@@ -148,10 +148,6 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 			m_pOldSelectedButton = GameClient()->m_TouchControls.SelectedButton();
 			if(CheckCachedSettings())
 			{
-				if(m_pOldSelectedButton == nullptr)
-				{
-					m_pOldSelectedButton = GameClient()->m_TouchControls.NewButton();
-				}
 				SaveCachedSettingsToTarget(m_pOldSelectedButton);
 				GameClient()->m_TouchControls.SetSelectedButton(m_pOldSelectedButton);
 				GameClient()->m_TouchControls.SetEditingChanges(true);
@@ -177,10 +173,7 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 		{
 			CacheAllSettingsFromTarget(GameClient()->m_TouchControls.SelectedButton());
 			Changed = true;
-			if(!GameClient()->m_TouchControls.NoRealButtonSelected())
-			{
-				SetUnsavedChanges(false);
-			}
+			SetUnsavedChanges(false);
 		}
 		// Cancel does nothing if nothing is unsaved.
 	}
@@ -199,43 +192,19 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 	EditBox.VSplitLeft(ButtonWidth, &LeftButton, &EditBox);
 	EditBox.VSplitLeft(SUBMARGIN, nullptr, &MiddleButton);
 	// Create a new button with current cached settings. New button will be automatically moved to nearest empty space.
-	static CButtonContainer s_CopyPasteButton;
-	bool Checked = GameClient()->m_TouchControls.NoRealButtonSelected();
-	if(GameClient()->m_Menus.DoButton_Menu(&s_CopyPasteButton, Localize("Duplicate"), UnsavedChanges() || Checked ? 1 : 0, &LeftButton))
+	static CButtonContainer s_DuplicateButton;
+	bool Checked = UnsavedChanges();
+	if(GameClient()->m_Menus.DoButton_Menu(&s_DuplicateButton, Localize("Duplicate"), UnsavedChanges() || Checked ? 1 : 0, &LeftButton))
 	{
 		if(Checked)
 		{
-			GameClient()->m_Menus.PopupMessage(Localize("New button already created"), Localize("A new button has already been created, please save or delete it before creating another one."), Localize("Ok"));
-		}
-		else if(UnsavedChanges())
-		{
 			GameClient()->m_Menus.PopupMessage(Localize("Unsaved changes"), Localize("Please save your changes before duplicating a button."), Localize("Ok"));
 		}
-		else
+		else if(NewButton(GameClient()->m_TouchControls.ShownRect().value(), m_CachedShape))
 		{
-			CTouchControls::CUnitRect FreeRect = GameClient()->m_TouchControls.UpdatePosition(GameClient()->m_TouchControls.ShownRect().value(), m_CachedShape, true);
-			if(FreeRect.m_X == -1)
-			{
-				FreeRect.m_W = CTouchControls::BUTTON_SIZE_MINIMUM;
-				FreeRect.m_H = CTouchControls::BUTTON_SIZE_MINIMUM;
-				FreeRect = GameClient()->m_TouchControls.UpdatePosition(FreeRect, m_CachedShape, true);
-				if(FreeRect.m_X == -1)
-				{
-					GameClient()->m_Menus.PopupMessage(Localize("No space for button"), Localize("There is not enough space available to place another button."), Localize("Ok"));
-				}
-				else
-				{
-					GameClient()->m_Menus.PopupMessage(Localize("No space for button"), Localize("There is not enough space available to place another button with this size. The button has been resized."), Localize("Ok"));
-				}
-			}
-			if(FreeRect.m_X != -1) // FreeRect might change. Don't use else here.
-			{
-				ResetButtonPointers();
-				SetPosInputs(FreeRect);
-				Changed = true;
-				SetUnsavedChanges(true);
-				GameClient()->m_TouchControls.SetEditingChanges(true);
-			}
+			m_pNewSelectedButton = GameClient()->m_TouchControls.SelectedButton();
+			SaveCachedSettingsToTarget(m_pNewSelectedButton);
+			UpdateSampleButton();
 		}
 	}
 
@@ -302,10 +271,7 @@ bool CMenusIngameTouchControls::RenderLayoutSettingBlock(CUIRect Block)
 		InputPosFunction(&m_InputH);
 		Changed = true;
 	}
-	int X = m_InputX.GetInteger();
-	int Y = m_InputY.GetInteger();
-	int W = m_InputW.GetInteger();
-	int H = m_InputH.GetInteger();
+	auto [X, Y, W, H] = GetPosInputs();
 	auto DoValidatedLabel = [&](const CUIRect &LabelBlock, const char *pLabel, int Size, bool Valid) {
 		if(pLabel == nullptr)
 			return;
@@ -323,7 +289,7 @@ bool CMenusIngameTouchControls::RenderLayoutSettingBlock(CUIRect Block)
 	str_format(aBuf, sizeof(aBuf), "%s:", Localize("Width"));
 	DoValidatedLabel(PosW, aBuf, FONTSIZE, CTouchControls::BUTTON_SIZE_MINIMUM <= W && W <= CTouchControls::BUTTON_SIZE_MAXIMUM);
 	str_format(aBuf, sizeof(aBuf), "%s:", Localize("Height"));
-	DoValidatedLabel(PosH, aBuf, FONTSIZE, CTouchControls::BUTTON_SIZE_MINIMUM <= H && H < +CTouchControls::BUTTON_SIZE_MAXIMUM);
+	DoValidatedLabel(PosH, aBuf, FONTSIZE, CTouchControls::BUTTON_SIZE_MINIMUM <= H && H <= CTouchControls::BUTTON_SIZE_MAXIMUM);
 
 	// Drop down menu for shapes
 	Block.HSplitTop(ROWSIZE, &EditBox, &Block);
@@ -692,8 +658,15 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	static CButtonContainer s_NewButton;
 	if(GameClient()->m_Menus.DoButton_Menu(&s_NewButton, Localize("New button"), 0, &LeftButton))
 	{
-		NewVirtualButton();
-		GameClient()->m_TouchControls.SetEditingChanges(true);
+		if(NewButton({0, 0, CTouchControls::BUTTON_SIZE_MINIMUM, CTouchControls::BUTTON_SIZE_MINIMUM}, CTouchControls::EButtonShape::RECT))
+		{
+			const auto Rect = GetPosInputs();
+			ResetCachedSettings();
+			SetPosInputs(Rect);
+			SaveCachedSettingsToTarget(GameClient()->m_TouchControls.SelectedButton());
+			UpdateSampleButton();
+			m_NeedUpdatePreview = true;
+		}
 	}
 	EditBox.VSplitLeft(SUBMARGIN, nullptr, &MiddleButton);
 	static CButtonContainer s_SelectedButton;
@@ -786,7 +759,7 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 		}
 		Ui()->DoLabel(aHeaderDatas[HeaderIndex].first, aHeaderDatas[HeaderIndex].second, FONTSIZE, TEXTALIGN_ML);
 	}
-	// Can't sort buttons basing on command, that's meaning less and too slow.
+	// Can't sort buttons basing on command, that's meaningless and too slow.
 	Ui()->DoLabel(&CommandRect, Localize("Command"), FONTSIZE, TEXTALIGN_ML);
 
 	if(m_NeedUpdatePreview)
@@ -1194,10 +1167,7 @@ bool CMenusIngameTouchControls::CheckCachedSettings() const
 {
 	std::vector<const char *> vpErrors;
 	char aBuf[256];
-	int X = m_InputX.GetInteger();
-	int Y = m_InputY.GetInteger();
-	int W = m_InputW.GetInteger();
-	int H = m_InputH.GetInteger();
+	auto [X, Y, W, H] = GetPosInputs();
 	// Illegal size settings.
 	if(W < CTouchControls::BUTTON_SIZE_MINIMUM || W > CTouchControls::BUTTON_SIZE_MAXIMUM || H < CTouchControls::BUTTON_SIZE_MINIMUM || H > CTouchControls::BUTTON_SIZE_MAXIMUM)
 	{
@@ -1370,6 +1340,11 @@ void CMenusIngameTouchControls::SetPosInputs(CTouchControls::CUnitRect MyRect)
 	m_InputH.SetInteger(MyRect.m_H);
 }
 
+CTouchControls::CUnitRect CMenusIngameTouchControls::GetPosInputs() const
+{
+	return {m_InputX.GetInteger(), m_InputY.GetInteger(), m_InputW.GetInteger(), m_InputH.GetInteger()};
+}
+
 // Used to make sure the input box is numbers only, also clamp the value.
 void CMenusIngameTouchControls::InputPosFunction(CLineInputNumber *pInput)
 {
@@ -1394,15 +1369,19 @@ void CMenusIngameTouchControls::ResetButtonPointers()
 	GameClient()->m_TouchControls.ResetButtonPointers();
 }
 
-// New button doesn't create a real button, instead it reset the Samplebutton to cache every setting. When saving a the Samplebutton then a real button will be created.
-void CMenusIngameTouchControls::NewVirtualButton()
+// Create a new button with default settings and deal with position issues.
+bool CMenusIngameTouchControls::NewButton(CTouchControls::CUnitRect Rect, CTouchControls::EButtonShape Shape)
 {
-	CTouchControls::CUnitRect FreeRect = GameClient()->m_TouchControls.UpdatePosition({0, 0, CTouchControls::BUTTON_SIZE_MINIMUM, CTouchControls::BUTTON_SIZE_MINIMUM}, CTouchControls::EButtonShape::RECT, true);
-	ResetButtonPointers();
-	ResetCachedSettings();
-	SetPosInputs(FreeRect);
-	UpdateSampleButton();
-	SetUnsavedChanges(true);
+	auto FreeRect = GameClient()->m_TouchControls.UpdatePosition(Rect, Shape, true);
+	if(!FreeRect.has_value())
+	{
+		GameClient()->m_Menus.PopupMessage(Localize("No space for button"), Localize("There is not enough space available to place another button."), Localize("Ok"));
+		return false;
+	}
+	m_pNewSelectedButton = GameClient()->m_TouchControls.NewButton();
+	GameClient()->m_TouchControls.SetSelectedButton(m_pNewSelectedButton);
+	SetPosInputs(FreeRect.value());
+	return true;
 }
 
 // Used for updating cached settings or something else only when opening the editor, to reduce lag. Issues come from CTouchControls.
@@ -1420,8 +1399,7 @@ void CMenusIngameTouchControls::ResolveIssues()
 			case(int)CTouchControls::EIssueType::CACHE_SETTINGS: CacheAllSettingsFromTarget(aIssues[Current].m_pTargetButton); break;
 			case(int)CTouchControls::EIssueType::SAVE_SETTINGS:
 			{
-				if(CheckCachedSettings())
-					SaveCachedSettingsToTarget(aIssues[Current].m_pTargetButton);
+				SaveCachedSettingsToTarget(aIssues[Current].m_pTargetButton);
 				break;
 			}
 			case(int)CTouchControls::EIssueType::CACHE_POSITION: SetPosInputs(aIssues[Current].m_pTargetButton->m_UnitRect); break;
@@ -1434,8 +1412,9 @@ void CMenusIngameTouchControls::ResolveIssues()
 // Turn predefined behavior strings like "joystick-hook" into integers according to the enum.
 int CMenusIngameTouchControls::CalculatePredefinedType(const char *pType) const
 {
-	int IntegerType;
-	for(IntegerType = (int)EPredefinedType::EXTRA_MENU; IntegerType < (int)EPredefinedType::NUM_PREDEFINEDTYPES; IntegerType++)
+	int IntegerType = (int)EPredefinedType::INGAME_MENU;
+	static_assert((int)EPredefinedType::INGAME_MENU == 0, "This should start from the first predefined type");
+	for(; IntegerType < (int)EPredefinedType::NUM_PREDEFINEDTYPES; IntegerType++)
 	{
 		if(str_comp(pType, BEHAVIOR_FACTORIES_EDITOR[IntegerType].m_pId) == 0)
 			return IntegerType;
