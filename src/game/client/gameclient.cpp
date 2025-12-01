@@ -4378,7 +4378,6 @@ void CGameClient::UpdateRenderedCharacters()
 				Pos = GetFreezePos(i);
 			else if(g_Config.m_TcFastInput && (i == m_Snap.m_LocalClientId || (PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy])))
 				Pos = GetFastInputPos(i);
-
 			if(i == m_Snap.m_LocalClientId || (PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy]))
 			{
 				m_aClients[i].m_IsPredictedLocal = true;
