@@ -43,7 +43,7 @@ elseif(TCLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)")
   set(TCLIENT_VERSION_MINOR ${CMAKE_MATCH_2})
   set(TCLIENT_VERSION_PATCH "0")
 else()
-  message(FATAL_ERROR "Couldn't parse TClient version from src/game/version.h")
+  message(FATAL_ERROR "Couldn't parse QmClient version from src/game/version.h")
 endif()
 
 if(TCLIENT_VERSION_PATCH STREQUAL "0")
@@ -52,7 +52,7 @@ else()
   project(TClient VERSION ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH})
 endif()
 
-file(APPEND "${DATA_VERSION_FILE}" "TClient ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH}\n")
+file(APPEND "${DATA_VERSION_FILE}" "QmClient ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH}\n")
 
 # </TClient>
 
@@ -121,7 +121,7 @@ set(AUTO_VULKAN_BACKEND ON)
 if(TARGET_OS STREQUAL "windows")
   set(AUTO_DEPENDENCIES_DEFAULT ON)
   if(TARGET_CPU_ARCHITECTURE STREQUAL "x86")
-    set(AUTO_VULKAN_BACKEND OFF)
+    set(AUTO_VULKAN_BACKEND ON)
   endif()
 elseif(TARGET_OS STREQUAL "mac")
   set(AUTO_VULKAN_BACKEND OFF)

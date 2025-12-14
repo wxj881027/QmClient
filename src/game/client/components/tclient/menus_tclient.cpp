@@ -2531,7 +2531,7 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 {
 	// hi hello, this is a relatively self contained mess, sorry if you're forking or need to modify this -Tater
-
+	// 你好, 这是一个相对独立的混乱，如果你要分叉或需要修改它，抱歉 -Tater
 	struct SIntStage
 	{
 		int m_Value;
@@ -2654,7 +2654,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 		RightRow.VSplitLeft(RightInset, nullptr, &RightRow);
 		CUIRect TopCol1, TopCol2;
 		RightRow.VSplitMid(&TopCol1, &TopCol2, 0.0f);
-		if(DoButton_CheckBox(&g_Config.m_TcUiShowTClient, Localize("TClient"), g_Config.m_TcUiShowTClient, &TopCol1))
+		if(DoButton_CheckBox(&g_Config.m_TcUiShowTClient, Localize("QmClient"), g_Config.m_TcUiShowTClient, &TopCol1))
 			g_Config.m_TcUiShowTClient ^= 1;
 		if(DoButton_CheckBox(&g_Config.m_TcUiCompactList, Localize("Compact List"), g_Config.m_TcUiCompactList, &TopCol2))
 			g_Config.m_TcUiCompactList ^= 1;

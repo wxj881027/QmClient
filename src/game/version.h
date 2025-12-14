@@ -20,11 +20,11 @@ extern const char *GIT_SHORTREV_HASH;
 
 // TClient
 #ifndef TCLIENT_VERSION
-#define TCLIENT_VERSION "10.7.0"
+#define TCLIENT_VERSION "1.0.1"
 #endif
 
 // custom
-#define CLIENT_NAME "TClient"
+#define CLIENT_NAME "QmClient"
 #define CLIENT_RELEASE_VERSION TCLIENT_VERSION
 
 #endif
