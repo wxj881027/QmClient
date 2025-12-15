@@ -212,11 +212,12 @@ void CPlayers::RenderHookCollLine(
 	float HookFireSpeed = (float)GameClient()->m_aClients[ClientId].m_Predicted.m_Tuning.m_HookFireSpeed;
 
 	// TClient: Hook collision line length follows cursor distance
-	if(Local && g_Config.m_TcHookCollCursor)
-	{
-		float CursorDistance = length(GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy]);
-		HookLength = CursorDistance;
-	}
+	// 有问题,暂定改回原版
+	//if(Local && g_Config.m_TcHookCollCursor)
+	//{
+	//	float CursorDistance = length(GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy]);
+	//	HookLength = CursorDistance;
+	//}
 
 	// janky physics
 	if(HookLength < HOOK_START_DISTANCE || HookFireSpeed <= 0.0f)

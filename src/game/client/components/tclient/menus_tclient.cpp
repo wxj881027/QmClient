@@ -662,7 +662,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
-	// ***** Auto Reply ***** //
+	// ***** 自动回复 ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
@@ -746,7 +746,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	}
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
-	// ***** Pet ***** //
+	// ***** 宠物 ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
@@ -963,7 +963,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
-	// ***** Rainbow ***** //
+	// ***** 彩虹! ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
@@ -1040,47 +1040,52 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	// ***** BG Draw ***** //
-	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
-	s_SectionBoxes.push_back(Column);
-	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Background Draw"), HeadlineFontSize, TEXTALIGN_ML);
-	Column.HSplitTop(MarginSmall, nullptr, &Column);
+	// ***** 背景绘画 ***** //
+	// 功能暂时不用,注释掉
+	//Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
+	//s_SectionBoxes.push_back(Column);
+	//Column.HSplitTop(HeadlineHeight, &Label, &Column);
+	//Ui()->DoLabel(&Label, TCLocalize("Background Draw"), HeadlineFontSize, TEXTALIGN_ML);
+	//Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	static CButtonContainer s_BgDrawColor;
-	DoLine_ColorPicker(&s_BgDrawColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("Color"), &g_Config.m_TcBgDrawColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+	//static CButtonContainer s_BgDrawColor;
+	//DoLine_ColorPicker(&s_BgDrawColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("Color"), &g_Config.m_TcBgDrawColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
 
-	Column.HSplitTop(LineSize * 2.0f, &Button, &Column);
-	if(g_Config.m_TcBgDrawFadeTime == 0)
-		Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, TCLocalize("Time until strokes disappear"), 0, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, TCLocalize(" seconds (never)"));
-	else
-		Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, TCLocalize("Time until strokes disappear"), 0, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, TCLocalize(" seconds"));
+	//Column.HSplitTop(LineSize * 2.0f, &Button, &Column);
+	//if(g_Config.m_TcBgDrawFadeTime == 0)
+	//	Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, TCLocalize("Time until strokes disappear"), 0, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, TCLocalize(" seconds (never)"));
+	//else
+	//	Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, TCLocalize("Time until strokes disappear"), 0, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, TCLocalize(" seconds"));
 
-	Column.HSplitTop(LineSize * 2.0f, &Button, &Column);
-	Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawWidth, &g_Config.m_TcBgDrawWidth, &Button, TCLocalize("Width"), 1, 50, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE);
+	//Column.HSplitTop(LineSize * 2.0f, &Button, &Column);
+	//Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawWidth, &g_Config.m_TcBgDrawWidth, &Button, TCLocalize("Width"), 1, 50, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE);
 
-	static CButtonContainer s_ReaderButtonDraw, s_ClearButtonDraw;
-	DoLine_KeyReader(Column, s_ReaderButtonDraw, s_ClearButtonDraw, TCLocalize("Draw where mouse is"), "+bg_draw");
+	//static CButtonContainer s_ReaderButtonDraw, s_ClearButtonDraw;
+	//DoLine_KeyReader(Column, s_ReaderButtonDraw, s_ClearButtonDraw, TCLocalize("Draw where mouse is"), "+bg_draw");
 
-	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
-	Column.HSplitTop(MarginSmall, nullptr, &Column);
+	//s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
+	//Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	// ***** Finish Name ***** //
-	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
-	s_SectionBoxes.push_back(Column);
-	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Finish Name"), HeadlineFontSize, TEXTALIGN_ML);
-	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChangeNameNearFinish, TCLocalize("Attempt to change your name when near finish"), &g_Config.m_TcChangeNameNearFinish, &Column, LineSize);
-	// Column.HSplitTop(LineSize, &Button, &Column); // TODO finish scan radius
-	// Ui()->DoScrollbarOption(&g_Config.m_TcPetSize, &g_Config.m_TcPetSize, &Button, TCLocalize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
-	Column.HSplitTop(LineSize + MarginExtraSmall, &Button, &Column);
-	Button.VSplitMid(&Label, &Button);
-	Ui()->DoLabel(&Label, TCLocalize("Finish Name:"), FontSize, TEXTALIGN_ML);
-	static CLineInput s_FinishName(g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishName));
-	Ui()->DoEditBox(&s_FinishName, &Button, EditBoxFontSize);
-	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
+
+	// ***** 终点恰分改名 ***** //
+	//Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
+	//s_SectionBoxes.push_back(Column);
+	//Column.HSplitTop(HeadlineHeight, &Label, &Column);
+	//Ui()->DoLabel(&Label, TCLocalize("Finish Name"), HeadlineFontSize, TEXTALIGN_ML);
+	//Column.HSplitTop(MarginSmall, nullptr, &Column);
+
+	//DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChangeNameNearFinish, TCLocalize("Attempt to change your name when near finish"), &g_Config.m_TcChangeNameNearFinish, &Column, LineSize);
+	//// Column.HSplitTop(LineSize, &Button, &Column); // TODO finish scan radius
+	//// Ui()->DoScrollbarOption(&g_Config.m_TcPetSize, &g_Config.m_TcPetSize, &Button, TCLocalize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+	//Column.HSplitTop(LineSize + MarginExtraSmall, &Button, &Column);
+	//Button.VSplitMid(&Label, &Button);
+	// 下面两句注释不用管
+	//Ui()->DoLabel(&Label, TCLocalize("Finish Name:"), FontSize, TEXTALIGN_ML);
+	//static CLineInput s_FinishName(g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishName));
+	// 上面两句注释不用管
+	//Ui()->DoEditBox(&s_FinishName, &Button, EditBoxFontSize);
+	//s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
 		// ***** Chat Bubble ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
