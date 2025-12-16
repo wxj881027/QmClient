@@ -1081,10 +1081,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	//// Ui()->DoScrollbarOption(&g_Config.m_TcPetSize, &g_Config.m_TcPetSize, &Button, TCLocalize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
 	//Column.HSplitTop(LineSize + MarginExtraSmall, &Button, &Column);
 	//Button.VSplitMid(&Label, &Button);
+	
+
 	// 下面两句注释不用管
 	//Ui()->DoLabel(&Label, TCLocalize("Finish Name:"), FontSize, TEXTALIGN_ML);
 	//static CLineInput s_FinishName(g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishName));
 	// 上面两句注释不用管
+	
+	
 	//Ui()->DoEditBox(&s_FinishName, &Button, EditBoxFontSize);
 	//s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
@@ -1140,6 +1144,19 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	}
 
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
+
+
+	// ***** 粒子拖尾 ***** //
+	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
+	s_SectionBoxes.push_back(Column);
+	Column.HSplitTop(HeadlineHeight, &Label, &Column);
+	Ui()->DoLabel(&Label, TCLocalize("粒子拖尾"), HeadlineFontSize, TEXTALIGN_ML);
+	Column.HSplitTop(MarginSmall, nullptr, &Column);
+
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, TCLocalize("启用粒子拖尾"), &g_Config.m_QmcFootParticles, &Column, LineSize);
+
+	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
+
 
 
 
