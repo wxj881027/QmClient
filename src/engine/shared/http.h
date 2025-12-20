@@ -74,8 +74,6 @@ class CHttpRequest : public IHttpRequest
 		case REQUEST::POST_JSON:
 			return "POST";
 		}
-
-		dbg_assert_failed("unreachable");
 	}
 
 	char m_aUrl[256] = {0};
