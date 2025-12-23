@@ -24,6 +24,14 @@ CControls::CControls()
 	std::fill(std::begin(m_aMousePosOnAction), std::end(m_aMousePosOnAction), vec2(0.0f, 0.0f));
 	std::fill(std::begin(m_aTargetPos), std::end(m_aTargetPos), vec2(0.0f, 0.0f));
 	std::fill(std::begin(m_aMouseInputType), std::end(m_aMouseInputType), EMouseInputType::ABSOLUTE);
+
+	// QmClient: Initialize Snap Tap state
+	for(int i = 0; i < NUM_DUMMIES; i++)
+	{
+		m_aSnapTapLastDirX[i] = 0;
+		m_aSnapTapPrevLeft[i] = 0;
+		m_aSnapTapPrevRight[i] = 0;
+	}
 }
 
 void CControls::OnReset()
@@ -274,12 +282,9 @@ int CControls::SnapInput(int *pData)
 		if(!m_aInputData[g_Config.m_ClDummy].m_TargetX && !m_aInputData[g_Config.m_ClDummy].m_TargetY)
 			m_aInputData[g_Config.m_ClDummy].m_TargetX = 1;
 
-		// set direction
-		m_aInputData[g_Config.m_ClDummy].m_Direction = 0;
-		if(m_aInputDirectionLeft[g_Config.m_ClDummy] && !m_aInputDirectionRight[g_Config.m_ClDummy])
-			m_aInputData[g_Config.m_ClDummy].m_Direction = -1;
-		if(!m_aInputDirectionLeft[g_Config.m_ClDummy] && m_aInputDirectionRight[g_Config.m_ClDummy])
-			m_aInputData[g_Config.m_ClDummy].m_Direction = 1;
+		// QmClient: Update Snap Tap state and set direction
+		UpdateSnapTapState(g_Config.m_ClDummy);
+		m_aInputData[g_Config.m_ClDummy].m_Direction = GetSnapTapDirection(g_Config.m_ClDummy);
 
 		// dummy copy moves
 		if(g_Config.m_ClDummyCopyMoves)
@@ -506,11 +511,8 @@ float CControls::GetMaxMouseDistance() const
 bool CControls::CheckNewInput()
 {
 	CNetObj_PlayerInput TestInput = m_aInputData[g_Config.m_ClDummy];
-	TestInput.m_Direction = 0;
-	if(m_aInputDirectionLeft[g_Config.m_ClDummy] && !m_aInputDirectionRight[g_Config.m_ClDummy])
-		TestInput.m_Direction = -1;
-	if(!m_aInputDirectionLeft[g_Config.m_ClDummy] && m_aInputDirectionRight[g_Config.m_ClDummy])
-		TestInput.m_Direction = 1;
+	// QmClient: Use GetSnapTapDirection for consistent direction calculation
+	TestInput.m_Direction = GetSnapTapDirection(g_Config.m_ClDummy);
 
 	bool NewInput = false;
 	if(m_FastInput.m_Direction != TestInput.m_Direction)
@@ -537,4 +539,94 @@ bool CControls::CheckNewInput()
 	m_FastInput = TestInput;
 
 	return NewInput;
+}
+
+// QmClient: Snap Tap (SOCD Last Input Wins) implementation
+// Updates the state machine tracking which direction was last pressed
+void CControls::UpdateSnapTapState(int Dummy)
+{
+	// Get current key states
+	const int LeftDown = m_aInputDirectionLeft[Dummy];
+	const int RightDown = m_aInputDirectionRight[Dummy];
+
+	// Detect edges (key press/release transitions)
+	const bool LeftPressed = (LeftDown && !m_aSnapTapPrevLeft[Dummy]);
+	const bool LeftReleased = (!LeftDown && m_aSnapTapPrevLeft[Dummy]);
+	const bool RightPressed = (RightDown && !m_aSnapTapPrevRight[Dummy]);
+	const bool RightReleased = (!RightDown && m_aSnapTapPrevRight[Dummy]);
+
+	// Update last direction based on key press events (Last Input Wins)
+	if(LeftPressed && !RightPressed)
+	{
+		// Left was just pressed, it becomes the priority direction
+		m_aSnapTapLastDirX[Dummy] = -1;
+	}
+	else if(RightPressed && !LeftPressed)
+	{
+		// Right was just pressed, it becomes the priority direction
+		m_aSnapTapLastDirX[Dummy] = 1;
+	}
+	else if(LeftPressed && RightPressed)
+	{
+		// Both pressed simultaneously - keep current direction (rare edge case)
+		// Or we could set to 0, but keeping current is more responsive
+	}
+
+	// Handle release: when the priority direction is released, switch to the other if held
+	if(LeftReleased && m_aSnapTapLastDirX[Dummy] == -1)
+	{
+		// Left was the priority direction and was released
+		if(RightDown)
+			m_aSnapTapLastDirX[Dummy] = 1; // Switch to right
+		else
+			m_aSnapTapLastDirX[Dummy] = 0; // Neutral
+	}
+	if(RightReleased && m_aSnapTapLastDirX[Dummy] == 1)
+	{
+		// Right was the priority direction and was released
+		if(LeftDown)
+			m_aSnapTapLastDirX[Dummy] = -1; // Switch to left
+		else
+			m_aSnapTapLastDirX[Dummy] = 0; // Neutral
+	}
+
+	// Update previous frame states for next edge detection
+	m_aSnapTapPrevLeft[Dummy] = LeftDown;
+	m_aSnapTapPrevRight[Dummy] = RightDown;
+}
+
+// Returns the direction to use, applying Snap Tap if enabled
+int CControls::GetSnapTapDirection(int Dummy) const
+{
+	const int LeftDown = m_aInputDirectionLeft[Dummy];
+	const int RightDown = m_aInputDirectionRight[Dummy];
+
+	// If Snap Tap is disabled, use original DDNet behavior
+	if(!g_Config.m_QmSnapTap)
+	{
+		// Original DDNet logic: both pressed = neutral (0)
+		if(LeftDown && !RightDown)
+			return -1;
+		if(!LeftDown && RightDown)
+			return 1;
+		return 0;
+	}
+
+	// Snap Tap enabled: use Last Input Wins
+	if(!LeftDown && !RightDown)
+		return 0; // Neither pressed, neutral
+
+	if(LeftDown && RightDown)
+	{
+		// Both pressed: return the last pressed direction
+		return m_aSnapTapLastDirX[Dummy];
+	}
+
+	// Only one direction pressed
+	if(LeftDown)
+		return -1;
+	if(RightDown)
+		return 1;
+
+	return 0;
 }

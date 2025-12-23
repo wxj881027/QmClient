@@ -40,6 +40,14 @@ public:
 	int m_aInputDirectionRight[NUM_DUMMIES];
 	int m_aShowHookColl[NUM_DUMMIES];
 
+	// QmClient: Snap Tap (SOCD Last Input Wins) state tracking
+	// Tracks the last pressed direction per dummy for each axis
+	// Values: -1=left was last, 0=neutral, 1=right was last
+	int m_aSnapTapLastDirX[NUM_DUMMIES];
+	// Previous frame key states for edge detection
+	int m_aSnapTapPrevLeft[NUM_DUMMIES];
+	int m_aSnapTapPrevRight[NUM_DUMMIES];
+
 	CNetObj_PlayerInput m_FastInput;
 
 	CControls();
@@ -56,6 +64,10 @@ public:
 	void ClampMousePos();
 	void ResetInput(int Dummy);
 	bool CheckNewInput();
+
+	// QmClient: Snap Tap methods
+	void UpdateSnapTapState(int Dummy);
+	int GetSnapTapDirection(int Dummy) const;
 
 private:
 	static void ConKeyInputState(IConsole::IResult *pResult, void *pUserData);

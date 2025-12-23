@@ -223,6 +223,18 @@ MACRO_CONFIG_INT(TcTeeTrailColorMode, tc_tee_trail_color_mode, 1, 1, 5, CFGFLAG_
 // Foot Particles - TClient: falling snowflake-like particles behind tee
 MACRO_CONFIG_INT(QmcFootParticles, qmc_foot_particles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show falling particles behind tee (like freeze snowflakes)")
 
+// Hook Collision Line Color Mode
+// Mode 1 = Weapon-Follow: color based on current weapon type
+// Mode 2 = Wall-Follow: color based on collision result (default DDNet behavior)
+MACRO_CONFIG_INT(QmHookCollMode, qm_hookcoll_mode, 2, 1, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook collision line color mode (1=Weapon-Follow, 2=Wall-Follow default)")
+// Weapon-Follow mode colors (HSLA format)
+// Brown (#8B5A2B): H=30, S=55%, L=36% -> HSLA int ~= 4013823
+// Blue (#2F6BFF): H=222, S=100%, L=59% -> HSLA int ~= 14811135
+// Red (#E53935): H=1, S=77%, L=55% -> HSLA int ~= 65407
+MACRO_CONFIG_COL(QmShotgunColor, qm_shotgun_color, 1414790, CFGFLAG_CLIENT | CFGFLAG_SAVE, "武器跟随模式下散弹枪的钩子碰撞线颜色 (棕色)")
+MACRO_CONFIG_COL(QmLaserColor, qm_laser_color, 11206528, CFGFLAG_CLIENT | CFGFLAG_SAVE, "武器跟随模式下激光枪的钩子碰撞线颜色 (蓝色)")
+MACRO_CONFIG_COL(QmGrenadeColor, qm_grenade_color, 65407, CFGFLAG_CLIENT | CFGFLAG_SAVE, "武器跟随模式下榴弹枪的钩子碰撞线颜色 (红色)")
+
 // Chat Reply
 MACRO_CONFIG_INT(TcAutoReplyMuted, tc_auto_reply_muted, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto reply to muted players with a message")
 MACRO_CONFIG_STR(TcAutoReplyMutedMessage, tc_auto_reply_muted_message, 128, "I have muted you", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Message to reply to muted players")
@@ -327,3 +339,8 @@ MACRO_CONFIG_INT(TcUiOnlyModified, tc_ui_only_modified, 0, 0, 1, CFGFLAG_CLIENT 
 
 // Scoreboard
 MACRO_CONFIG_INT(ClScoreboardPoints, cl_scoreboard_points, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Points column in scoreboard (fetches from DDNet API)")
+
+// Snap Tap (SOCD Resolution / Last Input Wins)
+// When opposite directions are pressed simultaneously, output the last pressed direction
+MACRO_CONFIG_INT(QmSnapTap, qm_snaptap, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Snap Tap (SOCD: last pressed direction wins)")
+MACRO_CONFIG_INT(QmSnapTapAxes, qm_snaptap_axes, 1, 1, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Snap Tap axes (1=horizontal only, DDNet has no vertical input)")
