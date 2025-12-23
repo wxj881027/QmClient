@@ -351,6 +351,14 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 {
 	float Len = distance(Pos, From);
 
+	// QmClient: 应用半透明度设置
+	const float LaserAlpha = g_Config.m_QmLaserAlpha / 100.0f;
+	OuterColor.a *= LaserAlpha;
+	InnerColor.a *= LaserAlpha;
+
+	// QmClient: 应用激光大小缩放
+	const float SizeScale = g_Config.m_QmLaserSize / 100.0f;
+
 	if(Len > 0)
 	{
 		if(Type == LASERTYPE_DRAGGER)
@@ -378,17 +386,62 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 		Graphics()->TextureClear();
 		Graphics()->QuadsBegin();
 
-		// do outline
+		// QmClient: 增强激光辉光效果（在基础激光之前渲染，确保正确分层）
+		if(g_Config.m_QmLaserEnhanced && g_Config.m_QmLaserGlowIntensity > 0 && (Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN))
+		{
+			// 计算脉冲动画
+			float PulseSpeed = g_Config.m_QmLaserPulseSpeed / 100.0f;
+			float PulseAmplitude = g_Config.m_QmLaserPulseAmplitude / 100.0f;
+			float PulsePhase = Client()->GlobalTime() * 4.0f * PulseSpeed;
+			float PulseFactor = 1.0f + PulseAmplitude * 0.5f * (1.0f + std::sin(PulsePhase));
+
+			// 辉光强度影响透明度和宽度
+			float GlowIntensity = g_Config.m_QmLaserGlowIntensity / 100.0f;
+			float GlowAlpha = 0.15f * GlowIntensity * PulseFactor * LaserAlpha;
+			float GlowWidth = (14.0f + 8.0f * GlowIntensity * PulseFactor) * SizeScale;
+
+			// 外层辉光（最宽，最透明）
+			ColorRGBA GlowColor = OuterColor;
+			GlowColor.a = GlowAlpha * 0.4f;
+			Graphics()->SetColor(GlowColor);
+			vec2 GlowOut = vec2(Dir.y, -Dir.x) * (GlowWidth * Ia);
+			IGraphics::CFreeformItem GlowFreeform(
+				From - GlowOut, From + GlowOut,
+				Pos - GlowOut, Pos + GlowOut);
+			Graphics()->QuadsDrawFreeform(&GlowFreeform, 1);
+
+			// 中层辉光
+			GlowColor.a = GlowAlpha * 0.6f;
+			Graphics()->SetColor(GlowColor);
+			GlowOut = vec2(Dir.y, -Dir.x) * ((GlowWidth * 0.65f) * Ia);
+			GlowFreeform = IGraphics::CFreeformItem(
+				From - GlowOut, From + GlowOut,
+				Pos - GlowOut, Pos + GlowOut);
+			Graphics()->QuadsDrawFreeform(&GlowFreeform, 1);
+
+			// 内层辉光（最亮）
+			GlowColor.a = GlowAlpha * 0.9f;
+			Graphics()->SetColor(GlowColor);
+			GlowOut = vec2(Dir.y, -Dir.x) * ((GlowWidth * 0.4f) * Ia);
+			GlowFreeform = IGraphics::CFreeformItem(
+				From - GlowOut, From + GlowOut,
+				Pos - GlowOut, Pos + GlowOut);
+			Graphics()->QuadsDrawFreeform(&GlowFreeform, 1);
+		}
+
+		// do outline - QmClient: 应用大小缩放
 		Graphics()->SetColor(OuterColor);
-		vec2 Out = vec2(Dir.y, -Dir.x) * (7.0f * Ia);
+		float OutlineWidth = 7.0f * SizeScale * Ia;
+		vec2 Out = vec2(Dir.y, -Dir.x) * OutlineWidth;
 
 		IGraphics::CFreeformItem Freeform(
 			From - Out, From + Out,
 			Pos - Out, Pos + Out);
 		Graphics()->QuadsDrawFreeform(&Freeform, 1);
 
-		// do inner
-		Out = vec2(Dir.y, -Dir.x) * (5.0f * Ia);
+		// do inner - QmClient: 应用大小缩放
+		float InnerWidth = 5.0f * SizeScale * Ia;
+		Out = vec2(Dir.y, -Dir.x) * InnerWidth;
 		vec2 ExtraOutlinePos = Dir;
 		vec2 ExtraOutlineFrom = Type == LASERTYPE_DOOR ? vec2(0, 0) : Dir;
 		Graphics()->SetColor(InnerColor); // center
@@ -397,6 +450,25 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 			From - Out + ExtraOutlineFrom, From + Out + ExtraOutlineFrom,
 			Pos - Out - ExtraOutlinePos, Pos + Out - ExtraOutlinePos);
 		Graphics()->QuadsDrawFreeform(&Freeform, 1);
+
+		// QmClient: 圆角端点效果
+		if(g_Config.m_QmLaserRoundCaps && (Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN))
+		{
+			const float CapRadius = OutlineWidth * 0.8f;
+			const int CapSegments = 12;
+
+			// 起点圆角
+			Graphics()->SetColor(OuterColor);
+			Graphics()->DrawCircle(From.x, From.y, CapRadius, CapSegments);
+			Graphics()->SetColor(InnerColor);
+			Graphics()->DrawCircle(From.x, From.y, InnerWidth * 0.8f, CapSegments);
+
+			// 结束点圆角
+			Graphics()->SetColor(OuterColor);
+			Graphics()->DrawCircle(Pos.x, Pos.y, CapRadius, CapSegments);
+			Graphics()->SetColor(InnerColor);
+			Graphics()->DrawCircle(Pos.x, Pos.y, InnerWidth * 0.8f, CapSegments);
+		}
 
 		Graphics()->QuadsEnd();
 	}

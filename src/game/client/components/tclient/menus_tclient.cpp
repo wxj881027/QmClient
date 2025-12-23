@@ -558,7 +558,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 	if(g_Config.m_TcFastInput)
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, TCLocalize("Extra tick other tees (increases other tees latency, \nmakes dragging slightly easier when using fast input)"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, TCLocalize("额外勾选其他Tee（增加其他Tee延迟，\n在使用快速输入时使拖拽操作稍易操作）"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
 	else
 		Column.HSplitTop(LineSize, nullptr, &Column);
 	// A little extra spacing because these are multi line
@@ -613,14 +613,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	s_SectionBoxes.push_back(Column);
 
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Auto execute"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("自动执行"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
 	{
 		CUIRect Box;
 		Column.HSplitTop(LineSize + MarginExtraSmall, &Box, &Column);
 		Box.VSplitMid(&Label, &Button);
-		Ui()->DoLabel(&Label, Localize("Execute before connect"), FontSize, TEXTALIGN_ML);
+		Ui()->DoLabel(&Label, Localize("连接前执行"), FontSize, TEXTALIGN_ML);
 		static CLineInput s_LineInput(g_Config.m_TcExecuteOnConnect, sizeof(g_Config.m_TcExecuteOnConnect));
 		Ui()->DoEditBox(&s_LineInput, &Button, EditBoxFontSize);
 	}
@@ -629,7 +629,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 		CUIRect Box;
 		Column.HSplitTop(LineSize + MarginExtraSmall, &Box, &Column);
 		Box.VSplitMid(&Label, &Button);
-		Ui()->DoLabel(&Label, Localize("Execute on join"), FontSize, TEXTALIGN_ML);
+		Ui()->DoLabel(&Label, Localize("在连接时执行"), FontSize, TEXTALIGN_ML);
 		static CLineInput s_LineInput(g_Config.m_TcExecuteOnJoin, sizeof(g_Config.m_TcExecuteOnJoin));
 		Ui()->DoEditBox(&s_LineInput, &Button, EditBoxFontSize);
 	}
@@ -643,20 +643,20 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Voting"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("投票"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoVoteWhenFar, TCLocalize("Auto vote no to map changes when far"), &g_Config.m_TcAutoVoteWhenFar, &Column, LineSize);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoVoteWhenFar, TCLocalize("自动投票反对地图变更"), &g_Config.m_TcAutoVoteWhenFar, &Column, LineSize);
 	Column.HSplitTop(LineSize, &Button, &Column);
-	Ui()->DoScrollbarOption(&g_Config.m_TcAutoVoteWhenFarTime, &g_Config.m_TcAutoVoteWhenFarTime, &Button, TCLocalize("Minimum Time"), 1, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, " minutes");
+	Ui()->DoScrollbarOption(&g_Config.m_TcAutoVoteWhenFarTime, &g_Config.m_TcAutoVoteWhenFarTime, &Button, TCLocalize("最短时间"), 1, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, " 分钟");
 
 	CUIRect VoteMessage;
 	Column.HSplitTop(LineSize + MarginExtraSmall, &VoteMessage, &Column);
 	VoteMessage.HSplitTop(MarginExtraSmall, nullptr, &VoteMessage);
 	VoteMessage.VSplitMid(&Label, &VoteMessage);
-	Ui()->DoLabel(&Label, TCLocalize("Message to send in chat:"), FontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("要在聊天中发送的消息："), FontSize, TEXTALIGN_ML);
 	static CLineInput s_VoteMessage(g_Config.m_TcAutoVoteWhenFarMessage, sizeof(g_Config.m_TcAutoVoteWhenFarMessage));
-	s_VoteMessage.SetEmptyText(TCLocalize("Leave empty to disable"));
+	s_VoteMessage.SetEmptyText(TCLocalize("留空以禁用"));
 	Ui()->DoEditBox(&s_VoteMessage, &VoteMessage, EditBoxFontSize);
 
 	Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
@@ -667,29 +667,29 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Auto Reply"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("自动回复"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMuted, TCLocalize("Auto reply to muted players"), &g_Config.m_TcAutoReplyMuted, &Column, LineSize);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMuted, TCLocalize("对已屏蔽发言的玩家自动回复"), &g_Config.m_TcAutoReplyMuted, &Column, LineSize);
 	CUIRect MutedReply;
 	Column.HSplitTop(LineSize + MarginExtraSmall, &MutedReply, &Column);
 	if(g_Config.m_TcAutoReplyMuted)
 	{
 		MutedReply.HSplitTop(MarginExtraSmall, nullptr, &MutedReply);
 		static CLineInput s_MutedReply(g_Config.m_TcAutoReplyMutedMessage, sizeof(g_Config.m_TcAutoReplyMutedMessage));
-		s_MutedReply.SetEmptyText("I have muted you");
+		s_MutedReply.SetEmptyText("我屏蔽你了");
 		Ui()->DoEditBox(&s_MutedReply, &MutedReply, EditBoxFontSize);
 	}
 	Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMinimized, TCLocalize("Auto reply when tabbed out"), &g_Config.m_TcAutoReplyMinimized, &Column, LineSize);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMinimized, TCLocalize("切屏时自动回复"), &g_Config.m_TcAutoReplyMinimized, &Column, LineSize);
 	CUIRect MinimizedReply;
 	Column.HSplitTop(LineSize + MarginExtraSmall, &MinimizedReply, &Column);
 	if(g_Config.m_TcAutoReplyMinimized)
 	{
 		MinimizedReply.HSplitTop(MarginExtraSmall, nullptr, &MinimizedReply);
 		static CLineInput s_MinimizedReply(g_Config.m_TcAutoReplyMinimizedMessage, sizeof(g_Config.m_TcAutoReplyMinimizedMessage));
-		s_MinimizedReply.SetEmptyText("I am not tabbed in");
+		s_MinimizedReply.SetEmptyText("我不在游戏窗口前");
 		Ui()->DoEditBox(&s_MinimizedReply, &MinimizedReply, EditBoxFontSize);
 	}
 	Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
@@ -699,7 +699,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Player Indicator"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("玩家指示器"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPlayerIndicator, TCLocalize("Show any enabled Indicators"), &g_Config.m_TcPlayerIndicator, &Column, LineSize);
@@ -1154,6 +1154,108 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, TCLocalize("启用粒子拖尾"), &g_Config.m_QmcFootParticles, &Column, LineSize);
+
+	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
+
+	// ***** QmClient: Hook辅助线设置 ***** //
+	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
+	s_SectionBoxes.push_back(Column);
+	Column.HSplitTop(HeadlineHeight, &Label, &Column);
+	Ui()->DoLabel(&Label, TCLocalize("Hook辅助线"), HeadlineFontSize, TEXTALIGN_ML);
+	Column.HSplitTop(MarginSmall, nullptr, &Column);
+
+	// Hook collision line mode dropdown
+	Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
+	static std::vector<const char *> s_HookCollModeDropDownNames;
+	s_HookCollModeDropDownNames = {TCLocalize("武器跟随 (Weapon-Follow)"), TCLocalize("墙体跟随 (Wall-Follow, 默认)")};
+	static CUi::SDropDownState s_HookCollModeDropDownState;
+	static CScrollRegion s_HookCollModeDropDownScrollRegion;
+	s_HookCollModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_HookCollModeDropDownScrollRegion;
+	int HookCollModeSelectedOld = g_Config.m_QmHookCollMode - 1; // cvar 1-2 -> index 0-1
+	CUIRect HookCollModeDropDownRect;
+	Column.HSplitTop(LineSize, &HookCollModeDropDownRect, &Column);
+	HookCollModeDropDownRect.VSplitLeft(120.0f, &Label, &HookCollModeDropDownRect);
+	Ui()->DoLabel(&Label, TCLocalize("颜色模式: "), FontSize, TEXTALIGN_ML);
+	const int HookCollModeSelectedNew = Ui()->DoDropDown(&HookCollModeDropDownRect, HookCollModeSelectedOld, s_HookCollModeDropDownNames.data(), s_HookCollModeDropDownNames.size(), s_HookCollModeDropDownState);
+	if(HookCollModeSelectedOld != HookCollModeSelectedNew)
+	{
+		g_Config.m_QmHookCollMode = HookCollModeSelectedNew + 1; // index 0-1 -> cvar 1-2
+	}
+	Column.HSplitTop(MarginSmall, nullptr, &Column);
+
+	// Weapon-Follow mode color pickers (only show when mode == 1)
+	if(g_Config.m_QmHookCollMode == 1)
+	{
+		static CButtonContainer s_ShotgunColorId, s_LaserColorId, s_GrenadeColorId;
+		DoLine_ColorPicker(&s_ShotgunColorId, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("散弹枪颜色 (棕色)"), &g_Config.m_QmShotgunColor, ColorRGBA(0.55f, 0.35f, 0.17f), false);
+		DoLine_ColorPicker(&s_LaserColorId, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("激光枪颜色 (蓝色)"), &g_Config.m_QmLaserColor, ColorRGBA(0.18f, 0.42f, 1.0f), false);
+		DoLine_ColorPicker(&s_GrenadeColorId, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("榴弹枪颜色 (红色)"), &g_Config.m_QmGrenadeColor, ColorRGBA(0.9f, 0.22f, 0.21f), false);
+	}
+
+	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
+
+	// ***** QmClient: 激光设置（脉冲） ***** //
+	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
+	s_SectionBoxes.push_back(Column);
+	Column.HSplitTop(HeadlineHeight, &Label, &Column);
+	Ui()->DoLabel(&Label, TCLocalize("激光设置（脉冲）"), HeadlineFontSize, TEXTALIGN_ML);
+	Column.HSplitTop(MarginSmall, nullptr, &Column);
+
+	// 增强激光特效 checkbox
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmLaserEnhanced, TCLocalize("增强激光特效"), &g_Config.m_QmLaserEnhanced, &Column, LineSize);
+
+	// 激光辉光强度滑条
+	Column.HSplitTop(LineSize, &Button, &Column);
+	Ui()->DoScrollbarOption(&g_Config.m_QmLaserGlowIntensity, &g_Config.m_QmLaserGlowIntensity, &Button, TCLocalize("激光辉光强度"), 0, 100);
+
+	// 激光大小滑条
+	Column.HSplitTop(LineSize, &Button, &Column);
+	Ui()->DoScrollbarOption(&g_Config.m_QmLaserSize, &g_Config.m_QmLaserSize, &Button, TCLocalize("激光大小"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
+
+	// 半透明度滑条
+	Column.HSplitTop(LineSize, &Button, &Column);
+	Ui()->DoScrollbarOption(&g_Config.m_QmLaserAlpha, &g_Config.m_QmLaserAlpha, &Button, TCLocalize("半透明"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+
+	// 圆角端点 checkbox
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmLaserRoundCaps, TCLocalize("圆角端点"), &g_Config.m_QmLaserRoundCaps, &Column, LineSize);
+
+	if(g_Config.m_QmLaserEnhanced)
+	{
+		Column.HSplitTop(LineSize, &Button, &Column);
+		Ui()->DoScrollbarOption(&g_Config.m_QmLaserPulseSpeed, &g_Config.m_QmLaserPulseSpeed, &Button, TCLocalize("脉冲速度"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+		Column.HSplitTop(LineSize, &Button, &Column);
+		Ui()->DoScrollbarOption(&g_Config.m_QmLaserPulseAmplitude, &g_Config.m_QmLaserPulseAmplitude, &Button, TCLocalize("脉冲幅度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+	}
+	else
+	{
+		Column.HSplitTop(LineSize * 2.0f, nullptr, &Column);
+	}
+
+	// 激光预览区域
+	Column.HSplitTop(MarginSmall, nullptr, &Column);
+	Column.HSplitTop(LineSize, &Label, &Column);
+	Ui()->DoLabel(&Label, TCLocalize("激光预览"), FontSize, TEXTALIGN_ML);
+
+	// 激光枪预览
+	const float LaserPreviewHeight = 50.0f;
+	CUIRect LaserPreviewRect;
+	Column.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &Column);
+	LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
+	{
+		ColorHSLA OutlineColor = ColorHSLA(g_Config.m_ClLaserRifleOutlineColor);
+		ColorHSLA InnerColor = ColorHSLA(g_Config.m_ClLaserRifleInnerColor);
+		DoLaserPreview(&LaserPreviewRect, OutlineColor, InnerColor, LASERTYPE_RIFLE);
+	}
+
+	// 散弹枪激光预览
+	Column.HSplitTop(MarginSmall, nullptr, &Column);
+	Column.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &Column);
+	LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
+	{
+		ColorHSLA OutlineColor = ColorHSLA(g_Config.m_ClLaserShotgunOutlineColor);
+		ColorHSLA InnerColor = ColorHSLA(g_Config.m_ClLaserShotgunInnerColor);
+		DoLaserPreview(&LaserPreviewRect, OutlineColor, InnerColor, LASERTYPE_SHOTGUN);
+	}
 
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
@@ -2109,33 +2211,28 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 	RightView.VSplitRight(MarginSmall, &RightView, nullptr);
 	LeftView.HSplitMid(&LeftView, &LowerLeftView, 0.0f);
 
+	// ======= LEFT VIEW: QmClient 社区 ========
 	LeftView.HSplitTop(HeadlineHeight, &Label, &LeftView);
-	Ui()->DoLabel(&Label, TCLocalize("TClient Links"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("QmClient 社区"), HeadlineFontSize, TEXTALIGN_ML);
 	LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
 
-	static CButtonContainer s_DiscordButton, s_WebsiteButton, s_GithubButton, s_SupportButton;
-	CUIRect ButtonLeft, ButtonRight;
-
+	// QQ群按钮
+	static CButtonContainer s_QQGroupButton;
 	LeftView.HSplitTop(LineSize * 2.0f, &Button, &LeftView);
-	Button.VSplitMid(&ButtonLeft, &ButtonRight, MarginSmall);
-	if(DoButtonLineSize_Menu(&s_DiscordButton, TCLocalize("Discord"), 0, &ButtonLeft, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
-		Client()->ViewLink("https://discord.gg/fBvhH93Bt6");
-	if(DoButtonLineSize_Menu(&s_WebsiteButton, TCLocalize("Website"), 0, &ButtonRight, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
-		Client()->ViewLink("https://tclient.app/");
+	if(DoButtonLineSize_Menu(&s_QQGroupButton, TCLocalize("QQ群: 1036393248 (点击复制)"), 0, &Button, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	{
+		Input()->SetClipboardText("1036393248");
+		// 显示复制成功提示
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "已复制QQ群号: 1036393248");
+		GameClient()->m_Chat.AddLine(-2, 0, aBuf);
+	}
 
-	LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
-	LeftView.HSplitTop(LineSize * 2.0f, &Button, &LeftView);
-	Button.VSplitMid(&ButtonLeft, &ButtonRight, MarginSmall);
-
-	if(DoButtonLineSize_Menu(&s_GithubButton, TCLocalize("Github"), 0, &ButtonLeft, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
-		Client()->ViewLink("https://github.com/sjrc6/TaterClient-ddnet");
-	if(DoButtonLineSize_Menu(&s_SupportButton, TCLocalize("Support ♥"), 0, &ButtonRight, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
-		Client()->ViewLink("https://ko-fi.com/Totar");
-
+	// ======= 配置文件区域 ========
 	LeftView = LowerLeftView;
 	LeftView.HSplitBottom(LineSize * 4.0f + MarginSmall * 2.0f + HeadlineFontSize, nullptr, &LeftView);
 	LeftView.HSplitTop(HeadlineHeight, &Label, &LeftView);
-	Ui()->DoLabel(&Label, TCLocalize("Config Files"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("配置文件"), HeadlineFontSize, TEXTALIGN_ML);
 	LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
 
 	char aBuf[128 + IO_MAX_PATH_LENGTH];
@@ -2145,12 +2242,12 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 	Button.VSplitMid(&TClientConfig, &ProfilesFile, MarginSmall);
 
 	static CButtonContainer s_Config, s_Profiles, s_Warlist, s_Chatbinds;
-	if(DoButtonLineSize_Menu(&s_Config, TCLocalize("TClient Settings"), 0, &TClientConfig, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButtonLineSize_Menu(&s_Config, TCLocalize("QmClient 设置"), 0, &TClientConfig, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[ConfigDomain::TCLIENT].m_aConfigPath, aBuf, sizeof(aBuf));
 		Client()->ViewFile(aBuf);
 	}
-	if(DoButtonLineSize_Menu(&s_Profiles, TCLocalize("Profiles"), 0, &ProfilesFile, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButtonLineSize_Menu(&s_Profiles, TCLocalize("配置文件"), 0, &ProfilesFile, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[ConfigDomain::TCLIENTPROFILES].m_aConfigPath, aBuf, sizeof(aBuf));
 		Client()->ViewFile(aBuf);
@@ -2160,87 +2257,31 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 	LeftView.HSplitTop(LineSize * 2.0f, &Button, &LeftView);
 	Button.VSplitMid(&WarlistFile, &ChatbindsFile, MarginSmall);
 
-	if(DoButtonLineSize_Menu(&s_Warlist, TCLocalize("War List"), 0, &WarlistFile, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButtonLineSize_Menu(&s_Warlist, TCLocalize("战争列表"), 0, &WarlistFile, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[ConfigDomain::TCLIENTWARLIST].m_aConfigPath, aBuf, sizeof(aBuf));
 		Client()->ViewFile(aBuf);
 	}
-	if(DoButtonLineSize_Menu(&s_Chatbinds, TCLocalize("Chat Binds"), 0, &ChatbindsFile, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButtonLineSize_Menu(&s_Chatbinds, TCLocalize("聊天绑定"), 0, &ChatbindsFile, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[ConfigDomain::TCLIENTCHATBINDS].m_aConfigPath, aBuf, sizeof(aBuf));
 		Client()->ViewFile(aBuf);
 	}
 
-	// =======RIGHT VIEW========
-
+	// ======= RIGHT VIEW: QmClient 开发人员 ========
 	RightView.HSplitTop(HeadlineHeight, &Label, &RightView);
-	Ui()->DoLabel(&Label, TCLocalize("TClient Developers"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("QmClient 开发人员"), HeadlineFontSize, TEXTALIGN_ML);
 	RightView.HSplitTop(MarginSmall, nullptr, &RightView);
 	RightView.HSplitTop(MarginSmall, nullptr, &RightView);
 
-	const float TeeSize = 50.0f;
-	const float CardSize = TeeSize + MarginSmall;
-	CUIRect TeeRect, DevCardRect;
-	static CButtonContainer s_LinkButton1, s_LinkButton2, s_LinkButton3, s_LinkButton4, s_LinkButton5;
-	{
-		RightView.HSplitTop(CardSize, &DevCardRect, &RightView);
-		DevCardRect.VSplitLeft(CardSize, &TeeRect, &Label);
-		Label.VSplitLeft(TextRender()->TextWidth(LineSize, "Tater"), &Label, &Button);
-		Button.VSplitLeft(MarginSmall, nullptr, &Button);
-		Button.w = LineSize, Button.h = LineSize, Button.y = Label.y + (Label.h / 2.0f - Button.h / 2.0f);
-		Ui()->DoLabel(&Label, "Tater", LineSize, TEXTALIGN_ML);
-		if(Ui()->DoButton_FontIcon(&s_LinkButton1, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, IGraphics::CORNER_ALL))
-			Client()->ViewLink("https://github.com/sjrc6");
-		RenderDevSkin(TeeRect.Center(), 50.0f, "glow_mermyfox", "mermyfox", true, 0, 0, 0, false, true, ColorRGBA(0.92f, 0.29f, 0.48f, 1.0f), ColorRGBA(0.55f, 0.64f, 0.76f, 1.0f));
-	}
-	{
-		RightView.HSplitTop(CardSize, &DevCardRect, &RightView);
-		DevCardRect.VSplitLeft(CardSize, &TeeRect, &Label);
-		Label.VSplitLeft(TextRender()->TextWidth(LineSize, "SollyBunny / bun bun"), &Label, &Button);
-		Button.VSplitLeft(MarginSmall, nullptr, &Button);
-		Button.w = LineSize, Button.h = LineSize, Button.y = Label.y + (Label.h / 2.0f - Button.h / 2.0f);
-		Ui()->DoLabel(&Label, "SollyBunny / bun bun", LineSize, TEXTALIGN_ML);
-		if(Ui()->DoButton_FontIcon(&s_LinkButton3, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, IGraphics::CORNER_ALL))
-			Client()->ViewLink("https://github.com/SollyBunny");
-		RenderDevSkin(TeeRect.Center(), 50.0f, "tuzi", "tuzi", false, 0, 0, 2, true, true, true);
-	}
-	{
-		RightView.HSplitTop(CardSize, &DevCardRect, &RightView);
-		DevCardRect.VSplitLeft(CardSize, &TeeRect, &Label);
-		Label.VSplitLeft(TextRender()->TextWidth(LineSize, "PeBox"), &Label, &Button);
-		Button.VSplitLeft(MarginSmall, nullptr, &Button);
-		Button.w = LineSize, Button.h = LineSize, Button.y = Label.y + (Label.h / 2.0f - Button.h / 2.0f);
-		Ui()->DoLabel(&Label, "PeBox", LineSize, TEXTALIGN_ML);
-		if(Ui()->DoButton_FontIcon(&s_LinkButton2, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, IGraphics::CORNER_ALL))
-			Client()->ViewLink("https://github.com/danielkempf");
-		RenderDevSkin(TeeRect.Center(), 50.0f, "greyfox", "greyfox", true, 0, 0, 2, false, true, ColorRGBA(0.00f, 0.09f, 1.00f, 1.00f), ColorRGBA(1.00f, 0.92f, 0.00f, 1.00f));
-	}
-	{
-		RightView.HSplitTop(CardSize, &DevCardRect, &RightView);
-		DevCardRect.VSplitLeft(CardSize, &TeeRect, &Label);
-		Label.VSplitLeft(TextRender()->TextWidth(LineSize, "Teero"), &Label, &Button);
-		Button.VSplitLeft(MarginSmall, nullptr, &Button);
-		Button.w = LineSize, Button.h = LineSize, Button.y = Label.y + (Label.h / 2.0f - Button.h / 2.0f);
-		Ui()->DoLabel(&Label, "Teero", LineSize, TEXTALIGN_ML);
-		if(Ui()->DoButton_FontIcon(&s_LinkButton4, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, IGraphics::CORNER_ALL))
-			Client()->ViewLink("https://github.com/Teero888");
-		RenderDevSkin(TeeRect.Center(), 50.0f, "glow_mermyfox", "mermyfox", true, 0, 0, 0, false, true, ColorRGBA(1.00f, 1.00f, 1.00f, 1.00f), ColorRGBA(1.00f, 0.02f, 0.13f, 1.00f));
-	}
-	{
-		RightView.HSplitTop(CardSize, &DevCardRect, &RightView);
-		DevCardRect.VSplitLeft(CardSize, &TeeRect, &Label);
-		Label.VSplitLeft(TextRender()->TextWidth(LineSize, "ChillerDragon"), &Label, &Button);
-		Button.VSplitLeft(MarginSmall, nullptr, &Button);
-		Button.w = LineSize, Button.h = LineSize, Button.y = Label.y + (Label.h / 2.0f - Button.h / 2.0f);
-		Ui()->DoLabel(&Label, "ChillerDragon", LineSize, TEXTALIGN_ML);
-		if(Ui()->DoButton_FontIcon(&s_LinkButton5, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, IGraphics::CORNER_ALL))
-			Client()->ViewLink("https://github.com/ChillerDragon");
-		RenderDevSkin(TeeRect.Center(), 50.0f, "glow_greensward", "greensward", false, 0, 0, 0, false, true, ColorRGBA(1.00f, 1.00f, 1.00f, 1.00f), ColorRGBA(1.00f, 0.02f, 0.13f, 1.00f));
-	}
+	// 纯文本开发者列表 - 只显示 "栖梦"
+	RightView.HSplitTop(LineSize * 1.5f, &Label, &RightView);
+	Ui()->DoLabel(&Label, "栖梦", FontSize * 1.2f, TEXTALIGN_ML);
 
-	RightView.HSplitTop(MarginSmall, nullptr, &RightView);
+	// ======= 隐藏设置选项卡 ========
+	RightView.HSplitTop(MarginBetweenSections, nullptr, &RightView);
 	RightView.HSplitTop(HeadlineHeight, &Label, &RightView);
-	Ui()->DoLabel(&Label, TCLocalize("Hide Settings Tabs"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("隐藏设置选项卡"), HeadlineFontSize, TEXTALIGN_ML);
 	RightView.HSplitTop(MarginSmall, nullptr, &RightView);
 	CUIRect LeftSettings, RightSettings;
 
@@ -2248,23 +2289,18 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 	RightView.HSplitTop(LineSize * 3.5f, nullptr, &RightView);
 
 	const char *apTabNames[] = {
-		TCLocalize("Settings"),
-		TCLocalize("Bind Wheel"),
-		TCLocalize("War List"),
-		TCLocalize("Chat Binds"),
-		TCLocalize("Status Bar"),
-		TCLocalize("Info")};
+		TCLocalize("设置"),
+		TCLocalize("绑定轮盘"),
+		TCLocalize("战争列表"),
+		TCLocalize("聊天绑定"),
+		TCLocalize("状态栏"),
+		TCLocalize("信息")};
 	static int s_aShowTabs[NUMBER_OF_TCLIENT_TABS] = {};
 	for(int i = 0; i < NUMBER_OF_TCLIENT_TABS - 1; ++i)
 	{
 		DoButton_CheckBoxAutoVMarginAndSet(&s_aShowTabs[i], apTabNames[i], &s_aShowTabs[i], i % 2 == 0 ? &LeftSettings : &RightSettings, LineSize);
 		SetFlag(g_Config.m_TcTClientSettingsTabs, i, s_aShowTabs[i]);
 	}
-
-	// RightView.HSplitTop(HeadlineHeight, &Label, &RightView);
-	// Ui()->DoLabel(&Label, TCLocalize("Integration"), HeadlineFontSize, TEXTALIGN_ML);
-	// RightView.HSplitTop(MarginSmall, nullptr, &RightView);
-	// DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcDiscordRPC, TCLocalize("Enable Discord Integration"), &g_Config.m_TcDiscordRPC, &RightView, LineSize);
 }
 
 void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)

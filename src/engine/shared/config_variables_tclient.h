@@ -340,7 +340,11 @@ MACRO_CONFIG_INT(TcUiOnlyModified, tc_ui_only_modified, 0, 0, 1, CFGFLAG_CLIENT 
 // Scoreboard
 MACRO_CONFIG_INT(ClScoreboardPoints, cl_scoreboard_points, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Points column in scoreboard (fetches from DDNet API)")
 
-// Snap Tap (SOCD Resolution / Last Input Wins)
-// When opposite directions are pressed simultaneously, output the last pressed direction
-MACRO_CONFIG_INT(QmSnapTap, qm_snaptap, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Snap Tap (SOCD: last pressed direction wins)")
-MACRO_CONFIG_INT(QmSnapTapAxes, qm_snaptap_axes, 1, 1, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Snap Tap axes (1=horizontal only, DDNet has no vertical input)")
+// Enhanced Laser Effects (Glow + Pulse) / 增强激光效果（辉光+脉冲）
+MACRO_CONFIG_INT(QmLaserEnhanced, qm_laser_enhanced, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用增强激光特效（辉光+脉冲动画）")
+MACRO_CONFIG_INT(QmLaserGlowIntensity, qm_laser_glow_intensity, 30, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "激光辉光强度 (0-100)")
+MACRO_CONFIG_INT(QmLaserPulseSpeed, qm_laser_pulse_speed, 100, 10, 500, CFGFLAG_CLIENT | CFGFLAG_SAVE, "脉冲动画速度 (百分比, 100=正常)")
+MACRO_CONFIG_INT(QmLaserPulseAmplitude, qm_laser_pulse_amplitude, 50, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "脉冲振幅 (0-100)")
+MACRO_CONFIG_INT(QmLaserSize, qm_laser_size, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "激光大小/粗细 (百分比, 100=默认)")
+MACRO_CONFIG_INT(QmLaserRoundCaps, qm_laser_round_caps, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "激光圆角端点 (0=方角, 1=圆角)")
+MACRO_CONFIG_INT(QmLaserAlpha, qm_laser_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "激光半透明度 (0=完全透明, 100=不透明)")

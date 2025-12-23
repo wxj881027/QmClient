@@ -1443,6 +1443,11 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView)
 
 void CMenus::RenderSettings(CUIRect MainView)
 {
+	// QmClient: Clamp ui_settings_page to valid range to prevent assertion failure
+	// This handles cases where old config files have an invalid page index
+	if(g_Config.m_UiSettingsPage < 0 || g_Config.m_UiSettingsPage >= SETTINGS_LENGTH)
+		g_Config.m_UiSettingsPage = SETTINGS_LANGUAGE;
+
 	// render background
 	CUIRect Button, TabBar, RestartBar;
 	MainView.VSplitRight(120.0f, &MainView, &TabBar);
