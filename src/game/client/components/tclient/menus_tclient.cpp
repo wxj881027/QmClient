@@ -2223,9 +2223,7 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 	{
 		Input()->SetClipboardText("1036393248");
 		// 显示复制成功提示
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "已复制QQ群号: 1036393248");
-		GameClient()->m_Chat.AddLine(-2, 0, aBuf);
+		GameClient()->m_Chat.AddLine(-2, 0, "已复制QQ群号: 1036393248");
 	}
 
 	// ======= 配置文件区域 ========

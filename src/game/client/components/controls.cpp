@@ -274,7 +274,7 @@ int CControls::SnapInput(int *pData)
 		if(!m_aInputData[g_Config.m_ClDummy].m_TargetX && !m_aInputData[g_Config.m_ClDummy].m_TargetY)
 			m_aInputData[g_Config.m_ClDummy].m_TargetX = 1;
 
-		m_aInputData[g_Config.m_ClDummy].m_Direction = m_aInputDirectionLeft[g_Config.m_ClDummy] + m_aInputDirectionRight[g_Config.m_ClDummy];
+		m_aInputData[g_Config.m_ClDummy].m_Direction = m_aInputDirectionRight[g_Config.m_ClDummy] - m_aInputDirectionLeft[g_Config.m_ClDummy];
 
 		// dummy copy moves
 		if(g_Config.m_ClDummyCopyMoves)
@@ -501,7 +501,7 @@ float CControls::GetMaxMouseDistance() const
 bool CControls::CheckNewInput()
 {
 	CNetObj_PlayerInput TestInput = m_aInputData[g_Config.m_ClDummy];
-	TestInput.m_Direction = m_aInputDirectionLeft[g_Config.m_ClDummy] + m_aInputDirectionRight[g_Config.m_ClDummy];
+	TestInput.m_Direction = m_aInputDirectionRight[g_Config.m_ClDummy] - m_aInputDirectionLeft[g_Config.m_ClDummy];
 
 	bool NewInput = false;
 	if(m_FastInput.m_Direction != TestInput.m_Direction)
