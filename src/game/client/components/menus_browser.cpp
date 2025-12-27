@@ -411,6 +411,11 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					}
 				}
 
+				// 检查是否是收藏地图
+				const bool IsFavoriteMap = GameClient()->m_TClient.IsFavoriteMap(pItem->m_aMap);
+				if(IsFavoriteMap)
+					TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f); // 金色
+
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
@@ -426,6 +431,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					});
 				if(!Printed)
 					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_1), &Button, pItem->m_aMap, FontSize, TEXTALIGN_ML, Props);
+
+				if(IsFavoriteMap)
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 			else if(Id == COL_FRIENDS)
 			{

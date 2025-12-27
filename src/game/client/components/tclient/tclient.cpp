@@ -420,6 +420,14 @@ void CTClient::OnConsoleInit()
 
 	Console()->Register("emote_cycle", "", CFGFLAG_CLIENT, ConEmoteCycle, this, "Cycle through emotes");
 
+	// 收藏地图命令
+	Console()->Register("add_favorite_map", "s[map_name]", CFGFLAG_CLIENT, ConAddFavoriteMap, this, "Add a map to favorites");
+	Console()->Register("remove_favorite_map", "s[map_name]", CFGFLAG_CLIENT, ConRemoveFavoriteMap, this, "Remove a map from favorites");
+	Console()->Register("clear_favorite_maps", "", CFGFLAG_CLIENT, ConClearFavoriteMaps, this, "Clear all favorite maps");
+
+	// 注册保存回调
+	ConfigManager()->RegisterCallback(ConfigSaveFavoriteMaps, this);
+
 	Console()->Chain(
 		"tc_allow_any_resolution", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
 			pfnCallback(pResult, pCallbackUserData);
@@ -1118,4 +1126,64 @@ void CTClient::TrackHookDirection(int Dummy)
 	}
 
 	Stats.m_WasHooking = IsHooking;
+}
+
+// ========== 收藏地图功能实现 ==========
+
+bool CTClient::IsFavoriteMap(const char *pMapName) const
+{
+	if(!pMapName || pMapName[0] == '\0')
+		return false;
+	return m_FavoriteMaps.find(std::string(pMapName)) != m_FavoriteMaps.end();
+}
+
+void CTClient::AddFavoriteMap(const char *pMapName)
+{
+	if(!pMapName || pMapName[0] == '\0')
+		return;
+	m_FavoriteMaps.insert(std::string(pMapName));
+	log_info("tclient", "Added favorite map: %s", pMapName);
+}
+
+void CTClient::RemoveFavoriteMap(const char *pMapName)
+{
+	if(!pMapName || pMapName[0] == '\0')
+		return;
+	m_FavoriteMaps.erase(std::string(pMapName));
+	log_info("tclient", "Removed favorite map: %s", pMapName);
+}
+
+void CTClient::ClearFavoriteMaps()
+{
+	m_FavoriteMaps.clear();
+	log_info("tclient", "Cleared all favorite maps");
+}
+
+void CTClient::ConAddFavoriteMap(IConsole::IResult *pResult, void *pUserData)
+{
+	CTClient *pThis = static_cast<CTClient *>(pUserData);
+	pThis->AddFavoriteMap(pResult->GetString(0));
+}
+
+void CTClient::ConRemoveFavoriteMap(IConsole::IResult *pResult, void *pUserData)
+{
+	CTClient *pThis = static_cast<CTClient *>(pUserData);
+	pThis->RemoveFavoriteMap(pResult->GetString(0));
+}
+
+void CTClient::ConClearFavoriteMaps(IConsole::IResult *pResult, void *pUserData)
+{
+	CTClient *pThis = static_cast<CTClient *>(pUserData);
+	pThis->ClearFavoriteMaps();
+}
+
+void CTClient::ConfigSaveFavoriteMaps(IConfigManager *pConfigManager, void *pUserData)
+{
+	CTClient *pThis = static_cast<CTClient *>(pUserData);
+	char aBuf[256];
+	for(const auto &Map : pThis->m_FavoriteMaps)
+	{
+		str_format(aBuf, sizeof(aBuf), "add_favorite_map \"%s\"", Map.c_str());
+		pConfigManager->WriteLine(aBuf);
+	}
 }

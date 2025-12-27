@@ -3313,6 +3313,86 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	Column.y = CardContent.y;
 	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
 
+	// ========== 模8: 收藏地图 ==========
+	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+	CUIRect Card8Start = Column;
+	s_GlassCards.push_back(Card8Start);
+
+	Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+	Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+	CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+
+	CardContent.HSplitTop(LG_HeadlineSize, &HeadlineRect, &CardContent);
+	TextRender()->TextColor(GetRainbowColor(7));
+	Ui()->DoLabel(&HeadlineRect, TCLocalize("收藏地图"), LG_HeadlineSize, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
+
+	// 收藏地图列表
+	const auto &FavMaps = GameClient()->m_TClient.GetFavoriteMaps();
+
+	// 记录复制状态和时间
+	static int s_CopiedMapIndex = -1;
+	static float s_CopiedTime = 0.0f;
+	if(s_CopiedMapIndex >= 0 && Client()->LocalTime() - s_CopiedTime > 1.5f)
+		s_CopiedMapIndex = -1;
+
+	if(FavMaps.empty())
+	{
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoLabel(&Row, TCLocalize("暂无收藏地图"), 12.0f, TEXTALIGN_ML);
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	}
+	else
+	{
+		int MapIndex = 0;
+		static int s_aMapButtonIds[64];
+		for(const auto &MapName : FavMaps)
+		{
+			if(MapIndex >= 64)
+				break;
+
+			CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+
+			// 检测点击
+			bool Clicked = false;
+			if(Ui()->MouseInside(&Row))
+			{
+				Ui()->SetHotItem(&s_aMapButtonIds[MapIndex]);
+				if(Ui()->MouseButtonClicked(0))
+				{
+					Input()->SetClipboardText(MapName.c_str());
+					s_CopiedMapIndex = MapIndex;
+					s_CopiedTime = Client()->LocalTime();
+					Clicked = true;
+				}
+			}
+
+			// 显示地图名或"已复制"
+			if(s_CopiedMapIndex == MapIndex)
+			{
+				TextRender()->TextColor(0.0f, 1.0f, 0.0f, 1.0f); // 绿色
+				Ui()->DoLabel(&Row, TCLocalize("已复制"), 12.0f, TEXTALIGN_ML);
+			}
+			else
+			{
+				TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f); // 金色
+				Ui()->DoLabel(&Row, MapName.c_str(), 12.0f, TEXTALIGN_ML);
+			}
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+			if(Ui()->HotItem() == &s_aMapButtonIds[MapIndex])
+				GameClient()->m_Tooltips.DoToolTip(&s_aMapButtonIds[MapIndex], &Row, TCLocalize("点击复制地图名"));
+
+			CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+			MapIndex++;
+		}
+	}
+
+	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+	Column.y = CardContent.y;
+	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+
 	// === Scroll Region End ===
 	RightView.y = Column.y;
 	CUIRect ScrollRegion;

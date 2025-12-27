@@ -9,6 +9,8 @@
 #include <game/client/component.h>
 
 #include <deque>
+#include <set>
+#include <string>
 
 // 玩家统计数据结构
 struct SPlayerStats
@@ -130,6 +132,13 @@ class CTClient : public CComponent
 	void UpdatePlayerStats();
 	void TrackHookDirection(int Dummy);
 
+	// 收藏地图功能
+	std::set<std::string> m_FavoriteMaps;
+	static void ConAddFavoriteMap(IConsole::IResult *pResult, void *pUserData);
+	static void ConRemoveFavoriteMap(IConsole::IResult *pResult, void *pUserData);
+	static void ConClearFavoriteMaps(IConsole::IResult *pResult, void *pUserData);
+	static void ConfigSaveFavoriteMaps(IConfigManager *pConfigManager, void *pUserData);
+
 public:
 	CTClient();
 	int Sizeof() const override { return sizeof(*this); }
@@ -162,6 +171,13 @@ public:
 	// 玩家统计公开接口
 	const SPlayerStats &GetPlayerStats(int Dummy = 0) const { return m_aPlayerStats[Dummy]; }
 	void ResetPlayerStats(int Dummy = -1); // -1 = 重置所有
+
+	// 收藏地图公开接口
+	bool IsFavoriteMap(const char *pMapName) const;
+	void AddFavoriteMap(const char *pMapName);
+	void RemoveFavoriteMap(const char *pMapName);
+	void ClearFavoriteMaps();
+	const std::set<std::string> &GetFavoriteMaps() const { return m_FavoriteMaps; }
 };
 
 #endif

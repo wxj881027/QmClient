@@ -704,6 +704,21 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		}
 	}
 
+	// favorite map checkbox
+	{
+		CUIRect Button;
+		bool IsMapFavorite = GameClient()->m_TClient.IsFavoriteMap(CurrentServerInfo.m_aMap);
+		ServerInfo.HSplitBottom(20.0f, &ServerInfo, &Button);
+		static int s_AddFavMapButton = 0;
+		if(DoButton_CheckBox(&s_AddFavMapButton, TCLocalize("收藏地图"), IsMapFavorite, &Button))
+		{
+			if(IsMapFavorite)
+				GameClient()->m_TClient.RemoveFavoriteMap(CurrentServerInfo.m_aMap);
+			else
+				GameClient()->m_TClient.AddFavoriteMap(CurrentServerInfo.m_aMap);
+		}
+	}
+
 	GameInfo.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
 	GameInfo.Margin(10.0f, &GameInfo);
 
@@ -840,6 +855,36 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 	int Selected = -1;
 	int TotalShown = 0;
 
+	// 检查是否为地图投票并提取地图名的辅助函数
+	auto ExtractMapName = [](const char *pDescription, char *pMapName, int MaxLen) -> bool {
+		// 地图投票格式通常为:
+		// "MapName by Author | x/5 ★" 或 "Map: MapName"
+		if(!pDescription)
+			return false;
+
+		// 尝试匹配 "Map: " 前缀
+		const char *pMapPrefix = str_find_nocase(pDescription, "Map:");
+		if(pMapPrefix)
+		{
+			pMapPrefix += 4; // 跳过 "Map:"
+			while(*pMapPrefix == ' ')
+				pMapPrefix++;
+			str_copy(pMapName, pMapPrefix, MaxLen);
+			return true;
+		}
+
+		// 尝试匹配 "Name by Author" 格式
+		const char *pBy = str_find_nocase(pDescription, " by ");
+		if(pBy && (str_find(pDescription, "★") || str_find(pDescription, "✰")))
+		{
+			int Len = minimum((int)(pBy - pDescription), MaxLen - 1);
+			str_copy(pMapName, pDescription, Len + 1);
+			return true;
+		}
+
+		return false;
+	};
+
 	int i = 0;
 	for(const CVoteOptionClient *pOption = GameClient()->m_Voting.FirstOption(); pOption; pOption = pOption->m_pNext, i++)
 	{
@@ -867,7 +912,27 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 
 		CUIRect Label;
 		Item.m_Rect.VMargin(2.0f, &Label);
-		Ui()->DoLabel(&Label, pOption->m_aDescription, 13.0f, TEXTALIGN_ML);
+
+		// 检查是否是收藏地图，用金色高亮
+		char aMapName[128];
+		bool IsFavorite = false;
+		if(ExtractMapName(pOption->m_aDescription, aMapName, sizeof(aMapName)))
+		{
+			IsFavorite = GameClient()->m_TClient.IsFavoriteMap(aMapName);
+		}
+
+		if(IsFavorite)
+		{
+			// 金色高亮
+			ColorRGBA GoldColor(1.0f, 0.85f, 0.0f, 1.0f);
+			TextRender()->TextColor(GoldColor);
+			Ui()->DoLabel(&Label, pOption->m_aDescription, 13.0f, TEXTALIGN_ML);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+		}
+		else
+		{
+			Ui()->DoLabel(&Label, pOption->m_aDescription, 13.0f, TEXTALIGN_ML);
+		}
 	}
 
 	Selected = s_ListBox.DoEnd();
