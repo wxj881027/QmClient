@@ -1476,6 +1476,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		Localize("DDNet"),
 		Localize("Assets"),
 		TCLocalize("QmClient"),
+		TCLocalize("栖梦"),
 		Localize("Profiles")};
 
 	static CButtonContainer s_aTabButtons[SETTINGS_LENGTH];
@@ -1545,6 +1546,11 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(13);
 		RenderSettingsTClient(MainView);
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_QIMENG)
+	{
+		GameClient()->m_MenuBackground.ChangePosition(15);
+		RenderSettingsQiMeng(MainView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
 	{

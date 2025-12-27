@@ -767,55 +767,20 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 	// TODO: add preview
 
-		// ***** Gores演员专用 ***** //
+	// ***** Gores演员模块已迁移至『栖梦』侧栏 ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Gores演员专用"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("Gores演员模块已迁移至『栖梦』侧栏"), FontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
-
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeChatEnabled, TCLocalize("掉水里自动发言和表情"), &g_Config.m_TcFreezeChatEnabled, &Column, LineSize);
-
-	if(g_Config.m_TcFreezeChatEnabled)
-	{
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeChatEmoticon, TCLocalize("掉水里发表情"), &g_Config.m_TcFreezeChatEmoticon, &Column, LineSize);
-
-		if(g_Config.m_TcFreezeChatEmoticon)
-		{
-			Column.HSplitTop(LineSize, &Button, &Column);
-			Ui()->DoScrollbarOption(&g_Config.m_TcFreezeChatEmoticonId, &g_Config.m_TcFreezeChatEmoticonId, &Button, TCLocalize("表情ID"), 0, 15);
-		}
-
-		CUIRect FreezeChatMessage;
-		Column.HSplitTop(LineSize + MarginExtraSmall, &FreezeChatMessage, &Column);
-		FreezeChatMessage.HSplitTop(MarginExtraSmall, nullptr, &FreezeChatMessage);
-		FreezeChatMessage.VSplitMid(&Label, &FreezeChatMessage);
-		Ui()->DoLabel(&Label, TCLocalize("聊天消息:"), FontSize, TEXTALIGN_ML);
-		static CLineInput s_FreezeChatMessage(g_Config.m_TcFreezeChatMessage, sizeof(g_Config.m_TcFreezeChatMessage));
-		s_FreezeChatMessage.SetEmptyText(TCLocalize("留空禁用"));
-		Ui()->DoEditBox(&s_FreezeChatMessage, &FreezeChatMessage, EditBoxFontSize);
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_TcFreezeChatChance, &g_Config.m_TcFreezeChatChance, &Button, TCLocalize("发送概率"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-
-	}
-
-	Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
-		// ***** 计分板查分 ***** //
+	// ***** 计分板查分模块已迁移至『栖梦』侧栏 ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("计分板查分"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("计分板查分模块已迁移至『栖梦』侧栏"), FontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
-
-	DoButton_CheckBoxAutoVMarginAndSet(
-		&g_Config.m_ClScoreboardPoints,
-		TCLocalize("显示计分板查分"),
-		&g_Config.m_ClScoreboardPoints,
-		&Column,
-		LineSize);
-
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
 
@@ -1092,171 +1057,37 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	//Ui()->DoEditBox(&s_FinishName, &Button, EditBoxFontSize);
 	//s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
-		// ***** 消息气泡 ***** //
+	// ***** 消息气泡已迁移至『栖梦』侧栏 ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("消息气泡"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("消息气泡模块已迁移至『栖梦』侧栏"), FontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
-
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChatBubble, TCLocalize("在玩家头顶显示聊天气泡"), &g_Config.m_TcChatBubble, &Column, LineSize);
-
-	if(g_Config.m_TcChatBubble)
-	{
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChatBubbleTyping, TCLocalize("显示正在输入的预览气泡"), &g_Config.m_TcChatBubbleTyping, &Column, LineSize);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChatBubbleZoomScale, TCLocalize("聊天气泡随镜头缩放"), &g_Config.m_TcChatBubbleZoomScale, &Column, LineSize);
-
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleDuration, &g_Config.m_TcChatBubbleDuration, &Button, TCLocalize("持续时间"), 1, 30, &CUi::ms_LinearScrollbarScale, 0, "s");
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleAlpha, &g_Config.m_TcChatBubbleAlpha, &Button, TCLocalize("透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleFontSize, &g_Config.m_TcChatBubbleFontSize, &Button, TCLocalize("字体大小"), 8, 24);
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleMaxWidth, &g_Config.m_TcChatBubbleMaxWidth, &Button, TCLocalize("最大宽度"), 100, 400, &CUi::ms_LinearScrollbarScale, 0, "px");
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleOffsetY, &g_Config.m_TcChatBubbleOffsetY, &Button, TCLocalize("垂直偏移"), 20, 100);
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleRounding, &g_Config.m_TcChatBubbleRounding, &Button, TCLocalize("圆角"), 0, 30);
-
-		// Animation dropdown
-		Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
-		static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
-		s_ChatBubbleAnimDropDownNames = {TCLocalize("淡出"), TCLocalize("收缩"), TCLocalize("上滑")};
-		static CUi::SDropDownState s_ChatBubbleAnimDropDownState;
-		static CScrollRegion s_ChatBubbleAnimDropDownScrollRegion;
-		s_ChatBubbleAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatBubbleAnimDropDownScrollRegion;
-		CUIRect AnimDropDownRect;
-		Column.HSplitTop(LineSize, &AnimDropDownRect, &Column);
-		AnimDropDownRect.VSplitLeft(120.0f, &Label, &AnimDropDownRect);
-		Ui()->DoLabel(&Label, TCLocalize("动画效果: "), FontSize, TEXTALIGN_ML);
-		const int AnimSelectedNew = Ui()->DoDropDown(&AnimDropDownRect, g_Config.m_TcChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState);
-		if(g_Config.m_TcChatBubbleAnimation != AnimSelectedNew)
-		{
-			g_Config.m_TcChatBubbleAnimation = AnimSelectedNew;
-		}
-		Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
-
-		// Color pickers
-		static CButtonContainer s_ChatBubbleBgColorId, s_ChatBubbleTextColorId;
-		DoLine_ColorPicker(&s_ChatBubbleBgColorId, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("背景颜色"), &g_Config.m_TcChatBubbleBgColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.8f), false, nullptr, true);
-		DoLine_ColorPicker(&s_ChatBubbleTextColorId, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("文本颜色"), &g_Config.m_TcChatBubbleTextColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
-	}
-
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
 
-	// ***** 粒子拖尾 ***** //
+	// ***** 粒子拖尾模块已迁移至『栖梦』侧栏 ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("粒子拖尾"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("粒子拖尾模块已迁移至『栖梦』侧栏"), FontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
-
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, TCLocalize("启用粒子拖尾"), &g_Config.m_QmcFootParticles, &Column, LineSize);
-
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
-	// ***** QmClient: Hook辅助线设置 ***** //
+	// ***** Hook辅助线模块已迁移至『栖梦』侧栏 ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Hook辅助线"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("Hook辅助线模块已迁移至『栖梦』侧栏"), FontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
-
-	// Hook collision line mode dropdown
-	Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
-	static std::vector<const char *> s_HookCollModeDropDownNames;
-	s_HookCollModeDropDownNames = {TCLocalize("武器跟随 (Weapon-Follow)"), TCLocalize("墙体跟随 (Wall-Follow, 默认)")};
-	static CUi::SDropDownState s_HookCollModeDropDownState;
-	static CScrollRegion s_HookCollModeDropDownScrollRegion;
-	s_HookCollModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_HookCollModeDropDownScrollRegion;
-	int HookCollModeSelectedOld = g_Config.m_QmHookCollMode - 1; // cvar 1-2 -> index 0-1
-	CUIRect HookCollModeDropDownRect;
-	Column.HSplitTop(LineSize, &HookCollModeDropDownRect, &Column);
-	HookCollModeDropDownRect.VSplitLeft(120.0f, &Label, &HookCollModeDropDownRect);
-	Ui()->DoLabel(&Label, TCLocalize("颜色模式: "), FontSize, TEXTALIGN_ML);
-	const int HookCollModeSelectedNew = Ui()->DoDropDown(&HookCollModeDropDownRect, HookCollModeSelectedOld, s_HookCollModeDropDownNames.data(), s_HookCollModeDropDownNames.size(), s_HookCollModeDropDownState);
-	if(HookCollModeSelectedOld != HookCollModeSelectedNew)
-	{
-		g_Config.m_QmHookCollMode = HookCollModeSelectedNew + 1; // index 0-1 -> cvar 1-2
-	}
-	Column.HSplitTop(MarginSmall, nullptr, &Column);
-
-	// Weapon-Follow mode color pickers (only show when mode == 1)
-	if(g_Config.m_QmHookCollMode == 1)
-	{
-		static CButtonContainer s_ShotgunColorId, s_LaserColorId, s_GrenadeColorId;
-		DoLine_ColorPicker(&s_ShotgunColorId, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("散弹枪颜色 (棕色)"), &g_Config.m_QmShotgunColor, ColorRGBA(0.55f, 0.35f, 0.17f), false);
-		DoLine_ColorPicker(&s_LaserColorId, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("激光枪颜色 (蓝色)"), &g_Config.m_QmLaserColor, ColorRGBA(0.18f, 0.42f, 1.0f), false);
-		DoLine_ColorPicker(&s_GrenadeColorId, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &Column, TCLocalize("榴弹枪颜色 (红色)"), &g_Config.m_QmGrenadeColor, ColorRGBA(0.9f, 0.22f, 0.21f), false);
-	}
-
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
-	// ***** QmClient: 激光设置（脉冲） ***** //
+	// ***** 激光设置（脉冲）模块已迁移至『栖梦』侧栏 ***** //
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("激光设置（脉冲）"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("激光设置（脉冲）模块已迁移至『栖梦』侧栏"), FontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
-
-	// 增强激光特效 checkbox
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmLaserEnhanced, TCLocalize("增强激光特效"), &g_Config.m_QmLaserEnhanced, &Column, LineSize);
-
-	// 激光辉光强度滑条
-	Column.HSplitTop(LineSize, &Button, &Column);
-	Ui()->DoScrollbarOption(&g_Config.m_QmLaserGlowIntensity, &g_Config.m_QmLaserGlowIntensity, &Button, TCLocalize("激光辉光强度"), 0, 100);
-
-	// 激光大小滑条
-	Column.HSplitTop(LineSize, &Button, &Column);
-	Ui()->DoScrollbarOption(&g_Config.m_QmLaserSize, &g_Config.m_QmLaserSize, &Button, TCLocalize("激光大小"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
-
-	// 半透明度滑条
-	Column.HSplitTop(LineSize, &Button, &Column);
-	Ui()->DoScrollbarOption(&g_Config.m_QmLaserAlpha, &g_Config.m_QmLaserAlpha, &Button, TCLocalize("半透明"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-
-	// 圆角端点 checkbox
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmLaserRoundCaps, TCLocalize("圆角端点"), &g_Config.m_QmLaserRoundCaps, &Column, LineSize);
-
-	if(g_Config.m_QmLaserEnhanced)
-	{
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_QmLaserPulseSpeed, &g_Config.m_QmLaserPulseSpeed, &Button, TCLocalize("脉冲速度"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
-		Column.HSplitTop(LineSize, &Button, &Column);
-		Ui()->DoScrollbarOption(&g_Config.m_QmLaserPulseAmplitude, &g_Config.m_QmLaserPulseAmplitude, &Button, TCLocalize("脉冲幅度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-	}
-	else
-	{
-		Column.HSplitTop(LineSize * 2.0f, nullptr, &Column);
-	}
-
-	// 激光预览区域
-	Column.HSplitTop(MarginSmall, nullptr, &Column);
-	Column.HSplitTop(LineSize, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("激光预览"), FontSize, TEXTALIGN_ML);
-
-	// 激光枪预览
-	const float LaserPreviewHeight = 50.0f;
-	CUIRect LaserPreviewRect;
-	Column.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &Column);
-	LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
-	{
-		ColorHSLA OutlineColor = ColorHSLA(g_Config.m_ClLaserRifleOutlineColor);
-		ColorHSLA InnerColor = ColorHSLA(g_Config.m_ClLaserRifleInnerColor);
-		DoLaserPreview(&LaserPreviewRect, OutlineColor, InnerColor, LASERTYPE_RIFLE);
-	}
-
-	// 散弹枪激光预览
-	Column.HSplitTop(MarginSmall, nullptr, &Column);
-	Column.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &Column);
-	LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
-	{
-		ColorHSLA OutlineColor = ColorHSLA(g_Config.m_ClLaserShotgunOutlineColor);
-		ColorHSLA InnerColor = ColorHSLA(g_Config.m_ClLaserShotgunInnerColor);
-		DoLaserPreview(&LaserPreviewRect, OutlineColor, InnerColor, LASERTYPE_SHOTGUN);
-	}
-
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
 
@@ -3048,5 +2879,418 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 
 	CUIRect EndPad{Content.x, Content.y, Content.w, 5.0f};
 	s_ScrollRegion.AddRect(EndPad);
+	s_ScrollRegion.End();
+}
+
+void CMenus::RenderSettingsQiMeng(CUIRect MainView)
+{
+	// ============================================
+	// Liquid Glass UI - 稳定布局系统
+	// ============================================
+
+	// === 布局常量（统一定义，禁止魔数） ===
+	constexpr float LG_CardPadding = 14.0f;          // 卡片内边距
+	constexpr float LG_CardSpacing = 16.0f;          // 卡片间距
+	constexpr float LG_CornerRadius = 12.0f;         // 圆角
+	constexpr float LG_CardAlpha = 0.70f;            // 卡片透明度
+	constexpr float LG_HeadlineSize = 14.0f;         // 标题字号
+	constexpr float LG_BodySize = 12.0f;             // 正文字号
+	constexpr float LG_LineHeight = 20.0f;           // 统一行高
+	constexpr float LG_LineSpacing = 5.0f;           // 统一行间距
+	constexpr float LG_HeadlineMargin = 10.0f;       // 标题下方间距
+	constexpr float LG_LabelWidth = 170.0f;          // 左侧标签列宽度（固定）
+
+	// === 颜色定义 ===
+	const ColorRGBA LG_GlassColor(0.08f, 0.09f, 0.12f, LG_CardAlpha);
+	const ColorRGBA LG_HighlightColor(1.0f, 1.0f, 1.0f, 0.05f);
+	const ColorRGBA LG_ShadowColor(0.0f, 0.0f, 0.0f, 0.12f);
+
+	CUIRect Column, LeftView, RightView;
+
+	static CScrollRegion s_ScrollRegion;
+	vec2 ScrollOffset(0.0f, 0.0f);
+	CScrollRegionParams ScrollParams;
+	ScrollParams.m_ScrollUnit = 60.0f;
+	ScrollParams.m_Flags = CScrollRegionParams::FLAG_CONTENT_STATIC_WIDTH;
+	ScrollParams.m_ScrollbarMargin = 8.0f;
+	s_ScrollRegion.Begin(&MainView, &ScrollOffset, &ScrollParams);
+
+	static std::vector<CUIRect> s_GlassCards;
+	static vec2 s_PrevScrollOffset(0.0f, 0.0f);
+
+	MainView.y += ScrollOffset.y;
+
+	// 外边距
+	MainView.VSplitRight(10.0f, &MainView, nullptr);
+	MainView.VSplitLeft(10.0f, nullptr, &MainView);
+
+	MainView.VSplitMid(&LeftView, &RightView, LG_CardSpacing);
+
+	// === 绘制 Liquid Glass 卡片背景 ===
+	for(CUIRect &Card : s_GlassCards)
+	{
+		Card.y -= s_PrevScrollOffset.y - ScrollOffset.y;
+
+		// 阴影层
+		CUIRect Shadow = Card;
+		Shadow.x += 1.5f;
+		Shadow.y += 2.0f;
+		Shadow.Draw(LG_ShadowColor, IGraphics::CORNER_ALL, LG_CornerRadius);
+
+		// 主玻璃层
+		Card.Draw(LG_GlassColor, IGraphics::CORNER_ALL, LG_CornerRadius);
+
+		// 顶部高光
+		CUIRect TopHighlight = Card;
+		TopHighlight.h = 1.0f;
+		TopHighlight.x += LG_CornerRadius;
+		TopHighlight.w -= LG_CornerRadius * 2.0f;
+		TopHighlight.Draw(LG_HighlightColor, IGraphics::CORNER_NONE, 0.0f);
+	}
+	s_PrevScrollOffset = ScrollOffset;
+	s_GlassCards.clear();
+
+	// === 动态彩色标题 ===
+	const float Time = Client()->GlobalTime();
+	auto GetRainbowColor = [Time](int ModuleIndex) -> ColorRGBA {
+		// 每个模块有不同的相位偏移，形成彩虹波浪效果
+		const float Hue = std::fmod(Time * 0.15f + ModuleIndex * 0.12f, 1.0f);
+		// HSL 转 RGB（S=0.7, L=0.65 柔和饱和度）
+		ColorHSLA Hsla(Hue, 0.7f, 0.65f, 1.0f);
+		return color_cast<ColorRGBA>(Hsla);
+	};
+
+	// ***** LeftView ***** //
+	Column = LeftView;
+	CUIRect Row, LabelCol, ControlCol, CardContent, HeadlineRect;
+
+	// ========== 模块 1: 消息气泡 ==========
+	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+	CUIRect Card1Start = Column;
+	s_GlassCards.push_back(Card1Start);
+
+	// 卡片内边距
+	Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+	Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+	CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+
+	// 标题
+	CardContent.HSplitTop(LG_HeadlineSize, &HeadlineRect, &CardContent);
+	TextRender()->TextColor(GetRainbowColor(0));
+	Ui()->DoLabel(&HeadlineRect, TCLocalize("消息气泡"), LG_HeadlineSize, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
+
+	// 控件布局
+
+	// Checkbox: 在玩家头顶显示聊天气泡
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChatBubble, TCLocalize("在玩家头顶显示聊天气泡"), &g_Config.m_TcChatBubble, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	if(g_Config.m_TcChatBubble)
+	{
+		// Checkbox: 显示正在输入的预览气泡
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChatBubbleTyping, TCLocalize("显示正在输入的预览气泡"), &g_Config.m_TcChatBubbleTyping, &Row, LG_LineHeight);
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Checkbox: 聊天气泡随镜头缩放
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChatBubbleZoomScale, TCLocalize("聊天气泡随镜头缩放"), &g_Config.m_TcChatBubbleZoomScale, &Row, LG_LineHeight);
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Slider: 持续时间
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleDuration, &g_Config.m_TcChatBubbleDuration, &Row, TCLocalize("持续时间"), 1, 30, &CUi::ms_LinearScrollbarScale, 0, "s");
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Slider: 透明度
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleAlpha, &g_Config.m_TcChatBubbleAlpha, &Row, TCLocalize("透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Slider: 字体大小
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleFontSize, &g_Config.m_TcChatBubbleFontSize, &Row, TCLocalize("字体大小"), 8, 24);
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Slider: 最大宽度
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleMaxWidth, &g_Config.m_TcChatBubbleMaxWidth, &Row, TCLocalize("最大宽度"), 100, 400, &CUi::ms_LinearScrollbarScale, 0, "px");
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Slider: 垂直偏移
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleOffsetY, &g_Config.m_TcChatBubbleOffsetY, &Row, TCLocalize("垂直偏移"), 20, 100);
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Slider: 圆角
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_TcChatBubbleRounding, &g_Config.m_TcChatBubbleRounding, &Row, TCLocalize("圆角"), 0, 30);
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Dropdown: 动画效果
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
+		s_ChatBubbleAnimDropDownNames = {TCLocalize("淡出"), TCLocalize("收缩"), TCLocalize("上滑")};
+		static CUi::SDropDownState s_ChatBubbleAnimDropDownState;
+		static CScrollRegion s_ChatBubbleAnimDropDownScrollRegion;
+		s_ChatBubbleAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatBubbleAnimDropDownScrollRegion;
+		Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+		Ui()->DoLabel(&LabelCol, TCLocalize("动画效果"), LG_BodySize, TEXTALIGN_ML);
+		const int AnimSelectedNew = Ui()->DoDropDown(&ControlCol, g_Config.m_TcChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState);
+		if(g_Config.m_TcChatBubbleAnimation != AnimSelectedNew)
+			g_Config.m_TcChatBubbleAnimation = AnimSelectedNew;
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// ColorPicker: 背景颜色
+		static CButtonContainer s_ChatBubbleBgColorId, s_ChatBubbleTextColorId;
+		DoLine_ColorPicker(&s_ChatBubbleBgColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("背景颜色"), &g_Config.m_TcChatBubbleBgColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.8f), false, nullptr, true);
+
+		// ColorPicker: 文本颜色
+		DoLine_ColorPicker(&s_ChatBubbleTextColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("文本颜色"), &g_Config.m_TcChatBubbleTextColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+	}
+
+	// 卡片底部边距
+	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+	Column.y = CardContent.y;
+	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+
+	// ========== 模块 2: Gores演员专用 ==========
+	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+	CUIRect Card2Start = Column;
+	s_GlassCards.push_back(Card2Start);
+
+	Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+	Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+	CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+
+	CardContent.HSplitTop(LG_HeadlineSize, &HeadlineRect, &CardContent);
+	TextRender()->TextColor(GetRainbowColor(1));
+	Ui()->DoLabel(&HeadlineRect, TCLocalize("Gores演员专用"), LG_HeadlineSize, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
+
+	// Checkbox: 掉水里自动发言和表情
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeChatEnabled, TCLocalize("掉水里自动发言和表情"), &g_Config.m_TcFreezeChatEnabled, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	if(g_Config.m_TcFreezeChatEnabled)
+	{
+		// Checkbox: 掉水里发表情
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeChatEmoticon, TCLocalize("掉水里发表情"), &g_Config.m_TcFreezeChatEmoticon, &Row, LG_LineHeight);
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		if(g_Config.m_TcFreezeChatEmoticon)
+		{
+			CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+			Ui()->DoScrollbarOption(&g_Config.m_TcFreezeChatEmoticonId, &g_Config.m_TcFreezeChatEmoticonId, &Row, TCLocalize("表情ID"), 0, 15);
+			CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+		}
+
+		// EditBox: 聊天消息
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+		Ui()->DoLabel(&LabelCol, TCLocalize("聊天消息"), LG_BodySize, TEXTALIGN_ML);
+		static CLineInput s_FreezeChatMessageQiMeng(g_Config.m_TcFreezeChatMessage, sizeof(g_Config.m_TcFreezeChatMessage));
+		s_FreezeChatMessageQiMeng.SetEmptyText(TCLocalize("留空禁用"));
+		Ui()->DoEditBox(&s_FreezeChatMessageQiMeng, &ControlCol, LG_BodySize);
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		// Slider: 发送概率
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_TcFreezeChatChance, &g_Config.m_TcFreezeChatChance, &Row, TCLocalize("发送概率"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	}
+
+	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+	Column.y = CardContent.y;
+	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+
+	// ========== 模块 3: 计分板查分 ==========
+	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+	CUIRect Card3Start = Column;
+	s_GlassCards.push_back(Card3Start);
+
+	Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+	Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+	CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+
+	CardContent.HSplitTop(LG_HeadlineSize, &HeadlineRect, &CardContent);
+	TextRender()->TextColor(GetRainbowColor(2));
+	Ui()->DoLabel(&HeadlineRect, TCLocalize("计分板查分"), LG_HeadlineSize, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
+
+	// Checkbox: 显示计分板查分
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClScoreboardPoints, TCLocalize("显示计分板查分"), &g_Config.m_ClScoreboardPoints, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+	Column.y = CardContent.y;
+	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+
+	// ***** RightView ***** //
+	LeftView = Column;
+	Column = RightView;
+
+	// ========== 模块 4: 粒子拖尾 ==========
+	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+	CUIRect Card4Start = Column;
+	s_GlassCards.push_back(Card4Start);
+
+	Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+	Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+	CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+
+	CardContent.HSplitTop(LG_HeadlineSize, &HeadlineRect, &CardContent);
+	TextRender()->TextColor(GetRainbowColor(3));
+	Ui()->DoLabel(&HeadlineRect, TCLocalize("粒子拖尾"), LG_HeadlineSize, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
+
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, TCLocalize("启用粒子拖尾"), &g_Config.m_QmcFootParticles, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+	Column.y = CardContent.y;
+	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+
+	// ========== 模块 5: Hook辅助线 ==========
+	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+	CUIRect Card5Start = Column;
+	s_GlassCards.push_back(Card5Start);
+
+	Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+	Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+	CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+
+	CardContent.HSplitTop(LG_HeadlineSize, &HeadlineRect, &CardContent);
+	TextRender()->TextColor(GetRainbowColor(4));
+	Ui()->DoLabel(&HeadlineRect, TCLocalize("Hook辅助线"), LG_HeadlineSize, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
+
+	// Dropdown: 颜色模式
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	static std::vector<const char *> s_HookCollModeDropDownNamesQM;
+	s_HookCollModeDropDownNamesQM = {TCLocalize("武器跟随"), TCLocalize("墙体跟随 (默认)")};
+	static CUi::SDropDownState s_HookCollModeDropDownStateQM;
+	static CScrollRegion s_HookCollModeDropDownScrollRegionQM;
+	s_HookCollModeDropDownStateQM.m_SelectionPopupContext.m_pScrollRegion = &s_HookCollModeDropDownScrollRegionQM;
+	Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+	Ui()->DoLabel(&LabelCol, TCLocalize("颜色模式"), LG_BodySize, TEXTALIGN_ML);
+	int HookCollModeSelectedOldQM = g_Config.m_QmHookCollMode - 1;
+	const int HookCollModeSelectedNewQM = Ui()->DoDropDown(&ControlCol, HookCollModeSelectedOldQM, s_HookCollModeDropDownNamesQM.data(), s_HookCollModeDropDownNamesQM.size(), s_HookCollModeDropDownStateQM);
+	if(HookCollModeSelectedOldQM != HookCollModeSelectedNewQM)
+		g_Config.m_QmHookCollMode = HookCollModeSelectedNewQM + 1;
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	if(g_Config.m_QmHookCollMode == 1)
+	{
+		static CButtonContainer s_ShotgunColorIdQM, s_LaserColorIdQM, s_GrenadeColorIdQM;
+		DoLine_ColorPicker(&s_ShotgunColorIdQM, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("散弹枪颜色"), &g_Config.m_QmShotgunColor, ColorRGBA(0.55f, 0.35f, 0.17f), false);
+		DoLine_ColorPicker(&s_LaserColorIdQM, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("激光枪颜色"), &g_Config.m_QmLaserColor, ColorRGBA(0.18f, 0.42f, 1.0f), false);
+		DoLine_ColorPicker(&s_GrenadeColorIdQM, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("榴弹枪颜色"), &g_Config.m_QmGrenadeColor, ColorRGBA(0.9f, 0.22f, 0.21f), false);
+	}
+
+	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+	Column.y = CardContent.y;
+	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+
+	// ========== 模块 6: 激光设置（脉冲） ==========
+	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+	CUIRect Card6Start = Column;
+	s_GlassCards.push_back(Card6Start);
+
+	Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+	Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+	CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+
+	CardContent.HSplitTop(LG_HeadlineSize, &HeadlineRect, &CardContent);
+	TextRender()->TextColor(GetRainbowColor(5));
+	Ui()->DoLabel(&HeadlineRect, TCLocalize("激光设置"), LG_HeadlineSize, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
+
+	// Checkbox: 增强激光特效
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmLaserEnhanced, TCLocalize("增强激光特效"), &g_Config.m_QmLaserEnhanced, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	// Slider: 激光辉光强度
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	Ui()->DoScrollbarOption(&g_Config.m_QmLaserGlowIntensity, &g_Config.m_QmLaserGlowIntensity, &Row, TCLocalize("辉光强度"), 0, 100);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	// Slider: 激光大小
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	Ui()->DoScrollbarOption(&g_Config.m_QmLaserSize, &g_Config.m_QmLaserSize, &Row, TCLocalize("激光大小"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	// Slider: 半透明
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	Ui()->DoScrollbarOption(&g_Config.m_QmLaserAlpha, &g_Config.m_QmLaserAlpha, &Row, TCLocalize("半透明"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	// Checkbox: 圆角端点
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmLaserRoundCaps, TCLocalize("圆角端点"), &g_Config.m_QmLaserRoundCaps, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	if(g_Config.m_QmLaserEnhanced)
+	{
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_QmLaserPulseSpeed, &g_Config.m_QmLaserPulseSpeed, &Row, TCLocalize("脉冲速度"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+		Ui()->DoScrollbarOption(&g_Config.m_QmLaserPulseAmplitude, &g_Config.m_QmLaserPulseAmplitude, &Row, TCLocalize("脉冲幅度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	}
+
+	// 激光预览区域
+	CardContent.HSplitTop(LG_LineSpacing * 2, nullptr, &CardContent);
+	CardContent.HSplitTop(LG_BodySize, &Row, &CardContent);
+	Ui()->DoLabel(&Row, TCLocalize("激光预览"), LG_BodySize, TEXTALIGN_ML);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	const float LaserPreviewHeightQM = 45.0f;
+	CUIRect LaserPreviewRectQM;
+	CardContent.HSplitTop(LaserPreviewHeightQM, &LaserPreviewRectQM, &CardContent);
+	LaserPreviewRectQM.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 8.0f);
+	{
+		ColorHSLA OutlineColor = ColorHSLA(g_Config.m_ClLaserRifleOutlineColor);
+		ColorHSLA InnerColor = ColorHSLA(g_Config.m_ClLaserRifleInnerColor);
+		DoLaserPreview(&LaserPreviewRectQM, OutlineColor, InnerColor, LASERTYPE_RIFLE);
+	}
+
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	CardContent.HSplitTop(LaserPreviewHeightQM, &LaserPreviewRectQM, &CardContent);
+	LaserPreviewRectQM.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 8.0f);
+	{
+		ColorHSLA OutlineColor = ColorHSLA(g_Config.m_ClLaserShotgunOutlineColor);
+		ColorHSLA InnerColor = ColorHSLA(g_Config.m_ClLaserShotgunInnerColor);
+		DoLaserPreview(&LaserPreviewRectQM, OutlineColor, InnerColor, LASERTYPE_SHOTGUN);
+	}
+
+	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+	Column.y = CardContent.y;
+	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+
+	// === Scroll Region End ===
+	RightView.y = Column.y;
+	CUIRect ScrollRegion;
+	ScrollRegion.x = MainView.x;
+	ScrollRegion.y = maximum(LeftView.y, RightView.y) + LG_CardSpacing;
+	ScrollRegion.w = MainView.w;
+	ScrollRegion.h = 0.0f;
+	s_ScrollRegion.AddRect(ScrollRegion);
 	s_ScrollRegion.End();
 }
