@@ -1861,9 +1861,9 @@ void CHud::RenderMovementInformation()
 	{
 		const char *pStatusText;
 		if(g_Config.m_ClDummyResetOnSwitch == 0)
-			pStatusText = "卡键: OFF";
-		else if(g_Config.m_ClDummyResetOnSwitch == 1)
 			pStatusText = "卡键: ON";
+		else if(g_Config.m_ClDummyResetOnSwitch == 1)
+			pStatusText = "卡键: OFF";
 		else if(g_Config.m_ClDummyResetOnSwitch == 2)
 			pStatusText = "卡键: 重置本体";
 		else
