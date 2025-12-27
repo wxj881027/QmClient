@@ -386,47 +386,119 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 		Graphics()->TextureClear();
 		Graphics()->QuadsBegin();
 
-		// QmClient: 增强激光辉光效果（在基础激光之前渲染，确保正确分层）
+		// QmClient: 精美荧光激光效果 - 使用顶点颜色渐变
 		if(g_Config.m_QmLaserEnhanced && g_Config.m_QmLaserGlowIntensity > 0 && (Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN))
 		{
-			// 计算脉冲动画
+			float GlowIntensity = g_Config.m_QmLaserGlowIntensity / 100.0f;
+			
+			// 脉冲动画
 			float PulseSpeed = g_Config.m_QmLaserPulseSpeed / 100.0f;
 			float PulseAmplitude = g_Config.m_QmLaserPulseAmplitude / 100.0f;
-			float PulsePhase = Client()->GlobalTime() * 4.0f * PulseSpeed;
-			float PulseFactor = 1.0f + PulseAmplitude * 0.5f * (1.0f + std::sin(PulsePhase));
-
-			// 辉光强度影响透明度和宽度
-			float GlowIntensity = g_Config.m_QmLaserGlowIntensity / 100.0f;
-			float GlowAlpha = 0.15f * GlowIntensity * PulseFactor * LaserAlpha;
-			float GlowWidth = (14.0f + 8.0f * GlowIntensity * PulseFactor) * SizeScale;
-
-			// 外层辉光（最宽，最透明）
+			float Time = Client()->GlobalTime();
+			float Pulse = 1.0f + PulseAmplitude * 0.3f * std::sin(Time * 4.0f * PulseSpeed);
+			
+			// 荧光基础参数
+			float BaseWidth = 25.0f * SizeScale * Ia * Pulse;
+			vec2 Perp = vec2(Dir.y, -Dir.x);
+			
+			// 荧光颜色
 			ColorRGBA GlowColor = OuterColor;
-			GlowColor.a = GlowAlpha * 0.4f;
-			Graphics()->SetColor(GlowColor);
-			vec2 GlowOut = vec2(Dir.y, -Dir.x) * (GlowWidth * Ia);
-			IGraphics::CFreeformItem GlowFreeform(
-				From - GlowOut, From + GlowOut,
-				Pos - GlowOut, Pos + GlowOut);
-			Graphics()->QuadsDrawFreeform(&GlowFreeform, 1);
-
-			// 中层辉光
-			GlowColor.a = GlowAlpha * 0.6f;
-			Graphics()->SetColor(GlowColor);
-			GlowOut = vec2(Dir.y, -Dir.x) * ((GlowWidth * 0.65f) * Ia);
-			GlowFreeform = IGraphics::CFreeformItem(
-				From - GlowOut, From + GlowOut,
-				Pos - GlowOut, Pos + GlowOut);
-			Graphics()->QuadsDrawFreeform(&GlowFreeform, 1);
-
-			// 内层辉光（最亮）
-			GlowColor.a = GlowAlpha * 0.9f;
-			Graphics()->SetColor(GlowColor);
-			GlowOut = vec2(Dir.y, -Dir.x) * ((GlowWidth * 0.4f) * Ia);
-			GlowFreeform = IGraphics::CFreeformItem(
-				From - GlowOut, From + GlowOut,
-				Pos - GlowOut, Pos + GlowOut);
-			Graphics()->QuadsDrawFreeform(&GlowFreeform, 1);
+			float CoreAlpha = 0.5f * GlowIntensity * LaserAlpha;
+			
+			// 主体荧光：上半部分
+			{
+				vec2 EdgeTop = Perp * BaseWidth;
+				IGraphics::CColorVertex aColors[4] = {
+					IGraphics::CColorVertex(0, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
+					IGraphics::CColorVertex(1, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f),
+					IGraphics::CColorVertex(2, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
+					IGraphics::CColorVertex(3, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f)
+				};
+				Graphics()->SetColorVertex(aColors, 4);
+				IGraphics::CFreeformItem Glow(
+					From.x, From.y,
+					From.x + EdgeTop.x, From.y + EdgeTop.y,
+					Pos.x, Pos.y,
+					Pos.x + EdgeTop.x, Pos.y + EdgeTop.y);
+				Graphics()->QuadsDrawFreeform(&Glow, 1);
+			}
+			
+			// 主体荧光：下半部分
+			{
+				vec2 EdgeBot = Perp * (-BaseWidth);
+				IGraphics::CColorVertex aColors[4] = {
+					IGraphics::CColorVertex(0, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
+					IGraphics::CColorVertex(1, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f),
+					IGraphics::CColorVertex(2, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
+					IGraphics::CColorVertex(3, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f)
+				};
+				Graphics()->SetColorVertex(aColors, 4);
+				IGraphics::CFreeformItem Glow(
+					From.x, From.y,
+					From.x + EdgeBot.x, From.y + EdgeBot.y,
+					Pos.x, Pos.y,
+					Pos.x + EdgeBot.x, Pos.y + EdgeBot.y);
+				Graphics()->QuadsDrawFreeform(&Glow, 1);
+			}
+			
+			// 端点封口：用半圆补全两端，中心亮度和主体一致
+			if(g_Config.m_QmLaserRoundCaps)
+			{
+				const int Segments = 8;
+				
+				// From端半圆（背离激光方向）
+				for(int i = 0; i < Segments; i++)
+				{
+					// 半圆范围：从Perpendicular到-Perpendicular（背向）
+					float BaseAngle = std::atan2(-Dir.y, -Dir.x); // 背离Pos的方向
+					float Angle1 = BaseAngle - pi * 0.5f + (float)i / Segments * pi;
+					float Angle2 = BaseAngle - pi * 0.5f + (float)(i + 1) / Segments * pi;
+					
+					vec2 P1 = vec2(std::cos(Angle1), std::sin(Angle1)) * BaseWidth;
+					vec2 P2 = vec2(std::cos(Angle2), std::sin(Angle2)) * BaseWidth;
+					
+					IGraphics::CColorVertex aColors[4] = {
+						IGraphics::CColorVertex(0, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
+						IGraphics::CColorVertex(1, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f),
+						IGraphics::CColorVertex(2, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
+						IGraphics::CColorVertex(3, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f)
+					};
+					Graphics()->SetColorVertex(aColors, 4);
+					
+					IGraphics::CFreeformItem GlowCap(
+						From.x, From.y,
+						From.x + P1.x, From.y + P1.y,
+						From.x, From.y,
+						From.x + P2.x, From.y + P2.y);
+					Graphics()->QuadsDrawFreeform(&GlowCap, 1);
+				}
+				
+				// Pos端半圆（背离From方向）
+				for(int i = 0; i < Segments; i++)
+				{
+					float BaseAngle = std::atan2(Dir.y, Dir.x); // 背离From的方向
+					float Angle1 = BaseAngle - pi * 0.5f + (float)i / Segments * pi;
+					float Angle2 = BaseAngle - pi * 0.5f + (float)(i + 1) / Segments * pi;
+					
+					vec2 P1 = vec2(std::cos(Angle1), std::sin(Angle1)) * BaseWidth;
+					vec2 P2 = vec2(std::cos(Angle2), std::sin(Angle2)) * BaseWidth;
+					
+					IGraphics::CColorVertex aColors[4] = {
+						IGraphics::CColorVertex(0, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
+						IGraphics::CColorVertex(1, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f),
+						IGraphics::CColorVertex(2, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
+						IGraphics::CColorVertex(3, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f)
+					};
+					Graphics()->SetColorVertex(aColors, 4);
+					
+					IGraphics::CFreeformItem GlowCap(
+						Pos.x, Pos.y,
+						Pos.x + P1.x, Pos.y + P1.y,
+						Pos.x, Pos.y,
+						Pos.x + P2.x, Pos.y + P2.y);
+					Graphics()->QuadsDrawFreeform(&GlowCap, 1);
+				}
+			}
 		}
 
 		// do outline - QmClient: 应用大小缩放
