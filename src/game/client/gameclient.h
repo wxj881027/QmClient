@@ -71,6 +71,8 @@
 #include "components/tclient/bindwheel.h"
 #include "components/tclient/collision_hitbox.h"
 #include "components/tclient/custom_communities.h"
+#include "components/tclient/data_version.h"
+#include "components/tclient/input_overlay.h"
 #include "components/tclient/mod.h"
 #include "components/tclient/outlines.h"
 #include "components/tclient/pet.h"
@@ -230,6 +232,7 @@ public:
 	CPlayerPoints m_PlayerPoints;
 	CCollisionHitbox m_CollisionHitbox;
 	CPieMenu m_PieMenu;
+	CInputOverlay m_InputOverlay;
 
 private:
 	std::vector<class CComponent *> m_vpAll;

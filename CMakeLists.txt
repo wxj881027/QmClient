@@ -2639,6 +2639,8 @@ if(CLIENT)
     components/tclient/translate.h
     components/tclient/warlist.cpp
     components/tclient/warlist.h
+    components/tclient/input_overlay.cpp
+    components/tclient/input_overlay.h
     components/tooltips.cpp
     components/tooltips.h
     components/touch_controls.cpp
@@ -3377,7 +3379,6 @@ add_custom_target(run_rust_tests
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   USES_TERMINAL
   DEPENDS rust_test
-  VERBATIM
 )
 
 ########################################################################
@@ -3604,10 +3605,10 @@ if(NOT DEV)
   endif()
   foreach(SIZE 16 32 48 256)
     if(TARGET game-client)
-      install(FILES other/icons/DDNet_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ddnet.png COMPONENT client)
+      install(FILES other/icons/${CLIENT_EXECUTABLE}_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ddnet.png COMPONENT client)
     endif()
     if(TARGET game-server)
-      install(FILES other/icons/DDNet-Server_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ddnet-server.png COMPONENT server)
+      install(FILES other/icons/${SERVER_EXECUTABLE}_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ddnet-server.png COMPONENT server)
     endif()
   endforeach()
   foreach(file ${VULKAN_SHADER_FILE_LIST})
@@ -3953,15 +3954,3 @@ foreach(target ${TARGETS_DEP})
     target_compile_options(${target} PRIVATE ${OUR_FLAGS_DEP})
   endif()
 endforeach()
-
-if(TARGET_OS STREQUAL "windows" AND STEAM AND NOT CMAKE_BUILD_TYPE STREQUAL Debug)
-  add_custom_command(
-    TARGET game-client POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${CMAKE_SOURCE_DIR}/steam_api.dll"
-      "$<TARGET_FILE_DIR:game-client>"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${CMAKE_SOURCE_DIR}/steam_appid.txt"
-      "$<TARGET_FILE_DIR:game-client>"
-  )
-endif()
