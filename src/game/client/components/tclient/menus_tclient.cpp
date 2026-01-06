@@ -3106,6 +3106,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	Ui()->DoLabel(&Row, "唯诺 哇哇(哇啊嗷) 热心市民 星星冻 咩咩不啊", LG_BodySize * 0.85f, TEXTALIGN_ML);
 	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
 	Ui()->DoLabel(&Row, "窝窝头 半夏pr 塔塔喵 軽い猫 苏哲羽", LG_BodySize * 0.85f, TEXTALIGN_ML);
+	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
+	Ui()->DoLabel(&Row, "夏日 TsFreddie Zerol Acqua 千月", LG_BodySize * 0.85f, TEXTALIGN_ML);
 
 	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
 	Ui()->DoLabel(&Row, "没有你们的支持我无法走的这么远,谢谢", LG_BodySize * 0.85f, TEXTALIGN_ML);
