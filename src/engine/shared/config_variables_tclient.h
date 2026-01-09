@@ -238,6 +238,7 @@ MACRO_CONFIG_INT(QmHookCollMode, qm_hookcoll_mode, 2, 1, 2, CFGFLAG_CLIENT | CFG
 MACRO_CONFIG_COL(QmShotgunColor, qm_shotgun_color, 1414790, CFGFLAG_CLIENT | CFGFLAG_SAVE, "武器跟随模式下散弹枪的钩子碰撞线颜色 (棕色)")
 MACRO_CONFIG_COL(QmLaserColor, qm_laser_color, 11206528, CFGFLAG_CLIENT | CFGFLAG_SAVE, "武器跟随模式下激光枪的钩子碰撞线颜色 (蓝色)")
 MACRO_CONFIG_COL(QmGrenadeColor, qm_grenade_color, 65407, CFGFLAG_CLIENT | CFGFLAG_SAVE, "武器跟随模式下榴弹枪的钩子碰撞线颜色 (红色)")
+MACRO_CONFIG_INT(QmPieMenuKey, qm_pie_menu_key, 25, 0, 511, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pie menu activation key (SDL scancode, default V)")
 
 // Chat Reply
 MACRO_CONFIG_INT(TcAutoReplyMuted, tc_auto_reply_muted, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto reply to muted players with a message")

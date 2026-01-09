@@ -45,7 +45,7 @@ void CPieMenu::OnInit()
 
 void CPieMenu::OnConsoleInit()
 {
-	Console()->Register("+pie_menu", "", CFGFLAG_CLIENT, ConPieMenuOpen, this, "Open pie menu");
+	Console()->Register("+pie_menu", "", CFGFLAG_CLIENT, ConKeyPieMenu, this, "Open pie menu");
 }
 
 void CPieMenu::OnRelease()
@@ -56,10 +56,27 @@ void CPieMenu::OnRelease()
 	}
 }
 
-void CPieMenu::ConPieMenuOpen(IConsole::IResult *pResult, void *pUserData)
+void CPieMenu::ConKeyPieMenu(IConsole::IResult *pResult, void *pUserData)
 {
 	CPieMenu *pSelf = (CPieMenu *)pUserData;
-	pSelf->OpenMenu();
+	
+	if(pResult->GetInteger(0) != 0)
+	{
+		// Key pressed - open menu
+		pSelf->OpenMenu();
+	}
+	else
+	{
+		// Key released - execute and close menu
+		if(pSelf->m_Active)
+		{
+			if(pSelf->m_SelectedOption >= 0 && pSelf->m_SelectedOption < (int)EMenuOption::NUM_OPTIONS)
+			{
+				pSelf->ExecuteOption((EMenuOption)pSelf->m_SelectedOption);
+			}
+			pSelf->CloseMenu();
+		}
+	}
 }
 
 // ========== Player Detection ==========
@@ -178,31 +195,7 @@ bool CPieMenu::OnInput(const IInput::CEvent &Event)
 	if(!g_Config.m_QmPieMenuEnabled)
 		return false;
 
-	// Handle menu activation (V key by default)
-	if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_V)
-	{
-		if(!m_Active && !m_WasPressed)
-		{
-			OpenMenu();
-			return true;
-		}
-	}
-	else if(Event.m_Flags & IInput::FLAG_RELEASE && Event.m_Key == KEY_V)
-	{
-		m_WasPressed = false;
-		if(m_Active)
-		{
-			// Execute selected option on release
-			if(m_SelectedOption >= 0 && m_SelectedOption < (int)EMenuOption::NUM_OPTIONS)
-			{
-				ExecuteOption((EMenuOption)m_SelectedOption);
-			}
-			CloseMenu();
-			return true;
-		}
-	}
-
-	// Handle keyboard shortcuts (1-6) when menu is active
+	// Handle keyboard shortcuts (1-6) and ESC when menu is active
 	if(m_Active && (Event.m_Flags & IInput::FLAG_PRESS))
 	{
 		if(Event.m_Key >= KEY_1 && Event.m_Key <= KEY_6)

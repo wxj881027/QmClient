@@ -57,7 +57,7 @@ private:
 	static constexpr float HIGHLIGHT_SCALE = 1.25f; // 25% larger when highlighted
 
 	// Console command handlers
-	static void ConPieMenuOpen(IConsole::IResult *pResult, void *pUserData);
+	static void ConKeyPieMenu(IConsole::IResult *pResult, void *pUserData);
 
 	// Helper methods
 	int FindNearestPlayer();
