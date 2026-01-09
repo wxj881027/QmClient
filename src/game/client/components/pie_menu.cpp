@@ -361,7 +361,9 @@ void CPieMenu::RenderCenterInfo()
 		return;
 
 	// Draw player name in center - scaled 1.8x
-	const char *pName = GameClient()->m_aClients[m_TargetClientId].m_aName;
+	char aNameBuf[MAX_NAME_LENGTH];
+	GameClient()->FormatStreamerName(m_TargetClientId, aNameBuf, sizeof(aNameBuf));
+	const char *pName = aNameBuf;
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 	
 	float FontSize = 32.0f;  // 18 * 1.8

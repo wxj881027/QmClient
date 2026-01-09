@@ -523,20 +523,25 @@ void CSpectator::OnRender()
 		NameCursor.m_FontSize = FontSize;
 		NameCursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 		NameCursor.m_LineWidth = 180.0f;
-		if(g_Config.m_ClShowIds)
+		const int ClientId = GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId;
+		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
+		char aNameBuf[MAX_NAME_LENGTH];
+		GameClient()->FormatStreamerName(ClientId, aNameBuf, sizeof(aNameBuf));
+
+		if(g_Config.m_ClShowIds && !HideIdentity)
 		{
 			char aClientId[16];
-			GameClient()->FormatClientId(GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
+			GameClient()->FormatClientId(ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
 			TextRender()->TextEx(&NameCursor, aClientId);
 		}
 
 		// TClient
-		if(pInfo && pInfo->m_ClientId > 0 && g_Config.m_TcWarList && g_Config.m_TcWarListSpectate && GameClient()->m_WarList.GetAnyWar(pInfo->m_ClientId))
+		if(pInfo && !HideIdentity && pInfo->m_ClientId > 0 && g_Config.m_TcWarList && g_Config.m_TcWarListSpectate && GameClient()->m_WarList.GetAnyWar(pInfo->m_ClientId))
 		{
 			TextRender()->TextColor(GameClient()->m_WarList.GetPriorityColor(pInfo->m_ClientId));
 		}
 
-		TextRender()->TextEx(&NameCursor, GameClient()->m_aClients[GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_aName);
+		TextRender()->TextEx(&NameCursor, aNameBuf);
 
 		if(GameClient()->m_MultiViewActivated)
 		{

@@ -2,6 +2,7 @@
 
 #include <base/str.h>
 
+#include <cmath>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/protocol7.h>
@@ -40,6 +41,11 @@ public:
 	bool m_ShowClan;
 	char m_aClan[std::max<size_t>(MAX_CLAN_LENGTH, protocol7::MAX_CLAN_ARRAY_SIZE)];
 	float m_FontSizeClan;
+	bool m_ShowCoordX;
+	bool m_ShowCoordY;
+	bool m_ShowCoords;
+	vec2 m_Coords;
+	float m_FontSizeCoords;
 	bool m_ShowDirection;
 	bool m_DirLeft;
 	bool m_DirJump;
@@ -630,6 +636,8 @@ protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = Data.m_InGame ? g_Config.m_TcNameplateSkins > (This.m_Snap.m_apPlayerInfos[Data.m_ClientId]->m_Local ? 1 : 0) : g_Config.m_TcNameplateSkins > 0;
+		if(Data.m_InGame && This.ShouldHideStreamerSkin(Data.m_ClientId))
+			m_Visible = false;
 		if(!m_Visible)
 			return false;
 		m_Color = Data.m_Color;
@@ -648,6 +656,58 @@ protected:
 
 public:
 	CNamePlatePartSkin(CGameClient &This) :
+		CNamePlatePartText(This) {}
+};
+
+class CNamePlatePartCoordinates : public CNamePlatePartText
+{
+private:
+	vec2 m_Coords = vec2(INFINITY, INFINITY);
+	float m_FontSize = -INFINITY;
+	bool m_ShowX = false;
+	bool m_ShowY = false;
+	char m_aText[64] = "";
+
+	static float RoundCoord(float Value)
+	{
+		return static_cast<float>(std::round(Value * 100.0f) / 100.0f);
+	}
+
+protected:
+	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
+	{
+		m_Visible = Data.m_ShowCoords && (Data.m_ShowCoordX || Data.m_ShowCoordY);
+		if(!m_Visible)
+			return false;
+		m_Color = Data.m_Color;
+		const float RoundedX = RoundCoord(Data.m_Coords.x);
+		const float RoundedY = RoundCoord(Data.m_Coords.y);
+		const bool ShowX = Data.m_ShowCoordX;
+		const bool ShowY = Data.m_ShowCoordY;
+		return m_FontSize != Data.m_FontSizeCoords || m_ShowX != ShowX || m_ShowY != ShowY ||
+		       m_Coords.x != RoundedX || m_Coords.y != RoundedY;
+	}
+	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
+	{
+		m_FontSize = Data.m_FontSizeCoords;
+		m_ShowX = Data.m_ShowCoordX;
+		m_ShowY = Data.m_ShowCoordY;
+		m_Coords = vec2(RoundCoord(Data.m_Coords.x), RoundCoord(Data.m_Coords.y));
+
+		if(m_ShowX && m_ShowY)
+			str_format(m_aText, sizeof(m_aText), "X:%.2f Y:%.2f", m_Coords.x, m_Coords.y);
+		else if(m_ShowX)
+			str_format(m_aText, sizeof(m_aText), "X:%.2f", m_Coords.x);
+		else
+			str_format(m_aText, sizeof(m_aText), "Y:%.2f", m_Coords.y);
+
+		CTextCursor Cursor;
+		Cursor.m_FontSize = m_FontSize;
+		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
+	}
+
+public:
+	CNamePlatePartCoordinates(CGameClient &This) :
 		CNamePlatePartText(This) {}
 };
 
@@ -774,6 +834,9 @@ private:
 		AddPart<CNamePlatePartHookStrongWeakId>(This);
 		AddPart<CNamePlatePartNewLine>(This);
 
+		AddPart<CNamePlatePartCoordinates>(This); // TClient
+		AddPart<CNamePlatePartNewLine>(This);
+
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_LEFT);
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_UP);
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_RIGHT);
@@ -890,19 +953,28 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 
 	Data.m_InGame = true;
 
+	const int ClientId = pPlayerInfo->m_ClientId;
+	const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
+
 	Data.m_ShowName = pPlayerInfo->m_Local ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates;
-	str_copy(Data.m_aName, GameClient()->m_aClients[pPlayerInfo->m_ClientId].m_aName);
-	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[pPlayerInfo->m_ClientId].m_Friend;
-	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
+	GameClient()->FormatStreamerName(ClientId, Data.m_aName, sizeof(Data.m_aName));
+	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
+	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
 	Data.m_FontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
 
-	Data.m_ClientId = pPlayerInfo->m_ClientId;
+	Data.m_ClientId = ClientId;
 	Data.m_ClientIdSeparateLine = g_Config.m_ClNamePlatesIdsSeparateLine;
 	Data.m_FontSizeClientId = Data.m_ClientIdSeparateLine ? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
 
-	Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan;
-	str_copy(Data.m_aClan, GameClient()->m_aClients[pPlayerInfo->m_ClientId].m_aClan);
+	Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
+	GameClient()->FormatStreamerClan(ClientId, Data.m_aClan, sizeof(Data.m_aClan));
 	Data.m_FontSizeClan = 18.0f + 20.0f * g_Config.m_ClNamePlatesClanSize / 100.0f;
+
+	Data.m_ShowCoordX = g_Config.m_QmNameplateCoordX != 0;
+	Data.m_ShowCoordY = g_Config.m_QmNameplateCoordY != 0;
+	Data.m_ShowCoords = pPlayerInfo->m_Local ? g_Config.m_QmNameplateCoordsOwn : g_Config.m_QmNameplateCoords;
+	Data.m_Coords = Position / 32.0f;
+	Data.m_FontSizeCoords = Data.m_FontSizeClan;
 
 	Data.m_FontSizeHookStrongWeak = 18.0f + 20.0f * g_Config.m_ClNamePlatesStrongSize / 100.0f;
 	Data.m_FontSizeDirection = 18.0f + 20.0f * g_Config.m_ClDirectionSize / 100.0f;
@@ -1008,7 +1080,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 
 	// TClient
-	if(g_Config.m_TcWarList && g_Config.m_TcWarListShowClan && GameClient()->m_WarList.GetWarData(pPlayerInfo->m_ClientId).m_WarClan)
+	if(!HideIdentity && g_Config.m_TcWarList && g_Config.m_TcWarListShowClan && GameClient()->m_WarList.GetWarData(pPlayerInfo->m_ClientId).m_WarClan)
 		Data.m_ShowClan = true;
 	Data.m_Local = pPlayerInfo->m_Local;
 
@@ -1052,6 +1124,12 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 	if(Data.m_aClan[0] == '\0')
 		str_copy(Data.m_aClan, "Clan Name");
 	Data.m_FontSizeClan = FontSizeClan;
+
+	Data.m_ShowCoordX = g_Config.m_QmNameplateCoordX != 0;
+	Data.m_ShowCoordY = g_Config.m_QmNameplateCoordY != 0;
+	Data.m_ShowCoords = g_Config.m_QmNameplateCoords || g_Config.m_QmNameplateCoordsOwn;
+	Data.m_Coords = vec2(12.34f + Dummy, 56.78f + Dummy);
+	Data.m_FontSizeCoords = Data.m_FontSizeClan;
 
 	Data.m_ShowDirection = g_Config.m_ClShowDirection != 0 ? true : false;
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = true;
@@ -1359,7 +1437,9 @@ void CNamePlates::OnRender()
 	if(IVideo::Current())
 		ShowDirection = g_Config.m_ClVideoShowDirection;
 #endif
-	if(!g_Config.m_ClNamePlates && ShowDirection == 0)
+	const bool ShowCoords = (g_Config.m_QmNameplateCoords || g_Config.m_QmNameplateCoordsOwn) &&
+				(g_Config.m_QmNameplateCoordX || g_Config.m_QmNameplateCoordY);
+	if(!g_Config.m_ClNamePlates && ShowDirection == 0 && !ShowCoords)
 		return;
 
 	for(int i = 0; i < MAX_CLIENTS; i++)

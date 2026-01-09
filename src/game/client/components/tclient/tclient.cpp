@@ -3,13 +3,16 @@
 #include "data_version.h"
 
 #include <base/log.h>
+#include <base/str.h>
 
 #include <engine/client.h>
 #include <engine/client/enums.h>
 #include <engine/external/regex.h>
 #include <engine/external/tinyexpr.h>
+#include <engine/friends.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
+#include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
 
@@ -142,6 +145,104 @@ bool CTClient::SendNonDuplicateMessage(int Team, const char *pLine)
 	return false;
 }
 
+static const char *s_apQiaFenPresetWords[] = {
+	"有人恰吗",
+	"有人要吗",
+	"有恰的吗",
+	"有恰吗",
+	"有要吗",
+	"有人要分吗",
+	"有人恰分吗",
+	"有要的吗",
+	"有恰分的吗",
+	"有要分的吗",
+	"有要的吗?",
+	"谁要",
+	"谁恰",
+	"恰分有无",
+	"恰分的有吗",
+	"要分的有吗",
+};
+
+static int QiaFenSeparatorLength(const char *pStr)
+{
+	const unsigned char C0 = (unsigned char)pStr[0];
+	if(C0 == ',' || C0 == ';' || C0 == '|' || C0 == '\n' || C0 == '\r')
+		return 1;
+	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBC)
+	{
+		const unsigned char C2 = (unsigned char)pStr[2];
+		if(C2 == 0x8C || C2 == 0x9B)
+			return 3;
+	}
+	return 0;
+}
+
+static bool IsQiaFenPresetWord(const char *pWord)
+{
+	for(const char *pPreset : s_apQiaFenPresetWords)
+	{
+		if(str_utf8_comp_nocase(pWord, pPreset) == 0)
+			return true;
+	}
+	return false;
+}
+
+static bool MessageMatchesQiaFenPreset(const char *pMessage)
+{
+	for(const char *pPreset : s_apQiaFenPresetWords)
+	{
+		if(str_find_nocase(pMessage, pPreset))
+			return true;
+	}
+	return false;
+}
+
+static bool MessageMatchesQiaFenCustom(const char *pMessage, const char *pKeywords)
+{
+	if(!pKeywords || pKeywords[0] == '\0')
+		return false;
+
+	char aBuf[512];
+	str_copy(aBuf, pKeywords, sizeof(aBuf));
+	char *pCursor = aBuf;
+
+	while(*pCursor)
+	{
+		int SepLen = QiaFenSeparatorLength(pCursor);
+		while(*pCursor && SepLen > 0)
+		{
+			pCursor += SepLen;
+			SepLen = QiaFenSeparatorLength(pCursor);
+		}
+
+		char *pStart = pCursor;
+		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
+			pCursor++;
+
+		if(pStart == pCursor)
+			break;
+
+		if(*pCursor)
+		{
+			const int CutLen = QiaFenSeparatorLength(pCursor);
+			*pCursor = '\0';
+			pCursor += CutLen;
+		}
+
+		char *pToken = (char *)str_utf8_skip_whitespaces(pStart);
+		str_utf8_trim_right(pToken);
+		if(pToken[0] == '\0')
+			continue;
+		if(IsQiaFenPresetWord(pToken))
+			continue;
+		if(str_find_nocase(pMessage, pToken))
+			return true;
+	}
+
+	return false;
+}
+
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
 {
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -173,25 +274,7 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 		{
 			// 检查是否是公屏消息且不是自己发的
 			const char *pMessage = pMsg->m_pMessage;
-			if(
-				str_find_nocase(pMessage, "有人恰吗")||
-				str_find_nocase(pMessage, "有人要吗")||
-				str_find_nocase(pMessage,"有恰的吗")||
-				str_find_nocase(pMessage,"有恰吗")||
-				str_find_nocase(pMessage,"有要吗")||
-				str_find_nocase(pMessage,"有人要分吗")||
-				str_find_nocase(pMessage,"有人恰分吗")||
-				str_find_nocase(pMessage,"有要的吗")||
-				str_find_nocase(pMessage,"有恰分的吗")||
-				str_find_nocase(pMessage,"有要分的吗")||
-				str_find_nocase(pMessage,"有要的吗")||
-				str_find_nocase(pMessage,"有要的吗?")||
-				str_find_nocase(pMessage, "谁要")||
-				str_find_nocase(pMessage,"谁恰")||
-				str_find_nocase(pMessage,"恰分有无")||
-				str_find_nocase(pMessage,"恰分的有吗")||
-				str_find_nocase(pMessage,"要分的有吗")
-				)
+			if(MessageMatchesQiaFenPreset(pMessage) || MessageMatchesQiaFenCustom(pMessage, g_Config.m_QmQiaFenKeywords))
 			{
 				// 发送回复
 				GameClient()->m_Chat.SendChat(0, "我要恰!!谢谢佬!!!!");
@@ -659,6 +742,7 @@ void CTClient::OnRender()
 	DoFinishCheck();
 	CheckFreeze();
 	CheckWaterFall();
+	CheckFriendOnline();
 	CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
 	CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
 	UpdatePlayerStats(); // 更新玩家统计
@@ -789,6 +873,112 @@ void CTClient::CheckWaterFall()
 		}
 
 		m_aWasInDeath[Dummy] = IsInDeath;
+	}
+}
+
+static std::string BuildFriendNotifyKey(const char *pName, const char *pClan, bool IgnoreClan)
+{
+	std::string Key = pName ? pName : "";
+	if(!IgnoreClan)
+	{
+		Key.push_back('\t');
+		if(pClan)
+			Key.append(pClan);
+	}
+	return Key;
+}
+
+void CTClient::CheckFriendOnline()
+{
+	const int Enabled = g_Config.m_QmFriendOnlineNotify;
+	if(m_FriendNotifyPrevEnabled != Enabled)
+	{
+		m_FriendNotifyPrevEnabled = Enabled;
+		m_FriendNotifyNextCheck = 0.0f;
+		m_FriendOnline.clear();
+		m_FriendAutoRefreshNext = 0.0f;
+	}
+
+	if(!Enabled)
+		return;
+
+	IServerBrowser *pServerBrowser = ServerBrowser();
+	if(!pServerBrowser)
+		return;
+
+	const float Now = LocalTime();
+	if(g_Config.m_QmFriendOnlineAutoRefresh != m_FriendAutoRefreshPrevEnabled ||
+		g_Config.m_QmFriendOnlineRefreshSeconds != m_FriendAutoRefreshPrevSeconds)
+	{
+		m_FriendAutoRefreshPrevEnabled = g_Config.m_QmFriendOnlineAutoRefresh;
+		m_FriendAutoRefreshPrevSeconds = g_Config.m_QmFriendOnlineRefreshSeconds;
+		m_FriendAutoRefreshNext = 0.0f;
+	}
+	if(g_Config.m_QmFriendOnlineAutoRefresh)
+	{
+		if(Now >= m_FriendAutoRefreshNext)
+		{
+			if(!pServerBrowser->IsRefreshing() && !pServerBrowser->IsGettingServerlist())
+				pServerBrowser->Refresh(pServerBrowser->GetCurrentType(), true);
+			m_FriendAutoRefreshNext = Now + g_Config.m_QmFriendOnlineRefreshSeconds;
+		}
+	}
+	if(Now < m_FriendNotifyNextCheck)
+		return;
+	m_FriendNotifyNextCheck = Now + 1.0f;
+
+	const int NumServers = pServerBrowser->NumSortedServers();
+	if(NumServers > 0)
+	{
+		const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
+		for(int ServerIndex = 0; ServerIndex < NumServers; ++ServerIndex)
+		{
+			const CServerInfo *pEntry = pServerBrowser->SortedGet(ServerIndex);
+			if(!pEntry)
+				continue;
+
+			for(int ClientIndex = 0; ClientIndex < pEntry->m_NumReceivedClients; ++ClientIndex)
+			{
+				const CServerInfo::CClient &Client = pEntry->m_aClients[ClientIndex];
+				if(Client.m_aName[0] == '\0')
+					continue;
+				if(!GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
+					continue;
+
+				const std::string Key = BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan);
+				auto It = m_FriendOnline.find(Key);
+				if(It == m_FriendOnline.end())
+				{
+					char aBuf[256];
+					const char *pMap = pEntry->m_aMap[0] != '\0' ? pEntry->m_aMap : TCLocalize("未知");
+					str_format(aBuf, sizeof(aBuf), TCLocalize("你的好友%s上线啦,目前在%s图!!!"), Client.m_aName, pMap);
+					GameClient()->m_Chat.Echo(aBuf);
+					SFriendOnlineState State;
+					State.m_LastSeen = Now;
+					State.m_Name = Client.m_aName;
+					State.m_Map = pEntry->m_aMap;
+					m_FriendOnline.emplace(Key, std::move(State));
+				}
+				else
+				{
+					It->second.m_LastSeen = Now;
+					if(It->second.m_Name != Client.m_aName)
+						It->second.m_Name = Client.m_aName;
+					if(It->second.m_Map != pEntry->m_aMap)
+						It->second.m_Map = pEntry->m_aMap;
+				}
+			}
+		}
+
+	}
+
+	constexpr float FriendOfflineTimeout = 10.0f;
+	for(auto It = m_FriendOnline.begin(); It != m_FriendOnline.end();)
+	{
+		if(Now - It->second.m_LastSeen > FriendOfflineTimeout)
+			It = m_FriendOnline.erase(It);
+		else
+			++It;
 	}
 }
 

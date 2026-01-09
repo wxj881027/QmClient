@@ -15,6 +15,7 @@
 #include <deque>
 #include <set>
 #include <string>
+#include <unordered_map>
 
 // 玩家统计数据结构
 struct SPlayerStats
@@ -159,6 +160,21 @@ class CTClient : public CComponent
 	int64_t m_LastRepeatTime = 0;           // 上次复读时间
 	void RepeatLastMessage();
 	static void ConRepeat(IConsole::IResult *pResult, void *pUserData);
+
+	// 好友上线提醒
+	struct SFriendOnlineState
+	{
+		float m_LastSeen = 0.0f;
+		std::string m_Name;
+		std::string m_Map;
+	};
+	std::unordered_map<std::string, SFriendOnlineState> m_FriendOnline;
+	float m_FriendNotifyNextCheck = 0.0f;
+	int m_FriendNotifyPrevEnabled = -1;
+	float m_FriendAutoRefreshNext = 0.0f;
+	int m_FriendAutoRefreshPrevEnabled = -1;
+	int m_FriendAutoRefreshPrevSeconds = -1;
+	void CheckFriendOnline();
 
 	// Speech-to-Text (STT)
 #if defined(CONF_WHISPER)

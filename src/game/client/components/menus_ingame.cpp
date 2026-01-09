@@ -18,6 +18,8 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
+
+#include <generated/protocol.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -526,6 +528,11 @@ void CMenus::RenderPlayers(CUIRect MainView)
 			continue;
 
 		CGameClient::CClientData &CurrentClient = GameClient()->m_aClients[Index];
+		const bool HideSkin = GameClient()->ShouldHideStreamerSkin(Index);
+		char aNameBuf[MAX_NAME_LENGTH];
+		char aClanBuf[MAX_CLAN_LENGTH];
+		GameClient()->FormatStreamerName(Index, aNameBuf, sizeof(aNameBuf));
+		GameClient()->FormatStreamerClan(Index, aClanBuf, sizeof(aClanBuf));
 		const CListboxItem Item = s_ListBox.DoNextItem(&CurrentClient);
 
 		Count++;
@@ -551,14 +558,14 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		vec2 TeeRenderPos(Button.x + Button.h / 2, Button.y + Button.h / 2 + OffsetToMid.y);
 		RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
 		Ui()->DoButtonLogic(&s_aPlayerIds[Index][3], 0, &Button, BUTTONFLAG_NONE);
-		GameClient()->m_Tooltips.DoToolTip(&s_aPlayerIds[Index][3], &Button, CurrentClient.m_aSkinName);
+		GameClient()->m_Tooltips.DoToolTip(&s_aPlayerIds[Index][3], &Button, HideSkin ? "default" : CurrentClient.m_aSkinName);
 
 		Player.HSplitTop(1.5f, nullptr, &Player);
 		Player.VSplitMid(&Player, &Button);
 		Row.VSplitRight(210.0f, &Button2, &Row);
 
-		Ui()->DoLabel(&Player, CurrentClient.m_aName, 14.0f, TEXTALIGN_ML);
-		Ui()->DoLabel(&Button, CurrentClient.m_aClan, 14.0f, TEXTALIGN_ML);
+		Ui()->DoLabel(&Player, aNameBuf, 14.0f, TEXTALIGN_ML);
+		Ui()->DoLabel(&Button, aClanBuf, 14.0f, TEXTALIGN_ML);
 
 		GameClient()->m_CountryFlags.Render(CurrentClient.m_Country, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f),
 			Button2.x, Button2.y + Button2.h / 2.0f - 0.75f * Button2.h / 2.0f, 1.5f * Button2.h, 0.75f * Button2.h);
@@ -987,7 +994,9 @@ bool CMenus::RenderServerControlKick(CUIRect MainView, bool FilterSpectators, bo
 
 		RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
 
-		Ui()->DoLabel(&Label, GameClient()->m_aClients[aPlayerIds[i]].m_aName, 16.0f, TEXTALIGN_ML);
+		char aNameBuf[MAX_NAME_LENGTH];
+		GameClient()->FormatStreamerName(aPlayerIds[i], aNameBuf, sizeof(aNameBuf));
+		Ui()->DoLabel(&Label, aNameBuf, 16.0f, TEXTALIGN_ML);
 	}
 
 	Selected = s_ListBox.DoEnd();
