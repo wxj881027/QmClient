@@ -176,13 +176,25 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			if(
 				str_find_nocase(pMessage, "有人恰吗")||
 				str_find_nocase(pMessage, "有人要吗")||
+				str_find_nocase(pMessage,"有恰的吗")||
+				str_find_nocase(pMessage,"有恰吗")||
+				str_find_nocase(pMessage,"有要吗")||
+				str_find_nocase(pMessage,"有人要分吗")||
+				str_find_nocase(pMessage,"有人恰分吗")||
+				str_find_nocase(pMessage,"有要的吗")||
+				str_find_nocase(pMessage,"有恰分的吗")||
+				str_find_nocase(pMessage,"有要分的吗")||
+				str_find_nocase(pMessage,"有要的吗")||
+				str_find_nocase(pMessage,"有要的吗?")||
 				str_find_nocase(pMessage, "谁要")||
 				str_find_nocase(pMessage,"谁恰")||
-				str_find_nocase(pMessage,"有恰的吗")
+				str_find_nocase(pMessage,"恰分有无")||
+				str_find_nocase(pMessage,"恰分的有吗")||
+				str_find_nocase(pMessage,"要分的有吗")
 				)
 			{
 				// 发送回复
-				GameClient()->m_Chat.SendChat(0, "恰,谢谢佬");
+				GameClient()->m_Chat.SendChat(0, "我要恰!!谢谢佬!!!!");
 				
 				// 在名字后面加"恰"
 				char aNewName[MAX_NAME_LENGTH];
