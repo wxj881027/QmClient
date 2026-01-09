@@ -272,9 +272,11 @@ private:
 
 	int m_EditorMovementDelay = 5;
 	void UpdateEditorIngameMoved();
+	void HandleHammerSkinSwap(CCharacter *pChar, int DummyIndex);
 
 	int m_PredictedTick;
 	int m_aLastNewPredictedTick[NUM_DUMMIES];
+	int m_aLastHammerSkinSwapAttackTick[NUM_DUMMIES];
 
 	int m_LastRoundStartTick;
 	int m_LastRaceTick;
@@ -738,6 +740,11 @@ public:
 	const CTuningParams *GetTuning(int i) const { return &m_aTuningList[i]; }
 	ColorRGBA GetDDTeamColor(int DDTeam, float Lightness = 0.5f) const;
 	void FormatClientId(int ClientId, char (&aClientId)[16], EClientIdFormat Format) const;
+	bool IsLocalClientId(int ClientId) const;
+	bool ShouldHideStreamerIdentity(int ClientId) const;
+	bool ShouldHideStreamerSkin(int ClientId) const;
+	void FormatStreamerName(int ClientId, char *pBuf, int BufSize) const;
+	void FormatStreamerClan(int ClientId, char *pBuf, int BufSize) const;
 
 	CGameWorld m_GameWorld;
 	CGameWorld m_PredictedWorld;

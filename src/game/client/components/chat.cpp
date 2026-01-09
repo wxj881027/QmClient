@@ -951,6 +951,8 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 	else
 	{
 		const auto &LineAuthor = GameClient()->m_aClients[CurrentLine.m_ClientId];
+		char aDisplayName[MAX_NAME_LENGTH];
+		GameClient()->FormatStreamerName(CurrentLine.m_ClientId, aDisplayName, sizeof(aDisplayName));
 
 		if(LineAuthor.m_Active)
 		{
@@ -972,7 +974,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 			if(LineAuthor.m_Active)
 			{
 				str_append(CurrentLine.m_aName, " ");
-				str_append(CurrentLine.m_aName, LineAuthor.m_aName);
+				str_append(CurrentLine.m_aName, aDisplayName);
 			}
 			CurrentLine.m_NameColor = TEAM_BLUE;
 			CurrentLine.m_Highlighted = false;
@@ -984,7 +986,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 			if(LineAuthor.m_Active)
 			{
 				str_append(CurrentLine.m_aName, " ");
-				str_append(CurrentLine.m_aName, LineAuthor.m_aName);
+				str_append(CurrentLine.m_aName, aDisplayName);
 			}
 			CurrentLine.m_NameColor = TEAM_RED;
 			CurrentLine.m_Highlighted = true;
@@ -992,7 +994,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 		}
 		else
 		{
-			str_copy(CurrentLine.m_aName, LineAuthor.m_aName);
+			str_copy(CurrentLine.m_aName, aDisplayName);
 		}
 
 		if(LineAuthor.m_Active)
@@ -1118,7 +1120,7 @@ void CChat::OnPrepareLines(float y)
 		Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
 
 		char aClientId[16] = "";
-		if(g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
+		if(g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0' && !GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
 		{
 			GameClient()->FormatClientId(Line.m_ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
 		}

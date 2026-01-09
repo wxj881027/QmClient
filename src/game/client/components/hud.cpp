@@ -271,7 +271,9 @@ void CHud::RenderScoreHud()
 					{
 						// draw name of the flag holder
 						int Id = aFlagCarrier[t] % MAX_CLIENTS;
-						const char *pName = GameClient()->m_aClients[Id].m_aName;
+						char aNameBuf[MAX_NAME_LENGTH];
+						GameClient()->FormatStreamerName(Id, aNameBuf, sizeof(aNameBuf));
+						const char *pName = aNameBuf;
 						if(str_comp(pName, m_aScoreInfo[t].m_aPlayerNameText) != 0 || RecreateRect)
 						{
 							str_copy(m_aScoreInfo[t].m_aPlayerNameText, pName);
@@ -376,7 +378,9 @@ void CHud::RenderScoreHud()
 					int Id = apPlayerInfo[t]->m_ClientId;
 					if(Id >= 0 && Id < MAX_CLIENTS)
 					{
-						const char *pName = GameClient()->m_aClients[Id].m_aName;
+						char aNameBuf[MAX_NAME_LENGTH];
+						GameClient()->FormatStreamerName(Id, aNameBuf, sizeof(aNameBuf));
+						const char *pName = aNameBuf;
 						if(str_comp(pName, m_aScoreInfo[t].m_aPlayerNameText) != 0)
 							RecreateRect = true;
 					}
@@ -436,7 +440,9 @@ void CHud::RenderScoreHud()
 					int Id = apPlayerInfo[t]->m_ClientId;
 					if(Id >= 0 && Id < MAX_CLIENTS)
 					{
-						const char *pName = GameClient()->m_aClients[Id].m_aName;
+						char aNameBuf[MAX_NAME_LENGTH];
+						GameClient()->FormatStreamerName(Id, aNameBuf, sizeof(aNameBuf));
+						const char *pName = aNameBuf;
 						if(RecreateRect)
 						{
 							str_copy(m_aScoreInfo[t].m_aPlayerNameText, pName);
@@ -1945,10 +1951,13 @@ void CHud::RenderSpectatorHud()
 	else if(GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW)
 	{
 		const auto &Player = GameClient()->m_aClients[GameClient()->m_Snap.m_SpecInfo.m_SpectatorId];
-		if(g_Config.m_ClShowIds)
-			str_format(aBuf, sizeof(aBuf), Localize("Following %d: %s", "Spectating"), Player.ClientId(), Player.m_aName);
+		char aNameBuf[MAX_NAME_LENGTH];
+		GameClient()->FormatStreamerName(Player.ClientId(), aNameBuf, sizeof(aNameBuf));
+		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(Player.ClientId());
+		if(g_Config.m_ClShowIds && !HideIdentity)
+			str_format(aBuf, sizeof(aBuf), Localize("Following %d: %s", "Spectating"), Player.ClientId(), aNameBuf);
 		else
-			str_format(aBuf, sizeof(aBuf), Localize("Following %s", "Spectating"), Player.m_aName);
+			str_format(aBuf, sizeof(aBuf), Localize("Following %s", "Spectating"), aNameBuf);
 	}
 	else
 	{

@@ -5,6 +5,7 @@
 #include <engine/textrender.h>
 
 #include <generated/client_data.h>
+#include <generated/protocol.h>
 
 #include <game/client/animstate.h>
 #include <game/client/components/motd.h>
@@ -307,7 +308,9 @@ void CStatboard::RenderGlobalStats()
 		Cursor.m_FontSize = FontSize;
 		Cursor.m_Flags |= TEXTFLAG_STOP_AT_END;
 		Cursor.m_LineWidth = 220;
-		TextRender()->TextEx(&Cursor, GameClient()->m_aClients[pInfo->m_ClientId].m_aName, -1);
+		char aNameBuf[MAX_NAME_LENGTH];
+		GameClient()->FormatStreamerName(pInfo->m_ClientId, aNameBuf, sizeof(aNameBuf));
+		TextRender()->TextEx(&Cursor, aNameBuf, -1);
 
 		px = 325;
 
