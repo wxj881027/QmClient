@@ -901,26 +901,32 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		s_InitDisplayAllVideoModes = g_Config.m_GfxDisplayAllVideoModes;
 	}
 
+	const float ViewWidth = MainView.w;
+	const float UiScale = minimum(1.0f, maximum(0.85f, ViewWidth / 800.0f));
+
 	CUIRect ModeList, ModeLabel;
-	MainView.VSplitLeft(350.0f, &MainView, &ModeList);
-	ModeList.HSplitTop(24.0f, &ModeLabel, &ModeList);
-	MainView.VSplitLeft(340.0f, &MainView, nullptr);
+	const float OptionsMargin = 10.0f * UiScale;
+	const float OptionsColumnWidth = minimum(340.0f * UiScale, ViewWidth * 0.55f);
+	const float OptionsBlockWidth = minimum(ViewWidth, OptionsColumnWidth + OptionsMargin);
+	MainView.VSplitLeft(OptionsBlockWidth, &MainView, &ModeList);
+	ModeList.HSplitTop(24.0f * UiScale, &ModeLabel, &ModeList);
+	MainView.VSplitLeft(OptionsColumnWidth, &MainView, nullptr);
 
 	// display mode list
 	static CListBox s_ListBox;
-	static const float sc_RowHeightResList = 22.0f;
-	static const float sc_FontSizeResListHeader = 12.0f;
-	static const float sc_FontSizeResList = 10.0f;
+	const float RowHeightResList = 22.0f * UiScale;
+	const float FontSizeResListHeader = 12.0f * UiScale;
+	const float FontSizeResList = 10.0f * UiScale;
 
 	{
 		int G = std::gcd(g_Config.m_GfxScreenWidth, g_Config.m_GfxScreenHeight);
 		str_format(aBuf, sizeof(aBuf), "%s: %dx%d @%dhz %d bit (%d:%d)", Localize("Current"), (int)(g_Config.m_GfxScreenWidth * Graphics()->ScreenHiDPIScale()), (int)(g_Config.m_GfxScreenHeight * Graphics()->ScreenHiDPIScale()), g_Config.m_GfxScreenRefreshRate, g_Config.m_GfxColorDepth, g_Config.m_GfxScreenWidth / G, g_Config.m_GfxScreenHeight / G);
-		Ui()->DoLabel(&ModeLabel, aBuf, sc_FontSizeResListHeader, TEXTALIGN_MC);
+		Ui()->DoLabel(&ModeLabel, aBuf, FontSizeResListHeader, TEXTALIGN_MC);
 	}
 
 	int SelectedOld = -1;
 	s_ListBox.SetActive(!Ui()->IsPopupOpen());
-	s_ListBox.DoStart(sc_RowHeightResList, s_NumNodes, 1, 3, SelectedOld, &ModeList);
+	s_ListBox.DoStart(RowHeightResList, s_NumNodes, 1, 3, SelectedOld, &ModeList);
 
 	for(int i = 0; i < s_NumNodes; ++i)
 	{
@@ -939,7 +945,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 
 		int G = std::gcd(s_aModes[i].m_WindowWidth, s_aModes[i].m_WindowHeight);
 		str_format(aBuf, sizeof(aBuf), " %dx%d @%dhz %d bit (%d:%d)", s_aModes[i].m_CanvasWidth, s_aModes[i].m_CanvasHeight, s_aModes[i].m_RefreshRate, Depth, s_aModes[i].m_WindowWidth / G, s_aModes[i].m_WindowHeight / G);
-		Ui()->DoLabel(&Item.m_Rect, aBuf, sc_FontSizeResList, TEXTALIGN_ML);
+		Ui()->DoLabel(&Item.m_Rect, aBuf, FontSizeResList, TEXTALIGN_ML);
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();

@@ -118,6 +118,7 @@ class CTClient : public CComponent
 	void DoFinishCheck();
 
 	bool ServerCommandExists(const char *pCommand);
+	bool IsQiaFenFinishedMap() const;
 
 	// Water Fall Detection
 	bool m_aWasInDeath[NUM_DUMMIES] = {false, false};
@@ -139,6 +140,10 @@ class CTClient : public CComponent
 	// Auto Switch on Unfreeze (HJ大佬辅助)
 	bool m_aWasInFreezeForSwitch[NUM_DUMMIES] = {false, false};
 	void CheckAutoSwitchOnUnfreeze();
+
+	// Auto Close Chat on Unfreeze (HJ大佬辅助)
+	bool m_aWasInFreezeForChatClose[NUM_DUMMIES] = {false, false};
+	void CheckAutoCloseChatOnUnfreeze();
 
 	// 玩家统计跟踪
 	SPlayerStats m_aPlayerStats[NUM_DUMMIES];
