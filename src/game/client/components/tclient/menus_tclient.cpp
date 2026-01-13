@@ -3108,11 +3108,6 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 
 void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 {
-	// ============================================
-	// Liquid Glass UI - 稳定布局系统
-	// ============================================
-
-	// === 布局常量（统一定义，禁止魔数） ===
 	const float ViewWidth = MainView.w;
 	const float UiScale = std::clamp(ViewWidth / 1000.0f, 0.85f, 1.0f);
 	const bool CompactLayout = ViewWidth < 600.0f;
@@ -3127,9 +3122,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	const float LG_LineSpacing = std::clamp(5.0f * UiScale, 3.0f, 5.0f);             // 统一行间距
 	const float LG_HeadlineMargin = std::clamp(10.0f * UiScale, 7.0f, 10.0f);        // 标题下方间距
 	const float LG_LabelMaxWidth = maximum(120.0f, ViewWidth * 0.45f);
-	const float LG_LabelWidth = std::clamp(170.0f * UiScale, 120.0f, LG_LabelMaxWidth); // 左侧标签列宽度（固定）
+	const float LG_LabelWidth = std::clamp(170.0f * UiScale, 120.0f, LG_LabelMaxWidth); // 左侧标签列宽度
 
-	// === 颜色定义 ===
+	//颜色定义
 	const ColorRGBA LG_GlassColor(0.08f, 0.09f, 0.12f, LG_CardAlpha);
 	const ColorRGBA LG_HighlightColor(1.0f, 1.0f, 1.0f, 0.05f);
 	const ColorRGBA LG_ShadowColor(0.0f, 0.0f, 0.0f, 0.12f);
@@ -3155,22 +3150,14 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	MainView.VSplitLeft(OuterMargin, nullptr, &MainView);
 
 	MainView.VSplitMid(&LeftView, &RightView, LG_CardSpacing);
-
-	// === 绘制 Liquid Glass 卡片背景 ===
 	for(CUIRect &Card : s_GlassCards)
 	{
 		Card.y -= s_PrevScrollOffset.y - ScrollOffset.y;
-
-		// 阴影层
 		CUIRect Shadow = Card;
 		Shadow.x += 1.5f;
 		Shadow.y += 2.0f;
 		Shadow.Draw(LG_ShadowColor, IGraphics::CORNER_ALL, LG_CornerRadius);
-
-		// 主玻璃层
 		Card.Draw(LG_GlassColor, IGraphics::CORNER_ALL, LG_CornerRadius);
-
-		// 顶部高光
 		CUIRect TopHighlight = Card;
 		TopHighlight.h = 1.0f;
 		TopHighlight.x += LG_CornerRadius;
@@ -3179,20 +3166,13 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	}
 	s_PrevScrollOffset = ScrollOffset;
 	s_GlassCards.clear();
-
-	// === 动态彩色标题 ===
 	const float Time = Client()->GlobalTime();
 	auto GetRainbowColor = [Time](int ModuleIndex) -> ColorRGBA {
-		// 每个模块有不同的相位偏移，形成彩虹波浪效果
 		const float Hue = std::fmod(Time * 0.15f + ModuleIndex * 0.12f, 1.0f);
-		// HSL 转 RGB（S=0.7, L=0.65 柔和饱和度）
 		ColorHSLA Hsla(Hue, 0.7f, 0.65f, 1.0f);
 		return color_cast<ColorRGBA>(Hsla);
 	};
-
 	CUIRect Row, LabelCol, ControlCol, CardContent, HeadlineRect;
-
-	// ========== 模块 0: QmClient 信息 (横跨整个宽度) ==========
 	static float s_QQCopiedTime = 0.0f;  
 	static bool s_QQCopied = false;       
 	MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
@@ -3210,10 +3190,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	CUIRect LeftTitle, LeftContent;
 	LeftPart.HSplitTop(LG_HeadlineSize, &LeftTitle, &LeftContent);
 	TextRender()->TextColor(GetRainbowColor(-1));
-	Ui()->DoLabel(&LeftTitle, "QmClient 暂定社区", LG_HeadlineSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&LeftTitle, "QmClient 社区", LG_HeadlineSize, TEXTALIGN_ML);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	LeftContent.HSplitTop(LG_HeadlineMargin, nullptr, &LeftContent);
-	// QQ群复制
 	LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
 	{
 		static int s_QQGroupButtonId;
@@ -3261,7 +3240,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		TeePos,               // 位置
 		TeeSize,              // 大小
 		"santa_tuzi",         // 皮肤名
-		"santa_tuzi",           // 备用皮肤
+		"santa_tuzi"，           // 备用皮肤
 		false,                 // 自定义颜色
 		0, 0, 0,              // 脚部颜色，身体颜色，表情
 		false,                 // 彩虹效果
@@ -3949,7 +3928,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		if(str_comp_nocase(pType, "Brutal") == 0)
 			return TCLocalize("高阶");
 		if(str_comp_nocase(pType, "Insane") == 0)
-			return TCLocalize("极限");
+			return TCLocalize("疯狂");
 		if(str_comp_nocase(pType, "Dummy") == 0)
 			return TCLocalize("分身");
 		if(str_comp_nocase(pType, "Solo") == 0)
@@ -4020,8 +3999,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		}
 		return TCLocalize("未知");
 	};
-
-	// 记录复制状态和时间
 	static int s_CopiedMapIndex = -1;
 	static float s_CopiedTime = 0.0f;
 	if(s_CopiedMapIndex >= 0 && Client()->LocalTime() - s_CopiedTime > 1.5f)
