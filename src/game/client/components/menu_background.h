@@ -118,6 +118,7 @@ public:
 
 	void ChangePosition(int PositionNumber);
 
+	void RefreshThemes();
 	std::vector<CTheme> &GetThemes();
 };
 

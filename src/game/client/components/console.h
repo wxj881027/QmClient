@@ -28,12 +28,26 @@ class CGameConsole : public CComponent
 	class CInstance
 	{
 	public:
+		enum class ELogCategory : unsigned char
+		{
+			SYSTEM = 0,
+			PLAYER,
+		};
+
+		enum class ELogFilter : unsigned char
+		{
+			ALL = 0,
+			PLAYER,
+			SYSTEM,
+		};
+
 		struct CBacklogEntry
 		{
 			float m_YOffset;
 			int m_LineCount;
 			ColorRGBA m_PrintColor;
 			size_t m_Length;
+			ELogCategory m_LogCategory;
 			char m_aText[1];
 		};
 		CStaticRingBuffer<CBacklogEntry, 1024 * 1024, CRingBufferBase::FLAG_RECYCLE> m_Backlog;
@@ -48,6 +62,7 @@ class CGameConsole : public CComponent
 		int m_BacklogCurLine;
 		int m_BacklogLastActiveLine = -1;
 		int m_LinesRendered;
+		ELogFilter m_LogFilter = ELogFilter::ALL;
 
 		STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
 		float m_LastInputHeight = 0.0f;
@@ -142,6 +157,9 @@ class CGameConsole : public CComponent
 		void UpdateCompletionSuggestions();
 
 	private:
+		void SetLogFilter(ELogFilter Filter);
+		bool MatchesLogFilter(const CBacklogEntry *pEntry) const;
+		static ELogCategory ClassifyLogCategory(const char *pLine, size_t Length);
 		void SetSearching(bool Searching);
 		void ClearSearch();
 		void UpdateSearch();
@@ -165,6 +183,8 @@ class CGameConsole : public CComponent
 
 	bool m_WantsSelectionCopy = false;
 	CUi::CTouchState m_TouchState;
+	CButtonContainer m_aFilterButtons[3];
+	bool m_FilterMouseDown = false;
 
 	static constexpr ColorRGBA ms_SearchHighlightColor = ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f);
 	static constexpr ColorRGBA ms_SearchSelectedColor = ColorRGBA(1.0f, 1.0f, 0.0f, 1.0f);

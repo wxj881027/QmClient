@@ -409,6 +409,8 @@ static CCommandBuffer::SCommand_Texture_Create LoadTextureCreateCommand(int Text
 		Cmd.m_Flags |= TextureFlag::TO_3D_TEXTURE;
 	if((Flags & IGraphics::TEXLOAD_NO_2D_TEXTURE) != 0)
 		Cmd.m_Flags |= TextureFlag::NO_2D_TEXTURE;
+	if((Flags & IGraphics::TEXLOAD_NO_MIPMAPS) != 0)
+		Cmd.m_Flags |= TextureFlag::NO_MIPMAPS;
 
 	return Cmd;
 }
@@ -530,6 +532,31 @@ bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int 
 	else
 	{
 		const size_t MemSize = Width * Height;
+		uint8_t *pTmpData = static_cast<uint8_t *>(malloc(MemSize));
+		mem_copy(pTmpData, pData, MemSize);
+		Cmd.m_pData = pTmpData;
+	}
+	AddCmd(Cmd);
+
+	return true;
+}
+
+bool CGraphics_Threaded::UpdateTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer)
+{
+	CCommandBuffer::SCommand_Texture_Update Cmd;
+	Cmd.m_Slot = TextureId.Id();
+	Cmd.m_X = x;
+	Cmd.m_Y = y;
+	Cmd.m_Width = Width;
+	Cmd.m_Height = Height;
+
+	if(IsMovedPointer)
+	{
+		Cmd.m_pData = pData;
+	}
+	else
+	{
+		const size_t MemSize = Width * Height * 4;
 		uint8_t *pTmpData = static_cast<uint8_t *>(malloc(MemSize));
 		mem_copy(pTmpData, pData, MemSize);
 		Cmd.m_pData = pTmpData;

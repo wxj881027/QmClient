@@ -764,6 +764,13 @@ void CConsole::Con_Exec(IResult *pResult, void *pUserData)
 	((CConsole *)pUserData)->ExecuteFile(pResult->GetString(0), pResult->m_ClientId, true, IStorage::TYPE_ALL);
 }
 
+void CConsole::Con_ToggleExec(IResult *pResult, void *pUserData)
+{
+	CConsole *pConsole = static_cast<CConsole *>(pUserData);
+	const char *pFilename = pResult->GetInteger(0) != 0 ? pResult->GetString(1) : pResult->GetString(2);
+	pConsole->ExecuteFile(pFilename, pResult->m_ClientId, true, IStorage::TYPE_ALL);
+}
+
 void CConsole::ConCommandAccess(IResult *pResult, void *pUser)
 {
 	CConsole *pConsole = static_cast<CConsole *>(pUser);
@@ -878,6 +885,7 @@ CConsole::CConsole(int FlagMask)
 	// register some basic commands
 	Register("echo", "r[text]", CFGFLAG_SERVER, Con_Echo, this, "Echo the text");
 	Register("exec", "r[file]", CFGFLAG_SERVER | CFGFLAG_CLIENT, Con_Exec, this, "Execute the specified file");
+	Register("+toggle_exec", "s[press_file] s[release_file]", CFGFLAG_CLIENT, Con_ToggleExec, this, "Execute files on key press/release");
 
 	Register("access_level", "s[command] ?s['admin'|'moderator'|'helper'|'all']", CFGFLAG_SERVER, ConCommandAccess, this, "Specify command accessibility for given access level");
 	Register("access_status", "s['admin'|'moderator'|'helper'|'all']", CFGFLAG_SERVER, ConCommandStatus, this, "List all commands which are accessible for given access level");

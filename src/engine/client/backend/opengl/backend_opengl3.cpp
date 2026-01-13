@@ -705,6 +705,11 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Create(const CCommandBuffe
 	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_RGBA, GL_RGBA, pCommand->m_Flags, pCommand->m_pData);
 }
 
+void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
+{
+	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RGBA, pCommand->m_pData);
+}
+
 void CCommandProcessorFragment_OpenGL3_3::Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand)
 {
 	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RED, pCommand->m_pData);

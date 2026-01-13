@@ -200,6 +200,7 @@ public:
 		TEXLOAD_TO_3D_TEXTURE = 1 << 0,
 		TEXLOAD_TO_2D_ARRAY_TEXTURE = 1 << 1,
 		TEXLOAD_NO_2D_TEXTURE = 1 << 2,
+		TEXLOAD_NO_MIPMAPS = 1 << 3,
 	};
 
 	class CTextureHandle
@@ -300,6 +301,7 @@ public:
 	virtual bool LoadTextTextures(size_t Width, size_t Height, CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture, uint8_t *pTextData, uint8_t *pTextOutlineData) = 0;
 	virtual bool UnloadTextTextures(CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture) = 0;
 	virtual bool UpdateTextTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer) = 0;
+	virtual bool UpdateTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer) = 0;
 
 	virtual CTextureHandle LoadSpriteTexture(const CImageInfo &FromImageInfo, const struct CDataSprite *pSprite) = 0;
 

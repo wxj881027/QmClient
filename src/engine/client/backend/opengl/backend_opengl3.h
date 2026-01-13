@@ -86,6 +86,7 @@ protected:
 	void Cmd_Shutdown(const SCommand_Shutdown *pCommand) override;
 	void Cmd_Texture_Destroy(const CCommandBuffer::SCommand_Texture_Destroy *pCommand) override;
 	void Cmd_Texture_Create(const CCommandBuffer::SCommand_Texture_Create *pCommand) override;
+	void Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand) override;
 	void Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand) override;
 	void Cmd_TextTextures_Destroy(const CCommandBuffer::SCommand_TextTextures_Destroy *pCommand) override;
 	void Cmd_TextTextures_Create(const CCommandBuffer::SCommand_TextTextures_Create *pCommand) override;

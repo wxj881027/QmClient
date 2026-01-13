@@ -904,6 +904,11 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 	TextureCreate(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, GL_RGBA, GL_RGBA, pCommand->m_Flags, pCommand->m_pData);
 }
 
+void CCommandProcessorFragment_OpenGL::Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
+{
+	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_RGBA, pCommand->m_pData);
+}
+
 void CCommandProcessorFragment_OpenGL::Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand)
 {
 	TextureUpdate(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, GL_ALPHA, pCommand->m_pData);
@@ -1048,6 +1053,9 @@ ERunCommandReturnTypes CCommandProcessorFragment_OpenGL::RunCommand(const CComma
 		break;
 	case CCommandBuffer::CMD_TEXTURE_DESTROY:
 		Cmd_Texture_Destroy(static_cast<const CCommandBuffer::SCommand_Texture_Destroy *>(pBaseCommand));
+		break;
+	case CCommandBuffer::CMD_TEXTURE_UPDATE:
+		Cmd_Texture_Update(static_cast<const CCommandBuffer::SCommand_Texture_Update *>(pBaseCommand));
 		break;
 	case CCommandBuffer::CMD_TEXT_TEXTURES_CREATE:
 		Cmd_TextTextures_Create(static_cast<const CCommandBuffer::SCommand_TextTextures_Create *>(pBaseCommand));

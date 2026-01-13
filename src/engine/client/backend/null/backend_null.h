@@ -9,6 +9,7 @@ class CCommandProcessorFragment_Null : public CCommandProcessorFragment_GLBase
 	ERunCommandReturnTypes RunCommand(const CCommandBuffer::SCommand *pBaseCommand) override;
 	bool Cmd_Init(const SCommand_Init *pCommand);
 	virtual void Cmd_Texture_Create(const CCommandBuffer::SCommand_Texture_Create *pCommand);
+	virtual void Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand);
 	virtual void Cmd_TextTextures_Create(const CCommandBuffer::SCommand_TextTextures_Create *pCommand);
 	virtual void Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand);
 };

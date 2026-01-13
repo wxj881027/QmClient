@@ -15,6 +15,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/shared/jsonwriter.h>
 
 #include <generated/client_data.h>
 
@@ -27,6 +28,8 @@
 #include <game/version.h>
 
 static constexpr const char *TCLIENT_INFO_URL = "https://update.tclient.app/info.json";
+static constexpr const char *MAP_CATEGORY_CACHE_FILE = "tclient/map_categories.json";
+static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 
 CTClient::CTClient()
 {
@@ -120,6 +123,7 @@ void CTClient::OnInit()
 		SWarning Warning(aError, TCLocalize("喜报!您可能仅安装了需要DDNet.exe文件，请使用完整的TClient文件夹", "data_version.h"));
 		Client()->AddWarning(Warning);
 	}
+	LoadMapCategoryCache();
 }
 
 static bool LineShouldHighlight(const char *pLine, const char *pName)
@@ -767,6 +771,7 @@ void CTClient::OnRender()
 	CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
 	CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
 	UpdatePlayerStats(); // 更新玩家统计
+	MaybeSaveMapCategoryCache();
 }
 
 void CTClient::CheckFreeze()
@@ -1631,6 +1636,134 @@ void CTClient::ConfigSaveFavoriteMaps(IConfigManager *pConfigManager, void *pUse
 	{
 		str_format(aBuf, sizeof(aBuf), "add_favorite_map \"%s\"", Map.c_str());
 		pConfigManager->WriteLine(aBuf);
+	}
+}
+
+// ==================== Map category cache ====================
+
+void CTClient::LoadMapCategoryCache()
+{
+	void *pFileData = nullptr;
+	unsigned FileSize = 0;
+	if(!Storage()->ReadFile(MAP_CATEGORY_CACHE_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize))
+		return;
+
+	json_settings JsonSettings{};
+	char aError[256];
+	json_value *pJson = json_parse_ex(&JsonSettings, static_cast<json_char *>(pFileData), FileSize, aError);
+	free(pFileData);
+
+	if(pJson == nullptr)
+	{
+		log_error("tclient", "map category cache json parse error: %s", aError);
+		return;
+	}
+
+	if(pJson->type != json_object)
+	{
+		json_value_free(pJson);
+		return;
+	}
+
+	const json_value *pMaps = json_object_get(pJson, "maps");
+	const json_value *pMapObject = (pMaps && pMaps->type == json_object) ? pMaps : pJson;
+	if(pMapObject->type == json_object)
+	{
+		m_MapCategoryCache.clear();
+		for(unsigned i = 0; i < pMapObject->u.object.length; ++i)
+		{
+			const char *pMapName = pMapObject->u.object.values[i].name;
+			const json_value *pCategoryValue = pMapObject->u.object.values[i].value;
+			if(!pMapName || !pCategoryValue || pCategoryValue->type != json_string)
+				continue;
+			if(pMapObject == pJson && str_comp(pMapName, "version") == 0)
+				continue;
+			const char *pCategoryKey = json_string_get(pCategoryValue);
+			if(!pCategoryKey || pCategoryKey[0] == '\0')
+				continue;
+			m_MapCategoryCache.emplace(pMapName, pCategoryKey);
+		}
+	}
+
+	json_value_free(pJson);
+	m_MapCategoryCacheDirty = false;
+	m_MapCategoryCacheNextSave = 0;
+}
+
+void CTClient::SaveMapCategoryCache()
+{
+	Storage()->CreateFolder("tclient", IStorage::TYPE_SAVE);
+
+	IOHANDLE File = Storage()->OpenFile(MAP_CATEGORY_CACHE_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+	{
+		log_error("tclient", "map category cache file open failed");
+		m_MapCategoryCacheNextSave = time_get() + time_freq() * MAP_CATEGORY_CACHE_SAVE_DELAY_SEC;
+		return;
+	}
+
+	CJsonFileWriter Writer(File);
+	Writer.BeginObject();
+	Writer.WriteAttribute("version");
+	Writer.WriteIntValue(1);
+	Writer.WriteAttribute("maps");
+	Writer.BeginObject();
+	for(const auto &Entry : m_MapCategoryCache)
+	{
+		if(Entry.first.empty() || Entry.second.empty())
+			continue;
+		Writer.WriteAttribute(Entry.first.c_str());
+		Writer.WriteStrValue(Entry.second.c_str());
+	}
+	Writer.EndObject();
+	Writer.EndObject();
+
+	m_MapCategoryCacheDirty = false;
+	m_MapCategoryCacheNextSave = 0;
+}
+
+void CTClient::MaybeSaveMapCategoryCache()
+{
+	if(!m_MapCategoryCacheDirty)
+		return;
+	if(m_MapCategoryCacheNextSave == 0)
+		m_MapCategoryCacheNextSave = time_get() + time_freq() * MAP_CATEGORY_CACHE_SAVE_DELAY_SEC;
+	if(time_get() >= m_MapCategoryCacheNextSave)
+		SaveMapCategoryCache();
+}
+
+const char *CTClient::GetCachedMapCategoryKey(const char *pMapName) const
+{
+	if(!pMapName || pMapName[0] == '\0')
+		return nullptr;
+	const auto It = m_MapCategoryCache.find(pMapName);
+	if(It == m_MapCategoryCache.end() || It->second.empty())
+		return nullptr;
+	return It->second.c_str();
+}
+
+void CTClient::UpdateMapCategoryCache(const char *pMapName, const char *pCategoryKey)
+{
+	if(!pMapName || pMapName[0] == '\0' || !pCategoryKey || pCategoryKey[0] == '\0')
+		return;
+
+	bool Updated = false;
+	auto It = m_MapCategoryCache.find(pMapName);
+	if(It == m_MapCategoryCache.end())
+	{
+		m_MapCategoryCache.emplace(pMapName, pCategoryKey);
+		Updated = true;
+	}
+	else if(It->second != pCategoryKey)
+	{
+		It->second = pCategoryKey;
+		Updated = true;
+	}
+
+	if(Updated && !m_MapCategoryCacheDirty)
+	{
+		m_MapCategoryCacheDirty = true;
+		m_MapCategoryCacheNextSave = time_get() + time_freq() * MAP_CATEGORY_CACHE_SAVE_DELAY_SEC;
 	}
 }
 

@@ -12,6 +12,9 @@ ERunCommandReturnTypes CCommandProcessorFragment_Null::RunCommand(const CCommand
 	case CCommandBuffer::CMD_TEXTURE_CREATE:
 		Cmd_Texture_Create(static_cast<const CCommandBuffer::SCommand_Texture_Create *>(pBaseCommand));
 		break;
+	case CCommandBuffer::CMD_TEXTURE_UPDATE:
+		Cmd_Texture_Update(static_cast<const CCommandBuffer::SCommand_Texture_Update *>(pBaseCommand));
+		break;
 	case CCommandBuffer::CMD_TEXT_TEXTURES_CREATE:
 		Cmd_TextTextures_Create(static_cast<const CCommandBuffer::SCommand_TextTextures_Create *>(pBaseCommand));
 		break;
@@ -45,6 +48,11 @@ bool CCommandProcessorFragment_Null::Cmd_Init(const SCommand_Init *pCommand)
 }
 
 void CCommandProcessorFragment_Null::Cmd_Texture_Create(const CCommandBuffer::SCommand_Texture_Create *pCommand)
+{
+	free(pCommand->m_pData);
+}
+
+void CCommandProcessorFragment_Null::Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
 {
 	free(pCommand->m_pData);
 }

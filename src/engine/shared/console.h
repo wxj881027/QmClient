@@ -71,6 +71,7 @@ class CConsole : public IConsole
 	static void Con_Chain(IResult *pResult, void *pUserData);
 	static void Con_Echo(IResult *pResult, void *pUserData);
 	static void Con_Exec(IResult *pResult, void *pUserData);
+	static void Con_ToggleExec(IResult *pResult, void *pUserData);
 	static void ConCommandAccess(IResult *pResult, void *pUser);
 	static void ConCommandStatus(IConsole::IResult *pResult, void *pUser);
 

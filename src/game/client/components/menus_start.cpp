@@ -104,8 +104,11 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 
 	CUIRect Menu;
 	MainView.VMargin(VMargin, &Menu);
-	Menu.HSplitBottom(25.0f, &Menu, nullptr);
-
+	CUIRect QuitNote;
+	Menu.HSplitBottom(22.0f, &Menu, &QuitNote);
+	CUIRect Line1, Line2;
+	QuitNote.HSplitTop(11.0f, &Line1, &QuitNote);
+	QuitNote.HSplitTop(11.0f, &Line2, nullptr);
 	Menu.HSplitBottom(40.0f, &Menu, &Button);
 	static CButtonContainer s_QuitButton;
 	bool UsedEscape = false;
@@ -120,6 +123,8 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 			Client()->Quit();
 		}
 	}
+	Ui()->DoLabel(&Line1, "在我死去之前", 6.0f, TEXTALIGN_MC);
+	Ui()->DoLabel(&Line2, "    谨以此端,回忆我", 3.0f, TEXTALIGN_MC);
 
 	Menu.HSplitBottom(100.0f, &Menu, nullptr);
 	Menu.HSplitBottom(40.0f, &Menu, &Button);

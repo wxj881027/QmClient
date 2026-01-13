@@ -157,6 +157,14 @@ class CTClient : public CComponent
 	static void ConClearFavoriteMaps(IConsole::IResult *pResult, void *pUserData);
 	static void ConfigSaveFavoriteMaps(IConfigManager *pConfigManager, void *pUserData);
 
+	// Map category cache
+	std::unordered_map<std::string, std::string> m_MapCategoryCache;
+	bool m_MapCategoryCacheDirty = false;
+	int64_t m_MapCategoryCacheNextSave = 0;
+	void LoadMapCategoryCache();
+	void SaveMapCategoryCache();
+	void MaybeSaveMapCategoryCache();
+
 	// 本地存档列表
 	static void ConSaveList(IConsole::IResult *pResult, void *pUserData);
 
@@ -233,6 +241,8 @@ public:
 	void RemoveFavoriteMap(const char *pMapName);
 	void ClearFavoriteMaps();
 	const std::set<std::string> &GetFavoriteMaps() const { return m_FavoriteMaps; }
+	const char *GetCachedMapCategoryKey(const char *pMapName) const;
+	void UpdateMapCategoryCache(const char *pMapName, const char *pCategoryKey);
 
 	// STT 公开接口
 #if defined(CONF_WHISPER)

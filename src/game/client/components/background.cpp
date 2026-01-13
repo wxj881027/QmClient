@@ -1,7 +1,7 @@
 #include "background.h"
-
 #include <base/system.h>
 
+#include <engine/graphics.h>
 #include <engine/map.h>
 #include <engine/shared/config.h>
 
@@ -19,11 +19,14 @@ CBackground::CBackground(ERenderType MapType, bool OnlineOnly) :
 	m_pImages = new CMapImages;
 	m_pBackgroundImages = m_pImages;
 	m_Loaded = false;
+	m_ImageBackground = false;
 	m_aMapName[0] = '\0';
+	m_BackgroundTexture.Invalidate();
 }
 
 CBackground::~CBackground()
 {
+	ClearImageBackground();
 	delete m_pBackgroundLayers;
 	delete m_pBackgroundImages;
 }
@@ -31,6 +34,28 @@ CBackground::~CBackground()
 CBackgroundEngineMap *CBackground::CreateBGMap()
 {
 	return new CBackgroundEngineMap;
+}
+
+void CBackground::ClearImageBackground()
+{
+	if(m_BackgroundTexture.IsValid())
+		Graphics()->UnloadTexture(&m_BackgroundTexture);
+	m_BackgroundTexture.Invalidate();
+	m_ImageBackground = false;
+}
+
+bool CBackground::LoadImageBackground(const char *pPath)
+{
+	ClearImageBackground();
+	m_BackgroundTexture = Graphics()->LoadTexture(pPath, IStorage::TYPE_ALL);
+	if(m_BackgroundTexture.IsNullTexture())
+	{
+		m_BackgroundTexture.Invalidate();
+		return false;
+	}
+	m_ImageBackground = true;
+	m_Loaded = true;
+	return true;
 }
 
 void CBackground::OnInit()
@@ -46,9 +71,10 @@ void CBackground::OnInit()
 
 void CBackground::LoadBackground()
 {
-	if(m_Loaded && m_pMap == m_pBackgroundMap)
+	if(m_Loaded && !m_ImageBackground && m_pMap == m_pBackgroundMap)
 		m_pMap->Unload();
 
+	ClearImageBackground();
 	m_Loaded = false;
 	m_pMap = m_pBackgroundMap;
 	m_pLayers = m_pBackgroundLayers;
@@ -60,7 +86,6 @@ void CBackground::LoadBackground()
 		bool NeedImageLoading = false;
 
 		char aBuf[IO_MAX_PATH_LENGTH];
-		str_format(aBuf, sizeof(aBuf), "maps/%s%s", g_Config.m_ClBackgroundEntities, str_endswith(g_Config.m_ClBackgroundEntities, ".map") ? "" : ".map");
 		if(str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP) == 0)
 		{
 			m_pMap = Kernel()->RequestInterface<IEngineMap>();
@@ -71,14 +96,23 @@ void CBackground::LoadBackground()
 				m_Loaded = true;
 			}
 		}
-		else if(m_pMap->Load(aBuf))
+		else if(str_endswith_nocase(g_Config.m_ClBackgroundEntities, ".png"))
 		{
-			m_pLayers->Init(m_pMap, true);
-			NeedImageLoading = true;
-			m_Loaded = true;
+			str_format(aBuf, sizeof(aBuf), "maps/%s", g_Config.m_ClBackgroundEntities);
+			LoadImageBackground(aBuf);
+		}
+		else
+		{
+			str_format(aBuf, sizeof(aBuf), "maps/%s%s", g_Config.m_ClBackgroundEntities, str_endswith(g_Config.m_ClBackgroundEntities, ".map") ? "" : ".map");
+			if(m_pMap->Load(aBuf))
+			{
+				m_pLayers->Init(m_pMap, true);
+				NeedImageLoading = true;
+				m_Loaded = true;
+			}
 		}
 
-		if(m_Loaded)
+		if(m_Loaded && !m_ImageBackground)
 		{
 			if(NeedImageLoading)
 			{
@@ -107,6 +141,23 @@ void CBackground::OnRender()
 
 	if(g_Config.m_ClOverlayEntities != 100)
 		return;
+
+	if(m_ImageBackground)
+	{
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const float ScreenHeight = 300.0f;
+		const float ScreenWidth = ScreenHeight * Graphics()->ScreenAspect();
+		Graphics()->MapScreen(0.0f, 0.0f, ScreenWidth, ScreenHeight);
+		Graphics()->TextureSet(m_BackgroundTexture);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		const IGraphics::CQuadItem QuadItem(0.0f, 0.0f, ScreenWidth, ScreenHeight);
+		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->QuadsEnd();
+		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+		return;
+	}
 
 	CMapLayers::OnRender();
 }

@@ -30,6 +30,149 @@
 
 static constexpr float FONT_SIZE = 10.0f;
 static constexpr float LINE_SPACING = 1.0f;
+static constexpr float LINK_CLICK_DRAG_THRESHOLD = 3.0f;
+static constexpr float LINK_UNDERLINE_HEIGHT = 0.12f;
+static constexpr ColorRGBA LINK_TEXT_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 1.0f);
+static constexpr ColorRGBA LINK_UNDERLINE_COLOR = ColorRGBA(0.2f, 0.65f, 1.0f, 0.9f);
+
+struct SLinkRange
+{
+	int m_StartChar;
+	int m_EndChar;
+};
+
+static bool IsLinkTrailingPunctuation(char c)
+{
+	switch(c)
+	{
+	case '.':
+	case ',':
+	case ';':
+	case ':':
+	case ')':
+	case ']':
+	case '}':
+	case '>':
+	case '"':
+	case '\'':
+		return true;
+	default:
+		return false;
+	}
+}
+
+static const char *FindNextLinkStart(const char *pText)
+{
+	const char *pHttps = str_find_nocase(pText, "https://");
+	const char *pHttp = str_find_nocase(pText, "http://");
+	const char *pWww = str_find_nocase(pText, "www.");
+	const char *pStart = nullptr;
+	for(const char *pCandidate : {pHttps, pHttp, pWww})
+	{
+		if(!pCandidate)
+			continue;
+		if(!pStart || pCandidate < pStart)
+			pStart = pCandidate;
+	}
+	return pStart;
+}
+
+static bool FindLinkAtChar(const char *pText, int CharIndex, char *pOut, size_t OutSize)
+{
+	if(!pText || CharIndex < 0 || OutSize == 0)
+		return false;
+
+	const char *pSearch = pText;
+	while(*pSearch)
+	{
+		const char *pStart = FindNextLinkStart(pSearch);
+		if(!pStart)
+			break;
+
+		const char *pEnd = pStart;
+		while(*pEnd && !str_isspace(*pEnd))
+			++pEnd;
+
+		while(pEnd > pStart && IsLinkTrailingPunctuation(pEnd[-1]))
+			--pEnd;
+
+		if(pEnd > pStart)
+		{
+			const int StartChar = (int)str_utf8_offset_bytes_to_chars(pText, pStart - pText);
+			const int EndChar = (int)str_utf8_offset_bytes_to_chars(pText, pEnd - pText);
+			if(CharIndex >= StartChar && CharIndex < EndChar)
+			{
+				str_truncate(pOut, (int)OutSize, pStart, (int)(pEnd - pStart));
+				return true;
+			}
+			pSearch = pEnd;
+		}
+		else
+		{
+			pSearch = pStart + 1;
+		}
+	}
+
+	return false;
+}
+
+static bool HasPotentialLink(const char *pText)
+{
+	return pText && (str_find_nocase(pText, "https://") || str_find_nocase(pText, "http://") || str_find_nocase(pText, "www."));
+}
+
+static void CollectLinkRanges(const char *pText, std::vector<SLinkRange> &vRanges)
+{
+	vRanges.clear();
+	if(!pText || pText[0] == '\0')
+		return;
+
+	const char *pSearch = pText;
+	while(*pSearch)
+	{
+		const char *pStart = FindNextLinkStart(pSearch);
+		if(!pStart)
+			break;
+
+		const char *pEnd = pStart;
+		while(*pEnd && !str_isspace(*pEnd))
+			++pEnd;
+
+		while(pEnd > pStart && IsLinkTrailingPunctuation(pEnd[-1]))
+			--pEnd;
+
+		if(pEnd > pStart)
+		{
+			const int StartChar = (int)str_utf8_offset_bytes_to_chars(pText, pStart - pText);
+			const int EndChar = (int)str_utf8_offset_bytes_to_chars(pText, pEnd - pText);
+			if(EndChar > StartChar)
+				vRanges.push_back({StartChar, EndChar});
+			pSearch = pEnd;
+		}
+		else
+		{
+			pSearch = pStart + 1;
+		}
+	}
+}
+
+static void BuildLinkColorSplits(const std::vector<SLinkRange> &vRanges, std::vector<STextColorSplit> &vSplits)
+{
+	vSplits.clear();
+	if(vRanges.empty())
+		return;
+
+	int Cursor = 0;
+	for(const auto &Range : vRanges)
+	{
+		if(Range.m_StartChar > Cursor)
+			vSplits.emplace_back(Cursor, Range.m_StartChar - Cursor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
+		if(Range.m_EndChar > Range.m_StartChar)
+			vSplits.emplace_back(Range.m_StartChar, Range.m_EndChar - Range.m_StartChar, LINK_TEXT_COLOR);
+		Cursor = Range.m_EndChar;
+	}
+	vSplits.emplace_back(Cursor, 9999, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
+}
 
 class CConsoleLogger : public ILogger
 {
@@ -239,7 +382,7 @@ CGameConsole::CInstance::CInstance(int Type)
 	m_IsCommand = false;
 
 	m_Backlog.SetPopCallback([this](CBacklogEntry *pEntry) {
-		if(pEntry->m_LineCount != -1)
+		if(pEntry->m_LineCount != -1 && MatchesLogFilter(pEntry))
 		{
 			m_NewLineCounter -= pEntry->m_LineCount;
 			for(auto &SearchMatch : m_vSearchMatches)
@@ -308,7 +451,8 @@ void CGameConsole::CInstance::PumpBacklogPending()
 		if(pEntry->m_LineCount == -1)
 		{
 			UpdateEntryTextAttributes(pEntry);
-			m_NewLineCounter += pEntry->m_LineCount;
+			if(MatchesLogFilter(pEntry))
+				m_NewLineCounter += pEntry->m_LineCount;
 		}
 	}
 }
@@ -772,8 +916,60 @@ void CGameConsole::CInstance::PrintLine(const char *pLine, int Len, ColorRGBA Pr
 	pEntry->m_YOffset = -1.0f;
 	pEntry->m_PrintColor = PrintColor;
 	pEntry->m_Length = Len;
+	pEntry->m_LogCategory = ClassifyLogCategory(pLine, (size_t)Len);
 	pEntry->m_LineCount = -1;
 	str_copy(pEntry->m_aText, pLine, Len + 1);
+}
+
+CGameConsole::CInstance::ELogCategory CGameConsole::CInstance::ClassifyLogCategory(const char *pLine, size_t Length)
+{
+	if(!pLine || Length == 0)
+		return ELogCategory::SYSTEM;
+
+	const char *pSearchEnd = pLine + Length;
+	const char *pSystemStart = pLine;
+	if(const char *pColon = str_find(pLine, ": "))
+	{
+		pSearchEnd = pColon;
+		const char *pIt = pColon;
+		while(pIt > pLine && pIt[-1] != ' ')
+			--pIt;
+		pSystemStart = pIt;
+	}
+
+	const char *pChat = str_find_nocase(pSystemStart, "chat/");
+	if(pChat && pChat < pSearchEnd)
+	{
+		if(str_startswith_nocase(pChat, "chat/all") || str_startswith_nocase(pChat, "chat/team") || str_startswith_nocase(pChat, "chat/whisper"))
+			return ELogCategory::PLAYER;
+	}
+	return ELogCategory::SYSTEM;
+}
+
+bool CGameConsole::CInstance::MatchesLogFilter(const CBacklogEntry *pEntry) const
+{
+	if(m_LogFilter == ELogFilter::ALL)
+		return true;
+	const ELogCategory Category = ClassifyLogCategory(pEntry->m_aText, pEntry->m_Length);
+	if(Category == ELogCategory::PLAYER)
+		return m_LogFilter == ELogFilter::PLAYER;
+	return m_LogFilter == ELogFilter::SYSTEM;
+}
+
+void CGameConsole::CInstance::SetLogFilter(ELogFilter Filter)
+{
+	if(m_LogFilter == Filter)
+		return;
+	m_LogFilter = Filter;
+	m_BacklogCurLine = 0;
+	m_BacklogLastActiveLine = -1;
+	m_NewLineCounter = 0;
+	m_HasSelection = false;
+	m_CurSelStart = 0;
+	m_CurSelEnd = 0;
+	m_MouseIsPress = false;
+	if(m_Searching)
+		UpdateSearch();
 }
 
 int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
@@ -785,7 +981,8 @@ int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
 	{
 		if(pEntry->m_LineCount == -1)
 			UpdateEntryTextAttributes(pEntry);
-		Line += pEntry->m_LineCount;
+		if(MatchesLogFilter(pEntry))
+			Line += pEntry->m_LineCount;
 		pEntry = m_Backlog.Prev(pEntry);
 	}
 
@@ -794,7 +991,8 @@ int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
 	{
 		if(pEntry->m_LineCount == -1)
 			UpdateEntryTextAttributes(pEntry);
-		Amount += pEntry->m_LineCount;
+		if(MatchesLogFilter(pEntry))
+			Amount += pEntry->m_LineCount;
 		pEntry = Direction == -1 ? m_Backlog.Prev(pEntry) : m_Backlog.Next(pEntry);
 	}
 
@@ -900,11 +1098,19 @@ void CGameConsole::CInstance::UpdateSearch()
 	CBacklogEntry *pEntry = m_Backlog.Last();
 	int EntryLine = 0, LineToScrollStart = 0, LineToScrollEnd = 0;
 
-	for(; pEntry; EntryLine += pEntry->m_LineCount, pEntry = m_Backlog.Prev(pEntry))
+	for(; pEntry; pEntry = m_Backlog.Prev(pEntry))
 	{
+		if(pEntry->m_LineCount == -1)
+			UpdateEntryTextAttributes(pEntry);
+		if(!MatchesLogFilter(pEntry))
+			continue;
+
 		const char *pSearchPos = str_utf8_find_nocase(pEntry->m_aText, pSearchText);
 		if(!pSearchPos)
+		{
+			EntryLine += pEntry->m_LineCount;
 			continue;
+		}
 
 		int EntryLineCount = pEntry->m_LineCount;
 
@@ -955,6 +1161,8 @@ void CGameConsole::CInstance::UpdateSearch()
 
 			pSearchPos = str_utf8_find_nocase(pEntry->m_aText + Pos + SearchLength, pSearchText);
 		}
+
+		EntryLine += pEntry->m_LineCount;
 	}
 
 	if(!m_vSearchMatches.empty() && SearchChanged)
@@ -1169,7 +1377,10 @@ void CGameConsole::OnRender()
 		Toggle(CONSOLETYPE_LOCAL);
 
 	if(m_ConsoleState == CONSOLE_CLOSED)
+	{
+		m_FilterMouseDown = false;
 		return;
+	}
 
 	if(m_ConsoleState == CONSOLE_OPEN)
 		Input()->MouseModeAbsolute();
@@ -1190,6 +1401,22 @@ void CGameConsole::OnRender()
 	const ColorRGBA aBorderColors[NUM_CONSOLETYPES] = {ColorRGBA(0.1f, 0.1f, 0.1f, 0.9f), ColorRGBA(0.2f, 0.1f, 0.1f, 0.9f)};
 
 	Ui()->MapScreen();
+
+	const bool UpdateConsoleUi = !Ui()->Enabled();
+	if(UpdateConsoleUi)
+	{
+		Ui()->SetEnabled(true);
+		Ui()->StartCheck();
+		const vec2 NativeMousePos = Input()->NativeMousePos();
+		const vec2 UpdatedMousePos = Ui()->UpdatedMousePos();
+		Ui()->OnCursorMove(NativeMousePos.x - UpdatedMousePos.x, NativeMousePos.y - UpdatedMousePos.y);
+		if(CLineInput *pActiveInput = CLineInput::GetActiveInput())
+		{
+			Ui()->SetActiveItem(pActiveInput);
+			Ui()->SetActiveItem(nullptr);
+		}
+		Ui()->Update();
+	}
 
 	// background
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BACKGROUND_NOISE].m_Id);
@@ -1240,6 +1467,11 @@ void CGameConsole::OnRender()
 		// check if mouse is pressed
 		const vec2 WindowSize = vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
 		const vec2 ScreenSize = vec2(Screen.w, Screen.h);
+		bool LinkClickPending = false;
+		vec2 LinkClickPos = vec2(0.0f, 0.0f);
+		vec2 LinkClickPress = vec2(0.0f, 0.0f);
+		const bool CtrlPressed = Input()->ModifierIsPressed();
+		const bool WasMousePressed = pConsole->m_MouseIsPress;
 		Ui()->UpdateTouchState(m_TouchState);
 		const auto &&GetMousePosition = [&]() -> vec2 {
 			if(m_TouchState.m_PrimaryPressed)
@@ -1258,7 +1490,15 @@ void CGameConsole::OnRender()
 		}
 		if(pConsole->m_MouseIsPress && !m_TouchState.m_PrimaryPressed && !Input()->NativeMousePressed(1))
 		{
+			const vec2 ReleasePos = GetMousePosition();
+			pConsole->m_MouseRelease = ReleasePos;
 			pConsole->m_MouseIsPress = false;
+			if(WasMousePressed && CtrlPressed && !m_TouchState.m_PrimaryPressed)
+			{
+				LinkClickPending = true;
+				LinkClickPos = ReleasePos;
+				LinkClickPress = pConsole->m_MousePress;
+			}
 		}
 		if(pConsole->m_MouseIsPress)
 		{
@@ -1326,6 +1566,14 @@ void CGameConsole::OnRender()
 			pConsole->m_HasSelection = false;
 			pConsole->m_MouseIsPress = false;
 			pConsole->m_LastInputHeight = pConsole->m_BoundingBox.m_H;
+		}
+
+		bool HandleLinkClick = false;
+		if(LinkClickPending)
+		{
+			const bool InLogArea = LinkClickPress.y < pConsole->m_BoundingBox.m_Y;
+			const float DragDistance = length(LinkClickPos - LinkClickPress);
+			HandleLinkClick = InLogArea && DragDistance <= LINK_CLICK_DRAG_THRESHOLD;
 		}
 
 		// render possible commands
@@ -1431,6 +1679,8 @@ void CGameConsole::OnRender()
 		float OffsetY = 0.0f;
 
 		std::string SelectionString;
+		std::vector<SLinkRange> vLinkRanges;
+		std::vector<STextColorSplit> vLinkColorSplits;
 
 		if(pConsole->m_BacklogLastActiveLine < 0)
 			pConsole->m_BacklogLastActiveLine = pConsole->m_BacklogCurLine;
@@ -1440,6 +1690,7 @@ void CGameConsole::OnRender()
 
 		int SkippedLines = 0;
 		bool First = true;
+		bool LinkClickHandled = !HandleLinkClick;
 
 		const float XScale = Graphics()->ScreenWidth() / Screen.w;
 		const float YScale = Graphics()->ScreenHeight() / Screen.h;
@@ -1451,6 +1702,12 @@ void CGameConsole::OnRender()
 		{
 			if(pEntry->m_LineCount == -1)
 				pConsole->UpdateEntryTextAttributes(pEntry);
+
+			if(!pConsole->MatchesLogFilter(pEntry))
+			{
+				pEntry = pConsole->m_Backlog.Prev(pEntry);
+				continue;
+			}
 
 			LineNum += pEntry->m_LineCount;
 			if(LineNum < pConsole->m_BacklogLastActiveLine)
@@ -1468,6 +1725,8 @@ void CGameConsole::OnRender()
 
 			const float LocalOffsetY = OffsetY + pEntry->m_YOffset / (float)pEntry->m_LineCount;
 			OffsetY += pEntry->m_YOffset;
+			const float EntryTop = y - OffsetY;
+			const float EntryBottom = EntryTop + pEntry->m_YOffset;
 
 			// Only apply offset if we do not keep scroll position (m_BacklogCurLine == 0)
 			if((pConsole->m_HasSelection || pConsole->m_MouseIsPress) && pConsole->m_NewLineCounter > 0 && pConsole->m_BacklogCurLine == 0)
@@ -1530,9 +1789,105 @@ void CGameConsole::OnRender()
 				EntryCursor.m_vColorSplits[0].m_Length += str_length("— ");
 			}
 			const char *pText = ColoredParts.Text();
+			vLinkRanges.clear();
+			if(HasPotentialLink(pText))
+				CollectLinkRanges(pText, vLinkRanges);
+
+			if(HandleLinkClick && !LinkClickHandled && LinkClickPos.y >= EntryTop && LinkClickPos.y <= EntryBottom)
+			{
+				LinkClickHandled = true;
+				CTextCursor LinkCursor;
+				LinkCursor.SetPosition(vec2(0.0f, EntryTop));
+				LinkCursor.m_FontSize = FONT_SIZE;
+				LinkCursor.m_LineWidth = Screen.w - 10.0f;
+				LinkCursor.m_MaxLines = pEntry->m_LineCount;
+				LinkCursor.m_LineSpacing = LINE_SPACING;
+				LinkCursor.m_Flags = 0;
+				LinkCursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_CALCULATE;
+				LinkCursor.m_ReleaseMouse = LinkClickPos;
+				TextRender()->TextEx(&LinkCursor, pText, -1);
+
+				char aLink[512];
+				if(FindLinkAtChar(pText, LinkCursor.m_CursorCharacter, aLink, sizeof(aLink)))
+				{
+					bool Opened = false;
+					char aNormalized[512];
+					if(const char *pAfterHttps = str_startswith_nocase(aLink, "https://"))
+					{
+						str_copy(aNormalized, "https://");
+						str_append(aNormalized, pAfterHttps, sizeof(aNormalized));
+						Opened = Client()->ViewLink(aNormalized);
+					}
+					else if(const char *pAfterHttp = str_startswith_nocase(aLink, "http://"))
+					{
+						str_copy(aNormalized, "http://");
+						str_append(aNormalized, pAfterHttp, sizeof(aNormalized));
+#if defined(CONF_PLATFORM_ANDROID)
+						Opened = Client()->ViewLink(aNormalized);
+#else
+						Opened = open_link(aNormalized) != 0;
+#endif
+					}
+					else if(str_startswith_nocase(aLink, "www."))
+					{
+						str_copy(aNormalized, "https://");
+						str_append(aNormalized, aLink, sizeof(aNormalized));
+						Opened = Client()->ViewLink(aNormalized);
+					}
+					if(Opened)
+					{
+						pConsole->m_HasSelection = false;
+						pConsole->m_CurSelStart = 0;
+						pConsole->m_CurSelEnd = 0;
+					}
+				}
+			}
+
+			if(!vLinkRanges.empty())
+			{
+				const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
+				const ColorRGBA PrevSelectionColor = TextRender()->GetTextSelectionColor();
+				TextRender()->TextColor(TransparentColor);
+				TextRender()->TextSelectionColor(LINK_UNDERLINE_COLOR);
+				for(const auto &Range : vLinkRanges)
+				{
+					CTextCursor UnderlineCursor;
+					UnderlineCursor.SetPosition(vec2(0.0f, EntryTop));
+					UnderlineCursor.m_FontSize = FONT_SIZE;
+					UnderlineCursor.m_LineWidth = Screen.w - 10.0f;
+					UnderlineCursor.m_MaxLines = pEntry->m_LineCount;
+					UnderlineCursor.m_LineSpacing = LINE_SPACING;
+					UnderlineCursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
+					UnderlineCursor.m_SelectionHeightFactor = LINK_UNDERLINE_HEIGHT;
+					UnderlineCursor.m_SelectionStart = Range.m_StartChar;
+					UnderlineCursor.m_SelectionEnd = Range.m_EndChar;
+					TextRender()->TextEx(&UnderlineCursor, pText, -1);
+				}
+				TextRender()->TextSelectionColor(PrevSelectionColor);
+				TextRender()->TextColor(PrevTextColor);
+			}
 
 			TextRender()->TextEx(&EntryCursor, pText, -1); // TClient
 			EntryCursor.m_vColorSplits = {};
+
+			if(!vLinkRanges.empty())
+			{
+				BuildLinkColorSplits(vLinkRanges, vLinkColorSplits);
+				if(!vLinkColorSplits.empty())
+				{
+					const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
+					CTextCursor LinkCursor;
+					LinkCursor.SetPosition(vec2(0.0f, EntryTop));
+					LinkCursor.m_FontSize = FONT_SIZE;
+					LinkCursor.m_LineWidth = Screen.w - 10.0f;
+					LinkCursor.m_MaxLines = pEntry->m_LineCount;
+					LinkCursor.m_LineSpacing = LINE_SPACING;
+					LinkCursor.m_vColorSplits = vLinkColorSplits;
+					TextRender()->TextColor(TransparentColor);
+					TextRender()->TextEx(&LinkCursor, pText, -1);
+					TextRender()->TextColor(PrevTextColor);
+				}
+			}
 
 			if(EntryCursor.m_CalculateSelectionMode == TEXT_CURSOR_SELECTION_MODE_CALCULATE)
 			{
@@ -1590,9 +1945,68 @@ void CGameConsole::OnRender()
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 		// render current lines and status (locked, following)
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), Localize("Lines %d - %d (%s)"), pConsole->m_BacklogCurLine + 1, pConsole->m_BacklogCurLine + pConsole->m_LinesRendered, pConsole->m_BacklogCurLine != 0 ? Localize("Locked") : Localize("Following"));
-		TextRender()->Text(10.0f, FONT_SIZE / 2.f, FONT_SIZE, aBuf);
+		char aLinesBuf[128];
+		const int LineStart = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + 1 : 0;
+		const int LineEnd = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + pConsole->m_LinesRendered : 0;
+		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd, pConsole->m_BacklogCurLine != 0 ? Localize("Locked") : Localize("Following"));
+		const float LinesTextX = 10.0f;
+		const float LinesTextY = FONT_SIZE / 2.f;
+
+		char aVersionBuf[128];
+		str_copy(aVersionBuf, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
+
+		const char *apFilterLabels[] = {Localize("All"), Localize("Players"), Localize("System")};
+		const CInstance::ELogFilter aFilters[] = {CInstance::ELogFilter::ALL, CInstance::ELogFilter::PLAYER, CInstance::ELogFilter::SYSTEM};
+		const float FilterFontSize = FONT_SIZE;
+		const float FilterHeight = RowHeight - 6.0f;
+		const float FilterY = (RowHeight - FilterHeight) / 2.0f;
+		const float FilterPadding = 6.0f;
+		const float FilterSpacing = 4.0f;
+		float aFilterWidths[3];
+		float TotalFilterWidth = 0.0f;
+		for(int i = 0; i < 3; ++i)
+		{
+			aFilterWidths[i] = TextRender()->TextWidth(FilterFontSize, apFilterLabels[i]) + FilterPadding * 2.0f;
+			TotalFilterWidth += aFilterWidths[i];
+			if(i != 2)
+				TotalFilterWidth += FilterSpacing;
+		}
+
+		const float LinesWidth = TextRender()->TextWidth(FONT_SIZE, aLinesBuf);
+		float FilterX = LinesTextX + LinesWidth + 10.0f;
+		const float VersionWidth = TextRender()->TextWidth(FONT_SIZE, aVersionBuf);
+		const float FilterRightLimit = Screen.w - VersionWidth - 20.0f;
+		if(FilterX + TotalFilterWidth > FilterRightLimit)
+			FilterX = maximum(LinesTextX + LinesWidth + 10.0f, FilterRightLimit - TotalFilterWidth);
+
+		CUIRect aFilterRects[3];
+		float FilterLayoutX = FilterX;
+		for(int i = 0; i < 3; ++i)
+		{
+			aFilterRects[i] = {FilterLayoutX, FilterY, aFilterWidths[i], FilterHeight};
+			FilterLayoutX += aFilterWidths[i] + FilterSpacing;
+		}
+
+		vec2 UiMousePos = Input()->NativeMousePos();
+		if(WindowSize.x > 0.0f && WindowSize.y > 0.0f)
+			UiMousePos = UiMousePos / WindowSize * ScreenSize;
+		const bool MouseDown = Input()->NativeMousePressed(1);
+		const bool MousePressed = MouseDown && !m_FilterMouseDown;
+
+		for(int i = 0; i < 3; ++i)
+		{
+			CUIRect Button = aFilterRects[i];
+			const bool Active = pConsole->m_LogFilter == aFilters[i];
+			const bool UiClicked = Ui()->DoButton_PopupMenu(&m_aFilterButtons[i], apFilterLabels[i], &Button, FilterFontSize, TEXTALIGN_MC);
+			const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
+			if(UiClicked || ManualClicked)
+				pConsole->SetLogFilter(aFilters[i]);
+			if(Active)
+				Button.DrawOutline(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
+		}
+		m_FilterMouseDown = MouseDown;
+
+		TextRender()->Text(LinesTextX, LinesTextY, FONT_SIZE, aLinesBuf);
 
 		if(m_ConsoleType == CONSOLETYPE_REMOTE && (Client()->ReceivingRconCommands() || Client()->ReceivingMaplist()))
 		{
@@ -1613,12 +2027,17 @@ void CGameConsole::OnRender()
 		}
 
 		// render version
-		str_copy(aBuf, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
-		TextRender()->Text(Screen.w - TextRender()->TextWidth(FONT_SIZE, aBuf) - 10.0f, FONT_SIZE / 2.f, FONT_SIZE, aBuf);
+		TextRender()->Text(Screen.w - TextRender()->TextWidth(FONT_SIZE, aVersionBuf) - 10.0f, FONT_SIZE / 2.f, FONT_SIZE, aVersionBuf);
 
 		// TClient: render client version
 		const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
 		TextRender()->Text(Screen.w - TextRender()->TextWidth(FONT_SIZE, pClientVersion) - 10.0f, FONT_SIZE / 2.0f + FONT_SIZE * 1.5f, FONT_SIZE, pClientVersion);
+	}
+
+	if(UpdateConsoleUi)
+	{
+		Ui()->FinishCheck();
+		Ui()->SetEnabled(false);
 	}
 }
 

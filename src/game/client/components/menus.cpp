@@ -2107,7 +2107,26 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 
 void CMenus::RenderThemeSelection(CUIRect MainView)
 {
-	const std::vector<CTheme> &vThemes = GameClient()->m_MenuBackground.GetThemes();
+	static CListBox s_ListBox;
+	auto &MenuBackground = GameClient()->m_MenuBackground;
+
+	const float HeaderHeight = 20.0f;
+	const float HeaderSpacing = 2.0f;
+	CUIRect HeaderView = MainView;
+	CUIRect Header, HeaderRow;
+	HeaderView.HSplitTop(HeaderHeight + HeaderSpacing, &Header, nullptr);
+	Header.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
+
+	s_ListBox.DoHeader(&MainView, Localize("Theme"), HeaderHeight, HeaderSpacing);
+
+	static CButtonContainer s_RefreshButton;
+	CUIRect RefreshButton;
+	HeaderRow.VSplitRight(80.0f, nullptr, &RefreshButton);
+	RefreshButton.VMargin(2.0f, &RefreshButton);
+	if(DoButton_Menu(&s_RefreshButton, Localize("刷新"), 0, &RefreshButton))
+		MenuBackground.RefreshThemes();
+
+	const std::vector<CTheme> &vThemes = MenuBackground.GetThemes();
 
 	int SelectedTheme = -1;
 	for(int i = 0; i < (int)vThemes.size(); i++)
@@ -2120,8 +2139,6 @@ void CMenus::RenderThemeSelection(CUIRect MainView)
 	}
 	const int OldSelected = SelectedTheme;
 
-	static CListBox s_ListBox;
-	s_ListBox.DoHeader(&MainView, Localize("Theme"), 20.0f);
 	s_ListBox.DoStart(20.0f, vThemes.size(), 1, 3, SelectedTheme);
 
 	for(int i = 0; i < (int)vThemes.size(); i++)
@@ -2148,20 +2165,14 @@ void CMenus::RenderThemeSelection(CUIRect MainView)
 			Graphics()->QuadsEnd();
 		}
 
-		char aName[128];
+		char aName[IO_MAX_PATH_LENGTH];
 		if(Theme.m_Name.empty())
 			str_copy(aName, "(none)");
 		else if(str_comp(Theme.m_Name.c_str(), "auto") == 0)
 			str_copy(aName, "(seasons)");
 		else if(str_comp(Theme.m_Name.c_str(), "rand") == 0)
 			str_copy(aName, "(random)");
-		else if(Theme.m_HasDay && Theme.m_HasNight)
-			str_copy(aName, Theme.m_Name.c_str());
-		else if(Theme.m_HasDay && !Theme.m_HasNight)
-			str_format(aName, sizeof(aName), "%s (day)", Theme.m_Name.c_str());
-		else if(!Theme.m_HasDay && Theme.m_HasNight)
-			str_format(aName, sizeof(aName), "%s (night)", Theme.m_Name.c_str());
-		else // generic
+		else
 			str_copy(aName, Theme.m_Name.c_str());
 
 		Ui()->DoLabel(&Label, aName, 16.0f * CUi::ms_FontmodHeight, TEXTALIGN_ML);

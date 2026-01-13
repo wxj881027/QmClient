@@ -102,11 +102,47 @@ void CMenuBackground::ResetPositions()
 void CMenuBackground::LoadThemeIcon(CTheme &Theme)
 {
 	char aIconPath[IO_MAX_PATH_LENGTH];
-	str_format(aIconPath, sizeof(aIconPath), "themes/%s.png", Theme.m_Name.empty() ? "none" : Theme.m_Name.c_str());
-	Theme.m_IconTexture = Graphics()->LoadTexture(aIconPath, IStorage::TYPE_ALL);
+	const char *pName = Theme.m_Name.empty() ? "none" : Theme.m_Name.c_str();
+	if(str_endswith_nocase(pName, ".png"))
+	{
+		str_format(aIconPath, sizeof(aIconPath), "themes/%s", pName);
+	}
+	else
+	{
+		char aBaseName[IO_MAX_PATH_LENGTH];
+		str_copy(aBaseName, pName, sizeof(aBaseName));
+		const char *pExt = str_endswith_nocase(aBaseName, ".map");
+		if(pExt)
+		{
+			char aTmp[IO_MAX_PATH_LENGTH];
+			str_truncate(aTmp, sizeof(aTmp), aBaseName, pExt - aBaseName);
+			str_copy(aBaseName, aTmp, sizeof(aBaseName));
+		}
+		const char *pDaySuffix = str_endswith(aBaseName, "_day");
+		const char *pNightSuffix = str_endswith(aBaseName, "_night");
+		if(pDaySuffix)
+		{
+			char aTmp[IO_MAX_PATH_LENGTH];
+			str_truncate(aTmp, sizeof(aTmp), aBaseName, pDaySuffix - aBaseName);
+			str_copy(aBaseName, aTmp, sizeof(aBaseName));
+		}
+		else if(pNightSuffix)
+		{
+			char aTmp[IO_MAX_PATH_LENGTH];
+			str_truncate(aTmp, sizeof(aTmp), aBaseName, pNightSuffix - aBaseName);
+			str_copy(aBaseName, aTmp, sizeof(aBaseName));
+		}
+		str_format(aIconPath, sizeof(aIconPath), "themes/%s.png", aBaseName);
+	}
+	Theme.m_IconTexture.Invalidate();
+	if(Storage()->FileExists(aIconPath, IStorage::TYPE_ALL))
+	{
+		Theme.m_IconTexture = Graphics()->LoadTexture(aIconPath, IStorage::TYPE_ALL);
+	}
 
 	char aBuf[32 + IO_MAX_PATH_LENGTH];
-	if(Theme.m_IconTexture.IsNullTexture())
+	const bool IconLoaded = Theme.m_IconTexture.IsValid() && !Theme.m_IconTexture.IsNullTexture();
+	if(!IconLoaded)
 		str_format(aBuf, sizeof(aBuf), "failed to load theme icon '%s'", aIconPath);
 	else
 		str_format(aBuf, sizeof(aBuf), "loaded theme icon '%s'", aIconPath);
@@ -117,48 +153,21 @@ int CMenuBackground::ThemeScan(const char *pName, int IsDir, int DirType, void *
 {
 	CMenuBackground *pSelf = (CMenuBackground *)pUser;
 	const char *pSuffix = str_endswith(pName, ".map");
+	if(!pSuffix)
+		pSuffix = str_endswith(pName, ".png");
 	if(IsDir || !pSuffix)
 		return 0;
-	char aFullName[128];
-	char aThemeName[128];
-	str_truncate(aFullName, sizeof(aFullName), pName, pSuffix - pName);
-
-	bool IsDay = false;
-	bool IsNight = false;
-	if((pSuffix = str_endswith(aFullName, "_day")))
+	for(const auto &Theme : pSelf->m_vThemes)
 	{
-		str_truncate(aThemeName, sizeof(aThemeName), pName, pSuffix - aFullName);
-		IsDay = true;
-	}
-	else if((pSuffix = str_endswith(aFullName, "_night")))
-	{
-		str_truncate(aThemeName, sizeof(aThemeName), pName, pSuffix - aFullName);
-		IsNight = true;
-	}
-	else
-		str_copy(aThemeName, aFullName);
-
-	if(str_comp(aThemeName, "none") == 0 || str_comp(aThemeName, "auto") == 0 || str_comp(aThemeName, "rand") == 0) // "none", "auto" and "rand" reserved, disallowed for maps
-		return 0;
-
-	// try to edit an existing theme
-	for(auto &Theme : pSelf->m_vThemes)
-	{
-		if(str_comp(Theme.m_Name.c_str(), aThemeName) == 0)
-		{
-			if(IsDay)
-				Theme.m_HasDay = true;
-			if(IsNight)
-				Theme.m_HasNight = true;
+		if(str_comp(Theme.m_Name.c_str(), pName) == 0)
 			return 0;
-		}
 	}
 
 	// make new theme
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "added theme '%s' from 'themes/%s'", aThemeName, pName);
+	str_format(aBuf, sizeof(aBuf), "added theme '%s' from 'themes/%s'", pName, pName);
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "menuthemes", aBuf);
-	pSelf->m_vThemes.emplace_back(aThemeName, IsDay, IsNight);
+	pSelf->m_vThemes.emplace_back(pName, true, true);
 	pSelf->LoadThemeIcon(pSelf->m_vThemes.back());
 
 	if(time_get_nanoseconds() - pSelf->m_ThemeScanStartTime > 500ms)
@@ -173,23 +182,30 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 	if(!m_IsInit)
 		return;
 
-	if(m_Loaded && m_pMap == m_pBackgroundMap)
+	if(m_Loaded && !m_ImageBackground && m_pMap == m_pBackgroundMap)
 		m_pMap->Unload();
 
 	m_Loaded = false;
+	ClearImageBackground();
 	m_pMap = m_pBackgroundMap;
 	m_pLayers = m_pBackgroundLayers;
 	m_pImages = m_pBackgroundImages;
 
 	ResetPositions();
 
-	str_copy(m_aMapName, g_Config.m_ClMenuMap);
+	char aMenuMapClean[IO_MAX_PATH_LENGTH];
+	str_copy(aMenuMapClean, g_Config.m_ClMenuMap, sizeof(aMenuMapClean));
+	str_utf8_trim_right(aMenuMapClean);
+	const char *pMenuMap = str_utf8_skip_whitespaces(aMenuMapClean);
+	if(pMenuMap != aMenuMapClean)
+		str_copy(aMenuMapClean, pMenuMap, sizeof(aMenuMapClean));
+	pMenuMap = aMenuMapClean;
+	str_copy(m_aMapName, pMenuMap, sizeof(m_aMapName));
 
-	if(g_Config.m_ClMenuMap[0] != '\0')
+	if(pMenuMap[0] != '\0')
 	{
 		m_Loading = true;
 
-		const char *pMenuMap = g_Config.m_ClMenuMap;
 		if(str_comp(pMenuMap, "auto") == 0)
 		{
 			switch(time_season())
@@ -230,35 +246,133 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 
 		const int HourOfTheDay = time_houroftheday();
 		const bool IsDaytime = HourOfTheDay >= 6 && HourOfTheDay < 18;
-
-		if(!m_Loaded && ((HasDayHint && IsDaytime) || (HasNightHint && !IsDaytime)))
+		const bool HasPngExtension = str_endswith_nocase(pMenuMap, ".png") != nullptr;
+		const bool HasMapExtension = str_endswith_nocase(pMenuMap, ".map") != nullptr;
+		const bool HasExplicitExtension = HasPngExtension || HasMapExtension;
+		char aMenuMapBase[IO_MAX_PATH_LENGTH];
+		str_copy(aMenuMapBase, pMenuMap, sizeof(aMenuMapBase));
+		while(true)
 		{
-			str_format(aBuf, sizeof(aBuf), "themes/%s_%s.map", pMenuMap, IsDaytime ? "day" : "night");
-			if(m_pMap->Load(aBuf))
+			const char *pExtension = str_endswith_nocase(aMenuMapBase, ".png");
+			if(!pExtension)
+				pExtension = str_endswith_nocase(aMenuMapBase, ".map");
+			if(!pExtension)
+				break;
+			char aMenuMapTmp[IO_MAX_PATH_LENGTH];
+			str_truncate(aMenuMapTmp, sizeof(aMenuMapTmp), aMenuMapBase, pExtension - aMenuMapBase);
+			str_copy(aMenuMapBase, aMenuMapTmp, sizeof(aMenuMapBase));
+		}
+		const char *pMenuMapBase = aMenuMapBase;
+
+		auto FormatThemePath = [&](char *pOut, int OutSize, const char *pName) {
+			if(str_startswith(pName, "themes/") || str_startswith(pName, "themes\\"))
+				str_copy(pOut, pName, OutSize);
+			else
+				str_format(pOut, OutSize, "themes/%s", pName);
+		};
+
+		auto FindThemeFile = [&](const char *pBasePath, const char *pSuffix, char *pOut, int OutSize) -> bool {
+			const char *pThemesPrefix = str_startswith(pBasePath, "themes/");
+			if(!pThemesPrefix)
+				pThemesPrefix = str_startswith(pBasePath, "themes\\");
+			const char *pThemeName = pThemesPrefix ? pThemesPrefix : pBasePath;
+			char aFilename[IO_MAX_PATH_LENGTH];
+			str_format(aFilename, sizeof(aFilename), "%s%s", pThemeName, pSuffix);
+			return Storage()->FindFile(aFilename, "themes", IStorage::TYPE_ALL, pOut, OutSize);
+		};
+
+		auto TryLoadTheme = [&](const char *pBasePath) -> bool {
+			str_format(aBuf, sizeof(aBuf), "%s.map", pBasePath);
+			if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && m_pMap->Load(aBuf))
 			{
 				m_Loaded = true;
+				return true;
+			}
+			char aFound[IO_MAX_PATH_LENGTH];
+			if(FindThemeFile(pBasePath, ".map", aFound, sizeof(aFound)) && m_pMap->Load(aFound))
+			{
+				m_Loaded = true;
+				return true;
+			}
+			str_format(aBuf, sizeof(aBuf), "%s.png", pBasePath);
+			if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && LoadImageBackground(aBuf))
+			{
+				return true;
+			}
+			if(FindThemeFile(pBasePath, ".png", aFound, sizeof(aFound)) && LoadImageBackground(aFound))
+			{
+				return true;
+			}
+			return false;
+		};
+
+		if(HasExplicitExtension)
+		{
+			FormatThemePath(aBuf, sizeof(aBuf), pMenuMap);
+			if(HasMapExtension)
+			{
+				if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && m_pMap->Load(aBuf))
+				{
+					m_Loaded = true;
+				}
+				else
+				{
+					char aFound[IO_MAX_PATH_LENGTH];
+					if(FindThemeFile(aBuf, "", aFound, sizeof(aFound)) && m_pMap->Load(aFound))
+					{
+						m_Loaded = true;
+					}
+				}
+			}
+			else if(HasPngExtension)
+			{
+				if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && LoadImageBackground(aBuf))
+				{
+					// LoadImageBackground updates m_Loaded/m_ImageBackground.
+				}
+				else
+				{
+					char aFound[IO_MAX_PATH_LENGTH];
+					if(FindThemeFile(aBuf, "", aFound, sizeof(aFound)) && LoadImageBackground(aFound))
+					{
+						// LoadImageBackground updates m_Loaded/m_ImageBackground.
+					}
+				}
+			}
+			if(!m_Loaded)
+			{
+				str_format(aBuf, sizeof(aBuf), "failed to load menu theme '%s'", pMenuMap);
+				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "menuthemes", aBuf);
+				m_Loading = false;
+				return;
+			}
+		}
+		else
+		{
+			pMenuMap = pMenuMapBase;
+
+			if(!m_Loaded && ((HasDayHint && IsDaytime) || (HasNightHint && !IsDaytime)))
+			{
+				FormatThemePath(aBuf, sizeof(aBuf), pMenuMap);
+				str_append(aBuf, IsDaytime ? "_day" : "_night", sizeof(aBuf));
+				TryLoadTheme(aBuf);
+			}
+
+			if(!m_Loaded)
+			{
+				FormatThemePath(aBuf, sizeof(aBuf), pMenuMap);
+				TryLoadTheme(aBuf);
+			}
+
+			if(!m_Loaded && ((HasDayHint && !IsDaytime) || (HasNightHint && IsDaytime)))
+			{
+				FormatThemePath(aBuf, sizeof(aBuf), pMenuMap);
+				str_append(aBuf, IsDaytime ? "_night" : "_day", sizeof(aBuf));
+				TryLoadTheme(aBuf);
 			}
 		}
 
-		if(!m_Loaded)
-		{
-			str_format(aBuf, sizeof(aBuf), "themes/%s.map", pMenuMap);
-			if(m_pMap->Load(aBuf))
-			{
-				m_Loaded = true;
-			}
-		}
-
-		if(!m_Loaded && ((HasDayHint && !IsDaytime) || (HasNightHint && IsDaytime)))
-		{
-			str_format(aBuf, sizeof(aBuf), "themes/%s_%s.map", pMenuMap, IsDaytime ? "night" : "day");
-			if(m_pMap->Load(aBuf))
-			{
-				m_Loaded = true;
-			}
-		}
-
-		if(m_Loaded)
+		if(m_Loaded && !m_ImageBackground)
 		{
 			m_pLayers->Init(m_pMap, true);
 
@@ -293,6 +407,11 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 				}
 			}
 		}
+		if(!m_Loaded)
+		{
+			str_format(aBuf, sizeof(aBuf), "failed to load menu theme '%s'", pMenuMap);
+			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "menuthemes", aBuf);
+		}
 		m_Loading = false;
 	}
 }
@@ -309,6 +428,23 @@ bool CMenuBackground::Render()
 {
 	if(!m_Loaded)
 		return false;
+
+	if(m_ImageBackground)
+	{
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const float ScreenHeight = 300.0f;
+		const float ScreenWidth = ScreenHeight * Graphics()->ScreenAspect();
+		Graphics()->MapScreen(0.0f, 0.0f, ScreenWidth, ScreenHeight);
+		Graphics()->TextureSet(m_BackgroundTexture);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		const IGraphics::CQuadItem QuadItem(0.0f, 0.0f, ScreenWidth, ScreenHeight);
+		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->QuadsEnd();
+		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+		return true;
+	}
 
 	m_Camera.m_Zoom = 0.7f;
 
@@ -380,6 +516,11 @@ void CMenuBackground::ChangePosition(int PositionNumber)
 	m_AnimationStartPos = m_Camera.m_Center;
 	m_RotationCenter = m_aPositions[m_CurrentPosition];
 	m_MoveTime = 0.0f;
+}
+
+void CMenuBackground::RefreshThemes()
+{
+	m_vThemes.clear();
 }
 
 std::vector<CTheme> &CMenuBackground::GetThemes()

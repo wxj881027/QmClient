@@ -761,6 +761,7 @@ void CHud::RenderTextInfo()
 			}
 		}
 	}
+
 }
 
 void CHud::RenderConnectionWarning()
@@ -1591,6 +1592,10 @@ inline float CHud::GetMovementInformationBoxHeight()
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active && (GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW || GameClient()->m_aClients[GameClient()->m_Snap.m_SpecInfo.m_SpectatorId].m_SpecCharPresent))
 		return g_Config.m_ClShowhudPlayerPosition ? 3.0f * MOVEMENT_INFORMATION_LINE_HEIGHT + 2.0f : 0.0f;
 	float BoxHeight = 3.0f * MOVEMENT_INFORMATION_LINE_HEIGHT * (g_Config.m_ClShowhudPlayerPosition + g_Config.m_ClShowhudPlayerSpeed) + 2.0f * MOVEMENT_INFORMATION_LINE_HEIGHT * g_Config.m_ClShowhudPlayerAngle;
+	if(g_Config.m_TcJumpHint)
+	{
+		BoxHeight += 5.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
+	}
 	// 新增卡键状态显示行
 	BoxHeight += 1.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 	// 新增玩家统计显示行（3行：存活时长、救醒/落水、出钩比例）
@@ -1685,7 +1690,7 @@ void CHud::RenderMovementInformation()
 	const bool PosOnly = ClientId == SPEC_FREEVIEW || (GameClient()->m_aClients[ClientId].m_SpecCharPresent);
 	// Draw the information depending on settings: Position, speed and target angle
 	// This display is only to present the available information from the last snapshot, not to interpolate or predict
-	if(!g_Config.m_ClShowhudPlayerPosition && (PosOnly || (!g_Config.m_ClShowhudPlayerSpeed && !g_Config.m_ClShowhudPlayerAngle)))
+	if(!g_Config.m_TcJumpHint && !g_Config.m_ClShowhudPlayerPosition && (PosOnly || (!g_Config.m_ClShowhudPlayerSpeed && !g_Config.m_ClShowhudPlayerAngle)))
 	{
 		return;
 	}
@@ -1743,7 +1748,24 @@ void CHud::RenderMovementInformation()
 	if(ShowDummyAngle)
 		BoxHeight += 1.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 
-	const float BoxWidth = 62.0f;
+	float BoxWidth = 62.0f;
+	if(g_Config.m_TcJumpHint)
+	{
+		const float TitleWidth = TextRender()->TextWidth(Fontsize, "三格edge:");
+		const float LeftJumpWidth = TextRender()->TextWidth(Fontsize, "左跳");
+		const float LeftDoubleJumpWidth = TextRender()->TextWidth(Fontsize, "左二跳");
+		const float RightJumpWidth = TextRender()->TextWidth(Fontsize, "右跳");
+		const float RightDoubleJumpWidth = TextRender()->TextWidth(Fontsize, "右二跳");
+		const float LeftJumpValueWidth = TextRender()->TextWidth(Fontsize, ".34|.31|.16");
+		const float LeftDoubleJumpValueWidth = TextRender()->TextWidth(Fontsize, ".41|.28|.25|.13");
+		const float RightJumpValueWidth = TextRender()->TextWidth(Fontsize, ".63|.66|.81");
+		const float RightDoubleJumpValueWidth = TextRender()->TextWidth(Fontsize, ".56|.69|.72|.84");
+		const float NeededWidth = maximum(
+			TitleWidth + 4.0f,
+			maximum(LeftJumpWidth + LeftJumpValueWidth, LeftDoubleJumpWidth + LeftDoubleJumpValueWidth) + 6.0f,
+			maximum(RightJumpWidth + RightJumpValueWidth, RightDoubleJumpWidth + RightDoubleJumpValueWidth) + 6.0f);
+		BoxWidth = maximum(BoxWidth, NeededWidth);
+	}
 
 	float StartX = m_Width - BoxWidth;
 	float StartY = 285.0f - BoxHeight - 4.0f; // 4 units distance to the next display;
@@ -1861,6 +1883,33 @@ void CHud::RenderMovementInformation()
 			TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, aBuf), y, Fontsize, aBuf, -1.0f);
 			y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 		}
+	}
+
+	if(g_Config.m_TcJumpHint)
+	{
+		TextRender()->Text(LeftX, y, Fontsize, "三格edge:", -1.0f);
+		y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+
+		const char *pLeftJump = ".34|.31|.16";
+		const char *pLeftDoubleJump = ".41|.28|.25|.13";
+		const char *pRightJump = ".63|.66|.81";
+		const char *pRightDoubleJump = ".56|.69|.72|.84";
+
+		TextRender()->Text(LeftX, y, Fontsize, "左跳", -1.0f);
+		TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, pLeftJump), y, Fontsize, pLeftJump, -1.0f);
+		y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+
+		TextRender()->Text(LeftX, y, Fontsize, "左二跳", -1.0f);
+		TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, pLeftDoubleJump), y, Fontsize, pLeftDoubleJump, -1.0f);
+		y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+
+		TextRender()->Text(LeftX, y, Fontsize, "右跳", -1.0f);
+		TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, pRightJump), y, Fontsize, pRightJump, -1.0f);
+		y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+
+		TextRender()->Text(LeftX, y, Fontsize, "右二跳", -1.0f);
+		TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, pRightDoubleJump), y, Fontsize, pRightDoubleJump, -1.0f);
+		y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 	}
 
 	// 卡键状态显示 (cl_dummy_resetonswitch) - 彩虹动态渐变

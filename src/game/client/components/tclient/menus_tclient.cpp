@@ -3264,7 +3264,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	Ui()->DoLabel(&Row, "赞助名单:", LG_BodySize * 0.95f, TEXTALIGN_ML);
 	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
 	//TextRender()->TextColor(GetRainbowColor(-8));//彩虹循环效果
+	TextRender()->TextColor(ColorRGBA(0.95f, 0.8f, 0.2f, 1.0f));
 	Ui()->DoLabel(&Row, "喵不一,久桃,椿雪绒绒,芽芽,骨头", LG_BodySize * 1.1f, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
 	Ui()->DoLabel(&Row, "没有你们或多或少的支持我无法走的这么远,谢谢", LG_BodySize * 0.93f, TEXTALIGN_ML);
@@ -3451,6 +3453,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWeaponTrajectory, TCLocalize("武器弹道辅助线"), &g_Config.m_QmWeaponTrajectory, &Row, LG_LineHeight);
 	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcJumpHint, TCLocalize("位置跳跃提示"), &g_Config.m_TcJumpHint, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
 	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 	Column.y = CardContent.y;
 	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
@@ -3571,6 +3577,11 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
 	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmQiaFenEnabled, TCLocalize("启用恰分功能"), &g_Config.m_QmQiaFenEnabled, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
+	TextRender()->TextColor(ColorRGBA(0.7f, 0.7f, 0.7f, 1.0f));
+	Ui()->DoLabel(&Row, TCLocalize("已通关的地图不会触发"), LG_BodySize * 0.7f, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 	static CLineInputBuffered<512> s_QiaFenKeywordsInput;
@@ -3960,8 +3971,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				pCategoryKey = MapCategoryKeyFromText(pInfo->m_aName);
 			if(!pCategoryKey)
 				continue;
-			if(MapCategories.find(pInfo->m_aMap) == MapCategories.end())
-				MapCategories.emplace(pInfo->m_aMap, pCategoryKey);
+			auto Inserted = MapCategories.emplace(pInfo->m_aMap, pCategoryKey);
+			if(Inserted.second)
+				GameClient()->m_TClient.UpdateMapCategoryCache(Inserted.first->first.c_str(), Inserted.first->second.c_str());
 		}
 
 		const IServerBrowser::CServerEntry *pEntry = pServerBrowser->Find(Client()->ServerAddress());
@@ -3971,7 +3983,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			if(!pCategoryKey)
 				pCategoryKey = MapCategoryKeyFromText(pEntry->m_Info.m_aName);
 			if(pCategoryKey)
-				MapCategories.emplace(pEntry->m_Info.m_aMap, pCategoryKey);
+			{
+				auto Inserted = MapCategories.emplace(pEntry->m_Info.m_aMap, pCategoryKey);
+				GameClient()->m_TClient.UpdateMapCategoryCache(Inserted.first->first.c_str(), pCategoryKey);
+			}
 		}
 	}
 
@@ -3997,6 +4012,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				}
 			}
 		}
+		const char *pCachedCategory = GameClient()->m_TClient.GetCachedMapCategoryKey(pMapName);
+		if(pCachedCategory)
+			return MapTypeDisplayName(pCachedCategory);
 		return TCLocalize("未知");
 	};
 	static int s_CopiedMapIndex = -1;
