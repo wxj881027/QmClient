@@ -226,6 +226,7 @@ class CConfigManager : public IConfigManager
 	static void Con_Reset(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Toggle(IConsole::IResult *pResult, void *pUserData);
 	static void Con_ToggleStroke(IConsole::IResult *pResult, void *pUserData);
+	static void Con_ToggleRestore(IConsole::IResult *pResult, void *pUserData);
 
 public:
 	CConfigManager();

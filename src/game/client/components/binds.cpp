@@ -8,11 +8,80 @@
 #include <engine/config.h>
 #include <engine/shared/config.h>
 
+#include <string>
+
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
 #include <game/client/gameclient.h>
 
 static constexpr LOG_COLOR BIND_PRINT_COLOR{255, 255, 204};
+
+namespace
+{
+	struct SActionBindCache
+	{
+		std::string m_Action;
+		std::vector<CBindSlot> m_vBindSlots;
+	};
+
+	std::vector<SActionBindCache> s_vActionBindCache;
+
+	bool CommandHasActionToken(const char *pCommand, const char *pAction)
+	{
+		if(!pCommand || !pAction || !pAction[0])
+			return false;
+
+		const int ActionLen = str_length(pAction);
+		const char *pSearch = pCommand;
+		while((pSearch = str_find(pSearch, pAction)) != nullptr)
+		{
+			const char *pLeft = pSearch;
+			while(pLeft > pCommand && (*(pLeft - 1) == ' ' || *(pLeft - 1) == '\t'))
+				--pLeft;
+			const bool LeftOk = (pLeft == pCommand) || (*(pLeft - 1) == ';');
+
+			const char *pRight = pSearch + ActionLen;
+			while(*pRight == ' ' || *pRight == '\t')
+				++pRight;
+			const bool RightOk = (*pRight == '\0') || (*pRight == ';');
+
+			if(LeftOk && RightOk)
+				return true;
+
+			pSearch += ActionLen;
+		}
+
+		return false;
+	}
+
+	SActionBindCache *FindActionBindCache(const char *pAction)
+	{
+		for(auto &Entry : s_vActionBindCache)
+		{
+			if(str_comp(Entry.m_Action.c_str(), pAction) == 0)
+				return &Entry;
+		}
+		s_vActionBindCache.push_back({pAction, {}});
+		return &s_vActionBindCache.back();
+	}
+
+	std::vector<CBindSlot> FindActionBindSlots(const CBinds *pBinds, const char *pAction)
+	{
+		std::vector<CBindSlot> vSlots;
+		for(int Modifier = KeyModifier::NONE; Modifier < KeyModifier::COMBINATION_COUNT; ++Modifier)
+		{
+			for(int KeyId = KEY_FIRST; KeyId < KEY_LAST; ++KeyId)
+			{
+				const char *pBind = pBinds->Get(KeyId, Modifier);
+				if(!pBind[0])
+					continue;
+				if(CommandHasActionToken(pBind, pAction))
+					vSlots.emplace_back(KeyId, Modifier);
+			}
+		}
+		return vSlots;
+	}
+}
 
 bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 {
@@ -314,6 +383,7 @@ void CBinds::OnConsoleInit()
 	ConfigManager()->RegisterCallback(ConfigSaveCallback, this);
 
 	Console()->Register("bind", "s[key] ?r[command]", CFGFLAG_CLIENT, ConBind, this, "Bind key to execute a command or view keybindings");
+	Console()->Register("bind_action", "s[action] r[command]", CFGFLAG_CLIENT, ConBindAction, this, "Rebind all keys containing the action token to a command");
 	Console()->Register("binds", "?s[key]", CFGFLAG_CLIENT, ConBinds, this, "Print command executed by this keybinding or all binds");
 	Console()->Register("unbind", "s[key]", CFGFLAG_CLIENT, ConUnbind, this, "Unbind key");
 	Console()->Register("unbindall", "", CFGFLAG_CLIENT, ConUnbindAll, this, "Unbind all keys");
@@ -340,6 +410,44 @@ void CBinds::ConBind(IConsole::IResult *pResult, void *pUserData)
 	}
 
 	pBinds->Bind(BindSlot.m_Key, pResult->GetString(1), false, BindSlot.m_ModifierMask);
+}
+
+void CBinds::ConBindAction(IConsole::IResult *pResult, void *pUserData)
+{
+	CBinds *pBinds = (CBinds *)pUserData;
+	if(pResult->NumArguments() < 2)
+	{
+		log_info_color(BIND_PRINT_COLOR, "binds", "bind_action: action and command required");
+		return;
+	}
+
+	const char *pAction = pResult->GetString(0);
+	const char *pCommand = pResult->GetString(1);
+	if(!pAction[0])
+	{
+		log_info_color(BIND_PRINT_COLOR, "binds", "bind_action: empty action");
+		return;
+	}
+
+	std::vector<CBindSlot> vTargets = FindActionBindSlots(pBinds, pAction);
+	SActionBindCache *pCache = FindActionBindCache(pAction);
+	if(vTargets.empty() && !pCache->m_vBindSlots.empty())
+	{
+		vTargets = pCache->m_vBindSlots;
+	}
+
+	if(vTargets.empty())
+	{
+		log_info_color(BIND_PRINT_COLOR, "binds", "bind_action: no binds containing %s", pAction);
+		return;
+	}
+
+	for(const CBindSlot &Slot : vTargets)
+	{
+		pBinds->Bind(Slot.m_Key, pCommand, false, Slot.m_ModifierMask);
+	}
+
+	pCache->m_vBindSlots = vTargets;
 }
 
 void CBinds::ConBinds(IConsole::IResult *pResult, void *pUserData)

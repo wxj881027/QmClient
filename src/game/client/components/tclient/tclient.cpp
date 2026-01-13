@@ -149,19 +149,10 @@ static const char *s_apQiaFenPresetWords[] = {
 	"有人恰吗",
 	"有人要吗",
 	"有恰的吗",
-	"有恰吗",
-	"有要吗",
 	"有人要分吗",
 	"有人恰分吗",
-	"有要的吗",
 	"有恰分的吗",
 	"有要分的吗",
-	"有要的吗?",
-	"谁要",
-	"谁恰",
-	"恰分有无",
-	"恰分的有吗",
-	"要分的有吗",
 };
 
 static int QiaFenSeparatorLength(const char *pStr)
@@ -243,6 +234,32 @@ static bool MessageMatchesQiaFenCustom(const char *pMessage, const char *pKeywor
 	return false;
 }
 
+bool CTClient::IsQiaFenFinishedMap() const
+{
+	IServerBrowser *pServerBrowser = ServerBrowser();
+	if(!pServerBrowser)
+		return false;
+
+	const char *pCommunityId = nullptr;
+	const IServerBrowser::CServerEntry *pEntry = pServerBrowser->Find(Client()->ServerAddress());
+	if(pEntry)
+		pCommunityId = pEntry->m_Info.m_aCommunityId;
+	else if(GameClient()->m_ConnectServerInfo)
+		pCommunityId = GameClient()->m_ConnectServerInfo->m_aCommunityId;
+
+	if(!pCommunityId || pCommunityId[0] == '\0')
+		return false;
+
+	const CCommunity *pCommunity = pServerBrowser->Community(pCommunityId);
+	if(!pCommunity)
+		return false;
+
+	const char *pMap = Client()->GetCurrentMap();
+	if(!pMap || pMap[0] == '\0')
+		return false;
+	return pCommunity->HasRank(pMap) == CServerInfo::RANK_RANKED;
+}
+
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
 {
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -272,36 +289,39 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 		// === 恰分功能 ===
 		if(g_Config.m_QmQiaFenEnabled && ClientId != LocalId && pMsg->m_Team == 0)
 		{
-			// 检查是否是公屏消息且不是自己发的
-			const char *pMessage = pMsg->m_pMessage;
-			if(MessageMatchesQiaFenPreset(pMessage) || MessageMatchesQiaFenCustom(pMessage, g_Config.m_QmQiaFenKeywords))
+			if(!IsQiaFenFinishedMap())
 			{
-				// 发送回复
-				GameClient()->m_Chat.SendChat(0, "我要恰!!谢谢佬!!!!");
-				
-				// 在名字后面加"恰"
-				char aNewName[MAX_NAME_LENGTH];
-				const char *pCurrentName = g_Config.m_PlayerName;
-				
-				// 检查名字是否已经以"恰"结尾
-				int NameLen = str_length(pCurrentName);
-				bool AlreadyHasQia = false;
-				
-				// 检查最后一个字符是否是"恰"（UTF-8：0xE6 0x81 0xB0）
-				if(NameLen >= 3 && 
-				   (unsigned char)pCurrentName[NameLen-3] == 0xE6 && 
-				   (unsigned char)pCurrentName[NameLen-2] == 0x81 && 
-				   (unsigned char)pCurrentName[NameLen-1] == 0xB0)
+				// 检查是否是公屏消息且不是自己发的
+				const char *pMessage = pMsg->m_pMessage;
+				if(MessageMatchesQiaFenPreset(pMessage) || MessageMatchesQiaFenCustom(pMessage, g_Config.m_QmQiaFenKeywords))
 				{
-					AlreadyHasQia = true;
-				}
-				
-				if(!AlreadyHasQia && NameLen + 3 < (int)sizeof(aNewName))
-				{
-					str_copy(aNewName, pCurrentName, sizeof(aNewName));
-					str_append(aNewName, "恰", sizeof(aNewName));
-					str_copy(g_Config.m_PlayerName, aNewName, sizeof(g_Config.m_PlayerName));
-					GameClient()->SendInfo(false);
+					// 发送回复
+					GameClient()->m_Chat.SendChat(0, "我要恰!!谢谢佬!!!!");
+					
+					// 在名字后面加"恰"
+					char aNewName[MAX_NAME_LENGTH];
+					const char *pCurrentName = g_Config.m_PlayerName;
+					
+					// 检查名字是否已经以"恰"结尾
+					int NameLen = str_length(pCurrentName);
+					bool AlreadyHasQia = false;
+					
+					// 检查最后一个字符是否是"恰"（UTF-8：0xE6 0x81 0xB0）
+					if(NameLen >= 3 && 
+					   (unsigned char)pCurrentName[NameLen-3] == 0xE6 && 
+					   (unsigned char)pCurrentName[NameLen-2] == 0x81 && 
+					   (unsigned char)pCurrentName[NameLen-1] == 0xB0)
+					{
+						AlreadyHasQia = true;
+					}
+					
+					if(!AlreadyHasQia && NameLen + 3 < (int)sizeof(aNewName))
+					{
+						str_copy(aNewName, pCurrentName, sizeof(aNewName));
+						str_append(aNewName, "恰", sizeof(aNewName));
+						str_copy(g_Config.m_PlayerName, aNewName, sizeof(g_Config.m_PlayerName));
+						GameClient()->SendInfo(false);
+					}
 				}
 			}
 		}
@@ -745,6 +765,7 @@ void CTClient::OnRender()
 	CheckFriendOnline();
 	CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
 	CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
+	CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
 	UpdatePlayerStats(); // 更新玩家统计
 }
 
@@ -1089,6 +1110,38 @@ void CTClient::CheckAutoSwitchOnUnfreeze()
 	// 更新状态
 	m_aWasInFreezeForSwitch[0] = MainInFreeze;
 	m_aWasInFreezeForSwitch[1] = DummyInFreeze;
+}
+
+void CTClient::CheckAutoCloseChatOnUnfreeze()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return;
+
+	bool CanCloseChat = g_Config.m_QmAutoCloseChatOnUnfreeze && GameClient()->m_Chat.IsActive();
+
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		if(Dummy == 1 && !Client()->DummyConnected())
+			continue;
+
+		const int ClientId = GameClient()->m_aLocalIds[Dummy];
+		if(ClientId < 0)
+			continue;
+
+		const auto &ClientData = GameClient()->m_aClients[ClientId];
+		if(!ClientData.m_Active)
+			continue;
+
+		const bool IsInFreeze = ClientData.m_FreezeEnd != 0;
+
+		if(m_aWasInFreezeForChatClose[Dummy] && !IsInFreeze && CanCloseChat)
+		{
+			GameClient()->m_Chat.DisableMode();
+			CanCloseChat = false;
+		}
+
+		m_aWasInFreezeForChatClose[Dummy] = IsInFreeze;
+	}
 }
 
 bool CTClient::NeedUpdate()

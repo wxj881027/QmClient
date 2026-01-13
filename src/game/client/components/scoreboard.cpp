@@ -837,9 +837,13 @@ void CScoreboard::OnRender()
 	const int NumPlayers = Teams ? maximum(aTeamSize[TEAM_RED], aTeamSize[TEAM_BLUE]) : aTeamSize[TEAM_RED];
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
 
-	// Scoreboard width: increased only when Points column is enabled
-	const float ScoreboardSmallWidth = g_Config.m_ClScoreboardPoints ? (450.0f + 10.0f) : 450.0f;
-	const float ScoreboardWidth = !Teams && NumPlayers <= 16 ? ScoreboardSmallWidth : 850.0f;
+	// Scoreboard width: clamp to screen width for narrow aspect ratios
+	const float ScreenMargin = 10.0f;
+	const float MaxScoreboardWidth = maximum(200.0f, Screen.w - ScreenMargin);
+	const float BaseScoreboardSmallWidth = g_Config.m_ClScoreboardPoints ? (450.0f + 10.0f) : 450.0f;
+	const float ScoreboardSmallWidth = minimum(BaseScoreboardSmallWidth, MaxScoreboardWidth);
+	const float BaseScoreboardWidth = !Teams && NumPlayers <= 16 ? ScoreboardSmallWidth : 850.0f;
+	const float ScoreboardWidth = minimum(BaseScoreboardWidth, MaxScoreboardWidth);
 	const float TitleHeight = 30.0f;
 
 	CUIRect Scoreboard = {(Screen.w - ScoreboardWidth) / 2.0f, 75.0f, ScoreboardWidth, 355.0f + TitleHeight};

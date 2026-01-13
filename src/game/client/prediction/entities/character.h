@@ -112,6 +112,9 @@ public:
 	int GetJumped() const { return m_Core.m_Jumped; }
 	int GetAttackTick() const { return m_AttackTick; }
 	int GetStrongWeakId() const { return m_StrongWeakId; }
+	int GetLastDamageTick() const { return m_LastDamageTick; }
+	int GetLastDamageFrom() const { return m_LastDamageFrom; }
+	int GetLastDamageWeapon() const { return m_LastDamageWeapon; }
 
 	CCharacter(CGameWorld *pGameWorld, int Id, CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended = nullptr);
 	void Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, bool IsLocal);
@@ -150,6 +153,9 @@ private:
 
 	int m_ReloadTimer;
 	int m_AttackTick;
+	int m_LastDamageTick;
+	int m_LastDamageFrom;
+	int m_LastDamageWeapon;
 
 	int m_MoveRestrictions;
 

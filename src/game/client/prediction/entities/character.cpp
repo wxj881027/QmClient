@@ -607,6 +607,10 @@ void CCharacter::TickDeferred()
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 {
+	m_LastDamageTick = GameWorld()->GameTick();
+	m_LastDamageFrom = From;
+	m_LastDamageWeapon = Weapon;
+
 	vec2 Temp = m_Core.m_Vel + Force;
 	m_Core.m_Vel = ClampVel(m_MoveRestrictions, Temp);
 	return true;
@@ -1257,6 +1261,9 @@ CCharacter::CCharacter(CGameWorld *pGameWorld, int Id, CNetObj_Character *pChar,
 	mem_zero(&m_Core.m_Ninja, sizeof(m_Core.m_Ninja));
 	m_Core.m_LeftWall = true;
 	m_ReloadTimer = 0;
+	m_LastDamageTick = -1;
+	m_LastDamageFrom = -1;
+	m_LastDamageWeapon = -1;
 	m_NumObjectsHit = 0;
 	m_LastRefillJumps = false;
 	m_CanMoveInFreeze = false;
@@ -1308,6 +1315,9 @@ void CCharacter::ResetPrediction()
 	}
 	m_LastWeaponSwitchTick = 0;
 	m_LastTuneZoneTick = 0;
+	m_LastDamageTick = -1;
+	m_LastDamageFrom = -1;
+	m_LastDamageWeapon = -1;
 }
 
 void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, bool IsLocal)

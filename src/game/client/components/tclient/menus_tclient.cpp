@@ -4,6 +4,7 @@
 #include <base/types.h>
 
 #include <engine/graphics.h>
+#include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/linereader.h>
 #include <engine/shared/localization.h>
@@ -81,19 +82,10 @@ static const char *s_apQiaFenPresetWords[] = {
 	"有人恰吗",
 	"有人要吗",
 	"有恰的吗",
-	"有恰吗",
-	"有要吗",
 	"有人要分吗",
 	"有人恰分吗",
-	"有要的吗",
 	"有恰分的吗",
 	"有要分的吗",
-	"有要的吗?",
-	"谁要",
-	"谁恰",
-	"恰分有无",
-	"恰分的有吗",
-	"要分的有吗",
 };
 
 static int QiaFenSeparatorLength(const char *pStr)
@@ -3121,16 +3113,21 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	// ============================================
 
 	// === 布局常量（统一定义，禁止魔数） ===
-	constexpr float LG_CardPadding = 14.0f;          // 卡片内边距
-	constexpr float LG_CardSpacing = 16.0f;          // 卡片间距
-	constexpr float LG_CornerRadius = 12.0f;         // 圆角
-	constexpr float LG_CardAlpha = 0.70f;            // 卡片透明度
-	constexpr float LG_HeadlineSize = 14.0f;         // 标题字号
-	constexpr float LG_BodySize = 12.0f;             // 正文字号
-	constexpr float LG_LineHeight = 20.0f;           // 统一行高
-	constexpr float LG_LineSpacing = 5.0f;           // 统一行间距
-	constexpr float LG_HeadlineMargin = 10.0f;       // 标题下方间距
-	constexpr float LG_LabelWidth = 170.0f;          // 左侧标签列宽度（固定）
+	const float ViewWidth = MainView.w;
+	const float UiScale = std::clamp(ViewWidth / 1000.0f, 0.85f, 1.0f);
+	const bool CompactLayout = ViewWidth < 600.0f;
+
+	const float LG_CardPadding = std::clamp(14.0f * UiScale, 10.0f, 14.0f);          // 卡片内边距
+	const float LG_CardSpacing = std::clamp(16.0f * UiScale, 10.0f, 16.0f);          // 卡片间距
+	const float LG_CornerRadius = std::clamp(12.0f * UiScale, 8.0f, 12.0f);          // 圆角
+	const float LG_CardAlpha = 0.70f;                                                // 卡片透明度
+	const float LG_HeadlineSize = std::clamp(14.0f * UiScale, 12.0f, 14.0f);         // 标题字号
+	const float LG_BodySize = std::clamp(12.0f * UiScale, 10.0f, 12.0f);             // 正文字号
+	const float LG_LineHeight = std::clamp(20.0f * UiScale, 16.0f, 20.0f);           // 统一行高
+	const float LG_LineSpacing = std::clamp(5.0f * UiScale, 3.0f, 5.0f);             // 统一行间距
+	const float LG_HeadlineMargin = std::clamp(10.0f * UiScale, 7.0f, 10.0f);        // 标题下方间距
+	const float LG_LabelMaxWidth = maximum(120.0f, ViewWidth * 0.45f);
+	const float LG_LabelWidth = std::clamp(170.0f * UiScale, 120.0f, LG_LabelMaxWidth); // 左侧标签列宽度（固定）
 
 	// === 颜色定义 ===
 	const ColorRGBA LG_GlassColor(0.08f, 0.09f, 0.12f, LG_CardAlpha);
@@ -3142,9 +3139,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	static CScrollRegion s_ScrollRegion;
 	vec2 ScrollOffset(0.0f, 0.0f);
 	CScrollRegionParams ScrollParams;
-	ScrollParams.m_ScrollUnit = 60.0f;
+	ScrollParams.m_ScrollUnit = 60.0f * UiScale;
 	ScrollParams.m_Flags = CScrollRegionParams::FLAG_CONTENT_STATIC_WIDTH;
-	ScrollParams.m_ScrollbarMargin = 8.0f;
+	ScrollParams.m_ScrollbarMargin = std::clamp(8.0f * UiScale, 6.0f, 8.0f);
 	s_ScrollRegion.Begin(&MainView, &ScrollOffset, &ScrollParams);
 
 	static std::vector<CUIRect> s_GlassCards;
@@ -3153,8 +3150,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	MainView.y += ScrollOffset.y;
 
 	// 外边距
-	MainView.VSplitRight(10.0f, &MainView, nullptr);
-	MainView.VSplitLeft(10.0f, nullptr, &MainView);
+	const float OuterMargin = std::clamp(10.0f * UiScale, 6.0f, 10.0f);
+	MainView.VSplitRight(OuterMargin, &MainView, nullptr);
+	MainView.VSplitLeft(OuterMargin, nullptr, &MainView);
 
 	MainView.VSplitMid(&LeftView, &RightView, LG_CardSpacing);
 
@@ -3204,8 +3202,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	CardInner.VSplitLeft(LG_CardPadding, nullptr, &CardInner);
 	CardInner.VSplitRight(LG_CardPadding, &CardInner, nullptr);
 	CardInner.HSplitTop(LG_CardPadding, nullptr, &CardInner);
-	CUIRect LeftPart, RightPart;
-	CardInner.VSplitMid(&LeftPart, &RightPart, LG_CardSpacing * 2);
+	CUIRect LeftPart = CardInner;
+	CUIRect RightPart = CardInner;
+	if(!CompactLayout)
+		CardInner.VSplitMid(&LeftPart, &RightPart, LG_CardSpacing * 2);
 	const float LeftStartY = LeftPart.y;
 	CUIRect LeftTitle, LeftContent;
 	LeftPart.HSplitTop(LG_HeadlineSize, &LeftTitle, &LeftContent);
@@ -3238,15 +3238,22 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		else
 		{
 			TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f); 
-			Ui()->DoLabel(&Row, "QQ群: 1076765929", LG_BodySize, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, "QQ群: 1076765929(点击复制)", LG_BodySize, TEXTALIGN_ML);
 		}
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		if(Ui()->HotItem() == &s_QQGroupButtonId)
 			GameClient()->m_Tooltips.DoToolTip(&s_QQGroupButtonId, &Row, TCLocalize("点击复制QQ群号"));
 	}
+
+	const float LeftUsedHeight = LeftContent.y - LeftStartY;
+	if(CompactLayout)
+	{
+		RightPart.y = LeftStartY + LeftUsedHeight + LG_CardSpacing;
+		RightPart.h = (CardInner.y + CardInner.h) - RightPart.y;
+	}
 	//右侧
 	const float RightStartY = RightPart.y;
-	const float TeeSize = 50.0f;
+	const float TeeSize = std::clamp(50.0f * UiScale, 36.0f, 50.0f);
 	CUIRect TeeRect, TextRect;
 	RightPart.VSplitLeft(TeeSize + LG_CardPadding, &TeeRect, &TextRect);
 	vec2 TeePos = vec2(TeeRect.x + TeeSize * 0.5f, RightStartY + TeeSize * 0.5f + LG_CardPadding * 0.5f);
@@ -3256,7 +3263,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		"santa_tuzi",         // 皮肤名
 		"santa_tuzi",           // 备用皮肤
 		false,                 // 自定义颜色
-		0, 0, 0,              // FeetColor, BodyColor, Emote
+		0, 0, 0,              // 脚部颜色，身体颜色，表情
 		false,                 // 彩虹效果
 		true                  // Cute
 	);
@@ -3268,34 +3275,24 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	RightContent.HSplitTop(LG_HeadlineMargin, nullptr, &RightContent);
 	//我名字
 	RightContent.HSplitTop(LG_LineHeight, &Row, &RightContent);
-	TextRender()->TextColor(GetRainbowColor(-3));
-	Ui()->DoLabel(&Row, "栖梦", LG_BodySize + 2.0f, TEXTALIGN_ML);
+	TextRender()->TextColor(GetRainbowColor(-6));
+	Ui()->DoLabel(&Row, "栖梦(璇梦)", LG_BodySize + 2.0f, TEXTALIGN_ML);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	// 感谢名单
 	RightContent.HSplitTop(LG_LineSpacing * 2, nullptr, &RightContent);
 	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
 	TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.8f));
-	Ui()->DoLabel(&Row, "感谢名单:", LG_BodySize * 0.95f, TEXTALIGN_ML);
+	Ui()->DoLabel(&Row, "赞助名单:", LG_BodySize * 0.95f, TEXTALIGN_ML);
 	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-	Ui()->DoLabel(&Row, "喵不一,久桃,椿雪绒绒,大恐龙,鹑", LG_BodySize * 0.8f, TEXTALIGN_ML);
-	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-	Ui()->DoLabel(&Row, "唯诺,哇哇(哇啊嗷),热心市民,星星冻,咩咩不啊", LG_BodySize * 0.8f, TEXTALIGN_ML);
-	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-	Ui()->DoLabel(&Row, "窝窝头,半夏pr,塔塔喵,軽い猫,苏哲羽", LG_BodySize * 0.8f, TEXTALIGN_ML);
-	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-	Ui()->DoLabel(&Row, "夏日,TsFreddie,Zerol Acqua,千月,张宁我儿", LG_BodySize * 0.8f, TEXTALIGN_ML);
-
+	//TextRender()->TextColor(GetRainbowColor(-8));//彩虹循环效果
+	Ui()->DoLabel(&Row, "喵不一,久桃,椿雪绒绒,芽芽,骨头", LG_BodySize * 1.1f, TEXTALIGN_ML);
 
 	RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-	Ui()->DoLabel(&Row, "没有你们或多或少的支持我无法走的这么远,谢谢", LG_BodySize * 0.85f, TEXTALIGN_ML);
+	Ui()->DoLabel(&Row, "没有你们或多或少的支持我无法走的这么远,谢谢", LG_BodySize * 0.93f, TEXTALIGN_ML);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-
-
-
-	const float LeftUsedHeight = LeftContent.y - LeftStartY;
 	const float RightUsedHeight = RightContent.y - RightStartY;
-	const float ContentHeight = maximum(LeftUsedHeight, RightUsedHeight);
+	const float ContentHeight = CompactLayout ? (LeftUsedHeight + LG_CardSpacing + RightUsedHeight) : maximum(LeftUsedHeight, RightUsedHeight);
 	const float InfoCardHeight = ContentHeight + LG_CardPadding * 2;
 
 	FullWidthCard.y = CardStartY;
@@ -3304,7 +3301,15 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	
 	MainView.HSplitTop(InfoCardHeight, nullptr, &MainView);
 	MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
-	MainView.VSplitMid(&LeftView, &RightView, LG_CardSpacing);
+	if(CompactLayout)
+	{
+		LeftView = MainView;
+		RightView = MainView;
+	}
+	else
+	{
+		MainView.VSplitMid(&LeftView, &RightView, LG_CardSpacing);
+	}
 	Column = LeftView;
 
 	// ========== 模块 1: 消息气泡 ==========
@@ -3456,6 +3461,14 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRandomEmoteOnHit, TCLocalize("随机表情"), &g_Config.m_QmRandomEmoteOnHit, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowName, TCLocalize("本地彩虹名字"), &g_Config.m_QmRainbowName, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWeaponTrajectory, TCLocalize("武器弹道辅助线"), &g_Config.m_QmWeaponTrajectory, &Row, LG_LineHeight);
 	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
@@ -3599,7 +3612,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	s_QiaFenKeywordsInput.SetEmptyText(TCLocalize("用 , 分隔"));
 
 	const float InputWidth = CardContent.w - LG_LabelWidth;
-	const float InputLineSpacing = 2.0f;
+	const float InputLineSpacing = std::clamp(2.0f * UiScale, 1.0f, 2.0f);
 	const float InputHeight = CalcQiaFenInputHeight(TextRender(), s_QiaFenKeywordsInput.GetString(), InputWidth, LG_BodySize, InputLineSpacing, LG_LineHeight);
 	CardContent.HSplitTop(InputHeight, &Row, &CardContent);
 	Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
@@ -3675,7 +3688,14 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
 
 	LeftView = Column;
-	Column = RightView;
+	if(CompactLayout)
+	{
+		Column = LeftView;
+	}
+	else
+	{
+		Column = RightView;
+	}
 
 	// ========== 模块 8: Hook辅助线 ==========
 	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
@@ -3764,7 +3784,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	Ui()->DoLabel(&Row, TCLocalize("激光预览"), LG_BodySize, TEXTALIGN_ML);
 	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-	const float LaserPreviewHeightQM = 45.0f;
+	const float LaserPreviewHeightQM = std::clamp(45.0f * UiScale, 32.0f, 45.0f);
 	CUIRect LaserPreviewRectQM;
 	CardContent.HSplitTop(LaserPreviewHeightQM, &LaserPreviewRectQM, &CardContent);
 	LaserPreviewRectQM.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 8.0f);
@@ -3866,6 +3886,140 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 
 	// 收藏地图列表
 	const auto &FavMaps = GameClient()->m_TClient.GetFavoriteMaps();
+	std::vector<std::string> vFavMaps;
+	vFavMaps.reserve(FavMaps.size());
+	for(const auto &MapName : FavMaps)
+		vFavMaps.emplace_back(MapName);
+
+	auto MapCategoryKeyFromText = [&](const char *pText) -> const char * {
+		if(!pText || pText[0] == '\0')
+			return nullptr;
+		if(str_find_nocase(pText, "DDmaX"))
+		{
+			if(str_find_nocase(pText, "Easy"))
+				return "DDmaX Easy";
+			if(str_find_nocase(pText, "Next"))
+				return "DDmaX Next";
+			if(str_find_nocase(pText, "Pro"))
+				return "DDmaX Pro";
+			if(str_find_nocase(pText, "Nut"))
+				return "DDmaX Nut";
+			return "DDmaX";
+		}
+		if(str_find_nocase(pText, "Oldschool"))
+			return "Oldschool";
+		if(str_find_nocase(pText, "Novice"))
+			return "Novice";
+		if(str_find_nocase(pText, "Moderate"))
+			return "Moderate";
+		if(str_find_nocase(pText, "Brutal"))
+			return "Brutal";
+		if(str_find_nocase(pText, "Insane"))
+			return "Insane";
+		if(str_find_nocase(pText, "Dummy"))
+			return "Dummy";
+		if(str_find_nocase(pText, "Solo"))
+			return "Solo";
+		if(str_find_nocase(pText, "Race"))
+			return "Race";
+		if(str_find_nocase(pText, "Fun"))
+			return "Fun";
+		if(str_find_nocase(pText, "Event"))
+			return "Event";
+		return nullptr;
+	};
+
+	auto MapTypeDisplayName = [&](const char *pType) -> const char * {
+		if(!pType || pType[0] == '\0')
+			return TCLocalize("未知");
+		if(str_comp_nocase(pType, "DDmaX Easy") == 0)
+			return TCLocalize("古典easy");
+		if(str_comp_nocase(pType, "DDmaX Next") == 0)
+			return TCLocalize("古典next");
+		if(str_comp_nocase(pType, "DDmaX Pro") == 0)
+			return TCLocalize("古典pro");
+		if(str_comp_nocase(pType, "DDmaX Nut") == 0)
+			return TCLocalize("古典nut");
+		if(str_comp_nocase(pType, "DDmaX") == 0)
+			return TCLocalize("古典");
+		if(str_comp_nocase(pType, "Novice") == 0)
+			return TCLocalize("简单");
+		if(str_comp_nocase(pType, "Moderate") == 0)
+			return TCLocalize("中阶");
+		if(str_comp_nocase(pType, "Brutal") == 0)
+			return TCLocalize("高阶");
+		if(str_comp_nocase(pType, "Insane") == 0)
+			return TCLocalize("极限");
+		if(str_comp_nocase(pType, "Dummy") == 0)
+			return TCLocalize("分身");
+		if(str_comp_nocase(pType, "Solo") == 0)
+			return TCLocalize("单人");
+		if(str_comp_nocase(pType, "Oldschool") == 0)
+			return TCLocalize("传统");
+		if(str_comp_nocase(pType, "Race") == 0)
+			return TCLocalize("竞速");
+		if(str_comp_nocase(pType, "Fun") == 0)
+			return TCLocalize("娱乐");
+		if(str_comp_nocase(pType, "Event") == 0)
+			return TCLocalize("活动");
+		return TCLocalize("未知");
+	};
+
+	std::unordered_map<std::string, std::string> MapCategories;
+	IServerBrowser *pServerBrowser = ServerBrowser();
+	if(pServerBrowser)
+	{
+		const int NumServers = pServerBrowser->NumSortedServers();
+		MapCategories.reserve((size_t)NumServers);
+		for(int i = 0; i < NumServers; ++i)
+		{
+			const CServerInfo *pInfo = pServerBrowser->SortedGet(i);
+			if(!pInfo || pInfo->m_aMap[0] == '\0')
+				continue;
+			const char *pCategoryKey = MapCategoryKeyFromText(pInfo->m_aCommunityType);
+			if(!pCategoryKey)
+				pCategoryKey = MapCategoryKeyFromText(pInfo->m_aName);
+			if(!pCategoryKey)
+				continue;
+			if(MapCategories.find(pInfo->m_aMap) == MapCategories.end())
+				MapCategories.emplace(pInfo->m_aMap, pCategoryKey);
+		}
+
+		const IServerBrowser::CServerEntry *pEntry = pServerBrowser->Find(Client()->ServerAddress());
+		if(pEntry && pEntry->m_Info.m_aMap[0] != '\0')
+		{
+			const char *pCategoryKey = MapCategoryKeyFromText(pEntry->m_Info.m_aCommunityType);
+			if(!pCategoryKey)
+				pCategoryKey = MapCategoryKeyFromText(pEntry->m_Info.m_aName);
+			if(pCategoryKey)
+				MapCategories.emplace(pEntry->m_Info.m_aMap, pCategoryKey);
+		}
+	}
+
+	auto GetMapCategory = [&](const char *pMapName) -> const char * {
+		if(!pMapName || pMapName[0] == '\0')
+			return TCLocalize("未知");
+		const auto It = MapCategories.find(pMapName);
+		if(It != MapCategories.end() && !It->second.empty())
+			return MapTypeDisplayName(It->second.c_str());
+		if(pServerBrowser)
+		{
+			const char *pCurrentMap = Client()->GetCurrentMap();
+			if(pCurrentMap && str_comp(pCurrentMap, pMapName) == 0)
+			{
+				const IServerBrowser::CServerEntry *pEntry = pServerBrowser->Find(Client()->ServerAddress());
+				if(pEntry)
+				{
+					const char *pCategoryKey = MapCategoryKeyFromText(pEntry->m_Info.m_aCommunityType);
+					if(!pCategoryKey)
+						pCategoryKey = MapCategoryKeyFromText(pEntry->m_Info.m_aName);
+					if(pCategoryKey)
+						return MapTypeDisplayName(pCategoryKey);
+				}
+			}
+		}
+		return TCLocalize("未知");
+	};
 
 	// 记录复制状态和时间
 	static int s_CopiedMapIndex = -1;
@@ -3873,56 +4027,70 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	if(s_CopiedMapIndex >= 0 && Client()->LocalTime() - s_CopiedTime > 1.5f)
 		s_CopiedMapIndex = -1;
 
-	if(FavMaps.empty())
+	if(vFavMaps.empty())
 	{
 		CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-		Ui()->DoLabel(&Row, TCLocalize("暂无收藏地图"), 12.0f, TEXTALIGN_ML);
+		Ui()->DoLabel(&Row, TCLocalize("暂无收藏地图"), LG_BodySize, TEXTALIGN_ML);
 		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 	}
 	else
 	{
-		int MapIndex = 0;
 		static int s_aMapButtonIds[64];
-		for(const auto &MapName : FavMaps)
+		static CButtonContainer s_aMapRemoveButtons[64];
+		std::string RemoveMapName;
+		for(size_t MapIndex = 0; MapIndex < vFavMaps.size() && MapIndex < 64; ++MapIndex)
 		{
-			if(MapIndex >= 64)
-				break;
+			const std::string &MapName = vFavMaps[MapIndex];
 
 			CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+			CUIRect RowLabel, RowRemove;
+			Row.VSplitRight(LG_LineHeight, &RowLabel, &RowRemove);
+			RowRemove.HMargin(std::clamp(2.0f * UiScale, 1.0f, 2.0f), &RowRemove);
 
-			// 检测点击
-			bool Clicked = false;
-			if(Ui()->MouseInside(&Row))
+			if(Ui()->DoButton_FontIcon(&s_aMapRemoveButtons[MapIndex], FONT_ICON_XMARK, 0, &RowRemove, IGraphics::CORNER_ALL))
+			{
+				if(RemoveMapName.empty())
+					RemoveMapName = MapName;
+				s_CopiedMapIndex = -1;
+			}
+
+			// 检测点击复制（排除删除按钮）
+			if(Ui()->MouseInside(&RowLabel))
 			{
 				Ui()->SetHotItem(&s_aMapButtonIds[MapIndex]);
 				if(Ui()->MouseButtonClicked(0))
 				{
 					Input()->SetClipboardText(MapName.c_str());
-					s_CopiedMapIndex = MapIndex;
+					s_CopiedMapIndex = (int)MapIndex;
 					s_CopiedTime = Client()->LocalTime();
-					Clicked = true;
 				}
 			}
 
 			// 显示地图名或"已复制"
-			if(s_CopiedMapIndex == MapIndex)
+			if(s_CopiedMapIndex == (int)MapIndex)
 			{
 				TextRender()->TextColor(0.0f, 1.0f, 0.0f, 1.0f); // 绿色
-				Ui()->DoLabel(&Row, TCLocalize("已复制"), 12.0f, TEXTALIGN_ML);
+				Ui()->DoLabel(&RowLabel, TCLocalize("已复制"), LG_BodySize, TEXTALIGN_ML);
 			}
 			else
 			{
+				char aLabel[256];
+				const char *pCategory = GetMapCategory(MapName.c_str());
+				str_format(aLabel, sizeof(aLabel), "%s (%s)", MapName.c_str(), pCategory);
 				TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f); // 金色
-				Ui()->DoLabel(&Row, MapName.c_str(), 12.0f, TEXTALIGN_ML);
+				Ui()->DoLabel(&RowLabel, aLabel, LG_BodySize, TEXTALIGN_ML);
 			}
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 			if(Ui()->HotItem() == &s_aMapButtonIds[MapIndex])
-				GameClient()->m_Tooltips.DoToolTip(&s_aMapButtonIds[MapIndex], &Row, TCLocalize("点击复制地图名"));
+				GameClient()->m_Tooltips.DoToolTip(&s_aMapButtonIds[MapIndex], &RowLabel, TCLocalize("点击复制地图名"));
+			if(Ui()->HotItem() == &s_aMapRemoveButtons[MapIndex])
+				GameClient()->m_Tooltips.DoToolTip(&s_aMapRemoveButtons[MapIndex], &RowRemove, TCLocalize("取消收藏"));
 
 			CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-			MapIndex++;
 		}
+		if(!RemoveMapName.empty())
+			GameClient()->m_TClient.RemoveFavoriteMap(RemoveMapName.c_str());
 	}
 
 	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -3948,7 +4116,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoUnspecOnUnfreeze, TCLocalize("解冻自动取消旁观"), &g_Config.m_QmAutoUnspecOnUnfreeze, &Row, LG_LineHeight);
 	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoSwitchOnUnfreeze, TCLocalize("自动切换到解冻的tee"), &g_Config.m_QmAutoUnspecOnUnfreeze, &Row, LG_LineHeight);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoSwitchOnUnfreeze, TCLocalize("自动切换到解冻的tee"), &g_Config.m_QmAutoSwitchOnUnfreeze, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoCloseChatOnUnfreeze, TCLocalize("从freeze醒来自动关闭当前聊天"), &g_Config.m_QmAutoCloseChatOnUnfreeze, &Row, LG_LineHeight);
 	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);

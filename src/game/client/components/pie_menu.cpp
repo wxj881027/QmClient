@@ -20,6 +20,7 @@
 #include <game/client/render.h>
 
 #include <cmath>
+#include <limits>
 
 CPieMenu::CPieMenu()
 {
@@ -86,11 +87,15 @@ int CPieMenu::FindNearestPlayer()
 	if(!g_Config.m_QmPieMenuEnabled)
 		return -1;
 
-	// Get crosshair world position
-	vec2 CursorWorldPos = GameClient()->m_CursorInfo.WorldTarget();
+	const bool Spectating = GameClient()->m_Snap.m_SpecInfo.m_Active ||
+		(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS);
+
+	// Use crosshair target when playing, screen center when spectating.
+	vec2 ReferencePos = Spectating ? GameClient()->m_Camera.m_Center : GameClient()->m_CursorInfo.WorldTarget();
 	
 	int NearestClientId = -1;
-	float NearestDistanceSq = (float)g_Config.m_QmPieMenuMaxDistance * g_Config.m_QmPieMenuMaxDistance;
+	float NearestDistanceSq = Spectating ? std::numeric_limits<float>::max() :
+		(float)g_Config.m_QmPieMenuMaxDistance * g_Config.m_QmPieMenuMaxDistance;
 	
 	const int LocalClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
 
@@ -117,7 +122,7 @@ int CPieMenu::FindNearestPlayer()
 		);
 
 		// Calculate squared distance (avoid sqrt for performance)
-		float DistanceSq = length_squared(CursorWorldPos - PlayerPos);
+		float DistanceSq = length_squared(ReferencePos - PlayerPos);
 
 		// Check if closer than current nearest
 		if(DistanceSq < NearestDistanceSq)
@@ -416,7 +421,7 @@ const char *CPieMenu::GetOptionIcon(EMenuOption Option) const
 
 ColorRGBA CPieMenu::GetOptionColor(EMenuOption Option, bool Highlighted) const
 {
-	// Get colors from config (RGBA format with alpha)
+	// Get colors from config (HSLA format)
 	unsigned int ConfigColor = 0;
 	
 	switch(Option)
@@ -443,13 +448,7 @@ ColorRGBA CPieMenu::GetOptionColor(EMenuOption Option, bool Highlighted) const
 		ConfigColor = 0x4D6680BF;
 	}
 
-	// Parse RGBA from config (format: 0xRRGGBBAA)
-	ColorRGBA BaseColor(
-		((ConfigColor >> 24) & 0xFF) / 255.0f,
-		((ConfigColor >> 16) & 0xFF) / 255.0f,
-		((ConfigColor >> 8) & 0xFF) / 255.0f,
-		(ConfigColor & 0xFF) / 255.0f
-	);
+	ColorRGBA BaseColor = color_cast<ColorRGBA>(ColorHSLA(ConfigColor));
 
 	if(Highlighted)
 	{

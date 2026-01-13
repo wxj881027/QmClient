@@ -273,10 +273,13 @@ private:
 	int m_EditorMovementDelay = 5;
 	void UpdateEditorIngameMoved();
 	void HandleHammerSkinSwap(CCharacter *pChar, int DummyIndex);
+	void HandleRandomEmoteOnHit(CCharacter *pLocalChar);
 
 	int m_PredictedTick;
 	int m_aLastNewPredictedTick[NUM_DUMMIES];
 	int m_aLastHammerSkinSwapAttackTick[NUM_DUMMIES];
+	int m_aLastRandomEmoteAttackTick[MAX_CLIENTS];
+	int m_LastRandomEmoteDamageTick;
 
 	int m_LastRoundStartTick;
 	int m_LastRaceTick;

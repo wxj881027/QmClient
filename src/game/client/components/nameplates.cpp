@@ -363,6 +363,24 @@ protected:
 			return false;
 		m_Color = Data.m_Color;
 		m_IsLocal = Data.m_Local;
+		if(!m_IsLocal)
+		{
+			if(Data.m_InGame)
+			{
+				for(const auto Id : This.m_aLocalIds)
+				{
+					if(Id == Data.m_ClientId)
+					{
+						m_IsLocal = true;
+						break;
+					}
+				}
+			}
+			else
+			{
+				m_IsLocal = Data.m_ClientId == 0 || Data.m_ClientId == 1;
+			}
+		}
 		m_Alpha = Data.m_Color.a;
 		// TClient
 		if(g_Config.m_TcWarList)

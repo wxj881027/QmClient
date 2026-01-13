@@ -650,6 +650,8 @@ void CGameClient::OnReset()
 	m_PredictedTick = -1;
 	std::fill(std::begin(m_aLastNewPredictedTick), std::end(m_aLastNewPredictedTick), -1);
 	std::fill(std::begin(m_aLastHammerSkinSwapAttackTick), std::end(m_aLastHammerSkinSwapAttackTick), -1);
+	std::fill(std::begin(m_aLastRandomEmoteAttackTick), std::end(m_aLastRandomEmoteAttackTick), -1);
+	m_LastRandomEmoteDamageTick = -1;
 
 	m_LastRoundStartTick = -1;
 	m_LastRaceTick = -1;
@@ -2618,6 +2620,66 @@ void CGameClient::HandleHammerSkinSwap(CCharacter *pChar, int DummyIndex)
 	}
 }
 
+void CGameClient::HandleRandomEmoteOnHit(CCharacter *pLocalChar)
+{
+	if(!g_Config.m_QmRandomEmoteOnHit || !pLocalChar)
+		return;
+
+	const int LocalId = pLocalChar->GetCid();
+	bool HammerTriggered = false;
+
+	for(int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		if(i == LocalId)
+			continue;
+
+		CCharacter *pAttacker = m_PredictedWorld.GetCharacterById(i);
+		if(!pAttacker)
+			continue;
+
+		const int AttackTick = pAttacker->GetAttackTick();
+		if(AttackTick == m_aLastRandomEmoteAttackTick[i])
+			continue;
+		m_aLastRandomEmoteAttackTick[i] = AttackTick;
+
+		if(AttackTick <= 0)
+			continue;
+		if(pAttacker->GetActiveWeapon() != WEAPON_HAMMER || pAttacker->HammerHitDisabled())
+			continue;
+		if(!pAttacker->CanCollide(LocalId))
+			continue;
+
+		vec2 Dir = direction(pAttacker->Core()->m_Angle / 256.0f);
+		if(Dir.x == 0.0f && Dir.y == 0.0f)
+			Dir = vec2(0.0f, -1.0f);
+
+		const float Radius = pAttacker->GetProximityRadius();
+		const vec2 ProjStartPos = pAttacker->GetPos() + Dir * Radius * 0.75f;
+		const float MaxDist = Radius * 0.5f + pLocalChar->GetProximityRadius();
+		if(length_squared(pLocalChar->GetPos() - ProjStartPos) <= MaxDist * MaxDist)
+		{
+			HammerTriggered = true;
+			break;
+		}
+	}
+
+	bool GrenadeTriggered = false;
+	const int DamageTick = pLocalChar->GetLastDamageTick();
+	if(DamageTick > 0 && DamageTick != m_LastRandomEmoteDamageTick)
+	{
+		m_LastRandomEmoteDamageTick = DamageTick;
+		const int From = pLocalChar->GetLastDamageFrom();
+		if(pLocalChar->GetLastDamageWeapon() == WEAPON_GRENADE && From >= 0 && From != LocalId)
+			GrenadeTriggered = true;
+	}
+
+	if(HammerTriggered || GrenadeTriggered)
+	{
+		const int Emote = rand() % NUM_EMOTICONS;
+		m_Emoticon.Emote(Emote);
+	}
+}
+
 void CGameClient::OnPredict()
 {
 	// store the previous values so we can detect prediction errors
@@ -2799,6 +2861,7 @@ void CGameClient::OnPredict()
 		HandleHammerSkinSwap(pLocalChar, 0);
 		if(pDummyChar)
 			HandleHammerSkinSwap(pDummyChar, 1);
+		HandleRandomEmoteOnHit(pLocalChar);
 
 		// fetch the current characters
 		if(Tick == FinalTickSelf)
