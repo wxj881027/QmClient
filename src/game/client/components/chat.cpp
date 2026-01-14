@@ -1678,6 +1678,34 @@ void CChat::SendChat(int Team, const char *pLine)
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
 }
 
+void CChat::SendChatOnConn(int Conn, int Team, const char *pLine)
+{
+	// don't send empty messages
+	if(*str_utf8_skip_whitespaces(pLine) == '\0')
+		return;
+
+	if(Conn != IClient::CONN_DUMMY)
+		Conn = IClient::CONN_MAIN;
+
+	m_LastChatSend = time();
+
+	if(GameClient()->Client()->IsSixup())
+	{
+		protocol7::CNetMsg_Cl_Say Msg7;
+		Msg7.m_Mode = Team == 1 ? protocol7::CHAT_TEAM : protocol7::CHAT_ALL;
+		Msg7.m_Target = -1;
+		Msg7.m_pMessage = pLine;
+		Client()->SendPackMsg(Conn, &Msg7, MSGFLAG_VITAL, true);
+		return;
+	}
+
+	// send chat message
+	CNetMsg_Cl_Say Msg;
+	Msg.m_Team = Team;
+	Msg.m_pMessage = pLine;
+	Client()->SendPackMsg(Conn, &Msg, MSGFLAG_VITAL);
+}
+
 void CChat::SendChatQueued(const char *pLine)
 {
 	if(!pLine || str_length(pLine) < 1)

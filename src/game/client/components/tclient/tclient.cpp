@@ -16,6 +16,8 @@
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
+#include <engine/client/updater.h>
+#include <engine/storage.h>
 
 #include <generated/client_data.h>
 
@@ -27,7 +29,8 @@
 #include <game/localization.h>
 #include <game/version.h>
 
-static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/info.json";
+static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
+static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
 static constexpr const char *MAP_CATEGORY_CACHE_FILE = "tclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 
@@ -299,12 +302,17 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 				const char *pMessage = pMsg->m_pMessage;
 				if(MessageMatchesQiaFenPreset(pMessage) || MessageMatchesQiaFenCustom(pMessage, g_Config.m_QmQiaFenKeywords))
 				{
+					const bool UseDummy = g_Config.m_QmQiaFenUseDummy && Client()->DummyConnected();
+					const int TargetConn = UseDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
+
 					// 发送回复
-					GameClient()->m_Chat.SendChat(0, "我要恰!!谢谢佬!!!!");
+					GameClient()->m_Chat.SendChatOnConn(TargetConn, 0, "我要恰!!谢谢佬!!!!");
 					
 					// 在名字后面加"恰"
 					char aNewName[MAX_NAME_LENGTH];
-					const char *pCurrentName = g_Config.m_PlayerName;
+					char *pConfigName = UseDummy ? g_Config.m_ClDummyName : g_Config.m_PlayerName;
+					const int NameBufSize = UseDummy ? (int)sizeof(g_Config.m_ClDummyName) : (int)sizeof(g_Config.m_PlayerName);
+					const char *pCurrentName = pConfigName;
 					
 					// 检查名字是否已经以"恰"结尾
 					int NameLen = str_length(pCurrentName);
@@ -323,8 +331,11 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 					{
 						str_copy(aNewName, pCurrentName, sizeof(aNewName));
 						str_append(aNewName, "恰", sizeof(aNewName));
-						str_copy(g_Config.m_PlayerName, aNewName, sizeof(g_Config.m_PlayerName));
-						GameClient()->SendInfo(false);
+						str_copy(pConfigName, aNewName, NameBufSize);
+						if(UseDummy)
+							GameClient()->SendDummyInfo(false);
+						else
+							GameClient()->SendInfo(false);
 					}
 				}
 			}
@@ -743,11 +754,62 @@ void CTClient::OnRender()
 {
 	if(m_pTClientInfoTask)
 	{
-		if(m_pTClientInfoTask->State() == EHttpState::DONE)
+		if(m_pTClientInfoTask->Done())
 		{
-			FinishTClientInfo();
+			const bool InfoOk = m_pTClientInfoTask->State() == EHttpState::DONE;
+			if(InfoOk)
+			{
+				FinishTClientInfo();
+			}
 			ResetTClientInfoTask();
+
+			if(m_AutoUpdateAfterCheck)
+			{
+				if(!InfoOk || !m_FetchedTClientInfo)
+				{
+					Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("检查更新失败")));
+				}
+				else if(!NeedUpdate())
+				{
+					Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("当前已是最新版本")));
+				}
+				else
+				{
+					StartUpdateDownload();
+				}
+				m_AutoUpdateAfterCheck = false;
+			}
 		}
+	}
+	if(m_pUpdateExeTask && m_pUpdateExeTask->Done())
+	{
+		const bool DownloadOk = m_pUpdateExeTask->State() == EHttpState::DONE;
+		bool ReplaceOk = false;
+		if(DownloadOk)
+		{
+			ReplaceOk = ReplaceClientFromUpdate();
+			if(ReplaceOk)
+			{
+				if(Client()->State() == IClient::STATE_ONLINE || Client()->EditorHasUnsavedData())
+				{
+					Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("更新完成，请重启客户端")));
+				}
+				else
+				{
+					Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("更新完成，正在重启...")));
+					Client()->Restart();
+				}
+			}
+		}
+
+		if(!DownloadOk || !ReplaceOk)
+		{
+			if(m_aUpdateExeTmp[0] != '\0')
+				Storage()->RemoveBinaryFile(m_aUpdateExeTmp);
+			Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("更新失败，请重试")));
+		}
+
+		ResetUpdateExeTask();
 	}
 
 #if defined(CONF_WHISPER)
@@ -1152,6 +1214,59 @@ void CTClient::CheckAutoCloseChatOnUnfreeze()
 bool CTClient::NeedUpdate()
 {
 	return str_comp(m_aVersionStr, "0") != 0;
+}
+
+void CTClient::RequestUpdateCheckAndUpdate()
+{
+	if((m_pTClientInfoTask && !m_pTClientInfoTask->Done()) || (m_pUpdateExeTask && !m_pUpdateExeTask->Done()))
+		return;
+
+	m_AutoUpdateAfterCheck = true;
+	m_FetchedTClientInfo = false;
+	FetchTClientInfo();
+}
+
+void CTClient::StartUpdateDownload()
+{
+#if !defined(CONF_FAMILY_WINDOWS)
+	Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("仅支持Windows自动更新")));
+	return;
+#endif
+
+	if(m_pUpdateExeTask && !m_pUpdateExeTask->Done())
+		return;
+
+	ResetUpdateExeTask();
+	IStorage::FormatTmpPath(m_aUpdateExeTmp, sizeof(m_aUpdateExeTmp), PLAT_CLIENT_EXEC);
+	m_pUpdateExeTask = HttpGet(TCLIENT_UPDATE_EXE_URL);
+	m_pUpdateExeTask->Timeout(CTimeout{10000, 0, 500, 10});
+	m_pUpdateExeTask->IpResolve(IPRESOLVE::V4);
+	m_pUpdateExeTask->WriteToFile(Storage(), m_aUpdateExeTmp, -2);
+	Http()->Run(m_pUpdateExeTask);
+	Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("正在下载更新...")));
+}
+
+void CTClient::ResetUpdateExeTask()
+{
+	if(m_pUpdateExeTask)
+	{
+		m_pUpdateExeTask->Abort();
+		m_pUpdateExeTask = nullptr;
+	}
+	m_aUpdateExeTmp[0] = '\0';
+}
+
+bool CTClient::ReplaceClientFromUpdate()
+{
+	if(m_aUpdateExeTmp[0] == '\0')
+		return false;
+
+	bool Success = true;
+	Storage()->RemoveBinaryFile(CLIENT_EXEC ".old");
+	Success &= Storage()->RenameBinaryFile(PLAT_CLIENT_EXEC, CLIENT_EXEC ".old");
+	Success &= Storage()->RenameBinaryFile(m_aUpdateExeTmp, PLAT_CLIENT_EXEC);
+	Storage()->RemoveBinaryFile(CLIENT_EXEC ".old");
+	return Success;
 }
 
 void CTClient::ResetTClientInfoTask()

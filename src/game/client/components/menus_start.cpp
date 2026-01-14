@@ -102,6 +102,19 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	if(GameClient()->m_Menus.DoButton_Menu(&s_NewsButton, Localize("News"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_N))
 		NewPage = CMenus::PAGE_NEWS;
 
+	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
+	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
+	static CButtonContainer s_UpdateButton;
+	const bool UpdateChecking = GameClient()->m_TClient.IsUpdateChecking();
+	const bool UpdateDownloading = GameClient()->m_TClient.IsUpdateDownloading();
+	const bool UpdateBusy = UpdateChecking || UpdateDownloading;
+	const char *pUpdateLabel = UpdateDownloading ? Localize("Updating…") : (UpdateChecking ? Localize("Checking…") : Localize("Update"));
+	if(GameClient()->m_Menus.DoButton_Menu(&s_UpdateButton, pUpdateLabel, 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	{
+		if(!UpdateBusy)
+			GameClient()->m_TClient.RequestUpdateCheckAndUpdate();
+	}
+
 	CUIRect Menu;
 	MainView.VMargin(VMargin, &Menu);
 	CUIRect QuitNote;

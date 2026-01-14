@@ -3599,6 +3599,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmQiaFenEnabled, TCLocalize("启用恰分功能"), &g_Config.m_QmQiaFenEnabled, &Row, LG_LineHeight);
 	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmQiaFenUseDummy, TCLocalize("使用Dummy发言"), &g_Config.m_QmQiaFenUseDummy, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 	CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
 	TextRender()->TextColor(ColorRGBA(0.7f, 0.7f, 0.7f, 1.0f));
 	Ui()->DoLabel(&Row, TCLocalize("已通关的地图不会触发"), LG_BodySize * 0.7f, TEXTALIGN_ML);

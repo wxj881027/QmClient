@@ -116,6 +116,9 @@ class CTClient : public CComponent
 
 	float m_FinishTextTimeout = 0.0f;
 	void DoFinishCheck();
+	void StartUpdateDownload();
+	void ResetUpdateExeTask();
+	bool ReplaceClientFromUpdate();
 
 	bool ServerCommandExists(const char *pCommand);
 	bool IsQiaFenFinishedMap() const;
@@ -215,10 +218,14 @@ public:
 	void SetForcedAspect();
 
 	std::shared_ptr<CHttpRequest> m_pTClientInfoTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pUpdateExeTask = nullptr;
 	void FetchTClientInfo();
 	void FinishTClientInfo();
 	void ResetTClientInfoTask();
 	bool NeedUpdate();
+	void RequestUpdateCheckAndUpdate();
+	bool IsUpdateChecking() const { return m_pTClientInfoTask && !m_pTClientInfoTask->Done(); }
+	bool IsUpdateDownloading() const { return m_pUpdateExeTask && !m_pUpdateExeTask->Done(); }
 
 	void RenderMiniVoteHud();
 	void RenderCenterLines();
@@ -227,6 +234,8 @@ public:
 	bool ChatDoSpecId(const char *pInput);
 	bool InfoTaskDone() { return m_pTClientInfoTask && m_pTClientInfoTask->State() == EHttpState::DONE; }
 	bool m_FetchedTClientInfo = false;
+	bool m_AutoUpdateAfterCheck = false;
+	char m_aUpdateExeTmp[64] = "";
 	char m_aVersionStr[10] = "0";
 
 	Regex m_RegexChatIgnore;

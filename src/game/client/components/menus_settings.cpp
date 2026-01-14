@@ -3143,41 +3143,55 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 #if defined(CONF_AUTOUPDATE)
 	{
 		const bool NeedUpdate = GameClient()->m_TClient.NeedUpdate();
+		const bool CheckingInfo = GameClient()->m_TClient.m_pTClientInfoTask && !GameClient()->m_TClient.m_pTClientInfoTask->Done();
+		const bool HasInfo = GameClient()->m_TClient.m_FetchedTClientInfo;
 		IUpdater::EUpdaterState State = Updater()->GetCurrentState();
 
-		// Update Button
 		char aBuf[256];
-		if(NeedUpdate && State <= IUpdater::CLEAN)
-		{
-			str_format(aBuf, sizeof(aBuf), Localize("TClient %s is available:"), GameClient()->m_TClient.m_aVersionStr);
-			UpdaterRect.VSplitLeft(TextRender()->TextWidth(14.0f, aBuf, -1, -1.0f) + 10.0f, &UpdaterRect, &Button);
-			Button.VSplitLeft(100.0f, &Button, nullptr);
-			static CButtonContainer s_ButtonUpdate;
-			if(DoButton_Menu(&s_ButtonUpdate, Localize("Update now"), 0, &Button))
-			{
-				Updater()->InitiateUpdate();
-			}
-		}
-		else if(State >= IUpdater::GETTING_MANIFEST && State < IUpdater::NEED_RESTART)
-			str_copy(aBuf, Localize("Updating…"));
-		else if(State == IUpdater::NEED_RESTART)
+		if(State == IUpdater::NEED_RESTART)
 		{
 			str_copy(aBuf, Localize("TClient Client updated!"));
 			m_NeedRestartUpdate = true;
 		}
-		else
+		else if(State == IUpdater::FAIL)
+			str_copy(aBuf, Localize("Update failed! Check log…"));
+		else if(State >= IUpdater::GETTING_MANIFEST && State < IUpdater::NEED_RESTART)
+			str_copy(aBuf, Localize("Updating…"));
+		else if(CheckingInfo)
+			str_copy(aBuf, Localize("Checking for updates…"));
+		else if(HasInfo)
 		{
-			str_copy(aBuf, Localize("No updates available"));
-			UpdaterRect.VSplitLeft(TextRender()->TextWidth(14.0f, aBuf, -1, -1.0f) + 10.0f, &UpdaterRect, &Button);
-			Button.VSplitLeft(100.0f, &Button, nullptr);
-			static CButtonContainer s_ButtonUpdate;
-			if(DoButton_Menu(&s_ButtonUpdate, Localize("Check now"), 0, &Button))
+			if(NeedUpdate)
+				str_format(aBuf, sizeof(aBuf), Localize("TClient %s is available:"), GameClient()->m_TClient.m_aVersionStr);
+			else
+				str_copy(aBuf, Localize("Already up to date"));
+		}
+		else
+			str_copy(aBuf, Localize("Click Update to check"));
+
+		UpdaterRect.VSplitLeft(TextRender()->TextWidth(14.0f, aBuf, -1, -1.0f) + 10.0f, &UpdaterRect, &Button);
+		Button.VSplitLeft(100.0f, &Button, nullptr);
+		static CButtonContainer s_ButtonUpdate;
+		if(State >= IUpdater::GETTING_MANIFEST && State < IUpdater::NEED_RESTART)
+		{
+			Ui()->RenderProgressBar(Button, Updater()->GetCurrentPercent() / 100.0f);
+		}
+		else if(State == IUpdater::NEED_RESTART)
+		{
+			if(DoButton_Menu(&s_ButtonUpdate, Localize("Restart"), 0, &Button))
 			{
-				GameClient()->m_TClient.FetchTClientInfo();
+				Client()->Restart();
 			}
 		}
+		else
+		{
+			if(DoButton_Menu(&s_ButtonUpdate, Localize("Update"), 0, &Button))
+			{
+				GameClient()->m_TClient.RequestUpdateCheckAndUpdate();
+			}
+		}
+
 		Ui()->DoLabel(&UpdaterRect, aBuf, 14.0f, TEXTALIGN_ML);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 #endif
 }
