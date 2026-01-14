@@ -1342,6 +1342,19 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		const CNetMsg_Sv_SaveCode *pMsg = (CNetMsg_Sv_SaveCode *)pRawMsg;
 		OnSaveCodeNetMessage(pMsg);
 	}
+	else if(MsgId == NETMSGTYPE_SV_RECORD || MsgId == NETMSGTYPE_SV_RECORDLEGACY)
+	{
+		CNetMsg_Sv_Record *pMsg = static_cast<CNetMsg_Sv_Record *>(pRawMsg);
+		if(pMsg->m_ServerTimeBest > 0)
+		{
+			m_MapBestTimeSeconds = pMsg->m_ServerTimeBest / 100;
+			m_MapBestTimeMillis = (pMsg->m_ServerTimeBest % 100) * 10;
+		}
+		else if(m_MapBestTimeSeconds == FinishTime::UNSET)
+		{
+			// some PvP mods based on DDNet accidentally send a best time of 0, despite having no finished races
+		}
+	}
 }
 
 void CGameClient::OnStateChange(int NewState, int OldState)
