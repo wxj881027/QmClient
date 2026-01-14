@@ -29,6 +29,7 @@
 #include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <memory>
@@ -1265,9 +1266,85 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	}
 }
 
+struct SAudioPackEntry
+{
+	char m_aName[64];
+	int m_FileCount;
+};
+
+struct SAudioPackScanUser
+{
+	IStorage *m_pStorage;
+	std::vector<SAudioPackEntry> *m_pPacks;
+};
+
+static int AudioPackFileScan(const char *pName, int IsDir, int DirType, void *pUser)
+{
+	if(IsDir || pName[0] == '.')
+		return 0;
+
+	if(str_endswith(pName, ".wv") || str_endswith(pName, ".opus"))
+	{
+		int *pCount = static_cast<int *>(pUser);
+		(*pCount)++;
+	}
+
+	return 0;
+}
+
+static int AudioPackScan(const char *pName, int IsDir, int DirType, void *pUser)
+{
+	if(!IsDir || pName[0] == '.' || str_comp(pName, "default") == 0)
+		return 0;
+
+	auto *pData = static_cast<SAudioPackScanUser *>(pUser);
+	SAudioPackEntry Entry{};
+	str_copy(Entry.m_aName, pName, sizeof(Entry.m_aName));
+
+	char aPath[IO_MAX_PATH_LENGTH];
+	str_format(aPath, sizeof(aPath), "audio/%s", pName);
+	pData->m_pStorage->ListDirectory(IStorage::TYPE_ALL, aPath, AudioPackFileScan, &Entry.m_FileCount);
+
+	if(Entry.m_FileCount == 0)
+	{
+		str_format(aPath, sizeof(aPath), "audio/%s/audio", pName);
+		pData->m_pStorage->ListDirectory(IStorage::TYPE_ALL, aPath, AudioPackFileScan, &Entry.m_FileCount);
+	}
+
+	pData->m_pPacks->push_back(Entry);
+	return 0;
+}
+
+static void RefreshAudioPacks(IStorage *pStorage, std::vector<SAudioPackEntry> &vPacks)
+{
+	vPacks.clear();
+
+	SAudioPackEntry Default{};
+	str_copy(Default.m_aName, "default", sizeof(Default.m_aName));
+	vPacks.push_back(Default);
+
+	SAudioPackScanUser User{pStorage, &vPacks};
+	pStorage->ListDirectory(IStorage::TYPE_ALL, "audio", AudioPackScan, &User);
+
+	if(vPacks.size() > 1)
+	{
+		std::sort(vPacks.begin() + 1, vPacks.end(), [](const SAudioPackEntry &A, const SAudioPackEntry &B) {
+			return str_comp(A.m_aName, B.m_aName) < 0;
+		});
+	}
+}
+
 void CMenus::RenderSettingsSound(CUIRect MainView)
 {
 	static int s_SndEnable = g_Config.m_SndEnable;
+	static bool s_SndPackInit = false;
+	static char s_aSndPack[sizeof(g_Config.m_SndPack)] = "";
+
+	if(!s_SndPackInit)
+	{
+		str_copy(s_aSndPack, g_Config.m_SndPack, sizeof(s_aSndPack));
+		s_SndPackInit = true;
+	}
 
 	CUIRect Button;
 	MainView.HSplitTop(20.0f, &Button, &MainView);
@@ -1275,11 +1352,15 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 	{
 		g_Config.m_SndEnable ^= 1;
 		UpdateMusicState();
-		m_NeedRestartSound = g_Config.m_SndEnable && !s_SndEnable;
 	}
 
+	const bool SndEnableChanged = g_Config.m_SndEnable && !s_SndEnable;
 	if(!g_Config.m_SndEnable)
+	{
+		const bool PackChanged = str_comp(g_Config.m_SndPack, s_aSndPack) != 0;
+		m_NeedRestartSound = SndEnableChanged || PackChanged;
 		return;
+	}
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
 	if(DoButton_CheckBox(&g_Config.m_SndMusic, Localize("Play background music"), g_Config.m_SndMusic, &Button))
@@ -1319,6 +1400,101 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 	MainView.HSplitTop(20.0f, &Button, &MainView);
 	if(DoButton_CheckBox(&g_Config.m_SndHighlight, Localize("Enable highlighted chat sound"), g_Config.m_SndHighlight, &Button))
 		g_Config.m_SndHighlight ^= 1;
+
+	// audio pack selector
+	{
+		static std::vector<SAudioPackEntry> s_vAudioPacks;
+		static bool s_AudioPacksInit = false;
+		if(!s_AudioPacksInit)
+		{
+			RefreshAudioPacks(Storage(), s_vAudioPacks);
+			s_AudioPacksInit = true;
+		}
+
+		MainView.HSplitTop(10.0f, nullptr, &MainView);
+		CUIRect AudioPackView;
+		MainView.HSplitTop(110.0f, &AudioPackView, &MainView);
+
+		const float HeaderHeight = 20.0f;
+		const float HeaderSpacing = 2.0f;
+
+		CUIRect HeaderRow = AudioPackView;
+		HeaderRow.HSplitTop(HeaderHeight + HeaderSpacing, &HeaderRow, nullptr);
+		HeaderRow.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
+
+		static CListBox s_AudioPackListBox;
+		s_AudioPackListBox.DoHeader(&AudioPackView, Localize("音频包"), HeaderHeight, HeaderSpacing);
+
+		static CButtonContainer s_AudioPackRefreshButton;
+		CUIRect RefreshButton;
+		HeaderRow.VSplitRight(80.0f, nullptr, &RefreshButton);
+		RefreshButton.VMargin(2.0f, &RefreshButton);
+		if(DoButton_Menu(&s_AudioPackRefreshButton, Localize("刷新"), 0, &RefreshButton))
+		{
+			RefreshAudioPacks(Storage(), s_vAudioPacks);
+		}
+
+		if(g_Config.m_SndPack[0] == '\0')
+			str_copy(g_Config.m_SndPack, "default", sizeof(g_Config.m_SndPack));
+
+		int SelectedPack = 0;
+		bool PackFound = false;
+		for(size_t i = 0; i < s_vAudioPacks.size(); ++i)
+		{
+			if(str_comp(s_vAudioPacks[i].m_aName, g_Config.m_SndPack) == 0)
+			{
+				SelectedPack = (int)i;
+				PackFound = true;
+				break;
+			}
+		}
+		if(!PackFound)
+		{
+			str_copy(g_Config.m_SndPack, "default", sizeof(g_Config.m_SndPack));
+			SelectedPack = 0;
+		}
+
+		const int OldSelectedPack = SelectedPack;
+		s_AudioPackListBox.DoStart(20.0f, s_vAudioPacks.size(), 1, 4, SelectedPack);
+
+		for(size_t i = 0; i < s_vAudioPacks.size(); ++i)
+		{
+			const SAudioPackEntry &Entry = s_vAudioPacks[i];
+			const CListboxItem Item = s_AudioPackListBox.DoNextItem(&Entry, SelectedPack == (int)i);
+			if(!Item.m_Visible)
+				continue;
+
+			char aLabel[128];
+			if(str_comp(Entry.m_aName, "default") == 0)
+			{
+				str_copy(aLabel, Localize("Default"), sizeof(aLabel));
+			}
+			else if(Entry.m_FileCount > 0)
+			{
+				str_format(aLabel, sizeof(aLabel), "%s (%d)", Entry.m_aName, Entry.m_FileCount);
+			}
+			else
+			{
+				str_copy(aLabel, Entry.m_aName, sizeof(aLabel));
+			}
+
+			Ui()->DoLabel(&Item.m_Rect, aLabel, 12.0f, TEXTALIGN_ML);
+		}
+
+		SelectedPack = s_AudioPackListBox.DoEnd();
+		if(SelectedPack != OldSelectedPack && SelectedPack >= 0 && SelectedPack < (int)s_vAudioPacks.size())
+		{
+			str_copy(g_Config.m_SndPack, s_vAudioPacks[SelectedPack].m_aName, sizeof(g_Config.m_SndPack));
+			if(GameClient()->m_Sounds.Reload())
+			{
+				str_copy(s_aSndPack, g_Config.m_SndPack, sizeof(s_aSndPack));
+				UpdateMusicState();
+			}
+		}
+	}
+
+	const bool PackChanged = str_comp(g_Config.m_SndPack, s_aSndPack) != 0;
+	m_NeedRestartSound = SndEnableChanged || PackChanged;
 
 	// volume slider
 	{

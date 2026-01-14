@@ -3,9 +3,13 @@
 
 #include "sounds.h"
 
+#include <base/str.h>
+#include <base/system.h>
+
 #include <engine/engine.h>
 #include <engine/shared/config.h>
 #include <engine/sound.h>
+#include <engine/storage.h>
 
 #include <generated/client_data.h>
 
@@ -21,6 +25,30 @@ CSoundLoading::CSoundLoading(CGameClient *pGameClient, bool Render) :
 	Abortable(true);
 }
 
+static const char *GetSoundFilename(const char *pFilename, IStorage *pStorage, char *pBuffer, size_t BufferSize)
+{
+	if(!pStorage || pFilename == nullptr || pFilename[0] == '\0')
+		return pFilename;
+
+	const char *pPack = g_Config.m_SndPack;
+	if(pPack[0] == '\0' || str_comp(pPack, "default") == 0)
+		return pFilename;
+
+	const char *pRelative = pFilename;
+	if(str_startswith(pFilename, "audio/"))
+		pRelative = pFilename + str_length("audio/");
+
+	str_format(pBuffer, BufferSize, "audio/%s/%s", pPack, pRelative);
+	if(pStorage->FileExists(pBuffer, IStorage::TYPE_ALL))
+		return pBuffer;
+
+	str_format(pBuffer, BufferSize, "audio/%s/%s", pPack, pFilename);
+	if(pStorage->FileExists(pBuffer, IStorage::TYPE_ALL))
+		return pBuffer;
+
+	return pFilename;
+}
+
 void CSoundLoading::Run()
 {
 	for(int s = 0; s < g_pData->m_NumSounds; s++)
@@ -33,7 +61,10 @@ void CSoundLoading::Run()
 			if(State() == IJob::STATE_ABORTED)
 				return;
 
-			int Id = m_pGameClient->Sound()->LoadWV(g_pData->m_aSounds[s].m_aSounds[i].m_pFilename);
+			char aPath[IO_MAX_PATH_LENGTH];
+			const char *pFilename = g_pData->m_aSounds[s].m_aSounds[i].m_pFilename;
+			const char *pLoadFilename = GetSoundFilename(pFilename, m_pGameClient->Storage(), aPath, sizeof(aPath));
+			int Id = m_pGameClient->Sound()->LoadWV(pLoadFilename);
 			g_pData->m_aSounds[s].m_aSounds[i].m_Id = Id;
 			// try to render a frame
 			if(m_Render)
@@ -117,6 +148,52 @@ void CSounds::OnInit()
 		CSoundLoading(GameClient(), true).Run();
 		m_WaitForSoundJob = false;
 	}
+}
+
+bool CSounds::Reload()
+{
+	if(m_WaitForSoundJob)
+	{
+		if(m_pSoundJob && (m_pSoundJob->State() == IJob::STATE_DONE || m_pSoundJob->State() == IJob::STATE_ABORTED))
+		{
+			m_WaitForSoundJob = false;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	Sound()->StopAll();
+	ClearQueue();
+
+	for(int s = 0; s < g_pData->m_NumSounds; s++)
+	{
+		for(int i = 0; i < g_pData->m_aSounds[s].m_NumSounds; i++)
+		{
+			int &Id = g_pData->m_aSounds[s].m_aSounds[i].m_Id;
+			if(Id != -1)
+			{
+				Sound()->UnloadSample(Id);
+				Id = -1;
+			}
+		}
+	}
+
+	for(int s = 0; s < g_pData->m_NumSounds; s++)
+	{
+		for(int i = 0; i < g_pData->m_aSounds[s].m_NumSounds; i++)
+		{
+			char aPath[IO_MAX_PATH_LENGTH];
+			const char *pFilename = g_pData->m_aSounds[s].m_aSounds[i].m_pFilename;
+			const char *pLoadFilename = GetSoundFilename(pFilename, Storage(), aPath, sizeof(aPath));
+			int Id = Sound()->LoadWV(pLoadFilename);
+			g_pData->m_aSounds[s].m_aSounds[i].m_Id = Id;
+		}
+	}
+
+	UpdateChannels();
+	return true;
 }
 
 void CSounds::OnReset()

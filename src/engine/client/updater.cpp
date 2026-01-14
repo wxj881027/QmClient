@@ -66,11 +66,21 @@ static void UrlEncodePath(const char *pIn, char *pOut, size_t OutSize)
 	pOut[WriteIndex] = '\0';
 }
 
+static constexpr const char *UPDATE_CLIENT_FILE = "DDNet.exe";
+static constexpr const char *UPDATE_CLIENT_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
+static constexpr const char *UPDATE_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/";
+
 static const char *GetUpdaterUrl(char *pBuf, int BufSize, const char *pFile)
 {
+	if(str_comp(pFile, UPDATE_CLIENT_FILE) == 0)
+	{
+		str_copy(pBuf, UPDATE_CLIENT_URL, BufSize);
+		return pBuf;
+	}
+
 	char aBuf[1024];
 	UrlEncodePath(pFile, aBuf, sizeof(aBuf));
-	str_format(pBuf, BufSize, "https://update.tclient.app/%s", aBuf);
+	str_format(pBuf, BufSize, "%s%s", UPDATE_FALLBACK_BASE_URL, aBuf);
 	return pBuf;
 }
 
@@ -350,8 +360,15 @@ void CUpdater::ParseUpdate()
 
 void CUpdater::InitiateUpdate()
 {
-	SetCurrentState(IUpdater::GETTING_MANIFEST);
-	FetchFile("update.json");
+	m_FileJobs.clear();
+	m_CurrentJob = m_FileJobs.end();
+	m_ClientUpdate = true;
+	m_ServerUpdate = false;
+	m_ClientFetched = true;
+	m_ServerFetched = false;
+	m_Percent = 0;
+	SetCurrentState(IUpdater::DOWNLOADING);
+	FetchFile(UPDATE_CLIENT_FILE, m_aClientExecTmp);
 }
 
 void CUpdater::PerformUpdate()

@@ -27,7 +27,7 @@
 #include <game/localization.h>
 #include <game/version.h>
 
-static constexpr const char *TCLIENT_INFO_URL = "https://update.tclient.app/info.json";
+static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/info.json";
 static constexpr const char *MAP_CATEGORY_CACHE_FILE = "tclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 
