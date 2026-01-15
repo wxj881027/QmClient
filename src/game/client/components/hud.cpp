@@ -1569,6 +1569,58 @@ void CHud::RenderDummyActions()
 	Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_DummyCopyOffset, x, y);
 }
 
+void CHud::RenderKeyStatus()
+{
+	const float Fontsize = 7.0f;
+	const float LineHeight = 9.0f;
+	const float PaddingX = 4.0f;
+	const float PaddingY = 3.0f;
+	const float StartX = 4.0f;
+	const float StartY = 45.0f;
+
+	const char *pKeyStatusText = "卡键: ?";
+	if(g_Config.m_ClDummyResetOnSwitch == 0)
+		pKeyStatusText = "卡键: ON";
+	else if(g_Config.m_ClDummyResetOnSwitch == 1)
+		pKeyStatusText = "卡键: OFF";
+	else if(g_Config.m_ClDummyResetOnSwitch == 2)
+		pKeyStatusText = "卡键: 重置本体";
+
+	const bool FirePressed = (GameClient()->m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire & 1) != 0;
+	const char *pHammerState = g_Config.m_ClDummyHammer ? (FirePressed ? "DF" : "HDF") : "正常锤";
+	char aHammerLine[64];
+	str_format(aHammerLine, sizeof(aHammerLine), "锤: %s", pHammerState);
+
+	const char *pControlState = g_Config.m_ClDummyControl ? "开启" : "关闭";
+	char aControlLine[64];
+	str_format(aControlLine, sizeof(aControlLine), "分身控制: %s", pControlState);
+
+	float BoxWidth = TextRender()->TextWidth(Fontsize, pKeyStatusText, -1, -1.0f);
+	BoxWidth = maximum(BoxWidth, TextRender()->TextWidth(Fontsize, aHammerLine, -1, -1.0f));
+	BoxWidth = maximum(BoxWidth, TextRender()->TextWidth(Fontsize, aControlLine, -1, -1.0f));
+	BoxWidth += PaddingX * 2.0f;
+
+	const float BoxHeight = LineHeight * 3.0f + PaddingY * 2.0f;
+	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_ALL, 5.0f);
+
+	float TextX = StartX + PaddingX;
+	float TextY = StartY + PaddingY;
+
+	const float Time = Client()->GlobalTime();
+	const float Hue = std::fmod(Time * 0.2f, 1.0f);
+	ColorHSLA RainbowHsla(Hue, 0.75f, 0.6f, 1.0f);
+	ColorRGBA RainbowColor = color_cast<ColorRGBA>(RainbowHsla);
+
+	TextRender()->TextColor(RainbowColor);
+	TextRender()->Text(TextX, TextY, Fontsize, pKeyStatusText, -1.0f);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	TextY += LineHeight;
+
+	TextRender()->Text(TextX, TextY, Fontsize, aHammerLine, -1.0f);
+	TextY += LineHeight;
+	TextRender()->Text(TextX, TextY, Fontsize, aControlLine, -1.0f);
+}
+
 inline int CHud::GetDigitsIndex(int Value, int Max)
 {
 	if(Value < 0)
@@ -1596,8 +1648,6 @@ inline float CHud::GetMovementInformationBoxHeight()
 	{
 		BoxHeight += 5.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 	}
-	// 新增卡键状态显示行
-	BoxHeight += 1.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 	// 新增玩家统计显示行（3行：存活时长、救醒/落水、出钩比例）
 	if(g_Config.m_QmPlayerStatsHud)
 	{
@@ -1912,30 +1962,6 @@ void CHud::RenderMovementInformation()
 		y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 	}
 
-	// 卡键状态显示 (cl_dummy_resetonswitch) - 彩虹动态渐变
-	{
-		const char *pStatusText;
-		if(g_Config.m_ClDummyResetOnSwitch == 0)
-			pStatusText = "卡键: ON";
-		else if(g_Config.m_ClDummyResetOnSwitch == 1)
-			pStatusText = "卡键: OFF";
-		else if(g_Config.m_ClDummyResetOnSwitch == 2)
-			pStatusText = "卡键: 重置本体";
-		else
-			pStatusText = "卡键: ?";
-
-		// 彩虹动态颜色
-		const float Time = Client()->GlobalTime();
-		const float Hue = std::fmod(Time * 0.2f, 1.0f);
-		ColorHSLA RainbowHsla(Hue, 0.75f, 0.6f, 1.0f);
-		ColorRGBA RainbowColor = color_cast<ColorRGBA>(RainbowHsla);
-
-		TextRender()->TextColor(RainbowColor);
-		TextRender()->Text(LeftX, y, Fontsize, pStatusText, -1.0f);
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-		y += MOVEMENT_INFORMATION_LINE_HEIGHT;
-	}
-
 	// 玩家统计HUD显示
 	if(g_Config.m_QmPlayerStatsHud)
 	{
@@ -2158,6 +2184,7 @@ void CHud::OnRender()
 		if(g_Config.m_ClShowhudScore)
 			RenderScoreHud();
 		RenderDummyActions();
+		RenderKeyStatus();
 		RenderWarmupTimer();
 		RenderTextInfo();
 		GameClient()->m_TClient.RenderCenterLines();

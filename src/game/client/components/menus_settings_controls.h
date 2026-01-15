@@ -18,7 +18,6 @@ enum class EBindOptionGroup
 	VOTING,
 	CHAT,
 	DUMMY,
-	COMMON_BINDS,
 	MISCELLANEOUS,
 	CUSTOM,
 	NUM,

@@ -3,6 +3,8 @@
 
 #include "chat.h"
 
+#include <base/log.h>
+
 #include <engine/editor.h>
 #include <engine/external/regex.h>
 #include <engine/graphics.h>
@@ -23,9 +25,201 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
+#include <algorithm>
 #include <cmath>
 
 char CChat::ms_aDisplayText[MAX_LINE_LENGTH] = "";
+
+enum
+{
+	BLOCK_WORDS_MODE_REGEX = 0,
+	BLOCK_WORDS_MODE_FULL,
+	BLOCK_WORDS_MODE_BOTH
+};
+
+static int BlockWordsSeparatorLength(const char *pStr)
+{
+	const unsigned char C0 = (unsigned char)pStr[0];
+	if(C0 == ',' || C0 == ';' || C0 == '|' || C0 == '\n' || C0 == '\r')
+		return 1;
+	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBC)
+	{
+		const unsigned char C2 = (unsigned char)pStr[2];
+		if(C2 == 0x8C || C2 == 0x9B)
+			return 3;
+	}
+	return 0;
+}
+
+static void ParseBlockWordsList(const char *pList, std::vector<std::string> &OutWords)
+{
+	OutWords.clear();
+	if(!pList || pList[0] == '\0')
+		return;
+
+	char aBuf[1024];
+	str_copy(aBuf, pList, sizeof(aBuf));
+	char *pCursor = aBuf;
+
+	while(*pCursor)
+	{
+		int SepLen = BlockWordsSeparatorLength(pCursor);
+		while(*pCursor && SepLen > 0)
+		{
+			pCursor += SepLen;
+			SepLen = BlockWordsSeparatorLength(pCursor);
+		}
+
+		char *pStart = pCursor;
+		while(*pCursor && BlockWordsSeparatorLength(pCursor) == 0)
+			pCursor++;
+
+		if(pStart == pCursor)
+			break;
+
+		if(*pCursor)
+		{
+			const int CutLen = BlockWordsSeparatorLength(pCursor);
+			*pCursor = '\0';
+			pCursor += CutLen;
+		}
+
+		char *pToken = (char *)str_utf8_skip_whitespaces(pStart);
+		str_utf8_trim_right(pToken);
+		if(pToken[0] != '\0')
+			OutWords.emplace_back(pToken);
+	}
+}
+
+static void PushUniqueWord(std::vector<std::string> &OutWords, const std::string &Word)
+{
+	if(std::find(OutWords.begin(), OutWords.end(), Word) == OutWords.end())
+		OutWords.push_back(Word);
+}
+
+struct CBlockWordsCache
+{
+	std::string m_List;
+	int m_Mode = -1;
+	std::vector<std::string> m_Words;
+	std::vector<Regex> m_Regexes;
+};
+
+static void UpdateBlockWordsCache(CBlockWordsCache &Cache)
+{
+	if(Cache.m_List == g_Config.m_QmBlockWordsList && Cache.m_Mode == g_Config.m_QmBlockWordsMode)
+		return;
+
+	Cache.m_List = g_Config.m_QmBlockWordsList;
+	Cache.m_Mode = g_Config.m_QmBlockWordsMode;
+
+	ParseBlockWordsList(Cache.m_List.c_str(), Cache.m_Words);
+	Cache.m_Regexes.clear();
+
+	if(Cache.m_Mode == BLOCK_WORDS_MODE_REGEX || Cache.m_Mode == BLOCK_WORDS_MODE_BOTH)
+	{
+		Cache.m_Regexes.reserve(Cache.m_Words.size());
+		for(const auto &Pattern : Cache.m_Words)
+		{
+			Regex Re(Pattern);
+			if(!Re.error().empty())
+			{
+				log_error("blocklist", "Invalid regex: %s", Pattern.c_str());
+				continue;
+			}
+			Cache.m_Regexes.push_back(std::move(Re));
+		}
+	}
+}
+
+static bool ReplaceLiteralWords(std::string &Text, const std::vector<std::string> &Words, char Replacement, bool MultiReplace, std::vector<std::string> *pMatched)
+{
+	bool AnyReplaced = false;
+
+	for(const auto &Word : Words)
+	{
+		if(Word.empty())
+			continue;
+
+		std::string Result;
+		const char *pCursor = Text.c_str();
+		const char *pMatchEnd = nullptr;
+		bool WordReplaced = false;
+
+		while(const char *pMatch = str_utf8_find_nocase(pCursor, Word.c_str(), &pMatchEnd))
+		{
+			Result.append(pCursor, pMatch - pCursor);
+			if(MultiReplace)
+				Result.append(pMatchEnd - pMatch, Replacement);
+			else
+				Result.push_back(Replacement);
+			pCursor = pMatchEnd;
+			WordReplaced = true;
+		}
+
+		if(WordReplaced)
+		{
+			Result.append(pCursor);
+			Text.swap(Result);
+			AnyReplaced = true;
+			if(pMatched)
+				PushUniqueWord(*pMatched, Word);
+		}
+	}
+
+	return AnyReplaced;
+}
+
+static bool ReplaceRegexWords(std::string &Text, std::vector<Regex> &Regexes, char Replacement, bool MultiReplace, std::vector<std::string> *pMatched)
+{
+	bool AnyReplaced = false;
+
+	for(Regex &Re : Regexes)
+	{
+		bool RegexMatched = false;
+		std::string Result = Re.replace(Text, true, [&](const std::string &Str, int, int Group) {
+			if(Group != 0)
+				return std::string();
+			RegexMatched = true;
+			if(pMatched)
+				PushUniqueWord(*pMatched, Str);
+			if(MultiReplace)
+				return std::string(Str.size(), Replacement);
+			return std::string(1, Replacement);
+		});
+
+		if(RegexMatched)
+		{
+			Text.swap(Result);
+			AnyReplaced = true;
+		}
+	}
+
+	return AnyReplaced;
+}
+
+static bool ApplyBlockWords(std::string &Text, std::vector<std::string> *pMatched)
+{
+	if(!g_Config.m_QmBlockWordsEnabled || g_Config.m_QmBlockWordsList[0] == '\0')
+		return false;
+
+	static CBlockWordsCache s_Cache;
+	UpdateBlockWordsCache(s_Cache);
+	if(s_Cache.m_Words.empty())
+		return false;
+
+	const char Replacement = g_Config.m_QmBlockWordsReplacementChar[0] != '\0' ? g_Config.m_QmBlockWordsReplacementChar[0] : '*';
+	const bool MultiReplace = g_Config.m_QmBlockWordsMultiReplace != 0;
+	const int Mode = g_Config.m_QmBlockWordsMode;
+
+	bool Replaced = false;
+	if(Mode == BLOCK_WORDS_MODE_REGEX || Mode == BLOCK_WORDS_MODE_BOTH)
+		Replaced |= ReplaceRegexWords(Text, s_Cache.m_Regexes, Replacement, MultiReplace, pMatched);
+	if(Mode == BLOCK_WORDS_MODE_FULL || Mode == BLOCK_WORDS_MODE_BOTH)
+		Replaced |= ReplaceLiteralWords(Text, s_Cache.m_Words, Replacement, MultiReplace, pMatched);
+
+	return Replaced;
+}
 
 CChat::CLine::CLine()
 {
@@ -806,6 +1000,35 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 	// TClient
 	if(ClientId == CLIENT_MSG && !g_Config.m_TcShowChatClient)
 		return;
+
+	char aFilteredLine[MAX_LINE_LENGTH];
+	const char *pFilteredLine = pLine;
+	std::vector<std::string> BlockedWords;
+	if(g_Config.m_QmBlockWordsEnabled && g_Config.m_QmBlockWordsList[0] != '\0')
+	{
+		std::string Text = pLine;
+		std::vector<std::string> *pMatched = g_Config.m_QmBlockWordsShowConsole ? &BlockedWords : nullptr;
+		if(ApplyBlockWords(Text, pMatched))
+		{
+			str_copy(aFilteredLine, Text.c_str(), sizeof(aFilteredLine));
+			pFilteredLine = aFilteredLine;
+			if(g_Config.m_QmBlockWordsShowConsole && !BlockedWords.empty())
+			{
+				std::string Joined;
+				for(size_t i = 0; i < BlockedWords.size(); ++i)
+				{
+					if(i > 0)
+						Joined.append(", ");
+					Joined.append(BlockedWords[i]);
+				}
+				char aBuf[512];
+				str_format(aBuf, sizeof(aBuf), "屏蔽词: %s", Joined.c_str());
+				const ColorRGBA LogColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmBlockWordsConsoleColor));
+				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat/blocklist", aBuf, LogColor);
+			}
+		}
+	}
+	pLine = pFilteredLine;
 
 	// trim right and set maximum length to 256 utf8-characters
 	int Length = 0;

@@ -80,6 +80,7 @@ class CHud : public CComponent
 	int m_LastSpectatorCountTick;
 	void RenderSpectatorCount();
 	void RenderDummyActions();
+	void RenderKeyStatus();
 	void RenderMovementInformation();
 
 	void UpdateMovementInformationTextContainer(STextContainerIndex &TextContainer, float FontSize, float Value, float &PrevValue);
