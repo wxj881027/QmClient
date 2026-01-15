@@ -93,15 +93,10 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 		{EBindOptionGroup::CHAT, Localizable("Converse"), "+show_chat; chat all /c "},
 		{EBindOptionGroup::CHAT, Localizable("Chat command"), "+show_chat; chat all /"},
 		{EBindOptionGroup::CHAT, Localizable("Show chat"), "+show_chat"},
-		{EBindOptionGroup::CHAT, Localizable("语言转文字"), "+stt"},
 		{EBindOptionGroup::CHAT, Localizable("复读"), "+qm_repeat"},
 		{EBindOptionGroup::DUMMY, Localizable("Toggle dummy"), "toggle cl_dummy 0 1"},
 		{EBindOptionGroup::DUMMY, Localizable("Dummy copy"), "toggle cl_dummy_copy_moves 0 1"},
 		{EBindOptionGroup::DUMMY, Localizable("Hammerfly dummy"), "toggle cl_dummy_hammer 0 1"},
-		//自定义BIND
-		//{EBindOptionGroup::COMMON_BINDS, Localizable("八角定位"), "echo 你正在使用45度瞄准;+toggle cl_mouse_max_distance 2 400; +toggle_restore inp_mousesens 1"},
-
-		//自定义BIND END
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Emoticon"), "+emote"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectator mode"), "+spectate"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectate next"), "spectate_next"},
@@ -194,7 +189,7 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	RenderSettingsBlock(MeasureSettingsMouseHeight(), &LeftColumn,
 		Localize("Mouse"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsMouse, this));
 	RenderSettingsBlock(MeasureSettingsJoystickHeight(), &LeftColumn,
-		Localizable("Controller"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsJoystick, this));
+		Localizable("手柄"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsJoystick, this));
 	RenderSettingsBindsBlock(EBindOptionGroup::MOVEMENT, &LeftColumn, Localize("Movement"));
 	RenderSettingsBindsBlock(EBindOptionGroup::WEAPON, &LeftColumn, Localize("Weapon"));
 
@@ -202,7 +197,6 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	RenderSettingsBindsBlock(EBindOptionGroup::VOTING, &RightColumn, Localize("Voting"));
 	RenderSettingsBindsBlock(EBindOptionGroup::CHAT, &RightColumn, Localize("Chat"));
 	RenderSettingsBindsBlock(EBindOptionGroup::DUMMY, &RightColumn, Localize("Dummy"));
-	RenderSettingsBindsBlock(EBindOptionGroup::COMMON_BINDS, &RightColumn, Localize("常用Bind"));
 	RenderSettingsBindsBlock(EBindOptionGroup::MISCELLANEOUS, &RightColumn, Localize("Miscellaneous"));
 	if(std::any_of(m_vBindOptions.begin(), m_vBindOptions.end(), [](const CBindOption &Option) { return Option.m_Group == EBindOptionGroup::CUSTOM; }))
 	{

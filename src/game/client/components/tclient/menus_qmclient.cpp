@@ -3487,6 +3487,19 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		s_ReaderButtonSmallSens, s_ClearButtonSmallSens,
 		s_ReaderButtonLeftJump, s_ClearButtonLeftJump,
 		s_ReaderButtonRightJump, s_ClearButtonRightJump;
+	static int s_Toggle45Degrees = 0;
+	static int s_ToggleSmallSens = 0;
+	static int s_PrevMouseMaxDistance = -1;
+	static int s_PrevMouseSens = -1;
+	static bool s_TogglesInitialized = false;
+	if(!s_TogglesInitialized)
+	{
+		s_Toggle45Degrees = g_Config.m_ClMouseMaxDistance == 2;
+		s_ToggleSmallSens = g_Config.m_InpMousesens == 1;
+		s_PrevMouseMaxDistance = s_Toggle45Degrees ? 400 : g_Config.m_ClMouseMaxDistance;
+		s_PrevMouseSens = s_ToggleSmallSens ? 200 : g_Config.m_InpMousesens;
+		s_TogglesInitialized = true;
+	}
 
 	DoKeyBindRow(CardContent, s_ReaderButtonDummyPseudo, s_ClearButtonDummyPseudo,
 		TCLocalize("HDF"), "+toggle cl_dummy_hammer 1 0");
@@ -3494,8 +3507,50 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		TCLocalize("DF"), "+fire; +toggle cl_dummy_hammer 1 0");
 	DoKeyBindRow(CardContent, s_ReaderButton45Degrees, s_ClearButton45Degrees,
 		TCLocalize("八角定位"), "echo 你正在使用45度瞄准;+toggle cl_mouse_max_distance 2 400; +toggle_restore inp_mousesens 1");
+	{
+		CUIRect ToggleRow, ToggleLabel;
+		CardContent.HSplitTop(LG_LineHeight, &ToggleRow, &CardContent);
+		ToggleRow.VSplitLeft(LG_LabelWidth, &ToggleLabel, nullptr);
+		ToggleLabel.VSplitLeft(LG_LineHeight, nullptr, &ToggleLabel);
+		if(DoButton_CheckBox(&s_Toggle45Degrees, TCLocalize("按下切换"), s_Toggle45Degrees, &ToggleLabel))
+		{
+			s_Toggle45Degrees ^= 1;
+			if(s_Toggle45Degrees)
+			{
+				if(g_Config.m_ClMouseMaxDistance != 2)
+					s_PrevMouseMaxDistance = g_Config.m_ClMouseMaxDistance;
+				g_Config.m_ClMouseMaxDistance = 2;
+			}
+			else
+			{
+				g_Config.m_ClMouseMaxDistance = s_PrevMouseMaxDistance >= 0 ? s_PrevMouseMaxDistance : 400;
+			}
+		}
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	}
 	DoKeyBindRow(CardContent, s_ReaderButtonSmallSens, s_ClearButtonSmallSens,
 		TCLocalize("瞄缝救人"), "+toggle_restore inp_mousesens 1");
+	{
+		CUIRect ToggleRow, ToggleLabel;
+		CardContent.HSplitTop(LG_LineHeight, &ToggleRow, &CardContent);
+		ToggleRow.VSplitLeft(LG_LabelWidth, &ToggleLabel, nullptr);
+		ToggleLabel.VSplitLeft(LG_LineHeight, nullptr, &ToggleLabel);
+		if(DoButton_CheckBox(&s_ToggleSmallSens, TCLocalize("按下切换"), s_ToggleSmallSens, &ToggleLabel))
+		{
+			s_ToggleSmallSens ^= 1;
+			if(s_ToggleSmallSens)
+			{
+				if(g_Config.m_InpMousesens != 1)
+					s_PrevMouseSens = g_Config.m_InpMousesens;
+				g_Config.m_InpMousesens = 1;
+			}
+			else
+			{
+				g_Config.m_InpMousesens = s_PrevMouseSens > 0 ? s_PrevMouseSens : 200;
+			}
+		}
+		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+	}
 	DoKeyBindRow(CardContent, s_ReaderButtonLeftJump, s_ClearButtonLeftJump,
 		TCLocalize("三格左跳"), "+jump; +left");
 	DoKeyBindRow(CardContent, s_ReaderButtonRightJump, s_ClearButtonRightJump,
@@ -3651,6 +3706,105 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		Ui()->DoScrollbarOption(&g_Config.m_QmFriendOnlineRefreshSeconds, &g_Config.m_QmFriendOnlineRefreshSeconds, &Row, TCLocalize("刷新间隔"), 5, 300, &CUi::ms_LinearScrollbarScale, 0, "s");
 		CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 	}
+
+	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+	Column.y = CardContent.y;
+	s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+
+	// ========== 模块 3.95: 屏蔽词 ==========
+	Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+	CUIRect CardBlockWordsStart = Column;
+	s_GlassCards.push_back(CardBlockWordsStart);
+
+	Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+	Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+	CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+
+	CardContent.HSplitTop(LG_HeadlineSize, &HeadlineRect, &CardContent);
+	TextRender()->TextColor(GetRainbowColor(7));
+	Ui()->DoLabel(&HeadlineRect, TCLocalize("屏蔽词"), LG_HeadlineSize, TEXTALIGN_ML);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	CardContent.HSplitTop(LG_HeadlineMargin, nullptr, &CardContent);
+
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsShowConsole, TCLocalize("控制台显示屏蔽词"), &g_Config.m_QmBlockWordsShowConsole, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	static CButtonContainer s_BlockWordsConsoleColorId;
+	DoLine_ColorPicker(&s_BlockWordsConsoleColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("控制台颜色"), &g_Config.m_QmBlockWordsConsoleColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsEnabled, TCLocalize("启用屏蔽词列表"), &g_Config.m_QmBlockWordsEnabled, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsMultiReplace, TCLocalize("按词长多字符替换"), &g_Config.m_QmBlockWordsMultiReplace, &Row, LG_LineHeight);
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	static CLineInputBuffered<8> s_BlockWordsReplaceInput;
+	static bool s_BlockWordsReplaceInited = false;
+	if(!s_BlockWordsReplaceInited)
+	{
+		s_BlockWordsReplaceInput.Set(g_Config.m_QmBlockWordsReplacementChar);
+		s_BlockWordsReplaceInited = true;
+	}
+	else if(!s_BlockWordsReplaceInput.IsActive() && str_comp(s_BlockWordsReplaceInput.GetString(), g_Config.m_QmBlockWordsReplacementChar) != 0)
+	{
+		s_BlockWordsReplaceInput.Set(g_Config.m_QmBlockWordsReplacementChar);
+	}
+	s_BlockWordsReplaceInput.SetEmptyText("*");
+
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+	Ui()->DoLabel(&LabelCol, TCLocalize("替换字符"), LG_BodySize, TEXTALIGN_ML);
+	if(Ui()->DoEditBox(&s_BlockWordsReplaceInput, &ControlCol, LG_BodySize))
+	{
+		char aReplacement[8];
+		str_utf8_truncate(aReplacement, sizeof(aReplacement), s_BlockWordsReplaceInput.GetString(), 1);
+		if(aReplacement[0] == '\0')
+			str_copy(aReplacement, "*", sizeof(aReplacement));
+		str_copy(g_Config.m_QmBlockWordsReplacementChar, aReplacement, sizeof(g_Config.m_QmBlockWordsReplacementChar));
+	}
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+	Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+	Ui()->DoLabel(&LabelCol, TCLocalize("替换方式"), LG_BodySize, TEXTALIGN_ML);
+	CUIRect ModeRow = ControlCol;
+	CUIRect ModeButton;
+	static CButtonContainer s_BlockWordsModeRegex, s_BlockWordsModeFull, s_BlockWordsModeBoth;
+	const float ModeWidth = ModeRow.w / 3.0f;
+	ModeRow.VSplitLeft(ModeWidth, &ModeButton, &ModeRow);
+	if(DoButtonLineSize_Menu(&s_BlockWordsModeRegex, TCLocalize("正则"), g_Config.m_QmBlockWordsMode == 0, &ModeButton, LG_LineHeight, false, 0, IGraphics::CORNER_L, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		g_Config.m_QmBlockWordsMode = 0;
+	ModeRow.VSplitLeft(ModeWidth, &ModeButton, &ModeRow);
+	if(DoButtonLineSize_Menu(&s_BlockWordsModeFull, TCLocalize("字面"), g_Config.m_QmBlockWordsMode == 1, &ModeButton, LG_LineHeight, false, 0, IGraphics::CORNER_NONE, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		g_Config.m_QmBlockWordsMode = 1;
+	if(DoButtonLineSize_Menu(&s_BlockWordsModeBoth, TCLocalize("两者"), g_Config.m_QmBlockWordsMode == 2, &ModeRow, LG_LineHeight, false, 0, IGraphics::CORNER_R, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		g_Config.m_QmBlockWordsMode = 2;
+	CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+	static CLineInputBuffered<1024> s_BlockWordsInput;
+	static bool s_BlockWordsInited = false;
+	if(!s_BlockWordsInited)
+	{
+		s_BlockWordsInput.Set(g_Config.m_QmBlockWordsList);
+		s_BlockWordsInited = true;
+	}
+	else if(!s_BlockWordsInput.IsActive() && str_comp(s_BlockWordsInput.GetString(), g_Config.m_QmBlockWordsList) != 0)
+	{
+		s_BlockWordsInput.Set(g_Config.m_QmBlockWordsList);
+	}
+	s_BlockWordsInput.SetEmptyText(TCLocalize("用 , 分隔"));
+
+	const float BlockInputWidth = CardContent.w - LG_LabelWidth;
+	const float BlockInputLineSpacing = std::clamp(2.0f * UiScale, 1.0f, 2.0f);
+	const float BlockInputHeight = CalcQiaFenInputHeight(TextRender(), s_BlockWordsInput.GetString(), BlockInputWidth, LG_BodySize, BlockInputLineSpacing, LG_LineHeight);
+	CardContent.HSplitTop(BlockInputHeight, &Row, &CardContent);
+	Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+	Ui()->DoLabel(&LabelCol, TCLocalize("屏蔽词"), LG_BodySize, TEXTALIGN_ML);
+	if(DoEditBoxMultiLine(Ui(), &s_BlockWordsInput, &ControlCol, LG_BodySize, BlockInputLineSpacing))
+		str_copy(g_Config.m_QmBlockWordsList, s_BlockWordsInput.GetString(), sizeof(g_Config.m_QmBlockWordsList));
 
 	CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 	Column.y = CardContent.y;
