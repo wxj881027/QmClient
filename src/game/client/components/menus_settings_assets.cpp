@@ -1,5 +1,7 @@
 #include "menus.h"
 
+#include <algorithm>
+
 #include <base/system.h>
 
 #include <engine/shared/config.h>
@@ -349,6 +351,11 @@ static int InitSearchList(std::vector<const TName *> &vpSearchList, std::vector<
 void CMenus::RenderSettingsCustom(CUIRect MainView)
 {
 	CUIRect TabBar, CustomList, QuickSearch, DirectoryButton, ReloadButton;
+	static bool s_AssetsTransitionInitialized = false;
+	static int s_PrevAssetsTab = ASSETS_TAB_ENTITIES;
+	static bool s_AssetsTransitionActive = false;
+	static float s_AssetsTransitionProgress = 1.0f;
+	static float s_AssetsTransitionDirection = 0.0f;
 
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
 	const float TabWidth = TabBar.w / NUMBER_OF_ASSETS_TABS;
@@ -370,6 +377,46 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			s_CurCustomTab = Tab;
 		}
+	}
+
+	if(!s_AssetsTransitionInitialized)
+	{
+		s_PrevAssetsTab = s_CurCustomTab;
+		s_AssetsTransitionInitialized = true;
+	}
+	else if(s_CurCustomTab != s_PrevAssetsTab)
+	{
+		s_AssetsTransitionActive = true;
+		s_AssetsTransitionProgress = 0.0f;
+		s_AssetsTransitionDirection = s_CurCustomTab > s_PrevAssetsTab ? 1.0f : -1.0f;
+		s_PrevAssetsTab = s_CurCustomTab;
+	}
+
+	auto ApplyAssetsTabTransition = [&](CUIRect &View) -> float {
+		if(!s_AssetsTransitionActive)
+			return 0.0f;
+		const float TransitionDuration = 0.18f;
+		s_AssetsTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
+		if(s_AssetsTransitionProgress >= 1.0f)
+		{
+			s_AssetsTransitionProgress = 1.0f;
+			s_AssetsTransitionActive = false;
+		}
+		const float Inv = 1.0f - s_AssetsTransitionProgress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
+		const float Offset = (1.0f - Ease) * OffsetMax * s_AssetsTransitionDirection;
+		View.x += Offset;
+		return (1.0f - Ease) * 0.12f;
+	};
+
+	const bool TransitionActive = s_AssetsTransitionActive;
+	const CUIRect ContentClip = MainView;
+	float TransitionAlpha = 0.0f;
+	if(TransitionActive)
+	{
+		TransitionAlpha = ApplyAssetsTabTransition(MainView);
+		Ui()->ClipEnable(&ContentClip);
 	}
 
 	auto LoadStartTime = time_get_nanoseconds();
@@ -641,6 +688,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	}
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+	if(TransitionActive && TransitionAlpha > 0.0f)
+	{
+		ContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+	}
+	if(TransitionActive)
+	{
+		Ui()->ClipDisable();
+	}
 }
 
 void CMenus::ConchainAssetsEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

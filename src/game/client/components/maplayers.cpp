@@ -22,6 +22,7 @@ void CMapLayers::OnInit()
 	m_pLayers = Layers();
 	m_pImages = &GameClient()->m_MapImages;
 	m_MapRenderer.Clear();
+	m_MapLoaded = false;
 }
 
 CCamera *CMapLayers::GetCurCamera()
@@ -31,6 +32,7 @@ CCamera *CMapLayers::GetCurCamera()
 
 void CMapLayers::OnMapLoad()
 {
+	m_MapLoaded = false;
 	FRenderUploadCallback FRenderCallback = [&](const char *pTitle, const char *pMessage, int IncreaseCounter) { GameClient()->m_Menus.RenderLoading(pTitle, pMessage, IncreaseCounter); };
 	auto FRenderCallbackOptional = std::make_optional<FRenderUploadCallback>(FRenderCallback);
 
@@ -44,17 +46,39 @@ void CMapLayers::OnMapLoad()
 	m_EnvEvaluator = CEnvelopeState(m_pLayers->Map(), m_OnlineOnly);
 	m_EnvEvaluator.OnInterfacesInit(GameClient());
 	m_MapRenderer.Load(m_Type, m_pLayers, m_pImages, &m_EnvEvaluator, FRenderCallbackOptional);
+	m_MapLoaded = true;
 }
 
 void CMapLayers::OnRender()
 {
 	if(m_OnlineOnly && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
+	if(!m_MapLoaded)
+		return;
 
 	// dynamic parameters for ingame rendering
 	m_Params.m_EntityOverlayVal = m_Type == RENDERTYPE_FULL_DESIGN ? 0 : g_Config.m_ClOverlayEntities;
 	m_Params.m_Center = GetCurCamera()->m_Center;
 	m_Params.m_Zoom = GetCurCamera()->m_Zoom;
+	m_Params.m_RenderText = g_Config.m_ClTextEntities;
+	m_Params.m_DebugRenderGroupClips = g_Config.m_DbgRenderGroupClips;
+	m_Params.m_DebugRenderQuadClips = g_Config.m_DbgRenderQuadClips;
+	m_Params.m_DebugRenderClusterClips = g_Config.m_DbgRenderClusterClips;
+	m_Params.m_DebugRenderTileClips = g_Config.m_DbgRenderTileClips;
+
+	m_MapRenderer.Render(m_Params);
+}
+
+void CMapLayers::RenderCustom(const vec2 &Center, float Zoom)
+{
+	if(m_OnlineOnly && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		return;
+	if(!m_MapLoaded)
+		return;
+
+	m_Params.m_EntityOverlayVal = m_Type == RENDERTYPE_FULL_DESIGN ? 0 : g_Config.m_ClOverlayEntities;
+	m_Params.m_Center = Center;
+	m_Params.m_Zoom = Zoom;
 	m_Params.m_RenderText = g_Config.m_ClTextEntities;
 	m_Params.m_DebugRenderGroupClips = g_Config.m_DbgRenderGroupClips;
 	m_Params.m_DebugRenderQuadClips = g_Config.m_DbgRenderQuadClips;

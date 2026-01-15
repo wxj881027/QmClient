@@ -32,6 +32,7 @@ public:
 	void OnInit() override;
 	void OnRender() override;
 	void OnMapLoad() override;
+	void RenderCustom(const vec2 &Center, float Zoom);
 
 	virtual CCamera *GetCurCamera();
 
@@ -41,6 +42,7 @@ private:
 	CRenderLayerParams m_Params;
 	CMapRenderer m_MapRenderer;
 	CEnvelopeState m_EnvEvaluator;
+	bool m_MapLoaded = false;
 };
 
 #endif

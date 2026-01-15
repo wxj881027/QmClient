@@ -16,6 +16,8 @@
 #include <engine/textrender.h>
 #include <engine/updater.h>
 
+#include <algorithm>
+
 #include <generated/protocol.h>
 
 #include <game/client/animstate.h>
@@ -236,6 +238,11 @@ void CMenus::SetNeedSendInfo()
 void CMenus::RenderSettingsPlayer(CUIRect MainView)
 {
 	CUIRect TabBar, PlayerTab, DummyTab, ChangeInfo, QuickSearch;
+	static bool s_PlayerTabTransitionInitialized = false;
+	static bool s_PrevDummy = false;
+	static bool s_PlayerTabTransitionActive = false;
+	static float s_PlayerTabTransitionProgress = 1.0f;
+	static float s_PlayerTabTransitionDirection = 0.0f;
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
 	TabBar.VSplitMid(&TabBar, &ChangeInfo, 20.f);
 	TabBar.VSplitMid(&PlayerTab, &DummyTab);
@@ -252,6 +259,67 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	{
 		m_Dummy = true;
 	}
+
+	if(!s_PlayerTabTransitionInitialized)
+	{
+		s_PrevDummy = m_Dummy;
+		s_PlayerTabTransitionInitialized = true;
+	}
+	else if(m_Dummy != s_PrevDummy)
+	{
+		s_PlayerTabTransitionActive = true;
+		s_PlayerTabTransitionProgress = 0.0f;
+		s_PlayerTabTransitionDirection = m_Dummy ? 1.0f : -1.0f;
+		s_PrevDummy = m_Dummy;
+	}
+
+	auto UpdatePlayerTabTransition = [&](float ViewWidth, float &OutAlpha) -> float {
+		if(!s_PlayerTabTransitionActive)
+		{
+			OutAlpha = 0.0f;
+			return 0.0f;
+		}
+		const float TransitionDuration = 0.18f;
+		s_PlayerTabTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
+		if(s_PlayerTabTransitionProgress >= 1.0f)
+		{
+			s_PlayerTabTransitionProgress = 1.0f;
+			s_PlayerTabTransitionActive = false;
+		}
+		const float Inv = 1.0f - s_PlayerTabTransitionProgress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(ViewWidth * 0.08f, 24.0f, 120.0f);
+		OutAlpha = (1.0f - Ease) * 0.12f;
+		return (1.0f - Ease) * OffsetMax * s_PlayerTabTransitionDirection;
+	};
+
+	float TransitionAlpha = 0.0f;
+	float TransitionOffset = 0.0f;
+	bool TransitionActive = s_PlayerTabTransitionActive;
+	if(TransitionActive)
+	{
+		TransitionOffset = UpdatePlayerTabTransition(MainView.w, TransitionAlpha);
+		TransitionActive = s_PlayerTabTransitionActive || TransitionAlpha > 0.0f;
+	}
+
+	auto DrawAnimatedRow = [&](CUIRect Row, auto &&DrawRow) {
+		if(TransitionActive)
+		{
+			CUIRect ClipRect = Row;
+			Ui()->ClipEnable(&ClipRect);
+			Row.x += TransitionOffset;
+			DrawRow(Row);
+			if(TransitionAlpha > 0.0f)
+			{
+				ClipRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+			}
+			Ui()->ClipDisable();
+		}
+		else
+		{
+			DrawRow(Row);
+		}
+	};
 
 	if(Client()->State() == IClient::STATE_ONLINE &&
 		GameClient()->m_aNextChangeInfo[m_Dummy] > Client()->GameTick(m_Dummy))
@@ -283,28 +351,34 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 
 	// player name
 	CUIRect Button, Label;
-	MainView.HSplitTop(20.0f, &Button, &MainView);
-	Button.VSplitLeft(80.0f, &Label, &Button);
-	Button.VSplitLeft(150.0f, &Button, nullptr);
+	CUIRect NameRow;
+	MainView.HSplitTop(20.0f, &NameRow, &MainView);
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "%s:", Localize("Name"));
-	Ui()->DoLabel(&Label, aBuf, 14.0f, TEXTALIGN_ML);
-	if(Ui()->DoEditBox(&s_NameInput, &Button, 14.0f))
-	{
-		SetNeedSendInfo();
-	}
+	DrawAnimatedRow(NameRow, [&](CUIRect Row) {
+		Row.VSplitLeft(80.0f, &Label, &Row);
+		Row.VSplitLeft(150.0f, &Row, nullptr);
+		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Name"));
+		Ui()->DoLabel(&Label, aBuf, 14.0f, TEXTALIGN_ML);
+		if(Ui()->DoEditBox(&s_NameInput, &Row, 14.0f))
+		{
+			SetNeedSendInfo();
+		}
+	});
 
 	// player clan
 	MainView.HSplitTop(5.0f, nullptr, &MainView);
-	MainView.HSplitTop(20.0f, &Button, &MainView);
-	Button.VSplitLeft(80.0f, &Label, &Button);
-	Button.VSplitLeft(150.0f, &Button, nullptr);
-	str_format(aBuf, sizeof(aBuf), "%s:", Localize("Clan"));
-	Ui()->DoLabel(&Label, aBuf, 14.0f, TEXTALIGN_ML);
-	if(Ui()->DoEditBox(&s_ClanInput, &Button, 14.0f))
-	{
-		SetNeedSendInfo();
-	}
+	CUIRect ClanRow;
+	MainView.HSplitTop(20.0f, &ClanRow, &MainView);
+	DrawAnimatedRow(ClanRow, [&](CUIRect Row) {
+		Row.VSplitLeft(80.0f, &Label, &Row);
+		Row.VSplitLeft(150.0f, &Row, nullptr);
+		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Clan"));
+		Ui()->DoLabel(&Label, aBuf, 14.0f, TEXTALIGN_ML);
+		if(Ui()->DoEditBox(&s_ClanInput, &Row, 14.0f))
+		{
+			SetNeedSendInfo();
+		}
+	});
 
 	// country flag selector
 	static CLineInputBuffered<25> s_FlagFilterInput;
@@ -361,11 +435,17 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	}
 
 	Ui()->DoEditBox_Search(&s_FlagFilterInput, &QuickSearch, 14.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+
 }
 
 void CMenus::RenderSettingsTee(CUIRect MainView)
 {
 	CUIRect TabBar, PlayerTab, DummyTab, ChangeInfo;
+	static bool s_TeeTabTransitionInitialized = false;
+	static bool s_PrevTeeDummy = false;
+	static bool s_TeeTabTransitionActive = false;
+	static float s_TeeTabTransitionProgress = 1.0f;
+	static float s_TeeTabTransitionDirection = 0.0f;
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
 	TabBar.VSplitMid(&TabBar, &ChangeInfo, 20.f);
 	TabBar.VSplitMid(&PlayerTab, &DummyTab);
@@ -384,6 +464,42 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		m_Dummy = true;
 		m_SkinListScrollToSelected = true;
 	}
+
+	if(!s_TeeTabTransitionInitialized)
+	{
+		s_PrevTeeDummy = m_Dummy;
+		s_TeeTabTransitionInitialized = true;
+	}
+	else if(m_Dummy != s_PrevTeeDummy)
+	{
+		s_TeeTabTransitionActive = true;
+		s_TeeTabTransitionProgress = 0.0f;
+		s_TeeTabTransitionDirection = m_Dummy ? 1.0f : -1.0f;
+		s_PrevTeeDummy = m_Dummy;
+	}
+
+	auto UpdateTeeTabTransition = [&](float ViewWidth, float &OutAlpha) -> float {
+		if(!s_TeeTabTransitionActive)
+		{
+			OutAlpha = 0.0f;
+			return 0.0f;
+		}
+		const float TransitionDuration = 0.18f;
+		s_TeeTabTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
+		if(s_TeeTabTransitionProgress >= 1.0f)
+		{
+			s_TeeTabTransitionProgress = 1.0f;
+			s_TeeTabTransitionActive = false;
+		}
+		const float Inv = 1.0f - s_TeeTabTransitionProgress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(ViewWidth * 0.08f, 24.0f, 120.0f);
+		OutAlpha = (1.0f - Ease) * 0.12f;
+		return (1.0f - Ease) * OffsetMax * s_TeeTabTransitionDirection;
+	};
+	float TransitionAlpha = 0.0f;
+	float TransitionOffset = 0.0f;
+	bool TransitionActive = s_TeeTabTransitionActive;
 
 	if(Client()->State() == IClient::STATE_ONLINE &&
 		GameClient()->m_aNextChangeInfo[m_Dummy] > Client()->GameTick(m_Dummy))
@@ -508,6 +624,18 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		}
 	}
 	CUIRect RandomColorsButton;
+
+	CUIRect YourSkinClip = YourSkin;
+	if(TransitionActive)
+	{
+		TransitionOffset = UpdateTeeTabTransition(YourSkin.w, TransitionAlpha);
+		TransitionActive = s_TeeTabTransitionActive || TransitionAlpha > 0.0f;
+		if(TransitionActive)
+		{
+			Ui()->ClipEnable(&YourSkinClip);
+			YourSkin.x += TransitionOffset;
+		}
+	}
 
 	// Player skin area
 	CUIRect CustomColorsButton, RandomSkinButton;
@@ -656,6 +784,15 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	{
 		*pUseCustomColor = *pUseCustomColor ? 0 : 1;
 		SetNeedSendInfo();
+	}
+
+	if(TransitionActive)
+	{
+		if(TransitionAlpha > 0.0f)
+		{
+			YourSkinClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+		}
+		Ui()->ClipDisable();
 	}
 
 	// Default eyes
@@ -867,6 +1004,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	{
 		GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SIX);
 	}
+
 }
 
 void CMenus::RenderSettingsGraphics(CUIRect MainView)
@@ -1629,6 +1767,12 @@ void CMenus::RenderSettings(CUIRect MainView)
 	if(g_Config.m_UiSettingsPage < 0 || g_Config.m_UiSettingsPage >= SETTINGS_LENGTH)
 		g_Config.m_UiSettingsPage = SETTINGS_LANGUAGE;
 
+	static bool s_SettingsTransitionInitialized = false;
+	static int s_PrevSettingsPage = SETTINGS_LANGUAGE;
+	static bool s_SettingsTransitionActive = false;
+	static float s_SettingsTransitionProgress = 1.0f;
+	static float s_SettingsTransitionDirection = 0.0f;
+
 	// render background
 	CUIRect Button, TabBar, RestartBar;
 	MainView.VSplitRight(120.0f, &MainView, &TabBar);
@@ -1670,77 +1814,127 @@ void CMenus::RenderSettings(CUIRect MainView)
 			g_Config.m_UiSettingsPage = i;
 	}
 
+	if(!s_SettingsTransitionInitialized)
+	{
+		s_PrevSettingsPage = g_Config.m_UiSettingsPage;
+		s_SettingsTransitionInitialized = true;
+	}
+	else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
+	{
+		s_SettingsTransitionActive = true;
+		s_SettingsTransitionProgress = 0.0f;
+		s_SettingsTransitionDirection = g_Config.m_UiSettingsPage > s_PrevSettingsPage ? 1.0f : -1.0f;
+		s_PrevSettingsPage = g_Config.m_UiSettingsPage;
+	}
+
+	auto ApplySettingsTransition = [&](CUIRect &View) -> float {
+		if(!s_SettingsTransitionActive)
+			return 0.0f;
+		const float TransitionDuration = 0.2f;
+		s_SettingsTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
+		if(s_SettingsTransitionProgress >= 1.0f)
+		{
+			s_SettingsTransitionProgress = 1.0f;
+			s_SettingsTransitionActive = false;
+		}
+		const float Inv = 1.0f - s_SettingsTransitionProgress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(View.h * 0.08f, 24.0f, 90.0f);
+		const float Offset = (1.0f - Ease) * OffsetMax * s_SettingsTransitionDirection;
+		View.y += Offset;
+		return (1.0f - Ease) * 0.12f;
+	};
+
+	CUIRect ContentView = MainView;
+	const bool TransitionActive = s_SettingsTransitionActive;
+	const CUIRect ContentClip = MainView;
+	float TransitionAlpha = 0.0f;
+	if(TransitionActive)
+	{
+		TransitionAlpha = ApplySettingsTransition(ContentView);
+		Ui()->ClipEnable(&ContentClip);
+	}
+
 	if(g_Config.m_UiSettingsPage == SETTINGS_LANGUAGE)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_LANGUAGE);
-		RenderLanguageSettings(MainView);
+		RenderLanguageSettings(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_GENERAL)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_GENERAL);
-		RenderSettingsGeneral(MainView);
+		RenderSettingsGeneral(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_PLAYER)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_PLAYER);
-		RenderSettingsPlayer(MainView);
+		RenderSettingsPlayer(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_TEE);
 		if(Client()->IsSixup())
-			RenderSettingsTee7(MainView);
+			RenderSettingsTee7(ContentView);
 		else
-			RenderSettingsTee(MainView);
+			RenderSettingsTee(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_APPEARANCE)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_APPEARANCE);
-		RenderSettingsAppearance(MainView);
+		RenderSettingsAppearance(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_CONTROLS)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_CONTROLS);
-		m_MenusSettingsControls.Render(MainView);
+		m_MenusSettingsControls.Render(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_GRAPHICS)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_GRAPHICS);
-		RenderSettingsGraphics(MainView);
+		RenderSettingsGraphics(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_SOUND)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_SOUND);
-		RenderSettingsSound(MainView);
+		RenderSettingsSound(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_DDNET)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_DDNET);
-		RenderSettingsDDNet(MainView);
+		RenderSettingsDDNet(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_ASSETS)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_ASSETS);
-		RenderSettingsCustom(MainView);
+		RenderSettingsCustom(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_TCLIENT)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(13);
-		RenderSettingsTClient(MainView);
+		RenderSettingsTClient(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_QIMENG)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(15);
-		RenderSettingsQiMeng(MainView);
+		RenderSettingsQiMeng(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(14);
-		RenderSettingsTClientProfiles(MainView);
+		RenderSettingsTClientProfiles(ContentView);
 	}
 	else
 	{
 		dbg_assert_failed("ui_settings_page invalid");
+	}
+
+	if(TransitionActive && TransitionAlpha > 0.0f)
+	{
+		ContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+	}
+	if(TransitionActive)
+	{
+		Ui()->ClipDisable();
 	}
 
 	if(NeedRestart)
@@ -2028,6 +2222,11 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 {
 	char aBuf[128];
 	static int s_CurTab = 0;
+	static bool s_AppearanceTransitionInitialized = false;
+	static int s_PrevAppearanceTab = 0;
+	static bool s_AppearanceTransitionActive = false;
+	static float s_AppearanceTransitionProgress = 1.0f;
+	static float s_AppearanceTransitionDirection = 0.0f;
 
 	CUIRect TabBar, LeftView, RightView, Button;
 
@@ -2064,9 +2263,50 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	const float ColorPickerLabelSize = 13.0f;
 	const float ColorPickerLineSpacing = 5.0f;
 
+	if(!s_AppearanceTransitionInitialized)
+	{
+		s_PrevAppearanceTab = s_CurTab;
+		s_AppearanceTransitionInitialized = true;
+	}
+	else if(s_CurTab != s_PrevAppearanceTab)
+	{
+		s_AppearanceTransitionActive = true;
+		s_AppearanceTransitionProgress = 0.0f;
+		s_AppearanceTransitionDirection = s_CurTab > s_PrevAppearanceTab ? 1.0f : -1.0f;
+		s_PrevAppearanceTab = s_CurTab;
+	}
+
+	auto ApplyAppearanceTabTransition = [&](CUIRect &View) -> float {
+		if(!s_AppearanceTransitionActive)
+			return 0.0f;
+		const float TransitionDuration = 0.18f;
+		s_AppearanceTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
+		if(s_AppearanceTransitionProgress >= 1.0f)
+		{
+			s_AppearanceTransitionProgress = 1.0f;
+			s_AppearanceTransitionActive = false;
+		}
+		const float Inv = 1.0f - s_AppearanceTransitionProgress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
+		const float Offset = (1.0f - Ease) * OffsetMax * s_AppearanceTransitionDirection;
+		View.x += Offset;
+		return (1.0f - Ease) * 0.12f;
+	};
+
+	CUIRect ContentView = MainView;
+	const bool TransitionActive = s_AppearanceTransitionActive;
+	const CUIRect ContentClip = MainView;
+	float TransitionAlpha = 0.0f;
+	if(TransitionActive)
+	{
+		TransitionAlpha = ApplyAppearanceTabTransition(ContentView);
+		Ui()->ClipEnable(&ContentClip);
+	}
+
 	if(s_CurTab == APPEARANCE_TAB_HUD)
 	{
-		MainView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
+		ContentView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
 
 		// ***** HUD ***** //
 		Ui()->DoLabel_AutoLineSize(Localize("HUD"), HeadlineFontSize,
@@ -2138,7 +2378,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	{
 		CChat &Chat = GameClient()->m_Chat;
 		CUIRect TopView, PreviewView;
-		MainView.HSplitBottom(220.0f, &TopView, &PreviewView);
+		ContentView.HSplitBottom(220.0f, &TopView, &PreviewView);
 		TopView.HSplitBottom(MarginBetweenViews, &TopView, nullptr);
 		TopView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
 
@@ -2503,7 +2743,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	}
 	else if(s_CurTab == APPEARANCE_TAB_NAME_PLATE)
 	{
-		MainView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
+		ContentView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
 
 		// ***** Name Plate ***** //
 		Ui()->DoLabel_AutoLineSize(Localize("Name Plate"), HeadlineFontSize,
@@ -2604,7 +2844,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	}
 	else if(s_CurTab == APPEARANCE_TAB_HOOK_COLLISION)
 	{
-		MainView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
+		ContentView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
 
 		// ***** Hookline ***** //
 		Ui()->DoLabel_AutoLineSize(Localize("Hook collision line"), HeadlineFontSize,
@@ -2775,7 +3015,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	}
 	else if(s_CurTab == APPEARANCE_TAB_INFO_MESSAGES)
 	{
-		MainView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
+		ContentView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
 
 		// ***** Info Messages ***** //
 		Ui()->DoLabel_AutoLineSize(Localize("Info Messages"), HeadlineFontSize,
@@ -2801,7 +3041,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	}
 	else if(s_CurTab == APPEARANCE_TAB_LASER)
 	{
-		MainView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
+		ContentView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);
 
 		// ***** Weapons ***** //
 		Ui()->DoLabel_AutoLineSize(Localize("Weapons"), HeadlineFontSize,
@@ -2891,6 +3131,15 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		RightView.HSplitTop(LaserPreviewHeight, &LaserPreview, &RightView);
 		RightView.HSplitTop(2 * MarginSmall, nullptr, &RightView);
 		DoLaserPreview(&LaserPreview, LaserDraggerOutlineColor, LaserDraggerInnerColor, LASERTYPE_DRAGGER);
+	}
+
+	if(TransitionActive && TransitionAlpha > 0.0f)
+	{
+		ContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+	}
+	if(TransitionActive)
+	{
+		Ui()->ClipDisable();
 	}
 }
 

@@ -652,7 +652,10 @@ void CPlayers::RenderHook(
 	CTeeRenderInfo RenderInfo = *pRenderInfo;
 
 	// don't render hooks to not active character cores
-	if(pPlayerChar->m_HookedPlayer != -1 && !GameClient()->m_Snap.m_aCharacters[pPlayerChar->m_HookedPlayer].m_Active)
+	const int HookedPlayer = pPlayerChar->m_HookedPlayer;
+	if(HookedPlayer != -1 && !in_range(HookedPlayer, MAX_CLIENTS - 1))
+		return;
+	if(HookedPlayer != -1 && !GameClient()->m_Snap.m_aCharacters[HookedPlayer].m_Active)
 		return;
 
 	if(ClientId >= 0)
@@ -765,6 +768,7 @@ void CPlayers::RenderPlayer(
 		Alpha = g_Config.m_ClRaceGhostAlpha / 100.0f;
 	// TODO: snd_game_volume_others
 	const float Volume = 1.0f;
+	const bool AllowEffects = !GameClient()->IsRenderingDummyMiniMap();
 
 	// set size
 	RenderInfo.m_Size = 64.0f;
@@ -808,19 +812,22 @@ void CPlayers::RenderPlayer(
 			vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y),
 			Client()->IntraGameTick(g_Config.m_ClDummy));
 
-	GameClient()->m_Flow.Add(Position, Vel * 100.0f, 10.0f);
+	if(AllowEffects)
+		GameClient()->m_Flow.Add(Position, Vel * 100.0f, 10.0f);
 
 	// TClient
 	if(ClientId >= 0 && GameClient()->m_aClients[ClientId].m_IsVolleyBall)
 	{
-		// Update
-		const float Delta = Client()->IntraGameTickSincePrev(g_Config.m_ClDummy);
 		auto &ClientData = GameClient()->m_aClients[ClientId];
-		ClientData.m_VolleyBallAngle += Vel.x * Delta / 64.0f;
-		if(ClientData.m_VolleyBallAngle < 0.0f)
-			ClientData.m_VolleyBallAngle += 2.0f * pi;
-		else if(ClientData.m_VolleyBallAngle > 2.0f * pi)
-			ClientData.m_VolleyBallAngle -= 2.0f * pi;
+		if(AllowEffects)
+		{
+			const float Delta = Client()->IntraGameTickSincePrev(g_Config.m_ClDummy);
+			ClientData.m_VolleyBallAngle += Vel.x * Delta / 64.0f;
+			if(ClientData.m_VolleyBallAngle < 0.0f)
+				ClientData.m_VolleyBallAngle += 2.0f * pi;
+			else if(ClientData.m_VolleyBallAngle > 2.0f * pi)
+				ClientData.m_VolleyBallAngle -= 2.0f * pi;
+		}
 		// Render
 		const CSkin *pSkin = GameClient()->m_Skins.Find(g_Config.m_TcVolleyBallBetterBallSkin);
 		if(!pSkin)
@@ -896,7 +903,7 @@ void CPlayers::RenderPlayer(
 		State.Add(&g_pData->m_aAnimations[ANIM_NINJA_SWING], std::clamp(LastAttackTime * 2.0f, 0.0f, 1.0f), 1.0f);
 
 	// do skidding
-	if(!InAir && WantOtherDir && length(Vel * 50) > 500.0f)
+	if(AllowEffects && !InAir && WantOtherDir && length(Vel * 50) > 500.0f)
 		GameClient()->m_Effects.SkidTrail(Position, Vel, Player.m_Direction, Alpha, Volume);
 
 	// draw gun
@@ -1001,12 +1008,14 @@ void CPlayers::RenderPlayer(
 				{
 					Graphics()->QuadsSetRotation(-pi / 2 - State.GetAttach()->m_Angle * pi * 2.0f);
 					WeaponPosition.x -= g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsetx;
-					GameClient()->m_Effects.PowerupShine(WeaponPosition + vec2(32.0f, 0.0f), vec2(32.0f, 12.0f), Alpha);
+					if(AllowEffects)
+						GameClient()->m_Effects.PowerupShine(WeaponPosition + vec2(32.0f, 0.0f), vec2(32.0f, 12.0f), Alpha);
 				}
 				else
 				{
 					Graphics()->QuadsSetRotation(-pi / 2 + State.GetAttach()->m_Angle * pi * 2.0f);
-					GameClient()->m_Effects.PowerupShine(WeaponPosition - vec2(32.0f, 0.0f), vec2(32.0f, 12.0f), Alpha);
+					if(AllowEffects)
+						GameClient()->m_Effects.PowerupShine(WeaponPosition - vec2(32.0f, 0.0f), vec2(32.0f, 12.0f), Alpha);
 				}
 				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
 
@@ -1096,11 +1105,13 @@ void CPlayers::RenderPlayer(
 	vec2 BodyPos = Position + vec2(State.GetBody()->m_X, State.GetBody()->m_Y) * TeeAnimScale;
 	if(RenderInfo.m_TeeRenderFlags & TEE_EFFECT_FROZEN)
 	{
-		GameClient()->m_Effects.FreezingFlakes(BodyPos, vec2(32, 32), Alpha);
+		if(AllowEffects)
+			GameClient()->m_Effects.FreezingFlakes(BodyPos, vec2(32, 32), Alpha);
 	}
 	if(RenderInfo.m_TeeRenderFlags & TEE_EFFECT_SPARKLE)
 	{
-		GameClient()->m_Effects.SparkleTrail(BodyPos, Alpha);
+		if(AllowEffects)
+			GameClient()->m_Effects.SparkleTrail(BodyPos, Alpha);
 	}
 
 		if(ClientId < 0)
@@ -1183,6 +1194,7 @@ void CPlayers::RenderPlayerGhost(
 	bool Local = GameClient()->m_Snap.m_LocalClientId == ClientId;
 	bool OtherTeam = GameClient()->IsOtherTeam(ClientId);
 	float Alpha = 1.0f;
+	const bool AllowEffects = !GameClient()->IsRenderingDummyMiniMap();
 
 	RenderTools()->m_LocalTeeRender = Local; // TClient
 
@@ -1274,7 +1286,8 @@ void CPlayers::RenderPlayerGhost(
 
 	vec2 Vel = mix(vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f), vec2(Player.m_VelX / 256.0f, Player.m_VelY / 256.0f), IntraTick);
 
-	GameClient()->m_Flow.Add(Position, Vel * 100.0f, 10.0f);
+	if(AllowEffects)
+		GameClient()->m_Flow.Add(Position, Vel * 100.0f, 10.0f);
 
 	RenderInfo.m_GotAirJump = Player.m_Jumped & 2 ? false : true;
 
@@ -1325,7 +1338,7 @@ void CPlayers::RenderPlayerGhost(
 		State.Add(&g_pData->m_aAnimations[ANIM_NINJA_SWING], std::clamp(LastAttackTime * 2.0f, 0.0f, 1.0f), 1.0f);
 
 	// do skidding
-	if(!InAir && WantOtherDir && length(Vel * 50) > 500.0f)
+	if(AllowEffects && !InAir && WantOtherDir && length(Vel * 50) > 500.0f)
 		GameClient()->m_Effects.SkidTrail(Position, Vel, Player.m_Direction, Alpha, 1.0f);
 
 	// draw gun
@@ -1433,12 +1446,14 @@ void CPlayers::RenderPlayerGhost(
 				{
 					Graphics()->QuadsSetRotation(-pi / 2 - State.GetAttach()->m_Angle * pi * 2.0f);
 					WeaponPosition.x -= g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsetx;
-					GameClient()->m_Effects.PowerupShine(WeaponPosition + vec2(32.0f, 0.0f), vec2(32.0f, 12.0f), Alpha);
+					if(AllowEffects)
+						GameClient()->m_Effects.PowerupShine(WeaponPosition + vec2(32.0f, 0.0f), vec2(32.0f, 12.0f), Alpha);
 				}
 				else
 				{
 					Graphics()->QuadsSetRotation(-pi / 2 + State.GetAttach()->m_Angle * pi * 2.0f);
-					GameClient()->m_Effects.PowerupShine(WeaponPosition - vec2(32.0f, 0.0f), vec2(32.0f, 12.0f), Alpha);
+					if(AllowEffects)
+						GameClient()->m_Effects.PowerupShine(WeaponPosition - vec2(32.0f, 0.0f), vec2(32.0f, 12.0f), Alpha);
 				}
 				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
 
@@ -1528,11 +1543,13 @@ void CPlayers::RenderPlayerGhost(
 	vec2 BodyPos = Position + vec2(State.GetBody()->m_X, State.GetBody()->m_Y) * TeeAnimScale;
 	if(RenderInfo.m_TeeRenderFlags & TEE_EFFECT_FROZEN)
 	{
-		GameClient()->m_Effects.FreezingFlakes(BodyPos, vec2(32, 32), Alpha);
+		if(AllowEffects)
+			GameClient()->m_Effects.FreezingFlakes(BodyPos, vec2(32, 32), Alpha);
 	}
 	if(RenderInfo.m_TeeRenderFlags & TEE_EFFECT_SPARKLE)
 	{
-		GameClient()->m_Effects.SparkleTrail(BodyPos, Alpha);
+		if(AllowEffects)
+			GameClient()->m_Effects.SparkleTrail(BodyPos, Alpha);
 	}
 
 	if(ClientId < 0)

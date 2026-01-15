@@ -161,3 +161,35 @@ void CBackground::OnRender()
 
 	CMapLayers::OnRender();
 }
+
+bool CBackground::RenderCustom(const vec2 &Center, float Zoom)
+{
+	if(!m_Loaded)
+		return false;
+
+	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		return false;
+
+	if(g_Config.m_ClOverlayEntities != 100)
+		return false;
+
+	if(m_ImageBackground)
+	{
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const float ScreenHeight = 300.0f;
+		const float ScreenWidth = ScreenHeight * Graphics()->ScreenAspect();
+		Graphics()->MapScreen(0.0f, 0.0f, ScreenWidth, ScreenHeight);
+		Graphics()->TextureSet(m_BackgroundTexture);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		const IGraphics::CQuadItem QuadItem(0.0f, 0.0f, ScreenWidth, ScreenHeight);
+		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->QuadsEnd();
+		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+		return true;
+	}
+
+	CMapLayers::RenderCustom(Center, Zoom);
+	return true;
+}

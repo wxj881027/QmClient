@@ -897,6 +897,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	bool m_SwapchainCreated = false;
 	bool m_RenderingPaused = false;
 	bool m_HasDynamicViewport = false;
+	bool m_ForceSingleThreadedRender = false;
 	VkOffset2D m_DynamicViewportOffset;
 	VkExtent2D m_DynamicViewportSize;
 
@@ -6471,15 +6472,22 @@ public:
 			bool CanStartThread = false;
 			if(CallbackObj.m_IsRenderCommand)
 			{
-				bool ForceSingleThread = m_LastCommandsInPipeThreadIndex == std::numeric_limits<decltype(m_LastCommandsInPipeThreadIndex)>::max();
+				bool ForceSingleThread = m_ForceSingleThreadedRender || m_LastCommandsInPipeThreadIndex == std::numeric_limits<decltype(m_LastCommandsInPipeThreadIndex)>::max();
 
-				size_t PotentiallyNextThread = (((m_CurCommandInPipe * (m_ThreadCount - 1)) / m_CommandsInPipe) + 1);
-				if(PotentiallyNextThread - 1 > m_LastCommandsInPipeThreadIndex)
+				if(!ForceSingleThread)
 				{
-					CanStartThread = true;
-					m_LastCommandsInPipeThreadIndex = PotentiallyNextThread - 1;
+					size_t PotentiallyNextThread = (((m_CurCommandInPipe * (m_ThreadCount - 1)) / m_CommandsInPipe) + 1);
+					if(PotentiallyNextThread - 1 > m_LastCommandsInPipeThreadIndex)
+					{
+						CanStartThread = true;
+						m_LastCommandsInPipeThreadIndex = PotentiallyNextThread - 1;
+					}
+					Buffer.m_ThreadIndex = m_ThreadCount > 1 ? (m_LastCommandsInPipeThreadIndex + 1) : 0;
 				}
-				Buffer.m_ThreadIndex = m_ThreadCount > 1 && !ForceSingleThread ? (m_LastCommandsInPipeThreadIndex + 1) : 0;
+				else
+				{
+					Buffer.m_ThreadIndex = 0;
+				}
 				CallbackObj.m_FillExecuteBuffer(Buffer, pBaseCommand);
 				m_CurRenderCallCountInPipe += Buffer.m_EstimatedRenderCallCount;
 			}
@@ -6890,6 +6898,9 @@ public:
 			auto Viewport = m_VKSwapImgAndViewportExtent.GetPresentedImageViewport();
 			if(pCommand->m_X != 0 || pCommand->m_Y != 0 || (uint32_t)pCommand->m_Width != Viewport.width || (uint32_t)pCommand->m_Height != Viewport.height)
 			{
+				if(!m_ForceSingleThreadedRender)
+					FinishRenderThreads();
+				m_ForceSingleThreadedRender = true;
 				m_HasDynamicViewport = true;
 
 				// convert viewport from OGL to vulkan
@@ -7553,6 +7564,11 @@ public:
 		{
 			m_ThreadCount = std::clamp<decltype(m_ThreadCount)>(m_ThreadCount, 3, std::max<decltype(m_ThreadCount)>(3, std::thread::hardware_concurrency()));
 		}
+		if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "AMD") != nullptr && m_ThreadCount > 1)
+		{
+			dbg_msg("vulkan", "forcing single-threaded rendering on AMD to avoid driver crashes with dynamic viewport usage");
+			m_ThreadCount = 1;
+		}
 
 		// start threads
 		dbg_assert(m_ThreadCount != 2, "Either use 1 main thread or at least 2 extra rendering threads.");
@@ -7609,6 +7625,7 @@ public:
 		m_RenderCallsInPipe = EstimatedRenderCallCount;
 		m_CurCommandInPipe = 0;
 		m_CurRenderCallCountInPipe = 0;
+		m_ForceSingleThreadedRender = false;
 	}
 
 	void EndCommands() override

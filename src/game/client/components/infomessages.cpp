@@ -457,7 +457,25 @@ void CInfoMessages::OnRender()
 		Showfps = 0;
 #endif
 	const float StartX = Width - 10.0f;
-	const float StartY = 30.0f + (Showfps ? 100.0f : 0.0f) + (g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK ? 100.0f : 0.0f);
+	float StartY = 30.0f + (Showfps ? 100.0f : 0.0f) + (g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK ? 100.0f : 0.0f);
+	if(Client()->DummyConnected())
+	{
+		const int DummyClientId = GameClient()->m_aLocalIds[1];
+		if(DummyClientId >= 0 && DummyClientId < MAX_CLIENTS && GameClient()->m_aClients[DummyClientId].m_Active && GameClient()->m_Snap.m_aCharacters[DummyClientId].m_Active)
+		{
+			const int MapW = GameClient()->Collision()->GetWidth();
+			const int MapH = GameClient()->Collision()->GetHeight();
+			if(MapW > 0 && MapH > 0)
+			{
+				const float MiniHeight = 80.0f;
+				const float Margin = 5.0f;
+				const float HudScale = Height / 300.0f;
+				const float MiniBottom = (Margin + MiniHeight + 4.0f) * HudScale;
+				if(StartY < MiniBottom)
+					StartY = MiniBottom;
+			}
+		}
+	}
 
 	float y = StartY;
 	for(int i = 1; i <= MAX_INFOMSGS; i++)

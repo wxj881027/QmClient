@@ -44,6 +44,7 @@ public:
 	void OnInit() override;
 	void OnMapLoad() override;
 	void OnRender() override;
+	bool RenderCustom(const vec2 &Center, float Zoom);
 
 	void LoadBackground();
 	const char *MapName() const { return m_aMapName; }

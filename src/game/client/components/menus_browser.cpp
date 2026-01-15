@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "menus.h"
 
+#include <algorithm>
+
 #include <base/log.h>
 
 #include <engine/engine.h>
@@ -1861,29 +1863,85 @@ void CMenus::RenderServerbrowser(CUIRect MainView)
 	*/
 	// clang-format on
 
-	CUIRect ServerList, StatusBox, ToolBox, TabBar;
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
-	MainView.Margin(10.0f, &MainView);
-	MainView.VSplitRight(205.0f, &ServerList, &ToolBox);
-	ServerList.VSplitRight(5.0f, &ServerList, nullptr);
+	CUIRect View = MainView;
+	View.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	View.Margin(10.0f, &View);
 
-	if((g_Config.m_UiPage == PAGE_INTERNET || g_Config.m_UiPage == PAGE_FAVORITES) && !ServerBrowser()->Communities().empty())
+	CUIRect ServerListBase, StatusBox, ToolBoxBase, TabBar;
+	CUIRect ContentLayout = View;
+	ContentLayout.VSplitRight(205.0f, &ServerListBase, &ToolBoxBase);
+	ServerListBase.VSplitRight(5.0f, &ServerListBase, nullptr);
+	ServerListBase.HSplitBottom(65.0f, &ServerListBase, &StatusBox);
+
+	float TransitionOffset = 0.0f;
+	float TransitionAlpha = 0.0f;
+	const bool DoClip = m_BrowserTabTransitionActive;
+	if(DoClip)
 	{
-		CUIRect CommunityFilter;
-		ToolBox.HSplitTop(19.0f + 4.0f * 17.0f + CScrollRegion::HEIGHT_MAGIC_FIX, &CommunityFilter, &ToolBox);
-		ToolBox.HSplitTop(8.0f, nullptr, &ToolBox);
-		RenderServerbrowserCommunitiesFilter(CommunityFilter);
+		const float TransitionDuration = 0.18f;
+		m_BrowserTabTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
+		if(m_BrowserTabTransitionProgress >= 1.0f)
+		{
+			m_BrowserTabTransitionProgress = 1.0f;
+			m_BrowserTabTransitionActive = false;
+		}
+		const float Inv = 1.0f - m_BrowserTabTransitionProgress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
+		TransitionOffset = (1.0f - Ease) * OffsetMax * m_BrowserTabTransitionDirection;
+		TransitionAlpha = (1.0f - Ease) * 0.12f;
 	}
 
-	ToolBox.HSplitTop(24.0f, &TabBar, &ToolBox);
-	ServerList.HSplitBottom(65.0f, &ServerList, &StatusBox);
+	bool WasListboxItemActivated = false;
+	{
+		CUIRect ServerList = ServerListBase;
+		if(DoClip)
+		{
+			Ui()->ClipEnable(&ServerListBase);
+			ServerList.x += TransitionOffset;
+		}
+		RenderServerbrowserServerList(ServerList, WasListboxItemActivated);
+		if(DoClip)
+		{
+			if(TransitionAlpha > 0.0f)
+			{
+				ServerListBase.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+			}
+			Ui()->ClipDisable();
+		}
+	}
 
-	bool WasListboxItemActivated;
-	RenderServerbrowserServerList(ServerList, WasListboxItemActivated);
 	RenderServerbrowserStatusBox(StatusBox, WasListboxItemActivated);
 
-	RenderServerbrowserTabBar(TabBar);
-	RenderServerbrowserToolBox(ToolBox);
+	{
+		CUIRect ToolBox = ToolBoxBase;
+		if(DoClip)
+		{
+			Ui()->ClipEnable(&ToolBoxBase);
+			ToolBox.x += TransitionOffset;
+		}
+
+		if((g_Config.m_UiPage == PAGE_INTERNET || g_Config.m_UiPage == PAGE_FAVORITES) && !ServerBrowser()->Communities().empty())
+		{
+			CUIRect CommunityFilter;
+			ToolBox.HSplitTop(19.0f + 4.0f * 17.0f + CScrollRegion::HEIGHT_MAGIC_FIX, &CommunityFilter, &ToolBox);
+			ToolBox.HSplitTop(8.0f, nullptr, &ToolBox);
+			RenderServerbrowserCommunitiesFilter(CommunityFilter);
+		}
+
+		ToolBox.HSplitTop(24.0f, &TabBar, &ToolBox);
+		RenderServerbrowserTabBar(TabBar);
+		RenderServerbrowserToolBox(ToolBox);
+
+		if(DoClip)
+		{
+			if(TransitionAlpha > 0.0f)
+			{
+				ToolBoxBase.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+			}
+			Ui()->ClipDisable();
+		}
+	}
 }
 
 template<typename F>

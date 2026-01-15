@@ -152,6 +152,17 @@ protected:
 	bool m_JoinTutorial = false;
 	bool m_CreateDefaultFavoriteCommunities = false;
 	bool m_ForceRefreshLanPage = false;
+	bool m_BrowserTabTransitionActive = false;
+	float m_BrowserTabTransitionProgress = 1.0f;
+	float m_BrowserTabTransitionDirection = 0.0f;
+	struct SPageTransition
+	{
+		bool m_Active = false;
+		float m_Progress = 1.0f;
+		float m_Direction = 0.0f;
+	};
+	SPageTransition m_MenuPageTransition;
+	SPageTransition m_GamePageTransition;
 
 	char m_aNextServer[256];
 
@@ -790,6 +801,7 @@ public:
 	};
 
 	void SetMenuPage(int NewPage);
+	void SetGamePage(int NewPage);
 	void RefreshBrowserTab(bool Force);
 	void ForceRefreshLanPage();
 	void SetShowStart(bool ShowStart);
