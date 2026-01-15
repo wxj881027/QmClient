@@ -68,6 +68,8 @@ class CHud : public CComponent
 	void RenderCursor();
 
 	void RenderTextInfo();
+	void RenderDummyMiniMap();
+	bool GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const;
 	void RenderConnectionWarning();
 	void RenderTeambalanceWarning();
 

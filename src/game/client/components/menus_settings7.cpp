@@ -3,6 +3,8 @@
 #include "menus.h"
 #include "skins7.h"
 
+#include <algorithm>
+
 #include <base/math.h>
 #include <base/system.h>
 
@@ -35,6 +37,12 @@ using namespace FontIcons;
 void CMenus::RenderSettingsTee7(CUIRect MainView)
 {
 	CUIRect SkinPreview, NormalSkinPreview, RedTeamSkinPreview, BlueTeamSkinPreview, Buttons, QuickSearch, DirectoryButton, RefreshButton, SaveDeleteButton, TabBars, TabBar, LeftTab, RightTab;
+	static bool s_Tee7TransitionInitialized = false;
+	static bool s_PrevTee7Dummy = false;
+	static bool s_PrevTee7Custom = false;
+	static bool s_Tee7TransitionActive = false;
+	static float s_Tee7TransitionProgress = 1.0f;
+	static float s_Tee7TransitionDirection = 0.0f;
 	MainView.HSplitBottom(20.0f, &MainView, &Buttons);
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 	Buttons.VSplitRight(25.0f, &Buttons, &RefreshButton);
@@ -95,6 +103,51 @@ void CMenus::RenderSettingsTee7(CUIRect MainView)
 			else
 				m_SkinNameInput.Set(m_pSelectedSkin->m_aName);
 		}
+	}
+
+	if(!s_Tee7TransitionInitialized)
+	{
+		s_PrevTee7Dummy = m_Dummy;
+		s_PrevTee7Custom = m_CustomSkinMenu;
+		s_Tee7TransitionInitialized = true;
+	}
+	else if(m_Dummy != s_PrevTee7Dummy || m_CustomSkinMenu != s_PrevTee7Custom)
+	{
+		s_Tee7TransitionActive = true;
+		s_Tee7TransitionProgress = 0.0f;
+		if(m_CustomSkinMenu != s_PrevTee7Custom)
+			s_Tee7TransitionDirection = m_CustomSkinMenu ? 1.0f : -1.0f;
+		else
+			s_Tee7TransitionDirection = m_Dummy ? 1.0f : -1.0f;
+		s_PrevTee7Dummy = m_Dummy;
+		s_PrevTee7Custom = m_CustomSkinMenu;
+	}
+
+	auto ApplyTee7Transition = [&](CUIRect &View) -> float {
+		if(!s_Tee7TransitionActive)
+			return 0.0f;
+		const float TransitionDuration = 0.18f;
+		s_Tee7TransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
+		if(s_Tee7TransitionProgress >= 1.0f)
+		{
+			s_Tee7TransitionProgress = 1.0f;
+			s_Tee7TransitionActive = false;
+		}
+		const float Inv = 1.0f - s_Tee7TransitionProgress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
+		const float Offset = (1.0f - Ease) * OffsetMax * s_Tee7TransitionDirection;
+		View.x += Offset;
+		return (1.0f - Ease) * 0.12f;
+	};
+
+	const bool TransitionActive = s_Tee7TransitionActive;
+	const CUIRect ContentClip = MainView;
+	float TransitionAlpha = 0.0f;
+	if(TransitionActive)
+	{
+		TransitionAlpha = ApplyTee7Transition(MainView);
+		Ui()->ClipEnable(&ContentClip);
 	}
 
 	// validate skin parts for solo mode
@@ -225,6 +278,15 @@ void CMenus::RenderSettingsTee7(CUIRect MainView)
 	}
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+	if(TransitionActive && TransitionAlpha > 0.0f)
+	{
+		ContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+	}
+	if(TransitionActive)
+	{
+		Ui()->ClipDisable();
+	}
 }
 
 void CMenus::PopupConfirmDeleteSkin7()
@@ -242,16 +304,13 @@ void CMenus::PopupConfirmDeleteSkin7()
 void CMenus::RenderSettingsTeeCustom7(CUIRect MainView)
 {
 	CUIRect ButtonBar, SkinPartSelection, CustomColors;
+	static bool s_SkinPartTransitionInitialized = false;
+	static int s_PrevSkinPart = 0;
+	static bool s_SkinPartTransitionActive = false;
+	static float s_SkinPartTransitionProgress = 1.0f;
+	static float s_SkinPartTransitionDirection = 0.0f;
 
 	MainView.HSplitTop(20.0f, &ButtonBar, &MainView);
-	MainView.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_B, 5.0f);
-	MainView.VSplitMid(&SkinPartSelection, &CustomColors, 10.0f);
-	CustomColors.Margin(5.0f, &CustomColors);
-	CUIRect CustomColorsButton, RandomSkinButton;
-	CustomColors.HSplitTop(20.0f, &CustomColorsButton, &CustomColors);
-	CustomColorsButton.VSplitRight(30.0f, &CustomColorsButton, &RandomSkinButton);
-	CustomColorsButton.VSplitRight(20.0f, &CustomColorsButton, nullptr);
-
 	const float ButtonWidth = ButtonBar.w / protocol7::NUM_SKINPARTS;
 
 	static CButtonContainer s_aSkinPartButtons[protocol7::NUM_SKINPARTS];
@@ -265,6 +324,54 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView)
 			m_TeePartSelected = i;
 		}
 	}
+
+	if(!s_SkinPartTransitionInitialized)
+	{
+		s_PrevSkinPart = m_TeePartSelected;
+		s_SkinPartTransitionInitialized = true;
+	}
+	else if(m_TeePartSelected != s_PrevSkinPart)
+	{
+		s_SkinPartTransitionActive = true;
+		s_SkinPartTransitionProgress = 0.0f;
+		s_SkinPartTransitionDirection = m_TeePartSelected > s_PrevSkinPart ? 1.0f : -1.0f;
+		s_PrevSkinPart = m_TeePartSelected;
+	}
+
+	auto ApplySkinPartTransition = [&](CUIRect &View) -> float {
+		if(!s_SkinPartTransitionActive)
+			return 0.0f;
+		const float TransitionDuration = 0.18f;
+		s_SkinPartTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
+		if(s_SkinPartTransitionProgress >= 1.0f)
+		{
+			s_SkinPartTransitionProgress = 1.0f;
+			s_SkinPartTransitionActive = false;
+		}
+		const float Inv = 1.0f - s_SkinPartTransitionProgress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
+		const float Offset = (1.0f - Ease) * OffsetMax * s_SkinPartTransitionDirection;
+		View.x += Offset;
+		return (1.0f - Ease) * 0.12f;
+	};
+
+	const bool TransitionActive = s_SkinPartTransitionActive;
+	const CUIRect ContentClip = MainView;
+	float TransitionAlpha = 0.0f;
+	if(TransitionActive)
+	{
+		TransitionAlpha = ApplySkinPartTransition(MainView);
+		Ui()->ClipEnable(&ContentClip);
+	}
+
+	MainView.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_B, 5.0f);
+	MainView.VSplitMid(&SkinPartSelection, &CustomColors, 10.0f);
+	CustomColors.Margin(5.0f, &CustomColors);
+	CUIRect CustomColorsButton, RandomSkinButton;
+	CustomColors.HSplitTop(20.0f, &CustomColorsButton, &CustomColors);
+	CustomColorsButton.VSplitRight(30.0f, &CustomColorsButton, &RandomSkinButton);
+	CustomColorsButton.VSplitRight(20.0f, &CustomColorsButton, nullptr);
 
 	RenderSkinPartSelection7(SkinPartSelection);
 
@@ -302,6 +409,15 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView)
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	GameClient()->m_Tooltips.DoToolTip(&s_RandomSkinButton, &RandomSkinButton, Localize("Create a random skin"));
+
+	if(TransitionActive && TransitionAlpha > 0.0f)
+	{
+		ContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+	}
+	if(TransitionActive)
+	{
+		Ui()->ClipDisable();
+	}
 }
 
 void CMenus::RenderSkinSelection7(CUIRect MainView)

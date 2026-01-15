@@ -84,6 +84,7 @@ public:
 	void OnReset() override;
 	void OnRender() override;
 	void OnInit() override;
+	void RenderGroup(int Group);
 
 private:
 	int m_ParticleQuadContainerIndex;
@@ -101,7 +102,6 @@ private:
 	float m_FrictionFraction = 0.0f;
 	int64_t m_LastRenderTime = 0;
 
-	void RenderGroup(int Group);
 	void Update(float TimePassed);
 
 	template<int TGROUP>

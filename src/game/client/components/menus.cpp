@@ -735,7 +735,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		if(ClientState == IClient::STATE_OFFLINE)
 			SetMenuPage(NewPage);
 		else
-			m_GamePage = NewPage;
+			SetGamePage(NewPage);
 	}
 }
 
@@ -1082,6 +1082,24 @@ void CMenus::Render()
 		Screen.Margin(10.0f, &Screen);
 	}
 
+	auto ApplyPageTransition = [&](SPageTransition &Transition, CUIRect &View) -> float {
+		if(!Transition.m_Active)
+			return 0.0f;
+		const float TransitionDuration = 0.18f;
+		Transition.m_Progress += Client()->RenderFrameTime() / TransitionDuration;
+		if(Transition.m_Progress >= 1.0f)
+		{
+			Transition.m_Progress = 1.0f;
+			Transition.m_Active = false;
+		}
+		const float Inv = 1.0f - Transition.m_Progress;
+		const float Ease = 1.0f - Inv * Inv * Inv;
+		const float OffsetMax = std::clamp(View.w * 0.04f, 18.0f, 48.0f);
+		const float Offset = (1.0f - Ease) * OffsetMax * Transition.m_Direction;
+		View.x += Offset;
+		return (1.0f - Ease) * 0.12f;
+	};
+
 	switch(ClientState)
 	{
 	case IClient::STATE_QUITTING:
@@ -1110,6 +1128,14 @@ void CMenus::Render()
 		{
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(24.0f, &TabBar, &MainView);
+			const bool TransitionActive = m_MenuPageTransition.m_Active;
+			const CUIRect MainViewClip = MainView;
+			float TransitionAlpha = 0.0f;
+			if(TransitionActive)
+			{
+				TransitionAlpha = ApplyPageTransition(m_MenuPageTransition, MainView);
+				Ui()->ClipEnable(&MainViewClip);
+			}
 
 			if(m_MenuPage == PAGE_NEWS)
 			{
@@ -1132,6 +1158,14 @@ void CMenus::Render()
 				dbg_assert_failed("Invalid m_MenuPage: %d", m_MenuPage);
 			}
 
+			if(TransitionActive && TransitionAlpha > 0.0f)
+			{
+				MainViewClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+			}
+			if(TransitionActive)
+			{
+				Ui()->ClipDisable();
+			}
 			RenderMenubar(TabBar, ClientState);
 		}
 		break;
@@ -1145,6 +1179,14 @@ void CMenus::Render()
 		{
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(24.0f, &TabBar, &MainView);
+			const bool TransitionActive = m_GamePageTransition.m_Active;
+			const CUIRect MainViewClip = MainView;
+			float TransitionAlpha = 0.0f;
+			if(TransitionActive)
+			{
+				TransitionAlpha = ApplyPageTransition(m_GamePageTransition, MainView);
+				Ui()->ClipEnable(&MainViewClip);
+			}
 
 			if(m_GamePage == PAGE_GAME)
 			{
@@ -1184,6 +1226,14 @@ void CMenus::Render()
 				dbg_assert_failed("Invalid m_GamePage: %d", m_GamePage);
 			}
 
+			if(TransitionActive && TransitionAlpha > 0.0f)
+			{
+				MainViewClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+			}
+			if(TransitionActive)
+			{
+				Ui()->ClipDisable();
+			}
 			RenderMenubar(TabBar, ClientState);
 		}
 		break;
@@ -2495,6 +2545,35 @@ void CMenus::SetMenuPage(int NewPage)
 {
 	const int OldPage = m_MenuPage;
 	m_MenuPage = NewPage;
+	auto IsBrowserPage = [](int Page) {
+		return Page >= PAGE_INTERNET && Page <= PAGE_FAVORITE_COMMUNITY_5;
+	};
+	const bool OldIsBrowser = IsBrowserPage(OldPage);
+	const bool NewIsBrowser = IsBrowserPage(NewPage);
+	if(OldIsBrowser && NewIsBrowser && OldPage != NewPage)
+	{
+		m_BrowserTabTransitionActive = true;
+		m_BrowserTabTransitionProgress = 0.0f;
+		m_BrowserTabTransitionDirection = NewPage > OldPage ? 1.0f : -1.0f;
+	}
+	else
+	{
+		m_BrowserTabTransitionActive = false;
+		m_BrowserTabTransitionProgress = 1.0f;
+		m_BrowserTabTransitionDirection = 0.0f;
+	}
+	if(OldPage != NewPage && !(OldIsBrowser && NewIsBrowser))
+	{
+		m_MenuPageTransition.m_Active = true;
+		m_MenuPageTransition.m_Progress = 0.0f;
+		m_MenuPageTransition.m_Direction = NewPage > OldPage ? 1.0f : -1.0f;
+	}
+	else
+	{
+		m_MenuPageTransition.m_Active = false;
+		m_MenuPageTransition.m_Progress = 1.0f;
+		m_MenuPageTransition.m_Direction = 0.0f;
+	}
 	if(NewPage >= PAGE_INTERNET && NewPage <= PAGE_FAVORITE_COMMUNITY_5)
 	{
 		g_Config.m_UiPage = NewPage;
@@ -2508,6 +2587,24 @@ void CMenus::SetMenuPage(int NewPage)
 		{
 			RefreshBrowserTab(ForceRefresh);
 		}
+	}
+}
+
+void CMenus::SetGamePage(int NewPage)
+{
+	const int OldPage = m_GamePage;
+	m_GamePage = NewPage;
+	if(OldPage != NewPage)
+	{
+		m_GamePageTransition.m_Active = true;
+		m_GamePageTransition.m_Progress = 0.0f;
+		m_GamePageTransition.m_Direction = NewPage > OldPage ? 1.0f : -1.0f;
+	}
+	else
+	{
+		m_GamePageTransition.m_Active = false;
+		m_GamePageTransition.m_Progress = 1.0f;
+		m_GamePageTransition.m_Direction = 0.0f;
 	}
 }
 

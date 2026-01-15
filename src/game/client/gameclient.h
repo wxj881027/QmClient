@@ -359,6 +359,7 @@ public:
 	const char *NetobjCorrectedOn() { return m_NetObjHandler.CorrectedObjOn(); }
 
 	bool m_SuppressEvents;
+	bool m_RenderingDummyMiniMap = false;
 	bool m_NewTick;
 	bool m_NewPredictedTick;
 	int m_aFlagDropTick[2];
@@ -740,6 +741,8 @@ public:
 	bool AntiPingGunfire() const { return AntiPingGrenade() && AntiPingWeapons() && g_Config.m_ClAntiPingGunfire; }
 	bool Predict() const;
 	bool PredictDummy() const { return g_Config.m_ClPredictDummy && Client()->DummyConnected() && m_Snap.m_LocalClientId >= 0 && m_PredictedDummyId >= 0 && !m_aClients[m_PredictedDummyId].m_Paused; }
+	bool IsRenderingDummyMiniMap() const { return m_RenderingDummyMiniMap; }
+	void SetRenderingDummyMiniMap(bool Rendering) { m_RenderingDummyMiniMap = Rendering; }
 	const CTuningParams *GetTuning(int i) const { return &m_aTuningList[i]; }
 	ColorRGBA GetDDTeamColor(int DDTeam, float Lightness = 0.5f) const;
 	void FormatClientId(int ClientId, char (&aClientId)[16], EClientIdFormat Format) const;
