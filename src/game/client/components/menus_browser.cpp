@@ -1533,9 +1533,9 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		vvFriends[OfflineCategoryIndex].emplace_back(pFriendInfo);
 	}
 
-	for(int ServerIndex = 0; ServerIndex < ServerBrowser()->NumSortedServers(); ++ServerIndex)
+	for(int ServerIndex = 0; ServerIndex < ServerBrowser()->NumServers(); ++ServerIndex)
 	{
-		const CServerInfo *pEntry = ServerBrowser()->SortedGet(ServerIndex);
+		const CServerInfo *pEntry = ServerBrowser()->Get(ServerIndex);
 		if(pEntry->m_FriendState == IFriends::FRIEND_NO)
 			continue;
 
