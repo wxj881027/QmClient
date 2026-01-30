@@ -1,6 +1,6 @@
 <rml>
 <head>
-  <link type="text/rcss" href="ui/start_menu.rcss"/>
+  <link type="text/rcss" href="start_menu.rcss"/>
 </head>
 <body>
   <div id="menu-buttons">

@@ -96,8 +96,9 @@ static void Unpremultiply(std::vector<uint8_t> &Data)
 class CRmlUiRenderInterface final : public Rml::RenderInterface
 {
 public:
-	explicit CRmlUiRenderInterface(CMenusStart *pOwner) :
-		m_pOwner(pOwner)
+	CRmlUiRenderInterface(IGraphics *pGraphics, CUi *pUi) :
+		m_pGraphics(pGraphics),
+		m_pUi(pUi)
 	{
 	}
 
@@ -115,7 +116,7 @@ public:
 		if(!pGeometry || pGeometry->m_Indices.empty())
 			return;
 
-		IGraphics *pGraphics = m_pOwner->Graphics();
+		IGraphics *pGraphics = m_pGraphics;
 
 		if(texture)
 		{
@@ -206,7 +207,7 @@ public:
 		texture_dimensions.x = (int)Image.m_Width;
 		texture_dimensions.y = (int)Image.m_Height;
 
-		IGraphics::CTextureHandle TexHandle = m_pOwner->Graphics()->LoadTextureRawMove(Image, 0, source.c_str());
+		IGraphics::CTextureHandle TexHandle = m_pGraphics->LoadTextureRawMove(Image, 0, source.c_str());
 		if(!TexHandle.IsValid())
 			return {};
 
@@ -235,7 +236,7 @@ public:
 			return {};
 		memcpy(Image.m_pData, Buffer.data(), Buffer.size());
 
-		IGraphics::CTextureHandle TexHandle = m_pOwner->Graphics()->LoadTextureRawMove(Image, 0, "rmlui");
+		IGraphics::CTextureHandle TexHandle = m_pGraphics->LoadTextureRawMove(Image, 0, "rmlui");
 		if(!TexHandle.IsValid())
 			return {};
 
@@ -251,7 +252,7 @@ public:
 		auto *pTexture = reinterpret_cast<SRmlUiTexture *>(texture);
 		if(!pTexture)
 			return;
-		m_pOwner->Graphics()->UnloadTexture(&pTexture->m_Handle);
+		m_pGraphics->UnloadTexture(&pTexture->m_Handle);
 		delete pTexture;
 	}
 
@@ -261,7 +262,7 @@ public:
 		if(m_ScissorEnabled)
 			UpdateScissor();
 		else
-			m_pOwner->Graphics()->ClipDisable();
+			m_pGraphics->ClipDisable();
 	}
 
 	void SetScissorRegion(Rml::Rectanglei region) override
@@ -274,17 +275,18 @@ public:
 private:
 	void UpdateScissor()
 	{
-		const CUIRect *pScreen = m_pOwner->Ui()->Screen();
-		const float XScale = m_pOwner->Graphics()->ScreenWidth() / pScreen->w;
-		const float YScale = m_pOwner->Graphics()->ScreenHeight() / pScreen->h;
+		const CUIRect *pScreen = m_pUi->Screen();
+		const float XScale = m_pGraphics->ScreenWidth() / pScreen->w;
+		const float YScale = m_pGraphics->ScreenHeight() / pScreen->h;
 		const int ClipX = (int)(m_ScissorRegion.Left() * XScale);
 		const int ClipY = (int)(m_ScissorRegion.Top() * YScale);
 		const int ClipW = (int)(m_ScissorRegion.Width() * XScale);
 		const int ClipH = (int)(m_ScissorRegion.Height() * YScale);
-		m_pOwner->Graphics()->ClipEnable(ClipX, ClipY, ClipW, ClipH);
+		m_pGraphics->ClipEnable(ClipX, ClipY, ClipW, ClipH);
 	}
 
-	CMenusStart *m_pOwner = nullptr;
+	IGraphics *m_pGraphics = nullptr;
+	CUi *m_pUi = nullptr;
 	bool m_ScissorEnabled = false;
 	Rml::Rectanglei m_ScissorRegion;
 };
@@ -292,14 +294,15 @@ private:
 class CRmlUiSystemInterface final : public Rml::SystemInterface
 {
 public:
-	explicit CRmlUiSystemInterface(CMenusStart *pOwner) :
-		m_pOwner(pOwner)
+	CRmlUiSystemInterface(IClient *pClient, IInput *pInput) :
+		m_pClient(pClient),
+		m_pInput(pInput)
 	{
 	}
 
 	double GetElapsedTime() override
 	{
-		return m_pOwner->Client()->LocalTime();
+		return m_pClient->LocalTime();
 	}
 
 	bool LogMessage(Rml::Log::Type type, const Rml::String &message) override
@@ -336,29 +339,30 @@ public:
 
 	void SetClipboardText(const Rml::String &text) override
 	{
-		m_pOwner->Input()->SetClipboardText(text.c_str());
+		m_pInput->SetClipboardText(text.c_str());
 	}
 
 	void GetClipboardText(Rml::String &text) override
 	{
-		text = m_pOwner->Input()->GetClipboardText();
+		text = m_pInput->GetClipboardText();
 	}
 
 private:
-	CMenusStart *m_pOwner = nullptr;
+	IClient *m_pClient = nullptr;
+	IInput *m_pInput = nullptr;
 };
 
 class CRmlUiFileInterface final : public Rml::FileInterface
 {
 public:
-	explicit CRmlUiFileInterface(CMenusStart *pOwner) :
-		m_pOwner(pOwner)
+	explicit CRmlUiFileInterface(IStorage *pStorage) :
+		m_pStorage(pStorage)
 	{
 	}
 
 	Rml::FileHandle Open(const Rml::String &path) override
 	{
-		IOHANDLE File = m_pOwner->Storage()->OpenFile(path.c_str(), IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
+		IOHANDLE File = m_pStorage->OpenFile(path.c_str(), IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
 		return (Rml::FileHandle)File;
 	}
 
@@ -396,7 +400,7 @@ public:
 	}
 
 private:
-	CMenusStart *m_pOwner = nullptr;
+	IStorage *m_pStorage = nullptr;
 };
 
 class CRmlUiStartMenu;
@@ -422,12 +426,9 @@ class CRmlUiStartMenu
 public:
 	~CRmlUiStartMenu()
 	{
-		if(m_pDocument)
-		{
-			m_pDocument->Close();
-			m_pDocument->RemoveReference();
-			m_pDocument = nullptr;
-		}
+		if(m_pContext && m_pDocument)
+			m_pContext->UnloadDocument(m_pDocument);
+		m_pDocument = nullptr;
 		if(m_pContext)
 		{
 			Rml::RemoveContext("start_menu");
@@ -437,9 +438,9 @@ public:
 			Rml::Shutdown();
 	}
 
-	bool RenderMenu(CMenusStart *pOwner, const CUIRect &MenuRect, bool LocalServerRunning, bool EditorDirty, EStartMenuAction &OutAction)
+	bool RenderMenu(IGraphics *pGraphics, CUi *pUi, IInput *pInput, IStorage *pStorage, IClient *pClient, const CUIRect &MenuRect, bool LocalServerRunning, bool EditorDirty, EStartMenuAction &OutAction)
 	{
-		if(!EnsureInit(pOwner))
+		if(!EnsureInit(pGraphics, pUi, pInput, pStorage, pClient))
 			return false;
 
 		UpdateLayout(MenuRect);
@@ -457,9 +458,13 @@ public:
 	}
 
 private:
-	bool EnsureInit(CMenusStart *pOwner)
+	bool EnsureInit(IGraphics *pGraphics, CUi *pUi, IInput *pInput, IStorage *pStorage, IClient *pClient)
 	{
-		m_pOwner = pOwner;
+		m_pGraphics = pGraphics;
+		m_pUi = pUi;
+		m_pInput = pInput;
+		m_pStorage = pStorage;
+		m_pClient = pClient;
 		if(m_Initialized)
 		{
 			if(!m_pDocument)
@@ -467,9 +472,9 @@ private:
 			return m_pContext != nullptr && m_pDocument != nullptr;
 		}
 
-		m_RenderInterface = std::make_unique<CRmlUiRenderInterface>(m_pOwner);
-		m_SystemInterface = std::make_unique<CRmlUiSystemInterface>(m_pOwner);
-		m_FileInterface = std::make_unique<CRmlUiFileInterface>(m_pOwner);
+		m_RenderInterface = std::make_unique<CRmlUiRenderInterface>(m_pGraphics, m_pUi);
+		m_SystemInterface = std::make_unique<CRmlUiSystemInterface>(m_pClient, m_pInput);
+		m_FileInterface = std::make_unique<CRmlUiFileInterface>(m_pStorage);
 
 		Rml::SetRenderInterface(m_RenderInterface.get());
 		Rml::SetSystemInterface(m_SystemInterface.get());
@@ -479,7 +484,7 @@ private:
 			return false;
 		m_Initialized = true;
 
-		const CUIRect *pScreen = m_pOwner->Ui()->Screen();
+		const CUIRect *pScreen = m_pUi->Screen();
 		m_pContext = Rml::CreateContext("start_menu", Rml::Vector2i((int)pScreen->w, (int)pScreen->h));
 		if(!m_pContext)
 			return false;
@@ -570,16 +575,16 @@ private:
 
 	void UpdateInput()
 	{
-		const CUIRect *pScreen = m_pOwner->Ui()->Screen();
+		const CUIRect *pScreen = m_pUi->Screen();
 		m_pContext->SetDimensions(Rml::Vector2i((int)pScreen->w, (int)pScreen->h));
 
-		const int MouseX = (int)m_pOwner->Ui()->MouseX();
-		const int MouseY = (int)m_pOwner->Ui()->MouseY();
+		const int MouseX = (int)m_pUi->MouseX();
+		const int MouseY = (int)m_pUi->MouseY();
 		m_pContext->ProcessMouseMove(MouseX, MouseY, 0);
 
 		for(int Button = 0; Button < 3; ++Button)
 		{
-			const bool Pressed = m_pOwner->Ui()->MouseButton(Button);
+			const bool Pressed = m_pUi->MouseButton(Button);
 			if(Pressed != m_aMouseButtons[Button])
 			{
 				if(Pressed)
@@ -598,7 +603,11 @@ private:
 		return Action;
 	}
 
-	CMenusStart *m_pOwner = nullptr;
+	IGraphics *m_pGraphics = nullptr;
+	CUi *m_pUi = nullptr;
+	IInput *m_pInput = nullptr;
+	IStorage *m_pStorage = nullptr;
+	IClient *m_pClient = nullptr;
 	bool m_Initialized = false;
 	Rml::Context *m_pContext = nullptr;
 	Rml::ElementDocument *m_pDocument = nullptr;
@@ -743,7 +752,7 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	bool UseRmlUi = false;
 #ifdef CONF_RMLUI
 	EStartMenuAction RmlAction = EStartMenuAction::None;
-	if(g_RmlUiStartMenu.RenderMenu(this, Menu, LocalServerRunning, EditorDirty, RmlAction))
+	if(g_RmlUiStartMenu.RenderMenu(Graphics(), Ui(), Input(), Storage(), Client(), Menu, LocalServerRunning, EditorDirty, RmlAction))
 	{
 		UseRmlUi = true;
 

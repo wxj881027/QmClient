@@ -927,7 +927,22 @@ if(CLIENT AND RMLUI)
   set(RMLUI_SVG_PLUGIN OFF CACHE BOOL "" FORCE)
   set(RMLUI_HARFBUZZ_SAMPLE OFF CACHE BOOL "" FORCE)
 
+  if(FREETYPE_FOUND AND NOT TARGET Freetype::Freetype)
+    add_library(Freetype::Freetype INTERFACE IMPORTED)
+    set_target_properties(Freetype::Freetype PROPERTIES
+      INTERFACE_LINK_LIBRARIES "${FREETYPE_LIBRARIES}"
+      INTERFACE_INCLUDE_DIRECTORIES "${FREETYPE_INCLUDE_DIRS}"
+    )
+  endif()
+
   add_subdirectory(ddnet-libs/rmlui EXCLUDE_FROM_ALL)
+  if(MSVC)
+    foreach(target rmlui_core rmlui_debugger rmlui_lua)
+      if(TARGET ${target})
+        set_property(TARGET ${target} PROPERTY MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
+      endif()
+    endforeach()
+  endif()
   set(RMLUI_ENABLED ON)
 endif()
 

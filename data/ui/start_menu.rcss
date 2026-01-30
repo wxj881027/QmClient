@@ -1,7 +1,7 @@
 body {
   margin: 0px;
   padding: 0px;
-  font-family: "GlowSansJ";
+  font-family: "Glow Sans J Compressed Book", "Source Han Sans", "DejaVu Sans", "Noto Emoji";
   font-size: 14px;
   color: #ffffff;
 }
