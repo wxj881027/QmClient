@@ -53,7 +53,9 @@
 #include "components/maplayers.h"
 #include "components/mapsounds.h"
 #include "components/menu_background.h"
+#include "components/menu_particles.h"
 #include "components/menus.h"
+#include "components/ui_effects.h"
 #include "components/motd.h"
 #include "components/nameplates.h"
 #include "components/particles.h"
@@ -204,6 +206,8 @@ public:
 	CMapLayers m_MapLayersForeground = CMapLayers{ERenderType::RENDERTYPE_FOREGROUND};
 	CBackground m_Background;
 	CMenuBackground m_MenuBackground;
+	CMenuParticles m_MenuParticles;
+	CUiEffects m_UiEffects;
 
 	CMapSounds m_MapSounds;
 
