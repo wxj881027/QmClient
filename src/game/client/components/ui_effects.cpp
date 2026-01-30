@@ -6,6 +6,10 @@
 #include <cmath>
 #include <algorithm>
 
+constexpr float PI = 3.14159265358979323846f;
+constexpr float SMOOTH_VALUE_EPSILON = 0.01f; // Threshold for smooth value convergence
+constexpr float SMOOTH_VALUE_STEP_MULTIPLIER = 10.0f; // Controls interpolation speed
+
 CUiEffects::CUiEffects()
 {
 	m_Time = 0.0f;
@@ -29,14 +33,14 @@ void CUiEffects::OnRender()
 	const float SpeedMultiplier = g_Config.m_ClHudAnimationSpeed / 100.0f;
 	for(auto &Value : m_vSmoothValues)
 	{
-		if(std::abs(Value.m_Current - Value.m_Target) < 0.001f)
+		if(std::abs(Value.m_Current - Value.m_Target) < SMOOTH_VALUE_EPSILON)
 		{
 			Value.m_Current = Value.m_Target;
 			continue;
 		}
 
 		const float Distance = Value.m_Target - Value.m_Current;
-		const float Step = Distance * Value.m_Speed * SpeedMultiplier * TimePassed * 10.0f;
+		const float Step = Distance * Value.m_Speed * SpeedMultiplier * TimePassed * SMOOTH_VALUE_STEP_MULTIPLIER;
 		Value.m_Current += Step;
 	}
 }
@@ -131,7 +135,7 @@ ColorRGBA CUiEffects::LerpColor(const ColorRGBA &From, const ColorRGBA &To, floa
 
 ColorRGBA CUiEffects::PulseColor(const ColorRGBA &Color, float Time, float Speed)
 {
-	const float Pulse = (std::sin(Time * Speed * 3.14159f) + 1.0f) * 0.5f;
+	const float Pulse = (std::sin(Time * Speed * PI) + 1.0f) * 0.5f;
 	return ColorRGBA(
 		Color.r * (0.5f + Pulse * 0.5f),
 		Color.g * (0.5f + Pulse * 0.5f),
@@ -142,12 +146,12 @@ ColorRGBA CUiEffects::PulseColor(const ColorRGBA &Color, float Time, float Speed
 
 float CUiEffects::GetPulse(float Speed)
 {
-	return (std::sin(m_Time * Speed * 3.14159f) + 1.0f) * 0.5f;
+	return (std::sin(m_Time * Speed * PI) + 1.0f) * 0.5f;
 }
 
 float CUiEffects::GetWave(float Speed, float Offset)
 {
-	return std::sin((m_Time * Speed + Offset) * 3.14159f);
+	return std::sin((m_Time * Speed + Offset) * PI);
 }
 
 float CUiEffects::GetBounce(float Speed)

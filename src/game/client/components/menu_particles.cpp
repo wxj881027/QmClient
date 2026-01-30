@@ -6,12 +6,15 @@
 
 #include <cmath>
 
+constexpr int MAX_PARTICLES = 150;
+constexpr float PI = 3.14159265358979323846f;
+
 CMenuParticles::CMenuParticles()
 {
 	m_Time = 0.0f;
 	m_SpawnTimer = 0.0f;
 	m_Enabled = true;
-	m_vParticles.reserve(200);
+	m_vParticles.reserve(MAX_PARTICLES);
 }
 
 void CMenuParticles::OnReset()
@@ -32,7 +35,7 @@ void CMenuParticles::OnRender()
 
 	// Spawn new particles
 	const float SpawnRate = 0.05f; // Spawn every 50ms
-	while(m_SpawnTimer >= SpawnRate && m_vParticles.size() < 150)
+	while(m_SpawnTimer >= SpawnRate && m_vParticles.size() < MAX_PARTICLES)
 	{
 		SpawnParticle();
 		m_SpawnTimer -= SpawnRate;
@@ -74,7 +77,7 @@ void CMenuParticles::SpawnParticle()
 	
 	// Random velocity based on effect mode
 	const float Speed = 20.0f + (rand() % 100) / 10.0f;
-	const float Angle = (rand() % 360) * 3.14159f / 180.0f;
+	const float Angle = (rand() % 360) * PI / 180.0f;
 	
 	switch(g_Config.m_ClMenuParticleEffect)
 	{
@@ -111,7 +114,7 @@ void CMenuParticles::SpawnParticle()
 	Particle.m_MaxLife = Particle.m_Life;
 	
 	// Rotation
-	Particle.m_Rotation = (rand() % 360) * 3.14159f / 180.0f;
+	Particle.m_Rotation = (rand() % 360) * PI / 180.0f;
 	Particle.m_RotationSpeed = ((rand() % 200) - 100) / 100.0f;
 	
 	// Type
@@ -145,7 +148,9 @@ void CMenuParticles::UpdateParticle(CParticle &Particle, float TimePassed)
 	// Update color based on effect mode
 	if(g_Config.m_ClMenuParticleEffect != EFFECT_NONE)
 	{
-		Particle.m_Color = GetEffectColor(Particle.m_Phase + m_Time * 0.2f);
+		// Normalize the phase value to prevent overflow
+		const float NormalizedPhase = std::fmod(Particle.m_Phase + m_Time * 0.2f, 1.0f);
+		Particle.m_Color = GetEffectColor(NormalizedPhase);
 	}
 	
 	// Fade out at the end of life
@@ -172,7 +177,7 @@ void CMenuParticles::RenderParticle(const CParticle &Particle)
 			Graphics()->QuadsSetRotation(Particle.m_Rotation);
 			IGraphics::CQuadItem QuadItem(Particle.m_Pos.x, Particle.m_Pos.y, Particle.m_Size, Particle.m_Size * 1.5f);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
-			Graphics()->QuadsSetRotation(Particle.m_Rotation + 3.14159f / 2.0f);
+			Graphics()->QuadsSetRotation(Particle.m_Rotation + PI / 2.0f);
 			IGraphics::CQuadItem QuadItem2(Particle.m_Pos.x, Particle.m_Pos.y, Particle.m_Size, Particle.m_Size * 1.5f);
 			Graphics()->QuadsDrawTL(&QuadItem2, 1);
 		}
@@ -206,10 +211,10 @@ void CMenuParticles::RenderParticle(const CParticle &Particle)
 			Graphics()->QuadsDrawTL(&QuadItem2, 1);
 		}
 		break;
-	case PARTICLE_GLOW:
+	case EFFECT_GLOW:
 		{
 			// Soft glow effect with pulsing
-			const float Pulse = 0.8f + std::sin(m_Time * 3.0f + Particle.m_Phase * 6.28f) * 0.2f;
+			const float Pulse = 0.8f + std::sin(m_Time * 3.0f + Particle.m_Phase * 2.0f * PI) * 0.2f;
 			const float Size = Particle.m_Size * Pulse;
 			IGraphics::CQuadItem QuadItem(Particle.m_Pos.x - Size * 0.5f, 
 										 Particle.m_Pos.y - Size * 0.5f, 
@@ -256,7 +261,7 @@ ColorRGBA CMenuParticles::GetEffectColor(float Phase)
 	case EFFECT_PULSE:
 		{
 			// Pulse between two colors
-			const float Pulse = (std::sin(Phase * 6.28f) + 1.0f) * 0.5f;
+			const float Pulse = (std::sin(Phase * 2.0f * PI) + 1.0f) * 0.5f;
 			Color.r = 0.3f + Pulse * 0.7f;
 			Color.g = 0.5f + Pulse * 0.5f;
 			Color.b = 1.0f;
@@ -266,7 +271,7 @@ ColorRGBA CMenuParticles::GetEffectColor(float Phase)
 	case EFFECT_WAVE:
 		{
 			// Wave effect with cyan/magenta gradient
-			const float Wave = (std::sin(Phase * 6.28f * 2.0f) + 1.0f) * 0.5f;
+			const float Wave = (std::sin(Phase * 2.0f * PI * 2.0f) + 1.0f) * 0.5f;
 			Color.r = 0.5f + Wave * 0.5f;
 			Color.g = 0.7f - Wave * 0.3f;
 			Color.b = 1.0f - Wave * 0.3f;

@@ -117,8 +117,10 @@ UI增强系统由三个主要组件组成：
   粒子系统限制为最多150个粒子以保证性能
 - Automatic particle cleanup to prevent memory leaks
   自动粒子清理以防止内存泄漏
-- Configurable update rates for smooth 60+ FPS
-  可配置的更新率以保持60+帧率
+- Optimized rendering with batched quad drawing
+  使用批量四边形绘制优化渲染
+- Frame-time based updates for consistent behavior
+  基于帧时间的更新以保证一致行为
 
 ## Usage Examples / 使用示例
 
