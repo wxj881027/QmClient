@@ -2068,6 +2068,26 @@ foreach(datafile ${DATA})
   file(MAKE_DIRECTORY ${DESTINATION})
   file(COPY ${datafile} DESTINATION ${DESTINATION})
 endforeach()
+
+# Keep UI data in sync with the build directory when files change.
+set(DATA_UI)
+foreach(datafile ${DATA})
+  if(datafile MATCHES "/data/ui/")
+    list(APPEND DATA_UI ${datafile})
+  endif()
+endforeach()
+if(DATA_UI)
+  set(UI_DATA_STAMP "${PROJECT_BINARY_DIR}/data/ui/.ui_data.stamp")
+  add_custom_command(
+    OUTPUT "${UI_DATA_STAMP}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/data/ui"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/data/ui" "${PROJECT_BINARY_DIR}/data/ui"
+    COMMAND ${CMAKE_COMMAND} -E touch "${UI_DATA_STAMP}"
+    DEPENDS ${DATA_UI}
+    COMMENT "Copy data/ui to build directory"
+  )
+  add_custom_target(copy_ui_data DEPENDS "${UI_DATA_STAMP}")
+endif()
 set(COPY_FILES
   ${CURL_COPY_FILES}
   ${FREETYPE_COPY_FILES}
@@ -3009,6 +3029,10 @@ if(CLIENT)
   if(WHISPER AND WHISPER_FOUND)
     target_compile_definitions(game-client PRIVATE CONF_WHISPER)
     target_include_directories(game-client PRIVATE ${whisper_SOURCE_DIR}/include)
+  endif()
+
+  if(TARGET copy_ui_data)
+    add_dependencies(game-client copy_ui_data)
   endif()
 
   list(APPEND TARGETS_OWN game-client)

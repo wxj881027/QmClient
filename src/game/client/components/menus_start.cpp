@@ -10,6 +10,7 @@
 #include <engine/textrender.h>
 
 #include <algorithm>
+#include <cmath>
 
 #include <generated/client_data.h>
 
@@ -91,6 +92,29 @@ static void Unpremultiply(std::vector<uint8_t> &Data)
 		Data[i + 1] = (uint8_t)std::min(255u, (unsigned)(Data[i + 1] * 255u + A / 2u) / A);
 		Data[i + 2] = (uint8_t)std::min(255u, (unsigned)(Data[i + 2] * 255u + A / 2u) / A);
 	}
+}
+
+static bool TryLoadFontFace(IStorage *pStorage, const char *pPath, bool Fallback)
+{
+	if(!pStorage || !pPath || pPath[0] == '\0')
+		return false;
+
+	IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
+	if(!File)
+		return false;
+	io_close(File);
+	Rml::LoadFontFace(pPath, Fallback);
+	return true;
+}
+
+static void LoadFontFaceFromData(IStorage *pStorage, const char *pPath, bool Fallback = false)
+{
+	if(TryLoadFontFace(pStorage, pPath, Fallback))
+		return;
+
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf), "data/%s", pPath);
+	TryLoadFontFace(pStorage, aBuf, Fallback);
 }
 
 class CRmlUiRenderInterface final : public Rml::RenderInterface
@@ -362,7 +386,33 @@ public:
 
 	Rml::FileHandle Open(const Rml::String &path) override
 	{
-		IOHANDLE File = m_pStorage->OpenFile(path.c_str(), IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
+		const char *pPath = path.c_str();
+		IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
+		if(!File)
+		{
+			const char *pResolved = nullptr;
+			if(str_startswith(pPath, "ui/ui/"))
+			{
+				pResolved = pPath + 3;
+				File = m_pStorage->OpenFile(pResolved, IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
+			}
+			if(!File && str_startswith(pPath, "ui/"))
+			{
+				pResolved = pPath + 3;
+				File = m_pStorage->OpenFile(pResolved, IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
+			}
+			if(!File)
+			{
+				char aBuf[512];
+				str_format(aBuf, sizeof(aBuf), "ui/%s", pPath);
+				pResolved = aBuf;
+				File = m_pStorage->OpenFile(pResolved, IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
+			}
+			if(File && pResolved)
+				dbg_msg("rmlui", "resolved '%s' -> '%s'", pPath, pResolved);
+			else if(!File)
+				dbg_msg("rmlui", "file not found: %s", pPath);
+		}
 		return (Rml::FileHandle)File;
 	}
 
@@ -489,9 +539,10 @@ private:
 		if(!m_pContext)
 			return false;
 
-		Rml::LoadFontFace("fonts/GlowSansJ-Compressed-Book.otf");
-		Rml::LoadFontFace("fonts/SourceHanSans.ttc", true);
-		Rml::LoadFontFace("fonts/DejaVuSans.ttf");
+		LoadFontFaceFromData(m_pStorage, "fonts/DejaVuSans.ttf");
+		LoadFontFaceFromData(m_pStorage, "fonts/SourceHanSans.ttc", true);
+		LoadFontFaceFromData(m_pStorage, "fonts/NotoEmoji-Regular.ttf", true);
+		LoadFontFaceFromData(m_pStorage, "fonts/GlowSansJ-Compressed-Book.otf");
 
 		LoadDocument();
 		return m_pDocument != nullptr;
@@ -502,6 +553,8 @@ private:
 		m_pDocument = m_pContext->LoadDocument("ui/start_menu.rml");
 		if(!m_pDocument)
 			return;
+		m_pDocument->SetProperty("font-family", "\"Source Han Sans\"");
+		m_pDocument->SetProperty("font-size", "14px");
 		m_pDocument->Show();
 
 		m_pMenuButtons = m_pDocument->GetElementById("menu-buttons");
@@ -538,16 +591,21 @@ private:
 		if(!m_pMenuButtons)
 			return;
 
+		const float Pixel = m_pUi ? m_pUi->PixelSize() : 0.0f;
+		const auto Snap = [Pixel](float Value) {
+			return Pixel > 0.0f ? std::round(Value / Pixel) * Pixel : Value;
+		};
+
 		const float Top = MenuRect.y + (MenuRect.h - BUTTONS_AREA_HEIGHT);
 
 		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "%.2fpx", MenuRect.x);
+		str_format(aBuf, sizeof(aBuf), "%.2fpx", Snap(MenuRect.x));
 		m_pMenuButtons->SetProperty("left", aBuf);
-		str_format(aBuf, sizeof(aBuf), "%.2fpx", Top);
+		str_format(aBuf, sizeof(aBuf), "%.2fpx", Snap(Top));
 		m_pMenuButtons->SetProperty("top", aBuf);
-		str_format(aBuf, sizeof(aBuf), "%.2fpx", MenuRect.w);
+		str_format(aBuf, sizeof(aBuf), "%.2fpx", Snap(MenuRect.w));
 		m_pMenuButtons->SetProperty("width", aBuf);
-		str_format(aBuf, sizeof(aBuf), "%.2fpx", BUTTONS_AREA_HEIGHT);
+		str_format(aBuf, sizeof(aBuf), "%.2fpx", Snap(BUTTONS_AREA_HEIGHT));
 		m_pMenuButtons->SetProperty("height", aBuf);
 	}
 
