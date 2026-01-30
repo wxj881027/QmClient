@@ -1,0 +1,58 @@
+body {
+  margin: 0px;
+  padding: 0px;
+  font-family: "GlowSansJ";
+  font-size: 14px;
+  color: #ffffff;
+}
+
+#menu-buttons {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+}
+
+.menu-button {
+  display: block;
+  width: 100%;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.25);
+  padding: 0px;
+  border: 0px;
+}
+
+.menu-button:hover {
+  background-color: rgba(0, 0, 0, 0.375);
+}
+
+.menu-button:active {
+  background-color: rgba(0, 0, 0, 0.125);
+}
+
+.menu-button.highlight {
+  background-color: rgba(0, 255, 0, 0.25);
+}
+
+.menu-button.highlight:hover {
+  background-color: rgba(0, 255, 0, 0.375);
+}
+
+.menu-button.highlight:active {
+  background-color: rgba(0, 255, 0, 0.125);
+}
+
+.gap {
+  display: block;
+  width: 100%;
+}
+
+.gap.small {
+  height: 5px;
+}
+
+.gap.large {
+  height: 100px;
+}

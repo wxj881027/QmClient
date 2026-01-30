@@ -151,6 +151,7 @@ option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AU
 option(DEV "Don't generate stuff necessary for packaging" OFF)
 option(VULKAN "Enable the vulkan backend" ${AUTO_VULKAN_BACKEND})
 option(WHISPER "Enable built-in Speech-to-Text with whisper.cpp" OFF)
+option(RMLUI "Enable RmlUI integration" ON)
 
 option(EXCEPTION_HANDLING "Enable crashdumps (only works with Windows)" OFF)
 option(IPO "Enable interprocedural optimizations" OFF)
@@ -849,7 +850,11 @@ endif()
 if(NOT(GTEST_FOUND) AND DOWNLOAD_GTEST)
   set(DDNET_GTEST_VERSION e5443e5c65f23bfd2a9d56a30bb5b1de91a48ff9)
   configure_file(cmake/Download_GTest_CMakeLists.txt.in googletest-download/CMakeLists.txt)
-  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+  set(GTEST_CMAKE_ARGS -G "${CMAKE_GENERATOR}")
+  if(CMAKE_MAKE_PROGRAM)
+    list(APPEND GTEST_CMAKE_ARGS "-DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} ${GTEST_CMAKE_ARGS} .
     RESULT_VARIABLE result
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/googletest-download
   )
@@ -906,6 +911,24 @@ set(DEP_JSON $<TARGET_OBJECTS:json>)
 set(DEP_MD5)
 if(NOT CRYPTO_FOUND)
   set(DEP_MD5 $<TARGET_OBJECTS:md5>)
+endif()
+
+########################################################################
+# RMLUI
+########################################################################
+
+set(RMLUI_ENABLED OFF)
+if(CLIENT AND RMLUI)
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+  set(RMLUI_SAMPLES OFF CACHE BOOL "" FORCE)
+  set(RMLUI_TESTS OFF CACHE BOOL "" FORCE)
+  set(RMLUI_LUA_BINDINGS OFF CACHE BOOL "" FORCE)
+  set(RMLUI_LOTTIE_PLUGIN OFF CACHE BOOL "" FORCE)
+  set(RMLUI_SVG_PLUGIN OFF CACHE BOOL "" FORCE)
+  set(RMLUI_HARFBUZZ_SAMPLE OFF CACHE BOOL "" FORCE)
+
+  add_subdirectory(ddnet-libs/rmlui EXCLUDE_FROM_ALL)
+  set(RMLUI_ENABLED ON)
 endif()
 
 ########################################################################
@@ -2013,10 +2036,12 @@ set(EXPECTED_DATA
   themes/winter_day.map
   themes/winter_night.map
   touch_controls.json
+  ui/start_menu.rcss
+  ui/start_menu.rml
   wordlist.txt
 )
 
-set_glob(DATA GLOB_RECURSE "cfg;chai;frag;json;map;otf;png;rules;ttc;ttf;txt;vert;wv" data ${EXPECTED_DATA})
+set_glob(DATA GLOB_RECURSE "cfg;chai;frag;json;map;otf;png;rcss;rml;rules;ttc;ttf;txt;vert;wv" data ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND SHARED LIBS
@@ -2621,6 +2646,8 @@ if(CLIENT)
     components/tclient/custom_communities.cpp
     components/tclient/custom_communities.h
     components/tclient/data_version.h
+    components/tclient/input_overlay.cpp
+    components/tclient/input_overlay.h
     components/tclient/menus_qmclient.cpp
     components/tclient/mod.cpp
     components/tclient/mod.h
@@ -2648,8 +2675,6 @@ if(CLIENT)
     components/tclient/translate.h
     components/tclient/warlist.cpp
     components/tclient/warlist.h
-    components/tclient/input_overlay.cpp
-    components/tclient/input_overlay.h
     components/tooltips.cpp
     components/tooltips.h
     components/touch_controls.cpp
@@ -2846,6 +2871,10 @@ if(CLIENT)
     list(APPEND LIBS_CLIENT whisper)
   endif()
 
+  if(RMLUI_ENABLED)
+    list(APPEND LIBS_CLIENT RmlUi::Core)
+  endif()
+
   if(TARGET_OS STREQUAL "windows")
     set(VERSION_EXECUTABLE "${CLIENT_EXECUTABLE}")
     set(VERSION_COMPANY "${CLIENT_EXECUTABLE} Team")
@@ -2895,6 +2924,9 @@ if(CLIENT)
       PROPERTY OUTPUT_NAME ${CLIENT_EXECUTABLE}
   )
   target_link_libraries(game-client ${LIBS_CLIENT})
+  if(RMLUI_ENABLED)
+    target_compile_definitions(game-client PRIVATE CONF_RMLUI)
+  endif()
 
   if(MSVC)
     target_compile_options(game-client PRIVATE /bigobj) # TClient, required for ChaiScript

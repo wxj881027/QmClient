@@ -1,0 +1,20 @@
+<rml>
+<head>
+  <link type="text/rcss" href="ui/start_menu.rcss"/>
+</head>
+<body>
+  <div id="menu-buttons">
+    <button id="play" class="menu-button">Play</button>
+    <div class="gap small"></div>
+    <button id="demos" class="menu-button">Demos</button>
+    <div class="gap small"></div>
+    <button id="editor" class="menu-button">Editor</button>
+    <div class="gap small"></div>
+    <button id="local_server" class="menu-button">Run server</button>
+    <div class="gap small"></div>
+    <button id="settings" class="menu-button">Settings</button>
+    <div class="gap large"></div>
+    <button id="quit" class="menu-button">Quit</button>
+  </div>
+</body>
+</rml>
