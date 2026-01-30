@@ -447,3 +447,16 @@ MACRO_CONFIG_INT(QmBlockWordsMode, qm_block_words_mode, 2, 0, 2, CFGFLAG_CLIENT 
 MACRO_CONFIG_STR(QmBlockWordsReplacementChar, qm_block_words_replacement_char, 8, "*", CFGFLAG_CLIENT | CFGFLAG_SAVE, "屏蔽词替换字符")
 MACRO_CONFIG_STR(QmBlockWordsList, qm_block_words_list, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "屏蔽词列表（用,分隔）")
 MACRO_CONFIG_STR(QmSidebarCardOrder, qm_sidebar_card_order, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "栖梦侧栏模块排序")
+
+// Menu Background Particles / 菜单背景粒子效果
+MACRO_CONFIG_INT(ClMenuParticles, cl_menu_particles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用菜单背景粒子效果 (Enable menu background particle effects)")
+MACRO_CONFIG_INT(ClMenuParticleEffect, cl_menu_particle_effect, 1, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "粒子效果类型 (0=None, 1=Rainbow, 2=Pulse, 3=Wave, 4=Spiral, 5=Meteor)")
+MACRO_CONFIG_INT(ClMenuParticleAlpha, cl_menu_particle_alpha, 60, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "粒子透明度 0-100 (Particle opacity 0-100)")
+
+// Menu Transition Effects / 菜单过渡效果
+MACRO_CONFIG_INT(ClMenuTransitions, cl_menu_transitions, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用菜单过渡动画 (Enable menu transition animations)")
+MACRO_CONFIG_INT(ClMenuTransitionSpeed, cl_menu_transition_speed, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "过渡动画速度百分比 (Transition animation speed percentage)")
+
+// HUD Smooth Animations / HUD平滑动画
+MACRO_CONFIG_INT(ClHudAnimations, cl_hud_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用HUD平滑动画 (Enable HUD smooth animations)")
+MACRO_CONFIG_INT(ClHudAnimationSpeed, cl_hud_animation_speed, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "HUD动画速度百分比 (HUD animation speed percentage)")

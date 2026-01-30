@@ -2625,8 +2625,12 @@ if(CLIENT)
     components/mapsounds.h
     components/menu_background.cpp
     components/menu_background.h
+    components/menu_particles.cpp
+    components/menu_particles.h
     components/menus.cpp
     components/menus.h
+    components/ui_effects.cpp
+    components/ui_effects.h
     components/menus_browser.cpp
     components/menus_demo.cpp
     components/menus_ingame.cpp
