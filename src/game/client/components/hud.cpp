@@ -1260,6 +1260,9 @@ void CHud::PreparePlayerStateQuads()
 
 void CHud::RenderMediaIsland(float AnchorX, float CenterY)
 {
+	if(!g_Config.m_ClSmtcShowHud)
+		return;
+
 	CSystemMediaControls::SState MediaState;
 	if(!GameClient()->m_SystemMediaControls.GetStateSnapshot(MediaState))
 		return;

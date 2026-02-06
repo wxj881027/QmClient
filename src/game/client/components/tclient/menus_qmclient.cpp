@@ -4087,16 +4087,20 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordX, TCLocalize("显示X"), &g_Config.m_QmNameplateCoordX, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				if(g_Config.m_QmNameplateCoordX)
-				{
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordXAlignHint, TCLocalize("对齐提示"), &g_Config.m_QmNameplateCoordXAlignHint, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-				}
-
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordY, TCLocalize("显示Y"), &g_Config.m_QmNameplateCoordY, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordXAlignHint, TCLocalize("对齐提示"), &g_Config.m_QmNameplateCoordXAlignHint, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				if(g_Config.m_QmNameplateCoordXAlignHint)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordXAlignHintStrict, TCLocalize("严格对齐"), &g_Config.m_QmNameplateCoordXAlignHintStrict, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
@@ -4405,11 +4409,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				Ui()->DoLabel(&Row, TCLocalize("需要开启实体层"), LG_BodySize, TEXTALIGN_ML);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				static CButtonContainer s_EntityOverlayFreezeColorId, s_EntityOverlayUnfreezeColorId;
-				static unsigned int s_PrevEntityOverlayFreezeColor = g_Config.m_QmEntityOverlayFreezeColor;
-				static unsigned int s_PrevEntityOverlayUnfreezeColor = g_Config.m_QmEntityOverlayUnfreezeColor;
-				DoLine_ColorPicker(&s_EntityOverlayFreezeColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("冻结颜色"), &g_Config.m_QmEntityOverlayFreezeColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, true);
-				DoLine_ColorPicker(&s_EntityOverlayUnfreezeColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("解冻颜色"), &g_Config.m_QmEntityOverlayUnfreezeColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, true);
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Ui()->DoScrollbarOption(&g_Config.m_QmEntityOverlayDeathAlpha, &g_Config.m_QmEntityOverlayDeathAlpha, &Row, TCLocalize("死亡透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
@@ -4434,12 +4433,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Ui()->DoScrollbarOption(&g_Config.m_ClOverlayEntities, &g_Config.m_ClOverlayEntities, &Row, TCLocalize("叠层透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-				if(s_PrevEntityOverlayFreezeColor != g_Config.m_QmEntityOverlayFreezeColor || s_PrevEntityOverlayUnfreezeColor != g_Config.m_QmEntityOverlayUnfreezeColor)
-				{
-					GameClient()->m_MapImages.ChangeEntitiesPath(g_Config.m_ClAssetsEntities);
-					s_PrevEntityOverlayFreezeColor = g_Config.m_QmEntityOverlayFreezeColor;
-					s_PrevEntityOverlayUnfreezeColor = g_Config.m_QmEntityOverlayUnfreezeColor;
-				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
@@ -4657,7 +4650,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					if(str_comp_nocase(pType, "Brutal") == 0)
 						return TCLocalize("高阶");
 					if(str_comp_nocase(pType, "Insane") == 0)
-						return TCLocalize("极限");
+						return TCLocalize("疯狂");
 					if(str_comp_nocase(pType, "Dummy") == 0)
 						return TCLocalize("分身");
 					if(str_comp_nocase(pType, "Solo") == 0)
@@ -4954,6 +4947,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 
 				if(g_Config.m_ClSmtcEnable)
 				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSmtcShowHud, Localize("显示左上角歌曲信息"), &g_Config.m_ClSmtcShowHud, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
 					CUIRect MediaButtons, PrevButton, PlayButton, NextButton;
 					CardContent.HSplitTop(LG_LineHeight, &MediaButtons, &CardContent);
 					MediaButtons.VSplitLeft((MediaButtons.w - LG_LineSpacing * 2.0f) / 3.0f, &PrevButton, &MediaButtons);
@@ -5205,3 +5202,4 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	s_ScrollRegion.AddRect(ScrollRegion);
 	s_ScrollRegion.End();
 }
+

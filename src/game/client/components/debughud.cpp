@@ -259,6 +259,45 @@ void CDebugHud::RenderHint()
 	TextRender()->Text(Spacing, Height - FontSize - Spacing, FontSize, Localize("Debug mode enabled. Press Ctrl+Shift+D to disable debug mode."));
 }
 
+void CDebugHud::RenderSwitchTileInfo()
+{
+	if(!g_Config.m_Debug)
+		return;
+
+	const CCollision *pCollision = GameClient()->Collision();
+	if(!pCollision)
+		return;
+
+	const vec2 TargetPos = GameClient()->m_Controls.m_aTargetPos[g_Config.m_ClDummy];
+	const int MapIndex = pCollision->GetMapIndex(TargetPos);
+	if(MapIndex < 0)
+		return;
+
+	const int Width = pCollision->GetWidth();
+	if(Width <= 0)
+		return;
+
+	const int TileX = MapIndex % Width;
+	const int TileY = MapIndex / Width;
+	const int SwitchType = pCollision->GetSwitchType(MapIndex);
+	const int SwitchDelay = pCollision->GetSwitchDelay(MapIndex);
+	const int SwitchNumber = pCollision->GetSwitchNumber(MapIndex);
+
+	const float Height = 300.0f;
+	const float WidthScreen = Height * Graphics()->ScreenAspect();
+	Graphics()->MapScreen(0.0f, 0.0f, WidthScreen, Height);
+
+	const float FontSize = 5.0f;
+	const float Spacing = 5.0f;
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "Switch tile: type=%d delay=%d number=%d (x=%d y=%d)", SwitchType, SwitchDelay, SwitchNumber, TileX, TileY);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	const float TextWidth = TextRender()->TextWidth(FontSize, aBuf);
+	const float X = std::max(Spacing, WidthScreen - Spacing - TextWidth);
+	const float Y = Height - FontSize - Spacing;
+	TextRender()->Text(X, Y, FontSize, aBuf);
+}
+
 void CDebugHud::OnRender()
 {
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -267,4 +306,5 @@ void CDebugHud::OnRender()
 	RenderTuning();
 	RenderNetCorrections();
 	RenderHint();
+	RenderSwitchTileInfo();
 }

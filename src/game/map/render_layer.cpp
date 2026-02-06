@@ -1611,6 +1611,7 @@ void CRenderLayerEntityGame::RenderTileLayerNoTileBuffer(const ColorRGBA &Color,
 	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha)), FilterUnfreezeAlphaTile);
 	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha)), FilterDeepFreezeAlphaTile);
 	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha)), FilterDeepUnfreezeAlphaTile);
+
 }
 
 ColorRGBA CRenderLayerEntityGame::GetDeathBorderColor() const
@@ -1942,6 +1943,24 @@ void CRenderLayerEntitySwitch::Init()
 		return !IsSpecialSwitchAlphaTile(Type);
 	};
 
+	auto NumberFilter = [this](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+		(void)Index;
+		(void)Flags;
+		(void)AngleRotate;
+		(void)CurOverlay;
+		const unsigned char Type = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
+		return IsSwitchTileNumberUsed(Type);
+	};
+
+	auto DelayFilter = [this](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+		(void)Index;
+		(void)Flags;
+		(void)AngleRotate;
+		(void)CurOverlay;
+		const unsigned char Type = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
+		return IsSwitchTileDelayUsed(Type);
+	};
+
 	auto FreezeFilter = [this](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
 		(void)Index;
 		(void)Flags;
@@ -1980,9 +1999,9 @@ void CRenderLayerEntitySwitch::Init()
 
 	UploadTileData(m_VisualTiles, 0, false, false, BaseFilter);
 	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualSwitchNumberTop, 1, false, false, BaseFilter);
+	UploadTileData(m_VisualSwitchNumberTop, 1, false, false, NumberFilter);
 	m_LayerClip = LayerClip;
-	UploadTileData(m_VisualSwitchNumberBottom, 2, false, false, BaseFilter);
+	UploadTileData(m_VisualSwitchNumberBottom, 2, false, false, DelayFilter);
 	m_LayerClip = LayerClip;
 	UploadTileData(m_VisualTilesFreeze, 0, false, false, FreezeFilter);
 	m_LayerClip = LayerClip;
@@ -2036,37 +2055,39 @@ void CRenderLayerEntitySwitch::Unload()
 
 void CRenderLayerEntitySwitch::GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const
 {
+	if(!m_pSwitchTiles)
+	{
+		*pIndex = 0;
+		*pFlags = 0;
+		return;
+	}
+
 	*pFlags = 0;
-	*pIndex = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Type;
+	const CSwitchTile &Tile = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x];
+	*pIndex = Tile.m_Type;
 	if(CurOverlay == 0)
 	{
-		*pFlags = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Flags;
+		*pFlags = Tile.m_Flags;
 		if(*pIndex == TILE_SWITCHTIMEDOPEN)
 			*pIndex = 8;
 	}
 	else if(CurOverlay == 1)
-		*pIndex = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Number;
+		*pIndex = Tile.m_Number;
 	else if(CurOverlay == 2)
-		*pIndex = m_pSwitchTiles[y * m_pLayerTilemap->m_Width + x].m_Delay;
+		*pIndex = Tile.m_Delay;
 }
 
 void CRenderLayerEntitySwitch::RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
 {
 	(void)Color;
+	if(!m_pSwitchTiles)
+		return;
+
 	Graphics()->BlendNormal();
 	const float SwitchAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlaySwitchAlpha);
+	const ColorRGBA SwitchColor(1.0f, 1.0f, 1.0f, SwitchAlpha);
 	if(SwitchAlpha > 0.0f)
-	{
-		const ColorRGBA SwitchColor(1.0f, 1.0f, 1.0f, SwitchAlpha);
 		RenderTileLayer(SwitchColor, Params);
-		if(Params.m_RenderText)
-		{
-			Graphics()->TextureSet(m_pMapImages->GetOverlayTop());
-			RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberTop.value());
-			Graphics()->TextureSet(m_pMapImages->GetOverlayBottom());
-			RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberBottom.value());
-		}
-	}
 
 	auto RenderFiltered = [&](std::optional<CTileLayerVisuals> &Visuals, float Alpha) {
 		if(!Visuals.has_value() || Alpha <= 0.0f)
@@ -2078,11 +2099,22 @@ void CRenderLayerEntitySwitch::RenderTileLayerWithTileBuffer(const ColorRGBA &Co
 	RenderFiltered(m_VisualTilesUnfreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha));
 	RenderFiltered(m_VisualTilesDeepFreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha));
 	RenderFiltered(m_VisualTilesDeepUnfreeze, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha));
+
+	if(SwitchAlpha > 0.0f && Params.m_RenderText && m_pMapImages && m_VisualSwitchNumberTop.has_value() && m_VisualSwitchNumberBottom.has_value())
+	{
+		Graphics()->TextureSet(m_pMapImages->GetOverlayTop());
+		RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberTop.value());
+		Graphics()->TextureSet(m_pMapImages->GetOverlayBottom());
+		RenderTileLayer(SwitchColor, Params, &m_VisualSwitchNumberBottom.value());
+	}
 }
 
 void CRenderLayerEntitySwitch::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
 {
 	(void)Color;
+	if(!m_pSwitchTiles)
+		return;
+
 	const int TileRenderFlags = Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0;
 
 	auto RenderFiltered = [&](ColorRGBA GroupColor, CRenderMap::FTileRenderFilter Filter) {
@@ -2097,19 +2129,18 @@ void CRenderLayerEntitySwitch::RenderTileLayerNoTileBuffer(const ColorRGBA &Colo
 	const float SwitchAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlaySwitchAlpha);
 	const ColorRGBA SwitchColor(1.0f, 1.0f, 1.0f, SwitchAlpha);
 	if(SwitchAlpha > 0.0f)
-	{
 		RenderFiltered(SwitchColor, FilterBaseSwitchAlphaTile);
-		if(Params.m_RenderText)
-		{
-			int OverlayRenderFlags = (Params.m_RenderText ? OVERLAYRENDERFLAG_TEXT : 0) | (Params.m_RenderInvalidTiles ? OVERLAYRENDERFLAG_EDITOR : 0);
-			RenderMap()->RenderSwitchOverlay(m_pSwitchTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, OverlayRenderFlags, SwitchColor.a);
-		}
-	}
 
 	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayFreezeAlpha)), FilterFreezeAlphaTile);
 	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayUnfreezeAlpha)), FilterUnfreezeAlphaTile);
 	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepFreezeAlpha)), FilterDeepFreezeAlphaTile);
 	RenderFiltered(ColorRGBA(1.0f, 1.0f, 1.0f, QmOverlayAlpha(g_Config.m_QmEntityOverlayDeepUnfreezeAlpha)), FilterDeepUnfreezeAlphaTile);
+
+	if(SwitchAlpha > 0.0f && Params.m_RenderText)
+	{
+		int OverlayRenderFlags = (Params.m_RenderText ? OVERLAYRENDERFLAG_TEXT : 0) | (Params.m_RenderInvalidTiles ? OVERLAYRENDERFLAG_EDITOR : 0);
+		RenderMap()->RenderSwitchOverlay(m_pSwitchTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, OverlayRenderFlags, SwitchColor.a);
+	}
 }
 
 // TUNE
@@ -2140,3 +2171,4 @@ void CRenderLayerEntityTune::RenderTileLayerNoTileBuffer(const ColorRGBA &Color,
 	Graphics()->BlendNormal();
 	RenderMap()->RenderTunemap(m_pTuneTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_TRANSPARENT);
 }
+

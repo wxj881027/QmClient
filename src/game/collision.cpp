@@ -14,6 +14,18 @@
 #include <game/mapitems.h>
 
 #include <cmath>
+#include <cstdint>
+#include <limits>
+
+static bool IsValidTileIndex(int Index, int Width, int Height)
+{
+	return Width > 0 && Height > 0 && Index >= 0 && Index < Width * Height;
+}
+
+static bool IsValidTileCoord(int Nx, int Ny, int Width, int Height)
+{
+	return Width > 0 && Height > 0 && Nx >= 0 && Ny >= 0 && Nx < Width && Ny < Height;
+}
 
 vec2 ClampVel(int MoveRestriction, vec2 Vel)
 {
@@ -52,9 +64,39 @@ void CCollision::Init(class CLayers *pLayers)
 	Unload();
 
 	m_pLayers = pLayers;
+	if(!m_pLayers || !m_pLayers->Map() || !m_pLayers->GameLayer())
+	{
+		Unload();
+		return;
+	}
+
 	m_Width = m_pLayers->GameLayer()->m_Width;
 	m_Height = m_pLayers->GameLayer()->m_Height;
+	if(m_Width <= 0 || m_Height <= 0)
+	{
+		Unload();
+		return;
+	}
+
+	const int64_t TileCount = static_cast<int64_t>(m_Width) * static_cast<int64_t>(m_Height);
+	if(TileCount <= 0 || TileCount > std::numeric_limits<int>::max())
+	{
+		Unload();
+		return;
+	}
+
+	if(m_pLayers->Map()->GetDataSize(m_pLayers->GameLayer()->m_Data) < static_cast<size_t>(TileCount) * sizeof(CTile))
+	{
+		Unload();
+		return;
+	}
+
 	m_pTiles = static_cast<CTile *>(m_pLayers->Map()->GetData(m_pLayers->GameLayer()->m_Data));
+	if(!m_pTiles)
+	{
+		Unload();
+		return;
+	}
 
 	if(m_pLayers->TeleLayer())
 	{
@@ -173,9 +215,21 @@ void CCollision::Unload()
 
 void CCollision::FillAntibot(CAntibotMapData *pMapData) const
 {
+	if(!pMapData)
+		return;
+
 	pMapData->m_Width = m_Width;
 	pMapData->m_Height = m_Height;
+	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
+	{
+		pMapData->m_pTiles = nullptr;
+		return;
+	}
+
 	pMapData->m_pTiles = (unsigned char *)malloc((size_t)m_Width * m_Height);
+	if(!pMapData->m_pTiles)
+		return;
+
 	for(int i = 0; i < m_Width * m_Height; i++)
 	{
 		pMapData->m_pTiles[i] = 0;
@@ -313,7 +367,7 @@ int CCollision::GetMoveRestrictions(CALLBACK_SWITCHACTIVE pfnSwitchActive, void 
 
 int CCollision::GetTile(int x, int y) const
 {
-	if(!m_pTiles)
+	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
 		return 0;
 
 	int Nx = std::clamp(x / 32, 0, m_Width - 1);
@@ -603,18 +657,33 @@ int CCollision::IsSolid(int x, int y) const
 
 bool CCollision::IsThrough(int x, int y, int OffsetX, int OffsetY, vec2 Pos0, vec2 Pos1) const
 {
+	if(!m_pTiles)
+		return false;
+
 	const int Index = GetPureMapIndex(x, y);
+	if(!IsValidTileIndex(Index, m_Width, m_Height))
+		return false;
+
 	if(m_pFront && (m_pFront[Index].m_Index == TILE_THROUGH_ALL || m_pFront[Index].m_Index == TILE_THROUGH_CUT))
 		return true;
 	if(m_pFront && m_pFront[Index].m_Index == TILE_THROUGH_DIR && ((m_pFront[Index].m_Flags == ROTATION_0 && Pos0.y > Pos1.y) || (m_pFront[Index].m_Flags == ROTATION_90 && Pos0.x < Pos1.x) || (m_pFront[Index].m_Flags == ROTATION_180 && Pos0.y < Pos1.y) || (m_pFront[Index].m_Flags == ROTATION_270 && Pos0.x > Pos1.x)))
 		return true;
 	const int OffsetIndex = GetPureMapIndex(x + OffsetX, y + OffsetY);
+	if(!IsValidTileIndex(OffsetIndex, m_Width, m_Height))
+		return false;
+
 	return m_pTiles[OffsetIndex].m_Index == TILE_THROUGH || (m_pFront && m_pFront[OffsetIndex].m_Index == TILE_THROUGH);
 }
 
 bool CCollision::IsHookBlocker(int x, int y, vec2 Pos0, vec2 Pos1) const
 {
+	if(!m_pTiles)
+		return false;
+
 	const int Index = GetPureMapIndex(x, y);
+	if(!IsValidTileIndex(Index, m_Width, m_Height))
+		return false;
+
 	if(m_pTiles[Index].m_Index == TILE_THROUGH_ALL || (m_pFront && m_pFront[Index].m_Index == TILE_THROUGH_ALL))
 		return true;
 	if(m_pTiles[Index].m_Index == TILE_THROUGH_DIR && ((m_pTiles[Index].m_Flags == ROTATION_0 && Pos0.y < Pos1.y) ||
@@ -629,7 +698,7 @@ bool CCollision::IsHookBlocker(int x, int y, vec2 Pos0, vec2 Pos1) const
 
 int CCollision::IsWallJump(int Index) const
 {
-	if(Index < 0)
+	if(!m_pTiles || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	return m_pTiles[Index].m_Index == TILE_WALLJUMP;
@@ -647,7 +716,7 @@ int CCollision::IsFrontNoLaser(int x, int y) const
 
 int CCollision::IsTeleport(int Index) const
 {
-	if(Index < 0 || !m_pTele)
+	if(!m_pTele || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pTele[Index].m_Type == TILE_TELEIN)
@@ -658,9 +727,7 @@ int CCollision::IsTeleport(int Index) const
 
 int CCollision::IsEvilTeleport(int Index) const
 {
-	if(Index < 0)
-		return 0;
-	if(!m_pTele)
+	if(!m_pTele || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pTele[Index].m_Type == TILE_TELEINEVIL)
@@ -671,24 +738,21 @@ int CCollision::IsEvilTeleport(int Index) const
 
 bool CCollision::IsCheckTeleport(int Index) const
 {
-	if(Index < 0 || !m_pTele)
+	if(!m_pTele || !IsValidTileIndex(Index, m_Width, m_Height))
 		return false;
 	return m_pTele[Index].m_Type == TILE_TELECHECKIN;
 }
 
 bool CCollision::IsCheckEvilTeleport(int Index) const
 {
-	if(Index < 0 || !m_pTele)
+	if(!m_pTele || !IsValidTileIndex(Index, m_Width, m_Height))
 		return false;
 	return m_pTele[Index].m_Type == TILE_TELECHECKINEVIL;
 }
 
 int CCollision::IsTeleCheckpoint(int Index) const
 {
-	if(Index < 0)
-		return 0;
-
-	if(!m_pTele)
+	if(!m_pTele || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pTele[Index].m_Type == TILE_TELECHECK)
@@ -699,7 +763,7 @@ int CCollision::IsTeleCheckpoint(int Index) const
 
 int CCollision::IsTeleportWeapon(int Index) const
 {
-	if(Index < 0 || !m_pTele)
+	if(!m_pTele || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pTele[Index].m_Type == TILE_TELEINWEAPON)
@@ -710,7 +774,7 @@ int CCollision::IsTeleportWeapon(int Index) const
 
 int CCollision::IsTeleportHook(int Index) const
 {
-	if(Index < 0 || !m_pTele)
+	if(!m_pTele || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pTele[Index].m_Type == TILE_TELEINHOOK)
@@ -721,7 +785,7 @@ int CCollision::IsTeleportHook(int Index) const
 
 int CCollision::IsSpeedup(int Index) const
 {
-	if(Index < 0 || !m_pSpeedup)
+	if(!m_pSpeedup || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pSpeedup[Index].m_Force > 0)
@@ -732,7 +796,7 @@ int CCollision::IsSpeedup(int Index) const
 
 int CCollision::IsTune(int Index) const
 {
-	if(Index < 0 || !m_pTune)
+	if(!m_pTune || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pTune[Index].m_Type)
@@ -743,7 +807,7 @@ int CCollision::IsTune(int Index) const
 
 void CCollision::GetSpeedup(int Index, vec2 *pDir, int *pForce, int *pMaxSpeed, int *pType) const
 {
-	if(Index < 0 || !m_pSpeedup)
+	if(!m_pSpeedup || !IsValidTileIndex(Index, m_Width, m_Height))
 		return;
 	float Angle = m_pSpeedup[Index].m_Angle * (pi / 180.0f);
 	*pForce = m_pSpeedup[Index].m_Force;
@@ -755,7 +819,7 @@ void CCollision::GetSpeedup(int Index, vec2 *pDir, int *pForce, int *pMaxSpeed, 
 
 int CCollision::GetSwitchType(int Index) const
 {
-	if(Index < 0 || !m_pSwitch)
+	if(!m_pSwitch || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pSwitch[Index].m_Type > 0)
@@ -766,7 +830,7 @@ int CCollision::GetSwitchType(int Index) const
 
 int CCollision::GetSwitchNumber(int Index) const
 {
-	if(Index < 0 || !m_pSwitch)
+	if(!m_pSwitch || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pSwitch[Index].m_Type > 0 && m_pSwitch[Index].m_Number > 0)
@@ -777,7 +841,7 @@ int CCollision::GetSwitchNumber(int Index) const
 
 int CCollision::GetSwitchDelay(int Index) const
 {
-	if(Index < 0 || !m_pSwitch)
+	if(!m_pSwitch || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 
 	if(m_pSwitch[Index].m_Type > 0)
@@ -788,6 +852,9 @@ int CCollision::GetSwitchDelay(int Index) const
 
 int CCollision::MoverSpeed(int x, int y, vec2 *pSpeed) const
 {
+	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
+		return 0;
+
 	int Nx = std::clamp(x / 32, 0, m_Width - 1);
 	int Ny = std::clamp(y / 32, 0, m_Height - 1);
 	int Index = m_pTiles[Ny * m_Width + Nx].m_Index;
@@ -830,6 +897,9 @@ int CCollision::MoverSpeed(int x, int y, vec2 *pSpeed) const
 
 int CCollision::GetPureMapIndex(float x, float y) const
 {
+	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
+		return -1;
+
 	int Nx = std::clamp(round_to_int(x) / 32, 0, m_Width - 1);
 	int Ny = std::clamp(round_to_int(y) / 32, 0, m_Height - 1);
 	return Ny * m_Width + Nx;
@@ -837,7 +907,7 @@ int CCollision::GetPureMapIndex(float x, float y) const
 
 bool CCollision::TileExists(int Index) const
 {
-	if(Index < 0)
+	if(!m_pTiles || !IsValidTileIndex(Index, m_Width, m_Height))
 		return false;
 
 	if((m_pTiles[Index].m_Index >= TILE_FREEZE && m_pTiles[Index].m_Index <= TILE_TELE_LASER_DISABLE) || (m_pTiles[Index].m_Index >= TILE_LFREEZE && m_pTiles[Index].m_Index <= TILE_LUNFREEZE))
@@ -859,7 +929,7 @@ bool CCollision::TileExists(int Index) const
 
 bool CCollision::TileExistsNext(int Index) const
 {
-	if(Index < 0)
+	if(!m_pTiles || !IsValidTileIndex(Index, m_Width, m_Height))
 		return false;
 	int TileOnTheLeft = (Index - 1 > 0) ? Index - 1 : Index;
 	int TileOnTheRight = (Index + 1 < m_Width * m_Height) ? Index + 1 : Index;
@@ -901,6 +971,9 @@ bool CCollision::TileExistsNext(int Index) const
 
 int CCollision::GetMapIndex(vec2 Pos) const
 {
+	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
+		return -1;
+
 	int Nx = std::clamp((int)Pos.x / 32, 0, m_Width - 1);
 	int Ny = std::clamp((int)Pos.y / 32, 0, m_Height - 1);
 	int Index = Ny * m_Width + Nx;
@@ -914,6 +987,9 @@ int CCollision::GetMapIndex(vec2 Pos) const
 std::vector<int> CCollision::GetMapIndices(vec2 PrevPos, vec2 Pos, unsigned MaxIndices) const
 {
 	std::vector<int> vIndices;
+	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
+		return vIndices;
+
 	float d = distance(PrevPos, Pos);
 	int End(d + 1);
 	if(!d)
@@ -955,7 +1031,7 @@ std::vector<int> CCollision::GetMapIndices(vec2 PrevPos, vec2 Pos, unsigned MaxI
 
 vec2 CCollision::GetPos(int Index) const
 {
-	if(Index < 0)
+	if(!IsValidTileIndex(Index, m_Width, m_Height))
 		return vec2(0, 0);
 
 	int x = Index % m_Width;
@@ -965,39 +1041,45 @@ vec2 CCollision::GetPos(int Index) const
 
 int CCollision::GetTileIndex(int Index) const
 {
-	if(Index < 0)
+	if(!m_pTiles || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 	return m_pTiles[Index].m_Index;
 }
 
 int CCollision::GetFrontTileIndex(int Index) const
 {
-	if(Index < 0 || !m_pFront)
+	if(!m_pFront || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 	return m_pFront[Index].m_Index;
 }
 
 int CCollision::GetTileFlags(int Index) const
 {
-	if(Index < 0)
+	if(!m_pTiles || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 	return m_pTiles[Index].m_Flags;
 }
 
 int CCollision::GetFrontTileFlags(int Index) const
 {
-	if(Index < 0 || !m_pFront)
+	if(!m_pFront || !IsValidTileIndex(Index, m_Width, m_Height))
 		return 0;
 	return m_pFront[Index].m_Flags;
 }
 
 int CCollision::GetIndex(int Nx, int Ny) const
 {
+	if(!m_pTiles || !IsValidTileCoord(Nx, Ny, m_Width, m_Height))
+		return 0;
+
 	return m_pTiles[Ny * m_Width + Nx].m_Index;
 }
 
 int CCollision::GetIndex(vec2 PrevPos, vec2 Pos) const
 {
+	if(m_Width <= 0 || m_Height <= 0 || (!m_pTele && !m_pSpeedup))
+		return -1;
+
 	float Distance = distance(PrevPos, Pos);
 
 	if(!Distance)
@@ -1031,14 +1113,14 @@ int CCollision::GetIndex(vec2 PrevPos, vec2 Pos) const
 
 int CCollision::GetFrontIndex(int Nx, int Ny) const
 {
-	if(!m_pFront)
+	if(!m_pFront || !IsValidTileCoord(Nx, Ny, m_Width, m_Height))
 		return 0;
 	return m_pFront[Ny * m_Width + Nx].m_Index;
 }
 
 int CCollision::GetFrontTile(int x, int y) const
 {
-	if(!m_pFront)
+	if(!m_pFront || m_Width <= 0 || m_Height <= 0)
 		return 0;
 	int Nx = std::clamp(x / 32, 0, m_Width - 1);
 	int Ny = std::clamp(y / 32, 0, m_Height - 1);
@@ -1057,16 +1139,28 @@ int CCollision::Entity(int x, int y, int Layer) const
 	switch(Layer)
 	{
 	case LAYER_GAME:
+		if(!m_pTiles)
+			return 0;
 		return m_pTiles[Index].m_Index - ENTITY_OFFSET;
 	case LAYER_FRONT:
+		if(!m_pFront)
+			return 0;
 		return m_pFront[Index].m_Index - ENTITY_OFFSET;
 	case LAYER_SWITCH:
+		if(!m_pSwitch)
+			return 0;
 		return m_pSwitch[Index].m_Type - ENTITY_OFFSET;
 	case LAYER_TELE:
+		if(!m_pTele)
+			return 0;
 		return m_pTele[Index].m_Type - ENTITY_OFFSET;
 	case LAYER_SPEEDUP:
+		if(!m_pSpeedup)
+			return 0;
 		return m_pSpeedup[Index].m_Type - ENTITY_OFFSET;
 	case LAYER_TUNE:
+		if(!m_pTune)
+			return 0;
 		return m_pTune[Index].m_Type - ENTITY_OFFSET;
 	default:
 		dbg_assert_failed("Invalid Layer: %d", Layer);
@@ -1075,6 +1169,9 @@ int CCollision::Entity(int x, int y, int Layer) const
 
 void CCollision::SetCollisionAt(float x, float y, int Index)
 {
+	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
+		return;
+
 	int Nx = std::clamp(round_to_int(x) / 32, 0, m_Width - 1);
 	int Ny = std::clamp(round_to_int(y) / 32, 0, m_Height - 1);
 
@@ -1083,7 +1180,7 @@ void CCollision::SetCollisionAt(float x, float y, int Index)
 
 void CCollision::SetDoorCollisionAt(float x, float y, int Type, int Flags, int Number)
 {
-	if(!m_pDoor)
+	if(!m_pDoor || m_Width <= 0 || m_Height <= 0)
 		return;
 	int Nx = std::clamp(round_to_int(x) / 32, 0, m_Width - 1);
 	int Ny = std::clamp(round_to_int(y) / 32, 0, m_Height - 1);
@@ -1095,7 +1192,10 @@ void CCollision::SetDoorCollisionAt(float x, float y, int Type, int Flags, int N
 
 void CCollision::GetDoorTile(int Index, CDoorTile *pDoorTile) const
 {
-	if(!m_pDoor || Index < 0 || !m_pDoor[Index].m_Index)
+	if(!pDoorTile)
+		return;
+
+	if(!m_pDoor || !IsValidTileIndex(Index, m_Width, m_Height) || !m_pDoor[Index].m_Index)
 	{
 		pDoorTile->m_Index = 0;
 		pDoorTile->m_Flags = 0;
@@ -1233,7 +1333,7 @@ int CCollision::IntersectAir(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pO
 
 int CCollision::IsTimeCheckpoint(int Index) const
 {
-	if(Index < 0)
+	if(!m_pTiles || !IsValidTileIndex(Index, m_Width, m_Height))
 		return -1;
 
 	int z = m_pTiles[Index].m_Index;
@@ -1244,7 +1344,7 @@ int CCollision::IsTimeCheckpoint(int Index) const
 
 int CCollision::IsFrontTimeCheckpoint(int Index) const
 {
-	if(Index < 0 || !m_pFront)
+	if(!m_pFront || !IsValidTileIndex(Index, m_Width, m_Height))
 		return -1;
 
 	int z = m_pFront[Index].m_Index;

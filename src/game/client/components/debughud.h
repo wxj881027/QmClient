@@ -11,6 +11,7 @@ class CDebugHud : public CComponent
 	void RenderNetCorrections();
 	void RenderTuning();
 	void RenderHint();
+	void RenderSwitchTileInfo();
 
 	CGraph m_RampGraph;
 	CGraph m_ZoomedInGraph;
