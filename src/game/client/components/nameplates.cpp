@@ -45,7 +45,10 @@ public:
 	bool m_ShowCoordY;
 	bool m_ShowCoords;
 	bool m_CoordXAlignHint;
+	bool m_CoordXAlignHintStrict;
 	bool m_CoordXAligned;
+	float m_CoordXAlignBaseX;
+	int m_CoordXAlignDiff;
 	vec2 m_Coords;
 	float m_FontSizeCoords;
 	bool m_ShowDirection;
@@ -615,6 +618,7 @@ public:
 	friend class CGameClient;
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
+		const CNetObj_PlayerInfo *pInfo = Data.m_InGame ? This.m_Snap.m_apPlayerInfos[Data.m_ClientId] : nullptr;
 		/*
 			If in a real game,
 				Show other people's pings if in scoreboard
@@ -625,13 +629,13 @@ public:
 		m_Radius = Data.m_FontSize / 3.0f;
 		m_Size = vec2(m_Radius, m_Radius) * 1.5f;
 		m_Visible = Data.m_InGame ? (
-						    ((Data.m_ShowName && g_Config.m_TcNameplatePingCircle > 0) ||
-							    (This.m_Scoreboard.IsActive() && !This.m_Snap.m_apPlayerInfos[Data.m_ClientId]->m_Local))) :
-					    (
-						    (Data.m_ShowName && g_Config.m_TcNameplatePingCircle > 0));
+					    ((Data.m_ShowName && g_Config.m_TcNameplatePingCircle > 0) ||
+						    (This.m_Scoreboard.IsActive() && pInfo && !pInfo->m_Local))) :
+				    (
+					    (Data.m_ShowName && g_Config.m_TcNameplatePingCircle > 0));
 		if(!m_Visible)
 			return;
-		int Ping = Data.m_InGame ? This.m_Snap.m_apPlayerInfos[Data.m_ClientId]->m_Latency : (1 + Data.m_ClientId) * 25;
+		int Ping = Data.m_InGame && pInfo ? pInfo->m_Latency : (1 + Data.m_ClientId) * 25;
 		m_Color = color_cast<ColorRGBA>(ColorHSLA((float)(300 - std::clamp(Ping, 0, 300)) / 1000.0f, 1.0f, 0.5f, Data.m_Color.a));
 	}
 	void Render(CGameClient &This, vec2 Pos) const override
@@ -655,7 +659,8 @@ private:
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
-		m_Visible = Data.m_InGame ? g_Config.m_TcNameplateSkins > (This.m_Snap.m_apPlayerInfos[Data.m_ClientId]->m_Local ? 1 : 0) : g_Config.m_TcNameplateSkins > 0;
+		const CNetObj_PlayerInfo *pInfo = Data.m_InGame ? This.m_Snap.m_apPlayerInfos[Data.m_ClientId] : nullptr;
+		m_Visible = Data.m_InGame ? (pInfo && g_Config.m_TcNameplateSkins > (pInfo->m_Local ? 1 : 0)) : g_Config.m_TcNameplateSkins > 0;
 		if(Data.m_InGame && This.ShouldHideStreamerSkin(Data.m_ClientId))
 			m_Visible = false;
 		if(!m_Visible)
@@ -686,11 +691,7 @@ private:
 	float m_FontSize = -INFINITY;
 	bool m_ShowX = false;
 	bool m_ShowY = false;
-	bool m_CoordXAligned = false;
-	bool m_AlignHintEnabled = false;
 	char m_aText[64] = "";
-	char m_aTextX[32] = "";
-	STextContainerIndex m_TextContainerIndexX;
 
 	static float RoundCoord(float Value)
 	{
@@ -698,12 +699,6 @@ private:
 	}
 
 protected:
-	void Update(CGameClient &This, const CNamePlateData &Data) override
-	{
-		m_CoordXAligned = Data.m_CoordXAligned;
-		m_AlignHintEnabled = Data.m_CoordXAlignHint;
-		CNamePlatePartText::Update(This, Data);
-	}
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = Data.m_ShowCoords && (Data.m_ShowCoordX || Data.m_ShowCoordY);
@@ -724,7 +719,6 @@ protected:
 		m_ShowY = Data.m_ShowCoordY;
 		m_Coords = vec2(RoundCoord(Data.m_Coords.x), RoundCoord(Data.m_Coords.y));
 
-		This.TextRender()->DeleteTextContainer(m_TextContainerIndexX);
 		if(m_ShowX && m_ShowY)
 			str_format(m_aText, sizeof(m_aText), "X:%.2f Y:%.2f", m_Coords.x, m_Coords.y);
 		else if(m_ShowX)
@@ -735,36 +729,127 @@ protected:
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
-
-		if(m_ShowX)
-		{
-			str_format(m_aTextX, sizeof(m_aTextX), "X:%.2f", m_Coords.x);
-			CTextCursor CursorX;
-			CursorX.m_FontSize = m_FontSize;
-			This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndexX, &CursorX, m_aTextX);
-		}
-	}
-	void Reset(CGameClient &This) override
-	{
-		CNamePlatePartText::Reset(This);
-		This.TextRender()->DeleteTextContainer(m_TextContainerIndexX);
-	}
-	void Render(CGameClient &This, vec2 Pos) const override
-	{
-		CNamePlatePartText::Render(This, Pos);
-		if(!m_AlignHintEnabled || !m_CoordXAligned || !m_ShowX || !m_TextContainerIndexX.Valid())
-			return;
-
-		const ColorRGBA HintColor = ColorRGBA(0.2f, 1.0f, 0.2f, m_Color.a);
-		const ColorRGBA OutlineColor = s_OutlineColor.WithMultipliedAlpha(m_Color.a);
-		const float LeftX = Pos.x - Size().x / 2.0f;
-		const float LeftY = Pos.y - Size().y / 2.0f;
-		This.TextRender()->RenderTextContainer(m_TextContainerIndexX, HintColor, OutlineColor, LeftX, LeftY);
 	}
 
 public:
 	CNamePlatePartCoordinates(CGameClient &This) :
 		CNamePlatePartText(This) {}
+};
+
+class CNamePlatePartCoordXAlignPopup : public CNamePlatePart
+{
+private:
+	STextContainerIndex m_TextContainerIndex;
+	char m_aText[32] = "";
+	float m_StartTime = -INFINITY;
+	float m_NextAllowedTriggerTime = -INFINITY;
+	bool m_AlignHintEnabled = false;
+	bool m_PrevAligned = false;
+	vec2 m_TextSize = vec2(0.0f, 0.0f);
+	ColorRGBA m_BaseColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+
+	static float RoundCoord(float Value)
+	{
+		return static_cast<float>(std::round(Value * 100.0f) / 100.0f);
+	}
+
+	static float CalcAlignPopupAlpha(float TimeSeconds)
+	{
+		const float FadeInDuration = 0.12f;
+		const float HoldDuration = 0.56f;
+		const float FadeOutDuration = 0.22f;
+		const float TotalDuration = FadeInDuration + HoldDuration + FadeOutDuration;
+		if(TimeSeconds < 0.0f || TimeSeconds > TotalDuration)
+			return 0.0f;
+		if(TimeSeconds < FadeInDuration)
+			return TimeSeconds / FadeInDuration;
+		if(TimeSeconds < FadeInDuration + HoldDuration)
+			return 1.0f;
+		const float FadeOutTime = TimeSeconds - FadeInDuration - HoldDuration;
+		return 1.0f - FadeOutTime / FadeOutDuration;
+	}
+
+public:
+	CNamePlatePartCoordXAlignPopup(CGameClient &This) :
+		CNamePlatePart(This)
+	{
+		m_Size = vec2(0.0f, 0.0f);
+		m_Padding = vec2(0.0f, 0.0f);
+	}
+
+	void Update(CGameClient &This, const CNamePlateData &Data) override
+	{
+		constexpr float AlignHintCooldown = 3.0f;
+		const float Now = This.Client()->LocalTime();
+
+		m_AlignHintEnabled = Data.m_CoordXAlignHint;
+		m_Visible = m_AlignHintEnabled;
+		m_BaseColor = Data.m_Color;
+		m_Size = vec2(0.0f, 0.0f);
+		m_Padding = vec2(0.0f, 0.0f);
+
+		if(!m_AlignHintEnabled)
+		{
+			m_PrevAligned = false;
+			return;
+		}
+
+		const bool Trigger = Data.m_CoordXAligned && !m_PrevAligned && Now >= m_NextAllowedTriggerTime;
+		m_PrevAligned = Data.m_CoordXAligned;
+		if(!Trigger)
+			return;
+
+		m_StartTime = Now;
+		m_NextAllowedTriggerTime = Now + AlignHintCooldown;
+		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
+
+		const float BaseX = RoundCoord(Data.m_CoordXAlignBaseX);
+		if(Data.m_CoordXAlignDiff >= 0)
+			str_format(m_aText, sizeof(m_aText), "%.2f+%d", BaseX, Data.m_CoordXAlignDiff);
+		else
+			str_format(m_aText, sizeof(m_aText), "%.2f%d", BaseX, Data.m_CoordXAlignDiff);
+
+		CTextCursor Cursor;
+		Cursor.m_FontSize = Data.m_FontSizeCoords;
+		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
+		if(m_TextContainerIndex.Valid())
+		{
+			const STextBoundingBox PopupBounds = This.TextRender()->GetBoundingBoxTextContainer(m_TextContainerIndex);
+			m_TextSize = vec2(PopupBounds.m_W, PopupBounds.m_H);
+		}
+		else
+		{
+			m_TextSize = vec2(0.0f, 0.0f);
+		}
+	}
+
+	void Reset(CGameClient &This) override
+	{
+		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
+		m_StartTime = -INFINITY;
+		m_NextAllowedTriggerTime = -INFINITY;
+		m_PrevAligned = false;
+		m_TextSize = vec2(0.0f, 0.0f);
+	}
+
+	void Render(CGameClient &This, vec2 Pos) const override
+	{
+		if(!m_AlignHintEnabled || !m_TextContainerIndex.Valid())
+			return;
+
+		const float TimeSinceStart = This.Client()->LocalTime() - m_StartTime;
+		const float PopupAlpha = CalcAlignPopupAlpha(TimeSinceStart);
+		if(PopupAlpha <= 0.0f)
+			return;
+
+		const float PopupDuration = 0.9f;
+		const float Rise = std::clamp(TimeSinceStart / PopupDuration, 0.0f, 1.0f) * 12.0f;
+		const ColorRGBA HintColor = ColorRGBA(0.2f, 1.0f, 0.2f, m_BaseColor.a * PopupAlpha);
+		const ColorRGBA OutlineColor = s_OutlineColor.WithMultipliedAlpha(m_BaseColor.a * PopupAlpha);
+		const float PopupX = Pos.x - m_TextSize.x / 2.0f;
+		const float PopupY = Pos.y - m_TextSize.y - 36.0f - Rise;
+		This.TextRender()->RenderTextContainer(m_TextContainerIndex, HintColor, OutlineColor, PopupX, PopupY);
+	}
 };
 
 class CNamePlatePartReason : public CNamePlatePartText
@@ -779,8 +864,9 @@ protected:
 		m_Visible = Data.m_InGame;
 		if(!m_Visible)
 			return false;
+		const CNetObj_PlayerInfo *pInfo = This.m_Snap.m_apPlayerInfos[Data.m_ClientId];
 		const char *pReason = This.m_WarList.GetWarData(Data.m_ClientId).m_aReason;
-		m_Visible = pReason[0] != '\0' && !This.m_Snap.m_apPlayerInfos[Data.m_ClientId]->m_Local;
+		m_Visible = pInfo && pReason[0] != '\0' && !pInfo->m_Local;
 		if(!m_Visible)
 			return false;
 		m_Color = ColorRGBA(0.7f, 0.7f, 0.7f, Data.m_Color.a);
@@ -891,6 +977,7 @@ private:
 		AddPart<CNamePlatePartNewLine>(This);
 
 		AddPart<CNamePlatePartCoordinates>(This); // TClient
+		AddPart<CNamePlatePartCoordXAlignPopup>(This); // TClient
 		AddPart<CNamePlatePartNewLine>(This);
 
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_LEFT);
@@ -991,6 +1078,13 @@ public:
 
 void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *pPlayerInfo, float Alpha)
 {
+	if(!pPlayerInfo)
+		return;
+
+	const int ClientId = pPlayerInfo->m_ClientId;
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+
 	// Get screen edges to avoid rendering offscreen
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
@@ -1004,12 +1098,11 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 
 	CNamePlateData Data;
 
-	const auto &ClientData = GameClient()->m_aClients[pPlayerInfo->m_ClientId];
-	const bool OtherTeam = GameClient()->IsOtherTeam(pPlayerInfo->m_ClientId);
+	const auto &ClientData = GameClient()->m_aClients[ClientId];
+	const bool OtherTeam = GameClient()->IsOtherTeam(ClientId);
 
 	Data.m_InGame = true;
 
-	const int ClientId = pPlayerInfo->m_ClientId;
 	const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 
 	Data.m_ShowName = pPlayerInfo->m_Local ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates;
@@ -1032,13 +1125,19 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	Data.m_Coords = Position / 32.0f;
 	Data.m_FontSizeCoords = 18.0f + 20.0f * g_Config.m_ClNamePlatesCoordsSize / 100.0f;
 	Data.m_CoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
+	Data.m_CoordXAlignHintStrict = g_Config.m_QmNameplateCoordXAlignHintStrict != 0;
 	Data.m_CoordXAligned = false;
-	if(Data.m_CoordXAlignHint && Data.m_ShowCoordX)
+	Data.m_CoordXAlignBaseX = Data.m_Coords.x;
+	Data.m_CoordXAlignDiff = 0;
+	if(Data.m_CoordXAlignHint && !GameClient()->m_aClients[ClientId].m_Solo)
 	{
 		const float Range = 64.0f;
 		const float RangeSq = Range * Range;
-		const float Tolerance = 0.03f;
+		const float Tolerance = Data.m_CoordXAlignHintStrict ? 0.0f : 0.03f;
+		const float StrictEpsilon = 0.0001f;
 		const float SelfX = Data.m_Coords.x;
+		const float SelfY = Data.m_Coords.y;
+		float BestDistSq = INFINITY;
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
 			if(i == ClientId)
@@ -1050,18 +1149,33 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 				continue;
 			if(GameClient()->m_aClients[i].m_IsVolleyBall)
 				continue;
+			if(GameClient()->m_aClients[i].m_Solo)
+				continue;
 
 			const vec2 OtherPos = GameClient()->m_aClients[i].m_RenderPos;
 			const float Dx = OtherPos.x - Position.x;
 			const float Dy = OtherPos.y - Position.y;
-			if(Dx * Dx + Dy * Dy > RangeSq)
+			const float DistSq = Dx * Dx + Dy * Dy;
+			if(DistSq > RangeSq)
 				continue;
 
 			const float OtherX = OtherPos.x / 32.0f;
-			if(std::abs(SelfX - OtherX) <= Tolerance)
+			const float OtherY = OtherPos.y / 32.0f;
+			if(SelfY > OtherY)
+				continue;
+
+			bool XAligned = false;
+			if(Data.m_CoordXAlignHintStrict)
+				XAligned = std::abs(SelfX - OtherX) <= StrictEpsilon;
+			else
+				XAligned = std::abs(SelfX - OtherX) <= Tolerance;
+
+			if(XAligned && DistSq < BestDistSq)
 			{
+				BestDistSq = DistSq;
 				Data.m_CoordXAligned = true;
-				break;
+				Data.m_CoordXAlignBaseX = SelfX;
+				Data.m_CoordXAlignDiff = static_cast<int>(std::round((OtherX - SelfX) * 100.0f));
 			}
 		}
 	}
@@ -1086,7 +1200,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		}
 		else
 		{
-			const int Team = GameClient()->m_Teams.Team(pPlayerInfo->m_ClientId);
+			const int Team = GameClient()->m_Teams.Team(ClientId);
 			if(Team)
 				Data.m_Color = GameClient()->GetDDTeamColor(Team, 0.75f);
 		}
@@ -1119,7 +1233,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	if(Data.m_ShowDirection)
 	{
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK &&
-			pPlayerInfo->m_ClientId == GameClient()->m_aLocalIds[!g_Config.m_ClDummy])
+			ClientId == GameClient()->m_aLocalIds[!g_Config.m_ClDummy])
 		{
 			const auto &InputData = GameClient()->m_Controls.m_aInputData[!g_Config.m_ClDummy];
 			Data.m_DirLeft = InputData.m_Direction == -1;
@@ -1135,7 +1249,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		}
 		else
 		{
-			const auto &Character = GameClient()->m_Snap.m_aCharacters[pPlayerInfo->m_ClientId];
+			const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
 			Data.m_DirLeft = Character.m_Cur.m_Direction == -1;
 			Data.m_DirJump = Character.m_Cur.m_Jumped & 1;
 			Data.m_DirRight = Character.m_Cur.m_Direction == 1;
@@ -1151,31 +1265,34 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	if(GameClient()->m_Snap.m_LocalClientId != -1 || Following)
 	{
 		const int SelectedId = Following ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : GameClient()->m_Snap.m_LocalClientId;
-		const CGameClient::CSnapState::CCharacterInfo &Selected = GameClient()->m_Snap.m_aCharacters[SelectedId];
-		const CGameClient::CSnapState::CCharacterInfo &Other = GameClient()->m_Snap.m_aCharacters[pPlayerInfo->m_ClientId];
-
-		if((Selected.m_HasExtendedData || GameClient()->m_aClients[SelectedId].m_SpecCharPresent) && Other.m_HasExtendedData)
+		if(SelectedId >= 0 && SelectedId < MAX_CLIENTS)
 		{
-			int SelectedStrongWeakId = Selected.m_HasExtendedData ? Selected.m_ExtendedData.m_StrongWeakId : 0;
-			Data.m_HookStrongWeakId = Other.m_ExtendedData.m_StrongWeakId;
-			Data.m_ShowHookStrongWeakId = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong == 2;
-			if(SelectedId == pPlayerInfo->m_ClientId)
-				Data.m_ShowHookStrongWeak = Data.m_ShowHookStrongWeakId;
-			else
+			const CGameClient::CSnapState::CCharacterInfo &Selected = GameClient()->m_Snap.m_aCharacters[SelectedId];
+			const CGameClient::CSnapState::CCharacterInfo &Other = GameClient()->m_Snap.m_aCharacters[ClientId];
+
+			if((Selected.m_HasExtendedData || GameClient()->m_aClients[SelectedId].m_SpecCharPresent) && Other.m_HasExtendedData)
 			{
-				Data.m_HookStrongWeakState = SelectedStrongWeakId > Other.m_ExtendedData.m_StrongWeakId ? EHookStrongWeakState::STRONG : EHookStrongWeakState::WEAK;
-				Data.m_ShowHookStrongWeak = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong > 0;
+				int SelectedStrongWeakId = Selected.m_HasExtendedData ? Selected.m_ExtendedData.m_StrongWeakId : 0;
+				Data.m_HookStrongWeakId = Other.m_ExtendedData.m_StrongWeakId;
+				Data.m_ShowHookStrongWeakId = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong == 2;
+				if(SelectedId == ClientId)
+					Data.m_ShowHookStrongWeak = Data.m_ShowHookStrongWeakId;
+				else
+				{
+					Data.m_HookStrongWeakState = SelectedStrongWeakId > Other.m_ExtendedData.m_StrongWeakId ? EHookStrongWeakState::STRONG : EHookStrongWeakState::WEAK;
+					Data.m_ShowHookStrongWeak = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong > 0;
+				}
 			}
 		}
 	}
 
 	// TClient
-	if(!HideIdentity && g_Config.m_TcWarList && g_Config.m_TcWarListShowClan && GameClient()->m_WarList.GetWarData(pPlayerInfo->m_ClientId).m_WarClan)
+	if(!HideIdentity && g_Config.m_TcWarList && g_Config.m_TcWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
 		Data.m_ShowClan = true;
 	Data.m_Local = pPlayerInfo->m_Local;
 
 	// Check if the nameplate is actually on screen
-	CNamePlate &NamePlate = m_pData->m_aNamePlates[pPlayerInfo->m_ClientId];
+	CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
 	NamePlate.Update(*GameClient(), Data);
 	NamePlate.Render(*GameClient(), Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset));
 }
@@ -1222,7 +1339,10 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 	Data.m_Coords = vec2(12.34f + Dummy, 56.78f + Dummy);
 	Data.m_FontSizeCoords = FontSizeCoords;
 	Data.m_CoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
+	Data.m_CoordXAlignHintStrict = g_Config.m_QmNameplateCoordXAlignHintStrict != 0;
 	Data.m_CoordXAligned = false;
+	Data.m_CoordXAlignBaseX = Data.m_Coords.x;
+	Data.m_CoordXAlignDiff = 0;
 
 	Data.m_ShowDirection = g_Config.m_ClShowDirection != 0 ? true : false;
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = true;
@@ -1532,7 +1652,8 @@ void CNamePlates::OnRender()
 #endif
 	const bool ShowCoords = (g_Config.m_QmNameplateCoords || g_Config.m_QmNameplateCoordsOwn) &&
 				(g_Config.m_QmNameplateCoordX || g_Config.m_QmNameplateCoordY);
-	if(!g_Config.m_ClNamePlates && ShowDirection == 0 && !ShowCoords)
+	const bool ShowCoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
+	if(!g_Config.m_ClNamePlates && ShowDirection == 0 && !ShowCoords && !ShowCoordXAlignHint)
 		return;
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
