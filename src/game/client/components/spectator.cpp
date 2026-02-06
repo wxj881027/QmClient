@@ -15,6 +15,7 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
+#include <cmath>
 #include <limits>
 
 bool CSpectator::CanChangeSpectatorId()
@@ -507,15 +508,16 @@ void CSpectator::OnRender()
 			}
 		}
 		float TeeAlpha;
+		float NameAlpha;
 		if(Client()->State() == IClient::STATE_DEMOPLAYBACK &&
 			!GameClient()->m_Snap.m_aCharacters[GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_Active)
 		{
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.25f);
+			NameAlpha = 0.25f;
 			TeeAlpha = 0.5f;
 		}
 		else
 		{
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, PlayerSelected ? 1.0f : 0.5f);
+			NameAlpha = PlayerSelected ? 1.0f : 0.5f;
 			TeeAlpha = 1.0f;
 		}
 		CTextCursor NameCursor;
@@ -525,6 +527,7 @@ void CSpectator::OnRender()
 		NameCursor.m_LineWidth = 180.0f;
 		const int ClientId = GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId;
 		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
+		const bool IsFriend = GameClient()->m_aClients[ClientId].m_Friend;
 		char aNameBuf[MAX_NAME_LENGTH];
 		GameClient()->FormatStreamerName(ClientId, aNameBuf, sizeof(aNameBuf));
 
@@ -535,14 +538,24 @@ void CSpectator::OnRender()
 			TextRender()->TextEx(&NameCursor, aClientId);
 		}
 
-		// TClient
-		if(pInfo && !HideIdentity && pInfo->m_ClientId > 0 && g_Config.m_TcWarList && g_Config.m_TcWarListSpectate && GameClient()->m_WarList.GetAnyWar(pInfo->m_ClientId))
+		ColorRGBA NameColor;
+		if(GameClient()->IsLocalClientId(ClientId))
 		{
-			TextRender()->TextColor(GameClient()->m_WarList.GetPriorityColor(pInfo->m_ClientId));
+			const float Time = Client()->GlobalTime();
+			const float Hue = std::fmod(Time * 0.15f, 1.0f);
+			NameColor = color_cast<ColorRGBA>(ColorHSLA(Hue, 0.7f, 0.65f, 1.0f));
 		}
-
+		else if(IsFriend)
+		{
+			NameColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor));
+		}
+		else
+		{
+			NameColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		}
+		NameColor.a *= NameAlpha;
+		TextRender()->TextColor(NameColor);
 		TextRender()->TextEx(&NameCursor, aNameBuf);
-
 		if(GameClient()->m_MultiViewActivated)
 		{
 			if(GameClient()->m_aMultiViewId[GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId])
@@ -586,7 +599,7 @@ void CSpectator::OnRender()
 
 		RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TeeAlpha);
 
-		if(GameClient()->m_aClients[GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_Friend)
+		if(IsFriend)
 		{
 			TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor)));
 			TextRender()->Text(Width / 2.0f + x - TeeInfo.m_Size / 2.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, "♥", 220.0f);
@@ -679,3 +692,5 @@ void CSpectator::SpectateClosest()
 	if(NewSpectatorId > -1)
 		Spectate(NewSpectatorId);
 }
+
+
