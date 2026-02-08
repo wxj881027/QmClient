@@ -359,6 +359,7 @@ protected:
 	{
 		char m_aName[MAX_NAME_LENGTH];
 		char m_aClan[MAX_CLAN_LENGTH];
+		char m_aCategory[IFriends::MAX_FRIEND_CATEGORY_LENGTH];
 		const CServerInfo *m_pServerInfo;
 		int m_FriendState;
 		bool m_IsPlayer;
@@ -384,6 +385,7 @@ protected:
 		{
 			str_copy(m_aName, pFriendInfo->m_aName);
 			str_copy(m_aClan, pFriendInfo->m_aClan);
+			str_copy(m_aCategory, pFriendInfo->m_aCategory[0] != '\0' ? pFriendInfo->m_aCategory : IFriends::DEFAULT_CATEGORY);
 			m_FriendState = m_aName[0] == '\0' ? IFriends::FRIEND_CLAN : IFriends::FRIEND_PLAYER;
 			m_aSkin[0] = '\0';
 			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
@@ -393,7 +395,7 @@ protected:
 				m_aCustomSkinColor7[Part] = 0;
 			}
 		}
-		CFriendItem(const CServerInfo::CClient &CurrentClient, const CServerInfo *pServerInfo) :
+		CFriendItem(const CServerInfo::CClient &CurrentClient, const CServerInfo *pServerInfo, const char *pCategory) :
 			m_pServerInfo(pServerInfo),
 			m_FriendState(CurrentClient.m_FriendState),
 			m_IsPlayer(CurrentClient.m_Player),
@@ -404,6 +406,7 @@ protected:
 		{
 			str_copy(m_aName, CurrentClient.m_aName);
 			str_copy(m_aClan, CurrentClient.m_aClan);
+			str_copy(m_aCategory, pCategory != nullptr && pCategory[0] != '\0' ? pCategory : IFriends::DEFAULT_CATEGORY);
 			str_copy(m_aSkin, CurrentClient.m_aSkin);
 			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
 			{
@@ -415,6 +418,7 @@ protected:
 
 		const char *Name() const { return m_aName; }
 		const char *Clan() const { return m_aClan; }
+		const char *Category() const { return m_aCategory; }
 		const CServerInfo *ServerInfo() const { return m_pServerInfo; }
 		int FriendState() const { return m_FriendState; }
 		bool IsPlayer() const { return m_IsPlayer; }
@@ -441,15 +445,37 @@ protected:
 		}
 	};
 
-	enum
+	std::vector<unsigned char> m_vFriendsCategoryExpanded;
+	int m_FriendAddCategoryIndex = 0;
+	CUi::SDropDownState m_FriendsAddCategoryDropDownState;
+	class CFriendsCategoryPopupContext : public SPopupMenuId
 	{
-		FRIEND_PLAYER_ON = 0,
-		FRIEND_CLAN_ON,
-		FRIEND_OFF,
-		NUM_FRIEND_TYPES
-	};
-	std::vector<CFriendItem> m_avFriends[NUM_FRIEND_TYPES];
-	const CFriendItem *m_pRemoveFriend = nullptr;
+	public:
+		enum EMode
+		{
+			MODE_ACTIONS,
+			MODE_ADD,
+			MODE_RENAME,
+		};
+
+		CMenus *m_pMenus = nullptr;
+		int m_CategoryIndex = -1;
+		EMode m_Mode = MODE_ACTIONS;
+		CLineInputBuffered<IFriends::MAX_FRIEND_CATEGORY_LENGTH> m_NameInput;
+		CButtonContainer m_AddButton;
+		CButtonContainer m_RenameButton;
+		CButtonContainer m_DeleteButton;
+		CButtonContainer m_ConfirmButton;
+		CButtonContainer m_CancelButton;
+	} m_FriendsCategoryPopupContext;
+	CUi::SSelectionPopupContext m_FriendsMoveCategoryPopupContext;
+	bool m_HasMoveCategoryFriend = false;
+	char m_aMoveCategoryFriendName[MAX_NAME_LENGTH] = {0};
+	char m_aMoveCategoryFriendClan[MAX_CLAN_LENGTH] = {0};
+	bool m_HasRemoveFriend = false;
+	char m_aRemoveFriendName[MAX_NAME_LENGTH] = {0};
+	char m_aRemoveFriendClan[MAX_CLAN_LENGTH] = {0};
+	int m_RemoveFriendState = IFriends::FRIEND_NO;
 
 	// found in menus.cpp
 	void Render();
@@ -541,8 +567,10 @@ protected:
 	void RenderServerbrowserInfo(CUIRect View);
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
+	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
 	void PopupConfirmRemoveFriend();
+	void PopupCancelRemoveFriend();
 	void RenderServerbrowserTabBar(CUIRect TabBar);
 	void RenderServerbrowserToolBox(CUIRect ToolBox);
 	void RenderServerbrowser(CUIRect MainView);

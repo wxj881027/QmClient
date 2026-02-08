@@ -353,6 +353,8 @@ MACRO_CONFIG_INT(ClShowBroadcasts, cl_show_broadcasts, 1, 0, 1, CFGFLAG_CLIENT, 
 MACRO_CONFIG_INT(ClPrintBroadcasts, cl_print_broadcasts, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "将广播消息打印到控制台")
 MACRO_CONFIG_INT(ClPrintMotd, cl_print_motd, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "将每日消息打印到控制台")
 MACRO_CONFIG_INT(ClFriendsIgnoreClan, cl_friends_ignore_clan, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "搜索好友时忽略战队标签")
+MACRO_CONFIG_COL(ClFriendsListFriendColor, cl_friends_list_friend_color, 0x20D9A8, CFGFLAG_CLIENT | CFGFLAG_SAVE, "好友列表中好友条目颜色")
+MACRO_CONFIG_COL(ClFriendsListClanColor, cl_friends_list_clan_color, 0xB1B48C, CFGFLAG_CLIENT | CFGFLAG_SAVE, "好友列表中战队成员条目颜色")
 
 MACRO_CONFIG_STR(ClAssetsEntities, cl_assets_entities, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "The asset/assets for entities")
 MACRO_CONFIG_STR(ClAssetGame, cl_asset_game, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "The asset for game")

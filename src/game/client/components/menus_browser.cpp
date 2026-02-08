@@ -27,10 +27,28 @@ using namespace FontIcons;
 
 static constexpr ColorRGBA gs_HighlightedTextColor = ColorRGBA(0.4f, 0.4f, 1.0f, 1.0f);
 
+static bool IsClanMembersCategory(const char *pCategory)
+{
+	return pCategory != nullptr && str_comp_nocase(pCategory, IFriends::CLAN_MEMBERS_CATEGORY) == 0;
+}
+
+static bool IsOfflineFriendsCategory(const char *pCategory)
+{
+	return pCategory != nullptr && str_comp_nocase(pCategory, IFriends::OFFLINE_CATEGORY) == 0;
+}
+
+static bool IsProtectedFriendsCategory(const char *pCategory)
+{
+	return pCategory != nullptr && (str_comp_nocase(pCategory, IFriends::DEFAULT_CATEGORY) == 0 || IsClanMembersCategory(pCategory) || IsOfflineFriendsCategory(pCategory));
+}
+
 static ColorRGBA PlayerBackgroundColor(bool Friend, bool Clan, bool Afk, bool Inside)
 {
-	static const ColorRGBA COLORS[] = {ColorRGBA(0.5f, 1.0f, 0.5f), ColorRGBA(0.4f, 0.4f, 1.0f), ColorRGBA(0.75f, 0.75f, 0.75f)};
-	static const ColorRGBA COLORS_AFK[] = {ColorRGBA(1.0f, 1.0f, 0.5f), ColorRGBA(0.4f, 0.75f, 1.0f), ColorRGBA(0.6f, 0.6f, 0.6f)};
+	const ColorRGBA FriendsColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListFriendColor));
+	const ColorRGBA ClanColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListClanColor));
+	const ColorRGBA NeutralColor = ColorRGBA(0.75f, 0.75f, 0.75f);
+	const ColorRGBA COLORS[] = {FriendsColor, ClanColor, NeutralColor};
+	static const ColorRGBA COLORS_AFK[] = {ColorRGBA(1.0f, 1.0f, 0.5f), ColorRGBA(1.0f, 0.98f, 0.65f), ColorRGBA(0.6f, 0.6f, 0.6f)};
 	int i;
 	if(Friend)
 		i = 0;
@@ -1427,7 +1445,12 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 		if(SelectedClient.m_FriendState == IFriends::FRIEND_PLAYER)
 			GameClient()->Friends()->RemoveFriend(SelectedClient.m_aName, SelectedClient.m_aClan);
 		else
-			GameClient()->Friends()->AddFriend(SelectedClient.m_aName, SelectedClient.m_aClan);
+		{
+			const int DefaultCategoryIndex = maximum(0, GameClient()->Friends()->FindCategory(GameClient()->Friends()->DefaultCategory()));
+			if(m_FriendAddCategoryIndex < 0 || m_FriendAddCategoryIndex >= GameClient()->Friends()->NumCategories() || IsClanMembersCategory(GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex)))
+				m_FriendAddCategoryIndex = DefaultCategoryIndex;
+			GameClient()->Friends()->AddFriend(SelectedClient.m_aName, SelectedClient.m_aClan, GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex));
+		}
 		FriendlistOnUpdate();
 		Client()->ServerBrowserUpdate();
 	}
@@ -1436,30 +1459,30 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 void CMenus::RenderServerbrowserFriends(CUIRect View)
 {
 	const float FontSize = 10.0f;
-	static bool s_aListExtended[NUM_FRIEND_TYPES] = {true, true, false};
 	const float SpacingH = 2.0f;
 
 	CUIRect List, ServerFriends;
-	View.HSplitBottom(70.0f, &List, &ServerFriends);
+	View.HSplitBottom(92.0f, &List, &ServerFriends);
 	List.HSplitTop(5.0f, nullptr, &List);
 	List.VSplitLeft(5.0f, nullptr, &List);
 
+	FriendlistOnUpdate();
+	const int NumCategories = maximum(1, GameClient()->Friends()->NumCategories());
+
+	std::vector<std::vector<CFriendItem>> vvFriends(NumCategories);
+	const int OfflineCategoryIndex = maximum(0, GameClient()->Friends()->FindCategory(IFriends::OFFLINE_CATEGORY));
+
 	// calculate friends
-	// TODO: optimize this
-	m_pRemoveFriend = nullptr;
-	for(auto &vFriends : m_avFriends)
-		vFriends.clear();
-	m_avFriends[FRIEND_OFF].reserve(GameClient()->Friends()->NumFriends());
+	bool OpenRemovePopup = false;
+	static CScrollRegion s_FriendsMoveCategoryPopupScrollRegion;
 	for(int FriendIndex = 0; FriendIndex < GameClient()->Friends()->NumFriends(); ++FriendIndex)
 	{
-		m_avFriends[FRIEND_OFF].emplace_back(GameClient()->Friends()->GetFriend(FriendIndex));
+		const CFriendInfo *pFriendInfo = GameClient()->Friends()->GetFriend(FriendIndex);
+		if(pFriendInfo->m_aName[0] == '\0')
+			continue;
+
+		vvFriends[OfflineCategoryIndex].emplace_back(pFriendInfo);
 	}
-	bool HasFriend = std::any_of(m_avFriends[FRIEND_OFF].begin(), m_avFriends[FRIEND_OFF].end(), [&](const auto &Friend) {
-		return Friend.Name()[0] != '\0';
-	}),
-	     HasClan = std::any_of(m_avFriends[FRIEND_OFF].begin(), m_avFriends[FRIEND_OFF].end(), [&](const auto &Friend) {
-		     return Friend.Name()[0] == '\0';
-	     });
 
 	for(int ServerIndex = 0; ServerIndex < ServerBrowser()->NumSortedServers(); ++ServerIndex)
 	{
@@ -1473,16 +1496,36 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			if(CurrentClient.m_FriendState == IFriends::FRIEND_NO)
 				continue;
 
-			const int FriendIndex = CurrentClient.m_FriendState == IFriends::FRIEND_PLAYER ? FRIEND_PLAYER_ON : FRIEND_CLAN_ON;
-			m_avFriends[FriendIndex].emplace_back(CurrentClient, pEntry);
-			const auto &&RemovalPredicate = [CurrentClient](const CFriendItem &Friend) {
-				return (Friend.Name()[0] == '\0' || str_comp(Friend.Name(), CurrentClient.m_aName) == 0) && ((Friend.Name()[0] != '\0' && g_Config.m_ClFriendsIgnoreClan) || str_comp(Friend.Clan(), CurrentClient.m_aClan) == 0);
-			};
-			m_avFriends[FRIEND_OFF].erase(std::remove_if(m_avFriends[FRIEND_OFF].begin(), m_avFriends[FRIEND_OFF].end(), RemovalPredicate), m_avFriends[FRIEND_OFF].end());
+			const bool ClanOnlyMatch = CurrentClient.m_FriendState == IFriends::FRIEND_CLAN;
+			const char *pCategory = ClanOnlyMatch ? IFriends::CLAN_MEMBERS_CATEGORY : GameClient()->Friends()->GetFriendCategory(CurrentClient.m_aName, CurrentClient.m_aClan);
+			if(!ClanOnlyMatch && IsOfflineFriendsCategory(pCategory))
+				pCategory = GameClient()->Friends()->DefaultCategory();
+
+			int CategoryIndex = GameClient()->Friends()->FindCategory(pCategory);
+			if(CategoryIndex < 0 || CategoryIndex >= NumCategories)
+				CategoryIndex = 0;
+
+			vvFriends[CategoryIndex].emplace_back(CurrentClient, pEntry, pCategory);
+
+			if(!ClanOnlyMatch)
+			{
+				auto &vOfflineFriends = vvFriends[OfflineCategoryIndex];
+				vOfflineFriends.erase(std::remove_if(vOfflineFriends.begin(), vOfflineFriends.end(), [&](const CFriendItem &Friend) {
+					return Friend.ServerInfo() == nullptr && Friend.Name()[0] != '\0' && str_comp(Friend.Name(), CurrentClient.m_aName) == 0 && (g_Config.m_ClFriendsIgnoreClan || str_comp(Friend.Clan(), CurrentClient.m_aClan) == 0);
+				}), vOfflineFriends.end());
+			}
 		}
 	}
-	for(auto &vFriends : m_avFriends)
-		std::sort(vFriends.begin(), vFriends.end());
+	for(auto &vFriends : vvFriends)
+	{
+		std::sort(vFriends.begin(), vFriends.end(), [](const CFriendItem &Left, const CFriendItem &Right) {
+			const bool LeftOnline = Left.ServerInfo() != nullptr;
+			const bool RightOnline = Right.ServerInfo() != nullptr;
+			if(LeftOnline != RightOnline)
+				return LeftOnline;
+			return Left < Right;
+		});
+	}
 
 	// friends list
 	static CScrollRegion s_ScrollRegion;
@@ -1496,44 +1539,49 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	List.y += ScrollOffset.y;
 
 	char aBuf[256];
-	for(size_t FriendType = 0; FriendType < NUM_FRIEND_TYPES; ++FriendType)
+	for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
 	{
 		// header
 		CUIRect Header, GroupIcon, GroupLabel;
 		List.HSplitTop(ms_ListheaderHeight, &Header, &List);
 		s_ScrollRegion.AddRect(Header);
-		Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->HotItem() == &s_aListExtended[FriendType] ? 0.4f : 0.25f), IGraphics::CORNER_ALL, 5.0f);
+		const char *pCategoryName = GameClient()->Friends()->GetCategory(CategoryIndex);
+		const bool HeaderHovered = Ui()->MouseHovered(&Header);
+		const bool PopupOpen = Ui()->IsPopupOpen(&m_FriendsCategoryPopupContext) && m_FriendsCategoryPopupContext.m_CategoryIndex == CategoryIndex;
+		ColorRGBA HeaderColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		if(str_comp_nocase(pCategoryName, IFriends::DEFAULT_CATEGORY) == 0)
+			HeaderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListFriendColor));
+		else if(IsClanMembersCategory(pCategoryName))
+			HeaderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListClanColor));
+		HeaderColor.a = HeaderHovered || PopupOpen ? 0.4f : 0.25f;
+		Header.Draw(HeaderColor, IGraphics::CORNER_ALL, 5.0f);
 		Header.VSplitLeft(Header.h, &GroupIcon, &GroupLabel);
 		GroupIcon.Margin(2.0f, &GroupIcon);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->TextColor(Ui()->HotItem() == &s_aListExtended[FriendType] ? TextRender()->DefaultTextColor() : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
-		Ui()->DoLabel(&GroupIcon, s_aListExtended[FriendType] ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		TextRender()->TextColor(HeaderHovered ? TextRender()->DefaultTextColor() : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
+		Ui()->DoLabel(&GroupIcon, m_vFriendsCategoryExpanded[CategoryIndex] ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		switch(FriendType)
-		{
-		case FRIEND_PLAYER_ON:
-			str_format(aBuf, sizeof(aBuf), Localize("Online friends (%d)"), (int)m_avFriends[FriendType].size());
-			break;
-		case FRIEND_CLAN_ON:
-			str_format(aBuf, sizeof(aBuf), Localize("Online clanmates (%d)"), (int)m_avFriends[FriendType].size());
-			break;
-		case FRIEND_OFF:
-			str_format(aBuf, sizeof(aBuf), Localize("Offline (%d)", "friends (server browser)"), (int)m_avFriends[FriendType].size());
-			break;
-		default:
-			dbg_assert_failed("FriendType invalid");
-		}
+		str_format(aBuf, sizeof(aBuf), "%s (%d)", pCategoryName, (int)vvFriends[CategoryIndex].size());
 		Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);
-		if(Ui()->DoButtonLogic(&s_aListExtended[FriendType], 0, &Header, BUTTONFLAG_LEFT))
+		const int HeaderResult = Ui()->DoButtonLogic(&m_vFriendsCategoryExpanded[CategoryIndex], 0, &Header, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
+		if(HeaderResult == 2)
 		{
-			s_aListExtended[FriendType] = !s_aListExtended[FriendType];
+			m_FriendsCategoryPopupContext.m_pMenus = this;
+			m_FriendsCategoryPopupContext.m_CategoryIndex = CategoryIndex;
+			m_FriendsCategoryPopupContext.m_Mode = CFriendsCategoryPopupContext::MODE_ACTIONS;
+			m_FriendsCategoryPopupContext.m_NameInput.Clear();
+			Ui()->DoPopupMenu(&m_FriendsCategoryPopupContext, Ui()->MouseX(), Ui()->MouseY(), 250.0f, 110.0f, &m_FriendsCategoryPopupContext, PopupFriendsCategory);
+		}
+		else if(HeaderResult == 1)
+		{
+			m_vFriendsCategoryExpanded[CategoryIndex] = !m_vFriendsCategoryExpanded[CategoryIndex];
 		}
 
 		// entries
-		if(s_aListExtended[FriendType])
+		if(m_vFriendsCategoryExpanded[CategoryIndex])
 		{
-			for(size_t FriendIndex = 0; FriendIndex < m_avFriends[FriendType].size(); ++FriendIndex)
+			for(size_t FriendIndex = 0; FriendIndex < vvFriends[CategoryIndex].size(); ++FriendIndex)
 			{
 				// space
 				{
@@ -1543,20 +1591,32 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				}
 
 				CUIRect Rect;
-				const auto &Friend = m_avFriends[FriendType][FriendIndex];
+				const auto &Friend = vvFriends[CategoryIndex][FriendIndex];
+				const unsigned NameHash = str_quickhash(Friend.Name());
+				const unsigned ClanHash = str_quickhash(Friend.Clan());
+				const unsigned AddrHash = Friend.ServerInfo() != nullptr ? str_quickhash(Friend.ServerInfo()->m_aAddress) : 0;
+				uintptr_t FriendUiIdBase = ((uintptr_t)NameHash << 32) ^ (uintptr_t)ClanHash ^ ((uintptr_t)AddrHash << 1) ^ (uintptr_t)(Friend.FriendState() << 2);
+				if(FriendUiIdBase == 0)
+					FriendUiIdBase = 1;
+				FriendUiIdBase <<= 4;
+				const void *pListItemId = reinterpret_cast<const void *>(FriendUiIdBase | 0x1);
+				const void *pRemoveButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0x3);
+				const void *pCommunityTooltipId = reinterpret_cast<const void *>(FriendUiIdBase | 0x5);
+				const void *pSkinTooltipId = reinterpret_cast<const void *>(FriendUiIdBase | 0x7);
 				List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f + (Friend.ServerInfo() == nullptr ? 0.0f : 10.0f), &Rect, &List);
 				s_ScrollRegion.AddRect(Rect);
 				if(s_ScrollRegion.RectClipped(Rect))
 					continue;
 
-				const bool Inside = Ui()->HotItem() == Friend.ListItemId() || Ui()->HotItem() == Friend.RemoveButtonId() || Ui()->HotItem() == Friend.CommunityTooltipId() || Ui()->HotItem() == Friend.SkinTooltipId();
-				int ButtonResult = Ui()->DoButtonLogic(Friend.ListItemId(), 0, &Rect, BUTTONFLAG_LEFT);
+				const bool Inside = Ui()->MouseHovered(&Rect);
+				int ButtonResult = Ui()->DoButtonLogic(pListItemId, 0, &Rect, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 
 				if(Friend.ServerInfo())
 				{
-					GameClient()->m_Tooltips.DoToolTip(Friend.ListItemId(), &Rect, Localize("Click to select server. Double click to join your friend."));
+					GameClient()->m_Tooltips.DoToolTip(pListItemId, &Rect, Localize("Click to select server. Double click to join your friend."));
 				}
-				const ColorRGBA Color = PlayerBackgroundColor(FriendType == FRIEND_PLAYER_ON, FriendType == FRIEND_CLAN_ON, FriendType == FRIEND_OFF ? true : Friend.IsAfk(), Inside);
+				const bool IsOffline = Friend.ServerInfo() == nullptr;
+				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), Inside);
 				Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);
 				Rect.Margin(2.0f, &Rect);
 
@@ -1582,8 +1642,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
 					const vec2 TeeRenderPos = vec2(Skin.x + Skin.w / 2.0f, Skin.y + Skin.h * 0.55f + OffsetToMid.y);
 					RenderTools()->RenderTee(pIdleState, &TeeInfo, Friend.IsAfk() ? EMOTE_BLINK : EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
-					Ui()->DoButtonLogic(Friend.SkinTooltipId(), 0, &Skin, BUTTONFLAG_NONE);
-					GameClient()->m_Tooltips.DoToolTip(Friend.SkinTooltipId(), &Skin, Friend.Skin());
+					Ui()->DoButtonLogic(pSkinTooltipId, 0, &Skin, BUTTONFLAG_NONE);
+					GameClient()->m_Tooltips.DoToolTip(pSkinTooltipId, &Skin, Friend.Skin());
 				}
 				else if(Friend.Skin7(protocol7::SKINPART_BODY)[0] != '\0')
 				{
@@ -1622,8 +1682,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 							InfoLabel.VSplitLeft(21.0f, &CommunityIcon, &InfoLabel);
 							InfoLabel.VSplitLeft(2.0f, nullptr, &InfoLabel);
 							m_CommunityIcons.Render(pIcon, CommunityIcon, true);
-							Ui()->DoButtonLogic(Friend.CommunityTooltipId(), 0, &CommunityIcon, BUTTONFLAG_NONE);
-							GameClient()->m_Tooltips.DoToolTip(Friend.CommunityTooltipId(), &CommunityIcon, pCommunity->Name());
+							Ui()->DoButtonLogic(pCommunityTooltipId, 0, &CommunityIcon, BUTTONFLAG_NONE);
+							GameClient()->m_Tooltips.DoToolTip(pCommunityTooltipId, &CommunityIcon, pCommunity->Name());
 						}
 					}
 
@@ -1640,41 +1700,72 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				// remove button
 				if(Inside)
 				{
-					TextRender()->TextColor(Ui()->HotItem() == Friend.RemoveButtonId() ? TextRender()->DefaultTextColor() : ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
+					TextRender()->TextColor(Ui()->HotItem() == pRemoveButtonId ? TextRender()->DefaultTextColor() : ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
 					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 					Ui()->DoLabel(&RemoveButton, FONT_ICON_TRASH, RemoveButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 					TextRender()->SetRenderFlags(0);
 					TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
-					if(Ui()->DoButtonLogic(Friend.RemoveButtonId(), 0, &RemoveButton, BUTTONFLAG_LEFT))
+					if(Ui()->DoButtonLogic(pRemoveButtonId, 0, &RemoveButton, BUTTONFLAG_LEFT))
 					{
-						m_pRemoveFriend = &Friend;
+						str_copy(m_aRemoveFriendName, Friend.Name(), sizeof(m_aRemoveFriendName));
+						str_copy(m_aRemoveFriendClan, Friend.Clan(), sizeof(m_aRemoveFriendClan));
+						m_RemoveFriendState = Friend.FriendState();
+						m_HasRemoveFriend = true;
+						OpenRemovePopup = true;
 						ButtonResult = 0;
 					}
-					GameClient()->m_Tooltips.DoToolTip(Friend.RemoveButtonId(), &RemoveButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to remove this player from your friends list.") : Localize("Click to remove this clan from your friends list."));
+					GameClient()->m_Tooltips.DoToolTip(pRemoveButtonId, &RemoveButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to remove this player from your friends list.") : Localize("Click to remove this clan from your friends list."));
+				}
+
+				if(ButtonResult == 2)
+				{
+					const bool CanMoveCategory = Friend.FriendState() == IFriends::FRIEND_PLAYER && !IsClanMembersCategory(Friend.Category());
+					if(CanMoveCategory)
+					{
+						m_FriendsMoveCategoryPopupContext.Reset();
+						m_FriendsMoveCategoryPopupContext.m_pScrollRegion = &s_FriendsMoveCategoryPopupScrollRegion;
+						str_copy(m_FriendsMoveCategoryPopupContext.m_aMessage, "移动到分类");
+						m_FriendsMoveCategoryPopupContext.m_EntryHeight = 18.0f;
+						m_FriendsMoveCategoryPopupContext.m_EntryPadding = 1.0f;
+						m_FriendsMoveCategoryPopupContext.m_FontSize = (m_FriendsMoveCategoryPopupContext.m_EntryHeight - 2 * m_FriendsMoveCategoryPopupContext.m_EntryPadding) * CUi::ms_FontmodHeight;
+						m_FriendsMoveCategoryPopupContext.m_Width = 180.0f;
+						for(int MoveCategoryIndex = 0; MoveCategoryIndex < NumCategories; ++MoveCategoryIndex)
+						{
+							const char *pMoveCategory = GameClient()->Friends()->GetCategory(MoveCategoryIndex);
+							if(IsClanMembersCategory(pMoveCategory))
+								continue;
+							m_FriendsMoveCategoryPopupContext.m_vEntries.emplace_back(pMoveCategory);
+						}
+
+						if(!m_FriendsMoveCategoryPopupContext.m_vEntries.empty())
+						{
+							str_copy(m_aMoveCategoryFriendName, Friend.Name(), sizeof(m_aMoveCategoryFriendName));
+							str_copy(m_aMoveCategoryFriendClan, Friend.Clan(), sizeof(m_aMoveCategoryFriendClan));
+							m_HasMoveCategoryFriend = true;
+							Ui()->ShowPopupSelection(Ui()->MouseX(), Ui()->MouseY(), &m_FriendsMoveCategoryPopupContext);
+						}
+					}
+
+					ButtonResult = 0;
 				}
 
 				// handle click and double click on item
-				if(ButtonResult && Friend.ServerInfo())
+				if(ButtonResult == 1 && Friend.ServerInfo())
 				{
 					str_copy(g_Config.m_UiServerAddress, Friend.ServerInfo()->m_aAddress);
 					m_ServerBrowserShouldRevealSelection = true;
-					if(ButtonResult == 1 && Ui()->DoDoubleClickLogic(Friend.ListItemId()))
+					if(Ui()->DoDoubleClickLogic(pListItemId))
 					{
 						Connect(g_Config.m_UiServerAddress);
 					}
 				}
 			}
 
-			// Render empty description
-			const char *pText = nullptr;
-			if(FriendType == FRIEND_PLAYER_ON && !HasFriend)
-				pText = Localize("Add friends by entering their name below or by clicking their name in the player list.");
-			else if(FriendType == FRIEND_CLAN_ON && !HasClan)
-				pText = Localize("Add clanmates by entering their clan below and leaving the name blank.");
-			if(pText != nullptr)
+			if(GameClient()->Friends()->NumFriends() == 0 && CategoryIndex == 0)
 			{
+				const char *pText = Localize("Add friends by entering their name below or by clicking their name in the player list.");
 				const float DescriptionMargin = 2.0f;
 				const STextBoundingBox BoundingBox = TextRender()->TextBoundingBox(FontSize, pText, -1, List.w - 2 * DescriptionMargin);
 				CUIRect EmptyDescription;
@@ -1694,15 +1785,39 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			s_ScrollRegion.AddRect(Space);
 		}
 	}
+
 	s_ScrollRegion.End();
 
-	if(m_pRemoveFriend != nullptr)
+	if(m_HasMoveCategoryFriend && m_FriendsMoveCategoryPopupContext.m_pSelection != nullptr)
+	{
+		const char *pCategory = m_FriendsMoveCategoryPopupContext.m_pSelection->c_str();
+
+		if(pCategory != nullptr && GameClient()->Friends()->SetFriendCategory(m_aMoveCategoryFriendName, m_aMoveCategoryFriendClan, pCategory))
+		{
+			m_FriendAddCategoryIndex = maximum(0, GameClient()->Friends()->FindCategory(pCategory));
+			FriendlistOnUpdate();
+			Client()->ServerBrowserUpdate();
+		}
+
+		m_FriendsMoveCategoryPopupContext.Reset();
+		m_HasMoveCategoryFriend = false;
+		m_aMoveCategoryFriendName[0] = '\0';
+		m_aMoveCategoryFriendClan[0] = '\0';
+	}
+	else if(m_HasMoveCategoryFriend && !Ui()->IsPopupOpen(&m_FriendsMoveCategoryPopupContext))
+	{
+		m_HasMoveCategoryFriend = false;
+		m_aMoveCategoryFriendName[0] = '\0';
+		m_aMoveCategoryFriendClan[0] = '\0';
+	}
+
+	if(OpenRemovePopup && m_HasRemoveFriend)
 	{
 		char aMessage[256];
 		str_format(aMessage, sizeof(aMessage),
-			m_pRemoveFriend->FriendState() == IFriends::FRIEND_PLAYER ? Localize("Are you sure that you want to remove the player '%s' from your friends list?") : Localize("Are you sure that you want to remove the clan '%s' from your friends list?"),
-			m_pRemoveFriend->FriendState() == IFriends::FRIEND_PLAYER ? m_pRemoveFriend->Name() : m_pRemoveFriend->Clan());
-		PopupConfirm(Localize("Remove friend"), aMessage, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmRemoveFriend);
+			m_RemoveFriendState == IFriends::FRIEND_PLAYER ? Localize("Are you sure that you want to remove the player '%s' from your friends list?") : Localize("Are you sure that you want to remove the clan '%s' from your friends list?"),
+			m_RemoveFriendState == IFriends::FRIEND_PLAYER ? m_aRemoveFriendName : m_aRemoveFriendClan);
+		PopupConfirm(Localize("Remove friend"), aMessage, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmRemoveFriend, POPUP_NONE, &CMenus::PopupCancelRemoveFriend, POPUP_NONE);
 	}
 
 	// add friend
@@ -1728,10 +1843,62 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 		ServerFriends.HSplitTop(3.0f, nullptr, &ServerFriends);
 		ServerFriends.HSplitTop(18.0f, &Button, &ServerFriends);
-		static CButtonContainer s_AddButton;
-		if(DoButton_Menu(&s_AddButton, s_NameInput.IsEmpty() && !s_ClanInput.IsEmpty() ? Localize("Add Clan") : Localize("Add Friend"), 0, &Button))
+		str_format(aBuf, sizeof(aBuf), "%s:", Localize("添加到分类"));
+		Ui()->DoLabel(&Button, aBuf, FontSize + 2.0f, TEXTALIGN_ML);
+		Button.VSplitLeft(80.0f, nullptr, &Button);
+		std::vector<const char *> vpCategories;
+		std::vector<int> vCategoryIndices;
+		vpCategories.reserve(NumCategories);
+		vCategoryIndices.reserve(NumCategories);
+		for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
 		{
-			GameClient()->Friends()->AddFriend(s_NameInput.GetString(), s_ClanInput.GetString());
+			const char *pCategory = GameClient()->Friends()->GetCategory(CategoryIndex);
+			if(IsClanMembersCategory(pCategory))
+				continue;
+			vpCategories.push_back(pCategory);
+			vCategoryIndices.push_back(CategoryIndex);
+		}
+
+		if(vCategoryIndices.empty())
+		{
+			const int DefaultCategoryIndex = maximum(0, GameClient()->Friends()->FindCategory(GameClient()->Friends()->DefaultCategory()));
+			vCategoryIndices.push_back(DefaultCategoryIndex);
+			vpCategories.push_back(GameClient()->Friends()->GetCategory(DefaultCategoryIndex));
+		}
+
+		int DropDownSelection = 0;
+		for(int SelectionIndex = 0; SelectionIndex < (int)vCategoryIndices.size(); ++SelectionIndex)
+		{
+			if(vCategoryIndices[SelectionIndex] == m_FriendAddCategoryIndex)
+			{
+				DropDownSelection = SelectionIndex;
+				break;
+			}
+		}
+
+		if(m_FriendAddCategoryIndex < 0 || m_FriendAddCategoryIndex >= NumCategories || IsClanMembersCategory(GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex)))
+			m_FriendAddCategoryIndex = vCategoryIndices[DropDownSelection];
+		if(!vpCategories.empty())
+		{
+			static CScrollRegion s_FriendsCategoryDropDownScrollRegion;
+			m_FriendsAddCategoryDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_FriendsCategoryDropDownScrollRegion;
+			DropDownSelection = Ui()->DoDropDown(&Button, DropDownSelection, vpCategories.data(), (int)vpCategories.size(), m_FriendsAddCategoryDropDownState);
+			if(DropDownSelection >= 0 && DropDownSelection < (int)vCategoryIndices.size())
+				m_FriendAddCategoryIndex = vCategoryIndices[DropDownSelection];
+		}
+
+		ServerFriends.HSplitTop(3.0f, nullptr, &ServerFriends);
+		ServerFriends.HSplitTop(18.0f, &Button, &ServerFriends);
+		static CButtonContainer s_AddButton;
+		char aAddButtonLabel[128];
+		if(s_NameInput.IsEmpty() && !s_ClanInput.IsEmpty())
+			str_copy(aAddButtonLabel, "添加战队");
+		else
+			str_format(aAddButtonLabel, sizeof(aAddButtonLabel), "添加到%s", GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex));
+		if(DoButton_Menu(&s_AddButton, aAddButtonLabel, 0, &Button))
+		{
+			const char *pCategory = GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex);
+			GameClient()->Friends()->AddFriend(s_NameInput.GetString(), s_ClanInput.GetString(), pCategory);
 			s_NameInput.Clear();
 			s_ClanInput.Clear();
 			FriendlistOnUpdate();
@@ -1740,17 +1907,141 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	}
 }
 
+CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRect View, bool Active)
+{
+	CFriendsCategoryPopupContext *pPopupContext = static_cast<CFriendsCategoryPopupContext *>(pContext);
+	CMenus *pMenus = pPopupContext->m_pMenus;
+	if(pMenus == nullptr)
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	IFriends *pFriends = pMenus->GameClient()->Friends();
+	if(pPopupContext->m_CategoryIndex < 0 || pPopupContext->m_CategoryIndex >= pFriends->NumCategories())
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	const char *pCategory = pFriends->GetCategory(pPopupContext->m_CategoryIndex);
+	const bool IsProtectedCategory = IsProtectedFriendsCategory(pCategory);
+	const float FontSize = 10.0f;
+
+	View.Margin(5.0f, &View);
+
+	if(pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ACTIONS)
+	{
+		CUIRect Label, Button;
+		View.HSplitTop(12.0f, &Label, &View);
+		pMenus->Ui()->DoLabel(&Label, pCategory, FontSize + 1.0f, TEXTALIGN_ML);
+
+		View.HSplitTop(3.0f, nullptr, &View);
+		View.HSplitTop(18.0f, &Button, &View);
+		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_AddButton, "新增分类", &Button, FontSize, TEXTALIGN_MC))
+		{
+			pPopupContext->m_Mode = CFriendsCategoryPopupContext::MODE_ADD;
+			pPopupContext->m_NameInput.Clear();
+			return CUi::POPUP_KEEP_OPEN;
+		}
+
+		View.HSplitTop(3.0f, nullptr, &View);
+		View.HSplitTop(18.0f, &Button, &View);
+		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_RenameButton, "重命名", &Button, FontSize, TEXTALIGN_MC, 0.0f, false, !IsProtectedCategory))
+		{
+			pPopupContext->m_Mode = CFriendsCategoryPopupContext::MODE_RENAME;
+			pPopupContext->m_NameInput.Set(pCategory);
+			pPopupContext->m_NameInput.SelectAll();
+			return CUi::POPUP_KEEP_OPEN;
+		}
+
+		View.HSplitTop(3.0f, nullptr, &View);
+		View.HSplitTop(18.0f, &Button, &View);
+		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_DeleteButton, "删除分类", &Button, FontSize, TEXTALIGN_MC, 0.0f, false, !IsProtectedCategory))
+		{
+			if(pFriends->RemoveCategory(pCategory))
+				pMenus->FriendlistOnUpdate();
+			return CUi::POPUP_CLOSE_CURRENT;
+		}
+
+		return CUi::POPUP_KEEP_OPEN;
+	}
+
+	CUIRect Label, Input, Buttons, Cancel, Confirm;
+	View.HSplitTop(12.0f, &Label, &View);
+	pMenus->Ui()->DoLabel(&Label, pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD ? "分类名称" : "新分类名称", FontSize, TEXTALIGN_ML);
+
+	View.HSplitTop(3.0f, nullptr, &View);
+	View.HSplitTop(18.0f, &Input, &View);
+	pMenus->Ui()->DoEditBox(&pPopupContext->m_NameInput, &Input, FontSize + 1.0f);
+
+	View.HSplitTop(4.0f, nullptr, &View);
+	View.HSplitTop(18.0f, &Buttons, &View);
+	Buttons.VSplitMid(&Cancel, &Confirm, 3.0f);
+
+	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, "取消", &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
+	if(CancelPressed)
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD ? "新增" : "重命名", &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
+	if(ConfirmPressed)
+	{
+		char aCategory[IFriends::MAX_FRIEND_CATEGORY_LENGTH];
+		str_copy(aCategory, str_utf8_skip_whitespaces(pPopupContext->m_NameInput.GetString()), sizeof(aCategory));
+		str_utf8_trim_right(aCategory);
+
+		if(aCategory[0] != '\0')
+		{
+			bool Changed = false;
+			if(pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD)
+				Changed = pFriends->AddCategory(aCategory);
+			else
+				Changed = pFriends->RenameCategory(pCategory, aCategory);
+
+			if(Changed)
+			{
+				pMenus->FriendlistOnUpdate();
+				const int NewCategory = pFriends->FindCategory(aCategory);
+				if(NewCategory >= 0)
+					pMenus->m_FriendAddCategoryIndex = NewCategory;
+			}
+		}
+
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	return CUi::POPUP_KEEP_OPEN;
+}
+
 void CMenus::FriendlistOnUpdate()
 {
-	// TODO: friends are currently updated every frame; optimize and only update friends when necessary
+	const int NumCategories = maximum(1, GameClient()->Friends()->NumCategories());
+	if((int)m_vFriendsCategoryExpanded.size() < NumCategories)
+		m_vFriendsCategoryExpanded.resize(NumCategories, true);
+	else if((int)m_vFriendsCategoryExpanded.size() > NumCategories)
+		m_vFriendsCategoryExpanded.resize(NumCategories);
+
+	if(m_FriendAddCategoryIndex < 0 || m_FriendAddCategoryIndex >= NumCategories)
+		m_FriendAddCategoryIndex = 0;
+
+	if(IsClanMembersCategory(GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex)))
+	{
+		const int DefaultCategoryIndex = GameClient()->Friends()->FindCategory(GameClient()->Friends()->DefaultCategory());
+		m_FriendAddCategoryIndex = DefaultCategoryIndex >= 0 ? DefaultCategoryIndex : 0;
+	}
 }
 
 void CMenus::PopupConfirmRemoveFriend()
 {
-	GameClient()->Friends()->RemoveFriend(m_pRemoveFriend->FriendState() == IFriends::FRIEND_PLAYER ? m_pRemoveFriend->Name() : "", m_pRemoveFriend->Clan());
+	if(!m_HasRemoveFriend)
+		return;
+
+	GameClient()->Friends()->RemoveFriend(m_RemoveFriendState == IFriends::FRIEND_PLAYER ? m_aRemoveFriendName : "", m_aRemoveFriendClan);
 	FriendlistOnUpdate();
 	Client()->ServerBrowserUpdate();
-	m_pRemoveFriend = nullptr;
+	PopupCancelRemoveFriend();
+}
+
+void CMenus::PopupCancelRemoveFriend()
+{
+	m_HasRemoveFriend = false;
+	m_aRemoveFriendName[0] = '\0';
+	m_aRemoveFriendClan[0] = '\0';
+	m_RemoveFriendState = IFriends::FRIEND_NO;
 }
 
 enum

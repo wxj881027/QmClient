@@ -2366,6 +2366,16 @@ void CServerBrowser::CleanFilters()
 	// Keep filters if we failed to load any communities
 	if(Communities().empty())
 		return;
+
+	// In TClient custom communities are initialized after the first DDNet info
+	// load. Preserve unknown community filters until that additional community
+	// list is available, otherwise valid custom entries from the config are
+	// cleaned too early and get lost on next save.
+	const bool CustomCommunitiesCanStillBeLoaded =
+		g_Config.m_TcCustomCommunitiesUrl[0] != '\0' && m_CustomCommunitiesFunction == nullptr;
+	if(CustomCommunitiesCanStillBeLoaded)
+		return;
+
 	FavoriteCommunitiesFilter().Clean(Communities());
 	CommunitiesFilter().Clean(Communities());
 	CountriesFilter().Clean(Communities());

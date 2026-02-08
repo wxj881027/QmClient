@@ -531,13 +531,6 @@ void CSpectator::OnRender()
 		char aNameBuf[MAX_NAME_LENGTH];
 		GameClient()->FormatStreamerName(ClientId, aNameBuf, sizeof(aNameBuf));
 
-		if(g_Config.m_ClShowIds && !HideIdentity)
-		{
-			char aClientId[16];
-			GameClient()->FormatClientId(ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
-			TextRender()->TextEx(&NameCursor, aClientId);
-		}
-
 		ColorRGBA NameColor;
 		if(GameClient()->IsLocalClientId(ClientId))
 		{
@@ -555,6 +548,14 @@ void CSpectator::OnRender()
 		}
 		NameColor.a *= NameAlpha;
 		TextRender()->TextColor(NameColor);
+
+		if(g_Config.m_ClShowIds && !HideIdentity)
+		{
+			char aClientId[16];
+			GameClient()->FormatClientId(ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
+			TextRender()->TextEx(&NameCursor, aClientId);
+		}
+
 		TextRender()->TextEx(&NameCursor, aNameBuf);
 		if(GameClient()->m_MultiViewActivated)
 		{
@@ -692,5 +693,6 @@ void CSpectator::SpectateClosest()
 	if(NewSpectatorId > -1)
 		Spectate(NewSpectatorId);
 }
+
 
 

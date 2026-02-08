@@ -3755,9 +3755,11 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
 			//TextRender()->TextColor(GetRainbowColor(-8));//彩虹循环效果
 			TextRender()->TextColor(ColorRGBA(0.95f, 0.8f, 0.2f, 1.0f));
-			Ui()->DoLabel(&Row, "喵不一,久桃,椿雪绒绒,芽芽,骨头", LG_BodySize * 1.1f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, "喵不一,久桃,椿雪绒绒,芽芽,骨头,见月,鹑", LG_BodySize * 1.1f, TEXTALIGN_ML);
 			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, "望舒,松子,平凡..,cixin,洗点,秀色", LG_BodySize * 1.1f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, "望舒,松子,平凡..,cixin,洗点,秀色,朱朱", LG_BodySize * 1.1f, TEXTALIGN_ML);
+			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
+			Ui()->DoLabel(&Row, "大恐龙,:luv:,陌浅羽,Blue°F,怯修,yezeen", LG_BodySize * 1.1f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);

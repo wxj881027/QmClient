@@ -16,6 +16,10 @@ void CCustomCommunities::DownloadCustomCommunitiesDDNetInfo()
 	}
 	else
 	{
+		// Load cached custom communities first so they are available immediately
+		// on startup, then refresh them in the background.
+		LoadCustomCommunitiesDDNetInfo();
+
 		if(m_pCustomCommunitiesDDNetInfoTask != nullptr)
 		{
 			m_pCustomCommunitiesDDNetInfoTask->Abort();

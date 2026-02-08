@@ -886,6 +886,10 @@ void CMenus::OnInit()
 	Console()->Chain("remove_favorite", ConchainFavoritesUpdate, this);
 	Console()->Chain("add_friend", ConchainFriendlistUpdate, this);
 	Console()->Chain("remove_friend", ConchainFriendlistUpdate, this);
+	Console()->Chain("friend_category_add", ConchainFriendlistUpdate, this);
+	Console()->Chain("friend_category_rename", ConchainFriendlistUpdate, this);
+	Console()->Chain("friend_category_remove", ConchainFriendlistUpdate, this);
+	Console()->Chain("set_friend_category", ConchainFriendlistUpdate, this);
 
 	Console()->Chain("add_excluded_community", ConchainCommunitiesUpdate, this);
 	Console()->Chain("remove_excluded_community", ConchainCommunitiesUpdate, this);
