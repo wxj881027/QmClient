@@ -22,6 +22,7 @@ public:
 		bool m_Playing = false;
 		char m_aTitle[128] = {};
 		char m_aArtist[128] = {};
+		char m_aAlbum[128] = {};
 		int64_t m_PositionMs = 0;
 		int64_t m_DurationMs = 0;
 		IGraphics::CTextureHandle m_AlbumArt;

@@ -2651,6 +2651,8 @@ if(CLIENT)
     components/tclient/data_version.h
     components/tclient/input_overlay.cpp
     components/tclient/input_overlay.h
+    components/tclient/lyrics_component.cpp
+    components/tclient/lyrics_component.h
     components/tclient/menus_qmclient.cpp
     components/tclient/mod.cpp
     components/tclient/mod.h
@@ -3413,8 +3415,10 @@ list(APPEND TARGETS_LINK rust_test)
 
 set(RUST_TEST_LIBS ${LIBS} $<TARGET_FILE:rust_test>)
 list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
+string(JOIN ";" RUST_TEST_LIBS_JOINED ${RUST_TEST_LIBS})
+string(GENEX_STRIP "${RUST_TEST_LIBS_JOINED}" RUST_TEST_LIBS_STRIPPED)
 add_custom_target(run_rust_tests
-  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES=${RUST_TEST_LIBS}" ${CARGO_TEST}
+  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES=${RUST_TEST_LIBS_STRIPPED}" ${CARGO_TEST}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   USES_TERMINAL
   DEPENDS rust_test

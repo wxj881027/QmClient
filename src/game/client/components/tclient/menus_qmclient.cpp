@@ -3748,21 +3748,27 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			Ui()->DoLabel(&Row, "栖梦(璇梦)", LG_BodySize + 2.0f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			// 感谢名单
-			RightContent.HSplitTop(LG_LineSpacing * 2, nullptr, &RightContent);
-			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-			TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.8f));
+			RightContent.HSplitTop(LG_LineSpacing * 1.75f, nullptr, &RightContent);
+			RightContent.HSplitTop(LG_LineHeight * 0.92f, &Row, &RightContent);
+			TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.82f));
 			Ui()->DoLabel(&Row, "赞助名单:", LG_BodySize * 0.95f, TEXTALIGN_ML);
-			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
+			RightContent.HSplitTop(LG_LineSpacing * 0.35f, nullptr, &RightContent);
+			CUIRect Divider;
+			RightContent.HSplitTop(1.0f, &Divider, &RightContent);
+			Divider.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.16f), IGraphics::CORNER_NONE, 0.0f);
+			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
+			RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
 			//TextRender()->TextColor(GetRainbowColor(-8));//彩虹循环效果
 			TextRender()->TextColor(ColorRGBA(0.95f, 0.8f, 0.2f, 1.0f));
-			Ui()->DoLabel(&Row, "喵不一,久桃,椿雪绒绒,芽芽,骨头,见月,鹑", LG_BodySize * 1.1f, TEXTALIGN_ML);
-			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, "望舒,松子,平凡..,cixin,洗点,秀色,朱朱", LG_BodySize * 1.1f, TEXTALIGN_ML);
-			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, "大恐龙,:luv:,陌浅羽,Blue°F,怯修,yezeen", LG_BodySize * 1.1f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, "喵不一,久桃,芽芽,骨头,陌浅羽,树羽小朋友", LG_BodySize * 1.1f, TEXTALIGN_ML);
+			RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
+			Ui()->DoLabel(&Row, "望舒,松子,平凡..,cixin,洗点,秀色,朱朱,Twen", LG_BodySize * 1.1f, TEXTALIGN_ML);
+			RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
+			Ui()->DoLabel(&Row, "大恐龙,:luv:,见月,Blue°F,怯修,yezeen,鹑", LG_BodySize * 1.1f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-			RightContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &RightContent);
+			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
+			RightContent.HSplitTop(LG_LineHeight * 0.9f, &Row, &RightContent);
 			Ui()->DoLabel(&Row, "没有你们或多或少的支持我无法走的这么远,谢谢", LG_BodySize * 0.93f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 

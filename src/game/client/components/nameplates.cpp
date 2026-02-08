@@ -1137,6 +1137,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		const float StrictEpsilon = 0.0001f;
 		const float SelfX = Data.m_Coords.x;
 		const float SelfY = Data.m_Coords.y;
+		const int SelfTeam = GameClient()->IsTeamPlay() ? ClientData.m_Team : GameClient()->m_Teams.Team(ClientId);
 		float BestDistSq = INFINITY;
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
@@ -1150,6 +1151,9 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 			if(GameClient()->m_aClients[i].m_IsVolleyBall)
 				continue;
 			if(GameClient()->m_aClients[i].m_Solo)
+				continue;
+			const int OtherTeam = GameClient()->IsTeamPlay() ? GameClient()->m_aClients[i].m_Team : GameClient()->m_Teams.Team(i);
+			if(SelfTeam != TEAM_SUPER && OtherTeam != TEAM_SUPER && SelfTeam != OtherTeam)
 				continue;
 
 			const vec2 OtherPos = GameClient()->m_aClients[i].m_RenderPos;

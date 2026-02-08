@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -24,22 +25,37 @@ using namespace winrt::Windows::Media::Control;
 
 struct CSystemMediaControls::SWinrt
 {
-	GlobalSystemMediaTransportControlsSessionManager m_Manager{nullptr};
-	GlobalSystemMediaTransportControlsSession m_Session{nullptr};
 	CSystemMediaControls::SState m_State{};
 	bool m_HasMedia = false;
-	int64_t m_LastStateUpdate = 0;
-	int64_t m_LastPropsUpdate = 0;
-	bool m_WinrtInitialized = false;
-	std::string m_AlbumArtKey;
+};
+
+struct SPlainState
+{
+	bool m_CanPlay = false;
+	bool m_CanPause = false;
+	bool m_CanPrev = false;
+	bool m_CanNext = false;
+	bool m_Playing = false;
+	char m_aTitle[128] = {};
+	char m_aArtist[128] = {};
+	char m_aAlbum[128] = {};
+	int64_t m_PositionMs = 0;
+	int64_t m_DurationMs = 0;
+};
+
+enum class ECommand
+{
+	Prev,
+	PlayPause,
+	Next,
 };
 
 struct CSystemMediaControls::SShared
 {
 	std::mutex m_Mutex;
-	bool m_HasRequest = false;
-	std::string m_RequestKey;
-	winrt::agile_ref<winrt::Windows::Storage::Streams::IRandomAccessStreamReference> m_Thumbnail;
+	SPlainState m_State{};
+	bool m_HasMedia = false;
+	std::deque<ECommand> m_Commands;
 	std::vector<uint8_t> m_AlbumArtRgba;
 	int m_AlbumArtWidth = 0;
 	int m_AlbumArtHeight = 0;
@@ -62,13 +78,6 @@ static void ClearState(CSystemMediaControls::SWinrt *pWinrt, IGraphics *pGraphic
 	ClearAlbumArtLocal(pWinrt, pGraphics);
 	pWinrt->m_State = CSystemMediaControls::SState{};
 	pWinrt->m_HasMedia = false;
-	pWinrt->m_AlbumArtKey.clear();
-}
-
-static void ClearMetadata(CSystemMediaControls::SWinrt *pWinrt)
-{
-	pWinrt->m_State.m_aTitle[0] = '\0';
-	pWinrt->m_State.m_aArtist[0] = '\0';
 }
 
 static void ClearSharedAlbumArt(CSystemMediaControls::SShared *pShared)
@@ -87,24 +96,6 @@ static void SetSharedAlbumArt(CSystemMediaControls::SShared *pShared, std::vecto
 	pShared->m_AlbumArtWidth = Width;
 	pShared->m_AlbumArtHeight = Height;
 	pShared->m_AlbumArtDirty = true;
-}
-
-static void QueueAlbumArtRequest(CSystemMediaControls::SShared *pShared, const winrt::Windows::Storage::Streams::IRandomAccessStreamReference &Thumbnail, const std::string &Key)
-{
-	std::scoped_lock Lock(pShared->m_Mutex);
-	pShared->m_Thumbnail = winrt::agile_ref<winrt::Windows::Storage::Streams::IRandomAccessStreamReference>(Thumbnail);
-	pShared->m_RequestKey = Key;
-	pShared->m_HasRequest = true;
-}
-
-static bool PopAlbumArtRequest(CSystemMediaControls::SShared *pShared, winrt::agile_ref<winrt::Windows::Storage::Streams::IRandomAccessStreamReference> &OutThumbnail)
-{
-	std::scoped_lock Lock(pShared->m_Mutex);
-	if(!pShared->m_HasRequest)
-		return false;
-	OutThumbnail = pShared->m_Thumbnail;
-	pShared->m_HasRequest = false;
-	return true;
 }
 
 static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const winrt::Windows::Storage::Streams::IRandomAccessStreamReference &Thumbnail)
@@ -294,38 +285,208 @@ void CSystemMediaControls::ThreadMain()
 {
 	try
 	{
-		winrt::init_apartment(winrt::apartment_type::single_threaded);
+		winrt::init_apartment(winrt::apartment_type::multi_threaded);
 	}
 	catch(const winrt::hresult_error &)
 	{
 		return;
 	}
 
+	GlobalSystemMediaTransportControlsSessionManager Manager{nullptr};
+	GlobalSystemMediaTransportControlsSession Session{nullptr};
+	SPlainState State{};
+	bool HasMedia = false;
+	std::string AlbumArtKey;
+	auto LastPropsUpdate = std::chrono::steady_clock::now() - std::chrono::seconds(2);
+
 	while(!m_StopThread)
 	{
-		winrt::agile_ref<winrt::Windows::Storage::Streams::IRandomAccessStreamReference> Thumbnail;
-		bool HasRequest = false;
+		try
 		{
-			std::scoped_lock Lock(m_pShared->m_Mutex);
-			if(m_pShared->m_HasRequest)
+			if(!Manager)
 			{
-				Thumbnail = m_pShared->m_Thumbnail;
-				m_pShared->m_HasRequest = false;
-				HasRequest = true;
+				try
+				{
+					Manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
+				}
+				catch(const winrt::hresult_error &)
+				{
+					Manager = nullptr;
+				}
+			}
+
+			if(!Manager)
+			{
+				if(HasMedia)
+				{
+					HasMedia = false;
+					State = SPlainState{};
+					AlbumArtKey.clear();
+					ClearSharedAlbumArt(m_pShared.get());
+					std::scoped_lock Lock(m_pShared->m_Mutex);
+					m_pShared->m_State = State;
+					m_pShared->m_HasMedia = false;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+				continue;
+			}
+
+			Session = Manager.GetCurrentSession();
+			if(!Session)
+			{
+				if(HasMedia)
+				{
+					HasMedia = false;
+					State = SPlainState{};
+					AlbumArtKey.clear();
+					ClearSharedAlbumArt(m_pShared.get());
+					std::scoped_lock Lock(m_pShared->m_Mutex);
+					m_pShared->m_State = State;
+					m_pShared->m_HasMedia = false;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+				continue;
+			}
+
+			const auto PlaybackInfo = Session.GetPlaybackInfo();
+			const auto Controls = PlaybackInfo.Controls();
+			State.m_CanPlay = Controls.IsPlayEnabled();
+			State.m_CanPause = Controls.IsPauseEnabled();
+			State.m_CanPrev = Controls.IsPreviousEnabled();
+			State.m_CanNext = Controls.IsNextEnabled();
+			State.m_Playing = PlaybackInfo.PlaybackStatus() == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing;
+
+			const auto Timeline = Session.GetTimelineProperties();
+			const int64_t Start100ns = Timeline.StartTime().count();
+			const int64_t End100ns = Timeline.EndTime().count();
+			const int64_t Position100ns = Timeline.Position().count();
+			const int64_t Duration100ns = End100ns - Start100ns;
+			const int64_t PositionRel100ns = Position100ns - Start100ns;
+			State.m_DurationMs = Duration100ns > 0 ? Duration100ns / 10000 : 0;
+			State.m_PositionMs = PositionRel100ns > 0 ? PositionRel100ns / 10000 : 0;
+			HasMedia = true;
+
+			const auto Now = std::chrono::steady_clock::now();
+			if(Now - LastPropsUpdate >= std::chrono::seconds(1))
+			{
+				LastPropsUpdate = Now;
+				try
+				{
+					const auto MediaProps = Session.TryGetMediaPropertiesAsync().get();
+					const std::string Title = winrt::to_string(MediaProps.Title());
+					const std::string Artist = winrt::to_string(MediaProps.Artist());
+					const std::string Album = winrt::to_string(MediaProps.AlbumTitle());
+
+					if(!Title.empty())
+					{
+						str_copy(State.m_aTitle, Title.c_str(), sizeof(State.m_aTitle));
+					}
+					else
+					{
+						State.m_aTitle[0] = '\0';
+					}
+
+					if(!Artist.empty())
+					{
+						str_copy(State.m_aArtist, Artist.c_str(), sizeof(State.m_aArtist));
+					}
+					else
+					{
+						State.m_aArtist[0] = '\0';
+					}
+
+					if(!Album.empty())
+					{
+						str_copy(State.m_aAlbum, Album.c_str(), sizeof(State.m_aAlbum));
+					}
+					else
+					{
+						State.m_aAlbum[0] = '\0';
+					}
+
+					const bool HasText = !Title.empty() || !Artist.empty() || !Album.empty();
+					if(HasText)
+					{
+						const std::string NewKey = Title + "\n" + Artist + "\n" + Album;
+						if(NewKey != AlbumArtKey)
+						{
+							AlbumArtKey = NewKey;
+							const auto Thumbnail = MediaProps.Thumbnail();
+							if(Thumbnail)
+								UpdateAlbumArtData(m_pShared.get(), Thumbnail);
+							else
+								ClearSharedAlbumArt(m_pShared.get());
+						}
+					}
+					else
+					{
+						AlbumArtKey.clear();
+						ClearSharedAlbumArt(m_pShared.get());
+					}
+				}
+				catch(const winrt::hresult_error &)
+				{
+					State.m_aTitle[0] = '\0';
+					State.m_aArtist[0] = '\0';
+					State.m_aAlbum[0] = '\0';
+				}
+			}
+
+			{
+				std::scoped_lock Lock(m_pShared->m_Mutex);
+				m_pShared->m_State = State;
+				m_pShared->m_HasMedia = HasMedia;
+			}
+
+			std::deque<ECommand> Commands;
+			{
+				std::scoped_lock Lock(m_pShared->m_Mutex);
+				Commands.swap(m_pShared->m_Commands);
+			}
+			if(Session)
+			{
+				for(const auto Command : Commands)
+				{
+					try
+					{
+						switch(Command)
+						{
+						case ECommand::Prev:
+							Session.TrySkipPreviousAsync().get();
+							break;
+						case ECommand::PlayPause:
+							Session.TryTogglePlayPauseAsync().get();
+							break;
+						case ECommand::Next:
+							Session.TrySkipNextAsync().get();
+							break;
+						}
+					}
+					catch(const winrt::hresult_error &)
+					{
+					}
+				}
 			}
 		}
-
-		if(HasRequest)
+		catch(const winrt::hresult_error &)
 		{
-			auto Ref = Thumbnail.get();
-			if(Ref)
-			{
-				UpdateAlbumArtData(m_pShared.get(), Ref);
-			}
-			else
-			{
-				ClearSharedAlbumArt(m_pShared.get());
-			}
+			HasMedia = false;
+			State = SPlainState{};
+			AlbumArtKey.clear();
+			ClearSharedAlbumArt(m_pShared.get());
+			std::scoped_lock Lock(m_pShared->m_Mutex);
+			m_pShared->m_State = State;
+			m_pShared->m_HasMedia = false;
+		}
+		catch(...)
+		{
+			HasMedia = false;
+			State = SPlainState{};
+			AlbumArtKey.clear();
+			ClearSharedAlbumArt(m_pShared.get());
+			std::scoped_lock Lock(m_pShared->m_Mutex);
+			m_pShared->m_State = State;
+			m_pShared->m_HasMedia = false;
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -339,25 +500,6 @@ void CSystemMediaControls::OnInit()
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	m_pWinrt = std::make_unique<SWinrt>();
-	try
-	{
-		winrt::init_apartment(winrt::apartment_type::single_threaded);
-		m_pWinrt->m_WinrtInitialized = true;
-	}
-	catch(const winrt::hresult_error &)
-	{
-		m_pWinrt.reset();
-		return;
-	}
-
-	try
-	{
-		m_pWinrt->m_Manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
-	}
-	catch(const winrt::hresult_error &)
-	{
-	}
-
 	m_pShared = std::make_unique<SShared>();
 	m_StopThread = false;
 	m_Thread = std::thread(&CSystemMediaControls::ThreadMain, this);
@@ -376,12 +518,6 @@ void CSystemMediaControls::OnShutdown()
 	if(m_pWinrt)
 	{
 		ClearState(m_pWinrt.get(), Graphics());
-		m_pWinrt->m_Session = nullptr;
-		m_pWinrt->m_Manager = nullptr;
-		if(m_pWinrt->m_WinrtInitialized)
-		{
-			winrt::uninit_apartment();
-		}
 		m_pWinrt.reset();
 	}
 #endif
@@ -393,132 +529,36 @@ void CSystemMediaControls::OnUpdate()
 	if(!m_pWinrt)
 		return;
 
-	const int64_t Now = time_get();
-	const int64_t StateInterval = time_freq() / 5;
-	if(Now - m_pWinrt->m_LastStateUpdate >= StateInterval)
+	if(!m_pShared)
+		return;
+
+	SPlainState SharedState{};
+	bool HasMedia = false;
 	{
-		m_pWinrt->m_LastStateUpdate = Now;
+		std::scoped_lock Lock(m_pShared->m_Mutex);
+		SharedState = m_pShared->m_State;
+		HasMedia = m_pShared->m_HasMedia;
+	}
 
-		if(!m_pWinrt->m_Manager)
-		{
-			try
-			{
-				m_pWinrt->m_Manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
-			}
-			catch(const winrt::hresult_error &)
-			{
-				ClearState(m_pWinrt.get(), Graphics());
-				if(m_pShared)
-					ClearSharedAlbumArt(m_pShared.get());
-				ApplySharedAlbumArt(m_pShared.get(), m_pWinrt.get(), Graphics());
-				return;
-			}
-		}
-
-		if(!m_pWinrt->m_Manager)
-		{
+	if(!HasMedia)
+	{
+		if(m_pWinrt->m_HasMedia)
 			ClearState(m_pWinrt.get(), Graphics());
-			if(m_pShared)
-				ClearSharedAlbumArt(m_pShared.get());
-			ApplySharedAlbumArt(m_pShared.get(), m_pWinrt.get(), Graphics());
-			return;
-		}
-
-		try
-		{
-			const auto Session = m_pWinrt->m_Manager.GetCurrentSession();
-			m_pWinrt->m_Session = Session;
-			if(!Session)
-			{
-				ClearState(m_pWinrt.get(), Graphics());
-				if(m_pShared)
-					ClearSharedAlbumArt(m_pShared.get());
-				ApplySharedAlbumArt(m_pShared.get(), m_pWinrt.get(), Graphics());
-				return;
-			}
-
-			const auto PlaybackInfo = Session.GetPlaybackInfo();
-			const auto Controls = PlaybackInfo.Controls();
-			m_pWinrt->m_State.m_CanPlay = Controls.IsPlayEnabled();
-			m_pWinrt->m_State.m_CanPause = Controls.IsPauseEnabled();
-			m_pWinrt->m_State.m_CanPrev = Controls.IsPreviousEnabled();
-			m_pWinrt->m_State.m_CanNext = Controls.IsNextEnabled();
-			m_pWinrt->m_State.m_Playing = PlaybackInfo.PlaybackStatus() == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing;
-			m_pWinrt->m_HasMedia = true;
-
-			const auto Timeline = Session.GetTimelineProperties();
-			const int64_t Start100ns = Timeline.StartTime().count();
-			const int64_t End100ns = Timeline.EndTime().count();
-			const int64_t Position100ns = Timeline.Position().count();
-			const int64_t Duration100ns = End100ns - Start100ns;
-			const int64_t PositionRel100ns = Position100ns - Start100ns;
-			m_pWinrt->m_State.m_DurationMs = Duration100ns > 0 ? Duration100ns / 10000 : 0;
-			m_pWinrt->m_State.m_PositionMs = PositionRel100ns > 0 ? PositionRel100ns / 10000 : 0;
-
-			const int64_t PropsInterval = time_freq();
-			if(Now - m_pWinrt->m_LastPropsUpdate >= PropsInterval)
-			{
-				m_pWinrt->m_LastPropsUpdate = Now;
-				try
-				{
-					const auto MediaProps = Session.TryGetMediaPropertiesAsync().get();
-					const std::string Title = winrt::to_string(MediaProps.Title());
-					const std::string Artist = winrt::to_string(MediaProps.Artist());
-
-					if(!Title.empty())
-					{
-						str_copy(m_pWinrt->m_State.m_aTitle, Title.c_str(), sizeof(m_pWinrt->m_State.m_aTitle));
-					}
-					else
-					{
-						m_pWinrt->m_State.m_aTitle[0] = '\0';
-					}
-
-					if(!Artist.empty())
-					{
-						str_copy(m_pWinrt->m_State.m_aArtist, Artist.c_str(), sizeof(m_pWinrt->m_State.m_aArtist));
-					}
-					else
-					{
-						m_pWinrt->m_State.m_aArtist[0] = '\0';
-					}
-
-					const bool HasText = !Title.empty() || !Artist.empty();
-					if(HasText)
-					{
-						const std::string NewKey = Title + "\n" + Artist;
-						if(NewKey != m_pWinrt->m_AlbumArtKey)
-						{
-							m_pWinrt->m_AlbumArtKey = NewKey;
-							if(m_pShared)
-							{
-								const auto Thumbnail = MediaProps.Thumbnail();
-								if(Thumbnail)
-									QueueAlbumArtRequest(m_pShared.get(), Thumbnail, NewKey);
-								else
-									ClearSharedAlbumArt(m_pShared.get());
-							}
-						}
-					}
-					else
-					{
-						m_pWinrt->m_AlbumArtKey.clear();
-						if(m_pShared)
-							ClearSharedAlbumArt(m_pShared.get());
-					}
-				}
-				catch(const winrt::hresult_error &)
-				{
-					ClearMetadata(m_pWinrt.get());
-				}
-			}
-		}
-		catch(const winrt::hresult_error &)
-		{
-			ClearState(m_pWinrt.get(), Graphics());
-			if(m_pShared)
-				ClearSharedAlbumArt(m_pShared.get());
-		}
+		m_pWinrt->m_HasMedia = false;
+	}
+	else
+	{
+		m_pWinrt->m_HasMedia = true;
+		m_pWinrt->m_State.m_CanPlay = SharedState.m_CanPlay;
+		m_pWinrt->m_State.m_CanPause = SharedState.m_CanPause;
+		m_pWinrt->m_State.m_CanPrev = SharedState.m_CanPrev;
+		m_pWinrt->m_State.m_CanNext = SharedState.m_CanNext;
+		m_pWinrt->m_State.m_Playing = SharedState.m_Playing;
+		str_copy(m_pWinrt->m_State.m_aTitle, SharedState.m_aTitle, sizeof(m_pWinrt->m_State.m_aTitle));
+		str_copy(m_pWinrt->m_State.m_aArtist, SharedState.m_aArtist, sizeof(m_pWinrt->m_State.m_aArtist));
+		str_copy(m_pWinrt->m_State.m_aAlbum, SharedState.m_aAlbum, sizeof(m_pWinrt->m_State.m_aAlbum));
+		m_pWinrt->m_State.m_PositionMs = SharedState.m_PositionMs;
+		m_pWinrt->m_State.m_DurationMs = SharedState.m_DurationMs;
 	}
 
 	ApplySharedAlbumArt(m_pShared.get(), m_pWinrt.get(), Graphics());
@@ -541,104 +581,32 @@ bool CSystemMediaControls::GetStateSnapshot(SState &State) const
 void CSystemMediaControls::Previous()
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!m_pWinrt)
+	if(!m_pShared)
 		return;
 
-	if(!m_pWinrt->m_Manager)
-	{
-		try
-		{
-			m_pWinrt->m_Manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
-		}
-		catch(const winrt::hresult_error &)
-		{
-			return;
-		}
-	}
-
-	if(!m_pWinrt->m_Manager)
-		return;
-
-	try
-	{
-		const auto Session = m_pWinrt->m_Manager.GetCurrentSession();
-		if(Session)
-		{
-			Session.TrySkipPreviousAsync().get();
-		}
-	}
-	catch(const winrt::hresult_error &)
-	{
-	}
+	std::scoped_lock Lock(m_pShared->m_Mutex);
+	m_pShared->m_Commands.push_back(ECommand::Prev);
 #endif
 }
 
 void CSystemMediaControls::PlayPause()
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!m_pWinrt)
+	if(!m_pShared)
 		return;
 
-	if(!m_pWinrt->m_Manager)
-	{
-		try
-		{
-			m_pWinrt->m_Manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
-		}
-		catch(const winrt::hresult_error &)
-		{
-			return;
-		}
-	}
-
-	if(!m_pWinrt->m_Manager)
-		return;
-
-	try
-	{
-		const auto Session = m_pWinrt->m_Manager.GetCurrentSession();
-		if(Session)
-		{
-			Session.TryTogglePlayPauseAsync().get();
-		}
-	}
-	catch(const winrt::hresult_error &)
-	{
-	}
+	std::scoped_lock Lock(m_pShared->m_Mutex);
+	m_pShared->m_Commands.push_back(ECommand::PlayPause);
 #endif
 }
 
 void CSystemMediaControls::Next()
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!m_pWinrt)
+	if(!m_pShared)
 		return;
 
-	if(!m_pWinrt->m_Manager)
-	{
-		try
-		{
-			m_pWinrt->m_Manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
-		}
-		catch(const winrt::hresult_error &)
-		{
-			return;
-		}
-	}
-
-	if(!m_pWinrt->m_Manager)
-		return;
-
-	try
-	{
-		const auto Session = m_pWinrt->m_Manager.GetCurrentSession();
-		if(Session)
-		{
-			Session.TrySkipNextAsync().get();
-		}
-	}
-	catch(const winrt::hresult_error &)
-	{
-	}
+	std::scoped_lock Lock(m_pShared->m_Mutex);
+	m_pShared->m_Commands.push_back(ECommand::Next);
 #endif
 }

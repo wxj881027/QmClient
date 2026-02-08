@@ -142,6 +142,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Ghost,
 					      &m_TClient, // Must be before chat and players
 					      &m_SystemMediaControls,
+					      &m_Lyrics,
 					      &m_Players,
 					      &m_MapLayersForeground,
 					      &m_Outlines,

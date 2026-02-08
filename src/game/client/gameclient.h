@@ -75,6 +75,7 @@
 #include "components/tclient/custom_communities.h"
 #include "components/tclient/data_version.h"
 #include "components/tclient/input_overlay.h"
+#include "components/tclient/lyrics_component.h"
 #include "components/tclient/mod.h"
 #include "components/tclient/outlines.h"
 #include "components/tclient/pet.h"
@@ -189,6 +190,7 @@ public:
 	CSounds m_Sounds;
 	CEmoticon m_Emoticon;
 	CSystemMediaControls m_SystemMediaControls;
+	CLyrics m_Lyrics;
 
 	CDamageInd m_DamageInd;
 	CTouchControls m_TouchControls;

@@ -18,6 +18,7 @@
 
 #include <game/client/animstate.h>
 #include <game/client/components/scoreboard.h>
+#include <game/client/components/tclient/lyrics_component.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/layers.h>
@@ -541,10 +542,6 @@ bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 		return false;
 	if(!GameClient()->m_Snap.m_aCharacters[MiniViewClientId].m_Active)
 		return false;
-	if(!GameClient()->m_Snap.m_apPlayerInfos[MiniViewClientId] || !GameClient()->m_Snap.m_apPrevPlayerInfos[MiniViewClientId])
-		return false;
-	if(MiniClient.m_RenderCur.m_Tick < 0 || MiniClient.m_RenderPrev.m_Tick < 0)
-		return false;
 
 	const int MapW = GameClient()->Collision()->GetWidth();
 	const int MapH = GameClient()->Collision()->GetHeight();
@@ -621,7 +618,12 @@ void CHud::RenderDummyMiniMap()
 	Graphics()->ClipDisable();
 	Graphics()->UpdateViewport(ClampedX, ClampedY, ClampedW, ClampedH, false);
 
-	const vec2 MiniPos = GameClient()->m_aClients[MiniViewClientId].m_RenderPos;
+	const CGameClient::CClientData &MiniClient = GameClient()->m_aClients[MiniViewClientId];
+	vec2 MiniPos = MiniClient.m_RenderPos;
+	if(MiniClient.m_RenderCur.m_Tick < 0 && MiniClient.m_RenderPrev.m_Tick < 0)
+	{
+		MiniPos = vec2(MiniClient.m_Snapped.m_X, MiniClient.m_Snapped.m_Y);
+	}
 	const float ZoomScale = maximum(0.1f, g_Config.m_ClDummyMiniViewZoom / 100.0f);
 	const float MiniZoom = GameClient()->m_Camera.m_Zoom * ZoomScale;
 
@@ -1333,6 +1335,23 @@ void CHud::RenderMediaIsland(float AnchorX, float CenterY)
 		Cursor.SetPosition(vec2(TextX, ArtistY));
 		TextRender()->TextEx(&Cursor, MediaState.m_aArtist);
 	}
+	char aLyricBuf[256];
+	if(GameClient()->m_Lyrics.GetCurrentLine(aLyricBuf, sizeof(aLyricBuf), MediaState.m_PositionMs))
+	{
+		const float LyricFontSize = 6.0f;
+		const float LyricHeight = LyricFontSize + 3.0f;
+		const float LyricY = IslandY + IslandHeight + 2.0f;
+		const float LyricX = IslandX;
+		const float LyricW = IslandWidth;
+		Graphics()->DrawRect(LyricX, LyricY, LyricW, LyricHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 3.0f);
+
+		CTextCursor Cursor;
+		Cursor.m_FontSize = LyricFontSize;
+		Cursor.m_LineWidth = LyricW - PaddingX * 2.0f;
+		Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
+		Cursor.SetPosition(vec2(LyricX + PaddingX, LyricY + 1.0f));
+		TextRender()->TextEx(&Cursor, aLyricBuf);
+	}
 	TextRender()->TextColor(PrevTextColor);
 	TextRender()->TextOutlineColor(PrevOutlineColor);
 	TextRender()->SetRenderFlags(PrevFlags);
@@ -1888,8 +1907,11 @@ namespace
 struct SKeyStatusLines
 {
 	const char *m_pKeyStatusText;
+	bool m_ShowKey;
 	char m_aHammerLine[64];
+	bool m_ShowHammer;
 	char m_aControlLine[64];
+	bool m_ShowControl;
 };
 
 struct SKeyStatusLayout
@@ -1907,20 +1929,33 @@ struct SKeyStatusLayout
 SKeyStatusLines GetKeyStatusLines(const CGameClient *pGameClient)
 {
 	SKeyStatusLines Lines{};
-	Lines.m_pKeyStatusText = "卡键: ?";
-	if(g_Config.m_ClDummyResetOnSwitch == 0)
-		Lines.m_pKeyStatusText = "卡键: ON";
-	else if(g_Config.m_ClDummyResetOnSwitch == 1)
-		Lines.m_pKeyStatusText = "卡键: OFF";
-	else if(g_Config.m_ClDummyResetOnSwitch == 2)
-		Lines.m_pKeyStatusText = "卡键: 重置本体";
+	Lines.m_ShowKey = g_Config.m_ClShowhudKeyStatusReset != 0;
+	Lines.m_ShowHammer = g_Config.m_ClShowhudKeyStatusHammer != 0;
+	Lines.m_ShowControl = g_Config.m_ClShowhudKeyStatusControl != 0;
 
-	const bool FirePressed = (pGameClient->m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire & 1) != 0;
-	const char *pHammerState = g_Config.m_ClDummyHammer ? (FirePressed ? "DF" : "HDF") : "正常锤";
-	str_format(Lines.m_aHammerLine, sizeof(Lines.m_aHammerLine), "锤: %s", pHammerState);
+	if(Lines.m_ShowKey)
+	{
+		Lines.m_pKeyStatusText = "卡键: ?";
+		if(g_Config.m_ClDummyResetOnSwitch == 0)
+			Lines.m_pKeyStatusText = "卡键: ON";
+		else if(g_Config.m_ClDummyResetOnSwitch == 1)
+			Lines.m_pKeyStatusText = "卡键: OFF";
+		else if(g_Config.m_ClDummyResetOnSwitch == 2)
+			Lines.m_pKeyStatusText = "卡键: 重置本体";
+	}
 
-	const char *pControlState = g_Config.m_ClDummyControl ? "开启" : "关闭";
-	str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), "分身控制: %s", pControlState);
+	if(Lines.m_ShowHammer)
+	{
+		const bool FirePressed = (pGameClient->m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire & 1) != 0;
+		const char *pHammerState = g_Config.m_ClDummyHammer ? (FirePressed ? "DF" : "HDF") : "正常锤";
+		str_format(Lines.m_aHammerLine, sizeof(Lines.m_aHammerLine), "锤: %s", pHammerState);
+	}
+
+	if(Lines.m_ShowControl)
+	{
+		const char *pControlState = g_Config.m_ClDummyControl ? "开启" : "关闭";
+		str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), "分身控制: %s", pControlState);
+	}
 
 	return Lines;
 }
@@ -1935,12 +1970,33 @@ SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const SKeyStatusLi
 	Layout.m_X = 476.0f;
 	Layout.m_Y = 38.0f;
 
-	Layout.m_W = pTextRender->TextWidth(Layout.m_FontSize, Lines.m_pKeyStatusText, -1, -1.0f);
-	Layout.m_W = maximum(Layout.m_W, pTextRender->TextWidth(Layout.m_FontSize, Lines.m_aHammerLine, -1, -1.0f));
-	Layout.m_W = maximum(Layout.m_W, pTextRender->TextWidth(Layout.m_FontSize, Lines.m_aControlLine, -1, -1.0f));
-	Layout.m_W += Layout.m_PaddingX * 2.0f;
+	int LineCount = 0;
+	float MaxWidth = 0.0f;
+	if(Lines.m_ShowKey)
+	{
+		MaxWidth = maximum(MaxWidth, pTextRender->TextWidth(Layout.m_FontSize, Lines.m_pKeyStatusText, -1, -1.0f));
+		LineCount++;
+	}
+	if(Lines.m_ShowHammer)
+	{
+		MaxWidth = maximum(MaxWidth, pTextRender->TextWidth(Layout.m_FontSize, Lines.m_aHammerLine, -1, -1.0f));
+		LineCount++;
+	}
+	if(Lines.m_ShowControl)
+	{
+		MaxWidth = maximum(MaxWidth, pTextRender->TextWidth(Layout.m_FontSize, Lines.m_aControlLine, -1, -1.0f));
+		LineCount++;
+	}
 
-	Layout.m_H = Layout.m_LineHeight * 3.0f + Layout.m_PaddingY * 2.0f;
+	if(LineCount == 0)
+	{
+		Layout.m_W = 0.0f;
+		Layout.m_H = 0.0f;
+		return Layout;
+	}
+
+	Layout.m_W = MaxWidth + Layout.m_PaddingX * 2.0f;
+	Layout.m_H = Layout.m_LineHeight * LineCount + Layout.m_PaddingY * 2.0f;
 	return Layout;
 }
 }
@@ -1949,6 +2005,8 @@ void CHud::RenderKeyStatus()
 {
 	const SKeyStatusLines Lines = GetKeyStatusLines(GameClient());
 	const SKeyStatusLayout Layout = GetKeyStatusLayout(TextRender(), Lines);
+	if(Layout.m_H <= 0.0f)
+		return;
 
 	Graphics()->DrawRect(Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_ALL, 5.0f);
 
@@ -1961,13 +2019,21 @@ void CHud::RenderKeyStatus()
 	ColorRGBA KeyRainbowColor = color_cast<ColorRGBA>(KeyRainbowHsla);
 
 	TextRender()->TextColor(KeyRainbowColor);
-	TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_pKeyStatusText, -1.0f);
+	if(Lines.m_ShowKey)
+	{
+		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_pKeyStatusText, -1.0f);
+		TextY += Layout.m_LineHeight;
+	}
+	if(Lines.m_ShowHammer)
+	{
+		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aHammerLine, -1.0f);
+		TextY += Layout.m_LineHeight;
+	}
+	if(Lines.m_ShowControl)
+	{
+		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aControlLine, -1.0f);
+	}
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	TextY += Layout.m_LineHeight;
-
-	TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aHammerLine, -1.0f);
-	TextY += Layout.m_LineHeight;
-	TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aControlLine, -1.0f);
 }
 
 inline int CHud::GetDigitsIndex(int Value, int Max)
@@ -2100,6 +2166,7 @@ void CHud::RenderMovementInformation()
 
 	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines(GameClient());
 	const SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines);
+	const bool ShowKeyStatus = KeyStatusLayout.m_H > 0.0f;
 
 	float MovementBoxHeight = ShowMovementInfo ? GetMovementInformationBoxHeight() : 0.0f;
 	bool HasDummyInfo = false;
@@ -2173,9 +2240,17 @@ void CHud::RenderMovementInformation()
 
 	BoxWidth = maximum(BoxWidth, KeyStatusLayout.m_W);
 
-	float BoxHeight = KeyStatusLayout.m_H;
+	float BoxHeight = 0.0f;
+	if(ShowKeyStatus)
+		BoxHeight += KeyStatusLayout.m_H;
 	if(ShowMovementInfo && MovementBoxHeight > 0.0f)
-		BoxHeight += KeyStatusGap + MovementBoxHeight;
+	{
+		if(ShowKeyStatus)
+			BoxHeight += KeyStatusGap;
+		BoxHeight += MovementBoxHeight;
+	}
+	if(BoxHeight <= 0.0f)
+		return;
 
 	const bool ShowDummyActionsHud = g_Config.m_ClShowhudDummyActions &&
 		!(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) &&
@@ -2381,22 +2456,34 @@ void CHud::RenderMovementInformation()
 		}
 	}
 
-	float KeyStatusY = StartY + BoxHeight - KeyStatusLayout.m_H;
-	float KeyTextX = StartX + KeyStatusLayout.m_PaddingX;
-	float KeyTextY = KeyStatusY + KeyStatusLayout.m_PaddingY;
+	if(ShowKeyStatus)
+	{
+		float KeyStatusY = StartY + BoxHeight - KeyStatusLayout.m_H;
+		float KeyTextX = StartX + KeyStatusLayout.m_PaddingX;
+		float KeyTextY = KeyStatusY + KeyStatusLayout.m_PaddingY;
 
-	const float KeyTime = Client()->GlobalTime();
-	const float KeyHue = std::fmod(KeyTime * 0.2f, 1.0f);
-	ColorHSLA KeyRainbowHsla(KeyHue, 0.75f, 0.6f, 1.0f);
-	ColorRGBA KeyRainbowColor = color_cast<ColorRGBA>(KeyRainbowHsla);
+		const float KeyTime = Client()->GlobalTime();
+		const float KeyHue = std::fmod(KeyTime * 0.2f, 1.0f);
+		ColorHSLA KeyRainbowHsla(KeyHue, 0.75f, 0.6f, 1.0f);
+		ColorRGBA KeyRainbowColor = color_cast<ColorRGBA>(KeyRainbowHsla);
 
-	TextRender()->TextColor(KeyRainbowColor);
-	TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_pKeyStatusText, -1.0f);
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	KeyTextY += KeyStatusLayout.m_LineHeight;
-	TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aHammerLine, -1.0f);
-	KeyTextY += KeyStatusLayout.m_LineHeight;
-	TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aControlLine, -1.0f);
+		TextRender()->TextColor(KeyRainbowColor);
+		if(KeyStatusLines.m_ShowKey)
+		{
+			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_pKeyStatusText, -1.0f);
+			KeyTextY += KeyStatusLayout.m_LineHeight;
+		}
+		if(KeyStatusLines.m_ShowHammer)
+		{
+			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aHammerLine, -1.0f);
+			KeyTextY += KeyStatusLayout.m_LineHeight;
+		}
+		if(KeyStatusLines.m_ShowControl)
+		{
+			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aControlLine, -1.0f);
+		}
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+	}
 }
 
 void CHud::RenderSpectatorHud()
