@@ -102,6 +102,18 @@ void CFriends::ConSetFriendCategory(IConsole::IResult *pResult, void *pUserData)
 	pSelf->SetFriendCategory(pResult->GetString(0), pResult->GetString(1), pResult->GetString(2));
 }
 
+void CFriends::ConSetFriendNote(IConsole::IResult *pResult, void *pUserData)
+{
+	CFriends *pSelf = (CFriends *)pUserData;
+	pSelf->SetFriendNote(pResult->GetString(0), pResult->GetString(1), pResult->GetString(2));
+}
+
+void CFriends::ConClearFriendNote(IConsole::IResult *pResult, void *pUserData)
+{
+	CFriends *pSelf = (CFriends *)pUserData;
+	pSelf->ClearFriendNote(pResult->GetString(0), pResult->GetString(1));
+}
+
 void CFriends::ConFriends(IConsole::IResult *pResult, void *pUserData)
 {
 	CFriends *pSelf = (CFriends *)pUserData;
@@ -134,6 +146,8 @@ void CFriends::Init(bool Foes)
 	pConsole->Register("friend_category_rename", "s[old_category] s[new_category]", CFGFLAG_CLIENT, ConRenameFriendCategory, this, "Rename a friend category");
 	pConsole->Register("friend_category_remove", "s[category]", CFGFLAG_CLIENT, ConRemoveFriendCategory, this, "Remove a friend category");
 	pConsole->Register("set_friend_category", "s[name] s[clan] s[category]", CFGFLAG_CLIENT, ConSetFriendCategory, this, "Set friend category");
+	pConsole->Register("set_friend_note", "s[name] s[clan] r[note]", CFGFLAG_CLIENT, ConSetFriendNote, this, "Set friend note");
+	pConsole->Register("clear_friend_note", "s[name] s[clan]", CFGFLAG_CLIENT, ConClearFriendNote, this, "Clear friend note");
 	pConsole->Register("friends", "", CFGFLAG_CLIENT, ConFriends, this, "List friends");
 }
 
@@ -195,6 +209,44 @@ const char *CFriends::GetFriendCategory(const char *pName, const char *pClan) co
 		}
 	}
 	return IFriends::OFFLINE_CATEGORY;
+}
+
+const char *CFriends::GetFriendNote(const char *pName, const char *pClan) const
+{
+	const int FriendIndex = FindFriend(pName, pClan);
+	if(FriendIndex < 0)
+		return "";
+
+	return m_aFriends[FriendIndex].m_aNote;
+}
+
+bool CFriends::SetFriendNote(const char *pName, const char *pClan, const char *pNote)
+{
+	const int FriendIndex = FindFriend(pName, pClan);
+	if(FriendIndex < 0 || m_aFriends[FriendIndex].m_aName[0] == '\0')
+		return false;
+
+	char aNote[IFriends::MAX_FRIEND_NOTE_LENGTH];
+	if(pNote == nullptr)
+	{
+		aNote[0] = '\0';
+	}
+	else
+	{
+		str_copy(aNote, pNote, sizeof(aNote));
+		str_utf8_trim_right(aNote);
+	}
+
+	if(str_comp(m_aFriends[FriendIndex].m_aNote, aNote) == 0)
+		return false;
+
+	str_copy(m_aFriends[FriendIndex].m_aNote, aNote, sizeof(m_aFriends[FriendIndex].m_aNote));
+	return true;
+}
+
+bool CFriends::ClearFriendNote(const char *pName, const char *pClan)
+{
+	return SetFriendNote(pName, pClan, "");
 }
 
 const char *CFriends::GetCategory(int Index) const
@@ -351,6 +403,7 @@ void CFriends::AddFriend(const char *pName, const char *pClan, const char *pCate
 	str_copy(m_aFriends[m_NumFriends].m_aName, pName, sizeof(m_aFriends[m_NumFriends].m_aName));
 	str_copy(m_aFriends[m_NumFriends].m_aClan, pClan, sizeof(m_aFriends[m_NumFriends].m_aClan));
 	str_copy(m_aFriends[m_NumFriends].m_aCategory, aCategory, sizeof(m_aFriends[m_NumFriends].m_aCategory));
+	m_aFriends[m_NumFriends].m_aNote[0] = '\0';
 	m_aFriends[m_NumFriends].m_NameHash = NameHash;
 	m_aFriends[m_NumFriends].m_ClanHash = ClanHash;
 	++m_NumFriends;
@@ -433,5 +486,20 @@ void CFriends::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserDat
 		}
 
 		pConfigManager->WriteLine(aBuf);
+
+		if(!pSelf->m_Foes && pSelf->m_aFriends[i].m_aNote[0] != '\0')
+		{
+			str_copy(aBuf, "set_friend_note \"");
+			char *pNoteDst = aBuf + str_length(aBuf);
+			str_escape(&pNoteDst, pSelf->m_aFriends[i].m_aName, pEnd);
+			str_append(aBuf, "\" \"");
+			pNoteDst = aBuf + str_length(aBuf);
+			str_escape(&pNoteDst, pSelf->m_aFriends[i].m_aClan, pEnd);
+			str_append(aBuf, "\" \"");
+			pNoteDst = aBuf + str_length(aBuf);
+			str_escape(&pNoteDst, pSelf->m_aFriends[i].m_aNote, pEnd);
+			str_append(aBuf, "\"");
+			pConfigManager->WriteLine(aBuf);
+		}
 	}
 }

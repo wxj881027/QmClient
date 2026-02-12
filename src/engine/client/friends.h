@@ -22,6 +22,8 @@ class CFriends : public IFriends
 	static void ConRenameFriendCategory(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveFriendCategory(IConsole::IResult *pResult, void *pUserData);
 	static void ConSetFriendCategory(IConsole::IResult *pResult, void *pUserData);
+	static void ConSetFriendNote(IConsole::IResult *pResult, void *pUserData);
+	static void ConClearFriendNote(IConsole::IResult *pResult, void *pUserData);
 	static void ConFriends(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
@@ -41,6 +43,9 @@ public:
 	int GetFriendState(const char *pName, const char *pClan) const override;
 	bool IsFriend(const char *pName, const char *pClan, bool PlayersOnly) const override;
 	const char *GetFriendCategory(const char *pName, const char *pClan) const override;
+	const char *GetFriendNote(const char *pName, const char *pClan) const override;
+	bool SetFriendNote(const char *pName, const char *pClan, const char *pNote) override;
+	bool ClearFriendNote(const char *pName, const char *pClan) override;
 
 	const char *DefaultCategory() const override { return IFriends::DEFAULT_CATEGORY; }
 	int NumCategories() const override { return m_NumCategories; }

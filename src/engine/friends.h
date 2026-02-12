@@ -12,6 +12,7 @@ struct CFriendInfo
 	char m_aName[MAX_NAME_LENGTH];
 	char m_aClan[MAX_CLAN_LENGTH];
 	char m_aCategory[64];
+	char m_aNote[128];
 	unsigned m_NameHash;
 	unsigned m_ClanHash;
 };
@@ -29,6 +30,7 @@ public:
 	static constexpr auto MAX_FRIENDS = 4096;
 	static constexpr int MAX_FRIEND_CATEGORIES = 64;
 	static constexpr int MAX_FRIEND_CATEGORY_LENGTH = 64;
+	static constexpr int MAX_FRIEND_NOTE_LENGTH = 128;
 	static constexpr const char *DEFAULT_CATEGORY = "好友";
 	static constexpr const char *CLAN_MEMBERS_CATEGORY = "战队成员";
 	static constexpr const char *OFFLINE_CATEGORY = "离线";
@@ -40,6 +42,9 @@ public:
 	virtual int GetFriendState(const char *pName, const char *pClan) const = 0;
 	virtual bool IsFriend(const char *pName, const char *pClan, bool PlayersOnly) const = 0;
 	virtual const char *GetFriendCategory(const char *pName, const char *pClan) const = 0;
+	virtual const char *GetFriendNote(const char *pName, const char *pClan) const = 0;
+	virtual bool SetFriendNote(const char *pName, const char *pClan, const char *pNote) = 0;
+	virtual bool ClearFriendNote(const char *pName, const char *pClan) = 0;
 
 	virtual const char *DefaultCategory() const = 0;
 	virtual int NumCategories() const = 0;

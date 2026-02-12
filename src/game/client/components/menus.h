@@ -28,6 +28,7 @@
 #include <chrono>
 #include <deque>
 #include <optional>
+#include <string>
 #include <vector>
 
 class CMenus : public CComponent
@@ -446,6 +447,10 @@ protected:
 	};
 
 	std::vector<unsigned char> m_vFriendsCategoryExpanded;
+	std::vector<std::string> m_vFriendsCategoryNames;
+	std::string m_FriendsCategoryExpandedStateCache;
+	bool m_FriendsCategoryExpandedLoaded = false;
+	std::vector<std::string> m_vFriendTooltipText;
 	int m_FriendAddCategoryIndex = 0;
 	CUi::SDropDownState m_FriendsAddCategoryDropDownState;
 	class CFriendsCategoryPopupContext : public SPopupMenuId
@@ -472,6 +477,29 @@ protected:
 	bool m_HasMoveCategoryFriend = false;
 	char m_aMoveCategoryFriendName[MAX_NAME_LENGTH] = {0};
 	char m_aMoveCategoryFriendClan[MAX_CLAN_LENGTH] = {0};
+	enum EFriendAction
+	{
+		FRIEND_ACTION_MOVE_CATEGORY = 0,
+		FRIEND_ACTION_EDIT_NOTE,
+		FRIEND_ACTION_CLEAR_NOTE,
+		FRIEND_ACTION_REMOVE,
+	};
+	CUi::SSelectionPopupContext m_FriendsActionPopupContext;
+	std::vector<EFriendAction> m_vFriendsActionEntries;
+	bool m_HasFriendAction = false;
+	char m_aFriendActionName[MAX_NAME_LENGTH] = {0};
+	char m_aFriendActionClan[MAX_CLAN_LENGTH] = {0};
+	int m_FriendActionState = IFriends::FRIEND_NO;
+	class CFriendNotePopupContext : public SPopupMenuId
+	{
+	public:
+		CMenus *m_pMenus = nullptr;
+		char m_aName[MAX_NAME_LENGTH] = {0};
+		char m_aClan[MAX_CLAN_LENGTH] = {0};
+		CLineInputBuffered<IFriends::MAX_FRIEND_NOTE_LENGTH> m_NoteInput;
+		CButtonContainer m_ConfirmButton;
+		CButtonContainer m_CancelButton;
+	} m_FriendNotePopupContext;
 	bool m_HasRemoveFriend = false;
 	char m_aRemoveFriendName[MAX_NAME_LENGTH] = {0};
 	char m_aRemoveFriendClan[MAX_CLAN_LENGTH] = {0};
@@ -568,7 +596,11 @@ protected:
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
+	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
+	void ApplyFriendsCategoryExpandedState();
+	void SaveFriendsCategoryExpandedState();
+	void RefreshFriendsCategoryNames();
 	void PopupConfirmRemoveFriend();
 	void PopupCancelRemoveFriend();
 	void RenderServerbrowserTabBar(CUIRect TabBar);

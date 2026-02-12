@@ -685,6 +685,7 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 
 			SMenuButtonProperties Props;
 			Props.m_HintRequiresStringCheck = true;
+			Props.m_HintCanChangePositionOrSize = true;
 			Props.m_UseIconFont = true;
 
 			static CButtonContainer s_RefreshButton;
@@ -700,6 +701,7 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 
 			SMenuButtonProperties Props;
 			Props.m_UseIconFont = true;
+			Props.m_HintCanChangePositionOrSize = true;
 			Props.m_Color = ColorRGBA(0.5f, 1.0f, 0.5f, 0.5f);
 
 			static CButtonContainer s_ConnectButton;
@@ -1475,6 +1477,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	// calculate friends
 	bool OpenRemovePopup = false;
 	static CScrollRegion s_FriendsMoveCategoryPopupScrollRegion;
+	static CScrollRegion s_FriendsActionPopupScrollRegion;
 	for(int FriendIndex = 0; FriendIndex < GameClient()->Friends()->NumFriends(); ++FriendIndex)
 	{
 		const CFriendInfo *pFriendInfo = GameClient()->Friends()->GetFriend(FriendIndex);
@@ -1527,6 +1530,12 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		});
 	}
 
+	int TotalFriendItems = 0;
+	for(const auto &vFriends : vvFriends)
+		TotalFriendItems += (int)vFriends.size();
+	m_vFriendTooltipText.clear();
+	m_vFriendTooltipText.resize(TotalFriendItems);
+
 	// friends list
 	static CScrollRegion s_ScrollRegion;
 	vec2 ScrollOffset(0.0f, 0.0f);
@@ -1539,6 +1548,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	List.y += ScrollOffset.y;
 
 	char aBuf[256];
+	int FriendTooltipIndex = 0;
 	for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
 	{
 		// header
@@ -1576,6 +1586,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		else if(HeaderResult == 1)
 		{
 			m_vFriendsCategoryExpanded[CategoryIndex] = !m_vFriendsCategoryExpanded[CategoryIndex];
+			SaveFriendsCategoryExpandedState();
 		}
 
 		// entries
@@ -1592,6 +1603,9 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 				CUIRect Rect;
 				const auto &Friend = vvFriends[CategoryIndex][FriendIndex];
+				const bool IsPlayerFriend = Friend.FriendState() == IFriends::FRIEND_PLAYER;
+				const char *pNote = IsPlayerFriend ? GameClient()->Friends()->GetFriendNote(Friend.Name(), Friend.Clan()) : "";
+				const bool HasNote = pNote[0] != '\0';
 				const unsigned NameHash = str_quickhash(Friend.Name());
 				const unsigned ClanHash = str_quickhash(Friend.Clan());
 				const unsigned AddrHash = Friend.ServerInfo() != nullptr ? str_quickhash(Friend.ServerInfo()->m_aAddress) : 0;
@@ -1611,10 +1625,28 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				const bool Inside = Ui()->MouseHovered(&Rect);
 				int ButtonResult = Ui()->DoButtonLogic(pListItemId, 0, &Rect, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 
-				if(Friend.ServerInfo())
+				if(Friend.ServerInfo() || HasNote)
 				{
-					GameClient()->m_Tooltips.DoToolTip(pListItemId, &Rect, Localize("Click to select server. Double click to join your friend."));
+					std::string &TooltipText = m_vFriendTooltipText[FriendTooltipIndex];
+					TooltipText.clear();
+					if(Friend.ServerInfo() && HasNote)
+					{
+						TooltipText = Localize("Click to select server. Double click to join your friend.");
+						TooltipText.append("\n备注: ");
+						TooltipText.append(pNote);
+					}
+					else if(Friend.ServerInfo())
+					{
+						TooltipText = Localize("Click to select server. Double click to join your friend.");
+					}
+					else
+					{
+						TooltipText = "备注: ";
+						TooltipText.append(pNote);
+					}
+					GameClient()->m_Tooltips.DoToolTip(pListItemId, &Rect, TooltipText.c_str());
 				}
+				++FriendTooltipIndex;
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
 				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), Inside);
 				Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);
@@ -1722,30 +1754,43 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				if(ButtonResult == 2)
 				{
 					const bool CanMoveCategory = Friend.FriendState() == IFriends::FRIEND_PLAYER && !IsClanMembersCategory(Friend.Category());
+					const bool CanEditNote = Friend.FriendState() == IFriends::FRIEND_PLAYER;
+
+					m_FriendsActionPopupContext.Reset();
+					m_FriendsActionPopupContext.m_pScrollRegion = &s_FriendsActionPopupScrollRegion;
+					m_vFriendsActionEntries.clear();
+					m_FriendsActionPopupContext.m_EntryHeight = 18.0f;
+					m_FriendsActionPopupContext.m_EntryPadding = 1.0f;
+					m_FriendsActionPopupContext.m_FontSize = (m_FriendsActionPopupContext.m_EntryHeight - 2 * m_FriendsActionPopupContext.m_EntryPadding) * CUi::ms_FontmodHeight;
+					m_FriendsActionPopupContext.m_Width = 180.0f;
+
 					if(CanMoveCategory)
 					{
-						m_FriendsMoveCategoryPopupContext.Reset();
-						m_FriendsMoveCategoryPopupContext.m_pScrollRegion = &s_FriendsMoveCategoryPopupScrollRegion;
-						str_copy(m_FriendsMoveCategoryPopupContext.m_aMessage, "移动到分类");
-						m_FriendsMoveCategoryPopupContext.m_EntryHeight = 18.0f;
-						m_FriendsMoveCategoryPopupContext.m_EntryPadding = 1.0f;
-						m_FriendsMoveCategoryPopupContext.m_FontSize = (m_FriendsMoveCategoryPopupContext.m_EntryHeight - 2 * m_FriendsMoveCategoryPopupContext.m_EntryPadding) * CUi::ms_FontmodHeight;
-						m_FriendsMoveCategoryPopupContext.m_Width = 180.0f;
-						for(int MoveCategoryIndex = 0; MoveCategoryIndex < NumCategories; ++MoveCategoryIndex)
-						{
-							const char *pMoveCategory = GameClient()->Friends()->GetCategory(MoveCategoryIndex);
-							if(IsClanMembersCategory(pMoveCategory))
-								continue;
-							m_FriendsMoveCategoryPopupContext.m_vEntries.emplace_back(pMoveCategory);
-						}
+						m_FriendsActionPopupContext.m_vEntries.emplace_back("移动到分类");
+						m_vFriendsActionEntries.push_back(FRIEND_ACTION_MOVE_CATEGORY);
+					}
 
-						if(!m_FriendsMoveCategoryPopupContext.m_vEntries.empty())
+					if(CanEditNote)
+					{
+						m_FriendsActionPopupContext.m_vEntries.emplace_back("编辑备注");
+						m_vFriendsActionEntries.push_back(FRIEND_ACTION_EDIT_NOTE);
+						if(HasNote)
 						{
-							str_copy(m_aMoveCategoryFriendName, Friend.Name(), sizeof(m_aMoveCategoryFriendName));
-							str_copy(m_aMoveCategoryFriendClan, Friend.Clan(), sizeof(m_aMoveCategoryFriendClan));
-							m_HasMoveCategoryFriend = true;
-							Ui()->ShowPopupSelection(Ui()->MouseX(), Ui()->MouseY(), &m_FriendsMoveCategoryPopupContext);
+							m_FriendsActionPopupContext.m_vEntries.emplace_back("清除备注");
+							m_vFriendsActionEntries.push_back(FRIEND_ACTION_CLEAR_NOTE);
 						}
+					}
+
+					m_FriendsActionPopupContext.m_vEntries.emplace_back("移除好友");
+					m_vFriendsActionEntries.push_back(FRIEND_ACTION_REMOVE);
+
+					if(!m_FriendsActionPopupContext.m_vEntries.empty())
+					{
+						str_copy(m_aFriendActionName, Friend.Name(), sizeof(m_aFriendActionName));
+						str_copy(m_aFriendActionClan, Friend.Clan(), sizeof(m_aFriendActionClan));
+						m_FriendActionState = Friend.FriendState();
+						m_HasFriendAction = true;
+						Ui()->ShowPopupSelection(Ui()->MouseX(), Ui()->MouseY(), &m_FriendsActionPopupContext);
 					}
 
 					ButtonResult = 0;
@@ -1787,6 +1832,77 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	}
 
 	s_ScrollRegion.End();
+
+	if(m_HasFriendAction && m_FriendsActionPopupContext.m_pSelection != nullptr)
+	{
+		const int SelectionIndex = m_FriendsActionPopupContext.m_SelectionIndex;
+		if(SelectionIndex >= 0 && SelectionIndex < (int)m_vFriendsActionEntries.size())
+		{
+			const EFriendAction Action = m_vFriendsActionEntries[SelectionIndex];
+			if(Action == FRIEND_ACTION_MOVE_CATEGORY)
+			{
+				m_FriendsMoveCategoryPopupContext.Reset();
+				m_FriendsMoveCategoryPopupContext.m_pScrollRegion = &s_FriendsMoveCategoryPopupScrollRegion;
+				str_copy(m_FriendsMoveCategoryPopupContext.m_aMessage, "移动到分类");
+				m_FriendsMoveCategoryPopupContext.m_EntryHeight = 18.0f;
+				m_FriendsMoveCategoryPopupContext.m_EntryPadding = 1.0f;
+				m_FriendsMoveCategoryPopupContext.m_FontSize = (m_FriendsMoveCategoryPopupContext.m_EntryHeight - 2 * m_FriendsMoveCategoryPopupContext.m_EntryPadding) * CUi::ms_FontmodHeight;
+				m_FriendsMoveCategoryPopupContext.m_Width = 180.0f;
+				for(int MoveCategoryIndex = 0; MoveCategoryIndex < NumCategories; ++MoveCategoryIndex)
+				{
+					const char *pMoveCategory = GameClient()->Friends()->GetCategory(MoveCategoryIndex);
+					if(IsClanMembersCategory(pMoveCategory))
+						continue;
+					m_FriendsMoveCategoryPopupContext.m_vEntries.emplace_back(pMoveCategory);
+				}
+
+				if(!m_FriendsMoveCategoryPopupContext.m_vEntries.empty())
+				{
+					str_copy(m_aMoveCategoryFriendName, m_aFriendActionName, sizeof(m_aMoveCategoryFriendName));
+					str_copy(m_aMoveCategoryFriendClan, m_aFriendActionClan, sizeof(m_aMoveCategoryFriendClan));
+					m_HasMoveCategoryFriend = true;
+					Ui()->ShowPopupSelection(Ui()->MouseX(), Ui()->MouseY(), &m_FriendsMoveCategoryPopupContext);
+				}
+			}
+			else if(Action == FRIEND_ACTION_EDIT_NOTE)
+			{
+				m_FriendNotePopupContext.m_pMenus = this;
+				str_copy(m_FriendNotePopupContext.m_aName, m_aFriendActionName, sizeof(m_FriendNotePopupContext.m_aName));
+				str_copy(m_FriendNotePopupContext.m_aClan, m_aFriendActionClan, sizeof(m_FriendNotePopupContext.m_aClan));
+				m_FriendNotePopupContext.m_NoteInput.Set(GameClient()->Friends()->GetFriendNote(m_aFriendActionName, m_aFriendActionClan));
+				m_FriendNotePopupContext.m_NoteInput.SelectAll();
+				Ui()->DoPopupMenu(&m_FriendNotePopupContext, Ui()->MouseX(), Ui()->MouseY(), 320.0f, 70.0f, &m_FriendNotePopupContext, PopupFriendNote);
+			}
+			else if(Action == FRIEND_ACTION_CLEAR_NOTE)
+			{
+				GameClient()->Friends()->ClearFriendNote(m_aFriendActionName, m_aFriendActionClan);
+			}
+			else if(Action == FRIEND_ACTION_REMOVE)
+			{
+				str_copy(m_aRemoveFriendName, m_aFriendActionName, sizeof(m_aRemoveFriendName));
+				str_copy(m_aRemoveFriendClan, m_aFriendActionClan, sizeof(m_aRemoveFriendClan));
+				m_RemoveFriendState = m_FriendActionState;
+				m_HasRemoveFriend = true;
+				OpenRemovePopup = true;
+			}
+		}
+
+		m_FriendsActionPopupContext.Reset();
+		m_vFriendsActionEntries.clear();
+		m_HasFriendAction = false;
+		m_aFriendActionName[0] = '\0';
+		m_aFriendActionClan[0] = '\0';
+		m_FriendActionState = IFriends::FRIEND_NO;
+	}
+	else if(m_HasFriendAction && !Ui()->IsPopupOpen(&m_FriendsActionPopupContext))
+	{
+		m_FriendsActionPopupContext.Reset();
+		m_vFriendsActionEntries.clear();
+		m_HasFriendAction = false;
+		m_aFriendActionName[0] = '\0';
+		m_aFriendActionClan[0] = '\0';
+		m_FriendActionState = IFriends::FRIEND_NO;
+	}
 
 	if(m_HasMoveCategoryFriend && m_FriendsMoveCategoryPopupContext.m_pSelection != nullptr)
 	{
@@ -2007,13 +2123,163 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 	return CUi::POPUP_KEEP_OPEN;
 }
 
+CUi::EPopupMenuFunctionResult CMenus::PopupFriendNote(void *pContext, CUIRect View, bool Active)
+{
+	CFriendNotePopupContext *pPopupContext = static_cast<CFriendNotePopupContext *>(pContext);
+	CMenus *pMenus = pPopupContext->m_pMenus;
+	if(pMenus == nullptr)
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	const float FontSize = 10.0f;
+	View.Margin(5.0f, &View);
+
+	CUIRect Label, Input, Buttons, Cancel, Confirm;
+	View.HSplitTop(12.0f, &Label, &View);
+	pMenus->Ui()->DoLabel(&Label, "好友备注", FontSize, TEXTALIGN_ML);
+
+	View.HSplitTop(3.0f, nullptr, &View);
+	View.HSplitTop(18.0f, &Input, &View);
+	pMenus->Ui()->DoEditBox(&pPopupContext->m_NoteInput, &Input, FontSize + 1.0f);
+
+	View.HSplitTop(4.0f, nullptr, &View);
+	View.HSplitTop(18.0f, &Buttons, &View);
+	Buttons.VSplitMid(&Cancel, &Confirm, 3.0f);
+
+	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, "取消", &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
+	if(CancelPressed)
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, "保存", &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
+	if(ConfirmPressed)
+	{
+		char aNote[IFriends::MAX_FRIEND_NOTE_LENGTH];
+		str_copy(aNote, pPopupContext->m_NoteInput.GetString(), sizeof(aNote));
+		str_utf8_trim_right(aNote);
+
+		if(aNote[0] == '\0')
+			pMenus->GameClient()->Friends()->ClearFriendNote(pPopupContext->m_aName, pPopupContext->m_aClan);
+		else
+			pMenus->GameClient()->Friends()->SetFriendNote(pPopupContext->m_aName, pPopupContext->m_aClan, aNote);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	return CUi::POPUP_KEEP_OPEN;
+}
+
+void CMenus::RefreshFriendsCategoryNames()
+{
+	const int NumCategories = maximum(1, GameClient()->Friends()->NumCategories());
+	m_vFriendsCategoryNames.clear();
+	m_vFriendsCategoryNames.reserve(NumCategories);
+	for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
+		m_vFriendsCategoryNames.emplace_back(GameClient()->Friends()->GetCategory(CategoryIndex));
+}
+
+void CMenus::ApplyFriendsCategoryExpandedState()
+{
+	const int NumCategories = maximum(1, GameClient()->Friends()->NumCategories());
+	m_vFriendsCategoryExpanded.assign(NumCategories, true);
+
+	const char *pState = g_Config.m_ClFriendsCategoryExpanded;
+	const int StateLen = str_length(pState);
+	for(int CategoryIndex = 0; CategoryIndex < NumCategories && CategoryIndex < StateLen; ++CategoryIndex)
+	{
+		if(pState[CategoryIndex] == '0')
+			m_vFriendsCategoryExpanded[CategoryIndex] = false;
+		else if(pState[CategoryIndex] == '1')
+			m_vFriendsCategoryExpanded[CategoryIndex] = true;
+	}
+
+	RefreshFriendsCategoryNames();
+	m_FriendsCategoryExpandedStateCache = g_Config.m_ClFriendsCategoryExpanded;
+	m_FriendsCategoryExpandedLoaded = true;
+}
+
+void CMenus::SaveFriendsCategoryExpandedState()
+{
+	const int NumCategories = maximum(1, GameClient()->Friends()->NumCategories());
+	char aState[sizeof(g_Config.m_ClFriendsCategoryExpanded)];
+	int Pos = 0;
+	for(int CategoryIndex = 0; CategoryIndex < NumCategories && Pos + 1 < (int)sizeof(aState); ++CategoryIndex)
+	{
+		const bool Expanded = CategoryIndex < (int)m_vFriendsCategoryExpanded.size() && m_vFriendsCategoryExpanded[CategoryIndex] != 0;
+		aState[Pos++] = Expanded ? '1' : '0';
+	}
+	aState[Pos] = '\0';
+
+	while(Pos > 0 && aState[Pos - 1] == '1')
+	{
+		--Pos;
+		aState[Pos] = '\0';
+	}
+
+	if(str_comp(aState, g_Config.m_ClFriendsCategoryExpanded) != 0)
+		str_copy(g_Config.m_ClFriendsCategoryExpanded, aState, sizeof(g_Config.m_ClFriendsCategoryExpanded));
+
+	m_FriendsCategoryExpandedStateCache = g_Config.m_ClFriendsCategoryExpanded;
+	m_FriendsCategoryExpandedLoaded = true;
+}
+
 void CMenus::FriendlistOnUpdate()
 {
 	const int NumCategories = maximum(1, GameClient()->Friends()->NumCategories());
-	if((int)m_vFriendsCategoryExpanded.size() < NumCategories)
-		m_vFriendsCategoryExpanded.resize(NumCategories, true);
-	else if((int)m_vFriendsCategoryExpanded.size() > NumCategories)
-		m_vFriendsCategoryExpanded.resize(NumCategories);
+	const bool ConfigChanged = m_FriendsCategoryExpandedLoaded &&
+		str_comp(m_FriendsCategoryExpandedStateCache.c_str(), g_Config.m_ClFriendsCategoryExpanded) != 0;
+
+	if(!m_FriendsCategoryExpandedLoaded || ConfigChanged)
+	{
+		ApplyFriendsCategoryExpandedState();
+	}
+	else
+	{
+		if((int)m_vFriendsCategoryNames.size() != NumCategories)
+		{
+			std::vector<unsigned char> vExpanded(NumCategories, true);
+			for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
+			{
+				const char *pCategory = GameClient()->Friends()->GetCategory(CategoryIndex);
+				for(size_t PrevIndex = 0; PrevIndex < m_vFriendsCategoryNames.size(); ++PrevIndex)
+				{
+					if(str_comp_nocase(m_vFriendsCategoryNames[PrevIndex].c_str(), pCategory) == 0)
+					{
+						if(PrevIndex < m_vFriendsCategoryExpanded.size())
+							vExpanded[CategoryIndex] = m_vFriendsCategoryExpanded[PrevIndex];
+						break;
+					}
+				}
+			}
+			m_vFriendsCategoryExpanded.swap(vExpanded);
+			RefreshFriendsCategoryNames();
+			SaveFriendsCategoryExpandedState();
+		}
+		else
+		{
+			bool NamesChanged = false;
+			for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
+			{
+				const char *pCategory = GameClient()->Friends()->GetCategory(CategoryIndex);
+				if(str_comp(m_vFriendsCategoryNames[CategoryIndex].c_str(), pCategory) != 0)
+				{
+					NamesChanged = true;
+					break;
+				}
+			}
+
+			if(NamesChanged)
+			{
+				RefreshFriendsCategoryNames();
+				SaveFriendsCategoryExpandedState();
+			}
+			else if((int)m_vFriendsCategoryExpanded.size() < NumCategories)
+			{
+				m_vFriendsCategoryExpanded.resize(NumCategories, true);
+			}
+			else if((int)m_vFriendsCategoryExpanded.size() > NumCategories)
+			{
+				m_vFriendsCategoryExpanded.resize(NumCategories);
+			}
+		}
+	}
 
 	if(m_FriendAddCategoryIndex < 0 || m_FriendAddCategoryIndex >= NumCategories)
 		m_FriendAddCategoryIndex = 0;

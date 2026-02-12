@@ -3757,14 +3757,71 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			RightContent.HSplitTop(1.0f, &Divider, &RightContent);
 			Divider.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.16f), IGraphics::CORNER_NONE, 0.0f);
 			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
-			RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
 			//TextRender()->TextColor(GetRainbowColor(-8));//彩虹循环效果
 			TextRender()->TextColor(ColorRGBA(0.95f, 0.8f, 0.2f, 1.0f));
-			Ui()->DoLabel(&Row, "喵不一,久桃,芽芽,骨头,陌浅羽,树羽小朋友", LG_BodySize * 1.1f, TEXTALIGN_ML);
-			RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, "望舒,松子,平凡..,cixin,洗点,秀色,朱朱,Twen", LG_BodySize * 1.1f, TEXTALIGN_ML);
-			RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, "大恐龙,:luv:,见月,Blue°F,怯修,yezeen,鹑", LG_BodySize * 1.1f, TEXTALIGN_ML);
+			{
+				static const char *const s_apSponsors[] = {
+					"喵不一",
+					"久桃",
+					"芽芽",
+					"碳烤綿芽",
+					"骨头",
+					"陌浅羽",
+					"树羽小朋友",
+					"望舒",
+					"松子",
+					"平凡..",
+					"cixin",
+					"洗点",
+					"秀色",
+					"朱朱",
+					"Twen",
+					"大恐龙",
+					":luv:",
+					"见月",
+					"Blue°F",
+					"怯修",
+					"yezeen",
+					"鹑",
+				};
+				const float SponsorFontSize = LG_BodySize * 1.1f;
+				const float MaxLineWidth = RightContent.w;
+				const char *pSeparator = ",";
+				const float SeparatorWidth = TextRender()->TextWidth(SponsorFontSize, pSeparator);
+
+				std::vector<std::string> Lines;
+				Lines.emplace_back();
+				float LineWidth = 0.0f;
+				for(const char *pName : s_apSponsors)
+				{
+					const float NameWidth = TextRender()->TextWidth(SponsorFontSize, pName);
+					if(Lines.back().empty())
+					{
+						Lines.back() = pName;
+						LineWidth = NameWidth;
+						continue;
+					}
+
+					const float NextWidth = LineWidth + SeparatorWidth + NameWidth;
+					if(NextWidth > MaxLineWidth)
+					{
+						Lines.emplace_back(pName);
+						LineWidth = NameWidth;
+					}
+					else
+					{
+						Lines.back().append(pSeparator);
+						Lines.back().append(pName);
+						LineWidth = NextWidth;
+					}
+				}
+
+				for(const auto &Line : Lines)
+				{
+					RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
+					Ui()->DoLabel(&Row, Line.c_str(), SponsorFontSize, TEXTALIGN_ML);
+				}
+			}
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);

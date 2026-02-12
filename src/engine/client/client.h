@@ -25,10 +25,12 @@
 #include <engine/textrender.h>
 #include <engine/warning.h>
 
+#include <atomic>
 #include <chrono>
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <thread>
 
 class CDemoEdit;
 class IDemoRecorder;
@@ -101,6 +103,21 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	uint64_t m_aSnapshotParts[NUM_DUMMIES] = {0, 0};
 	int64_t m_LocalStartTime = 0;
 	int64_t m_GlobalStartTime = 0;
+
+	struct SHangInfo
+	{
+		int m_State = IClient::STATE_OFFLINE;
+		char m_aCurrentMap[IO_MAX_PATH_LENGTH] = "";
+		char m_aServerAddr[NETADDR_MAXSTRSIZE] = "";
+	};
+
+	std::atomic<int64_t> m_HangLastHeartbeat{0};
+	std::atomic<bool> m_HangWatchdogStop{false};
+	std::atomic<bool> m_HangReportWritten{false};
+	std::atomic<int> m_HangInfoIndex{0};
+	SHangInfo m_aHangInfo[2];
+	std::thread m_HangWatchdogThread;
+	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
 
 	IGraphics::CTextureHandle m_DebugFont;
 
@@ -264,6 +281,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	void UpdateDemoIntraTimers();
 	int MaxLatencyTicks() const;
 	int PredictionMargin() const;
+	void StartHangWatchdog();
+	void StopHangWatchdog();
+	void UpdateHangHeartbeat();
+	void WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat);
 
 	std::shared_ptr<ILogger> m_pFileLogger = nullptr;
 	std::shared_ptr<ILogger> m_pStdoutLogger = nullptr;

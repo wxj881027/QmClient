@@ -78,10 +78,76 @@
 #include <thread>
 #include <tuple>
 
+#if defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+#include <dbghelp.h>
+#ifdef ERROR
+#undef ERROR
+#endif
+#endif
+
 using namespace std::chrono_literals;
 
 static constexpr ColorRGBA gs_ClientNetworkPrintColor{0.7f, 1, 0.7f, 1.0f};
 static constexpr ColorRGBA gs_ClientNetworkErrPrintColor{1.0f, 0.25f, 0.25f, 1.0f};
+static constexpr int64_t gs_HangTimeoutSeconds = 10;
+
+static const char *ClientStateToString(int State)
+{
+	switch(State)
+	{
+	case IClient::STATE_OFFLINE:
+		return "offline";
+	case IClient::STATE_CONNECTING:
+		return "connecting";
+	case IClient::STATE_LOADING:
+		return "loading";
+	case IClient::STATE_ONLINE:
+		return "online";
+	case IClient::STATE_DEMOPLAYBACK:
+		return "demoplayback";
+	case IClient::STATE_QUITTING:
+		return "quitting";
+	case IClient::STATE_RESTARTING:
+		return "restarting";
+	default:
+		return "unknown";
+	}
+}
+
+#if defined(CONF_FAMILY_WINDOWS)
+static bool WriteMiniDumpFile(const char *pFilename)
+{
+	using MiniDumpWriteDumpFunc = BOOL(WINAPI *)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
+		const MINIDUMP_EXCEPTION_INFORMATION *, const MINIDUMP_USER_STREAM_INFORMATION *, const MINIDUMP_CALLBACK_INFORMATION *);
+
+	HMODULE pDbgHelp = LoadLibraryA("dbghelp.dll");
+	if(pDbgHelp == nullptr)
+		return false;
+
+	auto pMiniDumpWriteDump = (MiniDumpWriteDumpFunc)GetProcAddress(pDbgHelp, "MiniDumpWriteDump");
+	if(pMiniDumpWriteDump == nullptr)
+	{
+		FreeLibrary(pDbgHelp);
+		return false;
+	}
+
+	HANDLE FileHandle = CreateFileA(pFilename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if(FileHandle == INVALID_HANDLE_VALUE)
+	{
+		FreeLibrary(pDbgHelp);
+		return false;
+	}
+
+	const MINIDUMP_TYPE DumpType = static_cast<MINIDUMP_TYPE>(
+		MiniDumpWithDataSegs | MiniDumpWithHandleData | MiniDumpWithIndirectlyReferencedMemory);
+	const BOOL Result = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, DumpType, nullptr, nullptr, nullptr);
+
+	CloseHandle(FileHandle);
+	FreeLibrary(pDbgHelp);
+	return Result != FALSE;
+}
+#endif
 
 CClient::CClient() :
 	m_DemoPlayer(&m_SnapshotDelta, true, [&]() { UpdateDemoIntraTimers(); }),
@@ -3135,6 +3201,16 @@ void CClient::Run()
 	m_aSnapshotParts[0] = 0;
 	m_aSnapshotParts[1] = 0;
 
+	StartHangWatchdog();
+	struct CHangWatchdogGuard
+	{
+		CClient *m_pClient;
+		~CHangWatchdogGuard()
+		{
+			m_pClient->StopHangWatchdog();
+		}
+	} HangWatchdogGuard{this};
+
 	if(m_GenerateTimeoutSeed)
 	{
 		GenerateTimeoutSeed();
@@ -3271,6 +3347,7 @@ void CClient::Run()
 	while(true)
 	{
 		set_new_tick();
+		UpdateHangHeartbeat();
 
 		// handle pending connects
 		if(m_aCmdConnect[0])
@@ -3471,6 +3548,8 @@ void CClient::Run()
 		m_LocalTime = (time_get() - m_LocalStartTime) / (float)time_freq();
 		m_GlobalTime = (time_get() - m_GlobalStartTime) / (float)time_freq();
 	}
+
+	StopHangWatchdog();
 
 	GameClient()->RenderShutdownMessage();
 	Disconnect();
@@ -4260,6 +4339,121 @@ void CClient::BenchmarkQuit(int Seconds, const char *pFilename)
 {
 	m_BenchmarkFile = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_ABSOLUTE);
 	m_BenchmarkStopTime = time_get() + time_freq() * Seconds;
+}
+
+void CClient::StartHangWatchdog()
+{
+	m_HangWatchdogStop.store(false, std::memory_order_release);
+	m_HangReportWritten.store(false, std::memory_order_release);
+	if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, "dumps", m_aHangDumpDir, sizeof(m_aHangDumpDir));
+	UpdateHangHeartbeat();
+
+	if(m_HangWatchdogThread.joinable())
+		return;
+
+	m_HangWatchdogThread = std::thread([this]() {
+		const int64_t TimeoutTicks = time_freq() * gs_HangTimeoutSeconds;
+		while(!m_HangWatchdogStop.load(std::memory_order_acquire))
+		{
+			std::this_thread::sleep_for(1s);
+			const int64_t LastHeartbeat = m_HangLastHeartbeat.load(std::memory_order_acquire);
+			if(LastHeartbeat == 0)
+				continue;
+			const int64_t Now = time_get();
+			if(Now - LastHeartbeat >= TimeoutTicks)
+			{
+				if(!m_HangReportWritten.exchange(true, std::memory_order_acq_rel))
+					WriteHangReportAndDump(Now, LastHeartbeat);
+			}
+		}
+	});
+}
+
+void CClient::StopHangWatchdog()
+{
+	m_HangWatchdogStop.store(true, std::memory_order_release);
+	if(m_HangWatchdogThread.joinable())
+		m_HangWatchdogThread.join();
+}
+
+void CClient::UpdateHangHeartbeat()
+{
+	const int NextIndex = 1 - m_HangInfoIndex.load(std::memory_order_relaxed);
+	SHangInfo &Info = m_aHangInfo[NextIndex];
+	Info.m_State = m_State;
+	str_copy(Info.m_aCurrentMap, m_aCurrentMap, sizeof(Info.m_aCurrentMap));
+	const NETADDR &Addr = ServerAddress();
+	if(Addr.type == NETTYPE_INVALID)
+	{
+		str_copy(Info.m_aServerAddr, "unknown", sizeof(Info.m_aServerAddr));
+	}
+	else
+	{
+		char aAddr[NETADDR_MAXSTRSIZE];
+		net_addr_str(&Addr, aAddr, sizeof(aAddr), true);
+		str_copy(Info.m_aServerAddr, aAddr, sizeof(Info.m_aServerAddr));
+	}
+	m_HangInfoIndex.store(NextIndex, std::memory_order_release);
+	m_HangLastHeartbeat.store(time_get(), std::memory_order_release);
+}
+
+void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
+{
+	if(m_aHangDumpDir[0] == '\0')
+		return;
+
+	char aDate[64];
+	str_timestamp(aDate, sizeof(aDate));
+
+	char aReportFilename[IO_MAX_PATH_LENGTH];
+	str_format(aReportFilename, sizeof(aReportFilename),
+		GAME_NAME "_%s_hang_report_%s_%d_%s.txt",
+		CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+	char aReportPath[IO_MAX_PATH_LENGTH];
+	str_format(aReportPath, sizeof(aReportPath), "%s/%s", m_aHangDumpDir, aReportFilename);
+	fs_makedir_rec_for(aReportPath);
+
+	IOHANDLE File = io_open(aReportPath, IOFLAG_WRITE);
+	if(File)
+	{
+		const int SnapshotIndex = m_HangInfoIndex.load(std::memory_order_acquire);
+		const SHangInfo Snapshot = m_aHangInfo[SnapshotIndex];
+		const float SecondsSinceHeartbeat = (Now - LastHeartbeat) / (float)time_freq();
+
+		char aBuf[1024];
+		str_format(aBuf, sizeof(aBuf), "Hang detected (no main thread heartbeat for %.1f seconds)\n", SecondsSinceHeartbeat);
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Timestamp: %s\n", aDate);
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Client state: %s (%d)\n", ClientStateToString(Snapshot.m_State), Snapshot.m_State);
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Current map: %s\n", Snapshot.m_aCurrentMap);
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Server address: %s\n", Snapshot.m_aServerAddr);
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Game version: %s %s %s\n", GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		io_write(File, aBuf, str_length(aBuf));
+
+		io_sync(File);
+		io_close(File);
+	}
+
+#if defined(CONF_FAMILY_WINDOWS)
+	char aDumpFilename[IO_MAX_PATH_LENGTH];
+	str_format(aDumpFilename, sizeof(aDumpFilename),
+		GAME_NAME "_%s_hang_dump_%s_%d_%s.dmp",
+		CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+	char aDumpPath[IO_MAX_PATH_LENGTH];
+	str_format(aDumpPath, sizeof(aDumpPath), "%s/%s", m_aHangDumpDir, aDumpFilename);
+	fs_makedir_rec_for(aDumpPath);
+	WriteMiniDumpFile(aDumpPath);
+#endif
 }
 
 void CClient::UpdateAndSwap()
