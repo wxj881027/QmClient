@@ -195,6 +195,21 @@ class CTClient : public CComponent
 	int m_FriendAutoRefreshPrevSeconds = -1;
 	void CheckFriendOnline();
 
+	// Q1menG client recognition sync
+	std::shared_ptr<CHttpRequest> m_pQmClientAuthTokenTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmClientUsersTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmClientUsersSendTask = nullptr;
+	char m_aQmClientAuthToken[256] = "";
+	int64_t m_QmClientLastSync = 0;
+	void UpdateQmClientRecognition();
+	void SyncQmClientUsers();
+	void FetchQmClientAuthToken();
+	void SendQmClientPlayerData();
+	void FetchQmClientUsers();
+	void FinishQmClientAuthToken();
+	void FinishQmClientUsers();
+	void ResetQmClientRecognitionTasks();
+
 
 public:
 	CTClient();

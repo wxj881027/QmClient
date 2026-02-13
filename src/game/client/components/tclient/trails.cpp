@@ -72,7 +72,7 @@ void CTrails::OnRender()
 	}
 
 	// Q1menG Client Recognition: Foot particles for recognized clients
-	if(g_Config.m_QmClientMarkEnabled && g_Config.m_QmClientMarkTrail)
+	if(g_Config.m_QmClientMarkTrail)
 	{
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 		{
@@ -84,9 +84,8 @@ void CTrails::OnRender()
 			if(Local)
 				continue; // Skip local player (already handled above)
 
-			// Check if this is a Q1menG client
-			const char *pClan = GameClient()->m_aClients[ClientId].m_aClan;
-			if(!CGameClient::IsQ1menGClient(pClan))
+			// Check if this is a recognized Q1menG client
+			if(!GameClient()->IsQ1menGClientRecognized(ClientId))
 				continue;
 
 			vec2 Position = GameClient()->m_aClients[ClientId].m_RenderPos;

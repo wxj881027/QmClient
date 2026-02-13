@@ -1,0 +1,13 @@
+{
+  "name": "qmclient-center-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Center sync server for Q1menG client recognition",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

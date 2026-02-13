@@ -753,6 +753,7 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aShowOthers), std::end(m_aShowOthers), SHOW_OTHERS_NOT_SET);
 	std::fill(std::begin(m_aEnableSpectatorCount), std::end(m_aEnableSpectatorCount), -1);
 	std::fill(std::begin(m_aLastUpdateTick), std::end(m_aLastUpdateTick), 0);
+	std::fill(std::begin(m_aQ1menGSyncMarkUntil), std::end(m_aQ1menGSyncMarkUntil), 0);
 
 	m_PredictedDummyId = -1;
 	m_IsDummySwapping = false;
@@ -3651,14 +3652,7 @@ void CGameClient::SendSwitchTeam(int Team) const
 
 void CGameClient::SendStartInfo7(bool Dummy)
 {
-	// Inject Q1menG mark into clan
-	char aMarkedClan[MAX_CLAN_LENGTH];
 	const char *pClanToSend = Dummy ? Config()->m_ClDummyClan : Config()->m_PlayerClan;
-	if(g_Config.m_QmClientMarkEnabled)
-	{
-		InjectQ1menGMark(aMarkedClan, sizeof(aMarkedClan), pClanToSend);
-		pClanToSend = aMarkedClan;
-	}
 
 	protocol7::CNetMsg_Cl_StartInfo Msg;
 	Msg.m_pName = Dummy ? Client()->DummyName() : Client()->PlayerName();
@@ -3745,18 +3739,9 @@ void CGameClient::SendInfo(bool Start)
 	}
 	if(Start)
 	{
-		// Inject Q1menG mark into clan
-		char aMarkedClan[MAX_CLAN_LENGTH];
-		const char *pClanToSend = g_Config.m_PlayerClan;
-		if(g_Config.m_QmClientMarkEnabled)
-		{
-			InjectQ1menGMark(aMarkedClan, sizeof(aMarkedClan), g_Config.m_PlayerClan);
-			pClanToSend = aMarkedClan;
-		}
-
 		CNetMsg_Cl_StartInfo Msg;
 		Msg.m_pName = Client()->PlayerName();
-		Msg.m_pClan = pClanToSend;
+		Msg.m_pClan = g_Config.m_PlayerClan;
 		Msg.m_Country = g_Config.m_PlayerCountry;
 		Msg.m_pSkin = g_Config.m_ClPlayerSkin;
 		Msg.m_UseCustomColor = g_Config.m_ClPlayerUseCustomColor;
@@ -3769,18 +3754,9 @@ void CGameClient::SendInfo(bool Start)
 	}
 	else
 	{
-		// Inject Q1menG mark into clan
-		char aMarkedClan[MAX_CLAN_LENGTH];
-		const char *pClanToSend = g_Config.m_PlayerClan;
-		if(g_Config.m_QmClientMarkEnabled)
-		{
-			InjectQ1menGMark(aMarkedClan, sizeof(aMarkedClan), g_Config.m_PlayerClan);
-			pClanToSend = aMarkedClan;
-		}
-
 		CNetMsg_Cl_ChangeInfo Msg;
 		Msg.m_pName = Client()->PlayerName();
-		Msg.m_pClan = pClanToSend;
+		Msg.m_pClan = g_Config.m_PlayerClan;
 		Msg.m_Country = g_Config.m_PlayerCountry;
 		Msg.m_pSkin = g_Config.m_ClPlayerSkin;
 		Msg.m_UseCustomColor = g_Config.m_ClPlayerUseCustomColor;
@@ -3805,18 +3781,9 @@ void CGameClient::SendDummyInfo(bool Start)
 	}
 	if(Start)
 	{
-		// Inject Q1menG mark into dummy clan
-		char aMarkedClan[MAX_CLAN_LENGTH];
-		const char *pClanToSend = g_Config.m_ClDummyClan;
-		if(g_Config.m_QmClientMarkEnabled)
-		{
-			InjectQ1menGMark(aMarkedClan, sizeof(aMarkedClan), g_Config.m_ClDummyClan);
-			pClanToSend = aMarkedClan;
-		}
-
 		CNetMsg_Cl_StartInfo Msg;
 		Msg.m_pName = Client()->DummyName();
-		Msg.m_pClan = pClanToSend;
+		Msg.m_pClan = g_Config.m_ClDummyClan;
 		Msg.m_Country = g_Config.m_ClDummyCountry;
 		Msg.m_pSkin = g_Config.m_ClDummySkin;
 		Msg.m_UseCustomColor = g_Config.m_ClDummyUseCustomColor;
@@ -3829,18 +3796,9 @@ void CGameClient::SendDummyInfo(bool Start)
 	}
 	else
 	{
-		// Inject Q1menG mark into dummy clan
-		char aMarkedClan[MAX_CLAN_LENGTH];
-		const char *pClanToSend = g_Config.m_ClDummyClan;
-		if(g_Config.m_QmClientMarkEnabled)
-		{
-			InjectQ1menGMark(aMarkedClan, sizeof(aMarkedClan), g_Config.m_ClDummyClan);
-			pClanToSend = aMarkedClan;
-		}
-
 		CNetMsg_Cl_ChangeInfo Msg;
 		Msg.m_pName = Client()->DummyName();
-		Msg.m_pClan = pClanToSend;
+		Msg.m_pClan = g_Config.m_ClDummyClan;
 		Msg.m_Country = g_Config.m_ClDummyCountry;
 		Msg.m_pSkin = g_Config.m_ClDummySkin;
 		Msg.m_UseCustomColor = g_Config.m_ClDummyUseCustomColor;
@@ -5969,45 +5927,27 @@ void CGameClient::SetConnectInfo(const NETADDR *pAddress)
 }
 
 // Q1menG Client Recognition Functions
-const char *CGameClient::InjectQ1menGMark(char *pBuffer, size_t BufferSize, const char *pClan)
+void CGameClient::ClearQ1menGSyncMarks()
 {
-	if(!pClan || BufferSize < 3)
-	{
-		if(BufferSize > 0)
-			pBuffer[0] = '\0';
-		return pBuffer;
-	}
-
-	// Use zero-width characters as hidden markers
-	// U+200D (Zero Width Joiner) = "QMC" signature
-	const char *pMark = "\xE2\x80\x8D"; // UTF-8 encoding of U+200D
-	
-	size_t ClanLen = str_length(pClan);
-	size_t MarkLen = str_length(pMark);
-	
-	// Check if we have enough space: clan + mark + null terminator
-	if(ClanLen + MarkLen + 1 > BufferSize)
-	{
-		// Not enough space, just copy the original clan
-		str_copy(pBuffer, pClan, BufferSize);
-		return pBuffer;
-	}
-	
-	// Append mark to the end of clan
-	str_copy(pBuffer, pClan, BufferSize);
-	str_append(pBuffer, pMark, BufferSize);
-	
-	return pBuffer;
+	std::fill(std::begin(m_aQ1menGSyncMarkUntil), std::end(m_aQ1menGSyncMarkUntil), 0);
 }
 
-bool CGameClient::IsQ1menGClient(const char *pClan)
+void CGameClient::MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick)
 {
-	if(!pClan || pClan[0] == '\0')
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+	if(ExpireTick <= 0)
+		return;
+	m_aQ1menGSyncMarkUntil[ClientId] = maximum(m_aQ1menGSyncMarkUntil[ClientId], ExpireTick);
+}
+
+bool CGameClient::IsQ1menGClientRecognized(int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return false;
-	
-	// Check for our hidden marker (U+200D)
-	const char *pMark = "\xE2\x80\x8D"; // UTF-8 encoding of U+200D
-	
-	// Search for the mark in the clan string
-	return str_find(pClan, pMark) != nullptr;
+
+	const int64_t Now = time_get();
+	if(m_aQ1menGSyncMarkUntil[ClientId] > Now)
+		return true;
+	return false;
 }

@@ -4,6 +4,7 @@
 
 #include <base/log.h>
 #include <base/str.h>
+#include <base/system.h>
 
 #include <engine/client.h>
 #include <engine/client/enums.h>
@@ -33,6 +34,17 @@ static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.c
 static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
 static constexpr const char *MAP_CATEGORY_CACHE_FILE = "tclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
+static constexpr int QMCLIENT_SYNC_INTERVAL_SECONDS = 30;
+static constexpr const char *QMCLIENT_TOKEN_URL = "http://42.194.185.210:8080/token";
+static constexpr const char *QMCLIENT_REPORT_URL = "http://42.194.185.210:8080/report";
+static constexpr const char *QMCLIENT_USERS_URL = "http://42.194.185.210:8080/users.json";
+
+static const json_value *JsonObjectField(const json_value *pObject, const char *pName)
+{
+	if(!pObject || pObject->type != json_object)
+		return &json_value_none;
+	return json_object_get(pObject, pName);
+}
 
 CTClient::CTClient()
 {
@@ -847,6 +859,8 @@ void CTClient::OnRender()
 		ResetUpdateExeTask();
 	}
 
+	UpdateQmClientRecognition();
+
 	DoFinishCheck();
 	CheckFreeze();
 	CheckWaterFall();
@@ -856,6 +870,244 @@ void CTClient::OnRender()
 	CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
 	UpdatePlayerStats(); // 更新玩家统计
 	MaybeSaveMapCategoryCache();
+}
+
+void CTClient::ResetQmClientRecognitionTasks()
+{
+	auto AbortTask = [](std::shared_ptr<CHttpRequest> &pTask) {
+		if(pTask)
+		{
+			pTask->Abort();
+			pTask = nullptr;
+		}
+	};
+	AbortTask(m_pQmClientAuthTokenTask);
+	AbortTask(m_pQmClientUsersTask);
+	AbortTask(m_pQmClientUsersSendTask);
+	m_aQmClientAuthToken[0] = '\0';
+	m_QmClientLastSync = 0;
+}
+
+void CTClient::FetchQmClientAuthToken()
+{
+	if(m_pQmClientAuthTokenTask && !m_pQmClientAuthTokenTask->Done())
+		return;
+
+	m_pQmClientAuthTokenTask = HttpGet(QMCLIENT_TOKEN_URL);
+	m_pQmClientAuthTokenTask->Timeout(CTimeout{10000, 0, 500, 10});
+	m_pQmClientAuthTokenTask->IpResolve(IPRESOLVE::V4);
+	m_pQmClientAuthTokenTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmClientAuthTokenTask);
+}
+
+void CTClient::SendQmClientPlayerData()
+{
+	if(m_aQmClientAuthToken[0] == '\0')
+		return;
+	if(m_pQmClientUsersSendTask && !m_pQmClientUsersSendTask->Done())
+		return;
+
+	char aServerAddress[NETADDR_MAXSTRSIZE];
+	net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
+	if(aServerAddress[0] == '\0')
+		return;
+
+	CJsonStringWriter JsonWriter;
+	JsonWriter.BeginObject();
+	JsonWriter.WriteAttribute("server_address");
+	JsonWriter.WriteStrValue(aServerAddress);
+	JsonWriter.WriteAttribute("auth_token");
+	JsonWriter.WriteStrValue(m_aQmClientAuthToken);
+	JsonWriter.WriteAttribute("timestamp");
+	JsonWriter.WriteIntValue((int)time_timestamp());
+	JsonWriter.WriteAttribute("players");
+	JsonWriter.BeginArray();
+
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		if(Dummy == 1 && !Client()->DummyConnected())
+			continue;
+
+		const int ClientId = GameClient()->m_aLocalIds[Dummy];
+		if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active)
+			continue;
+
+		JsonWriter.BeginObject();
+		JsonWriter.WriteAttribute("player_id");
+		JsonWriter.WriteIntValue(ClientId);
+		JsonWriter.WriteAttribute("dummy");
+		JsonWriter.WriteBoolValue(Dummy == 1);
+		JsonWriter.EndObject();
+	}
+
+	JsonWriter.EndArray();
+	JsonWriter.EndObject();
+
+	std::string JsonBody = JsonWriter.GetOutputString();
+	m_pQmClientUsersSendTask = HttpPostJson(QMCLIENT_REPORT_URL, JsonBody.c_str());
+	m_pQmClientUsersSendTask->Timeout(CTimeout{10000, 0, 500, 10});
+	m_pQmClientUsersSendTask->IpResolve(IPRESOLVE::V4);
+	m_pQmClientUsersSendTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmClientUsersSendTask);
+}
+
+void CTClient::FetchQmClientUsers()
+{
+	if(m_pQmClientUsersTask && !m_pQmClientUsersTask->Done())
+		return;
+
+	m_pQmClientUsersTask = HttpGet(QMCLIENT_USERS_URL);
+	m_pQmClientUsersTask->Timeout(CTimeout{10000, 0, 500, 10});
+	m_pQmClientUsersTask->IpResolve(IPRESOLVE::V4);
+	m_pQmClientUsersTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmClientUsersTask);
+}
+
+void CTClient::FinishQmClientAuthToken()
+{
+	if(!m_pQmClientAuthTokenTask || m_pQmClientAuthTokenTask->State() != EHttpState::DONE)
+		return;
+
+	json_value *pRoot = m_pQmClientAuthTokenTask->ResultJson();
+	if(!pRoot)
+		return;
+
+	const json_value *pToken = JsonObjectField(pRoot, "auth_token");
+	if(pToken == &json_value_none)
+		pToken = JsonObjectField(pRoot, "token");
+	if(pToken != &json_value_none && pToken->type == json_string)
+	{
+		str_copy(m_aQmClientAuthToken, pToken->u.string.ptr, sizeof(m_aQmClientAuthToken));
+		m_QmClientLastSync = 0;
+	}
+	json_value_free(pRoot);
+}
+
+void CTClient::FinishQmClientUsers()
+{
+	if(!m_pQmClientUsersTask || m_pQmClientUsersTask->State() != EHttpState::DONE)
+		return;
+
+	json_value *pRoot = m_pQmClientUsersTask->ResultJson();
+	if(!pRoot)
+		return;
+
+	const json_value *pUsers = pRoot;
+	if(pUsers->type == json_object)
+	{
+		const json_value *pUsersField = JsonObjectField(pUsers, "users");
+		if(pUsersField != &json_value_none)
+			pUsers = pUsersField;
+	}
+
+	if(pUsers->type != json_array)
+	{
+		json_value_free(pRoot);
+		return;
+	}
+
+	char aServerAddress[NETADDR_MAXSTRSIZE];
+	net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
+	const int SyncInterval = QMCLIENT_SYNC_INTERVAL_SECONDS;
+	const int64_t ExpireTick = time_get() + (int64_t)SyncInterval * time_freq() * 2;
+
+	GameClient()->ClearQ1menGSyncMarks();
+
+	for(unsigned Index = 0; Index < pUsers->u.array.length; ++Index)
+	{
+		const json_value *pEntry = pUsers->u.array.values[Index];
+		if(!pEntry || pEntry->type != json_object)
+			continue;
+
+		const json_value *pServerAddress = JsonObjectField(pEntry, "server_address");
+		if(pServerAddress == &json_value_none)
+			pServerAddress = JsonObjectField(pEntry, "server");
+		if(pServerAddress == &json_value_none || pServerAddress->type != json_string)
+			continue;
+		if(str_comp(pServerAddress->u.string.ptr, aServerAddress) != 0)
+			continue;
+
+		const json_value *pPlayerId = JsonObjectField(pEntry, "player_id");
+		if(pPlayerId == &json_value_none)
+			pPlayerId = JsonObjectField(pEntry, "id");
+		if(pPlayerId == &json_value_none || (pPlayerId->type != json_integer && pPlayerId->type != json_double))
+			continue;
+
+		const int ClientId = json_int_get(pPlayerId);
+		GameClient()->MarkQ1menGSyncClient(ClientId, ExpireTick);
+	}
+
+	json_value_free(pRoot);
+}
+
+void CTClient::SyncQmClientUsers()
+{
+	if((m_pQmClientUsersTask && !m_pQmClientUsersTask->Done()) || (m_pQmClientUsersSendTask && !m_pQmClientUsersSendTask->Done()))
+		return;
+
+	if(m_aQmClientAuthToken[0] == '\0')
+	{
+		FetchQmClientAuthToken();
+		return;
+	}
+
+	SendQmClientPlayerData();
+	FetchQmClientUsers();
+}
+
+void CTClient::UpdateQmClientRecognition()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+	{
+		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask || m_aQmClientAuthToken[0] != '\0' || m_QmClientLastSync != 0)
+		{
+			ResetQmClientRecognitionTasks();
+			GameClient()->ClearQ1menGSyncMarks();
+		}
+		return;
+	}
+
+	if(m_pQmClientAuthTokenTask && m_pQmClientAuthTokenTask->Done())
+	{
+		FinishQmClientAuthToken();
+		m_pQmClientAuthTokenTask = nullptr;
+	}
+	if(m_pQmClientUsersTask && m_pQmClientUsersTask->Done())
+	{
+		FinishQmClientUsers();
+		m_pQmClientUsersTask = nullptr;
+	}
+	if(m_pQmClientUsersSendTask && m_pQmClientUsersSendTask->Done())
+	{
+		// Report can fail after center service restart (stale auth token).
+		// Clear token to force refetch on the next sync cycle.
+		if(m_pQmClientUsersSendTask->State() != EHttpState::DONE || m_pQmClientUsersSendTask->StatusCode() == 401)
+			m_aQmClientAuthToken[0] = '\0';
+		m_pQmClientUsersSendTask = nullptr;
+	}
+
+	if(!g_Config.m_QmClientMarkTrail)
+	{
+		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask)
+			ResetQmClientRecognitionTasks();
+		GameClient()->ClearQ1menGSyncMarks();
+		return;
+	}
+
+	// Center sync endpoint is intentionally plain HTTP.
+	// Ensure libcurl allows HTTP protocol while this feature is enabled.
+	if(!g_Config.m_HttpAllowInsecure)
+		g_Config.m_HttpAllowInsecure = 1;
+
+	const int SyncInterval = QMCLIENT_SYNC_INTERVAL_SECONDS;
+	const int64_t IntervalTicks = (int64_t)SyncInterval * time_freq();
+	const int64_t Now = time_get();
+
+	if(m_QmClientLastSync == 0 || Now - m_QmClientLastSync >= IntervalTicks)
+	{
+		SyncQmClientUsers();
+		m_QmClientLastSync = Now;
+	}
 }
 
 void CTClient::CheckFreeze()

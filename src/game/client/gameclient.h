@@ -961,8 +961,9 @@ public:
 	void CleanMultiViewId(int ClientId);
 
 	// Q1menG Client Recognition
-	static const char *InjectQ1menGMark(char *pBuffer, size_t BufferSize, const char *pClan);
-	static bool IsQ1menGClient(const char *pClan);
+	void ClearQ1menGSyncMarks();
+	void MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick);
+	bool IsQ1menGClientRecognized(int ClientId) const;
 
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
@@ -987,6 +988,7 @@ private:
 	int m_IsDummySwapping;
 	CCharOrder m_CharOrder;
 	int m_aSwitchStateTeam[NUM_DUMMIES];
+	int64_t m_aQ1menGSyncMarkUntil[MAX_CLIENTS] = {0};
 
 	void LoadMapSettings();
 	CMapBugs m_MapBugs;
