@@ -1093,6 +1093,10 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcOutline, TCLocalize("显示所有启用的轮廓"), &g_Config.m_TcOutline, &Column, LineSize);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcOutlineEntities, TCLocalize("仅在实体层中显示轮廓"), &g_Config.m_TcOutlineEntities, &Column, LineSize);
+	Column.HSplitTop(LineSize, &Button, &Column);
+	Ui()->DoScrollbarOption(&g_Config.m_TcOutlineAlpha, &g_Config.m_TcOutlineAlpha, &Button, TCLocalize("轮廓透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+	Column.HSplitTop(LineSize, &Button, &Column);
+	Ui()->DoScrollbarOption(&g_Config.m_TcOutlineSolidAlpha, &g_Config.m_TcOutlineSolidAlpha, &Button, TCLocalize("墙体轮廓透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 
 	auto DoOutlineType = [&](CButtonContainer &ButtonContainer, const char *pName, int &Enable, int &Width, unsigned int &Color, const unsigned int &ColorDefault) {
 		// Checkbox & Color
