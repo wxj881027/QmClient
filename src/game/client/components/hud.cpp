@@ -973,7 +973,12 @@ void CHud::RenderSwapCountdown()
 		return;
 
 	static constexpr int SWAP_COUNTDOWN_SECONDS = 30;
-	const int SecondsLeft = SWAP_COUNTDOWN_SECONDS - (ElapsedTicks / TickSpeed);
+	static constexpr int SWAP_HIDE_AFTER_SECONDS = SWAP_COUNTDOWN_SECONDS + 60;
+	const int ElapsedSeconds = ElapsedTicks / TickSpeed;
+	if(ElapsedSeconds >= SWAP_HIDE_AFTER_SECONDS)
+		return;
+
+	const int SecondsLeft = SWAP_COUNTDOWN_SECONDS - ElapsedSeconds;
 
 	const float FontSize = 8.0f;
 	const float X = 5.0f;

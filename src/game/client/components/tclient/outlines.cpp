@@ -265,7 +265,15 @@ void COutlines::OnRender()
 			}
 			if(NumQuads <= 0)
 				continue;
-			Graphics()->SetColor(color_cast<ColorRGBA>(ColorHSLA(Config.m_Color, true)));
+
+			ColorRGBA OutlineColor = color_cast<ColorRGBA>(ColorHSLA(Config.m_Color, true));
+			OutlineColor.a *= g_Config.m_TcOutlineAlpha / 100.0f;
+			if(Type == OUTLINE_SOLID)
+				OutlineColor.a *= g_Config.m_TcOutlineSolidAlpha / 100.0f;
+			if(OutlineColor.a <= 0.0f)
+				continue;
+
+			Graphics()->SetColor(OutlineColor);
 			Graphics()->QuadsDrawTL(aQuads, NumQuads);
 		}
 	}
