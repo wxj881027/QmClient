@@ -468,12 +468,17 @@ void CPlayers::RenderWeaponTrajectory(
 		const float SelfIgnoreDistance = CCharacterCore::PhysicalSize() * 0.5f;
 		float ClosestDistance = distance(From, To) + 1.0f;
 		bool Found = false;
+		const CGameClient::CClientData &ShooterData = GameClient()->m_aClients[ClientId];
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
 			const CGameClient::CClientData &ClientData = GameClient()->m_aClients[i];
 			if(!ClientData.m_Active || ClientData.m_Team == TEAM_SPECTATORS)
 				continue;
 			if(!GameClient()->m_Snap.m_aCharacters[i].m_Active)
+				continue;
+			const bool IsOneSuper = ClientData.m_Super || ShooterData.m_Super;
+			const bool IsOneSolo = ClientData.m_Solo || ShooterData.m_Solo;
+			if(!IsOneSuper && (!GameClient()->m_Teams.SameTeam(i, ClientId) || IsOneSolo))
 				continue;
 
 			vec2 ClosestPoint;
@@ -507,6 +512,7 @@ void CPlayers::RenderWeaponTrajectory(
 		constexpr int PointCount = 180;
 		std::vector<vec2> vPoints;
 		vPoints.reserve(PointCount);
+		vec2 LandingPos = StartPos;
 
 		vec2 PrevPos = StartPos;
 		for(int i = 0; i < PointCount; ++i)
@@ -520,10 +526,12 @@ void CPlayers::RenderWeaponTrajectory(
 				if(Collision()->IntersectLine(PrevPos, Pos, &ColPos, &BeforePos))
 				{
 					vPoints.push_back(ColPos);
+					LandingPos = ColPos;
 					break;
 				}
 			}
 			vPoints.push_back(Pos);
+			LandingPos = Pos;
 			PrevPos = Pos;
 		}
 
@@ -550,6 +558,28 @@ void CPlayers::RenderWeaponTrajectory(
 			Graphics()->DrawCircle(vPoints[i].x, vPoints[i].y, Size, 12);
 		}
 		Graphics()->QuadsEnd();
+
+		const IGraphics::CTextureHandle &GrenadeCursor = GameClient()->m_GameSkin.m_SpriteWeaponGrenadeCursor;
+		if(GrenadeCursor.IsValid())
+		{
+			float CursorSpriteScaleX, CursorSpriteScaleY;
+			Graphics()->GetSpriteScale(g_pData->m_Weapons.m_aId[WEAPON_GRENADE].m_pSpriteCursor, CursorSpriteScaleX, CursorSpriteScaleY);
+
+			float CursorScale = (float)g_Config.m_TcCursorScale / 100.0f;
+			CursorScale = std::clamp(CursorScale, 0.3f, 3.0f);
+			const float CursorSize = 64.0f * CursorScale * 0.8f;
+			IGraphics::CQuadItem CursorQuad(
+				LandingPos.x,
+				LandingPos.y,
+				CursorSize * CursorSpriteScaleX,
+				CursorSize * CursorSpriteScaleY);
+
+			Graphics()->TextureSet(GrenadeCursor);
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.9f);
+			Graphics()->QuadsDraw(&CursorQuad, 1);
+			Graphics()->QuadsEnd();
+		}
 		return;
 	}
 
@@ -1588,6 +1618,9 @@ void CPlayers::OnRender()
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_SPARKLE;
 
 			Frozen = GameClient()->m_aClients[i].m_Predicted.m_FreezeEnd != 0;
+			// TClient
+			if(g_Config.m_TcFastInput)
+				Frozen = GameClient()->m_aClients[i].m_RegularPredicted.m_FreezeEnd != 0;
 		}
 		else
 		{

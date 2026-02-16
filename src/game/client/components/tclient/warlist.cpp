@@ -331,6 +331,7 @@ void CWarList::RemoveWarType(const char *pType)
 				Entry.m_pWarType = m_pWarTypeNone;
 			}
 		}
+		delete *it;
 		m_WarTypes.erase(it);
 	}
 }

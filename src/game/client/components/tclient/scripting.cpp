@@ -200,7 +200,7 @@ private:
 			if(!std::holds_alternative<int>(Arg))
 				return nullptr;
 			int Id = std::get<int>(Arg);
-			if(Id < 0 || Id > MAX_CLIENTS)
+			if(Id < 0 || Id >= MAX_CLIENTS)
 				return nullptr;
 			if(!GameClient()->m_aClients[Id].m_Active)
 				return nullptr;
@@ -213,7 +213,7 @@ private:
 			if(!std::holds_alternative<int>(Arg))
 				return nullptr;
 			int Id = std::get<int>(Arg);
-			if(Id < 0 || Id > MAX_CLIENTS)
+			if(Id < 0 || Id >= MAX_CLIENTS)
 				return nullptr;
 			if(!GameClient()->m_aClients[Id].m_Active)
 				return nullptr;

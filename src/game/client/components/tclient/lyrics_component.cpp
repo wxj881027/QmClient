@@ -215,10 +215,12 @@ void CLyrics::HandleRequestDone()
 		return;
 	}
 
-	const json_value *pObj = pRequest->ResultJson();
+	json_value *pObj = pRequest->ResultJson();
 	const bool Ok = m_RequestEndpoint == EEndpoint::SEARCH ?
 		ParseSearchResponse(pObj, m_aLastError, sizeof(m_aLastError)) :
 		ParseLyricsResponse(pObj, m_aLastError, sizeof(m_aLastError));
+	if(pObj)
+		json_value_free(pObj);
 	if(!Ok)
 	{
 		m_State = EState::ERROR;

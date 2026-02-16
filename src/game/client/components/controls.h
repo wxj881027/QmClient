@@ -41,7 +41,7 @@ public:
 	int m_aShowHookColl[NUM_DUMMIES];
 	int m_aShowWeaponTrajectory[NUM_DUMMIES];
 
-	CNetObj_PlayerInput m_FastInput;
+	CNetObj_PlayerInput m_aFastInput[NUM_DUMMIES];
 
 	CControls();
 	int Sizeof() const override { return sizeof(*this); }

@@ -857,9 +857,9 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	MainView.HSplitTop(5.0f, nullptr, &MainView);
 
 	CUIRect QueuePanel;
-	float QueuePanelWidth = MainView.w * 0.22f;
-	QueuePanelWidth = std::clamp(QueuePanelWidth, 150.0f, 240.0f);
-	QueuePanelWidth = std::min(QueuePanelWidth, MainView.w * 0.35f);
+	float QueuePanelWidth = MainView.w * 0.24f;
+	QueuePanelWidth = std::clamp(QueuePanelWidth, 160.0f, 250.0f);
+	QueuePanelWidth = std::min(QueuePanelWidth, MainView.w * 0.38f);
 	MainView.VSplitRight(QueuePanelWidth, &MainView, &QueuePanel);
 	QueuePanel.VSplitLeft(10.0f, nullptr, &QueuePanel);
 
@@ -877,7 +877,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		}
 
 		CUIRect QueueSection = QueuePanel;
-		CUIRect QueueHeader, QueueControls, QueueList;
+		CUIRect QueueHeader, QueueControls, QueueList, QueuePresets;
 		QueueSection.HSplitTop(18.0f, &QueueHeader, &QueueSection);
 		char aQueueLabel[64];
 		str_format(aQueueLabel, sizeof(aQueueLabel), "%s (%d/%d)", Localize("皮肤队列"), (int)SkinQueue.size(), QueueLength);
@@ -886,14 +886,14 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		QueueSection.HSplitTop(20.0f, &QueueControls, &QueueSection);
 		CUIRect IntervalRect, LengthRect;
 		QueueControls.VSplitMid(&IntervalRect, &LengthRect, 10.0f);
-		Ui()->DoScrollbarOption(&QueueInterval, &QueueInterval, &IntervalRect, Localize("切换间隔"), 1, 120, &CUi::ms_LinearScrollbarScale, 0, "s");
+		Ui()->DoScrollbarOption(&QueueInterval, &QueueInterval, &IntervalRect, Localize("切换间隔"), 5, 120, &CUi::ms_LinearScrollbarScale, 0, "s");
 		if(Ui()->DoScrollbarOption(&QueueLength, &QueueLength, &LengthRect, Localize("队列长度"), 0, QueueMaxLimit))
 		{
 			GameClient()->m_Skins.TrimSkinQueueToLimit(QueueDummy);
 		}
 
 		QueueSection.HSplitTop(5.0f, nullptr, &QueueSection);
-		QueueList = QueueSection;
+		QueueSection.HSplitMid(&QueueList, &QueuePresets, 6.0f);
 
 		static CListBox s_QueueListBox;
 		static std::vector<char> s_QueueItemIds;
@@ -1031,6 +1031,116 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				GameClient()->m_Skins.RemoveSkinQueue(SkinQueue[RemoveIndex].c_str(), QueueDummy);
 				s_QueueDragIndex = -1;
 				s_QueueDragging = false;
+			}
+		}
+
+		if(QueuePresets.h > 0.0f)
+		{
+			QueuePresets.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 4.0f);
+			CUIRect PresetHeader, PresetControls, PresetList;
+			QueuePresets.HSplitTop(18.0f, &PresetHeader, &QueuePresets);
+			const auto &vQueuePresets = GameClient()->m_Skins.SkinQueuePresets(QueueDummy);
+			char aPresetLabel[64];
+			str_format(aPresetLabel, sizeof(aPresetLabel), "%s (%d)", Localize("预设栏"), (int)vQueuePresets.size());
+			PresetHeader.VSplitLeft(6.0f, nullptr, &PresetHeader);
+			Ui()->DoLabel(&PresetHeader, aPresetLabel, 12.0f, TEXTALIGN_ML);
+
+			QueuePresets.HSplitTop(3.0f, nullptr, &QueuePresets);
+			QueuePresets.HSplitTop(20.0f, &PresetControls, &QueuePresets);
+			CUIRect SavePresetButton;
+			PresetControls.VSplitLeft(110.0f, &SavePresetButton, nullptr);
+			static CButtonContainer s_SavePresetButton;
+			const bool DisableSavePreset = SkinQueue.empty();
+			if(DoButton_Menu(&s_SavePresetButton, Localize("保存当前"), DisableSavePreset ? -1 : 0, &SavePresetButton) && !DisableSavePreset)
+			{
+				GameClient()->m_Skins.AddSkinQueuePresetFromCurrent(QueueDummy);
+			}
+			GameClient()->m_Tooltips.DoToolTip(&s_SavePresetButton, &SavePresetButton, DisableSavePreset ? Localize("队列为空") : Localize("一键保存当前队列为新预设"));
+
+			QueuePresets.HSplitTop(3.0f, nullptr, &QueuePresets);
+			PresetList = QueuePresets;
+			if(vQueuePresets.empty())
+			{
+				Ui()->DoLabel(&PresetList, Localize("暂无预设"), 11.0f, TEXTALIGN_MC);
+			}
+			else
+			{
+				static CListBox s_PresetListBox;
+				static std::vector<char> s_vPresetItemIds;
+				static std::vector<char> s_vPresetRenameIds;
+				static std::vector<char> s_vPresetApplyIds;
+				static std::vector<char> s_vPresetRemoveIds;
+				s_vPresetItemIds.resize(vQueuePresets.size());
+				s_vPresetRenameIds.resize(vQueuePresets.size());
+				s_vPresetApplyIds.resize(vQueuePresets.size());
+				s_vPresetRemoveIds.resize(vQueuePresets.size());
+
+				int RenamePresetIndex = -1;
+				int ApplyPresetIndex = -1;
+				int RemovePresetIndex = -1;
+				s_PresetListBox.DoStart(20.0f, (int)vQueuePresets.size(), 1, 1, -1, &PresetList, true, IGraphics::CORNER_ALL);
+				for(size_t i = 0; i < vQueuePresets.size(); ++i)
+				{
+					const CListboxItem Item = s_PresetListBox.DoNextItem(&s_vPresetItemIds[i], false, 3.0f);
+					if(!Item.m_Visible)
+						continue;
+
+					CUIRect NameRect, RenameRect, ApplyRect, RemoveRect;
+					Item.m_Rect.VSplitRight(42.0f, &NameRect, &RemoveRect);
+					NameRect.VSplitRight(42.0f, &NameRect, &ApplyRect);
+					NameRect.VSplitRight(42.0f, &NameRect, &RenameRect);
+					NameRect.VSplitLeft(4.0f, nullptr, &NameRect);
+
+					char aEntryLabel[96];
+					str_format(aEntryLabel, sizeof(aEntryLabel), "%s (%d)", vQueuePresets[i].m_Name.c_str(), (int)vQueuePresets[i].m_Queue.size());
+					Ui()->DoLabel(&NameRect, aEntryLabel, 11.0f, TEXTALIGN_ML);
+
+					const bool RenameHovered = Ui()->HotItem() == &s_vPresetRenameIds[i];
+					RenameRect.Draw(ColorRGBA(0.4f, 0.4f, 0.75f, RenameHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
+					Ui()->DoLabel(&RenameRect, Localize("改名"), 10.0f, TEXTALIGN_MC);
+					if(Ui()->DoButtonLogic(&s_vPresetRenameIds[i], 0, &RenameRect, BUTTONFLAG_LEFT))
+					{
+						RenamePresetIndex = (int)i;
+					}
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRenameIds[i], &RenameRect, Localize("打开重命名弹窗"));
+
+					const bool ApplyHovered = Ui()->HotItem() == &s_vPresetApplyIds[i];
+					ApplyRect.Draw(ColorRGBA(0.25f, 0.6f, 0.35f, ApplyHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
+					Ui()->DoLabel(&ApplyRect, Localize("应用"), 10.0f, TEXTALIGN_MC);
+					if(Ui()->DoButtonLogic(&s_vPresetApplyIds[i], 0, &ApplyRect, BUTTONFLAG_LEFT))
+					{
+						ApplyPresetIndex = (int)i;
+					}
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetApplyIds[i], &ApplyRect, Localize("一键应用此预设到当前队列"));
+
+					const bool RemoveHovered = Ui()->HotItem() == &s_vPresetRemoveIds[i];
+					RemoveRect.Draw(ColorRGBA(0.75f, 0.25f, 0.25f, RemoveHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
+					Ui()->DoLabel(&RemoveRect, Localize("删除"), 10.0f, TEXTALIGN_MC);
+					if(Ui()->DoButtonLogic(&s_vPresetRemoveIds[i], 0, &RemoveRect, BUTTONFLAG_LEFT))
+					{
+						RemovePresetIndex = (int)i;
+					}
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRemoveIds[i], &RemoveRect, Localize("删除该预设"));
+				}
+				s_PresetListBox.DoEnd();
+
+				if(RenamePresetIndex >= 0 && (size_t)RenamePresetIndex < vQueuePresets.size())
+				{
+					m_SkinQueuePresetRenamePopupContext.m_pMenus = this;
+					m_SkinQueuePresetRenamePopupContext.m_Dummy = QueueDummy;
+					m_SkinQueuePresetRenamePopupContext.m_PresetIndex = RenamePresetIndex;
+					m_SkinQueuePresetRenamePopupContext.m_NameInput.Set(vQueuePresets[RenamePresetIndex].m_Name.c_str());
+					m_SkinQueuePresetRenamePopupContext.m_NameInput.SelectAll();
+					Ui()->DoPopupMenu(&m_SkinQueuePresetRenamePopupContext, Ui()->MouseX(), Ui()->MouseY(), 260.0f, 72.0f, &m_SkinQueuePresetRenamePopupContext, PopupSkinQueuePresetRename);
+				}
+				else if(ApplyPresetIndex >= 0)
+				{
+					GameClient()->m_Skins.ApplySkinQueuePreset((size_t)ApplyPresetIndex, QueueDummy);
+				}
+				else if(RemovePresetIndex >= 0)
+				{
+					GameClient()->m_Skins.RemoveSkinQueuePreset((size_t)RemovePresetIndex, QueueDummy);
+				}
 			}
 		}
 
@@ -3621,6 +3731,48 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 	}
 #endif
 
+}
+
+CUi::EPopupMenuFunctionResult CMenus::PopupSkinQueuePresetRename(void *pContext, CUIRect View, bool Active)
+{
+	CSkinQueuePresetRenamePopupContext *pPopupContext = static_cast<CSkinQueuePresetRenamePopupContext *>(pContext);
+	CMenus *pMenus = pPopupContext->m_pMenus;
+	if(pMenus == nullptr)
+		return CUi::POPUP_CLOSE_CURRENT;
+	if(pPopupContext->m_Dummy < 0 || pPopupContext->m_Dummy > 1)
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	const auto &vPresets = pMenus->GameClient()->m_Skins.SkinQueuePresets(pPopupContext->m_Dummy);
+	if(pPopupContext->m_PresetIndex < 0 || pPopupContext->m_PresetIndex >= (int)vPresets.size())
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	const float FontSize = 10.0f;
+	View.Margin(5.0f, &View);
+
+	CUIRect Label, Input, Buttons, Cancel, Confirm;
+	View.HSplitTop(12.0f, &Label, &View);
+	pMenus->Ui()->DoLabel(&Label, Localize("新预设名称"), FontSize, TEXTALIGN_ML);
+
+	View.HSplitTop(3.0f, nullptr, &View);
+	View.HSplitTop(18.0f, &Input, &View);
+	pMenus->Ui()->DoEditBox(&pPopupContext->m_NameInput, &Input, FontSize + 1.0f);
+
+	View.HSplitTop(4.0f, nullptr, &View);
+	View.HSplitTop(18.0f, &Buttons, &View);
+	Buttons.VSplitMid(&Cancel, &Confirm, 3.0f);
+
+	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, Localize("取消"), &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
+	if(CancelPressed)
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, Localize("重命名"), &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
+	if(ConfirmPressed)
+	{
+		if(pMenus->GameClient()->m_Skins.RenameSkinQueuePreset((size_t)pPopupContext->m_PresetIndex, pPopupContext->m_NameInput.GetString(), pPopupContext->m_Dummy))
+			return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	return CUi::POPUP_KEEP_OPEN;
 }
 
 CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect View, bool Active)

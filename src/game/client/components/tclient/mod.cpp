@@ -151,7 +151,7 @@ void CMod::OnRender()
 	}
 }
 
-void CMod::OnStateChange(int OldState, int NewState)
+void CMod::OnStateChange(int NewState, int OldState)
 {
 	m_ModWeaponActiveId = -1;
 	m_ModWeaponActiveTimeLeft = -1.0f;

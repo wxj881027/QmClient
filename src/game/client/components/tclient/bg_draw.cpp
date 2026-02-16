@@ -566,10 +566,15 @@ void CBgDraw::OnRender()
 			if(g_Config.m_TcBgDrawFadeTime > 0 && Item.m_SecondsAge > (float)g_Config.m_TcBgDrawFadeTime)
 				Item.m_Killed = true;
 		}
-		const bool InRangeX = Item.BoundingBox().m_Min.x < ScreenX1 || Item.BoundingBox().m_Max.x > ScreenX0;
-		const bool InRangeY = Item.BoundingBox().m_Min.y < ScreenY1 || Item.BoundingBox().m_Max.y > ScreenY0;
+		const bool InRangeX = Item.BoundingBox().m_Min.x < ScreenX1 && Item.BoundingBox().m_Max.x > ScreenX0;
+		const bool InRangeY = Item.BoundingBox().m_Min.y < ScreenY1 && Item.BoundingBox().m_Max.y > ScreenY0;
 		if(InRangeX && InRangeY)
 			Item.Render();
+	}
+	for(std::optional<CBgDrawItem *> &ActiveItem : m_apActiveItems)
+	{
+		if(ActiveItem.has_value() && ActiveItem.value()->m_Killed)
+			ActiveItem = std::nullopt;
 	}
 	// Remove killed items
 	if(m_pvItems->remove_if([&](CBgDrawItem &Item) { return Item.m_Killed; }))
@@ -598,7 +603,7 @@ void CBgDraw::OnStateChange(int NewState, int OldState)
 	}
 	Reset();
 	m_NextAutoSave = AUTO_SAVE_INTERVAL;
-	if(NewState == IClient::STATE_ONLINE || OldState == IClient::STATE_DEMOPLAYBACK)
+	if(NewState == IClient::STATE_ONLINE || NewState == IClient::STATE_DEMOPLAYBACK)
 	{
 		if(g_Config.m_TcBgDrawAutoSaveLoad > 0)
 			Load(nullptr, false);

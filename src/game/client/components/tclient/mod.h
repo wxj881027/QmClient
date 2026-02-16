@@ -17,7 +17,7 @@ public:
 	int Sizeof() const override { return sizeof(*this); }
 	void OnConsoleInit() override;
 	void OnRender() override;
-	void OnStateChange(int OldState, int NewState) override;
+	void OnStateChange(int NewState, int OldState) override;
 };
 
 #endif

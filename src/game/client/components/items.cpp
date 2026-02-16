@@ -400,124 +400,62 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 		Graphics()->TextureClear();
 		Graphics()->QuadsBegin();
 
-		// QmClient: 精美荧光激光效果 - 使用顶点颜色渐变
-		if(g_Config.m_QmLaserEnhanced && g_Config.m_QmLaserGlowIntensity > 0 && (Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN))
+		const bool EnhancedWeaponLaser = g_Config.m_QmLaserEnhanced && g_Config.m_QmLaserGlowIntensity > 0 && (Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN);
+		float Pulse = 1.0f;
+		if(EnhancedWeaponLaser)
 		{
-			float GlowIntensity = g_Config.m_QmLaserGlowIntensity / 100.0f;
-			
-			// 脉冲动画
-			float PulseSpeed = g_Config.m_QmLaserPulseSpeed / 100.0f;
-			float PulseAmplitude = g_Config.m_QmLaserPulseAmplitude / 100.0f;
-			float Time = Client()->GlobalTime();
-			float Pulse = 1.0f + PulseAmplitude * 0.3f * std::sin(Time * 4.0f * PulseSpeed);
-			
-			// 荧光基础参数
-			float BaseWidth = 25.0f * SizeScale * Ia * Pulse;
-			vec2 Perp = vec2(Dir.y, -Dir.x);
-			
-			// 荧光颜色
-			ColorRGBA GlowColor = OuterColor;
-			float CoreAlpha = 0.5f * GlowIntensity * LaserAlpha;
-			
-			// 主体荧光：上半部分
+			// 多层辉光渲染，保留 QmClient 的脉冲、尺寸与透明度控制。
+			const float GlowIntensity = g_Config.m_QmLaserGlowIntensity / 100.0f;
+			const float PulseSpeed = g_Config.m_QmLaserPulseSpeed / 100.0f;
+			const float PulseAmplitude = g_Config.m_QmLaserPulseAmplitude / 100.0f;
+			Pulse += std::sin(Client()->GlobalTime() * 4.0f * PulseSpeed) * (0.35f * PulseAmplitude);
+
+			const vec2 Perp = vec2(Dir.y, -Dir.x);
+			constexpr int NumGlowLayers = 13;
+			static const float s_aLayerAlphas[NumGlowLayers] = {
+				0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.08f, 0.10f,
+				0.15f, 0.25f, 0.45f, 0.65f, 0.85f, 1.0f};
+			static const float s_aLayerWidths[NumGlowLayers] = {
+				24.0f, 22.0f, 20.0f, 18.0f, 16.0f, 14.0f, 12.0f,
+				10.0f, 8.0f, 6.0f, 4.0f, 3.0f, 2.0f};
+
+			for(int i = 0; i < NumGlowLayers; ++i)
 			{
-				vec2 EdgeTop = Perp * BaseWidth;
-				IGraphics::CColorVertex aColors[4] = {
-					IGraphics::CColorVertex(0, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
-					IGraphics::CColorVertex(1, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f),
-					IGraphics::CColorVertex(2, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
-					IGraphics::CColorVertex(3, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f)
-				};
-				Graphics()->SetColorVertex(aColors, 4);
-				IGraphics::CFreeformItem Glow(
-					From.x, From.y,
-					From.x + EdgeTop.x, From.y + EdgeTop.y,
-					Pos.x, Pos.y,
-					Pos.x + EdgeTop.x, Pos.y + EdgeTop.y);
-				Graphics()->QuadsDrawFreeform(&Glow, 1);
+				const float LayerAlpha = s_aLayerAlphas[i] * GlowIntensity * LaserAlpha;
+				const float LayerWidth = s_aLayerWidths[i] * SizeScale * Ia * Pulse;
+				const vec2 Out = Perp * LayerWidth;
+
+				ColorRGBA LayerColor = i == NumGlowLayers - 1 ? ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f) : (i >= NumGlowLayers - 2 ? InnerColor : OuterColor);
+				Graphics()->SetColor(LayerColor.WithMultipliedAlpha(LayerAlpha));
+
+				IGraphics::CFreeformItem Layer(
+					From - Out, From + Out,
+					Pos - Out, Pos + Out);
+				Graphics()->QuadsDrawFreeform(&Layer, 1);
 			}
-			
-			// 主体荧光：下半部分
-			{
-				vec2 EdgeBot = Perp * (-BaseWidth);
-				IGraphics::CColorVertex aColors[4] = {
-					IGraphics::CColorVertex(0, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
-					IGraphics::CColorVertex(1, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f),
-					IGraphics::CColorVertex(2, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
-					IGraphics::CColorVertex(3, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f)
-				};
-				Graphics()->SetColorVertex(aColors, 4);
-				IGraphics::CFreeformItem Glow(
-					From.x, From.y,
-					From.x + EdgeBot.x, From.y + EdgeBot.y,
-					Pos.x, Pos.y,
-					Pos.x + EdgeBot.x, Pos.y + EdgeBot.y);
-				Graphics()->QuadsDrawFreeform(&Glow, 1);
-			}
-			
-			// 端点封口：用半圆补全两端，中心亮度和主体一致
+
 			if(g_Config.m_QmLaserRoundCaps)
 			{
-				const int Segments = 8;
-				
-				// From端半圆（背离激光方向）
-				for(int i = 0; i < Segments; i++)
-				{
-					// 半圆范围：从Perpendicular到-Perpendicular（背向）
-					float BaseAngle = std::atan2(-Dir.y, -Dir.x); // 背离Pos的方向
-					float Angle1 = BaseAngle - pi * 0.5f + (float)i / Segments * pi;
-					float Angle2 = BaseAngle - pi * 0.5f + (float)(i + 1) / Segments * pi;
-					
-					vec2 P1 = vec2(std::cos(Angle1), std::sin(Angle1)) * BaseWidth;
-					vec2 P2 = vec2(std::cos(Angle2), std::sin(Angle2)) * BaseWidth;
-					
-					IGraphics::CColorVertex aColors[4] = {
-						IGraphics::CColorVertex(0, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
-						IGraphics::CColorVertex(1, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f),
-						IGraphics::CColorVertex(2, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
-						IGraphics::CColorVertex(3, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f)
-					};
-					Graphics()->SetColorVertex(aColors, 4);
-					
-					IGraphics::CFreeformItem GlowCap(
-						From.x, From.y,
-						From.x + P1.x, From.y + P1.y,
-						From.x, From.y,
-						From.x + P2.x, From.y + P2.y);
-					Graphics()->QuadsDrawFreeform(&GlowCap, 1);
-				}
-				
-				// Pos端半圆（背离From方向）
-				for(int i = 0; i < Segments; i++)
-				{
-					float BaseAngle = std::atan2(Dir.y, Dir.x); // 背离From的方向
-					float Angle1 = BaseAngle - pi * 0.5f + (float)i / Segments * pi;
-					float Angle2 = BaseAngle - pi * 0.5f + (float)(i + 1) / Segments * pi;
-					
-					vec2 P1 = vec2(std::cos(Angle1), std::sin(Angle1)) * BaseWidth;
-					vec2 P2 = vec2(std::cos(Angle2), std::sin(Angle2)) * BaseWidth;
-					
-					IGraphics::CColorVertex aColors[4] = {
-						IGraphics::CColorVertex(0, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
-						IGraphics::CColorVertex(1, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f),
-						IGraphics::CColorVertex(2, GlowColor.r, GlowColor.g, GlowColor.b, CoreAlpha),
-						IGraphics::CColorVertex(3, GlowColor.r, GlowColor.g, GlowColor.b, 0.0f)
-					};
-					Graphics()->SetColorVertex(aColors, 4);
-					
-					IGraphics::CFreeformItem GlowCap(
-						Pos.x, Pos.y,
-						Pos.x + P1.x, Pos.y + P1.y,
-						Pos.x, Pos.y,
-						Pos.x + P2.x, Pos.y + P2.y);
-					Graphics()->QuadsDrawFreeform(&GlowCap, 1);
-				}
+				const float GlowCapRadius = 6.0f * SizeScale * Ia * Pulse * (1.0f + GlowIntensity * 0.7f);
+				const int GlowCapSegments = 14;
+				Graphics()->SetColor(OuterColor.WithMultipliedAlpha(0.30f * GlowIntensity * LaserAlpha));
+				Graphics()->DrawCircle(From.x, From.y, GlowCapRadius, GlowCapSegments);
+				Graphics()->DrawCircle(Pos.x, Pos.y, GlowCapRadius, GlowCapSegments);
+				Graphics()->SetColor(InnerColor.WithMultipliedAlpha(0.45f * GlowIntensity * LaserAlpha));
+				Graphics()->DrawCircle(From.x, From.y, GlowCapRadius * 0.65f, GlowCapSegments);
+				Graphics()->DrawCircle(Pos.x, Pos.y, GlowCapRadius * 0.65f, GlowCapSegments);
 			}
 		}
 
 		// do outline - QmClient: 应用大小缩放
 		Graphics()->SetColor(OuterColor);
 		float OutlineWidth = 7.0f * SizeScale * Ia;
+		float InnerWidth = 5.0f * SizeScale * Ia;
+		if(EnhancedWeaponLaser)
+		{
+			OutlineWidth *= (1.08f * Pulse);
+			InnerWidth *= (1.05f * Pulse);
+		}
 		vec2 Out = vec2(Dir.y, -Dir.x) * OutlineWidth;
 
 		IGraphics::CFreeformItem Freeform(
@@ -526,7 +464,6 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 		Graphics()->QuadsDrawFreeform(&Freeform, 1);
 
 		// do inner - QmClient: 应用大小缩放
-		float InnerWidth = 5.0f * SizeScale * Ia;
 		Out = vec2(Dir.y, -Dir.x) * InnerWidth;
 		vec2 ExtraOutlinePos = Dir;
 		vec2 ExtraOutlineFrom = Type == LASERTYPE_DOOR ? vec2(0, 0) : Dir;
@@ -540,8 +477,8 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 		// QmClient: 圆角端点效果
 		if(g_Config.m_QmLaserRoundCaps && (Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN))
 		{
-			const float CapRadius = OutlineWidth * 0.8f;
-			const int CapSegments = 12;
+			const float CapRadius = OutlineWidth * (EnhancedWeaponLaser ? 0.95f : 0.8f);
+			const int CapSegments = EnhancedWeaponLaser ? 16 : 12;
 
 			// 起点圆角
 			Graphics()->SetColor(OuterColor);
@@ -611,13 +548,38 @@ void CItems::RenderLaser(vec2 From, vec2 Pos, ColorRGBA OuterColor, ColorRGBA In
 	}
 	else
 	{
+		const bool EnhancedWeaponLaser = g_Config.m_QmLaserEnhanced && g_Config.m_QmLaserGlowIntensity > 0 && (Type == LASERTYPE_RIFLE || Type == LASERTYPE_SHOTGUN);
+		const float GlowIntensity = g_Config.m_QmLaserGlowIntensity / 100.0f;
+		const float PulseSpeed = g_Config.m_QmLaserPulseSpeed / 100.0f;
+		const float PulseAmplitude = g_Config.m_QmLaserPulseAmplitude / 100.0f;
+		const float Pulse = 1.0f + std::sin(Client()->GlobalTime() * 4.0f * PulseSpeed) * (0.2f * PulseAmplitude);
+
 		int CurParticle = (int)TicksHead % 3;
 		Graphics()->TextureSet(GameClient()->m_ParticlesSkin.m_aSpriteParticleSplat[CurParticle]);
 		Graphics()->QuadsSetRotation((int)TicksHead);
+
+		if(EnhancedWeaponLaser && Len > 0.0f)
+		{
+			const vec2 Dir = normalize(Pos - From);
+			const float ImpactDot = absolute(dot(Dir, vec2(1.0f, 0.0f)));
+			const float AngleFactor = 1.0f - (ImpactDot * 0.3f);
+			const float GlowScale = AngleFactor * SizeScale * Pulse;
+
+			Graphics()->SetColor(OuterColor.WithMultipliedAlpha(0.18f * GlowIntensity * LaserAlpha));
+			Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y, 1.8f * GlowScale, 1.8f * GlowScale);
+			Graphics()->SetColor(OuterColor.WithMultipliedAlpha(0.30f * GlowIntensity * LaserAlpha));
+			Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y, 1.4f * GlowScale, 1.4f * GlowScale);
+			Graphics()->SetColor(InnerColor.WithMultipliedAlpha(0.55f * GlowIntensity * LaserAlpha));
+			Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y, 1.0f * GlowScale, 1.0f * GlowScale);
+			Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f * GlowIntensity * LaserAlpha));
+			Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y, 0.65f * GlowScale, 0.65f * GlowScale);
+		}
+
+		const float CoreScale = SizeScale * (EnhancedWeaponLaser ? (1.0f + 0.12f * (Pulse - 1.0f)) : 1.0f);
 		Graphics()->SetColor(OuterColor);
-		Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y);
+		Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y, CoreScale, CoreScale);
 		Graphics()->SetColor(InnerColor);
-		Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y, 20.f / 24.f, 20.f / 24.f);
+		Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aParticleSplatOffset[CurParticle], Pos.x, Pos.y, CoreScale * 20.f / 24.f, CoreScale * 20.f / 24.f);
 	}
 }
 

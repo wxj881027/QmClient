@@ -508,32 +508,42 @@ float CControls::GetMaxMouseDistance() const
 
 bool CControls::CheckNewInput()
 {
-	CNetObj_PlayerInput TestInput = m_aInputData[g_Config.m_ClDummy];
-	TestInput.m_Direction = m_aInputDirectionRight[g_Config.m_ClDummy] - m_aInputDirectionLeft[g_Config.m_ClDummy];
-
 	bool NewInput = false;
-	if(m_FastInput.m_Direction != TestInput.m_Direction)
-		NewInput = true;
-	if(m_FastInput.m_Hook != TestInput.m_Hook)
-		NewInput = true;
-	if(m_FastInput.m_Fire != TestInput.m_Fire)
-		NewInput = true;
-	if(m_FastInput.m_Jump != TestInput.m_Jump)
-		NewInput = true;
-	if(m_FastInput.m_NextWeapon != TestInput.m_NextWeapon)
-		NewInput = true;
-	if(m_FastInput.m_PrevWeapon != TestInput.m_PrevWeapon)
-		NewInput = true;
-	if(m_FastInput.m_WantedWeapon != TestInput.m_WantedWeapon)
-		NewInput = true;
-
-	if(g_Config.m_ClSubTickAiming)
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
 	{
-		TestInput.m_TargetX = (int)m_aMousePos[g_Config.m_ClDummy].x;
-		TestInput.m_TargetY = (int)m_aMousePos[g_Config.m_ClDummy].y;
-	}
+		CNetObj_PlayerInput TestInput = m_aInputData[Dummy];
+		if(Dummy == g_Config.m_ClDummy)
+		{
+			TestInput.m_Direction = 0;
+			if(m_aInputDirectionLeft[Dummy] && !m_aInputDirectionRight[Dummy])
+				TestInput.m_Direction = -1;
+			if(!m_aInputDirectionLeft[Dummy] && m_aInputDirectionRight[Dummy])
+				TestInput.m_Direction = 1;
 
-	m_FastInput = TestInput;
+			if(g_Config.m_ClSubTickAiming)
+			{
+				TestInput.m_TargetX = (int)m_aMousePos[Dummy].x;
+				TestInput.m_TargetY = (int)m_aMousePos[Dummy].y;
+			}
+		}
+
+		if(m_aFastInput[Dummy].m_Direction != TestInput.m_Direction)
+			NewInput = true;
+		if(m_aFastInput[Dummy].m_Hook != TestInput.m_Hook)
+			NewInput = true;
+		if(m_aFastInput[Dummy].m_Fire != TestInput.m_Fire)
+			NewInput = true;
+		if(m_aFastInput[Dummy].m_Jump != TestInput.m_Jump)
+			NewInput = true;
+		if(m_aFastInput[Dummy].m_NextWeapon != TestInput.m_NextWeapon)
+			NewInput = true;
+		if(m_aFastInput[Dummy].m_PrevWeapon != TestInput.m_PrevWeapon)
+			NewInput = true;
+		if(m_aFastInput[Dummy].m_WantedWeapon != TestInput.m_WantedWeapon)
+			NewInput = true;
+
+		m_aFastInput[Dummy] = TestInput;
+	}
 
 	return NewInput;
 }

@@ -638,6 +638,16 @@ protected:
 
 	std::vector<CButtonContainer> m_vButtonContainersNamePlateShow = {{}, {}, {}, {}};
 	std::vector<CButtonContainer> m_vButtonContainersNamePlateKeyPresses = {{}, {}, {}, {}};
+	class CSkinQueuePresetRenamePopupContext : public SPopupMenuId
+	{
+	public:
+		CMenus *m_pMenus = nullptr;
+		int m_Dummy = 0;
+		int m_PresetIndex = -1;
+		CLineInputBuffered<64> m_NameInput;
+		CButtonContainer m_ConfirmButton;
+		CButtonContainer m_CancelButton;
+	} m_SkinQueuePresetRenamePopupContext;
 
 	class CMapListItem
 	{
@@ -667,6 +677,7 @@ protected:
 		return str_comp_filenames(Lhs.m_aFilename, Rhs.m_aFilename) < 0;
 	}
 
+	static CUi::EPopupMenuFunctionResult PopupSkinQueuePresetRename(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupMapPicker(void *pContext, CUIRect View, bool Active);
 
 	void SetNeedSendInfo();

@@ -317,7 +317,7 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			return;
 		}
 
-		if(ClientId > MAX_CLIENTS)
+		if(ClientId >= MAX_CLIENTS)
 			return;
 		int LocalId = GameClient()->m_Snap.m_LocalClientId;
 		if(ClientId == LocalId)
@@ -561,7 +561,7 @@ void CTClient::SpecId(int ClientId)
 		return;
 	}
 
-	if(ClientId < 0 || ClientId > (int)std::size(GameClient()->m_aClients))
+	if(ClientId < 0 || ClientId >= (int)std::size(GameClient()->m_aClients))
 		return;
 	const auto &Player = GameClient()->m_aClients[ClientId];
 	if(!Player.m_Active)
@@ -1630,7 +1630,7 @@ void CTClient::SetForcedAspect()
 	Graphics()->SetForcedAspect(Force);
 }
 
-void CTClient::OnStateChange(int OldState, int NewState)
+void CTClient::OnStateChange(int NewState, int OldState)
 {
 	SetForcedAspect();
 	for(auto &AirRescuePositions : m_aAirRescuePositions)

@@ -328,7 +328,7 @@ void CTranslate::OnConsoleInit()
 
 void CTranslate::Translate(int Id, bool ShowProgress)
 {
-	if(Id < 0 || Id > (int)std::size(GameClient()->m_aClients))
+	if(Id < 0 || Id >= (int)std::size(GameClient()->m_aClients))
 	{
 		GameClient()->m_Chat.Echo("Not a valid ID");
 		return;

@@ -62,6 +62,23 @@ struct CSystemMediaControls::SShared
 	bool m_AlbumArtDirty = false;
 };
 
+template<typename TAsyncOp>
+static bool WaitForAsync(const TAsyncOp &Operation, const std::atomic_bool &StopFlag)
+{
+	using winrt::Windows::Foundation::AsyncStatus;
+	while(true)
+	{
+		const AsyncStatus Status = Operation.Status();
+		if(Status == AsyncStatus::Completed)
+			return true;
+		if(Status == AsyncStatus::Canceled || Status == AsyncStatus::Error)
+			return false;
+		if(StopFlag.load(std::memory_order_relaxed))
+			return false;
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	}
+}
+
 static void ClearAlbumArtLocal(CSystemMediaControls::SWinrt *pWinrt, IGraphics *pGraphics)
 {
 	if(pGraphics && pWinrt->m_State.m_AlbumArt.IsValid())
@@ -98,12 +115,25 @@ static void SetSharedAlbumArt(CSystemMediaControls::SShared *pShared, std::vecto
 	pShared->m_AlbumArtDirty = true;
 }
 
-static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const winrt::Windows::Storage::Streams::IRandomAccessStreamReference &Thumbnail)
+static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const winrt::Windows::Storage::Streams::IRandomAccessStreamReference &Thumbnail, const std::atomic_bool &StopFlag)
 {
 	try
 	{
-		const auto Stream = Thumbnail.OpenReadAsync().get();
-		const auto Decoder = winrt::Windows::Graphics::Imaging::BitmapDecoder::CreateAsync(Stream).get();
+		const auto StreamOp = Thumbnail.OpenReadAsync();
+		if(!WaitForAsync(StreamOp, StopFlag))
+		{
+			ClearSharedAlbumArt(pShared);
+			return;
+		}
+		const auto Stream = StreamOp.GetResults();
+
+		const auto DecoderOp = winrt::Windows::Graphics::Imaging::BitmapDecoder::CreateAsync(Stream);
+		if(!WaitForAsync(DecoderOp, StopFlag))
+		{
+			ClearSharedAlbumArt(pShared);
+			return;
+		}
+		const auto Decoder = DecoderOp.GetResults();
 		const uint32_t Width = Decoder.PixelWidth();
 		const uint32_t Height = Decoder.PixelHeight();
 		if(Width == 0 || Height == 0)
@@ -112,13 +142,18 @@ static void UpdateAlbumArtData(CSystemMediaControls::SShared *pShared, const win
 			return;
 		}
 
-		const auto PixelData = Decoder.GetPixelDataAsync(
-							       winrt::Windows::Graphics::Imaging::BitmapPixelFormat::Rgba8,
-							       winrt::Windows::Graphics::Imaging::BitmapAlphaMode::Premultiplied,
-							       winrt::Windows::Graphics::Imaging::BitmapTransform(),
-							       winrt::Windows::Graphics::Imaging::ExifOrientationMode::IgnoreExifOrientation,
-							       winrt::Windows::Graphics::Imaging::ColorManagementMode::DoNotColorManage)
-							       .get();
+		const auto PixelDataOp = Decoder.GetPixelDataAsync(
+			winrt::Windows::Graphics::Imaging::BitmapPixelFormat::Rgba8,
+			winrt::Windows::Graphics::Imaging::BitmapAlphaMode::Premultiplied,
+			winrt::Windows::Graphics::Imaging::BitmapTransform(),
+			winrt::Windows::Graphics::Imaging::ExifOrientationMode::IgnoreExifOrientation,
+			winrt::Windows::Graphics::Imaging::ColorManagementMode::DoNotColorManage);
+		if(!WaitForAsync(PixelDataOp, StopFlag))
+		{
+			ClearSharedAlbumArt(pShared);
+			return;
+		}
+		const auto PixelData = PixelDataOp.GetResults();
 
 		const auto Pixels = PixelData.DetachPixelData();
 		const size_t ExpectedSize = (size_t)Width * (size_t)Height * 4;
@@ -307,7 +342,17 @@ void CSystemMediaControls::ThreadMain()
 			{
 				try
 				{
-					Manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
+					const auto RequestOp = GlobalSystemMediaTransportControlsSessionManager::RequestAsync();
+					if(!WaitForAsync(RequestOp, m_StopThread))
+					{
+						if(m_StopThread.load(std::memory_order_relaxed))
+							break;
+						Manager = nullptr;
+					}
+					else
+					{
+						Manager = RequestOp.GetResults();
+					}
 				}
 				catch(const winrt::hresult_error &)
 				{
@@ -372,56 +417,68 @@ void CSystemMediaControls::ThreadMain()
 				LastPropsUpdate = Now;
 				try
 				{
-					const auto MediaProps = Session.TryGetMediaPropertiesAsync().get();
-					const std::string Title = winrt::to_string(MediaProps.Title());
-					const std::string Artist = winrt::to_string(MediaProps.Artist());
-					const std::string Album = winrt::to_string(MediaProps.AlbumTitle());
-
-					if(!Title.empty())
+					const auto MediaPropsOp = Session.TryGetMediaPropertiesAsync();
+					if(!WaitForAsync(MediaPropsOp, m_StopThread))
 					{
-						str_copy(State.m_aTitle, Title.c_str(), sizeof(State.m_aTitle));
-					}
-					else
-					{
+						if(m_StopThread.load(std::memory_order_relaxed))
+							break;
 						State.m_aTitle[0] = '\0';
-					}
-
-					if(!Artist.empty())
-					{
-						str_copy(State.m_aArtist, Artist.c_str(), sizeof(State.m_aArtist));
-					}
-					else
-					{
 						State.m_aArtist[0] = '\0';
-					}
-
-					if(!Album.empty())
-					{
-						str_copy(State.m_aAlbum, Album.c_str(), sizeof(State.m_aAlbum));
-					}
-					else
-					{
 						State.m_aAlbum[0] = '\0';
 					}
-
-					const bool HasText = !Title.empty() || !Artist.empty() || !Album.empty();
-					if(HasText)
-					{
-						const std::string NewKey = Title + "\n" + Artist + "\n" + Album;
-						if(NewKey != AlbumArtKey)
-						{
-							AlbumArtKey = NewKey;
-							const auto Thumbnail = MediaProps.Thumbnail();
-							if(Thumbnail)
-								UpdateAlbumArtData(m_pShared.get(), Thumbnail);
-							else
-								ClearSharedAlbumArt(m_pShared.get());
-						}
-					}
 					else
 					{
-						AlbumArtKey.clear();
-						ClearSharedAlbumArt(m_pShared.get());
+						const auto MediaProps = MediaPropsOp.GetResults();
+						const std::string Title = winrt::to_string(MediaProps.Title());
+						const std::string Artist = winrt::to_string(MediaProps.Artist());
+						const std::string Album = winrt::to_string(MediaProps.AlbumTitle());
+
+						if(!Title.empty())
+						{
+							str_copy(State.m_aTitle, Title.c_str(), sizeof(State.m_aTitle));
+						}
+						else
+						{
+							State.m_aTitle[0] = '\0';
+						}
+
+						if(!Artist.empty())
+						{
+							str_copy(State.m_aArtist, Artist.c_str(), sizeof(State.m_aArtist));
+						}
+						else
+						{
+							State.m_aArtist[0] = '\0';
+						}
+
+						if(!Album.empty())
+						{
+							str_copy(State.m_aAlbum, Album.c_str(), sizeof(State.m_aAlbum));
+						}
+						else
+						{
+							State.m_aAlbum[0] = '\0';
+						}
+
+						const bool HasText = !Title.empty() || !Artist.empty() || !Album.empty();
+						if(HasText)
+						{
+							const std::string NewKey = Title + "\n" + Artist + "\n" + Album;
+							if(NewKey != AlbumArtKey)
+							{
+								AlbumArtKey = NewKey;
+								const auto Thumbnail = MediaProps.Thumbnail();
+								if(Thumbnail)
+									UpdateAlbumArtData(m_pShared.get(), Thumbnail, m_StopThread);
+								else
+									ClearSharedAlbumArt(m_pShared.get());
+							}
+						}
+						else
+						{
+							AlbumArtKey.clear();
+							ClearSharedAlbumArt(m_pShared.get());
+						}
 					}
 				}
 				catch(const winrt::hresult_error &)
@@ -452,13 +509,13 @@ void CSystemMediaControls::ThreadMain()
 						switch(Command)
 						{
 						case ECommand::Prev:
-							Session.TrySkipPreviousAsync().get();
+							Session.TrySkipPreviousAsync();
 							break;
 						case ECommand::PlayPause:
-							Session.TryTogglePlayPauseAsync().get();
+							Session.TryTogglePlayPauseAsync();
 							break;
 						case ECommand::Next:
-							Session.TrySkipNextAsync().get();
+							Session.TrySkipNextAsync();
 							break;
 						}
 					}

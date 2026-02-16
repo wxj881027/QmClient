@@ -220,7 +220,7 @@ public:
 	void OnRender() override;
 	bool OnInput(const IInput::CEvent &Event) override;
 
-	void OnStateChange(int OldState, int NewState) override;
+	void OnStateChange(int NewState, int OldState) override;
 	void OnNewSnapshot() override;
 	void SetForcedAspect();
 

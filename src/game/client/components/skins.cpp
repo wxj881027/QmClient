@@ -518,6 +518,10 @@ void CSkins::OnConsoleInit()
 	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, ConRemFavoriteSkin, this, "Remove a skin from the favorites");
 	Console()->Register("add_skin_queue", "s[skin_name]", CFGFLAG_CLIENT, ConAddSkinQueue, this, "Add a skin to the queue");
 	Console()->Register("add_dummy_skin_queue", "s[skin_name]", CFGFLAG_CLIENT, ConAddDummySkinQueue, this, "Add a skin to the dummy queue");
+	Console()->Register("add_skin_queue_preset", "s[preset_name]", CFGFLAG_CLIENT, ConAddSkinQueuePreset, this, "Add a queue preset");
+	Console()->Register("add_dummy_skin_queue_preset", "s[preset_name]", CFGFLAG_CLIENT, ConAddDummySkinQueuePreset, this, "Add a dummy queue preset");
+	Console()->Register("add_skin_queue_preset_item", "i[preset_index] s[skin_name]", CFGFLAG_CLIENT, ConAddSkinQueuePresetItem, this, "Add a skin to a queue preset");
+	Console()->Register("add_dummy_skin_queue_preset_item", "i[preset_index] s[skin_name]", CFGFLAG_CLIENT, ConAddDummySkinQueuePresetItem, this, "Add a skin to a dummy queue preset");
 
 	Console()->Chain("player_skin", ConchainRefreshSkinList, this);
 	Console()->Chain("dummy_skin", ConchainRefreshSkinList, this);
@@ -1093,6 +1097,105 @@ void CSkins::TrimSkinQueueToLimit(int Dummy)
 	ClampSkinQueueIndex(Dummy);
 }
 
+bool CSkins::AddSkinQueuePreset(const char *pName, int Dummy)
+{
+	auto &Presets = m_aSkinQueuePresets[Dummy];
+	char aPresetName[MAX_SKIN_LENGTH];
+	if(pName == nullptr || pName[0] == '\0')
+	{
+		str_format(aPresetName, sizeof(aPresetName), "Preset %d", (int)Presets.size() + 1);
+		pName = aPresetName;
+	}
+	str_copy(aPresetName, pName, sizeof(aPresetName));
+
+	Presets.push_back({});
+	Presets.back().m_Name = aPresetName;
+	return true;
+}
+
+bool CSkins::AddSkinQueuePresetItem(int PresetIndex, const char *pSkinName, int Dummy)
+{
+	auto &Presets = m_aSkinQueuePresets[Dummy];
+	if(PresetIndex < 0 || PresetIndex >= (int)Presets.size())
+	{
+		return false;
+	}
+	if(!CSkin::IsValidName(pSkinName))
+	{
+		return false;
+	}
+
+	auto &Queue = Presets[PresetIndex].m_Queue;
+	if(std::find(Queue.begin(), Queue.end(), pSkinName) == Queue.end())
+	{
+		Queue.emplace_back(pSkinName);
+	}
+	return true;
+}
+
+bool CSkins::AddSkinQueuePresetFromCurrent(int Dummy)
+{
+	const auto &Queue = m_aSkinQueue[Dummy];
+	if(Queue.empty())
+	{
+		return false;
+	}
+
+	char aPresetName[MAX_SKIN_LENGTH];
+	str_format(aPresetName, sizeof(aPresetName), "Preset %d", (int)m_aSkinQueuePresets[Dummy].size() + 1);
+	AddSkinQueuePreset(aPresetName, Dummy);
+	m_aSkinQueuePresets[Dummy].back().m_Queue = Queue;
+	return true;
+}
+
+bool CSkins::RenameSkinQueuePreset(size_t PresetIndex, const char *pName, int Dummy)
+{
+	auto &Presets = m_aSkinQueuePresets[Dummy];
+	if(PresetIndex >= Presets.size() || pName == nullptr)
+	{
+		return false;
+	}
+
+	char aTrimmedName[MAX_SKIN_LENGTH];
+	str_copy(aTrimmedName, str_utf8_skip_whitespaces(pName), sizeof(aTrimmedName));
+	str_utf8_trim_right(aTrimmedName);
+	if(aTrimmedName[0] == '\0')
+	{
+		return false;
+	}
+
+	Presets[PresetIndex].m_Name = aTrimmedName;
+	return true;
+}
+
+bool CSkins::ApplySkinQueuePreset(size_t PresetIndex, int Dummy)
+{
+	auto &Presets = m_aSkinQueuePresets[Dummy];
+	if(PresetIndex >= Presets.size())
+	{
+		return false;
+	}
+
+	m_aSkinQueue[Dummy] = Presets[PresetIndex].m_Queue;
+	TrimSkinQueueToLimit(Dummy);
+	SkinQueueIndexVar(Dummy) = 0;
+	m_aSkinQueueElapsed[Dummy] = 0ns;
+	m_aSkinQueueLastUpdate[Dummy].reset();
+	ApplySkinQueueCurrent(Dummy);
+	return true;
+}
+
+bool CSkins::RemoveSkinQueuePreset(size_t PresetIndex, int Dummy)
+{
+	auto &Presets = m_aSkinQueuePresets[Dummy];
+	if(PresetIndex >= Presets.size())
+	{
+		return false;
+	}
+	Presets.erase(Presets.begin() + PresetIndex);
+	return true;
+}
+
 void CSkins::RandomizeSkin(int Dummy)
 {
 	static const float s_aSchemes[] = {1.0f / 2.0f, 1.0f / 3.0f, 1.0f / -3.0f, 1.0f / 12.0f, 1.0f / -12.0f}; // complementary, triadic, analogous
@@ -1334,6 +1437,30 @@ void CSkins::ConAddDummySkinQueue(IConsole::IResult *pResult, void *pUserData)
 	pSelf->AddSkinQueue(pResult->GetString(0), 1);
 }
 
+void CSkins::ConAddSkinQueuePreset(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CSkins *>(pUserData);
+	pSelf->AddSkinQueuePreset(pResult->GetString(0), 0);
+}
+
+void CSkins::ConAddDummySkinQueuePreset(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CSkins *>(pUserData);
+	pSelf->AddSkinQueuePreset(pResult->GetString(0), 1);
+}
+
+void CSkins::ConAddSkinQueuePresetItem(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CSkins *>(pUserData);
+	pSelf->AddSkinQueuePresetItem(pResult->GetInteger(0), pResult->GetString(1), 0);
+}
+
+void CSkins::ConAddDummySkinQueuePresetItem(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CSkins *>(pUserData);
+	pSelf->AddSkinQueuePresetItem(pResult->GetInteger(0), pResult->GetString(1), 1);
+}
+
 void CSkins::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 {
 	auto *pSelf = static_cast<CSkins *>(pUserData);
@@ -1369,6 +1496,33 @@ void CSkins::OnQueueConfigSave(IConfigManager *pConfigManager)
 		char aBuffer[40 + MAX_SKIN_LENGTH];
 		str_format(aBuffer, sizeof(aBuffer), "add_dummy_skin_queue \"%s\"", QueueSkin.c_str());
 		pConfigManager->WriteLine(aBuffer, ConfigDomain::TCLIENT);
+	}
+
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		int PresetIndex = 0;
+		for(const auto &Preset : m_aSkinQueuePresets[Dummy])
+		{
+			{
+				char aBuffer[64 + MAX_SKIN_LENGTH];
+				if(Dummy == 0)
+					str_format(aBuffer, sizeof(aBuffer), "add_skin_queue_preset \"%s\"", Preset.m_Name.c_str());
+				else
+					str_format(aBuffer, sizeof(aBuffer), "add_dummy_skin_queue_preset \"%s\"", Preset.m_Name.c_str());
+				pConfigManager->WriteLine(aBuffer, ConfigDomain::TCLIENT);
+			}
+
+			for(const auto &QueueSkin : Preset.m_Queue)
+			{
+				char aBuffer[80 + MAX_SKIN_LENGTH];
+				if(Dummy == 0)
+					str_format(aBuffer, sizeof(aBuffer), "add_skin_queue_preset_item %d \"%s\"", PresetIndex, QueueSkin.c_str());
+				else
+					str_format(aBuffer, sizeof(aBuffer), "add_dummy_skin_queue_preset_item %d \"%s\"", PresetIndex, QueueSkin.c_str());
+				pConfigManager->WriteLine(aBuffer, ConfigDomain::TCLIENT);
+			}
+			PresetIndex++;
+		}
 	}
 }
 
