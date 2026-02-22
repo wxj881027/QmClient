@@ -3932,7 +3932,13 @@ foreach(target ${TARGETS_OWN})
   target_include_directories(${target} PRIVATE src)
   target_include_directories(${target} PRIVATE src/rust-bridge)
   target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CONF_DEBUG>)
-  target_include_directories(${target} SYSTEM PRIVATE ${CURL_INCLUDE_DIRS} ${SQLite3_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+  set(COMMON_SYSTEM_INCLUDE_DIRS ${CURL_INCLUDE_DIRS} ${SQLite3_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+  if(TARGET_OS STREQUAL "mac")
+    # Do not pass SDK usr/include explicitly on macOS. libc++ expects to
+    # control C/C++ header resolution and this explicit include can break it.
+    list(FILTER COMMON_SYSTEM_INCLUDE_DIRS EXCLUDE REGEX "/SDKs/[^/]+\\.sdk/usr/include$")
+  endif()
+  target_include_directories(${target} SYSTEM PRIVATE ${COMMON_SYSTEM_INCLUDE_DIRS})
   target_compile_definitions(${target} PRIVATE GLEW_STATIC)
   target_compile_definitions(${target} PRIVATE _FILE_OFFSET_BITS=64) # Ensure off_t is 64 bit for ftello and fseeko functions
   if(CRYPTO_FOUND)

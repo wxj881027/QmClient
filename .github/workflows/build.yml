@@ -81,12 +81,21 @@ jobs:
           python -m pip install dmgbuild
           echo "${PWD}/.venv-dmgbuild/bin" >> "$GITHUB_PATH"
 
-      - name: Configure (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
         run: >
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DDOWNLOAD_GTEST=ON
+
+      - name: Configure (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DDOWNLOAD_GTEST=ON \
+            -DCMAKE_OSX_SYSROOT="${SDKROOT}"
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
