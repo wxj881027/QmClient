@@ -29,17 +29,17 @@ jobs:
           - name: Linux
             os: ubuntu-22.04
             package_ext: tar.xz
-            output_name: TClient-ubuntu.tar.xz
+            output_name: QmClient-ubuntu.tar.xz
             artifact_name: packaged-linux
           - name: Windows
             os: windows-2022
             package_ext: zip
-            output_name: TClient-windows.zip
+            output_name: QmClient-windows.zip
             artifact_name: packaged-windows
           - name: macOS
             os: macos-latest
             package_ext: dmg
-            output_name: TClient-macOS.dmg
+            output_name: QmClient-macOS.dmg
             artifact_name: packaged-macos
 
     steps:
@@ -287,8 +287,8 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            release-assets/TClient-windows.zip
-            release-assets/TClient-ubuntu.tar.xz
-            release-assets/TClient-macOS.dmg
+            release-assets/QmClient-windows.zip
+            release-assets/QmClient-ubuntu.tar.xz
+            release-assets/QmClient-macOS.dmg
             release-assets/QmClient-android.apk
             release-assets/QmClient-android.aab
