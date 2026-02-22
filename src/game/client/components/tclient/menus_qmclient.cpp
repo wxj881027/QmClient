@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <array>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -79,84 +80,148 @@ const float MarginBetweenViews = 30.0f;
 const float ColorPickerLabelSize = 13.0f;
 const float ColorPickerLineSpacing = 5.0f;
 
-static const char *s_apQiaFenPresetWords[] = {
-	"有人恰吗",
-	"有人要吗",
-	"有恰的吗",
-	"有人要分吗",
-	"有人恰分吗",
-	"有恰分的吗",
-	"有要分的吗",
+struct SAutoReplyRulePlain
+{
+	std::string m_Keywords;
+	std::string m_Reply;
 };
 
-static int QiaFenSeparatorLength(const char *pStr)
+struct SAutoReplyRuleInputRow
 {
-	const unsigned char C0 = (unsigned char)pStr[0];
-	if(C0 == ',' || C0 == ';' || C0 == '|' || C0 == '\n' || C0 == '\r')
-		return 1;
-	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBC)
-	{
-		const unsigned char C2 = (unsigned char)pStr[2];
-		if(C2 == 0x8C || C2 == 0x9B)
-			return 3;
-	}
-	return 0;
-}
+	char m_aTrigger[512] = "";
+	char m_aReply[256] = "";
+	CLineInput m_TriggerInput;
+	CLineInput m_ReplyInput;
 
-static bool IsQiaFenPresetWord(const char *pWord)
-{
-	for(const char *pPreset : s_apQiaFenPresetWords)
+	SAutoReplyRuleInputRow()
 	{
-		if(str_utf8_comp_nocase(pWord, pPreset) == 0)
-			return true;
+		m_TriggerInput.SetBuffer(m_aTrigger, sizeof(m_aTrigger));
+		m_ReplyInput.SetBuffer(m_aReply, sizeof(m_aReply));
 	}
-	return false;
-}
+};
 
-static bool FindQiaFenPresetDuplicate(const char *pKeywords, char *pOut, size_t OutSize)
+static bool CopyTrimmedString(const char *pSrc, char *pOut, size_t OutSize)
 {
-	if(!pKeywords || pKeywords[0] == '\0')
+	pOut[0] = '\0';
+	if(!pSrc)
 		return false;
 
-	char aBuf[512];
-	str_copy(aBuf, pKeywords, sizeof(aBuf));
-	char *pCursor = aBuf;
+	char aBuf[1024];
+	str_copy(aBuf, pSrc, sizeof(aBuf));
+	char *pTrimmed = (char *)str_utf8_skip_whitespaces(aBuf);
+	str_utf8_trim_right(pTrimmed);
+	str_copy(pOut, pTrimmed, OutSize);
+	return pOut[0] != '\0';
+}
 
+static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const char *pTrigger = "", const char *pReply = "")
+{
+	auto pRow = std::make_unique<SAutoReplyRuleInputRow>();
+	pRow->m_TriggerInput.Set(pTrigger);
+	pRow->m_ReplyInput.Set(pReply);
+	return pRow;
+}
+
+static void ParseAutoReplyRules(const char *pRules, std::vector<SAutoReplyRulePlain> &vOutRules)
+{
+	vOutRules.clear();
+	if(!pRules || pRules[0] == '\0')
+		return;
+
+	const char *pCursor = pRules;
 	while(*pCursor)
 	{
-		int SepLen = QiaFenSeparatorLength(pCursor);
-		while(*pCursor && SepLen > 0)
+		char aLine[1024];
+		int LineLen = 0;
+		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
 		{
-			pCursor += SepLen;
-			SepLen = QiaFenSeparatorLength(pCursor);
+			if(LineLen < (int)sizeof(aLine) - 1)
+				aLine[LineLen++] = *pCursor;
+			pCursor++;
 		}
+		aLine[LineLen] = '\0';
 
-		char *pStart = pCursor;
-		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
+		while(*pCursor == '\n' || *pCursor == '\r')
 			pCursor++;
 
-		if(pStart == pCursor)
-			break;
-
-		if(*pCursor)
-		{
-			const int CutLen = QiaFenSeparatorLength(pCursor);
-			*pCursor = '\0';
-			pCursor += CutLen;
-		}
-
-		char *pToken = (char *)str_utf8_skip_whitespaces(pStart);
-		str_utf8_trim_right(pToken);
-		if(pToken[0] == '\0')
+		char *pLine = (char *)str_utf8_skip_whitespaces(aLine);
+		str_utf8_trim_right(pLine);
+		if(pLine[0] == '\0' || pLine[0] == '#')
 			continue;
-		if(IsQiaFenPresetWord(pToken))
-		{
-			str_copy(pOut, pToken, OutSize);
-			return true;
-		}
+
+		const char *pArrowConst = str_find(pLine, "=>");
+		if(!pArrowConst)
+			continue;
+
+		char *pArrow = pLine + (pArrowConst - pLine);
+		*pArrow = '\0';
+		pArrow += 2;
+
+		char *pKeywords = (char *)str_utf8_skip_whitespaces(pLine);
+		str_utf8_trim_right(pKeywords);
+		char *pReply = (char *)str_utf8_skip_whitespaces(pArrow);
+		str_utf8_trim_right(pReply);
+		if(pKeywords[0] == '\0' || pReply[0] == '\0')
+			continue;
+
+		vOutRules.push_back({pKeywords, pReply});
+	}
+}
+
+static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, const std::vector<SAutoReplyRulePlain> &vRules)
+{
+	std::vector<SAutoReplyRulePlain> vCompleteRows;
+	vCompleteRows.reserve(vRows.size());
+	for(const auto &pRow : vRows)
+	{
+		char aTrigger[512];
+		char aReply[256];
+		const bool HasTrigger = CopyTrimmedString(pRow->m_TriggerInput.GetString(), aTrigger, sizeof(aTrigger));
+		const bool HasReply = CopyTrimmedString(pRow->m_ReplyInput.GetString(), aReply, sizeof(aReply));
+		if(!(HasTrigger && HasReply))
+			continue;
+		vCompleteRows.push_back({aTrigger, aReply});
 	}
 
-	return false;
+	if(vCompleteRows.size() != vRules.size())
+		return false;
+
+	for(size_t i = 0; i < vCompleteRows.size(); ++i)
+	{
+		if(str_comp(vCompleteRows[i].m_Keywords.c_str(), vRules[i].m_Keywords.c_str()) != 0 ||
+			str_comp(vCompleteRows[i].m_Reply.c_str(), vRules[i].m_Reply.c_str()) != 0)
+			return false;
+	}
+	return true;
+}
+
+static bool IsAutoReplyRuleRowHalfFilled(const SAutoReplyRuleInputRow &Row)
+{
+	char aTrigger[512];
+	char aReply[256];
+	const bool HasTrigger = CopyTrimmedString(Row.m_TriggerInput.GetString(), aTrigger, sizeof(aTrigger));
+	const bool HasReply = CopyTrimmedString(Row.m_ReplyInput.GetString(), aReply, sizeof(aReply));
+	return HasTrigger != HasReply;
+}
+
+static void BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, char *pOutRules, size_t OutRulesSize)
+{
+	pOutRules[0] = '\0';
+	for(const auto &pRow : vRows)
+	{
+		char aTrigger[512];
+		char aReply[256];
+		const bool HasTrigger = CopyTrimmedString(pRow->m_TriggerInput.GetString(), aTrigger, sizeof(aTrigger));
+		const bool HasReply = CopyTrimmedString(pRow->m_ReplyInput.GetString(), aReply, sizeof(aReply));
+		if(!(HasTrigger && HasReply))
+			continue;
+
+		if(pOutRules[0] != '\0')
+			str_append(pOutRules, "\n", OutRulesSize);
+		str_append(pOutRules, aTrigger, OutRulesSize);
+		str_append(pOutRules, "=>", OutRulesSize);
+		str_append(pOutRules, aReply, OutRulesSize);
+	}
 }
 
 static float CalcQiaFenInputHeight(ITextRender *pTextRender, const char *pText, float Width, float FontSize, float LineSpacing, float MinHeight)
@@ -1254,17 +1319,32 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("Finish Name"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("终点前改名"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChangeNameNearFinish, TCLocalize("Attempt to change your name when near finish"), &g_Config.m_TcChangeNameNearFinish, &Column, LineSize);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChangeNameNearFinish, TCLocalize("过终点前尝试改名"), &g_Config.m_TcChangeNameNearFinish, &Column, LineSize);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFinishNameRequireOwnFinished, TCLocalize("如果自己没过就不改名"), &g_Config.m_TcFinishNameRequireOwnFinished, &Column, LineSize);
 	Column.HSplitTop(LineSize, &Button, &Column);
-	//Ui()->DoScrollbarOption(&g_Config.m_TcPetSize, &g_Config.m_TcPetSize, &Button, TCLocalize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
-	//Column.HSplitTop(LineSize + MarginExtraSmall, &Button, &Column);
+
+	// One-time migration from legacy single-name config to unified queue config.
+	static bool s_FinishNameQueueMigrated = false;
+	if(!s_FinishNameQueueMigrated)
+	{
+		if(g_Config.m_TcFinishNameQueue[0] == '\0' && g_Config.m_TcFinishName[0] != '\0')
+		{
+			str_copy(g_Config.m_TcFinishNameQueue, g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishNameQueue));
+			g_Config.m_TcFinishName[0] = '\0';
+		}
+		s_FinishNameQueueMigrated = true;
+	}
+
 	Button.VSplitMid(&Label, &Button);
-	Ui()->DoLabel(&Label, TCLocalize("Finish Name:"), FontSize, TEXTALIGN_ML);
-	static CLineInput s_FinishName(g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishName));
-	Ui()->DoEditBox(&s_FinishName, &Button, EditBoxFontSize);
+	Ui()->DoLabel(&Label, TCLocalize("改名队列："), FontSize, TEXTALIGN_ML);
+	static CLineInput s_FinishNameQueueInput(g_Config.m_TcFinishNameQueue, sizeof(g_Config.m_TcFinishNameQueue));
+	Ui()->DoEditBox(&s_FinishNameQueueInput, &Button, EditBoxFontSize);
+
+	Column.HSplitTop(LineSize, &Label, &Column);
+	Ui()->DoLabel(&Label, TCLocalize("支持单名字或队列，多个名字用 | 分隔（按顺序）"), FontSize, TEXTALIGN_ML);
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
 
@@ -3130,8 +3210,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 
 	// === 布局常量（统一定义，禁止魔数） ===
 	const float ViewWidth = MainView.w;
-	const float UiScale = std::clamp(ViewWidth / 1000.0f, 0.85f, 1.0f);
-	const bool CompactLayout = ViewWidth < 600.0f;
+	// 5:4 等窄屏在设置页实际可用宽度会明显变小，提前切紧凑布局并适当缩放。
+	const bool CompactLayout = ViewWidth < 680.0f;
+	const float UiScale = std::clamp(ViewWidth / 1000.0f, CompactLayout ? 0.78f : 0.85f, 1.0f);
 
 	const float LG_CardPadding = std::clamp(14.0f * UiScale, 10.0f, 14.0f);          // 卡片内边距
 	const float LG_CardSpacing = std::clamp(16.0f * UiScale, 10.0f, 16.0f);          // 卡片间距
@@ -3144,8 +3225,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	const float LG_HeadlineMargin = std::clamp(10.0f * UiScale, 7.0f, 10.0f);        // 标题下方间距
 	const float LG_TipSize = std::clamp(LG_BodySize * 0.7f, 8.0f, LG_BodySize);
 	const float LG_TipHeight = maximum(LG_HeadlineMargin, LG_TipSize + 2.0f);
-	const float LG_LabelMaxWidth = maximum(120.0f, ViewWidth * 0.45f);
-	const float LG_LabelWidth = std::clamp(170.0f * UiScale, 120.0f, LG_LabelMaxWidth); // 左侧标签列宽度（固定）
+	const float LG_LabelMaxWidth = maximum(CompactLayout ? 96.0f : 120.0f, ViewWidth * (CompactLayout ? 0.38f : 0.45f));
+	const float LG_LabelBaseWidth = CompactLayout ? 148.0f : 170.0f;
+	const float LG_LabelMinWidth = CompactLayout ? 96.0f : 120.0f;
+	const float LG_LabelWidth = std::clamp(LG_LabelBaseWidth * UiScale, LG_LabelMinWidth, LG_LabelMaxWidth); // 左侧标签列宽度（固定）
 
 	// === 颜色定义 ===
 	const ColorRGBA LG_GlassColor(0.08f, 0.09f, 0.12f, LG_CardAlpha);
@@ -3169,7 +3252,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	MainView.y += ScrollOffset.y;
 
 	// 外边距
-	const float OuterMargin = std::clamp(10.0f * UiScale, 6.0f, 10.0f);
+	const float OuterMargin = CompactLayout ? std::clamp(7.0f * UiScale, 4.0f, 7.0f) : std::clamp(10.0f * UiScale, 6.0f, 10.0f);
 	MainView.VSplitRight(OuterMargin, &MainView, nullptr);
 	MainView.VSplitLeft(OuterMargin, nullptr, &MainView);
 
@@ -3222,6 +3305,18 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			Ui()->DoLabel(&TipRect, pTip, LG_TipSize, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 		}
+	};
+	auto RenderMenuImage = [&](const CMenuImage *pImage, const CUIRect &Rect, float Alpha = 1.0f) {
+		if(!pImage)
+			return;
+		Graphics()->TextureSet(pImage->m_OrgTexture);
+		Graphics()->WrapClamp();
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+		IGraphics::CQuadItem QuadItem(Rect.x, Rect.y, Rect.w, Rect.h);
+		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->QuadsEnd();
+		Graphics()->WrapNormal();
 	};
 
 	CUIRect Row, LabelCol, ControlCol, CardContent;
@@ -3714,6 +3809,15 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			}
 			LeftContent.HSplitTop(LG_LineSpacing * 2, nullptr, &LeftContent);
 			DoModuleHeadline(LeftContent, -3, TCLocalize("赞助"), TCLocalize("感谢您为QmClient做出的贡献"));
+			if(const CMenuImage *pSponsorImage = FindMenuImage("sponsor"))
+			{
+				const float SponsorImageHeight = std::clamp(LeftContent.w * 0.30f, LG_LineHeight * 2.2f, LG_LineHeight * 4.2f);
+				LeftContent.HSplitTop(SponsorImageHeight, &Row, &LeftContent);
+				CUIRect SponsorImageRect = Row;
+				SponsorImageRect.Margin(LG_LineSpacing * 0.4f, &SponsorImageRect);
+				RenderMenuImage(pSponsorImage, SponsorImageRect, 1.0f);
+				LeftContent.HSplitTop(LG_LineSpacing, nullptr, &LeftContent);
+			}
 			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
 			{
 				CUIRect SponsorButton;
@@ -3792,8 +3896,11 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					"鹑",
 					"枫香°",
 					"爱发电用户_07470",
-					"蓝蓝蓝蓝",
-					"临渊织网"
+					"·蓝蓝蓝蓝",
+					"临渊捕鱼",
+					"?hook?",
+					"放肆zero",
+					"Q币"
 				};
 				const float SponsorFontSize = LG_BodySize * 1.1f;
 				const float MaxLineWidth = RightContent.w;
@@ -4113,6 +4220,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRepeatAutoAddOne, TCLocalize("自动加一"), &g_Config.m_QmRepeatAutoAddOne, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHammerSwapSkin, TCLocalize("锤人换皮肤"), &g_Config.m_QmHammerSwapSkin, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
@@ -4247,6 +4358,21 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendEnterAutoGreet, TCLocalize("好友进图自动打招呼"), &g_Config.m_QmFriendEnterAutoGreet, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				if(g_Config.m_QmFriendEnterAutoGreet)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, TCLocalize("打招呼文本"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_FriendEnterGreetText(g_Config.m_QmFriendEnterGreetText, sizeof(g_Config.m_QmFriendEnterGreetText));
+					s_FriendEnterGreetText.SetEmptyText(TCLocalize("留空禁用"));
+					Ui()->DoEditBox(&s_FriendEnterGreetText, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
 				s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
@@ -4363,57 +4489,192 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 8, TCLocalize("恰分"), TCLocalize("自动识别并恰分"));
+				DoModuleHeadline(CardContent, 8, TCLocalize("恰分"), TCLocalize("恰分与关键词自动回复"));
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				Ui()->DoScrollbarOption(&g_Config.m_QmAutoReplyCooldown, &g_Config.m_QmAutoReplyCooldown, &Row, TCLocalize("自动回复冷却"), 0, 30, &CUi::ms_LinearScrollbarScale, 0, TCLocalize(" 秒"));
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmQiaFenEnabled, TCLocalize("启用恰分功能"), &g_Config.m_QmQiaFenEnabled, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmQiaFenUseDummy, TCLocalize("使用Dummy发言"), &g_Config.m_QmQiaFenUseDummy, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-				CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
-				TextRender()->TextColor(ColorRGBA(0.7f, 0.7f, 0.7f, 1.0f));
-				Ui()->DoLabel(&Row, TCLocalize("已通关的地图不会触发"), LG_BodySize * 0.7f, TEXTALIGN_ML);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmQiaFenUseDummy, TCLocalize("恰分使用Dummy发言"), &g_Config.m_QmQiaFenUseDummy, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				static CLineInputBuffered<512> s_QiaFenKeywordsInput;
-				static bool s_QiaFenKeywordsInited = false;
-				static char s_aQiaFenKeywordsDuplicate[64] = "";
-				if(!s_QiaFenKeywordsInited)
-				{
-					s_QiaFenKeywordsInput.Set(g_Config.m_QmQiaFenKeywords);
-					s_QiaFenKeywordsInited = true;
-				}
-				else if(!s_QiaFenKeywordsInput.IsActive())
-				{
-					char aDuplicateCheck[64];
-					const bool HasDuplicate = FindQiaFenPresetDuplicate(s_QiaFenKeywordsInput.GetString(), aDuplicateCheck, sizeof(aDuplicateCheck));
-					if(!HasDuplicate && str_comp(s_QiaFenKeywordsInput.GetString(), g_Config.m_QmQiaFenKeywords) != 0)
-						s_QiaFenKeywordsInput.Set(g_Config.m_QmQiaFenKeywords);
-				}
-				s_QiaFenKeywordsInput.SetEmptyText(TCLocalize("用 , 分隔"));
+				auto SyncRuleRowsFromConfig = [](std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, bool &Inited, const char *pConfigRules) {
+					std::vector<SAutoReplyRulePlain> vParsedRules;
+					ParseAutoReplyRules(pConfigRules, vParsedRules);
 
-				const float InputWidth = CardContent.w - LG_LabelWidth;
-				const float InputLineSpacing = std::clamp(2.0f * UiScale, 1.0f, 2.0f);
-				const float InputHeight = CalcQiaFenInputHeight(TextRender(), s_QiaFenKeywordsInput.GetString(), InputWidth, LG_BodySize, InputLineSpacing, LG_LineHeight);
-				CardContent.HSplitTop(InputHeight, &Row, &CardContent);
+					const auto RebuildRows = [&]() {
+						vRows.clear();
+						for(const auto &Rule : vParsedRules)
+							vRows.push_back(CreateAutoReplyRuleInputRow(Rule.m_Keywords.c_str(), Rule.m_Reply.c_str()));
+					};
+
+					bool HasActiveInput = false;
+					for(const auto &pRow : vRows)
+					{
+						if(pRow->m_TriggerInput.IsActive() || pRow->m_ReplyInput.IsActive())
+						{
+							HasActiveInput = true;
+							break;
+						}
+					}
+
+					if(!Inited)
+					{
+						RebuildRows();
+						Inited = true;
+					}
+					else if(!HasActiveInput && !AutoReplyRowsMatchRules(vRows, vParsedRules))
+					{
+						RebuildRows();
+					}
+				};
+
+				static std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> s_vQiaFenRuleRows;
+				static bool s_QiaFenRuleRowsInited = false;
+				static CButtonContainer s_QiaFenAddRuleButton;
+				static std::vector<CButtonContainer> s_vQiaFenRemoveRuleButtons;
+				SyncRuleRowsFromConfig(s_vQiaFenRuleRows, s_QiaFenRuleRowsInited, g_Config.m_QmQiaFenRules);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, TCLocalize("识别词"), LG_BodySize, TEXTALIGN_ML);
-				const bool KeywordsChanged = DoEditBoxMultiLine(Ui(), &s_QiaFenKeywordsInput, &ControlCol, LG_BodySize, InputLineSpacing);
-
-				const bool HasDuplicate = FindQiaFenPresetDuplicate(s_QiaFenKeywordsInput.GetString(), s_aQiaFenKeywordsDuplicate, sizeof(s_aQiaFenKeywordsDuplicate));
-				if(!HasDuplicate && KeywordsChanged)
-					str_copy(g_Config.m_QmQiaFenKeywords, s_QiaFenKeywordsInput.GetString(), sizeof(g_Config.m_QmQiaFenKeywords));
-
-				if(HasDuplicate)
+				Ui()->DoLabel(&LabelCol, TCLocalize("恰分规则"), LG_BodySize, TEXTALIGN_ML);
+				CUIRect AddRuleButtonRect;
+				ControlCol.VSplitRight(maximum(LG_LineHeight, 24.0f * UiScale), &ControlCol, &AddRuleButtonRect);
+				if(DoButton_Menu(&s_QiaFenAddRuleButton, "+", 0, &AddRuleButtonRect))
 				{
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					auto pNewRule = CreateAutoReplyRuleInputRow();
+					pNewRule->m_TriggerInput.Activate(EInputPriority::UI);
+					s_vQiaFenRuleRows.push_back(std::move(pNewRule));
+				}
+				s_vQiaFenRemoveRuleButtons.resize(s_vQiaFenRuleRows.size());
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				for(size_t i = 0; i < s_vQiaFenRuleRows.size();)
+				{
+					auto &pRuleRow = s_vQiaFenRuleRows[i];
+					pRuleRow->m_TriggerInput.SetEmptyText("");
+					pRuleRow->m_ReplyInput.SetEmptyText("");
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					char aWarn[96];
-					str_format(aWarn, sizeof(aWarn), "%s已有", s_aQiaFenKeywordsDuplicate);
+					Row.VSplitLeft(LG_LabelWidth, nullptr, &ControlCol);
+					CUIRect TriggerCol, SendCol, ReplyCol, RemoveButtonRect;
+					ControlCol.VSplitRight(maximum(LG_LineHeight, 24.0f * UiScale), &ControlCol, &RemoveButtonRect);
+					ControlCol.VSplitLeft(ControlCol.w * 0.45f, &TriggerCol, &ControlCol);
+					ControlCol.VSplitLeft(maximum(40.0f, 40.0f * UiScale), &SendCol, &ReplyCol);
+					Ui()->DoEditBox(&pRuleRow->m_TriggerInput, &TriggerCol, LG_BodySize);
+					Ui()->DoLabel(&SendCol, TCLocalize("发送"), LG_BodySize, TEXTALIGN_MC);
+					Ui()->DoEditBox(&pRuleRow->m_ReplyInput, &ReplyCol, LG_BodySize);
+					const bool RemoveClicked = DoButton_Menu(&s_vQiaFenRemoveRuleButtons[i], "-", 0, &RemoveButtonRect);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					if(RemoveClicked)
+					{
+						s_vQiaFenRuleRows.erase(s_vQiaFenRuleRows.begin() + i);
+						s_vQiaFenRemoveRuleButtons.erase(s_vQiaFenRemoveRuleButtons.begin() + i);
+						continue;
+					}
+					++i;
+				}
+
+				char aQiaFenRules[sizeof(g_Config.m_QmQiaFenRules)];
+				BuildAutoReplyRulesFromRows(s_vQiaFenRuleRows, aQiaFenRules, sizeof(aQiaFenRules));
+				str_copy(g_Config.m_QmQiaFenRules, aQiaFenRules, sizeof(g_Config.m_QmQiaFenRules));
+
+				bool QiaFenHalfFilled = false;
+				for(const auto &pRuleRow : s_vQiaFenRuleRows)
+				{
+					if(IsAutoReplyRuleRowHalfFilled(*pRuleRow))
+					{
+						QiaFenHalfFilled = true;
+						break;
+					}
+				}
+				if(QiaFenHalfFilled)
+				{
+					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
 					TextRender()->TextColor(1.0f, 0.2f, 0.2f, 1.0f);
-					Ui()->DoLabel(&Row, aWarn, LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&Row, TCLocalize("恰分规则两侧都需要填写"), LG_BodySize * 0.7f, TEXTALIGN_ML);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+
+				CardContent.HSplitTop(LG_CardPadding * 0.7f, nullptr, &CardContent);
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyEnabled, TCLocalize("启用关键词回复"), &g_Config.m_QmKeywordReplyEnabled, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyUseDummy, TCLocalize("关键词回复使用Dummy"), &g_Config.m_QmKeywordReplyUseDummy, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				static std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> s_vKeywordRuleRows;
+				static bool s_KeywordRuleRowsInited = false;
+				static CButtonContainer s_KeywordAddRuleButton;
+				static std::vector<CButtonContainer> s_vKeywordRemoveRuleButtons;
+				SyncRuleRowsFromConfig(s_vKeywordRuleRows, s_KeywordRuleRowsInited, g_Config.m_QmKeywordReplyRules);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+				Ui()->DoLabel(&LabelCol, TCLocalize("关键词规则"), LG_BodySize, TEXTALIGN_ML);
+				ControlCol.VSplitRight(maximum(LG_LineHeight, 24.0f * UiScale), &ControlCol, &AddRuleButtonRect);
+				if(DoButton_Menu(&s_KeywordAddRuleButton, "+", 0, &AddRuleButtonRect))
+				{
+					auto pNewRule = CreateAutoReplyRuleInputRow();
+					pNewRule->m_TriggerInput.Activate(EInputPriority::UI);
+					s_vKeywordRuleRows.push_back(std::move(pNewRule));
+				}
+				s_vKeywordRemoveRuleButtons.resize(s_vKeywordRuleRows.size());
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				for(size_t i = 0; i < s_vKeywordRuleRows.size();)
+				{
+					auto &pRuleRow = s_vKeywordRuleRows[i];
+					pRuleRow->m_TriggerInput.SetEmptyText("");
+					pRuleRow->m_ReplyInput.SetEmptyText("");
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, nullptr, &ControlCol);
+					CUIRect TriggerCol, SendCol, ReplyCol, RemoveButtonRect;
+					ControlCol.VSplitRight(maximum(LG_LineHeight, 24.0f * UiScale), &ControlCol, &RemoveButtonRect);
+					ControlCol.VSplitLeft(ControlCol.w * 0.45f, &TriggerCol, &ControlCol);
+					ControlCol.VSplitLeft(maximum(40.0f, 40.0f * UiScale), &SendCol, &ReplyCol);
+					Ui()->DoEditBox(&pRuleRow->m_TriggerInput, &TriggerCol, LG_BodySize);
+					Ui()->DoLabel(&SendCol, TCLocalize("发送"), LG_BodySize, TEXTALIGN_MC);
+					Ui()->DoEditBox(&pRuleRow->m_ReplyInput, &ReplyCol, LG_BodySize);
+					const bool RemoveClicked = DoButton_Menu(&s_vKeywordRemoveRuleButtons[i], "-", 0, &RemoveButtonRect);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					if(RemoveClicked)
+					{
+						s_vKeywordRuleRows.erase(s_vKeywordRuleRows.begin() + i);
+						s_vKeywordRemoveRuleButtons.erase(s_vKeywordRemoveRuleButtons.begin() + i);
+						continue;
+					}
+					++i;
+				}
+
+				char aKeywordRules[sizeof(g_Config.m_QmKeywordReplyRules)];
+				BuildAutoReplyRulesFromRows(s_vKeywordRuleRows, aKeywordRules, sizeof(aKeywordRules));
+				str_copy(g_Config.m_QmKeywordReplyRules, aKeywordRules, sizeof(g_Config.m_QmKeywordReplyRules));
+
+				bool KeywordHalfFilled = false;
+				for(const auto &pRuleRow : s_vKeywordRuleRows)
+				{
+					if(IsAutoReplyRuleRowHalfFilled(*pRuleRow))
+					{
+						KeywordHalfFilled = true;
+						break;
+					}
+				}
+				if(KeywordHalfFilled)
+				{
+					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
+					TextRender()->TextColor(1.0f, 0.2f, 0.2f, 1.0f);
+					Ui()->DoLabel(&Row, TCLocalize("关键词规则两侧都需要填写"), LG_BodySize * 0.7f, TEXTALIGN_ML);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);

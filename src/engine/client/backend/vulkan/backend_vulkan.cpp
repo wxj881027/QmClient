@@ -7518,8 +7518,8 @@ public:
 #ifdef CONF_PLATFORM_ANDROID
 			if(!CreateSurface(m_pWindow))
 				return false;
-			m_RecreateSwapChain = true;
 #endif
+			m_RecreateSwapChain = true;
 			m_RenderingPaused = false;
 			if(!PureMemoryFrame())
 				return false;
@@ -7539,9 +7539,7 @@ public:
 				return false;
 			m_RenderingPaused = true;
 			vkDeviceWaitIdle(m_VKDevice);
-#ifdef CONF_PLATFORM_ANDROID
 			CleanupVulkanSwapChain(true);
-#endif
 		}
 
 		return true;

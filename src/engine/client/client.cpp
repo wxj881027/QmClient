@@ -91,6 +91,7 @@ using namespace std::chrono_literals;
 static constexpr ColorRGBA gs_ClientNetworkPrintColor{0.7f, 1, 0.7f, 1.0f};
 static constexpr ColorRGBA gs_ClientNetworkErrPrintColor{1.0f, 0.25f, 0.25f, 1.0f};
 static constexpr int64_t gs_HangTimeoutSeconds = 10;
+static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
 
 static const char *ClientStateToString(int State)
 {
@@ -3553,8 +3554,6 @@ void CClient::Run()
 		m_GlobalTime = (time_get() - m_GlobalStartTime) / (float)time_freq();
 	}
 
-	StopHangWatchdog();
-
 	GameClient()->RenderShutdownMessage();
 	Disconnect();
 
@@ -3579,6 +3578,11 @@ void CClient::Run()
 	m_Http.Shutdown();
 	Engine()->ShutdownJobs();
 
+	// Stop the hang watchdog AFTER ShutdownJobs() so that hangs occurring
+	// during the shutdown sequence (e.g. a stuck non-abortable job) are
+	// still detected and reported while we wait.
+	StopHangWatchdog();
+
 	GameClient()->RenderShutdownMessage();
 	GameClient()->OnShutdown();
 	delete m_pEditor;
@@ -3589,6 +3593,7 @@ void CClient::Run()
 
 	// shutdown text render while graphics are still available
 	m_pTextRender->Shutdown();
+
 }
 
 bool CClient::InitNetworkClient(char *pError, size_t ErrorSize)
@@ -4227,6 +4232,13 @@ void CClient::DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int 
 			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demorec/record", "client is not online");
 		}
 	}
+	else if(!m_pMap || !m_pMap->IsLoaded())
+	{
+		if(Verbose)
+		{
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demorec/record", "map is not loaded yet");
+		}
+	}
 	else
 	{
 		char aFilename[IO_MAX_PATH_LENGTH];
@@ -4352,7 +4364,7 @@ void CClient::StartHangWatchdog()
 	m_HangWatchdogStop.store(false, std::memory_order_release);
 	m_HangReportWritten.store(false, std::memory_order_release);
 	if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, "dumps", m_aHangDumpDir, sizeof(m_aHangDumpDir));
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, m_aHangDumpDir, sizeof(m_aHangDumpDir));
 	UpdateHangHeartbeat();
 
 	if(m_HangWatchdogThread.joinable())
@@ -4426,12 +4438,30 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 		const int SnapshotIndex = m_HangInfoIndex.load(std::memory_order_acquire);
 		const SHangInfo Snapshot = m_aHangInfo[SnapshotIndex];
 		const float SecondsSinceHeartbeat = (Now - LastHeartbeat) / (float)time_freq();
+		char aOsVersion[128];
+		if(!os_version_str(aOsVersion, sizeof(aOsVersion)))
+			str_copy(aOsVersion, "unknown");
 
-		char aBuf[1024];
-		str_format(aBuf, sizeof(aBuf), "Hang detected (no main thread heartbeat for %.1f seconds)\n", SecondsSinceHeartbeat);
+		char aBuf[2048];
+		str_copy(aBuf, "QmClient hang diagnostic report\n");
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_copy(aBuf, "Report type: hang\n");
 		io_write(File, aBuf, str_length(aBuf));
 
 		str_format(aBuf, sizeof(aBuf), "Timestamp: %s\n", aDate);
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Process ID: %d\n", pid());
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Hang timeout threshold: %lld seconds\n", (long long)gs_HangTimeoutSeconds);
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "No heartbeat duration: %.1f seconds\n", SecondsSinceHeartbeat);
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Heartbeat ticks: now=%lld, last=%lld, delta=%lld\n", (long long)Now, (long long)LastHeartbeat, (long long)(Now - LastHeartbeat));
 		io_write(File, aBuf, str_length(aBuf));
 
 		str_format(aBuf, sizeof(aBuf), "Client state: %s (%d)\n", ClientStateToString(Snapshot.m_State), Snapshot.m_State);
@@ -4443,7 +4473,13 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 		str_format(aBuf, sizeof(aBuf), "Server address: %s\n", Snapshot.m_aServerAddr);
 		io_write(File, aBuf, str_length(aBuf));
 
+		str_format(aBuf, sizeof(aBuf), "OS version: %s\n", aOsVersion);
+		io_write(File, aBuf, str_length(aBuf));
+
 		str_format(aBuf, sizeof(aBuf), "Game version: %s %s %s\n", GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		io_write(File, aBuf, str_length(aBuf));
+
+		str_format(aBuf, sizeof(aBuf), "Report directory: %s\n", m_aHangDumpDir);
 		io_write(File, aBuf, str_length(aBuf));
 
 		io_sync(File);
@@ -5048,7 +5084,7 @@ int main(int argc, const char **argv)
 #if defined(CONF_CRASHDUMP)
 			" and crash log"
 #endif
-			" which you should find in the 'dumps' folder in your config directory.\n\n"
+			" which you should find in the 'dumps/QmClient_Crash' folder in your config directory.\n\n"
 			"%s\n\n"
 			"Platform: %s (%s)\n"
 			"Configuration: base"
@@ -5086,7 +5122,7 @@ int main(int argc, const char **argv)
 #if !defined(CONF_PLATFORM_ANDROID)
 		if(pClient->Storage() != nullptr)
 		{
-			vButtons.push_back({.m_pLabel = "Show dumps"});
+			vButtons.push_back({.m_pLabel = "Show crash reports"});
 		}
 #endif
 		vButtons.push_back({.m_pLabel = "OK", .m_Confirm = true, .m_Cancel = true});
@@ -5095,7 +5131,7 @@ int main(int argc, const char **argv)
 		if(pClient->Storage() != nullptr && MessageResult && *MessageResult == 0)
 		{
 			char aDumpsPath[IO_MAX_PATH_LENGTH];
-			pClient->Storage()->GetCompletePath(IStorage::TYPE_SAVE, "dumps", aDumpsPath, sizeof(aDumpsPath));
+			pClient->Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, aDumpsPath, sizeof(aDumpsPath));
 			pClient->ViewFile(aDumpsPath);
 		}
 #else
@@ -5138,7 +5174,7 @@ int main(int argc, const char **argv)
 		char aBufName[IO_MAX_PATH_LENGTH];
 		char aDate[64];
 		str_timestamp(aDate, sizeof(aDate));
-		str_format(aBufName, sizeof(aBufName), "dumps/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aBufName, aBufPath, sizeof(aBufPath));
 		crashdump_init_if_available(aBufPath);
 	}
@@ -5354,11 +5390,15 @@ const char *CClient::GetCurrentMapPath() const
 
 SHA256_DIGEST CClient::GetCurrentMapSha256() const
 {
+	if(!m_pMap || !m_pMap->IsLoaded())
+		return SHA256_ZEROED;
 	return m_pMap->Sha256();
 }
 
 unsigned CClient::GetCurrentMapCrc() const
 {
+	if(!m_pMap || !m_pMap->IsLoaded())
+		return 0;
 	return m_pMap->Crc();
 }
 
@@ -5366,6 +5406,8 @@ void CClient::RaceRecord_Start(const char *pFilename)
 {
 	if(State() != IClient::STATE_ONLINE)
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demorec/record", "client is not online");
+	else if(!m_pMap || !m_pMap->IsLoaded())
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demorec/record", "map is not loaded yet");
 	else
 		m_aDemoRecorder[RECORDER_RACE].Start(
 			Storage(),

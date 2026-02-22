@@ -365,6 +365,9 @@ static IOHANDLE BgDrawOpenFile(CGameClient &This, const char *pFilename, int Fla
 
 bool CBgDraw::Save(const char *pFilename, bool Verbose)
 {
+	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		return false;
+
 	if(m_pvItems->size() == 0)
 	{
 		if(Verbose)

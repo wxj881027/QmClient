@@ -100,6 +100,7 @@ public:
 
 		static constexpr const char *COMMON_DIRS[] = {
 			"dumps",
+			"dumps/QmClient_Crash",
 			"demos",
 			"demos/auto",
 			"demos/auto/race",

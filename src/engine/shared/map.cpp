@@ -142,21 +142,29 @@ bool CMap::IsLoaded() const
 
 IOHANDLE CMap::File() const
 {
+	if(!IsLoaded())
+		return nullptr;
 	return m_DataFile.File();
 }
 
 SHA256_DIGEST CMap::Sha256() const
 {
+	if(!IsLoaded())
+		return SHA256_ZEROED;
 	return m_DataFile.Sha256();
 }
 
 unsigned CMap::Crc() const
 {
+	if(!IsLoaded())
+		return 0;
 	return m_DataFile.Crc();
 }
 
 int CMap::MapSize() const
 {
+	if(!IsLoaded())
+		return 0;
 	return m_DataFile.MapSize();
 }
 

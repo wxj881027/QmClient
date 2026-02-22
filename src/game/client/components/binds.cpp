@@ -14,6 +14,96 @@
 
 static constexpr LOG_COLOR BIND_PRINT_COLOR{255, 255, 204};
 
+enum EDeepflyMode
+{
+	DEEPFLY_MODE_NONE = -1,
+	DEEPFLY_MODE_NORMAL = 0,
+	DEEPFLY_MODE_DF = 1,
+	DEEPFLY_MODE_HDF = 2,
+	DEEPFLY_MODE_CUSTOM = 3,
+};
+
+static void NormalizeBindCommand(const char *pCommand, char *pNormalized, size_t NormalizedSize)
+{
+	size_t OutLen = 0;
+	bool PendingSpace = false;
+
+	while(*pCommand != '\0' && str_isspace(*pCommand))
+		++pCommand;
+
+	while(*pCommand != '\0' && OutLen + 1 < NormalizedSize)
+	{
+		if(str_isspace(*pCommand))
+		{
+			PendingSpace = OutLen > 0;
+		}
+		else
+		{
+			if(PendingSpace && OutLen + 1 < NormalizedSize)
+			{
+				pNormalized[OutLen++] = ' ';
+				PendingSpace = false;
+			}
+			pNormalized[OutLen++] = *pCommand;
+		}
+		++pCommand;
+	}
+
+	while(OutLen > 0 && pNormalized[OutLen - 1] == ' ')
+		--OutLen;
+	pNormalized[OutLen] = '\0';
+}
+
+static int DetectDeepflyModeFromBindCommand(const char *pCommand)
+{
+	if(!pCommand || pCommand[0] == '\0')
+		return DEEPFLY_MODE_NONE;
+
+	char aCommand[1024];
+	str_copy(aCommand, pCommand, sizeof(aCommand));
+
+	bool HasFire = false;
+	bool HasDummyHammerToggle = false;
+	bool HasOtherCommand = false;
+
+	char *pCursor = aCommand;
+	while(*pCursor != '\0')
+	{
+		char *pEnd = pCursor;
+		while(*pEnd != '\0' && *pEnd != ';')
+			++pEnd;
+
+		const bool HasNextCommand = *pEnd == ';';
+		*pEnd = '\0';
+
+		char aNormalized[1024];
+		NormalizeBindCommand(pCursor, aNormalized, sizeof(aNormalized));
+		if(aNormalized[0] != '\0')
+		{
+			if(str_comp_nocase(aNormalized, "+fire") == 0)
+				HasFire = true;
+			else if(str_comp_nocase(aNormalized, "+toggle cl_dummy_hammer 1 0") == 0)
+				HasDummyHammerToggle = true;
+			else
+				HasOtherCommand = true;
+		}
+
+		if(!HasNextCommand)
+			break;
+		pCursor = pEnd + 1;
+	}
+
+	if(!HasFire && !HasDummyHammerToggle)
+		return DEEPFLY_MODE_NONE;
+	if(HasOtherCommand)
+		return DEEPFLY_MODE_CUSTOM;
+	if(HasFire && HasDummyHammerToggle)
+		return DEEPFLY_MODE_DF;
+	if(HasDummyHammerToggle)
+		return DEEPFLY_MODE_HDF;
+	return DEEPFLY_MODE_NORMAL;
+}
+
 bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 {
 	if((Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) == 0)
@@ -64,6 +154,12 @@ void CBinds::Bind(int KeyId, const char *pStr, bool FreeOnly, int ModifierCombin
 		m_aapKeyBindings[ModifierCombination][KeyId] = (char *)malloc(Size);
 		str_copy(m_aapKeyBindings[ModifierCombination][KeyId], pStr, Size);
 		log_info_color(BIND_PRINT_COLOR, "binds", "bound %s = %s", aBindName, m_aapKeyBindings[ModifierCombination][KeyId]);
+	}
+
+	const int DeepflyMode = DetectDeepflyModeFromBindCommand(pStr);
+	if(DeepflyMode != DEEPFLY_MODE_NONE)
+	{
+		g_Config.m_QmDeepflyMode = DeepflyMode;
 	}
 }
 

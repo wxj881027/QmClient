@@ -57,6 +57,21 @@ void CAssertionLogger::Dump()
 	IOHANDLE FileHandle = io_open(aAssertLogFile, IOFLAG_WRITE);
 	if(FileHandle)
 	{
+		char aOsVersion[128];
+		if(!os_version_str(aOsVersion, sizeof(aOsVersion)))
+			str_copy(aOsVersion, "unknown");
+		char aHeader[1024];
+		str_format(aHeader, sizeof(aHeader),
+			"QmClient assertion diagnostic log\n"
+			"Timestamp: %s\n"
+			"Process ID: %d\n"
+			"Game name: %s\n"
+			"OS version: %s\n"
+			"Log path: %s\n\n"
+			"Recent log lines before the assertion:\n",
+			aDate, pid(), m_aGameName, aOsVersion, m_aAssertLogPath);
+		io_write(FileHandle, aHeader, str_length(aHeader));
+
 		auto *pIt = m_DbgMessages.First();
 		while(pIt)
 		{
@@ -80,6 +95,6 @@ CAssertionLogger::CAssertionLogger(const char *pAssertLogPath, const char *pGame
 std::unique_ptr<ILogger> CreateAssertionLogger(IStorage *pStorage, const char *pGameName)
 {
 	char aAssertLogPath[IO_MAX_PATH_LENGTH];
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "dumps/", aAssertLogPath, sizeof(aAssertLogPath));
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "dumps/QmClient_Crash/", aAssertLogPath, sizeof(aAssertLogPath));
 	return std::make_unique<CAssertionLogger>(aAssertLogPath, pGameName);
 }

@@ -2,7 +2,10 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "jobs.h"
 
+#include <base/log.h>
+
 #include <algorithm>
+#include <chrono>
 
 IJob::IJob() :
 	m_pNext(nullptr),
@@ -124,6 +127,13 @@ void CJobPool::RunLoop()
 			break;
 		}
 	}
+
+	// Notify Shutdown() that this worker thread is about to exit.
+	{
+		std::lock_guard<std::mutex> Lock(m_ShutdownWaitMutex);
+		m_ActiveThreadCount.fetch_sub(1, std::memory_order_release);
+	}
+	m_ShutdownWaitCv.notify_all();
 }
 
 void CJobPool::Init(int NumThreads)
@@ -139,6 +149,7 @@ void CJobPool::Init(int NumThreads)
 	// start worker threads
 	char aName[16]; // unix kernel length limit
 	m_vpThreads.reserve(NumThreads);
+	m_ActiveThreadCount.store(NumThreads, std::memory_order_release);
 	for(int i = 0; i < NumThreads; i++)
 	{
 		str_format(aName, sizeof(aName), "CJobPool W%d", i);
@@ -196,10 +207,27 @@ void CJobPool::Shutdown()
 		sphore_signal(&m_Semaphore);
 	}
 
-	// wait for all worker threads to finish
+	// Wait up to 5 seconds for all worker threads to finish.
+	// If a non-abortable job is still running after the timeout, we detach the
+	// remaining threads instead of blocking the shutdown sequence indefinitely.
+	// The process is about to exit anyway, so the OS will clean up the threads.
+	{
+		std::unique_lock<std::mutex> Lock(m_ShutdownWaitMutex);
+		const bool AllDone = m_ShutdownWaitCv.wait_for(Lock, std::chrono::seconds(5),
+			[this]() { return m_ActiveThreadCount.load(std::memory_order_acquire) == 0; });
+		if(!AllDone)
+		{
+			log_warn("jobpool", "shutdown timed out after 5 seconds, %d worker thread(s) did not finish in time, detaching",
+				m_ActiveThreadCount.load(std::memory_order_relaxed));
+		}
+	}
+
+	// Detach all threads. Threads that already exited are simply reclaimed;
+	// threads that are still running will continue until they finish and
+	// have their resources freed automatically.
 	for(void *pThread : m_vpThreads)
 	{
-		thread_wait(pThread);
+		thread_detach(pThread);
 	}
 
 	m_vpThreads.clear();

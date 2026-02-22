@@ -71,6 +71,7 @@ MACRO_CONFIG_INT(ClShowhudDummyActions, cl_showhud_dummy_actions, 1, 0, 1, CFGFL
 MACRO_CONFIG_INT(ClShowhudKeyStatusReset, cl_showhud_key_status_reset, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示游戏内 HUD（卡键状态）")
 MACRO_CONFIG_INT(ClShowhudKeyStatusHammer, cl_showhud_key_status_hammer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示游戏内 HUD（锤状态）")
 MACRO_CONFIG_INT(ClShowhudKeyStatusControl, cl_showhud_key_status_control, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示游戏内 HUD（分身控制状态）")
+MACRO_CONFIG_INT(ClShowhudKeyStatusSync, cl_showhud_key_status_sync, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示游戏内 HUD（分身同步状态）")
 MACRO_CONFIG_INT(ClShowhudPlayerPosition, cl_showhud_player_position, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示游戏内 HUD（玩家位置）")
 MACRO_CONFIG_INT(ClShowhudPlayerSpeed, cl_showhud_player_speed, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示游戏内 HUD（玩家速度）")
 MACRO_CONFIG_INT(ClShowhudPlayerAngle, cl_showhud_player_angle, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示游戏内 HUD（玩家瞄准角度）")

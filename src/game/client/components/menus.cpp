@@ -231,6 +231,9 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 		}
 	}
 
+	// Keep tab contents inside the original button rect to avoid overlap on narrow layouts.
+	Ui()->ClipEnable(pRect);
+
 	if(pCommunityIcon)
 	{
 		CUIRect CommunityIcon;
@@ -243,6 +246,7 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 		Rect.HMargin(2.0f, &Label);
 		Ui()->DoLabel(&Label, pText, Label.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 	}
+	Ui()->ClipDisable();
 
 	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, BUTTONFLAG_LEFT);
 }
@@ -704,11 +708,6 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			if(DoButton_MenuTab(&s_GhostButton, Localize("Ghost"), ActivePage == PAGE_GHOST, &Button, IGraphics::CORNER_NONE))
 				NewPage = PAGE_GHOST;
 		}
-
-		Box.VSplitLeft(110.0f, &Button, &Box);
-		static CButtonContainer s_UnfinishedMapsButton;
-		if(DoButton_MenuTab(&s_UnfinishedMapsButton, Localize("未完成图"), ActivePage == PAGE_UNFINISHED_MAPS, &Button, IGraphics::CORNER_NONE))
-			NewPage = PAGE_UNFINISHED_MAPS;
 
 		Box.VSplitLeft(100.0f, &Button, &Box);
 		Box.VSplitLeft(4.0f, nullptr, &Box);
@@ -2609,6 +2608,10 @@ void CMenus::SetMenuPage(int NewPage)
 
 void CMenus::SetGamePage(int NewPage)
 {
+	// "Unfinished maps" is no longer exposed in navigation.
+	if(NewPage == PAGE_UNFINISHED_MAPS)
+		NewPage = PAGE_GAME;
+
 	const int OldPage = m_GamePage;
 	m_GamePage = NewPage;
 	if(OldPage != NewPage)

@@ -2113,9 +2113,11 @@ void CMenus::RenderSettings(CUIRect MainView)
 
 	// render background
 	CUIRect Button, TabBar, RestartBar;
-	MainView.VSplitRight(120.0f, &MainView, &TabBar);
+	const float TabBarWidth = std::clamp(MainView.w * 0.14f, 108.0f, 120.0f);
+	MainView.VSplitRight(TabBarWidth, &MainView, &TabBar);
 	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
-	MainView.Margin(20.0f, &MainView);
+	const float ContentMargin = std::clamp(MainView.w * 0.02f, 12.0f, 20.0f);
+	MainView.Margin(ContentMargin, &MainView);
 
 	const bool NeedRestart = m_NeedRestartGraphics || m_NeedRestartSound || m_NeedRestartUpdate;
 	if(NeedRestart)
@@ -2701,6 +2703,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusReset, Localize("显示卡键状态"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusHammer, Localize("显示锤状态"), &g_Config.m_ClShowhudKeyStatusHammer, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusControl, Localize("显示分身控制状态"), &g_Config.m_ClShowhudKeyStatusControl, &RightView, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusSync, Localize("显示分身同步状态"), &g_Config.m_ClShowhudKeyStatusSync, &RightView, LineSize);
 
 		// Player movement information display settings
 		RightView.HSplitTop(MarginSmall, nullptr, &RightView); // TClient

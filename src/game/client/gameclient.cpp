@@ -1956,6 +1956,7 @@ void CGameClient::OnNewSnapshot()
 					pClient->m_FreezeEnd = pCharacterData->m_FreezeEnd;
 					pClient->m_DeepFrozen = pCharacterData->m_FreezeEnd == -1;
 					pClient->m_LiveFrozen = (pCharacterData->m_Flags & CHARACTERFLAG_MOVEMENTS_DISABLED) != 0;
+					pClient->m_IsInFreeze = (pCharacterData->m_Flags & CHARACTERFLAG_IN_FREEZE) != 0;
 
 					// Telegun
 					pClient->m_HasTelegunGrenade = pCharacterData->m_Flags & CHARACTERFLAG_TELEGUN_GRENADE;
@@ -2531,15 +2532,24 @@ void CGameClient::UpdateEditorIngameMoved()
 	}
 }
 
-void CGameClient::HandleHammerSkinSwap(CCharacter *pChar, int DummyIndex)
+void CGameClient::HandleHammerSkinSwap(CCharacter *pChar)
 {
 	if(!g_Config.m_QmHammerSwapSkin || !pChar)
 		return;
 
-	const int AttackTick = pChar->GetAttackTick();
-	if(AttackTick == m_aLastHammerSkinSwapAttackTick[DummyIndex])
+	const int Cid = pChar->GetCid();
+	int TeeIndex = -1;
+	if(Cid == m_aLocalIds[0])
+		TeeIndex = 0;
+	else if(Cid == m_aLocalIds[1])
+		TeeIndex = 1;
+	if(TeeIndex < 0)
 		return;
-	m_aLastHammerSkinSwapAttackTick[DummyIndex] = AttackTick;
+
+	const int AttackTick = pChar->GetAttackTick();
+	if(AttackTick == m_aLastHammerSkinSwapAttackTick[TeeIndex])
+		return;
+	m_aLastHammerSkinSwapAttackTick[TeeIndex] = AttackTick;
 
 	if(pChar->GetActiveWeapon() != WEAPON_HAMMER || pChar->HammerHitDisabled())
 		return;
@@ -2584,7 +2594,7 @@ void CGameClient::HandleHammerSkinSwap(CCharacter *pChar, int DummyIndex)
 		return;
 
 	bool Changed = false;
-	if(DummyIndex != 0)
+	if(TeeIndex == 1)
 	{
 		if(str_comp(g_Config.m_ClDummySkin, TargetClient.m_aSkinName) != 0)
 		{
@@ -2924,9 +2934,9 @@ void CGameClient::OnPredict()
 		}
 
 		m_PredictedWorld.Tick();
-		HandleHammerSkinSwap(pLocalChar, 0);
+		HandleHammerSkinSwap(pLocalChar);
 		if(pDummyChar)
-			HandleHammerSkinSwap(pDummyChar, 1);
+			HandleHammerSkinSwap(pDummyChar);
 		HandleRandomEmoteOnHit(pLocalChar, 0);
 		if(pDummyChar)
 			HandleRandomEmoteOnHit(pDummyChar, 1);
@@ -3581,6 +3591,7 @@ void CGameClient::CClientData::Reset()
 	m_FreezeEnd = 0;
 	m_DeepFrozen = false;
 	m_LiveFrozen = false;
+	m_IsInFreeze = false;
 
 	m_Predicted.Reset();
 	m_PrevPredicted.Reset();
@@ -5374,8 +5385,7 @@ static bool UnknownMapSettingCallback(const char *pCommand, void *pUser)
 void CGameClient::LoadMapSettings()
 {
 	IEngineMap *pMap = Kernel()->RequestInterface<IEngineMap>();
-
-	m_MapBugs = CMapBugs::Create(Client()->GetCurrentMap(), pMap->MapSize(), pMap->Sha256());
+	m_MapBugs = CMapBugs::Create(Client()->GetCurrentMap(), 0, SHA256_ZEROED);
 
 	// Reset Tunezones
 	for(int TuneZone = 0; TuneZone < NUM_TUNEZONES; TuneZone++)
@@ -5387,6 +5397,13 @@ void CGameClient::LoadMapSettings()
 		TuningList()[TuneZone].Set("shotgun_speed", 500);
 		TuningList()[TuneZone].Set("shotgun_speeddiff", 0);
 	}
+
+	if(!pMap || !pMap->IsLoaded())
+	{
+		return;
+	}
+
+	m_MapBugs = CMapBugs::Create(Client()->GetCurrentMap(), pMap->MapSize(), pMap->Sha256());
 
 	// Load map tunings
 	int Start, Num;

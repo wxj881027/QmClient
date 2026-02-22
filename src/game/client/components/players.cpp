@@ -1603,39 +1603,44 @@ void CPlayers::OnRender()
 	const bool IsTeamPlay = GameClient()->IsTeamPlay();
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
-		aRenderInfo[i] = GameClient()->m_aClients[i].m_RenderInfo;
+		const auto &ClientData = GameClient()->m_aClients[i];
+		aRenderInfo[i] = ClientData.m_RenderInfo;
 		aRenderInfo[i].m_TeeRenderFlags = 0;
 
 		// predict freeze skin only for local players
 		bool Frozen = false;
 		if(i == GameClient()->m_aLocalIds[0] || i == GameClient()->m_aLocalIds[1])
 		{
-			if(GameClient()->m_aClients[i].m_Predicted.m_FreezeEnd != 0)
+			const CCharacterCore &Predicted = ClientData.m_Predicted;
+			if(Predicted.m_FreezeEnd != 0)
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_FROZEN | TEE_NO_WEAPON;
-			if(GameClient()->m_aClients[i].m_Predicted.m_LiveFrozen)
+			if(Predicted.m_LiveFrozen)
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_FROZEN;
-			if(GameClient()->m_aClients[i].m_Predicted.m_Invincible)
+			if(Predicted.m_Invincible)
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_SPARKLE;
 
-			Frozen = GameClient()->m_aClients[i].m_Predicted.m_FreezeEnd != 0;
+			Frozen = Predicted.m_FreezeEnd != 0 || Predicted.m_LiveFrozen || ClientData.m_IsInFreeze;
 			// TClient
-			if(g_Config.m_TcFastInput)
-				Frozen = GameClient()->m_aClients[i].m_RegularPredicted.m_FreezeEnd != 0;
+			if(g_Config.m_TcFastInput && GameClient()->Predict())
+			{
+				const CCharacterCore &RegularPredicted = ClientData.m_RegularPredicted;
+				Frozen = RegularPredicted.m_FreezeEnd != 0 || RegularPredicted.m_LiveFrozen || ClientData.m_IsInFreeze;
+			}
 		}
 		else
 		{
-			if(GameClient()->m_aClients[i].m_FreezeEnd != 0)
+			if(ClientData.m_FreezeEnd != 0)
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_FROZEN | TEE_NO_WEAPON;
-			if(GameClient()->m_aClients[i].m_LiveFrozen)
+			if(ClientData.m_LiveFrozen)
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_FROZEN;
-			if(GameClient()->m_aClients[i].m_Invincible)
+			if(ClientData.m_Invincible)
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_SPARKLE;
 
-			Frozen = GameClient()->m_Snap.m_aCharacters[i].m_HasExtendedData && GameClient()->m_Snap.m_aCharacters[i].m_ExtendedData.m_FreezeEnd != 0;
+			Frozen = ClientData.m_FreezeEnd != 0 || ClientData.m_LiveFrozen || ClientData.m_IsInFreeze;
 		}
 
 		// TClient
-		if(g_Config.m_TcFreezeKatana > 0 && GameClient()->m_aClients[i].m_Predicted.m_FreezeEnd != 0)
+		if(g_Config.m_TcFreezeKatana > 0 && Frozen)
 		{
 			GameClient()->m_aClients[i].m_RenderCur.m_Weapon = WEAPON_NINJA;
 			aRenderInfo[i].m_TeeRenderFlags &= ~TEE_NO_WEAPON;

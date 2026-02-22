@@ -1917,6 +1917,8 @@ struct SKeyStatusLines
 	bool m_ShowHammer;
 	char m_aControlLine[64];
 	bool m_ShowControl;
+	char m_aSyncLine[64];
+	bool m_ShowSync;
 };
 
 struct SKeyStatusLayout
@@ -1931,48 +1933,61 @@ struct SKeyStatusLayout
 	float m_PaddingY;
 };
 
-SKeyStatusLines GetKeyStatusLines(const CGameClient *pGameClient)
+constexpr float KEY_STATUS_RIGHT_MARGIN = 0.0f;
+
+SKeyStatusLines GetKeyStatusLines()
 {
 	SKeyStatusLines Lines{};
 	Lines.m_ShowKey = g_Config.m_ClShowhudKeyStatusReset != 0;
 	Lines.m_ShowHammer = g_Config.m_ClShowhudKeyStatusHammer != 0;
 	Lines.m_ShowControl = g_Config.m_ClShowhudKeyStatusControl != 0;
+	Lines.m_ShowSync = g_Config.m_ClShowhudKeyStatusSync != 0;
 
 	if(Lines.m_ShowKey)
 	{
 		Lines.m_pKeyStatusText = "卡键: ?";
 		if(g_Config.m_ClDummyResetOnSwitch == 0)
-			Lines.m_pKeyStatusText = "卡键: ON";
+			Lines.m_pKeyStatusText = "卡键: 开";
 		else if(g_Config.m_ClDummyResetOnSwitch == 1)
-			Lines.m_pKeyStatusText = "卡键: OFF";
+			Lines.m_pKeyStatusText = "卡键: 关";
 		else if(g_Config.m_ClDummyResetOnSwitch == 2)
 			Lines.m_pKeyStatusText = "卡键: 重置本体";
 	}
 
 	if(Lines.m_ShowHammer)
 	{
-		const bool FirePressed = (pGameClient->m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire & 1) != 0;
-		const char *pHammerState = g_Config.m_ClDummyHammer ? (FirePressed ? "DF" : "HDF") : "正常锤";
+		const char *pHammerState = "正常";
+		if(g_Config.m_QmDeepflyMode == 1)
+			pHammerState = "DF";
+		else if(g_Config.m_QmDeepflyMode == 2)
+			pHammerState = "HDF";
+		else if(g_Config.m_QmDeepflyMode == 3)
+			pHammerState = "自定义";
 		str_format(Lines.m_aHammerLine, sizeof(Lines.m_aHammerLine), "锤: %s", pHammerState);
 	}
 
 	if(Lines.m_ShowControl)
 	{
-		const char *pControlState = g_Config.m_ClDummyControl ? "开启" : "关闭";
+		const char *pControlState = g_Config.m_ClDummyControl ? "开" : "关";
 		str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), "分身控制: %s", pControlState);
+	}
+
+	if(Lines.m_ShowSync)
+	{
+		const char *pSyncState = g_Config.m_ClDummyCopyMoves ? "开" : "关";
+		str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), "分身同步: %s", pSyncState);
 	}
 
 	return Lines;
 }
 
-SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const SKeyStatusLines &Lines)
+SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const SKeyStatusLines &Lines, float HudWidth)
 {
 	SKeyStatusLayout Layout{};
 	Layout.m_FontSize = 7.0f;
 	Layout.m_LineHeight = 9.0f;
 	Layout.m_PaddingX = 4.0f;
 	Layout.m_PaddingY = 3.0f;
-	Layout.m_X = 476.0f;
 	Layout.m_Y = 38.0f;
 
 	int LineCount = 0;
@@ -1992,6 +2007,11 @@ SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const SKeyStatusLi
 		MaxWidth = maximum(MaxWidth, pTextRender->TextWidth(Layout.m_FontSize, Lines.m_aControlLine, -1, -1.0f));
 		LineCount++;
 	}
+	if(Lines.m_ShowSync)
+	{
+		MaxWidth = maximum(MaxWidth, pTextRender->TextWidth(Layout.m_FontSize, Lines.m_aSyncLine, -1, -1.0f));
+		LineCount++;
+	}
 
 	if(LineCount == 0)
 	{
@@ -2002,14 +2022,16 @@ SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const SKeyStatusLi
 
 	Layout.m_W = MaxWidth + Layout.m_PaddingX * 2.0f;
 	Layout.m_H = Layout.m_LineHeight * LineCount + Layout.m_PaddingY * 2.0f;
+	const float MaxX = maximum(HudWidth - Layout.m_W, 0.0f);
+	Layout.m_X = std::clamp(HudWidth - Layout.m_W - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxX);
 	return Layout;
 }
 }
 
 void CHud::RenderKeyStatus()
 {
-	const SKeyStatusLines Lines = GetKeyStatusLines(GameClient());
-	const SKeyStatusLayout Layout = GetKeyStatusLayout(TextRender(), Lines);
+	const SKeyStatusLines Lines = GetKeyStatusLines();
+	const SKeyStatusLayout Layout = GetKeyStatusLayout(TextRender(), Lines, m_Width);
 	if(Layout.m_H <= 0.0f)
 		return;
 
@@ -2037,6 +2059,11 @@ void CHud::RenderKeyStatus()
 	if(Lines.m_ShowControl)
 	{
 		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aControlLine, -1.0f);
+		TextY += Layout.m_LineHeight;
+	}
+	if(Lines.m_ShowSync)
+	{
+		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aSyncLine, -1.0f);
 	}
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }
@@ -2169,8 +2196,8 @@ void CHud::RenderMovementInformation()
 	const float Fontsize = 6.0f;
 	const float KeyStatusGap = 2.0f;
 
-	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines(GameClient());
-	const SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines);
+	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines();
+	const SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines, m_Width);
 	const bool ShowKeyStatus = KeyStatusLayout.m_H > 0.0f;
 
 	float MovementBoxHeight = ShowMovementInfo ? GetMovementInformationBoxHeight() : 0.0f;
@@ -2262,16 +2289,14 @@ void CHud::RenderMovementInformation()
 		Client()->DummyConnected();
 	const float DummyActionsReserveY = ShowDummyActionsHud ? (29.0f + 4.0f) : 0.0f;
 
-	float StartX = KeyStatusLayout.m_X;
+	const float MaxStartX = maximum(0.0f, m_Width - BoxWidth);
+	float StartX = std::clamp(m_Width - BoxWidth - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxStartX);
 	float StartY = 285.0f - BoxHeight - 4.0f;
 	if(g_Config.m_ClShowhudScore)
 	{
 		StartY -= 56.0f;
 	}
 	StartY -= DummyActionsReserveY;
-	StartX = minimum(StartX, m_Width - BoxWidth);
-	if(StartX < 0.0f)
-		StartX = 0.0f;
 	if(StartY < 0.0f)
 		StartY = 0.0f;
 
@@ -2486,6 +2511,11 @@ void CHud::RenderMovementInformation()
 		if(KeyStatusLines.m_ShowControl)
 		{
 			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aControlLine, -1.0f);
+			KeyTextY += KeyStatusLayout.m_LineHeight;
+		}
+		if(KeyStatusLines.m_ShowSync)
+		{
+			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aSyncLine, -1.0f);
 		}
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}

@@ -278,7 +278,7 @@ private:
 
 	int m_EditorMovementDelay = 5;
 	void UpdateEditorIngameMoved();
-	void HandleHammerSkinSwap(CCharacter *pChar, int DummyIndex);
+	void HandleHammerSkinSwap(CCharacter *pChar);
 	void HandleRandomEmoteOnHit(CCharacter *pLocalChar, int DummyIndex);
 
 	int m_PredictedTick;
@@ -525,6 +525,7 @@ public:
 		int m_FreezeEnd;
 		bool m_DeepFrozen;
 		bool m_LiveFrozen;
+		bool m_IsInFreeze;
 
 		CCharacterCore m_Predicted;
 		CCharacterCore m_PrevPredicted;

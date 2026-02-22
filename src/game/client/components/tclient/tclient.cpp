@@ -30,6 +30,8 @@
 #include <game/localization.h>
 #include <game/version.h>
 
+#include <vector>
+
 static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
 static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
 static constexpr const char *MAP_CATEGORY_CACHE_FILE = "tclient/map_categories.json";
@@ -38,6 +40,13 @@ static constexpr int QMCLIENT_SYNC_INTERVAL_SECONDS = 30;
 static constexpr const char *QMCLIENT_TOKEN_URL = "http://42.194.185.210:8080/token";
 static constexpr const char *QMCLIENT_REPORT_URL = "http://42.194.185.210:8080/report";
 static constexpr const char *QMCLIENT_USERS_URL = "http://42.194.185.210:8080/users.json";
+static constexpr const char *s_pQiaFenDefaultReply = "我要恰!!谢谢佬!!!!";
+static constexpr const char *FINISH_STATUS_URL = "https://info.ddnet.org/info";
+static constexpr int64_t FINISH_STATUS_RETRY_DELAY_SECONDS = 3;
+static constexpr const char *s_pFinishStatusPendingEcho = "请等一下!还没查到恰分结果!!";
+
+static int QiaFenSeparatorLength(const char *pStr);
+static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize);
 
 static const json_value *JsonObjectField(const json_value *pObject, const char *pName)
 {
@@ -139,6 +148,16 @@ void CTClient::OnInit()
 		Client()->AddWarning(Warning);
 	}
 	LoadMapCategoryCache();
+
+	// 兼容旧版恰分关键词配置：首次升级时将“关键词列表”迁移为“关键词=>回复”规则。
+	if(g_Config.m_QmQiaFenRules[0] == '\0' && g_Config.m_QmQiaFenKeywords[0] != '\0')
+	{
+		char aRules[sizeof(g_Config.m_QmQiaFenRules)];
+		ConvertLegacyQiaFenKeywordsToRules(g_Config.m_QmQiaFenKeywords, aRules, sizeof(aRules));
+
+		if(aRules[0] != '\0')
+			str_copy(g_Config.m_QmQiaFenRules, aRules, sizeof(g_Config.m_QmQiaFenRules));
+	}
 }
 
 static bool LineShouldHighlight(const char *pLine, const char *pName)
@@ -188,6 +207,112 @@ static int QiaFenSeparatorLength(const char *pStr)
 	return 0;
 }
 
+static bool JsonArrayContainsString(const json_value *pArray, const char *pValue)
+{
+	if(!pArray || pArray->type != json_array || !pValue || pValue[0] == '\0')
+		return false;
+	for(unsigned i = 0; i < pArray->u.array.length; ++i)
+	{
+		const json_value &Entry = (*pArray)[i];
+		if(Entry.type != json_string)
+			continue;
+		if(str_comp((const char *)Entry, pValue) == 0)
+			return true;
+	}
+	return false;
+}
+
+static void ParseFinishNameQueue(const char *pQueue, std::vector<std::string> &vNames)
+{
+	vNames.clear();
+	if(!pQueue || pQueue[0] == '\0')
+		return;
+
+	char aQueue[512];
+	str_copy(aQueue, pQueue, sizeof(aQueue));
+	char *pCursor = aQueue;
+	while(*pCursor)
+	{
+		int SepLen = QiaFenSeparatorLength(pCursor);
+		while(*pCursor && SepLen > 0)
+		{
+			pCursor += SepLen;
+			SepLen = QiaFenSeparatorLength(pCursor);
+		}
+
+		char *pStart = pCursor;
+		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
+			pCursor++;
+
+		if(pStart == pCursor)
+			break;
+
+		if(*pCursor)
+		{
+			const int CutLen = QiaFenSeparatorLength(pCursor);
+			*pCursor = '\0';
+			pCursor += CutLen;
+		}
+
+		char *pName = (char *)str_utf8_skip_whitespaces(pStart);
+		str_utf8_trim_right(pName);
+		if(pName[0] == '\0')
+			continue;
+
+		char aTrimmedName[MAX_NAME_LENGTH];
+		str_copy(aTrimmedName, pName, sizeof(aTrimmedName));
+		if(aTrimmedName[0] == '\0')
+			continue;
+		vNames.emplace_back(aTrimmedName);
+	}
+}
+
+static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize)
+{
+	pOutRules[0] = '\0';
+	if(!pKeywords || pKeywords[0] == '\0')
+		return;
+
+	char aLegacyKeywords[512];
+	str_copy(aLegacyKeywords, pKeywords, sizeof(aLegacyKeywords));
+	char *pCursor = aLegacyKeywords;
+
+	while(*pCursor)
+	{
+		int SepLen = QiaFenSeparatorLength(pCursor);
+		while(*pCursor && SepLen > 0)
+		{
+			pCursor += SepLen;
+			SepLen = QiaFenSeparatorLength(pCursor);
+		}
+
+		char *pStart = pCursor;
+		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
+			pCursor++;
+
+		if(pStart == pCursor)
+			break;
+
+		if(*pCursor)
+		{
+			const int CutLen = QiaFenSeparatorLength(pCursor);
+			*pCursor = '\0';
+			pCursor += CutLen;
+		}
+
+		char *pKeyword = (char *)str_utf8_skip_whitespaces(pStart);
+		str_utf8_trim_right(pKeyword);
+		if(pKeyword[0] == '\0')
+			continue;
+
+		if(pOutRules[0] != '\0')
+			str_append(pOutRules, "\n", OutRulesSize);
+		str_append(pOutRules, pKeyword, OutRulesSize);
+		str_append(pOutRules, "=>", OutRulesSize);
+		str_append(pOutRules, s_pQiaFenDefaultReply, OutRulesSize);
+	}
+}
+
 static bool IsQiaFenPresetWord(const char *pWord)
 {
 	for(const char *pPreset : s_apQiaFenPresetWords)
@@ -202,13 +327,13 @@ static bool MessageMatchesQiaFenPreset(const char *pMessage)
 {
 	for(const char *pPreset : s_apQiaFenPresetWords)
 	{
-		if(str_find_nocase(pMessage, pPreset))
+		if(str_utf8_find_nocase(pMessage, pPreset))
 			return true;
 	}
 	return false;
 }
 
-static bool MessageMatchesQiaFenCustom(const char *pMessage, const char *pKeywords)
+static bool MessageMatchesKeywordList(const char *pMessage, const char *pKeywords, bool SkipQiaFenPresetWords)
 {
 	if(!pKeywords || pKeywords[0] == '\0')
 		return false;
@@ -244,13 +369,114 @@ static bool MessageMatchesQiaFenCustom(const char *pMessage, const char *pKeywor
 		str_utf8_trim_right(pToken);
 		if(pToken[0] == '\0')
 			continue;
-		if(IsQiaFenPresetWord(pToken))
+		if(SkipQiaFenPresetWords && IsQiaFenPresetWord(pToken))
 			continue;
-		if(str_find_nocase(pMessage, pToken))
+		if(str_utf8_find_nocase(pMessage, pToken))
 			return true;
 	}
 
 	return false;
+}
+
+static bool MatchAutoReplyRuleKeywords(const char *pMessage, char *pKeywords)
+{
+	char *pCursor = pKeywords;
+	while(*pCursor)
+	{
+		int SepLen = QiaFenSeparatorLength(pCursor);
+		while(*pCursor && SepLen > 0)
+		{
+			pCursor += SepLen;
+			SepLen = QiaFenSeparatorLength(pCursor);
+		}
+
+		char *pStart = pCursor;
+		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
+			pCursor++;
+
+		if(pStart == pCursor)
+			break;
+
+		if(*pCursor)
+		{
+			const int CutLen = QiaFenSeparatorLength(pCursor);
+			*pCursor = '\0';
+			pCursor += CutLen;
+		}
+
+		char *pToken = (char *)str_utf8_skip_whitespaces(pStart);
+		str_utf8_trim_right(pToken);
+		if(pToken[0] == '\0')
+			continue;
+		if(str_utf8_find_nocase(pMessage, pToken))
+			return true;
+	}
+	return false;
+}
+
+static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *pOutReply, size_t OutReplySize)
+{
+	if(!pRules || pRules[0] == '\0')
+		return false;
+
+	static constexpr int MAX_MATCHED_REPLIES = 32;
+	char aaMatchedReplies[MAX_MATCHED_REPLIES][256];
+	int MatchedReplyCount = 0;
+
+	const char *pCursor = pRules;
+	while(*pCursor)
+	{
+		char aLine[1024];
+		int LineLen = 0;
+		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
+		{
+			if(LineLen < (int)sizeof(aLine) - 1)
+				aLine[LineLen++] = *pCursor;
+			pCursor++;
+		}
+		aLine[LineLen] = '\0';
+
+		while(*pCursor == '\n' || *pCursor == '\r')
+			pCursor++;
+
+		char *pLine = (char *)str_utf8_skip_whitespaces(aLine);
+		str_utf8_trim_right(pLine);
+		if(pLine[0] == '\0' || pLine[0] == '#')
+			continue;
+
+		const char *pArrowConst = str_find(pLine, "=>");
+		if(!pArrowConst)
+			continue;
+		char *pArrow = pLine + (pArrowConst - pLine);
+		*pArrow = '\0';
+		pArrow += 2;
+
+		char *pKeywords = (char *)str_utf8_skip_whitespaces(pLine);
+		str_utf8_trim_right(pKeywords);
+		char *pReply = (char *)str_utf8_skip_whitespaces(pArrow);
+		str_utf8_trim_right(pReply);
+		if(pKeywords[0] == '\0' || pReply[0] == '\0')
+			continue;
+
+		char aKeywordsBuf[512];
+		str_copy(aKeywordsBuf, pKeywords, sizeof(aKeywordsBuf));
+		if(MatchAutoReplyRuleKeywords(pMessage, aKeywordsBuf))
+		{
+			if(MatchedReplyCount < MAX_MATCHED_REPLIES)
+			{
+				str_copy(aaMatchedReplies[MatchedReplyCount], pReply, sizeof(aaMatchedReplies[MatchedReplyCount]));
+			}
+			MatchedReplyCount++;
+		}
+	}
+
+	if(MatchedReplyCount <= 0)
+		return false;
+
+	const int StoredReplyCount = MatchedReplyCount < MAX_MATCHED_REPLIES ? MatchedReplyCount : MAX_MATCHED_REPLIES;
+	const int PickedIndex = secure_rand_below(StoredReplyCount);
+	str_copy(pOutReply, aaMatchedReplies[PickedIndex], OutReplySize);
+	return true;
 }
 
 bool CTClient::IsQiaFenFinishedMap() const
@@ -259,14 +485,8 @@ bool CTClient::IsQiaFenFinishedMap() const
 	if(!pServerBrowser)
 		return false;
 
-	const char *pCommunityId = nullptr;
-	const IServerBrowser::CServerEntry *pEntry = pServerBrowser->Find(Client()->ServerAddress());
-	if(pEntry)
-		pCommunityId = pEntry->m_Info.m_aCommunityId;
-	else if(GameClient()->m_ConnectServerInfo)
-		pCommunityId = GameClient()->m_ConnectServerInfo->m_aCommunityId;
-
-	if(!pCommunityId || pCommunityId[0] == '\0')
+	const char *pCommunityId = CurrentCommunityIdForFinishCheck();
+	if(!pCommunityId)
 		return false;
 
 	const CCommunity *pCommunity = pServerBrowser->Community(pCommunityId);
@@ -277,6 +497,166 @@ bool CTClient::IsQiaFenFinishedMap() const
 	if(!pMap || pMap[0] == '\0')
 		return false;
 	return pCommunity->HasRank(pMap) == CServerInfo::RANK_RANKED;
+}
+
+const char *CTClient::CurrentCommunityIdForFinishCheck() const
+{
+	IServerBrowser *pServerBrowser = ServerBrowser();
+	if(!pServerBrowser)
+		return nullptr;
+
+	const char *pCommunityId = nullptr;
+	const IServerBrowser::CServerEntry *pEntry = pServerBrowser->Find(Client()->ServerAddress());
+	if(pEntry)
+		pCommunityId = pEntry->m_Info.m_aCommunityId;
+	else if(GameClient()->m_ConnectServerInfo)
+		pCommunityId = GameClient()->m_ConnectServerInfo->m_aCommunityId;
+
+	if(!pCommunityId || pCommunityId[0] == '\0')
+		return nullptr;
+	return pCommunityId;
+}
+
+void CTClient::ResetFinishNameStatuses()
+{
+	for(auto &Entry : m_FinishNameStatuses)
+	{
+		auto &Status = Entry.second;
+		if(Status.m_pTask)
+			Status.m_pTask->Abort();
+	}
+	m_FinishNameStatuses.clear();
+	m_FinishStatusMap.clear();
+	m_FinishStatusCommunity.clear();
+}
+
+void CTClient::RefreshFinishNameStatusContext()
+{
+	const char *pCurrentMap = Client()->GetCurrentMap();
+	const char *pCurrentCommunity = CurrentCommunityIdForFinishCheck();
+	const std::string CurrentMap = pCurrentMap ? pCurrentMap : "";
+	const std::string CurrentCommunity = pCurrentCommunity ? pCurrentCommunity : "";
+	if(CurrentMap != m_FinishStatusMap || CurrentCommunity != m_FinishStatusCommunity)
+	{
+		ResetFinishNameStatuses();
+		m_FinishStatusMap = CurrentMap;
+		m_FinishStatusCommunity = CurrentCommunity;
+	}
+}
+
+bool CTClient::ParseFinishStatusResult(const json_value *pRoot, bool &Finished) const
+{
+	Finished = false;
+	if(!pRoot || pRoot->type != json_object || m_FinishStatusMap.empty())
+		return false;
+
+	const char *pMap = m_FinishStatusMap.c_str();
+	const char *pWantedCommunity = m_FinishStatusCommunity.empty() ? nullptr : m_FinishStatusCommunity.c_str();
+	const json_value *pCommunities = JsonObjectField(pRoot, "communities");
+
+	if(pWantedCommunity && pCommunities->type == json_array)
+	{
+		for(unsigned i = 0; i < pCommunities->u.array.length; ++i)
+		{
+			const json_value &Community = (*pCommunities)[i];
+			if(Community.type != json_object)
+				continue;
+			const json_value *pCommunityId = JsonObjectField(&Community, "id");
+			if(pCommunityId->type != json_string)
+				continue;
+			const char *pCommunityIdStr = json_string_get(pCommunityId);
+			if(str_comp(pCommunityIdStr, pWantedCommunity) != 0)
+				continue;
+			const json_value *pFinishes = JsonObjectField(&Community, "finishes");
+			if(pFinishes->type != json_array)
+				break;
+			Finished = JsonArrayContainsString(pFinishes, pMap);
+			return true;
+		}
+	}
+
+	if(pCommunities->type == json_array)
+	{
+		bool AnyCommunityFinishes = false;
+		for(unsigned i = 0; i < pCommunities->u.array.length; ++i)
+		{
+			const json_value &Community = (*pCommunities)[i];
+			if(Community.type != json_object)
+				continue;
+			const json_value *pFinishes = JsonObjectField(&Community, "finishes");
+			if(pFinishes->type != json_array)
+				continue;
+
+			AnyCommunityFinishes = true;
+			if(JsonArrayContainsString(pFinishes, pMap))
+			{
+				Finished = true;
+				return true;
+			}
+		}
+		if(AnyCommunityFinishes)
+			return true;
+	}
+
+	const json_value *pLegacyMaps = JsonObjectField(pRoot, "maps");
+	if(pLegacyMaps->type == json_array)
+	{
+		Finished = JsonArrayContainsString(pLegacyMaps, pMap);
+		return true;
+	}
+
+	return false;
+}
+
+bool CTClient::TryGetFinishStatusForName(const char *pName, bool &Finished)
+{
+	Finished = false;
+	if(!pName || pName[0] == '\0' || m_FinishStatusMap.empty())
+		return false;
+
+	SFinishNameStatus &Status = m_FinishNameStatuses[pName];
+	if(Status.m_pTask && Status.m_pTask->Done())
+	{
+		bool Parsed = false;
+		if(Status.m_pTask->State() == EHttpState::DONE && Status.m_pTask->StatusCode() == 200)
+		{
+			json_value *pRoot = Status.m_pTask->ResultJson();
+			Parsed = ParseFinishStatusResult(pRoot, Status.m_Finished);
+			if(pRoot)
+				json_value_free(pRoot);
+		}
+
+		Status.m_pTask = nullptr;
+		Status.m_HasResult = Parsed;
+		if(Parsed)
+		{
+			Status.m_NextRetryTick = 0;
+		}
+		else
+		{
+			Status.m_NextRetryTick = time_get() + time_freq() * FINISH_STATUS_RETRY_DELAY_SECONDS;
+		}
+	}
+
+	if(Status.m_HasResult)
+	{
+		Finished = Status.m_Finished;
+		return true;
+	}
+
+	if(Status.m_pTask || time_get() < Status.m_NextRetryTick)
+		return false;
+
+	char aEscapedName[256];
+	EscapeUrl(aEscapedName, sizeof(aEscapedName), pName);
+	char aUrl[512];
+	str_format(aUrl, sizeof(aUrl), "%s?name=%s", FINISH_STATUS_URL, aEscapedName);
+	Status.m_pTask = HttpGet(aUrl);
+	Status.m_pTask->Timeout(CTimeout{10000, 0, 500, 10});
+	Status.m_pTask->IpResolve(IPRESOLVE::V4);
+	Status.m_pTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(Status.m_pTask);
+	return false;
 }
 
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
@@ -320,63 +700,157 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 		if(ClientId >= MAX_CLIENTS)
 			return;
 		int LocalId = GameClient()->m_Snap.m_LocalClientId;
-		if(ClientId == LocalId)
+		const auto IsOwnClientId = [&](int Id) {
+			if(Id < 0)
+				return false;
+			if(Id == GameClient()->m_aLocalIds[0])
+				return true;
+			return Client()->DummyConnected() && Id == GameClient()->m_aLocalIds[1];
+		};
+		const bool IsOwnMessage = IsOwnClientId(ClientId);
+		if(ClientId == LocalId && pMsg->m_pMessage != nullptr)
 			str_copy(m_PreviousOwnMessage, pMsg->m_pMessage);
 
 		// === 复读功能: 保存最新的公屏消息 ===
-		if(ClientId >= 0 && ClientId < MAX_CLIENTS && pMsg->m_Team == 0)
+		if(ClientId >= 0 && ClientId < MAX_CLIENTS && pMsg->m_Team == 0 && pMsg->m_pMessage != nullptr)
 		{
+			const char *pMessage = pMsg->m_pMessage;
+			const bool IsValidCandidate = pMessage[0] != '\0' && pMessage[0] != '/';
 			// 保存最新的公屏消息（不是自己发的）
-			if(ClientId != LocalId && pMsg->m_pMessage[0] != '/')
+			if(!IsOwnMessage && IsValidCandidate)
 			{
-				str_copy(m_aLastChatMessage, pMsg->m_pMessage, sizeof(m_aLastChatMessage));
+				str_copy(m_aLastChatMessage, pMessage, sizeof(m_aLastChatMessage));
+			}
+
+			// 自动加一：连续出现 2 句及以上非自己发送的相同公屏消息时，自动发送同内容一次。
+			if(g_Config.m_QmRepeatEnabled && g_Config.m_QmRepeatAutoAddOne && !IsOwnMessage && IsValidCandidate)
+			{
+				if(str_comp(m_aLastRepeatCandidate, pMessage) == 0)
+					++m_LastRepeatCandidateCount;
+				else
+				{
+					str_copy(m_aLastRepeatCandidate, pMessage, sizeof(m_aLastRepeatCandidate));
+					m_aLastAutoRepeatMessage[0] = '\0';
+					m_LastRepeatCandidateCount = 1;
+				}
+
+				if(m_LastRepeatCandidateCount >= 2)
+				{
+					const bool AlreadyRepeated = str_comp(m_aLastAutoRepeatMessage, pMessage) == 0;
+					const int64_t Now = time_get();
+					if(!AlreadyRepeated && Now - m_LastRepeatTime >= time_freq())
+					{
+						m_LastRepeatTime = Now;
+						str_copy(m_aLastAutoRepeatMessage, pMessage, sizeof(m_aLastAutoRepeatMessage));
+						GameClient()->m_Chat.SendChat(0, pMessage);
+					}
+				}
+			}
+			else if(!g_Config.m_QmRepeatEnabled || !g_Config.m_QmRepeatAutoAddOne)
+			{
+				m_aLastRepeatCandidate[0] = '\0';
+				m_aLastAutoRepeatMessage[0] = '\0';
+				m_LastRepeatCandidateCount = 0;
 			}
 		}
 
+		const auto TrySendAutoReply = [&](const char *pReply, bool UseDummy) -> bool {
+			if(!pReply || pReply[0] == '\0')
+				return false;
+			int Cooldown = g_Config.m_QmAutoReplyCooldown;
+			if(Cooldown < 0)
+				Cooldown = 0;
+			const int64_t Now = time_get();
+			if(Cooldown > 0 && Now - m_LastAutoReplyTime < (int64_t)Cooldown * time_freq())
+				return false;
+
+			const int TargetConn = UseDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
+			GameClient()->m_Chat.SendChatOnConn(TargetConn, 0, pReply);
+			m_LastAutoReplyTime = Now;
+			return true;
+		};
+
+		bool AutoReplyHandled = false;
+
 		// === 恰分功能 ===
-		if(g_Config.m_QmQiaFenEnabled && ClientId != LocalId && pMsg->m_Team == 0)
+		if(g_Config.m_QmQiaFenEnabled && !IsOwnMessage && pMsg->m_Team == 0 && pMsg->m_pMessage != nullptr)
 		{
 			if(!IsQiaFenFinishedMap())
 			{
-				// 检查是否是公屏消息且不是自己发的
 				const char *pMessage = pMsg->m_pMessage;
-				if(MessageMatchesQiaFenPreset(pMessage) || MessageMatchesQiaFenCustom(pMessage, g_Config.m_QmQiaFenKeywords))
+				const bool IsValidCandidate = pMessage[0] != '\0' && pMessage[0] != '/';
+				char aReply[256] = "";
+				bool Matched = false;
+
+				if(IsValidCandidate)
+				{
+					if(MessageMatchesQiaFenPreset(pMessage))
+					{
+						str_copy(aReply, s_pQiaFenDefaultReply, sizeof(aReply));
+						Matched = true;
+					}
+					else if(MatchAutoReplyRules(pMessage, g_Config.m_QmQiaFenRules, aReply, sizeof(aReply)))
+					{
+						Matched = true;
+					}
+					else if(MessageMatchesKeywordList(pMessage, g_Config.m_QmQiaFenKeywords, true))
+					{
+						str_copy(aReply, s_pQiaFenDefaultReply, sizeof(aReply));
+						Matched = true;
+					}
+				}
+
+				if(Matched)
 				{
 					const bool UseDummy = g_Config.m_QmQiaFenUseDummy && Client()->DummyConnected();
-					const int TargetConn = UseDummy ? IClient::CONN_DUMMY : IClient::CONN_MAIN;
+					AutoReplyHandled = TrySendAutoReply(aReply, UseDummy);
+					if(AutoReplyHandled)
+					{
+						// 在名字后面加"恰"
+						char aNewName[MAX_NAME_LENGTH];
+						char *pConfigName = UseDummy ? g_Config.m_ClDummyName : g_Config.m_PlayerName;
+						const int NameBufSize = UseDummy ? (int)sizeof(g_Config.m_ClDummyName) : (int)sizeof(g_Config.m_PlayerName);
+						const char *pCurrentName = pConfigName;
 
-					// 发送回复
-					GameClient()->m_Chat.SendChatOnConn(TargetConn, 0, "我要恰!!谢谢佬!!!!");
-					
-					// 在名字后面加"恰"
-					char aNewName[MAX_NAME_LENGTH];
-					char *pConfigName = UseDummy ? g_Config.m_ClDummyName : g_Config.m_PlayerName;
-					const int NameBufSize = UseDummy ? (int)sizeof(g_Config.m_ClDummyName) : (int)sizeof(g_Config.m_PlayerName);
-					const char *pCurrentName = pConfigName;
-					
-					// 检查名字是否已经以"恰"结尾
-					int NameLen = str_length(pCurrentName);
-					bool AlreadyHasQia = false;
-					
-					// 检查最后一个字符是否是"恰"（UTF-8：0xE6 0x81 0xB0）
-					if(NameLen >= 3 && 
-					   (unsigned char)pCurrentName[NameLen-3] == 0xE6 && 
-					   (unsigned char)pCurrentName[NameLen-2] == 0x81 && 
-					   (unsigned char)pCurrentName[NameLen-1] == 0xB0)
-					{
-						AlreadyHasQia = true;
+						// 检查名字是否已经以"恰"结尾
+						int NameLen = str_length(pCurrentName);
+						bool AlreadyHasQia = false;
+
+						// 检查最后一个字符是否是"恰"（UTF-8：0xE6 0x81 0xB0）
+						if(NameLen >= 3 &&
+							(unsigned char)pCurrentName[NameLen - 3] == 0xE6 &&
+							(unsigned char)pCurrentName[NameLen - 2] == 0x81 &&
+							(unsigned char)pCurrentName[NameLen - 1] == 0xB0)
+						{
+							AlreadyHasQia = true;
+						}
+
+						if(!AlreadyHasQia && NameLen + 3 < (int)sizeof(aNewName))
+						{
+							str_copy(aNewName, pCurrentName, sizeof(aNewName));
+							str_append(aNewName, "恰", sizeof(aNewName));
+							str_copy(pConfigName, aNewName, NameBufSize);
+							if(UseDummy)
+								GameClient()->SendDummyInfo(false);
+							else
+								GameClient()->SendInfo(false);
+						}
 					}
-					
-					if(!AlreadyHasQia && NameLen + 3 < (int)sizeof(aNewName))
-					{
-						str_copy(aNewName, pCurrentName, sizeof(aNewName));
-						str_append(aNewName, "恰", sizeof(aNewName));
-						str_copy(pConfigName, aNewName, NameBufSize);
-						if(UseDummy)
-							GameClient()->SendDummyInfo(false);
-						else
-							GameClient()->SendInfo(false);
-					}
+				}
+			}
+		}
+
+		// === 关键词回复 ===
+		if(!AutoReplyHandled && g_Config.m_QmKeywordReplyEnabled && !IsOwnMessage && pMsg->m_Team == 0 && pMsg->m_pMessage != nullptr)
+		{
+			const char *pMessage = pMsg->m_pMessage;
+			if(pMessage[0] != '\0' && pMessage[0] != '/')
+			{
+				char aReply[256] = "";
+				if(MatchAutoReplyRules(pMessage, g_Config.m_QmKeywordReplyRules, aReply, sizeof(aReply)))
+				{
+					const bool UseDummy = g_Config.m_QmKeywordReplyUseDummy && Client()->DummyConnected();
+					AutoReplyHandled = TrySendAutoReply(aReply, UseDummy);
 				}
 			}
 		}
@@ -734,7 +1208,11 @@ void CTClient::DoFinishCheck()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 	if(g_Config.m_TcChangeNameNearFinish <= 0)
+	{
+		if(!m_FinishNameStatuses.empty())
+			ResetFinishNameStatuses();
 		return;
+	}
 	m_FinishTextTimeout -= Client()->RenderFrameTime();
 	if(m_FinishTextTimeout > 0.0f)
 		return;
@@ -775,18 +1253,98 @@ void CTClient::DoFinishCheck()
 		GameClient()->m_aCheckInfo[Conn] = Client()->GameTickSpeed(); // 1 second
 	};
 	int Dummy = g_Config.m_ClDummy;
-	const auto &Player = GameClient()->m_aClients[GameClient()->m_aLocalIds[Dummy]];
+	const int LocalId = GameClient()->m_aLocalIds[Dummy];
+	if(LocalId < 0 || LocalId >= MAX_CLIENTS)
+		return;
+	const auto &Player = GameClient()->m_aClients[LocalId];
 	if(!Player.m_Active)
 		return;
-	const char *NewName = g_Config.m_TcFinishName;
-	if(str_comp(Player.m_aName, NewName) == 0)
+
+	RefreshFinishNameStatusContext();
+	if(m_FinishStatusMap.empty())
 		return;
+
+	// One-time runtime migration from legacy single-name config to unified queue config.
+	if(g_Config.m_TcFinishNameQueue[0] == '\0' && g_Config.m_TcFinishName[0] != '\0')
+	{
+		str_copy(g_Config.m_TcFinishNameQueue, g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishNameQueue));
+		g_Config.m_TcFinishName[0] = '\0';
+	}
+
+	std::vector<std::string> vNameQueue;
+	ParseFinishNameQueue(g_Config.m_TcFinishNameQueue, vNameQueue);
+	if(vNameQueue.empty())
+		return;
+
+	bool CurrentNameFinished = false;
+	const bool CurrentNameKnown = TryGetFinishStatusForName(Player.m_aName, CurrentNameFinished);
+	const char *pOwnName = Dummy == 0 ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
+	if(!pOwnName || pOwnName[0] == '\0')
+		pOwnName = Player.m_aName;
+	bool OwnNameFinished = true;
+	bool OwnNameKnown = true;
+	if(g_Config.m_TcFinishNameRequireOwnFinished)
+	{
+		if(str_comp(pOwnName, Player.m_aName) == 0)
+		{
+			OwnNameKnown = CurrentNameKnown;
+			OwnNameFinished = CurrentNameFinished;
+		}
+		else
+		{
+			OwnNameKnown = TryGetFinishStatusForName(pOwnName, OwnNameFinished);
+		}
+	}
+	for(const std::string &Name : vNameQueue)
+	{
+		bool Ignored = false;
+		TryGetFinishStatusForName(Name.c_str(), Ignored);
+	}
+
 	if(!NearTile(Player.m_RenderPos, 10, TILE_FINISH))
 		return;
+
+	if(!CurrentNameKnown)
+	{
+		GameClient()->Echo(s_pFinishStatusPendingEcho);
+		return;
+	}
+	if(g_Config.m_TcFinishNameRequireOwnFinished)
+	{
+		if(!OwnNameKnown)
+		{
+			GameClient()->Echo(s_pFinishStatusPendingEcho);
+			return;
+		}
+		if(!OwnNameFinished)
+			return;
+	}
+	if(!CurrentNameFinished)
+		return;
+
+	const char *pRenameTarget = nullptr;
+	for(const std::string &Name : vNameQueue)
+	{
+		bool Finished = false;
+		if(!TryGetFinishStatusForName(Name.c_str(), Finished))
+		{
+			GameClient()->Echo(s_pFinishStatusPendingEcho);
+			return;
+		}
+		if(!Finished)
+		{
+			pRenameTarget = Name.c_str();
+			break;
+		}
+	}
+
+	if(!pRenameTarget || pRenameTarget[0] == '\0' || str_comp(Player.m_aName, pRenameTarget) == 0)
+		return;
+
 	char aBuf[64];
-	str_format(aBuf, sizeof(aBuf), TCLocalize("Changing name to %s near finish"), NewName);
+	str_format(aBuf, sizeof(aBuf), TCLocalize("终点前改名为 %s"), pRenameTarget);
 	GameClient()->Echo(aBuf);
-	SendUrgentRename(Dummy, NewName);
+	SendUrgentRename(Dummy, pRenameTarget);
 }
 
 bool CTClient::ServerCommandExists(const char *pCommand)
@@ -865,6 +1423,7 @@ void CTClient::OnRender()
 	CheckFreeze();
 	CheckWaterFall();
 	CheckFriendOnline();
+	CheckFriendEnterGreet();
 	CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
 	CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
 	CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
@@ -1344,6 +1903,84 @@ void CTClient::CheckFriendOnline()
 	}
 }
 
+void CTClient::CheckFriendEnterGreet()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+	{
+		if(m_FriendEnterInitialized || !m_FriendEnterOnline.empty())
+		{
+			m_FriendEnterOnline.clear();
+			m_FriendEnterInitialized = false;
+		}
+		return;
+	}
+
+	const int Enabled = g_Config.m_QmFriendEnterAutoGreet;
+	if(m_FriendEnterPrevEnabled != Enabled)
+	{
+		m_FriendEnterPrevEnabled = Enabled;
+		m_FriendEnterOnline.clear();
+		m_FriendEnterInitialized = false;
+	}
+
+	if(!Enabled)
+		return;
+
+	std::unordered_set<std::string> CurrentFriends;
+	std::vector<std::string> NewFriends;
+	const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
+	const int LocalMain = GameClient()->m_aLocalIds[0];
+	const int LocalDummy = GameClient()->m_aLocalIds[1];
+	const bool HasDummy = Client()->DummyConnected();
+
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	{
+		const auto &Client = GameClient()->m_aClients[ClientId];
+		if(!Client.m_Active)
+			continue;
+		if(ClientId == LocalMain || (HasDummy && ClientId == LocalDummy))
+			continue;
+		if(!GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
+			continue;
+
+		std::string Key = BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan);
+		CurrentFriends.insert(Key);
+		if(m_FriendEnterOnline.find(Key) == m_FriendEnterOnline.end())
+			NewFriends.push_back(Client.m_aName);
+	}
+
+	if(!m_FriendEnterInitialized)
+	{
+		m_FriendEnterOnline = std::move(CurrentFriends);
+		m_FriendEnterInitialized = true;
+		return;
+	}
+
+	m_FriendEnterOnline = std::move(CurrentFriends);
+
+	if(NewFriends.empty())
+		return;
+
+	if(g_Config.m_QmFriendEnterGreetText[0] == '\0')
+		return;
+
+	char aMsg[256];
+	aMsg[0] = '\0';
+	for(size_t i = 0; i < NewFriends.size(); ++i)
+	{
+		if(i > 0)
+			str_append(aMsg, " ", sizeof(aMsg));
+		str_append(aMsg, NewFriends[i].c_str(), sizeof(aMsg));
+	}
+
+	if(aMsg[0] != '\0')
+		str_append(aMsg, ": ", sizeof(aMsg));
+	str_append(aMsg, g_Config.m_QmFriendEnterGreetText, sizeof(aMsg));
+
+	if(aMsg[0] != '\0')
+		GameClient()->m_Chat.SendChat(0, aMsg);
+}
+
 void CTClient::CheckAutoUnspecOnUnfreeze()
 {
 	if(Client()->State() != IClient::STATE_ONLINE)
@@ -1639,6 +2276,15 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	if(NewState != IClient::STATE_ONLINE)
 	{
 		ClearSwapCountdown();
+		m_aLastChatMessage[0] = '\0';
+		m_aLastRepeatCandidate[0] = '\0';
+		m_aLastAutoRepeatMessage[0] = '\0';
+		m_LastRepeatCandidateCount = 0;
+		m_LastRepeatTime = 0;
+		m_LastAutoReplyTime = 0;
+		ResetFinishNameStatuses();
+		m_FriendEnterOnline.clear();
+		m_FriendEnterInitialized = false;
 	}
 
 	// 进入服务器时重置统计数据

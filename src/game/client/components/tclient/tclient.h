@@ -5,6 +5,7 @@
 #include <engine/external/regex.h>
 #include <engine/shared/console.h>
 #include <engine/shared/http.h>
+#include <engine/shared/json.h>
 
 #include <game/client/component.h>
 
@@ -13,6 +14,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 // 玩家统计数据结构
 struct SPlayerStats
@@ -113,12 +115,28 @@ class CTClient : public CComponent
 
 	float m_FinishTextTimeout = 0.0f;
 	void DoFinishCheck();
+	struct SFinishNameStatus
+	{
+		std::shared_ptr<CHttpRequest> m_pTask = nullptr;
+		bool m_HasResult = false;
+		bool m_Finished = false;
+		int64_t m_NextRetryTick = 0;
+	};
+	std::unordered_map<std::string, SFinishNameStatus> m_FinishNameStatuses;
+	std::string m_FinishStatusMap;
+	std::string m_FinishStatusCommunity;
+	void ResetFinishNameStatuses();
+	void RefreshFinishNameStatusContext();
+	const char *CurrentCommunityIdForFinishCheck() const;
+	bool ParseFinishStatusResult(const json_value *pRoot, bool &Finished) const;
+	bool TryGetFinishStatusForName(const char *pName, bool &Finished);
 	void StartUpdateDownload();
 	void ResetUpdateExeTask();
 	bool ReplaceClientFromUpdate();
 
 	bool ServerCommandExists(const char *pCommand);
 	bool IsQiaFenFinishedMap() const;
+	int64_t m_LastAutoReplyTime = 0;
 
 	// Water Fall Detection
 	bool m_aWasInDeath[NUM_DUMMIES] = {false, false};
@@ -170,7 +188,10 @@ class CTClient : public CComponent
 
 	// 复读功能
 	char m_aLastChatMessage[2048] = "";  // 最新一条公屏消息
-	int64_t m_LastRepeatTime = 0;           // 上次复读时间
+	char m_aLastRepeatCandidate[2048] = ""; // 自动加一候选消息
+	char m_aLastAutoRepeatMessage[2048] = ""; // 最近一次自动加一已发送内容
+	int m_LastRepeatCandidateCount = 0; // 自动加一候选出现次数
+	int64_t m_LastRepeatTime = 0; // 上次手动/自动复读时间
 	void RepeatLastMessage();
 	static void ConRepeat(IConsole::IResult *pResult, void *pUserData);
 
@@ -194,6 +215,11 @@ class CTClient : public CComponent
 	int m_FriendAutoRefreshPrevEnabled = -1;
 	int m_FriendAutoRefreshPrevSeconds = -1;
 	void CheckFriendOnline();
+	// 好友进图自动打招呼
+	std::unordered_set<std::string> m_FriendEnterOnline;
+	int m_FriendEnterPrevEnabled = -1;
+	bool m_FriendEnterInitialized = false;
+	void CheckFriendEnterGreet();
 
 	// Q1menG client recognition sync
 	std::shared_ptr<CHttpRequest> m_pQmClientAuthTokenTask = nullptr;

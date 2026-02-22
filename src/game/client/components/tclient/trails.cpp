@@ -47,13 +47,13 @@ void CTrails::OnRender()
 	{
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 		{
-			const bool Local = GameClient()->m_Snap.m_LocalClientId == ClientId;
+			const bool IsLocalClient = GameClient()->IsLocalClientId(ClientId);
 
 			if(!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
 				continue;
 
-			// Only render for local player (can be extended to others if desired)
-			if(!Local)
+			// Render for both local players (main + dummy when connected).
+			if(!IsLocalClient)
 				continue;
 
 			vec2 Position = GameClient()->m_aClients[ClientId].m_RenderPos;
@@ -76,13 +76,13 @@ void CTrails::OnRender()
 	{
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 		{
-			const bool Local = GameClient()->m_Snap.m_LocalClientId == ClientId;
+			const bool IsLocalClient = GameClient()->IsLocalClientId(ClientId);
 
 			if(!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
 				continue;
 			
-			if(Local)
-				continue; // Skip local player (already handled above)
+			if(IsLocalClient)
+				continue; // Remote rendering is only for other players.
 
 			// Check if this is a recognized Q1menG client
 			if(!GameClient()->IsQ1menGClientRecognized(ClientId))
