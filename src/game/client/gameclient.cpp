@@ -393,6 +393,7 @@ void CGameClient::OnInit()
 
 	// propagate pointers
 	m_UI.Init(Kernel());
+	m_UiRuntimeV2.Init(this);
 	m_RenderTools.Init(Graphics(), TextRender(), this); // TClient
 	m_RenderMap.Init(Graphics(), TextRender());
 
@@ -776,6 +777,8 @@ void CGameClient::OnReset()
 	m_CursorInfo.m_CursorOwnerId = -1;
 	m_CursorInfo.m_NumSamples = 0;
 
+	m_UiRuntimeV2.Reset();
+
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnReset();
 
@@ -894,6 +897,8 @@ void CGameClient::OnRender()
 	m_Camera.UpdateCamera();
 
 	UpdateSpectatorCursor();
+
+	m_UiRuntimeV2.OnRender();
 
 	// render all systems
 	for(auto &pComponent : m_vpAll)

@@ -856,6 +856,8 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 			FILTERTAB_TYPES,
 		};
 		static EFilterTab s_ActiveTab = FILTERTAB_COUNTRIES;
+		static EFilterTab s_PrevFilterTab = FILTERTAB_COUNTRIES;
+		static float s_FilterTabDirection = 0.0f;
 
 		static CButtonContainer s_CountriesButton;
 		if(DoButton_MenuTab(&s_CountriesButton, Localize("Countries"), s_ActiveTab == FILTERTAB_COUNTRIES, &CountriesTab, IGraphics::CORNER_TL, nullptr, &ColorInactive, &ColorActive, nullptr, 4.0f))
@@ -869,13 +871,36 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 			s_ActiveTab = FILTERTAB_TYPES;
 		}
 
+		if(s_ActiveTab != s_PrevFilterTab)
+		{
+			s_FilterTabDirection = s_ActiveTab > s_PrevFilterTab ? 1.0f : -1.0f;
+			TriggerUiSwitchAnimation(UiAnimNodeKey("browser_filter_tab_switch"), 0.18f);
+			s_PrevFilterTab = s_ActiveTab;
+		}
+		const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("browser_filter_tab_switch"));
+		const bool TransitionActive = TransitionStrength > 0.0f && s_FilterTabDirection != 0.0f;
+		const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
+		CUIRect AnimatedTabContents = TabContents;
+		if(TransitionActive)
+		{
+			Ui()->ClipEnable(&TabContents);
+			ApplyUiSwitchOffset(AnimatedTabContents, TransitionStrength, s_FilterTabDirection, false, 0.08f, 24.0f, 120.0f);
+		}
+
 		if(s_ActiveTab == FILTERTAB_COUNTRIES)
 		{
-			RenderServerbrowserCountriesFilter(TabContents);
+			RenderServerbrowserCountriesFilter(AnimatedTabContents);
 		}
 		else if(s_ActiveTab == FILTERTAB_TYPES)
 		{
-			RenderServerbrowserTypesFilter(TabContents);
+			RenderServerbrowserTypesFilter(AnimatedTabContents);
+		}
+
+		if(TransitionActive)
+		{
+			if(TransitionAlpha > 0.0f)
+				TabContents.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+			Ui()->ClipDisable();
 		}
 	}
 
@@ -2363,21 +2388,47 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 
 void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 {
+	static int s_PrevToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
+	static float s_ToolboxDirection = 0.0f;
+	if(g_Config.m_UiToolboxPage != s_PrevToolboxPage)
+	{
+		s_ToolboxDirection = g_Config.m_UiToolboxPage > s_PrevToolboxPage ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(UiAnimNodeKey("browser_toolbox_tab_switch"), 0.18f);
+		s_PrevToolboxPage = g_Config.m_UiToolboxPage;
+	}
+
 	ToolBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_B, 4.0f);
+	const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("browser_toolbox_tab_switch"));
+	const bool TransitionActive = TransitionStrength > 0.0f && s_ToolboxDirection != 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
+	const CUIRect ContentClip = ToolBox;
+	if(TransitionActive)
+	{
+		Ui()->ClipEnable(&ContentClip);
+		ApplyUiSwitchOffset(ToolBox, TransitionStrength, s_ToolboxDirection, false, 0.08f, 24.0f, 120.0f);
+	}
 
 	switch(g_Config.m_UiToolboxPage)
 	{
 	case UI_TOOLBOX_PAGE_FILTERS:
 		RenderServerbrowserFilters(ToolBox);
-		return;
+		break;
 	case UI_TOOLBOX_PAGE_INFO:
 		RenderServerbrowserInfo(ToolBox);
-		return;
+		break;
 	case UI_TOOLBOX_PAGE_FRIENDS:
 		RenderServerbrowserFriends(ToolBox);
-		return;
+		break;
 	default:
 		dbg_assert_failed("ui_toolbox_page invalid");
+		break;
+	}
+
+	if(TransitionActive)
+	{
+		if(TransitionAlpha > 0.0f)
+			ContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+		Ui()->ClipDisable();
 	}
 }
 
@@ -2431,22 +2482,12 @@ void CMenus::RenderServerbrowser(CUIRect MainView)
 	ServerListBase.HSplitBottom(65.0f, &ServerListBase, &StatusBox);
 
 	float TransitionOffset = 0.0f;
-	float TransitionAlpha = 0.0f;
-	const bool DoClip = m_BrowserTabTransitionActive;
+	const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("browser_page_switch"));
+	const bool DoClip = TransitionStrength > 0.0f && m_BrowserTabTransitionDirection != 0.0f;
+	float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(DoClip)
 	{
-		const float TransitionDuration = 0.18f;
-		m_BrowserTabTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(m_BrowserTabTransitionProgress >= 1.0f)
-		{
-			m_BrowserTabTransitionProgress = 1.0f;
-			m_BrowserTabTransitionActive = false;
-		}
-		const float Inv = 1.0f - m_BrowserTabTransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
-		TransitionOffset = (1.0f - Ease) * OffsetMax * m_BrowserTabTransitionDirection;
-		TransitionAlpha = (1.0f - Ease) * 0.12f;
+		TransitionOffset = TransitionStrength * std::clamp(View.w * 0.08f, 24.0f, 120.0f) * m_BrowserTabTransitionDirection;
 	}
 
 	bool WasListboxItemActivated = false;

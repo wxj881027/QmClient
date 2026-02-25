@@ -92,6 +92,7 @@
 #include "components/touch_controls.h"
 #include "components/voting.h"
 #include "components/pie_menu.h"
+#include "QmUi/QmRt.h"
 
 #include <vector>
 
@@ -271,6 +272,7 @@ private:
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CUi m_UI;
+	CUiRuntimeV2 m_UiRuntimeV2;
 	CRaceHelper m_RaceHelper;
 
 	void ProcessEvents();
@@ -327,6 +329,8 @@ public:
 	class IGraphics *Graphics() const { return m_pGraphics; }
 	class IClient *Client() const { return m_pClient; }
 	class CUi *Ui() { return &m_UI; }
+	class CUiRuntimeV2 *UiRuntimeV2() { return &m_UiRuntimeV2; }
+	const class CUiRuntimeV2 *UiRuntimeV2() const { return &m_UiRuntimeV2; }
 	class ISound *Sound() const { return m_pSound; }
 	class IInput *Input() const { return m_pInput; }
 	class IStorage *Storage() const { return m_pStorage; }

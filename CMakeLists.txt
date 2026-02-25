@@ -2727,6 +2727,18 @@ if(CLIENT)
     skin.h
     ui.cpp
     ui.h
+    QmUi/QmAnim.cpp
+    QmUi/QmAnim.h
+    QmUi/QmLayout.cpp
+    QmUi/QmLayout.h
+    QmUi/QmLegacy.cpp
+    QmUi/QmLegacy.h
+    QmUi/QmRender.cpp
+    QmUi/QmRender.h
+    QmUi/QmRt.cpp
+    QmUi/QmRt.h
+    QmUi/QmTree.cpp
+    QmUi/QmTree.h
     ui_listbox.cpp
     ui_listbox.h
     ui_rect.cpp
@@ -3308,6 +3320,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     bezier_test.cpp
     blocklist_driver_test.cpp
     bytes_be_test.cpp
+    QmAnimTest.cpp
     chunk_header_test.cpp
     color_test.cpp
     compression_test.cpp
@@ -3351,10 +3364,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     time_test.cpp
     timestamp_test.cpp
     unix_test.cpp
+    QmLayoutTest.cpp
     uuid_test.cpp
     vmath_test.cpp
   )
   set(TESTS_EXTRA
+    src/game/client/QmUi/QmAnim.cpp
+    src/game/client/QmUi/QmLayout.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
     src/engine/client/serverbrowser.cpp

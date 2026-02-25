@@ -38,10 +38,34 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <unordered_map>
 #include <vector>
 
 using namespace FontIcons;
 using namespace std::chrono_literals;
+
+namespace
+{
+constexpr float MENU_SWITCH_DURATION = 0.18f;
+constexpr float MENU_SWITCH_ALPHA_MAX = 0.12f;
+constexpr float MENU_TAB_HOVER_DURATION = 0.10f;
+constexpr float MENU_TAB_DEFAULT_X_OFFSET = 0.0f;
+constexpr float MENU_TAB_DEFAULT_Y_OFFSET = -1.5f;
+constexpr float MENU_TAB_DEFAULT_W_OFFSET = 0.0f;
+constexpr float MENU_TAB_DEFAULT_H_OFFSET = 3.0f;
+constexpr float MENU_TAB_ANIM_EPSILON = 0.0001f;
+
+uint64_t HashAnimNode(uint64_t Value)
+{
+	// Mix bits to keep generated animation keys stable and well distributed.
+	Value ^= Value >> 33;
+	Value *= 0xff51afd7ed558ccdULL;
+	Value ^= Value >> 33;
+	Value *= 0xc4ceb9fe1a85ec53ULL;
+	Value ^= Value >> 33;
+	return Value;
+}
+}
 
 ColorRGBA CMenus::ms_GuiColor;
 ColorRGBA CMenus::ms_ColorTabbarInactiveOutgame;
@@ -78,26 +102,125 @@ CMenus::CMenus()
 
 	for(SUIAnimator &Animator : m_aAnimatorsSettingsTab)
 	{
+		Animator.m_Active = false;
+		Animator.m_ScaleLabel = false;
 		Animator.m_YOffset = -2.5f;
 		Animator.m_HOffset = 5.0f;
 		Animator.m_WOffset = 5.0f;
 		Animator.m_RepositionLabel = true;
+		Animator.m_XOffset = 0.0f;
+		Animator.m_Value = 0.0f;
+		Animator.m_Time = std::chrono::nanoseconds::zero();
 	}
 
 	for(SUIAnimator &Animator : m_aAnimatorsBigPage)
 	{
+		Animator.m_Active = false;
+		Animator.m_ScaleLabel = false;
+		Animator.m_RepositionLabel = false;
+		Animator.m_XOffset = 0.0f;
 		Animator.m_YOffset = -5.0f;
 		Animator.m_HOffset = 5.0f;
+		Animator.m_WOffset = 0.0f;
+		Animator.m_Value = 0.0f;
+		Animator.m_Time = std::chrono::nanoseconds::zero();
 	}
 
 	for(SUIAnimator &Animator : m_aAnimatorsSmallPage)
 	{
+		Animator.m_Active = false;
+		Animator.m_ScaleLabel = false;
+		Animator.m_RepositionLabel = false;
+		Animator.m_XOffset = 0.0f;
 		Animator.m_YOffset = -2.5f;
 		Animator.m_HOffset = 2.5f;
+		Animator.m_WOffset = 0.0f;
+		Animator.m_Value = 0.0f;
+		Animator.m_Time = std::chrono::nanoseconds::zero();
 	}
 
 	m_PasswordInput.SetBuffer(g_Config.m_Password, sizeof(g_Config.m_Password));
 	m_PasswordInput.SetHidden(true);
+}
+
+uint64_t CMenus::UiAnimNodeKey(const char *pScope, const uint64_t Id) const
+{
+	const uint64_t ScopeHash = static_cast<uint64_t>(str_quickhash(pScope));
+	return HashAnimNode((ScopeHash << 32) ^ HashAnimNode(Id));
+}
+
+void CMenus::TriggerUiSwitchAnimation(const uint64_t NodeKey, const float DurationSec)
+{
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_X, 1.0f);
+
+	SUiAnimRequest Request;
+	Request.m_NodeKey = NodeKey;
+	Request.m_Property = EUiAnimProperty::POS_X;
+	Request.m_Target = 0.0f;
+	Request.m_Transition.m_DurationSec = DurationSec;
+	Request.m_Transition.m_DelaySec = 0.0f;
+	Request.m_Transition.m_Priority = 1;
+	Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+	Request.m_Transition.m_Easing = EEasing::EASE_OUT;
+	AnimRuntime.RequestAnimation(Request);
+}
+
+float CMenus::ReadUiSwitchAnimation(const uint64_t NodeKey) const
+{
+	const CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	return std::clamp(AnimRuntime.GetValue(NodeKey, EUiAnimProperty::POS_X, 0.0f), 0.0f, 1.0f);
+}
+
+float CMenus::UiSwitchAnimationAlpha(const float Strength) const
+{
+	return Strength * MENU_SWITCH_ALPHA_MAX;
+}
+
+float CMenus::ApplyUiSwitchOffset(CUIRect &View, const float Strength, const float Direction, const bool Vertical, const float RelativeOffset, const float MinOffset, const float MaxOffset) const
+{
+	if(Strength <= 0.0f || Direction == 0.0f)
+		return 0.0f;
+
+	const float AxisSize = Vertical ? View.h : View.w;
+	const float Offset = Strength * std::clamp(AxisSize * RelativeOffset, MinOffset, MaxOffset) * Direction;
+	if(Vertical)
+		View.y += Offset;
+	else
+		View.x += Offset;
+	return Offset;
+}
+
+float CMenus::ResolveMenuTabAnimationValue(const void *pButtonId, const bool Active, const float DurationSec) const
+{
+	static std::unordered_map<uint64_t, float> s_aLastTargets;
+	const uint64_t NodeKey = UiAnimNodeKey("menu_tab_hover", reinterpret_cast<uint64_t>(pButtonId));
+	const float Target = Active ? 1.0f : 0.0f;
+
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const float CurrentValue = std::clamp(AnimRuntime.GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f);
+
+	auto ItLastTarget = s_aLastTargets.find(NodeKey);
+	const bool HasLastTarget = ItLastTarget != s_aLastTargets.end();
+	const float LastTarget = HasLastTarget ? ItLastTarget->second : Target;
+	const bool TargetChanged = !HasLastTarget || std::abs(Target - LastTarget) > MENU_TAB_ANIM_EPSILON;
+	const bool NeedsSync = !AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE) && std::abs(Target - CurrentValue) > MENU_TAB_ANIM_EPSILON;
+	if(TargetChanged || NeedsSync)
+	{
+		SUiAnimRequest Request;
+		Request.m_NodeKey = NodeKey;
+		Request.m_Property = EUiAnimProperty::SCALE;
+		Request.m_Target = Target;
+		Request.m_Transition.m_DurationSec = DurationSec;
+		Request.m_Transition.m_DelaySec = 0.0f;
+		Request.m_Transition.m_Priority = 1;
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Request.m_Transition.m_Easing = EEasing::EASE_OUT;
+		AnimRuntime.RequestAnimation(Request);
+		s_aLastTargets[NodeKey] = Target;
+	}
+
+	return std::clamp(AnimRuntime.GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f);
 }
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, const unsigned Flags)
@@ -162,31 +285,28 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 {
 	const bool MouseInside = Ui()->HotItem() == pButtonContainer;
 	CUIRect Rect = *pRect;
+	const bool TabActive = Checked || MouseInside;
+	const float AnimValue = ResolveMenuTabAnimationValue(pButtonContainer, TabActive, MENU_TAB_HOVER_DURATION);
 
+	float XOffset = MENU_TAB_DEFAULT_X_OFFSET;
+	float YOffset = MENU_TAB_DEFAULT_Y_OFFSET;
+	float WOffset = MENU_TAB_DEFAULT_W_OFFSET;
+	float HOffset = MENU_TAB_DEFAULT_H_OFFSET;
+	bool RepositionLabel = false;
+	bool ScaleLabel = false;
 	if(pAnimator != nullptr)
 	{
-		auto Time = time_get_nanoseconds();
-
-		if(pAnimator->m_Time + 100ms < Time)
-		{
-			pAnimator->m_Value = pAnimator->m_Active ? 1 : 0;
-			pAnimator->m_Time = Time;
-		}
-
-		pAnimator->m_Active = Checked || MouseInside;
-
-		if(pAnimator->m_Active)
-			pAnimator->m_Value = std::clamp<float>(pAnimator->m_Value + (Time - pAnimator->m_Time).count() / (double)std::chrono::nanoseconds(100ms).count(), 0, 1);
-		else
-			pAnimator->m_Value = std::clamp<float>(pAnimator->m_Value - (Time - pAnimator->m_Time).count() / (double)std::chrono::nanoseconds(100ms).count(), 0, 1);
-
-		Rect.w += pAnimator->m_Value * pAnimator->m_WOffset;
-		Rect.h += pAnimator->m_Value * pAnimator->m_HOffset;
-		Rect.x += pAnimator->m_Value * pAnimator->m_XOffset;
-		Rect.y += pAnimator->m_Value * pAnimator->m_YOffset;
-
-		pAnimator->m_Time = Time;
+		XOffset = pAnimator->m_XOffset;
+		YOffset = pAnimator->m_YOffset;
+		WOffset = pAnimator->m_WOffset;
+		HOffset = pAnimator->m_HOffset;
+		RepositionLabel = pAnimator->m_RepositionLabel;
+		ScaleLabel = pAnimator->m_ScaleLabel;
 	}
+	Rect.w += AnimValue * WOffset;
+	Rect.h += AnimValue * HOffset;
+	Rect.x += AnimValue * XOffset;
+	Rect.y += AnimValue * YOffset;
 
 	if(Checked)
 	{
@@ -218,13 +338,13 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 
 	if(pAnimator != nullptr)
 	{
-		if(pAnimator->m_RepositionLabel)
+		if(RepositionLabel)
 		{
 			Rect.x += Rect.w - pRect->w + Rect.x - pRect->x;
 			Rect.y += Rect.h - pRect->h + Rect.y - pRect->y;
 		}
 
-		if(!pAnimator->m_ScaleLabel)
+		if(!ScaleLabel)
 		{
 			Rect.w = pRect->w;
 			Rect.h = pRect->h;
@@ -1094,24 +1214,6 @@ void CMenus::Render()
 		Screen.Margin(10.0f, &Screen);
 	}
 
-	auto ApplyPageTransition = [&](SPageTransition &Transition, CUIRect &View) -> float {
-		if(!Transition.m_Active)
-			return 0.0f;
-		const float TransitionDuration = 0.18f;
-		Transition.m_Progress += Client()->RenderFrameTime() / TransitionDuration;
-		if(Transition.m_Progress >= 1.0f)
-		{
-			Transition.m_Progress = 1.0f;
-			Transition.m_Active = false;
-		}
-		const float Inv = 1.0f - Transition.m_Progress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(View.w * 0.04f, 18.0f, 48.0f);
-		const float Offset = (1.0f - Ease) * OffsetMax * Transition.m_Direction;
-		View.x += Offset;
-		return (1.0f - Ease) * 0.12f;
-	};
-
 	switch(ClientState)
 	{
 	case IClient::STATE_QUITTING:
@@ -1134,18 +1236,19 @@ void CMenus::Render()
 		}
 		else if(m_ShowStart)
 		{
-			m_MenusStart.RenderStartMenu(Screen);
+			m_MenusStart.RenderStartMenuV2(Screen);
 		}
 		else
 		{
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(24.0f, &TabBar, &MainView);
-			const bool TransitionActive = m_MenuPageTransition.m_Active;
 			const CUIRect MainViewClip = MainView;
-			float TransitionAlpha = 0.0f;
+			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"));
+			const bool TransitionActive = TransitionStrength > 0.0f && m_MenuPageTransitionDirection != 0.0f;
+			float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 			if(TransitionActive)
 			{
-				TransitionAlpha = ApplyPageTransition(m_MenuPageTransition, MainView);
+				ApplyUiSwitchOffset(MainView, TransitionStrength, m_MenuPageTransitionDirection, false, 0.04f, 18.0f, 48.0f);
 				Ui()->ClipEnable(&MainViewClip);
 			}
 
@@ -1191,12 +1294,13 @@ void CMenus::Render()
 		{
 			CUIRect TabBar, MainView;
 			Screen.HSplitTop(24.0f, &TabBar, &MainView);
-			const bool TransitionActive = m_GamePageTransition.m_Active;
 			const CUIRect MainViewClip = MainView;
-			float TransitionAlpha = 0.0f;
+			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("game_page_switch"));
+			const bool TransitionActive = TransitionStrength > 0.0f && m_GamePageTransitionDirection != 0.0f;
+			float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 			if(TransitionActive)
 			{
-				TransitionAlpha = ApplyPageTransition(m_GamePageTransition, MainView);
+				ApplyUiSwitchOffset(MainView, TransitionStrength, m_GamePageTransitionDirection, false, 0.04f, 18.0f, 48.0f);
 				Ui()->ClipEnable(&MainViewClip);
 			}
 
@@ -2568,27 +2672,21 @@ void CMenus::SetMenuPage(int NewPage)
 	const bool NewIsBrowser = IsBrowserPage(NewPage);
 	if(OldIsBrowser && NewIsBrowser && OldPage != NewPage)
 	{
-		m_BrowserTabTransitionActive = true;
-		m_BrowserTabTransitionProgress = 0.0f;
 		m_BrowserTabTransitionDirection = NewPage > OldPage ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(UiAnimNodeKey("browser_page_switch"), MENU_SWITCH_DURATION);
 	}
 	else
 	{
-		m_BrowserTabTransitionActive = false;
-		m_BrowserTabTransitionProgress = 1.0f;
 		m_BrowserTabTransitionDirection = 0.0f;
 	}
 	if(OldPage != NewPage && !(OldIsBrowser && NewIsBrowser))
 	{
-		m_MenuPageTransition.m_Active = true;
-		m_MenuPageTransition.m_Progress = 0.0f;
-		m_MenuPageTransition.m_Direction = NewPage > OldPage ? 1.0f : -1.0f;
+		m_MenuPageTransitionDirection = NewPage > OldPage ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"), MENU_SWITCH_DURATION);
 	}
 	else
 	{
-		m_MenuPageTransition.m_Active = false;
-		m_MenuPageTransition.m_Progress = 1.0f;
-		m_MenuPageTransition.m_Direction = 0.0f;
+		m_MenuPageTransitionDirection = 0.0f;
 	}
 	if(NewPage >= PAGE_INTERNET && NewPage <= PAGE_FAVORITE_COMMUNITY_5)
 	{
@@ -2616,15 +2714,12 @@ void CMenus::SetGamePage(int NewPage)
 	m_GamePage = NewPage;
 	if(OldPage != NewPage)
 	{
-		m_GamePageTransition.m_Active = true;
-		m_GamePageTransition.m_Progress = 0.0f;
-		m_GamePageTransition.m_Direction = NewPage > OldPage ? 1.0f : -1.0f;
+		m_GamePageTransitionDirection = NewPage > OldPage ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(UiAnimNodeKey("game_page_switch"), MENU_SWITCH_DURATION);
 	}
 	else
 	{
-		m_GamePageTransition.m_Active = false;
-		m_GamePageTransition.m_Progress = 1.0f;
-		m_GamePageTransition.m_Direction = 0.0f;
+		m_GamePageTransitionDirection = 0.0f;
 	}
 }
 

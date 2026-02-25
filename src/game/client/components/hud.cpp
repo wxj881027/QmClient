@@ -8,6 +8,7 @@
 #include "voting.h"
 
 #include <base/color.h>
+#include <base/str.h>
 
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -21,10 +22,134 @@
 #include <game/client/components/tclient/lyrics_component.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
+#include <game/client/QmUi/QmLayout.h>
 #include <game/layers.h>
 #include <game/localization.h>
 
 #include <cmath>
+#include <cstdint>
+#include <vector>
+
+namespace
+{
+struct SHudTextInfoLayout
+{
+	float m_FpsX = 0.0f;
+	float m_FpsY = 5.0f;
+	float m_PredX = 0.0f;
+	float m_PredY = 5.0f;
+};
+
+SHudTextInfoLayout ComputeHudTextInfoLayoutV2(bool ShowFps, bool ShowPred, bool UseMiniLayout, float HudWidth, float MiniX, float MiniY, float MiniW, float MiniH, float FpsWidth, float PredWidth, std::vector<SUiLayoutChild> &vChildrenScratch)
+{
+	SHudTextInfoLayout Result;
+	if(!ShowFps && !ShowPred)
+		return Result;
+
+	CUiV2LayoutEngine LayoutEngine;
+	std::vector<SUiLayoutChild> &vChildren = vChildrenScratch;
+	vChildren.clear();
+	vChildren.reserve(2);
+
+	if(ShowFps)
+	{
+		SUiLayoutChild Child;
+		Child.m_Style.m_Width = SUiLength::Px(FpsWidth);
+		Child.m_Style.m_Height = SUiLength::Px(12.0f);
+		vChildren.push_back(Child);
+	}
+	if(ShowPred)
+	{
+		SUiLayoutChild Child;
+		Child.m_Style.m_Width = SUiLength::Px(PredWidth);
+		Child.m_Style.m_Height = SUiLength::Px(12.0f);
+		vChildren.push_back(Child);
+	}
+
+	SUiStyle ContainerStyle;
+	SUiLayoutBox ContainerBox;
+	if(UseMiniLayout)
+	{
+		ContainerStyle.m_Axis = EUiAxis::ROW;
+		ContainerStyle.m_Gap = (ShowFps && ShowPred) ? 6.0f : 0.0f;
+		ContainerStyle.m_AlignItems = EUiAlign::START;
+		ContainerStyle.m_JustifyContent = EUiAlign::START;
+
+		const float TotalWidth = FpsWidth + PredWidth + ContainerStyle.m_Gap;
+		ContainerBox.m_X = MiniX + MiniW - TotalWidth;
+		ContainerBox.m_Y = MiniY + MiniH + 4.0f;
+		ContainerBox.m_W = TotalWidth;
+		ContainerBox.m_H = 12.0f;
+	}
+	else
+	{
+		ContainerStyle.m_Axis = EUiAxis::COLUMN;
+		ContainerStyle.m_Gap = (ShowFps && ShowPred) ? 3.0f : 0.0f;
+		ContainerStyle.m_AlignItems = EUiAlign::END;
+		ContainerStyle.m_JustifyContent = EUiAlign::START;
+
+		const float MaxWidth = maximum(FpsWidth, PredWidth);
+		ContainerBox.m_X = HudWidth - 10.0f - MaxWidth;
+		ContainerBox.m_Y = 5.0f;
+		ContainerBox.m_W = MaxWidth;
+		ContainerBox.m_H = (ShowFps && ShowPred) ? 27.0f : 12.0f;
+	}
+
+	LayoutEngine.ComputeChildren(ContainerStyle, ContainerBox, vChildren);
+
+	size_t ChildIndex = 0;
+	if(ShowFps && ChildIndex < vChildren.size())
+	{
+		Result.m_FpsX = vChildren[ChildIndex].m_Box.m_X;
+		Result.m_FpsY = vChildren[ChildIndex].m_Box.m_Y;
+		++ChildIndex;
+	}
+	if(ShowPred && ChildIndex < vChildren.size())
+	{
+		Result.m_PredX = vChildren[ChildIndex].m_Box.m_X;
+		Result.m_PredY = vChildren[ChildIndex].m_Box.m_Y;
+	}
+
+	return Result;
+}
+
+uint64_t HudTextInfoNodeKey(const char *pScope)
+{
+	static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_text_info_v2"));
+	return (s_BaseKey << 32) | static_cast<uint64_t>(str_quickhash(pScope));
+}
+
+uint64_t HudLocalTimeNodeKey(const char *pScope)
+{
+	static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_local_time_v2"));
+	return (s_BaseKey << 32) | static_cast<uint64_t>(str_quickhash(pScope));
+}
+
+float ResolveAnimatedLayoutValue(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, EUiAnimProperty Property, float Target, float &LastTarget)
+{
+	constexpr float Epsilon = 0.01f;
+	const float Current = AnimRuntime.GetValue(NodeKey, Property, Target);
+	const bool TargetChanged = std::abs(Target - LastTarget) > Epsilon;
+	const bool NeedsSync = !AnimRuntime.HasActiveAnimation(NodeKey, Property) && std::abs(Target - Current) > Epsilon;
+
+	if(TargetChanged || NeedsSync)
+	{
+		SUiAnimRequest Request;
+		Request.m_NodeKey = NodeKey;
+		Request.m_Property = Property;
+		Request.m_Target = Target;
+		Request.m_Transition.m_DurationSec = 0.10f;
+		Request.m_Transition.m_DelaySec = 0.0f;
+		Request.m_Transition.m_Priority = 1;
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Request.m_Transition.m_Easing = EEasing::EASE_OUT;
+		AnimRuntime.RequestAnimation(Request);
+		LastTarget = Target;
+	}
+
+	return AnimRuntime.GetValue(NodeKey, Property, Target);
+}
+}
 
 CHud::CHud()
 {
@@ -32,6 +157,10 @@ CHud::CHud()
 	m_DDRaceEffectsTextContainerIndex.Reset();
 	m_PlayerAngleTextContainerIndex.Reset();
 	m_PlayerPrevAngle = -INFINITY;
+	m_TextInfoV2AnimState.Reset();
+	m_LocalTimeV2AnimState.Reset();
+	m_vTextInfoLayoutChildrenScratch.reserve(2);
+	m_vLocalTimeLayoutChildrenScratch.resize(1);
 
 	for(int i = 0; i < 2; i++)
 	{
@@ -65,6 +194,9 @@ void CHud::ResetHudContainers()
 		TextRender()->DeleteTextContainer(m_aPlayerPositionContainers[i]);
 		m_aPlayerPrevPosition[i] = -INFINITY;
 	}
+
+	m_TextInfoV2AnimState.Reset();
+	m_LocalTimeV2AnimState.Reset();
 }
 
 void CHud::OnWindowResize()
@@ -678,16 +810,37 @@ void CHud::RenderTextInfo()
 		Showfps = 0;
 #endif
 	const bool Showpred = g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK;
+	const bool UseV2TextInfoLayout = true;
+	CUiV2AnimationRuntime *pAnimRuntime = nullptr;
+	if(UseV2TextInfoLayout)
+		pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
 
 	float MiniX = 0.0f;
 	float MiniY = 0.0f;
 	float MiniW = 0.0f;
 	float MiniH = 0.0f;
 	const bool HasMiniMap = GetDummyMiniMapRect(MiniX, MiniY, MiniW, MiniH);
-	const bool UseMiniLayout = HasMiniMap && (Showfps || Showpred);
+	SHudTextInfoV2AnimState &AnimState = m_TextInfoV2AnimState;
+	if(!UseV2TextInfoLayout)
+	{
+		AnimState.m_FpsPositionInitialized = false;
+		AnimState.m_PredPositionInitialized = false;
+		AnimState.m_AlphaInitialized = false;
+	}
 
-	char aFpsBuf[16];
-	char aPredBuf[64];
+	const uint64_t FpsNode = HudTextInfoNodeKey("fps");
+	const uint64_t PredNode = HudTextInfoNodeKey("pred");
+	if(UseV2TextInfoLayout && pAnimRuntime != nullptr && !AnimState.m_AlphaInitialized)
+	{
+		AnimState.m_FpsTargetAlpha = Showfps ? 1.0f : 0.0f;
+		AnimState.m_PredTargetAlpha = Showpred ? 1.0f : 0.0f;
+		pAnimRuntime->SetValue(FpsNode, EUiAnimProperty::ALPHA, AnimState.m_FpsTargetAlpha);
+		pAnimRuntime->SetValue(PredNode, EUiAnimProperty::ALPHA, AnimState.m_PredTargetAlpha);
+		AnimState.m_AlphaInitialized = true;
+	}
+
+	char aFpsBuf[16] = {0};
+	char aPredBuf[64] = {0};
 	float FpsWidth = 0.0f;
 	float PredWidth = 0.0f;
 	int DigitIndex = 0;
@@ -705,30 +858,89 @@ void CHud::RenderTextInfo()
 
 		DigitIndex = GetDigitsIndex(FramesPerSecond, 4);
 		FpsWidth = s_aTextWidth[DigitIndex];
+		str_copy(AnimState.m_aLastFpsText, aFpsBuf);
+		AnimState.m_LastFpsWidth = FpsWidth;
 	}
 	if(Showpred)
 	{
 		str_format(aPredBuf, sizeof(aPredBuf), "%d", Client()->GetPredictionTime());
 		PredWidth = TextRender()->TextWidth(12.0f, aPredBuf, -1, -1.0f);
+		str_copy(AnimState.m_aLastPredText, aPredBuf);
+		AnimState.m_LastPredWidth = PredWidth;
+	}
+
+	float FpsAlpha = Showfps ? 1.0f : 0.0f;
+	float PredAlpha = Showpred ? 1.0f : 0.0f;
+	if(UseV2TextInfoLayout && pAnimRuntime != nullptr)
+	{
+		FpsAlpha = ResolveAnimatedLayoutValue(*pAnimRuntime, FpsNode, EUiAnimProperty::ALPHA, Showfps ? 1.0f : 0.0f, AnimState.m_FpsTargetAlpha);
+		PredAlpha = ResolveAnimatedLayoutValue(*pAnimRuntime, PredNode, EUiAnimProperty::ALPHA, Showpred ? 1.0f : 0.0f, AnimState.m_PredTargetAlpha);
+	}
+
+	const bool RenderFps = Showfps || (UseV2TextInfoLayout && FpsAlpha > 0.01f && AnimState.m_aLastFpsText[0] != '\0');
+	const bool RenderPred = Showpred || (UseV2TextInfoLayout && PredAlpha > 0.01f && AnimState.m_aLastPredText[0] != '\0');
+	const float DisplayFpsWidth = Showfps ? FpsWidth : (RenderFps ? AnimState.m_LastFpsWidth : 0.0f);
+	const float DisplayPredWidth = Showpred ? PredWidth : (RenderPred ? AnimState.m_LastPredWidth : 0.0f);
+	const char *pFpsText = Showfps ? aFpsBuf : AnimState.m_aLastFpsText;
+	const char *pPredText = Showpred ? aPredBuf : AnimState.m_aLastPredText;
+	const bool UseMiniLayout = HasMiniMap && (RenderFps || RenderPred);
+
+	SHudTextInfoLayout V2Layout;
+	if(UseV2TextInfoLayout)
+	{
+		V2Layout = ComputeHudTextInfoLayoutV2(RenderFps, RenderPred, UseMiniLayout, m_Width, MiniX, MiniY, MiniW, MiniH, DisplayFpsWidth, DisplayPredWidth, m_vTextInfoLayoutChildrenScratch);
+	}
+
+	if(UseV2TextInfoLayout && pAnimRuntime != nullptr)
+	{
+		if(RenderFps && !AnimState.m_FpsPositionInitialized)
+		{
+			AnimState.m_FpsTargetX = V2Layout.m_FpsX;
+			AnimState.m_FpsTargetY = V2Layout.m_FpsY;
+			pAnimRuntime->SetValue(FpsNode, EUiAnimProperty::POS_X, AnimState.m_FpsTargetX);
+			pAnimRuntime->SetValue(FpsNode, EUiAnimProperty::POS_Y, AnimState.m_FpsTargetY);
+			AnimState.m_FpsPositionInitialized = true;
+		}
+		if(RenderPred && !AnimState.m_PredPositionInitialized)
+		{
+			AnimState.m_PredTargetX = V2Layout.m_PredX;
+			AnimState.m_PredTargetY = V2Layout.m_PredY;
+			pAnimRuntime->SetValue(PredNode, EUiAnimProperty::POS_X, AnimState.m_PredTargetX);
+			pAnimRuntime->SetValue(PredNode, EUiAnimProperty::POS_Y, AnimState.m_PredTargetY);
+			AnimState.m_PredPositionInitialized = true;
+		}
 	}
 
 	float StartX = 0.0f;
 	float TextY = 5.0f;
 	float Gap = 0.0f;
-	if(UseMiniLayout)
+	if(UseMiniLayout && !UseV2TextInfoLayout)
 	{
-		Gap = (Showfps && Showpred) ? 6.0f : 0.0f;
-		const float TotalWidth = FpsWidth + PredWidth + Gap;
+		Gap = (RenderFps && RenderPred) ? 6.0f : 0.0f;
+		const float TotalWidth = DisplayFpsWidth + DisplayPredWidth + Gap;
 		StartX = MiniX + MiniW - TotalWidth;
 		TextY = MiniY + MiniH + 4.0f;
 	}
 
-	if(Showfps)
+	if(RenderFps)
 	{
 		CTextCursor Cursor;
-		float FpsX = m_Width - 10 - FpsWidth;
+		float FpsX = m_Width - 10 - DisplayFpsWidth;
 		float FpsY = 5.0f;
-		if(UseMiniLayout)
+		if(UseV2TextInfoLayout)
+		{
+			if(pAnimRuntime != nullptr)
+			{
+				FpsX = ResolveAnimatedLayoutValue(*pAnimRuntime, FpsNode, EUiAnimProperty::POS_X, V2Layout.m_FpsX, AnimState.m_FpsTargetX);
+				FpsY = ResolveAnimatedLayoutValue(*pAnimRuntime, FpsNode, EUiAnimProperty::POS_Y, V2Layout.m_FpsY, AnimState.m_FpsTargetY);
+			}
+			else
+			{
+				FpsX = V2Layout.m_FpsX;
+				FpsY = V2Layout.m_FpsY;
+			}
+		}
+		else if(UseMiniLayout)
 		{
 			FpsX = StartX;
 			FpsY = TextY;
@@ -738,25 +950,62 @@ void CHud::RenderTextInfo()
 		auto OldFlags = TextRender()->GetRenderFlags();
 		TextRender()->SetRenderFlags(OldFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
 		if(m_FPSTextContainerIndex.Valid())
-			TextRender()->RecreateTextContainerSoft(m_FPSTextContainerIndex, &Cursor, aFpsBuf);
+			TextRender()->RecreateTextContainerSoft(m_FPSTextContainerIndex, &Cursor, pFpsText);
 		else
-			TextRender()->CreateTextContainer(m_FPSTextContainerIndex, &Cursor, "0");
+			TextRender()->CreateTextContainer(m_FPSTextContainerIndex, &Cursor, pFpsText);
 		TextRender()->SetRenderFlags(OldFlags);
 		if(m_FPSTextContainerIndex.Valid())
 		{
-			TextRender()->RenderTextContainer(m_FPSTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor());
+			ColorRGBA TextColor = TextRender()->DefaultTextColor();
+			ColorRGBA TextOutlineColor = TextRender()->DefaultTextOutlineColor();
+			if(UseV2TextInfoLayout)
+			{
+				TextColor.a *= FpsAlpha;
+				TextOutlineColor.a *= FpsAlpha;
+			}
+			TextRender()->RenderTextContainer(m_FPSTextContainerIndex, TextColor, TextOutlineColor);
 		}
 	}
-	if(Showpred)
+	if(RenderPred)
 	{
-		float PredX = m_Width - 10 - PredWidth;
-		float PredY = Showfps ? 20.0f : 5.0f;
-		if(UseMiniLayout)
+		float PredX = m_Width - 10 - DisplayPredWidth;
+		float PredY = RenderFps ? 20.0f : 5.0f;
+		if(UseV2TextInfoLayout)
 		{
-			PredX = StartX + (Showfps ? (FpsWidth + Gap) : 0.0f);
+			if(pAnimRuntime != nullptr)
+			{
+				PredX = ResolveAnimatedLayoutValue(*pAnimRuntime, PredNode, EUiAnimProperty::POS_X, V2Layout.m_PredX, AnimState.m_PredTargetX);
+				PredY = ResolveAnimatedLayoutValue(*pAnimRuntime, PredNode, EUiAnimProperty::POS_Y, V2Layout.m_PredY, AnimState.m_PredTargetY);
+			}
+			else
+			{
+				PredX = V2Layout.m_PredX;
+				PredY = V2Layout.m_PredY;
+			}
+		}
+		else if(UseMiniLayout)
+		{
+			PredX = StartX + (RenderFps ? (DisplayFpsWidth + Gap) : 0.0f);
 			PredY = TextY;
 		}
-		TextRender()->Text(PredX, PredY, 12.0f, aPredBuf, -1.0f);
+		if(UseV2TextInfoLayout)
+		{
+			ColorRGBA OldColor = TextRender()->GetTextColor();
+			ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
+			ColorRGBA PredTextColor = TextRender()->DefaultTextColor();
+			ColorRGBA PredOutlineColor = TextRender()->DefaultTextOutlineColor();
+			PredTextColor.a *= PredAlpha;
+			PredOutlineColor.a *= PredAlpha;
+			TextRender()->TextColor(PredTextColor);
+			TextRender()->TextOutlineColor(PredOutlineColor);
+			TextRender()->Text(PredX, PredY, 12.0f, pPredText, -1.0f);
+			TextRender()->TextColor(OldColor);
+			TextRender()->TextOutlineColor(OldOutlineColor);
+		}
+		else
+		{
+			TextRender()->Text(PredX, PredY, 12.0f, pPredText, -1.0f);
+		}
 	}
 
 	if(g_Config.m_TcMiniDebug)
@@ -2579,16 +2828,81 @@ void CHud::RenderSpectatorHud()
 void CHud::RenderLocalTime(float x)
 {
 	if(!g_Config.m_ClShowLocalTimeAlways && !GameClient()->m_Scoreboard.IsActive())
+	{
+		m_LocalTimeV2AnimState.Reset();
 		return;
+	}
+	const bool UseV2LocalTime = true;
+	CUiV2AnimationRuntime *pAnimRuntime = nullptr;
+	if(UseV2LocalTime)
+		pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
+	else
+		m_LocalTimeV2AnimState.Reset();
 
 	const bool Seconds = g_Config.m_TcShowLocalTimeSeconds; // TClient
 
 	char aTimeStr[16];
 	str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
-	const float Width = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
+	const float TextWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
 
-	Graphics()->DrawRect(x - (Width + 15.0f), 0.0f, Width + 10.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
-	TextRender()->Text(x - (Width + 10.0f), (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
+	if(!UseV2LocalTime)
+	{
+		Graphics()->DrawRect(x - (TextWidth + 15.0f), 0.0f, TextWidth + 10.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
+		TextRender()->Text(x - (TextWidth + 10.0f), (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
+		return;
+	}
+
+	SUiLayoutBox TimeRootBox;
+	TimeRootBox.m_X = x - (TextWidth + 15.0f);
+	TimeRootBox.m_Y = 0.0f;
+	TimeRootBox.m_W = TextWidth + 10.0f;
+	TimeRootBox.m_H = 12.5f;
+
+	CUiV2LayoutEngine LayoutEngine;
+	SUiStyle TimeContainerStyle;
+	TimeContainerStyle.m_Axis = EUiAxis::ROW;
+	TimeContainerStyle.m_AlignItems = EUiAlign::START;
+	TimeContainerStyle.m_JustifyContent = EUiAlign::START;
+	TimeContainerStyle.m_Padding.m_Left = 5.0f;
+	TimeContainerStyle.m_Padding.m_Right = 5.0f;
+	TimeContainerStyle.m_Padding.m_Top = (12.5f - 5.0f) / 2.0f;
+	TimeContainerStyle.m_Padding.m_Bottom = (12.5f - 5.0f) / 2.0f;
+
+	std::vector<SUiLayoutChild> &vChildren = m_vLocalTimeLayoutChildrenScratch;
+	if(vChildren.empty())
+		vChildren.resize(1);
+	vChildren[0] = SUiLayoutChild{};
+	vChildren[0].m_Style.m_Width = SUiLength::Px(TextWidth);
+	vChildren[0].m_Style.m_Height = SUiLength::Px(5.0f);
+	LayoutEngine.ComputeChildren(TimeContainerStyle, TimeRootBox, vChildren);
+
+	float BoxX = TimeRootBox.m_X;
+	float BoxW = TimeRootBox.m_W;
+	float TextX = vChildren[0].m_Box.m_X;
+	const float TextY = vChildren[0].m_Box.m_Y;
+
+	if(pAnimRuntime != nullptr)
+	{
+		const uint64_t BoxNode = HudLocalTimeNodeKey("box");
+		const uint64_t TextNode = HudLocalTimeNodeKey("text");
+		if(!m_LocalTimeV2AnimState.m_Initialized)
+		{
+			m_LocalTimeV2AnimState.m_TargetBoxX = BoxX;
+			m_LocalTimeV2AnimState.m_TargetBoxW = BoxW;
+			m_LocalTimeV2AnimState.m_TargetTextX = TextX;
+			pAnimRuntime->SetValue(BoxNode, EUiAnimProperty::POS_X, BoxX);
+			pAnimRuntime->SetValue(BoxNode, EUiAnimProperty::WIDTH, BoxW);
+			pAnimRuntime->SetValue(TextNode, EUiAnimProperty::POS_X, TextX);
+			m_LocalTimeV2AnimState.m_Initialized = true;
+		}
+
+		BoxX = ResolveAnimatedLayoutValue(*pAnimRuntime, BoxNode, EUiAnimProperty::POS_X, BoxX, m_LocalTimeV2AnimState.m_TargetBoxX);
+		BoxW = ResolveAnimatedLayoutValue(*pAnimRuntime, BoxNode, EUiAnimProperty::WIDTH, BoxW, m_LocalTimeV2AnimState.m_TargetBoxW);
+		TextX = ResolveAnimatedLayoutValue(*pAnimRuntime, TextNode, EUiAnimProperty::POS_X, TextX, m_LocalTimeV2AnimState.m_TargetTextX);
+	}
+
+	Graphics()->DrawRect(BoxX, 0.0f, BoxW, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
+	TextRender()->Text(TextX, TextY, 5.0f, aTimeStr, -1.0f);
 
 	// Graphics()->DrawRect(x - 30.0f, 0.0f, 25.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
 	// TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);

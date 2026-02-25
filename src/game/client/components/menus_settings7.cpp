@@ -40,9 +40,8 @@ void CMenus::RenderSettingsTee7(CUIRect MainView)
 	static bool s_Tee7TransitionInitialized = false;
 	static bool s_PrevTee7Dummy = false;
 	static bool s_PrevTee7Custom = false;
-	static bool s_Tee7TransitionActive = false;
-	static float s_Tee7TransitionProgress = 1.0f;
 	static float s_Tee7TransitionDirection = 0.0f;
+	const uint64_t Tee7SwitchNode = UiAnimNodeKey("settings_tee7_tab_switch");
 	MainView.HSplitBottom(20.0f, &MainView, &Buttons);
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 	Buttons.VSplitRight(25.0f, &Buttons, &RefreshButton);
@@ -113,41 +112,23 @@ void CMenus::RenderSettingsTee7(CUIRect MainView)
 	}
 	else if(m_Dummy != s_PrevTee7Dummy || m_CustomSkinMenu != s_PrevTee7Custom)
 	{
-		s_Tee7TransitionActive = true;
-		s_Tee7TransitionProgress = 0.0f;
 		if(m_CustomSkinMenu != s_PrevTee7Custom)
 			s_Tee7TransitionDirection = m_CustomSkinMenu ? 1.0f : -1.0f;
 		else
 			s_Tee7TransitionDirection = m_Dummy ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(Tee7SwitchNode, 0.18f);
 		s_PrevTee7Dummy = m_Dummy;
 		s_PrevTee7Custom = m_CustomSkinMenu;
 	}
 
-	auto ApplyTee7Transition = [&](CUIRect &View) -> float {
-		if(!s_Tee7TransitionActive)
-			return 0.0f;
-		const float TransitionDuration = 0.18f;
-		s_Tee7TransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(s_Tee7TransitionProgress >= 1.0f)
-		{
-			s_Tee7TransitionProgress = 1.0f;
-			s_Tee7TransitionActive = false;
-		}
-		const float Inv = 1.0f - s_Tee7TransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
-		const float Offset = (1.0f - Ease) * OffsetMax * s_Tee7TransitionDirection;
-		View.x += Offset;
-		return (1.0f - Ease) * 0.12f;
-	};
-
-	const bool TransitionActive = s_Tee7TransitionActive;
+	const float TransitionStrength = ReadUiSwitchAnimation(Tee7SwitchNode);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_Tee7TransitionDirection != 0.0f;
 	const CUIRect ContentClip = MainView;
-	float TransitionAlpha = 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(TransitionActive)
 	{
-		TransitionAlpha = ApplyTee7Transition(MainView);
 		Ui()->ClipEnable(&ContentClip);
+		ApplyUiSwitchOffset(MainView, TransitionStrength, s_Tee7TransitionDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
 	// validate skin parts for solo mode
@@ -306,9 +287,8 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView)
 	CUIRect ButtonBar, SkinPartSelection, CustomColors;
 	static bool s_SkinPartTransitionInitialized = false;
 	static int s_PrevSkinPart = 0;
-	static bool s_SkinPartTransitionActive = false;
-	static float s_SkinPartTransitionProgress = 1.0f;
 	static float s_SkinPartTransitionDirection = 0.0f;
+	const uint64_t SkinPartSwitchNode = UiAnimNodeKey("settings_tee7_skinpart_switch");
 
 	MainView.HSplitTop(20.0f, &ButtonBar, &MainView);
 	const float ButtonWidth = ButtonBar.w / protocol7::NUM_SKINPARTS;
@@ -332,37 +312,19 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView)
 	}
 	else if(m_TeePartSelected != s_PrevSkinPart)
 	{
-		s_SkinPartTransitionActive = true;
-		s_SkinPartTransitionProgress = 0.0f;
 		s_SkinPartTransitionDirection = m_TeePartSelected > s_PrevSkinPart ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(SkinPartSwitchNode, 0.18f);
 		s_PrevSkinPart = m_TeePartSelected;
 	}
 
-	auto ApplySkinPartTransition = [&](CUIRect &View) -> float {
-		if(!s_SkinPartTransitionActive)
-			return 0.0f;
-		const float TransitionDuration = 0.18f;
-		s_SkinPartTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(s_SkinPartTransitionProgress >= 1.0f)
-		{
-			s_SkinPartTransitionProgress = 1.0f;
-			s_SkinPartTransitionActive = false;
-		}
-		const float Inv = 1.0f - s_SkinPartTransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
-		const float Offset = (1.0f - Ease) * OffsetMax * s_SkinPartTransitionDirection;
-		View.x += Offset;
-		return (1.0f - Ease) * 0.12f;
-	};
-
-	const bool TransitionActive = s_SkinPartTransitionActive;
+	const float TransitionStrength = ReadUiSwitchAnimation(SkinPartSwitchNode);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_SkinPartTransitionDirection != 0.0f;
 	const CUIRect ContentClip = MainView;
-	float TransitionAlpha = 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(TransitionActive)
 	{
-		TransitionAlpha = ApplySkinPartTransition(MainView);
 		Ui()->ClipEnable(&ContentClip);
+		ApplyUiSwitchOffset(MainView, TransitionStrength, s_SkinPartTransitionDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
 	MainView.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_B, 5.0f);

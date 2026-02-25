@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "menus_start.h"
 
+#include <base/str.h>
+
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
@@ -11,11 +13,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <vector>
 
 #include <generated/client_data.h>
 
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
+#include <game/client/QmUi/QmLayout.h>
+#include <game/client/QmUi/QmLegacy.h>
 #include <game/localization.h>
 #include <game/version.h>
 
@@ -25,8 +31,111 @@
 
 using namespace FontIcons;
 
+namespace
+{
+void ComputeExternalButtons(const CUIRect &MainView, bool UseV2Layout, CUIRect &DiscordButton, CUIRect &LearnButton, CUIRect &TutorialButton, CUIRect &WebsiteButton, CUIRect &NewsButton)
+{
+	CUIRect ExtMenu;
+	MainView.VSplitLeft(30.0f, nullptr, &ExtMenu);
+	ExtMenu.VSplitLeft(100.0f, &ExtMenu, nullptr);
+
+	if(!UseV2Layout)
+	{
+		ExtMenu.HSplitBottom(20.0f, &ExtMenu, &DiscordButton);
+		ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr);
+		ExtMenu.HSplitBottom(20.0f, &ExtMenu, &LearnButton);
+		ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr);
+		ExtMenu.HSplitBottom(20.0f, &ExtMenu, &TutorialButton);
+		ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr);
+		ExtMenu.HSplitBottom(20.0f, &ExtMenu, &WebsiteButton);
+		ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr);
+		ExtMenu.HSplitBottom(20.0f, &ExtMenu, &NewsButton);
+		return;
+	}
+
+	CUiV2LayoutEngine LayoutEngine;
+	SUiStyle ContainerStyle;
+	ContainerStyle.m_Axis = EUiAxis::COLUMN;
+	ContainerStyle.m_Gap = 5.0f;
+	ContainerStyle.m_AlignItems = EUiAlign::STRETCH;
+	ContainerStyle.m_JustifyContent = EUiAlign::END;
+
+	std::vector<SUiLayoutChild> vChildren(5);
+	for(SUiLayoutChild &Child : vChildren)
+	{
+		Child.m_Style.m_Height = SUiLength::Px(20.0f);
+	}
+
+	LayoutEngine.ComputeChildren(ContainerStyle, CUiV2LegacyAdapter::FromCUIRect(ExtMenu), vChildren);
+	NewsButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
+	WebsiteButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
+	TutorialButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[2].m_Box);
+	LearnButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[3].m_Box);
+	DiscordButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[4].m_Box);
+}
+
+void ComputeMainButtons(const CUIRect &MenuArea, bool UseV2Layout, CUIRect aMenuButtons[6])
+{
+	if(!UseV2Layout)
+	{
+		CUIRect Cursor = MenuArea;
+		Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[0]);
+		Cursor.HSplitBottom(100.0f, &Cursor, nullptr);
+		Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[1]);
+		Cursor.HSplitBottom(5.0f, &Cursor, nullptr);
+		Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[2]);
+		Cursor.HSplitBottom(5.0f, &Cursor, nullptr);
+		Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[3]);
+		Cursor.HSplitBottom(5.0f, &Cursor, nullptr);
+		Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[4]);
+		Cursor.HSplitBottom(5.0f, &Cursor, nullptr);
+		Cursor.HSplitBottom(40.0f, &Cursor, &aMenuButtons[5]);
+		return;
+	}
+
+	CUIRect TopArea = MenuArea;
+	TopArea.HSplitBottom(40.0f, &TopArea, &aMenuButtons[0]);
+	TopArea.HSplitBottom(100.0f, &TopArea, nullptr);
+
+	CUiV2LayoutEngine LayoutEngine;
+	SUiStyle ContainerStyle;
+	ContainerStyle.m_Axis = EUiAxis::COLUMN;
+	ContainerStyle.m_Gap = 5.0f;
+	ContainerStyle.m_AlignItems = EUiAlign::STRETCH;
+	ContainerStyle.m_JustifyContent = EUiAlign::END;
+
+	std::vector<SUiLayoutChild> vChildren(5);
+	for(SUiLayoutChild &Child : vChildren)
+	{
+		Child.m_Style.m_Height = SUiLength::Px(40.0f);
+	}
+
+	LayoutEngine.ComputeChildren(ContainerStyle, CUiV2LegacyAdapter::FromCUIRect(TopArea), vChildren);
+	aMenuButtons[5] = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
+	aMenuButtons[4] = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
+	aMenuButtons[3] = CUiV2LegacyAdapter::ToCUIRect(vChildren[2].m_Box);
+	aMenuButtons[2] = CUiV2LegacyAdapter::ToCUIRect(vChildren[3].m_Box);
+	aMenuButtons[1] = CUiV2LegacyAdapter::ToCUIRect(vChildren[4].m_Box);
+}
+
+uint64_t StartMenuButtonScaleNodeKey(int Index)
+{
+	static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("start_menu_button_scale"));
+	return (s_BaseKey << 32) | static_cast<uint64_t>(static_cast<uint32_t>(Index));
+}
+}
 
 void CMenusStart::RenderStartMenu(CUIRect MainView)
+{
+	RenderStartMenuImpl(MainView, false);
+}
+
+void CMenusStart::RenderStartMenuV2(CUIRect MainView)
+{
+	RenderStartMenuImpl(MainView, true);
+}
+
+void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 {
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_START);
 
@@ -41,33 +150,24 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	const float Rounding = 10.0f;
 	const float VMargin = MainView.w / 2 - 190.0f;
 
-	CUIRect Button;
 	int NewPage = -1;
-
-	CUIRect ExtMenu;
-	MainView.VSplitLeft(30.0f, nullptr, &ExtMenu);
-	ExtMenu.VSplitLeft(100.0f, &ExtMenu, nullptr);
-
-	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
+	CUIRect DiscordButtonRect, LearnButtonRect, TutorialButtonRect, WebsiteButtonRect, NewsButtonRect;
+	ComputeExternalButtons(MainView, UseV2Layout, DiscordButtonRect, LearnButtonRect, TutorialButtonRect, WebsiteButtonRect, NewsButtonRect);
 	static CButtonContainer s_DiscordButton;
-	if(GameClient()->m_Menus.DoButton_Menu(&s_DiscordButton, Localize("Discord"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(GameClient()->m_Menus.DoButton_Menu(&s_DiscordButton, Localize("Discord"), 0, &DiscordButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
 		Client()->ViewLink(Localize("https://ddnet.org/discord"));
 	}
 
-	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
-	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_LearnButton;
-	if(GameClient()->m_Menus.DoButton_Menu(&s_LearnButton, Localize("Learn"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(GameClient()->m_Menus.DoButton_Menu(&s_LearnButton, Localize("Learn"), 0, &LearnButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
 		Client()->ViewLink(Localize("https://wiki.ddnet.org/"));
 	}
 
-	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
-	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_TutorialButton;
 	static float s_JoinTutorialTime = 0.0f;
-	if(GameClient()->m_Menus.DoButton_Menu(&s_TutorialButton, Localize("Tutorial"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) ||
+	if(GameClient()->m_Menus.DoButton_Menu(&s_TutorialButton, Localize("Tutorial"), 0, &TutorialButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) ||
 		(s_JoinTutorialTime != 0.0f && Client()->LocalTime() >= s_JoinTutorialTime))
 	{
 		// Activate internet tab before joining tutorial to make sure the server info
@@ -92,18 +192,14 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 		}
 	}
 
-	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
-	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_WebsiteButton;
-	if(GameClient()->m_Menus.DoButton_Menu(&s_WebsiteButton, Localize("Website"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(GameClient()->m_Menus.DoButton_Menu(&s_WebsiteButton, Localize("Website"), 0, &WebsiteButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
 		Client()->ViewLink("https://ddnet.org/");
 	}
 
-	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
-	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_NewsButton;
-	if(GameClient()->m_Menus.DoButton_Menu(&s_NewsButton, Localize("News"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_N))
+	if(GameClient()->m_Menus.DoButton_Menu(&s_NewsButton, Localize("News"), 0, &NewsButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_N))
 		NewPage = CMenus::PAGE_NEWS;
 
 	CUIRect Menu;
@@ -121,28 +217,30 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	{
 		constexpr int MenuButtonCount = 6;
 		CUIRect aMenuButtons[MenuButtonCount];
-		Menu.HSplitBottom(40.0f, &Menu, &aMenuButtons[0]);
-		Menu.HSplitBottom(100.0f, &Menu, nullptr);
-		Menu.HSplitBottom(40.0f, &Menu, &aMenuButtons[1]);
-		Menu.HSplitBottom(5.0f, &Menu, nullptr); // little space
-		Menu.HSplitBottom(40.0f, &Menu, &aMenuButtons[2]);
-
-		Menu.HSplitBottom(5.0f, &Menu, nullptr); // little space
-		Menu.HSplitBottom(40.0f, &Menu, &aMenuButtons[3]);
-
-		Menu.HSplitBottom(5.0f, &Menu, nullptr); // little space
-		Menu.HSplitBottom(40.0f, &Menu, &aMenuButtons[4]);
-
-		Menu.HSplitBottom(5.0f, &Menu, nullptr); // little space
-		Menu.HSplitBottom(40.0f, &Menu, &aMenuButtons[5]);
+		ComputeMainButtons(Menu, UseV2Layout, aMenuButtons);
 
 		static float s_aMenuButtonScale[MenuButtonCount] = {};
+		static float s_aMenuButtonTargetScale[MenuButtonCount] = {};
 		static bool s_MenuButtonScaleInit = false;
 		if(!s_MenuButtonScaleInit)
 		{
-			for(float &Scale : s_aMenuButtonScale)
-				Scale = 1.0f;
+			for(int i = 0; i < MenuButtonCount; ++i)
+			{
+				s_aMenuButtonScale[i] = 1.0f;
+				s_aMenuButtonTargetScale[i] = 1.0f;
+			}
 			s_MenuButtonScaleInit = true;
+		}
+
+		CUiV2AnimationRuntime *pAnimRuntime = nullptr;
+		if(UseV2Layout)
+		{
+			pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
+			for(int i = 0; i < MenuButtonCount; ++i)
+			{
+				const uint64_t NodeKey = StartMenuButtonScaleNodeKey(i);
+				s_aMenuButtonScale[i] = pAnimRuntime->GetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
+			}
 		}
 
 		const auto ScaleButtonRect = [](const CUIRect &Base, float Scale) {
@@ -190,7 +288,40 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 			{
 				Target = (i == HoveredIndex) ? HoverScale : OtherScale;
 			}
-			s_aMenuButtonScale[i] += (Target - s_aMenuButtonScale[i]) * Blend;
+
+			if(pAnimRuntime != nullptr)
+			{
+				const uint64_t NodeKey = StartMenuButtonScaleNodeKey(i);
+				const float CurrentScale = pAnimRuntime->GetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
+				const bool HasActiveTrack = pAnimRuntime->HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE);
+				const bool TargetChanged = std::abs(Target - s_aMenuButtonTargetScale[i]) > 0.0001f;
+				const bool NeedsSync = !HasActiveTrack && std::abs(Target - CurrentScale) > 0.0001f;
+				if(TargetChanged || NeedsSync)
+				{
+					// Ensure the animation starts from the currently shown scale.
+					// Without this, a missing runtime value can implicitly start from 0.
+					if(!HasActiveTrack)
+						pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::SCALE, CurrentScale);
+
+					SUiAnimRequest Request;
+					Request.m_NodeKey = NodeKey;
+					Request.m_Property = EUiAnimProperty::SCALE;
+					Request.m_Target = Target;
+					Request.m_Transition.m_DurationSec = 0.12f;
+					Request.m_Transition.m_DelaySec = 0.0f;
+					Request.m_Transition.m_Priority = 1;
+					Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+					Request.m_Transition.m_Easing = EEasing::EASE_OUT;
+					pAnimRuntime->RequestAnimation(Request);
+				}
+				s_aMenuButtonTargetScale[i] = Target;
+				s_aMenuButtonScale[i] = pAnimRuntime->GetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
+			}
+			else
+			{
+				s_aMenuButtonScale[i] += (Target - s_aMenuButtonScale[i]) * Blend;
+				s_aMenuButtonTargetScale[i] = s_aMenuButtonScale[i];
+			}
 		}
 
 		CUIRect ScaledButton = ScaleButtonRect(aMenuButtons[0], s_aMenuButtonScale[0]);

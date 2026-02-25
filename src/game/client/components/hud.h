@@ -9,6 +9,9 @@
 #include <generated/protocol.h>
 
 #include <game/client/component.h>
+#include <game/client/QmUi/QmLayout.h>
+
+#include <vector>
 
 struct SScoreInfo
 {
@@ -64,6 +67,58 @@ class CHud : public CComponent
 	ESpeedChange m_aLastPlayerSpeedChange[2];
 	STextContainerIndex m_aPlayerPositionContainers[2];
 	float m_aPlayerPrevPosition[2];
+	struct SHudTextInfoV2AnimState
+	{
+		float m_FpsTargetX = 0.0f;
+		float m_FpsTargetY = 0.0f;
+		float m_PredTargetX = 0.0f;
+		float m_PredTargetY = 0.0f;
+		float m_FpsTargetAlpha = 0.0f;
+		float m_PredTargetAlpha = 0.0f;
+		float m_LastFpsWidth = 0.0f;
+		float m_LastPredWidth = 0.0f;
+		char m_aLastFpsText[16] = {0};
+		char m_aLastPredText[64] = {0};
+		bool m_FpsPositionInitialized = false;
+		bool m_PredPositionInitialized = false;
+		bool m_AlphaInitialized = false;
+
+		void Reset()
+		{
+			m_FpsTargetX = 0.0f;
+			m_FpsTargetY = 0.0f;
+			m_PredTargetX = 0.0f;
+			m_PredTargetY = 0.0f;
+			m_FpsTargetAlpha = 0.0f;
+			m_PredTargetAlpha = 0.0f;
+			m_LastFpsWidth = 0.0f;
+			m_LastPredWidth = 0.0f;
+			m_aLastFpsText[0] = '\0';
+			m_aLastPredText[0] = '\0';
+			m_FpsPositionInitialized = false;
+			m_PredPositionInitialized = false;
+			m_AlphaInitialized = false;
+		}
+	};
+	SHudTextInfoV2AnimState m_TextInfoV2AnimState;
+	struct SHudLocalTimeV2AnimState
+	{
+		float m_TargetBoxX = 0.0f;
+		float m_TargetBoxW = 0.0f;
+		float m_TargetTextX = 0.0f;
+		bool m_Initialized = false;
+
+		void Reset()
+		{
+			m_TargetBoxX = 0.0f;
+			m_TargetBoxW = 0.0f;
+			m_TargetTextX = 0.0f;
+			m_Initialized = false;
+		}
+	};
+	SHudLocalTimeV2AnimState m_LocalTimeV2AnimState;
+	std::vector<SUiLayoutChild> m_vTextInfoLayoutChildrenScratch;
+	std::vector<SUiLayoutChild> m_vLocalTimeLayoutChildrenScratch;
 
 	void RenderCursor();
 

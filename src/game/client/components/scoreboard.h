@@ -10,6 +10,8 @@
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
 
+#include <array>
+
 class CScoreboard : public CComponent
 {
 	struct CScoreboardRenderState
@@ -40,11 +42,46 @@ class CScoreboard : public CComponent
 	float m_Visibility;
 	float m_OpenTime;
 	float m_AnimContentAlpha;
+	static constexpr int SOUND_MUTE_BUTTON_COUNT = 9;
 
 	IGraphics::CTextureHandle m_DeadTeeTexture;
 
 	std::optional<vec2> m_LastMousePos;
 	bool m_MouseUnlocked = false;
+
+	struct SSoundMuteButtonAnimState
+	{
+		std::array<float, SOUND_MUTE_BUTTON_COUNT> m_aTargetAlpha{};
+		std::array<float, SOUND_MUTE_BUTTON_COUNT> m_aTargetScale{};
+		std::array<float, SOUND_MUTE_BUTTON_COUNT> m_aTargetOffsetX{};
+		std::array<float, SOUND_MUTE_BUTTON_COUNT> m_aTargetReveal{};
+		bool m_Initialized = false;
+
+		void Reset()
+		{
+			m_aTargetAlpha.fill(0.0f);
+			m_aTargetScale.fill(1.0f);
+			m_aTargetOffsetX.fill(18.0f);
+			m_aTargetReveal.fill(0.0f);
+			m_Initialized = false;
+		}
+	} m_SoundMuteButtonAnimState;
+
+	struct SSoundMuteInfoAnimState
+	{
+		float m_TargetAlpha = 0.0f;
+		float m_TargetOffsetX = 14.0f;
+		bool m_Initialized = false;
+		int m_HoveredButton = -1;
+
+		void Reset()
+		{
+			m_TargetAlpha = 0.0f;
+			m_TargetOffsetX = 14.0f;
+			m_Initialized = false;
+			m_HoveredButton = -1;
+		}
+	} m_SoundMuteInfoAnimState;
 
 	void SetUiMousePos(vec2 Pos);
 

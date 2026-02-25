@@ -60,6 +60,13 @@ public:
 	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand);
 
 private:
+	uint64_t UiAnimNodeKey(const char *pScope, uint64_t Id = 0) const;
+	void TriggerUiSwitchAnimation(uint64_t NodeKey, float DurationSec = 0.18f);
+	float ReadUiSwitchAnimation(uint64_t NodeKey) const;
+	float UiSwitchAnimationAlpha(float Strength) const;
+	float ApplyUiSwitchOffset(CUIRect &View, float Strength, float Direction, bool Vertical, float RelativeOffset, float MinOffset, float MaxOffset) const;
+	float ResolveMenuTabAnimationValue(const void *pButtonId, bool Active, float DurationSec = 0.10f) const;
+
 	CUi::SColorPickerPopupContext m_ColorPickerPopupContext;
 	ColorHSLA DoLine_ColorPicker(CButtonContainer *pResetId, float LineSize, float LabelSize, float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, ColorRGBA DefaultColor, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, bool Alpha = false);
 	ColorHSLA DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha);
@@ -153,17 +160,9 @@ protected:
 	bool m_JoinTutorial = false;
 	bool m_CreateDefaultFavoriteCommunities = false;
 	bool m_ForceRefreshLanPage = false;
-	bool m_BrowserTabTransitionActive = false;
-	float m_BrowserTabTransitionProgress = 1.0f;
+	float m_MenuPageTransitionDirection = 0.0f;
+	float m_GamePageTransitionDirection = 0.0f;
 	float m_BrowserTabTransitionDirection = 0.0f;
-	struct SPageTransition
-	{
-		bool m_Active = false;
-		float m_Progress = 1.0f;
-		float m_Direction = 0.0f;
-	};
-	SPageTransition m_MenuPageTransition;
-	SPageTransition m_GamePageTransition;
 
 	char m_aNextServer[256];
 

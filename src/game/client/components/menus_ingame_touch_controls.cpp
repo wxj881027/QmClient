@@ -51,6 +51,10 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 	// Used to decide if need to update the Samplebutton.
 	bool Changed = false;
 	CUIRect Functional, LeftButton, MiddleButton, RightButton, EditBox, Block;
+	static bool s_EditElementTransitionInitialized = false;
+	static EElementType s_PrevEditElement = EElementType::LAYOUT;
+	static float s_EditElementTransitionDirection = 0.0f;
+	static const uint64_t s_EditElementSwitchNode = static_cast<uint64_t>(str_quickhash("touch_editor_element_switch"));
 	MainView.h = 600.0f - 40.0f - MainView.y;
 	MainView.Draw(CMenus::ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	MainView.VMargin(MAINMARGIN, &MainView);
@@ -78,16 +82,56 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 		m_EditElement = EElementType::BEHAVIOR;
 	}
 
+	if(!s_EditElementTransitionInitialized)
+	{
+		s_PrevEditElement = m_EditElement;
+		s_EditElementTransitionInitialized = true;
+	}
+	else if(m_EditElement != s_PrevEditElement)
+	{
+		s_EditElementTransitionDirection = static_cast<int>(m_EditElement) > static_cast<int>(s_PrevEditElement) ? 1.0f : -1.0f;
+		CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+		AnimRuntime.SetValue(s_EditElementSwitchNode, EUiAnimProperty::POS_X, 1.0f);
+		SUiAnimRequest Request;
+		Request.m_NodeKey = s_EditElementSwitchNode;
+		Request.m_Property = EUiAnimProperty::POS_X;
+		Request.m_Target = 0.0f;
+		Request.m_Transition.m_DurationSec = 0.18f;
+		Request.m_Transition.m_DelaySec = 0.0f;
+		Request.m_Transition.m_Priority = 1;
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Request.m_Transition.m_Easing = EEasing::EASE_OUT;
+		AnimRuntime.RequestAnimation(Request);
+		s_PrevEditElement = m_EditElement;
+	}
+	const CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const float TransitionStrength = std::clamp(AnimRuntime.GetValue(s_EditElementSwitchNode, EUiAnimProperty::POS_X, 0.0f), 0.0f, 1.0f);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_EditElementTransitionDirection != 0.0f;
+	const float TransitionAlpha = TransitionStrength * 0.12f;
+
 	// Edit blocks.
 	Block.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_B, 5.0f);
 	Block.HSplitTop(ROWGAP, nullptr, &Block);
 	Block.VMargin(SUBMARGIN, &Block);
+	CUIRect AnimatedBlock = Block;
+	const CUIRect BlockClip = Block;
+	if(TransitionActive)
+	{
+		Ui()->ClipEnable(&BlockClip);
+		AnimatedBlock.x += TransitionStrength * std::clamp(Block.w * 0.08f, 24.0f, 120.0f) * s_EditElementTransitionDirection;
+	}
 	switch(m_EditElement)
 	{
-	case EElementType::LAYOUT: Changed |= RenderLayoutSettingBlock(Block); break;
-	case EElementType::VISIBILITY: Changed |= RenderVisibilitySettingBlock(Block); break;
-	case EElementType::BEHAVIOR: Changed |= RenderBehaviorSettingBlock(Block); break;
+	case EElementType::LAYOUT: Changed |= RenderLayoutSettingBlock(AnimatedBlock); break;
+	case EElementType::VISIBILITY: Changed |= RenderVisibilitySettingBlock(AnimatedBlock); break;
+	case EElementType::BEHAVIOR: Changed |= RenderBehaviorSettingBlock(AnimatedBlock); break;
 	default: dbg_assert_failed("Unknown m_EditElement = %d.", (int)m_EditElement);
+	}
+	if(TransitionActive)
+	{
+		if(TransitionAlpha > 0.0f)
+			BlockClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+		Ui()->ClipDisable();
 	}
 
 	// Save & Cancel & Hint.

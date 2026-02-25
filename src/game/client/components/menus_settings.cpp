@@ -240,9 +240,8 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	CUIRect TabBar, PlayerTab, DummyTab, ChangeInfo, QuickSearch;
 	static bool s_PlayerTabTransitionInitialized = false;
 	static bool s_PrevDummy = false;
-	static bool s_PlayerTabTransitionActive = false;
-	static float s_PlayerTabTransitionProgress = 1.0f;
 	static float s_PlayerTabTransitionDirection = 0.0f;
+	const uint64_t PlayerTabSwitchNode = UiAnimNodeKey("settings_player_tab_switch");
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
 	TabBar.VSplitMid(&TabBar, &ChangeInfo, 20.f);
 	TabBar.VSplitMid(&PlayerTab, &DummyTab);
@@ -267,40 +266,15 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	}
 	else if(m_Dummy != s_PrevDummy)
 	{
-		s_PlayerTabTransitionActive = true;
-		s_PlayerTabTransitionProgress = 0.0f;
 		s_PlayerTabTransitionDirection = m_Dummy ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(PlayerTabSwitchNode, 0.18f);
 		s_PrevDummy = m_Dummy;
 	}
 
-	auto UpdatePlayerTabTransition = [&](float ViewWidth, float &OutAlpha) -> float {
-		if(!s_PlayerTabTransitionActive)
-		{
-			OutAlpha = 0.0f;
-			return 0.0f;
-		}
-		const float TransitionDuration = 0.18f;
-		s_PlayerTabTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(s_PlayerTabTransitionProgress >= 1.0f)
-		{
-			s_PlayerTabTransitionProgress = 1.0f;
-			s_PlayerTabTransitionActive = false;
-		}
-		const float Inv = 1.0f - s_PlayerTabTransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(ViewWidth * 0.08f, 24.0f, 120.0f);
-		OutAlpha = (1.0f - Ease) * 0.12f;
-		return (1.0f - Ease) * OffsetMax * s_PlayerTabTransitionDirection;
-	};
-
-	float TransitionAlpha = 0.0f;
-	float TransitionOffset = 0.0f;
-	bool TransitionActive = s_PlayerTabTransitionActive;
-	if(TransitionActive)
-	{
-		TransitionOffset = UpdatePlayerTabTransition(MainView.w, TransitionAlpha);
-		TransitionActive = s_PlayerTabTransitionActive || TransitionAlpha > 0.0f;
-	}
+	const float TransitionStrength = ReadUiSwitchAnimation(PlayerTabSwitchNode);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_PlayerTabTransitionDirection != 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
+	const float TransitionOffset = TransitionActive ? TransitionStrength * std::clamp(MainView.w * 0.08f, 24.0f, 120.0f) * s_PlayerTabTransitionDirection : 0.0f;
 
 	auto DrawAnimatedRow = [&](CUIRect Row, auto &&DrawRow) {
 		if(TransitionActive)
@@ -443,9 +417,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	CUIRect TabBar, PlayerTab, DummyTab, ChangeInfo;
 	static bool s_TeeTabTransitionInitialized = false;
 	static bool s_PrevTeeDummy = false;
-	static bool s_TeeTabTransitionActive = false;
-	static float s_TeeTabTransitionProgress = 1.0f;
 	static float s_TeeTabTransitionDirection = 0.0f;
+	const uint64_t TeeTabSwitchNode = UiAnimNodeKey("settings_tee_tab_switch");
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
 	TabBar.VSplitMid(&TabBar, &ChangeInfo, 20.f);
 	TabBar.VSplitMid(&PlayerTab, &DummyTab);
@@ -472,34 +445,15 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 	else if(m_Dummy != s_PrevTeeDummy)
 	{
-		s_TeeTabTransitionActive = true;
-		s_TeeTabTransitionProgress = 0.0f;
 		s_TeeTabTransitionDirection = m_Dummy ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(TeeTabSwitchNode, 0.18f);
 		s_PrevTeeDummy = m_Dummy;
 	}
 
-	auto UpdateTeeTabTransition = [&](float ViewWidth, float &OutAlpha) -> float {
-		if(!s_TeeTabTransitionActive)
-		{
-			OutAlpha = 0.0f;
-			return 0.0f;
-		}
-		const float TransitionDuration = 0.18f;
-		s_TeeTabTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(s_TeeTabTransitionProgress >= 1.0f)
-		{
-			s_TeeTabTransitionProgress = 1.0f;
-			s_TeeTabTransitionActive = false;
-		}
-		const float Inv = 1.0f - s_TeeTabTransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(ViewWidth * 0.08f, 24.0f, 120.0f);
-		OutAlpha = (1.0f - Ease) * 0.12f;
-		return (1.0f - Ease) * OffsetMax * s_TeeTabTransitionDirection;
-	};
-	float TransitionAlpha = 0.0f;
+	const float TransitionStrength = ReadUiSwitchAnimation(TeeTabSwitchNode);
+	float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	float TransitionOffset = 0.0f;
-	bool TransitionActive = s_TeeTabTransitionActive;
+	bool TransitionActive = TransitionStrength > 0.0f && s_TeeTabTransitionDirection != 0.0f;
 
 	if(Client()->State() == IClient::STATE_ONLINE &&
 		GameClient()->m_aNextChangeInfo[m_Dummy] > Client()->GameTick(m_Dummy))
@@ -628,13 +582,9 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	CUIRect YourSkinClip = YourSkin;
 	if(TransitionActive)
 	{
-		TransitionOffset = UpdateTeeTabTransition(YourSkin.w, TransitionAlpha);
-		TransitionActive = s_TeeTabTransitionActive || TransitionAlpha > 0.0f;
-		if(TransitionActive)
-		{
-			Ui()->ClipEnable(&YourSkinClip);
-			YourSkin.x += TransitionOffset;
-		}
+		TransitionOffset = TransitionStrength * std::clamp(YourSkin.w * 0.08f, 24.0f, 120.0f) * s_TeeTabTransitionDirection;
+		Ui()->ClipEnable(&YourSkinClip);
+		YourSkin.x += TransitionOffset;
 	}
 
 	// Player skin area
@@ -2107,9 +2057,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 
 	static bool s_SettingsTransitionInitialized = false;
 	static int s_PrevSettingsPage = SETTINGS_LANGUAGE;
-	static bool s_SettingsTransitionActive = false;
-	static float s_SettingsTransitionProgress = 1.0f;
 	static float s_SettingsTransitionDirection = 0.0f;
+	const uint64_t SettingsPageSwitchNode = UiAnimNodeKey("settings_main_page_switch");
 
 	// render background
 	CUIRect Button, TabBar, RestartBar;
@@ -2161,38 +2110,20 @@ void CMenus::RenderSettings(CUIRect MainView)
 	}
 	else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
 	{
-		s_SettingsTransitionActive = true;
-		s_SettingsTransitionProgress = 0.0f;
 		s_SettingsTransitionDirection = g_Config.m_UiSettingsPage > s_PrevSettingsPage ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(SettingsPageSwitchNode, 0.18f);
 		s_PrevSettingsPage = g_Config.m_UiSettingsPage;
 	}
 
-	auto ApplySettingsTransition = [&](CUIRect &View) -> float {
-		if(!s_SettingsTransitionActive)
-			return 0.0f;
-		const float TransitionDuration = 0.2f;
-		s_SettingsTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(s_SettingsTransitionProgress >= 1.0f)
-		{
-			s_SettingsTransitionProgress = 1.0f;
-			s_SettingsTransitionActive = false;
-		}
-		const float Inv = 1.0f - s_SettingsTransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(View.h * 0.08f, 24.0f, 90.0f);
-		const float Offset = (1.0f - Ease) * OffsetMax * s_SettingsTransitionDirection;
-		View.y += Offset;
-		return (1.0f - Ease) * 0.12f;
-	};
-
 	CUIRect ContentView = MainView;
-	const bool TransitionActive = s_SettingsTransitionActive;
+	const float TransitionStrength = ReadUiSwitchAnimation(SettingsPageSwitchNode);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_SettingsTransitionDirection != 0.0f;
 	const CUIRect ContentClip = MainView;
-	float TransitionAlpha = 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(TransitionActive)
 	{
-		TransitionAlpha = ApplySettingsTransition(ContentView);
 		Ui()->ClipEnable(&ContentClip);
+		ApplyUiSwitchOffset(ContentView, TransitionStrength, s_SettingsTransitionDirection, true, 0.08f, 24.0f, 90.0f);
 	}
 
 	if(g_Config.m_UiSettingsPage == SETTINGS_LANGUAGE)
@@ -2564,9 +2495,8 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	static int s_CurTab = 0;
 	static bool s_AppearanceTransitionInitialized = false;
 	static int s_PrevAppearanceTab = 0;
-	static bool s_AppearanceTransitionActive = false;
-	static float s_AppearanceTransitionProgress = 1.0f;
 	static float s_AppearanceTransitionDirection = 0.0f;
+	const uint64_t AppearanceTabSwitchNode = UiAnimNodeKey("settings_appearance_tab_switch");
 
 	CUIRect TabBar, LeftView, RightView, Button;
 
@@ -2610,38 +2540,20 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	}
 	else if(s_CurTab != s_PrevAppearanceTab)
 	{
-		s_AppearanceTransitionActive = true;
-		s_AppearanceTransitionProgress = 0.0f;
 		s_AppearanceTransitionDirection = s_CurTab > s_PrevAppearanceTab ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(AppearanceTabSwitchNode, 0.18f);
 		s_PrevAppearanceTab = s_CurTab;
 	}
 
-	auto ApplyAppearanceTabTransition = [&](CUIRect &View) -> float {
-		if(!s_AppearanceTransitionActive)
-			return 0.0f;
-		const float TransitionDuration = 0.18f;
-		s_AppearanceTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(s_AppearanceTransitionProgress >= 1.0f)
-		{
-			s_AppearanceTransitionProgress = 1.0f;
-			s_AppearanceTransitionActive = false;
-		}
-		const float Inv = 1.0f - s_AppearanceTransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
-		const float Offset = (1.0f - Ease) * OffsetMax * s_AppearanceTransitionDirection;
-		View.x += Offset;
-		return (1.0f - Ease) * 0.12f;
-	};
-
 	CUIRect ContentView = MainView;
-	const bool TransitionActive = s_AppearanceTransitionActive;
+	const float TransitionStrength = ReadUiSwitchAnimation(AppearanceTabSwitchNode);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_AppearanceTransitionDirection != 0.0f;
 	const CUIRect ContentClip = MainView;
-	float TransitionAlpha = 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(TransitionActive)
 	{
-		TransitionAlpha = ApplyAppearanceTabTransition(ContentView);
 		Ui()->ClipEnable(&ContentClip);
+		ApplyUiSwitchOffset(ContentView, TransitionStrength, s_AppearanceTransitionDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
 	if(s_CurTab == APPEARANCE_TAB_HUD)

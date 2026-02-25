@@ -557,9 +557,8 @@ void CMenus::RenderSettingsTClient(CUIRect MainView)
 	static int s_CurCustomTab = 0;
 	static bool s_CustomTabTransitionInitialized = false;
 	static int s_PrevCustomTab = 0;
-	static bool s_CustomTabTransitionActive = false;
-	static float s_CustomTabTransitionProgress = 1.0f;
 	static float s_CustomTabTransitionDirection = 0.0f;
+	const uint64_t TClientTabSwitchNode = UiAnimNodeKey("settings_tclient_tab_switch");
 
 	CUIRect TabBar, Button;
 	int TabCount = NUMBER_OF_TCLIENT_TABS;
@@ -605,38 +604,20 @@ void CMenus::RenderSettingsTClient(CUIRect MainView)
 	}
 	else if(s_CurCustomTab != s_PrevCustomTab)
 	{
-		s_CustomTabTransitionActive = true;
-		s_CustomTabTransitionProgress = 0.0f;
 		s_CustomTabTransitionDirection = s_CurCustomTab > s_PrevCustomTab ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(TClientTabSwitchNode, 0.18f);
 		s_PrevCustomTab = s_CurCustomTab;
 	}
 
-	auto ApplyCustomTabTransition = [&](CUIRect &View) -> float {
-		if(!s_CustomTabTransitionActive)
-			return 0.0f;
-		const float TransitionDuration = 0.18f;
-		s_CustomTabTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(s_CustomTabTransitionProgress >= 1.0f)
-		{
-			s_CustomTabTransitionProgress = 1.0f;
-			s_CustomTabTransitionActive = false;
-		}
-		const float Inv = 1.0f - s_CustomTabTransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
-		const float Offset = (1.0f - Ease) * OffsetMax * s_CustomTabTransitionDirection;
-		View.x += Offset;
-		return (1.0f - Ease) * 0.12f;
-	};
-
 	CUIRect ContentView = MainView;
-	const bool TransitionActive = s_CustomTabTransitionActive;
+	const float TransitionStrength = ReadUiSwitchAnimation(TClientTabSwitchNode);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_CustomTabTransitionDirection != 0.0f;
 	const CUIRect ContentClip = MainView;
-	float TransitionAlpha = 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(TransitionActive)
 	{
-		TransitionAlpha = ApplyCustomTabTransition(ContentView);
 		Ui()->ClipEnable(&ContentClip);
+		ApplyUiSwitchOffset(ContentView, TransitionStrength, s_CustomTabTransitionDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
 	if(s_CurCustomTab == TCLIENT_TAB_SETTINGS)

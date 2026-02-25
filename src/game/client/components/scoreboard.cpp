@@ -18,13 +18,83 @@
 #include <game/client/components/player_points.h>
 #include <game/client/components/statboard.h>
 #include <game/client/gameclient.h>
+#include <game/client/QmUi/QmAnim.h>
+#include <game/client/QmUi/QmLayout.h>
+#include <game/client/QmUi/QmLegacy.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <limits>
+#include <vector>
 
 static float ScoreboardEase(float t)
 {
 	static const CCubicBezier s_Bezier = CCubicBezier::With(0.0f, 0.0f, 0.0f, 1.0f);
 	return s_Bezier.Evaluate(std::clamp(t, 0.0f, 1.0f));
+}
+
+namespace
+{
+float ResolveAnimatedValue(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, EUiAnimProperty Property, float Target, float &LastTarget, float DurationSec)
+{
+	constexpr float Epsilon = 0.001f;
+	const float Current = AnimRuntime.GetValue(NodeKey, Property, Target);
+	const bool TargetChanged = std::abs(Target - LastTarget) > Epsilon;
+	const bool NeedsSync = !AnimRuntime.HasActiveAnimation(NodeKey, Property) && std::abs(Target - Current) > Epsilon;
+
+	if(TargetChanged || NeedsSync)
+	{
+		SUiAnimRequest Request;
+		Request.m_NodeKey = NodeKey;
+		Request.m_Property = Property;
+		Request.m_Target = Target;
+		Request.m_Transition.m_DurationSec = DurationSec;
+		Request.m_Transition.m_DelaySec = 0.0f;
+		Request.m_Transition.m_Priority = 1;
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Request.m_Transition.m_Easing = EEasing::EASE_OUT;
+		AnimRuntime.RequestAnimation(Request);
+		LastTarget = Target;
+	}
+
+	return AnimRuntime.GetValue(NodeKey, Property, Target);
+}
+
+uint64_t SoundMuteButtonNodeKey(int Index)
+{
+	static constexpr uint64_t NodeBase = 0x73636F72655F6D00ULL; // "score_m"
+	return NodeBase + static_cast<uint64_t>(Index);
+}
+
+uint64_t SoundMuteInfoNodeKey()
+{
+	static constexpr uint64_t NodeKey = 0x73636F72655F694EULL; // "score_iN"
+	return NodeKey;
+}
+
+struct SSoundMuteButtonDef
+{
+	int *m_pConfig;
+	const char *m_pIcon;
+	const char *m_pTitle;
+	const char *m_pDescription;
+};
+
+static const SSoundMuteButtonDef gs_aSoundMuteButtonDefs[] = {
+	{&g_Config.m_ClSndMuteWeapon, FontIcons::FONT_ICON_CIRCLE, "武器音效", "屏蔽主要武器发射与命中相关声音。"},
+	{&g_Config.m_ClSndMuteWeaponSwitch, FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, "武器切换音效", "屏蔽武器切换及相关切换提示音。"},
+	{&g_Config.m_ClSndMuteWeaponNoAmmo, FontIcons::FONT_ICON_TRIANGLE_EXCLAMATION, "无弹药提示音", "屏蔽武器无弹药时的提示音。"},
+	{&g_Config.m_ClSndMuteHook, FontIcons::FONT_ICON_ARROWS_ROTATE, "钩子音效", "屏蔽钩子发射、收回等相关声音。"},
+	{&g_Config.m_ClSndMuteMovement, FontIcons::FONT_ICON_ARROWS_UP_DOWN, "移动音效", "屏蔽行走与跳跃等移动相关声音。"},
+	{&g_Config.m_ClSndMutePlayerState, FontIcons::FONT_ICON_HEART_CRACK, "玩家状态音效", "屏蔽玩家状态变化相关声音。"},
+	{&g_Config.m_ClSndMutePickup, FontIcons::FONT_ICON_SQUARE_PLUS, "拾取音效", "屏蔽道具与武器拾取相关声音。"},
+	{&g_Config.m_ClSndMuteFlag, FontIcons::FONT_ICON_FLAG_CHECKERED, "旗帜音效", "屏蔽 CTF 旗帜事件相关声音。"},
+	{&g_Config.m_ClSndMuteMapSound, FontIcons::FONT_ICON_MAP, "地图音效", "屏蔽地图环境与脚本触发音效。"},
+};
+static_assert((sizeof(gs_aSoundMuteButtonDefs) / sizeof(gs_aSoundMuteButtonDefs[0])) == 9, "Sound mute button count mismatch");
 }
 
 CScoreboard::CScoreboard()
@@ -108,6 +178,8 @@ void CScoreboard::OnReset()
 	m_AnimContentAlpha = 0.0f;
 	m_MouseUnlocked = false;
 	m_LastMousePos = std::nullopt;
+	m_SoundMuteButtonAnimState.Reset();
+	m_SoundMuteInfoAnimState.Reset();
 }
 
 void CScoreboard::OnRelease()
@@ -116,6 +188,8 @@ void CScoreboard::OnRelease()
 	m_Visibility = 0.0f;
 	m_OpenTime = 0.0f;
 	m_AnimContentAlpha = 0.0f;
+	m_SoundMuteButtonAnimState.Reset();
+	m_SoundMuteInfoAnimState.Reset();
 
 	if(m_MouseUnlocked)
 	{
@@ -194,16 +268,34 @@ void CScoreboard::RenderTitle(CUIRect TitleBar, int Team, const char *pTitle)
 	const float ScoreTextWidth = TextRender()->TextWidth(TitleFontSize, aScore);
 
 	TitleBar.VMargin(10.0f, &TitleBar);
-	CUIRect TitleLabel, ScoreLabel;
-	if(Team == TEAM_RED)
+	CUIRect TitleLabel;
+	CUIRect ScoreLabel;
 	{
-		TitleBar.VSplitRight(ScoreTextWidth, &TitleLabel, &ScoreLabel);
-		TitleLabel.VSplitRight(5.0f, &TitleLabel, nullptr);
-	}
-	else
-	{
-		TitleBar.VSplitLeft(ScoreTextWidth, &ScoreLabel, &TitleLabel);
-		TitleLabel.VSplitLeft(5.0f, nullptr, &TitleLabel);
+		CUiV2LayoutEngine LayoutEngine;
+		SUiStyle TitleRowStyle;
+		TitleRowStyle.m_Axis = EUiAxis::ROW;
+		TitleRowStyle.m_Gap = 5.0f;
+		TitleRowStyle.m_AlignItems = EUiAlign::STRETCH;
+		TitleRowStyle.m_JustifyContent = EUiAlign::START;
+		static thread_local std::vector<SUiLayoutChild> s_vTitleChildren;
+		std::vector<SUiLayoutChild> &vTitleChildren = s_vTitleChildren;
+		vTitleChildren.assign(2, SUiLayoutChild{});
+		if(Team == TEAM_RED)
+		{
+			vTitleChildren[0].m_Style.m_Width = SUiLength::Flex(1.0f);
+			vTitleChildren[1].m_Style.m_Width = SUiLength::Px(ScoreTextWidth);
+			LayoutEngine.ComputeChildren(TitleRowStyle, CUiV2LegacyAdapter::FromCUIRect(TitleBar), vTitleChildren);
+			TitleLabel = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[0].m_Box);
+			ScoreLabel = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[1].m_Box);
+		}
+		else
+		{
+			vTitleChildren[0].m_Style.m_Width = SUiLength::Px(ScoreTextWidth);
+			vTitleChildren[1].m_Style.m_Width = SUiLength::Flex(1.0f);
+			LayoutEngine.ComputeChildren(TitleRowStyle, CUiV2LegacyAdapter::FromCUIRect(TitleBar), vTitleChildren);
+			ScoreLabel = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[0].m_Box);
+			TitleLabel = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[1].m_Box);
+		}
 	}
 
 	{
@@ -261,10 +353,20 @@ void CScoreboard::RenderSpectators(CUIRect Spectators)
 	CUIRect MediaPanel;
 	if(ShowMediaControls)
 	{
-		const float Gap = 5.0f;
-		const float SplitWidth = (Spectators.w - Gap) * 0.5f;
-		Spectators.VSplitLeft(SplitWidth, &SpectatorPanel, &MediaPanel);
-		MediaPanel.VSplitLeft(Gap, nullptr, &MediaPanel);
+		CUiV2LayoutEngine LayoutEngine;
+		SUiStyle PanelStyle;
+		PanelStyle.m_Axis = EUiAxis::ROW;
+		PanelStyle.m_Gap = 5.0f;
+		PanelStyle.m_AlignItems = EUiAlign::STRETCH;
+		PanelStyle.m_JustifyContent = EUiAlign::START;
+		static thread_local std::vector<SUiLayoutChild> s_vPanels;
+		std::vector<SUiLayoutChild> &vPanels = s_vPanels;
+		vPanels.assign(2, SUiLayoutChild{});
+		vPanels[0].m_Style.m_Width = SUiLength::Flex(1.0f);
+		vPanels[1].m_Style.m_Width = SUiLength::Flex(1.0f);
+		LayoutEngine.ComputeChildren(PanelStyle, CUiV2LegacyAdapter::FromCUIRect(Spectators), vPanels);
+		SpectatorPanel = CUiV2LegacyAdapter::ToCUIRect(vPanels[0].m_Box);
+		MediaPanel = CUiV2LegacyAdapter::ToCUIRect(vPanels[1].m_Box);
 	}
 
 	const float CornerRadius = 7.5f;
@@ -429,11 +531,24 @@ void CScoreboard::RenderMediaControls(CUIRect Controls)
 
 	CUIRect PrevButton, PlayButton, NextButton;
 	const float Spacing = 5.0f;
-	Row.VSplitLeft((Row.w - 2.0f * Spacing) / 3.0f, &PrevButton, &Row);
-	Row.VSplitLeft(Spacing, nullptr, &Row);
-	Row.VSplitLeft((Row.w - Spacing) / 2.0f, &PlayButton, &Row);
-	Row.VSplitLeft(Spacing, nullptr, &Row);
-	NextButton = Row;
+	{
+		CUiV2LayoutEngine LayoutEngine;
+		SUiStyle ButtonRowStyle;
+		ButtonRowStyle.m_Axis = EUiAxis::ROW;
+		ButtonRowStyle.m_Gap = Spacing;
+		ButtonRowStyle.m_AlignItems = EUiAlign::STRETCH;
+		ButtonRowStyle.m_JustifyContent = EUiAlign::START;
+		static thread_local std::vector<SUiLayoutChild> s_vButtons;
+		std::vector<SUiLayoutChild> &vButtons = s_vButtons;
+		vButtons.assign(3, SUiLayoutChild{});
+		vButtons[0].m_Style.m_Width = SUiLength::Flex(1.0f);
+		vButtons[1].m_Style.m_Width = SUiLength::Flex(1.0f);
+		vButtons[2].m_Style.m_Width = SUiLength::Flex(1.0f);
+		LayoutEngine.ComputeChildren(ButtonRowStyle, CUiV2LegacyAdapter::FromCUIRect(Row), vButtons);
+		PrevButton = CUiV2LegacyAdapter::ToCUIRect(vButtons[0].m_Box);
+		PlayButton = CUiV2LegacyAdapter::ToCUIRect(vButtons[1].m_Box);
+		NextButton = CUiV2LegacyAdapter::ToCUIRect(vButtons[2].m_Box);
+	}
 
 	static CButtonContainer s_SmtcPrevButton;
 	const float PrevButtonAlpha = 0.5f * Ui()->ButtonColorMul(&s_SmtcPrevButton) * ContentAlpha;
@@ -472,58 +587,242 @@ void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
 	};
 	RestoreTextColors();
 
-	struct SSoundMuteButton
-	{
-		int *m_pConfig;
-		const char *m_pIcon;
-		const char *m_pLabel;
-		const char *m_pLabelUnmute;
-	};
+	static CButtonContainer s_aButtons[SOUND_MUTE_BUTTON_COUNT];
+	std::array<CUIRect, SOUND_MUTE_BUTTON_COUNT> aAnimatedRects{};
 
-	static CButtonContainer s_aButtons[9];
-	static const SSoundMuteButton s_aButtonDefs[] = {
-		{&g_Config.m_ClSndMuteWeapon, FontIcons::FONT_ICON_CIRCLE, "禁用武器音效", "启用武器音效"},
-		{&g_Config.m_ClSndMuteWeaponSwitch, FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, "关闭武器切换音效等", "启用武器切换音效等"},
-		{&g_Config.m_ClSndMuteWeaponNoAmmo, FontIcons::FONT_ICON_TRIANGLE_EXCLAMATION, "禁用武器无弹药音效", "启用武器无弹药提示音"},
-		{&g_Config.m_ClSndMuteHook, FontIcons::FONT_ICON_ARROWS_ROTATE, "禁用钩子声", "启用钩子声"},
-		{&g_Config.m_ClSndMuteMovement, FontIcons::FONT_ICON_ARROWS_UP_DOWN, "禁用移动声音", "启用移动声音"},
-		{&g_Config.m_ClSndMutePlayerState, FontIcons::FONT_ICON_HEART_CRACK, "禁用玩家状态音效", "启用玩家状态音效"},
-		{&g_Config.m_ClSndMutePickup, FontIcons::FONT_ICON_SQUARE_PLUS, "禁用拾取声音", "启用拾取声音"},
-		{&g_Config.m_ClSndMuteFlag, FontIcons::FONT_ICON_FLAG_CHECKERED, "禁用CTF旗帜音效", "启用CTF旗帜音效"},
-		{&g_Config.m_ClSndMuteMapSound, FontIcons::FONT_ICON_MAP, "禁用地图音效", "启用地图音效"},
-	};
-	const int NumButtons = (int)(sizeof(s_aButtonDefs) / sizeof(s_aButtonDefs[0]));
+	const int NumButtons = static_cast<int>(sizeof(gs_aSoundMuteButtonDefs) / sizeof(gs_aSoundMuteButtonDefs[0]));
+	dbg_assert(NumButtons == SOUND_MUTE_BUTTON_COUNT, "Sound mute button state mismatch");
 
-	const float ButtonSize = 22.0f;
+	const float ButtonSize = 28.0f;
 	const float Gap = 4.0f;
-	const float Padding = 4.0f;
-	const float BarWidth = ButtonSize + Padding * 2.0f;
-	const float BarHeight = NumButtons * ButtonSize + (NumButtons - 1) * Gap + Padding * 2.0f;
-	float BarX = ScoreboardRect.x - BarWidth - 6.0f;
-	if(BarX < 0.0f)
-		BarX = 0.0f;
-	CUIRect Bar = {BarX, ScoreboardRect.y + (ScoreboardRect.h - BarHeight) * 0.5f, BarWidth, BarHeight};
+	const float ColumnHeight = NumButtons * ButtonSize + (NumButtons - 1) * Gap;
+	const float ColumnX = maximum(0.0f, ScoreboardRect.x - ButtonSize - 6.0f);
+	const float ColumnY = ScoreboardRect.y + (ScoreboardRect.h - ColumnHeight) * 0.5f;
+	const CUIRect *pScreen = Ui()->Screen();
 
-	Bar.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f * ContentAlpha), IGraphics::CORNER_ALL, 6.0f);
-	CUIRect Content;
-	Bar.Margin(Padding, &Content);
+	const float MouseX = Ui()->MouseX();
+	const float MouseY = Ui()->MouseY();
+	const float ActivationLeft = maximum(0.0f, ScoreboardRect.x - 70.0f);
+	const bool InActivationZone = m_MouseUnlocked &&
+				      MouseX >= ActivationLeft && MouseX <= ScoreboardRect.x &&
+				      MouseY >= ScoreboardRect.y && MouseY <= ScoreboardRect.y + ScoreboardRect.h;
 
+	int NearestIndex = -1;
+	if(InActivationZone)
+	{
+		float BestDistanceSq = std::numeric_limits<float>::max();
+		for(int i = 0; i < NumButtons; ++i)
+		{
+			const float CenterX = ColumnX + ButtonSize * 0.5f;
+			const float CenterY = ColumnY + i * (ButtonSize + Gap) + ButtonSize * 0.5f;
+			const float Dx = MouseX - CenterX;
+			const float Dy = MouseY - CenterY;
+			const float DistanceSq = Dx * Dx + Dy * Dy;
+			if(DistanceSq < BestDistanceSq)
+			{
+				BestDistanceSq = DistanceSq;
+				NearestIndex = i;
+			}
+		}
+	}
+
+	CUiV2AnimationRuntime *pAnimRuntime = nullptr;
+	if(GameClient()->UiRuntimeV2()->Enabled())
+		pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
+
+	if(pAnimRuntime != nullptr && !m_SoundMuteButtonAnimState.m_Initialized)
+	{
+		for(int i = 0; i < NumButtons; ++i)
+		{
+			const uint64_t NodeKey = SoundMuteButtonNodeKey(i);
+			pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+			pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
+			pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::POS_X, 18.0f);
+			pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+			m_SoundMuteButtonAnimState.m_aTargetAlpha[i] = 0.0f;
+			m_SoundMuteButtonAnimState.m_aTargetScale[i] = 1.0f;
+			m_SoundMuteButtonAnimState.m_aTargetOffsetX[i] = 18.0f;
+			m_SoundMuteButtonAnimState.m_aTargetReveal[i] = 0.0f;
+		}
+		m_SoundMuteButtonAnimState.m_Initialized = true;
+	}
+
+	if(pAnimRuntime != nullptr && !m_SoundMuteInfoAnimState.m_Initialized)
+	{
+		pAnimRuntime->SetValue(SoundMuteInfoNodeKey(), EUiAnimProperty::ALPHA, 0.0f);
+		pAnimRuntime->SetValue(SoundMuteInfoNodeKey(), EUiAnimProperty::POS_X, 14.0f);
+		m_SoundMuteInfoAnimState.m_TargetAlpha = 0.0f;
+		m_SoundMuteInfoAnimState.m_TargetOffsetX = 14.0f;
+		m_SoundMuteInfoAnimState.m_Initialized = true;
+	}
+
+	int HoveredNearestIndex = -1;
+	const float ClipWidth = ScoreboardRect.x - pScreen->x;
+	const bool ClipEnabled = ClipWidth > 0.0f;
+	CUIRect ClipRect = *pScreen;
+	if(ClipEnabled)
+	{
+		ClipRect.w = ClipWidth;
+		Ui()->ClipEnable(&ClipRect);
+	}
 	for(int i = 0; i < NumButtons; ++i)
 	{
-		CUIRect Button;
-		Content.HSplitTop(ButtonSize, &Button, &Content);
-		if(i + 1 < NumButtons)
-			Content.HSplitTop(Gap, nullptr, &Content);
+		const bool IsNearest = InActivationZone && i == NearestIndex;
+		const bool IsNeighbor = InActivationZone && (i == NearestIndex - 1 || i == NearestIndex + 1);
+		const bool IsOuterNeighbor = InActivationZone && (i == NearestIndex - 2 || i == NearestIndex + 2);
 
-		const bool Active = *s_aButtonDefs[i].m_pConfig != 0;
-		const float ButtonAlpha = (Active ? 0.1f : 0.5f) * Ui()->ButtonColorMul(&s_aButtons[i]) * ContentAlpha;
-		if(Ui()->DoButton_FontIcon(&s_aButtons[i], s_aButtonDefs[i].m_pIcon, Active, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, ColorRGBA(1.0f, 1.0f, 1.0f, ButtonAlpha)))
-			*s_aButtonDefs[i].m_pConfig ^= 1;
+		float TargetAlpha = 0.0f;
+		float TargetScale = 1.0f;
+		float TargetOffsetX = 18.0f;
+		float TargetYOffset = 0.0f;
+
+		if(IsNearest)
+		{
+			TargetAlpha = 1.0f;
+			TargetScale = 1.0f;
+			TargetOffsetX = 0.0f;
+			TargetYOffset = -7.0f;
+		}
+		else if(IsNeighbor)
+		{
+			TargetAlpha = 0.65f;
+			TargetScale = 1.0f;
+			TargetOffsetX = 10.0f;
+			TargetYOffset = -4.0f;
+		}
+		else if(IsOuterNeighbor)
+		{
+			TargetAlpha = 0.35f;
+			TargetScale = 1.0f;
+			TargetOffsetX = 16.0f;
+			TargetYOffset = -1.0f;
+		}
+
+		float Alpha = TargetAlpha;
+		float Scale = TargetScale;
+		float OffsetX = TargetOffsetX;
+		float YOffset = TargetYOffset;
+		if(pAnimRuntime != nullptr)
+		{
+			const uint64_t NodeKey = SoundMuteButtonNodeKey(i);
+			Alpha = ResolveAnimatedValue(*pAnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, m_SoundMuteButtonAnimState.m_aTargetAlpha[i], 0.12f);
+			Scale = ResolveAnimatedValue(*pAnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, m_SoundMuteButtonAnimState.m_aTargetScale[i], 0.12f);
+			OffsetX = ResolveAnimatedValue(*pAnimRuntime, NodeKey, EUiAnimProperty::POS_X, TargetOffsetX, m_SoundMuteButtonAnimState.m_aTargetOffsetX[i], 0.12f);
+			YOffset = ResolveAnimatedValue(*pAnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetYOffset, m_SoundMuteButtonAnimState.m_aTargetReveal[i], 0.12f);
+		}
+		else
+		{
+			m_SoundMuteButtonAnimState.m_aTargetAlpha[i] = TargetAlpha;
+			m_SoundMuteButtonAnimState.m_aTargetScale[i] = TargetScale;
+			m_SoundMuteButtonAnimState.m_aTargetOffsetX[i] = TargetOffsetX;
+			m_SoundMuteButtonAnimState.m_aTargetReveal[i] = TargetYOffset;
+		}
+
+		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
+		Scale = 1.0f;
+		if(Alpha <= 0.01f || Scale <= 0.01f)
+			continue;
+
+		CUIRect Button = {ColumnX, ColumnY + i * (ButtonSize + Gap), ButtonSize, ButtonSize};
+		Button.x += OffsetX;
+		Button.y += YOffset;
+		const float ScaledSize = ButtonSize;
+		Button.w = ScaledSize;
+		Button.h = ScaledSize;
+
+		if(Button.w <= 1.0f || Button.h <= 1.0f)
+			continue;
+
+		aAnimatedRects[i] = Button;
+
+		const bool Active = *gs_aSoundMuteButtonDefs[i].m_pConfig != 0;
+		const bool Clickable = IsNearest;
+		const float RenderAlpha = Alpha * ContentAlpha;
+		const ColorRGBA ButtonColor = Active ?
+						      ColorRGBA(1.0f, 0.32f, 0.32f, 0.95f * RenderAlpha) :
+						      ColorRGBA(0.82f, 0.88f, 0.96f, 0.45f * RenderAlpha);
+		if(Ui()->DoButton_FontIcon(&s_aButtons[i], gs_aSoundMuteButtonDefs[i].m_pIcon, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, ButtonColor) && Clickable)
+			*gs_aSoundMuteButtonDefs[i].m_pConfig ^= 1;
 		RestoreTextColors();
 
-		const char *pLabel = Active ? s_aButtonDefs[i].m_pLabelUnmute : s_aButtonDefs[i].m_pLabel;
-		GameClient()->m_Tooltips.DoToolTip(&s_aButtons[i], &Button, Localize(pLabel));
+		if(Clickable && Ui()->HotItem() == &s_aButtons[i])
+			HoveredNearestIndex = i;
 	}
+	if(ClipEnabled)
+		Ui()->ClipDisable();
+
+	const float InfoTargetAlpha = HoveredNearestIndex >= 0 ? 1.0f : 0.0f;
+	const float InfoTargetOffsetX = HoveredNearestIndex >= 0 ? 0.0f : 14.0f;
+	float InfoAlpha = InfoTargetAlpha;
+	float InfoOffsetX = InfoTargetOffsetX;
+	if(pAnimRuntime != nullptr)
+	{
+		InfoAlpha = ResolveAnimatedValue(*pAnimRuntime, SoundMuteInfoNodeKey(), EUiAnimProperty::ALPHA, InfoTargetAlpha, m_SoundMuteInfoAnimState.m_TargetAlpha, 0.10f);
+		InfoOffsetX = ResolveAnimatedValue(*pAnimRuntime, SoundMuteInfoNodeKey(), EUiAnimProperty::POS_X, InfoTargetOffsetX, m_SoundMuteInfoAnimState.m_TargetOffsetX, 0.10f);
+	}
+	else
+	{
+		m_SoundMuteInfoAnimState.m_TargetAlpha = InfoTargetAlpha;
+		m_SoundMuteInfoAnimState.m_TargetOffsetX = InfoTargetOffsetX;
+	}
+	InfoAlpha = std::clamp(InfoAlpha, 0.0f, 1.0f);
+
+	if(HoveredNearestIndex >= 0)
+		m_SoundMuteInfoAnimState.m_HoveredButton = HoveredNearestIndex;
+	else if(InfoAlpha <= 0.01f)
+		m_SoundMuteInfoAnimState.m_HoveredButton = -1;
+
+	const int InfoIndex = HoveredNearestIndex >= 0 ? HoveredNearestIndex : m_SoundMuteInfoAnimState.m_HoveredButton;
+	if(InfoIndex < 0 || InfoAlpha <= 0.01f)
+		return;
+
+	CUIRect Anchor = aAnimatedRects[InfoIndex];
+	if(Anchor.w <= 0.0f || Anchor.h <= 0.0f)
+		Anchor = {ColumnX, ColumnY + InfoIndex * (ButtonSize + Gap), ButtonSize, ButtonSize};
+
+	const char *pTitle = gs_aSoundMuteButtonDefs[InfoIndex].m_pTitle;
+	const char *pDescription = gs_aSoundMuteButtonDefs[InfoIndex].m_pDescription;
+	const float TitleFontSize = 10.0f;
+	const float BodyFontSize = 9.0f;
+	const float Padding = 6.0f;
+	const float InnerGap = 2.0f;
+	const float InfoTextWidth = maximum(TextRender()->TextWidth(TitleFontSize, pTitle), TextRender()->TextWidth(BodyFontSize, pDescription));
+	const float InfoWidth = std::clamp(InfoTextWidth + Padding * 2.0f, 170.0f, 360.0f);
+	const float InfoHeight = Padding * 2.0f + TitleFontSize + InnerGap + BodyFontSize + 2.0f;
+
+	CUIRect InfoRect = {Anchor.x + Anchor.w + 8.0f, Anchor.y + (Anchor.h - InfoHeight) * 0.5f, InfoWidth, InfoHeight};
+	InfoRect.x += InfoOffsetX;
+	const float ScreenMargin = 5.0f;
+	if(InfoRect.x + InfoRect.w + ScreenMargin > pScreen->w)
+		InfoRect.x = Anchor.x - InfoRect.w - 8.0f;
+	InfoRect.x = std::clamp(InfoRect.x, ScreenMargin, pScreen->w - InfoRect.w - ScreenMargin);
+	InfoRect.y = std::clamp(InfoRect.y, ScreenMargin, pScreen->h - InfoRect.h - ScreenMargin);
+
+	InfoRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.75f * InfoAlpha * ContentAlpha), IGraphics::CORNER_ALL, 6.0f);
+
+	CUIRect InfoContent = InfoRect;
+	InfoContent.Margin(Padding, &InfoContent);
+	CUIRect TitleRect, BodyRect;
+	InfoContent.HSplitTop(TitleFontSize + 1.0f, &TitleRect, &BodyRect);
+	BodyRect.HSplitTop(InnerGap, nullptr, &BodyRect);
+
+	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PrevOutlineColor = TextRender()->GetTextOutlineColor();
+	TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha * InfoAlpha));
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha * InfoAlpha));
+
+	SLabelProperties TitleProps;
+	TitleProps.m_MaxWidth = TitleRect.w;
+	TitleProps.m_EllipsisAtEnd = true;
+	Ui()->DoLabel(&TitleRect, pTitle, TitleFontSize, TEXTALIGN_ML, TitleProps);
+
+	SLabelProperties BodyProps;
+	BodyProps.m_MaxWidth = BodyRect.w;
+	BodyProps.m_EllipsisAtEnd = true;
+	Ui()->DoLabel(&BodyRect, pDescription, BodyFontSize, TEXTALIGN_ML, BodyProps);
+
+	TextRender()->TextColor(PrevTextColor);
+	TextRender()->TextOutlineColor(PrevOutlineColor);
 }
 
 void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, CScoreboardRenderState &State)
@@ -998,16 +1297,30 @@ void CScoreboard::RenderRecordingNotification(float x)
 
 	CUIRect Rect = {x, 0.0f, TextRender()->TextWidth(FontSize, aBuf) + 30.0f, 25.0f};
 	Rect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f * ContentAlpha), IGraphics::CORNER_B, 7.5f);
-	Rect.VSplitLeft(10.0f, nullptr, &Rect);
-	Rect.VSplitRight(5.0f, &Rect, nullptr);
-
 	CUIRect Circle;
-	Rect.VSplitLeft(10.0f, &Circle, &Rect);
+	CUIRect TextRect;
+	{
+		CUiV2LayoutEngine LayoutEngine;
+		SUiStyle RowStyle;
+		RowStyle.m_Axis = EUiAxis::ROW;
+		RowStyle.m_Gap = 5.0f;
+		RowStyle.m_Padding.m_Left = 10.0f;
+		RowStyle.m_Padding.m_Right = 5.0f;
+		RowStyle.m_AlignItems = EUiAlign::STRETCH;
+		RowStyle.m_JustifyContent = EUiAlign::START;
+		static thread_local std::vector<SUiLayoutChild> s_vChildren;
+		std::vector<SUiLayoutChild> &vChildren = s_vChildren;
+		vChildren.assign(2, SUiLayoutChild{});
+		vChildren[0].m_Style.m_Width = SUiLength::Px(10.0f);
+		vChildren[1].m_Style.m_Width = SUiLength::Flex(1.0f);
+		LayoutEngine.ComputeChildren(RowStyle, CUiV2LegacyAdapter::FromCUIRect(Rect), vChildren);
+		Circle = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
+		TextRect = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
+	}
 	Circle.HMargin((Circle.h - Circle.w) / 2.0f, &Circle);
 	Circle.Draw(ColorRGBA(1.0f, 0.0f, 0.0f, ContentAlpha), IGraphics::CORNER_ALL, Circle.h / 2.0f);
 
-	Rect.VSplitLeft(5.0f, nullptr, &Rect);
-	Ui()->DoLabel(&Rect, aBuf, FontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&TextRect, aBuf, FontSize, TEXTALIGN_ML);
 }
 
 void CScoreboard::OnRender()
@@ -1202,15 +1515,59 @@ void CScoreboard::OnRender()
 
 		CUIRect RedScoreboard, BlueScoreboard, RedTitle, BlueTitle;
 		CUIRect RedScoreboardContent, BlueScoreboardContent, RedTitleContent, BlueTitleContent;
-		Scoreboard.VSplitMid(&RedScoreboard, &BlueScoreboard, 7.5f);
+		{
+			CUiV2LayoutEngine LayoutEngine;
+			SUiStyle TwoColumnStyle;
+			TwoColumnStyle.m_Axis = EUiAxis::ROW;
+			TwoColumnStyle.m_Gap = 7.5f;
+			TwoColumnStyle.m_AlignItems = EUiAlign::STRETCH;
+			TwoColumnStyle.m_JustifyContent = EUiAlign::START;
+			static thread_local std::vector<SUiLayoutChild> s_vColumns;
+			std::vector<SUiLayoutChild> &vColumns = s_vColumns;
+			vColumns.assign(2, SUiLayoutChild{});
+			vColumns[0].m_Style.m_Width = SUiLength::Flex(1.0f);
+			vColumns[1].m_Style.m_Width = SUiLength::Flex(1.0f);
+			LayoutEngine.ComputeChildren(TwoColumnStyle, CUiV2LegacyAdapter::FromCUIRect(Scoreboard), vColumns);
+			RedScoreboard = CUiV2LegacyAdapter::ToCUIRect(vColumns[0].m_Box);
+			BlueScoreboard = CUiV2LegacyAdapter::ToCUIRect(vColumns[1].m_Box);
+		}
 		RedScoreboard.HSplitTop(TitleHeight, &RedTitle, &RedScoreboard);
 		BlueScoreboard.HSplitTop(TitleHeight, &BlueTitle, &BlueScoreboard);
-		ScoreboardContent.VSplitMid(&RedScoreboardContent, &BlueScoreboardContent, 7.5f);
+		{
+			CUiV2LayoutEngine LayoutEngine;
+			SUiStyle TwoColumnStyle;
+			TwoColumnStyle.m_Axis = EUiAxis::ROW;
+			TwoColumnStyle.m_Gap = 7.5f;
+			TwoColumnStyle.m_AlignItems = EUiAlign::STRETCH;
+			TwoColumnStyle.m_JustifyContent = EUiAlign::START;
+			static thread_local std::vector<SUiLayoutChild> s_vColumns;
+			std::vector<SUiLayoutChild> &vColumns = s_vColumns;
+			vColumns.assign(2, SUiLayoutChild{});
+			vColumns[0].m_Style.m_Width = SUiLength::Flex(1.0f);
+			vColumns[1].m_Style.m_Width = SUiLength::Flex(1.0f);
+			LayoutEngine.ComputeChildren(TwoColumnStyle, CUiV2LegacyAdapter::FromCUIRect(ScoreboardContent), vColumns);
+			RedScoreboardContent = CUiV2LegacyAdapter::ToCUIRect(vColumns[0].m_Box);
+			BlueScoreboardContent = CUiV2LegacyAdapter::ToCUIRect(vColumns[1].m_Box);
+		}
 		RedScoreboardContent.HSplitTop(TitleHeight, &RedTitleContent, &RedScoreboardContent);
 		BlueScoreboardContent.HSplitTop(TitleHeight, &BlueTitleContent, &BlueScoreboardContent);
 		CUIRect SortButton;
 		const CUIRect BlueTitleBackground = BlueTitle;
-		BlueTitleContent.VSplitRight(SortButtonWidth, &BlueTitleContent, &SortButton);
+		{
+			CUiV2LayoutEngine LayoutEngine;
+			SUiStyle TitleSplitStyle;
+			TitleSplitStyle.m_Axis = EUiAxis::ROW;
+			TitleSplitStyle.m_AlignItems = EUiAlign::STRETCH;
+			TitleSplitStyle.m_JustifyContent = EUiAlign::START;
+			static thread_local std::vector<SUiLayoutChild> s_vTitleChildren;
+			std::vector<SUiLayoutChild> &vTitleChildren = s_vTitleChildren;
+			vTitleChildren.assign(2, SUiLayoutChild{});
+			vTitleChildren[0].m_Style.m_Width = SUiLength::Flex(1.0f);
+			vTitleChildren[1].m_Style.m_Width = SUiLength::Px(SortButtonWidth);
+			LayoutEngine.ComputeChildren(TitleSplitStyle, CUiV2LegacyAdapter::FromCUIRect(BlueTitleContent), vTitleChildren);
+			BlueTitleContent = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[0].m_Box);
+			SortButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[1].m_Box);
+		}
 
 		RedTitle.Draw(ColorRGBA(0.975f, 0.17f, 0.17f, 0.5f * BackgroundAlphaFinal), IGraphics::CORNER_T, 7.5f);
 		BlueTitleBackground.Draw(ColorRGBA(0.17f, 0.46f, 0.975f, 0.5f * BackgroundAlphaFinal), IGraphics::CORNER_T, 7.5f);
@@ -1241,7 +1598,21 @@ void CScoreboard::OnRender()
 		CUIRect ScoreboardContentBody = ScoreboardContent;
 		ScoreboardContentBody.HSplitTop(TitleHeight, &Title, &ScoreboardContentBody);
 		CUIRect SortButton;
-		Title.VSplitRight(SortButtonWidth, &Title, &SortButton);
+		{
+			CUiV2LayoutEngine LayoutEngine;
+			SUiStyle TitleSplitStyle;
+			TitleSplitStyle.m_Axis = EUiAxis::ROW;
+			TitleSplitStyle.m_AlignItems = EUiAlign::STRETCH;
+			TitleSplitStyle.m_JustifyContent = EUiAlign::START;
+			static thread_local std::vector<SUiLayoutChild> s_vTitleChildren;
+			std::vector<SUiLayoutChild> &vTitleChildren = s_vTitleChildren;
+			vTitleChildren.assign(2, SUiLayoutChild{});
+			vTitleChildren[0].m_Style.m_Width = SUiLength::Flex(1.0f);
+			vTitleChildren[1].m_Style.m_Width = SUiLength::Px(SortButtonWidth);
+			LayoutEngine.ComputeChildren(TitleSplitStyle, CUiV2LegacyAdapter::FromCUIRect(Title), vTitleChildren);
+			Title = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[0].m_Box);
+			SortButton = CUiV2LegacyAdapter::ToCUIRect(vTitleChildren[1].m_Box);
+		}
 		RenderTitle(Title, TEAM_GAME, pTitle);
 		DoSortButton(SortButton);
 
@@ -1262,7 +1633,21 @@ void CScoreboard::OnRender()
 				PlayersPerSide = 32;
 
 			CUIRect LeftScoreboard, RightScoreboard;
-			ScoreboardContentBody.VSplitMid(&LeftScoreboard, &RightScoreboard);
+			{
+				CUiV2LayoutEngine LayoutEngine;
+				SUiStyle TwoColumnStyle;
+				TwoColumnStyle.m_Axis = EUiAxis::ROW;
+				TwoColumnStyle.m_AlignItems = EUiAlign::STRETCH;
+				TwoColumnStyle.m_JustifyContent = EUiAlign::START;
+				static thread_local std::vector<SUiLayoutChild> s_vColumns;
+				std::vector<SUiLayoutChild> &vColumns = s_vColumns;
+				vColumns.assign(2, SUiLayoutChild{});
+				vColumns[0].m_Style.m_Width = SUiLength::Flex(1.0f);
+				vColumns[1].m_Style.m_Width = SUiLength::Flex(1.0f);
+				LayoutEngine.ComputeChildren(TwoColumnStyle, CUiV2LegacyAdapter::FromCUIRect(ScoreboardContentBody), vColumns);
+				LeftScoreboard = CUiV2LegacyAdapter::ToCUIRect(vColumns[0].m_Box);
+				RightScoreboard = CUiV2LegacyAdapter::ToCUIRect(vColumns[1].m_Box);
+			}
 			RenderScoreboard(LeftScoreboard, TEAM_GAME, 0, PlayersPerSide, RenderState);
 			RenderScoreboard(RightScoreboard, TEAM_GAME, PlayersPerSide, 2 * PlayersPerSide, RenderState);
 		}
@@ -1270,12 +1655,25 @@ void CScoreboard::OnRender()
 		{
 			const int NumColumns = 3;
 			const int PlayersPerColumn = std::ceil(128.0f / NumColumns);
-			CUIRect RemainingScoreboard = ScoreboardContentBody;
-			for(int i = 0; i < NumColumns; ++i)
 			{
-				CUIRect Column;
-				RemainingScoreboard.VSplitLeft(Scoreboard.w / NumColumns, &Column, &RemainingScoreboard);
-				RenderScoreboard(Column, TEAM_GAME, i * PlayersPerColumn, (i + 1) * PlayersPerColumn, RenderState);
+				CUiV2LayoutEngine LayoutEngine;
+				SUiStyle ColumnStyle;
+				ColumnStyle.m_Axis = EUiAxis::ROW;
+				ColumnStyle.m_AlignItems = EUiAlign::STRETCH;
+				ColumnStyle.m_JustifyContent = EUiAlign::START;
+				static thread_local std::vector<SUiLayoutChild> s_vColumns;
+				std::vector<SUiLayoutChild> &vColumns = s_vColumns;
+				vColumns.assign(NumColumns, SUiLayoutChild{});
+				for(SUiLayoutChild &Child : vColumns)
+				{
+					Child.m_Style.m_Width = SUiLength::Flex(1.0f);
+				}
+				LayoutEngine.ComputeChildren(ColumnStyle, CUiV2LegacyAdapter::FromCUIRect(ScoreboardContentBody), vColumns);
+				for(int i = 0; i < NumColumns; ++i)
+				{
+					CUIRect Column = CUiV2LegacyAdapter::ToCUIRect(vColumns[i].m_Box);
+					RenderScoreboard(Column, TEAM_GAME, i * PlayersPerColumn, (i + 1) * PlayersPerColumn, RenderState);
+				}
 			}
 		}
 	}
@@ -1286,8 +1684,22 @@ void CScoreboard::OnRender()
 	if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
 	{
 		CUIRect Goals;
-		Spectators.HSplitTop(25.0f, &Goals, &Spectators);
-		Spectators.HSplitTop(5.0f, nullptr, &Spectators);
+		CUIRect SpectatorRest;
+		CUiV2LayoutEngine LayoutEngine;
+		SUiStyle ColumnStyle;
+		ColumnStyle.m_Axis = EUiAxis::COLUMN;
+		ColumnStyle.m_Gap = 5.0f;
+		ColumnStyle.m_AlignItems = EUiAlign::STRETCH;
+		ColumnStyle.m_JustifyContent = EUiAlign::START;
+		static thread_local std::vector<SUiLayoutChild> s_vChildren;
+		std::vector<SUiLayoutChild> &vChildren = s_vChildren;
+		vChildren.assign(2, SUiLayoutChild{});
+		vChildren[0].m_Style.m_Height = SUiLength::Px(25.0f);
+		vChildren[1].m_Style.m_Height = SUiLength::Flex(1.0f);
+		LayoutEngine.ComputeChildren(ColumnStyle, CUiV2LegacyAdapter::FromCUIRect(Spectators), vChildren);
+		Goals = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
+		SpectatorRest = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
+		Spectators = SpectatorRest;
 		RenderGoals(Goals);
 	}
 	RenderSpectators(Spectators);
@@ -1391,7 +1803,21 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 	const float ItemSpacing = 2.0f;
 	const float FontSize = 12.0f;
 
-	View.HSplitTop(FontSize, &Label, &View);
+	{
+		CUiV2LayoutEngine LayoutEngine;
+		SUiStyle HeaderLayoutStyle;
+		HeaderLayoutStyle.m_Axis = EUiAxis::COLUMN;
+		HeaderLayoutStyle.m_AlignItems = EUiAlign::STRETCH;
+		HeaderLayoutStyle.m_JustifyContent = EUiAlign::START;
+		static thread_local std::vector<SUiLayoutChild> s_vHeaderChildren;
+		std::vector<SUiLayoutChild> &vHeaderChildren = s_vHeaderChildren;
+		vHeaderChildren.assign(2, SUiLayoutChild{});
+		vHeaderChildren[0].m_Style.m_Height = SUiLength::Px(FontSize);
+		vHeaderChildren[1].m_Style.m_Height = SUiLength::Flex(1.0f);
+		LayoutEngine.ComputeChildren(HeaderLayoutStyle, CUiV2LegacyAdapter::FromCUIRect(View), vHeaderChildren);
+		Label = CUiV2LegacyAdapter::ToCUIRect(vHeaderChildren[0].m_Box);
+		View = CUiV2LegacyAdapter::ToCUIRect(vHeaderChildren[1].m_Box);
+	}
 	char aNameBuf[MAX_NAME_LENGTH];
 	pScoreboard->GameClient()->FormatStreamerName(pPopupContext->m_ClientId, aNameBuf, sizeof(aNameBuf));
 	pUi->DoLabel(&Label, aNameBuf, FontSize, TEXTALIGN_ML);
@@ -1403,10 +1829,38 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 		const float ActionSpacing = (View.w - (ActionsNum * ActionSize)) / 2;
 		int ActionCorners = IGraphics::CORNER_ALL;
 
-		View.HSplitTop(ItemSpacing * 2, nullptr, &View);
-		View.HSplitTop(ActionSize, &Container, &View);
+		{
+			CUiV2LayoutEngine LayoutEngine;
+			SUiStyle SectionStyle;
+			SectionStyle.m_Axis = EUiAxis::COLUMN;
+			SectionStyle.m_AlignItems = EUiAlign::STRETCH;
+			SectionStyle.m_JustifyContent = EUiAlign::START;
+			static thread_local std::vector<SUiLayoutChild> s_vSectionChildren;
+			std::vector<SUiLayoutChild> &vSectionChildren = s_vSectionChildren;
+			vSectionChildren.assign(3, SUiLayoutChild{});
+			vSectionChildren[0].m_Style.m_Height = SUiLength::Px(ItemSpacing * 2.0f);
+			vSectionChildren[1].m_Style.m_Height = SUiLength::Px(ActionSize);
+			vSectionChildren[2].m_Style.m_Height = SUiLength::Flex(1.0f);
+			LayoutEngine.ComputeChildren(SectionStyle, CUiV2LegacyAdapter::FromCUIRect(View), vSectionChildren);
+			Container = CUiV2LegacyAdapter::ToCUIRect(vSectionChildren[1].m_Box);
+			View = CUiV2LegacyAdapter::ToCUIRect(vSectionChildren[2].m_Box);
+		}
+		CUiV2LayoutEngine LayoutEngine;
+		SUiStyle ActionRowStyle;
+		ActionRowStyle.m_Axis = EUiAxis::ROW;
+		ActionRowStyle.m_Gap = ActionSpacing;
+		ActionRowStyle.m_AlignItems = EUiAlign::STRETCH;
+		ActionRowStyle.m_JustifyContent = EUiAlign::START;
+		static thread_local std::vector<SUiLayoutChild> s_vActions;
+		std::vector<SUiLayoutChild> &vActions = s_vActions;
+		vActions.assign(ActionsNum, SUiLayoutChild{});
+		for(SUiLayoutChild &Child : vActions)
+		{
+			Child.m_Style.m_Width = SUiLength::Px(ActionSize);
+		}
+		LayoutEngine.ComputeChildren(ActionRowStyle, CUiV2LegacyAdapter::FromCUIRect(Container), vActions);
 
-		Container.VSplitLeft(ActionSize, &Action, &Container);
+		Action = CUiV2LegacyAdapter::ToCUIRect(vActions[0].m_Box);
 
 		ColorRGBA FriendActionColor = Client.m_Friend ? ColorRGBA(0.95f, 0.3f, 0.3f, 0.85f * pUi->ButtonColorMul(&pPopupContext->m_FriendAction)) :
 								ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * pUi->ButtonColorMul(&pPopupContext->m_FriendAction));
@@ -1425,8 +1879,7 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 
 		pScoreboard->GameClient()->m_Tooltips.DoToolTip(&pPopupContext->m_FriendAction, &Action, Client.m_Friend ? Localize("移除好友") : Localize("Add friend"));
 
-		Container.VSplitLeft(ActionSpacing, nullptr, &Container);
-		Container.VSplitLeft(ActionSize, &Action, &Container);
+		Action = CUiV2LegacyAdapter::ToCUIRect(vActions[1].m_Box);
 
 		if(pUi->DoButton_FontIcon(&pPopupContext->m_MuteAction, FontIcons::FONT_ICON_BAN, Client.m_ChatIgnore, &Action, BUTTONFLAG_LEFT, ActionCorners))
 		{
@@ -1434,8 +1887,7 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 		}
 		pScoreboard->GameClient()->m_Tooltips.DoToolTip(&pPopupContext->m_MuteAction, &Action, Client.m_ChatIgnore ? Localize("Unmute") : Localize("Mute"));
 
-		Container.VSplitLeft(ActionSpacing, nullptr, &Container);
-		Container.VSplitLeft(ActionSize, &Action, &Container);
+		Action = CUiV2LegacyAdapter::ToCUIRect(vActions[2].m_Box);
 
 		const char *EmoticonActionIcon = Client.m_EmoticonIgnore ? FontIcons::FONT_ICON_COMMENT_SLASH : FontIcons::FONT_ICON_COMMENT;
 		if(pUi->DoButton_FontIcon(&pPopupContext->m_EmoticonAction, EmoticonActionIcon, Client.m_EmoticonIgnore, &Action, BUTTONFLAG_LEFT, ActionCorners))
@@ -1446,8 +1898,22 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 	}
 
 	const float ButtonSize = 17.5f;
-	View.HSplitTop(ItemSpacing * 2, nullptr, &View);
-	View.HSplitTop(ButtonSize, &Container, &View);
+	{
+		CUiV2LayoutEngine LayoutEngine;
+		SUiStyle SectionStyle;
+		SectionStyle.m_Axis = EUiAxis::COLUMN;
+		SectionStyle.m_AlignItems = EUiAlign::STRETCH;
+		SectionStyle.m_JustifyContent = EUiAlign::START;
+		static thread_local std::vector<SUiLayoutChild> s_vSectionChildren;
+		std::vector<SUiLayoutChild> &vSectionChildren = s_vSectionChildren;
+		vSectionChildren.assign(3, SUiLayoutChild{});
+		vSectionChildren[0].m_Style.m_Height = SUiLength::Px(ItemSpacing * 2.0f);
+		vSectionChildren[1].m_Style.m_Height = SUiLength::Px(ButtonSize);
+		vSectionChildren[2].m_Style.m_Height = SUiLength::Flex(1.0f);
+		LayoutEngine.ComputeChildren(SectionStyle, CUiV2LegacyAdapter::FromCUIRect(View), vSectionChildren);
+		Container = CUiV2LegacyAdapter::ToCUIRect(vSectionChildren[1].m_Box);
+		View = CUiV2LegacyAdapter::ToCUIRect(vSectionChildren[2].m_Box);
+	}
 
 	bool IsSpectating = pScoreboard->GameClient()->m_Snap.m_SpecInfo.m_Active && pScoreboard->GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == pPopupContext->m_ClientId;
 	ColorRGBA SpectateButtonColor = ColorRGBA(1.0f, 1.0f, 1.0f, (IsSpectating ? 0.25f : 0.5f) * pUi->ButtonColorMul(&pPopupContext->m_SpectateButton));

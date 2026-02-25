@@ -470,14 +470,48 @@ void CMenus::RenderGame(CUIRect MainView)
 			MainView.VMargin((MainView.w - CMenusIngameTouchControls::BUTTON_EDITOR_WIDTH) / 2.0f, &MainView);
 			MainView.HSplitTop(25.0f, &SelectingTab, &MainView);
 
+			static bool s_TouchMenuTransitionInitialized = false;
+			static CMenusIngameTouchControls::EMenuType s_PrevTouchMenu = CMenusIngameTouchControls::EMenuType::MENU_FILE;
+			static float s_TouchMenuTransitionDirection = 0.0f;
+			const uint64_t TouchMenuSwitchNode = UiAnimNodeKey("ingame_touch_menu_switch");
+
 			m_MenusIngameTouchControls.RenderSelectingTab(SelectingTab);
+			if(!s_TouchMenuTransitionInitialized)
+			{
+				s_PrevTouchMenu = m_MenusIngameTouchControls.m_CurrentMenu;
+				s_TouchMenuTransitionInitialized = true;
+			}
+			else if(m_MenusIngameTouchControls.m_CurrentMenu != s_PrevTouchMenu)
+			{
+				s_TouchMenuTransitionDirection = static_cast<int>(m_MenusIngameTouchControls.m_CurrentMenu) > static_cast<int>(s_PrevTouchMenu) ? 1.0f : -1.0f;
+				TriggerUiSwitchAnimation(TouchMenuSwitchNode, 0.18f);
+				s_PrevTouchMenu = m_MenusIngameTouchControls.m_CurrentMenu;
+			}
+
+			const float TransitionStrength = ReadUiSwitchAnimation(TouchMenuSwitchNode);
+			const bool TransitionActive = TransitionStrength > 0.0f && s_TouchMenuTransitionDirection != 0.0f;
+			const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
+			CUIRect MenuContent = MainView;
+			const CUIRect MenuContentClip = MainView;
+			if(TransitionActive)
+			{
+				Ui()->ClipEnable(&MenuContentClip);
+				ApplyUiSwitchOffset(MenuContent, TransitionStrength, s_TouchMenuTransitionDirection, false, 0.08f, 24.0f, 120.0f);
+			}
+
 			switch(m_MenusIngameTouchControls.m_CurrentMenu)
 			{
-			case CMenusIngameTouchControls::EMenuType::MENU_FILE: m_MenusIngameTouchControls.RenderTouchControlsEditor(MainView); break;
-			case CMenusIngameTouchControls::EMenuType::MENU_BUTTONS: m_MenusIngameTouchControls.RenderTouchButtonEditor(MainView); break;
-			case CMenusIngameTouchControls::EMenuType::MENU_SETTINGS: m_MenusIngameTouchControls.RenderConfigSettings(MainView); break;
-			case CMenusIngameTouchControls::EMenuType::MENU_PREVIEW: m_MenusIngameTouchControls.RenderPreviewSettings(MainView); break;
+			case CMenusIngameTouchControls::EMenuType::MENU_FILE: m_MenusIngameTouchControls.RenderTouchControlsEditor(MenuContent); break;
+			case CMenusIngameTouchControls::EMenuType::MENU_BUTTONS: m_MenusIngameTouchControls.RenderTouchButtonEditor(MenuContent); break;
+			case CMenusIngameTouchControls::EMenuType::MENU_SETTINGS: m_MenusIngameTouchControls.RenderConfigSettings(MenuContent); break;
+			case CMenusIngameTouchControls::EMenuType::MENU_PREVIEW: m_MenusIngameTouchControls.RenderPreviewSettings(MenuContent); break;
 			default: dbg_assert_failed("Unknown selected tab value = %d.", (int)m_MenusIngameTouchControls.m_CurrentMenu);
+			}
+			if(TransitionActive)
+			{
+				if(TransitionAlpha > 0.0f)
+					MenuContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+				Ui()->ClipDisable();
 			}
 		}
 	}
@@ -1173,6 +1207,10 @@ void CMenus::RenderServerControl(CUIRect MainView)
 		SPECVOTE,
 	};
 	static EServerControlTab s_ControlPage = EServerControlTab::SETTINGS;
+	static bool s_ControlPageTransitionInitialized = false;
+	static EServerControlTab s_PrevControlPage = EServerControlTab::SETTINGS;
+	static float s_ControlPageTransitionDirection = 0.0f;
+	const uint64_t ControlPageSwitchNode = UiAnimNodeKey("ingame_callvote_tab_switch");
 
 	// render background
 	CUIRect Bottom, RconExtension, TabBar, Button;
@@ -1200,6 +1238,21 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	if(DoButton_MenuTab(&s_Button2, Localize("Move player to spectators"), s_ControlPage == EServerControlTab::SPECVOTE, &TabBar, IGraphics::CORNER_NONE))
 		s_ControlPage = EServerControlTab::SPECVOTE;
 
+	if(!s_ControlPageTransitionInitialized)
+	{
+		s_PrevControlPage = s_ControlPage;
+		s_ControlPageTransitionInitialized = true;
+	}
+	else if(s_ControlPage != s_PrevControlPage)
+	{
+		s_ControlPageTransitionDirection = static_cast<int>(s_ControlPage) > static_cast<int>(s_PrevControlPage) ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(ControlPageSwitchNode, 0.18f);
+		s_PrevControlPage = s_ControlPage;
+	}
+	const float TransitionStrength = ReadUiSwitchAnimation(ControlPageSwitchNode);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_ControlPageTransitionDirection != 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
+
 	// render page
 	MainView.HSplitBottom(ms_ButtonHeight + 5 * 2, &MainView, &Bottom);
 	Bottom.HMargin(5.0f, &Bottom);
@@ -1218,13 +1271,26 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	bool Searching = Ui()->DoEditBox_Search(&m_FilterInput, &QuickSearch, 14.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 
 	// vote menu
+	CUIRect VoteContent = MainView;
+	const CUIRect VoteContentClip = MainView;
+	if(TransitionActive)
+	{
+		Ui()->ClipEnable(&VoteContentClip);
+		ApplyUiSwitchOffset(VoteContent, TransitionStrength, s_ControlPageTransitionDirection, false, 0.08f, 24.0f, 120.0f);
+	}
 	bool Call = false;
 	if(s_ControlPage == EServerControlTab::SETTINGS)
-		Call = RenderServerControlServer(MainView, Searching);
+		Call = RenderServerControlServer(VoteContent, Searching);
 	else if(s_ControlPage == EServerControlTab::KICKVOTE)
-		Call = RenderServerControlKick(MainView, false, Searching);
+		Call = RenderServerControlKick(VoteContent, false, Searching);
 	else if(s_ControlPage == EServerControlTab::SPECVOTE)
-		Call = RenderServerControlKick(MainView, true, Searching);
+		Call = RenderServerControlKick(VoteContent, true, Searching);
+	if(TransitionActive)
+	{
+		if(TransitionAlpha > 0.0f)
+			VoteContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+		Ui()->ClipDisable();
+	}
 
 	// call vote
 	Bottom.VSplitRight(10.0f, &Bottom, nullptr);

@@ -353,9 +353,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	CUIRect TabBar, CustomList, QuickSearch, DirectoryButton, ReloadButton;
 	static bool s_AssetsTransitionInitialized = false;
 	static int s_PrevAssetsTab = ASSETS_TAB_ENTITIES;
-	static bool s_AssetsTransitionActive = false;
-	static float s_AssetsTransitionProgress = 1.0f;
 	static float s_AssetsTransitionDirection = 0.0f;
+	const uint64_t AssetsTabSwitchNode = UiAnimNodeKey("settings_assets_tab_switch");
 
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
 	const float TabWidth = TabBar.w / NUMBER_OF_ASSETS_TABS;
@@ -386,37 +385,19 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	}
 	else if(s_CurCustomTab != s_PrevAssetsTab)
 	{
-		s_AssetsTransitionActive = true;
-		s_AssetsTransitionProgress = 0.0f;
 		s_AssetsTransitionDirection = s_CurCustomTab > s_PrevAssetsTab ? 1.0f : -1.0f;
+		TriggerUiSwitchAnimation(AssetsTabSwitchNode, 0.18f);
 		s_PrevAssetsTab = s_CurCustomTab;
 	}
 
-	auto ApplyAssetsTabTransition = [&](CUIRect &View) -> float {
-		if(!s_AssetsTransitionActive)
-			return 0.0f;
-		const float TransitionDuration = 0.18f;
-		s_AssetsTransitionProgress += Client()->RenderFrameTime() / TransitionDuration;
-		if(s_AssetsTransitionProgress >= 1.0f)
-		{
-			s_AssetsTransitionProgress = 1.0f;
-			s_AssetsTransitionActive = false;
-		}
-		const float Inv = 1.0f - s_AssetsTransitionProgress;
-		const float Ease = 1.0f - Inv * Inv * Inv;
-		const float OffsetMax = std::clamp(View.w * 0.08f, 24.0f, 120.0f);
-		const float Offset = (1.0f - Ease) * OffsetMax * s_AssetsTransitionDirection;
-		View.x += Offset;
-		return (1.0f - Ease) * 0.12f;
-	};
-
-	const bool TransitionActive = s_AssetsTransitionActive;
+	const float TransitionStrength = ReadUiSwitchAnimation(AssetsTabSwitchNode);
+	const bool TransitionActive = TransitionStrength > 0.0f && s_AssetsTransitionDirection != 0.0f;
 	const CUIRect ContentClip = MainView;
-	float TransitionAlpha = 0.0f;
+	const float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(TransitionActive)
 	{
-		TransitionAlpha = ApplyAssetsTabTransition(MainView);
 		Ui()->ClipEnable(&ContentClip);
+		ApplyUiSwitchOffset(MainView, TransitionStrength, s_AssetsTransitionDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
 	auto LoadStartTime = time_get_nanoseconds();
