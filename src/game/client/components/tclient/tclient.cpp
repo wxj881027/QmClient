@@ -44,6 +44,26 @@ static constexpr const char *s_pQiaFenDefaultReply = "我要恰!!谢谢佬!!!!";
 static constexpr const char *FINISH_STATUS_URL = "https://info.ddnet.org/info";
 static constexpr int64_t FINISH_STATUS_RETRY_DELAY_SECONDS = 3;
 static constexpr const char *s_pFinishStatusPendingEcho = "请等一下!还没查到恰分结果!!";
+static constexpr const char *s_apKeywordNegationWords[] = {
+	"不",
+	"没",
+	"無",
+	"无",
+	"別",
+	"别",
+	"勿",
+	"莫",
+	"非",
+	"未",
+	"沒",
+};
+static constexpr const char *s_apKeywordClauseContrastWords[] = {
+	"但是",
+	"但",
+	"不过",
+	"然而",
+	"可是",
+};
 
 static int QiaFenSeparatorLength(const char *pStr);
 static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize);
@@ -378,7 +398,119 @@ static bool MessageMatchesKeywordList(const char *pMessage, const char *pKeyword
 	return false;
 }
 
-static bool MatchAutoReplyRuleKeywords(const char *pMessage, char *pKeywords)
+static bool IsKeywordClauseSeparatorCodepoint(int Codepoint)
+{
+	return Codepoint == '\n' || Codepoint == '\r' ||
+	       Codepoint == ',' || Codepoint == '.' || Codepoint == ';' || Codepoint == ':' || Codepoint == '!' || Codepoint == '?' ||
+	       Codepoint == 0xFF0C || Codepoint == 0x3002 || Codepoint == 0xFF1B || Codepoint == 0xFF1A || Codepoint == 0xFF01 || Codepoint == 0xFF1F;
+}
+
+static const char *FindLastKeywordClauseSeparatorBoundary(const char *pMessageStart, const char *pLimit)
+{
+	const char *pBoundary = pMessageStart;
+	const char *pCursor = pMessageStart;
+	while(*pCursor && pCursor < pLimit)
+	{
+		const char *pCharStart = pCursor;
+		const int Codepoint = str_utf8_decode(&pCursor);
+		if(pCharStart >= pLimit)
+			break;
+		if(IsKeywordClauseSeparatorCodepoint(Codepoint))
+			pBoundary = pCursor;
+	}
+	return pBoundary;
+}
+
+static const char *FindLastKeywordContrastBoundary(const char *pMessageStart, const char *pLimit)
+{
+	const char *pBoundary = pMessageStart;
+	for(const char *pContrast : s_apKeywordClauseContrastWords)
+	{
+		const char *pSearchCursor = pMessageStart;
+		while(pSearchCursor && pSearchCursor < pLimit)
+		{
+			const char *pMatchEnd = nullptr;
+			const char *pMatch = str_utf8_find_nocase(pSearchCursor, pContrast, &pMatchEnd);
+			if(!pMatch || pMatch >= pLimit)
+				break;
+			if(pMatchEnd && pMatchEnd <= pLimit && pMatchEnd > pBoundary)
+				pBoundary = pMatchEnd;
+
+			const char *pNext = pMatch;
+			if(*pNext == '\0')
+				break;
+			str_utf8_decode(&pNext);
+			if(pNext <= pSearchCursor)
+				break;
+			pSearchCursor = pNext;
+		}
+	}
+	return pBoundary;
+}
+
+static const char *FindKeywordClauseStart(const char *pMessageStart, const char *pMatchStart)
+{
+	const char *pSeparatorBoundary = FindLastKeywordClauseSeparatorBoundary(pMessageStart, pMatchStart);
+	const char *pContrastBoundary = FindLastKeywordContrastBoundary(pMessageStart, pMatchStart);
+	return pSeparatorBoundary > pContrastBoundary ? pSeparatorBoundary : pContrastBoundary;
+}
+
+static int CountKeywordNegationsInRange(const char *pRangeStart, const char *pRangeEnd)
+{
+	if(!pRangeStart || !pRangeEnd || pRangeEnd <= pRangeStart)
+		return 0;
+
+	int NegationCount = 0;
+	for(const char *pNegationWord : s_apKeywordNegationWords)
+	{
+		const char *pSearchCursor = pRangeStart;
+		while(pSearchCursor && pSearchCursor < pRangeEnd)
+		{
+			const char *pMatchEnd = nullptr;
+			const char *pMatch = str_utf8_find_nocase(pSearchCursor, pNegationWord, &pMatchEnd);
+			if(!pMatch || pMatch >= pRangeEnd)
+				break;
+			if(pMatchEnd && pMatchEnd <= pRangeEnd)
+				++NegationCount;
+
+			const char *pNext = pMatch;
+			if(*pNext == '\0')
+				break;
+			str_utf8_decode(&pNext);
+			if(pNext <= pSearchCursor)
+				break;
+			pSearchCursor = pNext;
+		}
+	}
+
+	return NegationCount;
+}
+
+static bool HasPositiveKeywordMatch(const char *pMessage, const char *pToken)
+{
+	const char *pSearchCursor = pMessage;
+	while(*pSearchCursor)
+	{
+		const char *pMatchEnd = nullptr;
+		const char *pMatch = str_utf8_find_nocase(pSearchCursor, pToken, &pMatchEnd);
+		if(!pMatch)
+			return false;
+
+		const char *pClauseStart = FindKeywordClauseStart(pMessage, pMatch);
+		const int NegationCount = CountKeywordNegationsInRange(pClauseStart, pMatch);
+		if((NegationCount % 2) == 0)
+			return true;
+
+		const char *pNext = pMatch;
+		str_utf8_decode(&pNext);
+		if(pNext <= pSearchCursor)
+			return false;
+		pSearchCursor = pNext;
+	}
+	return false;
+}
+
+static bool MatchAutoReplyRuleKeywords(const char *pMessage, char *pKeywords, bool UseNegationFilter)
 {
 	char *pCursor = pKeywords;
 	while(*pCursor)
@@ -408,13 +540,20 @@ static bool MatchAutoReplyRuleKeywords(const char *pMessage, char *pKeywords)
 		str_utf8_trim_right(pToken);
 		if(pToken[0] == '\0')
 			continue;
-		if(str_utf8_find_nocase(pMessage, pToken))
+		if(!UseNegationFilter)
+		{
+			if(str_utf8_find_nocase(pMessage, pToken))
+				return true;
+		}
+		else if(HasPositiveKeywordMatch(pMessage, pToken))
+		{
 			return true;
+		}
 	}
 	return false;
 }
 
-static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *pOutReply, size_t OutReplySize)
+static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *pOutReply, size_t OutReplySize, bool UseNegationFilter)
 {
 	if(!pRules || pRules[0] == '\0')
 		return false;
@@ -460,7 +599,7 @@ static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *
 
 		char aKeywordsBuf[512];
 		str_copy(aKeywordsBuf, pKeywords, sizeof(aKeywordsBuf));
-		if(MatchAutoReplyRuleKeywords(pMessage, aKeywordsBuf))
+		if(MatchAutoReplyRuleKeywords(pMessage, aKeywordsBuf, UseNegationFilter))
 		{
 			if(MatchedReplyCount < MAX_MATCHED_REPLIES)
 			{
@@ -789,7 +928,7 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 						str_copy(aReply, s_pQiaFenDefaultReply, sizeof(aReply));
 						Matched = true;
 					}
-					else if(MatchAutoReplyRules(pMessage, g_Config.m_QmQiaFenRules, aReply, sizeof(aReply)))
+					else if(MatchAutoReplyRules(pMessage, g_Config.m_QmQiaFenRules, aReply, sizeof(aReply), false))
 					{
 						Matched = true;
 					}
@@ -847,7 +986,7 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			if(pMessage[0] != '\0' && pMessage[0] != '/')
 			{
 				char aReply[256] = "";
-				if(MatchAutoReplyRules(pMessage, g_Config.m_QmKeywordReplyRules, aReply, sizeof(aReply)))
+				if(MatchAutoReplyRules(pMessage, g_Config.m_QmKeywordReplyRules, aReply, sizeof(aReply), true))
 				{
 					const bool UseDummy = g_Config.m_QmKeywordReplyUseDummy && Client()->DummyConnected();
 					AutoReplyHandled = TrySendAutoReply(aReply, UseDummy);

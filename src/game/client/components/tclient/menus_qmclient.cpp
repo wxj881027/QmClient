@@ -3734,6 +3734,59 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	CollectModulesByColumn(EQmModuleColumn::Left, LeftModules);
 	CollectModulesByColumn(EQmModuleColumn::Right, RightModules);
 
+	static CLineInputBuffered<128> s_ModuleSearchInput;
+	const char *pModuleSearch = s_ModuleSearchInput.GetString();
+	const bool HasModuleSearch = pModuleSearch[0] != '\0';
+
+	auto ModuleSearchKeywords = [](EQmModuleId Id) -> const char * {
+		switch(Id)
+		{
+		case EQmModuleId::ChatBubble: return "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao";
+		case EQmModuleId::GoresActor: return "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv";
+		case EQmModuleId::KeyBinds: return "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding";
+		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 动画优化 donghua youhua 复读 fudu 自动加一 jia yi 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
+		case EQmModuleId::DummyMiniView: return "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao";
+		case EQmModuleId::Coords: return "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi";
+		case EQmModuleId::Streamer: return "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi";
+		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu";
+		case EQmModuleId::BlockWords: return "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan";
+		case EQmModuleId::QiaFen: return "恰分 qiafen 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 关键词 guanjianci 回复 huifu 关键词回复 guanjianci huifu";
+		case EQmModuleId::PieMenu: return "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli";
+		case EQmModuleId::EntityOverlay: return "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong 开关透明度 kaiguan 叠层透明度 dieceng";
+		case EQmModuleId::Laser: return "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu";
+		case EQmModuleId::PlayerStats: return "玩家统计 wanjia tongji player stats gores hud 显示统计 xianshi tongji 进服重置 jinfu chongzhi";
+		case EQmModuleId::CollisionHitbox: return "碰撞体积可视化 pengzhuang tiji keshihua 碰撞箱 pengzhuangxiang collision hitbox 显示碰撞 xianshi pengzhuang 透明度 touming";
+		case EQmModuleId::FavoriteMaps: return "收藏地图 shoucang ditu favorite maps 地图管理 ditu guanli 收藏 shoucang 取消收藏 quxiao shoucang";
+		case EQmModuleId::HJAssist: return "hj辅助 hj fuzhu 解冻辅助 jiedong fuzhu 自动取消旁观 quxiao pangguan 自动切换 qiehuan tee 自动关闭聊天 guanbi liaotian";
+		case EQmModuleId::InputOverlay: return "按键显示 anjian xianshi input overlay 按键叠加 anjian diejia 大小 daxiao 不透明度 butouming 水平位置 shuiping weizhi 垂直位置 chuizhi weizhi";
+		case EQmModuleId::SystemMediaControls: return "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige";
+		}
+		return "";
+	};
+
+	auto ModuleMatchesSearch = [&](const SQmModuleEntry *pModule) -> bool {
+		if(!HasModuleSearch)
+			return true;
+		return str_find_nocase(pModule->m_pKey, pModuleSearch) != nullptr ||
+			str_find_nocase(ModuleSearchKeywords(pModule->m_Id), pModuleSearch) != nullptr;
+	};
+
+	std::vector<const SQmModuleEntry *> VisibleLeftModules;
+	std::vector<const SQmModuleEntry *> VisibleRightModules;
+	VisibleLeftModules.reserve(LeftModules.size());
+	VisibleRightModules.reserve(RightModules.size());
+	for(const SQmModuleEntry *pModule : LeftModules)
+	{
+		if(ModuleMatchesSearch(pModule))
+			VisibleLeftModules.push_back(pModule);
+	}
+	for(const SQmModuleEntry *pModule : RightModules)
+	{
+		if(ModuleMatchesSearch(pModule))
+			VisibleRightModules.push_back(pModule);
+	}
+	const int VisibleModuleCount = static_cast<int>(VisibleLeftModules.size() + VisibleRightModules.size());
+
 	for(const SQmModuleEntry *pModule : FullModules)
 	{
 		switch(pModule->m_Id)
@@ -3800,13 +3853,25 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				LeftContent.HSplitTop(LG_LineSpacing, nullptr, &LeftContent);
 			}
 			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
+			const float SponsorButtonWidth = LG_LineHeight * 9.0f;
 			{
 				CUIRect SponsorButton;
 				static CButtonContainer s_SponsorButton;
-				Row.VSplitLeft(LG_LineHeight * 6.0f, &SponsorButton, nullptr);
+				Row.VSplitLeft(SponsorButtonWidth, &SponsorButton, nullptr);
 				if(DoButton_Menu(&s_SponsorButton, TCLocalize("前往赞助❤️"), 0, &SponsorButton))
 				{
 					Client()->ViewLink("https://afdian.com/a/Q1menGClient");
+				}
+			}
+			LeftContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &LeftContent);
+			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
+			{
+				CUIRect RecentUpdateButton;
+				static CButtonContainer s_RecentUpdateButton;
+				Row.VSplitLeft(SponsorButtonWidth, &RecentUpdateButton, nullptr);
+				if(DoButton_Menu(&s_RecentUpdateButton, TCLocalize("点击查看最近更新⭐"), 0, &RecentUpdateButton))
+				{
+					Client()->ViewLink("https://publish.obsidian.md/qmclient/2%E6%9C%88/2%E6%9C%8816%E6%97%A5%E6%9B%B4%E6%96%B0");
 				}
 			}
 
@@ -3945,6 +4010,37 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		default:
 			break;
 		}
+	}
+
+	{
+		const float SearchCardStartY = MainView.y;
+		CUIRect SearchCard = MainView;
+		CUIRect SearchContent = MainView;
+		SearchContent.VSplitLeft(LG_CardPadding, nullptr, &SearchContent);
+		SearchContent.VSplitRight(LG_CardPadding, &SearchContent, nullptr);
+		SearchContent.HSplitTop(LG_CardPadding, nullptr, &SearchContent);
+		DoModuleHeadline(SearchContent, -4, TCLocalize("功能搜索"), TCLocalize("快速定位功能模块"));
+		SearchContent.HSplitTop(LG_LineHeight, &Row, &SearchContent);
+		Ui()->DoEditBox_Search(&s_ModuleSearchInput, &Row, LG_BodySize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+		SearchContent.HSplitTop(LG_LineSpacing * 0.65f, nullptr, &SearchContent);
+
+		char aSearchHint[64];
+		str_format(aSearchHint, sizeof(aSearchHint), "匹配到 %d 个功能模块", VisibleModuleCount);
+		SearchContent.HSplitTop(LG_LineHeight * 0.85f, &Row, &SearchContent);
+		TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.82f));
+		if(HasModuleSearch && VisibleModuleCount == 0)
+			Ui()->DoLabel(&Row, TCLocalize("未找到匹配功能，请尝试其他关键词"), LG_BodySize * 0.92f, TEXTALIGN_ML);
+		else
+			Ui()->DoLabel(&Row, aSearchHint, LG_BodySize * 0.92f, TEXTALIGN_ML);
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+		SearchContent.HSplitTop(LG_CardPadding, nullptr, &SearchContent);
+		const float SearchCardHeight = SearchContent.y - SearchCardStartY;
+		SearchCard.y = SearchCardStartY;
+		SearchCard.h = SearchCardHeight;
+		s_GlassCards.push_back(SearchCard);
+		MainView.HSplitTop(SearchCardHeight, nullptr, &MainView);
+		MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
 	}
 
 	auto RenderColumnModules = [&](const std::vector<const SQmModuleEntry *> &Modules, EQmModuleColumn ColumnId) {
@@ -5491,15 +5587,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	};
 
 	EnsureColumnTops();
-	RenderColumnModules(LeftModules, EQmModuleColumn::Left);
-	RenderColumnModules(RightModules, EQmModuleColumn::Right);
-	UpdateDropPreview();
-	RenderDragGhost();
-	const bool MouseReleased = !Ui()->MouseButton(0) && Ui()->LastMouseButton(0);
-	if(MouseReleased)
+	RenderColumnModules(VisibleLeftModules, EQmModuleColumn::Left);
+	RenderColumnModules(VisibleRightModules, EQmModuleColumn::Right);
+	if(HasModuleSearch)
 	{
-		if(s_DragState.m_pDragging != nullptr)
-			CommitDropPreview();
 		s_DragState.m_pPressed = nullptr;
 		s_DragState.m_pDragging = nullptr;
 		s_DragState.m_GrabOffset = vec2(0.0f, 0.0f);
@@ -5510,8 +5601,28 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		s_DropPreview.m_Valid = false;
 		s_DropPreview.m_pDragged = nullptr;
 	}
-	if(s_DropPreview.m_Active && s_DropPreview.m_Valid)
-		s_DropPreview.m_LineRect.Draw(DropPreviewColor, IGraphics::CORNER_ALL, DropPreviewThickness);
+	else
+	{
+		UpdateDropPreview();
+		RenderDragGhost();
+		const bool MouseReleased = !Ui()->MouseButton(0) && Ui()->LastMouseButton(0);
+		if(MouseReleased)
+		{
+			if(s_DragState.m_pDragging != nullptr)
+				CommitDropPreview();
+			s_DragState.m_pPressed = nullptr;
+			s_DragState.m_pDragging = nullptr;
+			s_DragState.m_GrabOffset = vec2(0.0f, 0.0f);
+			s_DragState.m_DraggedWidth = 0.0f;
+			s_DragState.m_DraggedHeight = 0.0f;
+			s_DragState.m_HasDragRect = false;
+			s_DropPreview.m_Active = false;
+			s_DropPreview.m_Valid = false;
+			s_DropPreview.m_pDragged = nullptr;
+		}
+		if(s_DropPreview.m_Active && s_DropPreview.m_Valid)
+			s_DropPreview.m_LineRect.Draw(DropPreviewColor, IGraphics::CORNER_ALL, DropPreviewThickness);
+	}
 	if(!ColumnsReady)
 		EnsureColumns();
 
