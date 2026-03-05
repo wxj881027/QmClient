@@ -14,6 +14,7 @@
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
 
+#include <array>
 #include <memory>
 #include <vector>
 //枚举
@@ -23,6 +24,99 @@ enum class EHookStrongWeakState
 	NEUTRAL,
 	STRONG
 };
+
+enum class ENameplateCoreRow
+{
+	NAME,
+	CLAN,
+	HOOK,
+	COORDS,
+	KEYS,
+	NUM_ROWS
+};
+
+static constexpr size_t kNameplateCoreRowCount = static_cast<size_t>(ENameplateCoreRow::NUM_ROWS);
+static constexpr std::array<ENameplateCoreRow, kNameplateCoreRowCount> s_aDefaultNameplateCoreRowsTopToBottom = {
+	ENameplateCoreRow::KEYS,
+	ENameplateCoreRow::COORDS,
+	ENameplateCoreRow::HOOK,
+	ENameplateCoreRow::CLAN,
+	ENameplateCoreRow::NAME};
+
+static bool ParseNameplateCoreRowKey(const char *pKey, ENameplateCoreRow &OutRow)
+{
+	if(str_comp_nocase(pKey, "name") == 0)
+	{
+		OutRow = ENameplateCoreRow::NAME;
+		return true;
+	}
+	if(str_comp_nocase(pKey, "clan") == 0)
+	{
+		OutRow = ENameplateCoreRow::CLAN;
+		return true;
+	}
+	if(str_comp_nocase(pKey, "hook") == 0)
+	{
+		OutRow = ENameplateCoreRow::HOOK;
+		return true;
+	}
+	if(str_comp_nocase(pKey, "coords") == 0)
+	{
+		OutRow = ENameplateCoreRow::COORDS;
+		return true;
+	}
+	if(str_comp_nocase(pKey, "keys") == 0)
+	{
+		OutRow = ENameplateCoreRow::KEYS;
+		return true;
+	}
+	return false;
+}
+
+static std::array<ENameplateCoreRow, kNameplateCoreRowCount> ParseNameplateCoreRowOrderTopToBottom(const char *pConfigValue)
+{
+	std::array<ENameplateCoreRow, kNameplateCoreRowCount> Result = s_aDefaultNameplateCoreRowsTopToBottom;
+	if(!pConfigValue || pConfigValue[0] == '\0')
+		return Result;
+
+	std::array<ENameplateCoreRow, kNameplateCoreRowCount> ParsedRows = {};
+	bool aUsedRows[kNameplateCoreRowCount] = {};
+	int ParsedCount = 0;
+
+	char aToken[32];
+	const char *pToken = pConfigValue;
+	while((pToken = str_next_token(pToken, ",", aToken, sizeof(aToken))))
+	{
+		if(aToken[0] == '\0')
+			continue;
+
+		ENameplateCoreRow Row;
+		if(!ParseNameplateCoreRowKey(aToken, Row))
+			continue;
+
+		const int RowIndex = static_cast<int>(Row);
+		if(aUsedRows[RowIndex])
+			continue;
+
+		ParsedRows[ParsedCount++] = Row;
+		aUsedRows[RowIndex] = true;
+		if(ParsedCount == static_cast<int>(kNameplateCoreRowCount))
+			break;
+	}
+
+	int OutIndex = 0;
+	for(int i = 0; i < ParsedCount; ++i)
+		Result[OutIndex++] = ParsedRows[i];
+	for(const ENameplateCoreRow Row : s_aDefaultNameplateCoreRowsTopToBottom)
+	{
+		const int RowIndex = static_cast<int>(Row);
+		if(aUsedRows[RowIndex])
+			continue;
+		Result[OutIndex++] = Row;
+	}
+
+	return Result;
+}
 
 class CNamePlateData
 {
@@ -923,6 +1017,7 @@ class CNamePlate
 private:
 	bool m_Inited = false;
 	bool m_InGame = false;
+	char m_aCoreRowOrderConfigCache[sizeof(g_Config.m_QmNameplateRowOrder)] = {};
 	PartsVector m_vpParts;
 	void RenderLine(CGameClient &This,
 		vec2 Pos, vec2 Size,
@@ -947,12 +1042,9 @@ private:
 	{
 		m_vpParts.push_back(std::make_unique<PartType>(This, std::forward<ArgsType>(Args)...));
 	}
-	void Init(CGameClient &This)
-	{
-		if(m_Inited)
-			return;
-		m_Inited = true;
 
+	void AddNameRow(CGameClient &This)
+	{
 		AddPart<CNamePlatePartCountry>(This); // TClient
 		AddPart<CNamePlatePartPing>(This); // TClient
 		AddPart<CNamePlatePartIgnoreMark>(This); // TClient
@@ -960,29 +1052,88 @@ private:
 		AddPart<CNamePlatePartClientId>(This, false);
 		AddPart<CNamePlatePartName>(This);
 		AddPart<CNamePlatePartNewLine>(This);
+	}
 
+	void AddClanModule(CGameClient &This)
+	{
 		AddPart<CNamePlatePartClan>(This);
 		AddPart<CNamePlatePartNewLine>(This);
 
+		// Keep legacy optional rows attached to the clan module.
 		AddPart<CNamePlatePartReason>(This); // TClient
 		AddPart<CNamePlatePartNewLine>(This); // TClient
 		AddPart<CNamePlatePartSkin>(This); // TClient
 		AddPart<CNamePlatePartNewLine>(This); // TClient
-
 		AddPart<CNamePlatePartClientId>(This, true);
 		AddPart<CNamePlatePartNewLine>(This);
+	}
 
+	void AddHookRow(CGameClient &This)
+	{
 		AddPart<CNamePlatePartHookStrongWeak>(This);
 		AddPart<CNamePlatePartHookStrongWeakId>(This);
 		AddPart<CNamePlatePartNewLine>(This);
+	}
 
+	void AddCoordsRow(CGameClient &This)
+	{
 		AddPart<CNamePlatePartCoordinates>(This); // TClient
 		AddPart<CNamePlatePartCoordXAlignPopup>(This); // TClient
 		AddPart<CNamePlatePartNewLine>(This);
+	}
 
+	void AddKeysRow(CGameClient &This)
+	{
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_LEFT);
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_UP);
 		AddPart<CNamePlatePartDirection>(This, DIRECTION_RIGHT);
+		AddPart<CNamePlatePartNewLine>(This);
+	}
+
+	void AddCoreRowModule(CGameClient &This, ENameplateCoreRow Row)
+	{
+		switch(Row)
+		{
+		case ENameplateCoreRow::NAME:
+			AddNameRow(This);
+			break;
+		case ENameplateCoreRow::CLAN:
+			AddClanModule(This);
+			break;
+		case ENameplateCoreRow::HOOK:
+			AddHookRow(This);
+			break;
+		case ENameplateCoreRow::COORDS:
+			AddCoordsRow(This);
+			break;
+		case ENameplateCoreRow::KEYS:
+			AddKeysRow(This);
+			break;
+		case ENameplateCoreRow::NUM_ROWS:
+			break;
+		}
+	}
+
+	void RebuildPartLayout(CGameClient &This)
+	{
+		for(auto &Part : m_vpParts)
+			Part->Reset(This);
+		m_vpParts.clear();
+
+		const auto CoreRowsTopToBottom = ParseNameplateCoreRowOrderTopToBottom(g_Config.m_QmNameplateRowOrder);
+		for(auto It = CoreRowsTopToBottom.rbegin(); It != CoreRowsTopToBottom.rend(); ++It)
+			AddCoreRowModule(This, *It);
+	}
+
+	void Init(CGameClient &This)
+	{
+		const bool NeedLayoutSync = !m_Inited || str_comp(m_aCoreRowOrderConfigCache, g_Config.m_QmNameplateRowOrder) != 0;
+		if(!NeedLayoutSync)
+			return;
+
+		RebuildPartLayout(This);
+		str_copy(m_aCoreRowOrderConfigCache, g_Config.m_QmNameplateRowOrder, sizeof(m_aCoreRowOrderConfigCache));
+		m_Inited = true;
 	}
 
 public:

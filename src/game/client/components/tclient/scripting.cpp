@@ -257,5 +257,5 @@ void CScripting::ExecScript(const char *pFilename, const char *pArgs)
 
 void CScripting::OnConsoleInit()
 {
-	Console()->Register(SCRIPTING_IMPL, "s[file] ?r[args]", CFGFLAG_CLIENT, ConExecScript, this, "Execute a " SCRIPTING_IMPL " script");
+	Console()->Register(SCRIPTING_IMPL, "s[file] ?r[args]", CFGFLAG_CLIENT, ConExecScript, this, "执行 " SCRIPTING_IMPL " 脚本");
 }

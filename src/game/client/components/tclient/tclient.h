@@ -6,6 +6,7 @@
 #include <engine/shared/console.h>
 #include <engine/shared/http.h>
 #include <engine/shared/json.h>
+#include <engine/shared/protocol.h>
 
 #include <game/client/component.h>
 
@@ -115,6 +116,9 @@ class CTClient : public CComponent
 
 	float m_FinishTextTimeout = 0.0f;
 	void DoFinishCheck();
+	char m_aaFinishRestoreNames[NUM_DUMMIES][MAX_NAME_LENGTH] = {};
+	bool m_aFinishRestoreNameValid[NUM_DUMMIES] = {false, false};
+	bool m_aFinishRestoreRequested[NUM_DUMMIES] = {false, false};
 	struct SFinishNameStatus
 	{
 		std::shared_ptr<CHttpRequest> m_pTask = nullptr;

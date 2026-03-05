@@ -419,7 +419,7 @@ void CFileBrowser::OnRender(CUIRect _)
 			Storage()->GetCompletePath(m_vpFilteredFileList[m_SelectedFileIndex]->m_StorageType, m_pCurrentPath, aOpenPath, sizeof(aOpenPath));
 			if(!Client()->ViewFile(aOpenPath))
 			{
-				Editor()->ShowFileDialogError("无法打开目录 '%s'.", aOpenPath);
+				Editor()->ShowFileDialogError("无法打开目录“%s”。", aOpenPath);
 			}
 		}
 	}
@@ -892,7 +892,7 @@ CUi::EPopupMenuFunctionResult CFileBrowser::CPopupNewFolder::Render(void *pConte
 		}
 		else if(!pFileBrowser->Storage()->CreateFolder(aFolderPath, pFileBrowser->m_StorageType))
 		{
-			pEditor->ShowFileDialogError("无法创建文件夹 '%s'.", aFolderPath);
+			pEditor->ShowFileDialogError("无法创建文件夹“%s”。", aFolderPath);
 		}
 		else
 		{
@@ -923,7 +923,7 @@ CUi::EPopupMenuFunctionResult CFileBrowser::CPopupConfirmDelete::Render(void *pC
 	pFileBrowser->Ui()->DoLabel(&Label, "确认删除", 20.0f, TEXTALIGN_MC);
 
 	char aMessage[IO_MAX_PATH_LENGTH + 128];
-	str_format(aMessage, sizeof(aMessage), "你确定要删除%s '%s' 吗?",
+	str_format(aMessage, sizeof(aMessage), "你确定要删除%s“%s”吗？",
 		pConfirmDeleteContext->m_IsDirectory ? "文件夹" : "文件", pConfirmDeleteContext->m_aDeletePath);
 	pFileBrowser->Ui()->DoLabel(&View, aMessage, 10.0f, TEXTALIGN_ML, {.m_MaxWidth = View.w});
 
@@ -943,7 +943,7 @@ CUi::EPopupMenuFunctionResult CFileBrowser::CPopupConfirmDelete::Render(void *pC
 			}
 			else
 			{
-				pEditor->ShowFileDialogError("无法删除文件夹 '%s'. 确保它首先是空的. 查看本地控制台获取详细信息.", pConfirmDeleteContext->m_aDeletePath);
+				pEditor->ShowFileDialogError("无法删除文件夹“%s”。请先确保其为空。查看本地控制台获取详细信息。", pConfirmDeleteContext->m_aDeletePath);
 			}
 		}
 		else
@@ -954,7 +954,7 @@ CUi::EPopupMenuFunctionResult CFileBrowser::CPopupConfirmDelete::Render(void *pC
 			}
 			else
 			{
-				pEditor->ShowFileDialogError("无法删除文件 '%s'. 查看本地控制台获取详细信息.", pConfirmDeleteContext->m_aDeletePath);
+				pEditor->ShowFileDialogError("无法删除文件“%s”。查看本地控制台获取详细信息。", pConfirmDeleteContext->m_aDeletePath);
 			}
 		}
 		pFileBrowser->UpdateFilenameInput();
@@ -980,7 +980,7 @@ CUi::EPopupMenuFunctionResult CFileBrowser::CPopupConfirmOverwrite::Render(void 
 	pFileBrowser->Ui()->DoLabel(&Label, "确认覆盖", 20.0f, TEXTALIGN_MC);
 
 	char aMessage[IO_MAX_PATH_LENGTH + 128];
-	str_format(aMessage, sizeof(aMessage), "文件 '%s' 已经存在.\n\n你确定要覆盖它吗?",
+	str_format(aMessage, sizeof(aMessage), "文件“%s”已存在。\n\n你确定要覆盖它吗？",
 		pConfirmOverwriteContext->m_aOverwritePath);
 	pFileBrowser->Ui()->DoLabel(&View, aMessage, 10.0f, TEXTALIGN_ML, {.m_MaxWidth = View.w});
 

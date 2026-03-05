@@ -162,7 +162,7 @@ CUi::EPopupMenuFunctionResult CMapGrid::PopupGridSettings(void *pContext, CUIRec
 		NUM_PROPS,
 	};
 	CProperty aProps[] = {
-		{"Size", pMapGrid->Factor(), PROPTYPE_INT, MIN_GRID_FACTOR, MAX_GRID_FACTOR},
+		{"大小", pMapGrid->Factor(), PROPTYPE_INT, MIN_GRID_FACTOR, MAX_GRID_FACTOR},
 		{nullptr},
 	};
 
@@ -179,7 +179,7 @@ CUi::EPopupMenuFunctionResult CMapGrid::PopupGridSettings(void *pContext, CUIRec
 	View.HSplitBottom(12.0f, &View, &Button);
 
 	static char s_DefaultButton;
-	if(pMapGrid->Editor()->DoButton_Ex(&s_DefaultButton, "Default", 0, &Button, BUTTONFLAG_LEFT, "Reset to normal grid size.", IGraphics::CORNER_ALL))
+	if(pMapGrid->Editor()->DoButton_Ex(&s_DefaultButton, "默认", 0, &Button, BUTTONFLAG_LEFT, "重置为默认网格大小。", IGraphics::CORNER_ALL))
 	{
 		pMapGrid->SetFactor(1);
 	}

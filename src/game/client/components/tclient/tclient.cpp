@@ -34,7 +34,7 @@
 
 static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
 static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
-static constexpr const char *MAP_CATEGORY_CACHE_FILE = "tclient/map_categories.json";
+static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 static constexpr int QMCLIENT_SYNC_INTERVAL_SECONDS = 30;
 static constexpr const char *QMCLIENT_TOKEN_URL = "http://42.194.185.210:8080/token";
@@ -156,10 +156,10 @@ void CTClient::OnInit()
 	FetchTClientInfo();
 
 	char aError[512] = "";
-	// 先在 tclient/ 目录找，找不到再返回上一级目录找
-	if(!Storage()->FileExists("tclient/gui_logo.png", IStorage::TYPE_ALL) &&
+	// 先在 qmclient/ 目录找，找不到再返回上一级目录找
+	if(!Storage()->FileExists("qmclient/gui_logo.png", IStorage::TYPE_ALL) &&
 	   !Storage()->FileExists("gui_logo.png", IStorage::TYPE_ALL))
-		str_format(aError, sizeof(aError), TCLocalize("%s not found", DATA_VERSION_PATH), "data/tclient/gui_logo.png");
+		str_format(aError, sizeof(aError), TCLocalize("%s not found", DATA_VERSION_PATH), "data/qmclient/gui_logo.png");
 	if(aError[0] == '\0')
 		CheckDataVersion(aError, sizeof(aError), Storage()->OpenFile(DATA_VERSION_PATH, IOFLAG_READ, IStorage::TYPE_ALL));
 	if(aError[0] != '\0')
@@ -845,14 +845,16 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 		{
 			const char *pMessage = pMsg->m_pMessage;
 			const bool IsValidCandidate = pMessage[0] != '\0' && pMessage[0] != '/';
+			const bool SenderIsActiveClient = GameClient()->m_aClients[ClientId].m_Active;
+			const bool IsRepeatCandidate = !IsOwnMessage && SenderIsActiveClient && IsValidCandidate;
 			// 保存最新的公屏消息（不是自己发的）
-			if(!IsOwnMessage && IsValidCandidate)
+			if(IsRepeatCandidate)
 			{
 				str_copy(m_aLastChatMessage, pMessage, sizeof(m_aLastChatMessage));
 			}
 
 			// 自动加一：连续出现 2 句及以上非自己发送的相同公屏消息时，自动发送同内容一次。
-			if(g_Config.m_QmRepeatEnabled && g_Config.m_QmRepeatAutoAddOne && !IsOwnMessage && IsValidCandidate)
+			if(g_Config.m_QmRepeatEnabled && g_Config.m_QmRepeatAutoAddOne && IsRepeatCandidate)
 			{
 				if(str_comp(m_aLastRepeatCandidate, pMessage) == 0)
 					++m_LastRepeatCandidateCount;
@@ -1244,9 +1246,9 @@ void CTClient::ConCalc(IConsole::IResult *pResult, void *pUserData)
 	int Error = 0;
 	double Out = te_interp(pResult->GetString(0), &Error);
 	if(Out == NAN || Error != 0)
-		log_info("tclient", "Calc error: %d", Error);
+		log_info("qmclient", "Calc error: %d", Error);
 	else
-		log_info("tclient", "Calc result: %lf", Out);
+		log_info("qmclient", "Calc result: %lf", Out);
 }
 
 void CTClient::OnConsoleInit()
@@ -1289,7 +1291,7 @@ void CTClient::OnConsoleInit()
 				auto Re = Regex(pResult->GetString(0));
 				if(!Re.error().empty())
 				{
-					log_error("tclient", "Invalid regex: %s", Re.error().c_str());
+					log_error("qmclient", "Invalid regex: %s", Re.error().c_str());
 					return;
 				}
 				((CTClient *)pUserData)->m_RegexChatIgnore = std::move(Re);
@@ -1367,27 +1369,29 @@ void CTClient::DoFinishCheck()
 		}
 		return false;
 	};
-	const auto &SendUrgentRename = [this](int Conn, const char *pNewName) {
-		CNetMsg_Cl_ChangeInfo Msg;
-		Msg.m_pName = pNewName;
-		Msg.m_pClan = Conn == 0 ? g_Config.m_PlayerClan : g_Config.m_ClDummyClan;
-		Msg.m_Country = Conn == 0 ? g_Config.m_PlayerCountry : g_Config.m_ClDummyCountry;
-		Msg.m_pSkin = Conn == 0 ? g_Config.m_ClPlayerSkin : g_Config.m_ClDummySkin;
-		Msg.m_UseCustomColor = Conn == 0 ? g_Config.m_ClPlayerUseCustomColor : g_Config.m_ClDummyUseCustomColor;
-		Msg.m_ColorBody = Conn == 0 ? g_Config.m_ClPlayerColorBody : g_Config.m_ClDummyColorBody;
-		Msg.m_ColorFeet = Conn == 0 ? g_Config.m_ClPlayerColorFeet : g_Config.m_ClDummyColorFeet;
-		CMsgPacker Packer(&Msg);
-		Msg.Pack(&Packer);
-		Client()->SendMsg(Conn, &Packer, MSGFLAG_VITAL);
-		GameClient()->m_aCheckInfo[Conn] = Client()->GameTickSpeed(); // 1 second
-	};
-	int Dummy = g_Config.m_ClDummy;
+	const int Dummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
 	const int LocalId = GameClient()->m_aLocalIds[Dummy];
 	if(LocalId < 0 || LocalId >= MAX_CLIENTS)
 		return;
 	const auto &Player = GameClient()->m_aClients[LocalId];
 	if(!Player.m_Active)
 		return;
+	char *pConfigName = Dummy == 0 ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
+	const int ConfigNameSize = Dummy == 0 ? (int)sizeof(g_Config.m_PlayerName) : (int)sizeof(g_Config.m_ClDummyName);
+	const auto SendConfiguredName = [this, Dummy]() {
+		if(Dummy == 0)
+			GameClient()->SendInfo(false);
+		else
+			GameClient()->SendDummyInfo(false);
+	};
+	if(m_aFinishRestoreNameValid[Dummy] && m_aFinishRestoreRequested[Dummy] &&
+		m_aaFinishRestoreNames[Dummy][0] != '\0' &&
+		str_comp(Player.m_aName, m_aaFinishRestoreNames[Dummy]) == 0)
+	{
+		m_aFinishRestoreNameValid[Dummy] = false;
+		m_aFinishRestoreRequested[Dummy] = false;
+		m_aaFinishRestoreNames[Dummy][0] = '\0';
+	}
 
 	RefreshFinishNameStatusContext();
 	if(m_FinishStatusMap.empty())
@@ -1429,8 +1433,10 @@ void CTClient::DoFinishCheck()
 		bool Ignored = false;
 		TryGetFinishStatusForName(Name.c_str(), Ignored);
 	}
-
-	if(!NearTile(Player.m_RenderPos, 10, TILE_FINISH))
+	const bool NeedsRestoreName = m_aFinishRestoreNameValid[Dummy] &&
+		m_aaFinishRestoreNames[Dummy][0] != '\0' &&
+		str_comp(Player.m_aName, m_aaFinishRestoreNames[Dummy]) != 0;
+	if(!NeedsRestoreName && !NearTile(Player.m_RenderPos, 10, TILE_FINISH))
 		return;
 
 	if(!CurrentNameKnown)
@@ -1467,13 +1473,40 @@ void CTClient::DoFinishCheck()
 		}
 	}
 
-	if(!pRenameTarget || pRenameTarget[0] == '\0' || str_comp(Player.m_aName, pRenameTarget) == 0)
+	if(!pRenameTarget || pRenameTarget[0] == '\0')
+	{
+		if(!NeedsRestoreName)
+			return;
+
+		char aRestoreBuf[64];
+		str_format(aRestoreBuf, sizeof(aRestoreBuf), TCLocalize("过图后改回 %s"), m_aaFinishRestoreNames[Dummy]);
+		GameClient()->Echo(aRestoreBuf);
+		str_copy(pConfigName, m_aaFinishRestoreNames[Dummy], ConfigNameSize);
+		SendConfiguredName();
+		m_aFinishRestoreRequested[Dummy] = true;
 		return;
+	}
+
+	if(str_comp(Player.m_aName, pRenameTarget) == 0)
+		return;
+
+	if(!m_aFinishRestoreNameValid[Dummy])
+	{
+		const char *pRestoreName = pConfigName[0] != '\0' ? pConfigName : Player.m_aName;
+		if(pRestoreName[0] != '\0')
+		{
+			str_copy(m_aaFinishRestoreNames[Dummy], pRestoreName, sizeof(m_aaFinishRestoreNames[Dummy]));
+			m_aFinishRestoreNameValid[Dummy] = true;
+			m_aFinishRestoreRequested[Dummy] = false;
+		}
+	}
 
 	char aBuf[64];
 	str_format(aBuf, sizeof(aBuf), TCLocalize("终点前改名为 %s"), pRenameTarget);
 	GameClient()->Echo(aBuf);
-	SendUrgentRename(Dummy, pRenameTarget);
+	str_copy(pConfigName, pRenameTarget, ConfigNameSize);
+	SendConfiguredName();
+	m_aFinishRestoreRequested[Dummy] = false;
 }
 
 bool CTClient::ServerCommandExists(const char *pCommand)
@@ -2412,6 +2445,12 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		m_LastRepeatTime = 0;
 		m_LastAutoReplyTime = 0;
 		ResetFinishNameStatuses();
+		for(int i = 0; i < NUM_DUMMIES; ++i)
+		{
+			m_aFinishRestoreNameValid[i] = false;
+			m_aFinishRestoreRequested[i] = false;
+			m_aaFinishRestoreNames[i][0] = '\0';
+		}
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
 	}
@@ -2762,7 +2801,7 @@ void CTClient::AddFavoriteMap(const char *pMapName)
 	if(!pMapName || pMapName[0] == '\0')
 		return;
 	m_FavoriteMaps.insert(std::string(pMapName));
-	log_info("tclient", "Added favorite map: %s", pMapName);
+	log_info("qmclient", "Added favorite map: %s", pMapName);
 }
 
 void CTClient::RemoveFavoriteMap(const char *pMapName)
@@ -2770,13 +2809,13 @@ void CTClient::RemoveFavoriteMap(const char *pMapName)
 	if(!pMapName || pMapName[0] == '\0')
 		return;
 	m_FavoriteMaps.erase(std::string(pMapName));
-	log_info("tclient", "Removed favorite map: %s", pMapName);
+	log_info("qmclient", "Removed favorite map: %s", pMapName);
 }
 
 void CTClient::ClearFavoriteMaps()
 {
 	m_FavoriteMaps.clear();
-	log_info("tclient", "Cleared all favorite maps");
+	log_info("qmclient", "Cleared all favorite maps");
 }
 
 void CTClient::ConAddFavoriteMap(IConsole::IResult *pResult, void *pUserData)
@@ -2824,7 +2863,7 @@ void CTClient::LoadMapCategoryCache()
 
 	if(pJson == nullptr)
 	{
-		log_error("tclient", "map category cache json parse error: %s", aError);
+		log_error("qmclient", "map category cache json parse error: %s", aError);
 		return;
 	}
 
@@ -2861,12 +2900,12 @@ void CTClient::LoadMapCategoryCache()
 
 void CTClient::SaveMapCategoryCache()
 {
-	Storage()->CreateFolder("tclient", IStorage::TYPE_SAVE);
+	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 
 	IOHANDLE File = Storage()->OpenFile(MAP_CATEGORY_CACHE_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 	{
-		log_error("tclient", "map category cache file open failed");
+		log_error("qmclient", "map category cache file open failed");
 		m_MapCategoryCacheNextSave = time_get() + time_freq() * MAP_CATEGORY_CACHE_SAVE_DELAY_SEC;
 		return;
 	}

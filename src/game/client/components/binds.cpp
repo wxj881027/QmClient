@@ -104,6 +104,37 @@ static int DetectDeepflyModeFromBindCommand(const char *pCommand)
 	return DEEPFLY_MODE_NORMAL;
 }
 
+static bool BindContainsCommand(const char *pBind, const char *pCommand)
+{
+	if(!pBind || pBind[0] == '\0')
+		return false;
+
+	char aBind[1024];
+	str_copy(aBind, pBind, sizeof(aBind));
+
+	char *pCursor = aBind;
+	while(*pCursor != '\0')
+	{
+		char *pEnd = pCursor;
+		while(*pEnd != '\0' && *pEnd != ';')
+			++pEnd;
+
+		const bool HasNextCommand = *pEnd == ';';
+		*pEnd = '\0';
+
+		char aNormalized[1024];
+		NormalizeBindCommand(pCursor, aNormalized, sizeof(aNormalized));
+		if(aNormalized[0] != '\0' && str_comp_nocase(aNormalized, pCommand) == 0)
+			return true;
+
+		if(!HasNextCommand)
+			break;
+		pCursor = pEnd + 1;
+	}
+
+	return false;
+}
+
 bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 {
 	if((Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) == 0)
@@ -266,20 +297,34 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 	if(Event.m_Flags & IInput::FLAG_RELEASE)
 	{
 		const auto &&OnKeyRelease = [&](const CBindSlot &Bind) {
+			// Have to check for nullptr again because the previous execute can unbind itself
+			const char *pBind = m_aapKeyBindings[Bind.m_ModifierMask][Bind.m_Key];
+			if(!pBind)
+			{
+				return;
+			}
+
+			const bool IsReleaseSuppressed =
+				GameClient()->m_Chat.IsActive() ||
+				GameClient()->m_GameConsole.IsActive() ||
+				GameClient()->m_Menus.IsActive();
+
 			// Prevent binds from being deactivated while chat, console and menus are open, as these components will
 			// still allow key release events to be forwarded to this component, so the active binds can be cleared.
-			if(GameClient()->m_Chat.IsActive() ||
-				GameClient()->m_GameConsole.IsActive() ||
-				GameClient()->m_Menus.IsActive())
+			// Exception: +scoreboard must always receive release to avoid getting stuck while opening chat.
+			if(IsReleaseSuppressed && !BindContainsCommand(pBind, "+scoreboard"))
 			{
 				return;
 			}
-			// Have to check for nullptr again because the previous execute can unbind itself
-			if(!m_aapKeyBindings[Bind.m_ModifierMask][Bind.m_Key])
+
+			if(IsReleaseSuppressed)
 			{
-				return;
+				Console()->ExecuteLineStroked(0, "+scoreboard");
 			}
-			Console()->ExecuteLineStroked(0, m_aapKeyBindings[Bind.m_ModifierMask][Bind.m_Key]);
+			else
+			{
+				Console()->ExecuteLineStroked(0, pBind);
+			}
 		};
 
 		// Release active bind that uses this primary key

@@ -1244,12 +1244,12 @@ public:
 	{
 		CheckDefaultFaces();
 		std::vector<std::string> vCustomFonts;
-		Storage()->ListDirectory(IStorage::TYPE_ALL, "tclient/fonts", LaziestFileCallback, &vCustomFonts);
+		Storage()->ListDirectory(IStorage::TYPE_ALL, "qmclient/fonts", LaziestFileCallback, &vCustomFonts);
 		std::sort(vCustomFonts.begin(), vCustomFonts.end());
 		for(const std::string &FilePath : vCustomFonts)
 		{
 			char aFontName[IO_MAX_PATH_LENGTH];
-			str_format(aFontName, sizeof(aFontName), "tclient/fonts/%s", FilePath.c_str());
+			str_format(aFontName, sizeof(aFontName), "qmclient/fonts/%s", FilePath.c_str());
 			void *pFontData;
 			unsigned FontDataSize;
 			if(Storage()->ReadFile(aFontName, IStorage::TYPE_ALL, &pFontData, &FontDataSize))

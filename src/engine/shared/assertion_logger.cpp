@@ -53,6 +53,7 @@ void CAssertionLogger::Dump()
 	char aDate[64];
 	str_timestamp(aDate, sizeof(aDate));
 	str_format(aAssertLogFile, std::size(aAssertLogFile), "%s%s_assert_log_%s_%d.txt", m_aAssertLogPath, m_aGameName, aDate, pid());
+	fs_makedir_rec_for(aAssertLogFile);
 	const CLockScope LockScope(m_DbgMessageMutex);
 	IOHANDLE FileHandle = io_open(aAssertLogFile, IOFLAG_WRITE);
 	if(FileHandle)

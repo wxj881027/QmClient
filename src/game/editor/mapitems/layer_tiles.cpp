@@ -830,7 +830,7 @@ void CLayerTiles::FillGameTiles(EGameTileOp Fill)
 
 			vpActions.push_back(std::make_shared<CEditorBrushDrawAction>(Map(), GameGroupIndex));
 			char aDisplay[256];
-			str_format(aDisplay, sizeof(aDisplay), "Construct '%s' game tiles (x%d)", GAME_TILE_OP_NAMES[(int)Fill], Changes);
+			str_format(aDisplay, sizeof(aDisplay), "构建“%s”游戏图块（x%d）", GAME_TILE_OP_NAMES[(int)Fill], Changes);
 			Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(Map(), vpActions, aDisplay, true));
 		}
 		else
@@ -926,7 +926,7 @@ void CLayerTiles::FillGameTiles(EGameTileOp Fill)
 
 			vpActions.push_back(std::make_shared<CEditorBrushDrawAction>(Map(), GameGroupIndex));
 			char aDisplay[256];
-			str_format(aDisplay, sizeof(aDisplay), "Construct 'tele' game tiles (x%d)", Changes);
+			str_format(aDisplay, sizeof(aDisplay), "构建“传送”游戏图块（x%d）", Changes);
 			Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(Map(), vpActions, aDisplay, true));
 		}
 	}
@@ -975,14 +975,14 @@ CUi::EPopupMenuFunctionResult CLayerTiles::RenderProperties(CUIRect *pToolBox)
 			}
 		};
 
-		char aBuf[128] = "Game tiles";
+		char aBuf[128] = "游戏图块";
 		if(m_LiveGameTiles)
 		{
 			auto TileOp = GameTileToOp(m_FillGameTile);
 			if(TileOp != EGameTileOp::AIR)
-				str_format(aBuf, sizeof(aBuf), "Game tiles: %s", GAME_TILE_OP_NAMES[(size_t)TileOp]);
+				str_format(aBuf, sizeof(aBuf), "游戏图块：%s", GAME_TILE_OP_NAMES[(size_t)TileOp]);
 		}
-		if(Editor()->DoButton_Editor(&s_GameTilesButton, aBuf, 0, &Button, BUTTONFLAG_LEFT, "Construct game tiles from this layer."))
+		if(Editor()->DoButton_Editor(&s_GameTilesButton, aBuf, 0, &Button, BUTTONFLAG_LEFT, "根据该图层构建游戏图块。"))
 			Editor()->PopupSelectGametileOpInvoke(Editor()->Ui()->MouseX(), Editor()->Ui()->MouseY());
 		const int Selected = Editor()->PopupSelectGameTileOpResult();
 		FillGameTiles((EGameTileOp)Selected);
@@ -1000,25 +1000,25 @@ CUi::EPopupMenuFunctionResult CLayerTiles::RenderProperties(CUIRect *pToolBox)
 				Button.VSplitRight(16.0f, &Button, &ButtonAuto);
 				Button.VSplitRight(2.0f, &Button, nullptr);
 				static int s_AutoMapperButtonAuto = 0;
-				if(Editor()->DoButton_Editor(&s_AutoMapperButtonAuto, "A", m_AutoAutoMap, &ButtonAuto, BUTTONFLAG_LEFT, "Automatically run the automapper after modifications."))
+				if(Editor()->DoButton_Editor(&s_AutoMapperButtonAuto, "自", m_AutoAutoMap, &ButtonAuto, BUTTONFLAG_LEFT, "修改后自动执行自动映射。"))
 				{
 					m_AutoAutoMap = !m_AutoAutoMap;
 					FlagModified(0, 0, m_Width, m_Height);
 					if(!m_TilesHistory.empty()) // Sometimes pressing that button causes the automap to run so we should be able to undo that
 					{
 						// record undo
-						Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionTileChanges>(Map(), Editor()->m_SelectedGroup, Editor()->m_vSelectedLayers[0], "Auto map", m_TilesHistory));
+						Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionTileChanges>(Map(), Editor()->m_SelectedGroup, Editor()->m_vSelectedLayers[0], "自动映射", m_TilesHistory));
 						ClearHistory();
 					}
 				}
 			}
 
 			static int s_AutoMapperButton = 0;
-			if(Editor()->DoButton_Editor(&s_AutoMapperButton, "Automap", 0, &Button, BUTTONFLAG_LEFT, "Run the automapper."))
+			if(Editor()->DoButton_Editor(&s_AutoMapperButton, "自动映射", 0, &Button, BUTTONFLAG_LEFT, "执行自动映射。"))
 			{
 				Map()->m_vpImages[m_Image]->m_AutoMapper.Proceed(this, Map()->m_pGameLayer.get(), m_AutoMapperReference, m_AutoMapperConfig, m_Seed);
 				// record undo
-				Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionTileChanges>(Map(), Editor()->m_SelectedGroup, Editor()->m_vSelectedLayers[0], "Auto map", m_TilesHistory));
+				Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionTileChanges>(Map(), Editor()->m_SelectedGroup, Editor()->m_vSelectedLayers[0], "自动映射", m_TilesHistory));
 				ClearHistory();
 				return CUi::POPUP_CLOSE_CURRENT;
 			}
@@ -1026,18 +1026,18 @@ CUi::EPopupMenuFunctionResult CLayerTiles::RenderProperties(CUIRect *pToolBox)
 	}
 
 	CProperty aProps[] = {
-		{"Width", m_Width, PROPTYPE_INT, 1, 100000},
-		{"Height", m_Height, PROPTYPE_INT, 1, 100000},
-		{"Shift", 0, PROPTYPE_SHIFT, 0, 0},
-		{"Shift by", Editor()->m_ShiftBy, PROPTYPE_INT, 1, 100000},
-		{"Image", m_Image, PROPTYPE_IMAGE, 0, 0},
-		{"Color", PackColor(m_Color), PROPTYPE_COLOR, 0, 0},
-		{"Color Env", m_ColorEnv + 1, PROPTYPE_ENVELOPE, 0, 0},
-		{"Color TO", m_ColorEnvOffset, PROPTYPE_INT, -1000000, 1000000},
-		{"Auto Rule", m_AutoMapperConfig, PROPTYPE_AUTOMAPPER, m_Image, 0},
-		{"Reference", m_AutoMapperReference, PROPTYPE_AUTOMAPPER_REFERENCE, 0, 0},
-		{"Live Gametiles", m_LiveGameTiles, PROPTYPE_BOOL, 0, 1},
-		{"Seed", m_Seed, PROPTYPE_INT, 0, 1000000000},
+		{"宽度", m_Width, PROPTYPE_INT, 1, 100000},
+		{"高度", m_Height, PROPTYPE_INT, 1, 100000},
+		{"平移", 0, PROPTYPE_SHIFT, 0, 0},
+		{"平移量", Editor()->m_ShiftBy, PROPTYPE_INT, 1, 100000},
+		{"图像", m_Image, PROPTYPE_IMAGE, 0, 0},
+		{"颜色", PackColor(m_Color), PROPTYPE_COLOR, 0, 0},
+		{"颜色包络线", m_ColorEnv + 1, PROPTYPE_ENVELOPE, 0, 0},
+		{"颜色偏移", m_ColorEnvOffset, PROPTYPE_INT, -1000000, 1000000},
+		{"自动规则", m_AutoMapperConfig, PROPTYPE_AUTOMAPPER, m_Image, 0},
+		{"参考", m_AutoMapperReference, PROPTYPE_AUTOMAPPER_REFERENCE, 0, 0},
+		{"实时游戏图块", m_LiveGameTiles, PROPTYPE_BOOL, 0, 1},
+		{"种子", m_Seed, PROPTYPE_INT, 0, 1000000000},
 		{nullptr},
 	};
 
@@ -1164,7 +1164,7 @@ CUi::EPopupMenuFunctionResult CLayerTiles::RenderProperties(CUIRect *pToolBox)
 		// Record undo if automapper was ran
 		if(m_AutoAutoMap && !m_TilesHistory.empty())
 		{
-			Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionTileChanges>(Map(), Editor()->m_SelectedGroup, Editor()->m_vSelectedLayers[0], "Auto map", m_TilesHistory));
+			Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionTileChanges>(Map(), Editor()->m_SelectedGroup, Editor()->m_vSelectedLayers[0], "自动映射", m_TilesHistory));
 			ClearHistory();
 		}
 	}
@@ -1185,7 +1185,7 @@ CUi::EPopupMenuFunctionResult CLayerTiles::RenderCommonProperties(SCommonPropSta
 		CUIRect Commit;
 		pToolbox->HSplitBottom(20.0f, pToolbox, &Commit);
 		static int s_CommitButton = 0;
-		if(pEditor->DoButton_Editor(&s_CommitButton, "Commit", 0, &Commit, BUTTONFLAG_LEFT, "Apply the changes."))
+		if(pEditor->DoButton_Editor(&s_CommitButton, "应用", 0, &Commit, BUTTONFLAG_LEFT, "应用修改。"))
 		{
 			bool HasModifiedSize = (State.m_Modified & SCommonPropState::MODIFIED_SIZE) != 0;
 			bool HasModifiedColor = (State.m_Modified & SCommonPropState::MODIFIED_COLOR) != 0;
@@ -1247,7 +1247,7 @@ CUi::EPopupMenuFunctionResult CLayerTiles::RenderCommonProperties(SCommonPropSta
 			State.m_Modified = 0;
 
 			char aDisplay[256];
-			str_format(aDisplay, sizeof(aDisplay), "Edit %d layers common properties: %s", (int)vpLayers.size(), HasModifiedColor && HasModifiedSize ? "color, size" : (HasModifiedColor ? "color" : "size"));
+			str_format(aDisplay, sizeof(aDisplay), "编辑 %d 个图层的公共属性：%s", (int)vpLayers.size(), HasModifiedColor && HasModifiedSize ? "颜色、尺寸" : (HasModifiedColor ? "颜色" : "尺寸"));
 			pEditorMap->m_EditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(pEditorMap, vpActions, aDisplay));
 		}
 	}
@@ -1272,17 +1272,17 @@ CUi::EPopupMenuFunctionResult CLayerTiles::RenderCommonProperties(SCommonPropSta
 		pEditor->TextRender()->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
 		SLabelProperties Props;
 		Props.m_MaxWidth = Warning.w;
-		pEditor->Ui()->DoLabel(&Warning, "Editing multiple layers", 9.0f, TEXTALIGN_ML, Props);
+		pEditor->Ui()->DoLabel(&Warning, "正在编辑多个图层", 9.0f, TEXTALIGN_ML, Props);
 		pEditor->TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 		pToolbox->HSplitTop(2.0f, nullptr, pToolbox);
 	}
 
 	CProperty aProps[] = {
-		{"Width", State.m_Width, PROPTYPE_INT, 1, 100000},
-		{"Height", State.m_Height, PROPTYPE_INT, 1, 100000},
-		{"Shift", 0, PROPTYPE_SHIFT, 0, 0},
-		{"Shift by", pEditor->m_ShiftBy, PROPTYPE_INT, 1, 100000},
-		{"Color", State.m_Color, PROPTYPE_COLOR, 0, 0},
+		{"宽度", State.m_Width, PROPTYPE_INT, 1, 100000},
+		{"高度", State.m_Height, PROPTYPE_INT, 1, 100000},
+		{"平移", 0, PROPTYPE_SHIFT, 0, 0},
+		{"平移量", pEditor->m_ShiftBy, PROPTYPE_INT, 1, 100000},
+		{"颜色", State.m_Color, PROPTYPE_COLOR, 0, 0},
 		{nullptr},
 	};
 

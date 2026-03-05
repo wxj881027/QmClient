@@ -27,32 +27,32 @@ void CProofMode::OnMapLoad()
 void CProofMode::SetMenuBackgroundPositionNames()
 {
 	m_vpMenuBackgroundPositionNames.resize(CMenuBackground::NUM_POS);
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_START] = "start";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_INTERNET] = "browser(internet)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_LAN] = "browser(lan)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_DEMOS] = "demos";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_NEWS] = "news";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_FAVORITES] = "favorites";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_LANGUAGE] = "settings(language)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_GENERAL] = "settings(general)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_PLAYER] = "settings(player)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_TEE] = "settings(tee)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_APPEARANCE] = "settings(appearance)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_CONTROLS] = "settings(controls)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_GRAPHICS] = "settings(graphics)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_SOUND] = "settings(sound)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_DDNET] = "settings(ddnet)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_ASSETS] = "settings(assets)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM0] = "custom(1)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM1] = "custom(2)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM2] = "custom(3)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM3] = "custom(4)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM4] = "custom(5)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_RESERVED0] = "reserved settings(1)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_RESERVED1] = "reserved settings(2)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_RESERVED0] = "reserved(1)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_RESERVED1] = "reserved(2)";
-	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_RESERVED2] = "reserved(3)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_START] = "起始";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_INTERNET] = "浏览器(互联网)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_LAN] = "浏览器(局域网)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_DEMOS] = "录像";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_NEWS] = "新闻";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_FAVORITES] = "收藏";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_LANGUAGE] = "设置(语言)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_GENERAL] = "设置(通用)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_PLAYER] = "设置(玩家)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_TEE] = "设置(角色)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_APPEARANCE] = "设置(外观)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_CONTROLS] = "设置(控制)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_GRAPHICS] = "设置(图形)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_SOUND] = "设置(声音)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_DDNET] = "设置(官方扩展)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_ASSETS] = "设置(资源)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM0] = "自定义(1)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM1] = "自定义(2)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM2] = "自定义(3)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM3] = "自定义(4)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_BROWSER_CUSTOM4] = "自定义(5)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_RESERVED0] = "保留设置(1)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_SETTINGS_RESERVED1] = "保留设置(2)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_RESERVED0] = "保留(1)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_RESERVED1] = "保留(2)";
+	m_vpMenuBackgroundPositionNames[CMenuBackground::POS_RESERVED2] = "保留(3)";
 }
 
 void CProofMode::ResetMenuBackgroundPositions()

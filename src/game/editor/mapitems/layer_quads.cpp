@@ -199,7 +199,7 @@ void CLayerQuads::GetSize(float *pWidth, float *pHeight)
 CUi::EPopupMenuFunctionResult CLayerQuads::RenderProperties(CUIRect *pToolBox)
 {
 	CProperty aProps[] = {
-		{"Image", m_Image, PROPTYPE_IMAGE, -1, 0},
+		{"图像", m_Image, PROPTYPE_IMAGE, -1, 0},
 		{nullptr},
 	};
 

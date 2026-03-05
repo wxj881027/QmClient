@@ -220,7 +220,7 @@ REGISTER_QUICK_ACTION(
 	[&]() {
 		char aDefaultName[IO_MAX_PATH_LENGTH];
 		fs_split_file_extension(fs_filename(m_aFilename), aDefaultName, sizeof(aDefaultName));
-		m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, "Save map", "Save as", "maps", aDefaultName, CallbackSaveMap, this);
+		m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, "保存地图", "另存为", "maps", aDefaultName, CallbackSaveMap, this);
 	},
 	ALWAYS_FALSE,
 	ALWAYS_FALSE,
@@ -274,7 +274,7 @@ REGISTER_QUICK_ACTION(
 REGISTER_QUICK_ACTION(
 	AddImage,
 	"添加图像",
-	[&]() { m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::IMAGE, "Add image", "Add", "mapres", "", AddImage, this); },
+	[&]() { m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::IMAGE, "添加图像", "添加", "mapres", "", AddImage, this); },
 	ALWAYS_FALSE,
 	ALWAYS_FALSE,
 	DEFAULT_BTN,

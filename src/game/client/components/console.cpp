@@ -1624,10 +1624,14 @@ void CGameConsole::OnRender()
 				if(NumArguments <= 0 && pConsole->m_IsCommand)
 				{
 					char aBuf[1024];
-					str_format(aBuf, sizeof(aBuf), "Help: %s ", pConsole->m_pCommandHelp);
+					const char *pCommandHelp = pConsole->m_pCommandHelp != nullptr ? pConsole->m_pCommandHelp : "";
+					const char *pCommandParams = pConsole->m_pCommandParams != nullptr ? pConsole->m_pCommandParams : "";
+					const char *pLocalizedHelp = Localize(pCommandHelp);
+					const char *pLocalizedParams = Localize(pCommandParams);
+					str_format(aBuf, sizeof(aBuf), Localize("Help: %s"), pLocalizedHelp);
 					TextRender()->TextEx(&Info.m_Cursor, aBuf, -1);
 					TextRender()->TextColor(0.75f, 0.75f, 0.75f, 1);
-					str_format(aBuf, sizeof(aBuf), "Usage: %s %s", pConsole->m_pCommandName, pConsole->m_pCommandParams);
+					str_format(aBuf, sizeof(aBuf), Localize("Usage: %s %s"), pConsole->m_pCommandName, pLocalizedParams);
 					TextRender()->TextEx(&Info.m_Cursor, aBuf, -1);
 				}
 			}

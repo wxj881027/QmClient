@@ -227,7 +227,26 @@ bool CScoreboard::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 
 bool CScoreboard::OnInput(const IInput::CEvent &Event)
 {
-	return IsActive() && m_MouseUnlocked;
+	if(!IsActive() || !m_MouseUnlocked)
+		return false;
+
+	// While using the scoreboard cursor, block gameplay mouse actions but still
+	// allow keyboard binds (e.g. movement or toggling the cursor key) to pass through.
+	if((Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) == 0)
+		return true;
+
+	if(Event.m_Key == KEY_MOUSE_1 ||
+		Event.m_Key == KEY_MOUSE_2 ||
+		(Event.m_Key >= KEY_MOUSE_4 && Event.m_Key <= KEY_MOUSE_9) ||
+		Event.m_Key == KEY_MOUSE_WHEEL_UP ||
+		Event.m_Key == KEY_MOUSE_WHEEL_DOWN ||
+		Event.m_Key == KEY_MOUSE_WHEEL_LEFT ||
+		Event.m_Key == KEY_MOUSE_WHEEL_RIGHT)
+	{
+		return true;
+	}
+
+	return false;
 }
 
 void CScoreboard::RenderTitle(CUIRect TitleBar, int Team, const char *pTitle)
