@@ -3760,6 +3760,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::HJAssist: return "hj辅助 hj fuzhu 解冻辅助 jiedong fuzhu 自动取消旁观 quxiao pangguan 自动切换 qiehuan tee 自动关闭聊天 guanbi liaotian";
 		case EQmModuleId::InputOverlay: return "按键显示 anjian xianshi input overlay 按键叠加 anjian diejia 大小 daxiao 不透明度 butouming 水平位置 shuiping weizhi 垂直位置 chuizhi weizhi";
 		case EQmModuleId::SystemMediaControls: return "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige";
+		case EQmModuleId::Info: return "";
 		}
 		return "";
 	};
@@ -3767,8 +3768,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	auto ModuleMatchesSearch = [&](const SQmModuleEntry *pModule) -> bool {
 		if(!HasModuleSearch)
 			return true;
-		return str_find_nocase(pModule->m_pKey, pModuleSearch) != nullptr ||
-			str_find_nocase(ModuleSearchKeywords(pModule->m_Id), pModuleSearch) != nullptr;
+		return str_utf8_find_nocase(pModule->m_pKey, pModuleSearch) != nullptr ||
+			str_utf8_find_nocase(ModuleSearchKeywords(pModule->m_Id), pModuleSearch) != nullptr;
 	};
 
 	std::vector<const SQmModuleEntry *> VisibleLeftModules;

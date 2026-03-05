@@ -436,13 +436,9 @@ static const char *FindLastKeywordContrastBoundary(const char *pMessageStart, co
 			if(pMatchEnd && pMatchEnd <= pLimit && pMatchEnd > pBoundary)
 				pBoundary = pMatchEnd;
 
-			const char *pNext = pMatch;
-			if(*pNext == '\0')
+			if(!pMatchEnd || pMatchEnd <= pSearchCursor)
 				break;
-			str_utf8_decode(&pNext);
-			if(pNext <= pSearchCursor)
-				break;
-			pSearchCursor = pNext;
+			pSearchCursor = pMatchEnd;
 		}
 	}
 	return pBoundary;
@@ -473,13 +469,9 @@ static int CountKeywordNegationsInRange(const char *pRangeStart, const char *pRa
 			if(pMatchEnd && pMatchEnd <= pRangeEnd)
 				++NegationCount;
 
-			const char *pNext = pMatch;
-			if(*pNext == '\0')
+			if(!pMatchEnd || pMatchEnd <= pSearchCursor)
 				break;
-			str_utf8_decode(&pNext);
-			if(pNext <= pSearchCursor)
-				break;
-			pSearchCursor = pNext;
+			pSearchCursor = pMatchEnd;
 		}
 	}
 
@@ -501,11 +493,9 @@ static bool HasPositiveKeywordMatch(const char *pMessage, const char *pToken)
 		if((NegationCount % 2) == 0)
 			return true;
 
-		const char *pNext = pMatch;
-		str_utf8_decode(&pNext);
-		if(pNext <= pSearchCursor)
+		if(!pMatchEnd || pMatchEnd <= pSearchCursor)
 			return false;
-		pSearchCursor = pNext;
+		pSearchCursor = pMatchEnd;
 	}
 	return false;
 }
