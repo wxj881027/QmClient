@@ -351,8 +351,15 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 		}
 	}
 
-	// Keep tab contents inside the original button rect to avoid overlap on narrow layouts.
-	Ui()->ClipEnable(pRect);
+	// Keep tab contents clipped horizontally to the original button rect.
+	// Extend clipping vertically to include the animated rect so "float up"
+	// animations don't cut off icon/text.
+	CUIRect ContentClip = *pRect;
+	const float ClipTop = minimum(pRect->y, Rect.y);
+	const float ClipBottom = maximum(pRect->y + pRect->h, Rect.y + Rect.h);
+	ContentClip.y = ClipTop;
+	ContentClip.h = ClipBottom - ClipTop;
+	Ui()->ClipEnable(&ContentClip);
 
 	if(pCommunityIcon)
 	{

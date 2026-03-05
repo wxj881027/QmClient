@@ -150,7 +150,7 @@ option(DISCORD_DYNAMIC "Enable discovering Discord rich presence libraries at ru
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
 option(DEV "Don't generate stuff necessary for packaging" OFF)
 option(VULKAN "Enable the vulkan backend" ${AUTO_VULKAN_BACKEND})
-option(EXCEPTION_HANDLING "Enable crashdumps (only works with Windows)" OFF)
+option(EXCEPTION_HANDLING "Enable crashdumps (only works with Windows)" ON)
 option(IPO "Enable interprocedural optimizations" OFF)
 option(FUSE_LD "Linker to use" OFF)
 option(SECURITY_COMPILER_FLAGS "Whether to set security-relevant compiler flags like -D_FORTIFY_SOURCE=2 and -fstack-protector-strong" ON)
@@ -1919,57 +1919,57 @@ set(EXPECTED_DATA
   skins7/x_ninja.json
   skins7/xmas_hat.png
   strong_weak.png
-  tclient/builtinscripts/sayemoticon.chai
-  tclient/fonts/Cabin-Regular.ttf
-  tclient/fonts/FreeSansBold.ttf
-  tclient/fonts/GoogleSans-Regular.ttf
-  tclient/fonts/Inter_24pt-Regular.ttf
-  tclient/fonts/Inter_24pt-SemiBold.ttf
-  tclient/fonts/Montserrat-Regular.ttf
-  tclient/fonts/Nunito-Black.ttf
-  tclient/fonts/Rubik-Regular.ttf
-  tclient/fonts/minecraft_font.ttf
-  tclient/gui_logo.png
-  tclient/languages/arabic.txt
-  tclient/languages/azerbaijani.txt
-  tclient/languages/belarusian.txt
-  tclient/languages/bosnian.txt
-  tclient/languages/brazilian_portuguese.txt
-  tclient/languages/bulgarian.txt
-  tclient/languages/catalan.txt
-  tclient/languages/chuvash.txt
-  tclient/languages/czech.txt
-  tclient/languages/danish.txt
-  tclient/languages/dutch.txt
-  tclient/languages/esperanto.txt
-  tclient/languages/estonian.txt
-  tclient/languages/finnish.txt
-  tclient/languages/french.txt
-  tclient/languages/galician.txt
-  tclient/languages/german.txt
-  tclient/languages/greek.txt
-  tclient/languages/hungarian.txt
-  tclient/languages/index.txt
-  tclient/languages/italian.txt
-  tclient/languages/japanese.txt
-  tclient/languages/korean.txt
-  tclient/languages/kyrgyz.txt
-  tclient/languages/license.txt
-  tclient/languages/norwegian.txt
-  tclient/languages/persian.txt
-  tclient/languages/polish.txt
-  tclient/languages/portuguese.txt
-  tclient/languages/romanian.txt
-  tclient/languages/russian.txt
-  tclient/languages/serbian.txt
-  tclient/languages/serbian_cyrillic.txt
-  tclient/languages/simplified_chinese.txt
-  tclient/languages/slovak.txt
-  tclient/languages/spanish.txt
-  tclient/languages/swedish.txt
-  tclient/languages/traditional_chinese.txt
-  tclient/languages/turkish.txt
-  tclient/languages/ukrainian.txt
+  qmclient/builtinscripts/sayemoticon.chai
+  qmclient/fonts/Cabin-Regular.ttf
+  qmclient/fonts/FreeSansBold.ttf
+  qmclient/fonts/GoogleSans-Regular.ttf
+  qmclient/fonts/Inter_24pt-Regular.ttf
+  qmclient/fonts/Inter_24pt-SemiBold.ttf
+  qmclient/fonts/Montserrat-Regular.ttf
+  qmclient/fonts/Nunito-Black.ttf
+  qmclient/fonts/Rubik-Regular.ttf
+  qmclient/fonts/minecraft_font.ttf
+  qmclient/gui_logo.png
+  qmclient/languages/arabic.txt
+  qmclient/languages/azerbaijani.txt
+  qmclient/languages/belarusian.txt
+  qmclient/languages/bosnian.txt
+  qmclient/languages/brazilian_portuguese.txt
+  qmclient/languages/bulgarian.txt
+  qmclient/languages/catalan.txt
+  qmclient/languages/chuvash.txt
+  qmclient/languages/czech.txt
+  qmclient/languages/danish.txt
+  qmclient/languages/dutch.txt
+  qmclient/languages/esperanto.txt
+  qmclient/languages/estonian.txt
+  qmclient/languages/finnish.txt
+  qmclient/languages/french.txt
+  qmclient/languages/galician.txt
+  qmclient/languages/german.txt
+  qmclient/languages/greek.txt
+  qmclient/languages/hungarian.txt
+  qmclient/languages/index.txt
+  qmclient/languages/italian.txt
+  qmclient/languages/japanese.txt
+  qmclient/languages/korean.txt
+  qmclient/languages/kyrgyz.txt
+  qmclient/languages/license.txt
+  qmclient/languages/norwegian.txt
+  qmclient/languages/persian.txt
+  qmclient/languages/polish.txt
+  qmclient/languages/portuguese.txt
+  qmclient/languages/romanian.txt
+  qmclient/languages/russian.txt
+  qmclient/languages/serbian.txt
+  qmclient/languages/serbian_cyrillic.txt
+  qmclient/languages/simplified_chinese.txt
+  qmclient/languages/slovak.txt
+  qmclient/languages/spanish.txt
+  qmclient/languages/swedish.txt
+  qmclient/languages/traditional_chinese.txt
+  qmclient/languages/turkish.txt
+  qmclient/languages/ukrainian.txt
   themes/auto.png
   themes/autumn.png
   themes/autumn_day.map

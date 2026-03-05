@@ -56,7 +56,7 @@ bool CFontTyper::OnInput(const IInput::CEvent &Event)
 			{
 				m_ConfirmActivatePopupContext.Reset();
 				m_ConfirmActivatePopupContext.YesNoButtons();
-				str_copy(m_ConfirmActivatePopupContext.m_aMessage, "Enable text mode? Pressing letters and numbers on your keyboard will place tiles.");
+				str_copy(m_ConfirmActivatePopupContext.m_aMessage, "启用文字模式吗？按键盘上的字母和数字将放置图块。");
 				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &m_ConfirmActivatePopupContext);
 			}
 		}
@@ -181,7 +181,7 @@ void CFontTyper::TextModeOff()
 	if(Editor()->m_Dialog == DIALOG_PSEUDO_FONT_TYPER)
 		Editor()->m_Dialog = DIALOG_NONE;
 	if(m_TilesPlacedSinceActivate)
-		Editor()->m_Map.m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(&Editor()->m_Map, Editor()->m_SelectedGroup), "Font typer");
+		Editor()->m_Map.m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(&Editor()->m_Map, Editor()->m_SelectedGroup), "文字输入");
 	m_TilesPlacedSinceActivate = 0;
 	m_Active = false;
 	m_pLastLayer = nullptr;
@@ -210,7 +210,7 @@ void CFontTyper::OnRender(CUIRect View)
 
 	if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 		TextModeOff();
-	str_copy(Editor()->m_aTooltip, "Type on your keyboard to insert letters and numbers. Press Escape to end text mode.");
+	str_copy(Editor()->m_aTooltip, "在键盘上输入字母和数字以插入图块。按 Escape 结束文字模式。");
 
 	std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(Editor()->GetSelectedLayerType(0, LAYERTYPE_TILES));
 	if(!pLayer)

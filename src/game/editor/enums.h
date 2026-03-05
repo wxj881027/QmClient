@@ -2,19 +2,19 @@
 #define GAME_EDITOR_ENUMS_H
 
 constexpr const char *GAME_TILE_OP_NAMES[] = {
-	"Air",
-	"Hookable",
-	"Death",
-	"Unhookable",
-	"Hookthrough",
-	"Freeze",
-	"Unfreeze",
-	"Deep Freeze",
-	"Deep Unfreeze",
-	"Blue Check-Tele",
-	"Red Check-Tele",
-	"Live Freeze",
-	"Live Unfreeze",
+	"空气",
+	"可钩",
+	"死亡",
+	"不可钩",
+	"穿钩",
+	"冻结",
+	"解冻",
+	"深度冻结",
+	"深度解冻",
+	"蓝色检查点传送",
+	"红色检查点传送",
+	"实时冻结",
+	"实时解冻",
 };
 enum class EGameTileOp
 {
@@ -34,16 +34,16 @@ enum class EGameTileOp
 };
 
 constexpr const char *AUTOMAP_REFERENCE_NAMES[] = {
-	"Game Layer",
-	"Hookable",
-	"Death",
-	"Unhookable",
-	"Freeze",
-	"Unfreeze",
-	"Deep Freeze",
-	"Deep Unfreeze",
-	"Live Freeze",
-	"Live Unfreeze",
+	"游戏层",
+	"可钩",
+	"死亡",
+	"不可钩",
+	"冻结",
+	"解冻",
+	"深度冻结",
+	"深度解冻",
+	"实时冻结",
+	"实时解冻",
 };
 
 #endif

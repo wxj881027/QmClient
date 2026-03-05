@@ -5176,6 +5176,7 @@ int main(int argc, const char **argv)
 		str_timestamp(aDate, sizeof(aDate));
 		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aBufName, aBufPath, sizeof(aBufPath));
+		fs_makedir_rec_for(aBufPath);
 		crashdump_init_if_available(aBufPath);
 	}
 

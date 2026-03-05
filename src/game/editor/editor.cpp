@@ -464,7 +464,7 @@ bool CEditor::CallbackOpenMap(const char *pFilename, int StorageType, void *pUse
 	}
 	else
 	{
-		pEditor->ShowFileDialogError("Failed to load map from file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法从文件“%s”加载地图。", pFilename);
 		return false;
 	}
 }
@@ -480,7 +480,7 @@ bool CEditor::CallbackAppendMap(const char *pFilename, int StorageType, void *pU
 	else
 	{
 		pEditor->m_aFilename[0] = 0;
-		pEditor->ShowFileDialogError("Failed to load map from file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法从文件“%s”加载地图。", pFilename);
 		return false;
 	}
 }
@@ -503,7 +503,7 @@ bool CEditor::CallbackSaveMap(const char *pFilename, int StorageType, void *pUse
 	}
 	else
 	{
-		pEditor->ShowFileDialogError("Failed to save map to file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法将地图保存到文件“%s”。", pFilename);
 		return false;
 	}
 
@@ -532,7 +532,7 @@ bool CEditor::CallbackSaveCopyMap(const char *pFilename, int StorageType, void *
 	}
 	else
 	{
-		pEditor->ShowFileDialogError("Failed to save map to file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法将地图保存到文件“%s”。", pFilename);
 		return false;
 	}
 }
@@ -552,7 +552,7 @@ bool CEditor::CallbackSaveImage(const char *pFilename, int StorageType, void *pU
 	}
 	else
 	{
-		pEditor->ShowFileDialogError("Failed to write image to file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法将图像写入文件“%s”。", pFilename);
 		return false;
 	}
 }
@@ -573,7 +573,7 @@ bool CEditor::CallbackSaveSound(const char *pFilename, int StorageType, void *pU
 		pEditor->OnDialogClose();
 		return true;
 	}
-	pEditor->ShowFileDialogError("Failed to open file '%s'.", pFilename);
+	pEditor->ShowFileDialogError("无法打开文件“%s”。", pFilename);
 	return false;
 }
 
@@ -586,14 +586,14 @@ bool CEditor::CallbackCustomEntities(const char *pFilename, int StorageType, voi
 
 	if(std::find(pEditor->m_vSelectEntitiesFiles.begin(), pEditor->m_vSelectEntitiesFiles.end(), std::string(aBuf)) != pEditor->m_vSelectEntitiesFiles.end())
 	{
-		pEditor->ShowFileDialogError("Custom entities cannot have the same name as default entities.");
+		pEditor->ShowFileDialogError("自定义实体不能与默认实体同名。");
 		return false;
 	}
 
 	CImageInfo ImgInfo;
 	if(!pEditor->Graphics()->LoadPng(ImgInfo, pFilename, StorageType))
 	{
-		pEditor->ShowFileDialogError("Failed to load image from file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法从文件“%s”加载图像。", pFilename);
 		return false;
 	}
 
@@ -614,7 +614,7 @@ void CEditor::DoAudioPreview(CUIRect View, const void *pPlayPauseButtonId, const
 	// play/pause button
 	{
 		View.VSplitLeft(View.h, &Button, &View);
-		if(DoButton_FontIcon(pPlayPauseButtonId, Sound()->IsPlaying(SampleId) ? FONT_ICON_PAUSE : FONT_ICON_PLAY, 0, &Button, BUTTONFLAG_LEFT, "Play/pause audio preview.", IGraphics::CORNER_ALL) ||
+		if(DoButton_FontIcon(pPlayPauseButtonId, Sound()->IsPlaying(SampleId) ? FONT_ICON_PAUSE : FONT_ICON_PLAY, 0, &Button, BUTTONFLAG_LEFT, "播放/暂停音频预览。", IGraphics::CORNER_ALL) ||
 			(m_Dialog == DIALOG_NONE && CLineInput::GetActiveInput() == nullptr && Input()->KeyPress(KEY_SPACE)))
 		{
 			if(Sound()->IsPlaying(SampleId))
@@ -634,7 +634,7 @@ void CEditor::DoAudioPreview(CUIRect View, const void *pPlayPauseButtonId, const
 	{
 		View.VSplitLeft(2.0f, nullptr, &View);
 		View.VSplitLeft(View.h, &Button, &View);
-		if(DoButton_FontIcon(pStopButtonId, FONT_ICON_STOP, 0, &Button, BUTTONFLAG_LEFT, "Stop audio preview.", IGraphics::CORNER_ALL))
+		if(DoButton_FontIcon(pStopButtonId, FONT_ICON_STOP, 0, &Button, BUTTONFLAG_LEFT, "停止音频预览。", IGraphics::CORNER_ALL))
 		{
 			Sound()->Stop(SampleId);
 		}
@@ -740,7 +740,7 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 		// detail button
 		ToolbarTop.VSplitLeft(40.0f, &Button, &ToolbarTop);
 		static int s_HqButton = 0;
-		if(DoButton_Editor(&s_HqButton, "HD", m_ShowDetail, &Button, BUTTONFLAG_LEFT, "[Ctrl+H] 切换高清细节.") ||
+		if(DoButton_Editor(&s_HqButton, "高清", m_ShowDetail, &Button, BUTTONFLAG_LEFT, "[Ctrl+H] 切换高清细节.") ||
 			(m_Dialog == DIALOG_NONE && CLineInput::GetActiveInput() == nullptr && Input()->KeyPress(KEY_H) && ModPressed))
 		{
 			m_ShowDetail = !m_ShowDetail;
@@ -790,7 +790,7 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 		// zoom button
 		ToolbarTop.VSplitLeft(40.0f, &Button, &ToolbarTop);
 		static int s_ZoomButton = 0;
-		if(DoButton_Editor(&s_ZoomButton, "Zoom", m_PreviewZoom, &Button, BUTTONFLAG_LEFT, "切换预览图层在游戏中的缩放方式."))
+		if(DoButton_Editor(&s_ZoomButton, "缩放", m_PreviewZoom, &Button, BUTTONFLAG_LEFT, "切换预览图层在游戏中的缩放方式."))
 		{
 			m_PreviewZoom = !m_PreviewZoom;
 		}
@@ -809,7 +809,7 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 		// grid settings button
 		ToolbarTop.VSplitLeft(14.0f, &Button, &ToolbarTop);
 		static char s_GridSettingsButton;
-		if(DoButton_FontIcon(&s_GridSettingsButton, FONT_ICON_CIRCLE_CHEVRON_DOWN, 0, &Button, BUTTONFLAG_LEFT, "Change the grid settings.", IGraphics::CORNER_R, 8.0f))
+		if(DoButton_FontIcon(&s_GridSettingsButton, FONT_ICON_CIRCLE_CHEVRON_DOWN, 0, &Button, BUTTONFLAG_LEFT, "更改网格设置。", IGraphics::CORNER_R, 8.0f))
 		{
 			MapView()->MapGrid()->DoSettingsPopup(vec2(Button.x, Button.y + Button.h));
 		}
@@ -843,14 +843,14 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 		// undo/redo group
 		ToolbarTop.VSplitLeft(25.0f, &Button, &ToolbarTop);
 		static int s_UndoButton = 0;
-		if(DoButton_FontIcon(&s_UndoButton, FONT_ICON_UNDO, m_Map.m_EditorHistory.CanUndo() - 1, &Button, BUTTONFLAG_LEFT, "[Ctrl+Z] Undo the last action.", IGraphics::CORNER_L))
+		if(DoButton_FontIcon(&s_UndoButton, FONT_ICON_UNDO, m_Map.m_EditorHistory.CanUndo() - 1, &Button, BUTTONFLAG_LEFT, "[Ctrl+Z] 撤销上一步操作。", IGraphics::CORNER_L))
 		{
 			m_Map.m_EditorHistory.Undo();
 		}
 
 		ToolbarTop.VSplitLeft(25.0f, &Button, &ToolbarTop);
 		static int s_RedoButton = 0;
-		if(DoButton_FontIcon(&s_RedoButton, FONT_ICON_REDO, m_Map.m_EditorHistory.CanRedo() - 1, &Button, BUTTONFLAG_LEFT, "[Ctrl+Y] Redo the last action.", IGraphics::CORNER_R))
+		if(DoButton_FontIcon(&s_RedoButton, FONT_ICON_REDO, m_Map.m_EditorHistory.CanRedo() - 1, &Button, BUTTONFLAG_LEFT, "[Ctrl+Y] 重做上一步操作。", IGraphics::CORNER_R))
 		{
 			m_Map.m_EditorHistory.Redo();
 		}
@@ -893,14 +893,14 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 				}
 
 			static int s_CcwButton = 0;
-			if(DoButton_FontIcon(&s_CcwButton, FONT_ICON_ARROW_ROTATE_LEFT, Enabled, &Button, BUTTONFLAG_LEFT, "[R] Rotate the brush counter-clockwise.", IGraphics::CORNER_L) || (Input()->KeyPress(KEY_R) && m_Dialog == DIALOG_NONE && CLineInput::GetActiveInput() == nullptr && !Ui()->IsPopupOpen()))
+			if(DoButton_FontIcon(&s_CcwButton, FONT_ICON_ARROW_ROTATE_LEFT, Enabled, &Button, BUTTONFLAG_LEFT, "[R] 逆时针旋转画笔。", IGraphics::CORNER_L) || (Input()->KeyPress(KEY_R) && m_Dialog == DIALOG_NONE && CLineInput::GetActiveInput() == nullptr && !Ui()->IsPopupOpen()))
 			{
 				for(auto &pLayer : m_pBrush->m_vpLayers)
 					pLayer->BrushRotate(-s_RotationAmount / 360.0f * pi * 2);
 			}
 
 			ToolbarTop.VSplitLeft(30.0f, &Button, &ToolbarTop);
-			auto RotationAmountRes = UiDoValueSelector(&s_RotationAmount, &Button, "", s_RotationAmount, TileLayer ? 90 : 1, 359, TileLayer ? 90 : 1, TileLayer ? 10.0f : 2.0f, "Rotation of the brush in degrees. Use left mouse button to drag and change the value. Hold shift to be more precise.", true, false, IGraphics::CORNER_NONE);
+			auto RotationAmountRes = UiDoValueSelector(&s_RotationAmount, &Button, "", s_RotationAmount, TileLayer ? 90 : 1, 359, TileLayer ? 90 : 1, TileLayer ? 10.0f : 2.0f, "画笔旋转角度（度）。按住鼠标左键拖动以调整数值，按住 Shift 可更精细调整。", true, false, IGraphics::CORNER_NONE);
 			s_RotationAmount = RotationAmountRes.m_Value;
 
 			ToolbarTop.VSplitLeft(25.0f, &Button, &ToolbarTop);
@@ -969,25 +969,25 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 					int ExtraWidth = 0;
 					if(pS == m_Map.m_pSwitchLayer)
 					{
-						pButtonName = "Switch";
+						pButtonName = "开关";
 						pfnPopupFunc = PopupSwitch;
 						Rows = 3;
 					}
 					else if(pS == m_Map.m_pSpeedupLayer)
 					{
-						pButtonName = "Speedup";
+						pButtonName = "加速";
 						pfnPopupFunc = PopupSpeedup;
 						Rows = 3;
 					}
 					else if(pS == m_Map.m_pTuneLayer)
 					{
-						pButtonName = "Tune";
+						pButtonName = "调整";
 						pfnPopupFunc = PopupTune;
 						Rows = 2;
 					}
 					else if(pS == m_Map.m_pTeleLayer)
 					{
-						pButtonName = "Tele";
+						pButtonName = "传送";
 						pfnPopupFunc = PopupTele;
 						Rows = 3;
 						ExtraWidth = 50;
@@ -1062,7 +1062,7 @@ void CEditor::DoToolbarImages(CUIRect ToolBar)
 	if(pSelectedImage != nullptr)
 	{
 		char aLabel[64];
-		str_format(aLabel, sizeof(aLabel), "Size: %" PRIzu " × %" PRIzu, pSelectedImage->m_Width, pSelectedImage->m_Height);
+		str_format(aLabel, sizeof(aLabel), "尺寸: %" PRIzu " × %" PRIzu, pSelectedImage->m_Width, pSelectedImage->m_Height);
 		Ui()->DoLabel(&ToolBarBottom, aLabel, 12.0f, TEXTALIGN_ML);
 	}
 }
@@ -1166,7 +1166,7 @@ void CEditor::DoSoundSource(int LayerIndex, CSoundSource *pSource, int Index)
 		m_pUiGotContext = pSource;
 
 		Graphics()->SetColor(1, 1, 1, 1);
-		str_copy(m_aTooltip, "Left mouse button to move. Hold alt to ignore grid.");
+		str_copy(m_aTooltip, "鼠标左键移动。按住 Alt 可忽略网格。");
 
 		if(Ui()->MouseButton(0))
 		{
@@ -1821,7 +1821,7 @@ void CEditor::DoQuad(int LayerIndex, const std::shared_ptr<CLayerQuads> &pLayer,
 			EAxis Axis = GetDragAxis(s_LastOffset);
 			DrawAxis(Axis, s_OriginalPosition, pQuad->m_aPoints[4]);
 
-			str_copy(m_aTooltip, "Hold shift to keep alignment on one axis.");
+			str_copy(m_aTooltip, "按住 Shift 可锁定单轴对齐。");
 		}
 
 		if(s_Operation == OP_MOVE_PIVOT)
@@ -1943,7 +1943,7 @@ void CEditor::DoQuad(int LayerIndex, const std::shared_ptr<CLayerQuads> &pLayer,
 		m_pUiGotContext = pId;
 
 		Graphics()->SetColor(1, 1, 1, 1);
-		str_copy(m_aTooltip, "Left mouse button to move. Hold shift to move pivot. Hold alt to ignore grid. Shift+right click to delete.");
+		str_copy(m_aTooltip, "鼠标左键移动。按住 Shift 移动枢轴，按住 Alt 忽略网格。Shift+右键删除。");
 
 		if(Ui()->MouseButton(0))
 		{
@@ -2112,7 +2112,7 @@ void CEditor::DoQuadPoint(int LayerIndex, const std::shared_ptr<CLayerQuads> &pL
 			// Alignments
 			DrawPointAlignments(s_Alignments, s_LastOffset);
 
-			str_copy(m_aTooltip, "Hold shift to keep alignment on one axis.");
+			str_copy(m_aTooltip, "按住 Shift 可锁定单轴对齐。");
 		}
 
 		if(s_Operation == OP_CONTEXT_MENU)
@@ -2166,7 +2166,7 @@ void CEditor::DoQuadPoint(int LayerIndex, const std::shared_ptr<CLayerQuads> &pL
 		m_pUiGotContext = pId;
 
 		Graphics()->SetColor(1, 1, 1, 1);
-		str_copy(m_aTooltip, "Left mouse button to move. Hold shift to move the texture. Hold alt to ignore grid.");
+		str_copy(m_aTooltip, "鼠标左键移动。按住 Shift 移动纹理，按住 Alt 忽略网格。");
 
 		if(Ui()->MouseButton(0))
 		{
@@ -2235,7 +2235,7 @@ void CEditor::DoQuadKnife(int QuadIndex)
 		vec2(fx2f(pQuad->m_aPoints[3].x), fx2f(pQuad->m_aPoints[3].y)),
 		vec2(fx2f(pQuad->m_aPoints[2].x), fx2f(pQuad->m_aPoints[2].y))};
 
-	str_copy(m_aTooltip, "Left click inside the quad to select an area to slice. Hold alt to ignore grid. Right click to leave knife mode.");
+	str_copy(m_aTooltip, "在四边形内左键选择切割区域。按住 Alt 可忽略网格。右键退出切割模式。");
 
 	if(Ui()->MouseButtonClicked(1))
 	{
@@ -2638,7 +2638,7 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 	else if(Ui()->HotItem() == pPoint && m_CurrentQuadIndex == QuadIndex)
 	{
 		Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-		str_copy(m_aTooltip, "Left mouse button to move. Hold ctrl to rotate. Hold alt to ignore grid.");
+		str_copy(m_aTooltip, "鼠标左键移动。按住 Ctrl 旋转，按住 Alt 忽略网格。");
 
 		if(Ui()->MouseButton(0))
 		{
@@ -2890,18 +2890,18 @@ void CEditor::DoMapEditor(CUIRect View)
 				}
 			}
 			else if(m_pBrush->IsEmpty() && GetSelectedLayerType(0, LAYERTYPE_QUADS) != nullptr)
-				str_copy(m_aTooltip, "Use left mouse button to drag and create a brush. Hold shift to select multiple quads. Press R to rotate selected quads. Use ctrl+right click to select layer.");
+				str_copy(m_aTooltip, "按住鼠标左键拖拽创建画笔。按住 Shift 选择多个四边形。按 R 旋转选中四边形。Ctrl+右键选择图层。");
 			else if(m_pBrush->IsEmpty())
 			{
 				if(g_Config.m_EdLayerSelector)
-					str_copy(m_aTooltip, "Use left mouse button to drag and create a brush. Use ctrl+right click to select layer of hovered tile.");
+					str_copy(m_aTooltip, "按住鼠标左键拖拽创建画笔。Ctrl+右键选择悬停图块所在图层。");
 				else
-					str_copy(m_aTooltip, "Use left mouse button to drag and create a brush.");
+					str_copy(m_aTooltip, "按住鼠标左键拖拽创建画笔。");
 			}
 			else
 			{
 				// Alt behavior handled in CEditor::MouseAxisLock
-				str_copy(m_aTooltip, "Use left mouse button to paint with the brush. Right click to clear the brush. Hold Alt to lock the mouse movement to a single axis.");
+				str_copy(m_aTooltip, "使用鼠标左键用画笔绘制。右键清空画笔。按住 Alt 将鼠标移动锁定到单轴。");
 			}
 
 			if(Ui()->CheckActiveItem(&m_MapEditorId))
@@ -3156,9 +3156,9 @@ void CEditor::DoMapEditor(CUIRect View)
 					}
 					else if(Ui()->HotItem() == &MapView()->ProofMode()->m_vMenuBackgroundPositions[i])
 					{
-						char aTooltipPrefix[32] = "Switch proof position to";
+						char aTooltipPrefix[32] = "切换验证位置到";
 						if(i == MapView()->ProofMode()->m_CurrentMenuProofIndex)
-							str_copy(aTooltipPrefix, "Current proof position at");
+							str_copy(aTooltipPrefix, "当前验证位置在");
 
 						char aNumBuf[8];
 						if(i < (TILE_TIME_CHECKPOINT_LAST - TILE_TIME_CHECKPOINT_FIRST))
@@ -3172,7 +3172,7 @@ void CEditor::DoMapEditor(CUIRect View)
 						for(int k : MapView()->ProofMode()->m_vMenuBackgroundCollisions.at(i))
 						{
 							if(k == MapView()->ProofMode()->m_CurrentMenuProofIndex)
-								str_copy(aTooltipPrefix, "Current proof position at");
+								str_copy(aTooltipPrefix, "当前验证位置在");
 
 							Pos = MapView()->ProofMode()->m_vMenuBackgroundPositions[k];
 							Pos += MapView()->GetWorldOffset() - MapView()->ProofMode()->m_vMenuBackgroundPositions[MapView()->ProofMode()->m_CurrentMenuProofIndex];
@@ -3315,7 +3315,7 @@ void CEditor::DoColorPickerButton(const void *pId, const CUIRect *pRect, ColorRG
 	pRect->Margin(1.0f, &ColorRect);
 	ColorRect.Draw(Color, IGraphics::CORNER_ALL, 3.0f);
 
-	const int ButtonResult = DoButtonLogic(pId, 0, pRect, BUTTONFLAG_ALL, "Click to show the color picker. Shift+right click to copy color to clipboard. Shift+left click to paste color from clipboard.");
+	const int ButtonResult = DoButtonLogic(pId, 0, pRect, BUTTONFLAG_ALL, "点击打开取色器。Shift+右键将颜色复制到剪贴板，Shift+左键从剪贴板粘贴颜色。");
 	if(Input()->ShiftIsPressed())
 	{
 		if(ButtonResult == 1)
@@ -3517,7 +3517,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 		{
 			Slot.VSplitLeft(15.0f, &VisibleToggle, &Slot);
 
-			const int MouseClick = DoButton_FontIcon(&m_Map.m_vpGroups[g]->m_Visible, m_Map.m_vpGroups[g]->m_Visible ? FONT_ICON_EYE : FONT_ICON_EYE_SLASH, m_Map.m_vpGroups[g]->m_Collapse ? 1 : 0, &VisibleToggle, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "Left click to toggle visibility. Right click to show this group only.", IGraphics::CORNER_L, 8.0f);
+			const int MouseClick = DoButton_FontIcon(&m_Map.m_vpGroups[g]->m_Visible, m_Map.m_vpGroups[g]->m_Visible ? FONT_ICON_EYE : FONT_ICON_EYE_SLASH, m_Map.m_vpGroups[g]->m_Collapse ? 1 : 0, &VisibleToggle, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "左键切换可见性。右键仅显示此组。", IGraphics::CORNER_L, 8.0f);
 			if(MouseClick == 1)
 			{
 				m_Map.m_vpGroups[g]->m_Visible = !m_Map.m_vpGroups[g]->m_Visible;
@@ -3559,7 +3559,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 			bool Clicked;
 			bool Abrupted;
 			if(int Result = DoButton_DraggableEx(m_Map.m_vpGroups[g].get(), aBuf, g == m_SelectedGroup, &Slot, &Clicked, &Abrupted,
-				   BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, m_Map.m_vpGroups[g]->m_Collapse ? "Select group. Shift+left click to select all layers. Double click to expand." : "Select group. Shift+left click to select all layers. Double click to collapse.", IGraphics::CORNER_R))
+				   BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, m_Map.m_vpGroups[g]->m_Collapse ? "选择组。Shift+左键选择全部图层。双击展开。" : "选择组。Shift+左键选择全部图层。双击折叠。", IGraphics::CORNER_R))
 			{
 				if(s_Operation == OP_NONE)
 				{
@@ -3676,7 +3676,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 			Slot.VSplitLeft(12.0f, nullptr, &Slot);
 			Slot.VSplitLeft(15.0f, &VisibleToggle, &Button);
 
-			const int MouseClick = DoButton_FontIcon(&m_Map.m_vpGroups[g]->m_vpLayers[i]->m_Visible, m_Map.m_vpGroups[g]->m_vpLayers[i]->m_Visible ? FONT_ICON_EYE : FONT_ICON_EYE_SLASH, 0, &VisibleToggle, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "Left click to toggle visibility. Right click to show only this layer within its group.", IGraphics::CORNER_L, 8.0f);
+			const int MouseClick = DoButton_FontIcon(&m_Map.m_vpGroups[g]->m_vpLayers[i]->m_Visible, m_Map.m_vpGroups[g]->m_vpLayers[i]->m_Visible ? FONT_ICON_EYE : FONT_ICON_EYE_SLASH, 0, &VisibleToggle, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "左键切换可见性。右键仅显示该组内此图层。", IGraphics::CORNER_L, 8.0f);
 			if(MouseClick == 1)
 			{
 				m_Map.m_vpGroups[g]->m_vpLayers[i]->m_Visible = !m_Map.m_vpGroups[g]->m_vpLayers[i]->m_Visible;
@@ -3743,7 +3743,7 @@ void CEditor::RenderLayers(CUIRect LayersBox)
 			bool Clicked;
 			bool Abrupted;
 			if(int Result = DoButton_DraggableEx(m_Map.m_vpGroups[g]->m_vpLayers[i].get(), aBuf, Checked, &Button, &Clicked, &Abrupted,
-				   BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "选择图层. 按住Shift键以选择多个.", IGraphics::CORNER_R))
+			BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "选择图层。按住 Shift 键以选择多个。", IGraphics::CORNER_R))
 			{
 				if(s_Operation == OP_NONE)
 				{
@@ -4080,7 +4080,7 @@ bool CEditor::ReplaceImage(const char *pFilename, int StorageType, bool CheckDup
 		{
 			if(!str_comp(pImage->m_aName, aBuf))
 			{
-				ShowFileDialogError("Image named '%s' was already added.", pImage->m_aName);
+				ShowFileDialogError("名为“%s”的图像已存在。", pImage->m_aName);
 				return false;
 			}
 		}
@@ -4089,7 +4089,7 @@ bool CEditor::ReplaceImage(const char *pFilename, int StorageType, bool CheckDup
 	CImageInfo ImgInfo;
 	if(!Graphics()->LoadPng(ImgInfo, pFilename, StorageType))
 	{
-		ShowFileDialogError("Failed to load image from file '%s'.", pFilename);
+		ShowFileDialogError("无法从文件“%s”加载图像。", pFilename);
 		return false;
 	}
 
@@ -4133,7 +4133,7 @@ bool CEditor::AddImage(const char *pFilename, int StorageType, void *pUser)
 	{
 		if(!str_comp(pImage->m_aName, aBuf))
 		{
-			pEditor->ShowFileDialogError("Image named '%s' was already added.", pImage->m_aName);
+			pEditor->ShowFileDialogError("名为“%s”的图像已存在。", pImage->m_aName);
 			return false;
 		}
 	}
@@ -4148,7 +4148,7 @@ bool CEditor::AddImage(const char *pFilename, int StorageType, void *pUser)
 	CImageInfo ImgInfo;
 	if(!pEditor->Graphics()->LoadPng(ImgInfo, pFilename, StorageType))
 	{
-		pEditor->ShowFileDialogError("Failed to load image from file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法从文件“%s”加载图像。", pFilename);
 		return false;
 	}
 
@@ -4186,7 +4186,7 @@ bool CEditor::AddSound(const char *pFilename, int StorageType, void *pUser)
 	{
 		if(!str_comp(pSound->m_aName, aBuf))
 		{
-			pEditor->ShowFileDialogError("Sound named '%s' was already added.", pSound->m_aName);
+			pEditor->ShowFileDialogError("名为“%s”的声音已存在。", pSound->m_aName);
 			return false;
 		}
 	}
@@ -4203,7 +4203,7 @@ bool CEditor::AddSound(const char *pFilename, int StorageType, void *pUser)
 	unsigned DataSize;
 	if(!pEditor->Storage()->ReadFile(pFilename, StorageType, &pData, &DataSize))
 	{
-		pEditor->ShowFileDialogError("Failed to open sound file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法打开声音文件“%s”。", pFilename);
 		return false;
 	}
 
@@ -4212,7 +4212,7 @@ bool CEditor::AddSound(const char *pFilename, int StorageType, void *pUser)
 	if(SoundId == -1)
 	{
 		free(pData);
-		pEditor->ShowFileDialogError("Failed to load sound from file '%s'.", pFilename);
+		pEditor->ShowFileDialogError("无法从文件“%s”加载声音。", pFilename);
 		return false;
 	}
 
@@ -4240,7 +4240,7 @@ bool CEditor::ReplaceSound(const char *pFilename, int StorageType, bool CheckDup
 		{
 			if(!str_comp(pSound->m_aName, aBuf))
 			{
-				ShowFileDialogError("Sound named '%s' was already added.", pSound->m_aName);
+				ShowFileDialogError("名为“%s”的声音已存在。", pSound->m_aName);
 				return false;
 			}
 		}
@@ -4251,7 +4251,7 @@ bool CEditor::ReplaceSound(const char *pFilename, int StorageType, bool CheckDup
 	unsigned DataSize;
 	if(!Storage()->ReadFile(pFilename, StorageType, &pData, &DataSize))
 	{
-		ShowFileDialogError("Failed to open sound file '%s'.", pFilename);
+		ShowFileDialogError("无法打开声音文件“%s”。", pFilename);
 		return false;
 	}
 
@@ -4260,7 +4260,7 @@ bool CEditor::ReplaceSound(const char *pFilename, int StorageType, bool CheckDup
 	if(SoundId == -1)
 	{
 		free(pData);
-		ShowFileDialogError("Failed to load sound from file '%s'.", pFilename);
+		ShowFileDialogError("无法从文件“%s”加载声音。", pFilename);
 		return false;
 	}
 
@@ -4341,7 +4341,7 @@ void CEditor::RenderImagesList(CUIRect ToolBox)
 		CUIRect Slot;
 		ToolBox.HSplitTop(RowHeight + 3.0f, &Slot, &ToolBox);
 		if(s_ScrollRegion.AddRect(Slot))
-			Ui()->DoLabel(&Slot, e == 0 ? "Embedded" : "External", 12.0f, TEXTALIGN_MC);
+			Ui()->DoLabel(&Slot, e == 0 ? "嵌入" : "外部", 12.0f, TEXTALIGN_MC);
 
 		for(int i = 0; i < (int)m_Map.m_vpImages.size(); i++)
 		{
@@ -4379,7 +4379,7 @@ void CEditor::RenderImagesList(CUIRect ToolBox)
 			}
 
 			if(int Result = DoButton_Ex(&m_Map.m_vpImages[i], m_Map.m_vpImages[i]->m_aName, Selected, &Slot,
-				   BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "Select image.", IGraphics::CORNER_ALL))
+				   BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "选择图像。", IGraphics::CORNER_ALL))
 			{
 				m_Map.m_SelectedImage = i;
 
@@ -4473,7 +4473,7 @@ void CEditor::RenderSounds(CUIRect ToolBox)
 	CUIRect Slot;
 	ToolBox.HSplitTop(RowHeight + 3.0f, &Slot, &ToolBox);
 	if(s_ScrollRegion.AddRect(Slot))
-		Ui()->DoLabel(&Slot, "Embedded", 12.0f, TEXTALIGN_MC);
+		Ui()->DoLabel(&Slot, "嵌入", 12.0f, TEXTALIGN_MC);
 
 	for(int i = 0; i < (int)m_Map.m_vpSounds.size(); i++)
 	{
@@ -4495,7 +4495,7 @@ void CEditor::RenderSounds(CUIRect ToolBox)
 			Selected += 2; // Sound is unused
 
 		if(int Result = DoButton_Ex(&m_Map.m_vpSounds[i], m_Map.m_vpSounds[i]->m_aName, Selected, &Slot,
-			   BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "Select sound.", IGraphics::CORNER_ALL))
+			   BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "选择声音。", IGraphics::CORNER_ALL))
 		{
 			m_Map.m_SelectedSound = i;
 
@@ -4526,8 +4526,8 @@ void CEditor::RenderSounds(CUIRect ToolBox)
 	{
 		AddSoundButton.HSplitTop(5.0f, nullptr, &AddSoundButton);
 		AddSoundButton.HSplitTop(RowHeight, &AddSoundButton, nullptr);
-		if(DoButton_Editor(&s_AddSoundButton, "Add sound", 0, &AddSoundButton, BUTTONFLAG_LEFT, "Load a new sound to use in the map."))
-			m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::SOUND, "Add sound", "Add", "mapres", "", AddSound, this);
+		if(DoButton_Editor(&s_AddSoundButton, "添加声音", 0, &AddSoundButton, BUTTONFLAG_LEFT, "加载一个可在地图中使用的新声音。"))
+			m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::SOUND, "添加声音", "添加", "mapres", "", AddSound, this);
 	}
 	s_ScrollRegion.End();
 }
@@ -4572,11 +4572,11 @@ void CEditor::RenderModebar(CUIRect View)
 	{
 		char aBuf[64];
 		if(m_Mentions == 1)
-			str_copy(aBuf, Localize("1 new mention"));
+			str_copy(aBuf, Localize("1 条新提醒"));
 		else if(m_Mentions <= 9)
-			str_format(aBuf, sizeof(aBuf), Localize("%d new mentions"), m_Mentions);
+			str_format(aBuf, sizeof(aBuf), Localize("%d 条新提醒"), m_Mentions);
 		else
-			str_copy(aBuf, Localize("9+ new mentions"));
+			str_copy(aBuf, Localize("9+ 条新提醒"));
 
 		TextRender()->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
 		Ui()->DoLabel(&Mentions, aBuf, 10.0f, TEXTALIGN_MC);
@@ -4587,7 +4587,7 @@ void CEditor::RenderModebar(CUIRect View)
 	if(m_IngameMoved)
 	{
 		TextRender()->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
-		Ui()->DoLabel(&IngameMoved, Localize("Moved ingame"), 10.0f, TEXTALIGN_MC);
+		Ui()->DoLabel(&IngameMoved, Localize("在游戏内已移动"), 10.0f, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}
 
@@ -4595,21 +4595,21 @@ void CEditor::RenderModebar(CUIRect View)
 	{
 		ModeButtons.VSplitLeft(ButtonWidth, &ModeButton, &ModeButtons);
 		static int s_LayersButton = 0;
-		if(DoButton_FontIcon(&s_LayersButton, FONT_ICON_LAYER_GROUP, m_Mode == MODE_LAYERS, &ModeButton, BUTTONFLAG_LEFT, "Go to layers management.", IGraphics::CORNER_L))
+		if(DoButton_FontIcon(&s_LayersButton, FONT_ICON_LAYER_GROUP, m_Mode == MODE_LAYERS, &ModeButton, BUTTONFLAG_LEFT, "转到图层管理。", IGraphics::CORNER_L))
 		{
 			m_Mode = MODE_LAYERS;
 		}
 
 		ModeButtons.VSplitLeft(ButtonWidth, &ModeButton, &ModeButtons);
 		static int s_ImagesButton = 0;
-		if(DoButton_FontIcon(&s_ImagesButton, FONT_ICON_IMAGE, m_Mode == MODE_IMAGES, &ModeButton, BUTTONFLAG_LEFT, "Go to images management.", IGraphics::CORNER_NONE))
+		if(DoButton_FontIcon(&s_ImagesButton, FONT_ICON_IMAGE, m_Mode == MODE_IMAGES, &ModeButton, BUTTONFLAG_LEFT, "转到图像管理。", IGraphics::CORNER_NONE))
 		{
 			m_Mode = MODE_IMAGES;
 		}
 
 		ModeButtons.VSplitLeft(ButtonWidth, &ModeButton, &ModeButtons);
 		static int s_SoundsButton = 0;
-		if(DoButton_FontIcon(&s_SoundsButton, FONT_ICON_MUSIC, m_Mode == MODE_SOUNDS, &ModeButton, BUTTONFLAG_LEFT, "Go to sounds management.", IGraphics::CORNER_R))
+		if(DoButton_FontIcon(&s_SoundsButton, FONT_ICON_MUSIC, m_Mode == MODE_SOUNDS, &ModeButton, BUTTONFLAG_LEFT, "转到声音管理。", IGraphics::CORNER_R))
 		{
 			m_Mode = MODE_SOUNDS;
 		}
@@ -4658,7 +4658,7 @@ void CEditor::RenderTooltip(CUIRect TooltipRect)
 
 	char aBuf[256];
 	if(m_pUiGotContext && m_pUiGotContext == Ui()->HotItem())
-		str_format(aBuf, sizeof(aBuf), "%s Right click for context menu.", m_aTooltip);
+		str_format(aBuf, sizeof(aBuf), "%s 右键打开上下文菜单。", m_aTooltip);
 	else
 		str_copy(aBuf, m_aTooltip);
 
@@ -4727,7 +4727,7 @@ void CEditor::RemoveUnusedEnvelopes()
 		}
 	}
 	char aDisplay[256];
-	str_format(aDisplay, sizeof(aDisplay), "Tool 'Remove unused envelopes': delete %d envelopes", DeletedCount);
+	str_format(aDisplay, sizeof(aDisplay), "工具“移除未使用包络线”：删除 %d 条包络线", DeletedCount);
 	m_Map.m_EnvelopeEditorHistory.EndBulk(aDisplay);
 }
 
@@ -4895,20 +4895,20 @@ public:
 		{
 		case ETimeUnit::MILLISECONDS:
 			if(Minutes != 0)
-				str_format(pBuffer, BufferSize, "%d:%02d.%03dmin", Minutes, Seconds, Milliseconds);
+		str_format(pBuffer, BufferSize, "%d:%02d.%03d分", Minutes, Seconds, Milliseconds);
 			else if(Seconds != 0)
-				str_format(pBuffer, BufferSize, "%d.%03ds", Seconds, Milliseconds);
+		str_format(pBuffer, BufferSize, "%d.%03d秒", Seconds, Milliseconds);
 			else
-				str_format(pBuffer, BufferSize, "%dms", Milliseconds);
+		str_format(pBuffer, BufferSize, "%d毫秒", Milliseconds);
 			break;
 		case ETimeUnit::SECONDS:
 			if(Minutes != 0)
-				str_format(pBuffer, BufferSize, "%d:%02dmin", Minutes, Seconds);
+		str_format(pBuffer, BufferSize, "%d:%02d分", Minutes, Seconds);
 			else
-				str_format(pBuffer, BufferSize, "%ds", Seconds);
+		str_format(pBuffer, BufferSize, "%d秒", Seconds);
 			break;
 		case ETimeUnit::MINUTES:
-			str_format(pBuffer, BufferSize, "%dmin", Minutes);
+		str_format(pBuffer, BufferSize, "%d分", Minutes);
 			break;
 		}
 	}
@@ -5023,7 +5023,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		// redo button
 		ToolBar.VSplitRight(25.0f, &ToolBar, &Button);
 		static int s_RedoButton = 0;
-		if(DoButton_FontIcon(&s_RedoButton, FONT_ICON_REDO, m_Map.m_EnvelopeEditorHistory.CanRedo() ? 0 : -1, &Button, BUTTONFLAG_LEFT, "[Ctrl+Y] Redo the last action.", IGraphics::CORNER_R, 11.0f) == 1)
+		if(DoButton_FontIcon(&s_RedoButton, FONT_ICON_REDO, m_Map.m_EnvelopeEditorHistory.CanRedo() ? 0 : -1, &Button, BUTTONFLAG_LEFT, "[Ctrl+Y] 重做上一步操作。", IGraphics::CORNER_R, 11.0f) == 1)
 		{
 			m_Map.m_EnvelopeEditorHistory.Redo();
 		}
@@ -5032,14 +5032,14 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		ToolBar.VSplitRight(25.0f, &ToolBar, &Button);
 		ToolBar.VSplitRight(10.0f, &ToolBar, nullptr);
 		static int s_UndoButton = 0;
-		if(DoButton_FontIcon(&s_UndoButton, FONT_ICON_UNDO, m_Map.m_EnvelopeEditorHistory.CanUndo() ? 0 : -1, &Button, BUTTONFLAG_LEFT, "[Ctrl+Z] Undo the last action.", IGraphics::CORNER_L, 11.0f) == 1)
+		if(DoButton_FontIcon(&s_UndoButton, FONT_ICON_UNDO, m_Map.m_EnvelopeEditorHistory.CanUndo() ? 0 : -1, &Button, BUTTONFLAG_LEFT, "[Ctrl+Z] 撤销上一步操作。", IGraphics::CORNER_L, 11.0f) == 1)
 		{
 			m_Map.m_EnvelopeEditorHistory.Undo();
 		}
 
 		ToolBar.VSplitRight(50.0f, &ToolBar, &Button);
 		static int s_NewSoundButton = 0;
-		if(DoButton_Editor(&s_NewSoundButton, "Sound+", 0, &Button, BUTTONFLAG_LEFT, "Create a new sound envelope."))
+		if(DoButton_Editor(&s_NewSoundButton, "声音+", 0, &Button, BUTTONFLAG_LEFT, "创建新的声音包络线。"))
 		{
 			m_Map.m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEnvelopeAdd>(&m_Map, CEnvelope::EType::SOUND));
 			pEnvelope = m_Map.m_vpEnvelopes[m_SelectedEnvelope];
@@ -5048,7 +5048,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		ToolBar.VSplitRight(5.0f, &ToolBar, nullptr);
 		ToolBar.VSplitRight(50.0f, &ToolBar, &Button);
 		static int s_New4dButton = 0;
-		if(DoButton_Editor(&s_New4dButton, "Color+", 0, &Button, BUTTONFLAG_LEFT, "Create a new color envelope."))
+		if(DoButton_Editor(&s_New4dButton, "颜色+", 0, &Button, BUTTONFLAG_LEFT, "创建新的颜色包络线。"))
 		{
 			m_Map.m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEnvelopeAdd>(&m_Map, CEnvelope::EType::COLOR));
 			pEnvelope = m_Map.m_vpEnvelopes[m_SelectedEnvelope];
@@ -5057,7 +5057,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		ToolBar.VSplitRight(5.0f, &ToolBar, nullptr);
 		ToolBar.VSplitRight(50.0f, &ToolBar, &Button);
 		static int s_New2dButton = 0;
-		if(DoButton_Editor(&s_New2dButton, "Pos.+", 0, &Button, BUTTONFLAG_LEFT, "Create a new position envelope."))
+		if(DoButton_Editor(&s_New2dButton, "位置+", 0, &Button, BUTTONFLAG_LEFT, "创建新的位置包络线。"))
 		{
 			m_Map.m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEnvelopeAdd>(&m_Map, CEnvelope::EType::POSITION));
 			pEnvelope = m_Map.m_vpEnvelopes[m_SelectedEnvelope];
@@ -5069,7 +5069,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 			ToolBar.VSplitRight(10.0f, &ToolBar, nullptr);
 			ToolBar.VSplitRight(25.0f, &ToolBar, &Button);
 			static int s_DeleteButton = 0;
-			if(DoButton_Editor(&s_DeleteButton, "✗", 0, &Button, BUTTONFLAG_LEFT, "Delete this envelope."))
+			if(DoButton_Editor(&s_DeleteButton, "✗", 0, &Button, BUTTONFLAG_LEFT, "删除该包络线。"))
 			{
 				auto vpObjectReferences = m_Map.DeleteEnvelope(m_SelectedEnvelope);
 				m_Map.m_EnvelopeEditorHistory.RecordAction(std::make_shared<CEditorActionEnvelopeDelete>(&m_Map, m_SelectedEnvelope, vpObjectReferences, pEnvelope));
@@ -5087,7 +5087,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 			ToolBar.VSplitRight(5.0f, &ToolBar, nullptr);
 			ToolBar.VSplitRight(25.0f, &ToolBar, &Button);
 			static int s_MoveRightButton = 0;
-			if(DoButton_Ex(&s_MoveRightButton, "→", (m_SelectedEnvelope >= (int)m_Map.m_vpEnvelopes.size() - 1 ? -1 : 0), &Button, BUTTONFLAG_LEFT, "Move this envelope to the right.", IGraphics::CORNER_R))
+			if(DoButton_Ex(&s_MoveRightButton, "→", (m_SelectedEnvelope >= (int)m_Map.m_vpEnvelopes.size() - 1 ? -1 : 0), &Button, BUTTONFLAG_LEFT, "将该包络线右移。", IGraphics::CORNER_R))
 			{
 				int MoveTo = m_SelectedEnvelope + 1;
 				int MoveFrom = m_SelectedEnvelope;
@@ -5103,7 +5103,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 			// Move left button
 			ToolBar.VSplitRight(25.0f, &ToolBar, &Button);
 			static int s_MoveLeftButton = 0;
-			if(DoButton_Ex(&s_MoveLeftButton, "←", (m_SelectedEnvelope <= 0 ? -1 : 0), &Button, BUTTONFLAG_LEFT, "Move this envelope to the left.", IGraphics::CORNER_L))
+			if(DoButton_Ex(&s_MoveLeftButton, "←", (m_SelectedEnvelope <= 0 ? -1 : 0), &Button, BUTTONFLAG_LEFT, "将该包络线左移。", IGraphics::CORNER_L))
 			{
 				int MoveTo = m_SelectedEnvelope - 1;
 				int MoveFrom = m_SelectedEnvelope;
@@ -5121,7 +5121,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 				ToolBar.VSplitRight(5.0f, &ToolBar, nullptr);
 				ToolBar.VSplitRight(20.0f, &ToolBar, &Button);
 				static int s_ZoomOutButton = 0;
-				if(DoButton_FontIcon(&s_ZoomOutButton, FONT_ICON_MINUS, 0, &Button, BUTTONFLAG_LEFT, "[NumPad-] Zoom out horizontally, hold shift to zoom vertically.", IGraphics::CORNER_R, 9.0f))
+				if(DoButton_FontIcon(&s_ZoomOutButton, FONT_ICON_MINUS, 0, &Button, BUTTONFLAG_LEFT, "[NumPad-] 水平缩小，按住 Shift 垂直缩放。", IGraphics::CORNER_R, 9.0f))
 				{
 					if(Input()->ShiftIsPressed())
 						m_ZoomEnvelopeY.ChangeValue(0.1f * m_ZoomEnvelopeY.GetValue());
@@ -5131,12 +5131,12 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 				ToolBar.VSplitRight(20.0f, &ToolBar, &Button);
 				static int s_ResetZoomButton = 0;
-				if(DoButton_FontIcon(&s_ResetZoomButton, FONT_ICON_MAGNIFYING_GLASS, 0, &Button, BUTTONFLAG_LEFT, "[NumPad*] Reset zoom to default value.", IGraphics::CORNER_NONE, 9.0f))
+				if(DoButton_FontIcon(&s_ResetZoomButton, FONT_ICON_MAGNIFYING_GLASS, 0, &Button, BUTTONFLAG_LEFT, "[NumPad*] 重置缩放到默认值。", IGraphics::CORNER_NONE, 9.0f))
 					ResetZoomEnvelope(pEnvelope, s_ActiveChannels);
 
 				ToolBar.VSplitRight(20.0f, &ToolBar, &Button);
 				static int s_ZoomInButton = 0;
-				if(DoButton_FontIcon(&s_ZoomInButton, FONT_ICON_PLUS, 0, &Button, BUTTONFLAG_LEFT, "[NumPad+] Zoom in horizontally, hold shift to zoom vertically.", IGraphics::CORNER_L, 9.0f))
+				if(DoButton_FontIcon(&s_ZoomInButton, FONT_ICON_PLUS, 0, &Button, BUTTONFLAG_LEFT, "[NumPad+] 水平放大，按住 Shift 垂直缩放。", IGraphics::CORNER_L, 9.0f))
 				{
 					if(Input()->ShiftIsPressed())
 						m_ZoomEnvelopeY.ChangeValue(-0.1f * m_ZoomEnvelopeY.GetValue());
@@ -5163,7 +5163,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		}
 
 		static int s_EnvelopeSelector = 0;
-		auto NewValueRes = UiDoValueSelector(&s_EnvelopeSelector, &Shifter, aBuf, m_SelectedEnvelope + 1, 1, m_Map.m_vpEnvelopes.size(), 1, 1.0f, "Select the envelope.", false, false, IGraphics::CORNER_NONE, &EnvColor, false);
+		auto NewValueRes = UiDoValueSelector(&s_EnvelopeSelector, &Shifter, aBuf, m_SelectedEnvelope + 1, 1, m_Map.m_vpEnvelopes.size(), 1, 1.0f, "选择包络线。", false, false, IGraphics::CORNER_NONE, &EnvColor, false);
 		int NewValue = NewValueRes.m_Value;
 		if(NewValue - 1 != m_SelectedEnvelope)
 		{
@@ -5172,7 +5172,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		}
 
 		static int s_PrevButton = 0;
-		if(DoButton_FontIcon(&s_PrevButton, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, "Select previous envelope.", IGraphics::CORNER_L, 7.0f))
+		if(DoButton_FontIcon(&s_PrevButton, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, "选择上一条包络线。", IGraphics::CORNER_L, 7.0f))
 		{
 			m_SelectedEnvelope--;
 			if(m_SelectedEnvelope < 0)
@@ -5181,7 +5181,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		}
 
 		static int s_NextButton = 0;
-		if(DoButton_FontIcon(&s_NextButton, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, "Select next envelope.", IGraphics::CORNER_R, 7.0f))
+		if(DoButton_FontIcon(&s_NextButton, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, "选择下一条包络线。", IGraphics::CORNER_R, 7.0f))
 		{
 			m_SelectedEnvelope++;
 			if(m_SelectedEnvelope >= (int)m_Map.m_vpEnvelopes.size())
@@ -5193,13 +5193,13 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		{
 			ToolBar.VSplitLeft(15.0f, nullptr, &ToolBar);
 			ToolBar.VSplitLeft(40.0f, &Button, &ToolBar);
-			Ui()->DoLabel(&Button, "Name:", 10.0f, TEXTALIGN_MR);
+			Ui()->DoLabel(&Button, "名称：", 10.0f, TEXTALIGN_MR);
 
 			ToolBar.VSplitLeft(3.0f, nullptr, &ToolBar);
 			ToolBar.VSplitLeft(ToolBar.w > ToolBar.h * 40 ? 80.0f : 60.0f, &Button, &ToolBar);
 
 			s_NameInput.SetBuffer(pEnvelope->m_aName, sizeof(pEnvelope->m_aName));
-			if(DoEditBox(&s_NameInput, &Button, 10.0f, IGraphics::CORNER_ALL, "The name of the selected envelope."))
+			if(DoEditBox(&s_NameInput, &Button, 10.0f, IGraphics::CORNER_ALL, "当前选中包络线的名称。"))
 			{
 				m_Map.OnModify();
 			}
@@ -5230,17 +5230,17 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		ToolBar.VSplitLeft(15.0f, &Button, &ToolBar);
 
 		static const char *s_aapNames[4][CEnvPoint::MAX_CHANNELS] = {
-			{"V", "", "", ""},
+			{"值", "", "", ""},
 			{"", "", "", ""},
-			{"X", "Y", "R", ""},
-			{"R", "G", "B", "A"},
+			{"横", "纵", "旋", ""},
+			{"红", "绿", "蓝", "透"},
 		};
 
 		static const char *s_aapDescriptions[4][CEnvPoint::MAX_CHANNELS] = {
-			{"Volume of the envelope.", "", "", ""},
+			{"包络线的音量值。", "", "", ""},
 			{"", "", "", ""},
-			{"X-axis of the envelope.", "Y-axis of the envelope.", "Rotation of the envelope.", ""},
-			{"Red value of the envelope.", "Green value of the envelope.", "Blue value of the envelope.", "Alpha value of the envelope."},
+			{"包络线的横轴值。", "包络线的纵轴值。", "包络线的旋转值。", ""},
+			{"包络线的红色通道值。", "包络线的绿色通道值。", "包络线的蓝色通道值。", "包络线的不透明度值。"},
 		};
 
 		static int s_aChannelButtons[CEnvPoint::MAX_CHANNELS] = {0};
@@ -5355,7 +5355,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 			}
 
 			m_ActiveEnvelopePreview = EEnvelopePreview::SELECTED;
-			str_copy(m_aTooltip, "Double click to create a new point. Use shift to change the zoom axis. Press S to scale selected envelope points.");
+			str_copy(m_aTooltip, "双击创建新点。按住 Shift 切换缩放轴，按 S 缩放选中的包络点。");
 		}
 
 		UpdateZoomEnvelopeX(View);
@@ -5567,14 +5567,14 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 				CurveButton.w = CurveBar.h;
 				CurveButton.x -= CurveButton.w / 2.0f;
 				const void *pId = &pEnvelope->m_vPoints[i].m_Curvetype;
-				static const char *const TYPE_NAMES[NUM_CURVETYPES] = {"N", "L", "S", "F", "M", "B"};
+static const char *const TYPE_NAMES[NUM_CURVETYPES] = {"阶", "线", "慢", "快", "滑", "贝"};
 				const char *pTypeName = "!?";
 				if(0 <= pEnvelope->m_vPoints[i].m_Curvetype && pEnvelope->m_vPoints[i].m_Curvetype < (int)std::size(TYPE_NAMES))
 					pTypeName = TYPE_NAMES[pEnvelope->m_vPoints[i].m_Curvetype];
 
 				if(CurveButton.x >= View.x)
 				{
-					const int ButtonResult = DoButton_Editor(pId, pTypeName, 0, &CurveButton, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "Switch curve type (N = step, L = linear, S = slow, F = fast, M = smooth, B = bezier).");
+	const int ButtonResult = DoButton_Editor(pId, pTypeName, 0, &CurveButton, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, "切换曲线类型（阶=阶梯，线=线性，慢=慢入，快=快出，滑=平滑，贝=贝塞尔）。");
 					if(ButtonResult == 1)
 					{
 						const int PrevCurve = pEnvelope->m_vPoints[i].m_Curvetype;
@@ -5823,7 +5823,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 							m_ActiveEnvelopePreview = EEnvelopePreview::SELECTED;
 							Graphics()->SetColor(1, 1, 1, 1);
-							str_copy(m_aTooltip, "Envelope point. Left mouse to drag. Hold ctrl to be more precise. Hold shift to alter time. Shift+right click to delete.");
+							str_copy(m_aTooltip, "包络点：左键拖动，按住 Ctrl 精细调整，按住 Shift 改变时间，Shift+右键删除。");
 							m_pUiGotContext = pId;
 						}
 						else
@@ -5958,7 +5958,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 								m_ActiveEnvelopePreview = EEnvelopePreview::SELECTED;
 								Graphics()->SetColor(1, 1, 1, 1);
-								str_copy(m_aTooltip, "Bezier out-tangent. Left mouse to drag. Hold ctrl to be more precise. Shift+right click to reset.");
+								str_copy(m_aTooltip, "贝塞尔出切线：左键拖动，按住 Ctrl 精细调整，Shift+右键重置。");
 								m_pUiGotContext = pId;
 							}
 							else
@@ -6091,7 +6091,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 								m_ActiveEnvelopePreview = EEnvelopePreview::SELECTED;
 								Graphics()->SetColor(1, 1, 1, 1);
-								str_copy(m_aTooltip, "Bezier in-tangent. Left mouse to drag. Hold ctrl to be more precise. Shift+right click to reset.");
+								str_copy(m_aTooltip, "贝塞尔入切线：左键拖动，按住 Ctrl 精细调整，Shift+右键重置。");
 								m_pUiGotContext = pId;
 							}
 							else
@@ -6149,7 +6149,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 		if(s_Operation == EEnvelopeEditorOp::OP_SCALE)
 		{
-			str_copy(m_aTooltip, "Press shift to scale the time. Press alt to scale along midpoint. Press ctrl to be more precise.");
+			str_copy(m_aTooltip, "按住 Shift 缩放时间，按住 Alt 以中点为基准缩放，按住 Ctrl 精细调整。");
 
 			if(Input()->ShiftIsPressed())
 			{
@@ -6423,21 +6423,21 @@ void CEditor::RenderEditorHistory(CUIRect View)
 	{
 		TypeButtons.VSplitLeft(HistoryTypeBtnSize, &HistoryTypeButton, &TypeButtons);
 		static int s_EditorHistoryButton = 0;
-		if(DoButton_Ex(&s_EditorHistoryButton, "Editor", s_HistoryType == EDITOR_HISTORY, &HistoryTypeButton, BUTTONFLAG_LEFT, "Show map editor history.", IGraphics::CORNER_L))
+		if(DoButton_Ex(&s_EditorHistoryButton, "编辑器", s_HistoryType == EDITOR_HISTORY, &HistoryTypeButton, BUTTONFLAG_LEFT, "显示地图编辑历史。", IGraphics::CORNER_L))
 		{
 			s_HistoryType = EDITOR_HISTORY;
 		}
 
 		TypeButtons.VSplitLeft(HistoryTypeBtnSize, &HistoryTypeButton, &TypeButtons);
 		static int s_EnvelopeEditorHistoryButton = 0;
-		if(DoButton_Ex(&s_EnvelopeEditorHistoryButton, "Envelope", s_HistoryType == ENVELOPE_HISTORY, &HistoryTypeButton, BUTTONFLAG_LEFT, "Show envelope editor history.", IGraphics::CORNER_NONE))
+		if(DoButton_Ex(&s_EnvelopeEditorHistoryButton, "包络线", s_HistoryType == ENVELOPE_HISTORY, &HistoryTypeButton, BUTTONFLAG_LEFT, "显示包络线编辑历史。", IGraphics::CORNER_NONE))
 		{
 			s_HistoryType = ENVELOPE_HISTORY;
 		}
 
 		TypeButtons.VSplitLeft(HistoryTypeBtnSize, &HistoryTypeButton, &TypeButtons);
 		static int s_ServerSettingsHistoryButton = 0;
-		if(DoButton_Ex(&s_ServerSettingsHistoryButton, "Settings", s_HistoryType == SERVER_SETTINGS_HISTORY, &HistoryTypeButton, BUTTONFLAG_LEFT, "Show server settings editor history.", IGraphics::CORNER_R))
+		if(DoButton_Ex(&s_ServerSettingsHistoryButton, "设置", s_HistoryType == SERVER_SETTINGS_HISTORY, &HistoryTypeButton, BUTTONFLAG_LEFT, "显示服务器设置编辑历史。", IGraphics::CORNER_R))
 		{
 			s_HistoryType = SERVER_SETTINGS_HISTORY;
 		}
@@ -6447,7 +6447,7 @@ void CEditor::RenderEditorHistory(CUIRect View)
 	InfoProps.m_MaxWidth = ToolBar.w - 60.f;
 	InfoProps.m_EllipsisAtEnd = true;
 	Label.VSplitLeft(8.0f, nullptr, &Label);
-	Ui()->DoLabel(&Label, "Editor history. Click on an action to undo all actions above.", 10.0f, TEXTALIGN_ML, InfoProps);
+	Ui()->DoLabel(&Label, "编辑历史：点击某条操作可撤销其上方所有操作。", 10.0f, TEXTALIGN_ML, InfoProps);
 
 	CEditorHistory *pCurrentHistory;
 	if(s_HistoryType == EDITOR_HISTORY)
@@ -6463,7 +6463,7 @@ void CEditor::RenderEditorHistory(CUIRect View)
 	ToolBar.VSplitRight(25.0f, &ToolBar, &Button);
 	ToolBar.VSplitRight(5.0f, &ToolBar, nullptr);
 	static int s_DeleteButton = 0;
-	if(DoButton_FontIcon(&s_DeleteButton, FONT_ICON_TRASH, (!pCurrentHistory->m_vpUndoActions.empty() || !pCurrentHistory->m_vpRedoActions.empty()) ? 0 : -1, &Button, BUTTONFLAG_LEFT, "Clear the history.", IGraphics::CORNER_ALL, 9.0f) || (GotSelection && CLineInput::GetActiveInput() == nullptr && m_Dialog == DIALOG_NONE && Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE)))
+	if(DoButton_FontIcon(&s_DeleteButton, FONT_ICON_TRASH, (!pCurrentHistory->m_vpUndoActions.empty() || !pCurrentHistory->m_vpRedoActions.empty()) ? 0 : -1, &Button, BUTTONFLAG_LEFT, "清空历史记录。", IGraphics::CORNER_ALL, 9.0f) || (GotSelection && CLineInput::GetActiveInput() == nullptr && m_Dialog == DIALOG_NONE && Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE)))
 	{
 		pCurrentHistory->Clear();
 		s_ActionSelectedIndex = 0;
@@ -6506,14 +6506,14 @@ void CEditor::RenderEditorHistory(CUIRect View)
 		Ui()->DoLabel(&Label, pCurrentHistory->m_vpUndoActions[UndoSize - i - 1]->DisplayText(), 10.0f, TEXTALIGN_ML, Props);
 	}
 
-	{ // Base action "Loaded map" that cannot be undone
+	{ // Base action "已加载地图" that cannot be undone
 		static int s_BaseAction;
 		const CListboxItem Item = s_ListBox.DoNextItem(&s_BaseAction, s_ActionSelectedIndex == RedoSize + UndoSize);
 		if(Item.m_Visible)
 		{
 			Item.m_Rect.VMargin(5.0f, &Label);
 
-			Ui()->DoLabel(&Label, "Loaded map", 10.0f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Label, "已加载地图", 10.0f, TEXTALIGN_ML);
 		}
 	}
 
@@ -6561,7 +6561,7 @@ void CEditor::DoEditorDragBar(CUIRect View, CUIRect *pDragBar, EDragSide Side, f
 
 	bool Clicked;
 	bool Abrupted;
-	if(int Result = DoButton_DraggableEx(pDragBar, "", 8, pDragBar, &Clicked, &Abrupted, 0, "Change the size of the editor by dragging."))
+	if(int Result = DoButton_DraggableEx(pDragBar, "", 8, pDragBar, &Clicked, &Abrupted, 0, "拖动以调整编辑器尺寸。"))
 	{
 		if(s_Operation == OP_NONE && Result == 1)
 		{
@@ -6661,17 +6661,17 @@ void CEditor::RenderMenubar(CUIRect MenuBar)
 	char aTimeStr[6];
 	str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
 
-	str_format(aBuf, sizeof(aBuf), "X: %.1f, Y: %.1f, Z: %.1f, A: %.1f, G: %i  %s", Ui()->MouseWorldX() / 32.0f, Ui()->MouseWorldY() / 32.0f, MapView()->Zoom()->GetValue(), m_AnimateSpeed, MapView()->MapGrid()->Factor(), aTimeStr);
+	str_format(aBuf, sizeof(aBuf), "坐标X: %.1f, 坐标Y: %.1f, 缩放: %.1f, 动画: %.1f, 网格: %i  %s", Ui()->MouseWorldX() / 32.0f, Ui()->MouseWorldY() / 32.0f, MapView()->Zoom()->GetValue(), m_AnimateSpeed, MapView()->MapGrid()->Factor(), aTimeStr);
 	Ui()->DoLabel(&Info, aBuf, 10.0f, TEXTALIGN_MR);
 
 	static int s_HelpButton = 0;
-	if(DoButton_Editor(&s_HelpButton, "?", 0, &Help, BUTTONFLAG_LEFT, "[F1] 在网页浏览器中打开地图编辑器的DDNet Wiki页面.") ||
+	if(DoButton_Editor(&s_HelpButton, "?", 0, &Help, BUTTONFLAG_LEFT, "[F1] 在网页浏览器中打开地图编辑器维基页面。") ||
 		(Input()->KeyPress(KEY_F1) && m_Dialog == DIALOG_NONE && CLineInput::GetActiveInput() == nullptr))
 	{
 		const char *pLink = Localize("https://wiki.ddnet.org/wiki/Mapping");
 		if(!Client()->ViewLink(pLink))
 		{
-			ShowFileDialogError("Failed to open the link '%s' in the default web browser.", pLink);
+			ShowFileDialogError("无法在默认浏览器中打开链接“%s”。", pLink);
 		}
 	}
 
@@ -6745,12 +6745,12 @@ void CEditor::Render()
 				int Slot = i - KEY_1;
 				if(Input()->ModifierIsPressed() && !m_pBrush->IsEmpty())
 				{
-					dbg_msg("editor", "saving current brush to %d", Slot);
+					dbg_msg("editor", "正在保存当前画笔到槽位 %d", Slot);
 					m_apSavedBrushes[Slot] = std::make_shared<CLayerGroup>(*m_pBrush);
 				}
 				else if(m_apSavedBrushes[Slot])
 				{
-					dbg_msg("editor", "loading brush from slot %d", Slot);
+					dbg_msg("editor", "正在从槽位 %d 加载画笔", Slot);
 					m_pBrush = std::make_shared<CLayerGroup>(*m_apSavedBrushes[Slot]);
 				}
 			}
@@ -6795,7 +6795,7 @@ void CEditor::Render()
 			// ctrl+a to append map
 			if(Input()->KeyPress(KEY_A) && ModPressed)
 			{
-				m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::MAP, "Append map", "Append", "maps", "", CallbackAppendMap, this);
+				m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::MAP, "附加地图", "附加", "maps", "", CallbackAppendMap, this);
 			}
 		}
 
@@ -6838,7 +6838,7 @@ void CEditor::Render()
 				}
 				else
 				{
-					m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::MAP, "Load map", "Load", "maps", "", CallbackOpenMap, this);
+					m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::MAP, "加载地图", "加载", "maps", "", CallbackOpenMap, this);
 				}
 			}
 		}
@@ -6848,7 +6848,7 @@ void CEditor::Render()
 		{
 			char aDefaultName[IO_MAX_PATH_LENGTH];
 			fs_split_file_extension(fs_filename(m_aFilename), aDefaultName, sizeof(aDefaultName));
-			m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, "Save map", "Save copy", "maps", aDefaultName, CallbackSaveCopyMap, this);
+			m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, "保存地图", "保存副本", "maps", aDefaultName, CallbackSaveCopyMap, this);
 		}
 		// ctrl+shift+s to save as
 		else if(Input()->KeyPress(KEY_S) && ModPressed && ShiftPressed)
@@ -6864,7 +6864,7 @@ void CEditor::Render()
 			}
 			else
 			{
-				m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, "Save map", "Save", "maps", "", CallbackSaveMap, this);
+				m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, "保存地图", "保存", "maps", "", CallbackSaveMap, this);
 			}
 		}
 	}
@@ -6968,7 +6968,7 @@ void CEditor::Render()
 				return pLayer->m_Type == LAYERTYPE_TILES && std::static_pointer_cast<CLayerTiles>(pLayer)->m_HasTele;
 			});
 			if(HasTeleTiles)
-				str_copy(m_aTooltip, "Use shift+mouse wheel up/down to adjust the tele numbers. Use ctrl+f to change all tele numbers to the first unused number.");
+				str_copy(m_aTooltip, "使用 Shift+鼠标滚轮上下调整传送编号。使用 Ctrl+F 将所有传送编号改为首个未使用编号。");
 
 			if(Input()->ShiftIsPressed())
 			{
@@ -7041,7 +7041,7 @@ void CEditor::RenderSavingIndicator(CUIRect View)
 	if(m_WriterFinishJobs.empty())
 		return;
 
-	const char *pText = "Saving…";
+	const char *pText = "保存中…";
 	const float FontSize = 24.0f;
 
 	Ui()->MapScreen();
@@ -7086,7 +7086,7 @@ void CEditor::UpdateColorPipette()
 	}
 
 	// Simulate button overlaying the entire screen to intercept all clicks for color pipette.
-	const int ButtonResult = DoButtonLogic(&s_PipetteScreenButton, 0, Ui()->Screen(), BUTTONFLAG_ALL, "Left click to pick a color from the screen. Right click to cancel pipette mode.");
+	const int ButtonResult = DoButtonLogic(&s_PipetteScreenButton, 0, Ui()->Screen(), BUTTONFLAG_ALL, "左键从屏幕取色，右键取消吸管模式。");
 	// Don't handle clicks if we are panning, so the pipette stays active while panning.
 	// Checking m_pContainerPanned alone is not enough, as this variable is reset when
 	// panning ends before this function is called.
@@ -7530,7 +7530,7 @@ void CEditor::PlaceBorderTiles()
 	}
 
 	int GameGroupIndex = std::find(m_Map.m_vpGroups.begin(), m_Map.m_vpGroups.end(), m_Map.m_pGameGroup) - m_Map.m_vpGroups.begin();
-	m_Map.m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(&m_Map, GameGroupIndex), "Tool 'Make borders'");
+	m_Map.m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(&m_Map, GameGroupIndex), "工具“生成边框”");
 
 	m_Map.OnModify();
 }
@@ -7733,7 +7733,7 @@ bool CEditor::PerformAutosave()
 	}
 	else
 	{
-		ShowFileDialogError("Failed to automatically save map to file '%s'.", aAutosavePath);
+		ShowFileDialogError("自动保存地图到文件“%s”失败。", aAutosavePath);
 		return false;
 	}
 }
@@ -7751,7 +7751,7 @@ void CEditor::HandleWriterFinishJobs()
 	char aBuf[2 * IO_MAX_PATH_LENGTH + 128];
 	if(!Storage()->RemoveFile(pJob->GetRealFilename(), IStorage::TYPE_SAVE))
 	{
-		str_format(aBuf, sizeof(aBuf), "Saving failed: Could not remove old map file '%s'.", pJob->GetRealFilename());
+		str_format(aBuf, sizeof(aBuf), "保存失败：无法删除旧地图文件“%s”。", pJob->GetRealFilename());
 		ShowFileDialogError("%s", aBuf);
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "editor/save", aBuf);
 		return;
@@ -7759,13 +7759,13 @@ void CEditor::HandleWriterFinishJobs()
 
 	if(!Storage()->RenameFile(pJob->GetTempFilename(), pJob->GetRealFilename(), IStorage::TYPE_SAVE))
 	{
-		str_format(aBuf, sizeof(aBuf), "Saving failed: Could not move temporary map file '%s' to '%s'.", pJob->GetTempFilename(), pJob->GetRealFilename());
+		str_format(aBuf, sizeof(aBuf), "保存失败：无法将临时地图文件“%s”移动到“%s”。", pJob->GetTempFilename(), pJob->GetRealFilename());
 		ShowFileDialogError("%s", aBuf);
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "editor/save", aBuf);
 		return;
 	}
 
-	str_format(aBuf, sizeof(aBuf), "saving '%s' done", pJob->GetRealFilename());
+	str_format(aBuf, sizeof(aBuf), "保存“%s”完成", pJob->GetRealFilename());
 	Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "editor/save", aBuf);
 
 	// send rcon.. if we can
@@ -7962,7 +7962,7 @@ bool CEditor::Load(const char *pFilename, int StorageType)
 		for(CEditorComponent &Component : m_vComponents)
 			Component.OnMapLoad();
 
-		log_info("editor/load", "Loaded map '%s'", m_aFilename);
+		log_info("editor/load", "已加载地图“%s”", m_aFilename);
 	}
 	else
 	{
@@ -8006,7 +8006,7 @@ bool CEditor::Append(const char *pFilename, int StorageType, bool IgnoreHistory)
 		int DuplicateCount = 1;
 		str_copy(aRenamed, pImage->m_aName);
 		while(std::find_if(m_Map.m_vpImages.begin(), m_Map.m_vpImages.end(), [aRenamed](const std::shared_ptr<CEditorImage> &OtherImage) { return str_comp(OtherImage->m_aName, aRenamed) == 0; }) != m_Map.m_vpImages.end())
-			str_format(aRenamed, sizeof(aRenamed), "%s (%d)", pImage->m_aName, DuplicateCount++); // Rename to "image_name (%d)"
+			str_format(aRenamed, sizeof(aRenamed), "%s (%d)", pImage->m_aName, DuplicateCount++); // Rename to "图像名（%d）"
 		str_copy(pImage->m_aName, aRenamed);
 	};
 
@@ -8030,7 +8030,7 @@ bool CEditor::Append(const char *pFilename, int StorageType, bool IgnoreHistory)
 			{
 				const int IndexToReplaceWith = MatchInCurrentMap - m_Map.m_vpImages.begin();
 
-				dbg_msg("editor", "map already contains image %s with the same data, removing duplicate", pNewImage->m_aName);
+				dbg_msg("editor", "地图已包含图像 %s 且数据相同，移除重复项", pNewImage->m_aName);
 
 				// In the new map, replace the index of the duplicate image to the index of the same in the current map.
 				NewMap.ModifyImageIndex(s_ReplaceIndex(IndexToReplace, IndexToReplaceWith));
@@ -8040,7 +8040,7 @@ bool CEditor::Append(const char *pFilename, int StorageType, bool IgnoreHistory)
 				// Rename image and add it
 				Rename(pNewImage);
 
-				dbg_msg("editor", "map already contains image %s but contents of appended image is different. Renaming to %s", (*MatchInCurrentMap)->m_aName, pNewImage->m_aName);
+				dbg_msg("editor", "地图已包含图像 %s，但附加图像内容不同，重命名为 %s", (*MatchInCurrentMap)->m_aName, pNewImage->m_aName);
 
 				NewMap.ModifyImageIndex(s_ReplaceIndex(IndexToReplace, m_Map.m_vpImages.size()));
 				pNewImage->OnAttach(&m_Map);

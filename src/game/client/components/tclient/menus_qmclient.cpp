@@ -730,10 +730,10 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	static CButtonContainer s_FontDirectoryId;
 	if(Ui()->DoButton_FontIcon(&s_FontDirectoryId, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
 	{
-		Storage()->CreateFolder("tclient", IStorage::TYPE_SAVE);
-		Storage()->CreateFolder("tclient/fonts", IStorage::TYPE_SAVE);
+		Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
 		char aBuf[IO_MAX_PATH_LENGTH];
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, "tclient/fonts", aBuf, sizeof(aBuf));
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/fonts", aBuf, sizeof(aBuf));
 		Client()->ViewFile(aBuf);
 	}
 
@@ -3946,7 +3946,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					"临渊捕鱼",
 					"?hook?",
 					"放肆zero",
-					"Q币"
+					"Q币",
+					"洛天依",
+					"spider"
 				};
 				const float SponsorFontSize = LG_BodySize * 1.1f;
 				const float MaxLineWidth = RightContent.w;

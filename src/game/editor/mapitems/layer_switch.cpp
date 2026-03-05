@@ -5,7 +5,7 @@
 CLayerSwitch::CLayerSwitch(CEditorMap *pMap, int w, int h) :
 	CLayerTiles(pMap, w, h)
 {
-	str_copy(m_aName, "Switch");
+	str_copy(m_aName, "开关");
 	m_HasSwitch = true;
 
 	m_pSwitchTile = new CSwitchTile[w * h];
@@ -17,7 +17,7 @@ CLayerSwitch::CLayerSwitch(CEditorMap *pMap, int w, int h) :
 CLayerSwitch::CLayerSwitch(const CLayerSwitch &Other) :
 	CLayerTiles(Other)
 {
-	str_copy(m_aName, "Switch copy");
+	str_copy(m_aName, "开关 副本");
 	m_HasSwitch = true;
 
 	m_pSwitchTile = new CSwitchTile[m_Width * m_Height];

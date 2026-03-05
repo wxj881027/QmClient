@@ -2518,3 +2518,1053 @@ You will be disconnected from the server.
 
 Are you sure that you want to disconnect and play this demo?
 == 
+
+# Console command help translations (auto-generated)
+/times ?s?i shows last 5 times of the server or of a player beginning with name s starting with time i (i = 1 by default, -1 for first)
+== /times ?s?i 显示服务器最近 5 次成绩，或名称以 s 开头玩家从第 i 条开始的 5 次成绩（i 默认 1，-1 表示第一条）
+
+Add a bind to the bindwheel
+== 向绑定轮盘添加绑定
+
+Add a chat bind
+== 添加聊天绑定
+
+Add a clan war entry
+== 添加战队敌对条目
+
+Add a community as a favorite
+== 将社区添加为收藏夹
+
+Add a community to the exclusion filter
+== 将社区加入排除筛选
+
+Add a country to the exclusion filter for a specific community (ISO 3166-1 numeric)
+== 将国家/地区加入指定社区的排除筛选（ISO 3166-1 数字编码）
+
+Add a dummy queue preset
+== 添加分身队列预设
+
+
+Add a foe
+== 添加一个敌人
+
+Add a friend
+== 添加好友
+
+Add a friend category
+== 添加好友类别
+
+Add a map to favorites
+== 将地图添加到收藏夹
+
+Add a name war entry
+== 添加名字敌对条目
+
+Add a prehashed rcon key
+== 添加预哈希的 rcon 密钥
+
+Add a profile
+== 添加个人资料
+
+Add a queue preset
+== 添加队列预设
+
+Add a rcon key
+== 添加 rcon 键
+
+Add a server as a favorite
+== 将服务器添加为收藏夹
+
+Add a skin as a favorite
+== 将皮肤添加为收藏夹
+
+Add a skin to a dummy queue preset
+== 向分身队列预设添加皮肤
+
+Add a skin to a queue preset
+== 将皮肤添加到队列预设
+
+Add a skin to the dummy queue
+== 向分身队列添加皮肤
+
+Add a skin to the queue
+== 将皮肤添加到队列中
+
+add a sqlserver
+== 添加一个 SQL 服务器
+
+Add a type to the exclusion filter for a specific community
+== 将类型加入指定社区的排除筛选
+
+Add a voting option
+== 添加投票选项
+
+Add demo timeline marker
+== 添加回放时间线标记
+
+Add/remove Client-IDs to spectate them exclusively (-1 to reset)
+== 添加/移除要专门旁观的客户端 ID（-1 重置）
+
+Adds a specific war entry
+== 添加指定敌对条目
+
+Adds default chat binds
+== 添加默认聊天绑定
+
+Authenticate to rcon
+== 进行 rcon 认证
+
+Authenticate to rcon with a username
+== 使用用户名进行 rcon 认证
+
+Automatically adds voting options for all maps
+== 自动为所有地图添加投票选项
+
+Ban a certain nickname
+== 禁止某个昵称
+
+Ban ip for x minutes for any reason
+== 按任意原因封禁 IP x 分钟
+
+Ban ip range for x minutes for any reason
+== 按任意原因封禁 IP 段 x 分钟
+
+Ban player in a region
+== 禁止某个地区的玩家
+
+Ban player with ip/client id for x minutes for any reason
+== 按任意原因封禁玩家（IP/客户端 ID）x 分钟
+
+Ban range in a region
+== 封禁指定区域内的 IP 段
+
+Benchmark frame times for number of seconds to file, then quit
+== 将指定秒数的帧时间基准写入文件，然后退出
+
+Bind key to execute a command or view keybindings
+== 绑定按键以执行命令或查看按键绑定
+
+Broadcast message
+== 广播消息
+
+Cancel your swap request
+== 取消你的交换请求
+
+Change map
+== 更改地图
+
+Change ready state (0.7 only)
+== 更改就绪状态（仅限 0.7）
+
+Change zoom
+== 更改缩放比例
+
+Clear all favorite maps
+== 清空全部收藏地图
+
+Clear chat messages
+== 清除聊天消息
+
+Clear friend note
+== 清除好友备注
+
+Clear local console
+== 清空本地控制台
+
+Clear remote console
+== 清空远程控制台
+
+Clears the voting options
+== 清除投票选项
+
+Connect dummy
+== 连接分身
+
+Connect to the specified host/ip
+== 连接到指定主机/ip
+
+Converse with the last person you whispered to (private message)
+== 与上一个私聊对象继续对话（私聊）
+
+Cycle through emotes
+== 循环显示表情
+
+Depending on the number of supplied arguments, teleport yourself to; (0.) where you are spectating or aiming; (1.) the specified player name
+== 根据参数数量，将自己传送到：(0) 当前旁观或瞄准的位置；(1) 指定玩家
+
+Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <seconds> <reason>'
+== 已弃用。使用“muteid <client_id> <秒数> <原因>”或“muteip <ip> <秒数> <原因>”
+
+Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
+== 已弃用。使用“vote_muteid <client_id> <秒数> <原因>”或“vote_muteip <ip> <秒数> <原因>”
+
+Disconnect dummy
+== 断开分身连接
+
+Disconnect from the server
+== 与服务器断开连接
+
+DONT USE THIS! USE add_bindwheel INSTEAD!
+== 不要使用这个！使用 add_bindwheel 代替！
+
+Draw on the in game background
+== 在游戏背景上绘制
+
+Dump the current savestring
+== 导出当前存档字符串
+
+Dump zone tuning in zone x
+== 导出区域 x 的调参配置
+
+dumps all sqlservers readservers = r, writeservers = w
+== 导出全部 SQL 服务器（readservers = r, writeservers = w）
+
+Dumps the antibot status
+== 导出反机器人状态
+
+Echo the text
+== 输出文本
+
+Echo the text in chat window
+== 在聊天窗口输出文本
+
+Enable chat with all/team mode
+== 启用与所有人/队伍聊天模式
+
+Enable cheats for your current team's run, but you can't earn a rank
+== 为你当前队伍启用作弊，但将无法获得排名
+
+Enable map compatibility mode using the specified bug (example: grenade-doubleexplosion@ddnet.tw)
+== 使用指定 bug 启用地图兼容模式（例如：grenade-doubleexplosion@ddnet.tw）
+
+Enables/disables active moderator mode for the player
+== 启用/禁用该玩家的活跃管理员模式
+
+Erase items on the in game background
+== 擦除游戏背景中的内容
+
+Evaluate an expression
+== 评估表达式
+
+Execute files on key press/release
+== 按下/释放按键时执行文件
+
+Execute hovered bindwheel bind
+== 执行当前悬停的绑定轮盘绑定
+
+Execute the specified file
+== 执行指定文件
+
+Find all ban records for the specified IP address
+== 查询指定 IP 的全部封禁记录
+
+First page in console
+== 控制台第一页
+
+Force a vote to yes/no
+== 强制投票赞成/反对
+
+Force a voting option
+== 强制投票选项
+
+Force high bandwidth mode when spectating (1 = on, 0 = off)
+== 旁观时强制高带宽模式（1 = 开，0 = 关）
+
+Force i to pause for i seconds
+== 强制 ID 为 i 的玩家暂停 i 秒
+
+Give back right to vote to player with client ID
+== 将投票权归还给拥有客户端 ID 的玩家
+
+Give back right to vote to player with IP address
+== 将投票权还给有IP地址的玩家
+
+Give back right to vote to player with list index
+== 将投票权归还给列表索引的玩家
+
+Gives a grenade launcher to you
+== 给你一个榴弹发射器
+
+Gives a laser to you
+== 给予你激光枪
+
+Gives a shotgun to you
+== 给你一把霰弹枪
+
+Gives all weapons to you
+== 所有武器都给你
+
+Gives jetpack to you
+== 给你喷气背包
+
+Gives weapon with id i to you (all = -1, hammer = 0, gun = 1, shotgun = 2, grenade = 3, laser = 4, ninja = 5)
+== 给你id为i的武器（全部= -1，锤子= 0，枪= 1，霰弹枪= 2，手榴弹= 3，激光= 4，忍者= 5）
+
+Gives you as many jumps as you specify
+== 给予你指定次数的跳跃
+
+Gives you endless hook
+== 给予你无限钩子
+
+Gives you infinite jump
+== 给你无限跳跃
+
+Help: %s
+== 帮助：%s
+
+Invite a person to a locked team
+== 邀请某人加入锁定的队伍
+
+Join the team of the specified player
+== 加入指定玩家的队伍
+
+Kick player with specified id for any reason
+== 按任意原因踢出指定 ID 的玩家
+
+Kill yourself to restart
+== 自杀重新开始
+
+Kill yourself when kill-protected during a long game (use f1, kill for regular kill)
+== 在长局 kill 保护时自杀（普通自杀请用 f1 + kill）
+
+Kills a player and announces the kill
+== 击杀一名玩家并广播击杀信息
+
+Kills team and disables practice mode
+== 击杀队伍并关闭练习模式
+
+Last page in console
+== 控制台最后一页
+
+Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
+== 通过逐个 ping 服务器泄露你的 IP，同时会获取延迟
+
+Lets you join team i (shows your team if left blank)
+== 让你加入队伍 i（留空则显示你的队伍）
+
+List all commands that are available in practice mode
+== 列出练习模式下可用的所有命令
+
+List all commands which are accessible for given access level
+== 列出给定访问级别可访问的所有命令
+
+List all commands which are accessible for users
+== 列出用户可以访问的所有命令
+
+List all name bans
+== 列出全部昵称封禁
+
+List all rcon keys
+== 列出所有 rcon 键
+
+List all saves on the current map
+== 列出当前地图上的所有保存
+
+List all tuning variables and their values
+== 列出所有调整变量及其值
+
+List connected players with optional case-insensitive substring matching filter
+== 列出在线玩家，可选不区分大小写的子串筛选
+
+List foes
+== 列出敌人
+
+List friends
+== 列出好友
+
+List local saves for current map (or specified map)
+== 列出当前地图（或指定地图）的本地保存
+
+List players containing name or all players
+== 列出名称匹配的玩家，或列出全部玩家
+
+Load drawings from a given csv file (defaults to map name)
+== 从指定 CSV 文件加载绘图（默认使用地图名）
+
+Load with code r. /load to check your existing saves
+== 使用代码 r 载入；可用 /load 查看已有存档
+
+Log the network
+== 记录网络
+
+Logout of econ
+== 退出 econ 登录
+
+Logout of rcon
+== 退出 rcon 登录
+
+Makes you a ninja
+== 让你成为一名忍者
+
+Makes you live frozen
+== 使你进入 live freeze 状态
+
+Makes you move 1 tile down
+== 让你向下移动 1 个方块
+
+Makes you move 1 tile left
+== 让你向左移动 1 个方块
+
+Makes you move 1 tile right
+== 让你向右移动 1 个方块
+
+Makes you move 1 tile up
+== 让你向上移动 1 个方块
+
+Makes you super
+== 让你超级
+
+Mark the beginning of a demo cut
+== 标记回放剪辑起点
+
+Mark the end of a demo cut
+== 标记回放剪辑终点
+
+Minimize the client
+== 最小化客户端
+
+Moves to the point with x/y-coordinates ii
+== 移动到 x/y 坐标 ii 的点
+
+Moves to the tile with x/y-number ii
+== 移动到 x/y 编号 ii 的图块
+
+Mute player with client ID
+== 使用客户端 ID 将玩家静音
+
+Mute player with IP address
+== 按 IP 地址静音玩家
+
+Next page in console
+== 控制台下一页
+
+Open bindwheel selector
+== 打开绑定轮盘选择器
+
+Open emote selector
+== 打开表情选择器
+
+Open pie menu
+== 打开饼菜单
+
+Open spectator mode selector
+== 打开旁观者模式选择器
+
+Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
+== 选择退出观众计数并对未经授权的玩家隐藏身份验证状态（1 = 隐藏，0 = 显示）
+
+Pause/unpause game
+== 暂停/恢复游戏
+
+Personal Setting of showing time in either broadcast or game/round timer, timer s, where s = broadcast for broadcast, gametimer for game/round timer, cycle for cycle, both for both, none for no timer and nothing to show current status
+== 在广播或游戏/回合计时器中显示时间的个人设置，计时器 s，其中 s = 广播的广播，游戏/回合计时器的游戏计时器，循环的循环，两者都适用，无计时器且不显示当前状态
+
+Ping the current server
+== Ping 当前服务器
+
+Play back a demo
+== 播放回放
+
+Play/pause the current demo
+== 播放/暂停当前回放
+
+Previous page in console
+== 控制台上一页
+
+Print command executed by this keybinding or all binds
+== 打印此键绑定或所有绑定执行的命令
+
+Print command executed by this name or all chat binds
+== 打印该名称或所有聊天绑定执行的命令
+
+Privately messages someone's current time in this current running race (your time by default)
+== 私聊发送某人在当前竞速中的时间（默认发送你的时间）
+
+Privately shows you your current time in this current running race in the broadcast message
+== 在广播中私聊显示你当前竞速时间
+
+Publicly messages everyone your current time in this current running race
+== 公开发送你当前竞速时间给所有人
+
+Puts you into deep freeze
+== 让你陷入深度冻结
+
+Puts you into freeze
+== 让你陷入冻结状态
+
+Puts you into solo part
+== 使你进入 solo 状态
+
+Puts you out of deep freeze
+== 让你摆脱深度冰冻
+
+Puts you out of freeze
+== 让你摆脱冰冻状态
+
+Puts you out of live freeze
+== 让你摆脱实时冻结
+
+Puts you out of solo part
+== 使你退出 solo 状态
+
+Quit the client
+== 退出客户端
+
+Random map
+== 随机地图
+
+Random unfinished map
+== 随机未通关地图
+
+Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example: 0011 = randomize skin and flag [number is position]
+== 随机化玩家颜色（0 = 全部、1 = 身体、2 = 脚、3 = 皮肤、4 = 旗帜）示例：0011 = 随机化皮肤和旗帜 [数字是位置]
+
+Rebinds the client's listening address and port
+== 重新绑定客户端的监听地址和端口
+
+Record to a file
+== 记录到文件
+
+Reload the announcements
+== 重新加载公告
+
+Reload the censorlist
+== 重新加载审查列表
+
+Reload the map
+== 重新加载地图
+
+Reload the map while preserving the state of tees and teams
+== 重新加载地图并保留 tee 与队伍状态
+
+Reload the maplist
+== 重新加载地图列表
+
+Remove a bind from the bindwheel
+== 从绑定轮盘移除绑定
+
+Remove a chat bind
+== 删除聊天绑定
+
+Remove a clan war entry
+== 移除战队敌对条目
+
+Remove a community from the exclusion filter
+== 将社区从排除筛选中移除
+
+Remove a community from the favorites
+== 从收藏夹中删除社区
+
+Remove a country from the exclusion filter for a specific community (ISO 3166-1 numeric)
+== 将国家/地区从指定社区的排除筛选中移除（ISO 3166-1 数字编码）
+
+Remove a foe
+== 移除一个敌人
+
+Remove a friend
+== 删除好友
+
+Remove a friend category
+== 删除好友类别
+
+Remove a map from favorites
+== 从收藏夹中删除地图
+
+Remove a name war entry
+== 移除名字敌对条目
+
+Remove a rcon key
+== 删除 rcon 密钥
+
+Remove a server from favorites
+== 从收藏夹中删除服务器
+
+Remove a skin from the favorites
+== 从收藏夹中删除皮肤
+
+Remove a type from the exclusion filter for a specific community
+== 将类型从指定社区的排除筛选中移除
+
+remove a voting option
+== 删除投票选项
+
+Remove right to vote from player with client ID
+== 删除具有客户端 ID 的玩家的投票权
+
+Remove right to vote from player with IP address
+== 删除具有IP地址的玩家的投票权
+
+Removes all bindwheel binds
+== 移除全部绑定轮盘绑定
+
+Removes all chat binds
+== 删除所有聊天绑定
+
+Removes all weapons from you
+== 移除你身上的所有武器
+
+Removes endless hook from you
+== 移除你的无限钩子
+
+Removes infinite jump from you
+== 消除你的无限跳跃
+
+Removes ninja from you
+== 移除你身上的忍者
+
+Removes super from you
+== 移除你的超级状态
+
+Removes the grenade launcher from you
+== 移除你身上的榴弹发射器
+
+Removes the jetpack from you
+== 从你身上取下喷气背包
+
+Removes the laser from you
+== 将激光从你身上移除
+
+Removes the shotgun from you
+== 从你身上拿走霰弹枪
+
+removes weapon with id i from you (all = -1, hammer = 0, gun = 1, shotgun = 2, grenade = 3, laser = 4, ninja = 5)
+== 从你身上移除ID为i的武器（全部= -1，锤子= 0，枪= 1，霰弹枪= 2，手榴弹= 3，激光= 4，忍者= 5）
+
+Rename a friend category
+== 重命名好友类别
+
+Request to swap your tee with another team member
+== 请求与另一名队友交换 tee
+
+Rescue to a nearby air tile
+== 救援到附近空气格
+
+Reset a config to its default value
+== 将配置重置为其默认值
+
+Reset all drawings on the background
+== 重置背景上的所有绘图
+
+Reset all or one tuning variable to default
+== 将全部或单个调参变量重置为默认值
+
+Reset dummy
+== 重置分身
+
+Reset zone tuning in zone x or in all zones
+== 重置区域 x（或全部区域）的调参配置
+
+Restart in x seconds (0 = abort)
+== 在 x 秒后重新启动（0 = 中止）
+
+Restart the client
+== 重启客户端
+
+Same as "vote no"
+== 与“投反对票”相同
+
+Save a replay of the last defined amount of seconds
+== 保存最近设定秒数的回放
+
+Save banlist in a file
+== 将禁止列表保存在文件中
+
+Save drawings to a given csv file (defaults to map name)
+== 将绘图保存到给定的 csv 文件（默认为地图名称）
+
+Save team with code r.
+== 将队伍保存为代码 r
+
+Say in chat
+== 在聊天中说
+
+Say in team chat
+== 在队伍聊天中说
+
+Send a moderator alert message to player
+== 向玩家发送管理员提醒消息
+
+Send a server alert message to all players
+== 向所有玩家发送服务器警报消息
+
+Send specified command to rcon
+== 向 rcon 发送指定命令
+
+Sends a command to the antibot
+== 向反机器人发送命令
+
+Set camera position relative to current view in the map
+== 设置相对于地图中当前视图的相机位置
+
+Set camera position to x and y in the map
+== 将相机位置设置为地图中的 x 和 y
+
+Set current demo speed
+== 设置当前回放速度
+
+Set ddrace team for a player
+== 为玩家设置 DDRace 队伍
+
+Set force-pause timer of i to 0.
+== 将 i 的强制暂停计时器设置为 0。
+
+Set friend category
+== 设置好友类别
+
+Set friend note
+== 设置好友备注
+
+Set team for a player (spectators = -1, game = 0)
+== 设置玩家队伍（旁观 = -1，游戏 = 0）
+
+Set team for all players (spectators = -1, game = 0)
+== 设置所有玩家队伍（旁观 = -1，游戏 = 0）
+
+Set timeout protection code s
+== 设置超时保护码
+
+Set your checkpoints based on another player
+== 根据其他玩家设置你的检查点
+
+Sets one of the two rescue modes (auto or manual). Prints current mode if no arguments provided
+== 设置两种救援模式之一（自动或手动）。如果没有提供参数则打印当前模式
+
+Sets your tee's eye emote
+== 设置你的 tee 眼部表情
+
+Show all votes (page 0 by default, 20 entries per page)
+== 显示全部投票（默认第 0 页，每页 20 条）
+
+Show banlist (page 1 by default, 20 entries per page)
+== 显示封禁列表（默认第 1 页，每页 20 条）
+
+Show Hook Collision
+== 显示钩子碰撞
+
+Show info about the map with name r gives (current map by default)
+== 显示有关名称为 r 的地图的信息（默认为当前地图）
+
+Show IP addresses in rcon commands (1 = on, 0 = off)
+== 在 rcon 命令中显示 IP 地址（1 = 打开，0 = 关闭）
+
+Show list of mutes (page 1 by default, 20 entries per page)
+== 显示静音列表（默认第 1 页，每页 20 条）
+
+Show list of vote mutes (page 1 by default, 20 entries per page)
+== 显示投票静音列表（默认第 1 页，每页 20 条）
+
+Show logs of the last i seconds
+== 显示最后 i 秒的日志
+
+Show scoreboard
+== 显示记分牌
+
+Show stats
+== 显示统计数据
+
+Shows five points of the global point ladder beginning with rank i (1 by default)
+== 显示全局积分榜从第 i 名开始的 5 条（默认 1）
+
+Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
+== 显示天梯队伍排名（或玩家排名）从第 i 名开始的 5 条（默认 1，-1 为最差）
+
+Shows gameplay information for this server
+== 显示该服务器的游戏信息
+
+Shows help to command r, general help if left blank
+== 显示命令 r 的帮助，如果留空则显示一般帮助
+
+Shows info about this server
+== 显示有关此服务器的信息
+
+Shows the credits of the DDNet mod
+== 显示 DDNet mod 的制作人员
+
+Shows the global points of a player beginning with name r (your rank by default)
+== 显示名称以 r 开头玩家的全局积分（默认你的排名）
+
+Shows the rank of player with name r (your rank by default)
+== 显示名称为 r 的玩家排名（默认你的排名）
+
+Shows the server rules
+== 显示服务器规则
+
+Shows the team rank of player with name r (your team rank by default)
+== 显示名称为 r 的玩家队伍排名（默认你的队伍排名）
+
+Shows the top ranks of the global and regional ladder beginning with rank i (1 by default, -1 for worst)
+== 显示全局与区域天梯从第 i 名开始的前列排名（默认 1，-1 为最差）
+
+Shut down
+== 关闭
+
+Specify command accessibility for given access level
+== 指定给定访问级别的命令可访问性
+
+Spectate a player by Id
+== 按 ID 旁观玩家
+
+Spectate the closest player
+== 旁观最近的玩家
+
+Spectate the next player
+== 旁观下一名玩家
+
+Spectate the previous player
+== 旁观上一名玩家
+
+Start playback of ghosts
+== 开始播放鬼影
+
+Start recording a demo
+== 开始录制回放
+
+Start recording a video
+== 开始录制视频
+
+Stop recording
+== 停止录音
+
+Stop recording a demo
+== 停止录制回放
+
+Stop recording a video
+== 停止录制视频
+
+Switch spectator mode
+== 切换旁观模式
+
+Switch team
+== 切换队伍
+
+Switch to grenade
+== 切换到手榴弹
+
+Switch to gun
+== 切换到枪
+
+Switch to hammer
+== 切换到锤子
+
+Switch to laser
+== 切换到激光
+
+Switch to next weapon
+== 切换到下一个武器
+
+Switch to previous weapon
+== 切换到上一个武器
+
+Switch to shotgun
+== 切换到霰弹枪
+
+Take a screenshot
+== 截图
+
+Teleport yourself out of freeze if auto rescue mode is enabled, otherwise it will set position for rescuing if grounded and teleport you out of freeze if not (use sv_rescue 1 to enable this feature)
+== 若启用自动救援模式，则直接将你传送出冻结；否则，落地时会记录救援位置，未落地则直接传送出冻结（用 sv_rescue 1 启用）
+
+Teleport yourself to player or to where you are spectating/or looking if no player name is given
+== 若未给出玩家名，则将自己传送到目标玩家，或传送到你当前旁观/瞄准的位置
+
+Teleport yourself to the last auto rescue position before you died (use sv_rescue 1 to enable this feature)
+== 将自己传送到死亡前的最后一个自动救援位置（使用 sv_rescue 1 启用此功能）
+
+Teleport yourself to the last location you teleported to
+== 将自己传送到上次传送到的位置
+
+Teleport yourself to the specified coordinates. A tilde (~) can be used to denote your current position, e.g. '/tpxy ~1 ~' to teleport one tile to the right
+== 将自己传送到指定坐标。波浪号 (~) 表示当前位置，例如 '/tpxy ~1 ~' 表示向右传送一格
+
+Teleports player i (or you) to player i (or you to where you look at)
+== 将玩家 i（或你）传送到玩家 i（或将你传送到你所看的位置）
+
+Teleports you to checkpoint teleporter i
+== 将你传送到检查点传送器 i
+
+Teleports you to teleporter i
+== 将你传送到传送器 i
+
+Temporarily set a config value while pressed
+== 按下时临时设置配置值
+
+Toggle config value
+== 切换配置值
+
+Toggle config value via keypress
+== 通过按键切换配置值
+
+Toggle Do Not Disturb (no chat and server messages)
+== 切换请勿打扰（无聊天和服务器消息）
+
+Toggle local console
+== 切换本地控制台
+
+Toggle receiving whispers
+== 切换接收私语
+
+Toggle remote console
+== 切换远程控制台
+
+Toggle scoreboard cursor
+== 切换记分板光标
+
+Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
+== 在 team 0 和 team 模式间切换。该模式会让你的队伍按 team 0 规则运行
+
+Toggle team lock so no one else can join and so the team restarts when a player dies. /lock 0 to unlock, /lock 1 to lock
+== 切换队伍锁定，这样其他人就无法加入，因此当一名玩家死亡时队伍会重新开始。 /lock 0 解锁，/lock 1 锁定
+
+Toggle tune variable
+== 切换调整变量
+
+Toggles collision
+== 切换碰撞
+
+Toggles hit others
+== 切换打别人
+
+Toggles hook collision
+== 切换钩子碰撞
+
+Toggles invincible mode
+== 切换无敌模式
+
+Toggles pause
+== 切换暂停
+
+Toggles pause on the currently voted player
+== 切换当前投票玩家的暂停状态
+
+Toggles spec (if not available behaves as /pause)
+== 切换旁观（如果不可用，则表现为 /pause）
+
+Toggles spec on the currently voted player
+== 切换当前投票玩家的旁观
+
+Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off for off, toggle for toggle and nothing to show current status
+== 打开/关闭标准眼睛表情的使用，eyeemote s，其中 s = on 表示打开，off 表示关闭，toggle 表示切换，不显示当前状态
+
+Translate last message (of a given name)
+== 翻译最后一条消息（给定名称）
+
+Translate last message of the person with this id
+== 翻译具有此 ID 的人的最后一条消息
+
+Tune in zone a variable to value
+== 将区域 a 的变量调到指定值
+
+Tune variable to value
+== 将变量调到指定值
+
+Tune variable to value or show current value
+== 将变量调到指定值，或显示当前值
+
+Unban a certain nickname
+== 解封某个昵称
+
+Unban all entries
+== 取消禁止所有条目
+
+Unban ip range
+== 解除 IP 段封禁
+
+Unban ip/banlist entry
+== 解除 IP/封禁列表条目
+
+Unbind all keys
+== 解除所有按键的绑定
+
+Unbind key
+== 解除按键绑定
+
+Uninvite player from team
+== 取消对玩家的队伍邀请
+
+Unlock a team
+== 解锁队伍
+
+Unmute player with client ID
+== 使用客户端 ID 取消玩家静音
+
+Unmute player with IP address
+== 按 IP 地址取消玩家静音
+
+Unmute player with list index
+== 按列表索引取消玩家静音
+
+Update a rcon key
+== 更新 rcon 密钥
+
+Update a rcon key with prehashed data
+== 使用预哈希数据更新 rcon 密钥
+
+Update or add a specific war group
+== 更新或添加指定敌对分组
+
+Usage: %s %s
+== 用法：%s %s
+
+Use emote
+== 使用表情
+
+Use this after `add_favorite` to group favorites. Start with `begin_favorite_group`
+== 在 `add_favorite` 之后使用它来对收藏夹进行分组。从“begin_favorite_group”开始
+
+Use this before `add_favorite` to group favorites. End with `end_favorite_group`
+== 在“add_favorite”之前使用它来对收藏夹进行分组。以“end_favorite_group”结束
+
+View switch found (at offset) with given number
+== 查看给定编号找到的开关（在偏移处）
+
+View tele found (at offset) with given number
+== 查看给定编号的 tele（带偏移）
+
+Vote a map by name
+== 按名称对地图进行投票
+
+Vote yes/no
+== 投票赞成/反对
+
+Whether a switch is deactivated by default (otherwise activated)
+== 开关是否默认禁用（否则激活）
+
+Whether to show players at any distance (off by default), optional i = 0 for off else for on
+== 是否显示任意距离的玩家（默认关闭），可选 i = 0 为关闭，否则为打开
+
+Whether to show players from other teams or not (off by default), optional i = 0 for off, i = 1 for on, i = 2 for own team only
+== 是否显示其他队伍玩家（默认关），可选 i = 0 关，i = 1 开，i = 2 仅本队
+
+Whether to show players from other teams when spectating (on by default), optional i = 0 for off else for on
+== 旁观时是否显示其他队伍玩家（默认开），可选 i = 0 关，其他值开
+
+Whether to use ninja jetpack or not. Makes jetpack look more awesome
+== 是否使用忍者喷气背包。让喷气背包看起来更酷
+
+Which message to display on zone enter; use 0 for normal area
+== 输入区域时显示哪些消息；使用 0 表示正常区域
+
+Which message to display on zone leave; use 0 for normal area
+== 离开区域时显示哪些消息；使用 0 表示正常区域
+
+Whisper something to someone (private message)
+== 向某人发送私聊消息
+
+Write local console contents to a text file
+== 将本地控制台内容写入文本文件
+
+Write remote console contents to a text file
+== 将远程控制台内容写入文本文件
+
+Zoom decrease
+== 缩小视角
+
+Zoom increase
+== 放大视角
+
+复读
+== 复读
+
+显示武器弹道辅助线
+== 显示武器弹道辅助线
+
