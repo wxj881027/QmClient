@@ -359,7 +359,7 @@ void CPlayer::Snap(int SnappingClient)
 			return;
 
 		pPlayerInfo->m_Latency = Latency;
-		pPlayerInfo->m_Score = !g_Config.m_SvHideScore || SnappingClient == m_ClientId ? Score : FinishTime::NOT_FINISHED_TIMESCORE;
+		pPlayerInfo->m_Score = !g_Config.m_SvHideScore || SnappingClient == m_ClientId ? Score : -9999;
 		pPlayerInfo->m_Local = (int)(m_ClientId == SnappingClient && (m_Paused != PAUSE_PAUSED || SnappingClientVersion >= VERSION_DDNET_OLD));
 		pPlayerInfo->m_ClientId = TranslatedId;
 		pPlayerInfo->m_Team = m_Team;
@@ -382,7 +382,7 @@ void CPlayer::Snap(int SnappingClient)
 			pPlayerInfo->m_PlayerFlags |= protocol7::PLAYERFLAG_ADMIN;
 
 		// Times are in milliseconds for 0.7
-		pPlayerInfo->m_Score = m_Score.has_value() && (!g_Config.m_SvHideScore || SnappingClient == m_ClientId) ? GameServer()->Score()->PlayerData(m_ClientId)->m_BestTime * 1000 : protocol7::FinishTime::NOT_FINISHED;
+		pPlayerInfo->m_Score = m_Score.has_value() && (!g_Config.m_SvHideScore || SnappingClient == m_ClientId) ? GameServer()->Score()->PlayerData(m_ClientId)->m_BestTime * 1000 : -1;
 		pPlayerInfo->m_Latency = Latency;
 	}
 
@@ -481,22 +481,6 @@ void CPlayer::Snap(int SnappingClient)
 	if(m_Paused == PAUSE_PAUSED)
 		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_PAUSED;
 
-	// set precise finish time instead of timescore
-	if(m_Score.has_value() && (!g_Config.m_SvHideScore || SnappingClient == m_ClientId))
-	{
-		// same as in str_time_float
-		int64_t TimeMilliseconds = static_cast<int64_t>(std::roundf(GameServer()->Score()->PlayerData(m_ClientId)->m_BestTime * 1000.0f));
-		int Seconds = static_cast<int>(TimeMilliseconds / 1000);
-		int Millis = static_cast<int>(TimeMilliseconds % 1000);
-
-		pDDNetPlayer->m_FinishTimeSeconds = Seconds;
-		pDDNetPlayer->m_FinishTimeMillis = Millis;
-	}
-	else
-	{
-		pDDNetPlayer->m_FinishTimeSeconds = FinishTime::NOT_FINISHED_MILLIS;
-		pDDNetPlayer->m_FinishTimeMillis = 0;
-	}
 	if(Server()->IsSixup(SnappingClient) && m_pCharacter && m_pCharacter->m_DDRaceState == ERaceState::STARTED &&
 		GameServer()->m_apPlayers[SnappingClient]->m_TimerType == TIMERTYPE_SIXUP)
 	{
