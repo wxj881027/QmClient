@@ -117,19 +117,7 @@ void CPickup::Tick()
 
 			case POWERUP_WEAPON:
 				if(m_Subtype >= 0 && m_Subtype < NUM_WEAPONS && (!pChr->GetWeaponGot(m_Subtype) || pChr->GetWeaponAmmo(m_Subtype) != -1))
-				{
 					pChr->GiveWeapon(m_Subtype);
-
-					if(GameWorld()->m_WorldConfig.m_IsDDRace && GameWorld()->m_WorldConfig.m_PredictDDRace)
-					{
-						if(m_Subtype == WEAPON_GRENADE)
-							GameWorld()->CreatePredictedSound(m_Pos, SOUND_PICKUP_GRENADE, pChr->GetCid());
-						else if(m_Subtype == WEAPON_SHOTGUN)
-							GameWorld()->CreatePredictedSound(m_Pos, SOUND_PICKUP_SHOTGUN, pChr->GetCid());
-						else if(m_Subtype == WEAPON_LASER)
-							GameWorld()->CreatePredictedSound(m_Pos, SOUND_PICKUP_SHOTGUN, pChr->GetCid());
-					}
-				}
 				break;
 
 			case POWERUP_NINJA:
