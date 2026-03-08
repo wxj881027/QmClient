@@ -45,6 +45,8 @@ MACRO_CONFIG_INT(TcUnfreezeLagDelayTicks, tc_remove_anti_delay_ticks, 25, 5, 150
 MACRO_CONFIG_INT(TcUnpredOthersInFreeze, tc_unpred_others_in_freeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "如果你被冻结，请不要预测其他玩家")
 MACRO_CONFIG_INT(TcPredMarginInFreeze, tc_pred_margin_in_freeze, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "冻结时启用更改预测裕度")
 MACRO_CONFIG_INT(TcPredMarginInFreezeAmount, tc_pred_margin_in_freeze_amount, 15, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "设置冻结时的预测裕度应为多少")
+MACRO_CONFIG_INT(TcPredMarginSpikeGuard, tc_pred_margin_spike_guard, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在延迟尖峰时临时增加预测边距")
+MACRO_CONFIG_INT(TcPredMarginSpikeMax, tc_pred_margin_spike_max, 20, 0, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "延迟尖峰时临时预测边距的最大增加值（毫秒）")
 
 MACRO_CONFIG_INT(TcShowOthersGhosts, tc_show_others_ghosts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在其他玩家无法预测的位置上显示鬼魂")
 MACRO_CONFIG_INT(TcSwapGhosts, tc_swap_ghosts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "将预测的玩家显示为幽灵，将普通玩家显示为不可预测的玩家")

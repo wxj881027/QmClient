@@ -211,10 +211,14 @@ class CTClient : public CComponent
 		float m_LastSeen = 0.0f;
 		std::string m_Name;
 		std::string m_Map;
+		int m_LastSeenScanId = 0;
 	};
 	std::unordered_map<std::string, SFriendOnlineState> m_FriendOnline;
 	float m_FriendNotifyNextCheck = 0.0f;
 	int m_FriendNotifyPrevEnabled = -1;
+	bool m_FriendNotifyScanRunning = false;
+	int m_FriendNotifyScanIndex = 0;
+	int m_FriendNotifyScanId = 0;
 	float m_FriendAutoRefreshNext = 0.0f;
 	int m_FriendAutoRefreshPrevEnabled = -1;
 	int m_FriendAutoRefreshPrevSeconds = -1;
@@ -223,6 +227,7 @@ class CTClient : public CComponent
 	std::unordered_set<std::string> m_FriendEnterOnline;
 	int m_FriendEnterPrevEnabled = -1;
 	bool m_FriendEnterInitialized = false;
+	float m_FriendEnterNextCheck = 0.0f;
 	void CheckFriendEnterGreet();
 
 	// Q1menG client recognition sync

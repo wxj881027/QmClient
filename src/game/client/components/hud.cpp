@@ -32,6 +32,22 @@
 
 namespace
 {
+bool IsVulkanAmdBackend(IGraphics *pGraphics)
+{
+	if(str_comp_nocase(g_Config.m_GfxBackend, "Vulkan") != 0 || pGraphics == nullptr)
+		return false;
+
+	const char *pVendor = pGraphics->GetVendorString();
+	const char *pRenderer = pGraphics->GetRendererString();
+
+	const bool IsAmdVendor = pVendor != nullptr &&
+		(str_find_nocase(pVendor, "AMD") != nullptr || str_find_nocase(pVendor, "ATI") != nullptr);
+	const bool IsAmdRenderer = pRenderer != nullptr &&
+		(str_find_nocase(pRenderer, "Radeon") != nullptr || str_find_nocase(pRenderer, "AMD") != nullptr);
+
+	return IsAmdVendor || IsAmdRenderer;
+}
+
 struct SHudTextInfoLayout
 {
 	float m_FpsX = 0.0f;
@@ -659,6 +675,16 @@ bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 {
 	if(!g_Config.m_ClDummyMiniView)
 		return false;
+	if(IsVulkanAmdBackend(Graphics()))
+	{
+		static bool s_LoggedDisableReason = false;
+		if(!s_LoggedDisableReason)
+		{
+			dbg_msg("hud", "dummy mini view disabled on Vulkan + AMD due known driver crash");
+			s_LoggedDisableReason = true;
+		}
+		return false;
+	}
 	if(!Client()->DummyConnected())
 		return false;
 

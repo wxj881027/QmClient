@@ -225,26 +225,29 @@ CChat::CLine::CLine()
 {
 	m_TextContainerIndex.Reset();
 	m_QuadContainerIndex = -1;
-	// 初始化被挤出动画状态
-	m_IsCutOff = false;
-	m_CutOffTime = 0;
+	m_aYOffset[0] = -1.0f;
+	m_aYOffset[1] = -1.0f;
+	m_TextYOffset = 0.0f;
+	m_CutOffProgress = 0.0f;
 }
 
 void CChat::CLine::Reset(CChat &This)
 {
 	This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 	This.Graphics()->DeleteQuadContainer(m_QuadContainerIndex);
+	m_QuadContainerIndex = -1;
 	m_Initialized = false;
 	m_Time = 0;
 	m_aText[0] = '\0';
 	m_aName[0] = '\0';
+	m_aYOffset[0] = -1.0f;
+	m_aYOffset[1] = -1.0f;
+	m_TextYOffset = 0.0f;
+	m_CutOffProgress = 0.0f;
 	m_Friend = false;
 	m_TimesRepeated = 0;
 	m_pManagedTeeRenderInfo = nullptr;
 	m_pTranslateResponse = nullptr;
-	// 重置被挤出动画状态
-	m_IsCutOff = false;
-	m_CutOffTime = 0;
 }
 
 // 缓动函数实现
@@ -272,24 +275,13 @@ float CChat::CalculateAnimationAlpha(const CLine &Line, bool ShowChat) const
 	const float FadeOutStart = 14.0f;
 	const float FadeOutDuration = CHAT_ANIM_FADE_OUT_DURATION;
 
-	float Alpha = 1.0f;
+	const float FadeInT = std::clamp(MessageAge / FadeInDuration, 0.0f, 1.0f);
+	const float FadeOutT = ShowChat ? 0.0f : std::clamp((MessageAge - FadeOutStart) / FadeOutDuration, 0.0f, 1.0f);
 
-	// 淡入动画
-	if(MessageAge < FadeInDuration)
-	{
-		float t = MessageAge / FadeInDuration;
-		Alpha = EaseOutQuad(t);
-	}
-	// 淡出动画（仅在非显示聊天模式下，且消息超过显示时限）
-	else if(!ShowChat && MessageAge > FadeOutStart)
-	{
-		float t = (MessageAge - FadeOutStart) / FadeOutDuration;
-		t = std::clamp(t, 0.0f, 1.0f);
-		// 使用更平滑的淡出曲线
-		Alpha = 1.0f - EaseInQuad(t);
-	}
-
-	return std::clamp(Alpha, 0.0f, 1.0f);
+	// Declarative composition: entry * timeout.
+	const float EntryAlpha = EaseOutQuad(FadeInT);
+	const float TimeoutAlpha = 1.0f - EaseInQuad(FadeOutT);
+	return std::clamp(EntryAlpha * TimeoutAlpha, 0.0f, 1.0f);
 }
 
 float CChat::CalculateAnimationOffsetX(const CLine &Line, bool ShowChat) const
@@ -299,76 +291,33 @@ float CChat::CalculateAnimationOffsetX(const CLine &Line, bool ShowChat) const
 	const float FadeOutStart = 14.0f;
 	const float FadeOutDuration = CHAT_ANIM_FADE_OUT_DURATION;
 
-	// 淡入时从左向右滑入
-	if(MessageAge < SlideInDuration)
-	{
-		float t = MessageAge / SlideInDuration;
-		// 高亮和私信消息使用更显著的回弹效果
-		if(Line.m_Highlighted || Line.m_Whisper)
-		{
-			float eased = EaseOutBack(t);
-			// 限制回弹效果
-			eased = std::min(eased, 1.08f);
-			return -CHAT_ANIM_HIGHLIGHT_SLIDE * (1.0f - eased);
-		}
-		else
-		{
-			return -CHAT_ANIM_SLIDE_OFFSET * (1.0f - EaseOutQuad(t));
-		}
-	}
-	// 淡出时向左滑出屏幕（仅在非显示聊天模式下）
-	else if(!ShowChat && MessageAge > FadeOutStart)
-	{
-		float t = (MessageAge - FadeOutStart) / FadeOutDuration;
-		t = std::clamp(t, 0.0f, 1.0f);
-		// 使用平滑的缓入曲线向左滑出
-		float eased = EaseInQuad(t);
-		return -CHAT_ANIM_SLIDE_OUT_OFFSET * eased;
-	}
+	const float SlideInT = std::clamp(MessageAge / SlideInDuration, 0.0f, 1.0f);
+	const float SlideOutT = ShowChat ? 0.0f : std::clamp((MessageAge - FadeOutStart) / FadeOutDuration, 0.0f, 1.0f);
 
-	return 0.0f;
+	const bool Emphasized = Line.m_Highlighted || Line.m_Whisper;
+	const float EntryAmplitude = Emphasized ? CHAT_ANIM_HIGHLIGHT_SLIDE : CHAT_ANIM_SLIDE_OFFSET;
+	const float EntryEase = Emphasized ? std::min(EaseOutBack(SlideInT), 1.08f) : EaseOutQuad(SlideInT);
+	const float EntryOffsetX = -EntryAmplitude * (1.0f - EntryEase);
+	const float TimeoutOffsetX = -CHAT_ANIM_SLIDE_OUT_OFFSET * EaseInQuad(SlideOutT);
+
+	// Declarative composition: entry + timeout.
+	return EntryOffsetX + TimeoutOffsetX;
 }
 
-// 计算被挤出时的透明度
-float CChat::CalculateCutOffAlpha(const CLine &Line) const
+float CChat::CalculateCutOffAlpha(float CutOffT)
 {
-	if(!Line.m_IsCutOff || Line.m_CutOffTime == 0)
-		return 1.0f;
-
-	const float CutOffAge = (time() - Line.m_CutOffTime) / (float)time_freq();
-	const float CutOffDuration = CHAT_ANIM_CUTOFF_DURATION;
-
-	if(CutOffAge < CutOffDuration)
-	{
-		float t = CutOffAge / CutOffDuration;
-		return 1.0f - EaseInQuad(t);
-	}
-
-	return 0.0f;
+	return 1.0f - EaseInQuad(std::clamp(CutOffT, 0.0f, 1.0f));
 }
 
-// 计算被挤出时的 X 偏移
-float CChat::CalculateCutOffOffsetX(const CLine &Line) const
+float CChat::CalculateCutOffOffsetX(float CutOffT)
 {
-	if(!Line.m_IsCutOff || Line.m_CutOffTime == 0)
-		return 0.0f;
-
-	const float CutOffAge = (time() - Line.m_CutOffTime) / (float)time_freq();
-	const float CutOffDuration = CHAT_ANIM_CUTOFF_DURATION;
-
-	if(CutOffAge < CutOffDuration)
-	{
-		float t = CutOffAge / CutOffDuration;
-		float eased = EaseInQuad(t);
-		return -CHAT_ANIM_SLIDE_OUT_OFFSET * eased;
-	}
-
-	return -CHAT_ANIM_SLIDE_OUT_OFFSET;
+	return -CHAT_ANIM_SLIDE_OUT_OFFSET * EaseInQuad(std::clamp(CutOffT, 0.0f, 1.0f));
 }
 
 CChat::CChat()
 {
 	m_Mode = MODE_NONE;
+	m_LastAnimUpdateTime = 0;
 
 	m_Input.SetClipboardLineCallback([this](const char *pStr) { SendChatQueued(pStr); });
 	m_Input.SetCalculateOffsetCallback([this]() { return m_IsInputCensored; });
@@ -431,6 +380,7 @@ void CChat::RebuildChat()
 		// recalculate sizes
 		Line.m_aYOffset[0] = -1.0f;
 		Line.m_aYOffset[1] = -1.0f;
+		Line.m_CutOffProgress = 0.0f;
 	}
 }
 
@@ -440,6 +390,7 @@ void CChat::ClearLines()
 		Line.Reset(*this);
 	m_PrevScoreBoardShowed = false;
 	m_PrevShowChat = false;
+	m_LastAnimUpdateTime = 0;
 }
 
 void CChat::OnWindowResize()
@@ -646,10 +597,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				});
 		}
 
-		if(GameClient()->m_BindChat.ChatDoAutocomplete(ShiftPressed))
-		{
-		}
-		else if(m_aCompletionBuffer[0] == '/' && !m_vServerCommands.empty())
+		if(m_aCompletionBuffer[0] == '/' && !m_vServerCommands.empty())
 		{
 			CCommand *pCompletionCommand = nullptr;
 
@@ -758,7 +706,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 
 				// quote the name
 				char aQuoted[128];
-				if((m_Input.GetString()[0] == '/' || GameClient()->m_BindChat.CheckBindChat(m_Input.GetString())) && (str_find(pCompletionString, " ") || str_find(pCompletionString, "\"")))
+				if(m_Input.GetString()[0] == '/' && (str_find(pCompletionString, " ") || str_find(pCompletionString, "\"")))
 				{
 					// escape the name
 					str_copy(aQuoted, "\"");
@@ -1122,6 +1070,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 		PreviousLine.m_Time = time();
 		PreviousLine.m_aYOffset[0] = -1.0f;
 		PreviousLine.m_aYOffset[1] = -1.0f;
+		PreviousLine.m_CutOffProgress = 0.0f;
 
 		FChatMsgCheckAndPrint(PreviousLine);
 		return;
@@ -1337,7 +1286,16 @@ void CChat::OnPrepareLines(float y)
 			break;
 
 		if(Line.m_TextContainerIndex.Valid() && !ForceRecreate)
+		{
+			// Keep y progression coherent for already prepared lines.
+			if(Line.m_aYOffset[OffsetType] >= 0.0f)
+			{
+				y -= Line.m_aYOffset[OffsetType];
+				if(y < HeightLimit)
+					break;
+			}
 			continue;
+		}
 
 		TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
 		Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
@@ -1741,6 +1699,12 @@ void CChat::OnRender()
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 
 	int64_t Now = time();
+	if(m_LastAnimUpdateTime == 0 || Now < m_LastAnimUpdateTime)
+		m_LastAnimUpdateTime = Now;
+	const float DeltaSeconds = std::clamp((Now - m_LastAnimUpdateTime) / (float)time_freq(), 0.0f, 0.25f);
+	m_LastAnimUpdateTime = Now;
+	const float CutOffStep = CHAT_ANIM_CUTOFF_DURATION > 0.0f ? std::clamp(DeltaSeconds / CHAT_ANIM_CUTOFF_DURATION, 0.0f, 1.0f) : 1.0f;
+
 	float HeightLimit = IsScoreBoardOpen ? 180.0f : (m_PrevShowChat ? 50.0f : 200.0f);
 	int OffsetType = IsScoreBoardOpen ? 1 : 0;
 
@@ -1753,8 +1717,7 @@ void CChat::OnRender()
 		RealMsgPaddingY = 0;
 	}
 
-	// 第一遍：检测并标记被挤出的消息
-	float CheckY = y;
+	// Declarative animation pass: blend age-based animation with overflow-based cut-off.
 	for(int i = 0; i < MAX_LINES; i++)
 	{
 		CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
@@ -1763,59 +1726,34 @@ void CChat::OnRender()
 		if(Now > Line.m_Time + 16 * time_freq() && !m_PrevShowChat)
 			break;
 
-		CheckY -= Line.m_aYOffset[OffsetType];
+		const bool LineHeightValid = Line.m_aYOffset[OffsetType] >= 0.0f;
+		const float LineHeight = LineHeightValid ? Line.m_aYOffset[OffsetType] : FontSize() + RealMsgPaddingY;
 
-		// 检测是否被挤出
-		if(CheckY < HeightLimit)
+		y -= LineHeight;
+
+		// Don't abort the full render pass on a single malformed line.
+		if(!LineHeightValid)
 		{
-			// 刚刚开始被挤出
-			if(!Line.m_IsCutOff)
-			{
-				Line.m_IsCutOff = true;
-				Line.m_CutOffTime = Now;
-			}
+			Line.m_CutOffProgress = 0.0f;
+			continue;
 		}
-		else
-		{
-			// 不再被挤出，重置状态
-			if(Line.m_IsCutOff)
-			{
-				Line.m_IsCutOff = false;
-				Line.m_CutOffTime = 0;
-			}
-		}
-	}
 
-	// 第二遍：渲染所有消息（包括正在被挤出的消息）
-	for(int i = 0; i < MAX_LINES; i++)
-	{
-		CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
-		if(!Line.m_Initialized)
-			break;
-		if(Now > Line.m_Time + 16 * time_freq() && !m_PrevShowChat)
-			break;
-
-		y -= Line.m_aYOffset[OffsetType];
-
-		// 计算动画效果
+		// Base animation from message age.
 		float AnimAlpha = CalculateAnimationAlpha(Line, m_PrevShowChat);
 		float AnimOffsetX = CalculateAnimationOffsetX(Line, m_PrevShowChat);
 
-		// 如果消息正在被挤出，应用挤出动画
-		if(Line.m_IsCutOff)
-		{
-			float CutOffAlpha = CalculateCutOffAlpha(Line);
-			float CutOffOffsetX = CalculateCutOffOffsetX(Line);
-			AnimAlpha *= CutOffAlpha;
-			AnimOffsetX += CutOffOffsetX;
-		}
-		// 如果不是被挤出，且超出高度限制，则跳过
-		else if(y < HeightLimit)
-		{
-			break;
-		}
+		// Declarative cut-off composition from current overflow in the visible area.
+		const float Overflow = std::max(0.0f, HeightLimit - y);
+		const float TargetCutOffT = std::clamp(Overflow / std::max(LineHeight, 1.0f), 0.0f, 1.0f);
+		Line.m_CutOffProgress += std::clamp(TargetCutOffT - Line.m_CutOffProgress, -CutOffStep, CutOffStep);
+		const float CutOffT = Line.m_CutOffProgress;
+		AnimAlpha *= CalculateCutOffAlpha(CutOffT);
+		AnimOffsetX += CalculateCutOffOffsetX(CutOffT);
 
-		// 如果完全透明，跳过渲染
+		if(CutOffT >= 1.0f && AnimAlpha <= 0.001f)
+			break;
+
+		// Fully transparent lines can be skipped.
 		if(AnimAlpha <= 0.001f)
 			continue;
 

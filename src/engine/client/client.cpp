@@ -560,6 +560,7 @@ void CClient::OnEnterGame(bool Dummy)
 
 	if(!Dummy)
 	{
+		ResetPredMarginSpikeGuard();
 		m_LastDummyConnectTime = 0.0f;
 	}
 
@@ -782,6 +783,7 @@ void CClient::Connect(const char *pAddress, const char *pPassword)
 		str_copy(m_aPassword, pPassword);
 
 	m_CanReceiveServerCapabilities = true;
+	ResetPredMarginSpikeGuard();
 
 	m_Sixup = OnlySixup;
 	if(m_Sixup)
@@ -805,6 +807,7 @@ void CClient::DisconnectWithReason(const char *pReason)
 	if(pReason != nullptr && pReason[0] == '\0')
 		pReason = nullptr;
 
+	ResetPredMarginSpikeGuard();
 	DummyDisconnect(pReason);
 
 	char aBuf[512];
@@ -841,6 +844,7 @@ void CClient::DisconnectWithReason(const char *pReason)
 	mem_zero(&m_CurrentServerPingUuid, sizeof(m_CurrentServerPingUuid));
 	m_CurrentServerCurrentPingTime = -1;
 	m_CurrentServerNextPingTime = -1;
+	m_CurrentServerLatencyMs = -1;
 
 	ResetMapDownload(true);
 
@@ -1034,6 +1038,10 @@ void CClient::RenderDebug()
 
 	str_format(aBuffer, sizeof(aBuffer), "Prediction time: %d ms", GetPredictionTime());
 	Graphics()->QuadsText(2, 2 + FontSize, FontSize, aBuffer);
+	const int PredictionMarginMs = PredictionMargin();
+	const int SpikeBoostMs = maximum(0, PredictionMarginMs - m_PredMarginBaseMsDebug);
+	str_format(aBuffer, sizeof(aBuffer), "Prediction margin: base %d + spike %d = %d ms", m_PredMarginBaseMsDebug, SpikeBoostMs, PredictionMarginMs);
+	Graphics()->QuadsText(2, 2 + 2 * FontSize, FontSize, aBuffer);
 
 	str_format(aBuffer, sizeof(aBuffer), "FPS: %3d", round_to_int(1.0f / m_FrameTimeAverage));
 	Graphics()->QuadsText(20.0f * FontSize, 2, FontSize, aBuffer);
@@ -1584,6 +1592,8 @@ void CClient::ProcessServerInfo(int RawType, NETADDR *pFrom, const void *pData, 
 			{
 				int LatencyMs = (time_get() - m_CurrentServerCurrentPingTime) * 1000 / time_freq();
 				m_ServerBrowser.SetCurrentServerPing(ServerAddress(), LatencyMs);
+				m_CurrentServerLatencyMs = LatencyMs;
+				m_CurrentServerInfo.m_Latency = LatencyMs;
 				m_CurrentServerPingInfoType = SavedType;
 				m_CurrentServerCurrentPingTime = -1;
 
@@ -1932,6 +1942,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			{
 				int LatencyMs = (time_get() - m_CurrentServerCurrentPingTime) * 1000 / time_freq();
 				m_ServerBrowser.SetCurrentServerPing(ServerAddress(), LatencyMs);
+				m_CurrentServerLatencyMs = LatencyMs;
+				m_CurrentServerInfo.m_Latency = LatencyMs;
 				m_CurrentServerCurrentPingTime = -1;
 
 				char aBuf[64];
@@ -2101,6 +2113,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			}
 
 			int64_t Now = time_get();
+			if(Conn == CONN_MAIN)
+				UpdatePredMarginSpikeGuard(TimeLeft, Now);
 
 			// adjust our prediction time
 			int64_t Target = 0;
@@ -2354,7 +2368,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 							GameClient()->OnNewSnapshot();
 						}
 						SetState(IClient::STATE_ONLINE);
-						if(!Dummy)
+						if(Conn == CONN_MAIN)
 						{
 							DemoRecorder_HandleAutoStart();
 						}
@@ -3143,6 +3157,7 @@ void CClient::Update()
 		m_ReconnectTime = 0;
 	}
 
+	DecayPredMarginSpikeGuard(time_get());
 	m_PredictedTime.UpdateMargin(PredictionMargin() * time_freq() / 1000);
 }
 
@@ -5552,9 +5567,119 @@ int CClient::MaxLatencyTicks() const
 	return GameTickSpeed() + (PredictionMargin() * GameTickSpeed()) / 1000;
 }
 
+int CClient::AutoPredictionMarginFromPingMs() const
+{
+	// Slider max (300) means "auto": margin = clamp(round(10 + 0.18 * ping_ms), 10, 75).
+	// Prefer live ping from current server probes, then current server info.
+	int PingMs = m_CurrentServerLatencyMs;
+	if(PingMs < 0)
+	{
+		PingMs = m_CurrentServerInfo.m_Latency;
+	}
+	if(PingMs < 0)
+	{
+		// Initial fallback before any ping sample exists.
+		PingMs = 100;
+	}
+	PingMs = std::clamp(PingMs, 0, 999);
+
+	return std::clamp(round_to_int(10.0f + 0.18f * PingMs), 10, 75);
+}
+
+int CClient::BasePredictionMarginMs() const
+{
+	if(!m_ServerCapabilities.m_SyncWeaponInput)
+	{
+		return 10;
+	}
+
+	if(g_Config.m_ClPredictionMargin >= 300)
+	{
+		return AutoPredictionMarginFromPingMs();
+	}
+
+	return g_Config.m_ClPredictionMargin;
+}
+
 int CClient::PredictionMargin() const
 {
-	return m_ServerCapabilities.m_SyncWeaponInput ? g_Config.m_ClPredictionMargin : 10;
+	const int ManualBase = BasePredictionMarginMs();
+
+	int FreezeBase = ManualBase;
+	if(g_Config.m_TcPredMarginInFreeze && m_IsLocalFrozen)
+	{
+		FreezeBase = std::max(FreezeBase, g_Config.m_TcPredMarginInFreezeAmount);
+	}
+
+	int SpikeBase = ManualBase;
+	if(g_Config.m_TcPredMarginSpikeGuard)
+	{
+		SpikeBase = ManualBase + round_to_int(m_PredMarginSpikeBoostMs);
+	}
+
+	const int Effective = std::clamp(std::max(FreezeBase, SpikeBase), 1, 300);
+	m_PredMarginBaseMsDebug = FreezeBase;
+	m_PredMarginEffectiveMsDebug = Effective;
+	return Effective;
+}
+
+void CClient::ResetPredMarginSpikeGuard()
+{
+	m_PredMarginSpikeBoostMs = 0.0f;
+	m_PredMarginSpikeHoldUntil = 0;
+	m_PredMarginSpikeLastUpdate = 0;
+}
+
+void CClient::UpdatePredMarginSpikeGuard(int TimeLeftMs, int64_t Now)
+{
+	if(!g_Config.m_TcPredMarginSpikeGuard)
+		return;
+
+	if(TimeLeftMs > -40)
+		return;
+
+	const int CandidateBoost = std::clamp(6 + ((-TimeLeftMs - 40) / 2), 0, g_Config.m_TcPredMarginSpikeMax);
+	m_PredMarginSpikeBoostMs = std::max(m_PredMarginSpikeBoostMs, (float)CandidateBoost);
+	m_PredMarginSpikeHoldUntil = Now + time_freq() / 2;
+	m_PredMarginSpikeLastUpdate = Now;
+}
+
+void CClient::DecayPredMarginSpikeGuard(int64_t Now)
+{
+	if(m_PredMarginSpikeLastUpdate == 0)
+	{
+		m_PredMarginSpikeLastUpdate = Now;
+		return;
+	}
+
+	if(!g_Config.m_TcPredMarginSpikeGuard)
+	{
+		m_PredMarginSpikeBoostMs = 0.0f;
+		m_PredMarginSpikeHoldUntil = 0;
+		m_PredMarginSpikeLastUpdate = Now;
+		return;
+	}
+
+	if(m_PredMarginSpikeBoostMs <= 0.0f)
+	{
+		m_PredMarginSpikeBoostMs = 0.0f;
+		m_PredMarginSpikeLastUpdate = Now;
+		return;
+	}
+
+	if(Now <= m_PredMarginSpikeHoldUntil)
+	{
+		m_PredMarginSpikeLastUpdate = Now;
+		return;
+	}
+
+	const int64_t DeltaTicks = Now - m_PredMarginSpikeLastUpdate;
+	m_PredMarginSpikeLastUpdate = Now;
+	if(DeltaTicks <= 0)
+		return;
+
+	const float DecayMs = (DeltaTicks / (float)time_freq()) * 25.0f;
+	m_PredMarginSpikeBoostMs = std::max(0.0f, m_PredMarginSpikeBoostMs - DecayMs);
 }
 
 int CClient::UdpConnectivity(int NetType)

@@ -104,37 +104,6 @@ static int DetectDeepflyModeFromBindCommand(const char *pCommand)
 	return DEEPFLY_MODE_NORMAL;
 }
 
-static bool BindContainsCommand(const char *pBind, const char *pCommand)
-{
-	if(!pBind || pBind[0] == '\0')
-		return false;
-
-	char aBind[1024];
-	str_copy(aBind, pBind, sizeof(aBind));
-
-	char *pCursor = aBind;
-	while(*pCursor != '\0')
-	{
-		char *pEnd = pCursor;
-		while(*pEnd != '\0' && *pEnd != ';')
-			++pEnd;
-
-		const bool HasNextCommand = *pEnd == ';';
-		*pEnd = '\0';
-
-		char aNormalized[1024];
-		NormalizeBindCommand(pCursor, aNormalized, sizeof(aNormalized));
-		if(aNormalized[0] != '\0' && str_comp_nocase(aNormalized, pCommand) == 0)
-			return true;
-
-		if(!HasNextCommand)
-			break;
-		pCursor = pEnd + 1;
-	}
-
-	return false;
-}
-
 bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 {
 	if((Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) == 0)
@@ -187,11 +156,7 @@ void CBinds::Bind(int KeyId, const char *pStr, bool FreeOnly, int ModifierCombin
 		log_info_color(BIND_PRINT_COLOR, "binds", "bound %s = %s", aBindName, m_aapKeyBindings[ModifierCombination][KeyId]);
 	}
 
-	const int DeepflyMode = DetectDeepflyModeFromBindCommand(pStr);
-	if(DeepflyMode != DEEPFLY_MODE_NONE)
-	{
-		g_Config.m_QmDeepflyMode = DeepflyMode;
-	}
+	g_Config.m_QmDeepflyMode = DetectDeepflyModeFromAllBinds();
 }
 
 int CBinds::GetModifierMask(IInput *pInput)
@@ -304,27 +269,16 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 				return;
 			}
 
-			const bool IsReleaseSuppressed =
-				GameClient()->m_Chat.IsActive() ||
-				GameClient()->m_GameConsole.IsActive() ||
-				GameClient()->m_Menus.IsActive();
-
 			// Prevent binds from being deactivated while chat, console and menus are open, as these components will
 			// still allow key release events to be forwarded to this component, so the active binds can be cleared.
-			// Exception: +scoreboard must always receive release to avoid getting stuck while opening chat.
-			if(IsReleaseSuppressed && !BindContainsCommand(pBind, "+scoreboard"))
+			if(GameClient()->m_Chat.IsActive() ||
+				GameClient()->m_GameConsole.IsActive() ||
+				GameClient()->m_Menus.IsActive())
 			{
 				return;
 			}
 
-			if(IsReleaseSuppressed)
-			{
-				Console()->ExecuteLineStroked(0, "+scoreboard");
-			}
-			else
-			{
-				Console()->ExecuteLineStroked(0, pBind);
-			}
+			Console()->ExecuteLineStroked(0, pBind);
 		};
 
 		// Release active bind that uses this primary key
@@ -368,6 +322,48 @@ void CBinds::UnbindAll()
 			pKeyBinding = nullptr;
 		}
 	}
+
+	g_Config.m_QmDeepflyMode = DetectDeepflyModeFromAllBinds();
+}
+
+int CBinds::DetectDeepflyModeFromAllBinds() const
+{
+	bool HasFire = false;
+	bool HasDummyHammerToggle = false;
+	bool HasCustom = false;
+
+	for(int Modifier = KeyModifier::NONE; Modifier < KeyModifier::COMBINATION_COUNT; Modifier++)
+	{
+		for(int KeyId = KEY_FIRST; KeyId < KEY_LAST; KeyId++)
+		{
+			const char *pBind = Get(KeyId, Modifier);
+			if(!pBind[0])
+				continue;
+
+			const int DeepflyMode = DetectDeepflyModeFromBindCommand(pBind);
+			if(DeepflyMode == DEEPFLY_MODE_NONE)
+				continue;
+
+			if(DeepflyMode == DEEPFLY_MODE_CUSTOM)
+			{
+				HasCustom = true;
+				continue;
+			}
+
+			if(DeepflyMode == DEEPFLY_MODE_DF || DeepflyMode == DEEPFLY_MODE_NORMAL)
+				HasFire = true;
+			if(DeepflyMode == DEEPFLY_MODE_DF || DeepflyMode == DEEPFLY_MODE_HDF)
+				HasDummyHammerToggle = true;
+		}
+	}
+
+	if(HasCustom)
+		return DEEPFLY_MODE_CUSTOM;
+	if(HasFire && HasDummyHammerToggle)
+		return DEEPFLY_MODE_DF;
+	if(HasDummyHammerToggle)
+		return DEEPFLY_MODE_HDF;
+	return DEEPFLY_MODE_NORMAL;
 }
 
 const char *CBinds::Get(int KeyId, int ModifierCombination) const

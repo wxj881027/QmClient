@@ -231,9 +231,9 @@ bool CScoreboard::OnInput(const IInput::CEvent &Event)
 		return false;
 
 	// While using the scoreboard cursor, block gameplay mouse actions but still
-	// allow keyboard binds (e.g. movement or toggling the cursor key) to pass through.
+	// allow keyboard binds and text input to pass through.
 	if((Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) == 0)
-		return true;
+		return false;
 
 	if(Event.m_Key == KEY_MOUSE_1 ||
 		Event.m_Key == KEY_MOUSE_2 ||
@@ -1074,6 +1074,29 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				Row.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ItemAlpha), IGraphics::CORNER_ALL, RoundRadius);
 			}
 
+			const int ClientId = pInfo->m_ClientId;
+			const CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
+
+			if(m_MouseUnlocked)
+			{
+				const int ButtonResult = Ui()->DoButtonLogic(&ClientData, 0, &Row, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
+				if(ButtonResult != 0)
+				{
+					m_ScoreboardPopupContext.m_pScoreboard = this;
+					m_ScoreboardPopupContext.m_ClientId = ClientId;
+					m_ScoreboardPopupContext.m_IsLocal = GameClient()->m_aLocalIds[0] == ClientId ||
+									     (Client()->DummyConnected() && GameClient()->m_aLocalIds[1] == ClientId);
+
+					Ui()->DoPopupMenu(&m_ScoreboardPopupContext, Ui()->MouseX(), Ui()->MouseY(), 110.0f,
+						m_ScoreboardPopupContext.m_IsLocal ? 58.5f : 87.5f, &m_ScoreboardPopupContext, PopupScoreboard);
+				}
+
+				if(Ui()->HotItem() == &ClientData)
+				{
+					Row.Draw(ColorRGBA(0.7f, 0.7f, 0.7f, 0.7f * ItemAlpha), IGraphics::CORNER_ALL, RoundRadius);
+				}
+			}
+
 			// score
 			if(Race7)
 			{
@@ -1105,8 +1128,6 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				str_format(aBuf, sizeof(aBuf), "%d", std::clamp(pInfo->m_Score, -999, 99999));
 			}
 			TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
-			const int ClientId = pInfo->m_ClientId;
-			const CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
 			const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 			char aNameBuf[MAX_NAME_LENGTH];
 			char aClanBuf[MAX_CLAN_LENGTH];
@@ -1143,26 +1164,6 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				IGraphics::CQuadItem QuadItem(TeeOffset, Row.y - 2.5f - Spacing / 2.0f, Row.h / 2.0f, Row.h);
 				Graphics()->QuadsDrawTL(&QuadItem, 1);
 				Graphics()->QuadsEnd();
-			}
-
-			if(m_MouseUnlocked)
-			{
-				const int ButtonResult = Ui()->DoButtonLogic(&ClientData, 0, &Row, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
-				if(ButtonResult != 0)
-				{
-					m_ScoreboardPopupContext.m_pScoreboard = this;
-					m_ScoreboardPopupContext.m_ClientId = pInfo->m_ClientId;
-					m_ScoreboardPopupContext.m_IsLocal = GameClient()->m_aLocalIds[0] == pInfo->m_ClientId ||
-									     (Client()->DummyConnected() && GameClient()->m_aLocalIds[1] == pInfo->m_ClientId);
-
-					Ui()->DoPopupMenu(&m_ScoreboardPopupContext, Ui()->MouseX(), Ui()->MouseY(), 110.0f,
-						m_ScoreboardPopupContext.m_IsLocal ? 58.5f : 87.5f, &m_ScoreboardPopupContext, PopupScoreboard);
-				}
-
-				if(Ui()->HotItem() == &ClientData)
-				{
-					Row.Draw(ColorRGBA(0.7f, 0.7f, 0.7f, 0.7f * ItemAlpha), IGraphics::CORNER_ALL, RoundRadius);
-				}
 			}
 
 			// skin
@@ -1359,6 +1360,16 @@ void CScoreboard::OnRender()
 				GameClient()->m_PlayerPoints.EnsureQueried(GameClient()->m_aClients[i].m_aName);
 			}
 		}
+	}
+
+	// If scoreboard was opened by death/pause auto activation, ensure cursor locks back when it closes.
+	if(!IsActive() && m_MouseUnlocked)
+	{
+		Ui()->ClosePopupMenus();
+		m_MouseUnlocked = false;
+		if(m_LastMousePos.has_value())
+			SetUiMousePos(m_LastMousePos.value());
+		m_LastMousePos = Ui()->MousePos();
 	}
 
 	const bool WantActive = IsActive();

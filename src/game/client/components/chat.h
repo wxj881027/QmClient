@@ -37,7 +37,7 @@ class CChat : public CComponent
 	static constexpr float CHAT_ANIM_SLIDE_OFFSET = 25.0f;      // 普通消息滑入偏移量（像素）
 	static constexpr float CHAT_ANIM_HIGHLIGHT_SLIDE = 50.0f;   // 高亮/私信消息滑入偏移量
 	static constexpr float CHAT_ANIM_SLIDE_OUT_OFFSET = 60.0f;  // 淡出时向左滑出的偏移量
-	static constexpr float CHAT_ANIM_CUTOFF_DURATION = 0.3f;    // 被挤出时的动画持续时间
+	static constexpr float CHAT_ANIM_CUTOFF_DURATION = 0.3f;    // 被挤出动画平滑时间（秒）
 
 	enum
 	{
@@ -72,18 +72,16 @@ class CChat : public CComponent
 		std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;
 
 		float m_TextYOffset;
+		float m_CutOffProgress;
 
 		int m_TimesRepeated;
 
 		std::shared_ptr<CTranslateResponse> m_pTranslateResponse;
-
-		// 被挤出动画状态
-		bool m_IsCutOff;          // 是否正在被挤出
-		int64_t m_CutOffTime;     // 开始被挤出的时间
 	};
 
 	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
+	int64_t m_LastAnimUpdateTime;
 
 	CLine m_aLines[MAX_LINES];
 	int m_CurrentLine;
@@ -164,7 +162,6 @@ class CChat : public CComponent
 	bool m_EditingNewLine;
 
 	bool m_ServerSupportsCommandInfo;
-
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
 	static void ConSayTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConChat(IConsole::IResult *pResult, void *pUserData);
@@ -185,8 +182,8 @@ class CChat : public CComponent
 	static float EaseOutBack(float t);
 	float CalculateAnimationAlpha(const CLine &Line, bool ShowChat) const;
 	float CalculateAnimationOffsetX(const CLine &Line, bool ShowChat) const;
-	float CalculateCutOffAlpha(const CLine &Line) const;
-	float CalculateCutOffOffsetX(const CLine &Line) const;
+	static float CalculateCutOffAlpha(float CutOffT);
+	static float CalculateCutOffOffsetX(float CutOffT);
 
 	friend class CBindChat;
 	friend class CTranslate;

@@ -861,28 +861,79 @@ The command is ran in console not chat
 
 [bgdraw]
 No items to write
-== 
+== 没有可写入的内容
 
 [bgdraw]
 No changes since last save
-== 
+== 自上次保存后没有变化
 
 [Outlines]
 Width
-== 
+== 宽度
 
 Kill
-== 
+== 刺
 
 Time until strokes disappear
-== 
+== 轨迹消失时间
 
 _ or ' ' = Space
-== 
+== _ 或 ' ' = 空格
 
-Activating mod weapon on %d: %s\n
-== 
+Activating mod weapon on %d: %s
+== 在 %d 上启用模组武器: %s
 
 [data_version.h]
 You have probably only installed the TClient DDNet.exe which is not supported, please use the entire TClient folder
-== 
+== 你可能只安装了 TClient 的 DDNet.exe，这不受支持，请使用完整的 TClient 文件夹
+
+Show %s group
+== 显示 %s 分组
+
+Group Name
+== 分组名称
+
+%s not found
+== 未找到 %s
+
+Apply Changes
+== 应用更改
+
+Blue
+== 蓝色
+
+Changes: %d
+== 更改数: %d
+
+Clear Changes
+== 清除更改
+
+Colored frozen tee skins
+== 冻结 Tee 使用彩色皮肤
+
+Compact List
+== 紧凑列表
+
+DF
+== DF
+
+Enable Deleting
+== 启用删除
+
+Fast Input (reduced visual delay)
+== 快速输入（减少视觉延迟）
+
+Fast Input others
+== 快速输入其他玩家
+
+HDF
+== HDF
+
+Only modified
+== 仅显示已修改
+
+QmClient
+== 栖梦
+
+Red
+== 红色

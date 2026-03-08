@@ -12,8 +12,8 @@
 #include <csignal>
 #include <exception>
 
-#include <dbghelp.h>
 #include <windows.h>
+#include <dbghelp.h>
 
 static const char *CRASHDUMP_LIB = "exchndl.dll";
 static const char *CRASHDUMP_FN = "ExcHndlSetLogFileNameW";

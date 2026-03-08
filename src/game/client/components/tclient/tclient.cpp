@@ -164,7 +164,7 @@ void CTClient::OnInit()
 		CheckDataVersion(aError, sizeof(aError), Storage()->OpenFile(DATA_VERSION_PATH, IOFLAG_READ, IStorage::TYPE_ALL));
 	if(aError[0] != '\0')
 	{
-		SWarning Warning(aError, TCLocalize("喜报!您可能仅安装了需要DDNet.exe文件，请使用完整的TClient文件夹", "data_version.h"));
+		SWarning Warning(aError, TCLocalize("喜报!您可能仅安装了DDNet.exe文件，请使用完整的QmClient文件夹", "data_version.h"));
 		Client()->AddWarning(Warning);
 	}
 	LoadMapCategoryCache();
@@ -1989,6 +1989,9 @@ void CTClient::CheckFriendOnline()
 		m_FriendNotifyPrevEnabled = Enabled;
 		m_FriendNotifyNextCheck = 0.0f;
 		m_FriendOnline.clear();
+		m_FriendNotifyScanRunning = false;
+		m_FriendNotifyScanIndex = 0;
+		m_FriendNotifyScanId = 0;
 		m_FriendAutoRefreshNext = 0.0f;
 	}
 
@@ -2016,17 +2019,59 @@ void CTClient::CheckFriendOnline()
 			m_FriendAutoRefreshNext = Now + g_Config.m_QmFriendOnlineRefreshSeconds;
 		}
 	}
-	if(Now < m_FriendNotifyNextCheck)
+
+	if(GameClient()->Friends()->NumFriends() <= 0)
+	{
+		m_FriendOnline.clear();
+		m_FriendNotifyScanRunning = false;
+		m_FriendNotifyScanIndex = 0;
+		m_FriendNotifyScanId = 0;
 		return;
-	m_FriendNotifyNextCheck = Now + 1.0f;
+	}
+
+	constexpr float FriendOfflineTimeout = 10.0f;
+	auto PruneFriendOffline = [&]() {
+		for(auto It = m_FriendOnline.begin(); It != m_FriendOnline.end();)
+		{
+			if(Now - It->second.m_LastSeen > FriendOfflineTimeout)
+				It = m_FriendOnline.erase(It);
+			else
+				++It;
+		}
+	};
+
+	const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
+	if(!m_FriendNotifyScanRunning)
+	{
+		if(Now < m_FriendNotifyNextCheck)
+		{
+			PruneFriendOffline();
+			return;
+		}
+
+		m_FriendNotifyScanRunning = true;
+		m_FriendNotifyScanIndex = 0;
+		++m_FriendNotifyScanId;
+		if(m_FriendNotifyScanId <= 0)
+			m_FriendNotifyScanId = 1;
+	}
 
 	const int NumServers = pServerBrowser->NumSortedServers();
-	if(NumServers > 0)
+	if(NumServers <= 0)
 	{
-		const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
-		for(int ServerIndex = 0; ServerIndex < NumServers; ++ServerIndex)
+		m_FriendNotifyScanRunning = false;
+		m_FriendNotifyScanIndex = 0;
+		m_FriendNotifyNextCheck = Now + 1.0f;
+	}
+	else
+	{
+		constexpr int ServersPerFrame = 64;
+		int ProcessedServers = 0;
+		while(m_FriendNotifyScanIndex < NumServers && ProcessedServers < ServersPerFrame)
 		{
-			const CServerInfo *pEntry = pServerBrowser->SortedGet(ServerIndex);
+			const CServerInfo *pEntry = pServerBrowser->SortedGet(m_FriendNotifyScanIndex);
+			++m_FriendNotifyScanIndex;
+			++ProcessedServers;
 			if(!pEntry)
 				continue;
 
@@ -2050,11 +2095,12 @@ void CTClient::CheckFriendOnline()
 					State.m_LastSeen = Now;
 					State.m_Name = Client.m_aName;
 					State.m_Map = pEntry->m_aMap;
+					State.m_LastSeenScanId = m_FriendNotifyScanId;
 					m_FriendOnline.emplace(Key, std::move(State));
 				}
 				else
 				{
-					It->second.m_LastSeen = Now;
+					It->second.m_LastSeenScanId = m_FriendNotifyScanId;
 					if(It->second.m_Name != Client.m_aName)
 						It->second.m_Name = Client.m_aName;
 					if(It->second.m_Map != pEntry->m_aMap)
@@ -2063,15 +2109,28 @@ void CTClient::CheckFriendOnline()
 			}
 		}
 
-	}
-
-	constexpr float FriendOfflineTimeout = 10.0f;
-	for(auto It = m_FriendOnline.begin(); It != m_FriendOnline.end();)
-	{
-		if(Now - It->second.m_LastSeen > FriendOfflineTimeout)
-			It = m_FriendOnline.erase(It);
-		else
-			++It;
+		if(m_FriendNotifyScanIndex >= NumServers)
+		{
+			for(auto It = m_FriendOnline.begin(); It != m_FriendOnline.end();)
+			{
+				if(It->second.m_LastSeenScanId == m_FriendNotifyScanId)
+				{
+					It->second.m_LastSeen = Now;
+					++It;
+				}
+				else if(Now - It->second.m_LastSeen > FriendOfflineTimeout)
+				{
+					It = m_FriendOnline.erase(It);
+				}
+				else
+				{
+					++It;
+				}
+			}
+			m_FriendNotifyScanRunning = false;
+			m_FriendNotifyScanIndex = 0;
+			m_FriendNotifyNextCheck = Now + 1.0f;
+		}
 	}
 }
 
@@ -2084,6 +2143,7 @@ void CTClient::CheckFriendEnterGreet()
 			m_FriendEnterOnline.clear();
 			m_FriendEnterInitialized = false;
 		}
+		m_FriendEnterNextCheck = 0.0f;
 		return;
 	}
 
@@ -2093,13 +2153,28 @@ void CTClient::CheckFriendEnterGreet()
 		m_FriendEnterPrevEnabled = Enabled;
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
+		m_FriendEnterNextCheck = 0.0f;
 	}
 
 	if(!Enabled)
 		return;
 
+	if(GameClient()->Friends()->NumFriends() <= 0)
+	{
+		m_FriendEnterOnline.clear();
+		m_FriendEnterInitialized = false;
+		return;
+	}
+
+	const float Now = LocalTime();
+	if(Now < m_FriendEnterNextCheck)
+		return;
+	m_FriendEnterNextCheck = Now + 0.2f;
+
 	std::unordered_set<std::string> CurrentFriends;
+	CurrentFriends.reserve(32);
 	std::vector<std::string> NewFriends;
+	NewFriends.reserve(8);
 	const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
 	const int LocalMain = GameClient()->m_aLocalIds[0];
 	const int LocalDummy = GameClient()->m_aLocalIds[1];
@@ -2612,11 +2687,11 @@ void CTClient::RenderMiniVoteHud()
 	char aKey[64];
 	GameClient()->m_Binds.GetKey("vote yes", aKey, sizeof(aKey));
 	TextRender()->TextColor(GameClient()->m_Voting.TakenChoice() == 1 ? ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&LeftColumn, aKey[0] == '\0' ? "yes" : aKey, 0.5f, TEXTALIGN_ML);
+	Ui()->DoLabel(&LeftColumn, aKey[0] == '\0' ? "同意" : aKey, 0.5f, TEXTALIGN_ML);
 
 	GameClient()->m_Binds.GetKey("vote no", aKey, sizeof(aKey));
 	TextRender()->TextColor(GameClient()->m_Voting.TakenChoice() == -1 ? ColorRGBA(0.95f, 0.25f, 0.25f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&RightColumn, aKey[0] == '\0' ? "no" : aKey, 0.5f, TEXTALIGN_MR);
+	Ui()->DoLabel(&RightColumn, aKey[0] == '\0' ? "反对" : aKey, 0.5f, TEXTALIGN_MR);
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }

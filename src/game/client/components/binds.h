@@ -51,6 +51,7 @@ class CBinds : public CComponent
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
 
 	CBindSlot GetBindSlot(const char *pBindString) const;
+	int DetectDeepflyModeFromAllBinds() const;
 
 	// free buffer after use
 	char *GetKeyBindCommand(int ModifierCombination, int Key) const;

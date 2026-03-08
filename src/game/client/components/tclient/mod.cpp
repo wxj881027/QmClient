@@ -165,7 +165,7 @@ void CMod::ModWeapon(int Id)
 	if(!Player.m_Active)
 		return;
 
-	str_format(aBuf, sizeof(aBuf), TCLocalize("Activating mod weapon on %d: %s\n"), Player.ClientId(), Player.m_aName);
+	str_format(aBuf, sizeof(aBuf), "在 %d 上启用模组武器: %s", Player.ClientId(), Player.m_aName);
 	GameClient()->Echo(aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%s %d", g_Config.m_TcModWeaponCommand, Id);

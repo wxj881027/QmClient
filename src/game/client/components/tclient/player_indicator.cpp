@@ -7,44 +7,54 @@
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 
-static vec2 NormalizedDirection(vec2 Src, vec2 Dst)
+static vec2 DirectionTo(vec2 Src, vec2 Dst)
 {
-	return normalize(vec2(Dst.x - Src.x, Dst.y - Src.y));
-}
-
-static float DistanceBetweenTwoPoints(vec2 Src, vec2 Dst)
-{
-	return std::sqrt(std::pow(Dst.x - Src.x, 2.0f) + std::pow(Dst.y - Src.y, 2.0f));
+	const vec2 Delta = vec2(Dst.x - Src.x, Dst.y - Src.y);
+	const float DeltaLength = length(Delta);
+	if(DeltaLength <= 0.0001f)
+		return vec2(0.0f, 0.0f);
+	return Delta / DeltaLength;
 }
 
 void CPlayerIndicator::OnRender()
 {
+	if(g_Config.m_TcPlayerIndicator != 1)
+		return;
+
+	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
+
 	// Don't render if we can't find our own tee
-	if(GameClient()->m_Snap.m_LocalClientId == -1 || !GameClient()->m_Snap.m_aCharacters[GameClient()->m_Snap.m_LocalClientId].m_Active)
+	if(LocalClientId == -1 || !GameClient()->m_Snap.m_aCharacters[LocalClientId].m_Active)
 		return;
 
 	// Don't render if not race gamemode or in demo
 	if(!GameClient()->m_GameInfo.m_Race || Client()->State() == IClient::STATE_DEMOPLAYBACK || !GameClient()->m_Camera.ZoomAllowed())
 		return;
 
-	vec2 Position = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_RenderPos;
-
-	if(g_Config.m_TcPlayerIndicator != 1)
-		return;
+	const CGameClient::CClientData &LocalClient = GameClient()->m_aClients[LocalClientId];
+	const vec2 Position = LocalClient.m_RenderPos;
 
 	Graphics()->TextureClear();
 	ColorRGBA Col = ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f);
-	if(!(GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) == 0 && g_Config.m_TcIndicatorTeamOnly))
+	if(!(GameClient()->m_Teams.Team(LocalClientId) == 0 && g_Config.m_TcIndicatorTeamOnly))
 	{
+		const bool HideVisible = g_Config.m_TcIndicatorHideVisible != 0;
+		float ScreenX0 = 0.0f;
+		float ScreenY0 = 0.0f;
+		float ScreenX1 = 0.0f;
+		float ScreenY1 = 0.0f;
+		if(HideVisible)
+			Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
-			if(!GameClient()->m_Snap.m_apPlayerInfos[i] || i == GameClient()->m_Snap.m_LocalClientId)
+			if(!GameClient()->m_Snap.m_apPlayerInfos[i] || i == LocalClientId)
 				continue;
 
-			CGameClient::CClientData OtherTee = GameClient()->m_aClients[i];
-			CCharacterCore *pOtherCharacter = &GameClient()->m_aClients[i].m_Predicted;
+			const CGameClient::CClientData &OtherTee = GameClient()->m_aClients[i];
+			const CCharacterCore &OtherCharacter = OtherTee.m_Predicted;
 			if(
-				OtherTee.m_Team == GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Team &&
+				OtherTee.m_Team == LocalClient.m_Team &&
 				!OtherTee.m_Spec &&
 				GameClient()->m_Snap.m_aCharacters[i].m_Active)
 			{
@@ -52,18 +62,16 @@ void CPlayerIndicator::OnRender()
 					continue;
 
 				// Hide tees on our screen if the config is set to do so
-				float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-				Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-				if(g_Config.m_TcIndicatorHideVisible && in_range(GameClient()->m_aClients[i].m_RenderPos.x, ScreenX0, ScreenX1) && in_range(GameClient()->m_aClients[i].m_RenderPos.y, ScreenY0, ScreenY1))
+				if(HideVisible && in_range(OtherTee.m_RenderPos.x, ScreenX0, ScreenX1) && in_range(OtherTee.m_RenderPos.y, ScreenY0, ScreenY1))
 					continue;
 
-				vec2 Norm = NormalizedDirection(GameClient()->m_aClients[i].m_RenderPos, GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_RenderPos) * (-1);
+				const vec2 Norm = DirectionTo(OtherTee.m_RenderPos, Position) * (-1.0f);
 
 				float Offset = g_Config.m_TcIndicatorOffset;
-				if(g_Config.m_TcIndicatorVariableDistance)
+				if(g_Config.m_TcIndicatorVariableDistance && g_Config.m_TcIndicatorMaxDistance > 0)
 				{
 					Offset = mix((float)g_Config.m_TcIndicatorOffset, (float)g_Config.m_TcIndicatorOffsetMax,
-						std::min(DistanceBetweenTwoPoints(Position, OtherTee.m_RenderPos) / g_Config.m_TcIndicatorMaxDistance, 1.0f));
+						std::min(distance(Position, OtherTee.m_RenderPos) / (float)g_Config.m_TcIndicatorMaxDistance, 1.0f));
 				}
 
 				vec2 IndicatorPos(Norm.x * Offset + Position.x, Norm.y * Offset + Position.y);
@@ -72,7 +80,7 @@ void CPlayerIndicator::OnRender()
 				if(OtherTee.m_FreezeEnd > 0 || OtherTee.m_DeepFrozen)
 				{
 					// check if player is frozen or is getting saved
-					if(pOtherCharacter->m_IsInFreeze == 0)
+					if(OtherCharacter.m_IsInFreeze == 0)
 					{
 						// player is on the way to get free again
 						Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcIndicatorSaved));

@@ -769,7 +769,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	// DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRenderNameplateSpec, TCLocalize("Hide nameplates in spec"), &g_Config.m_TcRenderNameplateSpec, &Column, LineSize);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcNameplateSkins, TCLocalize("Show skin names in nameplate"), &g_Config.m_TcNameplateSkins, &Column, LineSize);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClFreezeStars, TCLocalize("Freeze stars"), &g_Config.m_ClFreezeStars, &Column, LineSize);
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcColorFreeze, TCLocalize("Colored frozen tee skins"), &g_Config.m_TcColorFreeze, &Column, LineSize);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcColorFreeze, TCLocalize("冻结 Tee 使用彩色皮肤"), &g_Config.m_TcColorFreeze, &Column, LineSize);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeKatana, TCLocalize("Show katan on frozen players"), &g_Config.m_TcFreezeKatana, &Column, LineSize);
 
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWhiteFeet, TCLocalize("Render all custom colored feet as white feet skin"), &g_Config.m_TcWhiteFeet, &Column, LineSize);
@@ -824,14 +824,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Ui()->DoLabel(&Label, TCLocalize("Input"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInput, TCLocalize("Fast Input (reduced visual delay)"), &g_Config.m_TcFastInput, &Column, LineSize);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInput, TCLocalize("快速输入(降低视觉延迟)"), &g_Config.m_TcFastInput, &Column, LineSize);
 
 	Column.HSplitTop(LineSize, &Button, &Column);
 	DoSliderWithScaledValue(&g_Config.m_TcFastInputAmount, &g_Config.m_TcFastInputAmount, &Button, TCLocalize("Amount"), 1, 100, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 	if(g_Config.m_TcFastInput)
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, TCLocalize("Fast Input others"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, TCLocalize("对其他玩家启用快速输入"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
 	else
 		Column.HSplitTop(LineSize, nullptr, &Column);
 	// A little extra spacing because these are multi line
@@ -846,8 +846,6 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Ui()->DoLabel(&Label, TCLocalize("Anti Latency Tools"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	Column.HSplitTop(LineSize, &Button, &Column);
-	Ui()->DoScrollbarOption(&g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, TCLocalize("Prediction Margin"), 10, 75, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRemoveAnti, TCLocalize("Remove prediction & antiping in freeze"), &g_Config.m_TcRemoveAnti, &Column, LineSize);
 	if(g_Config.m_TcRemoveAnti)
 	{
@@ -1006,9 +1004,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicatorColors, TCLocalize("Use warlist colors instead of regular colors"), &g_Config.m_TcWarListIndicatorColors, &Column, LineSize);
 		char aBuf[128];
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicatorAll, TCLocalize("Show all warlist groups"), &g_Config.m_TcWarListIndicatorAll, &Column, LineSize);
-		str_format(aBuf, sizeof(aBuf), "Show %s group", GameClient()->m_WarList.m_WarTypes.at(1)->m_aWarName);
+		str_format(aBuf, sizeof(aBuf), "显示 %s 分组", GameClient()->m_WarList.m_WarTypes.at(1)->m_aWarName);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicatorEnemy, aBuf, &g_Config.m_TcWarListIndicatorEnemy, &Column, LineSize);
-		str_format(aBuf, sizeof(aBuf), "Show %s group", GameClient()->m_WarList.m_WarTypes.at(2)->m_aWarName);
+		str_format(aBuf, sizeof(aBuf), "显示 %s 分组", GameClient()->m_WarList.m_WarTypes.at(2)->m_aWarName);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicatorTeam, aBuf, &g_Config.m_TcWarListIndicatorTeam, &Column, LineSize);
 	}
 	if(!g_Config.m_TcWarListIndicatorColors || !g_Config.m_TcWarListIndicator)
@@ -1281,9 +1279,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 
 	Column.HSplitTop(LineSize * 2.0f, &Button, &Column);
 	if(g_Config.m_TcBgDrawFadeTime == 0)
-		Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, TCLocalize("Time until strokes disappear"), 0, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, TCLocalize(" seconds (never)"));
+		Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, TCLocalize("笔画消失时间"), 0, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, TCLocalize(" seconds (never)"));
 	else
-		Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, TCLocalize("Time until strokes disappear"), 0, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, TCLocalize(" seconds"));
+		Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, TCLocalize("笔画消失时间"), 0, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, TCLocalize(" seconds"));
 
 	Column.HSplitTop(LineSize * 2.0f, &Button, &Column);
 	Ui()->DoScrollbarOption(&g_Config.m_TcBgDrawWidth, &g_Config.m_TcBgDrawWidth, &Button, TCLocalize("Width"), 1, 50, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE);
@@ -1934,7 +1932,7 @@ void CMenus::RenderSettingsTClientWarList(CUIRect MainView)
 	Column3.HSplitTop(MarginSmall, nullptr, &Column3);
 	Column3.HSplitTop(HeadlineFontSize + MarginSmall, &Button, &Column3);
 	s_TypeNameInput.SetBuffer(s_aTypeName, sizeof(s_aTypeName));
-	s_TypeNameInput.SetEmptyText("Group Name");
+	s_TypeNameInput.SetEmptyText("分组名称");
 	Ui()->DoEditBox(&s_TypeNameInput, &Button, 12.0f);
 	static CButtonContainer s_AddGroupButton, s_OverrideGroupButton, s_GroupColorPicker;
 
@@ -3744,7 +3742,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::ChatBubble: return "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao";
 		case EQmModuleId::GoresActor: return "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv";
 		case EQmModuleId::KeyBinds: return "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding";
-		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 动画优化 donghua youhua 复读 fudu 自动加一 jia yi 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
+		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 动画优化 donghua youhua 复读 fudu 自动加一 jia yi 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi 延迟尖峰防护 yanchi jianfeng fanghu 临时预测边距 linshi yuce bianju";
 		case EQmModuleId::DummyMiniView: return "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao";
 		case EQmModuleId::Coords: return "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi";
 		case EQmModuleId::Streamer: return "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi";
@@ -4325,6 +4323,17 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcJumpHint, TCLocalize("位置跳跃提示"), &g_Config.m_TcJumpHint, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPredMarginSpikeGuard, "延迟尖峰防护（临时预测边距）", &g_Config.m_TcPredMarginSpikeGuard, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				if(g_Config.m_TcPredMarginSpikeGuard)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Ui()->DoScrollbarOption(&g_Config.m_TcPredMarginSpikeMax, &g_Config.m_TcPredMarginSpikeMax, &Row, "最大临时增加", 0, 60, &CUi::ms_LinearScrollbarScale, 0, "毫秒");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
@@ -5007,10 +5016,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 
 				// 收藏地图列表
 				const auto &FavMaps = GameClient()->m_TClient.GetFavoriteMaps();
-				std::vector<std::string> vFavMaps;
-				vFavMaps.reserve(FavMaps.size());
-				for(const auto &MapName : FavMaps)
-					vFavMaps.emplace_back(MapName);
 
 				auto MapCategoryKeyFromText = [&](const char *pText) -> const char * {
 					if(!pText || pText[0] == '\0')
@@ -5086,25 +5091,69 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					return TCLocalize("未知");
 				};
 
-				std::unordered_map<std::string, std::string> MapCategories;
+				static std::unordered_map<std::string, std::string> s_MapCategories;
+				static int s_MapCategoryScanIndex = 0;
+				static int s_LastNumServers = -1;
+				static float s_NextFullScan = 0.0f;
 				IServerBrowser *pServerBrowser = ServerBrowser();
-				if(pServerBrowser)
+				const float Now = Client()->LocalTime();
+				if(!pServerBrowser || FavMaps.empty())
+				{
+					s_MapCategories.clear();
+					s_MapCategoryScanIndex = 0;
+					s_LastNumServers = -1;
+					s_NextFullScan = 0.0f;
+				}
+				else
 				{
 					const int NumServers = pServerBrowser->NumSortedServers();
-					MapCategories.reserve((size_t)NumServers);
-					for(int i = 0; i < NumServers; ++i)
+					if(NumServers != s_LastNumServers)
 					{
-						const CServerInfo *pInfo = pServerBrowser->SortedGet(i);
-						if(!pInfo || pInfo->m_aMap[0] == '\0')
-							continue;
-						const char *pCategoryKey = MapCategoryKeyFromText(pInfo->m_aCommunityType);
-						if(!pCategoryKey)
-							pCategoryKey = MapCategoryKeyFromText(pInfo->m_aName);
-						if(!pCategoryKey)
-							continue;
-						auto Inserted = MapCategories.emplace(pInfo->m_aMap, pCategoryKey);
-						if(Inserted.second)
-							GameClient()->m_TClient.UpdateMapCategoryCache(Inserted.first->first.c_str(), Inserted.first->second.c_str());
+						s_LastNumServers = NumServers;
+						s_MapCategoryScanIndex = 0;
+						s_NextFullScan = 0.0f;
+					}
+
+					if(NumServers > 0 && (Now >= s_NextFullScan || s_MapCategoryScanIndex > 0))
+					{
+						if(s_MapCategoryScanIndex == 0)
+						{
+							s_MapCategories.clear();
+							s_MapCategories.reserve((size_t)NumServers);
+						}
+
+						constexpr int ServersPerFrame = 64;
+						int ProcessedServers = 0;
+						while(s_MapCategoryScanIndex < NumServers && ProcessedServers < ServersPerFrame)
+						{
+							const CServerInfo *pInfo = pServerBrowser->SortedGet(s_MapCategoryScanIndex);
+							++s_MapCategoryScanIndex;
+							++ProcessedServers;
+							if(!pInfo || pInfo->m_aMap[0] == '\0')
+								continue;
+							const char *pCategoryKey = MapCategoryKeyFromText(pInfo->m_aCommunityType);
+							if(!pCategoryKey)
+								pCategoryKey = MapCategoryKeyFromText(pInfo->m_aName);
+							if(!pCategoryKey)
+								continue;
+							auto It = s_MapCategories.find(pInfo->m_aMap);
+							if(It == s_MapCategories.end() || It->second != pCategoryKey)
+							{
+								s_MapCategories[pInfo->m_aMap] = pCategoryKey;
+								GameClient()->m_TClient.UpdateMapCategoryCache(pInfo->m_aMap, pCategoryKey);
+							}
+						}
+
+						if(s_MapCategoryScanIndex >= NumServers)
+						{
+							s_MapCategoryScanIndex = 0;
+							s_NextFullScan = Now + 2.0f;
+						}
+					}
+					else
+					{
+						s_MapCategories.clear();
+						s_MapCategoryScanIndex = 0;
 					}
 
 					const IServerBrowser::CServerEntry *pEntry = pServerBrowser->Find(Client()->ServerAddress());
@@ -5115,8 +5164,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 							pCategoryKey = MapCategoryKeyFromText(pEntry->m_Info.m_aName);
 						if(pCategoryKey)
 						{
-							auto Inserted = MapCategories.emplace(pEntry->m_Info.m_aMap, pCategoryKey);
-							GameClient()->m_TClient.UpdateMapCategoryCache(Inserted.first->first.c_str(), pCategoryKey);
+							s_MapCategories[pEntry->m_Info.m_aMap] = pCategoryKey;
+							GameClient()->m_TClient.UpdateMapCategoryCache(pEntry->m_Info.m_aMap, pCategoryKey);
 						}
 					}
 				}
@@ -5124,8 +5173,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				auto GetMapCategory = [&](const char *pMapName) -> const char * {
 					if(!pMapName || pMapName[0] == '\0')
 						return TCLocalize("未知");
-					const auto It = MapCategories.find(pMapName);
-					if(It != MapCategories.end() && !It->second.empty())
+					const auto It = s_MapCategories.find(pMapName);
+					if(It != s_MapCategories.end() && !It->second.empty())
 						return MapTypeDisplayName(It->second.c_str());
 					if(pServerBrowser)
 					{
@@ -5155,7 +5204,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				if(s_CopiedMapIndex >= 0 && Client()->LocalTime() - s_CopiedTime > 1.5f)
 					s_CopiedMapIndex = -1;
 
-				if(vFavMaps.empty())
+				if(FavMaps.empty())
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Ui()->DoLabel(&Row, TCLocalize("暂无收藏地图"), LG_BodySize, TEXTALIGN_ML);
@@ -5166,9 +5215,11 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					static int s_aMapButtonIds[64];
 					static CButtonContainer s_aMapRemoveButtons[64];
 					std::string RemoveMapName;
-					for(size_t MapIndex = 0; MapIndex < vFavMaps.size() && MapIndex < 64; ++MapIndex)
+					size_t MapIndex = 0;
+					for(const std::string &MapName : FavMaps)
 					{
-						const std::string &MapName = vFavMaps[MapIndex];
+						if(MapIndex >= sizeof(s_aMapButtonIds) / sizeof(s_aMapButtonIds[0]))
+							break;
 
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						CUIRect RowLabel, RowRemove;
@@ -5216,6 +5267,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 							GameClient()->m_Tooltips.DoToolTip(&s_aMapRemoveButtons[MapIndex], &RowRemove, TCLocalize("取消收藏"));
 
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+						++MapIndex;
 					}
 					if(!RemoveMapName.empty())
 						GameClient()->m_TClient.RemoveFavoriteMap(RemoveMapName.c_str());

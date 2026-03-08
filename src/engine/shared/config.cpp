@@ -600,7 +600,12 @@ void CConfigManager::Con_ToggleRestore(IConsole::IResult *pResult, void *pUserDa
 		SIntConfigVariable *pIntVariable = static_cast<SIntConfigVariable *>(pVariable);
 		if(pResult->GetInteger(0) != 0)
 		{
-			s_ToggleRestoreInts[pIntVariable] = *pIntVariable->m_pVariable;
+			// Key repeat sends extra "press" strokes while held. Preserve the original value
+			// from the first press so release can restore correctly.
+			if(s_ToggleRestoreInts.find(pIntVariable) == s_ToggleRestoreInts.end())
+			{
+				s_ToggleRestoreInts[pIntVariable] = *pIntVariable->m_pVariable;
+			}
 			pIntVariable->SetValue(pResult->GetInteger(2));
 		}
 		else

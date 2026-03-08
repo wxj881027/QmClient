@@ -1044,6 +1044,11 @@ private:
 	VkSwapchainKHR m_VKSwapChain = VK_NULL_HANDLE;
 	std::vector<VkImage> m_vSwapChainImages;
 	uint32_t m_SwapChainImageCount = 0;
+	PFN_vkCreateSwapchainKHR m_pfnCreateSwapchainKHR = nullptr;
+	PFN_vkDestroySwapchainKHR m_pfnDestroySwapchainKHR = nullptr;
+	PFN_vkGetSwapchainImagesKHR m_pfnGetSwapchainImagesKHR = nullptr;
+	PFN_vkAcquireNextImageKHR m_pfnAcquireNextImageKHR = nullptr;
+	PFN_vkQueuePresentKHR m_pfnQueuePresentKHR = nullptr;
 
 	std::vector<SStreamMemory<SFrameBuffers>> m_vStreamedVertexBuffers;
 	std::vector<SStreamMemory<SFrameUniformBuffers>> m_vStreamedUniformBuffers;
@@ -2317,7 +2322,7 @@ protected:
 
 		m_LastPresentedSwapChainImageIndex = m_CurImageIndex;
 
-		VkResult QueuePresentRes = vkQueuePresentKHR(m_VKPresentQueue, &PresentInfo);
+		VkResult QueuePresentRes = m_pfnQueuePresentKHR(m_VKPresentQueue, &PresentInfo);
 		if(QueuePresentRes != VK_SUCCESS && QueuePresentRes != VK_SUBOPTIMAL_KHR)
 		{
 			const char *pCritErrorMsg = CheckVulkanCriticalError(QueuePresentRes);
@@ -2343,7 +2348,7 @@ protected:
 			RecreateSwapChain();
 		}
 
-		auto AcqResult = vkAcquireNextImageKHR(m_VKDevice, m_VKSwapChain, std::numeric_limits<uint64_t>::max(), m_AcquireImageSemaphore, VK_NULL_HANDLE, &m_CurImageIndex);
+		auto AcqResult = m_pfnAcquireNextImageKHR(m_VKDevice, m_VKSwapChain, std::numeric_limits<uint64_t>::max(), m_AcquireImageSemaphore, VK_NULL_HANDLE, &m_CurImageIndex);
 		if(AcqResult != VK_SUCCESS)
 		{
 			if(AcqResult == VK_ERROR_OUT_OF_DATE_KHR || m_RecreateSwapChain)
@@ -3288,10 +3293,18 @@ protected:
 			// if there is a dynamic viewport make sure the scissor data is scaled down to that
 			if(m_HasDynamicViewport)
 			{
-				Scissor.offset.x = (int32_t)(((float)Scissor.offset.x / (float)ScissorViewport.width) * (float)m_DynamicViewportSize.width) + m_DynamicViewportOffset.x;
-				Scissor.offset.y = (int32_t)(((float)Scissor.offset.y / (float)ScissorViewport.height) * (float)m_DynamicViewportSize.height) + m_DynamicViewportOffset.y;
-				Scissor.extent.width = (uint32_t)(((float)Scissor.extent.width / (float)ScissorViewport.width) * (float)m_DynamicViewportSize.width);
-				Scissor.extent.height = (uint32_t)(((float)Scissor.extent.height / (float)ScissorViewport.height) * (float)m_DynamicViewportSize.height);
+				if(ScissorViewport.width > 0 && ScissorViewport.height > 0)
+				{
+					Scissor.offset.x = (int32_t)(((float)Scissor.offset.x / (float)ScissorViewport.width) * (float)m_DynamicViewportSize.width) + m_DynamicViewportOffset.x;
+					Scissor.offset.y = (int32_t)(((float)Scissor.offset.y / (float)ScissorViewport.height) * (float)m_DynamicViewportSize.height) + m_DynamicViewportOffset.y;
+					Scissor.extent.width = (uint32_t)(((float)Scissor.extent.width / (float)ScissorViewport.width) * (float)m_DynamicViewportSize.width);
+					Scissor.extent.height = (uint32_t)(((float)Scissor.extent.height / (float)ScissorViewport.height) * (float)m_DynamicViewportSize.height);
+				}
+				else
+				{
+					Scissor.offset = m_DynamicViewportOffset;
+					Scissor.extent = m_DynamicViewportSize;
+				}
 			}
 
 			Viewport.x = std::clamp(Viewport.x, 0.0f, std::numeric_limits<decltype(Viewport.x)>::max());
@@ -3919,12 +3932,24 @@ public:
 
 		std::vector<const char *> vDevPropCNames;
 		std::set<std::string> OurDevExt = OurDeviceExtensions();
+		std::set<std::string> FoundDevExt;
 
 		for(const auto &CurExtProp : vDevPropList)
 		{
 			if(OurDevExt.contains(std::string(CurExtProp.extensionName)))
 			{
 				vDevPropCNames.emplace_back(CurExtProp.extensionName);
+				FoundDevExt.emplace(CurExtProp.extensionName);
+			}
+		}
+		for(const auto &ReqExt : OurDevExt)
+		{
+			if(!FoundDevExt.contains(ReqExt))
+			{
+				char aBuf[256];
+				str_format(aBuf, sizeof(aBuf), "Missing required Vulkan device extension: %s", ReqExt.c_str());
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, aBuf);
+				return false;
 			}
 		}
 
@@ -3952,6 +3977,17 @@ public:
 		if(vkCreateDevice(m_VKGPU, &VKCreateInfo, nullptr, &m_VKDevice) != VK_SUCCESS)
 		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Logical device could not be created.");
+			return false;
+		}
+
+		m_pfnCreateSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(m_VKDevice, "vkCreateSwapchainKHR"));
+		m_pfnDestroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(m_VKDevice, "vkDestroySwapchainKHR"));
+		m_pfnGetSwapchainImagesKHR = reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(m_VKDevice, "vkGetSwapchainImagesKHR"));
+		m_pfnAcquireNextImageKHR = reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(m_VKDevice, "vkAcquireNextImageKHR"));
+		m_pfnQueuePresentKHR = reinterpret_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(m_VKDevice, "vkQueuePresentKHR"));
+		if(m_pfnCreateSwapchainKHR == nullptr || m_pfnDestroySwapchainKHR == nullptr || m_pfnGetSwapchainImagesKHR == nullptr || m_pfnAcquireNextImageKHR == nullptr || m_pfnQueuePresentKHR == nullptr)
+		{
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Failed to resolve Vulkan swapchain function pointers. Try gfx_backend OpenGL.");
 			return false;
 		}
 
@@ -4201,7 +4237,7 @@ public:
 		SwapInfo.oldSwapchain = OldSwapChain;
 
 		m_VKSwapChain = VK_NULL_HANDLE;
-		VkResult SwapchainCreateRes = vkCreateSwapchainKHR(m_VKDevice, &SwapInfo, nullptr, &m_VKSwapChain);
+		VkResult SwapchainCreateRes = m_pfnCreateSwapchainKHR(m_VKDevice, &SwapInfo, nullptr, &m_VKSwapChain);
 		const char *pCritErrorMsg = CheckVulkanCriticalError(SwapchainCreateRes);
 		if(pCritErrorMsg != nullptr)
 		{
@@ -4218,7 +4254,7 @@ public:
 	{
 		if(ForceDestroy)
 		{
-			vkDestroySwapchainKHR(m_VKDevice, m_VKSwapChain, nullptr);
+			m_pfnDestroySwapchainKHR(m_VKDevice, m_VKSwapChain, nullptr);
 			m_VKSwapChain = VK_NULL_HANDLE;
 		}
 	}
@@ -4226,7 +4262,7 @@ public:
 	[[nodiscard]] bool GetSwapChainImageHandles()
 	{
 		uint32_t ImgCount = 0;
-		if(vkGetSwapchainImagesKHR(m_VKDevice, m_VKSwapChain, &ImgCount, nullptr) != VK_SUCCESS)
+		if(m_pfnGetSwapchainImagesKHR(m_VKDevice, m_VKSwapChain, &ImgCount, nullptr) != VK_SUCCESS)
 		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Could not get swap chain images.");
 			return false;
@@ -4235,7 +4271,7 @@ public:
 		m_SwapChainImageCount = ImgCount;
 
 		m_vSwapChainImages.resize(ImgCount);
-		if(vkGetSwapchainImagesKHR(m_VKDevice, m_VKSwapChain, &ImgCount, m_vSwapChainImages.data()) != VK_SUCCESS)
+		if(m_pfnGetSwapchainImagesKHR(m_VKDevice, m_VKSwapChain, &ImgCount, m_vSwapChainImages.data()) != VK_SUCCESS)
 		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Could not get swap chain images.");
 			return false;
@@ -5537,6 +5573,11 @@ public:
 		{
 			DestroySurface();
 			vkDestroyDevice(m_VKDevice, nullptr);
+			m_pfnCreateSwapchainKHR = nullptr;
+			m_pfnDestroySwapchainKHR = nullptr;
+			m_pfnGetSwapchainImagesKHR = nullptr;
+			m_pfnAcquireNextImageKHR = nullptr;
+			m_pfnQueuePresentKHR = nullptr;
 
 			if(g_Config.m_DbgGfx == DEBUG_GFX_MODE_MINIMUM || g_Config.m_DbgGfx == DEBUG_GFX_MODE_ALL)
 			{
@@ -5581,7 +5622,7 @@ public:
 
 		if(OldSwapChain != VK_NULL_HANDLE)
 		{
-			vkDestroySwapchainKHR(m_VKDevice, OldSwapChain, nullptr);
+			m_pfnDestroySwapchainKHR(m_VKDevice, OldSwapChain, nullptr);
 		}
 
 		if(Ret != 0 && IsVerbose())
@@ -6904,10 +6945,12 @@ public:
 				m_HasDynamicViewport = true;
 
 				// convert viewport from OGL to vulkan
-				int32_t ViewportY = (int32_t)Viewport.height - ((int32_t)pCommand->m_Y + (int32_t)pCommand->m_Height);
-				uint32_t ViewportH = (int32_t)pCommand->m_Height;
+				const int32_t ViewportWidth = std::max<int32_t>(1, pCommand->m_Width);
+				const int32_t ViewportHeight = std::max<int32_t>(1, pCommand->m_Height);
+				int32_t ViewportY = (int32_t)Viewport.height - ((int32_t)pCommand->m_Y + ViewportHeight);
+				uint32_t ViewportH = (uint32_t)ViewportHeight;
 				m_DynamicViewportOffset = {(int32_t)pCommand->m_X, ViewportY};
-				m_DynamicViewportSize = {(uint32_t)pCommand->m_Width, ViewportH};
+				m_DynamicViewportSize = {(uint32_t)ViewportWidth, ViewportH};
 			}
 			else
 			{

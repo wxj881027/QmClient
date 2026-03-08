@@ -189,7 +189,7 @@ void CEmoticon::OnRender()
 		m_WasActive = true;
 	}
 
-	if(GameClient()->m_Snap.m_SpecInfo.m_Active)
+	if(GameClient()->m_Snap.m_SpecInfo.m_Active || !GameClient()->m_Snap.m_pLocalCharacter)
 	{
 		m_Active = false;
 		m_WasActive = false;

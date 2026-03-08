@@ -2,6 +2,7 @@
 
 #include <base/str.h>
 
+#include <algorithm>
 #include <cmath>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -13,8 +14,10 @@
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
+#include <game/client/QmUi/QmAnim.h>
 
 #include <array>
+#include <limits>
 #include <memory>
 #include <vector>
 //枚举
@@ -42,6 +45,56 @@ static constexpr std::array<ENameplateCoreRow, kNameplateCoreRowCount> s_aDefaul
 	ENameplateCoreRow::HOOK,
 	ENameplateCoreRow::CLAN,
 	ENameplateCoreRow::NAME};
+
+struct SChatBubbleAnimState
+{
+	bool m_Initialized = false;
+	bool m_LastVisible = false;
+	bool m_LastTyping = false;
+	int64_t m_LastChatBubbleStartTick = 0;
+	float m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
+	float m_LastTargetScale = std::numeric_limits<float>::quiet_NaN();
+	float m_LastTargetSlide = std::numeric_limits<float>::quiet_NaN();
+	float m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
+	char m_aCachedText[256] = "";
+};
+
+static uint64_t ChatBubbleAnimNodeKey(int ClientId)
+{
+	static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("chat_bubble_anim_v2"));
+	return (s_BaseKey << 32) | static_cast<uint64_t>(ClientId & 0xffff);
+}
+
+static float ResolveChatBubbleAnimValue(
+	CUiV2AnimationRuntime &AnimRuntime,
+	uint64_t NodeKey,
+	EUiAnimProperty Property,
+	float Target,
+	float DurationSec,
+	EEasing Easing,
+	float &LastTarget,
+	bool ForceRequest = false)
+{
+	constexpr float Epsilon = 0.001f;
+	const float Current = AnimRuntime.GetValue(NodeKey, Property, Target);
+	const bool TargetChanged = !std::isfinite(LastTarget) || std::abs(Target - LastTarget) > Epsilon;
+	const bool NeedsSync = !AnimRuntime.HasActiveAnimation(NodeKey, Property) && std::abs(Target - Current) > Epsilon;
+	if(ForceRequest || TargetChanged || NeedsSync)
+	{
+		SUiAnimRequest Request;
+		Request.m_NodeKey = NodeKey;
+		Request.m_Property = Property;
+		Request.m_Target = Target;
+		Request.m_Transition.m_DurationSec = DurationSec;
+		Request.m_Transition.m_DelaySec = 0.0f;
+		Request.m_Transition.m_Priority = 1;
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Request.m_Transition.m_Easing = Easing;
+		AnimRuntime.RequestAnimation(Request);
+		LastTarget = Target;
+	}
+	return AnimRuntime.GetValue(NodeKey, Property, Target);
+}
 
 static bool ParseNameplateCoreRowKey(const char *pKey, ENameplateCoreRow &OutRow)
 {
@@ -1225,6 +1278,7 @@ class CNamePlates::CNamePlatesData
 {
 public:
 	CNamePlate m_aNamePlates[MAX_CLIENTS];
+	SChatBubbleAnimState m_aChatBubbleAnim[MAX_CLIENTS];
 };
 
 void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *pPlayerInfo, float Alpha)
@@ -1564,6 +1618,19 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 		return;
 
 	auto &ClientData = GameClient()->m_aClients[ClientId];
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
+	const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
+	const bool RuntimeNeedsInit = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) < -0.5f;
+	if(!AnimState.m_Initialized || RuntimeNeedsInit)
+	{
+		AnimState = SChatBubbleAnimState();
+		AnimState.m_Initialized = true;
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+	}
 
 	// Determine what text to show
 	const char *pBubbleText = nullptr;
@@ -1585,73 +1652,109 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	// If not typing, check for existing chat bubble
 	if(!pBubbleText)
 	{
-		if(ClientData.m_aChatBubbleText[0] == '\0')
-			return;
-		if(Now >= ClientData.m_ChatBubbleExpireTick)
-			return;
-		pBubbleText = ClientData.m_aChatBubbleText;
+		if(ClientData.m_aChatBubbleText[0] != '\0' && Now < ClientData.m_ChatBubbleExpireTick)
+			pBubbleText = ClientData.m_aChatBubbleText;
 	}
 
-	// Calculate animation progress
-	float EasedProgress = 1.0f;
-	float BubbleAlpha = Alpha;
-	float AnimScale = 1.0f; // For shrink animation
-	float AnimSlideOffset = 0.0f; // For slide up animation
+	const bool HasSourceText = pBubbleText && pBubbleText[0] != '\0';
+	if(HasSourceText)
+		str_copy(AnimState.m_aCachedText, pBubbleText, sizeof(AnimState.m_aCachedText));
 
-	if(IsTyping)
+	if(!HasSourceText && AnimState.m_aCachedText[0] == '\0')
 	{
-		// For typing, always fully visible with no fade
-		EasedProgress = 1.0f;
-		BubbleAlpha = Alpha;
+		AnimState.m_LastVisible = false;
+		AnimState.m_LastTyping = false;
+		return;
 	}
-	else
+
+	const bool TimedDisappearWindow = HasSourceText && !IsTyping && (ClientData.m_ChatBubbleExpireTick - Now <= time_freq());
+	const bool NewTimedBubble = HasSourceText && !IsTyping && ClientData.m_ChatBubbleStartTick != AnimState.m_LastChatBubbleStartTick;
+	if(NewTimedBubble)
+		AnimState.m_LastChatBubbleStartTick = ClientData.m_ChatBubbleStartTick;
+
+	const bool BecameVisible = HasSourceText && !AnimState.m_LastVisible;
+	if(BecameVisible || NewTimedBubble)
 	{
-		// Calculate animation progress (0.0 = just started, 1.0 = fully visible)
-		const float AnimDuration = 0.2f; // 200ms animation
-		int64_t TimeSinceStart = Now - ClientData.m_ChatBubbleStartTick;
-		float AnimProgress = std::clamp((float)TimeSinceStart / (AnimDuration * time_freq()), 0.0f, 1.0f);
-		
-		// Ease-out animation curve (starts fast, slows down)
-		EasedProgress = 1.0f - (1.0f - AnimProgress) * (1.0f - AnimProgress);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 0.92f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, 12.0f);
+		if(IsTyping)
+			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+		AnimState.m_LastTargetAlpha = std::numeric_limits<float>::quiet_NaN();
+		AnimState.m_LastTargetScale = std::numeric_limits<float>::quiet_NaN();
+		AnimState.m_LastTargetSlide = std::numeric_limits<float>::quiet_NaN();
+		AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
+	}
 
-		// Calculate disappear animation (last 1 second)
-		int64_t TimeRemaining = ClientData.m_ChatBubbleExpireTick - Now;
-		int64_t FadeStartTime = time_freq(); // Start animation 1 second before expiration
-		float DisappearProgress = 1.0f; // 0.0 = fully visible, 1.0 = fully disappeared
-		if(TimeRemaining < FadeStartTime)
-		{
-			DisappearProgress = 1.0f - (float)TimeRemaining / (float)FadeStartTime;
-		}
-		else
-		{
-			DisappearProgress = 0.0f;
-		}
+	float TargetAlpha = HasSourceText ? Alpha : 0.0f;
+	float TargetScale = 1.0f;
+	float TargetSlideOffset = 0.0f;
+	float AlphaDuration = HasSourceText ? 0.20f : 0.16f;
+	float TransformDuration = HasSourceText ? 0.20f : 0.16f;
 
-		// Apply disappear animation based on animation type
-		// 0 = fade (default), 1 = shrink, 2 = slide up
+	if(TimedDisappearWindow)
+	{
+		TargetAlpha = 0.0f;
+		AlphaDuration = 1.0f;
+		TransformDuration = 1.0f;
 		int AnimationType = g_Config.m_QmChatBubbleAnimation;
 		switch(AnimationType)
 		{
-		case 1: // Shrink animation
-			AnimScale = 1.0f - DisappearProgress * 0.8f; // Shrink to 20% then disappear
-			BubbleAlpha *= (DisappearProgress < 0.9f) ? 1.0f : (1.0f - (DisappearProgress - 0.9f) * 10.0f);
+		case 1:
+			TargetScale = 0.2f;
 			break;
-		case 2: // Slide up animation
-			AnimSlideOffset = DisappearProgress * 50.0f; // Slide up 50 pixels
-			BubbleAlpha *= 1.0f - DisappearProgress; // Also fade while sliding
+		case 2:
+			TargetSlideOffset = 50.0f;
 			break;
-		case 0: // Fade animation (default)
+		case 0:
 		default:
-			BubbleAlpha *= 1.0f - DisappearProgress;
 			break;
 		}
-		
-		// Apply fade-in from animation
-		BubbleAlpha *= EasedProgress;
 	}
 
-	if(BubbleAlpha <= 0.0f)
+	const float BubbleAlpha = std::clamp(ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, AlphaDuration, EEasing::EASE_OUT, AnimState.m_LastTargetAlpha), 0.0f, Alpha);
+	const float AnimScale = std::max(0.0f, ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, TargetScale, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetScale));
+	const float AnimSlideOffset = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetSlideOffset, TransformDuration, EEasing::EASE_OUT, AnimState.m_LastTargetSlide);
+
+	AnimState.m_LastVisible = HasSourceText;
+	AnimState.m_LastTyping = IsTyping;
+
+	const char *pRenderText = HasSourceText ? pBubbleText : AnimState.m_aCachedText;
+	char aAnimatedText[sizeof(AnimState.m_aCachedText)];
+	aAnimatedText[0] = '\0';
+	const char *pDisplayText = pRenderText;
+
+	size_t RenderBytes = 0;
+	size_t RenderCharCountSize = 0;
+	str_utf8_stats(pRenderText, std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max(), &RenderBytes, &RenderCharCountSize);
+	(void)RenderBytes;
+	const int RenderCharCount = static_cast<int>(RenderCharCountSize);
+
+	if(IsTyping)
+	{
+		const float TargetFillChars = static_cast<float>(RenderCharCount);
+		const float CurrentFillChars = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::WIDTH, TargetFillChars);
+		const float DeltaChars = std::abs(TargetFillChars - CurrentFillChars);
+		float FillDuration = std::clamp(DeltaChars * 0.035f, 0.05f, 0.25f);
+		if(TargetFillChars < CurrentFillChars)
+			FillDuration = 0.08f;
+		const float AnimatedFillChars = ResolveChatBubbleAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::WIDTH, TargetFillChars, FillDuration, EEasing::EASE_OUT, AnimState.m_LastTargetFillChars);
+		const int VisibleChars = std::clamp(round_to_int(AnimatedFillChars), 0, RenderCharCount);
+		str_utf8_copy_num(aAnimatedText, pRenderText, sizeof(aAnimatedText), VisibleChars);
+		pDisplayText = aAnimatedText;
+	}
+	else
+	{
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::WIDTH, static_cast<float>(RenderCharCount));
+		AnimState.m_LastTargetFillChars = std::numeric_limits<float>::quiet_NaN();
+	}
+
+	if(BubbleAlpha <= 0.001f)
+	{
+		if(!HasSourceText)
+			AnimState.m_aCachedText[0] = '\0';
 		return;
+	}
 
 	// Get current screen bounds (world coordinates with current zoom)
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
@@ -1717,7 +1820,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	MeasureCursor.m_FontSize = FontSize;
 	MeasureCursor.m_LineWidth = MaxWidth;
 	MeasureCursor.m_Flags = 0;
-	TextRender()->TextEx(&MeasureCursor, pBubbleText);
+	TextRender()->TextEx(&MeasureCursor, pDisplayText);
 	float TextHeight = MeasureCursor.Height();
 	float TextWidth = MeasureCursor.m_LongestLineWidth;
 
@@ -1726,9 +1829,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	float BubbleHeight = (TextHeight + Padding * 2.0f) * AnimScale;
 
 	// Position bubble above the player with pop-up animation and slide offset
-	// Animation: starts 20 pixels lower and moves up (only for non-typing)
-	float AnimOffset = IsTyping ? 0.0f : (1.0f - EasedProgress) * 20.0f;
-	AnimOffset += AnimSlideOffset; // Add slide up offset for slide animation
+	float AnimOffset = AnimSlideOffset;
 	float BubbleX = InterfaceX - BubbleWidth / 2.0f;
 	float BubbleY = InterfaceY - BaseOffset - BubbleHeight + AnimOffset;
 
@@ -1784,7 +1885,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	Cursor.m_LineWidth = MaxWidth * AnimScale;
 	Cursor.m_Flags = TEXTFLAG_RENDER;
 	Cursor.SetPosition(vec2(TextX, TextY));
-	TextRender()->TextEx(&Cursor, pBubbleText);
+	TextRender()->TextEx(&Cursor, pDisplayText);
 	
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
