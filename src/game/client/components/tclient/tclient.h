@@ -169,6 +169,7 @@ class CTClient : public CComponent
 
 	// 玩家统计跟踪
 	SPlayerStats m_aPlayerStats[NUM_DUMMIES];
+	int m_aLastGameplayLogicTick[NUM_DUMMIES] = {-1, -1};
 	void UpdatePlayerStats();
 	void TrackHookDirection(int Dummy);
 
@@ -228,6 +229,8 @@ class CTClient : public CComponent
 	int m_FriendEnterPrevEnabled = -1;
 	bool m_FriendEnterInitialized = false;
 	float m_FriendEnterNextCheck = 0.0f;
+	std::string m_FriendEnterPendingNames;
+	float m_FriendEnterPendingSendAt = 0.0f;
 	void CheckFriendEnterGreet();
 
 	// Q1menG client recognition sync

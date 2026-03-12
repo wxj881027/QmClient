@@ -30,6 +30,8 @@
 #include <game/localization.h>
 #include <game/version.h>
 
+#include <array>
+#include <cmath>
 #include <vector>
 
 static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
@@ -1358,19 +1360,31 @@ void CTClient::DoFinishCheck()
 	if(m_FinishTextTimeout > 0.0f)
 		return;
 	m_FinishTextTimeout = 1.0f;
-	// Check for finish tile
-	const auto &NearTile = [this](vec2 Pos, int RadiusInTiles, int Tile) -> bool {
-		const CCollision *pCollision = GameClient()->Collision();
-		for(int i = 0; i <= RadiusInTiles * 2; ++i)
+	static constexpr int FinishTileRadius = 10;
+	static const std::array<float, FinishTileRadius * 2 + 1> s_aFinishArcHeights = []() {
+		std::array<float, FinishTileRadius * 2 + 1> aHeights{};
+		for(int i = 0; i <= FinishTileRadius * 2; ++i)
 		{
-			const float h = std::ceil(std::pow(std::sin((float)i * pi / 2.0f / (float)RadiusInTiles), 0.5f) * pi / 2.0f * (float)RadiusInTiles);
-			const vec2 Pos1 = vec2(Pos.x + (float)(i - RadiusInTiles) * 32.0f, Pos.y - h);
-			const vec2 Pos2 = vec2(Pos.x + (float)(i - RadiusInTiles) * 32.0f, Pos.y + h);
+			aHeights[i] = std::ceil(std::pow(std::sin((float)i * pi / 2.0f / (float)FinishTileRadius), 0.5f) * pi / 2.0f * (float)FinishTileRadius);
+		}
+		return aHeights;
+	}();
+
+	// Check for finish tile.
+	const auto &NearFinishTile = [this](vec2 Pos, int Tile) -> bool {
+		const CCollision *pCollision = GameClient()->Collision();
+		for(int i = 0; i <= FinishTileRadius * 2; ++i)
+		{
+			const float h = s_aFinishArcHeights[i];
+			const vec2 Pos1 = vec2(Pos.x + (float)(i - FinishTileRadius) * 32.0f, Pos.y - h);
+			const vec2 Pos2 = vec2(Pos.x + (float)(i - FinishTileRadius) * 32.0f, Pos.y + h);
 			std::vector<int> vIndices = pCollision->GetMapIndices(Pos1, Pos2);
 			if(vIndices.empty())
 				vIndices.push_back(pCollision->GetPureMapIndex(Pos1));
-			for(int &Index : vIndices)
+			for(const int Index : vIndices)
 			{
+				if(Index < 0)
+					continue;
 				if(pCollision->GetTileIndex(Index) == Tile)
 					return true;
 				if(pCollision->GetFrontTileIndex(Index) == Tile)
@@ -1414,8 +1428,14 @@ void CTClient::DoFinishCheck()
 		g_Config.m_TcFinishName[0] = '\0';
 	}
 
-	std::vector<std::string> vNameQueue;
-	ParseFinishNameQueue(g_Config.m_TcFinishNameQueue, vNameQueue);
+	static char s_aFinishNameQueueCache[sizeof(g_Config.m_TcFinishNameQueue)] = "";
+	static std::vector<std::string> s_vCachedFinishNameQueue;
+	if(str_comp(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue) != 0)
+	{
+		str_copy(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue, sizeof(s_aFinishNameQueueCache));
+		ParseFinishNameQueue(g_Config.m_TcFinishNameQueue, s_vCachedFinishNameQueue);
+	}
+	const std::vector<std::string> &vNameQueue = s_vCachedFinishNameQueue;
 	if(vNameQueue.empty())
 		return;
 
@@ -1446,7 +1466,7 @@ void CTClient::DoFinishCheck()
 	const bool NeedsRestoreName = m_aFinishRestoreNameValid[Dummy] &&
 		m_aaFinishRestoreNames[Dummy][0] != '\0' &&
 		str_comp(Player.m_aName, m_aaFinishRestoreNames[Dummy]) != 0;
-	if(!NeedsRestoreName && !NearTile(Player.m_RenderPos, 10, TILE_FINISH))
+	if(!NeedsRestoreName && !NearFinishTile(Player.m_RenderPos, TILE_FINISH))
 		return;
 
 	if(!CurrentNameKnown)
@@ -1592,14 +1612,41 @@ void CTClient::OnRender()
 	UpdateQmClientRecognition();
 
 	DoFinishCheck();
-	CheckFreeze();
-	CheckWaterFall();
 	CheckFriendOnline();
 	CheckFriendEnterGreet();
-	CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
-	CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
-	CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
-	UpdatePlayerStats(); // 更新玩家统计
+
+	bool RunGameplayTickChecks = false;
+	if(Client()->State() == IClient::STATE_ONLINE)
+	{
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		{
+			if(Dummy == 1 && !Client()->DummyConnected())
+				continue;
+
+			const int Tick = Client()->GameTick(Dummy);
+			if(m_aLastGameplayLogicTick[Dummy] != Tick)
+			{
+				m_aLastGameplayLogicTick[Dummy] = Tick;
+				RunGameplayTickChecks = true;
+			}
+		}
+	}
+	else
+	{
+		m_aLastGameplayLogicTick[0] = -1;
+		m_aLastGameplayLogicTick[1] = -1;
+	}
+
+	if(RunGameplayTickChecks)
+	{
+		CheckFreeze();
+		CheckWaterFall();
+		CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
+		CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
+		CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
+		UpdatePlayerStats(); // 更新玩家统计
+	}
+
 	MaybeSaveMapCategoryCache();
 }
 
@@ -1969,16 +2016,17 @@ void CTClient::CheckWaterFall()
 	}
 }
 
-static std::string BuildFriendNotifyKey(const char *pName, const char *pClan, bool IgnoreClan)
+static void BuildFriendNotifyKey(const char *pName, const char *pClan, bool IgnoreClan, std::string &OutKey)
 {
-	std::string Key = pName ? pName : "";
+	OutKey.clear();
+	if(pName)
+		OutKey.append(pName);
 	if(!IgnoreClan)
 	{
-		Key.push_back('\t');
+		OutKey.push_back('\t');
 		if(pClan)
-			Key.append(pClan);
+			OutKey.append(pClan);
 	}
-	return Key;
 }
 
 void CTClient::CheckFriendOnline()
@@ -2065,14 +2113,16 @@ void CTClient::CheckFriendOnline()
 	}
 	else
 	{
-		constexpr int ServersPerFrame = 64;
+		constexpr int ServersPerFrame = 32;
 		int ProcessedServers = 0;
+		std::string Key;
+		Key.reserve(MAX_NAME_LENGTH + MAX_CLAN_LENGTH + 1);
 		while(m_FriendNotifyScanIndex < NumServers && ProcessedServers < ServersPerFrame)
 		{
 			const CServerInfo *pEntry = pServerBrowser->SortedGet(m_FriendNotifyScanIndex);
 			++m_FriendNotifyScanIndex;
 			++ProcessedServers;
-			if(!pEntry)
+			if(!pEntry || pEntry->m_FriendNum <= 0)
 				continue;
 
 			for(int ClientIndex = 0; ClientIndex < pEntry->m_NumReceivedClients; ++ClientIndex)
@@ -2080,10 +2130,12 @@ void CTClient::CheckFriendOnline()
 				const CServerInfo::CClient &Client = pEntry->m_aClients[ClientIndex];
 				if(Client.m_aName[0] == '\0')
 					continue;
-				if(!GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
+				if(Client.m_FriendState == IFriends::FRIEND_NO)
+					continue;
+				if(Client.m_FriendState != IFriends::FRIEND_PLAYER && !GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
 					continue;
 
-				const std::string Key = BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan);
+				BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
 				auto It = m_FriendOnline.find(Key);
 				if(It == m_FriendOnline.end())
 				{
@@ -2143,6 +2195,8 @@ void CTClient::CheckFriendEnterGreet()
 			m_FriendEnterOnline.clear();
 			m_FriendEnterInitialized = false;
 		}
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
 		m_FriendEnterNextCheck = 0.0f;
 		return;
 	}
@@ -2153,11 +2207,37 @@ void CTClient::CheckFriendEnterGreet()
 		m_FriendEnterPrevEnabled = Enabled;
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
 		m_FriendEnterNextCheck = 0.0f;
 	}
 
 	if(!Enabled)
+	{
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
 		return;
+	}
+
+	static constexpr float FriendEnterGreetDelaySeconds = 3.0f;
+	const float Now = LocalTime();
+	if(!m_FriendEnterPendingNames.empty() && Now >= m_FriendEnterPendingSendAt)
+	{
+		if(g_Config.m_QmFriendEnterGreetText[0] != '\0')
+		{
+			char aMsg[256];
+			aMsg[0] = '\0';
+			str_append(aMsg, m_FriendEnterPendingNames.c_str(), sizeof(aMsg));
+			if(aMsg[0] != '\0')
+				str_append(aMsg, ": ", sizeof(aMsg));
+			str_append(aMsg, g_Config.m_QmFriendEnterGreetText, sizeof(aMsg));
+
+			if(aMsg[0] != '\0')
+				GameClient()->m_Chat.SendChat(0, aMsg);
+		}
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
+	}
 
 	if(GameClient()->Friends()->NumFriends() <= 0)
 	{
@@ -2166,7 +2246,6 @@ void CTClient::CheckFriendEnterGreet()
 		return;
 	}
 
-	const float Now = LocalTime();
 	if(Now < m_FriendEnterNextCheck)
 		return;
 	m_FriendEnterNextCheck = Now + 0.2f;
@@ -2175,6 +2254,8 @@ void CTClient::CheckFriendEnterGreet()
 	CurrentFriends.reserve(32);
 	std::vector<std::string> NewFriends;
 	NewFriends.reserve(8);
+	std::string Key;
+	Key.reserve(MAX_NAME_LENGTH + MAX_CLAN_LENGTH + 1);
 	const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
 	const int LocalMain = GameClient()->m_aLocalIds[0];
 	const int LocalDummy = GameClient()->m_aLocalIds[1];
@@ -2190,7 +2271,7 @@ void CTClient::CheckFriendEnterGreet()
 		if(!GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
 			continue;
 
-		std::string Key = BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan);
+		BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
 		CurrentFriends.insert(Key);
 		if(m_FriendEnterOnline.find(Key) == m_FriendEnterOnline.end())
 			NewFriends.push_back(Client.m_aName);
@@ -2211,21 +2292,23 @@ void CTClient::CheckFriendEnterGreet()
 	if(g_Config.m_QmFriendEnterGreetText[0] == '\0')
 		return;
 
-	char aMsg[256];
-	aMsg[0] = '\0';
+	std::string NewNames;
+	NewNames.reserve(64);
 	for(size_t i = 0; i < NewFriends.size(); ++i)
 	{
 		if(i > 0)
-			str_append(aMsg, " ", sizeof(aMsg));
-		str_append(aMsg, NewFriends[i].c_str(), sizeof(aMsg));
+			NewNames.push_back(' ');
+		NewNames.append(NewFriends[i]);
 	}
 
-	if(aMsg[0] != '\0')
-		str_append(aMsg, ": ", sizeof(aMsg));
-	str_append(aMsg, g_Config.m_QmFriendEnterGreetText, sizeof(aMsg));
-
-	if(aMsg[0] != '\0')
-		GameClient()->m_Chat.SendChat(0, aMsg);
+	if(!NewNames.empty())
+	{
+		if(!m_FriendEnterPendingNames.empty())
+			m_FriendEnterPendingNames.push_back(' ');
+		m_FriendEnterPendingNames.append(NewNames);
+		if(m_FriendEnterPendingSendAt <= 0.0f)
+			m_FriendEnterPendingSendAt = Now + FriendEnterGreetDelaySeconds;
+	}
 }
 
 void CTClient::CheckAutoUnspecOnUnfreeze()
@@ -2539,6 +2622,8 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
 	}
+	m_aLastGameplayLogicTick[0] = -1;
+	m_aLastGameplayLogicTick[1] = -1;
 
 	// 进入服务器时重置统计数据
 	if(NewState == IClient::STATE_ONLINE && g_Config.m_QmPlayerStatsResetOnJoin)
@@ -3019,6 +3104,11 @@ void CTClient::MaybeSaveMapCategoryCache()
 {
 	if(!m_MapCategoryCacheDirty)
 		return;
+
+	// Avoid synchronous disk writes during active gameplay frames.
+	if(Client()->State() == IClient::STATE_ONLINE && !GameClient()->m_Menus.IsActive())
+		return;
+
 	if(m_MapCategoryCacheNextSave == 0)
 		m_MapCategoryCacheNextSave = time_get() + time_freq() * MAP_CATEGORY_CACHE_SAVE_DELAY_SEC;
 	if(time_get() >= m_MapCategoryCacheNextSave)

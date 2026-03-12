@@ -1496,7 +1496,7 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	return ReturnValue;
 }
 
-bool CUi::DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale, unsigned Flags, const char *pSuffix)
+bool CUi::DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale, unsigned Flags, const char *pSuffix, const char *pMaxText)
 {
 	const bool Infinite = Flags & CUi::SCROLLBAR_OPTION_INFINITE;
 	const bool NoClampValue = Flags & CUi::SCROLLBAR_OPTION_NOCLAMPVALUE;
@@ -1527,7 +1527,12 @@ bool CUi::DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect,
 
 	char aBuf[256];
 	if(!Infinite || Value != Max)
-		str_format(aBuf, sizeof(aBuf), "%s: %i%s", pStr, Value, pSuffix);
+	{
+		if(pMaxText != nullptr && Value == Max)
+			str_format(aBuf, sizeof(aBuf), "%s: %s", pStr, pMaxText);
+		else
+			str_format(aBuf, sizeof(aBuf), "%s: %i%s", pStr, Value, pSuffix);
+	}
 	else
 		str_format(aBuf, sizeof(aBuf), "%s: ∞", pStr);
 

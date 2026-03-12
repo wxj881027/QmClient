@@ -2977,7 +2977,7 @@ void CGameClient::OnPredict()
 			vec2 Pos = pLocalChar->Core()->m_Pos;
 			int Events = pLocalChar->Core()->m_TriggeredEvents;
 
-			if(g_Config.m_ClPredict && !m_SuppressEvents)
+			if(g_Config.m_ClPredict && g_Config.m_ClPredictEvents && !m_SuppressEvents)
 				if(Events & COREEVENT_AIR_JUMP)
 					m_Effects.AirJump(Pos, 1.0f, 1.0f);
 			if(g_Config.m_SndGame && !m_SuppressEvents)
@@ -2997,7 +2997,7 @@ void CGameClient::OnPredict()
 			m_aLastNewPredictedTick[!Dummy] = Tick;
 			vec2 Pos = pDummyChar->Core()->m_Pos;
 			int Events = pDummyChar->Core()->m_TriggeredEvents;
-			if(g_Config.m_ClPredict && !m_SuppressEvents)
+			if(g_Config.m_ClPredict && g_Config.m_ClPredictEvents && !m_SuppressEvents)
 				if(Events & COREEVENT_AIR_JUMP)
 					m_Effects.AirJump(Pos, 1.0f, 1.0f);
 		}

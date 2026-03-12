@@ -151,7 +151,7 @@ option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AU
 option(DEV "Don't generate stuff necessary for packaging" OFF)
 option(VULKAN "Enable the vulkan backend" ${AUTO_VULKAN_BACKEND})
 option(EXCEPTION_HANDLING "Enable crashdumps (only works with Windows)" ON)
-option(IPO "Enable interprocedural optimizations" OFF)
+option(IPO "Enable interprocedural optimizations" ON)
 option(FUSE_LD "Linker to use" OFF)
 option(SECURITY_COMPILER_FLAGS "Whether to set security-relevant compiler flags like -D_FORTIFY_SOURCE=2 and -fstack-protector-strong" ON)
 
@@ -3895,7 +3895,9 @@ foreach(target ${TARGETS})
     endif()
   endif()
   if(ENABLE_IPO)
-    set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    # Keep debug iteration fast and stable; use IPO/LTO for optimized configs.
+    set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+    set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE)
   endif()
   if(TARGET_OS STREQUAL "emscripten")
     # Preload data directory into the filesystem

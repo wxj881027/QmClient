@@ -24,8 +24,11 @@
 #include <game/client/prediction/entities/character.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/layers.h>
+#include <game/mapitems.h>
 #include <game/localization.h>
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -141,6 +144,54 @@ uint64_t HudLocalTimeNodeKey(const char *pScope)
 	return (s_BaseKey << 32) | static_cast<uint64_t>(str_quickhash(pScope));
 }
 
+uint64_t HudSwitchCountdownNodeKey(int Index)
+{
+	static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_switch_countdown"));
+	return (s_BaseKey << 32) | static_cast<uint64_t>(Index);
+}
+
+struct SSwapCountdownInfo
+{
+	ColorRGBA m_TextColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	char m_aText[64] = {0};
+};
+
+bool BuildSwapCountdownInfo(CGameClient &GameClient, IClient &Client, SSwapCountdownInfo &Out)
+{
+	if(!GameClient.m_TClient.HasSwapCountdown())
+		return false;
+
+	const int StartTick = GameClient.m_TClient.GetSwapCountdownStartTick();
+	if(StartTick <= 0)
+		return false;
+
+	const int TickSpeed = Client.GameTickSpeed();
+	const int CurTick = Client.GameTick(g_Config.m_ClDummy);
+	const int ElapsedTicks = CurTick - StartTick;
+	if(ElapsedTicks < 0 || TickSpeed <= 0)
+		return false;
+
+	static constexpr int SWAP_COUNTDOWN_SECONDS = 30;
+	static constexpr int SWAP_HIDE_AFTER_SECONDS = SWAP_COUNTDOWN_SECONDS + 60;
+	const int ElapsedSeconds = ElapsedTicks / TickSpeed;
+	if(ElapsedSeconds >= SWAP_HIDE_AFTER_SECONDS)
+		return false;
+
+	const int SecondsLeft = SWAP_COUNTDOWN_SECONDS - ElapsedSeconds;
+	if(SecondsLeft > 0)
+	{
+		str_format(Out.m_aText, sizeof(Out.m_aText), "Swap倒计时:%d秒", SecondsLeft);
+		Out.m_TextColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+	else
+	{
+		str_copy(Out.m_aText, "可交换!");
+		Out.m_TextColor = ColorRGBA(0.5f, 1.0f, 0.5f, 1.0f);
+	}
+
+	return true;
+}
+
 float ResolveAnimatedLayoutValue(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, EUiAnimProperty Property, float Target, float &LastTarget)
 {
 	constexpr float Epsilon = 0.01f;
@@ -175,6 +226,8 @@ CHud::CHud()
 	m_PlayerPrevAngle = -INFINITY;
 	m_TextInfoV2AnimState.Reset();
 	m_LocalTimeV2AnimState.Reset();
+	m_SwitchCountdownAnimState.Reset();
+	m_SwitchCountdownTracker.Reset();
 	m_vTextInfoLayoutChildrenScratch.reserve(2);
 	m_vLocalTimeLayoutChildrenScratch.resize(1);
 
@@ -213,6 +266,8 @@ void CHud::ResetHudContainers()
 
 	m_TextInfoV2AnimState.Reset();
 	m_LocalTimeV2AnimState.Reset();
+	m_SwitchCountdownAnimState.Reset();
+	m_SwitchCountdownTracker.Reset();
 }
 
 void CHud::OnWindowResize()
@@ -1234,45 +1289,167 @@ void CHud::RenderTextInfo()
 
 void CHud::RenderSwapCountdown()
 {
-	if(!GameClient()->m_TClient.HasSwapCountdown())
+	SSwapCountdownInfo Info;
+	if(!BuildSwapCountdownInfo(*GameClient(), *Client(), Info))
 		return;
-
-	const int StartTick = GameClient()->m_TClient.GetSwapCountdownStartTick();
-	if(StartTick <= 0)
-		return;
-
-	const int TickSpeed = Client()->GameTickSpeed();
-	const int CurTick = Client()->GameTick(g_Config.m_ClDummy);
-	const int ElapsedTicks = CurTick - StartTick;
-	if(ElapsedTicks < 0 || TickSpeed <= 0)
-		return;
-
-	static constexpr int SWAP_COUNTDOWN_SECONDS = 30;
-	static constexpr int SWAP_HIDE_AFTER_SECONDS = SWAP_COUNTDOWN_SECONDS + 60;
-	const int ElapsedSeconds = ElapsedTicks / TickSpeed;
-	if(ElapsedSeconds >= SWAP_HIDE_AFTER_SECONDS)
-		return;
-
-	const int SecondsLeft = SWAP_COUNTDOWN_SECONDS - ElapsedSeconds;
 
 	const float FontSize = 8.0f;
 	const float X = 5.0f;
 	const float Y = m_Height - 12.0f;
 
-	char aBuf[64];
-	if(SecondsLeft > 0)
+	TextRender()->TextColor(Info.m_TextColor);
+	TextRender()->Text(X, Y, FontSize, Info.m_aText, -1.0f);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+}
+
+void CHud::RenderSwitchCountdowns()
+{
+	const int TickSpeed = Client()->GameTickSpeed();
+	if(TickSpeed <= 0)
+		return;
+
+	const int CurTick = Client()->GameTick(g_Config.m_ClDummy);
+	const auto UpdateSwitchCountdownFromClient = [&](int ClientId, bool UsePredictedPos) {
+		if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+			return;
+
+		vec2 Pos;
+		if(UsePredictedPos)
+		{
+			if(!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
+				return;
+			Pos = GameClient()->m_aClients[ClientId].m_Predicted.m_Pos;
+		}
+		else
+		{
+			if(!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
+				return;
+			Pos = vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y);
+		}
+
+		const int Team = GameClient()->m_Teams.Team(ClientId);
+		if(Team < 0 || Team >= NUM_DDRACE_TEAMS)
+			return;
+
+		const int MapIndex = Collision()->GetPureMapIndex(Pos);
+		if(MapIndex < 0)
+			return;
+
+		const int SwitchType = Collision()->GetSwitchType(MapIndex);
+		if(SwitchType != TILE_SWITCHTIMEDOPEN && SwitchType != TILE_SWITCHTIMEDCLOSE)
+			return;
+
+		const int SwitchNumber = Collision()->GetSwitchNumber(MapIndex);
+		if(SwitchNumber <= 0 || SwitchNumber >= 256)
+			return;
+
+		const int Delay = Collision()->GetSwitchDelay(MapIndex);
+		const int EndTick = CurTick + 1 + Delay * TickSpeed;
+		m_SwitchCountdownTracker.m_aaEndTick[Team][SwitchNumber] = EndTick;
+		m_SwitchCountdownTracker.m_aaTouchTick[Team][SwitchNumber] = CurTick;
+	};
+
+	const int LocalId = GameClient()->m_aLocalIds[0];
+	const int DummyId = GameClient()->m_aLocalIds[1];
+	UpdateSwitchCountdownFromClient(LocalId, GameClient()->Predict());
+	if(Client()->DummyConnected())
+		UpdateSwitchCountdownFromClient(DummyId, GameClient()->PredictDummy());
+
+	struct SSwitchCountdownEntry
 	{
-		str_format(aBuf, sizeof(aBuf), "Swap倒计时:%d秒", SecondsLeft);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-	}
-	else
+		int m_Number;
+		int m_EndTick;
+		int m_LastTouchTick;
+	};
+
+	std::array<SSwitchCountdownEntry, 256> aEntries;
+	int EntryCount = 0;
+
+	const int Team = GameClient()->SwitchStateTeam();
+	if(Team < 0 || Team >= NUM_DDRACE_TEAMS)
+		return;
+
+	for(int i = 1; i < 256; ++i)
 	{
-		str_copy(aBuf, "可交换!");
-		TextRender()->TextColor(0.5f, 1.0f, 0.5f, 1.0f);
+		const int EndTick = m_SwitchCountdownTracker.m_aaEndTick[Team][i];
+		if(EndTick <= CurTick)
+		{
+			m_SwitchCountdownTracker.m_aaEndTick[Team][i] = 0;
+			m_SwitchCountdownTracker.m_aaTouchTick[Team][i] = 0;
+			continue;
+		}
+
+		const int TouchTick = m_SwitchCountdownTracker.m_aaTouchTick[Team][i];
+		if(TouchTick <= 0)
+			continue;
+
+		if(EntryCount < (int)aEntries.size())
+		{
+			aEntries[EntryCount] = {i, EndTick, TouchTick};
+			EntryCount++;
+		}
 	}
 
-	TextRender()->Text(X, Y, FontSize, aBuf, -1.0f);
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	if(EntryCount <= 0)
+		return;
+
+	std::sort(aEntries.begin(), aEntries.begin() + EntryCount, [](const SSwitchCountdownEntry &A, const SSwitchCountdownEntry &B) {
+		return A.m_LastTouchTick > B.m_LastTouchTick;
+	});
+
+	const int RenderCount = minimum(EntryCount, SWITCH_COUNTDOWN_MAX_LINES);
+
+	for(int i = RenderCount; i < SWITCH_COUNTDOWN_MAX_LINES; ++i)
+	{
+		m_SwitchCountdownAnimState.m_aInitialized[i] = false;
+		m_SwitchCountdownAnimState.m_aTargetX[i] = 0.0f;
+	}
+
+	const float FontSize = 8.0f;
+	const float BaseX = 5.0f;
+	const float BaseY = m_Height - 12.0f;
+	const float LineHeight = 10.0f;
+	const float SwapGap = 6.0f;
+
+	float SwitchBaseX = BaseX;
+	SSwapCountdownInfo SwapInfo;
+	if(BuildSwapCountdownInfo(*GameClient(), *Client(), SwapInfo))
+	{
+		const float SwapWidth = TextRender()->TextWidth(FontSize, SwapInfo.m_aText, -1, -1.0f);
+		SwitchBaseX += SwapWidth + SwapGap;
+	}
+
+	CUiV2AnimationRuntime *pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
+
+	for(int i = 0; i < RenderCount; ++i)
+	{
+		const int EndTick = aEntries[i].m_EndTick;
+		const int RemainingTicks = EndTick - CurTick;
+		if(RemainingTicks <= 0)
+			continue;
+
+		const int SecondsLeft = (RemainingTicks + TickSpeed - 1) / TickSpeed;
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), "开关#%d:%d秒", aEntries[i].m_Number, SecondsLeft);
+
+		float TargetX = SwitchBaseX;
+		const float Y = BaseY - i * LineHeight;
+		float X = TargetX;
+
+		if(pAnimRuntime != nullptr)
+		{
+			const uint64_t NodeKey = HudSwitchCountdownNodeKey(i);
+			if(!m_SwitchCountdownAnimState.m_aInitialized[i])
+			{
+				pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::POS_X, TargetX);
+				m_SwitchCountdownAnimState.m_aTargetX[i] = TargetX;
+				m_SwitchCountdownAnimState.m_aInitialized[i] = true;
+			}
+			X = ResolveAnimatedLayoutValue(*pAnimRuntime, NodeKey, EUiAnimProperty::POS_X, TargetX, m_SwitchCountdownAnimState.m_aTargetX[i]);
+		}
+
+		TextRender()->Text(X, Y, FontSize, aBuf, -1.0f);
+	}
 }
 
 void CHud::RenderConnectionWarning()
@@ -3042,6 +3219,7 @@ void CHud::OnRender()
 		RenderDummyMiniMap();
 		RenderTextInfo();
 		RenderSwapCountdown();
+		RenderSwitchCountdowns();
 		GameClient()->m_TClient.RenderCenterLines();
 		RenderLocalTime((m_Width / 7) * 3);
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)

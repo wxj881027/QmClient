@@ -215,11 +215,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	bool m_DummyReconnectOnReload = false;
 	bool m_DummyDeactivateOnReconnect = false;
 
-	// temporary prediction margin boost during latency spikes
-	float m_PredMarginSpikeBoostMs = 0.0f;
-	int64_t m_PredMarginSpikeHoldUntil = 0;
-	int64_t m_PredMarginSpikeLastUpdate = 0;
-
 	// graphs
 	CGraph m_InputtimeMarginGraph;
 	CGraph m_aGametimeMarginGraphs[NUM_DUMMIES];
@@ -256,7 +251,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	CUuid m_CurrentServerPingUuid = UUID_ZEROED;
 	int64_t m_CurrentServerCurrentPingTime = -1; // >= 0 request running
 	int64_t m_CurrentServerNextPingTime = -1; // >= 0 should request
-	int m_CurrentServerLatencyMs = -1;
 
 	// version info
 	struct CVersionInfo
@@ -292,12 +286,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	void UpdateDemoIntraTimers();
 	int MaxLatencyTicks() const;
-	int AutoPredictionMarginFromPingMs() const;
-	int BasePredictionMarginMs() const;
 	int PredictionMargin() const;
-	void ResetPredMarginSpikeGuard();
-	void UpdatePredMarginSpikeGuard(int TimeLeftMs, int64_t Now);
-	void DecayPredMarginSpikeGuard(int64_t Now);
 	void StartHangWatchdog();
 	void StopHangWatchdog();
 	void UpdateHangHeartbeat();
@@ -310,8 +299,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	NETSTATS m_NetstatsPrev = {};
 	NETSTATS m_NetstatsCurrent = {};
 	std::chrono::nanoseconds m_NetstatsLastUpdate = std::chrono::nanoseconds(0);
-	mutable int m_PredMarginBaseMsDebug = 0;
-	mutable int m_PredMarginEffectiveMsDebug = 0;
 
 	// For DummyName function
 	char m_aAutomaticDummyName[MAX_NAME_LENGTH];

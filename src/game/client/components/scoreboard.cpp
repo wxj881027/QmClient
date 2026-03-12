@@ -1133,6 +1133,16 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			char aClanBuf[MAX_CLAN_LENGTH];
 			GameClient()->FormatStreamerName(ClientId, aNameBuf, sizeof(aNameBuf));
 			GameClient()->FormatStreamerClan(ClientId, aClanBuf, sizeof(aClanBuf));
+			const bool IsFriend = ClientData.m_Friend;
+			bool IsSameClan = false;
+			if(aClanBuf[0] != '\0')
+			{
+				const int LocalClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
+				if(LocalClientId >= 0 && str_comp(aClanBuf, GameClient()->m_aClients[LocalClientId].m_aClan) == 0)
+				{
+					IsSameClan = true;
+				}
+			}
 			// Points column: render actual points value, right-aligned (only when enabled)
 			if(ShowPoints)
 			{
@@ -1205,10 +1215,20 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				Cursor.m_FontSize = FontSize;
 				Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 				Cursor.m_LineWidth = NameLength;
+				ColorRGBA NameColor = TextColor;
 				if(ClientData.m_AuthLevel)
 				{
-					TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClAuthedPlayerColor)).WithMultipliedAlpha(ItemAlpha));
+					NameColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClAuthedPlayerColor)).WithMultipliedAlpha(ItemAlpha);
 				}
+				else if(IsFriend)
+				{
+					NameColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor)).WithMultipliedAlpha(ItemAlpha);
+				}
+				else if(IsSameClan)
+				{
+					NameColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClSameClanColor)).WithMultipliedAlpha(ItemAlpha);
+				}
+				TextRender()->TextColor(NameColor);
 				if(g_Config.m_ClShowIds && !HideIdentity)
 				{
 					char aClientId[16];
