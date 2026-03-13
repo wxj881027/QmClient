@@ -1584,6 +1584,12 @@ void CGameClient::ProcessEvents()
 			if(!Config()->m_SndGame)
 				continue;
 
+			if(Client()->IsSixup() && pEvent->m_SoundId == SOUND_PLAYER_AIRJUMP)
+			{
+				m_Effects.AirJump(vec2(pEvent->m_X, pEvent->m_Y), Alpha, Volume);
+				continue;
+			}
+
 			if(m_GameInfo.m_RaceSounds && ((pEvent->m_SoundId == SOUND_GUN_FIRE && !g_Config.m_SndGun) || (pEvent->m_SoundId == SOUND_PLAYER_PAIN_LONG && !g_Config.m_SndLongPain)))
 				continue;
 
@@ -2500,8 +2506,26 @@ void CGameClient::OnNewSnapshot()
 		{
 			bool IsDummy = Client()->DummyConnected() && i == m_aLocalIds[!g_Config.m_ClDummy];
 			bool IsLocalPlayer = i == m_Snap.m_LocalClientId;
+			if(Client()->IsSixup() && !IsLocalPlayer)
+			{
+				// Sixup servers provide explicit AIR_JUMP events, handled in ProcessEvents.
+				// Skip heuristic detection for non-local players to avoid duplicate triggers.
+				continue;
+			}
 
-			if(!Predict() || (!IsLocalPlayer && !AntiPingPlayers()) || (!IsLocalPlayer && !IsDummy))
+			bool UseSnapshotAirJump = false;
+			if(IsLocalPlayer)
+			{
+				// Local air-jump effects are normally predicted. Fall back to snapshot
+				// when prediction is unavailable or predicted events are disabled.
+				UseSnapshotAirJump = !Predict() || !g_Config.m_ClPredictEvents;
+			}
+			else
+			{
+				UseSnapshotAirJump = !Predict() || !AntiPingPlayers() || !IsDummy;
+			}
+
+			if(UseSnapshotAirJump)
 			{
 				vec2 Pos = mix(vec2(m_Snap.m_aCharacters[i].m_Prev.m_X, m_Snap.m_aCharacters[i].m_Prev.m_Y),
 					vec2(m_Snap.m_aCharacters[i].m_Cur.m_X, m_Snap.m_aCharacters[i].m_Cur.m_Y),

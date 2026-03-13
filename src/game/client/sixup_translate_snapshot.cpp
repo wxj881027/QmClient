@@ -272,6 +272,18 @@ int CGameClient::TranslateSnap(CSnapshot *pSnapDstSix, CSnapshot *pSnapSrcSeven,
 					Sound.m_SoundId = SOUND_PLAYER_JUMP;
 					mem_copy(pEvent, &Sound, sizeof(CNetEvent_SoundWorld));
 				}
+				if(pChar7->m_TriggeredEvents & protocol7::COREEVENTFLAG_AIR_JUMP)
+				{
+					void *pEvent = Builder.NewItem(NETEVENTTYPE_SOUNDWORLD, pItem7->Id(), sizeof(CNetEvent_SoundWorld));
+					if(!pEvent)
+						return -7;
+
+					CNetEvent_SoundWorld Sound = {};
+					Sound.m_X = pChar7->m_X;
+					Sound.m_Y = pChar7->m_Y;
+					Sound.m_SoundId = SOUND_PLAYER_AIRJUMP;
+					mem_copy(pEvent, &Sound, sizeof(CNetEvent_SoundWorld));
+				}
 				if(pChar7->m_TriggeredEvents & protocol7::COREEVENTFLAG_HOOK_ATTACH_GROUND)
 				{
 					void *pEvent = Builder.NewItem(NETEVENTTYPE_SOUNDWORLD, pItem7->Id(), sizeof(CNetEvent_SoundWorld));
