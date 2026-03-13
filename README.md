@@ -1,4 +1,3 @@
-
 # Q1menG Client
 
 <p align="center">
@@ -45,11 +44,8 @@ cmake --build cmake-build-release --target run_tests
 ## ⚙️ 推荐 UI 配置（示例）
 
 ```cfg
-cl_menu_particles 1
-cl_menu_particle_effect 1
-cl_menu_particle_alpha 70
-cl_menu_transitions 1
 cl_hud_animations 1
+cl_hud_animation_speed 100
 ```
 
 ## 🙏 Special Thanks
@@ -73,5 +69,3 @@ cl_hud_animations 1
 ## 📮 Notes
 
 本项目为个人定制化修改，不代表 DDNet 或 TaterClient 官方立场。
-
-
