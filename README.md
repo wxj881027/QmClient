@@ -2,7 +2,7 @@
 # Q1menG Client
 
 <p align="center">
-  <img src="C:\Users\Administrator\Downloads\QimenGClient_UI_Remake\data\qmclient\gui_logo.png" alt="Q1menG Client Logo" width="280" />
+   <img src="data\qmclient\gui_logo.png" alt="Q1menG Client Logo" width="380" />
 </p>
 
 <p align="center">
