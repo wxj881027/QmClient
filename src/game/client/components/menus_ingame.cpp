@@ -1705,7 +1705,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	{
 		NewPage = PAGE_FAVORITES;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
+	GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("收藏夹"));
 
 	size_t FavoriteCommunityIndex = 0;
 	static CButtonContainer s_aFavoriteCommunityButtons[5];

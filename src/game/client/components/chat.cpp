@@ -265,14 +265,15 @@ float CChat::EaseOutBack(float t)
 {
 	const float c1 = 1.70158f;
 	const float c3 = c1 + 1.0f;
-	return 1.0f + c3 * std::pow(t - 1.0f, 3.0f) + c1 * std::pow(t - 1.0f, 2.0f);
+	const float x = t - 1.0f;
+	const float x2 = x * x;
+	return 1.0f + c3 * x2 * x + c1 * x2;
 }
 
-float CChat::CalculateAnimationAlpha(const CLine &Line, bool ShowChat) const
+float CChat::CalculateAnimationAlpha(const float MessageAge, const bool ShowChat) const
 {
-	const float MessageAge = (time() - Line.m_Time) / (float)time_freq();
 	const float FadeInDuration = CHAT_ANIM_FADE_IN_DURATION;
-	const float FadeOutStart = 14.0f;
+	const float FadeOutStart = CHAT_ANIM_FADE_OUT_START;
 	const float FadeOutDuration = CHAT_ANIM_FADE_OUT_DURATION;
 
 	const float FadeInT = std::clamp(MessageAge / FadeInDuration, 0.0f, 1.0f);
@@ -284,17 +285,15 @@ float CChat::CalculateAnimationAlpha(const CLine &Line, bool ShowChat) const
 	return std::clamp(EntryAlpha * TimeoutAlpha, 0.0f, 1.0f);
 }
 
-float CChat::CalculateAnimationOffsetX(const CLine &Line, bool ShowChat) const
+float CChat::CalculateAnimationOffsetX(const float MessageAge, const bool Emphasized, const bool ShowChat) const
 {
-	const float MessageAge = (time() - Line.m_Time) / (float)time_freq();
 	const float SlideInDuration = CHAT_ANIM_FADE_IN_DURATION;
-	const float FadeOutStart = 14.0f;
+	const float FadeOutStart = CHAT_ANIM_FADE_OUT_START;
 	const float FadeOutDuration = CHAT_ANIM_FADE_OUT_DURATION;
 
 	const float SlideInT = std::clamp(MessageAge / SlideInDuration, 0.0f, 1.0f);
 	const float SlideOutT = ShowChat ? 0.0f : std::clamp((MessageAge - FadeOutStart) / FadeOutDuration, 0.0f, 1.0f);
 
-	const bool Emphasized = Line.m_Highlighted || Line.m_Whisper;
 	const float EntryAmplitude = Emphasized ? CHAT_ANIM_HIGHLIGHT_SLIDE : CHAT_ANIM_SLIDE_OFFSET;
 	const float EntryEase = Emphasized ? std::min(EaseOutBack(SlideInT), 1.08f) : EaseOutQuad(SlideInT);
 	const float EntryOffsetX = -EntryAmplitude * (1.0f - EntryEase);
@@ -319,7 +318,6 @@ CChat::CChat()
 	m_Mode = MODE_NONE;
 	m_LastAnimUpdateTime = 0;
 
-	m_Input.SetClipboardLineCallback([this](const char *pStr) { SendChatQueued(pStr); });
 	m_Input.SetCalculateOffsetCallback([this]() { return m_IsInputCensored; });
 	m_Input.SetDisplayTextCallback([this](char *pStr, size_t NumChars) {
 		m_IsInputCensored = false;
@@ -1072,6 +1070,16 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 		PreviousLine.m_aYOffset[1] = -1.0f;
 		PreviousLine.m_CutOffProgress = 0.0f;
 
+		// Keep bubble lifetime in sync for repeated chat lines as well.
+		if(ClientId >= 0 && ClientId < MAX_CLIENTS)
+		{
+			CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
+			str_copy(ClientData.m_aChatBubbleText, pLine, sizeof(ClientData.m_aChatBubbleText));
+			const int64_t BubbleStartTick = time();
+			ClientData.m_ChatBubbleStartTick = BubbleStartTick;
+			ClientData.m_ChatBubbleExpireTick = BubbleStartTick + time_freq() * g_Config.m_QmChatBubbleDuration;
+		}
+
 		FChatMsgCheckAndPrint(PreviousLine);
 		return;
 	}
@@ -1238,8 +1246,9 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 	{
 		CGameClient::CClientData &ClientData = GameClient()->m_aClients[ClientId];
 		str_copy(ClientData.m_aChatBubbleText, pLine, sizeof(ClientData.m_aChatBubbleText));
-		ClientData.m_ChatBubbleStartTick = time();
-		ClientData.m_ChatBubbleExpireTick = time() + time_freq() * g_Config.m_QmChatBubbleDuration;
+		const int64_t BubbleStartTick = time();
+		ClientData.m_ChatBubbleStartTick = BubbleStartTick;
+		ClientData.m_ChatBubbleExpireTick = BubbleStartTick + time_freq() * g_Config.m_QmChatBubbleDuration;
 	}
 
 	// TClient
@@ -1256,6 +1265,7 @@ void CChat::OnPrepareLines(float y)
 	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat;
 	m_PrevScoreBoardShowed = IsScoreBoardOpen;
 	m_PrevShowChat = ShowLargeArea;
+	const int64_t VisibleTimeNoFocusTicks = static_cast<int64_t>(CHAT_VISIBLE_SECONDS_NO_FOCUS * time_freq());
 
 	const int TeeSize = MessageTeeSize();
 	float RealMsgPaddingX = MessagePaddingX();
@@ -1282,7 +1292,7 @@ void CChat::OnPrepareLines(float y)
 		CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
 		if(!Line.m_Initialized)
 			break;
-		if(Now > Line.m_Time + 16 * time_freq() && !m_PrevShowChat)
+		if(Now > Line.m_Time + VisibleTimeNoFocusTicks && !m_PrevShowChat)
 			break;
 
 		if(Line.m_TextContainerIndex.Valid() && !ForceRecreate)
@@ -1704,12 +1714,20 @@ void CChat::OnRender()
 	const float DeltaSeconds = std::clamp((Now - m_LastAnimUpdateTime) / (float)time_freq(), 0.0f, 0.25f);
 	m_LastAnimUpdateTime = Now;
 	const float CutOffStep = CHAT_ANIM_CUTOFF_DURATION > 0.0f ? std::clamp(DeltaSeconds / CHAT_ANIM_CUTOFF_DURATION, 0.0f, 1.0f) : 1.0f;
+	const float InvTimeFreq = 1.0f / (float)time_freq();
+	const int64_t VisibleTimeNoFocusTicks = static_cast<int64_t>(CHAT_VISIBLE_SECONDS_NO_FOCUS * time_freq());
 
 	float HeightLimit = IsScoreBoardOpen ? 180.0f : (m_PrevShowChat ? 50.0f : 200.0f);
 	int OffsetType = IsScoreBoardOpen ? 1 : 0;
+	const ColorRGBA BackgroundBaseColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true));
+	const ColorRGBA DefaultTextColor = TextRender()->DefaultTextColor();
+	const ColorRGBA DefaultTextOutlineColor = TextRender()->DefaultTextOutlineColor();
+	const CAnimState *pIdleState = CAnimState::GetIdle();
+	const int TeeSize = MessageTeeSize();
 
 	float RealMsgPaddingX = MessagePaddingX();
 	float RealMsgPaddingY = MessagePaddingY();
+	const float RowHeight = FontSize() + RealMsgPaddingY;
 
 	if(g_Config.m_ClChatOld)
 	{
@@ -1723,7 +1741,7 @@ void CChat::OnRender()
 		CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
 		if(!Line.m_Initialized)
 			break;
-		if(Now > Line.m_Time + 16 * time_freq() && !m_PrevShowChat)
+		if(Now > Line.m_Time + VisibleTimeNoFocusTicks && !m_PrevShowChat)
 			break;
 
 		const bool LineHeightValid = Line.m_aYOffset[OffsetType] >= 0.0f;
@@ -1739,8 +1757,10 @@ void CChat::OnRender()
 		}
 
 		// Base animation from message age.
-		float AnimAlpha = CalculateAnimationAlpha(Line, m_PrevShowChat);
-		float AnimOffsetX = CalculateAnimationOffsetX(Line, m_PrevShowChat);
+		const float MessageAge = (Now - Line.m_Time) * InvTimeFreq;
+		const bool Emphasized = Line.m_Highlighted || Line.m_Whisper;
+		float AnimAlpha = CalculateAnimationAlpha(MessageAge, m_PrevShowChat);
+		float AnimOffsetX = CalculateAnimationOffsetX(MessageAge, Emphasized, m_PrevShowChat);
 
 		// Declarative cut-off composition from current overflow in the visible area.
 		const float Overflow = std::max(0.0f, HeightLimit - y);
@@ -1763,7 +1783,7 @@ void CChat::OnRender()
 			Graphics()->TextureClear();
 			if(Line.m_QuadContainerIndex != -1)
 			{
-				Graphics()->SetColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true)).WithMultipliedAlpha(AnimAlpha));
+				Graphics()->SetColor(BackgroundBaseColor.WithMultipliedAlpha(AnimAlpha));
 				Graphics()->RenderQuadContainerEx(Line.m_QuadContainerIndex, 0, -1, AnimOffsetX, ((y + RealMsgPaddingY / 2.0f) - Line.m_TextYOffset));
 			}
 		}
@@ -1773,22 +1793,19 @@ void CChat::OnRender()
 			if(!g_Config.m_ClChatOld && Line.m_pManagedTeeRenderInfo != nullptr)
 			{
 				CTeeRenderInfo &TeeRenderInfo = Line.m_pManagedTeeRenderInfo->TeeRenderInfo();
-				const int TeeSize = MessageTeeSize();
 				TeeRenderInfo.m_Size = TeeSize;
 
-				float RowHeight = FontSize() + RealMsgPaddingY;
 				float OffsetTeeY = TeeSize / 2.0f;
 				float FullHeightMinusTee = RowHeight - TeeSize;
 
-				const CAnimState *pIdleState = CAnimState::GetIdle();
 				vec2 OffsetToMid;
 				CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeRenderInfo, OffsetToMid);
 				vec2 TeeRenderPos(x + AnimOffsetX + (RealMsgPaddingX + TeeSize) / 2.0f, y + OffsetTeeY + FullHeightMinusTee / 2.0f + OffsetToMid.y);
 				RenderTools()->RenderTee(pIdleState, &TeeRenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), TeeRenderPos, AnimAlpha);
 			}
 
-			const ColorRGBA TextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(AnimAlpha);
-			const ColorRGBA TextOutlineColor = TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(AnimAlpha);
+			const ColorRGBA TextColor = DefaultTextColor.WithMultipliedAlpha(AnimAlpha);
+			const ColorRGBA TextOutlineColor = DefaultTextOutlineColor.WithMultipliedAlpha(AnimAlpha);
 			TextRender()->RenderTextContainer(Line.m_TextContainerIndex, TextColor, TextOutlineColor, AnimOffsetX, (y + RealMsgPaddingY / 2.0f) - Line.m_TextYOffset);
 		}
 	}
@@ -1816,6 +1833,12 @@ void CChat::EnsureCoherentWidth() const
 
 // ----- send functions -----
 
+static bool ShouldSyncTeamCommandToOther(const char *pLine)
+{
+	return g_Config.m_ClDummyCopyMoves &&
+		str_startswith(pLine, "/team ") != nullptr;
+}
+
 void CChat::SendChat(int Team, const char *pLine)
 {
 	// don't send empty messages
@@ -1831,6 +1854,10 @@ void CChat::SendChat(int Team, const char *pLine)
 		Msg7.m_Target = -1;
 		Msg7.m_pMessage = pLine;
 		Client()->SendPackMsgActive(&Msg7, MSGFLAG_VITAL, true);
+
+		if(Client()->DummyConnected() && ShouldSyncTeamCommandToOther(pLine))
+			SendChatOnConn(!g_Config.m_ClDummy, Team, pLine);
+
 		return;
 	}
 
@@ -1839,6 +1866,9 @@ void CChat::SendChat(int Team, const char *pLine)
 	Msg.m_Team = Team;
 	Msg.m_pMessage = pLine;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
+
+	if(Client()->DummyConnected() && ShouldSyncTeamCommandToOther(pLine))
+		SendChatOnConn(!g_Config.m_ClDummy, Team, pLine);
 }
 
 void CChat::SendChatOnConn(int Conn, int Team, const char *pLine)

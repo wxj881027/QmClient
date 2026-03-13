@@ -13,6 +13,11 @@
 class CEmoticon : public CComponent
 {
 	float m_AnimationTime = 0.0f;
+	float m_AnimationProgress = 0.0f;
+	float m_AnimationStartProgress = 0.0f;
+	float m_AnimationStartTime = 0.0f;
+	bool m_AnimationTargetActive = false;
+	bool m_AnimationInitialized = false;
 	float m_aAnimationTimeEmotes[NUM_EMOTICONS] = {0};
 	float m_aAnimationTimeEyeEmotes[NUM_EMOTES] = {0};
 

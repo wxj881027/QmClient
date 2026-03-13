@@ -8,6 +8,8 @@
 
 #include <generated/protocol.h>
 
+#include <game/teamscore.h>
+
 #include <game/client/component.h>
 #include <game/client/QmUi/QmLayout.h>
 
@@ -47,6 +49,7 @@ struct SScoreInfo
 
 class CHud : public CComponent
 {
+	static constexpr int SWITCH_COUNTDOWN_MAX_LINES = 3;
 	float m_Width, m_Height;
 
 	int m_HudQuadContainerIndex;
@@ -117,6 +120,39 @@ class CHud : public CComponent
 		}
 	};
 	SHudLocalTimeV2AnimState m_LocalTimeV2AnimState;
+	struct SHudSwitchCountdownAnimState
+	{
+		float m_aTargetX[SWITCH_COUNTDOWN_MAX_LINES] = {0.0f, 0.0f, 0.0f};
+		bool m_aInitialized[SWITCH_COUNTDOWN_MAX_LINES] = {false, false, false};
+
+		void Reset()
+		{
+			for(int i = 0; i < SWITCH_COUNTDOWN_MAX_LINES; ++i)
+			{
+				m_aTargetX[i] = 0.0f;
+				m_aInitialized[i] = false;
+			}
+		}
+	};
+	SHudSwitchCountdownAnimState m_SwitchCountdownAnimState;
+	struct SHudSwitchCountdownTracker
+	{
+		int m_aaEndTick[NUM_DDRACE_TEAMS][256] = {};
+		int m_aaTouchTick[NUM_DDRACE_TEAMS][256] = {};
+
+		void Reset()
+		{
+			for(int t = 0; t < NUM_DDRACE_TEAMS; ++t)
+			{
+				for(int i = 0; i < 256; ++i)
+				{
+					m_aaEndTick[t][i] = 0;
+					m_aaTouchTick[t][i] = 0;
+				}
+			}
+		}
+	};
+	SHudSwitchCountdownTracker m_SwitchCountdownTracker;
 	std::vector<SUiLayoutChild> m_vTextInfoLayoutChildrenScratch;
 	std::vector<SUiLayoutChild> m_vLocalTimeLayoutChildrenScratch;
 
@@ -124,6 +160,7 @@ class CHud : public CComponent
 
 	void RenderTextInfo();
 	void RenderSwapCountdown();
+	void RenderSwitchCountdowns();
 	void RenderDummyMiniMap();
 	bool GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const;
 	void RenderConnectionWarning();

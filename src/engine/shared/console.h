@@ -74,6 +74,7 @@ class CConsole : public IConsole
 	static void Con_ToggleExec(IResult *pResult, void *pUserData);
 	static void ConCommandAccess(IResult *pResult, void *pUser);
 	static void ConCommandStatus(IConsole::IResult *pResult, void *pUser);
+	void PrintCommandList(EAccessLevel MinAccessLevel, int ExcludeFlagMask);
 
 	void ExecuteLineStroked(int Stroke, const char *pStr, int ClientId = IConsole::CLIENT_ID_UNSPECIFIED, bool InterpretSemicolons = true) override;
 

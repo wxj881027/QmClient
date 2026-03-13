@@ -3740,7 +3740,8 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 
 	// gameplay
 	CUIRect Gameplay;
-	MainView.HSplitTop(150.0f, &Gameplay, &MainView);
+	const float GameplayHeight = 150.0f + (g_Config.m_ClAntiPing ? 3.0f * 20.0f : 0.0f);
+	MainView.HSplitTop(GameplayHeight, &Gameplay, &MainView);
 	Gameplay.HSplitTop(30.0f, &Label, &Gameplay);
 	Ui()->DoLabel(&Label, Localize("Gameplay"), 20.0f, TEXTALIGN_ML);
 	Gameplay.HSplitTop(5.0f, nullptr, &Gameplay);
@@ -3790,33 +3791,40 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 		GameClient()->m_Camera.SetZoom(CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10), g_Config.m_ClSmoothZoomTime, true);
 
 	Right.HSplitTop(20.0f, &Button, &Right);
-	if(DoButton_CheckBox(&g_Config.m_ClAntiPing, Localize("AntiPing"), g_Config.m_ClAntiPing, &Button))
+	Ui()->DoScrollbarOption(&g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, Localize("预测边距"), 1, 300, &CUi::ms_LinearScrollbarScale, 0, "");
+
+	Right.HSplitTop(20.0f, &Button, &Right);
+	if(DoButton_CheckBox(&g_Config.m_ClPredictEvents, Localize("预测事件（实验性）"), g_Config.m_ClPredictEvents, &Button))
+	{
+		g_Config.m_ClPredictEvents ^= 1;
+	}
+
+	Right.HSplitTop(20.0f, &Button, &Right);
+	if(DoButton_CheckBox(&g_Config.m_ClAntiPing, Localize("延迟补偿（AntiPing）"), g_Config.m_ClAntiPing, &Button))
 	{
 		g_Config.m_ClAntiPing ^= 1;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClAntiPing, &Button, Localize("Tries to predict other entities to give a feel of low latency"));
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClAntiPing, &Button, Localize("尝试预测其他实体来降低高延迟带来的卡顿感"));
 
 	if(g_Config.m_ClAntiPing)
 	{
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingPlayers, Localize("AntiPing: predict other players"), g_Config.m_ClAntiPingPlayers, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingPlayers, Localize("延迟补偿：预测其他玩家"), g_Config.m_ClAntiPingPlayers, &Button))
 		{
 			g_Config.m_ClAntiPingPlayers ^= 1;
 		}
 
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingWeapons, Localize("AntiPing: predict weapons"), g_Config.m_ClAntiPingWeapons, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingWeapons, Localize("延迟补偿：预测武器"), g_Config.m_ClAntiPingWeapons, &Button))
 		{
 			g_Config.m_ClAntiPingWeapons ^= 1;
 		}
 
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingGrenade, Localize("AntiPing: predict grenade paths"), g_Config.m_ClAntiPingGrenade, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingGrenade, Localize("延迟补偿：预测榴弹枪路径"), g_Config.m_ClAntiPingGrenade, &Button))
 		{
 			g_Config.m_ClAntiPingGrenade ^= 1;
 		}
-		Right.HSplitTop(20.0f, &Button, &Right);
-		Ui()->DoScrollbarOption(&g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, Localize("AntiPing: prediction margin (max = auto)"), 1, 300);
 	}
 
 	CUIRect Background, Miscellaneous;

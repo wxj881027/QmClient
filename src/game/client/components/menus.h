@@ -277,6 +277,8 @@ protected:
 		bool m_IsLink;
 		int m_StorageType;
 		time_t m_Date;
+		bool m_DateLoaded;
+		bool m_DateValid;
 		int64_t m_Size;
 
 		bool m_InfosLoaded;
@@ -334,6 +336,23 @@ protected:
 		}
 	};
 
+	struct SDemoSelectionEntry
+	{
+		char m_aFilename[IO_MAX_PATH_LENGTH];
+		int m_StorageType;
+
+		bool operator==(const SDemoSelectionEntry &Other) const
+		{
+			return m_StorageType == Other.m_StorageType && str_comp(m_aFilename, Other.m_aFilename) == 0;
+		}
+	};
+
+	struct SDemoDeleteTarget
+	{
+		SDemoSelectionEntry m_Selection;
+		bool m_IsDir;
+	};
+
 	char m_aCurrentDemoFolder[IO_MAX_PATH_LENGTH];
 	char m_aCurrentDemoSelectionName[IO_MAX_PATH_LENGTH];
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenameInput;
@@ -346,13 +365,29 @@ protected:
 	bool m_DemolistSelectedReveal = false;
 	int m_DemolistStorageType;
 	bool m_DemolistMultipleStorages = false;
+	std::vector<SDemoSelectionEntry> m_vDemoSelection;
+	std::vector<SDemoDeleteTarget> m_vDemoDeleteTargets;
+	int m_DemoSelectionAnchorIndex = -1;
 	int m_Speed = 4;
 	bool m_StartPaused = false;
 
 	std::chrono::nanoseconds m_DemoPopulateStartTime{0};
 
+	SDemoSelectionEntry DemoSelectionEntryFromItem(const CDemoItem &Item) const;
+	bool IsDemoItemSelected(const CDemoItem &Item) const;
+	bool IsDemoItemDeletable(const CDemoItem &Item) const;
+	void SetDemoSelectionSingle(int Index);
+	void ToggleDemoSelection(int Index);
+	void SelectDemoRange(int StartIndex, int EndIndex, bool Additive);
+	void SelectAllDemos();
+	void SyncDemoSelection();
+	int NumSelectedDemos() const;
+	int NumSelectedDeletableDemos() const;
+	void PrepareDemoDeleteTargetsFromSelection();
 	void DemolistOnUpdate(bool Reset);
-	static int DemolistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
+	static int DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
+	bool EnsureDemoDate(CDemoItem &Item);
+	void EnsureAllDemoDates();
 
 	// friends
 	class CFriendItem
@@ -514,6 +549,7 @@ protected:
 #endif
 	void RenderMenubar(CUIRect Box, IClient::EClientState ClientState);
 	void RenderNews(CUIRect MainView);
+	void RenderStatistics(CUIRect MainView);
 	static void ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainUpdateMusicState(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	void UpdateMusicState();
@@ -538,6 +574,7 @@ protected:
 	void PopupConfirmPlayDemo();
 	void PopupConfirmDeleteDemo();
 	void PopupConfirmDeleteFolder();
+	void PopupConfirmDeleteSelectedDemos();
 	static void ConchainDemoPlay(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainDemoSpeed(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
@@ -729,6 +766,7 @@ public:
 		PAGE_NETWORK,
 		PAGE_GHOST,
 		PAGE_UNFINISHED_MAPS,
+		PAGE_STATS,
 
 		PAGE_LENGTH,
 	};

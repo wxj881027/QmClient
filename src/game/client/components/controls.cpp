@@ -31,6 +31,8 @@ void CControls::OnReset()
 {
 	ResetInput(0);
 	ResetInput(1);
+	m_FastInputHookAction = false;
+	m_FastInputFireAction = false;
 
 	for(int &AmmoCount : m_aAmmoCount)
 		AmmoCount = 0;
@@ -264,11 +266,14 @@ int CControls::SnapInput(int *pData)
 		vec2 Pos;
 		if(g_Config.m_ClSubTickAiming && m_aMousePosOnAction[g_Config.m_ClDummy] != vec2(0.0f, 0.0f))
 		{
-			Pos = GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+			Pos = GameClient()->m_Controls.m_aMousePosOnAction[g_Config.m_ClDummy];
 			m_aMousePosOnAction[g_Config.m_ClDummy] = vec2(0.0f, 0.0f);
 		}
 		else
 			Pos = GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+
+		m_FastInputHookAction = false;
+		m_FastInputFireAction = false;
 
 		if(g_Config.m_TcScaleMouseDistance && !GameClient()->m_Snap.m_SpecInfo.m_Active)
 		{
@@ -508,7 +513,7 @@ float CControls::GetMaxMouseDistance() const
 
 bool CControls::CheckNewInput()
 {
-	bool NewInput = false;
+	bool aNewInput[NUM_DUMMIES] = {};
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
 	{
 		CNetObj_PlayerInput TestInput = m_aInputData[Dummy];
@@ -519,31 +524,54 @@ bool CControls::CheckNewInput()
 				TestInput.m_Direction = -1;
 			if(!m_aInputDirectionLeft[Dummy] && m_aInputDirectionRight[Dummy])
 				TestInput.m_Direction = 1;
-
-			if(g_Config.m_ClSubTickAiming)
-			{
-				TestInput.m_TargetX = (int)m_aMousePos[Dummy].x;
-				TestInput.m_TargetY = (int)m_aMousePos[Dummy].y;
-			}
 		}
 
 		if(m_aFastInput[Dummy].m_Direction != TestInput.m_Direction)
-			NewInput = true;
+			aNewInput[Dummy] = true;
 		if(m_aFastInput[Dummy].m_Hook != TestInput.m_Hook)
-			NewInput = true;
+			aNewInput[Dummy] = true;
 		if(m_aFastInput[Dummy].m_Fire != TestInput.m_Fire)
-			NewInput = true;
+			aNewInput[Dummy] = true;
 		if(m_aFastInput[Dummy].m_Jump != TestInput.m_Jump)
-			NewInput = true;
+			aNewInput[Dummy] = true;
 		if(m_aFastInput[Dummy].m_NextWeapon != TestInput.m_NextWeapon)
-			NewInput = true;
+			aNewInput[Dummy] = true;
 		if(m_aFastInput[Dummy].m_PrevWeapon != TestInput.m_PrevWeapon)
-			NewInput = true;
+			aNewInput[Dummy] = true;
 		if(m_aFastInput[Dummy].m_WantedWeapon != TestInput.m_WantedWeapon)
-			NewInput = true;
+			aNewInput[Dummy] = true;
+
+		bool SetMousePos = false;
+		// Keep fast input target stable until hook/fire actions are consumed.
+		if(Dummy == g_Config.m_ClDummy)
+		{
+			if(m_aFastInput[Dummy].m_Hook == 0 && TestInput.m_Hook == 1)
+			{
+				m_FastInputHookAction = true;
+				SetMousePos = true;
+			}
+			if(m_aFastInput[Dummy].m_Fire != TestInput.m_Fire && TestInput.m_Fire % 2 == 1)
+			{
+				m_FastInputFireAction = true;
+				SetMousePos = true;
+			}
+			if(!m_FastInputHookAction && !m_FastInputFireAction)
+				SetMousePos = true;
+		}
+
+		if(SetMousePos)
+		{
+			TestInput.m_TargetX = (int)m_aMousePos[Dummy].x;
+			TestInput.m_TargetY = (int)m_aMousePos[Dummy].y;
+		}
+		else
+		{
+			TestInput.m_TargetX = m_aFastInput[Dummy].m_TargetX;
+			TestInput.m_TargetY = m_aFastInput[Dummy].m_TargetY;
+		}
 
 		m_aFastInput[Dummy] = TestInput;
 	}
 
-	return NewInput;
+	return aNewInput[0] || aNewInput[1];
 }

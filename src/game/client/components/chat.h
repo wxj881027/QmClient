@@ -34,10 +34,12 @@ class CChat : public CComponent
 	// 动画常量
 	static constexpr float CHAT_ANIM_FADE_IN_DURATION = 0.3f;   // 淡入持续时间（秒）
 	static constexpr float CHAT_ANIM_FADE_OUT_DURATION = 0.5f;  // 淡出持续时间（秒）
+	static constexpr float CHAT_ANIM_FADE_OUT_START = 14.0f;    // 何时开始淡出（秒）
 	static constexpr float CHAT_ANIM_SLIDE_OFFSET = 25.0f;      // 普通消息滑入偏移量（像素）
 	static constexpr float CHAT_ANIM_HIGHLIGHT_SLIDE = 50.0f;   // 高亮/私信消息滑入偏移量
 	static constexpr float CHAT_ANIM_SLIDE_OUT_OFFSET = 60.0f;  // 淡出时向左滑出的偏移量
 	static constexpr float CHAT_ANIM_CUTOFF_DURATION = 0.3f;    // 被挤出动画平滑时间（秒）
+	static constexpr float CHAT_VISIBLE_SECONDS_NO_FOCUS = 16.0f; // 聊天折叠时保留消息时长（秒）
 
 	enum
 	{
@@ -180,8 +182,8 @@ class CChat : public CComponent
 	static float EaseOutQuad(float t);
 	static float EaseInQuad(float t);
 	static float EaseOutBack(float t);
-	float CalculateAnimationAlpha(const CLine &Line, bool ShowChat) const;
-	float CalculateAnimationOffsetX(const CLine &Line, bool ShowChat) const;
+	float CalculateAnimationAlpha(float MessageAge, bool ShowChat) const;
+	float CalculateAnimationOffsetX(float MessageAge, bool Emphasized, bool ShowChat) const;
 	static float CalculateCutOffAlpha(float CutOffT);
 	static float CalculateCutOffOffsetX(float CutOffT);
 

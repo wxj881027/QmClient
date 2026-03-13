@@ -24,6 +24,7 @@
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 
+#include <algorithm>
 #include <chrono>
 
 using namespace FontIcons;
@@ -916,27 +917,31 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	}
 }
 
-int CMenus::DemolistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
+int CMenus::DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
 {
 	CMenus *pSelf = (CMenus *)pUser;
-	if(str_comp(pInfo->m_pName, ".") == 0 ||
-		(str_comp(pInfo->m_pName, "..") == 0 && (pSelf->m_aCurrentDemoFolder[0] == '\0' || (!pSelf->m_DemolistMultipleStorages && str_comp(pSelf->m_aCurrentDemoFolder, "demos") == 0))) ||
-		(!IsDir && !str_endswith(pInfo->m_pName, ".demo")))
+	if(str_comp(pName, ".") == 0 ||
+		(str_comp(pName, "..") == 0 && (pSelf->m_aCurrentDemoFolder[0] == '\0' || (!pSelf->m_DemolistMultipleStorages && str_comp(pSelf->m_aCurrentDemoFolder, "demos") == 0))) ||
+		(!IsDir && !str_endswith(pName, ".demo")))
 	{
 		return 0;
 	}
 
 	CDemoItem Item;
-	str_copy(Item.m_aFilename, pInfo->m_pName);
+	str_copy(Item.m_aFilename, pName);
 	if(IsDir)
 	{
-		str_format(Item.m_aName, sizeof(Item.m_aName), "%s/", pInfo->m_pName);
+		str_format(Item.m_aName, sizeof(Item.m_aName), "%s/", pName);
 		Item.m_Date = 0;
+		Item.m_DateLoaded = true;
+		Item.m_DateValid = false;
 	}
 	else
 	{
-		str_truncate(Item.m_aName, sizeof(Item.m_aName), pInfo->m_pName, str_length(pInfo->m_pName) - str_length(".demo"));
-		Item.m_Date = pInfo->m_TimeModified;
+		str_truncate(Item.m_aName, sizeof(Item.m_aName), pName, str_length(pName) - str_length(".demo"));
+		Item.m_Date = 0;
+		Item.m_DateLoaded = false;
+		Item.m_DateValid = false;
 	}
 	Item.m_InfosLoaded = false;
 	Item.m_Valid = false;
@@ -951,6 +956,31 @@ int CMenus::DemolistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int Stora
 	}
 
 	return 0;
+}
+
+bool CMenus::EnsureDemoDate(CDemoItem &Item)
+{
+	if(Item.m_IsDir)
+		return false;
+	if(Item.m_DateLoaded)
+		return Item.m_DateValid;
+
+	char aBuffer[IO_MAX_PATH_LENGTH];
+	str_format(aBuffer, sizeof(aBuffer), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
+	time_t Created;
+	time_t Modified;
+	Item.m_DateValid = Storage()->RetrieveTimes(aBuffer, Item.m_StorageType, &Created, &Modified);
+	Item.m_Date = Item.m_DateValid ? Modified : 0;
+	Item.m_DateLoaded = true;
+	return Item.m_DateValid;
+}
+
+void CMenus::EnsureAllDemoDates()
+{
+	for(auto &Item : m_vDemos)
+	{
+		EnsureDemoDate(Item);
+	}
 }
 
 void CMenus::DemolistPopulate()
@@ -976,6 +1006,8 @@ void CMenus::DemolistPopulate()
 			Item.m_InfosLoaded = false;
 			Item.m_Valid = false;
 			Item.m_Date = 0;
+			Item.m_DateLoaded = true;
+			Item.m_DateValid = false;
 			Item.m_IsDir = true;
 			Item.m_IsLink = true;
 			Item.m_StorageType = IStorage::TYPE_ALL;
@@ -993,6 +1025,8 @@ void CMenus::DemolistPopulate()
 				Item.m_InfosLoaded = false;
 				Item.m_Valid = false;
 				Item.m_Date = 0;
+				Item.m_DateLoaded = true;
+				Item.m_DateValid = false;
 				Item.m_IsDir = true;
 				Item.m_IsLink = true;
 				Item.m_StorageType = StorageType;
@@ -1003,10 +1037,12 @@ void CMenus::DemolistPopulate()
 	else
 	{
 		m_DemoPopulateStartTime = time_get_nanoseconds();
-		Storage()->ListDirectoryInfo(m_DemolistStorageType, m_aCurrentDemoFolder, DemolistFetchCallback, this);
+		Storage()->ListDirectory(m_DemolistStorageType, m_aCurrentDemoFolder, DemolistFetchCallback, this);
 
 		if(g_Config.m_BrDemoFetchInfo)
 			FetchAllHeaders();
+		else if(g_Config.m_BrDemoSort == SORT_DATE)
+			EnsureAllDemoDates();
 
 		std::stable_sort(m_vDemos.begin(), m_vDemos.end());
 	}
@@ -1025,6 +1061,223 @@ void CMenus::RefreshFilteredDemos()
 	}
 }
 
+CMenus::SDemoSelectionEntry CMenus::DemoSelectionEntryFromItem(const CDemoItem &Item) const
+{
+	SDemoSelectionEntry Entry{};
+	str_copy(Entry.m_aFilename, Item.m_aFilename);
+	Entry.m_StorageType = Item.m_StorageType;
+	return Entry;
+}
+
+bool CMenus::IsDemoItemSelected(const CDemoItem &Item) const
+{
+	const SDemoSelectionEntry Entry = DemoSelectionEntryFromItem(Item);
+	return std::find(m_vDemoSelection.begin(), m_vDemoSelection.end(), Entry) != m_vDemoSelection.end();
+}
+
+bool CMenus::IsDemoItemDeletable(const CDemoItem &Item) const
+{
+	return m_aCurrentDemoFolder[0] != '\0' && Item.m_StorageType == IStorage::TYPE_SAVE && str_comp(Item.m_aFilename, "..") != 0;
+}
+
+void CMenus::SetDemoSelectionSingle(int Index)
+{
+	m_vDemoSelection.clear();
+
+	if(Index < 0 || Index >= (int)m_vpFilteredDemos.size())
+	{
+		m_DemolistSelectedIndex = -1;
+		m_DemoSelectionAnchorIndex = -1;
+		m_aCurrentDemoSelectionName[0] = '\0';
+		return;
+	}
+
+	m_DemolistSelectedIndex = Index;
+	m_vDemoSelection.push_back(DemoSelectionEntryFromItem(*m_vpFilteredDemos[Index]));
+	m_DemoSelectionAnchorIndex = Index;
+	str_copy(m_aCurrentDemoSelectionName, m_vpFilteredDemos[Index]->m_aName);
+}
+
+void CMenus::ToggleDemoSelection(int Index)
+{
+	if(Index < 0 || Index >= (int)m_vpFilteredDemos.size())
+		return;
+
+	const SDemoSelectionEntry Entry = DemoSelectionEntryFromItem(*m_vpFilteredDemos[Index]);
+	auto It = std::find(m_vDemoSelection.begin(), m_vDemoSelection.end(), Entry);
+	if(It != m_vDemoSelection.end())
+		m_vDemoSelection.erase(It);
+	else
+		m_vDemoSelection.push_back(Entry);
+
+	m_DemolistSelectedIndex = Index;
+	m_DemoSelectionAnchorIndex = Index;
+
+	if(m_vDemoSelection.empty())
+	{
+		m_DemolistSelectedIndex = -1;
+		m_aCurrentDemoSelectionName[0] = '\0';
+		return;
+	}
+
+	if(m_DemolistSelectedIndex >= 0 && !IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]))
+	{
+		for(int DemoIndex = 0; DemoIndex < (int)m_vpFilteredDemos.size(); ++DemoIndex)
+		{
+			if(IsDemoItemSelected(*m_vpFilteredDemos[DemoIndex]))
+			{
+				m_DemolistSelectedIndex = DemoIndex;
+				break;
+			}
+		}
+	}
+
+	if(m_DemolistSelectedIndex >= 0)
+		str_copy(m_aCurrentDemoSelectionName, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aName);
+}
+
+void CMenus::SelectDemoRange(int StartIndex, int EndIndex, bool Additive)
+{
+	if(m_vpFilteredDemos.empty())
+		return;
+
+	StartIndex = std::clamp(StartIndex, 0, (int)m_vpFilteredDemos.size() - 1);
+	EndIndex = std::clamp(EndIndex, 0, (int)m_vpFilteredDemos.size() - 1);
+
+	if(!Additive)
+		m_vDemoSelection.clear();
+
+	const int RangeStart = minimum(StartIndex, EndIndex);
+	const int RangeEnd = maximum(StartIndex, EndIndex);
+	for(int DemoIndex = RangeStart; DemoIndex <= RangeEnd; ++DemoIndex)
+	{
+		const SDemoSelectionEntry Entry = DemoSelectionEntryFromItem(*m_vpFilteredDemos[DemoIndex]);
+		if(std::find(m_vDemoSelection.begin(), m_vDemoSelection.end(), Entry) == m_vDemoSelection.end())
+			m_vDemoSelection.push_back(Entry);
+	}
+
+	m_DemolistSelectedIndex = EndIndex;
+	str_copy(m_aCurrentDemoSelectionName, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aName);
+}
+
+void CMenus::SelectAllDemos()
+{
+	m_vDemoSelection.clear();
+
+	for(const auto *pDemo : m_vpFilteredDemos)
+		m_vDemoSelection.push_back(DemoSelectionEntryFromItem(*pDemo));
+
+	if(m_vDemoSelection.empty())
+	{
+		m_DemolistSelectedIndex = -1;
+		m_DemoSelectionAnchorIndex = -1;
+		m_aCurrentDemoSelectionName[0] = '\0';
+		return;
+	}
+
+	if(m_DemolistSelectedIndex < 0 || m_DemolistSelectedIndex >= (int)m_vpFilteredDemos.size())
+		m_DemolistSelectedIndex = 0;
+
+	str_copy(m_aCurrentDemoSelectionName, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aName);
+	m_DemoSelectionAnchorIndex = m_DemolistSelectedIndex;
+}
+
+void CMenus::SyncDemoSelection()
+{
+	const auto &&SelectionEntryExistsInList = [&](const SDemoSelectionEntry &SelectionEntry) {
+		for(const auto *pDemo : m_vpFilteredDemos)
+		{
+			if(pDemo->m_StorageType == SelectionEntry.m_StorageType && str_comp(pDemo->m_aFilename, SelectionEntry.m_aFilename) == 0)
+				return true;
+		}
+		return false;
+	};
+
+	m_vDemoSelection.erase(std::remove_if(m_vDemoSelection.begin(), m_vDemoSelection.end(), [&](const SDemoSelectionEntry &SelectionEntry) {
+				      return !SelectionEntryExistsInList(SelectionEntry);
+			      }),
+		m_vDemoSelection.end());
+
+	if(m_vpFilteredDemos.empty())
+	{
+		m_vDemoSelection.clear();
+		m_DemolistSelectedIndex = -1;
+		m_DemoSelectionAnchorIndex = -1;
+		m_aCurrentDemoSelectionName[0] = '\0';
+		return;
+	}
+
+	const auto &&IsValidIndex = [&](int Index) { return Index >= 0 && Index < (int)m_vpFilteredDemos.size(); };
+
+	if(m_vDemoSelection.empty())
+	{
+		if(!IsValidIndex(m_DemolistSelectedIndex))
+			m_DemolistSelectedIndex = 0;
+		if(IsValidIndex(m_DemolistSelectedIndex))
+			m_vDemoSelection.push_back(DemoSelectionEntryFromItem(*m_vpFilteredDemos[m_DemolistSelectedIndex]));
+	}
+	else if(!IsValidIndex(m_DemolistSelectedIndex) || !IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]))
+	{
+		m_DemolistSelectedIndex = -1;
+		for(int DemoIndex = 0; DemoIndex < (int)m_vpFilteredDemos.size(); ++DemoIndex)
+		{
+			if(IsDemoItemSelected(*m_vpFilteredDemos[DemoIndex]))
+			{
+				m_DemolistSelectedIndex = DemoIndex;
+				break;
+			}
+		}
+	}
+
+	if(IsValidIndex(m_DemolistSelectedIndex))
+		str_copy(m_aCurrentDemoSelectionName, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aName);
+	else
+		m_aCurrentDemoSelectionName[0] = '\0';
+
+	if(!IsValidIndex(m_DemoSelectionAnchorIndex) ||
+		!IsDemoItemSelected(*m_vpFilteredDemos[m_DemoSelectionAnchorIndex]))
+	{
+		m_DemoSelectionAnchorIndex = m_DemolistSelectedIndex;
+	}
+}
+
+int CMenus::NumSelectedDemos() const
+{
+	int NumSelected = 0;
+	for(const auto *pDemo : m_vpFilteredDemos)
+	{
+		if(IsDemoItemSelected(*pDemo))
+			++NumSelected;
+	}
+	return NumSelected;
+}
+
+int CMenus::NumSelectedDeletableDemos() const
+{
+	int NumSelectedDeletable = 0;
+	for(const auto *pDemo : m_vpFilteredDemos)
+	{
+		if(IsDemoItemSelected(*pDemo) && IsDemoItemDeletable(*pDemo))
+			++NumSelectedDeletable;
+	}
+	return NumSelectedDeletable;
+}
+
+void CMenus::PrepareDemoDeleteTargetsFromSelection()
+{
+	m_vDemoDeleteTargets.clear();
+	for(const auto *pDemo : m_vpFilteredDemos)
+	{
+		if(!IsDemoItemSelected(*pDemo) || !IsDemoItemDeletable(*pDemo))
+			continue;
+
+		SDemoDeleteTarget Target{};
+		Target.m_Selection = DemoSelectionEntryFromItem(*pDemo);
+		Target.m_IsDir = pDemo->m_IsDir;
+		m_vDemoDeleteTargets.push_back(Target);
+	}
+}
+
 void CMenus::DemolistOnUpdate(bool Reset)
 {
 	if(Reset)
@@ -1039,6 +1292,8 @@ void CMenus::DemolistOnUpdate(bool Reset)
 			m_DemolistSelectedIndex = 0;
 			str_copy(m_aCurrentDemoSelectionName, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aName);
 		}
+		m_vDemoSelection.clear();
+		m_DemoSelectionAnchorIndex = -1;
 	}
 	else
 	{
@@ -1057,6 +1312,8 @@ void CMenus::DemolistOnUpdate(bool Reset)
 			}
 		}
 	}
+
+	SyncDemoSelection();
 
 	if(m_DemolistSelectedIndex >= 0)
 		m_DemolistSelectedReveal = true;
@@ -1087,6 +1344,8 @@ void CMenus::FetchAllHeaders()
 	{
 		FetchHeader(Item);
 	}
+	if(g_Config.m_BrDemoSort == SORT_DATE)
+		EnsureAllDemoDates();
 	std::stable_sort(m_vDemos.begin(), m_vDemos.end());
 }
 
@@ -1221,6 +1480,8 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 					g_Config.m_BrDemoSortOrder = 0;
 				g_Config.m_BrDemoSort = Col.m_Sort;
 				// Don't rescan in order to keep fetched headers, just resort
+				if(g_Config.m_BrDemoSort == SORT_DATE)
+					EnsureAllDemoDates();
 				std::stable_sort(m_vDemos.begin(), m_vDemos.end());
 				DemolistOnUpdate(false);
 			}
@@ -1241,9 +1502,14 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	{
 		ItemIndex++;
 
-		const CListboxItem ListItem = s_ListBox.DoNextItem(pItem, ItemIndex == m_DemolistSelectedIndex);
+		const bool Focused = ItemIndex == m_DemolistSelectedIndex;
+		const bool Selected = IsDemoItemSelected(*pItem);
+		const CListboxItem ListItem = s_ListBox.DoNextItem(pItem, Focused);
 		if(!ListItem.m_Visible)
 			continue;
+
+		if(Selected && !Focused)
+			ListItem.m_Rect.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
 
 		for(const auto &Col : s_aCols)
 		{
@@ -1301,23 +1567,43 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 			}
 			else if(Col.m_Id == COL_DATE && !pItem->m_IsDir)
 			{
-				str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
+				if(EnsureDemoDate(*pItem))
+					str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
+				else
+					str_copy(aBuf, "-");
 				Button.VMargin(4.0f, &Button);
 				Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
 			}
 		}
 	}
 
+	const int OldSelected = m_DemolistSelectedIndex;
+	const bool WasItemSelected = s_ListBox.WasItemSelected();
 	const int NewSelected = s_ListBox.DoEnd();
-	if(NewSelected != m_DemolistSelectedIndex)
+	if(WasItemSelected && NewSelected >= 0)
 	{
-		m_DemolistSelectedIndex = NewSelected;
-		if(m_DemolistSelectedIndex >= 0)
-			str_copy(m_aCurrentDemoSelectionName, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aName);
-		DemolistOnUpdate(false);
+		if(Input()->ShiftIsPressed())
+		{
+			const int Anchor = m_DemoSelectionAnchorIndex >= 0 ? m_DemoSelectionAnchorIndex : (OldSelected >= 0 ? OldSelected : NewSelected);
+			SelectDemoRange(Anchor, NewSelected, Input()->ModifierIsPressed());
+			if(m_DemoSelectionAnchorIndex < 0)
+				m_DemoSelectionAnchorIndex = Anchor;
+		}
+		else if(Input()->ModifierIsPressed())
+		{
+			ToggleDemoSelection(NewSelected);
+		}
+		else
+		{
+			SetDemoSelectionSingle(NewSelected);
+		}
+	}
+	else if(NewSelected != OldSelected)
+	{
+		SetDemoSelectionSingle(NewSelected);
 	}
 
-	WasListboxItemActivated = s_ListBox.WasItemActivated();
+	WasListboxItemActivated = s_ListBox.WasItemActivated() && NumSelectedDemos() == 1;
 }
 
 void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
@@ -1328,12 +1614,22 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 	Contents.Margin(5.0f, &Contents);
 
 	const float FontSize = 12.0f;
-	CDemoItem *pItem = m_DemolistSelectedIndex >= 0 ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
+	const int NumSelected = NumSelectedDemos();
+	CDemoItem *pItem = nullptr;
+	if(NumSelected == 1 &&
+		m_DemolistSelectedIndex >= 0 &&
+		m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
+		IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]))
+	{
+		pItem = m_vpFilteredDemos[m_DemolistSelectedIndex];
+	}
 
 	Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_T, 5.0f);
 	const char *pHeaderLabel;
-	if(pItem == nullptr)
+	if(NumSelected == 0)
 		pHeaderLabel = Localize("No demo selected");
+	else if(NumSelected > 1)
+		pHeaderLabel = Localize("Selection");
 	else if(str_comp(pItem->m_aFilename, "..") == 0)
 		pHeaderLabel = Localize("Parent Folder");
 	else if(pItem->m_IsLink)
@@ -1346,6 +1642,14 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 		pHeaderLabel = Localize("Demo");
 	Ui()->DoLabel(&Header, pHeaderLabel, FontSize + 2.0f, TEXTALIGN_MC);
 
+	if(NumSelected > 1)
+	{
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), Localize("%d items selected"), NumSelected);
+		Ui()->DoLabel(&Contents, aBuf, FontSize + 1.0f, TEXTALIGN_ML);
+		return;
+	}
+
 	if(pItem == nullptr || pItem->m_IsDir)
 		return;
 
@@ -1357,7 +1661,10 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 	Ui()->DoLabel(&Left, Localize("Created"), FontSize, TEXTALIGN_ML);
 	if(pItem->m_Valid)
 		Ui()->DoLabel(&Right, Localize("Size"), FontSize, TEXTALIGN_ML);
-	str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
+	if(EnsureDemoDate(*pItem))
+		str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
+	else
+		str_copy(aBuf, "-");
 	Contents.HSplitTop(18.0f, &Left, &Contents);
 	Left.VSplitLeft(Contents.w / 2.f + 30.f, &Left, &Right);
 	Ui()->DoLabel(&Left, aBuf, FontSize - 1.0f, TEXTALIGN_ML);
@@ -1475,6 +1782,19 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		}
 	}
 
+	if(!Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive() && Input()->ModifierIsPressed() && Input()->KeyPress(KEY_A))
+	{
+		SelectAllDemos();
+	}
+
+	const bool HasSingleSelection =
+		NumSelectedDemos() == 1 &&
+		m_DemolistSelectedIndex >= 0 &&
+		m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
+		IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
+	CDemoItem *pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
+	const int NumSelectedDeletable = NumSelectedDeletableDemos();
+
 	// refresh button
 	{
 		CUIRect RefreshButton;
@@ -1505,7 +1825,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 	}
 
 	// demos directory button
-	if(m_DemolistSelectedIndex >= 0 && m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType != IStorage::TYPE_ALL)
+	if(HasSingleSelection && pSelectedItem->m_StorageType != IStorage::TYPE_ALL)
 	{
 		CUIRect DemosDirectoryButton;
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h * 10.0f, &DemosDirectoryButton, &ButtonBarBottom);
@@ -1514,27 +1834,27 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		if(DoButton_Menu(&s_DemosDirectoryButton, Localize("Demos directory"), 0, &DemosDirectoryButton))
 		{
 			char aBuf[IO_MAX_PATH_LENGTH];
-			Storage()->GetCompletePath(m_DemolistSelectedIndex >= 0 ? m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType : IStorage::TYPE_SAVE, m_aCurrentDemoFolder[0] == '\0' ? "demos" : m_aCurrentDemoFolder, aBuf, sizeof(aBuf));
+			Storage()->GetCompletePath(pSelectedItem->m_StorageType, m_aCurrentDemoFolder[0] == '\0' ? "demos" : m_aCurrentDemoFolder, aBuf, sizeof(aBuf));
 			Client()->ViewFile(aBuf);
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, Localize("Open the directory that contains the demo files"));
 	}
 
 	// play/open button
-	if(m_DemolistSelectedIndex >= 0)
+	if(HasSingleSelection)
 	{
 		CUIRect PlayButton;
 		ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &PlayButton);
 		ButtonBarBottom.VSplitRight(ButtonBarBottom.h, &ButtonBarBottom, nullptr);
 		SetIconMode(true);
 		static CButtonContainer s_PlayButton;
-		if(DoButton_Menu(&s_PlayButton, (m_DemolistSelectedIndex >= 0 && m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir) ? FONT_ICON_FOLDER_OPEN : FONT_ICON_PLAY, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
+		if(DoButton_Menu(&s_PlayButton, pSelectedItem->m_IsDir ? FONT_ICON_FOLDER_OPEN : FONT_ICON_PLAY, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 		{
 			SetIconMode(false);
-			if(m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir) // folder
+			if(pSelectedItem->m_IsDir) // folder
 			{
 				m_DemoSearchInput.Clear();
-				const bool ParentFolder = str_comp(m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename, "..") == 0;
+				const bool ParentFolder = str_comp(pSelectedItem->m_aFilename, "..") == 0;
 				if(ParentFolder) // parent folder
 				{
 					str_copy(m_aCurrentDemoSelectionName, fs_filename(m_aCurrentDemoFolder));
@@ -1558,8 +1878,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 					if(m_aCurrentDemoFolder[0] != '\0')
 						str_append(m_aCurrentDemoFolder, "/");
 					else
-						m_DemolistStorageType = m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType;
-					str_append(m_aCurrentDemoFolder, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
+						m_DemolistStorageType = pSelectedItem->m_StorageType;
+					str_append(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
 				}
 				DemolistPopulate();
 				DemolistOnUpdate(!ParentFolder);
@@ -1574,75 +1894,92 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			}
 		}
 		SetIconMode(false);
+	}
 
-		if(m_aCurrentDemoFolder[0] != '\0')
+	if(m_aCurrentDemoFolder[0] != '\0')
+	{
+		if(HasSingleSelection && IsDemoItemDeletable(*pSelectedItem))
 		{
-			if(str_comp(m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename, "..") != 0 && m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType == IStorage::TYPE_SAVE)
+			// rename button
+			CUIRect RenameButton;
+			ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &RenameButton);
+			ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
+			SetIconMode(true);
+			static CButtonContainer s_RenameButton;
+			if(DoButton_Menu(&s_RenameButton, FONT_ICON_PENCIL, 0, &RenameButton))
 			{
-				// rename button
-				CUIRect RenameButton;
-				ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &RenameButton);
-				ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
-				SetIconMode(true);
-				static CButtonContainer s_RenameButton;
-				if(DoButton_Menu(&s_RenameButton, FONT_ICON_PENCIL, 0, &RenameButton))
-				{
-					SetIconMode(false);
-					m_Popup = POPUP_RENAME_DEMO;
-					if(m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir)
-					{
-						m_DemoRenameInput.Set(m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
-					}
-					else
-					{
-						char aNameWithoutExt[IO_MAX_PATH_LENGTH];
-						fs_split_file_extension(m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
-						m_DemoRenameInput.Set(aNameWithoutExt);
-					}
-					Ui()->SetActiveItem(&m_DemoRenameInput);
-					return;
-				}
-
-				// delete button
-				static CButtonContainer s_DeleteButton;
-				CUIRect DeleteButton;
-				ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &DeleteButton);
-				ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
-				if(DoButton_Menu(&s_DeleteButton, FONT_ICON_TRASH, 0, &DeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE) || (Input()->KeyPress(KEY_D) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
-				{
-					SetIconMode(false);
-					char aBuf[128 + IO_MAX_PATH_LENGTH];
-					str_format(aBuf, sizeof(aBuf), m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir ? Localize("Are you sure that you want to delete the folder '%s'?") : Localize("Are you sure that you want to delete the demo '%s'?"), m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
-					PopupConfirm(m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir ? Localize("Delete folder") : Localize("Delete demo"), aBuf, Localize("Yes"), Localize("No"), m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir ? &CMenus::PopupConfirmDeleteFolder : &CMenus::PopupConfirmDeleteDemo);
-					return;
-				}
 				SetIconMode(false);
+				m_Popup = POPUP_RENAME_DEMO;
+				if(pSelectedItem->m_IsDir)
+				{
+					m_DemoRenameInput.Set(pSelectedItem->m_aFilename);
+				}
+				else
+				{
+					char aNameWithoutExt[IO_MAX_PATH_LENGTH];
+					fs_split_file_extension(pSelectedItem->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
+					m_DemoRenameInput.Set(aNameWithoutExt);
+				}
+				Ui()->SetActiveItem(&m_DemoRenameInput);
+				return;
 			}
+			SetIconMode(false);
+		}
+
+		if(NumSelectedDeletable > 0)
+		{
+			static CButtonContainer s_DeleteButton;
+			CUIRect DeleteButton;
+			ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &DeleteButton);
+			ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
+			SetIconMode(true);
+			if(DoButton_Menu(&s_DeleteButton, FONT_ICON_TRASH, 0, &DeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE) || (Input()->KeyPress(KEY_D) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
+			{
+				SetIconMode(false);
+				PrepareDemoDeleteTargetsFromSelection();
+				if(m_vDemoDeleteTargets.empty())
+					return;
+
+				if(m_vDemoDeleteTargets.size() == 1)
+				{
+					char aBuf[128 + IO_MAX_PATH_LENGTH];
+					str_format(aBuf, sizeof(aBuf), m_vDemoDeleteTargets[0].m_IsDir ? Localize("Are you sure that you want to delete the folder '%s'?") : Localize("Are you sure that you want to delete the demo '%s'?"), m_vDemoDeleteTargets[0].m_Selection.m_aFilename);
+					PopupConfirm(m_vDemoDeleteTargets[0].m_IsDir ? Localize("Delete folder") : Localize("Delete demo"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSelectedDemos);
+				}
+				else
+				{
+					char aBuf[128];
+					str_format(aBuf, sizeof(aBuf), Localize("Are you sure that you want to delete %d selected items?"), (int)m_vDemoDeleteTargets.size());
+					PopupConfirm(Localize("Delete selected items"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSelectedDemos);
+				}
+				return;
+			}
+			SetIconMode(false);
+		}
 
 #if defined(CONF_VIDEORECORDER)
-			// render demo button
-			if(!m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir)
+		// render demo button
+		if(HasSingleSelection && !pSelectedItem->m_IsDir)
+		{
+			CUIRect RenderButton;
+			ButtonBarTop.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarTop, &RenderButton);
+			ButtonBarTop.VSplitRight(ButtonBarBottom.h, &ButtonBarTop, nullptr);
+			SetIconMode(true);
+			static CButtonContainer s_RenderButton;
+			if(DoButton_Menu(&s_RenderButton, FONT_ICON_VIDEO, 0, &RenderButton) || (Input()->KeyPress(KEY_R) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 			{
-				CUIRect RenderButton;
-				ButtonBarTop.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarTop, &RenderButton);
-				ButtonBarTop.VSplitRight(ButtonBarBottom.h, &ButtonBarTop, nullptr);
-				SetIconMode(true);
-				static CButtonContainer s_RenderButton;
-				if(DoButton_Menu(&s_RenderButton, FONT_ICON_VIDEO, 0, &RenderButton) || (Input()->KeyPress(KEY_R) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
-				{
-					SetIconMode(false);
-					m_Popup = POPUP_RENDER_DEMO;
-					m_StartPaused = false;
-					char aNameWithoutExt[IO_MAX_PATH_LENGTH];
-					fs_split_file_extension(m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
-					m_DemoRenderInput.Set(aNameWithoutExt);
-					Ui()->SetActiveItem(&m_DemoRenderInput);
-					return;
-				}
 				SetIconMode(false);
+				m_Popup = POPUP_RENDER_DEMO;
+				m_StartPaused = false;
+				char aNameWithoutExt[IO_MAX_PATH_LENGTH];
+				fs_split_file_extension(pSelectedItem->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
+				m_DemoRenderInput.Set(aNameWithoutExt);
+				Ui()->SetActiveItem(&m_DemoRenderInput);
+				return;
 			}
-#endif
+			SetIconMode(false);
 		}
+#endif
 	}
 }
 
@@ -1664,38 +2001,87 @@ void CMenus::PopupConfirmPlayDemo()
 	}
 }
 
-void CMenus::PopupConfirmDeleteDemo()
+void CMenus::PopupConfirmDeleteSelectedDemos()
 {
-	char aBuf[IO_MAX_PATH_LENGTH];
-	str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
-	if(Storage()->RemoveFile(aBuf, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType))
+	if(m_vDemoDeleteTargets.empty())
+		return;
+
+	int NumDeleted = 0;
+	int NumFailed = 0;
+	bool FirstFailedWasDir = false;
+	char aFirstFailedName[IO_MAX_PATH_LENGTH] = "";
+	for(const auto &DeleteTarget : m_vDemoDeleteTargets)
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		str_format(aPath, sizeof(aPath), "%s/%s", m_aCurrentDemoFolder, DeleteTarget.m_Selection.m_aFilename);
+
+		const bool Deleted = DeleteTarget.m_IsDir ? Storage()->RemoveFolder(aPath, DeleteTarget.m_Selection.m_StorageType) : Storage()->RemoveFile(aPath, DeleteTarget.m_Selection.m_StorageType);
+		if(Deleted)
+		{
+			++NumDeleted;
+		}
+		else
+		{
+			if(NumFailed == 0)
+			{
+				FirstFailedWasDir = DeleteTarget.m_IsDir;
+				str_copy(aFirstFailedName, DeleteTarget.m_Selection.m_aFilename);
+			}
+			++NumFailed;
+		}
+	}
+
+	m_vDemoDeleteTargets.clear();
+
+	if(NumDeleted > 0)
 	{
 		DemolistPopulate();
 		DemolistOnUpdate(false);
 	}
+
+	if(NumFailed == 0)
+		return;
+
+	char aError[256 + IO_MAX_PATH_LENGTH];
+	if(NumFailed == 1)
+	{
+		str_format(aError, sizeof(aError), FirstFailedWasDir ? Localize("Unable to delete the folder '%s'. Make sure it's empty first.") : Localize("Unable to delete the demo '%s'"), aFirstFailedName);
+	}
+	else if(NumDeleted == 0)
+	{
+		str_format(aError, sizeof(aError), Localize("Unable to delete %d selected items. The first failing item was '%s'."), NumFailed, aFirstFailedName);
+	}
 	else
 	{
-		char aError[128 + IO_MAX_PATH_LENGTH];
-		str_format(aError, sizeof(aError), Localize("Unable to delete the demo '%s'"), m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
-		PopupMessage(Localize("Error"), aError, Localize("Ok"));
+		str_format(aError, sizeof(aError), Localize("%d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'."), NumDeleted, NumFailed, aFirstFailedName);
 	}
+	PopupMessage(Localize("Error"), aError, Localize("Ok"));
+}
+
+void CMenus::PopupConfirmDeleteDemo()
+{
+	m_vDemoDeleteTargets.clear();
+	if(m_DemolistSelectedIndex >= 0 && m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size())
+	{
+		SDemoDeleteTarget Target{};
+		Target.m_Selection = DemoSelectionEntryFromItem(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
+		Target.m_IsDir = false;
+		m_vDemoDeleteTargets.push_back(Target);
+	}
+	PopupConfirmDeleteSelectedDemos();
 }
 
 void CMenus::PopupConfirmDeleteFolder()
 {
-	char aBuf[IO_MAX_PATH_LENGTH];
-	str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
-	if(Storage()->RemoveFolder(aBuf, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType))
+	m_vDemoDeleteTargets.clear();
+	if(m_DemolistSelectedIndex >= 0 && m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size())
 	{
-		DemolistPopulate();
-		DemolistOnUpdate(false);
+		SDemoDeleteTarget Target{};
+		Target.m_Selection = DemoSelectionEntryFromItem(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
+		Target.m_IsDir = true;
+		m_vDemoDeleteTargets.push_back(Target);
 	}
-	else
-	{
-		char aError[128 + IO_MAX_PATH_LENGTH];
-		str_format(aError, sizeof(aError), Localize("Unable to delete the folder '%s'. Make sure it's empty first."), m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
-		PopupMessage(Localize("Error"), aError, Localize("Ok"));
-	}
+	PopupConfirmDeleteSelectedDemos();
 }
 
 void CMenus::ConchainDemoPlay(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

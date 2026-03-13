@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -690,18 +691,25 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Ui()->DoLabel(&Label, TCLocalize("Visual"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	static std::vector<const char *> s_FontDropDownNames = {};
+	static std::vector<std::string> s_FontDropDownNamesOwned;
+	static std::vector<const char *> s_FontDropDownNames;
 	static CUi::SDropDownState s_FontDropDownState;
 	static CScrollRegion s_FontDropDownScrollRegion;
 	s_FontDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_FontDropDownScrollRegion;
 	s_FontDropDownState.m_SelectionPopupContext.m_SpecialFontRenderMode = true;
-	int FontSelectedOld = -1;
-	for(size_t i = 0; i < TextRender()->GetCustomFaces()->size(); ++i)
+	const auto &CustomFaces = *TextRender()->GetCustomFaces();
+	if(s_FontDropDownNamesOwned != CustomFaces)
 	{
-		if(s_FontDropDownNames.size() != TextRender()->GetCustomFaces()->size())
-			s_FontDropDownNames.push_back(TextRender()->GetCustomFaces()->at(i).c_str());
-
-		if(str_find_nocase(g_Config.m_TcCustomFont, TextRender()->GetCustomFaces()->at(i).c_str()))
+		s_FontDropDownNamesOwned = CustomFaces;
+		s_FontDropDownNames.clear();
+		s_FontDropDownNames.reserve(s_FontDropDownNamesOwned.size());
+		for(const auto &FaceName : s_FontDropDownNamesOwned)
+			s_FontDropDownNames.push_back(FaceName.c_str());
+	}
+	int FontSelectedOld = -1;
+	for(size_t i = 0; i < CustomFaces.size(); ++i)
+	{
+		if(str_find_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()))
 			FontSelectedOld = i;
 	}
 	CUIRect FontDropDownRect, FontDirectory;
@@ -712,7 +720,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 
 	Ui()->DoLabel(&Label, TCLocalize("Custom Font: "), FontSize, TEXTALIGN_ML);
 	const int FontSelectedNew = Ui()->DoDropDown(&FontDropDownRect, FontSelectedOld, s_FontDropDownNames.data(), s_FontDropDownNames.size(), s_FontDropDownState);
-	if(FontSelectedOld != FontSelectedNew)
+	if(FontSelectedOld != FontSelectedNew && FontSelectedNew >= 0 && (size_t)FontSelectedNew < s_FontDropDownNames.size())
 	{
 		str_copy(g_Config.m_TcCustomFont, s_FontDropDownNames[FontSelectedNew]);
 		TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
@@ -846,6 +854,8 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Ui()->DoLabel(&Label, TCLocalize("Anti Latency Tools"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
+	Column.HSplitTop(LineSize, &Button, &Column);
+	Ui()->DoScrollbarOption(&g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, TCLocalize("Prediction Margin"), 10, 75, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRemoveAnti, TCLocalize("Remove prediction & antiping in freeze"), &g_Config.m_TcRemoveAnti, &Column, LineSize);
 	if(g_Config.m_TcRemoveAnti)
 	{
@@ -2548,6 +2558,14 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 		}
 	};
 
+	auto ApplySelectedProfile = [&]() {
+		if(s_SelectedProfile != -1 && s_SelectedProfile < (int)GameClient()->m_SkinProfiles.m_Profiles.size())
+		{
+			const CProfile LoadProfile = GameClient()->m_SkinProfiles.m_Profiles[s_SelectedProfile];
+			GameClient()->m_SkinProfiles.ApplyProfile(m_Dummy, LoadProfile);
+		}
+	};
+
 	{
 		CUIRect Top;
 		MainView.HSplitTop(160.0f, &Top, &MainView);
@@ -2605,13 +2623,7 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 			Actions.HSplitTop(30.0f, &Button, &Actions);
 			static CButtonContainer s_LoadButton;
 			if(DoButton_Menu(&s_LoadButton, TCLocalize("Load"), 0, &Button))
-			{
-				if(s_SelectedProfile != -1 && s_SelectedProfile < (int)GameClient()->m_SkinProfiles.m_Profiles.size())
-				{
-					CProfile LoadProfile = GameClient()->m_SkinProfiles.m_Profiles[s_SelectedProfile];
-					GameClient()->m_SkinProfiles.ApplyProfile(m_Dummy, LoadProfile);
-				}
-			}
+				ApplySelectedProfile();
 			Actions.HSplitTop(5.0f, nullptr, &Actions);
 
 			Actions.HSplitTop(30.0f, &Button, &Actions);
@@ -2714,6 +2726,8 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 	}
 
 	s_SelectedProfile = s_ListBox.DoEnd();
+	if(s_ListBox.WasItemActivated())
+		ApplySelectedProfile();
 }
 
 void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
@@ -2873,19 +2887,20 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 	}
 
 	const int FlagMask = CFGFLAG_CLIENT;
-
-	struct SEntry
+	static std::vector<const SConfigVariable *> s_vAllClientVars;
+	if(s_vAllClientVars.empty())
 	{
-		const SConfigVariable *m_pVar;
-	};
-	std::vector<SEntry> vEntries;
-	vEntries.reserve(256);
-
-	auto Collector = [](const SConfigVariable *pVar, void *pUserData) {
-		auto *pVec = static_cast<std::vector<SEntry> *>(pUserData);
-		pVec->push_back({pVar});
-	};
-	ConfigManager()->PossibleConfigVariables("", FlagMask, Collector, &vEntries);
+		auto Collector = [](const SConfigVariable *pVar, void *pUserData) {
+			auto *pVec = static_cast<std::vector<const SConfigVariable *> *>(pUserData);
+			pVec->push_back(pVar);
+		};
+		ConfigManager()->PossibleConfigVariables("", FlagMask, Collector, &s_vAllClientVars);
+		std::sort(s_vAllClientVars.begin(), s_vAllClientVars.end(), [](const SConfigVariable *a, const SConfigVariable *b) {
+			if(a->m_ConfigDomain != b->m_ConfigDomain)
+				return a->m_ConfigDomain < b->m_ConfigDomain;
+			return str_comp(a->m_pScriptName, b->m_pScriptName) < 0;
+		});
+	}
 
 	auto DomainEnabled = [&](ConfigDomain Domain) {
 		if(Domain == ConfigDomain::DDNET)
@@ -2924,10 +2939,9 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 	};
 
 	std::vector<const SConfigVariable *> vpFiltered;
-	vpFiltered.reserve(vEntries.size());
-	for(const auto &E : vEntries)
+	vpFiltered.reserve(s_vAllClientVars.size());
+	for(const SConfigVariable *pVar : s_vAllClientVars)
 	{
-		const SConfigVariable *pVar = E.m_pVar;
 		if(!DomainEnabled(pVar->m_ConfigDomain))
 			continue;
 		if(g_Config.m_TcUiOnlyModified && IsEffectiveDefaultVar(pVar))
@@ -2941,12 +2955,6 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 		}
 		vpFiltered.push_back(pVar);
 	}
-
-	std::sort(vpFiltered.begin(), vpFiltered.end(), [](const SConfigVariable *a, const SConfigVariable *b) {
-		if(a->m_ConfigDomain != b->m_ConfigDomain)
-			return a->m_ConfigDomain < b->m_ConfigDomain;
-		return str_comp(a->m_pScriptName, b->m_pScriptName) < 0;
-	});
 
 	static CScrollRegion s_ScrollRegion;
 	vec2 ScrollOffset(0.0f, 0.0f);
@@ -3298,23 +3306,26 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		Graphics()->WrapNormal();
 	};
 
+	// Avoid repeatedly scanning every key/modifier combination for each bind row.
+	std::unordered_map<std::string, CBindSlot> CommandBindCache;
+	CommandBindCache.reserve(64);
+	for(int Mod = 0; Mod < KeyModifier::COMBINATION_COUNT; ++Mod)
+	{
+		for(int KeyId = 0; KeyId < KEY_LAST; ++KeyId)
+		{
+			const char *pBind = GameClient()->m_Binds.Get(KeyId, Mod);
+			if(!pBind[0])
+				continue;
+			CommandBindCache.try_emplace(pBind, KeyId, Mod);
+		}
+	}
+
 	CUIRect Row, LabelCol, ControlCol, CardContent;
 	auto DoKeyBindRow = [&](CUIRect &Content, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pLabel, const char *pCommand) {
 		CBindSlot Bind(KEY_UNKNOWN, KeyModifier::NONE);
-		for(int Mod = 0; Mod < KeyModifier::COMBINATION_COUNT; ++Mod)
-		{
-			for(int KeyId = 0; KeyId < KEY_LAST; ++KeyId)
-			{
-				const char *pBind = GameClient()->m_Binds.Get(KeyId, Mod);
-				if(!pBind[0])
-					continue;
-				if(str_comp(pBind, pCommand) == 0)
-				{
-					Bind.m_Key = KeyId;
-					Bind.m_ModifierMask = Mod;
-				}
-			}
-		}
+		const auto CurrentBindIt = CommandBindCache.find(pCommand);
+		if(CurrentBindIt != CommandBindCache.end())
+			Bind = CurrentBindIt->second;
 
 		CUIRect BindRow, BindLabel, BindKey;
 		Content.HSplitTop(LG_LineHeight, &BindRow, &Content);
@@ -3327,7 +3338,14 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			if(Bind.m_Key != KEY_UNKNOWN)
 				GameClient()->m_Binds.Bind(Bind.m_Key, "", false, Bind.m_ModifierMask);
 			if(Result.m_Bind.m_Key != KEY_UNKNOWN)
+			{
 				GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, pCommand, false, Result.m_Bind.m_ModifierMask);
+				CommandBindCache.insert_or_assign(std::string(pCommand), Result.m_Bind);
+			}
+			else
+			{
+				CommandBindCache.erase(pCommand);
+			}
 		}
 
 		Content.HSplitTop(LG_LineSpacing, nullptr, &Content);
@@ -3401,6 +3419,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	static std::array<SQmModuleEntry, kQmModuleCount> s_aQmModuleLayout = s_aQmModuleDefaults;
 	static char s_aQmModuleLayoutConfigCache[sizeof(g_Config.m_QmSidebarCardOrder)] = {};
 	static bool s_QmModuleLayoutInitialized = false;
+	static bool s_QmModuleColumnCacheDirty = true;
+	static std::vector<const SQmModuleEntry *> s_vCachedFullModules;
+	static std::vector<const SQmModuleEntry *> s_vCachedLeftModules;
+	static std::vector<const SQmModuleEntry *> s_vCachedRightModules;
 
 	auto QmModuleColumnToString = [](EQmModuleColumn Column) -> const char * {
 		switch(Column)
@@ -3561,6 +3583,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			s_aQmModuleLayout = s_aQmModuleDefaults;
 			ParseQmModuleLayout(g_Config.m_QmSidebarCardOrder);
 			s_QmModuleLayoutInitialized = true;
+			s_QmModuleColumnCacheDirty = true;
 		}
 
 		char aSerialized[sizeof(g_Config.m_QmSidebarCardOrder)];
@@ -3709,28 +3732,30 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		ColumnTopsReady = true;
 	};
 
-	std::vector<const SQmModuleEntry *> FullModules;
-	std::vector<const SQmModuleEntry *> LeftModules;
-	std::vector<const SQmModuleEntry *> RightModules;
-	FullModules.reserve(s_aQmModuleLayout.size());
-	LeftModules.reserve(s_aQmModuleLayout.size());
-	RightModules.reserve(s_aQmModuleLayout.size());
+	if(s_QmModuleColumnCacheDirty)
+	{
+		auto RebuildColumnCache = [&](EQmModuleColumn Column, std::vector<const SQmModuleEntry *> &Out) {
+			Out.clear();
+			Out.reserve(s_aQmModuleLayout.size());
+			for(const auto &Entry : s_aQmModuleLayout)
+			{
+				if(Entry.m_Column == Column)
+					Out.push_back(&Entry);
+			}
+			std::stable_sort(Out.begin(), Out.end(), [](const SQmModuleEntry *a, const SQmModuleEntry *b) {
+				return a->m_OrderInColumn < b->m_OrderInColumn;
+			});
+		};
 
-	auto CollectModulesByColumn = [&](EQmModuleColumn Column, std::vector<const SQmModuleEntry *> &Out) {
-		Out.clear();
-		for(const auto &Entry : s_aQmModuleLayout)
-		{
-			if(Entry.m_Column == Column)
-				Out.push_back(&Entry);
-		}
-		std::stable_sort(Out.begin(), Out.end(), [](const SQmModuleEntry *a, const SQmModuleEntry *b) {
-			return a->m_OrderInColumn < b->m_OrderInColumn;
-		});
-	};
+		RebuildColumnCache(EQmModuleColumn::Full, s_vCachedFullModules);
+		RebuildColumnCache(EQmModuleColumn::Left, s_vCachedLeftModules);
+		RebuildColumnCache(EQmModuleColumn::Right, s_vCachedRightModules);
+		s_QmModuleColumnCacheDirty = false;
+	}
 
-	CollectModulesByColumn(EQmModuleColumn::Full, FullModules);
-	CollectModulesByColumn(EQmModuleColumn::Left, LeftModules);
-	CollectModulesByColumn(EQmModuleColumn::Right, RightModules);
+	const std::vector<const SQmModuleEntry *> &FullModules = s_vCachedFullModules;
+	const std::vector<const SQmModuleEntry *> &LeftModules = s_vCachedLeftModules;
+	const std::vector<const SQmModuleEntry *> &RightModules = s_vCachedRightModules;
 
 	static CLineInputBuffered<128> s_ModuleSearchInput;
 	const char *pModuleSearch = s_ModuleSearchInput.GetString();
@@ -3742,11 +3767,11 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::ChatBubble: return "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao";
 		case EQmModuleId::GoresActor: return "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv";
 		case EQmModuleId::KeyBinds: return "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding";
-		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 动画优化 donghua youhua 复读 fudu 自动加一 jia yi 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi 延迟尖峰防护 yanchi jianfeng fanghu 临时预测边距 linshi yuce bianju";
+		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 动画优化 donghua youhua 复读 fudu 自动加一 jia yi 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
 		case EQmModuleId::DummyMiniView: return "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao";
 		case EQmModuleId::Coords: return "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi";
 		case EQmModuleId::Streamer: return "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi";
-		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu";
+		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi";
 		case EQmModuleId::BlockWords: return "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan";
 		case EQmModuleId::QiaFen: return "恰分 qiafen 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 关键词 guanjianci 回复 huifu 关键词回复 guanjianci huifu";
 		case EQmModuleId::PieMenu: return "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli";
@@ -3870,7 +3895,18 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				Row.VSplitLeft(SponsorButtonWidth, &RecentUpdateButton, nullptr);
 				if(DoButton_Menu(&s_RecentUpdateButton, TCLocalize("点击查看最近更新⭐"), 0, &RecentUpdateButton))
 				{
-					Client()->ViewLink("https://publish.obsidian.md/qmclient/2%E6%9C%88/2%E6%9C%8816%E6%97%A5%E6%9B%B4%E6%96%B0");
+					Client()->ViewLink("https://qmclient.icu/index.html");
+				}
+			}
+			LeftContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &LeftContent);
+			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
+			{
+				CUIRect FeedbackButton;
+				static CButtonContainer s_FeedbackButton;
+				Row.VSplitLeft(SponsorButtonWidth, &FeedbackButton, nullptr);
+				if(DoButton_Menu(&s_FeedbackButton, TCLocalize("点击反馈"), 0, &FeedbackButton))
+				{
+					Client()->ViewLink("https://qmclient.icu/feedback.html");
 				}
 			}
 
@@ -3884,7 +3920,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			const float RightStartY = RightPart.y;
 			const float TeeSize = std::clamp(50.0f * UiScale, 36.0f, 50.0f);
 			CUIRect TeeRect, TextRect;
-			RightPart.VSplitLeft(TeeSize + LG_CardPadding, &TeeRect, &TextRect);
+				const float TeeTextOffset = TeeSize + LG_CardPadding * 0.65f;
+				RightPart.VSplitLeft(TeeTextOffset, &TeeRect, &TextRect);
 			vec2 TeePos = vec2(TeeRect.x + TeeSize * 0.5f, RightStartY + TeeSize * 0.5f + LG_CardPadding * 0.5f);
 			RenderDevSkin(
 				TeePos,               // 位置
@@ -3934,7 +3971,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					"Twen",
 					"大恐龙",
 					":luv:",
-					"见月",
+					"小左",
 					"Blue°F",
 					"怯修",
 					"yezeen",
@@ -3947,41 +3984,54 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					"放肆zero",
 					"Q币",
 					"洛天依",
-					"spider"
-				};
+					"spider",
+					"贝塔塔塔",
+					"见月",
+					"咩子的银耳"
+					};
 				const float SponsorFontSize = LG_BodySize * 1.1f;
 				const float MaxLineWidth = RightContent.w;
-				const char *pSeparator = ",";
-				const float SeparatorWidth = TextRender()->TextWidth(SponsorFontSize, pSeparator);
-
-				std::vector<std::string> Lines;
-				Lines.emplace_back();
-				float LineWidth = 0.0f;
-				for(const char *pName : s_apSponsors)
+				static std::vector<std::string> s_SponsorLines;
+				static float s_LastSponsorFontSize = -1.0f;
+				static float s_LastSponsorMaxLineWidth = -1.0f;
+				if(s_SponsorLines.empty() ||
+					std::abs(s_LastSponsorFontSize - SponsorFontSize) > 0.01f ||
+					std::abs(s_LastSponsorMaxLineWidth - MaxLineWidth) > 0.5f)
 				{
-					const float NameWidth = TextRender()->TextWidth(SponsorFontSize, pName);
-					if(Lines.back().empty())
-					{
-						Lines.back() = pName;
-						LineWidth = NameWidth;
-						continue;
-					}
+					s_LastSponsorFontSize = SponsorFontSize;
+					s_LastSponsorMaxLineWidth = MaxLineWidth;
+					const char *pSeparator = ",";
+					const float SeparatorWidth = TextRender()->TextWidth(SponsorFontSize, pSeparator);
 
-					const float NextWidth = LineWidth + SeparatorWidth + NameWidth;
-					if(NextWidth > MaxLineWidth)
+					s_SponsorLines.clear();
+					s_SponsorLines.emplace_back();
+					float LineWidth = 0.0f;
+					for(const char *pName : s_apSponsors)
 					{
-						Lines.emplace_back(pName);
-						LineWidth = NameWidth;
-					}
-					else
-					{
-						Lines.back().append(pSeparator);
-						Lines.back().append(pName);
-						LineWidth = NextWidth;
+						const float NameWidth = TextRender()->TextWidth(SponsorFontSize, pName);
+						if(s_SponsorLines.back().empty())
+						{
+							s_SponsorLines.back() = pName;
+							LineWidth = NameWidth;
+							continue;
+						}
+
+						const float NextWidth = LineWidth + SeparatorWidth + NameWidth;
+						if(NextWidth > MaxLineWidth)
+						{
+							s_SponsorLines.emplace_back(pName);
+							LineWidth = NameWidth;
+						}
+						else
+						{
+							s_SponsorLines.back().append(pSeparator);
+							s_SponsorLines.back().append(pName);
+							LineWidth = NextWidth;
+						}
 					}
 				}
 
-				for(const auto &Line : Lines)
+				for(const auto &Line : s_SponsorLines)
 				{
 					RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
 					Ui()->DoLabel(&Row, Line.c_str(), SponsorFontSize, TEXTALIGN_ML);
@@ -4070,13 +4120,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				if(g_Config.m_QmChatBubble)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmChatBubbleTyping, TCLocalize("显示正在输入的预览气泡"), &g_Config.m_QmChatBubbleTyping, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmChatBubbleZoomScale, TCLocalize("聊天气泡随镜头缩放"), &g_Config.m_QmChatBubbleZoomScale, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleDuration, &g_Config.m_QmChatBubbleDuration, &Row, TCLocalize("持续时间"), 1, 30, &CUi::ms_LinearScrollbarScale, 0, "s");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
@@ -4084,16 +4127,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleAlpha, &g_Config.m_QmChatBubbleAlpha, &Row, TCLocalize("透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleFontSize, &g_Config.m_QmChatBubbleFontSize, &Row, TCLocalize("字体大小"), 8, 24);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleMaxWidth, &g_Config.m_QmChatBubbleMaxWidth, &Row, TCLocalize("最大宽度"), 100, 400, &CUi::ms_LinearScrollbarScale, 0, "px");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleOffsetY, &g_Config.m_QmChatBubbleOffsetY, &Row, TCLocalize("垂直偏移"), 20, 100);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleRounding, &g_Config.m_QmChatBubbleRounding, &Row, TCLocalize("圆角"), 0, 30);
+					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleFontSize, &g_Config.m_QmChatBubbleFontSize, &Row, TCLocalize("字体大小"), 20, 40);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
@@ -4325,17 +4359,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcJumpHint, TCLocalize("位置跳跃提示"), &g_Config.m_TcJumpHint, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPredMarginSpikeGuard, "延迟尖峰防护（临时预测边距）", &g_Config.m_TcPredMarginSpikeGuard, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				if(g_Config.m_TcPredMarginSpikeGuard)
-				{
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_TcPredMarginSpikeMax, &g_Config.m_TcPredMarginSpikeMax, &Row, "最大临时增加", 0, 60, &CUi::ms_LinearScrollbarScale, 0, "毫秒");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-				}
-
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
 				s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
@@ -4450,6 +4473,21 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendEnterAutoGreet, TCLocalize("好友进图自动打招呼"), &g_Config.m_QmFriendEnterAutoGreet, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendEnterBroadcast, TCLocalize("大字显示好友进服"), &g_Config.m_QmFriendEnterBroadcast, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				if(g_Config.m_QmFriendEnterBroadcast)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, TCLocalize("大字提示文本"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_FriendEnterBroadcastText(g_Config.m_QmFriendEnterBroadcastText, sizeof(g_Config.m_QmFriendEnterBroadcastText));
+					s_FriendEnterBroadcastText.SetEmptyText(TCLocalize("使用%s代表好友名"));
+					Ui()->DoEditBox(&s_FriendEnterBroadcastText, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
 
 				if(g_Config.m_QmFriendEnterAutoGreet)
 				{
@@ -4570,7 +4608,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			break;
 			case EQmModuleId::QiaFen:
 			{
-				// ========== 模块 4: 恰分 ==========
+				// ========== 模块 4: 关键词回复 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card3_5Start = Column;
 				s_GlassCards.push_back(Card3_5Start);
@@ -4578,7 +4616,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 8, TCLocalize("恰分"), TCLocalize("恰分与关键词自动回复"));
+				DoModuleHeadline(CardContent, 8, TCLocalize("关键词回复"), TCLocalize("恰分与关键词自动回复"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Ui()->DoScrollbarOption(&g_Config.m_QmAutoReplyCooldown, &g_Config.m_QmAutoReplyCooldown, &Row, TCLocalize("自动回复冷却"), 0, 30, &CUi::ms_LinearScrollbarScale, 0, TCLocalize(" 秒"));
@@ -4589,7 +4627,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmQiaFenUseDummy, TCLocalize("恰分使用Dummy发言"), &g_Config.m_QmQiaFenUseDummy, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmQiaFenUseDummy, TCLocalize("使用分身回复"), &g_Config.m_QmQiaFenUseDummy, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				auto SyncRuleRowsFromConfig = [](std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, bool &Inited, const char *pConfigRules) {
@@ -4696,7 +4734,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyEnabled, TCLocalize("启用关键词回复"), &g_Config.m_QmKeywordReplyEnabled, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyUseDummy, TCLocalize("关键词回复使用Dummy"), &g_Config.m_QmKeywordReplyUseDummy, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyUseDummy, TCLocalize("使用分身回复"), &g_Config.m_QmKeywordReplyUseDummy, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> s_vKeywordRuleRows;
@@ -5150,11 +5188,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 							s_MapCategoryScanIndex = 0;
 							s_NextFullScan = Now + 2.0f;
 						}
-					}
-					else
-					{
-						s_MapCategories.clear();
-						s_MapCategoryScanIndex = 0;
 					}
 
 					const IServerBrowser::CServerEntry *pEntry = pServerBrowser->Find(Client()->ServerAddress());
@@ -5637,6 +5670,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		if(str_comp(aSerialized, g_Config.m_QmSidebarCardOrder) != 0)
 			str_copy(g_Config.m_QmSidebarCardOrder, aSerialized, sizeof(g_Config.m_QmSidebarCardOrder));
 		str_copy(s_aQmModuleLayoutConfigCache, g_Config.m_QmSidebarCardOrder, sizeof(s_aQmModuleLayoutConfigCache));
+		s_QmModuleColumnCacheDirty = true;
 
 		return true;
 	};

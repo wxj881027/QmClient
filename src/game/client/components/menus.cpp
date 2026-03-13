@@ -65,6 +65,68 @@ uint64_t HashAnimNode(uint64_t Value)
 	Value ^= Value >> 33;
 	return Value;
 }
+
+uint64_t BuildUiAnimNodeKey(const uint64_t ScopeHash, const uint64_t Id)
+{
+	return HashAnimNode((ScopeHash << 32) ^ HashAnimNode(Id));
+}
+
+float ResolveUiAnimValue(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, EUiAnimProperty Property, float Target, float DurationSec, EEasing Easing)
+{
+	struct SAnimTargetState
+	{
+		float m_Target = 0.0f;
+		uint64_t m_LastUseCounter = 0;
+	};
+
+	static std::unordered_map<uint64_t, SAnimTargetState> s_aLastTargets;
+	static uint64_t s_UseCounter = 0;
+	constexpr size_t TARGET_CACHE_SOFT_LIMIT = 4096;
+	constexpr uint64_t TARGET_CACHE_PRUNE_INTERVAL = 1024;
+	constexpr uint64_t TARGET_CACHE_STALE_WINDOW = 8192;
+	const uint64_t LastTargetKey = NodeKey ^ (static_cast<uint64_t>(Property) << 61);
+	const float CurrentValue = AnimRuntime.GetValue(NodeKey, Property, Target);
+	const uint64_t CurrentUseCounter = ++s_UseCounter;
+
+	if(s_aLastTargets.empty())
+		s_aLastTargets.reserve(TARGET_CACHE_SOFT_LIMIT);
+
+	if((CurrentUseCounter % TARGET_CACHE_PRUNE_INTERVAL) == 0 && s_aLastTargets.size() > TARGET_CACHE_SOFT_LIMIT)
+	{
+		for(auto It = s_aLastTargets.begin(); It != s_aLastTargets.end();)
+		{
+			if(CurrentUseCounter - It->second.m_LastUseCounter > TARGET_CACHE_STALE_WINDOW)
+				It = s_aLastTargets.erase(It);
+			else
+				++It;
+		}
+		if(s_aLastTargets.size() > TARGET_CACHE_SOFT_LIMIT * 2)
+			s_aLastTargets.clear();
+	}
+
+	auto [ItLastTarget, Inserted] = s_aLastTargets.try_emplace(LastTargetKey, SAnimTargetState{Target, CurrentUseCounter});
+	const bool HasLastTarget = !Inserted;
+	const float LastTarget = ItLastTarget->second.m_Target;
+	const bool TargetChanged = !HasLastTarget || std::abs(Target - LastTarget) > MENU_TAB_ANIM_EPSILON;
+	const bool NeedsSync = !AnimRuntime.HasActiveAnimation(NodeKey, Property) && std::abs(Target - CurrentValue) > MENU_TAB_ANIM_EPSILON;
+	if(TargetChanged || NeedsSync)
+	{
+		SUiAnimRequest Request;
+		Request.m_NodeKey = NodeKey;
+		Request.m_Property = Property;
+		Request.m_Target = Target;
+		Request.m_Transition.m_DurationSec = DurationSec;
+		Request.m_Transition.m_DelaySec = 0.0f;
+		Request.m_Transition.m_Priority = 1;
+		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+		Request.m_Transition.m_Easing = Easing;
+		AnimRuntime.RequestAnimation(Request);
+		ItLastTarget->second.m_Target = Target;
+	}
+	ItLastTarget->second.m_LastUseCounter = CurrentUseCounter;
+
+	return AnimRuntime.GetValue(NodeKey, Property, Target);
+}
 }
 
 ColorRGBA CMenus::ms_GuiColor;
@@ -146,7 +208,7 @@ CMenus::CMenus()
 uint64_t CMenus::UiAnimNodeKey(const char *pScope, const uint64_t Id) const
 {
 	const uint64_t ScopeHash = static_cast<uint64_t>(str_quickhash(pScope));
-	return HashAnimNode((ScopeHash << 32) ^ HashAnimNode(Id));
+	return BuildUiAnimNodeKey(ScopeHash, Id);
 }
 
 void CMenus::TriggerUiSwitchAnimation(const uint64_t NodeKey, const float DurationSec)
@@ -193,38 +255,21 @@ float CMenus::ApplyUiSwitchOffset(CUIRect &View, const float Strength, const flo
 
 float CMenus::ResolveMenuTabAnimationValue(const void *pButtonId, const bool Active, const float DurationSec) const
 {
-	static std::unordered_map<uint64_t, float> s_aLastTargets;
-	const uint64_t NodeKey = UiAnimNodeKey("menu_tab_hover", reinterpret_cast<uint64_t>(pButtonId));
 	const float Target = Active ? 1.0f : 0.0f;
-
+	static const uint64_t s_ScopeHash = static_cast<uint64_t>(str_quickhash("menu_tab_hover"));
+	const uint64_t NodeKey = BuildUiAnimNodeKey(s_ScopeHash, reinterpret_cast<uint64_t>(pButtonId));
 	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
-	const float CurrentValue = std::clamp(AnimRuntime.GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f);
-
-	auto ItLastTarget = s_aLastTargets.find(NodeKey);
-	const bool HasLastTarget = ItLastTarget != s_aLastTargets.end();
-	const float LastTarget = HasLastTarget ? ItLastTarget->second : Target;
-	const bool TargetChanged = !HasLastTarget || std::abs(Target - LastTarget) > MENU_TAB_ANIM_EPSILON;
-	const bool NeedsSync = !AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE) && std::abs(Target - CurrentValue) > MENU_TAB_ANIM_EPSILON;
-	if(TargetChanged || NeedsSync)
-	{
-		SUiAnimRequest Request;
-		Request.m_NodeKey = NodeKey;
-		Request.m_Property = EUiAnimProperty::SCALE;
-		Request.m_Target = Target;
-		Request.m_Transition.m_DurationSec = DurationSec;
-		Request.m_Transition.m_DelaySec = 0.0f;
-		Request.m_Transition.m_Priority = 1;
-		Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-		Request.m_Transition.m_Easing = EEasing::EASE_OUT;
-		AnimRuntime.RequestAnimation(Request);
-		s_aLastTargets[NodeKey] = Target;
-	}
-
-	return std::clamp(AnimRuntime.GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f);
+	return std::clamp(ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, Target, DurationSec, EEasing::EASE_OUT), 0.0f, 1.0f);
 }
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, const unsigned Flags)
 {
+	const float HoverTarget = Active && Ui()->HotItem() == pId ? 1.0f : 0.0f;
+	static const uint64_t s_ScopeHash = static_cast<uint64_t>(str_quickhash("menu_toggle_hover"));
+	const uint64_t NodeKey = BuildUiAnimNodeKey(s_ScopeHash, reinterpret_cast<uint64_t>(pId));
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const float HoverAlpha = std::clamp(ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, HoverTarget, 0.10f, EEasing::EASE_OUT), 0.0f, 1.0f);
+
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GUIBUTTONS].m_Id);
 	Graphics()->QuadsBegin();
 	if(!Active)
@@ -232,12 +277,14 @@ int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, 
 	Graphics()->SelectSprite(Checked ? SPRITE_GUIBUTTON_ON : SPRITE_GUIBUTTON_OFF);
 	IGraphics::CQuadItem QuadItem(pRect->x, pRect->y, pRect->w, pRect->h);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
-	if(Ui()->HotItem() == pId && Active)
+	if(Active && HoverAlpha > MENU_TAB_ANIM_EPSILON)
 	{
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, HoverAlpha);
 		Graphics()->SelectSprite(SPRITE_GUIBUTTON_HOVER);
 		QuadItem = IGraphics::CQuadItem(pRect->x, pRect->y, pRect->w, pRect->h);
 		Graphics()->QuadsDrawTL(&QuadItem, 1);
 	}
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	Graphics()->QuadsEnd();
 
 	return Active ? Ui()->DoButtonLogic(pId, Checked, pRect, Flags) : 0;
@@ -246,6 +293,14 @@ int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, 
 int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color)
 {
 	CUIRect Text = *pRect;
+	const bool MouseInside = Ui()->HotItem() == pButtonContainer;
+	const bool Pressed = Ui()->CheckActiveItem(pButtonContainer);
+	const float HoverTarget = Checked || MouseInside || Pressed ? 1.0f : 0.0f;
+	static const uint64_t s_ScopeHash = static_cast<uint64_t>(str_quickhash("menu_button_hover"));
+	const uint64_t NodeKey = BuildUiAnimNodeKey(s_ScopeHash, reinterpret_cast<uint64_t>(pButtonContainer));
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const float HoverStrength = std::clamp(ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, HoverTarget, 0.11f, EEasing::EASE_OUT), 0.0f, 1.0f);
+	const float HoverLift = -1.25f * HoverStrength;
 
 	if(Checked)
 		Color = ColorRGBA(0.6f, 0.6f, 0.6f, 0.5f);
@@ -253,11 +308,17 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 		Color.a *= Ui()->ButtonColorMul(pButtonContainer);
 
 	pRect->Draw(Color, Corners, Rounding);
+	if(HoverStrength > MENU_TAB_ANIM_EPSILON)
+	{
+		const float OverlayAlpha = (Checked ? 0.05f : 0.08f) * HoverStrength;
+		pRect->Draw(ColorRGBA(1.0f, 1.0f, 1.0f, OverlayAlpha), Corners, Rounding);
+	}
 
 	if(pImageName)
 	{
 		CUIRect Image;
 		pRect->VSplitRight(pRect->h * 4.0f, &Text, &Image); // always correct ratio for image
+		Image.y += HoverLift;
 
 		// render image
 		const CMenuImage *pImage = FindMenuImage(pImageName);
@@ -276,6 +337,7 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 
 	Text.HMargin(pRect->h >= 20.0f ? 2.0f : 1.0f, &Text);
 	Text.HMargin((Text.h * FontFactor) / 2.0f, &Text);
+	Text.y += HoverLift;
 	Ui()->DoLabel(&Text, pText, Text.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 
 	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
@@ -284,7 +346,7 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon)
 {
 	const bool MouseInside = Ui()->HotItem() == pButtonContainer;
-	CUIRect Rect = *pRect;
+	CUIRect AnimatedLabelRect = *pRect;
 	const bool TabActive = Checked || MouseInside;
 	const float AnimValue = ResolveMenuTabAnimationValue(pButtonContainer, TabActive, MENU_TAB_HOVER_DURATION);
 
@@ -303,10 +365,10 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 		RepositionLabel = pAnimator->m_RepositionLabel;
 		ScaleLabel = pAnimator->m_ScaleLabel;
 	}
-	Rect.w += AnimValue * WOffset;
-	Rect.h += AnimValue * HOffset;
-	Rect.x += AnimValue * XOffset;
-	Rect.y += AnimValue * YOffset;
+	AnimatedLabelRect.w += AnimValue * WOffset;
+	AnimatedLabelRect.h += AnimValue * HOffset;
+	AnimatedLabelRect.x += AnimValue * XOffset;
+	AnimatedLabelRect.y += AnimValue * YOffset;
 
 	if(Checked)
 	{
@@ -314,7 +376,7 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 		if(pActiveColor)
 			ColorMenuTab = *pActiveColor;
 
-		Rect.Draw(ColorMenuTab, Corners, EdgeRounding);
+		pRect->Draw(ColorMenuTab, Corners, EdgeRounding);
 	}
 	else
 	{
@@ -324,7 +386,7 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 			if(pHoverColor)
 				HoverColorMenuTab = *pHoverColor;
 
-			Rect.Draw(HoverColorMenuTab, Corners, EdgeRounding);
+			pRect->Draw(HoverColorMenuTab, Corners, EdgeRounding);
 		}
 		else
 		{
@@ -332,7 +394,7 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 			if(pDefaultColor)
 				ColorMenuTab = *pDefaultColor;
 
-			Rect.Draw(ColorMenuTab, Corners, EdgeRounding);
+			pRect->Draw(ColorMenuTab, Corners, EdgeRounding);
 		}
 	}
 
@@ -340,14 +402,14 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 	{
 		if(RepositionLabel)
 		{
-			Rect.x += Rect.w - pRect->w + Rect.x - pRect->x;
-			Rect.y += Rect.h - pRect->h + Rect.y - pRect->y;
+			AnimatedLabelRect.x += AnimatedLabelRect.w - pRect->w + AnimatedLabelRect.x - pRect->x;
+			AnimatedLabelRect.y += AnimatedLabelRect.h - pRect->h + AnimatedLabelRect.y - pRect->y;
 		}
 
 		if(!ScaleLabel)
 		{
-			Rect.w = pRect->w;
-			Rect.h = pRect->h;
+			AnimatedLabelRect.w = pRect->w;
+			AnimatedLabelRect.h = pRect->h;
 		}
 	}
 
@@ -355,8 +417,8 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 	// Extend clipping vertically to include the animated rect so "float up"
 	// animations don't cut off icon/text.
 	CUIRect ContentClip = *pRect;
-	const float ClipTop = minimum(pRect->y, Rect.y);
-	const float ClipBottom = maximum(pRect->y + pRect->h, Rect.y + Rect.h);
+	const float ClipTop = minimum(pRect->y, AnimatedLabelRect.y);
+	const float ClipBottom = maximum(pRect->y + pRect->h, AnimatedLabelRect.y + AnimatedLabelRect.h);
 	ContentClip.y = ClipTop;
 	ContentClip.h = ClipBottom - ClipTop;
 	Ui()->ClipEnable(&ContentClip);
@@ -364,13 +426,14 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 	if(pCommunityIcon)
 	{
 		CUIRect CommunityIcon;
-		Rect.Margin(2.0f, &CommunityIcon);
+		CUIRect StaticIconRect = *pRect;
+		StaticIconRect.Margin(2.0f, &CommunityIcon);
 		m_CommunityIcons.Render(pCommunityIcon, CommunityIcon, true);
 	}
 	else
 	{
 		CUIRect Label;
-		Rect.HMargin(2.0f, &Label);
+		AnimatedLabelRect.HMargin(2.0f, &Label);
 		Ui()->DoLabel(&Label, pText, Label.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 	}
 	Ui()->ClipDisable();
@@ -393,15 +456,23 @@ int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked,
 
 int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect)
 {
-	if(Checked || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId)
+	const bool ShouldShow = Checked || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId;
+	static const uint64_t s_VisibilityScopeHash = static_cast<uint64_t>(str_quickhash("menu_favorite_visibility"));
+	static const uint64_t s_HoverScopeHash = static_cast<uint64_t>(str_quickhash("menu_favorite_hover"));
+	const uint64_t VisibilityNodeKey = BuildUiAnimNodeKey(s_VisibilityScopeHash, reinterpret_cast<uint64_t>(pButtonId));
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const float ShowAlpha = std::clamp(ResolveUiAnimValue(AnimRuntime, VisibilityNodeKey, EUiAnimProperty::ALPHA, ShouldShow ? 1.0f : 0.0f, 0.12f, EEasing::EASE_OUT), 0.0f, 1.0f);
+	if(ShowAlpha > MENU_TAB_ANIM_EPSILON)
 	{
+		const uint64_t HoverNodeKey = BuildUiAnimNodeKey(s_HoverScopeHash, reinterpret_cast<uint64_t>(pButtonId));
+		const float HoverStrength = std::clamp(ResolveUiAnimValue(AnimRuntime, HoverNodeKey, EUiAnimProperty::SCALE, Ui()->HotItem() == pButtonId ? 1.0f : 0.0f, 0.10f, EEasing::EASE_OUT), 0.0f, 1.0f);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		const float Alpha = Ui()->HotItem() == pButtonId ? 0.2f : 0.0f;
-		TextRender()->TextColor(Checked ? ColorRGBA(1.0f, 0.85f, 0.3f, 0.8f + Alpha) : ColorRGBA(0.5f, 0.5f, 0.5f, 0.8f + Alpha));
+		const float BaseAlpha = std::clamp((Checked ? 0.8f : 0.65f) + 0.2f * HoverStrength, 0.0f, 1.0f);
+		TextRender()->TextColor(Checked ? ColorRGBA(1.0f, 0.85f, 0.3f, BaseAlpha * ShowAlpha) : ColorRGBA(0.5f, 0.5f, 0.5f, BaseAlpha * ShowAlpha));
 		SLabelProperties Props;
 		Props.m_MaxWidth = pRect->w;
-		Ui()->DoLabel(pRect, FONT_ICON_STAR, 12.0f, TEXTALIGN_MC, Props);
+		Ui()->DoLabel(pRect, FONT_ICON_STAR, 12.0f + HoverStrength, TEXTALIGN_MC, Props);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -415,19 +486,34 @@ int CMenus::DoButton_CheckBox_Common(const void *pId, const char *pText, const c
 	pRect->VSplitLeft(pRect->h, &Box, &Label);
 	Label.VSplitLeft(5.0f, nullptr, &Label);
 
-	Box.Margin(2.0f, &Box);
-	Box.Draw(ColorRGBA(1, 1, 1, 0.25f * Ui()->ButtonColorMul(pId)), IGraphics::CORNER_ALL, 3.0f);
+	const bool Hovered = Ui()->HotItem() == pId || Ui()->CheckActiveItem(pId);
+	static const uint64_t s_HoverScopeHash = static_cast<uint64_t>(str_quickhash("menu_checkbox_hover"));
+	static const uint64_t s_CheckScopeHash = static_cast<uint64_t>(str_quickhash("menu_checkbox_mark"));
+	const uint64_t HoverNodeKey = BuildUiAnimNodeKey(s_HoverScopeHash, reinterpret_cast<uint64_t>(pId));
+	const uint64_t CheckNodeKey = BuildUiAnimNodeKey(s_CheckScopeHash, reinterpret_cast<uint64_t>(pId));
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const float HoverStrength = std::clamp(ResolveUiAnimValue(AnimRuntime, HoverNodeKey, EUiAnimProperty::SCALE, Hovered ? 1.0f : 0.0f, 0.10f, EEasing::EASE_OUT), 0.0f, 1.0f);
+	const float CheckStrength = std::clamp(ResolveUiAnimValue(AnimRuntime, CheckNodeKey, EUiAnimProperty::ALPHA, *pBoxText == 'X' ? 1.0f : 0.0f, 0.10f, EEasing::EASE_OUT), 0.0f, 1.0f);
 
-	const bool Checkable = *pBoxText == 'X';
-	if(Checkable)
+	Box.Margin(2.0f, &Box);
+	const float BoxAlpha = std::clamp(0.25f * Ui()->ButtonColorMul(pId) + 0.10f * HoverStrength + 0.08f * CheckStrength, 0.0f, 1.0f);
+	Box.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, BoxAlpha), IGraphics::CORNER_ALL, 3.0f);
+
+	const bool HasCustomGlyph = pBoxText[0] != '\0' && pBoxText[0] != 'X';
+	if(HasCustomGlyph)
+	{
+		Ui()->DoLabel(&Box, pBoxText, Box.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+	}
+	else if(CheckStrength > MENU_TAB_ANIM_EPSILON)
 	{
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		const ColorRGBA DefaultColor = TextRender()->DefaultTextColor();
+		TextRender()->TextColor(ColorRGBA(DefaultColor.r, DefaultColor.g, DefaultColor.b, DefaultColor.a * CheckStrength));
 		Ui()->DoLabel(&Box, FONT_ICON_XMARK, Box.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		TextRender()->TextColor(DefaultColor);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	}
-	else
-		Ui()->DoLabel(&Box, pBoxText, Box.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 
 	TextRender()->SetRenderFlags(0);
 	const float FontSize = Box.h * CUi::ms_FontmodHeight;
@@ -754,7 +840,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		{
 			NewPage = PAGE_FAVORITES;
 		}
-		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
+		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("收藏夹"));
 
 		int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
 		if(
@@ -779,6 +865,12 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 
 		size_t FavoriteCommunityIndex = 0;
 		static CButtonContainer s_aFavoriteCommunityButtons[5];
+		static uint64_t s_aPrevFavoriteCommunityAnimNodes[5] = {0};
+		static size_t s_PrevFavoriteCommunityAnimNodeCount = 0;
+		uint64_t aCurFavoriteCommunityAnimNodes[5] = {0};
+		size_t CurFavoriteCommunityAnimNodeCount = 0;
+		static const uint64_t s_FavoriteCommunityAppearScopeHash = static_cast<uint64_t>(str_quickhash("menu_favorite_community_tab_appear"));
+		CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
 		static_assert(std::size(s_aFavoriteCommunityButtons) == (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
 		static_assert(std::size(s_aFavoriteCommunityButtons) == (size_t)BIT_TAB_FAVORITE_COMMUNITY_5 - BIT_TAB_FAVORITE_COMMUNITY_1 + 1);
 		static_assert(std::size(s_aFavoriteCommunityButtons) == (size_t)IServerBrowser::TYPE_FAVORITE_COMMUNITY_5 - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 + 1);
@@ -787,17 +879,53 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			if(Box.w < BrowserButtonWidth)
 				break;
 			Box.VSplitLeft(BrowserButtonWidth, &Button, &Box);
+
+			const uint64_t NodeKey = BuildUiAnimNodeKey(s_FavoriteCommunityAppearScopeHash, static_cast<uint64_t>(str_quickhash(pCommunity->Id())));
+			bool WasVisibleLastFrame = false;
+			for(size_t PrevNodeIndex = 0; PrevNodeIndex < s_PrevFavoriteCommunityAnimNodeCount; ++PrevNodeIndex)
+			{
+				if(s_aPrevFavoriteCommunityAnimNodes[PrevNodeIndex] == NodeKey)
+				{
+					WasVisibleLastFrame = true;
+					break;
+				}
+			}
+			if(!WasVisibleLastFrame)
+				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+
+			const float AppearStrength = std::clamp(ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA, 1.0f, 0.18f, EEasing::EASE_OUT), 0.0f, 1.0f);
+			const float RevealWidth = maximum(2.0f, Button.w * AppearStrength);
+			CUIRect AnimatedButton = Button;
+			AnimatedButton.x += (Button.w - RevealWidth) * 0.5f;
+			AnimatedButton.w = RevealWidth;
+
+			ColorRGBA InactiveColor = ms_ColorTabbarInactive;
+			ColorRGBA ActiveColor = ms_ColorTabbarActive;
+			ColorRGBA HoverColor = ms_ColorTabbarHover;
+			InactiveColor.a *= AppearStrength;
+			ActiveColor.a *= AppearStrength;
+			HoverColor.a *= AppearStrength;
+
 			const int Page = PAGE_FAVORITE_COMMUNITY_1 + FavoriteCommunityIndex;
-			if(DoButton_MenuTab(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], FONT_ICON_ELLIPSIS, ActivePage == Page, &Button, IGraphics::CORNER_T, &m_aAnimatorsBigPage[BIT_TAB_FAVORITE_COMMUNITY_1 + FavoriteCommunityIndex], nullptr, nullptr, nullptr, 10.0f, m_CommunityIcons.Find(pCommunity->Id())))
+			if(DoButton_MenuTab(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], FONT_ICON_ELLIPSIS, ActivePage == Page, &AnimatedButton, IGraphics::CORNER_T, &m_aAnimatorsBigPage[BIT_TAB_FAVORITE_COMMUNITY_1 + FavoriteCommunityIndex], &InactiveColor, &ActiveColor, &HoverColor, 10.0f, m_CommunityIcons.Find(pCommunity->Id())))
 			{
 				NewPage = Page;
 			}
-			GameClient()->m_Tooltips.DoToolTip(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], &Button, pCommunity->Name());
+			GameClient()->m_Tooltips.DoToolTip(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], &AnimatedButton, pCommunity->Name());
 
+			aCurFavoriteCommunityAnimNodes[CurFavoriteCommunityAnimNodeCount++] = NodeKey;
 			++FavoriteCommunityIndex;
 			if(FavoriteCommunityIndex >= std::size(s_aFavoriteCommunityButtons))
 				break;
 		}
+		for(size_t PrevNodeIndex = 0; PrevNodeIndex < std::size(s_aPrevFavoriteCommunityAnimNodes); ++PrevNodeIndex)
+		{
+			if(PrevNodeIndex < CurFavoriteCommunityAnimNodeCount)
+				s_aPrevFavoriteCommunityAnimNodes[PrevNodeIndex] = aCurFavoriteCommunityAnimNodes[PrevNodeIndex];
+			else
+				s_aPrevFavoriteCommunityAnimNodes[PrevNodeIndex] = 0;
+		}
+		s_PrevFavoriteCommunityAnimNodeCount = CurFavoriteCommunityAnimNodeCount;
 
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -973,6 +1101,193 @@ void CMenus::RenderNews(CUIRect MainView)
 			Ui()->DoLabel(&Label, aLine, 15.f, TEXTALIGN_ML);
 		}
 	}
+}
+
+void CMenus::RenderStatistics(CUIRect MainView)
+{
+	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_NEWS);
+
+	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+
+	CUIRect Window = MainView;
+	Window.Margin(20.0f, &Window);
+	Window.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
+
+	CUIRect Header, Content;
+	Window.HSplitTop(50.0f, &Header, &Content);
+	Header.VMargin(14.0f, &Header);
+	CUIRect HeaderTitle, HeaderSubTitle;
+	Header.HSplitTop(24.0f, &HeaderTitle, &HeaderSubTitle);
+	Ui()->DoLabel(&HeaderTitle, "统计", 24.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&HeaderSubTitle, "客户端数据概览", 12.0f, TEXTALIGN_ML);
+
+	Content.Margin(12.0f, &Content);
+
+	const int64_t LocalUptimeSeconds = static_cast<int64_t>(std::max(0.0f, Client()->LocalTime()));
+	int64_t CurrentTimestamp = time_timestamp();
+	int64_t StartupTimestamp = std::max<int64_t>(0, CurrentTimestamp - LocalUptimeSeconds);
+	const bool UsingServerTime = GameClient()->m_TClient.HasQmServerTime();
+	if(UsingServerTime)
+	{
+		CurrentTimestamp = GameClient()->m_TClient.QmServerTimeNow();
+		if(GameClient()->m_TClient.QmServerSessionStartTime() > 0)
+			StartupTimestamp = GameClient()->m_TClient.QmServerSessionStartTime();
+		else
+			StartupTimestamp = std::max<int64_t>(0, CurrentTimestamp - LocalUptimeSeconds);
+	}
+	int64_t UptimeSeconds = std::max<int64_t>(0, CurrentTimestamp - StartupTimestamp);
+	if(GameClient()->m_TClient.HasQmServerPlaytime())
+		UptimeSeconds = GameClient()->m_TClient.QmServerPlaytimeSeconds();
+
+	char aUptime[64];
+	str_time(UptimeSeconds * 100, TIME_HOURS, aUptime, sizeof(aUptime));
+
+	const int FinishedMaps = GameClient()->m_TClient.QmDdnetTotalFinishes();
+
+	char aFinishedMapsText[32];
+	if(FinishedMaps >= 0)
+		str_format(aFinishedMapsText, sizeof(aFinishedMapsText), "%d", FinishedMaps);
+	else
+		str_copy(aFinishedMapsText, "加载中", sizeof(aFinishedMapsText));
+
+	const char *pFavoritePartner = GameClient()->m_TClient.QmDdnetFavoritePartner();
+	char aFavoriteFriendText[160];
+	if(pFavoritePartner && pFavoritePartner[0] != '\0')
+		str_copy(aFavoriteFriendText, pFavoritePartner, sizeof(aFavoriteFriendText));
+	else
+		str_copy(aFavoriteFriendText, "加载中", sizeof(aFavoriteFriendText));
+
+	std::unordered_map<std::string, int> aOnlineFriendCounts;
+	for(int ServerIndex = 0; ServerIndex < ServerBrowser()->NumSortedServers(); ++ServerIndex)
+	{
+		const CServerInfo *pServerInfo = ServerBrowser()->SortedGet(ServerIndex);
+		if(pServerInfo == nullptr)
+			continue;
+
+		for(int ClientIndex = 0; ClientIndex < pServerInfo->m_NumClients; ++ClientIndex)
+		{
+			const CServerInfo::CClient &ClientInfo = pServerInfo->m_aClients[ClientIndex];
+			if(ClientInfo.m_FriendState != IFriends::FRIEND_PLAYER)
+				continue;
+
+			std::string Key(ClientInfo.m_aName);
+			Key.push_back('\x1f');
+			Key.append(ClientInfo.m_aClan);
+			++aOnlineFriendCounts[Key];
+		}
+	}
+
+	const int TotalFriends = GameClient()->Friends()->NumFriends();
+	const int OnlineFriends = static_cast<int>(aOnlineFriendCounts.size());
+
+	char aPointsText[32];
+	if(Client()->Points() >= 0)
+		str_format(aPointsText, sizeof(aPointsText), "%d", Client()->Points());
+	else
+		str_copy(aPointsText, "加载中", sizeof(aPointsText));
+
+	char aFriendsText[32];
+	str_format(aFriendsText, sizeof(aFriendsText), "%d", TotalFriends);
+
+	char aOnlineFriendsText[32];
+	str_format(aOnlineFriendsText, sizeof(aOnlineFriendsText), "%d", OnlineFriends);
+
+	char aFinishSourceText[32];
+	str_copy(aFinishSourceText, "官方", sizeof(aFinishSourceText));
+
+	auto RenderStatCard = [this](const CUIRect &Rect, const char *pTitle, const char *pValue, const char *pHint) {
+		Rect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.30f), IGraphics::CORNER_ALL, 8.0f);
+		CUIRect Inner = Rect;
+		Inner.Margin(10.0f, &Inner);
+
+		CUIRect Title, Value, Hint;
+		Inner.HSplitTop(16.0f, &Title, &Inner);
+		Ui()->DoLabel(&Title, pTitle, 12.0f, TEXTALIGN_ML);
+
+		Inner.HSplitTop(4.0f, nullptr, &Inner);
+		Inner.HSplitTop(30.0f, &Value, &Inner);
+		SLabelProperties ValueProps;
+		ValueProps.m_MaxWidth = static_cast<int>(Value.w);
+		Ui()->DoLabel(&Value, pValue, 18.0f, TEXTALIGN_ML, ValueProps);
+
+		if(pHint != nullptr && pHint[0] != '\0')
+		{
+			Inner.HSplitTop(2.0f, nullptr, &Inner);
+			Inner.HSplitTop(14.0f, &Hint, &Inner);
+			SLabelProperties HintProps;
+			HintProps.m_MaxWidth = static_cast<int>(Hint.w);
+			Ui()->DoLabel(&Hint, pHint, 11.0f, TEXTALIGN_ML, HintProps);
+		}
+	};
+
+	CUIRect TopCards;
+	Content.HSplitTop(96.0f, &TopCards, &Content);
+	const float CardGap = 8.0f;
+	const float CardWidth = (TopCards.w - CardGap * 2.0f) / 3.0f;
+
+	CUIRect CardStart, CardFinished, CardFriend, CardRest;
+	TopCards.VSplitLeft(CardWidth, &CardStart, &CardRest);
+	CardRest.VSplitLeft(CardGap, nullptr, &CardRest);
+	CardRest.VSplitLeft(CardWidth, &CardFinished, &CardRest);
+	CardRest.VSplitLeft(CardGap, nullptr, &CardRest);
+	CardFriend = CardRest;
+
+	RenderStatCard(CardStart, "客户端启动时间", aUptime, nullptr);
+	RenderStatCard(CardFinished, "完成地图次数", aFinishedMapsText, nullptr);
+	RenderStatCard(CardFriend, "最喜欢的好友", aFavoriteFriendText, nullptr);
+
+	Content.HSplitTop(10.0f, nullptr, &Content);
+
+	CUIRect BottomLeft, BottomRight;
+	Content.VSplitMid(&BottomLeft, &BottomRight, 6.0f);
+	BottomLeft.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.23f), IGraphics::CORNER_ALL, 8.0f);
+	BottomRight.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.23f), IGraphics::CORNER_ALL, 8.0f);
+
+	auto RenderInfoRow = [this](CUIRect &View, const char *pLabel, const char *pValue) {
+		CUIRect Row;
+		View.HSplitTop(24.0f, &Row, &View);
+		Row.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f), IGraphics::CORNER_ALL, 5.0f);
+		Row.VMargin(8.0f, &Row);
+
+		CUIRect Label, Value;
+		Row.VSplitLeft(Row.w * 0.58f, &Label, &Value);
+		Ui()->DoLabel(&Label, pLabel, 12.0f, TEXTALIGN_ML);
+		Ui()->DoLabel(&Value, pValue, 12.0f, TEXTALIGN_MR);
+
+		View.HSplitTop(4.0f, nullptr, &View);
+	};
+
+	CUIRect LeftContent = BottomLeft;
+	LeftContent.Margin(10.0f, &LeftContent);
+	CUIRect LeftTitle;
+	LeftContent.HSplitTop(20.0f, &LeftTitle, &LeftContent);
+	Ui()->DoLabel(&LeftTitle, "概览", 14.0f, TEXTALIGN_ML);
+	LeftContent.HSplitTop(6.0f, nullptr, &LeftContent);
+	RenderInfoRow(LeftContent, "DDNet分数", aPointsText);
+	RenderInfoRow(LeftContent, "好友总数", aFriendsText);
+	RenderInfoRow(LeftContent, "在线好友", aOnlineFriendsText);
+	RenderInfoRow(LeftContent, "完成图来源", aFinishSourceText);
+
+	CUIRect RightContent = BottomRight;
+	RightContent.Margin(10.0f, &RightContent);
+	CUIRect RightTitle, RightBody;
+	RightContent.HSplitTop(20.0f, &RightTitle, &RightBody);
+	Ui()->DoLabel(&RightTitle, "统计说明", 14.0f, TEXTALIGN_ML);
+	RightBody.HSplitTop(6.0f, nullptr, &RightBody);
+
+	char aNowTime[64];
+	str_timestamp_ex((time_t)CurrentTimestamp, aNowTime, sizeof(aNowTime), FORMAT_SPACE);
+	char aInfoText[512];
+	str_format(aInfoText, sizeof(aInfoText),
+		"当前时间: %s\n"
+		"- 启动时间与游玩时长使用官网的Json数据计算而得\n"
+		"- 同上\n"
+		"- 同上上\n",
+		aNowTime);
+
+	SLabelProperties InfoProps;
+	InfoProps.m_MaxWidth = static_cast<int>(RightBody.w);
+	Ui()->DoLabel(&RightBody, aInfoText, 12.0f, TEXTALIGN_TL, InfoProps);
 }
 
 void CMenus::OnInterfacesInit(CGameClient *pClient)
@@ -1262,6 +1577,10 @@ void CMenus::Render()
 			if(m_MenuPage == PAGE_NEWS)
 			{
 				RenderNews(MainView);
+			}
+			else if(m_MenuPage == PAGE_STATS)
+			{
+				RenderStatistics(MainView);
 			}
 			else if(m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_FAVORITE_COMMUNITY_5)
 			{

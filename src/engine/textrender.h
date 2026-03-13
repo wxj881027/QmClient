@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 enum
 {
@@ -132,6 +133,7 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_FILE = "\xEF\x85\x9B";
 
 	[[maybe_unused]] static const char *FONT_ICON_PENCIL = "\xEF\x8C\x83";
+	[[maybe_unused]] static const char *FONT_ICON_COPY = "\xEF\x83\x85";
 	[[maybe_unused]] static const char *FONT_ICON_TRASH = "\xEF\x87\xB8";
 
 	[[maybe_unused]] static const char *FONT_ICON_ARROWS_LEFT_RIGHT = "\xEF\x8C\xB7";

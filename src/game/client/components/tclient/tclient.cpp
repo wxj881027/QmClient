@@ -30,6 +30,11 @@
 #include <game/localization.h>
 #include <game/version.h>
 
+#include <array>
+#include <cctype>
+#include <cmath>
+#include <limits>
+#include <string_view>
 #include <vector>
 
 static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
@@ -40,6 +45,19 @@ static constexpr int QMCLIENT_SYNC_INTERVAL_SECONDS = 30;
 static constexpr const char *QMCLIENT_TOKEN_URL = "http://42.194.185.210:8080/token";
 static constexpr const char *QMCLIENT_REPORT_URL = "http://42.194.185.210:8080/report";
 static constexpr const char *QMCLIENT_USERS_URL = "http://42.194.185.210:8080/users.json";
+static constexpr const char *QMCLIENT_HEALTH_URL = "http://42.194.185.210:8080/healthz";
+static constexpr const char *QMCLIENT_PLAYTIME_START_URL = "http://42.194.185.210:8080/playtime/start";
+static constexpr const char *QMCLIENT_PLAYTIME_STOP_URL = "http://42.194.185.210:8080/playtime/stop";
+static constexpr const char *QMCLIENT_PLAYTIME_QUERY_URL = "http://42.194.185.210:8080/playtime/query";
+static constexpr const char *QMCLIENT_LIFECYCLE_MARKER_FILE = "qmclient/lifecycle_pending.marker";
+static constexpr const char *QMCLIENT_PLAYTIME_CLIENT_ID_FILE = "qmclient/playtime_client_id.txt";
+static constexpr int QMCLIENT_SERVER_TIME_SYNC_INTERVAL_SECONDS = 15;
+static constexpr int QMCLIENT_PLAYTIME_QUERY_INTERVAL_SECONDS = 10;
+static constexpr int QMCLIENT_RECOVERY_RETRY_SECONDS = 3;
+static constexpr int QMCLIENT_MARKER_FLUSH_INTERVAL_SECONDS = 5;
+static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players/?json2=";
+static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
+static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
 static constexpr const char *s_pQiaFenDefaultReply = "我要恰!!谢谢佬!!!!";
 static constexpr const char *FINISH_STATUS_URL = "https://info.ddnet.org/info";
 static constexpr int64_t FINISH_STATUS_RETRY_DELAY_SECONDS = 3;
@@ -64,15 +82,94 @@ static constexpr const char *s_apKeywordClauseContrastWords[] = {
 	"然而",
 	"可是",
 };
+static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s好友进入本服";
 
 static int QiaFenSeparatorLength(const char *pStr);
 static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize);
+
+static std::string BuildFriendEnterBroadcastText(const char *pTemplate, std::string_view FriendNames)
+{
+	const char *pFormat = pTemplate != nullptr && pTemplate[0] != '\0' ? pTemplate : s_pFriendEnterBroadcastDefaultText;
+	std::string Result;
+	Result.reserve(str_length(pFormat) + FriendNames.size() + 8);
+
+	const std::string_view Placeholder = "%s";
+	const std::string_view FormatView = pFormat;
+	size_t Pos = 0;
+	bool Replaced = false;
+	while(true)
+	{
+		const size_t Match = FormatView.find(Placeholder, Pos);
+		if(Match == std::string_view::npos)
+		{
+			Result.append(FormatView.substr(Pos));
+			break;
+		}
+
+		Result.append(FormatView.substr(Pos, Match - Pos));
+		Result.append(FriendNames);
+		Pos = Match + Placeholder.size();
+		Replaced = true;
+	}
+
+	if(!Replaced)
+	{
+		// Backward compatibility: if users remove '%s', keep friend names visible.
+		Result.clear();
+		Result.reserve(FriendNames.size() + FormatView.size());
+		Result.append(FriendNames);
+		Result.append(FormatView);
+	}
+
+	return Result;
+}
 
 static const json_value *JsonObjectField(const json_value *pObject, const char *pName)
 {
 	if(!pObject || pObject->type != json_object)
 		return &json_value_none;
 	return json_object_get(pObject, pName);
+}
+
+static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue)
+{
+	if(!pValue)
+		return false;
+
+	if(pValue->type == json_integer)
+	{
+		if(pValue->u.integer < 0)
+			return false;
+		OutValue = pValue->u.integer;
+		return true;
+	}
+	if(pValue->type == json_double)
+	{
+		if(pValue->u.dbl < 0.0)
+			return false;
+		OutValue = (int64_t)pValue->u.dbl;
+		return true;
+	}
+	return false;
+}
+
+static bool IsValidQmClientPlaytimeId(const char *pClientId)
+{
+	if(!pClientId)
+		return false;
+
+	const int Len = str_length(pClientId);
+	if(Len < 8 || Len > 64)
+		return false;
+
+	for(int i = 0; i < Len; ++i)
+	{
+		const unsigned char C = (unsigned char)pClientId[i];
+		if(std::isalnum(C) || C == '_' || C == '-')
+			continue;
+		return false;
+	}
+	return true;
 }
 
 CTClient::CTClient()
@@ -178,6 +275,32 @@ void CTClient::OnInit()
 		if(aRules[0] != '\0')
 			str_copy(g_Config.m_QmQiaFenRules, aRules, sizeof(g_Config.m_QmQiaFenRules));
 	}
+
+	InitQmClientLifecycle();
+}
+
+void CTClient::OnShutdown()
+{
+	if(!m_QmClientShutdownReported)
+	{
+		m_QmClientShutdownReported = true;
+		TouchQmClientLifecycleMarker(true);
+		SendQmClientLifecyclePing("shutdown", m_pQmClientLifecycleStopTask);
+	}
+
+	auto AbortTask = [](std::shared_ptr<CHttpRequest> &pTask) {
+		if(pTask)
+		{
+			pTask->Abort();
+			pTask = nullptr;
+		}
+	};
+
+	AbortTask(m_pQmClientLifecycleStartTask);
+	AbortTask(m_pQmClientLifecycleCrashTask);
+	AbortTask(m_pQmClientServerTimeTask);
+	AbortTask(m_pQmClientPlaytimeQueryTask);
+	AbortTask(m_pQmDdnetPlayerTask);
 }
 
 static bool LineShouldHighlight(const char *pLine, const char *pName)
@@ -1348,19 +1471,31 @@ void CTClient::DoFinishCheck()
 	if(m_FinishTextTimeout > 0.0f)
 		return;
 	m_FinishTextTimeout = 1.0f;
-	// Check for finish tile
-	const auto &NearTile = [this](vec2 Pos, int RadiusInTiles, int Tile) -> bool {
-		const CCollision *pCollision = GameClient()->Collision();
-		for(int i = 0; i <= RadiusInTiles * 2; ++i)
+	static constexpr int FinishTileRadius = 10;
+	static const std::array<float, FinishTileRadius * 2 + 1> s_aFinishArcHeights = []() {
+		std::array<float, FinishTileRadius * 2 + 1> aHeights{};
+		for(int i = 0; i <= FinishTileRadius * 2; ++i)
 		{
-			const float h = std::ceil(std::pow(std::sin((float)i * pi / 2.0f / (float)RadiusInTiles), 0.5f) * pi / 2.0f * (float)RadiusInTiles);
-			const vec2 Pos1 = vec2(Pos.x + (float)(i - RadiusInTiles) * 32.0f, Pos.y - h);
-			const vec2 Pos2 = vec2(Pos.x + (float)(i - RadiusInTiles) * 32.0f, Pos.y + h);
+			aHeights[i] = std::ceil(std::pow(std::sin((float)i * pi / 2.0f / (float)FinishTileRadius), 0.5f) * pi / 2.0f * (float)FinishTileRadius);
+		}
+		return aHeights;
+	}();
+
+	// Check for finish tile.
+	const auto &NearFinishTile = [this](vec2 Pos, int Tile) -> bool {
+		const CCollision *pCollision = GameClient()->Collision();
+		for(int i = 0; i <= FinishTileRadius * 2; ++i)
+		{
+			const float h = s_aFinishArcHeights[i];
+			const vec2 Pos1 = vec2(Pos.x + (float)(i - FinishTileRadius) * 32.0f, Pos.y - h);
+			const vec2 Pos2 = vec2(Pos.x + (float)(i - FinishTileRadius) * 32.0f, Pos.y + h);
 			std::vector<int> vIndices = pCollision->GetMapIndices(Pos1, Pos2);
 			if(vIndices.empty())
 				vIndices.push_back(pCollision->GetPureMapIndex(Pos1));
-			for(int &Index : vIndices)
+			for(const int Index : vIndices)
 			{
+				if(Index < 0)
+					continue;
 				if(pCollision->GetTileIndex(Index) == Tile)
 					return true;
 				if(pCollision->GetFrontTileIndex(Index) == Tile)
@@ -1404,8 +1539,14 @@ void CTClient::DoFinishCheck()
 		g_Config.m_TcFinishName[0] = '\0';
 	}
 
-	std::vector<std::string> vNameQueue;
-	ParseFinishNameQueue(g_Config.m_TcFinishNameQueue, vNameQueue);
+	static char s_aFinishNameQueueCache[sizeof(g_Config.m_TcFinishNameQueue)] = "";
+	static std::vector<std::string> s_vCachedFinishNameQueue;
+	if(str_comp(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue) != 0)
+	{
+		str_copy(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue, sizeof(s_aFinishNameQueueCache));
+		ParseFinishNameQueue(g_Config.m_TcFinishNameQueue, s_vCachedFinishNameQueue);
+	}
+	const std::vector<std::string> &vNameQueue = s_vCachedFinishNameQueue;
 	if(vNameQueue.empty())
 		return;
 
@@ -1436,7 +1577,7 @@ void CTClient::DoFinishCheck()
 	const bool NeedsRestoreName = m_aFinishRestoreNameValid[Dummy] &&
 		m_aaFinishRestoreNames[Dummy][0] != '\0' &&
 		str_comp(Player.m_aName, m_aaFinishRestoreNames[Dummy]) != 0;
-	if(!NeedsRestoreName && !NearTile(Player.m_RenderPos, 10, TILE_FINISH))
+	if(!NeedsRestoreName && !NearFinishTile(Player.m_RenderPos, TILE_FINISH))
 		return;
 
 	if(!CurrentNameKnown)
@@ -1580,17 +1721,617 @@ void CTClient::OnRender()
 	}
 
 	UpdateQmClientRecognition();
+	UpdateQmClientLifecycleAndServerTime();
+	UpdateQmDdnetPlayerStats();
 
 	DoFinishCheck();
-	CheckFreeze();
-	CheckWaterFall();
 	CheckFriendOnline();
 	CheckFriendEnterGreet();
-	CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
-	CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
-	CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
-	UpdatePlayerStats(); // 更新玩家统计
+
+	bool RunGameplayTickChecks = false;
+	if(Client()->State() == IClient::STATE_ONLINE)
+	{
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		{
+			if(Dummy == 1 && !Client()->DummyConnected())
+				continue;
+
+			const int Tick = Client()->GameTick(Dummy);
+			if(m_aLastGameplayLogicTick[Dummy] != Tick)
+			{
+				m_aLastGameplayLogicTick[Dummy] = Tick;
+				RunGameplayTickChecks = true;
+			}
+		}
+	}
+	else
+	{
+		m_aLastGameplayLogicTick[0] = -1;
+		m_aLastGameplayLogicTick[1] = -1;
+	}
+
+	if(RunGameplayTickChecks)
+	{
+		CheckFreeze();
+		CheckWaterFall();
+		CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
+		CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
+		CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
+		UpdatePlayerStats(); // 更新玩家统计
+	}
+
 	MaybeSaveMapCategoryCache();
+}
+
+bool CTClient::ReadQmClientLifecycleMarker(int64_t &OutStartedAt, int64_t &OutLastSeenAt)
+{
+	OutStartedAt = 0;
+	OutLastSeenAt = 0;
+
+	void *pFileData = nullptr;
+	unsigned FileSize = 0;
+	if(!Storage()->ReadFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize))
+		return false;
+
+	std::string Marker;
+	if(pFileData && FileSize > 0)
+		Marker.assign(static_cast<const char *>(pFileData), FileSize);
+	free(pFileData);
+	if(Marker.empty())
+		return true;
+
+	char aLine[256];
+	const char *pStr = Marker.c_str();
+	while((pStr = str_next_token(pStr, "\n", aLine, sizeof(aLine))))
+	{
+		if(const char *pValue = str_startswith(aLine, "started_at="))
+			OutStartedAt = maximum<int64_t>(0, str_toint(pValue));
+		else if(const char *pValue = str_startswith(aLine, "last_seen_at="))
+			OutLastSeenAt = maximum<int64_t>(0, str_toint(pValue));
+	}
+	return true;
+}
+
+void CTClient::WriteQmClientLifecycleMarker()
+{
+	if(m_QmClientMarkerStartedAt <= 0)
+		m_QmClientMarkerStartedAt = time_timestamp();
+	if(m_QmClientMarkerLastSeenAt <= 0)
+		m_QmClientMarkerLastSeenAt = m_QmClientMarkerStartedAt;
+
+	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+
+	IOHANDLE File = Storage()->OpenFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return;
+
+	char aLine[384];
+	str_format(aLine, sizeof(aLine),
+		"session=%s\nstarted_at=%d\nlast_seen_at=%d\nclient_id=%s\n",
+		m_aQmClientLifecycleSessionId, (int)m_QmClientMarkerStartedAt, (int)m_QmClientMarkerLastSeenAt, m_aQmClientPlaytimeClientId);
+	io_write(File, aLine, str_length(aLine));
+	io_close(File);
+}
+
+void CTClient::TouchQmClientLifecycleMarker(bool ForceWrite)
+{
+	const int64_t NowTick = time_get();
+	const int64_t Interval = (int64_t)QMCLIENT_MARKER_FLUSH_INTERVAL_SECONDS * time_freq();
+	if(!ForceWrite && m_QmClientMarkerLastFlushTick != 0 && NowTick - m_QmClientMarkerLastFlushTick < Interval)
+		return;
+
+	if(m_QmClientMarkerStartedAt <= 0)
+		m_QmClientMarkerStartedAt = time_timestamp();
+	m_QmClientMarkerLastSeenAt = time_timestamp();
+	m_QmClientMarkerLastFlushTick = NowTick;
+	WriteQmClientLifecycleMarker();
+}
+
+void CTClient::ClearQmClientLifecycleMarker()
+{
+	Storage()->RemoveFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IStorage::TYPE_SAVE);
+}
+
+void CTClient::SendQmClientLifecyclePing(const char *pEvent, std::shared_ptr<CHttpRequest> &pTaskSlot)
+{
+	if(!pEvent || pEvent[0] == '\0')
+		return;
+
+	if(pTaskSlot)
+	{
+		if(!pTaskSlot->Done())
+			return;
+		pTaskSlot = nullptr;
+	}
+
+	if(str_comp(pEvent, "startup") == 0)
+	{
+		SendQmClientPlaytimeRequest(QMCLIENT_PLAYTIME_START_URL, pTaskSlot);
+		return;
+	}
+
+	if(str_comp(pEvent, "recover_crash") == 0)
+	{
+		const int64_t StopAt = m_QmClientRecoveryStopAt > 0 ? m_QmClientRecoveryStopAt : time_timestamp();
+		SendQmClientPlaytimeRequest(QMCLIENT_PLAYTIME_STOP_URL, pTaskSlot, StopAt);
+		return;
+	}
+
+	if(str_comp(pEvent, "shutdown") == 0 || str_comp(pEvent, "restart") == 0)
+	{
+		SendQmClientPlaytimeRequest(QMCLIENT_PLAYTIME_STOP_URL, pTaskSlot, time_timestamp());
+		return;
+	}
+}
+
+void CTClient::EnsureQmClientPlaytimeClientId()
+{
+	if(m_aQmClientPlaytimeClientId[0] != '\0')
+		return;
+
+	char aLoaded[128] = "";
+	IOHANDLE File = Storage()->OpenFile(QMCLIENT_PLAYTIME_CLIENT_ID_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
+	if(File)
+	{
+		const int Read = io_read(File, aLoaded, sizeof(aLoaded) - 1);
+		io_close(File);
+		if(Read > 0)
+		{
+			aLoaded[Read] = '\0';
+			char *pTrimmed = (char *)str_utf8_skip_whitespaces(aLoaded);
+			str_utf8_trim_right(pTrimmed);
+			if(IsValidQmClientPlaytimeId(pTrimmed))
+				str_copy(m_aQmClientPlaytimeClientId, pTrimmed, sizeof(m_aQmClientPlaytimeClientId));
+		}
+	}
+
+	if(m_aQmClientPlaytimeClientId[0] == '\0')
+	{
+		unsigned char aRandom[16];
+		secure_random_fill(aRandom, sizeof(aRandom));
+
+		static constexpr const char HEX[] = "0123456789abcdef";
+		char aHex[sizeof(aRandom) * 2 + 1];
+		for(size_t i = 0; i < sizeof(aRandom); ++i)
+		{
+			aHex[i * 2] = HEX[aRandom[i] >> 4];
+			aHex[i * 2 + 1] = HEX[aRandom[i] & 0x0f];
+		}
+		aHex[sizeof(aHex) - 1] = '\0';
+		str_format(m_aQmClientPlaytimeClientId, sizeof(m_aQmClientPlaytimeClientId), "qm%s", aHex);
+	}
+
+	if(!IsValidQmClientPlaytimeId(m_aQmClientPlaytimeClientId))
+	{
+		m_aQmClientPlaytimeClientId[0] = '\0';
+		return;
+	}
+
+	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	IOHANDLE OutFile = Storage()->OpenFile(QMCLIENT_PLAYTIME_CLIENT_ID_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(OutFile)
+	{
+		io_write(OutFile, m_aQmClientPlaytimeClientId, str_length(m_aQmClientPlaytimeClientId));
+		io_write(OutFile, "\n", 1);
+		io_close(OutFile);
+	}
+}
+
+void CTClient::SendQmClientPlaytimeRequest(const char *pUrl, std::shared_ptr<CHttpRequest> &pTaskSlot, int64_t StopAt)
+{
+	if(!pUrl || pUrl[0] == '\0')
+		return;
+
+	EnsureQmClientPlaytimeClientId();
+	if(m_aQmClientPlaytimeClientId[0] == '\0')
+		return;
+
+	// Center endpoints are plain HTTP.
+	if(!g_Config.m_HttpAllowInsecure)
+		g_Config.m_HttpAllowInsecure = 1;
+
+	CJsonStringWriter JsonWriter;
+	JsonWriter.BeginObject();
+	JsonWriter.WriteAttribute("client_id");
+	JsonWriter.WriteStrValue(m_aQmClientPlaytimeClientId);
+	JsonWriter.WriteAttribute("player_name");
+	JsonWriter.WriteStrValue(g_Config.m_PlayerName);
+	if(StopAt > 0)
+	{
+		JsonWriter.WriteAttribute("stop_at");
+		const int StopAtInt = StopAt > std::numeric_limits<int>::max() ? std::numeric_limits<int>::max() : (int)StopAt;
+		JsonWriter.WriteIntValue(StopAtInt);
+	}
+	JsonWriter.EndObject();
+
+	std::string Body = JsonWriter.GetOutputString();
+	pTaskSlot = HttpPostJson(pUrl, Body.c_str());
+	pTaskSlot->Timeout(CTimeout{3000, 0, 250, 6});
+	pTaskSlot->IpResolve(IPRESOLVE::V4);
+	pTaskSlot->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(pTaskSlot);
+}
+
+bool CTClient::FinishQmClientPlaytimeTask(std::shared_ptr<CHttpRequest> &pTaskSlot, bool UpdateSessionStart)
+{
+	if(!pTaskSlot)
+		return false;
+
+	const bool Ok = pTaskSlot->State() == EHttpState::DONE && pTaskSlot->StatusCode() == 200;
+
+	if(Ok)
+	{
+		json_value *pRoot = pTaskSlot->ResultJson();
+		if(pRoot && pRoot->type == json_object)
+		{
+			int64_t ServerNow = 0;
+			if(JsonReadNonNegativeInt64(JsonObjectField(pRoot, "ts"), ServerNow))
+				m_QmClientServerNow = ServerNow;
+
+			int64_t TotalSeconds = 0;
+			if(JsonReadNonNegativeInt64(JsonObjectField(pRoot, "total_seconds"), TotalSeconds))
+				m_QmClientServerPlaytimeSeconds = TotalSeconds;
+
+			const json_value *pRunning = JsonObjectField(pRoot, "running");
+			const bool Running = pRunning->type == json_boolean && json_boolean_get(pRunning);
+			int64_t LastStartAt = 0;
+			if(UpdateSessionStart || Running)
+			{
+				if(JsonReadNonNegativeInt64(JsonObjectField(pRoot, "last_start_at"), LastStartAt) && LastStartAt > 0)
+					m_QmClientServerSessionStart = LastStartAt;
+			}
+		}
+		if(pRoot)
+			json_value_free(pRoot);
+	}
+
+	if(Ok && (&pTaskSlot == &m_pQmClientLifecycleStopTask || &pTaskSlot == &m_pQmClientLifecycleCrashTask))
+		ClearQmClientLifecycleMarker();
+
+	pTaskSlot = nullptr;
+	return Ok;
+}
+
+void CTClient::FinishQmClientServerTimeTask()
+{
+	if(!m_pQmClientServerTimeTask)
+		return;
+
+	m_QmClientServerTimeLastSync = time_get();
+
+	if(m_pQmClientServerTimeTask->State() == EHttpState::DONE)
+	{
+		json_value *pRoot = m_pQmClientServerTimeTask->ResultJson();
+		if(pRoot)
+		{
+			const json_value *pTs = JsonObjectField(pRoot, "ts");
+			if(pTs != &json_value_none && pTs->type == json_integer && pTs->u.integer > 0)
+			{
+				m_QmClientServerNow = pTs->u.integer;
+				if(m_QmClientServerSessionStart == 0)
+					m_QmClientServerSessionStart = m_QmClientServerNow;
+			}
+			json_value_free(pRoot);
+		}
+	}
+
+	m_pQmClientServerTimeTask = nullptr;
+}
+
+void CTClient::UpdateQmClientLifecycleAndServerTime()
+{
+	if(m_pQmClientLifecycleStartTask && m_pQmClientLifecycleStartTask->Done())
+	{
+		const bool Ok = FinishQmClientPlaytimeTask(m_pQmClientLifecycleStartTask, true);
+		if(!Ok)
+		{
+			m_QmClientStartupSent = false;
+			m_QmClientStartupNextRetry = time_get() + (int64_t)QMCLIENT_RECOVERY_RETRY_SECONDS * time_freq();
+		}
+		else
+		{
+			m_QmClientStartupNextRetry = 0;
+		}
+	}
+	if(m_pQmClientLifecycleCrashTask && m_pQmClientLifecycleCrashTask->Done())
+	{
+		const bool Ok = FinishQmClientPlaytimeTask(m_pQmClientLifecycleCrashTask, false);
+		if(Ok)
+		{
+			m_QmClientAwaitingRecoveryStop = false;
+			m_QmClientRecoveryNextRetry = 0;
+		}
+		else
+		{
+			m_QmClientRecoveryNextRetry = time_get() + (int64_t)QMCLIENT_RECOVERY_RETRY_SECONDS * time_freq();
+		}
+	}
+	if(m_pQmClientLifecycleStopTask && m_pQmClientLifecycleStopTask->Done())
+		FinishQmClientPlaytimeTask(m_pQmClientLifecycleStopTask, false);
+	if(m_pQmClientPlaytimeQueryTask && m_pQmClientPlaytimeQueryTask->Done())
+	{
+		FinishQmClientPlaytimeTask(m_pQmClientPlaytimeQueryTask, false);
+		m_QmClientPlaytimeLastSync = time_get();
+	}
+
+	if(m_pQmClientServerTimeTask && m_pQmClientServerTimeTask->Done())
+		FinishQmClientServerTimeTask();
+
+	if(Client()->State() == IClient::STATE_QUITTING || Client()->State() == IClient::STATE_RESTARTING)
+		return;
+
+	const int64_t Now = time_get();
+
+	if(m_QmClientAwaitingRecoveryStop && !m_pQmClientLifecycleCrashTask &&
+		(m_QmClientRecoveryNextRetry == 0 || Now >= m_QmClientRecoveryNextRetry))
+	{
+		SendQmClientLifecyclePing("recover_crash", m_pQmClientLifecycleCrashTask);
+		if(m_pQmClientLifecycleCrashTask)
+			m_QmClientRecoveryNextRetry = Now + (int64_t)QMCLIENT_RECOVERY_RETRY_SECONDS * time_freq();
+	}
+
+	if(!m_QmClientAwaitingRecoveryStop && !m_QmClientStartupSent && !m_pQmClientLifecycleStartTask &&
+		(m_QmClientStartupNextRetry == 0 || Now >= m_QmClientStartupNextRetry))
+	{
+		m_QmClientMarkerStartedAt = time_timestamp();
+		m_QmClientMarkerLastSeenAt = m_QmClientMarkerStartedAt;
+		m_QmClientMarkerLastFlushTick = Now;
+		WriteQmClientLifecycleMarker();
+
+		SendQmClientLifecyclePing("startup", m_pQmClientLifecycleStartTask);
+		m_QmClientStartupSent = m_pQmClientLifecycleStartTask != nullptr;
+		if(m_QmClientStartupSent)
+			m_QmClientStartupNextRetry = 0;
+	}
+
+	if(!m_QmClientAwaitingRecoveryStop && m_QmClientStartupSent)
+		TouchQmClientLifecycleMarker(false);
+
+	const int64_t PlaytimeIntervalTicks = (int64_t)QMCLIENT_PLAYTIME_QUERY_INTERVAL_SECONDS * time_freq();
+	if(!m_pQmClientPlaytimeQueryTask && (m_QmClientPlaytimeLastSync == 0 || Now - m_QmClientPlaytimeLastSync >= PlaytimeIntervalTicks))
+		SendQmClientPlaytimeRequest(QMCLIENT_PLAYTIME_QUERY_URL, m_pQmClientPlaytimeQueryTask);
+
+	const int64_t IntervalTicks = (int64_t)QMCLIENT_SERVER_TIME_SYNC_INTERVAL_SECONDS * time_freq();
+	if(m_pQmClientServerTimeTask || (m_QmClientServerTimeLastSync != 0 && Now - m_QmClientServerTimeLastSync < IntervalTicks))
+		return;
+
+	if(!g_Config.m_HttpAllowInsecure)
+		g_Config.m_HttpAllowInsecure = 1;
+
+	char aUrl[512];
+	const int Nonce = secure_rand_below(1000000);
+	str_format(aUrl, sizeof(aUrl), "%s?event=time_sync&session=%s&nonce=%d", QMCLIENT_HEALTH_URL, m_aQmClientLifecycleSessionId, Nonce);
+
+	m_pQmClientServerTimeTask = HttpGet(aUrl);
+	m_pQmClientServerTimeTask->Timeout(CTimeout{3000, 0, 250, 5});
+	m_pQmClientServerTimeTask->IpResolve(IPRESOLVE::V4);
+	m_pQmClientServerTimeTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmClientServerTimeTask);
+}
+
+void CTClient::UpdateQmDdnetPlayerStats()
+{
+	if(m_pQmDdnetPlayerTask && m_pQmDdnetPlayerTask->Done())
+		FinishQmDdnetPlayerStats();
+
+	const char *pConfiguredName = g_Config.m_PlayerName;
+	if(!pConfiguredName || pConfiguredName[0] == '\0')
+	{
+		if(m_pQmDdnetPlayerTask)
+		{
+			m_pQmDdnetPlayerTask->Abort();
+			m_pQmDdnetPlayerTask = nullptr;
+		}
+		if(m_aQmDdnetPlayerName[0] != '\0')
+		{
+			m_aQmDdnetPlayerName[0] = '\0';
+			m_aQmDdnetFavoritePartner[0] = '\0';
+			m_QmDdnetTotalFinishes = -1;
+			m_QmDdnetPlayerLastSync = 0;
+			m_QmDdnetPlayerNextRetry = 0;
+		}
+		return;
+	}
+
+	if(str_comp(m_aQmDdnetPlayerName, pConfiguredName) != 0)
+	{
+		if(m_pQmDdnetPlayerTask)
+		{
+			m_pQmDdnetPlayerTask->Abort();
+			m_pQmDdnetPlayerTask = nullptr;
+		}
+
+		str_copy(m_aQmDdnetPlayerName, pConfiguredName, sizeof(m_aQmDdnetPlayerName));
+		m_aQmDdnetFavoritePartner[0] = '\0';
+		m_QmDdnetTotalFinishes = -1;
+		m_QmDdnetPlayerLastSync = 0;
+		m_QmDdnetPlayerNextRetry = 0;
+	}
+
+	if(m_pQmDdnetPlayerTask)
+		return;
+
+	const int64_t Now = time_get();
+	if(m_QmDdnetPlayerNextRetry != 0 && Now < m_QmDdnetPlayerNextRetry)
+		return;
+
+	if(m_QmDdnetPlayerNextRetry == 0)
+	{
+		const int64_t SyncIntervalTicks = (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq();
+		if(m_QmDdnetPlayerLastSync != 0 && Now - m_QmDdnetPlayerLastSync < SyncIntervalTicks)
+			return;
+	}
+
+	FetchQmDdnetPlayerStats(m_aQmDdnetPlayerName);
+}
+
+void CTClient::FetchQmDdnetPlayerStats(const char *pPlayerName)
+{
+	if(!pPlayerName || pPlayerName[0] == '\0')
+		return;
+	if(m_pQmDdnetPlayerTask && !m_pQmDdnetPlayerTask->Done())
+		return;
+
+	char aEncodedName[256];
+	EscapeUrl(aEncodedName, sizeof(aEncodedName), pPlayerName);
+
+	char aUrl[512];
+	str_format(aUrl, sizeof(aUrl), "%s%s", DDNET_PLAYER_STATS_URL, aEncodedName);
+
+	m_pQmDdnetPlayerTask = HttpGet(aUrl);
+	m_pQmDdnetPlayerTask->Timeout(CTimeout{10000, 30000, 100, 10});
+	m_pQmDdnetPlayerTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmDdnetPlayerTask);
+}
+
+void CTClient::FinishQmDdnetPlayerStats()
+{
+	if(!m_pQmDdnetPlayerTask)
+		return;
+
+	bool Parsed = false;
+	char aFavoritePartner[MAX_NAME_LENGTH] = "";
+	int64_t TotalFinishes = 0;
+
+	if(m_pQmDdnetPlayerTask->State() == EHttpState::DONE && m_pQmDdnetPlayerTask->StatusCode() == 200)
+	{
+		json_value *pRoot = m_pQmDdnetPlayerTask->ResultJson();
+		if(pRoot && pRoot->type == json_object)
+		{
+			const json_value *pFavoritePartners = JsonObjectField(pRoot, "favorite_partners");
+			if(pFavoritePartners->type == json_array)
+			{
+				const char *pBestPartner = nullptr;
+				int BestPartnerFinishes = -1;
+				for(unsigned i = 0; i < pFavoritePartners->u.array.length; ++i)
+				{
+					const json_value &Partner = (*pFavoritePartners)[i];
+					if(Partner.type != json_object)
+						continue;
+
+					const json_value *pName = JsonObjectField(&Partner, "name");
+					if(pName->type != json_string)
+						continue;
+
+					const char *pPartnerName = json_string_get(pName);
+					if(!pPartnerName || pPartnerName[0] == '\0')
+						continue;
+
+					int PartnerFinishes = 0;
+					const json_value *pFinishes = JsonObjectField(&Partner, "finishes");
+					if(pFinishes->type == json_integer && pFinishes->u.integer > 0)
+					{
+						if(pFinishes->u.integer > std::numeric_limits<int>::max())
+							PartnerFinishes = std::numeric_limits<int>::max();
+						else
+							PartnerFinishes = (int)pFinishes->u.integer;
+					}
+
+					if(!pBestPartner ||
+						PartnerFinishes > BestPartnerFinishes ||
+						(PartnerFinishes == BestPartnerFinishes && str_comp_nocase(pPartnerName, pBestPartner) < 0))
+					{
+						pBestPartner = pPartnerName;
+						BestPartnerFinishes = PartnerFinishes;
+					}
+				}
+
+				if(pBestPartner)
+					str_copy(aFavoritePartner, pBestPartner, sizeof(aFavoritePartner));
+			}
+
+			const json_value *pTypes = JsonObjectField(pRoot, "types");
+			if(pTypes->type == json_object)
+			{
+				Parsed = true;
+				for(unsigned i = 0; i < pTypes->u.object.length; ++i)
+				{
+					const json_value *pTypeObj = pTypes->u.object.values[i].value;
+					if(!pTypeObj || pTypeObj->type != json_object)
+						continue;
+
+					const json_value *pMaps = JsonObjectField(pTypeObj, "maps");
+					if(pMaps->type != json_object)
+						continue;
+
+					for(unsigned j = 0; j < pMaps->u.object.length; ++j)
+					{
+						const json_value *pMapObj = pMaps->u.object.values[j].value;
+						if(!pMapObj || pMapObj->type != json_object)
+							continue;
+
+						const json_value *pFinishes = JsonObjectField(pMapObj, "finishes");
+						if(pFinishes->type != json_integer || pFinishes->u.integer <= 0 || TotalFinishes >= std::numeric_limits<int>::max())
+							continue;
+
+						int64_t SafeAdd = pFinishes->u.integer;
+						if(SafeAdd > std::numeric_limits<int>::max())
+							SafeAdd = std::numeric_limits<int>::max();
+
+						const int64_t MaxTotal = std::numeric_limits<int>::max();
+						if(SafeAdd > MaxTotal - TotalFinishes)
+							TotalFinishes = MaxTotal;
+						else
+							TotalFinishes += SafeAdd;
+					}
+				}
+			}
+		}
+		if(pRoot)
+			json_value_free(pRoot);
+	}
+
+	const int64_t Now = time_get();
+	if(Parsed)
+	{
+		m_QmDdnetPlayerLastSync = Now;
+		m_QmDdnetPlayerNextRetry = 0;
+		str_copy(m_aQmDdnetFavoritePartner, aFavoritePartner, sizeof(m_aQmDdnetFavoritePartner));
+		m_QmDdnetTotalFinishes = (int)TotalFinishes;
+	}
+	else
+	{
+		m_QmDdnetPlayerLastSync = 0;
+		m_QmDdnetPlayerNextRetry = Now + (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq();
+	}
+
+	m_pQmDdnetPlayerTask = nullptr;
+}
+
+void CTClient::InitQmClientLifecycle()
+{
+	unsigned SessionRandom = 0;
+	secure_random_fill(&SessionRandom, sizeof(SessionRandom));
+	str_format(m_aQmClientLifecycleSessionId, sizeof(m_aQmClientLifecycleSessionId), "%08x%08x", (unsigned)time_timestamp(), SessionRandom);
+
+	EnsureQmClientPlaytimeClientId();
+	int64_t PreviousStartedAt = 0;
+	int64_t PreviousLastSeenAt = 0;
+	const bool HadPendingMarker = ReadQmClientLifecycleMarker(PreviousStartedAt, PreviousLastSeenAt);
+	m_QmClientRecoveryStopAt = PreviousLastSeenAt > 0 ? PreviousLastSeenAt : PreviousStartedAt;
+	if(m_QmClientRecoveryStopAt <= 0)
+		m_QmClientRecoveryStopAt = time_timestamp();
+	m_QmClientMarkerStartedAt = PreviousStartedAt;
+	m_QmClientMarkerLastSeenAt = PreviousLastSeenAt;
+	m_QmClientMarkerLastFlushTick = 0;
+
+	m_QmClientShutdownReported = false;
+	m_QmClientAwaitingRecoveryStop = HadPendingMarker;
+	m_QmClientStartupSent = false;
+	m_QmClientRecoveryNextRetry = 0;
+	m_QmClientStartupNextRetry = 0;
+	m_QmClientServerNow = 0;
+	m_QmClientServerSessionStart = 0;
+	m_QmClientServerTimeLastSync = 0;
+	m_QmClientServerPlaytimeSeconds = -1;
+	m_QmClientPlaytimeLastSync = 0;
+
+	if(HadPendingMarker)
+	{
+		SendQmClientLifecyclePing("recover_crash", m_pQmClientLifecycleCrashTask);
+		if(!m_pQmClientLifecycleCrashTask)
+			m_QmClientRecoveryNextRetry = time_get() + (int64_t)QMCLIENT_RECOVERY_RETRY_SECONDS * time_freq();
+	}
 }
 
 void CTClient::ResetQmClientRecognitionTasks()
@@ -1959,24 +2700,27 @@ void CTClient::CheckWaterFall()
 	}
 }
 
-static std::string BuildFriendNotifyKey(const char *pName, const char *pClan, bool IgnoreClan)
+static void BuildFriendNotifyKey(const char *pName, const char *pClan, bool IgnoreClan, std::string &OutKey)
 {
-	std::string Key = pName ? pName : "";
+	OutKey.clear();
+	if(pName)
+		OutKey.append(pName);
 	if(!IgnoreClan)
 	{
-		Key.push_back('\t');
+		OutKey.push_back('\t');
 		if(pClan)
-			Key.append(pClan);
+			OutKey.append(pClan);
 	}
-	return Key;
 }
 
 void CTClient::CheckFriendOnline()
 {
 	const int Enabled = g_Config.m_QmFriendOnlineNotify;
-	if(m_FriendNotifyPrevEnabled != Enabled)
+	const int IgnoreClanSetting = g_Config.m_ClFriendsIgnoreClan;
+	if(m_FriendNotifyPrevEnabled != Enabled || m_FriendNotifyPrevIgnoreClan != IgnoreClanSetting)
 	{
 		m_FriendNotifyPrevEnabled = Enabled;
+		m_FriendNotifyPrevIgnoreClan = IgnoreClanSetting;
 		m_FriendNotifyNextCheck = 0.0f;
 		m_FriendOnline.clear();
 		m_FriendNotifyScanRunning = false;
@@ -2030,7 +2774,7 @@ void CTClient::CheckFriendOnline()
 		}
 	};
 
-	const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
+	const bool IgnoreClan = IgnoreClanSetting != 0;
 	if(!m_FriendNotifyScanRunning)
 	{
 		if(Now < m_FriendNotifyNextCheck)
@@ -2055,14 +2799,16 @@ void CTClient::CheckFriendOnline()
 	}
 	else
 	{
-		constexpr int ServersPerFrame = 64;
+		constexpr int ServersPerFrame = 32;
 		int ProcessedServers = 0;
+		std::string Key;
+		Key.reserve(MAX_NAME_LENGTH + MAX_CLAN_LENGTH + 1);
 		while(m_FriendNotifyScanIndex < NumServers && ProcessedServers < ServersPerFrame)
 		{
 			const CServerInfo *pEntry = pServerBrowser->SortedGet(m_FriendNotifyScanIndex);
 			++m_FriendNotifyScanIndex;
 			++ProcessedServers;
-			if(!pEntry)
+			if(!pEntry || pEntry->m_FriendNum <= 0)
 				continue;
 
 			for(int ClientIndex = 0; ClientIndex < pEntry->m_NumReceivedClients; ++ClientIndex)
@@ -2070,10 +2816,12 @@ void CTClient::CheckFriendOnline()
 				const CServerInfo::CClient &Client = pEntry->m_aClients[ClientIndex];
 				if(Client.m_aName[0] == '\0')
 					continue;
-				if(!GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
+				if(Client.m_FriendState == IFriends::FRIEND_NO)
+					continue;
+				if(Client.m_FriendState != IFriends::FRIEND_PLAYER && !GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
 					continue;
 
-				const std::string Key = BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan);
+				BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
 				auto It = m_FriendOnline.find(Key);
 				if(It == m_FriendOnline.end())
 				{
@@ -2133,21 +2881,58 @@ void CTClient::CheckFriendEnterGreet()
 			m_FriendEnterOnline.clear();
 			m_FriendEnterInitialized = false;
 		}
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
 		m_FriendEnterNextCheck = 0.0f;
 		return;
 	}
 
-	const int Enabled = g_Config.m_QmFriendEnterAutoGreet;
-	if(m_FriendEnterPrevEnabled != Enabled)
+	const bool AutoGreetEnabled = g_Config.m_QmFriendEnterAutoGreet != 0;
+	const bool BroadcastEnabled = g_Config.m_QmFriendEnterBroadcast != 0;
+	const int IgnoreClanSetting = g_Config.m_ClFriendsIgnoreClan;
+	const int EnabledMask = (AutoGreetEnabled ? 1 : 0) | (BroadcastEnabled ? 2 : 0);
+	if(m_FriendEnterPrevEnabled != EnabledMask || m_FriendEnterPrevIgnoreClan != IgnoreClanSetting)
 	{
-		m_FriendEnterPrevEnabled = Enabled;
+		m_FriendEnterPrevEnabled = EnabledMask;
+		m_FriendEnterPrevIgnoreClan = IgnoreClanSetting;
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
 		m_FriendEnterNextCheck = 0.0f;
 	}
 
-	if(!Enabled)
+	if(!AutoGreetEnabled && !BroadcastEnabled)
+	{
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
 		return;
+	}
+	if(!AutoGreetEnabled)
+	{
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
+	}
+
+	static constexpr float FriendEnterGreetDelaySeconds = 3.0f;
+	const float Now = LocalTime();
+	if(AutoGreetEnabled && !m_FriendEnterPendingNames.empty() && Now >= m_FriendEnterPendingSendAt)
+	{
+		if(g_Config.m_QmFriendEnterGreetText[0] != '\0')
+		{
+			char aMsg[256];
+			aMsg[0] = '\0';
+			str_append(aMsg, m_FriendEnterPendingNames.c_str(), sizeof(aMsg));
+			if(aMsg[0] != '\0')
+				str_append(aMsg, ": ", sizeof(aMsg));
+			str_append(aMsg, g_Config.m_QmFriendEnterGreetText, sizeof(aMsg));
+
+			if(aMsg[0] != '\0')
+				GameClient()->m_Chat.SendChat(0, aMsg);
+		}
+		m_FriendEnterPendingNames.clear();
+		m_FriendEnterPendingSendAt = 0.0f;
+	}
 
 	if(GameClient()->Friends()->NumFriends() <= 0)
 	{
@@ -2156,7 +2941,6 @@ void CTClient::CheckFriendEnterGreet()
 		return;
 	}
 
-	const float Now = LocalTime();
 	if(Now < m_FriendEnterNextCheck)
 		return;
 	m_FriendEnterNextCheck = Now + 0.2f;
@@ -2165,7 +2949,9 @@ void CTClient::CheckFriendEnterGreet()
 	CurrentFriends.reserve(32);
 	std::vector<std::string> NewFriends;
 	NewFriends.reserve(8);
-	const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
+	std::string Key;
+	Key.reserve(MAX_NAME_LENGTH + MAX_CLAN_LENGTH + 1);
+	const bool IgnoreClan = IgnoreClanSetting != 0;
 	const int LocalMain = GameClient()->m_aLocalIds[0];
 	const int LocalDummy = GameClient()->m_aLocalIds[1];
 	const bool HasDummy = Client()->DummyConnected();
@@ -2180,7 +2966,7 @@ void CTClient::CheckFriendEnterGreet()
 		if(!GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
 			continue;
 
-		std::string Key = BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan);
+		BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
 		CurrentFriends.insert(Key);
 		if(m_FriendEnterOnline.find(Key) == m_FriendEnterOnline.end())
 			NewFriends.push_back(Client.m_aName);
@@ -2198,24 +2984,33 @@ void CTClient::CheckFriendEnterGreet()
 	if(NewFriends.empty())
 		return;
 
-	if(g_Config.m_QmFriendEnterGreetText[0] == '\0')
-		return;
-
-	char aMsg[256];
-	aMsg[0] = '\0';
+	std::string NewNames;
+	NewNames.reserve(64);
 	for(size_t i = 0; i < NewFriends.size(); ++i)
 	{
 		if(i > 0)
-			str_append(aMsg, " ", sizeof(aMsg));
-		str_append(aMsg, NewFriends[i].c_str(), sizeof(aMsg));
+			NewNames.push_back(' ');
+		NewNames.append(NewFriends[i]);
 	}
 
-	if(aMsg[0] != '\0')
-		str_append(aMsg, ": ", sizeof(aMsg));
-	str_append(aMsg, g_Config.m_QmFriendEnterGreetText, sizeof(aMsg));
+	if(NewNames.empty())
+		return;
 
-	if(aMsg[0] != '\0')
-		GameClient()->m_Chat.SendChat(0, aMsg);
+	if(BroadcastEnabled)
+	{
+		const std::string BroadcastText = BuildFriendEnterBroadcastText(g_Config.m_QmFriendEnterBroadcastText, NewNames);
+		if(!BroadcastText.empty())
+			GameClient()->m_Broadcast.DoBroadcast(BroadcastText.c_str());
+	}
+
+	if(!AutoGreetEnabled || g_Config.m_QmFriendEnterGreetText[0] == '\0')
+		return;
+
+	if(!m_FriendEnterPendingNames.empty())
+		m_FriendEnterPendingNames.push_back(' ');
+	m_FriendEnterPendingNames.append(NewNames);
+	if(m_FriendEnterPendingSendAt <= 0.0f)
+		m_FriendEnterPendingSendAt = Now + FriendEnterGreetDelaySeconds;
 }
 
 void CTClient::CheckAutoUnspecOnUnfreeze()
@@ -2506,6 +3301,13 @@ void CTClient::SetForcedAspect()
 
 void CTClient::OnStateChange(int NewState, int OldState)
 {
+	if((NewState == IClient::STATE_QUITTING || NewState == IClient::STATE_RESTARTING) && !m_QmClientShutdownReported)
+	{
+		m_QmClientShutdownReported = true;
+		TouchQmClientLifecycleMarker(true);
+		SendQmClientLifecyclePing(NewState == IClient::STATE_RESTARTING ? "restart" : "shutdown", m_pQmClientLifecycleStopTask);
+	}
+
 	SetForcedAspect();
 	for(auto &AirRescuePositions : m_aAirRescuePositions)
 		AirRescuePositions = {};
@@ -2529,6 +3331,8 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
 	}
+	m_aLastGameplayLogicTick[0] = -1;
+	m_aLastGameplayLogicTick[1] = -1;
 
 	// 进入服务器时重置统计数据
 	if(NewState == IClient::STATE_ONLINE && g_Config.m_QmPlayerStatsResetOnJoin)
@@ -3009,6 +3813,11 @@ void CTClient::MaybeSaveMapCategoryCache()
 {
 	if(!m_MapCategoryCacheDirty)
 		return;
+
+	// Avoid synchronous disk writes during active gameplay frames.
+	if(Client()->State() == IClient::STATE_ONLINE && !GameClient()->m_Menus.IsActive())
+		return;
+
 	if(m_MapCategoryCacheNextSave == 0)
 		m_MapCategoryCacheNextSave = time_get() + time_freq() * MAP_CATEGORY_CACHE_SAVE_DELAY_SEC;
 	if(time_get() >= m_MapCategoryCacheNextSave)
