@@ -239,6 +239,7 @@ public:
 	bool HasCountry(const char *pCountryName) const;
 	bool HasType(const char *pTypeName) const;
 	bool HasRanks() const { return m_HasFinishes; }
+	int NumFinishedMaps() const { return static_cast<int>(m_FinishedMaps.size()); }
 	CServerInfo::ERankState HasRank(const char *pMap) const;
 	int NumPlayers() const { return m_NumPlayers; }
 };

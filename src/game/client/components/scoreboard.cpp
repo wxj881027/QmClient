@@ -1402,41 +1402,34 @@ void CScoreboard::OnRender()
 
 	if(!UseAnim)
 	{
+		m_OpenTime = WantActive ? ShowDuration : 0.0f;
+		m_Visibility = WantActive ? 1.0f : 0.0f;
 		if(!WantActive)
+		{
+			m_AnimContentAlpha = 0.0f;
 			return;
-		m_Visibility = 1.0f;
-		m_OpenTime = ShowDuration;
-	}
-	else if(WantActive)
-	{
-		if(ShowDuration > 0.0f)
-		{
-			m_OpenTime = minimum(ShowDuration, m_OpenTime + DeltaTime);
-			m_Visibility = minimum(1.0f, m_Visibility + DeltaTime / ShowDuration);
-		}
-		else
-		{
-			m_OpenTime = ShowDuration;
-			m_Visibility = 1.0f;
 		}
 	}
 	else
 	{
-		if(HideDuration > 0.0f)
+		if(WantActive)
 		{
-			m_Visibility = maximum(0.0f, m_Visibility - DeltaTime / HideDuration);
+			m_OpenTime += DeltaTime;
 		}
 		else
 		{
-			m_Visibility = 0.0f;
+			const float CloseSpeed = (HideDuration > 0.0f && ShowDuration > 0.0f) ? (ShowDuration / HideDuration) : 1.0f;
+			m_OpenTime -= DeltaTime * CloseSpeed;
 		}
 
-		if(m_Visibility <= 0.0f)
-			m_OpenTime = 0.0f;
+		m_OpenTime = std::clamp(m_OpenTime, 0.0f, ShowDuration);
+		m_Visibility = ShowDuration > 0.0f ? (m_OpenTime / ShowDuration) : (WantActive ? 1.0f : 0.0f);
+		if(!WantActive && m_OpenTime <= 0.0f)
+		{
+			m_AnimContentAlpha = 0.0f;
+			return;
+		}
 	}
-
-	if(UseAnim && !WantActive && m_Visibility <= 0.0f)
-		return;
 
 	if(!GameClient()->m_Menus.IsActive())
 	{
@@ -1456,10 +1449,8 @@ void CScoreboard::OnRender()
 	const float ContentProgress = ContentInTime > 0.0f ? std::clamp((OpenTime - BackgroundInTime) / ContentInTime, 0.0f, 1.0f) : 1.0f;
 	const float BackgroundAlpha = UseAnim ? ScoreboardEase(BackgroundProgress) : 1.0f;
 	const float ContentAlphaOpen = UseAnim ? ScoreboardEase(ContentProgress) : 1.0f;
-	const bool Closing = UseAnim && !WantActive && m_Visibility > 0.0f;
-	const float HideAlpha = Closing ? ScoreboardEase(std::clamp(m_Visibility, 0.0f, 1.0f)) : 1.0f;
-	const float BackgroundAlphaFinal = BackgroundAlpha * HideAlpha;
-	m_AnimContentAlpha = ContentAlphaOpen * HideAlpha;
+	const float BackgroundAlphaFinal = BackgroundAlpha;
+	m_AnimContentAlpha = ContentAlphaOpen;
 	const float ContentOffset = UseAnim ? (1.0f - ContentAlphaOpen) * 8.0f : 0.0f;
 
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
@@ -1497,18 +1488,6 @@ void CScoreboard::OnRender()
 		if(Ui()->DoButton_PopupMenu(&s_ScoreboardSortButton, pSortLabel, &Rect, SortButtonFontSize, TEXTALIGN_MC, 0.0f, false, true, SortButtonColor))
 			g_Config.m_ClScoreboardSortMode ^= 1;
 	};
-
-	const float RenderScale = Closing ? maximum(0.001f, HideAlpha) : 1.0f;
-	const bool ApplyScale = RenderScale < 1.0f;
-	if(ApplyScale)
-	{
-		const vec2 Pivot = Scoreboard.Center();
-		const float MapW = Screen.w / RenderScale;
-		const float MapH = Screen.h / RenderScale;
-		const float MapX = Pivot.x - (Pivot.x - Screen.x) / RenderScale;
-		const float MapY = Pivot.y - (Pivot.y - Screen.y) / RenderScale;
-		Graphics()->MapScreen(MapX, MapY, MapW, MapH);
-	}
 
 	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PrevTextOutlineColor = TextRender()->GetTextOutlineColor();
@@ -1769,11 +1748,6 @@ void CScoreboard::OnRender()
 
 	TextRender()->TextColor(PrevTextColor);
 	TextRender()->TextOutlineColor(PrevTextOutlineColor);
-
-	if(ApplyScale)
-	{
-		Ui()->MapScreen();
-	}
 }
 
 bool CScoreboard::IsActive() const

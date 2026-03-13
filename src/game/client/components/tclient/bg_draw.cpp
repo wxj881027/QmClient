@@ -1,6 +1,7 @@
 #include "bg_draw.h"
 
 #include <base/log.h>
+#include <base/system.h>
 
 #include <engine/client.h>
 #include <engine/external/spt.h>

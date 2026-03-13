@@ -541,6 +541,7 @@ public:
 		// TClient
 		vec2 m_ImprovedPredPos = vec2(0, 0);
 		vec2 m_PrevImprovedPredPos = vec2(0, 0);
+		bool m_ValidAntipingSmooth = false;
 		//vec2 m_DebugVector = vec2(0, 0);
 		//vec2 m_DebugVector2 = vec2(0, 0);
 		//vec2 m_DebugVector3 = vec2(0, 0);
@@ -732,6 +733,7 @@ public:
 	void SendReadyChange7();
 
 	void ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld);
+	bool GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const CNetObj_PlayerInput *pDummyInputData, const class CCharacter *pDummyChar, int LocalTee, int DummyTee) const;
 
 	int m_aNextChangeInfo[NUM_DUMMIES];
 
@@ -772,6 +774,11 @@ public:
 	CGameWorld m_GameWorld;
 	CGameWorld m_PredictedWorld;
 	CGameWorld m_PrevPredictedWorld;
+
+	// TClient
+	CGameWorld m_RegularPredictedWorld;
+	CGameWorld m_PrevRegularPredictedWorld;
+
 	// TClient
 	CGameWorld m_ExtraPredictedWorld;
 	CGameWorld m_PredSmoothingWorld;

@@ -52,6 +52,7 @@ public:
 	const char *GetCategory(int Index) const override;
 	int FindCategory(const char *pCategory) const override;
 	bool AddCategory(const char *pCategory) override;
+	bool MoveCategory(int FromIndex, int ToIndex) override;
 	bool RenameCategory(const char *pOldCategory, const char *pNewCategory) override;
 	bool RemoveCategory(const char *pCategory) override;
 	bool SetFriendCategory(const char *pName, const char *pClan, const char *pCategory) override;

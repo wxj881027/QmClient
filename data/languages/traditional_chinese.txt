@@ -505,6 +505,9 @@ Max demos
 News
 == 新聞
 
+Statistics
+== 統計
+
 Join game
 == 加入遊戲
 

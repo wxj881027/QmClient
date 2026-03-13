@@ -51,6 +51,7 @@ public:
 	virtual const char *GetCategory(int Index) const = 0;
 	virtual int FindCategory(const char *pCategory) const = 0;
 	virtual bool AddCategory(const char *pCategory) = 0;
+	virtual bool MoveCategory(int FromIndex, int ToIndex) = 0;
 	virtual bool RenameCategory(const char *pOldCategory, const char *pNewCategory) = 0;
 	virtual bool RemoveCategory(const char *pCategory) = 0;
 	virtual bool SetFriendCategory(const char *pName, const char *pClan, const char *pCategory) = 0;

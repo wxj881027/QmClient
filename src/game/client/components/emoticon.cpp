@@ -47,6 +47,13 @@ void CEmoticon::OnConsoleInit()
 
 void CEmoticon::OnReset()
 {
+	m_AnimationTime = 0.0f;
+	m_AnimationProgress = 0.0f;
+	m_AnimationStartProgress = 0.0f;
+	m_AnimationStartTime = 0.0f;
+	m_AnimationTargetActive = false;
+	m_AnimationInitialized = false;
+
 	m_WasActive = false;
 	m_Active = false;
 	m_SelectedEmote = -1;
@@ -166,26 +173,9 @@ void CEmoticon::OnRender()
 		if(m_WasActive && m_SelectedEyeEmote != -1)
 			EyeEmote(m_SelectedEyeEmote);
 		m_WasActive = false;
-
-		if(AnimationTime == 0.0f)
-			return;
-
-		// 关闭动画速度与打开速度相同，让效果对称
-		m_AnimationTime -= Client()->RenderFrameTime() * 1.2f;
-		if(m_AnimationTime <= 0.0f)
-		{
-			m_AnimationTime = 0.0f;
-			return;
-		}
 	}
 	else
 	{
-		if(AnimationTime != 0.0f)
-		{
-			m_AnimationTime += Client()->RenderFrameTime();
-			if(m_AnimationTime > AnimationTime)
-				m_AnimationTime = AnimationTime;
-		}
 		m_WasActive = true;
 	}
 
@@ -194,6 +184,55 @@ void CEmoticon::OnRender()
 		m_Active = false;
 		m_WasActive = false;
 	}
+
+	const bool TargetActive = m_Active;
+	const float Now = Client()->GlobalTime();
+
+	// 声明式动画：由目标状态 + 当前时间推导当前进度，而不是每帧累加/累减。
+	if(AnimationTime == 0.0f)
+	{
+		m_AnimationProgress = TargetActive ? 1.0f : 0.0f;
+		m_AnimationTime = 0.0f;
+		m_AnimationStartProgress = m_AnimationProgress;
+		m_AnimationStartTime = Now;
+		m_AnimationTargetActive = TargetActive;
+		m_AnimationInitialized = true;
+	}
+	else
+	{
+		if(!m_AnimationInitialized)
+		{
+			m_AnimationProgress = std::min(1.0f, std::max(0.0f, m_AnimationTime / AnimationTime));
+			m_AnimationStartProgress = m_AnimationProgress;
+			m_AnimationStartTime = Now;
+			m_AnimationTargetActive = TargetActive;
+			m_AnimationInitialized = true;
+		}
+
+		if(m_AnimationTargetActive != TargetActive)
+		{
+			m_AnimationStartProgress = m_AnimationProgress;
+			m_AnimationStartTime = Now;
+			m_AnimationTargetActive = TargetActive;
+		}
+
+		const float TargetProgress = m_AnimationTargetActive ? 1.0f : 0.0f;
+		const float TransitionDuration = m_AnimationTargetActive ? AnimationTime : AnimationTime / 1.2f;
+		if(TransitionDuration <= 0.0f)
+		{
+			m_AnimationProgress = TargetProgress;
+		}
+		else
+		{
+			const float TransitionProgress = std::min(1.0f, std::max(0.0f, (Now - m_AnimationStartTime) / TransitionDuration));
+			m_AnimationProgress = m_AnimationStartProgress + (TargetProgress - m_AnimationStartProgress) * TransitionProgress;
+		}
+
+		m_AnimationTime = m_AnimationProgress * AnimationTime;
+	}
+
+	if(!TargetActive && m_AnimationProgress <= 0.0f)
+		return;
 
 	const CUIRect Screen = *Ui()->Screen();
 

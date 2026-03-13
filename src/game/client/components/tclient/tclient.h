@@ -217,6 +217,7 @@ class CTClient : public CComponent
 	std::unordered_map<std::string, SFriendOnlineState> m_FriendOnline;
 	float m_FriendNotifyNextCheck = 0.0f;
 	int m_FriendNotifyPrevEnabled = -1;
+	int m_FriendNotifyPrevIgnoreClan = -1;
 	bool m_FriendNotifyScanRunning = false;
 	int m_FriendNotifyScanIndex = 0;
 	int m_FriendNotifyScanId = 0;
@@ -227,6 +228,7 @@ class CTClient : public CComponent
 	// 好友进图自动打招呼
 	std::unordered_set<std::string> m_FriendEnterOnline;
 	int m_FriendEnterPrevEnabled = -1;
+	int m_FriendEnterPrevIgnoreClan = -1;
 	bool m_FriendEnterInitialized = false;
 	float m_FriendEnterNextCheck = 0.0f;
 	std::string m_FriendEnterPendingNames;
@@ -237,8 +239,29 @@ class CTClient : public CComponent
 	std::shared_ptr<CHttpRequest> m_pQmClientAuthTokenTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientUsersTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientUsersSendTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleStartTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleCrashTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleStopTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmClientServerTimeTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmClientPlaytimeQueryTask = nullptr;
 	char m_aQmClientAuthToken[256] = "";
+	char m_aQmClientLifecycleSessionId[64] = "";
+	char m_aQmClientPlaytimeClientId[65] = "";
 	int64_t m_QmClientLastSync = 0;
+	int64_t m_QmClientServerNow = 0;
+	int64_t m_QmClientServerSessionStart = 0;
+	int64_t m_QmClientServerTimeLastSync = 0;
+	int64_t m_QmClientServerPlaytimeSeconds = -1;
+	int64_t m_QmClientPlaytimeLastSync = 0;
+	int64_t m_QmClientRecoveryStopAt = 0;
+	int64_t m_QmClientRecoveryNextRetry = 0;
+	int64_t m_QmClientStartupNextRetry = 0;
+	int64_t m_QmClientMarkerStartedAt = 0;
+	int64_t m_QmClientMarkerLastSeenAt = 0;
+	int64_t m_QmClientMarkerLastFlushTick = 0;
+	bool m_QmClientShutdownReported = false;
+	bool m_QmClientAwaitingRecoveryStop = false;
+	bool m_QmClientStartupSent = false;
 	void UpdateQmClientRecognition();
 	void SyncQmClientUsers();
 	void FetchQmClientAuthToken();
@@ -247,12 +270,35 @@ class CTClient : public CComponent
 	void FinishQmClientAuthToken();
 	void FinishQmClientUsers();
 	void ResetQmClientRecognitionTasks();
+	void InitQmClientLifecycle();
+	void UpdateQmClientLifecycleAndServerTime();
+	void SendQmClientLifecyclePing(const char *pEvent, std::shared_ptr<CHttpRequest> &pTaskSlot);
+	void FinishQmClientServerTimeTask();
+	bool FinishQmClientPlaytimeTask(std::shared_ptr<CHttpRequest> &pTaskSlot, bool UpdateSessionStart);
+	void SendQmClientPlaytimeRequest(const char *pUrl, std::shared_ptr<CHttpRequest> &pTaskSlot, int64_t StopAt = 0);
+	void EnsureQmClientPlaytimeClientId();
+	bool ReadQmClientLifecycleMarker(int64_t &OutStartedAt, int64_t &OutLastSeenAt);
+	void TouchQmClientLifecycleMarker(bool ForceWrite);
+	void WriteQmClientLifecycleMarker();
+	void ClearQmClientLifecycleMarker();
+
+	// DDNet player stats (favorite partner + total finishes)
+	std::shared_ptr<CHttpRequest> m_pQmDdnetPlayerTask = nullptr;
+	int64_t m_QmDdnetPlayerLastSync = 0;
+	int64_t m_QmDdnetPlayerNextRetry = 0;
+	char m_aQmDdnetPlayerName[MAX_NAME_LENGTH] = "";
+	char m_aQmDdnetFavoritePartner[MAX_NAME_LENGTH] = "";
+	int m_QmDdnetTotalFinishes = -1;
+	void UpdateQmDdnetPlayerStats();
+	void FetchQmDdnetPlayerStats(const char *pPlayerName);
+	void FinishQmDdnetPlayerStats();
 
 
 public:
 	CTClient();
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
+	void OnShutdown() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnConsoleInit() override;
 	void OnRender() override;
@@ -301,6 +347,13 @@ public:
 	const std::set<std::string> &GetFavoriteMaps() const { return m_FavoriteMaps; }
 	const char *GetCachedMapCategoryKey(const char *pMapName) const;
 	void UpdateMapCategoryCache(const char *pMapName, const char *pCategoryKey);
+	bool HasQmServerTime() const { return m_QmClientServerNow > 0; }
+	int64_t QmServerTimeNow() const { return m_QmClientServerNow; }
+	int64_t QmServerSessionStartTime() const { return m_QmClientServerSessionStart; }
+	bool HasQmServerPlaytime() const { return m_QmClientServerPlaytimeSeconds >= 0; }
+	int64_t QmServerPlaytimeSeconds() const { return m_QmClientServerPlaytimeSeconds; }
+	int QmDdnetTotalFinishes() const { return m_QmDdnetTotalFinishes; }
+	const char *QmDdnetFavoritePartner() const { return m_aQmDdnetFavoritePartner; }
 
 };
 

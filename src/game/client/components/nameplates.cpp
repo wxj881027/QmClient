@@ -1239,6 +1239,40 @@ public:
 		RenderLine(This, Position, LineSize, Start, m_vpParts.end());
 		This.Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
+	bool IsInitialized() const
+	{
+		return m_Inited;
+	}
+	float TopY(const vec2 &PositionBottomMiddle) const
+	{
+		dbg_assert(m_Inited, "Tried to get top of uninited nameplate");
+
+		vec2 Position = PositionBottomMiddle;
+		vec2 LineSize = vec2(0.0f, 0.0f);
+		bool Empty = true;
+		float Top = Position.y;
+		for(auto PartIt = m_vpParts.begin(); PartIt != m_vpParts.end(); ++PartIt) // NOLINT(modernize-loop-convert) For consistency with Render
+		{
+			CNamePlatePart &Part = **PartIt;
+			if(Part.NewLine())
+			{
+				if(!Empty)
+				{
+					Top = std::min(Top, Position.y - LineSize.y / 2.0f);
+					Position.y -= LineSize.y;
+				}
+				LineSize = vec2(0.0f, 0.0f);
+			}
+			else if(Part.Visible() || Part.ShiftOnInvis())
+			{
+				Empty = false;
+				LineSize.x += Part.Size().x + Part.Padding().x;
+				LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);
+			}
+		}
+		Top = std::min(Top, Position.y - LineSize.y / 2.0f);
+		return Top;
+	}
 	vec2 Size() const
 	{
 		dbg_assert(m_Inited, "Tried to get size of uninited nameplate");
@@ -1503,7 +1537,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	// Check if the nameplate is actually on screen
 	CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
 	NamePlate.Update(*GameClient(), Data);
-	NamePlate.Render(*GameClient(), Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset));
+	if(Alpha > 0.0f)
+		NamePlate.Render(*GameClient(), Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset));
 }
 
 void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
@@ -1608,6 +1643,25 @@ void CNamePlates::ResetNamePlates()
 		NamePlate.Reset(*GameClient());
 }
 
+void CNamePlates::ResetChatBubbleAnimState(int ClientId)
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return;
+
+	SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
+	const bool RuntimeInitialized = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) >= -0.5f;
+	if(!AnimState.m_Initialized && AnimState.m_aCachedText[0] == '\0' && !RuntimeInitialized)
+		return;
+
+	AnimState = SChatBubbleAnimState();
+	AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+	AnimRuntime.SetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
+	AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+	AnimRuntime.SetValue(NodeKey, EUiAnimProperty::WIDTH, 0.0f);
+}
+
 void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 {
 	// Check if chat bubbles are enabled
@@ -1639,7 +1693,7 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 
 	// Check if this is local player who is currently typing
 	const bool IsLocalPlayer = (GameClient()->m_Snap.m_LocalClientId == ClientId);
-	if(IsLocalPlayer && GameClient()->m_Chat.IsActive() && g_Config.m_QmChatBubbleTyping)
+	if(IsLocalPlayer && GameClient()->m_Chat.IsActive())
 	{
 		const char *pInputText = GameClient()->m_Chat.GetInputText();
 		if(pInputText && pInputText[0] != '\0')
@@ -1768,7 +1822,6 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	float ScreenWidth = ScreenX1 - ScreenX0;
 	float ScreenHeight = ScreenY1 - ScreenY0;
 	float ScreenPosX = (Position.x - ScreenX0) / ScreenWidth;
-	float ScreenPosY = (Position.y - ScreenY0) / ScreenHeight;
 
 	// Map to interface coordinates for text rendering (fixed zoom)
 	Graphics()->MapScreenToInterface(GameClient()->m_Camera.m_Center.x, GameClient()->m_Camera.m_Center.y);
@@ -1781,35 +1834,36 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 
 	// Convert screen-space position to interface coordinates
 	float InterfaceX = InterfaceX0 + ScreenPosX * InterfaceWidth;
-	float InterfaceY = InterfaceY0 + ScreenPosY * InterfaceHeight;
 
-	// Calculate zoom scale factor for bubble size
-	// m_Zoom < 1.0 means zoomed in (objects appear larger), > 1.0 means zoomed out (objects appear smaller)
-	// We want bubble to scale inversely: zoom in = larger bubble, zoom out = smaller bubble
+	// Chat bubbles always follow camera zoom.
 	float CameraZoom = GameClient()->m_Camera.m_Zoom;
 	float ZoomScale = 1.0f;
-	if(g_Config.m_QmChatBubbleZoomScale && CameraZoom > 0.0f)
+	if(CameraZoom > 0.0f)
 	{
-		// Apply zoom scaling with configurable intensity
-		// ZoomScale = 1/zoom means: zoom=0.5 -> scale=2, zoom=2 -> scale=0.5
 		ZoomScale = 1.0f / CameraZoom;
-		// Clamp to reasonable range to prevent extreme sizes
 		ZoomScale = std::clamp(ZoomScale, 0.25f, 4.0f);
 	}
 
-	// Configure text rendering - use settings with zoom scaling
+	// Configure text rendering with fixed visual rules.
+	constexpr float kBubblePadding = 12.0f;
+	constexpr float kBubbleRounding = 10.0f;
+	constexpr float kBubbleMaxWidth = 230.0f;
 	const float BaseFontSize = (float)g_Config.m_QmChatBubbleFontSize;
-	const float BasePadding = 12.0f;
-	const float BaseRounding = (float)g_Config.m_QmChatBubbleRounding;
-	const float BaseMaxWidth = (float)g_Config.m_QmChatBubbleMaxWidth;
-	const float BaseOffsetY = (float)g_Config.m_QmChatBubbleOffsetY * 2.0f;
 
 	// Apply zoom scaling to all dimensions
 	const float FontSize = BaseFontSize * ZoomScale;
-	const float Padding = BasePadding * ZoomScale;
-	const float Rounding = BaseRounding * ZoomScale;
-	const float MaxWidth = BaseMaxWidth * ZoomScale;
-	const float BaseOffset = BaseOffsetY * ZoomScale;
+	const float Padding = kBubblePadding * ZoomScale;
+	const float Rounding = kBubbleRounding * ZoomScale;
+	const float MaxWidth = kBubbleMaxWidth * ZoomScale;
+
+	// Anchor bubble to the top of the nameplate plus default nameplate spacing.
+	float NameplateTopWorldY = Position.y - (float)g_Config.m_ClNamePlatesOffset;
+	const vec2 NameplateBottomMiddleWorld = Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);
+	const CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
+	if(NamePlate.IsInitialized())
+		NameplateTopWorldY = NamePlate.TopY(NameplateBottomMiddleWorld);
+	const float ScreenPosNameplateTopY = (NameplateTopWorldY - ScreenY0) / ScreenHeight;
+	const float InterfaceNameplateTopY = InterfaceY0 + ScreenPosNameplateTopY * InterfaceHeight;
 
 	// Set anti-aliasing flags for smoother text
 	unsigned int PrevFlags = TextRender()->GetRenderFlags();
@@ -1828,22 +1882,16 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 	float BubbleWidth = (TextWidth + Padding * 2.0f) * AnimScale;
 	float BubbleHeight = (TextHeight + Padding * 2.0f) * AnimScale;
 
-	// Position bubble above the player with pop-up animation and slide offset
+	// Position bubble above the nameplate with built-in nameplate spacing.
 	float AnimOffset = AnimSlideOffset;
+	const float BubbleGap = DEFAULT_PADDING * ZoomScale;
 	float BubbleX = InterfaceX - BubbleWidth / 2.0f;
-	float BubbleY = InterfaceY - BaseOffset - BubbleHeight + AnimOffset;
+	float BubbleY = InterfaceNameplateTopY - BubbleGap - BubbleHeight + AnimOffset;
 
-	// Draw rounded rectangle background with slight border
-	// Use configured alpha value and colors (解析HSLA格式配置为RGBA)
 	float ConfigAlpha = g_Config.m_QmChatBubbleAlpha / 100.0f;
 
-	// ---------- Background ----------
 	ColorHSLA BgHSLA(g_Config.m_QmChatBubbleBgColor, true);
-	// 防止亮度过低/过高导致“发灰”
-	BgHSLA.l = std::clamp(BgHSLA.l, 0.15f, 0.85f);
-
 	ColorRGBA BgColor = color_cast<ColorRGBA>(BgHSLA);
-	// 背景跟随动画
 	BgColor.a *= BubbleAlpha * ConfigAlpha;
 
 	Graphics()->TextureClear();
@@ -1854,21 +1902,12 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 		IGraphics::CORNER_ALL,
 		Rounding);
 
-	// ---------- Text ----------
 	ColorHSLA TextHSLA(g_Config.m_QmChatBubbleTextColor, false);
-	// 保证文字亮度可读
-	TextHSLA.l = std::clamp(TextHSLA.l, 0.25f, 0.95f);
-
 	ColorRGBA TextColor = color_cast<ColorRGBA>(TextHSLA);
-	// 文字比背景“抗 fade”
-	TextColor.a *= std::min(1.0f, BubbleAlpha * 1.2f) * ConfigAlpha;
+	TextColor.a *= BubbleAlpha * ConfigAlpha;
 
-	// 自适应描边（反色而不是死黑）
-	ColorRGBA OutlineColor = TextColor;
-	OutlineColor.r = 1.0f - OutlineColor.r;
-	OutlineColor.g = 1.0f - OutlineColor.g;
-	OutlineColor.b = 1.0f - OutlineColor.b;
-	OutlineColor.a = 0.4f * TextColor.a;
+	ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
+	OutlineColor.a *= TextColor.a;
 
 	TextRender()->TextColor(TextColor);
 	TextRender()->TextOutlineColor(OutlineColor);
@@ -1909,17 +1948,22 @@ void CNamePlates::OnRender()
 	const bool ShowCoords = (g_Config.m_QmNameplateCoords || g_Config.m_QmNameplateCoordsOwn) &&
 				(g_Config.m_QmNameplateCoordX || g_Config.m_QmNameplateCoordY);
 	const bool ShowCoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
-	if(!g_Config.m_ClNamePlates && ShowDirection == 0 && !ShowCoords && !ShowCoordXAlignHint)
+	const bool RenderNameplates = g_Config.m_ClNamePlates || ShowDirection != 0 || ShowCoords || ShowCoordXAlignHint;
+	const bool RenderChatBubbles = g_Config.m_QmChatBubble != 0;
+	if(!RenderNameplates && !RenderChatBubbles)
 		return;
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		const CNetObj_PlayerInfo *pInfo = GameClient()->m_Snap.m_apPlayerInfos[i];
 		if(!pInfo)
+		{
+			ResetChatBubbleAnimState(i);
 			continue;
+		}
 
 		// Each player can also have a spectator char whose name plate is displayed independently
-		if(GameClient()->m_aClients[i].m_SpecCharPresent)
+		if(GameClient()->m_aClients[i].m_SpecCharPresent && RenderNameplates)
 		{
 			const vec2 RenderPos = GameClient()->m_aClients[i].m_SpecChar;
 			RenderNamePlateGame(RenderPos, pInfo, 0.4f);
@@ -1933,10 +1977,12 @@ void CNamePlates::OnRender()
 			// if(g_Config.m_TcRenderNameplateSpec > 0)
 			//	continue;
 			const vec2 RenderPos = GameClient()->m_aClients[i].m_RenderPos;
-			RenderNamePlateGame(RenderPos, pInfo, 1.0f);
+			if(RenderNameplates || RenderChatBubbles)
+				RenderNamePlateGame(RenderPos, pInfo, RenderNameplates ? 1.0f : 0.0f);
 
 			// Render chat bubble above player
-			RenderChatBubble(RenderPos, i, 1.0f);
+			if(RenderChatBubbles)
+				RenderChatBubble(RenderPos, i, 1.0f);
 		}
 	}
 }

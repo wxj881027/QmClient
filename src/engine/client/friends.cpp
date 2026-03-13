@@ -289,6 +289,27 @@ bool CFriends::AddCategory(const char *pCategory)
 	return true;
 }
 
+bool CFriends::MoveCategory(int FromIndex, int ToIndex)
+{
+	if(FromIndex < 0 || ToIndex < 0 || FromIndex >= m_NumCategories || ToIndex >= m_NumCategories || FromIndex == ToIndex)
+		return false;
+
+	char aCategory[MAX_FRIEND_CATEGORY_LENGTH];
+	str_copy(aCategory, m_aaCategories[FromIndex], sizeof(aCategory));
+
+	if(FromIndex < ToIndex)
+	{
+		mem_move(&m_aaCategories[FromIndex], &m_aaCategories[FromIndex + 1], sizeof(m_aaCategories[0]) * (ToIndex - FromIndex));
+	}
+	else
+	{
+		mem_move(&m_aaCategories[ToIndex + 1], &m_aaCategories[ToIndex], sizeof(m_aaCategories[0]) * (FromIndex - ToIndex));
+	}
+
+	str_copy(m_aaCategories[ToIndex], aCategory, sizeof(m_aaCategories[0]));
+	return true;
+}
+
 bool CFriends::RenameCategory(const char *pOldCategory, const char *pNewCategory)
 {
 	char aOldCategory[MAX_FRIEND_CATEGORY_LENGTH];

@@ -33,7 +33,7 @@ using namespace FontIcons;
 
 namespace
 {
-void ComputeExternalButtons(const CUIRect &MainView, bool UseV2Layout, CUIRect &DiscordButton, CUIRect &LearnButton, CUIRect &TutorialButton, CUIRect &WebsiteButton, CUIRect &NewsButton)
+void ComputeExternalButtons(const CUIRect &MainView, bool UseV2Layout, CUIRect &DiscordButton, CUIRect &LearnButton, CUIRect &TutorialButton, CUIRect &WebsiteButton, CUIRect &StatisticsButton, CUIRect &NewsButton)
 {
 	CUIRect ExtMenu;
 	MainView.VSplitLeft(30.0f, nullptr, &ExtMenu);
@@ -50,6 +50,8 @@ void ComputeExternalButtons(const CUIRect &MainView, bool UseV2Layout, CUIRect &
 		ExtMenu.HSplitBottom(20.0f, &ExtMenu, &WebsiteButton);
 		ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr);
 		ExtMenu.HSplitBottom(20.0f, &ExtMenu, &NewsButton);
+		ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr);
+		ExtMenu.HSplitBottom(20.0f, &ExtMenu, &StatisticsButton);
 		return;
 	}
 
@@ -60,18 +62,19 @@ void ComputeExternalButtons(const CUIRect &MainView, bool UseV2Layout, CUIRect &
 	ContainerStyle.m_AlignItems = EUiAlign::STRETCH;
 	ContainerStyle.m_JustifyContent = EUiAlign::END;
 
-	std::vector<SUiLayoutChild> vChildren(5);
+	std::vector<SUiLayoutChild> vChildren(6);
 	for(SUiLayoutChild &Child : vChildren)
 	{
 		Child.m_Style.m_Height = SUiLength::Px(20.0f);
 	}
 
 	LayoutEngine.ComputeChildren(ContainerStyle, CUiV2LegacyAdapter::FromCUIRect(ExtMenu), vChildren);
-	NewsButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
-	WebsiteButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
-	TutorialButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[2].m_Box);
-	LearnButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[3].m_Box);
-	DiscordButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[4].m_Box);
+	StatisticsButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
+	NewsButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
+	WebsiteButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[2].m_Box);
+	TutorialButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[3].m_Box);
+	LearnButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[4].m_Box);
+	DiscordButton = CUiV2LegacyAdapter::ToCUIRect(vChildren[5].m_Box);
 }
 
 void ComputeMainButtons(const CUIRect &MenuArea, bool UseV2Layout, CUIRect aMenuButtons[6])
@@ -151,8 +154,8 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	const float VMargin = MainView.w / 2 - 190.0f;
 
 	int NewPage = -1;
-	CUIRect DiscordButtonRect, LearnButtonRect, TutorialButtonRect, WebsiteButtonRect, NewsButtonRect;
-	ComputeExternalButtons(MainView, UseV2Layout, DiscordButtonRect, LearnButtonRect, TutorialButtonRect, WebsiteButtonRect, NewsButtonRect);
+	CUIRect DiscordButtonRect, LearnButtonRect, TutorialButtonRect, WebsiteButtonRect, StatisticsButtonRect, NewsButtonRect;
+	ComputeExternalButtons(MainView, UseV2Layout, DiscordButtonRect, LearnButtonRect, TutorialButtonRect, WebsiteButtonRect, StatisticsButtonRect, NewsButtonRect);
 	static CButtonContainer s_DiscordButton;
 	if(GameClient()->m_Menus.DoButton_Menu(&s_DiscordButton, Localize("Discord"), 0, &DiscordButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
@@ -197,6 +200,10 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	{
 		Client()->ViewLink("https://ddnet.org/");
 	}
+
+	static CButtonContainer s_StatisticsButton;
+	if(GameClient()->m_Menus.DoButton_Menu(&s_StatisticsButton, "统计", 0, &StatisticsButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		NewPage = CMenus::PAGE_STATS;
 
 	static CButtonContainer s_NewsButton;
 	if(GameClient()->m_Menus.DoButton_Menu(&s_NewsButton, Localize("News"), 0, &NewsButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_N))

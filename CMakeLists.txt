@@ -964,6 +964,7 @@ else()
   endif()
 endif()
 list(APPEND CARGO_BUILD $<$<NOT:$<CONFIG:Debug>>:--release>)
+list(APPEND CARGO_TEST $<$<NOT:$<CONFIG:Debug>>:--release>)
 
 if(CMAKE_OSX_ARCHITECTURES)
   set(RUST_OSX_ARCHITECTURES)
@@ -3436,9 +3437,8 @@ set(RUST_TEST_LIBS ${LIBS} $<TARGET_FILE:rust_test>)
 list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
 # Use ',' as separator so the value can be passed through shell safely.
 string(JOIN "," RUST_TEST_LIBS_JOINED ${RUST_TEST_LIBS})
-string(GENEX_STRIP "${RUST_TEST_LIBS_JOINED}" RUST_TEST_LIBS_STRIPPED)
 add_custom_target(run_rust_tests
-  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES=${RUST_TEST_LIBS_STRIPPED}" ${CARGO_TEST}
+  COMMAND ${CMAKE_COMMAND} -E env --unset=DDNET_TEST_NO_LINK --unset=RA_RUSTC_WRAPPER "DDNET_TEST_LIBRARIES=${RUST_TEST_LIBS_JOINED}" ${CARGO_TEST}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   USES_TERMINAL
   DEPENDS rust_test

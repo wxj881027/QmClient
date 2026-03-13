@@ -256,7 +256,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	{
 		if(!ServerBrowser()->NumServers() && ServerBrowser()->IsGettingServerlist())
 		{
-			Ui()->DoLabel(&View, Localize("Getting server list from master server"), 16.0f, TEXTALIGN_MC);
+			char aLoadingLabel[256];
+			const int LoadingDotsCount = static_cast<int>(Client()->GlobalTime() * 3.0f) % 7;
+			str_format(aLoadingLabel, sizeof(aLoadingLabel), "%s%.*s", Localize("Getting server list from master server"), LoadingDotsCount, "......");
+			Ui()->DoLabel(&View, aLoadingLabel, 16.0f, TEXTALIGN_MC);
 		}
 		else if(!ServerBrowser()->NumServers())
 		{
@@ -1140,7 +1143,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 			}
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_vFavoriteButtonIds[ItemIndex], &FavoriteButton,
-			Favorite ? Localize("Click to remove this community from your favorites.") : Localize("Click to add this community to your favorites."));
+			Favorite ? Localize("点击将该社区移出收藏") : Localize("点击将该社区加入收藏"));
 	};
 
 	s_vFavoriteButtonIds.resize(MaxEntries);
@@ -1593,6 +1596,90 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	s_ScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
 	List.y += ScrollOffset.y;
 
+	const CUIRect ListViewport = *s_ScrollRegion.ClipRect();
+	const float UiScale = 1.0f;
+	const float CategoryDragHoldSeconds = 0.5f;
+	const float CategoryDropPreviewThickness = std::clamp(3.0f * UiScale, 2.0f, 4.0f);
+	const float CategoryDragOutlineThickness = std::clamp(2.0f * UiScale, 1.0f, 2.0f);
+	const ColorRGBA CategoryDropPreviewColor(0.2f, 0.9f, 0.4f, 0.9f);
+	const ColorRGBA CategoryDragOutlineColor(1.0f, 0.85f, 0.2f, 0.9f);
+	const ColorRGBA CategoryDragGhostColor(0.08f, 0.09f, 0.12f, 0.55f);
+
+	struct SFriendsCategoryDragState
+	{
+		int m_PressedIndex = -1;
+		int m_DraggingIndex = -1;
+		float m_PressStartTime = 0.0f;
+		vec2 m_GrabOffset = vec2(0.0f, 0.0f);
+		float m_DraggedWidth = 0.0f;
+		float m_DraggedHeight = 0.0f;
+		bool m_HasDragRect = false;
+	};
+	static SFriendsCategoryDragState s_CategoryDragState;
+
+	struct SFriendsCategoryDropPreview
+	{
+		bool m_Active = false;
+		bool m_Valid = false;
+		int m_DraggedIndex = -1;
+		int m_InsertIndex = 0;
+		CUIRect m_LineRect = {};
+	};
+	static SFriendsCategoryDropPreview s_CategoryDropPreview;
+
+	struct SFriendsCategoryHeaderInfo
+	{
+		int m_CategoryIndex = -1;
+		CUIRect m_Rect = {};
+	};
+
+	auto ResetCategoryDragState = [&]() {
+		s_CategoryDragState = SFriendsCategoryDragState();
+		s_CategoryDropPreview = SFriendsCategoryDropPreview();
+	};
+
+	auto DrawCategoryDragOutline = [&](const CUIRect &Rect) {
+		CUIRect Line = Rect;
+		Line.HSplitTop(CategoryDragOutlineThickness, &Line, nullptr);
+		Line.Draw(CategoryDragOutlineColor, IGraphics::CORNER_NONE, 0.0f);
+
+		Line = Rect;
+		Line.HSplitBottom(CategoryDragOutlineThickness, nullptr, &Line);
+		Line.Draw(CategoryDragOutlineColor, IGraphics::CORNER_NONE, 0.0f);
+
+		Line = Rect;
+		Line.VSplitLeft(CategoryDragOutlineThickness, &Line, nullptr);
+		Line.Draw(CategoryDragOutlineColor, IGraphics::CORNER_NONE, 0.0f);
+
+		Line = Rect;
+		Line.VSplitRight(CategoryDragOutlineThickness, nullptr, &Line);
+		Line.Draw(CategoryDragOutlineColor, IGraphics::CORNER_NONE, 0.0f);
+	};
+
+	auto MoveCategoryExpandedState = [&](int FromIndex, int ToIndex) {
+		if(FromIndex < 0 || ToIndex < 0 || FromIndex == ToIndex || FromIndex >= (int)m_vFriendsCategoryExpanded.size() || ToIndex >= (int)m_vFriendsCategoryExpanded.size())
+			return;
+
+		const unsigned char Expanded = m_vFriendsCategoryExpanded[FromIndex];
+		if(FromIndex < ToIndex)
+		{
+			for(int Index = FromIndex; Index < ToIndex; ++Index)
+				m_vFriendsCategoryExpanded[Index] = m_vFriendsCategoryExpanded[Index + 1];
+		}
+		else
+		{
+			for(int Index = FromIndex; Index > ToIndex; --Index)
+				m_vFriendsCategoryExpanded[Index] = m_vFriendsCategoryExpanded[Index - 1];
+		}
+		m_vFriendsCategoryExpanded[ToIndex] = Expanded;
+	};
+
+	if(s_CategoryDragState.m_DraggingIndex >= NumCategories || s_CategoryDragState.m_PressedIndex >= NumCategories)
+		ResetCategoryDragState();
+
+	std::vector<SFriendsCategoryHeaderInfo> vCategoryHeaders;
+	vCategoryHeaders.reserve(NumCategories);
+
 	char aBuf[256];
 	int FriendTooltipIndex = 0;
 	for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
@@ -1601,8 +1688,43 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		CUIRect Header, GroupIcon, GroupLabel;
 		List.HSplitTop(ms_ListheaderHeight, &Header, &List);
 		s_ScrollRegion.AddRect(Header);
+		vCategoryHeaders.push_back({CategoryIndex, Header});
 		const char *pCategoryName = GameClient()->Friends()->GetCategory(CategoryIndex);
-		const bool HeaderHovered = Ui()->MouseHovered(&Header);
+		const bool HeaderInside = Ui()->MouseHovered(&Header);
+		if(Ui()->MouseButtonClicked(0) && HeaderInside && Ui()->ActiveItem() == nullptr)
+		{
+			s_CategoryDragState.m_PressedIndex = CategoryIndex;
+			s_CategoryDragState.m_DraggingIndex = -1;
+			s_CategoryDragState.m_PressStartTime = Client()->GlobalTime();
+		}
+
+		if(s_CategoryDragState.m_PressedIndex == CategoryIndex && Ui()->MouseButton(0) && s_CategoryDragState.m_DraggingIndex < 0)
+		{
+			if(HeaderInside && Client()->GlobalTime() - s_CategoryDragState.m_PressStartTime >= CategoryDragHoldSeconds)
+			{
+				s_CategoryDragState.m_DraggingIndex = CategoryIndex;
+				s_CategoryDragState.m_GrabOffset = vec2(Ui()->MouseX() - Header.x, Ui()->MouseY() - Header.y);
+				s_CategoryDragState.m_DraggedWidth = Header.w;
+				s_CategoryDragState.m_DraggedHeight = Header.h;
+				s_CategoryDragState.m_HasDragRect = true;
+
+				bool ExpandedChanged = false;
+				for(int CollapseIndex = 0; CollapseIndex < NumCategories && CollapseIndex < (int)m_vFriendsCategoryExpanded.size(); ++CollapseIndex)
+				{
+					if(m_vFriendsCategoryExpanded[CollapseIndex])
+					{
+						m_vFriendsCategoryExpanded[CollapseIndex] = false;
+						ExpandedChanged = true;
+					}
+				}
+				if(ExpandedChanged)
+					SaveFriendsCategoryExpandedState();
+			}
+		}
+
+		const bool DraggingThisHeader = s_CategoryDragState.m_DraggingIndex == CategoryIndex;
+		const bool DraggingAnyHeader = s_CategoryDragState.m_DraggingIndex >= 0;
+		const bool HeaderHovered = HeaderInside || DraggingThisHeader;
 		const bool PopupOpen = Ui()->IsPopupOpen(&m_FriendsCategoryPopupContext) && m_FriendsCategoryPopupContext.m_CategoryIndex == CategoryIndex;
 		ColorRGBA HeaderColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 		if(str_comp_nocase(pCategoryName, IFriends::DEFAULT_CATEGORY) == 0)
@@ -1620,8 +1742,11 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		str_format(aBuf, sizeof(aBuf), "%s (%d)", pCategoryName, (int)vvFriends[CategoryIndex].size());
 		Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);
+		if(DraggingThisHeader)
+			DrawCategoryDragOutline(Header);
+
 		const int HeaderResult = Ui()->DoButtonLogic(&m_vFriendsCategoryExpanded[CategoryIndex], 0, &Header, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
-		if(HeaderResult == 2)
+		if(!DraggingAnyHeader && HeaderResult == 2)
 		{
 			m_FriendsCategoryPopupContext.m_pMenus = this;
 			m_FriendsCategoryPopupContext.m_CategoryIndex = CategoryIndex;
@@ -1629,7 +1754,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			m_FriendsCategoryPopupContext.m_NameInput.Clear();
 			Ui()->DoPopupMenu(&m_FriendsCategoryPopupContext, Ui()->MouseX(), Ui()->MouseY(), 250.0f, 110.0f, &m_FriendsCategoryPopupContext, PopupFriendsCategory);
 		}
-		else if(HeaderResult == 1)
+		else if(!DraggingAnyHeader && HeaderResult == 1)
 		{
 			m_vFriendsCategoryExpanded[CategoryIndex] = !m_vFriendsCategoryExpanded[CategoryIndex];
 			SaveFriendsCategoryExpandedState();
@@ -1661,6 +1786,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				FriendUiIdBase <<= 4;
 				const void *pListItemId = reinterpret_cast<const void *>(FriendUiIdBase | 0x1);
 				const void *pRemoveButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0x3);
+				const void *pCopyButtonId = reinterpret_cast<const void *>(FriendUiIdBase | 0x9);
 				const void *pCommunityTooltipId = reinterpret_cast<const void *>(FriendUiIdBase | 0x5);
 				const void *pSkinTooltipId = reinterpret_cast<const void *>(FriendUiIdBase | 0x7);
 				List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f + (Friend.ServerInfo() == nullptr ? 0.0f : 10.0f), &Rect, &List);
@@ -1698,9 +1824,12 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);
 				Rect.Margin(2.0f, &Rect);
 
-				CUIRect RemoveButton, NameLabel, ClanLabel, InfoLabel;
-				Rect.HSplitTop(16.0f, &RemoveButton, nullptr);
-				RemoveButton.VSplitRight(13.0f, nullptr, &RemoveButton);
+				CUIRect ButtonsRow, CopyButton, RemoveButton, NameLabel, ClanLabel, InfoLabel;
+				Rect.HSplitTop(16.0f, &ButtonsRow, nullptr);
+				ButtonsRow.VSplitRight(13.0f, nullptr, &RemoveButton);
+				ButtonsRow.VSplitRight(15.0f, nullptr, &CopyButton);
+				CopyButton.VSplitLeft(2.0f, nullptr, &CopyButton);
+				CopyButton.HMargin((CopyButton.h - CopyButton.w) / 2.0f, &CopyButton);
 				RemoveButton.HMargin((RemoveButton.h - RemoveButton.w) / 2.0f, &RemoveButton);
 				Rect.VSplitLeft(2.0f, nullptr, &Rect);
 
@@ -1778,13 +1907,22 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				// remove button
 				if(Inside)
 				{
-					TextRender()->TextColor(Ui()->HotItem() == pRemoveButtonId ? TextRender()->DefaultTextColor() : ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
+					const ColorRGBA InactiveIconColor = ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f);
 					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+					TextRender()->TextColor(Ui()->HotItem() == pCopyButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
+					Ui()->DoLabel(&CopyButton, FONT_ICON_COPY, CopyButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+					TextRender()->TextColor(Ui()->HotItem() == pRemoveButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
 					Ui()->DoLabel(&RemoveButton, FONT_ICON_TRASH, RemoveButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 					TextRender()->SetRenderFlags(0);
 					TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					if(Ui()->DoButtonLogic(pCopyButtonId, 0, &CopyButton, BUTTONFLAG_LEFT))
+					{
+						Input()->SetClipboardText(Friend.Name()[0] != '\0' ? Friend.Name() : Friend.Clan());
+						ButtonResult = 0;
+					}
+					GameClient()->m_Tooltips.DoToolTip(pCopyButtonId, &CopyButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("点击复制该玩家名字到剪贴板") : Localize("点击复制该战队名字到剪贴板"));
 					if(Ui()->DoButtonLogic(pRemoveButtonId, 0, &RemoveButton, BUTTONFLAG_LEFT))
 					{
 						str_copy(m_aRemoveFriendName, Friend.Name(), sizeof(m_aRemoveFriendName));
@@ -1875,6 +2013,132 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			List.HSplitTop(SpacingH, &Space, &List);
 			s_ScrollRegion.AddRect(Space);
 		}
+	}
+
+	auto UpdateCategoryDropPreview = [&]() {
+		s_CategoryDropPreview = SFriendsCategoryDropPreview();
+
+		if(s_CategoryDragState.m_DraggingIndex < 0 || NumCategories <= 1)
+			return;
+
+		if(!Ui()->MouseHovered(&ListViewport))
+			return;
+
+		std::vector<const SFriendsCategoryHeaderInfo *> vFilteredHeaders;
+		vFilteredHeaders.reserve(vCategoryHeaders.size());
+		for(const auto &HeaderInfo : vCategoryHeaders)
+		{
+			if(HeaderInfo.m_CategoryIndex != s_CategoryDragState.m_DraggingIndex)
+				vFilteredHeaders.push_back(&HeaderInfo);
+		}
+
+		int InsertIndex = 0;
+		const float MouseY = Ui()->MouseY();
+		for(const auto *pHeaderInfo : vFilteredHeaders)
+		{
+			const float MidY = pHeaderInfo->m_Rect.y + pHeaderInfo->m_Rect.h * 0.5f;
+			if(MouseY > MidY)
+				++InsertIndex;
+		}
+
+		float LineY = ListViewport.y + ms_ListheaderHeight * 0.5f;
+		if(!vFilteredHeaders.empty())
+		{
+			if(InsertIndex <= 0)
+			{
+				LineY = maximum(ListViewport.y, vFilteredHeaders.front()->m_Rect.y - SpacingH * 0.5f);
+			}
+			else if(InsertIndex >= (int)vFilteredHeaders.size())
+			{
+				const SFriendsCategoryHeaderInfo *pLast = vFilteredHeaders.back();
+				LineY = pLast->m_Rect.y + pLast->m_Rect.h + SpacingH * 0.5f;
+			}
+			else
+			{
+				const SFriendsCategoryHeaderInfo *pPrev = vFilteredHeaders[InsertIndex - 1];
+				const SFriendsCategoryHeaderInfo *pNext = vFilteredHeaders[InsertIndex];
+				LineY = (pPrev->m_Rect.y + pPrev->m_Rect.h + pNext->m_Rect.y) * 0.5f;
+			}
+		}
+
+		const float LinePadding = std::clamp(6.0f * UiScale, 3.0f, 8.0f);
+		CUIRect LineRect;
+		LineRect.x = ListViewport.x + LinePadding;
+		LineRect.w = maximum(0.0f, ListViewport.w - LinePadding * 2.0f);
+		LineRect.y = LineY - CategoryDropPreviewThickness * 0.5f;
+		LineRect.h = CategoryDropPreviewThickness;
+
+		s_CategoryDropPreview.m_Active = true;
+		s_CategoryDropPreview.m_Valid = true;
+		s_CategoryDropPreview.m_DraggedIndex = s_CategoryDragState.m_DraggingIndex;
+		s_CategoryDropPreview.m_InsertIndex = InsertIndex;
+		s_CategoryDropPreview.m_LineRect = LineRect;
+	};
+
+	auto RenderCategoryDragGhost = [&]() {
+		if(s_CategoryDragState.m_DraggingIndex < 0 || !s_CategoryDragState.m_HasDragRect)
+			return;
+
+		CUIRect Ghost;
+		Ghost.x = Ui()->MouseX() - s_CategoryDragState.m_GrabOffset.x;
+		Ghost.y = Ui()->MouseY() - s_CategoryDragState.m_GrabOffset.y;
+		Ghost.w = s_CategoryDragState.m_DraggedWidth;
+		Ghost.h = s_CategoryDragState.m_DraggedHeight;
+
+		CUIRect Shadow = Ghost;
+		Shadow.x += 1.5f;
+		Shadow.y += 2.0f;
+		Shadow.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f), IGraphics::CORNER_ALL, 5.0f);
+
+		Ghost.Draw(CategoryDragGhostColor, IGraphics::CORNER_ALL, 5.0f);
+		DrawCategoryDragOutline(Ghost);
+	};
+
+	auto CommitCategoryDropPreview = [&]() {
+		if(!s_CategoryDropPreview.m_Active || !s_CategoryDropPreview.m_Valid || s_CategoryDropPreview.m_DraggedIndex < 0)
+			return false;
+
+		const int FromIndex = s_CategoryDropPreview.m_DraggedIndex;
+		const int ToIndex = std::clamp(s_CategoryDropPreview.m_InsertIndex, 0, NumCategories - 1);
+		if(FromIndex == ToIndex)
+			return false;
+
+		char aSelectedCategory[IFriends::MAX_FRIEND_CATEGORY_LENGTH] = {};
+		const bool HasSelectedCategory = m_FriendAddCategoryIndex >= 0 && m_FriendAddCategoryIndex < NumCategories;
+		if(HasSelectedCategory)
+			str_copy(aSelectedCategory, GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex), sizeof(aSelectedCategory));
+
+		if(!GameClient()->Friends()->MoveCategory(FromIndex, ToIndex))
+			return false;
+
+		MoveCategoryExpandedState(FromIndex, ToIndex);
+		SaveFriendsCategoryExpandedState();
+		FriendlistOnUpdate();
+
+		if(HasSelectedCategory)
+		{
+			const int SelectedCategoryIndex = GameClient()->Friends()->FindCategory(aSelectedCategory);
+			if(SelectedCategoryIndex >= 0)
+				m_FriendAddCategoryIndex = SelectedCategoryIndex;
+		}
+
+		return true;
+	};
+
+	if(s_CategoryDragState.m_DraggingIndex >= 0)
+	{
+		UpdateCategoryDropPreview();
+		if(s_CategoryDropPreview.m_Active && s_CategoryDropPreview.m_Valid)
+			s_CategoryDropPreview.m_LineRect.Draw(CategoryDropPreviewColor, IGraphics::CORNER_ALL, CategoryDropPreviewThickness);
+		RenderCategoryDragGhost();
+	}
+
+	const bool MouseReleased = !Ui()->MouseButton(0) && Ui()->LastMouseButton(0);
+	if(MouseReleased)
+	{
+		if(s_CategoryDragState.m_DraggingIndex >= 0)
+			CommitCategoryDropPreview();
+		ResetCategoryDragState();
 	}
 
 	s_ScrollRegion.End();

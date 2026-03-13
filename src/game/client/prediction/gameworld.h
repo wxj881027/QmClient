@@ -83,6 +83,7 @@ public:
 		bool m_UseTuneZones;
 		bool m_BugDDRaceInput;
 		bool m_NoWeakHookAndBounce;
+		bool m_PredictEvents;
 	} m_WorldConfig;
 
 	bool m_IsValidCopy;

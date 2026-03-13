@@ -13,6 +13,7 @@ class CNamePlates : public CComponent
 private:
 	class CNamePlatesData;
 	CNamePlatesData *m_pData;
+	void ResetChatBubbleAnimState(int ClientId);
 
 public:
 	void RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *pPlayerInfo, float Alpha);
