@@ -1626,9 +1626,9 @@ set(EXPECTED_DATA
   mapres/winter_mountains.png
   mapres/winter_mountains2.png
   mapres/winter_mountains3.png
-  maps/Gold\ Mine.map
+  "maps/Gold Mine.map"
   maps/LearnToPlay.map
-  maps/Sunny\ Side\ Up.map
+  "maps/Sunny Side Up.map"
   maps/Tsunami.map
   maps/Tutorial.map
   maps/coverage.map
@@ -1646,9 +1646,9 @@ set(EXPECTED_DATA
   maps/dm8.map
   maps/dm9.map
   maps/license.txt
-  maps7/Gold\ Mine.map
+  "maps7/Gold Mine.map"
   maps7/LearnToPlay.map
-  maps7/Sunny\ Side\ Up.map
+  "maps7/Sunny Side Up.map"
   maps7/Tsunami.map
   maps7/Tutorial.map
   maps7/readme.txt
@@ -1658,6 +1658,57 @@ set(EXPECTED_DATA
   menuimages/play_game.png
   menuimages/settings.png
   particles.png
+  qmclient/builtinscripts/sayemoticon.chai
+  qmclient/fonts/Cabin-Regular.ttf
+  qmclient/fonts/FreeSansBold.ttf
+  qmclient/fonts/GoogleSans-Regular.ttf
+  qmclient/fonts/Inter_24pt-Regular.ttf
+  qmclient/fonts/Inter_24pt-SemiBold.ttf
+  qmclient/fonts/Montserrat-Regular.ttf
+  qmclient/fonts/Nunito-Black.ttf
+  qmclient/fonts/Rubik-Regular.ttf
+  qmclient/fonts/minecraft_font.ttf
+  qmclient/gui_logo.png
+  qmclient/languages/arabic.txt
+  qmclient/languages/azerbaijani.txt
+  qmclient/languages/belarusian.txt
+  qmclient/languages/bosnian.txt
+  qmclient/languages/brazilian_portuguese.txt
+  qmclient/languages/bulgarian.txt
+  qmclient/languages/catalan.txt
+  qmclient/languages/chuvash.txt
+  qmclient/languages/czech.txt
+  qmclient/languages/danish.txt
+  qmclient/languages/dutch.txt
+  qmclient/languages/esperanto.txt
+  qmclient/languages/estonian.txt
+  qmclient/languages/finnish.txt
+  qmclient/languages/french.txt
+  qmclient/languages/galician.txt
+  qmclient/languages/german.txt
+  qmclient/languages/greek.txt
+  qmclient/languages/hungarian.txt
+  qmclient/languages/index.txt
+  qmclient/languages/italian.txt
+  qmclient/languages/japanese.txt
+  qmclient/languages/korean.txt
+  qmclient/languages/kyrgyz.txt
+  qmclient/languages/license.txt
+  qmclient/languages/norwegian.txt
+  qmclient/languages/persian.txt
+  qmclient/languages/polish.txt
+  qmclient/languages/portuguese.txt
+  qmclient/languages/romanian.txt
+  qmclient/languages/russian.txt
+  qmclient/languages/serbian.txt
+  qmclient/languages/serbian_cyrillic.txt
+  qmclient/languages/simplified_chinese.txt
+  qmclient/languages/slovak.txt
+  qmclient/languages/spanish.txt
+  qmclient/languages/swedish.txt
+  qmclient/languages/traditional_chinese.txt
+  qmclient/languages/turkish.txt
+  qmclient/languages/ukrainian.txt
   race_flag.png
   shader/pipeline.frag
   shader/pipeline.vert
@@ -1920,57 +1971,6 @@ set(EXPECTED_DATA
   skins7/x_ninja.json
   skins7/xmas_hat.png
   strong_weak.png
-  qmclient/builtinscripts/sayemoticon.chai
-  qmclient/fonts/Cabin-Regular.ttf
-  qmclient/fonts/FreeSansBold.ttf
-  qmclient/fonts/GoogleSans-Regular.ttf
-  qmclient/fonts/Inter_24pt-Regular.ttf
-  qmclient/fonts/Inter_24pt-SemiBold.ttf
-  qmclient/fonts/Montserrat-Regular.ttf
-  qmclient/fonts/Nunito-Black.ttf
-  qmclient/fonts/Rubik-Regular.ttf
-  qmclient/fonts/minecraft_font.ttf
-  qmclient/gui_logo.png
-  qmclient/languages/arabic.txt
-  qmclient/languages/azerbaijani.txt
-  qmclient/languages/belarusian.txt
-  qmclient/languages/bosnian.txt
-  qmclient/languages/brazilian_portuguese.txt
-  qmclient/languages/bulgarian.txt
-  qmclient/languages/catalan.txt
-  qmclient/languages/chuvash.txt
-  qmclient/languages/czech.txt
-  qmclient/languages/danish.txt
-  qmclient/languages/dutch.txt
-  qmclient/languages/esperanto.txt
-  qmclient/languages/estonian.txt
-  qmclient/languages/finnish.txt
-  qmclient/languages/french.txt
-  qmclient/languages/galician.txt
-  qmclient/languages/german.txt
-  qmclient/languages/greek.txt
-  qmclient/languages/hungarian.txt
-  qmclient/languages/index.txt
-  qmclient/languages/italian.txt
-  qmclient/languages/japanese.txt
-  qmclient/languages/korean.txt
-  qmclient/languages/kyrgyz.txt
-  qmclient/languages/license.txt
-  qmclient/languages/norwegian.txt
-  qmclient/languages/persian.txt
-  qmclient/languages/polish.txt
-  qmclient/languages/portuguese.txt
-  qmclient/languages/romanian.txt
-  qmclient/languages/russian.txt
-  qmclient/languages/serbian.txt
-  qmclient/languages/serbian_cyrillic.txt
-  qmclient/languages/simplified_chinese.txt
-  qmclient/languages/slovak.txt
-  qmclient/languages/spanish.txt
-  qmclient/languages/swedish.txt
-  qmclient/languages/traditional_chinese.txt
-  qmclient/languages/turkish.txt
-  qmclient/languages/ukrainian.txt
   themes/auto.png
   themes/autumn.png
   themes/autumn_day.map
@@ -2534,6 +2534,18 @@ if(CLIENT)
     warning.cpp
   )
   set_src(GAME_CLIENT GLOB_RECURSE src/game/client
+    QmUi/QmAnim.cpp
+    QmUi/QmAnim.h
+    QmUi/QmLayout.cpp
+    QmUi/QmLayout.h
+    QmUi/QmLegacy.cpp
+    QmUi/QmLegacy.h
+    QmUi/QmRender.cpp
+    QmUi/QmRender.h
+    QmUi/QmRt.cpp
+    QmUi/QmRt.h
+    QmUi/QmTree.cpp
+    QmUi/QmTree.h
     animstate.cpp
     animstate.h
     component.cpp
@@ -2728,18 +2740,6 @@ if(CLIENT)
     skin.h
     ui.cpp
     ui.h
-    QmUi/QmAnim.cpp
-    QmUi/QmAnim.h
-    QmUi/QmLayout.cpp
-    QmUi/QmLayout.h
-    QmUi/QmLegacy.cpp
-    QmUi/QmLegacy.h
-    QmUi/QmRender.cpp
-    QmUi/QmRender.h
-    QmUi/QmRt.cpp
-    QmUi/QmRt.h
-    QmUi/QmTree.cpp
-    QmUi/QmTree.h
     ui_listbox.cpp
     ui_listbox.h
     ui_rect.cpp
@@ -3317,11 +3317,12 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 
 if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   set_src(TESTS GLOB src/test
+    QmAnimTest.cpp
+    QmLayoutTest.cpp
     aio_test.cpp
     bezier_test.cpp
     blocklist_driver_test.cpp
     bytes_be_test.cpp
-    QmAnimTest.cpp
     chunk_header_test.cpp
     color_test.cpp
     compression_test.cpp
@@ -3365,7 +3366,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     time_test.cpp
     timestamp_test.cpp
     unix_test.cpp
-    QmLayoutTest.cpp
     uuid_test.cpp
     vmath_test.cpp
   )

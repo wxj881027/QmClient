@@ -795,6 +795,8 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aEnableSpectatorCount), std::end(m_aEnableSpectatorCount), -1);
 	std::fill(std::begin(m_aLastUpdateTick), std::end(m_aLastUpdateTick), 0);
 	std::fill(std::begin(m_aQ1menGSyncMarkUntil), std::end(m_aQ1menGSyncMarkUntil), 0);
+	std::fill(std::begin(m_aQ1menGSyncFootParticlesEnabled), std::end(m_aQ1menGSyncFootParticlesEnabled), false);
+	std::fill(std::begin(m_aQ1menGSyncRemoteParticlesEnabled), std::end(m_aQ1menGSyncRemoteParticlesEnabled), false);
 
 	m_PredictedDummyId = -1;
 	m_IsDummySwapping = false;
@@ -6125,15 +6127,19 @@ void CGameClient::SetConnectInfo(const NETADDR *pAddress)
 void CGameClient::ClearQ1menGSyncMarks()
 {
 	std::fill(std::begin(m_aQ1menGSyncMarkUntil), std::end(m_aQ1menGSyncMarkUntil), 0);
+	std::fill(std::begin(m_aQ1menGSyncFootParticlesEnabled), std::end(m_aQ1menGSyncFootParticlesEnabled), false);
+	std::fill(std::begin(m_aQ1menGSyncRemoteParticlesEnabled), std::end(m_aQ1menGSyncRemoteParticlesEnabled), false);
 }
 
-void CGameClient::MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick)
+void CGameClient::MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, bool FootParticlesEnabled, bool RemoteParticlesEnabled)
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 	if(ExpireTick <= 0)
 		return;
 	m_aQ1menGSyncMarkUntil[ClientId] = maximum(m_aQ1menGSyncMarkUntil[ClientId], ExpireTick);
+	m_aQ1menGSyncFootParticlesEnabled[ClientId] = FootParticlesEnabled;
+	m_aQ1menGSyncRemoteParticlesEnabled[ClientId] = RemoteParticlesEnabled;
 }
 
 bool CGameClient::IsQ1menGClientRecognized(int ClientId) const
@@ -6145,4 +6151,12 @@ bool CGameClient::IsQ1menGClientRecognized(int ClientId) const
 	if(m_aQ1menGSyncMarkUntil[ClientId] > Now)
 		return true;
 	return false;
+}
+
+bool CGameClient::ShouldRenderQ1menGRemoteFootParticles(int ClientId) const
+{
+	if(!IsQ1menGClientRecognized(ClientId))
+		return false;
+
+	return m_aQ1menGSyncRemoteParticlesEnabled[ClientId] && m_aQ1menGSyncFootParticlesEnabled[ClientId];
 }

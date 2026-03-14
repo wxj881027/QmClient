@@ -153,6 +153,29 @@ static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue
 	return false;
 }
 
+static bool JsonReadBoolean(const json_value *pValue, bool &OutValue)
+{
+	if(!pValue)
+		return false;
+
+	if(pValue->type == json_boolean)
+	{
+		OutValue = json_boolean_get(pValue) != 0;
+		return true;
+	}
+	if(pValue->type == json_integer)
+	{
+		OutValue = pValue->u.integer != 0;
+		return true;
+	}
+	if(pValue->type == json_double)
+	{
+		OutValue = pValue->u.dbl != 0.0;
+		return true;
+	}
+	return false;
+}
+
 static bool IsValidQmClientPlaytimeId(const char *pClientId)
 {
 	if(!pClientId)
@@ -2409,6 +2432,10 @@ void CTClient::SendQmClientPlayerData()
 		JsonWriter.WriteIntValue(ClientId);
 		JsonWriter.WriteAttribute("dummy");
 		JsonWriter.WriteBoolValue(Dummy == 1);
+		JsonWriter.WriteAttribute("foot_particles_enabled");
+		JsonWriter.WriteBoolValue(g_Config.m_QmcFootParticles != 0);
+		JsonWriter.WriteAttribute("remote_particles_enabled");
+		JsonWriter.WriteBoolValue(g_Config.m_QmClientMarkTrail != 0);
 		JsonWriter.EndObject();
 	}
 
@@ -2506,7 +2533,15 @@ void CTClient::FinishQmClientUsers()
 			continue;
 
 		const int ClientId = json_int_get(pPlayerId);
-		GameClient()->MarkQ1menGSyncClient(ClientId, ExpireTick);
+		bool FootParticlesEnabled = false;
+		const json_value *pFootParticlesEnabled = JsonObjectField(pEntry, "foot_particles_enabled");
+		JsonReadBoolean(pFootParticlesEnabled, FootParticlesEnabled);
+
+		bool RemoteParticlesEnabled = false;
+		const json_value *pRemoteParticlesEnabled = JsonObjectField(pEntry, "remote_particles_enabled");
+		JsonReadBoolean(pRemoteParticlesEnabled, RemoteParticlesEnabled);
+
+		GameClient()->MarkQ1menGSyncClient(ClientId, ExpireTick, FootParticlesEnabled, RemoteParticlesEnabled);
 	}
 
 	json_value_free(pRoot);

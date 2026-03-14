@@ -4314,11 +4314,11 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				DoModuleHeadline(CardContent, 2, TCLocalize("梦的小功能"), TCLocalize("栖梦出品,必属精品"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, TCLocalize("启用粒子拖尾"), &g_Config.m_QmcFootParticles, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, TCLocalize("本地粒子（仅自己）"), &g_Config.m_QmcFootParticles, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmClientMarkTrail, TCLocalize("通过远程服务器渲染其他玩家粒子"), &g_Config.m_QmClientMarkTrail, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmClientMarkTrail, TCLocalize("远程粒子（同步他人本地粒子）"), &g_Config.m_QmClientMarkTrail, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);

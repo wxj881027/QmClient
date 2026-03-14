@@ -1,4 +1,3 @@
-/* Player Points Query System */
 #include "player_points.h"
 
 #include <base/log.h>
@@ -9,7 +8,7 @@
 
 #include <cstring>
 
-// Custom HTTP request that truncates response after finding points field
+// 玩家请求，携带本次请求的上下文信息。
 class CPlayerPointsRequest : public CHttpRequest
 {
 private:
@@ -17,14 +16,14 @@ private:
 	int m_Points = 0;
 	bool m_PointsFound = false;
 	size_t m_BytesRead = 0;
-	static constexpr size_t MAX_READ_BYTES = 1024*1000; // 最多读取2KB数据以查找点字段
+	static constexpr size_t MAX_READ_BYTES = 1024*1000; // 最大响应体大小（约 1000KB）
 	
 	char m_aPartialData[MAX_READ_BYTES + 1] = {0};
 	
 protected:
 	void OnCompletion(EHttpState State) override
 	{
-		// This runs on curl thread, just mark completion
+		// 该回调在 curl 线程执行，这里不做耗时逻辑。
 	}
 	
 public:
@@ -32,7 +31,7 @@ public:
 		CHttpRequest(pUrl),
 		m_PlayerName(pPlayerName)
 	{
-		// Limit response size to avoid downloading huge JSON
+		// 限制响应大小，避免下载过大的 JSON。
 		MaxResponseSize(MAX_READ_BYTES);
 	}
 	
@@ -62,17 +61,17 @@ void CPlayerPoints::EnsureQueried(const char *pPlayerName)
 	
 	std::string Name(pPlayerName);
 	
-	// Check if already in cache
+	// 先看缓存状态，避免重复请求。
 	auto it = m_Cache.find(Name);
 	if(it != m_Cache.end())
 	{
 		const SPlayerPointsEntry &Entry = it->second;
 		
-		// If fetching, do nothing
+		// 正在请求中，直接返回。
 		if(Entry.m_Status == EPointsStatus::FETCHING)
 			return;
 		
-		// If ready and not expired, do nothing
+		// 命中有效缓存，直接返回。
 		if(Entry.m_Status == EPointsStatus::READY)
 		{
 			int64_t Now = time_get();
@@ -81,7 +80,7 @@ void CPlayerPoints::EnsureQueried(const char *pPlayerName)
 				return;
 		}
 		
-		// If failed, check retry delay
+		// 上次失败后在退避时间内，不重试。
 		if(Entry.m_Status == EPointsStatus::FAILED)
 		{
 			int64_t Now = time_get();
@@ -91,15 +90,15 @@ void CPlayerPoints::EnsureQueried(const char *pPlayerName)
 		}
 	}
 	
-	// Check concurrent request limit
+	// 并发请求上限保护。
 	if(m_ActiveRequests.size() >= MAX_CONCURRENT_REQUESTS)
 		return;
 	
-	// Check if already requesting
+	// 同名请求已在队列中。
 	if(m_ActiveRequests.find(Name) != m_ActiveRequests.end())
 		return;
 	
-	// Start new request
+	// 发起新请求。
 	StartRequest(pPlayerName);
 }
 
@@ -119,24 +118,24 @@ SPlayerPointsResult CPlayerPoints::GetPoints(const char *pPlayerName)
 
 void CPlayerPoints::StartRequest(const char *pPlayerName)
 {
-	// URL encode player name1
+	// 玩家名先做 URL 编码。
 	char aEncodedName[256];
 	EscapeUrl(aEncodedName, sizeof(aEncodedName), pPlayerName);
 	
-	// Construct URL
+	// 拼接查询 URL。
 	char aUrl[512];
 	str_format(aUrl, sizeof(aUrl), "https://ddnet.org/players/?json2=%s", aEncodedName);
 	
-	// Create request
+	// 创建并配置 HTTP 请求。
 	auto pRequest = std::make_shared<CPlayerPointsRequest>(aUrl, pPlayerName);
 	pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
 	pRequest->LogProgress(HTTPLOG::FAILURE);
 	
-	// Mark as fetching in cache
+	// 先把缓存状态标记为请求中。
 	std::string Name(pPlayerName);
 	m_Cache[Name].m_Status = EPointsStatus::FETCHING;
 	
-	// Store request and run
+	// 记录活跃请求并提交执行。
 	m_ActiveRequests[Name] = pRequest;
 	Http()->Run(pRequest);
 }
@@ -170,7 +169,7 @@ void CPlayerPoints::ProcessCompletedRequests()
 
 			if(Code != 200)
 			{
-				// 只有出错时才输出详细日志
+				// 仅失败时记录详细日志。
 				dbg_msg("player_points", "Response for '%s': %zu bytes, status=%d (failed)", Name.c_str(), DataSize, Code);
 				Entry.m_Status = EPointsStatus::FAILED;
 				Entry.m_LastFailTime = time_get();
@@ -192,21 +191,20 @@ void CPlayerPoints::ProcessCompletedRequests()
 
 						if(!pPointsVal)
 						{
-							// 很常见：玩家不存在时 ddnet 返回 {}
+							// 常见情况：玩家不存在时 DDNet 会返回 {}。
 							Entry.m_Status = EPointsStatus::FAILED;
 							Entry.m_LastFailTime = time_get();
 							dbg_msg("player_points", "'%s' -> points missing (maybe player not found)", Name.c_str());
 						}
 						else
 						{
-							// json_int_get 需要是 integer 节点，否则可能内部 assert/崩
-							// 如果你们 json-parser 对非 int 会返回 0，这里也至少有日志可看
+							// 这里期望 points 是整型节点。
 							int Points = json_int_get(pPointsVal);
 
 							Entry.m_Points = Points;
 							Entry.m_Status = EPointsStatus::READY;
 							Entry.m_LastSuccessTime = time_get();
-							// 成功时不输出日志
+							// 成功路径默认不打日志，避免刷屏。
 						}
 					}
 				}
@@ -237,40 +235,40 @@ bool CPlayerPoints::ParsePointsFromPartialJson(const char *pData, size_t DataSiz
 	if(!pData || DataSize == 0)
 		return false;
 	
-	// 检查是否为空对象 {} (玩家不存在)
+	// 空对象 {} 通常表示玩家不存在。
 	if(DataSize <= 2)
 		return false;
 	
-	// First, try to find the "points" object
+	// 先定位外层 "points" 对象。
 	const char *pPointsObj = str_find(pData, "\"points\"");
 	if(!pPointsObj)
 		return false;
 	
-	// Move past "points":
+	// 跳过 "points" 键名。
 	pPointsObj += 8;
 	
-	// Skip whitespace and colon
+	// 跳过空白和冒号。
 	while(*pPointsObj && (*pPointsObj == ' ' || *pPointsObj == '\t' || *pPointsObj == '\n' || *pPointsObj == '\r' || *pPointsObj == ':'))
 		pPointsObj++;
 	
-	// Expect opening brace
+	// 期待对象起始 '{'。
 	if(*pPointsObj != '{')
 		return false;
 	pPointsObj++;
 	
-	// Now find the nested "points" field
+	// 再定位内层 "points" 字段。
 	const char *pPointsField = str_find(pPointsObj, "\"points\"");
 	if(!pPointsField)
 		return false;
 	
-	// Move past "points":
+	// 跳过 "points" 键名。
 	pPointsField += 8;
 	
-	// Skip whitespace and colon
+	// 跳过空白和冒号。
 	while(*pPointsField && (*pPointsField == ' ' || *pPointsField == '\t' || *pPointsField == '\n' || *pPointsField == '\r' || *pPointsField == ':'))
 		pPointsField++;
 	
-	// Parse integer value
+	// 解析积分整数值。
 	char *pEnd = nullptr;
 	long Value = strtol(pPointsField, &pEnd, 10);
 	

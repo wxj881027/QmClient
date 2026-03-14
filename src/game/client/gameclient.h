@@ -981,8 +981,9 @@ public:
 
 	// Q1menG Client Recognition
 	void ClearQ1menGSyncMarks();
-	void MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick);
+	void MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, bool FootParticlesEnabled, bool RemoteParticlesEnabled);
 	bool IsQ1menGClientRecognized(int ClientId) const;
+	bool ShouldRenderQ1menGRemoteFootParticles(int ClientId) const;
 
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
@@ -1008,6 +1009,8 @@ private:
 	CCharOrder m_CharOrder;
 	int m_aSwitchStateTeam[NUM_DUMMIES];
 	int64_t m_aQ1menGSyncMarkUntil[MAX_CLIENTS] = {0};
+	bool m_aQ1menGSyncFootParticlesEnabled[MAX_CLIENTS] = {false};
+	bool m_aQ1menGSyncRemoteParticlesEnabled[MAX_CLIENTS] = {false};
 
 	void LoadMapSettings();
 	CMapBugs m_MapBugs;

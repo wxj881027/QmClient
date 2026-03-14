@@ -71,7 +71,7 @@ void CTrails::OnRender()
 		}
 	}
 
-	// Q1menG Client Recognition: Foot particles for recognized clients
+	// Remote particles: only show remote players that are in the shared pool and enabled local particles.
 	if(g_Config.m_QmClientMarkTrail)
 	{
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
@@ -84,8 +84,8 @@ void CTrails::OnRender()
 			if(IsLocalClient)
 				continue; // Remote rendering is only for other players.
 
-			// Check if this is a recognized Q1menG client
-			if(!GameClient()->IsQ1menGClientRecognized(ClientId))
+			// Show remote players only when their synced local+remote toggles are enabled.
+			if(!GameClient()->ShouldRenderQ1menGRemoteFootParticles(ClientId))
 				continue;
 
 			vec2 Position = GameClient()->m_aClients[ClientId].m_RenderPos;
