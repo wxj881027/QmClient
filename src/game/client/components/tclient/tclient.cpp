@@ -27,14 +27,17 @@
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
+#include <game/mapitems.h>
 #include <game/localization.h>
 #include <game/version.h>
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cmath>
 #include <limits>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
@@ -61,6 +64,7 @@ static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
 static constexpr const char *s_pQiaFenDefaultReply = "我要恰!!谢谢佬!!!!";
 static constexpr const char *FINISH_STATUS_URL = "https://info.ddnet.org/info";
 static constexpr int64_t FINISH_STATUS_RETRY_DELAY_SECONDS = 3;
+static constexpr int64_t FINISH_STATUS_RECHECK_UNFINISHED_SECONDS = 15;
 static constexpr const char *s_pFinishStatusPendingEcho = "请等一下!还没查到恰分结果!!";
 static constexpr const char *s_apKeywordNegationWords[] = {
 	"不",
@@ -86,6 +90,30 @@ static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s好友进�
 
 static int QiaFenSeparatorLength(const char *pStr);
 static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize);
+
+static bool ExtractFinishedPlayerName(const char *pMessage, char *pOutName, int OutNameSize)
+{
+	if(!pMessage || !pOutName || OutNameSize <= 0)
+		return false;
+	pOutName[0] = '\0';
+
+	const char *pNameStart = str_startswith(pMessage, "*** ");
+	if(!pNameStart)
+		return false;
+
+	const char *pFinishedMark = str_find(pNameStart, " finished in:");
+	if(!pFinishedMark || pFinishedMark <= pNameStart)
+		return false;
+
+	// Trim trailing spaces before " finished in:".
+	while(pFinishedMark > pNameStart && *(pFinishedMark - 1) == ' ')
+		pFinishedMark--;
+	if(pFinishedMark <= pNameStart)
+		return false;
+
+	str_truncate(pOutName, OutNameSize, pNameStart, (int)(pFinishedMark - pNameStart));
+	return pOutName[0] != '\0';
+}
 
 static std::string BuildFriendEnterBroadcastText(const char *pTemplate, std::string_view FriendNames)
 {
@@ -193,6 +221,11 @@ static bool IsValidQmClientPlaytimeId(const char *pClientId)
 		return false;
 	}
 	return true;
+}
+
+static bool IsBlockedForGoresBaselinePath(int TileIndex)
+{
+	return TileIndex == TILE_SOLID || TileIndex == TILE_NOHOOK || TileIndex == TILE_DEATH;
 }
 
 CTClient::CTClient()
@@ -370,6 +403,9 @@ static int QiaFenSeparatorLength(const char *pStr)
 		if(C2 == 0x8C || C2 == 0x9B)
 			return 3;
 	}
+	// Full-width vertical bar `｜` (U+FF5C), commonly produced by CJK IMEs.
+	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBD && (unsigned char)pStr[2] == 0x9C)
+		return 3;
 	return 0;
 }
 
@@ -431,6 +467,27 @@ static void ParseFinishNameQueue(const char *pQueue, std::vector<std::string> &v
 			continue;
 		vNames.emplace_back(aTrimmedName);
 	}
+}
+
+static void MigrateLegacyFinishNameQueueConfig()
+{
+	if(g_Config.m_TcFinishNameQueue[0] == '\0' && g_Config.m_TcFinishName[0] != '\0')
+	{
+		str_copy(g_Config.m_TcFinishNameQueue, g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishNameQueue));
+		g_Config.m_TcFinishName[0] = '\0';
+	}
+}
+
+static const std::vector<std::string> &CachedFinishNameQueue()
+{
+	static char s_aFinishNameQueueCache[sizeof(g_Config.m_TcFinishNameQueue)] = "";
+	static std::vector<std::string> s_vCachedFinishNameQueue;
+	if(str_comp(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue) != 0)
+	{
+		str_copy(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue, sizeof(s_aFinishNameQueueCache));
+		ParseFinishNameQueue(g_Config.m_TcFinishNameQueue, s_vCachedFinishNameQueue);
+	}
+	return s_vCachedFinishNameQueue;
 }
 
 static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize)
@@ -821,7 +878,23 @@ void CTClient::RefreshFinishNameStatusContext()
 	const char *pCurrentCommunity = CurrentCommunityIdForFinishCheck();
 	const std::string CurrentMap = pCurrentMap ? pCurrentMap : "";
 	const std::string CurrentCommunity = pCurrentCommunity ? pCurrentCommunity : "";
-	if(CurrentMap != m_FinishStatusMap || CurrentCommunity != m_FinishStatusCommunity)
+	if(CurrentMap != m_FinishStatusMap)
+	{
+		ResetFinishNameStatuses();
+		m_FinishStatusMap = CurrentMap;
+		m_FinishStatusCommunity = CurrentCommunity;
+		return;
+	}
+
+	if(CurrentCommunity == m_FinishStatusCommunity)
+		return;
+
+	// Keep context stable when community id appears/disappears late for the same map.
+	// This avoids dropping warm name-status cache near finish due to transient metadata updates.
+	if(CurrentCommunity.empty() || m_FinishStatusCommunity.empty())
+		return;
+
+	if(CurrentCommunity != m_FinishStatusCommunity)
 	{
 		ResetFinishNameStatuses();
 		m_FinishStatusMap = CurrentMap;
@@ -899,6 +972,7 @@ bool CTClient::TryGetFinishStatusForName(const char *pName, bool &Finished)
 	if(!pName || pName[0] == '\0' || m_FinishStatusMap.empty())
 		return false;
 
+	const int64_t Now = time_get();
 	SFinishNameStatus &Status = m_FinishNameStatuses[pName];
 	if(Status.m_pTask && Status.m_pTask->Done())
 	{
@@ -915,21 +989,38 @@ bool CTClient::TryGetFinishStatusForName(const char *pName, bool &Finished)
 		Status.m_HasResult = Parsed;
 		if(Parsed)
 		{
-			Status.m_NextRetryTick = 0;
+			if(Status.m_Finished)
+			{
+				// Finished state is monotonic for a fixed map/community, keep cached.
+				Status.m_NextRetryTick = 0;
+			}
+			else
+			{
+				// Not-finished can change after a run with that name, so refresh periodically.
+				Status.m_NextRetryTick = Now + time_freq() * FINISH_STATUS_RECHECK_UNFINISHED_SECONDS;
+			}
 		}
 		else
 		{
-			Status.m_NextRetryTick = time_get() + time_freq() * FINISH_STATUS_RETRY_DELAY_SECONDS;
+			Status.m_NextRetryTick = Now + time_freq() * FINISH_STATUS_RETRY_DELAY_SECONDS;
 		}
 	}
 
 	if(Status.m_HasResult)
 	{
-		Finished = Status.m_Finished;
-		return true;
+		if(!Status.m_Finished && Status.m_NextRetryTick > 0 && Now >= Status.m_NextRetryTick)
+		{
+			// Expire stale negative result and trigger a fresh request below.
+			Status.m_HasResult = false;
+		}
+		else
+		{
+			Finished = Status.m_Finished;
+			return true;
+		}
 	}
 
-	if(Status.m_pTask || time_get() < Status.m_NextRetryTick)
+	if(Status.m_pTask || Now < Status.m_NextRetryTick)
 		return false;
 
 	char aEscapedName[256];
@@ -942,6 +1033,59 @@ bool CTClient::TryGetFinishStatusForName(const char *pName, bool &Finished)
 	Status.m_pTask->LogProgress(HTTPLOG::FAILURE);
 	Http()->Run(Status.m_pTask);
 	return false;
+}
+
+void CTClient::WarmupFinishNameStatuses()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return;
+	if(g_Config.m_TcChangeNameNearFinish <= 0)
+		return;
+
+	RefreshFinishNameStatusContext();
+	if(m_FinishStatusMap.empty())
+		return;
+
+	MigrateLegacyFinishNameQueueConfig();
+	const std::vector<std::string> &vNameQueue = CachedFinishNameQueue();
+	if(vNameQueue.empty())
+		return;
+
+	for(const std::string &Name : vNameQueue)
+	{
+		bool Ignored = false;
+		TryGetFinishStatusForName(Name.c_str(), Ignored);
+	}
+
+	if(g_Config.m_TcFinishNameRequireOwnFinished)
+	{
+		if(g_Config.m_PlayerName[0] != '\0')
+		{
+			bool Ignored = false;
+			TryGetFinishStatusForName(g_Config.m_PlayerName, Ignored);
+		}
+		if(Client()->DummyConnected() && g_Config.m_ClDummyName[0] != '\0')
+		{
+			bool Ignored = false;
+			TryGetFinishStatusForName(g_Config.m_ClDummyName, Ignored);
+		}
+	}
+
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		if(Dummy == 1 && !Client()->DummyConnected())
+			continue;
+
+		const int LocalId = GameClient()->m_aLocalIds[Dummy];
+		if(LocalId < 0 || LocalId >= MAX_CLIENTS)
+			continue;
+		const auto &Player = GameClient()->m_aClients[LocalId];
+		if(!Player.m_Active || Player.m_aName[0] == '\0')
+			continue;
+
+		bool Ignored = false;
+		TryGetFinishStatusForName(Player.m_aName, Ignored);
+	}
 }
 
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
@@ -959,6 +1103,49 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			if(pMsg->m_pMessage)
 			{
 				const char *pText = pMsg->m_pMessage;
+				if(g_Config.m_TcChangeNameNearFinish > 0 && g_Config.m_TcFinishNameQueue[0] != '\0')
+				{
+					char aFinishedName[MAX_NAME_LENGTH];
+					if(ExtractFinishedPlayerName(pText, aFinishedName, sizeof(aFinishedName)))
+					{
+						for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+						{
+							if(Dummy == 1 && !Client()->DummyConnected())
+								continue;
+
+							const int LocalId = GameClient()->m_aLocalIds[Dummy];
+							if(LocalId < 0 || LocalId >= MAX_CLIENTS)
+								continue;
+							const auto &LocalPlayer = GameClient()->m_aClients[LocalId];
+							if(!LocalPlayer.m_Active || LocalPlayer.m_aName[0] == '\0')
+								continue;
+							if(str_comp(LocalPlayer.m_aName, aFinishedName) != 0)
+								continue;
+
+							// Finish reached: stop auto-rename for this run, resume after touching start.
+							m_aFinishQueueSuppressedUntilStart[Dummy] = true;
+
+							if(m_aFinishRestoreNameValid[Dummy] &&
+								m_aaFinishRestoreNames[Dummy][0] != '\0' &&
+								str_comp(LocalPlayer.m_aName, m_aaFinishRestoreNames[Dummy]) != 0)
+							{
+								char *pConfigName = Dummy == 0 ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
+								const int ConfigNameSize = Dummy == 0 ? (int)sizeof(g_Config.m_PlayerName) : (int)sizeof(g_Config.m_ClDummyName);
+								str_copy(pConfigName, m_aaFinishRestoreNames[Dummy], ConfigNameSize);
+								if(Dummy == 0)
+									GameClient()->SendInfo(false);
+								else
+									GameClient()->SendDummyInfo(false);
+								m_aFinishRestoreRequested[Dummy] = true;
+
+								char aRestoreBuf[64];
+								str_format(aRestoreBuf, sizeof(aRestoreBuf), TCLocalize("过图后改回 %s"), m_aaFinishRestoreNames[Dummy]);
+								GameClient()->Echo(aRestoreBuf);
+							}
+							break;
+						}
+					}
+				}
 				if(str_find_nocase(pText, "has requested to swap with you"))
 				{
 					StartSwapCountdown();
@@ -1498,12 +1685,18 @@ void CTClient::DoFinishCheck()
 	{
 		if(!m_FinishNameStatuses.empty())
 			ResetFinishNameStatuses();
+		m_FinishTextTimeout = 0.0f;
+		m_FinishPendingEchoCooldown = 0.0f;
+		for(int i = 0; i < NUM_DUMMIES; ++i)
+			m_aFinishQueueSuppressedUntilStart[i] = false;
 		return;
 	}
-	m_FinishTextTimeout -= Client()->RenderFrameTime();
+	const float FrameTime = Client()->RenderFrameTime();
+	m_FinishTextTimeout -= FrameTime;
+	m_FinishPendingEchoCooldown -= FrameTime;
 	if(m_FinishTextTimeout > 0.0f)
 		return;
-	m_FinishTextTimeout = 1.0f;
+	m_FinishTextTimeout = 0.1f;
 	static constexpr int FinishTileRadius = 10;
 	static const std::array<float, FinishTileRadius * 2 + 1> s_aFinishArcHeights = []() {
 		std::array<float, FinishTileRadius * 2 + 1> aHeights{};
@@ -1560,26 +1753,25 @@ void CTClient::DoFinishCheck()
 		m_aFinishRestoreRequested[Dummy] = false;
 		m_aaFinishRestoreNames[Dummy][0] = '\0';
 	}
+	const CCollision *pCollision = GameClient()->Collision();
+	bool SuppressedForRun = m_aFinishQueueSuppressedUntilStart[Dummy];
+	if(pCollision)
+	{
+		const int LocalMapIndex = pCollision->GetPureMapIndex(Player.m_RenderPos);
+		if(LocalMapIndex >= 0 &&
+			(pCollision->GetTileIndex(LocalMapIndex) == TILE_START || pCollision->GetFrontTileIndex(LocalMapIndex) == TILE_START))
+		{
+			m_aFinishQueueSuppressedUntilStart[Dummy] = false;
+			SuppressedForRun = false;
+		}
+	}
 
 	RefreshFinishNameStatusContext();
 	if(m_FinishStatusMap.empty())
 		return;
 
-	// One-time runtime migration from legacy single-name config to unified queue config.
-	if(g_Config.m_TcFinishNameQueue[0] == '\0' && g_Config.m_TcFinishName[0] != '\0')
-	{
-		str_copy(g_Config.m_TcFinishNameQueue, g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishNameQueue));
-		g_Config.m_TcFinishName[0] = '\0';
-	}
-
-	static char s_aFinishNameQueueCache[sizeof(g_Config.m_TcFinishNameQueue)] = "";
-	static std::vector<std::string> s_vCachedFinishNameQueue;
-	if(str_comp(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue) != 0)
-	{
-		str_copy(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue, sizeof(s_aFinishNameQueueCache));
-		ParseFinishNameQueue(g_Config.m_TcFinishNameQueue, s_vCachedFinishNameQueue);
-	}
-	const std::vector<std::string> &vNameQueue = s_vCachedFinishNameQueue;
+	MigrateLegacyFinishNameQueueConfig();
+	const std::vector<std::string> &vNameQueue = CachedFinishNameQueue();
 	if(vNameQueue.empty())
 		return;
 
@@ -1602,15 +1794,57 @@ void CTClient::DoFinishCheck()
 			OwnNameKnown = TryGetFinishStatusForName(pOwnName, OwnNameFinished);
 		}
 	}
-	for(const std::string &Name : vNameQueue)
-	{
-		bool Ignored = false;
-		TryGetFinishStatusForName(Name.c_str(), Ignored);
-	}
+	if(SuppressedForRun)
+		return;
 	const bool NeedsRestoreName = m_aFinishRestoreNameValid[Dummy] &&
 		m_aaFinishRestoreNames[Dummy][0] != '\0' &&
 		str_comp(Player.m_aName, m_aaFinishRestoreNames[Dummy]) != 0;
-	if(!NeedsRestoreName && !NearFinishTile(Player.m_RenderPos, TILE_FINISH))
+	const bool IsNearFinish = NearFinishTile(Player.m_RenderPos, TILE_FINISH);
+	if(!NeedsRestoreName && !IsNearFinish)
+		return;
+
+	const auto EchoPendingStatus = [this, IsNearFinish]() {
+		if(!IsNearFinish)
+			return;
+		if(m_FinishPendingEchoCooldown > 0.0f)
+			return;
+		GameClient()->Echo(s_pFinishStatusPendingEcho);
+		m_FinishPendingEchoCooldown = 1.0f;
+	};
+
+	const char *pRenameTarget = nullptr;
+	for(const std::string &Name : vNameQueue)
+	{
+		bool Finished = false;
+		if(!TryGetFinishStatusForName(Name.c_str(), Finished))
+		{
+			EchoPendingStatus();
+			return;
+		}
+		if(!Finished)
+		{
+			pRenameTarget = Name.c_str();
+			break;
+		}
+	}
+
+	if(!pRenameTarget || pRenameTarget[0] == '\0')
+	{
+		if(!NeedsRestoreName)
+			return;
+		if(m_aFinishRestoreRequested[Dummy])
+			return;
+
+		char aRestoreBuf[64];
+		str_format(aRestoreBuf, sizeof(aRestoreBuf), TCLocalize("过图后改回 %s"), m_aaFinishRestoreNames[Dummy]);
+		GameClient()->Echo(aRestoreBuf);
+		str_copy(pConfigName, m_aaFinishRestoreNames[Dummy], ConfigNameSize);
+		SendConfiguredName();
+		m_aFinishRestoreRequested[Dummy] = true;
+		return;
+	}
+
+	if(!IsNearFinish)
 		return;
 
 	if(!CurrentNameKnown)
@@ -1630,36 +1864,6 @@ void CTClient::DoFinishCheck()
 	}
 	if(!CurrentNameFinished)
 		return;
-
-	const char *pRenameTarget = nullptr;
-	for(const std::string &Name : vNameQueue)
-	{
-		bool Finished = false;
-		if(!TryGetFinishStatusForName(Name.c_str(), Finished))
-		{
-			GameClient()->Echo(s_pFinishStatusPendingEcho);
-			return;
-		}
-		if(!Finished)
-		{
-			pRenameTarget = Name.c_str();
-			break;
-		}
-	}
-
-	if(!pRenameTarget || pRenameTarget[0] == '\0')
-	{
-		if(!NeedsRestoreName)
-			return;
-
-		char aRestoreBuf[64];
-		str_format(aRestoreBuf, sizeof(aRestoreBuf), TCLocalize("过图后改回 %s"), m_aaFinishRestoreNames[Dummy]);
-		GameClient()->Echo(aRestoreBuf);
-		str_copy(pConfigName, m_aaFinishRestoreNames[Dummy], ConfigNameSize);
-		SendConfiguredName();
-		m_aFinishRestoreRequested[Dummy] = true;
-		return;
-	}
 
 	if(str_comp(Player.m_aName, pRenameTarget) == 0)
 		return;
@@ -1757,6 +1961,7 @@ void CTClient::OnRender()
 	UpdateQmClientLifecycleAndServerTime();
 	UpdateQmDdnetPlayerStats();
 
+	WarmupFinishNameStatuses();
 	DoFinishCheck();
 	CheckFriendOnline();
 	CheckFriendEnterGreet();
@@ -1791,6 +1996,7 @@ void CTClient::OnRender()
 		CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
 		CheckAutoCloseChatOnUnfreeze(); // HJ大佬辅助 - 检测解冻后关闭聊天
 		UpdatePlayerStats(); // 更新玩家统计
+		UpdateGoresMapProgress(); // 更新 Gores 地图路径进度
 	}
 
 	MaybeSaveMapCategoryCache();
@@ -3388,11 +3594,14 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		m_LastRepeatCandidateCount = 0;
 		m_LastRepeatTime = 0;
 		m_LastAutoReplyTime = 0;
+		m_FinishTextTimeout = 0.0f;
+		m_FinishPendingEchoCooldown = 0.0f;
 		ResetFinishNameStatuses();
 		for(int i = 0; i < NUM_DUMMIES; ++i)
 		{
 			m_aFinishRestoreNameValid[i] = false;
 			m_aFinishRestoreRequested[i] = false;
+			m_aFinishQueueSuppressedUntilStart[i] = false;
 			m_aaFinishRestoreNames[i][0] = '\0';
 
 			m_aWasInDeath[i] = false;
@@ -3406,6 +3615,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 			m_aWasInFreezeForSwitch[i] = false;
 			m_aWasInFreezeForChatClose[i] = false;
 		}
+		InvalidateGoresBaselinePath();
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
 	}
@@ -3742,6 +3952,468 @@ void CTClient::TrackHookDirection(int Dummy)
 	}
 
 	Stats.m_WasHooking = IsHooking;
+}
+
+bool CTClient::IsGoresGameMode() const
+{
+	const char *pGameType = GameClient()->m_GameInfo.m_aGameType;
+	return pGameType != nullptr && pGameType[0] != '\0' && str_find_nocase(pGameType, "gores") != nullptr;
+}
+
+bool CTClient::IsGoresMapProgressEnabled() const
+{
+	return IsGoresGameMode() && g_Config.m_QmPlayerStatsHud && g_Config.m_QmPlayerStatsMapProgress;
+}
+
+void CTClient::InvalidateGoresBaselinePath()
+{
+	m_GoresPathValid = false;
+	m_GoresPathAttempted = false;
+	m_GoresPathNextBuildTryTick = 0;
+	m_GoresPathTotalDistance = 0.0f;
+	m_vGoresPathPoints.clear();
+	m_vGoresPathSegmentDelta.clear();
+	m_vGoresPathSegmentLengthSquared.clear();
+	m_vGoresPathSegmentLength.clear();
+	m_vGoresPathCumulativeDistance.clear();
+	for(int i = 0; i < NUM_DUMMIES; ++i)
+	{
+		m_aGoresWasOnStartLastTick[i] = false;
+		m_aGoresRunStarted[i] = false;
+		m_aGoresRunStartPathDistance[i] = 0.0f;
+		m_aGoresProgressSegmentHint[i] = -1;
+		m_aGoresMapProgressValid[i] = false;
+		m_aGoresMapProgress[i] = 0.0f;
+	}
+}
+
+void CTClient::EnsureGoresBaselinePath()
+{
+	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresGameMode())
+		return;
+
+	const char *pCurrentMap = Client()->GetCurrentMap();
+	const char *pMap = pCurrentMap ? pCurrentMap : "";
+	if(str_comp(m_aGoresPathMap, pMap) != 0)
+	{
+		InvalidateGoresBaselinePath();
+		str_copy(m_aGoresPathMap, pMap, sizeof(m_aGoresPathMap));
+	}
+
+	if(m_GoresPathValid)
+		return;
+
+	const int64_t Now = time_get();
+	if(m_GoresPathAttempted && Now < m_GoresPathNextBuildTryTick)
+		return;
+
+	m_GoresPathAttempted = true;
+	BuildGoresBaselinePath();
+	m_GoresPathNextBuildTryTick = m_GoresPathValid ? 0 : (Now + time_freq());
+}
+
+void CTClient::BuildGoresBaselinePath()
+{
+	m_GoresPathValid = false;
+	m_GoresPathTotalDistance = 0.0f;
+	m_vGoresPathPoints.clear();
+	m_vGoresPathCumulativeDistance.clear();
+
+	const CCollision *pCollision = Collision();
+	if(!pCollision)
+		return;
+
+	const int Width = pCollision->GetWidth();
+	const int Height = pCollision->GetHeight();
+	if(Width <= 0 || Height <= 0)
+		return;
+
+	const int64_t MapSize64 = (int64_t)Width * Height;
+	if(MapSize64 <= 0 || MapSize64 > std::numeric_limits<int>::max())
+		return;
+	const int MapSize = (int)MapSize64;
+
+	std::vector<int> vStartIndices;
+	std::vector<int> vFinishIndices;
+	std::vector<unsigned char> vPassable(MapSize, 0);
+	vStartIndices.reserve(16);
+	vFinishIndices.reserve(16);
+
+	for(int Index = 0; Index < MapSize; ++Index)
+	{
+		const int Tile = pCollision->GetTileIndex(Index);
+		const int FrontTile = pCollision->GetFrontTileIndex(Index);
+		const bool IsStart = Tile == TILE_START || FrontTile == TILE_START;
+		const bool IsFinish = Tile == TILE_FINISH || FrontTile == TILE_FINISH;
+		const bool IsBlocked = IsBlockedForGoresBaselinePath(Tile) || IsBlockedForGoresBaselinePath(FrontTile);
+		if(IsStart)
+			vStartIndices.push_back(Index);
+		if(IsFinish)
+			vFinishIndices.push_back(Index);
+
+		// Keep route generation forgiving: start/finish tiles are always traversable.
+		vPassable[Index] = (!IsBlocked || IsStart || IsFinish) ? 1 : 0;
+	}
+
+	if(vStartIndices.empty() || vFinishIndices.empty())
+		return;
+
+	std::vector<int> vDist(MapSize, -1);
+	std::vector<int> vNext(MapSize, -1); // From cell i, go to vNext[i] to move toward finish.
+	std::vector<int> vQueue;
+	vQueue.reserve(MapSize);
+
+	for(const int FinishIndex : vFinishIndices)
+	{
+		if(FinishIndex < 0 || FinishIndex >= MapSize || !vPassable[FinishIndex] || vDist[FinishIndex] != -1)
+			continue;
+		vDist[FinishIndex] = 0;
+		vQueue.push_back(FinishIndex);
+	}
+
+	size_t Head = 0;
+	while(Head < vQueue.size())
+	{
+		const int Cur = vQueue[Head++];
+		const int X = Cur % Width;
+		const int Y = Cur / Width;
+		const int aDx[4] = {1, -1, 0, 0};
+		const int aDy[4] = {0, 0, 1, -1};
+
+		for(int Dir = 0; Dir < 4; ++Dir)
+		{
+			const int Nx = X + aDx[Dir];
+			const int Ny = Y + aDy[Dir];
+			if(Nx < 0 || Ny < 0 || Nx >= Width || Ny >= Height)
+				continue;
+
+			const int Next = Ny * Width + Nx;
+			if(!vPassable[Next] || vDist[Next] != -1)
+				continue;
+
+			vDist[Next] = vDist[Cur] + 1;
+			vNext[Next] = Cur;
+			vQueue.push_back(Next);
+		}
+	}
+
+	int RefX = -1;
+	int RefY = -1;
+	const int RefDummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
+	const int RefClientId = GameClient()->m_aLocalIds[RefDummy];
+	if(RefClientId >= 0 && RefClientId < MAX_CLIENTS)
+	{
+		const auto &RefChar = GameClient()->m_Snap.m_aCharacters[RefClientId];
+		if(RefChar.m_Active)
+		{
+			const int RefIndex = pCollision->GetPureMapIndex(vec2((float)RefChar.m_Cur.m_X, (float)RefChar.m_Cur.m_Y));
+			if(RefIndex >= 0 && RefIndex < MapSize)
+			{
+				RefX = RefIndex % Width;
+				RefY = RefIndex / Width;
+			}
+		}
+	}
+
+	int BestStart = -1;
+	int BestDistance = std::numeric_limits<int>::max();
+	int64_t BestPlayerDistSquared = std::numeric_limits<int64_t>::max();
+	const bool UsePlayerReference = RefX >= 0 && RefY >= 0;
+	for(const int StartIndex : vStartIndices)
+	{
+		if(StartIndex < 0 || StartIndex >= MapSize)
+			continue;
+		const int Dist = vDist[StartIndex];
+		if(Dist < 0)
+			continue;
+
+		if(!UsePlayerReference)
+		{
+			if(Dist < BestDistance)
+			{
+				BestDistance = Dist;
+				BestStart = StartIndex;
+			}
+			continue;
+		}
+
+		const int StartX = StartIndex % Width;
+		const int StartY = StartIndex / Width;
+		const int Dx = StartX - RefX;
+		const int Dy = StartY - RefY;
+		const int64_t PlayerDistSquared = (int64_t)Dx * (int64_t)Dx + (int64_t)Dy * (int64_t)Dy;
+
+		if(PlayerDistSquared < BestPlayerDistSquared || (PlayerDistSquared == BestPlayerDistSquared && Dist < BestDistance))
+		{
+			BestPlayerDistSquared = PlayerDistSquared;
+			BestDistance = Dist;
+			BestStart = StartIndex;
+		}
+	}
+	if(BestStart < 0)
+		return;
+
+	std::vector<int> vPathIndices;
+	vPathIndices.reserve((size_t)BestDistance + 1);
+	int Cursor = BestStart;
+	for(int Guard = 0; Guard < MapSize && Cursor >= 0; ++Guard)
+	{
+		vPathIndices.push_back(Cursor);
+		if(vDist[Cursor] == 0)
+			break;
+		Cursor = vNext[Cursor];
+	}
+
+	if(vPathIndices.size() < 2 || vDist[vPathIndices.back()] != 0)
+		return;
+
+	std::vector<vec2> vRawPathPoints;
+	vRawPathPoints.reserve(vPathIndices.size());
+	for(const int Index : vPathIndices)
+	{
+		const int X = Index % Width;
+		const int Y = Index / Width;
+		vRawPathPoints.emplace_back((float)X * 32.0f + 16.0f, (float)Y * 32.0f + 16.0f);
+	}
+
+	if(vRawPathPoints.size() < 2)
+		return;
+
+	// Merge straight runs to reduce per-frame projection cost while preserving geometry.
+	m_vGoresPathPoints.clear();
+	m_vGoresPathPoints.reserve(vRawPathPoints.size());
+	m_vGoresPathPoints.push_back(vRawPathPoints.front());
+
+	if(vRawPathPoints.size() > 2)
+	{
+		const auto ToGridDir = [](const vec2 &Delta) {
+			const int Dx = Delta.x > 0.0f ? 1 : (Delta.x < 0.0f ? -1 : 0);
+			const int Dy = Delta.y > 0.0f ? 1 : (Delta.y < 0.0f ? -1 : 0);
+			return std::pair<int, int>(Dx, Dy);
+		};
+
+		auto PrevDir = ToGridDir(vRawPathPoints[1] - vRawPathPoints[0]);
+		for(size_t i = 1; i + 1 < vRawPathPoints.size(); ++i)
+		{
+			const auto Dir = ToGridDir(vRawPathPoints[i + 1] - vRawPathPoints[i]);
+			if(Dir != PrevDir)
+			{
+				m_vGoresPathPoints.push_back(vRawPathPoints[i]);
+				PrevDir = Dir;
+			}
+		}
+	}
+	m_vGoresPathPoints.push_back(vRawPathPoints.back());
+
+	if(m_vGoresPathPoints.size() < 2)
+	{
+		m_vGoresPathPoints.clear();
+		return;
+	}
+
+	const size_t SegmentCount = m_vGoresPathPoints.size() - 1;
+	m_vGoresPathSegmentDelta.resize(SegmentCount);
+	m_vGoresPathSegmentLengthSquared.resize(SegmentCount);
+	m_vGoresPathSegmentLength.resize(SegmentCount);
+	m_vGoresPathCumulativeDistance.resize(m_vGoresPathPoints.size());
+	m_vGoresPathCumulativeDistance[0] = 0.0f;
+
+	float TotalDistance = 0.0f;
+	for(size_t i = 0; i < SegmentCount; ++i)
+	{
+		const vec2 Delta = m_vGoresPathPoints[i + 1] - m_vGoresPathPoints[i];
+		const float LenSquared = length_squared(Delta);
+		if(LenSquared <= 0.0f)
+		{
+			m_GoresPathValid = false;
+			m_GoresPathTotalDistance = 0.0f;
+			m_vGoresPathPoints.clear();
+			m_vGoresPathSegmentDelta.clear();
+			m_vGoresPathSegmentLengthSquared.clear();
+			m_vGoresPathSegmentLength.clear();
+			m_vGoresPathCumulativeDistance.clear();
+			return;
+		}
+		const float Len = std::sqrt(LenSquared);
+		m_vGoresPathSegmentDelta[i] = Delta;
+		m_vGoresPathSegmentLengthSquared[i] = LenSquared;
+		m_vGoresPathSegmentLength[i] = Len;
+		TotalDistance += Len;
+		m_vGoresPathCumulativeDistance[i + 1] = TotalDistance;
+	}
+
+	if(TotalDistance <= 0.0f)
+	{
+		m_GoresPathValid = false;
+		m_GoresPathTotalDistance = 0.0f;
+		m_vGoresPathPoints.clear();
+		m_vGoresPathSegmentDelta.clear();
+		m_vGoresPathSegmentLengthSquared.clear();
+		m_vGoresPathSegmentLength.clear();
+		m_vGoresPathCumulativeDistance.clear();
+		return;
+	}
+
+	m_GoresPathTotalDistance = TotalDistance;
+	m_GoresPathValid = true;
+}
+
+void CTClient::UpdateGoresMapProgress()
+{
+	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresMapProgressEnabled())
+	{
+		for(int i = 0; i < NUM_DUMMIES; ++i)
+		{
+			m_aGoresWasOnStartLastTick[i] = false;
+			m_aGoresRunStarted[i] = false;
+			m_aGoresRunStartPathDistance[i] = 0.0f;
+			m_aGoresProgressSegmentHint[i] = -1;
+			m_aGoresMapProgressValid[i] = false;
+		}
+		return;
+	}
+
+	const CCollision *pCollision = Collision();
+	if(!pCollision)
+	{
+		for(int i = 0; i < NUM_DUMMIES; ++i)
+		{
+			m_aGoresWasOnStartLastTick[i] = false;
+			m_aGoresRunStarted[i] = false;
+			m_aGoresRunStartPathDistance[i] = 0.0f;
+			m_aGoresProgressSegmentHint[i] = -1;
+			m_aGoresMapProgressValid[i] = false;
+		}
+		return;
+	}
+
+	EnsureGoresBaselinePath();
+	const size_t SegmentCount = m_vGoresPathSegmentLength.size();
+	if(!m_GoresPathValid || m_GoresPathTotalDistance <= 0.0f || m_vGoresPathPoints.size() < 2 ||
+		m_vGoresPathCumulativeDistance.size() != m_vGoresPathPoints.size() ||
+		m_vGoresPathSegmentDelta.size() != SegmentCount ||
+		m_vGoresPathSegmentLengthSquared.size() != SegmentCount ||
+		SegmentCount + 1 != m_vGoresPathPoints.size())
+	{
+		for(int i = 0; i < NUM_DUMMIES; ++i)
+		{
+			m_aGoresWasOnStartLastTick[i] = false;
+			m_aGoresRunStarted[i] = false;
+			m_aGoresRunStartPathDistance[i] = 0.0f;
+			m_aGoresProgressSegmentHint[i] = -1;
+			m_aGoresMapProgressValid[i] = false;
+		}
+		return;
+	}
+
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		m_aGoresMapProgressValid[Dummy] = false;
+
+		if(Dummy == 1 && !Client()->DummyConnected())
+			continue;
+
+		const int ClientId = GameClient()->m_aLocalIds[Dummy];
+		if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+			continue;
+
+		const auto &Char = GameClient()->m_Snap.m_aCharacters[ClientId];
+		if(!Char.m_Active)
+			continue;
+
+		const vec2 Pos = vec2((float)Char.m_Cur.m_X, (float)Char.m_Cur.m_Y);
+
+		const int PosIndex = pCollision->GetPureMapIndex(Pos);
+		const bool IsOnStart = PosIndex >= 0 && PosIndex < pCollision->GetWidth() * pCollision->GetHeight() &&
+			(pCollision->GetTileIndex(PosIndex) == TILE_START || pCollision->GetFrontTileIndex(PosIndex) == TILE_START);
+		if(IsOnStart)
+		{
+			m_aGoresWasOnStartLastTick[Dummy] = true;
+			m_aGoresRunStarted[Dummy] = false;
+			m_aGoresRunStartPathDistance[Dummy] = 0.0f;
+			m_aGoresProgressSegmentHint[Dummy] = -1;
+			m_aGoresMapProgress[Dummy] = 0.0f;
+			m_aGoresMapProgressValid[Dummy] = true;
+			continue;
+		}
+
+		float BestDistSquared = std::numeric_limits<float>::max();
+		float BestPathDistance = 0.0f;
+		int BestSegment = -1;
+
+		const auto EvaluateSegment = [&](int SegmentIndex) {
+			const vec2 A = m_vGoresPathPoints[(size_t)SegmentIndex];
+			const vec2 &Delta = m_vGoresPathSegmentDelta[(size_t)SegmentIndex];
+			const float LenSquared = m_vGoresPathSegmentLengthSquared[(size_t)SegmentIndex];
+			if(LenSquared <= 0.0f)
+				return;
+
+			const float T = std::clamp(dot(Pos - A, Delta) / LenSquared, 0.0f, 1.0f);
+			const vec2 Projection = A + Delta * T;
+			if(pCollision->IntersectLine(Pos, Projection, nullptr, nullptr) != 0)
+				return;
+			const float DistSquared = length_squared(Pos - Projection);
+			if(DistSquared >= BestDistSquared)
+				return;
+
+			BestDistSquared = DistSquared;
+			BestPathDistance = m_vGoresPathCumulativeDistance[(size_t)SegmentIndex] + m_vGoresPathSegmentLength[(size_t)SegmentIndex] * T;
+			BestSegment = SegmentIndex;
+		};
+
+		const auto EvaluateRange = [&](int BeginSegment, int EndSegment) {
+			for(int SegmentIndex = BeginSegment; SegmentIndex <= EndSegment; ++SegmentIndex)
+				EvaluateSegment(SegmentIndex);
+		};
+
+		const int HintSegment = m_aGoresProgressSegmentHint[Dummy];
+		const int LastSegment = (int)SegmentCount - 1;
+		if(HintSegment >= 0 && HintSegment <= LastSegment)
+		{
+			constexpr int HintWindow = 96;
+			const int BeginSegment = maximum(0, HintSegment - HintWindow);
+			const int EndSegment = minimum(LastSegment, HintSegment + HintWindow);
+			EvaluateRange(BeginSegment, EndSegment);
+
+			// Teleport/respawn can move the tee far away from the previous segment.
+			// Fallback to full scan in that case to keep progress accurate.
+			constexpr float HintAcceptDistanceSquared = 768.0f * 768.0f;
+			if(BestSegment < 0 || BestDistSquared > HintAcceptDistanceSquared)
+				EvaluateRange(0, LastSegment);
+		}
+		else
+		{
+			EvaluateRange(0, LastSegment);
+		}
+
+		if(BestSegment < 0 || BestDistSquared == std::numeric_limits<float>::max())
+		{
+			m_aGoresProgressSegmentHint[Dummy] = -1;
+			continue;
+		}
+
+		if(!m_aGoresRunStarted[Dummy])
+		{
+			if(!m_aGoresWasOnStartLastTick[Dummy])
+			{
+				m_aGoresMapProgressValid[Dummy] = false;
+				m_aGoresProgressSegmentHint[Dummy] = BestSegment;
+				continue;
+			}
+			m_aGoresRunStarted[Dummy] = true;
+			m_aGoresRunStartPathDistance[Dummy] = BestPathDistance;
+		}
+		m_aGoresWasOnStartLastTick[Dummy] = false;
+
+		const float StartDistance = std::clamp(m_aGoresRunStartPathDistance[Dummy], 0.0f, m_GoresPathTotalDistance);
+		const float RemainingDistance = maximum(0.0f, m_GoresPathTotalDistance - StartDistance);
+		if(RemainingDistance <= 0.001f)
+			m_aGoresMapProgress[Dummy] = 1.0f;
+		else
+			m_aGoresMapProgress[Dummy] = std::clamp((BestPathDistance - StartDistance) / RemainingDistance, 0.0f, 1.0f);
+		m_aGoresMapProgressValid[Dummy] = true;
+		m_aGoresProgressSegmentHint[Dummy] = BestSegment;
+	}
 }
 
 // ========== 收藏地图功能实现 ==========
