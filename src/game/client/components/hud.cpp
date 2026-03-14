@@ -2551,6 +2551,8 @@ inline float CHud::GetMovementInformationBoxHeight()
 	if(g_Config.m_QmPlayerStatsHud)
 	{
 		BoxHeight += 3.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
+		if(GameClient()->m_TClient.IsGoresMapProgressEnabled())
+			BoxHeight += 2.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 	}
 	if(g_Config.m_ClShowhudPlayerPosition || g_Config.m_ClShowhudPlayerSpeed || g_Config.m_ClShowhudPlayerAngle)
 	{
@@ -2934,6 +2936,35 @@ void CHud::RenderMovementInformation()
 				TextRender()->TextColor(RainbowColor3);
 				TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+
+				if(GameClient()->m_TClient.IsGoresMapProgressEnabled())
+				{
+					const bool HasProgress = GameClient()->m_TClient.HasGoresMapProgress(g_Config.m_ClDummy);
+					const float Progress = HasProgress ? GameClient()->m_TClient.GetGoresMapProgress(g_Config.m_ClDummy) : 0.0f;
+
+					if(HasProgress)
+						str_format(aBuf, sizeof(aBuf), "地图进度: %.1f%%", Progress * 100.0f);
+					else
+						str_copy(aBuf, "地图进度: --");
+
+					const float Hue4 = std::fmod(StatsTime * 0.2f + 0.4f, 1.0f);
+					ColorHSLA RainbowHsla4(Hue4, 0.75f, 0.6f, 1.0f);
+					ColorRGBA RainbowColor4 = color_cast<ColorRGBA>(RainbowHsla4);
+					TextRender()->TextColor(RainbowColor4);
+					TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+
+					const float BarWidth = 42.0f;
+					const float BarHeight = 3.0f;
+					const float BarX = RightX - BarWidth;
+					const float BarY = y + (MOVEMENT_INFORMATION_LINE_HEIGHT - BarHeight) * 0.5f;
+					Graphics()->DrawRect(BarX, BarY, BarWidth, BarHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), IGraphics::CORNER_ALL, 1.0f);
+					if(HasProgress)
+						Graphics()->DrawRect(BarX, BarY, BarWidth * std::clamp(Progress, 0.0f, 1.0f), BarHeight, RainbowColor4.WithAlpha(0.85f), IGraphics::CORNER_ALL, 1.0f);
+					y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+				}
 			}
 		}
 	}
