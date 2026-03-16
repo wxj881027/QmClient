@@ -5,6 +5,7 @@
 #include <game/mapitems.h>
 
 // DDNet entity explanations by Lady Saavik
+// DDNet entity Translation by 栖梦
 // TODO: Add other entities' tiles' explanations and improve new ones
 
 // Tile Numbers For Explanations - TODO: Add/Improve tiles and explanations
@@ -92,7 +93,7 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_NOLASER:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "激光阻挡器: 不让拖拽和旋转激光以及等离子炮塔穿过它到达tee.";
+			return "激光阻挡器: 不让拖拽和旋转激光以及炮塔穿过它到达tee.";
 		break;
 	case TILE_THROUGH_CUT:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
@@ -154,7 +155,7 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_WALLJUMP:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "墙跳: 放置在墙旁边.允许攀墙.";
+			return "墙跳: 放置在墙旁边,在玩家贴墙下落的途中补充跳跃";
 		break;
 	case TILE_EHOOK_ENABLE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
@@ -230,11 +231,11 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_START:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "起点: 开始计算你的竞赛时间.";
+			return "起点: 开始计算你的跑图时间.";
 		break;
 	case TILE_FINISH:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "终点: 竞赛结束.";
+			return "终点: 跑图结束.";
 		break;
 	case TILE_STOP:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
@@ -254,11 +255,11 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_CP:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "速度器: 使武器、盾牌、心和旋转激光缓慢移动.";
+			return "速度器: 使武器、盾牌、冻结心和旋转激光缓慢移动.";
 		break;
 	case TILE_CP_F:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "速度器: 使武器、盾牌、心和旋转激光快速移动.";
+			return "速度器: 使武器、盾牌、冻结心和旋转激光快速移动.";
 		break;
 	case TILE_TUNE:
 		if(Layer == LAYER_TUNE)
@@ -266,23 +267,23 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_OLDLASER:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "全局旧麟弹枪: 麟弹枪总是将其他人拖向射击者,即使弹跳后也是.射击者不能击中自己.只在地图某处放置一个图块.";
+			return "全局旧激光: 启用旧激光模式. 激光不能击中自己, 霰弹枪会将其他目标始终拉向玩家, 即使目标已经弹开也不例外. 仅可在地图上的任意位置放置一块图块.";
 		break;
 	case TILE_NPC:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "全局碰撞关闭: 没有人可以与其他人碰撞.只在地图某处放置一个图块.";
+			return "全局关闭碰撞: 没有人可以与其他人碰撞.只在地图某处放置一个图块.";
 		break;
 	case TILE_EHOOK:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "全局无限钩开启: 所有人都有无限钩子.只在地图某处放置一个图块.";
+			return "全局开启无限钩: 所有人都有无限钩子.只在地图某处放置一个图块.";
 		break;
 	case TILE_NOHIT:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "全局攻击其他人关闭: 没有人可以攻击其他人.只在地图某处放置一个图块.";
+			return "全局关闭武器命中其他人: 没有人可以用武器攻击其他人.只在地图某处放置一个图块.";
 		break;
 	case TILE_NPH:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "全局钩其他人关闭: 没有人可以钩住其他人.只在地图某处放置一个图块.";
+			return "全局关闭钩其他人: 没有人可以钩住其他人.只在地图某处放置一个图块.";
 		break;
 	case TILE_UNLOCK_TEAM:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
@@ -294,19 +295,19 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_NPC_DISABLE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "碰撞关闭: 你不能与其他人碰撞.";
+			return "关闭碰撞: 你不能与其他人碰撞.";
 		break;
 	case TILE_UNLIMITED_JUMPS_DISABLE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "超级跳跃关闭: 你没有无限空中跳跃.";
+			return "关闭无限跳: 你没有无限跳.";
 		break;
 	case TILE_JETPACK_DISABLE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "喷气背包关闭: 你失去了喷气背包枪.";
+			return "关闭喷气背包: 你失去了喷气背包.";
 		break;
 	case TILE_NPH_DISABLE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "钩其他人关闭: 你不能钩住其他人.";
+			return "关闭钩其他人: 你不能钩住其他人.";
 		break;
 	case TILE_SUBTRACT_TIME:
 		if(Layer == LAYER_SWITCH)
@@ -318,7 +319,7 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_UNLIMITED_JUMPS_ENABLE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "超级跳跃: 你有无限空中跳跃.";
+			return "无限跳: 你有无限跳!";
 		break;
 	case TILE_JETPACK_ENABLE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
@@ -326,7 +327,7 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_NPH_ENABLE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "钩其他人: 你可以钩住其他人.";
+			return "可钩其他人: 你可以钩住其他人.";
 		break;
 	case TILE_CREDITS_1:
 	case TILE_CREDITS_2:
@@ -367,7 +368,7 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case ENTITY_OFFSET + ENTITY_HEALTH_1:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return "心: 像冻结图块一样工作.默认冻结tee 3秒.";
+			return "冻结心: 像冻结图块一样工作.默认冻结tee 3秒.";
 		break;
 	case ENTITY_OFFSET + ENTITY_WEAPON_SHOTGUN:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
@@ -375,15 +376,15 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case ENTITY_OFFSET + ENTITY_WEAPON_GRENADE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return "榴弹发射器: 发射爆炸子弹.也称为火箭.";
+			return "榴弹发射器: 发射可推进tee的榴弹.也称为火箭.";
 		break;
 	case ENTITY_OFFSET + ENTITY_POWERUP_NINJA:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return "忍者: 让你在最黑暗的夜晚中隐形.";
+			return "忍者: 让你在最黑暗的夜晚中隐形XD";
 		break;
 	case ENTITY_OFFSET + ENTITY_WEAPON_LASER:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return "激光: 解冻被击中的tee.会从墙壁弹开.也称为激光.";
+			return "激光: 解冻被击中的tee,会从墙壁弹开.";
 		break;
 	case ENTITY_OFFSET + ENTITY_LASER_FAST_CCW:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
@@ -451,19 +452,19 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case ENTITY_OFFSET + ENTITY_PLASMAE:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return "等离子炮塔: 向最近的tee射击等离子子弹.它们在击中障碍物(墙或tee)时会爆炸.";
+			return "炮塔: 向最近的tee射击等离子子弹.它们在击中障碍物(墙或tee)时会爆炸.";
 		break;
 	case ENTITY_OFFSET + ENTITY_PLASMAF:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return "等离子炮塔: 向最近的tee射击像冻结一样工作的等离子子弹.";
+			return "炮塔: 向最近的tee射击像冻结一样工作的等离子子弹.";
 		break;
 	case ENTITY_OFFSET + ENTITY_PLASMA:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return "等离子炮塔: 向最近的tee射击像冻结一样工作的等离子子弹.它们还会在击中障碍物(墙或tee)时爆炸.";
+			return "炮塔: 向最近的tee射击像冻结一样工作的等离子子弹.它们还会在击中障碍物(墙或tee)时爆炸.";
 		break;
 	case ENTITY_OFFSET + ENTITY_PLASMAU:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return "等离子炮塔: 向最近的tee射击像解冻一样工作的等离子子弹.";
+			return "炮塔: 向最近的tee射击像解冻一样工作的等离子子弹.";
 		break;
 	case ENTITY_OFFSET + ENTITY_CRAZY_SHOTGUN_EX:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
@@ -555,7 +556,7 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	}
 	if(Tile >= TILE_TIME_CHECKPOINT_FIRST && Tile <= TILE_TIME_CHECKPOINT_LAST && (Layer == LAYER_GAME || Layer == LAYER_FRONT))
-		return "时间检查点: 将你当前的竞赛时间与你的记录进行比较,显示你跑得更快还是更慢.";
+		return "时间检查点: 将你当前的跑图时间与你的记录进行比较,显示你跑得更快还是更慢.";
 	return nullptr;
 }
 
