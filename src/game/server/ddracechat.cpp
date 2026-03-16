@@ -51,19 +51,24 @@ void CGameContext::ConInfo(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"DDraceNetwork Mod. Version: " GAME_VERSION);
+		"DDraceNetwork 模组版本: " GAME_VERSION);
+	//DDraceNetwork Mod. Version:
 	if(GIT_SHORTREV_HASH)
 	{
 		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "Git revision hash: %s", GIT_SHORTREV_HASH);
+		str_format(aBuf, sizeof(aBuf), "Git 提交哈希: %s", GIT_SHORTREV_HASH);
+		//Git revision hash: %s
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
 	}
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"Official site: DDNet.org");
+		"官方网站: DDNet.org");
+	//Official site: DDNet.org
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"For more info: /cmdlist");
+		"更多命令请查看: /cmdlist");
+	//For more info: /cmdlist
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"Or visit DDNet.org");
+		"或访问 DDNet.org");
+	//Or visit DDNet.org
 }
 
 void CGameContext::ConList(IConsole::IResult *pResult, void *pUserData)
@@ -243,7 +248,8 @@ void CGameContext::ConRules(IConsole::IResult *pResult, void *pUserData)
 	if(g_Config.m_SvDDRaceRules)
 	{
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"Be nice.");
+			"请友善交流。");
+		//Be nice.
 		Printed = true;
 	}
 	char *apRuleLines[] = {
@@ -270,7 +276,8 @@ void CGameContext::ConRules(IConsole::IResult *pResult, void *pUserData)
 	if(!Printed)
 	{
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"No Rules Defined, Kill em all!!");
+			"未设置服务器规则，请联系管理员。");
+		//No Rules Defined, Kill em all!!
 	}
 }
 
