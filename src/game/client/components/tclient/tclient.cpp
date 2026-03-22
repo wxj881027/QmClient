@@ -62,10 +62,6 @@ static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
 static constexpr const char *s_pQiaFenDefaultReply = "我要恰!!谢谢佬!!!!";
-static constexpr const char *FINISH_STATUS_URL = "https://info.ddnet.org/info";
-static constexpr int64_t FINISH_STATUS_RETRY_DELAY_SECONDS = 3;
-static constexpr int64_t FINISH_STATUS_RECHECK_UNFINISHED_SECONDS = 15;
-static constexpr const char *s_pFinishStatusPendingEcho = "请等一下!还没查到恰分结果!!";
 static constexpr const char *s_apKeywordNegationWords[] = {
 	"不",
 	"没",
@@ -90,30 +86,6 @@ static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s好友进�
 
 static int QiaFenSeparatorLength(const char *pStr);
 static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize);
-
-static bool ExtractFinishedPlayerName(const char *pMessage, char *pOutName, int OutNameSize)
-{
-	if(!pMessage || !pOutName || OutNameSize <= 0)
-		return false;
-	pOutName[0] = '\0';
-
-	const char *pNameStart = str_startswith(pMessage, "*** ");
-	if(!pNameStart)
-		return false;
-
-	const char *pFinishedMark = str_find(pNameStart, " finished in:");
-	if(!pFinishedMark || pFinishedMark <= pNameStart)
-		return false;
-
-	// Trim trailing spaces before " finished in:".
-	while(pFinishedMark > pNameStart && *(pFinishedMark - 1) == ' ')
-		pFinishedMark--;
-	if(pFinishedMark <= pNameStart)
-		return false;
-
-	str_truncate(pOutName, OutNameSize, pNameStart, (int)(pFinishedMark - pNameStart));
-	return pOutName[0] != '\0';
-}
 
 static std::string BuildFriendEnterBroadcastText(const char *pTemplate, std::string_view FriendNames)
 {
@@ -417,87 +389,6 @@ static int QiaFenSeparatorLength(const char *pStr)
 	if(C0 == 0xEF && (unsigned char)pStr[1] == 0xBD && (unsigned char)pStr[2] == 0x9C)
 		return 3;
 	return 0;
-}
-
-static bool JsonArrayContainsString(const json_value *pArray, const char *pValue)
-{
-	if(!pArray || pArray->type != json_array || !pValue || pValue[0] == '\0')
-		return false;
-	for(unsigned i = 0; i < pArray->u.array.length; ++i)
-	{
-		const json_value &Entry = (*pArray)[i];
-		if(Entry.type != json_string)
-			continue;
-		if(str_comp((const char *)Entry, pValue) == 0)
-			return true;
-	}
-	return false;
-}
-
-static void ParseFinishNameQueue(const char *pQueue, std::vector<std::string> &vNames)
-{
-	vNames.clear();
-	if(!pQueue || pQueue[0] == '\0')
-		return;
-
-	char aQueue[512];
-	str_copy(aQueue, pQueue, sizeof(aQueue));
-	char *pCursor = aQueue;
-	while(*pCursor)
-	{
-		int SepLen = QiaFenSeparatorLength(pCursor);
-		while(*pCursor && SepLen > 0)
-		{
-			pCursor += SepLen;
-			SepLen = QiaFenSeparatorLength(pCursor);
-		}
-
-		char *pStart = pCursor;
-		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
-			pCursor++;
-
-		if(pStart == pCursor)
-			break;
-
-		if(*pCursor)
-		{
-			const int CutLen = QiaFenSeparatorLength(pCursor);
-			*pCursor = '\0';
-			pCursor += CutLen;
-		}
-
-		char *pName = (char *)str_utf8_skip_whitespaces(pStart);
-		str_utf8_trim_right(pName);
-		if(pName[0] == '\0')
-			continue;
-
-		char aTrimmedName[MAX_NAME_LENGTH];
-		str_copy(aTrimmedName, pName, sizeof(aTrimmedName));
-		if(aTrimmedName[0] == '\0')
-			continue;
-		vNames.emplace_back(aTrimmedName);
-	}
-}
-
-static void MigrateLegacyFinishNameQueueConfig()
-{
-	if(g_Config.m_TcFinishNameQueue[0] == '\0' && g_Config.m_TcFinishName[0] != '\0')
-	{
-		str_copy(g_Config.m_TcFinishNameQueue, g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishNameQueue));
-		g_Config.m_TcFinishName[0] = '\0';
-	}
-}
-
-static const std::vector<std::string> &CachedFinishNameQueue()
-{
-	static char s_aFinishNameQueueCache[sizeof(g_Config.m_TcFinishNameQueue)] = "";
-	static std::vector<std::string> s_vCachedFinishNameQueue;
-	if(str_comp(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue) != 0)
-	{
-		str_copy(s_aFinishNameQueueCache, g_Config.m_TcFinishNameQueue, sizeof(s_aFinishNameQueueCache));
-		ParseFinishNameQueue(g_Config.m_TcFinishNameQueue, s_vCachedFinishNameQueue);
-	}
-	return s_vCachedFinishNameQueue;
 }
 
 static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize)
@@ -869,235 +760,6 @@ const char *CTClient::CurrentCommunityIdForFinishCheck() const
 	return pCommunityId;
 }
 
-void CTClient::ResetFinishNameStatuses()
-{
-	for(auto &Entry : m_FinishNameStatuses)
-	{
-		auto &Status = Entry.second;
-		if(Status.m_pTask)
-			Status.m_pTask->Abort();
-	}
-	m_FinishNameStatuses.clear();
-	m_FinishStatusMap.clear();
-	m_FinishStatusCommunity.clear();
-}
-
-void CTClient::RefreshFinishNameStatusContext()
-{
-	const char *pCurrentMap = Client()->GetCurrentMap();
-	const char *pCurrentCommunity = CurrentCommunityIdForFinishCheck();
-	const std::string CurrentMap = pCurrentMap ? pCurrentMap : "";
-	const std::string CurrentCommunity = pCurrentCommunity ? pCurrentCommunity : "";
-	if(CurrentMap != m_FinishStatusMap)
-	{
-		ResetFinishNameStatuses();
-		m_FinishStatusMap = CurrentMap;
-		m_FinishStatusCommunity = CurrentCommunity;
-		return;
-	}
-
-	if(CurrentCommunity == m_FinishStatusCommunity)
-		return;
-
-	// Keep context stable when community id appears/disappears late for the same map.
-	// This avoids dropping warm name-status cache near finish due to transient metadata updates.
-	if(CurrentCommunity.empty() || m_FinishStatusCommunity.empty())
-		return;
-
-	if(CurrentCommunity != m_FinishStatusCommunity)
-	{
-		ResetFinishNameStatuses();
-		m_FinishStatusMap = CurrentMap;
-		m_FinishStatusCommunity = CurrentCommunity;
-	}
-}
-
-bool CTClient::ParseFinishStatusResult(const json_value *pRoot, bool &Finished) const
-{
-	Finished = false;
-	if(!pRoot || pRoot->type != json_object || m_FinishStatusMap.empty())
-		return false;
-
-	const char *pMap = m_FinishStatusMap.c_str();
-	const char *pWantedCommunity = m_FinishStatusCommunity.empty() ? nullptr : m_FinishStatusCommunity.c_str();
-	const json_value *pCommunities = JsonObjectField(pRoot, "communities");
-
-	if(pWantedCommunity && pCommunities->type == json_array)
-	{
-		for(unsigned i = 0; i < pCommunities->u.array.length; ++i)
-		{
-			const json_value &Community = (*pCommunities)[i];
-			if(Community.type != json_object)
-				continue;
-			const json_value *pCommunityId = JsonObjectField(&Community, "id");
-			if(pCommunityId->type != json_string)
-				continue;
-			const char *pCommunityIdStr = json_string_get(pCommunityId);
-			if(str_comp(pCommunityIdStr, pWantedCommunity) != 0)
-				continue;
-			const json_value *pFinishes = JsonObjectField(&Community, "finishes");
-			if(pFinishes->type != json_array)
-				break;
-			Finished = JsonArrayContainsString(pFinishes, pMap);
-			return true;
-		}
-	}
-
-	if(pCommunities->type == json_array)
-	{
-		bool AnyCommunityFinishes = false;
-		for(unsigned i = 0; i < pCommunities->u.array.length; ++i)
-		{
-			const json_value &Community = (*pCommunities)[i];
-			if(Community.type != json_object)
-				continue;
-			const json_value *pFinishes = JsonObjectField(&Community, "finishes");
-			if(pFinishes->type != json_array)
-				continue;
-
-			AnyCommunityFinishes = true;
-			if(JsonArrayContainsString(pFinishes, pMap))
-			{
-				Finished = true;
-				return true;
-			}
-		}
-		if(AnyCommunityFinishes)
-			return true;
-	}
-
-	const json_value *pLegacyMaps = JsonObjectField(pRoot, "maps");
-	if(pLegacyMaps->type == json_array)
-	{
-		Finished = JsonArrayContainsString(pLegacyMaps, pMap);
-		return true;
-	}
-
-	return false;
-}
-
-bool CTClient::TryGetFinishStatusForName(const char *pName, bool &Finished)
-{
-	Finished = false;
-	if(!pName || pName[0] == '\0' || m_FinishStatusMap.empty())
-		return false;
-
-	const int64_t Now = time_get();
-	SFinishNameStatus &Status = m_FinishNameStatuses[pName];
-	if(Status.m_pTask && Status.m_pTask->Done())
-	{
-		bool Parsed = false;
-		if(Status.m_pTask->State() == EHttpState::DONE && Status.m_pTask->StatusCode() == 200)
-		{
-			json_value *pRoot = Status.m_pTask->ResultJson();
-			Parsed = ParseFinishStatusResult(pRoot, Status.m_Finished);
-			if(pRoot)
-				json_value_free(pRoot);
-		}
-
-		Status.m_pTask = nullptr;
-		Status.m_HasResult = Parsed;
-		if(Parsed)
-		{
-			if(Status.m_Finished)
-			{
-				// Finished state is monotonic for a fixed map/community, keep cached.
-				Status.m_NextRetryTick = 0;
-			}
-			else
-			{
-				// Not-finished can change after a run with that name, so refresh periodically.
-				Status.m_NextRetryTick = Now + time_freq() * FINISH_STATUS_RECHECK_UNFINISHED_SECONDS;
-			}
-		}
-		else
-		{
-			Status.m_NextRetryTick = Now + time_freq() * FINISH_STATUS_RETRY_DELAY_SECONDS;
-		}
-	}
-
-	if(Status.m_HasResult)
-	{
-		if(!Status.m_Finished && Status.m_NextRetryTick > 0 && Now >= Status.m_NextRetryTick)
-		{
-			// Expire stale negative result and trigger a fresh request below.
-			Status.m_HasResult = false;
-		}
-		else
-		{
-			Finished = Status.m_Finished;
-			return true;
-		}
-	}
-
-	if(Status.m_pTask || Now < Status.m_NextRetryTick)
-		return false;
-
-	char aEscapedName[256];
-	EscapeUrl(aEscapedName, sizeof(aEscapedName), pName);
-	char aUrl[512];
-	str_format(aUrl, sizeof(aUrl), "%s?name=%s", FINISH_STATUS_URL, aEscapedName);
-	Status.m_pTask = HttpGet(aUrl);
-	Status.m_pTask->Timeout(CTimeout{10000, 0, 500, 10});
-	Status.m_pTask->IpResolve(IPRESOLVE::V4);
-	Status.m_pTask->LogProgress(HTTPLOG::FAILURE);
-	Http()->Run(Status.m_pTask);
-	return false;
-}
-
-void CTClient::WarmupFinishNameStatuses()
-{
-	if(Client()->State() != IClient::STATE_ONLINE)
-		return;
-	if(g_Config.m_TcChangeNameNearFinish <= 0)
-		return;
-
-	RefreshFinishNameStatusContext();
-	if(m_FinishStatusMap.empty())
-		return;
-
-	MigrateLegacyFinishNameQueueConfig();
-	const std::vector<std::string> &vNameQueue = CachedFinishNameQueue();
-	if(vNameQueue.empty())
-		return;
-
-	for(const std::string &Name : vNameQueue)
-	{
-		bool Ignored = false;
-		TryGetFinishStatusForName(Name.c_str(), Ignored);
-	}
-
-	if(g_Config.m_TcFinishNameRequireOwnFinished)
-	{
-		if(g_Config.m_PlayerName[0] != '\0')
-		{
-			bool Ignored = false;
-			TryGetFinishStatusForName(g_Config.m_PlayerName, Ignored);
-		}
-		if(Client()->DummyConnected() && g_Config.m_ClDummyName[0] != '\0')
-		{
-			bool Ignored = false;
-			TryGetFinishStatusForName(g_Config.m_ClDummyName, Ignored);
-		}
-	}
-
-	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-	{
-		if(Dummy == 1 && !Client()->DummyConnected())
-			continue;
-
-		const int LocalId = GameClient()->m_aLocalIds[Dummy];
-		if(LocalId < 0 || LocalId >= MAX_CLIENTS)
-			continue;
-		const auto &Player = GameClient()->m_aClients[LocalId];
-		if(!Player.m_Active || Player.m_aName[0] == '\0')
-			continue;
-
-		bool Ignored = false;
-		TryGetFinishStatusForName(Player.m_aName, Ignored);
-	}
-}
-
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
 {
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -1113,49 +775,6 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			if(pMsg->m_pMessage)
 			{
 				const char *pText = pMsg->m_pMessage;
-				if(g_Config.m_TcChangeNameNearFinish > 0 && g_Config.m_TcFinishNameQueue[0] != '\0')
-				{
-					char aFinishedName[MAX_NAME_LENGTH];
-					if(ExtractFinishedPlayerName(pText, aFinishedName, sizeof(aFinishedName)))
-					{
-						for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-						{
-							if(Dummy == 1 && !Client()->DummyConnected())
-								continue;
-
-							const int LocalId = GameClient()->m_aLocalIds[Dummy];
-							if(LocalId < 0 || LocalId >= MAX_CLIENTS)
-								continue;
-							const auto &LocalPlayer = GameClient()->m_aClients[LocalId];
-							if(!LocalPlayer.m_Active || LocalPlayer.m_aName[0] == '\0')
-								continue;
-							if(str_comp(LocalPlayer.m_aName, aFinishedName) != 0)
-								continue;
-
-							// Finish reached: stop auto-rename for this run, resume after touching start.
-							m_aFinishQueueSuppressedUntilStart[Dummy] = true;
-
-							if(m_aFinishRestoreNameValid[Dummy] &&
-								m_aaFinishRestoreNames[Dummy][0] != '\0' &&
-								str_comp(LocalPlayer.m_aName, m_aaFinishRestoreNames[Dummy]) != 0)
-							{
-								char *pConfigName = Dummy == 0 ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
-								const int ConfigNameSize = Dummy == 0 ? (int)sizeof(g_Config.m_PlayerName) : (int)sizeof(g_Config.m_ClDummyName);
-								str_copy(pConfigName, m_aaFinishRestoreNames[Dummy], ConfigNameSize);
-								if(Dummy == 0)
-									GameClient()->SendInfo(false);
-								else
-									GameClient()->SendDummyInfo(false);
-								m_aFinishRestoreRequested[Dummy] = true;
-
-								char aRestoreBuf[64];
-								str_format(aRestoreBuf, sizeof(aRestoreBuf), TCLocalize("过图后改回 %s"), m_aaFinishRestoreNames[Dummy]);
-								GameClient()->Echo(aRestoreBuf);
-							}
-							break;
-						}
-					}
-				}
 				if(str_find_nocase(pText, "has requested to swap with you"))
 				{
 					StartSwapCountdown();
@@ -1204,37 +823,6 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			if(IsRepeatCandidate)
 			{
 				str_copy(m_aLastChatMessage, pMessage, sizeof(m_aLastChatMessage));
-			}
-
-			// 自动加一：连续出现 2 句及以上非自己发送的相同公屏消息时，自动发送同内容一次。
-			if(g_Config.m_QmRepeatEnabled && g_Config.m_QmRepeatAutoAddOne && IsRepeatCandidate)
-			{
-				if(str_comp(m_aLastRepeatCandidate, pMessage) == 0)
-					++m_LastRepeatCandidateCount;
-				else
-				{
-					str_copy(m_aLastRepeatCandidate, pMessage, sizeof(m_aLastRepeatCandidate));
-					m_aLastAutoRepeatMessage[0] = '\0';
-					m_LastRepeatCandidateCount = 1;
-				}
-
-				if(m_LastRepeatCandidateCount >= 2)
-				{
-					const bool AlreadyRepeated = str_comp(m_aLastAutoRepeatMessage, pMessage) == 0;
-					const int64_t Now = time_get();
-					if(!AlreadyRepeated && Now - m_LastRepeatTime >= time_freq())
-					{
-						m_LastRepeatTime = Now;
-						str_copy(m_aLastAutoRepeatMessage, pMessage, sizeof(m_aLastAutoRepeatMessage));
-						GameClient()->m_Chat.SendChat(0, pMessage);
-					}
-				}
-			}
-			else if(!g_Config.m_QmRepeatEnabled || !g_Config.m_QmRepeatAutoAddOne)
-			{
-				m_aLastRepeatCandidate[0] = '\0';
-				m_aLastAutoRepeatMessage[0] = '\0';
-				m_LastRepeatCandidateCount = 0;
 			}
 		}
 
@@ -1693,20 +1281,13 @@ void CTClient::DoFinishCheck()
 		return;
 	if(g_Config.m_TcChangeNameNearFinish <= 0)
 	{
-		if(!m_FinishNameStatuses.empty())
-			ResetFinishNameStatuses();
 		m_FinishTextTimeout = 0.0f;
-		m_FinishPendingEchoCooldown = 0.0f;
-		for(int i = 0; i < NUM_DUMMIES; ++i)
-			m_aFinishQueueSuppressedUntilStart[i] = false;
 		return;
 	}
-	const float FrameTime = Client()->RenderFrameTime();
-	m_FinishTextTimeout -= FrameTime;
-	m_FinishPendingEchoCooldown -= FrameTime;
+	m_FinishTextTimeout -= Client()->RenderFrameTime();
 	if(m_FinishTextTimeout > 0.0f)
 		return;
-	m_FinishTextTimeout = 0.1f;
+	m_FinishTextTimeout = 1.0f;
 	static constexpr int FinishTileRadius = 10;
 	static const std::array<float, FinishTileRadius * 2 + 1> s_aFinishArcHeights = []() {
 		std::array<float, FinishTileRadius * 2 + 1> aHeights{};
@@ -1720,6 +1301,8 @@ void CTClient::DoFinishCheck()
 	// Check for finish tile.
 	const auto &NearFinishTile = [this](vec2 Pos, int Tile) -> bool {
 		const CCollision *pCollision = GameClient()->Collision();
+		if(!pCollision)
+			return false;
 		for(int i = 0; i <= FinishTileRadius * 2; ++i)
 		{
 			const float h = s_aFinishArcHeights[i];
@@ -1740,6 +1323,21 @@ void CTClient::DoFinishCheck()
 		}
 		return false;
 	};
+	const auto &SendUrgentRename = [this](int Conn, const char *pNewName) {
+		CNetMsg_Cl_ChangeInfo Msg;
+		Msg.m_pName = pNewName;
+		Msg.m_pClan = Conn == 0 ? g_Config.m_PlayerClan : g_Config.m_ClDummyClan;
+		Msg.m_Country = Conn == 0 ? g_Config.m_PlayerCountry : g_Config.m_ClDummyCountry;
+		Msg.m_pSkin = Conn == 0 ? g_Config.m_ClPlayerSkin : g_Config.m_ClDummySkin;
+		Msg.m_UseCustomColor = Conn == 0 ? g_Config.m_ClPlayerUseCustomColor : g_Config.m_ClDummyUseCustomColor;
+		Msg.m_ColorBody = Conn == 0 ? g_Config.m_ClPlayerColorBody : g_Config.m_ClDummyColorBody;
+		Msg.m_ColorFeet = Conn == 0 ? g_Config.m_ClPlayerColorFeet : g_Config.m_ClDummyColorFeet;
+		CMsgPacker Packer(&Msg);
+		Msg.Pack(&Packer);
+		Client()->SendMsg(Conn, &Packer, MSGFLAG_VITAL);
+		GameClient()->m_aCheckInfo[Conn] = Client()->GameTickSpeed(); // 1 second
+	};
+
 	const int Dummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
 	const int LocalId = GameClient()->m_aLocalIds[Dummy];
 	if(LocalId < 0 || LocalId >= MAX_CLIENTS)
@@ -1747,154 +1345,17 @@ void CTClient::DoFinishCheck()
 	const auto &Player = GameClient()->m_aClients[LocalId];
 	if(!Player.m_Active)
 		return;
-	char *pConfigName = Dummy == 0 ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
-	const int ConfigNameSize = Dummy == 0 ? (int)sizeof(g_Config.m_PlayerName) : (int)sizeof(g_Config.m_ClDummyName);
-	const auto SendConfiguredName = [this, Dummy]() {
-		if(Dummy == 0)
-			GameClient()->SendInfo(false);
-		else
-			GameClient()->SendDummyInfo(false);
-	};
-	if(m_aFinishRestoreNameValid[Dummy] && m_aFinishRestoreRequested[Dummy] &&
-		m_aaFinishRestoreNames[Dummy][0] != '\0' &&
-		str_comp(Player.m_aName, m_aaFinishRestoreNames[Dummy]) == 0)
-	{
-		m_aFinishRestoreNameValid[Dummy] = false;
-		m_aFinishRestoreRequested[Dummy] = false;
-		m_aaFinishRestoreNames[Dummy][0] = '\0';
-	}
-	const CCollision *pCollision = GameClient()->Collision();
-	bool SuppressedForRun = m_aFinishQueueSuppressedUntilStart[Dummy];
-	if(pCollision)
-	{
-		const int LocalMapIndex = pCollision->GetPureMapIndex(Player.m_RenderPos);
-		if(LocalMapIndex >= 0 &&
-			(pCollision->GetTileIndex(LocalMapIndex) == TILE_START || pCollision->GetFrontTileIndex(LocalMapIndex) == TILE_START))
-		{
-			m_aFinishQueueSuppressedUntilStart[Dummy] = false;
-			SuppressedForRun = false;
-		}
-	}
-
-	RefreshFinishNameStatusContext();
-	if(m_FinishStatusMap.empty())
+	const char *pNewName = g_Config.m_TcFinishName;
+	if(!pNewName || pNewName[0] == '\0')
 		return;
-
-	MigrateLegacyFinishNameQueueConfig();
-	const std::vector<std::string> &vNameQueue = CachedFinishNameQueue();
-	if(vNameQueue.empty())
+	if(str_comp(Player.m_aName, pNewName) == 0)
 		return;
-
-	bool CurrentNameFinished = false;
-	const bool CurrentNameKnown = TryGetFinishStatusForName(Player.m_aName, CurrentNameFinished);
-	const char *pOwnName = Dummy == 0 ? g_Config.m_PlayerName : g_Config.m_ClDummyName;
-	if(!pOwnName || pOwnName[0] == '\0')
-		pOwnName = Player.m_aName;
-	bool OwnNameFinished = true;
-	bool OwnNameKnown = true;
-	if(g_Config.m_TcFinishNameRequireOwnFinished)
-	{
-		if(str_comp(pOwnName, Player.m_aName) == 0)
-		{
-			OwnNameKnown = CurrentNameKnown;
-			OwnNameFinished = CurrentNameFinished;
-		}
-		else
-		{
-			OwnNameKnown = TryGetFinishStatusForName(pOwnName, OwnNameFinished);
-		}
-	}
-	if(SuppressedForRun)
+	if(!NearFinishTile(Player.m_RenderPos, TILE_FINISH))
 		return;
-	const bool NeedsRestoreName = m_aFinishRestoreNameValid[Dummy] &&
-		m_aaFinishRestoreNames[Dummy][0] != '\0' &&
-		str_comp(Player.m_aName, m_aaFinishRestoreNames[Dummy]) != 0;
-	const bool IsNearFinish = NearFinishTile(Player.m_RenderPos, TILE_FINISH);
-	if(!NeedsRestoreName && !IsNearFinish)
-		return;
-
-	const auto EchoPendingStatus = [this, IsNearFinish]() {
-		if(!IsNearFinish)
-			return;
-		if(m_FinishPendingEchoCooldown > 0.0f)
-			return;
-		GameClient()->Echo(s_pFinishStatusPendingEcho);
-		m_FinishPendingEchoCooldown = 1.0f;
-	};
-
-	const char *pRenameTarget = nullptr;
-	for(const std::string &Name : vNameQueue)
-	{
-		bool Finished = false;
-		if(!TryGetFinishStatusForName(Name.c_str(), Finished))
-		{
-			EchoPendingStatus();
-			return;
-		}
-		if(!Finished)
-		{
-			pRenameTarget = Name.c_str();
-			break;
-		}
-	}
-
-	if(!pRenameTarget || pRenameTarget[0] == '\0')
-	{
-		if(!NeedsRestoreName)
-			return;
-		if(m_aFinishRestoreRequested[Dummy])
-			return;
-
-		char aRestoreBuf[64];
-		str_format(aRestoreBuf, sizeof(aRestoreBuf), TCLocalize("过图后改回 %s"), m_aaFinishRestoreNames[Dummy]);
-		GameClient()->Echo(aRestoreBuf);
-		str_copy(pConfigName, m_aaFinishRestoreNames[Dummy], ConfigNameSize);
-		SendConfiguredName();
-		m_aFinishRestoreRequested[Dummy] = true;
-		return;
-	}
-
-	if(!IsNearFinish)
-		return;
-
-	if(!CurrentNameKnown)
-	{
-		GameClient()->Echo(s_pFinishStatusPendingEcho);
-		return;
-	}
-	if(g_Config.m_TcFinishNameRequireOwnFinished)
-	{
-		if(!OwnNameKnown)
-		{
-			GameClient()->Echo(s_pFinishStatusPendingEcho);
-			return;
-		}
-		if(!OwnNameFinished)
-			return;
-	}
-	if(!CurrentNameFinished)
-		return;
-
-	if(str_comp(Player.m_aName, pRenameTarget) == 0)
-		return;
-
-	if(!m_aFinishRestoreNameValid[Dummy])
-	{
-		const char *pRestoreName = pConfigName[0] != '\0' ? pConfigName : Player.m_aName;
-		if(pRestoreName[0] != '\0')
-		{
-			str_copy(m_aaFinishRestoreNames[Dummy], pRestoreName, sizeof(m_aaFinishRestoreNames[Dummy]));
-			m_aFinishRestoreNameValid[Dummy] = true;
-			m_aFinishRestoreRequested[Dummy] = false;
-		}
-	}
-
 	char aBuf[64];
-	str_format(aBuf, sizeof(aBuf), TCLocalize("终点前改名为 %s"), pRenameTarget);
+	str_format(aBuf, sizeof(aBuf), TCLocalize("Changing name to %s near finish"), pNewName);
 	GameClient()->Echo(aBuf);
-	str_copy(pConfigName, pRenameTarget, ConfigNameSize);
-	SendConfiguredName();
-	m_aFinishRestoreRequested[Dummy] = false;
+	SendUrgentRename(Dummy, pNewName);
 }
 
 bool CTClient::ServerCommandExists(const char *pCommand)
@@ -1971,7 +1432,6 @@ void CTClient::OnRender()
 	UpdateQmClientLifecycleAndServerTime();
 	UpdateQmDdnetPlayerStats();
 
-	WarmupFinishNameStatuses();
 	DoFinishCheck();
 	CheckFriendOnline();
 	CheckFriendEnterGreet();
@@ -3599,21 +3059,13 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	{
 		ClearSwapCountdown();
 		m_aLastChatMessage[0] = '\0';
-		m_aLastRepeatCandidate[0] = '\0';
-		m_aLastAutoRepeatMessage[0] = '\0';
-		m_LastRepeatCandidateCount = 0;
 		m_LastRepeatTime = 0;
+		m_LastRepeatKeyPressTime = 0;
+		m_RepeatKeyDown = false;
 		m_LastAutoReplyTime = 0;
 		m_FinishTextTimeout = 0.0f;
-		m_FinishPendingEchoCooldown = 0.0f;
-		ResetFinishNameStatuses();
 		for(int i = 0; i < NUM_DUMMIES; ++i)
 		{
-			m_aFinishRestoreNameValid[i] = false;
-			m_aFinishRestoreRequested[i] = false;
-			m_aFinishQueueSuppressedUntilStart[i] = false;
-			m_aaFinishRestoreNames[i][0] = '\0';
-
 			m_aWasInDeath[i] = false;
 			m_aLastWaterFallTime[i] = 0;
 			m_aLastWaterHeartTime[i] = 0;
@@ -4770,8 +4222,30 @@ void CTClient::ConRepeat(IConsole::IResult *pResult, void *pUserData)
 	CTClient *pThis = static_cast<CTClient *>(pUserData);
 	if(!pThis->GameClient())
 		return;
-	
-	// +命令：按键按下时触发
+
+	// 仅在按下沿判定，避免按住时键盘重复触发。
+	const bool Pressed = pResult->GetInteger(0) != 0;
+	if(!Pressed)
+	{
+		pThis->m_RepeatKeyDown = false;
+		return;
+	}
+	if(pThis->m_RepeatKeyDown)
+		return;
+	pThis->m_RepeatKeyDown = true;
+
+	if(!g_Config.m_QmRepeatEnabled)
+		return;
+
+	const int64_t Now = time_get();
+	const int64_t DoublePressWindow = time_freq(); // 1秒内连按两次触发
+	if(Now - pThis->m_LastRepeatKeyPressTime > DoublePressWindow)
+	{
+		pThis->m_LastRepeatKeyPressTime = Now;
+		return;
+	}
+
+	pThis->m_LastRepeatKeyPressTime = 0;
 	pThis->RepeatLastMessage();
 }
 

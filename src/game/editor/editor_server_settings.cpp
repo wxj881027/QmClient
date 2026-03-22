@@ -224,7 +224,7 @@ void CEditor::RenderServerSettingsEditor(CUIRect View, bool ShowServerSettingsEd
 	{
 		if(CanReplace)
 		{
-			dbg_assert(CollidingCommandIndex != -1, "Could not replace command");
+			dbg_assert(CollidingCommandIndex != -1, "无法执行替换命令");
 			s_CommandSelectedIndex = CollidingCommandIndex;
 
 			const char *pStr = m_SettingsCommandInput.GetString();

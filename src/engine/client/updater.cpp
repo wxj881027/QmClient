@@ -99,6 +99,9 @@ CUpdaterFetchTask::CUpdaterFetchTask(CUpdater *pUpdater, const char *pFile, cons
 	m_pUpdater(pUpdater)
 {
 	WriteToFile(pUpdater->m_pStorage, GetUpdaterDestPath(m_aBuf2, sizeof(m_aBuf2), pFile, pDestPath), -2);
+	// Large binary downloads should fail fast enough on broken links, while
+	// still allowing slower connections to complete.
+	Timeout(CTimeout{10000, 10 * 60 * 1000, 8192, 20});
 }
 
 void CUpdaterFetchTask::OnProgress()

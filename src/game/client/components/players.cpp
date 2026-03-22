@@ -1107,26 +1107,27 @@ void CPlayers::RenderPlayer(
 					}
 					if(g_pData->m_Weapons.m_aId[CurrentWeapon].m_aSpriteMuzzles[IteX])
 					{
+						vec2 HadokenDirection;
 						if(PredictLocalWeapons)
-							Direction = vec2(pPlayerChar->m_X, pPlayerChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y);
+							HadokenDirection = vec2(pPlayerChar->m_X, pPlayerChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y);
 						else
-							Direction = vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y) - vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y);
+							HadokenDirection = vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y) - vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y);
 						float HadOkenAngle = 0;
-						if(absolute(Direction.x) > 0.0001f || absolute(Direction.y) > 0.0001f)
+						if(absolute(HadokenDirection.x) > 0.0001f || absolute(HadokenDirection.y) > 0.0001f)
 						{
-							Direction = normalize(Direction);
-							HadOkenAngle = angle(Direction);
+							HadokenDirection = normalize(HadokenDirection);
+							HadOkenAngle = angle(HadokenDirection);
 						}
 						else
 						{
-							Direction = vec2(1, 0);
+							HadokenDirection = vec2(1, 0);
 						}
 						Graphics()->QuadsSetRotation(HadOkenAngle);
 						QuadOffset = IteX * 2;
-						vec2 DirY(-Direction.y, Direction.x);
+						vec2 DirY(-HadokenDirection.y, HadokenDirection.x);
 						WeaponPosition = Position;
 						float OffsetX = g_pData->m_Weapons.m_aId[CurrentWeapon].m_Muzzleoffsetx;
-						WeaponPosition -= Direction * OffsetX;
+						WeaponPosition -= HadokenDirection * OffsetX;
 						Graphics()->TextureSet(GameClient()->m_GameSkin.m_aaSpriteWeaponsMuzzles[CurrentWeapon][IteX]);
 						Graphics()->RenderQuadContainerAsSprite(m_aWeaponSpriteMuzzleQuadContainerIndex[CurrentWeapon], QuadOffset, WeaponPosition.x, WeaponPosition.y);
 					}
@@ -1546,26 +1547,27 @@ void CPlayers::RenderPlayerGhost(
 					}
 					if(g_pData->m_Weapons.m_aId[CurrentWeapon].m_aSpriteMuzzles[IteX])
 					{
+						vec2 HadokenDirection;
 						if(PredictLocalWeapons)
-							Direction = vec2(pPlayerChar->m_X, pPlayerChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y);
+							HadokenDirection = vec2(pPlayerChar->m_X, pPlayerChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y);
 						else
-							Direction = vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y) - vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y);
+							HadokenDirection = vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y) - vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y);
 						float HadOkenAngle = 0;
-						if(absolute(Direction.x) > 0.0001f || absolute(Direction.y) > 0.0001f)
+						if(absolute(HadokenDirection.x) > 0.0001f || absolute(HadokenDirection.y) > 0.0001f)
 						{
-							Direction = normalize(Direction);
-							HadOkenAngle = angle(Direction);
+							HadokenDirection = normalize(HadokenDirection);
+							HadOkenAngle = angle(HadokenDirection);
 						}
 						else
 						{
-							Direction = vec2(1, 0);
+							HadokenDirection = vec2(1, 0);
 						}
 						Graphics()->QuadsSetRotation(HadOkenAngle);
 						QuadOffset = IteX * 2;
-						vec2 DirY(-Direction.y, Direction.x);
+						vec2 DirY(-HadokenDirection.y, HadokenDirection.x);
 						WeaponPosition = Position;
 						float OffsetX = g_pData->m_Weapons.m_aId[CurrentWeapon].m_Muzzleoffsetx;
-						WeaponPosition -= Direction * OffsetX;
+						WeaponPosition -= HadokenDirection * OffsetX;
 						Graphics()->TextureSet(GameClient()->m_GameSkin.m_aaSpriteWeaponsMuzzles[CurrentWeapon][IteX]);
 						Graphics()->RenderQuadContainerAsSprite(m_aWeaponSpriteMuzzleQuadContainerIndex[CurrentWeapon], QuadOffset, WeaponPosition.x, WeaponPosition.y);
 					}

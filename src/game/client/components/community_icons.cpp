@@ -6,6 +6,8 @@
 #include <engine/gfx/image_manipulation.h>
 #include <engine/storage.h>
 
+static constexpr size_t MAX_CONCURRENT_ICON_DOWNLOADS = 4;
+
 CCommunityIcons::CAbstractCommunityIconJob::CAbstractCommunityIconJob(CCommunityIcons *pCommunityIcons, const char *pCommunityId, int StorageType) :
 	m_pCommunityIcons(pCommunityIcons),
 	m_StorageType(StorageType)
@@ -20,7 +22,8 @@ CCommunityIcons::CCommunityIconDownloadJob::CCommunityIconDownloadJob(CCommunity
 {
 	WriteToFile(pCommunityIcons->Storage(), m_aPath, IStorage::TYPE_SAVE);
 	ExpectSha256(Sha256);
-	Timeout(CTimeout{0, 0, 0, 0});
+	// Keep icon downloads bounded so broken remote endpoints can't hang forever.
+	Timeout(CTimeout{10000, 30000, 500, 10});
 	LogProgress(HTTPLOG::FAILURE);
 }
 
@@ -200,6 +203,9 @@ void CCommunityIcons::Update()
 	// Find added and updated community icons
 	for(const auto &Community : ServerBrowser()->Communities())
 	{
+		if(m_CommunityIconDownloadJobs.size() >= MAX_CONCURRENT_ICON_DOWNLOADS)
+			break;
+
 		if(str_comp(Community.Id(), IServerBrowser::COMMUNITY_NONE) == 0)
 			continue;
 		auto ExistingIcon = std::find_if(m_vCommunityIcons.begin(), m_vCommunityIcons.end(), [Community](const auto &Element) {

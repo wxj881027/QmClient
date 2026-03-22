@@ -462,7 +462,6 @@ void CSpectator::OnRender()
 				Corners |= IGraphics::CORNER_BL | IGraphics::CORNER_BR;
 			Graphics()->DrawRect(Width / 2.0f + x - 10.0f + BoxOffset, Height / 2.0f + y + BoxMove, 270.0f - BoxOffset, LineHeight, Color, Corners, RoundRadius);
 		}
-
 		OldDDTeam = DDTeam;
 
 		if((Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_DemoSpecId == GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId) || (Client()->State() != IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId))
@@ -529,7 +528,18 @@ void CSpectator::OnRender()
 		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 		const bool IsFriend = GameClient()->m_aClients[ClientId].m_Friend;
 		char aNameBuf[MAX_NAME_LENGTH];
+		char aClanBuf[MAX_CLAN_LENGTH];
 		GameClient()->FormatStreamerName(ClientId, aNameBuf, sizeof(aNameBuf));
+		GameClient()->FormatStreamerClan(ClientId, aClanBuf, sizeof(aClanBuf));
+		bool IsSameClan = false;
+		if(aClanBuf[0] != '\0')
+		{
+			const int LocalClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
+			if(LocalClientId >= 0 && str_comp(aClanBuf, GameClient()->m_aClients[LocalClientId].m_aClan) == 0)
+			{
+				IsSameClan = true;
+			}
+		}
 
 		ColorRGBA NameColor;
 		if(GameClient()->IsLocalClientId(ClientId))
@@ -541,6 +551,10 @@ void CSpectator::OnRender()
 		else if(IsFriend)
 		{
 			NameColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor));
+		}
+		else if(IsSameClan)
+		{
+			NameColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClSameClanColor));
 		}
 		else
 		{
@@ -600,12 +614,29 @@ void CSpectator::OnRender()
 
 		RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TeeAlpha);
 
+		float IconX = Width / 2.0f + x - TeeInfo.m_Size / 2.0f;
+		const float IconY = Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.0f;
+		const float IconSize = FontSize >= 10.0f ? FontSize - 2.0f : FontSize;
 		if(IsFriend)
 		{
-			TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor)));
-			TextRender()->Text(Width / 2.0f + x - TeeInfo.m_Size / 2.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, "♥", 220.0f);
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			ColorRGBA FriendIconColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor));
+			FriendIconColor.a *= NameAlpha;
+			TextRender()->TextColor(FriendIconColor);
+			TextRender()->Text(IconX, IconY, IconSize, FontIcons::FONT_ICON_HEART, 220.0f);
+			IconX += IconSize - 2.0f;
 		}
+
+		if(IsSameClan)
+		{
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			ColorRGBA TeamIconColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClSameClanColor));
+			TeamIconColor.a *= NameAlpha;
+			TextRender()->TextColor(TeamIconColor);
+			TextRender()->Text(IconX, IconY, IconSize, FontIcons::FONT_ICON_USERS, 220.0f);
+		}
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 		y += LineHeight;
 	}

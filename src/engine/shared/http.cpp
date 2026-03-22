@@ -10,7 +10,10 @@
 
 #include <game/version.h>
 
+#include <cctype>
 #include <limits>
+#include <string>
+#include <unordered_map>
 
 #if !defined(CONF_FAMILY_WINDOWS)
 #include <csignal>
@@ -48,6 +51,96 @@ static int CurlDebug(CURL *pHandle, curl_infotype Type, char *pData, size_t Data
 		DataSize -= LineLength + 1;
 	}
 	return 0;
+}
+
+static constexpr size_t HTTP_MAX_CONCURRENT_REQUESTS = 16;
+static constexpr size_t HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST = 4;
+
+static std::string HttpRequestHostKey(const char *pUrl)
+{
+	if(!pUrl || pUrl[0] == '\0')
+	{
+		return {};
+	}
+
+	const char *pHostStart = str_find(pUrl, "://");
+	pHostStart = pHostStart ? pHostStart + 3 : pUrl;
+	if(pHostStart[0] == '\0')
+	{
+		return {};
+	}
+
+	const char *pAuthorityEnd = pHostStart;
+	while(*pAuthorityEnd != '\0' && *pAuthorityEnd != '/' && *pAuthorityEnd != '?' && *pAuthorityEnd != '#')
+	{
+		pAuthorityEnd++;
+	}
+	if(pAuthorityEnd <= pHostStart)
+	{
+		return {};
+	}
+
+	// Strip optional userinfo (`user:pass@host`).
+	const char *pAuthorityStart = pHostStart;
+	for(const char *p = pHostStart; p < pAuthorityEnd; ++p)
+	{
+		if(*p == '@')
+		{
+			pAuthorityStart = p + 1;
+		}
+	}
+	if(pAuthorityStart >= pAuthorityEnd)
+	{
+		return {};
+	}
+
+	const char *pHostEnd = pAuthorityEnd;
+	if(*pAuthorityStart == '[')
+	{
+		// IPv6 literals are wrapped in brackets.
+		const char *pClosingBracket = nullptr;
+		for(const char *p = pAuthorityStart + 1; p < pAuthorityEnd; ++p)
+		{
+			if(*p == ']')
+			{
+				pClosingBracket = p;
+				break;
+			}
+		}
+		if(!pClosingBracket || pClosingBracket <= pAuthorityStart + 1)
+		{
+			return {};
+		}
+		std::string Host(pAuthorityStart + 1, pClosingBracket - (pAuthorityStart + 1));
+		for(char &c : Host)
+		{
+			c = (char)std::tolower((unsigned char)c);
+		}
+		return Host;
+	}
+	else
+	{
+		for(const char *p = pAuthorityStart; p < pAuthorityEnd; ++p)
+		{
+			if(*p == ':')
+			{
+				pHostEnd = p;
+				break;
+			}
+		}
+	}
+
+	if(pHostEnd <= pAuthorityStart)
+	{
+		return {};
+	}
+
+	std::string Host(pAuthorityStart, pHostEnd - pAuthorityStart);
+	for(char &c : Host)
+	{
+		c = (char)std::tolower((unsigned char)c);
+	}
+	return Host;
 }
 
 void EscapeUrl(char *pBuf, int Size, const char *pStr)
@@ -697,6 +790,18 @@ void CHttp::RunLoop()
 		std::swap(m_PendingRequests, NewRequests);
 		Lock.unlock();
 
+		std::unordered_map<std::string, size_t> RunningRequestsPerHost;
+		RunningRequestsPerHost.reserve(m_RunningRequests.size());
+		for(const auto &ReqPair : m_RunningRequests)
+		{
+			const std::string HostKey = HttpRequestHostKey(ReqPair.second->m_aUrl);
+			if(!HostKey.empty())
+			{
+				RunningRequestsPerHost[HostKey]++;
+			}
+		}
+
+		decltype(m_PendingRequests) DeferredRequests = {};
 		while(!NewRequests.empty())
 		{
 			auto &pRequest = NewRequests.front();
@@ -711,6 +816,16 @@ void CHttp::RunLoop()
 					pRequest->m_State = EHttpState::DONE;
 				}
 				pRequest->m_WaitCondition.notify_all();
+				NewRequests.pop_front();
+				continue;
+			}
+
+			const std::string HostKey = HttpRequestHostKey(pRequest->m_aUrl);
+			const size_t RunningForHost = HostKey.empty() ? 0 : RunningRequestsPerHost[HostKey];
+			if(m_RunningRequests.size() >= HTTP_MAX_CONCURRENT_REQUESTS ||
+				(!HostKey.empty() && RunningForHost >= HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST))
+			{
+				DeferredRequests.push_back(std::move(pRequest));
 				NewRequests.pop_front();
 				continue;
 			}
@@ -742,6 +857,10 @@ void CHttp::RunLoop()
 				pRequest->m_State = EHttpState::RUNNING;
 			}
 			m_RunningRequests.emplace(pEH, std::move(pRequest));
+			if(!HostKey.empty())
+			{
+				RunningRequestsPerHost[HostKey]++;
+			}
 			NewRequests.pop_front();
 			continue;
 
@@ -753,11 +872,26 @@ void CHttp::RunLoop()
 			break;
 		}
 
-		// Only happens if m_State == ERROR, thus we already hold the lock
-		if(!NewRequests.empty())
+		// On fatal error, the lock is held and all requests must be put back so
+		// shutdown can complete them with a terminal state.
+		if(m_State == CHttp::ERROR)
 		{
-			m_PendingRequests.insert(m_PendingRequests.end(), std::make_move_iterator(NewRequests.begin()), std::make_move_iterator(NewRequests.end()));
+			if(!NewRequests.empty())
+			{
+				m_PendingRequests.insert(m_PendingRequests.end(), std::make_move_iterator(NewRequests.begin()), std::make_move_iterator(NewRequests.end()));
+			}
+			if(!DeferredRequests.empty())
+			{
+				m_PendingRequests.insert(m_PendingRequests.end(), std::make_move_iterator(DeferredRequests.begin()), std::make_move_iterator(DeferredRequests.end()));
+			}
 			break;
+		}
+
+		if(!DeferredRequests.empty())
+		{
+			Lock.lock();
+			m_PendingRequests.insert(m_PendingRequests.begin(), std::make_move_iterator(DeferredRequests.begin()), std::make_move_iterator(DeferredRequests.end()));
+			Lock.unlock();
 		}
 	}
 

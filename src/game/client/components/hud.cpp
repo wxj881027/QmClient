@@ -1390,26 +1390,22 @@ void CHud::RenderSwitchCountdowns()
 		}
 	}
 
-	if(EntryCount <= 0)
-		return;
-
-	std::sort(aEntries.begin(), aEntries.begin() + EntryCount, [](const SSwitchCountdownEntry &A, const SSwitchCountdownEntry &B) {
-		return A.m_LastTouchTick > B.m_LastTouchTick;
-	});
+	if(EntryCount > 0)
+	{
+		std::sort(aEntries.begin(), aEntries.begin() + EntryCount, [](const SSwitchCountdownEntry &A, const SSwitchCountdownEntry &B) {
+			return A.m_LastTouchTick > B.m_LastTouchTick;
+		});
+	}
 
 	const int RenderCount = minimum(EntryCount, SWITCH_COUNTDOWN_MAX_LINES);
-
-	for(int i = RenderCount; i < SWITCH_COUNTDOWN_MAX_LINES; ++i)
-	{
-		m_SwitchCountdownAnimState.m_aInitialized[i] = false;
-		m_SwitchCountdownAnimState.m_aTargetX[i] = 0.0f;
-	}
 
 	const float FontSize = 8.0f;
 	const float BaseX = 5.0f;
 	const float BaseY = m_Height - 12.0f;
-	const float LineHeight = 10.0f;
 	const float SwapGap = 6.0f;
+	const float ItemGap = 8.0f;
+	const float SlideOffsetY = 10.0f;
+	const float SlideOffsetX = 12.0f;
 
 	float SwitchBaseX = BaseX;
 	SSwapCountdownInfo SwapInfo;
@@ -1420,6 +1416,12 @@ void CHud::RenderSwitchCountdowns()
 	}
 
 	CUiV2AnimationRuntime *pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
+	SHudSwitchCountdownAnimState &AnimState = m_SwitchCountdownAnimState;
+	std::array<bool, SWITCH_COUNTDOWN_MAX_LINES> aShouldShow = {false, false, false};
+	std::array<char[64], SWITCH_COUNTDOWN_MAX_LINES> aCurrentText;
+	std::array<float, SWITCH_COUNTDOWN_MAX_LINES> aCurrentWidth = {0.0f, 0.0f, 0.0f};
+	std::array<int, SWITCH_COUNTDOWN_MAX_LINES> aCurrentNumber = {-1, -1, -1};
+	std::array<float, SWITCH_COUNTDOWN_MAX_LINES> aCurrentTargetX = {0.0f, 0.0f, 0.0f};
 
 	for(int i = 0; i < RenderCount; ++i)
 	{
@@ -1429,26 +1431,122 @@ void CHud::RenderSwitchCountdowns()
 			continue;
 
 		const int SecondsLeft = (RemainingTicks + TickSpeed - 1) / TickSpeed;
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "开关#%d:%d秒", aEntries[i].m_Number, SecondsLeft);
+		str_format(aCurrentText[i], sizeof(aCurrentText[i]), "开关#%d:%d秒", aEntries[i].m_Number, SecondsLeft);
+		aCurrentWidth[i] = TextRender()->TextWidth(FontSize, aCurrentText[i], -1, -1.0f);
+		aCurrentNumber[i] = aEntries[i].m_Number;
+		aShouldShow[i] = true;
+	}
 
-		float TargetX = SwitchBaseX;
-		const float Y = BaseY - i * LineHeight;
+	float CursorX = SwitchBaseX;
+	for(int i = 0; i < SWITCH_COUNTDOWN_MAX_LINES; ++i)
+	{
+		if(!aShouldShow[i])
+			continue;
+		aCurrentTargetX[i] = CursorX;
+		CursorX += aCurrentWidth[i] + ItemGap;
+	}
+
+	for(int i = 0; i < SWITCH_COUNTDOWN_MAX_LINES; ++i)
+	{
+		const bool ShouldShow = aShouldShow[i];
+		const bool WasVisible = AnimState.m_aWasVisible[i];
+		const bool IsNewEntry = ShouldShow && (!WasVisible || AnimState.m_aLastSwitchNumber[i] != aCurrentNumber[i]);
+
+		if(ShouldShow)
+		{
+			str_copy(AnimState.m_aaLastText[i], aCurrentText[i], sizeof(AnimState.m_aaLastText[i]));
+			AnimState.m_aLastWidth[i] = aCurrentWidth[i];
+			AnimState.m_aLastSwitchNumber[i] = aCurrentNumber[i];
+		}
+
+		const float TargetX = ShouldShow ? aCurrentTargetX[i] : AnimState.m_aTargetX[i];
+		const float TargetY = (!ShouldShow && WasVisible) ? (BaseY + SlideOffsetY) : BaseY;
+		const float TargetAlpha = ShouldShow ? 1.0f : 0.0f;
 		float X = TargetX;
+		float Y = TargetY;
+		float Alpha = TargetAlpha;
 
 		if(pAnimRuntime != nullptr)
 		{
 			const uint64_t NodeKey = HudSwitchCountdownNodeKey(i);
-			if(!m_SwitchCountdownAnimState.m_aInitialized[i])
+			if(!AnimState.m_aPositionInitialized[i])
 			{
 				pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::POS_X, TargetX);
-				m_SwitchCountdownAnimState.m_aTargetX[i] = TargetX;
-				m_SwitchCountdownAnimState.m_aInitialized[i] = true;
+				pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::POS_Y, TargetY);
+				AnimState.m_aTargetX[i] = TargetX;
+				AnimState.m_aTargetY[i] = TargetY;
+				AnimState.m_aPositionInitialized[i] = true;
 			}
-			X = ResolveAnimatedLayoutValue(*pAnimRuntime, NodeKey, EUiAnimProperty::POS_X, TargetX, m_SwitchCountdownAnimState.m_aTargetX[i]);
+			if(!AnimState.m_aAlphaInitialized[i])
+			{
+				pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, TargetAlpha);
+				AnimState.m_aTargetAlpha[i] = TargetAlpha;
+				AnimState.m_aAlphaInitialized[i] = true;
+			}
+
+			if(IsNewEntry)
+			{
+				pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::POS_X, TargetX);
+				pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::POS_Y, BaseY - SlideOffsetY);
+				pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+				AnimState.m_aTargetX[i] = TargetX;
+				AnimState.m_aTargetY[i] = BaseY - SlideOffsetY;
+				AnimState.m_aTargetAlpha[i] = 0.0f;
+			}
+			else
+			{
+				const bool ExistingEntry = ShouldShow && WasVisible;
+				const bool ExistingReflow = ExistingEntry && std::abs(TargetX - AnimState.m_aTargetX[i]) > 0.5f;
+				if(ExistingReflow)
+				{
+					// Existing items also replay declarative animation: slide in from left and fade in.
+					pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::POS_X, TargetX - SlideOffsetX);
+					pAnimRuntime->SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+					AnimState.m_aTargetX[i] = TargetX - SlideOffsetX;
+					AnimState.m_aTargetAlpha[i] = 0.0f;
+				}
+			}
+
+			X = ResolveAnimatedLayoutValue(*pAnimRuntime, NodeKey, EUiAnimProperty::POS_X, TargetX, AnimState.m_aTargetX[i]);
+			Y = ResolveAnimatedLayoutValue(*pAnimRuntime, NodeKey, EUiAnimProperty::POS_Y, TargetY, AnimState.m_aTargetY[i]);
+			Alpha = std::clamp(ResolveAnimatedLayoutValue(*pAnimRuntime, NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, AnimState.m_aTargetAlpha[i]), 0.0f, 1.0f);
 		}
 
-		TextRender()->Text(X, Y, FontSize, aBuf, -1.0f);
+		const char *pRenderText = AnimState.m_aaLastText[i];
+		if(pRenderText[0] != '\0' && Alpha > 0.01f)
+		{
+			ColorRGBA TextColor = TextRender()->DefaultTextColor();
+			ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
+			TextColor.a *= Alpha;
+			OutlineColor.a *= Alpha;
+			TextRender()->TextColor(TextColor);
+			TextRender()->TextOutlineColor(OutlineColor);
+			TextRender()->Text(X, Y, FontSize, pRenderText, -1.0f);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+		}
+
+		if(!ShouldShow)
+		{
+			if(pAnimRuntime == nullptr)
+			{
+				AnimState.m_aaLastText[i][0] = '\0';
+				AnimState.m_aLastWidth[i] = 0.0f;
+				AnimState.m_aLastSwitchNumber[i] = -1;
+			}
+			else
+			{
+				const uint64_t NodeKey = HudSwitchCountdownNodeKey(i);
+				if(Alpha <= 0.01f && !pAnimRuntime->HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA))
+				{
+					AnimState.m_aaLastText[i][0] = '\0';
+					AnimState.m_aLastWidth[i] = 0.0f;
+					AnimState.m_aLastSwitchNumber[i] = -1;
+				}
+			}
+		}
+
+		AnimState.m_aWasVisible[i] = ShouldShow;
 	}
 }
 

@@ -1308,32 +1308,15 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Column.HSplitTop(MarginBetweenSections, nullptr, &Column);
 	s_SectionBoxes.push_back(Column);
 	Column.HSplitTop(HeadlineHeight, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("终点前改名"), HeadlineFontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("Finish Name"), HeadlineFontSize, TEXTALIGN_ML);
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChangeNameNearFinish, TCLocalize("过终点前尝试改名"), &g_Config.m_TcChangeNameNearFinish, &Column, LineSize);
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFinishNameRequireOwnFinished, TCLocalize("如果自己没过就不改名"), &g_Config.m_TcFinishNameRequireOwnFinished, &Column, LineSize);
-	Column.HSplitTop(LineSize, &Button, &Column);
-
-	// One-time migration from legacy single-name config to unified queue config.
-	static bool s_FinishNameQueueMigrated = false;
-	if(!s_FinishNameQueueMigrated)
-	{
-		if(g_Config.m_TcFinishNameQueue[0] == '\0' && g_Config.m_TcFinishName[0] != '\0')
-		{
-			str_copy(g_Config.m_TcFinishNameQueue, g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishNameQueue));
-			g_Config.m_TcFinishName[0] = '\0';
-		}
-		s_FinishNameQueueMigrated = true;
-	}
-
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChangeNameNearFinish, TCLocalize("Attempt to change your name when near finish"), &g_Config.m_TcChangeNameNearFinish, &Column, LineSize);
+	Column.HSplitTop(LineSize + MarginExtraSmall, &Button, &Column);
 	Button.VSplitMid(&Label, &Button);
-	Ui()->DoLabel(&Label, TCLocalize("改名队列："), FontSize, TEXTALIGN_ML);
-	static CLineInput s_FinishNameQueueInput(g_Config.m_TcFinishNameQueue, sizeof(g_Config.m_TcFinishNameQueue));
-	Ui()->DoEditBox(&s_FinishNameQueueInput, &Button, EditBoxFontSize);
-
-	Column.HSplitTop(LineSize, &Label, &Column);
-	Ui()->DoLabel(&Label, TCLocalize("支持单名字或队列，多个名字用 | 分隔（按顺序）"), FontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, TCLocalize("Finish Name:"), FontSize, TEXTALIGN_ML);
+	static CLineInput s_FinishName(g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishName));
+	Ui()->DoEditBox(&s_FinishName, &Button, EditBoxFontSize);
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
 
 
@@ -2446,8 +2429,8 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 	int *pCurrentUseCustomColor = m_Dummy ? &g_Config.m_ClDummyUseCustomColor : &g_Config.m_ClPlayerUseCustomColor;
 
 	const char *pCurrentSkinName = m_Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin;
-	const unsigned CurrentColorBody = *pCurrentUseCustomColor == 1 ? (m_Dummy ? g_Config.m_ClDummyColorBody : g_Config.m_ClPlayerColorBody) : -1;
-	const unsigned CurrentColorFeet = *pCurrentUseCustomColor == 1 ? (m_Dummy ? g_Config.m_ClDummyColorFeet : g_Config.m_ClPlayerColorFeet) : -1;
+	const int CurrentColorBody = *pCurrentUseCustomColor == 1 ? (m_Dummy ? g_Config.m_ClDummyColorBody : g_Config.m_ClPlayerColorBody) : -1;
+	const int CurrentColorFeet = *pCurrentUseCustomColor == 1 ? (m_Dummy ? g_Config.m_ClDummyColorFeet : g_Config.m_ClPlayerColorFeet) : -1;
 	const int CurrentFlag = m_Dummy ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry;
 	const int Emote = m_Dummy ? g_Config.m_ClDummyDefaultEyes : g_Config.m_ClPlayerDefaultEyes;
 	const char *pCurrentName = m_Dummy ? g_Config.m_ClDummyName : g_Config.m_PlayerName;
@@ -2463,6 +2446,9 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 		pCurrentClan);
 
 	static int s_SelectedProfile = -1;
+	auto &vProfiles = GameClient()->m_SkinProfiles.m_Profiles;
+	if(s_SelectedProfile >= (int)vProfiles.size())
+		s_SelectedProfile = vProfiles.empty() ? -1 : (int)vProfiles.size() - 1;
 
 	CUIRect Label, Button;
 
@@ -2558,12 +2544,73 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 		}
 	};
 
-	auto ApplySelectedProfile = [&]() {
-		if(s_SelectedProfile != -1 && s_SelectedProfile < (int)GameClient()->m_SkinProfiles.m_Profiles.size())
+	auto IsSelectedProfileValid = [&]() {
+		return s_SelectedProfile >= 0 && s_SelectedProfile < (int)vProfiles.size();
+	};
+
+	auto pSelectedProfile = [&]() -> CProfile * {
+		if(!IsSelectedProfileValid())
+			return nullptr;
+		return &vProfiles[s_SelectedProfile];
+	};
+
+	auto pConstSelectedProfile = [&]() -> const CProfile * {
+		if(!IsSelectedProfileValid())
+			return nullptr;
+		return &vProfiles[s_SelectedProfile];
+	};
+
+	auto BuildProfileFromCurrentSettings = [&]() {
+		return CProfile(
+			g_Config.m_TcProfileColors ? CurrentColorBody : -1,
+			g_Config.m_TcProfileColors ? CurrentColorFeet : -1,
+			g_Config.m_TcProfileFlag ? CurrentFlag : -2,
+			g_Config.m_TcProfileEmote ? Emote : -1,
+			g_Config.m_TcProfileSkin ? pCurrentSkinName : "",
+			g_Config.m_TcProfileName ? pCurrentName : "",
+			g_Config.m_TcProfileClan ? pCurrentClan : "");
+	};
+
+	auto BuildPreviewProfile = [&]() {
+		CProfile PreviewProfile = CurrentProfile;
+		const CProfile *pProfile = pConstSelectedProfile();
+		if(!pProfile)
+			return PreviewProfile;
+
+		if(g_Config.m_TcProfileSkin && pProfile->m_SkinName[0] != '\0')
+			str_copy(PreviewProfile.m_SkinName, pProfile->m_SkinName);
+		if(g_Config.m_TcProfileColors && pProfile->m_BodyColor != -1 && pProfile->m_FeetColor != -1)
 		{
-			const CProfile LoadProfile = GameClient()->m_SkinProfiles.m_Profiles[s_SelectedProfile];
-			GameClient()->m_SkinProfiles.ApplyProfile(m_Dummy, LoadProfile);
+			PreviewProfile.m_BodyColor = pProfile->m_BodyColor;
+			PreviewProfile.m_FeetColor = pProfile->m_FeetColor;
 		}
+		if(g_Config.m_TcProfileEmote && pProfile->m_Emote != -1)
+			PreviewProfile.m_Emote = pProfile->m_Emote;
+		if(g_Config.m_TcProfileName && pProfile->m_Name[0] != '\0')
+			str_copy(PreviewProfile.m_Name, pProfile->m_Name);
+		if(g_Config.m_TcProfileClan && (pProfile->m_Clan[0] != '\0' || g_Config.m_TcProfileOverwriteClanWithEmpty))
+			str_copy(PreviewProfile.m_Clan, pProfile->m_Clan);
+		if(g_Config.m_TcProfileFlag && pProfile->m_CountryFlag != -2)
+			PreviewProfile.m_CountryFlag = pProfile->m_CountryFlag;
+
+		return PreviewProfile;
+	};
+
+	auto ApplySelectedProfile = [&]() {
+		const CProfile *pProfile = pConstSelectedProfile();
+		if(!pProfile)
+			return;
+		GameClient()->m_SkinProfiles.ApplyProfile(m_Dummy, *pProfile);
+	};
+
+	auto DeleteSelectedProfile = [&]() {
+		if(!IsSelectedProfileValid())
+			return;
+		vProfiles.erase(vProfiles.begin() + s_SelectedProfile);
+		if(vProfiles.empty())
+			s_SelectedProfile = -1;
+		else if(s_SelectedProfile >= (int)vProfiles.size())
+			s_SelectedProfile = (int)vProfiles.size() - 1;
 	};
 
 	{
@@ -2580,33 +2627,14 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 			RenderProfile(Skin, CurrentProfile, true);
 
 			// After load
-			if(s_SelectedProfile != -1 && s_SelectedProfile < (int)GameClient()->m_SkinProfiles.m_Profiles.size())
+			if(pConstSelectedProfile())
 			{
 				Profiles.HSplitTop(MarginSmall, nullptr, &Profiles);
 				Profiles.HSplitTop(LineSize, &Label, &Profiles);
 				Ui()->DoLabel(&Label, TCLocalize("After Load"), FontSize, TEXTALIGN_ML);
 				Profiles.HSplitTop(MarginSmall, nullptr, &Profiles);
 				Profiles.HSplitTop(50.0f, &Skin, &Profiles);
-
-				CProfile LoadProfile = CurrentProfile;
-				const CProfile &Profile = GameClient()->m_SkinProfiles.m_Profiles[s_SelectedProfile];
-				if(g_Config.m_TcProfileSkin && strlen(Profile.m_SkinName) != 0)
-					str_copy(LoadProfile.m_SkinName, Profile.m_SkinName);
-				if(g_Config.m_TcProfileColors && Profile.m_BodyColor != -1 && Profile.m_FeetColor != -1)
-				{
-					LoadProfile.m_BodyColor = Profile.m_BodyColor;
-					LoadProfile.m_FeetColor = Profile.m_FeetColor;
-				}
-				if(g_Config.m_TcProfileEmote && Profile.m_Emote != -1)
-					LoadProfile.m_Emote = Profile.m_Emote;
-				if(g_Config.m_TcProfileName && strlen(Profile.m_Name) != 0)
-					str_copy(LoadProfile.m_Name, Profile.m_Name);
-				if(g_Config.m_TcProfileClan && (strlen(Profile.m_Clan) != 0 || g_Config.m_TcProfileOverwriteClanWithEmpty))
-					str_copy(LoadProfile.m_Clan, Profile.m_Clan);
-				if(g_Config.m_TcProfileFlag && Profile.m_CountryFlag != -2)
-					LoadProfile.m_CountryFlag = Profile.m_CountryFlag;
-
-				RenderProfile(Skin, LoadProfile, true);
+				RenderProfile(Skin, BuildPreviewProfile(), true);
 			}
 		}
 		Top.VSplitLeft(20.0f, nullptr, &Top);
@@ -2630,14 +2658,15 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 			static CButtonContainer s_SaveButton;
 			if(DoButton_Menu(&s_SaveButton, TCLocalize("Save"), 0, &Button))
 			{
+				const CProfile ProfileToSave = BuildProfileFromCurrentSettings();
 				GameClient()->m_SkinProfiles.AddProfile(
-					g_Config.m_TcProfileColors ? CurrentColorBody : -1,
-					g_Config.m_TcProfileColors ? CurrentColorFeet : -1,
-					g_Config.m_TcProfileFlag ? CurrentFlag : -2,
-					g_Config.m_TcProfileEmote ? Emote : -1,
-					g_Config.m_TcProfileSkin ? pCurrentSkinName : "",
-					g_Config.m_TcProfileName ? pCurrentName : "",
-					g_Config.m_TcProfileClan ? pCurrentClan : "");
+					ProfileToSave.m_BodyColor,
+					ProfileToSave.m_FeetColor,
+					ProfileToSave.m_CountryFlag,
+					ProfileToSave.m_Emote,
+					ProfileToSave.m_SkinName,
+					ProfileToSave.m_Name,
+					ProfileToSave.m_Clan);
 			}
 			Actions.HSplitTop(5.0f, nullptr, &Actions);
 
@@ -2650,25 +2679,15 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 				Actions.HSplitTop(30.0f, &Button, &Actions);
 				static CButtonContainer s_DeleteButton;
 				if(DoButton_Menu(&s_DeleteButton, TCLocalize("Delete"), 0, &Button))
-					if(s_SelectedProfile != -1 && s_SelectedProfile < (int)GameClient()->m_SkinProfiles.m_Profiles.size())
-						GameClient()->m_SkinProfiles.m_Profiles.erase(GameClient()->m_SkinProfiles.m_Profiles.begin() + s_SelectedProfile);
+					DeleteSelectedProfile();
 				Actions.HSplitTop(5.0f, nullptr, &Actions);
 
 				Actions.HSplitTop(30.0f, &Button, &Actions);
 				static CButtonContainer s_OverrideButton;
 				if(DoButton_Menu(&s_OverrideButton, TCLocalize("Override"), 0, &Button))
 				{
-					if(s_SelectedProfile != -1 && s_SelectedProfile < (int)GameClient()->m_SkinProfiles.m_Profiles.size())
-					{
-						GameClient()->m_SkinProfiles.m_Profiles[s_SelectedProfile] = CProfile(
-							g_Config.m_TcProfileColors ? CurrentColorBody : -1,
-							g_Config.m_TcProfileColors ? CurrentColorFeet : -1,
-							g_Config.m_TcProfileFlag ? CurrentFlag : -2,
-							g_Config.m_TcProfileEmote ? Emote : -1,
-							g_Config.m_TcProfileSkin ? pCurrentSkinName : "",
-							g_Config.m_TcProfileName ? pCurrentName : "",
-							g_Config.m_TcProfileClan ? pCurrentClan : "");
-					}
+					if(CProfile *pProfile = pSelectedProfile())
+						*pProfile = BuildProfileFromCurrentSettings();
 				}
 			}
 		}
@@ -2710,19 +2729,24 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView)
 		}
 	}
 
-	const std::vector<CProfile> &ProfileList = GameClient()->m_SkinProfiles.m_Profiles;
 	static CListBox s_ListBox;
-	s_ListBox.DoStart(50.0f, ProfileList.size(), MainView.w / 200.0f, 3, s_SelectedProfile, &MainView, true, IGraphics::CORNER_ALL, true);
+	s_ListBox.DoStart(50.0f, vProfiles.size(), MainView.w / 200.0f, 3, s_SelectedProfile, &MainView, true, IGraphics::CORNER_ALL, true);
 
-	static bool s_Indexes[1024];
-
-	for(size_t i = 0; i < ProfileList.size(); ++i)
+	static std::vector<int> s_vProfileItemIds;
+	if(s_vProfileItemIds.size() != vProfiles.size())
 	{
-		CListboxItem Item = s_ListBox.DoNextItem(&s_Indexes[i], s_SelectedProfile >= 0 && (size_t)s_SelectedProfile == i);
+		s_vProfileItemIds.resize(vProfiles.size());
+		for(size_t i = 0; i < s_vProfileItemIds.size(); ++i)
+			s_vProfileItemIds[i] = (int)i;
+	}
+
+	for(size_t i = 0; i < vProfiles.size(); ++i)
+	{
+		CListboxItem Item = s_ListBox.DoNextItem(&s_vProfileItemIds[i], s_SelectedProfile >= 0 && (size_t)s_SelectedProfile == i);
 		if(!Item.m_Visible)
 			continue;
 
-		RenderProfile(Item.m_Rect, ProfileList[i], false);
+		RenderProfile(Item.m_Rect, vProfiles[i], false);
 	}
 
 	s_SelectedProfile = s_ListBox.DoEnd();
@@ -3767,7 +3791,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::ChatBubble: return "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao";
 		case EQmModuleId::GoresActor: return "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv";
 		case EQmModuleId::KeyBinds: return "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding";
-		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 聊天框淡出 liaotian danchu 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 自动加一 jia yi 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
+		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 聊天框淡出 liaotian danchu 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
 		case EQmModuleId::DummyMiniView: return "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao";
 		case EQmModuleId::Coords: return "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi";
 		case EQmModuleId::Streamer: return "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi";
@@ -4230,19 +4254,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					s_ReaderButtonSmallSens, s_ClearButtonSmallSens,
 					s_ReaderButtonLeftJump, s_ClearButtonLeftJump,
 					s_ReaderButtonRightJump, s_ClearButtonRightJump;
-				static int s_Toggle45Degrees = 0;
-				static int s_ToggleSmallSens = 0;
-				static int s_PrevMouseMaxDistance = -1;
-				static int s_PrevMouseSens = -1;
-				static bool s_TogglesInitialized = false;
-				if(!s_TogglesInitialized)
-				{
-					s_Toggle45Degrees = g_Config.m_ClMouseMaxDistance == 2;
-					s_ToggleSmallSens = g_Config.m_InpMousesens == 1;
-					s_PrevMouseMaxDistance = s_Toggle45Degrees ? 400 : g_Config.m_ClMouseMaxDistance;
-					s_PrevMouseSens = s_ToggleSmallSens ? 200 : g_Config.m_InpMousesens;
-					s_TogglesInitialized = true;
-				}
 
 				DoKeyBindRow(CardContent, s_ReaderButtonDummyPseudo, s_ClearButtonDummyPseudo,
 					TCLocalize("HDF"), "+toggle cl_dummy_hammer 1 0");
@@ -4250,50 +4261,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					TCLocalize("DF"), "+fire; +toggle cl_dummy_hammer 1 0");
 				DoKeyBindRow(CardContent, s_ReaderButton45Degrees, s_ClearButton45Degrees,
 					TCLocalize("八角定位"), "echo 你正在使用45度瞄准;+toggle cl_mouse_max_distance 2 400; +toggle_restore inp_mousesens 1");
-				{
-					CUIRect ToggleRow, ToggleLabel;
-					CardContent.HSplitTop(LG_LineHeight, &ToggleRow, &CardContent);
-					ToggleRow.VSplitLeft(LG_LabelWidth, &ToggleLabel, nullptr);
-					ToggleLabel.VSplitLeft(LG_LineHeight, nullptr, &ToggleLabel);
-					if(DoButton_CheckBox(&s_Toggle45Degrees, TCLocalize("按下切换"), s_Toggle45Degrees, &ToggleLabel))
-					{
-						s_Toggle45Degrees ^= 1;
-						if(s_Toggle45Degrees)
-						{
-							if(g_Config.m_ClMouseMaxDistance != 2)
-								s_PrevMouseMaxDistance = g_Config.m_ClMouseMaxDistance;
-							g_Config.m_ClMouseMaxDistance = 2;
-						}
-						else
-						{
-							g_Config.m_ClMouseMaxDistance = s_PrevMouseMaxDistance >= 0 ? s_PrevMouseMaxDistance : 400;
-						}
-					}
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-				}
 				DoKeyBindRow(CardContent, s_ReaderButtonSmallSens, s_ClearButtonSmallSens,
 					TCLocalize("瞄缝救人"), "+toggle_restore inp_mousesens 1");
-				{
-					CUIRect ToggleRow, ToggleLabel;
-					CardContent.HSplitTop(LG_LineHeight, &ToggleRow, &CardContent);
-					ToggleRow.VSplitLeft(LG_LabelWidth, &ToggleLabel, nullptr);
-					ToggleLabel.VSplitLeft(LG_LineHeight, nullptr, &ToggleLabel);
-					if(DoButton_CheckBox(&s_ToggleSmallSens, TCLocalize("按下切换"), s_ToggleSmallSens, &ToggleLabel))
-					{
-						s_ToggleSmallSens ^= 1;
-						if(s_ToggleSmallSens)
-						{
-							if(g_Config.m_InpMousesens != 1)
-								s_PrevMouseSens = g_Config.m_InpMousesens;
-							g_Config.m_InpMousesens = 1;
-						}
-						else
-						{
-							g_Config.m_InpMousesens = s_PrevMouseSens > 0 ? s_PrevMouseSens : 200;
-						}
-					}
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-				}
 				DoKeyBindRow(CardContent, s_ReaderButtonLeftJump, s_ClearButtonLeftJump,
 					TCLocalize("三格左跳"), "+jump; +left");
 				DoKeyBindRow(CardContent, s_ReaderButtonRightJump, s_ClearButtonRightJump,
@@ -4344,10 +4313,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRepeatEnabled, TCLocalize("启用复读功能"), &g_Config.m_QmRepeatEnabled, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRepeatAutoAddOne, TCLocalize("自动加一"), &g_Config.m_QmRepeatAutoAddOne, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);

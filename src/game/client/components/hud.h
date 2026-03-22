@@ -123,14 +123,28 @@ class CHud : public CComponent
 	struct SHudSwitchCountdownAnimState
 	{
 		float m_aTargetX[SWITCH_COUNTDOWN_MAX_LINES] = {0.0f, 0.0f, 0.0f};
-		bool m_aInitialized[SWITCH_COUNTDOWN_MAX_LINES] = {false, false, false};
+		float m_aTargetY[SWITCH_COUNTDOWN_MAX_LINES] = {0.0f, 0.0f, 0.0f};
+		float m_aTargetAlpha[SWITCH_COUNTDOWN_MAX_LINES] = {0.0f, 0.0f, 0.0f};
+		float m_aLastWidth[SWITCH_COUNTDOWN_MAX_LINES] = {0.0f, 0.0f, 0.0f};
+		int m_aLastSwitchNumber[SWITCH_COUNTDOWN_MAX_LINES] = {-1, -1, -1};
+		bool m_aPositionInitialized[SWITCH_COUNTDOWN_MAX_LINES] = {false, false, false};
+		bool m_aAlphaInitialized[SWITCH_COUNTDOWN_MAX_LINES] = {false, false, false};
+		bool m_aWasVisible[SWITCH_COUNTDOWN_MAX_LINES] = {false, false, false};
+		char m_aaLastText[SWITCH_COUNTDOWN_MAX_LINES][64] = {};
 
 		void Reset()
 		{
 			for(int i = 0; i < SWITCH_COUNTDOWN_MAX_LINES; ++i)
 			{
 				m_aTargetX[i] = 0.0f;
-				m_aInitialized[i] = false;
+				m_aTargetY[i] = 0.0f;
+				m_aTargetAlpha[i] = 0.0f;
+				m_aLastWidth[i] = 0.0f;
+				m_aLastSwitchNumber[i] = -1;
+				m_aPositionInitialized[i] = false;
+				m_aAlphaInitialized[i] = false;
+				m_aWasVisible[i] = false;
+				m_aaLastText[i][0] = '\0';
 			}
 		}
 	};

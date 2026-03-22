@@ -116,28 +116,8 @@ class CTClient : public CComponent
 	bool SendNonDuplicateMessage(int Team, const char *pLine);
 
 	float m_FinishTextTimeout = 0.0f;
-	float m_FinishPendingEchoCooldown = 0.0f;
-	void WarmupFinishNameStatuses();
 	void DoFinishCheck();
-	char m_aaFinishRestoreNames[NUM_DUMMIES][MAX_NAME_LENGTH] = {};
-	bool m_aFinishRestoreNameValid[NUM_DUMMIES] = {false, false};
-	bool m_aFinishRestoreRequested[NUM_DUMMIES] = {false, false};
-	bool m_aFinishQueueSuppressedUntilStart[NUM_DUMMIES] = {false, false};
-	struct SFinishNameStatus
-	{
-		std::shared_ptr<CHttpRequest> m_pTask = nullptr;
-		bool m_HasResult = false;
-		bool m_Finished = false;
-		int64_t m_NextRetryTick = 0;
-	};
-	std::unordered_map<std::string, SFinishNameStatus> m_FinishNameStatuses;
-	std::string m_FinishStatusMap;
-	std::string m_FinishStatusCommunity;
-	void ResetFinishNameStatuses();
-	void RefreshFinishNameStatusContext();
 	const char *CurrentCommunityIdForFinishCheck() const;
-	bool ParseFinishStatusResult(const json_value *pRoot, bool &Finished) const;
-	bool TryGetFinishStatusForName(const char *pName, bool &Finished);
 	void StartUpdateDownload();
 	void ResetUpdateExeTask();
 	bool ReplaceClientFromUpdate();
@@ -220,10 +200,9 @@ class CTClient : public CComponent
 
 	// 复读功能
 	char m_aLastChatMessage[2048] = "";  // 最新一条公屏消息
-	char m_aLastRepeatCandidate[2048] = ""; // 自动加一候选消息
-	char m_aLastAutoRepeatMessage[2048] = ""; // 最近一次自动加一已发送内容
-	int m_LastRepeatCandidateCount = 0; // 自动加一候选出现次数
-	int64_t m_LastRepeatTime = 0; // 上次手动/自动复读时间
+	int64_t m_LastRepeatTime = 0; // 上次发送复读时间
+	int64_t m_LastRepeatKeyPressTime = 0; // 上次按下复读按键时间
+	bool m_RepeatKeyDown = false; // 仅在按下沿计次，避免长按触发双击
 	void RepeatLastMessage();
 	static void ConRepeat(IConsole::IResult *pResult, void *pUserData);
 

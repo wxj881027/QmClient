@@ -303,8 +303,6 @@ MACRO_CONFIG_INT(TcPetAlpha, tc_pet_alpha, 90, 10, 100, CFGFLAG_CLIENT | CFGFLAG
 // Change name near finish
 MACRO_CONFIG_INT(TcChangeNameNearFinish, tc_change_name_near_finish, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "接近完成时尝试更改你的名字")
 MACRO_CONFIG_STR(TcFinishName, tc_finish_name, 16, "nameless tee", CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_INSENSITIVE, "当 tc_change_name_near_finish 为 1 时，接近完成时要更改的名称")
-MACRO_CONFIG_STR(TcFinishNameQueue, tc_finish_name_queue, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_INSENSITIVE, "有序的完成名称队列由 |、逗号、分号或换行符分隔")
-MACRO_CONFIG_INT(TcFinishNameRequireOwnFinished, tc_finish_name_require_own_finished, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "如果你自己配置的名称尚未完成地图，请勿在接近完成时更改名称")
 
 // Flags
 MACRO_CONFIG_INT(TcTClientSettingsTabs, tc_tclient_settings_tabs, 0, 0, 65536, CFGFLAG_CLIENT | CFGFLAG_SAVE, "用于禁用设置选项卡的位标志")
@@ -439,7 +437,6 @@ MACRO_CONFIG_INT(QmPieMenuColorSpectate, qm_pie_menu_color_spectate, 0x738C99BF,
 
 // Repeat Message / 复读功能
 MACRO_CONFIG_INT(QmRepeatEnabled, qm_repeat_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用复读功能 (Enable repeat last message)")
-MACRO_CONFIG_INT(QmRepeatAutoAddOne, qm_repeat_auto_add_one, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动加一（出现二句及以上非自己发送的相同消息时自动发送）")
 MACRO_CONFIG_INT(QmRepeatKey, qm_repeat_key, 278, 0, 512, CFGFLAG_CLIENT | CFGFLAG_SAVE, "复读快捷键 (Repeat key, default: Home=278)")
 MACRO_CONFIG_INT(QmSayNoPop, qm_say_nopop, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "输入时不显示打字表情 (Hide typing emoticon while chatting)")
 MACRO_CONFIG_INT(QmHammerSwapSkin, qm_hammer_swap_skin, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "锤人换皮肤 (Copy target skin on hammer hit)")
