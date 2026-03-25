@@ -10,6 +10,9 @@
 
 #include <game/client/component.h>
 
+#include <string>
+#include <vector>
+
 class CPieMenu : public CComponent
 {
 public:
@@ -38,15 +41,19 @@ private:
 	bool m_Active;
 	int m_TargetClientId;
 	int m_SelectedOption;
+	int m_SelectedRenameIndex;
 	float m_AnimationProgress;
 	vec2 m_MenuCenter;
 	int64_t m_OpenTime;
 	bool m_WasPressed;
 	vec2 m_SelectorMouse; // Mouse position for selection
+	std::vector<std::string> m_vRenameQueue;
 
 	// Menu parameters (in screen pixels) - scaled 1.8x
 	static constexpr float INNER_RADIUS = 108.0f;  // 60 * 1.8
 	static constexpr float OUTER_RADIUS = 288.0f;  // 160 * 1.8
+	static constexpr float SECONDARY_INNER_RADIUS = OUTER_RADIUS + 12.0f;
+	static constexpr float SECONDARY_OUTER_RADIUS = OUTER_RADIUS + 108.0f;
 	static constexpr float START_ANGLE = -90.0f; // Start from 12 o'clock
 	static constexpr float SECTOR_GAP = 3.6f; // 2 * 1.8
 
@@ -64,11 +71,14 @@ private:
 	void OpenMenu();
 	void CloseMenu();
 	void UpdateSelection();
+	void RefreshRenameQueue();
 	void ExecuteOption(EMenuOption Option);
+	void ExecuteRenameOption(int RenameIndex);
 
 	// Rendering helpers
 	void RenderOverlay();
 	void RenderSector(int Index, float InnerRadius, float OuterRadius, bool Highlighted, float Alpha);
+	void RenderRenameSector(int Index, int SectorCount, float InnerRadius, float OuterRadius, bool Highlighted, float Alpha);
 	void RenderCenterInfo();
 	vec2 GetSectorPosition(int Index, float Radius) const;
 	float GetSectorAngle(int Index) const;
@@ -79,6 +89,7 @@ private:
 	// Input helpers
 	bool IsMouseInCenter() const;
 	int GetHoveredOption() const;
+	int GetHoveredRenameOption() const;
 
 public:
 	CPieMenu();

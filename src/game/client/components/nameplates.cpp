@@ -171,6 +171,24 @@ static std::array<ENameplateCoreRow, kNameplateCoreRowCount> ParseNameplateCoreR
 	return Result;
 }
 
+static bool CommaListContainsName(const char *pList, const char *pName)
+{
+	if(!pList || pList[0] == '\0' || !pName || pName[0] == '\0')
+		return false;
+
+	char aToken[MAX_NAME_LENGTH];
+	const char *pCursor = pList;
+	while((pCursor = str_next_token(pCursor, ",", aToken, sizeof(aToken))))
+	{
+		char *pTrimmedToken = (char *)str_utf8_skip_whitespaces(aToken);
+		str_utf8_trim_right(pTrimmedToken);
+		if(pTrimmedToken[0] != '\0' && str_comp_nocase(pTrimmedToken, pName) == 0)
+			return true;
+	}
+
+	return false;
+}
+
 class CNamePlateData
 {
 public:
@@ -179,6 +197,9 @@ public:
 	ColorRGBA m_Color;
 	bool m_ShowName;
 	char m_aName[std::max<size_t>(MAX_NAME_LENGTH, protocol7::MAX_NAME_ARRAY_SIZE)];
+	bool m_ShowVoiceIndicator;
+	bool m_VoiceActive;
+	bool m_VoiceMuted;
 	bool m_ShowFriendMark;
 	bool m_ShowClientId;
 	int m_ClientId;
@@ -240,6 +261,8 @@ public:
 using PartsVector = std::vector<std::unique_ptr<CNamePlatePart>>;
 
 static constexpr ColorRGBA s_OutlineColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f);
+static constexpr const char *s_pFontIconMicrophone = "\xEF\x84\xB0";
+static constexpr const char *s_pFontIconMicrophoneSlash = "\xEF\x84\xB1";
 
 class CNamePlatePartText : public CNamePlatePart
 {
@@ -1063,6 +1086,54 @@ public:
 		CNamePlatePartText(This) {}
 };
 
+class CNamePlatePartVoiceMark : public CNamePlatePartText
+{
+private:
+	float m_FontSize = -INFINITY;
+	bool m_Active = false;
+	bool m_Muted = false;
+
+protected:
+	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
+	{
+		m_Visible = Data.m_ShowVoiceIndicator;
+		if(!m_Visible)
+			return false;
+
+		const bool StateChanged = m_FontSize != Data.m_FontSize || m_Active != Data.m_VoiceActive || m_Muted != Data.m_VoiceMuted;
+		m_FontSize = Data.m_FontSize;
+		m_Active = Data.m_VoiceActive;
+		m_Muted = Data.m_VoiceMuted;
+
+		if(m_Muted)
+			m_Color = ColorRGBA(1.0f, 0.35f, 0.35f, Data.m_Color.a);
+		else if(m_Active)
+			m_Color = ColorRGBA(0.35f, 1.0f, 0.35f, Data.m_Color.a);
+		else
+			m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, Data.m_Color.a);
+
+		return StateChanged;
+	}
+
+	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
+	{
+		(void)Data;
+		CTextCursor Cursor;
+		This.TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		Cursor.m_FontSize = m_FontSize;
+		const char *pIcon = m_Muted ? s_pFontIconMicrophoneSlash : s_pFontIconMicrophone;
+		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, pIcon);
+		This.TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	}
+
+public:
+	CNamePlatePartVoiceMark(CGameClient &This) :
+		CNamePlatePartText(This)
+	{
+		m_Padding.x = 4.0f;
+	}
+};
+
 // ***** Name Plates *****
 
 class CNamePlate
@@ -1100,6 +1171,7 @@ private:
 	{
 		AddPart<CNamePlatePartCountry>(This); // TClient
 		AddPart<CNamePlatePartPing>(This); // TClient
+		AddPart<CNamePlatePartVoiceMark>(This); // Voice indicator
 		AddPart<CNamePlatePartIgnoreMark>(This); // TClient
 		AddPart<CNamePlatePartFriendMark>(This);
 		AddPart<CNamePlatePartClientId>(This, false);
@@ -1346,6 +1418,9 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 
 	Data.m_ShowName = pPlayerInfo->m_Local ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates;
 	GameClient()->FormatStreamerName(ClientId, Data.m_aName, sizeof(Data.m_aName));
+	Data.m_ShowVoiceIndicator = false;
+	Data.m_VoiceActive = false;
+	Data.m_VoiceMuted = false;
 	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
 	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
 	Data.m_FontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
@@ -1534,6 +1609,28 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		Data.m_ShowClan = true;
 	Data.m_Local = pPlayerInfo->m_Local;
 
+	bool IsLocalClient = Data.m_Local;
+	if(!IsLocalClient)
+	{
+		for(const int LocalId : GameClient()->m_aLocalIds)
+		{
+			if(LocalId == ClientId)
+			{
+				IsLocalClient = true;
+				break;
+			}
+		}
+	}
+
+	const bool IsQ1menGRecognized = GameClient()->IsQ1menGClientRecognized(ClientId);
+	const bool AllowVoiceIconForClient = IsLocalClient || IsQ1menGRecognized;
+	if(Data.m_ShowName && AllowVoiceIconForClient && g_Config.m_RiVoiceEnable && g_Config.m_RiVoiceShowOverlay && g_Config.m_RiVoiceShowIndicator && (g_Config.m_RiVoiceIndicatorAboveSelf || !IsLocalClient))
+	{
+		Data.m_ShowVoiceIndicator = true;
+		Data.m_VoiceActive = GameClient()->m_Voice.IsVoiceActive(ClientId);
+		Data.m_VoiceMuted = IsLocalClient ? (g_Config.m_RiVoiceMicMute != 0) : CommaListContainsName(g_Config.m_RiVoiceMute, ClientData.m_aName);
+	}
+
 	// Check if the nameplate is actually on screen
 	CNamePlate &NamePlate = m_pData->m_aNamePlates[ClientId];
 	NamePlate.Update(*GameClient(), Data);
@@ -1561,6 +1658,9 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 	str_copy(Data.m_aName, str_utf8_skip_whitespaces(pName));
 	str_utf8_trim_right(Data.m_aName);
 	Data.m_FontSize = FontSize;
+	Data.m_ShowVoiceIndicator = false;
+	Data.m_VoiceActive = false;
+	Data.m_VoiceMuted = false;
 
 	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark;
 

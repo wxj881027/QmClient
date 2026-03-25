@@ -1645,7 +1645,10 @@ set(EXPECTED_DATA
   maps/dm7.map
   maps/dm8.map
   maps/dm9.map
+  maps/fall.map
   maps/license.txt
+  maps/moonnight.map
+  maps/sea.map
   "maps7/Gold Mine.map"
   maps7/LearnToPlay.map
   "maps7/Sunny Side Up.map"
@@ -2691,6 +2694,10 @@ if(CLIENT)
     components/tclient/trails.h
     components/tclient/translate.cpp
     components/tclient/translate.h
+    components/tclient/voice_component.cpp
+    components/tclient/voice_component.h
+    components/tclient/voice_core.cpp
+    components/tclient/voice_core.h
     components/tclient/warlist.cpp
     components/tclient/warlist.h
     components/tooltips.cpp

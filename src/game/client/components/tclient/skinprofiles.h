@@ -27,6 +27,7 @@ public:
 class CSkinProfiles : public CComponent
 {
 	static void ConAddProfile(IConsole::IResult *pResult, void *pUserData);
+	static void ConProfileQueue(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
 

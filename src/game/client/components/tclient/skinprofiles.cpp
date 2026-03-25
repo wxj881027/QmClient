@@ -29,12 +29,39 @@ void CSkinProfiles::OnConsoleInit()
 		pConfigManager->RegisterCallback(ConfigSaveCallback, this, ConfigDomain::TCLIENTPROFILES);
 
 	Console()->Register("add_profile", "i[body] i[feet] i[flag] i[emote] s[skin] s[name] s[clan]", CFGFLAG_CLIENT, ConAddProfile, this, "Add a profile");
+	Console()->Register("qm_profile_queue", "i[序号]", CFGFLAG_CLIENT, ConProfileQueue, this, "按当前角色通过序号应用模板");
 }
 
 void CSkinProfiles::ConAddProfile(IConsole::IResult *pResult, void *pUserData)
 {
 	CSkinProfiles *pSelf = (CSkinProfiles *)pUserData;
 	pSelf->AddProfile(pResult->GetInteger(0), pResult->GetInteger(1), pResult->GetInteger(2), pResult->GetInteger(3), pResult->GetString(4), pResult->GetString(5), pResult->GetString(6));
+}
+
+void CSkinProfiles::ConProfileQueue(IConsole::IResult *pResult, void *pUserData)
+{
+	CSkinProfiles *pSelf = (CSkinProfiles *)pUserData;
+	const int ProfileCount = (int)pSelf->m_Profiles.size();
+	if(ProfileCount <= 0)
+	{
+		pSelf->GameClient()->Echo("没有可用模板，请先保存一个模板。");
+		return;
+	}
+
+	const int OneBasedIndex = pResult->GetInteger(0);
+	if(OneBasedIndex <= 0 || OneBasedIndex > ProfileCount)
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "qm_profile_queue：序号必须在 1 到 %d 之间", ProfileCount);
+		pSelf->GameClient()->Echo(aBuf);
+		return;
+	}
+
+	int Dummy = g_Config.m_ClDummy != 0 ? 1 : 0;
+	if(Dummy == 1 && !pSelf->Client()->DummyConnected())
+		Dummy = 0;
+
+	pSelf->ApplyProfile(Dummy, pSelf->m_Profiles[OneBasedIndex - 1]);
 }
 
 void CSkinProfiles::AddProfile(int BodyColor, int FeetColor, int CountryFlag, int Emote, const char *pSkinName, const char *pName, const char *pClan)

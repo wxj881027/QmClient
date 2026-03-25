@@ -87,6 +87,7 @@
 #include "components/tclient/tclient.h"
 #include "components/tclient/trails.h"
 #include "components/tclient/translate.h"
+#include "components/tclient/voice_component.h"
 #include "components/tclient/warlist.h"
 #include "components/tooltips.h"
 #include "components/touch_controls.h"
@@ -226,6 +227,7 @@ public:
 	CBindWheel m_BindWheel;
 	CBgDraw m_BgDraw;
 	CTClient m_TClient;
+	CVoiceComponent m_Voice;
 	CTrails m_Trails;
 	CTranslate m_Translate;
 	CPet m_Pet;
