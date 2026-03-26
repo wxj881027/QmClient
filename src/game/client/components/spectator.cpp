@@ -650,6 +650,8 @@ void CSpectator::OnReset()
 	m_WasActive = false;
 	m_Active = false;
 	m_SelectedSpectatorId = NO_SELECTION;
+	m_MultiViewActivateDelay = 0.0f;
+	m_TouchState = {};
 }
 
 void CSpectator::Spectate(int SpectatorId)

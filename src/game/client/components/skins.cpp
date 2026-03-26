@@ -39,6 +39,11 @@ static int &SkinQueueIndexVar(int Dummy)
 	return Dummy ? g_Config.m_QmDummySkinQueueIndex : g_Config.m_QmSkinQueueIndex;
 }
 
+static int &SkinQueueRotateMapVar(int Dummy)
+{
+	return Dummy ? g_Config.m_QmDummySkinQueueRotateMap : g_Config.m_QmSkinQueueRotateMap;
+}
+
 static char *SkinNameVar(int Dummy)
 {
 	return Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin;
@@ -626,6 +631,7 @@ void CSkins::ApplySkinQueueCurrent(int Dummy)
 
 void CSkins::UpdateSkinQueue(std::chrono::nanoseconds Now, int Dummy)
 {
+	SyncSkinQueueFromMapPlayers(Dummy);
 	TrimSkinQueueToLimit(Dummy);
 	auto &Queue = m_aSkinQueue[Dummy];
 	const int QueueInterval = SkinQueueIntervalVar(Dummy);
@@ -666,6 +672,77 @@ void CSkins::UpdateSkinQueue(std::chrono::nanoseconds Now, int Dummy)
 		QueueIndex = (QueueIndex + 1) % (int)Queue.size();
 		ApplySkinQueueCurrent(Dummy);
 	}
+}
+
+void CSkins::SyncSkinQueueFromMapPlayers(int Dummy)
+{
+	if(!SkinQueueRotateMapVar(Dummy))
+	{
+		return;
+	}
+
+	const bool Online = Dummy == 0 ? Client()->State() == IClient::STATE_ONLINE : Client()->DummyConnected();
+	if(!Online)
+	{
+		return;
+	}
+
+	const int Limit = maximum(0, SkinQueueLengthVar(Dummy));
+	std::vector<std::string> vMapSkins;
+	vMapSkins.reserve(Limit > 0 ? (size_t)std::min(Limit, (int)MAX_CLIENTS) : 0);
+
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	{
+		const CNetObj_PlayerInfo *pPlayerInfo = GameClient()->m_Snap.m_apPlayerInfos[ClientId];
+		if(!pPlayerInfo || !GameClient()->m_aClients[ClientId].m_Active || pPlayerInfo->m_Team == TEAM_SPECTATORS)
+		{
+			continue;
+		}
+
+		const char *pSkinName = GameClient()->m_aClients[ClientId].m_aSkinName;
+		if(!CSkin::IsValidName(pSkinName) ||
+			std::find(vMapSkins.begin(), vMapSkins.end(), pSkinName) != vMapSkins.end())
+		{
+			continue;
+		}
+
+		if((int)vMapSkins.size() >= Limit)
+		{
+			break;
+		}
+		vMapSkins.emplace_back(pSkinName);
+	}
+
+	auto &Queue = m_aSkinQueue[Dummy];
+	if(Queue == vMapSkins)
+	{
+		return;
+	}
+
+	std::string CurrentSkin;
+	if(!Queue.empty())
+	{
+		ClampSkinQueueIndex(Dummy);
+		CurrentSkin = Queue[SkinQueueIndexVar(Dummy)];
+	}
+
+	Queue = std::move(vMapSkins);
+
+	int &QueueIndex = SkinQueueIndexVar(Dummy);
+	if(Queue.empty())
+	{
+		QueueIndex = 0;
+	}
+	else if(!CurrentSkin.empty())
+	{
+		const auto It = std::find(Queue.begin(), Queue.end(), CurrentSkin);
+		QueueIndex = It != Queue.end() ? (int)(It - Queue.begin()) : 0;
+	}
+	ClampSkinQueueIndex(Dummy);
+
+	m_aSkinQueueElapsed[Dummy] = 0ns;
+	m_aSkinQueueLastUpdate[Dummy].reset();
+	ApplySkinQueueCurrent(Dummy);
 }
 
 void CSkins::UpdateUnloadSkins(CSkinLoadingStats &Stats)

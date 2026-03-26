@@ -611,6 +611,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	int &QueueInterval = m_Dummy ? g_Config.m_QmDummySkinQueueInterval : g_Config.m_QmSkinQueueInterval;
 	int &QueueLength = m_Dummy ? g_Config.m_QmDummySkinQueueLength : g_Config.m_QmSkinQueueLength;
 	int &QueueIndex = m_Dummy ? g_Config.m_QmDummySkinQueueIndex : g_Config.m_QmSkinQueueIndex;
+	int &QueueRotateMap = m_Dummy ? g_Config.m_QmDummySkinQueueRotateMap : g_Config.m_QmSkinQueueRotateMap;
 	const auto &SkinQueue = GameClient()->m_Skins.SkinQueue(QueueDummy);
 	const CSkin *pDefaultSkin = GameClient()->m_Skins.Find("default");
 	const CSkins::CSkinContainer *pOwnSkinContainer = GameClient()->m_Skins.FindContainerOrNullptr(pSkinName[0] == '\0' ? "default" : pSkinName);
@@ -832,6 +833,14 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		char aQueueLabel[64];
 		str_format(aQueueLabel, sizeof(aQueueLabel), "%s (%d/%d)", Localize("皮肤队列"), (int)SkinQueue.size(), QueueLength);
 		Ui()->DoLabel(&QueueHeader, aQueueLabel, 14.0f, TEXTALIGN_ML);
+
+		CUIRect RotateMapRect;
+		QueueSection.HSplitTop(20.0f, &RotateMapRect, &QueueSection);
+		if(DoButton_CheckBox(&QueueRotateMap, Localize("轮换全图"), QueueRotateMap, &RotateMapRect))
+		{
+			QueueRotateMap ^= 1;
+		}
+		GameClient()->m_Tooltips.DoToolTip(&QueueRotateMap, &RotateMapRect, Localize("获取全图玩家皮肤 ID 并自动作为轮换队列"));
 
 		QueueSection.HSplitTop(20.0f, &QueueControls, &QueueSection);
 		CUIRect IntervalRect, LengthRect;

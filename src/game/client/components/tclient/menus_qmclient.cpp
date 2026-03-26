@@ -4318,7 +4318,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					"小信",
 					"哆啦梦",
 					"菜菜羊",
-					"吃了吗chilem"
+					"吃了吗chilem",
+					"你就是我的"
 					};
 				const float SponsorFontSize = LG_BodySize * 1.1f;
 				const float MaxLineWidth = RightContent.w;
