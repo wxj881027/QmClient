@@ -815,7 +815,16 @@ void CGameClient::OnReset()
 
 	m_MultiViewPersonalZoom = 0.0f;
 	m_MultiViewActivated = false;
+	m_MultiViewTeam = 0;
+	m_MultiView.m_Solo = false;
 	m_MultiView.m_IsInit = false;
+	m_MultiView.m_Teleported = false;
+	m_MultiView.m_OldPos = vec2(0.0f, 0.0f);
+	m_MultiView.m_OldPersonalZoom = 0;
+	m_MultiView.m_SecondChance = 0.0f;
+	m_MultiView.m_OldCameraDistance = 0.0f;
+	std::fill(std::begin(m_MultiView.m_aLastFreeze), std::end(m_MultiView.m_aLastFreeze), 0.0f);
+	std::fill(std::begin(m_MultiView.m_aVanish), std::end(m_MultiView.m_aVanish), false);
 
 	m_CursorInfo.m_CursorOwnerId = -1;
 	m_CursorInfo.m_NumSamples = 0;
@@ -5794,6 +5803,10 @@ bool CGameClient::InitMultiView(int Team)
 	float Width, Height;
 	CleanMultiViewIds();
 	m_MultiView.m_IsInit = true;
+	m_MultiView.m_SecondChance = 0.0f;
+	m_MultiView.m_OldCameraDistance = 0.0f;
+	m_MultiView.m_OldPos = m_Camera.m_Center;
+	m_MultiView.m_OldPersonalZoom = m_MultiViewPersonalZoom;
 
 	// get the current view coordinates
 	Graphics()->CalcScreenParams(Graphics()->ScreenAspect(), m_Camera.m_Zoom, &Width, &Height);

@@ -359,6 +359,7 @@ private:
 	void OnQueueConfigSave(IConfigManager *pConfigManager);
 	static void ConchainRefreshSkinList(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	void UpdateSkinQueue(std::chrono::nanoseconds Now, int Dummy);
+	void SyncSkinQueueFromMapPlayers(int Dummy);
 	void ApplySkinQueueCurrent(int Dummy);
 	void ClampSkinQueueIndex(int Dummy);
 	bool AddSkinQueuePreset(const char *pName, int Dummy);
