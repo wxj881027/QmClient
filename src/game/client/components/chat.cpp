@@ -21,7 +21,7 @@
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
-#include <game/client/components/tclient/colored_parts.h>
+#include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 

@@ -9,7 +9,7 @@
 ## 1. 启动
 
 ```bash
-cd tclient_scripts/qmclient_center_server
+cd qmclient_scripts/qmclient_center_server
 npm install
 AUTH_SECRET="replace-with-random-long-secret" PORT=8080 npm start
 ```
@@ -28,7 +28,7 @@ AUTH_SECRET="replace-with-random-long-secret" PORT=8080 npm start
 qm_client_mark_trail 1
 ```
 
-如果后续要改 IP 或端口，修改 `src/game/client/components/tclient/tclient.cpp` 里的常量：
+如果后续要改 IP 或端口，修改 `src/game/client/components/qmclient/qmclient.cpp` 里的常量：
 
 - `QMCLIENT_TOKEN_URL`
 - `QMCLIENT_REPORT_URL`

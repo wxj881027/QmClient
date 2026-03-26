@@ -2260,7 +2260,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   config_domains.h
   config_includes.h
   config_variables.h
-  config_variables_tclient.h
+  config_variables_qmclient.h
   console.cpp
   console.h
   csv.cpp
@@ -2651,55 +2651,55 @@ if(CLIENT)
     components/statboard.h
     components/system_media_controls.cpp
     components/system_media_controls.h
-    components/tclient/bg_draw.cpp
-    components/tclient/bg_draw.h
-    components/tclient/bg_draw_file.cpp
-    components/tclient/bg_draw_file.h
-    components/tclient/bindchat.cpp
-    components/tclient/bindchat.h
-    components/tclient/bindwheel.cpp
-    components/tclient/bindwheel.h
-    components/tclient/collision_hitbox.cpp
-    components/tclient/collision_hitbox.h
-    components/tclient/colored_parts.h
-    components/tclient/custom_communities.cpp
-    components/tclient/custom_communities.h
-    components/tclient/data_version.h
-    components/tclient/input_overlay.cpp
-    components/tclient/input_overlay.h
-    components/tclient/lyrics_component.cpp
-    components/tclient/lyrics_component.h
-    components/tclient/menus_qmclient.cpp
-    components/tclient/mod.cpp
-    components/tclient/mod.h
-    components/tclient/outlines.cpp
-    components/tclient/outlines.h
-    components/tclient/pet.cpp
-    components/tclient/pet.h
-    components/tclient/player_indicator.cpp
-    components/tclient/player_indicator.h
-    components/tclient/rainbow.cpp
-    components/tclient/rainbow.h
-    components/tclient/scripting.cpp
-    components/tclient/scripting.h
-    components/tclient/scripting/impl.cpp
-    components/tclient/scripting/impl.h
-    components/tclient/skinprofiles.cpp
-    components/tclient/skinprofiles.h
-    components/tclient/statusbar.cpp
-    components/tclient/statusbar.h
-    components/tclient/tclient.cpp
-    components/tclient/tclient.h
-    components/tclient/trails.cpp
-    components/tclient/trails.h
-    components/tclient/translate.cpp
-    components/tclient/translate.h
-    components/tclient/voice_component.cpp
-    components/tclient/voice_component.h
-    components/tclient/voice_core.cpp
-    components/tclient/voice_core.h
-    components/tclient/warlist.cpp
-    components/tclient/warlist.h
+    components/qmclient/bg_draw.cpp
+    components/qmclient/bg_draw.h
+    components/qmclient/bg_draw_file.cpp
+    components/qmclient/bg_draw_file.h
+    components/qmclient/bindchat.cpp
+    components/qmclient/bindchat.h
+    components/qmclient/bindwheel.cpp
+    components/qmclient/bindwheel.h
+    components/qmclient/collision_hitbox.cpp
+    components/qmclient/collision_hitbox.h
+    components/qmclient/colored_parts.h
+    components/qmclient/custom_communities.cpp
+    components/qmclient/custom_communities.h
+    components/qmclient/data_version.h
+    components/qmclient/input_overlay.cpp
+    components/qmclient/input_overlay.h
+    components/qmclient/lyrics_component.cpp
+    components/qmclient/lyrics_component.h
+    components/qmclient/menus_qmclient.cpp
+    components/qmclient/mod.cpp
+    components/qmclient/mod.h
+    components/qmclient/outlines.cpp
+    components/qmclient/outlines.h
+    components/qmclient/pet.cpp
+    components/qmclient/pet.h
+    components/qmclient/player_indicator.cpp
+    components/qmclient/player_indicator.h
+    components/qmclient/rainbow.cpp
+    components/qmclient/rainbow.h
+    components/qmclient/scripting.cpp
+    components/qmclient/scripting.h
+    components/qmclient/scripting/impl.cpp
+    components/qmclient/scripting/impl.h
+    components/qmclient/skinprofiles.cpp
+    components/qmclient/skinprofiles.h
+    components/qmclient/statusbar.cpp
+    components/qmclient/statusbar.h
+    components/qmclient/qmclient.cpp
+    components/qmclient/qmclient.h
+    components/qmclient/trails.cpp
+    components/qmclient/trails.h
+    components/qmclient/translate.cpp
+    components/qmclient/translate.h
+    components/qmclient/voice_component.cpp
+    components/qmclient/voice_component.h
+    components/qmclient/voice_core.cpp
+    components/qmclient/voice_core.h
+    components/qmclient/warlist.cpp
+    components/qmclient/warlist.h
     components/tooltips.cpp
     components/tooltips.h
     components/touch_controls.cpp

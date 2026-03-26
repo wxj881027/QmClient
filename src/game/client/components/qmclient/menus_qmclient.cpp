@@ -23,9 +23,9 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
-#include <game/client/components/tclient/bindchat.h>
-#include <game/client/components/tclient/bindwheel.h>
-#include <game/client/components/tclient/trails.h>
+#include <game/client/components/qmclient/bindchat.h>
+#include <game/client/components/qmclient/bindwheel.h>
+#include <game/client/components/qmclient/trails.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/skin.h>
