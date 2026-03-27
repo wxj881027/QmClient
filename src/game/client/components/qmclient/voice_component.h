@@ -16,7 +16,6 @@ public:
 	void OnRender() override;
 	void OnConsoleInit() override;
 	bool IsVoiceActive(int ClientId) const { return m_Voice.IsVoiceActive(ClientId); }
-	float MicLevel() const { return m_Voice.MicLevel(); }
 
 private:
 	static void ConVoicePtt(IConsole::IResult *pResult, void *pUserData);

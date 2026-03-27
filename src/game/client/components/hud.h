@@ -190,7 +190,6 @@ class CHud : public CComponent
 	int m_LastSpectatorCountTick;
 	void RenderSpectatorCount();
 	void RenderDummyActions();
-	void RenderVoiceMicHud();
 	void RenderKeyStatus();
 	void RenderMovementInformation();
 

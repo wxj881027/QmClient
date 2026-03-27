@@ -161,7 +161,6 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_QUESTION = "?";
 
 	[[maybe_unused]] static const char *FONT_ICON_CAMERA = "\xEF\x80\xB0";
-	[[maybe_unused]] static const char *FONT_ICON_MICROPHONE = "\xEF\x84\xB0";
 
 	// TClient
 	[[maybe_unused]] static const char *FONT_ICON_USERS = "\xEF\x83\x80";
