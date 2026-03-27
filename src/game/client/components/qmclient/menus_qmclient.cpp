@@ -5896,10 +5896,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_RiVoiceShowOverlay, TCLocalize("显示语音叠加层"), &g_Config.m_RiVoiceShowOverlay, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_RiVoiceShowHud, TCLocalize("显示麦克风HUD图标"), &g_Config.m_RiVoiceShowHud, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
 					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
 					Ui()->DoLabel(&Row, TCLocalize("按键绑定: +qm_voice_ptt(说话), qm_voice_toggle_mic(麦克风开关)"), LG_BodySize * 0.7f, TEXTALIGN_ML);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);

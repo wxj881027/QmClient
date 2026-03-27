@@ -2621,7 +2621,6 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 		// Switch for dummy actions display
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudDummyActions, Localize("Show dummy actions"), &g_Config.m_ClShowhudDummyActions, &RightView, LineSize);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_RiVoiceShowHud, Localize("Show microphone HUD icon"), &g_Config.m_RiVoiceShowHud, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusReset, Localize("显示卡键状态"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusHammer, Localize("显示锤状态"), &g_Config.m_ClShowhudKeyStatusHammer, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusControl, Localize("显示分身控制状态"), &g_Config.m_ClShowhudKeyStatusControl, &RightView, LineSize);
