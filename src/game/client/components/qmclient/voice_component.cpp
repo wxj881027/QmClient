@@ -43,6 +43,19 @@ void CVoiceComponent::ConVoiceClearOutputDevice(IConsole::IResult *pResult, void
 	g_Config.m_RiVoiceOutputDevice[0] = '\0';
 }
 
+void CVoiceComponent::ConVoiceToggleMicMute(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pResult;
+	(void)pUserData;
+	g_Config.m_RiVoiceMicMute = g_Config.m_RiVoiceMicMute ? 0 : 1;
+}
+
+void CVoiceComponent::ConVoiceSetMicMute(IConsole::IResult *pResult, void *pUserData)
+{
+	(void)pUserData;
+	g_Config.m_RiVoiceMicMute = pResult->GetInteger(0) != 0 ? 1 : 0;
+}
+
 void CVoiceComponent::OnInit()
 {
 	m_Voice.Init(GameClient(), Client(), Console());
@@ -69,4 +82,8 @@ void CVoiceComponent::OnConsoleInit()
 	Console()->Register("qm_voice_set_output_device", "s[name]", CFGFLAG_CLIENT, ConVoiceSetOutputDevice, this, "Set voice output device");
 	Console()->Register("qm_voice_clear_input_device", "", CFGFLAG_CLIENT, ConVoiceClearInputDevice, this, "Use default voice input device");
 	Console()->Register("qm_voice_clear_output_device", "", CFGFLAG_CLIENT, ConVoiceClearOutputDevice, this, "Use default voice output device");
+	Console()->Register("qm_voice_toggle_mic", "", CFGFLAG_CLIENT, ConVoiceToggleMicMute, this, "Toggle microphone mute");
+	Console()->Register("ri_voice_toggle_mic", "", CFGFLAG_CLIENT, ConVoiceToggleMicMute, this, "Alias of qm_voice_toggle_mic");
+	Console()->Register("qm_voice_set_mic", "i[state]", CFGFLAG_CLIENT, ConVoiceSetMicMute, this, "Set microphone mute state (0=on, 1=mute)");
+	Console()->Register("ri_voice_set_mic", "i[state]", CFGFLAG_CLIENT, ConVoiceSetMicMute, this, "Alias of qm_voice_set_mic");
 }

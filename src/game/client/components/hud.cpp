@@ -2457,6 +2457,79 @@ void CHud::RenderDummyActions()
 	Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_DummyCopyOffset, x, y);
 }
 
+void CHud::RenderVoiceMicHud()
+{
+	if(!g_Config.m_RiVoiceShowHud || (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
+		return;
+
+	const float BoxHeight = 16.0f;
+	const float BoxWidth = 16.0f;
+	const float Gap = 4.0f;
+
+	float StartX = m_Width - BoxWidth;
+	float StartY = 285.0f - BoxHeight - Gap;
+
+	if(g_Config.m_ClShowhudScore)
+		StartY -= 56.0f;
+
+	const bool ShowDummyActions = g_Config.m_ClShowhudDummyActions && Client()->DummyConnected();
+	if(ShowDummyActions)
+		StartY -= 29.0f + 4.0f;
+
+	auto Intersects = [](float Ax, float Ay, float Aw, float Ah, float Bx, float By, float Bw, float Bh) {
+		return Ax < Bx + Bw && Ax + Aw > Bx && Ay < By + Bh && Ay + Ah > By;
+	};
+
+	if(m_MovementInfoBoxValid &&
+		Intersects(StartX, StartY, BoxWidth, BoxHeight, m_MovementInfoBoxX, m_MovementInfoBoxY, m_MovementInfoBoxW, m_MovementInfoBoxH))
+	{
+		const float AboveY = m_MovementInfoBoxY - Gap - BoxHeight;
+		if(AboveY >= 0.0f)
+		{
+			StartY = AboveY;
+		}
+		else
+		{
+			const float LeftX = m_MovementInfoBoxX - Gap - BoxWidth;
+			StartX = std::clamp(LeftX, 0.0f, m_Width - BoxWidth);
+			StartY = std::clamp(StartY, 0.0f, m_Height - BoxHeight);
+		}
+	}
+	else
+	{
+		StartY = std::clamp(StartY, 0.0f, m_Height - BoxHeight);
+	}
+
+	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
+
+	const bool MicDisabled = g_Config.m_RiVoiceEnable == 0 || g_Config.m_RiVoiceMicMute != 0;
+	const int LocalId = GameClient()->m_Snap.m_LocalClientId;
+	const bool VoiceActive = LocalId >= 0 && LocalId < MAX_CLIENTS && GameClient()->m_Voice.IsVoiceActive(LocalId);
+	const float MicLevel = std::clamp(GameClient()->m_Voice.MicLevel(), 0.0f, 1.0f);
+	const bool MicLit = !MicDisabled && (VoiceActive || MicLevel > 0.02f);
+
+	ColorRGBA IconColor(0.6f, 0.6f, 0.6f, 1.0f);
+	if(MicDisabled)
+	{
+		IconColor = ColorRGBA(1.0f, 0.3f, 0.3f, 1.0f);
+	}
+	else if(MicLit)
+	{
+		const float Bright = 0.75f + MicLevel * 0.25f;
+		IconColor = ColorRGBA(Bright, Bright, Bright, 1.0f);
+	}
+
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->TextColor(IconColor);
+	const float IconSize = 8.0f;
+	const auto MicIconBounding = TextRender()->TextBoundingBox(IconSize, FontIcons::FONT_ICON_MICROPHONE);
+	const float IconX = StartX + (BoxWidth - MicIconBounding.m_W) * 0.5f;
+	const float IconY = StartY + (BoxHeight - MicIconBounding.m_H) * 0.5f;
+	TextRender()->Text(IconX, IconY, IconSize, FontIcons::FONT_ICON_MICROPHONE, -1.0f);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+}
+
 namespace
 {
 struct SKeyStatusLines
@@ -2735,6 +2808,8 @@ CHud::CMovementInformation CHud::GetMovementInformation(int ClientId, int Conn) 
 
 void CHud::RenderMovementInformation()
 {
+	m_MovementInfoBoxValid = false;
+
 	const int ClientId = GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : GameClient()->m_Snap.m_LocalClientId;
 	const bool PosOnly = ClientId == SPEC_FREEVIEW || (GameClient()->m_aClients[ClientId].m_SpecCharPresent);
 	const bool ShowPosition = g_Config.m_ClShowhudPlayerPosition;
@@ -2851,6 +2926,12 @@ void CHud::RenderMovementInformation()
 	StartY -= DummyActionsReserveY;
 	if(StartY < 0.0f)
 		StartY = 0.0f;
+
+	m_MovementInfoBoxValid = true;
+	m_MovementInfoBoxX = StartX;
+	m_MovementInfoBoxY = StartY;
+	m_MovementInfoBoxW = BoxWidth;
+	m_MovementInfoBoxH = BoxHeight;
 
 	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
 
@@ -3297,6 +3378,7 @@ void CHud::OnRender()
 	m_Width = 300.0f * Graphics()->ScreenAspect();
 	m_Height = 300.0f;
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
+	m_MovementInfoBoxValid = false;
 
 #if defined(CONF_VIDEORECORDER)
 	if((IVideo::Current() && g_Config.m_ClVideoShowhud) || (!IVideo::Current() && g_Config.m_ClShowhud))
@@ -3344,6 +3426,7 @@ void CHud::OnRender()
 		if(g_Config.m_ClShowhudScore)
 			RenderScoreHud();
 		RenderDummyActions();
+		RenderVoiceMicHud();
 		RenderWarmupTimer();
 		RenderDummyMiniMap();
 		RenderTextInfo();

@@ -93,6 +93,7 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 		{EBindOptionGroup::CHAT, Localizable("Converse"), "+show_chat; chat all /c "},
 		{EBindOptionGroup::CHAT, Localizable("Chat command"), "+show_chat; chat all /"},
 		{EBindOptionGroup::CHAT, Localizable("Show chat"), "+show_chat"},
+		{EBindOptionGroup::CHAT, Localizable("麦克风开关"), "qm_voice_toggle_mic"},
 		{EBindOptionGroup::CHAT, Localizable("复读"), "+qm_repeat"},
 		{EBindOptionGroup::CHAT, Localizable("说话"), "+qm_voice_ptt"},
 		{EBindOptionGroup::DUMMY, Localizable("Toggle dummy"), "toggle cl_dummy 0 1"},

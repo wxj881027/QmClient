@@ -16,6 +16,7 @@ public:
 	void OnRender() override;
 	void OnConsoleInit() override;
 	bool IsVoiceActive(int ClientId) const { return m_Voice.IsVoiceActive(ClientId); }
+	float MicLevel() const { return m_Voice.MicLevel(); }
 
 private:
 	static void ConVoicePtt(IConsole::IResult *pResult, void *pUserData);
@@ -24,6 +25,8 @@ private:
 	static void ConVoiceSetOutputDevice(IConsole::IResult *pResult, void *pUserData);
 	static void ConVoiceClearInputDevice(IConsole::IResult *pResult, void *pUserData);
 	static void ConVoiceClearOutputDevice(IConsole::IResult *pResult, void *pUserData);
+	static void ConVoiceToggleMicMute(IConsole::IResult *pResult, void *pUserData);
+	static void ConVoiceSetMicMute(IConsole::IResult *pResult, void *pUserData);
 
 	CRClientVoice m_Voice;
 };
