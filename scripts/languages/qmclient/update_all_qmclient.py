@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
-from copy_fix_tclient import copy_fix
-import twlang_tclient as twlang
+from copy_fix_qmclient import copy_fix
+import twlang_qmclient as twlang
 
 os.chdir(os.path.dirname(__file__) + "/../..")
 

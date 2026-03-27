@@ -9,7 +9,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/animstate.h>
-#include <game/client/components/tclient/bg_draw_file.h>
+#include <game/client/components/qmclient/bg_draw_file.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/localization.h>
