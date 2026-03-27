@@ -19,7 +19,7 @@
 
 #include <game/client/animstate.h>
 #include <game/client/components/scoreboard.h>
-#include <game/client/components/tclient/lyrics_component.h>
+#include <game/client/components/qmclient/lyrics_component.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/QmUi/QmLayout.h>

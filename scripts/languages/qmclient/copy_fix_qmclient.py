@@ -2,7 +2,7 @@
 import os
 import sys
 
-import twlang_tclient as twlang
+import twlang_qmclient as twlang
 
 def copy_fix(infile, delete_unused, append_missing, delete_empty):
 	with open(infile, encoding="utf-8") as f:
@@ -40,7 +40,7 @@ def main(argv):
 	os.chdir(os.path.dirname(__file__) + "/../..")
 
 	if len(argv) < 3:
-		print("usage: python copy_fix_tclient.py <infile> <outfile> [--delete-unused] [--append-missing] [--delete-empty]")
+		print("usage: python copy_fix_qmclient.py <infile> <outfile> [--delete-unused] [--append-missing] [--delete-empty]")
 		sys.exit()
 	infile = argv[1]
 	outfile = argv[2]

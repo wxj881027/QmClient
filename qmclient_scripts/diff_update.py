@@ -95,7 +95,7 @@ def compare_multiple(lst, data):
 
 def main():
 	p = argparse.ArgumentParser(description="""\
-Diff two TClient release archives to obtain an update description.
+Diff two QmClient release archives to obtain an update description.
 
 E.g. `python diff_update.py 14.6.2 14.7` with directories for different
 versions in the current working directory
@@ -108,8 +108,8 @@ versions in the current working directory
 		data = json.load(json_file)
 
 	pairs = [
-		(f"TClient-{args.version1}-win64", f"TClient-{args.version2}-win64"),
-		(f"TClient-{args.version1}-linux_x86_64", f"TClient-{args.version2}-linux_x86_64")
+		(f"QmClient-{args.version1}-win64", f"QmClient-{args.version2}-win64"),
+		(f"QmClient-{args.version1}-linux_x86_64", f"QmClient-{args.version2}-linux_x86_64")
 	]
 
 	data.insert(0, {"version": args.version2, "client": True, "server": True})
