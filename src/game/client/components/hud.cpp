@@ -2735,6 +2735,8 @@ CHud::CMovementInformation CHud::GetMovementInformation(int ClientId, int Conn) 
 
 void CHud::RenderMovementInformation()
 {
+	m_MovementInfoBoxValid = false;
+
 	const int ClientId = GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : GameClient()->m_Snap.m_LocalClientId;
 	const bool PosOnly = ClientId == SPEC_FREEVIEW || (GameClient()->m_aClients[ClientId].m_SpecCharPresent);
 	const bool ShowPosition = g_Config.m_ClShowhudPlayerPosition;
@@ -2851,6 +2853,12 @@ void CHud::RenderMovementInformation()
 	StartY -= DummyActionsReserveY;
 	if(StartY < 0.0f)
 		StartY = 0.0f;
+
+	m_MovementInfoBoxValid = true;
+	m_MovementInfoBoxX = StartX;
+	m_MovementInfoBoxY = StartY;
+	m_MovementInfoBoxW = BoxWidth;
+	m_MovementInfoBoxH = BoxHeight;
 
 	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
 
@@ -3297,6 +3305,7 @@ void CHud::OnRender()
 	m_Width = 300.0f * Graphics()->ScreenAspect();
 	m_Height = 300.0f;
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
+	m_MovementInfoBoxValid = false;
 
 #if defined(CONF_VIDEORECORDER)
 	if((IVideo::Current() && g_Config.m_ClVideoShowhud) || (!IVideo::Current() && g_Config.m_ClShowhud))

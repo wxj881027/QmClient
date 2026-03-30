@@ -281,6 +281,12 @@ private:
 	int m_PracticeModeOffset;
 	int m_Team0ModeOffset;
 	int m_LockModeOffset;
+
+	bool m_MovementInfoBoxValid = false;
+	float m_MovementInfoBoxX = 0.0f;
+	float m_MovementInfoBoxY = 0.0f;
+	float m_MovementInfoBoxW = 0.0f;
+	float m_MovementInfoBoxH = 0.0f;
 };
 
 #endif

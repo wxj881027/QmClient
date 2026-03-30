@@ -719,6 +719,7 @@ void CGameClient::OnReset()
 
 	m_PredictedTick = -1;
 	std::fill(std::begin(m_aLastNewPredictedTick), std::end(m_aLastNewPredictedTick), -1);
+	std::fill(std::begin(m_aLastPredictedAirJumpTick), std::end(m_aLastPredictedAirJumpTick), -1);
 	std::fill(std::begin(m_aLastHammerSkinSwapAttackTick), std::end(m_aLastHammerSkinSwapAttackTick), -1);
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
 	{
@@ -1047,6 +1048,7 @@ void CGameClient::OnDummyDisconnect()
 	m_aShowOthers[1] = SHOW_OTHERS_NOT_SET;
 	m_aEnableSpectatorCount[1] = -1;
 	m_aLastNewPredictedTick[1] = -1;
+	m_aLastPredictedAirJumpTick[1] = -1;
 	m_PredictedDummyId = -1;
 }
 
@@ -2512,6 +2514,9 @@ void CGameClient::OnNewSnapshot()
 	UpdateEditorIngameMoved();
 
 	// detect air jump for other players
+	const int PrevGameTick = Client()->PrevGameTick(g_Config.m_ClDummy);
+	const int CurGameTick = Client()->GameTick(g_Config.m_ClDummy);
+	const int PredictedLocalDummy = g_Config.m_ClDummy ^ m_IsDummySwapping;
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(m_Snap.m_aCharacters[i].m_Active && (m_Snap.m_aCharacters[i].m_Cur.m_Jumped & 2) && !(m_Snap.m_aCharacters[i].m_Prev.m_Jumped & 2))
@@ -2529,8 +2534,17 @@ void CGameClient::OnNewSnapshot()
 			if(IsLocalPlayer)
 			{
 				// Local air-jump effects are normally predicted. Fall back to snapshot
-				// when prediction is unavailable or predicted events are disabled.
-				UseSnapshotAirJump = !Predict() || !g_Config.m_ClPredictEvents;
+				// when prediction is unavailable, predicted events are disabled,
+				// or the predicted AIR_JUMP event was missed in the current snap window.
+				if(!Predict() || !g_Config.m_ClPredictEvents)
+				{
+					UseSnapshotAirJump = true;
+				}
+				else
+				{
+					const int LastPredictedAirJumpTick = m_aLastPredictedAirJumpTick[PredictedLocalDummy];
+					UseSnapshotAirJump = LastPredictedAirJumpTick <= PrevGameTick || LastPredictedAirJumpTick > CurGameTick;
+				}
 			}
 			else
 			{
@@ -3052,6 +3066,8 @@ void CGameClient::OnPredict()
 			RealPredTick = true;
 			vec2 Pos = pLocalChar->Core()->m_Pos;
 			int Events = pLocalChar->Core()->m_TriggeredEvents;
+			if(Events & COREEVENT_AIR_JUMP)
+				m_aLastPredictedAirJumpTick[Dummy] = Tick;
 
 			if(g_Config.m_ClPredict && m_PredictedWorld.m_WorldConfig.m_PredictEvents && !m_SuppressEvents)
 				if(Events & COREEVENT_AIR_JUMP)
@@ -3073,6 +3089,8 @@ void CGameClient::OnPredict()
 			m_aLastNewPredictedTick[!Dummy] = Tick;
 			vec2 Pos = pDummyChar->Core()->m_Pos;
 			int Events = pDummyChar->Core()->m_TriggeredEvents;
+			if(Events & COREEVENT_AIR_JUMP)
+				m_aLastPredictedAirJumpTick[!Dummy] = Tick;
 			if(g_Config.m_ClPredict && m_PredictedWorld.m_WorldConfig.m_PredictEvents && !m_SuppressEvents)
 				if(Events & COREEVENT_AIR_JUMP)
 					m_Effects.AirJump(Pos, 1.0f, 1.0f);

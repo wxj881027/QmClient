@@ -1304,16 +1304,22 @@ void CRClientVoice::UpdateClientSnapshot()
 
 void CRClientVoice::ProcessCapture()
 {
-	if(!m_CaptureDevice || !m_pEncoder || !m_ServerAddrValid.load() || !m_Socket)
+	if(!m_CaptureDevice)
 		return;
 
 	SRClientVoiceConfigSnapshot Config;
 	GetConfigSnapshot(Config);
 	const int TestMode = std::clamp(Config.m_RiVoiceTestMode, 0, 2);
 	const bool TestLocal = TestMode == 1;
+	const bool NeedNetwork = !TestLocal;
 	const bool ShowMicLevel = TestMode != 0;
 	const bool MicMuted = Config.m_RiVoiceMicMute != 0;
 	const float TestGain = std::clamp(Config.m_RiVoiceVolume / 100.0f, 0.0f, 4.0f);
+
+	if(!m_pEncoder)
+		return;
+	if(NeedNetwork && (!m_ServerAddrValid.load() || !m_Socket))
+		return;
 
 	int LocalClientId = -1;
 	std::array<int, 2> aLocalClientIds = {};
@@ -1328,8 +1334,10 @@ void CRClientVoice::ProcessCapture()
 		if(LocalClientId >= 0 && LocalClientId < MAX_CLIENTS)
 			LocalPos = m_aClientPosSnap[LocalClientId];
 	}
-	if(!Online || LocalClientId < 0 || LocalClientId >= MAX_CLIENTS)
+	if((!Online || LocalClientId < 0 || LocalClientId >= MAX_CLIENTS) && !TestLocal)
 		return;
+	if(LocalClientId < 0 || LocalClientId >= MAX_CLIENTS)
+		LocalClientId = 0;
 
 	const auto MarkLocalVoiceActive = [&](int64_t Timestamp) {
 		for(const int Id : aLocalClientIds)
@@ -1352,6 +1360,8 @@ void CRClientVoice::ProcessCapture()
 	{
 		ReleaseDeadline = m_PttReleaseDeadline.load();
 		PttHeld = m_PttActive.load() || (ReleaseDeadline != 0 && Now < ReleaseDeadline);
+		if(TestLocal)
+			PttHeld = true;
 	}
 	else if(m_VadActive && m_VadReleaseDeadline != 0 && Now >= m_VadReleaseDeadline)
 	{
@@ -1366,7 +1376,7 @@ void CRClientVoice::ProcessCapture()
 	if(TestMode == 2)
 		TxFlags |= VOICE_FLAG_LOOPBACK;
 
-	if(TokenChanged || (!TxActiveSnapshot && NeedKeepalive))
+	if(NeedNetwork && (TokenChanged || (!TxActiveSnapshot && NeedKeepalive)))
 	{
 		NETADDR ServerAddrLocal = NETADDR_ZEROED;
 		{

@@ -1629,13 +1629,9 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	{
 		const bool VoiceActive = GameClient()->m_Voice.IsVoiceActive(ClientId);
 		const bool VoiceMuted = IsLocalClient ? (g_Config.m_RiVoiceMicMute != 0) : CommaListContainsName(g_Config.m_RiVoiceMute, ClientData.m_aName);
-		const bool AllowLocalVoiceIndicator = !IsLocalClient || g_Config.m_RiVoiceIndicatorAboveSelf || VoiceActive || VoiceMuted;
-		if(AllowLocalVoiceIndicator)
-		{
-			Data.m_ShowVoiceIndicator = true;
-			Data.m_VoiceActive = VoiceActive;
-			Data.m_VoiceMuted = VoiceMuted;
-		}
+		Data.m_ShowVoiceIndicator = true;
+		Data.m_VoiceActive = VoiceActive;
+		Data.m_VoiceMuted = VoiceMuted;
 	}
 
 	// Check if the nameplate is actually on screen
@@ -2055,7 +2051,8 @@ void CNamePlates::OnRender()
 	const bool ShowCoords = (g_Config.m_QmNameplateCoords || g_Config.m_QmNameplateCoordsOwn) &&
 				(g_Config.m_QmNameplateCoordX || g_Config.m_QmNameplateCoordY);
 	const bool ShowCoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
-	const bool RenderNameplates = g_Config.m_ClNamePlates || ShowDirection != 0 || ShowCoords || ShowCoordXAlignHint;
+	const bool RenderVoiceOverlay = g_Config.m_RiVoiceEnable && g_Config.m_RiVoiceShowOverlay && g_Config.m_RiVoiceShowIndicator;
+	const bool RenderNameplates = g_Config.m_ClNamePlates || g_Config.m_ClNamePlatesOwn || ShowDirection != 0 || ShowCoords || ShowCoordXAlignHint || RenderVoiceOverlay;
 	const bool RenderChatBubbles = g_Config.m_QmChatBubble != 0;
 	if(!RenderNameplates && !RenderChatBubbles)
 		return;

@@ -1660,12 +1660,12 @@ void CPlayers::OnRender()
 			if(Predicted.m_Invincible)
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_SPARKLE;
 
-			Frozen = Predicted.m_FreezeEnd != 0 || Predicted.m_LiveFrozen || ClientData.m_IsInFreeze;
+			Frozen = Predicted.m_FreezeEnd != 0 || Predicted.m_LiveFrozen;
 			// TClient
 			if(g_Config.m_TcFastInput && GameClient()->Predict())
 			{
 				const CCharacterCore &RegularPredicted = ClientData.m_RegularPredicted;
-				Frozen = RegularPredicted.m_FreezeEnd != 0 || RegularPredicted.m_LiveFrozen || ClientData.m_IsInFreeze;
+				Frozen = RegularPredicted.m_FreezeEnd != 0 || RegularPredicted.m_LiveFrozen;
 			}
 		}
 		else
@@ -1677,7 +1677,7 @@ void CPlayers::OnRender()
 			if(ClientData.m_Invincible)
 				aRenderInfo[i].m_TeeRenderFlags |= TEE_EFFECT_SPARKLE;
 
-			Frozen = ClientData.m_FreezeEnd != 0 || ClientData.m_LiveFrozen || ClientData.m_IsInFreeze;
+			Frozen = ClientData.m_FreezeEnd != 0 || ClientData.m_LiveFrozen;
 		}
 
 		// TClient

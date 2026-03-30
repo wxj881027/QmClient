@@ -287,6 +287,7 @@ private:
 
 	int m_PredictedTick;
 	int m_aLastNewPredictedTick[NUM_DUMMIES];
+	int m_aLastPredictedAirJumpTick[NUM_DUMMIES];
 	int m_aLastHammerSkinSwapAttackTick[NUM_DUMMIES];
 	int m_aaLastRandomEmoteAttackTick[NUM_DUMMIES][MAX_CLIENTS];
 	int m_aLastRandomEmoteDamageTick[NUM_DUMMIES];

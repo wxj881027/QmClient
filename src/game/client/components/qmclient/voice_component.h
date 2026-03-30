@@ -24,6 +24,8 @@ private:
 	static void ConVoiceSetOutputDevice(IConsole::IResult *pResult, void *pUserData);
 	static void ConVoiceClearInputDevice(IConsole::IResult *pResult, void *pUserData);
 	static void ConVoiceClearOutputDevice(IConsole::IResult *pResult, void *pUserData);
+	static void ConVoiceToggleMicMute(IConsole::IResult *pResult, void *pUserData);
+	static void ConVoiceSetMicMute(IConsole::IResult *pResult, void *pUserData);
 
 	CRClientVoice m_Voice;
 };
