@@ -16,9 +16,12 @@ Regex::Regex(Regex&& Other) : data(Other.data) {
 
 Regex::Regex() : data(new Data{{}, "Empty"}) {}
 
-Regex::Regex(const std::string& pattern) : data(new Data) {
+Regex::Regex(const std::string& pattern, bool caseInsensitive) : data(new Data) {
 	try {
-		data->regex = std::regex(pattern);
+		std::regex_constants::syntax_option_type Flags = std::regex::ECMAScript;
+		if(caseInsensitive)
+			Flags |= std::regex::icase;
+		data->regex = std::regex(pattern, Flags);
 		data->error = "";
 	} catch (const std::regex_error& e) {
 		data->error = e.what();

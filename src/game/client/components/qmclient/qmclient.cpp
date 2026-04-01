@@ -391,16 +391,55 @@ static int QiaFenSeparatorLength(const char *pStr)
 	return 0;
 }
 
-static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize)
+enum class EAutoReplyTokenMode
 {
-	pOutRules[0] = '\0';
-	if(!pKeywords || pKeywords[0] == '\0')
-		return;
+	Literal,
+	RegexAuto,
+	RegexDelimited,
+};
 
-	char aLegacyKeywords[512];
-	str_copy(aLegacyKeywords, pKeywords, sizeof(aLegacyKeywords));
-	char *pCursor = aLegacyKeywords;
+static const char *FindDelimitedAutoReplyTokenEnd(const char *pTokenStart)
+{
+	if(!pTokenStart || pTokenStart[0] != '/')
+		return nullptr;
 
+	// Keep `/.../` together so regex alternation does not collide with the rule separators.
+	bool Escaped = false;
+	for(const char *pCursor = pTokenStart + 1; *pCursor; ++pCursor)
+	{
+		if(Escaped)
+		{
+			Escaped = false;
+			continue;
+		}
+		if(*pCursor == '\\')
+		{
+			Escaped = true;
+			continue;
+		}
+		if(*pCursor != '/')
+			continue;
+
+		++pCursor;
+		if(*pCursor == 'i' || *pCursor == 'I')
+			++pCursor;
+
+		const char *pAfterWhitespace = str_utf8_skip_whitespaces(pCursor);
+		if(*pAfterWhitespace != '\0' && QiaFenSeparatorLength(pAfterWhitespace) == 0)
+			return nullptr;
+		return pAfterWhitespace;
+	}
+
+	return nullptr;
+}
+
+template<typename F>
+static bool ForEachAutoReplyToken(const char *pText, F &&Fn)
+{
+	if(!pText || pText[0] == '\0')
+		return false;
+
+	const char *pCursor = pText;
 	while(*pCursor)
 	{
 		int SepLen = QiaFenSeparatorLength(pCursor);
@@ -410,31 +449,168 @@ static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOut
 			SepLen = QiaFenSeparatorLength(pCursor);
 		}
 
-		char *pStart = pCursor;
-		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
-			pCursor++;
-
-		if(pStart == pCursor)
+		if(*pCursor == '\0')
 			break;
 
-		if(*pCursor)
+		const char *pTokenStart = pCursor;
+		const char *pTokenEnd = nullptr;
+		const char *pTrimmedStart = str_utf8_skip_whitespaces(pTokenStart);
+		if(*pTrimmedStart == '/')
+			pTokenEnd = FindDelimitedAutoReplyTokenEnd(pTrimmedStart);
+
+		if(!pTokenEnd)
 		{
-			const int CutLen = QiaFenSeparatorLength(pCursor);
-			*pCursor = '\0';
-			pCursor += CutLen;
+			pTokenEnd = pCursor;
+			while(*pTokenEnd && QiaFenSeparatorLength(pTokenEnd) == 0)
+				++pTokenEnd;
 		}
 
-		char *pKeyword = (char *)str_utf8_skip_whitespaces(pStart);
-		str_utf8_trim_right(pKeyword);
-		if(pKeyword[0] == '\0')
+		pCursor = pTokenEnd;
+
+		std::string Token(pTokenStart, pTokenEnd - pTokenStart);
+		char *pMutableToken = Token.data();
+		char *pTrimmedToken = (char *)str_utf8_skip_whitespaces(pMutableToken);
+		str_utf8_trim_right(pTrimmedToken);
+		if(pTrimmedToken[0] == '\0')
 			continue;
 
+		if(Fn(std::string_view(pTrimmedToken)))
+			return true;
+	}
+
+	return false;
+}
+
+static bool IsAutoReplyRegexEscapeMarker(char C)
+{
+	switch(C)
+	{
+	case 'd':
+	case 'D':
+	case 's':
+	case 'S':
+	case 'w':
+	case 'W':
+	case 'b':
+	case 'B':
+	case 'A':
+	case 'Z':
+	case 'z':
+	case 't':
+	case 'n':
+	case 'r':
+	case 'v':
+	case 'f':
+	case '\\':
+	case '.':
+	case '+':
+	case '*':
+	case '?':
+	case '^':
+	case '$':
+	case '|':
+	case '(':
+	case ')':
+	case '[':
+	case ']':
+	case '{':
+	case '}':
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool LooksLikeAutoReplyRegex(std::string_view Token)
+{
+	if(Token.empty())
+		return false;
+
+	if(Token.front() == '^' || Token.back() == '$')
+		return true;
+
+	if(Token.find(".*") != std::string_view::npos ||
+		Token.find(".+") != std::string_view::npos ||
+		Token.find(".?") != std::string_view::npos)
+	{
+		return true;
+	}
+
+	if(Token.find('[') != std::string_view::npos || Token.find(']') != std::string_view::npos ||
+		Token.find('(') != std::string_view::npos || Token.find(')') != std::string_view::npos ||
+		Token.find('{') != std::string_view::npos || Token.find('}') != std::string_view::npos)
+	{
+		return true;
+	}
+
+	for(size_t i = 0; i + 1 < Token.size(); ++i)
+	{
+		if(Token[i] == '\\' && IsAutoReplyRegexEscapeMarker(Token[i + 1]))
+			return true;
+	}
+
+	return false;
+}
+
+static EAutoReplyTokenMode ParseAutoReplyTokenMode(std::string_view Token, std::string &OutPattern, bool &OutCaseInsensitive)
+{
+	OutPattern.clear();
+	OutCaseInsensitive = true;
+
+	if(Token.size() >= 2 && Token.front() == '/')
+	{
+		bool Escaped = false;
+		for(size_t i = 1; i < Token.size(); ++i)
+		{
+			const char C = Token[i];
+			if(Escaped)
+			{
+				Escaped = false;
+				continue;
+			}
+			if(C == '\\')
+			{
+				Escaped = true;
+				continue;
+			}
+			if(C != '/')
+				continue;
+
+			const std::string_view Flags = Token.substr(i + 1);
+			if(Flags.empty() || Flags == "i" || Flags == "I")
+			{
+				OutPattern.assign(Token.substr(1, i - 1));
+				return EAutoReplyTokenMode::RegexDelimited;
+			}
+			break;
+		}
+	}
+
+	if(LooksLikeAutoReplyRegex(Token))
+	{
+		OutPattern.assign(Token.begin(), Token.end());
+		return EAutoReplyTokenMode::RegexAuto;
+	}
+
+	OutPattern.assign(Token.begin(), Token.end());
+	return EAutoReplyTokenMode::Literal;
+}
+
+static void ConvertLegacyQiaFenKeywordsToRules(const char *pKeywords, char *pOutRules, size_t OutRulesSize)
+{
+	pOutRules[0] = '\0';
+	if(!pKeywords || pKeywords[0] == '\0')
+		return;
+
+	ForEachAutoReplyToken(pKeywords, [&](std::string_view Keyword) {
 		if(pOutRules[0] != '\0')
 			str_append(pOutRules, "\n", OutRulesSize);
-		str_append(pOutRules, pKeyword, OutRulesSize);
+		std::string KeywordString(Keyword);
+		str_append(pOutRules, KeywordString.c_str(), OutRulesSize);
 		str_append(pOutRules, "=>", OutRulesSize);
 		str_append(pOutRules, s_pQiaFenDefaultReply, OutRulesSize);
-	}
+		return false;
+	});
 }
 
 static bool IsQiaFenPresetWord(const char *pWord)
@@ -462,44 +638,25 @@ static bool MessageMatchesKeywordList(const char *pMessage, const char *pKeyword
 	if(!pKeywords || pKeywords[0] == '\0')
 		return false;
 
-	char aBuf[512];
-	str_copy(aBuf, pKeywords, sizeof(aBuf));
-	char *pCursor = aBuf;
+	return ForEachAutoReplyToken(pKeywords, [&](std::string_view Token) {
+		std::string TokenString(Token);
+		if(SkipQiaFenPresetWords && IsQiaFenPresetWord(TokenString.c_str()))
+			return false;
 
-	while(*pCursor)
-	{
-		int SepLen = QiaFenSeparatorLength(pCursor);
-		while(*pCursor && SepLen > 0)
+		std::string Pattern;
+		bool CaseInsensitive = true;
+		const EAutoReplyTokenMode Mode = ParseAutoReplyTokenMode(Token, Pattern, CaseInsensitive);
+		if(Mode != EAutoReplyTokenMode::Literal)
 		{
-			pCursor += SepLen;
-			SepLen = QiaFenSeparatorLength(pCursor);
+			Regex Re(Pattern, CaseInsensitive);
+			if(Re.error().empty())
+				return Re.test(pMessage);
+			if(Mode == EAutoReplyTokenMode::RegexDelimited)
+				return false;
 		}
 
-		char *pStart = pCursor;
-		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
-			pCursor++;
-
-		if(pStart == pCursor)
-			break;
-
-		if(*pCursor)
-		{
-			const int CutLen = QiaFenSeparatorLength(pCursor);
-			*pCursor = '\0';
-			pCursor += CutLen;
-		}
-
-		char *pToken = (char *)str_utf8_skip_whitespaces(pStart);
-		str_utf8_trim_right(pToken);
-		if(pToken[0] == '\0')
-			continue;
-		if(SkipQiaFenPresetWords && IsQiaFenPresetWord(pToken))
-			continue;
-		if(str_utf8_find_nocase(pMessage, pToken))
-			return true;
-	}
-
-	return false;
+		return str_utf8_find_nocase(pMessage, TokenString.c_str()) != nullptr;
+	});
 }
 
 static bool IsKeywordClauseSeparatorCodepoint(int Codepoint)
@@ -604,47 +761,31 @@ static bool HasPositiveKeywordMatch(const char *pMessage, const char *pToken)
 	return false;
 }
 
-static bool MatchAutoReplyRuleKeywords(const char *pMessage, char *pKeywords, bool UseNegationFilter)
+static bool MatchAutoReplyLiteralToken(const char *pMessage, const char *pToken, bool UseNegationFilter)
 {
-	char *pCursor = pKeywords;
-	while(*pCursor)
-	{
-		int SepLen = QiaFenSeparatorLength(pCursor);
-		while(*pCursor && SepLen > 0)
+	if(!UseNegationFilter)
+		return str_utf8_find_nocase(pMessage, pToken) != nullptr;
+	return HasPositiveKeywordMatch(pMessage, pToken);
+}
+
+static bool MatchAutoReplyRuleKeywords(const char *pMessage, const char *pKeywords, bool UseNegationFilter)
+{
+	return ForEachAutoReplyToken(pKeywords, [&](std::string_view Token) {
+		std::string Pattern;
+		bool CaseInsensitive = true;
+		const EAutoReplyTokenMode Mode = ParseAutoReplyTokenMode(Token, Pattern, CaseInsensitive);
+		if(Mode != EAutoReplyTokenMode::Literal)
 		{
-			pCursor += SepLen;
-			SepLen = QiaFenSeparatorLength(pCursor);
+			Regex Re(Pattern, CaseInsensitive);
+			if(Re.error().empty())
+				return Re.test(pMessage);
+			if(Mode == EAutoReplyTokenMode::RegexDelimited)
+				return false;
 		}
 
-		char *pStart = pCursor;
-		while(*pCursor && QiaFenSeparatorLength(pCursor) == 0)
-			pCursor++;
-
-		if(pStart == pCursor)
-			break;
-
-		if(*pCursor)
-		{
-			const int CutLen = QiaFenSeparatorLength(pCursor);
-			*pCursor = '\0';
-			pCursor += CutLen;
-		}
-
-		char *pToken = (char *)str_utf8_skip_whitespaces(pStart);
-		str_utf8_trim_right(pToken);
-		if(pToken[0] == '\0')
-			continue;
-		if(!UseNegationFilter)
-		{
-			if(str_utf8_find_nocase(pMessage, pToken))
-				return true;
-		}
-		else if(HasPositiveKeywordMatch(pMessage, pToken))
-		{
-			return true;
-		}
-	}
-	return false;
+		std::string TokenString(Token);
+		return MatchAutoReplyLiteralToken(pMessage, TokenString.c_str(), UseNegationFilter);
+	});
 }
 
 static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *pOutReply, size_t OutReplySize, bool UseNegationFilter)
@@ -691,9 +832,7 @@ static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *
 		if(pKeywords[0] == '\0' || pReply[0] == '\0')
 			continue;
 
-		char aKeywordsBuf[512];
-		str_copy(aKeywordsBuf, pKeywords, sizeof(aKeywordsBuf));
-		if(MatchAutoReplyRuleKeywords(pMessage, aKeywordsBuf, UseNegationFilter))
+		if(MatchAutoReplyRuleKeywords(pMessage, pKeywords, UseNegationFilter))
 		{
 			if(MatchedReplyCount < MAX_MATCHED_REPLIES)
 			{

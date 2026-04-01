@@ -649,6 +649,8 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 		if(g_Config.m_ClDummyControl)
 		{
 			const CNetObj_PlayerInput BaseDummyInput = pDummyInputData ? *pDummyInputData : CNetObj_PlayerInput{};
+			if(g_Config.m_ClDummyLeft || g_Config.m_ClDummyRight)
+				DummyFastInput.m_Direction = BaseDummyInput.m_Direction;
 			DummyFastInput.m_Jump = BaseDummyInput.m_Jump;
 			DummyFastInput.m_Fire = BaseDummyInput.m_Fire;
 			DummyFastInput.m_Hook = BaseDummyInput.m_Hook;
@@ -660,7 +662,10 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 	{
 		const CNetObj_PlayerInput BaseDummyInput = pDummyInputData ? *pDummyInputData : CNetObj_PlayerInput{};
 		DummyFastInput = BaseDummyInput;
-		DummyFastInput.m_Direction = m_Controls.m_aFastInput[DummyTee].m_Direction;
+		if(g_Config.m_ClDummyLeft || g_Config.m_ClDummyRight)
+			DummyFastInput.m_Direction = BaseDummyInput.m_Direction;
+		else
+			DummyFastInput.m_Direction = m_Controls.m_aFastInput[DummyTee].m_Direction;
 		DummyFastInput.m_PlayerFlags = m_Controls.m_aFastInput[DummyTee].m_PlayerFlags;
 		DummyFastInput.m_TargetX = m_Controls.m_aFastInput[DummyTee].m_TargetX;
 		DummyFastInput.m_TargetY = m_Controls.m_aFastInput[DummyTee].m_TargetY;

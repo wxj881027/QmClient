@@ -13,6 +13,7 @@
 #include <game/client/component.h>
 #include <game/client/QmUi/QmLayout.h>
 
+#include <cstdint>
 #include <vector>
 
 struct SScoreInfo
@@ -120,6 +121,50 @@ class CHud : public CComponent
 		}
 	};
 	SHudLocalTimeV2AnimState m_LocalTimeV2AnimState;
+	struct SHudMediaIslandAnimState
+	{
+		enum class EVisualState
+		{
+			MINIMIZED,
+			EXPANDED,
+		};
+
+		EVisualState m_VisualState = EVisualState::MINIMIZED;
+		int64_t m_ExpandUntilTick = 0;
+		int64_t m_LastTrackDurationMs = 0;
+		float m_TargetX = 0.0f;
+		float m_TargetWidth = 0.0f;
+		float m_TargetTitleAlpha = 0.0f;
+		float m_TargetTitleOffset = 0.0f;
+		float m_TargetSpectatorAlpha = 0.0f;
+		float m_CoverRotation = 0.0f;
+		int64_t m_LastCoverRotationTick = 0;
+		bool m_LayoutInitialized = false;
+		bool m_HasTrackIdentity = false;
+		char m_aLastTrackTitle[128] = {};
+		char m_aLastTrackArtist[128] = {};
+		char m_aLastTrackAlbum[128] = {};
+
+		void Reset()
+		{
+			m_VisualState = EVisualState::MINIMIZED;
+			m_ExpandUntilTick = 0;
+			m_LastTrackDurationMs = 0;
+			m_TargetX = 0.0f;
+			m_TargetWidth = 0.0f;
+			m_TargetTitleAlpha = 0.0f;
+			m_TargetTitleOffset = 0.0f;
+			m_TargetSpectatorAlpha = 0.0f;
+			m_CoverRotation = 0.0f;
+			m_LastCoverRotationTick = 0;
+			m_LayoutInitialized = false;
+			m_HasTrackIdentity = false;
+			m_aLastTrackTitle[0] = '\0';
+			m_aLastTrackArtist[0] = '\0';
+			m_aLastTrackAlbum[0] = '\0';
+		}
+	};
+	SHudMediaIslandAnimState m_MediaIslandAnimState;
 	struct SHudSwitchCountdownAnimState
 	{
 		float m_aTargetX[SWITCH_COUNTDOWN_MAX_LINES] = {0.0f, 0.0f, 0.0f};
@@ -185,7 +230,8 @@ class CHud : public CComponent
 
 	void PreparePlayerStateQuads();
 	void RenderPlayerState(int ClientId);
-	void RenderMediaIsland(float AnchorX, float CenterY);
+	bool HasVisibleMediaIsland() const;
+	void RenderMediaIsland();
 
 	int m_LastSpectatorCountTick;
 	void RenderSpectatorCount();

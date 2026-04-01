@@ -318,6 +318,11 @@ int CControls::SnapInput(int *pData)
 		if(g_Config.m_ClDummyControl)
 		{
 			CNetObj_PlayerInput *pDummyInput = &GameClient()->m_DummyInput;
+			if(g_Config.m_ClDummyLeft || g_Config.m_ClDummyRight)
+				pDummyInput->m_Direction = g_Config.m_ClDummyRight - g_Config.m_ClDummyLeft;
+			else if(!g_Config.m_ClDummyCopyMoves)
+				pDummyInput->m_Direction = m_aInputData[!g_Config.m_ClDummy].m_Direction;
+
 			pDummyInput->m_Jump = g_Config.m_ClDummyJump;
 
 			if(g_Config.m_ClDummyFire)

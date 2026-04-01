@@ -28,12 +28,33 @@ We would like to thank all contributors who have submitted code, reported issues
 
 ## 🚀 Build
 
+### Windows
+
+Use the repository wrapper so `cmake` always runs inside a configured MSVC developer environment, even from a normal PowerShell or `cmd.exe` session:
+
+```bat
+scripts\cmake-windows.cmd -S . -B cmake-build-release
+scripts\cmake-windows.cmd --build cmake-build-release --target game-client -j 10
+```
+
+### macOS / Linux / already-initialised developer shell
+
 ```sh
 cmake -S . -B cmake-build-release
 cmake --build cmake-build-release --target game-client -j 10
 ```
 
 ## ✅ Test
+
+### Windows
+
+```bat
+scripts\cmake-windows.cmd --build cmake-build-release --target run_cxx_tests
+scripts\cmake-windows.cmd --build cmake-build-release --target run_rust_tests
+scripts\cmake-windows.cmd --build cmake-build-release --target run_tests
+```
+
+### macOS / Linux / already-initialised developer shell
 
 ```sh
 cmake --build cmake-build-release --target run_cxx_tests

@@ -108,6 +108,7 @@ tags
 
 *.a
 *.cmd
+!scripts/cmake-windows.cmd
 *.csv
 *.dll
 *.dmg

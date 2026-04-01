@@ -17,7 +17,7 @@ public:
 	Regex& operator=(Regex&& other); // Move
 
 	Regex();
-	Regex(const std::string& pattern);
+	Regex(const std::string& pattern, bool caseInsensitive = false);
 	~Regex();
 
 	std::string error() const;

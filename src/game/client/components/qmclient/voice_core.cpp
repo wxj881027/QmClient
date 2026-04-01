@@ -31,6 +31,9 @@
 #include <thread>
 #include <vector>
 
+static constexpr int VOICE_CLIENT_SNAPSHOT_INTERVAL_MS = 10;
+static constexpr int VOICE_CONFIG_SNAPSHOT_INTERVAL_MS = 50;
+
 // !!WARNING!!
 // Voice full wrote by AI don't use that pls
 
@@ -488,6 +491,8 @@ void CRClientVoice::Init(CGameClient *pGameClient, IClient *pClient, IConsole *p
 	m_pConsole = pConsole;
 	m_pGraphics = m_pGameClient ? m_pGameClient->Kernel()->RequestInterface<IEngineGraphics>() : nullptr;
 	m_ShutdownDone = false;
+	m_LastConfigSnapshotUpdate = 0;
+	m_LastClientSnapshotUpdate = 0;
 }
 
 void CRClientVoice::OnShutdown()
@@ -1166,6 +1171,8 @@ void CRClientVoice::Shutdown()
 	m_MicLevel.store(0.0f);
 	m_LastPingSentTime = 0;
 	m_LastPingSeq = 0;
+	m_LastConfigSnapshotUpdate = 0;
+	m_LastClientSnapshotUpdate = 0;
 }
 
 void CRClientVoice::UpdateServerAddrConfig()
@@ -1262,19 +1269,31 @@ bool CRClientVoice::UpdateContext()
 	return NewHash != Old;
 }
 
-void CRClientVoice::UpdateClientSnapshot()
+void CRClientVoice::UpdateClientSnapshot(bool Force)
 {
-	std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
-	if(!m_pClient || !m_pGameClient || m_pClient->State() != IClient::STATE_ONLINE)
+	const bool Online = m_pClient && m_pGameClient && m_pClient->State() == IClient::STATE_ONLINE;
+	if(!Online)
 	{
+		std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
+		if(!m_OnlineSnap && m_LocalClientIdSnap == -1 && !m_SpecActiveSnap)
+			return;
+
 		m_OnlineSnap = false;
 		m_LocalClientIdSnap = -1;
 		m_aLocalClientIdsSnap.fill(-1);
 		m_SpecActiveSnap = false;
 		m_SpecPosSnap = vec2(0.0f, 0.0f);
+		m_LastClientSnapshotUpdate = 0;
 		return;
 	}
 
+	const int64_t Now = time_get();
+	const int64_t RefreshInterval = (int64_t)time_freq() * VOICE_CLIENT_SNAPSHOT_INTERVAL_MS / 1000;
+	if(!Force && m_LastClientSnapshotUpdate != 0 && Now - m_LastClientSnapshotUpdate < RefreshInterval)
+		return;
+
+	m_LastClientSnapshotUpdate = Now;
+	std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
 	m_OnlineSnap = true;
 	m_LocalClientIdSnap = m_pGameClient->m_Snap.m_LocalClientId;
 	m_aLocalClientIdsSnap.fill(-1);
@@ -1290,6 +1309,7 @@ void CRClientVoice::UpdateClientSnapshot()
 		m_aLocalClientIdsSnap.fill(-1);
 		m_SpecActiveSnap = false;
 		m_SpecPosSnap = vec2(0.0f, 0.0f);
+		m_LastClientSnapshotUpdate = 0;
 		return;
 	}
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -1852,8 +1872,14 @@ void CRClientVoice::ProcessIncoming()
 	}
 }
 
-void CRClientVoice::UpdateConfigSnapshot()
+void CRClientVoice::UpdateConfigSnapshot(bool Force)
 {
+	const int64_t Now = time_get();
+	const int64_t RefreshInterval = (int64_t)time_freq() * VOICE_CONFIG_SNAPSHOT_INTERVAL_MS / 1000;
+	if(!Force && m_LastConfigSnapshotUpdate != 0 && Now - m_LastConfigSnapshotUpdate < RefreshInterval)
+		return;
+
+	m_LastConfigSnapshotUpdate = Now;
 	std::lock_guard<std::mutex> Guard(m_ConfigMutex);
 	m_ConfigSnapshot.m_RiVoiceFilterEnable = g_Config.m_RiVoiceFilterEnable;
 	m_ConfigSnapshot.m_RiVoiceProtocolVersion = g_Config.m_RiVoiceProtocolVersion;
@@ -2144,7 +2170,7 @@ void CRClientVoice::WorkerLoop()
 		UpdateEncoderParams();
 		ProcessCapture();
 
-		std::this_thread::sleep_for(2ms);
+		std::this_thread::sleep_for(5ms);
 	}
 }
 
@@ -2187,7 +2213,7 @@ void CRClientVoice::OnRender()
 
 	UpdateServerAddrConfig();
 	const bool ContextChanged = UpdateContext();
-	UpdateClientSnapshot();
+	UpdateClientSnapshot(ContextChanged);
 	UpdateConfigSnapshot();
 
 #if defined(CONF_PLATFORM_ANDROID)

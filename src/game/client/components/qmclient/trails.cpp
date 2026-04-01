@@ -42,6 +42,13 @@ void CTrails::OnRender()
 	if(!GameClient()->m_Snap.m_pGameInfoObj)
 		return;
 
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const auto IsVisibleOnScreen = [&](vec2 Pos, float Margin) {
+		return Pos.x >= ScreenX0 - Margin && Pos.x <= ScreenX1 + Margin &&
+			Pos.y >= ScreenY0 - Margin && Pos.y <= ScreenY1 + Margin;
+	};
+
 	// TClient: Foot particles - render falling particles behind tee
 	if(g_Config.m_QmcFootParticles)
 	{
@@ -89,6 +96,8 @@ void CTrails::OnRender()
 				continue;
 
 			vec2 Position = GameClient()->m_aClients[ClientId].m_RenderPos;
+			if(!IsVisibleOnScreen(Position, 96.0f))
+				continue;
 
 			// Get facing direction from character data
 			const CNetObj_Character &Cur = GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur;
@@ -163,6 +172,9 @@ void CTrails::OnRender()
 			mix(PrevServerPos, CurServerPos, IntraTick),
 			GameTick,
 		};
+
+		if(!Local && !IsVisibleOnScreen(GameClient()->m_aClients[ClientId].m_RenderPos, 256.0f))
+			continue;
 
 		// // NOTE: this is kind of a hack to fix 25tps. This fixes flickering when using the speed mode
 		// m_History[ClientId][(GameTick + 1) % 200] = m_History[ClientId][GameTick % 200];

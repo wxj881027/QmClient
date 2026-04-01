@@ -4048,7 +4048,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::FavoriteMaps: return "收藏地图 shoucang ditu favorite maps 地图管理 ditu guanli 收藏 shoucang 取消收藏 quxiao shoucang";
 		case EQmModuleId::HJAssist: return "hj辅助 hj fuzhu 解冻辅助 jiedong fuzhu 自动取消旁观 quxiao pangguan 自动切换 qiehuan tee 自动关闭聊天 guanbi liaotian";
 		case EQmModuleId::InputOverlay: return "按键显示 anjian xianshi input overlay 按键叠加 anjian diejia 大小 daxiao 不透明度 butouming 水平位置 shuiping weizhi 垂直位置 chuizhi weizhi";
-		case EQmModuleId::Voice: return "语音 yuyin voice chat 麦克风 maikefeng mic 静音 jingyin 音量 yinliang 语音激活 vad 阈值 yuzhi 释放延迟 shifang yanchi 服务器 fuwuqi token 叠加层 diejiaceng 按住说话 ptt push to talk 全图收听 quantu 衰减 shuijian 距离 juli 半径 banjing 测试 ceshi 本地 bendi 回环 huihuan 设备 shebei 输入 shuru";
+		case EQmModuleId::Voice: return "语音 yuyin voice chat 麦克风 maikefeng mic 静音 jingyin 音量 yinliang 语音激活 vad 阈值 yuzhi 释放延迟 shifang yanchi 服务器 fuwuqi token 叠加层 diejiaceng 按住说话 ptt push to talk 全图收听 quantu 衰减 shuijian 距离 juli 半径 banjing 测试 ceshi 本地 bendi 回环 huihuan 设备 shebei 输入 shuru 左右声道定位 左右 zuoyou 声道 shengdao 立体声 stereo";
 		case EQmModuleId::SystemMediaControls: return "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige";
 		case EQmModuleId::Info: return "";
 		}
@@ -5839,6 +5839,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_RiVoiceGroupGlobal, TCLocalize("同密码全图收听"), &g_Config.m_RiVoiceGroupGlobal, &Row, LG_LineHeight);
 						CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
 					}
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_RiVoiceStereo, TCLocalize("左右声道定位"), &g_Config.m_RiVoiceStereo, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Ui()->DoScrollbarOption(&g_Config.m_RiVoiceRadius, &g_Config.m_RiVoiceRadius, &Row, TCLocalize("衰减距离半径"), 1, 400, &CUi::ms_LinearScrollbarScale, 0, TCLocalize("格"));

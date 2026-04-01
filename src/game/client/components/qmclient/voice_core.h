@@ -194,6 +194,8 @@ class CRClientVoice
 	std::atomic<bool> m_WorkerEnabled = false;
 	std::atomic<bool> m_AudioRefreshRequested = true;
 	bool m_ShutdownDone = true;
+	int64_t m_LastConfigSnapshotUpdate = 0;
+	int64_t m_LastClientSnapshotUpdate = 0;
 	std::mutex m_ServerAddrMutex;
 
 	mutable std::mutex m_ConfigMutex;
@@ -217,8 +219,8 @@ class CRClientVoice
 	void UpdateServerAddrConfig();
 	void ResolveServerAddr();
 	bool UpdateContext();
-	void UpdateClientSnapshot();
-	void UpdateConfigSnapshot();
+	void UpdateClientSnapshot(bool Force = false);
+	void UpdateConfigSnapshot(bool Force = false);
 	void GetConfigSnapshot(SRClientVoiceConfigSnapshot &Out) const;
 	void ProcessCapture();
 	void ProcessIncoming();
