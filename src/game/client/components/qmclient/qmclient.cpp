@@ -258,7 +258,7 @@ static unsigned char GoresSemanticImageToCMapValue(const char *pImageName)
 static int GoresDistanceFieldTraversalCost(unsigned char CMapValue, bool IsStart, bool IsFinish)
 {
 	static constexpr int NORMAL_COST = 100;
-	static constexpr int PENALTY_COST = 350;
+	static constexpr int PENALTY_COST = 4500;
 	static constexpr int REWARD_COST = 70;
 
 	if(IsStart || IsFinish)
@@ -3628,7 +3628,7 @@ bool CTClient::IsGoresGameMode() const
 
 bool CTClient::IsGoresMapProgressEnabled() const
 {
-	return IsGoresGameMode() && g_Config.m_QmPlayerStatsHud && g_Config.m_QmPlayerStatsMapProgress;
+	return IsGoresGameMode() && g_Config.m_QmPlayerStatsMapProgress;
 }
 
 bool CTClient::IsGoresMapProgressDebugRouteEnabled() const
