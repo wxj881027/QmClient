@@ -1443,6 +1443,23 @@ static bool FilterDeepUnfreezeAlphaTile(unsigned char Index, void *pUser)
 	return IsDeepUnfreezeAlphaTile(Index);
 }
 
+static bool IsTeleCheckpointAlphaTile(int Index)
+{
+	return IsTeleTileCheckpoint(Index);
+}
+
+static bool FilterBaseTeleAlphaTile(unsigned char Index, void *pUser)
+{
+	(void)pUser;
+	return !IsTeleCheckpointAlphaTile(Index);
+}
+
+static bool FilterCheckpointTeleAlphaTile(unsigned char Index, void *pUser)
+{
+	(void)pUser;
+	return IsTeleCheckpointAlphaTile(Index);
+}
+
 static bool FilterBaseSwitchAlphaTile(unsigned char Index, void *pUser)
 {
 	(void)pUser;
@@ -1773,8 +1790,46 @@ int CRenderLayerEntityTele::GetDataIndex(unsigned int &TileSize) const
 
 void CRenderLayerEntityTele::Init()
 {
-	UploadTileData(m_VisualTiles, 0, false);
-	UploadTileData(m_VisualTeleNumbers, 1, false);
+	if(!m_pTeleTiles)
+		return;
+
+	const std::optional<CClipRegion> LayerClip = m_LayerClip;
+	auto IsCheckpointTile = [&](unsigned int x, unsigned int y) {
+		return IsTeleCheckpointAlphaTile(m_pTeleTiles[y * m_pLayerTilemap->m_Width + x].m_Type);
+	};
+
+	UploadTileData(m_VisualTiles, 0, false, false, [&](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+		(void)Index;
+		(void)Flags;
+		(void)AngleRotate;
+		(void)CurOverlay;
+		return !IsCheckpointTile(x, y);
+	});
+	m_LayerClip = LayerClip;
+	UploadTileData(m_VisualCheckpointTiles, 0, false, false, [&](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+		(void)Index;
+		(void)Flags;
+		(void)AngleRotate;
+		(void)CurOverlay;
+		return IsCheckpointTile(x, y);
+	});
+	m_LayerClip = LayerClip;
+	UploadTileData(m_VisualTeleNumbers, 1, false, false, [&](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+		(void)Index;
+		(void)Flags;
+		(void)AngleRotate;
+		(void)CurOverlay;
+		return !IsCheckpointTile(x, y);
+	});
+	m_LayerClip = LayerClip;
+	UploadTileData(m_VisualCheckpointNumbers, 1, false, false, [&](unsigned char Index, unsigned char Flags, int AngleRotate, unsigned int x, unsigned int y, int CurOverlay) {
+		(void)Index;
+		(void)Flags;
+		(void)AngleRotate;
+		(void)CurOverlay;
+		return IsCheckpointTile(x, y);
+	});
+	m_LayerClip = LayerClip;
 }
 
 void CRenderLayerEntityTele::InitTileData()
@@ -1790,6 +1845,16 @@ void CRenderLayerEntityTele::Unload()
 		m_VisualTeleNumbers->Unload();
 		m_VisualTeleNumbers = std::nullopt;
 	}
+	if(m_VisualCheckpointTiles.has_value())
+	{
+		m_VisualCheckpointTiles->Unload();
+		m_VisualCheckpointTiles = std::nullopt;
+	}
+	if(m_VisualCheckpointNumbers.has_value())
+	{
+		m_VisualCheckpointNumbers->Unload();
+		m_VisualCheckpointNumbers = std::nullopt;
+	}
 }
 
 void CRenderLayerEntityTele::RenderTileLayerWithTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
@@ -1797,14 +1862,27 @@ void CRenderLayerEntityTele::RenderTileLayerWithTileBuffer(const ColorRGBA &Colo
 	(void)Color;
 	Graphics()->BlendNormal();
 	const float TeleAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleAlpha);
-	if(TeleAlpha <= 0.0f)
-		return;
 	const ColorRGBA TeleColor(1.0f, 1.0f, 1.0f, TeleAlpha);
-	RenderTileLayer(TeleColor, Params);
+	const float CheckpointAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleCheckpointAlpha);
+	const ColorRGBA CheckpointColor(1.0f, 1.0f, 1.0f, CheckpointAlpha);
+
+	if(TeleAlpha > 0.0f)
+		RenderTileLayer(TeleColor, Params);
+	if(CheckpointAlpha > 0.0f && m_VisualCheckpointTiles.has_value())
+		RenderTileLayer(CheckpointColor, Params, &m_VisualCheckpointTiles.value());
+
 	if(Params.m_RenderText)
 	{
-		Graphics()->TextureSet(m_pMapImages->GetOverlayCenter());
-		RenderTileLayer(TeleColor, Params, &m_VisualTeleNumbers.value());
+		if(TeleAlpha > 0.0f && m_VisualTeleNumbers.has_value())
+		{
+			Graphics()->TextureSet(m_pMapImages->GetOverlayCenter());
+			RenderTileLayer(TeleColor, Params, &m_VisualTeleNumbers.value());
+		}
+		if(CheckpointAlpha > 0.0f && m_VisualCheckpointNumbers.has_value())
+		{
+			Graphics()->TextureSet(m_pMapImages->GetOverlayCenter());
+			RenderTileLayer(CheckpointColor, Params, &m_VisualCheckpointNumbers.value());
+		}
 	}
 }
 
@@ -1812,15 +1890,28 @@ void CRenderLayerEntityTele::RenderTileLayerNoTileBuffer(const ColorRGBA &Color,
 {
 	(void)Color;
 	const float TeleAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleAlpha);
-	if(TeleAlpha <= 0.0f)
-		return;
 	const ColorRGBA TeleColor(1.0f, 1.0f, 1.0f, TeleAlpha);
-	Graphics()->BlendNone();
-	RenderMap()->RenderTelemap(m_pTeleTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, TeleColor, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_OPAQUE);
-	Graphics()->BlendNormal();
-	RenderMap()->RenderTelemap(m_pTeleTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, TeleColor, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_TRANSPARENT);
+	const float CheckpointAlpha = QmOverlayAlpha(g_Config.m_QmEntityOverlayTeleCheckpointAlpha);
+	const ColorRGBA CheckpointColor(1.0f, 1.0f, 1.0f, CheckpointAlpha);
+	const int TileRenderFlags = (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0);
+
+	auto RenderFiltered = [&](ColorRGBA GroupColor, CRenderMap::FTileRenderFilter Filter) {
+		if(GroupColor.a <= 0.0f)
+			return;
+		Graphics()->BlendNone();
+		RenderMap()->RenderTelemap(m_pTeleTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, GroupColor, TileRenderFlags | LAYERRENDERFLAG_OPAQUE, Filter);
+		Graphics()->BlendNormal();
+		RenderMap()->RenderTelemap(m_pTeleTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, GroupColor, TileRenderFlags | LAYERRENDERFLAG_TRANSPARENT, Filter);
+	};
+
+	RenderFiltered(TeleColor, FilterBaseTeleAlphaTile);
+	RenderFiltered(CheckpointColor, FilterCheckpointTeleAlphaTile);
+
 	int OverlayRenderFlags = (Params.m_RenderText ? OVERLAYRENDERFLAG_TEXT : 0) | (Params.m_RenderInvalidTiles ? OVERLAYRENDERFLAG_EDITOR : 0);
-	RenderMap()->RenderTeleOverlay(m_pTeleTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, OverlayRenderFlags, TeleColor.a);
+	if(TeleAlpha > 0.0f)
+		RenderMap()->RenderTeleOverlay(m_pTeleTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, OverlayRenderFlags, TeleColor.a, FilterBaseTeleAlphaTile);
+	if(CheckpointAlpha > 0.0f)
+		RenderMap()->RenderTeleOverlay(m_pTeleTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, OverlayRenderFlags, CheckpointColor.a, FilterCheckpointTeleAlphaTile);
 }
 
 void CRenderLayerEntityTele::GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const

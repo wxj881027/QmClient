@@ -4041,7 +4041,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::BlockWords: return "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan";
 		case EQmModuleId::QiaFen: return "恰分 qiafen 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 关键词 guanjianci 回复 huifu 关键词回复 guanjianci huifu";
 		case EQmModuleId::PieMenu: return "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan";
-		case EQmModuleId::EntityOverlay: return "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong 开关透明度 kaiguan 叠层透明度 dieceng";
+		case EQmModuleId::EntityOverlay: return "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng";
 		case EQmModuleId::Laser: return "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu";
 		case EQmModuleId::PlayerStats: return "玩家统计 wanjia tongji player stats gores hud 显示统计 xianshi tongji 进服重置 jinfu chongzhi";
 		case EQmModuleId::CollisionHitbox: return "碰撞体积可视化 pengzhuang tiji keshihua 碰撞箱 pengzhuangxiang collision hitbox 显示碰撞 xianshi pengzhuang 透明度 touming";
@@ -5194,6 +5194,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Ui()->DoScrollbarOption(&g_Config.m_QmEntityOverlayTeleAlpha, &g_Config.m_QmEntityOverlayTeleAlpha, &Row, TCLocalize("传送透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				Ui()->DoScrollbarOption(&g_Config.m_QmEntityOverlayTeleCheckpointAlpha, &g_Config.m_QmEntityOverlayTeleCheckpointAlpha, &Row, TCLocalize("CP点透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Ui()->DoScrollbarOption(&g_Config.m_QmEntityOverlaySwitchAlpha, &g_Config.m_QmEntityOverlaySwitchAlpha, &Row, TCLocalize("开关透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
