@@ -149,6 +149,12 @@ uint64_t HudMediaIslandNodeKey(const char *pScope)
 	return (s_BaseKey << 32) | static_cast<uint64_t>(str_quickhash(pScope));
 }
 
+uint64_t HudRecordingStatusNodeKey(const char *pScope)
+{
+	static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_recording_status"));
+	return (s_BaseKey << 32) | static_cast<uint64_t>(str_quickhash(pScope));
+}
+
 uint64_t HudSwitchCountdownNodeKey(int Index)
 {
 	static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_switch_countdown"));
@@ -171,6 +177,21 @@ struct SHudGameTimerInfo
 	float m_Y = 2.0f;
 	float m_W = 0.0f;
 	float m_Left = 0.0f;
+	char m_aText[32] = {};
+};
+
+struct SHudTopTimerCapsuleInfo
+{
+	bool m_Visible = false;
+	bool m_IsCritical = false;
+	float m_Alpha = 1.0f;
+	float m_FontSize = 10.0f;
+	float m_BoxX = 0.0f;
+	float m_BoxY = 1.0f;
+	float m_BoxW = 0.0f;
+	float m_BoxH = 16.0f;
+	float m_TextX = 0.0f;
+	float m_TextY = 0.0f;
 	char m_aText[32] = {};
 };
 
@@ -218,6 +239,54 @@ SHudGameTimerInfo BuildHudGameTimerInfo(const CGameClient &GameClient, const ICl
 	Result.m_Alpha = Time <= 10 && (2 * time_get() / time_freq()) % 2 ? 0.5f : 1.0f;
 	Result.m_Visible = true;
 	return Result;
+}
+
+SHudTopTimerCapsuleInfo BuildHudTopTimerCapsuleInfo(const SHudGameTimerInfo &TimerInfo)
+{
+	SHudTopTimerCapsuleInfo Result;
+	if(!TimerInfo.m_Visible)
+		return Result;
+
+	constexpr float BoxY = 1.0f;
+	constexpr float BoxH = 16.0f;
+	constexpr float PaddingX = 8.0f;
+
+	Result.m_Visible = true;
+	Result.m_IsCritical = TimerInfo.m_IsCritical;
+	Result.m_Alpha = TimerInfo.m_Alpha;
+	Result.m_FontSize = TimerInfo.m_FontSize;
+	Result.m_BoxY = BoxY;
+	Result.m_BoxH = BoxH;
+	Result.m_BoxW = std::round(TimerInfo.m_W + PaddingX * 2.0f);
+	Result.m_BoxX = std::round(TimerInfo.m_X + TimerInfo.m_W * 0.5f - Result.m_BoxW * 0.5f);
+	Result.m_TextX = std::round(Result.m_BoxX + (Result.m_BoxW - TimerInfo.m_W) * 0.5f);
+	Result.m_TextY = std::round(BoxY + (BoxH - TimerInfo.m_FontSize) * 0.5f - 0.5f);
+	str_copy(Result.m_aText, TimerInfo.m_aText, sizeof(Result.m_aText));
+	return Result;
+}
+
+bool BuildHudRecordingStatusText(const CGameClient &GameClient, char *pBuf, size_t BufSize)
+{
+	pBuf[0] = '\0';
+
+	const auto &&AppendRecorderInfo = [&](int Recorder, const char *pName) {
+		if(GameClient.DemoRecorder(Recorder)->IsRecording())
+		{
+			char aTime[32];
+			str_time((int64_t)GameClient.DemoRecorder(Recorder)->Length() * 100, TIME_HOURS, aTime, sizeof(aTime));
+			if(pBuf[0] != '\0')
+				str_append(pBuf, "  ", BufSize);
+			str_append(pBuf, pName, BufSize);
+			str_append(pBuf, " ", BufSize);
+			str_append(pBuf, aTime, BufSize);
+		}
+	};
+
+	AppendRecorderInfo(RECORDER_MANUAL, Localize("Manual"));
+	AppendRecorderInfo(RECORDER_RACE, Localize("Race"));
+	AppendRecorderInfo(RECORDER_AUTO, Localize("Auto"));
+	AppendRecorderInfo(RECORDER_REPLAYS, Localize("Replay"));
+	return pBuf[0] != '\0';
 }
 
 void DrawSmoothRoundedRect(IGraphics *pGraphics, float x, float y, float w, float h, float r, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL)
@@ -471,6 +540,7 @@ CHud::CHud()
 	m_TextInfoV2AnimState.Reset();
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
+	m_RecordingStatusAnimState.Reset();
 	m_SwitchCountdownAnimState.Reset();
 	m_SwitchCountdownTracker.Reset();
 	m_vTextInfoLayoutChildrenScratch.reserve(2);
@@ -512,6 +582,7 @@ void CHud::ResetHudContainers()
 	m_TextInfoV2AnimState.Reset();
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
+	m_RecordingStatusAnimState.Reset();
 	m_SwitchCountdownAnimState.Reset();
 	m_SwitchCountdownTracker.Reset();
 }
@@ -537,6 +608,7 @@ void CHud::OnReset()
 	m_aLastPlayerSpeedChange[1] = ESpeedChange::NONE;
 	m_LastSpectatorCountTick = 0;
 	m_MediaIslandAnimState.Reset();
+	m_RecordingStatusAnimState.Reset();
 
 	ResetHudContainers();
 }
@@ -570,13 +642,86 @@ void CHud::OnInit()
 void CHud::RenderGameTimer()
 {
 	const SHudGameTimerInfo TimerInfo = BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width);
-	if(!TimerInfo.m_Visible)
+	const SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
+	if(!TimerCapsule.m_Visible)
 		return;
 
-	if(TimerInfo.m_IsCritical)
-		TextRender()->TextColor(1.0f, 0.25f, 0.25f, TimerInfo.m_Alpha);
-	TextRender()->Text(TimerInfo.m_X, TimerInfo.m_Y, TimerInfo.m_FontSize, TimerInfo.m_aText, -1.0f);
-	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+	constexpr float TimerRadius = 8.0f;
+	constexpr float StatusSectionGap = 6.0f;
+	constexpr float StatusPaddingLeft = 7.0f;
+	constexpr float StatusPaddingRight = 8.0f;
+	constexpr float StatusDotSize = 5.0f;
+	constexpr float StatusDotGap = 5.0f;
+	constexpr float StatusFontSize = 5.3f;
+
+	char aRecordingBuf[512];
+	const bool ShowRecordingStatus = BuildHudRecordingStatusText(*GameClient(), aRecordingBuf, sizeof(aRecordingBuf));
+	const float StatusTextWidth = ShowRecordingStatus ? std::round(TextRender()->TextBoundingBox(StatusFontSize, aRecordingBuf).m_W) : 0.0f;
+	const float RawCollapsedWidth = StatusPaddingLeft + StatusDotSize + StatusPaddingRight;
+	const float RawExpandedWidth = StatusPaddingLeft + StatusDotSize + StatusDotGap + StatusTextWidth + StatusPaddingRight;
+	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
+	const float TimerBoxX = TimerCapsule.m_BoxX;
+	const float TimerTextX = TimerCapsule.m_TextX;
+	const float StatusSectionX = TimerBoxX + TimerCapsule.m_BoxW + StatusSectionGap;
+	const float CollapsedWidth = RawCollapsedWidth;
+	const float ExpandedWidth = RawExpandedWidth;
+	const float TargetStatusWidth = ShowRecordingStatus ? (ScoreboardExpanded ? ExpandedWidth : CollapsedWidth) : 0.0f;
+	const float TargetStatusAlpha = ShowRecordingStatus ? 1.0f : 0.0f;
+	const float TargetTextAlpha = ShowRecordingStatus && ScoreboardExpanded ? 1.0f : 0.0f;
+
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	const uint64_t StatusBoxNode = HudRecordingStatusNodeKey("box");
+	const uint64_t StatusTextNode = HudRecordingStatusNodeKey("text");
+	if(!m_RecordingStatusAnimState.m_Initialized)
+	{
+		m_RecordingStatusAnimState.m_TargetWidth = TargetStatusWidth;
+		m_RecordingStatusAnimState.m_TargetAlpha = TargetStatusAlpha;
+		m_RecordingStatusAnimState.m_TargetTextAlpha = TargetTextAlpha;
+		AnimRuntime.SetValue(StatusBoxNode, EUiAnimProperty::WIDTH, TargetStatusWidth);
+		AnimRuntime.SetValue(StatusBoxNode, EUiAnimProperty::ALPHA, TargetStatusAlpha);
+		AnimRuntime.SetValue(StatusTextNode, EUiAnimProperty::ALPHA, TargetTextAlpha);
+		m_RecordingStatusAnimState.m_Initialized = true;
+	}
+
+	const float StatusWidth = ResolveAnimatedLayoutValueEx(AnimRuntime, StatusBoxNode, EUiAnimProperty::WIDTH, TargetStatusWidth, m_RecordingStatusAnimState.m_TargetWidth, 0.16f, 0.0f, EEasing::EASE_OUT);
+	const float StatusAlpha = std::clamp(ResolveAnimatedLayoutValueEx(AnimRuntime, StatusBoxNode, EUiAnimProperty::ALPHA, TargetStatusAlpha, m_RecordingStatusAnimState.m_TargetAlpha, 0.10f, 0.0f, EEasing::EASE_OUT), 0.0f, 1.0f);
+	const float StatusTextAlpha = std::clamp(ResolveAnimatedLayoutValueEx(AnimRuntime, StatusTextNode, EUiAnimProperty::ALPHA, TargetTextAlpha, m_RecordingStatusAnimState.m_TargetTextAlpha, 0.08f, 0.0f, EEasing::EASE_OUT), 0.0f, 1.0f);
+	const bool RenderStatusSection = StatusWidth > 1.0f && StatusAlpha > 0.01f;
+	const float CombinedWidth = TimerCapsule.m_BoxW + (RenderStatusSection ? (StatusSectionGap + StatusWidth) : 0.0f);
+
+	const unsigned int PrevFlags = TextRender()->GetRenderFlags();
+	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PrevOutlineColor = TextRender()->GetTextOutlineColor();
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f);
+
+	DrawSmoothRoundedRect(Graphics(), TimerBoxX, TimerCapsule.m_BoxY, CombinedWidth, TimerCapsule.m_BoxH, TimerRadius, ColorRGBA(0.04f, 0.05f, 0.07f, 0.80f));
+	if(TimerCapsule.m_IsCritical)
+		TextRender()->TextColor(1.0f, 0.25f, 0.25f, TimerCapsule.m_Alpha);
+	else
+		TextRender()->TextColor(0.98f, 0.99f, 1.0f, 0.98f);
+	TextRender()->Text(TimerTextX, TimerCapsule.m_TextY, TimerCapsule.m_FontSize, TimerCapsule.m_aText, -1.0f);
+
+	if(RenderStatusSection)
+	{
+		const float DividerX = TimerBoxX + TimerCapsule.m_BoxW + StatusSectionGap * 0.5f;
+		Graphics()->DrawRect(DividerX, TimerCapsule.m_BoxY + 4.0f, 0.75f, TimerCapsule.m_BoxH - 8.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f * StatusAlpha), IGraphics::CORNER_ALL, 0.375f);
+
+		const vec2 DotCenter(StatusSectionX + StatusPaddingLeft + StatusDotSize * 0.5f, TimerCapsule.m_BoxY + TimerCapsule.m_BoxH * 0.5f);
+		DrawSmoothCircle(Graphics(), DotCenter, StatusDotSize * 0.5f, ColorRGBA(1.0f, 0.15f, 0.15f, 0.95f * StatusAlpha));
+
+		if(StatusTextAlpha > 0.001f && StatusWidth > RawCollapsedWidth + 2.0f)
+		{
+			const float TextX = StatusSectionX + StatusPaddingLeft + StatusDotSize + StatusDotGap;
+			const float TextY = TimerCapsule.m_BoxY + (TimerCapsule.m_BoxH - StatusFontSize) * 0.5f - 0.5f;
+			TextRender()->TextColor(0.97f, 0.98f, 1.0f, 0.90f * StatusTextAlpha);
+			TextRender()->Text(TextX, TextY, StatusFontSize, aRecordingBuf, -1.0f);
+		}
+	}
+
+	TextRender()->TextColor(PrevTextColor);
+	TextRender()->TextOutlineColor(PrevOutlineColor);
+	TextRender()->SetRenderFlags(PrevFlags);
 }
 
 void CHud::RenderPauseNotification()
@@ -2053,7 +2198,7 @@ void CHud::RenderMediaIsland()
 	auto &AnimState = m_MediaIslandAnimState;
 	const char *pDisplayTitle = MediaState.m_aTitle[0] != '\0' ? MediaState.m_aTitle : "未知歌曲";
 	const int64_t Now = time_get();
-	const int64_t AutoCollapseTicks = std::max<int64_t>(1, (int64_t)4000 * time_freq() / 1000);
+	const int64_t AutoCollapseTicks = std::max<int64_t>(1, (int64_t)3000 * time_freq() / 1000);
 
 	const bool TitleChanged = str_comp(AnimState.m_aLastTrackTitle, MediaState.m_aTitle) != 0;
 	const bool ArtistChanged = str_comp(AnimState.m_aLastTrackArtist, MediaState.m_aArtist) != 0;
@@ -2106,7 +2251,13 @@ void CHud::RenderMediaIsland()
 	constexpr float TitleFontSize = 5.8f;
 	constexpr float MetaFontSize = 5.3f;
 	constexpr float ScreenPadding = 5.0f;
-	constexpr float GapToGameTimer = 5.0f;
+	constexpr float GapToTimer = 6.0f;
+	constexpr float TimerToStatusGap = 6.0f;
+	constexpr float StatusPaddingLeft = 7.0f;
+	constexpr float StatusPaddingRight = 8.0f;
+	constexpr float StatusDotSize = 5.0f;
+	constexpr float StatusDotGap = 5.0f;
+	constexpr float StatusFontSize = 5.3f;
 	constexpr float CoverRotationSpeed = 0.75f;
 	constexpr float Tau = 6.28318530718f;
 
@@ -2119,23 +2270,33 @@ void CHud::RenderMediaIsland()
 	const float SpectatorTextWidth = ShowSpectator ? TextRender()->TextWidth(MetaFontSize, aSpectatorBuf) : 0.0f;
 	const float SpectatorWidth = ShowSpectator ? SpectatorIconWidth + SpectatorGap + SpectatorTextWidth : 0.0f;
 	const SHudGameTimerInfo TimerInfo = g_Config.m_ClShowhudTimer ? BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width) : SHudGameTimerInfo{};
+	const SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
+	char aRecordingBuf[512];
+	const bool ShowRecordingStatus = TimerCapsule.m_Visible && BuildHudRecordingStatusText(*GameClient(), aRecordingBuf, sizeof(aRecordingBuf));
+	const float StatusTextWidth = ShowRecordingStatus ? std::round(TextRender()->TextBoundingBox(StatusFontSize, aRecordingBuf).m_W) : 0.0f;
+	const float RawCollapsedStatusWidth = StatusPaddingLeft + StatusDotSize + StatusPaddingRight;
+	const float RawExpandedStatusWidth = StatusPaddingLeft + StatusDotSize + StatusDotGap + StatusTextWidth + StatusPaddingRight;
+	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
 	const float BaseWidth = PaddingX + CoverSize + (ShowSpectator ? Gap + SpectatorWidth : 0.0f) + Gap + TimeSlotWidth + PaddingX;
 	const float MaxTitleWidth = std::clamp(m_Width * 0.18f, 42.0f, 88.0f);
-	const float MaxIslandWidth = TimerInfo.m_Visible ?
-		std::max(BaseWidth, TimerInfo.m_Left - GapToGameTimer - ScreenPadding) :
+	const float MaxIslandWidth = TimerCapsule.m_Visible ?
+		std::max(BaseWidth, TimerCapsule.m_BoxX - GapToTimer - ScreenPadding) :
 		BaseWidth + Gap + MaxTitleWidth;
 	const float MaxExpandedTitleWidth = std::max(0.0f, MaxIslandWidth - BaseWidth - Gap);
 	const float NaturalTitleWidth = std::round(TextRender()->TextBoundingBox(TitleFontSize, pDisplayTitle).m_W);
 	const float TitleWidth = Expanded ? std::clamp(NaturalTitleWidth, 0.0f, std::min(MaxTitleWidth, MaxExpandedTitleWidth)) : 0.0f;
-
 	float TargetWidth = BaseWidth;
 	if(Expanded && TitleWidth > 0.0f)
 		TargetWidth += Gap + TitleWidth;
-
 	float TargetX = m_Width * 0.5f - TargetWidth * 0.5f;
-	if(TimerInfo.m_Visible)
-		TargetX = std::max(ScreenPadding, TimerInfo.m_Left - GapToGameTimer - TargetWidth);
-	const float TitleAlphaTarget = Expanded ? 1.0f : 0.0f;
+	if(TimerCapsule.m_Visible)
+		TargetX = std::max(ScreenPadding, TimerCapsule.m_BoxX - GapToTimer - TargetWidth);
+	else
+	{
+		const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - TargetWidth);
+		TargetX = std::clamp(TargetX, ScreenPadding, MaxTargetX);
+	}
+	const float TitleAlphaTarget = Expanded && TitleWidth > 0.0f ? 1.0f : 0.0f;
 	const float TitleOffsetTarget = Expanded ? 0.0f : 4.0f;
 	const float SpectatorAlphaTarget = ShowSpectator ? 1.0f : 0.0f;
 
@@ -2158,12 +2319,10 @@ void CHud::RenderMediaIsland()
 		AnimState.m_LayoutInitialized = true;
 	}
 
-	const float CapsuleDelay = Expanded ? 0.0f : 0.06f;
-	const float TitleDelay = Expanded ? 0.04f : 0.0f;
-	const float IslandX = ResolveAnimatedLayoutValueEx(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, TargetX, AnimState.m_TargetX, 0.18f, CapsuleDelay, EEasing::EASE_OUT);
-	const float IslandWidth = ResolveAnimatedLayoutValueEx(AnimRuntime, CapsuleNode, EUiAnimProperty::WIDTH, TargetWidth, AnimState.m_TargetWidth, 0.18f, CapsuleDelay, EEasing::EASE_OUT);
-	const float TitleAlpha = std::clamp(ResolveAnimatedLayoutValueEx(AnimRuntime, TitleNode, EUiAnimProperty::ALPHA, TitleAlphaTarget, AnimState.m_TargetTitleAlpha, 0.12f, TitleDelay, EEasing::EASE_OUT), 0.0f, 1.0f);
-	const float TitleOffset = ResolveAnimatedLayoutValueEx(AnimRuntime, TitleNode, EUiAnimProperty::POS_X, TitleOffsetTarget, AnimState.m_TargetTitleOffset, 0.12f, TitleDelay, EEasing::EASE_OUT);
+	const float IslandX = ResolveAnimatedLayoutValueEx(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, TargetX, AnimState.m_TargetX, 0.18f, 0.0f, EEasing::EASE_OUT);
+	const float IslandWidth = ResolveAnimatedLayoutValueEx(AnimRuntime, CapsuleNode, EUiAnimProperty::WIDTH, TargetWidth, AnimState.m_TargetWidth, 0.18f, 0.0f, EEasing::EASE_OUT);
+	const float TitleAlpha = std::clamp(ResolveAnimatedLayoutValueEx(AnimRuntime, TitleNode, EUiAnimProperty::ALPHA, TitleAlphaTarget, AnimState.m_TargetTitleAlpha, 0.12f, 0.0f, EEasing::EASE_OUT), 0.0f, 1.0f);
+	const float TitleOffset = ResolveAnimatedLayoutValueEx(AnimRuntime, TitleNode, EUiAnimProperty::POS_X, TitleOffsetTarget, AnimState.m_TargetTitleOffset, 0.12f, 0.0f, EEasing::EASE_OUT);
 	const float SpectatorAlpha = std::clamp(ResolveAnimatedLayoutValueEx(AnimRuntime, SpectatorNode, EUiAnimProperty::ALPHA, SpectatorAlphaTarget, AnimState.m_TargetSpectatorAlpha, 0.08f, 0.0f, EEasing::EASE_OUT), 0.0f, 1.0f);
 
 	const float Radius = IslandHeight * 0.5f;
@@ -2181,8 +2340,6 @@ void CHud::RenderMediaIsland()
 	const float TitleAvailableWidth = std::max(0.0f, TitleRight - TitleX);
 	const float TitleY = IslandY + (IslandHeight - TitleFontSize) * 0.5f - 0.5f;
 
-	DrawSmoothRoundedRect(Graphics(), IslandX, IslandY, IslandWidth, IslandHeight, Radius, ColorRGBA(0.04f, 0.05f, 0.07f, 0.76f));
-
 	if(AnimState.m_LastCoverRotationTick == 0)
 		AnimState.m_LastCoverRotationTick = Now;
 	if(MediaState.m_Playing)
@@ -2192,28 +2349,65 @@ void CHud::RenderMediaIsland()
 	}
 	AnimState.m_LastCoverRotationTick = Now;
 
-	if(MediaState.m_AlbumArt.IsValid())
-	{
-		DrawTexturedCircle(Graphics(), MediaState.m_AlbumArt, CoverCenter, CoverRadius, AnimState.m_CoverRotation);
-	}
-	else
-	{
-		DrawSmoothCircle(Graphics(), CoverCenter, CoverRadius, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f));
-	}
-
 	const unsigned int PrevFlags = TextRender()->GetRenderFlags();
 	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PrevOutlineColor = TextRender()->GetTextOutlineColor();
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f);
 
+	const float StatusSectionX = TimerCapsule.m_BoxX + TimerCapsule.m_BoxW + TimerToStatusGap;
+	const float CollapsedStatusWidth = RawCollapsedStatusWidth;
+	const float ExpandedStatusWidth = RawExpandedStatusWidth;
+	const float TargetStatusWidth = ShowRecordingStatus ? (ScoreboardExpanded ? ExpandedStatusWidth : CollapsedStatusWidth) : 0.0f;
+	const float TargetStatusAlpha = ShowRecordingStatus ? 1.0f : 0.0f;
+	const float TargetTextAlpha = ShowRecordingStatus && ScoreboardExpanded ? 1.0f : 0.0f;
+
+	const uint64_t StatusBoxNode = HudRecordingStatusNodeKey("box");
+	const uint64_t StatusTextNode = HudRecordingStatusNodeKey("text");
+	if(!m_RecordingStatusAnimState.m_Initialized)
+	{
+		m_RecordingStatusAnimState.m_TargetWidth = TargetStatusWidth;
+		m_RecordingStatusAnimState.m_TargetAlpha = TargetStatusAlpha;
+		m_RecordingStatusAnimState.m_TargetTextAlpha = TargetTextAlpha;
+		AnimRuntime.SetValue(StatusBoxNode, EUiAnimProperty::WIDTH, TargetStatusWidth);
+		AnimRuntime.SetValue(StatusBoxNode, EUiAnimProperty::ALPHA, TargetStatusAlpha);
+		AnimRuntime.SetValue(StatusTextNode, EUiAnimProperty::ALPHA, TargetTextAlpha);
+		m_RecordingStatusAnimState.m_Initialized = true;
+	}
+
+	const float StatusWidth = ResolveAnimatedLayoutValueEx(AnimRuntime, StatusBoxNode, EUiAnimProperty::WIDTH, TargetStatusWidth, m_RecordingStatusAnimState.m_TargetWidth, 0.16f, 0.0f, EEasing::EASE_OUT);
+	const float StatusAlpha = std::clamp(ResolveAnimatedLayoutValueEx(AnimRuntime, StatusBoxNode, EUiAnimProperty::ALPHA, TargetStatusAlpha, m_RecordingStatusAnimState.m_TargetAlpha, 0.10f, 0.0f, EEasing::EASE_OUT), 0.0f, 1.0f);
+	const float StatusTextAlpha = std::clamp(ResolveAnimatedLayoutValueEx(AnimRuntime, StatusTextNode, EUiAnimProperty::ALPHA, TargetTextAlpha, m_RecordingStatusAnimState.m_TargetTextAlpha, 0.08f, 0.0f, EEasing::EASE_OUT), 0.0f, 1.0f);
+	const bool RenderStatusSection = StatusWidth > 1.0f && StatusAlpha > 0.01f;
+	const float UnifiedRight = TimerCapsule.m_Visible ?
+		(TimerCapsule.m_BoxX + TimerCapsule.m_BoxW + (RenderStatusSection ? (TimerToStatusGap + StatusWidth) : 0.0f)) :
+		(IslandX + IslandWidth);
+	const float UnifiedWidth = std::max(IslandWidth, UnifiedRight - IslandX);
+
+	DrawSmoothRoundedRect(Graphics(), IslandX, IslandY, UnifiedWidth, IslandHeight, Radius, ColorRGBA(0.04f, 0.05f, 0.07f, 0.80f));
+
 	if(!MediaState.m_AlbumArt.IsValid())
 	{
+		DrawSmoothCircle(Graphics(), CoverCenter, CoverRadius, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f));
 		const float PlaceholderFontSize = MetaFontSize;
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.35f);
 		TextRender()->Text(CoverX + (CoverSize - PlaceholderWidth) * 0.5f, CoverY + (CoverSize - PlaceholderFontSize) * 0.5f - 0.5f, PlaceholderFontSize, FontIcons::FONT_ICON_MUSIC, -1.0f);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	}
+	else
+	{
+		DrawTexturedCircle(Graphics(), MediaState.m_AlbumArt, CoverCenter, CoverRadius, AnimState.m_CoverRotation);
+	}
+
+	if(ShowSpectator)
+	{
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.82f * SpectatorAlpha);
+		TextRender()->Text(SpectatorX, TimeY, MetaFontSize, FontIcons::FONT_ICON_EYE, -1.0f);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.82f * SpectatorAlpha);
+		TextRender()->Text(SpectatorX + SpectatorIconWidth + SpectatorGap, TimeY, MetaFontSize, aSpectatorBuf, -1.0f);
 	}
 
 	if(TitleAlpha > 0.001f && TitleAvailableWidth > 2.0f)
@@ -2227,18 +2421,37 @@ void CHud::RenderMediaIsland()
 		TextRender()->TextEx(&Cursor, pDisplayTitle);
 	}
 
-	if(ShowSpectator)
-	{
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.82f * SpectatorAlpha);
-		TextRender()->Text(SpectatorX, TimeY, MetaFontSize, FontIcons::FONT_ICON_EYE, -1.0f);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.82f * SpectatorAlpha);
-		TextRender()->Text(SpectatorX + SpectatorIconWidth + SpectatorGap, TimeY, MetaFontSize, aSpectatorBuf, -1.0f);
-	}
-
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.86f);
 	TextRender()->Text(TimeTextX, TimeY, MetaFontSize, aTimeBuf, -1.0f);
+
+	if(TimerCapsule.m_Visible)
+	{
+		const float LeftDividerX = TimerCapsule.m_BoxX - GapToTimer * 0.5f;
+		Graphics()->DrawRect(LeftDividerX, IslandY + 4.0f, 0.75f, IslandHeight - 8.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f), IGraphics::CORNER_ALL, 0.375f);
+
+		if(TimerCapsule.m_IsCritical)
+			TextRender()->TextColor(1.0f, 0.25f, 0.25f, TimerCapsule.m_Alpha);
+		else
+			TextRender()->TextColor(0.98f, 0.99f, 1.0f, 0.98f);
+		TextRender()->Text(TimerCapsule.m_TextX, TimerCapsule.m_TextY, TimerCapsule.m_FontSize, TimerCapsule.m_aText, -1.0f);
+	}
+
+	if(RenderStatusSection)
+	{
+		const float DividerX = TimerCapsule.m_BoxX + TimerCapsule.m_BoxW + TimerToStatusGap * 0.5f;
+		Graphics()->DrawRect(DividerX, IslandY + 4.0f, 0.75f, IslandHeight - 8.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f * StatusAlpha), IGraphics::CORNER_ALL, 0.375f);
+
+		const vec2 DotCenter(StatusSectionX + StatusPaddingLeft + StatusDotSize * 0.5f, IslandY + IslandHeight * 0.5f);
+		DrawSmoothCircle(Graphics(), DotCenter, StatusDotSize * 0.5f, ColorRGBA(1.0f, 0.15f, 0.15f, 0.95f * StatusAlpha));
+
+		if(StatusTextAlpha > 0.001f && StatusWidth > RawCollapsedStatusWidth + 2.0f)
+		{
+			const float StatusTextX = StatusSectionX + StatusPaddingLeft + StatusDotSize + StatusDotGap;
+			const float StatusTextY = IslandY + (IslandHeight - StatusFontSize) * 0.5f - 0.5f;
+			TextRender()->TextColor(0.97f, 0.98f, 1.0f, 0.90f * StatusTextAlpha);
+			TextRender()->Text(StatusTextX, StatusTextY, StatusFontSize, aRecordingBuf, -1.0f);
+		}
+	}
 
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	TextRender()->TextColor(PrevTextColor);
@@ -3670,7 +3883,7 @@ void CHud::OnRender()
 			RenderSpectatorHud();
 		}
 
-		if(g_Config.m_ClShowhudTimer)
+		if(g_Config.m_ClShowhudTimer && !ShowMediaIsland)
 			RenderGameTimer();
 		RenderPauseNotification();
 		RenderSuddenDeath();

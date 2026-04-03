@@ -165,6 +165,22 @@ class CHud : public CComponent
 		}
 	};
 	SHudMediaIslandAnimState m_MediaIslandAnimState;
+	struct SHudRecordingStatusAnimState
+	{
+		float m_TargetWidth = 0.0f;
+		float m_TargetAlpha = 0.0f;
+		float m_TargetTextAlpha = 0.0f;
+		bool m_Initialized = false;
+
+		void Reset()
+		{
+			m_TargetWidth = 0.0f;
+			m_TargetAlpha = 0.0f;
+			m_TargetTextAlpha = 0.0f;
+			m_Initialized = false;
+		}
+	};
+	SHudRecordingStatusAnimState m_RecordingStatusAnimState;
 	struct SHudSwitchCountdownAnimState
 	{
 		float m_aTargetX[SWITCH_COUNTDOWN_MAX_LINES] = {0.0f, 0.0f, 0.0f};
