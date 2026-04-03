@@ -4293,7 +4293,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					"yezeen",
 					"鹑",
 					"枫香°",
-					"爱发电用户_07470",
+					"没问题啊",
 					"·蓝蓝蓝蓝",
 					"临渊捕鱼",
 					"?hook?",
@@ -4324,7 +4324,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					"吃了吗chilem",
 					"你就是我的",
 					"xiaopang",
-					"星星🌙"
+					"星星🌙",
+					"軽い猫"
 					};
 				const float SponsorFontSize = LG_BodySize * 1.1f;
 				const float MaxLineWidth = RightContent.w;
@@ -5303,6 +5304,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 
 					if(g_Config.m_QmPlayerStatsMapProgress)
 					{
+						static CButtonContainer s_MapProgressColorId;
+
+						DoLine_ColorPicker(&s_MapProgressColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("进度条颜色"), &g_Config.m_QmPlayerStatsMapProgressColor, ColorRGBA(36.0f / 255.0f, 199.0f / 255.0f, 100.0f / 255.0f, 1.0f), false, nullptr, true);
+
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerStatsMapProgressDbgRoute, TCLocalize("显示地图点状路线调试"), &g_Config.m_QmPlayerStatsMapProgressDbgRoute, &Row, LG_LineHeight);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);

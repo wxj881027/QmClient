@@ -161,6 +161,16 @@ uint64_t HudSwitchCountdownNodeKey(int Index)
 	return (s_BaseKey << 32) | static_cast<uint64_t>(Index);
 }
 
+ColorRGBA LerpColor(const ColorRGBA &From, const ColorRGBA &To, float Amount)
+{
+	Amount = std::clamp(Amount, 0.0f, 1.0f);
+	return ColorRGBA(
+		mix(From.r, To.r, Amount),
+		mix(From.g, To.g, Amount),
+		mix(From.b, To.b, Amount),
+		mix(From.a, To.a, Amount));
+}
+
 struct SSwapCountdownInfo
 {
 	ColorRGBA m_TextColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
@@ -607,6 +617,10 @@ void CHud::OnReset()
 	m_aLastPlayerSpeedChange[0] = ESpeedChange::NONE;
 	m_aLastPlayerSpeedChange[1] = ESpeedChange::NONE;
 	m_LastSpectatorCountTick = 0;
+	m_aMapProgressDisplayed[0] = 0.0f;
+	m_aMapProgressDisplayed[1] = 0.0f;
+	m_aMapProgressInitialized[0] = false;
+	m_aMapProgressInitialized[1] = false;
 	m_MediaIslandAnimState.Reset();
 	m_RecordingStatusAnimState.Reset();
 
@@ -3182,8 +3196,6 @@ inline float CHud::GetMovementInformationBoxHeight()
 	if(g_Config.m_QmPlayerStatsHud)
 	{
 		BoxHeight += 3.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
-		if(GameClient()->m_TClient.IsGoresMapProgressEnabled())
-			BoxHeight += 2.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 	}
 	if(g_Config.m_ClShowhudPlayerPosition || g_Config.m_ClShowhudPlayerSpeed || g_Config.m_ClShowhudPlayerAngle)
 	{
@@ -3576,34 +3588,6 @@ void CHud::RenderMovementInformation()
 				TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
-
-				if(GameClient()->m_TClient.IsGoresMapProgressEnabled())
-				{
-					const bool HasProgress = GameClient()->m_TClient.HasGoresMapProgress(g_Config.m_ClDummy);
-					const float Progress = HasProgress ? GameClient()->m_TClient.GetGoresMapProgress(g_Config.m_ClDummy) : 0.0f;
-
-					if(HasProgress)
-						str_format(aBuf, sizeof(aBuf), "地图进度: %.1f%%", Progress * 100.0f);
-					else
-						str_copy(aBuf, "地图进度: --");
-
-					const float Hue4 = std::fmod(StatsTime * 0.2f + 0.4f, 1.0f);
-					ColorHSLA RainbowHsla4(Hue4, 0.75f, 0.6f, 1.0f);
-					ColorRGBA RainbowColor4 = color_cast<ColorRGBA>(RainbowHsla4);
-					TextRender()->TextColor(RainbowColor4);
-					TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
-					TextRender()->TextColor(TextRender()->DefaultTextColor());
-					y += MOVEMENT_INFORMATION_LINE_HEIGHT;
-
-					const float BarWidth = 42.0f;
-					const float BarHeight = 3.0f;
-					const float BarX = RightX - BarWidth;
-					const float BarY = y + (MOVEMENT_INFORMATION_LINE_HEIGHT - BarHeight) * 0.5f;
-					Graphics()->DrawRect(BarX, BarY, BarWidth, BarHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), IGraphics::CORNER_ALL, 1.0f);
-					if(HasProgress)
-						Graphics()->DrawRect(BarX, BarY, BarWidth * std::clamp(Progress, 0.0f, 1.0f), BarHeight, RainbowColor4.WithAlpha(0.85f), IGraphics::CORNER_ALL, 1.0f);
-					y += MOVEMENT_INFORMATION_LINE_HEIGHT;
-				}
 			}
 		}
 	}
@@ -3640,6 +3624,85 @@ void CHud::RenderMovementInformation()
 			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aSyncLine, -1.0f);
 		}
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
+	}
+}
+
+void CHud::RenderMapProgressBar()
+{
+	if(!GameClient()->m_TClient.IsGoresMapProgressEnabled())
+		return;
+
+	const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
+	const bool HasProgress = GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
+	const float TargetProgress = HasProgress ? std::clamp(GameClient()->m_TClient.GetGoresMapProgress(DummyIndex), 0.0f, 1.0f) : 0.0f;
+	if(!m_aMapProgressInitialized[DummyIndex])
+	{
+		m_aMapProgressDisplayed[DummyIndex] = TargetProgress;
+		m_aMapProgressInitialized[DummyIndex] = true;
+	}
+	else
+	{
+		const float Blend = std::clamp(Client()->RenderFrameTime() * 8.0f, 0.0f, 1.0f);
+		m_aMapProgressDisplayed[DummyIndex] = mix(m_aMapProgressDisplayed[DummyIndex], TargetProgress, Blend);
+	}
+
+	const float DisplayedProgress = std::clamp(m_aMapProgressDisplayed[DummyIndex], 0.0f, 1.0f);
+	const ColorRGBA ConfiguredColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPlayerStatsMapProgressColor, true));
+	const ColorRGBA FillColor = ColorRGBA(ConfiguredColor.r, ConfiguredColor.g, ConfiguredColor.b, std::clamp(maximum(ConfiguredColor.a, 0.65f), 0.0f, 1.0f));
+	const ColorRGBA TrackColor = LerpColor(ColorRGBA(0.02f, 0.03f, 0.03f, 0.78f), FillColor.WithAlpha(0.26f), 0.32f);
+	const ColorRGBA TextColor = LerpColor(ColorRGBA(0.92f, 0.97f, 1.0f, 1.0f), FillColor.WithAlpha(1.0f), 0.72f);
+
+	const float BarWidth = std::clamp(m_Width * 0.28f, 120.0f, 164.0f);
+	const float BarHeight = 10.0f;
+	const float BarRadius = BarHeight * 0.5f;
+	const float BarX = std::round(m_Width * 0.5f - BarWidth * 0.5f);
+	const float BarY = std::round(m_Height - 16.0f);
+	const float FillWidth = BarWidth * DisplayedProgress;
+
+	char aProgressText[32];
+	if(HasProgress)
+		str_format(aProgressText, sizeof(aProgressText), "%.1f%%", DisplayedProgress * 100.0f);
+	else
+		str_copy(aProgressText, "--");
+
+	const float TextSize = 7.0f;
+	const float TextWidth = TextRender()->TextWidth(TextSize, aProgressText, -1, -1.0f);
+	const float TextX = std::round(m_Width * 0.5f - TextWidth * 0.5f);
+	const float TextY = BarY - 7.0f;
+
+	DrawSmoothRoundedRect(Graphics(), BarX, BarY, BarWidth, BarHeight, BarRadius, TrackColor);
+	if(FillWidth > 0.0f)
+		DrawSmoothRoundedRect(Graphics(), BarX, BarY, FillWidth, BarHeight, BarRadius, FillColor);
+
+	const unsigned int PrevTextFlags = TextRender()->GetRenderFlags();
+	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PrevOutlineColor = TextRender()->GetTextOutlineColor();
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.45f);
+	TextRender()->TextColor(TextColor);
+	TextRender()->Text(TextX, TextY, TextSize, aProgressText, -1.0f);
+	TextRender()->TextColor(PrevTextColor);
+	TextRender()->TextOutlineColor(PrevOutlineColor);
+	TextRender()->SetRenderFlags(PrevTextFlags);
+
+	int TeeClientId = GameClient()->m_aLocalIds[DummyIndex];
+	if(TeeClientId < 0 || TeeClientId >= MAX_CLIENTS)
+		TeeClientId = GameClient()->m_Snap.m_LocalClientId;
+
+	if(TeeClientId >= 0 && TeeClientId < MAX_CLIENTS)
+	{
+		CTeeRenderInfo TeeInfo = GameClient()->m_aClients[TeeClientId].m_RenderInfo;
+		TeeInfo.m_Size = 17.0f;
+
+		const float TeePadding = TeeInfo.m_Size * 0.28f;
+		const float TeeX = std::clamp(BarX + BarWidth * DisplayedProgress, BarX + TeePadding, BarX + BarWidth - TeePadding);
+		const float TeeAnchorY = BarY + BarHeight * 0.5f - 1.5f;
+		const CAnimState *pIdleState = CAnimState::GetIdle();
+		vec2 OffsetToMid;
+		CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
+
+		DrawSmoothCircle(Graphics(), vec2(TeeX, TeeAnchorY), 4.8f, FillColor.WithAlpha(0.22f));
+		RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(TeeX, TeeAnchorY + OffsetToMid.y));
 	}
 }
 
@@ -3859,10 +3922,10 @@ void CHud::OnRender()
 			{
 				RenderPlayerState(GameClient()->m_Snap.m_LocalClientId);
 			}
-			if(!ShowMediaIsland)
-				RenderSpectatorCount();
-			RenderMovementInformation();
-			RenderDDRaceEffects();
+		if(!ShowMediaIsland)
+			RenderSpectatorCount();
+		RenderMovementInformation();
+		RenderDDRaceEffects();
 		}
 		else if(GameClient()->m_Snap.m_SpecInfo.m_Active)
 		{
@@ -3883,6 +3946,7 @@ void CHud::OnRender()
 			RenderSpectatorHud();
 		}
 
+		RenderMapProgressBar();
 		if(g_Config.m_ClShowhudTimer && !ShowMediaIsland)
 			RenderGameTimer();
 		RenderPauseNotification();
