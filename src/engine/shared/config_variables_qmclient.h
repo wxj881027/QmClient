@@ -93,6 +93,7 @@ MACRO_CONFIG_INT(TcFreezeChatChance, tc_freeze_chat_chance, 30, 0, 100, CFGFLAG_
 // Player Stats HUD
 MACRO_CONFIG_INT(QmPlayerStatsHud, qm_player_stats_hud, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用玩家统计HUD显示")
 MACRO_CONFIG_INT(QmPlayerStatsMapProgress, qm_player_stats_map_progress, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示地图进度条（内测中）")
+MACRO_CONFIG_INT(QmPlayerStatsMapProgressDbgRoute, qm_player_stats_map_progress_dbg_route, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在地图中显示地图进度调试点状路线")
 MACRO_CONFIG_INT(QmPlayerStatsResetOnJoin, qm_player_stats_reset_on_join, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "进入服务器时重置统计数据（0=累计统计, 1=进入服务器重置）")
 MACRO_CONFIG_STR(QmUnfinishedMapPlayer, qm_unfinished_map_player, 16, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "未完成图查询用玩家名")
 MACRO_CONFIG_INT(QmUnfinishedMapType, qm_unfinished_map_type, 0, 0, 13, CFGFLAG_CLIENT | CFGFLAG_SAVE, "未完成图筛选类型")

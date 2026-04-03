@@ -4254,7 +4254,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			//我名字
 			RightContent.HSplitTop(LG_LineHeight, &Row, &RightContent);
 			TextRender()->TextColor(GetRainbowColor(-6));
-			Ui()->DoLabel(&Row, "栖梦(璇梦)", LG_BodySize + 2.0f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, "栖梦(璇梦),夏日", LG_BodySize + 2.0f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			// 感谢名单
 			RightContent.HSplitTop(LG_LineSpacing * 1.75f, nullptr, &RightContent);
@@ -5280,7 +5280,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			break;
 			case EQmModuleId::PlayerStats:
 			{
-				// ========== 模块10: Gores玩家统计 ==========
+				// ========== 模块10: 玩家统计 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card7Start = Column;
 				s_GlassCards.push_back(Card7Start);
@@ -5288,11 +5288,11 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 6, TCLocalize("Gores玩家统计"), TCLocalize("Gores玩家统计与信息显示"));
+				DoModuleHeadline(CardContent, 6, TCLocalize("玩家统计"), TCLocalize("玩家统计与信息显示"));
 
 				// 显示统计HUD
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerStatsHud, TCLocalize("显示Gores玩家统计HUD"), &g_Config.m_QmPlayerStatsHud, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerStatsHud, TCLocalize("显示玩家统计HUD"), &g_Config.m_QmPlayerStatsHud, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_QmPlayerStatsHud)
@@ -5300,6 +5300,13 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerStatsMapProgress, TCLocalize("地图进度条(内测中)"), &g_Config.m_QmPlayerStatsMapProgress, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					if(g_Config.m_QmPlayerStatsMapProgress)
+					{
+						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerStatsMapProgressDbgRoute, TCLocalize("显示地图点状路线调试"), &g_Config.m_QmPlayerStatsMapProgressDbgRoute, &Row, LG_LineHeight);
+						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					}
 				}
 
 				// 进入服务器时重置统计

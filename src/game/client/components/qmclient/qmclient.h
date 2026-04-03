@@ -157,28 +157,29 @@ class CTClient : public CComponent
 	void UpdatePlayerStats();
 	void TrackHookDirection(int Dummy);
 
-	// Gores 地图进度（基准路径估算）
-	bool m_GoresPathValid = false;
-	bool m_GoresPathAttempted = false;
-	int64_t m_GoresPathNextBuildTryTick = 0;
-	char m_aGoresPathMap[128] = "";
-	float m_GoresPathTotalDistance = 0.0f;
-	std::vector<vec2> m_vGoresPathPoints;
-	std::vector<vec2> m_vGoresPathSegmentDelta;
-	std::vector<float> m_vGoresPathSegmentLengthSquared;
-	std::vector<float> m_vGoresPathSegmentLength;
-	std::vector<float> m_vGoresPathCumulativeDistance;
+	// Gores 地图进度（全图距离场估算）
+	bool m_GoresDistanceFieldValid = false;
+	bool m_GoresDistanceFieldAttempted = false;
+	int64_t m_GoresDistanceFieldNextBuildTryTick = 0;
+	char m_aGoresDistanceFieldMap[128] = "";
+	int m_GoresDistanceFieldWidth = 0;
+	int m_GoresDistanceFieldHeight = 0;
+	std::vector<unsigned char> m_vGoresCMap; // 0=normal 1=blocked 2=tele 3=penalty 4=reward
+	std::vector<std::vector<int>> m_vvGoresDirectTeleOuts;
+	std::vector<int> m_vGoresDistanceToFinish;
 	bool m_aGoresWasOnStartLastTick[NUM_DUMMIES] = {false, false};
 	bool m_aGoresRunStarted[NUM_DUMMIES] = {false, false};
-	float m_aGoresRunStartPathDistance[NUM_DUMMIES] = {0.0f, 0.0f};
-	int m_aGoresProgressSegmentHint[NUM_DUMMIES] = {-1, -1};
+	int m_aGoresRunStartDistanceToFinish[NUM_DUMMIES] = {0, 0};
 	bool m_aGoresMapProgressValid[NUM_DUMMIES] = {false, false};
 	float m_aGoresMapProgress[NUM_DUMMIES] = {0.0f, 0.0f};
 	bool IsGoresGameMode() const;
-	void InvalidateGoresBaselinePath();
-	void EnsureGoresBaselinePath();
-	void BuildGoresBaselinePath();
+	void InvalidateGoresDistanceField();
+	void EnsureGoresDistanceField();
+	void BuildGoresDistanceField();
 	void UpdateGoresMapProgress();
+	bool IsGoresMapProgressDebugRouteEnabled() const;
+	bool BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) const;
+	void RenderGoresDebugRoute();
 
 	// 收藏地图功能
 	std::set<std::string> m_FavoriteMaps;

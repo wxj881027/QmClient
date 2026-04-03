@@ -1725,7 +1725,8 @@ void CScoreboard::OnRender()
 	}
 	RenderSpectators(Spectators);
 
-	RenderRecordingNotification((Screen.w / 7) * 4 + 10);
+	if(!g_Config.m_ClShowhudTimer)
+		RenderRecordingNotification((Screen.w / 7) * 4 + 10);
 
 	if(!GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive())
 	{

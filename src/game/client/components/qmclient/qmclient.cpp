@@ -18,6 +18,7 @@
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
 #include <engine/client/updater.h>
+#include <engine/map.h>
 #include <engine/storage.h>
 
 #include <generated/client_data.h>
@@ -27,6 +28,7 @@
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
+#include <game/layers.h>
 #include <game/mapitems.h>
 #include <game/localization.h>
 #include <game/version.h>
@@ -36,6 +38,7 @@
 #include <cctype>
 #include <cmath>
 #include <limits>
+#include <queue>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -195,9 +198,77 @@ static bool IsValidQmClientPlaytimeId(const char *pClientId)
 	return true;
 }
 
-static bool IsBlockedForGoresBaselinePath(int TileIndex)
+static bool IsHardBlockedForGoresDistanceField(int TileIndex)
 {
-	return TileIndex == TILE_SOLID || TileIndex == TILE_NOHOOK || TileIndex == TILE_DEATH;
+	return TileIndex == TILE_SOLID || TileIndex == TILE_NOHOOK;
+}
+
+static bool IsPenaltyTileForGoresDistanceField(int TileIndex)
+{
+	return TileIndex == TILE_DEATH || TileIndex == TILE_FREEZE || TileIndex == TILE_DFREEZE || TileIndex == TILE_LFREEZE;
+}
+
+static bool IsRewardTileForGoresDistanceField(int TileIndex)
+{
+	return TileIndex == TILE_UNFREEZE || TileIndex == TILE_DUNFREEZE || TileIndex == TILE_LUNFREEZE;
+}
+
+enum EGoresCMapValue
+{
+	GORES_CMAP_NORMAL = 0,
+	GORES_CMAP_BLOCKED = 1,
+	GORES_CMAP_TELEPORT = 2,
+	GORES_CMAP_PENALTY = 3,
+	GORES_CMAP_REWARD = 4,
+};
+
+static bool IsPlayerTeleportInputTileForGoresDistanceField(int TeleType)
+{
+	return TeleType == TILE_TELEIN || TeleType == TILE_TELEINEVIL ||
+		TeleType == TILE_TELECHECKIN || TeleType == TILE_TELECHECKINEVIL;
+}
+
+static bool IsDirectTeleportInputTileForGoresDistanceField(int TeleType)
+{
+	return TeleType == TILE_TELEIN || TeleType == TILE_TELEINEVIL;
+}
+
+static unsigned char GoresSemanticImageToCMapValue(const char *pImageName)
+{
+	if(!pImageName || pImageName[0] == '\0')
+		return GORES_CMAP_NORMAL;
+
+	// Gores visual semantics:
+	//   sun        -> unfreeze/reward
+	//   blackwater -> deep freeze/penalty
+	//   water      -> freeze/penalty
+	if(str_find_nocase(pImageName, "sun") != nullptr)
+		return GORES_CMAP_REWARD;
+
+	if(str_find_nocase(pImageName, "blackwater") != nullptr ||
+		str_find_nocase(pImageName, "darkwater") != nullptr ||
+		str_find_nocase(pImageName, "black_water") != nullptr ||
+		str_find_nocase(pImageName, "dark_water") != nullptr ||
+		str_find_nocase(pImageName, "water") != nullptr)
+		return GORES_CMAP_PENALTY;
+
+	return GORES_CMAP_NORMAL;
+}
+
+static int GoresDistanceFieldTraversalCost(unsigned char CMapValue, bool IsStart, bool IsFinish)
+{
+	static constexpr int NORMAL_COST = 100;
+	static constexpr int PENALTY_COST = 350;
+	static constexpr int REWARD_COST = 70;
+
+	if(IsStart || IsFinish)
+		return NORMAL_COST;
+
+	if(CMapValue == GORES_CMAP_PENALTY)
+		return PENALTY_COST;
+	if(CMapValue == GORES_CMAP_REWARD)
+		return REWARD_COST;
+	return NORMAL_COST;
 }
 
 CTClient::CTClient()
@@ -1597,6 +1668,8 @@ void CTClient::OnRender()
 		UpdatePlayerStats(); // 更新玩家统计
 		UpdateGoresMapProgress(); // 更新 Gores 地图路径进度
 	}
+
+	RenderGoresDebugRoute();
 
 	MaybeSaveMapCategoryCache();
 }
@@ -3208,7 +3281,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 			m_aWasInFreezeForSwitch[i] = false;
 			m_aWasInFreezeForChatClose[i] = false;
 		}
-		InvalidateGoresBaselinePath();
+		InvalidateGoresDistanceField();
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
 	}
@@ -3558,63 +3631,74 @@ bool CTClient::IsGoresMapProgressEnabled() const
 	return IsGoresGameMode() && g_Config.m_QmPlayerStatsHud && g_Config.m_QmPlayerStatsMapProgress;
 }
 
-void CTClient::InvalidateGoresBaselinePath()
+bool CTClient::IsGoresMapProgressDebugRouteEnabled() const
 {
-	m_GoresPathValid = false;
-	m_GoresPathAttempted = false;
-	m_GoresPathNextBuildTryTick = 0;
-	m_GoresPathTotalDistance = 0.0f;
-	m_vGoresPathPoints.clear();
-	m_vGoresPathSegmentDelta.clear();
-	m_vGoresPathSegmentLengthSquared.clear();
-	m_vGoresPathSegmentLength.clear();
-	m_vGoresPathCumulativeDistance.clear();
+	return IsGoresGameMode() && g_Config.m_QmPlayerStatsMapProgressDbgRoute != 0;
+}
+
+void CTClient::InvalidateGoresDistanceField()
+{
+	m_GoresDistanceFieldValid = false;
+	m_GoresDistanceFieldAttempted = false;
+	m_GoresDistanceFieldNextBuildTryTick = 0;
+	m_GoresDistanceFieldWidth = 0;
+	m_GoresDistanceFieldHeight = 0;
+	m_vGoresCMap.clear();
+	m_vvGoresDirectTeleOuts.clear();
+	m_vGoresDistanceToFinish.clear();
 	for(int i = 0; i < NUM_DUMMIES; ++i)
 	{
 		m_aGoresWasOnStartLastTick[i] = false;
 		m_aGoresRunStarted[i] = false;
-		m_aGoresRunStartPathDistance[i] = 0.0f;
-		m_aGoresProgressSegmentHint[i] = -1;
+		m_aGoresRunStartDistanceToFinish[i] = 0;
 		m_aGoresMapProgressValid[i] = false;
 		m_aGoresMapProgress[i] = 0.0f;
 	}
 }
 
-void CTClient::EnsureGoresBaselinePath()
+void CTClient::EnsureGoresDistanceField()
 {
 	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresGameMode())
 		return;
 
 	const char *pCurrentMap = Client()->GetCurrentMap();
 	const char *pMap = pCurrentMap ? pCurrentMap : "";
-	if(str_comp(m_aGoresPathMap, pMap) != 0)
+	if(str_comp(m_aGoresDistanceFieldMap, pMap) != 0)
 	{
-		InvalidateGoresBaselinePath();
-		str_copy(m_aGoresPathMap, pMap, sizeof(m_aGoresPathMap));
+		InvalidateGoresDistanceField();
+		str_copy(m_aGoresDistanceFieldMap, pMap, sizeof(m_aGoresDistanceFieldMap));
 	}
 
-	if(m_GoresPathValid)
+	if(m_GoresDistanceFieldValid)
 		return;
 
 	const int64_t Now = time_get();
-	if(m_GoresPathAttempted && Now < m_GoresPathNextBuildTryTick)
+	if(m_GoresDistanceFieldAttempted && Now < m_GoresDistanceFieldNextBuildTryTick)
 		return;
 
-	m_GoresPathAttempted = true;
-	BuildGoresBaselinePath();
-	m_GoresPathNextBuildTryTick = m_GoresPathValid ? 0 : (Now + time_freq());
+	m_GoresDistanceFieldAttempted = true;
+	BuildGoresDistanceField();
+	m_GoresDistanceFieldNextBuildTryTick = m_GoresDistanceFieldValid ? 0 : (Now + time_freq());
 }
 
-void CTClient::BuildGoresBaselinePath()
+void CTClient::BuildGoresDistanceField()
 {
-	m_GoresPathValid = false;
-	m_GoresPathTotalDistance = 0.0f;
-	m_vGoresPathPoints.clear();
-	m_vGoresPathCumulativeDistance.clear();
+	m_GoresDistanceFieldValid = false;
+	m_GoresDistanceFieldWidth = 0;
+	m_GoresDistanceFieldHeight = 0;
+	m_vGoresCMap.clear();
+	m_vvGoresDirectTeleOuts.clear();
+	m_vGoresDistanceToFinish.clear();
 
 	const CCollision *pCollision = Collision();
 	if(!pCollision)
 		return;
+
+	const CTile *pGame = pCollision->GameLayer();
+	if(!pGame)
+		return;
+	const CTile *pFront = pCollision->FrontLayer();
+	const CTeleTile *pTele = pCollision->TeleLayer();
 
 	const int Width = pCollision->GetWidth();
 	const int Height = pCollision->GetHeight();
@@ -3626,277 +3710,488 @@ void CTClient::BuildGoresBaselinePath()
 		return;
 	const int MapSize = (int)MapSize64;
 
-	std::vector<int> vStartIndices;
 	std::vector<int> vFinishIndices;
 	std::vector<unsigned char> vPassable(MapSize, 0);
-	vStartIndices.reserve(16);
+	m_vGoresCMap.assign((size_t)MapSize, GORES_CMAP_NORMAL);
 	vFinishIndices.reserve(16);
+	std::vector<std::vector<int>> vvDirectTeleInputs;
+	m_vvGoresDirectTeleOuts.clear();
+	bool HasStart = false;
 
 	for(int Index = 0; Index < MapSize; ++Index)
 	{
-		const int Tile = pCollision->GetTileIndex(Index);
-		const int FrontTile = pCollision->GetFrontTileIndex(Index);
+		const int Tile = pGame[Index].m_Index;
+		const int FrontTile = pFront ? pFront[Index].m_Index : TILE_AIR;
 		const bool IsStart = Tile == TILE_START || FrontTile == TILE_START;
 		const bool IsFinish = Tile == TILE_FINISH || FrontTile == TILE_FINISH;
-		const bool IsBlocked = IsBlockedForGoresBaselinePath(Tile) || IsBlockedForGoresBaselinePath(FrontTile);
+		const bool HasPenalty = IsPenaltyTileForGoresDistanceField(Tile) || IsPenaltyTileForGoresDistanceField(FrontTile);
+		const bool HasReward = IsRewardTileForGoresDistanceField(Tile) || IsRewardTileForGoresDistanceField(FrontTile);
+		const bool HasTeleport = pTele && pTele[Index].m_Type != 0;
+		const bool IsBlocked = !IsStart && !IsFinish &&
+			(IsHardBlockedForGoresDistanceField(Tile) || IsHardBlockedForGoresDistanceField(FrontTile));
 		if(IsStart)
-			vStartIndices.push_back(Index);
+			HasStart = true;
 		if(IsFinish)
 			vFinishIndices.push_back(Index);
 
 		// Keep route generation forgiving: start/finish tiles are always traversable.
 		vPassable[Index] = (!IsBlocked || IsStart || IsFinish) ? 1 : 0;
+		if(IsBlocked)
+			m_vGoresCMap[(size_t)Index] = GORES_CMAP_BLOCKED;
+		else if(HasPenalty)
+			m_vGoresCMap[(size_t)Index] = GORES_CMAP_PENALTY;
+		else if(HasReward)
+			m_vGoresCMap[(size_t)Index] = GORES_CMAP_REWARD;
+		else if(HasTeleport)
+			m_vGoresCMap[(size_t)Index] = GORES_CMAP_TELEPORT;
+
+		if(pTele)
+		{
+			const int TeleType = pTele[Index].m_Type;
+			const int TeleNumber = pTele[Index].m_Number;
+			if(IsDirectTeleportInputTileForGoresDistanceField(TeleType) && TeleNumber > 0)
+			{
+				if((int)vvDirectTeleInputs.size() < TeleNumber)
+					vvDirectTeleInputs.resize(TeleNumber);
+				vvDirectTeleInputs[(size_t)TeleNumber - 1].push_back(Index);
+			}
+			else if(TeleType == TILE_TELEOUT && TeleNumber > 0)
+			{
+				if((int)m_vvGoresDirectTeleOuts.size() < TeleNumber)
+					m_vvGoresDirectTeleOuts.resize(TeleNumber);
+				m_vvGoresDirectTeleOuts[(size_t)TeleNumber - 1].push_back(Index);
+			}
+		}
 	}
 
-	if(vStartIndices.empty() || vFinishIndices.empty())
+	if(!HasStart || vFinishIndices.empty())
+	{
+		m_vGoresCMap.clear();
+		m_vvGoresDirectTeleOuts.clear();
 		return;
+	}
 
-	std::vector<int> vDist(MapSize, -1);
-	std::vector<int> vNext(MapSize, -1); // From cell i, go to vNext[i] to move toward finish.
-	std::vector<int> vQueue;
-	vQueue.reserve(MapSize);
+	if(const CLayers *pLayers = Layers())
+	{
+		if(IMap *pMap = pLayers->Map())
+		{
+			int ImageStart = 0;
+			int ImageCount = 0;
+			pMap->GetType(MAPITEMTYPE_IMAGE, &ImageStart, &ImageCount);
+			std::vector<unsigned char> vImageSemantics((size_t)maximum(ImageCount, 0), GORES_CMAP_NORMAL);
+			for(int ImageIndex = 0; ImageIndex < ImageCount; ++ImageIndex)
+			{
+				const auto *pImage = static_cast<const CMapItemImage_v2 *>(pMap->GetItem(ImageStart + ImageIndex));
+				if(!pImage)
+					continue;
 
+				const char *pImageName = pMap->GetDataString(pImage->m_ImageName);
+				vImageSemantics[(size_t)ImageIndex] = GoresSemanticImageToCMapValue(pImageName);
+				pMap->UnloadData(pImage->m_ImageName);
+			}
+
+			for(int GroupIndex = 0; GroupIndex < pLayers->NumGroups(); ++GroupIndex)
+			{
+				const CMapItemGroup *pGroup = pLayers->GetGroup(GroupIndex);
+				if(!pGroup)
+					continue;
+
+				for(int LayerOffset = 0; LayerOffset < pGroup->m_NumLayers; ++LayerOffset)
+				{
+					const CMapItemLayer *pLayer = pLayers->GetLayer(pGroup->m_StartLayer + LayerOffset);
+					if(!pLayer || pLayer->m_Type != LAYERTYPE_TILES)
+						continue;
+
+					const auto *pTilemap = reinterpret_cast<const CMapItemLayerTilemap *>(pLayer);
+					if(pTilemap->m_Flags != 0 ||
+						pTilemap->m_Width != Width ||
+						pTilemap->m_Height != Height ||
+						pTilemap->m_Image < 0 ||
+						pTilemap->m_Image >= ImageCount)
+						continue;
+
+					const unsigned char SemanticValue = vImageSemantics[(size_t)pTilemap->m_Image];
+					if(SemanticValue != GORES_CMAP_PENALTY && SemanticValue != GORES_CMAP_REWARD)
+						continue;
+
+					if(pMap->GetDataSize(pTilemap->m_Data) < MapSize * (int)sizeof(CTile))
+						continue;
+
+					const CTile *pLayerTiles = static_cast<const CTile *>(pMap->GetData(pTilemap->m_Data));
+					if(!pLayerTiles)
+						continue;
+
+					for(int Index = 0; Index < MapSize; ++Index)
+					{
+						if(pLayerTiles[Index].m_Index == TILE_AIR)
+							continue;
+
+						unsigned char &CellValue = m_vGoresCMap[(size_t)Index];
+						if(CellValue == GORES_CMAP_BLOCKED || CellValue == GORES_CMAP_TELEPORT || CellValue == GORES_CMAP_PENALTY)
+							continue;
+
+						if(SemanticValue == GORES_CMAP_PENALTY)
+							CellValue = GORES_CMAP_PENALTY;
+						else if(CellValue == GORES_CMAP_NORMAL)
+							CellValue = GORES_CMAP_REWARD;
+					}
+
+					pMap->UnloadData(pTilemap->m_Data);
+				}
+			}
+		}
+	}
+
+	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
+	m_vGoresDistanceToFinish.assign((size_t)MapSize, DISTANCE_INF);
+
+	using TDistanceNode = std::pair<int, int>;
+	std::priority_queue<TDistanceNode, std::vector<TDistanceNode>, std::greater<TDistanceNode>> Queue;
 	for(const int FinishIndex : vFinishIndices)
 	{
-		if(FinishIndex < 0 || FinishIndex >= MapSize || !vPassable[FinishIndex] || vDist[FinishIndex] != -1)
+		if(FinishIndex < 0 || FinishIndex >= MapSize || !vPassable[FinishIndex] ||
+			m_vGoresDistanceToFinish[(size_t)FinishIndex] != DISTANCE_INF)
 			continue;
-		vDist[FinishIndex] = 0;
-		vQueue.push_back(FinishIndex);
+		m_vGoresDistanceToFinish[(size_t)FinishIndex] = 0;
+		Queue.emplace(0, FinishIndex);
 	}
 
-	size_t Head = 0;
-	while(Head < vQueue.size())
+	if(Queue.empty())
 	{
-		const int Cur = vQueue[Head++];
+		m_vGoresCMap.clear();
+		m_vvGoresDirectTeleOuts.clear();
+		m_vGoresDistanceToFinish.clear();
+		return;
+	}
+
+	const auto TryRelax = [&](int Index, int NewDistance) {
+		if(NewDistance < m_vGoresDistanceToFinish[(size_t)Index])
+		{
+			m_vGoresDistanceToFinish[(size_t)Index] = NewDistance;
+			Queue.emplace(NewDistance, Index);
+		}
+	};
+
+	while(!Queue.empty())
+	{
+		const int CurDistance = Queue.top().first;
+		const int Cur = Queue.top().second;
+		Queue.pop();
+		if(CurDistance != m_vGoresDistanceToFinish[(size_t)Cur])
+			continue;
+
 		const int X = Cur % Width;
 		const int Y = Cur / Width;
+		const int CurGameTile = pGame[Cur].m_Index;
+		const int CurFrontTile = pFront ? pFront[Cur].m_Index : TILE_AIR;
+		const bool CurIsStart = CurGameTile == TILE_START || CurFrontTile == TILE_START;
+		const bool CurIsFinish = CurGameTile == TILE_FINISH || CurFrontTile == TILE_FINISH;
+		const int CurEnterCost = GoresDistanceFieldTraversalCost(m_vGoresCMap[(size_t)Cur], CurIsStart, CurIsFinish);
 		const int aDx[4] = {1, -1, 0, 0};
 		const int aDy[4] = {0, 0, 1, -1};
 
 		for(int Dir = 0; Dir < 4; ++Dir)
 		{
-			const int Nx = X + aDx[Dir];
-			const int Ny = Y + aDy[Dir];
-			if(Nx < 0 || Ny < 0 || Nx >= Width || Ny >= Height)
+			const int PredX = X + aDx[Dir];
+			const int PredY = Y + aDy[Dir];
+			if(PredX < 0 || PredY < 0 || PredX >= Width || PredY >= Height)
 				continue;
 
-			const int Next = Ny * Width + Nx;
-			if(!vPassable[Next] || vDist[Next] != -1)
+			const int PredIndex = PredY * Width + PredX;
+			if(!vPassable[(size_t)PredIndex])
 				continue;
 
-			vDist[Next] = vDist[Cur] + 1;
-			vNext[Next] = Cur;
-			vQueue.push_back(Next);
+			const int PredTeleType = pTele ? pTele[PredIndex].m_Type : 0;
+			if(IsPlayerTeleportInputTileForGoresDistanceField(PredTeleType))
+				continue;
+			if(CurDistance <= DISTANCE_INF - CurEnterCost)
+				TryRelax(PredIndex, CurDistance + CurEnterCost);
 		}
-	}
 
-	int RefX = -1;
-	int RefY = -1;
-	const int RefDummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
-	const int RefClientId = GameClient()->m_aLocalIds[RefDummy];
-	if(RefClientId >= 0 && RefClientId < MAX_CLIENTS)
-	{
-		const auto &RefChar = GameClient()->m_Snap.m_aCharacters[RefClientId];
-		if(RefChar.m_Active)
+		if(pTele && pTele[Cur].m_Type == TILE_TELEOUT)
 		{
-			const int RefIndex = pCollision->GetPureMapIndex(vec2((float)RefChar.m_Cur.m_X, (float)RefChar.m_Cur.m_Y));
-			if(RefIndex >= 0 && RefIndex < MapSize)
+			const int TeleNumber = pTele[Cur].m_Number;
+			if(TeleNumber > 0 && (int)vvDirectTeleInputs.size() >= TeleNumber)
 			{
-				RefX = RefIndex % Width;
-				RefY = RefIndex / Width;
+				for(const int PredIndex : vvDirectTeleInputs[(size_t)TeleNumber - 1])
+					TryRelax(PredIndex, CurDistance);
 			}
 		}
 	}
 
-	int BestStart = -1;
-	int BestDistance = std::numeric_limits<int>::max();
-	int64_t BestPlayerDistSquared = std::numeric_limits<int64_t>::max();
-	const bool UsePlayerReference = RefX >= 0 && RefY >= 0;
-	for(const int StartIndex : vStartIndices)
+	bool HasReachableStart = false;
+	for(int Index = 0; Index < MapSize; ++Index)
 	{
-		if(StartIndex < 0 || StartIndex >= MapSize)
-			continue;
-		const int Dist = vDist[StartIndex];
-		if(Dist < 0)
-			continue;
-
-		if(!UsePlayerReference)
+		const int Tile = pGame[Index].m_Index;
+		const int FrontTile = pFront ? pFront[Index].m_Index : TILE_AIR;
+		const bool IsStart = Tile == TILE_START || FrontTile == TILE_START;
+		if(IsStart && m_vGoresDistanceToFinish[(size_t)Index] != DISTANCE_INF)
 		{
-			if(Dist < BestDistance)
-			{
-				BestDistance = Dist;
-				BestStart = StartIndex;
-			}
-			continue;
-		}
-
-		const int StartX = StartIndex % Width;
-		const int StartY = StartIndex / Width;
-		const int Dx = StartX - RefX;
-		const int Dy = StartY - RefY;
-		const int64_t PlayerDistSquared = (int64_t)Dx * (int64_t)Dx + (int64_t)Dy * (int64_t)Dy;
-
-		if(PlayerDistSquared < BestPlayerDistSquared || (PlayerDistSquared == BestPlayerDistSquared && Dist < BestDistance))
-		{
-			BestPlayerDistSquared = PlayerDistSquared;
-			BestDistance = Dist;
-			BestStart = StartIndex;
-		}
-	}
-	if(BestStart < 0)
-		return;
-
-	std::vector<int> vPathIndices;
-	vPathIndices.reserve((size_t)BestDistance + 1);
-	int Cursor = BestStart;
-	for(int Guard = 0; Guard < MapSize && Cursor >= 0; ++Guard)
-	{
-		vPathIndices.push_back(Cursor);
-		if(vDist[Cursor] == 0)
+			HasReachableStart = true;
 			break;
-		Cursor = vNext[Cursor];
+		}
 	}
 
-	if(vPathIndices.size() < 2 || vDist[vPathIndices.back()] != 0)
-		return;
-
-	std::vector<vec2> vRawPathPoints;
-	vRawPathPoints.reserve(vPathIndices.size());
-	for(const int Index : vPathIndices)
+	if(!HasReachableStart)
 	{
-		const int X = Index % Width;
-		const int Y = Index / Width;
-		vRawPathPoints.emplace_back((float)X * 32.0f + 16.0f, (float)Y * 32.0f + 16.0f);
+		m_vGoresCMap.clear();
+		m_vvGoresDirectTeleOuts.clear();
+		m_vGoresDistanceToFinish.clear();
+		return;
 	}
 
-	if(vRawPathPoints.size() < 2)
-		return;
+	m_GoresDistanceFieldWidth = Width;
+	m_GoresDistanceFieldHeight = Height;
+	m_GoresDistanceFieldValid = true;
+}
 
-	// Merge straight runs to reduce per-frame projection cost while preserving geometry.
-	m_vGoresPathPoints.clear();
-	m_vGoresPathPoints.reserve(vRawPathPoints.size());
-	m_vGoresPathPoints.push_back(vRawPathPoints.front());
+bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) const
+{
+	vRoutePoints.clear();
 
-	if(vRawPathPoints.size() > 2)
+	const CCollision *pCollision = Collision();
+	if(!pCollision || !m_GoresDistanceFieldValid)
+		return false;
+
+	const int Width = pCollision->GetWidth();
+	const int Height = pCollision->GetHeight();
+	const int MapCellCount = Width * Height;
+	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
+	if(MapCellCount <= 0 ||
+		m_GoresDistanceFieldWidth != Width ||
+		m_GoresDistanceFieldHeight != Height ||
+		m_vGoresCMap.size() != (size_t)MapCellCount ||
+		m_vGoresDistanceToFinish.size() != (size_t)MapCellCount)
+		return false;
+
+	const int DummyIndex = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
+	if(DummyIndex == 1 && !Client()->DummyConnected())
+		return false;
+
+	const int ClientId = GameClient()->m_aLocalIds[DummyIndex];
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return false;
+
+	const auto &Char = GameClient()->m_Snap.m_aCharacters[ClientId];
+	if(!Char.m_Active)
+		return false;
+
+	const CTile *pGame = pCollision->GameLayer();
+	if(!pGame)
+		return false;
+	const CTile *pFront = pCollision->FrontLayer();
+	const CTeleTile *pTele = pCollision->TeleLayer();
+
+	const vec2 RefPos = GameClient()->m_aClients[ClientId].m_RenderPos;
+	const auto IsReachableIndex = [&](int Index) {
+		return Index >= 0 && Index < MapCellCount &&
+			m_vGoresCMap[(size_t)Index] != GORES_CMAP_BLOCKED &&
+			m_vGoresDistanceToFinish[(size_t)Index] != DISTANCE_INF;
+	};
+
+	int StartIndex = pCollision->GetPureMapIndex(RefPos);
+	if(!IsReachableIndex(StartIndex))
 	{
-		const auto ToGridDir = [](const vec2 &Delta) {
-			const int Dx = Delta.x > 0.0f ? 1 : (Delta.x < 0.0f ? -1 : 0);
-			const int Dy = Delta.y > 0.0f ? 1 : (Delta.y < 0.0f ? -1 : 0);
-			return std::pair<int, int>(Dx, Dy);
+		float BestDistanceSquared = std::numeric_limits<float>::max();
+		for(int Index = 0; Index < MapCellCount; ++Index)
+		{
+			if(!IsReachableIndex(Index))
+				continue;
+
+			const int Tile = pGame[Index].m_Index;
+			const int FrontTile = pFront ? pFront[Index].m_Index : TILE_AIR;
+			if(Tile != TILE_START && FrontTile != TILE_START)
+				continue;
+
+			const float DistanceSquared = length_squared(RefPos - pCollision->GetPos(Index));
+			if(DistanceSquared < BestDistanceSquared)
+			{
+				BestDistanceSquared = DistanceSquared;
+				StartIndex = Index;
+			}
+		}
+	}
+
+	if(!IsReachableIndex(StartIndex))
+		return false;
+
+	std::vector<unsigned char> vVisited((size_t)MapCellCount, 0);
+	vRoutePoints.reserve(256);
+	int CurrentIndex = StartIndex;
+	for(int Guard = 0; Guard < MapCellCount + 64; ++Guard)
+	{
+		if(!IsReachableIndex(CurrentIndex) || vVisited[(size_t)CurrentIndex] != 0)
+			break;
+
+		vVisited[(size_t)CurrentIndex] = 1;
+		vRoutePoints.push_back(pCollision->GetPos(CurrentIndex));
+
+		const int CurrentDistance = m_vGoresDistanceToFinish[(size_t)CurrentIndex];
+		if(CurrentDistance == 0)
+			return !vRoutePoints.empty();
+
+		int BestNextIndex = -1;
+		int BestNextDistance = DISTANCE_INF;
+		const auto ConsiderNext = [&](int NextIndex, int ExpectedDistance) {
+			if(!IsReachableIndex(NextIndex) || ExpectedDistance != CurrentDistance)
+				return;
+
+			const int NextDistance = m_vGoresDistanceToFinish[(size_t)NextIndex];
+			if(BestNextIndex < 0 || NextDistance < BestNextDistance)
+			{
+				BestNextIndex = NextIndex;
+				BestNextDistance = NextDistance;
+			}
 		};
 
-		auto PrevDir = ToGridDir(vRawPathPoints[1] - vRawPathPoints[0]);
-		for(size_t i = 1; i + 1 < vRawPathPoints.size(); ++i)
+		if(pTele && IsDirectTeleportInputTileForGoresDistanceField(pTele[CurrentIndex].m_Type))
 		{
-			const auto Dir = ToGridDir(vRawPathPoints[i + 1] - vRawPathPoints[i]);
-			if(Dir != PrevDir)
+			const int TeleNumber = pTele[CurrentIndex].m_Number;
+			if(TeleNumber > 0 && (int)m_vvGoresDirectTeleOuts.size() >= TeleNumber)
 			{
-				m_vGoresPathPoints.push_back(vRawPathPoints[i]);
-				PrevDir = Dir;
+				for(const int TeleOutIndex : m_vvGoresDirectTeleOuts[(size_t)TeleNumber - 1])
+					ConsiderNext(TeleOutIndex, m_vGoresDistanceToFinish[(size_t)TeleOutIndex]);
 			}
 		}
-	}
-	m_vGoresPathPoints.push_back(vRawPathPoints.back());
 
-	if(m_vGoresPathPoints.size() < 2)
-	{
-		m_vGoresPathPoints.clear();
-		return;
-	}
-
-	const size_t SegmentCount = m_vGoresPathPoints.size() - 1;
-	m_vGoresPathSegmentDelta.resize(SegmentCount);
-	m_vGoresPathSegmentLengthSquared.resize(SegmentCount);
-	m_vGoresPathSegmentLength.resize(SegmentCount);
-	m_vGoresPathCumulativeDistance.resize(m_vGoresPathPoints.size());
-	m_vGoresPathCumulativeDistance[0] = 0.0f;
-
-	float TotalDistance = 0.0f;
-	for(size_t i = 0; i < SegmentCount; ++i)
-	{
-		const vec2 Delta = m_vGoresPathPoints[i + 1] - m_vGoresPathPoints[i];
-		const float LenSquared = length_squared(Delta);
-		if(LenSquared <= 0.0f)
+		const int X = CurrentIndex % Width;
+		const int Y = CurrentIndex / Width;
+		const int aDx[4] = {1, -1, 0, 0};
+		const int aDy[4] = {0, 0, 1, -1};
+		for(int Dir = 0; Dir < 4; ++Dir)
 		{
-			m_GoresPathValid = false;
-			m_GoresPathTotalDistance = 0.0f;
-			m_vGoresPathPoints.clear();
-			m_vGoresPathSegmentDelta.clear();
-			m_vGoresPathSegmentLengthSquared.clear();
-			m_vGoresPathSegmentLength.clear();
-			m_vGoresPathCumulativeDistance.clear();
-			return;
+			const int NextX = X + aDx[Dir];
+			const int NextY = Y + aDy[Dir];
+			if(NextX < 0 || NextY < 0 || NextX >= Width || NextY >= Height)
+				continue;
+
+			const int NextIndex = NextY * Width + NextX;
+			if(!IsReachableIndex(NextIndex))
+				continue;
+
+			const int NextTile = pGame[NextIndex].m_Index;
+			const int NextFrontTile = pFront ? pFront[NextIndex].m_Index : TILE_AIR;
+			const bool NextIsStart = NextTile == TILE_START || NextFrontTile == TILE_START;
+			const bool NextIsFinish = NextTile == TILE_FINISH || NextFrontTile == TILE_FINISH;
+			const int StepCost = GoresDistanceFieldTraversalCost(m_vGoresCMap[(size_t)NextIndex], NextIsStart, NextIsFinish);
+			if(m_vGoresDistanceToFinish[(size_t)NextIndex] <= DISTANCE_INF - StepCost)
+				ConsiderNext(NextIndex, m_vGoresDistanceToFinish[(size_t)NextIndex] + StepCost);
 		}
-		const float Len = std::sqrt(LenSquared);
-		m_vGoresPathSegmentDelta[i] = Delta;
-		m_vGoresPathSegmentLengthSquared[i] = LenSquared;
-		m_vGoresPathSegmentLength[i] = Len;
-		TotalDistance += Len;
-		m_vGoresPathCumulativeDistance[i + 1] = TotalDistance;
+
+		if(BestNextIndex < 0)
+			break;
+		CurrentIndex = BestNextIndex;
 	}
 
-	if(TotalDistance <= 0.0f)
-	{
-		m_GoresPathValid = false;
-		m_GoresPathTotalDistance = 0.0f;
-		m_vGoresPathPoints.clear();
-		m_vGoresPathSegmentDelta.clear();
-		m_vGoresPathSegmentLengthSquared.clear();
-		m_vGoresPathSegmentLength.clear();
-		m_vGoresPathCumulativeDistance.clear();
+	return !vRoutePoints.empty();
+}
+
+void CTClient::RenderGoresDebugRoute()
+{
+	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresMapProgressDebugRouteEnabled())
 		return;
+
+	EnsureGoresDistanceField();
+	std::vector<vec2> vRoutePoints;
+	if(!BuildGoresDebugRoute(vRoutePoints, g_Config.m_ClDummy) || vRoutePoints.empty())
+		return;
+
+	float ScreenX0 = 0.0f;
+	float ScreenY0 = 0.0f;
+	float ScreenX1 = 0.0f;
+	float ScreenY1 = 0.0f;
+	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+
+	constexpr float DotSize = 6.0f;
+	constexpr float StartDotSize = 8.0f;
+	const float Margin = 48.0f;
+
+	Graphics()->TextureClear();
+	Graphics()->QuadsBegin();
+	Graphics()->SetColor(0.15f, 1.0f, 0.45f, 0.95f);
+	bool HasStartDot = false;
+	IGraphics::CQuadItem StartDot(0.0f, 0.0f, StartDotSize, StartDotSize);
+	std::vector<IGraphics::CQuadItem> vRouteDots;
+	vRouteDots.reserve(512);
+
+	for(size_t i = 0; i < vRoutePoints.size(); ++i)
+	{
+		const vec2 &Pos = vRoutePoints[i];
+		if(Pos.x < ScreenX0 - Margin || Pos.x > ScreenX1 + Margin ||
+			Pos.y < ScreenY0 - Margin || Pos.y > ScreenY1 + Margin)
+			continue;
+
+		if(i == 0)
+		{
+			StartDot = IGraphics::CQuadItem(Pos.x, Pos.y, StartDotSize, StartDotSize);
+			HasStartDot = true;
+			continue;
+		}
+
+		vRouteDots.emplace_back(Pos.x, Pos.y, DotSize, DotSize);
+		if(vRouteDots.size() >= 512)
+		{
+			if(HasStartDot)
+			{
+				Graphics()->SetColor(0.15f, 1.0f, 0.45f, 0.95f);
+				Graphics()->QuadsDraw(&StartDot, 1);
+				HasStartDot = false;
+			}
+			Graphics()->SetColor(0.15f, 1.0f, 0.45f, 0.72f);
+			Graphics()->QuadsDraw(vRouteDots.data(), (int)vRouteDots.size());
+			vRouteDots.clear();
+		}
 	}
 
-	m_GoresPathTotalDistance = TotalDistance;
-	m_GoresPathValid = true;
+	if(HasStartDot)
+	{
+		Graphics()->SetColor(0.15f, 1.0f, 0.45f, 0.95f);
+		Graphics()->QuadsDraw(&StartDot, 1);
+	}
+	if(!vRouteDots.empty())
+	{
+		Graphics()->SetColor(0.15f, 1.0f, 0.45f, 0.72f);
+		Graphics()->QuadsDraw(vRouteDots.data(), (int)vRouteDots.size());
+	}
+	Graphics()->QuadsEnd();
 }
 
 void CTClient::UpdateGoresMapProgress()
 {
-	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresMapProgressEnabled())
-	{
+	const auto ResetAllProgressState = [this]() {
 		for(int i = 0; i < NUM_DUMMIES; ++i)
 		{
 			m_aGoresWasOnStartLastTick[i] = false;
 			m_aGoresRunStarted[i] = false;
-			m_aGoresRunStartPathDistance[i] = 0.0f;
-			m_aGoresProgressSegmentHint[i] = -1;
+			m_aGoresRunStartDistanceToFinish[i] = 0;
 			m_aGoresMapProgressValid[i] = false;
+			m_aGoresMapProgress[i] = 0.0f;
 		}
+	};
+
+	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresMapProgressEnabled())
+	{
+		ResetAllProgressState();
 		return;
 	}
 
 	const CCollision *pCollision = Collision();
 	if(!pCollision)
 	{
-		for(int i = 0; i < NUM_DUMMIES; ++i)
-		{
-			m_aGoresWasOnStartLastTick[i] = false;
-			m_aGoresRunStarted[i] = false;
-			m_aGoresRunStartPathDistance[i] = 0.0f;
-			m_aGoresProgressSegmentHint[i] = -1;
-			m_aGoresMapProgressValid[i] = false;
-		}
+		ResetAllProgressState();
 		return;
 	}
 
-	EnsureGoresBaselinePath();
+	EnsureGoresDistanceField();
 	const int MapCellCount = pCollision->GetWidth() * pCollision->GetHeight();
-	const size_t SegmentCount = m_vGoresPathSegmentLength.size();
-	if(!m_GoresPathValid || m_GoresPathTotalDistance <= 0.0f || m_vGoresPathPoints.size() < 2 ||
-		m_vGoresPathCumulativeDistance.size() != m_vGoresPathPoints.size() ||
-		m_vGoresPathSegmentDelta.size() != SegmentCount ||
-		m_vGoresPathSegmentLengthSquared.size() != SegmentCount ||
-		SegmentCount + 1 != m_vGoresPathPoints.size())
+	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
+	if(!m_GoresDistanceFieldValid || MapCellCount <= 0 ||
+		m_GoresDistanceFieldWidth != pCollision->GetWidth() ||
+		m_GoresDistanceFieldHeight != pCollision->GetHeight() ||
+		m_vGoresCMap.size() != (size_t)MapCellCount ||
+		m_vGoresDistanceToFinish.size() != (size_t)MapCellCount)
 	{
-		for(int i = 0; i < NUM_DUMMIES; ++i)
-		{
-			m_aGoresWasOnStartLastTick[i] = false;
-			m_aGoresRunStarted[i] = false;
-			m_aGoresRunStartPathDistance[i] = 0.0f;
-			m_aGoresProgressSegmentHint[i] = -1;
-			m_aGoresMapProgressValid[i] = false;
-		}
+		ResetAllProgressState();
 		return;
 	}
 
@@ -3916,97 +4211,45 @@ void CTClient::UpdateGoresMapProgress()
 			continue;
 
 		const vec2 Pos = vec2((float)Char.m_Cur.m_X, (float)Char.m_Cur.m_Y);
-
 		const int PosIndex = pCollision->GetPureMapIndex(Pos);
-		const bool IsOnStart = PosIndex >= 0 && PosIndex < MapCellCount &&
-			(pCollision->GetTileIndex(PosIndex) == TILE_START || pCollision->GetFrontTileIndex(PosIndex) == TILE_START);
+		if(PosIndex < 0 || PosIndex >= MapCellCount)
+			continue;
+
+		const int Tile = pCollision->GetTileIndex(PosIndex);
+		const int FrontTile = pCollision->GetFrontTileIndex(PosIndex);
+		const bool IsOnStart = Tile == TILE_START || FrontTile == TILE_START;
 		if(IsOnStart)
 		{
 			m_aGoresWasOnStartLastTick[Dummy] = true;
 			m_aGoresRunStarted[Dummy] = false;
-			m_aGoresRunStartPathDistance[Dummy] = 0.0f;
-			m_aGoresProgressSegmentHint[Dummy] = -1;
+			m_aGoresRunStartDistanceToFinish[Dummy] = 0;
 			m_aGoresMapProgress[Dummy] = 0.0f;
 			m_aGoresMapProgressValid[Dummy] = true;
 			continue;
 		}
 
-		float BestDistSquared = std::numeric_limits<float>::max();
-		float BestPathDistance = 0.0f;
-		int BestSegment = -1;
-
-		const auto EvaluateSegment = [&](int SegmentIndex) {
-			const vec2 A = m_vGoresPathPoints[(size_t)SegmentIndex];
-			const vec2 &Delta = m_vGoresPathSegmentDelta[(size_t)SegmentIndex];
-			const float LenSquared = m_vGoresPathSegmentLengthSquared[(size_t)SegmentIndex];
-			if(LenSquared <= 0.0f)
-				return;
-
-			const float T = std::clamp(dot(Pos - A, Delta) / LenSquared, 0.0f, 1.0f);
-			const vec2 Projection = A + Delta * T;
-			const float DistSquared = length_squared(Pos - Projection);
-			if(DistSquared >= BestDistSquared)
-				return;
-			if(pCollision->IntersectLine(Pos, Projection, nullptr, nullptr) != 0)
-				return;
-
-			BestDistSquared = DistSquared;
-			BestPathDistance = m_vGoresPathCumulativeDistance[(size_t)SegmentIndex] + m_vGoresPathSegmentLength[(size_t)SegmentIndex] * T;
-			BestSegment = SegmentIndex;
-		};
-
-		const auto EvaluateRange = [&](int BeginSegment, int EndSegment) {
-			for(int SegmentIndex = BeginSegment; SegmentIndex <= EndSegment; ++SegmentIndex)
-				EvaluateSegment(SegmentIndex);
-		};
-
-		const int HintSegment = m_aGoresProgressSegmentHint[Dummy];
-		const int LastSegment = (int)SegmentCount - 1;
-		if(HintSegment >= 0 && HintSegment <= LastSegment)
-		{
-			constexpr int HintWindow = 96;
-			const int BeginSegment = maximum(0, HintSegment - HintWindow);
-			const int EndSegment = minimum(LastSegment, HintSegment + HintWindow);
-			EvaluateRange(BeginSegment, EndSegment);
-
-			// Teleport/respawn can move the tee far away from the previous segment.
-			// Fallback to full scan in that case to keep progress accurate.
-			constexpr float HintAcceptDistanceSquared = 768.0f * 768.0f;
-			if(BestSegment < 0 || BestDistSquared > HintAcceptDistanceSquared)
-				EvaluateRange(0, LastSegment);
-		}
-		else
-		{
-			EvaluateRange(0, LastSegment);
-		}
-
-		if(BestSegment < 0 || BestDistSquared == std::numeric_limits<float>::max())
-		{
-			m_aGoresProgressSegmentHint[Dummy] = -1;
+		const int CurrentDistanceToFinish = m_vGoresDistanceToFinish[(size_t)PosIndex];
+		if(CurrentDistanceToFinish == DISTANCE_INF)
 			continue;
-		}
 
 		if(!m_aGoresRunStarted[Dummy])
 		{
 			if(!m_aGoresWasOnStartLastTick[Dummy])
 			{
 				m_aGoresMapProgressValid[Dummy] = false;
-				m_aGoresProgressSegmentHint[Dummy] = BestSegment;
 				continue;
 			}
 			m_aGoresRunStarted[Dummy] = true;
-			m_aGoresRunStartPathDistance[Dummy] = BestPathDistance;
+			m_aGoresRunStartDistanceToFinish[Dummy] = CurrentDistanceToFinish;
 		}
 		m_aGoresWasOnStartLastTick[Dummy] = false;
 
-		const float StartDistance = std::clamp(m_aGoresRunStartPathDistance[Dummy], 0.0f, m_GoresPathTotalDistance);
-		const float RemainingDistance = maximum(0.0f, m_GoresPathTotalDistance - StartDistance);
-		if(RemainingDistance <= 0.001f)
+		const int StartDistanceToFinish = maximum(0, m_aGoresRunStartDistanceToFinish[Dummy]);
+		if(StartDistanceToFinish <= 0)
 			m_aGoresMapProgress[Dummy] = 1.0f;
 		else
-			m_aGoresMapProgress[Dummy] = std::clamp((BestPathDistance - StartDistance) / RemainingDistance, 0.0f, 1.0f);
+			m_aGoresMapProgress[Dummy] = std::clamp((StartDistanceToFinish - CurrentDistanceToFinish) / (float)StartDistanceToFinish, 0.0f, 1.0f);
 		m_aGoresMapProgressValid[Dummy] = true;
-		m_aGoresProgressSegmentHint[Dummy] = BestSegment;
 	}
 }
 
