@@ -134,9 +134,11 @@ class CHud : public CComponent
 		int64_t m_LastTrackDurationMs = 0;
 		float m_TargetX = 0.0f;
 		float m_TargetWidth = 0.0f;
+		float m_TargetHeight = 0.0f;
 		float m_TargetTitleAlpha = 0.0f;
 		float m_TargetTitleOffset = 0.0f;
 		float m_TargetSpectatorAlpha = 0.0f;
+		float m_TargetBottomAlpha = 0.0f;
 		float m_CoverRotation = 0.0f;
 		int64_t m_LastCoverRotationTick = 0;
 		bool m_LayoutInitialized = false;
@@ -152,9 +154,11 @@ class CHud : public CComponent
 			m_LastTrackDurationMs = 0;
 			m_TargetX = 0.0f;
 			m_TargetWidth = 0.0f;
+			m_TargetHeight = 0.0f;
 			m_TargetTitleAlpha = 0.0f;
 			m_TargetTitleOffset = 0.0f;
 			m_TargetSpectatorAlpha = 0.0f;
+			m_TargetBottomAlpha = 0.0f;
 			m_CoverRotation = 0.0f;
 			m_LastCoverRotationTick = 0;
 			m_LayoutInitialized = false;
@@ -236,6 +240,9 @@ class CHud : public CComponent
 	void RenderTextInfo();
 	void RenderSwapCountdown();
 	void RenderSwitchCountdowns();
+	void UpdateSwitchCountdownTracker();
+	bool HasActiveSwitchCountdown() const;
+	bool BuildSwitchCountdownSummary(char *pBuf, size_t BufSize) const;
 	void RenderDummyMiniMap();
 	bool GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const;
 	void RenderConnectionWarning();

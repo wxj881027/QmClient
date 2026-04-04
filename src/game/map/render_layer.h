@@ -348,7 +348,9 @@ protected:
 	void GetTileData(unsigned char *pIndex, unsigned char *pFlags, int *pAngleRotate, unsigned int x, unsigned int y, int CurOverlay) const override;
 
 private:
+	std::optional<CRenderLayerTile::CTileLayerVisuals> m_VisualCheckpointTiles;
 	std::optional<CRenderLayerTile::CTileLayerVisuals> m_VisualTeleNumbers;
+	std::optional<CRenderLayerTile::CTileLayerVisuals> m_VisualCheckpointNumbers;
 	CTeleTile *m_pTeleTiles;
 };
 

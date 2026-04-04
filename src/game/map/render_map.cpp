@@ -760,7 +760,7 @@ void CRenderMap::RenderTilemap(CTile *pTiles, int w, int h, float Scale, ColorRG
 	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
-void CRenderMap::RenderTeleOverlay(CTeleTile *pTele, int w, int h, float Scale, int OverlayRenderFlag, float Alpha)
+void CRenderMap::RenderTeleOverlay(CTeleTile *pTele, int w, int h, float Scale, int OverlayRenderFlag, float Alpha, FTileRenderFilter pFilter, void *pFilterUser)
 {
 	if(!(OverlayRenderFlag & OVERLAYRENDERFLAG_TEXT))
 		return;
@@ -797,6 +797,8 @@ void CRenderMap::RenderTeleOverlay(CTeleTile *pTele, int w, int h, float Scale, 
 				continue; // my = h-1;
 
 			int c = mx + my * w;
+			if(pFilter && !pFilter(pTele[c].m_Type, pFilterUser))
+				continue;
 
 			unsigned char Index = pTele[c].m_Number;
 			if(Index && IsTeleTileNumberUsedAny(pTele[c].m_Type))

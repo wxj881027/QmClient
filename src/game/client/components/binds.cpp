@@ -54,48 +54,110 @@ static void NormalizeBindCommand(const char *pCommand, char *pNormalized, size_t
 	pNormalized[OutLen] = '\0';
 }
 
+template<typename F>
+static void ForEachTopLevelBindCommand(const char *pCommand, F &&Fn)
+{
+	if(!pCommand)
+		return;
+
+	char aCurrentCommand[1024];
+	size_t CurrentLen = 0;
+	bool InQuotes = false;
+	bool EscapeNext = false;
+
+	const auto FlushCommand = [&]() {
+		aCurrentCommand[CurrentLen] = '\0';
+
+		char aNormalized[1024];
+		NormalizeBindCommand(aCurrentCommand, aNormalized, sizeof(aNormalized));
+		if(aNormalized[0] != '\0')
+		{
+			Fn(aNormalized);
+		}
+
+		CurrentLen = 0;
+	};
+
+	while(*pCommand != '\0')
+	{
+		const char c = *pCommand++;
+		if(c == ';' && !InQuotes)
+		{
+			FlushCommand();
+			EscapeNext = false;
+			continue;
+		}
+
+		if(CurrentLen + 1 < sizeof(aCurrentCommand))
+		{
+			aCurrentCommand[CurrentLen++] = c;
+		}
+
+		if(EscapeNext)
+		{
+			EscapeNext = false;
+			continue;
+		}
+
+		if(c == '\\')
+		{
+			EscapeNext = true;
+		}
+		else if(c == '"')
+		{
+			InQuotes = !InQuotes;
+		}
+	}
+
+	FlushCommand();
+}
+
+static bool IsDeepflyFireCommand(const char *pCommand)
+{
+	return str_comp_nocase(pCommand, "+fire") == 0;
+}
+
+static bool IsDeepflyDummyHammerToggleCommand(const char *pCommand)
+{
+	return str_comp_nocase(pCommand, "+toggle cl_dummy_hammer 1 0") == 0;
+}
+
+static bool IsIndirectDeepflyScriptCommand(const char *pCommand)
+{
+	// These commands only switch the actual fire bind indirectly, e.g.
+	// `bind mouse4 "bind mouse1 \"+fire\""` or `bind t "exec cfg\\clean.cfg"`.
+	// The HUD mode is refreshed again when those nested bind commands run, so
+	// the wrapper script itself should not count as a deepfly custom bind.
+	return str_startswith_nocase(pCommand, "bind ") != nullptr ||
+		str_startswith_nocase(pCommand, "unbind ") != nullptr ||
+		str_comp_nocase(pCommand, "unbindall") == 0 ||
+		str_startswith_nocase(pCommand, "exec ") != nullptr;
+}
+
 static int DetectDeepflyModeFromBindCommand(const char *pCommand)
 {
 	if(!pCommand || pCommand[0] == '\0')
 		return DEEPFLY_MODE_NONE;
 
-	char aCommand[1024];
-	str_copy(aCommand, pCommand, sizeof(aCommand));
-
 	bool HasFire = false;
 	bool HasDummyHammerToggle = false;
 	bool HasOtherCommand = false;
+	bool HasIndirectScriptCommand = false;
 
-	char *pCursor = aCommand;
-	while(*pCursor != '\0')
-	{
-		char *pEnd = pCursor;
-		while(*pEnd != '\0' && *pEnd != ';')
-			++pEnd;
-
-		const bool HasNextCommand = *pEnd == ';';
-		*pEnd = '\0';
-
-		char aNormalized[1024];
-		NormalizeBindCommand(pCursor, aNormalized, sizeof(aNormalized));
-		if(aNormalized[0] != '\0')
-		{
-			if(str_comp_nocase(aNormalized, "+fire") == 0)
-				HasFire = true;
-			else if(str_comp_nocase(aNormalized, "+toggle cl_dummy_hammer 1 0") == 0)
-				HasDummyHammerToggle = true;
-			else
-				HasOtherCommand = true;
-		}
-
-		if(!HasNextCommand)
-			break;
-		pCursor = pEnd + 1;
-	}
+	ForEachTopLevelBindCommand(pCommand, [&](const char *pNormalizedCommand) {
+		if(IsDeepflyFireCommand(pNormalizedCommand))
+			HasFire = true;
+		else if(IsDeepflyDummyHammerToggleCommand(pNormalizedCommand))
+			HasDummyHammerToggle = true;
+		else if(IsIndirectDeepflyScriptCommand(pNormalizedCommand))
+			HasIndirectScriptCommand = true;
+		else
+			HasOtherCommand = true;
+	});
 
 	if(!HasFire && !HasDummyHammerToggle)
 		return DEEPFLY_MODE_NONE;
-	if(HasOtherCommand)
+	if(HasOtherCommand || HasIndirectScriptCommand)
 		return DEEPFLY_MODE_CUSTOM;
 	if(HasFire && HasDummyHammerToggle)
 		return DEEPFLY_MODE_DF;
