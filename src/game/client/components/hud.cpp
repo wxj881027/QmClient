@@ -764,6 +764,23 @@ void CHud::OnInit()
 void CHud::RenderGameTimer()
 {
 	const SHudGameTimerInfo TimerInfo = BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width);
+	if(!TimerInfo.m_Visible)
+		return;
+
+	if(g_Config.m_QmHudIslandUseOriginalStyle)
+	{
+		m_RecordingStatusAnimState.Reset();
+
+		const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
+		if(TimerInfo.m_IsCritical)
+			TextRender()->TextColor(1.0f, 0.25f, 0.25f, TimerInfo.m_Alpha);
+		else
+			TextRender()->TextColor(1.0f, 1.0f, 1.0f, TimerInfo.m_Alpha);
+		TextRender()->Text(TimerInfo.m_X, TimerInfo.m_Y, TimerInfo.m_FontSize, TimerInfo.m_aText, -1.0f);
+		TextRender()->TextColor(PrevTextColor);
+		return;
+	}
+
 	const SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
 	if(!TimerCapsule.m_Visible)
 		return;
@@ -2395,6 +2412,9 @@ void CHud::PreparePlayerStateQuads()
 
 bool CHud::HasVisibleMediaIsland() const
 {
+	if(g_Config.m_QmHudIslandUseOriginalStyle)
+		return false;
+
 	SSwapCountdownInfo SwapInfo;
 	if(BuildSwapCountdownInfo(*GameClient(), *Client(), SwapInfo))
 		return true;
@@ -2421,6 +2441,9 @@ bool CHud::HasVisibleMediaIsland() const
 
 float CHud::GetTopIslandAvoidanceRight() const
 {
+	if(g_Config.m_QmHudIslandUseOriginalStyle)
+		return 0.0f;
+
 	const bool ShowLocalTime = ShouldRenderHudLocalTime(*GameClient());
 	const SHudGameTimerInfo TimerInfo = g_Config.m_ClShowhudTimer ? BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width) : SHudGameTimerInfo{};
 	const SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
@@ -2830,8 +2853,10 @@ void CHud::RenderMediaIsland()
 	const float UnifiedWidth = std::max(IslandWidth, UnifiedRight - IslandX);
 	const bool RenderLeftSection = ShowCover || ShowSpectator || ShowLocalTime;
 	const float TimerTextY = TimerCapsule.m_TextY;
+	ColorRGBA IslandBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandBgColor));
+	IslandBackgroundColor.a = std::clamp(g_Config.m_QmHudIslandBgOpacity / 100.0f, 0.0f, 1.0f);
 
-	DrawSmoothRoundedRect(Graphics(), IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight, Radius, ColorRGBA(0.04f, 0.05f, 0.07f, 0.80f));
+	DrawSmoothRoundedRect(Graphics(), IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight, Radius, IslandBackgroundColor);
 
 	if(ShowCover && !MediaState.m_AlbumArt.IsValid())
 	{
@@ -3181,6 +3206,13 @@ void CHud::RenderPlayerState(const int ClientId)
 		}
 	}
 
+	if(g_Config.m_QmHudIslandUseOriginalStyle)
+	{
+		constexpr float LegacyMediaBottomGap = 4.0f;
+		const float MediaBottomY = RenderLegacyMediaInfoAt(x + 4.0f, y);
+		y = maximum(y, MediaBottomY - 12.0f + LegacyMediaBottomGap);
+	}
+
 	// render capabilities
 	x = 5;
 	y += 12;
@@ -3527,33 +3559,77 @@ void CHud::RenderSpectatorCount()
 	char aBuf[16];
 	str_format(aBuf, sizeof(aBuf), "%d", Count);
 
-	const float Fontsize = 5.0f;
-	const float BoxHeight = 12.5f;
-	const float IconWidth = TextRender()->TextWidth(Fontsize, FontIcons::FONT_ICON_EYE);
-	const float TextWidth = TextRender()->TextWidth(Fontsize, aBuf);
-	const float BoxWidth = IconWidth + 3.0f + TextWidth + 10.0f;
-
 	float StartX = 0.0f;
 	float StartY = 0.0f;
-	const bool Seconds = g_Config.m_TcShowLocalTimeSeconds; // TClient
-	char aTimeStr[16];
-	str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
-	const float TimeWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
-	const float TimeAnchorX = (m_Width / 7.0f) * 3.0f;
-	const float TimeLeft = TimeAnchorX - (TimeWidth + 15.0f);
-	StartX = TimeLeft - 5.0f - BoxWidth;
-	StartY = 0.0f;
+	if(g_Config.m_QmHudIslandUseOriginalStyle)
+	{
+		const float Fontsize = 6.0f;
+		const float BoxHeight = 14.0f;
+		const float BoxWidth = 13.0f + TextRender()->TextWidth(Fontsize, aBuf);
 
-	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
+		if(m_MovementInfoBoxValid)
+		{
+			StartX = m_MovementInfoBoxX + m_MovementInfoBoxW - BoxWidth;
+			StartY = m_MovementInfoBoxY - BoxHeight - 4.0f;
+		}
+		else
+		{
+			StartX = m_Width - BoxWidth;
+			StartY = 285.0f - BoxHeight - 4.0f;
+			if(g_Config.m_ClShowhudPlayerPosition || g_Config.m_ClShowhudPlayerSpeed || g_Config.m_ClShowhudPlayerAngle)
+				StartY -= 4.0f;
+			StartY -= GetMovementInformationBoxHeight();
 
-	const float y = StartY + (BoxHeight - Fontsize) / 2.0f;
-	float x = StartX + 5.0f;
+			if(g_Config.m_ClShowhudScore)
+				StartY -= 56.0f;
 
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->Text(x, y, Fontsize, FontIcons::FONT_ICON_EYE, -1.0f);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-	x += IconWidth + 3.0f;
-	TextRender()->Text(x, y, Fontsize, aBuf, -1.0f);
+			if(g_Config.m_ClShowhudDummyActions && !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) && Client()->DummyConnected())
+				StartY -= 29.0f + 4.0f;
+		}
+
+		StartX = std::clamp(StartX, 0.0f, maximum(0.0f, m_Width - BoxWidth));
+		StartY = maximum(0.0f, StartY);
+
+		Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
+
+		const float y = StartY + BoxHeight / 3.0f;
+		const float x = StartX + 2.0f;
+
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->Text(x, y, Fontsize, FontIcons::FONT_ICON_EYE, -1.0f);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		TextRender()->Text(x + Fontsize + 3.0f, y, Fontsize, aBuf, -1.0f);
+		return;
+	}
+	else
+	{
+		const float Fontsize = 5.0f;
+		const float BoxHeight = 12.5f;
+		const float IconWidth = TextRender()->TextWidth(Fontsize, FontIcons::FONT_ICON_EYE);
+		const float TextWidth = TextRender()->TextWidth(Fontsize, aBuf);
+		const float BoxWidth = IconWidth + 3.0f + TextWidth + 10.0f;
+
+		const float TimeAnchorX = (m_Width / 7.0f) * 3.0f;
+		const bool Seconds = g_Config.m_TcShowLocalTimeSeconds; // TClient
+		char aTimeStr[16];
+		str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
+		const float TimeWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
+		const float TimeLeft = TimeAnchorX - (TimeWidth + 15.0f);
+		StartX = TimeLeft - 5.0f - BoxWidth;
+		StartY = 0.0f;
+
+		Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
+
+		const float y = StartY + (BoxHeight - Fontsize) / 2.0f;
+		float x = StartX + 5.0f;
+
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->Text(x, y, Fontsize, FontIcons::FONT_ICON_EYE, -1.0f);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		x += IconWidth + 3.0f;
+		TextRender()->Text(x, y, Fontsize, aBuf, -1.0f);
+		return;
+	}
 }
 
 void CHud::RenderDummyActions()
@@ -3787,6 +3863,8 @@ inline float CHud::GetMovementInformationBoxHeight()
 	if(g_Config.m_QmPlayerStatsHud)
 	{
 		BoxHeight += 3.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
+		if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && GameClient()->m_TClient.IsGoresMapProgressEnabled())
+			BoxHeight += 2.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
 	}
 	if(g_Config.m_ClShowhudPlayerPosition || g_Config.m_ClShowhudPlayerSpeed || g_Config.m_ClShowhudPlayerAngle)
 	{
@@ -4179,6 +4257,35 @@ void CHud::RenderMovementInformation()
 				TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+
+				if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && GameClient()->m_TClient.IsGoresMapProgressEnabled())
+				{
+					const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
+					const bool HasProgress = GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
+					const float Progress = HasProgress ? GameClient()->m_TClient.GetGoresMapProgress(DummyIndex) : 0.0f;
+
+					if(HasProgress)
+						str_format(aBuf, sizeof(aBuf), "地图进度: %.1f%%", Progress * 100.0f);
+					else
+						str_copy(aBuf, "地图进度: --");
+
+					const float Hue4 = std::fmod(StatsTime * 0.2f + 0.4f, 1.0f);
+					ColorHSLA RainbowHsla4(Hue4, 0.75f, 0.6f, 1.0f);
+					ColorRGBA RainbowColor4 = color_cast<ColorRGBA>(RainbowHsla4);
+					TextRender()->TextColor(RainbowColor4);
+					TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+
+					const float BarWidth = 42.0f;
+					const float BarHeight = 3.0f;
+					const float BarX = RightX - BarWidth;
+					const float BarY = y + (MOVEMENT_INFORMATION_LINE_HEIGHT - BarHeight) * 0.5f;
+					Graphics()->DrawRect(BarX, BarY, BarWidth, BarHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), IGraphics::CORNER_ALL, 1.0f);
+					if(HasProgress)
+						Graphics()->DrawRect(BarX, BarY, BarWidth * std::clamp(Progress, 0.0f, 1.0f), BarHeight, RainbowColor4.WithAlpha(0.85f), IGraphics::CORNER_ALL, 1.0f);
+					y += MOVEMENT_INFORMATION_LINE_HEIGHT;
+				}
 			}
 		}
 	}
@@ -4221,6 +4328,8 @@ void CHud::RenderMovementInformation()
 void CHud::RenderMapProgressBar()
 {
 	if(!GameClient()->m_TClient.IsGoresMapProgressEnabled())
+		return;
+	if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && g_Config.m_QmPlayerStatsHud)
 		return;
 
 	const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
@@ -4363,6 +4472,18 @@ void CHud::RenderLocalTime(float x)
 		m_LocalTimeV2AnimState.Reset();
 		return;
 	}
+
+	if(g_Config.m_QmHudIslandUseOriginalStyle)
+	{
+		m_LocalTimeV2AnimState.Reset();
+
+		char aTimeStr[6];
+		str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
+		Graphics()->DrawRect(x - 30.0f, 0.0f, 25.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
+		TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
+		return;
+	}
+
 	const bool UseV2LocalTime = true;
 	CUiV2AnimationRuntime *pAnimRuntime = nullptr;
 	if(UseV2LocalTime)
@@ -4439,6 +4560,174 @@ void CHud::RenderLocalTime(float x)
 	// TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
 }
 
+float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
+{
+	if(m_LegacyMediaInfoRendered || !g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_ClSmtcEnable || !g_Config.m_ClSmtcShowHud)
+		return CenterY;
+
+	CSystemMediaControls::SState MediaState;
+	if(!GameClient()->m_SystemMediaControls.GetStateSnapshot(MediaState))
+		return CenterY;
+
+	const bool HasTitle = MediaState.m_aTitle[0] != '\0';
+	const bool HasArtist = MediaState.m_aArtist[0] != '\0';
+	if(!HasTitle && !HasArtist)
+		return CenterY;
+
+	m_LegacyMediaInfoRendered = true;
+
+	constexpr float IslandHeight = 16.0f;
+	constexpr float CoverSize = 14.0f;
+	constexpr float PaddingX = 2.0f;
+	constexpr float IconGap = 3.0f;
+	constexpr float TextMaxWidth = 70.0f;
+	constexpr float TitleSize = 7.0f;
+	constexpr float ArtistSize = 6.0f;
+	const float IslandWidth = PaddingX + CoverSize + IconGap + TextMaxWidth + PaddingX;
+	const float IslandX = std::clamp(AnchorX, 0.0f, maximum(0.0f, m_Width - IslandWidth));
+	const float IslandY = std::clamp(CenterY - IslandHeight * 0.5f, 0.0f, maximum(0.0f, m_Height - IslandHeight));
+
+	Graphics()->DrawRect(IslandX, IslandY, IslandWidth, IslandHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.35f), IGraphics::CORNER_ALL, 4.0f);
+
+	const float CoverX = IslandX + PaddingX;
+	const float CoverY = IslandY + (IslandHeight - CoverSize) * 0.5f;
+	if(MediaState.m_AlbumArt.IsValid())
+	{
+		Graphics()->WrapClamp();
+		Graphics()->TextureSet(MediaState.m_AlbumArt);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		IGraphics::CQuadItem QuadItem(CoverX, CoverY, CoverSize, CoverSize);
+		Graphics()->QuadsDrawTL(&QuadItem, 1);
+		Graphics()->QuadsEnd();
+		Graphics()->WrapNormal();
+	}
+	else
+	{
+		Graphics()->DrawRect(CoverX, CoverY, CoverSize, CoverSize, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 2.0f);
+	}
+
+	const float TextX = CoverX + CoverSize + IconGap;
+	const float TextAreaW = IslandX + IslandWidth - PaddingX - TextX;
+	const float TitleY = IslandY + 1.0f;
+	const float ArtistY = TitleY + TitleSize;
+
+	const unsigned int PrevFlags = TextRender()->GetRenderFlags();
+	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PrevOutlineColor = TextRender()->GetTextOutlineColor();
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.9f);
+	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.35f);
+
+	if(HasTitle)
+	{
+		CTextCursor Cursor;
+		Cursor.m_FontSize = TitleSize;
+		Cursor.m_LineWidth = TextAreaW;
+		Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
+		Cursor.SetPosition(vec2(TextX, TitleY));
+		TextRender()->TextEx(&Cursor, MediaState.m_aTitle);
+	}
+	if(HasArtist)
+	{
+		CTextCursor Cursor;
+		Cursor.m_FontSize = ArtistSize;
+		Cursor.m_LineWidth = TextAreaW;
+		Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
+		Cursor.SetPosition(vec2(TextX, ArtistY));
+		TextRender()->TextEx(&Cursor, MediaState.m_aArtist);
+	}
+
+	char aLyricBuf[256];
+	float ContentBottomY = IslandY + IslandHeight;
+	if(GameClient()->m_Lyrics.GetCurrentLine(aLyricBuf, sizeof(aLyricBuf), MediaState.m_PositionMs))
+	{
+		constexpr float LyricFontSize = 6.0f;
+		const float LyricHeight = LyricFontSize + 3.0f;
+		const float LyricX = IslandX;
+		const float LyricY = std::clamp(IslandY + IslandHeight + 2.0f, 0.0f, maximum(0.0f, m_Height - LyricHeight));
+		const float LyricW = IslandWidth;
+		ContentBottomY = maximum(ContentBottomY, LyricY + LyricHeight);
+		Graphics()->DrawRect(LyricX, LyricY, LyricW, LyricHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 3.0f);
+
+		CTextCursor Cursor;
+		Cursor.m_FontSize = LyricFontSize;
+		Cursor.m_LineWidth = LyricW - PaddingX * 2.0f;
+		Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
+		Cursor.SetPosition(vec2(LyricX + PaddingX, LyricY + 1.0f));
+		TextRender()->TextEx(&Cursor, aLyricBuf);
+	}
+
+	TextRender()->TextColor(PrevTextColor);
+	TextRender()->TextOutlineColor(PrevOutlineColor);
+	TextRender()->SetRenderFlags(PrevFlags);
+
+	constexpr float BarHeight = 2.0f;
+	const float BarY = IslandY + IslandHeight - BarHeight - 1.0f;
+	Graphics()->DrawRect(TextX, BarY, TextAreaW, BarHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.15f), IGraphics::CORNER_ALL, 1.0f);
+	if(MediaState.m_DurationMs > 0)
+	{
+		const float Progress = std::clamp((float)MediaState.m_PositionMs / (float)MediaState.m_DurationMs, 0.0f, 1.0f);
+		if(Progress > 0.0f)
+			Graphics()->DrawRect(TextX, BarY, TextAreaW * Progress, BarHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.6f), IGraphics::CORNER_ALL, 1.0f);
+	}
+	return ContentBottomY;
+}
+
+bool CHud::GetLegacyMediaInfoAnchor(float &AnchorX, float &CenterY) const
+{
+	if(GameClient()->m_Snap.m_pGameInfoObj == nullptr)
+		return false;
+
+	int ClientId = -1;
+	if(GameClient()->m_Snap.m_pLocalCharacter && !GameClient()->m_Snap.m_SpecInfo.m_Active && !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
+		ClientId = GameClient()->m_Snap.m_LocalClientId;
+	else if(GameClient()->m_Snap.m_SpecInfo.m_Active)
+		ClientId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
+
+	if(ClientId < 0 || ClientId == SPEC_FREEVIEW || ClientId >= MAX_CLIENTS)
+		return false;
+
+	const CCharacterCore *pCharacter = &GameClient()->m_aClients[ClientId].m_Predicted;
+	float x = 5.0f + 12.0f;
+	float y = 5.0f + 12.0f +
+		(GameClient()->m_GameInfo.m_HudHealthArmor && g_Config.m_ClShowhudHealthAmmo ? 24.0f : 0.0f) +
+		(GameClient()->m_GameInfo.m_HudAmmo && g_Config.m_ClShowhudHealthAmmo ? 12.0f : 0.0f);
+
+	constexpr float aWeaponWidth[NUM_WEAPONS] = {16.0f, 12.0f, 12.0f, 12.0f, 12.0f, 12.0f};
+	constexpr float aWeaponInitialOffset[NUM_WEAPONS] = {-3.0f, -4.0f, -1.0f, -1.0f, -2.0f, -4.0f};
+	bool InitialOffsetAdded = false;
+	for(int Weapon = 0; Weapon < NUM_WEAPONS; ++Weapon)
+	{
+		if(!pCharacter->m_aWeapons[Weapon].m_Got)
+			continue;
+
+		if(!InitialOffsetAdded)
+		{
+			x += aWeaponInitialOffset[Weapon];
+			InitialOffsetAdded = true;
+		}
+		x += aWeaponWidth[Weapon];
+	}
+
+	AnchorX = x + 4.0f;
+	CenterY = y;
+	return true;
+}
+
+void CHud::RenderLegacyMediaInfo()
+{
+	if(m_LegacyMediaInfoRendered)
+		return;
+
+	float AnchorX = 5.0f + 12.0f + 32.0f;
+	float CenterY = 5.0f + 12.0f +
+		(GameClient()->m_GameInfo.m_HudHealthArmor && g_Config.m_ClShowhudHealthAmmo ? 24.0f : 0.0f) +
+		(GameClient()->m_GameInfo.m_HudAmmo && g_Config.m_ClShowhudHealthAmmo ? 12.0f : 0.0f);
+	GetLegacyMediaInfoAnchor(AnchorX, CenterY);
+	RenderLegacyMediaInfoAt(AnchorX, CenterY);
+}
+
 void CHud::OnNewSnapshot()
 {
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -4497,6 +4786,7 @@ void CHud::OnRender()
 	m_Height = 300.0f;
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
 	m_MovementInfoBoxValid = false;
+	m_LegacyMediaInfoRendered = false;
 	UpdateSwitchCountdownTracker();
 	const bool ShowMediaIsland = HasVisibleMediaIsland();
 	if(!ShowMediaIsland)
@@ -4518,10 +4808,18 @@ void CHud::OnRender()
 			{
 				RenderPlayerState(GameClient()->m_Snap.m_LocalClientId);
 			}
-		if(!ShowMediaIsland)
-			RenderSpectatorCount();
-		RenderMovementInformation();
-		RenderDDRaceEffects();
+			if(!ShowMediaIsland && g_Config.m_QmHudIslandUseOriginalStyle)
+			{
+				RenderMovementInformation();
+				RenderSpectatorCount();
+			}
+			else
+			{
+				if(!ShowMediaIsland)
+					RenderSpectatorCount();
+				RenderMovementInformation();
+			}
+			RenderDDRaceEffects();
 		}
 		else if(GameClient()->m_Snap.m_SpecInfo.m_Active)
 		{
@@ -4557,7 +4855,10 @@ void CHud::OnRender()
 		if(ShowMediaIsland)
 			RenderMediaIsland();
 		else
+		{
 			RenderLocalTime((m_Width / 7) * 3);
+			RenderLegacyMediaInfo();
+		}
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			RenderConnectionWarning();
 		RenderTeambalanceWarning();

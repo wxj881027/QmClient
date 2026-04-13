@@ -329,6 +329,18 @@ const CServerInfo *CServerBrowser::Get(int Index) const
 	return &m_vpServerlist[Index]->m_Info;
 }
 
+int CServerBrowser::NumHttpServers() const
+{
+	return m_pHttp != nullptr ? m_pHttp->NumServers() : 0;
+}
+
+const CServerInfo *CServerBrowser::HttpGet(int Index) const
+{
+	if(Index < 0 || m_pHttp == nullptr || Index >= m_pHttp->NumServers())
+		return nullptr;
+	return &m_pHttp->Server(Index);
+}
+
 int CServerBrowser::GenerateToken(const NETADDR &Addr) const
 {
 	SHA256_CTX Sha256;
@@ -1060,6 +1072,12 @@ void CServerBrowser::Refresh(int Type, bool Force)
 			Sort();
 		}
 	}
+}
+
+void CServerBrowser::RefreshHttpServerList()
+{
+	m_pHttp->Refresh();
+	m_pPingCache->Load();
 }
 
 void CServerBrowser::RequestImpl(const NETADDR &Addr, CServerEntry *pEntry, int *pBasicToken, int *pToken, bool RandomToken) const

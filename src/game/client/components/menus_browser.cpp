@@ -265,9 +265,29 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		{
 			if(ServerBrowser()->GetCurrentType() == IServerBrowser::TYPE_LAN)
 			{
+				CUIRect Label, Button;
+				View.HMargin((View.h - (16.0f + 18.0f + 8.0f)) / 2.0f, &Label);
+				Label.HSplitTop(16.0f, &Label, &Button);
+				Button.HSplitTop(8.0f, nullptr, &Button);
+				Button.VMargin((Button.w - 320.0f) / 2.0f, &Button);
 				char aBuf[128];
 				str_format(aBuf, sizeof(aBuf), Localize("No local servers found (ports %d-%d)"), IServerBrowser::LAN_PORT_BEGIN, IServerBrowser::LAN_PORT_END);
-				Ui()->DoLabel(&View, aBuf, 16.0f, TEXTALIGN_MC);
+				Ui()->DoLabel(&Label, aBuf, 16.0f, TEXTALIGN_MC);
+
+				static CButtonContainer s_StartLocalServerButton;
+				if(DoButton_Menu(&s_StartLocalServerButton, Localize("开启并连接到本地服务器"), 0, &Button))
+				{
+					if(GameClient()->m_LocalServer.IsServerRunning())
+					{
+						RefreshBrowserTab(true);
+						Connect("localhost");
+					}
+					else
+					{
+						GameClient()->m_LocalServer.RunServer({});
+						Connect("localhost");
+					}
+				}
 			}
 			else if(ServerBrowser()->IsServerlistError())
 			{

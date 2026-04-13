@@ -286,6 +286,9 @@ class CHud : public CComponent
 	void RenderSpectatorHud();
 	void RenderWarmupTimer();
 	void RenderLocalTime(float x);
+	float RenderLegacyMediaInfoAt(float AnchorX, float CenterY);
+	void RenderLegacyMediaInfo();
+	bool GetLegacyMediaInfoAnchor(float &AnchorX, float &CenterY) const;
 
 	static constexpr float MOVEMENT_INFORMATION_LINE_HEIGHT = 8.0f;
 
@@ -358,6 +361,7 @@ private:
 	float m_MovementInfoBoxY = 0.0f;
 	float m_MovementInfoBoxW = 0.0f;
 	float m_MovementInfoBoxH = 0.0f;
+	bool m_LegacyMediaInfoRendered = false;
 	float m_aMapProgressDisplayed[NUM_DUMMIES] = {0.0f, 0.0f};
 	bool m_aMapProgressInitialized[NUM_DUMMIES] = {false, false};
 };

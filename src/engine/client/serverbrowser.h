@@ -254,6 +254,7 @@ public:
 
 	// interface functions
 	void Refresh(int Type, bool Force = false) override;
+	void RefreshHttpServerList() override;
 	bool IsRefreshing() const override;
 	bool IsGettingServerlist() const override;
 	bool IsServerlistError() const override;
@@ -262,6 +263,8 @@ public:
 
 	int NumServers() const override { return m_vpServerlist.size(); }
 	const CServerInfo *Get(int Index) const override;
+	int NumHttpServers() const override;
+	const CServerInfo *HttpGet(int Index) const override;
 	int Players(const CServerInfo &Item) const override;
 	int Max(const CServerInfo &Item) const override;
 	int NumSortedServers() const override { return m_vSortedServerlist.size(); }

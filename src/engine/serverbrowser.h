@@ -342,6 +342,7 @@ public:
 	static constexpr const char *SEARCH_EXCLUDE_TOKEN = ";";
 
 	virtual void Refresh(int Type, bool Force = false) = 0;
+	virtual void RefreshHttpServerList() = 0;
 	virtual bool IsRefreshing() const = 0;
 	virtual bool IsGettingServerlist() const = 0;
 	virtual bool IsServerlistError() const = 0;
@@ -349,6 +350,8 @@ public:
 
 	virtual int NumServers() const = 0;
 	virtual const CServerInfo *Get(int Index) const = 0;
+	virtual int NumHttpServers() const = 0;
+	virtual const CServerInfo *HttpGet(int Index) const = 0;
 
 	virtual int Players(const CServerInfo &Item) const = 0;
 	virtual int Max(const CServerInfo &Item) const = 0;

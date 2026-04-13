@@ -1435,34 +1435,6 @@ set(EXPECTED_DATA
   countryflags/VU.png
   countryflags/WF.png
   countryflags/WS.png
-  countryflags/X-AROACE.png
-  countryflags/X-BI.png
-  countryflags/X-BLACK.png
-  countryflags/X-BLUEKITTY.png
-  countryflags/X-BLUESTRIPE.png
-  countryflags/X-BROWNBEAR.png
-  countryflags/X-CAMMO.png
-  countryflags/X-CAMMOSTRIPES.png
-  countryflags/X-COALA.png
-  countryflags/X-FINISH.png
-  countryflags/X-GAY.png
-  countryflags/X-LESBIAN.png
-  countryflags/X-LIMEKITTY.png
-  countryflags/X-PINKY.png
-  countryflags/X-PIRATE.png
-  countryflags/X-PROGRESS.png
-  countryflags/X-RAINBOW.png
-  countryflags/X-REDBOPP.png
-  countryflags/X-REDSTRIPE.png
-  countryflags/X-SADDO.png
-  countryflags/X-TOPTRI.png
-  countryflags/X-TOTAR.png
-  countryflags/X-TRANS.png
-  countryflags/X-TROLL.png
-  countryflags/X-TWINBOP.png
-  countryflags/X-TWINTRI.png
-  countryflags/X-WARPAINT.png
-  countryflags/X-WHITE.png
   countryflags/YE.png
   countryflags/ZA.png
   countryflags/ZM.png
@@ -2656,6 +2628,8 @@ if(CLIENT)
     components/qmclient/menus_qmclient.cpp
     components/qmclient/mod.cpp
     components/qmclient/mod.h
+    components/qmclient/moving_tiles.cpp
+    components/qmclient/moving_tiles.h
     components/qmclient/outlines.cpp
     components/qmclient/outlines.h
     components/qmclient/pet.cpp
@@ -2946,9 +2920,12 @@ if(CLIENT)
   if(MSVC)
     target_compile_options(game-client PRIVATE /bigobj) # TClient, required for ChaiScript
     target_link_options(game-client PRIVATE /ENTRY:mainCRTStartup)
-    # Work around an MSVC LTCG ICE in lyrics_component.cpp by excluding only this file
-    # from whole-program optimization while keeping IPO enabled for the rest of the target.
-    set_source_files_properties(src/game/client/components/qmclient/lyrics_component.cpp PROPERTIES
+    # Work around MSVC LTCG ICEs in ChaiScript-heavy translation units by excluding only
+    # those files from whole-program optimization while keeping IPO enabled elsewhere.
+    set_source_files_properties(
+      src/game/client/components/qmclient/lyrics_component.cpp
+      src/game/client/components/qmclient/scripting/impl.cpp
+      PROPERTIES
       COMPILE_OPTIONS "$<$<CONFIG:Release>:/GL->;$<$<CONFIG:RelWithDebInfo>:/GL->")
   endif()
 

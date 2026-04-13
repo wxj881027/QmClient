@@ -29,6 +29,8 @@
 #include <game/client/components/qmclient/rainbow.h>
 #include <game/client/prediction/entities/character.h>
 
+#include <optional>
+
 static float CalculateHandAngle(vec2 Dir, float AngleOffset)
 {
 	const float Angle = angle(Dir);
@@ -302,6 +304,7 @@ void CPlayers::RenderHookCollLine(
 	// simulate the hook into the future
 	int HookTick;
 	bool HookEnteredTelehook = false;
+	std::optional<IGraphics::CLineItem> HookTipLineSegment;
 	for(HookTick = 0; HookTick < MaxHookTicks; ++HookTick)
 	{
 		int Tele;
@@ -330,8 +333,11 @@ void CPlayers::RenderHookCollLine(
 				{
 					// The hook misses the player, but also misses the solid
 					vLineSegments.emplace_back(LineStartPos, SegmentStartPos);
+					HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, HitPos);
 					break;
 				}
+
+				HookTipLineSegment = IGraphics::CLineItem(SegmentStartPos, RetractingHookEndPos);
 			}
 
 			// the line is too long here, and the hook retracts, use old position
@@ -441,6 +447,7 @@ void CPlayers::RenderHookCollLine(
 	Alpha *= (float)g_Config.m_ClHookCollAlpha / 100;
 	if(Alpha <= 0.0f)
 		return;
+	ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
 
 	Graphics()->TextureClear();
 	if(HookCollSize > 0)
@@ -464,6 +471,20 @@ void CPlayers::RenderHookCollLine(
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor(HookCollColor.WithAlpha(Alpha));
 		Graphics()->QuadsDrawFreeform(vLineQuadSegments.data(), vLineQuadSegments.size());
+		if(HookTipLineSegment.has_value() && HookCollTipColor.a > 0.0f && !g_Config.m_TcRevertHookLine)
+		{
+			vLineQuadSegments.clear();
+			const auto &LineSegment = HookTipLineSegment.value();
+			vec2 DrawInitPos(LineSegment.m_X0, LineSegment.m_Y0);
+			vec2 DrawFinishPos(LineSegment.m_X1, LineSegment.m_Y1);
+			vec2 Pos0 = DrawFinishPos + PerpToAngle * -LineWidth;
+			vec2 Pos1 = DrawFinishPos + PerpToAngle * LineWidth;
+			vec2 Pos2 = DrawInitPos + PerpToAngle * -LineWidth;
+			vec2 Pos3 = DrawInitPos + PerpToAngle * LineWidth;
+			vLineQuadSegments.emplace_back(Pos0.x, Pos0.y, Pos1.x, Pos1.y, Pos2.x, Pos2.y, Pos3.x, Pos3.y);
+			Graphics()->SetColor(HookCollTipColor.WithMultipliedAlpha(Alpha));
+			Graphics()->QuadsDrawFreeform(vLineQuadSegments.data(), vLineQuadSegments.size());
+		}
 		Graphics()->QuadsEnd();
 	}
 	else
@@ -471,6 +492,11 @@ void CPlayers::RenderHookCollLine(
 		Graphics()->LinesBegin();
 		Graphics()->SetColor(HookCollColor.WithAlpha(Alpha));
 		Graphics()->LinesDraw(vLineSegments.data(), vLineSegments.size());
+		if(HookTipLineSegment.has_value() && HookCollTipColor.a > 0.0f && !g_Config.m_TcRevertHookLine)
+		{
+			Graphics()->SetColor(HookCollTipColor.WithMultipliedAlpha(Alpha));
+			Graphics()->LinesDraw(&HookTipLineSegment.value(), 1);
+		}
 		Graphics()->LinesEnd();
 	}
 }

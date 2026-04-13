@@ -102,7 +102,9 @@ struct SKeywordReplyRule
 	std::string m_Keywords;
 	std::string m_Reply;
 	bool m_AutoRename = false;
+	bool m_Regex = false;
 	bool m_HasExplicitRenameFlag = false;
+	bool m_HasExplicitRegexFlag = false;
 };
 
 static bool ParseQmClientServiceHostPort(const char *pAddrStr, char *pHost, size_t HostSize, int &Port)
@@ -136,20 +138,41 @@ static void TrimQmClientTextInPlace(char *pText)
 		mem_move(pText, pTrimmed, str_length(pTrimmed) + 1);
 }
 
-static char *ParseAutoReplyRulePrefix(char *pLine, bool &OutAutoRename, bool &OutHasExplicitFlag)
+static char *ParseAutoReplyRulePrefixes(char *pLine, bool &OutAutoRename, bool &OutRegex, bool &OutHasExplicitRenameFlag, bool &OutHasExplicitRegexFlag)
 {
 	OutAutoRename = false;
-	OutHasExplicitFlag = false;
+	OutRegex = false;
+	OutHasExplicitRenameFlag = false;
+	OutHasExplicitRegexFlag = false;
 
 	char *pTrimmedLine = (char *)str_utf8_skip_whitespaces(pLine);
-	const char *pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rename]");
-	if(!pAfterPrefix)
-		pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[r]");
-	if(pAfterPrefix)
+	while(true)
 	{
-		OutAutoRename = true;
-		OutHasExplicitFlag = true;
-		pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
+		const char *pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rename]");
+		if(!pAfterPrefix)
+			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[r]");
+		if(pAfterPrefix)
+		{
+			OutAutoRename = true;
+			OutHasExplicitRenameFlag = true;
+			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
+			continue;
+		}
+
+		pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[regex]");
+		if(!pAfterPrefix)
+			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[re]");
+		if(!pAfterPrefix)
+			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rx]");
+		if(pAfterPrefix)
+		{
+			OutRegex = true;
+			OutHasExplicitRegexFlag = true;
+			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
+			continue;
+		}
+
+		break;
 	}
 
 	return pTrimmedLine;
@@ -183,8 +206,10 @@ static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReply
 			continue;
 
 		bool AutoRename = false;
+		bool RegexRule = false;
 		bool HasExplicitRenameFlag = false;
-		char *pRuleText = ParseAutoReplyRulePrefix(pLine, AutoRename, HasExplicitRenameFlag);
+		bool HasExplicitRegexFlag = false;
+		char *pRuleText = ParseAutoReplyRulePrefixes(pLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
 		const char *pArrowConst = str_find(pRuleText, "=>");
 		if(!pArrowConst)
 			continue;
@@ -200,7 +225,7 @@ static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReply
 		if(pKeywords[0] == '\0' || pReply[0] == '\0')
 			continue;
 
-		vOutRules.push_back({pKeywords, pReply, AutoRename, HasExplicitRenameFlag});
+		vOutRules.push_back({pKeywords, pReply, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag});
 	}
 }
 
@@ -219,6 +244,8 @@ static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules,
 			str_append(pOutRules, "\n", OutRulesSize);
 		if(Rule.m_AutoRename)
 			str_append(pOutRules, "[rename] ", OutRulesSize);
+		if(Rule.m_Regex)
+			str_append(pOutRules, "[regex] ", OutRulesSize);
 		str_append(pOutRules, Rule.m_Keywords.c_str(), OutRulesSize);
 		str_append(pOutRules, "=>", OutRulesSize);
 		str_append(pOutRules, Rule.m_Reply.c_str(), OutRulesSize);
@@ -931,6 +958,15 @@ static EAutoReplyTokenMode ParseAutoReplyTokenMode(std::string_view Token, std::
 	return EAutoReplyTokenMode::Literal;
 }
 
+static void ParseExplicitAutoReplyRegexPattern(std::string_view PatternText, std::string &OutPattern, bool &OutCaseInsensitive)
+{
+	OutCaseInsensitive = true;
+	if(ParseAutoReplyTokenMode(PatternText, OutPattern, OutCaseInsensitive) == EAutoReplyTokenMode::RegexDelimited)
+		return;
+
+	OutPattern.assign(PatternText.begin(), PatternText.end());
+}
+
 static void AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules)
 {
 	if(!pOutRules || OutRulesSize == 0 || !pRules || pRules[0] == '\0')
@@ -1055,8 +1091,17 @@ static bool MatchAutoReplyLiteralToken(const char *pMessage, const char *pToken,
 	return HasPositiveKeywordMatch(pMessage, pToken);
 }
 
-static bool MatchAutoReplyRuleKeywords(const char *pMessage, const char *pKeywords, bool UseNegationFilter)
+static bool MatchAutoReplyRuleKeywords(const char *pMessage, const char *pKeywords, bool UseNegationFilter, bool ForceRegex)
 {
+	if(ForceRegex)
+	{
+		std::string Pattern;
+		bool CaseInsensitive = true;
+		ParseExplicitAutoReplyRegexPattern(pKeywords, Pattern, CaseInsensitive);
+		Regex Re(Pattern, CaseInsensitive);
+		return Re.error().empty() && Re.test(pMessage);
+	}
+
 	return ForEachAutoReplyToken(pKeywords, [&](std::string_view Token) {
 		std::string Pattern;
 		bool CaseInsensitive = true;
@@ -1108,9 +1153,12 @@ static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *
 			continue;
 
 		bool AutoRename = false;
+		bool RegexRule = false;
 		bool HasExplicitRenameFlag = false;
-		char *pRuleText = ParseAutoReplyRulePrefix(pLine, AutoRename, HasExplicitRenameFlag);
+		bool HasExplicitRegexFlag = false;
+		char *pRuleText = ParseAutoReplyRulePrefixes(pLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
 		(void)HasExplicitRenameFlag;
+		(void)HasExplicitRegexFlag;
 
 		const char *pArrowConst = str_find(pRuleText, "=>");
 		if(!pArrowConst)
@@ -1126,7 +1174,7 @@ static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *
 		if(pKeywords[0] == '\0' || pReply[0] == '\0')
 			continue;
 
-		if(MatchAutoReplyRuleKeywords(pMessage, pKeywords, UseNegationFilter))
+		if(MatchAutoReplyRuleKeywords(pMessage, pKeywords, UseNegationFilter, RegexRule))
 		{
 			if(MatchedReplyCount < MAX_MATCHED_REPLIES)
 			{
@@ -2961,16 +3009,16 @@ void CTClient::CheckFriendOnline()
 		m_FriendAutoRefreshPrevSeconds = g_Config.m_QmFriendOnlineRefreshSeconds;
 		m_FriendAutoRefreshNext = 0.0f;
 	}
-	if(g_Config.m_QmFriendOnlineAutoRefresh)
+
+	const float RefreshInterval = maximum(5.0f, (float)g_Config.m_QmFriendOnlineRefreshSeconds);
+	if(Now >= m_FriendAutoRefreshNext && !pServerBrowser->IsGettingServerlist())
 	{
 		const int CurrentType = pServerBrowser->GetCurrentType();
-		const bool AllowAutoRefresh = CurrentType != IServerBrowser::TYPE_LAN;
-		if(AllowAutoRefresh && Now >= m_FriendAutoRefreshNext)
-		{
-			if(!pServerBrowser->IsRefreshing() && !pServerBrowser->IsGettingServerlist())
-				pServerBrowser->Refresh(CurrentType, false);
-			m_FriendAutoRefreshNext = Now + g_Config.m_QmFriendOnlineRefreshSeconds;
-		}
+		if(g_Config.m_QmFriendOnlineAutoRefresh && CurrentType != IServerBrowser::TYPE_LAN)
+			pServerBrowser->Refresh(CurrentType, false);
+		else
+			pServerBrowser->RefreshHttpServerList();
+		m_FriendAutoRefreshNext = Now + RefreshInterval;
 	}
 
 	if(GameClient()->Friends()->NumFriends() <= 0)
@@ -3009,7 +3057,7 @@ void CTClient::CheckFriendOnline()
 			m_FriendNotifyScanId = 1;
 	}
 
-	const int NumServers = pServerBrowser->NumSortedServers();
+	const int NumServers = pServerBrowser->NumHttpServers();
 	if(NumServers <= 0)
 	{
 		m_FriendNotifyScanRunning = false;
@@ -3024,10 +3072,10 @@ void CTClient::CheckFriendOnline()
 		Key.reserve(MAX_NAME_LENGTH + MAX_CLAN_LENGTH + 1);
 		while(m_FriendNotifyScanIndex < NumServers && ProcessedServers < ServersPerFrame)
 		{
-			const CServerInfo *pEntry = pServerBrowser->SortedGet(m_FriendNotifyScanIndex);
+			const CServerInfo *pEntry = pServerBrowser->HttpGet(m_FriendNotifyScanIndex);
 			++m_FriendNotifyScanIndex;
 			++ProcessedServers;
-			if(!pEntry || pEntry->m_FriendNum <= 0)
+			if(!pEntry || pEntry->m_NumReceivedClients <= 0)
 				continue;
 
 			for(int ClientIndex = 0; ClientIndex < pEntry->m_NumReceivedClients; ++ClientIndex)
@@ -3035,9 +3083,7 @@ void CTClient::CheckFriendOnline()
 				const CServerInfo::CClient &Client = pEntry->m_aClients[ClientIndex];
 				if(Client.m_aName[0] == '\0')
 					continue;
-				if(Client.m_FriendState == IFriends::FRIEND_NO)
-					continue;
-				if(Client.m_FriendState != IFriends::FRIEND_PLAYER && !GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
+				if(!GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true))
 					continue;
 
 				BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);

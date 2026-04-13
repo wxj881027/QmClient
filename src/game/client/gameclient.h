@@ -77,6 +77,7 @@
 #include "components/qmclient/input_overlay.h"
 #include "components/qmclient/lyrics_component.h"
 #include "components/qmclient/mod.h"
+#include "components/qmclient/moving_tiles.h"
 #include "components/qmclient/outlines.h"
 #include "components/qmclient/pet.h"
 #include "components/qmclient/player_indicator.h"
@@ -242,6 +243,8 @@ public:
 	CCollisionHitbox m_CollisionHitbox;
 	CPieMenu m_PieMenu;
 	CInputOverlay m_InputOverlay;
+	CMovingTiles m_MovingTilesBackground = CMovingTiles{false};
+	CMovingTiles m_MovingTilesForeground = CMovingTiles{true};
 
 private:
 	std::vector<class CComponent *> m_vpAll;

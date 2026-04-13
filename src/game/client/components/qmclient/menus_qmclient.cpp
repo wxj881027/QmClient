@@ -90,6 +90,7 @@ struct SAutoReplyRulePlain
 	std::string m_Keywords;
 	std::string m_Reply;
 	bool m_AutoRename = false;
+	bool m_Regex = false;
 };
 
 struct SAutoReplyRuleInputRow
@@ -97,6 +98,7 @@ struct SAutoReplyRuleInputRow
 	char m_aTrigger[512] = "";
 	char m_aReply[256] = "";
 	int m_AutoRename = 0;
+	int m_Regex = 0;
 	CLineInput m_TriggerInput;
 	CLineInput m_ReplyInput;
 
@@ -107,20 +109,41 @@ struct SAutoReplyRuleInputRow
 	}
 };
 
-static char *ParseAutoReplyRulePrefix(char *pLine, bool &OutAutoRename, bool &OutHasExplicitFlag)
+static char *ParseAutoReplyRulePrefixes(char *pLine, bool &OutAutoRename, bool &OutRegex, bool &OutHasExplicitRenameFlag, bool &OutHasExplicitRegexFlag)
 {
 	OutAutoRename = false;
-	OutHasExplicitFlag = false;
+	OutRegex = false;
+	OutHasExplicitRenameFlag = false;
+	OutHasExplicitRegexFlag = false;
 
 	char *pTrimmedLine = (char *)str_utf8_skip_whitespaces(pLine);
-	const char *pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rename]");
-	if(!pAfterPrefix)
-		pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[r]");
-	if(pAfterPrefix)
+	while(true)
 	{
-		OutAutoRename = true;
-		OutHasExplicitFlag = true;
-		pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
+		const char *pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rename]");
+		if(!pAfterPrefix)
+			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[r]");
+		if(pAfterPrefix)
+		{
+			OutAutoRename = true;
+			OutHasExplicitRenameFlag = true;
+			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
+			continue;
+		}
+
+		pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[regex]");
+		if(!pAfterPrefix)
+			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[re]");
+		if(!pAfterPrefix)
+			pAfterPrefix = str_startswith_nocase(pTrimmedLine, "[rx]");
+		if(pAfterPrefix)
+		{
+			OutRegex = true;
+			OutHasExplicitRegexFlag = true;
+			pTrimmedLine = (char *)str_utf8_skip_whitespaces(pAfterPrefix);
+			continue;
+		}
+
+		break;
 	}
 
 	return pTrimmedLine;
@@ -140,12 +163,13 @@ static bool CopyTrimmedString(const char *pSrc, char *pOut, size_t OutSize)
 	return pOut[0] != '\0';
 }
 
-static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const char *pTrigger = "", const char *pReply = "", bool AutoRename = false)
+static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const char *pTrigger = "", const char *pReply = "", bool AutoRename = false, bool Regex = false)
 {
 	auto pRow = std::make_unique<SAutoReplyRuleInputRow>();
 	pRow->m_TriggerInput.Set(pTrigger);
 	pRow->m_ReplyInput.Set(pReply);
 	pRow->m_AutoRename = AutoRename ? 1 : 0;
+	pRow->m_Regex = Regex ? 1 : 0;
 	return pRow;
 }
 
@@ -177,9 +201,12 @@ static void ParseAutoReplyRules(const char *pRules, std::vector<SAutoReplyRulePl
 			continue;
 
 		bool AutoRename = false;
-		bool HasExplicitFlag = false;
-		char *pRuleText = ParseAutoReplyRulePrefix(pLine, AutoRename, HasExplicitFlag);
-		(void)HasExplicitFlag;
+		bool RegexRule = false;
+		bool HasExplicitRenameFlag = false;
+		bool HasExplicitRegexFlag = false;
+		char *pRuleText = ParseAutoReplyRulePrefixes(pLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
+		(void)HasExplicitRenameFlag;
+		(void)HasExplicitRegexFlag;
 
 		const char *pArrowConst = str_find(pRuleText, "=>");
 		if(!pArrowConst)
@@ -196,7 +223,7 @@ static void ParseAutoReplyRules(const char *pRules, std::vector<SAutoReplyRulePl
 		if(pKeywords[0] == '\0' || pReply[0] == '\0')
 			continue;
 
-		vOutRules.push_back({pKeywords, pReply, AutoRename});
+		vOutRules.push_back({pKeywords, pReply, AutoRename, RegexRule});
 	}
 }
 
@@ -212,7 +239,7 @@ static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReply
 		const bool HasReply = CopyTrimmedString(pRow->m_ReplyInput.GetString(), aReply, sizeof(aReply));
 		if(!(HasTrigger && HasReply))
 			continue;
-		vCompleteRows.push_back({aTrigger, aReply, pRow->m_AutoRename != 0});
+		vCompleteRows.push_back({aTrigger, aReply, pRow->m_AutoRename != 0, pRow->m_Regex != 0});
 	}
 
 	if(vCompleteRows.size() != vRules.size())
@@ -222,7 +249,8 @@ static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReply
 	{
 		if(str_comp(vCompleteRows[i].m_Keywords.c_str(), vRules[i].m_Keywords.c_str()) != 0 ||
 			str_comp(vCompleteRows[i].m_Reply.c_str(), vRules[i].m_Reply.c_str()) != 0 ||
-			vCompleteRows[i].m_AutoRename != vRules[i].m_AutoRename)
+			vCompleteRows[i].m_AutoRename != vRules[i].m_AutoRename ||
+			vCompleteRows[i].m_Regex != vRules[i].m_Regex)
 			return false;
 	}
 	return true;
@@ -253,6 +281,8 @@ static void BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoR
 			str_append(pOutRules, "\n", OutRulesSize);
 		if(pRow->m_AutoRename != 0)
 			str_append(pOutRules, "[rename] ", OutRulesSize);
+		if(pRow->m_Regex != 0)
+			str_append(pOutRules, "[regex] ", OutRulesSize);
 		str_append(pOutRules, aTrigger, OutRulesSize);
 		str_append(pOutRules, "=>", OutRulesSize);
 		str_append(pOutRules, aReply, OutRulesSize);
@@ -854,7 +884,8 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 		{
 			g_Config.m_TcFakeCtfFlags = Value;
 		}
-	}//尚不明确作用
+	}
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcMovingTilesEntities, TCLocalize("Show moving tiles in entities"), &g_Config.m_TcMovingTilesEntities, &Column, LineSize);
 
 	Column.HSplitTop(MarginExtraSmall, nullptr, &Column);
 	s_SectionBoxes.back().h = Column.y - s_SectionBoxes.back().y;
@@ -873,9 +904,11 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 	if(g_Config.m_TcFastInput)
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, TCLocalize("对其他玩家启用快速输入"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, TCLocalize("Extra tick other tees (increases other tees latency, \nmakes dragging slightly easier when using fast input)"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
 	else
 		Column.HSplitTop(LineSize, nullptr, &Column);
+
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSubTickAiming, TCLocalize("Sub-Tick aiming"), &g_Config.m_ClSubTickAiming, &Column, LineSize);
 	// A little extra spacing because these are multi line
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 
@@ -3668,6 +3701,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		HJAssist,
 		InputOverlay,
 		Voice,
+		DynamicIsland,
 		SystemMediaControls,
 	};
 
@@ -3686,7 +3720,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		const char *m_pKey;
 	};
 
-	constexpr size_t kQmModuleCount = 22;
+	constexpr size_t kQmModuleCount = 23;
 
 	// Layout string format: key:column:order; entries separated by ';'.
 	static const std::array<SQmModuleEntry, kQmModuleCount> s_aQmModuleDefaults = {{
@@ -3711,7 +3745,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		{EQmModuleId::InputOverlay, EQmModuleColumn::Right, 7, "input_overlay"},
 		{EQmModuleId::Voice, EQmModuleColumn::Right, 8, "voice"},
 		{EQmModuleId::DummyMiniView, EQmModuleColumn::Right, 9, "dummy_miniview"},
-		{EQmModuleId::SystemMediaControls, EQmModuleColumn::Right, 10, "system_media_controls"}
+		{EQmModuleId::DynamicIsland, EQmModuleColumn::Right, 10, "dynamic_island"},
+		{EQmModuleId::SystemMediaControls, EQmModuleColumn::Right, 11, "system_media_controls"}
 	}};
 
 	static std::array<SQmModuleEntry, kQmModuleCount> s_aQmModuleLayout = s_aQmModuleDefaults;
@@ -4082,6 +4117,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::HJAssist: return "hj辅助 hj fuzhu 解冻辅助 jiedong fuzhu 自动取消旁观 quxiao pangguan 自动切换 qiehuan tee 自动关闭聊天 guanbi liaotian";
 		case EQmModuleId::InputOverlay: return "按键显示 anjian xianshi input overlay 按键叠加 anjian diejia 大小 daxiao 不透明度 butouming 水平位置 shuiping weizhi 垂直位置 chuizhi weizhi";
 		case EQmModuleId::Voice: return "语音 yuyin voice chat 麦克风 maikefeng mic 静音 jingyin 音量 yinliang 语音激活 vad 阈值 yuzhi 释放延迟 shifang yanchi 服务器 fuwuqi token 叠加层 diejiaceng 按住说话 ptt push to talk 全图收听 quantu 衰减 shuijian 距离 juli 半径 banjing 测试 ceshi 本地 bendi 回环 huihuan 设备 shebei 输入 shuru 左右声道定位 左右 zuoyou 声道 shengdao 立体声 stereo";
+		case EQmModuleId::DynamicIsland: return "灵动岛 lld lingdongdao dynamic island hud 顶部 dingbu 背景 beijing 颜色 yanse 透明度 touming 黑底 heidi 原版 yuanban 默认 moren classic old style";
 		case EQmModuleId::SystemMediaControls: return "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige";
 		case EQmModuleId::Info: return "";
 		}
@@ -4985,7 +5021,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					const auto RebuildRows = [&]() {
 						vRows.clear();
 						for(const auto &Rule : vParsedRules)
-							vRows.push_back(CreateAutoReplyRuleInputRow(Rule.m_Keywords.c_str(), Rule.m_Reply.c_str(), Rule.m_AutoRename));
+							vRows.push_back(CreateAutoReplyRuleInputRow(Rule.m_Keywords.c_str(), Rule.m_Reply.c_str(), Rule.m_AutoRename, Rule.m_Regex));
 					};
 
 					bool HasActiveInput = false;
@@ -5042,13 +5078,16 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					pRuleRow->m_TriggerInput.SetEmptyText("");
 					pRuleRow->m_ReplyInput.SetEmptyText("");
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Row.VSplitLeft(LG_LabelWidth, nullptr, &ControlCol);
-					CUIRect RenameCol, TriggerCol, SendCol, ReplyCol, RemoveButtonRect;
+					CUIRect OptionsCol;
+					Row.VSplitLeft(LG_LabelWidth, &OptionsCol, &ControlCol);
+					CUIRect RenameCol, RegexCol, TriggerCol, SendCol, ReplyCol, RemoveButtonRect;
 					ControlCol.VSplitRight(maximum(LG_LineHeight, 24.0f * UiScale), &ControlCol, &RemoveButtonRect);
-					ControlCol.VSplitLeft(maximum(62.0f, 62.0f * UiScale), &RenameCol, &ControlCol);
 					ControlCol.VSplitLeft(ControlCol.w * 0.45f, &TriggerCol, &ControlCol);
 					ControlCol.VSplitLeft(maximum(40.0f, 40.0f * UiScale), &SendCol, &ReplyCol);
+					OptionsCol.VSplitLeft(maximum(54.0f, 54.0f * UiScale), &RenameCol, &OptionsCol);
+					OptionsCol.VSplitLeft(maximum(54.0f, 54.0f * UiScale), &RegexCol, &OptionsCol);
 					DoButton_CheckBoxAutoVMarginAndSet(&pRuleRow->m_AutoRename, TCLocalize("改名"), &pRuleRow->m_AutoRename, &RenameCol, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&pRuleRow->m_Regex, TCLocalize("正则"), &pRuleRow->m_Regex, &RegexCol, LG_LineHeight);
 					Ui()->DoEditBox(&pRuleRow->m_TriggerInput, &TriggerCol, LG_BodySize);
 					Ui()->DoLabel(&SendCol, TCLocalize("发送"), LG_BodySize, TEXTALIGN_MC);
 					Ui()->DoEditBox(&pRuleRow->m_ReplyInput, &ReplyCol, LG_BodySize);
@@ -5126,10 +5165,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					static CLineInput s_PieMenuRenameQueue(g_Config.m_QmPieMenuRenameQueue, sizeof(g_Config.m_QmPieMenuRenameQueue));
 					s_PieMenuRenameQueue.SetEmptyText(TCLocalize("示例: 璇梦1|璇梦2|璇梦3"));
 					Ui()->DoEditBox(&s_PieMenuRenameQueue, &ControlCol, LG_BodySize);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight * 0.75f, &Row, &CardContent);
-					Ui()->DoLabel(&Row, TCLocalize("外圈将根据名单数量自动分配扇区"), LG_BodySize * 0.75f, TEXTALIGN_ML);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
@@ -5302,25 +5337,32 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 
 					if(g_Config.m_QmPlayerStatsMapProgress)
 					{
-						static CButtonContainer s_MapProgressColorId;
-
-						DoLine_ColorPicker(&s_MapProgressColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("进度条颜色"), &g_Config.m_QmPlayerStatsMapProgressColor, ColorRGBA(36.0f / 255.0f, 199.0f / 255.0f, 100.0f / 255.0f, 1.0f), false, nullptr, true);
-
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmPlayerStatsMapProgressWidth, &g_Config.m_QmPlayerStatsMapProgressWidth, &Row, TCLocalize("进度条宽度"), 10, 80, &CUi::ms_LinearScrollbarScale, 0, "%");
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerStatsMapProgressStyle, TCLocalize("使用HUD内嵌进度条"), &g_Config.m_QmPlayerStatsMapProgressStyle, &Row, LG_LineHeight);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmPlayerStatsMapProgressHeight, &g_Config.m_QmPlayerStatsMapProgressHeight, &Row, TCLocalize("进度条高度"), 6, 30, &CUi::ms_LinearScrollbarScale, 0, "px");
-						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+						if(g_Config.m_QmPlayerStatsMapProgressStyle == 0)
+						{
+							static CButtonContainer s_MapProgressColorId;
 
-						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmPlayerStatsMapProgressPosX, &g_Config.m_QmPlayerStatsMapProgressPosX, &Row, TCLocalize("水平位置"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+							DoLine_ColorPicker(&s_MapProgressColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("进度条颜色"), &g_Config.m_QmPlayerStatsMapProgressColor, ColorRGBA(36.0f / 255.0f, 199.0f / 255.0f, 100.0f / 255.0f, 1.0f), false, nullptr, true);
 
-						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmPlayerStatsMapProgressPosY, &g_Config.m_QmPlayerStatsMapProgressPosY, &Row, TCLocalize("垂直位置"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+							CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+							Ui()->DoScrollbarOption(&g_Config.m_QmPlayerStatsMapProgressWidth, &g_Config.m_QmPlayerStatsMapProgressWidth, &Row, TCLocalize("进度条宽度"), 10, 80, &CUi::ms_LinearScrollbarScale, 0, "%");
+							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+							CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+							Ui()->DoScrollbarOption(&g_Config.m_QmPlayerStatsMapProgressHeight, &g_Config.m_QmPlayerStatsMapProgressHeight, &Row, TCLocalize("进度条高度"), 6, 30, &CUi::ms_LinearScrollbarScale, 0, "px");
+							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+							CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+							Ui()->DoScrollbarOption(&g_Config.m_QmPlayerStatsMapProgressPosX, &g_Config.m_QmPlayerStatsMapProgressPosX, &Row, TCLocalize("水平位置"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+							CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+							Ui()->DoScrollbarOption(&g_Config.m_QmPlayerStatsMapProgressPosY, &g_Config.m_QmPlayerStatsMapProgressPosY, &Row, TCLocalize("垂直位置"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+						}
 
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerStatsMapProgressDbgRoute, TCLocalize("显示地图点状路线调试"), &g_Config.m_QmPlayerStatsMapProgressDbgRoute, &Row, LG_LineHeight);
@@ -5956,9 +5998,45 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				HandleModuleDragState(pModule, s_GlassCards.back());
 			}
 			break;
+			case EQmModuleId::DynamicIsland:
+			{
+				// ========== 模块17: 灵动岛 ==========
+				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+				CUIRect CardDynamicIslandStart = Column;
+				s_GlassCards.push_back(CardDynamicIslandStart);
+
+				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+				DoModuleHeadline(CardContent, 14, TCLocalize("灵动岛"), TCLocalize("灵动岛"));
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHudIslandUseOriginalStyle, TCLocalize("关闭灵动岛"), &g_Config.m_QmHudIslandUseOriginalStyle, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				if(g_Config.m_QmHudIslandUseOriginalStyle)
+				{
+				}
+				else
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Ui()->DoScrollbarOption(&g_Config.m_QmHudIslandBgOpacity, &g_Config.m_QmHudIslandBgOpacity, &Row, TCLocalize("透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					static CButtonContainer s_DynamicIslandBgColorId;
+					DoLine_ColorPicker(&s_DynamicIslandBgColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, TCLocalize("背景颜色"), &g_Config.m_QmHudIslandBgColor, ColorRGBA(0.04f, 0.05f, 0.07f, 1.0f), false);
+				}
+
+				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+				Column.y = CardContent.y;
+				s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+				RegisterModuleCard(pModule, ColumnId, s_GlassCards.back());
+				HandleModuleDragState(pModule, s_GlassCards.back());
+			}
+			break;
 			case EQmModuleId::SystemMediaControls:
 			{
-				// ========== 模块17: 系统媒体控制 ==========
+				// ========== 模块18: 系统媒体控制 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardSystemMediaControlsStart = Column;
 				s_GlassCards.push_back(CardSystemMediaControlsStart);
