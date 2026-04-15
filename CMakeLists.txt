@@ -1987,52 +1987,14 @@ foreach(datafile ${DATA})
     list(APPEND DATA_UI ${datafile})
   endif()
 endforeach()
-if(DATA_UI)
-  set(UI_DATA_STAMP "${PROJECT_BINARY_DIR}/data/ui/.ui_data.stamp")
-  add_custom_command(
-    OUTPUT "${UI_DATA_STAMP}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/data/ui"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/data/ui" "${PROJECT_BINARY_DIR}/data/ui"
-    COMMAND ${CMAKE_COMMAND} -E touch "${UI_DATA_STAMP}"
-    DEPENDS ${DATA_UI}
-    COMMENT "Copy data/ui to build directory"
+if(DATA)
+  # Keep the whole runtime data directory in sync with the build directory on every build.
+  # This custom target has no OUTPUT, so it always runs when game-client is built.
+  add_custom_target(sync_runtime_data
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/data" "${PROJECT_BINARY_DIR}/data"
+    COMMENT "Sync data directory to build directory"
   )
-  add_custom_target(copy_ui_data DEPENDS "${UI_DATA_STAMP}")
-endif()
-
-# Keep input overlay data in sync with the build directory when files change.
-set(DATA_INPUT_OVERLAY)
-foreach(datafile ${DATA})
-  if(datafile MATCHES "/data/input overlay-Zac/")
-    list(APPEND DATA_INPUT_OVERLAY ${datafile})
-  endif()
-endforeach()
-if(DATA_INPUT_OVERLAY)
-  set(INPUT_OVERLAY_DATA_STAMP "${PROJECT_BINARY_DIR}/data/input overlay-Zac/.input_overlay_data.stamp")
-  add_custom_command(
-    OUTPUT "${INPUT_OVERLAY_DATA_STAMP}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/data/input overlay-Zac"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/data/input overlay-Zac" "${PROJECT_BINARY_DIR}/data/input overlay-Zac"
-    COMMAND ${CMAKE_COMMAND} -E touch "${INPUT_OVERLAY_DATA_STAMP}"
-    DEPENDS ${DATA_INPUT_OVERLAY}
-    COMMENT "Copy data/input overlay-Zac to build directory"
-  )
-  add_custom_target(copy_input_overlay_data DEPENDS "${INPUT_OVERLAY_DATA_STAMP}")
-endif()
-
-# Keep input_overlay.json in sync with the build directory when it changes.
-set(INPUT_OVERLAY_CONFIG "${PROJECT_SOURCE_DIR}/data/input_overlay.json")
-if(EXISTS "${INPUT_OVERLAY_CONFIG}")
-  set(INPUT_OVERLAY_CONFIG_STAMP "${PROJECT_BINARY_DIR}/data/.input_overlay_config.stamp")
-  add_custom_command(
-    OUTPUT "${INPUT_OVERLAY_CONFIG_STAMP}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/data"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${INPUT_OVERLAY_CONFIG}" "${PROJECT_BINARY_DIR}/data/input_overlay.json"
-    COMMAND ${CMAKE_COMMAND} -E touch "${INPUT_OVERLAY_CONFIG_STAMP}"
-    DEPENDS "${INPUT_OVERLAY_CONFIG}"
-    COMMENT "Copy data/input_overlay.json to build directory"
-  )
-  add_custom_target(copy_input_overlay_config DEPENDS "${INPUT_OVERLAY_CONFIG_STAMP}")
 endif()
 set(COPY_FILES
   ${CURL_COPY_FILES}
@@ -2561,6 +2523,8 @@ if(CLIENT)
     components/freezebars.h
     components/ghost.cpp
     components/ghost.h
+    components/hud_editor.cpp
+    components/hud_editor.h
     components/hud.cpp
     components/hud.h
     components/important_alert.cpp
@@ -2623,6 +2587,10 @@ if(CLIENT)
     components/qmclient/data_version.h
     components/qmclient/input_overlay.cpp
     components/qmclient/input_overlay.h
+    components/qmclient/fast_practice.cpp
+    components/qmclient/fast_practice.h
+    components/qmclient/jelly_tee.cpp
+    components/qmclient/jelly_tee.h
     components/qmclient/lyrics_component.cpp
     components/qmclient/lyrics_component.h
     components/qmclient/menus_qmclient.cpp
@@ -2987,14 +2955,8 @@ if(CLIENT)
     target_compile_definitions(game-client PRIVATE CONF_BACKEND_VULKAN)
   endif()
 
-  if(TARGET copy_ui_data)
-    add_dependencies(game-client copy_ui_data)
-  endif()
-  if(TARGET copy_input_overlay_data)
-    add_dependencies(game-client copy_input_overlay_data)
-  endif()
-  if(TARGET copy_input_overlay_config)
-    add_dependencies(game-client copy_input_overlay_config)
+  if(TARGET sync_runtime_data)
+    add_dependencies(game-client sync_runtime_data)
   endif()
 
   list(APPEND TARGETS_OWN game-client)
@@ -3219,6 +3181,7 @@ if(TOOLS)
     map_diff.cpp
     map_extract.cpp
     map_find_env.cpp
+    map_generator.cpp
     map_optimize.cpp
     map_replace_area.cpp
     map_replace_image.cpp
@@ -3244,6 +3207,12 @@ if(TOOLS)
       endif()
       if(TOOL MATCHES "^config_")
         list(APPEND EXTRA_TOOL_SRC "src/tools/config_common.h")
+      endif()
+      if(TOOL MATCHES "^map_generator$")
+        list(APPEND EXTRA_TOOL_SRC
+          "src/tools/map_generator/generator.cpp"
+          "src/tools/map_generator/generator.h"
+        )
       endif()
       set(EXCLUDE_FROM_ALL)
       if(DEV)

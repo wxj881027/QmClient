@@ -37,6 +37,8 @@
 #include "components/spectator.h"
 #include "components/statboard.h"
 #include "components/voting.h"
+#include "components/qmclient/fast_practice.h"
+#include "components/qmclient/jelly_tee.h"
 #include "lineinput.h"
 #include "prediction/entities/character.h"
 #include "prediction/entities/projectile.h"
@@ -77,10 +79,89 @@
 #include <game/mapitems.h>
 #include <game/version.h>
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <limits>
 
 using namespace std::chrono_literals;
+
+namespace
+{
+float EffectiveFastInputOffsetTicks(const CGameClient *pGameClient)
+{
+	(void)pGameClient;
+
+	if(!g_Config.m_TcFastInput)
+		return 0.0f;
+
+	if(g_Config.m_BcFastInputMode == 0)
+	{
+		if(g_Config.m_TcFastInputAmount <= 0)
+			return 0.0f;
+		return g_Config.m_TcFastInputAmount / 20.0f;
+	}
+
+	if(g_Config.m_BcFastInputMode == 1)
+	{
+		if(g_Config.m_BcFastInputDeltaInput <= 0)
+			return 0.0f;
+		return g_Config.m_BcFastInputDeltaInput / 100.0f;
+	}
+
+	const int GammaInputAmount = BcFastInputGammaUiToEffectiveAmount(g_Config.m_BcFastInputGammaInput);
+	if(GammaInputAmount <= 0)
+		return 0.0f;
+	return GammaInputAmount / 100.0f;
+}
+
+int FastInputPredictionTicks(float OffsetTicks)
+{
+	if(OffsetTicks <= 0.0f)
+		return 0;
+	return (int)std::ceil(OffsetTicks);
+}
+
+void ApplyFastInputOffset(float OffsetTicks, int &Tick, float &Intra)
+{
+	if(OffsetTicks <= 0.0f)
+		return;
+
+	const int WholeTicks = (int)OffsetTicks;
+	const float OffsetIntra = OffsetTicks - WholeTicks;
+
+	const float CombinedIntra = Intra + OffsetIntra;
+	const int CarryOverTicks = (int)CombinedIntra;
+
+	Tick += WholeTicks + CarryOverTicks;
+	Intra = CombinedIntra - CarryOverTicks;
+}
+
+bool EffectiveFastInputOthers()
+{
+	return g_Config.m_BcFastInputMode == 0 && g_Config.m_TcFastInputOthers != 0;
+}
+
+bool EffectiveDeltaInputOthers()
+{
+	return g_Config.m_BcFastInputMode == 1 && g_Config.m_BcDeltaInputOthers != 0;
+}
+
+bool EffectiveGammaInputOthers()
+{
+	return g_Config.m_BcFastInputMode == 2 && g_Config.m_BcGammaInputOthers != 0;
+}
+
+bool EffectiveAnyFastInputOthers()
+{
+	return EffectiveFastInputOthers() || EffectiveDeltaInputOthers() || EffectiveGammaInputOthers();
+}
+
+bool EffectiveImmediateFastInputOthers()
+{
+	return EffectiveDeltaInputOthers() || EffectiveGammaInputOthers();
+}
+} // namespace
 
 const char *CGameClient::Version() const { return GAME_VERSION; }
 const char *CGameClient::NetVersion() const { return GAME_NETVERSION; }
@@ -141,6 +222,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Translate,
 					      &m_Ghost,
 					      &m_TClient, // Must be before chat and players
+					      &m_FastPractice,
 					      &m_Voice,
 					      &m_SystemMediaControls,
 					      &m_Lyrics,
@@ -180,6 +262,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Menus,
 					      &m_PieMenu,
 					      &m_InputOverlay,
+					      &m_HudEditor,
 					      &m_Tooltips,
 					      &m_Scripting,
 					      &m_KeyBinder,
@@ -200,6 +283,7 @@ void CGameClient::OnConsoleInit()
 						  &m_ImportantAlert,
 						  &m_Menus,
 						  &m_PieMenu,
+						  &m_HudEditor,
 						  &m_TClient, // TClient repeat message
 						  &m_Controls,
 						  &m_TouchControls,
@@ -477,6 +561,8 @@ void CGameClient::OnInit()
 	}
 
 	m_GameWorld.Init(Collision(), m_aTuningList, &m_MapBugs);
+	if(!m_pJellyTee)
+		m_pJellyTee = std::make_unique<CQmJelly>(this);
 	OnReset();
 
 	// Set free binds to DDRace binds if it's active
@@ -683,6 +769,7 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 
 void CGameClient::OnConnected()
 {
+	m_FastPractice.InvalidateBufferedInputState();
 	const char *pConnectCaption = DemoPlayer()->IsPlaying() ? Localize("Preparing demo playback") : Localize("Connected");
 	const char *pLoadMapContent = Localize("Initializing map logic");
 	// render loading before skip is calculated
@@ -754,6 +841,7 @@ void CGameClient::OnReset()
 	m_SuppressEvents = false;
 	m_NewTick = false;
 	m_NewPredictedTick = false;
+	std::fill(std::begin(m_aPredictedHammerHitEvent), std::end(m_aPredictedHammerHitEvent), false);
 
 	m_aFlagDropTick[TEAM_RED] = 0;
 	m_aFlagDropTick[TEAM_BLUE] = 0;
@@ -841,6 +929,8 @@ void CGameClient::OnReset()
 	m_CursorInfo.m_NumSamples = 0;
 
 	m_UiRuntimeV2.Reset();
+	if(m_pJellyTee)
+		m_pJellyTee->Reset();
 
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnReset();
@@ -977,6 +1067,7 @@ void CGameClient::OnRender()
 	// clear new tick flags
 	m_NewTick = false;
 	m_NewPredictedTick = false;
+	std::fill(std::begin(m_aPredictedHammerHitEvent), std::end(m_aPredictedHammerHitEvent), false);
 
 	if(g_Config.m_ClDummy && !Client()->DummyConnected())
 		g_Config.m_ClDummy = 0;
@@ -1060,6 +1151,7 @@ void CGameClient::OnDummyDisconnect()
 	m_aLastNewPredictedTick[1] = -1;
 	m_aLastPredictedAirJumpTick[1] = -1;
 	m_PredictedDummyId = -1;
+	m_FastPractice.InvalidateBufferedInputState();
 }
 
 int CGameClient::LastRaceTick() const
@@ -1078,7 +1170,7 @@ int CGameClient::CurrentRaceTime() const
 
 bool CGameClient::Predict() const
 {
-	if(!g_Config.m_ClPredict)
+	if(!g_Config.m_ClPredict && !m_FastPractice.Enabled())
 		return false;
 
 	if(m_Snap.m_pGameInfoObj)
@@ -1366,6 +1458,11 @@ void CGameClient::FormatStreamerVoteText(const char *pText, char *pBuf, int BufS
 		AppendVoteText(pBuf, BufSize, Length, pCursor, 1);
 		++pCursor;
 	}
+}
+
+void CGameClient::PrepareInputForSend(int *pData, int Size, bool Dummy)
+{
+	m_FastPractice.PrepareInputForSend(pData, Size, Dummy);
 }
 
 void CGameClient::OnRelease()
@@ -1739,6 +1836,8 @@ void CGameClient::ProcessEvents()
 	if(m_SuppressEvents)
 		return;
 
+	std::fill(std::begin(m_aPredictedHammerHitEvent), std::end(m_aPredictedHammerHitEvent), false);
+
 	int SnapType = IClient::SNAP_CURRENT;
 	int Num = Client()->SnapNumItems(SnapType);
 	for(int Index = 0; Index < Num; Index++)
@@ -1762,7 +1861,24 @@ void CGameClient::ProcessEvents()
 		else if(Item.m_Type == NETEVENTTYPE_HAMMERHIT)
 		{
 			const CNetEvent_HammerHit *pEvent = (const CNetEvent_HammerHit *)Item.m_pData;
-			m_Effects.HammerHit(vec2(pEvent->m_X, pEvent->m_Y), Alpha, Volume);
+			const vec2 HammerHitPos = vec2(pEvent->m_X, pEvent->m_Y);
+			m_Effects.HammerHit(HammerHitPos, Alpha, Volume);
+
+			constexpr float QmJellyHammerHitRadius = 120.0f;
+			for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+			{
+				const int LocalId = m_aLocalIds[Dummy];
+				if(LocalId < 0 || LocalId >= MAX_CLIENTS || !m_aClients[LocalId].m_Active)
+					continue;
+
+				const auto &Core = m_aClients[LocalId].m_Predicted;
+				const bool FiringHammer = Core.m_ActiveWeapon == WEAPON_HAMMER && (Core.m_Input.m_Fire & 1);
+				if(!FiringHammer)
+					continue;
+
+				if(distance(Core.m_Pos, HammerHitPos) <= QmJellyHammerHitRadius)
+					m_aPredictedHammerHitEvent[Dummy] = true;
+			}
 		}
 		else if(Item.m_Type == NETEVENTTYPE_BIRTHDAY)
 		{
@@ -2406,6 +2522,12 @@ void CGameClient::OnNewSnapshot()
 			m_Controls.OnPlayerDeath();
 		}
 	}
+	if(m_FastPractice.Enabled())
+		m_PredictedDummyId = m_FastPractice.CurrentPracticeDummyId();
+	else if(Client()->DummyConnected() && m_aLocalIds[!g_Config.m_ClDummy] >= 0)
+		m_PredictedDummyId = m_aLocalIds[!g_Config.m_ClDummy];
+	else
+		m_PredictedDummyId = -1;
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
 		if(m_Snap.m_LocalClientId == -1 && m_DemoSpecId == SPEC_FOLLOW)
@@ -3106,6 +3228,9 @@ void CGameClient::OnPredict()
 		return;
 	}
 
+	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
+		return;
+
 	vec2 aBeforeRender[MAX_CLIENTS];
 	for(int i = 0; i < MAX_CLIENTS; i++)
 		aBeforeRender[i] = GetSmoothPos(i);
@@ -3141,14 +3266,13 @@ void CGameClient::OnPredict()
 	// predict
 	// prediction actually happens here
 
-	int FastInputTicks = 0;
-	if(g_Config.m_TcFastInput)
-		FastInputTicks = (g_Config.m_TcFastInputAmount + 19) / 20;
+	const int FastInputTicks = GetFastInputPredictionTicks();
+	const bool FastInputOthers = EffectiveAnyFastInputOthers();
 
 	int FinalTickRegular = Client()->PredGameTick(g_Config.m_ClDummy); // The vanilla final tick disregarding fast input
 	int FinalTickSelf = FinalTickRegular + FastInputTicks; // the final tick for just our local tee
 	int FinalTickOthers = FinalTickSelf; // the final tick for all other tees
-	if(g_Config.m_TcFastInput && !g_Config.m_TcFastInputOthers)
+	if(!FastInputOthers)
 		FinalTickOthers = FinalTickSelf - FastInputTicks;
 
 	int LocalTee = g_Config.m_ClDummy ^ m_IsDummySwapping;
@@ -4170,8 +4294,11 @@ void CGameClient::SendDummyInfo(bool Start)
 	}
 }
 
-void CGameClient::SendKill() const
+void CGameClient::SendKill()
 {
+	if(m_FastPractice.ConsumeKillCommand())
+		return;
+
 	CNetMsg_Cl_Kill Msg;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
 
@@ -4180,6 +4307,11 @@ void CGameClient::SendKill() const
 		CMsgPacker MsgP(NETMSGTYPE_CL_KILL, false);
 		Client()->SendMsg(!g_Config.m_ClDummy, &MsgP, MSGFLAG_VITAL);
 	}
+}
+
+void CGameClient::SendKill() const
+{
+	const_cast<CGameClient *>(this)->SendKill();
 }
 
 void CGameClient::SendReadyChange7()
@@ -4658,6 +4790,10 @@ void CGameClient::UpdateSpectatorCursor()
 
 void CGameClient::UpdateRenderedCharacters()
 {
+	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
+	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
+	const bool HasFastInput = FastInputTicks > 0;
+	const bool FastInputOthers = EffectiveAnyFastInputOthers();
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(!m_Snap.m_aCharacters[i].m_Active)
@@ -4677,7 +4813,8 @@ void CGameClient::UpdateRenderedCharacters()
 		if(i == m_Snap.m_LocalClientId)
 			Client()->m_IsLocalFrozen = pChar && pChar->m_FreezeTime > 0;
 
-		if(Predict() && (i == m_Snap.m_LocalClientId || (AntiPingPlayers() && !IsOtherTeam(i))) && pChar)
+		const bool IsPracticeParticipant = m_FastPractice.Enabled() && m_FastPractice.IsPracticeParticipant(i);
+		if(Predict() && (i == m_Snap.m_LocalClientId || IsPracticeParticipant || (AntiPingPlayers() && !IsOtherTeam(i))) && pChar)
 		{
 			m_aClients[i].m_Predicted.Write(&m_aClients[i].m_RenderCur);
 			m_aClients[i].m_PrevPredicted.Write(&m_aClients[i].m_RenderPrev);
@@ -4689,11 +4826,19 @@ void CGameClient::UpdateRenderedCharacters()
 				vec2(m_aClients[i].m_RenderCur.m_X, m_aClients[i].m_RenderCur.m_Y),
 				m_aClients[i].m_IsPredicted ? Client()->PredIntraGameTick(g_Config.m_ClDummy) : Client()->IntraGameTick(g_Config.m_ClDummy));
 
-			if(g_Config.m_TcRemoveAnti)
+			if(IsPracticeParticipant)
+			{
+				if(HasFastInput && (i == m_Snap.m_LocalClientId || FastInputOthers))
+					Pos = GetFastInputPos(i);
+			}
+			else if(g_Config.m_TcRemoveAnti)
 				Pos = GetFreezePos(i);
-			else if(g_Config.m_TcFastInput && (i == m_Snap.m_LocalClientId || (PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy])))
+			else if(HasFastInput && (i == m_Snap.m_LocalClientId || (PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy])))
+			{
 				Pos = GetFastInputPos(i);
-			if(i == m_Snap.m_LocalClientId || (PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy]))
+			}
+
+			if(i == m_Snap.m_LocalClientId || IsPracticeParticipant || (PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy]))
 			{
 				m_aClients[i].m_IsPredictedLocal = true;
 				if(AntiPingGunfire() && ((pChar->m_NinjaJetpack && pChar->m_FreezeTime == 0) || m_Snap.m_aCharacters[i].m_Cur.m_Weapon != WEAPON_NINJA || m_Snap.m_aCharacters[i].m_Cur.m_Weapon == m_aClients[i].m_Predicted.m_ActiveWeapon))
@@ -4712,12 +4857,15 @@ void CGameClient::UpdateRenderedCharacters()
 				if(g_Config.m_ClAntiPingSmooth)
 					Pos = GetSmoothPos(i);
 
-				if(g_Config.m_TcAntiPingImproved && m_aClients[i].m_ValidAntipingSmooth)
+				// Delta/gamma others should feel immediate: prefer direct fast-input position over smoothing layers.
+				if(HasFastInput && EffectiveImmediateFastInputOthers())
+					Pos = GetFastInputPos(i);
+				else if(g_Config.m_TcAntiPingImproved && m_aClients[i].m_ValidAntipingSmooth)
 					Pos = mix(m_aClients[i].m_PrevImprovedPredPos, m_aClients[i].m_ImprovedPredPos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
 
 				if(g_Config.m_TcRemoveAnti && m_pClient->m_IsLocalFrozen)
 					Pos = GetFreezePos(i);
-				else if(g_Config.m_TcFastInput && g_Config.m_TcFastInputOthers && !g_Config.m_TcAntiPingImproved)
+				else if(HasFastInput && FastInputOthers && !g_Config.m_TcAntiPingImproved)
 					Pos = GetFastInputPos(i);
 
 				if(g_Config.m_TcShowOthersGhosts && g_Config.m_TcSwapGhosts && !(m_aClients[i].m_FreezeEnd > 0 && g_Config.m_TcHideFrozenGhosts))
@@ -4819,9 +4967,13 @@ void CGameClient::DetectStrongHook()
 
 vec2 CGameClient::GetSmoothPos(int ClientId)
 {
-	const int FastInputTicks = g_Config.m_TcFastInput ? (g_Config.m_TcFastInputAmount + 19) / 20 : 0;
+	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
+	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
+	if(ClientId != m_Snap.m_LocalClientId && FastInputTicks > 0 && EffectiveImmediateFastInputOthers())
+		return GetFastInputPos(ClientId);
 	vec2 Pos = mix(m_aClients[ClientId].m_PrevPredicted.m_Pos, m_aClients[ClientId].m_Predicted.m_Pos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
 	int64_t Now = time_get();
+	const bool FastInputOthers = EffectiveAnyFastInputOthers();
 	for(int i = 0; i < 2; i++)
 	{
 		int64_t Len = std::clamp(m_aClients[ClientId].m_aSmoothLen[i], (int64_t)1, time_freq());
@@ -4833,8 +4985,10 @@ vec2 CGameClient::GetSmoothPos(int ClientId)
 			float SmoothIntra;
 			Client()->GetSmoothTick(&SmoothTick, &SmoothIntra, MixAmount);
 
-			if(ClientId != m_Snap.m_LocalClientId && g_Config.m_TcFastInputOthers && FastInputTicks > 0)
-				SmoothTick += FastInputTicks;
+			if(ClientId != m_Snap.m_LocalClientId && FastInputOthers && FastInputTicks > 0)
+			{
+				ApplyFastInputOffset(FastInputOffsetTicks, SmoothTick, SmoothIntra);
+			}
 
 			if(SmoothTick > 0 &&
 				m_aClients[ClientId].m_aPredTick[(SmoothTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) &&
@@ -4845,6 +4999,28 @@ vec2 CGameClient::GetSmoothPos(int ClientId)
 	return Pos;
 }
 
+int CGameClient::GetFastInputPredictionAmountMs()
+{
+	if(!g_Config.m_TcFastInput)
+		return 0;
+
+	if(g_Config.m_BcFastInputMode == 0)
+		return std::max(0, g_Config.m_TcFastInputAmount);
+	if(g_Config.m_BcFastInputMode == 1)
+		return std::max(0, (g_Config.m_BcFastInputDeltaInput + 2) / 5);
+	return std::max(0, (BcFastInputGammaUiToEffectiveAmount(g_Config.m_BcFastInputGammaInput) + 2) / 5);
+}
+
+int CGameClient::GetFastInputPredictionTicks()
+{
+	return FastInputPredictionTicks(EffectiveFastInputOffsetTicks(this));
+}
+
+int CGameClient::GetFastInputRenderAmountMs()
+{
+	return round_to_int(EffectiveFastInputOffsetTicks(this) * 20.0f);
+}
+
 vec2 CGameClient::GetFastInputPos(int ClientId)
 {
 	float PredIntraTick = Client()->PredIntraGameTick(g_Config.m_ClDummy);
@@ -4852,24 +5028,15 @@ vec2 CGameClient::GetFastInputPos(int ClientId)
 
 	vec2 Pos = mix(m_aClients[ClientId].m_PrevPredicted.m_Pos, m_aClients[ClientId].m_Predicted.m_Pos, PredIntraTick);
 
-	float FastInputIntra = (g_Config.m_TcFastInputAmount % 20) / 20.0f;
-	int FastInputTicks = g_Config.m_TcFastInputAmount / 20;
+	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
+	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
+	ApplyFastInputOffset(FastInputOffsetTicks, PredTick, PredIntraTick);
 
-	float CombinedIntra = PredIntraTick + FastInputIntra;
-
-	float IntraRemainder = 0.0f;
-	float FinalIntra = std::modf(CombinedIntra, &IntraRemainder);
-	int CarryOverTicks = static_cast<int>(IntraRemainder);
-
-	FastInputTicks += CarryOverTicks;
-
-	int FinalTick = PredTick + FastInputTicks;
-
-	if(FinalTick > 0 &&
-		m_aClients[ClientId].m_aPredTick[(FinalTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) &&
-		m_aClients[ClientId].m_aPredTick[FinalTick % 200] <= Client()->PredGameTick(g_Config.m_ClDummy) + FastInputTicks)
+	if(PredTick > 0 &&
+		m_aClients[ClientId].m_aPredTick[(PredTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) &&
+		m_aClients[ClientId].m_aPredTick[PredTick % 200] <= Client()->PredGameTick(g_Config.m_ClDummy) + FastInputTicks)
 	{
-		Pos = mix(m_aClients[ClientId].m_aPredPos[(FinalTick - 1) % 200], m_aClients[ClientId].m_aPredPos[FinalTick % 200], FinalIntra);
+		Pos = mix(m_aClients[ClientId].m_aPredPos[(PredTick - 1) % 200], m_aClients[ClientId].m_aPredPos[PredTick % 200], PredIntraTick);
 	}
 
 	return Pos;
@@ -4877,6 +5044,11 @@ vec2 CGameClient::GetFastInputPos(int ClientId)
 
 vec2 CGameClient::GetFreezePos(int ClientId)
 {
+	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
+	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
+	if(ClientId != m_Snap.m_LocalClientId && FastInputTicks > 0 && EffectiveImmediateFastInputOthers())
+		return GetFastInputPos(ClientId);
+	const bool FastInputOthers = EffectiveAnyFastInputOthers();
 	vec2 Pos = mix(m_aClients[ClientId].m_PrevPredicted.m_Pos, m_aClients[ClientId].m_Predicted.m_Pos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
 	// int64_t Now = time_get();
 	CCharacter *pChar = m_PredictedWorld.GetCharacterById(m_Snap.m_LocalClientId);
@@ -4914,27 +5086,12 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 	m_SmoothTick = SmoothTick;
 	m_SmoothIntraTick = SmoothIntra;
 
-	float FastInputIntra = (g_Config.m_TcFastInputAmount % 20) / 20.0f;
-	int FastInputTicks = g_Config.m_TcFastInputAmount / 20;
-
-	float CombinedIntra = SmoothIntra + FastInputIntra;
-
-	float IntraRemainder = 0.0f;
-	float FinalIntra = std::modf(CombinedIntra, &IntraRemainder);
-	int CarryOverTicks = static_cast<int>(IntraRemainder);
-
-	FastInputTicks += CarryOverTicks;
-
 	const bool IsLocal = ClientId == m_Snap.m_LocalClientId || (PredictDummy() && ClientId == m_aLocalIds[!g_Config.m_ClDummy]);
-	if(IsLocal && g_Config.m_TcFastInput)
+	const bool ApplyFastInputLocal = IsLocal && FastInputTicks > 0;
+	const bool ApplyFastInputOthers = !IsLocal && FastInputOthers && FastInputTicks > 0;
+	if(ApplyFastInputLocal || ApplyFastInputOthers)
 	{
-		SmoothTick += FastInputTicks;
-		SmoothIntra = FinalIntra;
-	}
-	else if(!IsLocal && g_Config.m_TcFastInputOthers && g_Config.m_TcFastInput)
-	{
-		SmoothTick += FastInputTicks;
-		SmoothIntra = FinalIntra;
+		ApplyFastInputOffset(FastInputOffsetTicks, SmoothTick, SmoothIntra);
 	}
 
 	if(SmoothTick > 0 &&

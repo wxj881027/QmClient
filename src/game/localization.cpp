@@ -251,8 +251,15 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 
 void CLocalizationDatabase::AddString(const char *pOrgStr, const char *pNewStr, const char *pContext)
 {
-	if(!FindString(str_quickhash(pOrgStr), str_quickhash(pContext)))
-		m_vStrings.emplace_back(str_quickhash(pOrgStr), str_quickhash(pContext), m_StringsHeap.StoreString(*pNewStr ? pNewStr : pOrgStr));
+	const unsigned Hash = str_quickhash(pOrgStr);
+	const unsigned ContextHash = str_quickhash(pContext);
+	const auto It = std::find_if(m_vStrings.begin(), m_vStrings.end(), [Hash, ContextHash](const CString &String) {
+		return String.m_Hash == Hash && String.m_ContextHash == ContextHash;
+	});
+	if(It == m_vStrings.end())
+		m_vStrings.emplace_back(Hash, ContextHash, m_StringsHeap.StoreString(*pNewStr ? pNewStr : pOrgStr));
+	else
+		It->m_pReplacement = m_StringsHeap.StoreString(*pNewStr ? pNewStr : pOrgStr);
 }
 
 const char *CLocalizationDatabase::FindString(unsigned Hash, unsigned ContextHash) const

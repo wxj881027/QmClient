@@ -5,6 +5,12 @@
 #include <engine/storage.h>
 
 #include <game/client/gameclient.h>
+#include <game/localization.h>
+
+namespace
+{
+constexpr const char *QMCLIENT_LOCALIZATION_CONTEXT = "QmClient";
+}
 
 static void EscapeParam(char *pDst, const char *pSrc, int Size)
 {
@@ -29,7 +35,7 @@ void CSkinProfiles::OnConsoleInit()
 		pConfigManager->RegisterCallback(ConfigSaveCallback, this, ConfigDomain::TCLIENTPROFILES);
 
 	Console()->Register("add_profile", "i[body] i[feet] i[flag] i[emote] s[skin] s[name] s[clan]", CFGFLAG_CLIENT, ConAddProfile, this, "Add a profile");
-	Console()->Register("qm_profile_queue", "i[序号]", CFGFLAG_CLIENT, ConProfileQueue, this, "按当前角色通过序号应用模板");
+	Console()->Register("qm_profile_queue", "i[index]", CFGFLAG_CLIENT, ConProfileQueue, this, "Apply a saved profile by 1-based index to the current tee");
 }
 
 void CSkinProfiles::ConAddProfile(IConsole::IResult *pResult, void *pUserData)
@@ -44,7 +50,7 @@ void CSkinProfiles::ConProfileQueue(IConsole::IResult *pResult, void *pUserData)
 	const int ProfileCount = (int)pSelf->m_Profiles.size();
 	if(ProfileCount <= 0)
 	{
-		pSelf->GameClient()->Echo("没有可用模板，请先保存一个模板。");
+		pSelf->GameClient()->Echo(TCLocalize("No saved profiles available yet. Save one first.", QMCLIENT_LOCALIZATION_CONTEXT));
 		return;
 	}
 
@@ -52,7 +58,7 @@ void CSkinProfiles::ConProfileQueue(IConsole::IResult *pResult, void *pUserData)
 	if(OneBasedIndex <= 0 || OneBasedIndex > ProfileCount)
 	{
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "qm_profile_queue：序号必须在 1 到 %d 之间", ProfileCount);
+		str_format(aBuf, sizeof(aBuf), TCLocalize("qm_profile_queue: index must be between 1 and %d", QMCLIENT_LOCALIZATION_CONTEXT), ProfileCount);
 		pSelf->GameClient()->Echo(aBuf);
 		return;
 	}

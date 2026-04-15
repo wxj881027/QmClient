@@ -11,6 +11,15 @@
 
 ##### translated strings #####
 
+All
+== 全体
+
+Spectate
+== 旁观
+
+Kill
+== 自杀
+
 Clan
 == 战队
 
@@ -67,6 +76,21 @@ Color frozen tee skins
 
 Render all custom colored feet as white feet skin
 == 将所有自定义脚部颜色渲染为白色
+
+Jelly Tee
+== Q弹 Tee
+
+Enable Jelly Tee
+== 启用 Q弹 Tee
+
+Jelly others
+== 其他玩家也使用 Q弹 Tee
+
+Jelly strength
+== Q弹强度
+
+Jelly duration
+== 回弹时长
 
 Show position and angle (mini debug)
 == 显示位置和角度（小型调试工具）
@@ -871,8 +895,9 @@ No changes since last save
 Width
 == 宽度
 
+[QmClient]
 Kill
-== 刺
+== 击杀
 
 Time until strokes disappear
 == 轨迹消失时间

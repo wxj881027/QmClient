@@ -69,6 +69,7 @@ static constexpr int QMCLIENT_SERVER_TIME_SYNC_INTERVAL_SECONDS = 15;
 static constexpr int QMCLIENT_PLAYTIME_QUERY_INTERVAL_SECONDS = 10;
 static constexpr int QMCLIENT_RECOVERY_RETRY_SECONDS = 3;
 static constexpr int QMCLIENT_MARKER_FLUSH_INTERVAL_SECONDS = 5;
+static constexpr const char *QMCLIENT_LOCALIZATION_CONTEXT = "QmClient";
 static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players/?json2=";
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
@@ -92,7 +93,7 @@ static constexpr const char *s_apKeywordClauseContrastWords[] = {
 	"然而",
 	"可是",
 };
-static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s好友进入本服";
+static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s joined this server";
 
 static int AutoReplySeparatorLength(const char *pStr);
 static void AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
@@ -592,7 +593,7 @@ void CTClient::OnInit()
 	if(MissingQmClientFolder || MissingGuiLogo)
 	{
 		str_format(aError, sizeof(aError), TCLocalize("%s not found", DATA_VERSION_PATH), "data/qmclient/gui_logo.png");
-		SWarning Warning(aError, TCLocalize("喜报!你可能仅下载并替换了DDNet.exe,没有下载QmClient.zip\n请仔细阅读群公告的使用说明!!!", "data_version.h"));
+		SWarning Warning(aError, TCLocalize("You may have replaced only DDNet.exe and skipped QmClient.zip.\nPlease install the full QmClient package.", "data_version.h"));
 		Client()->AddWarning(Warning);
 	}
 	else
@@ -600,7 +601,7 @@ void CTClient::OnInit()
 		CheckDataVersion(aError, sizeof(aError), Storage()->OpenFile(DATA_VERSION_PATH, IOFLAG_READ, IStorage::TYPE_ALL));
 		if(aError[0] != '\0')
 		{
-			SWarning Warning(aError, TCLocalize("喜报!您可能仅安装了DDNet.exe文件，请使用完整的QmClient文件夹", "data_version.h"));
+			SWarning Warning(aError, TCLocalize("You may have installed only DDNet.exe. Please use the full QmClient folder.", "data_version.h"));
 			Client()->AddWarning(Warning);
 		}
 	}
@@ -1593,7 +1594,7 @@ void CTClient::OnConsoleInit()
 	Console()->Register("emote_cycle", "", CFGFLAG_CLIENT, ConEmoteCycle, this, "Cycle through emotes");
 
 	// 复读功能命令
-	Console()->Register("+qm_repeat", "", CFGFLAG_CLIENT, ConRepeat, this, "复读");
+	Console()->Register("+qm_repeat", "", CFGFLAG_CLIENT, ConRepeat, this, "Repeat the latest chat message");
 
 	// 收藏地图命令
 	Console()->Register("add_favorite_map", "s[map_name]", CFGFLAG_CLIENT, ConAddFavoriteMap, this, "Add a map to favorites");
@@ -1609,9 +1610,16 @@ void CTClient::OnConsoleInit()
 	Console()->Chain(
 		"tc_allow_any_resolution", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
 			pfnCallback(pResult, pCallbackUserData);
-			((CTClient *)pUserData)->SetForcedAspect();
+			((CTClient *)pUserData)->QueueAspectApply();
 		},
 		this);
+
+	auto AspectConchain = [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
+		pfnCallback(pResult, pCallbackUserData);
+		((CTClient *)pUserData)->QueueAspectApply();
+	};
+	Console()->Chain("qm_aspect_preset", AspectConchain, this);
+	Console()->Chain("qm_aspect_ratio", AspectConchain, this);
 
 	Console()->Chain(
 		"tc_regex_chat_ignore", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
@@ -1756,6 +1764,12 @@ bool CTClient::ServerCommandExists(const char *pCommand)
 
 void CTClient::OnRender()
 {
+	if(m_QmAspectApplyPending)
+	{
+		m_QmAspectApplyPending = false;
+		SetForcedAspect();
+	}
+
 	if(m_pTClientInfoTask)
 	{
 		if(m_pTClientInfoTask->Done())
@@ -1771,11 +1785,11 @@ void CTClient::OnRender()
 			{
 				if(!InfoOk || !m_FetchedTClientInfo)
 				{
-					Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("检查更新失败")));
+					Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Failed to check for updates", QMCLIENT_LOCALIZATION_CONTEXT)));
 				}
 				else if(!NeedUpdate())
 				{
-					Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("当前已是最新版本")));
+					Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("You are already on the latest version", QMCLIENT_LOCALIZATION_CONTEXT)));
 				}
 				else
 				{
@@ -1796,11 +1810,11 @@ void CTClient::OnRender()
 			{
 				if(Client()->State() == IClient::STATE_ONLINE || Client()->EditorHasUnsavedData())
 				{
-					Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("更新完成，请重启客户端")));
+					Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Update finished. Please restart the client", QMCLIENT_LOCALIZATION_CONTEXT)));
 				}
 				else
 				{
-					Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("更新完成，正在重启...")));
+					Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Update finished. Restarting...", QMCLIENT_LOCALIZATION_CONTEXT)));
 					Client()->Restart();
 				}
 			}
@@ -1810,7 +1824,7 @@ void CTClient::OnRender()
 		{
 			if(m_aUpdateExeTmp[0] != '\0')
 				Storage()->RemoveBinaryFile(m_aUpdateExeTmp);
-			Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("更新失败，请重试")));
+			Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Update failed. Please try again", QMCLIENT_LOCALIZATION_CONTEXT)));
 		}
 
 		ResetUpdateExeTask();
@@ -3091,8 +3105,8 @@ void CTClient::CheckFriendOnline()
 				if(It == m_FriendOnline.end())
 				{
 					char aBuf[256];
-					const char *pMap = pEntry->m_aMap[0] != '\0' ? pEntry->m_aMap : TCLocalize("未知");
-					str_format(aBuf, sizeof(aBuf), TCLocalize("你的好友%s上线啦,目前在%s图!!!"), Client.m_aName, pMap);
+					const char *pMap = pEntry->m_aMap[0] != '\0' ? pEntry->m_aMap : TCLocalize("Unknown", QMCLIENT_LOCALIZATION_CONTEXT);
+					str_format(aBuf, sizeof(aBuf), TCLocalize("Your friend %s is online and currently on map %s!", QMCLIENT_LOCALIZATION_CONTEXT), Client.m_aName, pMap);
 					GameClient()->m_Chat.Echo(aBuf);
 					SFriendOnlineState State;
 					State.m_LastSeen = Now;
@@ -3411,6 +3425,7 @@ void CTClient::CheckAutoCloseChatOnUnfreeze()
 
 		if(m_aWasInFreezeForChatClose[Dummy] && !IsInFreeze && CanCloseChat)
 		{
+			GameClient()->m_Chat.SaveDraft();
 			GameClient()->m_Chat.DisableMode();
 			CanCloseChat = false;
 		}
@@ -3437,7 +3452,7 @@ void CTClient::RequestUpdateCheckAndUpdate()
 void CTClient::StartUpdateDownload()
 {
 #if !defined(CONF_FAMILY_WINDOWS)
-	Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("仅支持Windows自动更新")));
+	Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Automatic updates are only supported on Windows", QMCLIENT_LOCALIZATION_CONTEXT)));
 	return;
 #endif
 
@@ -3451,7 +3466,7 @@ void CTClient::StartUpdateDownload()
 	m_pUpdateExeTask->IpResolve(IPRESOLVE::V4);
 	m_pUpdateExeTask->WriteToFile(Storage(), m_aUpdateExeTmp, -2);
 	Http()->Run(m_pUpdateExeTask);
-	Client()->AddWarning(SWarning(TCLocalize("更新"), TCLocalize("正在下载更新...")));
+	Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Downloading update...", QMCLIENT_LOCALIZATION_CONTEXT)));
 }
 
 void CTClient::ResetUpdateExeTask()
@@ -3550,17 +3565,45 @@ void CTClient::FinishTClientInfo()
 	json_value_free(pJson);
 }
 
+void CTClient::QueueAspectApply()
+{
+	m_QmAspectApplyPending = true;
+}
+
 void CTClient::SetForcedAspect()
 {
+	m_QmAspectApplyPending = false;
+
 	// TODO: Fix flashing on windows
 	int State = Client()->State();
 	bool Force = true;
+	float ScreenAspectOverride = 0.0f;
 	if(g_Config.m_TcAllowAnyRes == 0)
 		;
 	else if(State == CClient::EClientState::STATE_DEMOPLAYBACK)
 		Force = false;
 	else if(State == CClient::EClientState::STATE_ONLINE && GameClient()->m_GameInfo.m_AllowZoom && !GameClient()->m_Menus.IsActive())
 		Force = false;
+
+	if(g_Config.m_QmAspectPreset != 0)
+	{
+		int AspectRatio = g_Config.m_QmAspectRatio;
+		switch(g_Config.m_QmAspectPreset)
+		{
+		case 1: AspectRatio = 125; break;
+		case 2: AspectRatio = 133; break;
+		case 3: AspectRatio = 150; break;
+		case 4: AspectRatio = 178; break;
+		case 5: AspectRatio = 233; break;
+		case 6: AspectRatio = std::clamp(g_Config.m_QmAspectRatio, 100, 300); break;
+		default: AspectRatio = 0; break;
+		}
+
+		if(AspectRatio > 0)
+			ScreenAspectOverride = AspectRatio / 100.0f;
+	}
+
+	Graphics()->SetScreenAspectOverride(ScreenAspectOverride);
 	Graphics()->SetForcedAspect(Force);
 }
 
@@ -3757,11 +3800,11 @@ void CTClient::RenderMiniVoteHud()
 	char aKey[64];
 	GameClient()->m_Binds.GetKey("vote yes", aKey, sizeof(aKey));
 	TextRender()->TextColor(GameClient()->m_Voting.TakenChoice() == 1 ? ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&LeftColumn, aKey[0] == '\0' ? "同意" : aKey, 0.5f, TEXTALIGN_ML);
+	Ui()->DoLabel(&LeftColumn, aKey[0] == '\0' ? TCLocalize("Agree", QMCLIENT_LOCALIZATION_CONTEXT) : aKey, 0.5f, TEXTALIGN_ML);
 
 	GameClient()->m_Binds.GetKey("vote no", aKey, sizeof(aKey));
 	TextRender()->TextColor(GameClient()->m_Voting.TakenChoice() == -1 ? ColorRGBA(0.95f, 0.25f, 0.25f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&RightColumn, aKey[0] == '\0' ? "反对" : aKey, 0.5f, TEXTALIGN_MR);
+	Ui()->DoLabel(&RightColumn, aKey[0] == '\0' ? TCLocalize("Disagree", QMCLIENT_LOCALIZATION_CONTEXT) : aKey, 0.5f, TEXTALIGN_MR);
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }
@@ -4992,7 +5035,7 @@ void CTClient::RepeatLastMessage()
 	// 检查是否有消息可以复读
 	if(m_aLastChatMessage[0] == '\0')
 	{
-		GameClient()->m_Chat.AddLine(-2, 0, "无消息可复读");
+		GameClient()->m_Chat.AddLine(-2, 0, TCLocalize("No chat message available to repeat", QMCLIENT_LOCALIZATION_CONTEXT));
 		return;
 	}
 

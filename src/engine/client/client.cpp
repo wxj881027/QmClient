@@ -417,6 +417,11 @@ void CClient::SendInput()
 
 		if(Size)
 		{
+			int aSendData[MAX_INPUT_SIZE];
+			dbg_assert(Size <= (int)sizeof(aSendData), "input size exceeds send buffer");
+			mem_copy(aSendData, m_aInputs[i][m_aCurrentInput[i]].m_aData, (size_t)Size);
+			GameClient()->PrepareInputForSend(aSendData, Size, Dummy);
+
 			// pack input
 			CMsgPacker Msg(NETMSG_INPUT, true);
 			Msg.AddInt(m_aAckGameTick[i]);
@@ -436,12 +441,12 @@ void CClient::SendInput()
 				static const int FlagsOffset = offsetof(CNetObj_PlayerInput, m_PlayerFlags) / sizeof(int);
 				if(k == FlagsOffset && IsSixup())
 				{
-					int PlayerFlags = m_aInputs[i][m_aCurrentInput[i]].m_aData[k];
+					int PlayerFlags = aSendData[k];
 					Msg.AddInt(PlayerFlags_SixToSeven(PlayerFlags));
 				}
 				else
 				{
-					Msg.AddInt(m_aInputs[i][m_aCurrentInput[i]].m_aData[k]);
+					Msg.AddInt(aSendData[k]);
 				}
 			}
 
@@ -557,6 +562,12 @@ void CClient::OnEnterGame(bool Dummy)
 	m_aPredIntraTick[Dummy] = 0.0f;
 	m_aGameTime[Dummy].Init(0);
 	m_PredictedTime.Init(0);
+	if(!Dummy)
+	{
+		m_AutoMarginLastSampleTime = 0;
+		m_AutoMarginLatencyAverageMs = 0.0f;
+		m_AutoMarginLatencyJitterMs = 0.0f;
+	}
 
 	if(!Dummy)
 	{
@@ -841,6 +852,9 @@ void CClient::DisconnectWithReason(const char *pReason)
 	mem_zero(&m_CurrentServerPingUuid, sizeof(m_CurrentServerPingUuid));
 	m_CurrentServerCurrentPingTime = -1;
 	m_CurrentServerNextPingTime = -1;
+	m_AutoMarginLastSampleTime = 0;
+	m_AutoMarginLatencyAverageMs = 0.0f;
+	m_AutoMarginLatencyJitterMs = 0.0f;
 
 	ResetMapDownload(true);
 
@@ -5571,7 +5585,64 @@ int CClient::MaxLatencyTicks() const
 
 int CClient::PredictionMargin() const
 {
-	return m_ServerCapabilities.m_SyncWeaponInput ? g_Config.m_ClPredictionMargin : 10;
+	if(!m_ServerCapabilities.m_SyncWeaponInput)
+		return 10;
+
+	int PredictionMargin = g_Config.m_ClPredictionMargin;
+	if(!g_Config.m_BcFastInputAutoMargin)
+		return PredictionMargin;
+
+	int FastInputMargin = 0;
+	if(g_Config.m_TcFastInput)
+	{
+		if(g_Config.m_BcFastInputMode == 0)
+		{
+			FastInputMargin = std::max(0, g_Config.m_TcFastInputAmount);
+		}
+		else if(g_Config.m_BcFastInputMode == 1)
+		{
+			const int DeltaInputAmount = std::max(0, g_Config.m_BcFastInputDeltaInput);
+			// delta input is measured in 0.01 ticks, convert it to milliseconds.
+			FastInputMargin = (DeltaInputAmount + 2) / 5;
+		}
+		else
+		{
+			const int GammaInputAmount = BcFastInputGammaUiToEffectiveAmount(g_Config.m_BcFastInputGammaInput);
+			// gamma input is configured directly in 0.01 ticks.
+			FastInputMargin = (GammaInputAmount + 2) / 5;
+		}
+	}
+
+	const int BaseMargin = std::max(PredictionMargin, FastInputMargin);
+	const int64_t Now = time_get();
+	const int LivePredictionMs = std::max(0, (int)((m_PredictedTime.Get(Now) - m_aGameTime[g_Config.m_ClDummy].Get(Now)) * 1000 / (float)time_freq()));
+
+	if(m_AutoMarginLastSampleTime == 0)
+	{
+		m_AutoMarginLastSampleTime = Now;
+		m_AutoMarginLatencyAverageMs = LivePredictionMs;
+		m_AutoMarginLatencyJitterMs = 0.0f;
+	}
+	else if(Now > m_AutoMarginLastSampleTime + time_freq() / 20)
+	{
+		// Track current latency and its spread so auto margin can react to unstable links in real time.
+		const float LatencyDelta = std::abs((float)LivePredictionMs - m_AutoMarginLatencyAverageMs);
+		m_AutoMarginLatencyAverageMs += (LivePredictionMs - m_AutoMarginLatencyAverageMs) * 0.15f;
+		m_AutoMarginLatencyJitterMs += (LatencyDelta - m_AutoMarginLatencyJitterMs) * 0.15f;
+		m_AutoMarginLastSampleTime = Now;
+	}
+
+	const int BaseMaxLatencyTicks = GameTickSpeed() + (BaseMargin * GameTickSpeed()) / 1000;
+	const bool ConnectionProblems = m_aNetClient[g_Config.m_ClDummy].GotProblems(BaseMaxLatencyTicks * time_freq() / GameTickSpeed());
+	const CServerBrowser::CServerEntry *pCurrentServerEntry = const_cast<CServerBrowser &>(m_ServerBrowser).Find(ServerAddress());
+	const bool HasMeasuredPing = pCurrentServerEntry != nullptr && !pCurrentServerEntry->m_Info.m_LatencyIsEstimated && pCurrentServerEntry->m_Info.m_Latency >= 0;
+	const float MeasuredPingMargin = HasMeasuredPing ? pCurrentServerEntry->m_Info.m_Latency * 0.5f : 0.0f;
+	const float LiveConnectionMargin = std::max({MeasuredPingMargin, m_AutoMarginLatencyAverageMs, (float)LivePredictionMs});
+	const float ExcessLatencyMargin = std::max(0.0f, LiveConnectionMargin - BaseMargin) / 6.0f;
+	const float JitterMargin = std::max(0.0f, m_AutoMarginLatencyJitterMs - 2.0f) * 0.75f;
+	const float ConnectionMargin = BaseMargin + ExcessLatencyMargin + JitterMargin + (ConnectionProblems ? 10.0f : 0.0f);
+
+	return std::clamp(round_to_int(ConnectionMargin), 1, 300);
 }
 
 int CClient::UdpConnectivity(int NetType)

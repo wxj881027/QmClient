@@ -2288,6 +2288,20 @@ void CGraphics_Threaded::SetForcedAspect(bool Force)
 		ResizeListener();
 }
 
+void CGraphics_Threaded::SetScreenAspectOverride(float Aspect)
+{
+	Aspect = maximum(0.0f, Aspect);
+	if(absolute(m_ScreenAspectOverride - Aspect) < 0.0001f)
+		return;
+
+	m_ScreenAspectOverride = Aspect;
+	if(!IsBackendInitialized())
+		return;
+
+	for(auto &ResizeListener : m_vResizeListeners)
+		ResizeListener();
+}
+
 void CGraphics_Threaded::AdjustViewport(bool SendViewportChangeToBackend)
 {
 	// adjust the viewport to only allow certain aspect ratios

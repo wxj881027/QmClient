@@ -235,6 +235,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	std::deque<std::shared_ptr<CDemoEdit>> m_EditJobs;
 
+	mutable int64_t m_AutoMarginLastSampleTime = 0;
+	mutable float m_AutoMarginLatencyAverageMs = 0.0f;
+	mutable float m_AutoMarginLatencyJitterMs = 0.0f;
+
 	//
 	bool m_CanReceiveServerCapabilities = false;
 	bool m_ServerSentCapabilities = false;

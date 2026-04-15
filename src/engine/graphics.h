@@ -193,6 +193,7 @@ protected:
 	int m_ScreenHeight;
 	int m_ScreenRefreshRate;
 	float m_ScreenHiDPIScale;
+	float m_ScreenAspectOverride = 0.0f;
 
 public:
 	enum
@@ -222,7 +223,7 @@ public:
 
 	int ScreenWidth() const { return m_ScreenWidth; }
 	int ScreenHeight() const { return m_ScreenHeight; }
-	float ScreenAspect() const { return (float)ScreenWidth() / (float)ScreenHeight(); }
+	float ScreenAspect() const { return m_ScreenAspectOverride > 0.0f ? m_ScreenAspectOverride : (float)ScreenWidth() / (float)ScreenHeight(); }
 	float ScreenHiDPIScale() const { return m_ScreenHiDPIScale; }
 	int WindowWidth() const { return m_ScreenWidth / m_ScreenHiDPIScale; }
 	int WindowHeight() const { return m_ScreenHeight / m_ScreenHiDPIScale; }
@@ -617,6 +618,7 @@ protected:
 public:
 	// TClient
 	virtual void SetForcedAspect(bool Force) = 0;
+	virtual void SetScreenAspectOverride(float Aspect) = 0;
 };
 
 class IEngineGraphics : public IGraphics

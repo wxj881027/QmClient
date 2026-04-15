@@ -403,7 +403,7 @@ bool BuildHudRecordingStatusText(const CGameClient &GameClient, char *pBuf, size
 
 bool ShouldRenderHudLocalTime(const CGameClient &GameClient)
 {
-	return g_Config.m_ClShowLocalTimeAlways || GameClient.m_Scoreboard.IsActive();
+	return g_Config.m_ClShowLocalTimeAlways || GameClient.m_Scoreboard.IsActive() || GameClient.m_HudEditor.IsActive();
 }
 
 void DrawSmoothRoundedRect(IGraphics *pGraphics, float x, float y, float w, float h, float r, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL)
@@ -763,13 +763,28 @@ void CHud::OnInit()
 
 void CHud::RenderGameTimer()
 {
-	const SHudGameTimerInfo TimerInfo = BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width);
-	if(!TimerInfo.m_Visible)
+	SHudGameTimerInfo TimerInfo = BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width);
+	const bool Preview = GameClient()->m_HudEditor.IsActive() && g_Config.m_ClShowhudTimer && !TimerInfo.m_Visible;
+	if(!TimerInfo.m_Visible && !Preview)
 		return;
+	if(Preview)
+	{
+		str_copy(TimerInfo.m_aText, "11:56.13", sizeof(TimerInfo.m_aText));
+		TimerInfo.m_FontSize = 10.0f;
+		TimerInfo.m_W = TextRender()->TextWidth(TimerInfo.m_FontSize, TimerInfo.m_aText, -1, -1.0f);
+		TimerInfo.m_X = m_Width * 0.5f - TimerInfo.m_W * 0.5f;
+		TimerInfo.m_Left = TimerInfo.m_X;
+		TimerInfo.m_Visible = true;
+		TimerInfo.m_Alpha = 1.0f;
+		TimerInfo.m_IsCritical = false;
+	}
 
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 	{
 		m_RecordingStatusAnimState.Reset();
+		const float TimerWidth = TextRender()->TextWidth(TimerInfo.m_FontSize, TimerInfo.m_aText, -1, -1.0f);
+		const CUIRect TimerRect = {TimerInfo.m_X - 4.0f, TimerInfo.m_Y - 2.0f, TimerWidth + 8.0f, TimerInfo.m_FontSize + 6.0f};
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::GameTimer, TimerRect);
 
 		const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
 		if(TimerInfo.m_IsCritical)
@@ -778,6 +793,7 @@ void CHud::RenderGameTimer()
 			TextRender()->TextColor(1.0f, 1.0f, 1.0f, TimerInfo.m_Alpha);
 		TextRender()->Text(TimerInfo.m_X, TimerInfo.m_Y, TimerInfo.m_FontSize, TimerInfo.m_aText, -1.0f);
 		TextRender()->TextColor(PrevTextColor);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 
@@ -827,6 +843,8 @@ void CHud::RenderGameTimer()
 	const float StatusTextAlpha = std::clamp(ResolveAnimatedLayoutValueEx(AnimRuntime, StatusTextNode, EUiAnimProperty::ALPHA, TargetTextAlpha, m_RecordingStatusAnimState.m_TargetTextAlpha, 0.08f, 0.0f, EEasing::EASE_OUT), 0.0f, 1.0f);
 	const bool RenderStatusSection = StatusWidth > 1.0f && StatusAlpha > 0.01f;
 	const float CombinedWidth = TimerCapsule.m_BoxW + (RenderStatusSection ? (StatusSectionGap + StatusWidth) : 0.0f);
+	const CUIRect TimerRect = {TimerBoxX, TimerCapsule.m_BoxY, CombinedWidth, TimerCapsule.m_BoxH};
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::GameTimer, TimerRect);
 
 	const unsigned int PrevFlags = TextRender()->GetRenderFlags();
 	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
@@ -861,29 +879,41 @@ void CHud::RenderGameTimer()
 	TextRender()->TextColor(PrevTextColor);
 	TextRender()->TextOutlineColor(PrevOutlineColor);
 	TextRender()->SetRenderFlags(PrevFlags);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderPauseNotification()
 {
-	if(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED &&
-		!(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
+	const bool Preview = GameClient()->m_HudEditor.IsActive() &&
+		((GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED) == 0 ||
+		 (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) != 0);
+	if((GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED &&
+		!(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER)) || Preview)
 	{
 		const char *pText = Localize("Game paused");
 		float FontSize = 20.0f;
 		float w = TextRender()->TextWidth(FontSize, pText, -1, -1.0f);
-		TextRender()->Text(150.0f * Graphics()->ScreenAspect() + -w / 2.0f, 50.0f, FontSize, pText, -1.0f);
+		const float X = 150.0f * Graphics()->ScreenAspect() - w / 2.0f;
+		const float Y = 50.0f;
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::PauseNotification, {X, Y, w, FontSize + 4.0f});
+		TextRender()->Text(X, Y, FontSize, pText, -1.0f);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	}
 }
 
 void CHud::RenderSuddenDeath()
 {
-	if(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH)
+	if((GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH) || GameClient()->m_HudEditor.IsActive())
 	{
 		float Half = m_Width / 2.0f;
 		const char *pText = Localize("Sudden Death");
 		float FontSize = 12.0f;
 		float w = TextRender()->TextWidth(FontSize, pText, -1, -1.0f);
-		TextRender()->Text(Half - w / 2, 2, FontSize, pText, -1.0f);
+		const float X = Half - w / 2.0f;
+		const float Y = 2.0f;
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SuddenDeath, {X, Y, w, FontSize + 4.0f});
+		TextRender()->Text(X, Y, FontSize, pText, -1.0f);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	}
 }
 
@@ -892,6 +922,7 @@ void CHud::RenderScoreHud()
 	// render small score hud
 	if(!(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
 	{
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::ScoreHud, {m_Width - 150.0f, 229.0f, 150.0f, 56.0f});
 		float StartY = 229.0f; // the height of this display is 56, so EndY is 285
 
 		const float ScoreSingleBoxHeight = 18.0f;
@@ -1204,26 +1235,34 @@ void CHud::RenderScoreHud()
 				StartY += 8.0f;
 			}
 		}
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	}
 }
 
 void CHud::RenderWarmupTimer()
 {
 	// render warmup timer
-	if(GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer > 0 && !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME))
+	const bool Preview = GameClient()->m_HudEditor.IsActive() &&
+		(GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer <= 0 || (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME) != 0);
+	if((GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer > 0 && !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME)) || Preview)
 	{
 		char aBuf[256];
 		float FontSize = 20.0f;
 		float w = TextRender()->TextWidth(FontSize, Localize("Warmup"), -1, -1.0f);
-		TextRender()->Text(150 * Graphics()->ScreenAspect() + -w / 2, 50, FontSize, Localize("Warmup"), -1.0f);
 
-		int Seconds = GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer / Client()->GameTickSpeed();
+		int Seconds = Preview ? 8 : GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer / Client()->GameTickSpeed();
 		if(Seconds < 5)
 			str_format(aBuf, sizeof(aBuf), "%d.%d", Seconds, (GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer * 10 / Client()->GameTickSpeed()) % 10);
 		else
 			str_format(aBuf, sizeof(aBuf), "%d", Seconds);
+		const float LabelWidth = w;
 		w = TextRender()->TextWidth(FontSize, aBuf, -1, -1.0f);
+		const float MaxWidth = maximum(LabelWidth, w);
+		const float BaseX = 150.0f * Graphics()->ScreenAspect() - MaxWidth / 2.0f;
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::WarmupTimer, {BaseX, 50.0f, MaxWidth, 45.0f});
+		TextRender()->Text(150 * Graphics()->ScreenAspect() + -LabelWidth / 2, 50, FontSize, Localize("Warmup"), -1.0f);
 		TextRender()->Text(150 * Graphics()->ScreenAspect() + -w / 2, 75, FontSize, aBuf, -1.0f);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	}
 }
 
@@ -1231,6 +1270,23 @@ bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 {
 	if(!g_Config.m_ClDummyMiniView)
 		return false;
+	if(GameClient()->m_HudEditor.IsActive())
+	{
+		const float SizeScale = g_Config.m_ClDummyMiniViewSize / 100.0f;
+		const float MaxHeight = 80.0f * SizeScale;
+		const float Margin = 5.0f;
+		const float Aspect = m_Width / m_Height;
+		H = MaxHeight;
+		W = MaxHeight * Aspect;
+		if(W > m_Width - Margin * 2.0f)
+		{
+			W = m_Width - Margin * 2.0f;
+			H = W / Aspect;
+		}
+		X = m_Width - Margin - W;
+		Y = Margin;
+		return true;
+	}
 	if(IsVulkanAmdBackend(Graphics()))
 	{
 		static bool s_LoggedDisableReason = false;
@@ -1288,12 +1344,30 @@ void CHud::RenderDummyMiniMap()
 	float MiniH = 0.0f;
 	if(!GetDummyMiniMapRect(MiniX, MiniY, MiniW, MiniH))
 		return;
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::DummyMiniMap, {MiniX, MiniY, MiniW, MiniH}, true, false);
+	if(HudEditorScope.m_TargetRect.w > 0.0f && HudEditorScope.m_TargetRect.h > 0.0f)
+	{
+		MiniX = HudEditorScope.m_TargetRect.x;
+		MiniY = HudEditorScope.m_TargetRect.y;
+		MiniW = HudEditorScope.m_TargetRect.w;
+		MiniH = HudEditorScope.m_TargetRect.h;
+	}
 
 	const int DummyClientId = GameClient()->m_aLocalIds[1];
 	const int MainClientId = GameClient()->m_aLocalIds[0];
 	const int MiniViewClientId = g_Config.m_ClDummy ? MainClientId : DummyClientId;
 	if(MiniViewClientId < 0 || MiniViewClientId >= MAX_CLIENTS || !GameClient()->m_aClients[MiniViewClientId].m_Active)
+	{
+		if(GameClient()->m_HudEditor.IsActive())
+		{
+			Graphics()->DrawRect(MiniX, MiniY, MiniW, MiniH, ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f), IGraphics::CORNER_ALL, 5.0f);
+			Graphics()->DrawRect(MiniX + 1.5f, MiniY + 1.5f, maximum(0.0f, MiniW - 3.0f), maximum(0.0f, MiniH - 3.0f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 4.0f);
+			TextRender()->Text(MiniX + 5.0f, MiniY + 5.0f, 6.0f, Localize("Dummy"), -1.0f);
+			GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::DummyMiniMap, {MiniX, MiniY, MiniW, MiniH});
+		}
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
+	}
 
 	const float BorderSize = 1.0f;
 	const float InnerX = MiniX + BorderSize;
@@ -1301,7 +1375,10 @@ void CHud::RenderDummyMiniMap()
 	const float InnerW = MiniW - BorderSize * 2.0f;
 	const float InnerH = MiniH - BorderSize * 2.0f;
 	if(InnerW <= 0.0f || InnerH <= 0.0f)
+	{
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
+	}
 
 	Graphics()->TextureClear();
 
@@ -1326,7 +1403,10 @@ void CHud::RenderDummyMiniMap()
 	int ClampedW = minimum(ViewW, ScreenW - ClampedX);
 	int ClampedH = minimum(ViewH, ScreenH - ClampedY);
 	if(ClampedW <= 0 || ClampedH <= 0)
+	{
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
+	}
 
 	Graphics()->FlushVertices();
 	Graphics()->ClipDisable();
@@ -1382,6 +1462,8 @@ void CHud::RenderDummyMiniMap()
 	Graphics()->LinesDraw(BorderLines, 4);
 	Graphics()->LinesEnd();
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::DummyMiniMap, {MiniX, MiniY, MiniW, MiniH});
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderTextInfo()
@@ -1503,6 +1585,67 @@ void CHud::RenderTextInfo()
 		StartX = MiniX + MiniW - TotalWidth;
 		TextY = MiniY + MiniH + 4.0f;
 	}
+	CHudEditor::STransformScope TextInfoScope;
+	if(RenderFps || RenderPred)
+	{
+		bool BoundsInitialized = false;
+		float BoundsX = 0.0f;
+		float BoundsY = 0.0f;
+		float BoundsW = 0.0f;
+		float BoundsH = 0.0f;
+		const auto ExtendBounds = [&](float X, float Y, float W, float H) {
+			if(W <= 0.0f || H <= 0.0f)
+				return;
+			if(!BoundsInitialized)
+			{
+				BoundsX = X;
+				BoundsY = Y;
+				BoundsW = W;
+				BoundsH = H;
+				BoundsInitialized = true;
+				return;
+			}
+			const float Right = maximum(BoundsX + BoundsW, X + W);
+			const float Bottom = maximum(BoundsY + BoundsH, Y + H);
+			BoundsX = minimum(BoundsX, X);
+			BoundsY = minimum(BoundsY, Y);
+			BoundsW = Right - BoundsX;
+			BoundsH = Bottom - BoundsY;
+		};
+
+		float FpsRectX = m_Width - 10.0f - DisplayFpsWidth;
+		float FpsRectY = 5.0f;
+		if(UseV2TextInfoLayout)
+		{
+			FpsRectX = V2Layout.m_FpsX;
+			FpsRectY = V2Layout.m_FpsY;
+		}
+		else if(UseMiniLayout)
+		{
+			FpsRectX = StartX;
+			FpsRectY = TextY;
+		}
+
+		float PredRectX = m_Width - 10.0f - DisplayPredWidth;
+		float PredRectY = RenderFps ? 20.0f : 5.0f;
+		if(UseV2TextInfoLayout)
+		{
+			PredRectX = V2Layout.m_PredX;
+			PredRectY = V2Layout.m_PredY;
+		}
+		else if(UseMiniLayout)
+		{
+			PredRectX = StartX + (RenderFps ? (DisplayFpsWidth + Gap) : 0.0f);
+			PredRectY = TextY;
+		}
+
+		if(RenderFps)
+			ExtendBounds(FpsRectX, FpsRectY, DisplayFpsWidth, 12.0f);
+		if(RenderPred)
+			ExtendBounds(PredRectX, PredRectY, DisplayPredWidth, 12.0f);
+		if(BoundsInitialized)
+			TextInfoScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::TextInfo, {BoundsX - 2.0f, BoundsY - 2.0f, BoundsW + 4.0f, BoundsH + 4.0f});
+	}
 
 	if(RenderFps)
 	{
@@ -1588,6 +1731,20 @@ void CHud::RenderTextInfo()
 		{
 			TextRender()->Text(PredX, PredY, 12.0f, pPredText, -1.0f);
 		}
+	}
+
+	GameClient()->m_HudEditor.EndTransform(TextInfoScope);
+
+	if(GameClient()->m_FastPractice.Enabled())
+	{
+		constexpr const char *pLine1 = "practice mode";
+		constexpr const char *pLine2 = "(you can use practice commands /tc /invincible)";
+		const float Line1Size = 10.0f;
+		const float Line2Size = 8.0f;
+		const float Line1X = m_Width / 2.0f - TextRender()->TextWidth(Line1Size, Localize(pLine1), -1, -1.0f) / 2.0f;
+		const float Line2X = m_Width / 2.0f - TextRender()->TextWidth(Line2Size, Localize(pLine2), -1, -1.0f) / 2.0f;
+		TextRender()->Text(Line1X, 34.0f, Line1Size, Localize(pLine1), -1.0f);
+		TextRender()->Text(Line2X, 45.0f, Line2Size, Localize(pLine2), -1.0f);
 	}
 
 	if(g_Config.m_TcMiniDebug)
@@ -2177,6 +2334,9 @@ void CHud::RenderTeambalanceWarning()
 
 void CHud::RenderCursor()
 {
+	if(GameClient()->m_HudEditor.IsActive())
+		return;
+
 	const float Scale = (float)g_Config.m_TcCursorScale / 100.0f;
 	if(Scale <= 0.0f)
 		return;
@@ -2855,6 +3015,7 @@ void CHud::RenderMediaIsland()
 	const float TimerTextY = TimerCapsule.m_TextY;
 	ColorRGBA IslandBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandBgColor));
 	IslandBackgroundColor.a = std::clamp(g_Config.m_QmHudIslandBgOpacity / 100.0f, 0.0f, 1.0f);
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MediaIsland, {IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight});
 
 	DrawSmoothRoundedRect(Graphics(), IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight, Radius, IslandBackgroundColor);
 
@@ -3087,6 +3248,7 @@ void CHud::RenderMediaIsland()
 	TextRender()->TextColor(PrevTextColor);
 	TextRender()->TextOutlineColor(PrevOutlineColor);
 	TextRender()->SetRenderFlags(PrevFlags);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderPlayerState(const int ClientId)
@@ -3522,6 +3684,7 @@ void CHud::RenderSpectatorCount()
 	}
 
 	int Count = 0;
+	const bool Preview = GameClient()->m_HudEditor.IsActive();
 	if(Client()->IsSixup())
 	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
@@ -3546,11 +3709,13 @@ void CHud::RenderSpectatorCount()
 		Count = pSpectatorCount->m_NumSpectators;
 	}
 
-	if(Count == 0)
+	if(Count == 0 && !Preview)
 	{
 		m_LastSpectatorCountTick = Client()->GameTick(g_Config.m_ClDummy);
 		return;
 	}
+	if(Count == 0 && Preview)
+		Count = 8;
 
 	// 1 second delay
 	if(Client()->GameTick(g_Config.m_ClDummy) < m_LastSpectatorCountTick + Client()->GameTickSpeed())
@@ -3589,6 +3754,7 @@ void CHud::RenderSpectatorCount()
 
 		StartX = std::clamp(StartX, 0.0f, maximum(0.0f, m_Width - BoxWidth));
 		StartY = maximum(0.0f, StartY);
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SpectatorCount, {StartX, StartY, BoxWidth, BoxHeight});
 
 		Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
 
@@ -3599,6 +3765,7 @@ void CHud::RenderSpectatorCount()
 		TextRender()->Text(x, y, Fontsize, FontIcons::FONT_ICON_EYE, -1.0f);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		TextRender()->Text(x + Fontsize + 3.0f, y, Fontsize, aBuf, -1.0f);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 	else
@@ -3617,6 +3784,7 @@ void CHud::RenderSpectatorCount()
 		const float TimeLeft = TimeAnchorX - (TimeWidth + 15.0f);
 		StartX = TimeLeft - 5.0f - BoxWidth;
 		StartY = 0.0f;
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SpectatorCount, {StartX, StartY, BoxWidth, BoxHeight});
 
 		Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
 
@@ -3628,6 +3796,7 @@ void CHud::RenderSpectatorCount()
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		x += IconWidth + 3.0f;
 		TextRender()->Text(x, y, Fontsize, aBuf, -1.0f);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 }
@@ -4073,6 +4242,7 @@ void CHud::RenderMovementInformation()
 	m_MovementInfoBoxY = StartY;
 	m_MovementInfoBoxW = BoxWidth;
 	m_MovementInfoBoxH = BoxHeight;
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MovementInfo, {StartX, StartY, BoxWidth, BoxHeight});
 
 	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
 
@@ -4323,18 +4493,21 @@ void CHud::RenderMovementInformation()
 		}
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}
+
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderMapProgressBar()
 {
-	if(!GameClient()->m_TClient.IsGoresMapProgressEnabled())
+	const bool Preview = GameClient()->m_HudEditor.IsActive();
+	if(!GameClient()->m_TClient.IsGoresMapProgressEnabled() && !Preview)
 		return;
 	if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && g_Config.m_QmPlayerStatsHud)
 		return;
 
 	const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
-	const bool HasProgress = GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
-	const float TargetProgress = HasProgress ? std::clamp(GameClient()->m_TClient.GetGoresMapProgress(DummyIndex), 0.0f, 1.0f) : 0.0f;
+	const bool HasProgress = Preview || GameClient()->m_TClient.HasGoresMapProgress(DummyIndex);
+	const float TargetProgress = Preview ? 0.426f : (HasProgress ? std::clamp(GameClient()->m_TClient.GetGoresMapProgress(DummyIndex), 0.0f, 1.0f) : 0.0f);
 	if(!m_aMapProgressInitialized[DummyIndex])
 	{
 		m_aMapProgressDisplayed[DummyIndex] = TargetProgress;
@@ -4373,6 +4546,7 @@ void CHud::RenderMapProgressBar()
 	const float TextGap = std::clamp(BarHeight * 0.35f, 2.0f, 8.0f);
 	const float TextX = std::round(BarX + BarWidth * 0.5f - TextWidth * 0.5f);
 	const float TextY = std::round(std::clamp(BarY - TextSize - TextGap, 2.0f, maximum(2.0f, m_Height - TextSize - 2.0f)));
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MapProgressBar, {BarX, TextY, BarWidth, BarY + BarHeight - TextY});
 
 	DrawSmoothRoundedRect(Graphics(), BarX, BarY, BarWidth, BarHeight, BarRadius, TrackColor);
 	if(FillWidth > 0.0f)
@@ -4388,6 +4562,7 @@ void CHud::RenderMapProgressBar()
 	TextRender()->TextColor(PrevTextColor);
 	TextRender()->TextOutlineColor(PrevOutlineColor);
 	TextRender()->SetRenderFlags(PrevTextFlags);
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::MapProgressBar, {BarX, TextY, BarWidth, BarY + BarHeight - TextY});
 
 	int TeeClientId = GameClient()->m_aLocalIds[DummyIndex];
 	if(TeeClientId < 0 || TeeClientId >= MAX_CLIENTS)
@@ -4408,6 +4583,7 @@ void CHud::RenderMapProgressBar()
 		DrawSmoothCircle(Graphics(), vec2(TeeX, TeeAnchorY), std::clamp(BarHeight * 0.48f, 4.0f, 10.0f), FillColor.WithAlpha(0.22f));
 		RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(TeeX, TeeAnchorY + OffsetToMid.y));
 	}
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderSpectatorHud()
@@ -4417,6 +4593,19 @@ void CHud::RenderSpectatorHud()
 
 	// TClient
 	float AdjustedHeight = m_Height - (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f);
+	float BoundsTop = AdjustedHeight - 15.0f;
+	float BoundsBottom = AdjustedHeight;
+	const bool ShowAutoTag = Client()->State() != IClient::STATE_DEMOPLAYBACK &&
+		GameClient()->m_Camera.SpectatingPlayer() &&
+		GameClient()->m_Camera.CanUseAutoSpecCamera() &&
+		g_Config.m_ClSpecAutoSync;
+	if(ShowAutoTag)
+	{
+		BoundsTop = minimum(BoundsTop, m_Height - 12.0f);
+		BoundsBottom = maximum(BoundsBottom, m_Height - 2.0f);
+	}
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SpectatorHud, {m_Width - 180.0f, BoundsTop, 180.0f, BoundsBottom - BoundsTop});
+
 	// draw the box
 	Graphics()->DrawRect(m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_TL, 5.0f);
 
@@ -4444,7 +4633,7 @@ void CHud::RenderSpectatorHud()
 	TextRender()->Text(m_Width - 174.0f, AdjustedHeight - 15.0f + (15.f - 8.f) / 2.f, 8.0f, aBuf, -1.0f);
 
 	// draw the camera info
-	if(Client()->State() != IClient::STATE_DEMOPLAYBACK && GameClient()->m_Camera.SpectatingPlayer() && GameClient()->m_Camera.CanUseAutoSpecCamera() && g_Config.m_ClSpecAutoSync)
+	if(ShowAutoTag)
 	{
 		bool AutoSpecCameraEnabled = GameClient()->m_Camera.m_AutoSpecCamera;
 		const char *pLabelText = Localize("AUTO", "Spectating Camera Mode Icon");
@@ -4463,6 +4652,8 @@ void CHud::RenderSpectatorHud()
 		TextRender()->Text(TagX + Padding + IconWidth + Padding, m_Height - 10.0f, 6.0f, pLabelText, -1.0f);
 		TextRender()->TextColor(1, 1, 1, 1);
 	}
+
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderLocalTime(float x)
@@ -4479,8 +4670,10 @@ void CHud::RenderLocalTime(float x)
 
 		char aTimeStr[6];
 		str_timestamp_format(aTimeStr, sizeof(aTimeStr), "%H:%M");
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, {x - 30.0f, 0.0f, 25.0f, 12.5f});
 		Graphics()->DrawRect(x - 30.0f, 0.0f, 25.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
 		TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 
@@ -4499,8 +4692,10 @@ void CHud::RenderLocalTime(float x)
 
 	if(!UseV2LocalTime)
 	{
+		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, {x - (TextWidth + 15.0f), 0.0f, TextWidth + 10.0f, 12.5f});
 		Graphics()->DrawRect(x - (TextWidth + 15.0f), 0.0f, TextWidth + 10.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
 		TextRender()->Text(x - (TextWidth + 10.0f), (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 
@@ -4553,8 +4748,10 @@ void CHud::RenderLocalTime(float x)
 		TextX = ResolveAnimatedLayoutValue(*pAnimRuntime, TextNode, EUiAnimProperty::POS_X, TextX, m_LocalTimeV2AnimState.m_TargetTextX);
 	}
 
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LocalTime, {BoxX, 0.0f, BoxW, 12.5f});
 	Graphics()->DrawRect(BoxX, 0.0f, BoxW, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
 	TextRender()->Text(TextX, TextY, 5.0f, aTimeStr, -1.0f);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 
 	// Graphics()->DrawRect(x - 30.0f, 0.0f, 25.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
 	// TextRender()->Text(x - 25.0f, (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
@@ -4565,9 +4762,17 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 	if(m_LegacyMediaInfoRendered || !g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_ClSmtcEnable || !g_Config.m_ClSmtcShowHud)
 		return CenterY;
 
-	CSystemMediaControls::SState MediaState;
+	CSystemMediaControls::SState MediaState{};
+	const bool Preview = GameClient()->m_HudEditor.IsActive();
 	if(!GameClient()->m_SystemMediaControls.GetStateSnapshot(MediaState))
-		return CenterY;
+	{
+		if(!Preview)
+			return CenterY;
+		str_copy(MediaState.m_aTitle, "Pure Music", sizeof(MediaState.m_aTitle));
+		str_copy(MediaState.m_aArtist, "QmClient", sizeof(MediaState.m_aArtist));
+		MediaState.m_PositionMs = 56 * 1000;
+		MediaState.m_DurationMs = 3 * 60 * 1000;
+	}
 
 	const bool HasTitle = MediaState.m_aTitle[0] != '\0';
 	const bool HasArtist = MediaState.m_aArtist[0] != '\0';
@@ -4586,6 +4791,13 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 	const float IslandWidth = PaddingX + CoverSize + IconGap + TextMaxWidth + PaddingX;
 	const float IslandX = std::clamp(AnchorX, 0.0f, maximum(0.0f, m_Width - IslandWidth));
 	const float IslandY = std::clamp(CenterY - IslandHeight * 0.5f, 0.0f, maximum(0.0f, m_Height - IslandHeight));
+	char aLyricBuf[256] = {};
+	constexpr float LyricFontSize = 6.0f;
+	const float LyricHeight = LyricFontSize + 3.0f;
+	const bool HasLyric = GameClient()->m_Lyrics.GetCurrentLine(aLyricBuf, sizeof(aLyricBuf), MediaState.m_PositionMs);
+	const float LyricY = HasLyric ? std::clamp(IslandY + IslandHeight + 2.0f, 0.0f, maximum(0.0f, m_Height - LyricHeight)) : 0.0f;
+	const float ContentBottomTarget = HasLyric ? maximum(IslandY + IslandHeight, LyricY + LyricHeight) : (IslandY + IslandHeight);
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LegacyMediaInfo, {IslandX, IslandY, IslandWidth, ContentBottomTarget - IslandY});
 
 	Graphics()->DrawRect(IslandX, IslandY, IslandWidth, IslandHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.35f), IGraphics::CORNER_ALL, 4.0f);
 
@@ -4638,14 +4850,10 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 		TextRender()->TextEx(&Cursor, MediaState.m_aArtist);
 	}
 
-	char aLyricBuf[256];
 	float ContentBottomY = IslandY + IslandHeight;
-	if(GameClient()->m_Lyrics.GetCurrentLine(aLyricBuf, sizeof(aLyricBuf), MediaState.m_PositionMs))
+	if(HasLyric)
 	{
-		constexpr float LyricFontSize = 6.0f;
-		const float LyricHeight = LyricFontSize + 3.0f;
 		const float LyricX = IslandX;
-		const float LyricY = std::clamp(IslandY + IslandHeight + 2.0f, 0.0f, maximum(0.0f, m_Height - LyricHeight));
 		const float LyricW = IslandWidth;
 		ContentBottomY = maximum(ContentBottomY, LyricY + LyricHeight);
 		Graphics()->DrawRect(LyricX, LyricY, LyricW, LyricHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 3.0f);
@@ -4671,6 +4879,7 @@ float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 		if(Progress > 0.0f)
 			Graphics()->DrawRect(TextX, BarY, TextAreaW * Progress, BarHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.6f), IGraphics::CORNER_ALL, 1.0f);
 	}
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 	return ContentBottomY;
 }
 
@@ -4802,11 +5011,20 @@ void CHud::OnRender()
 		{
 			if(g_Config.m_ClShowhudHealthAmmo)
 			{
+				float HudMainHeight = 0.0f;
+				if(GameClient()->m_GameInfo.m_HudHealthArmor)
+					HudMainHeight = maximum(HudMainHeight, 24.0f);
+				if(GameClient()->m_GameInfo.m_HudAmmo)
+					HudMainHeight = maximum(HudMainHeight, GameClient()->m_GameInfo.m_HudHealthArmor ? 36.0f : 12.0f);
+				const auto HudMainScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::HudMain, {5.0f, 5.0f, 144.0f, maximum(HudMainHeight, 12.0f)});
 				RenderAmmoHealthAndArmor(GameClient()->m_Snap.m_pLocalCharacter);
+				GameClient()->m_HudEditor.EndTransform(HudMainScope);
 			}
 			if(GameClient()->m_Snap.m_aCharacters[GameClient()->m_Snap.m_LocalClientId].m_HasExtendedData && g_Config.m_ClShowhudDDRace && GameClient()->m_GameInfo.m_HudDDRace)
 			{
+				const auto HudPlayerStateScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::HudPlayerState, {0.0f, 5.0f, 180.0f, 110.0f});
 				RenderPlayerState(GameClient()->m_Snap.m_LocalClientId);
+				GameClient()->m_HudEditor.EndTransform(HudPlayerStateScope);
 			}
 			if(!ShowMediaIsland && g_Config.m_QmHudIslandUseOriginalStyle)
 			{
@@ -4826,7 +5044,14 @@ void CHud::OnRender()
 			int SpectatorId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
 			if(SpectatorId != SPEC_FREEVIEW && g_Config.m_ClShowhudHealthAmmo)
 			{
+				float HudMainHeight = 0.0f;
+				if(GameClient()->m_GameInfo.m_HudHealthArmor)
+					HudMainHeight = maximum(HudMainHeight, 24.0f);
+				if(GameClient()->m_GameInfo.m_HudAmmo)
+					HudMainHeight = maximum(HudMainHeight, GameClient()->m_GameInfo.m_HudHealthArmor ? 36.0f : 12.0f);
+				const auto HudMainScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::HudMain, {5.0f, 5.0f, 144.0f, maximum(HudMainHeight, 12.0f)});
 				RenderAmmoHealthAndArmor(&GameClient()->m_Snap.m_aCharacters[SpectatorId].m_Cur);
+				GameClient()->m_HudEditor.EndTransform(HudMainScope);
 			}
 			if(SpectatorId != SPEC_FREEVIEW &&
 				GameClient()->m_Snap.m_aCharacters[SpectatorId].m_HasExtendedData &&
@@ -4834,7 +5059,9 @@ void CHud::OnRender()
 				(!GameClient()->m_MultiViewActivated || GameClient()->m_MultiViewShowHud) &&
 				GameClient()->m_GameInfo.m_HudDDRace)
 			{
+				const auto HudPlayerStateScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::HudPlayerState, {0.0f, 5.0f, 180.0f, 110.0f});
 				RenderPlayerState(SpectatorId);
+				GameClient()->m_HudEditor.EndTransform(HudPlayerStateScope);
 			}
 			RenderMovementInformation();
 			RenderSpectatorHud();

@@ -43,6 +43,28 @@ public:
 
 extern CConfig g_Config;
 
+static constexpr int BC_FAST_INPUT_GAMMA_UI_MAX = 600;
+static constexpr int BC_FAST_INPUT_GAMMA_EFFECTIVE_MAX = 600;
+
+constexpr int BcFastInputGammaClampUiAmount(int GammaUiAmount)
+{
+	if(GammaUiAmount <= 0)
+		return 0;
+	if(GammaUiAmount >= BC_FAST_INPUT_GAMMA_UI_MAX)
+		return BC_FAST_INPUT_GAMMA_UI_MAX;
+	return GammaUiAmount;
+}
+
+constexpr int BcFastInputGammaUiToEffectiveAmount(int GammaUiAmount)
+{
+	return BcFastInputGammaClampUiAmount(GammaUiAmount);
+}
+
+constexpr int BcFastInputGammaEffectiveToUiAmount(int EffectiveAmount)
+{
+	return BcFastInputGammaClampUiAmount(EffectiveAmount);
+}
+
 enum
 {
 	CFGFLAG_SAVE = 1 << 0,

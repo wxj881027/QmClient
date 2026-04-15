@@ -43,6 +43,7 @@
 #include "components/flow.h"
 #include "components/freezebars.h"
 #include "components/ghost.h"
+#include "components/hud_editor.h"
 #include "components/hud.h"
 #include "components/important_alert.h"
 #include "components/infomessages.h"
@@ -74,6 +75,7 @@
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/custom_communities.h"
 #include "components/qmclient/data_version.h"
+#include "components/qmclient/fast_practice.h"
 #include "components/qmclient/input_overlay.h"
 #include "components/qmclient/lyrics_component.h"
 #include "components/qmclient/mod.h"
@@ -97,6 +99,8 @@
 #include "QmUi/QmRt.h"
 
 #include <vector>
+
+class CQmJelly;
 
 class CGameInfo
 {
@@ -166,6 +170,7 @@ class CGameClient : public IGameClient
 {
 public:
 	friend class CTClient;
+	friend class CFastPractice;
 
 	// all components
 	CInfoMessages m_InfoMessages;
@@ -216,6 +221,7 @@ public:
 
 	CRaceDemo m_RaceDemo;
 	CGhost m_Ghost;
+	CHudEditor m_HudEditor;
 
 	CTooltips m_Tooltips;
 
@@ -228,6 +234,7 @@ public:
 	CBindWheel m_BindWheel;
 	CBgDraw m_BgDraw;
 	CTClient m_TClient;
+	CFastPractice m_FastPractice;
 	CVoiceComponent m_Voice;
 	CTrails m_Trails;
 	CTranslate m_Translate;
@@ -249,6 +256,7 @@ public:
 private:
 	std::vector<class CComponent *> m_vpAll;
 	std::vector<class CComponent *> m_vpInput;
+	std::unique_ptr<CQmJelly> m_pJellyTee;
 	CNetObjHandler m_NetObjHandler;
 	protocol7::CNetObjHandler m_NetObjHandler7;
 
@@ -358,6 +366,7 @@ public:
 	class IEditor *Editor() { return m_pEditor; }
 	class IFriends *Friends() { return m_pFriends; }
 	class IFriends *Foes() { return m_pFoes; }
+	CQmJelly *JellyTee() const { return m_pJellyTee.get(); }
 #if defined(CONF_AUTOUPDATE)
 	class IUpdater *Updater()
 	{
@@ -379,6 +388,7 @@ public:
 	bool m_RenderingDummyMiniMap = false;
 	bool m_NewTick;
 	bool m_NewPredictedTick;
+	bool m_aPredictedHammerHitEvent[NUM_DUMMIES];
 	int m_aFlagDropTick[2];
 
 	enum
@@ -689,6 +699,7 @@ public:
 	void OnActivateEditor() override;
 	void OnDummySwap() override;
 	int OnSnapInput(int *pData, bool Dummy, bool Force) override;
+	void PrepareInputForSend(int *pData, int Size, bool Dummy) override;
 	void OnShutdown() override;
 	void OnEnterGame() override;
 	void OnRconType(bool UsernameReq) override;
@@ -735,6 +746,7 @@ public:
 	bool GotWantedSkin7(bool Dummy);
 	void SendInfo(bool Start);
 	void SendDummyInfo(bool Start) override;
+	void SendKill();
 	void SendKill() const;
 	void SendReadyChange7();
 
@@ -769,12 +781,20 @@ public:
 
 	bool IsTeamPlay() const { return m_Snap.m_pGameInfoObj && m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_TEAMS; }
 
-	bool AntiPingPlayers() const { return g_Config.m_ClAntiPing && g_Config.m_ClAntiPingPlayers && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK; }
-	bool AntiPingGrenade() const { return g_Config.m_ClAntiPing && g_Config.m_ClAntiPingGrenade && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK; }
-	bool AntiPingWeapons() const { return g_Config.m_ClAntiPing && g_Config.m_ClAntiPingWeapons && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK; }
-	bool AntiPingGunfire() const { return AntiPingGrenade() && AntiPingWeapons() && g_Config.m_ClAntiPingGunfire; }
+	bool AntiPingPlayers() const { return m_FastPractice.ForcePredictPlayers() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingPlayers && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
+	bool AntiPingGrenade() const { return m_FastPractice.ForcePredictGrenade() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingGrenade && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
+	bool AntiPingWeapons() const { return m_FastPractice.ForcePredictWeapons() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingWeapons && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
+	bool AntiPingGunfire() const { return m_FastPractice.ForcePredictGunfire() || (AntiPingGrenade() && AntiPingWeapons() && g_Config.m_ClAntiPingGunfire); }
 	bool Predict() const;
-	bool PredictDummy() const { return g_Config.m_ClPredictDummy && Client()->DummyConnected() && m_Snap.m_LocalClientId >= 0 && m_PredictedDummyId >= 0 && !m_aClients[m_PredictedDummyId].m_Paused; }
+	bool PredictDummy() const
+	{
+		if(m_FastPractice.Enabled())
+		{
+			const int FastPracticeDummyId = m_FastPractice.CurrentPracticeDummyId();
+			return FastPracticeDummyId >= 0 && m_Snap.m_LocalClientId >= 0 && !m_aClients[FastPracticeDummyId].m_Paused;
+		}
+		return g_Config.m_ClPredictDummy && Client()->DummyConnected() && m_Snap.m_LocalClientId >= 0 && m_PredictedDummyId >= 0 && !m_aClients[m_PredictedDummyId].m_Paused;
+	}
 	bool IsRenderingDummyMiniMap() const { return m_RenderingDummyMiniMap; }
 	void SetRenderingDummyMiniMap(bool Rendering) { m_RenderingDummyMiniMap = Rendering; }
 	const CTuningParams *GetTuning(int i) const { return &m_aTuningList[i]; }
@@ -1008,6 +1028,9 @@ public:
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
 	void SnapCollectEntities();
+	int GetFastInputPredictionAmountMs();
+	int GetFastInputPredictionTicks();
+	int GetFastInputRenderAmountMs();
 
 	bool m_aDDRaceMsgSent[NUM_DUMMIES];
 	int m_aShowOthers[NUM_DUMMIES];

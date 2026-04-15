@@ -562,23 +562,34 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 
 void CVoting::Render()
 {
-	if((!g_Config.m_ClShowVotesAfterVoting && !GameClient()->m_Scoreboard.IsActive() && TakenChoice()) || !IsVoting())
+	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
+	if((!g_Config.m_ClShowVotesAfterVoting && !GameClient()->m_Scoreboard.IsActive() && TakenChoice()) || (!IsVoting() && !HudEditorPreview))
 		return;
-	const int Seconds = SecondsLeft();
+	int Seconds = SecondsLeft();
 	if(Seconds < 0)
 	{
-		OnReset();
-		return;
+		if(HudEditorPreview)
+			Seconds = 24;
+		else
+		{
+			OnReset();
+			return;
+		}
 	}
 
 	// TClient
-	if(g_Config.m_TcMiniVoteHud > 0)
+	if(g_Config.m_TcMiniVoteHud > 0 && !HudEditorPreview)
 	{
 		GameClient()->m_TClient.RenderMiniVoteHud();
 		return;
 	}
 
+	const bool PreviewVote = HudEditorPreview && !IsVoting();
+	if(PreviewVote)
+		Seconds = 24;
+
 	CUIRect View = {0.0f, 60.0f, 120.0f, 38.0f};
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Voting, View);
 	View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_R, 3.0f);
 	View.Margin(3.0f, &View);
 
@@ -603,8 +614,16 @@ void CVoting::Render()
 
 	char aDescription[VOTE_DESC_LENGTH];
 	char aReason[VOTE_REASON_LENGTH];
-	GameClient()->FormatStreamerVoteText(VoteDescription(), aDescription, sizeof(aDescription));
-	GameClient()->FormatStreamerVoteText(VoteReason(), aReason, sizeof(aReason));
+	if(PreviewVote)
+	{
+		str_copy(aDescription, "funvote", sizeof(aDescription));
+		str_copy(aReason, "No reason given", sizeof(aReason));
+	}
+	else
+	{
+		GameClient()->FormatStreamerVoteText(VoteDescription(), aDescription, sizeof(aDescription));
+		GameClient()->FormatStreamerVoteText(VoteReason(), aReason, sizeof(aReason));
+	}
 
 	Props.m_MaxWidth = LeftColumn.w;
 	Ui()->DoLabel(&LeftColumn, aDescription, 6.0f, TEXTALIGN_ML, Props);
@@ -626,15 +645,17 @@ void CVoting::Render()
 	char aKey[64];
 	GameClient()->m_Binds.GetKey("vote yes", aKey, sizeof(aKey));
 	str_format(aBuf, sizeof(aBuf), "%s - %s", aKey, Localize("Vote yes"));
-	TextRender()->TextColor(TakenChoice() == 1 ? ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f) : TextRender()->DefaultTextColor());
+	TextRender()->TextColor(!PreviewVote && TakenChoice() == 1 ? ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f) : TextRender()->DefaultTextColor());
 	Ui()->DoLabel(&LeftColumn, aBuf, 6.0f, TEXTALIGN_ML);
 
 	GameClient()->m_Binds.GetKey("vote no", aKey, sizeof(aKey));
 	str_format(aBuf, sizeof(aBuf), "%s - %s", Localize("Vote no"), aKey);
-	TextRender()->TextColor(TakenChoice() == -1 ? ColorRGBA(0.95f, 0.25f, 0.25f, 0.85f) : TextRender()->DefaultTextColor());
+	TextRender()->TextColor(!PreviewVote && TakenChoice() == -1 ? ColorRGBA(0.95f, 0.25f, 0.25f, 0.85f) : TextRender()->DefaultTextColor());
 	Ui()->DoLabel(&RightColumn, aBuf, 6.0f, TEXTALIGN_MR);
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Voting, {0.0f, 60.0f, 120.0f, 38.0f});
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CVoting::RenderBars(CUIRect Bars) const

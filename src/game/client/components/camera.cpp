@@ -43,6 +43,11 @@ CCamera::CCamera()
 	m_DyncamTargetCameraOffset = vec2(0, 0);
 	std::fill(std::begin(m_aDyncamCurrentCameraOffset), std::end(m_aDyncamCurrentCameraOffset), vec2(0.0f, 0.0f));
 	m_DyncamSmoothingSpeedBias = 0.5f;
+	m_DriftTargetOffset = vec2(0.0f, 0.0f);
+	m_DriftCurrentOffset = vec2(0.0f, 0.0f);
+	m_DynamicFovTarget = 1.0f;
+	m_DynamicFovCurrent = 1.0f;
+	m_DynamicFovAppliedFactor = 1.0f;
 
 	m_AutoSpecCamera = true;
 	m_AutoSpecCameraZooming = false;
@@ -116,6 +121,12 @@ void CCamera::ResetAutoSpecCamera()
 
 void CCamera::UpdateCamera()
 {
+	if(m_DynamicFovAppliedFactor != 1.0f)
+	{
+		m_Zoom /= m_DynamicFovAppliedFactor;
+		m_DynamicFovAppliedFactor = 1.0f;
+	}
+
 	// use hardcoded smooth camera for spectating unless player explicitly turn it off
 	bool CanUseCameraInfo = !GameClient()->m_MultiViewActivated;
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -287,6 +298,64 @@ void CCamera::UpdateCamera()
 	m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy] = CurrentCameraOffset;
 	m_CanUseCameraInfo = CanUseCameraInfo;
 	m_UsingAutoSpecCamera = UsingAutoSpecCamera;
+
+	const int LocalClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy];
+	const bool HasLocalPrediction = LocalClientId >= 0 && LocalClientId < MAX_CLIENTS;
+	const vec2 PlayerVel = HasLocalPrediction ? GameClient()->m_aClients[LocalClientId].m_Predicted.m_Vel : vec2(0.0f, 0.0f);
+	const bool CanApplyLocalCameraEffects = !GameClient()->m_Snap.m_SpecInfo.m_Active && HasLocalPrediction;
+
+	m_DriftTargetOffset = vec2(0.0f, 0.0f);
+	if(CanApplyLocalCameraEffects && g_Config.m_QmCameraDrift)
+	{
+		vec2 DriftVelocity = vec2(PlayerVel.x, 0.0f);
+		const float VelocityFactor = length(DriftVelocity);
+		if(VelocityFactor > 0.0001f)
+		{
+			vec2 DriftDirection = normalize(DriftVelocity);
+			if(g_Config.m_QmCameraDriftReverse)
+				DriftDirection *= -1.0f;
+
+			const float DriftMultiplier = 1.0f + (VelocityFactor / 10.0f);
+			const float DriftAmount = VelocityFactor * (g_Config.m_QmCameraDriftAmount / 50.0f) * DriftMultiplier;
+			m_DriftTargetOffset = DriftDirection * DriftAmount;
+		}
+	}
+
+	if(g_Config.m_QmCameraDriftSmoothness > 0)
+	{
+		const float SmoothFactor = maximum(0.1f, (1.0f - (g_Config.m_QmCameraDriftSmoothness / 100.0f)) * 10.0f);
+		m_DriftCurrentOffset += (m_DriftTargetOffset - m_DriftCurrentOffset) * minimum(DeltaTime * SmoothFactor, 1.0f);
+	}
+	else
+	{
+		m_DriftCurrentOffset = m_DriftTargetOffset;
+	}
+
+	if(CanApplyLocalCameraEffects || length(m_DriftCurrentOffset) > 0.01f)
+		m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy] += m_DriftCurrentOffset;
+
+	m_DynamicFovTarget = 1.0f;
+	if(CanApplyLocalCameraEffects && g_Config.m_QmDynamicFov)
+	{
+		const float VelocityFactor = length(PlayerVel);
+		const float DynamicFovMultiplier = 1.0f + (VelocityFactor / 10.0f);
+		const float DynamicFovAmount = VelocityFactor * (g_Config.m_QmDynamicFovAmount / 50.0f) * DynamicFovMultiplier;
+		m_DynamicFovTarget = std::clamp(1.0f + DynamicFovAmount / 500.0f, 1.0f, 5.0f);
+	}
+
+	if(g_Config.m_QmDynamicFovSmoothness > 0)
+	{
+		const float SmoothFactor = maximum(0.1f, (1.0f - (g_Config.m_QmDynamicFovSmoothness / 100.0f)) * 10.0f);
+		m_DynamicFovCurrent += (m_DynamicFovTarget - m_DynamicFovCurrent) * minimum(DeltaTime * SmoothFactor, 1.0f);
+	}
+	else
+	{
+		m_DynamicFovCurrent = m_DynamicFovTarget;
+	}
+
+	m_DynamicFovCurrent = maximum(1.0f, m_DynamicFovCurrent);
+	m_Zoom *= m_DynamicFovCurrent;
+	m_DynamicFovAppliedFactor = m_DynamicFovCurrent;
 }
 
 void CCamera::OnRender()
@@ -421,6 +490,11 @@ void CCamera::OnConsoleInit()
 void CCamera::OnReset()
 {
 	m_CameraSmoothing = false;
+	m_DriftTargetOffset = vec2(0.0f, 0.0f);
+	m_DriftCurrentOffset = vec2(0.0f, 0.0f);
+	m_DynamicFovTarget = 1.0f;
+	m_DynamicFovCurrent = 1.0f;
+	m_DynamicFovAppliedFactor = 1.0f;
 
 	m_Zoom = CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10);
 	m_Zooming = false;

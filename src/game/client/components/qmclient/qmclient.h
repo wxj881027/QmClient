@@ -304,6 +304,7 @@ class CTClient : public CComponent
 	char m_aQmDdnetPlayerName[MAX_NAME_LENGTH] = "";
 	char m_aQmDdnetFavoritePartner[MAX_NAME_LENGTH] = "";
 	int m_QmDdnetTotalFinishes = -1;
+	bool m_QmAspectApplyPending = false;
 	void UpdateQmDdnetPlayerStats();
 	void FetchQmDdnetPlayerStats(const char *pPlayerName);
 	void FinishQmDdnetPlayerStats();
@@ -322,6 +323,7 @@ public:
 
 	void OnStateChange(int NewState, int OldState) override;
 	void OnNewSnapshot() override;
+	void QueueAspectApply();
 	void SetForcedAspect();
 
 	std::shared_ptr<CHttpRequest> m_pTClientInfoTask = nullptr;

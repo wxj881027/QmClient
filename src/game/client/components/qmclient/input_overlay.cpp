@@ -161,6 +161,8 @@ void CInputOverlay::OnRender()
 		if(CanvasH <= pScreen->h)
 			OriginY = std::clamp(OriginY, 0.0f, pScreen->h - CanvasH);
 	}
+	const CUIRect OverlayRect = {OriginX, OriginY, std::max(CanvasW, 1.0f), std::max(CanvasH, 1.0f)};
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::InputOverlay, OverlayRect);
 
 	m_Time += Client()->RenderFrameTime();
 
@@ -287,6 +289,8 @@ void CInputOverlay::OnRender()
 		}
 
 		Graphics()->TextureClear();
+		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::InputOverlay, OverlayRect);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 
@@ -418,6 +422,8 @@ void CInputOverlay::OnRender()
 	}
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::InputOverlay, OverlayRect);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 bool CInputOverlay::LoadConfiguration(int StorageType)

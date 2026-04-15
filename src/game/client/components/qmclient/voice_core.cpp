@@ -2284,6 +2284,8 @@ void CRClientVoice::RenderSpeakerOverlay()
 	if(!m_pGameClient || !m_pGraphics || !g_Config.m_RiVoiceEnable || !g_Config.m_RiVoiceShowOverlay)
 		return;
 
+	const bool HudEditorPreview = m_pGameClient->m_HudEditor.IsActive();
+
 	ITextRender *pTextRender = m_pGameClient->TextRender();
 	if(!pTextRender)
 		return;
@@ -2374,8 +2376,23 @@ void CRClientVoice::RenderSpeakerOverlay()
 			m_aOverlayOrder[ClientId] = 0;
 	}
 
-	if(vEntries.empty())
+	if(vEntries.empty() && !HudEditorPreview)
 		return;
+
+	if(vEntries.empty() && HudEditorPreview)
+	{
+		SSpeakerEntry &LocalEntry = vEntries.emplace_back();
+		LocalEntry.m_ClientId = 0;
+		LocalEntry.m_OverlayOrder = 1;
+		LocalEntry.m_IsLocal = true;
+		str_copy(LocalEntry.m_aName, "You", sizeof(LocalEntry.m_aName));
+
+		SSpeakerEntry &TeammateEntry = vEntries.emplace_back();
+		TeammateEntry.m_ClientId = 1;
+		TeammateEntry.m_OverlayOrder = 2;
+		TeammateEntry.m_IsLocal = false;
+		str_copy(TeammateEntry.m_aName, "Teammate", sizeof(TeammateEntry.m_aName));
+	}
 
 	std::stable_sort(vEntries.begin(), vEntries.end(), [](const SSpeakerEntry &Left, const SSpeakerEntry &Right) {
 		if(Left.m_OverlayOrder != Right.m_OverlayOrder)
@@ -2417,6 +2434,15 @@ void CRClientVoice::RenderSpeakerOverlay()
 	const float UserIconWidth = pTextRender->TextWidth(UserIconFontSize, FontIcons::FONT_ICON_USERS);
 	const float MicIconWidth = pTextRender->TextWidth(IconFontSize, s_pVoiceOverlayMicIcon);
 	pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	float PanelWidth = 0.0f;
+	for(const SSpeakerEntry &Entry : vEntries)
+	{
+		const float NameWidth = std::min(std::round(pTextRender->TextBoundingBox(NameFontSize, Entry.m_aName).m_W), MaxNameWidth);
+		PanelWidth = std::max(PanelWidth, RowPaddingX + UserBoxWidth + UserToNameGap + NameWidth + NameToMicGap + MicIconWidth + RowPaddingX);
+	}
+	const float PanelHeight = vEntries.empty() ? 0.0f : vEntries.size() * RowHeight + (vEntries.size() - 1) * RowGap;
+	const CUIRect PanelRect = {PanelX, PanelY, PanelWidth, PanelHeight};
+	const auto HudEditorScope = m_pGameClient->m_HudEditor.BeginTransform(EHudEditorElement::VoiceOverlay, PanelRect);
 
 	for(size_t Index = 0; Index < vEntries.size(); ++Index)
 	{
@@ -2468,5 +2494,7 @@ void CRClientVoice::RenderSpeakerOverlay()
 	pTextRender->TextColor(PrevTextColor);
 	pTextRender->TextOutlineColor(PrevOutlineColor);
 	pTextRender->SetRenderFlags(PrevFlags);
+	m_pGameClient->m_HudEditor.UpdateVisibleRect(EHudEditorElement::VoiceOverlay, PanelRect);
+	m_pGameClient->m_HudEditor.EndTransform(HudEditorScope);
 	m_pGraphics->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }

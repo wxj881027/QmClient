@@ -4,6 +4,7 @@
 
 #include "ui_scrollregion.h"
 
+#include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
 
@@ -1839,6 +1840,8 @@ CUi::SSelectionPopupContext::SSelectionPopupContext()
 
 void CUi::SSelectionPopupContext::Reset()
 {
+	m_pUI = nullptr;
+	m_pScrollRegion = nullptr;
 	m_Props = SPopupMenuProperties();
 	m_aMessage[0] = '\0';
 	m_pSelection = nullptr;
@@ -1852,6 +1855,7 @@ void CUi::SSelectionPopupContext::Reset()
 	m_Width = 300.0f + (SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN) * 2;
 	m_AlignmentHeight = -1.0f;
 	m_TransparentButtons = false;
+	m_SpecialFontRenderMode = false;
 }
 
 CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, bool Active)
@@ -1859,6 +1863,11 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 	SSelectionPopupContext *pSelectionPopup = static_cast<SSelectionPopupContext *>(pContext);
 	CUi *pUI = pSelectionPopup->m_pUI;
 	CScrollRegion *pScrollRegion = pSelectionPopup->m_pScrollRegion;
+	if(pScrollRegion == nullptr)
+	{
+		log_error("ui", "Selection popup opened without a scroll region");
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
 
 	vec2 ScrollOffset(0.0f, 0.0f);
 	CScrollRegionParams ScrollParams;
@@ -1942,6 +1951,8 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 
 int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char **pStrs, int Num, SDropDownState &State)
 {
+	static CScrollRegion s_DefaultDropDownScrollRegion;
+
 	if(!State.m_Init)
 	{
 		State.m_UiElement.Init(this, -1);
@@ -1960,7 +1971,11 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char **pStrs, int Nu
 		Props.m_Corners = IGraphics::CORNER_ALL & (~State.m_SelectionPopupContext.m_Props.m_Corners);
 	if(DoButton_Menu(State.m_UiElement, &State.m_ButtonContainer, LabelFunc, pRect, Props))
 	{
+		CScrollRegion *pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion;
+		const bool SpecialFontRenderMode = State.m_SelectionPopupContext.m_SpecialFontRenderMode;
 		State.m_SelectionPopupContext.Reset();
+		State.m_SelectionPopupContext.m_pScrollRegion = pScrollRegion != nullptr ? pScrollRegion : &s_DefaultDropDownScrollRegion;
+		State.m_SelectionPopupContext.m_SpecialFontRenderMode = SpecialFontRenderMode;
 		State.m_SelectionPopupContext.m_Props.m_BorderColor = ColorRGBA(0.7f, 0.7f, 0.7f, 0.9f);
 		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f);
 		for(int i = 0; i < Num; ++i)

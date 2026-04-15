@@ -414,6 +414,8 @@ void CChat::Reset()
 	m_CurrentLine = 0;
 	m_IsInputCensored = false;
 	m_EditingNewLine = true;
+	m_aSavedInputText[0] = '\0';
+	m_SavedInputPending = false;
 	m_ServerSupportsCommandInfo = false;
 	m_ServerCommandsNeedSorting = false;
 	m_aCurrentInputText[0] = '\0';
@@ -447,21 +449,56 @@ void CChat::ConSayTeam(IConsole::IResult *pResult, void *pUserData)
 
 void CChat::ConChat(IConsole::IResult *pResult, void *pUserData)
 {
+	CChat *pChat = (CChat *)pUserData;
 	const char *pMode = pResult->GetString(0);
 	if(str_comp(pMode, "all") == 0)
-		((CChat *)pUserData)->EnableMode(0);
+		pChat->EnableMode(0);
 	else if(str_comp(pMode, "team") == 0)
-		((CChat *)pUserData)->EnableMode(1);
+		pChat->EnableMode(1);
 	else
-		((CChat *)pUserData)->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", "expected all or team as mode");
+		pChat->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", "expected all or team as mode");
 
-	if(pResult->GetString(1)[0] || g_Config.m_ClChatReset)
-		((CChat *)pUserData)->m_Input.Set(pResult->GetString(1));
+	if(pResult->GetString(1)[0])
+		pChat->m_Input.Set(pResult->GetString(1));
+	else if(g_Config.m_ClChatReset)
+	{
+		if(g_Config.m_QmChatSaveDraft && pChat->m_SavedInputPending)
+			pChat->m_Input.Set(pChat->m_aSavedInputText);
+		else
+			pChat->m_Input.Clear();
+	}
+
+	if(!g_Config.m_QmChatSaveDraft)
+	{
+		pChat->m_SavedInputPending = false;
+		pChat->m_aSavedInputText[0] = '\0';
+	}
 }
 
 void CChat::ConShowChat(IConsole::IResult *pResult, void *pUserData)
 {
 	((CChat *)pUserData)->m_Show = pResult->GetInteger(0) != 0;
+}
+
+void CChat::SaveDraft()
+{
+	if(!g_Config.m_QmChatSaveDraft)
+	{
+		m_SavedInputPending = false;
+		m_aSavedInputText[0] = '\0';
+		return;
+	}
+
+	if(m_Input.GetString()[0] != '\0')
+	{
+		str_copy(m_aSavedInputText, m_Input.GetString(), sizeof(m_aSavedInputText));
+		m_SavedInputPending = true;
+	}
+	else
+	{
+		m_SavedInputPending = false;
+		m_aSavedInputText[0] = '\0';
+	}
 }
 
 void CChat::ConEcho(IConsole::IResult *pResult, void *pUserData)
@@ -530,8 +567,14 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 		GameClient()->OnRelease();
 		if(g_Config.m_ClChatReset)
 		{
+			SaveDraft();
 			m_Input.Clear();
 			m_pHistoryEntry = nullptr;
+		}
+		else if(!g_Config.m_QmChatSaveDraft)
+		{
+			m_SavedInputPending = false;
+			m_aSavedInputText[0] = '\0';
 		}
 	}
 	else if(Event.m_Flags & IInput::FLAG_PRESS && (Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER))
@@ -548,6 +591,8 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			; // Do nothing as specid was executed
 		else
 			SendChatQueued(m_Input.GetString());
+		m_SavedInputPending = false;
+		m_aSavedInputText[0] = '\0';
 		m_pHistoryEntry = nullptr;
 		DisableMode();
 		GameClient()->OnRelease();
@@ -1603,6 +1648,8 @@ void CChat::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
+	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
+
 	// send pending chat messages
 	if(m_PendingChatCounter > 0 && m_LastChatSend + time_freq() < time())
 	{
@@ -1621,8 +1668,28 @@ void CChat::OnRender()
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
+	const CUIRect ChatRect = {0.0f, 50.0f, std::min(Width, std::max(190.0f, g_Config.m_ClChatWidth + 32.0f)), 250.0f};
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Chat, ChatRect);
 
 	float x = 5.0f;
+	float BoundsTop = Height;
+	float BoundsBottom = 0.0f;
+	bool HasBounds = false;
+	auto ExtendBounds = [&](float X, float Y, float W, float H) {
+		if(W <= 0.0f || H <= 0.0f)
+			return;
+		const float Right = X + W;
+		const float Bottom = Y + H;
+		if(!HasBounds)
+		{
+			BoundsTop = Y;
+			BoundsBottom = Bottom;
+			HasBounds = true;
+			return;
+		}
+		BoundsTop = minimum(BoundsTop, Y);
+		BoundsBottom = maximum(BoundsBottom, Bottom);
+	};
 
 	// TClient
 	float y = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f));
@@ -1651,6 +1718,7 @@ void CChat::OnRender()
 
 		const float MessageMaxWidth = InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX);
 		const CUIRect ClippingRect = {InputCursor.m_X, InputCursor.m_Y, MessageMaxWidth, 2.25f * InputCursor.m_FontSize};
+		ExtendBounds(x, InputCursor.m_Y, ChatRect.w - x, ClippingRect.h);
 		const float XScale = Graphics()->ScreenWidth() / Width;
 		const float YScale = Graphics()->ScreenHeight() / Height;
 		Graphics()->ClipEnable((int)(ClippingRect.x * XScale), (int)(ClippingRect.y * YScale), (int)(ClippingRect.w * XScale), (int)(ClippingRect.h * YScale));
@@ -1702,7 +1770,10 @@ void CChat::OnRender()
 #else
 	if(!g_Config.m_ClShowChat)
 #endif
+	{
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
+	}
 
 	y -= ScaledFontSize;
 
@@ -1736,6 +1807,8 @@ void CChat::OnRender()
 		RealMsgPaddingX = 0;
 		RealMsgPaddingY = 0;
 	}
+
+	bool RenderedAnyLines = false;
 
 	// Declarative animation pass: blend age-based animation with overflow-based cut-off.
 	for(int i = 0; i < MAX_LINES; i++)
@@ -1792,6 +1865,8 @@ void CChat::OnRender()
 
 		if(Line.m_TextContainerIndex.Valid())
 		{
+			RenderedAnyLines = true;
+			ExtendBounds(x, y, ChatRect.w - x, LineHeight);
 			if(!g_Config.m_ClChatOld && Line.m_pManagedTeeRenderInfo != nullptr)
 			{
 				CTeeRenderInfo &TeeRenderInfo = Line.m_pManagedTeeRenderInfo->TeeRenderInfo();
@@ -1811,6 +1886,50 @@ void CChat::OnRender()
 			TextRender()->RenderTextContainer(Line.m_TextContainerIndex, TextColor, TextOutlineColor, AnimOffsetX, (y + RealMsgPaddingY / 2.0f) - Line.m_TextYOffset);
 		}
 	}
+
+	if(HudEditorPreview && !RenderedAnyLines)
+	{
+		struct SPreviewLine
+		{
+			const char *m_pPrefix;
+			const char *m_pMessage;
+			ColorRGBA m_TextColor;
+		};
+
+		static const SPreviewLine s_aPreviewLines[] = {
+			{"Server", "Welcome to QmClient", ColorRGBA(0.72f, 0.82f, 1.0f, 0.92f)},
+			{"Teammate", "Ready?", ColorRGBA(0.72f, 1.0f, 0.72f, 0.92f)},
+			{"Friend", "Let's go!", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
+		};
+
+		float PreviewY = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f)) - ScaledFontSize;
+		PreviewY -= RowHeight * (float)std::size(s_aPreviewLines);
+
+		for(const SPreviewLine &Line : s_aPreviewLines)
+		{
+			char aPreviewText[256];
+			str_format(aPreviewText, sizeof(aPreviewText), "%s: %s", Line.m_pPrefix, Line.m_pMessage);
+			const float TextWidth = TextRender()->TextWidth(FontSize(), aPreviewText, -1, -1.0f);
+			const float PreviewWidth = minimum(ChatRect.w - x, TextWidth + RealMsgPaddingX * 1.5f + (g_Config.m_ClChatOld ? 0.0f : MessageTeeSize() + 2.0f));
+
+			if(!g_Config.m_ClChatOld)
+				Graphics()->DrawRect(x, PreviewY, PreviewWidth, RowHeight, BackgroundBaseColor, IGraphics::CORNER_ALL, MessageRounding());
+
+			TextRender()->TextColor(Line.m_TextColor);
+			TextRender()->Text(x + (g_Config.m_ClChatOld ? 0.0f : RealMsgPaddingX), PreviewY + RealMsgPaddingY * 0.5f, FontSize(), aPreviewText, -1.0f);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			ExtendBounds(x, PreviewY, PreviewWidth, RowHeight);
+			PreviewY += RowHeight;
+		}
+	}
+
+	if(HasBounds)
+	{
+		const float BoundsHeight = maximum(0.0f, BoundsBottom - BoundsTop);
+		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, {x, BoundsTop, ChatRect.w - x, BoundsHeight});
+	}
+
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CChat::EnsureCoherentFontSize() const
@@ -1845,6 +1964,8 @@ void CChat::SendChat(int Team, const char *pLine)
 {
 	// don't send empty messages
 	if(*str_utf8_skip_whitespaces(pLine) == '\0')
+		return;
+	if(GameClient()->m_FastPractice.ConsumePracticeChatCommand(Team, pLine))
 		return;
 
 	m_LastChatSend = time();
@@ -1901,16 +2022,19 @@ void CChat::SendChatOnConn(int Conn, int Team, const char *pLine)
 	Client()->SendPackMsg(Conn, &Msg, MSGFLAG_VITAL);
 }
 
-void CChat::SendChatQueued(const char *pLine)
+void CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation)
 {
 	if(!pLine || str_length(pLine) < 1)
+		return;
+
+	if(AllowOutgoingTranslation && GameClient()->m_Translate.TryTranslateOutgoingChat(Team, pLine))
 		return;
 
 	bool AddEntry = false;
 
 	if(m_LastChatSend + time_freq() < time())
 	{
-		SendChat(m_Mode == MODE_ALL ? 0 : 1, pLine);
+		SendChat(Team, pLine);
 		AddEntry = true;
 	}
 	else if(m_PendingChatCounter < 3)
@@ -1923,7 +2047,12 @@ void CChat::SendChatQueued(const char *pLine)
 	{
 		const int Length = str_length(pLine);
 		CHistoryEntry *pEntry = m_History.Allocate(sizeof(CHistoryEntry) + Length);
-		pEntry->m_Team = m_Mode == MODE_ALL ? 0 : 1;
+		pEntry->m_Team = Team;
 		str_copy(pEntry->m_aText, pLine, Length + 1);
 	}
+}
+
+void CChat::SendChatQueued(const char *pLine)
+{
+	SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true);
 }

@@ -11,6 +11,12 @@
 
 #include <game/client/component.h>
 #include <game/client/gameclient.h>
+#include <game/localization.h>
+
+namespace
+{
+constexpr const char *QMCLIENT_LOCALIZATION_CONTEXT = "QmClient";
+}
 
 class CScriptRunner : CComponentInterfaces
 {
@@ -257,5 +263,5 @@ void CScripting::ExecScript(const char *pFilename, const char *pArgs)
 
 void CScripting::OnConsoleInit()
 {
-	Console()->Register(SCRIPTING_IMPL, "s[file] ?r[args]", CFGFLAG_CLIENT, ConExecScript, this, "执行 " SCRIPTING_IMPL " 脚本");
+	Console()->Register(SCRIPTING_IMPL, "s[file] ?r[args]", CFGFLAG_CLIENT, ConExecScript, this, TCLocalize("Run a " SCRIPTING_IMPL " script", QMCLIENT_LOCALIZATION_CONTEXT));
 }

@@ -19,9 +19,11 @@
 #include <game/client/components/controls.h>
 #include <game/client/components/effects.h>
 #include <game/client/components/flow.h>
+#include <game/client/components/qmclient/jelly_tee.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
+#include <game/collision.h>
 #include <game/gamecore.h>
 #include <game/mapitems.h>
 
@@ -29,6 +31,7 @@
 #include <game/client/components/qmclient/rainbow.h>
 #include <game/client/prediction/entities/character.h>
 
+#include <algorithm>
 #include <optional>
 
 static float CalculateHandAngle(vec2 Dir, float AngleOffset)
@@ -52,6 +55,75 @@ static vec2 CalculateHandPosition(vec2 CenterPos, vec2 Dir, vec2 PostRotOffset)
 		DirY = -DirY;
 	}
 	return CenterPos + Dir + Dir * PostRotOffset.x + DirY * PostRotOffset.y;
+}
+
+static int LocalDummyIndexForClient(const CGameClient *pGameClient, int ClientId)
+{
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		if(pGameClient->m_aLocalIds[Dummy] == ClientId)
+			return Dummy;
+	}
+	return -1;
+}
+
+static bool HasQmJellyHammerImpact(const CGameClient *pGameClient, int ClientId)
+{
+	const int LocalDummy = LocalDummyIndexForClient(pGameClient, ClientId);
+	return LocalDummy >= 0 && pGameClient->m_aPredictedHammerHitEvent[LocalDummy];
+}
+
+static bool IsSolidAt(const CCollision *pCollision, vec2 Pos)
+{
+	if(pCollision == nullptr)
+		return false;
+	return pCollision->CheckPoint(Pos.x, Pos.y);
+}
+
+static float DetectQmJellyWallImpact(const CCollision *pCollision, vec2 Position, vec2 PrevVel, vec2 Vel, bool InAir)
+{
+	if(InAir)
+		return 0.0f;
+
+	const float PrevSpeedX = absolute(PrevVel.x);
+	const float CurSpeedX = absolute(Vel.x);
+	const float SpeedDrop = PrevSpeedX - CurSpeedX;
+	if(PrevSpeedX < 4.0f || SpeedDrop < 1.2f)
+		return 0.0f;
+
+	const float Side = PrevVel.x >= 0.0f ? 1.0f : -1.0f;
+	const float ProbeX = Position.x + Side * 16.0f;
+	const bool TouchingWall =
+		IsSolidAt(pCollision, vec2(ProbeX, Position.y - 10.0f)) ||
+		IsSolidAt(pCollision, vec2(ProbeX, Position.y)) ||
+		IsSolidAt(pCollision, vec2(ProbeX, Position.y + 10.0f));
+
+	if(!TouchingWall)
+		return 0.0f;
+
+	return std::clamp(SpeedDrop / 7.0f, 0.0f, 1.8f);
+}
+
+static void BuildQmJellyExtraImpulse(const CGameClient *pGameClient, const CCollision *pCollision, int ClientId, vec2 Position, vec2 PrevVel, vec2 Vel, vec2 LookDir, bool InAir, vec2 &OutExtraDeformImpulse, float &OutExtraCompression)
+{
+	OutExtraDeformImpulse = vec2(0.0f, 0.0f);
+	OutExtraCompression = 0.0f;
+
+	const float WallImpact = DetectQmJellyWallImpact(pCollision, Position, PrevVel, Vel, InAir);
+	if(WallImpact > 0.0f)
+	{
+		const float BounceDir = PrevVel.x >= 0.0f ? -1.0f : 1.0f;
+		OutExtraDeformImpulse.x += BounceDir * WallImpact * 0.95f;
+		OutExtraCompression += WallImpact * 1.20f;
+	}
+
+	if(HasQmJellyHammerImpact(pGameClient, ClientId))
+	{
+		const float HitImpact = 1.05f;
+		const float HorizontalKick = absolute(Vel.x - PrevVel.x) > 0.05f ? std::clamp(Vel.x - PrevVel.x, -1.0f, 1.0f) : -LookDir.x;
+		OutExtraDeformImpulse.x += HorizontalKick * 0.80f * HitImpact;
+		OutExtraCompression += HitImpact;
+	}
 }
 
 void CPlayers::RenderHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset, float Alpha)
@@ -445,6 +517,8 @@ void CPlayers::RenderHookCollLine(
 
 	float Alpha = GameClient()->IsOtherTeam(ClientId) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
 	Alpha *= (float)g_Config.m_ClHookCollAlpha / 100;
+	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
+		Alpha = std::min(Alpha, 0.5f);
 	if(Alpha <= 0.0f)
 		return;
 	ColorRGBA HookCollTipColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollTipColor, true));
@@ -756,6 +830,8 @@ void CPlayers::RenderHook(
 	float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
 	if(ClientId == -2) // ghost
 		Alpha = g_Config.m_ClRaceGhostAlpha / 100.0f;
+	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
+		Alpha = std::min(Alpha, 0.5f);
 
 	RenderInfo.m_Size = 64.0f;
 
@@ -857,6 +933,8 @@ void CPlayers::RenderPlayer(
 
 	if(ClientId == -2) // ghost
 		Alpha = g_Config.m_ClRaceGhostAlpha / 100.0f;
+	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
+		Alpha = std::min(Alpha, 0.5f);
 	// TODO: snd_game_volume_others
 	const float Volume = 1.0f;
 	const bool AllowEffects = !GameClient()->IsRenderingDummyMiniMap();
@@ -894,7 +972,8 @@ void CPlayers::RenderPlayer(
 		Position = GameClient()->m_aClients[ClientId].m_RenderPos;
 	else
 		Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), Intra);
-	vec2 Vel = mix(vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f), vec2(Player.m_VelX / 256.0f, Player.m_VelY / 256.0f), Intra);
+	vec2 PrevVel = vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f);
+	vec2 Vel = mix(PrevVel, vec2(Player.m_VelX / 256.0f, Player.m_VelY / 256.0f), Intra);
 
 	// TClient
 	if(g_Config.m_TcSwapGhosts && g_Config.m_TcShowOthersGhosts && !Local && Client()->State() != IClient::STATE_DEMOPLAYBACK && ClientId >= 0)
@@ -954,6 +1033,17 @@ void CPlayers::RenderPlayer(
 	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
 	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
 	bool Inactive = ClientId >= 0 && (GameClient()->m_aClients[ClientId].m_Afk || GameClient()->m_aClients[ClientId].m_Paused);
+	SQmJellyDeform JellyDeform;
+	if(g_Config.m_QmJellyTee && ClientId >= 0)
+	{
+		vec2 ExtraDeformImpulse;
+		float ExtraCompression = 0.0f;
+		BuildQmJellyExtraImpulse(GameClient(), Collision(), ClientId, Position, PrevVel, Vel, Direction, InAir, ExtraDeformImpulse, ExtraCompression);
+		if(CQmJelly *pJellyTee = GameClient()->JellyTee())
+		{
+			JellyDeform = pJellyTee->GetDeform(ClientId, PrevVel, Vel, Direction, InAir, WantOtherDir, Client()->RenderFrameTime(), ExtraDeformImpulse, ExtraCompression);
+		}
+	}
 
 	// evaluate animation
 	float WalkTime = std::fmod(Position.x, 100.0f) / 100.0f;
@@ -1188,10 +1278,10 @@ void CPlayers::RenderPlayer(
 				vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y),
 				Client()->IntraGameTick(g_Config.m_ClDummy));
 
-		RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, ShadowPosition, 0.5f); // render ghost
+		RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, ShadowPosition, 0.5f, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle); // render ghost
 	}
 
-	RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, Position, Alpha);
+	RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, Position, Alpha, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle);
 
 	float TeeAnimScale, TeeBaseSize;
 	CRenderTools::GetRenderTeeAnimScaleAndBaseSize(&RenderInfo, TeeAnimScale, TeeBaseSize);
@@ -1377,7 +1467,8 @@ void CPlayers::RenderPlayerGhost(
 		return;
 	}
 
-	vec2 Vel = mix(vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f), vec2(Player.m_VelX / 256.0f, Player.m_VelY / 256.0f), IntraTick);
+	vec2 PrevVel = vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f);
+	vec2 Vel = mix(PrevVel, vec2(Player.m_VelX / 256.0f, Player.m_VelY / 256.0f), IntraTick);
 
 	if(AllowEffects)
 		GameClient()->m_Flow.Add(Position, Vel * 100.0f, 10.0f);
@@ -1391,6 +1482,17 @@ void CPlayers::RenderPlayerGhost(
 	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
 	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
 	bool Inactive = GameClient()->m_aClients[ClientId].m_Afk || GameClient()->m_aClients[ClientId].m_Paused;
+	SQmJellyDeform JellyDeform;
+	if(g_Config.m_QmJellyTee && ClientId >= 0)
+	{
+		vec2 ExtraDeformImpulse;
+		float ExtraCompression = 0.0f;
+		BuildQmJellyExtraImpulse(GameClient(), Collision(), ClientId, Position, PrevVel, Vel, Direction, InAir, ExtraDeformImpulse, ExtraCompression);
+		if(CQmJelly *pJellyTee = GameClient()->JellyTee())
+		{
+			JellyDeform = pJellyTee->GetDeform(ClientId, PrevVel, Vel, Direction, InAir, WantOtherDir, Client()->RenderFrameTime(), ExtraDeformImpulse, ExtraCompression);
+		}
+	}
 
 	// evaluate animation
 	float WalkTime = std::fmod(Position.x, 100.0f) / 100.0f;
@@ -1628,10 +1730,10 @@ void CPlayers::RenderPlayerGhost(
 				vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y),
 				Client()->IntraGameTick(g_Config.m_ClDummy));
 
-		RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, ShadowPosition, 0.5f); // render ghost
+		RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, ShadowPosition, 0.5f, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle); // render ghost
 	}
 
-	RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, Position, Alpha);
+	RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, Position, Alpha, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle);
 
 	float TeeAnimScale, TeeBaseSize;
 	CRenderTools::GetRenderTeeAnimScaleAndBaseSize(&RenderInfo, TeeAnimScale, TeeBaseSize);

@@ -162,6 +162,8 @@ class CChat : public CComponent
 	bool m_IsInputCensored;
 	char m_aCurrentInputText[MAX_LINE_LENGTH];
 	bool m_EditingNewLine;
+	char m_aSavedInputText[MAX_LINE_LENGTH];
+	bool m_SavedInputPending;
 
 	bool m_ServerSupportsCommandInfo;
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
@@ -177,6 +179,7 @@ class CChat : public CComponent
 
 	bool LineShouldHighlight(const char *pLine, const char *pName);
 	void StoreSave(const char *pText);
+	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
 
 	// 动画辅助函数
 	static float EaseOutQuad(float t);
@@ -203,6 +206,7 @@ public:
 	void AddLine(int ClientId, int Team, const char *pLine);
 	void EnableMode(int Team);
 	void DisableMode();
+	void SaveDraft();
 	void RegisterCommand(const char *pName, const char *pParams, const char *pHelpText);
 	void UnregisterCommand(const char *pName);
 	void Echo(const char *pString);
