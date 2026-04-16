@@ -208,17 +208,24 @@ public:
 	{
 		friend class IGraphics;
 		int m_Id;
+		uint32_t m_Generation;
 
 	public:
 		CTextureHandle() :
-			m_Id(-1)
+			m_Id(-1),
+			m_Generation(0)
 		{
 		}
 
 		bool IsValid() const { return Id() >= 0; }
-		bool IsNullTexture() const { return Id() == 0; }
+		bool IsNullTexture() const { return IsValid() && Id() == 0; }
 		int Id() const { return m_Id; }
-		void Invalidate() { m_Id = -1; }
+		uint32_t Generation() const { return m_Generation; }
+		void Invalidate()
+		{
+			m_Id = -1;
+			m_Generation = 0;
+		}
 	};
 
 	int ScreenWidth() const { return m_ScreenWidth; }
@@ -608,10 +615,11 @@ public:
 	virtual bool IsBackendInitialized() = 0;
 
 protected:
-	CTextureHandle CreateTextureHandle(int Index)
+	CTextureHandle CreateTextureHandle(int Index, uint32_t Generation = 0)
 	{
 		CTextureHandle Tex;
 		Tex.m_Id = Index;
+		Tex.m_Generation = Generation;
 		return Tex;
 	}
 

@@ -298,22 +298,44 @@ IGraphics::CTextureHandle CGraphics_Threaded::FindFreeTextureIndex()
 	if(m_FirstFreeTexture == CurSize)
 	{
 		m_vTextureIndices.resize(CurSize * 2);
+		m_vTextureGenerations.resize(CurSize * 2);
 		for(size_t i = 0; i < CurSize; ++i)
 			m_vTextureIndices[CurSize + i] = CurSize + i + 1;
 	}
 	const size_t Tex = m_FirstFreeTexture;
 	m_FirstFreeTexture = m_vTextureIndices[Tex];
 	m_vTextureIndices[Tex] = -1;
-	return CreateTextureHandle(Tex);
+	return CreateTextureHandle(Tex, m_vTextureGenerations[Tex]);
+}
+
+bool CGraphics_Threaded::IsTextureHandleAllocated(CTextureHandle TextureId) const
+{
+	if(!TextureId.IsValid())
+		return false;
+
+	const size_t TextureIndex = TextureId.Id();
+	if(TextureIndex >= m_vTextureIndices.size() || TextureIndex >= m_vTextureGenerations.size())
+		return false;
+
+	return m_vTextureIndices[TextureIndex] == -1 && m_vTextureGenerations[TextureIndex] == TextureId.Generation();
 }
 
 void CGraphics_Threaded::FreeTextureIndex(CTextureHandle *pIndex)
 {
-	dbg_assert(pIndex->IsValid(), "Cannot free invalid texture index");
-	dbg_assert(m_vTextureIndices[pIndex->Id()] == -1, "Cannot free already freed texture index");
+	if(!pIndex->IsValid())
+		return;
+
+	if(!IsTextureHandleAllocated(*pIndex))
+	{
+		if(g_Config.m_Debug)
+			log_trace("graphics/texture", "Ignoring stale texture handle %d during free.", pIndex->Id());
+		pIndex->Invalidate();
+		return;
+	}
 
 	m_vTextureIndices[pIndex->Id()] = m_FirstFreeTexture;
 	m_FirstFreeTexture = pIndex->Id();
+	++m_vTextureGenerations[pIndex->Id()];
 	pIndex->Invalidate();
 }
 
@@ -321,6 +343,14 @@ void CGraphics_Threaded::UnloadTexture(CTextureHandle *pIndex)
 {
 	if(pIndex->IsNullTexture() || !pIndex->IsValid())
 		return;
+
+	if(!IsTextureHandleAllocated(*pIndex))
+	{
+		if(g_Config.m_Debug)
+			log_trace("graphics/texture", "Ignoring unload of stale texture handle %d.", pIndex->Id());
+		pIndex->Invalidate();
+		return;
+	}
 
 	CCommandBuffer::SCommand_Texture_Destroy Cmd;
 	Cmd.m_Slot = pIndex->Id();
@@ -503,20 +533,22 @@ bool CGraphics_Threaded::LoadTextTextures(size_t Width, size_t Height, CTextureH
 
 bool CGraphics_Threaded::UnloadTextTextures(CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture)
 {
-	CCommandBuffer::SCommand_TextTextures_Destroy Cmd;
-	Cmd.m_Slot = TextTexture.Id();
-	Cmd.m_SlotOutline = TextOutlineTexture.Id();
-	AddCmd(Cmd);
-
-	if(TextTexture.IsValid())
-		FreeTextureIndex(&TextTexture);
-	if(TextOutlineTexture.IsValid())
-		FreeTextureIndex(&TextOutlineTexture);
+	UnloadTexture(&TextTexture);
+	UnloadTexture(&TextOutlineTexture);
 	return true;
 }
 
 bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer)
 {
+	if(!IsTextureHandleAllocated(TextureId))
+	{
+		if(IsMovedPointer)
+			free(pData);
+		if(g_Config.m_Debug && TextureId.IsValid())
+			log_trace("graphics/texture", "Ignoring update of stale text texture handle %d.", TextureId.Id());
+		return false;
+	}
+
 	CCommandBuffer::SCommand_TextTexture_Update Cmd;
 	Cmd.m_Slot = TextureId.Id();
 	Cmd.m_X = x;
@@ -542,6 +574,15 @@ bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int 
 
 bool CGraphics_Threaded::UpdateTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer)
 {
+	if(!IsTextureHandleAllocated(TextureId))
+	{
+		if(IsMovedPointer)
+			free(pData);
+		if(g_Config.m_Debug && TextureId.IsValid())
+			log_trace("graphics/texture", "Ignoring update of stale texture handle %d.", TextureId.Id());
+		return false;
+	}
+
 	CCommandBuffer::SCommand_Texture_Update Cmd;
 	Cmd.m_Slot = TextureId.Id();
 	Cmd.m_X = x;
@@ -756,7 +797,12 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 void CGraphics_Threaded::TextureSet(CTextureHandle TextureId)
 {
 	dbg_assert(m_Drawing == EDrawing::NONE, "called Graphics()->TextureSet within begin");
-	dbg_assert(!TextureId.IsValid() || m_vTextureIndices[TextureId.Id()] == -1, "Texture handle was not invalid, but also did not correlate to an existing texture.");
+	if(TextureId.IsValid() && !IsTextureHandleAllocated(TextureId))
+	{
+		if(g_Config.m_Debug)
+			log_trace("graphics/texture", "Ignoring stale texture handle %d during bind.", TextureId.Id());
+		TextureId.Invalidate();
+	}
 	m_State.m_Texture = TextureId.Id();
 }
 
@@ -2483,6 +2529,7 @@ int CGraphics_Threaded::Init()
 	// init textures
 	m_FirstFreeTexture = 0;
 	m_vTextureIndices.resize(CCommandBuffer::MAX_TEXTURES);
+	m_vTextureGenerations.resize(CCommandBuffer::MAX_TEXTURES);
 	for(size_t i = 0; i < m_vTextureIndices.size(); ++i)
 		m_vTextureIndices[i] = i + 1;
 

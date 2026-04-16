@@ -800,6 +800,8 @@ class CGraphics_Threaded : public IEngineGraphics
 	CTextureHandle m_NullTexture;
 
 	std::vector<int> m_vTextureIndices;
+	// Tracks slot generations so copied handles become stale once a slot is freed and reused.
+	std::vector<uint32_t> m_vTextureGenerations;
 	size_t m_FirstFreeTexture;
 	int m_TextureMemoryUsage;
 
@@ -942,6 +944,7 @@ public:
 	void LinesBatchDraw(CLineItemBatch *pBatch, const CLineItem *pArray, size_t Num) override;
 
 	IGraphics::CTextureHandle FindFreeTextureIndex();
+	bool IsTextureHandleAllocated(CTextureHandle TextureId) const;
 	void FreeTextureIndex(CTextureHandle *pIndex);
 	void UnloadTexture(IGraphics::CTextureHandle *pIndex) override;
 	void LoadTextureAddWarning(size_t Width, size_t Height, int Flags, const char *pTexName);
