@@ -29,8 +29,20 @@ class CTranslate : public CComponent
 		// For chat translations
 		CChat::CLine *m_pLine = nullptr;
 		std::shared_ptr<CTranslateResponse> m_pTranslateResponse = nullptr;
+		bool m_AutoTriggered = false;
+		char m_aTarget[16] = "";
 	};
 	std::vector<CTranslateJob> m_vJobs;
+
+	class COutgoingTranslateJob
+	{
+	public:
+		std::unique_ptr<ITranslateBackend> m_pBackend = nullptr;
+		CTranslateResponse m_Response;
+		int m_Team = 0;
+		char m_aTarget[16] = "";
+	};
+	std::vector<COutgoingTranslateJob> m_vOutgoingJobs;
 
 	static void ConTranslate(IConsole::IResult *pResult, void *pUserData);
 	static void ConTranslateId(IConsole::IResult *pResult, void *pUserData);
@@ -43,7 +55,8 @@ public:
 
 	void Translate(int Id, bool ShowProgress = true);
 	void Translate(const char *pName, bool ShowProgress = true);
-	void Translate(CChat::CLine &Line, bool ShowProgress = true);
+	void Translate(CChat::CLine &Line, bool ShowProgress = true, bool AutoTriggered = false);
+	bool TryTranslateOutgoingChat(int Team, const char *pText);
 
 	void AutoTranslate(CChat::CLine &Line);
 };
