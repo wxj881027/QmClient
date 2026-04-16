@@ -2547,6 +2547,7 @@ if(CLIENT)
     components/menu_background.h
     components/menus.cpp
     components/menus.h
+    components/menus_assets_editor.cpp
     components/menus_browser.cpp
     components/menus_demo.cpp
     components/menus_ingame.cpp
@@ -2554,7 +2555,6 @@ if(CLIENT)
     components/menus_ingame_touch_controls.h
     components/menus_settings.cpp
     components/menus_settings7.cpp
-    components/menus_assets_editor.cpp
     components/menus_settings_assets.cpp
     components/menus_settings_controls.cpp
     components/menus_settings_controls.h
