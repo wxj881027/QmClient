@@ -4611,3 +4611,138 @@ Use the mouse wheel on a hovered module to scale it by 5%
 Press Esc to exit the HUD editor
 == 按 Esc 退出 HUD 编辑器
 
+Assets editor
+== 材质编辑器
+
+Entities
+== 实体
+
+Game
+== 游戏
+
+Emoticons
+== 表情
+
+Particles
+== 粒子
+
+HUD
+== HUD
+
+Extras
+== 附加
+
+Reloaded images. %d slot(s) fell back to main asset.
+== 已重新加载图像。%d 个槽位已回退到主材质。
+
+Reloaded images.
+== 已重新加载图像。
+
+Added %d missing required slot(s).
+== 已补充 %d 个缺失的必需槽位。
+
+No assets available for composition.
+== 没有可用于合成的材质。
+
+Failed to load main asset: %s
+== 加载主材质失败：%s
+
+Preview built with %d skipped slot(s).
+== 预览已生成，但跳过了 %d 个槽位。
+
+Choose export name first.
+== 请先填写导出名称。
+
+The name "default" is reserved.
+== “default” 是保留名称。
+
+Export name contains invalid characters.
+== 导出名称包含无效字符。
+
+Asset with this name already exists.
+== 同名材质已存在。
+
+Failed to write PNG export.
+== 写入 PNG 导出文件失败。
+
+Exported to %s
+== 已导出到 %s
+
+Save asset before closing?
+== 关闭前保存材质吗？
+
+You have unsaved changes.
+== 你有未保存的更改。
+
+Save
+== 保存
+
+Discard
+== 丢弃
+
+Cancel
+== 取消
+
+Selected candidate %d/%d under cursor.
+== 已选中光标下的候选项 %d/%d。
+
+Can only drop onto same-size parts.
+== 只能拖放到同尺寸部件上。
+
+Applied to %d same-family part(s).
+== 已应用到 %d 个同族部件。
+
+Part updated.
+== 部件已更新。
+
+No preview
+== 无预览
+
+Mode
+== 模式
+
+No assets found.
+== 未找到材质。
+
+Reload
+== 重新加载
+
+Export
+== 导出
+
+Show Grid
+== 显示网格
+
+Donor (drag parts from left)
+== 来源材质（从左侧拖拽部件）
+
+Frankenstein (drop parts on right)
+== 拼合结果（将部件拖放到右侧）
+
+Part reset to main asset.
+== 部件已重置为主材质。
+
+tile
+== 图块
+
+%s from %s
+== %s（来自 %s）
+
+Click again to cycle parts (%d options).
+== 再次点击可切换部件（%d 个选项）。
+
+Donor Asset
+== 来源材质
+
+Main Asset
+== 主材质
+
+Drop on right canvas to replace one part.
+== 拖到右侧画布可替换一个部件。
+
+Drag from left to right. Right-click a Frankenstein part to reset it.
+== 从左侧拖到右侧。右键拼合结果中的部件可将其重置。
+
+Reset All
+== 全部重置
+
