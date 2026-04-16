@@ -5589,25 +5589,25 @@ int CClient::PredictionMargin() const
 		return 10;
 
 	int PredictionMargin = g_Config.m_ClPredictionMargin;
-	if(!g_Config.m_BcFastInputAutoMargin)
+	if(!g_Config.m_QmFastInputAutoMargin)
 		return PredictionMargin;
 
 	int FastInputMargin = 0;
 	if(g_Config.m_TcFastInput)
 	{
-		if(g_Config.m_BcFastInputMode == 0)
+		if(g_Config.m_QmFastInputMode == 0)
 		{
 			FastInputMargin = std::max(0, g_Config.m_TcFastInputAmount);
 		}
-		else if(g_Config.m_BcFastInputMode == 1)
+		else if(g_Config.m_QmFastInputMode == 1)
 		{
-			const int DeltaInputAmount = std::max(0, g_Config.m_BcFastInputDeltaInput);
+			const int DeltaInputAmount = std::max(0, g_Config.m_QmFastInputDeltaInput);
 			// delta input is measured in 0.01 ticks, convert it to milliseconds.
 			FastInputMargin = (DeltaInputAmount + 2) / 5;
 		}
 		else
 		{
-			const int GammaInputAmount = BcFastInputGammaUiToEffectiveAmount(g_Config.m_BcFastInputGammaInput);
+			const int GammaInputAmount = BcFastInputGammaUiToEffectiveAmount(g_Config.m_QmFastInputGammaInput);
 			// gamma input is configured directly in 0.01 ticks.
 			FastInputMargin = (GammaInputAmount + 2) / 5;
 		}

@@ -6,7 +6,8 @@
 #endif
 
 CONFIG_DOMAIN(DDNET, "settings_ddnet.cfg", true)
-CONFIG_DOMAIN(TCLIENT, "settings_qmclient.cfg", true)
+CONFIG_DOMAIN(TCLIENT, "settings_tclient.cfg", true)
+CONFIG_DOMAIN(QIMENG, "settings_qimeng.cfg", true)
 CONFIG_DOMAIN(TCLIENTPROFILES, "qmclient_profiles.cfg", false)
 CONFIG_DOMAIN(TCLIENTCHATBINDS, "qmclient_chatbinds.cfg", false)
 CONFIG_DOMAIN(TCLIENTWARLIST, "qmclient_warlist.cfg", false)

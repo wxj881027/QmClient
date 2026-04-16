@@ -10,3 +10,6 @@ SET_CONFIG_DOMAIN(ConfigDomain::DDNET)
 
 SET_CONFIG_DOMAIN(ConfigDomain::TCLIENT)
 #include "config_variables_qmclient.h"
+
+SET_CONFIG_DOMAIN(ConfigDomain::QIMENG)
+#include "config_variables_qimeng.h"
