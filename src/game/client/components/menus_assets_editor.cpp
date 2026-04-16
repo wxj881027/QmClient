@@ -4,7 +4,6 @@
 #include <base/types.h>
 
 #include <engine/graphics.h>
-#include <engine/font_icons.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/shared/config.h>
