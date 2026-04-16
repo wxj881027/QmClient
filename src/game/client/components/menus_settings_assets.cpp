@@ -716,6 +716,12 @@ static int InitSearchList(std::vector<TName *> &vpSearchList, std::vector<TName>
 
 void CMenus::RenderSettingsCustom(CUIRect MainView)
 {
+	if(m_AssetsEditorState.m_Open)
+	{
+		RenderAssetsEditorScreen(MainView);
+		return;
+	}
+
 	CUIRect TabBar, CustomList, QuickSearch, DirectoryButton, ReloadButton, WorkshopHudView;
 	static bool s_AssetsTransitionInitialized = false;
 	static int s_PrevAssetsTab = ASSETS_TAB_ENTITIES;
@@ -1549,6 +1555,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	// Quick search
 	MainView.HSplitBottom(ms_ButtonHeight, &MainView, &QuickSearch);
+	CUIRect AssetsEditorButton;
 	QuickSearch.VSplitLeft(220.0f, &QuickSearch, &DirectoryButton);
 	QuickSearch.HSplitTop(5.0f, nullptr, &QuickSearch);
 	if(Ui()->DoEditBox_Search(&s_aFilterInputs[s_CurCustomTab], &QuickSearch, 14.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive()))
@@ -1560,6 +1567,26 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	DirectoryButton.VSplitRight(175.0f, nullptr, &DirectoryButton);
 	DirectoryButton.VSplitRight(25.0f, &DirectoryButton, &ReloadButton);
 	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+	DirectoryButton.VSplitRight(110.0f, &DirectoryButton, &AssetsEditorButton);
+	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+	static CButtonContainer s_AssetsEditorButton;
+	if(DoButton_Menu(&s_AssetsEditorButton, Localize("Assets editor"), 0, &AssetsEditorButton))
+	{
+		int AssetsEditorType = ASSETS_EDITOR_TYPE_GAME;
+		if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
+			AssetsEditorType = ASSETS_EDITOR_TYPE_ENTITIES;
+		else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
+			AssetsEditorType = ASSETS_EDITOR_TYPE_EMOTICONS;
+		else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
+			AssetsEditorType = ASSETS_EDITOR_TYPE_PARTICLES;
+		else if(s_CurCustomTab == ASSETS_TAB_HUD)
+			AssetsEditorType = ASSETS_EDITOR_TYPE_HUD;
+		else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
+			AssetsEditorType = ASSETS_EDITOR_TYPE_EXTRAS;
+		AssetsEditorOpen(AssetsEditorType);
+		return;
+	}
+
 	static CButtonContainer s_AssetsDirId;
 	if(DoButton_Menu(&s_AssetsDirId, Localize("Assets directory"), 0, &DirectoryButton))
 	{

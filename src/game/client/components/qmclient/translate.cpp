@@ -26,9 +26,7 @@ constexpr size_t TC3_HMAC_BLOCK_SIZE = 64;
 constexpr const char *TENCENTCLOUD_TMT_ACTION = "TextTranslate";
 constexpr const char *TENCENTCLOUD_TMT_VERSION = "2018-03-21";
 constexpr const char *TENCENTCLOUD_TMT_SERVICE = "tmt";
-constexpr const char *TENCENTCLOUD_TMT_DEFAULT_ENDPOINT = "https://tmt.tencentcloudapi.com/";
-constexpr const char *TENCENTCLOUD_SECRET_ID_FALLBACK = "";
-constexpr const char *TENCENTCLOUD_SECRET_KEY_FALLBACK = "";
+
 
 SHA256_DIGEST HmacSha256(const unsigned char *pKey, size_t KeyLength, const unsigned char *pData, size_t DataLength)
 {

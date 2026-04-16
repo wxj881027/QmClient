@@ -2064,6 +2064,9 @@ void CMenus::RenderSettings(CUIRect MainView)
 	if(g_Config.m_UiSettingsPage < 0 || g_Config.m_UiSettingsPage >= SETTINGS_LENGTH)
 		g_Config.m_UiSettingsPage = SETTINGS_LANGUAGE;
 
+	if(g_Config.m_UiSettingsPage != SETTINGS_ASSETS && (m_AssetsEditorState.m_Open || m_AssetsEditorState.m_Initialized))
+		AssetsEditorCloseNow();
+
 	static bool s_SettingsTransitionInitialized = false;
 	static int s_PrevSettingsPage = SETTINGS_LANGUAGE;
 	static float s_SettingsTransitionDirection = 0.0f;
