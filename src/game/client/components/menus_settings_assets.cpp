@@ -220,7 +220,12 @@ static std::vector<CMenus::SCustomHud *> gs_vpSearchHudList;
 static std::vector<CMenus::SCustomExtras *> gs_vpSearchExtrasList;
 
 static bool gs_aInitCustomList[NUMBER_OF_ASSETS_TABS] = {
-	true,
+	true, // ASSETS_TAB_ENTITIES
+	true, // ASSETS_TAB_GAME
+	true, // ASSETS_TAB_EMOTICONS
+	true, // ASSETS_TAB_PARTICLES
+	true, // ASSETS_TAB_HUD
+	true, // ASSETS_TAB_EXTRAS
 };
 
 static size_t gs_aCustomListSize[NUMBER_OF_ASSETS_TABS] = {

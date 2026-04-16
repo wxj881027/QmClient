@@ -3,6 +3,12 @@
 data/
 !/data/
 
+# Agent documentation (local only)
+AGENTS.md
+
+# Local documentation (local only)
+dyl/
+
 bundle/
 !/other/bundle/
 
@@ -99,6 +105,8 @@ target
 .vscode
 compile_commands.json
 cmake-build-*/*
+cmake-build-release/
+build-ninja/
 cscope.files
 cscope.out
 out

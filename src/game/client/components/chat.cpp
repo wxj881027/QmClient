@@ -2027,8 +2027,9 @@ void CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTransl
 	if(!pLine || str_length(pLine) < 1)
 		return;
 
-	if(AllowOutgoingTranslation && GameClient()->m_Translate.TryTranslateOutgoingChat(Team, pLine))
-		return;
+	// TODO: Outgoing chat translation not implemented
+	// if(AllowOutgoingTranslation && GameClient()->m_Translate.TryTranslateOutgoingChat(Team, pLine))
+	// 	return;
 
 	bool AddEntry = false;
 
