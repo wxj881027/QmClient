@@ -233,19 +233,20 @@ static int s_CurCustomTab = ASSETS_TAB_ENTITIES;
 
 namespace
 {
-constexpr const char *WORKSHOP_HUD_ASSETS_URL = "https://3gqy.cn/api/v1/assets?page=1&pageSize=64&category=%E7%95%8C%E9%9D%A2%EF%BC%88HUD%EF%BC%89";
-constexpr const char *WORKSHOP_HUD_CATEGORY = "界面（HUD）";
-constexpr const char *WORKSHOP_ENTITIES_ASSETS_URL = "https://3gqy.cn/api/v1/assets?page=1&pageSize=96&category=%E5%AE%9E%E4%BD%93%EF%BC%88ENTITIES%EF%BC%89";
-constexpr const char *WORKSHOP_ENTITIES_CATEGORY = "实体（Entities）";
+constexpr const char *WORKSHOP_ASSETS_URL = "https://www.ddrace.cn/data/assets.json";
+constexpr const char *WORKSHOP_HUD_ASSETS_URL = WORKSHOP_ASSETS_URL;
+constexpr const char *WORKSHOP_HUD_CATEGORY = "HUD";
+constexpr const char *WORKSHOP_ENTITIES_ASSETS_URL = WORKSHOP_ASSETS_URL;
+constexpr const char *WORKSHOP_ENTITIES_CATEGORY = "实体层";
 constexpr const char *WORKSHOP_ENTITIES_CATEGORY_ALT = "实体（ENTITIES）";
-constexpr const char *WORKSHOP_GAME_ASSETS_URL = "https://3gqy.cn/api/v1/assets?page=1&pageSize=96&category=%E6%B8%B8%E6%88%8F%EF%BC%88GAME%EF%BC%89";
-constexpr const char *WORKSHOP_GAME_CATEGORY = "游戏（Game）";
+constexpr const char *WORKSHOP_GAME_ASSETS_URL = WORKSHOP_ASSETS_URL;
+constexpr const char *WORKSHOP_GAME_CATEGORY = "游戏";
 constexpr const char *WORKSHOP_GAME_CATEGORY_ALT = "游戏（GAME）";
-constexpr const char *WORKSHOP_EMOTICONS_ASSETS_URL = "https://3gqy.cn/api/v1/assets?page=1&pageSize=192&category=%E8%A1%A8%E6%83%85%EF%BC%88EMOTICONS%EF%BC%89";
-constexpr const char *WORKSHOP_EMOTICONS_CATEGORY = "表情（Emoticons）";
+constexpr const char *WORKSHOP_EMOTICONS_ASSETS_URL = WORKSHOP_ASSETS_URL;
+constexpr const char *WORKSHOP_EMOTICONS_CATEGORY = "表情";
 constexpr const char *WORKSHOP_EMOTICONS_CATEGORY_ALT = "表情（EMOTICONS）";
-constexpr const char *WORKSHOP_PARTICLES_ASSETS_URL = "https://3gqy.cn/api/v1/assets?page=1&pageSize=192&category=%E7%B2%92%E5%AD%90%EF%BC%88PARTICLES%EF%BC%89";
-constexpr const char *WORKSHOP_PARTICLES_CATEGORY = "粒子（Particles）";
+constexpr const char *WORKSHOP_PARTICLES_ASSETS_URL = WORKSHOP_ASSETS_URL;
+constexpr const char *WORKSHOP_PARTICLES_CATEGORY = "粒子";
 constexpr const char *WORKSHOP_PARTICLES_CATEGORY_ALT = "粒子（PARTICLES）";
 
 struct SWorkshopHudAsset
@@ -393,6 +394,54 @@ std::string BuildSafeFilename(const char *pName, const char *pFallbackName, cons
 	return aFilename;
 }
 
+std::string NormalizeWorkshopAssetUrl(const char *pUrl)
+{
+	if(!pUrl || pUrl[0] == '\0')
+		return {};
+
+	std::string Url = pUrl;
+	const size_t TransformPos = Url.find("!/");
+	if(TransformPos != std::string::npos)
+		Url.resize(TransformPos);
+	return Url;
+}
+
+bool WorkshopCategoryMatches(const char *pCategoryValue, const char *pCategoryFilter, const char *pCategoryFilterAlt, const char *pInstallFolder)
+{
+	if(!pCategoryValue || pCategoryValue[0] == '\0')
+		return false;
+
+	if((pCategoryFilter && pCategoryFilter[0] != '\0' && str_comp(pCategoryValue, pCategoryFilter) == 0) ||
+		(pCategoryFilterAlt && pCategoryFilterAlt[0] != '\0' && str_comp(pCategoryValue, pCategoryFilterAlt) == 0))
+	{
+		return true;
+	}
+
+	if(!pInstallFolder || pInstallFolder[0] == '\0')
+		return false;
+
+	if(str_comp(pInstallFolder, "hud") == 0)
+		return str_comp(pCategoryValue, "HUD") == 0 || str_comp(pCategoryValue, "界面（HUD）") == 0;
+	if(str_comp(pInstallFolder, "entities") == 0)
+		return str_comp(pCategoryValue, "实体层") == 0 ||
+			str_comp(pCategoryValue, "实体（Entities）") == 0 ||
+			str_comp(pCategoryValue, "实体（ENTITIES）") == 0;
+	if(str_comp(pInstallFolder, "game") == 0)
+		return str_comp(pCategoryValue, "游戏") == 0 ||
+			str_comp(pCategoryValue, "游戏（Game）") == 0 ||
+			str_comp(pCategoryValue, "游戏（GAME）") == 0;
+	if(str_comp(pInstallFolder, "emoticons") == 0)
+		return str_comp(pCategoryValue, "表情") == 0 ||
+			str_comp(pCategoryValue, "表情（Emoticons）") == 0 ||
+			str_comp(pCategoryValue, "表情（EMOTICONS）") == 0;
+	if(str_comp(pInstallFolder, "particles") == 0)
+		return str_comp(pCategoryValue, "粒子") == 0 ||
+			str_comp(pCategoryValue, "粒子（Particles）") == 0 ||
+			str_comp(pCategoryValue, "粒子（PARTICLES）") == 0;
+
+	return false;
+}
+
 bool ParseWorkshopAssets(const json_value *pRoot, const char *pCategoryFilter, const char *pCategoryFilterAlt, const char *pInstallFolder, std::vector<SWorkshopHudAsset> &vOut, char *pErr, int ErrSize)
 {
 	vOut.clear();
@@ -402,28 +451,34 @@ bool ParseWorkshopAssets(const json_value *pRoot, const char *pCategoryFilter, c
 		return false;
 	}
 
-	const json_value *pCode = json_object_get(pRoot, "code");
-	if(pCode == &json_value_none || pCode->type != json_integer || pCode->u.integer != 0)
+	const json_value *pAssets = json_object_get(pRoot, "assets");
+	bool LegacyApi = false;
+	if(pAssets == &json_value_none)
 	{
-		const json_value *pMessage = json_object_get(pRoot, "message");
-		if(pMessage != &json_value_none && pMessage->type == json_string)
-			str_copy(pErr, json_string_get(pMessage), ErrSize);
-		else
-			str_copy(pErr, "Workshop api returned error", ErrSize);
+		const json_value *pCode = json_object_get(pRoot, "code");
+		if(pCode != &json_value_none && (pCode->type != json_integer || pCode->u.integer != 0))
+		{
+			const json_value *pMessage = json_object_get(pRoot, "message");
+			if(pMessage != &json_value_none && pMessage->type == json_string)
+				str_copy(pErr, json_string_get(pMessage), ErrSize);
+			else
+				str_copy(pErr, "Workshop api returned error", ErrSize);
+			return false;
+		}
+		pAssets = json_object_get(pRoot, "data");
+		LegacyApi = true;
+	}
+
+	if(pAssets == &json_value_none || pAssets->type != json_array)
+	{
+		str_copy(pErr, "Workshop asset list is missing", ErrSize);
 		return false;
 	}
 
-	const json_value *pData = json_object_get(pRoot, "data");
-	if(pData == &json_value_none || pData->type != json_array)
+	vOut.reserve(pAssets->u.array.length);
+	for(unsigned i = 0; i < pAssets->u.array.length; ++i)
 	{
-		str_copy(pErr, "Workshop data field is missing", ErrSize);
-		return false;
-	}
-
-	vOut.reserve(pData->u.array.length);
-	for(unsigned i = 0; i < pData->u.array.length; ++i)
-	{
-		const json_value &Entry = (*pData)[i];
+		const json_value &Entry = (*pAssets)[i];
 		if(Entry.type != json_object)
 			continue;
 
@@ -431,12 +486,14 @@ bool ParseWorkshopAssets(const json_value *pRoot, const char *pCategoryFilter, c
 		if(pCategory == &json_value_none || pCategory->type != json_string)
 			continue;
 		const char *pCategoryValue = json_string_get(pCategory);
-		const bool CategoryMatchesPrimary = pCategoryFilter == nullptr || pCategoryFilter[0] == '\0' || str_comp(pCategoryValue, pCategoryFilter) == 0;
-		const bool CategoryMatchesAlt = pCategoryFilterAlt != nullptr && pCategoryFilterAlt[0] != '\0' && str_comp(pCategoryValue, pCategoryFilterAlt) == 0;
-		if(!CategoryMatchesPrimary && !CategoryMatchesAlt)
+		if(!WorkshopCategoryMatches(pCategoryValue, pCategoryFilter, pCategoryFilterAlt, pInstallFolder))
 			continue;
 
-		const json_value *pImage = json_object_get(&Entry, "image");
+		const json_value *pImage = json_object_get(&Entry, LegacyApi ? "image" : "image_url");
+		if(pImage == &json_value_none)
+			pImage = json_object_get(&Entry, "image");
+		if(pImage == &json_value_none)
+			pImage = json_object_get(&Entry, "image_url");
 		if(pImage == &json_value_none || pImage->type != json_string)
 			continue;
 
@@ -448,7 +505,9 @@ bool ParseWorkshopAssets(const json_value *pRoot, const char *pCategoryFilter, c
 		Asset.m_Id = pId != &json_value_none && pId->type == json_string ? json_string_get(pId) : std::to_string(i);
 		Asset.m_Name = pName != &json_value_none && pName->type == json_string ? json_string_get(pName) : Asset.m_Id;
 		Asset.m_Author = pAuthor != &json_value_none && pAuthor->type == json_string ? json_string_get(pAuthor) : "";
-		Asset.m_ImageUrl = json_string_get(pImage);
+		Asset.m_ImageUrl = NormalizeWorkshopAssetUrl(json_string_get(pImage));
+		if(Asset.m_ImageUrl.empty())
+			continue;
 
 		char aExt[16];
 		GuessUrlExtension(Asset.m_ImageUrl.c_str(), aExt, sizeof(aExt));
@@ -562,9 +621,10 @@ void CMenus::ClearCustomItems(int CurTab)
 	{
 		for(auto &Entity : m_vEntitiesList)
 		{
+			Graphics()->UnloadTexture(&Entity.m_RenderTexture);
 			for(auto &Image : Entity.m_aImages)
 			{
-				Graphics()->UnloadTexture(&Image.m_Texture);
+				Image.m_Texture.Invalidate();
 			}
 		}
 		m_vEntitiesList.clear();
@@ -1149,23 +1209,34 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			bool Parsed = false;
 			char aError[sizeof(WorkshopState.m_aError)] = "";
 			std::vector<SWorkshopHudAsset> vParsedAssets;
-
-			if(WorkshopState.m_pListTask->State() == EHttpState::DONE && WorkshopState.m_pListTask->StatusCode() == 200)
+			const EHttpState ListTaskState = WorkshopState.m_pListTask->State();
+			if(ListTaskState == EHttpState::DONE)
 			{
-				json_value *pJson = WorkshopState.m_pListTask->ResultJson();
-				if(pJson)
+				if(WorkshopState.m_pListTask->StatusCode() == 200)
 				{
-					Parsed = ParseWorkshopAssets(pJson, pWorkshopCategory, pWorkshopCategoryAlt, pInstallFolder, vParsedAssets, aError, sizeof(aError));
-					json_value_free(pJson);
+					json_value *pJson = WorkshopState.m_pListTask->ResultJson();
+					if(pJson)
+					{
+						Parsed = ParseWorkshopAssets(pJson, pWorkshopCategory, pWorkshopCategoryAlt, pInstallFolder, vParsedAssets, aError, sizeof(aError));
+						json_value_free(pJson);
+					}
+					else
+					{
+						str_copy(aError, "Workshop json parse failed", sizeof(aError));
+					}
 				}
 				else
 				{
-					str_copy(aError, "Workshop json parse failed", sizeof(aError));
+					str_format(aError, sizeof(aError), "Workshop request failed (%d)", WorkshopState.m_pListTask->StatusCode());
 				}
+			}
+			else if(ListTaskState == EHttpState::ABORTED)
+			{
+				str_copy(aError, "Workshop request aborted", sizeof(aError));
 			}
 			else
 			{
-				str_format(aError, sizeof(aError), "Workshop request failed (%d)", WorkshopState.m_pListTask->StatusCode());
+				str_copy(aError, "Workshop request failed", sizeof(aError));
 			}
 
 			ResetWorkshopState(WorkshopState, Graphics(), true);
