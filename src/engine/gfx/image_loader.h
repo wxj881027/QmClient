@@ -52,9 +52,9 @@ public:
 	static bool LoadPng(IOHANDLE File, const char *pFilename, CImageInfo &Image, int &PngliteIncompatible);
 	static bool LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image);
 
-	static bool LoadWebp(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image);
-	static bool LoadWebp(IOHANDLE File, const char *pFilename, CImageInfo &Image);
-	static bool LoadWebp(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image);
+	static bool LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image);
+	static bool LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Image);
+	static bool LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image);
 
 	static bool SavePng(CByteBufferWriter &Writer, const CImageInfo &Image);
 	static bool SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image);

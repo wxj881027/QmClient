@@ -6,14 +6,6 @@
 #include <png.h>
 #include <webp/decode.h>
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/imgutils.h>
-#include <libavutil/error.h>
-#include <libswscale/swscale.h>
-}
-
 #include <csetjmp>
 #include <cstdlib>
 #include <vector>
@@ -418,7 +410,7 @@ bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInf
 	return WriteSuccess;
 }
 
-bool CImageLoader::LoadWebp(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image)
+bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image)
 {
 	// Read all data from reader
 	const size_t DataSize = Reader.Size();
@@ -481,7 +473,7 @@ bool CImageLoader::LoadWebp(CByteBufferReader &Reader, const char *pContextName,
 	return true;
 }
 
-bool CImageLoader::LoadWebp(IOHANDLE File, const char *pFilename, CImageInfo &Image)
+bool CImageLoader::LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Image)
 {
 	if(!File)
 	{
@@ -501,7 +493,7 @@ bool CImageLoader::LoadWebp(IOHANDLE File, const char *pFilename, CImageInfo &Im
 
 	CByteBufferReader ImageReader(static_cast<const uint8_t *>(pFileData), FileDataSize);
 
-	const bool LoadResult = CImageLoader::LoadWebp(ImageReader, pFilename, Image);
+	const bool LoadResult = CImageLoader::LoadWebP(ImageReader, pFilename, Image);
 	free(pFileData);
 	if(!LoadResult)
 	{
@@ -519,8 +511,8 @@ bool CImageLoader::LoadPng(const void *pData, size_t Size, const char *pContextN
 	return LoadPng(Reader, pContextName, Image, PngliteIncompatible);
 }
 
-bool CImageLoader::LoadWebp(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image)
+bool CImageLoader::LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image)
 {
 	CByteBufferReader Reader(static_cast<const uint8_t *>(pData), Size);
-	return LoadWebp(Reader, pContextName, Image);
+	return LoadWebP(Reader, pContextName, Image);
 }

@@ -69,7 +69,7 @@ private:
 
 		if(IsWebp)
 		{
-			Success = CImageLoader::LoadWebp(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
+			Success = CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
 		}
 		else if(IsPng)
 		{
@@ -77,7 +77,7 @@ private:
 		}
 		else
 		{
-			if(CImageLoader::LoadWebp(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
+			if(CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
 				Success = true;
 			else if(CImageLoader::LoadPng(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
 				Success = true;
@@ -156,7 +156,7 @@ private:
 
 		if(IsWebp)
 		{
-			Success = CImageLoader::LoadWebp(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
+			Success = CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
 		}
 		else if(IsPng)
 		{
@@ -164,7 +164,7 @@ private:
 		}
 		else
 		{
-			if(CImageLoader::LoadWebp(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
+			if(CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
 				Success = true;
 			else if(CImageLoader::LoadPng(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
 				Success = true;
