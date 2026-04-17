@@ -31,6 +31,9 @@ public:
 	CButtonContainer m_KeyResetButton;
 	bool m_ToBeDeleted = false;
 
+	CBindSlotUiElement(const CBindSlot &Bind) :
+		m_Bind(Bind) {}
+
 	bool operator<(const CBindSlotUiElement &Other) const;
 };
 
