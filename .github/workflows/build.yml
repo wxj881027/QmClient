@@ -46,8 +46,7 @@ jobs:
             artifact_name: packaged-linux
           - name: Windows
             os: windows-2022
-            package_ext: 7z
-            output_name: QmClient-windows.7z
+            package_ext: zip
             artifact_name: packaged-windows
           - name: macOS
             os: macos-14
@@ -300,23 +299,30 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Path dist -Force | Out-Null
-          Write-Host "Searching for *.${{ matrix.package_ext }} in build/..."
-          $pkg = Get-ChildItem -Path build -Recurse -File -Filter "QmClient*.${{ matrix.package_ext }}" |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
-          if (-not $pkg) {
-            Write-Host "QmClient* pattern failed, trying broader search..."
-            $pkg = Get-ChildItem -Path build -Recurse -File -Filter "*.${{ matrix.package_ext }}" |
-              Where-Object { $_.Name -notmatch "-src\." } |
+          $found = $false
+          foreach ($ext in @('7z', 'zip')) {
+            Write-Host "Searching for QmClient*.$ext in build/..."
+            $pkg = Get-ChildItem -Path build -Recurse -File -Filter "QmClient*.$ext" |
               Sort-Object LastWriteTime -Descending |
               Select-Object -First 1
+            if (-not $pkg) {
+              $pkg = Get-ChildItem -Path build -Recurse -File -Filter "*.$ext" |
+                Where-Object { $_.Name -notmatch "-src\." } |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 1
+            }
+            if ($pkg) {
+              $destPath = Join-Path $PWD "dist\QmClient-windows.$ext"
+              Write-Host "Found: $($pkg.FullName) -> $destPath"
+              Copy-Item -LiteralPath $pkg.FullName -Destination $destPath
+              $found = $true
+            } else {
+              Write-Host "No .$ext package found"
+            }
           }
-          if (-not $pkg) {
-            throw "No package with extension .${{ matrix.package_ext }} found under build/"
+          if (-not $found) {
+            throw "No zip or 7z package found under build/"
           }
-          $destPath = Join-Path $PWD "dist\${{ matrix.output_name }}"
-          Write-Host "Found: $($pkg.FullName) -> $destPath"
-          Copy-Item -LiteralPath $pkg.FullName -Destination $destPath
           Get-ChildItem -Path dist
 
       - name: Upload packaged artifact

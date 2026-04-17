@@ -3466,7 +3466,7 @@ if(TARGET_OS AND TARGET_BITS)
     else()
       set(CPACK_SYSTEM_NAME "win${TARGET_BITS}")
     endif()
-    set(CPACK_GENERATOR 7Z)
+    set(CPACK_GENERATOR "ZIP;7Z")
   elseif(TARGET_OS STREQUAL "linux")
     # Let compiler tell its arch
     # Both gcc and clang support -dumpmachine
