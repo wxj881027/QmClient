@@ -215,7 +215,8 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DPREFER_BUNDLED_LIBS=ON \
             -DDOWNLOAD_GTEST=ON \
-            -DCMAKE_OSX_SYSROOT="${SDKROOT}"
+            -DCMAKE_OSX_SYSROOT="${SDKROOT}" \
+            -DIPO=OFF
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'

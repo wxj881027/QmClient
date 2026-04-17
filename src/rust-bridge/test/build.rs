@@ -66,7 +66,7 @@ fn main() {
                 .expect("library name")
                 .to_str()
                 .expect("should have errored earlier");
-            let strip_lib_prefix = matches!(extension, Some("a") | Some("so") | Some("dylib") | Some("framework"));
+            let strip_lib_prefix = matches!(extension, Some("a") | Some("so") | Some("dylib") | Some("framework") | Some("tbd"));
             if strip_lib_prefix && name.starts_with("lib") {
                 name = &name[3..];
             }
