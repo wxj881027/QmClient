@@ -176,12 +176,22 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           WEBP_LIBDIR=$(brew --prefix webp)/lib
+          WEBP_OLD_ID=$(otool -D "${WEBP_LIBDIR}/libwebp.7.dylib" | tail -1)
           for DIR in lib64 libarm64; do
             mkdir -p "ddnet-libs/webp/mac/${DIR}"
             cp "${WEBP_LIBDIR}/libwebp.7.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
             cp "${WEBP_LIBDIR}/libwebpdemux.2.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
             cp "${WEBP_LIBDIR}/libwebpmux.3.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
+            install_name_tool -id @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebp.7.dylib" 2>/dev/null || true
+            install_name_tool -id @rpath/libwebpdemux.2.dylib "ddnet-libs/webp/mac/${DIR}/libwebpdemux.2.dylib" 2>/dev/null || true
+            install_name_tool -id @rpath/libwebpmux.3.dylib "ddnet-libs/webp/mac/${DIR}/libwebpmux.3.dylib" 2>/dev/null || true
+            if [ -n "${WEBP_OLD_ID}" ]; then
+              install_name_tool -change "${WEBP_OLD_ID}" @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebpdemux.2.dylib" 2>/dev/null || true
+              install_name_tool -change "${WEBP_OLD_ID}" @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebpmux.3.dylib" 2>/dev/null || true
+            fi
           done
+          echo "Verifying WebP install_name:"
+          otool -D ddnet-libs/webp/mac/libarm64/libwebp.7.dylib 2>/dev/null || true
           ls -la ddnet-libs/webp/mac/lib64/
 
       - name: Configure (Linux)
@@ -201,6 +211,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DPREFER_BUNDLED_LIBS=ON \
             -DDOWNLOAD_GTEST=ON \
             -DCMAKE_OSX_SYSROOT="${SDKROOT}"
 
@@ -243,6 +254,32 @@ jobs:
         shell: pwsh
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --target package_default --parallel
 
+      - name: Create 7z package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packDir = Get-ChildItem -Path build -Directory -Filter "pack_*_zip" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $packDir) {
+            throw "No pack directory found"
+          }
+          Write-Host "Found pack directory: $($packDir.FullName)"
+          $innerDir = Get-ChildItem -Path $packDir.FullName -Directory | Select-Object -First 1
+          if (-not $innerDir) {
+            throw "No inner directory found in pack directory"
+          }
+          $version = $innerDir.Name -replace '^QmClient-', ''
+          $sevenZipName = "QmClient-${version}-win64.7z"
+          Write-Host "Creating 7z from: $($innerDir.FullName)"
+          Write-Host "Output: $sevenZipName"
+          Push-Location $packDir.FullName
+          7z a -t7z -mx=9 "../$sevenZipName" $innerDir.Name
+          Pop-Location
+          Move-Item "build/$sevenZipName" dist/ -Force
+          Write-Host "Created: dist/$sevenZipName"
+
       - name: Collect package (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
@@ -276,7 +313,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: dist/${{ matrix.output_name }}
+          path: dist/*
           if-no-files-found: error
           retention-days: 14
 
@@ -299,15 +336,20 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $file = "dist/${{ matrix.output_name }}"
-          if (-not (Test-Path $file)) {
-            throw "Build artifact not found!"
+          $files = @(
+            "dist/${{ matrix.output_name }}"
+            (Get-ChildItem -Path dist -Filter "*.7z" | Select-Object -First 1).FullName
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path $file)) {
+              throw "Build artifact not found: $file"
+            }
+            $size = (Get-Item $file).Length
+            if ($size -lt 1000000) {
+              throw "Build artifact too small: $file ($size bytes)"
+            }
+            Write-Host "Verified: $file ($size bytes)"
           }
-          $size = (Get-Item $file).Length
-          if ($size -lt 1000000) {
-            throw "Build artifact too small: $size bytes"
-          }
-          Write-Host "Build artifact verified: $size bytes"
 
       - name: Build summary
         if: always()
@@ -317,7 +359,11 @@ jobs:
           echo "- **OS**: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Type**: ${{ env.BUILD_TYPE }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Artifact**: ${{ matrix.output_name }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            echo "- **Artifacts**: ${{ matrix.output_name }}, QmClient-*-win64.7z" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Artifact**: ${{ matrix.output_name }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Show ccache statistics (Linux/macOS)
         if: always() && runner.os != 'Windows'
@@ -617,6 +663,7 @@ jobs:
           generate_release_notes: true
           files: |
             release-assets/QmClient-windows.zip
+            release-assets/QmClient-*-win64.7z
             release-assets/QmClient-ubuntu.tar.xz
             release-assets/QmClient-macOS.dmg
 
