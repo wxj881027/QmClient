@@ -60,6 +60,10 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}
           max-size: 500M
 
+      - name: Setup MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Install Ninja (Windows)
         if: runner.os == 'Windows'
         run: choco install ninja -y

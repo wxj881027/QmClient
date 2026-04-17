@@ -1,6 +1,7 @@
 #include "system_media_controls.h"
 
-#if defined(CONF_FAMILY_WINDOWS)
+#if defined(CONF_FAMILY_WINDOWS) && defined(_MSC_VER)
+#define SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED 1
 #include <base/system.h>
 
 #include <engine/image.h>
@@ -19,9 +20,11 @@
 #include <winrt/Windows.Media.Control.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/base.h>
+#else
+#define SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED 0
 #endif
 
-#if defined(CONF_FAMILY_WINDOWS)
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
 using namespace winrt::Windows::Media::Control;
 
 struct CSystemMediaControls::SWinrt

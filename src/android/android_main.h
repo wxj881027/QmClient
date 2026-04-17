@@ -76,4 +76,15 @@ void ExecuteAndroidServerCommand(const char *pCommand);
  */
 bool IsAndroidServerRunning();
 
+/**
+ * Requests the audio record permission on Android.
+ *
+ * @ingroup Android
+ *
+ * This will show a permission dialog to the user if the permission is not already granted.
+ *
+ * @return `true` if the permission was granted, `false` otherwise.
+ */
+bool RequestAndroidAudioRecordPermission();
+
 #endif // ANDROID_ANDROID_MAIN_H
