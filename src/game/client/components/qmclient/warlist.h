@@ -3,6 +3,10 @@
 
 #include <base/str.h>
 
+#include <string_view>
+#include <unordered_map>
+#include <vector>
+
 #include <engine/console.h>
 #include <engine/shared/protocol.h>
 
@@ -151,8 +155,11 @@ public:
 
 	// Duplicate war entries ARE allowed
 	std::vector<CWarEntry> m_vWarEntries;
-	// TODO: create an unordered map for war clans and war names, to speed up updating the WarPlayers cache
-	// It should be updated when m_WarList changes
+	using TWarEntryLookup = std::unordered_map<std::string_view, std::vector<const CWarEntry *>>;
+	TWarEntryLookup m_WarEntriesByName;
+	TWarEntryLookup m_WarEntriesByClan;
+	bool m_WarEntryLookupDirty = true;
+	bool m_WarTypeIndicesDirty = true;
 
 	CWarDataCache m_WarPlayers[MAX_CLIENTS];
 
@@ -196,6 +203,11 @@ public:
 
 	CWarType *FindWarType(const char *pType);
 	CWarEntry *FindWarEntry(const char *pName, const char *pClan, const char *pType);
+
+	void MarkWarEntriesDirty();
+	void MarkWarTypesDirty();
+	void RefreshWarTypeIndices();
+	void RebuildWarEntryLookup();
 };
 
 #endif

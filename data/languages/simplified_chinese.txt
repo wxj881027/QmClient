@@ -4356,6 +4356,9 @@ Auto switch to the tee that got unfrozen
 Automatically close the current chat after waking from freeze
 == 从冻结状态中醒来自动关闭聊天框
 
+Show wake-up popup on the other tee
+== 在另一侧tee显示唤醒提示
+
 Input overlay
 == 按键显示
 
@@ -6234,3 +6237,84 @@ No player nearby
 
 Favorite map
 == 收藏地图
+
+Main
+== 本体
+
+Zoom
+== 缩放
+
+Offline
+== 离线
+
+Sync
+== 同步
+
+Dummy tee
+== 分身 Tee
+
+Main tee
+== 本体 Tee
+
+Dummy camera
+== 分身视角
+
+Main camera
+== 本体视角
+
+HUD editor preview
+== HUD 编辑器预览
+
+Connect dummy to activate
+== 连接分身后启用
+
+Waiting for snapshot
+== 等待快照
+
+Only show when the other tee is off-screen
+== 仅在另一只 Tee 离开视角后显示
+
+Cleaner monitor card with presets and HUD placement
+== 更整洁的监视卡片，带预设和 HUD 摆放
+
+Live
+== 实时
+
+Preview
+== 预览
+
+Tracks the dummy tee
+== 跟随分身 Tee
+
+Tracks the main tee
+== 跟随本体 Tee
+
+Appears after the other tee leaves the camera
+== 另一只 Tee 离开当前镜头后出现
+
+Live source ready
+== 实时画面已就绪
+
+Preview until dummy connects
+== 分身连接前显示预览
+
+Tracks the other local tee and only appears once it leaves the camera.
+== 跟随另一只本地 Tee，并在其离开当前镜头后才出现。
+
+Tracks the other local tee. Move it in the HUD editor.
+== 跟随另一只本地 Tee。可在 HUD 编辑器中拖动位置。
+
+Heavy render path. AMD + Vulkan stays blocked for safety.
+== 渲染开销较高。出于稳定性考虑，AMD + Vulkan 仍保持禁用。
+
+Other-tee monitor
+== 另一只 Tee 监视器
+
+Drag in HUD editor
+== 在 HUD 编辑器中拖动
+
+Size presets
+== 大小预设
+
+Zoom presets
+== 缩放预设

@@ -222,6 +222,15 @@ struct SHudFrozenTeamInfo
 	int m_LocalTeamId = 0;
 };
 
+struct SHudFrozenHudRect
+{
+	bool m_Visible = false;
+	float m_X = 0.0f;
+	float m_Y = 0.0f;
+	float m_W = 0.0f;
+	float m_H = 0.0f;
+};
+
 struct SHudGameTimerInfo
 {
 	bool m_Visible = false;
@@ -305,6 +314,35 @@ bool ShouldShowHudFrozenSummaryInStatus(bool ShowFrozenSummary, bool TimerVisibl
 bool ShouldShowHudFrozenSummaryInBottomRow(bool ShowFrozenSummary, bool TimerVisible)
 {
 	return ShowFrozenSummary && !TimerVisible;
+}
+
+SHudFrozenHudRect BuildFrozenHudRect(const CGameClient &GameClient, float HudWidth, float HudHeight, float TopIslandAvoidanceRight)
+{
+	SHudFrozenHudRect Result;
+	const SHudFrozenTeamInfo FrozenInfo = BuildHudFrozenTeamInfo(GameClient);
+	if(!g_Config.m_TcShowFrozenHud || !FrozenInfo.m_Available || FrozenInfo.m_NumInTeam <= 0 || GameClient.m_Scoreboard.IsActive() || (FrozenInfo.m_LocalTeamId == 0 && g_Config.m_TcFrozenHudTeamOnly))
+		return Result;
+
+	const float TeeSize = g_Config.m_TcFrozenHudTeeSize;
+	int MaxTees = (int)(8.3f * (HudWidth / HudHeight) * 13.0f / TeeSize);
+	if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred)
+		MaxTees = (int)(9.5f * (HudWidth / HudHeight) * 13.0f / TeeSize);
+	const int MaxRows = g_Config.m_TcFrozenMaxRows;
+	float StartPos = HudWidth / 2.0f + 38.0f * (HudWidth / HudHeight) / 1.78f;
+	if(TopIslandAvoidanceRight > 0.0f)
+		StartPos = std::max(StartPos, TopIslandAvoidanceRight + TeeSize * 0.5f + 4.0f);
+
+	const float RowLeft = StartPos - TeeSize * 0.5f;
+	const float AvailableRowWidth = std::max(TeeSize, HudWidth - RowLeft);
+	MaxTees = std::max(1, std::min(MaxTees, (int)std::floor(AvailableRowWidth / TeeSize)));
+
+	const int TotalRows = std::min(MaxRows, (FrozenInfo.m_NumInTeam + MaxTees - 1) / MaxTees);
+	Result.m_Visible = TotalRows > 0;
+	Result.m_X = RowLeft;
+	Result.m_Y = 0.0f;
+	Result.m_W = TeeSize * std::min(FrozenInfo.m_NumInTeam, MaxTees);
+	Result.m_H = TeeSize + 3.0f + (TotalRows - 1) * TeeSize;
+	return Result;
 }
 
 SHudGameTimerInfo BuildHudGameTimerInfo(const CGameClient &GameClient, const IClient &Client, ITextRender *pTextRender, float HudWidth)
@@ -1266,6 +1304,136 @@ void CHud::RenderWarmupTimer()
 	}
 }
 
+namespace
+{
+struct SHudDummyMiniViewState
+{
+	bool m_HasSignal = false;
+	char m_aPlaceholderTitle[48] = {};
+	char m_aPlaceholderSubtitle[96] = {};
+	ColorRGBA m_TargetAccent = ColorRGBA(0.35f, 0.78f, 1.0f, 1.0f);
+};
+
+bool IsDummyMiniViewPredictedLocalTarget(const CGameClient &GameClient, int MiniViewClientId)
+{
+	return GameClient.PredictDummy() &&
+		MiniViewClientId >= 0 &&
+		MiniViewClientId == GameClient.m_aLocalIds[!g_Config.m_ClDummy];
+}
+
+bool TryGetDummyMiniViewTargetPos(const CGameClient &GameClient, const IClient &Client, int MiniViewClientId, vec2 &OutPos, bool *pFromSnapshot = nullptr)
+{
+	if(pFromSnapshot != nullptr)
+		*pFromSnapshot = false;
+
+	if(MiniViewClientId < 0 || MiniViewClientId >= MAX_CLIENTS)
+		return false;
+
+	const CGameClient::CClientData &MiniClient = GameClient.m_aClients[MiniViewClientId];
+	if(!MiniClient.m_Active)
+		return false;
+
+	if(GameClient.m_Snap.m_aCharacters[MiniViewClientId].m_Active)
+	{
+		OutPos = MiniClient.m_RenderPos;
+		if(MiniClient.m_RenderCur.m_Tick < 0 && MiniClient.m_RenderPrev.m_Tick < 0)
+			OutPos = vec2(MiniClient.m_Snapped.m_X, MiniClient.m_Snapped.m_Y);
+		if(pFromSnapshot != nullptr)
+			*pFromSnapshot = true;
+		return true;
+	}
+
+	if(MiniViewClientId == GameClient.m_Snap.m_LocalClientId)
+	{
+		OutPos = GameClient.m_LocalCharacterPos;
+		return true;
+	}
+
+	if(IsDummyMiniViewPredictedLocalTarget(GameClient, MiniViewClientId))
+	{
+		OutPos = mix(MiniClient.m_PrevPredicted.m_Pos, MiniClient.m_Predicted.m_Pos, Client.PredIntraGameTick(g_Config.m_ClDummy));
+		return true;
+	}
+
+	return false;
+}
+
+void RenderHudEllipsizedText(ITextRender *pTextRender, float X, float Y, float FontSize, float MaxWidth, const char *pText)
+{
+	if(pTextRender == nullptr || pText == nullptr || pText[0] == '\0' || MaxWidth <= 0.0f)
+		return;
+
+	const float TextWidth = std::round(pTextRender->TextBoundingBox(FontSize, pText).m_W);
+	if(TextWidth <= MaxWidth + 0.01f)
+	{
+		pTextRender->Text(X, Y, FontSize, pText, -1.0f);
+		return;
+	}
+
+	CTextCursor Cursor;
+	Cursor.m_FontSize = FontSize;
+	Cursor.m_LineWidth = MaxWidth;
+	Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
+	Cursor.SetPosition(vec2(X, Y));
+	pTextRender->TextEx(&Cursor, pText);
+}
+
+SHudDummyMiniViewState BuildHudDummyMiniViewState(const CGameClient &GameClient, const IClient &Client, bool Preview, int DummyClientId, int MiniViewClientId)
+{
+	SHudDummyMiniViewState State;
+	const bool TargetIsDummy = MiniViewClientId >= 0 ? (MiniViewClientId == DummyClientId) : !g_Config.m_ClDummy;
+	State.m_TargetAccent = TargetIsDummy ? ColorRGBA(0.35f, 0.78f, 1.0f, 1.0f) : ColorRGBA(1.0f, 0.74f, 0.34f, 1.0f);
+	str_copy(State.m_aPlaceholderTitle, Localize("Dummy mini view"), sizeof(State.m_aPlaceholderTitle));
+
+	if(MiniViewClientId >= 0 && MiniViewClientId < MAX_CLIENTS)
+	{
+		vec2 TargetPos;
+		State.m_HasSignal = TryGetDummyMiniViewTargetPos(GameClient, Client, MiniViewClientId, TargetPos);
+	}
+
+	if(Preview)
+	{
+		str_copy(State.m_aPlaceholderSubtitle, Localize("HUD editor preview"), sizeof(State.m_aPlaceholderSubtitle));
+	}
+	else if(!Client.DummyConnected())
+	{
+		str_copy(State.m_aPlaceholderSubtitle, Localize("Connect dummy to activate"), sizeof(State.m_aPlaceholderSubtitle));
+	}
+	else
+	{
+		if(!State.m_HasSignal)
+			str_copy(State.m_aPlaceholderSubtitle, Localize("Waiting for snapshot"), sizeof(State.m_aPlaceholderSubtitle));
+	}
+
+	return State;
+}
+
+bool IsDummyMiniViewTargetOutsideCurrentView(const CGameClient &GameClient, IGraphics *pGraphics, int MiniViewClientId)
+{
+	if(!g_Config.m_ClDummyMiniViewAuto || pGraphics == nullptr)
+		return true;
+	if(MiniViewClientId < 0 || MiniViewClientId >= MAX_CLIENTS)
+		return true;
+
+	vec2 TargetPos;
+	if(!TryGetDummyMiniViewTargetPos(GameClient, *GameClient.Client(), MiniViewClientId, TargetPos))
+		return true;
+
+	float ViewWidth = 0.0f;
+	float ViewHeight = 0.0f;
+	pGraphics->CalcScreenParams(pGraphics->ScreenAspect(), GameClient.m_Camera.m_Zoom, &ViewWidth, &ViewHeight);
+
+	const vec2 Center = GameClient.m_Camera.m_Center;
+	constexpr float TileMargin = 32.0f;
+	const float Left = Center.x - ViewWidth * 0.5f - TileMargin;
+	const float Right = Center.x + ViewWidth * 0.5f + TileMargin;
+	const float Top = Center.y - ViewHeight * 0.5f - TileMargin;
+	const float Bottom = Center.y + ViewHeight * 0.5f + TileMargin;
+
+	return TargetPos.x < Left || TargetPos.x > Right || TargetPos.y < Top || TargetPos.y > Bottom;
+}
+}
+
 bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 {
 	if(!g_Config.m_ClDummyMiniView)
@@ -1310,7 +1478,10 @@ bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 	const CGameClient::CClientData &MiniClient = GameClient()->m_aClients[MiniViewClientId];
 	if(!MiniClient.m_Active)
 		return false;
-	if(!GameClient()->m_Snap.m_aCharacters[MiniViewClientId].m_Active)
+	vec2 TargetPos;
+	if(!TryGetDummyMiniViewTargetPos(*GameClient(), *Client(), MiniViewClientId, TargetPos))
+		return false;
+	if(!IsDummyMiniViewTargetOutsideCurrentView(*GameClient(), Graphics(), MiniViewClientId))
 		return false;
 
 	const int MapW = GameClient()->Collision()->GetWidth();
@@ -1333,6 +1504,15 @@ bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 
 	X = m_Width - Margin - W;
 	Y = Margin;
+
+	const SHudFrozenHudRect FrozenHudRect = BuildFrozenHudRect(*GameClient(), m_Width, m_Height, GetTopIslandAvoidanceRight());
+	if(FrozenHudRect.m_Visible)
+	{
+		const bool OverlapsFrozenHudX = X < FrozenHudRect.m_X + FrozenHudRect.m_W && X + W > FrozenHudRect.m_X;
+		const bool OverlapsFrozenHudY = Y < FrozenHudRect.m_Y + FrozenHudRect.m_H;
+		if(OverlapsFrozenHudX && OverlapsFrozenHudY)
+			Y = minimum(m_Height - H - Margin, FrozenHudRect.m_Y + FrozenHudRect.m_H + 4.0f);
+	}
 	return true;
 }
 
@@ -1355,113 +1535,161 @@ void CHud::RenderDummyMiniMap()
 
 	const int DummyClientId = GameClient()->m_aLocalIds[1];
 	const int MainClientId = GameClient()->m_aLocalIds[0];
-	const int MiniViewClientId = g_Config.m_ClDummy ? MainClientId : DummyClientId;
-	if(MiniViewClientId < 0 || MiniViewClientId >= MAX_CLIENTS || !GameClient()->m_aClients[MiniViewClientId].m_Active)
-	{
-		if(GameClient()->m_HudEditor.IsActive())
-		{
-			Graphics()->DrawRect(MiniX, MiniY, MiniW, MiniH, ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f), IGraphics::CORNER_ALL, 5.0f);
-			Graphics()->DrawRect(MiniX + 1.5f, MiniY + 1.5f, maximum(0.0f, MiniW - 3.0f), maximum(0.0f, MiniH - 3.0f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 4.0f);
-			TextRender()->Text(MiniX + 5.0f, MiniY + 5.0f, 6.0f, Localize("Dummy"), -1.0f);
-			GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::DummyMiniMap, {MiniX, MiniY, MiniW, MiniH});
-		}
-		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
-		return;
-	}
+	int MiniViewClientId = g_Config.m_ClDummy ? MainClientId : DummyClientId;
+	if(MiniViewClientId < 0 || MiniViewClientId >= MAX_CLIENTS)
+		MiniViewClientId = -1;
 
-	const float BorderSize = 1.0f;
-	const float InnerX = MiniX + BorderSize;
-	const float InnerY = MiniY + BorderSize;
-	const float InnerW = MiniW - BorderSize * 2.0f;
-	const float InnerH = MiniH - BorderSize * 2.0f;
+	const SHudDummyMiniViewState ViewState = BuildHudDummyMiniViewState(*GameClient(), *Client(), GameClient()->m_HudEditor.IsActive(), DummyClientId, MiniViewClientId);
+
+	const float Radius = std::clamp(MiniH * 0.11f, 5.0f, 7.5f);
+	DrawSmoothRoundedRect(Graphics(), MiniX + 0.8f, MiniY + 1.2f, MiniW, MiniH, Radius, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f));
+	DrawSmoothRoundedRect(Graphics(), MiniX, MiniY, MiniW, MiniH, Radius, ColorRGBA(0.02f, 0.03f, 0.05f, 0.92f));
+	DrawSmoothRoundedRect(Graphics(), MiniX + 0.75f, MiniY + 0.75f, maximum(0.0f, MiniW - 1.5f), maximum(0.0f, MiniH - 1.5f), maximum(0.0f, Radius - 0.55f), ViewState.m_TargetAccent.WithAlpha(0.16f));
+
+	const float FrameInset = 1.45f;
+	const float FrameX = MiniX + FrameInset;
+	const float FrameY = MiniY + FrameInset;
+	const float FrameW = MiniW - FrameInset * 2.0f;
+	const float FrameH = MiniH - FrameInset * 2.0f;
+	const float FrameRadius = maximum(0.0f, Radius - 1.0f);
+	DrawSmoothRoundedRect(Graphics(), FrameX, FrameY, FrameW, FrameH, FrameRadius, ColorRGBA(0.07f, 0.09f, 0.13f, 0.96f));
+	DrawSmoothRoundedRect(Graphics(), FrameX + 0.65f, FrameY + 0.65f, maximum(0.0f, FrameW - 1.3f), maximum(0.0f, minimum(FrameH - 1.3f, FrameH * 0.48f)), maximum(0.0f, FrameRadius - 0.45f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.035f), IGraphics::CORNER_T);
+
+	const float ContentInset = 1.9f;
+	const float InnerX = FrameX + ContentInset;
+	const float InnerY = FrameY + ContentInset;
+	const float InnerW = FrameW - ContentInset * 2.0f;
+	const float InnerH = FrameH - ContentInset * 2.0f;
+	const float InnerRadius = maximum(0.0f, FrameRadius - 1.1f);
 	if(InnerW <= 0.0f || InnerH <= 0.0f)
 	{
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
 
-	Graphics()->TextureClear();
+	DrawSmoothRoundedRect(Graphics(), InnerX, InnerY, InnerW, InnerH, InnerRadius, ColorRGBA(0.03f, 0.04f, 0.06f, 0.92f));
 
-	float SavedX0 = 0.0f;
-	float SavedY0 = 0.0f;
-	float SavedX1 = 0.0f;
-	float SavedY1 = 0.0f;
-	Graphics()->GetScreen(&SavedX0, &SavedY0, &SavedX1, &SavedY1);
-
-	const int ScreenW = Graphics()->ScreenWidth();
-	const int ScreenH = Graphics()->ScreenHeight();
-	const float XScale = ScreenW / m_Width;
-	const float YScale = ScreenH / m_Height;
-
-	const int ViewX = (int)std::round(InnerX * XScale);
-	const int ViewY = (int)std::round((m_Height - (InnerY + InnerH)) * YScale);
-	const int ViewW = maximum(1, (int)std::round(InnerW * XScale));
-	const int ViewH = maximum(1, (int)std::round(InnerH * YScale));
-
-	int ClampedX = maximum(0, minimum(ViewX, ScreenW - 1));
-	int ClampedY = maximum(0, minimum(ViewY, ScreenH - 1));
-	int ClampedW = minimum(ViewW, ScreenW - ClampedX);
-	int ClampedH = minimum(ViewH, ScreenH - ClampedY);
-	if(ClampedW <= 0 || ClampedH <= 0)
+	if(ViewState.m_HasSignal && MiniViewClientId >= 0)
 	{
-		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
-		return;
+		Graphics()->TextureClear();
+
+		float SavedX0 = 0.0f;
+		float SavedY0 = 0.0f;
+		float SavedX1 = 0.0f;
+		float SavedY1 = 0.0f;
+		Graphics()->GetScreen(&SavedX0, &SavedY0, &SavedX1, &SavedY1);
+
+		const int ScreenW = Graphics()->ScreenWidth();
+		const int ScreenH = Graphics()->ScreenHeight();
+		const float XScale = ScreenW / m_Width;
+		const float YScale = ScreenH / m_Height;
+
+		const int ViewX = (int)std::round(InnerX * XScale);
+		const int ViewY = (int)std::round((m_Height - (InnerY + InnerH)) * YScale);
+		const int ViewW = maximum(1, (int)std::round(InnerW * XScale));
+		const int ViewH = maximum(1, (int)std::round(InnerH * YScale));
+
+		int ClampedX = maximum(0, minimum(ViewX, ScreenW - 1));
+		int ClampedY = maximum(0, minimum(ViewY, ScreenH - 1));
+		int ClampedW = minimum(ViewW, ScreenW - ClampedX);
+		int ClampedH = minimum(ViewH, ScreenH - ClampedY);
+		if(ClampedW > 0 && ClampedH > 0)
+		{
+			Graphics()->FlushVertices();
+			Graphics()->ClipDisable();
+			Graphics()->UpdateViewport(ClampedX, ClampedY, ClampedW, ClampedH, false);
+
+			const CGameClient::CClientData &MiniClient = GameClient()->m_aClients[MiniViewClientId];
+			vec2 MiniPos(0.0f, 0.0f);
+			bool HasSnapshotSignal = false;
+			if(!TryGetDummyMiniViewTargetPos(*GameClient(), *Client(), MiniViewClientId, MiniPos, &HasSnapshotSignal))
+			{
+				Graphics()->FlushVertices();
+				Graphics()->ClipDisable();
+				Graphics()->UpdateViewport(0, 0, ScreenW, ScreenH, false);
+				Graphics()->MapScreen(SavedX0, SavedY0, SavedX1, SavedY1);
+				GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+				return;
+			}
+
+			const float ZoomScale = maximum(0.1f, g_Config.m_ClDummyMiniViewZoom / 100.0f);
+			const float MiniZoom = GameClient()->m_Camera.m_Zoom * ZoomScale;
+
+			bool RenderedBackground = false;
+			if(g_Config.m_ClOverlayEntities == 100)
+				RenderedBackground = GameClient()->m_Background.RenderCustom(MiniPos, MiniZoom);
+			if(!RenderedBackground)
+				GameClient()->m_MapLayersBackground.RenderCustom(MiniPos, MiniZoom);
+
+			float aPoints[4];
+			Graphics()->MapScreenToWorld(MiniPos.x, MiniPos.y, 100.0f, 100.0f, 100.0f, 0, 0, Graphics()->ScreenAspect(), MiniZoom, aPoints);
+			Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
+
+			// Render the monitor view without spawning new effects or sounds.
+			const bool PrevMiniRender = GameClient()->IsRenderingDummyMiniMap();
+			GameClient()->SetRenderingDummyMiniMap(true);
+
+			GameClient()->m_Particles.RenderGroup(CParticles::GROUP_PROJECTILE_TRAIL);
+			GameClient()->m_Particles.RenderGroup(CParticles::GROUP_TRAIL_EXTRA);
+			GameClient()->m_Items.OnRender();
+			GameClient()->m_Players.OnRender();
+			GameClient()->m_MapLayersForeground.RenderCustom(MiniPos, MiniZoom);
+			GameClient()->m_Particles.RenderGroup(CParticles::GROUP_EXPLOSIONS);
+			GameClient()->m_Particles.RenderGroup(CParticles::GROUP_EXTRA);
+			GameClient()->m_Particles.RenderGroup(CParticles::GROUP_GENERAL);
+
+			if(!HasSnapshotSignal)
+			{
+				CTeeRenderInfo TeeInfo = MiniClient.m_RenderInfo;
+				const CAnimState *pIdleState = CAnimState::GetIdle();
+				vec2 OffsetToMid;
+				CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
+				RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(MiniPos.x, MiniPos.y + OffsetToMid.y));
+			}
+
+			GameClient()->SetRenderingDummyMiniMap(PrevMiniRender);
+
+			Graphics()->FlushVertices();
+			Graphics()->ClipDisable();
+			Graphics()->UpdateViewport(0, 0, ScreenW, ScreenH, false);
+			Graphics()->MapScreen(SavedX0, SavedY0, SavedX1, SavedY1);
+		}
 	}
 
-	Graphics()->FlushVertices();
-	Graphics()->ClipDisable();
-	Graphics()->UpdateViewport(ClampedX, ClampedY, ClampedW, ClampedH, false);
-
-	const CGameClient::CClientData &MiniClient = GameClient()->m_aClients[MiniViewClientId];
-	vec2 MiniPos = MiniClient.m_RenderPos;
-	if(MiniClient.m_RenderCur.m_Tick < 0 && MiniClient.m_RenderPrev.m_Tick < 0)
+	if(!ViewState.m_HasSignal)
 	{
-		MiniPos = vec2(MiniClient.m_Snapped.m_X, MiniClient.m_Snapped.m_Y);
+		const unsigned int PrevFlags = TextRender()->GetRenderFlags();
+		const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
+		const ColorRGBA PrevOutlineColor = TextRender()->GetTextOutlineColor();
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+		TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.36f);
+
+		const float PlaceholderIconSize = std::clamp(minimum(InnerW, InnerH) * 0.14f, 7.0f, 11.0f);
+		const float PlaceholderTitleSize = std::clamp(MiniH * 0.078f, 5.3f, 6.6f);
+		const float PlaceholderBodySize = std::clamp(MiniH * 0.062f, 4.6f, 5.4f);
+		const vec2 PlaceholderCenter(InnerX + InnerW * 0.5f, InnerY + InnerH * 0.52f);
+
+		DrawSmoothCircle(Graphics(), vec2(PlaceholderCenter.x, PlaceholderCenter.y - 7.5f), PlaceholderIconSize * 0.9f, ViewState.m_TargetAccent.WithAlpha(0.16f));
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.68f);
+		const float CameraWidth = TextRender()->TextWidth(PlaceholderIconSize, FontIcons::FONT_ICON_CAMERA);
+		TextRender()->Text(PlaceholderCenter.x - CameraWidth * 0.5f, PlaceholderCenter.y - PlaceholderIconSize - 8.0f, PlaceholderIconSize, FontIcons::FONT_ICON_CAMERA, -1.0f);
+
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		TextRender()->TextColor(0.97f, 0.98f, 1.0f, 0.90f);
+		const float TitleWidth = TextRender()->TextWidth(PlaceholderTitleSize, ViewState.m_aPlaceholderTitle);
+		TextRender()->Text(PlaceholderCenter.x - TitleWidth * 0.5f, PlaceholderCenter.y - 3.0f, PlaceholderTitleSize, ViewState.m_aPlaceholderTitle, -1.0f);
+
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.64f);
+		const float SubtitleMaxWidth = maximum(0.0f, InnerW - 16.0f);
+		RenderHudEllipsizedText(TextRender(), PlaceholderCenter.x - SubtitleMaxWidth * 0.5f, PlaceholderCenter.y + 4.2f, PlaceholderBodySize, SubtitleMaxWidth, ViewState.m_aPlaceholderSubtitle);
+
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		TextRender()->SetRenderFlags(PrevFlags);
+		TextRender()->TextColor(PrevTextColor);
+		TextRender()->TextOutlineColor(PrevOutlineColor);
 	}
-	const float ZoomScale = maximum(0.1f, g_Config.m_ClDummyMiniViewZoom / 100.0f);
-	const float MiniZoom = GameClient()->m_Camera.m_Zoom * ZoomScale;
 
-	bool RenderedBackground = false;
-	if(g_Config.m_ClOverlayEntities == 100)
-		RenderedBackground = GameClient()->m_Background.RenderCustom(MiniPos, MiniZoom);
-	if(!RenderedBackground)
-		GameClient()->m_MapLayersBackground.RenderCustom(MiniPos, MiniZoom);
-
-	float aPoints[4];
-	Graphics()->MapScreenToWorld(MiniPos.x, MiniPos.y, 100.0f, 100.0f, 100.0f, 0, 0, Graphics()->ScreenAspect(), MiniZoom, aPoints);
-	Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
-
-	// Render a mini view without spawning new effects or sounds.
-	const bool PrevMiniRender = GameClient()->IsRenderingDummyMiniMap();
-	GameClient()->SetRenderingDummyMiniMap(true);
-
-	GameClient()->m_Particles.RenderGroup(CParticles::GROUP_PROJECTILE_TRAIL);
-	GameClient()->m_Particles.RenderGroup(CParticles::GROUP_TRAIL_EXTRA);
-	GameClient()->m_Items.OnRender();
-	GameClient()->m_Players.OnRender();
-	GameClient()->m_MapLayersForeground.RenderCustom(MiniPos, MiniZoom);
-	GameClient()->m_Particles.RenderGroup(CParticles::GROUP_EXPLOSIONS);
-	GameClient()->m_Particles.RenderGroup(CParticles::GROUP_EXTRA);
-	GameClient()->m_Particles.RenderGroup(CParticles::GROUP_GENERAL);
-
-	GameClient()->SetRenderingDummyMiniMap(PrevMiniRender);
-
-	Graphics()->FlushVertices();
-	Graphics()->ClipDisable();
-	Graphics()->UpdateViewport(0, 0, ScreenW, ScreenH, false);
-	Graphics()->MapScreen(SavedX0, SavedY0, SavedX1, SavedY1);
-
-	Graphics()->LinesBegin();
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.7f);
-	IGraphics::CLineItem BorderLines[4] = {
-		{MiniX, MiniY, MiniX + MiniW, MiniY},
-		{MiniX + MiniW, MiniY, MiniX + MiniW, MiniY + MiniH},
-		{MiniX + MiniW, MiniY + MiniH, MiniX, MiniY + MiniH},
-		{MiniX, MiniY + MiniH, MiniX, MiniY},
-	};
-	Graphics()->LinesDraw(BorderLines, 4);
-	Graphics()->LinesEnd();
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::DummyMiniMap, {MiniX, MiniY, MiniW, MiniH});
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }

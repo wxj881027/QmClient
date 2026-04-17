@@ -1,4 +1,4 @@
-#include <base/log.h>
+
 #include <base/math.h>
 #include <base/str.h>
 #include <base/system.h>
@@ -9,12 +9,9 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/config_tags.h>
-#include <engine/shared/linereader.h>
 #include <engine/shared/localization.h>
-#include <engine/shared/protocol7.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
-#include <engine/updater.h>
 
 #include <game/client/animstate.h>
 #include <game/client/components/binds.h>
@@ -23,7 +20,6 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/skins.h>
-#include <game/client/components/sounds.h>
 #include <game/client/components/qmclient/bindchat.h>
 #include <game/client/components/qmclient/bindwheel.h>
 #include <game/client/components/qmclient/trails.h>
@@ -888,7 +884,6 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 		Column.HSplitTop(LineSize, &Button, &Column);
 		Ui()->DoScrollbarOption(&g_Config.m_QmJellyTeeDuration, &g_Config.m_QmJellyTeeDuration, &Button, Localize("Jelly duration"), 1, 500);
 	}
-
 	{
 		static std::vector<CButtonContainer> s_vButtonContainers = {{}, {}, {}};
 		int Value = g_Config.m_TcFakeCtfFlags;
@@ -916,91 +911,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInput, Localize("Fast input (reduce visual latency)"), &g_Config.m_TcFastInput, &Column, LineSize);
 
 	Column.HSplitTop(LineSize, &Button, &Column);
-	CUIRect ModeLabel, ModeButtons, ModeButton;
-	Button.VSplitLeft(150.0f, &ModeLabel, &ModeButtons);
-	Ui()->DoLabel(&ModeLabel, Localize("Mode"), FontSize, TEXTALIGN_ML);
-	static CButtonContainer s_FastInputModeFast, s_FastInputModeDeltaInput, s_FastInputModeGammaInput;
-	const int OldMode = g_Config.m_QmFastInputMode;
-	CUIRect Left, RightRest, Middle, Right;
-	ModeButtons.VSplitLeft((ModeButtons.w - 4.0f) / 3.0f, &Left, &RightRest);
-	RightRest.VSplitLeft(2.0f, nullptr, &RightRest);
-	RightRest.VSplitLeft((RightRest.w - 2.0f) / 2.0f, &Middle, &Right);
-	Right.VSplitLeft(2.0f, nullptr, &Right);
-	Left.HMargin(2.0f, &Left);
-	Middle.HMargin(2.0f, &Middle);
-	Right.HMargin(2.0f, &Right);
-
-	if(DoButtonLineSize_Menu(&s_FastInputModeFast, Localize("Fast input"), g_Config.m_QmFastInputMode == 0, &Left, LineSize, false, 0, IGraphics::CORNER_L, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
-		g_Config.m_QmFastInputMode = 0;
-	if(DoButtonLineSize_Menu(&s_FastInputModeDeltaInput, Localize("Delta input"), g_Config.m_QmFastInputMode == 1, &Middle, LineSize, false, 0, IGraphics::CORNER_NONE, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
-		g_Config.m_QmFastInputMode = 1;
-	if(DoButtonLineSize_Menu(&s_FastInputModeGammaInput, Localize("Gamma input"), g_Config.m_QmFastInputMode == 2, &Right, LineSize, false, 0, IGraphics::CORNER_R, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
-		g_Config.m_QmFastInputMode = 2;
-
-	if(g_Config.m_QmFastInputMode != OldMode)
-	{
-		if(g_Config.m_QmFastInputMode == 1 && g_Config.m_QmFastInputDeltaInput <= 0)
-		{
-			if(OldMode == 2 && g_Config.m_QmFastInputGammaInput > 0)
-				g_Config.m_QmFastInputDeltaInput = BcFastInputGammaUiToEffectiveAmount(g_Config.m_QmFastInputGammaInput);
-			else if(g_Config.m_TcFastInputAmount > 0)
-				g_Config.m_QmFastInputDeltaInput = std::clamp(g_Config.m_TcFastInputAmount * 5, 0, 500);
-		}
-		else if(g_Config.m_QmFastInputMode == 2 && g_Config.m_QmFastInputGammaInput <= 0)
-		{
-			if(OldMode == 1 && g_Config.m_QmFastInputDeltaInput > 0)
-				g_Config.m_QmFastInputGammaInput = BcFastInputGammaEffectiveToUiAmount(g_Config.m_QmFastInputDeltaInput);
-			else if(g_Config.m_TcFastInputAmount > 0)
-				g_Config.m_QmFastInputGammaInput = BcFastInputGammaEffectiveToUiAmount(g_Config.m_TcFastInputAmount * 5);
-		}
-		else if(g_Config.m_QmFastInputMode == 0 && g_Config.m_TcFastInputAmount <= 0)
-		{
-			const int SourceAmount = OldMode == 2 ? BcFastInputGammaUiToEffectiveAmount(g_Config.m_QmFastInputGammaInput) : g_Config.m_QmFastInputDeltaInput;
-			if(SourceAmount > 0)
-				g_Config.m_TcFastInputAmount = std::clamp((SourceAmount + 2) / 5, 0, 40);
-		}
-	}
-
-	Column.HSplitTop(LineSize, &Button, &Column);
-	if(g_Config.m_QmFastInputMode == 0)
-	{
-		DoSliderWithScaledValue(&g_Config.m_TcFastInputAmount, &g_Config.m_TcFastInputAmount, &Button, Localize("Amount"), 1, 100, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
-	}
-	else
-	{
-		const bool GammaMode = g_Config.m_QmFastInputMode == 2;
-		const int Min = 0;
-		const int Max = GammaMode ? BC_FAST_INPUT_GAMMA_UI_MAX : 500;
-		int *pAmountValue = GammaMode ? &g_Config.m_QmFastInputGammaInput : &g_Config.m_QmFastInputDeltaInput;
-		int Value = std::clamp(*pAmountValue, Min, Max);
-
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "%s: %.2f%s", GammaMode ? Localize("Gamma amount") : Localize("Amount"), Value / 100.0f, GammaMode ? "M" : "A");
-
-		CUIRect AmountLabel, ScrollBar;
-		Button.VSplitMid(&AmountLabel, &ScrollBar, minimum(10.0f, Button.w * 0.05f));
-		Ui()->DoLabel(&AmountLabel, aBuf, FontSize, TEXTALIGN_ML);
-
-		const float Rel = (Value - Min) / (float)(Max - Min);
-		const float NewRel = Ui()->DoScrollbarH(pAmountValue, &ScrollBar, Rel);
-		Value = (int)(Min + NewRel * (Max - Min) + 0.5f);
-		*pAmountValue = std::clamp(Value, Min, Max);
-	}
+	DoSliderWithScaledValue(&g_Config.m_TcFastInputAmount, &g_Config.m_TcFastInputAmount, &Button, Localize("Amount"), 1, 100, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
 	if(g_Config.m_TcFastInput)
-	{
-		if(g_Config.m_QmFastInputMode == 0)
-			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, Localize("Fast input others"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
-		else if(g_Config.m_QmFastInputMode == 1)
-			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDeltaInputOthers, Localize("Delta input others"), &g_Config.m_QmDeltaInputOthers, &Column, LineSize);
-		else
-			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGammaInputOthers, Localize("Gamma input others"), &g_Config.m_QmGammaInputOthers, &Column, LineSize);
-	}
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, Localize("Fast input others"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
 	else
 		Column.HSplitTop(LineSize, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFastInputAutoMargin, Localize("Auto margin"), &g_Config.m_QmFastInputAutoMargin, &Column, LineSize);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSubTickAiming, Localize("Sub-Tick aiming"), &g_Config.m_ClSubTickAiming, &Column, LineSize);
 	// A little extra spacing because these are multi line
 	Column.HSplitTop(MarginSmall, nullptr, &Column);
@@ -4579,9 +4497,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::GoresActor: return "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv";
 		case EQmModuleId::Gores: return "gores kog king of gores 锤枪切换 chuichang qiehuan 自动切枪 zidong qieqiang gun hammer prevweapon fire 开火后切锤 kaihuo qiechui 拿到其他武器停用";
 		case EQmModuleId::KeyBinds: return "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding";
-		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 聊天框淡出 liaotian danchu 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi jelly q弹 tee 果冻 gudong 拉伸 yashen 压扁 yabian 回弹 huidan";
+		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 聊天框淡出 liaotian danchu 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
 		case EQmModuleId::CameraView: return "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao";
-		case EQmModuleId::DummyMiniView: return "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao";
+		case EQmModuleId::DummyMiniView: return "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao 离开视角 offscreen 自动显示 zidong xianshi";
 		case EQmModuleId::Coords: return "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi";
 		case EQmModuleId::Streamer: return "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi";
 		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi";
@@ -4634,7 +4552,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::CameraView:
 			return {10, Localize("Camera and view"), Localize("Camera drift, dynamic FOV and aspect ratio presets")};
 		case EQmModuleId::DummyMiniView:
-			return {12, Localize("Dummy mini view"), Localize("Dummy mini view preview and scaling")};
+			return {12, Localize("Dummy mini view"), Localize("Cleaner monitor card with presets and HUD placement")};
 		case EQmModuleId::Coords:
 			return {4, Localize("Coordinates"), Localize("Show player coordinate info")};
 		case EQmModuleId::Streamer:
@@ -4923,7 +4841,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 			//我名字
 			RightContent.HSplitTop(LG_LineHeight, &Row, &RightContent);
 			TextRender()->TextColor(GetRainbowColor(-6));
-			Ui()->DoLabel(&Row, "栖梦(璇梦),夏日", LG_BodySize + 2.0f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, "栖梦(璇梦),夏日,DYL", LG_BodySize + 2.0f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 			// 感谢名单
 			constexpr float SponsorFontShrink = 4.0f;
@@ -4996,7 +4914,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					"你就是我的",
 					"xiaopang",
 					"星星🌙",
-					"軽い猫"
+					"軽い猫",
+					"oxyzo1",
+					"猫玖",
+					"信息检索"
 					};
 				const float SponsorFontSize = maximum(LG_BodySize * 1.1f - SponsorFontShrink, MinSponsorFontSize);
 				const float MaxLineWidth = RightContent.w;
@@ -5427,17 +5348,6 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordY, Localize("Show Y"), &g_Config.m_QmNameplateCoordY, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordXAlignHint, Localize("Alignment hint"), &g_Config.m_QmNameplateCoordXAlignHint, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				if(g_Config.m_QmNameplateCoordXAlignHint)
-				{
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordXAlignHintStrict, Localize("Strict alignment"), &g_Config.m_QmNameplateCoordXAlignHintStrict, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
@@ -6754,6 +6664,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoCloseChatOnUnfreeze, Localize("Automatically close the current chat after waking from freeze"), &g_Config.m_QmAutoCloseChatOnUnfreeze, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFreezeWakeupPopup, Localize("Show wake-up popup on the other tee"), &g_Config.m_QmFreezeWakeupPopup, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
@@ -7034,18 +6947,21 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 12, Localize("Dummy mini view"), Localize("Dummy mini view preview and scaling"));
+				DoModuleHeadline(CardContent, 12, Localize("Dummy mini view"), Localize("Cleaner monitor card with presets and HUD placement"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClDummyMiniView, Localize("Enable dummy mini view"), &g_Config.m_ClDummyMiniView, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
 				CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
-				Ui()->DoLabel(&Row, Localize("This is very expensive. AMD + Vulkan has a known unrecoverable bug"), LG_BodySize * 0.7f, TEXTALIGN_ML);
+				Ui()->DoLabel(&Row, Localize("Heavy render path. AMD + Vulkan stays blocked for safety."), LG_BodySize * 0.7f, TEXTALIGN_ML);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_ClDummyMiniView)
 				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClDummyMiniViewAuto, Localize("Only show when the other tee is off-screen"), &g_Config.m_ClDummyMiniViewAuto, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Ui()->DoScrollbarOption(&g_Config.m_ClDummyMiniViewSize, &g_Config.m_ClDummyMiniViewSize, &Row, Localize("Mini view size"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);

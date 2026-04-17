@@ -1510,15 +1510,8 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 	Row.VSplitLeft(90.0f, &Label, &Row);
 	Ui()->DoLabel(&Label, Localize("Player name:"), 14.0f, TEXTALIGN_ML);
 
-	static bool s_PlayerNameInit = false;
-	if(!s_PlayerNameInit)
-	{
-		if(g_Config.m_QmUnfinishedMapPlayer[0] == '\0')
-			str_copy(g_Config.m_QmUnfinishedMapPlayer, Client()->PlayerName(), sizeof(g_Config.m_QmUnfinishedMapPlayer));
-		s_PlayerNameInit = true;
-	}
-
-	static CLineInput s_PlayerNameInput(g_Config.m_QmUnfinishedMapPlayer, sizeof(g_Config.m_QmUnfinishedMapPlayer));
+	static char s_aPlayerName[16] = "";
+	static CLineInput s_PlayerNameInput(s_aPlayerName, sizeof(s_aPlayerName));
 	s_PlayerNameInput.SetEmptyText(Client()->PlayerName());
 	static bool s_NameDirty = false;
 	if(Ui()->DoEditBox(&s_PlayerNameInput, &Row, 12.0f))
@@ -1563,27 +1556,29 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 	};
 	static_assert(std::size(apTypeLabels) == std::size(apTypeKeys));
 	const int NumTypes = (int)std::size(apTypeLabels);
-	if(g_Config.m_QmUnfinishedMapType < 0 || g_Config.m_QmUnfinishedMapType >= NumTypes)
-		g_Config.m_QmUnfinishedMapType = 0;
+	static int s_UnfinishedMapType = 0;
+	if(s_UnfinishedMapType < 0 || s_UnfinishedMapType >= NumTypes)
+		s_UnfinishedMapType = 0;
 
 	static CUi::SDropDownState s_TypeDropDownState;
 	static CScrollRegion s_TypeDropDownScrollRegion;
 	s_TypeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TypeDropDownScrollRegion;
-const int NewType = Ui()->DoDropDown(&Row, g_Config.m_QmUnfinishedMapType, apTypeLabels, NumTypes, s_TypeDropDownState);
-if(NewType != g_Config.m_QmUnfinishedMapType)
+	const int NewType = Ui()->DoDropDown(&Row, s_UnfinishedMapType, apTypeLabels, NumTypes, s_TypeDropDownState);
+	if(NewType != s_UnfinishedMapType)
 	{
-		g_Config.m_QmUnfinishedMapType = NewType;
+		s_UnfinishedMapType = NewType;
 		GameClient()->m_Voting.ClearUnfinishedMapVoteChain();
 	}
-	const char *pSelectedTypeKey = apTypeKeys[g_Config.m_QmUnfinishedMapType];
-	const char *pSelectedTypeLabel = apTypeLabels[g_Config.m_QmUnfinishedMapType];
+	const char *pSelectedTypeKey = apTypeKeys[s_UnfinishedMapType];
+	const char *pSelectedTypeLabel = apTypeLabels[s_UnfinishedMapType];
 
 	MainView.HSplitTop(6.0f, nullptr, &MainView);
 	MainView.HSplitTop(20.0f, &Row, &MainView);
-if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起投票"), g_Config.m_QmUnfinishedMapAutoVote, &Row))
+	static int s_UnfinishedMapAutoVote = 0;
+	if(DoButton_CheckBox(&s_UnfinishedMapAutoVote, Localize("自动发起投票"), s_UnfinishedMapAutoVote, &Row))
 	{
-		g_Config.m_QmUnfinishedMapAutoVote ^= 1;
-		if(!g_Config.m_QmUnfinishedMapAutoVote)
+		s_UnfinishedMapAutoVote ^= 1;
+		if(!s_UnfinishedMapAutoVote)
 			GameClient()->m_Voting.ClearUnfinishedMapVoteChain();
 	}
 
@@ -1630,6 +1625,7 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 	if(DoButton_Menu(&s_PickButton, Localize("Random pick"), 0, &Button))
 	{
 		s_aStatusText[0] = '\0';
+		const char *pQueryName = s_aPlayerName[0] != '\0' ? s_aPlayerName : Client()->PlayerName();
 		if(!g_Config.m_BrIndicateFinished)
 		{
 			str_copy(s_aStatusText, Localize("请先启用完成度显示"));
@@ -1637,7 +1633,7 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 		else if(s_NameDirty || !s_UnfinishedQuery.HasData())
 		{
 			if(!s_UnfinishedQuery.IsLoading())
-				s_UnfinishedQuery.Start(Http(), g_Config.m_QmUnfinishedMapPlayer);
+				s_UnfinishedQuery.Start(Http(), pQueryName);
 			s_NameDirty = false;
 			str_copy(s_aStatusText, Localize("未完成图数据刷新中，请稍后再试"));
 		}
@@ -1654,7 +1650,7 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 			str_copy(s_aPickedMap, vUnfinishedMaps[PickIndex]);
 			s_PickedCopyTime = 0.0f;
 
-			if(g_Config.m_QmUnfinishedMapAutoVote)
+			if(s_UnfinishedMapAutoVote)
 			{
 				const auto Action = GameClient()->m_Voting.StartUnfinishedMapVoteChain(s_aPickedMap, pSelectedTypeKey, pSelectedTypeLabel);
 				if(Action == CVoting::EUnfinishedMapVoteAction::MAP_VOTE_SENT)

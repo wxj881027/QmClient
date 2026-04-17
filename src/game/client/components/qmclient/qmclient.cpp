@@ -27,6 +27,7 @@
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
 #include <game/client/gameclient.h>
+#include <game/client/prediction/entities/character.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
 #include <game/layers.h>
@@ -72,6 +73,23 @@ static constexpr int QMCLIENT_MARKER_FLUSH_INTERVAL_SECONDS = 5;
 static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players/?json2=";
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
+static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
+static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION = 2.0f;
+static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_BASE_ANGLE = 30.0f * pi / 180.0f;
+static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_ANGLE_VARIATION = 7.0f * pi / 180.0f;
+static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_WIDTH = 136.0f;
+static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_HEIGHT = 42.0f;
+static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET = vec2(34.0f, -78.0f);
+static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT = vec2(18.0f, -16.0f);
+static constexpr std::array<ColorRGBA, 7> s_aFreezeWakeupPopupColors = {
+	ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f),
+	ColorRGBA(1.0f, 0.5f, 0.0f, 1.0f),
+	ColorRGBA(1.0f, 1.0f, 0.0f, 1.0f),
+	ColorRGBA(0.0f, 1.0f, 0.0f, 1.0f),
+	ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f),
+	ColorRGBA(0.0f, 0.45f, 1.0f, 1.0f),
+	ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f),
+};
 static constexpr const char *s_apKeywordNegationWords[] = {
 	"不",
 	"没",
@@ -685,6 +703,8 @@ void CTClient::OnShutdown()
 	AbortTask(m_pQmClientServerTimeTask);
 	AbortTask(m_pQmClientPlaytimeQueryTask);
 	AbortTask(m_pQmDdnetPlayerTask);
+	Graphics()->UnloadTexture(&m_FreezeWakeupTextTexture);
+	ClearFreezeWakeupPopups();
 }
 
 static bool LineShouldHighlight(const char *pLine, const char *pName)
@@ -1862,6 +1882,7 @@ void CTClient::OnRender()
 	if(RunGameplayTickChecks)
 	{
 		CheckFreeze();
+		CheckFreezeWakeupPopup();
 		CheckWaterFall();
 		CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
 		CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
@@ -2039,10 +2060,6 @@ void CTClient::SendQmClientPlaytimeRequest(const char *pUrl, std::shared_ptr<CHt
 	if(m_aQmClientPlaytimeClientId[0] == '\0')
 		return;
 
-	// Center endpoints are plain HTTP.
-	if(!g_Config.m_HttpAllowInsecure)
-		g_Config.m_HttpAllowInsecure = 1;
-
 	CJsonStringWriter JsonWriter;
 	JsonWriter.BeginObject();
 	JsonWriter.WriteAttribute("client_id");
@@ -2059,6 +2076,7 @@ void CTClient::SendQmClientPlaytimeRequest(const char *pUrl, std::shared_ptr<CHt
 
 	std::string Body = JsonWriter.GetOutputString();
 	pTaskSlot = HttpPostJson(pUrl, Body.c_str());
+	pTaskSlot->AllowInsecureProtocol();
 	pTaskSlot->Timeout(CTimeout{3000, 0, 250, 6});
 	pTaskSlot->IpResolve(IPRESOLVE::V4);
 	pTaskSlot->LogProgress(HTTPLOG::FAILURE);
@@ -2208,14 +2226,12 @@ void CTClient::UpdateQmClientLifecycleAndServerTime()
 	if(m_pQmClientServerTimeTask || (m_QmClientServerTimeLastSync != 0 && Now - m_QmClientServerTimeLastSync < IntervalTicks))
 		return;
 
-	if(!g_Config.m_HttpAllowInsecure)
-		g_Config.m_HttpAllowInsecure = 1;
-
 	char aUrl[512];
 	const int Nonce = secure_rand_below(1000000);
 	str_format(aUrl, sizeof(aUrl), "%s?event=time_sync&session=%s&nonce=%d", QMCLIENT_HEALTH_URL, m_aQmClientLifecycleSessionId, Nonce);
 
 	m_pQmClientServerTimeTask = HttpGet(aUrl);
+	m_pQmClientServerTimeTask->AllowInsecureProtocol();
 	m_pQmClientServerTimeTask->Timeout(CTimeout{3000, 0, 250, 5});
 	m_pQmClientServerTimeTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientServerTimeTask->LogProgress(HTTPLOG::FAILURE);
@@ -2567,6 +2583,7 @@ void CTClient::FetchQmClientAuthToken()
 		return;
 
 	m_pQmClientAuthTokenTask = HttpGet(aUrl);
+	m_pQmClientAuthTokenTask->AllowInsecureProtocol();
 	m_pQmClientAuthTokenTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pQmClientAuthTokenTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientAuthTokenTask->LogProgress(HTTPLOG::FAILURE);
@@ -2632,6 +2649,7 @@ void CTClient::SendQmClientPlayerData()
 		return;
 
 	m_pQmClientUsersSendTask = HttpPostJson(aUrl, JsonBody.c_str());
+	m_pQmClientUsersSendTask->AllowInsecureProtocol();
 	m_pQmClientUsersSendTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pQmClientUsersSendTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientUsersSendTask->LogProgress(HTTPLOG::FAILURE);
@@ -2648,6 +2666,7 @@ void CTClient::FetchQmClientUsers()
 		return;
 
 	m_pQmClientUsersTask = HttpGet(aUrl);
+	m_pQmClientUsersTask->AllowInsecureProtocol();
 	m_pQmClientUsersTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pQmClientUsersTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientUsersTask->LogProgress(HTTPLOG::FAILURE);
@@ -2678,7 +2697,13 @@ void CTClient::FinishQmClientAuthToken()
 
 void CTClient::FinishQmClientUsers()
 {
-	if(!m_pQmClientUsersTask || m_pQmClientUsersTask->State() != EHttpState::DONE)
+	if(!m_pQmClientUsersTask)
+		return;
+
+	GameClient()->ClearQ1menGSyncMarks();
+	GameClient()->ClearQmVoiceSyncMarks();
+
+	if(m_pQmClientUsersTask->State() != EHttpState::DONE)
 		return;
 
 	json_value *pRoot = m_pQmClientUsersTask->ResultJson();
@@ -2704,9 +2729,6 @@ void CTClient::FinishQmClientUsers()
 	const bool FastSync = g_Config.m_RiVoiceEnable || g_Config.m_QmClientShowBadge;
 	const int SyncInterval = FastSync ? QMCLIENT_VOICE_SYNC_INTERVAL_SECONDS : QMCLIENT_SYNC_INTERVAL_SECONDS;
 	const int64_t ExpireTick = time_get() + (int64_t)SyncInterval * time_freq() * 2;
-
-	GameClient()->ClearQ1menGSyncMarks();
-	GameClient()->ClearQmVoiceSyncMarks();
 
 	for(unsigned Index = 0; Index < pUsers->u.array.length; ++Index)
 	{
@@ -2804,17 +2826,12 @@ void CTClient::UpdateQmClientRecognition()
 	const bool NeedRecognition = g_Config.m_RiVoiceServer[0] != '\0';
 	if(!NeedRecognition)
 	{
-		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask)
+		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask || m_aQmClientAuthToken[0] != '\0' || m_QmClientLastSync != 0)
 			ResetQmClientRecognitionTasks();
 		GameClient()->ClearQ1menGSyncMarks();
 		GameClient()->ClearQmVoiceSyncMarks();
 		return;
 	}
-
-	// Center sync endpoint is intentionally plain HTTP.
-	// Ensure libcurl allows HTTP protocol while this feature is enabled.
-	if(!g_Config.m_HttpAllowInsecure)
-		g_Config.m_HttpAllowInsecure = 1;
 
 	const bool FastSync = g_Config.m_RiVoiceEnable || g_Config.m_QmClientShowBadge;
 	const int SyncInterval = FastSync ? QMCLIENT_VOICE_SYNC_INTERVAL_SECONDS : QMCLIENT_SYNC_INTERVAL_SECONDS;
@@ -2902,6 +2919,226 @@ void CTClient::CheckFreeze()
 
 		m_aWasInFreeze[Dummy] = IsInFreeze;
 	}
+}
+
+void CTClient::EnsureFreezeWakeupTextTexture()
+{
+	const bool FontChanged = str_comp(m_aFreezeWakeupFont, g_Config.m_TcCustomFont) != 0;
+	if(m_FreezeWakeupTextTexture.IsValid() && !FontChanged)
+		return;
+
+	if(m_FreezeWakeupTextTexture.IsValid())
+		Graphics()->UnloadTexture(&m_FreezeWakeupTextTexture);
+
+	TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+
+	CImageInfo TextImage;
+	TextImage.m_Width = 1024;
+	TextImage.m_Height = 256;
+	TextImage.m_Format = CImageInfo::FORMAT_RGBA;
+	TextImage.m_pData = static_cast<uint8_t *>(calloc(TextImage.DataSize(), sizeof(uint8_t)));
+	if(TextImage.m_pData == nullptr)
+		return;
+
+	constexpr int PaddingX = 48;
+	constexpr int PaddingY = 36;
+	const int TextLength = str_length(QMCLIENT_FREEZE_WAKEUP_TEXT);
+	const int MaxTextWidth = TextImage.m_Width - PaddingX * 2;
+	const int MaxTextHeight = TextImage.m_Height - PaddingY * 2;
+	const int FontSize = maximum(1, TextRender()->AdjustFontSize(QMCLIENT_FREEZE_WAKEUP_TEXT, TextLength, MaxTextHeight, MaxTextWidth));
+	const int TextWidth = minimum(TextRender()->CalculateTextWidth(QMCLIENT_FREEZE_WAKEUP_TEXT, TextLength, 0, FontSize), MaxTextWidth);
+	const float TextX = PaddingX + (MaxTextWidth - TextWidth) / 2.0f;
+	const float TextY = PaddingY + (MaxTextHeight - FontSize) / 2.0f;
+
+	TextRender()->UploadEntityLayerText(TextImage, TextImage.m_Width - (int)TextX, TextImage.m_Height - (int)TextY, QMCLIENT_FREEZE_WAKEUP_TEXT, TextLength, TextX, TextY, FontSize);
+	m_FreezeWakeupTextTexture = Graphics()->LoadTextureRawMove(TextImage, 0, "qmclient_freeze_wakeup_text");
+	if(m_FreezeWakeupTextTexture.IsValid())
+		str_copy(m_aFreezeWakeupFont, g_Config.m_TcCustomFont, sizeof(m_aFreezeWakeupFont));
+}
+
+void CTClient::ClearFreezeWakeupPopups()
+{
+	for(auto &Popup : m_aFreezeWakeupPopups)
+		Popup = {};
+}
+
+void CTClient::AddFreezeWakeupPopup(int WokenDummy)
+{
+	const int AnchorDummy = WokenDummy ^ 1;
+	const int AnchorClientId = GameClient()->m_aLocalIds[AnchorDummy];
+	if(AnchorClientId < 0 || AnchorClientId >= MAX_CLIENTS)
+		return;
+
+	if(!GameClient()->m_aClients[AnchorClientId].m_Active || !GameClient()->m_Snap.m_aCharacters[AnchorClientId].m_Active)
+		return;
+
+	EnsureFreezeWakeupTextTexture();
+	if(!m_FreezeWakeupTextTexture.IsValid())
+		return;
+
+	const float Now = LocalTime();
+	int PopupIndex = -1;
+	float OldestStartTime = Now;
+	for(int i = 0; i < FREEZE_WAKEUP_POPUP_MAX; ++i)
+	{
+		const auto &Popup = m_aFreezeWakeupPopups[i];
+		if(!Popup.m_Active || Now - Popup.m_StartTime >= QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION)
+		{
+			PopupIndex = i;
+			break;
+		}
+
+		if(PopupIndex < 0 || Popup.m_StartTime < OldestStartTime)
+		{
+			PopupIndex = i;
+			OldestStartTime = Popup.m_StartTime;
+		}
+	}
+
+	if(PopupIndex < 0)
+		return;
+
+	auto &Popup = m_aFreezeWakeupPopups[PopupIndex];
+	Popup = {};
+	Popup.m_Active = true;
+	Popup.m_AnchorClientId = AnchorClientId;
+	Popup.m_StartTime = Now;
+	Popup.m_HorizontalSign = std::rand() % 2 == 0 ? -1.0f : 1.0f;
+	Popup.m_Angle = Popup.m_HorizontalSign * (QMCLIENT_FREEZE_WAKEUP_POPUP_BASE_ANGLE +
+		(((float)std::rand() / (float)RAND_MAX) * 2.0f - 1.0f) * QMCLIENT_FREEZE_WAKEUP_POPUP_ANGLE_VARIATION);
+	Popup.m_Color = s_aFreezeWakeupPopupColors[std::rand() % s_aFreezeWakeupPopupColors.size()];
+}
+
+void CTClient::CheckFreezeWakeupPopup()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return;
+
+	if(!g_Config.m_QmFreezeWakeupPopup)
+	{
+		ClearFreezeWakeupPopups();
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+			m_aWasInFreezeForWakeupPopup[Dummy] = false;
+		return;
+	}
+
+	const int DamageTickWindow = maximum(2, GameClient()->m_PredictedWorld.GameTickSpeed() / 6);
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		if(Dummy == 1 && !Client()->DummyConnected())
+		{
+			m_aWasInFreezeForWakeupPopup[Dummy] = false;
+			continue;
+		}
+
+		const int ClientId = GameClient()->m_aLocalIds[Dummy];
+		if(ClientId < 0)
+		{
+			m_aWasInFreezeForWakeupPopup[Dummy] = false;
+			continue;
+		}
+
+		const auto &ClientData = GameClient()->m_aClients[ClientId];
+		if(!ClientData.m_Active)
+		{
+			m_aWasInFreezeForWakeupPopup[Dummy] = false;
+			continue;
+		}
+
+		const bool IsInFreeze = ClientData.m_FreezeEnd != 0;
+		if(m_aWasInFreezeForWakeupPopup[Dummy] && !IsInFreeze)
+		{
+			if(const CCharacter *pPredictedChar = GameClient()->m_PredictedWorld.GetCharacterById(ClientId))
+			{
+				const int LastDamageTick = pPredictedChar->GetLastDamageTick();
+				const int DamageTickDelta = GameClient()->m_PredictedWorld.GameTick() - LastDamageTick;
+				const bool HammerWakeup = LastDamageTick > 0 &&
+					DamageTickDelta >= 0 &&
+					DamageTickDelta <= DamageTickWindow &&
+					pPredictedChar->GetLastDamageWeapon() == WEAPON_HAMMER &&
+					pPredictedChar->GetLastDamageFrom() >= 0 &&
+					pPredictedChar->GetLastDamageFrom() != ClientId;
+				if(HammerWakeup)
+					AddFreezeWakeupPopup(Dummy);
+			}
+		}
+
+		m_aWasInFreezeForWakeupPopup[Dummy] = IsInFreeze;
+	}
+}
+
+bool CTClient::HasFreezeWakeupPopups() const
+{
+	if(!g_Config.m_QmFreezeWakeupPopup)
+		return false;
+
+	const float Now = LocalTime();
+	for(const auto &Popup : m_aFreezeWakeupPopups)
+	{
+		if(Popup.m_Active && Now - Popup.m_StartTime < QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION)
+			return true;
+	}
+	return false;
+}
+
+void CTClient::RenderFreezeWakeupPopups()
+{
+	if(!HasFreezeWakeupPopups())
+		return;
+
+	EnsureFreezeWakeupTextTexture();
+	if(!m_FreezeWakeupTextTexture.IsValid())
+		return;
+
+	const float Now = LocalTime();
+	Graphics()->TextureSet(m_FreezeWakeupTextTexture);
+	Graphics()->QuadsBegin();
+	for(auto &Popup : m_aFreezeWakeupPopups)
+	{
+		if(!Popup.m_Active)
+			continue;
+
+		const float Elapsed = Now - Popup.m_StartTime;
+		if(Elapsed >= QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION)
+		{
+			Popup.m_Active = false;
+			continue;
+		}
+
+		if(Popup.m_AnchorClientId < 0 || Popup.m_AnchorClientId >= MAX_CLIENTS ||
+			!GameClient()->m_aClients[Popup.m_AnchorClientId].m_Active ||
+			!GameClient()->m_Snap.m_aCharacters[Popup.m_AnchorClientId].m_Active)
+		{
+			Popup.m_Active = false;
+			continue;
+		}
+
+		const float Progress = std::clamp(Elapsed / QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION, 0.0f, 1.0f);
+		const float PopIn = std::clamp(Elapsed / 0.12f, 0.0f, 1.0f);
+		const float FadeOut = 1.0f - std::clamp((Progress - 0.7f) / 0.3f, 0.0f, 1.0f);
+		const float Scale = 0.85f + 0.15f * PopIn;
+		const float Width = QMCLIENT_FREEZE_WAKEUP_POPUP_WIDTH * Scale;
+		const float Height = QMCLIENT_FREEZE_WAKEUP_POPUP_HEIGHT * Scale;
+		const vec2 AnchorPos = GameClient()->m_aClients[Popup.m_AnchorClientId].m_RenderPos +
+			vec2(QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET.x * Popup.m_HorizontalSign, QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET.y) +
+			vec2(QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT.x * Popup.m_HorizontalSign, QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT.y) * Progress;
+		const vec2 Pos =
+			Popup.m_HorizontalSign < 0.0f ?
+				vec2(AnchorPos.x - Width, AnchorPos.y) :
+				AnchorPos;
+
+		const IGraphics::CQuadItem ShadowQuad(Pos.x + 2.0f, Pos.y + 2.0f, Width, Height);
+		const IGraphics::CQuadItem TextQuad(Pos.x, Pos.y, Width, Height);
+
+		Graphics()->QuadsSetRotation(Popup.m_Angle);
+		Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.32f * FadeOut);
+		Graphics()->QuadsDrawTL(&ShadowQuad, 1);
+		Graphics()->SetColor(Popup.m_Color.WithAlpha(FadeOut));
+		Graphics()->QuadsDrawTL(&TextQuad, 1);
+	}
+	Graphics()->QuadsEnd();
+	Graphics()->QuadsSetRotation(0.0f);
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 void CTClient::CheckWaterFall()
@@ -3618,6 +3855,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	SetForcedAspect();
 	for(auto &AirRescuePositions : m_aAirRescuePositions)
 		AirRescuePositions = {};
+	ClearFreezeWakeupPopups();
 
 	if(NewState != IClient::STATE_ONLINE)
 	{
@@ -3637,6 +3875,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 			m_aWasInFreeze[i] = false;
 			m_aLastFreezeEmoteTime[i] = 0;
 			m_aLastFreezeMessageTime[i] = 0;
+			m_aWasInFreezeForWakeupPopup[i] = false;
 			m_aWasInFreezeForUnspec[i] = false;
 			m_aWasInFreezeForSwitch[i] = false;
 			m_aWasInFreezeForChatClose[i] = false;

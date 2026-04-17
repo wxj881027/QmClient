@@ -15,7 +15,7 @@ enum class EConfigTag : uint8_t
 	HUD,         // 界面显示 (计分板、灵动岛、统计等)
 	INPUT,       // 输入优化 (Fast Input、Deepfly等)
 	CHAT,        // 聊天相关 (气泡、复读、关键词等)
-	AUDIO,       // 语音/音效 (RiVoice等)
+	AUDIO,       // 语音/音效 (QmVoice等)
 	AUTOMATION,  // 自动化功能 (Gores、自动切换等)
 	SOCIAL,      // 社交功能 (好友、饼菜单、屏蔽词等)
 	CAMERA,      // 相机/视野 (漂移、动态FOV等)

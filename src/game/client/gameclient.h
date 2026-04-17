@@ -293,6 +293,8 @@ private:
 
 	int m_EditorMovementDelay = 5;
 	void UpdateEditorIngameMoved();
+	bool GetPredictedHammerHitbox(CCharacter *pChar, vec2 &HitPos, float &HitRadius);
+	int FindPredictedHammerHitTargets(CCharacter *pChar, vec2 HitPos, float HitRadius, int *pTargetIds, int MaxTargetIds);
 	void HandleHammerSkinSwap(CCharacter *pChar);
 	void HandleRandomEmoteOnHit(CCharacter *pLocalChar, int DummyIndex);
 
@@ -377,6 +379,8 @@ public:
 	{
 		return m_pHttp;
 	}
+	bool HasFreezeWakeupPopups() const { return m_TClient.HasFreezeWakeupPopups(); }
+	void RenderFreezeWakeupPopups() { m_TClient.RenderFreezeWakeupPopups(); }
 
 	int NetobjNumCorrections()
 	{

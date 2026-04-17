@@ -327,35 +327,10 @@ void CPlayers::RenderHookCollLine(
 	ColorRGBA HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
 	std::vector<IGraphics::CLineItem> vLineSegments;
 
-	// QmClient: Weapon-Follow mode (mode 1) - use weapon-based color
-	const bool WeaponFollowMode = (g_Config.m_QmHookCollMode == 1) && Local;
-	if(WeaponFollowMode)
-	{
-		// Get current weapon from player character
-		int CurrentWeapon = Player.m_Weapon;
-		switch(CurrentWeapon)
-		{
-		case WEAPON_SHOTGUN:
-			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmShotgunColor));
-			break;
-		case WEAPON_LASER:
-			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmLaserColor));
-			break;
-		case WEAPON_GRENADE:
-			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmGrenadeColor));
-			break;
-		default:
-			// Gun, Hammer, Ninja: fallback to default NoColl color (Wall-Follow behavior)
-			break;
-		}
-	}
-
 	const int MaxHookTicks = 5 * Client()->GameTickSpeed(); // calculating above 5 seconds is very expensive and unlikely to happen
 
 	auto AddHookPlayerSegment = [&](const vec2 &StartPos, const vec2 &EndPos, const vec2 &HookablePlayerPosition, const vec2 &HitPos) {
-		// QmClient: In Weapon-Follow mode, keep weapon color; otherwise update to tee collision color
-		if(!WeaponFollowMode)
-			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl));
+		HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl));
 
 		// stop hookline at player circle so it looks better
 		vec2 aIntersections[2];
@@ -446,8 +421,7 @@ void CPlayers::RenderHookCollLine(
 		// we hit a solid / hook stopper
 		if(Hit != TILE_TELEINHOOK)
 		{
-			// QmClient: In Weapon-Follow mode, keep weapon color
-			if(!WeaponFollowMode && Hit != TILE_NOHOOK)
+			if(Hit != TILE_NOHOOK)
 				HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
 			vLineSegments.emplace_back(LineStartPos, HitPos);
 			break;
@@ -462,17 +436,13 @@ void CPlayers::RenderHookCollLine(
 		if(vTeleOuts.empty())
 		{
 			// the hook gets stuck, this is a feature or a bug
-			// QmClient: In Weapon-Follow mode, keep weapon color
-			if(!WeaponFollowMode)
-				HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
+			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
 			break;
 		}
 		else if(vTeleOuts.size() > 1)
 		{
 			// we don't know which teleout the hook takes, just invert the color
-			// QmClient: In Weapon-Follow mode, keep weapon color
-			if(!WeaponFollowMode)
-				HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
+			HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
 			break;
 		}
 
@@ -495,9 +465,7 @@ void CPlayers::RenderHookCollLine(
 	if(HookTick >= MaxHookTicks && vLineSegments.empty())
 	{
 		// we simply don't know if we hit anything or not
-		// QmClient: In Weapon-Follow mode, keep weapon color
-		if(!WeaponFollowMode)
-			HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
+		HookCollColor = color_invert(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
 		vLineSegments.emplace_back(LineStartPos, BasePos + QuantizedDirection * HookLength);
 	}
 
@@ -507,9 +475,7 @@ void CPlayers::RenderHookCollLine(
 	if(AlwaysRenderHookColl && RenderHookCollPlayer)
 	{
 		// invert the hook coll colors when using cl_show_hook_coll_always and +showhookcoll is pressed
-		// QmClient: In Weapon-Follow mode, keep weapon color (no invert)
-		if(!WeaponFollowMode)
-			HookCollColor = color_invert(HookCollColor);
+		HookCollColor = color_invert(HookCollColor);
 	}
 
 	// Render hook coll line

@@ -156,7 +156,7 @@ CConfigTagsManager::CConfigTagsManager()
 
 	// Audio - 语音/音效
 	RegisterTag("*voice*", EConfigTag::AUDIO);
-	RegisterTag("*ri_voice*", EConfigTag::AUDIO);
+	RegisterTag("*qm_voice*", EConfigTag::AUDIO);
 	RegisterTag("*sound*", EConfigTag::AUDIO);
 	RegisterTag("*audio*", EConfigTag::AUDIO);
 	RegisterTag("tc_voice*", EConfigTag::AUDIO);

@@ -4,8 +4,11 @@
 #include <base/system.h>
 
 #include <png.h>
+#if defined(CONF_WEBP)
 #include <webp/decode.h>
+#endif
 
+#include <array>
 #include <csetjmp>
 #include <cstdlib>
 #include <vector>
@@ -412,6 +415,7 @@ bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInf
 
 bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image)
 {
+#if defined(CONF_WEBP)
 	// Read all data from reader
 	const size_t DataSize = Reader.Size();
 	if(DataSize == 0)
@@ -471,10 +475,36 @@ bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName,
 	Image.m_pData = pDestData;
 
 	return true;
+#else
+	(void)Image;
+
+	const size_t DataSize = Reader.Size();
+	if(DataSize < 12)
+	{
+		return false;
+	}
+
+	std::array<uint8_t, 12> aHeader;
+	if(!Reader.Read(aHeader.data(), aHeader.size()))
+	{
+		return false;
+	}
+
+	static constexpr uint8_t WEBP_RIFF[] = {'R', 'I', 'F', 'F'};
+	static constexpr uint8_t WEBP_WEBP[] = {'W', 'E', 'B', 'P'};
+	const bool IsWebP = mem_comp(aHeader.data(), WEBP_RIFF, std::size(WEBP_RIFF)) == 0 &&
+		mem_comp(aHeader.data() + 8, WEBP_WEBP, std::size(WEBP_WEBP)) == 0;
+	if(IsWebP)
+	{
+		log_error("webp", "cannot load '%s': client was built without libwebp support", pContextName);
+	}
+	return false;
+#endif
 }
 
 bool CImageLoader::LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Image)
 {
+#if defined(CONF_WEBP)
 	if(!File)
 	{
 		log_error("webp", "failed to open file for reading. filename='%s'", pFilename);
@@ -502,6 +532,19 @@ bool CImageLoader::LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Im
 	}
 
 	return true;
+#else
+	(void)Image;
+
+	if(!File)
+	{
+		log_error("webp", "failed to open file for reading. filename='%s'", pFilename);
+		return false;
+	}
+
+	io_close(File);
+	log_error("webp", "cannot load image from file. filename='%s', client was built without libwebp support", pFilename);
+	return false;
+#endif
 }
 
 bool CImageLoader::LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image)

@@ -2333,6 +2333,7 @@ set(LIBS
 add_library(engine-gfx EXCLUDE_FROM_ALL OBJECT ${ENGINE_GFX})
 target_include_directories(engine-gfx PRIVATE ${PNG_INCLUDE_DIRS})
 if(WebP_FOUND)
+  target_compile_definitions(engine-gfx PRIVATE CONF_WEBP)
   target_include_directories(engine-gfx PRIVATE ${WebP_INCLUDE_DIRS})
 endif()
 if(VIDEORECORDER AND FFMPEG_FOUND)
@@ -3364,7 +3365,7 @@ add_library(rust_test STATIC EXCLUDE_FROM_ALL
 list(APPEND TARGETS_OWN rust_test)
 list(APPEND TARGETS_LINK rust_test)
 
-set(RUST_TEST_LIBS ${LIBS} $<TARGET_FILE:rust_test>)
+set(RUST_TEST_LIBS ${WebP_LIBRARIES} ${LIBS} $<TARGET_FILE:rust_test>)
 list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
 # Use ',' as separator so the value can be passed through shell safely.
 string(JOIN "," RUST_TEST_LIBS_JOINED ${RUST_TEST_LIBS})

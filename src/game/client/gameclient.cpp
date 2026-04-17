@@ -97,25 +97,9 @@ float EffectiveFastInputOffsetTicks(const CGameClient *pGameClient)
 
 	if(!g_Config.m_TcFastInput)
 		return 0.0f;
-
-	if(g_Config.m_QmFastInputMode == 0)
-	{
-		if(g_Config.m_TcFastInputAmount <= 0)
-			return 0.0f;
-		return g_Config.m_TcFastInputAmount / 20.0f;
-	}
-
-	if(g_Config.m_QmFastInputMode == 1)
-	{
-		if(g_Config.m_QmFastInputDeltaInput <= 0)
-			return 0.0f;
-		return g_Config.m_QmFastInputDeltaInput / 100.0f;
-	}
-
-	const int GammaInputAmount = BcFastInputGammaUiToEffectiveAmount(g_Config.m_QmFastInputGammaInput);
-	if(GammaInputAmount <= 0)
+	if(g_Config.m_TcFastInputAmount <= 0)
 		return 0.0f;
-	return GammaInputAmount / 100.0f;
+	return g_Config.m_TcFastInputAmount / 20.0f;
 }
 
 int FastInputPredictionTicks(float OffsetTicks)
@@ -142,27 +126,17 @@ void ApplyFastInputOffset(float OffsetTicks, int &Tick, float &Intra)
 
 bool EffectiveFastInputOthers()
 {
-	return g_Config.m_QmFastInputMode == 0 && g_Config.m_TcFastInputOthers != 0;
-}
-
-bool EffectiveDeltaInputOthers()
-{
-	return g_Config.m_QmFastInputMode == 1 && g_Config.m_QmDeltaInputOthers != 0;
-}
-
-bool EffectiveGammaInputOthers()
-{
-	return g_Config.m_QmFastInputMode == 2 && g_Config.m_QmGammaInputOthers != 0;
+	return g_Config.m_TcFastInputOthers != 0;
 }
 
 bool EffectiveAnyFastInputOthers()
 {
-	return EffectiveFastInputOthers() || EffectiveDeltaInputOthers() || EffectiveGammaInputOthers();
+	return EffectiveFastInputOthers();
 }
 
 bool EffectiveImmediateFastInputOthers()
 {
-	return EffectiveDeltaInputOthers() || EffectiveGammaInputOthers();
+	return EffectiveFastInputOthers();
 }
 } // namespace
 
@@ -2968,6 +2942,50 @@ void CGameClient::UpdateEditorIngameMoved()
 	}
 }
 
+bool CGameClient::GetPredictedHammerHitbox(CCharacter *pChar, vec2 &HitPos, float &HitRadius)
+{
+	if(!pChar || pChar->GetActiveWeapon() != WEAPON_HAMMER || pChar->HammerHitDisabled())
+		return false;
+
+	const CNetObj_PlayerInput *pInput = pChar->LatestInput();
+	if(!pInput)
+		return false;
+
+	vec2 Direction = normalize(vec2(pInput->m_TargetX, pInput->m_TargetY));
+	if(Direction.x == 0.0f && Direction.y == 0.0f)
+		Direction = vec2(0.0f, -1.0f);
+
+	const float ProximityRadius = pChar->GetProximityRadius();
+	HitPos = pChar->GetPos() + Direction * ProximityRadius * 0.75f;
+	HitRadius = ProximityRadius * 0.5f;
+	return true;
+}
+
+int CGameClient::FindPredictedHammerHitTargets(CCharacter *pChar, vec2 HitPos, float HitRadius, int *pTargetIds, int MaxTargetIds)
+{
+	if(!pChar || !pTargetIds || MaxTargetIds <= 0)
+		return 0;
+
+	CEntity *apEnts[MAX_CLIENTS];
+	const int Num = m_PredictedWorld.FindEntities(HitPos, HitRadius, apEnts, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
+
+	int NumTargets = 0;
+	for(int i = 0; i < Num && NumTargets < MaxTargetIds; ++i)
+	{
+		CCharacter *pTarget = static_cast<CCharacter *>(apEnts[i]);
+		if(!pTarget || pTarget == pChar)
+			continue;
+
+		const int TargetId = pTarget->GetCid();
+		if(TargetId < 0 || TargetId >= MAX_CLIENTS || !pChar->CanCollide(TargetId))
+			continue;
+
+		pTargetIds[NumTargets++] = TargetId;
+	}
+
+	return NumTargets;
+}
+
 void CGameClient::HandleHammerSkinSwap(CCharacter *pChar)
 {
 	if(!g_Config.m_QmHammerSwapSkin || !pChar)
@@ -2983,38 +3001,29 @@ void CGameClient::HandleHammerSkinSwap(CCharacter *pChar)
 		return;
 
 	const int AttackTick = pChar->GetAttackTick();
-	if(AttackTick == m_aLastHammerSkinSwapAttackTick[TeeIndex])
+	if(AttackTick <= 0 || AttackTick == m_aLastHammerSkinSwapAttackTick[TeeIndex])
 		return;
 	m_aLastHammerSkinSwapAttackTick[TeeIndex] = AttackTick;
 
-	if(pChar->GetActiveWeapon() != WEAPON_HAMMER || pChar->HammerHitDisabled())
+	vec2 HammerHitPos;
+	float HammerHitRadius;
+	if(!GetPredictedHammerHitbox(pChar, HammerHitPos, HammerHitRadius))
 		return;
 
-	const CNetObj_PlayerInput *pInput = pChar->LatestInput();
-	if(!pInput)
+	int aTargetIds[MAX_CLIENTS];
+	const int NumTargets = FindPredictedHammerHitTargets(pChar, HammerHitPos, HammerHitRadius, aTargetIds, MAX_CLIENTS);
+	if(NumTargets <= 0)
 		return;
-
-	vec2 Dir = normalize(vec2(pInput->m_TargetX, pInput->m_TargetY));
-	if(Dir.x == 0.0f && Dir.y == 0.0f)
-		Dir = vec2(0.0f, -1.0f);
-
-	const float Radius = pChar->GetProximityRadius();
-	const vec2 ProjStartPos = pChar->GetPos() + Dir * Radius * 0.75f;
-
-	CEntity *apEnts[MAX_CLIENTS];
-	const int Num = m_PredictedWorld.FindEntities(ProjStartPos, Radius * 0.5f, apEnts, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
 
 	int TargetId = -1;
 	float BestDistSq = 0.0f;
-	for(int i = 0; i < Num; ++i)
+	for(int i = 0; i < NumTargets; ++i)
 	{
-		CCharacter *pTarget = static_cast<CCharacter *>(apEnts[i]);
-		if(!pTarget || pTarget == pChar)
-			continue;
-		if(!pChar->CanCollide(pTarget->GetCid()))
+		CCharacter *pTarget = m_PredictedWorld.GetCharacterById(aTargetIds[i]);
+		if(!pTarget)
 			continue;
 
-		const float DistSq = length_squared(pTarget->GetPos() - ProjStartPos);
+		const float DistSq = length_squared(pTarget->GetPos() - HammerHitPos);
 		if(TargetId < 0 || DistSq < BestDistSq)
 		{
 			TargetId = pTarget->GetCid();
@@ -3129,24 +3138,25 @@ void CGameClient::HandleRandomEmoteOnHit(CCharacter *pLocalChar, int DummyIndex)
 			continue;
 		if(AttackTick == m_aaLastRandomEmoteAttackTick[DummyIndex][i])
 			continue;
-		if(pAttacker->GetActiveWeapon() != WEAPON_HAMMER || pAttacker->HammerHitDisabled())
-			continue;
-		if(!pAttacker->CanCollide(LocalId))
+		m_aaLastRandomEmoteAttackTick[DummyIndex][i] = AttackTick;
+
+		vec2 HammerHitPos;
+		float HammerHitRadius;
+		if(!GetPredictedHammerHitbox(pAttacker, HammerHitPos, HammerHitRadius))
 			continue;
 
-		vec2 Dir = direction(pAttacker->Core()->m_Angle / 256.0f);
-		if(Dir.x == 0.0f && Dir.y == 0.0f)
-			Dir = vec2(0.0f, -1.0f);
-
-		const float Radius = pAttacker->GetProximityRadius();
-		const vec2 ProjStartPos = pAttacker->GetPos() + Dir * Radius * 0.75f;
-		const float MaxDist = Radius * 0.5f + pLocalChar->GetProximityRadius();
-		if(length_squared(pLocalChar->GetPos() - ProjStartPos) <= MaxDist * MaxDist)
+		int aTargetIds[MAX_CLIENTS];
+		const int NumTargets = FindPredictedHammerHitTargets(pAttacker, HammerHitPos, HammerHitRadius, aTargetIds, MAX_CLIENTS);
+		for(int TargetIndex = 0; TargetIndex < NumTargets; ++TargetIndex)
 		{
-			HammerTriggered = true;
-			m_aaLastRandomEmoteAttackTick[DummyIndex][i] = AttackTick;
-			break;
+			if(aTargetIds[TargetIndex] == LocalId)
+			{
+				HammerTriggered = true;
+				break;
+			}
 		}
+		if(HammerTriggered)
+			break;
 	}
 
 	bool GrenadeTriggered = false;
@@ -4863,7 +4873,7 @@ void CGameClient::UpdateRenderedCharacters()
 				if(g_Config.m_ClAntiPingSmooth)
 					Pos = GetSmoothPos(i);
 
-				// Delta/gamma others should feel immediate: prefer direct fast-input position over smoothing layers.
+				// Fast-input others should feel immediate: prefer direct fast-input position over smoothing layers.
 				if(HasFastInput && EffectiveImmediateFastInputOthers())
 					Pos = GetFastInputPos(i);
 				else if(g_Config.m_TcAntiPingImproved && m_aClients[i].m_ValidAntipingSmooth)
@@ -5009,12 +5019,7 @@ int CGameClient::GetFastInputPredictionAmountMs()
 {
 	if(!g_Config.m_TcFastInput)
 		return 0;
-
-	if(g_Config.m_QmFastInputMode == 0)
-		return std::max(0, g_Config.m_TcFastInputAmount);
-	if(g_Config.m_QmFastInputMode == 1)
-		return std::max(0, (g_Config.m_QmFastInputDeltaInput + 2) / 5);
-	return std::max(0, (BcFastInputGammaUiToEffectiveAmount(g_Config.m_QmFastInputGammaInput) + 2) / 5);
+	return std::max(0, g_Config.m_TcFastInputAmount);
 }
 
 int CGameClient::GetFastInputPredictionTicks()

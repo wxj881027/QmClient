@@ -66,7 +66,8 @@ fn main() {
                 .expect("library name")
                 .to_str()
                 .expect("should have errored earlier");
-            if name.starts_with("lib") {
+            let strip_lib_prefix = matches!(extension, Some("a") | Some("so") | Some("dylib") | Some("framework"));
+            if strip_lib_prefix && name.starts_with("lib") {
                 name = &name[3..];
             }
             println!("cargo:rustc-link-lib={}{}", kind, name);

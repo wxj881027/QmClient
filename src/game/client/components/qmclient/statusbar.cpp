@@ -311,30 +311,42 @@ void CStatusBar::OnRender()
 	Graphics()->DrawRect(m_BarX, m_BarY, m_Width, m_BarHeight, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcStatusBarColor)).WithAlpha(g_Config.m_TcStatusBarAlpha / 100.0f), 0, 0);
 	TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcStatusBarTextColor)).WithAlpha(g_Config.m_TcStatusBarTextAlpha / 100.0f));
 
-	// std::vector<CStatusItem *> m_StatusBarItems = {&m_LocalTime, &m_LocalTime, &m_Space, &m_LocalTime};
+	struct SStatusLayoutItem
+	{
+		const CStatusItem *m_pItem = nullptr;
+		float m_ItemWidth = 0.0f;
+		float m_LabelWidth = 0.0f;
+		bool m_IsSpace = false;
+	};
+
 	int SpaceCount = 0;
 	const int ItemCount = (int)m_StatusBarItems.size();
 	float UsedWidth = 0.0f;
 	float AvailableWidth = m_Width - m_Margin * 2.0f; // 1 extra margin on the sides
+	std::vector<SStatusLayoutItem> vLayoutItems;
+	vLayoutItems.reserve(ItemCount);
 	// Count the number of spaces and determine how much unused space there is
 	for(const CStatusItem *Item : m_StatusBarItems)
 	{
-		if(str_comp(Item->m_aName, "Space") == 0)
+		SStatusLayoutItem &LayoutItem = vLayoutItems.emplace_back();
+		LayoutItem.m_pItem = Item;
+		LayoutItem.m_IsSpace = str_comp(Item->m_aName, "Space") == 0;
+		if(LayoutItem.m_IsSpace)
 			++SpaceCount;
 		else
 		{
-			float ItemWidth = Item->m_GetWidth();
-			if(g_Config.m_TcStatusBarLabels && Item->m_ShowLabel && ItemWidth > 0.0f)
-				ItemWidth += LabelWidth(Item->m_aDisplayName);
-			UsedWidth += ItemWidth;
+			LayoutItem.m_ItemWidth = Item->m_GetWidth();
+			if(g_Config.m_TcStatusBarLabels && Item->m_ShowLabel && LayoutItem.m_ItemWidth > 0.0f)
+				LayoutItem.m_LabelWidth = LabelWidth(Item->m_aDisplayName);
+			UsedWidth += LayoutItem.m_ItemWidth + LayoutItem.m_LabelWidth;
 		}
 	}
 	UsedWidth += m_Margin * (ItemCount + 1);
 	AvailableWidth -= UsedWidth;
 	// AvailableWidth can be negative so might as well not make it even worse
-	float SpaceWidth = std::max((AvailableWidth) / (float)SpaceCount, 0.0f);
+	float SpaceWidth = SpaceCount > 0 ? std::max(AvailableWidth / (float)SpaceCount, 0.0f) : 0.0f;
 
-	float SpaceBetweenItems = std::max(AvailableWidth / (float)(ItemCount - 1), 0.0f);
+	float SpaceBetweenItems = ItemCount > 1 ? std::max(AvailableWidth / (float)(ItemCount - 1), 0.0f) : 0.0f;
 	if(SpaceCount > 0)
 		SpaceBetweenItems = 0;
 
@@ -342,23 +354,23 @@ void CStatusBar::OnRender()
 
 	m_CursorX = m_Margin;
 	// Render items
-	for(const CStatusItem *Item : m_StatusBarItems)
+	for(const SStatusLayoutItem &LayoutItem : vLayoutItems)
 	{
 		m_CursorX += m_Margin;
-		float ItemWidth = Item->m_GetWidth();
+		const CStatusItem *pItem = LayoutItem.m_pItem;
 
-		if(ItemWidth > 0.0f)
+		if(LayoutItem.m_ItemWidth > 0.0f)
 		{
-			if(g_Config.m_TcStatusBarLabels && Item->m_ShowLabel)
+			if(LayoutItem.m_LabelWidth > 0.0f)
 			{
-				LabelRender(Item->m_aDisplayName);
-				m_CursorX += LabelWidth(Item->m_aDisplayName);
+				LabelRender(pItem->m_aDisplayName);
+				m_CursorX += LayoutItem.m_LabelWidth;
 			}
-			Item->m_RenderItem();
+			pItem->m_RenderItem();
 		}
 
-		m_CursorX += ItemWidth;
-		if(str_comp(Item->m_aName, "Space") == 0)
+		m_CursorX += LayoutItem.m_ItemWidth;
+		if(LayoutItem.m_IsSpace)
 			m_CursorX += SpaceWidth;
 
 		m_CursorX += SpaceBetweenItems;

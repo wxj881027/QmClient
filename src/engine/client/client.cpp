@@ -5470,10 +5470,7 @@ void CClient::RequestDDNetInfo()
 	if(g_Config.m_BrIndicateFinished)
 	{
 		char aEscaped[128];
-		const char *pName = PlayerName();
-		if(g_Config.m_QmUnfinishedMapPlayer[0] != '\0')
-			pName = g_Config.m_QmUnfinishedMapPlayer;
-		EscapeUrl(aEscaped, sizeof(aEscaped), pName);
+		EscapeUrl(aEscaped, sizeof(aEscaped), PlayerName());
 		str_append(aUrl, "?name=");
 		str_append(aUrl, aEscaped);
 	}
@@ -5577,32 +5574,7 @@ int CClient::PredictionMargin() const
 	if(!m_ServerCapabilities.m_SyncWeaponInput)
 		return 10;
 
-	int PredictionMargin = g_Config.m_ClPredictionMargin;
-	if(!g_Config.m_QmFastInputAutoMargin)
-		return PredictionMargin;
-
-	int FastInputMargin = 0;
-	if(g_Config.m_TcFastInput)
-	{
-		if(g_Config.m_QmFastInputMode == 0)
-		{
-			FastInputMargin = std::max(0, g_Config.m_TcFastInputAmount);
-		}
-		else if(g_Config.m_QmFastInputMode == 1)
-		{
-			const int DeltaInputAmount = std::max(0, g_Config.m_QmFastInputDeltaInput);
-			// delta input is measured in 0.01 ticks, convert it to milliseconds.
-			FastInputMargin = (DeltaInputAmount + 2) / 5;
-		}
-		else
-		{
-			const int GammaInputAmount = BcFastInputGammaUiToEffectiveAmount(g_Config.m_QmFastInputGammaInput);
-			// gamma input is configured directly in 0.01 ticks.
-			FastInputMargin = (GammaInputAmount + 2) / 5;
-		}
-	}
-
-	const int BaseMargin = std::max(PredictionMargin, FastInputMargin);
+	const int BaseMargin = g_Config.m_ClPredictionMargin;
 	const int64_t Now = time_get();
 	const int LivePredictionMs = std::max(0, (int)((m_PredictedTime.Get(Now) - m_aGameTime[g_Config.m_ClDummy].Get(Now)) * 1000 / (float)time_freq()));
 

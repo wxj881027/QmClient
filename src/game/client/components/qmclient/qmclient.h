@@ -1,10 +1,12 @@
 #ifndef GAME_CLIENT_COMPONENTS_TCLIENT_TCLIENT_H
 #define GAME_CLIENT_COMPONENTS_TCLIENT_TCLIENT_H
 
+#include <base/color.h>
 #include <base/hash.h>
 
 #include <engine/client/enums.h>
 #include <engine/external/regex.h>
+#include <engine/graphics.h>
 #include <engine/shared/console.h>
 #include <engine/shared/http.h>
 #include <engine/shared/json.h>
@@ -144,6 +146,25 @@ class CTClient : public CComponent
 	// Auto Unspec on Unfreeze
 	bool m_aWasInFreezeForUnspec[NUM_DUMMIES] = {false, false};
 	void CheckAutoUnspecOnUnfreeze();
+
+	struct SFreezeWakeupPopup
+	{
+		bool m_Active = false;
+		int m_AnchorClientId = -1;
+		float m_StartTime = 0.0f;
+		float m_Angle = 0.0f;
+		float m_HorizontalSign = 1.0f;
+		ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	};
+	static constexpr int FREEZE_WAKEUP_POPUP_MAX = 4;
+	bool m_aWasInFreezeForWakeupPopup[NUM_DUMMIES] = {false, false};
+	SFreezeWakeupPopup m_aFreezeWakeupPopups[FREEZE_WAKEUP_POPUP_MAX];
+	IGraphics::CTextureHandle m_FreezeWakeupTextTexture;
+	char m_aFreezeWakeupFont[256] = "";
+	void CheckFreezeWakeupPopup();
+	void AddFreezeWakeupPopup(int WokenDummy);
+	void EnsureFreezeWakeupTextTexture();
+	void ClearFreezeWakeupPopups();
 
 	// Auto Switch on Unfreeze (HJ大佬辅助)
 	bool m_aWasInFreezeForSwitch[NUM_DUMMIES] = {false, false};
@@ -325,6 +346,8 @@ public:
 	void OnNewSnapshot() override;
 	void QueueAspectApply();
 	void SetForcedAspect();
+	bool HasFreezeWakeupPopups() const;
+	void RenderFreezeWakeupPopups();
 
 	std::shared_ptr<CHttpRequest> m_pTClientInfoTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pUpdateExeTask = nullptr;
