@@ -142,8 +142,8 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |
-            /var/cache/apt/archives/*.deb
-            /var/lib/apt/lists
+            /var/cache/apt/archives/
+            /var/lib/apt/lists/
           key: apt-linux-${{ hashFiles('.github/workflows/build.yml') }}
 
       - name: Install Linux dependencies
@@ -167,6 +167,7 @@ jobs:
           brew install \
             cmake ninja pkg-config python \
             freetype sdl2 libpng webp libogg opus opusfile sqlite wavpack ffmpeg
+          brew link --overwrite cmake ninja pkg-config python freetype sdl2 libpng webp libogg opus opusfile sqlite wavpack ffmpeg
           python3 -m venv .venv-dmgbuild
           . .venv-dmgbuild/bin/activate
           python -m pip install --upgrade pip
