@@ -931,11 +931,11 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	Middle.HMargin(2.0f, &Middle);
 	Right.HMargin(2.0f, &Right);
 
-	if(DoButtonLineSize_Menu(&s_FastInputModeFast, Localize("Fast input"), g_Config.m_QmFastInputMode == 0, &Left, LineSize, false, 0, IGraphics::CORNER_L, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButtonLineSize_Menu(&s_FastInputModeFast, TCLocalize("Fast input"), g_Config.m_QmFastInputMode == 0, &Left, LineSize, false, 0, IGraphics::CORNER_L, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 		g_Config.m_QmFastInputMode = 0;
-	if(DoButtonLineSize_Menu(&s_FastInputModeDeltaInput, Localize("Delta input"), g_Config.m_QmFastInputMode == 1, &Middle, LineSize, false, 0, IGraphics::CORNER_NONE, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButtonLineSize_Menu(&s_FastInputModeDeltaInput, TCLocalize("Delta input"), g_Config.m_QmFastInputMode == 1, &Middle, LineSize, false, 0, IGraphics::CORNER_NONE, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 		g_Config.m_QmFastInputMode = 1;
-	if(DoButtonLineSize_Menu(&s_FastInputModeGammaInput, Localize("Gamma input"), g_Config.m_QmFastInputMode == 2, &Right, LineSize, false, 0, IGraphics::CORNER_R, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButtonLineSize_Menu(&s_FastInputModeGammaInput, TCLocalize("Gamma input"), g_Config.m_QmFastInputMode == 2, &Right, LineSize, false, 0, IGraphics::CORNER_R, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 		g_Config.m_QmFastInputMode = 2;
 
 	if(g_Config.m_QmFastInputMode != OldMode)
@@ -992,16 +992,16 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 	if(g_Config.m_TcFastInput)
 	{
 		if(g_Config.m_QmFastInputMode == 0)
-			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, Localize("Fast input others"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
+			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, TCLocalize("Fast input others"), &g_Config.m_TcFastInputOthers, &Column, LineSize);
 		else if(g_Config.m_QmFastInputMode == 1)
-			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDeltaInputOthers, Localize("Delta input others"), &g_Config.m_QmDeltaInputOthers, &Column, LineSize);
+			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDeltaInputOthers, TCLocalize("Delta input others"), &g_Config.m_QmDeltaInputOthers, &Column, LineSize);
 		else
-			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGammaInputOthers, Localize("Gamma input others"), &g_Config.m_QmGammaInputOthers, &Column, LineSize);
+			DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGammaInputOthers, TCLocalize("Gamma input others"), &g_Config.m_QmGammaInputOthers, &Column, LineSize);
 	}
 	else
 		Column.HSplitTop(LineSize, nullptr, &Column);
 
-	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFastInputAutoMargin, Localize("Auto margin"), &g_Config.m_QmFastInputAutoMargin, &Column, LineSize);
+	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFastInputAutoMargin, TCLocalize("Auto margin"), &g_Config.m_QmFastInputAutoMargin, &Column, LineSize);
 	DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSubTickAiming, TCLocalize("Sub-Tick aiming"), &g_Config.m_ClSubTickAiming, &Column, LineSize);
 	// A little extra spacing because these are multi line
 	Column.HSplitTop(MarginSmall, nullptr, &Column);

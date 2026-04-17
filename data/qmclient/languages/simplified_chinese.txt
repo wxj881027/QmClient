@@ -74,8 +74,14 @@ Freeze stars
 Color frozen tee skins
 == 冻结不再是灰黑色而是自定义的颜色（无自定义默认灰黑色）
 
+Use colored skins for frozen tees
+== 冻结 Tee 使用彩色皮肤
+
 Render all custom colored feet as white feet skin
 == 将所有自定义脚部颜色渲染为白色
+
+Smaller tees
+== 小尺寸 Tee
 
 Jelly Tee
 == Q弹 Tee
@@ -946,7 +952,7 @@ Enable Deleting
 == 启用删除
 
 Fast Input (reduced visual delay)
-== 快速输入（减少视觉延迟）
+== 快速输入（降低视觉延迟）
 
 Fast Input others
 == 快速输入其他玩家
@@ -1022,3 +1028,36 @@ Are you sure you want to delete this asset?
 
 Download this asset?
 == 确定要下载此资源吗？
+
+Show moving tiles in entities
+== 在实体层显示移动方块
+
+Smaller tees
+== 小尺寸 Tee
+
+Fast input
+== 快速输入
+
+Auto margin
+== 自动预测值
+
+Sub-Tick aiming
+== Sub-Tick 瞄准
+
+Execute before connecting
+== 连接前执行
+
+Execute on connect
+== 连接时执行
+
+Fast input (reduce visual latency)
+== 快速输入（降低视觉延迟）
+
+Mode
+== 模式
+
+Amount
+== 预测量
+
+Gamma amount
+== Gamma 值

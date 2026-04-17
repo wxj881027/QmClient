@@ -737,7 +737,7 @@ Spree
 == 连杀
 
 Max CSVs
-== 最大 csv 文件数
+== 最大 CSV 数
 
 %.2f KiB
 == %.2f KiB
@@ -758,7 +758,7 @@ Deactivate
 == 停用
 
 Welcome to DDNet
-== 欢迎来到 DDNet
+== 欢迎加入 DDNet
 
 Activate
 == 启用
@@ -932,7 +932,7 @@ Client message
 == 客户端消息
 
 Show others (own team only)
-== 显示其他玩家（仅同队伍）
+== 仅显示同队伍
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == 使用 K键 自杀以重新开始，使用 Q键 可以暂停以旁观他人或查看地图。在设置中可以查看其他按键绑定。
@@ -4726,7 +4726,7 @@ Part reset to main asset.
 == 部件已重置为主材质。
 
 tile
-== 图块
+== 瓦片
 
 %s from %s
 == %s（来自 %s）
