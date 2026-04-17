@@ -36,6 +36,7 @@ jobs:
     env:
       BUILD_TYPE: ${{ github.event.inputs.build_type || 'Release' }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SCCACHE_GHA_ENABLED: "true"
     strategy:
       fail-fast: false
       matrix:
@@ -137,14 +138,6 @@ jobs:
       - name: Install Ninja (Windows)
         if: runner.os == 'Windows'
         run: choco install ninja -y
-
-      - name: Cache apt dependencies
-        if: runner.os == 'Linux'
-        uses: actions/cache@v5
-        with:
-          path: |
-            /var/cache/apt/archives/
-          key: apt-linux-${{ hashFiles('.github/workflows/build.yml') }}
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -380,6 +373,7 @@ jobs:
       ANDROID_BUILD_DIR: build-android-release
       ANDROID_NDK_VERSION: "26.1.10909125"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SCCACHE_GHA_ENABLED: "true"
       # Debug keystore credentials - safe to commit as these are standard Android debug keys
       # For production releases, use GitHub Secrets for keystore credentials
       TW_KEY_NAME: /home/runner/.android/debug.keystore
@@ -442,13 +436,6 @@ jobs:
             ~/.android/sdk/platforms
             ~/.android/sdk/build-tools
           key: android-sdk-ndk-${{ env.ANDROID_NDK_VERSION }}
-
-      - name: Cache apt dependencies (Android)
-        uses: actions/cache@v5
-        with:
-          path: |
-            /var/cache/apt/archives/
-          key: apt-android-${{ hashFiles('.github/workflows/build.yml') }}
 
       - name: Cache Rust Android targets
         uses: actions/cache@v5
