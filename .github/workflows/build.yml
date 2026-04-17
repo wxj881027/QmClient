@@ -299,7 +299,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          if (-not (Test-Path dist)) { New-Item -ItemType Directory -Path dist -Force | Out-Null }
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
           Write-Host "Searching for *.${{ matrix.package_ext }} in build/..."
           $pkg = Get-ChildItem -Path build -Recurse -File -Filter "QmClient*.${{ matrix.package_ext }}" |
             Sort-Object LastWriteTime -Descending |
@@ -314,8 +314,9 @@ jobs:
           if (-not $pkg) {
             throw "No package with extension .${{ matrix.package_ext }} found under build/"
           }
-          Write-Host "Found: $($pkg.FullName) -> dist/${{ matrix.output_name }}"
-          Copy-Item -Path $pkg.FullName -Destination "dist/${{ matrix.output_name }}"
+          $destPath = Join-Path $PWD "dist\${{ matrix.output_name }}"
+          Write-Host "Found: $($pkg.FullName) -> $destPath"
+          Copy-Item -LiteralPath $pkg.FullName -Destination $destPath
           Get-ChildItem -Path dist
 
       - name: Upload packaged artifact
