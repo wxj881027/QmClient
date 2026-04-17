@@ -54,6 +54,16 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-${{ runner.arch }}
+          max-size: 500M
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja -y
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -86,6 +96,8 @@ jobs:
         run: >
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DDOWNLOAD_GTEST=ON
 
       - name: Configure (macOS)
@@ -94,6 +106,8 @@ jobs:
           SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DDOWNLOAD_GTEST=ON \
             -DCMAKE_OSX_SYSROOT="${SDKROOT}"
 
@@ -101,8 +115,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: >
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DPREFER_BUNDLED_LIBS=ON
           -DDOWNLOAD_GTEST=ON
 
@@ -199,13 +215,30 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Cache cargo-ndk
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-ndk
+          key: cargo-ndk-${{ runner.os }}
+
+      - name: Cache Android NDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/sdk/ndk
+            ~/.android/sdk/platforms
+            ~/.android/sdk/build-tools
+          key: android-sdk-ndk-26.1.10909125
+
       - name: Install host dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             cmake ninja-build pkg-config curl python3 python3-pip \
-            glslang-tools spirv-tools
-          cargo install cargo-ndk
+            glslang-tools spirv-tools ccache
+          if [ ! -f ~/.cargo/bin/cargo-ndk ]; then
+            cargo install cargo-ndk
+          fi
           rustup target add armv7-linux-androideabi
           rustup target add i686-linux-android
           rustup target add aarch64-linux-android
