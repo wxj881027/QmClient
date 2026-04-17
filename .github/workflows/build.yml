@@ -97,24 +97,14 @@ jobs:
             -DDOWNLOAD_GTEST=ON \
             -DCMAKE_OSX_SYSROOT="${SDKROOT}"
 
-      - name: Prepare WebP library (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Expand-Archive -Path "ddnet-libs/libwebp.zip" -DestinationPath "ddnet-libs/libwebp-temp" -Force
-          New-Item -ItemType Directory -Path "ddnet-libs/webp/include/webp" -Force
-          New-Item -ItemType Directory -Path "ddnet-libs/webp/windows/lib64" -Force
-          Copy-Item -Path "ddnet-libs/libwebp-temp/libwebp-1.6.0-windows-x64/include/webp/*" -Destination "ddnet-libs/webp/include/webp/" -Force
-          Copy-Item -Path "ddnet-libs/libwebp-temp/libwebp-1.6.0-windows-x64/lib/*" -Destination "ddnet-libs/webp/windows/lib64/" -Force
-          Remove-Item -Recurse -Force "ddnet-libs/libwebp-temp"
-
       - name: Configure (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: >
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-          -DDOWNLOAD_GTEST=ON
+          -DCMAKE_BUILD_TYPE=Release
           -DPREFER_BUNDLED_LIBS=ON
+          -DDOWNLOAD_GTEST=ON
 
       - name: Build client (Linux/macOS)
         if: runner.os != 'Windows'
@@ -233,11 +223,19 @@ jobs:
             "ndk;26.1.10909125"
           yes | sdkmanager --licenses
 
+      - name: Cache WebP for Android
+        id: cache-webp
+        uses: actions/cache@v4
+        with:
+          path: ddnet-libs/webp/android
+          key: webp-android-v1.6.0-${{ hashFiles('.github/workflows/build.yml') }}
+
       - name: Build WebP for Android
+        if: steps.cache-webp.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth 1 --branch v1.4.0 https://chromium.googlesource.com/webm/libwebp
+          git clone --depth 1 --branch v1.6.0 https://chromium.googlesource.com/webm/libwebp
           cd libwebp
           mkdir build-android
           

@@ -71,9 +71,11 @@ endif()
 
 set(WebP_COPY_FILES)
 if(WebP_BUNDLED AND TARGET_OS STREQUAL "windows")
-  list(APPEND WebP_COPY_FILES
-    "${EXTRA_WebP_LIBDIR}/libwebp.dll"
-    "${EXTRA_WebP_LIBDIR}/libwebpdemux.dll"
-    "${EXTRA_WebP_LIBDIR}/libwebpmux.dll"
-  )
+  if(EXISTS "${EXTRA_WebP_LIBDIR}/libwebp.dll")
+    list(APPEND WebP_COPY_FILES
+      "${EXTRA_WebP_LIBDIR}/libwebp.dll"
+      "${EXTRA_WebP_LIBDIR}/libwebpdemux.dll"
+      "${EXTRA_WebP_LIBDIR}/libwebpmux.dll"
+    )
+  endif()
 endif()
