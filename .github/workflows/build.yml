@@ -91,7 +91,7 @@ jobs:
           TAG_VERSION="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG_VERSION#v}"
           echo "Updating TCLIENT_VERSION to $VERSION"
-          sed -i 's/^#define TCLIENT_VERSION ".*"/#define TCLIENT_VERSION "'"$VERSION"'"/' src/game/version.h
+          sed -i.bak 's/^#define TCLIENT_VERSION ".*"/#define TCLIENT_VERSION "'"$VERSION"'"/' src/game/version.h && rm -f src/game/version.h.bak
           echo "Updated version.h:"
           grep "TCLIENT_VERSION" src/game/version.h
 
@@ -400,7 +400,7 @@ jobs:
           TAG_VERSION="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG_VERSION#v}"
           echo "Updating TCLIENT_VERSION to $VERSION"
-          sed -i 's/^#define TCLIENT_VERSION ".*"/#define TCLIENT_VERSION "'"$VERSION"'"/' src/game/version.h
+          sed -i.bak 's/^#define TCLIENT_VERSION ".*"/#define TCLIENT_VERSION "'"$VERSION"'"/' src/game/version.h && rm -f src/game/version.h.bak
           echo "Updated version.h:"
           grep "TCLIENT_VERSION" src/game/version.h
 
