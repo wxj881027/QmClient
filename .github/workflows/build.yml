@@ -103,7 +103,6 @@ jobs:
         with:
           path: |
             build/_deps
-            build/CMakeCache.txt
           key: cmake-${{ runner.os }}-${{ runner.arch }}-${{ env.BUILD_TYPE }}-${{ hashFiles('CMakeLists.txt', 'cmake/**/*.cmake') }}
           restore-keys: cmake-${{ runner.os }}-${{ runner.arch }}-${{ env.BUILD_TYPE }}-
 
