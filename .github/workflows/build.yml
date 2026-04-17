@@ -2,12 +2,9 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      [ main, master ]
     tags:
       - "v*"
       - "V*"
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -37,22 +34,62 @@ jobs:
             output_name: QmClient-windows.zip
             artifact_name: packaged-windows
           - name: macOS
-            os: macos-latest
+            os: macos-14
             package_ext: dmg
             output_name: QmClient-macOS.dmg
             artifact_name: packaged-macos
 
     steps:
+      - name: Validate tag version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          if [[ ! "$TAG_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag format: $TAG_VERSION"
+            echo "Expected format: v1.2.3"
+            exit 1
+          fi
+          echo "Tag version: $TAG_VERSION"
+
+      - name: Free disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h
+
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 1
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+
+      - name: Cache CMake build
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/_deps
+            build/CMakeCache.txt
+          key: cmake-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**/*.cmake') }}
+          restore-keys: cmake-${{ runner.os }}-
+
+      - name: Cache Homebrew packages
+        if: runner.os == 'macOS'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/Homebrew
+            /opt/homebrew/Cellar
+          key: homebrew-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
+          restore-keys: homebrew-${{ runner.os }}-
 
       - name: Setup ccache (Linux/macOS)
         if: runner.os != 'Windows'
@@ -158,12 +195,12 @@ jobs:
 
       - name: Build client (Linux/macOS)
         if: runner.os != 'Windows'
-        run: cmake --build build --target game-client --parallel
+        run: cmake --build build --target game-client --parallel $(nproc)
 
       - name: Build client (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: cmake --build build --config Release --target game-client --parallel
+        run: cmake --build build --config Release --target game-client --parallel $env:NUMBER_OF_PROCESSORS
 
       - name: Run tests (Linux/macOS)
         if: runner.os != 'Windows'
@@ -219,6 +256,29 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Verify build artifact
+        if: runner.os != 'Windows'
+        run: |
+          if [ ! -f "dist/${{ matrix.output_name }}" ]; then
+            echo "Build artifact not found!"
+            exit 1
+          fi
+          FILE_SIZE=$(stat -c%s "dist/${{ matrix.output_name }}" 2>/dev/null || stat -f%z "dist/${{ matrix.output_name }}")
+          if [ "$FILE_SIZE" -lt 1000000 ]; then
+            echo "Build artifact too small: $FILE_SIZE bytes"
+            exit 1
+          fi
+          echo "Build artifact verified: $FILE_SIZE bytes"
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platform**: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **OS**: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Artifact**: ${{ matrix.output_name }}" >> $GITHUB_STEP_SUMMARY
+
   build_android:
     name: Android
     runs-on: ubuntu-22.04
@@ -231,10 +291,19 @@ jobs:
       TW_KEY_PW: android
       TW_KEY_ALIAS: androiddebugkey
     steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h
+
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 1
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
@@ -275,8 +344,12 @@ jobs:
       - name: Cache Rust Android targets
         uses: actions/cache@v4
         with:
-          path: ~/.rustup/toolchains/*/lib/rustlib
-          key: rust-android-targets-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.rustup/toolchains
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: rust-android-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: rust-android-${{ runner.os }}-
 
       - name: Install host dependencies
         run: |
@@ -309,7 +382,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ddnet-libs/webp/android
-          key: webp-android-v1.6.0-${{ hashFiles('.github/workflows/build.yml') }}
+          key: webp-android-v1.6.0-${{ hashFiles('.github/workflows/build.yml', 'ddnet-libs/webp/**') }}
+          restore-keys: webp-android-v1.6.0-
 
       - name: Build WebP for Android (Parallel)
         if: steps.cache-webp.outputs.cache-hit != 'true'
@@ -427,6 +501,29 @@ jobs:
             dist/QmClient-android.aab
           if-no-files-found: error
           retention-days: 14
+
+      - name: Verify build artifacts
+        run: |
+          for file in dist/QmClient-android.apk dist/QmClient-android.aab; do
+            if [ ! -f "$file" ]; then
+              echo "Build artifact not found: $file"
+              exit 1
+            fi
+            FILE_SIZE=$(stat -c%s "$file")
+            if [ "$FILE_SIZE" -lt 1000000 ]; then
+              echo "Build artifact too small: $file ($FILE_SIZE bytes)"
+              exit 1
+            fi
+            echo "Verified: $file ($FILE_SIZE bytes)"
+          done
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platform**: Android" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Artifacts**: QmClient-android.apk, QmClient-android.aab" >> $GITHUB_STEP_SUMMARY
 
   release-desktop:
     name: Publish Desktop Release
