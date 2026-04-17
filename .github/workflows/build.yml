@@ -110,15 +110,13 @@ jobs:
         if: runner.os == 'macOS'
         uses: actions/cache@v5
         with:
-          path: |
-            ~/Library/Caches/Homebrew
-            /opt/homebrew/Cellar
+          path: ~/Library/Caches/Homebrew
           key: homebrew-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
           restore-keys: homebrew-${{ runner.os }}-
 
-      - name: Link ccache (macOS)
+      - name: Reinstall ccache (macOS)
         if: runner.os == 'macOS'
-        run: brew link ccache
+        run: brew reinstall ccache
 
       - name: Setup ccache (Linux/macOS)
         if: runner.os != 'Windows'
