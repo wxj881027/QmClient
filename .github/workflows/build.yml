@@ -6,6 +6,20 @@ on:
       - "v*"
       - "V*"
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build type"
+        required: true
+        default: "Release"
+        type: choice
+        options:
+          - Release
+          - Debug
+      skip_tests:
+        description: "Skip tests"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -19,6 +33,8 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
+    env:
+      BUILD_TYPE: ${{ github.event.inputs.build_type || 'Release' }}
     strategy:
       fail-fast: false
       matrix:
@@ -78,8 +94,8 @@ jobs:
           path: |
             build/_deps
             build/CMakeCache.txt
-          key: cmake-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**/*.cmake') }}
-          restore-keys: cmake-${{ runner.os }}-
+          key: cmake-${{ runner.os }}-${{ runner.arch }}-${{ env.BUILD_TYPE }}-${{ hashFiles('CMakeLists.txt', 'cmake/**/*.cmake') }}
+          restore-keys: cmake-${{ runner.os }}-${{ runner.arch }}-${{ env.BUILD_TYPE }}-
 
       - name: Cache Homebrew packages
         if: runner.os == 'macOS'
@@ -150,22 +166,19 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           WEBP_LIBDIR=$(brew --prefix webp)/lib
-          mkdir -p ddnet-libs/webp/mac/lib64
-          cp "${WEBP_LIBDIR}/libwebp.7.dylib" ddnet-libs/webp/mac/lib64/ 2>/dev/null || true
-          cp "${WEBP_LIBDIR}/libwebpdemux.2.dylib" ddnet-libs/webp/mac/lib64/ 2>/dev/null || true
-          cp "${WEBP_LIBDIR}/libwebpmux.3.dylib" ddnet-libs/webp/mac/lib64/ 2>/dev/null || true
-          # Also copy to libarm64 for Apple Silicon
-          mkdir -p ddnet-libs/webp/mac/libarm64
-          cp "${WEBP_LIBDIR}/libwebp.7.dylib" ddnet-libs/webp/mac/libarm64/ 2>/dev/null || true
-          cp "${WEBP_LIBDIR}/libwebpdemux.2.dylib" ddnet-libs/webp/mac/libarm64/ 2>/dev/null || true
-          cp "${WEBP_LIBDIR}/libwebpmux.3.dylib" ddnet-libs/webp/mac/libarm64/ 2>/dev/null || true
+          for DIR in lib64 libarm64; do
+            mkdir -p "ddnet-libs/webp/mac/${DIR}"
+            cp "${WEBP_LIBDIR}/libwebp.7.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
+            cp "${WEBP_LIBDIR}/libwebpdemux.2.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
+            cp "${WEBP_LIBDIR}/libwebpmux.3.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
+          done
           ls -la ddnet-libs/webp/mac/lib64/
 
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         run: >
           cmake -S . -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DDOWNLOAD_GTEST=ON
@@ -175,7 +188,7 @@ jobs:
         run: |
           SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
           cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DDOWNLOAD_GTEST=ON \
@@ -186,7 +199,7 @@ jobs:
         shell: pwsh
         run: >
           cmake -S . -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DPREFER_BUNDLED_LIBS=ON
@@ -200,16 +213,16 @@ jobs:
       - name: Build client (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: cmake --build build --config Release --target game-client --parallel $env:NUMBER_OF_PROCESSORS
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --target game-client --parallel $env:NUMBER_OF_PROCESSORS
 
       - name: Run tests (Linux/macOS)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && github.event.inputs.skip_tests != 'true'
         run: cmake --build build --target run_tests --parallel
 
       - name: Run tests (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && github.event.inputs.skip_tests != 'true'
         shell: pwsh
-        run: cmake --build build --config Release --target run_tests --parallel
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --target run_tests --parallel
 
       - name: Package (Linux/macOS)
         if: runner.os != 'Windows'
@@ -218,7 +231,7 @@ jobs:
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: cmake --build build --config Release --target package_default --parallel
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --target package_default --parallel
 
       - name: Collect package (Linux/macOS)
         if: runner.os != 'Windows'
@@ -237,6 +250,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Path dist -Force | Out-Null
           $pkg = Get-ChildItem -Path build -Recurse -File -Filter "*.${{ matrix.package_ext }}" |
             Where-Object { $_.Name -notmatch "-src\\." } |
@@ -270,14 +284,34 @@ jobs:
           fi
           echo "Build artifact verified: $FILE_SIZE bytes"
 
+      - name: Verify build artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $file = "dist/${{ matrix.output_name }}"
+          if (-not (Test-Path $file)) {
+            throw "Build artifact not found!"
+          }
+          $size = (Get-Item $file).Length
+          if ($size -lt 1000000) {
+            throw "Build artifact too small: $size bytes"
+          }
+          Write-Host "Build artifact verified: $size bytes"
+
       - name: Build summary
         if: always()
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Platform**: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **OS**: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Type**: ${{ env.BUILD_TYPE }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Artifact**: ${{ matrix.output_name }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Show ccache statistics (Linux/macOS)
+        if: always() && runner.os != 'Windows'
+        run: ccache --show-stats || true
 
   build_android:
     name: Android
@@ -287,6 +321,9 @@ jobs:
       ANDROID_APP_NAME: QmClient
       ANDROID_PACKAGE_NAME: org.ddnet.client
       ANDROID_BUILD_DIR: build-android-release
+      ANDROID_NDK_VERSION: "26.1.10909125"
+      # Debug keystore credentials - safe to commit as these are standard Android debug keys
+      # For production releases, use GitHub Secrets for keystore credentials
       TW_KEY_NAME: /home/runner/.android/debug.keystore
       TW_KEY_PW: android
       TW_KEY_ALIAS: androiddebugkey
@@ -315,6 +352,12 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Setup ccache (Android)
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: android-${{ runner.os }}
+          max-size: 500M
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -331,7 +374,7 @@ jobs:
             ~/.android/sdk/ndk
             ~/.android/sdk/platforms
             ~/.android/sdk/build-tools
-          key: android-sdk-ndk-26.1.10909125
+          key: android-sdk-ndk-${{ env.ANDROID_NDK_VERSION }}
 
       - name: Cache apt dependencies (Android)
         uses: actions/cache@v4
@@ -374,7 +417,7 @@ jobs:
             "platform-tools" \
             "platforms;android-34" \
             "build-tools;34.0.0" \
-            "ndk;26.1.10909125"
+            "ndk;${{ env.ANDROID_NDK_VERSION }}"
           yes | sdkmanager --licenses
 
       - name: Cache WebP for Android
@@ -393,7 +436,7 @@ jobs:
           git clone --depth 1 --branch v1.6.0 https://chromium.googlesource.com/webm/libwebp
           cd libwebp
           
-          ANDROID_NDK_HOME="$ANDROID_HOME/ndk/26.1.10909125"
+          ANDROID_NDK_HOME="$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}"
           
           # Build all ABIs in parallel using background jobs
           build_abi() {
@@ -524,6 +567,10 @@ jobs:
           echo "- **Platform**: Android" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Artifacts**: QmClient-android.apk, QmClient-android.aab" >> $GITHUB_STEP_SUMMARY
+
+      - name: Show ccache statistics (Android)
+        if: always()
+        run: ccache --show-stats || true
 
   release-desktop:
     name: Publish Desktop Release
