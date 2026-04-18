@@ -757,21 +757,12 @@ public:
 	void ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld);
 	bool GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const CNetObj_PlayerInput *pDummyInputData, const class CCharacter *pDummyChar, int LocalTee, int DummyTee) const;
 
-	enum EDummyControlReleaseFlags
-	{
-		DUMMY_CONTROL_RELEASE_DIRECTION = 1 << 0,
-		DUMMY_CONTROL_RELEASE_JUMP = 1 << 1,
-		DUMMY_CONTROL_RELEASE_FIRE = 1 << 2,
-		DUMMY_CONTROL_RELEASE_HOOK = 1 << 3,
-	};
-
 	int m_aNextChangeInfo[NUM_DUMMIES];
 
 	// DDRace
 
 	int m_aLocalIds[NUM_DUMMIES];
 	CNetObj_PlayerInput m_DummyInput;
-	int m_DummyControlReleaseFlags{};
 	CNetObj_PlayerInput m_HammerInput;
 	unsigned int m_DummyFire;
 	bool m_ReceivedDDNetPlayer;

@@ -93,6 +93,13 @@ struct SPlayerStats
 	}
 };
 
+struct SQmClientServerDistribution
+{
+	std::string m_ServerAddress;
+	int m_UserCount = 0;
+	int m_DummyCount = 0;
+};
+
 class CTClient : public CComponent
 {
 	std::deque<vec2> m_aAirRescuePositions[NUM_DUMMIES];
@@ -293,6 +300,9 @@ class CTClient : public CComponent
 	int64_t m_QmClientMarkerStartedAt = 0;
 	int64_t m_QmClientMarkerLastSeenAt = 0;
 	int64_t m_QmClientMarkerLastFlushTick = 0;
+	std::vector<SQmClientServerDistribution> m_vQmClientServerDistribution;
+	int m_QmClientOnlineUserCount = 0;
+	int m_QmClientOnlineDummyCount = 0;
 	bool m_QmClientShutdownReported = false;
 	bool m_QmClientAwaitingRecoveryStop = false;
 	bool m_QmClientStartupSent = false;
@@ -306,6 +316,7 @@ class CTClient : public CComponent
 	void ResetQmClientRecognitionTasks();
 	bool EnsureQmClientMachineHash();
 	bool BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t BufSize, const char *pQuery = nullptr) const;
+	void ClearQmClientServerDistribution();
 	void InitQmClientLifecycle();
 	void UpdateQmClientLifecycleAndServerTime();
 	void SendQmClientLifecyclePing(const char *pEvent, std::shared_ptr<CHttpRequest> &pTaskSlot);
@@ -393,6 +404,9 @@ public:
 	int64_t QmServerSessionStartTime() const { return m_QmClientServerSessionStart; }
 	bool HasQmServerPlaytime() const { return m_QmClientServerPlaytimeSeconds >= 0; }
 	int64_t QmServerPlaytimeSeconds() const { return m_QmClientServerPlaytimeSeconds; }
+	const std::vector<SQmClientServerDistribution> &QmClientServerDistribution() const { return m_vQmClientServerDistribution; }
+	int QmClientOnlineUserCount() const { return m_QmClientOnlineUserCount; }
+	int QmClientOnlineDummyCount() const { return m_QmClientOnlineDummyCount; }
 	int QmDdnetTotalFinishes() const { return m_QmDdnetTotalFinishes; }
 	const char *QmDdnetFavoritePartner() const { return m_aQmDdnetFavoritePartner; }
 	bool IsGoresMapProgressEnabled() const;

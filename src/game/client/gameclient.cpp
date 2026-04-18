@@ -109,35 +109,11 @@ int FastInputPredictionTicks(float OffsetTicks)
 	return (int)std::ceil(OffsetTicks);
 }
 
-void ApplyFastInputOffset(float OffsetTicks, int &Tick, float &Intra)
-{
-	if(OffsetTicks <= 0.0f)
-		return;
-
-	const int WholeTicks = (int)OffsetTicks;
-	const float OffsetIntra = OffsetTicks - WholeTicks;
-
-	const float CombinedIntra = Intra + OffsetIntra;
-	const int CarryOverTicks = (int)CombinedIntra;
-
-	Tick += WholeTicks + CarryOverTicks;
-	Intra = CombinedIntra - CarryOverTicks;
-}
-
 bool EffectiveFastInputOthers()
 {
 	return g_Config.m_TcFastInputOthers != 0;
 }
 
-bool EffectiveAnyFastInputOthers()
-{
-	return EffectiveFastInputOthers();
-}
-
-bool EffectiveImmediateFastInputOthers()
-{
-	return EffectiveFastInputOthers();
-}
 } // namespace
 
 const char *CGameClient::Version() const { return GAME_VERSION; }
@@ -640,7 +616,6 @@ void CGameClient::OnDummySwap()
 	}
 	const int PrevDummyFire = m_DummyInput.m_Fire;
 	m_DummyInput = m_Controls.m_aInputData[!g_Config.m_ClDummy];
-	m_DummyControlReleaseFlags = 0;
 	m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire = PrevDummyFire;
 	m_IsDummySwapping = 1;
 }
@@ -718,8 +693,7 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 		if(g_Config.m_ClDummyControl)
 		{
 			const CNetObj_PlayerInput BaseDummyInput = pDummyInputData ? *pDummyInputData : CNetObj_PlayerInput{};
-			if(g_Config.m_ClDummyLeft || g_Config.m_ClDummyRight)
-				DummyFastInput.m_Direction = BaseDummyInput.m_Direction;
+			DummyFastInput.m_Direction = BaseDummyInput.m_Direction;
 			DummyFastInput.m_Jump = BaseDummyInput.m_Jump;
 			DummyFastInput.m_Fire = BaseDummyInput.m_Fire;
 			DummyFastInput.m_Hook = BaseDummyInput.m_Hook;
@@ -731,10 +705,6 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 	{
 		const CNetObj_PlayerInput BaseDummyInput = pDummyInputData ? *pDummyInputData : CNetObj_PlayerInput{};
 		DummyFastInput = BaseDummyInput;
-		if(g_Config.m_ClDummyLeft || g_Config.m_ClDummyRight)
-			DummyFastInput.m_Direction = BaseDummyInput.m_Direction;
-		else
-			DummyFastInput.m_Direction = m_Controls.m_aFastInput[DummyTee].m_Direction;
 		DummyFastInput.m_PlayerFlags = m_Controls.m_aFastInput[DummyTee].m_PlayerFlags;
 		DummyFastInput.m_TargetX = m_Controls.m_aFastInput[DummyTee].m_TargetX;
 		DummyFastInput.m_TargetY = m_Controls.m_aFastInput[DummyTee].m_TargetY;
@@ -854,7 +824,6 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aNextChangeInfo), std::end(m_aNextChangeInfo), -1);
 	std::fill(std::begin(m_aLocalIds), std::end(m_aLocalIds), -1);
 	m_DummyInput = {};
-	m_DummyControlReleaseFlags = 0;
 	m_HammerInput = {};
 	m_DummyFire = 0;
 	m_ReceivedDDNetPlayer = false;
@@ -3283,7 +3252,7 @@ void CGameClient::OnPredict()
 	// prediction actually happens here
 
 	const int FastInputTicks = GetFastInputPredictionTicks();
-	const bool FastInputOthers = EffectiveAnyFastInputOthers();
+	const bool FastInputOthers = EffectiveFastInputOthers();
 
 	int FinalTickRegular = Client()->PredGameTick(g_Config.m_ClDummy); // The vanilla final tick disregarding fast input
 	int FinalTickSelf = FinalTickRegular + FastInputTicks; // the final tick for just our local tee
@@ -4806,10 +4775,6 @@ void CGameClient::UpdateSpectatorCursor()
 
 void CGameClient::UpdateRenderedCharacters()
 {
-	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
-	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
-	const bool HasFastInput = FastInputTicks > 0;
-	const bool FastInputOthers = EffectiveAnyFastInputOthers();
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(!m_Snap.m_aCharacters[i].m_Active)
@@ -4844,12 +4809,12 @@ void CGameClient::UpdateRenderedCharacters()
 
 			if(IsPracticeParticipant)
 			{
-				if(HasFastInput && (i == m_Snap.m_LocalClientId || FastInputOthers))
+				if(g_Config.m_TcFastInput && (i == m_Snap.m_LocalClientId || g_Config.m_TcFastInputOthers))
 					Pos = GetFastInputPos(i);
 			}
 			else if(g_Config.m_TcRemoveAnti)
 				Pos = GetFreezePos(i);
-			else if(HasFastInput && (i == m_Snap.m_LocalClientId || (PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy])))
+			else if(g_Config.m_TcFastInput && (i == m_Snap.m_LocalClientId || (PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy])))
 			{
 				Pos = GetFastInputPos(i);
 			}
@@ -4873,15 +4838,12 @@ void CGameClient::UpdateRenderedCharacters()
 				if(g_Config.m_ClAntiPingSmooth)
 					Pos = GetSmoothPos(i);
 
-				// Fast-input others should feel immediate: prefer direct fast-input position over smoothing layers.
-				if(HasFastInput && EffectiveImmediateFastInputOthers())
-					Pos = GetFastInputPos(i);
-				else if(g_Config.m_TcAntiPingImproved && m_aClients[i].m_ValidAntipingSmooth)
+				if(g_Config.m_TcAntiPingImproved && m_aClients[i].m_ValidAntipingSmooth)
 					Pos = mix(m_aClients[i].m_PrevImprovedPredPos, m_aClients[i].m_ImprovedPredPos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
 
 				if(g_Config.m_TcRemoveAnti && m_pClient->m_IsLocalFrozen)
 					Pos = GetFreezePos(i);
-				else if(HasFastInput && FastInputOthers && !g_Config.m_TcAntiPingImproved)
+				else if(g_Config.m_TcFastInput && g_Config.m_TcFastInputOthers && !g_Config.m_TcAntiPingImproved)
 					Pos = GetFastInputPos(i);
 
 				if(g_Config.m_TcShowOthersGhosts && g_Config.m_TcSwapGhosts && !(m_aClients[i].m_FreezeEnd > 0 && g_Config.m_TcHideFrozenGhosts))
@@ -4983,13 +4945,9 @@ void CGameClient::DetectStrongHook()
 
 vec2 CGameClient::GetSmoothPos(int ClientId)
 {
-	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
-	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
-	if(ClientId != m_Snap.m_LocalClientId && FastInputTicks > 0 && EffectiveImmediateFastInputOthers())
-		return GetFastInputPos(ClientId);
+	const int FastInputTicks = g_Config.m_TcFastInput ? (g_Config.m_TcFastInputAmount + 19) / 20 : 0;
 	vec2 Pos = mix(m_aClients[ClientId].m_PrevPredicted.m_Pos, m_aClients[ClientId].m_Predicted.m_Pos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
 	int64_t Now = time_get();
-	const bool FastInputOthers = EffectiveAnyFastInputOthers();
 	for(int i = 0; i < 2; i++)
 	{
 		int64_t Len = std::clamp(m_aClients[ClientId].m_aSmoothLen[i], (int64_t)1, time_freq());
@@ -5001,10 +4959,8 @@ vec2 CGameClient::GetSmoothPos(int ClientId)
 			float SmoothIntra;
 			Client()->GetSmoothTick(&SmoothTick, &SmoothIntra, MixAmount);
 
-			if(ClientId != m_Snap.m_LocalClientId && FastInputOthers && FastInputTicks > 0)
-			{
-				ApplyFastInputOffset(FastInputOffsetTicks, SmoothTick, SmoothIntra);
-			}
+			if(ClientId != m_Snap.m_LocalClientId && g_Config.m_TcFastInputOthers && FastInputTicks > 0)
+				SmoothTick += FastInputTicks;
 
 			if(SmoothTick > 0 &&
 				m_aClients[ClientId].m_aPredTick[(SmoothTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) &&
@@ -5039,15 +4995,24 @@ vec2 CGameClient::GetFastInputPos(int ClientId)
 
 	vec2 Pos = mix(m_aClients[ClientId].m_PrevPredicted.m_Pos, m_aClients[ClientId].m_Predicted.m_Pos, PredIntraTick);
 
-	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
-	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
-	ApplyFastInputOffset(FastInputOffsetTicks, PredTick, PredIntraTick);
+	float FastInputIntra = (g_Config.m_TcFastInputAmount % 20) / 20.0f;
+	int FastInputTicks = g_Config.m_TcFastInputAmount / 20;
 
-	if(PredTick > 0 &&
-		m_aClients[ClientId].m_aPredTick[(PredTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) &&
-		m_aClients[ClientId].m_aPredTick[PredTick % 200] <= Client()->PredGameTick(g_Config.m_ClDummy) + FastInputTicks)
+	float CombinedIntra = PredIntraTick + FastInputIntra;
+
+	float IntraRemainder = 0.0f;
+	float FinalIntra = std::modf(CombinedIntra, &IntraRemainder);
+	int CarryOverTicks = static_cast<int>(IntraRemainder);
+
+	FastInputTicks += CarryOverTicks;
+
+	int FinalTick = PredTick + FastInputTicks;
+
+	if(FinalTick > 0 &&
+		m_aClients[ClientId].m_aPredTick[(FinalTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) &&
+		m_aClients[ClientId].m_aPredTick[FinalTick % 200] <= Client()->PredGameTick(g_Config.m_ClDummy) + FastInputTicks)
 	{
-		Pos = mix(m_aClients[ClientId].m_aPredPos[(PredTick - 1) % 200], m_aClients[ClientId].m_aPredPos[PredTick % 200], PredIntraTick);
+		Pos = mix(m_aClients[ClientId].m_aPredPos[(FinalTick - 1) % 200], m_aClients[ClientId].m_aPredPos[FinalTick % 200], FinalIntra);
 	}
 
 	return Pos;
@@ -5055,11 +5020,6 @@ vec2 CGameClient::GetFastInputPos(int ClientId)
 
 vec2 CGameClient::GetFreezePos(int ClientId)
 {
-	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
-	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
-	if(ClientId != m_Snap.m_LocalClientId && FastInputTicks > 0 && EffectiveImmediateFastInputOthers())
-		return GetFastInputPos(ClientId);
-	const bool FastInputOthers = EffectiveAnyFastInputOthers();
 	vec2 Pos = mix(m_aClients[ClientId].m_PrevPredicted.m_Pos, m_aClients[ClientId].m_Predicted.m_Pos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
 	// int64_t Now = time_get();
 	CCharacter *pChar = m_PredictedWorld.GetCharacterById(m_Snap.m_LocalClientId);
@@ -5097,12 +5057,27 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 	m_SmoothTick = SmoothTick;
 	m_SmoothIntraTick = SmoothIntra;
 
+	float FastInputIntra = (g_Config.m_TcFastInputAmount % 20) / 20.0f;
+	int FastInputTicks = g_Config.m_TcFastInputAmount / 20;
+
+	float CombinedIntra = SmoothIntra + FastInputIntra;
+
+	float IntraRemainder = 0.0f;
+	float FinalIntra = std::modf(CombinedIntra, &IntraRemainder);
+	int CarryOverTicks = static_cast<int>(IntraRemainder);
+
+	FastInputTicks += CarryOverTicks;
+
 	const bool IsLocal = ClientId == m_Snap.m_LocalClientId || (PredictDummy() && ClientId == m_aLocalIds[!g_Config.m_ClDummy]);
-	const bool ApplyFastInputLocal = IsLocal && FastInputTicks > 0;
-	const bool ApplyFastInputOthers = !IsLocal && FastInputOthers && FastInputTicks > 0;
-	if(ApplyFastInputLocal || ApplyFastInputOthers)
+	if(IsLocal && g_Config.m_TcFastInput)
 	{
-		ApplyFastInputOffset(FastInputOffsetTicks, SmoothTick, SmoothIntra);
+		SmoothTick += FastInputTicks;
+		SmoothIntra = FinalIntra;
+	}
+	else if(!IsLocal && g_Config.m_TcFastInputOthers && g_Config.m_TcFastInput)
+	{
+		SmoothTick += FastInputTicks;
+		SmoothIntra = FinalIntra;
 	}
 
 	if(SmoothTick > 0 &&

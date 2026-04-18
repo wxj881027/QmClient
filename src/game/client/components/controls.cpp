@@ -317,64 +317,21 @@ int CControls::SnapInput(int *pData)
 
 		if(g_Config.m_ClDummyControl)
 		{
-			int DummyControlReleaseFlags = 0;
-			if(g_Config.m_ClDummyLeft || g_Config.m_ClDummyRight)
-			{
-				pDummyInput->m_Direction = g_Config.m_ClDummyRight - g_Config.m_ClDummyLeft;
-				DummyControlReleaseFlags |= CGameClient::DUMMY_CONTROL_RELEASE_DIRECTION;
-			}
-			else if(!g_Config.m_ClDummyCopyMoves)
-				pDummyInput->m_Direction = m_aInputData[!g_Config.m_ClDummy].m_Direction;
+			pDummyInput->m_Direction = 0;
+			if(g_Config.m_ClDummyLeft && !g_Config.m_ClDummyRight)
+				pDummyInput->m_Direction = -1;
+			if(!g_Config.m_ClDummyLeft && g_Config.m_ClDummyRight)
+				pDummyInput->m_Direction = 1;
 
 			pDummyInput->m_Jump = g_Config.m_ClDummyJump;
-			if(g_Config.m_ClDummyJump)
-				DummyControlReleaseFlags |= CGameClient::DUMMY_CONTROL_RELEASE_JUMP;
 
 			if(g_Config.m_ClDummyFire)
-			{
 				pDummyInput->m_Fire = g_Config.m_ClDummyFire;
-				DummyControlReleaseFlags |= CGameClient::DUMMY_CONTROL_RELEASE_FIRE;
-			}
 			else if((pDummyInput->m_Fire & 1) != 0)
 				pDummyInput->m_Fire++;
 
 			pDummyInput->m_Hook = g_Config.m_ClDummyHook;
-			if(g_Config.m_ClDummyHook)
-				DummyControlReleaseFlags |= CGameClient::DUMMY_CONTROL_RELEASE_HOOK;
-
-			GameClient()->m_DummyControlReleaseFlags = DummyControlReleaseFlags;
-		}
-		else if(GameClient()->m_DummyControlReleaseFlags != 0)
-		{
-			int RemainingReleaseFlags = 0;
-			if(!g_Config.m_ClDummyCopyMoves)
-			{
-				if(GameClient()->m_DummyControlReleaseFlags & CGameClient::DUMMY_CONTROL_RELEASE_DIRECTION)
-					pDummyInput->m_Direction = 0;
-				if(GameClient()->m_DummyControlReleaseFlags & CGameClient::DUMMY_CONTROL_RELEASE_JUMP)
-					pDummyInput->m_Jump = 0;
-			}
-			if(GameClient()->m_DummyControlReleaseFlags & CGameClient::DUMMY_CONTROL_RELEASE_FIRE)
-			{
-				if((pDummyInput->m_Fire & 1) != 0)
-					pDummyInput->m_Fire++;
-			}
-			if(GameClient()->m_DummyControlReleaseFlags & CGameClient::DUMMY_CONTROL_RELEASE_HOOK)
-			{
-				// Keep dummy hook pressed after leaving dummy-control mode until the dedicated
-				// hook bind is actually released, otherwise toggling control off drops the hook.
-				if(g_Config.m_ClDummyHook)
-				{
-					pDummyInput->m_Hook = 1;
-					RemainingReleaseFlags |= CGameClient::DUMMY_CONTROL_RELEASE_HOOK;
-				}
-				else if(!g_Config.m_ClDummyCopyMoves)
-				{
-					pDummyInput->m_Hook = 0;
-				}
-			}
-
-			GameClient()->m_DummyControlReleaseFlags = RemainingReleaseFlags;
+			m_aInputData[!g_Config.m_ClDummy] = *pDummyInput;
 		}
 
 		// stress testing

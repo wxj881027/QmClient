@@ -54,6 +54,34 @@ static size_t SkinNameVarSize(int Dummy)
 	return Dummy ? sizeof(g_Config.m_ClDummySkin) : sizeof(g_Config.m_ClPlayerSkin);
 }
 
+static int &SkinUseCustomColorVar(int Dummy)
+{
+	return Dummy ? g_Config.m_ClDummyUseCustomColor : g_Config.m_ClPlayerUseCustomColor;
+}
+
+static unsigned &SkinBodyColorVar(int Dummy)
+{
+	return Dummy ? g_Config.m_ClDummyColorBody : g_Config.m_ClPlayerColorBody;
+}
+
+static unsigned &SkinFeetColorVar(int Dummy)
+{
+	return Dummy ? g_Config.m_ClDummyColorFeet : g_Config.m_ClPlayerColorFeet;
+}
+
+static CSkins::CSkinQueueEntry MakeSkinQueueEntry(const char *pSkinName, bool UseCustomColor, int ColorBody, int ColorFeet)
+{
+	CSkins::CSkinQueueEntry Entry;
+	Entry.m_SkinName = pSkinName;
+	Entry.m_UseCustomColor = UseCustomColor;
+	if(UseCustomColor)
+	{
+		Entry.m_ColorBody = ColorBody;
+		Entry.m_ColorFeet = ColorFeet;
+	}
+	return Entry;
+}
+
 CSkins::CAbstractSkinLoadJob::CAbstractSkinLoadJob(CSkins *pSkins, const char *pName) :
 	m_pSkins(pSkins)
 {
@@ -523,10 +551,14 @@ void CSkins::OnConsoleInit()
 	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, ConRemFavoriteSkin, this, "Remove a skin from the favorites");
 	Console()->Register("add_skin_queue", "s[skin_name]", CFGFLAG_CLIENT, ConAddSkinQueue, this, "Add a skin to the queue");
 	Console()->Register("add_dummy_skin_queue", "s[skin_name]", CFGFLAG_CLIENT, ConAddDummySkinQueue, this, "Add a skin to the dummy queue");
+	Console()->Register("add_skin_queue_ex", "s[skin_name] i[use_custom_color] i[color_body] i[color_feet]", CFGFLAG_CLIENT, ConAddSkinQueueEx, this, "Add a colored skin to the queue");
+	Console()->Register("add_dummy_skin_queue_ex", "s[skin_name] i[use_custom_color] i[color_body] i[color_feet]", CFGFLAG_CLIENT, ConAddDummySkinQueueEx, this, "Add a colored skin to the dummy queue");
 	Console()->Register("add_skin_queue_preset", "s[preset_name]", CFGFLAG_CLIENT, ConAddSkinQueuePreset, this, "Add a queue preset");
 	Console()->Register("add_dummy_skin_queue_preset", "s[preset_name]", CFGFLAG_CLIENT, ConAddDummySkinQueuePreset, this, "Add a dummy queue preset");
 	Console()->Register("add_skin_queue_preset_item", "i[preset_index] s[skin_name]", CFGFLAG_CLIENT, ConAddSkinQueuePresetItem, this, "Add a skin to a queue preset");
 	Console()->Register("add_dummy_skin_queue_preset_item", "i[preset_index] s[skin_name]", CFGFLAG_CLIENT, ConAddDummySkinQueuePresetItem, this, "Add a skin to a dummy queue preset");
+	Console()->Register("add_skin_queue_preset_item_ex", "i[preset_index] s[skin_name] i[use_custom_color] i[color_body] i[color_feet]", CFGFLAG_CLIENT, ConAddSkinQueuePresetItemEx, this, "Add a colored skin to a queue preset");
+	Console()->Register("add_dummy_skin_queue_preset_item_ex", "i[preset_index] s[skin_name] i[use_custom_color] i[color_body] i[color_feet]", CFGFLAG_CLIENT, ConAddDummySkinQueuePresetItemEx, this, "Add a colored skin to a dummy queue preset");
 
 	Console()->Chain("player_skin", ConchainRefreshSkinList, this);
 	Console()->Chain("dummy_skin", ConchainRefreshSkinList, this);
@@ -609,11 +641,39 @@ void CSkins::ApplySkinQueueCurrent(int Dummy)
 	}
 
 	ClampSkinQueueIndex(Dummy);
-	const char *pTargetSkin = Queue[SkinQueueIndexVar(Dummy)].c_str();
+	const CSkinQueueEntry &TargetEntry = Queue[SkinQueueIndexVar(Dummy)];
 	char *pSkinName = SkinNameVar(Dummy);
-	if(str_comp(pSkinName, pTargetSkin) != 0)
+	int &UseCustomColor = SkinUseCustomColorVar(Dummy);
+	unsigned &ColorBody = SkinBodyColorVar(Dummy);
+	unsigned &ColorFeet = SkinFeetColorVar(Dummy);
+
+	bool Changed = false;
+	if(str_comp(pSkinName, TargetEntry.m_SkinName.c_str()) != 0)
 	{
-		str_copy(pSkinName, pTargetSkin, SkinNameVarSize(Dummy));
+		str_copy(pSkinName, TargetEntry.m_SkinName.c_str(), SkinNameVarSize(Dummy));
+		Changed = true;
+	}
+	if(UseCustomColor != (int)TargetEntry.m_UseCustomColor)
+	{
+		UseCustomColor = TargetEntry.m_UseCustomColor ? 1 : 0;
+		Changed = true;
+	}
+	if(TargetEntry.m_UseCustomColor)
+	{
+		if(ColorBody != (unsigned)TargetEntry.m_ColorBody)
+		{
+			ColorBody = TargetEntry.m_ColorBody;
+			Changed = true;
+		}
+		if(ColorFeet != (unsigned)TargetEntry.m_ColorFeet)
+		{
+			ColorFeet = TargetEntry.m_ColorFeet;
+			Changed = true;
+		}
+	}
+
+	if(Changed)
+	{
 		m_SkinList.ForceRefresh();
 		if(Dummy == 0)
 		{
@@ -688,7 +748,7 @@ void CSkins::SyncSkinQueueFromMapPlayers(int Dummy)
 	}
 
 	const int Limit = maximum(0, SkinQueueLengthVar(Dummy));
-	std::vector<std::string> vMapSkins;
+	std::vector<CSkinQueueEntry> vMapSkins;
 	vMapSkins.reserve(Limit > 0 ? (size_t)std::min(Limit, (int)MAX_CLIENTS) : 0);
 
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
@@ -699,9 +759,15 @@ void CSkins::SyncSkinQueueFromMapPlayers(int Dummy)
 			continue;
 		}
 
-		const char *pSkinName = GameClient()->m_aClients[ClientId].m_aSkinName;
-		if(!CSkin::IsValidName(pSkinName) ||
-			std::find(vMapSkins.begin(), vMapSkins.end(), pSkinName) != vMapSkins.end())
+		const auto &ClientData = GameClient()->m_aClients[ClientId];
+		const char *pSkinName = ClientData.m_aSkinName;
+		if(!CSkin::IsValidName(pSkinName))
+		{
+			continue;
+		}
+
+		const CSkinQueueEntry Entry = MakeSkinQueueEntry(pSkinName, ClientData.m_UseCustomColor != 0, ClientData.m_ColorBody, ClientData.m_ColorFeet);
+		if(std::find(vMapSkins.begin(), vMapSkins.end(), Entry) != vMapSkins.end())
 		{
 			continue;
 		}
@@ -710,7 +776,7 @@ void CSkins::SyncSkinQueueFromMapPlayers(int Dummy)
 		{
 			break;
 		}
-		vMapSkins.emplace_back(pSkinName);
+		vMapSkins.push_back(Entry);
 	}
 
 	auto &Queue = m_aSkinQueue[Dummy];
@@ -719,7 +785,7 @@ void CSkins::SyncSkinQueueFromMapPlayers(int Dummy)
 		return;
 	}
 
-	std::string CurrentSkin;
+	std::optional<CSkinQueueEntry> CurrentSkin;
 	if(!Queue.empty())
 	{
 		ClampSkinQueueIndex(Dummy);
@@ -733,9 +799,9 @@ void CSkins::SyncSkinQueueFromMapPlayers(int Dummy)
 	{
 		QueueIndex = 0;
 	}
-	else if(!CurrentSkin.empty())
+	else if(CurrentSkin.has_value())
 	{
-		const auto It = std::find(Queue.begin(), Queue.end(), CurrentSkin);
+		const auto It = std::find(Queue.begin(), Queue.end(), CurrentSkin.value());
 		QueueIndex = It != Queue.end() ? (int)(It - Queue.begin()) : 0;
 	}
 	ClampSkinQueueIndex(Dummy);
@@ -1090,11 +1156,22 @@ bool CSkins::IsFavorite(const char *pName) const
 
 bool CSkins::IsInSkinQueue(const char *pName, int Dummy) const
 {
-	const auto &Queue = m_aSkinQueue[Dummy];
-	return std::find(Queue.begin(), Queue.end(), pName) != Queue.end();
+	return IsInSkinQueue(pName, false, 0, 0, Dummy);
 }
 
 bool CSkins::AddSkinQueue(const char *pName, int Dummy)
+{
+	return AddSkinQueue(pName, false, 0, 0, Dummy);
+}
+
+bool CSkins::IsInSkinQueue(const char *pName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy) const
+{
+	const auto &Queue = m_aSkinQueue[Dummy];
+	const CSkinQueueEntry Entry = MakeSkinQueueEntry(pName, UseCustomColor, ColorBody, ColorFeet);
+	return std::find(Queue.begin(), Queue.end(), Entry) != Queue.end();
+}
+
+bool CSkins::AddSkinQueue(const char *pName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy)
 {
 	if(!CSkin::IsValidName(pName))
 	{
@@ -1103,7 +1180,7 @@ bool CSkins::AddSkinQueue(const char *pName, int Dummy)
 		return false;
 	}
 
-	if(IsInSkinQueue(pName, Dummy))
+	if(IsInSkinQueue(pName, UseCustomColor, ColorBody, ColorFeet, Dummy))
 	{
 		return false;
 	}
@@ -1114,15 +1191,25 @@ bool CSkins::AddSkinQueue(const char *pName, int Dummy)
 		return false;
 	}
 
-	Queue.emplace_back(pName);
+	Queue.push_back(MakeSkinQueueEntry(pName, UseCustomColor, ColorBody, ColorFeet));
 	ClampSkinQueueIndex(Dummy);
 	return true;
 }
 
 bool CSkins::RemoveSkinQueue(const char *pName, int Dummy)
 {
+	return RemoveSkinQueue(pName, false, 0, 0, Dummy);
+}
+
+bool CSkins::RemoveSkinQueue(const char *pName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy)
+{
+	return RemoveSkinQueue(MakeSkinQueueEntry(pName, UseCustomColor, ColorBody, ColorFeet), Dummy);
+}
+
+bool CSkins::RemoveSkinQueue(const CSkinQueueEntry &Entry, int Dummy)
+{
 	auto &Queue = m_aSkinQueue[Dummy];
-	auto It = std::find(Queue.begin(), Queue.end(), pName);
+	auto It = std::find(Queue.begin(), Queue.end(), Entry);
 	if(It == Queue.end())
 	{
 		return false;
@@ -1147,7 +1234,7 @@ void CSkins::MoveSkinQueueItem(size_t FromIndex, size_t ToIndex, int Dummy)
 		return;
 	}
 
-	std::string Moving = std::move(Queue[FromIndex]);
+	CSkinQueueEntry Moving = std::move(Queue[FromIndex]);
 	Queue.erase(Queue.begin() + FromIndex);
 	Queue.insert(Queue.begin() + ToIndex, std::move(Moving));
 
@@ -1197,6 +1284,11 @@ bool CSkins::AddSkinQueuePreset(const char *pName, int Dummy)
 
 bool CSkins::AddSkinQueuePresetItem(int PresetIndex, const char *pSkinName, int Dummy)
 {
+	return AddSkinQueuePresetItem(PresetIndex, pSkinName, false, 0, 0, Dummy);
+}
+
+bool CSkins::AddSkinQueuePresetItem(int PresetIndex, const char *pSkinName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy)
+{
 	auto &Presets = m_aSkinQueuePresets[Dummy];
 	if(PresetIndex < 0 || PresetIndex >= (int)Presets.size())
 	{
@@ -1208,9 +1300,10 @@ bool CSkins::AddSkinQueuePresetItem(int PresetIndex, const char *pSkinName, int 
 	}
 
 	auto &Queue = Presets[PresetIndex].m_Queue;
-	if(std::find(Queue.begin(), Queue.end(), pSkinName) == Queue.end())
+	const CSkinQueueEntry Entry = MakeSkinQueueEntry(pSkinName, UseCustomColor, ColorBody, ColorFeet);
+	if(std::find(Queue.begin(), Queue.end(), Entry) == Queue.end())
 	{
-		Queue.emplace_back(pSkinName);
+		Queue.push_back(Entry);
 	}
 	return true;
 }
@@ -1519,6 +1612,18 @@ void CSkins::ConAddDummySkinQueue(IConsole::IResult *pResult, void *pUserData)
 	pSelf->AddSkinQueue(pResult->GetString(0), 1);
 }
 
+void CSkins::ConAddSkinQueueEx(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CSkins *>(pUserData);
+	pSelf->AddSkinQueue(pResult->GetString(0), pResult->GetInteger(1) != 0, pResult->GetInteger(2), pResult->GetInteger(3), 0);
+}
+
+void CSkins::ConAddDummySkinQueueEx(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CSkins *>(pUserData);
+	pSelf->AddSkinQueue(pResult->GetString(0), pResult->GetInteger(1) != 0, pResult->GetInteger(2), pResult->GetInteger(3), 1);
+}
+
 void CSkins::ConAddSkinQueuePreset(IConsole::IResult *pResult, void *pUserData)
 {
 	auto *pSelf = static_cast<CSkins *>(pUserData);
@@ -1541,6 +1646,18 @@ void CSkins::ConAddDummySkinQueuePresetItem(IConsole::IResult *pResult, void *pU
 {
 	auto *pSelf = static_cast<CSkins *>(pUserData);
 	pSelf->AddSkinQueuePresetItem(pResult->GetInteger(0), pResult->GetString(1), 1);
+}
+
+void CSkins::ConAddSkinQueuePresetItemEx(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CSkins *>(pUserData);
+	pSelf->AddSkinQueuePresetItem(pResult->GetInteger(0), pResult->GetString(1), pResult->GetInteger(2) != 0, pResult->GetInteger(3), pResult->GetInteger(4), 0);
+}
+
+void CSkins::ConAddDummySkinQueuePresetItemEx(IConsole::IResult *pResult, void *pUserData)
+{
+	auto *pSelf = static_cast<CSkins *>(pUserData);
+	pSelf->AddSkinQueuePresetItem(pResult->GetInteger(0), pResult->GetString(1), pResult->GetInteger(2) != 0, pResult->GetInteger(3), pResult->GetInteger(4), 1);
 }
 
 void CSkins::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
@@ -1567,17 +1684,53 @@ void CSkins::ConfigSaveQueueCallback(IConfigManager *pConfigManager, void *pUser
 
 void CSkins::OnQueueConfigSave(IConfigManager *pConfigManager)
 {
+	const auto WriteQueueEntry = [pConfigManager](const CSkinQueueEntry &Entry, bool Dummy, int PresetIndex) {
+		char aBuffer[160 + MAX_SKIN_LENGTH];
+		if(PresetIndex < 0)
+		{
+			if(Entry.m_UseCustomColor)
+			{
+				str_format(aBuffer, sizeof(aBuffer), "%s \"%s\" %d %d %d",
+					Dummy ? "add_dummy_skin_queue_ex" : "add_skin_queue_ex",
+					Entry.m_SkinName.c_str(),
+					Entry.m_UseCustomColor ? 1 : 0,
+					Entry.m_ColorBody,
+					Entry.m_ColorFeet);
+			}
+			else
+			{
+				str_format(aBuffer, sizeof(aBuffer), "%s \"%s\"",
+					Dummy ? "add_dummy_skin_queue" : "add_skin_queue",
+					Entry.m_SkinName.c_str());
+			}
+		}
+		else if(Entry.m_UseCustomColor)
+		{
+			str_format(aBuffer, sizeof(aBuffer), "%s %d \"%s\" %d %d %d",
+				Dummy ? "add_dummy_skin_queue_preset_item_ex" : "add_skin_queue_preset_item_ex",
+				PresetIndex,
+				Entry.m_SkinName.c_str(),
+				Entry.m_UseCustomColor ? 1 : 0,
+				Entry.m_ColorBody,
+				Entry.m_ColorFeet);
+		}
+		else
+		{
+			str_format(aBuffer, sizeof(aBuffer), "%s %d \"%s\"",
+				Dummy ? "add_dummy_skin_queue_preset_item" : "add_skin_queue_preset_item",
+				PresetIndex,
+				Entry.m_SkinName.c_str());
+		}
+		pConfigManager->WriteLine(aBuffer, ConfigDomain::QIMENG);
+	};
+
 	for(const auto &QueueSkin : m_aSkinQueue[0])
 	{
-		char aBuffer[32 + MAX_SKIN_LENGTH];
-		str_format(aBuffer, sizeof(aBuffer), "add_skin_queue \"%s\"", QueueSkin.c_str());
-		pConfigManager->WriteLine(aBuffer, ConfigDomain::QIMENG);
+		WriteQueueEntry(QueueSkin, false, -1);
 	}
 	for(const auto &QueueSkin : m_aSkinQueue[1])
 	{
-		char aBuffer[40 + MAX_SKIN_LENGTH];
-		str_format(aBuffer, sizeof(aBuffer), "add_dummy_skin_queue \"%s\"", QueueSkin.c_str());
-		pConfigManager->WriteLine(aBuffer, ConfigDomain::QIMENG);
+		WriteQueueEntry(QueueSkin, true, -1);
 	}
 
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
@@ -1595,14 +1748,7 @@ void CSkins::OnQueueConfigSave(IConfigManager *pConfigManager)
 			}
 
 			for(const auto &QueueSkin : Preset.m_Queue)
-			{
-				char aBuffer[80 + MAX_SKIN_LENGTH];
-				if(Dummy == 0)
-					str_format(aBuffer, sizeof(aBuffer), "add_skin_queue_preset_item %d \"%s\"", PresetIndex, QueueSkin.c_str());
-				else
-					str_format(aBuffer, sizeof(aBuffer), "add_dummy_skin_queue_preset_item %d \"%s\"", PresetIndex, QueueSkin.c_str());
-				pConfigManager->WriteLine(aBuffer, ConfigDomain::QIMENG);
-			}
+				WriteQueueEntry(QueueSkin, Dummy != 0, PresetIndex);
 			PresetIndex++;
 		}
 	}

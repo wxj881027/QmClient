@@ -832,8 +832,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	QueuePanel.VSplitLeft(10.0f, nullptr, &QueuePanel);
 
 	{
-		const int UnfilteredCount = SkinList.UnfilteredCount();
-		const int QueueMaxLimit = UnfilteredCount > 0 ? UnfilteredCount : QueueLength;
+		const int QueueMaxLimit = 1024;
 		const int PrevQueueLength = QueueLength;
 		if(QueueMaxLimit >= 0)
 		{
@@ -944,13 +943,15 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				TeeRect.VSplitLeft(3.0f, nullptr, &TeeRect);
 
 				char aEntryLabel[64];
-				str_format(aEntryLabel, sizeof(aEntryLabel), "%d. %s", (int)i + 1, SkinQueue[i].c_str());
+				str_format(aEntryLabel, sizeof(aEntryLabel), "%d. %s", (int)i + 1, SkinQueue[i].m_SkinName.c_str());
 				LabelRect.VSplitLeft(4.0f, nullptr, &LabelRect);
 				Ui()->DoLabel(&LabelRect, aEntryLabel, 12.0f, TEXTALIGN_ML);
 
-				const CSkin *pQueueSkin = GameClient()->m_Skins.Find(SkinQueue[i].c_str());
+				const CSkins::CSkinQueueEntry &QueueEntry = SkinQueue[i];
+				const CSkin *pQueueSkin = GameClient()->m_Skins.Find(QueueEntry.m_SkinName.c_str());
 				CTeeRenderInfo QueueInfo = OwnSkinInfo;
 				QueueInfo.Apply(pQueueSkin);
+				QueueInfo.ApplyColors(QueueEntry.m_UseCustomColor, QueueEntry.m_ColorBody, QueueEntry.m_ColorFeet);
 				QueueInfo.m_Size = TeeSize;
 				vec2 OffsetToMid;
 				CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &QueueInfo, OffsetToMid);
@@ -1004,7 +1005,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 
 			if(RemoveIndex >= 0 && RemoveIndex < (int)SkinQueue.size())
 			{
-				GameClient()->m_Skins.RemoveSkinQueue(SkinQueue[RemoveIndex].c_str(), QueueDummy);
+				GameClient()->m_Skins.RemoveSkinQueue(SkinQueue[RemoveIndex], QueueDummy);
 				s_QueueDragIndex = -1;
 				s_QueueDragging = false;
 			}
@@ -1227,17 +1228,17 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			IconRow.VSplitRight(20.0f, &IconRow, &FavIcon);
 			IconRow.VSplitRight(2.0f, &IconRow, nullptr);
 			IconRow.VSplitRight(20.0f, &IconRow, &QueueIcon);
-			const bool InQueue = GameClient()->m_Skins.IsInSkinQueue(pSkinContainer->Name(), QueueDummy);
+			const bool InQueue = GameClient()->m_Skins.IsInSkinQueue(pSkinContainer->Name(), *pUseCustomColor != 0, *pColorBody, *pColorFeet, QueueDummy);
 			const bool QueueFull = !InQueue && (int)SkinQueue.size() >= QueueLength;
 			if(DoButton_SkinQueue(&s_vQueueButtonIds[i], SkinListEntry.ListItemId(), InQueue, QueueFull, &QueueIcon))
 			{
 				if(InQueue)
 				{
-					GameClient()->m_Skins.RemoveSkinQueue(pSkinContainer->Name(), QueueDummy);
+					GameClient()->m_Skins.RemoveSkinQueue(pSkinContainer->Name(), *pUseCustomColor != 0, *pColorBody, *pColorFeet, QueueDummy);
 				}
 				else
 				{
-					GameClient()->m_Skins.AddSkinQueue(pSkinContainer->Name(), QueueDummy);
+					GameClient()->m_Skins.AddSkinQueue(pSkinContainer->Name(), *pUseCustomColor != 0, *pColorBody, *pColorFeet, QueueDummy);
 				}
 			}
 			const char *pQueueTooltip = QueueFull && !InQueue ? Localize("队列已满") : (InQueue ? Localize("从队列移除") : Localize("加入队列"));

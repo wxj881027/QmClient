@@ -922,37 +922,36 @@ void CHud::RenderGameTimer()
 
 void CHud::RenderPauseNotification()
 {
-	const bool Preview = GameClient()->m_HudEditor.IsActive() &&
-		((GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED) == 0 ||
-		 (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) != 0);
-	if((GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED &&
-		!(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER)) || Preview)
-	{
-		const char *pText = Localize("Game paused");
-		float FontSize = 20.0f;
-		float w = TextRender()->TextWidth(FontSize, pText, -1, -1.0f);
-		const float X = 150.0f * Graphics()->ScreenAspect() - w / 2.0f;
-		const float Y = 50.0f;
-		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::PauseNotification, {X, Y, w, FontSize + 4.0f});
-		TextRender()->Text(X, Y, FontSize, pText, -1.0f);
-		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
-	}
+	const bool Paused = (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED) != 0;
+	const bool GameOver = (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) != 0;
+	if(!Paused || GameOver)
+		return;
+
+	const char *pText = Localize("Game paused");
+	float FontSize = 20.0f;
+	float w = TextRender()->TextWidth(FontSize, pText, -1, -1.0f);
+	const float X = 150.0f * Graphics()->ScreenAspect() - w / 2.0f;
+	const float Y = 50.0f;
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::PauseNotification, {X, Y, w, FontSize + 4.0f});
+	TextRender()->Text(X, Y, FontSize, pText, -1.0f);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderSuddenDeath()
 {
-	if((GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH) || GameClient()->m_HudEditor.IsActive())
-	{
-		float Half = m_Width / 2.0f;
-		const char *pText = Localize("Sudden Death");
-		float FontSize = 12.0f;
-		float w = TextRender()->TextWidth(FontSize, pText, -1, -1.0f);
-		const float X = Half - w / 2.0f;
-		const float Y = 2.0f;
-		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SuddenDeath, {X, Y, w, FontSize + 4.0f});
-		TextRender()->Text(X, Y, FontSize, pText, -1.0f);
-		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
-	}
+	const bool SuddenDeath = (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH) != 0;
+	if(!SuddenDeath)
+		return;
+
+	float Half = m_Width / 2.0f;
+	const char *pText = Localize("Sudden Death");
+	float FontSize = 12.0f;
+	float w = TextRender()->TextWidth(FontSize, pText, -1, -1.0f);
+	const float X = Half - w / 2.0f;
+	const float Y = 2.0f;
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SuddenDeath, {X, Y, w, FontSize + 4.0f});
+	TextRender()->Text(X, Y, FontSize, pText, -1.0f);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderScoreHud()
@@ -1280,28 +1279,29 @@ void CHud::RenderScoreHud()
 void CHud::RenderWarmupTimer()
 {
 	// render warmup timer
-	const bool Preview = GameClient()->m_HudEditor.IsActive() &&
-		(GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer <= 0 || (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME) != 0);
-	if((GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer > 0 && !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME)) || Preview)
-	{
-		char aBuf[256];
-		float FontSize = 20.0f;
-		float w = TextRender()->TextWidth(FontSize, Localize("Warmup"), -1, -1.0f);
+	const bool RaceTime = (GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME) != 0;
+	if(GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer <= 0 || RaceTime)
+		return;
 
-		int Seconds = Preview ? 8 : GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer / Client()->GameTickSpeed();
-		if(Seconds < 5)
-			str_format(aBuf, sizeof(aBuf), "%d.%d", Seconds, (GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer * 10 / Client()->GameTickSpeed()) % 10);
-		else
-			str_format(aBuf, sizeof(aBuf), "%d", Seconds);
-		const float LabelWidth = w;
-		w = TextRender()->TextWidth(FontSize, aBuf, -1, -1.0f);
-		const float MaxWidth = maximum(LabelWidth, w);
-		const float BaseX = 150.0f * Graphics()->ScreenAspect() - MaxWidth / 2.0f;
-		const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::WarmupTimer, {BaseX, 50.0f, MaxWidth, 45.0f});
-		TextRender()->Text(150 * Graphics()->ScreenAspect() + -LabelWidth / 2, 50, FontSize, Localize("Warmup"), -1.0f);
-		TextRender()->Text(150 * Graphics()->ScreenAspect() + -w / 2, 75, FontSize, aBuf, -1.0f);
-		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
-	}
+	char aBuf[256];
+	float FontSize = 20.0f;
+	float w = TextRender()->TextWidth(FontSize, Localize("Warmup"), -1, -1.0f);
+	const int Seconds = GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer / Client()->GameTickSpeed();
+	if(Seconds < 5)
+		str_format(aBuf, sizeof(aBuf), "%d.%d", Seconds, (GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer * 10 / Client()->GameTickSpeed()) % 10);
+	else
+		str_format(aBuf, sizeof(aBuf), "%d", Seconds);
+	const float LabelWidth = w;
+	w = TextRender()->TextWidth(FontSize, aBuf, -1, -1.0f);
+	const float MaxWidth = maximum(LabelWidth, w);
+	const float BaseX = 150.0f * Graphics()->ScreenAspect() - MaxWidth / 2.0f;
+	const float BaseY = 50.0f;
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::WarmupTimer, {BaseX, BaseY, MaxWidth, 45.0f});
+
+	TextRender()->Text(150 * Graphics()->ScreenAspect() + -LabelWidth / 2, BaseY, FontSize, Localize("Warmup"), -1.0f);
+	TextRender()->Text(150 * Graphics()->ScreenAspect() + -w / 2, BaseY + 25.0f, FontSize, aBuf, -1.0f);
+
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 namespace

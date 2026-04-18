@@ -6318,3 +6318,39 @@ Size presets
 
 Zoom presets
 == 缩放预设
+
+QmClient
+== QmClient
+
+QmClient online distribution
+== QmClient 在线分布
+
+Set a voice server to enable QmClient distribution
+== 需要先配置语音服务器，才能启用 QmClient 在线分布
+
+No active QmClient reports yet
+== 暂无活跃的 QmClient 上报
+
+%d servers, %d users
+== %d 个服务器，%d 个用户
+
+%d servers, %d users, %d dummies
+== %d 个服务器，%d 个用户，%d 个分身
+
+%d user
+== %d 个用户
+
+%d users
+== %d 个用户
+
+%d dummy
+== %d 个分身
+
+%d dummies
+== %d 个分身
+
+Selected server
+== 已选中服务器
+
+Not in the current browser list
+== 不在当前浏览器列表中

@@ -115,6 +115,45 @@ static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s joined thi
 static int AutoReplySeparatorLength(const char *pStr);
 static void AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
 
+namespace
+{
+enum class EFreezeWakeupType
+{
+	NONE,
+	LOCAL_HAMMER,
+	EXTERNAL_HAMMER,
+};
+
+EFreezeWakeupType DetectFreezeWakeupType(CGameClient *pGameClient, int ClientId)
+{
+	const CCharacter *pPredictedChar = pGameClient->m_PredictedWorld.GetCharacterById(ClientId);
+	if(pPredictedChar == nullptr)
+		return EFreezeWakeupType::NONE;
+
+	const int LastDamageTick = pPredictedChar->GetLastDamageTick();
+	const int DamageTickDelta = pGameClient->m_PredictedWorld.GameTick() - LastDamageTick;
+	const int DamageTickWindow = maximum(2, pGameClient->m_PredictedWorld.GameTickSpeed() / 6);
+	const int DamageFrom = pPredictedChar->GetLastDamageFrom();
+	if(LastDamageTick <= 0 ||
+		DamageTickDelta < 0 ||
+		DamageTickDelta > DamageTickWindow ||
+		pPredictedChar->GetLastDamageWeapon() != WEAPON_HAMMER ||
+		DamageFrom < 0)
+	{
+		return EFreezeWakeupType::NONE;
+	}
+
+	if(DamageFrom == ClientId ||
+		DamageFrom == pGameClient->m_aLocalIds[0] ||
+		DamageFrom == pGameClient->m_aLocalIds[1])
+	{
+		return EFreezeWakeupType::LOCAL_HAMMER;
+	}
+
+	return EFreezeWakeupType::EXTERNAL_HAMMER;
+}
+}
+
 struct SKeywordReplyRule
 {
 	std::string m_Keywords;
@@ -2477,6 +2516,7 @@ void CTClient::ResetQmClientRecognitionTasks()
 	AbortTask(m_pQmClientUsersSendTask);
 	m_aQmClientAuthToken[0] = '\0';
 	m_QmClientLastSync = 0;
+	ClearQmClientServerDistribution();
 }
 
 bool CTClient::BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t BufSize, const char *pQuery) const
@@ -2508,6 +2548,13 @@ bool CTClient::BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t
 	}
 
 	return pBuf[0] != '\0';
+}
+
+void CTClient::ClearQmClientServerDistribution()
+{
+	m_vQmClientServerDistribution.clear();
+	m_QmClientOnlineUserCount = 0;
+	m_QmClientOnlineDummyCount = 0;
 }
 
 bool CTClient::EnsureQmClientMachineHash()
@@ -2599,8 +2646,9 @@ void CTClient::SendQmClientPlayerData()
 	if(!EnsureQmClientMachineHash())
 		return;
 
-	char aServerAddress[NETADDR_MAXSTRSIZE];
-	net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
+	char aServerAddress[NETADDR_MAXSTRSIZE] = "";
+	if(Client()->State() == IClient::STATE_ONLINE)
+		net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
 	if(aServerAddress[0] == '\0')
 		return;
 
@@ -2702,6 +2750,7 @@ void CTClient::FinishQmClientUsers()
 
 	GameClient()->ClearQ1menGSyncMarks();
 	GameClient()->ClearQmVoiceSyncMarks();
+	ClearQmClientServerDistribution();
 
 	if(m_pQmClientUsersTask->State() != EHttpState::DONE)
 		return;
@@ -2724,11 +2773,13 @@ void CTClient::FinishQmClientUsers()
 		return;
 	}
 
-	char aServerAddress[NETADDR_MAXSTRSIZE];
-	net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
+	char aServerAddress[NETADDR_MAXSTRSIZE] = "";
+	if(Client()->State() == IClient::STATE_ONLINE)
+		net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
 	const bool FastSync = g_Config.m_RiVoiceEnable || g_Config.m_QmClientShowBadge;
 	const int SyncInterval = FastSync ? QMCLIENT_VOICE_SYNC_INTERVAL_SECONDS : QMCLIENT_SYNC_INTERVAL_SECONDS;
 	const int64_t ExpireTick = time_get() + (int64_t)SyncInterval * time_freq() * 2;
+	std::unordered_map<std::string, size_t> ServerIndexByAddress;
 
 	for(unsigned Index = 0; Index < pUsers->u.array.length; ++Index)
 	{
@@ -2741,8 +2792,6 @@ void CTClient::FinishQmClientUsers()
 			pServerAddress = JsonObjectField(pEntry, "server");
 		if(pServerAddress == &json_value_none || pServerAddress->type != json_string)
 			continue;
-		if(str_comp(pServerAddress->u.string.ptr, aServerAddress) != 0)
-			continue;
 
 		const json_value *pPlayerId = JsonObjectField(pEntry, "player_id");
 		if(pPlayerId == &json_value_none)
@@ -2751,6 +2800,33 @@ void CTClient::FinishQmClientUsers()
 			continue;
 
 		const int ClientId = json_int_get(pPlayerId);
+		bool Dummy = false;
+		const json_value *pDummy = JsonObjectField(pEntry, "dummy");
+		if(pDummy != &json_value_none)
+			JsonReadBoolean(pDummy, Dummy);
+
+		const std::string ServerAddress = pServerAddress->u.string.ptr;
+		const auto ItServer = ServerIndexByAddress.find(ServerAddress);
+		if(ItServer == ServerIndexByAddress.end())
+		{
+			ServerIndexByAddress[ServerAddress] = m_vQmClientServerDistribution.size();
+			m_vQmClientServerDistribution.push_back({ServerAddress, 0, 0});
+		}
+		SQmClientServerDistribution &ServerDistribution = m_vQmClientServerDistribution[ServerIndexByAddress[ServerAddress]];
+		if(Dummy)
+		{
+			++ServerDistribution.m_DummyCount;
+			++m_QmClientOnlineDummyCount;
+		}
+		else
+		{
+			++ServerDistribution.m_UserCount;
+			++m_QmClientOnlineUserCount;
+		}
+
+		if(str_comp(pServerAddress->u.string.ptr, aServerAddress) != 0)
+			continue;
+
 		const char *pQid = "";
 		const json_value *pQidField = JsonObjectField(pEntry, "qid");
 		if(pQidField != &json_value_none && pQidField->type == json_string)
@@ -2773,12 +2849,22 @@ void CTClient::FinishQmClientUsers()
 			GameClient()->MarkQmVoiceSupportedClient(ClientId, ExpireTick);
 	}
 
+	std::sort(m_vQmClientServerDistribution.begin(), m_vQmClientServerDistribution.end(), [](const SQmClientServerDistribution &Left, const SQmClientServerDistribution &Right) {
+		if(Left.m_UserCount != Right.m_UserCount)
+			return Left.m_UserCount > Right.m_UserCount;
+		if(Left.m_DummyCount != Right.m_DummyCount)
+			return Left.m_DummyCount > Right.m_DummyCount;
+		return str_comp(Left.m_ServerAddress.c_str(), Right.m_ServerAddress.c_str()) < 0;
+	});
+
 	json_value_free(pRoot);
 }
 
 void CTClient::SyncQmClientUsers()
 {
-	if((m_pQmClientUsersTask && !m_pQmClientUsersTask->Done()) || (m_pQmClientUsersSendTask && !m_pQmClientUsersSendTask->Done()))
+	if(m_pQmClientUsersTask && !m_pQmClientUsersTask->Done())
+		return;
+	if(Client()->State() == IClient::STATE_ONLINE && m_pQmClientUsersSendTask && !m_pQmClientUsersSendTask->Done())
 		return;
 
 	if(m_aQmClientAuthToken[0] == '\0')
@@ -2787,21 +2873,18 @@ void CTClient::SyncQmClientUsers()
 		return;
 	}
 
-	SendQmClientPlayerData();
+	if(Client()->State() == IClient::STATE_ONLINE)
+		SendQmClientPlayerData();
 	FetchQmClientUsers();
 }
 
 void CTClient::UpdateQmClientRecognition()
 {
-	if(Client()->State() != IClient::STATE_ONLINE)
+	const bool Online = Client()->State() == IClient::STATE_ONLINE;
+	if(!Online)
 	{
-		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask || m_aQmClientAuthToken[0] != '\0' || m_QmClientLastSync != 0)
-		{
-			ResetQmClientRecognitionTasks();
-			GameClient()->ClearQ1menGSyncMarks();
-			GameClient()->ClearQmVoiceSyncMarks();
-		}
-		return;
+		GameClient()->ClearQ1menGSyncMarks();
+		GameClient()->ClearQmVoiceSyncMarks();
 	}
 
 	if(m_pQmClientAuthTokenTask && m_pQmClientAuthTokenTask->Done())
@@ -3022,7 +3105,6 @@ void CTClient::CheckFreezeWakeupPopup()
 		return;
 	}
 
-	const int DamageTickWindow = maximum(2, GameClient()->m_PredictedWorld.GameTickSpeed() / 6);
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
 	{
 		if(Dummy == 1 && !Client()->DummyConnected())
@@ -3048,19 +3130,8 @@ void CTClient::CheckFreezeWakeupPopup()
 		const bool IsInFreeze = ClientData.m_FreezeEnd != 0;
 		if(m_aWasInFreezeForWakeupPopup[Dummy] && !IsInFreeze)
 		{
-			if(const CCharacter *pPredictedChar = GameClient()->m_PredictedWorld.GetCharacterById(ClientId))
-			{
-				const int LastDamageTick = pPredictedChar->GetLastDamageTick();
-				const int DamageTickDelta = GameClient()->m_PredictedWorld.GameTick() - LastDamageTick;
-				const bool HammerWakeup = LastDamageTick > 0 &&
-					DamageTickDelta >= 0 &&
-					DamageTickDelta <= DamageTickWindow &&
-					pPredictedChar->GetLastDamageWeapon() == WEAPON_HAMMER &&
-					pPredictedChar->GetLastDamageFrom() >= 0 &&
-					pPredictedChar->GetLastDamageFrom() != ClientId;
-				if(HammerWakeup)
-					AddFreezeWakeupPopup(Dummy);
-			}
+			if(DetectFreezeWakeupType(GameClient(), ClientId) == EFreezeWakeupType::EXTERNAL_HAMMER)
+				AddFreezeWakeupPopup(Dummy);
 		}
 
 		m_aWasInFreezeForWakeupPopup[Dummy] = IsInFreeze;
@@ -3555,6 +3626,12 @@ void CTClient::CheckAutoUnspecOnUnfreeze()
 		// 检测从 freeze 到 unfreeze 的转换
 		if(m_aWasInFreezeForUnspec[Dummy] && !IsInFreeze && IsSpectating)
 		{
+			if(DetectFreezeWakeupType(GameClient(), ClientId) != EFreezeWakeupType::EXTERNAL_HAMMER)
+			{
+				m_aWasInFreezeForUnspec[Dummy] = IsInFreeze;
+				continue;
+			}
+
 			// 被解冻了，且当前处于旁观状态，直接发送网络包（最快方式）
 			if(Client()->IsSixup())
 			{
@@ -3613,19 +3690,23 @@ void CTClient::CheckAutoSwitchOnUnfreeze()
 
 	// 当前操控的是哪个 (0=本体, 1=dummy)
 	int CurrentDummy = g_Config.m_ClDummy;
+	const bool MainJustUnfrozen = MainWasInFreeze && !MainInFreeze;
+	const bool DummyJustUnfrozen = DummyWasInFreeze && !DummyInFreeze;
+	const bool MainExternalHammerWakeup = MainJustUnfrozen && DetectFreezeWakeupType(GameClient(), MainClientId) == EFreezeWakeupType::EXTERNAL_HAMMER;
+	const bool DummyExternalHammerWakeup = DummyJustUnfrozen && DetectFreezeWakeupType(GameClient(), DummyClientId) == EFreezeWakeupType::EXTERNAL_HAMMER;
 
 	// 核心逻辑：两个都曾被freeze，现在有一个解冻了
 	// 如果解冻的不是当前操控的，就切换
 	if(MainWasInFreeze && DummyWasInFreeze)
 	{
 		// 本体刚解冻，而当前操控的是dummy
-		if(!MainInFreeze && DummyInFreeze && CurrentDummy == 1)
+		if(!MainInFreeze && DummyInFreeze && CurrentDummy == 1 && MainExternalHammerWakeup)
 		{
 			// 切换到本体
 			Console()->ExecuteLine("cl_dummy 0");
 		}
 		// dummy刚解冻，而当前操控的是本体
-		else if(MainInFreeze && !DummyInFreeze && CurrentDummy == 0)
+		else if(MainInFreeze && !DummyInFreeze && CurrentDummy == 0 && DummyExternalHammerWakeup)
 		{
 			// 切换到dummy
 			Console()->ExecuteLine("cl_dummy 1");
@@ -3661,6 +3742,12 @@ void CTClient::CheckAutoCloseChatOnUnfreeze()
 
 		if(m_aWasInFreezeForChatClose[Dummy] && !IsInFreeze && CanCloseChat)
 		{
+			if(DetectFreezeWakeupType(GameClient(), ClientId) != EFreezeWakeupType::EXTERNAL_HAMMER)
+			{
+				m_aWasInFreezeForChatClose[Dummy] = IsInFreeze;
+				continue;
+			}
+
 			GameClient()->m_Chat.SaveDraft();
 			GameClient()->m_Chat.DisableMode();
 			CanCloseChat = false;
