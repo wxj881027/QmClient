@@ -257,7 +257,9 @@ MACRO_CONFIG_INT(TcBgDrawAutoSaveLoad, tc_bg_draw_auto_save_load, 1, 0, 1, CFGFL
 MACRO_CONFIG_STR(TcTranslateBackend, tc_translate_backend, 32, "tencentcloud", CFGFLAG_CLIENT | CFGFLAG_SAVE, "翻译后端（ftapi、libretranslate、tencentcloud）")
 MACRO_CONFIG_STR(TcTranslateTarget, tc_translate_target, 16, "zh", CFGFLAG_CLIENT | CFGFLAG_SAVE, "翻译目标语言代码（如 zh、en、ja、zh-TW）")
 MACRO_CONFIG_STR(TcTranslateEndpoint, tc_translate_endpoint, 256, "https://tmt.tencentcloudapi.com/", CFGFLAG_CLIENT | CFGFLAG_SAVE, "用于需要该参数的后端的接口地址（必须是 https）")
-MACRO_CONFIG_STR(TcTranslateKey, tc_translate_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "用于需要鉴权的后端的 API Key")
+MACRO_CONFIG_STR(TcTranslateSecretId, tc_translate_secret_id, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "腾讯云翻译 SecretId")
+MACRO_CONFIG_STR(TcTranslateSecretKey, tc_translate_secret_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "腾讯云翻译 SecretKey")
+MACRO_CONFIG_STR(TcTranslateKey, tc_translate_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "用于需要鉴权的后端的 API Key（如 LibreTranslate）")
 MACRO_CONFIG_STR(TcTranslateRegion, tc_translate_region, 32, "ap-guangzhou", CFGFLAG_CLIENT | CFGFLAG_SAVE, "腾讯云翻译地域（如 ap-guangzhou）")
 MACRO_CONFIG_INT(TcTranslateAuto, tc_translate_auto, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动翻译消息，只有部分后端支持（FTApi 不支持）")
 

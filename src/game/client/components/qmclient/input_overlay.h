@@ -178,6 +178,8 @@ private:
 	float m_MouseDeltaY = 0.0f;
 	float m_aWheelLastTime[4] = {-1.0f, -1.0f, -1.0f, -1.0f};
 	float m_aWheelAlpha[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+	bool m_UsingDemoInputState = false;
+	uint64_t m_LastDemoWheelSequence = 0;
 };
 
 #endif

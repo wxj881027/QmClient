@@ -36,6 +36,13 @@ static ColorRGBA RainbowColor(float Hue, float Alpha)
 	return Col;
 }
 
+bool DemoInputKeyIsPressed(const CGameClient::SDemoInputPlaybackState *pState, int Key)
+{
+	if(pState == nullptr || Key < KEY_FIRST || Key >= KEY_LAST)
+		return false;
+	return (pState->m_aKeyStates[Key >> 3] & (1U << (Key & 7))) != 0;
+}
+
 } // namespace
 
 void CInputOverlay::OnInit()
@@ -168,11 +175,24 @@ void CInputOverlay::OnRender()
 
 	if(m_ConfigMode == EConfigMode::OBS)
 	{
-		const vec2 MousePos = Input()->NativeMousePos();
-		m_MouseDeltaX = MousePos.x - m_LastMouseX;
-		m_MouseDeltaY = MousePos.y - m_LastMouseY;
-		m_LastMouseX = MousePos.x;
-		m_LastMouseY = MousePos.y;
+		const CGameClient::SDemoInputPlaybackState *pDemoInputState = Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->DemoInputPlaybackState() : nullptr;
+		const bool UseDemoInputState = pDemoInputState != nullptr;
+		const vec2 MousePos = UseDemoInputState ? vec2((float)pDemoInputState->m_TargetX, (float)pDemoInputState->m_TargetY) : Input()->NativeMousePos();
+		if(UseDemoInputState != m_UsingDemoInputState)
+		{
+			m_LastMouseX = MousePos.x;
+			m_LastMouseY = MousePos.y;
+			m_MouseDeltaX = 0.0f;
+			m_MouseDeltaY = 0.0f;
+			m_UsingDemoInputState = UseDemoInputState;
+		}
+		else
+		{
+			m_MouseDeltaX = MousePos.x - m_LastMouseX;
+			m_MouseDeltaY = MousePos.y - m_LastMouseY;
+			m_LastMouseX = MousePos.x;
+			m_LastMouseY = MousePos.y;
+		}
 
 		const float WheelHoldTime = 0.5f;
 		auto UpdateWheel = [&](int Index, int Key) {
@@ -193,12 +213,47 @@ void CInputOverlay::OnRender()
 			}
 		};
 
-		UpdateWheel(0, KEY_MOUSE_WHEEL_UP);
-		UpdateWheel(1, KEY_MOUSE_WHEEL_DOWN);
-		UpdateWheel(2, KEY_MOUSE_WHEEL_LEFT);
-		UpdateWheel(3, KEY_MOUSE_WHEEL_RIGHT);
+		if(UseDemoInputState)
+		{
+			if(m_LastDemoWheelSequence != pDemoInputState->m_WheelSequence)
+			{
+				if((pDemoInputState->m_WheelMask & (1U << 0)) != 0)
+					m_aWheelLastTime[0] = m_Time;
+				if((pDemoInputState->m_WheelMask & (1U << 1)) != 0)
+					m_aWheelLastTime[1] = m_Time;
+				if((pDemoInputState->m_WheelMask & (1U << 2)) != 0)
+					m_aWheelLastTime[2] = m_Time;
+				if((pDemoInputState->m_WheelMask & (1U << 3)) != 0)
+					m_aWheelLastTime[3] = m_Time;
+				m_LastDemoWheelSequence = pDemoInputState->m_WheelSequence;
+			}
+			for(int i = 0; i < 4; ++i)
+			{
+				if(m_aWheelLastTime[i] < 0.0f)
+				{
+					m_aWheelAlpha[i] = 0.0f;
+					continue;
+				}
+				const float Age = m_Time - m_aWheelLastTime[i];
+				if(Age <= WheelHoldTime)
+					m_aWheelAlpha[i] = 1.0f;
+				else
+				{
+					m_aWheelAlpha[i] = 0.0f;
+					m_aWheelLastTime[i] = -1.0f;
+				}
+			}
+		}
+		else
+		{
+			m_LastDemoWheelSequence = 0;
+			UpdateWheel(0, KEY_MOUSE_WHEEL_UP);
+			UpdateWheel(1, KEY_MOUSE_WHEEL_DOWN);
+			UpdateWheel(2, KEY_MOUSE_WHEEL_LEFT);
+			UpdateWheel(3, KEY_MOUSE_WHEEL_RIGHT);
+		}
 
-		const vec2 AimPos = GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+		const vec2 AimPos = UseDemoInputState ? vec2((float)pDemoInputState->m_TargetX, (float)pDemoInputState->m_TargetY) : GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy];
 		float MouseMoveAngle = std::atan2(AimPos.y, AimPos.x);
 		MouseMoveAngle += (float)(pi / 2.0);
 
@@ -1386,14 +1441,15 @@ int CInputOverlay::WheelDirFromObsId(const char *pId) const
 
 bool CInputOverlay::IsObsActive(const SObsElement &Element) const
 {
+	const CGameClient::SDemoInputPlaybackState *pDemoInputState = Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->DemoInputPlaybackState() : nullptr;
 	switch(Element.m_InputKind)
 	{
 	case EObsInputKind::NONE:
 		return true;
 	case EObsInputKind::KEY:
-		return Element.m_Key > KEY_UNKNOWN && Input()->KeyIsPressed(Element.m_Key);
+		return Element.m_Key > KEY_UNKNOWN && (pDemoInputState != nullptr ? DemoInputKeyIsPressed(pDemoInputState, Element.m_Key) : Input()->KeyIsPressed(Element.m_Key));
 	case EObsInputKind::MOUSE:
-		return Element.m_MouseButton > 0 && Input()->NativeMousePressed(Element.m_MouseButton);
+		return Element.m_MouseButton > 0 && (pDemoInputState != nullptr ? DemoInputKeyIsPressed(pDemoInputState, KEY_MOUSE_1 + Element.m_MouseButton - 1) : Input()->NativeMousePressed(Element.m_MouseButton));
 	case EObsInputKind::WHEEL:
 		switch(Element.m_WheelDir)
 		{
@@ -1586,14 +1642,15 @@ void CInputOverlay::ClearObsLayouts()
 
 bool CInputOverlay::IsActiveInput(const SElement &Element) const
 {
+	const CGameClient::SDemoInputPlaybackState *pDemoInputState = Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->DemoInputPlaybackState() : nullptr;
 	switch(Element.m_InputKind)
 	{
 	case EInputKind::ALWAYS:
 		return true;
 	case EInputKind::KEY:
-		return Element.m_Key > KEY_UNKNOWN && Input()->KeyIsPressed(Element.m_Key);
+		return Element.m_Key > KEY_UNKNOWN && (pDemoInputState != nullptr ? DemoInputKeyIsPressed(pDemoInputState, Element.m_Key) : Input()->KeyIsPressed(Element.m_Key));
 	case EInputKind::MOUSE:
-		return Element.m_MouseButton > 0 && Input()->NativeMousePressed(Element.m_MouseButton);
+		return Element.m_MouseButton > 0 && (pDemoInputState != nullptr ? DemoInputKeyIsPressed(pDemoInputState, KEY_MOUSE_1 + Element.m_MouseButton - 1) : Input()->NativeMousePressed(Element.m_MouseButton));
 	default:
 		return false;
 	}

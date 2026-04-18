@@ -201,18 +201,151 @@ struct SUnfinishedMapsQuery
 void CMenus::RenderGame(CUIRect MainView)
 {
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
-	bool ShowDDRaceButtons = MainView.w > 855.0f;
-	MainView.HSplitTop(45.0f + (g_Config.m_ClTouchControls ? 35.0f : 0.0f), &ButtonBars, &MainView);
+	constexpr float PrimaryButtonSpacing = 5.0f;
+	constexpr float SpectateButtonWidth = 120.0f;
+	constexpr float TeamButtonWidth = 100.0f;
+	constexpr float KillButtonWidth = 65.0f;
+	constexpr float PauseButtonWidth = 65.0f;
+	constexpr float JoinGameButtonWidth = 120.0f;
+	constexpr float NormalPracticeButtonWidth = 120.0f;
+	constexpr float CompactPracticeButtonWidth = 52.0f;
+	constexpr float PracticeButtonMinWidth = 32.0f;
+	constexpr float AutoCameraButtonWidth = 32.0f;
+	constexpr float UtilityButtonSpacingNormal = 5.0f;
+	constexpr float UtilityButtonSpacingCompact = 4.0f;
+	constexpr float DisconnectButtonWidthNormal = 120.0f;
+	constexpr float DisconnectButtonWidthCompact = 110.0f;
+	constexpr float DummyButtonWidthNormal = 170.0f;
+	constexpr float DummyButtonWidthCompact = 150.0f;
+	constexpr float EditHudButtonWidthNormal = 130.0f;
+	constexpr float EditHudButtonWidthCompact = 120.0f;
+	constexpr float DemoButtonWidthNormal = 140.0f;
+	constexpr float DemoButtonWidthCompact = 120.0f;
+
+	bool Paused = false;
+	bool Spec = false;
+	if(GameClient()->m_Snap.m_LocalClientId >= 0)
+	{
+		Paused = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Paused;
+		Spec = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Spec;
+	}
+
+	const bool HasLocalInfo = GameClient()->m_Snap.m_pLocalInfo != nullptr;
+	const bool HasGameInfo = GameClient()->m_Snap.m_pGameInfoObj != nullptr;
+	const bool IsTeamPlay = GameClient()->IsTeamPlay();
+	const int LocalTeam = HasLocalInfo ? GameClient()->m_Snap.m_pLocalInfo->m_Team : TEAM_SPECTATORS;
+
+	const bool ShowGameplayButtons = HasLocalInfo && HasGameInfo && !Paused && !Spec;
+	const bool ShowSpectateButton = ShowGameplayButtons && LocalTeam != TEAM_SPECTATORS;
+	const bool ShowJoinRedButton = ShowGameplayButtons && IsTeamPlay && LocalTeam != TEAM_RED;
+	const bool ShowJoinBlueButton = ShowGameplayButtons && IsTeamPlay && LocalTeam != TEAM_BLUE;
+	const bool ShowJoinGameButton = ShowGameplayButtons && !IsTeamPlay && LocalTeam != TEAM_GAME;
+	const bool ShowKillButton = ShowGameplayButtons && LocalTeam != TEAM_SPECTATORS;
+	const bool ShowPauseButton = GameClient()->m_ReceivedDDNetPlayer && HasLocalInfo && (LocalTeam != TEAM_SPECTATORS || Paused || Spec);
+	const bool ShowPracticeButton = GameClient()->m_ReceivedDDNetPlayer && HasLocalInfo && LocalTeam != TEAM_SPECTATORS && !Paused && !Spec;
+	const bool ShowAutoCameraButton = HasLocalInfo && (LocalTeam == TEAM_SPECTATORS || Paused || Spec);
+	const float CurrentPauseButtonWidth = (!Paused && !Spec) ? PauseButtonWidth : JoinGameButtonWidth;
+
+	const float UtilityButtonWidthNormal =
+		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + UtilityButtonSpacingNormal * 3.0f;
+	const float UtilityButtonWidthCompact =
+		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + UtilityButtonSpacingCompact * 3.0f;
+	const float PrimaryButtonBarWidth = maximum(0.0f, MainView.w - 20.0f);
+
+	auto CalcPrimaryButtonsWidth = [&](bool IncludeTeamplayDDRaceButtons) {
+		float Width = 0.0f;
+		auto AddButtonWidth = [&](bool Show, float ButtonWidth) {
+			if(!Show)
+				return;
+			if(Width > 0.0f)
+				Width += PrimaryButtonSpacing;
+			Width += ButtonWidth;
+		};
+
+		AddButtonWidth(ShowSpectateButton, SpectateButtonWidth);
+		AddButtonWidth(ShowJoinRedButton, TeamButtonWidth);
+		AddButtonWidth(ShowJoinBlueButton, TeamButtonWidth);
+		AddButtonWidth(ShowJoinGameButton, JoinGameButtonWidth);
+
+		const bool ShowTeamplayDDRaceButtons = !IsTeamPlay || IncludeTeamplayDDRaceButtons;
+		AddButtonWidth(ShowKillButton && ShowTeamplayDDRaceButtons, KillButtonWidth);
+		AddButtonWidth(ShowPauseButton && ShowTeamplayDDRaceButtons, CurrentPauseButtonWidth);
+		AddButtonWidth(ShowPracticeButton && ShowTeamplayDDRaceButtons, CompactPracticeButtonWidth);
+		AddButtonWidth(ShowAutoCameraButton, AutoCameraButtonWidth);
+		return Width;
+	};
+
+	bool UseCompactUtilityButtons = false;
+	bool UseSecondaryUtilityButtonBar = false;
+	bool ShowDDRaceButtons = !IsTeamPlay;
+	if(g_Config.m_ClTouchControls)
+	{
+		ShowDDRaceButtons = MainView.w > 855.0f;
+	}
+	else
+	{
+		auto TryUtilityLayout = [&](float RequiredPrimaryWidth) {
+			if(PrimaryButtonBarWidth >= RequiredPrimaryWidth + UtilityButtonWidthNormal)
+			{
+				UseCompactUtilityButtons = false;
+				UseSecondaryUtilityButtonBar = false;
+				return true;
+			}
+			if(PrimaryButtonBarWidth >= RequiredPrimaryWidth + UtilityButtonWidthCompact)
+			{
+				UseCompactUtilityButtons = true;
+				UseSecondaryUtilityButtonBar = false;
+				return true;
+			}
+			if(PrimaryButtonBarWidth >= RequiredPrimaryWidth && PrimaryButtonBarWidth >= UtilityButtonWidthNormal)
+			{
+				UseCompactUtilityButtons = false;
+				UseSecondaryUtilityButtonBar = true;
+				return true;
+			}
+			if(PrimaryButtonBarWidth >= RequiredPrimaryWidth && PrimaryButtonBarWidth >= UtilityButtonWidthCompact)
+			{
+				UseCompactUtilityButtons = true;
+				UseSecondaryUtilityButtonBar = true;
+				return true;
+			}
+			return false;
+		};
+
+		if(IsTeamPlay && TryUtilityLayout(CalcPrimaryButtonsWidth(true)))
+		{
+			ShowDDRaceButtons = true;
+		}
+		else
+		{
+			ShowDDRaceButtons = !IsTeamPlay;
+			if(!TryUtilityLayout(CalcPrimaryButtonsWidth(false)))
+			{
+				UseCompactUtilityButtons = true;
+				UseSecondaryUtilityButtonBar = true;
+			}
+		}
+	}
+
+	const bool HasSecondaryButtonBar = g_Config.m_ClTouchControls || UseSecondaryUtilityButtonBar;
+	MainView.HSplitTop(45.0f + (HasSecondaryButtonBar ? 35.0f : 0.0f), &ButtonBars, &MainView);
 	ButtonBars.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	ButtonBars.Margin(10.0f, &ButtonBars);
 	ButtonBars.HSplitTop(25.0f, &ButtonBar, &ButtonBars);
-	if(g_Config.m_ClTouchControls)
+	if(HasSecondaryButtonBar)
 	{
 		ButtonBars.HSplitTop(10.0f, nullptr, &ButtonBars);
 		ButtonBars.HSplitTop(25.0f, &ButtonBar2, &ButtonBars);
 	}
 
-	ButtonBar.VSplitRight(120.0f, &ButtonBar, &Button);
+	CUIRect UtilityButtonBar = UseSecondaryUtilityButtonBar ? ButtonBar2 : ButtonBar;
+	const float UtilityButtonSpacing = UseCompactUtilityButtons ? UtilityButtonSpacingCompact : UtilityButtonSpacingNormal;
+	const float DisconnectButtonWidth = UseCompactUtilityButtons ? DisconnectButtonWidthCompact : DisconnectButtonWidthNormal;
+	const float DummyButtonWidth = UseCompactUtilityButtons ? DummyButtonWidthCompact : DummyButtonWidthNormal;
+	const float EditHudButtonWidth = UseCompactUtilityButtons ? EditHudButtonWidthCompact : EditHudButtonWidthNormal;
+	const float DemoButtonWidth = UseCompactUtilityButtons ? DemoButtonWidthCompact : DemoButtonWidthNormal;
+
+	UtilityButtonBar.VSplitRight(DisconnectButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_DisconnectButton;
 	if(DoButton_Menu(&s_DisconnectButton, Localize("Disconnect"), 0, &Button))
 	{
@@ -243,8 +376,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 	}
 
-	ButtonBar.VSplitRight(5.0f, &ButtonBar, nullptr);
-	ButtonBar.VSplitRight(170.0f, &ButtonBar, &Button);
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(DummyButtonWidth, &UtilityButtonBar, &Button);
 
 	static CButtonContainer s_DummyButton;
 	if(!Client()->DummyAllowed())
@@ -281,8 +414,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 	}
 
-	ButtonBar.VSplitRight(5.0f, &ButtonBar, nullptr);
-	ButtonBar.VSplitRight(130.0f, &ButtonBar, &Button);
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(EditHudButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_EditHudButton;
 	if(DoButton_Menu(&s_EditHudButton, Localize("Edit HUD"), 0, &Button))
 	{
@@ -290,8 +423,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		SetActive(false);
 	}
 
-	ButtonBar.VSplitRight(5.0f, &ButtonBar, nullptr);
-	ButtonBar.VSplitRight(140.0f, &ButtonBar, &Button);
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(DemoButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_DemoButton;
 	const bool Recording = DemoRecorder(RECORDER_MANUAL)->IsRecording();
 	if(DoButton_Menu(&s_DemoButton, Recording ? Localize("Stop record") : Localize("Record demo"), 0, &Button))
@@ -300,14 +433,6 @@ void CMenus::RenderGame(CUIRect MainView)
 			Client()->DemoRecorder_Start(Client()->GetCurrentMap(), true, RECORDER_MANUAL);
 		else
 			Client()->DemoRecorder(RECORDER_MANUAL)->Stop(IDemoRecorder::EStopMode::KEEP_FILE);
-	}
-
-	bool Paused = false;
-	bool Spec = false;
-	if(GameClient()->m_Snap.m_LocalClientId >= 0)
-	{
-		Paused = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Paused;
-		Spec = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Spec;
 	}
 
 	if(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pGameInfoObj && !Paused && !Spec)
@@ -399,14 +524,9 @@ void CMenus::RenderGame(CUIRect MainView)
 
 		if(GameClient()->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS && !Paused && !Spec)
 		{
-			const bool ShowAutoCameraButton = GameClient()->m_Snap.m_pLocalInfo && (GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS || Paused || Spec);
-			constexpr float NormalPracticeButtonWidth = 120.0f;
-			constexpr float CompactPracticeButtonWidth = 52.0f;
-			constexpr float PracticeButtonMinWidth = 32.0f;
-			constexpr float ButtonSpacing = 5.0f;
-			const float ReservedWidth = ShowAutoCameraButton ? (32.0f + ButtonSpacing) : 0.0f;
+			const float ReservedWidth = ShowAutoCameraButton ? (AutoCameraButtonWidth + PrimaryButtonSpacing) : 0.0f;
 
-			const bool CompactPractice = ButtonBar.w < NormalPracticeButtonWidth + ButtonSpacing + ReservedWidth;
+			const bool CompactPractice = ButtonBar.w < NormalPracticeButtonWidth + PrimaryButtonSpacing + ReservedWidth;
 			float PracticeButtonWidth = CompactPractice ? CompactPracticeButtonWidth : NormalPracticeButtonWidth;
 			const float MaxPracticeButtonWidth = maximum(0.0f, ButtonBar.w - ReservedWidth);
 			if(MaxPracticeButtonWidth < PracticeButtonMinWidth)
@@ -417,8 +537,8 @@ void CMenus::RenderGame(CUIRect MainView)
 			if(PracticeButtonWidth > 0.0f)
 			{
 				ButtonBar.VSplitLeft(PracticeButtonWidth, &Button, &ButtonBar);
-				if(ButtonBar.w >= ButtonSpacing)
-					ButtonBar.VSplitLeft(ButtonSpacing, nullptr, &ButtonBar);
+				if(ButtonBar.w >= PrimaryButtonSpacing)
+					ButtonBar.VSplitLeft(PrimaryButtonSpacing, nullptr, &ButtonBar);
 
 				static CButtonContainer s_FastPracticeButton;
 				const bool UseCompactLabel = CompactPractice || PracticeButtonWidth <= CompactPracticeButtonWidth;

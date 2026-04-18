@@ -4651,12 +4651,6 @@ Repeat message
 Voice chat
 == 说话
 
-Dummy move left
-== 分身左移
-
-Dummy move right
-== 分身右移
-
 Dummy jump
 == 分身跳
 

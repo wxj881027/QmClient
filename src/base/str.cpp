@@ -12,6 +12,16 @@ int str_copy(char *dst, const char *src, int dst_size)
 
 void str_append(char *dst, const char *src, int dst_size)
 {
+	if(dst_size <= 0)
+		return;
+
+	if(src == nullptr)
+	{
+		dst[dst_size - 1] = 0; /* assure null termination */
+		str_utf8_fix_truncation(dst);
+		return;
+	}
+
 	int s = str_length(dst);
 	int i = 0;
 	while(s < dst_size)

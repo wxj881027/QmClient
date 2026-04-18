@@ -4497,14 +4497,14 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::GoresActor: return "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv";
 		case EQmModuleId::Gores: return "gores kog king of gores 锤枪切换 chuichang qiehuan 自动切枪 zidong qieqiang gun hammer prevweapon fire 开火后切锤 kaihuo qiechui 拿到其他武器停用";
 		case EQmModuleId::KeyBinds: return "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding";
-		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 聊天框淡出 liaotian danchu 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
+		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 聊天框淡出 liaotian danchu 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
 		case EQmModuleId::CameraView: return "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao";
 		case EQmModuleId::DummyMiniView: return "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao 离开视角 offscreen 自动显示 zidong xianshi";
 		case EQmModuleId::Coords: return "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi";
 		case EQmModuleId::Streamer: return "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi";
 		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi";
 		case EQmModuleId::BlockWords: return "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan";
-		case EQmModuleId::Translate: return "翻译 fanyi translate 腾讯云 tengxunyun 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region 中文跳过 zhongwen tiaoguo 服务器消息跳过";
+		case EQmModuleId::Translate: return "翻译 fanyi translate 腾讯云 tengxunyun 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 中文跳过 zhongwen tiaoguo 服务器消息跳过";
 		case EQmModuleId::QiaFen: return "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming";
 		case EQmModuleId::PieMenu: return "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan";
 		case EQmModuleId::EntityOverlay: return "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng";
@@ -5299,6 +5299,10 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmComboPopup, Localize("Combo popups"), &g_Config.m_QmComboPopup, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSayNoPop, Localize("Hide typing emote while chatting"), &g_Config.m_QmSayNoPop, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
@@ -5608,6 +5612,37 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
 				Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "tencentcloud") == 0)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Secret ID"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateSecretId(g_Config.m_TcTranslateSecretId, sizeof(g_Config.m_TcTranslateSecretId));
+					s_TranslateSecretId.SetEmptyText("TENCENTCLOUD_SECRET_ID");
+					Ui()->DoEditBox(&s_TranslateSecretId, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Secret key"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateSecretKey(g_Config.m_TcTranslateSecretKey, sizeof(g_Config.m_TcTranslateSecretKey));
+					s_TranslateSecretKey.SetEmptyText("TENCENTCLOUD_SECRET_KEY");
+					s_TranslateSecretKey.SetHidden(true);
+					Ui()->DoEditBox(&s_TranslateSecretKey, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+
+				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("API key"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateApiKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
+					s_TranslateApiKey.SetHidden(true);
+					Ui()->DoEditBox(&s_TranslateApiKey, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
