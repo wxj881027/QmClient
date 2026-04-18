@@ -4096,46 +4096,51 @@ struct SKeyStatusLayout
 
 constexpr float KEY_STATUS_RIGHT_MARGIN = 0.0f;
 
-SKeyStatusLines GetKeyStatusLines()
+SKeyStatusLines GetKeyStatusLines(const CGameClient *pGameClient)
 {
 	SKeyStatusLines Lines{};
 	Lines.m_ShowKey = g_Config.m_ClShowhudKeyStatusReset != 0;
 	Lines.m_ShowHammer = g_Config.m_ClShowhudKeyStatusHammer != 0;
 	Lines.m_ShowControl = g_Config.m_ClShowhudKeyStatusControl != 0;
 	Lines.m_ShowSync = g_Config.m_ClShowhudKeyStatusSync != 0;
+	const CGameClient::SDemoHudPlaybackState *pDemoState = pGameClient != nullptr ? pGameClient->DemoHudPlaybackState() : nullptr;
+	const int DummyResetOnSwitch = pDemoState != nullptr ? pDemoState->m_DummyResetOnSwitch : g_Config.m_ClDummyResetOnSwitch;
+	const int DeepflyMode = pDemoState != nullptr ? pDemoState->m_DeepflyMode : g_Config.m_QmDeepflyMode;
+	const bool DummyControl = pDemoState != nullptr ? pDemoState->m_DummyControl : g_Config.m_ClDummyControl != 0;
+	const bool DummyCopyMoves = pDemoState != nullptr ? pDemoState->m_DummyCopyMoves : g_Config.m_ClDummyCopyMoves != 0;
 
 	if(Lines.m_ShowKey)
 	{
 		Lines.m_pKeyStatusText = "卡键: ?";
-		if(g_Config.m_ClDummyResetOnSwitch == 0)
+		if(DummyResetOnSwitch == 0)
 			Lines.m_pKeyStatusText = "卡键: 开";
-		else if(g_Config.m_ClDummyResetOnSwitch == 1)
+		else if(DummyResetOnSwitch == 1)
 			Lines.m_pKeyStatusText = "卡键: 关";
-		else if(g_Config.m_ClDummyResetOnSwitch == 2)
+		else if(DummyResetOnSwitch == 2)
 			Lines.m_pKeyStatusText = "卡键: 重置本体";
 	}
 
 	if(Lines.m_ShowHammer)
 	{
 		const char *pHammerState = "正常";
-		if(g_Config.m_QmDeepflyMode == 1)
+		if(DeepflyMode == 1)
 			pHammerState = "DF";
-		else if(g_Config.m_QmDeepflyMode == 2)
+		else if(DeepflyMode == 2)
 			pHammerState = "HDF";
-		else if(g_Config.m_QmDeepflyMode == 3)
+		else if(DeepflyMode == 3)
 			pHammerState = "自定义";
 		str_format(Lines.m_aHammerLine, sizeof(Lines.m_aHammerLine), "锤: %s", pHammerState);
 	}
 
 	if(Lines.m_ShowControl)
 	{
-		const char *pControlState = g_Config.m_ClDummyControl ? "开" : "关";
+		const char *pControlState = DummyControl ? "开" : "关";
 		str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), "分身控制: %s", pControlState);
 	}
 
 	if(Lines.m_ShowSync)
 	{
-		const char *pSyncState = g_Config.m_ClDummyCopyMoves ? "开" : "关";
+		const char *pSyncState = DummyCopyMoves ? "开" : "关";
 		str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), "分身同步: %s", pSyncState);
 	}
 
@@ -4191,7 +4196,7 @@ SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const SKeyStatusLi
 
 void CHud::RenderKeyStatus()
 {
-	const SKeyStatusLines Lines = GetKeyStatusLines();
+	const SKeyStatusLines Lines = GetKeyStatusLines(GameClient());
 	const SKeyStatusLayout Layout = GetKeyStatusLayout(TextRender(), Lines, m_Width);
 	if(Layout.m_H <= 0.0f)
 		return;
@@ -4361,7 +4366,7 @@ void CHud::RenderMovementInformation()
 	const float Fontsize = 6.0f;
 	const float KeyStatusGap = 2.0f;
 
-	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines();
+	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines(GameClient());
 	const SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines, m_Width);
 	const bool ShowKeyStatus = KeyStatusLayout.m_H > 0.0f;
 

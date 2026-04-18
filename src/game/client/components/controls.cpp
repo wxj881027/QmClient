@@ -317,12 +317,6 @@ int CControls::SnapInput(int *pData)
 
 		if(g_Config.m_ClDummyControl)
 		{
-			pDummyInput->m_Direction = 0;
-			if(g_Config.m_ClDummyLeft && !g_Config.m_ClDummyRight)
-				pDummyInput->m_Direction = -1;
-			if(!g_Config.m_ClDummyLeft && g_Config.m_ClDummyRight)
-				pDummyInput->m_Direction = 1;
-
 			pDummyInput->m_Jump = g_Config.m_ClDummyJump;
 
 			if(g_Config.m_ClDummyFire)

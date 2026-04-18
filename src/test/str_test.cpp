@@ -841,6 +841,14 @@ TEST(Str, Append)
 	EXPECT_STREQ(aBuf, "DDNet最好了");
 }
 
+TEST(Str, AppendNull)
+{
+	char aBuf[64];
+	str_copy(aBuf, "DDNet", sizeof(aBuf));
+	str_append(aBuf, nullptr, sizeof(aBuf));
+	EXPECT_STREQ(aBuf, "DDNet");
+}
+
 TEST(Str, Utf8Stats)
 {
 	size_t Size, Count;

@@ -33,7 +33,7 @@ protected:
 	CMapImages *m_pBackgroundImages;
 
 	virtual CBackgroundEngineMap *CreateBGMap();
-	void ClearImageBackground();
+	void ClearImageBackground(bool UnloadTexture = true);
 	bool LoadImageBackground(const char *pPath);
 
 public:
@@ -42,6 +42,7 @@ public:
 	int Sizeof() const override { return sizeof(*this); }
 
 	void OnInit() override;
+	void OnShutdown() override;
 	void OnMapLoad() override;
 	void OnRender() override;
 	bool RenderCustom(const vec2 &Center, float Zoom);

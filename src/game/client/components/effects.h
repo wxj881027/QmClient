@@ -16,6 +16,9 @@ private:
 	bool m_Add50hz;
 	int64_t m_LastUpdate50hz = 0;
 
+	bool m_Add25hz;
+	int64_t m_LastUpdate25hz = 0;
+
 	bool m_Add100hz;
 	int64_t m_LastUpdate100hz = 0;
 

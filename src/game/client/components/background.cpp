@@ -26,7 +26,7 @@ CBackground::CBackground(ERenderType MapType, bool OnlineOnly) :
 
 CBackground::~CBackground()
 {
-	ClearImageBackground();
+	ClearImageBackground(false);
 	delete m_pBackgroundLayers;
 	delete m_pBackgroundImages;
 }
@@ -36,9 +36,9 @@ CBackgroundEngineMap *CBackground::CreateBGMap()
 	return new CBackgroundEngineMap;
 }
 
-void CBackground::ClearImageBackground()
+void CBackground::ClearImageBackground(bool UnloadTexture)
 {
-	if(m_BackgroundTexture.IsValid())
+	if(UnloadTexture && m_BackgroundTexture.IsValid())
 		Graphics()->UnloadTexture(&m_BackgroundTexture);
 	m_BackgroundTexture.Invalidate();
 	m_ImageBackground = false;
@@ -67,6 +67,11 @@ void CBackground::OnInit()
 	Kernel()->RegisterInterface(m_pBackgroundMap);
 	if(g_Config.m_ClBackgroundEntities[0] != '\0' && str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP))
 		LoadBackground();
+}
+
+void CBackground::OnShutdown()
+{
+	ClearImageBackground();
 }
 
 void CBackground::LoadBackground()
