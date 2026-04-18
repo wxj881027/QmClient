@@ -936,36 +936,45 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 
 		// online menus
-		Box.VSplitLeft(90.0f, &Button, &Box);
+		const bool CompactOnlineMenuTabs = Graphics()->ScreenAspect() <= 1.45f || Box.w < 690.0f;
+		const float GameButtonWidth = CompactOnlineMenuTabs ? 78.0f : 90.0f;
+		const float PlayersButtonWidth = CompactOnlineMenuTabs ? 78.0f : 90.0f;
+		const float ServerInfoButtonWidth = CompactOnlineMenuTabs ? 112.0f : 130.0f;
+		const float BrowserButtonWidth = CompactOnlineMenuTabs ? 78.0f : 90.0f;
+		const float GhostButtonWidth = CompactOnlineMenuTabs ? 78.0f : 90.0f;
+		const float CallVoteButtonWidth = CompactOnlineMenuTabs ? 88.0f : 100.0f;
+		const float CallVoteSpacing = CompactOnlineMenuTabs ? 2.0f : 4.0f;
+
+		Box.VSplitLeft(GameButtonWidth, &Button, &Box);
 		static CButtonContainer s_GameButton;
 		if(DoButton_MenuTab(&s_GameButton, Localize("Game"), ActivePage == PAGE_GAME, &Button, IGraphics::CORNER_TL))
 			NewPage = PAGE_GAME;
 
-		Box.VSplitLeft(90.0f, &Button, &Box);
+		Box.VSplitLeft(PlayersButtonWidth, &Button, &Box);
 		static CButtonContainer s_PlayersButton;
 		if(DoButton_MenuTab(&s_PlayersButton, Localize("Players"), ActivePage == PAGE_PLAYERS, &Button, IGraphics::CORNER_NONE))
 			NewPage = PAGE_PLAYERS;
 
-		Box.VSplitLeft(130.0f, &Button, &Box);
+		Box.VSplitLeft(ServerInfoButtonWidth, &Button, &Box);
 		static CButtonContainer s_ServerInfoButton;
 		if(DoButton_MenuTab(&s_ServerInfoButton, Localize("Server info"), ActivePage == PAGE_SERVER_INFO, &Button, IGraphics::CORNER_NONE))
 			NewPage = PAGE_SERVER_INFO;
 
-		Box.VSplitLeft(90.0f, &Button, &Box);
+		Box.VSplitLeft(BrowserButtonWidth, &Button, &Box);
 		static CButtonContainer s_NetworkButton;
 		if(DoButton_MenuTab(&s_NetworkButton, Localize("Browser"), ActivePage == PAGE_NETWORK, &Button, IGraphics::CORNER_NONE))
 			NewPage = PAGE_NETWORK;
 
 		if(GameClient()->m_GameInfo.m_Race)
 		{
-			Box.VSplitLeft(90.0f, &Button, &Box);
+			Box.VSplitLeft(GhostButtonWidth, &Button, &Box);
 			static CButtonContainer s_GhostButton;
 			if(DoButton_MenuTab(&s_GhostButton, Localize("Ghost"), ActivePage == PAGE_GHOST, &Button, IGraphics::CORNER_NONE))
 				NewPage = PAGE_GHOST;
 		}
 
-		Box.VSplitLeft(100.0f, &Button, &Box);
-		Box.VSplitLeft(4.0f, nullptr, &Box);
+		Box.VSplitLeft(CallVoteButtonWidth, &Button, &Box);
+		Box.VSplitLeft(CallVoteSpacing, nullptr, &Box);
 		static CButtonContainer s_CallVoteButton;
 		if(DoButton_MenuTab(&s_CallVoteButton, Localize("Call vote"), ActivePage == PAGE_CALLVOTE, &Button, IGraphics::CORNER_TR))
 		{

@@ -96,8 +96,6 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 		{EBindOptionGroup::CHAT, Localizable("Repeat message"), "+qm_repeat"},
 		{EBindOptionGroup::CHAT, Localizable("Voice chat"), "+qm_voice_ptt"},
 		{EBindOptionGroup::DUMMY, Localizable("Toggle dummy"), "toggle cl_dummy 0 1"},
-		{EBindOptionGroup::DUMMY, Localizable("Dummy move left"), "+toggle_restore cl_dummy_left 1"},
-		{EBindOptionGroup::DUMMY, Localizable("Dummy move right"), "+toggle_restore cl_dummy_right 1"},
 		{EBindOptionGroup::DUMMY, Localizable("Dummy jump"), "+toggle_restore cl_dummy_jump 1"},
 		{EBindOptionGroup::DUMMY, Localizable("Dummy fire"), "+toggle_restore cl_dummy_fire 1"},
 		{EBindOptionGroup::DUMMY, Localizable("Dummy hook"), "+toggle_restore cl_dummy_hook 1"},

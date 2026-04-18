@@ -22,6 +22,8 @@
 #include <unordered_set>
 #include <vector>
 
+class IJob;
+
 // 玩家统计数据结构
 struct SPlayerStats
 {
@@ -158,20 +160,31 @@ class CTClient : public CComponent
 	{
 		bool m_Active = false;
 		int m_AnchorClientId = -1;
+		int m_TextType = 0;
 		float m_StartTime = 0.0f;
-		float m_Angle = 0.0f;
 		float m_HorizontalSign = 1.0f;
+		float m_ColorPhase = 0.0f;
+		bool m_UseRollingColor = false;
 		ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 	};
-	static constexpr int FREEZE_WAKEUP_POPUP_MAX = 4;
+	static constexpr int FREEZE_WAKEUP_POPUP_MAX = 8;
+	static constexpr int TEXT_POPUP_TEXTURE_MAX = 5;
 	bool m_aWasInFreezeForWakeupPopup[NUM_DUMMIES] = {false, false};
 	SFreezeWakeupPopup m_aFreezeWakeupPopups[FREEZE_WAKEUP_POPUP_MAX];
-	IGraphics::CTextureHandle m_FreezeWakeupTextTexture;
-	char m_aFreezeWakeupFont[256] = "";
+	IGraphics::CTextureHandle m_aTextPopupTextures[TEXT_POPUP_TEXTURE_MAX];
+	char m_aTextPopupFont[256] = "";
 	void CheckFreezeWakeupPopup();
+	void CheckComboPopup();
 	void AddFreezeWakeupPopup(int WokenDummy);
-	void EnsureFreezeWakeupTextTexture();
+	bool EnsureTextPopupTexture(int TextType);
+	bool AddTextPopup(int AnchorClientId, int TextType, bool UseRollingColor, ColorRGBA Color);
+	void UnloadTextPopupTextures();
 	void ClearFreezeWakeupPopups();
+	void ResetComboState(int Dummy = -1);
+	int m_aComboPopupCount[NUM_DUMMIES] = {0, 0};
+	int m_aComboLastEventTick[NUM_DUMMIES] = {-1, -1};
+	int m_aComboLastTargetPlayer[NUM_DUMMIES] = {-1, -1};
+	int m_aComboLastHookedPlayer[NUM_DUMMIES] = {-1, -1};
 
 	// Auto Switch on Unfreeze (HJ大佬辅助)
 	bool m_aWasInFreezeForSwitch[NUM_DUMMIES] = {false, false};
@@ -279,11 +292,13 @@ class CTClient : public CComponent
 	std::shared_ptr<CHttpRequest> m_pQmClientAuthTokenTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientUsersTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientUsersSendTask = nullptr;
+	std::shared_ptr<IJob> m_pQmClientUsersParseJob = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleStartTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleCrashTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleStopTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientServerTimeTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientPlaytimeQueryTask = nullptr;
+	std::shared_ptr<IJob> m_pQmClientLifecycleMarkerWriteJob = nullptr;
 	char m_aQmClientAuthToken[256] = "";
 	char m_aQmClientMachineHash[SHA256_MAXSTRSIZE] = "";
 	char m_aQmClientLifecycleSessionId[64] = "";
@@ -314,6 +329,8 @@ class CTClient : public CComponent
 	void FinishQmClientAuthToken();
 	void FinishQmClientUsers();
 	void ResetQmClientRecognitionTasks();
+	bool NeedsQmClientRecognition() const;
+	bool NeedsFastQmClientSync() const;
 	bool EnsureQmClientMachineHash();
 	bool BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t BufSize, const char *pQuery = nullptr) const;
 	void ClearQmClientServerDistribution();
@@ -331,6 +348,7 @@ class CTClient : public CComponent
 
 	// DDNet player stats (favorite partner + total finishes)
 	std::shared_ptr<CHttpRequest> m_pQmDdnetPlayerTask = nullptr;
+	std::shared_ptr<IJob> m_pQmDdnetPlayerParseJob = nullptr;
 	int64_t m_QmDdnetPlayerLastSync = 0;
 	int64_t m_QmDdnetPlayerNextRetry = 0;
 	char m_aQmDdnetPlayerName[MAX_NAME_LENGTH] = "";
@@ -349,6 +367,7 @@ public:
 	void OnShutdown() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnConsoleInit() override;
+	void OnUpdate() override;
 	void OnRender() override;
 	bool OnInput(const IInput::CEvent &Event) override;
 	bool ShouldAppendGoresPrevWeapon() const;

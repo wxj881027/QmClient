@@ -265,9 +265,7 @@ MACRO_CONFIG_INT(ClDummyRestoreWeapon, cl_dummy_restore_weapon, 1, 0, 1, CFGFLAG
 MACRO_CONFIG_INT(ClDummyCopyMoves, cl_dummy_copy_moves, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否复制你的移动")
 
 // more controllable dummy command
-MACRO_CONFIG_INT(ClDummyControl, cl_dummy_control, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "是否可以同时控制分身（cl_dummy_left、cl_dummy_right、cl_dummy_jump、cl_dummy_fire、cl_dummy_hook）")
-MACRO_CONFIG_INT(ClDummyLeft, cl_dummy_left, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否向左移动（需要 cl_dummy_control 1）")
-MACRO_CONFIG_INT(ClDummyRight, cl_dummy_right, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否向右移动（需要 cl_dummy_control 1）")
+MACRO_CONFIG_INT(ClDummyControl, cl_dummy_control, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "是否可以同时控制分身（cl_dummy_jump、cl_dummy_fire、cl_dummy_hook）")
 MACRO_CONFIG_INT(ClDummyJump, cl_dummy_jump, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否跳跃（需要 cl_dummy_control 1）")
 MACRO_CONFIG_INT(ClDummyFire, cl_dummy_fire, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否开火（需要 cl_dummy_control 1）")
 MACRO_CONFIG_INT(ClDummyHook, cl_dummy_hook, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否钩人（需要 cl_dummy_control 1）")

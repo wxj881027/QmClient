@@ -183,11 +183,27 @@ bool IsChineseLanguage(const char *pLanguage)
 
 const char *GetTencentCloudSecretId()
 {
+	if(g_Config.m_TcTranslateSecretId[0] != '\0')
+		return g_Config.m_TcTranslateSecretId;
+	const char *pSecretId = getenv("TENCENTCLOUD_SECRET_ID");
+	if(pSecretId != nullptr && pSecretId[0] != '\0')
+		return pSecretId;
+	pSecretId = getenv("TC_SECRET_ID");
+	if(pSecretId != nullptr && pSecretId[0] != '\0')
+		return pSecretId;
 	return TENCENTCLOUD_SECRET_ID_FALLBACK;
 }
 
 const char *GetTencentCloudSecretKey()
 {
+	if(g_Config.m_TcTranslateSecretKey[0] != '\0')
+		return g_Config.m_TcTranslateSecretKey;
+	const char *pSecretKey = getenv("TENCENTCLOUD_SECRET_KEY");
+	if(pSecretKey != nullptr && pSecretKey[0] != '\0')
+		return pSecretKey;
+	pSecretKey = getenv("TC_SECRET_KEY");
+	if(pSecretKey != nullptr && pSecretKey[0] != '\0')
+		return pSecretKey;
 	return TENCENTCLOUD_SECRET_KEY_FALLBACK;
 }
 
@@ -549,7 +565,7 @@ public:
 		const char *pSecretKey = GetTencentCloudSecretKey();
 		if(!pSecretId || !pSecretId[0] || !pSecretKey || !pSecretKey[0])
 		{
-			SetInitError("Missing TencentCloud credentials: set env vars or tc_translate_secret_id/tc_translate_secret_key");
+			SetInitError("Missing TencentCloud credentials: set TENCENTCLOUD_SECRET_ID/TENCENTCLOUD_SECRET_KEY or tc_translate_secret_id/tc_translate_secret_key");
 			return;
 		}
 

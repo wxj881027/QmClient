@@ -2836,6 +2836,9 @@ void CClient::OnDemoPlayerMessage(void *pData, int Size)
 		return;
 	}
 
+	if(GameClient()->OnDemoPlaybackMessage(Msg, &Unpacker))
+		return;
+
 	if(!Sys)
 		GameClient()->OnMessage(Msg, &Unpacker, CONN_MAIN, false);
 }
