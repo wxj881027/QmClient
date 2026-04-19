@@ -4,6 +4,12 @@
 //! 采样率: 48000 Hz
 //! 帧大小: 960 采样 (20ms)
 //! 声道数: 1 (单声道)
+//!
+//! 配置与原有 C++ 实现 1:1 对应:
+//! - 模式: VoIP (OPUS_APPLICATION_VOIP)
+//! - 默认比特率: 48kbps (用户要求)
+//! - 自适应比特率: 16-64kbps
+//! - 支持 FEC 和丢包率设置
 
 use opus_rs::{OpusDecoder, OpusEncoder, Application};
 
@@ -11,6 +17,15 @@ use opus_rs::{OpusDecoder, OpusEncoder, Application};
 pub const FRAME_SAMPLES: usize = 960; // 20ms @ 48kHz
 /// 采样率
 pub const SAMPLE_RATE: u32 = 48000;
+/// 声道数
+pub const CHANNELS: usize = 1;
+
+/// 默认比特率 (bps)
+pub const DEFAULT_BITRATE: i32 = 48000;
+/// 最小比特率 (bps)
+pub const MIN_BITRATE: i32 = 6000;
+/// 最大比特率 (bps)
+pub const MAX_BITRATE: i32 = 510000;
 
 /// 编解码错误
 #[derive(Debug, thiserror::Error)]
@@ -24,31 +39,40 @@ pub enum CodecError {
 }
 
 /// Opus 编解码器
+///
+/// 与原有 C++ 实现 CRClientVoice 中的 Opus 配置对应
 pub struct OpusCodec {
     encoder: OpusEncoder,
     decoder: OpusDecoder,
     bitrate: i32,
+    packet_loss_perc: i32,
     fec_enabled: bool,
 }
 
 impl OpusCodec {
     /// 创建新的编解码器
     /// 
-    /// 使用 Audio 模式以获得更好的音质，初始比特率 32kbps
+    /// 使用 VoIP 模式 (与原有实现一致)
+    /// 默认比特率 48kbps
     pub fn new() -> Result<Self, CodecError> {
-        let mut encoder = OpusEncoder::new(SAMPLE_RATE as i32, 1, Application::Audio)
+        let mut encoder = OpusEncoder::new(SAMPLE_RATE as i32, CHANNELS, Application::Voip)
             .map_err(|e| CodecError::Opus(e.to_string()))?;
-        encoder.bitrate_bps = 32000;
-        encoder.complexity = 10; // 最高复杂度
-        encoder.use_cbr = true;
         
-        let decoder = OpusDecoder::new(SAMPLE_RATE as i32, 1)
+        // 与原有 C++ 实现对应的配置
+        encoder.bitrate_bps = DEFAULT_BITRATE;
+        encoder.complexity = 10; // 最高复杂度
+        encoder.use_cbr = false; // 使用 VBR (与原有实现一致)
+        encoder.use_inband_fec = false;
+        encoder.packet_loss_perc = 0;
+        
+        let decoder = OpusDecoder::new(SAMPLE_RATE as i32, CHANNELS)
             .map_err(|e| CodecError::Opus(e.to_string()))?;
         
         Ok(Self {
             encoder,
             decoder,
-            bitrate: 32000,
+            bitrate: DEFAULT_BITRATE,
+            packet_loss_perc: 0,
             fec_enabled: false,
         })
     }
@@ -151,7 +175,7 @@ impl OpusCodec {
     /// # 参数
     /// * `bitrate` - 比特率 (bps)，范围 6000-510000
     pub fn set_bitrate(&mut self, bitrate: i32) -> Result<(), CodecError> {
-        let bitrate = bitrate.clamp(6000, 510000);
+        let bitrate = bitrate.clamp(MIN_BITRATE, MAX_BITRATE);
         self.encoder.bitrate_bps = bitrate;
         self.bitrate = bitrate;
         Ok(())
@@ -164,14 +188,40 @@ impl OpusCodec {
         Ok(())
     }
 
+    /// 设置预期丢包率
+    /// 
+    /// # 参数
+    /// * `loss_perc` - 预期丢包率 (0-100)
+    pub fn set_packet_loss_perc(&mut self, loss_perc: i32) -> Result<(), CodecError> {
+        let loss_perc = loss_perc.clamp(0, 100);
+        self.encoder.packet_loss_perc = loss_perc;
+        self.packet_loss_perc = loss_perc;
+        Ok(())
+    }
+
+    /// 设置复杂度
+    /// 
+    /// # 参数
+    /// * `complexity` - 复杂度 (1-10)，10 为最高
+    pub fn set_complexity(&mut self, complexity: i32) -> Result<(), CodecError> {
+        let complexity = complexity.clamp(1, 10);
+        self.encoder.complexity = complexity;
+        Ok(())
+    }
+
     /// 获取当前比特率
-    pub fn get_bitrate(&self) -> Result<i32, CodecError> {
-        Ok(self.bitrate)
+    pub fn get_bitrate(&self) -> i32 {
+        self.bitrate
     }
 
     /// 是否启用 FEC
     pub fn is_fec_enabled(&self) -> bool {
         self.fec_enabled
+    }
+
+    /// 获取预期丢包率
+    pub fn get_packet_loss_perc(&self) -> i32 {
+        self.packet_loss_perc
     }
 
     /// 获取采样率
@@ -182,6 +232,42 @@ impl OpusCodec {
     /// 获取每帧采样数
     pub fn frame_samples(&self) -> usize {
         FRAME_SAMPLES
+    }
+
+    /// 获取声道数
+    pub fn channels(&self) -> usize {
+        CHANNELS
+    }
+
+    /// 根据网络状况自适应调整编码参数
+    /// 
+    /// 与原有 C++ 实现的 UpdateEncoderParams 对应
+    /// 
+    /// # 参数
+    /// * `loss_perc` - 实际丢包率 (0-100)
+    /// * `jitter_ms` - 抖动 (ms)
+    pub fn adapt_to_network(&mut self, loss_perc: f32, jitter_ms: f32) {
+        let loss_perc_clamped = loss_perc.clamp(0.0, 30.0) as i32;
+        
+        // 与原有 C++ 实现对应的自适应逻辑
+        let (target_bitrate, target_loss, target_fec) = if loss_perc_clamped <= 2 && jitter_ms < 8.0 {
+            // 网络好: 高比特率，无 FEC
+            (48000, 0, false)
+        } else if loss_perc_clamped <= 5 {
+            // 网络一般: 中等比特率，开启 FEC
+            (32000, 5, true)
+        } else if loss_perc_clamped <= 10 {
+            // 网络较差: 降低比特率，开启 FEC
+            (24000, 10, true)
+        } else {
+            // 网络很差: 最低比特率，开启 FEC
+            (16000, 20, true)
+        };
+
+        // 应用新的参数
+        let _ = self.set_bitrate(target_bitrate);
+        let _ = self.set_packet_loss_perc(target_loss);
+        let _ = self.set_fec(target_fec);
     }
 }
 
@@ -234,14 +320,14 @@ mod tests {
 
     #[test]
     fn test_opus_rs_sine_wave() {
-        // 测试正弦波编解码
+        // 测试正弦波编解码 - 使用 VoIP 模式和 48kbps
         use opus_rs::{OpusEncoder, OpusDecoder, Application};
         
-        // 使用 48kHz，Audio 模式以获得更好的音质
-        let mut encoder = OpusEncoder::new(48000, 1, Application::Audio).unwrap();
-        encoder.bitrate_bps = 48000; // 更高比特率
+        // 使用 48kHz，VoIP 模式（与原有实现一致）
+        let mut encoder = OpusEncoder::new(48000, 1, Application::Voip).unwrap();
+        encoder.bitrate_bps = 48000; // 用户要求的比特率
         encoder.complexity = 10; // 最高复杂度
-        encoder.use_cbr = true;
+        encoder.use_cbr = false; // VBR
         
         // 生成测试信号 (440Hz 正弦波, 48kHz 采样率)
         let frame_size = 960; // 20ms @ 48kHz
@@ -288,7 +374,7 @@ mod tests {
     fn test_encode_decode_roundtrip() {
         let mut codec = OpusCodec::new().unwrap();
         
-        // 生成测试信号 (440Hz 正弦波，使用较低频率以获得更好的编码效果)
+        // 生成测试信号 (440Hz 正弦波)
         let original: Vec<i16> = (0..FRAME_SAMPLES)
             .map(|i| {
                 let phase = i as f32 * 2.0 * std::f32::consts::PI * 440.0 / SAMPLE_RATE as f32;
@@ -353,10 +439,10 @@ mod tests {
         let mut codec = OpusCodec::new().unwrap();
         
         codec.set_bitrate(16000).unwrap();
-        assert_eq!(codec.get_bitrate().unwrap(), 16000);
+        assert_eq!(codec.get_bitrate(), 16000);
         
-        codec.set_bitrate(32000).unwrap();
-        assert_eq!(codec.get_bitrate().unwrap(), 32000);
+        codec.set_bitrate(48000).unwrap();
+        assert_eq!(codec.get_bitrate(), 48000);
     }
 
     #[test]
@@ -373,10 +459,49 @@ mod tests {
     }
 
     #[test]
+    fn test_packet_loss_perc() {
+        let mut codec = OpusCodec::new().unwrap();
+        
+        assert_eq!(codec.get_packet_loss_perc(), 0);
+        
+        codec.set_packet_loss_perc(10).unwrap();
+        assert_eq!(codec.get_packet_loss_perc(), 10);
+        
+        codec.set_packet_loss_perc(50).unwrap();
+        assert_eq!(codec.get_packet_loss_perc(), 50);
+    }
+
+    #[test]
     fn test_codec_creation() {
         let codec = OpusCodec::new().unwrap();
-        assert_eq!(codec.get_bitrate().unwrap(), 32000);
+        assert_eq!(codec.get_bitrate(), DEFAULT_BITRATE);
         assert_eq!(codec.sample_rate(), 48000);
         assert_eq!(codec.frame_samples(), 960);
+        assert_eq!(codec.channels(), 1);
+    }
+
+    #[test]
+    fn test_adapt_to_network() {
+        let mut codec = OpusCodec::new().unwrap();
+        
+        // 网络好
+        codec.adapt_to_network(0.0, 5.0);
+        assert_eq!(codec.get_bitrate(), 48000);
+        assert!(!codec.is_fec_enabled());
+        
+        // 网络一般
+        codec.adapt_to_network(3.0, 10.0);
+        assert_eq!(codec.get_bitrate(), 32000);
+        assert!(codec.is_fec_enabled());
+        
+        // 网络较差
+        codec.adapt_to_network(8.0, 20.0);
+        assert_eq!(codec.get_bitrate(), 24000);
+        assert!(codec.is_fec_enabled());
+        
+        // 网络很差
+        codec.adapt_to_network(15.0, 50.0);
+        assert_eq!(codec.get_bitrate(), 16000);
+        assert!(codec.is_fec_enabled());
     }
 }
