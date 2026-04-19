@@ -136,6 +136,7 @@ std::optional<std::vector<std::string>> CCensor::LoadCensorList(const void *pLis
 	if(pData->type != json_object)
 	{
 		log_error("censor", "Censor list malformed: root must be an object");
+		json_value_free(pData);
 		return std::nullopt;
 	}
 
@@ -144,6 +145,7 @@ std::optional<std::vector<std::string>> CCensor::LoadCensorList(const void *pLis
 	if(Words.type != json_array)
 	{
 		log_error("censor", "Censor list malformed: 'words' must be an array");
+		json_value_free(pData);
 		return std::nullopt;
 	}
 	int Length = Words.u.array.length;
@@ -155,6 +157,7 @@ std::optional<std::vector<std::string>> CCensor::LoadCensorList(const void *pLis
 		if(JsonWord.type != json_string)
 		{
 			log_error("censor", "Censor list malformed: 'words' must be an array of strings (error at index %d)", i);
+			json_value_free(pData);
 			return std::nullopt;
 		}
 

@@ -35,6 +35,29 @@ public:
 	{
 		delete[] m_pBuffer;
 	}
+	CColoredParts(const CColoredParts &) = delete;
+	CColoredParts &operator=(const CColoredParts &) = delete;
+	CColoredParts(CColoredParts &&Other) noexcept :
+		m_pBuffer(Other.m_pBuffer),
+		m_pText(Other.m_pText),
+		m_vColors(std::move(Other.m_vColors))
+	{
+		Other.m_pBuffer = nullptr;
+		Other.m_pText = nullptr;
+	}
+	CColoredParts &operator=(CColoredParts &&Other) noexcept
+	{
+		if(this != &Other)
+		{
+			delete[] m_pBuffer;
+			m_pBuffer = Other.m_pBuffer;
+			m_pText = Other.m_pText;
+			m_vColors = std::move(Other.m_vColors);
+			Other.m_pBuffer = nullptr;
+			Other.m_pText = nullptr;
+		}
+		return *this;
+	}
 	CColoredParts(const char *pInput, bool Parse)
 	{
 		if(!Parse || !str_find(pInput, "[["))

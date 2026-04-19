@@ -1367,6 +1367,9 @@ void CScoreboard::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideScoreboard)
+		return;
+
 
 
 	// 当记分板可见时（骗你的,不可见也查），为所有活跃玩家触发查询点

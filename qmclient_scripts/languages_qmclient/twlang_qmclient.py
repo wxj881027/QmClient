@@ -74,9 +74,9 @@ def check_folder(path):
 
 
 def languages():
-	with open("../data/qmclient/languages/index.txt", encoding="utf-8") as f:
+	with open("data/qmclient/languages/index.txt", encoding="utf-8") as f:
 		index = decode(f, 3)
-	langs = {"../data/qmclient/languages/"+key[0]+".txt" : [key[0]]+elements for key, elements in index.items()}
+	langs = {"data/qmclient/languages/"+key[0]+".txt" : [key[0]]+elements for key, elements in index.items()}
 	return langs
 
 
@@ -86,5 +86,5 @@ def translations(filename):
 
 
 def localizes():
-	englishlist = list(check_folder("../src"))
+	englishlist = list(check_folder("src"))
 	return englishlist

@@ -25,32 +25,32 @@ bool CBindChat::CBind::CompContent(const CBind &Other) const
 }
 
 decltype(CBindChat::BIND_DEFAULTS) CBindChat::BIND_DEFAULTS = {
-	{TCLocalizable("Kaomoji"), {
-					   {TCLocalizable("Shrug:"), {"!shrug", "chai qmclient/builtinscripts/sayemoticon.chai ¯\\_(ツ)_/¯D"}},
-					   {TCLocalizable("Flip:"), {"!flip", "chai qmclient/builtinscripts/sayemoticon.chai (╯°□°)╯︵ ┻━┻D"}},
-					   {TCLocalizable("Unflip:"), {"!unflip", "chai qmclient/builtinscripts/sayemoticon.chai ┬─┬ノ( º _ ºノ)D"}},
-					   {TCLocalizable("Cute:"), {"!cute", "chai qmclient/builtinscripts/sayemoticon.chai ૮ ˶ᵔ ᵕ ᵔ˶ აD"}},
-					   {TCLocalizable("Lenny:"), {"!lenny", "chai qmclient/builtinscripts/sayemoticon.chai ( ͡° ͜ʖ ͡°)D"}},
+	{Localizable("Kaomoji"), {
+					   {Localizable("Shrug:"), {"!shrug", "chai qmclient/builtinscripts/sayemoticon.chai ¯\\_(ツ)_/¯D"}},
+					   {Localizable("Flip:"), {"!flip", "chai qmclient/builtinscripts/sayemoticon.chai (╯°□°)╯︵ ┻━┻D"}},
+					   {Localizable("Unflip:"), {"!unflip", "chai qmclient/builtinscripts/sayemoticon.chai ┬─┬ノ( º _ ºノ)D"}},
+					   {Localizable("Cute:"), {"!cute", "chai qmclient/builtinscripts/sayemoticon.chai ૮ ˶ᵔ ᵕ ᵔ˶ აD"}},
+					   {Localizable("Lenny:"), {"!lenny", "chai qmclient/builtinscripts/sayemoticon.chai ( ͡° ͜ʖ ͡°)D"}},
 				   }},
-	{TCLocalizable("Warlist"), {
-					   {TCLocalizable("Add war name:"), {"!war", "war_name_index 1"}},
-					   {TCLocalizable("Add war clan:"), {"!warclan", "war_clan_index 1"}},
-					   {TCLocalizable("Add team name:"), {"!team", "war_name_index 2"}},
-					   {TCLocalizable("Add team clan:"), {"!teamclan", "war_clan_index 2"}},
-					   {TCLocalizable("Remove war name:"), {"!delwar", "remove_war_name_index 1"}},
-					   {TCLocalizable("Remove war clan:"), {"!delwarclan", "remove_war_clan_index 1"}},
-					   {TCLocalizable("Remove team name:"), {"!delteam", "remove_war_name_index 2"}},
-					   {TCLocalizable("Remove team clan:"), {"!delteamclan", "remove_war_clan_index 2"}},
-					   {TCLocalizable("Add [group] [name] [reason]:"), {"!name", "war_name"}},
-					   {TCLocalizable("Add [group] [clan] [reason]:"), {"!clan", "war_clan"}},
-					   {TCLocalizable("Remove [group] [name]:"), {"!delname", "remove_war_name"}},
-					   {TCLocalizable("Remove [group] [clan]:"), {"!delclan", "remove_war_clan"}},
+	{Localizable("Warlist"), {
+					   {Localizable("Add war name:"), {"!war", "war_name_index 1"}},
+					   {Localizable("Add war clan:"), {"!warclan", "war_clan_index 1"}},
+					   {Localizable("Add team name:"), {"!team", "war_name_index 2"}},
+					   {Localizable("Add team clan:"), {"!teamclan", "war_clan_index 2"}},
+					   {Localizable("Remove war name:"), {"!delwar", "remove_war_name_index 1"}},
+					   {Localizable("Remove war clan:"), {"!delwarclan", "remove_war_clan_index 1"}},
+					   {Localizable("Remove team name:"), {"!delteam", "remove_war_name_index 2"}},
+					   {Localizable("Remove team clan:"), {"!delteamclan", "remove_war_clan_index 2"}},
+					   {Localizable("Add [group] [name] [reason]:"), {"!name", "war_name"}},
+					   {Localizable("Add [group] [clan] [reason]:"), {"!clan", "war_clan"}},
+					   {Localizable("Remove [group] [name]:"), {"!delname", "remove_war_name"}},
+					   {Localizable("Remove [group] [clan]:"), {"!delclan", "remove_war_clan"}},
 				   }},
-	{TCLocalizable("Other"), {
-					 {TCLocalizable("Translate:"), {"!translate", "translate"}},
-					 {TCLocalizable("Translate ID:"), {"!translateid", "translate_id"}},
-					 {TCLocalizable("Mute:"), {"!mute", "add_foe"}},
-					 {TCLocalizable("Unmute:"), {"!unmute", "remove_foe"}},
+	{Localizable("Other"), {
+					 {Localizable("Translate:"), {"!translate", "translate"}},
+					 {Localizable("Translate ID:"), {"!translateid", "translate_id"}},
+					 {Localizable("Mute:"), {"!mute", "add_foe"}},
+					 {Localizable("Unmute:"), {"!unmute", "remove_foe"}},
 				 }},
 };
 

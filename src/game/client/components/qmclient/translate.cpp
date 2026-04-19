@@ -756,6 +756,18 @@ void CTranslate::OnConsoleInit()
 	Console()->Register("translate_id", "v[id]", CFGFLAG_CLIENT, ConTranslateId, this, "Translate last message of the person with this id");
 }
 
+void CTranslate::OnReset()
+{
+	m_vJobs.clear();
+	m_vOutgoingJobs.clear();
+}
+
+void CTranslate::OnShutdown()
+{
+	m_vJobs.clear();
+	m_vOutgoingJobs.clear();
+}
+
 void CTranslate::Translate(int Id, bool ShowProgress)
 {
 	if(Id < 0 || Id >= (int)std::size(GameClient()->m_aClients))

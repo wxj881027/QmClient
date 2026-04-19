@@ -3854,6 +3854,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		ChatBubble,
 		GoresActor,
 		Gores,
+		FocusMode,
 		KeyBinds,
 		MiniFeatures,
 		CameraView,
@@ -3892,7 +3893,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		const char *m_pKey;
 	};
 
-	constexpr size_t kQmModuleCount = 25;
+	constexpr size_t kQmModuleCount = 26;
 
 	// Layout string format: key:column:order; entries separated by ';'.
 	static const std::array<SQmModuleEntry, kQmModuleCount> s_aQmModuleDefaults = {{
@@ -3900,15 +3901,16 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		{EQmModuleId::ChatBubble, EQmModuleColumn::Left, 0, "chat_bubble"},
 		{EQmModuleId::GoresActor, EQmModuleColumn::Left, 1, "gores_actor"},
 		{EQmModuleId::Gores, EQmModuleColumn::Left, 2, "gores"},
-		{EQmModuleId::KeyBinds, EQmModuleColumn::Left, 3, "key_binds"},
-		{EQmModuleId::MiniFeatures, EQmModuleColumn::Left, 4, "mini_features"},
-		{EQmModuleId::Coords, EQmModuleColumn::Left, 5, "coords"},
-		{EQmModuleId::Streamer, EQmModuleColumn::Left, 6, "streamer"},
-		{EQmModuleId::FriendNotify, EQmModuleColumn::Left, 7, "friend_notify"},
-		{EQmModuleId::BlockWords, EQmModuleColumn::Left, 8, "block_words"},
-		{EQmModuleId::Translate, EQmModuleColumn::Left, 11, "translate"},
-		{EQmModuleId::QiaFen, EQmModuleColumn::Left, 9, "qiafen"},
-		{EQmModuleId::PieMenu, EQmModuleColumn::Left, 10, "pie_menu"},
+		{EQmModuleId::FocusMode, EQmModuleColumn::Left, 3, "focus_mode"},
+		{EQmModuleId::KeyBinds, EQmModuleColumn::Left, 4, "key_binds"},
+		{EQmModuleId::MiniFeatures, EQmModuleColumn::Left, 5, "mini_features"},
+		{EQmModuleId::Coords, EQmModuleColumn::Left, 6, "coords"},
+		{EQmModuleId::Streamer, EQmModuleColumn::Left, 7, "streamer"},
+		{EQmModuleId::FriendNotify, EQmModuleColumn::Left, 8, "friend_notify"},
+		{EQmModuleId::BlockWords, EQmModuleColumn::Left, 9, "block_words"},
+		{EQmModuleId::Translate, EQmModuleColumn::Left, 12, "translate"},
+		{EQmModuleId::QiaFen, EQmModuleColumn::Left, 10, "qiafen"},
+		{EQmModuleId::PieMenu, EQmModuleColumn::Left, 11, "pie_menu"},
 		{EQmModuleId::CameraView, EQmModuleColumn::Right, 0, "camera_view"},
 		{EQmModuleId::EntityOverlay, EQmModuleColumn::Right, 1, "entity_overlay"},
 		{EQmModuleId::Laser, EQmModuleColumn::Right, 2, "laser"},
@@ -4495,7 +4497,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		{
 		case EQmModuleId::ChatBubble: return "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao";
 		case EQmModuleId::GoresActor: return "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv";
-		case EQmModuleId::Gores: return "gores kog king of gores 锤枪切换 chuichang qiehuan 自动切枪 zidong qieqiang gun hammer prevweapon fire 开火后切锤 kaihuo qiechui 拿到其他武器停用";
+		case EQmModuleId::Gores: return "gores kog king of gores 锤枪切换 chuichang qiehuan 自动切枪 zidong qieqiang gun hammer prevweapon fire 开火后切锤 kaihuo qiechui 拿到其他武器停用 快速输入 kuaisu shuru fast input 快速输入其他玩家";
+		case EQmModuleId::FocusMode: return "专注模式 zhuanzhi moshi focus mode zen mode 隐藏 yincang hud 名字 mingzi 特效 texiao 计分板 jifenban 沉浸 chenjing 无干扰 wuganrao 聊天 liaotian chat 非必要UI";
 		case EQmModuleId::KeyBinds: return "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding";
 		case EQmModuleId::MiniFeatures: return "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 计分板查分 chafen 聊天框淡出 liaotian danchu 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 武器弹道辅助线 dan dao fuzhuxian 位置跳跃提示 tiaoyue tishi";
 		case EQmModuleId::CameraView: return "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao";
@@ -4544,7 +4547,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::GoresActor:
 			return {1, Localize("Gores actor tools"), Localize("Auto speak on water death")};
 		case EQmModuleId::Gores:
-			return {2, Localize("Gores"), Localize("King of Gores auto weapon swap")};
+			return {2, Localize("Gores Mode"), Localize("King of Gores auto weapon swap")};
+		case EQmModuleId::FocusMode:
+			return {2, Localize("Focus/Zen Mode"), Localize("Hide UI elements for immersive gameplay")};
 		case EQmModuleId::KeyBinds:
 			return {3, Localize("Key binds"), Localize("Common bind collection")};
 		case EQmModuleId::MiniFeatures:
@@ -5164,21 +5169,142 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 2, Localize("Gores"), Localize("King of Gores auto weapon swap"));
+				DoModuleHeadline(CardContent, 2, Localize("Gores Mode"), Localize("King of Gores auto weapon swap"));
+
+				static CButtonContainer s_ReaderButtonGoresToggle, s_ClearButtonGoresToggle;
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGores, Localize("Enable Gores auto weapon swap"), &g_Config.m_QmGores, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGores, Localize("Enable Gores Mode"), &g_Config.m_QmGores, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresDisableIfWeapons, Localize("Disable after picking up other weapons"), &g_Config.m_QmGoresDisableIfWeapons, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				if(g_Config.m_QmGores)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresFastInput, Localize("Fast input"), &g_Config.m_QmGoresFastInput, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresAutoEnable, Localize("Auto enable in Gores mode"), &g_Config.m_QmGoresAutoEnable, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
+					if(g_Config.m_QmGoresFastInput)
+					{
+						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresFastInputOthers, Localize("Fast input others"), &g_Config.m_QmGoresFastInputOthers, &Row, LG_LineHeight);
+						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					}
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresDisableIfWeapons, Localize("Disable after picking up other weapons"), &g_Config.m_QmGoresDisableIfWeapons, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresAutoEnable, Localize("Auto enable in Gores mode"), &g_Config.m_QmGoresAutoEnable, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
+				}
 
 				CardContent.HSplitTop(LG_LineHeight * 0.85f, &Row, &CardContent);
+				{
+					CUIRect BindLabel, BindKey;
+					Row.VSplitLeft(Row.w * 0.45f, &BindLabel, &BindKey);
+					Ui()->DoLabel(&BindLabel, Localize("Gores mode bind:"), LG_BodySize, TEXTALIGN_ML);
+					CBindSlot GoresBind(KEY_UNKNOWN, KeyModifier::NONE);
+					{
+						const auto GoresIt = CommandBindCache.find("toggle qm_gores 0 1");
+						if(GoresIt != CommandBindCache.end())
+							GoresBind = GoresIt->second;
+					}
+					const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonGoresToggle, &s_ClearButtonGoresToggle, &BindKey, GoresBind, false);
+					if(Result.m_Bind != GoresBind)
+					{
+						if(GoresBind.m_Key != KEY_UNKNOWN)
+							GameClient()->m_Binds.Bind(GoresBind.m_Key, "", false, GoresBind.m_ModifierMask);
+						if(Result.m_Bind.m_Key != KEY_UNKNOWN)
+						{
+							GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "toggle qm_gores 0 1", false, Result.m_Bind.m_ModifierMask);
+							CommandBindCache.insert_or_assign(std::string("toggle qm_gores 0 1"), Result.m_Bind);
+						}
+						else
+						{
+							CommandBindCache.erase("toggle qm_gores 0 1");
+						}
+					}
+				}
+
+				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+				Column.y = CardContent.y;
+				s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+				RegisterModuleCard(pModule, ColumnId, s_GlassCards.back());
+				HandleModuleDragState(pModule, s_GlassCards.back());
+			}
+			break;
+			case EQmModuleId::FocusMode:
+			{
+				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+				CUIRect CardFocusStart = Column;
+				s_GlassCards.push_back(CardFocusStart);
+
+				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+				DoModuleHeadline(CardContent, 2, Localize("Focus/Zen Mode"), Localize("Hide UI elements for immersive gameplay"));
+
+				static CButtonContainer s_ReaderButtonFocusToggle, s_ClearButtonFocusToggle;
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusMode, Localize("Enable Focus Mode"), &g_Config.m_QmFocusMode, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				if(g_Config.m_QmFocusMode)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideHud, Localize("Hide HUD"), &g_Config.m_QmFocusModeHideHud, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideUI, Localize("Hide unnecessary UI"), &g_Config.m_QmFocusModeHideUI, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideNames, Localize("Hide Player Names"), &g_Config.m_QmFocusModeHideNames, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideEffects, Localize("Hide Visual Effects"), &g_Config.m_QmFocusModeHideEffects, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideChat, Localize("Hide Chat"), &g_Config.m_QmFocusModeHideChat, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideScoreboard, Localize("Hide Scoreboard"), &g_Config.m_QmFocusModeHideScoreboard, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
+				}
+
+				CardContent.HSplitTop(LG_LineHeight * 0.85f, &Row, &CardContent);
+				{
+					CUIRect BindLabel, BindKey;
+					Row.VSplitLeft(Row.w * 0.45f, &BindLabel, &BindKey);
+					Ui()->DoLabel(&BindLabel, Localize("Focus mode bind:"), LG_BodySize, TEXTALIGN_ML);
+					CBindSlot FocusBind(KEY_UNKNOWN, KeyModifier::NONE);
+					{
+						const auto FocusIt = CommandBindCache.find("toggle qm_focus_mode 0 1");
+						if(FocusIt != CommandBindCache.end())
+							FocusBind = FocusIt->second;
+					}
+					const auto Result = GameClient()->m_KeyBinder.DoKeyReader(&s_ReaderButtonFocusToggle, &s_ClearButtonFocusToggle, &BindKey, FocusBind, false);
+					if(Result.m_Bind != FocusBind)
+					{
+						if(FocusBind.m_Key != KEY_UNKNOWN)
+							GameClient()->m_Binds.Bind(FocusBind.m_Key, "", false, FocusBind.m_ModifierMask);
+						if(Result.m_Bind.m_Key != KEY_UNKNOWN)
+						{
+							GameClient()->m_Binds.Bind(Result.m_Bind.m_Key, "toggle qm_focus_mode 0 1", false, Result.m_Bind.m_ModifierMask);
+							CommandBindCache.insert_or_assign(std::string("toggle qm_focus_mode 0 1"), Result.m_Bind);
+						}
+						else
+						{
+							CommandBindCache.erase("toggle qm_focus_mode 0 1");
+						}
+					}
+				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;

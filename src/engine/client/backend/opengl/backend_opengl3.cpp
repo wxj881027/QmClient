@@ -654,7 +654,9 @@ void CCommandProcessorFragment_OpenGL3_3::TextureCreate(int Slot, int Width, int
 				glSamplerParameterf(m_vTextures[Slot].m_Sampler2DArray, GL_TEXTURE_LOD_BIAS, ((GLfloat)m_OpenGLTextureLodBIAS / 1000.0f));
 #endif
 
-			uint8_t *pImageData3D = static_cast<uint8_t *>(malloc((size_t)Width * Height * PixelSize));
+			uint8_t *pImageData3D = static_cast<uint8_t *>(malloc((size_t)Width * (size_t)Height * PixelSize));
+			if(!pImageData3D)
+				return;
 			int Image3DWidth, Image3DHeight;
 
 			int ConvertWidth = Width;

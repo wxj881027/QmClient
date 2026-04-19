@@ -3911,6 +3911,9 @@ void CHud::RenderSpectatorCount()
 		return;
 	}
 
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI)
+		return;
+
 	int Count = 0;
 	const bool Preview = GameClient()->m_HudEditor.IsActive();
 	if(Client()->IsSixup())
@@ -4035,6 +4038,9 @@ void CHud::RenderDummyActions()
 	{
 		return;
 	}
+
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI)
+		return;
 	// render small dummy actions hud
 	const float BoxHeight = 29.0f;
 	const float BoxWidth = 16.0f;
@@ -4892,6 +4898,12 @@ void CHud::RenderSpectatorHud()
 void CHud::RenderLocalTime(float x)
 {
 	if(!g_Config.m_ClShowLocalTimeAlways && !GameClient()->m_Scoreboard.IsActive())
+	{
+		m_LocalTimeV2AnimState.Reset();
+		return;
+	}
+
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI)
 	{
 		m_LocalTimeV2AnimState.Reset();
 		return;

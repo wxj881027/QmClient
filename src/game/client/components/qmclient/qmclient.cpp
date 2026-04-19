@@ -1099,6 +1099,11 @@ void CTClient::OnShutdown()
 	AbortTask(m_pQmClientServerTimeTask);
 	AbortTask(m_pQmClientPlaytimeQueryTask);
 	AbortTask(m_pQmDdnetPlayerTask);
+	AbortTask(m_pQmClientAuthTokenTask);
+	AbortTask(m_pQmClientUsersTask);
+	AbortTask(m_pQmClientUsersSendTask);
+	AbortTask(m_pTClientInfoTask);
+	AbortTask(m_pUpdateExeTask);
 	m_pQmClientUsersParseJob = nullptr;
 	m_pQmDdnetPlayerParseJob = nullptr;
 	m_pQmClientLifecycleMarkerWriteJob = nullptr;
@@ -1758,7 +1763,7 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 		{
 			char aBuf[256];
 			if(pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w"))
-				str_format(aBuf, sizeof(aBuf), "/w %s %s", aPlayerName, g_Config.m_TcAutoReplyMutedMessage);
+				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_TcAutoReplyMutedMessage);
 			else
 				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_TcAutoReplyMutedMessage);
 			SendNonDuplicateMessage(0, aBuf);
@@ -1770,7 +1775,7 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 		{
 			char aBuf[256];
 			if(pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w"))
-				str_format(aBuf, sizeof(aBuf), "/w %s %s", aPlayerName, g_Config.m_TcAutoReplyMinimizedMessage);
+				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_TcAutoReplyMinimizedMessage);
 			else
 				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_TcAutoReplyMinimizedMessage);
 			SendNonDuplicateMessage(0, aBuf);
@@ -2293,6 +2298,8 @@ void CTClient::OnUpdate()
 	}
 
 	MaybeSaveMapCategoryCache();
+	ApplyFocusModeEffects();
+	ApplyGoresFastInputLink();
 }
 
 void CTClient::OnRender()
@@ -5086,6 +5093,64 @@ void CTClient::BuildGoresDistanceField()
 	m_GoresDistanceFieldValid = true;
 }
 
+void CTClient::ApplyFocusModeEffects()
+{
+	const bool FocusActive = g_Config.m_QmFocusMode != 0;
+	if(FocusActive == m_PrevFocusModeActive)
+		return;
+
+	if(FocusActive)
+	{
+		if(g_Config.m_QmFocusModeHideHud)
+		{
+			m_SavedClShowhud = g_Config.m_ClShowhud;
+			g_Config.m_ClShowhud = 0;
+		}
+		if(g_Config.m_QmFocusModeHideNames)
+		{
+			m_SavedClNamePlates = g_Config.m_ClNamePlates;
+			g_Config.m_ClNamePlates = 0;
+		}
+	}
+	else
+	{
+		g_Config.m_ClShowhud = m_SavedClShowhud;
+		g_Config.m_ClNamePlates = m_SavedClNamePlates;
+	}
+
+	m_PrevFocusModeActive = FocusActive;
+}
+
+void CTClient::ApplyGoresFastInputLink()
+{
+	const bool GoresActive = g_Config.m_QmGores != 0;
+	const bool ShouldEnableFastInput = GoresActive && g_Config.m_QmGoresFastInput;
+	const bool ShouldEnableFastInputOthers = ShouldEnableFastInput && g_Config.m_QmGoresFastInputOthers;
+
+	if(ShouldEnableFastInput && !m_PrevGoresFastInputActive)
+	{
+		m_SavedTcFastInput = g_Config.m_TcFastInput;
+		g_Config.m_TcFastInput = 1;
+	}
+	else if(!ShouldEnableFastInput && m_PrevGoresFastInputActive)
+	{
+		g_Config.m_TcFastInput = m_SavedTcFastInput;
+	}
+
+	if(ShouldEnableFastInputOthers && !m_PrevGoresFastInputOthersActive)
+	{
+		m_SavedTcFastInputOthers = g_Config.m_TcFastInputOthers;
+		g_Config.m_TcFastInputOthers = 1;
+	}
+	else if(!ShouldEnableFastInputOthers && m_PrevGoresFastInputOthersActive)
+	{
+		g_Config.m_TcFastInputOthers = m_SavedTcFastInputOthers;
+	}
+
+	m_PrevGoresFastInputActive = ShouldEnableFastInput;
+	m_PrevGoresFastInputOthersActive = ShouldEnableFastInputOthers;
+}
+
 bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) const
 {
 	vRoutePoints.clear();
@@ -5096,7 +5161,10 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) 
 
 	const int Width = pCollision->GetWidth();
 	const int Height = pCollision->GetHeight();
-	const int MapCellCount = Width * Height;
+	const int64_t MapCellCount64 = (int64_t)Width * Height;
+	if(MapCellCount64 <= 0 || MapCellCount64 > std::numeric_limits<int>::max())
+		return false;
+	const int MapCellCount = (int)MapCellCount64;
 	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
 	if(MapCellCount <= 0 ||
 		m_GoresDistanceFieldWidth != Width ||

@@ -89,6 +89,7 @@ class CRClientVoice
 		};
 
 		OpusDecoder *m_pDecoder = nullptr;
+		bool m_DecoderFailed = false;
 		uint16_t m_LastSeq = 0;
 		bool m_HasSeq = false;
 		uint16_t m_LastRecvSeq = 0;
@@ -175,10 +176,10 @@ class CRClientVoice
 
 	std::atomic<bool> m_PttActive = false;
 	std::atomic<int64_t> m_PttReleaseDeadline = 0;
-	bool m_VadActive = false;
-	int64_t m_VadReleaseDeadline = 0;
-	bool m_TxWasActive = false;
-	uint16_t m_Sequence = 0;
+	std::atomic<bool> m_VadActive = false;
+	std::atomic<int64_t> m_VadReleaseDeadline = 0;
+	std::atomic<bool> m_TxWasActive = false;
+	std::atomic<uint16_t> m_Sequence = 0;
 	std::atomic<uint32_t> m_ContextHash = 0;
 	int64_t m_LastKeepalive = 0;
 	uint32_t m_LastTokenHashSent = 0;
@@ -195,7 +196,7 @@ class CRClientVoice
 	std::atomic<bool> m_WorkerStop = false;
 	std::atomic<bool> m_WorkerEnabled = false;
 	std::atomic<bool> m_AudioRefreshRequested = true;
-	bool m_ShutdownDone = true;
+	std::atomic<bool> m_ShutdownDone = true;
 	int64_t m_LastConfigSnapshotUpdate = 0;
 	int64_t m_LastClientSnapshotUpdate = 0;
 	std::mutex m_ServerAddrMutex;

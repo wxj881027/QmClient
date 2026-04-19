@@ -1000,6 +1000,7 @@ void CRClientVoice::ClearPeerFrames()
 		Peer.m_LastGainLeft = 1.0f;
 		Peer.m_LastGainRight = 1.0f;
 		Peer.m_LossEwma = 0.0f;
+		Peer.m_DecoderFailed = false;
 		if(Peer.m_pDecoder)
 			opus_decoder_ctl(Peer.m_pDecoder, OPUS_RESET_STATE);
 		Peer.m_FrameHead = 0;
@@ -1040,6 +1041,7 @@ void CRClientVoice::ResetPeer(SVoicePeer &Peer)
 	Peer.m_LastGainLeft = 1.0f;
 	Peer.m_LastGainRight = 1.0f;
 	Peer.m_LossEwma = 0.0f;
+	Peer.m_DecoderFailed = false;
 	if(Peer.m_pDecoder)
 		opus_decoder_ctl(Peer.m_pDecoder, OPUS_RESET_STATE);
 	if(m_OutputDevice)
@@ -1394,7 +1396,7 @@ void CRClientVoice::ProcessCapture()
 	}
 	const bool TokenChanged = Config.m_RiVoiceTokenHash != m_LastTokenHashSent;
 	const bool NeedKeepalive = m_LastKeepalive == 0 || Now - m_LastKeepalive > time_freq() * 2;
-	const bool TxActiveSnapshot = UseVad ? m_VadActive : PttHeld;
+	const bool TxActiveSnapshot = UseVad ? m_VadActive.load() : PttHeld;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
 	uint8_t TxFlags = UseVad ? VOICE_FLAG_VAD : 0;
 	if(TestMode == 2)
@@ -1527,7 +1529,7 @@ void CRClientVoice::ProcessCapture()
 			}
 		}
 
-		const bool TxActive = UseVad ? m_VadActive : PttHeld;
+		const bool TxActive = UseVad ? m_VadActive.load() : PttHeld;
 		if(!TxActive)
 		{
 			m_TxWasActive = false;
@@ -2060,6 +2062,8 @@ void CRClientVoice::DecodeJitter()
 
 		if(!Peer.m_pDecoder)
 		{
+			if(Peer.m_DecoderFailed)
+				continue;
 			int Error = 0;
 			Peer.m_pDecoder = opus_decoder_create(VOICE_SAMPLE_RATE, VOICE_CHANNELS, &Error);
 			if(!Peer.m_pDecoder || Error != OPUS_OK)
@@ -2067,6 +2071,7 @@ void CRClientVoice::DecodeJitter()
 				char aError[256];
 				str_format(aError, sizeof(aError), "Failed to create Opus decoder: %d", Error);
 				VoiceLogErrorOnce(m_aDecoderErrorLog, sizeof(m_aDecoderErrorLog), aError);
+				Peer.m_DecoderFailed = true;
 				continue;
 			}
 			m_aDecoderErrorLog[0] = '\0';

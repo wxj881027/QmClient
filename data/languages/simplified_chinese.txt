@@ -256,6 +256,27 @@ Play background music
 Player
 == 玩家
 
+Hide HUD
+== 隐藏 HUD
+
+Hide Player Names
+== 隐藏玩家名字
+
+Hide Scoreboard
+== 隐藏计分板
+
+Hide Chat
+== 隐藏聊天
+
+Hide unnecessary UI
+== 隐藏非必要 UI
+
+Hide UI elements for immersive gameplay
+== 隐藏 UI 元素以获得沉浸式体验
+
+Hide Visual Effects
+== 隐藏视觉特效
+
 HUD
 == HUD
 
@@ -3594,6 +3615,9 @@ QmClient mode only leads your own tee
 Auto execute
 == 自动执行
 
+Enable Focus Mode
+== 启用专注模式
+
 Execute before connecting
 == 连接前执行
 
@@ -3878,6 +3902,12 @@ King of Gores auto weapon swap
 
 Enable Gores auto weapon swap
 == 启用 Gores 自动切枪
+
+Enable Gores Mode
+== 启用 Gores 模式
+
+Gores Mode
+== Gores 模式
 
 Disable after picking up other weapons
 == 拿到其他武器时停用
@@ -4990,9 +5020,6 @@ Current ratio: Display default (global)
 Current aspect ratio preset applies to the entire client view
 == 当前纵横比预设会作用于整个客户端画面
 
-QmClient
-== 栖梦
-
 All
 == 全体
 
@@ -5585,7 +5612,7 @@ r = Race Time
 == r = Race Time（比赛时间）
 
 f = FPS
-== f = FPS（每秒帧数）
+== f = FPS（每秒帧数、帧率）
 
 v = Velocity
 == v = Velocity（速度）
@@ -6006,10 +6033,6 @@ _ or ' ' = Space
 Activating mod weapon on %d: %s
 == 在 %d 上启用模组武器: %s
 
-[data_version.h]
-You have probably only installed the TClient DDNet.exe which is not supported, please use the entire TClient folder
-== 你可能只安装了 TClient 的 DDNet.exe，这不受支持，请使用完整的 TClient 文件夹
-
 Show %s group
 == 显示 %s 分组
 
@@ -6043,12 +6066,6 @@ DF
 Enable Deleting
 == 启用删除
 
-Delta input
-== Delta 输入
-
-Gamma input
-== Gamma 输入
-
 Fast Input (reduced visual delay)
 == 快速输入（降低视觉延迟）
 
@@ -6058,20 +6075,11 @@ Fast Input others
 Fast input others
 == 快速输入其他玩家
 
-Gamma input others
-== Gamma 输入其他玩家
-
-Delta input others
-== Delta 输入其他玩家
-
 HDF
 == HDF
 
 Only modified
 == 仅显示已修改
-
-QmClient
-== 栖梦
 
 Red
 == 红色
@@ -6157,6 +6165,21 @@ Execute on connect
 Fast input (reduce visual latency)
 == 快速输入（降低视觉延迟）
 
+Fast input others
+== 快速输入其他玩家
+
+Focus Mode
+== 专注模式
+
+Focus/Zen Mode
+== 专注模式
+
+Focus mode bind:
+== 专注模式按键：
+
+Gores mode bind:
+== Gores 模式按键：
+
 Mode
 == 模式
 
@@ -6213,9 +6236,6 @@ Current ratio: Display default (global)
 
 Current aspect ratio preset applies to the entire client view
 == 当前纵横比预设会作用于整个客户端画面
-
-QmClient
-== 栖梦
 
 Current: Ranks
 == 当前: 查分
@@ -6314,16 +6334,16 @@ Zoom presets
 == 缩放预设
 
 QmClient
-== QmClient
+== 栖梦
 
 QmClient online distribution
-== QmClient 在线分布
+== 栖梦客户端在线分布
 
 Set a voice server to enable QmClient distribution
-== 需要先配置语音服务器，才能启用 QmClient 在线分布
+== 需要先配置语音服务器，才能启用栖梦客户端在线分布
 
 No active QmClient reports yet
-== 暂无活跃的 QmClient 上报
+== 暂无活跃的栖梦客户端上报
 
 %d servers, %d users
 == %d 个服务器，%d 个用户
@@ -6348,3 +6368,12 @@ Selected server
 
 Not in the current browser list
 == 不在当前浏览器列表中
+
+Hook line tip
+== 辅助线提示（实际可钩中 Tee 的长度）
+
+Combo popups
+== Combo 连击动效
+
+Qm
+== 栖梦

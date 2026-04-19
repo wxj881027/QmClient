@@ -52,6 +52,8 @@ public:
 
 	void OnConsoleInit() override;
 	void OnRender() override;
+	void OnReset() override;
+	void OnShutdown() override;
 
 	void Translate(int Id, bool ShowProgress = true);
 	void Translate(const char *pName, bool ShowProgress = true);
