@@ -165,6 +165,112 @@ pub fn shutdown() {
     log::info!("Shutting down voice system...");
 }
 
+// ============== C ABI 导出 (供 C++ 直接调用) ==============
+
+/// 语音系统状态 (C ABI 版本)
+struct VoiceSystemHandle {
+    system: VoiceSystem,
+}
+
+/// 创建语音系统
+#[no_mangle]
+pub extern "C" fn voice_system_create() -> usize {
+    let handle = Box::new(VoiceSystemHandle {
+        system: VoiceSystem::new(),
+    });
+    Box::into_raw(handle) as usize
+}
+
+/// 销毁语音系统
+#[no_mangle]
+pub extern "C" fn voice_system_destroy(handle: usize) {
+    if handle != 0 {
+        unsafe {
+            let _ = Box::from_raw(handle as *mut VoiceSystemHandle);
+        }
+    }
+}
+
+/// 设置配置 (使用整数数组: 15 个参数)
+#[no_mangle]
+pub unsafe extern "C" fn voice_set_config(handle: usize, config: *const i32) {
+    if handle == 0 || config.is_null() { return; }
+    
+    let handle = &*(handle as *const VoiceSystemHandle);
+    handle.system.set_config(VoiceConfig {
+        mic_volume: *config.offset(0),
+        noise_suppress: *config.offset(1) != 0,
+        noise_suppress_strength: *config.offset(2),
+        comp_threshold: *config.offset(3),
+        comp_ratio: *config.offset(4),
+        comp_attack_ms: *config.offset(5),
+        comp_release_ms: *config.offset(6),
+        comp_makeup: *config.offset(7),
+        vad_enable: *config.offset(8) != 0,
+        vad_threshold: *config.offset(9),
+        vad_release_delay_ms: *config.offset(10),
+        stereo: *config.offset(11) != 0,
+        stereo_width: *config.offset(12),
+        volume: *config.offset(13),
+        radius: *config.offset(14),
+    });
+}
+
+/// 设置 PTT
+#[no_mangle]
+pub extern "C" fn voice_set_ptt(handle: usize, active: i32) {
+    if handle == 0 { return; }
+    
+    let handle = unsafe { &*(handle as *const VoiceSystemHandle) };
+    handle.system.set_ptt_active(active != 0);
+}
+
+/// 设置 VAD
+#[no_mangle]
+pub extern "C" fn voice_set_vad(handle: usize, active: i32) {
+    if handle == 0 { return; }
+    
+    let handle = unsafe { &*(handle as *const VoiceSystemHandle) };
+    handle.system.set_vad_active(active != 0);
+}
+
+/// 更新玩家
+#[no_mangle]
+pub unsafe extern "C" fn voice_update_players(handle: usize, players: *const f32, count: usize) {
+    if handle == 0 || players.is_null() || count == 0 { return; }
+    
+    let handle = &*(handle as *const VoiceSystemHandle);
+    // TODO: 实现玩家位置更新
+}
+
+/// 获取麦克风电平
+#[no_mangle]
+pub extern "C" fn voice_get_mic_level(handle: usize) -> i32 {
+    if handle == 0 { return 0; }
+    
+    let handle = unsafe { &*(handle as *const VoiceSystemHandle) };
+    handle.system.get_mic_level()
+}
+
+/// 获取延迟
+#[no_mangle]
+pub extern "C" fn voice_get_ping(handle: usize) -> i32 {
+    if handle == 0 { return 0; }
+    
+    let handle = unsafe { &*(handle as *const VoiceSystemHandle) };
+    handle.system.get_ping_ms()
+}
+
+/// 是否正在说话
+#[no_mangle]
+pub extern "C" fn voice_is_speaking(handle: usize) -> i32 {
+    if handle == 0 { return 0; }
+    
+    let handle = unsafe { &*(handle as *const VoiceSystemHandle) };
+    // 基于麦克风级别判断是否在说话
+    if handle.system.get_mic_level() > 10 { 1 } else { 0 }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

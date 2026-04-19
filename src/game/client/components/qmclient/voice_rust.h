@@ -9,10 +9,6 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_RUST_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_RUST_H
 
-// cxx 生成的头文件路径
-// 构建时会生成到: ${CMAKE_BINARY_DIR}/cxxbridge/
-#include "ddnet-voice/src/bridge/mod.rs.h"
-
 #include <memory>
 #include <vector>
 
@@ -63,6 +59,8 @@ struct SpatialResult {
 
 /**
  * @brief 语音系统封装类
+ *
+ * 使用不透明句柄模式，避免 C++ 直接依赖 cxx 生成的头文件
  */
 class VoiceSystem {
 public:
@@ -91,65 +89,9 @@ public:
     bool isSpeaking() const;
 
 private:
-    std::unique_ptr<VoiceSystemHandle> m_pHandle;
+    // 不透明句柄 - 避免依赖 cxx 生成的类型
+    size_t m_Handle = 0;
 };
-
-/**
- * @brief DSP 处理器封装类
- */
-class DspProcessor {
-public:
-    DspProcessor();
-    ~DspProcessor();
-    
-    /// 处理音频帧
-    void process(int16_t *samples, size_t count, const Config &config);
-
-private:
-    std::unique_ptr<DspProcessor> m_pHandle;
-};
-
-/**
- * @brief Opus 编解码器封装类
- */
-class OpusCodec {
-public:
-    OpusCodec();
-    ~OpusCodec();
-    
-    /// 编码音频帧
-    /// @return 编码后的字节数，-1 表示错误
-    int encode(const int16_t *pcm, size_t pcm_count, uint8_t *output, size_t output_size);
-    
-    /// 解码音频帧
-    /// @return 解码后的采样数，-1 表示错误
-    int decode(const uint8_t *opus_data, size_t opus_len, int16_t *pcm, size_t pcm_size);
-    
-    /// 设置比特率
-    void setBitrate(int bitrate);
-
-private:
-    std::unique_ptr<OpusCodecHandle> m_pHandle;
-};
-
-/**
- * @brief 计算 3D 空间音频参数
- */
-SpatialResult calculateSpatial(
-    float local_x, float local_y,
-    float sender_x, float sender_y,
-    float radius, float stereo_width, float volume
-);
-
-/**
- * @brief 计算上下文哈希
- */
-uint32_t contextHash(const char *server_addr);
-
-/**
- * @brief 计算 Token 哈希
- */
-uint32_t tokenHash(const char *token);
 
 } // namespace voice
 

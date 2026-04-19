@@ -7,6 +7,7 @@
 void CVoiceComponent::ConVoicePtt(IConsole::IResult *pResult, void *pUserData)
 {
 	CVoiceComponent *pThis = static_cast<CVoiceComponent *>(pUserData);
+	// 暂时只使用 C++ 实现
 	pThis->m_Voice.SetPttActive(pResult->GetInteger(0) != 0);
 }
 

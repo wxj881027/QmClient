@@ -184,6 +184,7 @@ MACRO_CONFIG_INT(QmInputOverlayPosY, qm_input_overlay_pos_y, 80, 0, 100, CFGFLAG
 
 // Voice
 MACRO_CONFIG_INT(RiVoiceEnable, qm_voice_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用语音聊天")
+MACRO_CONFIG_INT(RiVoiceUseRust, qm_voice_use_rust, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "使用 Rust 重构版语音系统（实验性，需要额外配置）")
 MACRO_CONFIG_INT(RiVoiceProtocolVersion, qm_voice_protocol_version, 3, 1, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "语音协议版本")
 MACRO_CONFIG_STR(RiVoiceServer, qm_voice_server, 128, "42.194.185.210:9987", CFGFLAG_CLIENT | CFGFLAG_SAVE, "语音服务器地址（host:port）")
 MACRO_CONFIG_STR(RiVoiceAudioBackend, qm_voice_audio_backend, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "语音音频后端（SDL 驱动名，空为自动）")

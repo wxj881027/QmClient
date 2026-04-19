@@ -746,7 +746,7 @@ endif()
 
 if(TARGET_OS STREQUAL "windows")
   set(PLATFORM_CLIENT)
-  set(PLATFORM_CLIENT_LIBS opengl32.lib winmm.lib imm32.lib)
+  set(PLATFORM_CLIENT_LIBS opengl32.lib winmm.lib imm32.lib oleaut32.lib ole32.lib)
   if(MSVC)
     list(APPEND PLATFORM_CLIENT_LIBS windowsapp.lib)
   endif()
@@ -985,6 +985,9 @@ set(RUST_SRC
       ${RUST_BASE}
       ${RUST_ENGINE_INTERFACE}
       ${RUST_ENGINE_SHARED}
+      # Voice crate
+      src/rust-bridge/voice/Cargo.toml
+      src/rust-bridge/voice/src/lib.rs
       Cargo.toml
       Cargo.lock
 )
@@ -2597,6 +2600,8 @@ if(CLIENT)
     components/qmclient/voice_component.h
     components/qmclient/voice_core.cpp
     components/qmclient/voice_core.h
+    # components/qmclient/voice_rust.cpp  # 暂时禁用，等待 COM/OLE 链接问题修复
+    # components/qmclient/voice_rust.h  # 暂时禁用
     components/qmclient/warlist.cpp
     components/qmclient/warlist.h
     components/race_demo.cpp
@@ -2797,7 +2802,7 @@ if(CLIENT)
 
     ${TARGET_STEAMAPI}
     rust_engine_shared
-    rust_voice
+    # rust_voice  # 暂时禁用，等待 COM/OLE 链接问题修复
 
     ${PLATFORM_CLIENT_LIBS}
     ${LIBS}
