@@ -6906,6 +6906,14 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_RiVoiceEnable, Localize("Enable voice"), &g_Config.m_RiVoiceEnable, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
+				// Rust/C++ 语音系统切换开关
+				if(g_Config.m_RiVoiceEnable)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_RiVoiceUseRust, Localize("Use Rust voice (experimental)"), &g_Config.m_RiVoiceUseRust, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing * 0.75f, nullptr, &CardContent);
+				}
+
 				if(g_Config.m_RiVoiceEnable)
 				{
 					auto AddVoiceSectionLabel = [&](const char *pTitle, const char *pHint) {

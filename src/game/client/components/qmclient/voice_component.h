@@ -5,9 +5,7 @@
 #include <game/client/component.h>
 
 #include "voice_core.h"
-
-// Rust 语音系统 (实验性)
-// #include "voice_rust.h"  // 暂时禁用，等待 COM/OLE 链接问题修复
+#include "voice_rust.h"
 
 class CVoiceComponent : public CComponent
 {
@@ -22,7 +20,11 @@ public:
 	bool UseRustVoice() const { return g_Config.m_RiVoiceUseRust != 0; }
 	
 	void RenderOverlay() { 
-		m_Voice.RenderSpeakerOverlay();
+		if(UseRustVoice()) {
+			// Rust 版本暂无覆盖层渲染
+		} else {
+			m_Voice.RenderSpeakerOverlay();
+		}
 	}
 
 private:
@@ -36,7 +38,7 @@ private:
 	static void ConVoiceSetMicMute(IConsole::IResult *pResult, void *pUserData);
 
 	CRClientVoice m_Voice;
-	// voice::VoiceSystem m_RustVoice;  // 暂时禁用
+	voice::VoiceSystem m_RustVoice;
 };
 
 #endif // GAME_CLIENT_COMPONENTS_TCLIENT_VOICE_COMPONENT_H

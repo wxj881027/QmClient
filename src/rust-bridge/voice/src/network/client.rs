@@ -2,7 +2,7 @@
 //!
 //! 使用 Tokio 异步运行时处理网络 I/O
 
-use super::protocol::{VoicePacket, PacketType, ParseError};
+use super::protocol::{VoicePacket, ParseError};
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc;
 use std::net::SocketAddr;
@@ -60,8 +60,10 @@ impl VoiceClient {
             Self::recv_loop(socket, recv_tx_clone).await;
         });
 
+        // 创建一个新的 socket 用于客户端结构体（占位）
+        let placeholder_socket = UdpSocket::bind("0.0.0.0:0").await?;
         let client = Self {
-            socket: Arc::new(UdpSocket::bind("0.0.0.0:0").await?), // 占位，实际使用 send_tx
+            socket: Arc::new(placeholder_socket),
             server_addr,
             send_tx,
             recv_tx,

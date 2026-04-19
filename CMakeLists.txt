@@ -2600,8 +2600,8 @@ if(CLIENT)
     components/qmclient/voice_component.h
     components/qmclient/voice_core.cpp
     components/qmclient/voice_core.h
-    # components/qmclient/voice_rust.cpp  # 暂时禁用，等待 COM/OLE 链接问题修复
-    # components/qmclient/voice_rust.h  # 暂时禁用
+    components/qmclient/voice_rust.cpp
+    components/qmclient/voice_rust.h
     components/qmclient/warlist.cpp
     components/qmclient/warlist.h
     components/race_demo.cpp
@@ -2802,7 +2802,12 @@ if(CLIENT)
 
     ${TARGET_STEAMAPI}
     rust_engine_shared
-    # rust_voice  # 暂时禁用，等待 COM/OLE 链接问题修复
+    rust_voice
+
+    # Windows COM/OLE 库 (Rust tokio/windows-core 依赖)
+    ole32
+    oleaut32
+    propsys
 
     ${PLATFORM_CLIENT_LIBS}
     ${LIBS}
