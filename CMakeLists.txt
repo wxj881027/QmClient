@@ -988,7 +988,7 @@ set(RUST_SRC
       Cargo.toml
       Cargo.lock
 )
-set(RUST_TARGETS engine_shared)
+set(RUST_TARGETS engine_shared voice)
 if(NOT CMAKE_OSX_ARCHITECTURES)
   set(RUST_OUTPUTS)
   foreach(rust_target ${RUST_TARGETS})
@@ -2797,6 +2797,7 @@ if(CLIENT)
 
     ${TARGET_STEAMAPI}
     rust_engine_shared
+    rust_voice
 
     ${PLATFORM_CLIENT_LIBS}
     ${LIBS}
