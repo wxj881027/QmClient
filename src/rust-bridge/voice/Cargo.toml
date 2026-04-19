@@ -18,8 +18,8 @@ sdl-backend = []
 # 音频（双后端策略）
 cpal = { version = "0.15", optional = true }  # 跨平台音频 I/O（首选）
 
-# 编解码 - 使用 opus crate
-opus = "0.3"                     # Opus 编解码
+# 编解码 - 纯 Rust Opus 实现
+opus-rs = "0.1"                # 纯 Rust Opus 编解码器
 
 # 异步运行时
 tokio = { version = "1", features = ["net", "sync", "rt-multi-thread", "time", "macros"] }
