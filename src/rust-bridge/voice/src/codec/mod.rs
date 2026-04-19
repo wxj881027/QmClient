@@ -7,7 +7,6 @@
 //! - PLC (丢包隐藏)
 
 pub mod opus;
-pub mod opus_mock;
 pub mod adaptive;
 
 pub use opus::OpusCodec;

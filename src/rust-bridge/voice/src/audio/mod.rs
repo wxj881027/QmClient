@@ -1,11 +1,15 @@
 //! 音频 I/O 模块
 //!
-//! 使用 cpal 实现跨平台音频采集和播放
+//! 双后端策略：
+//! - cpal: 纯 Rust 跨平台音频（首选）
+//! - sdl: 通过 C++ 桥接的 SDL 音频（备选）
 
+pub mod backend;
 pub mod capture;
 pub mod playback;
 pub mod mixer;
 
+pub use backend::{AudioBackend, AudioBackendType};
 pub use capture::AudioCapture;
 pub use playback::AudioPlayback;
 pub use mixer::AudioMixer;
@@ -25,18 +29,5 @@ impl Default for AudioConfig {
             channels: 1,
             frame_size: 960, // 20ms @ 48kHz
         }
-    }
-}
-
-/// 音频后端类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AudioBackend {
-    Auto,
-    Cpal,
-}
-
-impl Default for AudioBackend {
-    fn default() -> Self {
-        AudioBackend::Auto
     }
 }

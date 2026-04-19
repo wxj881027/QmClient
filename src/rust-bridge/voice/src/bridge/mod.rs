@@ -1,78 +1,136 @@
 //! C++ 桥接层
 //!
-//! 提供 Rust 与 C++ 之间的 FFI 接口
-//! 
-//! 注意：这是实验性实现，实际项目中需要配置 cxx 桥接
+//! 使用 cxx 提供 Rust 与 C++ 之间的 FFI 接口
 
-use crate::{VoiceSystem, VoiceConfig, PlayerSnapshot};
-use std::sync::Arc;
+use crate::VoiceConfig;
+use crate::dsp::DspChain;
+use crate::codec::OpusCodec;
+use crate::network::protocol::{calculate_context_hash, calculate_token_hash};
+use crate::spatial::{calculate_spatial, SpatialConfig};
 
-/// 语音系统句柄 (包装 VoiceSystem)
-pub struct VoiceSystemHandle {
-    system: Arc<VoiceSystem>,
+#[cxx::bridge]
+mod ffi {
+    // Rust 暴露给 C++ 的接口
+    extern "Rust" {
+        /// 初始化语音系统
+        fn voice_init() -> bool;
+        
+        /// 关闭语音系统
+        fn voice_shutdown();
+        
+        /// 创建 DSP 处理器，返回不透明句柄
+        fn voice_dsp_create() -> usize;
+        
+        /// 销毁 DSP 处理器
+        fn voice_dsp_destroy(dsp: usize);
+        
+        /// 处理音频帧 (DSP)
+        fn voice_dsp_process(dsp: usize, samples: &mut [i16], config: &VoiceConfigFFI);
+        
+        /// 创建 Opus 编解码器，返回不透明句柄
+        fn voice_opus_create() -> usize;
+        
+        /// 销毁 Opus 编解码器
+        fn voice_opus_destroy(codec: usize);
+        
+        /// 编码音频帧
+        fn voice_opus_encode(codec: usize, pcm: &[i16], output: &mut [u8]) -> Result<usize>;
+        
+        /// 解码音频帧
+        fn voice_opus_decode(codec: usize, opus_data: &[u8], pcm: &mut [i16]) -> Result<usize>;
+        
+        /// 设置比特率
+        fn voice_opus_set_bitrate(codec: usize, bitrate: i32) -> Result<()>;
+        
+        /// 计算 3D 空间音频
+        fn voice_calculate_spatial(
+            local_x: f32, local_y: f32,
+            sender_x: f32, sender_y: f32,
+            radius: f32, stereo_width: f32, volume: f32
+        ) -> SpatialResultFFI;
+        
+        /// 计算上下文哈希
+        fn voice_context_hash(server_addr: &str) -> u32;
+        
+        /// 计算 Token 哈希
+        fn voice_token_hash(token: &str) -> u32;
+    }
+    
+    // C++ 暴露给 Rust 的接口
+    unsafe extern "C++" {
+        include!("game/client/components/qmclient/voice_callback.h");
+        
+        /// 回调：收到音频数据
+        fn on_voice_packet(data: &[u8], sender_id: u16);
+        
+        /// 回调：玩家开始/停止说话
+        fn on_voice_state_change(client_id: u16, speaking: bool);
+        
+        /// 回调：获取当前时间 (microseconds)
+        fn time_get() -> i64;
+        
+        /// 回调：获取时间频率 (ticks per second)
+        fn time_freq() -> i64;
+    }
+    
+    /// 语音配置 FFI 结构
+    struct VoiceConfigFFI {
+        mic_volume: i32,
+        noise_suppress: bool,
+        noise_suppress_strength: i32,
+        comp_threshold: i32,
+        comp_ratio: i32,
+        comp_attack_ms: i32,
+        comp_release_ms: i32,
+        comp_makeup: i32,
+        vad_enable: bool,
+        vad_threshold: i32,
+        vad_release_delay_ms: i32,
+        stereo: bool,
+        stereo_width: i32,
+        volume: i32,
+        radius: i32,
+    }
+    
+    /// 空间音频结果 FFI 结构
+    struct SpatialResultFFI {
+        distance_factor: f32,
+        left_gain: f32,
+        right_gain: f32,
+        in_range: bool,
+    }
 }
 
-impl VoiceSystemHandle {
-    pub fn new() -> Self {
-        Self {
-            system: Arc::new(VoiceSystem::new()),
+// FFI 函数实现
+
+fn voice_init() -> bool {
+    crate::init()
+}
+
+fn voice_shutdown() {
+    crate::shutdown()
+}
+
+fn voice_dsp_create() -> usize {
+    let dsp = Box::new(DspChain::new());
+    Box::into_raw(dsp) as usize
+}
+
+fn voice_dsp_destroy(dsp: usize) {
+    if dsp != 0 {
+        unsafe {
+            let _ = Box::from_raw(dsp as *mut DspChain);
         }
     }
 }
 
-/// C++ 配置结构
-#[repr(C)]
-pub struct VoiceConfigFFI {
-    pub mic_volume: i32,
-    pub noise_suppress: bool,
-    pub noise_suppress_strength: i32,
-    pub comp_threshold: i32,
-    pub comp_ratio: i32,
-    pub comp_attack_ms: i32,
-    pub comp_release_ms: i32,
-    pub comp_makeup: i32,
-    pub vad_enable: bool,
-    pub vad_threshold: i32,
-    pub vad_release_delay_ms: i32,
-    pub stereo: bool,
-    pub stereo_width: i32,
-    pub volume: i32,
-    pub radius: i32,
-}
-
-/// C++ 玩家快照结构
-#[repr(C)]
-pub struct PlayerSnapshotFFI {
-    pub client_id: u16,
-    pub x: f32,
-    pub y: f32,
-    pub team: i32,
-    pub is_spectator: bool,
-    pub is_active: bool,
-}
-
-/// 初始化语音系统
-pub fn voice_init() -> bool {
-    crate::init()
-}
-
-/// 关闭语音系统
-pub fn voice_shutdown() {
-    crate::shutdown()
-}
-
-/// 创建语音系统实例
-pub fn voice_create() -> Box<VoiceSystemHandle> {
-    Box::new(VoiceSystemHandle::new())
-}
-
-/// 销毁语音系统实例
-pub fn voice_destroy(_handle: Box<VoiceSystemHandle>) {
-    // Box 会在函数结束时自动 drop
-}
-
-/// 设置配置
-pub fn voice_set_config(handle: &mut VoiceSystemHandle, config_ffi: &VoiceConfigFFI) {
+fn voice_dsp_process(dsp: usize, samples: &mut [i16], config_ffi: &ffi::VoiceConfigFFI) {
+    if dsp == 0 {
+        return;
+    }
+    
+    let dsp = unsafe { &mut *(dsp as *mut DspChain) };
+    
     let config = VoiceConfig {
         mic_volume: config_ffi.mic_volume,
         noise_suppress: config_ffi.noise_suppress,
@@ -90,43 +148,80 @@ pub fn voice_set_config(handle: &mut VoiceSystemHandle, config_ffi: &VoiceConfig
         volume: config_ffi.volume,
         radius: config_ffi.radius,
     };
-    handle.system.set_config(config);
+    dsp.process(samples, &config);
 }
 
-/// 设置 PTT 状态
-pub fn voice_set_ptt(handle: &mut VoiceSystemHandle, active: bool) {
-    handle.system.set_ptt_active(active);
+fn voice_opus_create() -> usize {
+    match OpusCodec::new() {
+        Ok(codec) => {
+            let boxed = Box::new(codec);
+            Box::into_raw(boxed) as usize
+        }
+        Err(_) => 0,
+    }
 }
 
-/// 更新玩家快照
-pub fn voice_update_players(handle: &mut VoiceSystemHandle, players_ffi: &[PlayerSnapshotFFI]) {
-    let players: Vec<PlayerSnapshot> = players_ffi
-        .iter()
-        .map(|p| PlayerSnapshot {
-            client_id: p.client_id,
-            x: p.x,
-            y: p.y,
-            team: p.team,
-            is_spectator: p.is_spectator,
-            is_active: p.is_active,
-        })
-        .collect();
-    handle.system.update_players(players);
+fn voice_opus_destroy(codec: usize) {
+    if codec != 0 {
+        unsafe {
+            let _ = Box::from_raw(codec as *mut OpusCodec);
+        }
+    }
 }
 
-/// 获取麦克风电平
-pub fn voice_get_mic_level(handle: &VoiceSystemHandle) -> i32 {
-    handle.system.get_mic_level()
+fn voice_opus_encode(codec: usize, pcm: &[i16], output: &mut [u8]) -> Result<usize, String> {
+    if codec == 0 {
+        return Err("Null codec pointer".to_string());
+    }
+    
+    let codec = unsafe { &mut *(codec as *mut OpusCodec) };
+    codec.encode(pcm, output).map_err(|e| e.to_string())
 }
 
-/// 获取延迟
-pub fn voice_get_ping(handle: &VoiceSystemHandle) -> i32 {
-    handle.system.get_ping_ms()
+fn voice_opus_decode(codec: usize, opus_data: &[u8], pcm: &mut [i16]) -> Result<usize, String> {
+    if codec == 0 {
+        return Err("Null codec pointer".to_string());
+    }
+    
+    let codec = unsafe { &mut *(codec as *mut OpusCodec) };
+    codec.decode(opus_data, pcm).map_err(|e| e.to_string())
 }
 
-/// 是否正在说话
-pub fn voice_is_speaking(handle: &VoiceSystemHandle) -> bool {
-    handle.system.is_ptt_active() || handle.system.is_vad_active()
+fn voice_opus_set_bitrate(codec: usize, bitrate: i32) -> Result<(), String> {
+    if codec == 0 {
+        return Err("Null codec pointer".to_string());
+    }
+    
+    let codec = unsafe { &mut *(codec as *mut OpusCodec) };
+    codec.set_bitrate(bitrate).map_err(|e| e.to_string())
+}
+
+fn voice_calculate_spatial(
+    local_x: f32, local_y: f32,
+    sender_x: f32, sender_y: f32,
+    radius: f32, stereo_width: f32, volume: f32
+) -> ffi::SpatialResultFFI {
+    let config = SpatialConfig {
+        radius,
+        stereo_width,
+        volume,
+    };
+    let result = calculate_spatial((local_x, local_y), (sender_x, sender_y), &config);
+    
+    ffi::SpatialResultFFI {
+        distance_factor: result.distance_factor,
+        left_gain: result.left_gain,
+        right_gain: result.right_gain,
+        in_range: result.in_range,
+    }
+}
+
+fn voice_context_hash(server_addr: &str) -> u32 {
+    calculate_context_hash(server_addr)
+}
+
+fn voice_token_hash(token: &str) -> u32 {
+    calculate_token_hash(token)
 }
 
 #[cfg(test)]
@@ -134,8 +229,54 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_voice_system_handle() {
-        let handle = VoiceSystemHandle::new();
-        assert_eq!(handle.system.get_mic_level(), 0);
+    fn test_dsp_processor() {
+        let dsp = voice_dsp_create();
+        assert_ne!(dsp, 0);
+        
+        let mut samples = vec![1000i16; 960];
+        let config = ffi::VoiceConfigFFI {
+            mic_volume: 100,
+            noise_suppress: true,
+            noise_suppress_strength: 50,
+            comp_threshold: 20,
+            comp_ratio: 25,
+            comp_attack_ms: 20,
+            comp_release_ms: 200,
+            comp_makeup: 160,
+            vad_enable: false,
+            vad_threshold: 8,
+            vad_release_delay_ms: 150,
+            stereo: true,
+            stereo_width: 100,
+            volume: 100,
+            radius: 50,
+        };
+        voice_dsp_process(dsp, &mut samples, &config);
+        
+        voice_dsp_destroy(dsp);
+    }
+
+    #[test]
+    fn test_opus_codec() {
+        let codec = voice_opus_create();
+        assert_ne!(codec, 0);
+        
+        let samples: Vec<i16> = (0..960).map(|i| (i % 100) as i16).collect();
+        let mut encoded = vec![0u8; 1000];
+        let len = voice_opus_encode(codec, &samples, &mut encoded).unwrap();
+        assert!(len > 0);
+        
+        let mut decoded = vec![0i16; 960];
+        let samples_decoded = voice_opus_decode(codec, &encoded[..len], &mut decoded).unwrap();
+        assert!(samples_decoded > 0);
+        
+        voice_opus_destroy(codec);
+    }
+
+    #[test]
+    fn test_spatial_calculation() {
+        let result = voice_calculate_spatial(0.0, 0.0, 100.0, 0.0, 1600.0, 1.0, 1.0);
+        assert!(result.in_range);
+        assert!(result.distance_factor > 0.0);
     }
 }

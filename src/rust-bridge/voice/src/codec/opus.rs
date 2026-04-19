@@ -1,12 +1,11 @@
 //! Opus 编解码器封装
 //!
-//! 采样率: 48000 Hz (Opus 唯一支持的采样率)
+//! 使用 opus crate 进行音频编解码
+//! 采样率: 48000 Hz
 //! 帧大小: 960 采样 (20ms)
 //! 声道数: 1 (单声道)
 
-// 使用 mock 实现进行实验性构建
-// 实际项目中应该使用: use opus::{Decoder, Encoder, Application, Error as OpusError};
-use super::opus_mock::{Decoder, Encoder, Application, Error as OpusError, Bitrate, Channels};
+use opus::{Decoder, Encoder, Application, Bitrate, Channels, Error as OpusError};
 
 /// 语音编解码器
 pub struct OpusCodec {
@@ -14,7 +13,8 @@ pub struct OpusCodec {
     decoder: Decoder,
     sample_rate: u32,
     channels: Channels,
-    _mock_bitrate: i32,
+    current_bitrate: i32,
+    fec_enabled: bool,
 }
 
 /// 编解码错误
@@ -44,15 +44,21 @@ impl OpusCodec {
     /// 
     /// 使用 VoIP 优化模式，初始比特率 24kbps
     pub fn new() -> Result<Self, CodecError> {
-        let encoder = Encoder::new(SAMPLE_RATE, Channels::Mono, Application::Voip)?;
-        let decoder = Decoder::new(SAMPLE_RATE, Channels::Mono)?;
+        let sample_rate = SAMPLE_RATE;
+        let channels = Channels::Mono;
+        
+        let mut encoder = Encoder::new(sample_rate, channels, Application::Voip)?;
+        encoder.set_bitrate(Bitrate::Bits(24000))?;
+        
+        let decoder = Decoder::new(sample_rate, channels)?;
         
         Ok(Self {
             encoder,
             decoder,
-            sample_rate: SAMPLE_RATE,
-            channels: Channels::Mono,
-            _mock_bitrate: 24000,
+            sample_rate,
+            channels,
+            current_bitrate: 24000,
+            fec_enabled: false,
         })
     }
 
@@ -64,7 +70,7 @@ impl OpusCodec {
     /// 
     /// # 返回
     /// 编码后的字节数
-    pub fn encode(&self, pcm: &[i16], output: &mut [u8]) -> Result<usize, CodecError> {
+    pub fn encode(&mut self, pcm: &[i16], output: &mut [u8]) -> Result<usize, CodecError> {
         if pcm.len() != FRAME_SAMPLES {
             return Err(CodecError::InvalidFrameSize {
                 expected: FRAME_SAMPLES,
@@ -132,20 +138,22 @@ impl OpusCodec {
     /// # 参数
     /// * `bitrate` - 比特率 (bps)，范围 6000-510000
     pub fn set_bitrate(&mut self, bitrate: i32) -> Result<(), CodecError> {
-        self._mock_bitrate = bitrate.clamp(6000, 510000);
+        let bitrate = bitrate.clamp(6000, 510000);
+        self.encoder.set_bitrate(Bitrate::Bits(bitrate))?;
+        self.current_bitrate = bitrate;
         Ok(())
     }
 
     /// 设置 FEC (前向纠错)
     pub fn set_fec(&mut self, enabled: bool) -> Result<(), CodecError> {
-        // 在 mock 中忽略
-        let _ = enabled;
+        self.encoder.set_inband_fec(enabled)?;
+        self.fec_enabled = enabled;
         Ok(())
     }
 
     /// 获取当前比特率
     pub fn get_bitrate(&self) -> Result<i32, CodecError> {
-        Ok(self._mock_bitrate)
+        Ok(self.current_bitrate)
     }
 
     /// 重置编码器状态
@@ -168,6 +176,11 @@ impl OpusCodec {
     /// 获取每帧采样数
     pub fn frame_samples(&self) -> usize {
         FRAME_SAMPLES
+    }
+
+    /// 是否启用 FEC
+    pub fn is_fec_enabled(&self) -> bool {
+        self.fec_enabled
     }
 }
 
@@ -202,8 +215,19 @@ mod tests {
         let mut decoded = vec![0i16; FRAME_SAMPLES];
         codec.decode(&encoded[..encoded_len], &mut decoded).unwrap();
         
-        // Mock 实现会有数据，但不会完全相同
-        assert_eq!(decoded.len(), FRAME_SAMPLES);
+        // 计算 SNR
+        let mut sum_sq_diff = 0.0f64;
+        let mut sum_sq_orig = 0.0f64;
+        for (orig, dec) in original.iter().zip(decoded.iter()) {
+            let diff = *orig as f64 - *dec as f64;
+            sum_sq_diff += diff * diff;
+            sum_sq_orig += (*orig as f64) * (*orig as f64);
+        }
+        
+        let snr_db = 10.0 * (sum_sq_orig / sum_sq_diff).log10();
+        
+        // Opus 在 24kbps 应该有 > 15dB SNR
+        assert!(snr_db > 15.0, "SNR too low: {} dB", snr_db);
     }
 
     #[test]
@@ -219,45 +243,36 @@ mod tests {
         let mut concealed = vec![0i16; FRAME_SAMPLES];
         codec.decode_plc(&mut concealed).unwrap();
         
-        // PLC 应该产生输出
-        assert_eq!(concealed.len(), FRAME_SAMPLES);
+        // PLC 应该产生平滑的音频，不是静音
+        let energy: f32 = concealed.iter().map(|&s| (s as f32).powi(2)).sum::<f32>() / FRAME_SAMPLES as f32;
+        assert!(energy > 0.0, "PLC should produce non-silent output");
     }
 
     #[test]
     fn test_bitrate_change() {
         let mut codec = OpusCodec::new().unwrap();
         
-        // 设置不同比特率 (mock 中忽略)
+        // 设置不同比特率
         codec.set_bitrate(16000).unwrap();
-        codec.set_bitrate(24000).unwrap();
-        codec.set_bitrate(32000).unwrap();
+        assert_eq!(codec.get_bitrate().unwrap(), 16000);
         
-        // Mock 返回固定值
-        let bitrate = codec.get_bitrate().unwrap();
-        assert!(bitrate > 0);
+        codec.set_bitrate(32000).unwrap();
+        assert_eq!(codec.get_bitrate().unwrap(), 32000);
     }
 
     #[test]
     fn test_fec() {
         let mut codec = OpusCodec::new().unwrap();
         
-        // 启用 FEC (mock 中忽略)
+        // 默认不启用 FEC
+        assert!(!codec.is_fec_enabled());
+        
+        // 启用 FEC
         codec.set_fec(true).unwrap();
+        assert!(codec.is_fec_enabled());
         
-        // 编码两帧
-        let frame1: Vec<i16> = (0..FRAME_SAMPLES).map(|i| (i % 100) as i16).collect();
-        let frame2: Vec<i16> = (0..FRAME_SAMPLES).map(|i| ((i + 50) % 100) as i16).collect();
-        
-        let mut enc1 = vec![0u8; 1000];
-        let mut enc2 = vec![0u8; 1000];
-        let _ = codec.encode(&frame1, &mut enc1).unwrap();
-        let _ = codec.encode(&frame2, &mut enc2).unwrap();
-        
-        // 使用第二帧恢复第一帧 (FEC)
-        let mut recovered = vec![0i16; FRAME_SAMPLES];
-        codec.decode_fec(&enc2, &mut recovered).unwrap();
-        
-        // FEC 应该产生输出
-        assert_eq!(recovered.len(), FRAME_SAMPLES);
+        // 禁用 FEC
+        codec.set_fec(false).unwrap();
+        assert!(!codec.is_fec_enabled());
     }
 }

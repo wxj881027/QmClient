@@ -9,18 +9,20 @@ license = "Zlib"
 crate-type = ["rlib", "staticlib"]
 path = "src/lib.rs"
 
+[features]
+default = ["cpal-backend"]
+cpal-backend = ["cpal"]
+sdl-backend = []
+
 [dependencies]
 # 音频（双后端策略）
-cpal = "0.15"                    # 跨平台音频 I/O（首选）
+cpal = { version = "0.15", optional = true }  # 跨平台音频 I/O（首选）
 
-# 编解码 (注释掉 opus，使用 mock 实现进行实验性构建)
-# opus = "0.3"                     # Opus 编解码
+# 编解码 - 使用 opus crate
+opus = "0.3"                     # Opus 编解码
 
 # 异步运行时
 tokio = { version = "1", features = ["net", "sync", "rt-multi-thread", "time", "macros"] }
-
-# DSP
-# nnnoiseless = "0.3"              # RNNoise Rust 移植（可选）
 
 # C++ 桥接
 cxx = "1.0"
@@ -32,9 +34,10 @@ log = "0.4"                      # 日志
 thiserror = "1.0"                # 错误处理
 
 [dev-dependencies]
-# ddnet-test = { path = "../test", features = ["link-test-libraries"] }
 criterion = "0.5"                # 性能基准测试
 proptest = "1.4"                 # 属性测试
+
+[build-dependencies]
 
 [[bench]]
 name = "voice_benchmark"
