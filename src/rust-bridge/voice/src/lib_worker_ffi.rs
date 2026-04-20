@@ -27,6 +27,12 @@ impl VoiceWorkerHandle {
     }
 }
 
+impl Default for VoiceWorkerHandle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // 创建 Worker，返回句柄
 #[no_mangle]
 pub extern "C" fn voice_worker_create() -> usize {
@@ -34,7 +40,11 @@ pub extern "C" fn voice_worker_create() -> usize {
     Box::into_raw(handle) as usize
 }
 
-// 销毁 Worker
+/// 销毁 Worker
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
+/// - 调用后 `handle` 不再有效，不能再次使用
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_destroy(handle: usize) {
     if handle == 0 {
@@ -51,7 +61,11 @@ pub unsafe extern "C" fn voice_worker_destroy(handle: usize) {
     // handle 在这里被 drop，自动释放内存
 }
 
-// 设置 Worker 配置
+/// 设置 Worker 配置
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
+/// - `config` 必须指向有效的 `VoiceConfigCABI` 结构体
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_set_config(handle: usize, config: *const VoiceConfigCABI) {
     if handle == 0 || config.is_null() {
@@ -113,8 +127,11 @@ pub unsafe extern "C" fn voice_worker_set_config(handle: usize, config: *const V
     }
 }
 
-// 启动 Worker 线程
-// 必须在调用其他操作前启动工作线程
+/// 启动 Worker 线程
+/// 必须在调用其他操作前启动工作线程
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_start(handle: usize) -> i32 {
     if handle == 0 {
@@ -136,7 +153,10 @@ pub unsafe extern "C" fn voice_worker_start(handle: usize) -> i32 {
     1
 }
 
-// 停止 Worker 线程
+/// 停止 Worker 线程
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_stop(handle: usize) {
     if handle == 0 {
@@ -150,7 +170,11 @@ pub unsafe extern "C" fn voice_worker_stop(handle: usize) {
     handle.context.shutdown_encoder();
 }
 
-// 提交捕获的音频数据
+/// 提交捕获的音频数据
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
+/// - `pcm` 必须指向至少 `samples` 个有效 i16 样本
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_submit_capture(handle: usize, pcm: *const i16, samples: usize) {
     if handle == 0 || pcm.is_null() || samples == 0 {
@@ -172,7 +196,11 @@ pub unsafe extern "C" fn voice_worker_submit_capture(handle: usize, pcm: *const 
     handle.context.capture_queue.push(frame);
 }
 
-// 获取混音输出
+/// 获取混音输出
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
+/// - `output` 必须指向至少 `samples * channels` 个有效 i16 样本的缓冲区
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_mix_output(
     handle: usize,
@@ -216,12 +244,16 @@ pub unsafe extern "C" fn voice_worker_mix_output(
     }
 
     // 清零未填充的部分
-    for i in (read_samples * channels)..output_slice.len() {
-        output_slice[i] = 0;
+    for sample in output_slice.iter_mut().skip(read_samples * channels) {
+        *sample = 0;
     }
 }
 
-// 提交网络数据包（用于非 UDP 模式，如通过游戏网络传输）
+/// 提交网络数据包（用于非 UDP 模式，如通过游戏网络传输）
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
+/// - `data` 必须指向至少 `len` 字节的有效数据
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_submit_packet(handle: usize, data: *const u8, len: usize) {
     if handle == 0 || data.is_null() || len == 0 || len > VOICE_MAX_PACKET {
@@ -267,7 +299,11 @@ pub unsafe extern "C" fn voice_worker_submit_packet(handle: usize, data: *const 
     }
 }
 
-// 设置玩家名称列表
+/// 设置玩家名称列表
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
+/// - 所有字符串指针可以为 null（表示空字符串）或指向有效的以 null 结尾的 C 字符串
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_set_name_lists(
     _handle: usize,
@@ -323,7 +359,10 @@ pub unsafe extern "C" fn voice_worker_set_name_lists(
     let _ = (_vad_allow_owned, _name_volumes_owned);
 }
 
-// 设置本地客户端 ID
+/// 设置本地客户端 ID
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_set_local_client_id(handle: usize, client_id: i32) {
     if handle == 0 {
@@ -338,7 +377,10 @@ pub unsafe extern "C" fn voice_worker_set_local_client_id(handle: usize, client_
     }
 }
 
-// 设置上下文哈希
+/// 设置上下文哈希
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_set_context_hash(handle: usize, hash: u32) {
     if handle == 0 {
@@ -353,7 +395,10 @@ pub unsafe extern "C" fn voice_worker_set_context_hash(handle: usize, hash: u32)
     }
 }
 
-// 设置 PTT 状态
+/// 设置 PTT 状态
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_set_ptt(handle: usize, active: i32) {
     if handle == 0 {
@@ -369,7 +414,10 @@ pub unsafe extern "C" fn voice_worker_set_ptt(handle: usize, active: i32) {
     }
 }
 
-// 获取麦克风电平
+/// 获取麦克风电平
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_get_mic_level(handle: usize) -> i32 {
     if handle == 0 {
@@ -379,7 +427,10 @@ pub unsafe extern "C" fn voice_worker_get_mic_level(handle: usize) -> i32 {
     handle.context.get_mic_level()
 }
 
-// 获取延迟 (ms)
+/// 获取延迟 (ms)
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_get_ping(handle: usize) -> i32 {
     if handle == 0 {
@@ -389,7 +440,12 @@ pub unsafe extern "C" fn voice_worker_get_ping(handle: usize) -> i32 {
     handle.context.get_ping_ms()
 }
 
-// 更新玩家列表
+/// 更新玩家列表
+///
+/// # Safety
+/// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
+/// - `players` 必须指向至少 `count * 5` 个有效 f32 值的数组
+/// - `count` 必须 <= MAX_CLIENTS (64)
 #[no_mangle]
 pub unsafe extern "C" fn voice_worker_update_players(handle: usize, players: *const f32, count: usize) {
     if handle == 0 || players.is_null() || count == 0 || count > MAX_CLIENTS {
