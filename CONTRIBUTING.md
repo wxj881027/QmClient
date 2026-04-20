@@ -1,5 +1,7 @@
 # Contributing code to DDNet
 
+> 📄 This document is available in <a href="CONTRIBUTING_zh.md">中文</a></p>
+
 ## General
 
 Please open an issue first discussing the idea before starting to write code.

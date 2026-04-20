@@ -31,7 +31,7 @@ inline void CheckDataVersion(char *pError, int Length, IOHANDLE File)
 {
 	if(!File)
 	{
-		// str_format(pError, Length, TCLocalize("%s could not be read", DATA_VERSION_PATH), DATA_VERSION_PATH);
+		// str_format(pError, Length, Localize("%s could not be read"), DATA_VERSION_PATH);
 		return;
 	}
 

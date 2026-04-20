@@ -7,10 +7,7 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
-namespace
-{
-constexpr const char *QMCLIENT_LOCALIZATION_CONTEXT = "QmClient";
-}
+
 
 static void EscapeParam(char *pDst, const char *pSrc, int Size)
 {
@@ -50,7 +47,7 @@ void CSkinProfiles::ConProfileQueue(IConsole::IResult *pResult, void *pUserData)
 	const int ProfileCount = (int)pSelf->m_Profiles.size();
 	if(ProfileCount <= 0)
 	{
-		pSelf->GameClient()->Echo(TCLocalize("No saved profiles available yet. Save one first.", QMCLIENT_LOCALIZATION_CONTEXT));
+		pSelf->GameClient()->Echo(Localize("No saved profiles available yet. Save one first."));
 		return;
 	}
 
@@ -58,7 +55,7 @@ void CSkinProfiles::ConProfileQueue(IConsole::IResult *pResult, void *pUserData)
 	if(OneBasedIndex <= 0 || OneBasedIndex > ProfileCount)
 	{
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), TCLocalize("qm_profile_queue: index must be between 1 and %d", QMCLIENT_LOCALIZATION_CONTEXT), ProfileCount);
+		str_format(aBuf, sizeof(aBuf), Localize("qm_profile_queue: index must be between 1 and %d"), ProfileCount);
 		pSelf->GameClient()->Echo(aBuf);
 		return;
 	}

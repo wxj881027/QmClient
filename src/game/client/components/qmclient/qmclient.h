@@ -1,14 +1,17 @@
 #ifndef GAME_CLIENT_COMPONENTS_TCLIENT_TCLIENT_H
 #define GAME_CLIENT_COMPONENTS_TCLIENT_TCLIENT_H
 
+#include <base/color.h>
 #include <base/hash.h>
 
 #include <engine/client/enums.h>
 #include <engine/external/regex.h>
+#include <engine/graphics.h>
 #include <engine/shared/console.h>
 #include <engine/shared/http.h>
 #include <engine/shared/json.h>
 #include <engine/shared/protocol.h>
+#include <engine/textrender.h>
 
 #include <game/client/component.h>
 
@@ -19,6 +22,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+class IJob;
 
 // 玩家统计数据结构
 struct SPlayerStats
@@ -91,6 +96,13 @@ struct SPlayerStats
 	}
 };
 
+struct SQmClientServerDistribution
+{
+	std::string m_ServerAddress;
+	int m_UserCount = 0;
+	int m_DummyCount = 0;
+};
+
 class CTClient : public CComponent
 {
 	std::deque<vec2> m_aAirRescuePositions[NUM_DUMMIES];
@@ -144,6 +156,40 @@ class CTClient : public CComponent
 	// Auto Unspec on Unfreeze
 	bool m_aWasInFreezeForUnspec[NUM_DUMMIES] = {false, false};
 	void CheckAutoUnspecOnUnfreeze();
+
+	struct SFreezeWakeupPopup
+	{
+		bool m_Active = false;
+		int m_AnchorClientId = -1;
+		int m_TextType = 0;
+		float m_StartTime = 0.0f;
+		float m_HorizontalSign = 1.0f;
+		float m_ColorPhase = 0.0f;
+		bool m_UseRollingColor = false;
+		ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	};
+	static constexpr int FREEZE_WAKEUP_POPUP_MAX = 8;
+	static constexpr int TEXT_POPUP_TEXTURE_MAX = 5;
+	struct STextPopupCache
+	{
+		STextContainerIndex m_TextContainerIndex;
+		vec2 m_TextSize = vec2(0.0f, 0.0f);
+	};
+	bool m_aWasInFreezeForWakeupPopup[NUM_DUMMIES] = {false, false};
+	SFreezeWakeupPopup m_aFreezeWakeupPopups[FREEZE_WAKEUP_POPUP_MAX];
+	STextPopupCache m_aTextPopupCaches[TEXT_POPUP_TEXTURE_MAX];
+	char m_aTextPopupFont[256] = "";
+	void CheckFreezeWakeupPopup();
+	void CheckComboPopup();
+	void AddFreezeWakeupPopup(int WokenDummy);
+	bool EnsureTextPopupCache(int TextType);
+	bool AddTextPopup(int AnchorClientId, int TextType, bool UseRollingColor, ColorRGBA Color);
+	void UnloadTextPopupCaches();
+	void ClearFreezeWakeupPopups();
+	void ResetComboState(int Dummy = -1);
+	int m_aComboPopupCount[NUM_DUMMIES] = {0, 0};
+	int m_aComboLastEventTick[NUM_DUMMIES] = {-1, -1};
+	int m_aComboLastHookedPlayer[NUM_DUMMIES] = {-1, -1};
 
 	// Auto Switch on Unfreeze (HJ大佬辅助)
 	bool m_aWasInFreezeForSwitch[NUM_DUMMIES] = {false, false};
@@ -251,11 +297,13 @@ class CTClient : public CComponent
 	std::shared_ptr<CHttpRequest> m_pQmClientAuthTokenTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientUsersTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientUsersSendTask = nullptr;
+	std::shared_ptr<IJob> m_pQmClientUsersParseJob = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleStartTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleCrashTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleStopTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientServerTimeTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientPlaytimeQueryTask = nullptr;
+	std::shared_ptr<IJob> m_pQmClientLifecycleMarkerWriteJob = nullptr;
 	char m_aQmClientAuthToken[256] = "";
 	char m_aQmClientMachineHash[SHA256_MAXSTRSIZE] = "";
 	char m_aQmClientLifecycleSessionId[64] = "";
@@ -272,6 +320,9 @@ class CTClient : public CComponent
 	int64_t m_QmClientMarkerStartedAt = 0;
 	int64_t m_QmClientMarkerLastSeenAt = 0;
 	int64_t m_QmClientMarkerLastFlushTick = 0;
+	std::vector<SQmClientServerDistribution> m_vQmClientServerDistribution;
+	int m_QmClientOnlineUserCount = 0;
+	int m_QmClientOnlineDummyCount = 0;
 	bool m_QmClientShutdownReported = false;
 	bool m_QmClientAwaitingRecoveryStop = false;
 	bool m_QmClientStartupSent = false;
@@ -283,8 +334,11 @@ class CTClient : public CComponent
 	void FinishQmClientAuthToken();
 	void FinishQmClientUsers();
 	void ResetQmClientRecognitionTasks();
+	bool NeedsQmClientRecognition() const;
+	bool NeedsFastQmClientSync() const;
 	bool EnsureQmClientMachineHash();
 	bool BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t BufSize, const char *pQuery = nullptr) const;
+	void ClearQmClientServerDistribution();
 	void InitQmClientLifecycle();
 	void UpdateQmClientLifecycleAndServerTime();
 	void SendQmClientLifecyclePing(const char *pEvent, std::shared_ptr<CHttpRequest> &pTaskSlot);
@@ -299,6 +353,7 @@ class CTClient : public CComponent
 
 	// DDNet player stats (favorite partner + total finishes)
 	std::shared_ptr<CHttpRequest> m_pQmDdnetPlayerTask = nullptr;
+	std::shared_ptr<IJob> m_pQmDdnetPlayerParseJob = nullptr;
 	int64_t m_QmDdnetPlayerLastSync = 0;
 	int64_t m_QmDdnetPlayerNextRetry = 0;
 	char m_aQmDdnetPlayerName[MAX_NAME_LENGTH] = "";
@@ -315,8 +370,10 @@ public:
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
 	void OnShutdown() override;
+	void OnWindowResize() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnConsoleInit() override;
+	void OnUpdate() override;
 	void OnRender() override;
 	bool OnInput(const IInput::CEvent &Event) override;
 	bool ShouldAppendGoresPrevWeapon() const;
@@ -325,6 +382,8 @@ public:
 	void OnNewSnapshot() override;
 	void QueueAspectApply();
 	void SetForcedAspect();
+	bool HasFreezeWakeupPopups() const;
+	void RenderFreezeWakeupPopups();
 
 	std::shared_ptr<CHttpRequest> m_pTClientInfoTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pUpdateExeTask = nullptr;
@@ -370,6 +429,9 @@ public:
 	int64_t QmServerSessionStartTime() const { return m_QmClientServerSessionStart; }
 	bool HasQmServerPlaytime() const { return m_QmClientServerPlaytimeSeconds >= 0; }
 	int64_t QmServerPlaytimeSeconds() const { return m_QmClientServerPlaytimeSeconds; }
+	const std::vector<SQmClientServerDistribution> &QmClientServerDistribution() const { return m_vQmClientServerDistribution; }
+	int QmClientOnlineUserCount() const { return m_QmClientOnlineUserCount; }
+	int QmClientOnlineDummyCount() const { return m_QmClientOnlineDummyCount; }
 	int QmDdnetTotalFinishes() const { return m_QmDdnetTotalFinishes; }
 	const char *QmDdnetFavoritePartner() const { return m_aQmDdnetFavoritePartner; }
 	bool IsGoresMapProgressEnabled() const;

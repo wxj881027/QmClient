@@ -4319,6 +4319,27 @@ void CEditor::RenderImagesList(CUIRect ToolBox)
 	s_ScrollRegion.Begin(&ToolBox, &ScrollOffset, &ScrollParams);
 	ToolBox.y += ScrollOffset.y;
 
+	// Precompute image usage once instead of scanning all groups/layers for each visible row.
+	std::vector<bool> vImageUsed(m_Map.m_vpImages.size(), false);
+	for(const auto &pGroup : m_Map.m_vpGroups)
+	{
+		for(const auto &pLayer : pGroup->m_vpLayers)
+		{
+			if(pLayer->m_Type == LAYERTYPE_QUADS)
+			{
+				const int ImageIndex = std::static_pointer_cast<CLayerQuads>(pLayer)->m_Image;
+				if(ImageIndex >= 0 && (size_t)ImageIndex < vImageUsed.size())
+					vImageUsed[ImageIndex] = true;
+			}
+			else if(pLayer->m_Type == LAYERTYPE_TILES)
+			{
+				const int ImageIndex = std::static_pointer_cast<CLayerTiles>(pLayer)->m_Image;
+				if(ImageIndex >= 0 && (size_t)ImageIndex < vImageUsed.size())
+					vImageUsed[ImageIndex] = true;
+			}
+		}
+	}
+
 	bool ScrollToSelection = false;
 	if(m_Dialog == DIALOG_NONE && CLineInput::GetActiveInput() == nullptr && !m_Map.m_vpImages.empty())
 	{
@@ -4357,15 +4378,7 @@ void CEditor::RenderImagesList(CUIRect ToolBox)
 				continue;
 			Slot.HSplitTop(RowHeight, &Slot, nullptr);
 
-			const bool ImageUsed = std::any_of(m_Map.m_vpGroups.cbegin(), m_Map.m_vpGroups.cend(), [i](const auto &pGroup) {
-				return std::any_of(pGroup->m_vpLayers.cbegin(), pGroup->m_vpLayers.cend(), [i](const auto &pLayer) {
-					if(pLayer->m_Type == LAYERTYPE_QUADS)
-						return std::static_pointer_cast<CLayerQuads>(pLayer)->m_Image == i;
-					else if(pLayer->m_Type == LAYERTYPE_TILES)
-						return std::static_pointer_cast<CLayerTiles>(pLayer)->m_Image == i;
-					return false;
-				});
-			});
+			const bool ImageUsed = vImageUsed[i];
 
 			if(!ImageUsed)
 				Selected += 2; // Image is unused

@@ -497,6 +497,7 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename,
 	dbg_assert(pFilename[0] != '\0', "Cannot load texture from file with empty filename"); // would cause Valgrind to crash otherwise
 
 	CImageInfo Image;
+	// Try PNG first
 	if(LoadPng(Image, pFilename, StorageType))
 	{
 		CTextureHandle Id = LoadTextureRawMove(Image, Flags, pFilename);
@@ -504,6 +505,18 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename,
 		{
 			if(g_Config.m_Debug)
 				log_trace("graphics/texture", "Loaded texture '%s'", pFilename);
+			return Id;
+		}
+	}
+
+	// Try WebP if PNG failed
+	if(LoadWebP(Image, pFilename, StorageType))
+	{
+		CTextureHandle Id = LoadTextureRawMove(Image, Flags, pFilename);
+		if(Id.IsValid())
+		{
+			if(g_Config.m_Debug)
+				log_trace("graphics/texture", "Loaded WebP texture '%s'", pFilename);
 			return Id;
 		}
 	}
@@ -660,6 +673,21 @@ bool CGraphics_Threaded::LoadPng(CImageInfo &Image, const uint8_t *pData, size_t
 	}
 
 	return true;
+}
+
+bool CGraphics_Threaded::LoadWebP(CImageInfo &Image, const char *pFilename, int StorageType)
+{
+	IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
+	if(!File)
+		return false;
+
+	return CImageLoader::LoadWebP(File, pFilename, Image);
+}
+
+bool CGraphics_Threaded::LoadWebP(CImageInfo &Image, const uint8_t *pData, size_t DataSize, const char *pContextName)
+{
+	CByteBufferReader Reader(pData, DataSize);
+	return CImageLoader::LoadWebP(Reader, pContextName, Image);
 }
 
 bool CGraphics_Threaded::CheckImageDivisibility(const char *pContextName, CImageInfo &Image, int DivX, int DivY, bool AllowResize)

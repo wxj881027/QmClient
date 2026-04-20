@@ -83,7 +83,7 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 		{EBindOptionGroup::WEAPON, Localizable("Shotgun"), "+weapon3"},
 		{EBindOptionGroup::WEAPON, Localizable("Grenade"), "+weapon4"},
 		{EBindOptionGroup::WEAPON, Localizable("Laser"), "+weapon5"},
-		{EBindOptionGroup::WEAPON, Localizable("武器弹道辅助线"), "+showweapontrajectory"},
+		{EBindOptionGroup::WEAPON, Localizable("Weapon trajectory"), "+showweapontrajectory"},
 		{EBindOptionGroup::WEAPON, Localizable("Next weapon"), "+nextweapon"},
 		{EBindOptionGroup::WEAPON, Localizable("Prev. weapon"), "+prevweapon"},
 		{EBindOptionGroup::VOTING, Localizable("Vote yes"), "vote yes"},
@@ -93,16 +93,15 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 		{EBindOptionGroup::CHAT, Localizable("Converse"), "+show_chat; chat all /c "},
 		{EBindOptionGroup::CHAT, Localizable("Chat command"), "+show_chat; chat all /"},
 		{EBindOptionGroup::CHAT, Localizable("Show chat"), "+show_chat"},
-		{EBindOptionGroup::CHAT, Localizable("复读"), "+qm_repeat"},
-		{EBindOptionGroup::CHAT, Localizable("说话"), "+qm_voice_ptt"},
+		{EBindOptionGroup::CHAT, Localizable("Repeat message"), "+qm_repeat"},
+		{EBindOptionGroup::CHAT, Localizable("Voice chat"), "+qm_voice_ptt"},
 		{EBindOptionGroup::DUMMY, Localizable("Toggle dummy"), "toggle cl_dummy 0 1"},
-		{EBindOptionGroup::DUMMY, Localizable("分身左移"), "+toggle_restore cl_dummy_left 1"},
-		{EBindOptionGroup::DUMMY, Localizable("分身右移"), "+toggle_restore cl_dummy_right 1"},
-		{EBindOptionGroup::DUMMY, Localizable("分身跳"), "+toggle_restore cl_dummy_jump 1"},
-		{EBindOptionGroup::DUMMY, Localizable("分身开火"), "+toggle_restore cl_dummy_fire 1"},
-		{EBindOptionGroup::DUMMY, Localizable("分身钩"), "+toggle_restore cl_dummy_hook 1"},
+		{EBindOptionGroup::DUMMY, Localizable("Dummy jump"), "+toggle_restore cl_dummy_jump 1"},
+		{EBindOptionGroup::DUMMY, Localizable("Dummy fire"), "+toggle_restore cl_dummy_fire 1"},
+		{EBindOptionGroup::DUMMY, Localizable("Dummy hook"), "+toggle_restore cl_dummy_hook 1"},
 		{EBindOptionGroup::DUMMY, Localizable("Dummy copy"), "toggle cl_dummy_copy_moves 0 1"},
 		{EBindOptionGroup::DUMMY, Localizable("Hammerfly dummy"), "toggle cl_dummy_hammer 0 1"},
+		{EBindOptionGroup::DUMMY, Localizable("Dummy control"), "toggle cl_dummy_control 1 0"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Emoticon"), "+emote"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectator mode"), "+spectate"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Spectate next"), "spectate_next"},
@@ -113,7 +112,7 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Scoreboard"), "+scoreboard"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Scoreboard cursor"), "toggle_scoreboard_cursor"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Statboard"), "+statboard"},
-		{EBindOptionGroup::MISCELLANEOUS, Localizable("饼菜单"), "+pie_menu"},
+		{EBindOptionGroup::MISCELLANEOUS, Localizable("Pie menu"), "+pie_menu"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Fast practice"), "fast_practice_toggle"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Lock team"), "say /lock"},
 		{EBindOptionGroup::MISCELLANEOUS, Localizable("Show entities"), "toggle cl_overlay_entities 0 100"},
@@ -196,7 +195,7 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	RenderSettingsBlock(MeasureSettingsMouseHeight(), &LeftColumn,
 		Localize("Mouse"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsMouse, this));
 	RenderSettingsBlock(MeasureSettingsJoystickHeight(), &LeftColumn,
-		Localizable("手柄"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsJoystick, this));
+		Localize("Controller"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsJoystick, this));
 	RenderSettingsBindsBlock(EBindOptionGroup::MOVEMENT, &LeftColumn, Localize("Movement"));
 	RenderSettingsBindsBlock(EBindOptionGroup::WEAPON, &LeftColumn, Localize("Weapon"));
 
@@ -572,16 +571,61 @@ float CMenusSettingsControls::MeasureSettingsMouseHeight() const
 
 void CMenusSettingsControls::RenderSettingsMouse(CUIRect View)
 {
-	CUIRect Button;
-	View.HSplitTop(BUTTON_HEIGHT, &Button, &View);
-	Ui()->DoScrollbarOption(&g_Config.m_InpMousesens, &g_Config.m_InpMousesens, &Button, Localize("Ingame mouse sens."), 1, 500,
-		&CUi::ms_LogarithmicScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE);
+	// Ingame mouse sensitivity
+	{
+		CUIRect Label, Slider, ValueSelector;
+		View.HSplitTop(BUTTON_HEIGHT, &Label, &View);
+		Label.VSplitLeft(Label.w * 0.4f, &Label, &Slider);
+		Slider.VSplitRight(50.0f, &Slider, &ValueSelector);
+		Slider.VSplitRight(5.0f, &Slider, nullptr);
 
-	View.HSplitTop(BUTTON_SPACING, nullptr, &View);
+		// Label
+		Ui()->DoLabel(&Label, Localize("Ingame mouse sens."), FONT_SIZE, TEXTALIGN_ML);
 
-	View.HSplitTop(BUTTON_HEIGHT, &Button, &View);
-	Ui()->DoScrollbarOption(&g_Config.m_UiMousesens, &g_Config.m_UiMousesens, &Button, Localize("UI mouse sens."), 1, 500,
-		&CUi::ms_LogarithmicScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+		// Slider
+		const int Min = 1, Max = 500;
+		int Value = g_Config.m_InpMousesens;
+		Value = CUi::ms_LogarithmicScrollbarScale.ToAbsolute(
+			Ui()->DoScrollbarH(&g_Config.m_InpMousesens, &Slider,
+				CUi::ms_LogarithmicScrollbarScale.ToRelative(Value, Min, Max)),
+			Min, Max);
+		g_Config.m_InpMousesens = Value;
+
+		// Value selector for manual input
+		SValueSelectorProperties Props;
+		Props.m_UseScroll = false;
+		g_Config.m_InpMousesens = (int)Ui()->DoValueSelector(&m_IngameMouseSensValueSelector, &ValueSelector, "",
+			g_Config.m_InpMousesens, 1, 500, Props);
+	}
+
+	View.HSplitTop(BIND_OPTION_SPACING, nullptr, &View);
+
+	// UI mouse sensitivity
+	{
+		CUIRect Label, Slider, ValueSelector;
+		View.HSplitTop(BUTTON_HEIGHT, &Label, &View);
+		Label.VSplitLeft(Label.w * 0.4f, &Label, &Slider);
+		Slider.VSplitRight(50.0f, &Slider, &ValueSelector);
+		Slider.VSplitRight(5.0f, &Slider, nullptr);
+
+		// Label
+		Ui()->DoLabel(&Label, Localize("UI mouse sens."), FONT_SIZE, TEXTALIGN_ML);
+
+		// Slider
+		const int Min = 1, Max = 500;
+		int Value = g_Config.m_UiMousesens;
+		Value = CUi::ms_LogarithmicScrollbarScale.ToAbsolute(
+			Ui()->DoScrollbarH(&g_Config.m_UiMousesens, &Slider,
+				CUi::ms_LogarithmicScrollbarScale.ToRelative(Value, Min, Max)),
+			Min, Max);
+		g_Config.m_UiMousesens = Value;
+
+		// Value selector for manual input
+		SValueSelectorProperties Props;
+		Props.m_UseScroll = false;
+		g_Config.m_UiMousesens = (int)Ui()->DoValueSelector(&m_UiMouseSensValueSelector, &ValueSelector, "",
+			g_Config.m_UiMousesens, 1, 500, Props);
+	}
 }
 
 float CMenusSettingsControls::MeasureSettingsJoystickHeight() const

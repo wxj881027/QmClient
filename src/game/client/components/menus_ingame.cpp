@@ -201,18 +201,151 @@ struct SUnfinishedMapsQuery
 void CMenus::RenderGame(CUIRect MainView)
 {
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
-	bool ShowDDRaceButtons = MainView.w > 855.0f;
-	MainView.HSplitTop(45.0f + (g_Config.m_ClTouchControls ? 35.0f : 0.0f), &ButtonBars, &MainView);
+	constexpr float PrimaryButtonSpacing = 5.0f;
+	constexpr float SpectateButtonWidth = 120.0f;
+	constexpr float TeamButtonWidth = 100.0f;
+	constexpr float KillButtonWidth = 65.0f;
+	constexpr float PauseButtonWidth = 65.0f;
+	constexpr float JoinGameButtonWidth = 120.0f;
+	constexpr float NormalPracticeButtonWidth = 120.0f;
+	constexpr float CompactPracticeButtonWidth = 52.0f;
+	constexpr float PracticeButtonMinWidth = 32.0f;
+	constexpr float AutoCameraButtonWidth = 32.0f;
+	constexpr float UtilityButtonSpacingNormal = 5.0f;
+	constexpr float UtilityButtonSpacingCompact = 4.0f;
+	constexpr float DisconnectButtonWidthNormal = 120.0f;
+	constexpr float DisconnectButtonWidthCompact = 110.0f;
+	constexpr float DummyButtonWidthNormal = 170.0f;
+	constexpr float DummyButtonWidthCompact = 150.0f;
+	constexpr float EditHudButtonWidthNormal = 130.0f;
+	constexpr float EditHudButtonWidthCompact = 120.0f;
+	constexpr float DemoButtonWidthNormal = 140.0f;
+	constexpr float DemoButtonWidthCompact = 120.0f;
+
+	bool Paused = false;
+	bool Spec = false;
+	if(GameClient()->m_Snap.m_LocalClientId >= 0)
+	{
+		Paused = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Paused;
+		Spec = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Spec;
+	}
+
+	const bool HasLocalInfo = GameClient()->m_Snap.m_pLocalInfo != nullptr;
+	const bool HasGameInfo = GameClient()->m_Snap.m_pGameInfoObj != nullptr;
+	const bool IsTeamPlay = GameClient()->IsTeamPlay();
+	const int LocalTeam = HasLocalInfo ? GameClient()->m_Snap.m_pLocalInfo->m_Team : TEAM_SPECTATORS;
+
+	const bool ShowGameplayButtons = HasLocalInfo && HasGameInfo && !Paused && !Spec;
+	const bool ShowSpectateButton = ShowGameplayButtons && LocalTeam != TEAM_SPECTATORS;
+	const bool ShowJoinRedButton = ShowGameplayButtons && IsTeamPlay && LocalTeam != TEAM_RED;
+	const bool ShowJoinBlueButton = ShowGameplayButtons && IsTeamPlay && LocalTeam != TEAM_BLUE;
+	const bool ShowJoinGameButton = ShowGameplayButtons && !IsTeamPlay && LocalTeam != TEAM_GAME;
+	const bool ShowKillButton = ShowGameplayButtons && LocalTeam != TEAM_SPECTATORS;
+	const bool ShowPauseButton = GameClient()->m_ReceivedDDNetPlayer && HasLocalInfo && (LocalTeam != TEAM_SPECTATORS || Paused || Spec);
+	const bool ShowPracticeButton = GameClient()->m_ReceivedDDNetPlayer && HasLocalInfo && LocalTeam != TEAM_SPECTATORS && !Paused && !Spec;
+	const bool ShowAutoCameraButton = HasLocalInfo && (LocalTeam == TEAM_SPECTATORS || Paused || Spec);
+	const float CurrentPauseButtonWidth = (!Paused && !Spec) ? PauseButtonWidth : JoinGameButtonWidth;
+
+	const float UtilityButtonWidthNormal =
+		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + UtilityButtonSpacingNormal * 3.0f;
+	const float UtilityButtonWidthCompact =
+		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + UtilityButtonSpacingCompact * 3.0f;
+	const float PrimaryButtonBarWidth = maximum(0.0f, MainView.w - 20.0f);
+
+	auto CalcPrimaryButtonsWidth = [&](bool IncludeTeamplayDDRaceButtons) {
+		float Width = 0.0f;
+		auto AddButtonWidth = [&](bool Show, float ButtonWidth) {
+			if(!Show)
+				return;
+			if(Width > 0.0f)
+				Width += PrimaryButtonSpacing;
+			Width += ButtonWidth;
+		};
+
+		AddButtonWidth(ShowSpectateButton, SpectateButtonWidth);
+		AddButtonWidth(ShowJoinRedButton, TeamButtonWidth);
+		AddButtonWidth(ShowJoinBlueButton, TeamButtonWidth);
+		AddButtonWidth(ShowJoinGameButton, JoinGameButtonWidth);
+
+		const bool ShowTeamplayDDRaceButtons = !IsTeamPlay || IncludeTeamplayDDRaceButtons;
+		AddButtonWidth(ShowKillButton && ShowTeamplayDDRaceButtons, KillButtonWidth);
+		AddButtonWidth(ShowPauseButton && ShowTeamplayDDRaceButtons, CurrentPauseButtonWidth);
+		AddButtonWidth(ShowPracticeButton && ShowTeamplayDDRaceButtons, CompactPracticeButtonWidth);
+		AddButtonWidth(ShowAutoCameraButton, AutoCameraButtonWidth);
+		return Width;
+	};
+
+	bool UseCompactUtilityButtons = false;
+	bool UseSecondaryUtilityButtonBar = false;
+	bool ShowDDRaceButtons = !IsTeamPlay;
+	if(g_Config.m_ClTouchControls)
+	{
+		ShowDDRaceButtons = MainView.w > 855.0f;
+	}
+	else
+	{
+		auto TryUtilityLayout = [&](float RequiredPrimaryWidth) {
+			if(PrimaryButtonBarWidth >= RequiredPrimaryWidth + UtilityButtonWidthNormal)
+			{
+				UseCompactUtilityButtons = false;
+				UseSecondaryUtilityButtonBar = false;
+				return true;
+			}
+			if(PrimaryButtonBarWidth >= RequiredPrimaryWidth + UtilityButtonWidthCompact)
+			{
+				UseCompactUtilityButtons = true;
+				UseSecondaryUtilityButtonBar = false;
+				return true;
+			}
+			if(PrimaryButtonBarWidth >= RequiredPrimaryWidth && PrimaryButtonBarWidth >= UtilityButtonWidthNormal)
+			{
+				UseCompactUtilityButtons = false;
+				UseSecondaryUtilityButtonBar = true;
+				return true;
+			}
+			if(PrimaryButtonBarWidth >= RequiredPrimaryWidth && PrimaryButtonBarWidth >= UtilityButtonWidthCompact)
+			{
+				UseCompactUtilityButtons = true;
+				UseSecondaryUtilityButtonBar = true;
+				return true;
+			}
+			return false;
+		};
+
+		if(IsTeamPlay && TryUtilityLayout(CalcPrimaryButtonsWidth(true)))
+		{
+			ShowDDRaceButtons = true;
+		}
+		else
+		{
+			ShowDDRaceButtons = !IsTeamPlay;
+			if(!TryUtilityLayout(CalcPrimaryButtonsWidth(false)))
+			{
+				UseCompactUtilityButtons = true;
+				UseSecondaryUtilityButtonBar = true;
+			}
+		}
+	}
+
+	const bool HasSecondaryButtonBar = g_Config.m_ClTouchControls || UseSecondaryUtilityButtonBar;
+	MainView.HSplitTop(45.0f + (HasSecondaryButtonBar ? 35.0f : 0.0f), &ButtonBars, &MainView);
 	ButtonBars.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	ButtonBars.Margin(10.0f, &ButtonBars);
 	ButtonBars.HSplitTop(25.0f, &ButtonBar, &ButtonBars);
-	if(g_Config.m_ClTouchControls)
+	if(HasSecondaryButtonBar)
 	{
 		ButtonBars.HSplitTop(10.0f, nullptr, &ButtonBars);
 		ButtonBars.HSplitTop(25.0f, &ButtonBar2, &ButtonBars);
 	}
 
-	ButtonBar.VSplitRight(120.0f, &ButtonBar, &Button);
+	CUIRect UtilityButtonBar = UseSecondaryUtilityButtonBar ? ButtonBar2 : ButtonBar;
+	const float UtilityButtonSpacing = UseCompactUtilityButtons ? UtilityButtonSpacingCompact : UtilityButtonSpacingNormal;
+	const float DisconnectButtonWidth = UseCompactUtilityButtons ? DisconnectButtonWidthCompact : DisconnectButtonWidthNormal;
+	const float DummyButtonWidth = UseCompactUtilityButtons ? DummyButtonWidthCompact : DummyButtonWidthNormal;
+	const float EditHudButtonWidth = UseCompactUtilityButtons ? EditHudButtonWidthCompact : EditHudButtonWidthNormal;
+	const float DemoButtonWidth = UseCompactUtilityButtons ? DemoButtonWidthCompact : DemoButtonWidthNormal;
+
+	UtilityButtonBar.VSplitRight(DisconnectButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_DisconnectButton;
 	if(DoButton_Menu(&s_DisconnectButton, Localize("Disconnect"), 0, &Button))
 	{
@@ -243,8 +376,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 	}
 
-	ButtonBar.VSplitRight(5.0f, &ButtonBar, nullptr);
-	ButtonBar.VSplitRight(170.0f, &ButtonBar, &Button);
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(DummyButtonWidth, &UtilityButtonBar, &Button);
 
 	static CButtonContainer s_DummyButton;
 	if(!Client()->DummyAllowed())
@@ -281,8 +414,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 	}
 
-	ButtonBar.VSplitRight(5.0f, &ButtonBar, nullptr);
-	ButtonBar.VSplitRight(130.0f, &ButtonBar, &Button);
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(EditHudButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_EditHudButton;
 	if(DoButton_Menu(&s_EditHudButton, Localize("Edit HUD"), 0, &Button))
 	{
@@ -290,8 +423,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		SetActive(false);
 	}
 
-	ButtonBar.VSplitRight(5.0f, &ButtonBar, nullptr);
-	ButtonBar.VSplitRight(140.0f, &ButtonBar, &Button);
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(DemoButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_DemoButton;
 	const bool Recording = DemoRecorder(RECORDER_MANUAL)->IsRecording();
 	if(DoButton_Menu(&s_DemoButton, Recording ? Localize("Stop record") : Localize("Record demo"), 0, &Button))
@@ -300,14 +433,6 @@ void CMenus::RenderGame(CUIRect MainView)
 			Client()->DemoRecorder_Start(Client()->GetCurrentMap(), true, RECORDER_MANUAL);
 		else
 			Client()->DemoRecorder(RECORDER_MANUAL)->Stop(IDemoRecorder::EStopMode::KEEP_FILE);
-	}
-
-	bool Paused = false;
-	bool Spec = false;
-	if(GameClient()->m_Snap.m_LocalClientId >= 0)
-	{
-		Paused = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Paused;
-		Spec = GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_Spec;
 	}
 
 	if(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pGameInfoObj && !Paused && !Spec)
@@ -399,14 +524,9 @@ void CMenus::RenderGame(CUIRect MainView)
 
 		if(GameClient()->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS && !Paused && !Spec)
 		{
-			const bool ShowAutoCameraButton = GameClient()->m_Snap.m_pLocalInfo && (GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS || Paused || Spec);
-			constexpr float NormalPracticeButtonWidth = 120.0f;
-			constexpr float CompactPracticeButtonWidth = 52.0f;
-			constexpr float PracticeButtonMinWidth = 32.0f;
-			constexpr float ButtonSpacing = 5.0f;
-			const float ReservedWidth = ShowAutoCameraButton ? (32.0f + ButtonSpacing) : 0.0f;
+			const float ReservedWidth = ShowAutoCameraButton ? (AutoCameraButtonWidth + PrimaryButtonSpacing) : 0.0f;
 
-			const bool CompactPractice = ButtonBar.w < NormalPracticeButtonWidth + ButtonSpacing + ReservedWidth;
+			const bool CompactPractice = ButtonBar.w < NormalPracticeButtonWidth + PrimaryButtonSpacing + ReservedWidth;
 			float PracticeButtonWidth = CompactPractice ? CompactPracticeButtonWidth : NormalPracticeButtonWidth;
 			const float MaxPracticeButtonWidth = maximum(0.0f, ButtonBar.w - ReservedWidth);
 			if(MaxPracticeButtonWidth < PracticeButtonMinWidth)
@@ -417,8 +537,8 @@ void CMenus::RenderGame(CUIRect MainView)
 			if(PracticeButtonWidth > 0.0f)
 			{
 				ButtonBar.VSplitLeft(PracticeButtonWidth, &Button, &ButtonBar);
-				if(ButtonBar.w >= ButtonSpacing)
-					ButtonBar.VSplitLeft(ButtonSpacing, nullptr, &ButtonBar);
+				if(ButtonBar.w >= PrimaryButtonSpacing)
+					ButtonBar.VSplitLeft(PrimaryButtonSpacing, nullptr, &ButtonBar);
 
 				static CButtonContainer s_FastPracticeButton;
 				const bool UseCompactLabel = CompactPractice || PracticeButtonWidth <= CompactPracticeButtonWidth;
@@ -965,7 +1085,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		bool IsMapFavorite = GameClient()->m_TClient.IsFavoriteMap(CurrentServerInfo.m_aMap);
 		ServerInfo.HSplitBottom(20.0f, &ServerInfo, &Button);
 		static int s_AddFavMapButton = 0;
-		if(DoButton_CheckBox(&s_AddFavMapButton, TCLocalize("收藏地图"), IsMapFavorite, &Button))
+		if(DoButton_CheckBox(&s_AddFavMapButton, Localize("Favorite map"), IsMapFavorite, &Button))
 		{
 			if(IsMapFavorite)
 				GameClient()->m_TClient.RemoveFavoriteMap(CurrentServerInfo.m_aMap);
@@ -1501,24 +1621,17 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 
 	MainView.HSplitTop(6.0f, nullptr, &MainView);
 	MainView.HSplitTop(18.0f, &Row, &MainView);
-	Ui()->DoLabel(&Row, Localize("计算玩家某个模式下的未完成图"), 14.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&Row, Localize("Calculate unfinished maps for player in certain mode"), 14.0f, TEXTALIGN_ML);
 	MainView.HSplitTop(18.0f, &Row, &MainView);
 	Ui()->DoLabel(&Row, Localize("并随机抽取一张"), 14.0f, TEXTALIGN_ML);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
 	MainView.HSplitTop(24.0f, &Row, &MainView);
 	Row.VSplitLeft(90.0f, &Label, &Row);
-	Ui()->DoLabel(&Label, Localize("玩家名:"), 14.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, Localize("Player name:"), 14.0f, TEXTALIGN_ML);
 
-	static bool s_PlayerNameInit = false;
-	if(!s_PlayerNameInit)
-	{
-		if(g_Config.m_QmUnfinishedMapPlayer[0] == '\0')
-			str_copy(g_Config.m_QmUnfinishedMapPlayer, Client()->PlayerName(), sizeof(g_Config.m_QmUnfinishedMapPlayer));
-		s_PlayerNameInit = true;
-	}
-
-	static CLineInput s_PlayerNameInput(g_Config.m_QmUnfinishedMapPlayer, sizeof(g_Config.m_QmUnfinishedMapPlayer));
+	static char s_aPlayerName[16] = "";
+	static CLineInput s_PlayerNameInput(s_aPlayerName, sizeof(s_aPlayerName));
 	s_PlayerNameInput.SetEmptyText(Client()->PlayerName());
 	static bool s_NameDirty = false;
 	if(Ui()->DoEditBox(&s_PlayerNameInput, &Row, 12.0f))
@@ -1530,20 +1643,20 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 	Ui()->DoLabel(&Label, Localize("地图类型:"), 14.0f, TEXTALIGN_ML);
 
 	const char *apTypeLabels[] = {
-		Localize("简单"),
-		Localize("中阶"),
-		Localize("高阶"),
-		Localize("古典 Easy"),
-		Localize("古典 Next"),
-		Localize("古典 Pro"),
-		Localize("古典 Nut"),
-		Localize("传统"),
-		Localize("单人"),
-		Localize("竞速"),
-		Localize("娱乐"),
-		Localize("事件"),
-		Localize("疯狂"),
-		Localize("分身"),
+		Localize("Simple"),
+		Localize("Intermediate"),
+		Localize("Advanced"),
+		Localize("Classic Easy"),
+		Localize("Classic Next"),
+		Localize("Classic Pro"),
+		Localize("Classic Nut"),
+		Localize("Traditional"),
+		Localize("Solo"),
+		Localize("Race"),
+		Localize("Fun"),
+		Localize("Event"),
+		Localize("Insane"),
+		Localize("Dummy"),
 	};
 	const char *apTypeKeys[] = {
 		"Novice",
@@ -1563,27 +1676,29 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 	};
 	static_assert(std::size(apTypeLabels) == std::size(apTypeKeys));
 	const int NumTypes = (int)std::size(apTypeLabels);
-	if(g_Config.m_QmUnfinishedMapType < 0 || g_Config.m_QmUnfinishedMapType >= NumTypes)
-		g_Config.m_QmUnfinishedMapType = 0;
+	static int s_UnfinishedMapType = 0;
+	if(s_UnfinishedMapType < 0 || s_UnfinishedMapType >= NumTypes)
+		s_UnfinishedMapType = 0;
 
 	static CUi::SDropDownState s_TypeDropDownState;
 	static CScrollRegion s_TypeDropDownScrollRegion;
 	s_TypeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TypeDropDownScrollRegion;
-const int NewType = Ui()->DoDropDown(&Row, g_Config.m_QmUnfinishedMapType, apTypeLabels, NumTypes, s_TypeDropDownState);
-if(NewType != g_Config.m_QmUnfinishedMapType)
+	const int NewType = Ui()->DoDropDown(&Row, s_UnfinishedMapType, apTypeLabels, NumTypes, s_TypeDropDownState);
+	if(NewType != s_UnfinishedMapType)
 	{
-		g_Config.m_QmUnfinishedMapType = NewType;
+		s_UnfinishedMapType = NewType;
 		GameClient()->m_Voting.ClearUnfinishedMapVoteChain();
 	}
-	const char *pSelectedTypeKey = apTypeKeys[g_Config.m_QmUnfinishedMapType];
-	const char *pSelectedTypeLabel = apTypeLabels[g_Config.m_QmUnfinishedMapType];
+	const char *pSelectedTypeKey = apTypeKeys[s_UnfinishedMapType];
+	const char *pSelectedTypeLabel = apTypeLabels[s_UnfinishedMapType];
 
 	MainView.HSplitTop(6.0f, nullptr, &MainView);
 	MainView.HSplitTop(20.0f, &Row, &MainView);
-if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起投票"), g_Config.m_QmUnfinishedMapAutoVote, &Row))
+	static int s_UnfinishedMapAutoVote = 0;
+	if(DoButton_CheckBox(&s_UnfinishedMapAutoVote, Localize("自动发起投票"), s_UnfinishedMapAutoVote, &Row))
 	{
-		g_Config.m_QmUnfinishedMapAutoVote ^= 1;
-		if(!g_Config.m_QmUnfinishedMapAutoVote)
+		s_UnfinishedMapAutoVote ^= 1;
+		if(!s_UnfinishedMapAutoVote)
 			GameClient()->m_Voting.ClearUnfinishedMapVoteChain();
 	}
 
@@ -1606,7 +1721,7 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 	char aCountBuf[128];
 	if(s_UnfinishedQuery.IsLoading())
 	{
-		str_copy(aCountBuf, Localize("未完成图数据刷新中"));
+		str_copy(aCountBuf, Localize("Unfinished map data refreshing"));
 	}
 	else if(!s_UnfinishedQuery.HasData())
 	{
@@ -1614,7 +1729,7 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 	}
 	else
 	{
-		str_format(aCountBuf, sizeof(aCountBuf), Localize("未完成图数量: %d"), (int)vUnfinishedMaps.size());
+		str_format(aCountBuf, sizeof(aCountBuf), Localize("Unfinished map count: %d"), (int)vUnfinishedMaps.size());
 	}
 	Ui()->DoLabel(&Row, aCountBuf, 14.0f, TEXTALIGN_ML);
 
@@ -1627,9 +1742,10 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 	static int s_PickedCopyId = 0;
 	static float s_PickedCopyTime = 0.0f;
 	static CButtonContainer s_PickedFavButton;
-	if(DoButton_Menu(&s_PickButton, Localize("随机抽取"), 0, &Button))
+	if(DoButton_Menu(&s_PickButton, Localize("Random pick"), 0, &Button))
 	{
 		s_aStatusText[0] = '\0';
+		const char *pQueryName = s_aPlayerName[0] != '\0' ? s_aPlayerName : Client()->PlayerName();
 		if(!g_Config.m_BrIndicateFinished)
 		{
 			str_copy(s_aStatusText, Localize("请先启用完成度显示"));
@@ -1637,13 +1753,13 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 		else if(s_NameDirty || !s_UnfinishedQuery.HasData())
 		{
 			if(!s_UnfinishedQuery.IsLoading())
-				s_UnfinishedQuery.Start(Http(), g_Config.m_QmUnfinishedMapPlayer);
+				s_UnfinishedQuery.Start(Http(), pQueryName);
 			s_NameDirty = false;
 			str_copy(s_aStatusText, Localize("未完成图数据刷新中，请稍后再试"));
 		}
 		else if(vUnfinishedMaps.empty())
 		{
-			str_copy(s_aStatusText, Localize("没有可抽取的未完成图"));
+			str_copy(s_aStatusText, Localize("No unfinished maps available"));
 			s_aPickedMap[0] = '\0';
 		}
 		else
@@ -1654,7 +1770,7 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 			str_copy(s_aPickedMap, vUnfinishedMaps[PickIndex]);
 			s_PickedCopyTime = 0.0f;
 
-			if(g_Config.m_QmUnfinishedMapAutoVote)
+			if(s_UnfinishedMapAutoVote)
 			{
 				const auto Action = GameClient()->m_Voting.StartUnfinishedMapVoteChain(s_aPickedMap, pSelectedTypeKey, pSelectedTypeLabel);
 				if(Action == CVoting::EUnfinishedMapVoteAction::MAP_VOTE_SENT)
@@ -1690,7 +1806,7 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 		else
 		{
 			char aResultBuf[128];
-			str_format(aResultBuf, sizeof(aResultBuf), Localize("抽取结果: %s"), s_aPickedMap);
+			str_format(aResultBuf, sizeof(aResultBuf), Localize("Pick result: %s"), s_aPickedMap);
 			Ui()->DoLabel(&RowLabel, aResultBuf, 14.0f, TEXTALIGN_ML);
 		}
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -1699,7 +1815,7 @@ if(DoButton_CheckBox(&g_Config.m_QmUnfinishedMapAutoVote, Localize("自动发起
 			GameClient()->m_Tooltips.DoToolTip(&s_PickedCopyId, &RowLabel, Localize("点击复制地图名"));
 
 		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(s_aPickedMap);
-		if(DoButton_CheckBox(&s_PickedFavButton, TCLocalize("收藏地图"), IsFavorite, &RowFav))
+		if(DoButton_CheckBox(&s_PickedFavButton, Localize("Favorite map"), IsFavorite, &RowFav))
 		{
 			if(IsFavorite)
 				GameClient()->m_TClient.RemoveFavoriteMap(s_aPickedMap);
@@ -1749,7 +1865,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	{
 		NewPage = PAGE_FAVORITES;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("收藏夹"));
+	GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
 
 	size_t FavoriteCommunityIndex = 0;
 	static CButtonContainer s_aFavoriteCommunityButtons[5];

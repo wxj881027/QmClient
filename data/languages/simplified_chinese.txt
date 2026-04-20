@@ -46,9 +46,6 @@ Blue team
 Blue team wins!
 == 蓝队胜利！
 
-Body
-== 身体
-
 Call vote
 == 发起投票
 
@@ -57,9 +54,6 @@ Change settings
 
 Chat
 == 聊天
-
-Clan
-== 战队
 
 Client
 == 客户端
@@ -81,12 +75,6 @@ Count players only
 
 Current
 == 当前
-
-Custom colors
-== 自定义颜色
-
-Delete
-== 删除
 
 Delete demo
 == 删除回放
@@ -124,15 +112,6 @@ Error loading demo
 Favorite
 == 收藏
 
-Favorites
-== 收藏夹
-
-Feet
-== 脚
-
-Fire
-== 开火
-
 Folder
 == 文件夹
 
@@ -144,9 +123,6 @@ Free-View
 
 Fullscreen
 == 独占全屏
-
-Game
-== 游戏
 
 Game info
 == 游戏信息
@@ -180,9 +156,6 @@ Has people playing
 
 High Detail
 == 显示地图细节
-
-Hook
-== 钩索
 
 Invalid Demo
 == 回放文件无效或已损坏
@@ -244,17 +217,11 @@ Enable team chat sound
 Enable highlighted chat sound
 == 启用聊天被提及消息提示音
 
-Name
-== 名称
-
 Next weapon
 == 下一个武器
 
 Nickname
 == 昵称
-
-No
-== 否
 
 No password
 == 没有密码
@@ -339,6 +306,9 @@ Score limit
 
 Scoreboard
 == 计分板
+
+Scoreboard cursor
+== 计分板光标
 
 Screenshot
 == 截图
@@ -463,17 +433,11 @@ Vote no
 Vote yes
 == 赞成
 
-Voting
-== 投票
-
 Warmup
 == 热身
 
 Weapon
 == 武器
-
-Yes
-== 是
 
 You must restart the game for all settings to take effect.
 == 你需要重启游戏来使新设置生效。
@@ -601,9 +565,6 @@ Show ghost
 Save ghost
 == 保存影子
 
-Gameplay
-== 游戏
-
 Overlay entities
 == 显示实体层
 
@@ -657,9 +618,6 @@ Browser
 
 Connecting dummy
 == 正在连接分身
-
-Search
-== 搜索
 
 Vanilla skins only
 == 只显示原生皮肤
@@ -734,7 +692,7 @@ Spree
 == 连杀
 
 Max CSVs
-== 最大 csv 文件数
+== 最大 CSV 数
 
 %.2f KiB
 == %.2f KiB
@@ -755,7 +713,7 @@ Deactivate
 == 停用
 
 Welcome to DDNet
-== 欢迎来到 DDNet
+== 欢迎加入 DDNet
 
 Activate
 == 启用
@@ -765,9 +723,6 @@ File already exists, do you want to overwrite it?
 
 Indicate map finish
 == 标记已完成的地图
-
-Save
-== 保存
 
 Date
 == 日期
@@ -853,9 +808,6 @@ Stop practice
 Toggle fast practice mode
 == 切换快速练习模式
 
-Size
-== 大小
-
 Dummy copy
 == 分身同步动作
 
@@ -929,10 +881,10 @@ Client message
 == 客户端消息
 
 Show others (own team only)
-== 显示其他玩家（仅同队伍）
+== 仅显示同队伍
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
-== 使用 K键 自杀以重新开始，使用 Q键 可以暂停以旁观他人或查看地图。在设置中可以查看其他按键绑定。
+== 使用 K 键 自杀以重新开始，使用 Q 键 可以暂停以旁观他人或查看地图。在设置中可以查看其他按键绑定。
 
 https://wiki.ddnet.org/
 == https://wiki.ddnet.org/wiki/Main_Page/zh
@@ -940,17 +892,8 @@ https://wiki.ddnet.org/
 Warning
 == 警告
 
-Speed
-== 速度
-
 Skip the main menu
 == 跳过主菜单
-
-Website
-== 官网
-
-Settings
-== 设置
 
 [Start menu]
 Play
@@ -970,9 +913,6 @@ Editor
 
 Manual
 == 手动
-
-Race
-== 游戏
 
 Auto
 == 自动
@@ -1043,9 +983,6 @@ Use old chat style
 Use current map as background
 == 使用当前地图作为实体层背景地图
 
-Entities
-== 实体层
-
 Emoticons
 == 表情
 
@@ -1057,9 +994,6 @@ Assets directory
 
 https://ddnet.org/discord
 == https://chat.teeworlds.cn/
-
-Discord
-== 加入社区
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 纹理文件 %s 的宽度无法被 %d 整除，或者高度无法被 %d 整除，这可能会导致显示错误。
@@ -1212,7 +1146,7 @@ Download community skins
 == 下载社区皮肤
 
 Enable controller
-== 启用控制器
+== 使用手柄
 
 [Ingame controller mode]
 Relative
@@ -1223,7 +1157,7 @@ Absolute
 == 绝对
 
 Ingame controller mode
-== 游戏内控制器瞄准模式
+== 游戏内手柄瞄准模式
 
 Ingame controller sens.
 == 摇杆灵敏度（游戏）
@@ -1248,9 +1182,6 @@ Ingame mouse sens.
 
 UI mouse sens.
 == 鼠标灵敏度（界面）
-
-Controller
-== 控制器
 
 Show dummy actions
 == 显示分身状态
@@ -1515,7 +1446,7 @@ Open the directory to add custom skins
 == 打开用以添加自定义皮肤的文件夹路径
 
 No controller found. Plug in a controller.
-== 未检测到任何控制器。请尝试重新连接控制器。
+== 未检测到任何手柄。请尝试重新连接手柄。
 
 Unregister protocol and file extensions
 == 解除协议与文件类型关联
@@ -1995,7 +1926,13 @@ Aim
 Fire
 == 开火
 
+Fire
+== 开火
+
 [Direct touch input]
+Hook
+== 钩索
+
 Hook
 == 钩索
 
@@ -2157,10 +2094,6 @@ Map size
 == 地图占用空间
 
 [Show name plates]
-None
-== 禁用
-
-[Show name plates]
 Own
 == 自身
 
@@ -2293,9 +2226,6 @@ Deselect
 
 You'll lose unsaved changes after deselecting.
 == 你的更改在取消选择后不会被保存。
-
-Width
-== 宽
 
 Height
 == 高
@@ -2562,7 +2492,6 @@ Add a country to the exclusion filter for a specific community (ISO 3166-1 numer
 Add a dummy queue preset
 == 添加分身队列预设
 
-
 Add a foe
 == 添加一个敌人
 
@@ -2816,7 +2745,7 @@ Gives jetpack to you
 == 给你喷气背包
 
 Gives weapon with id i to you (all = -1, hammer = 0, gun = 1, shotgun = 2, grenade = 3, laser = 4, ninja = 5)
-== 给你id为i的武器（全部= -1，锤子= 0，枪= 1，霰弹枪= 2，手榴弹= 3，激光= 4，忍者= 5）
+== 给你 id 为 i 的武器（全部 = -1，锤子 = 0，枪 = 1，霰弹枪 = 2，手榴弹 = 3，激光 = 4，忍者 = 5）
 
 Gives you as many jumps as you specify
 == 给予你指定次数的跳跃
@@ -3059,7 +2988,7 @@ Reload the map
 == 重新加载地图
 
 Reload the map while preserving the state of tees and teams
-== 重新加载地图并保留 tee 与队伍状态
+== 重新加载地图并保留 Tee 与队伍状态
 
 Reload the maplist
 == 重新加载地图列表
@@ -3152,13 +3081,13 @@ Removes the shotgun from you
 == 从你身上拿走霰弹枪
 
 removes weapon with id i from you (all = -1, hammer = 0, gun = 1, shotgun = 2, grenade = 3, laser = 4, ninja = 5)
-== 从你身上移除ID为i的武器（全部= -1，锤子= 0，枪= 1，霰弹枪= 2，手榴弹= 3，激光= 4，忍者= 5）
+== 从你身上移除 ID 为 i 的武器（全部 = -1，锤子 = 0，枪 = 1，霰弹枪 = 2，手榴弹 = 3，激光 = 4，忍者 = 5）
 
 Rename a friend category
 == 重命名好友类别
 
 Request to swap your tee with another team member
-== 请求与另一名队友交换 tee
+== 请求与另一名队友交换 Tee
 
 Rescue to a nearby air tile
 == 救援到附近空气格
@@ -3254,7 +3183,7 @@ Sets one of the two rescue modes (auto or manual). Prints current mode if no arg
 == 设置两种救援模式之一（自动或手动）。如果没有提供参数则打印当前模式
 
 Sets your tee's eye emote
-== 设置你的 tee 眼部表情
+== 设置你的 Tee 眼部表情
 
 Show all votes (page 0 by default, 20 entries per page)
 == 显示全部投票（默认第 0 页，每页 20 条）
@@ -3626,14 +3555,8 @@ Update finished. Restarting...
 Update failed. Please try again
 == 更新失败，请重试
 
-Automatic updates are only supported on Windows
-== 仅支持Windows自动更新
-
 Downloading update...
 == 正在下载更新...
-
-Your friend %s is online and currently on map %s!
-== 你的好友%s上线啦,目前在%s图!!!
 
 Agree
 == 同意
@@ -3656,14 +3579,8 @@ None
 Self
 == 自身
 
-All
-== 全部
-
 Mode
 == 模式
-
-Fast input (reduce visual latency)
-== 快速输入(降低视觉延迟)
 
 Max lead
 == 最大超前
@@ -3672,16 +3589,13 @@ Auto clamp while frozen, hooking, or dragging
 == 冻结、出勾和拖拽时自动收敛
 
 QmClient mode only leads your own tee
-== QmClient 模式仅超前自身 tee
+== QmClient 模式仅超前自身 Tee
 
 Auto execute
 == 自动执行
 
 Execute before connecting
 == 连接前执行
-
-Execute on connect
-== 在连接时执行
 
 Voting
 == 投票
@@ -3723,7 +3637,7 @@ Show %s group
 == 显示 %s 分组
 
 Show compact vote HUD
-== 显示小型投票HUD
+== 显示小型投票 HUD
 
 Show position and angle (mini debug)
 == 显示位置和角度（小型调试）
@@ -3759,13 +3673,13 @@ Screen center line width
 == 屏幕中心线宽度
 
 Tee status bar
-== Tee状态栏
+== Tee 状态栏
 
 Show tee status bar
-== 显示Tee状态栏
+== 显示 Tee 状态栏
 
 Use custom skins instead of the ninja tee
-== 使用自定义皮肤代替忍者Tee
+== 使用自定义皮肤代替忍者 Tee
 
 Only show after joining a team
 == 仅在加入队伍后显示
@@ -3774,13 +3688,13 @@ Maximum rows
 == 最大行数
 
 Tee size
-== Tee大小
+== Tee 大小
 
 Show the number of tees still alive
-== 显示剩余存活Tee的数量
+== 显示剩余存活 Tee 的数量
 
 Show the number of frozen tees
-== 显示冻结Tee的数量
+== 显示冻结 Tee 的数量
 
 Tile outlines
 == 墙体轮廓
@@ -3792,10 +3706,10 @@ Only show outlines in the entities layer
 == 仅在实体层中显示轮廓
 
 Outline opacity
-== 轮廓透明度
+== 轮廓不透明度
 
 Solid tile outline opacity
-== 墙体轮廓透明度
+== 墙体轮廓不透明度
 
 Solid
 == 墙体
@@ -3821,17 +3735,14 @@ Tele
 Ghost tools
 == 影子工具
 
-Show unpredicted ghosts for other players
-== 向其他玩家显示未预见的影子
-
 Swap ghosts with regular players
 == 交换影子与普通玩家
 
 Predicted ghost opacity
-== 预测透明度
+== 预测影子不透明度
 
 Unpredicted ghost opacity
-== 未预测透明度
+== 未预测影子不透明度
 
 Hide ghosts of frozen players
 == 隐藏冻结玩家的影子
@@ -3857,17 +3768,14 @@ Official community links
 Copied
 == 已复制
 
-QQ Group: 1076765929 (click to copy)
-== QQ群: 1076765929(点击复制)
-
 Click to copy the QQ group number
-== 点击复制QQ群号
+== 点击复制 QQ 群号
 
 Support
 == 赞助
 
 Thanks for supporting QmClient
-== 感谢您为QmClient做出的贡献
+== 感谢您为 QmClient 做出的贡献
 
 Hide support QR code
 == 隐藏赞赏码❤️
@@ -3876,10 +3784,10 @@ View support QR code
 == 查看赞赏码❤️
 
 Failed to load the support QR code. Check the Base64 content
-== 赞赏码加载失败，请检查Base64内容
+== 赞赏码加载失败，请检查 Base64 内容
 
 Support QR code Base64 is not configured
-== 未配置赞赏码Base64
+== 未配置赞赏码 Base64
 
 View recent updates
 == 点击查看最近更新⭐
@@ -3895,9 +3803,6 @@ Developers and supporters
 
 Supporters:
 == 赞助名单:
-
-I could not have come this far without your support, big or small. Thank you.
-== 没有你们或多或少的支持我无法走的这么远,谢谢
 
 Feature search
 == 功能搜索
@@ -3948,7 +3853,7 @@ Text color
 == 文本颜色
 
 Gores actor tools
-== Gores演员专用
+== Gores 演员专用
 
 Auto speak on water death
 == 落水自动发言
@@ -3960,7 +3865,7 @@ Send an emote on water death
 == 掉水里发表情
 
 Emote ID
-== 表情ID
+== 表情 ID
 
 Chat message
 == 聊天消息
@@ -3984,7 +3889,7 @@ Key binds
 == 按键绑定
 
 Common bind collection
-== 常用bind合集
+== 常用 bind 合集
 
 45-degree aim
 == 八角定位
@@ -4001,8 +3906,8 @@ Three-tile jump right
 Qm mini features
 == 梦的小功能
 
-Qimeng's assorted daily-use tools
-== 栖梦出品,必属精品
+QmClient's assorted daily-use tools
+== QmClient 的日常实用小功能
 
 Local particles
 == 本地粒子
@@ -4011,19 +3916,10 @@ Remote particles
 == 远程粒子
 
 Show Qm badge
-== 显示Qm标识
+== 显示 Qm 标识
 
 Show scoreboard points
 == 显示计分板查分
-
-Chat box animation
-== 聊天框动画
-
-Emote animation
-== 表情动画
-
-Scoreboard animation
-== 计分板动画
 
 Enable repeat feature
 == 启用复读功能
@@ -4045,6 +3941,21 @@ Weapon trajectory guide
 
 Position jump hint
 == 位置跳跃提示
+
+Combo popups
+== 连击弹字
+
+Amazing!
+== 太棒了！
+
+Fantastic!
+== 太精彩了！
+
+Unbelievable!
+== 难以置信！
+
+Unstoppable!
+== 势不可挡！
 
 Coordinates
 == 显示坐标
@@ -4077,7 +3988,7 @@ Stream and privacy protection toggles
 == 直播/隐私保护开关
 
 Replace non-friend names with IDs
-== 非好友昵称改为ID
+== 非好友昵称改为 ID
 
 Replace non-friend skins with default skins
 == 非好友皮肤改为默认
@@ -4221,7 +4132,7 @@ Pie menu opacity
 == 饼菜单不透明度
 
 UI scale
-== UI大小
+== UI 大小
 
 Detection distance
 == 检测距离
@@ -4278,31 +4189,31 @@ The entities layer must be enabled
 == 需要开启实体层
 
 Death opacity
-== 死亡透明度
+== 死亡不透明度
 
 Freeze opacity
-== 冻结透明度
+== 冻结不透明度
 
 Unfreeze opacity
-== 解冻透明度
+== 解冻不透明度
 
 Deep freeze opacity
-== 深度冻结透明度
+== 深度冻结不透明度
 
 Deep unfreeze opacity
-== 深度解冻透明度
+== 深度解冻不透明度
 
 Tele opacity
-== 传送透明度
+== 传送不透明度
 
 Checkpoint tele opacity
-== CP点透明度
+== CP 点不透明度
 
 Switch opacity
-== 开关透明度
+== 开关不透明度
 
 Overlay opacity
-== 叠层透明度
+== 叠层不透明度
 
 Laser settings
 == 激光设置
@@ -4341,13 +4252,10 @@ Player stats and info display
 == 玩家统计与信息显示
 
 Show player stats HUD
-== 显示玩家统计HUD
-
-Map progress bar (experimental)
-== 地图进度条(内测中)
+== 显示玩家统计 HUD
 
 Use embedded HUD progress bar
-== 使用HUD内嵌进度条
+== 使用 HUD 内嵌进度条
 
 Progress bar color
 == 进度条颜色
@@ -4377,7 +4285,7 @@ Hitbox opacity
 == 碰撞体积不透明度
 
 Freeze border color
-== Freeze边框颜色
+== Freeze 边框颜色
 
 Favorite maps
 == 收藏地图
@@ -4386,16 +4294,16 @@ Favorite map manager
 == 收藏地图管理
 
 Classic easy
-== 古典easy
+== 古典 easy
 
 Classic next
-== 古典next
+== 古典 next
 
 Classic pro
-== 古典pro
+== 古典 pro
 
 Classic nut
-== 古典nut
+== 古典 nut
 
 Classic
 == 古典
@@ -4440,7 +4348,7 @@ Remove from favorites
 == 取消收藏
 
 HJ assist
-== HJ大佬辅助
+== HJ 大佬辅助
 
 Unfreeze automation helpers
 == 解冻相关自动化辅助
@@ -4449,10 +4357,13 @@ Auto unspec on unfreeze
 == 解冻自动取消旁观
 
 Auto switch to the tee that got unfrozen
-== 自动切换到解冻的tee
+== 自动切换到解冻的 Tee
 
 Automatically close the current chat after waking from freeze
-== 从freeze醒来自动关闭当前聊天
+== 从冻结状态中醒来自动关闭聊天框
+
+Show wake-up popup on the other tee
+== 在另一侧tee显示唤醒提示
 
 Input overlay
 == 按键显示
@@ -4551,7 +4462,7 @@ Enable dummy mini view
 == 启用分身小窗
 
 This is very expensive. AMD + Vulkan has a known unrecoverable bug
-== 性能消耗极大,且使用AMD+Vulkan会造成已知且不能修复的BUG
+== 性能消耗极大，且使用 AMD + Vulkan 会造成已知且不能修复的BUG
 
 Mini view size
 == 小窗大小
@@ -4594,13 +4505,10 @@ Opacity
 
 [data_version.h]
 You may have replaced only DDNet.exe and skipped QmClient.zip.\nPlease install the full QmClient package.
-== 喜报!你可能仅下载并替换了DDNet.exe,没有下载QmClient.zip\n请仔细阅读群公告的使用说明!!!
-
-You may have installed only DDNet.exe. Please use the full QmClient folder.
-== 喜报!您可能仅安装了DDNet.exe文件，请使用完整的QmClient文件夹
+== 喜报! 你可能仅下载并替换了 DDNet.exe 文件，没有下载 QmClient.zip\n请仔细阅读群公告的使用说明!!!
 
 Edit HUD
-== 编辑HUD
+== 编辑 HUD
 
 Drag HUD modules with the left mouse button
 == 按住鼠标左键拖动 HUD 模块
@@ -4626,11 +4534,8 @@ Emoticons
 Particles
 == 粒子
 
-HUD
-== HUD
-
 Extras
-== 附加
+== 其他
 
 Reloaded images. %d slot(s) fell back to main asset.
 == 已重新加载图像。%d 个槽位已回退到主材质。
@@ -4677,9 +4582,6 @@ You have unsaved changes.
 Save
 == 保存
 
-Discard
-== 丢弃
-
 Cancel
 == 取消
 
@@ -4723,7 +4625,7 @@ Part reset to main asset.
 == 部件已重置为主材质。
 
 tile
-== 图块
+== 瓦片
 
 %s from %s
 == %s（来自 %s）
@@ -4746,3 +4648,1709 @@ Drag from left to right. Right-click a Frankenstein part to reset it.
 Reset All
 == 全部重置
 
+Weapon trajectory
+== 武器弹道辅助线
+
+Repeat message
+== 复读
+
+Voice chat
+== 说话
+
+Dummy jump
+== 分身跳
+
+Dummy fire
+== 分身开火
+
+Dummy hook
+== 分身钩
+
+Dummy control
+== 分身控制
+
+Controller
+== 手柄
+
+Unfinished maps
+== 未完成图
+
+Calculate unfinished maps for player in certain mode
+== 计算玩家某个模式下的未完成图
+
+And randomly pick one
+== 并随机抽取一张
+
+Player name:
+== 玩家名:
+
+Map type:
+== 地图类型:
+
+Auto start vote
+== 自动发起投票
+
+Unfinished map data refreshing
+== 未完成图数据刷新中
+
+Unfinished map data not fetched
+== 未获取未完成图数据
+
+Unfinished map count: %d
+== 未完成图数量: %d
+
+Random pick
+== 随机抽取
+
+Please enable completion display first
+== 请先启用完成度显示
+
+No unfinished maps available
+== 没有可抽取的未完成图
+
+Vote auto started
+== 已自动发起投票
+
+Map type change vote auto started
+== 已自动发起切换类型投票
+
+Vote option not found
+== 未找到对应投票选项
+
+Copied
+== 已复制
+
+Pick result: %s
+== 抽取结果: %s
+
+Click to copy map name
+== 点击复制地图名
+
+Favorites
+== 收藏夹
+
+Rename: %s
+== 改名: %s
+
+Friend
+== 好友
+
+Whisper
+== 私聊
+
+Mention
+== 提及
+
+Copy skin
+== 复制皮肤
+
+Swap
+== 交换
+
+Spectate
+== 观战
+
+Name changed: %s%s
+== 已切换名字: %s%s
+
+Removed %s from friends
+== 已将 %s 移出好友
+
+Added %s as friend
+== 已将 %s 添加为好友
+
+Copied %s's skin%s
+== 已复制 %s 的皮肤%s
+
+Cannot swap: player not in your team
+== 无法交换：对方不在你的队伍
+
+Weapon sounds
+== 武器音效
+
+Weapon switch sounds
+== 武器切换音效
+
+Empty ammo sounds
+== 无弹药提示音
+
+Hook sounds
+== 钩子音效
+
+Movement sounds
+== 移动音效
+
+Player state sounds
+== 玩家状态音效
+
+Pickup sounds
+== 拾取音效
+
+Flag sounds
+== 旗帜音效
+
+Map sounds
+== 地图音效
+
+Skin queue
+== 皮肤队列
+
+Rotate all maps
+== 轮换全图
+
+Get all map players' skin IDs and auto add to rotate queue
+== 获取全图玩家皮肤 ID 并自动作为轮换队列
+
+Switch interval
+== 切换间隔
+
+Queue length
+== 队列长度
+
+Queue is empty
+== 队列为空
+
+Remove from queue
+== 从队列移除
+
+Preset bar
+== 预设栏
+
+Save current
+== 保存当前
+
+One-click save current queue as new preset
+== 一键保存当前队列为新预设
+
+No presets yet
+== 暂无预设
+
+Open rename popup
+== 打开重命名弹窗
+
+One-click apply this preset to current queue
+== 一键应用此预设到当前队列
+
+Delete this preset
+== 删除该预设
+
+Queue full
+== 队列已满
+
+Join queue
+== 加入队列
+
+Audio pack
+== 音频包
+
+Refresh
+== 刷新
+
+Friend color in friends list
+== 好友列表中好友条目颜色
+
+Clan color in friends list
+== 好友列表中战队成员条目颜色
+
+Show key stuck status
+== 显示卡键状态
+
+Show hammer status
+== 显示锤状态
+
+Show dummy control status
+== 显示分身控制状态
+
+Show dummy sync status
+== 显示分身同步状态
+
+Coords size
+== 坐标大小
+
+Nickname order
+== 昵称顺序
+
+Prediction margin
+== 预测边距
+
+Predict events (experimental)
+== 预测事件（实验性）
+
+Latency compensation (AntiPing)
+== 延迟补偿（AntiPing）
+
+Try to predict other entities to reduce lag from high latency
+== 尝试预测其他实体来降低高延迟带来的卡顿感
+
+Latency compensation: predict other players
+== 延迟补偿：预测其他玩家
+
+Latency compensation: predict weapons
+== 延迟补偿：预测武器
+
+Latency compensation: predict grenade trajectory
+== 延迟补偿：预测榴弹枪路径
+
+New preset name
+== 新预设名称
+
+Cancel
+== 取消
+
+Apply
+== 应用
+
+Delete
+== 删除
+
+Rename
+== 改名
+
+Add friend
+== 添加好友
+
+Simple
+== 简单
+
+Intermediate
+== 中阶
+
+Advanced
+== 高阶
+
+Traditional Easy
+== 传统
+
+Solo
+== 单人
+
+Race
+== 竞速
+
+Fun
+== 娱乐
+
+Crazy
+== 疯狂
+
+Dummy
+== 分身
+
+keys
+== 按键显示
+
+coords
+== 坐标
+
+hook strength
+== 钩索强度
+
+clan
+== 战队
+
+name
+== 名称
+
+Unfinished map data refreshing, please try later
+== 未完成图数据刷新中，请稍后再试
+
+Camera and view
+== 镜头与视野
+
+Camera drift, dynamic FOV and aspect ratio presets
+== 镜头漂移、动态视野与纵横比预设
+
+Enable camera drift
+== 启用镜头漂移
+
+Drift intensity
+== 漂移强度
+
+Drift smoothness
+== 漂移平滑度
+
+Reverse drift direction
+== 反向漂移方向
+
+Enable dynamic FOV
+== 启用动态视野
+
+Dynamic FOV intensity
+== 动态视野强度
+
+Dynamic FOV smoothness
+== 动态视野平滑度
+
+Aspect ratio preset
+== 纵横比预设
+
+Custom ratio
+== 自定义比例
+
+Current ratio:
+== 当前比例：
+
+Current ratio: Display default (global)
+== 当前比例：显示器默认（全局生效）
+
+Current aspect ratio preset applies to the entire client view
+== 当前纵横比预设会作用于整个客户端画面
+
+QmClient
+== QmClient
+
+All
+== 全体
+
+Spectate
+== 旁观
+
+Kill
+== 自杀
+
+Clan
+== 战队
+
+Custom colors
+== 自定义颜色
+
+Name
+== 名称
+
+No
+== 否
+
+Yes
+== 是
+
+Save
+== 保存
+
+Website
+== 官网
+
+Settings
+== 设置
+
+Discord
+== Discord
+
+Profiles
+== 配置文件
+
+Visual
+== 视觉效果
+
+Hide nameplates in spec
+== 其他玩家旁观时隐藏玩家昵称
+
+Show skin names in nameplate
+== 在玩家昵称旁显示皮肤名
+
+Freeze stars
+== 显示冻结效果的星星动画
+
+Color frozen tee skins
+== 冻结不再是灰黑色而是自定义的颜色（无自定义默认灰黑色）
+
+Use colored skins for frozen tees
+== 冻结 Tee 使用彩色皮肤
+
+Render all custom colored feet as white feet skin
+== 将所有自定义脚部颜色渲染为白色
+
+Smaller tees
+== 小尺寸 Tee
+
+Jelly Tee
+== Q 弹 Tee
+
+Enable Jelly Tee
+== 启用 Q 弹 Tee
+
+Jelly others
+== 其他玩家也使用 Q 弹 Tee
+
+Jelly strength
+== Q 弹强度
+
+Jelly duration
+== 回弹时长
+
+Mode
+== 模式
+
+Amount
+== 预测量
+
+Gamma amount
+== Gamma 值
+
+Show ping colored circle in nameplates
+== 在玩家昵称旁显示延迟颜色圆圈
+
+Show country flags in nameplates
+== 在玩家昵称旁显示国旗
+
+Wheel animate
+== 滚轮动画
+
+Update
+== 更新
+
+Failed to check for updates
+== 检查更新失败
+
+Update finished. Please restart the client
+== 更新完成，请重启客户端
+
+Update finished. Restarting...
+== 更新完成，正在重启...
+
+Update failed. Please try again
+== 更新失败，请重试
+
+Unknown
+== 未知
+
+Your friend %s is online and currently on map %s!
+== 你的好友 %s 在线，当前在地图 %s！
+
+Automatic updates are only supported on Windows
+== 自动更新仅支持 Windows
+
+Downloading update...
+== 正在下载更新...
+
+Agree
+== 同意
+
+Map progress bar (experimental)
+== 地图进度条（实验性）
+
+Voice
+== 语音
+
+QQ Group: 1076765929 (click to copy)
+== QQ群：1076765929（点击复制）
+
+I could not have come this far without your support, big or small. Thank you.
+== 没有你们的支持，我无法走到今天，无论大小。谢谢。
+
+You may have installed only DDNet.exe. Please use the full QmClient folder.
+== 你可能只安装了 DDNet.exe。请使用完整的 QmClient 文件夹。
+
+All
+== 全体
+
+Spectate
+== 旁观
+
+Kill
+== 自杀
+
+Clan
+== 战队
+
+Custom colors
+== 自定义颜色
+
+Delete
+== 删除
+
+Name
+== 名称
+
+No
+== 否
+
+Yes
+== 是
+
+Save
+== 保存
+
+HUD
+== HUD
+
+Website
+== 官网
+
+Settings
+== 设置
+
+Dummy
+== 分身
+
+Discord
+== Discord
+
+Profiles
+== 配置文件
+
+Visual
+== 视觉效果
+
+Hide nameplates in spec
+== 其他玩家旁观时隐藏玩家昵称
+
+Show skin names in nameplate
+== 在玩家昵称旁显示皮肤名
+
+Freeze stars
+== 显示冻结效果的星星动画
+
+Color frozen tee skins
+== 冻结不再是灰黑色而是自定义的颜色（无自定义默认灰黑色）
+
+Use colored skins for frozen tees
+== 冻结 Tee 使用彩色皮肤
+
+Render all custom colored feet as white feet skin
+== 将所有自定义脚部颜色渲染为白色
+
+Smaller tees
+== 小尺寸 Tee
+
+Jelly Tee
+== Q 弹 Tee
+
+Enable Jelly Tee
+== 启用 Q 弹 Tee
+
+Jelly others
+== 其他玩家也使用 Q 弹 Tee
+
+Jelly strength
+== Q 弹强度
+
+Jelly duration
+== 回弹时长
+
+Show your cursor when in free spectate
+== 在自由观战时显示光标
+
+Spectate cursor alpha
+== 观战光标透明度
+
+Show when you are the last alive
+== 当只剩一名玩家存活时提示
+
+Frozen Tee Display
+== Tee 状态显示栏
+
+Show frozen tee display
+== 显示 Tee 状态显示栏
+
+Use skins instead of ninja tees
+== 使用自定义皮肤代替忍者 Tee
+
+Only show after joining a team
+== 仅在加入队伍后显示
+
+Max Rows
+== 最大行数
+
+Tee Size
+== Tee 尺寸
+
+Tees left alive text
+== 显示剩余存活 Tee 数量
+
+Count frozen tees
+== 显示冻结 Tee 数量
+
+Input
+== 输入
+
+Fast Inputs (-20ms visual delay)
+== 更快的输入（-20毫秒视觉延迟）
+
+Anti Latency Tools
+== 延迟补偿工具
+
+Remove prediction & antiping in freeze
+== 在冻结时移除预测 & 延迟补偿
+
+Amount
+== 预测量
+
+Delay
+== 延迟
+
+Dont predict other players if you are frozen
+== 被冻结时不预测其他玩家
+
+Adjust your prediction margin while frozen
+== 调整冻结时的预测量
+
+Frozen Margin
+== 冻结预测值
+
+Tile Outlines
+== 方块轮廓
+
+Show any enabled outlines
+== 显示任何已启用的轮廓
+
+Only show outlines in entities
+== 仅在实体层中显示轮廓
+
+Outline freeze & deep
+== 冻结 & 深度冻结轮廓
+
+Outline walls
+== 墙体轮廓
+
+Outline teleporter
+== 传送轮廓
+
+Outline unfreeze & undeep
+== 解冻 & 解除深度冻结轮廓
+
+Outline width
+== 轮廓宽度
+
+Outline alpha
+== 轮廓透明度
+
+Outline Alpha (walls)
+== 墙体轮廓透明度
+
+Freeze outline color
+== 冻结轮廓颜色
+
+Walls outline color
+== 墙体轮廓颜色
+
+Teleporter outline color
+== 传送轮廓颜色
+
+Unfreeze outline color
+== 解冻轮廓颜色
+
+Optimistic prediction along stable direction
+== 沿稳定方向更乐观的预测
+
+Negative stability buffer (for Gores)
+== 负稳定性缓冲（用于 Gores）
+
+Uncertainty duration
+== 不确定性持续时间
+
+Other
+== 其他
+
+Ghost Tools
+== 影子工具
+
+Show unpredicted ghosts for other players
+== 显示其他玩家未预测的影子
+
+Swap ghosts and normal players
+== 交换影子和普通玩家
+
+Predicted alpha
+== 预测透明度
+
+Unpredicted alpha
+== 未预测透明度
+
+Player Indicator
+== 玩家指示器
+
+Show any enabled Indicators
+== 开启玩家指示器
+
+Hide indicator for tees on your screen
+== 其他玩家在屏幕内时隐藏指示器
+
+Show only freeze Players
+== 仅显示冻结玩家
+
+Render tiny tees instead of circles
+== 渲染成迷你 Tee 而不是圆圈
+
+Use warlist groups for indicator
+== 使用敌对列表作为指示器
+
+Indicator size
+== 显示大小
+
+Indicator opacity
+== 指示器不透明度
+
+Change indicator offset based on distance to other tees
+== 根据与其他 Tee 的距离更改指示器偏移量
+
+Indicator min offset
+== 指示器最小偏移量
+
+Indicator max offset
+== 指示器最大偏移量
+
+Indicator max distance
+== 指示器最大距离
+
+Indicator offset
+== 指示器偏移量
+
+Indicator alive color
+== 指示器存活颜色
+
+Indicator in freeze color
+== 指示器冻结颜色
+
+Indicator safe color
+== 指示器安全颜色
+
+Rainbow
+== 彩虹
+
+Rainbow Tees
+== 彩虹色 Tee
+
+Rainbow weapons
+== 彩虹色武器
+
+Rainbow hook
+== 彩虹色钩索
+
+Rainbow others
+== 将彩虹带给每个人！
+
+Rainbow speed
+== 颜色变化速度
+
+Pulse
+== 脉冲
+
+Black
+== 黑色
+
+Random
+== 随机
+
+Tee Trails
+== Tee 拖尾
+
+Enable tee trails
+== 启用 Tee 拖尾
+
+Fade trail alpha
+== 淡化拖尾
+
+Taper trail width
+== 锥形拖尾宽度
+
+Trail width
+== 拖尾宽度
+
+Trail length
+== 拖尾长度
+
+Trail alpha
+== 拖尾透明度
+
+Tee trail color
+== Tee 拖尾颜色
+
+Name:
+== 名称:
+
+Command:
+== 指令:
+
+Override Selected
+== 覆盖选定项
+
+Remove Bind
+== 删除绑定
+
+Add Bind
+== 添加绑定
+
+Use left mouse to select
+== 使用鼠标左键选择
+
+Use right mouse to swap with selected
+== 使用鼠标右键与所选内容交换
+
+Use middle mouse select without copy
+== 使用鼠标中键选择而不复制
+
+Reset position of mouse when opening bindwheel
+== 打开 快捷绑定轮盘 时重置鼠标位置
+
+Warlist
+== 敌对列表
+
+Name
+== 名称
+
+Clan
+== 战队
+
+War Entries
+== 敌对条目
+
+Edit Entry
+== 编辑条目
+
+Override Entry
+== 覆盖条目
+
+Add Entry
+== 添加条目
+
+Allow Duplicate Entries
+== 允许重复条目
+
+Enable warlist
+== 启用敌对列表
+
+Colors in chat
+== 在聊天栏中的颜色
+
+Colors in scoreboard
+== 在记分板中的颜色
+
+War Groups
+== 敌对群组
+
+Override Group
+== 覆盖群组
+
+Add Group
+== 添加群组
+
+Online Players
+== 在线玩家
+
+Show clan if war
+== 如果有敌对则显示战队
+
+Chat Binds
+== 聊天绑定
+
+Kaomoji
+== 表情符号
+
+Status Bar
+== 状态栏
+
+Show status bar
+== 显示状态栏
+
+Show labels on status bar items
+== 在状态栏上显示条目标签
+
+Status bar height
+== 状态栏高度
+
+Local Time
+== 本地时间
+
+Use 12 hour clock
+== 使用 12 小时制
+
+Show seconds on clock
+== 在时间处显示秒数
+
+Colors
+== 颜色
+
+Status bar color
+== 状态栏颜色
+
+Status bar alpha
+== 状态栏透明度
+
+Text alpha
+== 文字透明度
+
+Status Bar Codes:
+== 状态栏代码：
+
+a = Angle
+== a = Angle（角度）
+
+p = Ping
+== p = Ping（延迟）
+
+d = Prediction
+== d = Prediction（预测）
+
+c = Position
+== c = Position（位置）
+
+l = Local Time
+== l = Local Time（本地时间）
+
+r = Race Time
+== r = Race Time（比赛时间）
+
+f = FPS
+== f = FPS（每秒帧数）
+
+v = Velocity
+== v = Velocity（速度）
+
+z = Zoom
+== z = Zoom（缩放）
+
+Add Item
+== 添加项
+
+Remove Item
+== 删除项
+
+Status Scheme:
+== 状态方案：
+
+Apply
+== 应用
+
+Info
+== 信息
+
+TClient Links
+== TClient 链接
+
+Support ♥
+== 支持 ♥
+
+TClient Settings
+== TClient 设置
+
+Config Files
+== 配置文件
+
+TClient Developers
+== TClient 开发人员
+
+Hide Settings Tabs
+== 隐藏设置选项卡
+
+Your profile
+== 您的个人资料
+
+Profiles file
+== 配置文件
+
+Save/Load Skin
+== 保存/加载皮肤
+
+Save/Load Colors
+== 保存/加载颜色
+
+Save/Load Emote
+== 保存/加载表情
+
+Save/Load Name
+== 保存/加载名称
+
+Save/Load Clan
+== 保存/加载战队
+
+Save/Load Flag
+== 保存/加载国旗
+
+Load
+== 加载
+
+Override
+== 覆盖
+
+Command
+== 命令
+
+Extra tick other tees (increases other tees latency, \nmakes dragging slightly easier when using fast input)
+== 对其他 Tee 增加帧（增加其他 Tee 的延迟，\n使用更快的输入时使钩其他 Tee 更容易）
+
+Prediction Margin
+== 预测量
+
+Anti Ping Smoothing
+== 平滑预测
+
+Use new smoothing algorithm
+== 使用新的平滑算法
+
+Use warlist colors instead of regular colors
+== 使用敌对列表颜色而不是常规颜色
+
+Show all warlist groups
+== 显示所有敌对群组
+
+Last!
+== 最后存活！
+
+Outline kill
+== 显示击杀方块轮廓
+
+Kill outline color
+== 击杀方块轮廓颜色
+
+Reason
+== 原因
+
+Are you sure that you want to remove '%s' from your war groups?
+== 您确定要从您的敌对群组中删除 '%s' 吗？
+
+Remove War Group
+== 删除敌对群组
+
+Color
+== 颜色
+
+Github
+== Github
+
+Integration
+== 集成
+
+Enable Discord Integration
+== 启用 Discord 集成
+
+Name: %s
+== 名称：%s
+
+Clan: %s
+== 战队：%s
+
+Skin: %s
+== 皮肤：%s
+
+After Load
+== 加载后
+
+TClient
+== TClient
+
+Colors in spectate select
+== 旁观选择中的颜色
+
+Voting
+== 投票
+
+Auto vote no to map changes when far
+== 自动拒绝地图修改
+
+Minimum Time
+== 最短时间
+
+Auto Reply
+== 自动回复
+
+Auto reply to muted players
+== 自动回复已禁言的玩家
+
+Auto reply when tabbed out
+== 切出游戏窗口时自动回复
+
+Show other tees' trails
+== 显示其他 Tee 的拖尾
+
+Solid
+== 纯色
+
+Tee
+== Tee
+
+Speed
+== 速度
+
+ seconds
+==  秒
+
+ seconds (never)
+==  秒 (不消失)
+
+Attempt to change your name when near finish
+== 过终点前尝试改名
+
+Background Draw
+== 背景绘制
+
+Changing name to %s near finish
+== 接近终点时改名为 %s
+
+Custom Font: 
+== 自定义字体: 
+
+Finish Name
+== 终点前改名
+
+Finish Name:
+== 恰分名称:
+
+Font Size
+== 字体大小
+
+Hammer Mode: 
+== 锤子模式:
+
+Horizontal Position
+== 水平位置
+
+Ingame cursor scale
+== 游戏内光标缩放
+
+[bgdraw]
+Loaded %d items
+== 加载了 %d 项
+
+[bgdraw]
+Loaded %d items (discarded %d items)
+== 加载了 %d 项（丢弃了 %d 项）
+
+Pet
+== 宠物
+
+Pet Skin:
+== 宠物皮肤:
+
+Pet alpha
+== 宠物透明度
+
+Pet size
+== 宠物大小
+
+Show mini vote HUD
+== 显示小型投票 HUD
+
+Show the pet
+== 显示宠物
+
+Translated text hidden due to streamer mode
+== 由于主播模式，隐藏翻译文本
+
+Vertical Position
+== 垂直位置
+
+Wheel animate
+== 滚轮动画
+
+Width
+== 宽度
+
+[bgdraw]
+Writing item %d failed
+== 写入项目 %d 失败
+
+[bgdraw]
+Written %d items
+== 写入了 %d 项
+
+Toggle ghosts key
+== 切换影子键
+
+Bind Wheel Key
+== 唤出滚轮绑键
+
+Draw where mouse is
+== 绘制鼠标所在位置
+
+Shrug:
+== 耸肩：
+
+Flip:
+== 翻转：
+
+Unflip:
+== 取消翻转：
+
+Cute:
+== 可爱：
+
+Lenny:
+== Lenny ͡° ͜ʖ ͡°:
+
+Translate:
+== 翻译：
+
+Mute:
+== 禁言：
+
+Unmute:
+== 取消禁言：
+
+(On Latest)
+== (已是最新版本)
+
+(Fetching Update Info)
+== (正在获取更新信息)
+
+[bgdraw]
+Failed to create bgdraw folder
+== 创建 bgdraw 文件夹失败
+
+Add war name:
+== 添加敌对玩家:
+
+Add war clan:
+== 添加敌对战队:
+
+Add team name:
+== 添加友好玩家:
+
+Add team clan:
+== 添加友好战队:
+
+Remove war name:
+== 删除敌对玩家:
+
+Remove war clan:
+== 删除敌对战队
+
+Remove team name:
+== 删除友好玩家:
+
+Remove team clan:
+== 删除友好战队:
+
+Add [group] [name] [reason]:
+== 添加 [组名] [玩家名] [原因]
+
+Add [group] [clan] [reason]:
+== 添加 [组名] [战队名] [原因]
+
+Remove [group] [name]:
+== 删除 [组名] [玩家名] [原因]
+
+Remove [group] [clan]:
+== 删除 [组名] [战队名] [原因]
+
+Translate ID:
+== 翻译 ID:
+
+Bind Wheel
+== 绑定轮盘
+
+War List
+== 战争列表
+
+[Hammer Mode]
+Normal
+== 正常(不旋转)
+
+[Hammer Mode]
+Rotate with cursor
+== 随光标旋转(垂直)
+
+[Hammer Mode]
+Rotate with cursor like gun
+== 像枪一样随光标旋转(平行)
+
+Show katan on frozen players
+== 在被冻结的玩家身上显示武士刀
+
+Tiny Tees
+== 迷你 Tee
+
+Tiny Tee Size
+== 迷你 Tee 大小
+
+Show screen center lines
+== 显示屏幕中心线
+
+Overwrite clan even if empty
+== 即使战队为空也覆盖
+
+[translate]
+%s translating to %s
+== %s 翻译为 %s
+
+[translate]
+%s to %s failed: %s
+== %s 翻译到 %s 失败: %s
+
+Auto execute
+== 自动执行
+
+Unhook & hook
+== 墙体轮廓
+
+Freeze & deep
+== 冷冻轮廓与深冷轮廓
+
+Unfreeze & undeep
+== 解冻轮廓
+
+Tele
+== 传送轮廓
+
+Fake CTF flags
+== 伪 CTF 旗帜
+
+The command is ran in console not chat
+== 在此绑定的命令会在控制台运行，而非聊天窗口，绑定发送文字需要在前面添加say
+
+[bgdraw]
+No items to write
+== 没有可写入的内容
+
+[bgdraw]
+No changes since last save
+== 自上次保存后没有变化
+
+[Outlines]
+Width
+== 宽度
+
+[QmClient]
+Kill
+== 击杀
+
+Time until strokes disappear
+== 轨迹消失时间
+
+_ or ' ' = Space
+== _ 或 ' ' = 空格
+
+Activating mod weapon on %d: %s
+== 在 %d 上启用模组武器: %s
+
+[data_version.h]
+You have probably only installed the TClient DDNet.exe which is not supported, please use the entire TClient folder
+== 你可能只安装了 TClient 的 DDNet.exe，这不受支持，请使用完整的 TClient 文件夹
+
+Show %s group
+== 显示 %s 分组
+
+Group Name
+== 分组名称
+
+%s not found
+== 未找到 %s
+
+Apply Changes
+== 应用更改
+
+Blue
+== 蓝色
+
+Changes: %d
+== 更改数: %d
+
+Clear Changes
+== 清除更改
+
+Colored frozen tee skins
+== 冻结 Tee 使用彩色皮肤
+
+Compact List
+== 紧凑列表
+
+DF
+== DF
+
+Enable Deleting
+== 启用删除
+
+Delta input
+== Delta 输入
+
+Gamma input
+== Gamma 输入
+
+Fast Input (reduced visual delay)
+== 快速输入（降低视觉延迟）
+
+Fast Input others
+== 快速输入其他玩家
+
+Fast input others
+== 快速输入其他玩家
+
+Gamma input others
+== Gamma 输入其他玩家
+
+Delta input others
+== Delta 输入其他玩家
+
+HDF
+== HDF
+
+Only modified
+== 仅显示已修改
+
+QmClient
+== QmClient
+
+Red
+== 红色
+
+Configs
+== 客户端配置
+
+Search
+== 搜索
+
+Compact
+== 紧凑列表
+
+Modified
+== 仅已修改
+
+Tags
+== 标签
+
+Visual
+== 视觉效果
+
+Extras
+== 其他
+
+extras
+== 其他
+
+Audio
+== 语音音效
+
+Automation
+== 自动功能
+
+Social
+== 社交功能
+
+Camera
+== 镜头视野
+
+Gameplay
+== 游戏玩法
+
+Misc
+== 其他杂项
+
+Auto
+== 自动
+
+Entity Preview
+== 实体层预览
+
+Toggle between game scene preview and raw texture
+== 在游戏场景预览和原始材质之间切换
+
+Are you sure you want to delete this asset?
+== 确定要删除此资源吗？
+
+Download this asset?
+== 确定要下载此资源吗？
+
+Show moving tiles in entities
+== 在实体层显示移动方块
+
+Smaller tees
+== 小尺寸 Tee
+
+Fast input
+== 快速输入
+
+Auto margin
+== 自动预测值
+
+Sub-Tick aiming
+== Sub-Tick 瞄准
+
+Execute before connecting
+== 连接前执行
+
+Execute on connect
+== 连接时执行
+
+Fast input (reduce visual latency)
+== 快速输入（降低视觉延迟）
+
+Mode
+== 模式
+
+Amount
+== 预测量
+
+Gamma amount
+== Gamma 值
+
+Camera and view
+== 镜头与视野
+
+Camera drift, dynamic FOV and aspect ratio presets
+== 镜头漂移、动态视野与纵横比预设
+
+Enable camera drift
+== 启用镜头漂移
+
+Drift intensity
+== 漂移强度
+
+Drift smoothness
+== 漂移平滑度
+
+Reverse drift direction
+== 反向漂移方向
+
+Enable dynamic FOV
+== 启用动态视野
+
+Dynamic FOV intensity
+== 动态视野强度
+
+Dynamic FOV smoothness
+== 动态视野平滑度
+
+Off
+== 关闭
+
+Custom
+== 自定义
+
+Aspect ratio preset
+== 纵横比预设
+
+Custom ratio
+== 自定义比例
+
+Current ratio:
+== 当前比例：
+
+Current ratio: Display default (global)
+== 当前比例：显示器默认（全局生效）
+
+Current aspect ratio preset applies to the entire client view
+== 当前纵横比预设会作用于整个客户端画面
+
+QmClient
+== QmClient
+
+Current: Ranks
+== 当前: 查分
+
+Current: Time
+== 当前: 时间
+
+Current: Score
+== 当前: 分数
+
+No player nearby
+== 没有玩家在准心附近
+
+Favorite map
+== 收藏地图
+
+Main
+== 本体
+
+Zoom
+== 缩放
+
+Offline
+== 离线
+
+Sync
+== 同步
+
+Dummy tee
+== 分身 Tee
+
+Main tee
+== 本体 Tee
+
+Dummy camera
+== 分身视角
+
+Main camera
+== 本体视角
+
+HUD editor preview
+== HUD 编辑器预览
+
+Connect dummy to activate
+== 连接分身后启用
+
+Waiting for snapshot
+== 等待快照
+
+Only show when the other tee is off-screen
+== 仅在另一只 Tee 离开视角后显示
+
+Cleaner monitor card with presets and HUD placement
+== 更整洁的监视卡片，带预设和 HUD 摆放
+
+Live
+== 实时
+
+Preview
+== 预览
+
+Tracks the dummy tee
+== 跟随分身 Tee
+
+Tracks the main tee
+== 跟随本体 Tee
+
+Appears after the other tee leaves the camera
+== 另一只 Tee 离开当前镜头后出现
+
+Live source ready
+== 实时画面已就绪
+
+Preview until dummy connects
+== 分身连接前显示预览
+
+Tracks the other local tee and only appears once it leaves the camera.
+== 跟随另一只本地 Tee，并在其离开当前镜头后才出现。
+
+Tracks the other local tee. Move it in the HUD editor.
+== 跟随另一只本地 Tee。可在 HUD 编辑器中拖动位置。
+
+Heavy render path. AMD + Vulkan stays blocked for safety.
+== 渲染开销较高。出于稳定性考虑，AMD + Vulkan 仍保持禁用。
+
+Other-tee monitor
+== 另一只 Tee 监视器
+
+Drag in HUD editor
+== 在 HUD 编辑器中拖动
+
+Size presets
+== 大小预设
+
+Zoom presets
+== 缩放预设
+
+QmClient
+== QmClient
+
+QmClient online distribution
+== QmClient 在线分布
+
+Set a voice server to enable QmClient distribution
+== 需要先配置语音服务器，才能启用 QmClient 在线分布
+
+No active QmClient reports yet
+== 暂无活跃的 QmClient 上报
+
+%d servers, %d users
+== %d 个服务器，%d 个用户
+
+%d servers, %d users, %d dummies
+== %d 个服务器，%d 个用户，%d 个分身
+
+%d user
+== %d 个用户
+
+%d users
+== %d 个用户
+
+%d dummy
+== %d 个分身
+
+%d dummies
+== %d 个分身
+
+Selected server
+== 已选中服务器
+
+Not in the current browser list
+== 不在当前浏览器列表中

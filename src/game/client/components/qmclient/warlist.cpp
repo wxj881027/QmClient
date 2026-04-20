@@ -1,11 +1,29 @@
 #include "warlist.h"
 
+#include <algorithm>
+
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
+
+namespace
+{
+void ResetWarPlayerData(CWarDataCache &WarData, int WarTypeCount)
+{
+	WarData.m_WarName = false;
+	WarData.m_WarClan = false;
+	WarData.m_aReason[0] = '\0';
+	WarData.m_NameColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	WarData.m_ClanColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	if(static_cast<int>(WarData.m_WarGroupMatches.size()) != WarTypeCount)
+		WarData.m_WarGroupMatches.assign(WarTypeCount, false);
+	else
+		std::fill(WarData.m_WarGroupMatches.begin(), WarData.m_WarGroupMatches.end(), false);
+}
+}
 
 void CWarList::OnNewSnapshot()
 {
@@ -215,6 +233,7 @@ void CWarList::UpdateWarEntry(int Index, const char *pName, const char *pClan, c
 		str_copy(m_vWarEntries[Index].m_aClan, pClan);
 		str_copy(m_vWarEntries[Index].m_aReason, pReason);
 		m_vWarEntries[Index].m_pWarType = pType;
+		MarkWarEntriesDirty();
 	}
 }
 
@@ -257,6 +276,7 @@ void CWarList::AddWarEntry(const char *pName, const char *pClan, const char *pRe
 	if(!g_Config.m_TcWarListAllowDuplicates)
 		RemoveWarEntryDuplicates(pName, pClan);
 	m_vWarEntries.push_back(Entry);
+	MarkWarEntriesDirty();
 }
 
 void CWarList::RemoveWarEntryDuplicates(const char *pName, const char *pClan)
@@ -264,6 +284,7 @@ void CWarList::RemoveWarEntryDuplicates(const char *pName, const char *pClan)
 	if(str_comp(pName, "") == 0 && str_comp(pClan, "") == 0)
 		return;
 
+	bool RemovedAny = false;
 	for(auto it = m_vWarEntries.begin(); it != m_vWarEntries.end();)
 	{
 		bool IsDuplicate =
@@ -271,10 +292,16 @@ void CWarList::RemoveWarEntryDuplicates(const char *pName, const char *pClan)
 			(str_comp(it->m_aClan, pClan) == 0);
 
 		if(IsDuplicate)
+		{
 			it = m_vWarEntries.erase(it);
+			RemovedAny = true;
+		}
 		else
 			++it;
 	}
+
+	if(RemovedAny)
+		MarkWarEntriesDirty();
 }
 
 void CWarList::AddWarType(const char *pType, ColorRGBA Color)
@@ -287,6 +314,7 @@ void CWarList::AddWarType(const char *pType, ColorRGBA Color)
 	{
 		CWarType *NewType = new CWarType(pType, Color);
 		m_WarTypes.push_back(NewType);
+		MarkWarTypesDirty();
 	}
 	else
 	{
@@ -300,7 +328,10 @@ void CWarList::RemoveWarEntry(const char *pName, const char *pClan, const char *
 	CWarEntry Entry(pWarType, pName, pClan, "");
 	auto it = std::find(m_vWarEntries.begin(), m_vWarEntries.end(), Entry);
 	if(it != m_vWarEntries.end())
+	{
 		m_vWarEntries.erase(it);
+		MarkWarEntriesDirty();
+	}
 }
 
 void CWarList::RemoveWarEntry(CWarEntry *Entry)
@@ -308,7 +339,10 @@ void CWarList::RemoveWarEntry(CWarEntry *Entry)
 	auto it = std::find_if(m_vWarEntries.begin(), m_vWarEntries.end(),
 		[Entry](const CWarEntry &WarEntry) { return &WarEntry == Entry; });
 	if(it != m_vWarEntries.end())
+	{
 		m_vWarEntries.erase(it);
+		MarkWarEntriesDirty();
+	}
 }
 
 void CWarList::RemoveWarType(const char *pType)
@@ -333,6 +367,7 @@ void CWarList::RemoveWarType(const char *pType)
 		}
 		delete *it;
 		m_WarTypes.erase(it);
+		MarkWarTypesDirty();
 	}
 }
 
@@ -357,6 +392,49 @@ CWarEntry *CWarList::FindWarEntry(const char *pName, const char *pClan, const ch
 		return &(*it);
 	else
 		return nullptr;
+}
+
+void CWarList::MarkWarEntriesDirty()
+{
+	m_WarEntryLookupDirty = true;
+}
+
+void CWarList::MarkWarTypesDirty()
+{
+	m_WarTypeIndicesDirty = true;
+	m_WarEntryLookupDirty = true;
+}
+
+void CWarList::RefreshWarTypeIndices()
+{
+	if(!m_WarTypeIndicesDirty)
+		return;
+
+	for(int i = 0; i < (int)m_WarTypes.size(); ++i)
+		m_WarTypes[i]->m_Index = i;
+
+	m_WarTypeIndicesDirty = false;
+}
+
+void CWarList::RebuildWarEntryLookup()
+{
+	if(!m_WarEntryLookupDirty)
+		return;
+
+	m_WarEntriesByName.clear();
+	m_WarEntriesByClan.clear();
+	m_WarEntriesByName.reserve(m_vWarEntries.size());
+	m_WarEntriesByClan.reserve(m_vWarEntries.size());
+
+	for(const CWarEntry &Entry : m_vWarEntries)
+	{
+		if(Entry.m_aName[0] != '\0')
+			m_WarEntriesByName[std::string_view(Entry.m_aName)].push_back(&Entry);
+		else if(Entry.m_aClan[0] != '\0')
+			m_WarEntriesByClan[std::string_view(Entry.m_aClan)].push_back(&Entry);
+	}
+
+	m_WarEntryLookupDirty = false;
 }
 
 ColorRGBA CWarList::GetPriorityColor(int ClientId)
@@ -414,41 +492,47 @@ void CWarList::SortWarEntries()
 
 void CWarList::UpdateWarPlayers()
 {
-	for(int i = 0; i < (int)m_WarTypes.size(); ++i)
-		m_WarTypes[i]->m_Index = i;
+	RefreshWarTypeIndices();
+	RebuildWarEntryLookup();
+
+	const int WarTypeCount = (int)m_WarTypes.size();
 
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
 		if(!GameClient()->m_aClients[i].m_Active)
 			continue;
 
-		m_WarPlayers[i].m_WarName = false;
-		m_WarPlayers[i].m_WarClan = false;
-		memset(m_WarPlayers[i].m_aReason, 0, sizeof(m_WarPlayers[i].m_aReason));
-		m_WarPlayers[i].m_NameColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-		m_WarPlayers[i].m_ClanColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-		m_WarPlayers[i].m_WarGroupMatches.clear();
-		m_WarPlayers[i].m_WarGroupMatches.resize((int)m_WarTypes.size(), false);
+		CWarDataCache &WarData = m_WarPlayers[i];
+		ResetWarPlayerData(WarData, WarTypeCount);
 
-		for(CWarEntry &Entry : m_vWarEntries)
+		const auto NameIt = m_WarEntriesByName.find(std::string_view(GameClient()->m_aClients[i].m_aName));
+		if(NameIt != m_WarEntriesByName.end())
 		{
-			if(str_comp(GameClient()->m_aClients[i].m_aName, Entry.m_aName) == 0 && str_comp(Entry.m_aName, "") != 0)
+			for(const CWarEntry *pEntry : NameIt->second)
 			{
-				str_copy(m_WarPlayers[i].m_aReason, Entry.m_aReason);
-				m_WarPlayers[i].m_WarName = true;
-				m_WarPlayers[i].m_NameColor = Entry.m_pWarType->m_Color;
-				m_WarPlayers[i].m_WarGroupMatches[Entry.m_pWarType->m_Index] = true;
+				str_copy(WarData.m_aReason, pEntry->m_aReason);
+				WarData.m_WarName = true;
+				WarData.m_NameColor = pEntry->m_pWarType->m_Color;
+				WarData.m_WarGroupMatches[pEntry->m_pWarType->m_Index] = true;
 			}
-			else if(str_comp(GameClient()->m_aClients[i].m_aClan, Entry.m_aClan) == 0 && str_comp(Entry.m_aClan, "") != 0)
-			{
-				// Name war reason has priority over clan war reason
-				if(!m_WarPlayers[i].m_WarName)
-					str_copy(m_WarPlayers[i].m_aReason, Entry.m_aReason);
+		}
 
-				m_WarPlayers[i].m_WarClan = true;
-				m_WarPlayers[i].m_ClanColor = Entry.m_pWarType->m_Color;
-				m_WarPlayers[i].m_WarGroupMatches[Entry.m_pWarType->m_Index] = true;
-			}
+		if(GameClient()->m_aClients[i].m_aClan[0] == '\0')
+			continue;
+
+		const auto ClanIt = m_WarEntriesByClan.find(std::string_view(GameClient()->m_aClients[i].m_aClan));
+		if(ClanIt == m_WarEntriesByClan.end())
+			continue;
+
+		for(const CWarEntry *pEntry : ClanIt->second)
+		{
+			// Name war reason has priority over clan war reason.
+			if(!WarData.m_WarName)
+				str_copy(WarData.m_aReason, pEntry->m_aReason);
+
+			WarData.m_WarClan = true;
+			WarData.m_ClanColor = pEntry->m_pWarType->m_Color;
+			WarData.m_WarGroupMatches[pEntry->m_pWarType->m_Index] = true;
 		}
 	}
 }

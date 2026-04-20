@@ -8,6 +8,8 @@
   A project to rebuild a customised client based on DDNet / TaterClient
 </p>
 
+> 📄 This document is available in <a href="README_zh.md">中文</a></p>
+
 ## 📝 Project Overview
 
 Q1menG Client is a customised client built upon DDNet and TaterClient.  

@@ -359,7 +359,7 @@ static IOHANDLE BgDrawOpenFile(CGameClient &This, const char *pFilename, int Fla
 	{
 		// Create folder
 		if(!This.Storage()->CreateFolder("bgdraw", IStorage::TYPE_SAVE))
-			This.Echo(TCLocalize("Failed to create bgdraw folder", "bgdraw"));
+			This.Echo(Localize("Failed to create bgdraw folder"));
 	}
 	return This.Storage()->OpenFile(aFilename, Flags, IStorage::TYPE_SAVE);
 }
@@ -372,13 +372,13 @@ bool CBgDraw::Save(const char *pFilename, bool Verbose)
 	if(m_pvItems->size() == 0)
 	{
 		if(Verbose)
-			GameClient()->Echo(TCLocalize("No items to write", "bgdraw"));
+			GameClient()->Echo(Localize("No items to write"));
 		return false;
 	}
 	if(!m_Dirty)
 	{
 		if(Verbose)
-			GameClient()->Echo(TCLocalize("No changes since last save", "bgdraw"));
+			GameClient()->Echo(Localize("No changes since last save"));
 		return false;
 	}
 	m_Dirty = false;
@@ -392,7 +392,7 @@ bool CBgDraw::Save(const char *pFilename, bool Verbose)
 	{
 		if(!BgDrawFile::Write(Handle, Item.Data()))
 		{
-			str_format(aMsg, sizeof(aMsg), TCLocalize("Writing item %d failed", "bgdraw"), Written);
+			str_format(aMsg, sizeof(aMsg), Localize("Writing item %d failed"), Written);
 			GameClient()->Echo(aMsg);
 			Success = false;
 			break;
@@ -401,7 +401,7 @@ bool CBgDraw::Save(const char *pFilename, bool Verbose)
 	}
 	if(Verbose || !Success)
 	{
-		str_format(aMsg, sizeof(aMsg), TCLocalize("Written %d items", "bgdraw"), Written);
+		str_format(aMsg, sizeof(aMsg), Localize("Written %d items"), Written);
 		GameClient()->Echo(aMsg);
 	}
 	io_close(Handle);
@@ -438,9 +438,9 @@ bool CBgDraw::Load(const char *pFilename, bool Verbose)
 	{
 		char aInfo[256];
 		if(ItemsDiscarded == 0)
-			str_format(aInfo, sizeof(aInfo), TCLocalize("Loaded %d items", "bgdraw"), ItemsLoaded);
+			str_format(aInfo, sizeof(aInfo), Localize("Loaded %d items"), ItemsLoaded);
 		else
-			str_format(aInfo, sizeof(aInfo), TCLocalize("Loaded %d items (discarded %d items)", "bgdraw"), ItemsLoaded - ItemsDiscarded, ItemsDiscarded);
+			str_format(aInfo, sizeof(aInfo), Localize("Loaded %d items (discarded %d items)"), ItemsLoaded - ItemsDiscarded, ItemsDiscarded);
 		GameClient()->Echo(aInfo);
 	}
 

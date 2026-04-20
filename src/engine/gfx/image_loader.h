@@ -21,6 +21,7 @@ public:
 
 	bool Read(void *pData, size_t Size);
 	bool Error() const { return m_Error; }
+	size_t Size() const { return m_Size; }
 };
 
 class CByteBufferWriter
@@ -49,6 +50,11 @@ public:
 
 	static bool LoadPng(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible);
 	static bool LoadPng(IOHANDLE File, const char *pFilename, CImageInfo &Image, int &PngliteIncompatible);
+	static bool LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image);
+
+	static bool LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image);
+	static bool LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Image);
+	static bool LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image);
 
 	static bool SavePng(CByteBufferWriter &Writer, const CImageInfo &Image);
 	static bool SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image);

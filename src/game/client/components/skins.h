@@ -252,18 +252,40 @@ public:
 	void RemoveFavorite(const char *pName);
 	bool IsFavorite(const char *pName) const;
 
+	class CSkinQueueEntry
+	{
+	public:
+		std::string m_SkinName;
+		bool m_UseCustomColor = false;
+		int m_ColorBody = 0;
+		int m_ColorFeet = 0;
+
+		bool operator==(const CSkinQueueEntry &Other) const
+		{
+			if(m_SkinName != Other.m_SkinName || m_UseCustomColor != Other.m_UseCustomColor)
+				return false;
+			if(!m_UseCustomColor)
+				return true;
+			return m_ColorBody == Other.m_ColorBody && m_ColorFeet == Other.m_ColorFeet;
+		}
+	};
+
 	class CSkinQueuePreset
 	{
 	public:
 		std::string m_Name;
-		std::vector<std::string> m_Queue;
+		std::vector<CSkinQueueEntry> m_Queue;
 	};
 
-	const std::vector<std::string> &SkinQueue(int Dummy) const { return m_aSkinQueue[Dummy]; }
+	const std::vector<CSkinQueueEntry> &SkinQueue(int Dummy) const { return m_aSkinQueue[Dummy]; }
 	const std::vector<CSkinQueuePreset> &SkinQueuePresets(int Dummy) const { return m_aSkinQueuePresets[Dummy]; }
 	bool IsInSkinQueue(const char *pName, int Dummy) const;
+	bool IsInSkinQueue(const char *pName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy) const;
 	bool AddSkinQueue(const char *pName, int Dummy);
+	bool AddSkinQueue(const char *pName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy);
 	bool RemoveSkinQueue(const char *pName, int Dummy);
+	bool RemoveSkinQueue(const char *pName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy);
+	bool RemoveSkinQueue(const CSkinQueueEntry &Entry, int Dummy);
 	void MoveSkinQueueItem(size_t FromIndex, size_t ToIndex, int Dummy);
 	void TrimSkinQueueToLimit(int Dummy);
 	bool AddSkinQueuePresetFromCurrent(int Dummy);
@@ -327,7 +349,7 @@ private:
 
 	CSkinList m_SkinList;
 	std::set<std::string> m_Favorites;
-	std::array<std::vector<std::string>, NUM_DUMMIES> m_aSkinQueue;
+	std::array<std::vector<CSkinQueueEntry>, NUM_DUMMIES> m_aSkinQueue;
 	std::array<std::vector<CSkinQueuePreset>, NUM_DUMMIES> m_aSkinQueuePresets;
 	std::array<std::chrono::nanoseconds, NUM_DUMMIES> m_aSkinQueueElapsed = {};
 	std::array<std::optional<std::chrono::nanoseconds>, NUM_DUMMIES> m_aSkinQueueLastUpdate = {};
@@ -351,10 +373,14 @@ private:
 	void OnConfigSave(IConfigManager *pConfigManager);
 	static void ConAddSkinQueue(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddDummySkinQueue(IConsole::IResult *pResult, void *pUserData);
+	static void ConAddSkinQueueEx(IConsole::IResult *pResult, void *pUserData);
+	static void ConAddDummySkinQueueEx(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddSkinQueuePreset(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddDummySkinQueuePreset(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddSkinQueuePresetItem(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddDummySkinQueuePresetItem(IConsole::IResult *pResult, void *pUserData);
+	static void ConAddSkinQueuePresetItemEx(IConsole::IResult *pResult, void *pUserData);
+	static void ConAddDummySkinQueuePresetItemEx(IConsole::IResult *pResult, void *pUserData);
 	static void ConfigSaveQueueCallback(IConfigManager *pConfigManager, void *pUserData);
 	void OnQueueConfigSave(IConfigManager *pConfigManager);
 	static void ConchainRefreshSkinList(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
@@ -364,6 +390,7 @@ private:
 	void ClampSkinQueueIndex(int Dummy);
 	bool AddSkinQueuePreset(const char *pName, int Dummy);
 	bool AddSkinQueuePresetItem(int PresetIndex, const char *pSkinName, int Dummy);
+	bool AddSkinQueuePresetItem(int PresetIndex, const char *pSkinName, bool UseCustomColor, int ColorBody, int ColorFeet, int Dummy);
 
 	friend class CSkinProfiles;
 };

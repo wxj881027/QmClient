@@ -1210,7 +1210,7 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 		{
 			SetActiveItem(nullptr);
 		}
-		if(Inside && ((m_ActiveValueSelectorState.m_Button == 0 && !m_ActiveValueSelectorState.m_DidScroll && DoDoubleClickLogic(pId)) || m_ActiveValueSelectorState.m_Button == 1))
+		if(Inside && ((m_ActiveValueSelectorState.m_Button == 0 && !m_ActiveValueSelectorState.m_DidScroll) || m_ActiveValueSelectorState.m_Button == 1))
 		{
 			m_ActiveValueSelectorState.m_pLastTextId = pId;
 			m_ActiveValueSelectorState.m_NumberInput.SetInteger64(Current, Base, Props.m_HexPrefix);
@@ -1298,7 +1298,9 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 			else
 				str_format(aBuf, sizeof(aBuf), "%" PRId64, Current);
 		}
-		pRect->Draw(Props.m_Color, IGraphics::CORNER_ALL, 3.0f);
+		const bool Active = CheckActiveItem(pId);
+		const bool Hovered = HotItem() == pId;
+		pRect->Draw(ms_LightButtonColorFunction.GetColor(Active, Hovered), IGraphics::CORNER_ALL, 3.0f);
 		DoLabel(pRect, aBuf, 10.0f, TEXTALIGN_MC);
 	}
 

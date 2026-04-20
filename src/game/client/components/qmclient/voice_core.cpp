@@ -2296,6 +2296,9 @@ void CRClientVoice::RenderSpeakerOverlay()
 		uint64_t m_OverlayOrder = 0;
 		bool m_IsLocal = false;
 		char m_aName[MAX_NAME_LENGTH] = {};
+		float m_FullNameWidth = 0.0f;
+		float m_NameWidth = 0.0f;
+		float m_RowWidth = 0.0f;
 	};
 
 	std::array<std::array<char, MAX_NAME_LENGTH>, MAX_CLIENTS> aaClientNames{};
@@ -2435,10 +2438,12 @@ void CRClientVoice::RenderSpeakerOverlay()
 	const float MicIconWidth = pTextRender->TextWidth(IconFontSize, s_pVoiceOverlayMicIcon);
 	pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	float PanelWidth = 0.0f;
-	for(const SSpeakerEntry &Entry : vEntries)
+	for(SSpeakerEntry &Entry : vEntries)
 	{
-		const float NameWidth = std::min(std::round(pTextRender->TextBoundingBox(NameFontSize, Entry.m_aName).m_W), MaxNameWidth);
-		PanelWidth = std::max(PanelWidth, RowPaddingX + UserBoxWidth + UserToNameGap + NameWidth + NameToMicGap + MicIconWidth + RowPaddingX);
+		Entry.m_FullNameWidth = std::round(pTextRender->TextBoundingBox(NameFontSize, Entry.m_aName).m_W);
+		Entry.m_NameWidth = std::min(Entry.m_FullNameWidth, MaxNameWidth);
+		Entry.m_RowWidth = RowPaddingX + UserBoxWidth + UserToNameGap + Entry.m_NameWidth + NameToMicGap + MicIconWidth + RowPaddingX;
+		PanelWidth = std::max(PanelWidth, Entry.m_RowWidth);
 	}
 	const float PanelHeight = vEntries.empty() ? 0.0f : vEntries.size() * RowHeight + (vEntries.size() - 1) * RowGap;
 	const CUIRect PanelRect = {PanelX, PanelY, PanelWidth, PanelHeight};
@@ -2447,8 +2452,8 @@ void CRClientVoice::RenderSpeakerOverlay()
 	for(size_t Index = 0; Index < vEntries.size(); ++Index)
 	{
 		const SSpeakerEntry &Entry = vEntries[Index];
-		const float NameWidth = std::min(std::round(pTextRender->TextBoundingBox(NameFontSize, Entry.m_aName).m_W), MaxNameWidth);
-		const float RowWidth = RowPaddingX + UserBoxWidth + UserToNameGap + NameWidth + NameToMicGap + MicIconWidth + RowPaddingX;
+		const float NameWidth = Entry.m_NameWidth;
+		const float RowWidth = Entry.m_RowWidth;
 		const float RowY = PanelY + Index * (RowHeight + RowGap);
 		const float RowX = PanelX;
 
@@ -2475,7 +2480,7 @@ void CRClientVoice::RenderSpeakerOverlay()
 		const float NameY = RowY + (RowHeight - NameFontSize) * 0.5f - 0.5f;
 		pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		pTextRender->TextColor(0.97f, 0.98f, 1.0f, 0.94f);
-		if(NameWidth + 0.01f < std::round(pTextRender->TextBoundingBox(NameFontSize, Entry.m_aName).m_W))
+		if(NameWidth + 0.01f < Entry.m_FullNameWidth)
 		{
 			CTextCursor Cursor;
 			Cursor.m_FontSize = NameFontSize;

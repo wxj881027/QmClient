@@ -409,11 +409,11 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	UpdateToDateText.VSplitRight(40.0f, &UpdateToDateText, nullptr);
 	if(!GameClient()->m_TClient.NeedUpdate() && GameClient()->m_TClient.m_FetchedTClientInfo)
 	{
-		Ui()->DoLabel(&UpdateToDateText, TCLocalize("(On Latest)"), 14.0f, TEXTALIGN_MR);
+		Ui()->DoLabel(&UpdateToDateText, Localize("(On Latest)"), 14.0f, TEXTALIGN_MR);
 	}
 	else
 	{
-		Ui()->DoLabel(&UpdateToDateText, TCLocalize("(Fetching Update Info)"), 14.0f, TEXTALIGN_MR);
+		Ui()->DoLabel(&UpdateToDateText, Localize("(Fetching Update Info)"), 14.0f, TEXTALIGN_MR);
 	}
 #endif
 	static CButtonContainer s_ConsoleButton;

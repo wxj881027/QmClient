@@ -81,6 +81,8 @@ private:
 
 	float MeasureSettingsMouseHeight() const;
 	void RenderSettingsMouse(CUIRect View);
+	CButtonContainer m_IngameMouseSensValueSelector;
+	CButtonContainer m_UiMouseSensValueSelector;
 
 	std::vector<CButtonContainer> m_vJoystickIngameModeButtonContainers = {{}, {}};
 	char m_aaJoystickAxisCheckboxIds[NUM_JOYSTICK_AXES][2]; // 2 for X and Y buttons

@@ -2,8 +2,6 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "scoreboard.h"
 
-#include <base/bezier.h>
-
 #include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -29,12 +27,6 @@
 #include <cstdint>
 #include <limits>
 #include <vector>
-
-static float ScoreboardEase(float t)
-{
-	static const CCubicBezier s_Bezier = CCubicBezier::With(0.0f, 0.0f, 0.0f, 1.0f);
-	return s_Bezier.Evaluate(std::clamp(t, 0.0f, 1.0f));
-}
 
 namespace
 {
@@ -136,7 +128,6 @@ void CScoreboard::ConToggleScoreboardCursor(IConsole::IResult *pResult, void *pU
 
 	if(!pSelf->IsActive() ||
 		pSelf->GameClient()->m_Menus.IsActive() ||
-		pSelf->GameClient()->m_Chat.IsActive() ||
 		pSelf->Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
 		return;
@@ -1392,43 +1383,17 @@ void CScoreboard::OnRender()
 	}
 
 	const bool WantActive = IsActive();
-	const bool UseAnim = g_Config.m_QmScoreboardAnimOptim != 0;
-	const float DeltaTime = Client()->RenderFrameTime();
-	const float BackgroundInTime = 0.12f;
-	const float ContentInTime = 0.18f;
-	const float ShowDuration = BackgroundInTime + ContentInTime;
-	const float HideDuration = ContentInTime;
-
-	if(!UseAnim)
+	if(!WantActive)
 	{
-		m_OpenTime = WantActive ? ShowDuration : 0.0f;
-		m_Visibility = WantActive ? 1.0f : 0.0f;
-		if(!WantActive)
-		{
-			m_AnimContentAlpha = 0.0f;
-			return;
-		}
+		m_OpenTime = 0.0f;
+		m_Visibility = 0.0f;
+		m_AnimContentAlpha = 0.0f;
+		return;
 	}
-	else
-	{
-		if(WantActive)
-		{
-			m_OpenTime += DeltaTime;
-		}
-		else
-		{
-			const float CloseSpeed = (HideDuration > 0.0f && ShowDuration > 0.0f) ? (ShowDuration / HideDuration) : 1.0f;
-			m_OpenTime -= DeltaTime * CloseSpeed;
-		}
 
-		m_OpenTime = std::clamp(m_OpenTime, 0.0f, ShowDuration);
-		m_Visibility = ShowDuration > 0.0f ? (m_OpenTime / ShowDuration) : (WantActive ? 1.0f : 0.0f);
-		if(!WantActive && m_OpenTime <= 0.0f)
-		{
-			m_AnimContentAlpha = 0.0f;
-			return;
-		}
-	}
+	m_OpenTime = 1.0f;
+	m_Visibility = 1.0f;
+	m_AnimContentAlpha = 1.0f;
 
 	if(!GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive())
 	{
@@ -1443,14 +1408,8 @@ void CScoreboard::OnRender()
 	const CUIRect Screen = *Ui()->Screen();
 	Ui()->MapScreen();
 
-	const float OpenTime = std::clamp(m_OpenTime, 0.0f, ShowDuration);
-	const float BackgroundProgress = BackgroundInTime > 0.0f ? std::clamp(OpenTime / BackgroundInTime, 0.0f, 1.0f) : 1.0f;
-	const float ContentProgress = ContentInTime > 0.0f ? std::clamp((OpenTime - BackgroundInTime) / ContentInTime, 0.0f, 1.0f) : 1.0f;
-	const float BackgroundAlpha = UseAnim ? ScoreboardEase(BackgroundProgress) : 1.0f;
-	const float ContentAlphaOpen = UseAnim ? ScoreboardEase(ContentProgress) : 1.0f;
-	const float BackgroundAlphaFinal = BackgroundAlpha;
-	m_AnimContentAlpha = ContentAlphaOpen;
-	const float ContentOffset = UseAnim ? (1.0f - ContentAlphaOpen) * 8.0f : 0.0f;
+	const float BackgroundAlphaFinal = 1.0f;
+	const float ContentOffset = 0.0f;
 
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const bool Teams = GameClient()->IsTeamPlay();
@@ -1475,9 +1434,9 @@ void CScoreboard::OnRender()
 	const float SortButtonFontSize = 10.0f;
 	const char *pSortLabel = nullptr;
 	if(g_Config.m_ClScoreboardSortMode)
-		pSortLabel = TCLocalize("当前: 查分");
+		pSortLabel = Localize("Current: Ranks");
 	else
-		pSortLabel = TimeScore ? TCLocalize("当前: 时间") : TCLocalize("当前: 分数");
+		pSortLabel = TimeScore ? Localize("Current: Time") : Localize("Current: Score");
 	const float SortButtonWidth = TextRender()->TextWidth(SortButtonFontSize, pSortLabel) + 18.0f;
 	const ColorRGBA SortButtonBaseColor = g_Config.m_ClScoreboardSortMode ? ColorRGBA(0.25f, 0.55f, 0.8f, 0.6f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f);
 	const ColorRGBA SortButtonColor = SortButtonBaseColor.WithMultipliedAlpha(m_AnimContentAlpha);
@@ -1900,7 +1859,7 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 			}
 		}
 
-		pScoreboard->GameClient()->m_Tooltips.DoToolTip(&pPopupContext->m_FriendAction, &Action, Client.m_Friend ? Localize("移除好友") : Localize("Add friend"));
+		pScoreboard->GameClient()->m_Tooltips.DoToolTip(&pPopupContext->m_FriendAction, &Action, Client.m_Friend ? Localize("Remove friend") : Localize("Add friend"));
 
 		Action = CUiV2LegacyAdapter::ToCUIRect(vActions[1].m_Box);
 

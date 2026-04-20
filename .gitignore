@@ -3,6 +3,13 @@
 data/
 !/data/
 
+# Agent documentation (local only)
+AGENTS.md
+
+# Local documentation (local only)
+dyl/
+.trae/
+
 bundle/
 !/other/bundle/
 
@@ -83,6 +90,7 @@ versionsrv
 
 generated
 target
+src/voicesrv/
 
 /build*
 /integration_test/*
@@ -99,6 +107,8 @@ target
 .vscode
 compile_commands.json
 cmake-build-*/*
+cmake-build-release/
+build-ninja/
 cscope.files
 cscope.out
 out

@@ -86,11 +86,14 @@ private:
 
 	// menus_settings_assets.cpp
 public:
+	class CAssetDecodeJob;
+
 	struct SCustomItem
 	{
 		IGraphics::CTextureHandle m_RenderTexture;
 
 		char m_aName[50];
+		std::shared_ptr<CAssetDecodeJob> m_pDecodeJob;
 
 		bool operator<(const SCustomItem &Other) const { return str_comp(m_aName, Other.m_aName) < 0; }
 	};
@@ -734,6 +737,7 @@ protected:
 	void RenderServerbrowserInfo(CUIRect View);
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
+	void RenderServerbrowserQm(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
@@ -768,6 +772,7 @@ protected:
 	void RenderSettingsGraphics(CUIRect MainView);
 	void RenderSettingsSound(CUIRect MainView);
 	void RenderSettings(CUIRect MainView);
+	void PrewarmSettingsPages();
 	void RenderSettingsCustom(CUIRect MainView);
 
 	// found in menus_settings_controls.cpp
@@ -887,8 +892,9 @@ public:
 		SETTINGS_DDNET,
 		SETTINGS_ASSETS,
 		SETTINGS_TCLIENT,
-		SETTINGS_QIMENG,
+		SETTINGS_QMCLIENT,
 		SETTINGS_PROFILES,
+		SETTINGS_CONFIGS,
 
 		SETTINGS_LENGTH,
 	};
@@ -920,6 +926,7 @@ public:
 		SMALL_TAB_BROWSER_FILTER,
 		SMALL_TAB_BROWSER_INFO,
 		SMALL_TAB_BROWSER_FRIENDS,
+		SMALL_TAB_BROWSER_QM,
 
 		SMALL_TAB_LENGTH,
 	};
@@ -1049,7 +1056,8 @@ private:
 	void RenderSettingsTClientProfiles(CUIRect MainView);
 	void RenderSettingsTClientConfigs(CUIRect MainView);
 	void RenderSettingsTClientSidebar(CUIRect MainView);
-	void RenderSettingsQiMeng(CUIRect MainView);
+	void RenderSettingsQmClient(CUIRect MainView);
+	void PrewarmTClientAndQmClientPages();
 	void RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha = 1.0f);
 
 	const CWarType *m_pRemoveWarType = nullptr;

@@ -112,6 +112,19 @@ static void ForEachTopLevelBindCommand(const char *pCommand, F &&Fn)
 	FlushCommand();
 }
 
+static bool BindContainsCommand(const char *pBind, const char *pCommand)
+{
+	if(!pBind || !pCommand || pCommand[0] == '\0')
+		return false;
+
+	bool Found = false;
+	ForEachTopLevelBindCommand(pBind, [&](const char *pNormalizedCommand) {
+		if(!Found && str_comp_nocase(pNormalizedCommand, pCommand) == 0)
+			Found = true;
+	});
+	return Found;
+}
+
 static bool IsDeepflyFireCommand(const char *pCommand)
 {
 	return str_comp_nocase(pCommand, "+fire") == 0;

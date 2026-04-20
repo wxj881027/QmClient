@@ -2836,6 +2836,9 @@ void CClient::OnDemoPlayerMessage(void *pData, int Size)
 		return;
 	}
 
+	if(GameClient()->OnDemoPlaybackMessage(Msg, &Unpacker))
+		return;
+
 	if(!Sys)
 		GameClient()->OnMessage(Msg, &Unpacker, CONN_MAIN, false);
 }
@@ -5246,23 +5249,12 @@ int main(int argc, const char **argv)
 
 	// execute config file
 	pConsole->SetUnknownCommandCallback(SaveUnknownCommandCallback, pClient);
-	static constexpr const char *pLegacyTClientConfigPath = "settings_tclient.cfg";
 	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
 	{
 		const char *pConfigPath = s_aConfigDomains[ConfigDomain].m_aConfigPath;
 		if(!pStorage->FileExists(pConfigPath, IStorage::TYPE_ALL))
 		{
-			if(ConfigDomain == ConfigDomain::TCLIENT &&
-				pStorage->FileExists(pLegacyTClientConfigPath, IStorage::TYPE_ALL))
-			{
-				pConfigPath = pLegacyTClientConfigPath;
-				log_info("client", "loading legacy config '%s' because '%s' was not found",
-					pLegacyTClientConfigPath, s_aConfigDomains[ConfigDomain].m_aConfigPath);
-			}
-			else
-			{
-				continue;
-			}
+			continue;
 		}
 
 		if(!pConsole->ExecuteFile(pConfigPath))
@@ -5481,10 +5473,7 @@ void CClient::RequestDDNetInfo()
 	if(g_Config.m_BrIndicateFinished)
 	{
 		char aEscaped[128];
-		const char *pName = PlayerName();
-		if(g_Config.m_QmUnfinishedMapPlayer[0] != '\0')
-			pName = g_Config.m_QmUnfinishedMapPlayer;
-		EscapeUrl(aEscaped, sizeof(aEscaped), pName);
+		EscapeUrl(aEscaped, sizeof(aEscaped), PlayerName());
 		str_append(aUrl, "?name=");
 		str_append(aUrl, aEscaped);
 	}
@@ -5588,32 +5577,7 @@ int CClient::PredictionMargin() const
 	if(!m_ServerCapabilities.m_SyncWeaponInput)
 		return 10;
 
-	int PredictionMargin = g_Config.m_ClPredictionMargin;
-	if(!g_Config.m_BcFastInputAutoMargin)
-		return PredictionMargin;
-
-	int FastInputMargin = 0;
-	if(g_Config.m_TcFastInput)
-	{
-		if(g_Config.m_BcFastInputMode == 0)
-		{
-			FastInputMargin = std::max(0, g_Config.m_TcFastInputAmount);
-		}
-		else if(g_Config.m_BcFastInputMode == 1)
-		{
-			const int DeltaInputAmount = std::max(0, g_Config.m_BcFastInputDeltaInput);
-			// delta input is measured in 0.01 ticks, convert it to milliseconds.
-			FastInputMargin = (DeltaInputAmount + 2) / 5;
-		}
-		else
-		{
-			const int GammaInputAmount = BcFastInputGammaUiToEffectiveAmount(g_Config.m_BcFastInputGammaInput);
-			// gamma input is configured directly in 0.01 ticks.
-			FastInputMargin = (GammaInputAmount + 2) / 5;
-		}
-	}
-
-	const int BaseMargin = std::max(PredictionMargin, FastInputMargin);
+	const int BaseMargin = g_Config.m_ClPredictionMargin;
 	const int64_t Now = time_get();
 	const int LivePredictionMs = std::max(0, (int)((m_PredictedTime.Get(Now) - m_aGameTime[g_Config.m_ClDummy].Get(Now)) * 1000 / (float)time_freq()));
 

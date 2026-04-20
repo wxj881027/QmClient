@@ -8,5 +8,8 @@
 SET_CONFIG_DOMAIN(ConfigDomain::DDNET)
 #include "config_variables.h"
 
-SET_CONFIG_DOMAIN(ConfigDomain::TCLIENT)
+SET_CONFIG_DOMAIN(ConfigDomain::QMCLIENT)
 #include "config_variables_qmclient.h"
+
+SET_CONFIG_DOMAIN(ConfigDomain::QMCLIENT)
+#include "config_variables_qmclient_extra.h"

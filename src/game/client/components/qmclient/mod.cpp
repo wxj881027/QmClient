@@ -8,7 +8,6 @@
 #include <game/localization.h>
 
 static constexpr const float MOD_WEAPON_TIME = 1.5f;
-static constexpr const char *QMCLIENT_LOCALIZATION_CONTEXT = "QmClient";
 
 void CMod::OnConsoleInit()
 {
@@ -166,7 +165,7 @@ void CMod::ModWeapon(int Id)
 	if(!Player.m_Active)
 		return;
 
-	str_format(aBuf, sizeof(aBuf), TCLocalize("Enable mod weapon on %d: %s", QMCLIENT_LOCALIZATION_CONTEXT), Player.ClientId(), Player.m_aName);
+	str_format(aBuf, sizeof(aBuf), Localize("Enable mod weapon on %d: %s"), Player.ClientId(), Player.m_aName);
 	GameClient()->Echo(aBuf);
 
 	str_format(aBuf, sizeof(aBuf), "%s %d", g_Config.m_TcModWeaponCommand, Id);

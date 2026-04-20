@@ -561,6 +561,7 @@ find_package(Opus)
 find_package(Opusfile)
 find_package(PNG)
 find_package(Python3)
+find_package(WebP)
 find_package(Rust)
 find_package(SDL2)
 find_package(SQLite3)
@@ -657,6 +658,7 @@ show_dependency_status("Python3" Python3)
 show_dependency_status("SDL2" SDL2)
 show_dependency_status("SQLite3" SQLite3)
 show_dependency_status("Wavpack" WAVPACK)
+show_dependency_status("WebP" WebP)
 show_dependency_status("Zlib" ZLIB)
 if(DISCORD)
   show_dependency_status("DiscordSdk" DiscordSdk)
@@ -1644,46 +1646,6 @@ set(EXPECTED_DATA
   qmclient/fonts/Rubik-Regular.ttf
   qmclient/fonts/minecraft_font.ttf
   qmclient/gui_logo.png
-  qmclient/languages/arabic.txt
-  qmclient/languages/azerbaijani.txt
-  qmclient/languages/belarusian.txt
-  qmclient/languages/bosnian.txt
-  qmclient/languages/brazilian_portuguese.txt
-  qmclient/languages/bulgarian.txt
-  qmclient/languages/catalan.txt
-  qmclient/languages/chuvash.txt
-  qmclient/languages/czech.txt
-  qmclient/languages/danish.txt
-  qmclient/languages/dutch.txt
-  qmclient/languages/esperanto.txt
-  qmclient/languages/estonian.txt
-  qmclient/languages/finnish.txt
-  qmclient/languages/french.txt
-  qmclient/languages/galician.txt
-  qmclient/languages/german.txt
-  qmclient/languages/greek.txt
-  qmclient/languages/hungarian.txt
-  qmclient/languages/index.txt
-  qmclient/languages/italian.txt
-  qmclient/languages/japanese.txt
-  qmclient/languages/korean.txt
-  qmclient/languages/kyrgyz.txt
-  qmclient/languages/license.txt
-  qmclient/languages/norwegian.txt
-  qmclient/languages/persian.txt
-  qmclient/languages/polish.txt
-  qmclient/languages/portuguese.txt
-  qmclient/languages/romanian.txt
-  qmclient/languages/russian.txt
-  qmclient/languages/serbian.txt
-  qmclient/languages/serbian_cyrillic.txt
-  qmclient/languages/simplified_chinese.txt
-  qmclient/languages/slovak.txt
-  qmclient/languages/spanish.txt
-  qmclient/languages/swedish.txt
-  qmclient/languages/traditional_chinese.txt
-  qmclient/languages/turkish.txt
-  qmclient/languages/ukrainian.txt
   race_flag.png
   shader/pipeline.frag
   shader/pipeline.vert
@@ -2007,6 +1969,7 @@ set(COPY_FILES
   ${WEBSOCKETS_COPY_FILES}
   ${DISCORDSDK_COPY_FILES}
   ${VULKAN_COPY_FILES}
+  ${WebP_COPY_FILES}
   ${CRASHDUMP_COPY_FILES}
   ${SSP_COPY_FILES}
 )
@@ -2193,6 +2156,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   config.h
   config_domains.h
   config_includes.h
+  config_tags.cpp
+  config_tags.h
   config_variables.h
   config_variables_qmclient.h
   config_variables_qmclient_extra.h
@@ -2368,6 +2333,13 @@ set(LIBS
 # Targets
 add_library(engine-gfx EXCLUDE_FROM_ALL OBJECT ${ENGINE_GFX})
 target_include_directories(engine-gfx PRIVATE ${PNG_INCLUDE_DIRS})
+if(WebP_FOUND)
+  target_compile_definitions(engine-gfx PRIVATE CONF_WEBP)
+  target_include_directories(engine-gfx PRIVATE ${WebP_INCLUDE_DIRS})
+endif()
+if(VIDEORECORDER AND FFMPEG_FOUND)
+  target_include_directories(engine-gfx PRIVATE ${FFMPEG_INCLUDE_DIRS})
+endif()
 add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_EXTERNAL} ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_UUID_SHARED} ${BASE})
 add_library(game-shared EXCLUDE_FROM_ALL OBJECT ${GAME_SHARED} ${GAME_GENERATED_SHARED})
 list(APPEND TARGETS_OWN engine-gfx engine-shared game-shared)
@@ -2815,6 +2787,7 @@ if(CLIENT)
     ${SDL2_LIBRARIES}
     ${WAVPACK_LIBRARIES}
     ${FFMPEG_LIBRARIES}
+    ${WebP_LIBRARIES}
 
     # Order of these three is important.
     ${OPUSFILE_LIBRARIES}
@@ -2917,6 +2890,7 @@ if(CLIENT)
     ${SDL2_INCLUDE_DIRS}
     ${WAVPACK_INCLUDE_DIRS}
     ${FFMPEG_INCLUDE_DIRS}
+    ${WebP_INCLUDE_DIRS}
     ${DISCORDSDK_INCLUDE_DIRS}
 
     ${VULKAN_INCLUDE_DIRS}
@@ -3203,9 +3177,9 @@ if(TOOLS)
       set(TOOL_LIBS ${LIBS})
       unset(EXTRA_TOOL_SRC)
       if(TOOL MATCHES "^(dilate|map_convert_07|map_optimize|map_extract|map_replace_image)$")
-        list(APPEND TOOL_INCLUDE_DIRS ${PNG_INCLUDE_DIRS})
+        list(APPEND TOOL_INCLUDE_DIRS ${PNG_INCLUDE_DIRS} ${WebP_INCLUDE_DIRS})
         list(APPEND TOOL_DEPS $<TARGET_OBJECTS:engine-gfx>)
-        list(APPEND TOOL_LIBS ${PNG_LIBRARIES})
+        list(APPEND TOOL_LIBS ${PNG_LIBRARIES} ${WebP_LIBRARIES})
       endif()
       if(TOOL MATCHES "^config_")
         list(APPEND EXTRA_TOOL_SRC "src/tools/config_common.h")
@@ -3353,7 +3327,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     $<TARGET_OBJECTS:rust-bridge-shared>
     ${DEPS}
   )
-  target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+  target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
   target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS})
 
   list(APPEND TARGETS_OWN ${TARGET_TESTRUNNER})
@@ -3392,7 +3366,7 @@ add_library(rust_test STATIC EXCLUDE_FROM_ALL
 list(APPEND TARGETS_OWN rust_test)
 list(APPEND TARGETS_LINK rust_test)
 
-set(RUST_TEST_LIBS ${LIBS} $<TARGET_FILE:rust_test>)
+set(RUST_TEST_LIBS ${WebP_LIBRARIES} ${LIBS} $<TARGET_FILE:rust_test>)
 list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
 # Use ',' as separator so the value can be passed through shell safely.
 string(JOIN "," RUST_TEST_LIBS_JOINED ${RUST_TEST_LIBS})

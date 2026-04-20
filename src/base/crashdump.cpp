@@ -2,7 +2,12 @@
 
 #if defined(CONF_CRASHDUMP)
 #if !defined(CONF_FAMILY_WINDOWS)
-#error crash dumping not implemented
+
+void crashdump_init_if_available(const char *log_file_path)
+{
+	(void)log_file_path;
+}
+
 #else
 
 #include "log.h"

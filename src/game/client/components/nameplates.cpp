@@ -567,7 +567,7 @@ protected:
 		ColorRGBA OutlineColor, Color;
 		Color = m_Color;
 
-		// Rainbow name for local player (same style as QiMeng sidebar)
+		// Rainbow name for local player (same style as QmClient sidebar)
 		if(m_IsLocal && g_Config.m_QmRainbowName)
 		{
 			const float Time = This.Client()->GlobalTime();
@@ -1397,65 +1397,11 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	Data.m_ShowCoords = pPlayerInfo->m_Local ? g_Config.m_QmNameplateCoordsOwn : g_Config.m_QmNameplateCoords;
 	Data.m_Coords = Position / 32.0f;
 	Data.m_FontSizeCoords = 18.0f + 20.0f * g_Config.m_ClNamePlatesCoordsSize / 100.0f;
-	Data.m_CoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
-	Data.m_CoordXAlignHintStrict = g_Config.m_QmNameplateCoordXAlignHintStrict != 0;
+	Data.m_CoordXAlignHint = false;
+	Data.m_CoordXAlignHintStrict = false;
 	Data.m_CoordXAligned = false;
 	Data.m_CoordXAlignBaseX = Data.m_Coords.x;
 	Data.m_CoordXAlignDiff = 0;
-	if(Data.m_CoordXAlignHint && !GameClient()->m_aClients[ClientId].m_Solo)
-	{
-		const float Range = 64.0f;
-		const float RangeSq = Range * Range;
-		const float Tolerance = Data.m_CoordXAlignHintStrict ? 0.0f : 0.03f;
-		const float StrictEpsilon = 0.0001f;
-		const float SelfX = Data.m_Coords.x;
-		const float SelfY = Data.m_Coords.y;
-		const int SelfTeam = GameClient()->IsTeamPlay() ? ClientData.m_Team : GameClient()->m_Teams.Team(ClientId);
-		float BestDistSq = INFINITY;
-		for(int i = 0; i < MAX_CLIENTS; ++i)
-		{
-			if(i == ClientId)
-				continue;
-			const CNetObj_PlayerInfo *pOtherInfo = GameClient()->m_Snap.m_apPlayerInfos[i];
-			if(!pOtherInfo)
-				continue;
-			if(!GameClient()->m_Snap.m_aCharacters[i].m_Active)
-				continue;
-			if(GameClient()->m_aClients[i].m_IsVolleyBall)
-				continue;
-			if(GameClient()->m_aClients[i].m_Solo)
-				continue;
-			const int OtherTeam = GameClient()->IsTeamPlay() ? GameClient()->m_aClients[i].m_Team : GameClient()->m_Teams.Team(i);
-			if(SelfTeam != TEAM_SUPER && OtherTeam != TEAM_SUPER && SelfTeam != OtherTeam)
-				continue;
-
-			const vec2 OtherPos = GameClient()->m_aClients[i].m_RenderPos;
-			const float Dx = OtherPos.x - Position.x;
-			const float Dy = OtherPos.y - Position.y;
-			const float DistSq = Dx * Dx + Dy * Dy;
-			if(DistSq > RangeSq)
-				continue;
-
-			const float OtherX = OtherPos.x / 32.0f;
-			const float OtherY = OtherPos.y / 32.0f;
-			if(SelfY > OtherY)
-				continue;
-
-			bool XAligned = false;
-			if(Data.m_CoordXAlignHintStrict)
-				XAligned = std::abs(SelfX - OtherX) <= StrictEpsilon;
-			else
-				XAligned = std::abs(SelfX - OtherX) <= Tolerance;
-
-			if(XAligned && DistSq < BestDistSq)
-			{
-				BestDistSq = DistSq;
-				Data.m_CoordXAligned = true;
-				Data.m_CoordXAlignBaseX = SelfX;
-				Data.m_CoordXAlignDiff = static_cast<int>(std::round((OtherX - SelfX) * 100.0f));
-			}
-		}
-	}
 
 	Data.m_FontSizeHookStrongWeak = 18.0f + 20.0f * g_Config.m_ClNamePlatesStrongSize / 100.0f;
 	Data.m_FontSizeDirection = 18.0f + 20.0f * g_Config.m_ClDirectionSize / 100.0f;
@@ -1618,8 +1564,8 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 	Data.m_ShowCoords = g_Config.m_QmNameplateCoords || g_Config.m_QmNameplateCoordsOwn;
 	Data.m_Coords = vec2(12.34f + Dummy, 56.78f + Dummy);
 	Data.m_FontSizeCoords = FontSizeCoords;
-	Data.m_CoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
-	Data.m_CoordXAlignHintStrict = g_Config.m_QmNameplateCoordXAlignHintStrict != 0;
+	Data.m_CoordXAlignHint = false;
+	Data.m_CoordXAlignHintStrict = false;
 	Data.m_CoordXAligned = false;
 	Data.m_CoordXAlignBaseX = Data.m_Coords.x;
 	Data.m_CoordXAlignDiff = 0;
@@ -2021,44 +1967,50 @@ void CNamePlates::OnRender()
 #endif
 	const bool ShowCoords = (g_Config.m_QmNameplateCoords || g_Config.m_QmNameplateCoordsOwn) &&
 				(g_Config.m_QmNameplateCoordX || g_Config.m_QmNameplateCoordY);
-	const bool ShowCoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint != 0;
-	const bool RenderNameplates = g_Config.m_ClNamePlates || g_Config.m_ClNamePlatesOwn || ShowDirection != 0 || ShowCoords || ShowCoordXAlignHint;
+	const bool RenderNameplates = g_Config.m_ClNamePlates || g_Config.m_ClNamePlatesOwn || ShowDirection != 0 || ShowCoords;
 	const bool RenderChatBubbles = g_Config.m_QmChatBubble != 0;
-	if(!RenderNameplates && !RenderChatBubbles)
+	const bool RenderFreezeWakeupPopups = GameClient()->HasFreezeWakeupPopups();
+	if(!RenderNameplates && !RenderChatBubbles && !RenderFreezeWakeupPopups)
 		return;
 
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	if(RenderNameplates || RenderChatBubbles)
 	{
-		const CNetObj_PlayerInfo *pInfo = GameClient()->m_Snap.m_apPlayerInfos[i];
-		if(!pInfo)
+		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			ResetChatBubbleAnimState(i);
-			continue;
-		}
-
-		// Each player can also have a spectator char whose name plate is displayed independently
-		if(GameClient()->m_aClients[i].m_SpecCharPresent && RenderNameplates)
-		{
-			const vec2 RenderPos = GameClient()->m_aClients[i].m_SpecChar;
-			RenderNamePlateGame(RenderPos, pInfo, 0.4f);
-		}
-		// Only render name plates for active characters
-		if(GameClient()->m_Snap.m_aCharacters[i].m_Active)
-		{
-			// TClient
-			if(GameClient()->m_aClients[i].m_IsVolleyBall)
+			const CNetObj_PlayerInfo *pInfo = GameClient()->m_Snap.m_apPlayerInfos[i];
+			if(!pInfo)
+			{
+				ResetChatBubbleAnimState(i);
 				continue;
-			// if(g_Config.m_TcRenderNameplateSpec > 0)
-			//	continue;
-			const vec2 RenderPos = GameClient()->m_aClients[i].m_RenderPos;
-			if(RenderNameplates || RenderChatBubbles)
-				RenderNamePlateGame(RenderPos, pInfo, RenderNameplates ? 1.0f : 0.0f);
+			}
 
-			// Render chat bubble above player
-			if(RenderChatBubbles)
-				RenderChatBubble(RenderPos, i, 1.0f);
+			// Each player can also have a spectator char whose name plate is displayed independently
+			if(GameClient()->m_aClients[i].m_SpecCharPresent && RenderNameplates)
+			{
+				const vec2 RenderPos = GameClient()->m_aClients[i].m_SpecChar;
+				RenderNamePlateGame(RenderPos, pInfo, 0.4f);
+			}
+			// Only render name plates for active characters
+			if(GameClient()->m_Snap.m_aCharacters[i].m_Active)
+			{
+				// TClient
+				if(GameClient()->m_aClients[i].m_IsVolleyBall)
+					continue;
+				// if(g_Config.m_TcRenderNameplateSpec > 0)
+				//	continue;
+				const vec2 RenderPos = GameClient()->m_aClients[i].m_RenderPos;
+				if(RenderNameplates || RenderChatBubbles)
+					RenderNamePlateGame(RenderPos, pInfo, RenderNameplates ? 1.0f : 0.0f);
+
+				// Render chat bubble above player
+				if(RenderChatBubbles)
+					RenderChatBubble(RenderPos, i, 1.0f);
+			}
 		}
 	}
+
+	if(RenderFreezeWakeupPopups)
+		GameClient()->RenderFreezeWakeupPopups();
 }
 
 void CNamePlates::OnWindowResize()

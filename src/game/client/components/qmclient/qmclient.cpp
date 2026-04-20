@@ -15,9 +15,11 @@
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
+#include <engine/engine.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
+#include <engine/shared/jobs.h>
 #include <engine/client/updater.h>
 #include <engine/map.h>
 #include <engine/storage.h>
@@ -27,6 +29,7 @@
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
 #include <game/client/gameclient.h>
+#include <game/client/prediction/entities/character.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
 #include <game/layers.h>
@@ -39,6 +42,7 @@
 #include <cctype>
 #include <cmath>
 #include <limits>
+#include <mutex>
 #include <queue>
 #include <string>
 #include <string_view>
@@ -69,10 +73,19 @@ static constexpr int QMCLIENT_SERVER_TIME_SYNC_INTERVAL_SECONDS = 15;
 static constexpr int QMCLIENT_PLAYTIME_QUERY_INTERVAL_SECONDS = 10;
 static constexpr int QMCLIENT_RECOVERY_RETRY_SECONDS = 3;
 static constexpr int QMCLIENT_MARKER_FLUSH_INTERVAL_SECONDS = 5;
-static constexpr const char *QMCLIENT_LOCALIZATION_CONTEXT = "QmClient";
 static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players/?json2=";
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
+static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
+static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION = 2.0f;
+static constexpr float QMCLIENT_COMBO_POPUP_DURATION = 1.25f;
+static constexpr float QMCLIENT_TEXT_POPUP_FONT_SIZE = 30.0f;
+static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET = vec2(34.0f, -78.0f);
+static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT = vec2(18.0f, -16.0f);
+static constexpr int QMCLIENT_COMBO_POPUP_WINDOW_SECONDS = 2;
+static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_FROM = ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f);
+static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_TO = ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f);
+static constexpr ColorRGBA QMCLIENT_COMBO_POPUP_COLOR = ColorRGBA(1.0f, 0.96f, 0.45f, 1.0f);
 static constexpr const char *s_apKeywordNegationWords[] = {
 	"不",
 	"没",
@@ -97,6 +110,409 @@ static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s joined thi
 
 static int AutoReplySeparatorLength(const char *pStr);
 static void AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
+static const json_value *JsonObjectField(const json_value *pObject, const char *pName);
+static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue);
+static bool JsonReadBoolean(const json_value *pValue, bool &OutValue);
+
+namespace
+{
+enum class ETextPopupType
+{
+	FREEZE_WAKEUP = 0,
+	COMBO_AMAZING,
+	COMBO_FANTASTIC,
+	COMBO_UNBELIEVABLE,
+	COMBO_UNSTOPPABLE,
+	NUM_TYPES,
+};
+
+struct STextPopupDefinition
+{
+	const char *m_pText;
+};
+
+static constexpr std::array<STextPopupDefinition, (int)ETextPopupType::NUM_TYPES> s_aTextPopupDefinitions = {{
+	{QMCLIENT_FREEZE_WAKEUP_TEXT},
+	{"Amazing!"},
+	{"Fantastic!"},
+	{"Unbelievable!"},
+	{"Unstoppable!"},
+}};
+
+class CQmClientUsersParseJob : public IJob
+{
+public:
+	struct SClientMark
+	{
+		int m_ClientId = -1;
+		bool m_FootParticlesEnabled = false;
+		bool m_RemoteParticlesEnabled = false;
+		bool m_VoiceSupported = false;
+		std::string m_Qid;
+	};
+
+	struct SResult
+	{
+		bool m_Parsed = false;
+		std::vector<SQmClientServerDistribution> m_vServerDistribution;
+		std::vector<SClientMark> m_vLocalServerMarks;
+		int m_OnlineUserCount = 0;
+		int m_OnlineDummyCount = 0;
+	};
+
+private:
+	std::shared_ptr<CHttpRequest> m_pTask;
+	char m_aServerAddress[NETADDR_MAXSTRSIZE] = "";
+	int64_t m_ExpireTick = 0;
+	std::mutex m_Mutex;
+	SResult m_Result;
+
+	void Run() override
+	{
+		SResult Result;
+		if(m_pTask && m_pTask->State() == EHttpState::DONE)
+		{
+			json_value *pRoot = m_pTask->ResultJson();
+			if(pRoot != nullptr)
+			{
+				const json_value *pUsers = pRoot;
+				if(pUsers->type == json_object)
+				{
+					const json_value *pUsersField = JsonObjectField(pUsers, "users");
+					if(pUsersField != &json_value_none)
+						pUsers = pUsersField;
+				}
+
+				if(pUsers->type == json_array)
+				{
+					Result.m_Parsed = true;
+					std::unordered_map<std::string, size_t> ServerIndexByAddress;
+					ServerIndexByAddress.reserve(pUsers->u.array.length);
+					Result.m_vServerDistribution.reserve(pUsers->u.array.length);
+
+					for(unsigned Index = 0; Index < pUsers->u.array.length; ++Index)
+					{
+						const json_value *pEntry = pUsers->u.array.values[Index];
+						if(!pEntry || pEntry->type != json_object)
+							continue;
+
+						const json_value *pServerAddress = JsonObjectField(pEntry, "server_address");
+						if(pServerAddress == &json_value_none)
+							pServerAddress = JsonObjectField(pEntry, "server");
+						if(pServerAddress == &json_value_none || pServerAddress->type != json_string)
+							continue;
+
+						const json_value *pPlayerId = JsonObjectField(pEntry, "player_id");
+						if(pPlayerId == &json_value_none)
+							pPlayerId = JsonObjectField(pEntry, "id");
+						if(pPlayerId == &json_value_none || (pPlayerId->type != json_integer && pPlayerId->type != json_double))
+							continue;
+
+						const int ClientId = json_int_get(pPlayerId);
+						bool Dummy = false;
+						const json_value *pDummy = JsonObjectField(pEntry, "dummy");
+						if(pDummy != &json_value_none)
+							JsonReadBoolean(pDummy, Dummy);
+
+						const std::string ServerAddress = pServerAddress->u.string.ptr;
+						const auto ItServer = ServerIndexByAddress.find(ServerAddress);
+						if(ItServer == ServerIndexByAddress.end())
+						{
+							ServerIndexByAddress[ServerAddress] = Result.m_vServerDistribution.size();
+							Result.m_vServerDistribution.push_back({ServerAddress, 0, 0});
+						}
+						SQmClientServerDistribution &ServerDistribution = Result.m_vServerDistribution[ServerIndexByAddress[ServerAddress]];
+						if(Dummy)
+						{
+							++ServerDistribution.m_DummyCount;
+							++Result.m_OnlineDummyCount;
+						}
+						else
+						{
+							++ServerDistribution.m_UserCount;
+							++Result.m_OnlineUserCount;
+						}
+
+						if(str_comp(ServerAddress.c_str(), m_aServerAddress) != 0)
+							continue;
+
+						SClientMark &Mark = Result.m_vLocalServerMarks.emplace_back();
+						Mark.m_ClientId = ClientId;
+
+						const json_value *pQidField = JsonObjectField(pEntry, "qid");
+						if(pQidField != &json_value_none && pQidField->type == json_string)
+							Mark.m_Qid = pQidField->u.string.ptr;
+
+						const json_value *pFootParticlesEnabled = JsonObjectField(pEntry, "foot_particles_enabled");
+						JsonReadBoolean(pFootParticlesEnabled, Mark.m_FootParticlesEnabled);
+
+						const json_value *pRemoteParticlesEnabled = JsonObjectField(pEntry, "remote_particles_enabled");
+						JsonReadBoolean(pRemoteParticlesEnabled, Mark.m_RemoteParticlesEnabled);
+
+						Mark.m_VoiceSupported = true;
+						const json_value *pVoiceSupported = JsonObjectField(pEntry, "voice_supported");
+						if(pVoiceSupported != &json_value_none)
+							JsonReadBoolean(pVoiceSupported, Mark.m_VoiceSupported);
+					}
+
+					std::sort(Result.m_vServerDistribution.begin(), Result.m_vServerDistribution.end(), [](const SQmClientServerDistribution &Left, const SQmClientServerDistribution &Right) {
+						if(Left.m_UserCount != Right.m_UserCount)
+							return Left.m_UserCount > Right.m_UserCount;
+						if(Left.m_DummyCount != Right.m_DummyCount)
+							return Left.m_DummyCount > Right.m_DummyCount;
+						return str_comp(Left.m_ServerAddress.c_str(), Right.m_ServerAddress.c_str()) < 0;
+					});
+				}
+				json_value_free(pRoot);
+			}
+		}
+
+		{
+			std::lock_guard<std::mutex> Lock(m_Mutex);
+			m_Result = std::move(Result);
+		}
+		m_pTask = nullptr;
+	}
+
+public:
+	CQmClientUsersParseJob(std::shared_ptr<CHttpRequest> pTask, const char *pServerAddress, int64_t ExpireTick) :
+		m_pTask(std::move(pTask)),
+		m_ExpireTick(ExpireTick)
+	{
+		str_copy(m_aServerAddress, pServerAddress, sizeof(m_aServerAddress));
+	}
+
+	SResult TakeResult()
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		SResult Result = std::move(m_Result);
+		m_Result = SResult();
+		return Result;
+	}
+
+	int64_t ExpireTick() const { return m_ExpireTick; }
+};
+
+class CQmDdnetPlayerStatsParseJob : public IJob
+{
+public:
+	struct SResult
+	{
+		bool m_Parsed = false;
+		std::string m_FavoritePartner;
+		int m_TotalFinishes = -1;
+	};
+
+private:
+	std::shared_ptr<CHttpRequest> m_pTask;
+	std::mutex m_Mutex;
+	SResult m_Result;
+
+	void Run() override
+	{
+		SResult Result;
+		if(m_pTask && m_pTask->State() == EHttpState::DONE && m_pTask->StatusCode() == 200)
+		{
+			json_value *pRoot = m_pTask->ResultJson();
+			if(pRoot && pRoot->type == json_object)
+			{
+				const json_value *pFavoritePartners = JsonObjectField(pRoot, "favorite_partners");
+				if(pFavoritePartners->type == json_array)
+				{
+					const char *pBestPartner = nullptr;
+					int BestPartnerFinishes = -1;
+					for(unsigned i = 0; i < pFavoritePartners->u.array.length; ++i)
+					{
+						const json_value &Partner = (*pFavoritePartners)[i];
+						if(Partner.type != json_object)
+							continue;
+
+						const json_value *pName = JsonObjectField(&Partner, "name");
+						if(pName->type != json_string)
+							continue;
+
+						const char *pPartnerName = json_string_get(pName);
+						if(!pPartnerName || pPartnerName[0] == '\0')
+							continue;
+
+						int PartnerFinishes = 0;
+						const json_value *pFinishes = JsonObjectField(&Partner, "finishes");
+						if(pFinishes->type == json_integer && pFinishes->u.integer > 0)
+						{
+							if(pFinishes->u.integer > std::numeric_limits<int>::max())
+								PartnerFinishes = std::numeric_limits<int>::max();
+							else
+								PartnerFinishes = (int)pFinishes->u.integer;
+						}
+
+						if(!pBestPartner ||
+							PartnerFinishes > BestPartnerFinishes ||
+							(PartnerFinishes == BestPartnerFinishes && str_comp_nocase(pPartnerName, pBestPartner) < 0))
+						{
+							pBestPartner = pPartnerName;
+							BestPartnerFinishes = PartnerFinishes;
+						}
+					}
+
+					if(pBestPartner)
+						Result.m_FavoritePartner = pBestPartner;
+				}
+
+				const json_value *pTypes = JsonObjectField(pRoot, "types");
+				if(pTypes->type == json_object)
+				{
+					Result.m_Parsed = true;
+					int64_t TotalFinishes = 0;
+					for(unsigned i = 0; i < pTypes->u.object.length; ++i)
+					{
+						const json_value *pTypeObj = pTypes->u.object.values[i].value;
+						if(!pTypeObj || pTypeObj->type != json_object)
+							continue;
+
+						const json_value *pMaps = JsonObjectField(pTypeObj, "maps");
+						if(pMaps->type != json_object)
+							continue;
+
+						for(unsigned j = 0; j < pMaps->u.object.length; ++j)
+						{
+							const json_value *pMapObj = pMaps->u.object.values[j].value;
+							if(!pMapObj || pMapObj->type != json_object)
+								continue;
+
+							const json_value *pFinishes = JsonObjectField(pMapObj, "finishes");
+							if(pFinishes->type != json_integer || pFinishes->u.integer <= 0 || TotalFinishes >= std::numeric_limits<int>::max())
+								continue;
+
+							int64_t SafeAdd = pFinishes->u.integer;
+							if(SafeAdd > std::numeric_limits<int>::max())
+								SafeAdd = std::numeric_limits<int>::max();
+
+							const int64_t MaxTotal = std::numeric_limits<int>::max();
+							if(SafeAdd > MaxTotal - TotalFinishes)
+								TotalFinishes = MaxTotal;
+							else
+								TotalFinishes += SafeAdd;
+						}
+					}
+					Result.m_TotalFinishes = (int)TotalFinishes;
+				}
+				json_value_free(pRoot);
+			}
+		}
+
+		{
+			std::lock_guard<std::mutex> Lock(m_Mutex);
+			m_Result = std::move(Result);
+		}
+		m_pTask = nullptr;
+	}
+
+public:
+	explicit CQmDdnetPlayerStatsParseJob(std::shared_ptr<CHttpRequest> pTask) :
+		m_pTask(std::move(pTask))
+	{
+	}
+
+	SResult TakeResult()
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		SResult Result = std::move(m_Result);
+		m_Result = SResult();
+		return Result;
+	}
+};
+
+class CQmClientLifecycleMarkerWriteJob : public IJob
+{
+	IStorage *m_pStorage = nullptr;
+	std::string m_Content;
+
+	void Run() override
+	{
+		if(m_pStorage == nullptr || State() == IJob::STATE_ABORTED)
+			return;
+
+		m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		IOHANDLE File = m_pStorage->OpenFile(QMCLIENT_LIFECYCLE_MARKER_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		if(!File)
+			return;
+		if(State() == IJob::STATE_ABORTED)
+		{
+			io_close(File);
+			return;
+		}
+
+		io_write(File, m_Content.data(), m_Content.size());
+		io_close(File);
+	}
+
+public:
+	CQmClientLifecycleMarkerWriteJob(IStorage *pStorage, std::string Content) :
+		m_pStorage(pStorage),
+		m_Content(std::move(Content))
+	{
+		Abortable(true);
+	}
+};
+
+enum class EFreezeWakeupType
+{
+	NONE,
+	LOCAL_HAMMER,
+	EXTERNAL_HAMMER,
+};
+
+int ComboPopupTextTypeFromCount(int ComboCount)
+{
+	switch(ComboCount)
+	{
+	case 2: return (int)ETextPopupType::COMBO_AMAZING;
+	case 3: return (int)ETextPopupType::COMBO_FANTASTIC;
+	case 4: return (int)ETextPopupType::COMBO_UNBELIEVABLE;
+	default: return (int)ETextPopupType::COMBO_UNSTOPPABLE;
+	}
+}
+
+bool IsComboPopupTextType(int TextType)
+{
+	return TextType >= (int)ETextPopupType::COMBO_AMAZING &&
+		TextType <= (int)ETextPopupType::COMBO_UNSTOPPABLE;
+}
+
+float TextPopupDuration(int TextType)
+{
+	return IsComboPopupTextType(TextType) ? QMCLIENT_COMBO_POPUP_DURATION : QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION;
+}
+
+EFreezeWakeupType DetectFreezeWakeupType(CGameClient *pGameClient, int ClientId)
+{
+	const CCharacter *pPredictedChar = pGameClient->m_PredictedWorld.GetCharacterById(ClientId);
+	if(pPredictedChar == nullptr)
+		return EFreezeWakeupType::NONE;
+
+	const int LastDamageTick = pPredictedChar->GetLastDamageTick();
+	const int DamageTickDelta = pGameClient->m_PredictedWorld.GameTick() - LastDamageTick;
+	const int DamageTickWindow = maximum(2, pGameClient->m_PredictedWorld.GameTickSpeed() / 6);
+	const int DamageFrom = pPredictedChar->GetLastDamageFrom();
+	if(LastDamageTick <= 0 ||
+		DamageTickDelta < 0 ||
+		DamageTickDelta > DamageTickWindow ||
+		pPredictedChar->GetLastDamageWeapon() != WEAPON_HAMMER ||
+		DamageFrom < 0)
+	{
+		return EFreezeWakeupType::NONE;
+	}
+
+	if(DamageFrom == ClientId ||
+		DamageFrom == pGameClient->m_aLocalIds[0] ||
+		DamageFrom == pGameClient->m_aLocalIds[1])
+	{
+		return EFreezeWakeupType::LOCAL_HAMMER;
+	}
+
+	return EFreezeWakeupType::EXTERNAL_HAMMER;
+}
+}
 
 struct SKeywordReplyRule
 {
@@ -592,8 +1008,8 @@ void CTClient::OnInit()
 	char aError[512] = "";
 	if(MissingQmClientFolder || MissingGuiLogo)
 	{
-		str_format(aError, sizeof(aError), TCLocalize("%s not found", DATA_VERSION_PATH), "data/qmclient/gui_logo.png");
-		SWarning Warning(aError, TCLocalize("You may have replaced only DDNet.exe and skipped QmClient.zip.\nPlease install the full QmClient package.", "data_version.h"));
+		str_format(aError, sizeof(aError), Localize("%s not found", DATA_VERSION_PATH), "data/qmclient/gui_logo.png");
+		SWarning Warning(aError, Localize("You may have replaced only DDNet.exe and skipped QmClient.zip.\nPlease install the full QmClient package.", "data_version.h"));
 		Client()->AddWarning(Warning);
 	}
 	else
@@ -601,7 +1017,7 @@ void CTClient::OnInit()
 		CheckDataVersion(aError, sizeof(aError), Storage()->OpenFile(DATA_VERSION_PATH, IOFLAG_READ, IStorage::TYPE_ALL));
 		if(aError[0] != '\0')
 		{
-			SWarning Warning(aError, TCLocalize("You may have installed only DDNet.exe. Please use the full QmClient folder.", "data_version.h"));
+			SWarning Warning(aError, Localize("You may have installed only DDNet.exe. Please use the full QmClient folder.", "data_version.h"));
 			Client()->AddWarning(Warning);
 		}
 	}
@@ -686,6 +1102,16 @@ void CTClient::OnShutdown()
 	AbortTask(m_pQmClientServerTimeTask);
 	AbortTask(m_pQmClientPlaytimeQueryTask);
 	AbortTask(m_pQmDdnetPlayerTask);
+	m_pQmClientUsersParseJob = nullptr;
+	m_pQmDdnetPlayerParseJob = nullptr;
+	m_pQmClientLifecycleMarkerWriteJob = nullptr;
+	UnloadTextPopupCaches();
+	ClearFreezeWakeupPopups();
+}
+
+void CTClient::OnWindowResize()
+{
+	UnloadTextPopupCaches();
 }
 
 static bool LineShouldHighlight(const char *pLine, const char *pName)
@@ -1749,7 +2175,7 @@ void CTClient::DoFinishCheck()
 	if(!NearFinishTile(Player.m_RenderPos, TILE_FINISH))
 		return;
 	char aBuf[64];
-	str_format(aBuf, sizeof(aBuf), TCLocalize("Changing name to %s near finish"), pNewName);
+	str_format(aBuf, sizeof(aBuf), Localize("Changing name to %s near finish"), pNewName);
 	GameClient()->Echo(aBuf);
 	SendUrgentRename(Dummy, pNewName);
 }
@@ -1762,7 +2188,7 @@ bool CTClient::ServerCommandExists(const char *pCommand)
 	return false;
 }
 
-void CTClient::OnRender()
+void CTClient::OnUpdate()
 {
 	if(m_QmAspectApplyPending)
 	{
@@ -1785,11 +2211,11 @@ void CTClient::OnRender()
 			{
 				if(!InfoOk || !m_FetchedTClientInfo)
 				{
-					Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Failed to check for updates", QMCLIENT_LOCALIZATION_CONTEXT)));
+					Client()->AddWarning(SWarning(Localize("Update"), Localize("Failed to check for updates")));
 				}
 				else if(!NeedUpdate())
 				{
-					Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("You are already on the latest version", QMCLIENT_LOCALIZATION_CONTEXT)));
+					Client()->AddWarning(SWarning(Localize("Update"), Localize("You are already on the latest version")));
 				}
 				else
 				{
@@ -1810,11 +2236,11 @@ void CTClient::OnRender()
 			{
 				if(Client()->State() == IClient::STATE_ONLINE || Client()->EditorHasUnsavedData())
 				{
-					Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Update finished. Please restart the client", QMCLIENT_LOCALIZATION_CONTEXT)));
+					Client()->AddWarning(SWarning(Localize("Update"), Localize("Update finished. Please restart the client")));
 				}
 				else
 				{
-					Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Update finished. Restarting...", QMCLIENT_LOCALIZATION_CONTEXT)));
+					Client()->AddWarning(SWarning(Localize("Update"), Localize("Update finished. Restarting...")));
 					Client()->Restart();
 				}
 			}
@@ -1824,7 +2250,7 @@ void CTClient::OnRender()
 		{
 			if(m_aUpdateExeTmp[0] != '\0')
 				Storage()->RemoveBinaryFile(m_aUpdateExeTmp);
-			Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Update failed. Please try again", QMCLIENT_LOCALIZATION_CONTEXT)));
+			Client()->AddWarning(SWarning(Localize("Update"), Localize("Update failed. Please try again")));
 		}
 
 		ResetUpdateExeTask();
@@ -1863,6 +2289,8 @@ void CTClient::OnRender()
 	if(RunGameplayTickChecks)
 	{
 		CheckFreeze();
+		CheckFreezeWakeupPopup();
+		CheckComboPopup();
 		CheckWaterFall();
 		CheckAutoUnspecOnUnfreeze(); // 检测解冻自动取消旁观
 		CheckAutoSwitchOnUnfreeze(); // HJ大佬辅助 - 检测自动切换
@@ -1872,9 +2300,12 @@ void CTClient::OnRender()
 		UpdateGoresMapProgress(); // 更新 Gores 地图路径进度
 	}
 
-	RenderGoresDebugRoute();
-
 	MaybeSaveMapCategoryCache();
+}
+
+void CTClient::OnRender()
+{
+	RenderGoresDebugRoute();
 }
 
 bool CTClient::ReadQmClientLifecycleMarker(int64_t &OutStartedAt, int64_t &OutLastSeenAt)
@@ -1938,7 +2369,27 @@ void CTClient::TouchQmClientLifecycleMarker(bool ForceWrite)
 		m_QmClientMarkerStartedAt = time_timestamp();
 	m_QmClientMarkerLastSeenAt = time_timestamp();
 	m_QmClientMarkerLastFlushTick = NowTick;
-	WriteQmClientLifecycleMarker();
+
+	if(ForceWrite)
+	{
+		if(m_pQmClientLifecycleMarkerWriteJob && !m_pQmClientLifecycleMarkerWriteJob->Done())
+		{
+			m_pQmClientLifecycleMarkerWriteJob->Abort();
+			m_pQmClientLifecycleMarkerWriteJob = nullptr;
+		}
+		WriteQmClientLifecycleMarker();
+		return;
+	}
+
+	if(m_pQmClientLifecycleMarkerWriteJob && !m_pQmClientLifecycleMarkerWriteJob->Done())
+		return;
+
+	char aLine[384];
+	str_format(aLine, sizeof(aLine),
+		"session=%s\nstarted_at=%d\nlast_seen_at=%d\nclient_id=%s\n",
+		m_aQmClientLifecycleSessionId, (int)m_QmClientMarkerStartedAt, (int)m_QmClientMarkerLastSeenAt, m_aQmClientPlaytimeClientId);
+	m_pQmClientLifecycleMarkerWriteJob = std::make_shared<CQmClientLifecycleMarkerWriteJob>(Storage(), aLine);
+	Engine()->AddJob(m_pQmClientLifecycleMarkerWriteJob);
 }
 
 void CTClient::ClearQmClientLifecycleMarker()
@@ -2040,10 +2491,6 @@ void CTClient::SendQmClientPlaytimeRequest(const char *pUrl, std::shared_ptr<CHt
 	if(m_aQmClientPlaytimeClientId[0] == '\0')
 		return;
 
-	// Center endpoints are plain HTTP.
-	if(!g_Config.m_HttpAllowInsecure)
-		g_Config.m_HttpAllowInsecure = 1;
-
 	CJsonStringWriter JsonWriter;
 	JsonWriter.BeginObject();
 	JsonWriter.WriteAttribute("client_id");
@@ -2060,6 +2507,7 @@ void CTClient::SendQmClientPlaytimeRequest(const char *pUrl, std::shared_ptr<CHt
 
 	std::string Body = JsonWriter.GetOutputString();
 	pTaskSlot = HttpPostJson(pUrl, Body.c_str());
+	pTaskSlot->AllowInsecureProtocol();
 	pTaskSlot->Timeout(CTimeout{3000, 0, 250, 6});
 	pTaskSlot->IpResolve(IPRESOLVE::V4);
 	pTaskSlot->LogProgress(HTTPLOG::FAILURE);
@@ -2209,14 +2657,12 @@ void CTClient::UpdateQmClientLifecycleAndServerTime()
 	if(m_pQmClientServerTimeTask || (m_QmClientServerTimeLastSync != 0 && Now - m_QmClientServerTimeLastSync < IntervalTicks))
 		return;
 
-	if(!g_Config.m_HttpAllowInsecure)
-		g_Config.m_HttpAllowInsecure = 1;
-
 	char aUrl[512];
 	const int Nonce = secure_rand_below(1000000);
 	str_format(aUrl, sizeof(aUrl), "%s?event=time_sync&session=%s&nonce=%d", QMCLIENT_HEALTH_URL, m_aQmClientLifecycleSessionId, Nonce);
 
 	m_pQmClientServerTimeTask = HttpGet(aUrl);
+	m_pQmClientServerTimeTask->AllowInsecureProtocol();
 	m_pQmClientServerTimeTask->Timeout(CTimeout{3000, 0, 250, 5});
 	m_pQmClientServerTimeTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientServerTimeTask->LogProgress(HTTPLOG::FAILURE);
@@ -2225,6 +2671,8 @@ void CTClient::UpdateQmClientLifecycleAndServerTime()
 
 void CTClient::UpdateQmDdnetPlayerStats()
 {
+	if(m_pQmDdnetPlayerParseJob && m_pQmDdnetPlayerParseJob->Done())
+		FinishQmDdnetPlayerStats();
 	if(m_pQmDdnetPlayerTask && m_pQmDdnetPlayerTask->Done())
 		FinishQmDdnetPlayerStats();
 
@@ -2236,6 +2684,7 @@ void CTClient::UpdateQmDdnetPlayerStats()
 			m_pQmDdnetPlayerTask->Abort();
 			m_pQmDdnetPlayerTask = nullptr;
 		}
+		m_pQmDdnetPlayerParseJob = nullptr;
 		if(m_aQmDdnetPlayerName[0] != '\0')
 		{
 			m_aQmDdnetPlayerName[0] = '\0';
@@ -2254,6 +2703,7 @@ void CTClient::UpdateQmDdnetPlayerStats()
 			m_pQmDdnetPlayerTask->Abort();
 			m_pQmDdnetPlayerTask = nullptr;
 		}
+		m_pQmDdnetPlayerParseJob = nullptr;
 
 		str_copy(m_aQmDdnetPlayerName, pConfiguredName, sizeof(m_aQmDdnetPlayerName));
 		m_aQmDdnetFavoritePartner[0] = '\0';
@@ -2262,6 +2712,8 @@ void CTClient::UpdateQmDdnetPlayerStats()
 		m_QmDdnetPlayerNextRetry = 0;
 	}
 
+	if(m_pQmDdnetPlayerParseJob)
+		return;
 	if(m_pQmDdnetPlayerTask)
 		return;
 
@@ -2283,6 +2735,8 @@ void CTClient::FetchQmDdnetPlayerStats(const char *pPlayerName)
 {
 	if(!pPlayerName || pPlayerName[0] == '\0')
 		return;
+	if(m_pQmDdnetPlayerParseJob && !m_pQmDdnetPlayerParseJob->Done())
+		return;
 	if(m_pQmDdnetPlayerTask && !m_pQmDdnetPlayerTask->Done())
 		return;
 
@@ -2300,115 +2754,44 @@ void CTClient::FetchQmDdnetPlayerStats(const char *pPlayerName)
 
 void CTClient::FinishQmDdnetPlayerStats()
 {
+	if(m_pQmDdnetPlayerParseJob)
+	{
+		if(!m_pQmDdnetPlayerParseJob->Done())
+			return;
+
+		auto pParseJob = std::static_pointer_cast<CQmDdnetPlayerStatsParseJob>(m_pQmDdnetPlayerParseJob);
+		CQmDdnetPlayerStatsParseJob::SResult Result = pParseJob->TakeResult();
+		m_pQmDdnetPlayerParseJob = nullptr;
+
+		const int64_t Now = time_get();
+		if(Result.m_Parsed)
+		{
+			m_QmDdnetPlayerLastSync = Now;
+			m_QmDdnetPlayerNextRetry = 0;
+			str_copy(m_aQmDdnetFavoritePartner, Result.m_FavoritePartner.c_str(), sizeof(m_aQmDdnetFavoritePartner));
+			m_QmDdnetTotalFinishes = Result.m_TotalFinishes;
+		}
+		else
+		{
+			m_QmDdnetPlayerLastSync = 0;
+			m_QmDdnetPlayerNextRetry = Now + (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq();
+		}
+		return;
+	}
+
 	if(!m_pQmDdnetPlayerTask)
 		return;
 
-	bool Parsed = false;
-	char aFavoritePartner[MAX_NAME_LENGTH] = "";
-	int64_t TotalFinishes = 0;
-
-	if(m_pQmDdnetPlayerTask->State() == EHttpState::DONE && m_pQmDdnetPlayerTask->StatusCode() == 200)
-	{
-		json_value *pRoot = m_pQmDdnetPlayerTask->ResultJson();
-		if(pRoot && pRoot->type == json_object)
-		{
-			const json_value *pFavoritePartners = JsonObjectField(pRoot, "favorite_partners");
-			if(pFavoritePartners->type == json_array)
-			{
-				const char *pBestPartner = nullptr;
-				int BestPartnerFinishes = -1;
-				for(unsigned i = 0; i < pFavoritePartners->u.array.length; ++i)
-				{
-					const json_value &Partner = (*pFavoritePartners)[i];
-					if(Partner.type != json_object)
-						continue;
-
-					const json_value *pName = JsonObjectField(&Partner, "name");
-					if(pName->type != json_string)
-						continue;
-
-					const char *pPartnerName = json_string_get(pName);
-					if(!pPartnerName || pPartnerName[0] == '\0')
-						continue;
-
-					int PartnerFinishes = 0;
-					const json_value *pFinishes = JsonObjectField(&Partner, "finishes");
-					if(pFinishes->type == json_integer && pFinishes->u.integer > 0)
-					{
-						if(pFinishes->u.integer > std::numeric_limits<int>::max())
-							PartnerFinishes = std::numeric_limits<int>::max();
-						else
-							PartnerFinishes = (int)pFinishes->u.integer;
-					}
-
-					if(!pBestPartner ||
-						PartnerFinishes > BestPartnerFinishes ||
-						(PartnerFinishes == BestPartnerFinishes && str_comp_nocase(pPartnerName, pBestPartner) < 0))
-					{
-						pBestPartner = pPartnerName;
-						BestPartnerFinishes = PartnerFinishes;
-					}
-				}
-
-				if(pBestPartner)
-					str_copy(aFavoritePartner, pBestPartner, sizeof(aFavoritePartner));
-			}
-
-			const json_value *pTypes = JsonObjectField(pRoot, "types");
-			if(pTypes->type == json_object)
-			{
-				Parsed = true;
-				for(unsigned i = 0; i < pTypes->u.object.length; ++i)
-				{
-					const json_value *pTypeObj = pTypes->u.object.values[i].value;
-					if(!pTypeObj || pTypeObj->type != json_object)
-						continue;
-
-					const json_value *pMaps = JsonObjectField(pTypeObj, "maps");
-					if(pMaps->type != json_object)
-						continue;
-
-					for(unsigned j = 0; j < pMaps->u.object.length; ++j)
-					{
-						const json_value *pMapObj = pMaps->u.object.values[j].value;
-						if(!pMapObj || pMapObj->type != json_object)
-							continue;
-
-						const json_value *pFinishes = JsonObjectField(pMapObj, "finishes");
-						if(pFinishes->type != json_integer || pFinishes->u.integer <= 0 || TotalFinishes >= std::numeric_limits<int>::max())
-							continue;
-
-						int64_t SafeAdd = pFinishes->u.integer;
-						if(SafeAdd > std::numeric_limits<int>::max())
-							SafeAdd = std::numeric_limits<int>::max();
-
-						const int64_t MaxTotal = std::numeric_limits<int>::max();
-						if(SafeAdd > MaxTotal - TotalFinishes)
-							TotalFinishes = MaxTotal;
-						else
-							TotalFinishes += SafeAdd;
-					}
-				}
-			}
-		}
-		if(pRoot)
-			json_value_free(pRoot);
-	}
-
-	const int64_t Now = time_get();
-	if(Parsed)
-	{
-		m_QmDdnetPlayerLastSync = Now;
-		m_QmDdnetPlayerNextRetry = 0;
-		str_copy(m_aQmDdnetFavoritePartner, aFavoritePartner, sizeof(m_aQmDdnetFavoritePartner));
-		m_QmDdnetTotalFinishes = (int)TotalFinishes;
-	}
-	else
+	if(m_pQmDdnetPlayerTask->State() != EHttpState::DONE || m_pQmDdnetPlayerTask->StatusCode() != 200)
 	{
 		m_QmDdnetPlayerLastSync = 0;
-		m_QmDdnetPlayerNextRetry = Now + (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq();
+		m_QmDdnetPlayerNextRetry = time_get() + (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq();
+		m_pQmDdnetPlayerTask = nullptr;
+		return;
 	}
 
+	m_pQmDdnetPlayerParseJob = std::make_shared<CQmDdnetPlayerStatsParseJob>(m_pQmDdnetPlayerTask);
+	Engine()->AddJob(m_pQmDdnetPlayerParseJob);
 	m_pQmDdnetPlayerTask = nullptr;
 }
 
@@ -2460,8 +2843,20 @@ void CTClient::ResetQmClientRecognitionTasks()
 	AbortTask(m_pQmClientAuthTokenTask);
 	AbortTask(m_pQmClientUsersTask);
 	AbortTask(m_pQmClientUsersSendTask);
+	m_pQmClientUsersParseJob = nullptr;
 	m_aQmClientAuthToken[0] = '\0';
 	m_QmClientLastSync = 0;
+	ClearQmClientServerDistribution();
+}
+
+bool CTClient::NeedsQmClientRecognition() const
+{
+	return g_Config.m_RiVoiceServer[0] != '\0';
+}
+
+bool CTClient::NeedsFastQmClientSync() const
+{
+	return g_Config.m_RiVoiceEnable != 0 || g_Config.m_QmClientShowBadge != 0 || g_Config.m_QmClientMarkTrail != 0;
 }
 
 bool CTClient::BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t BufSize, const char *pQuery) const
@@ -2493,6 +2888,13 @@ bool CTClient::BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t
 	}
 
 	return pBuf[0] != '\0';
+}
+
+void CTClient::ClearQmClientServerDistribution()
+{
+	m_vQmClientServerDistribution.clear();
+	m_QmClientOnlineUserCount = 0;
+	m_QmClientOnlineDummyCount = 0;
 }
 
 bool CTClient::EnsureQmClientMachineHash()
@@ -2568,6 +2970,7 @@ void CTClient::FetchQmClientAuthToken()
 		return;
 
 	m_pQmClientAuthTokenTask = HttpGet(aUrl);
+	m_pQmClientAuthTokenTask->AllowInsecureProtocol();
 	m_pQmClientAuthTokenTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pQmClientAuthTokenTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientAuthTokenTask->LogProgress(HTTPLOG::FAILURE);
@@ -2583,8 +2986,9 @@ void CTClient::SendQmClientPlayerData()
 	if(!EnsureQmClientMachineHash())
 		return;
 
-	char aServerAddress[NETADDR_MAXSTRSIZE];
-	net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
+	char aServerAddress[NETADDR_MAXSTRSIZE] = "";
+	if(Client()->State() == IClient::STATE_ONLINE)
+		net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
 	if(aServerAddress[0] == '\0')
 		return;
 
@@ -2633,6 +3037,7 @@ void CTClient::SendQmClientPlayerData()
 		return;
 
 	m_pQmClientUsersSendTask = HttpPostJson(aUrl, JsonBody.c_str());
+	m_pQmClientUsersSendTask->AllowInsecureProtocol();
 	m_pQmClientUsersSendTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pQmClientUsersSendTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientUsersSendTask->LogProgress(HTTPLOG::FAILURE);
@@ -2649,6 +3054,7 @@ void CTClient::FetchQmClientUsers()
 		return;
 
 	m_pQmClientUsersTask = HttpGet(aUrl);
+	m_pQmClientUsersTask->AllowInsecureProtocol();
 	m_pQmClientUsersTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pQmClientUsersTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientUsersTask->LogProgress(HTTPLOG::FAILURE);
@@ -2679,24 +3085,32 @@ void CTClient::FinishQmClientAuthToken()
 
 void CTClient::FinishQmClientUsers()
 {
-	if(!m_pQmClientUsersTask || m_pQmClientUsersTask->State() != EHttpState::DONE)
-		return;
-
-	json_value *pRoot = m_pQmClientUsersTask->ResultJson();
-	if(!pRoot)
-		return;
-
-	const json_value *pUsers = pRoot;
-	if(pUsers->type == json_object)
+	if(m_pQmClientUsersParseJob)
 	{
-		const json_value *pUsersField = JsonObjectField(pUsers, "users");
-		if(pUsersField != &json_value_none)
-			pUsers = pUsersField;
-	}
+		if(!m_pQmClientUsersParseJob->Done())
+			return;
 
-	if(pUsers->type != json_array)
-	{
-		json_value_free(pRoot);
+		auto pParseJob = std::static_pointer_cast<CQmClientUsersParseJob>(m_pQmClientUsersParseJob);
+		const int64_t ExpireTick = pParseJob->ExpireTick();
+		CQmClientUsersParseJob::SResult Result = pParseJob->TakeResult();
+		m_pQmClientUsersParseJob = nullptr;
+
+		GameClient()->ClearQ1menGSyncMarks();
+		GameClient()->ClearQmVoiceSyncMarks();
+		ClearQmClientServerDistribution();
+
+		if(!Result.m_Parsed)
+			return;
+
+		m_vQmClientServerDistribution = std::move(Result.m_vServerDistribution);
+		m_QmClientOnlineUserCount = Result.m_OnlineUserCount;
+		m_QmClientOnlineDummyCount = Result.m_OnlineDummyCount;
+		for(const auto &Mark : Result.m_vLocalServerMarks)
+		{
+			GameClient()->MarkQ1menGSyncClient(Mark.m_ClientId, ExpireTick, Mark.m_FootParticlesEnabled, Mark.m_RemoteParticlesEnabled, Mark.m_Qid.c_str());
+			if(Mark.m_VoiceSupported)
+				GameClient()->MarkQmVoiceSupportedClient(Mark.m_ClientId, ExpireTick);
+		}
 		return;
 	}
 
@@ -2709,55 +3123,33 @@ void CTClient::FinishQmClientUsers()
 	GameClient()->ClearQ1menGSyncMarks();
 	GameClient()->ClearQmVoiceSyncMarks();
 
-	for(unsigned Index = 0; Index < pUsers->u.array.length; ++Index)
+	if(m_pQmClientUsersTask->State() != EHttpState::DONE)
 	{
-		const json_value *pEntry = pUsers->u.array.values[Index];
-		if(!pEntry || pEntry->type != json_object)
-			continue;
-
-		const json_value *pServerAddress = JsonObjectField(pEntry, "server_address");
-		if(pServerAddress == &json_value_none)
-			pServerAddress = JsonObjectField(pEntry, "server");
-		if(pServerAddress == &json_value_none || pServerAddress->type != json_string)
-			continue;
-		if(str_comp(pServerAddress->u.string.ptr, aServerAddress) != 0)
-			continue;
-
-		const json_value *pPlayerId = JsonObjectField(pEntry, "player_id");
-		if(pPlayerId == &json_value_none)
-			pPlayerId = JsonObjectField(pEntry, "id");
-		if(pPlayerId == &json_value_none || (pPlayerId->type != json_integer && pPlayerId->type != json_double))
-			continue;
-
-		const int ClientId = json_int_get(pPlayerId);
-		const char *pQid = "";
-		const json_value *pQidField = JsonObjectField(pEntry, "qid");
-		if(pQidField != &json_value_none && pQidField->type == json_string)
-			pQid = pQidField->u.string.ptr;
-		bool FootParticlesEnabled = false;
-		const json_value *pFootParticlesEnabled = JsonObjectField(pEntry, "foot_particles_enabled");
-		JsonReadBoolean(pFootParticlesEnabled, FootParticlesEnabled);
-
-		bool RemoteParticlesEnabled = false;
-		const json_value *pRemoteParticlesEnabled = JsonObjectField(pEntry, "remote_particles_enabled");
-		JsonReadBoolean(pRemoteParticlesEnabled, RemoteParticlesEnabled);
-
-		bool VoiceSupported = true;
-		const json_value *pVoiceSupported = JsonObjectField(pEntry, "voice_supported");
-		if(pVoiceSupported != &json_value_none)
-			JsonReadBoolean(pVoiceSupported, VoiceSupported);
-
-		GameClient()->MarkQ1menGSyncClient(ClientId, ExpireTick, FootParticlesEnabled, RemoteParticlesEnabled, pQid);
-		if(VoiceSupported)
-			GameClient()->MarkQmVoiceSupportedClient(ClientId, ExpireTick);
+		GameClient()->ClearQ1menGSyncMarks();
+		GameClient()->ClearQmVoiceSyncMarks();
+		ClearQmClientServerDistribution();
+		m_pQmClientUsersTask = nullptr;
+		return;
 	}
 
-	json_value_free(pRoot);
+	char aServerAddress[NETADDR_MAXSTRSIZE] = "";
+	if(Client()->State() == IClient::STATE_ONLINE)
+		net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
+	const bool FastSync = NeedsFastQmClientSync();
+	const int SyncInterval = FastSync ? QMCLIENT_VOICE_SYNC_INTERVAL_SECONDS : QMCLIENT_SYNC_INTERVAL_SECONDS;
+	const int64_t ExpireTick = time_get() + (int64_t)SyncInterval * time_freq() * 2;
+	m_pQmClientUsersParseJob = std::make_shared<CQmClientUsersParseJob>(m_pQmClientUsersTask, aServerAddress, ExpireTick);
+	Engine()->AddJob(m_pQmClientUsersParseJob);
+	m_pQmClientUsersTask = nullptr;
 }
 
 void CTClient::SyncQmClientUsers()
 {
-	if((m_pQmClientUsersTask && !m_pQmClientUsersTask->Done()) || (m_pQmClientUsersSendTask && !m_pQmClientUsersSendTask->Done()))
+	if(m_pQmClientUsersTask && !m_pQmClientUsersTask->Done())
+		return;
+	if(m_pQmClientUsersParseJob && !m_pQmClientUsersParseJob->Done())
+		return;
+	if(Client()->State() == IClient::STATE_ONLINE && m_pQmClientUsersSendTask && !m_pQmClientUsersSendTask->Done())
 		return;
 
 	if(m_aQmClientAuthToken[0] == '\0')
@@ -2766,21 +3158,18 @@ void CTClient::SyncQmClientUsers()
 		return;
 	}
 
-	SendQmClientPlayerData();
+	if(Client()->State() == IClient::STATE_ONLINE)
+		SendQmClientPlayerData();
 	FetchQmClientUsers();
 }
 
 void CTClient::UpdateQmClientRecognition()
 {
-	if(Client()->State() != IClient::STATE_ONLINE)
+	const bool Online = Client()->State() == IClient::STATE_ONLINE;
+	if(!Online)
 	{
-		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask || m_aQmClientAuthToken[0] != '\0' || m_QmClientLastSync != 0)
-		{
-			ResetQmClientRecognitionTasks();
-			GameClient()->ClearQ1menGSyncMarks();
-			GameClient()->ClearQmVoiceSyncMarks();
-		}
-		return;
+		GameClient()->ClearQ1menGSyncMarks();
+		GameClient()->ClearQmVoiceSyncMarks();
 	}
 
 	if(m_pQmClientAuthTokenTask && m_pQmClientAuthTokenTask->Done())
@@ -2788,10 +3177,13 @@ void CTClient::UpdateQmClientRecognition()
 		FinishQmClientAuthToken();
 		m_pQmClientAuthTokenTask = nullptr;
 	}
+	if(m_pQmClientUsersParseJob && m_pQmClientUsersParseJob->Done())
+	{
+		FinishQmClientUsers();
+	}
 	if(m_pQmClientUsersTask && m_pQmClientUsersTask->Done())
 	{
 		FinishQmClientUsers();
-		m_pQmClientUsersTask = nullptr;
 	}
 	if(m_pQmClientUsersSendTask && m_pQmClientUsersSendTask->Done())
 	{
@@ -2805,7 +3197,7 @@ void CTClient::UpdateQmClientRecognition()
 	const bool NeedRecognition = g_Config.m_QmVoiceServer[0] != '\0';
 	if(!NeedRecognition)
 	{
-		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask)
+		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask || m_pQmClientUsersParseJob || m_aQmClientAuthToken[0] != '\0' || m_QmClientLastSync != 0)
 			ResetQmClientRecognitionTasks();
 		GameClient()->ClearQ1menGSyncMarks();
 		GameClient()->ClearQmVoiceSyncMarks();
@@ -2902,6 +3294,338 @@ void CTClient::CheckFreeze()
 		}
 
 		m_aWasInFreeze[Dummy] = IsInFreeze;
+	}
+}
+
+bool CTClient::EnsureTextPopupCache(int TextType)
+{
+	if(TextType < 0 || TextType >= (int)std::size(s_aTextPopupDefinitions))
+		return false;
+
+	const bool FontChanged = str_comp(m_aTextPopupFont, g_Config.m_TcCustomFont) != 0;
+	if(FontChanged)
+		UnloadTextPopupCaches();
+
+	auto &PopupCache = m_aTextPopupCaches[TextType];
+	if(PopupCache.m_TextContainerIndex.Valid())
+		return true;
+
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+
+	const auto &Definition = s_aTextPopupDefinitions[TextType];
+	const char *pPopupText = Localize(Definition.m_pText);
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(0.0f, 0.0f));
+	Cursor.m_FontSize = QMCLIENT_TEXT_POPUP_FONT_SIZE;
+	if(!TextRender()->CreateTextContainer(PopupCache.m_TextContainerIndex, &Cursor, pPopupText))
+		return false;
+
+	if(PopupCache.m_TextContainerIndex.Valid())
+	{
+		const STextBoundingBox BoundingBox = TextRender()->GetBoundingBoxTextContainer(PopupCache.m_TextContainerIndex);
+		PopupCache.m_TextSize = vec2(BoundingBox.m_W, BoundingBox.m_H);
+		str_copy(m_aTextPopupFont, g_Config.m_TcCustomFont, sizeof(m_aTextPopupFont));
+	}
+	return PopupCache.m_TextContainerIndex.Valid();
+}
+
+void CTClient::UnloadTextPopupCaches()
+{
+	for(auto &PopupCache : m_aTextPopupCaches)
+	{
+		TextRender()->DeleteTextContainer(PopupCache.m_TextContainerIndex);
+		PopupCache.m_TextSize = vec2(0.0f, 0.0f);
+	}
+	m_aTextPopupFont[0] = '\0';
+}
+
+void CTClient::ClearFreezeWakeupPopups()
+{
+	for(auto &Popup : m_aFreezeWakeupPopups)
+		Popup = {};
+}
+
+bool CTClient::AddTextPopup(int AnchorClientId, int TextType, bool UseRollingColor, ColorRGBA Color)
+{
+	if(AnchorClientId < 0 || AnchorClientId >= MAX_CLIENTS)
+		return false;
+
+	if(!GameClient()->m_aClients[AnchorClientId].m_Active || !GameClient()->m_Snap.m_aCharacters[AnchorClientId].m_Active)
+		return false;
+
+	if(!EnsureTextPopupCache(TextType))
+		return false;
+
+	const float Now = LocalTime();
+	int PopupIndex = -1;
+	float OldestStartTime = Now;
+	for(int i = 0; i < FREEZE_WAKEUP_POPUP_MAX; ++i)
+	{
+		const auto &Popup = m_aFreezeWakeupPopups[i];
+		if(!Popup.m_Active || Now - Popup.m_StartTime >= TextPopupDuration(Popup.m_TextType))
+		{
+			PopupIndex = i;
+			break;
+		}
+
+		if(PopupIndex < 0 || Popup.m_StartTime < OldestStartTime)
+		{
+			PopupIndex = i;
+			OldestStartTime = Popup.m_StartTime;
+		}
+	}
+
+	if(PopupIndex < 0)
+		return false;
+
+	auto &Popup = m_aFreezeWakeupPopups[PopupIndex];
+	Popup = {};
+	Popup.m_Active = true;
+	Popup.m_AnchorClientId = AnchorClientId;
+	Popup.m_TextType = TextType;
+	Popup.m_StartTime = Now;
+	Popup.m_HorizontalSign = std::rand() % 2 == 0 ? -1.0f : 1.0f;
+	Popup.m_ColorPhase = ((float)std::rand() / (float)RAND_MAX) * 2.0f * pi;
+	Popup.m_UseRollingColor = UseRollingColor;
+	Popup.m_Color = Color;
+	return true;
+}
+
+void CTClient::AddFreezeWakeupPopup(int WokenDummy)
+{
+	const int AnchorDummy = WokenDummy ^ 1;
+	const int AnchorClientId = GameClient()->m_aLocalIds[AnchorDummy];
+	AddTextPopup(AnchorClientId, (int)ETextPopupType::FREEZE_WAKEUP, true, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+}
+
+void CTClient::CheckFreezeWakeupPopup()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return;
+
+	if(!g_Config.m_QmFreezeWakeupPopup)
+	{
+		for(auto &Popup : m_aFreezeWakeupPopups)
+		{
+			if(Popup.m_Active && Popup.m_TextType == (int)ETextPopupType::FREEZE_WAKEUP)
+				Popup.m_Active = false;
+		}
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+			m_aWasInFreezeForWakeupPopup[Dummy] = false;
+		return;
+	}
+
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		if(Dummy == 1 && !Client()->DummyConnected())
+		{
+			m_aWasInFreezeForWakeupPopup[Dummy] = false;
+			continue;
+		}
+
+		const int ClientId = GameClient()->m_aLocalIds[Dummy];
+		if(ClientId < 0)
+		{
+			m_aWasInFreezeForWakeupPopup[Dummy] = false;
+			continue;
+		}
+
+		const auto &ClientData = GameClient()->m_aClients[ClientId];
+		if(!ClientData.m_Active)
+		{
+			m_aWasInFreezeForWakeupPopup[Dummy] = false;
+			continue;
+		}
+
+		const bool IsInFreeze = ClientData.m_FreezeEnd != 0;
+		if(m_aWasInFreezeForWakeupPopup[Dummy] && !IsInFreeze)
+		{
+			if(DetectFreezeWakeupType(GameClient(), ClientId) == EFreezeWakeupType::EXTERNAL_HAMMER)
+				AddFreezeWakeupPopup(Dummy);
+		}
+
+		m_aWasInFreezeForWakeupPopup[Dummy] = IsInFreeze;
+	}
+}
+
+void CTClient::ResetComboState(int Dummy)
+{
+	auto ResetOne = [&](int Index) {
+		m_aComboPopupCount[Index] = 0;
+		m_aComboLastEventTick[Index] = -1;
+		m_aComboLastHookedPlayer[Index] = -1;
+	};
+
+	if(Dummy >= 0 && Dummy < NUM_DUMMIES)
+	{
+		ResetOne(Dummy);
+		return;
+	}
+
+	for(int Index = 0; Index < NUM_DUMMIES; ++Index)
+		ResetOne(Index);
+}
+
+void CTClient::CheckComboPopup()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return;
+
+	if(!g_Config.m_QmComboPopup)
+	{
+		for(auto &Popup : m_aFreezeWakeupPopups)
+		{
+			if(Popup.m_Active && IsComboPopupTextType(Popup.m_TextType))
+				Popup.m_Active = false;
+		}
+		ResetComboState();
+		return;
+	}
+
+	const int ComboWindowTicks = maximum(1, Client()->GameTickSpeed() * QMCLIENT_COMBO_POPUP_WINDOW_SECONDS);
+	auto RegisterComboEvent = [&](int Dummy, int AnchorClientId, int TargetPlayer) {
+		if(TargetPlayer < 0 || TargetPlayer >= MAX_CLIENTS)
+			return;
+
+		const int CurrentTick = Client()->GameTick(Dummy);
+		if(m_aComboLastEventTick[Dummy] >= 0 &&
+			CurrentTick >= m_aComboLastEventTick[Dummy] &&
+			CurrentTick - m_aComboLastEventTick[Dummy] <= ComboWindowTicks)
+		{
+			++m_aComboPopupCount[Dummy];
+		}
+		else
+		{
+			m_aComboPopupCount[Dummy] = 1;
+		}
+		m_aComboLastEventTick[Dummy] = CurrentTick;
+
+		if(m_aComboPopupCount[Dummy] >= 2)
+			AddTextPopup(AnchorClientId, ComboPopupTextTypeFromCount(m_aComboPopupCount[Dummy]), true, QMCLIENT_COMBO_POPUP_COLOR);
+	};
+
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		if(Dummy == 1 && !Client()->DummyConnected())
+		{
+			ResetComboState(Dummy);
+			continue;
+		}
+
+		const int ClientId = GameClient()->m_aLocalIds[Dummy];
+		if(ClientId < 0 || ClientId >= MAX_CLIENTS ||
+			!GameClient()->m_aClients[ClientId].m_Active ||
+			!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
+		{
+			ResetComboState(Dummy);
+			continue;
+		}
+
+		const CCharacter *pLocalChar = GameClient()->m_PredictedWorld.GetCharacterById(ClientId);
+		if(pLocalChar == nullptr)
+		{
+			ResetComboState(Dummy);
+			continue;
+		}
+
+		const int HookedPlayer = pLocalChar->Core()->HookedPlayer();
+		if(HookedPlayer >= 0 && HookedPlayer != ClientId && HookedPlayer != m_aComboLastHookedPlayer[Dummy])
+			RegisterComboEvent(Dummy, ClientId, HookedPlayer);
+		m_aComboLastHookedPlayer[Dummy] = HookedPlayer >= 0 ? HookedPlayer : -1;
+
+		const int CurrentTick = Client()->GameTick(Dummy);
+		for(int TargetId = 0; TargetId < MAX_CLIENTS; ++TargetId)
+		{
+			if(TargetId == ClientId)
+				continue;
+
+			const CCharacter *pTargetChar = GameClient()->m_PredictedWorld.GetCharacterById(TargetId);
+			if(pTargetChar == nullptr)
+				continue;
+
+			if(pTargetChar->GetLastDamageTick() == CurrentTick &&
+				pTargetChar->GetLastDamageFrom() == ClientId &&
+				pTargetChar->GetLastDamageWeapon() == WEAPON_HAMMER)
+			{
+				RegisterComboEvent(Dummy, ClientId, TargetId);
+			}
+		}
+	}
+}
+
+bool CTClient::HasFreezeWakeupPopups() const
+{
+	const float Now = LocalTime();
+	for(const auto &Popup : m_aFreezeWakeupPopups)
+	{
+		if(Popup.m_Active && Now - Popup.m_StartTime < TextPopupDuration(Popup.m_TextType))
+			return true;
+	}
+	return false;
+}
+
+void CTClient::RenderFreezeWakeupPopups()
+{
+	if(!HasFreezeWakeupPopups())
+		return;
+
+	const float Now = LocalTime();
+	for(auto &Popup : m_aFreezeWakeupPopups)
+	{
+		if(!Popup.m_Active)
+			continue;
+
+		const float Elapsed = Now - Popup.m_StartTime;
+		const float PopupDuration = TextPopupDuration(Popup.m_TextType);
+		if(Elapsed >= PopupDuration)
+		{
+			Popup.m_Active = false;
+			continue;
+		}
+
+		if(Popup.m_AnchorClientId < 0 || Popup.m_AnchorClientId >= MAX_CLIENTS ||
+			!GameClient()->m_aClients[Popup.m_AnchorClientId].m_Active ||
+			!GameClient()->m_Snap.m_aCharacters[Popup.m_AnchorClientId].m_Active)
+		{
+			Popup.m_Active = false;
+			continue;
+		}
+
+		if(!EnsureTextPopupCache(Popup.m_TextType))
+		{
+			Popup.m_Active = false;
+			continue;
+		}
+
+		const auto &PopupCache = m_aTextPopupCaches[Popup.m_TextType];
+		const float Progress = std::clamp(Elapsed / PopupDuration, 0.0f, 1.0f);
+		const float PopIn = std::clamp(Elapsed / 0.12f, 0.0f, 1.0f);
+		const float FadeOut = 1.0f - std::clamp((Progress - 0.7f) / 0.3f, 0.0f, 1.0f);
+		const float Rise = (1.0f - PopIn) * 6.0f;
+		const vec2 AnchorPos = GameClient()->m_aClients[Popup.m_AnchorClientId].m_RenderPos +
+			vec2(QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET.x * Popup.m_HorizontalSign, QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET.y) +
+			vec2(QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT.x * Popup.m_HorizontalSign, QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT.y) * Progress;
+		const vec2 Pos =
+			Popup.m_HorizontalSign < 0.0f ?
+				vec2(AnchorPos.x - PopupCache.m_TextSize.x, AnchorPos.y - Rise) :
+				vec2(AnchorPos.x, AnchorPos.y - Rise);
+
+		ColorRGBA PopupColor = Popup.m_Color;
+		if(Popup.m_UseRollingColor)
+		{
+			const float RollAmount = 0.5f + 0.5f * std::sin(Elapsed * 6.0f + Popup.m_ColorPhase);
+			PopupColor = ColorRGBA(
+				QMCLIENT_POPUP_ROLL_COLOR_FROM.r + (QMCLIENT_POPUP_ROLL_COLOR_TO.r - QMCLIENT_POPUP_ROLL_COLOR_FROM.r) * RollAmount,
+				QMCLIENT_POPUP_ROLL_COLOR_FROM.g + (QMCLIENT_POPUP_ROLL_COLOR_TO.g - QMCLIENT_POPUP_ROLL_COLOR_FROM.g) * RollAmount,
+				QMCLIENT_POPUP_ROLL_COLOR_FROM.b + (QMCLIENT_POPUP_ROLL_COLOR_TO.b - QMCLIENT_POPUP_ROLL_COLOR_FROM.b) * RollAmount,
+				1.0f);
+		}
+
+		ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
+		OutlineColor.a *= FadeOut;
+		TextRender()->RenderTextContainer(PopupCache.m_TextContainerIndex, ColorRGBA(0.0f, 0.0f, 0.0f, 0.32f * FadeOut), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Pos.x + 2.0f, Pos.y + 2.0f);
+		TextRender()->RenderTextContainer(PopupCache.m_TextContainerIndex, PopupColor.WithAlpha(FadeOut), OutlineColor, Pos.x, Pos.y);
 	}
 }
 
@@ -3105,8 +3829,8 @@ void CTClient::CheckFriendOnline()
 				if(It == m_FriendOnline.end())
 				{
 					char aBuf[256];
-					const char *pMap = pEntry->m_aMap[0] != '\0' ? pEntry->m_aMap : TCLocalize("Unknown", QMCLIENT_LOCALIZATION_CONTEXT);
-					str_format(aBuf, sizeof(aBuf), TCLocalize("Your friend %s is online and currently on map %s!", QMCLIENT_LOCALIZATION_CONTEXT), Client.m_aName, pMap);
+					const char *pMap = pEntry->m_aMap[0] != '\0' ? pEntry->m_aMap : Localize("Unknown");
+				str_format(aBuf, sizeof(aBuf), Localize("Your friend %s is online and currently on map %s!"), Client.m_aName, pMap);
 					GameClient()->m_Chat.Echo(aBuf);
 					SFriendOnlineState State;
 					State.m_LastSeen = Now;
@@ -3319,6 +4043,12 @@ void CTClient::CheckAutoUnspecOnUnfreeze()
 		// 检测从 freeze 到 unfreeze 的转换
 		if(m_aWasInFreezeForUnspec[Dummy] && !IsInFreeze && IsSpectating)
 		{
+			if(DetectFreezeWakeupType(GameClient(), ClientId) != EFreezeWakeupType::EXTERNAL_HAMMER)
+			{
+				m_aWasInFreezeForUnspec[Dummy] = IsInFreeze;
+				continue;
+			}
+
 			// 被解冻了，且当前处于旁观状态，直接发送网络包（最快方式）
 			if(Client()->IsSixup())
 			{
@@ -3377,19 +4107,23 @@ void CTClient::CheckAutoSwitchOnUnfreeze()
 
 	// 当前操控的是哪个 (0=本体, 1=dummy)
 	int CurrentDummy = g_Config.m_ClDummy;
+	const bool MainJustUnfrozen = MainWasInFreeze && !MainInFreeze;
+	const bool DummyJustUnfrozen = DummyWasInFreeze && !DummyInFreeze;
+	const bool MainExternalHammerWakeup = MainJustUnfrozen && DetectFreezeWakeupType(GameClient(), MainClientId) == EFreezeWakeupType::EXTERNAL_HAMMER;
+	const bool DummyExternalHammerWakeup = DummyJustUnfrozen && DetectFreezeWakeupType(GameClient(), DummyClientId) == EFreezeWakeupType::EXTERNAL_HAMMER;
 
 	// 核心逻辑：两个都曾被freeze，现在有一个解冻了
 	// 如果解冻的不是当前操控的，就切换
 	if(MainWasInFreeze && DummyWasInFreeze)
 	{
 		// 本体刚解冻，而当前操控的是dummy
-		if(!MainInFreeze && DummyInFreeze && CurrentDummy == 1)
+		if(!MainInFreeze && DummyInFreeze && CurrentDummy == 1 && MainExternalHammerWakeup)
 		{
 			// 切换到本体
 			Console()->ExecuteLine("cl_dummy 0");
 		}
 		// dummy刚解冻，而当前操控的是本体
-		else if(MainInFreeze && !DummyInFreeze && CurrentDummy == 0)
+		else if(MainInFreeze && !DummyInFreeze && CurrentDummy == 0 && DummyExternalHammerWakeup)
 		{
 			// 切换到dummy
 			Console()->ExecuteLine("cl_dummy 1");
@@ -3425,6 +4159,12 @@ void CTClient::CheckAutoCloseChatOnUnfreeze()
 
 		if(m_aWasInFreezeForChatClose[Dummy] && !IsInFreeze && CanCloseChat)
 		{
+			if(DetectFreezeWakeupType(GameClient(), ClientId) != EFreezeWakeupType::EXTERNAL_HAMMER)
+			{
+				m_aWasInFreezeForChatClose[Dummy] = IsInFreeze;
+				continue;
+			}
+
 			GameClient()->m_Chat.SaveDraft();
 			GameClient()->m_Chat.DisableMode();
 			CanCloseChat = false;
@@ -3452,7 +4192,7 @@ void CTClient::RequestUpdateCheckAndUpdate()
 void CTClient::StartUpdateDownload()
 {
 #if !defined(CONF_FAMILY_WINDOWS)
-	Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Automatic updates are only supported on Windows", QMCLIENT_LOCALIZATION_CONTEXT)));
+	Client()->AddWarning(SWarning(Localize("Update"), Localize("Automatic updates are only supported on Windows")));
 	return;
 #endif
 
@@ -3466,7 +4206,7 @@ void CTClient::StartUpdateDownload()
 	m_pUpdateExeTask->IpResolve(IPRESOLVE::V4);
 	m_pUpdateExeTask->WriteToFile(Storage(), m_aUpdateExeTmp, -2);
 	Http()->Run(m_pUpdateExeTask);
-	Client()->AddWarning(SWarning(TCLocalize("Update", QMCLIENT_LOCALIZATION_CONTEXT), TCLocalize("Downloading update...", QMCLIENT_LOCALIZATION_CONTEXT)));
+	Client()->AddWarning(SWarning(Localize("Update"), Localize("Downloading update...")));
 }
 
 void CTClient::ResetUpdateExeTask()
@@ -3619,6 +4359,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	SetForcedAspect();
 	for(auto &AirRescuePositions : m_aAirRescuePositions)
 		AirRescuePositions = {};
+	ClearFreezeWakeupPopups();
 
 	if(NewState != IClient::STATE_ONLINE)
 	{
@@ -3638,10 +4379,12 @@ void CTClient::OnStateChange(int NewState, int OldState)
 			m_aWasInFreeze[i] = false;
 			m_aLastFreezeEmoteTime[i] = 0;
 			m_aLastFreezeMessageTime[i] = 0;
+			m_aWasInFreezeForWakeupPopup[i] = false;
 			m_aWasInFreezeForUnspec[i] = false;
 			m_aWasInFreezeForSwitch[i] = false;
 			m_aWasInFreezeForChatClose[i] = false;
 		}
+		ResetComboState();
 		InvalidateGoresDistanceField();
 		m_FriendEnterOnline.clear();
 		m_FriendEnterInitialized = false;
@@ -3800,11 +4543,11 @@ void CTClient::RenderMiniVoteHud()
 	char aKey[64];
 	GameClient()->m_Binds.GetKey("vote yes", aKey, sizeof(aKey));
 	TextRender()->TextColor(GameClient()->m_Voting.TakenChoice() == 1 ? ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&LeftColumn, aKey[0] == '\0' ? TCLocalize("Agree", QMCLIENT_LOCALIZATION_CONTEXT) : aKey, 0.5f, TEXTALIGN_ML);
+	Ui()->DoLabel(&LeftColumn, aKey[0] == '\0' ? Localize("Agree") : aKey, 0.5f, TEXTALIGN_ML);
 
 	GameClient()->m_Binds.GetKey("vote no", aKey, sizeof(aKey));
 	TextRender()->TextColor(GameClient()->m_Voting.TakenChoice() == -1 ? ColorRGBA(0.95f, 0.25f, 0.25f, 0.85f) : TextRender()->DefaultTextColor());
-	Ui()->DoLabel(&RightColumn, aKey[0] == '\0' ? TCLocalize("Disagree", QMCLIENT_LOCALIZATION_CONTEXT) : aKey, 0.5f, TEXTALIGN_MR);
+	Ui()->DoLabel(&RightColumn, aKey[0] == '\0' ? Localize("Disagree") : aKey, 0.5f, TEXTALIGN_MR);
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }
@@ -5035,7 +5778,7 @@ void CTClient::RepeatLastMessage()
 	// 检查是否有消息可以复读
 	if(m_aLastChatMessage[0] == '\0')
 	{
-		GameClient()->m_Chat.AddLine(-2, 0, TCLocalize("No chat message available to repeat", QMCLIENT_LOCALIZATION_CONTEXT));
+		GameClient()->m_Chat.AddLine(-2, 0, Localize("No chat message available to repeat"));
 		return;
 	}
 

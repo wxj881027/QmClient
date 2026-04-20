@@ -146,6 +146,7 @@ const char *CHudEditor::ElementToken(EHudEditorElement Element)
 	case EHudEditorElement::SuddenDeath: return "sudden_death";
 	case EHudEditorElement::ScoreHud: return "score_hud";
 	case EHudEditorElement::WarmupTimer: return "warmup_timer";
+	case EHudEditorElement::DummyActions: return "dummy_actions";
 	case EHudEditorElement::DummyMiniMap: return "dummy_minimap";
 	case EHudEditorElement::TextInfo: return "text_info";
 	case EHudEditorElement::SpectatorCount: return "spectator_count";
@@ -495,6 +496,9 @@ void CHudEditor::OnRender()
 	{
 		const bool Hovered = static_cast<int>(i) == HoveredIndex;
 		const bool Dragging = m_DraggingElement >= 0 && static_cast<int>(m_vVisibleElements[i].m_Element) == m_DraggingElement;
+		if(!Hovered && !Dragging)
+			continue;
+
 		const ColorRGBA FillColor = Dragging ? ColorRGBA(1.0f, 0.75f, 0.15f, 0.10f) : (Hovered ? ColorRGBA(0.35f, 0.75f, 1.0f, 0.10f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.04f));
 		const ColorRGBA BorderColor = Dragging ? ColorRGBA(1.0f, 0.82f, 0.20f, 0.95f) : (Hovered ? ColorRGBA(0.35f, 0.80f, 1.0f, 0.90f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.55f));
 		const float BorderSize = Dragging ? 2.5f : 1.5f;

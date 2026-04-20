@@ -11,6 +11,7 @@
 #include <engine/client.h>
 #include <engine/client/enums.h>
 #include <engine/console.h>
+#include <engine/keys.h>
 #include <engine/shared/config.h>
 #include <engine/shared/snapshot.h>
 
@@ -169,6 +170,25 @@ enum class EClientIdFormat
 class CGameClient : public IGameClient
 {
 public:
+	struct SDemoHudPlaybackState
+	{
+		bool m_Valid = false;
+		int m_DummyResetOnSwitch = 0;
+		int m_DeepflyMode = 0;
+		bool m_DummyControl = false;
+		bool m_DummyCopyMoves = false;
+	};
+
+	struct SDemoInputPlaybackState
+	{
+		bool m_Valid = false;
+		unsigned char m_aKeyStates[KEY_LAST / 8] = {};
+		int m_TargetX = 0;
+		int m_TargetY = 0;
+		unsigned m_WheelMask = 0;
+		uint64_t m_WheelSequence = 0;
+	};
+
 	friend class CTClient;
 	friend class CFastPractice;
 
@@ -290,9 +310,16 @@ private:
 
 	void ProcessEvents();
 	void UpdatePositions();
+	void RecordDemoHudState(bool Force);
+	void RecordDemoInputState(bool Force);
+	void RecordDemoInputWheelEvent();
+	static int PackDemoHudState(int DummyResetOnSwitch, int DeepflyMode, bool DummyControl, bool DummyCopyMoves);
+	void UnpackDemoHudState(int PackedState);
 
 	int m_EditorMovementDelay = 5;
 	void UpdateEditorIngameMoved();
+	bool GetPredictedHammerHitbox(CCharacter *pChar, vec2 &HitPos, float &HitRadius);
+	int FindPredictedHammerHitTargets(CCharacter *pChar, vec2 HitPos, float HitRadius, int *pTargetIds, int MaxTargetIds);
 	void HandleHammerSkinSwap(CCharacter *pChar);
 	void HandleRandomEmoteOnHit(CCharacter *pLocalChar, int DummyIndex);
 
@@ -337,6 +364,11 @@ private:
 	bool m_GameOver = false;
 	bool m_GamePaused = false;
 	int m_PrevLocalId = -1;
+	SDemoHudPlaybackState m_DemoHudPlaybackState;
+	SDemoInputPlaybackState m_DemoInputPlaybackState;
+	int m_LastDemoHudRecordTick = -1;
+	int m_LastDemoInputRecordTick = -1;
+	int m_LastDemoPlaybackStateTick = -1;
 
 public:
 	IKernel *Kernel() { return IInterface::Kernel(); }
@@ -377,6 +409,8 @@ public:
 	{
 		return m_pHttp;
 	}
+	bool HasFreezeWakeupPopups() const { return m_TClient.HasFreezeWakeupPopups(); }
+	void RenderFreezeWakeupPopups() { m_TClient.RenderFreezeWakeupPopups(); }
 
 	int NetobjNumCorrections()
 	{
@@ -693,6 +727,8 @@ public:
 	void *TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn);
 	int TranslateSnap(CSnapshot *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy) override;
 	void OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dummy) override;
+	bool OnDemoPlaybackMessage(int MsgId, CUnpacker *pUnpacker) override;
+	void ResetDemoPlaybackState() override;
 	void InvalidateSnapshot() override;
 	void OnNewSnapshot() override;
 	void OnPredict() override;
@@ -734,6 +770,8 @@ public:
 	int DDNetVersion() const override;
 	const char *DDNetVersionStr() const override;
 	int ClientVersion7() const override;
+	const SDemoHudPlaybackState *DemoHudPlaybackState() const { return m_DemoHudPlaybackState.m_Valid ? &m_DemoHudPlaybackState : nullptr; }
+	const SDemoInputPlaybackState *DemoInputPlaybackState() const { return m_DemoInputPlaybackState.m_Valid ? &m_DemoInputPlaybackState : nullptr; }
 
 	void DoTeamChangeMessage7(const char *pName, int ClientId, int Team, const char *pPrefix = "");
 
@@ -753,21 +791,12 @@ public:
 	void ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld);
 	bool GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const CNetObj_PlayerInput *pDummyInputData, const class CCharacter *pDummyChar, int LocalTee, int DummyTee) const;
 
-	enum EDummyControlReleaseFlags
-	{
-		DUMMY_CONTROL_RELEASE_DIRECTION = 1 << 0,
-		DUMMY_CONTROL_RELEASE_JUMP = 1 << 1,
-		DUMMY_CONTROL_RELEASE_FIRE = 1 << 2,
-		DUMMY_CONTROL_RELEASE_HOOK = 1 << 3,
-	};
-
 	int m_aNextChangeInfo[NUM_DUMMIES];
 
 	// DDRace
 
 	int m_aLocalIds[NUM_DUMMIES];
 	CNetObj_PlayerInput m_DummyInput;
-	int m_DummyControlReleaseFlags{};
 	CNetObj_PlayerInput m_HammerInput;
 	unsigned int m_DummyFire;
 	bool m_ReceivedDDNetPlayer;

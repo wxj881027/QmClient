@@ -318,3 +318,8 @@ bool IsAndroidServerRunning()
 
 	return Result;
 }
+
+bool RequestAndroidAudioRecordPermission()
+{
+	return SDL_AndroidRequestPermission("android.permission.RECORD_AUDIO");
+}

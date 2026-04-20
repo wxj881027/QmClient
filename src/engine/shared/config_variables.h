@@ -99,6 +99,7 @@ MACRO_CONFIG_INT(ClShowpred, cl_showpred, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE
 MACRO_CONFIG_INT(ClSmtcEnable, cl_smtc_enable, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用系统媒体传输控制集成")
 MACRO_CONFIG_INT(ClSmtcShowHud, cl_smtc_show_hud, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在 HUD 上显示系统媒体信息")
 MACRO_CONFIG_INT(ClDummyMiniView, cl_dummy_miniview, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示分身迷你视图窗口")
+MACRO_CONFIG_INT(ClDummyMiniViewAuto, cl_dummy_miniview_auto, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "仅在另一只 tee 离开当前视角时显示分身迷你视图")
 MACRO_CONFIG_INT(ClDummyMiniViewSize, cl_dummy_miniview_size, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "分身迷你视图大小（百分比）")
 MACRO_CONFIG_INT(ClDummyMiniViewZoom, cl_dummy_miniview_zoom, 100, 10, 300, CFGFLAG_CLIENT | CFGFLAG_SAVE, "分身迷你视图缩放（百分比）")
 MACRO_CONFIG_INT(ClEyeWheel, cl_eye_wheel, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "显示眼轮和表情")
@@ -232,7 +233,7 @@ MACRO_CONFIG_STR(ClDummy7SkinEyes, dummy7_skin_eyes, protocol7::MAX_SKIN_ARRAY_S
 
 MACRO_CONFIG_INT(UiPage, ui_page, 6, 6, 13, CFGFLAG_CLIENT | CFGFLAG_SAVE, "界面页面")
 MACRO_CONFIG_INT(UiSettingsPage, ui_settings_page, 0, 0, 11, CFGFLAG_CLIENT | CFGFLAG_SAVE, "界面设置页面")
-MACRO_CONFIG_INT(UiToolboxPage, ui_toolbox_page, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "工具箱页面")
+MACRO_CONFIG_INT(UiToolboxPage, ui_toolbox_page, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "工具箱页面")
 MACRO_CONFIG_STR(UiServerAddress, ui_server_address, 1024, "localhost:8303", CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_INSENSITIVE, "界面服务器地址")
 MACRO_CONFIG_INT(UiMousesens, ui_mousesens, 200, 1, 100000, CFGFLAG_SAVE | CFGFLAG_CLIENT, "菜单/编辑器中的鼠标灵敏度")
 MACRO_CONFIG_INT(UiControllerSens, ui_controller_sens, 100, 1, 100000, CFGFLAG_SAVE | CFGFLAG_CLIENT, "菜单/编辑器中的手柄灵敏度")
@@ -264,9 +265,7 @@ MACRO_CONFIG_INT(ClDummyRestoreWeapon, cl_dummy_restore_weapon, 1, 0, 1, CFGFLAG
 MACRO_CONFIG_INT(ClDummyCopyMoves, cl_dummy_copy_moves, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否复制你的移动")
 
 // more controllable dummy command
-MACRO_CONFIG_INT(ClDummyControl, cl_dummy_control, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "是否可以同时控制分身（cl_dummy_left、cl_dummy_right、cl_dummy_jump、cl_dummy_fire、cl_dummy_hook）")
-MACRO_CONFIG_INT(ClDummyLeft, cl_dummy_left, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否向左移动（需要 cl_dummy_control 1）")
-MACRO_CONFIG_INT(ClDummyRight, cl_dummy_right, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否向右移动（需要 cl_dummy_control 1）")
+MACRO_CONFIG_INT(ClDummyControl, cl_dummy_control, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "是否可以同时控制分身（cl_dummy_jump、cl_dummy_fire、cl_dummy_hook）")
 MACRO_CONFIG_INT(ClDummyJump, cl_dummy_jump, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否跳跃（需要 cl_dummy_control 1）")
 MACRO_CONFIG_INT(ClDummyFire, cl_dummy_fire, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否开火（需要 cl_dummy_control 1）")
 MACRO_CONFIG_INT(ClDummyHook, cl_dummy_hook, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_INSENSITIVE, "分身是否钩人（需要 cl_dummy_control 1）")

@@ -59,25 +59,9 @@ float EffectiveFastInputOffsetTicks(const CGameClient *pGameClient)
 
 	if(!g_Config.m_TcFastInput)
 		return 0.0f;
-
-	if(g_Config.m_BcFastInputMode == 0)
-	{
-		if(g_Config.m_TcFastInputAmount <= 0)
-			return 0.0f;
-		return g_Config.m_TcFastInputAmount / 20.0f;
-	}
-
-	if(g_Config.m_BcFastInputMode == 1)
-	{
-		if(g_Config.m_BcFastInputDeltaInput <= 0)
-			return 0.0f;
-		return g_Config.m_BcFastInputDeltaInput / 100.0f;
-	}
-
-	const int GammaInputAmount = BcFastInputGammaUiToEffectiveAmount(g_Config.m_BcFastInputGammaInput);
-	if(GammaInputAmount <= 0)
+	if(g_Config.m_TcFastInputAmount <= 0)
 		return 0.0f;
-	return GammaInputAmount / 100.0f;
+	return g_Config.m_TcFastInputAmount / 20.0f;
 }
 
 int FastInputPredictionTicks(float OffsetTicks)
@@ -89,11 +73,7 @@ int FastInputPredictionTicks(float OffsetTicks)
 
 bool EffectiveFastInputOthers()
 {
-	if(g_Config.m_BcFastInputMode == 0)
-		return g_Config.m_TcFastInputOthers != 0;
-	if(g_Config.m_BcFastInputMode == 1)
-		return g_Config.m_BcDeltaInputOthers != 0;
-	return g_Config.m_BcGammaInputOthers != 0;
+	return g_Config.m_TcFastInputOthers != 0;
 }
 
 bool IsFrozenState(const CCharacter *pChar)

@@ -162,7 +162,7 @@ void CPieMenu::OpenMenu()
 	if(TargetId < 0)
 	{
 		// Show "No player nearby" message
-		GameClient()->Echo(TCLocalize("没有玩家在准心附近"));
+		GameClient()->Echo(Localize("No player nearby"));
 		return;
 	}
 

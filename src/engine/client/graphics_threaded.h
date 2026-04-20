@@ -965,6 +965,8 @@ public:
 	IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int Flags = 0) override;
 	bool LoadPng(CImageInfo &Image, const char *pFilename, int StorageType) override;
 	bool LoadPng(CImageInfo &Image, const uint8_t *pData, size_t DataSize, const char *pContextName) override;
+	bool LoadWebP(CImageInfo &Image, const char *pFilename, int StorageType);
+	bool LoadWebP(CImageInfo &Image, const uint8_t *pData, size_t DataSize, const char *pContextName);
 
 	bool CheckImageDivisibility(const char *pContextName, CImageInfo &Image, int DivX, int DivY, bool AllowResize) override;
 	bool IsImageFormatRgba(const char *pContextName, const CImageInfo &Image) override;
