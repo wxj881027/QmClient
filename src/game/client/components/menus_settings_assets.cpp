@@ -203,6 +203,128 @@ public:
 	}
 };
 
+// 全异步图片加载 Job：在后台线程完成文件读取和解码
+class CFullAsyncImageLoadJob : public IJob
+{
+public:
+	struct SResult
+	{
+		CImageInfo m_Image;
+		bool m_Success = false;
+	};
+
+private:
+	std::vector<std::string> m_vPossiblePaths; // 可能的文件路径列表，按优先级排序
+	IStorage *m_pStorage;
+	int m_StorageType; // 存储类型
+	std::string m_Name;
+	std::mutex m_Mutex;
+	SResult m_Result;
+	bool m_Completed = false;
+
+	// 在后台线程读取文件
+	bool TryLoadFile(const char *pFilename, std::vector<uint8_t> &vBuffer)
+	{
+		IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, m_StorageType);
+		if(!File)
+			return false;
+
+		io_seek(File, 0, IOSEEK_END);
+		const int64_t Size = io_tell(File);
+		io_seek(File, 0, IOSEEK_START);
+
+		if(Size <= 0 || Size > 10 * 1024 * 1024)
+		{
+			io_close(File);
+			return false;
+		}
+
+		vBuffer.resize(Size);
+		const size_t Read = io_read(File, vBuffer.data(), Size);
+		io_close(File);
+
+		return Read == (size_t)Size;
+	}
+
+	void Run() override
+	{
+		// 1. 尝试按优先级读取文件
+		std::vector<uint8_t> vFileData;
+		for(const std::string &Path : m_vPossiblePaths)
+		{
+			if(TryLoadFile(Path.c_str(), vFileData))
+				break;
+		}
+
+		if(vFileData.empty())
+		{
+			std::lock_guard<std::mutex> Lock(m_Mutex);
+			m_Completed = true;
+			return;
+		}
+
+		// 2. 解码图片
+		CImageInfo Image;
+		bool Success = false;
+
+		constexpr uint8_t PNG_SIGNATURE[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+		constexpr uint8_t WEBP_RIFF[] = {0x52, 0x49, 0x46, 0x46};
+		constexpr uint8_t WEBP_WEBP[] = {0x57, 0x45, 0x42, 0x50};
+
+		const bool IsPng = vFileData.size() >= 8 &&
+			memcmp(vFileData.data(), PNG_SIGNATURE, 8) == 0;
+		const bool IsWebp = vFileData.size() >= 12 &&
+			memcmp(vFileData.data(), WEBP_RIFF, 4) == 0 &&
+			memcmp(vFileData.data() + 8, WEBP_WEBP, 4) == 0;
+
+		if(IsWebp)
+		{
+			Success = CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), m_Name.c_str(), Image);
+		}
+		else if(IsPng)
+		{
+			Success = CImageLoader::LoadPng(vFileData.data(), vFileData.size(), m_Name.c_str(), Image);
+		}
+		else
+		{
+			if(CImageLoader::LoadWebP(vFileData.data(), vFileData.size(), m_Name.c_str(), Image))
+				Success = true;
+			else if(CImageLoader::LoadPng(vFileData.data(), vFileData.size(), m_Name.c_str(), Image))
+				Success = true;
+		}
+
+		{
+			std::lock_guard<std::mutex> Lock(m_Mutex);
+			m_Result.m_Image = std::move(Image);
+			m_Result.m_Success = Success;
+			m_Completed = true;
+		}
+	}
+
+public:
+	CFullAsyncImageLoadJob(std::vector<std::string> &&vPossiblePaths, IStorage *pStorage, const char *pName, int StorageType = IStorage::TYPE_ALL) :
+		m_vPossiblePaths(std::move(vPossiblePaths)),
+		m_pStorage(pStorage),
+		m_StorageType(StorageType),
+		m_Name(pName)
+	{
+	}
+
+	bool IsCompleted() const
+	{
+		std::lock_guard<std::mutex> Lock(const_cast<std::mutex &>(m_Mutex));
+		return m_Completed;
+	}
+
+	SResult GetResult()
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		SResult Result = std::move(m_Result);
+		m_Result = SResult();
+		return Result;
+	}
+};
+
 static std::string JsonEscape(const std::string &Str)
 {
 	std::string Result;
@@ -301,7 +423,8 @@ static void StartEntitiesDecode(CMenus::SCustomEntities *pEntitiesItem, IStorage
 	if(pEntitiesItem->m_pDecodeJob || pEntitiesItem->m_RenderTexture.IsValid())
 		return;
 
-	std::vector<uint8_t> vFileData;
+	// 构建可能的文件路径列表（按优先级排序）
+	std::vector<std::string> vPossiblePaths;
 	char aPath[IO_MAX_PATH_LENGTH];
 
 	if(str_comp(pEntitiesItem->m_aName, "default") == 0)
@@ -309,8 +432,7 @@ static void StartEntitiesDecode(CMenus::SCustomEntities *pEntitiesItem, IStorage
 		for(int i = 0; i < MAP_IMAGE_MOD_TYPE_COUNT; ++i)
 		{
 			str_format(aPath, sizeof(aPath), "editor/entities_clear/%s.png", gs_apModEntitiesNames[i]);
-			if(LoadFileToBuffer(pStorage, aPath, IStorage::TYPE_ALL, vFileData))
-				break;
+			vPossiblePaths.emplace_back(aPath);
 		}
 	}
 	else
@@ -318,21 +440,15 @@ static void StartEntitiesDecode(CMenus::SCustomEntities *pEntitiesItem, IStorage
 		for(int i = 0; i < MAP_IMAGE_MOD_TYPE_COUNT; ++i)
 		{
 			str_format(aPath, sizeof(aPath), "assets/entities/%s/%s.png", pEntitiesItem->m_aName, gs_apModEntitiesNames[i]);
-			if(LoadFileToBuffer(pStorage, aPath, IStorage::TYPE_ALL, vFileData))
-				break;
+			vPossiblePaths.emplace_back(aPath);
 		}
-		if(vFileData.empty())
-		{
-			str_format(aPath, sizeof(aPath), "assets/entities/%s.png", pEntitiesItem->m_aName);
-			LoadFileToBuffer(pStorage, aPath, IStorage::TYPE_ALL, vFileData);
-		}
+		str_format(aPath, sizeof(aPath), "assets/entities/%s.png", pEntitiesItem->m_aName);
+		vPossiblePaths.emplace_back(aPath);
 	}
 
-	if(!vFileData.empty())
-	{
-		pEntitiesItem->m_pDecodeJob = std::make_shared<CMenus::CAssetDecodeJob>(std::move(vFileData), pEntitiesItem->m_aName);
-		pEngine->AddJob(pEntitiesItem->m_pDecodeJob);
-	}
+	// 创建全异步 Job，在后台线程完成文件读取和解码
+	pEntitiesItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pEntitiesItem->m_aName);
+	pEngine->AddJob(pEntitiesItem->m_pDecodeJob);
 }
 
 int CMenus::EntitiesScan(const char *pName, int IsDir, int DirType, void *pUser)
@@ -379,30 +495,26 @@ static void StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage
 	if(pAssetItem->m_pDecodeJob || pAssetItem->m_RenderTexture.IsValid())
 		return;
 
-	std::vector<uint8_t> vFileData;
+	// 构建可能的文件路径列表（按优先级排序）
+	std::vector<std::string> vPossiblePaths;
 	char aPath[IO_MAX_PATH_LENGTH];
 
 	if(str_comp(pAssetItem->m_aName, "default") == 0)
 	{
 		str_format(aPath, sizeof(aPath), "%s.png", pAssetName);
-		LoadFileToBuffer(pStorage, aPath, IStorage::TYPE_ALL, vFileData);
+		vPossiblePaths.emplace_back(aPath);
 	}
 	else
 	{
 		str_format(aPath, sizeof(aPath), "assets/%s/%s.png", pAssetName, pAssetItem->m_aName);
-		LoadFileToBuffer(pStorage, aPath, IStorage::TYPE_ALL, vFileData);
-		if(vFileData.empty())
-		{
-			str_format(aPath, sizeof(aPath), "assets/%s/%s/%s.png", pAssetName, pAssetItem->m_aName, pAssetName);
-			LoadFileToBuffer(pStorage, aPath, IStorage::TYPE_ALL, vFileData);
-		}
+		vPossiblePaths.emplace_back(aPath);
+		str_format(aPath, sizeof(aPath), "assets/%s/%s/%s.png", pAssetName, pAssetItem->m_aName, pAssetName);
+		vPossiblePaths.emplace_back(aPath);
 	}
 
-	if(!vFileData.empty())
-	{
-		pAssetItem->m_pDecodeJob = std::make_shared<CMenus::CAssetDecodeJob>(std::move(vFileData), pAssetItem->m_aName);
-		pEngine->AddJob(pAssetItem->m_pDecodeJob);
-	}
+	// 创建全异步 Job，在后台线程完成文件读取和解码
+	pAssetItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pAssetItem->m_aName);
+	pEngine->AddJob(pAssetItem->m_pDecodeJob);
 }
 
 template<typename TName>
@@ -556,7 +668,7 @@ struct SWorkshopHudAsset
 	bool m_DownloadFailed = false;
 	bool m_Installed = false;
 	
-	std::shared_ptr<CImageDecodeJob> m_pDecodeJob;
+	std::shared_ptr<CFullAsyncImageLoadJob> m_pDecodeJob;
 };
 
 struct SWorkshopHudState
@@ -597,21 +709,22 @@ static void StartBackgroundDecode(SWorkshopHudAsset &Asset, IStorage *pStorage, 
 	if(Asset.m_pDecodeJob || Asset.m_ThumbTexture.IsValid())
 		return;
 
-	std::vector<uint8_t> vFileData;
+	// 构建可能的文件路径列表（按优先级排序）
+	std::vector<std::string> vPossiblePaths;
 
 	if(Asset.m_Installed && !Asset.m_InstallPath.empty())
 	{
-		LoadFileToBuffer(pStorage, Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE, vFileData);
+		vPossiblePaths.emplace_back(Asset.m_InstallPath);
+	}
+	if(!Asset.m_ThumbCachePath.empty())
+	{
+		vPossiblePaths.emplace_back(Asset.m_ThumbCachePath);
 	}
 
-	if(vFileData.empty() && !Asset.m_ThumbCachePath.empty())
+	if(!vPossiblePaths.empty())
 	{
-		LoadFileToBuffer(pStorage, Asset.m_ThumbCachePath.c_str(), IStorage::TYPE_SAVE, vFileData);
-	}
-
-	if(!vFileData.empty())
-	{
-		Asset.m_pDecodeJob = std::make_shared<CImageDecodeJob>(std::move(vFileData), Asset.m_Name.c_str());
+		// 创建全异步 Job，在后台线程完成文件读取和解码
+		Asset.m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, Asset.m_Name.c_str(), IStorage::TYPE_SAVE);
 		pEngine->AddJob(Asset.m_pDecodeJob);
 	}
 }
@@ -1855,7 +1968,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			{
 				if(!Asset.m_ThumbTexture.IsValid() && GpuUploadsThisFrame < MaxGpuUploadsPerFrame)
 				{
-					CImageDecodeJob::SResult Result = Asset.m_pDecodeJob->GetResult();
+					CFullAsyncImageLoadJob::SResult Result = Asset.m_pDecodeJob->GetResult();
 					if(Result.m_Success && Result.m_Image.m_pData)
 					{
 						constexpr int MaxPreviewSize = 512;

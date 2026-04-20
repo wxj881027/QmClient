@@ -1088,6 +1088,9 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	// Reset GPU upload limiter for this frame
+	m_GpuUploadLimiter.OnFrameStart();
+
 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
 	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
 

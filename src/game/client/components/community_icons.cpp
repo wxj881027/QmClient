@@ -3,6 +3,7 @@
 #include <base/log.h>
 
 #include <engine/engine.h>
+#include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/storage.h>
 
@@ -70,11 +71,22 @@ const CCommunityIcon *CCommunityIcons::Find(const char *pCommunityId)
 
 bool CCommunityIcons::LoadFile(const char *pPath, int DirType, CImageInfo &Info, CImageInfo &InfoGrayscale, SHA256_DIGEST &Sha256)
 {
-	if(!Graphics()->LoadPng(Info, pPath, DirType))
+	void *pFileData = nullptr;
+	unsigned FileSize = 0;
+	if(!Storage()->ReadFile(pPath, DirType, &pFileData, &FileSize))
 	{
-		log_error("menus/browser", "Failed to load community icon from '%s'", pPath);
+		log_error("menus/browser", "Failed to read community icon from '%s'", pPath);
 		return false;
 	}
+
+	if(!CImageLoader::LoadPng(pFileData, FileSize, pPath, Info))
+	{
+		free(pFileData);
+		log_error("menus/browser", "Failed to decode community icon from '%s'", pPath);
+		return false;
+	}
+	free(pFileData);
+
 	if(Info.m_Format != CImageInfo::FORMAT_RGBA)
 	{
 		Info.Free();

@@ -10,6 +10,7 @@
 #include <base/system.h>
 
 #include <engine/external/json-parser/json.h>
+#include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -31,6 +32,101 @@ int *CSkins7::ms_apUCCVariables[NUM_DUMMIES][protocol7::NUM_SKINPARTS] = {{nullp
 int unsigned *CSkins7::ms_apColorVariables[NUM_DUMMIES][protocol7::NUM_SKINPARTS] = {{nullptr}};
 
 #define SKINS_DIR "skins7"
+
+static ColorRGBA DetermineBloodColorFromInfo(const CImageInfo &Info)
+{
+	const size_t Step = Info.PixelSize();
+	const size_t Pitch = Info.m_Width * Step;
+	const size_t PartX = Info.m_Width / 2;
+	const size_t PartY = 0;
+	const size_t PartWidth = Info.m_Width / 2;
+	const size_t PartHeight = Info.m_Height / 2;
+
+	int64_t aColors[3] = {0};
+	for(size_t y = PartY; y < PartY + PartHeight; y++)
+	{
+		for(size_t x = PartX; x < PartX + PartWidth; x++)
+		{
+			const size_t Offset = y * Pitch + x * Step;
+			if(Info.m_pData[Offset + 3] > 128)
+			{
+				for(size_t c = 0; c < 3; c++)
+				{
+					aColors[c] += Info.m_pData[Offset + c];
+				}
+			}
+		}
+	}
+
+	const vec3 NormalizedColor = normalize(vec3(aColors[0], aColors[1], aColors[2]));
+	return ColorRGBA(NormalizedColor.x, NormalizedColor.y, NormalizedColor.z);
+}
+
+CSkins7::CSkinPartLoadJob::CSkinPartLoadJob(const char *pPath, const char *pPartName, IStorage *pStorage, int StorageType, int PartType, int Flags) :
+	m_Path(pPath),
+	m_PartName(pPartName),
+	m_pStorage(pStorage),
+	m_StorageType(StorageType),
+	m_PartType(PartType),
+	m_Flags(Flags)
+{
+	str_copy(m_Result.m_aName, pPartName, sizeof(m_Result.m_aName));
+	m_Result.m_PartType = PartType;
+	m_Result.m_Flags = Flags;
+}
+
+CSkins7::CSkinPartLoadJob::~CSkinPartLoadJob()
+{
+	m_Result.m_OriginalImage.Free();
+	m_Result.m_GrayscaleImage.Free();
+}
+
+void CSkins7::CSkinPartLoadJob::Run()
+{
+	void *pFileData = nullptr;
+	unsigned FileSize = 0;
+	if(!m_pStorage->ReadFile(m_Path.c_str(), m_StorageType, &pFileData, &FileSize))
+	{
+		log_error("skins7", "Failed to read skin part file '%s'", m_Path.c_str());
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_Completed = true;
+		return;
+	}
+
+	CImageInfo OriginalImage;
+	if(!CImageLoader::LoadPng(static_cast<uint8_t *>(pFileData), FileSize, m_Path.c_str(), OriginalImage))
+	{
+		free(pFileData);
+		log_error("skins7", "Failed to decode skin part PNG '%s'", m_Path.c_str());
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_Completed = true;
+		return;
+	}
+	free(pFileData);
+
+	if(OriginalImage.m_Format != CImageInfo::FORMAT_RGBA)
+	{
+		log_error("skins7", "Skin part '%s' must be RGBA format", m_Path.c_str());
+		OriginalImage.Free();
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_Completed = true;
+		return;
+	}
+
+	CImageInfo GrayscaleImage = OriginalImage.DeepCopy();
+	ConvertToGrayscale(GrayscaleImage);
+
+	ColorRGBA BloodColor = DetermineBloodColorFromInfo(OriginalImage);
+
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_Result.m_OriginalImage = std::move(OriginalImage);
+		m_Result.m_GrayscaleImage = std::move(GrayscaleImage);
+		m_Result.m_BloodColor = BloodColor;
+		m_Result.m_Success = true;
+		m_Completed = true;
+	}
+}
 
 // TODO: uncomment
 // const float MIN_EYE_BODY_COLOR_DIST = 80.f; // between body and eyes (LAB color space)
@@ -79,43 +175,8 @@ int CSkins7::SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser
 		return 0;
 
 	CSkinPartScanData *pScanData = static_cast<CSkinPartScanData *>(pUser);
-	pScanData->m_pThis->LoadSkinPart(pScanData->m_Part, pName, DirType);
-	pScanData->m_SkinLoadedCallback();
+	pScanData->m_pThis->StartSkinPartLoadJob(pScanData->m_Part, pName, DirType);
 	return 0;
-}
-
-static ColorRGBA DetermineBloodColor(int PartType, const CImageInfo &Info)
-{
-	if(PartType != protocol7::SKINPART_BODY)
-	{
-		return ColorRGBA(1.0f, 1.0f, 1.0f);
-	}
-
-	const size_t Step = Info.PixelSize();
-	const size_t Pitch = Info.m_Width * Step;
-	const size_t PartX = Info.m_Width / 2;
-	const size_t PartY = 0;
-	const size_t PartWidth = Info.m_Width / 2;
-	const size_t PartHeight = Info.m_Height / 2;
-
-	int64_t aColors[3] = {0};
-	for(size_t y = PartY; y < PartY + PartHeight; y++)
-	{
-		for(size_t x = PartX; x < PartX + PartWidth; x++)
-		{
-			const size_t Offset = y * Pitch + x * Step;
-			if(Info.m_pData[Offset + 3] > 128)
-			{
-				for(size_t c = 0; c < 3; c++)
-				{
-					aColors[c] += Info.m_pData[Offset + c];
-				}
-			}
-		}
-	}
-
-	const vec3 NormalizedColor = normalize(vec3(aColors[0], aColors[1], aColors[2]));
-	return ColorRGBA(NormalizedColor.x, NormalizedColor.y, NormalizedColor.z);
 }
 
 bool CSkins7::LoadSkinPart(int PartType, const char *pName, int DirType)
@@ -156,9 +217,11 @@ bool CSkins7::LoadSkinPart(int PartType, const char *pName, int DirType)
 	}
 	str_copy(Part.m_aName, pName, minimum<int>(PartNameSize + 1, sizeof(Part.m_aName)));
 	Part.m_OriginalTexture = Graphics()->LoadTextureRaw(Info, 0, aFilename);
-	Part.m_BloodColor = DetermineBloodColor(Part.m_Type, Info);
+	GameClient()->GpuUploadLimiter()->OnUploaded();
+	Part.m_BloodColor = DetermineBloodColorFromInfo(Info);
 	ConvertToGrayscale(Info);
 	Part.m_ColorableTexture = Graphics()->LoadTextureRawMove(Info, 0, aFilename);
+	GameClient()->GpuUploadLimiter()->OnUploaded();
 
 	if(Config()->m_Debug)
 	{
@@ -166,6 +229,89 @@ bool CSkins7::LoadSkinPart(int PartType, const char *pName, int DirType)
 	}
 	m_avSkinParts[PartType].emplace_back(Part);
 	return true;
+}
+
+void CSkins7::StartSkinPartLoadJob(int PartType, const char *pName, int DirType)
+{
+	size_t PartNameSize, PartNameCount;
+	str_utf8_stats(pName, str_length(pName) - str_length(".png") + 1, IO_MAX_PATH_LENGTH, &PartNameSize, &PartNameCount);
+	if(PartNameSize >= protocol7::MAX_SKIN_ARRAY_SIZE || PartNameCount > protocol7::MAX_SKIN_LENGTH)
+	{
+		log_error("skins7", "Failed to load skin part '%s/%s': name too long", CSkins7::ms_apSkinPartNames[PartType], pName);
+		return;
+	}
+
+	char aFilename[IO_MAX_PATH_LENGTH];
+	str_format(aFilename, sizeof(aFilename), SKINS_DIR "/%s/%s", CSkins7::ms_apSkinPartNames[PartType], pName);
+
+	char aPartName[24];
+	str_copy(aPartName, pName, minimum<int>(PartNameSize + 1, sizeof(aPartName)));
+
+	int Flags = 0;
+	if(IsSpecialSkin(pName))
+	{
+		Flags |= SKINFLAG_SPECIAL;
+	}
+	if(DirType != IStorage::TYPE_SAVE)
+	{
+		Flags |= SKINFLAG_STANDARD;
+	}
+
+	auto pJob = std::make_shared<CSkinPartLoadJob>(aFilename, aPartName, Storage(), DirType, PartType, Flags);
+	Engine()->AddJob(pJob);
+	m_PendingSkinPartJobs.push_back(pJob);
+}
+
+void CSkins7::ProcessCompletedJobs()
+{
+	auto it = m_PendingSkinPartJobs.begin();
+	while(it != m_PendingSkinPartJobs.end())
+	{
+		auto &pJob = *it;
+		if(!pJob->IsCompleted())
+		{
+			++it;
+			continue;
+		}
+
+		if(!GameClient()->GpuUploadLimiter()->CanUpload())
+		{
+			break;
+		}
+
+		CSkinPartLoadJob::SResult Result = pJob->GetResult();
+		if(Result.m_Success)
+		{
+			CSkinPart Part;
+			Part.m_Type = Result.m_PartType;
+			Part.m_Flags = Result.m_Flags;
+			str_copy(Part.m_aName, Result.m_aName, sizeof(Part.m_aName));
+			Part.m_OriginalTexture = Graphics()->LoadTextureRaw(Result.m_OriginalImage, 0, Result.m_aName);
+			GameClient()->GpuUploadLimiter()->OnUploaded();
+			Part.m_BloodColor = Result.m_BloodColor;
+			Part.m_ColorableTexture = Graphics()->LoadTextureRawMove(Result.m_GrayscaleImage, 0, Result.m_aName);
+			GameClient()->GpuUploadLimiter()->OnUploaded();
+
+			if(Config()->m_Debug)
+			{
+				log_trace("skins7", "Loaded skin part '%s/%s'", CSkins7::ms_apSkinPartNames[Result.m_PartType], Part.m_aName);
+			}
+			m_avSkinParts[Result.m_PartType].emplace_back(Part);
+
+			if(m_SkinLoadedCallback)
+			{
+				m_SkinLoadedCallback();
+			}
+		}
+
+		it = m_PendingSkinPartJobs.erase(it);
+	}
+
+	if(m_PendingSkinPartJobs.empty() && m_Loading)
+	{
+		m_Loading = false;
+		m_LastRefreshTime = time_get_nanoseconds();
+	}
 }
 
 class CSkinScanData
@@ -350,6 +496,11 @@ void CSkins7::OnInit()
 	});
 }
 
+void CSkins7::OnReset()
+{
+	ProcessCompletedJobs();
+}
+
 void CSkins7::InitPlaceholderSkinParts()
 {
 	for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
@@ -367,6 +518,12 @@ void CSkins7::InitPlaceholderSkinParts()
 void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 {
 	m_vSkins.clear();
+
+	for(auto &pJob : m_PendingSkinPartJobs)
+	{
+		pJob->Abort();
+	}
+	m_PendingSkinPartJobs.clear();
 
 	for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
 	{
@@ -396,16 +553,16 @@ void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 		Storage()->ListDirectory(IStorage::TYPE_ALL, aPartsDirectory, SkinPartScan, &SkinPartScanData);
 	}
 
+	m_SkinLoadedCallback = std::move(SkinLoadedCallback);
+	m_Loading = true;
+
 	CSkinScanData SkinScanData;
 	SkinScanData.m_pThis = this;
-	SkinScanData.m_SkinLoadedCallback = SkinLoadedCallback;
+	SkinScanData.m_SkinLoadedCallback = m_SkinLoadedCallback;
 	Storage()->ListDirectory(IStorage::TYPE_ALL, SKINS_DIR, SkinScan, &SkinScanData);
 
 	LoadXmasHat();
 	LoadBotDecoration();
-	SkinLoadedCallback();
-
-	m_LastRefreshTime = time_get_nanoseconds();
 }
 
 void CSkins7::LoadXmasHat()

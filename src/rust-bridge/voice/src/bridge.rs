@@ -3,6 +3,8 @@
 //! 提供空间音频计算和 DSP 处理的辅助函数
 //! FFI 接口统一使用 lib.rs 底部的 C ABI 导出函数
 
+// 允许 dead_code: 本模块函数供 C++ FFI 调用，Rust 内部可能未直接引用
+// 这些函数由 lib.rs 中的 FFI 导出函数间接使用，编译器无法识别其为有效调用
 #![allow(dead_code)]
 
 use crate::dsp::DspChain;
