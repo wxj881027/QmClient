@@ -2195,6 +2195,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   config_includes.h
   config_variables.h
   config_variables_qmclient.h
+  config_variables_qmclient_extra.h
   console.cpp
   console.h
   csv.cpp
@@ -2523,10 +2524,10 @@ if(CLIENT)
     components/freezebars.h
     components/ghost.cpp
     components/ghost.h
-    components/hud_editor.cpp
-    components/hud_editor.h
     components/hud.cpp
     components/hud.h
+    components/hud_editor.cpp
+    components/hud_editor.h
     components/important_alert.cpp
     components/important_alert.h
     components/infomessages.cpp
@@ -2586,10 +2587,10 @@ if(CLIENT)
     components/qmclient/custom_communities.cpp
     components/qmclient/custom_communities.h
     components/qmclient/data_version.h
-    components/qmclient/input_overlay.cpp
-    components/qmclient/input_overlay.h
     components/qmclient/fast_practice.cpp
     components/qmclient/fast_practice.h
+    components/qmclient/input_overlay.cpp
+    components/qmclient/input_overlay.h
     components/qmclient/jelly_tee.cpp
     components/qmclient/jelly_tee.h
     components/qmclient/lyrics_component.cpp
