@@ -49,7 +49,7 @@ impl AdaptiveBitrate {
     }
 
     /// 记录丢包
-    /// 
+    ///
     /// # 参数
     /// * `expected` - 期望接收的包数
     /// * `received` - 实际接收的包数
@@ -60,10 +60,10 @@ impl AdaptiveBitrate {
         } else {
             0.0
         };
-        
+
         // 更新 EWMA
         self.loss_ewma = 0.9 * self.loss_ewma + 0.1 * loss_ratio;
-        
+
         // 记录历史
         self.loss_history.push_back(loss_ratio);
         if self.loss_history.len() > 100 {
@@ -79,7 +79,7 @@ impl AdaptiveBitrate {
     /// 获取当前网络质量等级
     pub fn get_quality(&self) -> NetworkQuality {
         let loss_percent = self.loss_ewma * 100.0;
-        
+
         if loss_percent <= 2.0 {
             NetworkQuality::Excellent
         } else if loss_percent <= 5.0 {
@@ -92,20 +92,20 @@ impl AdaptiveBitrate {
     }
 
     /// 评估并更新编码参数
-    /// 
+    ///
     /// 返回 (新比特率, FEC 是否启用)
     pub fn evaluate(&mut self) -> (i32, bool) {
         let now = std::time::Instant::now();
         let elapsed = now.duration_since(self.last_eval_time).as_millis() as u64;
-        
+
         if elapsed < self.eval_interval_ms {
             return (self.current_bitrate, self.fec_enabled);
         }
-        
+
         self.last_eval_time = now;
-        
+
         let quality = self.get_quality();
-        
+
         let (target_bitrate, fec) = match quality {
             NetworkQuality::Excellent => {
                 // 优秀网络，提高比特率，关闭 FEC
@@ -126,7 +126,7 @@ impl AdaptiveBitrate {
                 (16000, true)
             }
         };
-        
+
         // 平滑过渡
         let diff = target_bitrate - self.current_bitrate;
         if diff.abs() > 1000 {
@@ -134,9 +134,9 @@ impl AdaptiveBitrate {
         } else {
             self.current_bitrate = target_bitrate;
         }
-        
+
         self.fec_enabled = fec;
-        
+
         (self.current_bitrate, self.fec_enabled)
     }
 
@@ -192,12 +192,12 @@ mod tests {
     #[test]
     fn test_packet_loss_recording() {
         let mut adaptive = AdaptiveBitrate::new();
-        
+
         // 记录 10% 丢包
         for _ in 0..10 {
             adaptive.record_packet_loss(100, 90);
         }
-        
+
         assert!(adaptive.get_loss_rate() > 0.05);
         assert_eq!(adaptive.get_quality(), NetworkQuality::Fair);
     }
@@ -205,15 +205,17 @@ mod tests {
     #[test]
     fn test_adaptation() {
         let mut adaptive = AdaptiveBitrate::new();
-        
+        // 设置评估间隔为 0，确保每次调用都执行评估逻辑
+        adaptive.set_eval_interval(0);
+
         // 模拟优秀网络
         for _ in 0..10 {
             adaptive.record_packet_loss(100, 99);
         }
-        
+
         let (bitrate, fec) = adaptive.evaluate();
-        
-        // 应该提高比特率
+
+        // 应该提高比特率并关闭 FEC
         assert!(bitrate >= 24000);
         assert_eq!(fec, false);
     }
@@ -221,15 +223,27 @@ mod tests {
     #[test]
     fn test_poor_network() {
         let mut adaptive = AdaptiveBitrate::new();
-        
+        // 设置评估间隔为 0，确保每次调用都执行评估逻辑
+        adaptive.set_eval_interval(0);
+
         // 模拟差网络 (20% 丢包)
         for _ in 0..10 {
             adaptive.record_packet_loss(100, 80);
         }
-        
+
+        // 比特率调整有平滑过渡机制，需要多次评估才能达到目标值
+        // 24000 -> 22000 -> 20000 -> 18000 -> 16000
+        let mut last_bitrate = 24000;
+        for _ in 0..5 {
+            let (bitrate, fec) = adaptive.evaluate();
+            // 每次应该降低或保持
+            assert!(bitrate <= last_bitrate);
+            assert_eq!(fec, true);
+            last_bitrate = bitrate;
+        }
+
+        // 最终应该稳定在最低比特率
         let (bitrate, fec) = adaptive.evaluate();
-        
-        // 应该降低比特率并启用 FEC
         assert_eq!(bitrate, 16000);
         assert_eq!(fec, true);
     }
@@ -237,12 +251,12 @@ mod tests {
     #[test]
     fn test_reset() {
         let mut adaptive = AdaptiveBitrate::new();
-        
+
         adaptive.record_packet_loss(100, 80);
         adaptive.record_jitter(50.0);
-        
+
         adaptive.reset();
-        
+
         assert_eq!(adaptive.get_loss_rate(), 0.0);
         assert_eq!(adaptive.get_bitrate(), 24000);
     }

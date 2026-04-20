@@ -3872,6 +3872,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		CollisionHitbox,
 		FavoriteMaps,
 		HJAssist,
+		SpeedrunTimer,
 		InputOverlay,
 		Voice,
 		DynamicIsland,
@@ -3893,7 +3894,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		const char *m_pKey;
 	};
 
-	constexpr size_t kQmModuleCount = 26;
+	constexpr size_t kQmModuleCount = 27;
 
 	// Layout string format: key:column:order; entries separated by ';'.
 	static const std::array<SQmModuleEntry, kQmModuleCount> s_aQmModuleDefaults = {{
@@ -3918,11 +3919,12 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		{EQmModuleId::CollisionHitbox, EQmModuleColumn::Right, 4, "collision_hitbox"},
 		{EQmModuleId::FavoriteMaps, EQmModuleColumn::Right, 5, "favorite_maps"},
 		{EQmModuleId::HJAssist, EQmModuleColumn::Right, 6, "hj_assist"},
-		{EQmModuleId::InputOverlay, EQmModuleColumn::Right, 7, "input_overlay"},
-		{EQmModuleId::Voice, EQmModuleColumn::Right, 8, "voice"},
-		{EQmModuleId::DummyMiniView, EQmModuleColumn::Right, 9, "dummy_miniview"},
-		{EQmModuleId::DynamicIsland, EQmModuleColumn::Right, 10, "dynamic_island"},
-		{EQmModuleId::SystemMediaControls, EQmModuleColumn::Right, 11, "system_media_controls"}
+		{EQmModuleId::SpeedrunTimer, EQmModuleColumn::Right, 7, "speedrun_timer"},
+		{EQmModuleId::InputOverlay, EQmModuleColumn::Right, 8, "input_overlay"},
+		{EQmModuleId::Voice, EQmModuleColumn::Right, 9, "voice"},
+		{EQmModuleId::DummyMiniView, EQmModuleColumn::Right, 10, "dummy_miniview"},
+		{EQmModuleId::DynamicIsland, EQmModuleColumn::Right, 11, "dynamic_island"},
+		{EQmModuleId::SystemMediaControls, EQmModuleColumn::Right, 12, "system_media_controls"}
 	}};
 
 	static std::array<SQmModuleEntry, kQmModuleCount> s_aQmModuleLayout = s_aQmModuleDefaults;
@@ -4507,7 +4509,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::Streamer: return "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi";
 		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi";
 		case EQmModuleId::BlockWords: return "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan";
-		case EQmModuleId::Translate: return "翻译 fanyi translate 腾讯云 tengxunyun 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 中文跳过 zhongwen tiaoguo 服务器消息跳过";
+		case EQmModuleId::Translate: return "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.7-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过";
 		case EQmModuleId::QiaFen: return "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming";
 		case EQmModuleId::PieMenu: return "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan";
 		case EQmModuleId::EntityOverlay: return "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng";
@@ -5697,7 +5699,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static std::vector<const char *> s_TranslateBackendDropDownNames;
-				s_TranslateBackendDropDownNames = {Localize("Tencent Cloud"), "LibreTranslate", "FTAPI"};
+				s_TranslateBackendDropDownNames = {Localize("Tencent Cloud"), "LibreTranslate", "FTAPI", Localize("ZhipuAI")};
 				static CUi::SDropDownState s_TranslateBackendDropDownState;
 				static CScrollRegion s_TranslateBackendDropDownScrollRegion;
 				s_TranslateBackendDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TranslateBackendDropDownScrollRegion;
@@ -5707,6 +5709,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					BackendSelectedOld = 1;
 				else if(str_comp_nocase(g_Config.m_TcTranslateBackend, "ftapi") == 0)
 					BackendSelectedOld = 2;
+				else if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+					BackendSelectedOld = 3;
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
@@ -5718,6 +5722,8 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 						str_copy(g_Config.m_TcTranslateBackend, "libretranslate", sizeof(g_Config.m_TcTranslateBackend));
 					else if(BackendSelectedNew == 2)
 						str_copy(g_Config.m_TcTranslateBackend, "ftapi", sizeof(g_Config.m_TcTranslateBackend));
+					else if(BackendSelectedNew == 3)
+						str_copy(g_Config.m_TcTranslateBackend, "zhipuai", sizeof(g_Config.m_TcTranslateBackend));
 					else
 						str_copy(g_Config.m_TcTranslateBackend, "tencentcloud", sizeof(g_Config.m_TcTranslateBackend));
 				}
@@ -5767,6 +5773,26 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					static CLineInput s_TranslateApiKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
 					s_TranslateApiKey.SetHidden(true);
 					Ui()->DoEditBox(&s_TranslateApiKey, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+
+				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("API key"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_ZhipuAiApiKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
+					s_ZhipuAiApiKey.SetEmptyText("ZHIPU_API_KEY");
+					s_ZhipuAiApiKey.SetHidden(true);
+					Ui()->DoEditBox(&s_ZhipuAiApiKey, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Model"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_ZhipuAiModel(g_Config.m_QmTranslateZhipuaiModel, sizeof(g_Config.m_QmTranslateZhipuaiModel));
+					s_ZhipuAiModel.SetEmptyText("glm-4.7-flash");
+					Ui()->DoEditBox(&s_ZhipuAiModel, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
@@ -6829,12 +6855,63 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFreezeWakeupPopup, Localize("Show wake-up popup on the other tee"), &g_Config.m_QmFreezeWakeupPopup, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoTeamLock, Localize("Auto team lock"), &g_Config.m_QmAutoTeamLock, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				if(g_Config.m_QmAutoTeamLock)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Ui()->DoScrollbarOption(&g_Config.m_QmAutoTeamLockDelay, &g_Config.m_QmAutoTeamLockDelay, &Row, Localize("Lock delay"), 0, 30, &CUi::ms_LinearScrollbarScale, 0, Localize(" sec"));
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
 				s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
 				RegisterModuleCard(pModule, ColumnId, s_GlassCards.back());
 				HandleModuleDragState(pModule, s_GlassCards.back());
 
+			}
+			break;
+			case EQmModuleId::SpeedrunTimer:
+			{
+				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+				CUIRect CardSpeedrunStart = Column;
+				s_GlassCards.push_back(CardSpeedrunStart);
+
+				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+				DoModuleHeadline(CardContent, 11, Localize("Speedrun timer"), Localize("Countdown timer for speedruns"));
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSpeedrunTimer, Localize("Enable speedrun timer"), &g_Config.m_QmSpeedrunTimer, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				if(g_Config.m_QmSpeedrunTimer)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Ui()->DoScrollbarOption(&g_Config.m_QmSpeedrunTimerHours, &g_Config.m_QmSpeedrunTimerHours, &Row, Localize("Hours"), 0, 99, &CUi::ms_LinearScrollbarScale, 0, "h");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Ui()->DoScrollbarOption(&g_Config.m_QmSpeedrunTimerMinutes, &g_Config.m_QmSpeedrunTimerMinutes, &Row, Localize("Minutes"), 0, 59, &CUi::ms_LinearScrollbarScale, 0, "min");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Ui()->DoScrollbarOption(&g_Config.m_QmSpeedrunTimerSeconds, &g_Config.m_QmSpeedrunTimerSeconds, &Row, Localize("Seconds"), 0, 59, &CUi::ms_LinearScrollbarScale, 0, "s");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Ui()->DoScrollbarOption(&g_Config.m_QmSpeedrunTimerMilliseconds, &g_Config.m_QmSpeedrunTimerMilliseconds, &Row, Localize("Milliseconds"), 0, 999, &CUi::ms_LinearScrollbarScale, 0, "ms");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSpeedrunTimerAutoDisable, Localize("Auto disable when time expires"), &g_Config.m_QmSpeedrunTimerAutoDisable, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+
+				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+				Column.y = CardContent.y;
+				s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+				RegisterModuleCard(pModule, ColumnId, s_GlassCards.back());
+				HandleModuleDragState(pModule, s_GlassCards.back());
 			}
 			break;
 			case EQmModuleId::InputOverlay:

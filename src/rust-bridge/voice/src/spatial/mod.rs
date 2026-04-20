@@ -39,7 +39,7 @@ pub struct SpatialResult {
 }
 
 /// 计算空间音频参数
-/// 
+///
 /// # 参数
 /// * `local_pos` - 本地玩家位置
 /// * `sender_pos` - 发送者位置
@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn test_spatial_distance_attenuation() {
         let config = SpatialConfig::default();
-        
+
         // 近距离
         let close = calculate_spatial((0.0, 0.0), (100.0, 0.0), &config);
         // 远距离

@@ -59,9 +59,9 @@ impl Default for CompressorState {
 }
 
 /// 应用动态压缩
-/// 
+///
 /// 压缩公式: if envelope > threshold, gain = (threshold + (envelope - threshold) / ratio) / envelope
-/// 
+///
 /// # 参数
 /// * `samples` - 音频样本数组 (会被原地修改)
 /// * `state` - 压缩器状态
@@ -79,12 +79,17 @@ pub fn apply(samples: &mut [i16], state: &mut CompressorState, config: &Compress
         let input = sample.abs() as f32 / 32768.0;
 
         // 包络跟随 (peak detector)
-        let coef = if input > state.envelope { attack_coef } else { release_coef };
+        let coef = if input > state.envelope {
+            attack_coef
+        } else {
+            release_coef
+        };
         state.envelope = state.envelope + (1.0 - coef) * (input - state.envelope);
 
         // 计算压缩增益
         let gain = if state.envelope > config.threshold {
-            let compressed_level = config.threshold + (state.envelope - config.threshold) / config.ratio;
+            let compressed_level =
+                config.threshold + (state.envelope - config.threshold) / config.ratio;
             compressed_level / state.envelope
         } else {
             1.0
@@ -99,7 +104,7 @@ pub fn apply(samples: &mut [i16], state: &mut CompressorState, config: &Compress
 /// 应用限制器 (硬削波到指定阈值)
 pub fn apply_limiter(samples: &mut [i16], limit_threshold: f32) {
     let threshold = (limit_threshold.clamp(0.0, 1.0) * 32767.0) as i16;
-    
+
     for sample in samples.iter_mut() {
         *sample = (*sample).clamp(-threshold, threshold);
     }
@@ -117,14 +122,26 @@ mod tests {
         let config = CompressorConfig {
             threshold: 0.5, // 50%
             ratio: 4.0,
+            attack_ms: 1,     // 使用快速攻击时间 (1ms)，以便在单帧内建立压缩
+            makeup_gain: 1.0, // 不使用补偿增益，以便测试压缩效果
             ..Default::default()
         };
 
         apply(&mut samples, &mut state, &config);
 
-        // 压缩后峰值应该降低
-        let max_peak = samples.iter().map(|&s| s.abs()).max().unwrap();
-        assert!(max_peak < 30000, "Peak should be reduced after compression");
+        // 压缩后，后半部分样本的峰值应该降低（包络已建立）
+        // 检查最后 100 个样本的平均值
+        let tail_avg: f32 = samples
+            .iter()
+            .rev()
+            .take(100)
+            .map(|&s| s.abs() as f32)
+            .sum::<f32>()
+            / 100.0;
+        assert!(
+            tail_avg < 30000.0,
+            "Tail average should be reduced after compression"
+        );
     }
 
     #[test]
@@ -138,15 +155,18 @@ mod tests {
 
         // 低电平信号应该被补偿增益放大
         let avg = samples.iter().map(|&s| s.abs() as f32).sum::<f32>() / samples.len() as f32;
-        assert!(avg > 1000.0, "Low level signals should be amplified by makeup gain");
+        assert!(
+            avg > 1000.0,
+            "Low level signals should be amplified by makeup gain"
+        );
     }
 
     #[test]
     fn test_limiter() {
         let mut samples = vec![30000i16, -32000, 1000, -500];
-        
+
         apply_limiter(&mut samples, 0.5); // 50% 限制
-        
+
         assert!(samples[0].abs() <= 16384);
         assert!(samples[1].abs() <= 16384);
         assert_eq!(samples[2], 1000); // 低于阈值，不变

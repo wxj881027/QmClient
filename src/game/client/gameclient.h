@@ -1068,6 +1068,7 @@ private:
 	std::vector<std::shared_ptr<CManagedTeeRenderInfo>> m_vpManagedTeeRenderInfos;
 	void UpdateManagedTeeRenderInfos();
 
+	void UpdateAutoTeamLock();
 	void UpdateLocalTuning();
 	void UpdatePrediction();
 	void UpdateSpectatorCursor();
@@ -1080,6 +1081,9 @@ private:
 	int m_IsDummySwapping;
 	CCharOrder m_CharOrder;
 	int m_aSwitchStateTeam[NUM_DUMMIES];
+	int m_aAutoTeamLockLastTeam[NUM_DUMMIES] = {TEAM_FLOCK, TEAM_FLOCK};
+	int64_t m_aAutoTeamLockDeadlineTick[NUM_DUMMIES] = {0, 0};
+	bool m_aAutoTeamLockPending[NUM_DUMMIES] = {false, false};
 	int64_t m_aQ1menGSyncMarkUntil[MAX_CLIENTS] = {0};
 	bool m_aQ1menGSyncFootParticlesEnabled[MAX_CLIENTS] = {false};
 	bool m_aQ1menGSyncRemoteParticlesEnabled[MAX_CLIENTS] = {false};

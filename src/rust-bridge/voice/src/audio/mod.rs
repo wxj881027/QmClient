@@ -6,15 +6,18 @@
 
 pub mod backend;
 pub mod capture;
-pub mod playback;
+pub mod capture_queue;
+pub mod engine;
 pub mod mixer;
+pub mod playback;
 pub mod sdl_backend;
 
 pub use backend::{AudioBackend, AudioBackendType};
 pub use capture::AudioCapture;
-pub use playback::AudioPlayback;
+pub use capture_queue::{CaptureFrame, CaptureQueue};
+pub use engine::{AudioEngine, AudioFrame, EngineConfig, EngineState, FRAME_SAMPLES, SAMPLE_RATE};
 pub use mixer::AudioMixer;
-pub use sdl_backend::{SdlAudioBackend, DeviceInfo, AudioError as SdlAudioError};
+pub use playback::AudioPlayback;
 
 /// 音频配置
 #[derive(Debug, Clone)]

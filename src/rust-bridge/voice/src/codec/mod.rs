@@ -6,8 +6,8 @@
 //! - FEC (前向纠错)
 //! - PLC (丢包隐藏)
 
-pub mod opus;
 pub mod adaptive;
+pub mod opus;
 
-pub use opus::OpusCodec;
 pub use adaptive::AdaptiveBitrate;
+pub use opus::OpusCodec;

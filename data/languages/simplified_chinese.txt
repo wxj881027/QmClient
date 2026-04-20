@@ -4113,6 +4113,15 @@ Endpoint
 Region
 == 地域
 
+ZhipuAI
+== 智谱AI
+
+API key
+== API 密钥
+
+Model
+== 模型
+
 Keyword reply
 == 关键词回复
 
@@ -4389,6 +4398,39 @@ Automatically close the current chat after waking from freeze
 Show wake-up popup on the other tee
 == 在另一侧tee显示唤醒提示
 
+Auto team lock
+== 自动锁队
+
+Lock delay
+== 锁队延迟
+
+Speedrun timer
+== 速通计时器
+
+Countdown timer for speedruns
+== 速通倒计时器
+
+Enable speedrun timer
+== 启用速通计时器
+
+Hours
+== 小时
+
+Minutes
+== 分钟
+
+Seconds
+== 秒
+
+Milliseconds
+== 毫秒
+
+Auto disable when time expires
+== 时间耗尽后自动禁用
+
+TIME EXPIRED!
+== 时间耗尽！
+
 Input overlay
 == 按键显示
 
@@ -4418,6 +4460,9 @@ Voice connection, input, and display
 
 Enable voice
 == 启用语音
+
+Use Rust voice (experimental)
+== 使用 Rust 语音系统（实验性）
 
 Server
 == 服务器

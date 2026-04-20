@@ -276,6 +276,7 @@ class CHud : public CComponent
 	};
 	class CMovementInformation GetMovementInformation(int ClientId, int Conn) const;
 
+	void RenderSpeedrunTimer();
 	void RenderGameTimer();
 	void RenderPauseNotification();
 	void RenderSuddenDeath();
@@ -319,6 +320,7 @@ private:
 	int m_FinishTimeLastReceivedTick;
 	int m_TimeCpLastReceivedTick;
 	bool m_ShowFinishTime;
+	int m_SpeedrunTimerExpiredTick = 0;
 
 	inline float GetMovementInformationBoxHeight();
 	inline int GetDigitsIndex(int Value, int Max);

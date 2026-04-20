@@ -2602,6 +2602,8 @@ if(CLIENT)
     components/qmclient/voice_core.h
     components/qmclient/voice_rust.cpp
     components/qmclient/voice_rust.h
+    components/qmclient/voice_utils.cpp
+    components/qmclient/voice_utils.h
     components/qmclient/warlist.cpp
     components/qmclient/warlist.h
     components/race_demo.cpp
@@ -3308,6 +3310,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     thread_test.cpp
     time_test.cpp
     timestamp_test.cpp
+    translate_test.cpp
     unix_test.cpp
     uuid_test.cpp
     vmath_test.cpp

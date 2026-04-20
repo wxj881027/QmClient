@@ -251,6 +251,52 @@ bool ParseOutgoingTranslateTarget(const char *pLine, std::string &Text, std::str
 	Text = Line.substr(0, TextEnd);
 	return true;
 }
+
+static void EscapeJsonString(const char *pStr, char *pOut, size_t OutSize)
+{
+	size_t OutPos = 0;
+	if(OutSize < 2)
+		return;
+	pOut[OutPos++] = '"';
+	for(const char *p = pStr; *p; ++p)
+	{
+		char c = *p;
+		if(c == '"' || c == '\\' || c == '\b' || c == '\n' || c == '\r' || c == '\t' || (unsigned char)c < 0x20)
+		{
+			if(OutPos >= OutSize - 2)
+				break;
+			pOut[OutPos++] = '\\';
+			switch(c)
+			{
+			case '"': pOut[OutPos++] = '\\'; pOut[OutPos++] = '"'; break;
+			case '\\': pOut[OutPos++] = '\\'; break;
+			case '\b': pOut[OutPos++] = 'b'; break;
+			case '\n': pOut[OutPos++] = 'n'; break;
+			case '\r': pOut[OutPos++] = 'r'; break;
+			case '\t': pOut[OutPos++] = 't'; break;
+			default:
+				if(OutPos >= OutSize - 6)
+				{
+					OutPos--; // Remove backslash
+					break;
+				}
+				str_format(pOut + OutPos, 6, "u%04x", (unsigned char)c);
+				OutPos += 5;
+				break;
+			}
+		}
+		else
+		{
+			if(OutPos >= OutSize - 1)
+				break;
+			pOut[OutPos++] = c;
+		}
+	}
+	if(OutPos < OutSize)
+		pOut[OutPos++] = '"';
+	if(OutPos < OutSize)
+		pOut[OutPos] = '\0';
+}
 } // namespace
 
 static void UrlEncode(const char *pText, char *pOut, size_t Length)
@@ -721,6 +767,158 @@ public:
 	}
 };
 
+class CTranslateBackendZhipuAI : public ITranslateBackendHttp
+{
+private:
+	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
+	{
+		if(!pObj)
+		{
+			str_copy(Out.m_Text, "Response is not JSON");
+			return false;
+		}
+
+		if(pObj->type != json_object)
+		{
+			str_copy(Out.m_Text, "Response is not object");
+			return false;
+		}
+
+		const json_value *pError = json_object_get(pObj, "error");
+		if(pError != &json_value_none)
+		{
+			const json_value *pMessage = json_object_get(pError, "message");
+			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "ZhipuAI request failed";
+			str_copy(Out.m_Text, pMessageStr);
+			return false;
+		}
+
+		const json_value *pChoices = json_object_get(pObj, "choices");
+		if(pChoices == &json_value_none)
+		{
+			str_copy(Out.m_Text, "No choices");
+			return false;
+		}
+		if(pChoices->type != json_array)
+		{
+			str_copy(Out.m_Text, "choices is not array");
+			return false;
+		}
+		if(pChoices->u.array.length == 0)
+		{
+			str_copy(Out.m_Text, "choices is empty");
+			return false;
+		}
+
+		const json_value *pChoice = pChoices->u.array.values[0];
+		if(pChoice->type != json_object)
+		{
+			str_copy(Out.m_Text, "choice is not object");
+			return false;
+		}
+
+		const json_value *pMessage = json_object_get(pChoice, "message");
+		if(pMessage == &json_value_none)
+		{
+			str_copy(Out.m_Text, "No message in choice");
+			return false;
+		}
+		if(pMessage->type != json_object)
+		{
+			str_copy(Out.m_Text, "message is not object");
+			return false;
+		}
+
+		const json_value *pContent = json_object_get(pMessage, "content");
+		if(pContent == &json_value_none)
+		{
+			str_copy(Out.m_Text, "No content in message");
+			return false;
+		}
+		if(pContent->type != json_string)
+		{
+			str_copy(Out.m_Text, "content is not string");
+			return false;
+		}
+
+		str_copy(Out.m_Text, pContent->u.string.ptr);
+		Out.m_Language[0] = '\0'; // ZhipuAI doesn't return detected language
+
+		return true;
+	}
+
+protected:
+	bool ParseResponse(CTranslateResponse &Out) override
+	{
+		json_value *pObj = m_pHttpRequest->ResultJson();
+		bool Res = ParseResponseJson(pObj, Out);
+		json_value_free(pObj);
+		return Res;
+	}
+
+	bool ParseHttpError() const override
+	{
+		return true;
+	}
+
+public:
+	const char *Name() const override
+	{
+		return "ZhipuAI";
+	}
+
+	CTranslateBackendZhipuAI(IHttp &Http, const char *pText, const char *pTarget)
+	{
+		if(g_Config.m_TcTranslateKey[0] == '\0')
+		{
+			SetInitError("Missing ZhipuAI API Key: set tc_translate_key");
+			return;
+		}
+
+		const char *pEndpoint = g_Config.m_TcTranslateEndpoint[0] != '\0' ? g_Config.m_TcTranslateEndpoint : "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+
+		// Build system message with target language
+		char aSystemMessage[256];
+		str_format(aSystemMessage, sizeof(aSystemMessage), "You are a professional translator. Translate the following text to %s. Only output the translation result, no explanations.", EncodeTarget(pTarget));
+
+		// Build JSON request body manually (CJsonStringWriter doesn't support float values)
+		// Need to escape the text and system message for JSON
+		char aEscapedText[4096];
+		char aEscapedSystem[512];
+		EscapeJsonString(pText, aEscapedText, sizeof(aEscapedText));
+		EscapeJsonString(aSystemMessage, aEscapedSystem, sizeof(aEscapedSystem));
+
+		// Use configured model or default to glm-4.7-flash
+		const char *pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ? g_Config.m_QmTranslateZhipuaiModel : "glm-4.7-flash";
+
+		char aPayload[8192];
+		str_format(aPayload, sizeof(aPayload),
+			"{"
+			"\"model\":\"%s\","
+			"\"messages\":["
+			"{\"role\":\"system\",\"content\":%s},"
+			"{\"role\":\"user\",\"content\":%s}"
+			"],"
+			"\"temperature\":0.3,"
+			"\"max_tokens\":1024"
+			"}",
+			pModel, aEscapedSystem, aEscapedText);
+
+		// Build Authorization header
+		char aAuthorization[512];
+		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", g_Config.m_TcTranslateKey);
+
+		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
+		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
+		m_pHttpRequest->FailOnErrorStatus(false);
+		m_pHttpRequest->Timeout(CTimeout{10000, 0, 500, 10});
+		m_pHttpRequest->HeaderString("Content-Type", "application/json");
+		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
+		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(aPayload), str_length(aPayload));
+		Http.Run(m_pHttpRequest);
+	}
+};
+
 static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const char *pText, const char *pTarget)
 {
 	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0)
@@ -729,6 +927,8 @@ static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, co
 		return std::make_unique<CTranslateBackendFtapi>(Http, pText, pTarget);
 	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "tencentcloud") == 0)
 		return std::make_unique<CTranslateBackendTencentCloud>(Http, pText, pTarget);
+	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+		return std::make_unique<CTranslateBackendZhipuAI>(Http, pText, pTarget);
 	return nullptr;
 }
 

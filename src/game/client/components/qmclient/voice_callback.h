@@ -33,13 +33,13 @@ void on_voice_state_change(uint16_t client_id, bool speaking);
  * @brief 获取当前时间 (microseconds)
  * @return 当前时间戳
  */
-int64_t time_get();
+int64_t voice_time_get();
 
 /**
  * @brief 获取时间频率 (ticks per second)
  * @return 时间频率
  */
-int64_t time_freq();
+int64_t voice_time_freq();
 
 #ifdef __cplusplus
 }

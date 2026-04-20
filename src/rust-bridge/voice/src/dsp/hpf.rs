@@ -18,7 +18,7 @@ impl HpfState {
         let rc = 1.0 / (2.0 * std::f32::consts::PI * CUTOFF_HZ);
         let dt = 1.0 / SAMPLE_RATE;
         let alpha = rc / (rc + dt);
-        
+
         Self {
             prev_in: 0.0,
             prev_out: 0.0,
@@ -40,9 +40,9 @@ impl Default for HpfState {
 }
 
 /// 应用高通滤波器
-/// 
+///
 /// 使用一阶差分滤波器: y[n] = α * (y[n-1] + x[n] - x[n-1])
-/// 
+///
 /// # 参数
 /// * `samples` - 音频样本数组 (会被原地修改)
 /// * `state` - 滤波器状态
@@ -50,10 +50,10 @@ pub fn apply(samples: &mut [i16], state: &mut HpfState) {
     for sample in samples.iter_mut() {
         let x = *sample as f32;
         let y = state.alpha * (state.prev_out + x - state.prev_in);
-        
+
         state.prev_in = x;
         state.prev_out = y;
-        
+
         *sample = y.clamp(-32768.0, 32767.0) as i16;
     }
 }
@@ -63,14 +63,14 @@ pub fn apply_with_cutoff(samples: &mut [i16], state: &mut HpfState, cutoff_hz: f
     let rc = 1.0 / (2.0 * std::f32::consts::PI * cutoff_hz.max(10.0));
     let dt = 1.0 / SAMPLE_RATE;
     let alpha = rc / (rc + dt);
-    
+
     for sample in samples.iter_mut() {
         let x = *sample as f32;
         let y = alpha * (state.prev_out + x - state.prev_in);
-        
+
         state.prev_in = x;
         state.prev_out = y;
-        
+
         *sample = y.clamp(-32768.0, 32767.0) as i16;
     }
 }
@@ -84,15 +84,19 @@ mod tests {
         // 直流信号
         let mut samples = vec![1000i16; 960];
         let mut state = HpfState::default();
-        
+
         // 处理多帧
         for _ in 0..10 {
             apply(&mut samples, &mut state);
         }
-        
+
         // 直流分量应该被滤除
         let avg: f32 = samples.iter().map(|&s| s as f32).sum::<f32>() / samples.len() as f32;
-        assert!(avg.abs() < 50.0, "DC component should be filtered out, got avg={}", avg);
+        assert!(
+            avg.abs() < 50.0,
+            "DC component should be filtered out, got avg={}",
+            avg
+        );
     }
 
     #[test]
@@ -104,16 +108,18 @@ mod tests {
                 (phase.sin() * 16000.0) as i16
             })
             .collect();
-        
+
         let original_rms = super::super::gain::frame_rms(&samples);
-        
+
         let mut state = HpfState::default();
         apply(&mut samples, &mut state);
-        
+
         let filtered_rms = super::super::gain::frame_rms(&samples);
-        
+
         // 高频应该基本保留 (损失 < 10%)
-        assert!(filtered_rms > original_rms * 0.9, 
-                "High frequency content should be preserved");
+        assert!(
+            filtered_rms > original_rms * 0.9,
+            "High frequency content should be preserved"
+        );
     }
 }

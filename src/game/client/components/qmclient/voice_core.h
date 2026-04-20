@@ -12,6 +12,7 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -158,7 +159,6 @@ class CRClientVoice
 	float m_NsGain = 1.0f;
 	DenoiseState *m_pNoiseSuppress = nullptr;
 	std::atomic<int> m_OutputChannels = 0;
-	std::vector<int32_t> m_MixBuffer;
 
 	OpusEncoder *m_pEncoder = nullptr;
 	int m_EncBitrate = 24000;
@@ -169,7 +169,7 @@ class CRClientVoice
 	std::atomic<float> m_MicLevel = 0.0f;
 	int64_t m_LastPingSentTime = 0;
 	uint16_t m_LastPingSeq = 0;
-	std::array<SVoicePeer, MAX_CLIENTS> m_aPeers = {};
+	std::unique_ptr<std::array<SVoicePeer, MAX_CLIENTS>> m_pPeers;
 	std::array<std::atomic<int64_t>, MAX_CLIENTS> m_aLastHeard = {};
 	std::array<uint64_t, MAX_CLIENTS> m_aOverlayOrder = {};
 	uint64_t m_NextOverlayOrder = 1;
@@ -249,6 +249,7 @@ public:
 	void ListDevices();
 	int PingMs() const { return m_PingMs.load(); }
 	float MicLevel() const { return m_MicLevel.load(); }
+	bool IsSpeaking() const { return m_TxWasActive.load(); }
 	bool IsCaptureUnavailable() const { return m_CaptureUnavailable; }
 	bool IsOutputUnavailable() const { return m_OutputUnavailable; }
 };

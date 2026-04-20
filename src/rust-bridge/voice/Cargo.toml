@@ -20,17 +20,14 @@ rnnoise = ["nnnoiseless"]
 cpal = { version = "0.15", optional = true }  # 跨平台音频 I/O（首选）
 sdl2 = { version = "0.37", optional = true }  # SDL2 音频后端（兼容性，需配置 SDL2_LIB_DIR）
 
-# 编解码 - 纯 Rust Opus 实现
-opus-rs = "0.1.12"             # 纯 Rust Opus 编解码器 (restsend/opus-rs)
+# 编解码 - libopus 官方绑定
+opus = "0.3"                     # libopus 官方绑定 (SNR 20-30dB)
 
 # 降噪 - 纯 Rust RNNoise 实现
 nnnoiseless = { version = "0.5", optional = true }  # RNNoise 纯 Rust 移植
 
 # 异步运行时
 tokio = { version = "1", features = ["net", "sync", "rt-multi-thread", "time", "macros"] }
-
-# C++ 桥接
-cxx = "1.0"
 
 # 工具
 crossbeam = "0.8"                # 跨线程 channel

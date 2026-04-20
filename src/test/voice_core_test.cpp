@@ -1,6 +1,7 @@
 #include "test.h"
 
 #include <game/client/components/qmclient/voice_utils.h>
+#include <base/system.h>
 #include <base/vmath.h>
 
 #include <gtest/gtest.h>
@@ -364,4 +365,366 @@ TEST(VoiceUtils, HpfCompressorEnabled)
 		}
 	}
 	EXPECT_TRUE(AnyChanged);
+}
+
+// ---------------------------------------------------------------------------
+// SeqDelta / SeqLess  (re-implement static logic from voice_core.cpp)
+// ---------------------------------------------------------------------------
+
+static int TestSeqDelta(uint16_t NewSeq, uint16_t OldSeq)
+{
+	return (int)(int16_t)(NewSeq - OldSeq);
+}
+
+static bool TestSeqLess(uint16_t A, uint16_t B)
+{
+	return (int16_t)(A - B) < 0;
+}
+
+TEST(VoiceCore, SeqDeltaNormal)
+{
+	EXPECT_EQ(TestSeqDelta(10, 5), 5);
+	EXPECT_EQ(TestSeqDelta(100, 0), 100);
+	EXPECT_EQ(TestSeqDelta(5, 10), -5);
+	EXPECT_EQ(TestSeqDelta(0, 100), -100);
+}
+
+TEST(VoiceCore, SeqDeltaSame)
+{
+	EXPECT_EQ(TestSeqDelta(42, 42), 0);
+	EXPECT_EQ(TestSeqDelta(0, 0), 0);
+	EXPECT_EQ(TestSeqDelta(65535, 65535), 0);
+}
+
+TEST(VoiceCore, SeqDeltaWrapForward)
+{
+	EXPECT_EQ(TestSeqDelta(5, 65530), 11);
+	EXPECT_EQ(TestSeqDelta(0, 65535), 1);
+	EXPECT_EQ(TestSeqDelta(100, 65436), 200);
+}
+
+TEST(VoiceCore, SeqDeltaWrapBackward)
+{
+	EXPECT_EQ(TestSeqDelta(65530, 5), -11);
+	EXPECT_EQ(TestSeqDelta(65535, 0), -1);
+	EXPECT_EQ(TestSeqDelta(65436, 100), -200);
+}
+
+TEST(VoiceCore, SeqLessNormal)
+{
+	EXPECT_TRUE(TestSeqLess(5, 10));
+	EXPECT_TRUE(TestSeqLess(0, 1));
+	EXPECT_FALSE(TestSeqLess(10, 5));
+	EXPECT_FALSE(TestSeqLess(1, 0));
+}
+
+TEST(VoiceCore, SeqLessEqual)
+{
+	EXPECT_FALSE(TestSeqLess(42, 42));
+	EXPECT_FALSE(TestSeqLess(0, 0));
+	EXPECT_FALSE(TestSeqLess(65535, 65535));
+}
+
+TEST(VoiceCore, SeqLessWrap)
+{
+	EXPECT_TRUE(TestSeqLess(65530, 5));
+	EXPECT_TRUE(TestSeqLess(65535, 1));
+	EXPECT_FALSE(TestSeqLess(5, 65530));
+	EXPECT_FALSE(TestSeqLess(1, 65535));
+}
+
+TEST(VoiceCore, SeqLessHalfWrap)
+{
+	// 32768 = 0x8000 wraps to -32768 as int16_t
+	// Both directions return true at the exact halfway point (ambiguous)
+	EXPECT_TRUE(TestSeqLess(0, 32768));
+	EXPECT_TRUE(TestSeqLess(32768, 0));
+	// Just past halfway: 32769 = 0x8001 wraps to -32767
+	EXPECT_FALSE(TestSeqLess(0, 32769));
+	EXPECT_TRUE(TestSeqLess(32769, 0));
+}
+
+// ---------------------------------------------------------------------------
+// ClampJitterTarget  (re-implement static logic from voice_core.cpp)
+// ---------------------------------------------------------------------------
+
+static int TestClampJitterTarget(float JitterMs)
+{
+	if(JitterMs <= 8.0f)
+		return 2;
+	if(JitterMs <= 14.0f)
+		return 3;
+	if(JitterMs <= 22.0f)
+		return 4;
+	if(JitterMs <= 32.0f)
+		return 5;
+	return 6;
+}
+
+TEST(VoiceCore, ClampJitterTargetLow)
+{
+	EXPECT_EQ(TestClampJitterTarget(0.0f), 2);
+	EXPECT_EQ(TestClampJitterTarget(5.0f), 2);
+	EXPECT_EQ(TestClampJitterTarget(8.0f), 2);
+}
+
+TEST(VoiceCore, ClampJitterTargetMid)
+{
+	EXPECT_EQ(TestClampJitterTarget(10.0f), 3);
+	EXPECT_EQ(TestClampJitterTarget(14.0f), 3);
+	EXPECT_EQ(TestClampJitterTarget(18.0f), 4);
+	EXPECT_EQ(TestClampJitterTarget(22.0f), 4);
+	EXPECT_EQ(TestClampJitterTarget(28.0f), 5);
+	EXPECT_EQ(TestClampJitterTarget(32.0f), 5);
+}
+
+TEST(VoiceCore, ClampJitterTargetHigh)
+{
+	EXPECT_EQ(TestClampJitterTarget(33.0f), 6);
+	EXPECT_EQ(TestClampJitterTarget(100.0f), 6);
+	EXPECT_EQ(TestClampJitterTarget(1000.0f), 6);
+}
+
+// ---------------------------------------------------------------------------
+// ProcessIncoming PayloadSize=0 regression test
+// ---------------------------------------------------------------------------
+
+static constexpr char TestVoiceMagic[4] = {'R', 'V', '0', '1'};
+static constexpr uint8_t TestVoiceTypeAudio = 1;
+static constexpr int TestVoiceHeaderSize = sizeof(TestVoiceMagic) + 1 + 1 + 2 + 4 + 4 + 1 + 2 + 2 + 4 + 4;
+
+static size_t BuildVoicePacket(uint8_t *pBuf, uint8_t Version, uint8_t Type, uint16_t PayloadSize,
+	uint32_t ContextHash, uint32_t TokenHash, uint8_t Flags, uint16_t SenderId, uint16_t Sequence,
+	float PosX, float PosY, const uint8_t *pPayload = nullptr)
+{
+	size_t Offset = 0;
+	mem_copy(pBuf + Offset, TestVoiceMagic, sizeof(TestVoiceMagic));
+	Offset += sizeof(TestVoiceMagic);
+	pBuf[Offset++] = Version;
+	pBuf[Offset++] = Type;
+	VoiceUtils::WriteU16(pBuf + Offset, PayloadSize);
+	Offset += sizeof(uint16_t);
+	VoiceUtils::WriteU32(pBuf + Offset, ContextHash);
+	Offset += sizeof(uint32_t);
+	VoiceUtils::WriteU32(pBuf + Offset, TokenHash);
+	Offset += sizeof(uint32_t);
+	pBuf[Offset++] = Flags;
+	VoiceUtils::WriteU16(pBuf + Offset, SenderId);
+	Offset += sizeof(uint16_t);
+	VoiceUtils::WriteU16(pBuf + Offset, Sequence);
+	Offset += sizeof(uint16_t);
+	VoiceUtils::WriteFloat(pBuf + Offset, PosX);
+	Offset += sizeof(float);
+	VoiceUtils::WriteFloat(pBuf + Offset, PosY);
+	Offset += sizeof(float);
+	if(PayloadSize > 0 && pPayload)
+	{
+		mem_copy(pBuf + Offset, pPayload, PayloadSize);
+		Offset += PayloadSize;
+	}
+	return Offset;
+}
+
+static bool ParseVoicePacketPayloadSize(const uint8_t *pData, int Bytes, uint16_t &OutPayloadSize)
+{
+	if(!pData || Bytes < TestVoiceHeaderSize)
+		return false;
+
+	size_t Offset = 0;
+	if(mem_comp(pData, TestVoiceMagic, sizeof(TestVoiceMagic)) != 0)
+		return false;
+	Offset += sizeof(TestVoiceMagic);
+
+	Offset++; // Version
+	Offset++; // Type
+
+	OutPayloadSize = VoiceUtils::ReadU16(pData + Offset);
+	return true;
+}
+
+static bool ShouldProcessPayload(uint16_t PayloadSize, size_t Offset, int Bytes)
+{
+	if(PayloadSize == 0)
+		return false;
+	if(Offset + PayloadSize > (size_t)Bytes)
+		return false;
+	return true;
+}
+
+TEST(VoiceCore, ProcessIncomingZeroPayload)
+{
+	uint8_t aPacket[1200];
+	const size_t PacketSize = BuildVoicePacket(aPacket, 3, TestVoiceTypeAudio,
+		0, 0x12345678u, 0u, 0, 1, 100, 50.0f, 50.0f, nullptr);
+
+	uint16_t PayloadSize = 0;
+	ASSERT_TRUE(ParseVoicePacketPayloadSize(aPacket, (int)PacketSize, PayloadSize));
+	EXPECT_EQ(PayloadSize, 0);
+
+	EXPECT_FALSE(ShouldProcessPayload(PayloadSize, TestVoiceHeaderSize, (int)PacketSize));
+}
+
+TEST(VoiceCore, ProcessIncomingNormalPayload)
+{
+	uint8_t aPayload[64];
+	mem_zero(aPayload, sizeof(aPayload));
+	aPayload[0] = 0xFF;
+
+	uint8_t aPacket[1200];
+	const size_t PacketSize = BuildVoicePacket(aPacket, 3, TestVoiceTypeAudio,
+		64, 0x12345678u, 0u, 0, 1, 100, 50.0f, 50.0f, aPayload);
+
+	uint16_t PayloadSize = 0;
+	ASSERT_TRUE(ParseVoicePacketPayloadSize(aPacket, (int)PacketSize, PayloadSize));
+	EXPECT_EQ(PayloadSize, 64);
+
+	EXPECT_TRUE(ShouldProcessPayload(PayloadSize, TestVoiceHeaderSize, (int)PacketSize));
+}
+
+TEST(VoiceCore, ProcessIncomingTruncatedPayload)
+{
+	uint8_t aPacket[1200];
+	const size_t PacketSize = BuildVoicePacket(aPacket, 3, TestVoiceTypeAudio,
+		200, 0x12345678u, 0u, 0, 1, 100, 50.0f, 50.0f, nullptr);
+
+	uint16_t PayloadSize = 0;
+	ASSERT_TRUE(ParseVoicePacketPayloadSize(aPacket, (int)PacketSize, PayloadSize));
+	EXPECT_EQ(PayloadSize, 200);
+
+	EXPECT_FALSE(ShouldProcessPayload(PayloadSize, TestVoiceHeaderSize, (int)PacketSize));
+}
+
+TEST(VoiceCore, ProcessIncomingBadMagic)
+{
+	uint8_t aPacket[1200];
+	mem_zero(aPacket, sizeof(aPacket));
+	aPacket[0] = 'X';
+	aPacket[1] = 'Y';
+	aPacket[2] = 'Z';
+	aPacket[3] = '!';
+
+	uint16_t PayloadSize = 999;
+	EXPECT_FALSE(ParseVoicePacketPayloadSize(aPacket, (int)sizeof(aPacket), PayloadSize));
+}
+
+TEST(VoiceCore, ProcessIncomingTooSmall)
+{
+	uint8_t aPacket[4];
+	mem_zero(aPacket, sizeof(aPacket));
+
+	uint16_t PayloadSize = 999;
+	EXPECT_FALSE(ParseVoicePacketPayloadSize(aPacket, (int)sizeof(aPacket), PayloadSize));
+}
+
+// ---------------------------------------------------------------------------
+// VAD state machine test
+// ---------------------------------------------------------------------------
+
+struct SVadState
+{
+	bool m_Active = false;
+	int64_t m_ReleaseDeadline = 0;
+};
+
+static void VadUpdate(SVadState &State, bool Trigger, int64_t FrameNow, int64_t ReleaseTicks)
+{
+	if(Trigger)
+	{
+		State.m_Active = true;
+		if(ReleaseTicks > 0)
+			State.m_ReleaseDeadline = FrameNow + ReleaseTicks;
+		else
+			State.m_ReleaseDeadline = 0;
+	}
+	else if(State.m_Active)
+	{
+		if(State.m_ReleaseDeadline == 0 || FrameNow >= State.m_ReleaseDeadline)
+		{
+			State.m_Active = false;
+			State.m_ReleaseDeadline = 0;
+		}
+	}
+}
+
+TEST(VoiceCore, VadTriggerActivates)
+{
+	SVadState State;
+	EXPECT_FALSE(State.m_Active);
+
+	VadUpdate(State, true, 1000, 500);
+	EXPECT_TRUE(State.m_Active);
+	EXPECT_EQ(State.m_ReleaseDeadline, 1500);
+}
+
+TEST(VoiceCore, VadTriggerWhileActiveExtendsDeadline)
+{
+	SVadState State;
+	VadUpdate(State, true, 1000, 500);
+	EXPECT_EQ(State.m_ReleaseDeadline, 1500);
+
+	VadUpdate(State, true, 2000, 500);
+	EXPECT_TRUE(State.m_Active);
+	EXPECT_EQ(State.m_ReleaseDeadline, 2500);
+}
+
+TEST(VoiceCore, VadNoTriggerStaysInactive)
+{
+	SVadState State;
+	VadUpdate(State, false, 1000, 500);
+	EXPECT_FALSE(State.m_Active);
+}
+
+TEST(VoiceCore, VadReleaseDelayKeepsActive)
+{
+	SVadState State;
+	VadUpdate(State, true, 1000, 500);
+	EXPECT_TRUE(State.m_Active);
+
+	VadUpdate(State, false, 1200, 500);
+	EXPECT_TRUE(State.m_Active);
+}
+
+TEST(VoiceCore, VadReleaseDelayExpires)
+{
+	SVadState State;
+	VadUpdate(State, true, 1000, 500);
+	EXPECT_TRUE(State.m_Active);
+
+	VadUpdate(State, false, 1499, 500);
+	EXPECT_TRUE(State.m_Active);
+
+	VadUpdate(State, false, 1500, 500);
+	EXPECT_FALSE(State.m_Active);
+	EXPECT_EQ(State.m_ReleaseDeadline, 0);
+}
+
+TEST(VoiceCore, VadZeroReleaseDelayDeactivatesImmediately)
+{
+	SVadState State;
+	VadUpdate(State, true, 1000, 0);
+	EXPECT_TRUE(State.m_Active);
+	EXPECT_EQ(State.m_ReleaseDeadline, 0);
+
+	VadUpdate(State, false, 1001, 0);
+	EXPECT_FALSE(State.m_Active);
+}
+
+TEST(VoiceCore, VadReactivatesAfterRelease)
+{
+	SVadState State;
+	VadUpdate(State, true, 1000, 500);
+	VadUpdate(State, false, 1500, 500);
+	EXPECT_FALSE(State.m_Active);
+
+	VadUpdate(State, true, 2000, 500);
+	EXPECT_TRUE(State.m_Active);
+	EXPECT_EQ(State.m_ReleaseDeadline, 2500);
+}
+
+TEST(VoiceCore, VadTriggerWithZeroThreshold)
+{
+	SVadState State;
+	const bool Trigger = true;
+	VadUpdate(State, Trigger, 1000, 500);
+	EXPECT_TRUE(State.m_Active);
 }

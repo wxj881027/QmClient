@@ -8,17 +8,17 @@ use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
 #[cfg(feature = "sdl-backend")]
 use sdl2::AudioSubsystem;
 
-use crate::codec::opus::{FRAME_SAMPLES, SAMPLE_RATE};
+use crate::codec::opus::FRAME_SAMPLES;
 
 /// 音频设备错误
 #[derive(Debug, thiserror::Error)]
 pub enum AudioError {
     #[error("SDL error: {0}")]
     Sdl(String),
-    
+
     #[error("Device not available: {0}")]
     DeviceNotAvailable(String),
-    
+
     #[error("SDL backend not enabled")]
     NotEnabled,
 }
@@ -102,7 +102,7 @@ impl AudioCallback for SdlCaptureCallback {
             let mut frame = [0i16; FRAME_SAMPLES];
             frame.copy_from_slice(&self.buffer[..FRAME_SAMPLES]);
             self.buffer.drain(..FRAME_SAMPLES);
-            
+
             // 如果发送失败（接收端已关闭），忽略
             let _ = self.audio_tx.try_send(frame);
         }
@@ -143,10 +143,12 @@ impl SdlAudioBackend {
     /// 枚举输出设备
     pub fn enumerate_output_devices(&self) -> Result<Vec<DeviceInfo>, AudioError> {
         let mut devices = Vec::new();
-        
-        let num_devices = self.audio_subsystem.num_audio_playback_devices()
+
+        let num_devices = self
+            .audio_subsystem
+            .num_audio_playback_devices()
             .unwrap_or(0);
-        
+
         for i in 0..num_devices {
             match self.audio_subsystem.audio_playback_device_name(i) {
                 Ok(name) => {
@@ -166,10 +168,12 @@ impl SdlAudioBackend {
     /// 枚举捕获设备
     pub fn enumerate_capture_devices(&self) -> Result<Vec<DeviceInfo>, AudioError> {
         let mut devices = Vec::new();
-        
-        let num_devices = self.audio_subsystem.num_audio_capture_devices()
+
+        let num_devices = self
+            .audio_subsystem
+            .num_audio_capture_devices()
             .unwrap_or(0);
-        
+
         for i in 0..num_devices {
             match self.audio_subsystem.audio_capture_device_name(i) {
                 Ok(name) => {
@@ -187,7 +191,11 @@ impl SdlAudioBackend {
     }
 
     /// 打开输出设备
-    pub fn open_output(&mut self, device_name: Option<&str>, channels: usize) -> Result<(), AudioError> {
+    pub fn open_output(
+        &mut self,
+        device_name: Option<&str>,
+        channels: usize,
+    ) -> Result<(), AudioError> {
         let desired_spec = AudioSpecDesired {
             freq: Some(SAMPLE_RATE as i32),
             channels: Some(channels as u8),
@@ -196,7 +204,8 @@ impl SdlAudioBackend {
 
         let (output_tx, output_rx) = crossbeam::channel::bounded(16);
 
-        let device = self.audio_subsystem
+        let device = self
+            .audio_subsystem
             .open_playback(device_name, &desired_spec, |spec| {
                 self.output_channels = spec.channels as usize;
                 SdlOutputCallback {
@@ -214,7 +223,11 @@ impl SdlAudioBackend {
     }
 
     /// 打开捕获设备
-    pub fn open_capture(&mut self, device_name: Option<&str>, channels: usize) -> Result<(), AudioError> {
+    pub fn open_capture(
+        &mut self,
+        device_name: Option<&str>,
+        channels: usize,
+    ) -> Result<(), AudioError> {
         let desired_spec = AudioSpecDesired {
             freq: Some(SAMPLE_RATE as i32),
             channels: Some(channels as u8),
@@ -223,7 +236,8 @@ impl SdlAudioBackend {
 
         let (capture_tx, capture_rx) = crossbeam::channel::bounded(16);
 
-        let device = self.audio_subsystem
+        let device = self
+            .audio_subsystem
             .open_capture(device_name, &desired_spec, |spec| {
                 self.capture_channels = spec.channels as usize;
                 SdlCaptureCallback {
@@ -244,7 +258,8 @@ impl SdlAudioBackend {
     /// 发送音频帧到输出设备
     pub fn send_frame(&self, frame: &[i16; FRAME_SAMPLES]) -> Result<(), AudioError> {
         if let Some(tx) = &self.output_tx {
-            tx.try_send(*frame).map_err(|_| AudioError::DeviceNotAvailable("Output buffer full".into()))?;
+            tx.try_send(*frame)
+                .map_err(|_| AudioError::DeviceNotAvailable("Output buffer full".into()))?;
         }
         Ok(())
     }
@@ -300,11 +315,19 @@ impl SdlAudioBackend {
         Err(AudioError::NotEnabled)
     }
 
-    pub fn open_output(&mut self, _device_name: Option<&str>, _channels: usize) -> Result<(), AudioError> {
+    pub fn open_output(
+        &mut self,
+        _device_name: Option<&str>,
+        _channels: usize,
+    ) -> Result<(), AudioError> {
         Err(AudioError::NotEnabled)
     }
 
-    pub fn open_capture(&mut self, _device_name: Option<&str>, _channels: usize) -> Result<(), AudioError> {
+    pub fn open_capture(
+        &mut self,
+        _device_name: Option<&str>,
+        _channels: usize,
+    ) -> Result<(), AudioError> {
         Err(AudioError::NotEnabled)
     }
 
@@ -320,15 +343,19 @@ impl SdlAudioBackend {
 
     pub fn close_capture(&mut self) {}
 
-    pub fn output_channels(&self) -> usize { 1 }
+    pub fn output_channels(&self) -> usize {
+        1
+    }
 
-    pub fn capture_channels(&self) -> usize { 1 }
+    pub fn capture_channels(&self) -> usize {
+        1
+    }
 }
 
 #[cfg(not(feature = "sdl-backend"))]
 impl Default for SdlAudioBackend {
     fn default() -> Self {
-        Self::new().unwrap_or_else(|_| Self)
+        Self
     }
 }
 
@@ -343,7 +370,7 @@ mod tests {
             is_capture: false,
             is_default: true,
         };
-        
+
         assert_eq!(info.name, "Default Device");
         assert!(!info.is_capture);
         assert!(info.is_default);
@@ -354,10 +381,10 @@ mod tests {
     fn test_enumerate_devices() {
         let sdl = sdl2::init().unwrap();
         let backend = SdlAudioBackend::new(&sdl).unwrap();
-        
+
         let output_devices = backend.enumerate_output_devices().unwrap();
         println!("Output devices: {:?}", output_devices);
-        
+
         let capture_devices = backend.enumerate_capture_devices().unwrap();
         println!("Capture devices: {:?}", capture_devices);
     }

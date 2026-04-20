@@ -20,7 +20,7 @@ pub const RNNOISE_FRAME_SAMPLES: usize = 480;
 pub enum RnNoiseError {
     #[error("Invalid frame size: expected {expected}, got {actual}")]
     InvalidFrameSize { expected: usize, actual: usize },
-    
+
     #[error("RNNoise not available (feature not enabled)")]
     NotAvailable,
 }
@@ -54,11 +54,11 @@ impl RnNoiseState {
     }
 
     /// 处理一帧音频
-    /// 
+    ///
     /// # 参数
     /// * `input` - 输入 PCM 样本 (480 samples), i16 格式
     /// * `output` - 输出 PCM 样本 (480 samples), i16 格式
-    /// 
+    ///
     /// # 说明
     /// 根据 nnnoiseless 文档，第一帧输出包含淡入伪影，建议丢弃
     pub fn process_frame(&mut self, input: &[i16], output: &mut [i16]) -> Result<(), RnNoiseError> {
@@ -106,11 +106,11 @@ impl RnNoiseState {
     }
 
     /// 处理多帧音频
-    /// 
+    ///
     /// # 参数
     /// * `samples` - PCM 样本，长度必须是 480 的倍数
     pub fn process(&mut self, samples: &mut [i16]) -> Result<(), RnNoiseError> {
-        if samples.len() % RNNOISE_FRAME_SAMPLES != 0 {
+        if !samples.len().is_multiple_of(RNNOISE_FRAME_SAMPLES) {
             return Err(RnNoiseError::InvalidFrameSize {
                 expected: RNNOISE_FRAME_SAMPLES,
                 actual: samples.len() % RNNOISE_FRAME_SAMPLES,
@@ -127,7 +127,7 @@ impl RnNoiseState {
             let base = f * RNNOISE_FRAME_SAMPLES;
             let input: Vec<i16> = samples[base..base + RNNOISE_FRAME_SAMPLES].to_vec();
             let mut output = [0i16; RNNOISE_FRAME_SAMPLES];
-            
+
             self.process_frame(&input, &mut output)?;
             samples[base..base + RNNOISE_FRAME_SAMPLES].copy_from_slice(&output);
         }
@@ -240,10 +240,10 @@ mod tests {
     #[test]
     fn test_rnnoise_enable_disable() {
         let mut state = RnNoiseState::new();
-        
+
         state.set_enabled(true);
         assert!(state.is_enabled());
-        
+
         state.set_enabled(false);
         assert!(!state.is_enabled());
     }
@@ -251,13 +251,13 @@ mod tests {
     #[test]
     fn test_rnnoise_strength() {
         let mut state = RnNoiseState::new();
-        
+
         state.set_strength(0.5);
         assert!((state.strength() - 0.5).abs() < 0.001);
-        
+
         state.set_strength(2.0);
         assert!((state.strength() - 1.0).abs() < 0.001);
-        
+
         state.set_strength(-1.0);
         assert!((state.strength() - 0.0).abs() < 0.001);
     }
@@ -266,10 +266,10 @@ mod tests {
     fn test_rnnoise_process_frame_disabled() {
         let mut state = RnNoiseState::new();
         state.set_enabled(false);
-        
+
         let input = [1000i16; RNNOISE_FRAME_SAMPLES];
         let mut output = [0i16; RNNOISE_FRAME_SAMPLES];
-        
+
         state.process_frame(&input, &mut output).unwrap();
         assert_eq!(output, input);
     }
@@ -278,10 +278,10 @@ mod tests {
     fn test_rnnoise_process_frame_invalid_size() {
         let mut state = RnNoiseState::new();
         state.set_enabled(true);
-        
+
         let input = [0i16; 100];
         let mut output = [0i16; 100];
-        
+
         let result = state.process_frame(&input, &mut output);
         assert!(result.is_err());
     }
@@ -291,14 +291,14 @@ mod tests {
     fn test_rnnoise_process_frame_enabled() {
         let mut state = RnNoiseState::new();
         state.set_enabled(true);
-        
+
         // 生成静音信号
         let input = [0i16; RNNOISE_FRAME_SAMPLES];
         let mut output = [0i16; RNNOISE_FRAME_SAMPLES];
-        
+
         // 第一帧会被丢弃（淡入伪影）
         state.process_frame(&input, &mut output).unwrap();
-        
+
         // 第二帧才是真正的降噪输出
         state.process_frame(&input, &mut output).unwrap();
         println!("Output for silence: {:?}", &output[..10]);
@@ -309,7 +309,7 @@ mod tests {
     fn test_rnnoise_process_sine_wave() {
         let mut state = RnNoiseState::new();
         state.set_enabled(true);
-        
+
         // 生成 440Hz 正弦波 (48kHz 采样率)
         let input: Vec<i16> = (0..RNNOISE_FRAME_SAMPLES)
             .map(|i| {
@@ -317,13 +317,13 @@ mod tests {
                 (phase.sin() * 16000.0) as i16
             })
             .collect();
-        
+
         let mut output = [0i16; RNNOISE_FRAME_SAMPLES];
-        
+
         // 处理两帧（第一帧会被丢弃）
         state.process_frame(&input, &mut output).unwrap();
         state.process_frame(&input, &mut output).unwrap();
-        
+
         println!("Input first 10: {:?}", &input[..10]);
         println!("Output first 10: {:?}", &output[..10]);
     }

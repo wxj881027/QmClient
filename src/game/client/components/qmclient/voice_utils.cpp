@@ -2,6 +2,7 @@
 
 #include <base/system.h>
 #include <base/str.h>
+#include <engine/shared/protocol.h>
 
 #include <algorithm>
 #include <cmath>
@@ -109,7 +110,6 @@ bool VoiceListMatch(const char *pList, const char *pName)
 		if(Len <= 0)
 			continue;
 
-		constexpr int MAX_NAME_LENGTH = 16;
 		char aToken[MAX_NAME_LENGTH];
 		int CopyLen = Len < MAX_NAME_LENGTH - 1 ? Len : MAX_NAME_LENGTH - 1;
 		for(int i = 0; i < CopyLen; i++)
@@ -169,7 +169,6 @@ bool VoiceNameVolume(const char *pList, const char *pName, int &OutPercent)
 		if(NameLen <= 0 || ValueLen <= 0)
 			continue;
 
-		constexpr int MAX_NAME_LENGTH = 16;
 		char aToken[MAX_NAME_LENGTH];
 		int CopyLen = NameLen < MAX_NAME_LENGTH - 1 ? NameLen : MAX_NAME_LENGTH - 1;
 		for(int i = 0; i < CopyLen; i++)
