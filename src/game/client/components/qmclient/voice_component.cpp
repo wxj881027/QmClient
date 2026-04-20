@@ -20,40 +20,40 @@ void CVoiceComponent::ConVoiceListDevices(IConsole::IResult *pResult, void *pUse
 void CVoiceComponent::ConVoiceSetInputDevice(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pUserData;
-	str_copy(g_Config.m_RiVoiceInputDevice, pResult->GetString(0), sizeof(g_Config.m_RiVoiceInputDevice));
+	str_copy(g_Config.m_QmVoiceInputDevice, pResult->GetString(0), sizeof(g_Config.m_QmVoiceInputDevice));
 }
 
 void CVoiceComponent::ConVoiceSetOutputDevice(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pUserData;
-	str_copy(g_Config.m_RiVoiceOutputDevice, pResult->GetString(0), sizeof(g_Config.m_RiVoiceOutputDevice));
+	str_copy(g_Config.m_QmVoiceOutputDevice, pResult->GetString(0), sizeof(g_Config.m_QmVoiceOutputDevice));
 }
 
 void CVoiceComponent::ConVoiceClearInputDevice(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pResult;
 	(void)pUserData;
-	g_Config.m_RiVoiceInputDevice[0] = '\0';
+	g_Config.m_QmVoiceInputDevice[0] = '\0';
 }
 
 void CVoiceComponent::ConVoiceClearOutputDevice(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pResult;
 	(void)pUserData;
-	g_Config.m_RiVoiceOutputDevice[0] = '\0';
+	g_Config.m_QmVoiceOutputDevice[0] = '\0';
 }
 
 void CVoiceComponent::ConVoiceToggleMicMute(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pResult;
 	(void)pUserData;
-	g_Config.m_RiVoiceMicMute = g_Config.m_RiVoiceMicMute ? 0 : 1;
+	g_Config.m_QmVoiceMicMute = g_Config.m_QmVoiceMicMute ? 0 : 1;
 }
 
 void CVoiceComponent::ConVoiceSetMicMute(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pUserData;
-	g_Config.m_RiVoiceMicMute = pResult->GetInteger(0) != 0 ? 1 : 0;
+	g_Config.m_QmVoiceMicMute = pResult->GetInteger(0) != 0 ? 1 : 0;
 }
 
 void CVoiceComponent::OnInit()
@@ -74,7 +74,6 @@ void CVoiceComponent::OnRender()
 void CVoiceComponent::OnConsoleInit()
 {
 	Console()->Register("+qm_voice_ptt", "", CFGFLAG_CLIENT, ConVoicePtt, this, "Push-to-talk for voice chat");
-
 	Console()->Register("qm_voice_list_devices", "", CFGFLAG_CLIENT, ConVoiceListDevices, this, "List available voice devices");
 	Console()->Register("qm_voice_set_input_device", "s[name]", CFGFLAG_CLIENT, ConVoiceSetInputDevice, this, "Set voice input device");
 	Console()->Register("qm_voice_set_output_device", "s[name]", CFGFLAG_CLIENT, ConVoiceSetOutputDevice, this, "Set voice output device");

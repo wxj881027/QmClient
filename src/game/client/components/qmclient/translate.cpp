@@ -26,7 +26,7 @@ constexpr size_t TC3_HMAC_BLOCK_SIZE = 64;
 constexpr const char *TENCENTCLOUD_TMT_ACTION = "TextTranslate";
 constexpr const char *TENCENTCLOUD_TMT_VERSION = "2018-03-21";
 constexpr const char *TENCENTCLOUD_TMT_SERVICE = "tmt";
-constexpr const char *TENCENTCLOUD_TMT_DEFAULT_ENDPOINT = "tmt.tencentcloudapi.com";
+constexpr const char *TENCENTCLOUD_TMT_DEFAULT_ENDPOINT = "https://tmt.tencentcloudapi.com/";
 constexpr const char *TENCENTCLOUD_SECRET_ID_FALLBACK = "";
 constexpr const char *TENCENTCLOUD_SECRET_KEY_FALLBACK = "";
 
@@ -185,12 +185,8 @@ const char *GetTencentCloudSecretId()
 {
 	if(g_Config.m_TcTranslateSecretId[0] != '\0')
 		return g_Config.m_TcTranslateSecretId;
-	const char *pSecretId = getenv("TENCENTCLOUD_SECRET_ID");
-	if(pSecretId != nullptr && pSecretId[0] != '\0')
-		return pSecretId;
-	pSecretId = getenv("TC_SECRET_ID");
-	if(pSecretId != nullptr && pSecretId[0] != '\0')
-		return pSecretId;
+	if(const char *pEnvSecretId = std::getenv("TENCENTCLOUD_SECRET_ID"))
+		return pEnvSecretId;
 	return TENCENTCLOUD_SECRET_ID_FALLBACK;
 }
 
@@ -198,12 +194,8 @@ const char *GetTencentCloudSecretKey()
 {
 	if(g_Config.m_TcTranslateSecretKey[0] != '\0')
 		return g_Config.m_TcTranslateSecretKey;
-	const char *pSecretKey = getenv("TENCENTCLOUD_SECRET_KEY");
-	if(pSecretKey != nullptr && pSecretKey[0] != '\0')
-		return pSecretKey;
-	pSecretKey = getenv("TC_SECRET_KEY");
-	if(pSecretKey != nullptr && pSecretKey[0] != '\0')
-		return pSecretKey;
+	if(const char *pEnvSecretKey = std::getenv("TENCENTCLOUD_SECRET_KEY"))
+		return pEnvSecretKey;
 	return TENCENTCLOUD_SECRET_KEY_FALLBACK;
 }
 
@@ -565,7 +557,7 @@ public:
 		const char *pSecretKey = GetTencentCloudSecretKey();
 		if(!pSecretId || !pSecretId[0] || !pSecretKey || !pSecretKey[0])
 		{
-			SetInitError("Missing TencentCloud credentials: set TENCENTCLOUD_SECRET_ID/TENCENTCLOUD_SECRET_KEY or tc_translate_secret_id/tc_translate_secret_key");
+			SetInitError("Missing TencentCloud credentials: configure SecretId/SecretKey or set TENCENTCLOUD_SECRET_ID/TENCENTCLOUD_SECRET_KEY");
 			return;
 		}
 
