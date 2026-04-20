@@ -3906,8 +3906,8 @@ Three-tile jump right
 Qm mini features
 == 梦的小功能
 
-Qimeng's assorted daily-use tools
-== 栖梦出品,必属精品
+QmClient's assorted daily-use tools
+== QmClient 的日常实用小功能
 
 Local particles
 == 本地粒子
@@ -3920,15 +3920,6 @@ Show Qm badge
 
 Show scoreboard points
 == 显示计分板查分
-
-Chat box animation
-== 聊天框动画
-
-Emote animation
-== 表情动画
-
-Scoreboard animation
-== 计分板动画
 
 Enable repeat feature
 == 启用复读功能
@@ -3950,6 +3941,21 @@ Weapon trajectory guide
 
 Position jump hint
 == 位置跳跃提示
+
+Combo popups
+== 连击弹字
+
+Amazing!
+== 太棒了！
+
+Fantastic!
+== 太精彩了！
+
+Unbelievable!
+== 难以置信！
+
+Unstoppable!
+== 势不可挡！
 
 Coordinates
 == 显示坐标
@@ -4991,7 +4997,7 @@ Current aspect ratio preset applies to the entire client view
 == 当前纵横比预设会作用于整个客户端画面
 
 QmClient
-== 栖梦
+== QmClient
 
 All
 == 全体
@@ -6071,7 +6077,7 @@ Only modified
 == 仅显示已修改
 
 QmClient
-== 栖梦
+== QmClient
 
 Red
 == 红色
@@ -6215,7 +6221,7 @@ Current aspect ratio preset applies to the entire client view
 == 当前纵横比预设会作用于整个客户端画面
 
 QmClient
-== 栖梦
+== QmClient
 
 Current: Ranks
 == 当前: 查分

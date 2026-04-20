@@ -2124,7 +2124,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		s_apTabs[SETTINGS_DDNET] = Localize("DDNet");
 		s_apTabs[SETTINGS_ASSETS] = Localize("Assets");
 		s_apTabs[SETTINGS_TCLIENT] = Localize("TClient");
-		s_apTabs[SETTINGS_QIMENG] = Localize("QmClient");
+		s_apTabs[SETTINGS_QMCLIENT] = Localize("QmClient");
 		s_apTabs[SETTINGS_PROFILES] = Localize("Profiles");
 		s_apTabs[SETTINGS_CONFIGS] = Localize("Configs");
 	}
@@ -2222,10 +2222,10 @@ void CMenus::RenderSettings(CUIRect MainView)
 		GameClient()->m_MenuBackground.ChangePosition(13);
 		RenderSettingsTClient(ContentView);
 	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_QIMENG)
+	else if(g_Config.m_UiSettingsPage == SETTINGS_QMCLIENT)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(15);
-		RenderSettingsQiMeng(ContentView);
+		RenderSettingsQmClient(ContentView);
 	}
 	else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
 	{

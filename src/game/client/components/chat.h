@@ -31,14 +31,8 @@ class CChat : public CComponent
 	static constexpr float CHAT_HEIGHT_MIN = 50.0f;
 	static constexpr float CHAT_FONTSIZE_WIDTH_RATIO = 2.5f;
 
-	// 动画常量
-	static constexpr float CHAT_ANIM_FADE_IN_DURATION = 0.3f;   // 淡入持续时间（秒）
-	static constexpr float CHAT_ANIM_FADE_OUT_DURATION = 0.5f;  // 淡出持续时间（秒）
-	static constexpr float CHAT_ANIM_FADE_OUT_START = 14.0f;    // 何时开始淡出（秒）
-	static constexpr float CHAT_ANIM_SLIDE_OFFSET = 25.0f;      // 普通消息滑入偏移量（像素）
-	static constexpr float CHAT_ANIM_HIGHLIGHT_SLIDE = 50.0f;   // 高亮/私信消息滑入偏移量
-	static constexpr float CHAT_ANIM_SLIDE_OUT_OFFSET = 60.0f;  // 淡出时向左滑出的偏移量
-	static constexpr float CHAT_ANIM_CUTOFF_DURATION = 0.3f;    // 被挤出动画平滑时间（秒）
+	static constexpr float CHAT_ANIM_SLIDE_OUT_OFFSET = 60.0f;    // 被挤出可见区域时的水平偏移量
+	static constexpr float CHAT_ANIM_CUTOFF_DURATION = 0.3f;      // 被挤出动画平滑时间（秒）
 	static constexpr float CHAT_VISIBLE_SECONDS_NO_FOCUS = 16.0f; // 聊天折叠时保留消息时长（秒）
 
 	enum
@@ -164,6 +158,8 @@ class CChat : public CComponent
 	bool m_EditingNewLine;
 	char m_aSavedInputText[MAX_LINE_LENGTH];
 	bool m_SavedInputPending;
+	std::optional<vec2> m_LastMousePos;
+	bool m_MouseUnlocked = false;
 
 	bool m_ServerSupportsCommandInfo;
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
@@ -178,15 +174,12 @@ class CChat : public CComponent
 	static void ConchainChatWidth(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	bool LineShouldHighlight(const char *pLine, const char *pName);
+	void LockMouse();
+	void SetUiMousePos(vec2 Pos);
 	void StoreSave(const char *pText);
 	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
 
-	// 动画辅助函数
-	static float EaseOutQuad(float t);
 	static float EaseInQuad(float t);
-	static float EaseOutBack(float t);
-	float CalculateAnimationAlpha(float MessageAge, bool ShowChat) const;
-	float CalculateAnimationOffsetX(float MessageAge, bool Emphasized, bool ShowChat) const;
 	static float CalculateCutOffAlpha(float CutOffT);
 	static float CalculateCutOffOffsetX(float CutOffT);
 
@@ -210,6 +203,7 @@ public:
 	void RegisterCommand(const char *pName, const char *pParams, const char *pHelpText);
 	void UnregisterCommand(const char *pName);
 	void Echo(const char *pString);
+	void ToggleMouseUnlocked();
 
 	void OnWindowResize() override;
 	void OnConsoleInit() override;
@@ -219,6 +213,7 @@ public:
 	void Reset();
 	void OnRelease() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
+	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 	bool OnInput(const IInput::CEvent &Event) override;
 	void OnInit() override;
 

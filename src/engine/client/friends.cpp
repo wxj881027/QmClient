@@ -196,17 +196,24 @@ const char *CFriends::GetFriendCategory(const char *pName, const char *pClan) co
 	const unsigned ClanHash = str_quickhash(pClan);
 	for(int i = 0; i < m_NumFriends; ++i)
 	{
-		if((g_Config.m_ClFriendsIgnoreClan && m_aFriends[i].m_aName[0]) || (m_aFriends[i].m_ClanHash == ClanHash && !str_comp(m_aFriends[i].m_aClan, pClan)))
-		{
-			if(m_aFriends[i].m_aName[0] == 0)
-				return IFriends::CLAN_MEMBERS_CATEGORY;
-			else if(m_aFriends[i].m_NameHash == NameHash && !str_comp(m_aFriends[i].m_aName, pName))
-			{
-				const char *pCategory = m_aFriends[i].m_aCategory[0] != '\0' ? m_aFriends[i].m_aCategory : DefaultCategory();
-				const int CategoryIndex = FindCategory(pCategory);
-				return CategoryIndex >= 0 ? GetCategory(CategoryIndex) : DefaultCategory();
-			}
-		}
+		if(m_aFriends[i].m_aName[0] == 0)
+			continue;
+		if(m_aFriends[i].m_NameHash != NameHash || str_comp(m_aFriends[i].m_aName, pName) != 0)
+			continue;
+		if(!g_Config.m_ClFriendsIgnoreClan && (m_aFriends[i].m_ClanHash != ClanHash || str_comp(m_aFriends[i].m_aClan, pClan) != 0))
+			continue;
+
+		const char *pCategory = m_aFriends[i].m_aCategory[0] != '\0' ? m_aFriends[i].m_aCategory : DefaultCategory();
+		const int CategoryIndex = FindCategory(pCategory);
+		return CategoryIndex >= 0 ? GetCategory(CategoryIndex) : DefaultCategory();
+	}
+
+	for(int i = 0; i < m_NumFriends; ++i)
+	{
+		if(m_aFriends[i].m_aName[0] != 0)
+			continue;
+		if(m_aFriends[i].m_ClanHash == ClanHash && !str_comp(m_aFriends[i].m_aClan, pClan))
+			return IFriends::CLAN_MEMBERS_CATEGORY;
 	}
 	return IFriends::OFFLINE_CATEGORY;
 }

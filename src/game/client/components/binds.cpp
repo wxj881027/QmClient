@@ -112,6 +112,19 @@ static void ForEachTopLevelBindCommand(const char *pCommand, F &&Fn)
 	FlushCommand();
 }
 
+static bool BindContainsCommand(const char *pBind, const char *pCommand)
+{
+	if(!pBind || !pCommand || pCommand[0] == '\0')
+		return false;
+
+	bool Found = false;
+	ForEachTopLevelBindCommand(pBind, [&](const char *pNormalizedCommand) {
+		if(!Found && str_comp_nocase(pNormalizedCommand, pCommand) == 0)
+			Found = true;
+	});
+	return Found;
+}
+
 static bool IsDeepflyFireCommand(const char *pCommand)
 {
 	return str_comp_nocase(pCommand, "+fire") == 0;
@@ -192,6 +205,9 @@ bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 	{
 		return m_pBinds->OnInput(Event);
 	}
+
+	if(GameClient()->m_Chat.IsActive() && m_pBinds->HasChatToggleCursorBind(Event))
+		return m_pBinds->OnInput(Event);
 
 	return false;
 }
@@ -278,6 +294,20 @@ int CBinds::GetModifierMaskOfKey(int Key)
 	default:
 		return KeyModifier::NONE;
 	}
+}
+
+bool CBinds::HasChatToggleCursorBind(const IInput::CEvent &Event) const
+{
+	const int KeyModifierMask = GetModifierMaskOfKey(Event.m_Key);
+	const int ModifierMask = GetModifierMask(Input()) & ~KeyModifierMask;
+
+	if(BindContainsCommand(m_aapKeyBindings[ModifierMask][Event.m_Key], "toggle_scoreboard_cursor"))
+		return true;
+
+	return m_aapKeyBindings[KeyModifier::NONE][Event.m_Key] &&
+		ModifierMask != ((1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)) &&
+		ModifierMask != ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)) &&
+		BindContainsCommand(m_aapKeyBindings[KeyModifier::NONE][Event.m_Key], "toggle_scoreboard_cursor");
 }
 
 bool CBinds::OnInput(const IInput::CEvent &Event)
