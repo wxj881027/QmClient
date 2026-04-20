@@ -392,7 +392,12 @@ mod tests {
 
         // 验证：消费数应该不超过推送数
         let total = total_pushed.load(Ordering::Relaxed);
-        assert!(consumed <= total, "Consumed ({}) should not exceed pushed ({})", consumed, total);
+        assert!(
+            consumed <= total,
+            "Consumed ({}) should not exceed pushed ({})",
+            consumed,
+            total
+        );
 
         // 验证：消费数 + 队列长度 + 溢出数 = 推送总数
         let remaining = queue.len();

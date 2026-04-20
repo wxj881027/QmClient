@@ -335,7 +335,10 @@ impl AcousticEchoCanceller {
     /// 生成舒适噪声
     fn generate_comfort_noise(&mut self) -> f32 {
         // 简单的伪随机噪声生成器
-        self.comfort_noise_state = self.comfort_noise_state.wrapping_mul(1664525).wrapping_add(1013904223);
+        self.comfort_noise_state = self
+            .comfort_noise_state
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
         let random = (self.comfort_noise_state as f32 / u32::MAX as f32) - 0.5;
 
         // 根据近端信号能量调整噪声水平
@@ -486,8 +489,7 @@ mod tests {
         aec.process_frame(&near_signal, &far_signal, &mut output);
         // 应该检测到双端通话或近端单端通话
         assert!(
-            aec.dtd_state() == DtdState::DoubleTalk
-                || aec.dtd_state() == DtdState::SingleTalkNear
+            aec.dtd_state() == DtdState::DoubleTalk || aec.dtd_state() == DtdState::SingleTalkNear
         );
     }
 

@@ -77,9 +77,17 @@ pub const SIZE_POS_X: usize = 4;
 pub const SIZE_POS_Y: usize = 4;
 
 /// 头部大小 (Magic + Version + Type + PayloadSize + ContextHash + TokenHash + Flags + SenderId + Sequence + PosX + PosY)
-pub const VOICE_HEADER_SIZE: usize = SIZE_MAGIC + SIZE_VERSION + SIZE_TYPE + SIZE_PAYLOAD_SIZE
-    + SIZE_CONTEXT_HASH + SIZE_TOKEN_HASH + SIZE_FLAGS + SIZE_SENDER_ID + SIZE_SEQUENCE
-    + SIZE_POS_X + SIZE_POS_Y;
+pub const VOICE_HEADER_SIZE: usize = SIZE_MAGIC
+    + SIZE_VERSION
+    + SIZE_TYPE
+    + SIZE_PAYLOAD_SIZE
+    + SIZE_CONTEXT_HASH
+    + SIZE_TOKEN_HASH
+    + SIZE_FLAGS
+    + SIZE_SENDER_ID
+    + SIZE_SEQUENCE
+    + SIZE_POS_X
+    + SIZE_POS_Y;
 
 // 编译期验证头部大小
 const _: () = assert!(
@@ -372,10 +380,8 @@ impl VoicePacket {
             .copy_from_slice(&self.sender_id.to_le_bytes());
         buf[OFFSET_SEQUENCE..OFFSET_SEQUENCE + SIZE_SEQUENCE]
             .copy_from_slice(&self.sequence.to_le_bytes());
-        buf[OFFSET_POS_X..OFFSET_POS_X + SIZE_POS_X]
-            .copy_from_slice(&self.pos_x.to_le_bytes());
-        buf[OFFSET_POS_Y..OFFSET_POS_Y + SIZE_POS_Y]
-            .copy_from_slice(&self.pos_y.to_le_bytes());
+        buf[OFFSET_POS_X..OFFSET_POS_X + SIZE_POS_X].copy_from_slice(&self.pos_x.to_le_bytes());
+        buf[OFFSET_POS_Y..OFFSET_POS_Y + SIZE_POS_Y].copy_from_slice(&self.pos_y.to_le_bytes());
 
         // 写入 payload
         if !self.opus_payload.is_empty() {

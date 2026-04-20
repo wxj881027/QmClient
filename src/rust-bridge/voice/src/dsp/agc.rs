@@ -135,15 +135,15 @@ pub struct AgcConfig {
 impl Default for AgcConfig {
     fn default() -> Self {
         Self {
-            target_level: 2000,       // 约 -24dBFS
-            max_gain_db: 30.0,        // +30dB
-            min_gain_db: -10.0,       // -10dB
-            attack_ms: 50.0,          // 50ms 攻击时间
-            release_ms: 200.0,        // 200ms 释放时间
-            enable_limiter: true,     // 启用防削波
-            limiter_threshold: 0.95,  // 95% 满幅度
+            target_level: 2000,          // 约 -24dBFS
+            max_gain_db: 30.0,           // +30dB
+            min_gain_db: -10.0,          // -10dB
+            attack_ms: 50.0,             // 50ms 攻击时间
+            release_ms: 200.0,           // 200ms 释放时间
+            enable_limiter: true,        // 启用防削波
+            limiter_threshold: 0.95,     // 95% 满幅度
             level_estimator_window: 480, // 10ms @ 48kHz
-            use_vad: true,            // 使用 VAD 辅助
+            use_vad: true,               // 使用 VAD 辅助
         }
     }
 }
@@ -198,11 +198,8 @@ impl AutomaticGainController {
     /// 使用自定义配置创建 AGC
     pub fn with_config(config: AgcConfig) -> Self {
         let sample_rate = 48000u32;
-        let (attack_coeff, release_coeff) = Self::calculate_time_constants(
-            config.attack_ms,
-            config.release_ms,
-            sample_rate,
-        );
+        let (attack_coeff, release_coeff) =
+            Self::calculate_time_constants(config.attack_ms, config.release_ms, sample_rate);
 
         Self {
             config,
@@ -269,10 +266,7 @@ impl AutomaticGainController {
 
     /// 计算帧音量 (RMS)
     fn calculate_frame_level(&self, samples: &[i16]) -> f32 {
-        let sum_squares: f64 = samples
-            .iter()
-            .map(|&s| (s as f64).powi(2))
-            .sum();
+        let sum_squares: f64 = samples.iter().map(|&s| (s as f64).powi(2)).sum();
 
         ((sum_squares / samples.len() as f64).sqrt()) as f32
     }
@@ -307,10 +301,8 @@ impl AutomaticGainController {
 
         // 转换为 dB 进行限制
         let desired_gain_db = 20.0 * desired_gain.log10();
-        let clamped_gain_db = desired_gain_db.clamp(
-            self.config.min_gain_db,
-            self.config.max_gain_db,
-        );
+        let clamped_gain_db =
+            desired_gain_db.clamp(self.config.min_gain_db, self.config.max_gain_db);
 
         // 转回线性增益
         self.target_gain = 10.0f32.powf(clamped_gain_db / 20.0);

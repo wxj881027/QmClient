@@ -330,8 +330,7 @@ mod tests {
             let encoded_len = encoder.encode(pcm, &mut encoded)?;
 
             let mut decoded = vec![0i16; FRAME_SAMPLES];
-            let samples = decoder
-                .decode(&encoded[..encoded_len], &mut decoded, false)?;
+            let samples = decoder.decode(&encoded[..encoded_len], &mut decoded, false)?;
             assert_eq!(samples, FRAME_SAMPLES);
             all_decoded.extend_from_slice(&decoded[..samples]);
         }

@@ -5,8 +5,8 @@
 
 pub mod context;
 
-pub use context::{EncoderParams, PlaybackBuffer, WorkerContext, WorkerStats};
 pub use crate::audio::{CaptureFrame, CaptureQueue};
+pub use context::{EncoderParams, PlaybackBuffer, WorkerContext, WorkerStats};
 
 use crossbeam::channel::{bounded, Receiver, Sender, TryRecvError};
 use parking_lot::Mutex;
@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 
 use crate::network::protocol::{PacketType, VoicePacket, VOICE_MAX_PACKET};
 use crate::network::BandwidthEstimator;
-use crate::{monotonic_micros, PlayerSnapshot, VoiceConfig, VOICE_FRAME_SAMPLES, MAX_CLIENTS};
+use crate::{monotonic_micros, PlayerSnapshot, VoiceConfig, MAX_CLIENTS, VOICE_FRAME_SAMPLES};
 
 // 线程本地编码缓冲区，用于重用内存分配
 thread_local! {
@@ -271,7 +271,7 @@ fn process_commands(cmd_rx: &Receiver<WorkerCommand>, ctx: &WorkerContext) {
 fn process_incoming(ctx: &WorkerContext) {
     // 获取配置（用于 Ping/Pong 处理）
     let config = ctx.get_config();
-    
+
     // 非阻塞接收所有可用数据包
     loop {
         match ctx.receive_packet() {
@@ -289,11 +289,14 @@ fn process_incoming(ctx: &WorkerContext) {
                                     let peer = &mut peers[client_id];
 
                                     // 查找空闲的抖动包槽位
-                                    if let Some(slot) = peer.jitter_packets.iter_mut().find(|p| !p.valid) {
+                                    if let Some(slot) =
+                                        peer.jitter_packets.iter_mut().find(|p| !p.valid)
+                                    {
                                         slot.valid = true;
                                         slot.seq = packet.sequence;
                                         slot.size = packet.opus_payload.len().min(slot.data.len());
-                                        slot.data[..slot.size].copy_from_slice(&packet.opus_payload[..slot.size]);
+                                        slot.data[..slot.size]
+                                            .copy_from_slice(&packet.opus_payload[..slot.size]);
                                         peer.queued_packets += 1;
                                         peer.last_recv_time = Some(Instant::now());
                                     }
@@ -301,15 +304,18 @@ fn process_incoming(ctx: &WorkerContext) {
                             }
                             PacketType::Ping => {
                                 // Ping 包 - 发送 Pong 回复
-                                log::debug!("Received Ping from {}, sending Pong", packet.sender_id);
-                                
+                                log::debug!(
+                                    "Received Ping from {}, sending Pong",
+                                    packet.sender_id
+                                );
+
                                 let pong_packet = VoicePacket::new_pong(
                                     ctx.local_client_id.load(Ordering::SeqCst) as u16,
                                     packet.sequence,
                                     config.context_hash,
                                     config.token_hash,
                                 );
-                                
+
                                 let mut buf = [0u8; VOICE_MAX_PACKET];
                                 let len = pong_packet.serialize(&mut buf);
                                 if len > 0 {
@@ -323,14 +329,14 @@ fn process_incoming(ctx: &WorkerContext) {
                             PacketType::Pong => {
                                 // Pong 包 - 计算 RTT
                                 log::debug!("Received Pong from {}", packet.sender_id);
-                                
+
                                 // 计算 RTT
                                 let last_ping_time = ctx.last_ping_sent_time.load(Ordering::SeqCst);
                                 if last_ping_time > 0 {
                                     let now = monotonic_micros();
                                     let rtt_ms = ((now - last_ping_time) / 1000) as i32;
                                     ctx.set_ping_ms(rtt_ms);
-                                    
+
                                     log::debug!("RTT calculated: {} ms", rtt_ms);
                                 }
                             }
@@ -615,10 +621,7 @@ fn update_encoder_params(ctx: &WorkerContext) {
 }
 
 /// 更新编码器参数（使用 GCC 风格带宽估计器）
-fn update_encoder_params_with_estimator(
-    ctx: &WorkerContext,
-    estimator: &mut BandwidthEstimator,
-) {
+fn update_encoder_params_with_estimator(ctx: &WorkerContext, estimator: &mut BandwidthEstimator) {
     let mut encoder_guard = ctx.encoder.lock();
     let encoder = match encoder_guard.as_mut() {
         Some(e) => e,

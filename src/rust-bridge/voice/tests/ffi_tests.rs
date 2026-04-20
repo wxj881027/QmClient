@@ -16,11 +16,11 @@ use std::ffi::CString;
 // 直接使用 ddnet_voice crate 导出的 FFI 函数
 // 这些函数在 lib.rs 中通过 #[no_mangle] pub extern "C" 导出
 use ddnet_voice::{
-    voice_decode_jitter, voice_get_mic_level, voice_get_ping, voice_is_speaking,
-    voice_mix_audio, voice_process_frame, voice_receive_packet, voice_set_config,
-    voice_set_context_hash, voice_set_local_client_id, voice_set_name_lists, voice_set_ptt,
-    voice_set_vad, voice_system_create, voice_system_destroy, voice_system_init,
-    voice_system_shutdown, voice_update_encoder_params, voice_update_players,
+    voice_decode_jitter, voice_get_mic_level, voice_get_ping, voice_is_speaking, voice_mix_audio,
+    voice_process_frame, voice_receive_packet, voice_set_config, voice_set_context_hash,
+    voice_set_local_client_id, voice_set_name_lists, voice_set_ptt, voice_set_vad,
+    voice_system_create, voice_system_destroy, voice_system_init, voice_system_shutdown,
+    voice_update_encoder_params, voice_update_players,
 };
 
 // ============== 辅助函数 ==============
@@ -79,11 +79,17 @@ fn create_default_config() -> VoiceConfigCABI {
 fn test_ffi_lifecycle() {
     // 1. 创建系统
     let handle = voice_system_create();
-    assert_ne!(handle, 0, "voice_system_create should return non-zero handle");
+    assert_ne!(
+        handle, 0,
+        "voice_system_create should return non-zero handle"
+    );
 
     // 2. 初始化
     let init_result = unsafe { voice_system_init(handle) };
-    assert_eq!(init_result, 1, "voice_system_init should return 1 on success");
+    assert_eq!(
+        init_result, 1,
+        "voice_system_init should return 1 on success"
+    );
 
     // 3. 再次初始化（幂等性测试）
     let init_again = unsafe { voice_system_init(handle) };
@@ -267,7 +273,10 @@ fn test_ffi_ptt_control() {
     // PTT 激活后，需要音频帧才能触发 speaking
     // 这里只验证不会崩溃
     let speaking = unsafe { voice_is_speaking(handle) };
-    assert_eq!(speaking, 0, "PTT active but no audio, should not be speaking");
+    assert_eq!(
+        speaking, 0,
+        "PTT active but no audio, should not be speaking"
+    );
 
     // 停止 PTT
     unsafe { voice_set_ptt(handle, 0) };
@@ -316,9 +325,9 @@ fn test_ffi_update_players() {
 
     // 玩家数据格式：[client_id, x, y, team, flags] * count
     let players: [f32; 15] = [
-        0.0, 100.0, 100.0, 1.0, 3.0,  // 玩家 0 (本地): active, spectator
-        1.0, 200.0, 200.0, 1.0, 2.0,  // 玩家 1: active
-        2.0, 300.0, 300.0, 2.0, 2.0,  // 玩家 2: active
+        0.0, 100.0, 100.0, 1.0, 3.0, // 玩家 0 (本地): active, spectator
+        1.0, 200.0, 200.0, 1.0, 2.0, // 玩家 1: active
+        2.0, 300.0, 300.0, 2.0, 2.0, // 玩家 2: active
     ];
 
     unsafe { voice_update_players(handle, players.as_ptr(), 3) };
@@ -372,7 +381,9 @@ fn test_ffi_process_frame() {
     unsafe { voice_set_local_client_id(handle, 0) };
 
     // 创建测试音频帧 (960 samples @ 48kHz = 20ms)
-    let mut pcm: Vec<i16> = (0..960).map(|i| ((i as f32 * 0.1).sin() * 16000.0) as i16).collect();
+    let mut pcm: Vec<i16> = (0..960)
+        .map(|i| ((i as f32 * 0.1).sin() * 16000.0) as i16)
+        .collect();
     let mut output: Vec<u8> = vec![0u8; 1200];
 
     // 激活 PTT
@@ -390,7 +401,10 @@ fn test_ffi_process_frame() {
     };
 
     // 结果应该是编码后的数据长度（可能为 0，因为需要初始化编码器）
-    assert!(result >= 0, "voice_process_frame should return non-negative");
+    assert!(
+        result >= 0,
+        "voice_process_frame should return non-negative"
+    );
 
     unsafe { voice_system_shutdown(handle) };
     unsafe { voice_system_destroy(handle) };
@@ -650,7 +664,9 @@ fn test_ffi_local_loopback_mode() {
     unsafe { voice_set_ptt(handle, 1) };
 
     // 处理帧
-    let mut pcm: Vec<i16> = (0..960).map(|i| ((i as f32 * 0.1).sin() * 16000.0) as i16).collect();
+    let mut pcm: Vec<i16> = (0..960)
+        .map(|i| ((i as f32 * 0.1).sin() * 16000.0) as i16)
+        .collect();
     let mut output: Vec<u8> = vec![0u8; 1200];
 
     let result = unsafe {
@@ -838,7 +854,8 @@ fn test_ffi_full_audio_flow() {
     for frame_idx in 0..5 {
         let mut pcm: Vec<i16> = (0..960)
             .map(|i| {
-                let phase = (i + frame_idx * 960) as f32 * 2.0 * std::f32::consts::PI * 440.0 / 48000.0;
+                let phase =
+                    (i + frame_idx * 960) as f32 * 2.0 * std::f32::consts::PI * 440.0 / 48000.0;
                 (phase.sin() * 16000.0) as i16
             })
             .collect();

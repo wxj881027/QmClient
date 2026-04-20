@@ -364,7 +364,12 @@ impl StatsCollector {
     }
 
     /// 记录音频能量
-    pub fn record_audio_energy(&mut self, signal_energy: f64, noise_energy: f64, is_active_speech: bool) {
+    pub fn record_audio_energy(
+        &mut self,
+        signal_energy: f64,
+        noise_energy: f64,
+        is_active_speech: bool,
+    ) {
         self.signal_energy_sum += signal_energy;
         self.noise_energy_sum += noise_energy;
         self.sample_count += 1;
@@ -375,7 +380,7 @@ impl StatsCollector {
     }
 
     /// 计算 MOS 评分 (基于 E-Model)
-    /// 
+    ///
     /// E-Model 公式: R = Ro - Is - Id - Ie + A
     /// MOS = 1 + 0.035R + 7e-6 * R * (R-60) * (100-R)  (R < 100)
     /// MOS = 4.5  (R >= 100)
@@ -432,8 +437,7 @@ impl StatsCollector {
         } else if r > 100.0 {
             4.5
         } else {
-            let mos = 1.0 + 0.035 * r
-                + 7e-6 * r * (r - 60.0) * (100.0 - r);
+            let mos = 1.0 + 0.035 * r + 7e-6 * r * (r - 60.0) * (100.0 - r);
             mos.clamp(1.0, 4.5)
         }
     }
@@ -570,9 +574,9 @@ impl StatsCollector {
                 avg_packet_size,
                 bandwidth_kbps,
             },
-            codec: CodecMetrics::default(), // 需要外部填充
+            codec: CodecMetrics::default(),         // 需要外部填充
             jitter: JitterBufferMetrics::default(), // 需要外部填充
-            dsp: DspMetrics::default(), // 需要外部填充
+            dsp: DspMetrics::default(),             // 需要外部填充
         }
     }
 
@@ -595,7 +599,11 @@ impl StatsCollector {
 
     /// 获取总计包数
     pub fn total_packets(&self) -> (u64, u64, u64) {
-        (self.total_packets_sent, self.total_packets_received, self.total_packets_lost)
+        (
+            self.total_packets_sent,
+            self.total_packets_received,
+            self.total_packets_lost,
+        )
     }
 }
 
@@ -697,6 +705,9 @@ mod tests {
             collector.record_latency(500.0); // 高延迟
         }
         let poor_report = collector.generate_report();
-        assert!(matches!(poor_report.quality_rating(), QualityRating::Poor | QualityRating::Bad));
+        assert!(matches!(
+            poor_report.quality_rating(),
+            QualityRating::Poor | QualityRating::Bad
+        ));
     }
 }

@@ -252,7 +252,11 @@ impl JitterBuffer {
         self.last_sequence = Some(sequence);
 
         // 检查是否已存在（使用 seq_diff 判断是否为同一序列号）
-        if self.frames.iter().any(|f| seq_diff(f.sequence, sequence) == 0) {
+        if self
+            .frames
+            .iter()
+            .any(|f| seq_diff(f.sequence, sequence) == 0)
+        {
             return; // 重复包，忽略
         }
 
@@ -665,7 +669,11 @@ mod tests {
 
         // 目标帧数应该增加
         let target = buffer.target_frames();
-        assert!(target >= 3, "Target should increase with high jitter, got {}", target);
+        assert!(
+            target >= 3,
+            "Target should increase with high jitter, got {}",
+            target
+        );
     }
 
     #[test]

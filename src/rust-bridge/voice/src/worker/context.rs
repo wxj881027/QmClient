@@ -41,7 +41,7 @@ impl PlaybackBuffer {
     /// 容量会向上取整到最近的 2 的幂次，以支持位运算优化。
     pub fn new(frames: usize) -> Self {
         let min_capacity = frames * 960 * 2; // 立体声
-        // 向上取整到最近的 2 的幂次
+                                             // 向上取整到最近的 2 的幂次
         let capacity = min_capacity.next_power_of_two();
         Self {
             buffer: Mutex::new(vec![0i16; capacity]),
@@ -707,7 +707,8 @@ impl WorkerContext {
                                 frame.left_gain = packet.left_gain;
                                 frame.right_gain = packet.right_gain;
 
-                                peer.frame_tail = (peer.frame_tail + 1) % peer.playback_frames.len();
+                                peer.frame_tail =
+                                    (peer.frame_tail + 1) % peer.playback_frames.len();
                                 peer.frame_count += 1;
                                 peer.next_seq = packet.seq.wrapping_add(1);
                             } else {

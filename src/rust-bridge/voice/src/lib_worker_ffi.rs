@@ -1,15 +1,18 @@
 // ============== Worker 线程 FFI ==============
 
+use parking_lot::Mutex;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::sync::Arc;
-use parking_lot::Mutex;
 
 use crate::audio::CaptureFrame;
 use crate::monotonic_micros;
 use crate::network::protocol::{PacketType, VoicePacket};
 use crate::worker::{WorkerCommand, WorkerContext, WorkerThread};
-use crate::{PlayerSnapshot, VoiceConfig, VoiceConfigCABI, MAX_CLIENTS, VOICE_FRAME_SAMPLES, VOICE_MAX_PACKET};
+use crate::{
+    PlayerSnapshot, VoiceConfig, VoiceConfigCABI, MAX_CLIENTS, VOICE_FRAME_SAMPLES,
+    VOICE_MAX_PACKET,
+};
 
 /// Worker 句柄结构体
 /// 封装 WorkerContext 和 WorkerThread，提供 C ABI 接口
@@ -58,7 +61,7 @@ pub unsafe extern "C" fn voice_worker_destroy(handle: usize) {
             worker.stop();
         }
     } // 锁在这里释放
-    // handle 在这里被 drop，自动释放内存
+      // handle 在这里被 drop，自动释放内存
 }
 
 /// 设置 Worker 配置
@@ -176,7 +179,11 @@ pub unsafe extern "C" fn voice_worker_stop(handle: usize) {
 /// - `handle` 必须是由 `voice_worker_create` 返回的有效句柄
 /// - `pcm` 必须指向至少 `samples` 个有效 i16 样本
 #[no_mangle]
-pub unsafe extern "C" fn voice_worker_submit_capture(handle: usize, pcm: *const i16, samples: usize) {
+pub unsafe extern "C" fn voice_worker_submit_capture(
+    handle: usize,
+    pcm: *const i16,
+    samples: usize,
+) {
     if handle == 0 || pcm.is_null() || samples == 0 {
         return;
     }
@@ -447,7 +454,11 @@ pub unsafe extern "C" fn voice_worker_get_ping(handle: usize) -> i32 {
 /// - `players` 必须指向至少 `count * 5` 个有效 f32 值的数组
 /// - `count` 必须 <= MAX_CLIENTS (64)
 #[no_mangle]
-pub unsafe extern "C" fn voice_worker_update_players(handle: usize, players: *const f32, count: usize) {
+pub unsafe extern "C" fn voice_worker_update_players(
+    handle: usize,
+    players: *const f32,
+    count: usize,
+) {
     if handle == 0 || players.is_null() || count == 0 || count > MAX_CLIENTS {
         return;
     }

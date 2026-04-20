@@ -61,7 +61,11 @@ fn generate_square_wave_signal(samples: usize, frequency: f32, amplitude: i16) -
 }
 
 /// 生成多频率复合信号
-fn generate_multi_frequency_signal(samples: usize, frequencies: &[f32], amplitude: i16) -> Vec<i16> {
+fn generate_multi_frequency_signal(
+    samples: usize,
+    frequencies: &[f32],
+    amplitude: i16,
+) -> Vec<i16> {
     let sample_rate = 48000.0f32;
     let per_freq_amplitude = amplitude as f32 / frequencies.len() as f32;
 
@@ -82,8 +86,12 @@ fn generate_boundary_signal(samples: usize, pattern: &str) -> Vec<i16> {
     match pattern {
         "max" => vec![32767i16; samples],
         "min" => vec![-32767i16; samples], // 使用 -32767 而非 -32768 避免 abs() 溢出
-        "alternating" => (0..samples).map(|i| if i % 2 == 0 { 32767 } else { -32767 }).collect(),
-        "ramp_up" => (0..samples).map(|i| ((i as f32 / samples as f32) * 32767.0) as i16).collect(),
+        "alternating" => (0..samples)
+            .map(|i| if i % 2 == 0 { 32767 } else { -32767 })
+            .collect(),
+        "ramp_up" => (0..samples)
+            .map(|i| ((i as f32 / samples as f32) * 32767.0) as i16)
+            .collect(),
         "ramp_down" => (0..samples)
             .map(|i| ((1.0 - i as f32 / samples as f32) * 32767.0) as i16)
             .collect(),
@@ -463,7 +471,11 @@ fn test_dsp_silence_signal() {
     // 静音信号处理后应仍为静音或接近静音
     let max_abs = signal.iter().map(|&s| s.abs()).max().unwrap_or(0);
     // 由于高通滤波器和舒适噪声，可能有小幅值输出
-    assert!(max_abs < 100, "Silence signal should remain quiet, got max={}", max_abs);
+    assert!(
+        max_abs < 100,
+        "Silence signal should remain quiet, got max={}",
+        max_abs
+    );
 }
 
 /// 测试 DSP 处理白噪声信号的稳定性
@@ -628,7 +640,11 @@ fn test_opus_codec_silence() {
 
     // 解码后的静音应该接近零
     let max_abs = decoded.iter().map(|&s| s.abs()).max().unwrap_or(0);
-    assert!(max_abs < 100, "Decoded silence should be quiet, got max={}", max_abs);
+    assert!(
+        max_abs < 100,
+        "Decoded silence should be quiet, got max={}",
+        max_abs
+    );
 }
 
 /// 测试 Opus 编解码白噪声信号
@@ -717,8 +733,14 @@ fn test_full_pipeline_diverse_signals() {
     let test_signals = vec![
         ("silence", generate_silence_signal(960)),
         ("white_noise", generate_white_noise_signal(960, 16000)),
-        ("square_wave", generate_square_wave_signal(960, 440.0, 16000)),
-        ("multi_freq", generate_multi_frequency_signal(960, &[440.0, 880.0], 16000)),
+        (
+            "square_wave",
+            generate_square_wave_signal(960, 440.0, 16000),
+        ),
+        (
+            "multi_freq",
+            generate_multi_frequency_signal(960, &[440.0, 880.0], 16000),
+        ),
         ("ramp_up", generate_boundary_signal(960, "ramp_up")),
         ("ramp_down", generate_boundary_signal(960, "ramp_down")),
     ];
@@ -769,8 +791,18 @@ fn test_mixer_diverse_signals() {
 
     // 添加多种信号源
     mixer.add_source(AudioSource::new(1, generate_silence_signal(960), 1.0, 0.0));
-    mixer.add_source(AudioSource::new(2, generate_sine_wave_signal(960, 440.0, 5000.0), 0.5, 0.0));
-    mixer.add_source(AudioSource::new(3, generate_white_noise_signal(960, 5000), 0.3, 0.0));
+    mixer.add_source(AudioSource::new(
+        2,
+        generate_sine_wave_signal(960, 440.0, 5000.0),
+        0.5,
+        0.0,
+    ));
+    mixer.add_source(AudioSource::new(
+        3,
+        generate_white_noise_signal(960, 5000),
+        0.3,
+        0.0,
+    ));
 
     let output = mixer.mix(960, 1);
 
@@ -828,12 +860,12 @@ fn test_spatial_audio_diverse_signals() {
 
     // 测试不同位置的空间音频
     let positions = vec![
-        ((0.0, 0.0), (0.0, 0.0)),      // 中心
-        ((0.0, 0.0), (-500.0, 0.0)),   // 左侧
-        ((0.0, 0.0), (500.0, 0.0)),    // 右侧
-        ((0.0, 0.0), (0.0, -500.0)),   // 上方
-        ((0.0, 0.0), (0.0, 500.0)),    // 下方
-        ((0.0, 0.0), (5000.0, 0.0)),   // 超出范围
+        ((0.0, 0.0), (0.0, 0.0)),    // 中心
+        ((0.0, 0.0), (-500.0, 0.0)), // 左侧
+        ((0.0, 0.0), (500.0, 0.0)),  // 右侧
+        ((0.0, 0.0), (0.0, -500.0)), // 上方
+        ((0.0, 0.0), (0.0, 500.0)),  // 下方
+        ((0.0, 0.0), (5000.0, 0.0)), // 超出范围
     ];
 
     for (local_pos, sender_pos) in positions {
@@ -857,30 +889,28 @@ fn test_spatial_audio_diverse_signals() {
 #[test]
 fn test_protocol_diverse_payloads() {
     let test_payloads = vec![
-        vec![],                                    // 空负载
-        vec![0u8; 10],                            // 小负载
-        vec![0xAA; 100],                          // 中等负载
-        vec![0xFF; 500],                          // 大负载
+        vec![],                                  // 空负载
+        vec![0u8; 10],                           // 小负载
+        vec![0xAA; 100],                         // 中等负载
+        vec![0xFF; 500],                         // 大负载
         (0..=255u8).cycle().take(200).collect(), // 模式化负载
     ];
 
     for (i, payload) in test_payloads.iter().enumerate() {
-        let packet = VoicePacket::new_audio(
-            1,
-            i as u16,
-            0x12345678,
-            0,
-            100.0,
-            200.0,
-            payload.clone(),
-        );
+        let packet =
+            VoicePacket::new_audio(1, i as u16, 0x12345678, 0, 100.0, 200.0, payload.clone());
 
         let mut buf = vec![0u8; 1200];
         let len = packet.serialize(&mut buf);
         assert!(len > 0, "Failed to serialize packet {}", i);
 
         let parsed = VoicePacket::parse(&buf[..len]).unwrap();
-        assert_eq!(parsed.opus_payload.len(), payload.len(), "Payload mismatch for packet {}", i);
+        assert_eq!(
+            parsed.opus_payload.len(),
+            payload.len(),
+            "Payload mismatch for packet {}",
+            i
+        );
     }
 }
 

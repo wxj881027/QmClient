@@ -231,8 +231,8 @@ impl BandwidthEstimator {
     /// 报告丢包事件
     pub fn report_packet_loss(&mut self, lost: bool) {
         let loss_value = if lost { 1.0 } else { 0.0 };
-        self.loss_ewma = self.loss_ewma * (1.0 - self.loss_smoothing)
-            + loss_value * self.loss_smoothing;
+        self.loss_ewma =
+            self.loss_ewma * (1.0 - self.loss_smoothing) + loss_value * self.loss_smoothing;
     }
 
     /// 获取当前估计带宽
@@ -440,7 +440,7 @@ mod tests {
         // 模拟正常网络条件
         for i in 0..50 {
             let arrival = i as f32 * 20.0; // 20ms 间隔到达
-            let send = i as f32 * 20.0;    // 20ms 间隔发送
+            let send = i as f32 * 20.0; // 20ms 间隔发送
             estimator.add_delay_sample(arrival, send, 100);
         }
 

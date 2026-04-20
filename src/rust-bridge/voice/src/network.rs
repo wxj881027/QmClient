@@ -34,9 +34,7 @@ pub use server::{
     DEFAULT_PORT,
 };
 
-pub use bandwidth_estimator::{
-    BandwidthEstimator, BandwidthEstimatorConfig, BandwidthUsage,
-};
+pub use bandwidth_estimator::{BandwidthEstimator, BandwidthEstimatorConfig, BandwidthUsage};
 
 pub use reliable::{
     AdaptiveBitrateController, FecConfig, JitterBuffer, JitterPacket, LossDetector,

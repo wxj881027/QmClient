@@ -168,7 +168,11 @@ fn codec_benchmark(c: &mut Criterion) {
     let _ = codec.encode(&samples, &mut enc2).unwrap();
     group.bench_function("decode_fec", |b| {
         let mut output = vec![0i16; 960];
-        b.iter(|| codec.decode_fec(black_box(&enc2), black_box(&mut output)).unwrap())
+        b.iter(|| {
+            codec
+                .decode_fec(black_box(&enc2), black_box(&mut output))
+                .unwrap()
+        })
     });
 
     group.finish();
@@ -304,7 +308,8 @@ fn performance_regression_test(c: &mut Criterion) {
             if avg_us > perf_thresholds::DSP_CHAIN_US as f64 {
                 panic!(
                     "DSP chain performance regression: {:.2}us > {}us threshold",
-                    avg_us, perf_thresholds::DSP_CHAIN_US
+                    avg_us,
+                    perf_thresholds::DSP_CHAIN_US
                 );
             }
             elapsed
@@ -313,8 +318,12 @@ fn performance_regression_test(c: &mut Criterion) {
 
     // AEC 处理性能断言
     let mut aec = AcousticEchoCanceller::new();
-    let near_end: Vec<i16> = (0..960).map(|i| ((i as f32 * 0.1).sin() * 1000.0) as i16).collect();
-    let far_end: Vec<i16> = (0..960).map(|i| ((i as f32 * 0.05).sin() * 800.0) as i16).collect();
+    let near_end: Vec<i16> = (0..960)
+        .map(|i| ((i as f32 * 0.1).sin() * 1000.0) as i16)
+        .collect();
+    let far_end: Vec<i16> = (0..960)
+        .map(|i| ((i as f32 * 0.05).sin() * 800.0) as i16)
+        .collect();
     let mut output = vec![0i16; 960];
 
     group.bench_function("aec_threshold", |b| {
@@ -330,7 +339,8 @@ fn performance_regression_test(c: &mut Criterion) {
             if avg_us > perf_thresholds::AEC_US as f64 {
                 panic!(
                     "AEC performance regression: {:.2}us > {}us threshold",
-                    avg_us, perf_thresholds::AEC_US
+                    avg_us,
+                    perf_thresholds::AEC_US
                 );
             }
             elapsed
@@ -357,7 +367,8 @@ fn performance_regression_test(c: &mut Criterion) {
             if avg_us > perf_thresholds::OPUS_ENCODE_US as f64 {
                 panic!(
                     "Opus encode performance regression: {:.2}us > {}us threshold",
-                    avg_us, perf_thresholds::OPUS_ENCODE_US
+                    avg_us,
+                    perf_thresholds::OPUS_ENCODE_US
                 );
             }
             elapsed
@@ -381,7 +392,8 @@ fn performance_regression_test(c: &mut Criterion) {
             if avg_us > perf_thresholds::OPUS_DECODE_US as f64 {
                 panic!(
                     "Opus decode performance regression: {:.2}us > {}us threshold",
-                    avg_us, perf_thresholds::OPUS_DECODE_US
+                    avg_us,
+                    perf_thresholds::OPUS_DECODE_US
                 );
             }
             elapsed
@@ -407,7 +419,8 @@ fn performance_regression_test(c: &mut Criterion) {
             if avg_us > perf_thresholds::MIXER_US as f64 {
                 panic!(
                     "Mixer performance regression: {:.2}us > {}us threshold",
-                    avg_us, perf_thresholds::MIXER_US
+                    avg_us,
+                    perf_thresholds::MIXER_US
                 );
             }
             elapsed
