@@ -2858,24 +2858,24 @@ void CTClient::ResetQmClientRecognitionTasks()
 
 bool CTClient::NeedsQmClientRecognition() const
 {
-	return g_Config.m_RiVoiceServer[0] != '\0';
+	return g_Config.m_QmVoiceServer[0] != '\0';
 }
 
 bool CTClient::NeedsFastQmClientSync() const
 {
-	return g_Config.m_RiVoiceEnable != 0 || g_Config.m_QmClientShowBadge != 0 || g_Config.m_QmClientMarkTrail != 0;
+	return g_Config.m_QmVoiceEnable != 0 || g_Config.m_QmClientShowBadge != 0 || g_Config.m_QmClientMarkTrail != 0;
 }
 
 bool CTClient::BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t BufSize, const char *pQuery) const
 {
 	if(!pPath || pPath[0] == '\0' || !pBuf || BufSize == 0)
 		return false;
-	if(g_Config.m_RiVoiceServer[0] == '\0')
+	if(g_Config.m_QmVoiceServer[0] == '\0')
 		return false;
 
 	char aHost[128];
 	int Port = 0;
-	if(!ParseQmClientServiceHostPort(g_Config.m_RiVoiceServer, aHost, sizeof(aHost), Port))
+	if(!ParseQmClientServiceHostPort(g_Config.m_QmVoiceServer, aHost, sizeof(aHost), Port))
 		return false;
 
 	const bool NeedsIpv6Brackets = str_find(aHost, ":") != nullptr;

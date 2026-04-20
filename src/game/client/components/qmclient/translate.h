@@ -48,6 +48,8 @@ class CTranslate : public CComponent
 	static void ConTranslateId(IConsole::IResult *pResult, void *pUserData);
 
 public:
+	static constexpr size_t MAX_TRANSLATION_JOBS = 15;
+
 	int Sizeof() const override { return sizeof(*this); }
 
 	void OnConsoleInit() override;

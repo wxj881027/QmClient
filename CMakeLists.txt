@@ -2420,6 +2420,7 @@ if(CLIENT)
     graphics_threaded.cpp
     graphics_threaded.h
     graphics_threaded_sprites.cpp
+    gpu_upload_limiter.h
     input.cpp
     input.h
     keynames.cpp
@@ -2599,6 +2600,7 @@ if(CLIENT)
     components/qmclient/translate.h
     components/qmclient/voice_component.cpp
     components/qmclient/voice_component.h
+    components/qmclient/voice_callback.h
     components/qmclient/voice_core.cpp
     components/qmclient/voice_core.h
     components/qmclient/voice_rust.cpp

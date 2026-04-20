@@ -79,7 +79,7 @@ static constexpr int RNNOISE_FRAME_SAMPLES = 480;
 
 static uint8_t VoiceProtocolVersion(const SRClientVoiceConfigSnapshot &Config)
 {
-	const int ProtocolVersion = Config.m_RiVoiceProtocolVersion > 0 ? Config.m_RiVoiceProtocolVersion : VOICE_VERSION;
+	const int ProtocolVersion = Config.m_QmVoiceProtocolVersion > 0 ? Config.m_QmVoiceProtocolVersion : VOICE_VERSION;
 	return (uint8_t)std::clamp(ProtocolVersion, 1, 255);
 }
 
@@ -108,7 +108,7 @@ static bool VoiceShouldHear(uint32_t SenderGroup, uint32_t ReceiverGroup)
 
 static void ApplyHpfCompressor(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count, float &PrevIn, float &PrevOut, float &Env)
 {
-	if(!Config.m_RiVoiceFilterEnable)
+	if(!Config.m_QmVoiceFilterEnable)
 		return;
 
 	const float CutoffHz = 120.0f;
@@ -116,13 +116,13 @@ static void ApplyHpfCompressor(const SRClientVoiceConfigSnapshot &Config, int16_
 	const float Dt = 1.0f / VOICE_SAMPLE_RATE;
 	const float Alpha = Rc / (Rc + Dt);
 
-	const float Threshold = std::clamp(Config.m_RiVoiceCompThreshold / 100.0f, 0.01f, 1.0f);
-	const float Ratio = std::max(1.0f, Config.m_RiVoiceCompRatio / 10.0f);
-	const float AttackSec = std::max(0.001f, Config.m_RiVoiceCompAttackMs / 1000.0f);
-	const float ReleaseSec = std::max(0.001f, Config.m_RiVoiceCompReleaseMs / 1000.0f);
-	const float MakeupGain = std::max(0.0f, Config.m_RiVoiceCompMakeup / 100.0f);
+	const float Threshold = std::clamp(Config.m_QmVoiceCompThreshold / 100.0f, 0.01f, 1.0f);
+	const float Ratio = std::max(1.0f, Config.m_QmVoiceCompRatio / 10.0f);
+	const float AttackSec = std::max(0.001f, Config.m_QmVoiceCompAttackMs / 1000.0f);
+	const float ReleaseSec = std::max(0.001f, Config.m_QmVoiceCompReleaseMs / 1000.0f);
+	const float MakeupGain = std::max(0.0f, Config.m_QmVoiceCompMakeup / 100.0f);
 	const float NoiseFloor = 0.02f;
-	const float Limiter = std::clamp(Config.m_RiVoiceLimiter / 100.0f, 0.05f, 1.0f);
+	const float Limiter = std::clamp(Config.m_QmVoiceLimiter / 100.0f, 0.05f, 1.0f);
 	const float AttackCoeff = 1.0f - std::exp(-1.0f / (AttackSec * VOICE_SAMPLE_RATE));
 	const float ReleaseCoeff = 1.0f - std::exp(-1.0f / (ReleaseSec * VOICE_SAMPLE_RATE));
 
@@ -153,10 +153,10 @@ static void ApplyHpfCompressor(const SRClientVoiceConfigSnapshot &Config, int16_
 
 static void ApplyNoiseSuppressorSimple(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count, float &NoiseFloor, float &Gate)
 {
-	if(!Config.m_RiVoiceNoiseSuppressEnable)
+	if(!Config.m_QmVoiceNoiseSuppressEnable)
 		return;
 
-	const float Strength = std::clamp(Config.m_RiVoiceNoiseSuppressStrength / 100.0f, 0.0f, 1.0f);
+	const float Strength = std::clamp(Config.m_QmVoiceNoiseSuppressStrength / 100.0f, 0.0f, 1.0f);
 	if(Strength <= 0.0f)
 		return;
 
@@ -218,10 +218,10 @@ static void ApplyNoiseSuppressorSimple(const SRClientVoiceConfigSnapshot &Config
 
 static void ApplyNoiseSuppressor(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count, float &NoiseFloor, float &Gate, DenoiseState *&pState)
 {
-	if(!Config.m_RiVoiceNoiseSuppressEnable)
+	if(!Config.m_QmVoiceNoiseSuppressEnable)
 		return;
 
-	const float Strength = std::clamp(Config.m_RiVoiceNoiseSuppressStrength / 100.0f, 0.0f, 1.0f);
+	const float Strength = std::clamp(Config.m_QmVoiceNoiseSuppressStrength / 100.0f, 0.0f, 1.0f);
 	if(Strength <= 0.0f)
 		return;
 
@@ -327,7 +327,7 @@ void CRClientVoice::SetPttActive(bool Active)
 
 	if(WasActive)
 	{
-		const int DelayMs = std::clamp(g_Config.m_RiVoicePttReleaseDelayMs, 0, 1000);
+		const int DelayMs = std::clamp(g_Config.m_QmVoicePttReleaseDelayMs, 0, 1000);
 		if(DelayMs > 0)
 			m_PttReleaseDeadline.store(time_get() + (int64_t)time_freq() * DelayMs / 1000);
 		else
@@ -384,7 +384,7 @@ bool CRClientVoice::EnsureAudio()
 	WantCapture.samples = VOICE_FRAME_SAMPLES;
 	WantCapture.callback = nullptr;
 
-	const bool WantStereo = g_Config.m_RiVoiceStereo != 0;
+	const bool WantStereo = g_Config.m_QmVoiceStereo != 0;
 	const int DesiredOutputChannels = WantStereo ? 2 : 1;
 
 	SDL_AudioSpec WantOutput = {};
@@ -395,7 +395,7 @@ bool CRClientVoice::EnsureAudio()
 	WantOutput.callback = SDLAudioCallback;
 	WantOutput.userdata = this;
 
-	const bool BackendChanged = str_comp(m_aAudioBackend, g_Config.m_RiVoiceAudioBackend) != 0;
+	const bool BackendChanged = str_comp(m_aAudioBackend, g_Config.m_QmVoiceAudioBackend) != 0;
 	if(BackendChanged)
 	{
 		if(m_CaptureDevice)
@@ -411,7 +411,7 @@ bool CRClientVoice::EnsureAudio()
 		m_CaptureSpec = {};
 		m_OutputSpec = {};
 		m_OutputChannels.store(0);
-		str_copy(m_aAudioBackend, g_Config.m_RiVoiceAudioBackend, sizeof(m_aAudioBackend));
+		str_copy(m_aAudioBackend, g_Config.m_QmVoiceAudioBackend, sizeof(m_aAudioBackend));
 		m_aAudioBackendMismatchReq[0] = '\0';
 		m_aAudioBackendMismatchCur[0] = '\0';
 		m_aAudioInitLoggedBackend[0] = '\0';
@@ -423,7 +423,7 @@ bool CRClientVoice::EnsureAudio()
 		m_LastAudioRetryAttempt = 0;
 	}
 
-	const char *pRequestedBackend = g_Config.m_RiVoiceAudioBackend[0] ? g_Config.m_RiVoiceAudioBackend : nullptr;
+	const char *pRequestedBackend = g_Config.m_QmVoiceAudioBackend[0] ? g_Config.m_QmVoiceAudioBackend : nullptr;
 	if((SDL_WasInit(SDL_INIT_AUDIO) & SDL_INIT_AUDIO) == 0)
 	{
 		if(SDL_AudioInit(pRequestedBackend) < 0)
@@ -483,27 +483,27 @@ bool CRClientVoice::EnsureAudio()
 	const bool HadOutput = m_OutputDevice != 0;
 	const bool HadEncoder = m_pEncoder != nullptr;
 
-	if(str_comp(m_aInputDeviceName, g_Config.m_RiVoiceInputDevice) != 0)
+	if(str_comp(m_aInputDeviceName, g_Config.m_QmVoiceInputDevice) != 0)
 	{
 		if(m_CaptureDevice)
 		{
 			SDL_CloseAudioDevice(m_CaptureDevice);
 			m_CaptureDevice = 0;
 		}
-		str_copy(m_aInputDeviceName, g_Config.m_RiVoiceInputDevice, sizeof(m_aInputDeviceName));
+		str_copy(m_aInputDeviceName, g_Config.m_QmVoiceInputDevice, sizeof(m_aInputDeviceName));
 		m_LogDeviceChange = true;
 		m_CaptureUnavailable = false;
 		m_LastAudioRetryAttempt = 0;
 	}
 
-	if(str_comp(m_aOutputDeviceName, g_Config.m_RiVoiceOutputDevice) != 0)
+	if(str_comp(m_aOutputDeviceName, g_Config.m_QmVoiceOutputDevice) != 0)
 	{
 		if(m_OutputDevice)
 		{
 			SDL_CloseAudioDevice(m_OutputDevice);
 			m_OutputDevice = 0;
 		}
-		str_copy(m_aOutputDeviceName, g_Config.m_RiVoiceOutputDevice, sizeof(m_aOutputDeviceName));
+		str_copy(m_aOutputDeviceName, g_Config.m_QmVoiceOutputDevice, sizeof(m_aOutputDeviceName));
 		m_LogDeviceChange = true;
 		m_OutputUnavailable = false;
 		m_LastAudioRetryAttempt = 0;
@@ -996,9 +996,9 @@ void CRClientVoice::UpdateServerAddrConfig()
 	bool AddrChanged = false;
 	{
 		std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
-		AddrChanged = str_comp(m_aServerAddrStr, g_Config.m_RiVoiceServer) != 0;
+		AddrChanged = str_comp(m_aServerAddrStr, g_Config.m_QmVoiceServer) != 0;
 		if(AddrChanged)
-			str_copy(m_aServerAddrStr, g_Config.m_RiVoiceServer, sizeof(m_aServerAddrStr));
+			str_copy(m_aServerAddrStr, g_Config.m_QmVoiceServer, sizeof(m_aServerAddrStr));
 	}
 
 	if(!AddrChanged)
@@ -1145,12 +1145,12 @@ void CRClientVoice::ProcessCapture()
 
 	SRClientVoiceConfigSnapshot Config;
 	GetConfigSnapshot(Config);
-	const int TestMode = std::clamp(Config.m_RiVoiceTestMode, 0, 2);
+	const int TestMode = std::clamp(Config.m_QmVoiceTestMode, 0, 2);
 	const bool TestLocal = TestMode == 1;
 	const bool NeedNetwork = !TestLocal;
 	const bool ShowMicLevel = TestMode != 0;
-	const bool MicMuted = Config.m_RiVoiceMicMute != 0;
-	const float TestGain = std::clamp(Config.m_RiVoiceVolume / 100.0f, 0.0f, 4.0f);
+	const bool MicMuted = Config.m_QmVoiceMicMute != 0;
+	const float TestGain = std::clamp(Config.m_QmVoiceVolume / 100.0f, 0.0f, 4.0f);
 
 	if(!m_pEncoder)
 		return;
@@ -1184,7 +1184,7 @@ void CRClientVoice::ProcessCapture()
 	};
 
 	const int64_t Now = time_get();
-	const bool UseVad = Config.m_RiVoiceVadEnable != 0;
+	const bool UseVad = Config.m_QmVoiceVadEnable != 0;
 	if(!UseVad)
 	{
 		m_VadActive = false;
@@ -1204,7 +1204,7 @@ void CRClientVoice::ProcessCapture()
 		m_VadActive = false;
 		m_VadReleaseDeadline = 0;
 	}
-	const bool TokenChanged = Config.m_RiVoiceTokenHash != m_LastTokenHashSent;
+	const bool TokenChanged = Config.m_QmVoiceTokenHash != m_LastTokenHashSent;
 	const bool NeedKeepalive = m_LastKeepalive == 0 || Now - m_LastKeepalive > time_freq() * 2;
 	const bool TxActiveSnapshot = UseVad ? m_VadActive.load() : PttHeld;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
@@ -1229,7 +1229,7 @@ void CRClientVoice::ProcessCapture()
 		Offset += sizeof(uint16_t);
 		VoiceUtils::WriteU32(aPacket + Offset, m_ContextHash.load());
 		Offset += sizeof(uint32_t);
-		VoiceUtils::WriteU32(aPacket + Offset, Config.m_RiVoiceTokenHash);
+		VoiceUtils::WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
 		Offset += sizeof(uint32_t);
 		aPacket[Offset++] = TxFlags;
 		VoiceUtils::WriteU16(aPacket + Offset, 0);
@@ -1244,7 +1244,7 @@ void CRClientVoice::ProcessCapture()
 		m_LastPingSentTime = Now;
 		m_LastPingSeq = m_Sequence;
 		m_LastKeepalive = Now;
-		m_LastTokenHashSent = Config.m_RiVoiceTokenHash;
+		m_LastTokenHashSent = Config.m_QmVoiceTokenHash;
 	}
 
 	if(MicMuted)
@@ -1267,7 +1267,7 @@ void CRClientVoice::ProcessCapture()
 			{
 				int16_t aPcm[VOICE_FRAME_SAMPLES];
 				SDL_DequeueAudio(m_CaptureDevice, aPcm, VOICE_FRAME_BYTES);
-				VoiceUtils::ApplyMicGain(std::clamp(Config.m_RiVoiceMicVolume / 100.0f, 0.0f, 3.0f), aPcm, VOICE_FRAME_SAMPLES);
+				VoiceUtils::ApplyMicGain(std::clamp(Config.m_QmVoiceMicVolume / 100.0f, 0.0f, 3.0f), aPcm, VOICE_FRAME_SAMPLES);
 				ApplyNoiseSuppressor(Config, aPcm, VOICE_FRAME_SAMPLES, m_NsNoiseFloor, m_NsGain, m_pNoiseSuppress);
 				ApplyHpfCompressor(Config, aPcm, VOICE_FRAME_SAMPLES, m_HpfPrevIn, m_HpfPrevOut, m_CompEnv);
 				const float Peak = VoiceUtils::VoiceFramePeak(aPcm, VOICE_FRAME_SAMPLES);
@@ -1292,8 +1292,8 @@ void CRClientVoice::ProcessCapture()
 
 	const int ClientId = LocalClientId;
 	const vec2 Pos = LocalPos;
-	const float VadThreshold = std::clamp(Config.m_RiVoiceVadThreshold / 100.0f, 0.0f, 1.0f);
-	const int VadReleaseMs = std::clamp(Config.m_RiVoiceVadReleaseDelayMs, 0, 1000);
+	const float VadThreshold = std::clamp(Config.m_QmVoiceVadThreshold / 100.0f, 0.0f, 1.0f);
+	const int VadReleaseMs = std::clamp(Config.m_QmVoiceVadReleaseDelayMs, 0, 1000);
 	const int64_t VadReleaseTicks = (int64_t)time_freq() * VadReleaseMs / 1000;
 	if(!TxActiveSnapshot)
 		m_TxWasActive = false;
@@ -1306,7 +1306,7 @@ void CRClientVoice::ProcessCapture()
 	{
 		int16_t aPcm[VOICE_FRAME_SAMPLES];
 		SDL_DequeueAudio(m_CaptureDevice, aPcm, VOICE_FRAME_BYTES);
-		VoiceUtils::ApplyMicGain(std::clamp(Config.m_RiVoiceMicVolume / 100.0f, 0.0f, 3.0f), aPcm, VOICE_FRAME_SAMPLES);
+		VoiceUtils::ApplyMicGain(std::clamp(Config.m_QmVoiceMicVolume / 100.0f, 0.0f, 3.0f), aPcm, VOICE_FRAME_SAMPLES);
 		ApplyNoiseSuppressor(Config, aPcm, VOICE_FRAME_SAMPLES, m_NsNoiseFloor, m_NsGain, m_pNoiseSuppress);
 		ApplyHpfCompressor(Config, aPcm, VOICE_FRAME_SAMPLES, m_HpfPrevIn, m_HpfPrevOut, m_CompEnv);
 
@@ -1383,7 +1383,7 @@ void CRClientVoice::ProcessCapture()
 		Offset += sizeof(uint16_t);
 		VoiceUtils::WriteU32(aPacket + Offset, m_ContextHash.load());
 		Offset += sizeof(uint32_t);
-		VoiceUtils::WriteU32(aPacket + Offset, Config.m_RiVoiceTokenHash);
+		VoiceUtils::WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
 		Offset += sizeof(uint32_t);
 		aPacket[Offset++] = TxFlags;
 		VoiceUtils::WriteU16(aPacket + Offset, (uint16_t)ClientId);
@@ -1404,7 +1404,7 @@ void CRClientVoice::ProcessCapture()
 		}
 		net_udp_send(m_Socket, &ServerAddrLocal, aPacket, (int)Offset);
 		MarkLocalVoiceActive(Now);
-		if(Config.m_RiVoiceDebug)
+		if(Config.m_QmVoiceDebug)
 		{
 			m_TxPackets++;
 			if(Now - m_TxLastLog > time_freq())
@@ -1434,7 +1434,7 @@ void CRClientVoice::ProcessIncoming()
 
 	SRClientVoiceConfigSnapshot Config;
 	GetConfigSnapshot(Config);
-	const int TestMode = std::clamp(Config.m_RiVoiceTestMode, 0, 2);
+	const int TestMode = std::clamp(Config.m_QmVoiceTestMode, 0, 2);
 	const bool TestServer = TestMode == 2;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
 
@@ -1497,7 +1497,7 @@ void CRClientVoice::ProcessIncoming()
 		}
 		if(Type == VOICE_TYPE_PING || Type == VOICE_TYPE_PONG)
 		{
-			if(TokenHash != 0 && TokenHash != Config.m_RiVoiceTokenHash)
+			if(TokenHash != 0 && TokenHash != Config.m_QmVoiceTokenHash)
 				continue;
 			if(m_LastPingSentTime != 0 && Sequence == m_LastPingSeq)
 			{
@@ -1509,7 +1509,7 @@ void CRClientVoice::ProcessIncoming()
 		}
 		if(Type != VOICE_TYPE_AUDIO)
 			continue;
-		const uint32_t LocalToken = Config.m_RiVoiceTokenHash;
+		const uint32_t LocalToken = Config.m_QmVoiceTokenHash;
 		const uint32_t LocalGroup = VoiceTokenGroup(LocalToken);
 		const uint32_t SenderGroup = VoiceTokenGroup(TokenHash);
 		if(!VoiceShouldHear(SenderGroup, LocalGroup))
@@ -1541,7 +1541,7 @@ void CRClientVoice::ProcessIncoming()
 			SenderSpec = m_aClientSpecSnap[SenderId] != 0;
 		}
 
-		if(SpecActive && Config.m_RiVoiceHearOnSpecPos)
+		if(SpecActive && Config.m_QmVoiceHearOnSpecPos)
 			LocalPos = SpecPos;
 
 		const bool IsSelf = SenderId == LocalId;
@@ -1549,30 +1549,30 @@ void CRClientVoice::ProcessIncoming()
 			continue;
 
 		const bool SameGroup = LocalGroup != 0 && SenderGroup == LocalGroup;
-		const bool IgnoreDistance = Config.m_RiVoiceIgnoreDistance || (Config.m_RiVoiceGroupGlobal && SameGroup);
+		const bool IgnoreDistance = Config.m_QmVoiceIgnoreDistance || (Config.m_QmVoiceGroupGlobal && SameGroup);
 		const char *pSenderName = aSenderName;
 		if(!IsSelf)
 		{
-			const bool AllowObserver = Config.m_RiVoiceHearPeoplesInSpectate && !SenderActive && !SenderSpec;
-			if(Config.m_RiVoiceVisibilityMode == 0)
+			const bool AllowObserver = Config.m_QmVoiceHearPeoplesInSpectate && !SenderActive && !SenderSpec;
+			if(Config.m_QmVoiceVisibilityMode == 0)
 			{
 				if(!IgnoreDistance && !SenderActive && !AllowObserver)
 					continue;
 			}
-			else if(Config.m_RiVoiceVisibilityMode == 1)
+			else if(Config.m_QmVoiceVisibilityMode == 1)
 			{
 				if(SenderOtherTeam && !AllowObserver)
 					continue;
 			}
 
-			if(VoiceUtils::VoiceListMatch(Config.m_aRiVoiceMute, pSenderName))
+			if(VoiceUtils::VoiceListMatch(Config.m_aQmVoiceMute, pSenderName))
 				continue;
-			if(Config.m_RiVoiceListMode == 1 && !VoiceUtils::VoiceListMatch(Config.m_aRiVoiceWhitelist, pSenderName))
+			if(Config.m_QmVoiceListMode == 1 && !VoiceUtils::VoiceListMatch(Config.m_aQmVoiceWhitelist, pSenderName))
 				continue;
-			if(Config.m_RiVoiceListMode == 2 && VoiceUtils::VoiceListMatch(Config.m_aRiVoiceBlacklist, pSenderName))
+			if(Config.m_QmVoiceListMode == 2 && VoiceUtils::VoiceListMatch(Config.m_aQmVoiceBlacklist, pSenderName))
 				continue;
 			const bool SenderUsesVad = (Flags & VOICE_FLAG_VAD) != 0;
-			if(SenderUsesVad && !Config.m_RiVoiceHearVad && !VoiceUtils::VoiceListMatch(Config.m_aRiVoiceVadAllow, pSenderName))
+			if(SenderUsesVad && !Config.m_QmVoiceHearVad && !VoiceUtils::VoiceListMatch(Config.m_aQmVoiceVadAllow, pSenderName))
 				continue;
 		}
 		m_aLastHeard[SenderId].store(time_get());
@@ -1585,7 +1585,7 @@ void CRClientVoice::ProcessIncoming()
 			continue;
 
 		const vec2 SenderPos = vec2(PosX, PosY);
-		const float Radius = std::max(1, Config.m_RiVoiceRadius) * 32.0f;
+		const float Radius = std::max(1, Config.m_QmVoiceRadius) * 32.0f;
 		const float Dist = distance(LocalPos, SenderPos);
 		if(!IgnoreDistance && Dist > Radius)
 		{
@@ -1594,20 +1594,20 @@ void CRClientVoice::ProcessIncoming()
 		}
 
 		const float RadiusFactor = IgnoreDistance ? 1.0f : (1.0f - (Dist / Radius));
-		float Volume = std::clamp(RadiusFactor * (Config.m_RiVoiceVolume / 100.0f), 0.0f, 4.0f);
+		float Volume = std::clamp(RadiusFactor * (Config.m_QmVoiceVolume / 100.0f), 0.0f, 4.0f);
 		if(Volume <= 0.0f)
 			continue;
 
 		int NameVolume = 100;
-		if(VoiceUtils::VoiceNameVolume(Config.m_aRiVoiceNameVolumes, pSenderName, NameVolume))
+		if(VoiceUtils::VoiceNameVolume(Config.m_aQmVoiceNameVolumes, pSenderName, NameVolume))
 		{
 			Volume *= (NameVolume / 100.0f);
 			if(Volume <= 0.0f)
 				continue;
 		}
 
-		const bool StereoEnabled = Config.m_RiVoiceStereo != 0;
-		const float StereoWidth = std::clamp(Config.m_RiVoiceStereoWidth / 100.0f, 0.0f, 2.0f);
+		const bool StereoEnabled = Config.m_QmVoiceStereo != 0;
+		const float StereoWidth = std::clamp(Config.m_QmVoiceStereoWidth / 100.0f, 0.0f, 2.0f);
 		const float Pan = StereoEnabled ? std::clamp(((SenderPos.x - LocalPos.x) / Radius) * StereoWidth, -1.0f, 1.0f) : 0.0f;
 		const float LeftGain = Volume * (Pan <= 0.0f ? 1.0f : (1.0f - Pan));
 		const float RightGain = Volume * (Pan >= 0.0f ? 1.0f : (1.0f + Pan));
@@ -1675,7 +1675,7 @@ void CRClientVoice::ProcessIncoming()
 		Pkt.m_RightGain = RightGain;
 		mem_copy(Pkt.m_aData, pData + Offset, PayloadSize);
 
-		if(Config.m_RiVoiceDebug)
+		if(Config.m_QmVoiceDebug)
 		{
 			m_RxPackets++;
 			if(Now - m_RxLastLog > time_freq())
@@ -1699,44 +1699,44 @@ void CRClientVoice::UpdateConfigSnapshot(bool Force)
 
 	m_LastConfigSnapshotUpdate = Now;
 	std::lock_guard<std::mutex> Guard(m_ConfigMutex);
-	m_ConfigSnapshot.m_RiVoiceFilterEnable = g_Config.m_RiVoiceFilterEnable;
-	m_ConfigSnapshot.m_RiVoiceProtocolVersion = g_Config.m_RiVoiceProtocolVersion;
-	m_ConfigSnapshot.m_RiVoiceNoiseSuppressEnable = g_Config.m_RiVoiceNoiseSuppressEnable;
-	m_ConfigSnapshot.m_RiVoiceNoiseSuppressStrength = g_Config.m_RiVoiceNoiseSuppressStrength;
-	m_ConfigSnapshot.m_RiVoiceCompThreshold = g_Config.m_RiVoiceCompThreshold;
-	m_ConfigSnapshot.m_RiVoiceCompRatio = g_Config.m_RiVoiceCompRatio;
-	m_ConfigSnapshot.m_RiVoiceCompAttackMs = g_Config.m_RiVoiceCompAttackMs;
-	m_ConfigSnapshot.m_RiVoiceCompReleaseMs = g_Config.m_RiVoiceCompReleaseMs;
-	m_ConfigSnapshot.m_RiVoiceCompMakeup = g_Config.m_RiVoiceCompMakeup;
-	m_ConfigSnapshot.m_RiVoiceLimiter = g_Config.m_RiVoiceLimiter;
-	m_ConfigSnapshot.m_RiVoiceStereo = g_Config.m_RiVoiceStereo;
-	m_ConfigSnapshot.m_RiVoiceStereoWidth = g_Config.m_RiVoiceStereoWidth;
-	m_ConfigSnapshot.m_RiVoiceRadius = g_Config.m_RiVoiceRadius;
-	m_ConfigSnapshot.m_RiVoiceVolume = g_Config.m_RiVoiceVolume;
-	m_ConfigSnapshot.m_RiVoiceMicVolume = g_Config.m_RiVoiceMicVolume;
-	m_ConfigSnapshot.m_RiVoiceMicMute = g_Config.m_RiVoiceMicMute;
-	m_ConfigSnapshot.m_RiVoiceTestMode = g_Config.m_RiVoiceTestMode;
-	m_ConfigSnapshot.m_RiVoiceVadEnable = g_Config.m_RiVoiceVadEnable;
-	m_ConfigSnapshot.m_RiVoiceVadThreshold = g_Config.m_RiVoiceVadThreshold;
-	m_ConfigSnapshot.m_RiVoiceVadReleaseDelayMs = g_Config.m_RiVoiceVadReleaseDelayMs;
-	m_ConfigSnapshot.m_RiVoiceIgnoreDistance = g_Config.m_RiVoiceIgnoreDistance;
-	m_ConfigSnapshot.m_RiVoiceGroupGlobal = g_Config.m_RiVoiceGroupGlobal;
-	m_ConfigSnapshot.m_RiVoiceVisibilityMode = g_Config.m_RiVoiceVisibilityMode;
-	m_ConfigSnapshot.m_RiVoiceListMode = g_Config.m_RiVoiceListMode;
-	m_ConfigSnapshot.m_RiVoiceDebug = g_Config.m_RiVoiceDebug;
-	m_ConfigSnapshot.m_RiVoiceGroupMode = g_Config.m_RiVoiceGroupMode;
-	m_ConfigSnapshot.m_RiVoiceHearOnSpecPos = g_Config.m_RiVoiceHearOnSpecPos;
-	m_ConfigSnapshot.m_RiVoiceHearPeoplesInSpectate = g_Config.m_RiVoiceHearPeoplesInSpectate;
-	m_ConfigSnapshot.m_RiVoiceHearVad = g_Config.m_RiVoiceHearVad;
+	m_ConfigSnapshot.m_QmVoiceFilterEnable = g_Config.m_QmVoiceFilterEnable;
+	m_ConfigSnapshot.m_QmVoiceProtocolVersion = g_Config.m_QmVoiceProtocolVersion;
+	m_ConfigSnapshot.m_QmVoiceNoiseSuppressEnable = g_Config.m_QmVoiceNoiseSuppressEnable;
+	m_ConfigSnapshot.m_QmVoiceNoiseSuppressStrength = g_Config.m_QmVoiceNoiseSuppressStrength;
+	m_ConfigSnapshot.m_QmVoiceCompThreshold = g_Config.m_QmVoiceCompThreshold;
+	m_ConfigSnapshot.m_QmVoiceCompRatio = g_Config.m_QmVoiceCompRatio;
+	m_ConfigSnapshot.m_QmVoiceCompAttackMs = g_Config.m_QmVoiceCompAttackMs;
+	m_ConfigSnapshot.m_QmVoiceCompReleaseMs = g_Config.m_QmVoiceCompReleaseMs;
+	m_ConfigSnapshot.m_QmVoiceCompMakeup = g_Config.m_QmVoiceCompMakeup;
+	m_ConfigSnapshot.m_QmVoiceLimiter = g_Config.m_QmVoiceLimiter;
+	m_ConfigSnapshot.m_QmVoiceStereo = g_Config.m_QmVoiceStereo;
+	m_ConfigSnapshot.m_QmVoiceStereoWidth = g_Config.m_QmVoiceStereoWidth;
+	m_ConfigSnapshot.m_QmVoiceRadius = g_Config.m_QmVoiceRadius;
+	m_ConfigSnapshot.m_QmVoiceVolume = g_Config.m_QmVoiceVolume;
+	m_ConfigSnapshot.m_QmVoiceMicVolume = g_Config.m_QmVoiceMicVolume;
+	m_ConfigSnapshot.m_QmVoiceMicMute = g_Config.m_QmVoiceMicMute;
+	m_ConfigSnapshot.m_QmVoiceTestMode = g_Config.m_QmVoiceTestMode;
+	m_ConfigSnapshot.m_QmVoiceVadEnable = g_Config.m_QmVoiceVadEnable;
+	m_ConfigSnapshot.m_QmVoiceVadThreshold = g_Config.m_QmVoiceVadThreshold;
+	m_ConfigSnapshot.m_QmVoiceVadReleaseDelayMs = g_Config.m_QmVoiceVadReleaseDelayMs;
+	m_ConfigSnapshot.m_QmVoiceIgnoreDistance = g_Config.m_QmVoiceIgnoreDistance;
+	m_ConfigSnapshot.m_QmVoiceGroupGlobal = g_Config.m_QmVoiceGroupGlobal;
+	m_ConfigSnapshot.m_QmVoiceVisibilityMode = g_Config.m_QmVoiceVisibilityMode;
+	m_ConfigSnapshot.m_QmVoiceListMode = g_Config.m_QmVoiceListMode;
+	m_ConfigSnapshot.m_QmVoiceDebug = g_Config.m_QmVoiceDebug;
+	m_ConfigSnapshot.m_QmVoiceGroupMode = g_Config.m_QmVoiceGroupMode;
+	m_ConfigSnapshot.m_QmVoiceHearOnSpecPos = g_Config.m_QmVoiceHearOnSpecPos;
+	m_ConfigSnapshot.m_QmVoiceHearPeoplesInSpectate = g_Config.m_QmVoiceHearPeoplesInSpectate;
+	m_ConfigSnapshot.m_QmVoiceHearVad = g_Config.m_QmVoiceHearVad;
 	m_ConfigSnapshot.m_ClShowOthers = g_Config.m_ClShowOthers;
-	uint32_t GroupHash = g_Config.m_RiVoiceToken[0] != '\0' ? str_quickhash(g_Config.m_RiVoiceToken) : 0;
-	uint32_t Mode = (uint32_t)std::clamp(g_Config.m_RiVoiceGroupMode, 0, 3);
-	m_ConfigSnapshot.m_RiVoiceTokenHash = VoicePackToken(GroupHash, Mode);
-	str_copy(m_ConfigSnapshot.m_aRiVoiceWhitelist, g_Config.m_RiVoiceWhitelist, sizeof(m_ConfigSnapshot.m_aRiVoiceWhitelist));
-	str_copy(m_ConfigSnapshot.m_aRiVoiceBlacklist, g_Config.m_RiVoiceBlacklist, sizeof(m_ConfigSnapshot.m_aRiVoiceBlacklist));
-	str_copy(m_ConfigSnapshot.m_aRiVoiceMute, g_Config.m_RiVoiceMute, sizeof(m_ConfigSnapshot.m_aRiVoiceMute));
-	str_copy(m_ConfigSnapshot.m_aRiVoiceVadAllow, g_Config.m_RiVoiceVadAllow, sizeof(m_ConfigSnapshot.m_aRiVoiceVadAllow));
-	str_copy(m_ConfigSnapshot.m_aRiVoiceNameVolumes, g_Config.m_RiVoiceNameVolumes, sizeof(m_ConfigSnapshot.m_aRiVoiceNameVolumes));
+	uint32_t GroupHash = g_Config.m_QmVoiceToken[0] != '\0' ? str_quickhash(g_Config.m_QmVoiceToken) : 0;
+	uint32_t Mode = (uint32_t)std::clamp(g_Config.m_QmVoiceGroupMode, 0, 3);
+	m_ConfigSnapshot.m_QmVoiceTokenHash = VoicePackToken(GroupHash, Mode);
+	str_copy(m_ConfigSnapshot.m_aQmVoiceWhitelist, g_Config.m_QmVoiceWhitelist, sizeof(m_ConfigSnapshot.m_aQmVoiceWhitelist));
+	str_copy(m_ConfigSnapshot.m_aQmVoiceBlacklist, g_Config.m_QmVoiceBlacklist, sizeof(m_ConfigSnapshot.m_aQmVoiceBlacklist));
+	str_copy(m_ConfigSnapshot.m_aQmVoiceMute, g_Config.m_QmVoiceMute, sizeof(m_ConfigSnapshot.m_aQmVoiceMute));
+	str_copy(m_ConfigSnapshot.m_aQmVoiceVadAllow, g_Config.m_QmVoiceVadAllow, sizeof(m_ConfigSnapshot.m_aQmVoiceVadAllow));
+	str_copy(m_ConfigSnapshot.m_aQmVoiceNameVolumes, g_Config.m_QmVoiceNameVolumes, sizeof(m_ConfigSnapshot.m_aQmVoiceNameVolumes));
 }
 
 void CRClientVoice::GetConfigSnapshot(SRClientVoiceConfigSnapshot &Out) const
@@ -1986,7 +1986,7 @@ void CRClientVoice::WorkerLoop()
 
 void CRClientVoice::OnRender()
 {
-	if(!g_Config.m_RiVoiceEnable || !m_pGameClient || !m_pClient)
+	if(!g_Config.m_QmVoiceEnable || !m_pGameClient || !m_pClient)
 	{
 		Shutdown();
 		return;
@@ -2003,7 +2003,7 @@ void CRClientVoice::OnRender()
 	return;
 #endif
 
-	if(g_Config.m_RiVoiceOffNonActive && m_pGraphics && !m_pGraphics->WindowActive())
+	if(g_Config.m_QmVoiceOffNonActive && m_pGraphics && !m_pGraphics->WindowActive())
 	{
 		StopWorker();
 		if(m_CaptureDevice)
@@ -2039,14 +2039,14 @@ void CRClientVoice::OnRender()
 	}
 #endif
 
-	const bool WantStereo = g_Config.m_RiVoiceStereo != 0;
+	const bool WantStereo = g_Config.m_QmVoiceStereo != 0;
 	const int DesiredChannels = WantStereo ? 2 : 1;
 	bool NeedReinit = false;
-	if(str_comp(m_aAudioBackend, g_Config.m_RiVoiceAudioBackend) != 0)
+	if(str_comp(m_aAudioBackend, g_Config.m_QmVoiceAudioBackend) != 0)
 		NeedReinit = true;
-	if(str_comp(m_aInputDeviceName, g_Config.m_RiVoiceInputDevice) != 0)
+	if(str_comp(m_aInputDeviceName, g_Config.m_QmVoiceInputDevice) != 0)
 		NeedReinit = true;
-	if(str_comp(m_aOutputDeviceName, g_Config.m_RiVoiceOutputDevice) != 0)
+	if(str_comp(m_aOutputDeviceName, g_Config.m_QmVoiceOutputDevice) != 0)
 		NeedReinit = true;
 	if(m_OutputStereo != WantStereo)
 		NeedReinit = true;
@@ -2097,7 +2097,7 @@ void CRClientVoice::OnRender()
 
 void CRClientVoice::RenderSpeakerOverlay()
 {
-	if(!m_pGameClient || !m_pGraphics || !g_Config.m_RiVoiceEnable || !g_Config.m_RiVoiceShowOverlay)
+	if(!m_pGameClient || !m_pGraphics || !g_Config.m_QmVoiceEnable || !g_Config.m_QmVoiceShowOverlay)
 		return;
 
 	const bool HudEditorPreview = m_pGameClient->m_HudEditor.IsActive();
@@ -2135,7 +2135,7 @@ void CRClientVoice::RenderSpeakerOverlay()
 
 	const int64_t Now = time_get();
 	const int64_t VisibleWindow = (int64_t)time_freq() * VOICE_OVERLAY_VISIBLE_MS / 1000;
-	const bool ShowLocalWhenActive = g_Config.m_RiVoiceShowWhenActive != 0;
+	const bool ShowLocalWhenActive = g_Config.m_QmVoiceShowWhenActive != 0;
 	std::array<bool, MAX_CLIENTS> aVisibleNow{};
 	aVisibleNow.fill(false);
 	std::vector<SSpeakerEntry> vEntries;

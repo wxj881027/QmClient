@@ -29,93 +29,6 @@ using namespace std::chrono_literals;
 
 typedef std::function<void()> TMenuAssetScanLoadedFunc;
 
-class CMenus::CAssetDecodeJob : public IJob
-{
-public:
-	struct SResult
-	{
-		CImageInfo m_Image;
-		bool m_Success = false;
-	};
-
-private:
-	std::vector<uint8_t> m_vFileData;
-	std::string m_Name;
-	std::mutex m_Mutex;
-	SResult m_Result;
-	bool m_Completed = false;
-
-	void Run() override
-	{
-		if(m_vFileData.empty())
-		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
-			m_Completed = true;
-			return;
-		}
-
-		CImageInfo Image;
-		bool Success = false;
-
-		constexpr uint8_t PNG_SIGNATURE[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
-		constexpr uint8_t WEBP_RIFF[] = {0x52, 0x49, 0x46, 0x46};
-		constexpr uint8_t WEBP_WEBP[] = {0x57, 0x45, 0x42, 0x50};
-
-		const bool IsPng = m_vFileData.size() >= 8 &&
-			memcmp(m_vFileData.data(), PNG_SIGNATURE, 8) == 0;
-		const bool IsWebp = m_vFileData.size() >= 12 &&
-			memcmp(m_vFileData.data(), WEBP_RIFF, 4) == 0 &&
-			memcmp(m_vFileData.data() + 8, WEBP_WEBP, 4) == 0;
-
-		if(IsWebp)
-		{
-			Success = CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
-		}
-		else if(IsPng)
-		{
-			Success = CImageLoader::LoadPng(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image);
-		}
-		else
-		{
-			if(CImageLoader::LoadWebP(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-			else if(CImageLoader::LoadPng(m_vFileData.data(), m_vFileData.size(), m_Name.c_str(), Image))
-				Success = true;
-		}
-
-		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
-			m_Result.m_Image = std::move(Image);
-			m_Result.m_Success = Success;
-			m_Completed = true;
-		}
-
-		m_vFileData.clear();
-		m_vFileData.shrink_to_fit();
-	}
-
-public:
-	CAssetDecodeJob(std::vector<uint8_t> &&vFileData, const char *pName) :
-		m_vFileData(std::move(vFileData)),
-		m_Name(pName)
-	{
-	}
-
-	bool IsCompleted() const
-	{
-		std::lock_guard<std::mutex> Lock(const_cast<std::mutex &>(m_Mutex));
-		return m_Completed;
-	}
-
-	SResult GetResult()
-	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
-		SResult Result = std::move(m_Result);
-		m_Result = SResult();
-		return Result;
-	}
-};
-
 class CImageDecodeJob : public IJob
 {
 public:
@@ -1428,7 +1341,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	int GpuUploadsThisFrame = 0;
 
 	auto UploadCompletedDecodeJob = [&](SCustomItem *pItem) {
-		if(!pItem->m_pDecodeJob || !pItem->m_pDecodeJob->IsCompleted())
+		if(!pItem->m_pDecodeJob || !std::static_pointer_cast<CFullAsyncImageLoadJob>(pItem->m_pDecodeJob)->IsCompleted())
 			return;
 		if(GpuUploadsThisFrame >= MaxGpuUploadsPerFrame)
 			return;
@@ -1437,7 +1350,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			pItem->m_pDecodeJob.reset();
 			return;
 		}
-		CMenus::CAssetDecodeJob::SResult Result = pItem->m_pDecodeJob->GetResult();
+		CFullAsyncImageLoadJob::SResult Result = std::static_pointer_cast<CFullAsyncImageLoadJob>(pItem->m_pDecodeJob)->GetResult();
 		pItem->m_pDecodeJob.reset();
 		if(Result.m_Success && Result.m_Image.m_pData)
 		{

@@ -17,7 +17,7 @@ public:
 	void OnConsoleInit() override;
 	
 	/// 是否配置使用 Rust 语音系统
-	bool UseRustVoice() const { return g_Config.m_RiVoiceEnable && g_Config.m_RiVoiceUseRust; }
+	bool UseRustVoice() const { return g_Config.m_QmVoiceEnable && g_Config.m_QmVoiceUseRust; }
 	
 	/// Rust 语音系统是否实际可用 (配置启用且初始化成功)
 	bool IsRustVoiceActive() const { return UseRustVoice() && !m_RustInitFailed; }

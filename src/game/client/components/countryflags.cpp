@@ -6,6 +6,7 @@
 #include <base/math.h>
 #include <base/system.h>
 
+#include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -225,6 +226,7 @@ const CCountryFlags::CCountryFlag &CCountryFlags::GetByIndex(size_t Index) const
 
 void CCountryFlags::Render(const CCountryFlag &Flag, ColorRGBA Color, float x, float y, float w, float h)
 {
+	ProcessCompletedJobs();
 	if(Flag.m_Texture.IsValid())
 	{
 		Graphics()->TextureSet(Flag.m_Texture);

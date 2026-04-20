@@ -904,7 +904,7 @@ impl VoiceSystem {
     /// 如果启用了观战位置收听且本地玩家是观察者，返回观战位置
     /// 否则返回玩家实际位置
     ///
-    /// 对应 C++: if(SpecActive && Config.m_RiVoiceHearOnSpecPos) LocalPos = SpecPos;
+    /// 对应 C++: if(SpecActive && Config.m_QmVoiceHearOnSpecPos) LocalPos = SpecPos;
     pub fn get_local_listening_pos(&self, config: &VoiceConfig) -> (f32, f32) {
         let local_id = self.local_client_id.load(Ordering::SeqCst);
         if local_id < 0 {
@@ -1416,7 +1416,7 @@ impl VoiceSystem {
         }
 
         // 检查 VAD 玩家过滤
-        // C++: if(SenderUsesVad && !Config.m_RiVoiceHearVad && !VoiceListMatch(...)) continue;
+        // C++: if(SenderUsesVad && !Config.m_QmVoiceHearVad && !VoiceListMatch(...)) continue;
         let sender_uses_vad = packet.is_vad();
         if sender_uses_vad && !config.hear_vad {
             // 检查是否在 VAD 允许名单中
@@ -1446,7 +1446,7 @@ impl VoiceSystem {
         let ignore_distance = config.ignore_distance || (config.group_global && same_group);
 
         // 计算 AllowObserver (允许收听旁观者语音)
-        // C++: AllowObserver = Config.m_RiVoiceHearPeoplesInSpectate && !SenderActive && !SenderSpec
+        // C++: AllowObserver = Config.m_QmVoiceHearPeoplesInSpectate && !SenderActive && !SenderSpec
         let allow_observer = config.hear_in_spectate && !sender_is_active && !sender_is_spectator;
 
         // 同队伍检查
@@ -2580,6 +2580,11 @@ ffi_wrap!(
         );
     }
 );
+
+// ============== Worker 线程 FFI ==============
+// Worker FFI 函数定义在 lib_worker_ffi.rs 模块中
+
+pub mod lib_worker_ffi;
 
 // ============== 单元测试 ==============
 

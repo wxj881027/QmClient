@@ -1688,6 +1688,7 @@ void CChat::OnRender()
 	if(UpdateChatUi)
 	{
 		Ui()->StartCheck();
+		Ui()->SetActiveItem(&m_Input);
 		Ui()->Update();
 		const CUIRect *pUiScreen = Ui()->Screen();
 		ChatMousePos = vec2(

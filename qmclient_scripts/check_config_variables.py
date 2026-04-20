@@ -5,7 +5,7 @@ QmClient 配置变量使用检查工具
 基于上游 scripts/check_config_variables.py 适配，支持 QmClient 的三套配置变量文件：
   - src/engine/shared/config_variables.h          (DDNet 上游，无前缀)
   - src/engine/shared/config_variables_qmclient.h (TaterClient 继承，Tc 前缀)
-  - src/engine/shared/config_variables_qimeng.h   (QmClient 自研，Qm/RiVoice 前缀)
+  - src/engine/shared/config_variables_qmclient_extra.h (QmClient 自研，Qm 前缀)
 
 用法：
   python qmclient_scripts/check_config_variables.py          # 检查所有配置文件

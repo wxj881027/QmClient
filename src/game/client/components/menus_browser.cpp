@@ -2694,7 +2694,7 @@ void CMenus::RenderServerbrowserQm(CUIRect View)
 	View.HSplitTop(5.0f, nullptr, &View);
 	View.HSplitTop(28.0f, &Summary, &View);
 
-	if(g_Config.m_RiVoiceServer[0] == '\0')
+	if(g_Config.m_QmVoiceServer[0] == '\0')
 	{
 		Ui()->DoLabel(&Summary, Localize("Set a voice server to enable QmClient distribution"), 9.0f, TEXTALIGN_ML);
 		return;

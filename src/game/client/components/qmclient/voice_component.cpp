@@ -25,40 +25,40 @@ void CVoiceComponent::ConVoiceListDevices(IConsole::IResult *pResult, void *pUse
 void CVoiceComponent::ConVoiceSetInputDevice(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pUserData;
-	str_copy(g_Config.m_RiVoiceInputDevice, pResult->GetString(0), sizeof(g_Config.m_RiVoiceInputDevice));
+	str_copy(g_Config.m_QmVoiceInputDevice, pResult->GetString(0), sizeof(g_Config.m_QmVoiceInputDevice));
 }
 
 void CVoiceComponent::ConVoiceSetOutputDevice(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pUserData;
-	str_copy(g_Config.m_RiVoiceOutputDevice, pResult->GetString(0), sizeof(g_Config.m_RiVoiceOutputDevice));
+	str_copy(g_Config.m_QmVoiceOutputDevice, pResult->GetString(0), sizeof(g_Config.m_QmVoiceOutputDevice));
 }
 
 void CVoiceComponent::ConVoiceClearInputDevice(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pResult;
 	(void)pUserData;
-	g_Config.m_RiVoiceInputDevice[0] = '\0';
+	g_Config.m_QmVoiceInputDevice[0] = '\0';
 }
 
 void CVoiceComponent::ConVoiceClearOutputDevice(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pResult;
 	(void)pUserData;
-	g_Config.m_RiVoiceOutputDevice[0] = '\0';
+	g_Config.m_QmVoiceOutputDevice[0] = '\0';
 }
 
 void CVoiceComponent::ConVoiceToggleMicMute(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pResult;
 	(void)pUserData;
-	g_Config.m_RiVoiceMicMute = g_Config.m_RiVoiceMicMute ? 0 : 1;
+	g_Config.m_QmVoiceMicMute = g_Config.m_QmVoiceMicMute ? 0 : 1;
 }
 
 void CVoiceComponent::ConVoiceSetMicMute(IConsole::IResult *pResult, void *pUserData)
 {
 	(void)pUserData;
-	g_Config.m_RiVoiceMicMute = pResult->GetInteger(0) != 0 ? 1 : 0;
+	g_Config.m_QmVoiceMicMute = pResult->GetInteger(0) != 0 ? 1 : 0;
 }
 
 void CVoiceComponent::OnInit()
@@ -67,25 +67,25 @@ void CVoiceComponent::OnInit()
 
 	if(UseRustVoice()) {
 		voice::Config config;
-		config.mic_volume = g_Config.m_RiVoiceMicVolume;
-		config.noise_suppress = g_Config.m_RiVoiceNoiseSuppressEnable != 0;
-		config.noise_suppress_strength = g_Config.m_RiVoiceNoiseSuppressStrength;
-		config.comp_threshold = g_Config.m_RiVoiceCompThreshold;
-		config.comp_ratio = g_Config.m_RiVoiceCompRatio;
-		config.comp_attack_ms = g_Config.m_RiVoiceCompAttackMs;
-		config.comp_release_ms = g_Config.m_RiVoiceCompReleaseMs;
-		config.comp_makeup = g_Config.m_RiVoiceCompMakeup;
-		config.vad_enable = g_Config.m_RiVoiceVadEnable != 0;
-		config.vad_threshold = g_Config.m_RiVoiceVadThreshold;
-		config.vad_release_delay_ms = g_Config.m_RiVoiceVadReleaseDelayMs;
-		config.stereo = g_Config.m_RiVoiceStereo != 0;
-		config.stereo_width = g_Config.m_RiVoiceStereoWidth;
-		config.volume = g_Config.m_RiVoiceVolume;
-		config.radius = g_Config.m_RiVoiceRadius;
-		config.mic_mute = g_Config.m_RiVoiceMicMute != 0;
-		config.test_mode = g_Config.m_RiVoiceTestMode;
-		config.ignore_distance = g_Config.m_RiVoiceIgnoreDistance != 0;
-		config.group_global = g_Config.m_RiVoiceGroupGlobal != 0;
+		config.mic_volume = g_Config.m_QmVoiceMicVolume;
+		config.noise_suppress = g_Config.m_QmVoiceNoiseSuppressEnable != 0;
+		config.noise_suppress_strength = g_Config.m_QmVoiceNoiseSuppressStrength;
+		config.comp_threshold = g_Config.m_QmVoiceCompThreshold;
+		config.comp_ratio = g_Config.m_QmVoiceCompRatio;
+		config.comp_attack_ms = g_Config.m_QmVoiceCompAttackMs;
+		config.comp_release_ms = g_Config.m_QmVoiceCompReleaseMs;
+		config.comp_makeup = g_Config.m_QmVoiceCompMakeup;
+		config.vad_enable = g_Config.m_QmVoiceVadEnable != 0;
+		config.vad_threshold = g_Config.m_QmVoiceVadThreshold;
+		config.vad_release_delay_ms = g_Config.m_QmVoiceVadReleaseDelayMs;
+		config.stereo = g_Config.m_QmVoiceStereo != 0;
+		config.stereo_width = g_Config.m_QmVoiceStereoWidth;
+		config.volume = g_Config.m_QmVoiceVolume;
+		config.radius = g_Config.m_QmVoiceRadius;
+		config.mic_mute = g_Config.m_QmVoiceMicMute != 0;
+		config.test_mode = g_Config.m_QmVoiceTestMode;
+		config.ignore_distance = g_Config.m_QmVoiceIgnoreDistance != 0;
+		config.group_global = g_Config.m_QmVoiceGroupGlobal != 0;
 		config.token_hash = 0;
 		config.context_hash = 0;
 		
@@ -143,25 +143,25 @@ void CVoiceComponent::UpdateConfig()
 	if(!IsRustVoiceActive()) return;
 	
 	voice::Config config;
-	config.mic_volume = g_Config.m_RiVoiceMicVolume;
-	config.noise_suppress = g_Config.m_RiVoiceNoiseSuppressEnable != 0;
-	config.noise_suppress_strength = g_Config.m_RiVoiceNoiseSuppressStrength;
-	config.comp_threshold = g_Config.m_RiVoiceCompThreshold;
-	config.comp_ratio = g_Config.m_RiVoiceCompRatio;
-	config.comp_attack_ms = g_Config.m_RiVoiceCompAttackMs;
-	config.comp_release_ms = g_Config.m_RiVoiceCompReleaseMs;
-	config.comp_makeup = g_Config.m_RiVoiceCompMakeup;
-	config.vad_enable = g_Config.m_RiVoiceVadEnable != 0;
-	config.vad_threshold = g_Config.m_RiVoiceVadThreshold;
-	config.vad_release_delay_ms = g_Config.m_RiVoiceVadReleaseDelayMs;
-	config.stereo = g_Config.m_RiVoiceStereo != 0;
-	config.stereo_width = g_Config.m_RiVoiceStereoWidth;
-	config.volume = g_Config.m_RiVoiceVolume;
-	config.radius = g_Config.m_RiVoiceRadius;
-	config.mic_mute = g_Config.m_RiVoiceMicMute != 0;
-	config.test_mode = g_Config.m_RiVoiceTestMode;
-	config.ignore_distance = g_Config.m_RiVoiceIgnoreDistance != 0;
-	config.group_global = g_Config.m_RiVoiceGroupGlobal != 0;
+	config.mic_volume = g_Config.m_QmVoiceMicVolume;
+	config.noise_suppress = g_Config.m_QmVoiceNoiseSuppressEnable != 0;
+	config.noise_suppress_strength = g_Config.m_QmVoiceNoiseSuppressStrength;
+	config.comp_threshold = g_Config.m_QmVoiceCompThreshold;
+	config.comp_ratio = g_Config.m_QmVoiceCompRatio;
+	config.comp_attack_ms = g_Config.m_QmVoiceCompAttackMs;
+	config.comp_release_ms = g_Config.m_QmVoiceCompReleaseMs;
+	config.comp_makeup = g_Config.m_QmVoiceCompMakeup;
+	config.vad_enable = g_Config.m_QmVoiceVadEnable != 0;
+	config.vad_threshold = g_Config.m_QmVoiceVadThreshold;
+	config.vad_release_delay_ms = g_Config.m_QmVoiceVadReleaseDelayMs;
+	config.stereo = g_Config.m_QmVoiceStereo != 0;
+	config.stereo_width = g_Config.m_QmVoiceStereoWidth;
+	config.volume = g_Config.m_QmVoiceVolume;
+	config.radius = g_Config.m_QmVoiceRadius;
+	config.mic_mute = g_Config.m_QmVoiceMicMute != 0;
+	config.test_mode = g_Config.m_QmVoiceTestMode;
+	config.ignore_distance = g_Config.m_QmVoiceIgnoreDistance != 0;
+	config.group_global = g_Config.m_QmVoiceGroupGlobal != 0;
 	config.token_hash = 0;
 	config.context_hash = 0;
 	

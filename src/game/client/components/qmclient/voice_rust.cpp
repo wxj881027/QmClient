@@ -33,19 +33,12 @@ extern "C" {
 	void voice_update_encoder_params(size_t handle);
 
 	// ============== 新增 Worker FFI ==============
-	/// 创建 Worker 线程
 	size_t voice_worker_create();
-	/// 销毁 Worker 线程
 	void voice_worker_destroy(size_t handle);
-	/// 设置 Worker 配置
 	void voice_worker_set_config(size_t handle, const voice::VoiceConfigCABI *config);
-	/// 提交捕获的音频数据
 	void voice_worker_submit_capture(size_t handle, const int16_t *pcm, size_t samples);
-	/// 获取混音输出
 	void voice_worker_mix_output(size_t handle, int16_t *output, size_t samples, size_t channels);
-	/// 提交网络数据包
 	void voice_worker_submit_packet(size_t handle, const uint8_t *data, size_t len);
-	/// 设置玩家名称列表
 	void voice_worker_set_name_lists(
 		size_t handle,
 		const char **whitelist, size_t whitelist_count,
@@ -100,7 +93,7 @@ void VoiceSystem::setConfig(const Config &config)
 	VoiceConfigCABI cabi = config.toCABI();
 	voice_set_config(m_Handle, &cabi);
 
-	// 如果 Worker 在运行，也更新 Worker 配置
+	// Worker 配置更新
 	if(m_WorkerHandle) {
 		voice_worker_set_config(m_WorkerHandle, &cabi);
 	}
@@ -196,7 +189,7 @@ void VoiceSystem::decodeJitter()
 
 void VoiceSystem::mixAudio(int16_t *output, size_t samples, size_t channels)
 {
-	// 如果 Worker 线程在运行，使用 Worker 混音
+	// Worker 混音优先
 	if(m_WorkerHandle && m_WorkerRunning && output && samples > 0 && channels > 0) {
 		voice_worker_mix_output(m_WorkerHandle, output, samples, channels);
 	} else if(m_Handle && output && samples > 0 && channels > 0) {
@@ -218,12 +211,10 @@ bool VoiceSystem::startWorker()
 	if(!m_Handle || m_WorkerRunning) {
 		return false;
 	}
-
 	m_WorkerHandle = voice_worker_create();
 	if(!m_WorkerHandle) {
 		return false;
 	}
-
 	m_WorkerRunning = true;
 	return true;
 }

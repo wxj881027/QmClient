@@ -442,12 +442,12 @@ private:
 		const json_value *pDetectedLanguage = json_object_get(pObj, "detectedLanguage");
 		if(pDetectedLanguage == &json_value_none)
 		{
-			str_copy(Out.m_Text, "No pDetectedLanguage");
+			str_copy(Out.m_Text, "No detectedLanguage");
 			return false;
 		}
 		if(pDetectedLanguage->type != json_object)
 		{
-			str_copy(Out.m_Text, "pDetectedLanguage is not object");
+			str_copy(Out.m_Text, "detectedLanguage is not object");
 			return false;
 		}
 
@@ -482,6 +482,19 @@ protected:
 	{
 		json_value *pObj = m_pHttpRequest->ResultJson();
 		bool Res = ParseResponseJson(pObj, Out);
+		if(!Res)
+		{
+			// Log the raw response for debugging
+			unsigned char *pResult = nullptr;
+			size_t ResultLength = 0;
+			m_pHttpRequest->Result(&pResult, &ResultLength);
+			if(pResult && ResultLength > 0)
+			{
+				// Truncate if too long
+				size_t LogLength = std::min(ResultLength, size_t(1024));
+				log_debug("translate/libretranslate", "LibreTranslate response failed to parse. Raw response: %.*s", (int)LogLength, pResult);
+			}
+		}
 		json_value_free(pObj);
 		return Res;
 	}
@@ -796,7 +809,23 @@ private:
 		const json_value *pChoices = json_object_get(pObj, "choices");
 		if(pChoices == &json_value_none)
 		{
-			str_copy(Out.m_Text, "No choices");
+			char aErrorMsg[512];
+			str_copy(aErrorMsg, "No choices in response", sizeof(aErrorMsg));
+
+			const json_value *pCode = json_object_get(pObj, "code");
+			const json_value *pMsg = json_object_get(pObj, "msg");
+			if(pCode != &json_value_none && pCode->type == json_string)
+			{
+				str_format(aErrorMsg + str_length(aErrorMsg), sizeof(aErrorMsg) - str_length(aErrorMsg),
+					" (code: %s", pCode->u.string.ptr);
+				if(pMsg != &json_value_none && pMsg->type == json_string)
+					str_format(aErrorMsg + str_length(aErrorMsg), sizeof(aErrorMsg) - str_length(aErrorMsg),
+						", %s)", pMsg->u.string.ptr);
+				else
+					str_append(aErrorMsg, ")", sizeof(aErrorMsg));
+			}
+
+			str_copy(Out.m_Text, aErrorMsg);
 			return false;
 		}
 		if(pChoices->type != json_array)
@@ -875,7 +904,7 @@ public:
 			return;
 		}
 
-		const char *pEndpoint = g_Config.m_TcTranslateEndpoint[0] != '\0' ? g_Config.m_TcTranslateEndpoint : "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+		const char *pEndpoint = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
 		// Build system message with target language
 		char aSystemMessage[256];
@@ -1030,7 +1059,7 @@ void CTranslate::Translate(const char *pName, bool ShowProgress)
 
 void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTriggered)
 {
-	if(m_vJobs.size() > 15)
+	if(m_vJobs.size() > MAX_TRANSLATION_JOBS)
 	{
 		return;
 	}
@@ -1077,7 +1106,7 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
 	if(!ParseOutgoingTranslateTarget(pText, Text, Target))
 		return false;
 
-	if(m_vJobs.size() + m_vOutgoingJobs.size() > 15)
+	if(m_vJobs.size() + m_vOutgoingJobs.size() > MAX_TRANSLATION_JOBS)
 	{
 		GameClient()->m_Chat.Echo("Too many translation jobs");
 		return true;
