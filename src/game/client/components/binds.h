@@ -92,7 +92,6 @@ public:
 	void SetDDRaceBinds(bool FreeOnly);
 
 private:
-	bool HasChatToggleCursorBind(const IInput::CEvent &Event) const;
 	char *m_aapKeyBindings[KeyModifier::COMBINATION_COUNT][KEY_LAST];
 	std::vector<CBindSlot> m_vActiveBinds;
 };

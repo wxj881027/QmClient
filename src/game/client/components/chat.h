@@ -175,6 +175,7 @@ class CChat : public CComponent
 
 	bool LineShouldHighlight(const char *pLine, const char *pName);
 	void LockMouse();
+	void UnlockMouse();
 	void SetUiMousePos(vec2 Pos);
 	void StoreSave(const char *pText);
 	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
@@ -203,7 +204,6 @@ public:
 	void RegisterCommand(const char *pName, const char *pParams, const char *pHelpText);
 	void UnregisterCommand(const char *pName);
 	void Echo(const char *pString);
-	void ToggleMouseUnlocked();
 
 	void OnWindowResize() override;
 	void OnConsoleInit() override;
