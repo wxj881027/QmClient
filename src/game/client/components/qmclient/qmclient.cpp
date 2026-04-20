@@ -78,8 +78,8 @@ static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
 static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION = 2.0f;
-static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_WIDTH = 136.0f;
-static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_HEIGHT = 42.0f;
+static constexpr float QMCLIENT_COMBO_POPUP_DURATION = 1.25f;
+static constexpr float QMCLIENT_TEXT_POPUP_FONT_SIZE = 30.0f;
 static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET = vec2(34.0f, -78.0f);
 static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT = vec2(18.0f, -16.0f);
 static constexpr int QMCLIENT_COMBO_POPUP_WINDOW_SECONDS = 2;
@@ -129,16 +129,14 @@ enum class ETextPopupType
 struct STextPopupDefinition
 {
 	const char *m_pText;
-	const char *m_pTextureName;
-	float m_Width;
 };
 
 static constexpr std::array<STextPopupDefinition, (int)ETextPopupType::NUM_TYPES> s_aTextPopupDefinitions = {{
-	{QMCLIENT_FREEZE_WAKEUP_TEXT, "qmclient_popup_wakeup", 136.0f},
-	{"Amazing!", "qmclient_popup_amazing", 166.0f},
-	{"Fantastic!", "qmclient_popup_fantastic", 184.0f},
-	{"Unbelievable!", "qmclient_popup_unbelievable", 224.0f},
-	{"Unstoppable!", "qmclient_popup_unstoppable", 206.0f},
+	{QMCLIENT_FREEZE_WAKEUP_TEXT},
+	{"Amazing!"},
+	{"Fantastic!"},
+	{"Unbelievable!"},
+	{"Unstoppable!"},
 }};
 
 class CQmClientUsersParseJob : public IJob
@@ -479,6 +477,11 @@ bool IsComboPopupTextType(int TextType)
 {
 	return TextType >= (int)ETextPopupType::COMBO_AMAZING &&
 		TextType <= (int)ETextPopupType::COMBO_UNSTOPPABLE;
+}
+
+float TextPopupDuration(int TextType)
+{
+	return IsComboPopupTextType(TextType) ? QMCLIENT_COMBO_POPUP_DURATION : QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION;
 }
 
 EFreezeWakeupType DetectFreezeWakeupType(CGameClient *pGameClient, int ClientId)
@@ -1107,8 +1110,13 @@ void CTClient::OnShutdown()
 	m_pQmClientUsersParseJob = nullptr;
 	m_pQmDdnetPlayerParseJob = nullptr;
 	m_pQmClientLifecycleMarkerWriteJob = nullptr;
-	UnloadTextPopupTextures();
+	UnloadTextPopupCaches();
 	ClearFreezeWakeupPopups();
+}
+
+void CTClient::OnWindowResize()
+{
+	UnloadTextPopupCaches();
 }
 
 static bool LineShouldHighlight(const char *pLine, const char *pName)
@@ -3285,52 +3293,45 @@ void CTClient::CheckFreeze()
 	}
 }
 
-bool CTClient::EnsureTextPopupTexture(int TextType)
+bool CTClient::EnsureTextPopupCache(int TextType)
 {
 	if(TextType < 0 || TextType >= (int)std::size(s_aTextPopupDefinitions))
 		return false;
 
 	const bool FontChanged = str_comp(m_aTextPopupFont, g_Config.m_TcCustomFont) != 0;
 	if(FontChanged)
-		UnloadTextPopupTextures();
+		UnloadTextPopupCaches();
 
-	if(m_aTextPopupTextures[TextType].IsValid())
+	auto &PopupCache = m_aTextPopupCaches[TextType];
+	if(PopupCache.m_TextContainerIndex.Valid())
 		return true;
 
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
 
-	CImageInfo TextImage;
-	TextImage.m_Width = 1024;
-	TextImage.m_Height = 256;
-	TextImage.m_Format = CImageInfo::FORMAT_RGBA;
-	TextImage.m_pData = static_cast<uint8_t *>(calloc(TextImage.DataSize(), sizeof(uint8_t)));
-	if(TextImage.m_pData == nullptr)
+	const auto &Definition = s_aTextPopupDefinitions[TextType];
+	const char *pPopupText = Localize(Definition.m_pText);
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(0.0f, 0.0f));
+	Cursor.m_FontSize = QMCLIENT_TEXT_POPUP_FONT_SIZE;
+	if(!TextRender()->CreateTextContainer(PopupCache.m_TextContainerIndex, &Cursor, pPopupText))
 		return false;
 
-	constexpr int PaddingX = 48;
-	constexpr int PaddingY = 36;
-	const auto &Definition = s_aTextPopupDefinitions[TextType];
-	const int TextLength = str_length(Definition.m_pText);
-	const int MaxTextWidth = TextImage.m_Width - PaddingX * 2;
-	const int MaxTextHeight = TextImage.m_Height - PaddingY * 2;
-	const int FontSize = maximum(1, TextRender()->AdjustFontSize(Definition.m_pText, TextLength, MaxTextHeight, MaxTextWidth));
-	const int TextWidth = minimum(TextRender()->CalculateTextWidth(Definition.m_pText, TextLength, 0, FontSize), MaxTextWidth);
-	const float TextX = PaddingX + (MaxTextWidth - TextWidth) / 2.0f;
-	const float TextY = PaddingY + (MaxTextHeight - FontSize) / 2.0f;
-
-	TextRender()->UploadEntityLayerText(TextImage, TextImage.m_Width - (int)TextX, TextImage.m_Height - (int)TextY, Definition.m_pText, TextLength, TextX, TextY, FontSize);
-	m_aTextPopupTextures[TextType] = Graphics()->LoadTextureRawMove(TextImage, 0, Definition.m_pTextureName);
-	if(m_aTextPopupTextures[TextType].IsValid())
+	if(PopupCache.m_TextContainerIndex.Valid())
+	{
+		const STextBoundingBox BoundingBox = TextRender()->GetBoundingBoxTextContainer(PopupCache.m_TextContainerIndex);
+		PopupCache.m_TextSize = vec2(BoundingBox.m_W, BoundingBox.m_H);
 		str_copy(m_aTextPopupFont, g_Config.m_TcCustomFont, sizeof(m_aTextPopupFont));
-	return m_aTextPopupTextures[TextType].IsValid();
+	}
+	return PopupCache.m_TextContainerIndex.Valid();
 }
 
-void CTClient::UnloadTextPopupTextures()
+void CTClient::UnloadTextPopupCaches()
 {
-	for(auto &TextTexture : m_aTextPopupTextures)
+	for(auto &PopupCache : m_aTextPopupCaches)
 	{
-		if(TextTexture.IsValid())
-			Graphics()->UnloadTexture(&TextTexture);
+		TextRender()->DeleteTextContainer(PopupCache.m_TextContainerIndex);
+		PopupCache.m_TextSize = vec2(0.0f, 0.0f);
 	}
 	m_aTextPopupFont[0] = '\0';
 }
@@ -3349,7 +3350,7 @@ bool CTClient::AddTextPopup(int AnchorClientId, int TextType, bool UseRollingCol
 	if(!GameClient()->m_aClients[AnchorClientId].m_Active || !GameClient()->m_Snap.m_aCharacters[AnchorClientId].m_Active)
 		return false;
 
-	if(!EnsureTextPopupTexture(TextType))
+	if(!EnsureTextPopupCache(TextType))
 		return false;
 
 	const float Now = LocalTime();
@@ -3358,7 +3359,7 @@ bool CTClient::AddTextPopup(int AnchorClientId, int TextType, bool UseRollingCol
 	for(int i = 0; i < FREEZE_WAKEUP_POPUP_MAX; ++i)
 	{
 		const auto &Popup = m_aFreezeWakeupPopups[i];
-		if(!Popup.m_Active || Now - Popup.m_StartTime >= QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION)
+		if(!Popup.m_Active || Now - Popup.m_StartTime >= TextPopupDuration(Popup.m_TextType))
 		{
 			PopupIndex = i;
 			break;
@@ -3449,7 +3450,6 @@ void CTClient::ResetComboState(int Dummy)
 	auto ResetOne = [&](int Index) {
 		m_aComboPopupCount[Index] = 0;
 		m_aComboLastEventTick[Index] = -1;
-		m_aComboLastTargetPlayer[Index] = -1;
 		m_aComboLastHookedPlayer[Index] = -1;
 	};
 
@@ -3487,8 +3487,7 @@ void CTClient::CheckComboPopup()
 		const int CurrentTick = Client()->GameTick(Dummy);
 		if(m_aComboLastEventTick[Dummy] >= 0 &&
 			CurrentTick >= m_aComboLastEventTick[Dummy] &&
-			CurrentTick - m_aComboLastEventTick[Dummy] <= ComboWindowTicks &&
-			m_aComboLastTargetPlayer[Dummy] == TargetPlayer)
+			CurrentTick - m_aComboLastEventTick[Dummy] <= ComboWindowTicks)
 		{
 			++m_aComboPopupCount[Dummy];
 		}
@@ -3497,10 +3496,9 @@ void CTClient::CheckComboPopup()
 			m_aComboPopupCount[Dummy] = 1;
 		}
 		m_aComboLastEventTick[Dummy] = CurrentTick;
-		m_aComboLastTargetPlayer[Dummy] = TargetPlayer;
 
 		if(m_aComboPopupCount[Dummy] >= 2)
-			AddTextPopup(AnchorClientId, ComboPopupTextTypeFromCount(m_aComboPopupCount[Dummy]), false, QMCLIENT_COMBO_POPUP_COLOR);
+			AddTextPopup(AnchorClientId, ComboPopupTextTypeFromCount(m_aComboPopupCount[Dummy]), true, QMCLIENT_COMBO_POPUP_COLOR);
 	};
 
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
@@ -3557,7 +3555,7 @@ bool CTClient::HasFreezeWakeupPopups() const
 	const float Now = LocalTime();
 	for(const auto &Popup : m_aFreezeWakeupPopups)
 	{
-		if(Popup.m_Active && Now - Popup.m_StartTime < QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION)
+		if(Popup.m_Active && Now - Popup.m_StartTime < TextPopupDuration(Popup.m_TextType))
 			return true;
 	}
 	return false;
@@ -3575,7 +3573,8 @@ void CTClient::RenderFreezeWakeupPopups()
 			continue;
 
 		const float Elapsed = Now - Popup.m_StartTime;
-		if(Elapsed >= QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION)
+		const float PopupDuration = TextPopupDuration(Popup.m_TextType);
+		if(Elapsed >= PopupDuration)
 		{
 			Popup.m_Active = false;
 			continue;
@@ -3589,28 +3588,24 @@ void CTClient::RenderFreezeWakeupPopups()
 			continue;
 		}
 
-		if(!EnsureTextPopupTexture(Popup.m_TextType))
+		if(!EnsureTextPopupCache(Popup.m_TextType))
 		{
 			Popup.m_Active = false;
 			continue;
 		}
 
-		const float Progress = std::clamp(Elapsed / QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION, 0.0f, 1.0f);
+		const auto &PopupCache = m_aTextPopupCaches[Popup.m_TextType];
+		const float Progress = std::clamp(Elapsed / PopupDuration, 0.0f, 1.0f);
 		const float PopIn = std::clamp(Elapsed / 0.12f, 0.0f, 1.0f);
 		const float FadeOut = 1.0f - std::clamp((Progress - 0.7f) / 0.3f, 0.0f, 1.0f);
-		const float Scale = 0.85f + 0.15f * PopIn;
-		const float Width = s_aTextPopupDefinitions[Popup.m_TextType].m_Width * Scale;
-		const float Height = QMCLIENT_FREEZE_WAKEUP_POPUP_HEIGHT * Scale;
+		const float Rise = (1.0f - PopIn) * 6.0f;
 		const vec2 AnchorPos = GameClient()->m_aClients[Popup.m_AnchorClientId].m_RenderPos +
 			vec2(QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET.x * Popup.m_HorizontalSign, QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET.y) +
 			vec2(QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT.x * Popup.m_HorizontalSign, QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT.y) * Progress;
 		const vec2 Pos =
 			Popup.m_HorizontalSign < 0.0f ?
-				vec2(AnchorPos.x - Width, AnchorPos.y) :
-				AnchorPos;
-
-		const IGraphics::CQuadItem ShadowQuad(Pos.x + 2.0f, Pos.y + 2.0f, Width, Height);
-		const IGraphics::CQuadItem TextQuad(Pos.x, Pos.y, Width, Height);
+				vec2(AnchorPos.x - PopupCache.m_TextSize.x, AnchorPos.y - Rise) :
+				vec2(AnchorPos.x, AnchorPos.y - Rise);
 
 		ColorRGBA PopupColor = Popup.m_Color;
 		if(Popup.m_UseRollingColor)
@@ -3623,15 +3618,11 @@ void CTClient::RenderFreezeWakeupPopups()
 				1.0f);
 		}
 
-		Graphics()->TextureSet(m_aTextPopupTextures[Popup.m_TextType]);
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.32f * FadeOut);
-		Graphics()->QuadsDrawTL(&ShadowQuad, 1);
-		Graphics()->SetColor(PopupColor.WithAlpha(FadeOut));
-		Graphics()->QuadsDrawTL(&TextQuad, 1);
-		Graphics()->QuadsEnd();
+		ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
+		OutlineColor.a *= FadeOut;
+		TextRender()->RenderTextContainer(PopupCache.m_TextContainerIndex, ColorRGBA(0.0f, 0.0f, 0.0f, 0.32f * FadeOut), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), Pos.x + 2.0f, Pos.y + 2.0f);
+		TextRender()->RenderTextContainer(PopupCache.m_TextContainerIndex, PopupColor.WithAlpha(FadeOut), OutlineColor, Pos.x, Pos.y);
 	}
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 void CTClient::CheckWaterFall()

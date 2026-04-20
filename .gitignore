@@ -94,6 +94,7 @@ versionsrv
 
 generated
 target
+src/voicesrv/
 
 /build*
 /integration_test/*

@@ -2382,7 +2382,7 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 	static CButtonContainer s_Config, s_Profiles, s_Warlist, s_Chatbinds;
 	if(DoButtonLineSize_Menu(&s_Config, Localize("TClient Settings"), 0, &TClientConfig, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[ConfigDomain::QIMENG].m_aConfigPath, aBuf, sizeof(aBuf));
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[ConfigDomain::QMCLIENT].m_aConfigPath, aBuf, sizeof(aBuf));
 		Client()->ViewFile(aBuf);
 	}
 	if(DoButtonLineSize_Menu(&s_Profiles, Localize("Profiles"), 0, &ProfilesFile, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
@@ -2971,18 +2971,18 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 		// 分隔
 		Row.VSplitLeft(MarginSmall, nullptr, &Row);
 
-		// Domain 筛选 - DDNet / Qimeng
+		// Domain 筛选 - DDNet / QmClient
 		const float DomainWidth = 85.0f;
-		CUIRect DomainDDNet, DomainQimeng;
+		CUIRect DomainDDNet, DomainQmClient;
 		Row.VSplitLeft(DomainWidth, &DomainDDNet, &Row);
 		Row.VSplitLeft(MarginSmall, nullptr, &Row);
-		Row.VSplitLeft(DomainWidth, &DomainQimeng, &Row);
+		Row.VSplitLeft(DomainWidth, &DomainQmClient, &Row);
 		Row.VSplitLeft(Margin, nullptr, &Row);
 
 		if(DoButton_CheckBox(&g_Config.m_TcUiShowDDNet, Localize("DDNet"), g_Config.m_TcUiShowDDNet, &DomainDDNet))
 			g_Config.m_TcUiShowDDNet ^= 1;
-		if(DoButton_CheckBox(&g_Config.m_TcUiShowQimeng, Localize("QmClient"), g_Config.m_TcUiShowQimeng, &DomainQimeng))
-			g_Config.m_TcUiShowQimeng ^= 1;
+		if(DoButton_CheckBox(&g_Config.m_TcUiShowQmClient, Localize("QmClient"), g_Config.m_TcUiShowQmClient, &DomainQmClient))
+			g_Config.m_TcUiShowQmClient ^= 1;
 
 		// 其他筛选 - 紧凑列表 / 仅显示已修改
 		const float FilterWidth = 90.0f;
@@ -3099,9 +3099,9 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 	auto DomainEnabled = [&](ConfigDomain Domain) {
 		if(Domain == ConfigDomain::DDNET)
 			return g_Config.m_TcUiShowDDNet != 0;
-		if(Domain == ConfigDomain::QIMENG)
-			return g_Config.m_TcUiShowQimeng != 0;
-		// only show DDNet and Qimeng domains
+		if(Domain == ConfigDomain::QMCLIENT)
+			return g_Config.m_TcUiShowQmClient != 0;
+		// only show DDNet and QmClient domains
 		return false;
 	};
 
@@ -3208,7 +3208,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 		switch(D)
 		{
 		case ConfigDomain::DDNET: return "DDNet";
-		case ConfigDomain::QIMENG: return "Qimeng";
+		case ConfigDomain::QMCLIENT: return "QmClient";
 		default: return "Other";
 		}
 	};
@@ -3426,7 +3426,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 	s_ScrollRegion.End();
 }
 
-void CMenus::RenderSettingsQiMeng(CUIRect MainView)
+void CMenus::RenderSettingsQmClient(CUIRect MainView)
 {
 	// ============================================
 	// Liquid Glass UI - 稳定布局系统
@@ -4555,7 +4555,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 		case EQmModuleId::KeyBinds:
 			return {3, Localize("Key binds"), Localize("Common bind collection")};
 		case EQmModuleId::MiniFeatures:
-			return {2, Localize("Qm mini features"), Localize("Qimeng's assorted daily-use tools")};
+			return {2, Localize("Qm mini features"), Localize("QmClient's assorted daily-use tools")};
 		case EQmModuleId::CameraView:
 			return {10, Localize("Camera and view"), Localize("Camera drift, dynamic FOV and aspect ratio presets")};
 		case EQmModuleId::DummyMiniView:
@@ -5145,9 +5145,9 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("Chat message"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_FreezeChatMessageQiMeng(g_Config.m_TcFreezeChatMessage, sizeof(g_Config.m_TcFreezeChatMessage));
-					s_FreezeChatMessageQiMeng.SetEmptyText(Localize("Leave empty to disable"));
-					Ui()->DoEditBox(&s_FreezeChatMessageQiMeng, &ControlCol, LG_BodySize);
+					static CLineInput s_FreezeChatMessageQmClient(g_Config.m_TcFreezeChatMessage, sizeof(g_Config.m_TcFreezeChatMessage));
+					s_FreezeChatMessageQmClient.SetEmptyText(Localize("Leave empty to disable"));
+					Ui()->DoEditBox(&s_FreezeChatMessageQmClient, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -5365,7 +5365,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 2, Localize("Qm mini features"), Localize("Qimeng's assorted daily-use tools"));
+				DoModuleHeadline(CardContent, 2, Localize("Qm mini features"), Localize("QmClient's assorted daily-use tools"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, Localize("Local particles"), &g_Config.m_QmcFootParticles, &Row, LG_LineHeight);
@@ -5384,43 +5384,12 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmChatFadeOutAnim, Localize("Chat box animation"), &g_Config.m_QmChatFadeOutAnim, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmEmoticonSelectAnim, Localize("Emote animation"), &g_Config.m_QmEmoticonSelectAnim, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmScoreboardAnimOptim, Localize("Scoreboard animation"), &g_Config.m_QmScoreboardAnimOptim, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRepeatEnabled, Localize("Enable repeat feature"), &g_Config.m_QmRepeatEnabled, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHammerSwapSkin, Localize("Hammer hit copies skin"), &g_Config.m_QmHammerSwapSkin, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmJellyTee, Localize("Enable Jelly Tee"), &g_Config.m_QmJellyTee, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-				if(g_Config.m_QmJellyTee)
-				{
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmJellyTeeOthers, Localize("Jelly others"), &g_Config.m_QmJellyTeeOthers, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmJellyTeeStrength, &g_Config.m_QmJellyTeeStrength, &Row, Localize("Jelly strength"), 0, 1000);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmJellyTeeDuration, &g_Config.m_QmJellyTeeDuration, &Row, Localize("Jelly duration"), 1, 500);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-				}
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRandomEmoteOnHit, Localize("Random emote on hit"), &g_Config.m_QmRandomEmoteOnHit, &Row, LG_LineHeight);
@@ -7554,7 +7523,7 @@ void CMenus::RenderSettingsQiMeng(CUIRect MainView)
 	s_ScrollRegion.End();
 }
 
-void CMenus::PrewarmTClientAndQiMengPages()
+void CMenus::PrewarmTClientAndQmClientPages()
 {
 	static bool s_Prewarmed = false;
 	if(s_Prewarmed)

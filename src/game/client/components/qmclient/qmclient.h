@@ -11,6 +11,7 @@
 #include <engine/shared/http.h>
 #include <engine/shared/json.h>
 #include <engine/shared/protocol.h>
+#include <engine/textrender.h>
 
 #include <game/client/component.h>
 
@@ -169,21 +170,25 @@ class CTClient : public CComponent
 	};
 	static constexpr int FREEZE_WAKEUP_POPUP_MAX = 8;
 	static constexpr int TEXT_POPUP_TEXTURE_MAX = 5;
+	struct STextPopupCache
+	{
+		STextContainerIndex m_TextContainerIndex;
+		vec2 m_TextSize = vec2(0.0f, 0.0f);
+	};
 	bool m_aWasInFreezeForWakeupPopup[NUM_DUMMIES] = {false, false};
 	SFreezeWakeupPopup m_aFreezeWakeupPopups[FREEZE_WAKEUP_POPUP_MAX];
-	IGraphics::CTextureHandle m_aTextPopupTextures[TEXT_POPUP_TEXTURE_MAX];
+	STextPopupCache m_aTextPopupCaches[TEXT_POPUP_TEXTURE_MAX];
 	char m_aTextPopupFont[256] = "";
 	void CheckFreezeWakeupPopup();
 	void CheckComboPopup();
 	void AddFreezeWakeupPopup(int WokenDummy);
-	bool EnsureTextPopupTexture(int TextType);
+	bool EnsureTextPopupCache(int TextType);
 	bool AddTextPopup(int AnchorClientId, int TextType, bool UseRollingColor, ColorRGBA Color);
-	void UnloadTextPopupTextures();
+	void UnloadTextPopupCaches();
 	void ClearFreezeWakeupPopups();
 	void ResetComboState(int Dummy = -1);
 	int m_aComboPopupCount[NUM_DUMMIES] = {0, 0};
 	int m_aComboLastEventTick[NUM_DUMMIES] = {-1, -1};
-	int m_aComboLastTargetPlayer[NUM_DUMMIES] = {-1, -1};
 	int m_aComboLastHookedPlayer[NUM_DUMMIES] = {-1, -1};
 
 	// Auto Switch on Unfreeze (HJ大佬辅助)
@@ -365,6 +370,7 @@ public:
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
 	void OnShutdown() override;
+	void OnWindowResize() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void OnConsoleInit() override;
 	void OnUpdate() override;

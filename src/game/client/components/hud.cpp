@@ -4154,6 +4154,8 @@ void CHud::RenderDummyActions()
 		StartY -= 56;
 	}
 
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::DummyActions, {StartX, StartY, BoxWidth, BoxHeight});
+
 	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
 
 	float y = StartY + 2;
@@ -4173,6 +4175,7 @@ void CHud::RenderDummyActions()
 	}
 	Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudDummyCopy);
 	Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_DummyCopyOffset, x, y);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 namespace

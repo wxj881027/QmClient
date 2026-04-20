@@ -146,6 +146,7 @@ const char *CHudEditor::ElementToken(EHudEditorElement Element)
 	case EHudEditorElement::SuddenDeath: return "sudden_death";
 	case EHudEditorElement::ScoreHud: return "score_hud";
 	case EHudEditorElement::WarmupTimer: return "warmup_timer";
+	case EHudEditorElement::DummyActions: return "dummy_actions";
 	case EHudEditorElement::DummyMiniMap: return "dummy_minimap";
 	case EHudEditorElement::TextInfo: return "text_info";
 	case EHudEditorElement::SpectatorCount: return "spectator_count";

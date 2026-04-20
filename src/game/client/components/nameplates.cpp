@@ -567,7 +567,7 @@ protected:
 		ColorRGBA OutlineColor, Color;
 		Color = m_Color;
 
-		// Rainbow name for local player (same style as QiMeng sidebar)
+		// Rainbow name for local player (same style as QmClient sidebar)
 		if(m_IsLocal && g_Config.m_QmRainbowName)
 		{
 			const float Time = This.Client()->GlobalTime();

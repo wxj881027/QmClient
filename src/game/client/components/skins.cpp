@@ -547,7 +547,7 @@ void CSkins::LoadSkinDirect(const char *pName)
 void CSkins::OnConsoleInit()
 {
 	ConfigManager()->RegisterCallback(CSkins::ConfigSaveCallback, this);
-	ConfigManager()->RegisterCallback(CSkins::ConfigSaveQueueCallback, this, ConfigDomain::QIMENG);
+	ConfigManager()->RegisterCallback(CSkins::ConfigSaveQueueCallback, this, ConfigDomain::QMCLIENT);
 	Console()->Register("add_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, ConAddFavoriteSkin, this, "Add a skin as a favorite");
 	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, ConRemFavoriteSkin, this, "Remove a skin from the favorites");
 	Console()->Register("add_skin_queue", "s[skin_name]", CFGFLAG_CLIENT, ConAddSkinQueue, this, "Add a skin to the queue");
@@ -1745,7 +1745,7 @@ void CSkins::OnQueueConfigSave(IConfigManager *pConfigManager)
 				PresetIndex,
 				Entry.m_SkinName.c_str());
 		}
-		pConfigManager->WriteLine(aBuffer, ConfigDomain::QIMENG);
+		pConfigManager->WriteLine(aBuffer, ConfigDomain::QMCLIENT);
 	};
 
 	for(const auto &QueueSkin : m_aSkinQueue[0])
@@ -1768,7 +1768,7 @@ void CSkins::OnQueueConfigSave(IConfigManager *pConfigManager)
 					str_format(aBuffer, sizeof(aBuffer), "add_skin_queue_preset \"%s\"", Preset.m_Name.c_str());
 				else
 					str_format(aBuffer, sizeof(aBuffer), "add_dummy_skin_queue_preset \"%s\"", Preset.m_Name.c_str());
-				pConfigManager->WriteLine(aBuffer, ConfigDomain::QIMENG);
+				pConfigManager->WriteLine(aBuffer, ConfigDomain::QMCLIENT);
 			}
 
 			for(const auto &QueueSkin : Preset.m_Queue)

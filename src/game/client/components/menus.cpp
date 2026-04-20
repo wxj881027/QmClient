@@ -1414,8 +1414,8 @@ void CMenus::PrewarmSettingsPages()
 	// Preload skin list to avoid lag when first entering settings
 	GameClient()->m_Skins.SkinList();
 
-	// Preload TClient and QiMeng pages static variables
-	PrewarmTClientAndQiMengPages();
+	// Preload TClient and QmClient pages static variables
+	PrewarmTClientAndQmClientPages();
 }
 
 void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

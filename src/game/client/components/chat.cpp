@@ -250,59 +250,9 @@ void CChat::CLine::Reset(CChat &This)
 	m_pTranslateResponse = nullptr;
 }
 
-// 缓动函数实现
-float CChat::EaseOutQuad(float t)
-{
-	return 1.0f - (1.0f - t) * (1.0f - t);
-}
-
 float CChat::EaseInQuad(float t)
 {
 	return t * t;
-}
-
-float CChat::EaseOutBack(float t)
-{
-	const float c1 = 1.70158f;
-	const float c3 = c1 + 1.0f;
-	const float x = t - 1.0f;
-	const float x2 = x * x;
-	return 1.0f + c3 * x2 * x + c1 * x2;
-}
-
-float CChat::CalculateAnimationAlpha(const float MessageAge, const bool ShowChat) const
-{
-	const bool UseFadeOutAnim = g_Config.m_QmChatFadeOutAnim != 0;
-	const float FadeInDuration = CHAT_ANIM_FADE_IN_DURATION;
-	const float FadeOutStart = CHAT_ANIM_FADE_OUT_START;
-	const float FadeOutDuration = CHAT_ANIM_FADE_OUT_DURATION;
-
-	const float FadeInT = std::clamp(MessageAge / FadeInDuration, 0.0f, 1.0f);
-	const float FadeOutT = (ShowChat || !UseFadeOutAnim) ? 0.0f : std::clamp((MessageAge - FadeOutStart) / FadeOutDuration, 0.0f, 1.0f);
-
-	// Declarative composition: entry * timeout.
-	const float EntryAlpha = EaseOutQuad(FadeInT);
-	const float TimeoutAlpha = 1.0f - EaseInQuad(FadeOutT);
-	return std::clamp(EntryAlpha * TimeoutAlpha, 0.0f, 1.0f);
-}
-
-float CChat::CalculateAnimationOffsetX(const float MessageAge, const bool Emphasized, const bool ShowChat) const
-{
-	const bool UseFadeOutAnim = g_Config.m_QmChatFadeOutAnim != 0;
-	const float SlideInDuration = CHAT_ANIM_FADE_IN_DURATION;
-	const float FadeOutStart = CHAT_ANIM_FADE_OUT_START;
-	const float FadeOutDuration = CHAT_ANIM_FADE_OUT_DURATION;
-
-	const float SlideInT = std::clamp(MessageAge / SlideInDuration, 0.0f, 1.0f);
-	const float SlideOutT = (ShowChat || !UseFadeOutAnim) ? 0.0f : std::clamp((MessageAge - FadeOutStart) / FadeOutDuration, 0.0f, 1.0f);
-
-	const float EntryAmplitude = Emphasized ? CHAT_ANIM_HIGHLIGHT_SLIDE : CHAT_ANIM_SLIDE_OFFSET;
-	const float EntryEase = Emphasized ? std::min(EaseOutBack(SlideInT), 1.08f) : EaseOutQuad(SlideInT);
-	const float EntryOffsetX = -EntryAmplitude * (1.0f - EntryEase);
-	const float TimeoutOffsetX = -CHAT_ANIM_SLIDE_OUT_OFFSET * EaseInQuad(SlideOutT);
-
-	// Declarative composition: entry + timeout.
-	return EntryOffsetX + TimeoutOffsetX;
 }
 
 float CChat::CalculateCutOffAlpha(float CutOffT)
@@ -393,6 +343,43 @@ void CChat::ClearLines()
 	m_LastAnimUpdateTime = 0;
 }
 
+void CChat::SetUiMousePos(vec2 Pos)
+{
+	const vec2 WindowSize = vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
+	const CUIRect *pScreen = Ui()->Screen();
+
+	const vec2 UpdatedMousePos = Ui()->UpdatedMousePos();
+	Pos = Pos / vec2(pScreen->w, pScreen->h) * WindowSize;
+	Ui()->OnCursorMove(Pos.x - UpdatedMousePos.x, Pos.y - UpdatedMousePos.y);
+}
+
+void CChat::LockMouse()
+{
+	if(!m_MouseUnlocked)
+		return;
+
+	m_MouseUnlocked = false;
+	if(m_LastMousePos.has_value())
+		SetUiMousePos(m_LastMousePos.value());
+	m_LastMousePos = Ui()->MousePos();
+}
+
+void CChat::UnlockMouse()
+{
+	if(m_MouseUnlocked || !IsActive() || GameClient()->m_Menus.IsActive() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		return;
+
+	m_MouseUnlocked = true;
+
+	vec2 OldMousePos = Ui()->MousePos();
+	if(m_LastMousePos == std::nullopt)
+		SetUiMousePos(Ui()->Screen()->Center());
+	else
+		SetUiMousePos(m_LastMousePos.value());
+
+	m_LastMousePos = OldMousePos;
+}
+
 void CChat::OnWindowResize()
 {
 	RebuildChat();
@@ -420,6 +407,8 @@ void CChat::Reset()
 	m_ServerCommandsNeedSorting = false;
 	m_aCurrentInputText[0] = '\0';
 	DisableMode();
+	m_MouseUnlocked = false;
+	m_LastMousePos = std::nullopt;
 	m_vServerCommands.clear();
 
 	for(int64_t &LastSoundPlayed : m_aLastSoundPlayed)
@@ -428,6 +417,7 @@ void CChat::Reset()
 
 void CChat::OnRelease()
 {
+	LockMouse();
 	m_Show = false;
 }
 
@@ -851,6 +841,7 @@ void CChat::EnableMode(int Team)
 		m_CompletionChosen = -1;
 		m_CompletionUsed = false;
 		m_Input.Activate(EInputPriority::CHAT);
+		UnlockMouse();
 	}
 }
 
@@ -858,6 +849,7 @@ void CChat::DisableMode()
 {
 	if(m_Mode != MODE_NONE)
 	{
+		LockMouse();
 		m_Mode = MODE_NONE;
 		m_Input.Deactivate();
 	}
@@ -1643,6 +1635,16 @@ void CChat::OnPrepareLines(float y)
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }
 
+bool CChat::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
+{
+	if(m_Mode == MODE_NONE || !m_MouseUnlocked)
+		return false;
+
+	Ui()->ConvertMouseMove(&x, &y, CursorType);
+	Ui()->OnCursorMove(x, y);
+	return true;
+}
+
 void CChat::OnRender()
 {
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -1673,6 +1675,25 @@ void CChat::OnRender()
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 	const CUIRect ChatRect = {0.0f, 50.0f, std::min(Width, std::max(190.0f, g_Config.m_ClChatWidth + 32.0f)), 250.0f};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Chat, ChatRect);
+	const bool UpdateChatUi = m_Mode != MODE_NONE && m_MouseUnlocked && !HudEditorPreview && !GameClient()->m_Menus.IsActive();
+	vec2 ChatMousePos(0.0f, 0.0f);
+	auto FinishChatUi = [&]() {
+		if(UpdateChatUi)
+		{
+			RenderTools()->RenderCursor(ChatMousePos, 24.0f);
+			Ui()->FinishCheck();
+		}
+	};
+
+	if(UpdateChatUi)
+	{
+		Ui()->StartCheck();
+		Ui()->Update();
+		const CUIRect *pUiScreen = Ui()->Screen();
+		ChatMousePos = vec2(
+			Ui()->MouseX() * Width / pUiScreen->w,
+			Ui()->MouseY() * Height / pUiScreen->h);
+	}
 
 	float x = 5.0f;
 	float BoundsTop = Height;
@@ -1730,6 +1751,27 @@ void CChat::OnRender()
 		float ScrollOffsetChange = m_Input.GetScrollOffsetChange();
 
 		m_Input.Activate(EInputPriority::CHAT); // Ensure that the input is active
+		if(UpdateChatUi)
+		{
+			CLineInput::SMouseSelection *pMouseSelection = m_Input.GetMouseSelection();
+			const bool MouseInsideInput = ChatMousePos.x >= ClippingRect.x && ChatMousePos.x < ClippingRect.x + ClippingRect.w &&
+				ChatMousePos.y >= ClippingRect.y && ChatMousePos.y < ClippingRect.y + ClippingRect.h;
+			if(MouseInsideInput && !pMouseSelection->m_Selecting && Ui()->MouseButtonClicked(0))
+			{
+				pMouseSelection->m_Selecting = true;
+				pMouseSelection->m_PressMouse = ChatMousePos;
+				pMouseSelection->m_Offset = vec2(0.0f, 0.0f);
+			}
+			if(pMouseSelection->m_Selecting)
+			{
+				pMouseSelection->m_ReleaseMouse = ChatMousePos;
+				if(!Ui()->MouseButton(0))
+				{
+					pMouseSelection->m_Selecting = false;
+					Input()->EnsureScreenKeyboardShown();
+				}
+			}
+		}
 		const CUIRect InputCursorRect = {InputCursor.m_X, InputCursor.m_Y - ScrollOffset, 0.0f, 0.0f};
 		const bool WasChanged = m_Input.WasChanged();
 		const bool WasCursorChanged = m_Input.WasCursorChanged();
@@ -1774,6 +1816,7 @@ void CChat::OnRender()
 	if(!g_Config.m_ClShowChat)
 #endif
 	{
+		FinishChatUi();
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
@@ -1790,7 +1833,6 @@ void CChat::OnRender()
 	const float DeltaSeconds = std::clamp((Now - m_LastAnimUpdateTime) / (float)time_freq(), 0.0f, 0.25f);
 	m_LastAnimUpdateTime = Now;
 	const float CutOffStep = CHAT_ANIM_CUTOFF_DURATION > 0.0f ? std::clamp(DeltaSeconds / CHAT_ANIM_CUTOFF_DURATION, 0.0f, 1.0f) : 1.0f;
-	const float InvTimeFreq = 1.0f / (float)time_freq();
 	const int64_t VisibleTimeNoFocusTicks = static_cast<int64_t>(CHAT_VISIBLE_SECONDS_NO_FOCUS * time_freq());
 
 	float HeightLimit = IsScoreBoardOpen ? 180.0f : (m_PrevShowChat ? 50.0f : 200.0f);
@@ -1813,7 +1855,7 @@ void CChat::OnRender()
 
 	bool RenderedAnyLines = false;
 
-	// Declarative animation pass: blend age-based animation with overflow-based cut-off.
+	// Keep chat rendering static and only smooth the overflow cut-off.
 	for(int i = 0; i < MAX_LINES; i++)
 	{
 		CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
@@ -1834,11 +1876,8 @@ void CChat::OnRender()
 			continue;
 		}
 
-		// Base animation from message age.
-		const float MessageAge = (Now - Line.m_Time) * InvTimeFreq;
-		const bool Emphasized = Line.m_Highlighted || Line.m_Whisper;
-		float AnimAlpha = CalculateAnimationAlpha(MessageAge, m_PrevShowChat);
-		float AnimOffsetX = CalculateAnimationOffsetX(MessageAge, Emphasized, m_PrevShowChat);
+		float AnimAlpha = 1.0f;
+		float AnimOffsetX = 0.0f;
 
 		// Declarative cut-off composition from current overflow in the visible area.
 		const float Overflow = std::max(0.0f, HeightLimit - y);
@@ -1932,6 +1971,7 @@ void CChat::OnRender()
 		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, {x, BoundsTop, ChatRect.w - x, BoundsHeight});
 	}
 
+	FinishChatUi();
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
