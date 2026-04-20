@@ -17,6 +17,7 @@ enum class EHudEditorElement
 	SuddenDeath,
 	ScoreHud,
 	WarmupTimer,
+	DummyActions,
 	DummyMiniMap,
 	TextInfo,
 	SpectatorCount,

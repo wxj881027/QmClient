@@ -261,7 +261,7 @@ MACRO_CONFIG_STR(TcTranslateSecretId, tc_translate_secret_id, 256, "", CFGFLAG_C
 MACRO_CONFIG_STR(TcTranslateSecretKey, tc_translate_secret_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "腾讯云翻译 SecretKey")
 MACRO_CONFIG_STR(TcTranslateKey, tc_translate_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "用于需要鉴权的后端的 API Key（如 LibreTranslate）")
 MACRO_CONFIG_STR(TcTranslateRegion, tc_translate_region, 32, "ap-guangzhou", CFGFLAG_CLIENT | CFGFLAG_SAVE, "腾讯云翻译地域（如 ap-guangzhou）")
-MACRO_CONFIG_INT(TcTranslateAuto, tc_translate_auto, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动翻译消息，只有部分后端支持（FTApi 不支持）")
+MACRO_CONFIG_INT(TcTranslateAuto, tc_translate_auto, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动翻译消息，只有部分后端支持（FTApi 不支持）")
 
 // Animations
 MACRO_CONFIG_INT(TcAnimateWheelTime, tc_animate_wheel_time, 350, 0, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "表情轮和绑定轮动画时长（毫秒，0=无动画，1000=1 秒）")
@@ -328,7 +328,8 @@ MACRO_CONFIG_INT(TcSidebarShowServerInfo, tc_sidebar_show_server_info, 1, 0, 1, 
 
 // UI Settings
 MACRO_CONFIG_INT(TcUiShowTClient, tc_ui_show_tclient, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在配置界面显示 TClient 配置项")
-MACRO_CONFIG_INT(TcUiShowQimeng, tc_ui_show_qimeng, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在配置界面显示栖梦配置项")
+// Keep the legacy script name for config compatibility.
+MACRO_CONFIG_INT(TcUiShowQmClient, tc_ui_show_qimeng, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在配置界面显示 QmClient 配置项")
 MACRO_CONFIG_INT(TcUiShowDDNet, tc_ui_show_ddnet, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在配置界面显示 DDNet 配置项")
 MACRO_CONFIG_INT(TcUiCompactList, tc_ui_compact_list, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "配置列表使用紧凑视图")
 MACRO_CONFIG_INT(TcUiOnlyModified, tc_ui_only_modified, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "只显示已修改的配置项")
