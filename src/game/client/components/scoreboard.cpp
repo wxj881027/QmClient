@@ -126,12 +126,6 @@ void CScoreboard::ConToggleScoreboardCursor(IConsole::IResult *pResult, void *pU
 {
 	CScoreboard *pSelf = static_cast<CScoreboard *>(pUserData);
 
-	if(pSelf->GameClient()->m_Chat.IsActive())
-	{
-		pSelf->GameClient()->m_Chat.ToggleMouseUnlocked();
-		return;
-	}
-
 	if(!pSelf->IsActive() ||
 		pSelf->GameClient()->m_Menus.IsActive() ||
 		pSelf->Client()->State() == IClient::STATE_DEMOPLAYBACK)

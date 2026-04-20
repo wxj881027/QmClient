@@ -364,12 +364,12 @@ void CChat::LockMouse()
 	m_LastMousePos = Ui()->MousePos();
 }
 
-void CChat::ToggleMouseUnlocked()
+void CChat::UnlockMouse()
 {
-	if(!IsActive() || GameClient()->m_Menus.IsActive() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	if(m_MouseUnlocked || !IsActive() || GameClient()->m_Menus.IsActive() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		return;
 
-	m_MouseUnlocked = !m_MouseUnlocked;
+	m_MouseUnlocked = true;
 
 	vec2 OldMousePos = Ui()->MousePos();
 	if(m_LastMousePos == std::nullopt)
@@ -550,12 +550,6 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 {
 	if(m_Mode == MODE_NONE)
 		return false;
-
-	if(m_MouseUnlocked && Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE)
-	{
-		LockMouse();
-		return true;
-	}
 
 	if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE)
 	{
@@ -847,6 +841,7 @@ void CChat::EnableMode(int Team)
 		m_CompletionChosen = -1;
 		m_CompletionUsed = false;
 		m_Input.Activate(EInputPriority::CHAT);
+		UnlockMouse();
 	}
 }
 
