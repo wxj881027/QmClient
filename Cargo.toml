@@ -4,7 +4,6 @@ members = [
   "src/engine",
   "src/engine/shared",
   "src/rust-bridge/test",
-  "src/rust-bridge/voice",
 ]
 
 resolver = "2"

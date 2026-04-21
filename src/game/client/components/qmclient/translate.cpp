@@ -246,48 +246,54 @@ bool ParseOutgoingTranslateTarget(const char *pLine, std::string &Text, std::str
 
 static void EscapeJsonString(const char *pStr, char *pOut, size_t OutSize)
 {
-	size_t OutPos = 0;
-	if(OutSize < 2)
+	if(OutSize == 0)
 		return;
+
+	pOut[0] = '\0';
+	if(OutSize < 3)
+		return;
+
+	size_t OutPos = 0;
 	pOut[OutPos++] = '"';
 	for(const char *p = pStr; *p; ++p)
 	{
-		char c = *p;
-		if(c == '"' || c == '\\' || c == '\b' || c == '\n' || c == '\r' || c == '\t' || (unsigned char)c < 0x20)
+		const unsigned char c = (unsigned char)*p;
+		const auto CanAppend = [&](size_t Count) {
+			return OutPos + Count + 2 <= OutSize;
+		};
+
+		if(c == '"' || c == '\\' || c == '\b' || c == '\n' || c == '\r' || c == '\t')
 		{
-			if(OutPos >= OutSize - 2)
+			if(!CanAppend(2))
 				break;
 			pOut[OutPos++] = '\\';
 			switch(c)
 			{
-			case '"': pOut[OutPos++] = '\\'; pOut[OutPos++] = '"'; break;
+			case '"': pOut[OutPos++] = '"'; break;
 			case '\\': pOut[OutPos++] = '\\'; break;
 			case '\b': pOut[OutPos++] = 'b'; break;
 			case '\n': pOut[OutPos++] = 'n'; break;
 			case '\r': pOut[OutPos++] = 'r'; break;
 			case '\t': pOut[OutPos++] = 't'; break;
-			default:
-				if(OutPos >= OutSize - 6)
-				{
-					OutPos--; // Remove backslash
-					break;
-				}
-				str_format(pOut + OutPos, 6, "u%04x", (unsigned char)c);
-				OutPos += 5;
-				break;
 			}
+		}
+		else if(c < 0x20)
+		{
+			if(!CanAppend(6))
+				break;
+			str_format(pOut + OutPos, OutSize - OutPos, "\\u%04x", c);
+			OutPos += 6;
 		}
 		else
 		{
-			if(OutPos >= OutSize - 1)
+			if(!CanAppend(1))
 				break;
-			pOut[OutPos++] = c;
+			pOut[OutPos++] = (char)c;
 		}
 	}
-	if(OutPos < OutSize)
-		pOut[OutPos++] = '"';
-	if(OutPos < OutSize)
-		pOut[OutPos] = '\0';
+
+	pOut[OutPos++] = '"';
+	pOut[OutPos] = '\0';
 }
 } // namespace
 

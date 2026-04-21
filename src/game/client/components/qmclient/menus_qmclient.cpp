@@ -2893,6 +2893,16 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 	ListArea.HSplitTop(MarginSmall, nullptr, &ListArea);
 
 	static CLineInputBuffered<128> s_SearchInput;
+	static int s_TcUiTagVisual = 0;
+	static int s_TcUiTagHud = 0;
+	static int s_TcUiTagInput = 0;
+	static int s_TcUiTagChat = 0;
+	static int s_TcUiTagAudio = 0;
+	static int s_TcUiTagAutomation = 0;
+	static int s_TcUiTagSocial = 0;
+	static int s_TcUiTagCamera = 0;
+	static int s_TcUiTagGameplay = 0;
+	static int s_TcUiTagMisc = 0;
 
 	ChangesCount = s_StagedInts.size() + s_StagedStrs.size() + s_StagedCols.size();
 	// Apply Bar - 应用/清除按钮 + 更改计数
@@ -2981,8 +2991,8 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 
 		if(DoButton_CheckBox(&g_Config.m_TcUiShowDDNet, Localize("DDNet"), g_Config.m_TcUiShowDDNet, &DomainDDNet))
 			g_Config.m_TcUiShowDDNet ^= 1;
-		if(DoButton_CheckBox(&g_Config.m_TcUiShowQmClient, Localize("QmClient"), g_Config.m_TcUiShowQmClient, &DomainQmClient))
-			g_Config.m_TcUiShowQmClient ^= 1;
+		if(DoButton_CheckBox(&g_Config.m_TcUiShowTClient, Localize("QmClient"), g_Config.m_TcUiShowTClient, &DomainQmClient))
+			g_Config.m_TcUiShowTClient ^= 1;
 
 		// 其他筛选 - 紧凑列表 / 仅显示已修改
 		const float FilterWidth = 90.0f;
@@ -3015,28 +3025,28 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 
 		CUIRect TagBtn;
 		TagsArea.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagVisual, Localize("Visual"), g_Config.m_TcUiTagVisual, &TagBtn))
-			g_Config.m_TcUiTagVisual ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagVisual, Localize("Visual"), s_TcUiTagVisual, &TagBtn))
+			s_TcUiTagVisual ^= 1;
 
 		TagsArea.VSplitLeft(TagMargin, nullptr, &TagsArea);
 		TagsArea.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagHud, Localize("HUD"), g_Config.m_TcUiTagHud, &TagBtn))
-			g_Config.m_TcUiTagHud ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagHud, Localize("HUD"), s_TcUiTagHud, &TagBtn))
+			s_TcUiTagHud ^= 1;
 
 		TagsArea.VSplitLeft(TagMargin, nullptr, &TagsArea);
 		TagsArea.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagInput, Localize("Input"), g_Config.m_TcUiTagInput, &TagBtn))
-			g_Config.m_TcUiTagInput ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagInput, Localize("Input"), s_TcUiTagInput, &TagBtn))
+			s_TcUiTagInput ^= 1;
 
 		TagsArea.VSplitLeft(TagMargin, nullptr, &TagsArea);
 		TagsArea.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagChat, Localize("Chat"), g_Config.m_TcUiTagChat, &TagBtn))
-			g_Config.m_TcUiTagChat ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagChat, Localize("Chat"), s_TcUiTagChat, &TagBtn))
+			s_TcUiTagChat ^= 1;
 
 		TagsArea.VSplitLeft(TagMargin, nullptr, &TagsArea);
 		TagsArea.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagAudio, Localize("Audio"), g_Config.m_TcUiTagAudio, &TagBtn))
-			g_Config.m_TcUiTagAudio ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagAudio, Localize("Audio"), s_TcUiTagAudio, &TagBtn))
+			s_TcUiTagAudio ^= 1;
 	}
 
 	// Tags Filter Bar - Row 2 (Automation, Social, Camera, Gameplay, Misc)
@@ -3056,28 +3066,28 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 
 		CUIRect TagBtn;
 		TagsArea2.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea2);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagAutomation, Localize("Auto"), g_Config.m_TcUiTagAutomation, &TagBtn))
-			g_Config.m_TcUiTagAutomation ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagAutomation, Localize("Auto"), s_TcUiTagAutomation, &TagBtn))
+			s_TcUiTagAutomation ^= 1;
 
 		TagsArea2.VSplitLeft(TagMargin, nullptr, &TagsArea2);
 		TagsArea2.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea2);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagSocial, Localize("Social"), g_Config.m_TcUiTagSocial, &TagBtn))
-			g_Config.m_TcUiTagSocial ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagSocial, Localize("Social"), s_TcUiTagSocial, &TagBtn))
+			s_TcUiTagSocial ^= 1;
 
 		TagsArea2.VSplitLeft(TagMargin, nullptr, &TagsArea2);
 		TagsArea2.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea2);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagCamera, Localize("Camera"), g_Config.m_TcUiTagCamera, &TagBtn))
-			g_Config.m_TcUiTagCamera ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagCamera, Localize("Camera"), s_TcUiTagCamera, &TagBtn))
+			s_TcUiTagCamera ^= 1;
 
 		TagsArea2.VSplitLeft(TagMargin, nullptr, &TagsArea2);
 		TagsArea2.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea2);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagGameplay, Localize("Gameplay"), g_Config.m_TcUiTagGameplay, &TagBtn))
-			g_Config.m_TcUiTagGameplay ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagGameplay, Localize("Gameplay"), s_TcUiTagGameplay, &TagBtn))
+			s_TcUiTagGameplay ^= 1;
 
 		TagsArea2.VSplitLeft(TagMargin, nullptr, &TagsArea2);
 		TagsArea2.VSplitLeft(TagBtnWidth, &TagBtn, &TagsArea2);
-		if(DoButton_CheckBox(&g_Config.m_TcUiTagMisc, Localize("Misc"), g_Config.m_TcUiTagMisc, &TagBtn))
-			g_Config.m_TcUiTagMisc ^= 1;
+		if(DoButton_CheckBox(&s_TcUiTagMisc, Localize("Misc"), s_TcUiTagMisc, &TagBtn))
+			s_TcUiTagMisc ^= 1;
 	}
 
 	const int FlagMask = CFGFLAG_CLIENT;
@@ -3100,7 +3110,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 		if(Domain == ConfigDomain::DDNET)
 			return g_Config.m_TcUiShowDDNet != 0;
 		if(Domain == ConfigDomain::QMCLIENT)
-			return g_Config.m_TcUiShowQmClient != 0;
+			return g_Config.m_TcUiShowTClient != 0;
 		// only show DDNet and QmClient domains
 		return false;
 	};
@@ -3109,25 +3119,25 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 	auto TagEnabled = [&](EConfigTag Tag) -> bool {
 		switch(Tag)
 		{
-		case EConfigTag::VISUAL: return g_Config.m_TcUiTagVisual != 0;
-		case EConfigTag::HUD: return g_Config.m_TcUiTagHud != 0;
-		case EConfigTag::INPUT: return g_Config.m_TcUiTagInput != 0;
-		case EConfigTag::CHAT: return g_Config.m_TcUiTagChat != 0;
-		case EConfigTag::AUDIO: return g_Config.m_TcUiTagAudio != 0;
-		case EConfigTag::AUTOMATION: return g_Config.m_TcUiTagAutomation != 0;
-		case EConfigTag::SOCIAL: return g_Config.m_TcUiTagSocial != 0;
-		case EConfigTag::CAMERA: return g_Config.m_TcUiTagCamera != 0;
-		case EConfigTag::GAMEPLAY: return g_Config.m_TcUiTagGameplay != 0;
-		case EConfigTag::MISC: return g_Config.m_TcUiTagMisc != 0;
+		case EConfigTag::VISUAL: return s_TcUiTagVisual != 0;
+		case EConfigTag::HUD: return s_TcUiTagHud != 0;
+		case EConfigTag::INPUT: return s_TcUiTagInput != 0;
+		case EConfigTag::CHAT: return s_TcUiTagChat != 0;
+		case EConfigTag::AUDIO: return s_TcUiTagAudio != 0;
+		case EConfigTag::AUTOMATION: return s_TcUiTagAutomation != 0;
+		case EConfigTag::SOCIAL: return s_TcUiTagSocial != 0;
+		case EConfigTag::CAMERA: return s_TcUiTagCamera != 0;
+		case EConfigTag::GAMEPLAY: return s_TcUiTagGameplay != 0;
+		case EConfigTag::MISC: return s_TcUiTagMisc != 0;
 		default: return true;
 		}
 	};
 
 	// Check if any tag filter is enabled
-	bool AnyTagEnabled = g_Config.m_TcUiTagVisual || g_Config.m_TcUiTagHud || g_Config.m_TcUiTagInput ||
-						 g_Config.m_TcUiTagChat || g_Config.m_TcUiTagAudio || g_Config.m_TcUiTagAutomation ||
-						 g_Config.m_TcUiTagSocial || g_Config.m_TcUiTagCamera || g_Config.m_TcUiTagGameplay ||
-						 g_Config.m_TcUiTagMisc;
+	bool AnyTagEnabled = s_TcUiTagVisual || s_TcUiTagHud || s_TcUiTagInput ||
+						 s_TcUiTagChat || s_TcUiTagAudio || s_TcUiTagAutomation ||
+						 s_TcUiTagSocial || s_TcUiTagCamera || s_TcUiTagGameplay ||
+						 s_TcUiTagMisc;
 
 	const char *pSearch = s_SearchInput.GetString();
 
@@ -3185,7 +3195,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 				}
 			}
 			// If variable has no tags but Misc is enabled, show it
-			if(vTags.empty() && g_Config.m_TcUiTagMisc)
+			if(vTags.empty() && s_TcUiTagMisc)
 				HasEnabledTag = true;
 			if(!HasEnabledTag)
 				continue;
@@ -4518,6 +4528,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 		case EQmModuleId::CollisionHitbox: return "碰撞体积可视化 pengzhuang tiji keshihua 碰撞箱 pengzhuangxiang collision hitbox 显示碰撞 xianshi pengzhuang 透明度 touming";
 		case EQmModuleId::FavoriteMaps: return "收藏地图 shoucang ditu favorite maps 地图管理 ditu guanli 收藏 shoucang 取消收藏 quxiao shoucang";
 		case EQmModuleId::HJAssist: return "hj辅助 hj fuzhu 解冻辅助 jiedong fuzhu 自动取消旁观 quxiao pangguan 自动切换 qiehuan tee 自动关闭聊天 guanbi liaotian";
+		case EQmModuleId::SpeedrunTimer: return "速通计时器 sutong jishiqi speedrun timer 倒计时 daojishi 倒数 daoshu 小时 xiaoshi 分钟 fenzhong 秒 miao 毫秒 haomiao 自动关闭 zidong guanbi";
 		case EQmModuleId::InputOverlay: return "按键显示 anjian xianshi input overlay 按键叠加 anjian diejia 大小 daxiao 不透明度 butouming 水平位置 shuiping weizhi 垂直位置 chuizhi weizhi";
 		case EQmModuleId::Voice: return "语音 yuyin voice chat 麦克风 maikefeng mic 静音 jingyin 音量 yinliang 语音激活 vad 阈值 yuzhi 释放延迟 shifang yanchi 服务器 fuwuqi token 叠加层 diejiaceng 按住说话 ptt push to talk 全图收听 quantu 衰减 shuijian 距离 juli 半径 banjing 测试 ceshi 本地 bendi 回环 huihuan 设备 shebei 输入 shuru 左右声道定位 左右 zuoyou 声道 shengdao 立体声 stereo";
 		case EQmModuleId::DynamicIsland: return "灵动岛 lld lingdongdao dynamic island hud 顶部 dingbu 背景 beijing 颜色 yanse 透明度 touming 黑底 heidi 原版 yuanban 默认 moren classic old style";
@@ -4586,6 +4597,8 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 			return {7, Localize("Favorite maps"), Localize("Favorite map manager")};
 		case EQmModuleId::HJAssist:
 			return {11, Localize("HJ assist"), Localize("Unfreeze automation helpers")};
+		case EQmModuleId::SpeedrunTimer:
+			return {11, Localize("Speedrun timer"), Localize("Countdown timer for speedruns")};
 		case EQmModuleId::InputOverlay:
 			return {11, Localize("Input overlay"), Localize("Input overlay display")};
 		case EQmModuleId::Voice:
@@ -5732,7 +5745,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, TCLocalize("Region", QMCLIENT_LOCALIZATION_CONTEXT), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("Region"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateRegion(g_Config.m_TcTranslateRegion, sizeof(g_Config.m_TcTranslateRegion));
 					s_TranslateRegion.SetEmptyText("ap-guangzhou");
 					Ui()->DoEditBox(&s_TranslateRegion, &ControlCol, LG_BodySize);
@@ -5758,7 +5771,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, TCLocalize("API key", QMCLIENT_LOCALIZATION_CONTEXT), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("API key"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
 					s_TranslateKey.SetHidden(true);
 					Ui()->DoEditBox(&s_TranslateKey, &ControlCol, LG_BodySize);
@@ -6972,17 +6985,6 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceEnable, Localize("Enable voice"), &g_Config.m_QmVoiceEnable, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				// Rust/C++ 语音系统切换开关
-				if(g_Config.m_QmVoiceEnable)
-				{
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceUseRust, Localize("Use Rust voice (experimental)"), &g_Config.m_QmVoiceUseRust, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing * 0.75f, nullptr, &CardContent);
-				}
-
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceEnable, TCLocalize("Enable voice", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceEnable, &Row, LG_LineHeight);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
 				if(g_Config.m_QmVoiceEnable)
 				{
 					auto AddVoiceSectionLabel = [&](const char *pTitle, const char *pHint) {
@@ -6999,7 +7001,6 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("Server"), LG_BodySize, TEXTALIGN_ML);
-					Ui()->DoLabel(&LabelCol, TCLocalize("Server", QMCLIENT_LOCALIZATION_CONTEXT), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_VoiceServer(g_Config.m_QmVoiceServer, sizeof(g_Config.m_QmVoiceServer));
 					s_VoiceServer.SetEmptyText("42.194.185.210:9987");
 					Ui()->DoEditBox(&s_VoiceServer, &ControlCol, LG_BodySize);
@@ -7010,9 +7011,6 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 					Ui()->DoLabel(&LabelCol, Localize("Room password"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_VoiceToken(g_Config.m_QmVoiceToken, sizeof(g_Config.m_QmVoiceToken));
 					s_VoiceToken.SetEmptyText(Localize("Leave empty for the public room"));
-					Ui()->DoLabel(&LabelCol, TCLocalize("Room password", QMCLIENT_LOCALIZATION_CONTEXT), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_VoiceToken(g_Config.m_QmVoiceToken, sizeof(g_Config.m_QmVoiceToken));
-					s_VoiceToken.SetEmptyText(TCLocalize("Leave empty for the public room", QMCLIENT_LOCALIZATION_CONTEXT));
 					Ui()->DoEditBox(&s_VoiceToken, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing * 1.15f, nullptr, &CardContent);
 
@@ -7071,7 +7069,6 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 							{
 								char aDisplay[160];
 								str_format(aDisplay, sizeof(aDisplay), "%s (%s)", g_Config.m_QmVoiceInputDevice, Localize("Current config"));
-								str_format(aDisplay, sizeof(aDisplay), "%s (%s)", g_Config.m_QmVoiceInputDevice, TCLocalize("Current config", QMCLIENT_LOCALIZATION_CONTEXT));
 								s_VoiceInputDeviceDisplayNames.emplace_back(aDisplay);
 								s_VoiceInputDeviceConfigValues.emplace_back(g_Config.m_QmVoiceInputDevice);
 							}
@@ -7123,15 +7120,6 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceVadEnable, Localize("Voice activation"), &g_Config.m_QmVoiceVadEnable, &Row, LG_LineHeight);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceMicMute, TCLocalize("Mute microphone", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceMicMute, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceMicVolume, &g_Config.m_QmVoiceMicVolume, &Row, TCLocalize("Microphone volume", QMCLIENT_LOCALIZATION_CONTEXT), 0, 300, &CUi::ms_LinearScrollbarScale, 0, "%");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceVadEnable, TCLocalize("Voice activation", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceVadEnable, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmVoiceVadEnable)
@@ -7142,11 +7130,6 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadReleaseDelayMs, &g_Config.m_QmVoiceVadReleaseDelayMs, &Row, Localize("Voice activation release delay"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadThreshold, &g_Config.m_QmVoiceVadThreshold, &Row, TCLocalize("Voice activation threshold", QMCLIENT_LOCALIZATION_CONTEXT), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadReleaseDelayMs, &g_Config.m_QmVoiceVadReleaseDelayMs, &Row, TCLocalize("Voice activation release delay", QMCLIENT_LOCALIZATION_CONTEXT), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
@@ -7158,18 +7141,12 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceStereo, Localize("Enable stereo positioning"), &g_Config.m_QmVoiceStereo, &Row, LG_LineHeight);
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVolume, &g_Config.m_QmVoiceVolume, &Row, TCLocalize("Playback volume", QMCLIENT_LOCALIZATION_CONTEXT), 0, 400, &CUi::ms_LinearScrollbarScale, 0, "%");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceStereo, TCLocalize("Enable stereo positioning", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceStereo, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmVoiceStereo)
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceStereoWidth, &g_Config.m_QmVoiceStereoWidth, &Row, Localize("Stereo width"), 0, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceStereoWidth, &g_Config.m_QmVoiceStereoWidth, &Row, TCLocalize("Stereo width", QMCLIENT_LOCALIZATION_CONTEXT), 0, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
@@ -7183,22 +7160,12 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowOverlay, Localize("Show the speaker list on the left"), &g_Config.m_QmVoiceShowOverlay, &Row, LG_LineHeight);
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceRadius, &g_Config.m_QmVoiceRadius, &Row, TCLocalize("Voice distance radius", QMCLIENT_LOCALIZATION_CONTEXT), 1, 400, &CUi::ms_LinearScrollbarScale, 0, "tile");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceGroupGlobal, TCLocalize("Hear teammates globally", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceGroupGlobal, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowOverlay, TCLocalize("Show the speaker list on the left", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceShowOverlay, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmVoiceShowOverlay)
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowWhenActive, Localize("Also show while you are speaking"), &g_Config.m_QmVoiceShowWhenActive, &Row, LG_LineHeight);
-						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowWhenActive, TCLocalize("Also show while you are speaking", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceShowWhenActive, &Row, LG_LineHeight);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 				}

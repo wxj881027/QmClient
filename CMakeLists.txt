@@ -901,11 +901,20 @@ set_glob(RUST_ENGINE_SHARED GLOB_RECURSE "rs;toml" src/engine/shared
   config.rs
   lib.rs
   rust_version.rs
+  snapshot/builder.rs
+  snapshot/delta.rs
+  snapshot/mod.rs
+  uuid_manager.rs
 )
 
 set_src(RUST_BRIDGE_SHARED GLOB_RECURSE src/rust-bridge
+  base/cxx.h
   cpp/console.cpp
   cpp/console.h
+  cpp/snapshot.cpp
+  cpp/snapshot.h
+  cpp/uuid_manager.cpp
+  cpp/uuid_manager.h
   engine/shared/rust_version.cpp
   engine/shared/rust_version.h
 )
@@ -919,16 +928,20 @@ set_glob(RUST_MASTERSRV GLOB "rs;toml" src/mastersrv/src
 )
 
 add_library(rust-bridge-shared EXCLUDE_FROM_ALL OBJECT ${RUST_BRIDGE_SHARED})
+add_dependencies(rust-bridge-shared generate_protocol)
 list(APPEND TARGETS_OWN rust-bridge-shared)
+
+set(CARGO_BUILD_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} DDNET_TEST_NO_LINK=1)
+set(CARGO_TEST_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR})
 
 if(TARGET_OS STREQUAL "android")
   set(CARGO_BUILD_DIR "${CARGO_NDK_TARGET}/")
-  set(CARGO_BUILD ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} DDNET_TEST_NO_LINK=1 ${RUST_CARGO} ndk --manifest-path "${PROJECT_SOURCE_DIR}/Cargo.toml" --target ${CARGO_NDK_TARGET} --platform ${CARGO_NDK_API} build)
-  set(CARGO_TEST ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} ${RUST_CARGO} ndk --target ${CARGO_NDK_TARGET} --platform ${CARGO_NDK_API} test)
+  set(CARGO_BUILD ${CMAKE_COMMAND} -E env ${CARGO_BUILD_ENV} ${RUST_CARGO} ndk --manifest-path "${PROJECT_SOURCE_DIR}/Cargo.toml" --target ${CARGO_NDK_TARGET} --platform ${CARGO_NDK_API} build)
+  set(CARGO_TEST ${CMAKE_COMMAND} -E env ${CARGO_TEST_ENV} ${RUST_CARGO} ndk --target ${CARGO_NDK_TARGET} --platform ${CARGO_NDK_API} test)
 else()
   set(CARGO_BUILD_DIR "")
-  set(CARGO_BUILD ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} DDNET_TEST_NO_LINK=1 ${RUST_CARGO} build --manifest-path "${PROJECT_SOURCE_DIR}/Cargo.toml")
-  set(CARGO_TEST ${CMAKE_COMMAND} -E env CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} ${RUST_CARGO} test)
+  set(CARGO_BUILD ${CMAKE_COMMAND} -E env ${CARGO_BUILD_ENV} ${RUST_CARGO} build --manifest-path "${PROJECT_SOURCE_DIR}/Cargo.toml")
+  set(CARGO_TEST ${CMAKE_COMMAND} -E env ${CARGO_TEST_ENV} ${RUST_CARGO} test)
 endif()
 if(MSVC)
   list(INSERT CARGO_BUILD 0 ${CMAKE_COMMAND} -E env $<$<CONFIG:Debug>:CFLAGS=/MTd> $<$<CONFIG:Debug>:CXXFLAGS=/MTd>)
@@ -985,13 +998,10 @@ set(RUST_SRC
       ${RUST_BASE}
       ${RUST_ENGINE_INTERFACE}
       ${RUST_ENGINE_SHARED}
-      # Voice crate
-      src/rust-bridge/voice/Cargo.toml
-      src/rust-bridge/voice/src/lib.rs
       Cargo.toml
       Cargo.lock
 )
-set(RUST_TARGETS engine_shared voice)
+set(RUST_TARGETS engine_shared)
 if(NOT CMAKE_OSX_ARCHITECTURES)
   set(RUST_OUTPUTS)
   foreach(rust_target ${RUST_TARGETS})
@@ -1010,7 +1020,7 @@ if(NOT CMAKE_OSX_ARCHITECTURES)
     COMMAND ${CARGO_BUILD}
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     USES_TERMINAL
-    DEPENDS ${RUST_SRC}
+    DEPENDS ${RUST_SRC} ${RUST_EXTRA_DEPENDS}
   )
 else()
   foreach(rust_target ${RUST_TARGETS})
@@ -1029,7 +1039,7 @@ else()
     add_custom_command(
       OUTPUT "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR}/${LIBRARY_NAME}"
       COMMAND lipo ${ARCH_LIBRARIES} -create -output "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR}/${LIBRARY_NAME}"
-      DEPENDS ${ARCH_LIBRARIES}
+      DEPENDS ${ARCH_LIBRARIES} ${RUST_EXTRA_DEPENDS}
     )
   endforeach()
   foreach(arch ${RUST_OSX_ARCHITECTURES})
@@ -2068,6 +2078,13 @@ generate_source7("src/generated/client_data7.h" "client_content_header")
 generate_maps("src/generated/protocolglue.h" "map_header")
 generate_maps("src/generated/protocolglue.cpp" "map_source")
 
+add_custom_target(generate_protocol
+  DEPENDS
+    src/generated/protocol.h
+    src/generated/protocol7.h
+    src/generated/protocolglue.h
+)
+
 add_custom_command(OUTPUT "src/generated/wordlist.h"
   COMMAND ${Python3_EXECUTABLE} scripts/wordlist.py > ${PROJECT_BINARY_DIR}/src/generated/wordlist.h
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -2345,6 +2362,8 @@ if(VIDEORECORDER AND FFMPEG_FOUND)
 endif()
 add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_EXTERNAL} ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_UUID_SHARED} ${BASE})
 add_library(game-shared EXCLUDE_FROM_ALL OBJECT ${GAME_SHARED} ${GAME_GENERATED_SHARED})
+add_dependencies(engine-shared generate_protocol)
+add_dependencies(game-shared generate_protocol)
 list(APPEND TARGETS_OWN engine-gfx engine-shared game-shared)
 
 if(DISCORD AND NOT DISCORD_DYNAMIC)
@@ -2603,8 +2622,6 @@ if(CLIENT)
     components/qmclient/voice_callback.h
     components/qmclient/voice_core.cpp
     components/qmclient/voice_core.h
-    components/qmclient/voice_rust.cpp
-    components/qmclient/voice_rust.h
     components/qmclient/voice_utils.cpp
     components/qmclient/voice_utils.h
     components/qmclient/warlist.cpp
@@ -2807,12 +2824,6 @@ if(CLIENT)
 
     ${TARGET_STEAMAPI}
     rust_engine_shared
-    rust_voice
-
-    # Windows COM/OLE 库 (Rust tokio/windows-core 依赖)
-    ole32
-    oleaut32
-    propsys
 
     ${PLATFORM_CLIENT_LIBS}
     ${LIBS}
@@ -3385,11 +3396,10 @@ list(APPEND TARGETS_OWN rust_test)
 list(APPEND TARGETS_LINK rust_test)
 
 set(RUST_TEST_LIBS ${WebP_LIBRARIES} ${LIBS} $<TARGET_FILE:rust_test>)
+list(REMOVE_ITEM RUST_TEST_LIBS "rust_engine_shared")
 list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
-# Use ',' as separator so the value can be passed through shell safely.
-string(JOIN "," RUST_TEST_LIBS_JOINED ${RUST_TEST_LIBS})
 add_custom_target(run_rust_tests
-  COMMAND ${CMAKE_COMMAND} -E env --unset=DDNET_TEST_NO_LINK --unset=RA_RUSTC_WRAPPER "DDNET_TEST_LIBRARIES=${RUST_TEST_LIBS_JOINED}" ${CARGO_TEST}
+  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES=${RUST_TEST_LIBS}" ${CARGO_TEST}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   USES_TERMINAL
   DEPENDS rust_test

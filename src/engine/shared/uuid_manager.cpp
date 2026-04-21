@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <memory>
 
 static const CUuid TEEWORLDS_NAMESPACE = {{// "e05ddaaa-c4e6-4cfb-b642-5d48e80c0029"
 	0xe0, 0x5d, 0xda, 0xaa, 0xc4, 0xe6, 0x4c, 0xfb,
@@ -192,4 +193,14 @@ void CUuidManager::DebugDump() const
 		FormatUuid(Name.m_Uuid, aBuf, sizeof(aBuf));
 		dbg_msg("uuid", "%s %s", aBuf, Name.m_pName);
 	}
+}
+
+std::unique_ptr<CUuidManager> CUuidManager_New()
+{
+	return std::make_unique<CUuidManager>();
+}
+
+const CUuidManager &CUuidManager_Global()
+{
+	return g_UuidManager;
 }

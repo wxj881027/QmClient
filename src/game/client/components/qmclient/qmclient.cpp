@@ -3121,14 +3121,14 @@ void CTClient::FinishQmClientUsers()
 		return;
 	}
 
-	char aServerAddress[NETADDR_MAXSTRSIZE];
-	net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
-	const bool FastSync = g_Config.m_QmVoiceEnable || g_Config.m_QmClientShowBadge;
-	const int SyncInterval = FastSync ? QMCLIENT_VOICE_SYNC_INTERVAL_SECONDS : QMCLIENT_SYNC_INTERVAL_SECONDS;
-	const int64_t ExpireTick = time_get() + (int64_t)SyncInterval * time_freq() * 2;
-
 	GameClient()->ClearQ1menGSyncMarks();
 	GameClient()->ClearQmVoiceSyncMarks();
+
+	if(!m_pQmClientUsersTask)
+	{
+		ClearQmClientServerDistribution();
+		return;
+	}
 
 	if(m_pQmClientUsersTask->State() != EHttpState::DONE)
 	{

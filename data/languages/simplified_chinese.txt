@@ -4467,9 +4467,6 @@ Voice connection, input, and display
 Enable voice
 == 启用语音
 
-Use Rust voice (experimental)
-== 使用 Rust 语音系统（实验性）
-
 Server
 == 服务器
 

@@ -6,9 +6,6 @@ data/
 # Agent documentation (local only)
 AGENTS.md
 
-# opus crate 预编译库 (从 ddnet-libs DLL 生成，首次构建前运行 setup-opus.ps1)
-src/rust-bridge/voice/opus-prebuilt/
-
 # Local documentation (local only)
 dyl/
 .trae/
@@ -94,7 +91,6 @@ versionsrv
 
 generated
 target
-src/voicesrv/
 
 /build*
 /integration_test/*

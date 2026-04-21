@@ -3,11 +3,14 @@
 #ifndef ENGINE_SHARED_SNAPSHOT_H
 #define ENGINE_SHARED_SNAPSHOT_H
 
+#include <base/cxx.h>
+
 #include <generated/protocol.h>
 #include <generated/protocol7.h>
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 
 // CSnapshot
 
@@ -21,6 +24,7 @@ public:
 	int m_TypeAndId;
 
 	const int *Data() const { return (int *)(this + 1); }
+	int InternalType() const { return Type(); }
 	int Type() const { return m_TypeAndId >> 16; }
 	int Id() const { return m_TypeAndId & 0xffff; }
 	int Key() const { return m_TypeAndId; }
@@ -61,6 +65,7 @@ public:
 	int GetItemType(int Index) const;
 	int GetExternalItemType(int InternalType) const;
 	const void *FindItem(int Type, int Id) const;
+	rust::Slice<const int32_t> AsSlice() const;
 
 	unsigned Crc() const;
 	// Prints the raw snapshot data showing item and int boundaries.
@@ -71,6 +76,18 @@ public:
 
 	static const CSnapshot *EmptySnapshot() { return &ms_EmptySnapshot; }
 };
+
+class alignas(int32_t) CSnapshotBuffer
+{
+public:
+	unsigned char m_aData[CSnapshot::MAX_SIZE];
+
+	CSnapshot *AsSnapshot() { return (CSnapshot *)m_aData; }
+	const CSnapshot *AsSnapshot() const { return (const CSnapshot *)m_aData; }
+	rust::Slice<int32_t> AsMutSlice() { return rust::Slice((int32_t *)m_aData, sizeof(m_aData) / sizeof(int32_t)); }
+};
+
+std::unique_ptr<CSnapshotBuffer> CSnapshotBuffer_New();
 
 // CSnapshotDelta
 
