@@ -10,7 +10,7 @@ AGENTS.md
 src/rust-bridge/voice/opus-prebuilt/
 
 # Local documentation
-docs/dyl/*
+docs/dyl
 !docs/dyl/QmClient_docs
 .trae
 
