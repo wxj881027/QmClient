@@ -35,6 +35,18 @@
 class CImageInfo;
 struct CDataSprite;
 
+// IDs of the tabs in the Assets menu
+enum
+{
+	ASSETS_TAB_ENTITIES = 0,
+	ASSETS_TAB_GAME = 1,
+	ASSETS_TAB_EMOTICONS = 2,
+	ASSETS_TAB_PARTICLES = 3,
+	ASSETS_TAB_HUD = 4,
+	ASSETS_TAB_EXTRAS = 5,
+	NUMBER_OF_ASSETS_TABS = 6,
+};
+
 class CMenus : public CComponent
 {
 	static ColorRGBA ms_GuiColor;
@@ -86,6 +98,26 @@ private:
 	int m_DirectionQuadContainerIndex;
 
 	// menus_settings_assets.cpp
+public:
+	// Async asset loading states
+	enum EAssetLoadState
+	{
+		ASSET_LOAD_STATE_UNLOADED = 0,
+		ASSET_LOAD_STATE_LOADING,
+		ASSET_LOAD_STATE_LOADED,
+	};
+
+private:
+	EAssetLoadState m_aAssetLoadStates[NUMBER_OF_ASSETS_TABS] = {
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+	};
+	std::shared_ptr<IJob> m_apAssetLoadJobs[NUMBER_OF_ASSETS_TABS];
+
 public:
 	struct SCustomItem
 	{
@@ -481,6 +513,8 @@ protected:
 	SDemoSelectionEntry DemoSelectionEntryFromItem(const CDemoItem &Item) const;
 	bool IsDemoItemSelected(const CDemoItem &Item) const;
 	bool IsDemoItemDeletable(const CDemoItem &Item) const;
+	bool IsValidDemoIndex(int Index) const { return Index >= 0 && Index < (int)m_vpFilteredDemos.size(); }
+	CDemoItem *GetSelectedDemo() const { return IsValidDemoIndex(m_DemolistSelectedIndex) ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr; }
 	void SetDemoSelectionSingle(int Index);
 	void ToggleDemoSelection(int Index);
 	void SelectDemoRange(int StartIndex, int EndIndex, bool Additive);

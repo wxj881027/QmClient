@@ -41,9 +41,9 @@ public:
 private:
 	std::vector<uint8_t> m_vFileData;
 	std::string m_Name;
-	std::mutex m_Mutex;
+	mutable std::mutex m_Mutex;
 	SResult m_Result;
-	bool m_Completed = false;
+	mutable bool m_Completed = false;
 
 	void Run() override
 	{
@@ -103,7 +103,7 @@ public:
 
 	bool IsCompleted() const
 	{
-		std::lock_guard<std::mutex> Lock(const_cast<std::mutex &>(m_Mutex));
+		std::lock_guard<std::mutex> Lock(m_Mutex);
 		return m_Completed;
 	}
 
@@ -131,9 +131,9 @@ private:
 	IStorage *m_pStorage;
 	int m_StorageType; // 存储类型
 	std::string m_Name;
-	std::mutex m_Mutex;
+	mutable std::mutex m_Mutex;
 	SResult m_Result;
-	bool m_Completed = false;
+	mutable bool m_Completed = false;
 
 	// 在后台线程读取文件
 	bool TryLoadFile(const char *pFilename, std::vector<uint8_t> &vBuffer)
@@ -225,7 +225,7 @@ public:
 
 	bool IsCompleted() const
 	{
-		std::lock_guard<std::mutex> Lock(const_cast<std::mutex &>(m_Mutex));
+		std::lock_guard<std::mutex> Lock(m_Mutex);
 		return m_Completed;
 	}
 
@@ -263,6 +263,138 @@ struct SMenuAssetScanUser
 	TMenuAssetScanLoadedFunc m_LoadedFunc;
 };
 
+// ============================================================================
+// ASYNC ASSET LIST LOADING
+// ============================================================================
+//
+// Problem: Synchronous Storage()->ListDirectory() calls block the render thread
+// causing UI stutters when switching asset tabs.
+//
+// Solution: Use background jobs to scan directories and populate asset lists.
+// The render thread polls for completion and displays loading indicators.
+
+class CAssetListLoadJob : public IJob
+{
+public:
+	enum EAssetType
+	{
+		ASSET_TYPE_ENTITIES = 0,
+		ASSET_TYPE_GAME,
+		ASSET_TYPE_EMOTICONS,
+		ASSET_TYPE_PARTICLES,
+		ASSET_TYPE_HUD,
+		ASSET_TYPE_EXTRAS,
+	};
+
+	struct SAssetEntry
+	{
+		char m_aName[50];
+		bool m_IsDir;
+	};
+
+private:
+	EAssetType m_Type;
+	IStorage *m_pStorage;
+	mutable std::mutex m_Mutex;
+	std::vector<SAssetEntry> m_vEntries;
+	mutable bool m_Completed = false;
+
+	static int ScanCallback(const char *pName, int IsDir, int DirType, void *pUser)
+	{
+		(void)DirType;
+		auto *pEntries = static_cast<std::vector<SAssetEntry> *>(pUser);
+
+		if(IsDir)
+		{
+			if(pName[0] == '.')
+				return 0;
+			if(str_comp(pName, "default") == 0)
+				return 0;
+
+			SAssetEntry Entry;
+			str_copy(Entry.m_aName, pName);
+			Entry.m_IsDir = true;
+			pEntries->push_back(Entry);
+		}
+		else
+		{
+			if(str_endswith(pName, ".png"))
+			{
+				char aName[50];
+				str_truncate(aName, sizeof(aName), pName, str_length(pName) - 4);
+				if(str_comp(aName, "default") == 0)
+					return 0;
+
+				SAssetEntry Entry;
+				str_copy(Entry.m_aName, aName);
+				Entry.m_IsDir = false;
+				pEntries->push_back(Entry);
+			}
+		}
+		return 0;
+	}
+
+	void Run() override
+	{
+		std::vector<SAssetEntry> vEntries;
+
+		switch(m_Type)
+		{
+		case ASSET_TYPE_ENTITIES:
+			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/entities", ScanCallback, &vEntries);
+			break;
+		case ASSET_TYPE_GAME:
+			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/game", ScanCallback, &vEntries);
+			break;
+		case ASSET_TYPE_EMOTICONS:
+			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/emoticons", ScanCallback, &vEntries);
+			break;
+		case ASSET_TYPE_PARTICLES:
+			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/particles", ScanCallback, &vEntries);
+			break;
+		case ASSET_TYPE_HUD:
+			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/hud", ScanCallback, &vEntries);
+			break;
+		case ASSET_TYPE_EXTRAS:
+			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/extras", ScanCallback, &vEntries);
+			break;
+		}
+
+		// Sort entries by name
+		std::sort(vEntries.begin(), vEntries.end(),
+			[](const SAssetEntry &Left, const SAssetEntry &Right) {
+				return str_comp(Left.m_aName, Right.m_aName) < 0;
+			});
+
+		{
+			std::lock_guard<std::mutex> Lock(m_Mutex);
+			m_vEntries = std::move(vEntries);
+			m_Completed = true;
+		}
+	}
+
+public:
+	CAssetListLoadJob(EAssetType Type, IStorage *pStorage) :
+		m_Type(Type),
+		m_pStorage(pStorage)
+	{
+	}
+
+	bool IsCompleted() const
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		return m_Completed;
+	}
+
+	std::vector<SAssetEntry> GetEntries()
+	{
+		std::lock_guard<std::mutex> Lock(m_Mutex);
+		return m_vEntries;
+	}
+
+	EAssetType GetType() const { return m_Type; }
+};
+
 static bool LoadFileToBuffer(IStorage *pStorage, const char *pFilename, int StorageType, std::vector<uint8_t> &vBuffer)
 {
 	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType);
@@ -285,18 +417,6 @@ static bool LoadFileToBuffer(IStorage *pStorage, const char *pFilename, int Stor
 
 	return Read == (size_t)Size;
 }
-
-// IDs of the tabs in the Assets menu
-enum
-{
-	ASSETS_TAB_ENTITIES = 0,
-	ASSETS_TAB_GAME = 1,
-	ASSETS_TAB_EMOTICONS = 2,
-	ASSETS_TAB_PARTICLES = 3,
-	ASSETS_TAB_HUD = 4,
-	ASSETS_TAB_EXTRAS = 5,
-	NUMBER_OF_ASSETS_TABS = 6,
-};
 
 void CMenus::LoadEntities(SCustomEntities *pEntitiesItem, void *pUser)
 {
@@ -1079,6 +1199,15 @@ static void ClearAssetList(std::vector<TName> &vList, IGraphics *pGraphics)
 
 void CMenus::ClearCustomItems(int CurTab)
 {
+	// Reset async loading state first
+	m_aAssetLoadStates[CurTab] = ASSET_LOAD_STATE_UNLOADED;
+	if(m_apAssetLoadJobs[CurTab])
+	{
+		// Note: We don't wait for the job to complete here as it could cause a stall.
+		// The job will complete in the background and be ignored on next frame.
+		m_apAssetLoadJobs[CurTab].reset();
+	}
+
 	if(CurTab == ASSETS_TAB_ENTITIES)
 	{
 		for(auto &Entity : m_vEntitiesList)
@@ -1089,6 +1218,7 @@ void CMenus::ClearCustomItems(int CurTab)
 			}
 		}
 		m_vEntitiesList.clear();
+		gs_vpSearchEntitiesList.clear();
 
 		// reload current entities
 		GameClient()->m_MapImages.ChangeEntitiesPath(g_Config.m_ClAssetsEntities);
@@ -1096,6 +1226,7 @@ void CMenus::ClearCustomItems(int CurTab)
 	else if(CurTab == ASSETS_TAB_GAME)
 	{
 		ClearAssetList(m_vGameList, Graphics());
+		gs_vpSearchGamesList.clear();
 
 		// reload current game skin
 		GameClient()->LoadGameSkin(g_Config.m_ClAssetGame);
@@ -1103,6 +1234,7 @@ void CMenus::ClearCustomItems(int CurTab)
 	else if(CurTab == ASSETS_TAB_EMOTICONS)
 	{
 		ClearAssetList(m_vEmoticonList, Graphics());
+		gs_vpSearchEmoticonsList.clear();
 
 		// reload current emoticons skin
 		GameClient()->LoadEmoticonsSkin(g_Config.m_ClAssetEmoticons);
@@ -1110,6 +1242,7 @@ void CMenus::ClearCustomItems(int CurTab)
 	else if(CurTab == ASSETS_TAB_PARTICLES)
 	{
 		ClearAssetList(m_vParticlesList, Graphics());
+		gs_vpSearchParticlesList.clear();
 
 		// reload current particles skin
 		GameClient()->LoadParticlesSkin(g_Config.m_ClAssetParticles);
@@ -1117,6 +1250,7 @@ void CMenus::ClearCustomItems(int CurTab)
 	else if(CurTab == ASSETS_TAB_HUD)
 	{
 		ClearAssetList(m_vHudList, Graphics());
+		gs_vpSearchHudList.clear();
 
 		// reload current hud skin
 		GameClient()->LoadHudSkin(g_Config.m_ClAssetHud);
@@ -1124,6 +1258,7 @@ void CMenus::ClearCustomItems(int CurTab)
 	else if(CurTab == ASSETS_TAB_EXTRAS)
 	{
 		ClearAssetList(m_vExtrasList, Graphics());
+		gs_vpSearchExtrasList.clear();
 
 		// reload current DDNet particles skin
 		GameClient()->LoadExtrasSkin(g_Config.m_ClAssetExtras);
@@ -1234,51 +1369,171 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		ApplyUiSwitchOffset(MainView, TransitionStrength, s_AssetsTransitionDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
-	auto LoadStartTime = time_get_nanoseconds();
-	SMenuAssetScanUser User;
-	User.m_pUser = this;
-	User.m_LoadedFunc = [&]() {
-		if(time_get_nanoseconds() - LoadStartTime > 500ms)
-			RenderLoading(Localize("Loading assets"), "", 0);
-	};
-	if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
+	// ============================================================================
+	// ASYNC ASSET LIST LOADING
+	// ============================================================================
+	// Start async loading if list is empty and not already loading
+	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_UNLOADED)
 	{
-		if(m_vEntitiesList.empty())
+		// Add default item first
+		switch(s_CurCustomTab)
 		{
-			SCustomEntities EntitiesItem;
-			str_copy(EntitiesItem.m_aName, "default");
-			m_vEntitiesList.push_back(EntitiesItem);
-
-			// load entities
-			Storage()->ListDirectory(IStorage::TYPE_ALL, "assets/entities", EntitiesScan, &User);
-			std::sort(m_vEntitiesList.begin(), m_vEntitiesList.end());
+		case ASSETS_TAB_ENTITIES:
+			if(m_vEntitiesList.empty())
+			{
+				SCustomEntities EntitiesItem;
+				str_copy(EntitiesItem.m_aName, "default");
+				m_vEntitiesList.push_back(EntitiesItem);
+			}
+			break;
+		case ASSETS_TAB_GAME:
+			if(m_vGameList.empty())
+			{
+				SCustomGame GameItem;
+				str_copy(GameItem.m_aName, "default");
+				m_vGameList.push_back(GameItem);
+			}
+			break;
+		case ASSETS_TAB_EMOTICONS:
+			if(m_vEmoticonList.empty())
+			{
+				SCustomEmoticon EmoticonItem;
+				str_copy(EmoticonItem.m_aName, "default");
+				m_vEmoticonList.push_back(EmoticonItem);
+			}
+			break;
+		case ASSETS_TAB_PARTICLES:
+			if(m_vParticlesList.empty())
+			{
+				SCustomParticle ParticleItem;
+				str_copy(ParticleItem.m_aName, "default");
+				m_vParticlesList.push_back(ParticleItem);
+			}
+			break;
+		case ASSETS_TAB_HUD:
+			if(m_vHudList.empty())
+			{
+				SCustomHud HudItem;
+				str_copy(HudItem.m_aName, "default");
+				m_vHudList.push_back(HudItem);
+			}
+			break;
+		case ASSETS_TAB_EXTRAS:
+			if(m_vExtrasList.empty())
+			{
+				SCustomExtras ExtrasItem;
+				str_copy(ExtrasItem.m_aName, "default");
+				m_vExtrasList.push_back(ExtrasItem);
+			}
+			break;
 		}
+
+		// Start async loading job
+		m_apAssetLoadJobs[s_CurCustomTab] = std::make_shared<CAssetListLoadJob>(
+			static_cast<CAssetListLoadJob::EAssetType>(s_CurCustomTab), Storage());
+		Engine()->AddJob(m_apAssetLoadJobs[s_CurCustomTab]);
+		m_aAssetLoadStates[s_CurCustomTab] = ASSET_LOAD_STATE_LOADING;
+	}
+
+	// Check if async loading completed
+	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_LOADING &&
+		m_apAssetLoadJobs[s_CurCustomTab] &&
+		std::static_pointer_cast<CAssetListLoadJob>(m_apAssetLoadJobs[s_CurCustomTab])->IsCompleted())
+	{
+		auto pJob = std::static_pointer_cast<CAssetListLoadJob>(m_apAssetLoadJobs[s_CurCustomTab]);
+		std::vector<CAssetListLoadJob::SAssetEntry> vEntries = pJob->GetEntries();
+
+		// Populate the appropriate list
+		switch(s_CurCustomTab)
+		{
+		case ASSETS_TAB_ENTITIES:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomEntities EntitiesItem;
+				str_copy(EntitiesItem.m_aName, Entry.m_aName);
+				m_vEntitiesList.push_back(EntitiesItem);
+			}
+			std::sort(m_vEntitiesList.begin(), m_vEntitiesList.end());
+			break;
+		case ASSETS_TAB_GAME:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomGame GameItem;
+				str_copy(GameItem.m_aName, Entry.m_aName);
+				m_vGameList.push_back(GameItem);
+			}
+			std::sort(m_vGameList.begin(), m_vGameList.end());
+			break;
+		case ASSETS_TAB_EMOTICONS:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomEmoticon EmoticonItem;
+				str_copy(EmoticonItem.m_aName, Entry.m_aName);
+				m_vEmoticonList.push_back(EmoticonItem);
+			}
+			std::sort(m_vEmoticonList.begin(), m_vEmoticonList.end());
+			break;
+		case ASSETS_TAB_PARTICLES:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomParticle ParticleItem;
+				str_copy(ParticleItem.m_aName, Entry.m_aName);
+				m_vParticlesList.push_back(ParticleItem);
+			}
+			std::sort(m_vParticlesList.begin(), m_vParticlesList.end());
+			break;
+		case ASSETS_TAB_HUD:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomHud HudItem;
+				str_copy(HudItem.m_aName, Entry.m_aName);
+				m_vHudList.push_back(HudItem);
+			}
+			std::sort(m_vHudList.begin(), m_vHudList.end());
+			break;
+		case ASSETS_TAB_EXTRAS:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomExtras ExtrasItem;
+				str_copy(ExtrasItem.m_aName, Entry.m_aName);
+				m_vExtrasList.push_back(ExtrasItem);
+			}
+			std::sort(m_vExtrasList.begin(), m_vExtrasList.end());
+			break;
+		}
+
+		m_aAssetLoadStates[s_CurCustomTab] = ASSET_LOAD_STATE_LOADED;
+		gs_aInitCustomList[s_CurCustomTab] = true;
+		m_apAssetLoadJobs[s_CurCustomTab].reset();
+	}
+
+	// Mark for search list rebuild if size changed
+	switch(s_CurCustomTab)
+	{
+	case ASSETS_TAB_ENTITIES:
 		if(m_vEntitiesList.size() != gs_aCustomListSize[s_CurCustomTab])
 			gs_aInitCustomList[s_CurCustomTab] = true;
-	}
-	else if(s_CurCustomTab == ASSETS_TAB_GAME)
-	{
-		InitAssetList(m_vGameList, "assets/game", GameScan, Storage(), &User);
-	}
-	else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
-	{
-		InitAssetList(m_vEmoticonList, "assets/emoticons", EmoticonsScan, Storage(), &User);
-	}
-	else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
-	{
-		InitAssetList(m_vParticlesList, "assets/particles", ParticlesScan, Storage(), &User);
-	}
-	else if(s_CurCustomTab == ASSETS_TAB_HUD)
-	{
-		InitAssetList(m_vHudList, "assets/hud", HudScan, Storage(), &User);
-	}
-	else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
-	{
-		InitAssetList(m_vExtrasList, "assets/extras", ExtrasScan, Storage(), &User);
-	}
-	else
-	{
-		dbg_assert_failed("Invalid s_CurCustomTab: %d", s_CurCustomTab);
+		break;
+	case ASSETS_TAB_GAME:
+		if(m_vGameList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
+	case ASSETS_TAB_EMOTICONS:
+		if(m_vEmoticonList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
+	case ASSETS_TAB_PARTICLES:
+		if(m_vParticlesList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
+	case ASSETS_TAB_HUD:
+		if(m_vHudList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
+	case ASSETS_TAB_EXTRAS:
+		if(m_vExtrasList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
 	}
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -1289,6 +1544,77 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	{
 		WorkshopHudView = CustomList;
 	}
+
+	// Show loading indicator while async loading is in progress
+	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_LOADING)
+	{
+		// Only show loading if we haven't loaded any items yet (excluding default)
+		bool ShowLoading = false;
+		switch(s_CurCustomTab)
+		{
+		case ASSETS_TAB_ENTITIES: ShowLoading = m_vEntitiesList.size() <= 1; break;
+		case ASSETS_TAB_GAME: ShowLoading = m_vGameList.size() <= 1; break;
+		case ASSETS_TAB_EMOTICONS: ShowLoading = m_vEmoticonList.size() <= 1; break;
+		case ASSETS_TAB_PARTICLES: ShowLoading = m_vParticlesList.size() <= 1; break;
+		case ASSETS_TAB_HUD: ShowLoading = m_vHudList.size() <= 1; break;
+		case ASSETS_TAB_EXTRAS: ShowLoading = m_vExtrasList.size() <= 1; break;
+		}
+
+		if(ShowLoading)
+		{
+			// Draw loading spinner in the center of the list area
+			const float SpinnerSize = 40.0f;
+			CUIRect SpinnerRect;
+			SpinnerRect.w = SpinnerSize;
+			SpinnerRect.h = SpinnerSize;
+			SpinnerRect.x = CustomList.x + (CustomList.w - SpinnerSize) / 2.0f;
+			SpinnerRect.y = CustomList.y + (CustomList.h - SpinnerSize) / 2.0f - 20.0f;
+
+			// Use a rotating icon as spinner
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+
+			// Calculate rotation angle based on time
+			const float Time = Client()->LocalTime();
+			const float Rotation = Time * 360.0f * 2.0f; // 2 rotations per second
+
+			// Render spinner with rotation
+			Graphics()->TextureClear();
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.8f);
+
+			// Draw multiple segments to simulate rotation
+			const int NumSegments = 8;
+			const float SegmentAngle = 360.0f / NumSegments;
+			for(int i = 0; i < NumSegments; i++)
+			{
+				float Alpha = 0.1f + 0.9f * ((i + (int)(Rotation / SegmentAngle)) % NumSegments) / (float)(NumSegments - 1);
+				Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+
+				float Angle = (i * SegmentAngle + Rotation) * (3.14159f / 180.0f);
+				float CenterX = SpinnerRect.x + SpinnerRect.w / 2.0f;
+				float CenterY = SpinnerRect.y + SpinnerRect.h / 2.0f;
+				float Radius = SpinnerRect.w / 3.0f;
+
+				IGraphics::CQuadItem Quad(
+					CenterX + cosf(Angle) * Radius - 3.0f,
+					CenterY + sinf(Angle) * Radius - 3.0f,
+					6.0f, 6.0f);
+				Graphics()->QuadsDrawTL(&Quad, 1);
+			}
+			Graphics()->QuadsEnd();
+
+			TextRender()->SetRenderFlags(0);
+			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+			// Loading text
+			CUIRect LoadingTextRect;
+			CustomList.HSplitTop(SpinnerRect.y - CustomList.y + SpinnerSize + 10.0f, nullptr, &LoadingTextRect);
+			LoadingTextRect.h = 20.0f;
+			Ui()->DoLabel(&LoadingTextRect, Localize("Loading assets..."), 14.0f, TEXTALIGN_MC);
+		}
+	}
+
 	if(gs_aInitCustomList[s_CurCustomTab])
 	{
 		int ListSize = 0;

@@ -357,6 +357,24 @@ private:
 	CSkin m_PlaceholderSkin;
 	char m_aEventSkinPrefix[MAX_SKIN_LENGTH];
 
+	/**
+	 * Maximum number of skins to process per frame in UpdateFinishLoading.
+	 * This limit prevents frame stuttering caused by uploading too many textures at once.
+	 * Each skin requires approximately 14 texture uploads (7 original + 7 colorable).
+	 */
+	static constexpr int MAX_SKINS_PER_FRAME = 2;
+
+	enum class ESkinProcessResult
+	{
+		CONTINUE,
+		BREAK_GPU_LIMIT,
+		BREAK_TIME_EXCEEDED,
+	};
+
+	ESkinProcessResult ProcessSkinContainer(CSkinContainer *pSkinContainer, CSkinLoadingStats &Stats,
+		int &SkinsProcessedThisFrame, std::chrono::nanoseconds StartTime,
+		std::chrono::nanoseconds MaxTime);
+
 	bool LoadSkinData(const char *pName, CSkinLoadData &Data) const;
 	void LoadSkinFinish(CSkinContainer *pSkinContainer, const CSkinLoadData &Data);
 	void LoadSkinDirect(const char *pName);

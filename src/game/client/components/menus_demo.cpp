@@ -1120,7 +1120,7 @@ void CMenus::ToggleDemoSelection(int Index)
 		return;
 	}
 
-	if(m_DemolistSelectedIndex >= 0 && !IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]))
+	if(IsValidDemoIndex(m_DemolistSelectedIndex) && !IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]))
 	{
 		for(int DemoIndex = 0; DemoIndex < (int)m_vpFilteredDemos.size(); ++DemoIndex)
 		{
@@ -1132,7 +1132,7 @@ void CMenus::ToggleDemoSelection(int Index)
 		}
 	}
 
-	if(m_DemolistSelectedIndex >= 0)
+	if(IsValidDemoIndex(m_DemolistSelectedIndex))
 		str_copy(m_aCurrentDemoSelectionName, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aName);
 }
 
@@ -1985,9 +1985,15 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 
 void CMenus::PopupConfirmPlayDemo()
 {
+	CDemoItem *pSelectedDemo = GetSelectedDemo();
+	if(pSelectedDemo == nullptr)
+	{
+		PopupMessage(Localize("Error loading demo"), Localize("No demo selected"), Localize("Ok"));
+		return;
+	}
 	char aBuf[IO_MAX_PATH_LENGTH];
-	str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
-	const char *pError = Client()->DemoPlayer_Play(aBuf, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType);
+	str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, pSelectedDemo->m_aFilename);
+	const char *pError = Client()->DemoPlayer_Play(aBuf, pSelectedDemo->m_StorageType);
 	m_LastPauseChange = -1.0f;
 	m_LastSpeedChange = -1.0f;
 	if(pError)

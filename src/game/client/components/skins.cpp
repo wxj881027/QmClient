@@ -889,61 +889,111 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 	}
 }
 
-void CSkins::UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime)
+CSkins::ESkinProcessResult CSkins::ProcessSkinContainer(CSkinContainer *pSkinContainer, CSkinLoadingStats &Stats,
+	int &SkinsProcessedThisFrame, std::chrono::nanoseconds StartTime,
+	std::chrono::nanoseconds MaxTime)
 {
-	for(auto &[_, pSkinContainer] : m_Skins)
+	if(pSkinContainer->m_State != CSkinContainer::EState::LOADING)
 	{
-		if(Stats.m_NumLoading == 0)
+		return ESkinProcessResult::CONTINUE;
+	}
+
+	dbg_assert(pSkinContainer->m_pLoadJob != nullptr, "Skin container in loading state must have a load job");
+	if(!pSkinContainer->m_pLoadJob->Done())
+	{
+		return ESkinProcessResult::CONTINUE;
+	}
+
+	if(pSkinContainer->m_pLoadJob->State() == IJob::STATE_DONE && pSkinContainer->m_pLoadJob->m_Data.m_Info.m_pData)
+	{
+		if(!GameClient()->GpuUploadLimiter()->CanUpload())
 		{
-			break;
+			return ESkinProcessResult::BREAK_GPU_LIMIT;
 		}
-		if(pSkinContainer->m_State != CSkinContainer::EState::LOADING)
-		{
-			continue;
-		}
-		dbg_assert(pSkinContainer->m_pLoadJob != nullptr, "Skin container in loading state must have a load job");
-		if(!pSkinContainer->m_pLoadJob->Done())
-		{
-			continue;
-		}
+
 		Stats.m_NumLoading--;
-		if(pSkinContainer->m_pLoadJob->State() == IJob::STATE_DONE && pSkinContainer->m_pLoadJob->m_Data.m_Info.m_pData)
+		SkinsProcessedThisFrame++;
+
+		LoadSkinFinish(pSkinContainer, pSkinContainer->m_pLoadJob->m_Data);
+		for(int i = 0; i < 14 && GameClient()->GpuUploadLimiter()->CanUpload(); ++i)
 		{
-			// Check GPU upload limiter before uploading textures
-			// Each skin requires multiple texture uploads (body, feet, hands, eyes, etc.)
-			if(!GameClient()->GpuUploadLimiter()->CanUpload())
-			{
-				// Skip this frame, will be processed in the next frame
-				continue;
-			}
-			LoadSkinFinish(pSkinContainer.get(), pSkinContainer->m_pLoadJob->m_Data);
-			// Record the texture uploads (approximately 14 textures per skin: 7 original + 7 colorable)
-			for(int i = 0; i < 14 && GameClient()->GpuUploadLimiter()->CanUpload(); ++i)
-			{
-				GameClient()->GpuUploadLimiter()->OnUploaded();
-			}
-			GameClient()->OnSkinUpdate(pSkinContainer->Name());
-			pSkinContainer->m_pLoadJob = nullptr;
-			Stats.m_NumLoaded++;
-			if(time_get_nanoseconds() - StartTime >= MaxTime)
-			{
-				// Avoid using too much frame time for loading skins
-				break;
-			}
+			GameClient()->GpuUploadLimiter()->OnUploaded();
+		}
+		GameClient()->OnSkinUpdate(pSkinContainer->Name());
+		pSkinContainer->m_pLoadJob = nullptr;
+		Stats.m_NumLoaded++;
+	}
+	else
+	{
+		Stats.m_NumLoading--;
+		SkinsProcessedThisFrame++;
+
+		if(pSkinContainer->m_pLoadJob->State() == IJob::STATE_DONE && pSkinContainer->m_pLoadJob->m_NotFound)
+		{
+			pSkinContainer->SetState(CSkinContainer::EState::NOT_FOUND);
+			Stats.m_NumNotFound++;
 		}
 		else
 		{
-			if(pSkinContainer->m_pLoadJob->State() == IJob::STATE_DONE && pSkinContainer->m_pLoadJob->m_NotFound)
-			{
-				pSkinContainer->SetState(CSkinContainer::EState::NOT_FOUND);
-				Stats.m_NumNotFound++;
-			}
-			else
-			{
-				pSkinContainer->SetState(CSkinContainer::EState::ERROR);
-				Stats.m_NumError++;
-			}
-			pSkinContainer->m_pLoadJob = nullptr;
+			pSkinContainer->SetState(CSkinContainer::EState::ERROR);
+			Stats.m_NumError++;
+		}
+		pSkinContainer->m_pLoadJob = nullptr;
+	}
+
+	if(time_get_nanoseconds() - StartTime >= MaxTime)
+	{
+		return ESkinProcessResult::BREAK_TIME_EXCEEDED;
+	}
+
+	return ESkinProcessResult::CONTINUE;
+}
+
+void CSkins::UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime)
+{
+	int SkinsProcessedThisFrame = 0;
+
+	// First, try to process skins from the usage list (most recently used first)
+	// This prioritizes visible/commonly used skins for better perceived performance
+	for(const std::string_view &SkinName : m_SkinsUsageList)
+	{
+		if(Stats.m_NumLoading == 0 || SkinsProcessedThisFrame >= MAX_SKINS_PER_FRAME)
+		{
+			break;
+		}
+
+		auto It = m_Skins.find(SkinName);
+		if(It == m_Skins.end())
+		{
+			continue;
+		}
+
+		ESkinProcessResult Result = ProcessSkinContainer(It->second.get(), Stats, SkinsProcessedThisFrame, StartTime, MaxTime);
+		if(Result == ESkinProcessResult::BREAK_GPU_LIMIT || Result == ESkinProcessResult::BREAK_TIME_EXCEEDED)
+		{
+			break;
+		}
+	}
+
+	// Process remaining loading skins that are not in the usage list
+	// This ensures all skins will eventually be loaded
+	for(auto &[_, pSkinContainer] : m_Skins)
+	{
+		if(Stats.m_NumLoading == 0 || SkinsProcessedThisFrame >= MAX_SKINS_PER_FRAME)
+		{
+			break;
+		}
+
+		// Skip skins that were already processed (those in usage list)
+		if(pSkinContainer->m_UsageEntryIterator.has_value())
+		{
+			continue;
+		}
+
+		ESkinProcessResult Result = ProcessSkinContainer(pSkinContainer.get(), Stats, SkinsProcessedThisFrame, StartTime, MaxTime);
+		if(Result == ESkinProcessResult::BREAK_GPU_LIMIT || Result == ESkinProcessResult::BREAK_TIME_EXCEEDED)
+		{
+			break;
 		}
 	}
 }
