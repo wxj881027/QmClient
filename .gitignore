@@ -13,7 +13,7 @@ src/rust-bridge/voice/opus-prebuilt/
 docs/dyl/*
 !docs/dyl/栖梦客户端功能报告/*
 !docs/dyl/栖梦客户端功能报告/
-.trae/
+!.trae/
 
 bundle/
 !/other/bundle/
