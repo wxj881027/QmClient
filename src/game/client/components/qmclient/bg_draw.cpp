@@ -28,6 +28,7 @@ static float cross(vec2 A, vec2 B)
 	return A.x * B.y - A.y * B.x;
 }
 
+
 static bool line_intersects(vec2 A, vec2 B, vec2 C, vec2 D)
 {
 	const vec2 R = B - A;
