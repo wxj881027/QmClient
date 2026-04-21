@@ -11,7 +11,7 @@ src/rust-bridge/voice/opus-prebuilt/
 
 # Local documentation
 dyl/*
-!dyl/栖梦客户端功能报告/
+!dyl/栖梦客户端功能报告/*
 .trae/
 
 bundle/
