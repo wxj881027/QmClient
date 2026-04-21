@@ -8,6 +8,7 @@
 
 #include <engine/client/enums.h>
 #include <engine/graphics.h>
+#include <engine/shared/jobs.h>
 
 #include <generated/protocol.h>
 #include <generated/protocol7.h>
@@ -16,6 +17,8 @@
 #include <game/client/render.h>
 
 #include <chrono>
+#include <deque>
+#include <mutex>
 #include <vector>
 
 class CSkins7 : public CComponent
@@ -62,6 +65,52 @@ public:
 		bool operator==(const CSkin &Other) const;
 	};
 
+	class CSkinPartLoadJob : public IJob
+	{
+	public:
+		struct SResult
+		{
+			CImageInfo m_OriginalImage;
+			CImageInfo m_GrayscaleImage;
+			ColorRGBA m_BloodColor;
+			int m_PartType;
+			int m_Flags;
+			char m_aName[24];
+			bool m_Success = false;
+		};
+
+	private:
+		std::string m_Path;
+		std::string m_PartName;
+		IStorage *m_pStorage;
+		int m_StorageType;
+		int m_PartType;
+		int m_Flags;
+		std::mutex m_Mutex;
+		SResult m_Result;
+		bool m_Completed = false;
+
+		void Run() override;
+
+	public:
+		CSkinPartLoadJob(const char *pPath, const char *pPartName, IStorage *pStorage, int StorageType, int PartType, int Flags);
+		~CSkinPartLoadJob() override;
+
+		bool IsCompleted() const
+		{
+			std::lock_guard<std::mutex> Lock(const_cast<std::mutex &>(m_Mutex));
+			return m_Completed;
+		}
+
+		SResult GetResult()
+		{
+			std::lock_guard<std::mutex> Lock(m_Mutex);
+			SResult Result = std::move(m_Result);
+			m_Result = SResult();
+			return Result;
+		}
+	};
+
 	static const char *const ms_apSkinPartNames[protocol7::NUM_SKINPARTS];
 	static const char *const ms_apSkinPartNamesLocalized[protocol7::NUM_SKINPARTS];
 	static const char *const ms_apColorComponents[NUM_COLOR_COMPONENTS];
@@ -73,9 +122,11 @@ public:
 
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
+	void OnReset() override;
 
 	void Refresh(TSkinLoadedCallback &&SkinLoadedCallback);
 	std::chrono::nanoseconds LastRefreshTime() const { return m_LastRefreshTime; }
+	bool IsLoading() const { return m_Loading; }
 
 	const std::vector<CSkin> &GetSkins() const;
 	const std::vector<CSkinPart> &GetSkinParts(int Part) const;
@@ -101,16 +152,22 @@ public:
 
 private:
 	std::chrono::nanoseconds m_LastRefreshTime;
+	bool m_Loading = false;
 
 	std::vector<CSkinPart> m_avSkinParts[protocol7::NUM_SKINPARTS];
 	CSkinPart m_aPlaceholderSkinParts[protocol7::NUM_SKINPARTS];
 	std::vector<CSkin> m_vSkins;
+
+	std::deque<std::shared_ptr<CSkinPartLoadJob>> m_PendingSkinPartJobs;
+	TSkinLoadedCallback m_SkinLoadedCallback;
 
 	IGraphics::CTextureHandle m_XmasHatTexture;
 	IGraphics::CTextureHandle m_BotTexture;
 
 	static int SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser);
 	bool LoadSkinPart(int PartType, const char *pName, int DirType);
+	void StartSkinPartLoadJob(int PartType, const char *pName, int DirType);
+	void ProcessCompletedJobs();
 	static int SkinScan(const char *pName, int IsDir, int DirType, void *pUser);
 	bool LoadSkin(const char *pName, int DirType);
 

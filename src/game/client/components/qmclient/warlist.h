@@ -142,6 +142,8 @@ class CWarList : public CComponent
 public:
 	CWarList();
 	~CWarList();
+	CWarList(const CWarList &) = delete;
+	CWarList &operator=(const CWarList &) = delete;
 
 	// duplicate war types are NOT allowed
 	std::vector<CWarType *> m_WarTypes = {

@@ -1625,12 +1625,18 @@ void CNamePlates::ResetNamePlates()
 		NamePlate.Reset(*GameClient());
 }
 
-void CNamePlates::ResetChatBubbleAnimState(int ClientId)
+void CNamePlates::ResetChatBubbleAnimState(int ClientId, bool IsDestructing)
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 
 	SChatBubbleAnimState &AnimState = m_pData->m_aChatBubbleAnim[ClientId];
+	if(IsDestructing)
+	{
+		TextRender()->DeleteTextContainer(AnimState.m_TextContainerIndex);
+		AnimState = SChatBubbleAnimState();
+		return;
+	}
 	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
 	const uint64_t NodeKey = ChatBubbleAnimNodeKey(ClientId);
 	const bool RuntimeInitialized = AnimRuntime.GetValue(NodeKey, EUiAnimProperty::ALPHA, -1.0f) >= -0.5f;
@@ -2025,8 +2031,6 @@ CNamePlates::CNamePlates() :
 
 CNamePlates::~CNamePlates()
 {
-	for(int i = 0; i < MAX_CLIENTS; ++i)
-		ResetChatBubbleAnimState(i);
 	delete m_pData;
 }
 

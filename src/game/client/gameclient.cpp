@@ -976,6 +976,13 @@ void CGameClient::OnReset()
 	m_CharOrder.Reset();
 	std::fill(std::begin(m_aSwitchStateTeam), std::end(m_aSwitchStateTeam), -1);
 
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
+		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
+		m_aAutoTeamLockPending[Dummy] = false;
+	}
+
 	// m_MapBugs and m_aTuningList are reset in LoadMapSettings
 
 	m_LastShowDistanceZoom = 0.0f;
@@ -1081,6 +1088,9 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	// Reset GPU upload limiter for this frame
+	m_GpuUploadLimiter.OnFrameStart();
+
 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
 	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
 
@@ -3075,6 +3085,63 @@ void CGameClient::OnNewSnapshot()
 	m_IsDummySwapping = 0;
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		UpdatePrediction();
+	UpdateAutoTeamLock();
+}
+
+void CGameClient::UpdateAutoTeamLock()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+	{
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		{
+			m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
+			m_aAutoTeamLockDeadlineTick[Dummy] = 0;
+			m_aAutoTeamLockPending[Dummy] = false;
+		}
+		return;
+	}
+
+	const int Dummy = g_Config.m_ClDummy;
+	const int ClientId = m_aLocalIds[Dummy];
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+	{
+		m_aAutoTeamLockLastTeam[Dummy] = TEAM_FLOCK;
+		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
+		m_aAutoTeamLockPending[Dummy] = false;
+		return;
+	}
+
+	const int Team = m_Teams.Team(ClientId);
+	const bool TeamCanBeLocked = Team > TEAM_FLOCK && Team < TEAM_SUPER;
+	const bool LastTeamCanBeLocked = m_aAutoTeamLockLastTeam[Dummy] > TEAM_FLOCK && m_aAutoTeamLockLastTeam[Dummy] < TEAM_SUPER;
+
+	if(!g_Config.m_QmAutoTeamLock)
+	{
+		m_aAutoTeamLockLastTeam[Dummy] = Team;
+		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
+		m_aAutoTeamLockPending[Dummy] = false;
+		return;
+	}
+
+	if(TeamCanBeLocked && (!LastTeamCanBeLocked || Team != m_aAutoTeamLockLastTeam[Dummy]))
+	{
+		const int DelayTicks = g_Config.m_QmAutoTeamLockDelay * Client()->GameTickSpeed();
+		m_aAutoTeamLockDeadlineTick[Dummy] = (int64_t)Client()->GameTick(Dummy) + DelayTicks;
+		m_aAutoTeamLockPending[Dummy] = true;
+	}
+	else if(!TeamCanBeLocked)
+	{
+		m_aAutoTeamLockDeadlineTick[Dummy] = 0;
+		m_aAutoTeamLockPending[Dummy] = false;
+	}
+
+	if(m_aAutoTeamLockPending[Dummy] && TeamCanBeLocked && Client()->GameTick(Dummy) >= m_aAutoTeamLockDeadlineTick[Dummy])
+	{
+		m_Chat.SendChat(0, "/lock 1");
+		m_aAutoTeamLockPending[Dummy] = false;
+	}
+
+	m_aAutoTeamLockLastTeam[Dummy] = Team;
 }
 
 void CGameClient::UpdateEditorIngameMoved()

@@ -11,6 +11,7 @@
 
 #include <engine/config.h>
 #include <engine/engine.h>
+#include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -908,7 +909,19 @@ void CSkins::UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseco
 		Stats.m_NumLoading--;
 		if(pSkinContainer->m_pLoadJob->State() == IJob::STATE_DONE && pSkinContainer->m_pLoadJob->m_Data.m_Info.m_pData)
 		{
+			// Check GPU upload limiter before uploading textures
+			// Each skin requires multiple texture uploads (body, feet, hands, eyes, etc.)
+			if(!GameClient()->GpuUploadLimiter()->CanUpload())
+			{
+				// Skip this frame, will be processed in the next frame
+				continue;
+			}
 			LoadSkinFinish(pSkinContainer.get(), pSkinContainer->m_pLoadJob->m_Data);
+			// Record the texture uploads (approximately 14 textures per skin: 7 original + 7 colorable)
+			for(int i = 0; i < 14 && GameClient()->GpuUploadLimiter()->CanUpload(); ++i)
+			{
+				GameClient()->GpuUploadLimiter()->OnUploaded();
+			}
 			GameClient()->OnSkinUpdate(pSkinContainer->Name());
 			pSkinContainer->m_pLoadJob = nullptr;
 			Stats.m_NumLoaded++;
@@ -1441,18 +1454,29 @@ void CSkins::CSkinLoadJob::Run()
 {
 	char aPath[IO_MAX_PATH_LENGTH];
 	str_format(aPath, sizeof(aPath), "skins/%s.png", m_aName);
-	if(m_pSkins->Graphics()->LoadPng(m_Data.m_Info, aPath, m_StorageType))
+
+	void *pFileData = nullptr;
+	unsigned FileSize = 0;
+	if(!m_pSkins->Storage()->ReadFile(aPath, m_StorageType, &pFileData, &FileSize))
 	{
-		if(State() == IJob::STATE_ABORTED)
-		{
-			return;
-		}
-		m_pSkins->LoadSkinData(m_aName, m_Data);
+		log_error("skins", "Failed to read skin file '%s'", aPath);
+		return;
 	}
-	else
+
+	const bool LoadSuccess = CImageLoader::LoadPng(pFileData, FileSize, aPath, m_Data.m_Info);
+	free(pFileData);
+
+	if(!LoadSuccess)
 	{
-		log_error("skins", "Failed to load PNG of skin '%s' from '%s'", m_aName, aPath);
+		log_error("skins", "Failed to decode skin PNG '%s'", aPath);
+		return;
 	}
+
+	if(State() == IJob::STATE_ABORTED)
+	{
+		return;
+	}
+	m_pSkins->LoadSkinData(m_aName, m_Data);
 }
 
 CSkins::CSkinDownloadJob::CSkinDownloadJob(CSkins *pSkins, const char *pName) :
@@ -1510,7 +1534,7 @@ void CSkins::CSkinDownloadJob::Run()
 		unsigned PngSize;
 		if(m_pSkins->Storage()->ReadFile(aPathReal, IStorage::TYPE_SAVE, &pPngData, &PngSize))
 		{
-			if(m_pSkins->Graphics()->LoadPng(m_Data.m_Info, static_cast<uint8_t *>(pPngData), PngSize, aPathReal))
+			if(CImageLoader::LoadPng(pPngData, PngSize, aPathReal, m_Data.m_Info))
 			{
 				if(State() == IJob::STATE_ABORTED)
 				{
@@ -1572,7 +1596,7 @@ void CSkins::CSkinDownloadJob::Run()
 
 	m_Data.m_Info.Free();
 	m_Data.m_InfoGrayscale.Free();
-	const bool Success = m_pSkins->Graphics()->LoadPng(m_Data.m_Info, pResult, ResultSize, aUrl);
+	const bool Success = CImageLoader::LoadPng(pResult, ResultSize, aUrl, m_Data.m_Info);
 	if(Success)
 	{
 		if(State() == IJob::STATE_ABORTED)

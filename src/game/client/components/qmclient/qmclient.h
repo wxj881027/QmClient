@@ -446,6 +446,19 @@ public:
 		return m_aGoresMapProgress[Idx];
 	}
 
+	// Focus Mode (Zen Mode)
+	bool m_PrevFocusModeActive = false;
+	int m_SavedClShowhud = 1;
+	int m_SavedClNamePlates = 1;
+	void ApplyFocusModeEffects();
+
+	// Gores FastInput Link
+	bool m_PrevGoresFastInputActive = false;
+	int m_SavedTcFastInput = 0;
+	bool m_PrevGoresFastInputOthersActive = false;
+	int m_SavedTcFastInputOthers = 0;
+	void ApplyGoresFastInputLink();
+
 };
 
 #endif

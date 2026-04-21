@@ -10,6 +10,7 @@
 
 #include <engine/client.h>
 #include <engine/client/enums.h>
+#include <engine/client/gpu_upload_limiter.h>
 #include <engine/console.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
@@ -280,6 +281,9 @@ private:
 	CNetObjHandler m_NetObjHandler;
 	protocol7::CNetObjHandler m_NetObjHandler7;
 
+	// Global GPU texture upload limiter
+	CGpuUploadLimiter m_GpuUploadLimiter;
+
 	class IEngine *m_pEngine;
 	class IInput *m_pInput;
 	class IGraphics *m_pGraphics;
@@ -411,6 +415,12 @@ public:
 	}
 	bool HasFreezeWakeupPopups() const { return m_TClient.HasFreezeWakeupPopups(); }
 	void RenderFreezeWakeupPopups() { m_TClient.RenderFreezeWakeupPopups(); }
+
+	/**
+	 * Get the global GPU upload limiter for texture upload throttling.
+	 */
+	CGpuUploadLimiter *GpuUploadLimiter() { return &m_GpuUploadLimiter; }
+	const CGpuUploadLimiter *GpuUploadLimiter() const { return &m_GpuUploadLimiter; }
 
 	int NetobjNumCorrections()
 	{
@@ -1068,6 +1078,7 @@ private:
 	std::vector<std::shared_ptr<CManagedTeeRenderInfo>> m_vpManagedTeeRenderInfos;
 	void UpdateManagedTeeRenderInfos();
 
+	void UpdateAutoTeamLock();
 	void UpdateLocalTuning();
 	void UpdatePrediction();
 	void UpdateSpectatorCursor();
@@ -1080,6 +1091,9 @@ private:
 	int m_IsDummySwapping;
 	CCharOrder m_CharOrder;
 	int m_aSwitchStateTeam[NUM_DUMMIES];
+	int m_aAutoTeamLockLastTeam[NUM_DUMMIES] = {TEAM_FLOCK, TEAM_FLOCK};
+	int64_t m_aAutoTeamLockDeadlineTick[NUM_DUMMIES] = {0, 0};
+	bool m_aAutoTeamLockPending[NUM_DUMMIES] = {false, false};
 	int64_t m_aQ1menGSyncMarkUntil[MAX_CLIENTS] = {0};
 	bool m_aQ1menGSyncFootParticlesEnabled[MAX_CLIENTS] = {false};
 	bool m_aQ1menGSyncRemoteParticlesEnabled[MAX_CLIENTS] = {false};

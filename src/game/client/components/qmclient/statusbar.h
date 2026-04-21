@@ -25,6 +25,10 @@ public:
 class CStatusBar : public CComponent
 {
 public:
+	CStatusBar() = default;
+	CStatusBar(const CStatusBar &) = delete;
+	CStatusBar &operator=(const CStatusBar &) = delete;
+
 	int Sizeof() const override { return sizeof(*this); }
 	void OnRender() override;
 	void OnInit() override;

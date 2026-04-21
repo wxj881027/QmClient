@@ -35,8 +35,8 @@ Q1menG 客户端是基于 DDNet 和 TaterClient 构建的定制版本。
 使用仓库包装脚本，`cmake` 始终在配置的 MSVC 开发环境中运行，即使从普通的 PowerShell 或 `cmd.exe` 会话：
 
 ```bat
-scripts\cmake-windows.cmd -S . -B cmake-build-release
-scripts\cmake-windows.cmd --build cmake-build-release --target game-client -j 10
+qmclient_scripts\cmake-windows.cmd -S . -B cmake-build-release
+qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target game-client -j 10
 ```
 
 ### macOS / Linux / 已初始化的开发人员环境
@@ -51,9 +51,9 @@ cmake --build cmake-build-release --target game-client -j 10
 ### Windows
 
 ```bat
-scripts\cmake-windows.cmd --build cmake-build-release --target run_cxx_tests
-scripts\cmake-windows.cmd --build cmake-build-release --target run_rust_tests
-scripts\cmake-windows.cmd --build cmake-build-release --target run_tests
+qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target run_cxx_tests
+qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target run_rust_tests
+qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target run_tests
 ```
 
 ### macOS / Linux / 已初始化的开发人员环境

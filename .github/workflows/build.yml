@@ -35,6 +35,8 @@ jobs:
     timeout-minutes: 120
     env:
       BUILD_TYPE: ${{ github.event.inputs.build_type || 'Release' }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SCCACHE_GHA_ENABLED: "true"
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +60,7 @@ jobs:
     steps:
       - name: Validate tag version
         if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/}"
           if [[ ! "$TAG_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -77,18 +80,19 @@ jobs:
           df -h
 
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
           fetch-depth: 1
 
       - name: Update version from tag
         if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG_VERSION#v}"
           echo "Updating TCLIENT_VERSION to $VERSION"
-          sed -i 's/^#define TCLIENT_VERSION ".*"/#define TCLIENT_VERSION "'"$VERSION"'"/' src/game/version.h
+          sed -i.bak 's/^#define TCLIENT_VERSION ".*"/#define TCLIENT_VERSION "'"$VERSION"'"/' src/game/version.h && rm -f src/game/version.h.bak
           echo "Updated version.h:"
           grep "TCLIENT_VERSION" src/game/version.h
 
@@ -99,27 +103,28 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Cache CMake build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             build/_deps
-            build/CMakeCache.txt
           key: cmake-${{ runner.os }}-${{ runner.arch }}-${{ env.BUILD_TYPE }}-${{ hashFiles('CMakeLists.txt', 'cmake/**/*.cmake') }}
           restore-keys: cmake-${{ runner.os }}-${{ runner.arch }}-${{ env.BUILD_TYPE }}-
 
       - name: Cache Homebrew packages
         if: runner.os == 'macOS'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
-          path: |
-            ~/Library/Caches/Homebrew
-            /opt/homebrew/Cellar
+          path: ~/Library/Caches/Homebrew
           key: homebrew-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
           restore-keys: homebrew-${{ runner.os }}-
 
+      - name: Reinstall ccache (macOS)
+        if: runner.os == 'macOS'
+        run: brew reinstall ccache
+
       - name: Setup ccache (Linux/macOS)
         if: runner.os != 'Windows'
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: hendrikmuhs/ccache-action@v1.2.22
         with:
           key: ${{ runner.os }}-${{ runner.arch }}
           max-size: 500M
@@ -135,15 +140,6 @@ jobs:
       - name: Install Ninja (Windows)
         if: runner.os == 'Windows'
         run: choco install ninja -y
-
-      - name: Cache apt dependencies
-        if: runner.os == 'Linux'
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives/*.deb
-            /var/lib/apt/lists
-          key: apt-linux-${{ hashFiles('.github/workflows/build.yml') }}
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -163,9 +159,13 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           export HOMEBREW_NO_AUTO_UPDATE=1
-          brew install \
-            cmake ninja pkg-config python \
-            freetype sdl2 libpng webp libogg opus opusfile sqlite wavpack ffmpeg
+          for pkg in cmake ninja pkg-config python freetype sdl2 libpng webp libogg opus opusfile sqlite wavpack ffmpeg; do
+            if brew list --formula "$pkg" &>/dev/null; then
+              brew link --overwrite "$pkg" 2>/dev/null || true
+            else
+              brew install "$pkg"
+            fi
+          done
           python3 -m venv .venv-dmgbuild
           . .venv-dmgbuild/bin/activate
           python -m pip install --upgrade pip
@@ -176,12 +176,30 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           WEBP_LIBDIR=$(brew --prefix webp)/lib
+          WEBP_OLD_ID=$(otool -D "${WEBP_LIBDIR}/libwebp.7.dylib" | tail -1)
+          SHARPYUV_OLD_ID=$(otool -D "${WEBP_LIBDIR}/libsharpyuv.0.dylib" 2>/dev/null | tail -1)
           for DIR in lib64 libarm64; do
             mkdir -p "ddnet-libs/webp/mac/${DIR}"
             cp "${WEBP_LIBDIR}/libwebp.7.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
             cp "${WEBP_LIBDIR}/libwebpdemux.2.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
             cp "${WEBP_LIBDIR}/libwebpmux.3.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
+            cp "${WEBP_LIBDIR}/libsharpyuv.0.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
+            install_name_tool -id @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebp.7.dylib" 2>/dev/null || true
+            install_name_tool -id @rpath/libwebpdemux.2.dylib "ddnet-libs/webp/mac/${DIR}/libwebpdemux.2.dylib" 2>/dev/null || true
+            install_name_tool -id @rpath/libwebpmux.3.dylib "ddnet-libs/webp/mac/${DIR}/libwebpmux.3.dylib" 2>/dev/null || true
+            install_name_tool -id @rpath/libsharpyuv.0.dylib "ddnet-libs/webp/mac/${DIR}/libsharpyuv.0.dylib" 2>/dev/null || true
+            if [ -n "${WEBP_OLD_ID}" ]; then
+              install_name_tool -change "${WEBP_OLD_ID}" @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebpdemux.2.dylib" 2>/dev/null || true
+              install_name_tool -change "${WEBP_OLD_ID}" @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebpmux.3.dylib" 2>/dev/null || true
+            fi
+            if [ -n "${SHARPYUV_OLD_ID}" ]; then
+              install_name_tool -change "${SHARPYUV_OLD_ID}" @rpath/libsharpyuv.0.dylib "ddnet-libs/webp/mac/${DIR}/libwebp.7.dylib" 2>/dev/null || true
+              install_name_tool -change "${SHARPYUV_OLD_ID}" @rpath/libsharpyuv.0.dylib "ddnet-libs/webp/mac/${DIR}/libwebpdemux.2.dylib" 2>/dev/null || true
+              install_name_tool -change "${SHARPYUV_OLD_ID}" @rpath/libsharpyuv.0.dylib "ddnet-libs/webp/mac/${DIR}/libwebpmux.3.dylib" 2>/dev/null || true
+            fi
           done
+          echo "Verifying WebP install_name:"
+          otool -D ddnet-libs/webp/mac/libarm64/libwebp.7.dylib 2>/dev/null || true
           ls -la ddnet-libs/webp/mac/lib64/
 
       - name: Configure (Linux)
@@ -201,8 +219,10 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DPREFER_BUNDLED_LIBS=ON \
             -DDOWNLOAD_GTEST=ON \
-            -DCMAKE_OSX_SYSROOT="${SDKROOT}"
+            -DCMAKE_OSX_SYSROOT="${SDKROOT}" \
+            -DIPO=OFF
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
@@ -262,21 +282,37 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Path dist -Force | Out-Null
-          $pkg = Get-ChildItem -Path build -Recurse -File -Filter "*.${{ matrix.package_ext }}" |
-            Where-Object { $_.Name -notmatch "-src\\." } |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
-          if (-not $pkg) {
-            throw "No package with extension .${{ matrix.package_ext }} found under build/"
+          $found = $false
+          foreach ($ext in @('7z', 'zip')) {
+            Write-Host "Searching for QmClient*.$ext in build/..."
+            $pkg = Get-ChildItem -Path build -Recurse -File -Filter "QmClient*.$ext" |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 1
+            if (-not $pkg) {
+              $pkg = Get-ChildItem -Path build -Recurse -File -Filter "*.$ext" |
+                Where-Object { $_.Name -notmatch "-src\." } |
+                Sort-Object LastWriteTime -Descending |
+                Select-Object -First 1
+            }
+            if ($pkg) {
+              $destPath = Join-Path $PWD "dist\QmClient-windows.$ext"
+              Write-Host "Found: $($pkg.FullName) -> $destPath"
+              Copy-Item -LiteralPath $pkg.FullName -Destination $destPath
+              $found = $true
+            } else {
+              Write-Host "No .$ext package found"
+            }
           }
-          Copy-Item -Path $pkg.FullName -Destination "dist\\${{ matrix.output_name }}"
+          if (-not $found) {
+            throw "No zip or 7z package found under build/"
+          }
           Get-ChildItem -Path dist
 
       - name: Upload packaged artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact_name }}
-          path: dist/${{ matrix.output_name }}
+          path: dist/*
           if-no-files-found: error
           retention-days: 14
 
@@ -299,25 +335,31 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $file = "dist/${{ matrix.output_name }}"
-          if (-not (Test-Path $file)) {
-            throw "Build artifact not found!"
+          $files = Get-ChildItem -Path dist -File
+          if ($files.Count -eq 0) {
+            throw "No build artifacts found in dist/"
           }
-          $size = (Get-Item $file).Length
-          if ($size -lt 1000000) {
-            throw "Build artifact too small: $size bytes"
+          foreach ($file in $files) {
+            if ($file.Length -lt 1000000) {
+              throw "Build artifact too small: $($file.Name) ($($file.Length) bytes)"
+            }
+            Write-Host "Verified: $($file.Name) ($($file.Length) bytes)"
           }
-          Write-Host "Build artifact verified: $size bytes"
 
       - name: Build summary
         if: always()
+        shell: bash
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Platform**: ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **OS**: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Type**: ${{ env.BUILD_TYPE }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Artifact**: ${{ matrix.output_name }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            echo "- **Artifacts**: QmClient-windows.zip, QmClient-windows.7z" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Artifact**: ${{ matrix.output_name }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Show ccache statistics (Linux/macOS)
         if: always() && runner.os != 'Windows'
@@ -332,6 +374,8 @@ jobs:
       ANDROID_PACKAGE_NAME: org.ddnet.client
       ANDROID_BUILD_DIR: build-android-release
       ANDROID_NDK_VERSION: "26.1.10909125"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SCCACHE_GHA_ENABLED: "true"
       # Debug keystore credentials - safe to commit as these are standard Android debug keys
       # For production releases, use GitHub Secrets for keystore credentials
       TW_KEY_NAME: /home/runner/.android/debug.keystore
@@ -341,29 +385,29 @@ jobs:
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           df -h
 
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
           fetch-depth: 1
 
       - name: Update version from tag
         if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG_VERSION#v}"
           echo "Updating TCLIENT_VERSION to $VERSION"
-          sed -i 's/^#define TCLIENT_VERSION ".*"/#define TCLIENT_VERSION "'"$VERSION"'"/' src/game/version.h
+          sed -i.bak 's/^#define TCLIENT_VERSION ".*"/#define TCLIENT_VERSION "'"$VERSION"'"/' src/game/version.h && rm -f src/game/version.h.bak
           echo "Updated version.h:"
           grep "TCLIENT_VERSION" src/game/version.h
 
       - name: Setup Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
@@ -373,7 +417,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Setup ccache (Android)
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: hendrikmuhs/ccache-action@v1.2.22
         with:
           key: android-${{ runner.os }}
           max-size: 500M
@@ -382,13 +426,13 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Cache cargo-ndk
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/cargo-ndk
           key: cargo-ndk-${{ runner.os }}
 
       - name: Cache Android NDK
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.android/sdk/ndk
@@ -396,16 +440,8 @@ jobs:
             ~/.android/sdk/build-tools
           key: android-sdk-ndk-${{ env.ANDROID_NDK_VERSION }}
 
-      - name: Cache apt dependencies (Android)
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives/*.deb
-            /var/lib/apt/lists
-          key: apt-android-${{ hashFiles('.github/workflows/build.yml') }}
-
       - name: Cache Rust Android targets
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.rustup/toolchains
@@ -429,7 +465,7 @@ jobs:
           rustup target add x86_64-linux-android
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install Android SDK components
         run: |
@@ -442,7 +478,7 @@ jobs:
 
       - name: Cache WebP for Android
         id: cache-webp
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ddnet-libs/webp/android
           key: webp-android-v1.6.0-${{ hashFiles('.github/workflows/build.yml', 'ddnet-libs/webp/**') }}
@@ -546,7 +582,7 @@ jobs:
 
       - name: Upload WebP libraries (for ddnet-libs)
         if: steps.cache-webp.outputs.cache-hit != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: webp-android-libs
           path: |
@@ -556,7 +592,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Android artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: packaged-android
           path: |
@@ -602,7 +638,7 @@ jobs:
       contents: write
     steps:
       - name: Download packaged artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: packaged-*
           path: release-assets
@@ -617,6 +653,7 @@ jobs:
           generate_release_notes: true
           files: |
             release-assets/QmClient-windows.zip
+            release-assets/QmClient-windows.7z
             release-assets/QmClient-ubuntu.tar.xz
             release-assets/QmClient-macOS.dmg
 
@@ -630,7 +667,7 @@ jobs:
       contents: write
     steps:
       - name: Download Android artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: packaged-android
           path: release-assets

@@ -24,6 +24,9 @@ CEffects::CEffects()
 
 void CEffects::AirJump(vec2 Pos, float Alpha, float Volume)
 {
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideEffects)
+		return;
+
 	CParticle p;
 	p.SetDefault();
 	p.m_Spr = SPRITE_PART_AIRJUMP;
@@ -79,6 +82,9 @@ void CEffects::PowerupShine(vec2 Pos, vec2 Size, float Alpha)
 void CEffects::FreezingFlakes(vec2 Pos, vec2 Size, float Alpha)
 {
 	if(!m_Add5hz)
+		return;
+
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideEffects)
 		return;
 
 	CParticle p;
@@ -392,6 +398,9 @@ void CEffects::Explosion(vec2 Pos, float Alpha)
 
 void CEffects::HammerHit(vec2 Pos, float Alpha, float Volume)
 {
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideEffects)
+		return;
+
 	// add the explosion
 	CParticle p;
 	p.SetDefault();

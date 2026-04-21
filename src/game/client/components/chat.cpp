@@ -1650,6 +1650,9 @@ void CChat::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideChat)
+		return;
+
 	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
 
 	// send pending chat messages
@@ -1685,6 +1688,7 @@ void CChat::OnRender()
 	if(UpdateChatUi)
 	{
 		Ui()->StartCheck();
+		Ui()->SetActiveItem(&m_Input);
 		Ui()->Update();
 		const CUIRect *pUiScreen = Ui()->Screen();
 		ChatMousePos = vec2(

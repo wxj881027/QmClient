@@ -12,6 +12,7 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -89,6 +90,7 @@ class CRClientVoice
 		};
 
 		OpusDecoder *m_pDecoder = nullptr;
+		bool m_DecoderFailed = false;
 		uint16_t m_LastSeq = 0;
 		bool m_HasSeq = false;
 		uint16_t m_LastRecvSeq = 0;
@@ -157,7 +159,6 @@ class CRClientVoice
 	float m_NsGain = 1.0f;
 	DenoiseState *m_pNoiseSuppress = nullptr;
 	std::atomic<int> m_OutputChannels = 0;
-	std::vector<int32_t> m_MixBuffer;
 
 	OpusEncoder *m_pEncoder = nullptr;
 	int m_EncBitrate = 24000;
@@ -168,17 +169,17 @@ class CRClientVoice
 	std::atomic<float> m_MicLevel = 0.0f;
 	int64_t m_LastPingSentTime = 0;
 	uint16_t m_LastPingSeq = 0;
-	std::array<SVoicePeer, MAX_CLIENTS> m_aPeers = {};
+	std::unique_ptr<std::array<SVoicePeer, MAX_CLIENTS>> m_pPeers;
 	std::array<std::atomic<int64_t>, MAX_CLIENTS> m_aLastHeard = {};
 	std::array<uint64_t, MAX_CLIENTS> m_aOverlayOrder = {};
 	uint64_t m_NextOverlayOrder = 1;
 
 	std::atomic<bool> m_PttActive = false;
 	std::atomic<int64_t> m_PttReleaseDeadline = 0;
-	bool m_VadActive = false;
-	int64_t m_VadReleaseDeadline = 0;
-	bool m_TxWasActive = false;
-	uint16_t m_Sequence = 0;
+	std::atomic<bool> m_VadActive = false;
+	std::atomic<int64_t> m_VadReleaseDeadline = 0;
+	std::atomic<bool> m_TxWasActive = false;
+	std::atomic<uint16_t> m_Sequence = 0;
 	std::atomic<uint32_t> m_ContextHash = 0;
 	int64_t m_LastKeepalive = 0;
 	uint32_t m_LastTokenHashSent = 0;
@@ -195,7 +196,7 @@ class CRClientVoice
 	std::atomic<bool> m_WorkerStop = false;
 	std::atomic<bool> m_WorkerEnabled = false;
 	std::atomic<bool> m_AudioRefreshRequested = true;
-	bool m_ShutdownDone = true;
+	std::atomic<bool> m_ShutdownDone = true;
 	int64_t m_LastConfigSnapshotUpdate = 0;
 	int64_t m_LastClientSnapshotUpdate = 0;
 	std::mutex m_ServerAddrMutex;
@@ -248,6 +249,7 @@ public:
 	void ListDevices();
 	int PingMs() const { return m_PingMs.load(); }
 	float MicLevel() const { return m_MicLevel.load(); }
+	bool IsSpeaking() const { return m_TxWasActive.load(); }
 	bool IsCaptureUnavailable() const { return m_CaptureUnavailable; }
 	bool IsOutputUnavailable() const { return m_OutputUnavailable; }
 };

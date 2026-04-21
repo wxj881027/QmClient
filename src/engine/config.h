@@ -24,9 +24,9 @@ class CConfigDomain
 public:
 	const char *m_aConfigPath;
 	bool m_HasVars;
-}
+};
 #define CONFIG_DOMAIN(Name, ConfigPath, HasVars) {ConfigPath, HasVars},
-static const s_aConfigDomains[ConfigDomain::NUM] = {
+static const CConfigDomain s_aConfigDomains[ConfigDomain::NUM] = {
 #include "shared/config_domains.h"
 };
 #undef CONFIG_DOMAIN

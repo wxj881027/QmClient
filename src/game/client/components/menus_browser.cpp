@@ -2694,7 +2694,7 @@ void CMenus::RenderServerbrowserQm(CUIRect View)
 	View.HSplitTop(5.0f, nullptr, &View);
 	View.HSplitTop(28.0f, &Summary, &View);
 
-	if(g_Config.m_RiVoiceServer[0] == '\0')
+	if(g_Config.m_QmVoiceServer[0] == '\0')
 	{
 		Ui()->DoLabel(&Summary, Localize("Set a voice server to enable QmClient distribution"), 9.0f, TEXTALIGN_ML);
 		return;
@@ -2850,7 +2850,7 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	static CButtonContainer s_QmTabButton;
-	if(DoButton_MenuTab(&s_QmTabButton, "Qm", g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_QM, &QmTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_QM], &ColorInactive, &ColorActive))
+	if(DoButton_MenuTab(&s_QmTabButton, Localize("Qm"), g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_QM, &QmTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_QM], &ColorInactive, &ColorActive))
 	{
 		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_QM;
 	}

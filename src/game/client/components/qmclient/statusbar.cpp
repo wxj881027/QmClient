@@ -301,6 +301,9 @@ void CStatusBar::OnRender()
 	if(!g_Config.m_TcStatusBar || !GameClient()->m_Snap.m_pGameInfoObj)
 		return;
 
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI)
+		return;
+
 	m_PlayerId = GameClient()->m_Snap.m_LocalClientId;
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active)
 		m_PlayerId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;

@@ -746,7 +746,7 @@ endif()
 
 if(TARGET_OS STREQUAL "windows")
   set(PLATFORM_CLIENT)
-  set(PLATFORM_CLIENT_LIBS opengl32.lib winmm.lib imm32.lib)
+  set(PLATFORM_CLIENT_LIBS opengl32.lib winmm.lib imm32.lib oleaut32.lib ole32.lib)
   if(MSVC)
     list(APPEND PLATFORM_CLIENT_LIBS windowsapp.lib)
   endif()
@@ -985,10 +985,13 @@ set(RUST_SRC
       ${RUST_BASE}
       ${RUST_ENGINE_INTERFACE}
       ${RUST_ENGINE_SHARED}
+      # Voice crate
+      src/rust-bridge/voice/Cargo.toml
+      src/rust-bridge/voice/src/lib.rs
       Cargo.toml
       Cargo.lock
 )
-set(RUST_TARGETS engine_shared)
+set(RUST_TARGETS engine_shared voice)
 if(NOT CMAKE_OSX_ARCHITECTURES)
   set(RUST_OUTPUTS)
   foreach(rust_target ${RUST_TARGETS})
@@ -2417,6 +2420,7 @@ if(CLIENT)
     graphics_threaded.cpp
     graphics_threaded.h
     graphics_threaded_sprites.cpp
+    gpu_upload_limiter.h
     input.cpp
     input.h
     keynames.cpp
@@ -2596,8 +2600,13 @@ if(CLIENT)
     components/qmclient/translate.h
     components/qmclient/voice_component.cpp
     components/qmclient/voice_component.h
+    components/qmclient/voice_callback.h
     components/qmclient/voice_core.cpp
     components/qmclient/voice_core.h
+    components/qmclient/voice_rust.cpp
+    components/qmclient/voice_rust.h
+    components/qmclient/voice_utils.cpp
+    components/qmclient/voice_utils.h
     components/qmclient/warlist.cpp
     components/qmclient/warlist.h
     components/race_demo.cpp
@@ -2798,6 +2807,12 @@ if(CLIENT)
 
     ${TARGET_STEAMAPI}
     rust_engine_shared
+    rust_voice
+
+    # Windows COM/OLE 库 (Rust tokio/windows-core 依赖)
+    ole32
+    oleaut32
+    propsys
 
     ${PLATFORM_CLIENT_LIBS}
     ${LIBS}
@@ -3298,13 +3313,16 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     thread_test.cpp
     time_test.cpp
     timestamp_test.cpp
+    translate_test.cpp
     unix_test.cpp
     uuid_test.cpp
     vmath_test.cpp
+    voice_core_test.cpp
   )
   set(TESTS_EXTRA
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmLayout.cpp
+    src/game/client/components/qmclient/voice_utils.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
     src/engine/client/serverbrowser.cpp
@@ -3672,8 +3690,15 @@ if(CLIENT AND DMGBUILD)
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/ffmpeg/${LIB_DIR}/libswresample.5.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/ffmpeg/${LIB_DIR}/libswscale.8.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/libsteam_api.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebp.7.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebpdemux.2.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebpmux.3.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libsharpyuv.0.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/../Frameworks ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
+    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/darwin_fix_install_names.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks --executable ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
+    COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/*.dylib
+    COMMAND codesign --force --sign - ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
 
     # SERVER
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/data/maps ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/Resources/data/maps
@@ -3681,6 +3706,7 @@ if(CLIENT AND DMGBUILD)
     COMMAND ${CMAKE_COMMAND} -E copy bundle/server/Info.plist ${PROJECT_SOURCE_DIR}/other/bundle/server/PkgInfo ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:game-server> $<TARGET_FILE:game-server-launcher> ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
+    COMMAND codesign --force --sign - ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
     COMMAND ${CMAKE_COMMAND} -E copy ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
 
     # DMG
@@ -3705,11 +3731,12 @@ if(CLIENT AND DMGBUILD)
   list(APPEND PACKAGE_TARGETS package_dmg)
 endif()
 
-foreach(ext zip tar.gz tar.xz)
-  set(TAR_MODE c)
-  set(TAR_EXTRA_ARGS)
-  string(REPLACE . _ EXT_SLUG ${ext})
+if(TARGET_OS STREQUAL "windows")
+  find_program(7Z_EXECUTABLE 7z)
+endif()
 
+foreach(ext zip tar.gz tar.xz 7z)
+  string(REPLACE . _ EXT_SLUG ${ext})
   set(TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG}/${CPACK_PACKAGE_FILE_NAME})
 
   set(COPY_FILE_COMMANDS)
@@ -3732,12 +3759,18 @@ foreach(ext zip tar.gz tar.xz)
     endif()
   endforeach()
 
+  set(PACKAGE_COMMAND)
   if(ext STREQUAL zip)
-    set(TAR_EXTRA_ARGS --format=zip)
+    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${CMAKE_COMMAND} -E tar c ../${CPACK_PACKAGE_FILE_NAME}.${ext} --format=zip -- ${CPACK_PACKAGE_FILE_NAME}/)
   elseif(ext STREQUAL tar.gz)
-    set(TAR_MODE cz)
+    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${CMAKE_COMMAND} -E tar cz ../${CPACK_PACKAGE_FILE_NAME}.${ext} -- ${CPACK_PACKAGE_FILE_NAME}/)
   elseif(ext STREQUAL tar.xz)
-    set(TAR_MODE cJ)
+    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${CMAKE_COMMAND} -E tar cJ ../${CPACK_PACKAGE_FILE_NAME}.${ext} -- ${CPACK_PACKAGE_FILE_NAME}/)
+  elseif(ext STREQUAL 7z)
+    if(NOT 7Z_EXECUTABLE)
+      continue()
+    endif()
+    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${7Z_EXECUTABLE} a -t7z -mx=5 ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${CPACK_PACKAGE_FILE_NAME}/)
   endif()
   add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.${ext}
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${TMPDIR}
@@ -3746,7 +3779,7 @@ foreach(ext zip tar.gz tar.xz)
     ${COPY_DIR_COMMANDS}
     ${COPY_TARGET_COMMANDS}
     ${STRIP_TARGET_COMMANDS}
-    COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${CMAKE_COMMAND} -E tar ${TAR_MODE} ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${TAR_EXTRA_ARGS} -- ${CPACK_PACKAGE_FILE_NAME}/
+    ${PACKAGE_COMMAND}
     DEPENDS ${CPACK_TARGETS}
   )
   add_custom_target(package_${EXT_SLUG} DEPENDS ${CPACK_PACKAGE_FILE_NAME}.${ext})
@@ -3756,10 +3789,17 @@ endforeach()
 set(PACKAGE_DEFAULT tar_xz)
 if(TARGET_OS STREQUAL "windows")
   set(PACKAGE_DEFAULT zip)
+  if(7Z_EXECUTABLE)
+    add_custom_target(package_default DEPENDS package_zip package_7z)
+  else()
+    add_custom_target(package_default DEPENDS package_zip)
+  endif()
 elseif(TARGET_OS STREQUAL "mac")
   set(PACKAGE_DEFAULT dmg)
+  add_custom_target(package_default DEPENDS package_${PACKAGE_DEFAULT})
+else()
+  add_custom_target(package_default DEPENDS package_${PACKAGE_DEFAULT})
 endif()
-add_custom_target(package_default DEPENDS package_${PACKAGE_DEFAULT})
 
 add_custom_target(package_all DEPENDS ${PACKAGE_TARGETS})
 

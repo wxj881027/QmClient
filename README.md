@@ -12,7 +12,7 @@
 
 ## 📝 Project Overview
 
-Q1menG Client is a customised client built upon DDNet and TaterClient.  
+Q1menG Client is a customised client built upon DDNet and TaterClient.\
 The aim is to provide a more modern UI experience, a wider range of configurable visual effects, and more user-friendly day-to-day features, whilst maintaining compatibility with the core gameplay.
 
 ## ✨ Features
@@ -35,8 +35,8 @@ We would like to thank all contributors who have submitted code, reported issues
 Use the repository wrapper so `cmake` always runs inside a configured MSVC developer environment, even from a normal PowerShell or `cmd.exe` session:
 
 ```bat
-scripts\cmake-windows.cmd -S . -B cmake-build-release
-scripts\cmake-windows.cmd --build cmake-build-release --target game-client -j 10
+qmclient_scripts\cmake-windows.cmd -S . -B cmake-build-release
+qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target game-client -j 10
 ```
 
 ### macOS / Linux / already-initialised developer shell
@@ -51,9 +51,9 @@ cmake --build cmake-build-release --target game-client -j 10
 ### Windows
 
 ```bat
-scripts\cmake-windows.cmd --build cmake-build-release --target run_cxx_tests
-scripts\cmake-windows.cmd --build cmake-build-release --target run_rust_tests
-scripts\cmake-windows.cmd --build cmake-build-release --target run_tests
+qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target run_cxx_tests
+qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target run_rust_tests
+qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target run_tests
 ```
 
 ### macOS / Linux / already-initialised developer shell
@@ -80,11 +80,9 @@ cmake --build cmake-build-release --target run_tests
 
 ## 📜 License
 
-This project is licensed under the zlib/libpng licence, in line with the upstream DDNet / TaterClient projects.  
+This project is licensed under the zlib/libpng licence, in line with the upstream DDNet / TaterClient projects.\
 Modified versions must be clearly attributed and must not misrepresent the identity of the original authors.
 
 ## 📮 Notes
 
 This project is a personalised customisation and does not represent the official stance of DDNet or TaterClient.
-
-

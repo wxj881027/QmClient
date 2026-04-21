@@ -26,6 +26,23 @@
 
 class CSemaphore;
 
+static std::thread::id gs_MainThreadId;
+static bool gs_MainThreadIdInitialized = false;
+
+static void EnsureMainThreadIdInitialized()
+{
+	if(!gs_MainThreadIdInitialized)
+	{
+		gs_MainThreadId = std::this_thread::get_id();
+		gs_MainThreadIdInitialized = true;
+	}
+}
+
+static bool IsMainThread()
+{
+	return std::this_thread::get_id() == gs_MainThreadId;
+}
+
 static CVideoMode g_aFakeModes[] = {
 	{8192, 4320, 8192, 4320, 0, 8, 8, 8, 0}, {7680, 4320, 7680, 4320, 0, 8, 8, 8, 0}, {5120, 2880, 5120, 2880, 0, 8, 8, 8, 0},
 	{4096, 2160, 4096, 2160, 0, 8, 8, 8, 0}, {3840, 2160, 3840, 2160, 0, 8, 8, 8, 0}, {2560, 1440, 2560, 1440, 0, 8, 8, 8, 0},
@@ -100,6 +117,8 @@ void CGraphics_Threaded::AddVertices(int Count, CCommandBuffer::SVertexTex3DStre
 
 CGraphics_Threaded::CGraphics_Threaded()
 {
+	EnsureMainThreadIdInitialized();
+
 	m_State.m_ScreenTL.x = 0;
 	m_State.m_ScreenTL.y = 0;
 	m_State.m_ScreenBR.x = 0;
@@ -446,6 +465,8 @@ static CCommandBuffer::SCommand_Texture_Create LoadTextureCreateCommand(int Text
 
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName)
 {
+	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
+
 	LoadTextureAddWarning(Image.m_Width, Image.m_Height, Flags, pTexName);
 
 	if(Image.m_Width == 0 || Image.m_Height == 0)
@@ -469,6 +490,8 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &I
 
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName)
 {
+	dbg_assert(IsMainThread(), "GPU texture upload must be called from main thread");
+
 	if(Image.m_Format != CImageInfo::FORMAT_RGBA)
 	{
 		// Moving not possible, texture needs to be converted

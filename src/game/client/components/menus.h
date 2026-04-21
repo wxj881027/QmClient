@@ -11,6 +11,7 @@
 #include <engine/friends.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
+#include <engine/shared/jobs.h>
 #include <engine/textrender.h>
 
 #include <game/client/component.h>
@@ -86,14 +87,12 @@ private:
 
 	// menus_settings_assets.cpp
 public:
-	class CAssetDecodeJob;
-
 	struct SCustomItem
 	{
 		IGraphics::CTextureHandle m_RenderTexture;
 
 		char m_aName[50];
-		std::shared_ptr<CAssetDecodeJob> m_pDecodeJob;
+		std::shared_ptr<IJob> m_pDecodeJob;
 
 		bool operator<(const SCustomItem &Other) const { return str_comp(m_aName, Other.m_aName) < 0; }
 	};
