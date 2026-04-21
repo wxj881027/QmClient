@@ -2,3 +2,6 @@
 	path = ddnet-libs
 	url = https://github.com/wuqie-xuanzhao/ddnet-libs
 	shallow = true
+[submodule "docs/dyl/QmClient_docs"]
+	path = docs/dyl/QmClient_docs
+	url = https://github.com/wuqie-xuanzhao/QmClient-docs.git
