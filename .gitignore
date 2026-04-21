@@ -13,6 +13,7 @@ src/rust-bridge/voice/opus-prebuilt/
 docs/dyl
 !docs/dyl/QmClient_docs
 .trae
+.trae/
 
 bundle/
 !/other/bundle/
