@@ -158,8 +158,6 @@ class CChat : public CComponent
 	bool m_EditingNewLine;
 	char m_aSavedInputText[MAX_LINE_LENGTH];
 	bool m_SavedInputPending;
-	std::optional<vec2> m_LastMousePos;
-	bool m_MouseUnlocked = false;
 
 	bool m_ServerSupportsCommandInfo;
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
@@ -174,9 +172,6 @@ class CChat : public CComponent
 	static void ConchainChatWidth(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	bool LineShouldHighlight(const char *pLine, const char *pName);
-	void LockMouse();
-	void UnlockMouse();
-	void SetUiMousePos(vec2 Pos);
 	void StoreSave(const char *pText);
 	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
 
@@ -213,7 +208,6 @@ public:
 	void Reset();
 	void OnRelease() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
-	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 	bool OnInput(const IInput::CEvent &Event) override;
 	void OnInit() override;
 
