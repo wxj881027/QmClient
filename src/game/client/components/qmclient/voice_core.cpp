@@ -106,6 +106,84 @@ static bool VoiceShouldHear(uint32_t SenderGroup, uint32_t ReceiverGroup)
 	return SenderGroup == ReceiverGroup;
 }
 
+static void WriteU16(uint8_t *pBuf, uint16_t Value)
+{
+	pBuf[0] = Value & 0xff;
+	pBuf[1] = (Value >> 8) & 0xff;
+}
+
+static void WriteU32(uint8_t *pBuf, uint32_t Value)
+{
+	pBuf[0] = Value & 0xff;
+	pBuf[1] = (Value >> 8) & 0xff;
+	pBuf[2] = (Value >> 16) & 0xff;
+	pBuf[3] = (Value >> 24) & 0xff;
+}
+
+static void WriteFloat(uint8_t *pBuf, float Value)
+{
+	static_assert(sizeof(float) == 4, "float must be 4 bytes");
+	uint32_t Bits = 0;
+	mem_copy(&Bits, &Value, sizeof(Bits));
+	WriteU32(pBuf, Bits);
+}
+
+static uint16_t ReadU16(const uint8_t *pBuf)
+{
+	return (uint16_t)pBuf[0] | ((uint16_t)pBuf[1] << 8);
+}
+
+static uint32_t ReadU32(const uint8_t *pBuf)
+{
+	return (uint32_t)pBuf[0] | ((uint32_t)pBuf[1] << 8) | ((uint32_t)pBuf[2] << 16) | ((uint32_t)pBuf[3] << 24);
+}
+
+static float ReadFloat(const uint8_t *pBuf)
+{
+	uint32_t Bits = ReadU32(pBuf);
+	float Value = 0.0f;
+	mem_copy(&Value, &Bits, sizeof(Value));
+	return Value;
+}
+
+static float SanitizeFloat(float Value)
+{
+	if(!std::isfinite(Value))
+		return 0.0f;
+	if(Value > 1000000.0f)
+		return 1000000.0f;
+	if(Value < -1000000.0f)
+		return -1000000.0f;
+	return Value;
+}
+
+static float VoiceFramePeak(const int16_t *pSamples, int Count)
+{
+	int Peak = 0;
+	for(int i = 0; i < Count; i++)
+	{
+		const int Sample = pSamples[i];
+		const int Abs = Sample == -32768 ? 32768 : (Sample < 0 ? -Sample : Sample);
+		if(Abs > Peak)
+			Peak = Abs;
+	}
+	return Peak / 32768.0f;
+}
+
+static void ApplyMicGain(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count)
+{
+	const float Gain = std::clamp(Config.m_QmVoiceMicVolume / 100.0f, 0.0f, 3.0f);
+	if(Gain == 1.0f)
+		return;
+
+	for(int i = 0; i < Count; i++)
+	{
+		const float Out = pSamples[i] * Gain;
+		const int Sample = (int)std::clamp(Out, -32768.0f, 32767.0f);
+		pSamples[i] = (int16_t)Sample;
+	}
+}
+
 static void ApplyHpfCompressor(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count, float &PrevIn, float &PrevOut, float &Env)
 {
 	if(!Config.m_QmVoiceFilterEnable)
@@ -411,6 +489,7 @@ bool CRClientVoice::EnsureAudio()
 		m_CaptureSpec = {};
 		m_OutputSpec = {};
 		m_OutputChannels.store(0);
+		m_MixBuffer.clear();
 		str_copy(m_aAudioBackend, g_Config.m_QmVoiceAudioBackend, sizeof(m_aAudioBackend));
 		m_aAudioBackendMismatchReq[0] = '\0';
 		m_aAudioBackendMismatchCur[0] = '\0';
@@ -1230,6 +1309,7 @@ void CRClientVoice::ProcessCapture()
 		VoiceUtils::WriteU32(aPacket + Offset, m_ContextHash.load());
 		Offset += sizeof(uint32_t);
 		VoiceUtils::WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
+		WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
 		Offset += sizeof(uint32_t);
 		aPacket[Offset++] = TxFlags;
 		VoiceUtils::WriteU16(aPacket + Offset, 0);
@@ -1384,6 +1464,7 @@ void CRClientVoice::ProcessCapture()
 		VoiceUtils::WriteU32(aPacket + Offset, m_ContextHash.load());
 		Offset += sizeof(uint32_t);
 		VoiceUtils::WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
+		WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
 		Offset += sizeof(uint32_t);
 		aPacket[Offset++] = TxFlags;
 		VoiceUtils::WriteU16(aPacket + Offset, (uint16_t)ClientId);
@@ -1573,6 +1654,14 @@ void CRClientVoice::ProcessIncoming()
 				continue;
 			const bool SenderUsesVad = (Flags & VOICE_FLAG_VAD) != 0;
 			if(SenderUsesVad && !Config.m_QmVoiceHearVad && !VoiceUtils::VoiceListMatch(Config.m_aQmVoiceVadAllow, pSenderName))
+			if(VoiceListMatch(Config.m_aQmVoiceMute, pSenderName))
+				continue;
+			if(Config.m_QmVoiceListMode == 1 && !VoiceListMatch(Config.m_aQmVoiceWhitelist, pSenderName))
+				continue;
+			if(Config.m_QmVoiceListMode == 2 && VoiceListMatch(Config.m_aQmVoiceBlacklist, pSenderName))
+				continue;
+			const bool SenderUsesVad = (Flags & VOICE_FLAG_VAD) != 0;
+			if(SenderUsesVad && !Config.m_QmVoiceHearVad && !VoiceListMatch(Config.m_aQmVoiceVadAllow, pSenderName))
 				continue;
 		}
 		m_aLastHeard[SenderId].store(time_get());
@@ -1600,6 +1689,7 @@ void CRClientVoice::ProcessIncoming()
 
 		int NameVolume = 100;
 		if(VoiceUtils::VoiceNameVolume(Config.m_aQmVoiceNameVolumes, pSenderName, NameVolume))
+		if(VoiceNameVolume(Config.m_aQmVoiceNameVolumes, pSenderName, NameVolume))
 		{
 			Volume *= (NameVolume / 100.0f);
 			if(Volume <= 0.0f)

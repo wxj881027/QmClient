@@ -1,4 +1,4 @@
-
+#include <base/log.h>
 #include <base/math.h>
 #include <base/str.h>
 #include <base/system.h>
@@ -5708,6 +5708,8 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 						str_copy(g_Config.m_TcTranslateEndpoint, "", sizeof(g_Config.m_TcTranslateEndpoint)); // Use default tencent endpoint
 					}
 				}
+				const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_TcTranslateBackend, "tencentcloud") == 0;
+				const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0;
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -5726,34 +5728,40 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 				Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "tencentcloud") == 0)
+				if(IsTencentCloudBackend)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Secret ID"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, TCLocalize("Region", QMCLIENT_LOCALIZATION_CONTEXT), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateRegion(g_Config.m_TcTranslateRegion, sizeof(g_Config.m_TcTranslateRegion));
+					s_TranslateRegion.SetEmptyText("ap-guangzhou");
+					Ui()->DoEditBox(&s_TranslateRegion, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, "SecretId", LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateSecretId(g_Config.m_TcTranslateSecretId, sizeof(g_Config.m_TcTranslateSecretId));
-					s_TranslateSecretId.SetEmptyText("TENCENTCLOUD_SECRET_ID");
+					s_TranslateSecretId.SetEmptyText("AKID...");
 					Ui()->DoEditBox(&s_TranslateSecretId, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Secret key"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, "SecretKey", LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateSecretKey(g_Config.m_TcTranslateSecretKey, sizeof(g_Config.m_TcTranslateSecretKey));
-					s_TranslateSecretKey.SetEmptyText("TENCENTCLOUD_SECRET_KEY");
 					s_TranslateSecretKey.SetHidden(true);
 					Ui()->DoEditBox(&s_TranslateSecretKey, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
-
-				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0)
+				else if(IsLibreTranslateBackend)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("API key"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_TranslateApiKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
-					s_TranslateApiKey.SetHidden(true);
-					Ui()->DoEditBox(&s_TranslateApiKey, &ControlCol, LG_BodySize);
+					Ui()->DoLabel(&LabelCol, TCLocalize("API key", QMCLIENT_LOCALIZATION_CONTEXT), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
+					s_TranslateKey.SetHidden(true);
+					Ui()->DoEditBox(&s_TranslateKey, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
@@ -6972,6 +6980,9 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 					CardContent.HSplitTop(LG_LineSpacing * 0.75f, nullptr, &CardContent);
 				}
 
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceEnable, TCLocalize("Enable voice", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceEnable, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
 				if(g_Config.m_QmVoiceEnable)
 				{
 					auto AddVoiceSectionLabel = [&](const char *pTitle, const char *pHint) {
@@ -6988,6 +6999,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("Server"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, TCLocalize("Server", QMCLIENT_LOCALIZATION_CONTEXT), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_VoiceServer(g_Config.m_QmVoiceServer, sizeof(g_Config.m_QmVoiceServer));
 					s_VoiceServer.SetEmptyText("42.194.185.210:9987");
 					Ui()->DoEditBox(&s_VoiceServer, &ControlCol, LG_BodySize);
@@ -6998,6 +7010,9 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 					Ui()->DoLabel(&LabelCol, Localize("Room password"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_VoiceToken(g_Config.m_QmVoiceToken, sizeof(g_Config.m_QmVoiceToken));
 					s_VoiceToken.SetEmptyText(Localize("Leave empty for the public room"));
+					Ui()->DoLabel(&LabelCol, TCLocalize("Room password", QMCLIENT_LOCALIZATION_CONTEXT), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_VoiceToken(g_Config.m_QmVoiceToken, sizeof(g_Config.m_QmVoiceToken));
+					s_VoiceToken.SetEmptyText(TCLocalize("Leave empty for the public room", QMCLIENT_LOCALIZATION_CONTEXT));
 					Ui()->DoEditBox(&s_VoiceToken, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing * 1.15f, nullptr, &CardContent);
 
@@ -7056,6 +7071,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 							{
 								char aDisplay[160];
 								str_format(aDisplay, sizeof(aDisplay), "%s (%s)", g_Config.m_QmVoiceInputDevice, Localize("Current config"));
+								str_format(aDisplay, sizeof(aDisplay), "%s (%s)", g_Config.m_QmVoiceInputDevice, TCLocalize("Current config", QMCLIENT_LOCALIZATION_CONTEXT));
 								s_VoiceInputDeviceDisplayNames.emplace_back(aDisplay);
 								s_VoiceInputDeviceConfigValues.emplace_back(g_Config.m_QmVoiceInputDevice);
 							}
@@ -7107,6 +7123,15 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceVadEnable, Localize("Voice activation"), &g_Config.m_QmVoiceVadEnable, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceMicMute, TCLocalize("Mute microphone", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceMicMute, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceMicVolume, &g_Config.m_QmVoiceMicVolume, &Row, TCLocalize("Microphone volume", QMCLIENT_LOCALIZATION_CONTEXT), 0, 300, &CUi::ms_LinearScrollbarScale, 0, "%");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceVadEnable, TCLocalize("Voice activation", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceVadEnable, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmVoiceVadEnable)
@@ -7117,6 +7142,11 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadReleaseDelayMs, &g_Config.m_QmVoiceVadReleaseDelayMs, &Row, Localize("Voice activation release delay"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
+						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadThreshold, &g_Config.m_QmVoiceVadThreshold, &Row, TCLocalize("Voice activation threshold", QMCLIENT_LOCALIZATION_CONTEXT), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadReleaseDelayMs, &g_Config.m_QmVoiceVadReleaseDelayMs, &Row, TCLocalize("Voice activation release delay", QMCLIENT_LOCALIZATION_CONTEXT), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
@@ -7128,12 +7158,18 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceStereo, Localize("Enable stereo positioning"), &g_Config.m_QmVoiceStereo, &Row, LG_LineHeight);
+					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVolume, &g_Config.m_QmVoiceVolume, &Row, TCLocalize("Playback volume", QMCLIENT_LOCALIZATION_CONTEXT), 0, 400, &CUi::ms_LinearScrollbarScale, 0, "%");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceStereo, TCLocalize("Enable stereo positioning", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceStereo, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmVoiceStereo)
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceStereoWidth, &g_Config.m_QmVoiceStereoWidth, &Row, Localize("Stereo width"), 0, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
+						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceStereoWidth, &g_Config.m_QmVoiceStereoWidth, &Row, TCLocalize("Stereo width", QMCLIENT_LOCALIZATION_CONTEXT), 0, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
@@ -7147,12 +7183,22 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowOverlay, Localize("Show the speaker list on the left"), &g_Config.m_QmVoiceShowOverlay, &Row, LG_LineHeight);
+					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceRadius, &g_Config.m_QmVoiceRadius, &Row, TCLocalize("Voice distance radius", QMCLIENT_LOCALIZATION_CONTEXT), 1, 400, &CUi::ms_LinearScrollbarScale, 0, "tile");
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceGroupGlobal, TCLocalize("Hear teammates globally", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceGroupGlobal, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowOverlay, TCLocalize("Show the speaker list on the left", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceShowOverlay, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmVoiceShowOverlay)
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowWhenActive, Localize("Also show while you are speaking"), &g_Config.m_QmVoiceShowWhenActive, &Row, LG_LineHeight);
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowWhenActive, TCLocalize("Also show while you are speaking", QMCLIENT_LOCALIZATION_CONTEXT), &g_Config.m_QmVoiceShowWhenActive, &Row, LG_LineHeight);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 				}
