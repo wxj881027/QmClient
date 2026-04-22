@@ -66,7 +66,7 @@ cmake --build cmake-build-release --target run_tests
 
 ## 🙏 Special Thanks
 
-- All contributors to DDNet, Teeworlds, DDRace, TaterClient, RClient and CactusClient
+- All contributors to DDNet, Teeworlds, DDRace, TaterClient, Best Client, RClient and CactusClient
 - Friends who have taken part in testing, provided feedback and offered inspiration
 - Everyone who continues to contribute to the open-source community
 - All donors – thank you
@@ -77,6 +77,7 @@ cmake --build cmake-build-release --target run_tests
 - DDRace — Shereef Marzouk
 - DDNet — Dennis Felsing and contributors
 - TaterClient — Community modifications
+- Best Client — Community modifications
 
 ## 📜 License
 
