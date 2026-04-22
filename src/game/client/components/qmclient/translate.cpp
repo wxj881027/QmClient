@@ -973,8 +973,11 @@ public:
 
 	CTranslateBackendLlm(IHttp &Http, const char *pText, const char *pTarget)
 	{
-		// 获取当前选择的 Provider
-		ELlmProvider Provider = static_cast<ELlmProvider>(g_Config.m_QmTranslateLlmProvider);
+		// 获取当前选择的 Provider（确保值在有效范围内）
+		constexpr int PROVIDER_MIN = static_cast<int>(ELlmProvider::ZHIPU_AI);
+		constexpr int PROVIDER_MAX = static_cast<int>(ELlmProvider::CUSTOM);
+		int ProviderValue = std::clamp(g_Config.m_QmTranslateLlmProvider, PROVIDER_MIN, PROVIDER_MAX);
+		ELlmProvider Provider = static_cast<ELlmProvider>(ProviderValue);
 
 		// 获取对应 Provider 的 API Key
 		const char *pApiKey = GetLlmApiKey(Provider);
