@@ -97,6 +97,15 @@ MACRO_CONFIG_INT(QmFreezeWakeupPopup, qm_freeze_wakeup_popup, 1, 0, 1, CFGFLAG_C
 MACRO_CONFIG_INT(QmAutoTeamLock, qm_auto_team_lock, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "加入可锁定队伍后自动锁定")
 MACRO_CONFIG_INT(QmAutoTeamLockDelay, qm_auto_team_lock_delay, 5, 0, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动锁定延迟（秒）")
 
+// Translate - LLM General
+MACRO_CONFIG_STR(TcTranslateLlmEndpoint, tc_translate_llm_endpoint, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "通用LLM API端点（留空使用预设）")
+MACRO_CONFIG_INT(TcTranslateLlmConcurrency, tc_translate_llm_concurrency, 1, 1, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM翻译并发数（根据服务端限制调整）")
+MACRO_CONFIG_STR(TcTranslateSystemPrompt, tc_translate_system_prompt, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "自定义翻译提示词（覆盖内置提示词）")
+
+// Translate - Auto Outgoing
+MACRO_CONFIG_INT(TcTranslateAutoOutgoing, tc_translate_auto_outgoing, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动翻译发送的消息")
+MACRO_CONFIG_INT(TcTranslateAutoOutgoingMode, tc_translate_auto_outgoing_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动翻译模式 (0=仅中文输入时触发, 1=始终翻译)")
+
 // Translate - ZhipuAI
 MACRO_CONFIG_STR(QmTranslateZhipuaiModel, qm_translate_zhipuai_model, 32, "glm-4.7-flash", CFGFLAG_CLIENT | CFGFLAG_SAVE, "智谱AI翻译模型（默认 glm-4.7-flash）")
 
