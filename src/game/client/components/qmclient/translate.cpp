@@ -30,6 +30,37 @@ constexpr const char *TENCENTCLOUD_TMT_DEFAULT_ENDPOINT = "https://tmt.tencentcl
 constexpr const char *TENCENTCLOUD_SECRET_ID_FALLBACK = "";
 constexpr const char *TENCENTCLOUD_SECRET_KEY_FALLBACK = "";
 
+constexpr const char *DEFAULT_TRANSLATE_PROMPT =
+    "You are a professional translator for the DDNet (DDraceNetwork) game. "
+    "Translate the following text to %s. "
+    "Game terms: hook=钩子, freeze=冻结, team=队伍, race=竞速, checkpoint=检查点, "
+    "unfreeze=解冻, deep freeze=深冻, tele=传送, swap=交换, dummy=分身, "
+    "hammer=锤子, shotgun=霰弹枪, grenade=榴弹, laser=激光, ninja=忍者. "
+    "Only output the translation result, no explanations.";
+
+enum class ELlmPreset
+{
+    NONE,
+    ZHIPU_AI,
+};
+
+ELlmPreset DetectLlmPreset(const char *pEndpoint)
+{
+    if(str_find_nocase(pEndpoint, "bigmodel.cn") || str_find_nocase(pEndpoint, "zhipuai"))
+        return ELlmPreset::ZHIPU_AI;
+    return ELlmPreset::NONE;
+}
+
+const char *GetDefaultLlmEndpoint(ELlmPreset Preset)
+{
+    switch(Preset)
+    {
+        case ELlmPreset::ZHIPU_AI:
+            return "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+        default:
+            return "https://api.openai.com/v1/chat/completions";
+    }
+}
 
 SHA256_DIGEST HmacSha256(const unsigned char *pKey, size_t KeyLength, const unsigned char *pData, size_t DataLength)
 {
@@ -946,6 +977,133 @@ public:
 	}
 };
 
+class CTranslateBackendOpenAI : public ITranslateBackendHttp
+{
+private:
+	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
+	{
+		if(!pObj)
+		{
+			str_copy(Out.m_Text, "Response is not JSON");
+			return false;
+		}
+
+		if(pObj->type != json_object)
+		{
+			str_copy(Out.m_Text, "Response is not object");
+			return false;
+		}
+
+		const json_value *pError = json_object_get(pObj, "error");
+		if(pError != &json_value_none)
+		{
+			const json_value *pMessage = json_object_get(pError, "message");
+			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "OpenAI request failed";
+			str_copy(Out.m_Text, pMessageStr);
+			return false;
+		}
+
+		const json_value *pChoices = json_object_get(pObj, "choices");
+		if(pChoices == &json_value_none || pChoices->type != json_array || pChoices->u.array.length == 0)
+		{
+			str_copy(Out.m_Text, "No valid choices in response");
+			return false;
+		}
+
+		const json_value *pChoice = pChoices->u.array.values[0];
+		const json_value *pMessage = json_object_get(pChoice, "message");
+		const json_value *pContent = json_object_get(pMessage, "content");
+
+		if(pContent == &json_value_none || pContent->type != json_string)
+		{
+			str_copy(Out.m_Text, "No content in message");
+			return false;
+		}
+
+		str_copy(Out.m_Text, pContent->u.string.ptr);
+		Out.m_Language[0] = '\0';
+		return true;
+	}
+
+protected:
+	bool ParseResponse(CTranslateResponse &Out) override
+	{
+		json_value *pObj = m_pHttpRequest->ResultJson();
+		bool Res = ParseResponseJson(pObj, Out);
+		json_value_free(pObj);
+		return Res;
+	}
+
+	bool ParseHttpError() const override { return true; }
+
+public:
+	const char *Name() const override { return "OpenAI"; }
+
+	CTranslateBackendOpenAI(IHttp &Http, const char *pText, const char *pTarget)
+	{
+		if(g_Config.m_TcTranslateKey[0] == '\0')
+		{
+			SetInitError("Missing API Key: set tc_translate_key");
+			return;
+		}
+
+		const char *pEndpoint;
+		char aEndpointBuf[256];
+		if(g_Config.m_TcTranslateLlmEndpoint[0] != '\0')
+		{
+			str_copy(aEndpointBuf, g_Config.m_TcTranslateLlmEndpoint, sizeof(aEndpointBuf));
+			pEndpoint = aEndpointBuf;
+		}
+		else
+		{
+			pEndpoint = GetDefaultLlmEndpoint(DetectLlmPreset(g_Config.m_TcTranslateLlmEndpoint));
+		}
+
+		char aSystemMessage[1024];
+		if(g_Config.m_TcTranslateSystemPrompt[0] != '\0')
+		{
+			str_copy(aSystemMessage, g_Config.m_TcTranslateSystemPrompt, sizeof(aSystemMessage));
+		}
+		else
+		{
+			str_format(aSystemMessage, sizeof(aSystemMessage), DEFAULT_TRANSLATE_PROMPT, EncodeTarget(pTarget));
+		}
+
+		char aEscapedText[4096];
+		char aEscapedSystem[1024];
+		EscapeJsonString(pText, aEscapedText, sizeof(aEscapedText));
+		EscapeJsonString(aSystemMessage, aEscapedSystem, sizeof(aEscapedSystem));
+
+		const char *pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ?
+		                      g_Config.m_QmTranslateZhipuaiModel : "glm-4.5-flash";
+
+		char aPayload[8192];
+		str_format(aPayload, sizeof(aPayload),
+			"{"
+			"\"model\":\"%s\","
+			"\"messages\":["
+			"{\"role\":\"system\",\"content\":%s},"
+			"{\"role\":\"user\",\"content\":%s}"
+			"],"
+			"\"temperature\":0.3,"
+			"\"max_tokens\":1024"
+			"}",
+			pModel, aEscapedSystem, aEscapedText);
+
+		char aAuthorization[512];
+		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", g_Config.m_TcTranslateKey);
+
+		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
+		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
+		m_pHttpRequest->FailOnErrorStatus(false);
+		m_pHttpRequest->Timeout(CTimeout{10000, 0, 500, 10});
+		m_pHttpRequest->HeaderString("Content-Type", "application/json");
+		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
+		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(aPayload), str_length(aPayload));
+		Http.Run(m_pHttpRequest);
+	}
+};
+
 static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const char *pText, const char *pTarget)
 {
 	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0)
@@ -956,6 +1114,8 @@ static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, co
 		return std::make_unique<CTranslateBackendTencentCloud>(Http, pText, pTarget);
 	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
 		return std::make_unique<CTranslateBackendZhipuAI>(Http, pText, pTarget);
+	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "openai") == 0)
+		return std::make_unique<CTranslateBackendOpenAI>(Http, pText, pTarget);
 	return nullptr;
 }
 
