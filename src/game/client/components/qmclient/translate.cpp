@@ -1365,3 +1365,72 @@ void CTranslate::AutoTranslate(CChat::CLine &Line)
 	}
 	Translate(Line, false, true);
 }
+
+bool CTranslate::ContainsChinese(const char *pText)
+{
+	if(!pText)
+		return false;
+
+	const char *p = pText;
+	while(*p)
+	{
+		const int codepoint = str_utf8_decode(&p);
+		// CJK Unified Ideographs: 0x4E00-0x9FFF
+		// CJK Unified Ideographs Extension A: 0x3400-0x4DBF
+		if((codepoint >= 0x4E00 && codepoint <= 0x9FFF) ||
+		   (codepoint >= 0x3400 && codepoint <= 0x4DBF))
+			return true;
+	}
+	return false;
+}
+
+bool CTranslate::ShouldAutoTranslateOutgoing(const char *pText) const
+{
+	if(!g_Config.m_TcTranslateAutoOutgoing)
+		return false;
+
+	if(!pText || pText[0] == '\0' || pText[0] == '/')
+		return false;
+
+	// 模式 0: 仅中文输入时触发
+	if(g_Config.m_TcTranslateAutoOutgoingMode == 0)
+		return ContainsChinese(pText);
+
+	// 模式 1: 始终翻译
+	return true;
+}
+
+void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
+{
+	if(m_vJobs.size() + m_vOutgoingJobs.size() >= static_cast<size_t>(GetMaxConcurrency()))
+	{
+		GameClient()->m_Chat.Echo("Translation queue full, sending original text");
+		GameClient()->m_Chat.SendChatQueued(Team, pText, false);
+		return;
+	}
+
+	COutgoingTranslateJob Job;
+	Job.m_Team = Team;
+	str_copy(Job.m_aTarget, g_Config.m_TcTranslateTarget, sizeof(Job.m_aTarget));
+	Job.m_pBackend = CreateTranslateBackend(*Http(), pText, Job.m_aTarget);
+
+	if(!Job.m_pBackend)
+	{
+		GameClient()->m_Chat.Echo("Invalid translate backend, sending original text");
+		GameClient()->m_Chat.SendChatQueued(Team, pText, false);
+		return;
+	}
+
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "Translating to %s...", Job.m_aTarget);
+	GameClient()->m_Chat.Echo(aBuf);
+	m_vOutgoingJobs.emplace_back(std::move(Job));
+}
+
+int CTranslate::GetMaxConcurrency() const
+{
+	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0 ||
+	   str_comp_nocase(g_Config.m_TcTranslateBackend, "openai") == 0)
+		return g_Config.m_TcTranslateLlmConcurrency;
+	return 5;
+}

@@ -63,6 +63,17 @@ public:
 	bool TryTranslateOutgoingChat(int Team, const char *pText);
 
 	void AutoTranslate(CChat::CLine &Line);
+
+	// 自动出站翻译
+	bool ShouldAutoTranslateOutgoing(const char *pText) const;
+	void StartAutoOutgoingTranslate(int Team, const char *pText);
+
+private:
+	// 中文检测
+	static bool ContainsChinese(const char *pText);
+
+	// 获取最大并发数
+	int GetMaxConcurrency() const;
 };
 
 #endif
