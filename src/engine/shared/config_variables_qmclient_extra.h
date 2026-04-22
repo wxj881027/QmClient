@@ -103,9 +103,13 @@ MACRO_CONFIG_STR(QmTranslateTarget, qm_translate_target, 16, "zh", CFGFLAG_CLIEN
 MACRO_CONFIG_INT(QmTranslateAuto, qm_translate_auto, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动翻译入站消息")
 
 // Translate - LLM API (OpenAI 兼容，默认智谱AI预设)
+MACRO_CONFIG_INT(QmTranslateLlmProvider, qm_translate_llm_provider, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM Provider (0=ZhipuAI, 1=DeepSeek, 2=OpenAI, 3=Custom)")
 MACRO_CONFIG_STR(QmTranslateLlmEndpoint, qm_translate_llm_endpoint, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM API 端点（留空使用智谱AI预设）")
 MACRO_CONFIG_STR(QmTranslateLlmModel, qm_translate_llm_model, 32, "glm-4.5-flash", CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM 模型名称（默认 glm-4.5-flash）")
-MACRO_CONFIG_STR(QmTranslateLlmKey, qm_translate_llm_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM API Key")
+MACRO_CONFIG_STR(QmTranslateLlmKey, qm_translate_llm_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM API Key (Custom Provider)")
+MACRO_CONFIG_STR(QmTranslateLlmKeyZhipu, qm_translate_llm_key_zhipu, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "智谱AI API Key")
+MACRO_CONFIG_STR(QmTranslateLlmKeyDeepseek, qm_translate_llm_key_deepseek, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "DeepSeek API Key")
+MACRO_CONFIG_STR(QmTranslateLlmKeyOpenai, qm_translate_llm_key_openai, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "OpenAI API Key")
 MACRO_CONFIG_INT(QmTranslateLlmConcurrency, qm_translate_llm_concurrency, 1, 1, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM 翻译并发数（智谱AI免费版最大2）")
 MACRO_CONFIG_STR(QmTranslateSystemPrompt, qm_translate_system_prompt, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "自定义翻译提示词（覆盖内置提示词）")
 

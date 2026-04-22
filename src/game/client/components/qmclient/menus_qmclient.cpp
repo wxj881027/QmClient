@@ -5937,14 +5937,84 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 
 				if(IsLlmBackend)
 				{
+					// LLM Provider 选择
+					static std::vector<const char *> s_LlmProviderDropDownNames = {
+						Localize("Zhipu AI (智谱AI)"),
+						"DeepSeek",
+						"OpenAI",
+						Localize("Custom (自定义)")
+					};
+					static CUi::SDropDownState s_LlmProviderDropDownState;
+					static CScrollRegion s_LlmProviderDropDownScrollRegion;
+					s_LlmProviderDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_LlmProviderDropDownScrollRegion;
+
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("API key"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_LlmApiKey(g_Config.m_QmTranslateLlmKey, sizeof(g_Config.m_QmTranslateLlmKey));
-					s_LlmApiKey.SetEmptyText("ZHIPU_API_KEY");
-					s_LlmApiKey.SetHidden(true);
-					Ui()->DoEditBox(&s_LlmApiKey, &ControlCol, LG_BodySize);
+					Ui()->DoLabel(&LabelCol, Localize("LLM Provider"), LG_BodySize, TEXTALIGN_ML);
+					const int NewProvider = Ui()->DoDropDown(&ControlCol, g_Config.m_QmTranslateLlmProvider, s_LlmProviderDropDownNames.data(), s_LlmProviderDropDownNames.size(), s_LlmProviderDropDownState);
+					if(NewProvider != g_Config.m_QmTranslateLlmProvider)
+					{
+						g_Config.m_QmTranslateLlmProvider = NewProvider;
+					}
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 各 Provider 的 API Key 输入框（静态变量，分别绑定到不同配置）
+					static CLineInput s_LlmApiKeyZhipu(g_Config.m_QmTranslateLlmKeyZhipu, sizeof(g_Config.m_QmTranslateLlmKeyZhipu));
+					static CLineInput s_LlmApiKeyDeepseek(g_Config.m_QmTranslateLlmKeyDeepseek, sizeof(g_Config.m_QmTranslateLlmKeyDeepseek));
+					static CLineInput s_LlmApiKeyOpenai(g_Config.m_QmTranslateLlmKeyOpenai, sizeof(g_Config.m_QmTranslateLlmKeyOpenai));
+					static CLineInput s_LlmApiKeyCustom(g_Config.m_QmTranslateLlmKey, sizeof(g_Config.m_QmTranslateLlmKey));
+
+					// 根据 Provider 显示对应的 API Key 输入框
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+
+					CLineInput *pActiveKeyInput = nullptr;
+					const char *pKeyLabel = Localize("API Key");
+					switch(g_Config.m_QmTranslateLlmProvider)
+					{
+					case 0: // Zhipu AI
+						pKeyLabel = Localize("Zhipu AI API Key");
+						s_LlmApiKeyZhipu.SetEmptyText("ZHIPU_API_KEY");
+						s_LlmApiKeyZhipu.SetHidden(true);
+						pActiveKeyInput = &s_LlmApiKeyZhipu;
+						break;
+					case 1: // DeepSeek
+						pKeyLabel = Localize("DeepSeek API Key");
+						s_LlmApiKeyDeepseek.SetEmptyText("DEEPSEEK_API_KEY");
+						s_LlmApiKeyDeepseek.SetHidden(true);
+						pActiveKeyInput = &s_LlmApiKeyDeepseek;
+						break;
+					case 2: // OpenAI
+						pKeyLabel = Localize("OpenAI API Key");
+						s_LlmApiKeyOpenai.SetEmptyText("OPENAI_API_KEY");
+						s_LlmApiKeyOpenai.SetHidden(true);
+						pActiveKeyInput = &s_LlmApiKeyOpenai;
+						break;
+					case 3: // Custom
+					default:
+						pKeyLabel = Localize("Custom API Key");
+						s_LlmApiKeyCustom.SetEmptyText("API_KEY");
+						s_LlmApiKeyCustom.SetHidden(true);
+						pActiveKeyInput = &s_LlmApiKeyCustom;
+						break;
+					}
+
+					Ui()->DoLabel(&LabelCol, pKeyLabel, LG_BodySize, TEXTALIGN_ML);
+					if(pActiveKeyInput)
+						Ui()->DoEditBox(pActiveKeyInput, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 仅在自定义 Provider 时显示端点配置
+					if(g_Config.m_QmTranslateLlmProvider == 3) // CUSTOM
+					{
+						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+						Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+						Ui()->DoLabel(&LabelCol, Localize("Custom Endpoint"), LG_BodySize, TEXTALIGN_ML);
+						static CLineInput s_LlmEndpoint(g_Config.m_QmTranslateLlmEndpoint, sizeof(g_Config.m_QmTranslateLlmEndpoint));
+						s_LlmEndpoint.SetEmptyText("https://api.example.com/v1/chat/completions");
+						Ui()->DoEditBox(&s_LlmEndpoint, &ControlCol, LG_BodySize);
+						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					}
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
