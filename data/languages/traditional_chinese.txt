@@ -3391,3 +3391,48 @@ Changing name to %s near finish
 [translate]
 %s to %s failed: %s
 == 
+
+Contributors
+== 貢獻者
+
+Functions
+== 功能
+
+Config
+== 配置
+
+Visuals
+== 視覺
+
+QmClient overview
+== QmClient 概覽
+
+Use the top tabs to browse QmClient features by category
+== 透過頂部分頁依分類瀏覽 QmClient 功能
+
+Info keeps a lightweight overview of the client and page structure
+== 資訊頁只保留客戶端概覽與頁面結構說明
+
+Visual contains appearance and rendering related options
+== 視覺頁包含外觀與渲染相關選項
+
+Function contains tools, automation, and gameplay helpers
+== 功能頁包含工具、自動化與玩法輔助
+
+Page guide
+== 頁面說明
+
+Each tab now has a focused responsibility
+== 每個分頁現在都有更明確的職責
+
+HUD collects overlays, counters, voice display, and top-of-screen components
+== HUD 頁整合疊加層、計數器、語音顯示與頂部元件
+
+Configs reuses the existing client config browser inside QmClient
+== 配置頁重用現有的客戶端配置瀏覽器
+
+Community links, updates, feedback, and supporter credits moved to Contributors
+== 社群入口、更新、回饋與贊助鳴謝已移到貢獻者頁
+
+Drag, collapse, search, and usage history are preserved inside each category
+== 拖曳、折疊、搜尋與使用頻率記錄會繼續保留在各自分類中

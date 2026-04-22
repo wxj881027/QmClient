@@ -2081,6 +2081,16 @@ void CMenus::RenderSettings(CUIRect MainView)
 	// This handles cases where old config files have an invalid page index
 	if(g_Config.m_UiSettingsPage < 0 || g_Config.m_UiSettingsPage >= SETTINGS_LENGTH)
 		g_Config.m_UiSettingsPage = SETTINGS_LANGUAGE;
+	if(g_Config.m_UiSettingsPage == SETTINGS_CONFIGS)
+	{
+		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
+		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONFIG;
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_CONTRIBUTORS)
+	{
+		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
+		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
+	}
 
 	if(g_Config.m_UiSettingsPage != SETTINGS_ASSETS && (m_AssetsEditorState.m_Open || m_AssetsEditorState.m_Initialized))
 		AssetsEditorCloseNow();
@@ -2110,7 +2120,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 
 	static const char *s_apTabs[SETTINGS_LENGTH] = {};
 	static char s_aTabsLanguageFile[IO_MAX_PATH_LENGTH] = {};
-	if(str_comp(s_aTabsLanguageFile, g_Config.m_ClLanguagefile) != 0)
+	if(s_apTabs[0] == nullptr || str_comp(s_aTabsLanguageFile, g_Config.m_ClLanguagefile) != 0)
 	{
 		str_copy(s_aTabsLanguageFile, g_Config.m_ClLanguagefile, sizeof(s_aTabsLanguageFile));
 		s_apTabs[SETTINGS_LANGUAGE] = Localize("Language");
@@ -2127,14 +2137,15 @@ void CMenus::RenderSettings(CUIRect MainView)
 		s_apTabs[SETTINGS_QMCLIENT] = Localize("QmClient");
 		s_apTabs[SETTINGS_PROFILES] = Localize("Profiles");
 		s_apTabs[SETTINGS_CONFIGS] = Localize("Configs");
+		s_apTabs[SETTINGS_CONTRIBUTORS] = Localize("Contributors");
 	}
 
 	static CButtonContainer s_aTabButtons[SETTINGS_LENGTH];
 
 	for(int i = 0; i < SETTINGS_LENGTH; i++)
 	{
-		if(i == SETTINGS_PROFILES)
-			continue; // Profiles 已合并到 Tee 页面
+		if(i == SETTINGS_PROFILES || i == SETTINGS_CONFIGS || i == SETTINGS_CONTRIBUTORS)
+			continue; // Profiles 已合并到 Tee 页面，Configs/Contributors 已并入 QmClient 顶部分页
 		TabBar.HSplitTop(10.0f, nullptr, &TabBar);
 		TabBar.HSplitTop(26.0f, &Button, &TabBar);
 		if(DoButton_MenuTab(&s_aTabButtons[i], s_apTabs[i], g_Config.m_UiSettingsPage == i, &Button, IGraphics::CORNER_R, &m_aAnimatorsSettingsTab[i]))
@@ -2231,11 +2242,6 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(14);
 		RenderSettingsTClientProfiles(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_CONFIGS)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(15);
-		RenderSettingsTClientConfigs(ContentView);
 	}
 	else
 	{
