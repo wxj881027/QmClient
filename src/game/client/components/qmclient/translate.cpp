@@ -338,6 +338,10 @@ bool ParseOutgoingTranslateTarget(const char *pLine, std::string &Text, std::str
 	return true;
 }
 
+// JSON 字符串转义
+// 只转义 JSON 特殊字符（" \）和 ASCII 控制字符（0x00-0x1F）
+// UTF-8 多字节字符（>= 0x80）不需要转义，可以直接嵌入 JSON 字符串
+// 因为 JSON 规范允许字符串中包含任意 UTF-8 编码的 Unicode 字符
 static void EscapeJsonString(const char *pStr, char *pOut, size_t OutSize)
 {
 	if(OutSize == 0)
