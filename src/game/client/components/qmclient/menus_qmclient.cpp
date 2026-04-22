@@ -6108,6 +6108,28 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 					Ui()->DoScrollbarOption(&g_Config.m_QmTranslateLlmEnableThinking, &g_Config.m_QmTranslateLlmEnableThinking, &ControlCol, Localize("Enable thinking mode (slower)"), 0, 1);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
+					// 思考模式提示
+					if(g_Config.m_QmTranslateLlmEnableThinking)
+					{
+						const char *pHint = nullptr;
+						if(g_Config.m_QmTranslateLlmProvider == 2) // OpenAI
+						{
+							pHint = Localize("Enable thinking mode requires using reasoning models");
+						}
+						else if(g_Config.m_QmTranslateLlmProvider == 3) // Custom
+						{
+							pHint = Localize("Ensure backend supports OpenAI-compatible thinking parameter");
+						}
+
+						if(pHint)
+						{
+							CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
+							Row.VMargin(LG_LabelWidth, &Row);
+							Ui()->DoLabel(&Row, pHint, LG_BodySize * 0.8f, TEXTALIGN_ML);
+							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+						}
+					}
+
 					// 自定义提示词配置
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);

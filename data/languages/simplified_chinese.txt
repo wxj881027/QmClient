@@ -6492,6 +6492,12 @@ Thinking Mode
 Enable thinking mode (slower)
 == 启用思考模式（较慢）
 
+Enable thinking mode requires using reasoning models
+== 启用思考模式请使用推理模型
+
+Ensure backend supports OpenAI-compatible thinking parameter
+== 请确保后端支持 OpenAI 兼容的 thinking 参数
+
 Source Language
 == 源语言
 
