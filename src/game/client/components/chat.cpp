@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 char CChat::ms_aDisplayText[MAX_LINE_LENGTH] = "";
 
@@ -250,7 +251,11 @@ void CChat::CLine::Reset(CChat &This)
 	m_pTranslateResponse = nullptr;
 
 	// 递增翻译 ID，标记内容已变更
-	m_TranslationId++;
+	// 溢出保护：跳过 0，避免与默认值冲突
+	if(m_TranslationId < std::numeric_limits<unsigned int>::max())
+		m_TranslationId++;
+	else
+		m_TranslationId = 1;
 }
 
 float CChat::EaseInQuad(float t)
