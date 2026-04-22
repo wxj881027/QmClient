@@ -2284,7 +2284,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	};
 
 	// 辅助函数：渲染下拉框
-	auto RenderDropdown = [&](const char *pLabel, const char *pCurrentValue, ETranslateDropdown DropdownId, auto &&GetValueName) -> bool {
+	auto RenderDropdown = [&](const char *pLabel, char *pCurrentValue, size_t CurrentValueSize, ETranslateDropdown DropdownId, auto &&GetValueName, auto &&pItems, size_t ItemCount, bool CaseInsensitiveCompare) -> bool {
 		// 标签
 		CUIRect LabelRect;
 		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
@@ -2315,7 +2315,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		if(IsOpen)
 		{
 			// 列表区域 - 在头部下方展开
-			float ListHeight = RowHeight * 10; // 10 个语言选项
+			float ListHeight = RowHeight * ItemCount;
 			CUIRect ListRect;
 			ListRect.x = HeaderRect.x;
 			ListRect.y = HeaderRect.y + HeaderRect.h + 2.0f;
@@ -2328,9 +2328,10 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			CUIRect ItemRect = ListRect;
 			ItemRect.h = RowHeight;
 
-			for(const auto &Item : s_aLanguages)
+			for(size_t i = 0; i < ItemCount; ++i)
 			{
-				const bool Selected = str_comp(pCurrentValue, Item.m_pCode) == 0;
+				const auto &Item = pItems[i];
+				const bool Selected = CaseInsensitiveCompare ? str_comp_nocase(pCurrentValue, Item.m_pCode) == 0 : str_comp(pCurrentValue, Item.m_pCode) == 0;
 				const ColorRGBA ItemColor = Selected ? OptionSelectedColor : ColorRGBA(0.15f, 0.15f, 0.15f, 0.95f);
 
 				CUIRect ItemBgRect = ItemRect;
@@ -2339,7 +2340,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 
 				if(pUi->DoButtonLogic(&Item, 0, &ItemBgRect, BUTTONFLAG_LEFT))
 				{
-					str_copy(const_cast<char *>(pCurrentValue), Item.m_pCode, 16);
+					str_copy(pCurrentValue, Item.m_pCode, CurrentValueSize);
 					pPopupContext->m_DropdownOpen = ETranslateDropdown::NONE;
 					return true;
 				}
@@ -2362,7 +2363,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		if(RenderDropdown(Localize("Inbound Language"), g_Config.m_QmTranslateTarget, ETranslateDropdown::INBOUND_LANG, GetLangName))
+		if(RenderDropdown(Localize("Inbound Language"), g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), ETranslateDropdown::INBOUND_LANG, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
 			return CUi::POPUP_KEEP_OPEN;
 	}
 
@@ -2375,7 +2376,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		if(RenderDropdown(Localize("Outbound Language"), g_Config.m_QmTranslateOutgoingTarget, ETranslateDropdown::OUTBOUND_LANG, GetLangName))
+		if(RenderDropdown(Localize("Outbound Language"), g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), ETranslateDropdown::OUTBOUND_LANG, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
 			return CUi::POPUP_KEEP_OPEN;
 	}
 
@@ -2408,65 +2409,8 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		// 标签
-		CUIRect LabelRect;
-		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
-		pUi->DoLabel(&LabelRect, Localize("Translate Backend"), FontSize * 0.9f, TEXTALIGN_ML);
-
-		// 下拉框头部
-		CUIRect HeaderRect;
-		View.HSplitTop(DropdownHeaderHeight, &HeaderRect, &View);
-		HeaderRect.VMargin(2.0f, &HeaderRect);
-
-		const bool IsOpen = pPopupContext->m_DropdownOpen == ETranslateDropdown::BACKEND;
-		const ColorRGBA HeaderColor = IsOpen ? OptionSelectedColor : OptionNormalColor;
-		HeaderRect.Draw(HeaderColor, IGraphics::CORNER_ALL, 4.0f);
-
-		char aDisplayBuf[64];
-		str_format(aDisplayBuf, sizeof(aDisplayBuf), "%s %s", GetBackendName(g_Config.m_QmTranslateBackend), IsOpen ? "▲" : "▼");
-		pUi->DoLabel(&HeaderRect, aDisplayBuf, FontSize, TEXTALIGN_ML);
-
-		if(pUi->DoButtonLogic(&s_aBackends[0], 0, &HeaderRect, BUTTONFLAG_LEFT))
-		{
-			pPopupContext->m_DropdownOpen = IsOpen ? ETranslateDropdown::NONE : ETranslateDropdown::BACKEND;
+		if(RenderDropdown(Localize("Translate Backend"), g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), ETranslateDropdown::BACKEND, GetBackendName, s_aBackends, std::size(s_aBackends), true))
 			return CUi::POPUP_KEEP_OPEN;
-		}
-
-		if(IsOpen)
-		{
-			float ListHeight = RowHeight * 4; // 4 个后端选项
-			CUIRect ListRect;
-			ListRect.x = HeaderRect.x;
-			ListRect.y = HeaderRect.y + HeaderRect.h + 2.0f;
-			ListRect.w = HeaderRect.w;
-			ListRect.h = ListHeight;
-
-			ListRect.Draw(ColorRGBA(0.15f, 0.15f, 0.15f, 0.95f), IGraphics::CORNER_ALL, 4.0f);
-
-			CUIRect ItemRect = ListRect;
-			ItemRect.h = RowHeight;
-
-			for(const auto &Item : s_aBackends)
-			{
-				const bool Selected = str_comp_nocase(g_Config.m_QmTranslateBackend, Item.m_pCode) == 0;
-				const ColorRGBA ItemColor = Selected ? OptionSelectedColor : ColorRGBA(0.15f, 0.15f, 0.15f, 0.95f);
-
-				CUIRect ItemBgRect = ItemRect;
-				ItemBgRect.VMargin(2.0f, &ItemBgRect);
-				ItemBgRect.Draw(ItemColor, IGraphics::CORNER_ALL, 3.0f);
-
-				if(pUi->DoButtonLogic(&Item, 0, &ItemBgRect, BUTTONFLAG_LEFT))
-				{
-					str_copy(g_Config.m_QmTranslateBackend, Item.m_pCode, sizeof(g_Config.m_QmTranslateBackend));
-					pPopupContext->m_DropdownOpen = ETranslateDropdown::NONE;
-					return CUi::POPUP_KEEP_OPEN;
-				}
-
-				pUi->DoLabel(&ItemBgRect, Item.m_pName, FontSize, TEXTALIGN_ML);
-
-				ItemRect.y += RowHeight;
-			}
-		}
 	}
 
 	// 后端未配置警告
