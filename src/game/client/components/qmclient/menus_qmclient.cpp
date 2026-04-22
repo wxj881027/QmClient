@@ -4995,7 +4995,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 
 			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
 			RightContent.HSplitTop(LG_LineHeight * 0.9f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, Localize("感谢你们一直以来的陪伴与坚信让我能够有勇气走下去,谢谢"), LG_BodySize * 0.93f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, Localize("Thank you for your companionship and belief, which gave me the courage to keep going"), LG_BodySize * 0.93f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 			const float RightUsedHeight = RightContent.y - RightStartY;
@@ -5956,10 +5956,10 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				{
 					// LLM Provider 选择
 					static std::vector<const char *> s_LlmProviderDropDownNames = {
-						Localize("Zhipu AI (智谱AI)"),
+						Localize("Zhipu AI"),
 						"DeepSeek",
 						"OpenAI",
-						Localize("Custom (自定义)")
+						Localize("Custom")
 					};
 					static CUi::SDropDownState s_LlmProviderDropDownState;
 					static CScrollRegion s_LlmProviderDropDownScrollRegion;
@@ -6164,11 +6164,11 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				// CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				// Ui()->DoLabel(&Row, Localize("自动翻译会跳过简体、繁体和服务器消息"), LG_BodySize * 0.8f, TEXTALIGN_ML);
+				// Ui()->DoLabel(&Row, Localize("Auto-translate will skip simplified Chinese, traditional Chinese, and server messages"), LG_BodySize * 0.8f, TEXTALIGN_ML);
 				// CardContent.HSplitTop(LG_LineSpacing / 2.0f, nullptr, &CardContent);
 				//
 				// CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				// Ui()->DoLabel(&Row, Localize("发送时可在末尾加 [ru]、[en]、[ja] 等目标语言代码"), LG_BodySize * 0.8f, TEXTALIGN_ML);
+				// Ui()->DoLabel(&Row, Localize("Append language codes like [ru], [en], [ja] at the end when sending"), LG_BodySize * 0.8f, TEXTALIGN_ML);
 				// CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);

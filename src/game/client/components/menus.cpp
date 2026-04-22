@@ -840,7 +840,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		{
 			NewPage = PAGE_FAVORITES;
 		}
-		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("收藏夹"));
+		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
 
 		int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
 		if(
@@ -2666,7 +2666,7 @@ void CMenus::RenderThemeSelection(CUIRect MainView)
 	CUIRect RefreshButton;
 	HeaderRow.VSplitRight(80.0f, nullptr, &RefreshButton);
 	RefreshButton.VMargin(2.0f, &RefreshButton);
-	if(DoButton_Menu(&s_RefreshButton, Localize("刷新"), 0, &RefreshButton))
+	if(DoButton_Menu(&s_RefreshButton, Localize("Refresh"), 0, &RefreshButton))
 		MenuBackground.RefreshThemes();
 
 	const std::vector<CTheme> &vThemes = MenuBackground.GetThemes();

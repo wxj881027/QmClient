@@ -6599,3 +6599,135 @@ Menu Option - Selected
 
 Menu Option - Normal
 == 菜单选项 - 未选中
+
+Unfinished maps
+== 未完成图
+
+And pick one randomly
+== 并随机抽取一张
+
+Map type:
+== 地图类型:
+
+Auto start vote
+== 自动发起投票
+
+Unfinished map data not fetched
+== 未获取未完成图数据
+
+Please enable finished indicator first
+== 请先启用完成度显示
+
+Unfinished map data is refreshing, please try again later
+== 未完成图数据刷新中，请稍后再试
+
+Vote started automatically
+== 已自动发起投票
+
+Type switch vote started automatically
+== 已自动发起切换类型投票
+
+No corresponding vote option found
+== 未找到对应投票选项
+
+Copied
+== 已复制
+
+Click to copy map name
+== 点击复制地图名
+
+Start and connect to local server
+== 开启并连接到本地服务器
+
+Click to remove this community from favorites
+== 点击将该社区移出收藏
+
+Click to add this community to favorites
+== 点击将该社区加入收藏
+
+Click to copy this player's name to clipboard
+== 点击复制该玩家名字到剪贴板
+
+Click to copy this clan's name to clipboard
+== 点击复制该战队名字到剪贴板
+
+Add to category
+== 添加到分类
+
+Thank you for your companionship and belief, which gave me the courage to keep going
+== 感谢你们一直以来的陪伴与坚信让我能够有勇气走下去,谢谢
+
+Moved ingame
+== 在游戏内已移动
+
+Skin queue
+== 皮肤队列
+
+Switch interval
+== 切换间隔
+
+Queue is empty
+== 队列为空
+
+Save current queue as a new preset
+== 一键保存当前队列为新预设
+
+No presets yet
+== 暂无预设
+
+Open rename dialog
+== 打开重命名弹窗
+
+Apply this preset to the current queue
+== 一键应用此预设到当前队列
+
+Delete this preset
+== 删除该预设
+
+Queue is full
+== 队列已满
+
+Add to queue
+== 加入队列
+
+Audio packs
+== 音频包
+
+Friend color in friends list
+== 好友列表中好友条目颜色
+
+Show key stuck status
+== 显示卡键状态
+
+Name order
+== 昵称顺序
+
+Predict events (experimental)
+== 预测事件（实验性）
+
+AntiPing (latency compensation)
+== 延迟补偿（AntiPing）
+
+Try to predict other entities to reduce lag feeling at high latency
+== 尝试预测其他实体来降低高延迟带来的卡顿感
+
+AntiPing: predict other players
+== 延迟补偿：预测其他玩家
+
+AntiPing: predict weapons
+== 延迟补偿：预测武器
+
+AntiPing: predict grenade path
+== 延迟补偿：预测榴弹枪路径
+
+New preset name
+== 新预设名称
+
+Press Ctrl+Shift+G to toggle debug graphs
+== 按下 Ctrl+Shift+G 可关闭调试图表
+
+Game time margin
+== 游戏时间边距
+
+Avg %.*f   ↓ %.*f   ↑ %.*f
+== 平均 %.*f   ↓ %.*f   ↑ %.*f
