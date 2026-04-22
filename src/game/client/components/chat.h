@@ -73,6 +73,9 @@ class CChat : public CComponent
 
 		int m_TimesRepeated;
 
+		// 翻译标识符（每次内容变更时递增）
+		unsigned int m_TranslationId = 0;
+
 		std::shared_ptr<CTranslateResponse> m_pTranslateResponse;
 	};
 

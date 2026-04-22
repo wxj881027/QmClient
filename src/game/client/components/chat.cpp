@@ -248,6 +248,9 @@ void CChat::CLine::Reset(CChat &This)
 	m_TimesRepeated = 0;
 	m_pManagedTeeRenderInfo = nullptr;
 	m_pTranslateResponse = nullptr;
+
+	// 递增翻译 ID，标记内容已变更
+	m_TranslationId++;
 }
 
 float CChat::EaseInQuad(float t)
