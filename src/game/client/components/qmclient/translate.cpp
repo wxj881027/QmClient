@@ -1178,24 +1178,7 @@ public:
 		// 注意：思考模式会增加响应时间，默认关闭
 		if(g_Config.m_QmTranslateLlmEnableThinking)
 		{
-			// 启用思考模式（不添加 enable_thinking:false）
-			str_format(aPayload, sizeof(aPayload),
-				"{"
-				"\"model\":%s,"
-				"\"messages\":["
-				"{\"role\":\"system\",\"content\":%s},"
-				"{\"role\":\"user\",\"content\":%s}"
-				"],"
-				"\"temperature\":0.3,"
-				"\"max_tokens\":1024"
-				"}",
-				aEscapedModel, aEscapedSystem, aEscapedText);
-		}
-		else
-		{
-			// 关闭思考模式
-			// 智谱AI使用 enable_thinking:false
-			// DeepSeek 使用 reasoning_effort:none（如果支持）
+			// 启用思考模式
 			if(Provider == ELlmProvider::ZHIPU_AI)
 			{
 				str_format(aPayload, sizeof(aPayload),
@@ -1207,7 +1190,70 @@ public:
 					"],"
 					"\"temperature\":0.3,"
 					"\"max_tokens\":1024,"
-					"\"enable_thinking\":false"
+					"\"thinking\":{\"type\":\"enabled\"}"
+					"}",
+					aEscapedModel, aEscapedSystem, aEscapedText);
+			}
+			else if(Provider == ELlmProvider::DEEPSEEK)
+			{
+				str_format(aPayload, sizeof(aPayload),
+					"{"
+					"\"model\":%s,"
+					"\"messages\":["
+					"{\"role\":\"system\",\"content\":%s},"
+					"{\"role\":\"user\",\"content\":%s}"
+					"],"
+					"\"thinking\":{\"type\":\"enabled\"}"
+					"}",
+					aEscapedModel, aEscapedSystem, aEscapedText);
+			}
+			else if(Provider == ELlmProvider::OPENAI)
+			{
+				// OpenAI: 不支持 thinking 参数，依赖用户选择推理模型
+				str_format(aPayload, sizeof(aPayload),
+					"{"
+					"\"model\":%s,"
+					"\"messages\":["
+					"{\"role\":\"system\",\"content\":%s},"
+					"{\"role\":\"user\",\"content\":%s}"
+					"],"
+					"\"temperature\":0.3,"
+					"\"max_tokens\":1024"
+					"}",
+					aEscapedModel, aEscapedSystem, aEscapedText);
+			}
+			else // CUSTOM
+			{
+				// 自定义: 使用 OpenAI 兼容格式
+				str_format(aPayload, sizeof(aPayload),
+					"{"
+					"\"model\":%s,"
+					"\"messages\":["
+					"{\"role\":\"system\",\"content\":%s},"
+					"{\"role\":\"user\",\"content\":%s}"
+					"],"
+					"\"thinking\":{\"type\":\"enabled\"}"
+					"}",
+					aEscapedModel, aEscapedSystem, aEscapedText);
+			}
+		}
+		else
+		{
+			// 关闭思考模式
+			// 智谱AI使用 thinking:disabled（GLM-4.7+ 默认开启）
+			// DeepSeek 和其他平台不需要显式关闭
+			if(Provider == ELlmProvider::ZHIPU_AI)
+			{
+				str_format(aPayload, sizeof(aPayload),
+					"{"
+					"\"model\":%s,"
+					"\"messages\":["
+					"{\"role\":\"system\",\"content\":%s},"
+					"{\"role\":\"user\",\"content\":%s}"
+					"],"
+					"\"temperature\":0.3,"
+					"\"max_tokens\":1024,"
+					"\"thinking\":{\"type\":\"disabled\"}"
 					"}",
 					aEscapedModel, aEscapedSystem, aEscapedText);
 			}
