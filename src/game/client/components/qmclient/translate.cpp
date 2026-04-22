@@ -951,19 +951,12 @@ public:
 			return;
 		}
 
-		const char *pEndpoint;
+		const char *pEndpoint = GetDefaultLlmEndpoint(m_Provider);
 		char aEndpointBuf[256];
-
-		// Custom Provider uses manually configured endpoint
-		if(m_Provider == ELlmProvider::CUSTOM && g_Config.m_QmTranslateLlmEndpoint[0] != '\0')
+		if(m_Provider == ELlmProvider::CUSTOM && g_Config.m_TcTranslateEndpoint[0] != '\0')
 		{
-			str_copy(aEndpointBuf, g_Config.m_QmTranslateLlmEndpoint, sizeof(aEndpointBuf));
+			str_copy(aEndpointBuf, g_Config.m_TcTranslateEndpoint, sizeof(aEndpointBuf));
 			pEndpoint = aEndpointBuf;
-		}
-		else
-		{
-			// Preset Provider uses default endpoint
-			pEndpoint = GetDefaultLlmEndpoint(m_Provider);
 		}
 
 		// Build system message with target language
@@ -985,14 +978,14 @@ public:
 				pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ? g_Config.m_QmTranslateZhipuaiModel : "glm-4.7-flash";
 				break;
 			case ELlmProvider::DEEPSEEK:
-				pModel = g_Config.m_QmTranslateDeepseekModel[0] != '\0' ? g_Config.m_QmTranslateDeepseekModel : "deepseek-chat";
+				pModel = "deepseek-chat";
 				break;
 			case ELlmProvider::OPENAI:
-				pModel = g_Config.m_QmTranslateOpenaiModel[0] != '\0' ? g_Config.m_QmTranslateOpenaiModel : "gpt-3.5-turbo";
+				pModel = "gpt-3.5-turbo";
 				break;
 			case ELlmProvider::CUSTOM:
 			default:
-				pModel = g_Config.m_QmTranslateLlmModel[0] != '\0' ? g_Config.m_QmTranslateLlmModel : "gpt-3.5-turbo";
+				pModel = "gpt-3.5-turbo";
 				break;
 		}
 
@@ -1000,7 +993,7 @@ public:
 		str_format(aPayload, sizeof(aPayload),
 			"{"
 			"\"model\":\"%s\","
-			"\"messages":["
+			"\"messages\":["
 			"{\"role\":\"system\",\"content\":%s},"
 			"{\"role\":\"user\",\"content\":%s}"
 			"],"

@@ -3279,6 +3279,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     QmAnimTest.cpp
     QmLayoutTest.cpp
     aio_test.cpp
+    assets_preview_scale_test.cpp
     bezier_test.cpp
     blocklist_driver_test.cpp
     bytes_be_test.cpp
@@ -3313,11 +3314,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     server_test.cpp
     serverbrowser_test.cpp
     serverinfo_test.cpp
+    settings_warmup_test.cpp
     shell_execute_test.cpp
     snapshot_test.cpp
     str_test.cpp
     strip_path_and_extension_test.cpp
     swap_endian_test.cpp
+    theme_scan_test.cpp
     teehistorian_test.cpp
     test.cpp
     test.h

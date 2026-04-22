@@ -362,7 +362,7 @@ private:
 	 * This limit prevents frame stuttering caused by uploading too many textures at once.
 	 * Each skin requires approximately 14 texture uploads (7 original + 7 colorable).
 	 */
-	static constexpr int MAX_SKINS_PER_FRAME = 2;
+	static constexpr int MAX_SKINS_PER_FRAME = 12;
 
 	enum class ESkinProcessResult
 	{

@@ -13,6 +13,10 @@ docs/dyl
 .trae
 .trae/
 docs/superpowers
+.superpowers
+
+# Git worktrees
+worktrees/
 
 bundle/
 !/other/bundle/

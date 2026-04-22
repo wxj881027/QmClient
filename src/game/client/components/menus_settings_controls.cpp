@@ -128,7 +128,12 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 
 void CMenusSettingsControls::Render(CUIRect MainView)
 {
-	UpdateBindOptions();
+	const bool DeferHeavyContent = ShouldDeferHeavyContent();
+	if(!DeferHeavyContent && (m_BindOptionsDirty || GameClient()->m_KeyBinder.IsActive()))
+	{
+		UpdateBindOptions();
+		m_BindOptionsDirty = false;
+	}
 
 	CUIRect QuickSearch, SearchMatches, ResetToDefault;
 	MainView.HSplitBottom(BUTTON_HEIGHT, &MainView, &QuickSearch);
@@ -191,25 +196,83 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	CUIRect LeftColumn, RightColumn;
 	MainView.VSplitMid(&LeftColumn, &RightColumn, MARGIN);
 
-	// Left column
-	RenderSettingsBlock(MeasureSettingsMouseHeight(), &LeftColumn,
-		Localize("Mouse"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsMouse, this));
-	RenderSettingsBlock(MeasureSettingsJoystickHeight(), &LeftColumn,
-		Localize("Controller"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsJoystick, this));
-	RenderSettingsBindsBlock(EBindOptionGroup::MOVEMENT, &LeftColumn, Localize("Movement"));
-	RenderSettingsBindsBlock(EBindOptionGroup::WEAPON, &LeftColumn, Localize("Weapon"));
-
-	// Right column
-	RenderSettingsBindsBlock(EBindOptionGroup::VOTING, &RightColumn, Localize("Voting"));
-	RenderSettingsBindsBlock(EBindOptionGroup::CHAT, &RightColumn, Localize("Chat"));
-	RenderSettingsBindsBlock(EBindOptionGroup::DUMMY, &RightColumn, Localize("Dummy"));
-	RenderSettingsBindsBlock(EBindOptionGroup::MISCELLANEOUS, &RightColumn, Localize("Miscellaneous"));
-	if(std::any_of(m_vBindOptions.begin(), m_vBindOptions.end(), [](const CBindOption &Option) { return Option.m_Group == EBindOptionGroup::CUSTOM; }))
+	if(DeferHeavyContent)
 	{
-		RenderSettingsBindsBlock(EBindOptionGroup::CUSTOM, &RightColumn, Localize("Custom"));
+		RenderDeferredSummaryBlock(&LeftColumn, Localize("Mouse"), EBindOptionGroup::MOVEMENT, 2);
+		RenderDeferredSummaryBlock(&LeftColumn, Localize("Controller"), EBindOptionGroup::MOVEMENT, 2);
+		RenderDeferredSummaryBlock(&LeftColumn, Localize("Movement"), EBindOptionGroup::MOVEMENT, 3);
+		RenderDeferredSummaryBlock(&RightColumn, Localize("Voting"), EBindOptionGroup::VOTING, 2);
+		if(m_DeferredHeavyFrames <= 3)
+		{
+			RenderDeferredSummaryBlock(&LeftColumn, Localize("Weapon"), EBindOptionGroup::WEAPON, 3);
+			RenderDeferredSummaryBlock(&RightColumn, Localize("Chat"), EBindOptionGroup::CHAT, 3);
+		}
+		if(m_DeferredHeavyFrames <= 2)
+		{
+			RenderDeferredSummaryBlock(&RightColumn, Localize("Dummy"), EBindOptionGroup::DUMMY, 3);
+			RenderDeferredSummaryBlock(&RightColumn, Localize("Miscellaneous"), EBindOptionGroup::MISCELLANEOUS, 4);
+		}
+	}
+	else
+	{
+		// Left column
+		RenderSettingsBlock(MeasureSettingsMouseHeight(), &LeftColumn,
+			Localize("Mouse"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsMouse, this));
+		RenderSettingsBlock(MeasureSettingsJoystickHeight(), &LeftColumn,
+			Localize("Controller"), nullptr, nullptr, std::bind_front(&CMenusSettingsControls::RenderSettingsJoystick, this));
+		RenderSettingsBindsBlock(EBindOptionGroup::MOVEMENT, &LeftColumn, Localize("Movement"));
+		RenderSettingsBindsBlock(EBindOptionGroup::WEAPON, &LeftColumn, Localize("Weapon"));
+
+		// Right column
+		RenderSettingsBindsBlock(EBindOptionGroup::VOTING, &RightColumn, Localize("Voting"));
+		RenderSettingsBindsBlock(EBindOptionGroup::CHAT, &RightColumn, Localize("Chat"));
+		RenderSettingsBindsBlock(EBindOptionGroup::DUMMY, &RightColumn, Localize("Dummy"));
+		RenderSettingsBindsBlock(EBindOptionGroup::MISCELLANEOUS, &RightColumn, Localize("Miscellaneous"));
+		if(std::any_of(m_vBindOptions.begin(), m_vBindOptions.end(), [](const CBindOption &Option) { return Option.m_Group == EBindOptionGroup::CUSTOM; }))
+		{
+			RenderSettingsBindsBlock(EBindOptionGroup::CUSTOM, &RightColumn, Localize("Custom"));
+		}
 	}
 
 	m_SettingsScrollRegion.End();
+	FinishDeferredFrame();
+}
+
+void CMenusSettingsControls::SetDeferredFrames(int Frames)
+{
+	m_DeferredHeavyFrames = maximum(Frames, 0);
+	m_BindOptionsDirty = true;
+}
+
+bool CMenusSettingsControls::ShouldDeferHeavyContent() const
+{
+	return m_DeferredHeavyFrames > 0 && m_FilterInput.IsEmpty() && !GameClient()->m_KeyBinder.IsActive();
+}
+
+void CMenusSettingsControls::FinishDeferredFrame()
+{
+	if(m_DeferredHeavyFrames > 0)
+		--m_DeferredHeavyFrames;
+}
+
+void CMenusSettingsControls::RenderDeferredSummaryBlock(CUIRect *pParentRect, const char *pTitle, EBindOptionGroup Group, int ApproxRows)
+{
+	int MatchingOptions = 0;
+	for(const CBindOption &Option : m_vBindOptions)
+	{
+		if(Option.m_Group == Group)
+			++MatchingOptions;
+	}
+
+	const int DisplayCount = maximum(MatchingOptions, ApproxRows);
+	RenderSettingsBlock(maximum(ApproxRows, 2) * BUTTON_HEIGHT + (maximum(ApproxRows, 2) - 1) * BUTTON_SPACING,
+		pParentRect, pTitle, nullptr, nullptr,
+		[&](CUIRect Rect) {
+			char aBuf[128];
+			Rect.HSplitTop(BUTTON_HEIGHT, &Rect, nullptr);
+			str_format(aBuf, sizeof(aBuf), Localize("Preparing %d actions..."), DisplayCount);
+			Ui()->DoLabel(&Rect, aBuf, FONT_SIZE, TEXTALIGN_ML);
+		});
 }
 
 void CMenusSettingsControls::UpdateBindOptions()
@@ -546,6 +609,7 @@ void CMenusSettingsControls::RenderSettingsBinds(EBindOptionGroup Group, CUIRect
 				if(CurrentBind.m_Bind == EMPTY_BIND_SLOT && (&CurrentBind - BindOption.m_vCurrentBinds.data()) > 0)
 				{
 					CurrentBind.m_ToBeDeleted = true;
+					m_BindOptionsDirty = true;
 				}
 			}
 			else if(KeyReaderResult.m_Bind != CurrentBind.m_Bind)
@@ -559,6 +623,7 @@ void CMenusSettingsControls::RenderSettingsBinds(EBindOptionGroup Group, CUIRect
 				{
 					GameClient()->m_Binds.Bind(KeyReaderResult.m_Bind.m_Key, BindOption.m_Command.c_str(), false, KeyReaderResult.m_Bind.m_ModifierMask);
 				}
+				m_BindOptionsDirty = true;
 			}
 		}
 	}

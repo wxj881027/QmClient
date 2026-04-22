@@ -12,6 +12,7 @@
 #include <base/log.h>
 #include <base/logger.h>
 #include <base/math.h>
+#include <base/perf_timer.h>
 #include <base/str.h>
 #include <base/system.h>
 
@@ -68,6 +69,32 @@
 #endif
 
 #include "SDL.h"
+
+namespace
+{
+bool PerfDebugEnabled()
+{
+	return g_Config.m_QmPerfDebug != 0;
+}
+
+double PerfDebugThresholdMs()
+{
+	return g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
+}
+
+void LogPerfStage(const char *pSystem, const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
+{
+	if(!PerfDebugEnabled())
+		return;
+	if(!Force && DurationMs < PerfDebugThresholdMs())
+		return;
+
+	if(pExtra != nullptr && pExtra[0] != '\0')
+		dbg_msg(pSystem, "stage=%s duration_ms=%.3f %s", pStage, DurationMs, pExtra);
+	else
+		dbg_msg(pSystem, "stage=%s duration_ms=%.3f", pStage, DurationMs);
+}
+}
 #ifdef main
 #undef main
 #endif
@@ -1244,17 +1271,34 @@ const char *CClient::ErrorString() const
 
 void CClient::Render()
 {
+	CPerfTimer RenderTimer;
+
 	if(m_EditorActive)
 	{
+		CPerfTimer StageTimer;
 		m_pEditor->OnRender();
+		LogPerfStage("perf/render", "editor_onrender", StageTimer.ElapsedMs());
 	}
 	else
 	{
+		CPerfTimer StageTimer;
 		GameClient()->OnRender();
+		LogPerfStage("perf/render", "gameclient_onrender", StageTimer.ElapsedMs());
 	}
 
-	RenderDebug();
-	RenderGraphs();
+	{
+		CPerfTimer StageTimer;
+		RenderDebug();
+		LogPerfStage("perf/render", "client_render_debug", StageTimer.ElapsedMs());
+	}
+
+	{
+		CPerfTimer StageTimer;
+		RenderGraphs();
+		LogPerfStage("perf/render", "client_render_graphs", StageTimer.ElapsedMs());
+	}
+
+	LogPerfStage("perf/render", "client_render_total", RenderTimer.ElapsedMs());
 }
 
 const char *CClient::LoadMap(const char *pName, const char *pFilename, SHA256_DIGEST *pWantedSha256, unsigned WantedCrc)
@@ -3370,6 +3414,7 @@ void CClient::Run()
 
 	while(true)
 	{
+		CPerfTimer LoopTimer;
 		set_new_tick();
 		UpdateHangHeartbeat();
 
@@ -3402,12 +3447,19 @@ void CClient::Run()
 		}
 
 		// update input
-		if(Input()->Update())
 		{
-			if(State() == IClient::STATE_QUITTING)
-				break;
-			else
-				SetState(IClient::STATE_QUITTING); // SDL_QUIT
+			CPerfTimer StageTimer;
+			const bool QuitRequested = Input()->Update();
+			char aExtra[96];
+			str_format(aExtra, sizeof(aExtra), "state=%d quit=%d", State(), QuitRequested ? 1 : 0);
+			LogPerfStage("perf/main_thread", "input_update", StageTimer.ElapsedMs(), QuitRequested, aExtra);
+			if(QuitRequested)
+			{
+				if(State() == IClient::STATE_QUITTING)
+					break;
+				else
+					SetState(IClient::STATE_QUITTING); // SDL_QUIT
+			}
 		}
 
 		char aFile[IO_MAX_PATH_LENGTH];
@@ -3422,11 +3474,19 @@ void CClient::Run()
 		}
 
 #if defined(CONF_AUTOUPDATE)
-		Updater()->Update();
+		{
+			CPerfTimer StageTimer;
+			Updater()->Update();
+			LogPerfStage("perf/main_thread", "updater_update", StageTimer.ElapsedMs());
+		}
 #endif
 
 		// update sound
-		Sound()->Update();
+		{
+			CPerfTimer StageTimer;
+			Sound()->Update();
+			LogPerfStage("perf/main_thread", "sound_update", StageTimer.ElapsedMs());
+		}
 
 		if(CtrlShiftKey(KEY_D, LastD))
 			g_Config.m_Debug ^= 1;
@@ -3458,7 +3518,13 @@ void CClient::Run()
 				m_EditorActive = false;
 			}
 
-			Update();
+			{
+				CPerfTimer StageTimer;
+				Update();
+				char aExtra[96];
+				str_format(aExtra, sizeof(aExtra), "state=%d editor=%d", State(), m_EditorActive ? 1 : 0);
+				LogPerfStage("perf/main_thread", "client_update", StageTimer.ElapsedMs(), false, aExtra);
+			}
 			int64_t Now = time_get();
 
 			bool IsRenderActive = (g_Config.m_GfxBackgroundRender || m_pGraphics->WindowOpen());
@@ -3507,8 +3573,20 @@ void CClient::Run()
 				LastRenderTime = Now - AdditionalTime;
 				m_LastRenderTime = Now;
 
-				Render();
-				m_pGraphics->Swap();
+				{
+					CPerfTimer StageTimer;
+					Render();
+					char aExtra[64];
+					str_format(aExtra, sizeof(aExtra), "state=%d", State());
+					LogPerfStage("perf/main_thread", "frame_render", StageTimer.ElapsedMs(), false, aExtra);
+				}
+				{
+					CPerfTimer StageTimer;
+					m_pGraphics->Swap();
+					char aExtra[64];
+					str_format(aExtra, sizeof(aExtra), "state=%d", State());
+					LogPerfStage("perf/main_thread", "graphics_swap", StageTimer.ElapsedMs(), false, aExtra);
+				}
 			}
 			else if(!IsRenderActive)
 			{
@@ -3522,6 +3600,7 @@ void CClient::Run()
 		AutoCSV_Cleanup();
 
 		m_Fifo.Update();
+		LogPerfStage("perf/main_thread", "loop_total", LoopTimer.ElapsedMs());
 
 		if(State() == IClient::STATE_QUITTING || State() == IClient::STATE_RESTARTING)
 			break;
