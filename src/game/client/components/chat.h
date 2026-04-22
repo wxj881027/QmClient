@@ -201,6 +201,14 @@ class CChat : public CComponent
 	int m_LanguageMenuId = 0;
 	bool m_LanguageMenuOpen = false;
 
+	// 聊天框光标状态
+	bool m_MouseUnlocked = false;
+	std::optional<vec2> m_LastMousePos;
+
+	void SetUiMousePos(vec2 Pos);
+	void EnableChatCursor();
+	void DisableChatCursor();
+
 public:
 	CChat();
 	int Sizeof() const override { return sizeof(*this); }

@@ -374,6 +374,14 @@ void CChat::Reset()
 
 	for(int64_t &LastSoundPlayed : m_aLastSoundPlayed)
 		LastSoundPlayed = 0;
+
+	// 重置光标状态
+	if(m_MouseUnlocked)
+	{
+		DisableChatCursor();
+	}
+	m_MouseUnlocked = false;
+	m_LastMousePos = std::nullopt;
 }
 
 void CChat::OnRelease()
@@ -850,6 +858,9 @@ void CChat::EnableMode(int Team)
 		m_CompletionChosen = -1;
 		m_CompletionUsed = false;
 		m_Input.Activate(EInputPriority::CHAT);
+
+		// 打开聊天框时启用光标
+		EnableChatCursor();
 	}
 }
 
@@ -859,6 +870,9 @@ void CChat::DisableMode()
 	{
 		m_Mode = MODE_NONE;
 		m_Input.Deactivate();
+
+		// 关闭聊天框时禁用光标
+		DisableChatCursor();
 	}
 }
 
@@ -2154,4 +2168,47 @@ void CChat::ToggleAutoTranslate()
 void CChat::OpenLanguageMenu()
 {
 	m_LanguageMenuOpen = !m_LanguageMenuOpen;
+}
+
+void CChat::SetUiMousePos(vec2 Pos)
+{
+	const vec2 WindowSize = vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
+	const CUIRect *pScreen = Ui()->Screen();
+
+	const vec2 UpdatedMousePos = Ui()->UpdatedMousePos();
+	Pos = Pos / vec2(pScreen->w, pScreen->h) * WindowSize;
+	Ui()->OnCursorMove(Pos.x - UpdatedMousePos.x, Pos.y - UpdatedMousePos.y);
+}
+
+void CChat::EnableChatCursor()
+{
+	if(m_MouseUnlocked)
+		return;
+
+	m_MouseUnlocked = true;
+	vec2 OldMousePos = Ui()->MousePos();
+
+	if(m_LastMousePos == std::nullopt)
+	{
+		SetUiMousePos(Ui()->Screen()->Center());
+	}
+	else
+	{
+		SetUiMousePos(m_LastMousePos.value());
+	}
+
+	m_LastMousePos = OldMousePos;
+}
+
+void CChat::DisableChatCursor()
+{
+	if(!m_MouseUnlocked)
+		return;
+
+	m_MouseUnlocked = false;
+	if(m_LastMousePos.has_value())
+	{
+		SetUiMousePos(m_LastMousePos.value());
+	}
+	m_LastMousePos = Ui()->MousePos();
 }
