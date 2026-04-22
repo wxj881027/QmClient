@@ -184,6 +184,23 @@ class CChat : public CComponent
 	friend class CTClient;
 	friend class CPieMenu;
 
+	// 翻译按钮状态
+	struct STranslateButtonState
+	{
+		bool m_IsPressed = false;
+		bool m_RectValid = false;
+		float m_X = 0.0f;
+		float m_Y = 0.0f;
+		float m_W = 0.0f;
+		float m_H = 0.0f;
+		bool m_AutoTranslateEnabled = false;
+	};
+	STranslateButtonState m_TranslateButton;
+
+	// 语言菜单
+	int m_LanguageMenuId = 0;
+	bool m_LanguageMenuOpen = false;
+
 public:
 	CChat();
 	int Sizeof() const override { return sizeof(*this); }
@@ -222,6 +239,13 @@ public:
 	float MessagePaddingY() const { return FontSize() * (1 / 6.f); }
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }
 	float MessageRounding() const { return FontSize() * (1 / 2.f); }
+
+	// 翻译按钮相关方法
+	vec2 GetChatMousePos() const;
+	void RenderTranslateButton(const CUIRect &InputRect);
+	void ToggleAutoTranslate();
+	void OpenLanguageMenu();
+	bool IsLanguageMenuOpen() const { return m_LanguageMenuOpen; }
 
 	// ----- send functions -----
 

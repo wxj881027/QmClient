@@ -511,6 +511,55 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	if(m_Mode == MODE_NONE)
 		return false;
 
+	// ===== 翻译按钮处理（优先级高于输入框）=====
+	if(m_TranslateButton.m_RectValid)
+	{
+		const vec2 MousePos = GetChatMousePos();
+		const bool InsideButton =
+			MousePos.x >= m_TranslateButton.m_X &&
+			MousePos.x <= m_TranslateButton.m_X + m_TranslateButton.m_W &&
+			MousePos.y >= m_TranslateButton.m_Y &&
+			MousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
+
+		// 左键处理
+		if(Event.m_Key == KEY_MOUSE_1)
+		{
+			if(Event.m_Flags & IInput::FLAG_PRESS)
+			{
+				m_TranslateButton.m_IsPressed = InsideButton;
+				if(InsideButton)
+				{
+					// 重置输入框的鼠标选择状态
+					CLineInput::SMouseSelection *pMouseSel = m_Input.GetMouseSelection();
+					if(pMouseSel)
+					{
+						pMouseSel->m_Selecting = false;
+						pMouseSel->m_PressMouse = vec2(0, 0);
+						pMouseSel->m_ReleaseMouse = vec2(0, 0);
+					}
+					return true;
+				}
+			}
+			else if(Event.m_Flags & IInput::FLAG_RELEASE)
+			{
+				const bool Activate = m_TranslateButton.m_IsPressed && InsideButton;
+				m_TranslateButton.m_IsPressed = false;
+				if(Activate)
+				{
+					ToggleAutoTranslate();
+					return true;
+				}
+			}
+		}
+
+		// 右键处理
+		if(Event.m_Key == KEY_MOUSE_2 && InsideButton && (Event.m_Flags & IInput::FLAG_PRESS))
+		{
+			OpenLanguageMenu();
+			return true;
+		}
+	}
+
 	if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE)
 	{
 		DisableMode();
@@ -1669,7 +1718,10 @@ void CChat::OnRender()
 
 		TextRender()->TextEx(&InputCursor, ": ");
 
-		const float MessageMaxWidth = InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX);
+		// 计算翻译按钮大小并调整输入框宽度
+		const float TranslateButtonSize = maximum(16.0f, ScaledFontSize * 1.35f);
+		const float TranslateButtonGap = 4.0f;
+		const float MessageMaxWidth = InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX) - TranslateButtonSize - TranslateButtonGap;
 		const CUIRect ClippingRect = {InputCursor.m_X, InputCursor.m_Y, MessageMaxWidth, 2.25f * InputCursor.m_FontSize};
 		ExtendBounds(x, InputCursor.m_Y, ChatRect.w - x, ClippingRect.h);
 		const float XScale = Graphics()->ScreenWidth() / Width;
@@ -1716,6 +1768,14 @@ void CChat::OnRender()
 				}
 			}
 		}
+
+		// 渲染翻译按钮
+		CUIRect TranslateButtonRect = {ClippingRect.x + ClippingRect.w + TranslateButtonGap, ClippingRect.y, TranslateButtonSize, maximum(InputCursor.m_FontSize + 4.0f, 16.0f)};
+		RenderTranslateButton(TranslateButtonRect);
+	}
+	else
+	{
+		m_TranslateButton.m_RectValid = false;
 	}
 
 #if defined(CONF_VIDEORECORDER)
@@ -1976,9 +2036,12 @@ void CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTransl
 	if(!pLine || str_length(pLine) < 1)
 		return;
 
-	// TODO: Outgoing chat translation not implemented
-	// if(AllowOutgoingTranslation && GameClient()->m_Translate.TryTranslateOutgoingChat(Team, pLine))
-	// 	return;
+	// 自动出站翻译
+	if(AllowOutgoingTranslation && GameClient()->m_Translate.ShouldAutoTranslateOutgoing(pLine))
+	{
+		GameClient()->m_Translate.StartAutoOutgoingTranslate(Team, pLine);
+		return;
+	}
 
 	bool AddEntry = false;
 
@@ -2005,4 +2068,90 @@ void CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTransl
 void CChat::SendChatQueued(const char *pLine)
 {
 	SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true);
+}
+
+// ===== 翻译按钮相关方法 =====
+
+vec2 CChat::GetChatMousePos() const
+{
+	const vec2 WindowSize(maximum(1.0f, static_cast<float>(Graphics()->WindowWidth())),
+		maximum(1.0f, static_cast<float>(Graphics()->WindowHeight())));
+	return Ui()->MousePos() * vec2(Ui()->Screen()->w, Ui()->Screen()->h) / WindowSize;
+}
+
+void CChat::RenderTranslateButton(const CUIRect &InputRect)
+{
+	using namespace FontIcons;
+
+	const float ButtonSize = maximum(16.0f, FontSize() * 8.0f / 6.0f * 1.35f);
+	const float ButtonGap = 4.0f;
+
+	CUIRect ButtonRect;
+	ButtonRect.x = InputRect.x + InputRect.w + ButtonGap;
+	ButtonRect.y = InputRect.y;
+	ButtonRect.w = ButtonSize;
+	ButtonRect.h = maximum(InputRect.h, ButtonSize);
+
+	m_TranslateButton.m_X = ButtonRect.x;
+	m_TranslateButton.m_Y = ButtonRect.y;
+	m_TranslateButton.m_W = ButtonRect.w;
+	m_TranslateButton.m_H = ButtonRect.h;
+	m_TranslateButton.m_RectValid = true;
+
+	const vec2 MousePos = GetChatMousePos();
+	const bool Hovered = MousePos.x >= ButtonRect.x &&
+			     MousePos.x <= ButtonRect.x + ButtonRect.w &&
+			     MousePos.y >= ButtonRect.y &&
+			     MousePos.y <= ButtonRect.y + ButtonRect.h;
+
+	const bool IsOpen = m_LanguageMenuOpen;
+	const ColorRGBA ButtonColor = IsOpen ? ColorRGBA(0.35f, 0.45f, 0.70f, 0.90f) :
+					       (Hovered ? ColorRGBA(0.28f, 0.28f, 0.28f, 0.90f) :
+							   ColorRGBA(0.16f, 0.16f, 0.16f, 0.82f));
+	const float ButtonRounding = maximum(3.0f, ButtonRect.h * 0.28f);
+
+	ButtonRect.Draw(ButtonColor, IGraphics::CORNER_ALL, ButtonRounding);
+
+	CUIRect IconRect;
+	ButtonRect.Margin(1.0f, &IconRect);
+	const float IconSize = IconRect.h * CUi::ms_FontmodHeight;
+
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |
+				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
+				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING |
+				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT |
+				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.95f);
+	Ui()->DoLabel(&IconRect, FONT_ICON_LANGUAGE, IconSize, TEXTALIGN_MC);
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+	if(m_TranslateButton.m_AutoTranslateEnabled)
+	{
+		CUIRect DotRect;
+		DotRect.x = ButtonRect.x + ButtonRect.w - 6.0f;
+		DotRect.y = ButtonRect.y + 2.0f;
+		DotRect.w = 4.0f;
+		DotRect.h = 4.0f;
+		DotRect.Draw(ColorRGBA(0.2f, 0.8f, 0.2f, 1.0f), IGraphics::CORNER_ALL, 2.0f);
+	}
+
+	if(Hovered)
+	{
+		GameClient()->m_Tooltips.DoToolTip(&m_TranslateButton, &ButtonRect,
+			Localize("Auto translate toggle (Right-click for language)"));
+	}
+}
+
+void CChat::ToggleAutoTranslate()
+{
+	m_TranslateButton.m_AutoTranslateEnabled = !m_TranslateButton.m_AutoTranslateEnabled;
+	g_Config.m_TcTranslateAutoOutgoing = m_TranslateButton.m_AutoTranslateEnabled ? 1 : 0;
+}
+
+void CChat::OpenLanguageMenu()
+{
+	m_LanguageMenuOpen = !m_LanguageMenuOpen;
 }
