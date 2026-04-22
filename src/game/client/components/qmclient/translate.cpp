@@ -98,14 +98,30 @@ const char *GetLlmApiKey(ELlmProvider Provider)
 	switch(Provider)
 	{
 		case ELlmProvider::ZHIPU_AI:
-			return g_Config.m_QmTranslateLlmKeyZhipu;
+			if(g_Config.m_QmTranslateLlmKeyZhipu[0] != '\0')
+				return g_Config.m_QmTranslateLlmKeyZhipu;
+			if(const char *pEnvKey = std::getenv("QMTRANSLATE_LLM_KEY_ZHIPU"))
+				return pEnvKey;
+			return "";
 		case ELlmProvider::DEEPSEEK:
-			return g_Config.m_QmTranslateLlmKeyDeepseek;
+			if(g_Config.m_QmTranslateLlmKeyDeepseek[0] != '\0')
+				return g_Config.m_QmTranslateLlmKeyDeepseek;
+			if(const char *pEnvKey = std::getenv("QMTRANSLATE_LLM_KEY_DEEPSEEK"))
+				return pEnvKey;
+			return "";
 		case ELlmProvider::OPENAI:
-			return g_Config.m_QmTranslateLlmKeyOpenai;
+			if(g_Config.m_QmTranslateLlmKeyOpenai[0] != '\0')
+				return g_Config.m_QmTranslateLlmKeyOpenai;
+			if(const char *pEnvKey = std::getenv("QMTRANSLATE_LLM_KEY_OPENAI"))
+				return pEnvKey;
+			return "";
 		case ELlmProvider::CUSTOM:
 		default:
-			return g_Config.m_QmTranslateLlmKeyCustom;
+			if(g_Config.m_QmTranslateLlmKeyCustom[0] != '\0')
+				return g_Config.m_QmTranslateLlmKeyCustom;
+			if(const char *pEnvKey = std::getenv("QMTRANSLATE_LLM_KEY_CUSTOM"))
+				return pEnvKey;
+			return "";
 	}
 }
 
