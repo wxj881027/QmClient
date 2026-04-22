@@ -72,9 +72,8 @@ const char *GetLlmEndpoint(ELlmProvider Provider)
 		case ELlmProvider::OPENAI:
 			return g_Config.m_QmTranslateLlmEndpointOpenai[0] != '\0' ? g_Config.m_QmTranslateLlmEndpointOpenai : GetDefaultLlmEndpoint(Provider);
 		case ELlmProvider::CUSTOM:
-			return g_Config.m_QmTranslateLlmEndpointCustom;
 		default:
-			return GetDefaultLlmEndpoint(Provider);
+			return g_Config.m_QmTranslateLlmEndpointCustom;
 	}
 }
 

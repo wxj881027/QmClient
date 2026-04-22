@@ -5863,7 +5863,8 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 					{
 						// LLM API - 默认使用智谱AI预设
 						str_copy(g_Config.m_QmTranslateBackend, "llm", sizeof(g_Config.m_QmTranslateBackend));
-						str_copy(g_Config.m_QmTranslateLlmEndpoint, "", sizeof(g_Config.m_QmTranslateLlmEndpoint)); // ZhipuAI uses hardcoded endpoint
+						// LLM API - 清空自定义端点，使用默认
+					str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "", sizeof(g_Config.m_QmTranslateLlmEndpointCustom));
 					}
 					else
 					{
@@ -5884,19 +5885,28 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				Ui()->DoEditBox(&s_TranslateTarget, &ControlCol, LG_BodySize);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
-				static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateLlmEndpoint, sizeof(g_Config.m_QmTranslateLlmEndpoint));
-				// 根据后端类型设置默认提示
-				if(IsLlmBackend)
-					s_TranslateEndpoint.SetEmptyText("https://open.bigmodel.cn/api/paas/v4/chat/completions");
-				else if(IsLibreTranslateBackend)
-					s_TranslateEndpoint.SetEmptyText("http://localhost:5000");
-				else
+				// Endpoint 配置 - 根据后端类型显示不同的端点输入
+				if(IsTencentCloudBackend)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateTcEndpoint, sizeof(g_Config.m_QmTranslateTcEndpoint));
 					s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
-				Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+					Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+				else if(IsLibreTranslateBackend)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateLibreEndpoint, sizeof(g_Config.m_QmTranslateLibreEndpoint));
+					s_TranslateEndpoint.SetEmptyText("http://localhost:5000");
+					Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+				// LLM 后端的端点配置在 Provider 选择区域显示
 
 				if(IsTencentCloudBackend)
 				{
@@ -5962,7 +5972,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 					static CLineInput s_LlmApiKeyZhipu(g_Config.m_QmTranslateLlmKeyZhipu, sizeof(g_Config.m_QmTranslateLlmKeyZhipu));
 					static CLineInput s_LlmApiKeyDeepseek(g_Config.m_QmTranslateLlmKeyDeepseek, sizeof(g_Config.m_QmTranslateLlmKeyDeepseek));
 					static CLineInput s_LlmApiKeyOpenai(g_Config.m_QmTranslateLlmKeyOpenai, sizeof(g_Config.m_QmTranslateLlmKeyOpenai));
-					static CLineInput s_LlmApiKeyCustom(g_Config.m_QmTranslateLlmKey, sizeof(g_Config.m_QmTranslateLlmKey));
+					static CLineInput s_LlmApiKeyCustom(g_Config.m_QmTranslateLlmKeyCustom, sizeof(g_Config.m_QmTranslateLlmKeyCustom));
 
 					// 根据 Provider 显示对应的 API Key 输入框
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -6004,24 +6014,78 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 						Ui()->DoEditBox(pActiveKeyInput, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-					// 仅在自定义 Provider 时显示端点配置
-					if(g_Config.m_QmTranslateLlmProvider == 3) // CUSTOM
-					{
-						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-						Ui()->DoLabel(&LabelCol, Localize("Custom Endpoint"), LG_BodySize, TEXTALIGN_ML);
-						static CLineInput s_LlmEndpoint(g_Config.m_QmTranslateLlmEndpoint, sizeof(g_Config.m_QmTranslateLlmEndpoint));
-						s_LlmEndpoint.SetEmptyText("https://api.example.com/v1/chat/completions");
-						Ui()->DoEditBox(&s_LlmEndpoint, &ControlCol, LG_BodySize);
-						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					}
+					// 各 Provider 的端点配置（允许覆盖默认）
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Endpoint (Optional)"), LG_BodySize, TEXTALIGN_ML);
 
+					static CLineInput s_LlmEndpointZhipu(g_Config.m_QmTranslateLlmEndpointZhipu, sizeof(g_Config.m_QmTranslateLlmEndpointZhipu));
+					static CLineInput s_LlmEndpointDeepseek(g_Config.m_QmTranslateLlmEndpointDeepseek, sizeof(g_Config.m_QmTranslateLlmEndpointDeepseek));
+					static CLineInput s_LlmEndpointOpenai(g_Config.m_QmTranslateLlmEndpointOpenai, sizeof(g_Config.m_QmTranslateLlmEndpointOpenai));
+					static CLineInput s_LlmEndpointCustom(g_Config.m_QmTranslateLlmEndpointCustom, sizeof(g_Config.m_QmTranslateLlmEndpointCustom));
+
+					CLineInput *pActiveEndpointInput = nullptr;
+					switch(g_Config.m_QmTranslateLlmProvider)
+					{
+					case 0: // Zhipu AI
+						s_LlmEndpointZhipu.SetEmptyText("https://open.bigmodel.cn/api/paas/v4/chat/completions");
+						pActiveEndpointInput = &s_LlmEndpointZhipu;
+						break;
+					case 1: // DeepSeek
+						s_LlmEndpointDeepseek.SetEmptyText("https://api.deepseek.com/chat/completions");
+						pActiveEndpointInput = &s_LlmEndpointDeepseek;
+						break;
+					case 2: // OpenAI
+						s_LlmEndpointOpenai.SetEmptyText("https://api.openai.com/v1/chat/completions");
+						pActiveEndpointInput = &s_LlmEndpointOpenai;
+						break;
+					case 3: // Custom
+					default:
+						s_LlmEndpointCustom.SetEmptyText("https://api.example.com/v1/chat/completions");
+						pActiveEndpointInput = &s_LlmEndpointCustom;
+						break;
+					}
+					if(pActiveEndpointInput)
+						Ui()->DoEditBox(pActiveEndpointInput, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 各 Provider 的模型配置
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("Model"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_LlmModel(g_Config.m_QmTranslateLlmModel, sizeof(g_Config.m_QmTranslateLlmModel));
-					s_LlmModel.SetEmptyText("glm-4.5-flash");
-					Ui()->DoEditBox(&s_LlmModel, &ControlCol, LG_BodySize);
+
+					static CLineInput s_LlmModelZhipu(g_Config.m_QmTranslateLlmModelZhipu, sizeof(g_Config.m_QmTranslateLlmModelZhipu));
+					static CLineInput s_LlmModelDeepseek(g_Config.m_QmTranslateLlmModelDeepseek, sizeof(g_Config.m_QmTranslateLlmModelDeepseek));
+					static CLineInput s_LlmModelOpenai(g_Config.m_QmTranslateLlmModelOpenai, sizeof(g_Config.m_QmTranslateLlmModelOpenai));
+					static CLineInput s_LlmModelCustom(g_Config.m_QmTranslateLlmModelCustom, sizeof(g_Config.m_QmTranslateLlmModelCustom));
+
+					CLineInput *pActiveModelInput = nullptr;
+					const char *pModelEmptyText = "model-name";
+					switch(g_Config.m_QmTranslateLlmProvider)
+					{
+					case 0: // Zhipu AI
+						pModelEmptyText = "glm-4.5-flash";
+						s_LlmModelZhipu.SetEmptyText(pModelEmptyText);
+						pActiveModelInput = &s_LlmModelZhipu;
+						break;
+					case 1: // DeepSeek
+						pModelEmptyText = "deepseek-chat";
+						s_LlmModelDeepseek.SetEmptyText(pModelEmptyText);
+						pActiveModelInput = &s_LlmModelDeepseek;
+						break;
+					case 2: // OpenAI
+						pModelEmptyText = "gpt-4o-mini";
+						s_LlmModelOpenai.SetEmptyText(pModelEmptyText);
+						pActiveModelInput = &s_LlmModelOpenai;
+						break;
+					case 3: // Custom
+					default:
+						s_LlmModelCustom.SetEmptyText(pModelEmptyText);
+						pActiveModelInput = &s_LlmModelCustom;
+						break;
+					}
+					if(pActiveModelInput)
+						Ui()->DoEditBox(pActiveModelInput, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 

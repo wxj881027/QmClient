@@ -3324,6 +3324,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     thread_test.cpp
     time_test.cpp
     timestamp_test.cpp
+    translate_llm_provider_test.cpp
     translate_test.cpp
     unix_test.cpp
     uuid_test.cpp
