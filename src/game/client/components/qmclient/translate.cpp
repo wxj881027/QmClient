@@ -214,8 +214,8 @@ bool IsChineseLanguage(const char *pLanguage)
 
 const char *GetTencentCloudSecretId()
 {
-	if(g_Config.m_TcTranslateSecretId[0] != '\0')
-		return g_Config.m_TcTranslateSecretId;
+	if(g_Config.m_QmTranslateTcSecretId[0] != '\0')
+		return g_Config.m_QmTranslateTcSecretId;
 	if(const char *pEnvSecretId = std::getenv("TENCENTCLOUD_SECRET_ID"))
 		return pEnvSecretId;
 	return TENCENTCLOUD_SECRET_ID_FALLBACK;
@@ -223,8 +223,8 @@ const char *GetTencentCloudSecretId()
 
 const char *GetTencentCloudSecretKey()
 {
-	if(g_Config.m_TcTranslateSecretKey[0] != '\0')
-		return g_Config.m_TcTranslateSecretKey;
+	if(g_Config.m_QmTranslateTcSecretKey[0] != '\0')
+		return g_Config.m_QmTranslateTcSecretKey;
 	if(const char *pEnvSecretKey = std::getenv("TENCENTCLOUD_SECRET_KEY"))
 		return pEnvSecretKey;
 	return TENCENTCLOUD_SECRET_KEY_FALLBACK;
@@ -232,7 +232,7 @@ const char *GetTencentCloudSecretKey()
 
 const char *GetEffectiveTranslateTarget(const char *pTarget)
 {
-	return (pTarget && pTarget[0] != '\0') ? pTarget : CConfig::ms_pTcTranslateTarget;
+	return (pTarget && pTarget[0] != '\0') ? pTarget : CConfig::ms_pQmTranslateTarget;
 }
 
 bool IsOutgoingTranslateTargetChar(char Character)
@@ -356,7 +356,7 @@ static void UrlEncode(const char *pText, char *pOut, size_t Length)
 const char *ITranslateBackend::EncodeTarget(const char *pTarget) const
 {
 	if(!pTarget || pTarget[0] == '\0')
-		return CConfig::ms_pTcTranslateTarget;
+		return CConfig::ms_pQmTranslateTarget;
 	return pTarget;
 }
 
@@ -546,13 +546,13 @@ public:
 		Json.WriteStrValue(EncodeTarget(pTarget));
 		Json.WriteAttribute("format");
 		Json.WriteStrValue("text");
-		if(g_Config.m_TcTranslateKey[0] != '\0')
+		if(g_Config.m_QmTranslateLibreKey[0] != '\0')
 		{
 			Json.WriteAttribute("api_key");
-			Json.WriteStrValue(g_Config.m_TcTranslateKey);
+			Json.WriteStrValue(g_Config.m_QmTranslateLibreKey);
 		}
 		Json.EndObject();
-		CreateHttpRequest(Http, g_Config.m_TcTranslateEndpoint[0] == '\0' ? "localhost:5000/translate" : g_Config.m_TcTranslateEndpoint);
+		CreateHttpRequest(Http, g_Config.m_QmTranslateLibreEndpoint[0] == '\0' ? "localhost:5000/translate" : g_Config.m_QmTranslateLibreEndpoint);
 		const char *pJson = Json.GetOutputString().c_str();
 		m_pHttpRequest->PostJson(pJson);
 	}
@@ -634,7 +634,7 @@ public:
 	const char *EncodeTarget(const char *pTarget) const override
 	{
 		if(!pTarget || pTarget[0] == '\0')
-			return CConfig::ms_pTcTranslateTarget;
+			return CConfig::ms_pQmTranslateTarget;
 		if(str_comp_nocase(pTarget, "zh-cn") == 0)
 			return "zh";
 		if(str_comp_nocase(pTarget, "zh-tw") == 0)
@@ -657,7 +657,7 @@ public:
 			return;
 		}
 
-		const char *pEndpoint = g_Config.m_TcTranslateEndpoint[0] != '\0' ? g_Config.m_TcTranslateEndpoint : TENCENTCLOUD_TMT_DEFAULT_ENDPOINT;
+		const char *pEndpoint = g_Config.m_QmTranslateTcEndpoint[0] != '\0' ? g_Config.m_QmTranslateTcEndpoint : TENCENTCLOUD_TMT_DEFAULT_ENDPOINT;
 		std::string Host;
 		std::string Path;
 		if(!ParseHttpsUrl(pEndpoint, Host, Path, m_aInitError, sizeof(m_aInitError)))
@@ -720,7 +720,7 @@ public:
 		m_pHttpRequest->HeaderString("Host", Host.c_str());
 		m_pHttpRequest->HeaderString("X-TC-Action", TENCENTCLOUD_TMT_ACTION);
 		m_pHttpRequest->HeaderString("X-TC-Version", TENCENTCLOUD_TMT_VERSION);
-		m_pHttpRequest->HeaderString("X-TC-Region", g_Config.m_TcTranslateRegion);
+		m_pHttpRequest->HeaderString("X-TC-Region", g_Config.m_QmTranslateTcRegion);
 		m_pHttpRequest->HeaderString("X-TC-Timestamp", TimestampString.c_str());
 		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(Payload.data()), Payload.size());
 		Http.Run(m_pHttpRequest);
@@ -787,7 +787,7 @@ public:
 	const char *EncodeTarget(const char *pTarget) const override
 	{
 		if(!pTarget || pTarget[0] == '\0')
-			return CConfig::ms_pTcTranslateTarget;
+			return CConfig::ms_pQmTranslateTarget;
 		if(str_comp_nocase(pTarget, "zh") == 0)
 			return "zh-cn";
 		return pTarget;
@@ -800,7 +800,7 @@ public:
 	{
 		char aBuf[4096];
 		str_format(aBuf, sizeof(aBuf), "%s/translate?dl=%s&text=",
-			g_Config.m_TcTranslateEndpoint[0] != '\0' ? g_Config.m_TcTranslateEndpoint : "https://ftapi.pythonanywhere.com",
+			g_Config.m_QmTranslateTcEndpoint[0] != '\0' ? g_Config.m_QmTranslateTcEndpoint : "https://ftapi.pythonanywhere.com",
 			EncodeTarget(pTarget));
 
 		UrlEncode(pText, aBuf + strlen(aBuf), sizeof(aBuf) - strlen(aBuf));
@@ -809,7 +809,7 @@ public:
 	}
 };
 
-class CTranslateBackendZhipuAI : public ITranslateBackendHttp
+class CTranslateBackendLlm : public ITranslateBackendHttp
 {
 private:
 	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
@@ -830,7 +830,7 @@ private:
 		if(pError != &json_value_none)
 		{
 			const json_value *pMessage = json_object_get(pError, "message");
-			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "ZhipuAI request failed";
+			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "LLM API request failed";
 			str_copy(Out.m_Text, pMessageStr);
 			return false;
 		}
@@ -900,7 +900,7 @@ private:
 		}
 
 		str_copy(Out.m_Text, pContent->u.string.ptr);
-		Out.m_Language[0] = '\0'; // ZhipuAI doesn't return detected language
+		Out.m_Language[0] = '\0'; // LLM doesn't return detected language
 
 		return true;
 	}
@@ -922,184 +922,70 @@ protected:
 public:
 	const char *Name() const override
 	{
-		return "ZhipuAI";
+		return "LLM API";
 	}
 
-	CTranslateBackendZhipuAI(IHttp &Http, const char *pText, const char *pTarget)
+	CTranslateBackendLlm(IHttp &Http, const char *pText, const char *pTarget)
 	{
-		if(g_Config.m_TcTranslateKey[0] == '\0')
+		if(g_Config.m_QmTranslateLlmKey[0] == '\0')
 		{
-			SetInitError("Missing ZhipuAI API Key: set tc_translate_key");
-			return;
-		}
-
-		const char *pEndpoint = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-
-		// Build system message with target language
-		char aSystemMessage[256];
-		str_format(aSystemMessage, sizeof(aSystemMessage), "You are a professional translator. Translate the following text to %s. Only output the translation result, no explanations.", EncodeTarget(pTarget));
-
-		// Build JSON request body manually (CJsonStringWriter doesn't support float values)
-		// Need to escape the text and system message for JSON
-		char aEscapedText[4096];
-		char aEscapedSystem[512];
-		EscapeJsonString(pText, aEscapedText, sizeof(aEscapedText));
-		EscapeJsonString(aSystemMessage, aEscapedSystem, sizeof(aEscapedSystem));
-
-		// Use configured model or default to glm-4.7-flash
-	const char *pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ? g_Config.m_QmTranslateZhipuaiModel : "glm-4.7-flash";
-
-	// Escape model name for JSON
-	char aEscapedModel[128];
-	EscapeJsonString(pModel, aEscapedModel, sizeof(aEscapedModel));
-
-	char aPayload[8192];
-	str_format(aPayload, sizeof(aPayload),
-		"{"
-		"\"model\":\"%s\","
-		"\"messages\":["
-		"{\"role\":\"system\",\"content\":%s},"
-		"{\"role\":\"user\",\"content\":%s}"
-		"],"
-		"\"temperature\":0.3,"
-		"\"max_tokens\":1024"
-		"}",
-		aEscapedModel, aEscapedSystem, aEscapedText);
-
-		// Build Authorization header
-		char aAuthorization[512];
-		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", g_Config.m_TcTranslateKey);
-
-		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
-		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
-		m_pHttpRequest->FailOnErrorStatus(false);
-		m_pHttpRequest->Timeout(CTimeout{10000, 0, 500, 10});
-		m_pHttpRequest->HeaderString("Content-Type", "application/json");
-		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
-		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(aPayload), str_length(aPayload));
-		Http.Run(m_pHttpRequest);
-	}
-};
-
-class CTranslateBackendOpenAI : public ITranslateBackendHttp
-{
-private:
-	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
-	{
-		if(!pObj)
-		{
-			str_copy(Out.m_Text, "Response is not JSON");
-			return false;
-		}
-
-		if(pObj->type != json_object)
-		{
-			str_copy(Out.m_Text, "Response is not object");
-			return false;
-		}
-
-		const json_value *pError = json_object_get(pObj, "error");
-		if(pError != &json_value_none)
-		{
-			const json_value *pMessage = json_object_get(pError, "message");
-			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "OpenAI request failed";
-			str_copy(Out.m_Text, pMessageStr);
-			return false;
-		}
-
-		const json_value *pChoices = json_object_get(pObj, "choices");
-		if(pChoices == &json_value_none || pChoices->type != json_array || pChoices->u.array.length == 0)
-		{
-			str_copy(Out.m_Text, "No valid choices in response");
-			return false;
-		}
-
-		const json_value *pChoice = pChoices->u.array.values[0];
-		const json_value *pMessage = json_object_get(pChoice, "message");
-		const json_value *pContent = json_object_get(pMessage, "content");
-
-		if(pContent == &json_value_none || pContent->type != json_string)
-		{
-			str_copy(Out.m_Text, "No content in message");
-			return false;
-		}
-
-		str_copy(Out.m_Text, pContent->u.string.ptr);
-		Out.m_Language[0] = '\0';
-		return true;
-	}
-
-protected:
-	bool ParseResponse(CTranslateResponse &Out) override
-	{
-		json_value *pObj = m_pHttpRequest->ResultJson();
-		bool Res = ParseResponseJson(pObj, Out);
-		json_value_free(pObj);
-		return Res;
-	}
-
-	bool ParseHttpError() const override { return true; }
-
-public:
-	const char *Name() const override { return "OpenAI"; }
-
-	CTranslateBackendOpenAI(IHttp &Http, const char *pText, const char *pTarget)
-	{
-		if(g_Config.m_TcTranslateKey[0] == '\0')
-		{
-			SetInitError("Missing API Key: set tc_translate_key");
+			SetInitError("Missing LLM API Key: set qm_translate_llm_key");
 			return;
 		}
 
 		const char *pEndpoint;
 		char aEndpointBuf[256];
-		if(g_Config.m_TcTranslateLlmEndpoint[0] != '\0')
+		if(g_Config.m_QmTranslateLlmEndpoint[0] != '\0')
 		{
-			str_copy(aEndpointBuf, g_Config.m_TcTranslateLlmEndpoint, sizeof(aEndpointBuf));
+			str_copy(aEndpointBuf, g_Config.m_QmTranslateLlmEndpoint, sizeof(aEndpointBuf));
 			pEndpoint = aEndpointBuf;
 		}
 		else
 		{
-			pEndpoint = GetDefaultLlmEndpoint(DetectLlmPreset(g_Config.m_TcTranslateLlmEndpoint));
+			pEndpoint = GetDefaultLlmEndpoint(DetectLlmPreset(g_Config.m_QmTranslateLlmEndpoint));
 		}
 
+		// Build system message with target language
 		char aSystemMessage[1024];
-		if(g_Config.m_TcTranslateSystemPrompt[0] != '\0')
+		if(g_Config.m_QmTranslateSystemPrompt[0] != '\0')
 		{
-			str_copy(aSystemMessage, g_Config.m_TcTranslateSystemPrompt, sizeof(aSystemMessage));
+			str_copy(aSystemMessage, g_Config.m_QmTranslateSystemPrompt, sizeof(aSystemMessage));
 		}
 		else
 		{
 			str_format(aSystemMessage, sizeof(aSystemMessage), DEFAULT_TRANSLATE_PROMPT, EncodeTarget(pTarget));
 		}
 
+		// Build JSON request body manually (CJsonStringWriter doesn't support float values)
+		// Need to escape the text and system message for JSON
 		char aEscapedText[4096];
 		char aEscapedSystem[1024];
 		EscapeJsonString(pText, aEscapedText, sizeof(aEscapedText));
 		EscapeJsonString(aSystemMessage, aEscapedSystem, sizeof(aEscapedSystem));
 
-		const char *pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ?
-	                      g_Config.m_QmTranslateZhipuaiModel : "glm-4.5-flash";
+		// Use configured model or default to glm-4.5-flash
+		const char *pModel = g_Config.m_QmTranslateLlmModel[0] != '\0' ? g_Config.m_QmTranslateLlmModel : "glm-4.5-flash";
 
-	// Escape model name for JSON
-	char aEscapedModel[128];
-	EscapeJsonString(pModel, aEscapedModel, sizeof(aEscapedModel));
+		// Escape model name for JSON
+		char aEscapedModel[128];
+		EscapeJsonString(pModel, aEscapedModel, sizeof(aEscapedModel));
 
-	char aPayload[8192];
-	str_format(aPayload, sizeof(aPayload),
-		"{"
-		"\"model\":\"%s\","
-		"\"messages\":["
-		"{\"role\":\"system\",\"content\":%s},"
-		"{\"role\":\"user\",\"content\":%s}"
-		"],"
-		"\"temperature\":0.3,"
-		"\"max_tokens\":1024"
-		"}",
-		aEscapedModel, aEscapedSystem, aEscapedText);
+		char aPayload[8192];
+		str_format(aPayload, sizeof(aPayload),
+			"{"
+			"\"model\":\"%s\","
+			"\"messages\":["
+			"{\"role\":\"system\",\"content\":%s},"
+			"{\"role\":\"user\",\"content\":%s}"
+			"],"
+			"\"temperature\":0.3,"
+			"\"max_tokens\":1024"
+			"}",
+			aEscapedModel, aEscapedSystem, aEscapedText);
 
+		// Build Authorization header
 		char aAuthorization[512];
-		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", g_Config.m_TcTranslateKey);
+		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", g_Config.m_QmTranslateLlmKey);
 
 		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
 		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
@@ -1114,16 +1000,14 @@ public:
 
 static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const char *pText, const char *pTarget)
 {
-	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0)
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
 		return std::make_unique<CTranslateBackendLibretranslate>(Http, pText, pTarget);
-	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "ftapi") == 0)
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 		return std::make_unique<CTranslateBackendFtapi>(Http, pText, pTarget);
-	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "tencentcloud") == 0)
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
 		return std::make_unique<CTranslateBackendTencentCloud>(Http, pText, pTarget);
-	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
-		return std::make_unique<CTranslateBackendZhipuAI>(Http, pText, pTarget);
-	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "openai") == 0)
-		return std::make_unique<CTranslateBackendOpenAI>(Http, pText, pTarget);
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
+		return std::make_unique<CTranslateBackendLlm>(Http, pText, pTarget);
 	return nullptr;
 }
 
@@ -1241,7 +1125,7 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 	Job.m_pTranslateResponse = std::make_shared<CTranslateResponse>();
 	Job.m_AutoTriggered = AutoTriggered;
 	Job.m_pLine->m_pTranslateResponse = Job.m_pTranslateResponse;
-	str_copy(Job.m_aTarget, GetEffectiveTranslateTarget(g_Config.m_TcTranslateTarget), sizeof(Job.m_aTarget));
+	str_copy(Job.m_aTarget, GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget), sizeof(Job.m_aTarget));
 	Job.m_pBackend = CreateTranslateBackend(*Http(), Job.m_pLine->m_aText, Job.m_aTarget);
 	if(!Job.m_pBackend)
 	{
@@ -1354,7 +1238,7 @@ void CTranslate::OnRender()
 
 void CTranslate::AutoTranslate(CChat::CLine &Line)
 {
-	if(!g_Config.m_TcTranslateAuto)
+	if(!g_Config.m_QmTranslateAuto)
 		return;
 	if(Line.m_ClientId == CChat::CLIENT_MSG)
 		return;
@@ -1365,7 +1249,7 @@ void CTranslate::AutoTranslate(CChat::CLine &Line)
 		if(Id >= 0 && Id == Line.m_ClientId)
 			return;
 	}
-	if(str_comp(g_Config.m_TcTranslateBackend, "ftapi") == 0)
+	if(str_comp(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 	{
 		// FTAPI quickly gets overloaded, please do not disable this
 		// It may shut down if we spam it too hard
@@ -1394,14 +1278,14 @@ bool CTranslate::ContainsChinese(const char *pText)
 
 bool CTranslate::ShouldAutoTranslateOutgoing(const char *pText) const
 {
-	if(!g_Config.m_TcTranslateAutoOutgoing)
+	if(!g_Config.m_QmTranslateAutoOutgoing)
 		return false;
 
 	if(!pText || pText[0] == '\0' || pText[0] == '/')
 		return false;
 
 	// 模式 0: 仅中文输入时触发
-	if(g_Config.m_TcTranslateAutoOutgoingMode == 0)
+	if(g_Config.m_QmTranslateAutoOutgoingMode == 0)
 		return ContainsChinese(pText);
 
 	// 模式 1: 始终翻译
@@ -1419,7 +1303,7 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 
 	COutgoingTranslateJob Job;
 	Job.m_Team = Team;
-	str_copy(Job.m_aTarget, g_Config.m_TcTranslateTarget, sizeof(Job.m_aTarget));
+	str_copy(Job.m_aTarget, g_Config.m_QmTranslateTarget, sizeof(Job.m_aTarget));
 	Job.m_pBackend = CreateTranslateBackend(*Http(), pText, Job.m_aTarget);
 
 	if(!Job.m_pBackend)
@@ -1437,8 +1321,7 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 
 int CTranslate::GetMaxConcurrency() const
 {
-	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0 ||
-	   str_comp_nocase(g_Config.m_TcTranslateBackend, "openai") == 0)
-		return g_Config.m_TcTranslateLlmConcurrency;
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
+		return g_Config.m_QmTranslateLlmConcurrency;
 	return 5;
 }

@@ -2162,7 +2162,7 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 void CChat::ToggleAutoTranslate()
 {
 	m_TranslateButton.m_AutoTranslateEnabled = !m_TranslateButton.m_AutoTranslateEnabled;
-	g_Config.m_TcTranslateAutoOutgoing = m_TranslateButton.m_AutoTranslateEnabled ? 1 : 0;
+	g_Config.m_QmTranslateAutoOutgoing = m_TranslateButton.m_AutoTranslateEnabled ? 1 : 0;
 }
 
 void CChat::OpenLanguageMenu()
