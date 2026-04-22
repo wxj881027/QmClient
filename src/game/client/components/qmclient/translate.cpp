@@ -1636,7 +1636,7 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 
 	COutgoingTranslateJob Job;
 	Job.m_Team = Team;
-	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget);
+	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateOutgoingTarget);
 	if(!IsValidLanguageCode(pTarget))
 	{
 		pTarget = "en";
