@@ -57,7 +57,7 @@ const char *GetDefaultLlmEndpoint(ELlmProvider Provider)
 		case ELlmProvider::OPENAI:
 			return "https://api.openai.com/v1/chat/completions";
 		default:
-			return "https://api.openai.com/v1/chat/completions";
+			return "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 	}
 }
 
@@ -296,6 +296,34 @@ const char *GetTencentCloudSecretKey()
 const char *GetEffectiveTranslateTarget(const char *pTarget)
 {
 	return (pTarget && pTarget[0] != '\0') ? pTarget : CConfig::ms_pQmTranslateTarget;
+}
+
+// 验证语言代码格式
+// 有效格式：2-3 个字母（如 zh, en, ja）或 xx-XX 格式（如 zh-CN, zh-TW）
+static bool IsValidLanguageCode(const char *pCode)
+{
+	if(!pCode || pCode[0] == '\0')
+		return false;
+
+	size_t Len = str_length(pCode);
+	if(Len < 2 || Len > 5) // 最短 "en"，最长 "zh-CN"
+		return false;
+
+	// 检查格式：纯字母或 xx-XX 格式
+	for(size_t i = 0; i < Len; i++)
+	{
+		char c = pCode[i];
+		if(i == 2 && c == '-')
+			continue; // 允许 xx-XX 格式中的连字符
+		if(c < 'a' || c > 'z')
+		{
+			// 允许大写字母（在 - 后面）
+			if(i > 2 && c >= 'A' && c <= 'Z')
+				continue;
+			return false;
+		}
+	}
+	return true;
 }
 
 bool IsOutgoingTranslateTargetChar(char Character)
@@ -1195,7 +1223,13 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 	Job.m_pTranslateResponse = std::make_shared<CTranslateResponse>();
 	Job.m_AutoTriggered = AutoTriggered;
 	Job.m_pLine->m_pTranslateResponse = Job.m_pTranslateResponse;
-	str_copy(Job.m_aTarget, GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget), sizeof(Job.m_aTarget));
+	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget);
+	if(!IsValidLanguageCode(pTarget))
+	{
+		// 使用默认语言代码
+		pTarget = "en";
+	}
+	str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
 	Job.m_pBackend = CreateTranslateBackend(*Http(), Job.m_pLine->m_aText, Job.m_aTarget);
 	if(!Job.m_pBackend)
 	{
@@ -1373,7 +1407,12 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 
 	COutgoingTranslateJob Job;
 	Job.m_Team = Team;
-	str_copy(Job.m_aTarget, g_Config.m_QmTranslateTarget, sizeof(Job.m_aTarget));
+	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget);
+	if(!IsValidLanguageCode(pTarget))
+	{
+		pTarget = "en";
+	}
+	str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
 	Job.m_pBackend = CreateTranslateBackend(*Http(), pText, Job.m_aTarget);
 
 	if(!Job.m_pBackend)
