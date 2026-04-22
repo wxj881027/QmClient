@@ -208,6 +208,7 @@ class CChat : public CComponent
 	void SetUiMousePos(vec2 Pos);
 	void EnableChatCursor();
 	void DisableChatCursor();
+	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 
 public:
 	CChat();

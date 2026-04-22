@@ -2212,3 +2212,14 @@ void CChat::DisableChatCursor()
 	}
 	m_LastMousePos = Ui()->MousePos();
 }
+
+bool CChat::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
+{
+	if(!IsActive() || !m_MouseUnlocked)
+		return false;
+
+	Ui()->ConvertMouseMove(&x, &y, CursorType);
+	Ui()->OnCursorMove(x, y);
+
+	return true;
+}
