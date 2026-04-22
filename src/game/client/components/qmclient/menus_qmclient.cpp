@@ -4734,7 +4734,8 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				Id == EQmModuleId::Streamer ||
 				Id == EQmModuleId::EntityOverlay ||
 				Id == EQmModuleId::Laser ||
-				Id == EQmModuleId::CollisionHitbox;
+				Id == EQmModuleId::CollisionHitbox ||
+				Id == EQmModuleId::TranslateUi;
 		case QMCLIENT_SETTINGS_TAB_FUNCTION:
 			return Id == EQmModuleId::GoresActor ||
 				Id == EQmModuleId::Gores ||
