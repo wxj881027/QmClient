@@ -2234,7 +2234,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	// 标题
 	CUIRect TitleRect;
 	View.HSplitTop(RowHeight, &TitleRect, &View);
-	pUi->DoLabel(&TitleRect, Localize("Translation Settings"), FontSize, TEXTALIGN_ML);
+	pUi->DoLabel(&TitleRect, Localize("翻译设置"), FontSize, TEXTALIGN_ML);
 
 	// 自动翻译开关
 	{
@@ -2253,16 +2253,8 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		}
 
 		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto Translate"), Enabled ? Localize("On") : Localize("Off"));
+		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("自动翻译"), Enabled ? Localize("开") : Localize("关"));
 		pUi->DoLabel(&ToggleRect, aBuf, FontSize, TEXTALIGN_ML);
-	}
-
-	// 分隔线
-	{
-		CUIRect SepRect;
-		View.HSplitTop(8.0f, &SepRect, &View);
-		SepRect.HMargin(3.0f, &SepRect);
-		SepRect.Draw(ColorRGBA(0.5f, 0.5f, 0.5f, 0.5f), IGraphics::CORNER_NONE, 0.0f);
 	}
 
 	// 语言列表定义
@@ -2283,8 +2275,26 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		{"pt", "Português"},
 	};
 
+	// 后端列表定义
+	static const struct
+	{
+		const char *m_pCode;
+		const char *m_pName;
+	} s_aBackends[] = {
+		{"llm", "LLM API"},
+		{"tencentcloud", "Tencent Cloud"},
+		{"libretranslate", "LibreTranslate"},
+		{"ftapi", "FTAPI"},
+	};
+
+	// 使用静态数组作为 DoButtonLogic 的唯一 ID，避免 lambda 参数地址重复
+	static int s_aDropdownIds[4] = {0, 1, 2, 3};
+	static int s_aItemIds[16] = {0};
+	for(int i = 0; i < 16; ++i)
+		s_aItemIds[i] = 100 + i;
+
 	// 辅助函数：渲染下拉框
-	auto RenderDropdown = [&](const char *pLabel, char *pCurrentValue, size_t CurrentValueSize, ETranslateDropdown DropdownId, auto &&GetValueName, auto &&pItems, size_t ItemCount, bool CaseInsensitiveCompare) -> bool {
+	auto RenderDropdown = [&](const char *pLabel, char *pCurrentValue, size_t CurrentValueSize, ETranslateDropdown DropdownId, int DropdownBtnId, auto &&GetValueName, auto &&pItems, size_t ItemCount, bool CaseInsensitiveCompare) -> bool {
 		// 标签
 		CUIRect LabelRect;
 		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
@@ -2300,7 +2310,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		HeaderRect.Draw(HeaderColor, IGraphics::CORNER_ALL, 4.0f);
 
 		// 点击头部切换展开/收起（必须在 DoLabel 之前）
-		if(pUi->DoButtonLogic(&DropdownId, 0, &HeaderRect, BUTTONFLAG_LEFT))
+		if(pUi->DoButtonLogic(&s_aDropdownIds[DropdownBtnId], 0, &HeaderRect, BUTTONFLAG_LEFT))
 		{
 			pPopupContext->m_DropdownOpen = IsOpen ? ETranslateDropdown::NONE : DropdownId;
 			return true;
@@ -2311,19 +2321,15 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		str_format(aDisplayBuf, sizeof(aDisplayBuf), "%s %s", GetValueName(pCurrentValue), IsOpen ? "▲" : "▼");
 		pUi->DoLabel(&HeaderRect, aDisplayBuf, FontSize, TEXTALIGN_ML);
 
-		// 如果展开，渲染列表
+		// 如果展开，渲染列表（悬浮在下方，不挤占父元素空间）
 		if(IsOpen)
 		{
-			// 为展开的下拉框预留空间（从 View 中扣除）
 			float ListHeight = RowHeight * ItemCount;
 			CUIRect ListRect;
 			ListRect.x = HeaderRect.x;
 			ListRect.y = HeaderRect.y + HeaderRect.h + 2.0f;
 			ListRect.w = HeaderRect.w;
 			ListRect.h = ListHeight;
-
-			// 从 View 中扣除列表占用的高度，避免后续元素重叠
-			View.HSplitTop(ListHeight + 2.0f, &ListRect, &View);
 
 			// 列表背景 - 使用完全不透明的深色背景
 			CUIRect ListBgRect = ListRect;
@@ -2350,7 +2356,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 					ItemBgRect.Draw(OptionNormalColor, IGraphics::CORNER_ALL, 3.0f);
 				}
 
-				if(pUi->DoButtonLogic(&Item, 0, &ItemBgRect, BUTTONFLAG_LEFT))
+				if(pUi->DoButtonLogic(&s_aItemIds[i], 0, &ItemBgRect, BUTTONFLAG_LEFT))
 				{
 					str_copy(pCurrentValue, Item.m_pCode, CurrentValueSize);
 					pPopupContext->m_DropdownOpen = ETranslateDropdown::NONE;
@@ -2375,7 +2381,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		if(RenderDropdown(Localize("Inbound Language"), g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), ETranslateDropdown::INBOUND_LANG, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
+		if(RenderDropdown(Localize("入站语言"), g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), ETranslateDropdown::INBOUND_LANG, 0, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
 			return CUi::POPUP_KEEP_OPEN;
 	}
 
@@ -2388,29 +2394,9 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		if(RenderDropdown(Localize("Outbound Language"), g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), ETranslateDropdown::OUTBOUND_LANG, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
+		if(RenderDropdown(Localize("出站语言"), g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), ETranslateDropdown::OUTBOUND_LANG, 1, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
 			return CUi::POPUP_KEEP_OPEN;
 	}
-
-	// 分隔线
-	{
-		CUIRect SepRect;
-		View.HSplitTop(8.0f, &SepRect, &View);
-		SepRect.HMargin(3.0f, &SepRect);
-		SepRect.Draw(ColorRGBA(0.5f, 0.5f, 0.5f, 0.5f), IGraphics::CORNER_NONE, 0.0f);
-	}
-
-	// 后端列表定义
-	static const struct
-	{
-		const char *m_pCode;
-		const char *m_pName;
-	} s_aBackends[] = {
-		{"llm", "LLM API"},
-		{"tencentcloud", "Tencent Cloud"},
-		{"libretranslate", "LibreTranslate"},
-		{"ftapi", "FTAPI"},
-	};
 
 	// 翻译后端下拉框
 	{
@@ -2421,7 +2407,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		if(RenderDropdown(Localize("Translate Backend"), g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), ETranslateDropdown::BACKEND, GetBackendName, s_aBackends, std::size(s_aBackends), true))
+		if(RenderDropdown(Localize("翻译后端"), g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), ETranslateDropdown::BACKEND, 2, GetBackendName, s_aBackends, std::size(s_aBackends), true))
 			return CUi::POPUP_KEEP_OPEN;
 	}
 
@@ -2431,12 +2417,12 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
 	{
 		IsConfigured = g_Config.m_QmTranslateTcSecretId[0] != '\0' && g_Config.m_QmTranslateTcSecretKey[0] != '\0';
-		pConfigWarning = Localize("⚠️ Tencent Cloud API not configured");
+		pConfigWarning = Localize("⚠️ 腾讯云 API 未配置");
 	}
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
 	{
 		IsConfigured = g_Config.m_QmTranslateLibreKey[0] != '\0';
-		pConfigWarning = Localize("⚠️ LibreTranslate API Key not set");
+		pConfigWarning = Localize("⚠️ LibreTranslate API Key 未设置");
 	}
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
 	{
@@ -2444,7 +2430,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			       g_Config.m_QmTranslateLlmKeyDeepseek[0] != '\0' ||
 			       g_Config.m_QmTranslateLlmKeyOpenai[0] != '\0' ||
 			       g_Config.m_QmTranslateLlmKeyCustom[0] != '\0';
-		pConfigWarning = Localize("⚠️ LLM API Key not configured");
+		pConfigWarning = Localize("⚠️ LLM API Key 未配置");
 	}
 
 	if(!IsConfigured && pConfigWarning)
