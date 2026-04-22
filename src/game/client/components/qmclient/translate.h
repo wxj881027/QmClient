@@ -8,6 +8,14 @@
 #include <optional>
 #include <vector>
 
+enum class ELlmProvider
+{
+	ZHIPU_AI = 0,
+	DEEPSEEK = 1,
+	OPENAI = 2,
+	CUSTOM = 3,
+};
+
 class CTranslate;
 
 class ITranslateBackend

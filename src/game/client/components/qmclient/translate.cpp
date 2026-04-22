@@ -204,6 +204,37 @@ const char *GetEffectiveTranslateTarget(const char *pTarget)
 	return (pTarget && pTarget[0] != '\0') ? pTarget : CConfig::ms_pTcTranslateTarget;
 }
 
+const char *GetDefaultLlmEndpoint(ELlmProvider Provider)
+{
+	switch(Provider)
+	{
+		case ELlmProvider::ZHIPU_AI:
+			return "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+		case ELlmProvider::DEEPSEEK:
+			return "https://api.deepseek.com/chat/completions";
+		case ELlmProvider::OPENAI:
+			return "https://api.openai.com/v1/chat/completions";
+		default:
+			return "https://api.openai.com/v1/chat/completions";
+	}
+}
+
+const char *GetLlmApiKey(ELlmProvider Provider)
+{
+	switch(Provider)
+	{
+		case ELlmProvider::ZHIPU_AI:
+			return g_Config.m_QmTranslateLlmKeyZhipu;
+		case ELlmProvider::DEEPSEEK:
+			return g_Config.m_QmTranslateLlmKeyDeepseek;
+		case ELlmProvider::OPENAI:
+			return g_Config.m_QmTranslateLlmKeyOpenai;
+		case ELlmProvider::CUSTOM:
+		default:
+			return g_Config.m_QmTranslateLlmKey;
+	}
+}
+
 bool IsOutgoingTranslateTargetChar(char Character)
 {
 	const unsigned char Value = static_cast<unsigned char>(Character);
@@ -778,9 +809,11 @@ public:
 	}
 };
 
-class CTranslateBackendZhipuAI : public ITranslateBackendHttp
+class CTranslateBackendLlm : public ITranslateBackendHttp
 {
 private:
+	ELlmProvider m_Provider;
+
 	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
 	{
 		if(!pObj)
@@ -799,7 +832,7 @@ private:
 		if(pError != &json_value_none)
 		{
 			const json_value *pMessage = json_object_get(pError, "message");
-			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "ZhipuAI request failed";
+			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "LLM request failed";
 			str_copy(Out.m_Text, pMessageStr);
 			return false;
 		}
@@ -869,7 +902,7 @@ private:
 		}
 
 		str_copy(Out.m_Text, pContent->u.string.ptr);
-		Out.m_Language[0] = '\0'; // ZhipuAI doesn't return detected language
+		Out.m_Language[0] = '\0'; // LLM doesn't return detected language
 
 		return true;
 	}
@@ -891,18 +924,47 @@ protected:
 public:
 	const char *Name() const override
 	{
-		return "ZhipuAI";
+		switch(m_Provider)
+		{
+			case ELlmProvider::ZHIPU_AI:
+				return "ZhipuAI";
+			case ELlmProvider::DEEPSEEK:
+				return "DeepSeek";
+			case ELlmProvider::OPENAI:
+				return "OpenAI";
+			case ELlmProvider::CUSTOM:
+			default:
+				return "LLM";
+		}
 	}
 
-	CTranslateBackendZhipuAI(IHttp &Http, const char *pText, const char *pTarget)
+	CTranslateBackendLlm(IHttp &Http, const char *pText, const char *pTarget)
 	{
-		if(g_Config.m_TcTranslateKey[0] == '\0')
+		// Get current selected Provider
+		m_Provider = static_cast<ELlmProvider>(g_Config.m_QmTranslateLlmProvider);
+
+		// Get API Key for the selected Provider
+		const char *pApiKey = GetLlmApiKey(m_Provider);
+		if(pApiKey[0] == '\0')
 		{
-			SetInitError("Missing ZhipuAI API Key: set tc_translate_key");
+			SetInitError("Missing API Key: configure the API key for the selected provider in settings");
 			return;
 		}
 
-		const char *pEndpoint = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+		const char *pEndpoint;
+		char aEndpointBuf[256];
+
+		// Custom Provider uses manually configured endpoint
+		if(m_Provider == ELlmProvider::CUSTOM && g_Config.m_QmTranslateLlmEndpoint[0] != '\0')
+		{
+			str_copy(aEndpointBuf, g_Config.m_QmTranslateLlmEndpoint, sizeof(aEndpointBuf));
+			pEndpoint = aEndpointBuf;
+		}
+		else
+		{
+			// Preset Provider uses default endpoint
+			pEndpoint = GetDefaultLlmEndpoint(m_Provider);
+		}
 
 		// Build system message with target language
 		char aSystemMessage[256];
@@ -915,14 +977,30 @@ public:
 		EscapeJsonString(pText, aEscapedText, sizeof(aEscapedText));
 		EscapeJsonString(aSystemMessage, aEscapedSystem, sizeof(aEscapedSystem));
 
-		// Use configured model or default to glm-4.7-flash
-		const char *pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ? g_Config.m_QmTranslateZhipuaiModel : "glm-4.7-flash";
+		// Use configured model based on provider
+		const char *pModel;
+		switch(m_Provider)
+		{
+			case ELlmProvider::ZHIPU_AI:
+				pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ? g_Config.m_QmTranslateZhipuaiModel : "glm-4.7-flash";
+				break;
+			case ELlmProvider::DEEPSEEK:
+				pModel = g_Config.m_QmTranslateDeepseekModel[0] != '\0' ? g_Config.m_QmTranslateDeepseekModel : "deepseek-chat";
+				break;
+			case ELlmProvider::OPENAI:
+				pModel = g_Config.m_QmTranslateOpenaiModel[0] != '\0' ? g_Config.m_QmTranslateOpenaiModel : "gpt-3.5-turbo";
+				break;
+			case ELlmProvider::CUSTOM:
+			default:
+				pModel = g_Config.m_QmTranslateLlmModel[0] != '\0' ? g_Config.m_QmTranslateLlmModel : "gpt-3.5-turbo";
+				break;
+		}
 
 		char aPayload[8192];
 		str_format(aPayload, sizeof(aPayload),
 			"{"
 			"\"model\":\"%s\","
-			"\"messages\":["
+			"\"messages":["
 			"{\"role\":\"system\",\"content\":%s},"
 			"{\"role\":\"user\",\"content\":%s}"
 			"],"
@@ -933,7 +1011,7 @@ public:
 
 		// Build Authorization header
 		char aAuthorization[512];
-		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", g_Config.m_TcTranslateKey);
+		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", pApiKey);
 
 		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
 		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
@@ -954,8 +1032,8 @@ static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, co
 		return std::make_unique<CTranslateBackendFtapi>(Http, pText, pTarget);
 	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "tencentcloud") == 0)
 		return std::make_unique<CTranslateBackendTencentCloud>(Http, pText, pTarget);
-	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
-		return std::make_unique<CTranslateBackendZhipuAI>(Http, pText, pTarget);
+	if(str_comp_nocase(g_Config.m_TcTranslateBackend, "llm") == 0)
+		return std::make_unique<CTranslateBackendLlm>(Http, pText, pTarget);
 	return nullptr;
 }
 
