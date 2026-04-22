@@ -5830,7 +5830,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static std::vector<const char *> s_TranslateBackendDropDownNames;
-				s_TranslateBackendDropDownNames = {Localize("Tencent Cloud"), "LibreTranslate", "FTAPI", Localize("ZhipuAI")};
+				s_TranslateBackendDropDownNames = {Localize("Tencent Cloud"), "LibreTranslate", "FTAPI", Localize("ZhipuAI"), "OpenAI"};
 				static CUi::SDropDownState s_TranslateBackendDropDownState;
 				static CScrollRegion s_TranslateBackendDropDownScrollRegion;
 				s_TranslateBackendDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TranslateBackendDropDownScrollRegion;
@@ -5842,6 +5842,8 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 					BackendSelectedOld = 2;
 				else if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
 					BackendSelectedOld = 3;
+				else if(str_comp_nocase(g_Config.m_TcTranslateBackend, "openai") == 0)
+					BackendSelectedOld = 4;
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
@@ -5864,6 +5866,11 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 						str_copy(g_Config.m_TcTranslateBackend, "zhipuai", sizeof(g_Config.m_TcTranslateBackend));
 						str_copy(g_Config.m_TcTranslateEndpoint, "", sizeof(g_Config.m_TcTranslateEndpoint)); // ZhipuAI uses hardcoded endpoint
 					}
+					else if(BackendSelectedNew == 4)
+					{
+						str_copy(g_Config.m_TcTranslateBackend, "openai", sizeof(g_Config.m_TcTranslateBackend));
+						str_copy(g_Config.m_TcTranslateEndpoint, "", sizeof(g_Config.m_TcTranslateEndpoint)); // OpenAI uses hardcoded endpoint
+					}
 					else
 					{
 						str_copy(g_Config.m_TcTranslateBackend, "tencentcloud", sizeof(g_Config.m_TcTranslateBackend));
@@ -5872,6 +5879,8 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				}
 				const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_TcTranslateBackend, "tencentcloud") == 0;
 				const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0;
+				const bool IsLlmBackend = str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0 ||
+							  str_comp_nocase(g_Config.m_TcTranslateBackend, "openai") == 0;
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -5886,7 +5895,13 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 				Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
 				static CLineInput s_TranslateEndpoint(g_Config.m_TcTranslateEndpoint, sizeof(g_Config.m_TcTranslateEndpoint));
-				s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
+				// 根据后端类型设置默认提示
+				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+					s_TranslateEndpoint.SetEmptyText("https://open.bigmodel.cn/api/paas/v4/chat/completions");
+				else if(str_comp_nocase(g_Config.m_TcTranslateBackend, "openai") == 0)
+					s_TranslateEndpoint.SetEmptyText("https://api.openai.com/v1/chat/completions");
+				else
+					s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
 				Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
@@ -5927,23 +5942,30 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
-				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0 ||
+				   str_comp_nocase(g_Config.m_TcTranslateBackend, "openai") == 0)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("API key"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_ZhipuAiApiKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
-					s_ZhipuAiApiKey.SetEmptyText("ZHIPU_API_KEY");
-					s_ZhipuAiApiKey.SetHidden(true);
-					Ui()->DoEditBox(&s_ZhipuAiApiKey, &ControlCol, LG_BodySize);
+					static CLineInput s_LlmApiKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
+					if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+						s_LlmApiKey.SetEmptyText("ZHIPU_API_KEY");
+					else
+						s_LlmApiKey.SetEmptyText("OPENAI_API_KEY");
+					s_LlmApiKey.SetHidden(true);
+					Ui()->DoEditBox(&s_LlmApiKey, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("Model"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_ZhipuAiModel(g_Config.m_QmTranslateZhipuaiModel, sizeof(g_Config.m_QmTranslateZhipuaiModel));
-					s_ZhipuAiModel.SetEmptyText("glm-4.7-flash");
-					Ui()->DoEditBox(&s_ZhipuAiModel, &ControlCol, LG_BodySize);
+					static CLineInput s_LlmModel(g_Config.m_QmTranslateZhipuaiModel, sizeof(g_Config.m_QmTranslateZhipuaiModel));
+					if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+						s_LlmModel.SetEmptyText("glm-4.7-flash");
+					else
+						s_LlmModel.SetEmptyText("gpt-4o-mini");
+					Ui()->DoEditBox(&s_LlmModel, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 

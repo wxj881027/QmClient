@@ -1217,7 +1217,7 @@ void CTranslate::Translate(const char *pName, bool ShowProgress)
 
 void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTriggered)
 {
-	if(m_vJobs.size() > MAX_TRANSLATION_JOBS)
+	if(m_vJobs.size() >= static_cast<size_t>(GetMaxConcurrency()))
 	{
 		return;
 	}
@@ -1264,7 +1264,7 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
 	if(!ParseOutgoingTranslateTarget(pText, Text, Target))
 		return false;
 
-	if(m_vJobs.size() + m_vOutgoingJobs.size() > MAX_TRANSLATION_JOBS)
+	if(m_vJobs.size() + m_vOutgoingJobs.size() >= static_cast<size_t>(GetMaxConcurrency()))
 	{
 		GameClient()->m_Chat.Echo("Too many translation jobs");
 		return true;
