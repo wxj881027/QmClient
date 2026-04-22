@@ -38,28 +38,76 @@ constexpr const char *DEFAULT_TRANSLATE_PROMPT =
     "hammer=锤子, shotgun=霰弹枪, grenade=榴弹, laser=激光, ninja=忍者. "
     "Only output the translation result, no explanations.";
 
-enum class ELlmPreset
+enum class ELlmProvider
 {
-    NONE,
-    ZHIPU_AI,
+	ZHIPU_AI = 0,
+	DEEPSEEK = 1,
+	OPENAI = 2,
+	CUSTOM = 3,
 };
 
-ELlmPreset DetectLlmPreset(const char *pEndpoint)
+const char *GetDefaultLlmEndpoint(ELlmProvider Provider)
 {
-    if(str_find_nocase(pEndpoint, "bigmodel.cn") || str_find_nocase(pEndpoint, "zhipuai"))
-        return ELlmPreset::ZHIPU_AI;
-    return ELlmPreset::NONE;
+	switch(Provider)
+	{
+		case ELlmProvider::ZHIPU_AI:
+			return "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+		case ELlmProvider::DEEPSEEK:
+			return "https://api.deepseek.com/chat/completions";
+		case ELlmProvider::OPENAI:
+			return "https://api.openai.com/v1/chat/completions";
+		default:
+			return "https://api.openai.com/v1/chat/completions";
+	}
 }
 
-const char *GetDefaultLlmEndpoint(ELlmPreset Preset)
+const char *GetLlmEndpoint(ELlmProvider Provider)
 {
-    switch(Preset)
-    {
-        case ELlmPreset::ZHIPU_AI:
-            return "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-        default:
-            return "https://api.openai.com/v1/chat/completions";
-    }
+	switch(Provider)
+	{
+		case ELlmProvider::ZHIPU_AI:
+			return g_Config.m_QmTranslateLlmEndpointZhipu[0] != '\0' ? g_Config.m_QmTranslateLlmEndpointZhipu : GetDefaultLlmEndpoint(Provider);
+		case ELlmProvider::DEEPSEEK:
+			return g_Config.m_QmTranslateLlmEndpointDeepseek[0] != '\0' ? g_Config.m_QmTranslateLlmEndpointDeepseek : GetDefaultLlmEndpoint(Provider);
+		case ELlmProvider::OPENAI:
+			return g_Config.m_QmTranslateLlmEndpointOpenai[0] != '\0' ? g_Config.m_QmTranslateLlmEndpointOpenai : GetDefaultLlmEndpoint(Provider);
+		case ELlmProvider::CUSTOM:
+			return g_Config.m_QmTranslateLlmEndpointCustom;
+		default:
+			return GetDefaultLlmEndpoint(Provider);
+	}
+}
+
+const char *GetLlmModel(ELlmProvider Provider)
+{
+	switch(Provider)
+	{
+		case ELlmProvider::ZHIPU_AI:
+			return g_Config.m_QmTranslateLlmModelZhipu;
+		case ELlmProvider::DEEPSEEK:
+			return g_Config.m_QmTranslateLlmModelDeepseek;
+		case ELlmProvider::OPENAI:
+			return g_Config.m_QmTranslateLlmModelOpenai;
+		case ELlmProvider::CUSTOM:
+		default:
+			return g_Config.m_QmTranslateLlmModelCustom;
+	}
+}
+
+const char *GetLlmApiKey(ELlmProvider Provider)
+{
+	switch(Provider)
+	{
+		case ELlmProvider::ZHIPU_AI:
+			return g_Config.m_QmTranslateLlmKeyZhipu;
+		case ELlmProvider::DEEPSEEK:
+			return g_Config.m_QmTranslateLlmKeyDeepseek;
+		case ELlmProvider::OPENAI:
+			return g_Config.m_QmTranslateLlmKeyOpenai;
+		case ELlmProvider::CUSTOM:
+		default:
+			return g_Config.m_QmTranslateLlmKeyCustom;
+	}
 }
 
 SHA256_DIGEST HmacSha256(const unsigned char *pKey, size_t KeyLength, const unsigned char *pData, size_t DataLength)
@@ -799,8 +847,7 @@ public:
 	CTranslateBackendFtapi(IHttp &Http, const char *pText, const char *pTarget)
 	{
 		char aBuf[4096];
-		str_format(aBuf, sizeof(aBuf), "%s/translate?dl=%s&text=",
-			g_Config.m_QmTranslateTcEndpoint[0] != '\0' ? g_Config.m_QmTranslateTcEndpoint : "https://ftapi.pythonanywhere.com",
+		str_format(aBuf, sizeof(aBuf), "https://ftapi.pythonanywhere.com/translate?dl=%s&text=",
 			EncodeTarget(pTarget));
 
 		UrlEncode(pText, aBuf + strlen(aBuf), sizeof(aBuf) - strlen(aBuf));
@@ -927,22 +974,23 @@ public:
 
 	CTranslateBackendLlm(IHttp &Http, const char *pText, const char *pTarget)
 	{
-		if(g_Config.m_QmTranslateLlmKey[0] == '\0')
+		// 获取当前选择的 Provider
+		ELlmProvider Provider = static_cast<ELlmProvider>(g_Config.m_QmTranslateLlmProvider);
+
+		// 获取对应 Provider 的 API Key
+		const char *pApiKey = GetLlmApiKey(Provider);
+		if(pApiKey[0] == '\0')
 		{
-			SetInitError("Missing LLM API Key: set qm_translate_llm_key");
+			SetInitError("Missing API Key: configure the API key for the selected provider in settings");
 			return;
 		}
 
-		const char *pEndpoint;
-		char aEndpointBuf[256];
-		if(g_Config.m_QmTranslateLlmEndpoint[0] != '\0')
+		// 获取对应 Provider 的端点（已配置则使用配置，否则使用默认）
+		const char *pEndpoint = GetLlmEndpoint(Provider);
+		if(pEndpoint[0] == '\0')
 		{
-			str_copy(aEndpointBuf, g_Config.m_QmTranslateLlmEndpoint, sizeof(aEndpointBuf));
-			pEndpoint = aEndpointBuf;
-		}
-		else
-		{
-			pEndpoint = GetDefaultLlmEndpoint(DetectLlmPreset(g_Config.m_QmTranslateLlmEndpoint));
+			SetInitError("Missing Endpoint: configure the endpoint for the selected provider in settings");
+			return;
 		}
 
 		// Build system message with target language
@@ -963,8 +1011,8 @@ public:
 		EscapeJsonString(pText, aEscapedText, sizeof(aEscapedText));
 		EscapeJsonString(aSystemMessage, aEscapedSystem, sizeof(aEscapedSystem));
 
-		// Use configured model or default to glm-4.5-flash
-		const char *pModel = g_Config.m_QmTranslateLlmModel[0] != '\0' ? g_Config.m_QmTranslateLlmModel : "glm-4.5-flash";
+		// 获取对应 Provider 的模型
+		const char *pModel = GetLlmModel(Provider);
 
 		// Escape model name for JSON
 		char aEscapedModel[128];
@@ -985,7 +1033,7 @@ public:
 
 		// Build Authorization header
 		char aAuthorization[512];
-		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", g_Config.m_QmTranslateLlmKey);
+		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", pApiKey);
 
 		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
 		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
