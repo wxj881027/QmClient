@@ -2158,7 +2158,7 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 	{
 		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled));
 	}
-	const float ButtonRounding = maximum(4.0f, ButtonRect.h * 0.28f);
+	const float ButtonRounding = maximum(5.0f, ButtonRect.h * 0.28f);
 
 	ButtonRect.Draw(ButtonColor, IGraphics::CORNER_ALL, ButtonRounding);
 
@@ -2204,8 +2204,8 @@ void CChat::OpenLanguageMenu()
 		const vec2 ChatToUiScale(Ui()->Screen()->w / Width, Ui()->Screen()->h / Height);
 
 		// 菜单尺寸
-		const float MenuWidth = 180.0f;
-		const float MenuHeight = 280.0f;
+		const float MenuWidth = 150.0f;
+		const float MenuHeight = 320.0f;
 
 		// 菜单在按钮上方弹出
 		vec2 MenuPos = vec2(m_TranslateButton.m_X, m_TranslateButton.m_Y) * ChatToUiScale;
