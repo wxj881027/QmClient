@@ -6425,3 +6425,48 @@ Combo popups
 
 Qm
 == 栖梦
+
+Contributors
+== 贡献者
+
+Functions
+== 功能
+
+Config
+== 配置
+
+Visuals
+== 视觉
+
+QmClient overview
+== 栖梦边栏概览
+
+Use the top tabs to browse QmClient features by category
+== 通过顶部页签按分类浏览栖梦边栏功能
+
+Info keeps a lightweight overview of the client and page structure
+== 信息页仅保留客户端概览和页面结构说明
+
+Visual contains appearance and rendering related options
+== 视觉页包含外观与渲染相关选项
+
+Function contains tools, automation, and gameplay helpers
+== 功能页包含工具、自动化与玩法辅助
+
+Page guide
+== 页面说明
+
+Each tab now has a focused responsibility
+== 每个页签现在都有更明确的职责
+
+HUD collects overlays, counters, voice display, and top-of-screen components
+== HUD 页聚合叠加层、计数器、语音显示和顶部组件
+
+Configs reuses the existing client config browser inside QmClient
+== 配置页复用现有客户端配置浏览器
+
+Community links, updates, feedback, and supporter credits moved to Contributors
+== 社区入口、更新、反馈和赞助鸣谢已移到贡献者页
+
+Drag, collapse, search, and usage history are preserved inside each category
+== 拖拽、折叠、搜索和使用频率记录会继续保留在各自分类中

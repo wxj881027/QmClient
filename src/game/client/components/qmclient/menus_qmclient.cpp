@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
@@ -3436,8 +3437,182 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 	s_ScrollRegion.End();
 }
 
-void CMenus::RenderSettingsQmClient(CUIRect MainView)
+void CMenus::RenderSettingsQmClientOverview(CUIRect MainView)
 {
+	const float ViewWidth = MainView.w;
+	const bool CompactLayout = ViewWidth < 680.0f;
+	const float UiScale = std::clamp(ViewWidth / 1000.0f, CompactLayout ? 0.78f : 0.85f, 1.0f);
+	const float CardPadding = std::clamp(14.0f * UiScale, 10.0f, 14.0f);
+	const float CardSpacing = std::clamp(16.0f * UiScale, 10.0f, 16.0f);
+	const float CornerRadius = std::clamp(12.0f * UiScale, 8.0f, 12.0f);
+	const float HeadlineSize = std::clamp(16.0f * UiScale, 13.0f, 16.0f);
+	const float BodySize = std::clamp(12.0f * UiScale, 10.0f, 12.0f);
+	const float TipSize = std::clamp(BodySize * 0.88f, 9.0f, BodySize);
+	const float LineHeight = std::clamp(22.0f * UiScale, 18.0f, 22.0f);
+	const ColorRGBA GlassColor(0.08f, 0.09f, 0.12f, 0.70f);
+	const ColorRGBA ShadowColor(0.0f, 0.0f, 0.0f, 0.12f);
+	const ColorRGBA HighlightColor(1.0f, 1.0f, 1.0f, 0.05f);
+	const ColorRGBA TipColor(1.0f, 1.0f, 1.0f, 0.72f);
+
+	static CScrollRegion s_ScrollRegion;
+	vec2 ScrollOffset(0.0f, 0.0f);
+	CScrollRegionParams ScrollParams;
+	ScrollParams.m_ScrollUnit = 60.0f * UiScale;
+	ScrollParams.m_Flags = CScrollRegionParams::FLAG_CONTENT_STATIC_WIDTH;
+	ScrollParams.m_ScrollbarMargin = std::clamp(8.0f * UiScale, 6.0f, 8.0f);
+	s_ScrollRegion.Begin(&MainView, &ScrollOffset, &ScrollParams);
+
+	MainView.y += ScrollOffset.y;
+	const float OuterMargin = CompactLayout ? std::clamp(7.0f * UiScale, 4.0f, 7.0f) : std::clamp(10.0f * UiScale, 6.0f, 10.0f);
+	MainView.VSplitRight(OuterMargin, &MainView, nullptr);
+	MainView.VSplitLeft(OuterMargin, nullptr, &MainView);
+
+	auto DrawCardBackground = [&](const CUIRect &Rect) {
+		CUIRect Shadow = Rect;
+		Shadow.x += 1.5f;
+		Shadow.y += 2.0f;
+		Shadow.Draw(ShadowColor, IGraphics::CORNER_ALL, CornerRadius);
+		Rect.Draw(GlassColor, IGraphics::CORNER_ALL, CornerRadius);
+		CUIRect TopHighlight = Rect;
+		TopHighlight.h = 1.0f;
+		TopHighlight.x += CornerRadius;
+		TopHighlight.w -= CornerRadius * 2.0f;
+		TopHighlight.Draw(HighlightColor, IGraphics::CORNER_NONE, 0.0f);
+	};
+
+	auto AddTextLine = [&](CUIRect &Content, const char *pText, float Size = -1.0f, const ColorRGBA *pColor = nullptr) {
+		CUIRect Row;
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		if(pColor != nullptr)
+			TextRender()->TextColor(*pColor);
+		Ui()->DoLabel(&Row, pText, Size > 0.0f ? Size : BodySize, TEXTALIGN_ML);
+		if(pColor != nullptr)
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+		Content.HSplitTop(CardSpacing * 0.35f, nullptr, &Content);
+	};
+
+	auto DrawCardTitle = [&](CUIRect &Content, const char *pTitle, const char *pTip) {
+		CUIRect Title;
+		Content.HSplitTop(HeadlineSize, &Title, &Content);
+		Ui()->DoLabel(&Title, pTitle, HeadlineSize, TEXTALIGN_ML);
+		Content.HSplitTop(CardSpacing * 0.35f, nullptr, &Content);
+		if(pTip != nullptr && pTip[0] != '\0')
+			AddTextLine(Content, pTip, TipSize, &TipColor);
+		Content.HSplitTop(CardSpacing * 0.25f, nullptr, &Content);
+	};
+
+	auto DrawFullWidthCard = [&](float Height, const std::function<void(CUIRect &)> &RenderContent) {
+		MainView.HSplitTop(CardSpacing, nullptr, &MainView);
+		CUIRect Card = MainView;
+		Card.h = Height;
+		DrawCardBackground(Card);
+		CUIRect Content = Card;
+		Content.Margin(CardPadding, &Content);
+		RenderContent(Content);
+		MainView.HSplitTop(Height, nullptr, &MainView);
+	};
+
+	DrawFullWidthCard(std::clamp(148.0f * UiScale, 126.0f, 168.0f), [&](CUIRect &Content) {
+		DrawCardTitle(Content, Localize("QmClient overview"), Localize("Use the top tabs to browse QmClient features by category"));
+		AddTextLine(Content, Localize("Info keeps a lightweight overview of the client and page structure"));
+		AddTextLine(Content, Localize("Visual contains appearance and rendering related options"));
+		AddTextLine(Content, Localize("Function contains tools, automation, and gameplay helpers"));
+	});
+
+	DrawFullWidthCard(std::clamp(176.0f * UiScale, 150.0f, 198.0f), [&](CUIRect &Content) {
+		DrawCardTitle(Content, Localize("Page guide"), Localize("Each tab now has a focused responsibility"));
+		AddTextLine(Content, Localize("HUD collects overlays, counters, voice display, and top-of-screen components"));
+		AddTextLine(Content, Localize("Configs reuses the existing client config browser inside QmClient"));
+		AddTextLine(Content, Localize("Community links, updates, feedback, and supporter credits moved to Contributors"));
+		AddTextLine(Content, Localize("Drag, collapse, search, and usage history are preserved inside each category"));
+	});
+
+	CUIRect EndPad{MainView.x, MainView.y, MainView.w, 5.0f};
+	s_ScrollRegion.AddRect(EndPad);
+	s_ScrollRegion.End();
+}
+
+void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
+{
+	bool TabTransitionActive = false;
+	float TabTransitionAlpha = 0.0f;
+	CUIRect TabContentClip = MainView;
+	if(ContributorsPage)
+		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
+
+	{
+		if(m_QmClientSettingsTab < 0 || m_QmClientSettingsTab >= NUMBER_OF_QMCLIENT_SETTINGS_TABS)
+			m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
+
+		static bool s_QmTabTransitionInitialized = false;
+		static int s_PrevQmTab = QMCLIENT_SETTINGS_TAB_VISUAL;
+		static float s_QmTabTransitionDirection = 0.0f;
+		const uint64_t QmClientTabSwitchNode = UiAnimNodeKey("settings_qmclient_tab_switch");
+
+		CUIRect TabBar, Button;
+		MainView.HSplitTop(LineSize, &TabBar, &MainView);
+		const float TabWidth = TabBar.w / NUMBER_OF_QMCLIENT_SETTINGS_TABS;
+		static CButtonContainer s_aPageTabs[NUMBER_OF_QMCLIENT_SETTINGS_TABS] = {};
+		static const char *s_apQmTabNames[NUMBER_OF_QMCLIENT_SETTINGS_TABS] = {};
+		static char s_aQmLanguageFile[IO_MAX_PATH_LENGTH] = {};
+		if(s_apQmTabNames[0] == nullptr || str_comp(s_aQmLanguageFile, g_Config.m_ClLanguagefile) != 0)
+		{
+			str_copy(s_aQmLanguageFile, g_Config.m_ClLanguagefile, sizeof(s_aQmLanguageFile));
+			s_apQmTabNames[QMCLIENT_SETTINGS_TAB_VISUAL] = Localize("Visuals");
+			s_apQmTabNames[QMCLIENT_SETTINGS_TAB_FUNCTION] = Localize("Functions");
+			s_apQmTabNames[QMCLIENT_SETTINGS_TAB_HUD] = Localize("HUD");
+			s_apQmTabNames[QMCLIENT_SETTINGS_TAB_CONTRIBUTORS] = Localize("Contributors");
+			s_apQmTabNames[QMCLIENT_SETTINGS_TAB_CONFIG] = Localize("Config");
+		}
+
+		for(int Tab = 0; Tab < NUMBER_OF_QMCLIENT_SETTINGS_TABS; ++Tab)
+		{
+			TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
+			const int Corners = Tab == 0 ? IGraphics::CORNER_L :
+				Tab == NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1 ? IGraphics::CORNER_R :
+				IGraphics::CORNER_NONE;
+			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apQmTabNames[Tab], m_QmClientSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f))
+				m_QmClientSettingsTab = Tab;
+		}
+
+		MainView.HSplitTop(Margin, nullptr, &MainView);
+
+		if(!s_QmTabTransitionInitialized)
+		{
+			s_PrevQmTab = m_QmClientSettingsTab;
+			s_QmTabTransitionInitialized = true;
+		}
+		else if(m_QmClientSettingsTab != s_PrevQmTab)
+		{
+			s_QmTabTransitionDirection = m_QmClientSettingsTab > s_PrevQmTab ? 1.0f : -1.0f;
+			TriggerUiSwitchAnimation(QmClientTabSwitchNode, 0.18f);
+			s_PrevQmTab = m_QmClientSettingsTab;
+		}
+
+		CUIRect ContentView = MainView;
+		const float TransitionStrength = ReadUiSwitchAnimation(QmClientTabSwitchNode);
+		TabTransitionActive = TransitionStrength > 0.0f && s_QmTabTransitionDirection != 0.0f;
+		TabContentClip = MainView;
+		TabTransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
+		if(TabTransitionActive)
+		{
+			Ui()->ClipEnable(&TabContentClip);
+			ApplyUiSwitchOffset(ContentView, TransitionStrength, s_QmTabTransitionDirection, false, 0.08f, 24.0f, 120.0f);
+		}
+
+		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_CONFIG)
+		{
+			RenderSettingsTClientConfigs(ContentView);
+			if(TabTransitionActive && TabTransitionAlpha > 0.0f)
+				TabContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TabTransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+			if(TabTransitionActive)
+				Ui()->ClipDisable();
+			return;
+		}
+
+		MainView = ContentView;
+	}
+
 	// ============================================
 	// Liquid Glass UI - 稳定布局系统
 	// ============================================
@@ -4501,8 +4676,9 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 	static CLineInputBuffered<128> s_ModuleSearchInput;
 	const char *pModuleSearch = s_ModuleSearchInput.GetString();
-	const bool HasModuleSearch = pModuleSearch[0] != '\0';
-	ShowSearchModuleControls = true;
+	const bool AllowModuleSearch = m_QmClientSettingsTab != QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
+	const bool HasModuleSearch = AllowModuleSearch && pModuleSearch[0] != '\0';
+	ShowSearchModuleControls = AllowModuleSearch;
 
 	auto ModuleSearchKeywords = [](EQmModuleId Id) -> const char * {
 		switch(Id)
@@ -4533,7 +4709,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 		case EQmModuleId::Voice: return "语音 yuyin voice chat 麦克风 maikefeng mic 静音 jingyin 音量 yinliang 语音激活 vad 阈值 yuzhi 释放延迟 shifang yanchi 服务器 fuwuqi token 叠加层 diejiaceng 按住说话 ptt push to talk 全图收听 quantu 衰减 shuijian 距离 juli 半径 banjing 测试 ceshi 本地 bendi 回环 huihuan 设备 shebei 输入 shuru 左右声道定位 左右 zuoyou 声道 shengdao 立体声 stereo";
 		case EQmModuleId::DynamicIsland: return "灵动岛 lld lingdongdao dynamic island hud 顶部 dingbu 背景 beijing 颜色 yanse 透明度 touming 黑底 heidi 原版 yuanban 默认 moren classic old style";
 		case EQmModuleId::SystemMediaControls: return "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige";
-		case EQmModuleId::Info: return "";
+		case EQmModuleId::Info: return "贡献者 gongxianzhe 社区 shequ qq群 反馈 fankui 更新 gengxin 赞助 zanzhu 支持 zhichi 开发人员 kaifa sponsor supporters team";
 		}
 		return "";
 	};
@@ -4543,6 +4719,295 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 			return true;
 		return str_utf8_find_nocase(pModule->m_pKey, pModuleSearch) != nullptr ||
 			str_utf8_find_nocase(ModuleSearchKeywords(pModule->m_Id), pModuleSearch) != nullptr;
+	};
+
+	auto ModuleMatchesSelectedTab = [&](EQmModuleId Id) -> bool {
+		switch(m_QmClientSettingsTab)
+		{
+		case QMCLIENT_SETTINGS_TAB_VISUAL:
+			return Id == EQmModuleId::ChatBubble ||
+				Id == EQmModuleId::CameraView ||
+				Id == EQmModuleId::Streamer ||
+				Id == EQmModuleId::EntityOverlay ||
+				Id == EQmModuleId::Laser ||
+				Id == EQmModuleId::CollisionHitbox;
+		case QMCLIENT_SETTINGS_TAB_FUNCTION:
+			return Id == EQmModuleId::GoresActor ||
+				Id == EQmModuleId::Gores ||
+				Id == EQmModuleId::FocusMode ||
+				Id == EQmModuleId::KeyBinds ||
+				Id == EQmModuleId::MiniFeatures ||
+				Id == EQmModuleId::FriendNotify ||
+				Id == EQmModuleId::BlockWords ||
+				Id == EQmModuleId::Translate ||
+				Id == EQmModuleId::QiaFen ||
+				Id == EQmModuleId::PieMenu ||
+				Id == EQmModuleId::FavoriteMaps ||
+				Id == EQmModuleId::HJAssist;
+		case QMCLIENT_SETTINGS_TAB_HUD:
+			return Id == EQmModuleId::DummyMiniView ||
+				Id == EQmModuleId::Coords ||
+				Id == EQmModuleId::PlayerStats ||
+				Id == EQmModuleId::SpeedrunTimer ||
+				Id == EQmModuleId::InputOverlay ||
+				Id == EQmModuleId::Voice ||
+				Id == EQmModuleId::DynamicIsland ||
+				Id == EQmModuleId::SystemMediaControls;
+		case QMCLIENT_SETTINGS_TAB_CONTRIBUTORS:
+			return false;
+		default:
+			return false;
+		}
+	};
+
+	auto RenderContributorsModule = [&](const SQmModuleEntry *pModule) {
+		switch(pModule->m_Id)
+		{
+		case EQmModuleId::Info:
+		{
+			// ========== 模块 0: QmClient 信息 (横跨整个宽度) ==========
+			static float s_QQCopiedTime = 0.0f;
+			static bool s_QQCopied = false;
+			MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
+			const float CardStartY = MainView.y;
+			CUIRect FullWidthCard = MainView;
+			CUIRect CardInner = MainView;
+			CardInner.VSplitLeft(LG_CardPadding, nullptr, &CardInner);
+			CardInner.VSplitRight(LG_CardPadding, &CardInner, nullptr);
+			CardInner.HSplitTop(LG_CardPadding, nullptr, &CardInner);
+			CUIRect LeftPart = CardInner;
+			CUIRect RightPart = CardInner;
+			if(!CompactLayout)
+			{
+				const float ColumnSpacing = LG_CardSpacing * 2.0f;
+				const float MinRightWidth = 360.0f * UiScale;
+				const float PreferredLeftWidth = CardInner.w * 0.30f;
+				const float MaxLeftWidth = maximum(220.0f * UiScale, CardInner.w - ColumnSpacing - MinRightWidth);
+				const float LeftWidth = std::clamp(PreferredLeftWidth, 220.0f * UiScale, MaxLeftWidth);
+				CardInner.VSplitLeft(LeftWidth, &LeftPart, &RightPart);
+				RightPart.VSplitLeft(ColumnSpacing, nullptr, &RightPart);
+			}
+			const float LeftStartY = LeftPart.y;
+			CUIRect LeftContent = LeftPart;
+			DoModuleHeadline(LeftContent, -1, Localize("QmClient community"), Localize("Official community links"));
+			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
+			{
+				static int s_QQGroupButtonId;
+				if(Ui()->MouseInside(&Row))
+				{
+					Ui()->SetHotItem(&s_QQGroupButtonId);
+					if(Ui()->MouseButtonClicked(0))
+					{
+						Input()->SetClipboardText("1076765929");
+						s_QQCopied = true;
+						s_QQCopiedTime = Client()->LocalTime();
+					}
+				}
+				if(s_QQCopied && Client()->LocalTime() - s_QQCopiedTime > 1.5f)
+					s_QQCopied = false;
+				if(s_QQCopied)
+				{
+					TextRender()->TextColor(0.0f, 1.0f, 0.0f, 1.0f);
+					Ui()->DoLabel(&Row, Localize("Copied"), LG_BodySize, TEXTALIGN_ML);
+				}
+				else
+				{
+					TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f);
+					Ui()->DoLabel(&Row, Localize("QQ Group: 1076765929 (click to copy)"), LG_BodySize, TEXTALIGN_ML);
+				}
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				if(Ui()->HotItem() == &s_QQGroupButtonId)
+					GameClient()->m_Tooltips.DoToolTip(&s_QQGroupButtonId, &Row, Localize("Click to copy the QQ group number"));
+			}
+			LeftContent.HSplitTop(LG_LineSpacing * 2, nullptr, &LeftContent);
+			DoModuleHeadline(LeftContent, -3, Localize("Support"), Localize("Thanks for supporting QmClient"));
+			if(const CMenuImage *pSponsorImage = FindMenuImage("sponsor"))
+			{
+				const float SponsorImageHeight = std::clamp(LeftContent.w * 0.30f, LG_LineHeight * 2.2f, LG_LineHeight * 4.2f);
+				LeftContent.HSplitTop(SponsorImageHeight, &Row, &LeftContent);
+				CUIRect SponsorImageRect = Row;
+				SponsorImageRect.Margin(LG_LineSpacing * 0.4f, &SponsorImageRect);
+				RenderMenuImage(pSponsorImage, SponsorImageRect, 1.0f);
+				LeftContent.HSplitTop(LG_LineSpacing, nullptr, &LeftContent);
+			}
+			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
+			const float SponsorButtonWidth = LeftContent.w;
+			{
+				CUIRect SponsorButton;
+				static CButtonContainer s_SponsorButton;
+				Row.VSplitLeft(SponsorButtonWidth, &SponsorButton, nullptr);
+				const char *pSponsorButtonText = s_ShowSponsorQrCode ? Localize("Hide support QR code") : Localize("View support QR code");
+				if(DoButton_Menu(&s_SponsorButton, pSponsorButtonText, 0, &SponsorButton))
+					s_ShowSponsorQrCode = !s_ShowSponsorQrCode;
+			}
+			if(s_ShowSponsorQrCode)
+			{
+				LeftContent.HSplitTop(LG_LineSpacing * 0.8f, nullptr, &LeftContent);
+				if(EnsureSponsorQrTexture())
+				{
+					const float QrSide = std::clamp(LeftContent.w, LG_LineHeight * 8.0f, LG_LineHeight * 12.0f);
+					LeftContent.HSplitTop(QrSide, &Row, &LeftContent);
+
+					CUIRect QrRect = Row;
+					QrRect.Margin(LG_LineSpacing * 0.35f, &QrRect);
+					QrRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
+					QrRect.Margin(LG_LineSpacing * 0.5f, &QrRect);
+
+					if(QrRect.w > QrRect.h)
+					{
+						const float Pad = (QrRect.w - QrRect.h) * 0.5f;
+						QrRect.VSplitLeft(Pad, nullptr, &QrRect);
+						QrRect.VSplitRight(Pad, &QrRect, nullptr);
+					}
+					else if(QrRect.h > QrRect.w)
+					{
+						const float Pad = (QrRect.h - QrRect.w) * 0.5f;
+						QrRect.HSplitTop(Pad, nullptr, &QrRect);
+						QrRect.HSplitBottom(Pad, &QrRect, nullptr);
+					}
+					RenderTexture(s_SponsorQrTexture, QrRect, 1.0f);
+				}
+				else
+				{
+					LeftContent.HSplitTop(LG_LineHeight * 1.4f, &Row, &LeftContent);
+					TextRender()->TextColor(ColorRGBA(1.0f, 0.75f, 0.3f, 1.0f));
+					if(s_SponsorQrDecodeFailed)
+						Ui()->DoLabel(&Row, Localize("Failed to load the support QR code. Check the Base64 content"), LG_BodySize * 0.92f, TEXTALIGN_ML);
+					else
+						Ui()->DoLabel(&Row, Localize("Support QR code Base64 is not configured"), LG_BodySize * 0.92f, TEXTALIGN_ML);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+				}
+			}
+			LeftContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &LeftContent);
+			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
+			{
+				CUIRect RecentUpdateButton;
+				static CButtonContainer s_RecentUpdateButton;
+				Row.VSplitLeft(SponsorButtonWidth, &RecentUpdateButton, nullptr);
+				if(DoButton_Menu(&s_RecentUpdateButton, Localize("View recent updates"), 0, &RecentUpdateButton))
+				{
+					Client()->ViewLink("https://publish.obsidian.md/qmclient");
+				}
+			}
+			LeftContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &LeftContent);
+			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
+			{
+				CUIRect FeedbackButton;
+				static CButtonContainer s_FeedbackButton;
+				Row.VSplitLeft(SponsorButtonWidth, &FeedbackButton, nullptr);
+				if(DoButton_Menu(&s_FeedbackButton, Localize("Send feedback"), 0, &FeedbackButton))
+				{
+					Client()->ViewLink("https://qmclient.icu/feedback.html");
+				}
+			}
+
+			const float LeftUsedHeight = LeftContent.y - LeftStartY;
+			if(CompactLayout)
+			{
+				RightPart.y = LeftStartY + LeftUsedHeight + LG_CardSpacing;
+				RightPart.h = (CardInner.y + CardInner.h) - RightPart.y;
+			}
+			const float RightStartY = RightPart.y;
+			const float TeeSize = std::clamp(60.0f * UiScale, 36.0f, 60.0f);
+			const float RightContentShift = LG_CardPadding * 0.40f;
+			CUIRect TeeRect, TextRect;
+			const float TeeTextOffset = TeeSize + LG_CardPadding * 0.65f;
+			RightPart.VSplitLeft(TeeTextOffset, &TeeRect, &TextRect);
+			vec2 TeePos = vec2(TeeRect.x + TeeSize * 0.5f - RightContentShift, RightStartY + TeeSize * 0.5f + LG_CardPadding * 0.5f);
+			RenderDevSkin(TeePos, TeeSize, "rabbit_new2", "santa_tuzi", false, 0, 0, 0, false, true);
+			CUIRect RightContent = TextRect;
+			RightContent.x -= RightContentShift;
+			RightContent.w += RightContentShift;
+			DoModuleHeadline(RightContent, -2, Localize("QmClient team"), Localize("Developers and supporters"));
+			RightContent.HSplitTop(LG_LineHeight, &Row, &RightContent);
+			TextRender()->TextColor(GetRainbowColor(-6));
+			Ui()->DoLabel(&Row, "栖梦(璇梦),夏日,DYL", LG_BodySize + 2.0f, TEXTALIGN_ML);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			constexpr float SponsorFontShrink = 4.0f;
+			constexpr float MinSponsorFontSize = 8.0f;
+			RightContent.HSplitTop(LG_LineSpacing * 1.75f, nullptr, &RightContent);
+			RightContent.HSplitTop(LG_LineHeight * 0.92f, &Row, &RightContent);
+			TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.82f));
+			Ui()->DoLabel(&Row, Localize("Supporters:"), maximum(LG_BodySize * 0.95f - SponsorFontShrink, MinSponsorFontSize), TEXTALIGN_ML);
+			RightContent.HSplitTop(LG_LineSpacing * 0.35f, nullptr, &RightContent);
+			CUIRect Divider;
+			RightContent.HSplitTop(1.0f, &Divider, &RightContent);
+			Divider.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.16f), IGraphics::CORNER_NONE, 0.0f);
+			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
+			TextRender()->TextColor(ColorRGBA(0.95f, 0.8f, 0.2f, 1.0f));
+			{
+				static const char *const s_apSponsors[] = {
+					"喵不一", "久桃", "芽芽", "碳烤綿芽", "骨头", "陌浅羽", "树羽小朋友", "望舒", "松子", "平凡..", "cixin", "洗点", "秀色", "朱朱", "Twen", "大恐龙", ":luv:", "小左", "Blue°F", "怯修", "yezeen", "鹑", "枫香°", "没问题啊", "·蓝蓝蓝蓝", "临渊捕鱼", "?hook?", "放肆zero", "Q币", "洛天依", "spider", "贝塔塔塔", "见月", "咩子的银耳", "Cancer", "少女`", "长亭寂寞独自愁", "fantuan", "无言鱼", "胖人老许", "夏日", "张宁我儿", "拌饭", "shengyan", "修勾在修沟", "taffy", "杀意没爱意", "DYL", "小信", "哆啦梦", "菜菜羊", "吃了吗chilem", "你就是我的", "xiaopang", "星星🌙", "軽い猫", "oxyzo1", "猫玖", "信息检索"};
+				const float SponsorFontSize = maximum(LG_BodySize * 1.1f - SponsorFontShrink, MinSponsorFontSize);
+				const float MaxLineWidth = RightContent.w;
+				static std::vector<std::string> s_SponsorLines;
+				static float s_LastSponsorFontSize = -1.0f;
+				static float s_LastSponsorMaxLineWidth = -1.0f;
+				if(s_SponsorLines.empty() ||
+					std::abs(s_LastSponsorFontSize - SponsorFontSize) > 0.01f ||
+					std::abs(s_LastSponsorMaxLineWidth - MaxLineWidth) > 0.5f)
+				{
+					s_LastSponsorFontSize = SponsorFontSize;
+					s_LastSponsorMaxLineWidth = MaxLineWidth;
+					const char *pSeparator = ",";
+					const float SeparatorWidth = TextRender()->TextWidth(SponsorFontSize, pSeparator);
+
+					s_SponsorLines.clear();
+					s_SponsorLines.emplace_back();
+					float LineWidth = 0.0f;
+					for(const char *pName : s_apSponsors)
+					{
+						const float NameWidth = TextRender()->TextWidth(SponsorFontSize, pName);
+						if(s_SponsorLines.back().empty())
+						{
+							s_SponsorLines.back() = pName;
+							LineWidth = NameWidth;
+							continue;
+						}
+
+						const float NextWidth = LineWidth + SeparatorWidth + NameWidth;
+						if(NextWidth > MaxLineWidth)
+						{
+							s_SponsorLines.emplace_back(pName);
+							LineWidth = NameWidth;
+						}
+						else
+						{
+							s_SponsorLines.back().append(pSeparator);
+							s_SponsorLines.back().append(pName);
+							LineWidth = NextWidth;
+						}
+					}
+				}
+
+				for(const auto &Line : s_SponsorLines)
+				{
+					RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
+					Ui()->DoLabel(&Row, Line.c_str(), SponsorFontSize, TEXTALIGN_ML);
+				}
+			}
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
+			RightContent.HSplitTop(LG_LineHeight * 0.9f, &Row, &RightContent);
+			Ui()->DoLabel(&Row, Localize("感谢你们一直以来的陪伴与坚信让我能够有勇气走下去,谢谢"), LG_BodySize * 0.93f, TEXTALIGN_ML);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+			const float RightUsedHeight = RightContent.y - RightStartY;
+			const float ContentHeight = CompactLayout ? (LeftUsedHeight + LG_CardSpacing + RightUsedHeight) : maximum(LeftUsedHeight, RightUsedHeight);
+			const float InfoCardHeight = ContentHeight + LG_CardPadding * 2;
+
+			FullWidthCard.y = CardStartY;
+			FullWidthCard.h = InfoCardHeight;
+			RegisterModuleCard(pModule, EQmModuleColumn::Full, FullWidthCard);
+			HandleModuleDragState(pModule, FullWidthCard);
+			MainView.HSplitTop(InfoCardHeight, nullptr, &MainView);
+			MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
+		}
+		break;
+		default:
+			break;
+		}
 	};
 
 	struct SQmModuleHeadlineInfo
@@ -4628,17 +5093,24 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 
 	std::vector<const SQmModuleEntry *> VisibleLeftModules;
 	std::vector<const SQmModuleEntry *> VisibleRightModules;
+	std::vector<const SQmModuleEntry *> VisibleFullModules;
 	VisibleLeftModules.reserve(LeftModules.size());
 	VisibleRightModules.reserve(RightModules.size());
+	VisibleFullModules.reserve(FullModules.size());
 	for(const SQmModuleEntry *pModule : LeftModules)
 	{
-		if(ModuleMatchesSearch(pModule))
+		if(ModuleMatchesSelectedTab(pModule->m_Id) && ModuleMatchesSearch(pModule))
 			VisibleLeftModules.push_back(pModule);
 	}
 	for(const SQmModuleEntry *pModule : RightModules)
 	{
-		if(ModuleMatchesSearch(pModule))
+		if(ModuleMatchesSelectedTab(pModule->m_Id) && ModuleMatchesSearch(pModule))
 			VisibleRightModules.push_back(pModule);
+	}
+	for(const SQmModuleEntry *pModule : FullModules)
+	{
+		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+			VisibleFullModules.push_back(pModule);
 	}
 	std::vector<const SQmModuleEntry *> SearchVisibleModules;
 	std::vector<const SQmModuleEntry *> SearchLeftModules;
@@ -4681,338 +5153,12 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 			}
 		}
 	}
+	const int VisibleFullModuleCount = static_cast<int>(VisibleFullModules.size());
 	const int VisibleModuleCount = HasModuleSearch ?
-		static_cast<int>(SearchVisibleModules.size()) :
-		static_cast<int>(VisibleLeftModules.size() + VisibleRightModules.size());
+		static_cast<int>(SearchVisibleModules.size()) + VisibleFullModuleCount :
+		static_cast<int>(VisibleLeftModules.size() + VisibleRightModules.size()) + VisibleFullModuleCount;
 
-	for(const SQmModuleEntry *pModule : FullModules)
-	{
-		switch(pModule->m_Id)
-		{
-		case EQmModuleId::Info:
-		{
-			// ========== 模块 0: QmClient 信息 (横跨整个宽度) ==========
-			static float s_QQCopiedTime = 0.0f;  
-			static bool s_QQCopied = false;       
-			MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
-			const float CardStartY = MainView.y;
-			CUIRect FullWidthCard = MainView;
-			CUIRect CardInner = MainView;
-			CardInner.VSplitLeft(LG_CardPadding, nullptr, &CardInner);
-			CardInner.VSplitRight(LG_CardPadding, &CardInner, nullptr);
-			CardInner.HSplitTop(LG_CardPadding, nullptr, &CardInner);
-			CUIRect LeftPart = CardInner;
-			CUIRect RightPart = CardInner;
-			if(!CompactLayout)
-			{
-				const float ColumnSpacing = LG_CardSpacing * 2.0f;
-				const float MinRightWidth = 360.0f * UiScale;
-				const float PreferredLeftWidth = CardInner.w * 0.30f;
-				const float MaxLeftWidth = maximum(220.0f * UiScale, CardInner.w - ColumnSpacing - MinRightWidth);
-				const float LeftWidth = std::clamp(PreferredLeftWidth, 220.0f * UiScale, MaxLeftWidth);
-				CardInner.VSplitLeft(LeftWidth, &LeftPart, &RightPart);
-				RightPart.VSplitLeft(ColumnSpacing, nullptr, &RightPart);
-			}
-			const float LeftStartY = LeftPart.y;
-			CUIRect LeftContent = LeftPart;
-			DoModuleHeadline(LeftContent, -1, Localize("QmClient community"), Localize("Official community links"));
-			// QQ群复制
-			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
-			{
-				static int s_QQGroupButtonId;
-				// 检测点击
-				if(Ui()->MouseInside(&Row))
-				{
-					Ui()->SetHotItem(&s_QQGroupButtonId);
-					if(Ui()->MouseButtonClicked(0))
-					{
-						Input()->SetClipboardText("1076765929");
-						s_QQCopied = true;
-						s_QQCopiedTime = Client()->LocalTime();
-					}
-				}
-				if(s_QQCopied && Client()->LocalTime() - s_QQCopiedTime > 1.5f)
-					s_QQCopied = false;
-				if(s_QQCopied)
-				{
-					TextRender()->TextColor(0.0f, 1.0f, 0.0f, 1.0f);
-					Ui()->DoLabel(&Row, Localize("Copied"), LG_BodySize, TEXTALIGN_ML);
-				}
-				else
-				{
-					TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f); 
-					Ui()->DoLabel(&Row, Localize("QQ Group: 1076765929 (click to copy)"), LG_BodySize, TEXTALIGN_ML);
-				}
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
-				if(Ui()->HotItem() == &s_QQGroupButtonId)
-					GameClient()->m_Tooltips.DoToolTip(&s_QQGroupButtonId, &Row, Localize("Click to copy the QQ group number"));
-			}
-			LeftContent.HSplitTop(LG_LineSpacing * 2, nullptr, &LeftContent);
-			DoModuleHeadline(LeftContent, -3, Localize("Support"), Localize("Thanks for supporting QmClient"));
-			if(const CMenuImage *pSponsorImage = FindMenuImage("sponsor"))
-			{
-				const float SponsorImageHeight = std::clamp(LeftContent.w * 0.30f, LG_LineHeight * 2.2f, LG_LineHeight * 4.2f);
-				LeftContent.HSplitTop(SponsorImageHeight, &Row, &LeftContent);
-				CUIRect SponsorImageRect = Row;
-				SponsorImageRect.Margin(LG_LineSpacing * 0.4f, &SponsorImageRect);
-				RenderMenuImage(pSponsorImage, SponsorImageRect, 1.0f);
-				LeftContent.HSplitTop(LG_LineSpacing, nullptr, &LeftContent);
-			}
-			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
-			const float SponsorButtonWidth = LeftContent.w;
-			{
-				CUIRect SponsorButton;
-				static CButtonContainer s_SponsorButton;
-				Row.VSplitLeft(SponsorButtonWidth, &SponsorButton, nullptr);
-				const char *pSponsorButtonText = s_ShowSponsorQrCode ? Localize("Hide support QR code") : Localize("View support QR code");
-				if(DoButton_Menu(&s_SponsorButton, pSponsorButtonText, 0, &SponsorButton))
-					s_ShowSponsorQrCode = !s_ShowSponsorQrCode;
-			}
-			if(s_ShowSponsorQrCode)
-			{
-				LeftContent.HSplitTop(LG_LineSpacing * 0.8f, nullptr, &LeftContent);
-				if(EnsureSponsorQrTexture())
-				{
-					const float QrSide = std::clamp(LeftContent.w, LG_LineHeight * 8.0f, LG_LineHeight * 12.0f);
-					LeftContent.HSplitTop(QrSide, &Row, &LeftContent);
-
-					CUIRect QrRect = Row;
-					QrRect.Margin(LG_LineSpacing * 0.35f, &QrRect);
-					QrRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
-					QrRect.Margin(LG_LineSpacing * 0.5f, &QrRect);
-
-					// 强制按正方形区域显示二维码，避免被拉伸。
-					if(QrRect.w > QrRect.h)
-					{
-						const float Pad = (QrRect.w - QrRect.h) * 0.5f;
-						QrRect.VSplitLeft(Pad, nullptr, &QrRect);
-						QrRect.VSplitRight(Pad, &QrRect, nullptr);
-					}
-					else if(QrRect.h > QrRect.w)
-					{
-						const float Pad = (QrRect.h - QrRect.w) * 0.5f;
-						QrRect.HSplitTop(Pad, nullptr, &QrRect);
-						QrRect.HSplitBottom(Pad, &QrRect, nullptr);
-					}
-					RenderTexture(s_SponsorQrTexture, QrRect, 1.0f);
-				}
-				else
-				{
-					LeftContent.HSplitTop(LG_LineHeight * 1.4f, &Row, &LeftContent);
-					TextRender()->TextColor(ColorRGBA(1.0f, 0.75f, 0.3f, 1.0f));
-					if(s_SponsorQrDecodeFailed)
-						Ui()->DoLabel(&Row, Localize("Failed to load the support QR code. Check the Base64 content"), LG_BodySize * 0.92f, TEXTALIGN_ML);
-					else
-						Ui()->DoLabel(&Row, Localize("Support QR code Base64 is not configured"), LG_BodySize * 0.92f, TEXTALIGN_ML);
-					TextRender()->TextColor(TextRender()->DefaultTextColor());
-				}
-			}
-			LeftContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &LeftContent);
-			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
-			{
-				CUIRect RecentUpdateButton;
-				static CButtonContainer s_RecentUpdateButton;
-				Row.VSplitLeft(SponsorButtonWidth, &RecentUpdateButton, nullptr);
-				if(DoButton_Menu(&s_RecentUpdateButton, Localize("View recent updates"), 0, &RecentUpdateButton))
-				{
-					Client()->ViewLink("https://publish.obsidian.md/qmclient");
-				}
-			}
-			LeftContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &LeftContent);
-			LeftContent.HSplitTop(LG_LineHeight, &Row, &LeftContent);
-			{
-				CUIRect FeedbackButton;
-				static CButtonContainer s_FeedbackButton;
-				Row.VSplitLeft(SponsorButtonWidth, &FeedbackButton, nullptr);
-				if(DoButton_Menu(&s_FeedbackButton, Localize("Send feedback"), 0, &FeedbackButton))
-				{
-					Client()->ViewLink("https://qmclient.icu/feedback.html");
-				}
-			}
-
-			const float LeftUsedHeight = LeftContent.y - LeftStartY;
-			if(CompactLayout)
-			{
-				RightPart.y = LeftStartY + LeftUsedHeight + LG_CardSpacing;
-				RightPart.h = (CardInner.y + CardInner.h) - RightPart.y;
-			}
-			//右侧
-			const float RightStartY = RightPart.y;
-			const float TeeSize = std::clamp(60.0f * UiScale, 36.0f, 60.0f);
-			const float RightContentShift = LG_CardPadding * 0.40f;
-			CUIRect TeeRect, TextRect;
-				const float TeeTextOffset = TeeSize + LG_CardPadding * 0.65f;
-				RightPart.VSplitLeft(TeeTextOffset, &TeeRect, &TextRect);
-			vec2 TeePos = vec2(TeeRect.x + TeeSize * 0.5f - RightContentShift, RightStartY + TeeSize * 0.5f + LG_CardPadding * 0.5f);
-			RenderDevSkin(
-				TeePos,               // 位置
-				TeeSize,              // 大小
-				"rabbit_new2",         // 皮肤名
-				"santa_tuzi",           // 备用皮肤
-				false,                 // 自定义颜色
-				0, 0, 0,              // 脚部颜色，身体颜色，表情
-				false,                 // 彩虹效果
-				true                  // Cute
-			);
-			CUIRect RightContent = TextRect;
-			RightContent.x -= RightContentShift;
-			RightContent.w += RightContentShift;
-			DoModuleHeadline(RightContent, -2, Localize("QmClient team"), Localize("Developers and supporters"));
-			//我名字
-			RightContent.HSplitTop(LG_LineHeight, &Row, &RightContent);
-			TextRender()->TextColor(GetRainbowColor(-6));
-			Ui()->DoLabel(&Row, "栖梦(璇梦),夏日,DYL", LG_BodySize + 2.0f, TEXTALIGN_ML);
-			TextRender()->TextColor(TextRender()->DefaultTextColor());
-			// 感谢名单
-			constexpr float SponsorFontShrink = 4.0f;
-			constexpr float MinSponsorFontSize = 8.0f;
-			RightContent.HSplitTop(LG_LineSpacing * 1.75f, nullptr, &RightContent);
-			RightContent.HSplitTop(LG_LineHeight * 0.92f, &Row, &RightContent);
-			TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.82f));
-			Ui()->DoLabel(&Row, Localize("Supporters:"), maximum(LG_BodySize * 0.95f - SponsorFontShrink, MinSponsorFontSize), TEXTALIGN_ML);
-			RightContent.HSplitTop(LG_LineSpacing * 0.35f, nullptr, &RightContent);
-			CUIRect Divider;
-			RightContent.HSplitTop(1.0f, &Divider, &RightContent);
-			Divider.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.16f), IGraphics::CORNER_NONE, 0.0f);
-			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
-			//TextRender()->TextColor(GetRainbowColor(-8));//彩虹循环效果
-			TextRender()->TextColor(ColorRGBA(0.95f, 0.8f, 0.2f, 1.0f));
-			{
-				static const char *const s_apSponsors[] = {
-					"喵不一",
-					"久桃",
-					"芽芽",
-					"碳烤綿芽",
-					"骨头",
-					"陌浅羽",
-					"树羽小朋友",
-					"望舒",
-					"松子",
-					"平凡..",
-					"cixin",
-					"洗点",
-					"秀色",
-					"朱朱",
-					"Twen",
-					"大恐龙",
-					":luv:",
-					"小左",
-					"Blue°F",
-					"怯修",
-					"yezeen",
-					"鹑",
-					"枫香°",
-					"没问题啊",
-					"·蓝蓝蓝蓝",
-					"临渊捕鱼",
-					"?hook?",
-					"放肆zero",
-					"Q币",
-					"洛天依",
-					"spider",
-					"贝塔塔塔",
-					"见月",
-					"咩子的银耳",
-					"Cancer",
-					"少女`",
-					"长亭寂寞独自愁",
-					"fantuan",
-					"无言鱼",
-					"胖人老许",
-					"夏日",
-					"张宁我儿",
-					"拌饭",
-					"shengyan",
-					"修勾在修沟",
-					"taffy",
-					"杀意没爱意",
-					"DYL",
-					"小信",
-					"哆啦梦",
-					"菜菜羊",
-					"吃了吗chilem",
-					"你就是我的",
-					"xiaopang",
-					"星星🌙",
-					"軽い猫",
-					"oxyzo1",
-					"猫玖",
-					"信息检索"
-					};
-				const float SponsorFontSize = maximum(LG_BodySize * 1.1f - SponsorFontShrink, MinSponsorFontSize);
-				const float MaxLineWidth = RightContent.w;
-				static std::vector<std::string> s_SponsorLines;
-				static float s_LastSponsorFontSize = -1.0f;
-				static float s_LastSponsorMaxLineWidth = -1.0f;
-				if(s_SponsorLines.empty() ||
-					std::abs(s_LastSponsorFontSize - SponsorFontSize) > 0.01f ||
-					std::abs(s_LastSponsorMaxLineWidth - MaxLineWidth) > 0.5f)
-				{
-					s_LastSponsorFontSize = SponsorFontSize;
-					s_LastSponsorMaxLineWidth = MaxLineWidth;
-					const char *pSeparator = ",";
-					const float SeparatorWidth = TextRender()->TextWidth(SponsorFontSize, pSeparator);
-
-					s_SponsorLines.clear();
-					s_SponsorLines.emplace_back();
-					float LineWidth = 0.0f;
-					for(const char *pName : s_apSponsors)
-					{
-						const float NameWidth = TextRender()->TextWidth(SponsorFontSize, pName);
-						if(s_SponsorLines.back().empty())
-						{
-							s_SponsorLines.back() = pName;
-							LineWidth = NameWidth;
-							continue;
-						}
-
-						const float NextWidth = LineWidth + SeparatorWidth + NameWidth;
-						if(NextWidth > MaxLineWidth)
-						{
-							s_SponsorLines.emplace_back(pName);
-							LineWidth = NameWidth;
-						}
-						else
-						{
-							s_SponsorLines.back().append(pSeparator);
-							s_SponsorLines.back().append(pName);
-							LineWidth = NextWidth;
-						}
-					}
-				}
-
-				for(const auto &Line : s_SponsorLines)
-				{
-					RightContent.HSplitTop(LG_LineHeight * 0.96f, &Row, &RightContent);
-					Ui()->DoLabel(&Row, Line.c_str(), SponsorFontSize, TEXTALIGN_ML);
-				}
-			}
-			TextRender()->TextColor(TextRender()->DefaultTextColor());
-
-			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
-			RightContent.HSplitTop(LG_LineHeight * 0.9f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, Localize("感谢你们一直以来的陪伴与坚信让我能够有勇气走下去,谢谢"), LG_BodySize * 0.93f, TEXTALIGN_ML);
-			TextRender()->TextColor(TextRender()->DefaultTextColor());
-
-			const float RightUsedHeight = RightContent.y - RightStartY;
-			const float ContentHeight = CompactLayout ? (LeftUsedHeight + LG_CardSpacing + RightUsedHeight) : maximum(LeftUsedHeight, RightUsedHeight);
-			const float InfoCardHeight = ContentHeight + LG_CardPadding * 2;
-
-			FullWidthCard.y = CardStartY;
-			FullWidthCard.h = InfoCardHeight;
-			s_GlassCards.push_back(FullWidthCard);
-			RegisterModuleCard(pModule, EQmModuleColumn::Full, FullWidthCard);
-			HandleModuleDragState(pModule, FullWidthCard);
-			MainView.HSplitTop(InfoCardHeight, nullptr, &MainView);
-			MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
-
-		}
-		break;
-		default:
-			break;
-		}
-	}
-
+	if(ShowSearchModuleControls)
 	{
 		const float SearchCardStartY = MainView.y;
 		CUIRect SearchCard = MainView;
@@ -5043,6 +5189,9 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 		MainView.HSplitTop(SearchCardHeight, nullptr, &MainView);
 		MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
 	}
+
+	for(const SQmModuleEntry *pModule : VisibleFullModules)
+		RenderContributorsModule(pModule);
 
 	auto RenderColumnModules = [&](const std::vector<const SQmModuleEntry *> &Modules, EQmModuleColumn ColumnId) {
 		if(Modules.empty())
@@ -7546,6 +7695,10 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView)
 	ScrollRegion.h = 0.0f;
 	s_ScrollRegion.AddRect(ScrollRegion);
 	s_ScrollRegion.End();
+	if(TabTransitionActive && TabTransitionAlpha > 0.0f)
+		TabContentClip.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, TabTransitionAlpha), IGraphics::CORNER_NONE, 0.0f);
+	if(TabTransitionActive)
+		Ui()->ClipDisable();
 }
 
 void CMenus::PrewarmTClientAndQmClientPages()
