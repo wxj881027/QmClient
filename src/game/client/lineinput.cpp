@@ -516,7 +516,7 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 		CTextCursor CaretCursor;
 		CaretCursor.SetPosition(CursorPos);
 		CaretCursor.m_FontSize = FontSize;
-		CaretCursor.m_Flags = 0;
+		// Keep default TEXTFLAG_RENDER to ensure cursor is rendered
 		CaretCursor.m_LineWidth = LineWidth;
 		CaretCursor.m_LineSpacing = LineSpacing;
 		CaretCursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_SET;

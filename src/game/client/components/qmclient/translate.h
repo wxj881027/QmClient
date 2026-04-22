@@ -20,6 +20,8 @@ public:
 	virtual std::optional<bool> Update(CTranslateResponse &Out) = 0;
 };
 
+#include "translate_parse.h"
+
 class CTranslate : public CComponent
 {
 	class CTranslateJob

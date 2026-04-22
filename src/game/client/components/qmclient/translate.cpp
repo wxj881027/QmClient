@@ -1,4 +1,5 @@
 #include "translate.h"
+#include "translate_parse.h"
 
 #include <base/hash.h>
 #include <base/log.h>
@@ -31,12 +32,35 @@ constexpr const char *TENCENTCLOUD_SECRET_ID_FALLBACK = "";
 constexpr const char *TENCENTCLOUD_SECRET_KEY_FALLBACK = "";
 
 constexpr const char *DEFAULT_TRANSLATE_PROMPT =
-    "You are a professional translator for the DDNet (DDraceNetwork) game. "
-    "Translate the following text to %s. "
-    "Game terms: hook=钩子, freeze=冻结, team=队伍, race=竞速, checkpoint=检查点, "
-    "unfreeze=解冻, deep freeze=深冻, tele=传送, swap=交换, dummy=分身, "
-    "hammer=锤子, shotgun=霰弹枪, grenade=榴弹, laser=激光, ninja=忍者. "
-    "Only output the translation result, no explanations.";
+    "You are a translation assistant. Your task is straightforward:\n\n"
+    "1. Translate the user's message into %s\n"
+    "2. Keep game terminology consistent (see glossary below)\n"
+    "3. Output ONLY the translated text, nothing else\n\n"
+    "Game terminology glossary (DDNet/DDraceNetwork):\n"
+    "- hook = 钩子\n"
+    "- freeze = 冻结\n"
+    "- team = 队伍/组队\n"
+    "- race = 竞速/比赛\n"
+    "- checkpoint = 检查点/CP\n"
+    "- unfreeze = 解冻\n"
+    "- deep freeze = 深冻\n"
+    "- tele = 传送\n"
+    "- swap = 交换\n"
+    "- dummy = 分身\n"
+    "- hammer = 锤子\n"
+    "- shotgun = 霰弹枪\n"
+    "- grenade = 榴弹/手雷\n"
+    "- laser = 激光枪\n"
+    "- ninja = 忍者\n"
+    "- kill = 自杀/击杀\n"
+    "- spec/spectate = 旁观\n"
+    "- tee = 角色/玩家\n\n"
+    "Rules:\n"
+    "- Do NOT add any explanation, notes, or commentary\n"
+    "- Do NOT say 'I don't know' or 'I haven't learned this'\n"
+    "- If unsure, provide the best possible translation based on context\n"
+    "- Preserve the original meaning and tone\n"
+    "- Keep it concise and natural";
 
 enum class ELlmProvider
 {
@@ -1002,7 +1026,87 @@ private:
 protected:
 	bool ParseResponse(CTranslateResponse &Out) override
 	{
+		// 检查 HTTP 请求状态
+		EHttpState State = m_pHttpRequest->State();
+		if(State == EHttpState::ERROR)
+		{
+			str_copy(Out.m_Text, "HTTP request failed (network error, timeout, or connection refused)");
+			return false;
+		}
+		if(State == EHttpState::ABORTED)
+		{
+			str_copy(Out.m_Text, "HTTP request was aborted");
+			return false;
+		}
+
+		int StatusCode = m_pHttpRequest->StatusCode();
+		if(StatusCode >= 400)
+		{
+			str_format(Out.m_Text, sizeof(Out.m_Text), "HTTP error %d", StatusCode);
+			// 尝试获取响应体中的错误信息
+			json_value *pObj = m_pHttpRequest->ResultJson();
+			if(pObj)
+			{
+				const json_value *pError = json_object_get(pObj, "error");
+				if(pError != &json_value_none && pError->type == json_object)
+				{
+					const json_value *pMessage = json_object_get(pError, "message");
+					if(pMessage != &json_value_none && pMessage->type == json_string)
+					{
+						str_format(Out.m_Text, sizeof(Out.m_Text), "HTTP %d: %.200s", StatusCode, pMessage->u.string.ptr);
+					}
+				}
+				else
+				{
+					// 智谱AI格式: code/msg
+					const json_value *pMsg = json_object_get(pObj, "msg");
+					if(pMsg != &json_value_none && pMsg->type == json_string)
+					{
+						str_format(Out.m_Text, sizeof(Out.m_Text), "HTTP %d: %.200s", StatusCode, pMsg->u.string.ptr);
+					}
+				}
+				json_value_free(pObj);
+			}
+			return false;
+		}
+
 		json_value *pObj = m_pHttpRequest->ResultJson();
+
+		// 如果 JSON 解析失败，尝试获取原始响应内容
+		if(!pObj)
+		{
+			// 获取原始响应内容
+			unsigned char *pResult = nullptr;
+			size_t ResultLength = 0;
+			m_pHttpRequest->Result(&pResult, &ResultLength);
+
+			if(pResult && ResultLength > 0)
+			{
+				// 截断并格式化原始响应内容用于错误显示
+				char aRawResponse[256];
+				size_t CopyLen = std::min(ResultLength, sizeof(aRawResponse) - 1);
+				mem_copy(aRawResponse, pResult, CopyLen);
+				aRawResponse[CopyLen] = '\0';
+
+				// 去除换行符，避免影响错误信息显示
+				for(char *p = aRawResponse; *p; ++p)
+				{
+					if(*p == '\n' || *p == '\r')
+						*p = ' ';
+				}
+
+				str_format(Out.m_Text, sizeof(Out.m_Text),
+					"JSON parse error: %.200s%s",
+					aRawResponse,
+					ResultLength > 200 ? "... (truncated)" : "");
+			}
+			else
+			{
+				str_copy(Out.m_Text, "Empty response from LLM API");
+			}
+			return false;
+		}
+
 		bool Res = ParseResponseJson(pObj, Out);
 		json_value_free(pObj);
 		return Res;
@@ -1056,6 +1160,7 @@ public:
 
 		// Build JSON request body manually (CJsonStringWriter doesn't support float values)
 		// Need to escape the text and system message for JSON
+		// Note: EscapeJsonString adds quotes around the output, so we don't add them in the template
 		char aEscapedText[4096];
 		char aEscapedSystem[1024];
 		EscapeJsonString(pText, aEscapedText, sizeof(aEscapedText));
@@ -1069,30 +1174,88 @@ public:
 		EscapeJsonString(pModel, aEscapedModel, sizeof(aEscapedModel));
 
 		char aPayload[8192];
-		str_format(aPayload, sizeof(aPayload),
-			"{"
-			"\"model\":\"%s\","
-			"\"messages\":["
-			"{\"role\":\"system\",\"content\":%s},"
-			"{\"role\":\"user\",\"content\":%s}"
-			"],"
-			"\"temperature\":0.3,"
-			"\"max_tokens\":1024"
-			"}",
-			aEscapedModel, aEscapedSystem, aEscapedText);
+		// 根据配置决定是否启用思考模式
+		// 注意：思考模式会增加响应时间，默认关闭
+		if(g_Config.m_QmTranslateLlmEnableThinking)
+		{
+			// 启用思考模式（不添加 enable_thinking:false）
+			str_format(aPayload, sizeof(aPayload),
+				"{"
+				"\"model\":%s,"
+				"\"messages\":["
+				"{\"role\":\"system\",\"content\":%s},"
+				"{\"role\":\"user\",\"content\":%s}"
+				"],"
+				"\"temperature\":0.3,"
+				"\"max_tokens\":1024"
+				"}",
+				aEscapedModel, aEscapedSystem, aEscapedText);
+		}
+		else
+		{
+			// 关闭思考模式
+			// 智谱AI使用 enable_thinking:false
+			// DeepSeek 使用 reasoning_effort:none（如果支持）
+			if(Provider == ELlmProvider::ZHIPU_AI)
+			{
+				str_format(aPayload, sizeof(aPayload),
+					"{"
+					"\"model\":%s,"
+					"\"messages\":["
+					"{\"role\":\"system\",\"content\":%s},"
+					"{\"role\":\"user\",\"content\":%s}"
+					"],"
+					"\"temperature\":0.3,"
+					"\"max_tokens\":1024,"
+					"\"enable_thinking\":false"
+					"}",
+					aEscapedModel, aEscapedSystem, aEscapedText);
+			}
+			else if(Provider == ELlmProvider::DEEPSEEK)
+			{
+				str_format(aPayload, sizeof(aPayload),
+					"{"
+					"\"model\":%s,"
+					"\"messages\":["
+					"{\"role\":\"system\",\"content\":%s},"
+					"{\"role\":\"user\",\"content\":%s}"
+					"],"
+					"\"temperature\":0.3,"
+					"\"max_tokens\":1024"
+					"}",
+					aEscapedModel, aEscapedSystem, aEscapedText);
+			}
+			else
+			{
+				// 其他 Provider 使用标准格式
+				str_format(aPayload, sizeof(aPayload),
+					"{"
+					"\"model\":%s,"
+					"\"messages\":["
+					"{\"role\":\"system\",\"content\":%s},"
+					"{\"role\":\"user\",\"content\":%s}"
+					"],"
+					"\"temperature\":0.3,"
+					"\"max_tokens\":1024"
+					"}",
+					aEscapedModel, aEscapedSystem, aEscapedText);
+			}
+		}
 
 		// Build Authorization header
 		char aAuthorization[512];
 		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", pApiKey);
 
 		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
-		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
-		m_pHttpRequest->FailOnErrorStatus(false);
-		m_pHttpRequest->Timeout(CTimeout{10000, 0, 500, 10});
-		m_pHttpRequest->HeaderString("Content-Type", "application/json");
-		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
-		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(aPayload), str_length(aPayload));
-		Http.Run(m_pHttpRequest);
+	m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
+	m_pHttpRequest->FailOnErrorStatus(false);
+	// LLM API 响应可能较慢（特别是智谱AI），增加超时时间到30秒
+	// 降低最低速度要求避免 "Operation too slow" 错误
+	m_pHttpRequest->Timeout(CTimeout{30000, 0, 100, 30});
+	m_pHttpRequest->HeaderString("Content-Type", "application/json");
+	m_pHttpRequest->HeaderString("Authorization", aAuthorization);
+	m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(aPayload), str_length(aPayload));
+	Http.Run(m_pHttpRequest);
 	}
 };
 
@@ -1349,15 +1512,27 @@ void CTranslate::OnRender()
 void CTranslate::AutoTranslate(CChat::CLine &Line)
 {
 	if(!g_Config.m_QmTranslateAuto)
+	{
+		dbg_msg("translate", "AutoTranslate skipped: m_QmTranslateAuto=%d", g_Config.m_QmTranslateAuto);
 		return;
+	}
 	if(Line.m_ClientId == CChat::CLIENT_MSG)
+	{
+		dbg_msg("translate", "AutoTranslate skipped: CLIENT_MSG");
 		return;
+	}
 	if(Line.m_ClientId == CChat::SERVER_MSG)
+	{
+		dbg_msg("translate", "AutoTranslate skipped: SERVER_MSG");
 		return;
+	}
 	for(const int Id : GameClient()->m_aLocalIds)
 	{
 		if(Id >= 0 && Id == Line.m_ClientId)
+		{
+			dbg_msg("translate", "AutoTranslate skipped: local player msg (Id=%d)", Id);
 			return;
+		}
 	}
 	if(str_comp(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 	{
@@ -1365,6 +1540,8 @@ void CTranslate::AutoTranslate(CChat::CLine &Line)
 		// It may shut down if we spam it too hard
 		return;
 	}
+	dbg_msg("translate", "AutoTranslate triggered for: '%.50s...' (ClientId=%d, Backend=%s)",
+		Line.m_aText, Line.m_ClientId, g_Config.m_QmTranslateBackend);
 	Translate(Line, false, true);
 }
 

@@ -23,6 +23,7 @@
 #include <game/client/components/qmclient/bindchat.h>
 #include <game/client/components/qmclient/bindwheel.h>
 #include <game/client/components/qmclient/trails.h>
+#include <game/client/components/qmclient/translate_ui_settings.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/skin.h>
@@ -4049,6 +4050,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		FriendNotify,
 		BlockWords,
 		Translate,
+		TranslateUi,
 		QiaFen,
 		PieMenu,
 		EntityOverlay,
@@ -4079,7 +4081,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		const char *m_pKey;
 	};
 
-	constexpr size_t kQmModuleCount = 27;
+	constexpr size_t kQmModuleCount = 28;
 
 	// Layout string format: key:column:order; entries separated by ';'.
 	static const std::array<SQmModuleEntry, kQmModuleCount> s_aQmModuleDefaults = {{
@@ -4095,6 +4097,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		{EQmModuleId::FriendNotify, EQmModuleColumn::Left, 8, "friend_notify"},
 		{EQmModuleId::BlockWords, EQmModuleColumn::Left, 9, "block_words"},
 		{EQmModuleId::Translate, EQmModuleColumn::Left, 12, "translate"},
+		{EQmModuleId::TranslateUi, EQmModuleColumn::Left, 13, "translate_ui"},
 		{EQmModuleId::QiaFen, EQmModuleColumn::Left, 10, "qiafen"},
 		{EQmModuleId::PieMenu, EQmModuleColumn::Left, 11, "pie_menu"},
 		{EQmModuleId::CameraView, EQmModuleColumn::Right, 0, "camera_view"},
@@ -4696,6 +4699,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi";
 		case EQmModuleId::BlockWords: return "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan";
 		case EQmModuleId::Translate: return "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.5-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过";
+		case EQmModuleId::TranslateUi: return "翻译UI fanyi ui 颜色 yanse color 按钮 anniu button 菜单 caidan menu rgba 自定义 zidingyi custom";
 		case EQmModuleId::QiaFen: return "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming";
 		case EQmModuleId::PieMenu: return "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan";
 		case EQmModuleId::EntityOverlay: return "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng";
@@ -5046,6 +5050,8 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 			return {7, Localize("Block words"), Localize("Chat block word filter")};
 		case EQmModuleId::Translate:
 			return {8, Localize("Translate"), Localize("Chat translation settings")};
+		case EQmModuleId::TranslateUi:
+			return {9, Localize("Translate UI"), Localize("Customize translate button and menu colors")};
 		case EQmModuleId::QiaFen:
 			return {8, Localize("Keyword reply"), Localize("Automatic replies for chat keywords")};
 		case EQmModuleId::PieMenu:
@@ -6087,7 +6093,52 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 					if(pActiveModelInput)
 						Ui()->DoEditBox(pActiveModelInput, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// LLM 并发数配置
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Concurrency"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoScrollbarOption(&g_Config.m_QmTranslateLlmConcurrency, &g_Config.m_QmTranslateLlmConcurrency, &ControlCol, Localize("Max concurrent translations"), 1, 20, &CUi::ms_LinearScrollbarScale, 1);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 思考模式开关
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Thinking Mode"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoScrollbarOption(&g_Config.m_QmTranslateLlmEnableThinking, &g_Config.m_QmTranslateLlmEnableThinking, &ControlCol, Localize("Enable thinking mode (slower)"), 0, 1);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 自定义提示词配置
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Custom prompt template"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_CustomPrompt(g_Config.m_QmTranslateSystemPrompt, sizeof(g_Config.m_QmTranslateSystemPrompt));
+					s_CustomPrompt.SetEmptyText(Localize("Leave empty to use default prompt"));
+					Ui()->DoEditBox(&s_CustomPrompt, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &CardContent);
+
+					// 提示信息
+					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
+					Ui()->DoLabel(&Row, Localize("Use %s as placeholder for target language"), LG_BodySize * 0.8f, TEXTALIGN_ML);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
+
+				// 入站语言和出站语言配置
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+				Ui()->DoLabel(&LabelCol, Localize("Source Language"), LG_BodySize, TEXTALIGN_ML);
+				static CLineInput s_SourceLang(g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource));
+				s_SourceLang.SetEmptyText("auto");
+				Ui()->DoEditBox(&s_SourceLang, &ControlCol, LG_BodySize);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+				Ui()->DoLabel(&LabelCol, Localize("Target Language"), LG_BodySize, TEXTALIGN_ML);
+				static CLineInput s_TargetLang(g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget));
+				s_TargetLang.SetEmptyText("zh");
+				Ui()->DoEditBox(&s_TargetLang, &ControlCol, LG_BodySize);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				// CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				// Ui()->DoLabel(&Row, Localize("自动翻译会跳过简体、繁体和服务器消息"), LG_BodySize * 0.8f, TEXTALIGN_ML);
@@ -6096,6 +6147,27 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				// CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				// Ui()->DoLabel(&Row, Localize("发送时可在末尾加 [ru]、[en]、[ja] 等目标语言代码"), LG_BodySize * 0.8f, TEXTALIGN_ML);
 				// CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+				Column.y = CardContent.y;
+				s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+				RegisterModuleCard(pModule, ColumnId, s_GlassCards.back());
+				HandleModuleDragState(pModule, s_GlassCards.back());
+			}
+			break;
+			case EQmModuleId::TranslateUi:
+			{
+				// ========== 模块: 翻译 UI ==========
+				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+				CUIRect CardTranslateUiStart = Column;
+				s_GlassCards.push_back(CardTranslateUiStart);
+
+				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+				DoModuleHeadline(CardContent, 9, Localize("Translate UI"), Localize("Customize translate button and menu colors"));
+
+				NTranslateUiSettings::RenderTranslateUiModule(this, CardContent, LG_LineHeight, LG_BodySize, LG_LineSpacing);
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;

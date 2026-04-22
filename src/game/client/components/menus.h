@@ -47,8 +47,17 @@ enum
 	NUMBER_OF_ASSETS_TABS = 6,
 };
 
+class CUIRect;
+class CMenus;
+
+namespace NTranslateUiSettings
+{
+void RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
+}
+
 class CMenus : public CComponent
 {
+	friend void NTranslateUiSettings::RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
 	static ColorRGBA ms_GuiColor;
 	static ColorRGBA ms_ColorTabbarInactiveOutgame;
 	static ColorRGBA ms_ColorTabbarActiveOutgame;

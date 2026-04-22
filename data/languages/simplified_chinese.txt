@@ -4365,6 +4365,12 @@ Dummy
 Solo
 == 单人
 
+Off
+== 关
+
+On
+== 开
+
 Oldschool
 == 传统
 
@@ -6470,3 +6476,108 @@ Community links, updates, feedback, and supporter credits moved to Contributors
 
 Drag, collapse, search, and usage history are preserved inside each category
 == 拖拽、折叠、搜索和使用频率记录会继续保留在各自分类中
+
+Concurrency
+== 并发数
+
+Max concurrent translations
+== 最大并发翻译数
+
+Translate
+== 翻译
+
+Thinking Mode
+== 思考模式
+
+Enable thinking mode (slower)
+== 启用思考模式（较慢）
+
+Source Language
+== 源语言
+
+Target Language
+== 目标语言
+
+Translation Settings
+== 翻译设置
+
+Auto Translate
+== 自动翻译
+
+Click to open translation settings
+== 点击打开翻译设置
+
+Auto translate incoming messages
+== 自动翻译入站消息
+
+LLM Provider
+== LLM 提供商
+
+Zhipu AI API Key
+== 智谱 AI API 密钥
+
+DeepSeek API Key
+== DeepSeek API 密钥
+
+OpenAI API Key
+== OpenAI API 密钥
+
+Custom API Key
+== 自定义 API 密钥
+
+Endpoint (Optional)
+== 端点（可选）
+
+Model
+== 模型
+
+Custom prompt template
+== 自定义提示词模板
+
+Leave empty to use default prompt
+== 留空使用默认提示词
+
+Translate prompt
+== 翻译提示词
+
+Use %s as placeholder for target language
+== 使用 %s 作为目标语言的占位符
+
+Right-click to disable auto-translate
+== 右键关闭自动翻译
+
+Right-click to enable auto-translate
+== 右键开启自动翻译
+
+Translate Backend
+== 翻译后端
+
+⚠️ Tencent Cloud API not configured
+== ⚠️ 腾讯云 API 未配置
+
+⚠️ LibreTranslate API Key not set
+== ⚠️ LibreTranslate API Key 未设置
+
+⚠️ LLM API Key not configured
+== ⚠️ LLM API Key 未配置
+
+Translate UI
+== 翻译 UI
+
+Customize translate button and menu colors
+== 自定义翻译按钮和菜单颜色
+
+Button - Disabled
+== 按钮 - 未启用
+
+Button - Enabled
+== 按钮 - 已启用
+
+Menu Background
+== 菜单背景
+
+Menu Option - Selected
+== 菜单选项 - 选中
+
+Menu Option - Normal
+== 菜单选项 - 未选中

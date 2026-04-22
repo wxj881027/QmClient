@@ -12,6 +12,7 @@
 #include <game/client/component.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
+#include <game/client/ui.h>
 
 #include <vector>
 
@@ -198,16 +199,14 @@ class CChat : public CComponent
 	STranslateButtonState m_TranslateButton;
 
 	// 语言菜单
-	int m_LanguageMenuId = 0;
+	class CLanguagePopupContext : public SPopupMenuId
+	{
+	public:
+		CChat *m_pChat = nullptr;
+	};
+	CLanguagePopupContext m_LanguagePopupContext;
 	bool m_LanguageMenuOpen = false;
 
-	// 聊天框光标状态
-	bool m_MouseUnlocked = false;
-	std::optional<vec2> m_LastMousePos;
-
-	void SetUiMousePos(vec2 Pos);
-	void EnableChatCursor();
-	void DisableChatCursor();
 	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 
 public:
@@ -255,6 +254,7 @@ public:
 	void ToggleAutoTranslate();
 	void OpenLanguageMenu();
 	bool IsLanguageMenuOpen() const { return m_LanguageMenuOpen; }
+	static CUi::EPopupMenuFunctionResult PopupLanguageMenu(void *pContext, CUIRect View, bool Active);
 
 	// ----- send functions -----
 

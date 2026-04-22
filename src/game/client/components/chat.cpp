@@ -374,14 +374,6 @@ void CChat::Reset()
 
 	for(int64_t &LastSoundPlayed : m_aLastSoundPlayed)
 		LastSoundPlayed = 0;
-
-	// 重置光标状态
-	if(m_MouseUnlocked)
-	{
-		DisableChatCursor();
-	}
-	m_MouseUnlocked = false;
-	m_LastMousePos = std::nullopt;
 }
 
 void CChat::OnRelease()
@@ -529,7 +521,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			MousePos.y >= m_TranslateButton.m_Y &&
 			MousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
 
-		// 左键处理
+		// 左键处理：打开语言菜单
 		if(Event.m_Key == KEY_MOUSE_1)
 		{
 			if(Event.m_Flags & IInput::FLAG_PRESS)
@@ -554,22 +546,33 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				m_TranslateButton.m_IsPressed = false;
 				if(Activate)
 				{
-					ToggleAutoTranslate();
+					OpenLanguageMenu();
 					return true;
 				}
 			}
 		}
 
-		// 右键处理
-		if(Event.m_Key == KEY_MOUSE_2 && InsideButton && (Event.m_Flags & IInput::FLAG_PRESS))
+		// 右键处理：切换自动翻译
+		if(Event.m_Key == KEY_MOUSE_2)
 		{
-			OpenLanguageMenu();
-			return true;
+			if((Event.m_Flags & IInput::FLAG_PRESS) && InsideButton)
+			{
+				ToggleAutoTranslate();
+				return true;
+			}
 		}
 	}
 
+	// ESC 键处理：优先关闭弹出菜单
 	if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE)
 	{
+		if(Ui()->IsPopupOpen())
+		{
+			m_LanguageMenuOpen = false;
+			// UI 系统会自动关闭弹出菜单
+			return true;
+		}
+
 		DisableMode();
 		GameClient()->OnRelease();
 		if(g_Config.m_ClChatReset)
@@ -858,9 +861,6 @@ void CChat::EnableMode(int Team)
 		m_CompletionChosen = -1;
 		m_CompletionUsed = false;
 		m_Input.Activate(EInputPriority::CHAT);
-
-		// 打开聊天框时启用光标
-		EnableChatCursor();
 	}
 }
 
@@ -870,9 +870,6 @@ void CChat::DisableMode()
 	{
 		m_Mode = MODE_NONE;
 		m_Input.Deactivate();
-
-		// 关闭聊天框时禁用光标
-		DisableChatCursor();
 	}
 }
 
@@ -1953,6 +1950,26 @@ void CChat::OnRender()
 	}
 
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+
+	// 渲染弹出菜单（当有弹出菜单打开时）
+	if(m_Mode != MODE_NONE && Ui()->IsPopupOpen())
+	{
+		Ui()->StartCheck();
+		Ui()->Update();
+		Ui()->MapScreen();
+		Ui()->RenderPopupMenus();
+		Ui()->FinishCheck();
+		Ui()->ClearHotkeys();
+		Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
+	}
+
+	// 渲染鼠标光标（当聊天框激活时）
+	if(m_Mode != MODE_NONE)
+	{
+		const vec2 UiMousePos = Ui()->UpdatedMousePos() * vec2(Ui()->Screen()->w, Ui()->Screen()->h) / vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
+		const vec2 UiToChatScale(Width / Ui()->Screen()->w, Height / Ui()->Screen()->h);
+		RenderTools()->RenderCursor(UiMousePos * UiToChatScale, 12.0f);
+	}
 }
 
 void CChat::EnsureCoherentFontSize() const
@@ -2088,9 +2105,12 @@ void CChat::SendChatQueued(const char *pLine)
 
 vec2 CChat::GetChatMousePos() const
 {
-	const vec2 WindowSize(maximum(1.0f, static_cast<float>(Graphics()->WindowWidth())),
-		maximum(1.0f, static_cast<float>(Graphics()->WindowHeight())));
-	return Ui()->MousePos() * vec2(Ui()->Screen()->w, Ui()->Screen()->h) / WindowSize;
+	const float Height = 300.0f;
+	const float Width = Height * Graphics()->ScreenAspect();
+	const vec2 WindowSize(maximum(1.0f, (float)Graphics()->WindowWidth()), maximum(1.0f, (float)Graphics()->WindowHeight()));
+	const vec2 UiMousePos = Ui()->UpdatedMousePos() * vec2(Ui()->Screen()->w, Ui()->Screen()->h) / WindowSize;
+	const vec2 UiToChatScale(Width / Ui()->Screen()->w, Height / Ui()->Screen()->h);
+	return UiMousePos * UiToChatScale;
 }
 
 void CChat::RenderTranslateButton(const CUIRect &InputRect)
@@ -2119,10 +2139,26 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 			     MousePos.y <= ButtonRect.y + ButtonRect.h;
 
 	const bool IsOpen = m_LanguageMenuOpen;
-	const ColorRGBA ButtonColor = IsOpen ? ColorRGBA(0.35f, 0.45f, 0.70f, 0.90f) :
-					       (Hovered ? ColorRGBA(0.28f, 0.28f, 0.28f, 0.90f) :
-							   ColorRGBA(0.16f, 0.16f, 0.16f, 0.82f));
-	const float ButtonRounding = maximum(3.0f, ButtonRect.h * 0.28f);
+	const bool IsEnabled = m_TranslateButton.m_AutoTranslateEnabled;
+
+	ColorRGBA ButtonColor;
+	if(IsEnabled)
+	{
+		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled));
+	}
+	else if(IsOpen)
+	{
+		ButtonColor = ColorRGBA(0.35f, 0.45f, 0.70f, 0.90f);
+	}
+	else if(Hovered)
+	{
+		ButtonColor = ColorRGBA(0.28f, 0.28f, 0.28f, 0.90f);
+	}
+	else
+	{
+		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled));
+	}
+	const float ButtonRounding = maximum(4.0f, ButtonRect.h * 0.28f);
 
 	ButtonRect.Draw(ButtonColor, IGraphics::CORNER_ALL, ButtonRounding);
 
@@ -2142,20 +2178,10 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-	if(m_TranslateButton.m_AutoTranslateEnabled)
-	{
-		CUIRect DotRect;
-		DotRect.x = ButtonRect.x + ButtonRect.w - 6.0f;
-		DotRect.y = ButtonRect.y + 2.0f;
-		DotRect.w = 4.0f;
-		DotRect.h = 4.0f;
-		DotRect.Draw(ColorRGBA(0.2f, 0.8f, 0.2f, 1.0f), IGraphics::CORNER_ALL, 2.0f);
-	}
-
 	if(Hovered)
 	{
-		GameClient()->m_Tooltips.DoToolTip(&m_TranslateButton, &ButtonRect,
-			Localize("Auto translate toggle (Right-click for language)"));
+		const char *pTooltip = IsEnabled ? Localize("Right-click to disable auto-translate") : Localize("Right-click to enable auto-translate");
+		GameClient()->m_Tooltips.DoToolTip(&m_TranslateButton, &ButtonRect, pTooltip);
 	}
 }
 
@@ -2168,58 +2194,206 @@ void CChat::ToggleAutoTranslate()
 void CChat::OpenLanguageMenu()
 {
 	m_LanguageMenuOpen = !m_LanguageMenuOpen;
+	if(m_LanguageMenuOpen)
+	{
+		m_LanguagePopupContext.m_pChat = this;
+
+		// Chat 坐标转换为 UI 坐标（DoPopupMenu 需要 UI 坐标系）
+		const float Height = 300.0f;
+		const float Width = Height * Graphics()->ScreenAspect();
+		const vec2 ChatToUiScale(Ui()->Screen()->w / Width, Ui()->Screen()->h / Height);
+
+		// 菜单尺寸
+		const float MenuWidth = 180.0f;
+		const float MenuHeight = 280.0f;
+
+		// 菜单在按钮上方弹出
+		vec2 MenuPos = vec2(m_TranslateButton.m_X, m_TranslateButton.m_Y) * ChatToUiScale;
+		MenuPos.y -= MenuHeight;
+
+		Ui()->DoPopupMenu(&m_LanguagePopupContext, MenuPos.x, MenuPos.y, MenuWidth, MenuHeight, &m_LanguagePopupContext, PopupLanguageMenu);
+	}
 }
 
-void CChat::SetUiMousePos(vec2 Pos)
+CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect View, bool Active)
 {
-	const vec2 WindowSize = vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
-	const CUIRect *pScreen = Ui()->Screen();
+	CLanguagePopupContext *pPopupContext = static_cast<CLanguagePopupContext *>(pContext);
+	CChat *pChat = pPopupContext->m_pChat;
+	CUi *pUi = pChat->Ui();
 
-	const vec2 UpdatedMousePos = Ui()->UpdatedMousePos();
-	Pos = Pos / vec2(pScreen->w, pScreen->h) * WindowSize;
-	Ui()->OnCursorMove(Pos.x - UpdatedMousePos.x, Pos.y - UpdatedMousePos.y);
-}
+	const float Margin = 5.0f;
+	View.Margin(Margin, &View);
 
-void CChat::EnableChatCursor()
-{
-	if(m_MouseUnlocked)
-		return;
+	const float FontSize = 10.0f;
+	const float RowHeight = 18.0f;
 
-	m_MouseUnlocked = true;
-	vec2 OldMousePos = Ui()->MousePos();
+	// 使用配置颜色
+	ColorRGBA OptionSelectedColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionSelected));
+	ColorRGBA OptionNormalColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionNormal));
 
-	if(m_LastMousePos == std::nullopt)
+	// 标题
+	CUIRect TitleRect;
+	View.HSplitTop(RowHeight, &TitleRect, &View);
+	pUi->DoLabel(&TitleRect, Localize("Translation Settings"), FontSize, TEXTALIGN_ML);
+
+	// 自动翻译开关
 	{
-		SetUiMousePos(Ui()->Screen()->Center());
+		CUIRect ToggleRect;
+		View.HSplitTop(RowHeight, &ToggleRect, &View);
+		ToggleRect.VMargin(2.0f, &ToggleRect);
+
+		const bool Enabled = g_Config.m_QmTranslateAutoOutgoing != 0;
+		const ColorRGBA ToggleColor = Enabled ? OptionSelectedColor : OptionNormalColor;
+
+		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
+
+		if(pUi->DoButtonLogic(&g_Config.m_QmTranslateAutoOutgoing, 0, &ToggleRect, BUTTONFLAG_LEFT))
+		{
+			pChat->ToggleAutoTranslate();
+			return CUi::POPUP_KEEP_OPEN;
+		}
+
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto Translate"), Enabled ? Localize("On") : Localize("Off"));
+		pUi->DoLabel(&ToggleRect, aBuf, FontSize, TEXTALIGN_ML);
 	}
-	else
+
+	// 分隔线
 	{
-		SetUiMousePos(m_LastMousePos.value());
+		CUIRect SepRect;
+		View.HSplitTop(8.0f, &SepRect, &View);
+		SepRect.HMargin(3.0f, &SepRect);
+		SepRect.Draw(ColorRGBA(0.5f, 0.5f, 0.5f, 0.5f), IGraphics::CORNER_NONE, 0.0f);
 	}
 
-	m_LastMousePos = OldMousePos;
-}
-
-void CChat::DisableChatCursor()
-{
-	if(!m_MouseUnlocked)
-		return;
-
-	m_MouseUnlocked = false;
-	if(m_LastMousePos.has_value())
+	// 语言列表
+	static const struct
 	{
-		SetUiMousePos(m_LastMousePos.value());
+		const char *m_pCode;
+		const char *m_pName;
+	} s_aLanguages[] = {
+		{"zh", "中文"},
+		{"en", "English"},
+		{"ja", "日本語"},
+		{"ko", "한국어"},
+		{"zh-TW", "繁體中文"},
+	};
+
+	// 入站语言标签
+	{
+		CUIRect LabelRect;
+		View.HSplitTop(RowHeight, &LabelRect, &View);
+		pUi->DoLabel(&LabelRect, Localize("Target Language"), FontSize, TEXTALIGN_ML);
 	}
-	m_LastMousePos = Ui()->MousePos();
+
+	// 语言选择按钮
+	for(const auto &Lang : s_aLanguages)
+	{
+		CUIRect ButtonRect;
+		View.HSplitTop(RowHeight, &ButtonRect, &View);
+		ButtonRect.VMargin(2.0f, &ButtonRect);
+
+		const bool Selected = str_comp(g_Config.m_QmTranslateTarget, Lang.m_pCode) == 0;
+		const ColorRGBA ButtonColor = Selected ? OptionSelectedColor : OptionNormalColor;
+
+		ButtonRect.Draw(ButtonColor, IGraphics::CORNER_ALL, 4.0f);
+
+		if(pUi->DoButtonLogic(&Lang, 0, &ButtonRect, BUTTONFLAG_LEFT))
+		{
+			str_copy(g_Config.m_QmTranslateTarget, Lang.m_pCode);
+			return CUi::POPUP_KEEP_OPEN;
+		}
+
+		pUi->DoLabel(&ButtonRect, Lang.m_pName, FontSize, TEXTALIGN_ML);
+	}
+
+	// 分隔线
+	{
+		CUIRect SepRect;
+		View.HSplitTop(8.0f, &SepRect, &View);
+		SepRect.HMargin(3.0f, &SepRect);
+		SepRect.Draw(ColorRGBA(0.5f, 0.5f, 0.5f, 0.5f), IGraphics::CORNER_NONE, 0.0f);
+	}
+
+	// 翻译后端标签
+	{
+		CUIRect LabelRect;
+		View.HSplitTop(RowHeight, &LabelRect, &View);
+		pUi->DoLabel(&LabelRect, Localize("Translate Backend"), FontSize, TEXTALIGN_ML);
+	}
+
+	// 后端选择
+	static const struct
+	{
+		const char *m_pCode;
+		const char *m_pName;
+	} s_aBackends[] = {
+		{"llm", "LLM API"},
+		{"tencentcloud", "Tencent Cloud"},
+		{"libretranslate", "LibreTranslate"},
+		{"ftapi", "FTAPI"},
+	};
+
+	for(const auto &Backend : s_aBackends)
+	{
+		CUIRect ButtonRect;
+		View.HSplitTop(RowHeight, &ButtonRect, &View);
+		ButtonRect.VMargin(2.0f, &ButtonRect);
+
+		const bool Selected = str_comp_nocase(g_Config.m_QmTranslateBackend, Backend.m_pCode) == 0;
+		const ColorRGBA ButtonColor = Selected ? OptionSelectedColor : OptionNormalColor;
+
+		ButtonRect.Draw(ButtonColor, IGraphics::CORNER_ALL, 4.0f);
+
+		if(pUi->DoButtonLogic(&Backend, 0, &ButtonRect, BUTTONFLAG_LEFT))
+		{
+			str_copy(g_Config.m_QmTranslateBackend, Backend.m_pCode, sizeof(g_Config.m_QmTranslateBackend));
+			return CUi::POPUP_KEEP_OPEN;
+		}
+
+		pUi->DoLabel(&ButtonRect, Backend.m_pName, FontSize, TEXTALIGN_ML);
+	}
+
+	// 检查后端是否配置
+	bool IsConfigured = true;
+	const char *pConfigWarning = nullptr;
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
+	{
+		IsConfigured = g_Config.m_QmTranslateTcSecretId[0] != '\0' && g_Config.m_QmTranslateTcSecretKey[0] != '\0';
+		pConfigWarning = Localize("⚠️ Tencent Cloud API not configured");
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
+	{
+		IsConfigured = g_Config.m_QmTranslateLibreKey[0] != '\0';
+		pConfigWarning = Localize("⚠️ LibreTranslate API Key not set");
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
+	{
+		IsConfigured = g_Config.m_QmTranslateLlmKeyZhipu[0] != '\0' ||
+			       g_Config.m_QmTranslateLlmKeyDeepseek[0] != '\0' ||
+			       g_Config.m_QmTranslateLlmKeyOpenai[0] != '\0' ||
+			       g_Config.m_QmTranslateLlmKeyCustom[0] != '\0';
+		pConfigWarning = Localize("⚠️ LLM API Key not configured");
+	}
+
+	if(!IsConfigured && pConfigWarning)
+	{
+		CUIRect WarningRect;
+		View.HSplitTop(RowHeight, &WarningRect, &View);
+		WarningRect.VMargin(2.0f, &WarningRect);
+		WarningRect.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, 4.0f);
+		pUi->DoLabel(&WarningRect, pConfigWarning, FontSize * 0.9f, TEXTALIGN_ML);
+	}
+
+	return CUi::POPUP_KEEP_OPEN;
 }
 
 bool CChat::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!IsActive() || !m_MouseUnlocked)
+	if(m_Mode == MODE_NONE)
 		return false;
 
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
 	Ui()->OnCursorMove(x, y);
-
 	return true;
 }

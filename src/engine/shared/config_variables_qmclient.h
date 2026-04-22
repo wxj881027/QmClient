@@ -489,10 +489,3 @@ MACRO_CONFIG_STR(QmBlockWordsList, qm_block_words_list, 1024, "", CFGFLAG_CLIENT
 MACRO_CONFIG_STR(QmSidebarCardOrder, qm_sidebar_card_order, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "栖梦侧栏模块排序")
 MACRO_CONFIG_STR(QmSidebarCardCollapsed, qm_sidebar_card_collapsed, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "栖梦侧栏模块折叠状态")
 MACRO_CONFIG_STR(QmSidebarCardUsage, qm_sidebar_card_usage, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "栖梦侧栏模块使用频率")
-
-// Translate UI Colors
-MACRO_CONFIG_COL(QmTranslateBtnColorDisabled, qm_translate_btn_color_disabled, 0x292929D1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate button color when disabled")
-MACRO_CONFIG_COL(QmTranslateBtnColorEnabled, qm_translate_btn_color_enabled, 0x5973B3E6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate button color when enabled")
-MACRO_CONFIG_COL(QmTranslateMenuBgColor, qm_translate_menu_bg_color, 0x1E1E1EF2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate menu background color")
-MACRO_CONFIG_COL(QmTranslateMenuOptionSelected, qm_translate_menu_option_selected, 0x5973B3E6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate menu selected option color")
-MACRO_CONFIG_COL(QmTranslateMenuOptionNormal, qm_translate_menu_option_normal, 0x323232E6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate menu normal option color")

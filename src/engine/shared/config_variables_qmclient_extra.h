@@ -123,8 +123,12 @@ MACRO_CONFIG_STR(QmTranslateLlmKeyDeepseek, qm_translate_llm_key_deepseek, 256, 
 MACRO_CONFIG_STR(QmTranslateLlmKeyOpenai, qm_translate_llm_key_openai, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "OpenAI API Key")
 MACRO_CONFIG_STR(QmTranslateLlmKeyCustom, qm_translate_llm_key_custom, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "自定义 Provider API Key")
 
-MACRO_CONFIG_INT(QmTranslateLlmConcurrency, qm_translate_llm_concurrency, 1, 1, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM 翻译并发数（智谱AI免费版最大2）")
+MACRO_CONFIG_INT(QmTranslateLlmConcurrency, qm_translate_llm_concurrency, 1, 1, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM 翻译并发数")
+MACRO_CONFIG_INT(QmTranslateLlmEnableThinking, qm_translate_llm_enable_thinking, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用 LLM 思考模式（可能增加响应时间）")
 MACRO_CONFIG_STR(QmTranslateSystemPrompt, qm_translate_system_prompt, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "自定义翻译提示词（覆盖内置提示词）")
+
+// Translate - Source/Target Language
+MACRO_CONFIG_STR(QmTranslateSource, qm_translate_source, 16, "auto", CFGFLAG_CLIENT | CFGFLAG_SAVE, "翻译源语言代码（auto=自动检测）")
 
 // Translate - Auto Outgoing
 MACRO_CONFIG_INT(QmTranslateAutoOutgoing, qm_translate_auto_outgoing, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动翻译发送的消息")
@@ -147,3 +151,10 @@ MACRO_CONFIG_INT(QmSpeedrunTimerMinutes, qm_speedrun_timer_minutes, 0, 0, 59, CF
 MACRO_CONFIG_INT(QmSpeedrunTimerSeconds, qm_speedrun_timer_seconds, 0, 0, 59, CFGFLAG_CLIENT | CFGFLAG_SAVE, "速通计时器秒")
 MACRO_CONFIG_INT(QmSpeedrunTimerMilliseconds, qm_speedrun_timer_milliseconds, 0, 0, 999, CFGFLAG_CLIENT | CFGFLAG_SAVE, "速通计时器毫秒")
 MACRO_CONFIG_INT(QmSpeedrunTimerAutoDisable, qm_speedrun_timer_auto_disable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "时间耗尽后自动禁用速通计时器")
+
+// Translate UI Colors - 翻译按钮自定义颜色
+MACRO_CONFIG_COL(QmTranslateBtnColorDisabled, qm_translate_btn_color_disabled, 0x292929D1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate button color when disabled")
+MACRO_CONFIG_COL(QmTranslateBtnColorEnabled, qm_translate_btn_color_enabled, 0x5973B3E6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate button color when enabled")
+MACRO_CONFIG_COL(QmTranslateMenuBgColor, qm_translate_menu_bg_color, 0x1E1E1EF2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate menu background color")
+MACRO_CONFIG_COL(QmTranslateMenuOptionSelected, qm_translate_menu_option_selected, 0x5973B3E6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate menu selected option color")
+MACRO_CONFIG_COL(QmTranslateMenuOptionNormal, qm_translate_menu_option_normal, 0x323232E6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translate menu normal option color")
