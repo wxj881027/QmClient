@@ -198,11 +198,21 @@ class CChat : public CComponent
 	};
 	STranslateButtonState m_TranslateButton;
 
+	// 翻译菜单下拉框展开状态
+	enum class ETranslateDropdown : int
+	{
+		NONE = 0,
+		INBOUND_LANG,
+		OUTBOUND_LANG,
+		BACKEND,
+	};
+
 	// 语言菜单
 	class CLanguagePopupContext : public SPopupMenuId
 	{
 	public:
 		CChat *m_pChat = nullptr;
+		ETranslateDropdown m_DropdownOpen = ETranslateDropdown::NONE;
 	};
 	CLanguagePopupContext m_LanguagePopupContext;
 	bool m_LanguageMenuOpen = false;
