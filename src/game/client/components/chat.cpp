@@ -2299,22 +2299,22 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		const ColorRGBA HeaderColor = IsOpen ? OptionSelectedColor : OptionNormalColor;
 		HeaderRect.Draw(HeaderColor, IGraphics::CORNER_ALL, 4.0f);
 
-		// 显示当前值和箭头
-		char aDisplayBuf[64];
-		str_format(aDisplayBuf, sizeof(aDisplayBuf), "%s %s", GetValueName(pCurrentValue), IsOpen ? "▲" : "▼");
-		pUi->DoLabel(&HeaderRect, aDisplayBuf, FontSize, TEXTALIGN_ML);
-
-		// 点击头部切换展开/收起
+		// 点击头部切换展开/收起（必须在 DoLabel 之前）
 		if(pUi->DoButtonLogic(&DropdownId, 0, &HeaderRect, BUTTONFLAG_LEFT))
 		{
 			pPopupContext->m_DropdownOpen = IsOpen ? ETranslateDropdown::NONE : DropdownId;
 			return true;
 		}
 
+		// 显示当前值和箭头
+		char aDisplayBuf[64];
+		str_format(aDisplayBuf, sizeof(aDisplayBuf), "%s %s", GetValueName(pCurrentValue), IsOpen ? "▲" : "▼");
+		pUi->DoLabel(&HeaderRect, aDisplayBuf, FontSize, TEXTALIGN_ML);
+
 		// 如果展开，渲染列表
 		if(IsOpen)
 		{
-			// 列表区域 - 在头部下方展开
+			// 为展开的下拉框预留空间（从 View 中扣除）
 			float ListHeight = RowHeight * ItemCount;
 			CUIRect ListRect;
 			ListRect.x = HeaderRect.x;
@@ -2322,8 +2322,12 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			ListRect.w = HeaderRect.w;
 			ListRect.h = ListHeight;
 
-			// 背景
-			ListRect.Draw(ColorRGBA(0.15f, 0.15f, 0.15f, 0.95f), IGraphics::CORNER_ALL, 4.0f);
+			// 从 View 中扣除列表占用的高度，避免后续元素重叠
+			View.HSplitTop(ListHeight + 2.0f, &ListRect, &View);
+
+			// 列表背景 - 使用完全不透明的深色背景
+			CUIRect ListBgRect = ListRect;
+			ListBgRect.Draw(ColorRGBA(0.12f, 0.12f, 0.12f, 1.0f), IGraphics::CORNER_ALL, 4.0f);
 
 			CUIRect ItemRect = ListRect;
 			ItemRect.h = RowHeight;
@@ -2332,11 +2336,19 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			{
 				const auto &Item = pItems[i];
 				const bool Selected = CaseInsensitiveCompare ? str_comp_nocase(pCurrentValue, Item.m_pCode) == 0 : str_comp(pCurrentValue, Item.m_pCode) == 0;
-				const ColorRGBA ItemColor = Selected ? OptionSelectedColor : ColorRGBA(0.15f, 0.15f, 0.15f, 0.95f);
 
 				CUIRect ItemBgRect = ItemRect;
 				ItemBgRect.VMargin(2.0f, &ItemBgRect);
-				ItemBgRect.Draw(ItemColor, IGraphics::CORNER_ALL, 3.0f);
+
+				// 每个列表项都有独立的背景色
+				if(Selected)
+				{
+					ItemBgRect.Draw(OptionSelectedColor, IGraphics::CORNER_ALL, 3.0f);
+				}
+				else
+				{
+					ItemBgRect.Draw(OptionNormalColor, IGraphics::CORNER_ALL, 3.0f);
+				}
 
 				if(pUi->DoButtonLogic(&Item, 0, &ItemBgRect, BUTTONFLAG_LEFT))
 				{
