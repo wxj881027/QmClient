@@ -1286,6 +1286,12 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
 void CTranslate::OnRender()
 {
 	const auto Time = time();
+	// 检查翻译响应是否仍然属于同一行
+	// 注意：m_pLine 是指向 CChat::CLine 的裸指针，当聊天行被重用时可能变成悬垂指针
+	// 我们通过比较 m_pTranslateResponse 指针来检测这种情况：
+	// - CLine::Reset() 会清除 m_pTranslateResponse
+	// - 如果指针不匹配，说明该行已被重用，翻译结果应该丢弃
+	// 这个检查依赖于 CLine::Reset 正确清除 m_pTranslateResponse
 	auto ForEach = [&](CTranslateJob &Job) {
 		if(Job.m_pLine->m_pTranslateResponse != Job.m_pTranslateResponse)
 			return true; // Not the same line anymore
