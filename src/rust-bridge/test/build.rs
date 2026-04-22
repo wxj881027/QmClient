@@ -27,13 +27,7 @@ fn main() {
         let libraries = env::var("DDNET_TEST_LIBRARIES")
             .expect("environment variable DDNET_TEST_LIBRARIES required but not found");
         let mut seen_library_dirs = HashSet::new();
-        // Historically this list used ';'. Newer CMake uses ',' because ';'
-        // can be interpreted by POSIX shells when passed via custom commands.
-        for library in libraries.split(|ch| ch == ';' || ch == ',') {
-            let library = library.trim();
-            if library.is_empty() {
-                continue;
-            }
+        for library in libraries.split(';') {
             let library = Path::new(library);
             let extension = library.extension().and_then(OsStr::to_str);
             let kind = match extension {
@@ -66,8 +60,7 @@ fn main() {
                 .expect("library name")
                 .to_str()
                 .expect("should have errored earlier");
-            let strip_lib_prefix = matches!(extension, Some("a") | Some("so") | Some("dylib") | Some("framework") | Some("tbd"));
-            if strip_lib_prefix && name.starts_with("lib") {
+            if name.starts_with("lib") {
                 name = &name[3..];
             }
             println!("cargo:rustc-link-lib={}{}", kind, name);

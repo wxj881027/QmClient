@@ -343,43 +343,6 @@ void CChat::ClearLines()
 	m_LastAnimUpdateTime = 0;
 }
 
-void CChat::SetUiMousePos(vec2 Pos)
-{
-	const vec2 WindowSize = vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
-	const CUIRect *pScreen = Ui()->Screen();
-
-	const vec2 UpdatedMousePos = Ui()->UpdatedMousePos();
-	Pos = Pos / vec2(pScreen->w, pScreen->h) * WindowSize;
-	Ui()->OnCursorMove(Pos.x - UpdatedMousePos.x, Pos.y - UpdatedMousePos.y);
-}
-
-void CChat::LockMouse()
-{
-	if(!m_MouseUnlocked)
-		return;
-
-	m_MouseUnlocked = false;
-	if(m_LastMousePos.has_value())
-		SetUiMousePos(m_LastMousePos.value());
-	m_LastMousePos = Ui()->MousePos();
-}
-
-void CChat::UnlockMouse()
-{
-	if(m_MouseUnlocked || !IsActive() || GameClient()->m_Menus.IsActive() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
-		return;
-
-	m_MouseUnlocked = true;
-
-	vec2 OldMousePos = Ui()->MousePos();
-	if(m_LastMousePos == std::nullopt)
-		SetUiMousePos(Ui()->Screen()->Center());
-	else
-		SetUiMousePos(m_LastMousePos.value());
-
-	m_LastMousePos = OldMousePos;
-}
-
 void CChat::OnWindowResize()
 {
 	RebuildChat();
@@ -407,8 +370,6 @@ void CChat::Reset()
 	m_ServerCommandsNeedSorting = false;
 	m_aCurrentInputText[0] = '\0';
 	DisableMode();
-	m_MouseUnlocked = false;
-	m_LastMousePos = std::nullopt;
 	m_vServerCommands.clear();
 
 	for(int64_t &LastSoundPlayed : m_aLastSoundPlayed)
@@ -417,7 +378,6 @@ void CChat::Reset()
 
 void CChat::OnRelease()
 {
-	LockMouse();
 	m_Show = false;
 }
 
@@ -841,7 +801,6 @@ void CChat::EnableMode(int Team)
 		m_CompletionChosen = -1;
 		m_CompletionUsed = false;
 		m_Input.Activate(EInputPriority::CHAT);
-		UnlockMouse();
 	}
 }
 
@@ -849,7 +808,6 @@ void CChat::DisableMode()
 {
 	if(m_Mode != MODE_NONE)
 	{
-		LockMouse();
 		m_Mode = MODE_NONE;
 		m_Input.Deactivate();
 	}
@@ -1635,16 +1593,6 @@ void CChat::OnPrepareLines(float y)
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }
 
-bool CChat::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
-{
-	if(m_Mode == MODE_NONE || !m_MouseUnlocked)
-		return false;
-
-	Ui()->ConvertMouseMove(&x, &y, CursorType);
-	Ui()->OnCursorMove(x, y);
-	return true;
-}
-
 void CChat::OnRender()
 {
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -1675,26 +1623,6 @@ void CChat::OnRender()
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 	const CUIRect ChatRect = {0.0f, 50.0f, std::min(Width, std::max(190.0f, g_Config.m_ClChatWidth + 32.0f)), 250.0f};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::Chat, ChatRect);
-	const bool UpdateChatUi = m_Mode != MODE_NONE && m_MouseUnlocked && !HudEditorPreview && !GameClient()->m_Menus.IsActive();
-	vec2 ChatMousePos(0.0f, 0.0f);
-	auto FinishChatUi = [&]() {
-		if(UpdateChatUi)
-		{
-			RenderTools()->RenderCursor(ChatMousePos, 24.0f);
-			Ui()->FinishCheck();
-		}
-	};
-
-	if(UpdateChatUi)
-	{
-		Ui()->StartCheck();
-		Ui()->SetActiveItem(&m_Input);
-		Ui()->Update();
-		const CUIRect *pUiScreen = Ui()->Screen();
-		ChatMousePos = vec2(
-			Ui()->MouseX() * Width / pUiScreen->w,
-			Ui()->MouseY() * Height / pUiScreen->h);
-	}
 
 	float x = 5.0f;
 	float BoundsTop = Height;
@@ -1752,27 +1680,6 @@ void CChat::OnRender()
 		float ScrollOffsetChange = m_Input.GetScrollOffsetChange();
 
 		m_Input.Activate(EInputPriority::CHAT); // Ensure that the input is active
-		if(UpdateChatUi)
-		{
-			CLineInput::SMouseSelection *pMouseSelection = m_Input.GetMouseSelection();
-			const bool MouseInsideInput = ChatMousePos.x >= ClippingRect.x && ChatMousePos.x < ClippingRect.x + ClippingRect.w &&
-				ChatMousePos.y >= ClippingRect.y && ChatMousePos.y < ClippingRect.y + ClippingRect.h;
-			if(MouseInsideInput && !pMouseSelection->m_Selecting && Ui()->MouseButtonClicked(0))
-			{
-				pMouseSelection->m_Selecting = true;
-				pMouseSelection->m_PressMouse = ChatMousePos;
-				pMouseSelection->m_Offset = vec2(0.0f, 0.0f);
-			}
-			if(pMouseSelection->m_Selecting)
-			{
-				pMouseSelection->m_ReleaseMouse = ChatMousePos;
-				if(!Ui()->MouseButton(0))
-				{
-					pMouseSelection->m_Selecting = false;
-					Input()->EnsureScreenKeyboardShown();
-				}
-			}
-		}
 		const CUIRect InputCursorRect = {InputCursor.m_X, InputCursor.m_Y - ScrollOffset, 0.0f, 0.0f};
 		const bool WasChanged = m_Input.WasChanged();
 		const bool WasCursorChanged = m_Input.WasCursorChanged();
@@ -1817,7 +1724,6 @@ void CChat::OnRender()
 	if(!g_Config.m_ClShowChat)
 #endif
 	{
-		FinishChatUi();
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
 	}
@@ -1972,7 +1878,6 @@ void CChat::OnRender()
 		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::Chat, {x, BoundsTop, ChatRect.w - x, BoundsHeight});
 	}
 
-	FinishChatUi();
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 

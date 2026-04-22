@@ -13,6 +13,7 @@
 
 #include <cstdlib>
 #include <limits>
+#include <memory>
 
 // CSnapshot
 
@@ -105,6 +106,11 @@ const void *CSnapshot::FindItem(int Type, int Id) const
 	return Index < 0 ? nullptr : GetItem(Index)->Data();
 }
 
+rust::Slice<const int32_t> CSnapshot::AsSlice() const
+{
+	return rust::Slice<const int32_t>((const int32_t *)this, TotalSize() / sizeof(int32_t));
+}
+
 unsigned CSnapshot::Crc() const
 {
 	unsigned int Crc = 0;
@@ -158,6 +164,11 @@ bool CSnapshot::IsValid(size_t ActualSize) const
 			return false;
 
 	return true;
+}
+
+std::unique_ptr<CSnapshotBuffer> CSnapshotBuffer_New()
+{
+	return std::make_unique<CSnapshotBuffer>();
 }
 
 // CSnapshotDelta

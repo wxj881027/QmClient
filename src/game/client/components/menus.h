@@ -928,8 +928,20 @@ public:
 		SETTINGS_QMCLIENT,
 		SETTINGS_PROFILES,
 		SETTINGS_CONFIGS,
+		SETTINGS_CONTRIBUTORS,
 
 		SETTINGS_LENGTH,
+	};
+
+	enum
+	{
+		QMCLIENT_SETTINGS_TAB_VISUAL = 0,
+		QMCLIENT_SETTINGS_TAB_FUNCTION,
+		QMCLIENT_SETTINGS_TAB_HUD,
+		QMCLIENT_SETTINGS_TAB_CONTRIBUTORS,
+		QMCLIENT_SETTINGS_TAB_CONFIG,
+
+		NUMBER_OF_QMCLIENT_SETTINGS_TABS,
 	};
 
 	enum
@@ -967,6 +979,7 @@ public:
 	SUIAnimator m_aAnimatorsBigPage[BIG_TAB_LENGTH];
 	SUIAnimator m_aAnimatorsSmallPage[SMALL_TAB_LENGTH];
 	SUIAnimator m_aAnimatorsSettingsTab[SETTINGS_LENGTH];
+	int m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 
 	// DDRace
 	int DoButton_CheckBox_Tristate(const void *pId, const char *pText, TRISTATE Checked, const CUIRect *pRect);
@@ -1089,7 +1102,8 @@ private:
 	void RenderSettingsTClientProfiles(CUIRect MainView);
 	void RenderSettingsTClientConfigs(CUIRect MainView);
 	void RenderSettingsTClientSidebar(CUIRect MainView);
-	void RenderSettingsQmClient(CUIRect MainView);
+	void RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage = false);
+	void RenderSettingsQmClientOverview(CUIRect MainView);
 	void PrewarmTClientAndQmClientPages();
 	void RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha = 1.0f);
 

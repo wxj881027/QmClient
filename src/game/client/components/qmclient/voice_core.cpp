@@ -58,6 +58,84 @@ static void VoiceLogErrorOnce(char *pLastMessage, size_t LastMessageSize, const 
 	log_error("voice", "%s", pMessage);
 }
 
+void CVoiceOverlayState::Reset()
+{
+	m_aLastHeard.fill(0);
+	m_aOrder.fill(0);
+	m_aIsLocal.fill(false);
+	for(auto &aName : m_aaNames)
+		aName[0] = '\0';
+	m_NextOrder = 1;
+}
+
+void CVoiceOverlayState::NoteSpeaker(int ClientId, const char *pName, bool IsLocal, int64_t Timestamp)
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || pName == nullptr || pName[0] == '\0')
+		return;
+
+	m_aLastHeard[ClientId] = Timestamp;
+	m_aIsLocal[ClientId] = IsLocal;
+	str_copy(m_aaNames[ClientId].data(), pName, m_aaNames[ClientId].size());
+	if(m_aOrder[ClientId] == 0)
+	{
+		m_aOrder[ClientId] = m_NextOrder++;
+		if(m_NextOrder == 0)
+			m_NextOrder = 1;
+	}
+}
+
+std::vector<SVoiceOverlayEntry> CVoiceOverlayState::CollectVisible(int64_t Now, int64_t VisibleWindow, bool ShowLocalWhenActive, size_t MaxEntries)
+{
+	std::vector<SVoiceOverlayEntry> vEntries;
+	vEntries.reserve(MAX_CLIENTS);
+
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+	{
+		const int64_t LastHeard = m_aLastHeard[ClientId];
+		if(LastHeard <= 0 || Now - LastHeard >= VisibleWindow)
+		{
+			m_aOrder[ClientId] = 0;
+			continue;
+		}
+
+		if(m_aaNames[ClientId][0] == '\0')
+		{
+			m_aOrder[ClientId] = 0;
+			continue;
+		}
+
+		if(m_aIsLocal[ClientId] && !ShowLocalWhenActive)
+		{
+			m_aOrder[ClientId] = 0;
+			continue;
+		}
+
+		if(m_aOrder[ClientId] == 0)
+		{
+			m_aOrder[ClientId] = m_NextOrder++;
+			if(m_NextOrder == 0)
+				m_NextOrder = 1;
+		}
+
+		SVoiceOverlayEntry &Entry = vEntries.emplace_back();
+		Entry.m_ClientId = ClientId;
+		Entry.m_Order = m_aOrder[ClientId];
+		Entry.m_IsLocal = m_aIsLocal[ClientId];
+		str_copy(Entry.m_aName, m_aaNames[ClientId].data(), sizeof(Entry.m_aName));
+	}
+
+	std::stable_sort(vEntries.begin(), vEntries.end(), [](const SVoiceOverlayEntry &Left, const SVoiceOverlayEntry &Right) {
+		if(Left.m_Order != Right.m_Order)
+			return Left.m_Order < Right.m_Order;
+		return Left.m_ClientId < Right.m_ClientId;
+	});
+
+	if(vEntries.size() > MaxEntries)
+		vEntries.resize(MaxEntries);
+
+	return vEntries;
+}
+
 static constexpr char VOICE_MAGIC[4] = {'R', 'V', '0', '1'};
 static constexpr uint8_t VOICE_VERSION = 3;
 static constexpr uint8_t VOICE_TYPE_AUDIO = 1;
@@ -104,6 +182,84 @@ static uint32_t VoiceTokenMode(uint32_t TokenHash)
 static bool VoiceShouldHear(uint32_t SenderGroup, uint32_t ReceiverGroup)
 {
 	return SenderGroup == ReceiverGroup;
+}
+
+static void WriteU16(uint8_t *pBuf, uint16_t Value)
+{
+	pBuf[0] = Value & 0xff;
+	pBuf[1] = (Value >> 8) & 0xff;
+}
+
+static void WriteU32(uint8_t *pBuf, uint32_t Value)
+{
+	pBuf[0] = Value & 0xff;
+	pBuf[1] = (Value >> 8) & 0xff;
+	pBuf[2] = (Value >> 16) & 0xff;
+	pBuf[3] = (Value >> 24) & 0xff;
+}
+
+static void WriteFloat(uint8_t *pBuf, float Value)
+{
+	static_assert(sizeof(float) == 4, "float must be 4 bytes");
+	uint32_t Bits = 0;
+	mem_copy(&Bits, &Value, sizeof(Bits));
+	WriteU32(pBuf, Bits);
+}
+
+static uint16_t ReadU16(const uint8_t *pBuf)
+{
+	return (uint16_t)pBuf[0] | ((uint16_t)pBuf[1] << 8);
+}
+
+static uint32_t ReadU32(const uint8_t *pBuf)
+{
+	return (uint32_t)pBuf[0] | ((uint32_t)pBuf[1] << 8) | ((uint32_t)pBuf[2] << 16) | ((uint32_t)pBuf[3] << 24);
+}
+
+static float ReadFloat(const uint8_t *pBuf)
+{
+	uint32_t Bits = ReadU32(pBuf);
+	float Value = 0.0f;
+	mem_copy(&Value, &Bits, sizeof(Value));
+	return Value;
+}
+
+static float SanitizeFloat(float Value)
+{
+	if(!std::isfinite(Value))
+		return 0.0f;
+	if(Value > 1000000.0f)
+		return 1000000.0f;
+	if(Value < -1000000.0f)
+		return -1000000.0f;
+	return Value;
+}
+
+static float VoiceFramePeak(const int16_t *pSamples, int Count)
+{
+	int Peak = 0;
+	for(int i = 0; i < Count; i++)
+	{
+		const int Sample = pSamples[i];
+		const int Abs = Sample == -32768 ? 32768 : (Sample < 0 ? -Sample : Sample);
+		if(Abs > Peak)
+			Peak = Abs;
+	}
+	return Peak / 32768.0f;
+}
+
+static void ApplyMicGain(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count)
+{
+	const float Gain = std::clamp(Config.m_QmVoiceMicVolume / 100.0f, 0.0f, 3.0f);
+	if(Gain == 1.0f)
+		return;
+
+	for(int i = 0; i < Count; i++)
+	{
+		const float Out = pSamples[i] * Gain;
+		const int Sample = (int)std::clamp(Out, -32768.0f, 32767.0f);
+		pSamples[i] = (int16_t)Sample;
+	}
 }
 
 static void ApplyHpfCompressor(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count, float &PrevIn, float &PrevOut, float &Env)
@@ -301,19 +457,38 @@ static bool ParseHostPort(const char *pAddrStr, char *pHost, size_t HostSize, in
 
 void CRClientVoice::Init(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole)
 {
+	SetInterfaces(pGameClient, pClient, pConsole);
+	Init();
+}
+
+void CRClientVoice::SetInterfaces(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole)
+{
 	m_pGameClient = pGameClient;
 	m_pClient = pClient;
 	m_pConsole = pConsole;
 	m_pGraphics = m_pGameClient ? m_pGameClient->Kernel()->RequestInterface<IEngineGraphics>() : nullptr;
+}
+
+bool CRClientVoice::Init()
+{
+	if(!m_pGameClient || !m_pClient || !m_pConsole)
+		return false;
+
 	m_pPeers = std::make_unique<std::array<SVoicePeer, MAX_CLIENTS>>();
 	m_ShutdownDone = false;
 	m_LastConfigSnapshotUpdate = 0;
 	m_LastClientSnapshotUpdate = 0;
+	return true;
 }
 
 void CRClientVoice::OnShutdown()
 {
 	Shutdown();
+}
+
+void CRClientVoice::OnFrame()
+{
+	OnRender();
 }
 
 void CRClientVoice::SetPttActive(bool Active)
@@ -411,6 +586,7 @@ bool CRClientVoice::EnsureAudio()
 		m_CaptureSpec = {};
 		m_OutputSpec = {};
 		m_OutputChannels.store(0);
+		ClearPeerFrames();
 		str_copy(m_aAudioBackend, g_Config.m_QmVoiceAudioBackend, sizeof(m_aAudioBackend));
 		m_aAudioBackendMismatchReq[0] = '\0';
 		m_aAudioBackendMismatchCur[0] = '\0';
@@ -897,6 +1073,54 @@ void CRClientVoice::ListDevices()
 	}
 }
 
+void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const
+{
+	std::array<std::array<char, MAX_NAME_LENGTH>, MAX_CLIENTS> aaClientNames{};
+	std::array<int, 2> aLocalClientIds{};
+	aLocalClientIds.fill(-1);
+	int PreferredLocalId = -1;
+	bool Online = false;
+	{
+		std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
+		Online = m_OnlineSnap;
+		if(!Online)
+			return;
+
+		PreferredLocalId = m_LocalClientIdSnap;
+		aLocalClientIds = m_aLocalClientIdsSnap;
+		aaClientNames = m_aClientNameSnap;
+	}
+
+	bool LocalEntryAdded = false;
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	{
+		const int64_t LastHeard = m_aLastHeard[ClientId].load();
+		if(LastHeard <= 0 || aaClientNames[ClientId][0] == '\0')
+			continue;
+
+		bool IsLocalSpeaker = false;
+		for(const int LocalId : aLocalClientIds)
+		{
+			if(LocalId == ClientId)
+			{
+				IsLocalSpeaker = true;
+				break;
+			}
+		}
+
+		if(IsLocalSpeaker)
+		{
+			if(PreferredLocalId >= 0 && ClientId != PreferredLocalId)
+				continue;
+			if(PreferredLocalId < 0 && LocalEntryAdded)
+				continue;
+			LocalEntryAdded = true;
+		}
+
+		Overlay.NoteSpeaker(ClientId, aaClientNames[ClientId].data(), IsLocalSpeaker, LastHeard);
+	}
+}
+
 void CRClientVoice::UpdateMicLevel(float Peak)
 {
 	const float Prev = m_MicLevel.load();
@@ -1230,6 +1454,7 @@ void CRClientVoice::ProcessCapture()
 		VoiceUtils::WriteU32(aPacket + Offset, m_ContextHash.load());
 		Offset += sizeof(uint32_t);
 		VoiceUtils::WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
+		WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
 		Offset += sizeof(uint32_t);
 		aPacket[Offset++] = TxFlags;
 		VoiceUtils::WriteU16(aPacket + Offset, 0);
@@ -1384,6 +1609,7 @@ void CRClientVoice::ProcessCapture()
 		VoiceUtils::WriteU32(aPacket + Offset, m_ContextHash.load());
 		Offset += sizeof(uint32_t);
 		VoiceUtils::WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
+		WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
 		Offset += sizeof(uint32_t);
 		aPacket[Offset++] = TxFlags;
 		VoiceUtils::WriteU16(aPacket + Offset, (uint16_t)ClientId);

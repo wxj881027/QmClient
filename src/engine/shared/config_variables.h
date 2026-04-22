@@ -232,7 +232,7 @@ MACRO_CONFIG_STR(ClDummy7SkinEyes, dummy7_skin_eyes, protocol7::MAX_SKIN_ARRAY_S
 // MACRO_CONFIG_STR(ClCensorUrl, cl_censor_url, 100, "https://info.ddnet.org/censor.json", CFGFLAG_CLIENT | CFGFLAG_SAVE, "URL used to download words to censor (must start with https://)")
 
 MACRO_CONFIG_INT(UiPage, ui_page, 6, 6, 13, CFGFLAG_CLIENT | CFGFLAG_SAVE, "界面页面")
-MACRO_CONFIG_INT(UiSettingsPage, ui_settings_page, 0, 0, 11, CFGFLAG_CLIENT | CFGFLAG_SAVE, "界面设置页面")
+MACRO_CONFIG_INT(UiSettingsPage, ui_settings_page, 0, 0, 14, CFGFLAG_CLIENT | CFGFLAG_SAVE, "界面设置页面")
 MACRO_CONFIG_INT(UiToolboxPage, ui_toolbox_page, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "工具箱页面")
 MACRO_CONFIG_STR(UiServerAddress, ui_server_address, 1024, "localhost:8303", CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_INSENSITIVE, "界面服务器地址")
 MACRO_CONFIG_INT(UiMousesens, ui_mousesens, 200, 1, 100000, CFGFLAG_SAVE | CFGFLAG_CLIENT, "菜单/编辑器中的鼠标灵敏度")

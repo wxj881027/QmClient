@@ -10,6 +10,7 @@ AGENTS.md
 src/rust-bridge/voice/opus-prebuilt/
 
 # Local documentation
+dyl/
 docs/dyl
 !docs/dyl/QmClient_docs
 .trae
@@ -97,7 +98,6 @@ versionsrv
 
 generated
 target
-src/voicesrv/
 
 /build*
 /integration_test/*

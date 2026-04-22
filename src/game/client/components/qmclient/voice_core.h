@@ -25,6 +25,29 @@ struct OpusDecoder;
 struct OpusEncoder;
 struct DenoiseState;
 
+struct SVoiceOverlayEntry
+{
+	int m_ClientId = -1;
+	uint64_t m_Order = 0;
+	bool m_IsLocal = false;
+	char m_aName[MAX_NAME_LENGTH] = {};
+};
+
+class CVoiceOverlayState
+{
+public:
+	void Reset();
+	void NoteSpeaker(int ClientId, const char *pName, bool IsLocal, int64_t Timestamp);
+	std::vector<SVoiceOverlayEntry> CollectVisible(int64_t Now, int64_t VisibleWindow, bool ShowLocalWhenActive, size_t MaxEntries);
+
+private:
+	std::array<int64_t, MAX_CLIENTS> m_aLastHeard = {};
+	std::array<uint64_t, MAX_CLIENTS> m_aOrder = {};
+	std::array<bool, MAX_CLIENTS> m_aIsLocal = {};
+	std::array<std::array<char, MAX_NAME_LENGTH>, MAX_CLIENTS> m_aaNames = {};
+	uint64_t m_NextOrder = 1;
+};
+
 struct SRClientVoiceConfigSnapshot
 {
 	int m_QmVoiceFilterEnable = 0;
@@ -204,7 +227,7 @@ class CRClientVoice
 	mutable std::mutex m_ConfigMutex;
 	SRClientVoiceConfigSnapshot m_ConfigSnapshot = {};
 
-	std::mutex m_SnapshotMutex;
+	mutable std::mutex m_SnapshotMutex;
 	int m_LocalClientIdSnap = -1;
 	std::array<int, 2> m_aLocalClientIdsSnap = {};
 	bool m_OnlineSnap = false;
@@ -218,7 +241,6 @@ class CRClientVoice
 
 	bool EnsureSocket();
 	bool EnsureAudio();
-	void Shutdown();
 	void UpdateServerAddrConfig();
 	void ResolveServerAddr();
 	bool UpdateContext();
@@ -241,12 +263,17 @@ class CRClientVoice
 	void WorkerLoop();
 
 public:
+	void SetInterfaces(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole);
+	bool Init();
 	void Init(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole);
+	void Shutdown();
 	void OnShutdown();
+	void OnFrame();
 	void OnRender();
 	void RenderSpeakerOverlay();
 	void SetPttActive(bool Active);
 	void ListDevices();
+	void ExportOverlayState(CVoiceOverlayState &Overlay) const;
 	int PingMs() const { return m_PingMs.load(); }
 	float MicLevel() const { return m_MicLevel.load(); }
 	bool IsSpeaking() const { return m_TxWasActive.load(); }

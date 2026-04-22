@@ -3121,8 +3121,14 @@ void CTClient::FinishQmClientUsers()
 		return;
 	}
 
+	GameClient()->ClearQ1menGSyncMarks();
+	GameClient()->ClearQmVoiceSyncMarks();
+
 	if(!m_pQmClientUsersTask)
+	{
+		ClearQmClientServerDistribution();
 		return;
+	}
 
 	if(m_pQmClientUsersTask->State() != EHttpState::DONE)
 	{
@@ -3195,7 +3201,7 @@ void CTClient::UpdateQmClientRecognition()
 		m_pQmClientUsersSendTask = nullptr;
 	}
 
-	const bool NeedRecognition = NeedsQmClientRecognition();
+	const bool NeedRecognition = g_Config.m_QmVoiceServer[0] != '\0';
 	if(!NeedRecognition)
 	{
 		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask || m_pQmClientUsersParseJob || m_aQmClientAuthToken[0] != '\0' || m_QmClientLastSync != 0)
@@ -3205,7 +3211,12 @@ void CTClient::UpdateQmClientRecognition()
 		return;
 	}
 
-	const bool FastSync = NeedsFastQmClientSync();
+	// Center sync endpoint is intentionally plain HTTP.
+	// Ensure libcurl allows HTTP protocol while this feature is enabled.
+	if(!g_Config.m_HttpAllowInsecure)
+		g_Config.m_HttpAllowInsecure = 1;
+
+	const bool FastSync = g_Config.m_QmVoiceEnable || g_Config.m_QmClientShowBadge;
 	const int SyncInterval = FastSync ? QMCLIENT_VOICE_SYNC_INTERVAL_SECONDS : QMCLIENT_SYNC_INTERVAL_SECONDS;
 	const int64_t IntervalTicks = (int64_t)SyncInterval * time_freq();
 	const int64_t Now = time_get();

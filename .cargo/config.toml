@@ -1,8 +1,2 @@
 [target.'cfg(target_env = "msvc")']
 rustflags = ["-C", "target-feature=+crt-static"]
-
-# opus crate (libopus 绑定) 预编译库路径
-# audiopus_sys 的 link_opus() 会在路径后追加 /lib，所以需要 <path>/lib/opus.lib
-# 首次构建前需运行: src/rust-bridge/voice/setup-opus.ps1
-[env]
-LIBOPUS_LIB_DIR = { value = "src/rust-bridge/voice/opus-prebuilt", relative = true }

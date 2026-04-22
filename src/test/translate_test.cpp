@@ -2,7 +2,7 @@
 
 #include <base/system.h>
 
-#include <engine/shared/jsonreader.h>
+#include <engine/shared/json.h>
 
 #include <gtest/gtest.h>
 
@@ -10,48 +10,54 @@
 
 static void EscapeJsonString(const char *pStr, char *pOut, size_t OutSize)
 {
-	size_t OutPos = 0;
-	if(OutSize < 2)
+	if(OutSize == 0)
 		return;
+
+	pOut[0] = '\0';
+	if(OutSize < 3)
+		return;
+
+	size_t OutPos = 0;
 	pOut[OutPos++] = '"';
 	for(const char *p = pStr; *p; ++p)
 	{
-		char c = *p;
-		if(c == '"' || c == '\\' || c == '\b' || c == '\n' || c == '\r' || c == '\t' || (unsigned char)c < 0x20)
+		const unsigned char c = (unsigned char)*p;
+		const auto CanAppend = [&](size_t Count) {
+			return OutPos + Count + 2 <= OutSize;
+		};
+
+		if(c == '"' || c == '\\' || c == '\b' || c == '\n' || c == '\r' || c == '\t')
 		{
-			if(OutPos >= OutSize - 2)
+			if(!CanAppend(2))
 				break;
 			pOut[OutPos++] = '\\';
 			switch(c)
 			{
-			case '"': pOut[OutPos++] = '\\'; pOut[OutPos++] = '"'; break;
+			case '"': pOut[OutPos++] = '"'; break;
 			case '\\': pOut[OutPos++] = '\\'; break;
 			case '\b': pOut[OutPos++] = 'b'; break;
 			case '\n': pOut[OutPos++] = 'n'; break;
 			case '\r': pOut[OutPos++] = 'r'; break;
 			case '\t': pOut[OutPos++] = 't'; break;
-			default:
-				if(OutPos >= OutSize - 6)
-				{
-					OutPos--;
-					break;
-				}
-				str_format(pOut + OutPos, 6, "u%04x", (unsigned char)c);
-				OutPos += 5;
-				break;
 			}
+		}
+		else if(c < 0x20)
+		{
+			if(!CanAppend(6))
+				break;
+			str_format(pOut + OutPos, OutSize - OutPos, "\\u%04x", c);
+			OutPos += 6;
 		}
 		else
 		{
-			if(OutPos >= OutSize - 1)
+			if(!CanAppend(1))
 				break;
-			pOut[OutPos++] = c;
+			pOut[OutPos++] = (char)c;
 		}
 	}
-	if(OutPos < OutSize)
-		pOut[OutPos++] = '"';
-	if(OutPos < OutSize)
-		pOut[OutPos] = '\0';
+
+	pOut[OutPos++] = '"';
+	pOut[OutPos] = '\0';
 }
 
 TEST(Translate, EscapeJsonString_Basic)
@@ -156,7 +162,8 @@ TEST(Translate, EscapeJsonString_ExactlyTwo)
 TEST(Translate, EscapeJsonString_NullByte)
 {
 	char aBuf[256];
-	EscapeJsonString("null\x00byte", aBuf, sizeof(aBuf));
+	const char aInput[] = {'n', 'u', 'l', 'l', '\0', 'b', 'y', 't', 'e', '\0'};
+	EscapeJsonString(aInput, aBuf, sizeof(aBuf));
 	EXPECT_STREQ(aBuf, "\"null\"");
 }
 
@@ -199,7 +206,7 @@ TEST(Translate, EscapeJsonString_MultipleEscapes)
 {
 	char aBuf[256];
 	EscapeJsonString("\"\\\\\n\r\t\"", aBuf, sizeof(aBuf));
-	EXPECT_STREQ(aBuf, "\"\\\"\\\\\\n\\r\\t\\\"\"");
+	EXPECT_STREQ(aBuf, "\"\\\"\\\\\\\\\\n\\r\\t\\\"\"");
 }
 
 class TranslateJsonResponseParser
@@ -211,29 +218,34 @@ public:
 		if(!pRoot)
 			return false;
 
-		const json_value *pChoices = json_get_object(pRoot, "choices");
-		if(!pChoices || pChoices->type != JSON_ARRAY)
+		const json_value *pChoices = json_object_get(pRoot, "choices");
+		if(pChoices == &json_value_none || pChoices->type != json_array)
+		{
+			json_value_free(pRoot);
+			return false;
+		}
+		if(json_array_length(pChoices) == 0)
 		{
 			json_value_free(pRoot);
 			return false;
 		}
 
-		const json_value *pFirstChoice = &pChoices->u.array_values[0];
-		if(!pFirstChoice || pFirstChoice->type != JSON_OBJECT)
+		const json_value *pFirstChoice = json_array_get(pChoices, 0);
+		if(pFirstChoice == &json_value_none || pFirstChoice->type != json_object)
 		{
 			json_value_free(pRoot);
 			return false;
 		}
 
-		const json_value *pMessage = json_get_object(pFirstChoice, "message");
-		if(!pMessage || pMessage->type != JSON_OBJECT)
+		const json_value *pMessage = json_object_get(pFirstChoice, "message");
+		if(pMessage == &json_value_none || pMessage->type != json_object)
 		{
 			json_value_free(pRoot);
 			return false;
 		}
 
-		const json_value *pContent = json_get_object(pMessage, "content");
-		if(!pContent || pContent->type != JSON_STRING)
+		const json_value *pContent = json_object_get(pMessage, "content");
+		if(pContent == &json_value_none || pContent->type != json_string)
 		{
 			json_value_free(pRoot);
 			return false;
@@ -252,15 +264,15 @@ public:
 		if(!pRoot)
 			return false;
 
-		const json_value *pError = json_get_object(pRoot, "error");
-		if(!pError || pError->type != JSON_OBJECT)
+		const json_value *pError = json_object_get(pRoot, "error");
+		if(pError == &json_value_none || pError->type != json_object)
 		{
 			json_value_free(pRoot);
 			return false;
 		}
 
-		const json_value *pMessage = json_get_object(pError, "message");
-		if(!pMessage || pMessage->type != JSON_STRING)
+		const json_value *pMessage = json_object_get(pError, "message");
+		if(pMessage == &json_value_none || pMessage->type != json_string)
 		{
 			json_value_free(pRoot);
 			return false;
