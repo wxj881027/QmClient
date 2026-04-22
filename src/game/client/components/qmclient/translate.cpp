@@ -1247,15 +1247,15 @@ public:
 		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", pApiKey);
 
 		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
-	m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
-	m_pHttpRequest->FailOnErrorStatus(false);
-	// LLM API 响应可能较慢（特别是智谱AI），增加超时时间到30秒
-	// 降低最低速度要求避免 "Operation too slow" 错误
-	m_pHttpRequest->Timeout(CTimeout{30000, 0, 100, 30});
-	m_pHttpRequest->HeaderString("Content-Type", "application/json");
-	m_pHttpRequest->HeaderString("Authorization", aAuthorization);
-	m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(aPayload), str_length(aPayload));
-	Http.Run(m_pHttpRequest);
+		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
+		m_pHttpRequest->FailOnErrorStatus(false);
+		// LLM API 响应可能较慢（特别是智谱AI），增加超时时间到30秒
+		// 降低最低速度要求避免 "Operation too slow" 错误
+		m_pHttpRequest->Timeout(CTimeout{30000, 0, 100, 30});
+		m_pHttpRequest->HeaderString("Content-Type", "application/json");
+		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
+		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(aPayload), str_length(aPayload));
+		Http.Run(m_pHttpRequest);
 	}
 };
 

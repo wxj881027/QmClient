@@ -8,6 +8,8 @@
 #include <optional>
 #include <vector>
 
+#include "translate_parse.h"
+
 class CTranslate;
 
 class ITranslateBackend
@@ -19,8 +21,6 @@ public:
 	virtual const char *Name() const = 0;
 	virtual std::optional<bool> Update(CTranslateResponse &Out) = 0;
 };
-
-#include "translate_parse.h"
 
 class CTranslate : public CComponent
 {
