@@ -947,20 +947,24 @@ public:
 		EscapeJsonString(aSystemMessage, aEscapedSystem, sizeof(aEscapedSystem));
 
 		// Use configured model or default to glm-4.7-flash
-		const char *pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ? g_Config.m_QmTranslateZhipuaiModel : "glm-4.7-flash";
+	const char *pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ? g_Config.m_QmTranslateZhipuaiModel : "glm-4.7-flash";
 
-		char aPayload[8192];
-		str_format(aPayload, sizeof(aPayload),
-			"{"
-			"\"model\":\"%s\","
-			"\"messages\":["
-			"{\"role\":\"system\",\"content\":%s},"
-			"{\"role\":\"user\",\"content\":%s}"
-			"],"
-			"\"temperature\":0.3,"
-			"\"max_tokens\":1024"
-			"}",
-			pModel, aEscapedSystem, aEscapedText);
+	// Escape model name for JSON
+	char aEscapedModel[128];
+	EscapeJsonString(pModel, aEscapedModel, sizeof(aEscapedModel));
+
+	char aPayload[8192];
+	str_format(aPayload, sizeof(aPayload),
+		"{"
+		"\"model\":\"%s\","
+		"\"messages\":["
+		"{\"role\":\"system\",\"content\":%s},"
+		"{\"role\":\"user\",\"content\":%s}"
+		"],"
+		"\"temperature\":0.3,"
+		"\"max_tokens\":1024"
+		"}",
+		aEscapedModel, aEscapedSystem, aEscapedText);
 
 		// Build Authorization header
 		char aAuthorization[512];
@@ -1075,20 +1079,24 @@ public:
 		EscapeJsonString(aSystemMessage, aEscapedSystem, sizeof(aEscapedSystem));
 
 		const char *pModel = g_Config.m_QmTranslateZhipuaiModel[0] != '\0' ?
-		                      g_Config.m_QmTranslateZhipuaiModel : "glm-4.5-flash";
+	                      g_Config.m_QmTranslateZhipuaiModel : "glm-4.5-flash";
 
-		char aPayload[8192];
-		str_format(aPayload, sizeof(aPayload),
-			"{"
-			"\"model\":\"%s\","
-			"\"messages\":["
-			"{\"role\":\"system\",\"content\":%s},"
-			"{\"role\":\"user\",\"content\":%s}"
-			"],"
-			"\"temperature\":0.3,"
-			"\"max_tokens\":1024"
-			"}",
-			pModel, aEscapedSystem, aEscapedText);
+	// Escape model name for JSON
+	char aEscapedModel[128];
+	EscapeJsonString(pModel, aEscapedModel, sizeof(aEscapedModel));
+
+	char aPayload[8192];
+	str_format(aPayload, sizeof(aPayload),
+		"{"
+		"\"model\":\"%s\","
+		"\"messages\":["
+		"{\"role\":\"system\",\"content\":%s},"
+		"{\"role\":\"user\",\"content\":%s}"
+		"],"
+		"\"temperature\":0.3,"
+		"\"max_tokens\":1024"
+		"}",
+		aEscapedModel, aEscapedSystem, aEscapedText);
 
 		char aAuthorization[512];
 		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", g_Config.m_TcTranslateKey);
