@@ -5833,7 +5833,11 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				DoModuleHeadline(CardContent, 8, Localize("Translate"), Localize("Chat translation settings"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAuto, Localize("Automatically translate chat messages"), &g_Config.m_QmTranslateAuto, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAuto, Localize("Auto inbound translation"), &g_Config.m_QmTranslateAuto, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAutoOutgoing, Localize("Auto outbound translation"), &g_Config.m_QmTranslateAutoOutgoing, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static std::vector<const char *> s_TranslateBackendDropDownNames;
@@ -5887,9 +5891,33 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 				Ui()->DoLabel(&LabelCol, Localize("Target language"), LG_BodySize, TEXTALIGN_ML);
-				static CLineInput s_TranslateTarget(g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget));
-				s_TranslateTarget.SetEmptyText("zh");
-				Ui()->DoEditBox(&s_TranslateTarget, &ControlCol, LG_BodySize);
+
+				// 下拉框 + 输入框组合
+				{
+					static const char *s_apLangNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
+					static const char *s_apLangCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+					static CUi::SDropDownState s_TargetLangDropDown;
+
+					CUIRect DropRect, EditRect;
+					ControlCol.VSplitMid(&DropRect, &EditRect);
+					DropRect.VMargin(1.0f, &DropRect);
+					EditRect.VMargin(1.0f, &EditRect);
+
+					auto FindIndex = [](const char *pVal, const char **apCodes, int Count) -> int {
+						for(int i = 0; i < Count; ++i)
+							if(str_comp(pVal, apCodes[i]) == 0) return i;
+						return -1;
+					};
+
+					const int OldSel = FindIndex(g_Config.m_QmTranslateTarget, s_apLangCodes, std::size(s_apLangCodes));
+					const int NewSel = Ui()->DoDropDown(&DropRect, OldSel < 0 ? 0 : OldSel, s_apLangNames, std::size(s_apLangNames), s_TargetLangDropDown);
+					if(NewSel != OldSel && NewSel >= 0)
+						str_copy(g_Config.m_QmTranslateTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateTarget));
+
+					static CLineInput s_TranslateTarget(g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget));
+					s_TranslateTarget.SetEmptyText("zh");
+					Ui()->DoEditBox(&s_TranslateTarget, &EditRect, LG_BodySize);
+				}
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				// Endpoint 配置 - 根据后端类型显示不同的端点输入
@@ -6104,9 +6132,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 
 					// 思考模式开关
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Thinking Mode"), LG_BodySize, TEXTALIGN_ML);
-					Ui()->DoScrollbarOption(&g_Config.m_QmTranslateLlmEnableThinking, &g_Config.m_QmTranslateLlmEnableThinking, &ControlCol, Localize("Enable thinking mode (slower)"), 0, 1);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateLlmEnableThinking, Localize("Enable thinking mode (slower)"), &g_Config.m_QmTranslateLlmEnableThinking, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					// 思考模式提示
@@ -6149,18 +6175,66 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				// 入站语言和出站语言配置
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Source Language"), LG_BodySize, TEXTALIGN_ML);
-				static CLineInput s_SourceLang(g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource));
-				s_SourceLang.SetEmptyText("auto");
-				Ui()->DoEditBox(&s_SourceLang, &ControlCol, LG_BodySize);
+				Ui()->DoLabel(&LabelCol, Localize("Outbound Source Language"), LG_BodySize, TEXTALIGN_ML);
+
+				// 下拉框 + 输入框组合
+				{
+					static const char *s_apSourceNames[] = {Localize("Auto Detect"), "中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
+					static const char *s_apSourceCodes[] = {"auto", "zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+					static CUi::SDropDownState s_SourceLangDropDown;
+
+					CUIRect DropRect, EditRect;
+					ControlCol.VSplitMid(&DropRect, &EditRect);
+					DropRect.VMargin(1.0f, &DropRect);
+					EditRect.VMargin(1.0f, &EditRect);
+
+					auto FindIndexSrc = [](const char *pVal, const char **apCodes, int Count) -> int {
+						for(int i = 0; i < Count; ++i)
+							if(str_comp(pVal, apCodes[i]) == 0) return i;
+						return -1;
+					};
+
+					const int OldSelSrc = FindIndexSrc(g_Config.m_QmTranslateSource, s_apSourceCodes, std::size(s_apSourceCodes));
+					const int NewSelSrc = Ui()->DoDropDown(&DropRect, OldSelSrc < 0 ? 0 : OldSelSrc, s_apSourceNames, std::size(s_apSourceNames), s_SourceLangDropDown);
+					if(NewSelSrc != OldSelSrc && NewSelSrc >= 0)
+						str_copy(g_Config.m_QmTranslateSource, s_apSourceCodes[NewSelSrc], sizeof(g_Config.m_QmTranslateSource));
+
+					static CLineInput s_SourceLang(g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource));
+					s_SourceLang.SetEmptyText("auto");
+					Ui()->DoEditBox(&s_SourceLang, &EditRect, LG_BodySize);
+				}
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Target Language"), LG_BodySize, TEXTALIGN_ML);
-				static CLineInput s_TargetLang(g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget));
-				s_TargetLang.SetEmptyText("zh");
-				Ui()->DoEditBox(&s_TargetLang, &ControlCol, LG_BodySize);
+				Ui()->DoLabel(&LabelCol, Localize("Outbound Target Language"), LG_BodySize, TEXTALIGN_ML);
+
+				// 下拉框 + 输入框组合
+				{
+					static const char *s_apOutTargetNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
+					static const char *s_apOutTargetCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+					static CUi::SDropDownState s_OutTargetLangDropDown;
+
+					CUIRect DropRect, EditRect;
+					ControlCol.VSplitMid(&DropRect, &EditRect);
+					DropRect.VMargin(1.0f, &DropRect);
+					EditRect.VMargin(1.0f, &EditRect);
+
+					auto FindIndexOut = [](const char *pVal, const char **apCodes, int Count) -> int {
+						for(int i = 0; i < Count; ++i)
+							if(str_comp(pVal, apCodes[i]) == 0) return i;
+						return -1;
+					};
+
+					const int OldSelOut = FindIndexOut(g_Config.m_QmTranslateOutgoingTarget, s_apOutTargetCodes, std::size(s_apOutTargetCodes));
+					const int NewSelOut = Ui()->DoDropDown(&DropRect, OldSelOut < 0 ? 0 : OldSelOut, s_apOutTargetNames, std::size(s_apOutTargetNames), s_OutTargetLangDropDown);
+					if(NewSelOut != OldSelOut && NewSelOut >= 0)
+						str_copy(g_Config.m_QmTranslateOutgoingTarget, s_apOutTargetCodes[NewSelOut], sizeof(g_Config.m_QmTranslateOutgoingTarget));
+
+					static CLineInput s_TargetLang(g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget));
+					s_TargetLang.SetEmptyText("en");
+					Ui()->DoEditBox(&s_TargetLang, &EditRect, LG_BodySize);
+				}
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				// CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);

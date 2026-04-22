@@ -212,7 +212,15 @@ class CChat : public CComponent
 	{
 	public:
 		CChat *m_pChat = nullptr;
-		ETranslateDropdown m_DropdownOpen = ETranslateDropdown::NONE;
+
+		// DoDropDown 状态（使用游戏自带下拉框组件）
+		CUi::SDropDownState m_InboundLangDropDownState;
+		CUi::SDropDownState m_OutboundLangDropDownState;
+		CUi::SDropDownState m_BackendDropDownState;
+
+		// 菜单动画状态
+		int64_t m_OpenTime = 0;
+		float m_AnimationProgress = 1.0f;
 	};
 	CLanguagePopupContext m_LanguagePopupContext;
 	bool m_LanguageMenuOpen = false;

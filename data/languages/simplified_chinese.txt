@@ -6558,11 +6558,11 @@ Right-click to enable auto-translate
 Translate Backend
 == 翻译后端
 
-Inbound Language
-== 入站语言
+Inbound Language (Receive)
+== 入站语言（接收消息）
 
-Outbound Language
-== 出站语言
+Outbound Language (Send)
+== 出站语言（发送消息）
 
 On
 == 开
@@ -6571,13 +6571,13 @@ Off
 == 关
 
 ⚠️ Tencent Cloud API not configured
-== ⚠️ 腾讯云 API 未配置
+== ⚠️ 腾讯云 API 密钥未配置
 
 ⚠️ LibreTranslate API Key not set
-== ⚠️ LibreTranslate API Key 未设置
+== ⚠️ Libre 翻译 API 密钥未设置
 
 ⚠️ LLM API Key not configured
-== ⚠️ LLM API Key 未配置
+== ⚠️ LLM API 密钥未配置
 
 Translate UI
 == 翻译 UI
@@ -6654,8 +6654,8 @@ Click to copy this clan's name to clipboard
 Add to category
 == 添加到分类
 
-Thank you for your companionship and belief, which gave me the courage to keep going
-== 感谢你们一直以来的陪伴与坚信让我能够有勇气走下去,谢谢
+Thank you for your companionship and belief, which gave me the courage to keep going!
+== 感谢你们一直以来的陪伴与坚信让我能够有勇气走下去，谢谢！
 
 Moved ingame
 == 在游戏内已移动
@@ -6731,3 +6731,36 @@ Game time margin
 
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 平均 %.*f   ↓ %.*f   ↑ %.*f
+
+Auto Inbound Translation
+== 自动入站翻译
+
+Auto Outbound Translation
+== 自动出站翻译
+
+Auto inbound translation
+== 自动入站翻译
+
+Auto outbound translation
+== 自动出站翻译
+
+LLM API
+== LLM API
+
+Tencent Cloud
+== 腾讯云
+
+LibreTranslate
+== Libre 翻译
+
+FTAPI
+== FTAPI
+
+Outbound Target Language
+== 出站目标语言
+
+Outbound Source Language
+== 出站源语言
+
+Auto Detect
+== 自动检测
