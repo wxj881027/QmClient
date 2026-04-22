@@ -6558,6 +6558,18 @@ Right-click to enable auto-translate
 Translate Backend
 == 翻译后端
 
+Inbound Language
+== 入站语言
+
+Outbound Language
+== 出站语言
+
+On
+== 开
+
+Off
+== 关
+
 ⚠️ Tencent Cloud API not configured
 == ⚠️ 腾讯云 API 未配置
 

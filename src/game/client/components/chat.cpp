@@ -2158,7 +2158,7 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 	{
 		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled));
 	}
-	const float ButtonRounding = maximum(5.0f, ButtonRect.h * 0.28f);
+	const float ButtonRounding = maximum(6.0f, ButtonRect.h * 0.28f);
 
 	ButtonRect.Draw(ButtonColor, IGraphics::CORNER_ALL, ButtonRounding);
 
@@ -2205,7 +2205,7 @@ void CChat::OpenLanguageMenu()
 
 		// 菜单尺寸
 		const float MenuWidth = 150.0f;
-		const float MenuHeight = 320.0f;
+		const float MenuHeight = 160.0f;
 
 		// 菜单在按钮上方弹出
 		vec2 MenuPos = vec2(m_TranslateButton.m_X, m_TranslateButton.m_Y) * ChatToUiScale;
@@ -2234,7 +2234,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	// 标题
 	CUIRect TitleRect;
 	View.HSplitTop(RowHeight, &TitleRect, &View);
-	pUi->DoLabel(&TitleRect, Localize("翻译设置"), FontSize, TEXTALIGN_ML);
+	pUi->DoLabel(&TitleRect, Localize("Translation Settings"), FontSize, TEXTALIGN_MC);
 
 	// 自动翻译开关
 	{
@@ -2253,8 +2253,8 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		}
 
 		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("自动翻译"), Enabled ? Localize("开") : Localize("关"));
-		pUi->DoLabel(&ToggleRect, aBuf, FontSize, TEXTALIGN_ML);
+		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto Translate"), Enabled ? Localize("On") : Localize("Off"));
+		pUi->DoLabel(&ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
 	}
 
 	// 语言列表定义
@@ -2298,7 +2298,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		// 标签
 		CUIRect LabelRect;
 		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
-		pUi->DoLabel(&LabelRect, pLabel, FontSize * 0.9f, TEXTALIGN_ML);
+		pUi->DoLabel(&LabelRect, pLabel, FontSize * 0.9f, TEXTALIGN_MC);
 
 		// 下拉框头部
 		CUIRect HeaderRect;
@@ -2316,10 +2316,16 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return true;
 		}
 
-		// 显示当前值和箭头
+		// 显示当前值和箭头（箭头居右）
 		char aDisplayBuf[64];
-		str_format(aDisplayBuf, sizeof(aDisplayBuf), "%s %s", GetValueName(pCurrentValue), IsOpen ? "▲" : "▼");
+		str_format(aDisplayBuf, sizeof(aDisplayBuf), "%s", GetValueName(pCurrentValue));
 		pUi->DoLabel(&HeaderRect, aDisplayBuf, FontSize, TEXTALIGN_ML);
+
+		// 箭头单独居右显示
+		CUIRect ArrowRect = HeaderRect;
+		ArrowRect.w = HeaderRect.h;
+		ArrowRect.x = HeaderRect.x + HeaderRect.w - ArrowRect.w;
+		pUi->DoLabel(&ArrowRect, IsOpen ? "▲" : "▼", FontSize, TEXTALIGN_MC);
 
 		// 如果展开，渲染列表（悬浮在下方，不挤占父元素空间）
 		if(IsOpen)
@@ -2363,7 +2369,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 					return true;
 				}
 
-				pUi->DoLabel(&ItemBgRect, Item.m_pName, FontSize, TEXTALIGN_ML);
+				pUi->DoLabel(&ItemBgRect, Item.m_pName, FontSize, TEXTALIGN_MC);
 
 				ItemRect.y += RowHeight;
 			}
@@ -2381,7 +2387,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		if(RenderDropdown(Localize("入站语言"), g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), ETranslateDropdown::INBOUND_LANG, 0, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
+		if(RenderDropdown(Localize("Inbound Language"), g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), ETranslateDropdown::INBOUND_LANG, 0, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
 			return CUi::POPUP_KEEP_OPEN;
 	}
 
@@ -2394,7 +2400,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		if(RenderDropdown(Localize("出站语言"), g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), ETranslateDropdown::OUTBOUND_LANG, 1, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
+		if(RenderDropdown(Localize("Outbound Language"), g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), ETranslateDropdown::OUTBOUND_LANG, 1, GetLangName, s_aLanguages, std::size(s_aLanguages), false))
 			return CUi::POPUP_KEEP_OPEN;
 	}
 
@@ -2407,7 +2413,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			return pCode;
 		};
 
-		if(RenderDropdown(Localize("翻译后端"), g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), ETranslateDropdown::BACKEND, 2, GetBackendName, s_aBackends, std::size(s_aBackends), true))
+		if(RenderDropdown(Localize("Translate Backend"), g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), ETranslateDropdown::BACKEND, 2, GetBackendName, s_aBackends, std::size(s_aBackends), true))
 			return CUi::POPUP_KEEP_OPEN;
 	}
 
@@ -2417,12 +2423,12 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
 	{
 		IsConfigured = g_Config.m_QmTranslateTcSecretId[0] != '\0' && g_Config.m_QmTranslateTcSecretKey[0] != '\0';
-		pConfigWarning = Localize("⚠️ 腾讯云 API 未配置");
+		pConfigWarning = Localize("⚠️ Tencent Cloud API not configured");
 	}
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
 	{
 		IsConfigured = g_Config.m_QmTranslateLibreKey[0] != '\0';
-		pConfigWarning = Localize("⚠️ LibreTranslate API Key 未设置");
+		pConfigWarning = Localize("⚠️ LibreTranslate API Key not set");
 	}
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
 	{
@@ -2430,7 +2436,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 			       g_Config.m_QmTranslateLlmKeyDeepseek[0] != '\0' ||
 			       g_Config.m_QmTranslateLlmKeyOpenai[0] != '\0' ||
 			       g_Config.m_QmTranslateLlmKeyCustom[0] != '\0';
-		pConfigWarning = Localize("⚠️ LLM API Key 未配置");
+		pConfigWarning = Localize("⚠️ LLM API Key not configured");
 	}
 
 	if(!IsConfigured && pConfigWarning)
@@ -2439,7 +2445,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		View.HSplitTop(RowHeight, &WarningRect, &View);
 		WarningRect.VMargin(2.0f, &WarningRect);
 		WarningRect.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, 4.0f);
-		pUi->DoLabel(&WarningRect, pConfigWarning, FontSize * 0.9f, TEXTALIGN_ML);
+		pUi->DoLabel(&WarningRect, pConfigWarning, FontSize * 0.9f, TEXTALIGN_MC);
 	}
 
 	return CUi::POPUP_KEEP_OPEN;
