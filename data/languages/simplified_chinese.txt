@@ -146,7 +146,7 @@ Graphics
 == 图像
 
 Grenade
-== 榴弹枪
+== 榴弹炮
 
 Hammer
 == 锤子
@@ -605,7 +605,7 @@ AntiPing: predict weapons
 == 延迟补偿：预测武器
 
 AntiPing: predict grenade paths
-== 延迟补偿：预测榴弹枪路径
+== 延迟补偿：预测榴弹炮路径
 
 Show other players' hook collision lines
 == 显示其他玩家的钩索辅助线
@@ -2751,7 +2751,7 @@ Give back right to vote to player with list index
 == 将投票权归还给列表索引的玩家
 
 Gives a grenade launcher to you
-== 给你一个榴弹发射器
+== 给你一个榴弹炮发射器
 
 Gives a laser to you
 == 给予你激光枪
@@ -3090,7 +3090,7 @@ Removes super from you
 == 移除你的超级状态
 
 Removes the grenade launcher from you
-== 移除你身上的榴弹发射器
+== 移除你身上的榴弹炮发射器
 
 Removes the jetpack from you
 == 从你身上取下喷气背包
@@ -3312,7 +3312,7 @@ Switch team
 == 切换队伍
 
 Switch to grenade
-== 切换到手榴弹
+== 切换到榴弹炮
 
 Switch to gun
 == 切换到枪
@@ -4967,7 +4967,7 @@ Latency compensation: predict weapons
 == 延迟补偿：预测武器
 
 Latency compensation: predict grenade trajectory
-== 延迟补偿：预测榴弹枪路径
+== 延迟补偿：预测榴弹炮路径
 
 New preset name
 == 新预设名称
@@ -6718,7 +6718,7 @@ AntiPing: predict weapons
 == 延迟补偿：预测武器
 
 AntiPing: predict grenade path
-== 延迟补偿：预测榴弹枪路径
+== 延迟补偿：预测榴弹炮路径
 
 New preset name
 == 新预设名称
@@ -6755,6 +6755,27 @@ LibreTranslate
 
 FTAPI
 == FTAPI
+
+Enable FTAPI auto-translate (may cause overload)
+== 启用 FTAPI 自动翻译（可能导致过载）
+
+⚠️ FTAPI is a free service. Excessive use may cause service suspension.
+== ⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停
+
+Concurrency
+== 并发数
+
+Auto: %d (smart default)
+== 自动：%d（智能默认值）
+
+Manual: %d
+== 手动：%d
+
+Manual concurrency (1=auto)
+== 手动并发数（1=自动）
+
+FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
+== FTAPI 自动翻译已禁用以防止过载。如需启用请在设置中配置。
 
 Outbound Target Language
 == 出站目标语言

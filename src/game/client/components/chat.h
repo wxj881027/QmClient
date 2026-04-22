@@ -277,6 +277,11 @@ public:
 	bool IsLanguageMenuOpen() const { return m_LanguageMenuOpen; }
 	static CUi::EPopupMenuFunctionResult PopupLanguageMenu(void *pContext, CUIRect View, bool Active);
 
+	// 聊天行索引辅助方法（用于翻译任务的内存安全）
+	int GetLineIndex(const CLine *pLine) const;
+	CLine *GetLineByIndex(int Index);
+	void InvalidateLineTranslation(CLine &Line);
+
 	// ----- send functions -----
 
 	// Sends a chat message to the server.

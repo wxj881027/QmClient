@@ -5886,7 +5886,22 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
 				const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0;
 				const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
+				const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				// FTAPI 自动翻译开关（仅在 FTAPI 后端时显示）
+				if(IsFtapiBackend)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateFtapiAutoEnable, Localize("Enable FTAPI auto-translate (may cause overload)"), &g_Config.m_QmTranslateFtapiAutoEnable, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// FTAPI 警告提示
+					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
+					Row.VMargin(LG_LabelWidth, &Row);
+					Ui()->DoLabel(&Row, Localize("⚠️ FTAPI is a free service. Excessive use may cause service suspension."), LG_BodySize * 0.8f, TEXTALIGN_ML);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
@@ -6127,7 +6142,54 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("Concurrency"), LG_BodySize, TEXTALIGN_ML);
-					Ui()->DoScrollbarOption(&g_Config.m_QmTranslateLlmConcurrency, &g_Config.m_QmTranslateLlmConcurrency, &ControlCol, Localize("Max concurrent translations"), 1, 20, &CUi::ms_LinearScrollbarScale, 1);
+
+					// 显示当前有效并发数
+					{
+						// 计算智能默认值（与 GetEffectiveConcurrency 逻辑一致）
+						int EffectiveConcurrency = 3; // 默认值
+						if(g_Config.m_QmTranslateLlmConcurrency != 1)
+						{
+							// 用户手动设置
+							EffectiveConcurrency = g_Config.m_QmTranslateLlmConcurrency;
+						}
+						else
+						{
+							// 根据 Provider 类型提供智能默认值
+							switch(g_Config.m_QmTranslateLlmProvider)
+							{
+							case 0: // Zhipu AI
+							case 1: // DeepSeek
+								EffectiveConcurrency = 3;
+								break;
+							case 2: // OpenAI
+								EffectiveConcurrency = 2;
+								break;
+							case 3: // Custom
+							default:
+								EffectiveConcurrency = g_Config.m_QmTranslateLlmConcurrencyDefault;
+								break;
+							}
+						}
+
+						// 显示有效并发数
+						char aBuf[64];
+						if(g_Config.m_QmTranslateLlmConcurrency == 1)
+						{
+							str_format(aBuf, sizeof(aBuf), Localize("Auto: %d (smart default)"), EffectiveConcurrency);
+						}
+						else
+						{
+							str_format(aBuf, sizeof(aBuf), Localize("Manual: %d"), EffectiveConcurrency);
+						}
+						Ui()->DoLabel(&ControlCol, aBuf, LG_BodySize, TEXTALIGN_ML);
+					}
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 手动并发数滑块
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Manual concurrency (1=auto)"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoScrollbarOption(&g_Config.m_QmTranslateLlmConcurrency, &g_Config.m_QmTranslateLlmConcurrency, &ControlCol, Localize("Manual concurrency"), 1, 20, &CUi::ms_LinearScrollbarScale, 1);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					// 思考模式开关

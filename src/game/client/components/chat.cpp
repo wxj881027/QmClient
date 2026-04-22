@@ -346,6 +346,34 @@ void CChat::ClearLines()
 	m_LastAnimUpdateTime = 0;
 }
 
+int CChat::GetLineIndex(const CLine *pLine) const
+{
+	if(pLine == nullptr)
+		return -1;
+
+	// 计算指针在数组中的偏移量
+	const CLine *pBegin = m_aLines;
+	const CLine *pEnd = pBegin + MAX_LINES;
+
+	if(pLine < pBegin || pLine >= pEnd)
+		return -1; // 指针不在数组范围内
+
+	return static_cast<int>(pLine - pBegin);
+}
+
+CChat::CLine *CChat::GetLineByIndex(int Index)
+{
+	if(Index < 0 || Index >= MAX_LINES)
+		return nullptr;
+
+	return &m_aLines[Index];
+}
+
+void CChat::InvalidateLineTranslation(CLine &Line)
+{
+	++Line.m_TranslationId;
+}
+
 void CChat::OnWindowResize()
 {
 	RebuildChat();

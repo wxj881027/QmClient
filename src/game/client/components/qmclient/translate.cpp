@@ -1428,10 +1428,11 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 	}
 
 	CTranslateJob Job;
-	Job.m_pLine = &Line;
+	Job.m_LineIndex = GameClient()->m_Chat.GetLineIndex(&Line);
+	Job.m_TranslationId = Line.m_TranslationId;
 	Job.m_pTranslateResponse = std::make_shared<CTranslateResponse>();
 	Job.m_AutoTriggered = AutoTriggered;
-	Job.m_pLine->m_pTranslateResponse = Job.m_pTranslateResponse;
+	Line.m_pTranslateResponse = Job.m_pTranslateResponse;
 	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget);
 	if(!IsValidLanguageCode(pTarget))
 	{
@@ -1439,7 +1440,7 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 		pTarget = "en";
 	}
 	str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
-	Job.m_pBackend = CreateTranslateBackend(*Http(), Job.m_pLine->m_aText, Job.m_aTarget);
+	Job.m_pBackend = CreateTranslateBackend(*Http(), Line.m_aText, Job.m_aTarget);
 	if(!Job.m_pBackend)
 	{
 		GameClient()->m_Chat.Echo("Invalid translate backend");
@@ -1449,7 +1450,7 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 	if(ShowProgress)
 	{
 		str_format(Job.m_pTranslateResponse->m_Text, sizeof(Job.m_pTranslateResponse->m_Text), Localize("%s translating to %s"), Job.m_pBackend->Name(), Job.m_aTarget);
-		Job.m_pLine->m_Time = time();
+		Line.m_Time = time();
 	}
 	else
 	{
@@ -1496,14 +1497,23 @@ void CTranslate::OnRender()
 {
 	const auto Time = time();
 	// 检查翻译响应是否仍然属于同一行
-	// 注意：m_pLine 是指向 CChat::CLine 的裸指针，当聊天行被重用时可能变成悬垂指针
-	// 我们通过比较 m_pTranslateResponse 指针来检测这种情况：
-	// - CLine::Reset() 会清除 m_pTranslateResponse
-	// - 如果指针不匹配，说明该行已被重用，翻译结果应该丢弃
-	// 这个检查依赖于 CLine::Reset 正确清除 m_pTranslateResponse
+	// 使用行索引和翻译ID来安全地检测行重用：
+	// - GetLineByIndex 通过索引安全获取行指针
+	// - m_TranslationId 检测行内容是否已变更
+	// - 如果 ID 不匹配，说明该行已被重用，翻译结果应该丢弃
 	auto ForEach = [&](CTranslateJob &Job) {
-		if(Job.m_pLine->m_pTranslateResponse != Job.m_pTranslateResponse)
-			return true; // Not the same line anymore
+		CChat::CLine *pLine = GameClient()->m_Chat.GetLineByIndex(Job.m_LineIndex);
+		if(pLine == nullptr)
+			return true; // 无效索引，丢弃任务
+
+		// 检查翻译ID是否匹配，检测行是否被重用
+		if(pLine->m_TranslationId != Job.m_TranslationId)
+			return true; // 行已被重用，丢弃翻译结果
+
+		// 检查响应指针是否仍然匹配（额外保护）
+		if(pLine->m_pTranslateResponse != Job.m_pTranslateResponse)
+			return true; // 响应已被替换，丢弃任务
+
 		const std::optional<bool> Done = Job.m_pBackend->Update(*Job.m_pTranslateResponse);
 		if(!Done.has_value())
 			return false; // Keep ongoing tasks
@@ -1511,7 +1521,7 @@ void CTranslate::OnRender()
 		{
 			if(Job.m_AutoTriggered && IsChineseLanguage(Job.m_pTranslateResponse->m_Language))
 				Job.m_pTranslateResponse->m_Text[0] = '\0';
-			else if(str_comp_nocase(Job.m_pLine->m_aText, Job.m_pTranslateResponse->m_Text) == 0) // Check for no translation difference
+			else if(str_comp_nocase(pLine->m_aText, Job.m_pTranslateResponse->m_Text) == 0) // Check for no translation difference
 				Job.m_pTranslateResponse->m_Text[0] = '\0';
 		}
 		else
@@ -1521,7 +1531,7 @@ void CTranslate::OnRender()
 			Job.m_pTranslateResponse->m_Error = true;
 			str_copy(Job.m_pTranslateResponse->m_Text, aBuf);
 		}
-		Job.m_pLine->m_Time = Time;
+		pLine->m_Time = Time;
 		GameClient()->m_Chat.RebuildChat();
 		return true;
 	};
@@ -1582,9 +1592,17 @@ void CTranslate::AutoTranslate(CChat::CLine &Line)
 	}
 	if(str_comp(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 	{
-		// FTAPI quickly gets overloaded, please do not disable this
-		// It may shut down if we spam it too hard
-		return;
+		// FTAPI 过载保护：默认禁用自动翻译，防止服务过载
+		if(!g_Config.m_QmTranslateFtapiAutoEnable)
+		{
+			static bool s_Warned = false;
+			if(!s_Warned)
+			{
+				GameClient()->m_Chat.Echo(Localize("FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed."));
+				s_Warned = true;
+			}
+			return;
+		}
 	}
 	dbg_msg("translate", "AutoTranslate triggered for: '%.50s...' (ClientId=%d, Backend=%s)",
 		Line.m_aText, Line.m_ClientId, g_Config.m_QmTranslateBackend);
@@ -1657,9 +1675,51 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 	m_vOutgoingJobs.emplace_back(std::move(Job));
 }
 
+int CTranslate::GetEffectiveConcurrency() const
+{
+	// 如果用户手动设置（不等于默认值 1），使用用户值
+	if(g_Config.m_QmTranslateLlmConcurrency != 1)
+		return g_Config.m_QmTranslateLlmConcurrency;
+
+	// 根据后端类型提供智能默认值
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
+	{
+		// LLM 后端：根据 Provider 类型提供不同默认值
+		constexpr int PROVIDER_MIN = static_cast<int>(ELlmProvider::ZHIPU_AI);
+		constexpr int PROVIDER_MAX = static_cast<int>(ELlmProvider::CUSTOM);
+		int ProviderValue = std::clamp(g_Config.m_QmTranslateLlmProvider, PROVIDER_MIN, PROVIDER_MAX);
+		ELlmProvider Provider = static_cast<ELlmProvider>(ProviderValue);
+
+		switch(Provider)
+		{
+		case ELlmProvider::ZHIPU_AI:
+		case ELlmProvider::DEEPSEEK:
+			return 3; // ZhipuAI 和 DeepSeek 默认 3
+		case ELlmProvider::OPENAI:
+			return 2; // OpenAI 默认 2（成本考虑）
+		case ELlmProvider::CUSTOM:
+		default:
+			return g_Config.m_QmTranslateLlmConcurrencyDefault; // 自定义使用配置默认值
+		}
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
+	{
+		return 5; // TencentCloud 默认 5
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
+	{
+		return 2; // LibreTranslate 默认 2
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
+	{
+		return 1; // FTAPI 默认 1（防止过载）
+	}
+
+	// 未知后端默认 3
+	return 3;
+}
+
 int CTranslate::GetMaxConcurrency() const
 {
-	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
-		return g_Config.m_QmTranslateLlmConcurrency;
-	return 5;
+	return GetEffectiveConcurrency();
 }

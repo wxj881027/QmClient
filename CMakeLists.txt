@@ -3330,6 +3330,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     translate_llm_parse_test.cpp
     translate_llm_provider_test.cpp
     translate_llm_response_test.cpp
+    translate_safety_test.cpp
+    translate_integration_test.cpp
+    translate_boundary_test.cpp
     translate_test.cpp
     unix_test.cpp
     uuid_test.cpp
