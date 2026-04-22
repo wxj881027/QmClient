@@ -97,6 +97,13 @@ MACRO_CONFIG_INT(QmFreezeWakeupPopup, qm_freeze_wakeup_popup, 1, 0, 1, CFGFLAG_C
 MACRO_CONFIG_INT(QmAutoTeamLock, qm_auto_team_lock, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "加入可锁定队伍后自动锁定")
 MACRO_CONFIG_INT(QmAutoTeamLockDelay, qm_auto_team_lock_delay, 5, 0, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "自动锁定延迟（秒）")
 
+// Translate - LLM Provider
+MACRO_CONFIG_INT(QmTranslateLlmProvider, qm_translate_llm_provider, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM Provider (0=智谱AI, 1=DeepSeek, 2=OpenAI, 3=自定义)")
+MACRO_CONFIG_STR(QmTranslateLlmKeyZhipu, qm_translate_llm_key_zhipu, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "智谱AI API Key")
+MACRO_CONFIG_STR(QmTranslateLlmKeyDeepseek, qm_translate_llm_key_deepseek, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "DeepSeek API Key")
+MACRO_CONFIG_STR(QmTranslateLlmKeyOpenai, qm_translate_llm_key_openai, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "OpenAI API Key")
+MACRO_CONFIG_STR(QmTranslateLlmKey, qm_translate_llm_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "自定义 LLM API Key（仅 Provider=自定义时使用）")
+
 // Translate - ZhipuAI
 MACRO_CONFIG_STR(QmTranslateZhipuaiModel, qm_translate_zhipuai_model, 32, "glm-4.7-flash", CFGFLAG_CLIENT | CFGFLAG_SAVE, "智谱AI翻译模型（默认 glm-4.7-flash）")
 
