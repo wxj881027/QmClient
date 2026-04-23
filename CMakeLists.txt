@@ -3411,8 +3411,26 @@ list(APPEND TARGETS_LINK rust_test)
 set(RUST_TEST_LIBS ${WebP_LIBRARIES} ${LIBS} $<TARGET_FILE:rust_test>)
 list(REMOVE_ITEM RUST_TEST_LIBS "rust_engine_shared")
 list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
+if(MSVC)
+  set(RUST_TEST_LIB_ALIAS_DIR "${PROJECT_BINARY_DIR}/rust_test_lib_aliases")
+  file(MAKE_DIRECTORY "${RUST_TEST_LIB_ALIAS_DIR}")
+  foreach(WebPLib ${WebP_LIBRARIES})
+    get_filename_component(WebPLibName "${WebPLib}" NAME)
+    if(WebPLibName MATCHES "^lib(.+)\\.lib$")
+      set(WebPLibAlias "${RUST_TEST_LIB_ALIAS_DIR}/${CMAKE_MATCH_1}.lib")
+      configure_file("${WebPLib}" "${WebPLibAlias}" COPYONLY)
+      list(REMOVE_ITEM RUST_TEST_LIBS "${WebPLib}")
+      list(APPEND RUST_TEST_LIBS "${WebPLibAlias}")
+    endif()
+  endforeach()
+endif()
+list(JOIN RUST_TEST_LIBS "\n" RUST_TEST_LIBS_FILE_CONTENT)
+file(GENERATE
+  OUTPUT "${PROJECT_BINARY_DIR}/rust_test_libraries.txt"
+  CONTENT "${RUST_TEST_LIBS_FILE_CONTENT}\n"
+)
 add_custom_target(run_rust_tests
-  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES=${RUST_TEST_LIBS}" ${CARGO_TEST}
+  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES_FILE=${PROJECT_BINARY_DIR}/rust_test_libraries.txt" ${CARGO_TEST}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   USES_TERMINAL
   DEPENDS rust_test

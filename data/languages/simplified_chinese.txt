@@ -6840,6 +6840,9 @@ Manual: %d
 Manual concurrency (1=auto)
 == 手动并发数（1=自动）
 
+Manual concurrency: %d
+== 手动并发数：%d
+
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == FTAPI 自动翻译已禁用以防止过载。如需启用请在设置中配置。
 
@@ -6885,6 +6888,9 @@ Automatic concurrency: %d (smart default)
 Manual concurrency: %d
 == 手动并发数：%d
 
+Manual concurrency
+== 手动并发数
+
 Commands run in the console
 == 在控制台中执行的命令
 
@@ -6893,6 +6899,30 @@ L select  R swap  M select only
 
 L select  R swap
 == 左键选择  右键交换
+
+Angle
+== 角度
+
+Prediction
+== 预测
+
+Position
+== 位置
+
+Race Time
+== 比赛时间
+
+FPS
+== 每秒帧数
+
+Velocity
+== 速度
+
+Zoom
+== 缩放
+
+Space
+== 占位空间(空格)
 
 Displays your current angle in degrees
 == 显示你当前的角度（度）

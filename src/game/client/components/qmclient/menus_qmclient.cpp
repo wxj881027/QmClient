@@ -3785,6 +3785,10 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView)
 	LeftView.VSplitLeft(MarginSmall, nullptr, &LeftView);
 	RightView.VSplitRight(MarginSmall, &RightView, nullptr);
 
+	auto GetStatusBarEditorLabel = [](const CStatusItem *pItem) {
+		return str_comp(pItem->m_aName, "Space") == 0 ? pItem->m_aName : pItem->m_aDisplayName;
+	};
+
 	auto RenderStatusBarPreview = [&](CUIRect PreviewRect, int MaxItems = -1) {
 		PreviewRect.Draw(ColorRGBA(0, 0, 0, 0.5f), IGraphics::CORNER_ALL, 5.0f);
 		PreviewRect.VSplitLeft(MarginExtraSmall, nullptr, &PreviewRect);
@@ -3806,7 +3810,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView)
 			PreviewItem.HMargin(MarginSmall, &PreviewItem);
 			PreviewItem.VMargin(MarginExtraSmall, &PreviewItem);
 			PreviewItem.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.15f), IGraphics::CORNER_ALL, 5.0f);
-			Ui()->DoLabel(&PreviewItem, Localize(GameClient()->m_StatusBar.m_StatusBarItems[i]->m_aDisplayName), FontSize, TEXTALIGN_MC);
+			Ui()->DoLabel(&PreviewItem, Localize(GetStatusBarEditorLabel(GameClient()->m_StatusBar.m_StatusBarItems[i])), FontSize, TEXTALIGN_MC);
 		}
 		if(PreviewCount < TotalCount)
 		{
@@ -4137,7 +4141,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView)
 			float Progress = std::pow(2.0, -5.0 * (1.0 - s_ItemSwaps[i].m_Duration / 0.15f));
 			TempItemButton.x = mix(TempItemButton.x, s_ItemSwaps[i].m_InitialPosition.x, Progress);
 		}
-		if(DoButtonLineSize_Menu(s_pItemButtons[i], Localize(StatusItem->m_aDisplayName), 0, &TempItemButton, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, Col))
+		if(DoButtonLineSize_Menu(s_pItemButtons[i], Localize(GetStatusBarEditorLabel(StatusItem)), 0, &TempItemButton, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, Col))
 		{
 			if(s_SelectedItem == -2)
 				s_SelectedItem++;

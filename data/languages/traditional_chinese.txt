@@ -3213,7 +3213,31 @@ Status bar height
 == 
 
 Local Time
-== 
+== 本地時間
+
+Angle
+== 角度
+
+Prediction
+== 預測
+
+Position
+== 位置
+
+Race Time
+== 競速時間
+
+FPS
+== 每秒幀數
+
+Velocity
+== 速度
+
+Zoom
+== 縮放
+
+Space
+== 佔位空間(空格)
 
 Use 12 hour clock
 == 
@@ -3511,6 +3535,9 @@ Automatic concurrency: %d (smart default)
 
 Manual concurrency: %d
 == 手動並發數：%d
+
+Manual concurrency
+== 手動並發數
 
 Commands run in the console
 == 在控制台中執行的命令

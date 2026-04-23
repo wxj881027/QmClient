@@ -340,7 +340,7 @@ void CStatusBar::OnRender()
 		{
 			LayoutItem.m_ItemWidth = Item->m_GetWidth();
 			if(g_Config.m_TcStatusBarLabels && Item->m_ShowLabel && LayoutItem.m_ItemWidth > 0.0f)
-				LayoutItem.m_LabelWidth = LabelWidth(Item->m_aDisplayName);
+				LayoutItem.m_LabelWidth = LabelWidth(Localize(Item->m_aDisplayName));
 			UsedWidth += LayoutItem.m_ItemWidth + LayoutItem.m_LabelWidth;
 		}
 	}
@@ -366,7 +366,7 @@ void CStatusBar::OnRender()
 		{
 			if(LayoutItem.m_LabelWidth > 0.0f)
 			{
-				LabelRender(pItem->m_aDisplayName);
+				LabelRender(Localize(pItem->m_aDisplayName));
 				m_CursorX += LayoutItem.m_LabelWidth;
 			}
 			pItem->m_RenderItem();
