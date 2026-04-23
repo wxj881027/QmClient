@@ -48,10 +48,11 @@
 #include "render.h"
 
 #include <base/log.h>
-#include <engine/shared/config_tags.h>
 #include <base/math.h>
+#include <base/perf_timer.h>
 #include <base/system.h>
 #include <base/vmath.h>
+#include <engine/shared/config_tags.h>
 
 #include <engine/client/checksum.h>
 #include <engine/client/enums.h>
@@ -86,6 +87,29 @@
 namespace
 {
 constexpr int DEMO_INPUT_KEY_STATE_SIZE = KEY_LAST / 8;
+
+bool PerfDebugEnabled()
+{
+	return g_Config.m_QmPerfDebug != 0;
+}
+
+double PerfDebugThresholdMs()
+{
+	return g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
+}
+
+void LogPerfStage(const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
+{
+	if(!PerfDebugEnabled())
+		return;
+	if(!Force && DurationMs < PerfDebugThresholdMs())
+		return;
+
+	if(pExtra != nullptr && pExtra[0] != '\0')
+		dbg_msg("perf/gameclient", "stage=%s duration_ms=%.3f %s", pStage, DurationMs, pExtra);
+	else
+		dbg_msg("perf/gameclient", "stage=%s duration_ms=%.3f", pStage, DurationMs);
+}
 
 void SetDemoInputKeyState(unsigned char *pKeyStates, int Key, bool Pressed)
 {
@@ -1088,6 +1112,8 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	CPerfTimer FrameTimer;
+
 	// Reset GPU upload limiter for this frame
 	m_GpuUploadLimiter.OnFrameStart();
 
@@ -1112,7 +1138,11 @@ void CGameClient::OnRender()
 	}
 
 	// update the local character and spectate position
-	UpdatePositions();
+	{
+		CPerfTimer StageTimer;
+		UpdatePositions();
+		LogPerfStage("update_positions", StageTimer.ElapsedMs());
+	}
 
 	// display warnings
 	if(m_Menus.CanDisplayWarning())
@@ -1130,20 +1160,43 @@ void CGameClient::OnRender()
 	}
 
 	// update camera data prior to CControls::OnRender to allow CControls::m_aTargetPos to compensate using camera data
-	m_Camera.UpdateCamera();
+	{
+		CPerfTimer StageTimer;
+		m_Camera.UpdateCamera();
+		UpdateSpectatorCursor();
+		LogPerfStage("camera_and_cursor", StageTimer.ElapsedMs());
+	}
 
-	UpdateSpectatorCursor();
-
-	m_UiRuntimeV2.OnRender();
+	{
+		CPerfTimer StageTimer;
+		m_UiRuntimeV2.OnRender();
+		LogPerfStage("ui_runtime_v2", StageTimer.ElapsedMs());
+	}
 
 	// render all systems
+	CPerfTimer ComponentsTimer;
 	for(auto &pComponent : m_vpAll)
-		pComponent->OnRender();
+	{
+		if(pComponent == &m_Menus)
+		{
+			CPerfTimer StageTimer;
+			pComponent->OnRender();
+			LogPerfStage("component_menus", StageTimer.ElapsedMs());
+		}
+		else
+		{
+			pComponent->OnRender();
+		}
+	}
+	LogPerfStage("components_total", ComponentsTimer.ElapsedMs());
 
 	// clear all events/input for this frame
-	Input()->Clear();
-
-	CLineInput::RenderCandidates();
+	{
+		CPerfTimer StageTimer;
+		Input()->Clear();
+		CLineInput::RenderCandidates();
+		LogPerfStage("input_clear_and_candidates", StageTimer.ElapsedMs());
+	}
 
 	const bool WasNewTick = m_NewTick;
 
@@ -1154,6 +1207,8 @@ void CGameClient::OnRender()
 
 	if(g_Config.m_ClDummy && !Client()->DummyConnected())
 		g_Config.m_ClDummy = 0;
+
+	LogPerfStage("gameclient_onrender_total", FrameTimer.ElapsedMs());
 
 	// resend player and dummy info if it was filtered by server
 	if(m_aLocalIds[0] >= 0 && Client()->State() == IClient::STATE_ONLINE && !m_Menus.IsActive() && WasNewTick)

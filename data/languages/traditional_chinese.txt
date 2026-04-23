@@ -3213,7 +3213,31 @@ Status bar height
 == 
 
 Local Time
-== 
+== 本地時間
+
+Angle
+== 角度
+
+Prediction
+== 預測
+
+Position
+== 位置
+
+Race Time
+== 競速時間
+
+FPS
+== 每秒幀數
+
+Velocity
+== 速度
+
+Zoom
+== 縮放
+
+Space
+== 佔位空間(空格)
 
 Use 12 hour clock
 == 
@@ -3386,7 +3410,49 @@ Changing name to %s near finish
 
 [translate]
 %s translating to %s
-== 
+== %s 翻譯為 %s
+
+%s translating to %s before send
+== %s 正在翻譯為 %s 後傳送
+
+Translating to %s...
+== 正在翻譯為 %s...
+
+Not a valid ID
+== 無效的 ID
+
+ID not connected
+== 該 ID 未連線
+
+No message to translate
+== 沒有可翻譯的訊息
+
+Server messages are not translated
+== 伺服器訊息不會被翻譯
+
+Invalid translate backend
+== 無效的翻譯後端
+
+Too many translation jobs
+== 翻譯任務過多
+
+Translation queue full, sending original text
+== 翻譯佇列已滿，發送原始文字
+
+Invalid translate backend, sending original text
+== 翻譯後端無效，發送原始文字
+
+You are not in practice
+== 你目前不在練習模式中
+
+No safe position found
+== 未找到安全位置
+
+No local saves file found (ddnet-saves.txt)
+== 未找到本地存檔檔案（ddnet-saves.txt）
+
+Failed to read saves file
+== 讀取存檔檔案失敗
 
 [translate]
 %s to %s failed: %s
@@ -3436,3 +3502,158 @@ Community links, updates, feedback, and supporter credits moved to Contributors
 
 Drag, collapse, search, and usage history are preserved inside each category
 == 拖曳、折疊、搜尋與使用頻率記錄會繼續保留在各自分類中
+
+Visual: Font & Cursor
+== 視覺：字體與游標
+
+Visual: Nameplates
+== 視覺：名牌
+
+Visual: Effects
+== 視覺：特效
+
+Show ping colored circle in nameplates
+== 在玩家暱稱旁顯示延遲顏色圓圈
+
+Show country flags in nameplates
+== 在玩家暱稱旁顯示國旗
+
+Show skin names in nameplate
+== 在玩家暱稱旁顯示皮膚名
+
+Use colored skins for frozen tees
+== 凍結 Tee 使用彩色皮膚
+
+Show katan on frozen players
+== 在被凍結的玩家身上顯示武士刀
+
+Render all custom colored feet as white feet skin
+== 將所有自訂腳部顏色渲染為白色
+
+Automatic concurrency: %d (smart default)
+== 自動並發數：%d（智慧預設）
+
+Manual concurrency: %d
+== 手動並發數：%d
+
+Manual concurrency
+== 手動並發數
+
+Commands run in the console
+== 在控制台中執行的命令
+
+L select  R swap  M select only
+== 左鍵選取  右鍵交換  中鍵僅選取
+
+L select  R swap
+== 左鍵選取  右鍵交換
+
+Status Bar Codes:
+== 狀態欄代碼：
+
+a = Angle
+== a = Angle（角度）
+
+p = Ping
+== p = Ping（延遲）
+
+d = Prediction
+== d = Prediction（預測）
+
+c = Position
+== c = Position（位置）
+
+l = Local Time
+== l = Local Time（本地時間）
+
+r = Race Time
+== r = Race Time（競速時間）
+
+f = FPS
+== f = FPS（每秒幀數）
+
+v = Velocity
+== v = Velocity（速度）
+
+z = Zoom
+== z = Zoom（縮放）
+
+_ or ' ' = Space
+== _ 或 ' ' = 空白
+
+Apply
+== 套用
+
+Status Scheme:
+== 狀態欄方案：
+
+Add Item
+== 新增項目
+
+Remove Item
+== 移除項目
+
+Text color
+== 文字顏色
+
+Displays your current angle in degrees
+== 顯示你目前的角度（度）
+
+Displays your ping to the current server
+== 顯示你到目前伺服器的延遲
+
+Displays your current prediction amount
+== 顯示你目前的預測量
+
+Displays position
+== 顯示目前位置
+
+Displays your local time
+== 顯示你的本地時間
+
+Display your race time
+== 顯示你的競速時間
+
+Displays your frames per second
+== 顯示你目前的每秒幀數
+
+Displays X and Y velocity
+== 顯示 X 與 Y 方向速度
+
+Displays current zoom value
+== 顯示目前縮放值
+
+Gap between statusbar items
+== 狀態欄項目之間的間隔
+
+Downloaded
+== 已下載
+
+Not downloaded
+== 未下載
+
+Thank you for your companionship and belief, which gave me the courage to keep going
+== 感謝你們一路以來的陪伴與信任，讓我有勇氣繼續走下去
+
+Hide overhead direction and hook indicators
+== 隱藏頭頂方向鍵與強弱鉤提示
+Hide guides
+== 隱藏輔助線
+
+Auto login Axiom server
+== 自動登入 Axiom 伺服器
+
+Axiom login password
+== Axiom 登入密碼
+
+Attempting Axiom auto login
+== 正在嘗試自動登入 Axiom 伺服器
+
+Axiom auto login succeeded
+== Axiom 自動登入成功
+
+Axiom auto login failed, retrying
+== Axiom 自動登入失敗，正在重試
+
+Axiom auto login failed
+== Axiom 自動登入失敗

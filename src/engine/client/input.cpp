@@ -4,6 +4,7 @@
 
 #include "keynames.h"
 
+#include <base/perf_timer.h>
 #include <base/system.h>
 
 #include <engine/console.h>
@@ -33,6 +34,32 @@
 #ifdef KeyPress
 #undef KeyPress // Undo pollution from X11/Xlib.h included by SDL_syswm.h on Linux
 #endif
+
+namespace
+{
+bool PerfDebugEnabled()
+{
+	return g_Config.m_QmPerfDebug != 0;
+}
+
+double PerfDebugThresholdMs()
+{
+	return g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
+}
+
+void LogPerfStage(const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
+{
+	if(!PerfDebugEnabled())
+		return;
+	if(!Force && DurationMs < PerfDebugThresholdMs())
+		return;
+
+	if(pExtra != nullptr && pExtra[0] != '\0')
+		dbg_msg("perf/input", "stage=%s duration_ms=%.3f %s", pStage, DurationMs, pExtra);
+	else
+		dbg_msg("perf/input", "stage=%s duration_ms=%.3f", pStage, DurationMs);
+}
+}
 
 void CInput::AddKeyEvent(int Key, int Flags)
 {
@@ -700,6 +727,8 @@ int CInput::Update()
 
 	SDL_Event Event;
 	bool IgnoreKeys = false;
+	CPerfTimer EventPumpTimer;
+	int EventCount = 0;
 
 	const auto &&AddKeyEventChecked = [&](int Key, int Flags) {
 		if(Key != KEY_UNKNOWN && !IgnoreKeys && (!(Flags & IInput::FLAG_PRESS) || !HasComposition()))
@@ -710,6 +739,7 @@ int CInput::Update()
 
 	while(SDL_PollEvent(&Event))
 	{
+		++EventCount;
 		switch(Event.type)
 		{
 		case SDL_SYSWMEVENT:
@@ -848,7 +878,12 @@ int CInput::Update()
 
 		// other messages
 		case SDL_QUIT:
+		{
+			char aExtra[128];
+			str_format(aExtra, sizeof(aExtra), "events=%d quit=1", EventCount);
+			LogPerfStage("sdl_poll_events", EventPumpTimer.ElapsedMs(), true, aExtra);
 			return 1;
+		}
 
 		case SDL_DROPFILE:
 			str_copy(m_aDropFile, Event.drop.file);
@@ -856,6 +891,10 @@ int CInput::Update()
 			break;
 		}
 	}
+
+	char aExtra[128];
+	str_format(aExtra, sizeof(aExtra), "events=%d has_composition=%d", EventCount, HasComposition() ? 1 : 0);
+	LogPerfStage("sdl_poll_events", EventPumpTimer.ElapsedMs(), EventCount > 64, aExtra);
 
 	return 0;
 }

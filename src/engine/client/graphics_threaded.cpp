@@ -18,6 +18,8 @@
 
 #include <game/localization.h>
 
+#include <thread>
+
 #if defined(CONF_VIDEORECORDER)
 #include <engine/shared/video.h>
 #endif

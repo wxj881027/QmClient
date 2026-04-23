@@ -2617,6 +2617,8 @@ if(CLIENT)
     components/qmclient/trails.h
     components/qmclient/translate.cpp
     components/qmclient/translate.h
+    components/qmclient/translate_ui_settings.cpp
+    components/qmclient/translate_ui_settings.h
     components/qmclient/voice_component.cpp
     components/qmclient/voice_component.h
     components/qmclient/voice_callback.h
@@ -3279,6 +3281,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     QmAnimTest.cpp
     QmLayoutTest.cpp
     aio_test.cpp
+    assets_preview_scale_test.cpp
     bezier_test.cpp
     blocklist_driver_test.cpp
     bytes_be_test.cpp
@@ -3313,17 +3316,26 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     server_test.cpp
     serverbrowser_test.cpp
     serverinfo_test.cpp
+    settings_warmup_test.cpp
     shell_execute_test.cpp
     snapshot_test.cpp
     str_test.cpp
     strip_path_and_extension_test.cpp
     swap_endian_test.cpp
+    theme_scan_test.cpp
     teehistorian_test.cpp
     test.cpp
     test.h
     thread_test.cpp
     time_test.cpp
     timestamp_test.cpp
+    translate_json_format_test.cpp
+    translate_llm_parse_test.cpp
+    translate_llm_provider_test.cpp
+    translate_llm_response_test.cpp
+    translate_safety_test.cpp
+    translate_integration_test.cpp
+    translate_boundary_test.cpp
     translate_test.cpp
     unix_test.cpp
     uuid_test.cpp
@@ -3333,6 +3345,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   set(TESTS_EXTRA
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmLayout.cpp
+    src/game/client/components/qmclient/translate_parse.cpp
     src/game/client/components/qmclient/voice_utils.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
@@ -3398,8 +3411,26 @@ list(APPEND TARGETS_LINK rust_test)
 set(RUST_TEST_LIBS ${WebP_LIBRARIES} ${LIBS} $<TARGET_FILE:rust_test>)
 list(REMOVE_ITEM RUST_TEST_LIBS "rust_engine_shared")
 list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
+if(MSVC)
+  set(RUST_TEST_LIB_ALIAS_DIR "${PROJECT_BINARY_DIR}/rust_test_lib_aliases")
+  file(MAKE_DIRECTORY "${RUST_TEST_LIB_ALIAS_DIR}")
+  foreach(WebPLib ${WebP_LIBRARIES})
+    get_filename_component(WebPLibName "${WebPLib}" NAME)
+    if(WebPLibName MATCHES "^lib(.+)\\.lib$")
+      set(WebPLibAlias "${RUST_TEST_LIB_ALIAS_DIR}/${CMAKE_MATCH_1}.lib")
+      configure_file("${WebPLib}" "${WebPLibAlias}" COPYONLY)
+      list(REMOVE_ITEM RUST_TEST_LIBS "${WebPLib}")
+      list(APPEND RUST_TEST_LIBS "${WebPLibAlias}")
+    endif()
+  endforeach()
+endif()
+list(JOIN RUST_TEST_LIBS "\n" RUST_TEST_LIBS_FILE_CONTENT)
+file(GENERATE
+  OUTPUT "${PROJECT_BINARY_DIR}/rust_test_libraries.txt"
+  CONTENT "${RUST_TEST_LIBS_FILE_CONTENT}\n"
+)
 add_custom_target(run_rust_tests
-  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES=${RUST_TEST_LIBS}" ${CARGO_TEST}
+  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES_FILE=${PROJECT_BINARY_DIR}/rust_test_libraries.txt" ${CARGO_TEST}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   USES_TERMINAL
   DEPENDS rust_test

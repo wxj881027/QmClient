@@ -1617,13 +1617,13 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 
 	CUIRect Row, Label, Button;
 	MainView.HSplitTop(24.0f, &Row, &MainView);
-	Ui()->DoLabel(&Row, Localize("未完成图"), 18.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&Row, Localize("Unfinished maps"), 18.0f, TEXTALIGN_ML);
 
 	MainView.HSplitTop(6.0f, nullptr, &MainView);
 	MainView.HSplitTop(18.0f, &Row, &MainView);
 	Ui()->DoLabel(&Row, Localize("Calculate unfinished maps for player in certain mode"), 14.0f, TEXTALIGN_ML);
 	MainView.HSplitTop(18.0f, &Row, &MainView);
-	Ui()->DoLabel(&Row, Localize("并随机抽取一张"), 14.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&Row, Localize("And pick one randomly"), 14.0f, TEXTALIGN_ML);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
 	MainView.HSplitTop(24.0f, &Row, &MainView);
@@ -1640,7 +1640,7 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 	MainView.HSplitTop(6.0f, nullptr, &MainView);
 	MainView.HSplitTop(24.0f, &Row, &MainView);
 	Row.VSplitLeft(90.0f, &Label, &Row);
-	Ui()->DoLabel(&Label, Localize("地图类型:"), 14.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&Label, Localize("Map type:"), 14.0f, TEXTALIGN_ML);
 
 	const char *apTypeLabels[] = {
 		Localize("Simple"),
@@ -1695,7 +1695,7 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 	MainView.HSplitTop(6.0f, nullptr, &MainView);
 	MainView.HSplitTop(20.0f, &Row, &MainView);
 	static int s_UnfinishedMapAutoVote = 0;
-	if(DoButton_CheckBox(&s_UnfinishedMapAutoVote, Localize("自动发起投票"), s_UnfinishedMapAutoVote, &Row))
+	if(DoButton_CheckBox(&s_UnfinishedMapAutoVote, Localize("Auto start vote"), s_UnfinishedMapAutoVote, &Row))
 	{
 		s_UnfinishedMapAutoVote ^= 1;
 		if(!s_UnfinishedMapAutoVote)
@@ -1725,7 +1725,7 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 	}
 	else if(!s_UnfinishedQuery.HasData())
 	{
-		str_copy(aCountBuf, Localize("未获取未完成图数据"));
+		str_copy(aCountBuf, Localize("Unfinished map data not fetched"));
 	}
 	else
 	{
@@ -1748,14 +1748,14 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 		const char *pQueryName = s_aPlayerName[0] != '\0' ? s_aPlayerName : Client()->PlayerName();
 		if(!g_Config.m_BrIndicateFinished)
 		{
-			str_copy(s_aStatusText, Localize("请先启用完成度显示"));
+			str_copy(s_aStatusText, Localize("Please enable finished indicator first"));
 		}
 		else if(s_NameDirty || !s_UnfinishedQuery.HasData())
 		{
 			if(!s_UnfinishedQuery.IsLoading())
 				s_UnfinishedQuery.Start(Http(), pQueryName);
 			s_NameDirty = false;
-			str_copy(s_aStatusText, Localize("未完成图数据刷新中，请稍后再试"));
+			str_copy(s_aStatusText, Localize("Unfinished map data is refreshing, please try again later"));
 		}
 		else if(vUnfinishedMaps.empty())
 		{
@@ -1774,11 +1774,11 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 			{
 				const auto Action = GameClient()->m_Voting.StartUnfinishedMapVoteChain(s_aPickedMap, pSelectedTypeKey, pSelectedTypeLabel);
 				if(Action == CVoting::EUnfinishedMapVoteAction::MAP_VOTE_SENT)
-					str_copy(s_aStatusText, Localize("已自动发起投票"));
+					str_copy(s_aStatusText, Localize("Vote started automatically"));
 				else if(Action == CVoting::EUnfinishedMapVoteAction::TYPE_VOTE_SENT)
-					str_copy(s_aStatusText, Localize("已自动发起切换类型投票"));
+					str_copy(s_aStatusText, Localize("Type switch vote started automatically"));
 				else
-					str_copy(s_aStatusText, Localize("未找到对应投票选项"));
+					str_copy(s_aStatusText, Localize("No corresponding vote option found"));
 			}
 		}
 	}
@@ -1801,7 +1801,7 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 		if(s_PickedCopyTime > 0.0f && Client()->LocalTime() - s_PickedCopyTime < 1.5f)
 		{
 			TextRender()->TextColor(0.0f, 1.0f, 0.0f, 1.0f);
-			Ui()->DoLabel(&RowLabel, Localize("已复制"), 14.0f, TEXTALIGN_ML);
+			Ui()->DoLabel(&RowLabel, Localize("Copied"), 14.0f, TEXTALIGN_ML);
 		}
 		else
 		{
@@ -1812,7 +1812,7 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 		if(Ui()->HotItem() == &s_PickedCopyId)
-			GameClient()->m_Tooltips.DoToolTip(&s_PickedCopyId, &RowLabel, Localize("点击复制地图名"));
+			GameClient()->m_Tooltips.DoToolTip(&s_PickedCopyId, &RowLabel, Localize("Click to copy map name"));
 
 		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(s_aPickedMap);
 		if(DoButton_CheckBox(&s_PickedFavButton, Localize("Favorite map"), IsFavorite, &RowFav))

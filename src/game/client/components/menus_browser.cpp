@@ -311,7 +311,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				Ui()->DoLabel(&Label, aBuf, 16.0f, TEXTALIGN_MC);
 
 				static CButtonContainer s_StartLocalServerButton;
-				if(DoButton_Menu(&s_StartLocalServerButton, Localize("开启并连接到本地服务器"), 0, &Button))
+				if(DoButton_Menu(&s_StartLocalServerButton, Localize("Start and connect to local server"), 0, &Button))
 				{
 					if(GameClient()->m_LocalServer.IsServerRunning())
 					{
@@ -1199,7 +1199,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 			}
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_vFavoriteButtonIds[ItemIndex], &FavoriteButton,
-			Favorite ? Localize("点击将该社区移出收藏") : Localize("点击将该社区加入收藏"));
+			Favorite ? Localize("Click to remove this community from favorites") : Localize("Click to add this community to favorites"));
 	};
 
 	s_vFavoriteButtonIds.resize(MaxEntries);
@@ -1980,7 +1980,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 						Input()->SetClipboardText(Friend.Name()[0] != '\0' ? Friend.Name() : Friend.Clan());
 						ButtonResult = 0;
 					}
-					GameClient()->m_Tooltips.DoToolTip(pCopyButtonId, &CopyButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("点击复制该玩家名字到剪贴板") : Localize("点击复制该战队名字到剪贴板"));
+					GameClient()->m_Tooltips.DoToolTip(pCopyButtonId, &CopyButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to copy this player's name to clipboard") : Localize("Click to copy this clan's name to clipboard"));
 					if(Ui()->DoButtonLogic(pRemoveButtonId, 0, &RemoveButton, BUTTONFLAG_LEFT))
 					{
 						str_copy(m_aRemoveFriendName, Friend.Name(), sizeof(m_aRemoveFriendName));
@@ -2327,7 +2327,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 		ServerFriends.HSplitTop(3.0f, nullptr, &ServerFriends);
 		ServerFriends.HSplitTop(18.0f, &Button, &ServerFriends);
-		str_format(aBuf, sizeof(aBuf), "%s:", Localize("添加到分类"));
+		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Add to category"));
 		Ui()->DoLabel(&Button, aBuf, FontSize + 2.0f, TEXTALIGN_ML);
 		Button.VSplitLeft(80.0f, nullptr, &Button);
 		std::vector<const char *> vpCategories;
@@ -2694,7 +2694,7 @@ void CMenus::RenderServerbrowserQm(CUIRect View)
 	View.HSplitTop(5.0f, nullptr, &View);
 	View.HSplitTop(28.0f, &Summary, &View);
 
-	if(g_Config.m_QmVoiceServer[0] == '\0')
+	if(!GameClient()->m_TClient.HasQmClientRecognitionService())
 	{
 		Ui()->DoLabel(&Summary, Localize("Set a voice server to enable QmClient distribution"), 9.0f, TEXTALIGN_ML);
 		return;

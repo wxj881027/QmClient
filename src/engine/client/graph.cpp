@@ -245,7 +245,7 @@ void CGraph::Render(IGraphics *pGraphics, ITextRender *pTextRender, float x, flo
 
 	if(m_SummaryStats)
 	{
-		str_format(aBuf, sizeof(aBuf), Localize("平均 %.*f   ↓ %.*f   ↑ %.*f"), m_Precision, m_Average, m_Precision, m_MinValue, m_Precision, m_MaxValue);
+		str_format(aBuf, sizeof(aBuf), Localize("Avg %.*f   ↓ %.*f   ↑ %.*f"), m_Precision, m_Average, m_Precision, m_MinValue, m_Precision, m_MaxValue);
 		pTextRender->Text(ItemFooter.m_X + Spacing, ItemFooter.m_Y + ItemFooter.m_Height - FontSize - Spacing, FontSize, aBuf);
 	}
 

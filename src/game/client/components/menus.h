@@ -5,10 +5,12 @@
 
 #include <base/types.h>
 #include <base/vmath.h>
+#include <base/system.h>
 
 #include <engine/console.h>
 #include <engine/demo.h>
 #include <engine/friends.h>
+#include <engine/image.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
@@ -27,16 +29,37 @@
 #include <game/voting.h>
 
 #include <chrono>
+#include <array>
 #include <deque>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <vector>
-
-class CImageInfo;
 struct CDataSprite;
+
+// IDs of the tabs in the Assets menu
+enum
+{
+	ASSETS_TAB_ENTITIES = 0,
+	ASSETS_TAB_GAME = 1,
+	ASSETS_TAB_EMOTICONS = 2,
+	ASSETS_TAB_PARTICLES = 3,
+	ASSETS_TAB_HUD = 4,
+	ASSETS_TAB_EXTRAS = 5,
+	NUMBER_OF_ASSETS_TABS = 6,
+};
+
+class CUIRect;
+class CMenus;
+
+namespace NTranslateUiSettings
+{
+void RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
+}
 
 class CMenus : public CComponent
 {
+	friend void NTranslateUiSettings::RenderTranslateUiModule(CMenus *pMenus, CUIRect &CardContent, float LineHeight, float BodySize, float LineSpacing);
 	static ColorRGBA ms_GuiColor;
 	static ColorRGBA ms_ColorTabbarInactiveOutgame;
 	static ColorRGBA ms_ColorTabbarActiveOutgame;
@@ -51,7 +74,7 @@ class CMenus : public CComponent
 public:
 	int DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, unsigned Flags = BUTTONFLAG_LEFT);
 	int DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = 5.0f, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
-	int DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr);
+	int DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr);
 
 	int DoButton_CheckBox_Common(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags);
 	int DoButton_CheckBox(const void *pId, const char *pText, int Checked, const CUIRect *pRect);
@@ -70,6 +93,10 @@ private:
 	float UiSwitchAnimationAlpha(float Strength) const;
 	float ApplyUiSwitchOffset(CUIRect &View, float Strength, float Direction, bool Vertical, float RelativeOffset, float MinOffset, float MaxOffset) const;
 	float ResolveMenuTabAnimationValue(const void *pButtonId, bool Active, float DurationSec = 0.10f) const;
+	void InitSettingsTabLabelCache();
+	void UpdateSettingsTabLabels();
+	void PrepareSettingsTabLabelCache(float MainViewWidth);
+	void PrepareLanguagePageCache(float MainViewWidth);
 
 	CUi::SColorPickerPopupContext m_ColorPickerPopupContext;
 	ColorHSLA DoLine_ColorPicker(CButtonContainer *pResetId, float LineSize, float LabelSize, float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, ColorRGBA DefaultColor, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, bool Alpha = false);
@@ -87,12 +114,87 @@ private:
 
 	// menus_settings_assets.cpp
 public:
+	// Async asset loading states
+	enum EAssetLoadState
+	{
+		ASSET_LOAD_STATE_UNLOADED = 0,
+		ASSET_LOAD_STATE_LOADING,
+		ASSET_LOAD_STATE_LOADED,
+	};
+
+private:
+	EAssetLoadState m_aAssetLoadStates[NUMBER_OF_ASSETS_TABS] = {
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+	};
+	std::shared_ptr<IJob> m_apAssetLoadJobs[NUMBER_OF_ASSETS_TABS];
+
+public:
 	struct SCustomItem
 	{
+		enum EPreviewState
+		{
+			PREVIEW_STATE_UNLOADED = 0,
+			PREVIEW_STATE_LOADING,
+			PREVIEW_STATE_READY,
+			PREVIEW_STATE_LOADED,
+			PREVIEW_STATE_FAILED,
+		};
+
 		IGraphics::CTextureHandle m_RenderTexture;
 
 		char m_aName[50];
 		std::shared_ptr<IJob> m_pDecodeJob;
+		EPreviewState m_PreviewState = PREVIEW_STATE_UNLOADED;
+		CImageInfo m_PreviewImage;
+		unsigned m_PreviewEpoch = 0;
+		size_t m_PreviewBytes = 0;
+		bool m_PreviewResized = false;
+
+		SCustomItem() = default;
+
+		SCustomItem(const SCustomItem &Other) :
+			m_RenderTexture(Other.m_RenderTexture),
+			m_pDecodeJob(Other.m_pDecodeJob),
+			m_PreviewState(Other.m_PreviewState),
+			m_PreviewEpoch(Other.m_PreviewEpoch),
+			m_PreviewBytes(Other.m_PreviewBytes),
+			m_PreviewResized(Other.m_PreviewResized)
+		{
+			str_copy(m_aName, Other.m_aName);
+			if(Other.m_PreviewImage.m_pData != nullptr)
+				m_PreviewImage = Other.m_PreviewImage.DeepCopy();
+		}
+
+		SCustomItem &operator=(const SCustomItem &Other)
+		{
+			if(this == &Other)
+				return *this;
+
+			m_RenderTexture = Other.m_RenderTexture;
+			str_copy(m_aName, Other.m_aName);
+			m_pDecodeJob = Other.m_pDecodeJob;
+			m_PreviewState = Other.m_PreviewState;
+			m_PreviewImage.Free();
+			if(Other.m_PreviewImage.m_pData != nullptr)
+				m_PreviewImage = Other.m_PreviewImage.DeepCopy();
+			m_PreviewEpoch = Other.m_PreviewEpoch;
+			m_PreviewBytes = Other.m_PreviewBytes;
+			m_PreviewResized = Other.m_PreviewResized;
+			return *this;
+		}
+
+		SCustomItem(SCustomItem &&Other) = default;
+		SCustomItem &operator=(SCustomItem &&Other) = default;
+
+		~SCustomItem()
+		{
+			m_PreviewImage.Free();
+		}
 
 		bool operator<(const SCustomItem &Other) const { return str_comp(m_aName, Other.m_aName) < 0; }
 	};
@@ -171,6 +273,10 @@ protected:
 	std::vector<SCustomParticle> m_vParticlesList;
 	std::vector<SCustomHud> m_vHudList;
 	std::vector<SCustomExtras> m_vExtrasList;
+	std::deque<SCustomItem *> m_aaCustomPreviewDecodeQueue[NUMBER_OF_ASSETS_TABS];
+	std::deque<SCustomItem *> m_aaCustomPreviewReadyQueue[NUMBER_OF_ASSETS_TABS];
+	std::unordered_set<SCustomItem *> m_aaCustomPreviewReadyQueued[NUMBER_OF_ASSETS_TABS];
+	unsigned m_aCustomPreviewEpoch[NUMBER_OF_ASSETS_TABS] = {0};
 
 	bool m_IsInit = false;
 
@@ -337,6 +443,10 @@ protected:
 	bool m_NeedRestartGraphics;
 	bool m_NeedRestartSound;
 	bool m_NeedRestartUpdate;
+	bool m_SettingsTabLabelElementsInit = false;
+	bool m_SettingsTabLabelsInit = false;
+	bool m_SettingsTabSixup = false;
+	char m_aSettingsTabLanguageFile[IO_MAX_PATH_LENGTH] = "";
 	bool m_NeedSendinfo;
 	bool m_NeedSendDummyinfo;
 	int m_SettingPlayerPage;
@@ -481,6 +591,8 @@ protected:
 	SDemoSelectionEntry DemoSelectionEntryFromItem(const CDemoItem &Item) const;
 	bool IsDemoItemSelected(const CDemoItem &Item) const;
 	bool IsDemoItemDeletable(const CDemoItem &Item) const;
+	bool IsValidDemoIndex(int Index) const { return Index >= 0 && Index < (int)m_vpFilteredDemos.size(); }
+	CDemoItem *GetSelectedDemo() const { return IsValidDemoIndex(m_DemolistSelectedIndex) ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr; }
 	void SetDemoSelectionSingle(int Index);
 	void ToggleDemoSelection(int Index);
 	void SelectDemoRange(int StartIndex, int EndIndex, bool Additive);
@@ -945,6 +1057,9 @@ public:
 	SUIAnimator m_aAnimatorsBigPage[BIG_TAB_LENGTH];
 	SUIAnimator m_aAnimatorsSmallPage[SMALL_TAB_LENGTH];
 	SUIAnimator m_aAnimatorsSettingsTab[SETTINGS_LENGTH];
+	std::array<CButtonContainer, SETTINGS_LENGTH> m_aSettingsTabButtons;
+	std::array<CUIElement, SETTINGS_LENGTH> m_aSettingsTabLabelElements;
+	std::array<const char *, SETTINGS_LENGTH> m_apSettingsTabs{};
 	int m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 
 	// DDRace
@@ -1070,7 +1185,6 @@ private:
 	void RenderSettingsTClientSidebar(CUIRect MainView);
 	void RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage = false);
 	void RenderSettingsQmClientOverview(CUIRect MainView);
-	void PrewarmTClientAndQmClientPages();
 	void RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha = 1.0f);
 
 	const CWarType *m_pRemoveWarType = nullptr;

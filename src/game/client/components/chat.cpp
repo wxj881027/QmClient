@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 char CChat::ms_aDisplayText[MAX_LINE_LENGTH] = "";
 
@@ -248,6 +249,13 @@ void CChat::CLine::Reset(CChat &This)
 	m_TimesRepeated = 0;
 	m_pManagedTeeRenderInfo = nullptr;
 	m_pTranslateResponse = nullptr;
+
+	// 递增翻译 ID，标记内容已变更
+	// 溢出保护：跳过 0，避免与默认值冲突
+	if(m_TranslationId < std::numeric_limits<unsigned int>::max())
+		m_TranslationId++;
+	else
+		m_TranslationId = 1;
 }
 
 float CChat::EaseInQuad(float t)
@@ -341,6 +349,34 @@ void CChat::ClearLines()
 	m_PrevScoreBoardShowed = false;
 	m_PrevShowChat = false;
 	m_LastAnimUpdateTime = 0;
+}
+
+int CChat::GetLineIndex(const CLine *pLine) const
+{
+	if(pLine == nullptr)
+		return -1;
+
+	// 计算指针在数组中的偏移量
+	const CLine *pBegin = m_aLines;
+	const CLine *pEnd = pBegin + MAX_LINES;
+
+	if(pLine < pBegin || pLine >= pEnd)
+		return -1; // 指针不在数组范围内
+
+	return static_cast<int>(pLine - pBegin);
+}
+
+CChat::CLine *CChat::GetLineByIndex(int Index)
+{
+	if(Index < 0 || Index >= MAX_LINES)
+		return nullptr;
+
+	return &m_aLines[Index];
+}
+
+void CChat::InvalidateLineTranslation(CLine &Line)
+{
+	++Line.m_TranslationId;
 }
 
 void CChat::OnWindowResize()
@@ -511,8 +547,68 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	if(m_Mode == MODE_NONE)
 		return false;
 
+	// ===== 翻译按钮处理（优先级高于输入框）=====
+	if(m_TranslateButton.m_RectValid)
+	{
+		const vec2 MousePos = GetChatMousePos();
+		const bool InsideButton =
+			MousePos.x >= m_TranslateButton.m_X &&
+			MousePos.x <= m_TranslateButton.m_X + m_TranslateButton.m_W &&
+			MousePos.y >= m_TranslateButton.m_Y &&
+			MousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
+
+		// 左键处理：打开语言菜单
+		if(Event.m_Key == KEY_MOUSE_1)
+		{
+			if(Event.m_Flags & IInput::FLAG_PRESS)
+			{
+				m_TranslateButton.m_IsPressed = InsideButton;
+				if(InsideButton)
+				{
+					// 重置输入框的鼠标选择状态
+					CLineInput::SMouseSelection *pMouseSel = m_Input.GetMouseSelection();
+					if(pMouseSel)
+					{
+						pMouseSel->m_Selecting = false;
+						pMouseSel->m_PressMouse = vec2(0, 0);
+						pMouseSel->m_ReleaseMouse = vec2(0, 0);
+					}
+					return true;
+				}
+			}
+			else if(Event.m_Flags & IInput::FLAG_RELEASE)
+			{
+				const bool Activate = m_TranslateButton.m_IsPressed && InsideButton;
+				m_TranslateButton.m_IsPressed = false;
+				if(Activate)
+				{
+					OpenLanguageMenu();
+					return true;
+				}
+			}
+		}
+
+		// 右键处理：切换自动翻译
+		if(Event.m_Key == KEY_MOUSE_2)
+		{
+			if((Event.m_Flags & IInput::FLAG_PRESS) && InsideButton)
+			{
+				ToggleAutoTranslate();
+				return true;
+			}
+		}
+	}
+
+	// ESC 键处理：优先关闭弹出菜单
 	if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE)
 	{
+		if(Ui()->IsPopupOpen())
+		{
+			m_LanguageMenuOpen = false;
+			// UI 系统会自动关闭弹出菜单
+			return true;
+		}
+
 		DisableMode();
 		GameClient()->OnRelease();
 		if(g_Config.m_ClChatReset)
@@ -1669,7 +1765,10 @@ void CChat::OnRender()
 
 		TextRender()->TextEx(&InputCursor, ": ");
 
-		const float MessageMaxWidth = InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX);
+		// 计算翻译按钮大小并调整输入框宽度
+		const float TranslateButtonSize = maximum(16.0f, ScaledFontSize * 1.35f);
+		const float TranslateButtonGap = 4.0f;
+		const float MessageMaxWidth = InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX) - TranslateButtonSize - TranslateButtonGap;
 		const CUIRect ClippingRect = {InputCursor.m_X, InputCursor.m_Y, MessageMaxWidth, 2.25f * InputCursor.m_FontSize};
 		ExtendBounds(x, InputCursor.m_Y, ChatRect.w - x, ClippingRect.h);
 		const float XScale = Graphics()->ScreenWidth() / Width;
@@ -1716,6 +1815,14 @@ void CChat::OnRender()
 				}
 			}
 		}
+
+		// 渲染翻译按钮
+		CUIRect TranslateButtonRect = {ClippingRect.x + ClippingRect.w + TranslateButtonGap, ClippingRect.y, TranslateButtonSize, maximum(InputCursor.m_FontSize + 4.0f, 16.0f)};
+		RenderTranslateButton(TranslateButtonRect);
+	}
+	else
+	{
+		m_TranslateButton.m_RectValid = false;
 	}
 
 #if defined(CONF_VIDEORECORDER)
@@ -1879,6 +1986,26 @@ void CChat::OnRender()
 	}
 
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+
+	// 渲染弹出菜单（当有弹出菜单打开时）
+	if(m_Mode != MODE_NONE && Ui()->IsPopupOpen())
+	{
+		Ui()->StartCheck();
+		Ui()->Update();
+		Ui()->MapScreen();
+		Ui()->RenderPopupMenus();
+		Ui()->FinishCheck();
+		Ui()->ClearHotkeys();
+		Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
+	}
+
+	// 渲染鼠标光标（当聊天框激活时）
+	if(m_Mode != MODE_NONE)
+	{
+		const vec2 UiMousePos = Ui()->UpdatedMousePos() * vec2(Ui()->Screen()->w, Ui()->Screen()->h) / vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
+		const vec2 UiToChatScale(Width / Ui()->Screen()->w, Height / Ui()->Screen()->h);
+		RenderTools()->RenderCursor(UiMousePos * UiToChatScale, 12.0f);
+	}
 }
 
 void CChat::EnsureCoherentFontSize() const
@@ -1976,9 +2103,12 @@ void CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTransl
 	if(!pLine || str_length(pLine) < 1)
 		return;
 
-	// TODO: Outgoing chat translation not implemented
-	// if(AllowOutgoingTranslation && GameClient()->m_Translate.TryTranslateOutgoingChat(Team, pLine))
-	// 	return;
+	// 自动出站翻译
+	if(AllowOutgoingTranslation && GameClient()->m_Translate.ShouldAutoTranslateOutgoing(pLine))
+	{
+		GameClient()->m_Translate.StartAutoOutgoingTranslate(Team, pLine);
+		return;
+	}
 
 	bool AddEntry = false;
 
@@ -2005,4 +2135,323 @@ void CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTransl
 void CChat::SendChatQueued(const char *pLine)
 {
 	SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true);
+}
+
+// ===== 翻译按钮相关方法 =====
+
+vec2 CChat::GetChatMousePos() const
+{
+	const float Height = 300.0f;
+	const float Width = Height * Graphics()->ScreenAspect();
+	const vec2 WindowSize(maximum(1.0f, (float)Graphics()->WindowWidth()), maximum(1.0f, (float)Graphics()->WindowHeight()));
+	const vec2 UiMousePos = Ui()->UpdatedMousePos() * vec2(Ui()->Screen()->w, Ui()->Screen()->h) / WindowSize;
+	const vec2 UiToChatScale(Width / Ui()->Screen()->w, Height / Ui()->Screen()->h);
+	return UiMousePos * UiToChatScale;
+}
+
+void CChat::RenderTranslateButton(const CUIRect &InputRect)
+{
+	using namespace FontIcons;
+
+	const float ButtonSize = maximum(16.0f, FontSize() * 8.0f / 6.0f * 1.35f);
+	const float ButtonGap = 4.0f;
+
+	CUIRect ButtonRect;
+	ButtonRect.x = InputRect.x + InputRect.w + ButtonGap;
+	ButtonRect.y = InputRect.y;
+	ButtonRect.w = ButtonSize;
+	ButtonRect.h = maximum(InputRect.h, ButtonSize);
+
+	m_TranslateButton.m_X = ButtonRect.x;
+	m_TranslateButton.m_Y = ButtonRect.y;
+	m_TranslateButton.m_W = ButtonRect.w;
+	m_TranslateButton.m_H = ButtonRect.h;
+	m_TranslateButton.m_RectValid = true;
+
+	const vec2 MousePos = GetChatMousePos();
+	const bool Hovered = MousePos.x >= ButtonRect.x &&
+			     MousePos.x <= ButtonRect.x + ButtonRect.w &&
+			     MousePos.y >= ButtonRect.y &&
+			     MousePos.y <= ButtonRect.y + ButtonRect.h;
+
+	const bool IsOpen = m_LanguageMenuOpen;
+	const bool IsEnabled = m_TranslateButton.m_AutoTranslateEnabled;
+
+	ColorRGBA ButtonColor;
+	if(IsEnabled)
+	{
+		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled));
+	}
+	else if(IsOpen)
+	{
+		ButtonColor = ColorRGBA(0.35f, 0.45f, 0.70f, 0.90f);
+	}
+	else if(Hovered)
+	{
+		ButtonColor = ColorRGBA(0.28f, 0.28f, 0.28f, 0.90f);
+	}
+	else
+	{
+		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled));
+	}
+	const float ButtonRounding = maximum(6.0f, ButtonRect.h * 0.28f);
+
+	ButtonRect.Draw(ButtonColor, IGraphics::CORNER_ALL, ButtonRounding);
+
+	CUIRect IconRect;
+	ButtonRect.Margin(1.0f, &IconRect);
+	const float IconSize = IconRect.h * CUi::ms_FontmodHeight;
+
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |
+				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
+				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING |
+				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT |
+				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.95f);
+	Ui()->DoLabel(&IconRect, FONT_ICON_LANGUAGE, IconSize, TEXTALIGN_MC);
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+	if(Hovered)
+	{
+		const char *pTooltip = IsEnabled ? Localize("Right-click to disable auto-translate") : Localize("Right-click to enable auto-translate");
+		GameClient()->m_Tooltips.DoToolTip(&m_TranslateButton, &ButtonRect, pTooltip);
+	}
+}
+
+void CChat::ToggleAutoTranslate()
+{
+	m_TranslateButton.m_AutoTranslateEnabled = !m_TranslateButton.m_AutoTranslateEnabled;
+	g_Config.m_QmTranslateAutoOutgoing = m_TranslateButton.m_AutoTranslateEnabled ? 1 : 0;
+}
+
+void CChat::OpenLanguageMenu()
+{
+	m_LanguageMenuOpen = !m_LanguageMenuOpen;
+	if(m_LanguageMenuOpen)
+	{
+		m_LanguagePopupContext.m_pChat = this;
+
+		// Chat 坐标转换为 UI 坐标（DoPopupMenu 需要 UI 坐标系）
+		const float Height = 300.0f;
+		const float Width = Height * Graphics()->ScreenAspect();
+		const vec2 ChatToUiScale(Ui()->Screen()->w / Width, Ui()->Screen()->h / Height);
+
+		// 菜单尺寸（根据内容动态计算高度）
+		const float MenuWidth = 150.0f;
+		const float FontSize = 10.0f;
+		const float RowHeight = 18.0f;
+		const float DropdownHeaderHeight = 20.0f;
+		const float LabelHeight = RowHeight * 0.8f;
+		const float Spacing = 4.0f;
+		const float Margin = 5.0f;
+
+		float ContentHeight =
+			RowHeight + // 标题
+			RowHeight + // 入站 Toggle
+			Spacing +
+			RowHeight + // 出站 Toggle
+			LabelHeight + DropdownHeaderHeight + // 入站语言
+			LabelHeight + DropdownHeaderHeight + // 出站语言
+			LabelHeight + DropdownHeaderHeight + // 后端
+			RowHeight; // 警告（可能）
+		const float MenuHeight = ContentHeight + Margin * 2;
+
+		// 菜单在按钮上方弹出
+		vec2 MenuPos = vec2(m_TranslateButton.m_X, m_TranslateButton.m_Y) * ChatToUiScale;
+		MenuPos.y -= MenuHeight;
+
+		Ui()->DoPopupMenu(&m_LanguagePopupContext, MenuPos.x, MenuPos.y, MenuWidth, MenuHeight, &m_LanguagePopupContext, PopupLanguageMenu);
+	}
+}
+
+CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect View, bool Active)
+{
+	CLanguagePopupContext *pPopupContext = static_cast<CLanguagePopupContext *>(pContext);
+	CChat *pChat = pPopupContext->m_pChat;
+	CUi *pUi = pChat->Ui();
+
+	// 菜单动画：首次打开记录时间
+	if(pPopupContext->m_OpenTime == 0)
+		pPopupContext->m_OpenTime = pChat->time();
+	const float AnimationDuration = 0.15f;
+	pPopupContext->m_AnimationProgress = std::clamp((float)(pChat->time() - pPopupContext->m_OpenTime) / (float)time_freq() / AnimationDuration, 0.0f, 1.0f);
+	const float Progress = pPopupContext->m_AnimationProgress;
+
+	// 对 View 应用缩放动画（从中心 0.95 -> 1.0）
+	const float Scale = 0.95f + 0.05f * Progress;
+	const vec2 Center(View.x + View.w / 2.0f, View.y + View.h / 2.0f);
+	View.x = Center.x - (View.w * Scale) / 2.0f;
+	View.y = Center.y - (View.h * Scale) / 2.0f;
+	View.w *= Scale;
+	View.h *= Scale;
+
+	const float Margin = 5.0f;
+	View.Margin(Margin, &View);
+
+	const float FontSize = 10.0f;
+	const float RowHeight = 18.0f;
+	const float DropdownHeaderHeight = 20.0f;
+
+	ColorRGBA OptionSelectedColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionSelected));
+	ColorRGBA OptionNormalColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionNormal));
+
+	// 应用透明度动画
+	OptionSelectedColor.a *= Progress;
+	OptionNormalColor.a *= Progress;
+
+	// 标题
+	CUIRect TitleRect;
+	View.HSplitTop(RowHeight, &TitleRect, &View);
+	pUi->DoLabel(&TitleRect, Localize("Translation Settings"), FontSize, TEXTALIGN_MC);
+
+	// 自动入站翻译开关
+	{
+		CUIRect ToggleRect;
+		View.HSplitTop(RowHeight, &ToggleRect, &View);
+		ToggleRect.VMargin(2.0f, &ToggleRect);
+
+		const bool InboundEnabled = g_Config.m_QmTranslateAuto != 0;
+		const ColorRGBA ToggleColor = InboundEnabled ? OptionSelectedColor : OptionNormalColor;
+		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
+
+		static int s_InboundToggleId = 0;
+		if(pUi->DoButtonLogic(&s_InboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
+		{
+			g_Config.m_QmTranslateAuto = InboundEnabled ? 0 : 1;
+			return CUi::POPUP_KEEP_OPEN;
+		}
+
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto Inbound Translation"), InboundEnabled ? Localize("On") : Localize("Off"));
+		pUi->DoLabel(&ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
+	}
+
+	// Toggle 间距
+	{
+		CUIRect Spacer;
+		View.HSplitTop(4.0f, &Spacer, &View);
+	}
+
+	// 自动出站翻译开关
+	{
+		CUIRect ToggleRect;
+		View.HSplitTop(RowHeight, &ToggleRect, &View);
+		ToggleRect.VMargin(2.0f, &ToggleRect);
+
+		const bool OutboundEnabled = g_Config.m_QmTranslateAutoOutgoing != 0;
+		const ColorRGBA ToggleColor = OutboundEnabled ? OptionSelectedColor : OptionNormalColor;
+		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
+
+		static int s_OutboundToggleId = 0;
+		if(pUi->DoButtonLogic(&s_OutboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
+		{
+			g_Config.m_QmTranslateAutoOutgoing = OutboundEnabled ? 0 : 1;
+			return CUi::POPUP_KEEP_OPEN;
+		}
+
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto Outbound Translation"), OutboundEnabled ? Localize("On") : Localize("Off"));
+		pUi->DoLabel(&ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
+	}
+
+	// 语言/后端名称数组（用于 DoDropDown）
+	static const char *s_apLangNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
+	static const char *s_apLangCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+	static const char *s_apBackendNames[] = {Localize("LLM API"), Localize("Tencent Cloud"), Localize("LibreTranslate"), Localize("FTAPI")};
+	static const char *s_apBackendCodes[] = {"llm", "tencentcloud", "libretranslate", "ftapi"};
+
+	auto FindIndex = [](const char *pValue, const char **apCodes, int Count) -> int {
+		for(int i = 0; i < Count; ++i)
+			if(str_comp(pValue, apCodes[i]) == 0)
+				return i;
+		return 0;
+	};
+
+	// 入站语言标签 + 下拉框
+	{
+		CUIRect LabelRect, DropdownRect;
+		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
+		pUi->DoLabel(&LabelRect, Localize("Inbound Language (Receive)"), FontSize * 0.9f, TEXTALIGN_MC);
+		View.HSplitTop(DropdownHeaderHeight, &DropdownRect, &View);
+		DropdownRect.VMargin(2.0f, &DropdownRect);
+
+		const int OldSel = FindIndex(g_Config.m_QmTranslateTarget, s_apLangCodes, std::size(s_apLangCodes));
+		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_InboundLangDropDownState);
+		if(NewSel != OldSel)
+			str_copy(g_Config.m_QmTranslateTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateTarget));
+	}
+
+	// 出站语言标签 + 下拉框
+	{
+		CUIRect LabelRect, DropdownRect;
+		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
+		pUi->DoLabel(&LabelRect, Localize("Outbound Language (Send)"), FontSize * 0.9f, TEXTALIGN_MC);
+		View.HSplitTop(DropdownHeaderHeight, &DropdownRect, &View);
+		DropdownRect.VMargin(2.0f, &DropdownRect);
+
+		const int OldSel = FindIndex(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes, std::size(s_apLangCodes));
+		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_OutboundLangDropDownState);
+		if(NewSel != OldSel)
+			str_copy(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateOutgoingTarget));
+	}
+
+	// 翻译后端标签 + 下拉框
+	{
+		CUIRect LabelRect, DropdownRect;
+		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
+		pUi->DoLabel(&LabelRect, Localize("Translate Backend"), FontSize * 0.9f, TEXTALIGN_MC);
+		View.HSplitTop(DropdownHeaderHeight, &DropdownRect, &View);
+		DropdownRect.VMargin(2.0f, &DropdownRect);
+
+		const int OldSel = FindIndex(g_Config.m_QmTranslateBackend, s_apBackendCodes, std::size(s_apBackendCodes));
+		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apBackendNames, std::size(s_apBackendNames), pPopupContext->m_BackendDropDownState);
+		if(NewSel != OldSel)
+			str_copy(g_Config.m_QmTranslateBackend, s_apBackendCodes[NewSel], sizeof(g_Config.m_QmTranslateBackend));
+	}
+
+	// 后端未配置警告
+	bool IsConfigured = true;
+	const char *pConfigWarning = nullptr;
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
+	{
+		IsConfigured = g_Config.m_QmTranslateTcSecretId[0] != '\0' && g_Config.m_QmTranslateTcSecretKey[0] != '\0';
+		pConfigWarning = Localize("⚠️ Tencent Cloud API not configured");
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
+	{
+		IsConfigured = g_Config.m_QmTranslateLibreKey[0] != '\0';
+		pConfigWarning = Localize("⚠️ LibreTranslate API Key not set");
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
+	{
+		IsConfigured = g_Config.m_QmTranslateLlmKeyZhipu[0] != '\0' ||
+			       g_Config.m_QmTranslateLlmKeyDeepseek[0] != '\0' ||
+			       g_Config.m_QmTranslateLlmKeyOpenai[0] != '\0' ||
+			       g_Config.m_QmTranslateLlmKeyCustom[0] != '\0';
+		pConfigWarning = Localize("⚠️ LLM API Key not configured");
+	}
+
+	if(!IsConfigured && pConfigWarning)
+	{
+		CUIRect WarningRect;
+		View.HSplitTop(RowHeight, &WarningRect, &View);
+		WarningRect.VMargin(2.0f, &WarningRect);
+		WarningRect.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, 4.0f);
+		pUi->DoLabel(&WarningRect, pConfigWarning, FontSize * 0.9f, TEXTALIGN_MC);
+	}
+
+	return CUi::POPUP_KEEP_OPEN;
+}
+
+bool CChat::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
+{
+	if(m_Mode == MODE_NONE)
+		return false;
+
+	Ui()->ConvertMouseMove(&x, &y, CursorType);
+	Ui()->OnCursorMove(x, y);
+	return true;
 }

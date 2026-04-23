@@ -12,6 +12,7 @@
 #include <game/client/component.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
+#include <game/client/ui.h>
 
 #include <vector>
 
@@ -71,6 +72,9 @@ class CChat : public CComponent
 		float m_CutOffProgress;
 
 		int m_TimesRepeated;
+
+		// 翻译标识符（每次内容变更时递增）
+		unsigned int m_TranslationId = 0;
 
 		std::shared_ptr<CTranslateResponse> m_pTranslateResponse;
 	};
@@ -184,6 +188,48 @@ class CChat : public CComponent
 	friend class CTClient;
 	friend class CPieMenu;
 
+	// 翻译按钮状态
+	struct STranslateButtonState
+	{
+		bool m_IsPressed = false;
+		bool m_RectValid = false;
+		float m_X = 0.0f;
+		float m_Y = 0.0f;
+		float m_W = 0.0f;
+		float m_H = 0.0f;
+		bool m_AutoTranslateEnabled = false;
+	};
+	STranslateButtonState m_TranslateButton;
+
+	// 翻译菜单下拉框展开状态
+	enum class ETranslateDropdown : int
+	{
+		NONE = 0,
+		INBOUND_LANG,
+		OUTBOUND_LANG,
+		BACKEND,
+	};
+
+	// 语言菜单
+	class CLanguagePopupContext : public SPopupMenuId
+	{
+	public:
+		CChat *m_pChat = nullptr;
+
+		// DoDropDown 状态（使用游戏自带下拉框组件）
+		CUi::SDropDownState m_InboundLangDropDownState;
+		CUi::SDropDownState m_OutboundLangDropDownState;
+		CUi::SDropDownState m_BackendDropDownState;
+
+		// 菜单动画状态
+		int64_t m_OpenTime = 0;
+		float m_AnimationProgress = 1.0f;
+	};
+	CLanguagePopupContext m_LanguagePopupContext;
+	bool m_LanguageMenuOpen = false;
+
+	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
+
 public:
 	CChat();
 	int Sizeof() const override { return sizeof(*this); }
@@ -222,6 +268,19 @@ public:
 	float MessagePaddingY() const { return FontSize() * (1 / 6.f); }
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }
 	float MessageRounding() const { return FontSize() * (1 / 2.f); }
+
+	// 翻译按钮相关方法
+	vec2 GetChatMousePos() const;
+	void RenderTranslateButton(const CUIRect &InputRect);
+	void ToggleAutoTranslate();
+	void OpenLanguageMenu();
+	bool IsLanguageMenuOpen() const { return m_LanguageMenuOpen; }
+	static CUi::EPopupMenuFunctionResult PopupLanguageMenu(void *pContext, CUIRect View, bool Active);
+
+	// 聊天行索引辅助方法（用于翻译任务的内存安全）
+	int GetLineIndex(const CLine *pLine) const;
+	CLine *GetLineByIndex(int Index);
+	void InvalidateLineTranslation(CLine &Line);
 
 	// ----- send functions -----
 

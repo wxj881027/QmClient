@@ -4585,11 +4585,11 @@ void CEditor::RenderModebar(CUIRect View)
 	{
 		char aBuf[64];
 		if(m_Mentions == 1)
-			str_copy(aBuf, Localize("1 条新提醒"));
+			str_copy(aBuf, Localize("1 new mention"));
 		else if(m_Mentions <= 9)
-			str_format(aBuf, sizeof(aBuf), Localize("%d 条新提醒"), m_Mentions);
+			str_format(aBuf, sizeof(aBuf), Localize("%d new mentions"), m_Mentions);
 		else
-			str_copy(aBuf, Localize("9+ 条新提醒"));
+			str_copy(aBuf, Localize("9+ new mentions"));
 
 		TextRender()->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
 		Ui()->DoLabel(&Mentions, aBuf, 10.0f, TEXTALIGN_MC);
@@ -4600,7 +4600,7 @@ void CEditor::RenderModebar(CUIRect View)
 	if(m_IngameMoved)
 	{
 		TextRender()->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
-		Ui()->DoLabel(&IngameMoved, Localize("在游戏内已移动"), 10.0f, TEXTALIGN_MC);
+		Ui()->DoLabel(&IngameMoved, Localize("Moved ingame"), 10.0f, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}
 

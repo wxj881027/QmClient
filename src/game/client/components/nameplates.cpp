@@ -1438,6 +1438,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		ShowDirectionConfig = g_Config.m_ClVideoShowDirection;
 #endif
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = false;
+	const bool HideOverheadIndicators = g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideOverheadIndicators;
 	switch(ShowDirectionConfig)
 	{
 	case 0: // Off
@@ -1455,6 +1456,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	default:
 		dbg_assert_failed("ShowDirectionConfig invalid");
 	}
+	if(HideOverheadIndicators)
+		Data.m_ShowDirection = false;
 	if(Data.m_ShowDirection)
 	{
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK &&
@@ -1487,7 +1490,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	Data.m_HookStrongWeakId = 0;
 
 	const bool Following = (GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_MultiViewActivated && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW);
-	if(GameClient()->m_Snap.m_LocalClientId != -1 || Following)
+	if(!HideOverheadIndicators && (GameClient()->m_Snap.m_LocalClientId != -1 || Following))
 	{
 		const int SelectedId = Following ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : GameClient()->m_Snap.m_LocalClientId;
 		if(SelectedId >= 0 && SelectedId < MAX_CLIENTS)
@@ -1655,6 +1658,8 @@ void CNamePlates::RenderChatBubble(vec2 Position, int ClientId, float Alpha)
 {
 	// Check if chat bubbles are enabled
 	if(!g_Config.m_QmChatBubble)
+		return;
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideChat)
 		return;
 
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)

@@ -6,6 +6,8 @@
 
 #include <array>
 #include <chrono>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -25,12 +27,17 @@ public:
 	bool m_HasDay;
 	bool m_HasNight;
 	IGraphics::CTextureHandle m_IconTexture;
+	std::string m_IconPath;
+	bool m_IconLoadRequested = false;
+	bool m_IconLoadFailed = false;
 	bool operator<(const CTheme &Other) const { return m_Name < Other.m_Name; }
 };
 
 class CMenuBackground : public CBackground
 {
 	std::chrono::nanoseconds m_ThemeScanStartTime{0};
+	class CThemeListLoadJob;
+	class CThemeIconLoadJob;
 
 public:
 	enum
@@ -95,10 +102,18 @@ private:
 
 	void ResetPositions();
 
-	void LoadThemeIcon(CTheme &Theme);
-	static int ThemeScan(const char *pName, int IsDir, int DirType, void *pUser);
+	void EnsureThemeEntries();
+	void EnsureThemeListJob();
+	void ProcessThemeListJob();
+	void QueueNextThemeIconLoad();
+	void QueueThemeIconLoad(CTheme &Theme);
+	void ProcessThemeIconJobs();
+	void UpdateThemeLoading();
 
 	std::vector<CTheme> m_vThemes;
+	std::shared_ptr<CThemeListLoadJob> m_pThemeListLoadJob;
+	std::vector<std::shared_ptr<CThemeIconLoadJob>> m_vThemeIconLoadJobs;
+	bool m_ThemeListLoaded = false;
 
 public:
 	CMenuBackground();

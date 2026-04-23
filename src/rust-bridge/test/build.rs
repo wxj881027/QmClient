@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsStr;
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 
@@ -24,10 +25,24 @@ fn main() {
         return;
     }
     if env::var_os("CARGO_FEATURE_LINK_TEST_LIBRARIES").is_some() {
-        let libraries = env::var("DDNET_TEST_LIBRARIES")
-            .expect("environment variable DDNET_TEST_LIBRARIES required but not found");
+        let libraries = if let Some(path) = env::var_os("DDNET_TEST_LIBRARIES_FILE") {
+            fs::read_to_string(path).expect("failed to read DDNET_TEST_LIBRARIES_FILE")
+        } else {
+            env::var("DDNET_TEST_LIBRARIES")
+                .expect("environment variable DDNET_TEST_LIBRARIES or DDNET_TEST_LIBRARIES_FILE required but not found")
+        };
         let mut seen_library_dirs = HashSet::new();
-        for library in libraries.split(';') {
+        let separator = if libraries.contains('\n') {
+            '\n'
+        } else if libraries.contains('|') {
+            '|'
+        } else {
+            ';'
+        };
+        for library in libraries.split(separator) {
+            if library.is_empty() {
+                continue;
+            }
             let library = Path::new(library);
             let extension = library.extension().and_then(OsStr::to_str);
             let kind = match extension {
@@ -60,7 +75,7 @@ fn main() {
                 .expect("library name")
                 .to_str()
                 .expect("should have errored earlier");
-            if name.starts_with("lib") {
+            if extension != Some("lib") && name.starts_with("lib") {
                 name = &name[3..];
             }
             println!("cargo:rustc-link-lib={}{}", kind, name);

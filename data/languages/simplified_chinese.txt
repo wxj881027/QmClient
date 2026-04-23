@@ -146,7 +146,7 @@ Graphics
 == 图像
 
 Grenade
-== 榴弹枪
+== 榴弹炮
 
 Hammer
 == 锤子
@@ -605,7 +605,7 @@ AntiPing: predict weapons
 == 延迟补偿：预测武器
 
 AntiPing: predict grenade paths
-== 延迟补偿：预测榴弹枪路径
+== 延迟补偿：预测榴弹炮路径
 
 Show other players' hook collision lines
 == 显示其他玩家的钩索辅助线
@@ -2751,7 +2751,7 @@ Give back right to vote to player with list index
 == 将投票权归还给列表索引的玩家
 
 Gives a grenade launcher to you
-== 给你一个榴弹发射器
+== 给你一个榴弹炮发射器
 
 Gives a laser to you
 == 给予你激光枪
@@ -3090,7 +3090,7 @@ Removes super from you
 == 移除你的超级状态
 
 Removes the grenade launcher from you
-== 移除你身上的榴弹发射器
+== 移除你身上的榴弹炮发射器
 
 Removes the jetpack from you
 == 从你身上取下喷气背包
@@ -3312,7 +3312,7 @@ Switch team
 == 切换队伍
 
 Switch to grenade
-== 切换到手榴弹
+== 切换到榴弹炮
 
 Switch to gun
 == 切换到枪
@@ -4365,6 +4365,12 @@ Dummy
 Solo
 == 单人
 
+Off
+== 关
+
+On
+== 开
+
 Oldschool
 == 传统
 
@@ -4961,7 +4967,7 @@ Latency compensation: predict weapons
 == 延迟补偿：预测武器
 
 Latency compensation: predict grenade trajectory
-== 延迟补偿：预测榴弹枪路径
+== 延迟补偿：预测榴弹炮路径
 
 New preset name
 == 新预设名称
@@ -6031,6 +6037,48 @@ Overwrite clan even if empty
 %s translating to %s
 == %s 翻译为 %s
 
+%s translating to %s before send
+== %s 正在翻译为 %s 后发送
+
+Translating to %s...
+== 正在翻译为 %s...
+
+Not a valid ID
+== 无效的 ID
+
+ID not connected
+== 该 ID 未连接
+
+No message to translate
+== 没有可翻译的消息
+
+Server messages are not translated
+== 服务器消息不会被翻译
+
+Invalid translate backend
+== 无效的翻译后端
+
+Too many translation jobs
+== 翻译任务过多
+
+Translation queue full, sending original text
+== 翻译队列已满，发送原始文本
+
+Invalid translate backend, sending original text
+== 翻译后端无效，发送原始文本
+
+You are not in practice
+== 你当前不在练习模式中
+
+No safe position found
+== 未找到安全位置
+
+No local saves file found (ddnet-saves.txt)
+== 未找到本地存档文件（ddnet-saves.txt）
+
+Failed to read saves file
+== 读取存档文件失败
+
 [translate]
 %s to %s failed: %s
 == %s 翻译到 %s 失败: %s
@@ -6420,6 +6468,27 @@ Not in the current browser list
 Hook line tip
 == 辅助线提示（实际可钩中 Tee 的长度）
 
+Hide guides
+== 隐藏辅助线
+
+Auto login Axiom server
+== 自动登录 Axiom 服务器
+
+Axiom login password
+== Axiom 登录密码
+
+Attempting Axiom auto login
+== 正在尝试自动登录 Axiom 服务器
+
+Axiom auto login succeeded
+== Axiom 自动登录成功
+
+Axiom auto login failed, retrying
+== Axiom 自动登录失败，正在重试
+
+Axiom auto login failed
+== Axiom 自动登录失败
+
 Combo popups
 == Combo 连击动效
 
@@ -6470,3 +6539,425 @@ Community links, updates, feedback, and supporter credits moved to Contributors
 
 Drag, collapse, search, and usage history are preserved inside each category
 == 拖拽、折叠、搜索和使用频率记录会继续保留在各自分类中
+
+Concurrency
+== 并发数
+
+Max concurrent translations
+== 最大并发翻译数
+
+Translate
+== 翻译
+
+Thinking Mode
+== 思考模式
+
+Enable thinking mode (slower)
+== 启用思考模式（较慢）
+
+Enable thinking mode requires using reasoning models
+== 启用思考模式请使用推理模型
+
+Ensure backend supports OpenAI-compatible thinking parameter
+== 请确保后端支持 OpenAI 兼容的 thinking 参数
+
+Source Language
+== 源语言
+
+Target Language
+== 目标语言
+
+Translation Settings
+== 翻译设置
+
+Auto Translate
+== 自动翻译
+
+Click to open translation settings
+== 点击打开翻译设置
+
+Auto translate incoming messages
+== 自动翻译入站消息
+
+LLM Provider
+== LLM 提供商
+
+Zhipu AI API Key
+== 智谱 AI API 密钥
+
+DeepSeek API Key
+== DeepSeek API 密钥
+
+OpenAI API Key
+== OpenAI API 密钥
+
+Custom API Key
+== 自定义 API 密钥
+
+Endpoint (Optional)
+== 端点（可选）
+
+Model
+== 模型
+
+Custom prompt template
+== 自定义提示词模板
+
+Leave empty to use default prompt
+== 留空使用默认提示词
+
+Translate prompt
+== 翻译提示词
+
+Use %s as placeholder for target language
+== 使用 %s 作为目标语言的占位符
+
+Right-click to disable auto-translate
+== 右键关闭自动翻译
+
+Right-click to enable auto-translate
+== 右键开启自动翻译
+
+Translate Backend
+== 翻译后端
+
+Inbound Language (Receive)
+== 入站语言（接收消息）
+
+Outbound Language (Send)
+== 出站语言（发送消息）
+
+On
+== 开
+
+Off
+== 关
+
+⚠️ Tencent Cloud API not configured
+== ⚠️ 腾讯云 API 密钥未配置
+
+⚠️ LibreTranslate API Key not set
+== ⚠️ Libre 翻译 API 密钥未设置
+
+⚠️ LLM API Key not configured
+== ⚠️ LLM API 密钥未配置
+
+Translate UI
+== 翻译 UI
+
+Customize translate button and menu colors
+== 自定义翻译按钮和菜单颜色
+
+Button - Disabled
+== 按钮 - 未启用
+
+Button - Enabled
+== 按钮 - 已启用
+
+Menu Background
+== 菜单背景
+
+Menu Option - Selected
+== 菜单选项 - 选中
+
+Menu Option - Normal
+== 菜单选项 - 未选中
+
+Unfinished maps
+== 未完成图
+
+And pick one randomly
+== 并随机抽取一张
+
+Map type:
+== 地图类型:
+
+Auto start vote
+== 自动发起投票
+
+Unfinished map data not fetched
+== 未获取未完成图数据
+
+Please enable finished indicator first
+== 请先启用完成度显示
+
+Unfinished map data is refreshing, please try again later
+== 未完成图数据刷新中，请稍后再试
+
+Vote started automatically
+== 已自动发起投票
+
+Type switch vote started automatically
+== 已自动发起切换类型投票
+
+No corresponding vote option found
+== 未找到对应投票选项
+
+Copied
+== 已复制
+
+Click to copy map name
+== 点击复制地图名
+
+Start and connect to local server
+== 开启并连接到本地服务器
+
+Click to remove this community from favorites
+== 点击将该社区移出收藏
+
+Click to add this community to favorites
+== 点击将该社区加入收藏
+
+Click to copy this player's name to clipboard
+== 点击复制该玩家名字到剪贴板
+
+Click to copy this clan's name to clipboard
+== 点击复制该战队名字到剪贴板
+
+Add to category
+== 添加到分类
+
+Thank you for your companionship and belief, which gave me the courage to keep going!
+== 感谢你们一直以来的陪伴与坚信让我能够有勇气走下去，谢谢！
+
+Thank you for your companionship and belief, which gave me the courage to keep going
+== 感谢你们一直以来的陪伴与坚信，让我有勇气继续走下去
+
+Moved ingame
+== 在游戏内已移动
+
+Skin queue
+== 皮肤队列
+
+Switch interval
+== 切换间隔
+
+Queue is empty
+== 队列为空
+
+Save current queue as a new preset
+== 一键保存当前队列为新预设
+
+No presets yet
+== 暂无预设
+
+Open rename dialog
+== 打开重命名弹窗
+
+Apply this preset to the current queue
+== 一键应用此预设到当前队列
+
+Delete this preset
+== 删除该预设
+
+Queue is full
+== 队列已满
+
+Add to queue
+== 加入队列
+
+Audio packs
+== 音频包
+
+Friend color in friends list
+== 好友列表中好友条目颜色
+
+Show key stuck status
+== 显示卡键状态
+
+Name order
+== 昵称顺序
+
+Predict events (experimental)
+== 预测事件（实验性）
+
+AntiPing (latency compensation)
+== 延迟补偿（AntiPing）
+
+Try to predict other entities to reduce lag feeling at high latency
+== 尝试预测其他实体来降低高延迟带来的卡顿感
+
+AntiPing: predict other players
+== 延迟补偿：预测其他玩家
+
+AntiPing: predict weapons
+== 延迟补偿：预测武器
+
+AntiPing: predict grenade path
+== 延迟补偿：预测榴弹炮路径
+
+New preset name
+== 新预设名称
+
+Press Ctrl+Shift+G to toggle debug graphs
+== 按下 Ctrl+Shift+G 可关闭调试图表
+
+Game time margin
+== 游戏时间边距
+
+Avg %.*f   ↓ %.*f   ↑ %.*f
+== 平均 %.*f   ↓ %.*f   ↑ %.*f
+
+Auto Inbound Translation
+== 自动入站翻译
+
+Auto Outbound Translation
+== 自动出站翻译
+
+Auto inbound translation
+== 自动入站翻译
+
+Auto outbound translation
+== 自动出站翻译
+
+LLM API
+== LLM API
+
+Tencent Cloud
+== 腾讯云
+
+LibreTranslate
+== Libre 翻译
+
+FTAPI
+== FTAPI
+
+Enable FTAPI auto-translate (may cause overload)
+== 启用 FTAPI 自动翻译（可能导致过载）
+
+⚠️ FTAPI is a free service. Excessive use may cause service suspension.
+== ⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停
+
+Concurrency
+== 并发数
+
+Auto: %d (smart default)
+== 自动：%d（智能默认值）
+
+Manual: %d
+== 手动：%d
+
+Manual concurrency (1=auto)
+== 手动并发数（1=自动）
+
+Manual concurrency: %d
+== 手动并发数：%d
+
+FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
+== FTAPI 自动翻译已禁用以防止过载。如需启用请在设置中配置。
+
+Outbound Target Language
+== 出站目标语言
+
+Outbound Source Language
+== 出站源语言
+
+Auto Detect
+== 自动检测
+
+Visual: Font & Cursor
+== 视觉：字体与光标
+
+Visual: Nameplates
+== 视觉：名牌
+
+Visual: Effects
+== 视觉：特效
+
+Show ping colored circle in nameplates
+== 在玩家昵称旁显示延迟颜色圆圈
+
+Show country flags in nameplates
+== 在玩家昵称旁显示国旗
+
+Show skin names in nameplate
+== 在玩家昵称旁显示皮肤名
+
+Use colored skins for frozen tees
+== 冻结 Tee 使用彩色皮肤
+
+Show katan on frozen players
+== 在被冻结的玩家身上显示武士刀
+
+Render all custom colored feet as white feet skin
+== 将所有自定义脚部颜色渲染为白色
+
+Automatic concurrency: %d (smart default)
+== 自动并发数：%d（智能默认）
+
+Manual concurrency: %d
+== 手动并发数：%d
+
+Manual concurrency
+== 手动并发数
+
+Commands run in the console
+== 在控制台中执行的命令
+
+L select  R swap  M select only
+== 左键选择  右键交换  中键仅选择
+
+L select  R swap
+== 左键选择  右键交换
+
+Angle
+== 角度
+
+Prediction
+== 预测
+
+Position
+== 位置
+
+Race Time
+== 比赛时间
+
+FPS
+== 每秒帧数
+
+Velocity
+== 速度
+
+Zoom
+== 缩放
+
+Space
+== 占位空间(空格)
+
+Displays your current angle in degrees
+== 显示你当前的角度（度）
+
+Displays your ping to the current server
+== 显示你到当前服务器的延迟
+
+Displays your current prediction amount
+== 显示你当前的预测量
+
+Displays position
+== 显示当前位置
+
+Displays your local time
+== 显示你的本地时间
+
+Display your race time
+== 显示你的竞速时间
+
+Displays your frames per second
+== 显示你当前的每秒帧数
+
+Displays X and Y velocity
+== 显示 X 和 Y 方向速度
+
+Displays current zoom value
+== 显示当前缩放值
+
+Gap between statusbar items
+== 状态栏条目之间的间隔
+Downloaded
+== 已下载
+
+Not downloaded
+== 未下载
+
+Hide overhead direction and hook indicators
+== 隐藏头顶方向键和强弱钩提示

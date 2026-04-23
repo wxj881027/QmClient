@@ -6,9 +6,17 @@ data/
 # Agent documentation (local only)
 AGENTS.md
 
-# Local documentation (local only)
+# Local documentation
 dyl/
+docs/dyl
+!docs/dyl/QmClient_docs
+.trae
 .trae/
+docs/superpowers
+.superpowers
+
+# Git worktrees
+worktrees/
 
 bundle/
 !/other/bundle/
