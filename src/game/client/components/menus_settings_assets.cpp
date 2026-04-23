@@ -17,6 +17,8 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <generated/client_data.h>
+
 #include <game/client/gameclient.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
@@ -335,6 +337,10 @@ public:
 		ASSET_TYPE_EMOTICONS,
 		ASSET_TYPE_PARTICLES,
 		ASSET_TYPE_HUD,
+		ASSET_TYPE_GUI_CURSOR,
+		ASSET_TYPE_ARROW,
+		ASSET_TYPE_STRONG_WEAK,
+		ASSET_TYPE_ENTITY_BG,
 		ASSET_TYPE_EXTRAS,
 	};
 
@@ -348,6 +354,7 @@ public:
 	{
 		std::vector<SAssetEntry> *m_pEntries;
 		EAssetResourceKind m_Kind;
+		bool m_SkipReservedDefault;
 	};
 
 private:
@@ -369,7 +376,7 @@ private:
 				return 0;
 			if(pName[0] == '.')
 				return 0;
-			if(str_comp(pName, "default") == 0)
+			if(pContext->m_SkipReservedDefault && str_comp(pName, "default") == 0)
 				return 0;
 
 			SAssetEntry Entry;
@@ -389,7 +396,7 @@ private:
 			{
 				char aName[50];
 				str_truncate(aName, sizeof(aName), pName, str_length(pName) - str_length(pExt));
-				if(str_comp(aName, "default") == 0)
+				if(pContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
 					return 0;
 
 				SAssetEntry Entry;
@@ -404,7 +411,7 @@ private:
 	void Run() override
 	{
 		std::vector<SAssetEntry> vEntries;
-		SScanContext ScanContext{&vEntries, EAssetResourceKind::DIRECTORY};
+		SScanContext ScanContext{&vEntries, EAssetResourceKind::DIRECTORY, true};
 
 		if(m_Type == ASSET_TYPE_EXTRAS)
 		{
@@ -430,12 +437,25 @@ private:
 			case ASSET_TYPE_HUD:
 				pCategory = FindAssetResourceCategory("hud");
 				break;
+			case ASSET_TYPE_GUI_CURSOR:
+				pCategory = FindAssetResourceCategory("gui_cursor");
+				break;
+			case ASSET_TYPE_ARROW:
+				pCategory = FindAssetResourceCategory("arrow");
+				break;
+			case ASSET_TYPE_STRONG_WEAK:
+				pCategory = FindAssetResourceCategory("strong_weak");
+				break;
+			case ASSET_TYPE_ENTITY_BG:
+				pCategory = FindAssetResourceCategory("entity_bg");
+				break;
 			case ASSET_TYPE_EXTRAS:
 				break;
 			}
 
 			dbg_assert(pCategory != nullptr, "asset list category must exist");
 			ScanContext.m_Kind = pCategory->m_Kind;
+			ScanContext.m_SkipReservedDefault = pCategory->m_Kind != EAssetResourceKind::MAP_FILE;
 			m_pStorage->ListDirectory(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, ScanCallback, &ScanContext);
 		}
 
@@ -629,6 +649,51 @@ static void StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage
 	pEngine->AddJob(pAssetItem->m_pDecodeJob);
 }
 
+static bool IsEntityBgSelectionMatched(const char *pItemName)
+{
+	const char *pValue = g_Config.m_ClBackgroundEntities;
+	if(str_comp(pItemName, "default") == 0)
+		return pValue[0] == '\0';
+	if(pValue[0] == '\0' || str_comp(pValue, CURRENT_MAP) == 0 || str_find(pValue, "/") != nullptr || str_endswith_nocase(pValue, ".png"))
+		return false;
+	if(str_comp(pValue, pItemName) == 0)
+		return true;
+
+	char aMapName[IO_MAX_PATH_LENGTH];
+	str_format(aMapName, sizeof(aMapName), "%s.map", pItemName);
+	return str_comp(pValue, aMapName) == 0;
+}
+
+static void ApplyEntityBgSelection(CGameClient *pGameClient, const char *pItemName)
+{
+	if(str_comp(pItemName, "default") == 0)
+		g_Config.m_ClBackgroundEntities[0] = '\0';
+	else
+		str_copy(g_Config.m_ClBackgroundEntities, pItemName, sizeof(g_Config.m_ClBackgroundEntities));
+	pGameClient->m_Background.LoadBackground();
+}
+
+static void StartEntityBgDecode(CMenus::SCustomEntityBg *pAssetItem, IStorage *pStorage, IEngine *pEngine)
+{
+	if(pAssetItem->m_pDecodeJob || pAssetItem->m_RenderTexture.IsValid())
+		return;
+
+	std::vector<std::string> vPossiblePaths;
+	char aPath[IO_MAX_PATH_LENGTH];
+	str_format(aPath, sizeof(aPath), "maps/%s.png", pAssetItem->m_aName);
+	vPossiblePaths.emplace_back(aPath);
+
+	pAssetItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pAssetItem->m_aName, IStorage::TYPE_ALL, LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE);
+	pEngine->AddJob(pAssetItem->m_pDecodeJob);
+}
+
+static bool IsEntityBgConfigSelected(const char *pAssetName)
+{
+	if(pAssetName == nullptr || pAssetName[0] == '\0')
+		return false;
+	return IsEntityBgSelectionMatched(pAssetName);
+}
+
 template<typename TName>
 static void LoadAsset(TName *pAssetItem, const char *pAssetName, IGraphics *pGraphics)
 {
@@ -728,6 +793,10 @@ static std::vector<CMenus::SCustomGame *> gs_vpSearchGamesList;
 static std::vector<CMenus::SCustomEmoticon *> gs_vpSearchEmoticonsList;
 static std::vector<CMenus::SCustomParticle *> gs_vpSearchParticlesList;
 static std::vector<CMenus::SCustomHud *> gs_vpSearchHudList;
+static std::vector<CMenus::SCustomGuiCursor *> gs_vpSearchGuiCursorList;
+static std::vector<CMenus::SCustomArrow *> gs_vpSearchArrowList;
+static std::vector<CMenus::SCustomStrongWeak *> gs_vpSearchStrongWeakList;
+static std::vector<CMenus::SCustomEntityBg *> gs_vpSearchEntityBgList;
 static std::vector<CMenus::SCustomExtras *> gs_vpSearchExtrasList;
 
 static bool gs_aInitCustomList[NUMBER_OF_ASSETS_TABS] = {
@@ -736,6 +805,10 @@ static bool gs_aInitCustomList[NUMBER_OF_ASSETS_TABS] = {
 	true, // ASSETS_TAB_EMOTICONS
 	true, // ASSETS_TAB_PARTICLES
 	true, // ASSETS_TAB_HUD
+	true, // ASSETS_TAB_GUI_CURSOR
+	true, // ASSETS_TAB_ARROW
+	true, // ASSETS_TAB_STRONG_WEAK
+	true, // ASSETS_TAB_ENTITY_BG
 	true, // ASSETS_TAB_EXTRAS
 };
 
@@ -763,6 +836,14 @@ const char *AssetResourceCategoryIdByTab(int Tab)
 		return "particles";
 	if(Tab == ASSETS_TAB_HUD)
 		return "hud";
+	if(Tab == ASSETS_TAB_GUI_CURSOR)
+		return "gui_cursor";
+	if(Tab == ASSETS_TAB_ARROW)
+		return "arrow";
+	if(Tab == ASSETS_TAB_STRONG_WEAK)
+		return "strong_weak";
+	if(Tab == ASSETS_TAB_ENTITY_BG)
+		return "entity_bg";
 	return nullptr;
 }
 
@@ -1496,6 +1577,15 @@ bool DeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetNam
 	case ASSETS_TAB_EMOTICONS: pSubFolder = "emoticons"; break;
 	case ASSETS_TAB_PARTICLES: pSubFolder = "particles"; break;
 	case ASSETS_TAB_HUD: pSubFolder = "hud"; break;
+	case ASSETS_TAB_GUI_CURSOR: pSubFolder = "gui_cursor"; break;
+	case ASSETS_TAB_ARROW: pSubFolder = "arrow"; break;
+	case ASSETS_TAB_STRONG_WEAK: pSubFolder = "strong_weak"; break;
+	case ASSETS_TAB_ENTITY_BG:
+	{
+		char aMapPath[IO_MAX_PATH_LENGTH];
+		str_format(aMapPath, sizeof(aMapPath), "maps/%s.map", pAssetName);
+		return pStorage->RemoveFile(aMapPath, IStorage::TYPE_SAVE);
+	}
 	case ASSETS_TAB_EXTRAS: pSubFolder = "extras"; break;
 	default: return false;
 	}
@@ -1511,6 +1601,34 @@ bool DeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetNam
 
 	return Removed;
 }
+
+bool CanDeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetName)
+{
+	if(IsProtectedDefaultAsset(pAssetName))
+		return false;
+
+	switch(CurTab)
+	{
+	case ASSETS_TAB_ENTITY_BG:
+	{
+		char aMapPath[IO_MAX_PATH_LENGTH];
+		str_format(aMapPath, sizeof(aMapPath), "maps/%s.map", pAssetName);
+		return pStorage->FileExists(aMapPath, IStorage::TYPE_SAVE);
+	}
+	case ASSETS_TAB_ENTITIES:
+	case ASSETS_TAB_GAME:
+	case ASSETS_TAB_EMOTICONS:
+	case ASSETS_TAB_PARTICLES:
+	case ASSETS_TAB_HUD:
+	case ASSETS_TAB_GUI_CURSOR:
+	case ASSETS_TAB_ARROW:
+	case ASSETS_TAB_STRONG_WEAK:
+	case ASSETS_TAB_EXTRAS:
+		return true;
+	default:
+		return false;
+	}
+}
 } // namespace
 
 static const CMenus::SCustomItem *GetCustomItem(int CurTab, size_t Index)
@@ -1525,6 +1643,14 @@ static const CMenus::SCustomItem *GetCustomItem(int CurTab, size_t Index)
 		return gs_vpSearchParticlesList[Index];
 	else if(CurTab == ASSETS_TAB_HUD)
 		return gs_vpSearchHudList[Index];
+	else if(CurTab == ASSETS_TAB_GUI_CURSOR)
+		return gs_vpSearchGuiCursorList[Index];
+	else if(CurTab == ASSETS_TAB_ARROW)
+		return gs_vpSearchArrowList[Index];
+	else if(CurTab == ASSETS_TAB_STRONG_WEAK)
+		return gs_vpSearchStrongWeakList[Index];
+	else if(CurTab == ASSETS_TAB_ENTITY_BG)
+		return gs_vpSearchEntityBgList[Index];
 	else if(CurTab == ASSETS_TAB_EXTRAS)
 		return gs_vpSearchExtrasList[Index];
 	dbg_assert_failed("Invalid CurTab: %d", CurTab);
@@ -1619,6 +1745,34 @@ void CMenus::ClearCustomItems(int CurTab)
 		// reload current hud skin
 		GameClient()->LoadHudSkin(g_Config.m_ClAssetHud);
 	}
+	else if(CurTab == ASSETS_TAB_GUI_CURSOR)
+	{
+		ClearAssetList(m_vGuiCursorList, Graphics());
+		gs_vpSearchGuiCursorList.clear();
+
+		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+	}
+	else if(CurTab == ASSETS_TAB_ARROW)
+	{
+		ClearAssetList(m_vArrowList, Graphics());
+		gs_vpSearchArrowList.clear();
+
+		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
+	}
+	else if(CurTab == ASSETS_TAB_STRONG_WEAK)
+	{
+		ClearAssetList(m_vStrongWeakList, Graphics());
+		gs_vpSearchStrongWeakList.clear();
+
+		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
+	}
+	else if(CurTab == ASSETS_TAB_ENTITY_BG)
+	{
+		ClearAssetList(m_vEntityBgList, Graphics());
+		gs_vpSearchEntityBgList.clear();
+
+		GameClient()->m_Background.LoadBackground();
+	}
 	else if(CurTab == ASSETS_TAB_EXTRAS)
 	{
 		ClearAssetList(m_vExtrasList, Graphics());
@@ -1697,6 +1851,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		s_apAssetsTabNames[ASSETS_TAB_EMOTICONS] = Localize("Emoticons");
 		s_apAssetsTabNames[ASSETS_TAB_PARTICLES] = Localize("Particles");
 		s_apAssetsTabNames[ASSETS_TAB_HUD] = Localize("HUD");
+		s_apAssetsTabNames[ASSETS_TAB_GUI_CURSOR] = Localize("GUI Cursor");
+		s_apAssetsTabNames[ASSETS_TAB_ARROW] = Localize("Arrow");
+		s_apAssetsTabNames[ASSETS_TAB_STRONG_WEAK] = Localize("Strong Weak");
+		s_apAssetsTabNames[ASSETS_TAB_ENTITY_BG] = Localize("Entity BG");
 		s_apAssetsTabNames[ASSETS_TAB_EXTRAS] = Localize("Extras");
 	}
 
@@ -1767,6 +1925,24 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		case ASSETS_TAB_HUD:
 			dbg_assert(pCurrentCategory != nullptr, "hud category must exist");
 			EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList);
+			break;
+		case ASSETS_TAB_GUI_CURSOR:
+			dbg_assert(pCurrentCategory != nullptr, "gui cursor category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList);
+			break;
+		case ASSETS_TAB_ARROW:
+			dbg_assert(pCurrentCategory != nullptr, "arrow category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList);
+			break;
+		case ASSETS_TAB_STRONG_WEAK:
+			dbg_assert(pCurrentCategory != nullptr, "strong weak category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList);
+			break;
+		case ASSETS_TAB_ENTITY_BG:
+			dbg_assert(pCurrentCategory != nullptr, "entity bg category must exist");
+			std::sort(m_vEntityBgList.begin(), m_vEntityBgList.end(), [](const CMenus::SCustomEntityBg &LeftItem, const CMenus::SCustomEntityBg &RightItem) {
+				return AssetResourceNameLess(LeftItem.m_aName, RightItem.m_aName);
+			});
 			break;
 		case ASSETS_TAB_EXTRAS:
 			if(m_vExtrasList.empty())
@@ -1892,6 +2068,72 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
 			}
 			break;
+		case ASSETS_TAB_GUI_CURSOR:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomGuiCursor Item;
+				str_copy(Item.m_aName, Entry.m_aName);
+				m_vGuiCursorList.push_back(Item);
+			}
+			{
+				CPerfTimer SortTimer;
+				dbg_assert(pCurrentCategory != nullptr, "gui cursor category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vGuiCursorList);
+				char aExtra[128];
+				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vGuiCursorList.size());
+				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
+			}
+			break;
+		case ASSETS_TAB_ARROW:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomArrow Item;
+				str_copy(Item.m_aName, Entry.m_aName);
+				m_vArrowList.push_back(Item);
+			}
+			{
+				CPerfTimer SortTimer;
+				dbg_assert(pCurrentCategory != nullptr, "arrow category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vArrowList);
+				char aExtra[128];
+				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vArrowList.size());
+				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
+			}
+			break;
+		case ASSETS_TAB_STRONG_WEAK:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomStrongWeak Item;
+				str_copy(Item.m_aName, Entry.m_aName);
+				m_vStrongWeakList.push_back(Item);
+			}
+			{
+				CPerfTimer SortTimer;
+				dbg_assert(pCurrentCategory != nullptr, "strong weak category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vStrongWeakList);
+				char aExtra[128];
+				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vStrongWeakList.size());
+				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
+			}
+			break;
+		case ASSETS_TAB_ENTITY_BG:
+			for(const auto &Entry : vEntries)
+			{
+				SCustomEntityBg Item;
+				str_copy(Item.m_aName, Entry.m_aName);
+				m_vEntityBgList.push_back(Item);
+			}
+			{
+				CPerfTimer SortTimer;
+				dbg_assert(pCurrentCategory != nullptr, "entity bg category must exist");
+				std::sort(m_vEntityBgList.begin(), m_vEntityBgList.end(), [](const CMenus::SCustomEntityBg &LeftItem, const CMenus::SCustomEntityBg &RightItem) {
+					return AssetResourceNameLess(LeftItem.m_aName, RightItem.m_aName);
+				});
+				char aExtra[128];
+				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vEntityBgList.size());
+				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
+			}
+			break;
 		case ASSETS_TAB_EXTRAS:
 			for(const auto &Entry : vEntries)
 			{
@@ -1942,6 +2184,22 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		if(m_vHudList.size() != gs_aCustomListSize[s_CurCustomTab])
 			gs_aInitCustomList[s_CurCustomTab] = true;
 		break;
+	case ASSETS_TAB_GUI_CURSOR:
+		if(m_vGuiCursorList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
+	case ASSETS_TAB_ARROW:
+		if(m_vArrowList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
+	case ASSETS_TAB_STRONG_WEAK:
+		if(m_vStrongWeakList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
+	case ASSETS_TAB_ENTITY_BG:
+		if(m_vEntityBgList.size() != gs_aCustomListSize[s_CurCustomTab])
+			gs_aInitCustomList[s_CurCustomTab] = true;
+		break;
 	case ASSETS_TAB_EXTRAS:
 		if(m_vExtrasList.size() != gs_aCustomListSize[s_CurCustomTab])
 			gs_aInitCustomList[s_CurCustomTab] = true;
@@ -1969,6 +2227,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		case ASSETS_TAB_EMOTICONS: ShowLoading = m_vEmoticonList.size() <= 1; break;
 		case ASSETS_TAB_PARTICLES: ShowLoading = m_vParticlesList.size() <= 1; break;
 		case ASSETS_TAB_HUD: ShowLoading = m_vHudList.size() <= 1; break;
+		case ASSETS_TAB_GUI_CURSOR: ShowLoading = m_vGuiCursorList.size() <= 1; break;
+		case ASSETS_TAB_ARROW: ShowLoading = m_vArrowList.size() <= 1; break;
+		case ASSETS_TAB_STRONG_WEAK: ShowLoading = m_vStrongWeakList.size() <= 1; break;
+		case ASSETS_TAB_ENTITY_BG: ShowLoading = m_vEntityBgList.size() <= 1; break;
 		case ASSETS_TAB_EXTRAS: ShowLoading = m_vExtrasList.size() <= 1; break;
 		}
 
@@ -2062,6 +2324,22 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			ListSize = InitSearchList(gs_vpSearchHudList, m_vHudList);
 		}
+		else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR)
+		{
+			ListSize = InitSearchList(gs_vpSearchGuiCursorList, m_vGuiCursorList);
+		}
+		else if(s_CurCustomTab == ASSETS_TAB_ARROW)
+		{
+			ListSize = InitSearchList(gs_vpSearchArrowList, m_vArrowList);
+		}
+		else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
+		{
+			ListSize = InitSearchList(gs_vpSearchStrongWeakList, m_vStrongWeakList);
+		}
+		else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+		{
+			ListSize = InitSearchList(gs_vpSearchEntityBgList, m_vEntityBgList);
+		}
 		else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 		{
 			ListSize = InitSearchList(gs_vpSearchExtrasList, m_vExtrasList);
@@ -2149,6 +2427,26 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			SCustomHud *pHud = gs_vpSearchHudList[Index];
 			StartAssetDecode(pHud, "hud", Storage(), Engine());
 		}
+		else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR)
+		{
+			SCustomGuiCursor *pGuiCursor = gs_vpSearchGuiCursorList[Index];
+			StartAssetDecode(pGuiCursor, "gui_cursor", Storage(), Engine());
+		}
+		else if(s_CurCustomTab == ASSETS_TAB_ARROW)
+		{
+			SCustomArrow *pArrow = gs_vpSearchArrowList[Index];
+			StartAssetDecode(pArrow, "arrow", Storage(), Engine());
+		}
+		else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
+		{
+			SCustomStrongWeak *pStrongWeak = gs_vpSearchStrongWeakList[Index];
+			StartAssetDecode(pStrongWeak, "strong_weak", Storage(), Engine());
+		}
+		else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+		{
+			SCustomEntityBg *pEntityBg = gs_vpSearchEntityBgList[Index];
+			StartEntityBgDecode(pEntityBg, Storage(), Engine());
+		}
 		else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 		{
 			SCustomExtras *pExtras = gs_vpSearchExtrasList[Index];
@@ -2179,6 +2477,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		CUIRect BadgeRect = Rect;
 		BadgeRect.Draw(FillColor, IGraphics::CORNER_ALL, minimum(BadgeRect.h / 2.0f, 6.0f));
 		Ui()->DoLabel(&BadgeRect, pLabel, FontSize, TEXTALIGN_MC);
+	};
+
+	auto RenderEntityBgFallback = [&](const CUIRect &Rect) {
+		CUIRect FallbackRect = Rect;
+		FallbackRect.Margin(6.0f, &FallbackRect);
+		FallbackRect.Draw(ColorRGBA(0.14f, 0.16f, 0.18f, 0.9f), IGraphics::CORNER_ALL, 8.0f);
+
+		CUIRect LabelRect = FallbackRect;
+		LabelRect.Margin(8.0f, &LabelRect);
+		Ui()->DoLabel(&LabelRect, Localize("Map Preview"), 11.0f, TEXTALIGN_MC);
 	};
 
 	struct SAssetCardHeaderLayout
@@ -2290,6 +2598,22 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	else if(s_CurCustomTab == ASSETS_TAB_HUD)
 	{
 		SearchListSize = gs_vpSearchHudList.size();
+	}
+	else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR)
+	{
+		SearchListSize = gs_vpSearchGuiCursorList.size();
+	}
+	else if(s_CurCustomTab == ASSETS_TAB_ARROW)
+	{
+		SearchListSize = gs_vpSearchArrowList.size();
+	}
+	else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
+	{
+		SearchListSize = gs_vpSearchStrongWeakList.size();
+	}
+	else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+	{
+		SearchListSize = gs_vpSearchEntityBgList.size();
 	}
 	else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 	{
@@ -2502,6 +2826,26 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				if(str_comp(pItem->m_aName, g_Config.m_ClAssetHud) == 0)
 					OldSelected = i;
 			}
+			else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR)
+			{
+				if(str_comp(pItem->m_aName, g_Config.m_ClAssetGuiCursor) == 0)
+					OldSelected = i;
+			}
+			else if(s_CurCustomTab == ASSETS_TAB_ARROW)
+			{
+				if(str_comp(pItem->m_aName, g_Config.m_ClAssetArrow) == 0)
+					OldSelected = i;
+			}
+			else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
+			{
+				if(str_comp(pItem->m_aName, g_Config.m_ClAssetStrongWeak) == 0)
+					OldSelected = i;
+			}
+			else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+			{
+				if(IsEntityBgConfigSelected(pItem->m_aName))
+					OldSelected = i;
+			}
 			else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 			{
 				if(str_comp(pItem->m_aName, g_Config.m_ClAssetExtras) == 0)
@@ -2518,7 +2862,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			LastVisibleIndex = (int)i;
 
 			const CUIRect CardRect = ItemRect;
-			const bool HasDeleteButton = !IsProtectedDefaultAsset(pItem->m_aName);
+			const bool HasDeleteButton = CanDeleteLocalAssetByTab(Storage(), s_CurCustomTab, pItem->m_aName);
 			const bool ShowLocalOnlyBadge = pCurrentCategory != nullptr && pCurrentCategory->m_LocalOnlyBadge && !pCurrentCategory->m_WorkshopEnabled;
 			const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, nullptr, ShowLocalOnlyBadge);
 			Ui()->DoLabel(&HeaderLayout.m_TitleRect, pItem->m_aName, HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
@@ -2534,6 +2878,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				Graphics()->QuadsDrawTL(&QuadItem, 1);
 				Graphics()->QuadsEnd();
 				Graphics()->WrapNormal();
+			}
+			else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+			{
+				RenderEntityBgFallback(HeaderLayout.m_TextureRect);
 			}
 
 			if(HasDeleteButton)
@@ -2580,6 +2928,26 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			{
 				str_copy(g_Config.m_ClAssetHud, "default");
 				GameClient()->LoadHudSkin(g_Config.m_ClAssetHud);
+			}
+			else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR && str_comp(g_Config.m_ClAssetGuiCursor, pDeletedName) == 0)
+			{
+				str_copy(g_Config.m_ClAssetGuiCursor, "default");
+				GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+			}
+			else if(s_CurCustomTab == ASSETS_TAB_ARROW && str_comp(g_Config.m_ClAssetArrow, pDeletedName) == 0)
+			{
+				str_copy(g_Config.m_ClAssetArrow, "default");
+				GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
+			}
+			else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK && str_comp(g_Config.m_ClAssetStrongWeak, pDeletedName) == 0)
+			{
+				str_copy(g_Config.m_ClAssetStrongWeak, "default");
+				GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
+			}
+			else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && IsEntityBgConfigSelected(pDeletedName))
+			{
+				g_Config.m_ClBackgroundEntities[0] = '\0';
+				GameClient()->m_Background.LoadBackground();
 			}
 			else if(s_CurCustomTab == ASSETS_TAB_EXTRAS && str_comp(g_Config.m_ClAssetExtras, pDeletedName) == 0)
 			{
@@ -2645,6 +3013,25 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				{
 					str_copy(g_Config.m_ClAssetHud, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
 					GameClient()->LoadHudSkin(g_Config.m_ClAssetHud);
+				}
+				else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR)
+				{
+					str_copy(g_Config.m_ClAssetGuiCursor, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+				}
+				else if(s_CurCustomTab == ASSETS_TAB_ARROW)
+				{
+					str_copy(g_Config.m_ClAssetArrow, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
+				}
+				else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
+				{
+					str_copy(g_Config.m_ClAssetStrongWeak, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
+				}
+				else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+				{
+					ApplyEntityBgSelection(GameClient(), GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 				{
@@ -3440,24 +3827,30 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	DirectoryButton.VSplitRight(175.0f, nullptr, &DirectoryButton);
 	DirectoryButton.VSplitRight(25.0f, &DirectoryButton, &ReloadButton);
 	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
-	DirectoryButton.VSplitRight(110.0f, &DirectoryButton, &AssetsEditorButton);
-	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+	const bool SupportsAssetsEditor = s_CurCustomTab == ASSETS_TAB_ENTITIES || s_CurCustomTab == ASSETS_TAB_GAME ||
+		s_CurCustomTab == ASSETS_TAB_EMOTICONS || s_CurCustomTab == ASSETS_TAB_PARTICLES ||
+		s_CurCustomTab == ASSETS_TAB_HUD || s_CurCustomTab == ASSETS_TAB_EXTRAS;
 	static CButtonContainer s_AssetsEditorButton;
-	if(DoButton_Menu(&s_AssetsEditorButton, Localize("Assets editor"), 0, &AssetsEditorButton))
+	if(SupportsAssetsEditor)
 	{
-		int AssetsEditorType = ASSETS_EDITOR_TYPE_GAME;
-		if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
-			AssetsEditorType = ASSETS_EDITOR_TYPE_ENTITIES;
-		else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
-			AssetsEditorType = ASSETS_EDITOR_TYPE_EMOTICONS;
-		else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
-			AssetsEditorType = ASSETS_EDITOR_TYPE_PARTICLES;
-		else if(s_CurCustomTab == ASSETS_TAB_HUD)
-			AssetsEditorType = ASSETS_EDITOR_TYPE_HUD;
-		else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
-			AssetsEditorType = ASSETS_EDITOR_TYPE_EXTRAS;
-		AssetsEditorOpen(AssetsEditorType);
-		return;
+		DirectoryButton.VSplitRight(110.0f, &DirectoryButton, &AssetsEditorButton);
+		DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+		if(DoButton_Menu(&s_AssetsEditorButton, Localize("Assets editor"), 0, &AssetsEditorButton))
+		{
+			int AssetsEditorType = ASSETS_EDITOR_TYPE_GAME;
+			if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
+				AssetsEditorType = ASSETS_EDITOR_TYPE_ENTITIES;
+			else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
+				AssetsEditorType = ASSETS_EDITOR_TYPE_EMOTICONS;
+			else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
+				AssetsEditorType = ASSETS_EDITOR_TYPE_PARTICLES;
+			else if(s_CurCustomTab == ASSETS_TAB_HUD)
+				AssetsEditorType = ASSETS_EDITOR_TYPE_HUD;
+			else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
+				AssetsEditorType = ASSETS_EDITOR_TYPE_EXTRAS;
+			AssetsEditorOpen(AssetsEditorType);
+			return;
+		}
 	}
 
 	CUIRect AssetsDirButton;

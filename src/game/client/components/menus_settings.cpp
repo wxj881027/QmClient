@@ -4275,7 +4275,11 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		Ui()->DoLabel(&Label, Localize("Map"), 14.0f, TEXTALIGN_ML);
 
 		static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
+		static char s_aBackgroundEntitiesSync[sizeof(g_Config.m_ClBackgroundEntities)] = "";
+		if(!s_BackgroundEntitiesInput.IsActive() && str_comp(s_aBackgroundEntitiesSync, g_Config.m_ClBackgroundEntities) != 0)
+			s_BackgroundEntitiesInput.Set(g_Config.m_ClBackgroundEntities);
 		Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
+		str_copy(s_aBackgroundEntitiesSync, g_Config.m_ClBackgroundEntities, sizeof(s_aBackgroundEntitiesSync));
 
 		static CButtonContainer s_BackgroundEntitiesMapPicker, s_BackgroundEntitiesReload;
 
@@ -4372,7 +4376,11 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			Ui()->DoLabel(&Label, Localize("Map"), 14.0f, TEXTALIGN_ML);
 
 			static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
+			static char s_aBackgroundEntitiesSync[sizeof(g_Config.m_ClBackgroundEntities)] = "";
+			if(!s_BackgroundEntitiesInput.IsActive() && str_comp(s_aBackgroundEntitiesSync, g_Config.m_ClBackgroundEntities) != 0)
+				s_BackgroundEntitiesInput.Set(g_Config.m_ClBackgroundEntities);
 			Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
+			str_copy(s_aBackgroundEntitiesSync, g_Config.m_ClBackgroundEntities, sizeof(s_aBackgroundEntitiesSync));
 
 			static CButtonContainer s_BackgroundEntitiesMapPicker, s_BackgroundEntitiesReload;
 

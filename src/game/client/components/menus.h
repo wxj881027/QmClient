@@ -45,8 +45,12 @@ enum
 	ASSETS_TAB_EMOTICONS = 2,
 	ASSETS_TAB_PARTICLES = 3,
 	ASSETS_TAB_HUD = 4,
-	ASSETS_TAB_EXTRAS = 5,
-	NUMBER_OF_ASSETS_TABS = 6,
+	ASSETS_TAB_GUI_CURSOR = 5,
+	ASSETS_TAB_ARROW = 6,
+	ASSETS_TAB_STRONG_WEAK = 7,
+	ASSETS_TAB_ENTITY_BG = 8,
+	ASSETS_TAB_EXTRAS = 9,
+	NUMBER_OF_ASSETS_TABS = 10,
 };
 
 class CUIRect;
@@ -124,6 +128,10 @@ public:
 
 private:
 	EAssetLoadState m_aAssetLoadStates[NUMBER_OF_ASSETS_TABS] = {
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
+		ASSET_LOAD_STATE_UNLOADED,
 		ASSET_LOAD_STATE_UNLOADED,
 		ASSET_LOAD_STATE_UNLOADED,
 		ASSET_LOAD_STATE_UNLOADED,
@@ -228,6 +236,22 @@ public:
 	{
 	};
 
+	struct SCustomGuiCursor : public SCustomItem
+	{
+	};
+
+	struct SCustomArrow : public SCustomItem
+	{
+	};
+
+	struct SCustomStrongWeak : public SCustomItem
+	{
+	};
+
+	struct SCustomEntityBg : public SCustomItem
+	{
+	};
+
 	enum
 	{
 		ASSETS_EDITOR_TYPE_GAME = 0,
@@ -272,6 +296,10 @@ protected:
 	std::vector<SCustomEmoticon> m_vEmoticonList;
 	std::vector<SCustomParticle> m_vParticlesList;
 	std::vector<SCustomHud> m_vHudList;
+	std::vector<SCustomGuiCursor> m_vGuiCursorList;
+	std::vector<SCustomArrow> m_vArrowList;
+	std::vector<SCustomStrongWeak> m_vStrongWeakList;
+	std::vector<SCustomEntityBg> m_vEntityBgList;
 	std::vector<SCustomExtras> m_vExtrasList;
 	std::deque<SCustomItem *> m_aaCustomPreviewDecodeQueue[NUMBER_OF_ASSETS_TABS];
 	std::deque<SCustomItem *> m_aaCustomPreviewReadyQueue[NUMBER_OF_ASSETS_TABS];
