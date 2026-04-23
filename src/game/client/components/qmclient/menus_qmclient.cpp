@@ -6898,7 +6898,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 		{
 		case EQmModuleId::Info:
 		{
-			// ========== 模块 0: QmClient 信息 (横跨整个宽度) ==========
+			// ========== 模块: QmClient 信息==========
 			static float s_QQCopiedTime = 0.0f;
 			static bool s_QQCopied = false;
 			MainView.HSplitTop(LG_CardSpacing, nullptr, &MainView);
@@ -7706,7 +7706,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			{
 			case EQmModuleId::ChatBubble:
 			{
-				// ========== 模块 1: 消息气泡 ==========
+				// ========== 模块: 消息气泡 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card1Start = Column;
 				s_GlassCards.push_back(Card1Start);
@@ -7759,7 +7759,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::GoresActor:
 			{
-				// ========== 模块 2: Gores演员专用 ==========
+				// ========== 模块: Gores演员专用 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card2Start = Column;
 				s_GlassCards.push_back(Card2Start);
@@ -7984,7 +7984,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::KeyBinds:
 			{
-				// ========== 模块 2.5: 按键绑定 ==========
+				// ========== 模块: 按键绑定 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardControlsStart = Column;
 				s_GlassCards.push_back(CardControlsStart);
@@ -8024,7 +8024,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::MiniFeatures:
 			{
-				// ========== 模块 3: 梦的小功能 ==========
+				// ========== 模块: 梦的小功能 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardMiniFeaturesStart = Column;
 				s_GlassCards.push_back(CardMiniFeaturesStart);
@@ -8093,7 +8093,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::Coords:
 			{
-				// ========== 模块 3.5: 显示坐标 ==========
+				// ========== 模块: 显示坐标 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardCoordsStart = Column;
 				s_GlassCards.push_back(CardCoordsStart);
@@ -8128,7 +8128,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::Streamer:
 			{
-				// ========== 模块 3.8: 主播模式 ==========
+				// ========== 模块: 主播模式 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardStreamerStart = Column;
 				s_GlassCards.push_back(CardStreamerStart);
@@ -8159,7 +8159,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::FriendNotify:
 			{
-				// ========== 模块 3.9: 好友提醒 ==========
+				// ========== 模块: 好友提醒 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardFriendNotifyStart = Column;
 				s_GlassCards.push_back(CardFriendNotifyStart);
@@ -8223,7 +8223,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::BlockWords:
 			{
-				// ========== 模块 3.95: 屏蔽词 ==========
+				// ========== 模块: 屏蔽词 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardBlockWordsStart = Column;
 				s_GlassCards.push_back(CardBlockWordsStart);
@@ -8322,7 +8322,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::Translate:
 			{
-				// ========== 模块 3.96: 翻译 ==========
+				// ========== 模块: 翻译 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardTranslateStart = Column;
 				s_GlassCards.push_back(CardTranslateStart);
@@ -8972,7 +8972,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::PieMenu:
 			{
-				// ========== 模块 5: 饼菜单 ==========
+				// ========== 模块: 饼菜单 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card3_6Start = Column;
 				s_GlassCards.push_back(Card3_6Start);
@@ -9474,7 +9474,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::Laser:
 			{
-				// ========== 模块 9: 激光设置 ==========
+				// ========== 模块: 激光设置 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card6Start = Column;
 				s_GlassCards.push_back(Card6Start);
@@ -9544,7 +9544,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::PlayerStats:
 			{
-				// ========== 模块10: 玩家统计 ==========
+				// ========== 模块: 玩家统计 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card7Start = Column;
 				s_GlassCards.push_back(Card7Start);
@@ -9614,7 +9614,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::CollisionHitbox:
 			{
-				// ========== 模块11: 碰撞体积可视化 ==========
+				// ========== 模块: 碰撞体积可视化 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card8Start_CollisionHitbox = Column;
 				s_GlassCards.push_back(Card8Start_CollisionHitbox);
@@ -9647,7 +9647,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::FavoriteMaps:
 			{
-				// ========== 模块12: 收藏地图 ==========
+				// ========== 模块: 收藏地图 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card8Start = Column;
 				s_GlassCards.push_back(Card8Start);
@@ -9920,7 +9920,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::HJAssist:
 			{
-					// ========== 模块13: HJ大佬辅助 ==========
+					// ========== 模块: HJ大佬辅助 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardHJStart = Column;
 				s_GlassCards.push_back(CardHJStart);
@@ -10004,7 +10004,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::InputOverlay:
 			{
-				// ========== 模块14: 按键显示 ==========
+				// ========== 模块: 按键显示 ==========
 
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardInputOverlayStart = Column;
@@ -10057,7 +10057,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::Voice:
 			{
-				// ========== 模块15: 语音 ==========
+				// ========== 模块: 语音 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardVoiceStart = Column;
 				s_GlassCards.push_back(CardVoiceStart);
@@ -10259,7 +10259,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::DummyMiniView:
 			{
-				// ========== 模块16: 分身小窗 ==========
+				// ========== 模块: 分身小窗 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardDummyMiniViewStart = Column;
 				s_GlassCards.push_back(CardDummyMiniViewStart);
@@ -10299,7 +10299,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::DynamicIsland:
 			{
-				// ========== 模块17: 灵动岛 ==========
+				// ========== 模块: 灵动岛 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardDynamicIslandStart = Column;
 				s_GlassCards.push_back(CardDynamicIslandStart);
@@ -10335,7 +10335,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::SystemMediaControls:
 			{
-				// ========== 模块18: 系统媒体控制 ==========
+				// ========== 模块: 系统媒体控制 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardSystemMediaControlsStart = Column;
 				s_GlassCards.push_back(CardSystemMediaControlsStart);
