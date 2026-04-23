@@ -6,6 +6,7 @@
 #include <base/color.h>
 #include <base/log.h>
 #include <base/math.h>
+#include <base/perf_timer.h>
 #include <base/system.h>
 #include <base/vmath.h>
 
@@ -126,6 +127,81 @@ float ResolveUiAnimValue(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, E
 	ItLastTarget->second.m_LastUseCounter = CurrentUseCounter;
 
 	return AnimRuntime.GetValue(NodeKey, Property, Target);
+}
+
+bool PerfDebugEnabled()
+{
+	return g_Config.m_QmPerfDebug != 0;
+}
+
+double PerfDebugThresholdMs()
+{
+	return g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
+}
+
+void LogPerfStage(const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
+{
+	if(!PerfDebugEnabled())
+		return;
+	if(!Force && DurationMs < PerfDebugThresholdMs())
+		return;
+
+	if(pExtra != nullptr && pExtra[0] != '\0')
+		dbg_msg("perf/menu", "stage=%s duration_ms=%.3f %s", pStage, DurationMs, pExtra);
+	else
+		dbg_msg("perf/menu", "stage=%s duration_ms=%.3f", pStage, DurationMs);
+}
+
+const char *MenuPageName(const int Page)
+{
+	switch(Page)
+	{
+	case CMenus::PAGE_NEWS: return "news";
+	case CMenus::PAGE_INTERNET: return "internet";
+	case CMenus::PAGE_LAN: return "lan";
+	case CMenus::PAGE_FAVORITES: return "favorites";
+	case CMenus::PAGE_FAVORITE_COMMUNITY_1: return "favorite_community_1";
+	case CMenus::PAGE_FAVORITE_COMMUNITY_2: return "favorite_community_2";
+	case CMenus::PAGE_FAVORITE_COMMUNITY_3: return "favorite_community_3";
+	case CMenus::PAGE_FAVORITE_COMMUNITY_4: return "favorite_community_4";
+	case CMenus::PAGE_FAVORITE_COMMUNITY_5: return "favorite_community_5";
+	case CMenus::PAGE_DEMOS: return "demos";
+	case CMenus::PAGE_SETTINGS: return "settings";
+	case CMenus::PAGE_STATS: return "stats";
+	default: return "unknown";
+	}
+}
+
+const char *GamePageName(const int Page)
+{
+	switch(Page)
+	{
+	case CMenus::PAGE_GAME: return "game";
+	case CMenus::PAGE_PLAYERS: return "players";
+	case CMenus::PAGE_SERVER_INFO: return "server_info";
+	case CMenus::PAGE_NETWORK: return "browser";
+	case CMenus::PAGE_GHOST: return "ghost";
+	case CMenus::PAGE_CALLVOTE: return "call_vote";
+	case CMenus::PAGE_SETTINGS: return "settings";
+	case CMenus::PAGE_DEMOS: return "demos";
+	case CMenus::PAGE_UNFINISHED_MAPS: return "unfinished_maps";
+	default: return "unknown";
+	}
+}
+
+const char *ClientStateName(const IClient::EClientState State)
+{
+	switch(State)
+	{
+	case IClient::STATE_OFFLINE: return "offline";
+	case IClient::STATE_CONNECTING: return "connecting";
+	case IClient::STATE_LOADING: return "loading";
+	case IClient::STATE_ONLINE: return "online";
+	case IClient::STATE_DEMOPLAYBACK: return "demoplayback";
+	case IClient::STATE_QUITTING: return "quitting";
+	case IClient::STATE_RESTARTING: return "restarting";
+	default: return "unknown";
+	}
 }
 }
 
@@ -343,7 +419,7 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
 }
 
-int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon)
+int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement)
 {
 	const bool MouseInside = Ui()->HotItem() == pButtonContainer;
 	CUIRect AnimatedLabelRect = *pRect;
@@ -434,11 +510,103 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 	{
 		CUIRect Label;
 		AnimatedLabelRect.HMargin(2.0f, &Label);
-		Ui()->DoLabel(&Label, pText, Label.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		if(pTextUiElement != nullptr && pTextUiElement->AreRectsInit())
+			Ui()->DoLabelStreamed(*pTextUiElement->Rect(0), &Label, pText, Label.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		else
+			Ui()->DoLabel(&Label, pText, Label.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 	}
 	Ui()->ClipDisable();
 
 	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, BUTTONFLAG_LEFT);
+}
+
+void CMenus::InitSettingsTabLabelCache()
+{
+	if(m_SettingsTabLabelElementsInit)
+		return;
+
+	for(CUIElement &LabelElement : m_aSettingsTabLabelElements)
+		LabelElement.Init(Ui(), 1);
+	m_SettingsTabLabelElementsInit = true;
+}
+
+void CMenus::UpdateSettingsTabLabels()
+{
+	const bool Sixup = Client()->IsSixup();
+	if(m_SettingsTabLabelsInit && str_comp(m_aSettingsTabLanguageFile, g_Config.m_ClLanguagefile) == 0 && m_SettingsTabSixup == Sixup)
+		return;
+
+	str_copy(m_aSettingsTabLanguageFile, g_Config.m_ClLanguagefile, sizeof(m_aSettingsTabLanguageFile));
+	m_SettingsTabSixup = Sixup;
+	m_SettingsTabLabelsInit = true;
+
+	m_apSettingsTabs[SETTINGS_LANGUAGE] = Localize("Language");
+	m_apSettingsTabs[SETTINGS_GENERAL] = Localize("General");
+	m_apSettingsTabs[SETTINGS_PLAYER] = Localize("Player");
+	m_apSettingsTabs[SETTINGS_TEE] = Sixup ? "Tee 0.7" : Localize("Tee");
+	m_apSettingsTabs[SETTINGS_APPEARANCE] = Localize("Appearance");
+	m_apSettingsTabs[SETTINGS_CONTROLS] = Localize("Controls");
+	m_apSettingsTabs[SETTINGS_GRAPHICS] = Localize("Graphics");
+	m_apSettingsTabs[SETTINGS_SOUND] = Localize("Sound");
+	m_apSettingsTabs[SETTINGS_DDNET] = Localize("DDNet");
+	m_apSettingsTabs[SETTINGS_ASSETS] = Localize("Assets");
+	m_apSettingsTabs[SETTINGS_TCLIENT] = Localize("TClient");
+	m_apSettingsTabs[SETTINGS_QMCLIENT] = Localize("QmClient");
+	m_apSettingsTabs[SETTINGS_PROFILES] = Localize("Profiles");
+	m_apSettingsTabs[SETTINGS_CONFIGS] = Localize("Configs");
+	m_apSettingsTabs[SETTINGS_CONTRIBUTORS] = Localize("Contributors");
+
+	if(m_SettingsTabLabelElementsInit)
+	{
+		for(CUIElement &LabelElement : m_aSettingsTabLabelElements)
+			Ui()->ResetUIElement(LabelElement);
+	}
+}
+
+void CMenus::PrepareSettingsTabLabelCache(float MainViewWidth)
+{
+	InitSettingsTabLabelCache();
+	UpdateSettingsTabLabels();
+
+	const float TabBarWidth = std::clamp(MainViewWidth * 0.14f, 108.0f, 120.0f);
+	CUIRect Button;
+	Button.x = 0.0f;
+	Button.y = 0.0f;
+	Button.w = TabBarWidth;
+	Button.h = 26.0f;
+
+	CUIRect Label;
+	Button.HMargin(2.0f, &Label);
+	const float FontSize = Label.h * CUi::ms_FontmodHeight;
+
+	for(int i = 0; i < SETTINGS_LENGTH; i++)
+	{
+		if(i == SETTINGS_PROFILES || i == SETTINGS_CONFIGS || i == SETTINGS_CONTRIBUTORS)
+			continue;
+
+		CUIElement::SUIElementRect &RectEl = *m_aSettingsTabLabelElements[i].Rect(0);
+		const char *pText = m_apSettingsTabs[i];
+		const bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();
+		const bool TextChanged = str_comp(RectEl.m_Text.c_str(), pText) != 0;
+		const bool SizeChanged = RectEl.m_Width != Label.w || RectEl.m_Height != Label.h;
+		if(RectEl.m_UITextContainer.Valid() && !ColorChanged && !TextChanged && !SizeChanged)
+			continue;
+
+		TextRender()->DeleteTextContainer(RectEl.m_UITextContainer);
+		RectEl.m_X = Label.x;
+		RectEl.m_Y = Label.y;
+		RectEl.m_Width = Label.w;
+		RectEl.m_Height = Label.h;
+		RectEl.m_Text = pText;
+		RectEl.m_ReadCursorGlyphCount = -1;
+
+		CUIRect TmpRect;
+		TmpRect.x = 0.0f;
+		TmpRect.y = 0.0f;
+		TmpRect.w = Label.w;
+		TmpRect.h = Label.h;
+		Ui()->DoLabel(RectEl, &TmpRect, pText, FontSize, TEXTALIGN_TL);
+	}
 }
 
 int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align)
@@ -840,7 +1008,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		{
 			NewPage = PAGE_FAVORITES;
 		}
-		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("收藏夹"));
+		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
 
 		int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
 		if(
@@ -1414,8 +1582,6 @@ void CMenus::PrewarmSettingsPages()
 	// Preload skin list to avoid lag when first entering settings
 	GameClient()->m_Skins.SkinList();
 
-	// Preload TClient and QmClient pages static variables
-	PrewarmTClientAndQmClientPages();
 }
 
 void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -1502,6 +1668,7 @@ bool CMenus::CanDisplayWarning() const
 
 void CMenus::Render()
 {
+	CPerfTimer RenderTimer;
 	Ui()->MapScreen();
 	Ui()->ResetMouseSlow();
 
@@ -1582,24 +1749,37 @@ void CMenus::Render()
 	case IClient::STATE_QUITTING:
 	case IClient::STATE_RESTARTING:
 		// Render nothing except menu background. This should not happen for more than one frame.
+		LogPerfStage("menus_render_total", RenderTimer.ElapsedMs(), true, "state=shutdown");
 		return;
 
 	case IClient::STATE_CONNECTING:
-		RenderPopupConnecting(Screen);
+		{
+			CPerfTimer StageTimer;
+			RenderPopupConnecting(Screen);
+			LogPerfStage("popup_connecting", StageTimer.ElapsedMs());
+		}
 		break;
 
 	case IClient::STATE_LOADING:
-		RenderPopupLoading(Screen);
+		{
+			CPerfTimer StageTimer;
+			RenderPopupLoading(Screen);
+			LogPerfStage("popup_loading", StageTimer.ElapsedMs());
+		}
 		break;
 
 	case IClient::STATE_OFFLINE:
 		if(m_Popup != POPUP_NONE)
 		{
+			CPerfTimer StageTimer;
 			RenderPopupFullscreen(Screen);
+			LogPerfStage("popup_fullscreen", StageTimer.ElapsedMs());
 		}
 		else if(m_ShowStart)
 		{
+			CPerfTimer StageTimer;
 			m_MenusStart.RenderStartMenuV2(Screen);
+			LogPerfStage("start_menu", StageTimer.ElapsedMs());
 		}
 		else
 		{
@@ -1609,12 +1789,16 @@ void CMenus::Render()
 			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"));
 			const bool TransitionActive = TransitionStrength > 0.0f && m_MenuPageTransitionDirection != 0.0f;
 			float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
+			const char *pPageName = MenuPageName(m_MenuPage);
+			if(m_MenuPage != PAGE_SETTINGS)
+				PrepareSettingsTabLabelCache(MainView.w);
 			if(TransitionActive)
 			{
 				ApplyUiSwitchOffset(MainView, TransitionStrength, m_MenuPageTransitionDirection, false, 0.04f, 18.0f, 48.0f);
 				Ui()->ClipEnable(&MainViewClip);
 			}
 
+			CPerfTimer ContentTimer;
 			if(m_MenuPage == PAGE_NEWS)
 			{
 				RenderNews(MainView);
@@ -1639,6 +1823,9 @@ void CMenus::Render()
 			{
 				dbg_assert_failed("Invalid m_MenuPage: %d", m_MenuPage);
 			}
+			char aContentExtra[128];
+			str_format(aContentExtra, sizeof(aContentExtra), "page=%s transition=%d", pPageName, TransitionActive ? 1 : 0);
+			LogPerfStage("offline_page_content", ContentTimer.ElapsedMs(), TransitionActive, aContentExtra);
 
 			if(TransitionActive && TransitionAlpha > 0.0f)
 			{
@@ -1648,14 +1835,22 @@ void CMenus::Render()
 			{
 				Ui()->ClipDisable();
 			}
-			RenderMenubar(TabBar, ClientState);
+			{
+				CPerfTimer StageTimer;
+				RenderMenubar(TabBar, ClientState);
+				char aMenubarExtra[128];
+				str_format(aMenubarExtra, sizeof(aMenubarExtra), "page=%s state=%s", pPageName, ClientStateName(ClientState));
+				LogPerfStage("menu_menubar", StageTimer.ElapsedMs(), TransitionActive, aMenubarExtra);
+			}
 		}
 		break;
 
 	case IClient::STATE_ONLINE:
 		if(m_Popup != POPUP_NONE)
 		{
+			CPerfTimer StageTimer;
 			RenderPopupFullscreen(Screen);
+			LogPerfStage("popup_fullscreen", StageTimer.ElapsedMs());
 		}
 		else
 		{
@@ -1665,12 +1860,16 @@ void CMenus::Render()
 			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("game_page_switch"));
 			const bool TransitionActive = TransitionStrength > 0.0f && m_GamePageTransitionDirection != 0.0f;
 			float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
+			const char *pPageName = GamePageName(m_GamePage);
+			if(m_GamePage != PAGE_SETTINGS)
+				PrepareSettingsTabLabelCache(MainView.w);
 			if(TransitionActive)
 			{
 				ApplyUiSwitchOffset(MainView, TransitionStrength, m_GamePageTransitionDirection, false, 0.04f, 18.0f, 48.0f);
 				Ui()->ClipEnable(&MainViewClip);
 			}
 
+			CPerfTimer ContentTimer;
 			if(m_GamePage == PAGE_GAME)
 			{
 				RenderGame(MainView);
@@ -1712,6 +1911,9 @@ void CMenus::Render()
 			{
 				dbg_assert_failed("Invalid m_GamePage: %d", m_GamePage);
 			}
+			char aContentExtra[128];
+			str_format(aContentExtra, sizeof(aContentExtra), "page=%s transition=%d", pPageName, TransitionActive ? 1 : 0);
+			LogPerfStage("ingame_page_content", ContentTimer.ElapsedMs(), TransitionActive, aContentExtra);
 
 			if(TransitionActive && TransitionAlpha > 0.0f)
 			{
@@ -1721,23 +1923,37 @@ void CMenus::Render()
 			{
 				Ui()->ClipDisable();
 			}
-			RenderMenubar(TabBar, ClientState);
+			{
+				CPerfTimer StageTimer;
+				RenderMenubar(TabBar, ClientState);
+				char aMenubarExtra[128];
+				str_format(aMenubarExtra, sizeof(aMenubarExtra), "page=%s state=%s", pPageName, ClientStateName(ClientState));
+				LogPerfStage("menu_menubar", StageTimer.ElapsedMs(), TransitionActive, aMenubarExtra);
+			}
 		}
 		break;
 
 	case IClient::STATE_DEMOPLAYBACK:
 		if(m_Popup != POPUP_NONE)
 		{
+			CPerfTimer StageTimer;
 			RenderPopupFullscreen(Screen);
+			LogPerfStage("popup_fullscreen", StageTimer.ElapsedMs());
 		}
 		else
 		{
+			CPerfTimer StageTimer;
 			RenderDemoPlayer(Screen);
+			LogPerfStage("demo_player", StageTimer.ElapsedMs());
 		}
 		break;
 	}
 
-	Ui()->RenderPopupMenus();
+	{
+		CPerfTimer StageTimer;
+		Ui()->RenderPopupMenus();
+		LogPerfStage("popup_menus", StageTimer.ElapsedMs());
+	}
 
 	// Prevent UI elements from being hovered while a key reader is active
 	if(GameClient()->m_KeyBinder.IsActive())
@@ -1750,6 +1966,10 @@ void CMenus::Render()
 	{
 		m_ShowStart = true;
 	}
+
+	char aTotalExtra[96];
+	str_format(aTotalExtra, sizeof(aTotalExtra), "state=%s active=%d", ClientStateName(ClientState), IsActive() ? 1 : 0);
+	LogPerfStage("menus_render_total", RenderTimer.ElapsedMs(), false, aTotalExtra);
 }
 
 void CMenus::RenderPopupFullscreen(CUIRect Screen)
@@ -2650,6 +2870,7 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 
 void CMenus::RenderThemeSelection(CUIRect MainView)
 {
+	CPerfTimer RenderTimer;
 	static CListBox s_ListBox;
 	auto &MenuBackground = GameClient()->m_MenuBackground;
 
@@ -2666,7 +2887,7 @@ void CMenus::RenderThemeSelection(CUIRect MainView)
 	CUIRect RefreshButton;
 	HeaderRow.VSplitRight(80.0f, nullptr, &RefreshButton);
 	RefreshButton.VMargin(2.0f, &RefreshButton);
-	if(DoButton_Menu(&s_RefreshButton, Localize("刷新"), 0, &RefreshButton))
+	if(DoButton_Menu(&s_RefreshButton, Localize("Refresh"), 0, &RefreshButton))
 		MenuBackground.RefreshThemes();
 
 	const std::vector<CTheme> &vThemes = MenuBackground.GetThemes();
@@ -2729,6 +2950,9 @@ void CMenus::RenderThemeSelection(CUIRect MainView)
 		str_copy(g_Config.m_ClMenuMap, Theme.m_Name.c_str());
 		GameClient()->m_MenuBackground.LoadMenuBackground(Theme.m_HasDay, Theme.m_HasNight);
 	}
+	char aExtra[96];
+	str_format(aExtra, sizeof(aExtra), "themes=%d selected=%d", (int)vThemes.size(), SelectedTheme);
+	LogPerfStage("theme_selection_total", RenderTimer.ElapsedMs(), false, aExtra);
 }
 
 void CMenus::SetActive(bool Active)
@@ -2846,6 +3070,7 @@ void CMenus::OnWindowResize()
 
 void CMenus::OnRender()
 {
+	CPerfTimer FrameTimer;
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		SetActive(true);
 
@@ -2872,13 +3097,23 @@ void CMenus::OnRender()
 	Ui()->StartCheck();
 	UpdateColors();
 
-	Ui()->Update();
+	{
+		CPerfTimer StageTimer;
+		Ui()->Update();
+		LogPerfStage("ui_update", StageTimer.ElapsedMs());
+	}
 
-	Render();
+	{
+		CPerfTimer StageTimer;
+		Render();
+		LogPerfStage("render_body", StageTimer.ElapsedMs());
+	}
 
 	if(IsActive())
 	{
+		CPerfTimer StageTimer;
 		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		LogPerfStage("cursor_render", StageTimer.ElapsedMs());
 	}
 
 	// render debug information
@@ -2890,6 +3125,10 @@ void CMenus::OnRender()
 
 	Ui()->FinishCheck();
 	Ui()->ClearHotkeys();
+
+	char aExtra[96];
+	str_format(aExtra, sizeof(aExtra), "state=%s active=%d", ClientStateName(Client()->State()), IsActive() ? 1 : 0);
+	LogPerfStage("menus_onrender_total", FrameTimer.ElapsedMs(), false, aExtra);
 }
 
 void CMenus::UpdateColors()
@@ -3040,6 +3279,10 @@ const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 void CMenus::SetMenuPage(int NewPage)
 {
 	const int OldPage = m_MenuPage;
+	if(PerfDebugEnabled() && OldPage != NewPage)
+	{
+		dbg_msg("perf/menu", "event=menu_page_switch from=%s to=%s", MenuPageName(OldPage), MenuPageName(NewPage));
+	}
 	m_MenuPage = NewPage;
 	auto IsBrowserPage = [](int Page) {
 		return Page >= PAGE_INTERNET && Page <= PAGE_FAVORITE_COMMUNITY_5;
@@ -3087,6 +3330,10 @@ void CMenus::SetGamePage(int NewPage)
 		NewPage = PAGE_GAME;
 
 	const int OldPage = m_GamePage;
+	if(PerfDebugEnabled() && OldPage != NewPage)
+	{
+		dbg_msg("perf/menu", "event=game_page_switch from=%s to=%s", GamePageName(OldPage), GamePageName(NewPage));
+	}
 	m_GamePage = NewPage;
 	if(OldPage != NewPage)
 	{
@@ -3101,6 +3348,7 @@ void CMenus::SetGamePage(int NewPage)
 
 void CMenus::RefreshBrowserTab(bool Force)
 {
+	CPerfTimer Timer;
 	if(g_Config.m_UiPage == PAGE_INTERNET)
 	{
 		if(Force || ServerBrowser()->GetCurrentType() != IServerBrowser::TYPE_INTERNET)
@@ -3146,6 +3394,10 @@ void CMenus::RefreshBrowserTab(bool Force)
 			UpdateCommunityCache(true);
 		}
 	}
+
+	char aExtra[128];
+	str_format(aExtra, sizeof(aExtra), "page=%s force=%d current_type=%d", MenuPageName(g_Config.m_UiPage), Force ? 1 : 0, ServerBrowser()->GetCurrentType());
+	LogPerfStage("refresh_browser_tab", Timer.ElapsedMs(), Force, aExtra);
 }
 
 void CMenus::ForceRefreshLanPage()

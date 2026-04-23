@@ -59,13 +59,19 @@ class CMenusSettingsControls : public CComponentInterfaces
 public:
 	void OnInterfacesInit(CGameClient *pClient) override;
 	void Render(CUIRect MainView);
+	void SetDeferredFrames(int Frames);
 
 private:
 	bool m_aBindGroupExpanded[(int)EBindOptionGroup::NUM];
 	CButtonContainer m_aBindGroupExpandButtons[(int)EBindOptionGroup::NUM];
 	std::vector<CBindOption> m_vBindOptions;
 	size_t m_NumPredefinedBindOptions;
+	bool m_BindOptionsDirty = true;
 	void UpdateBindOptions();
+	int m_DeferredHeavyFrames = 0;
+	bool ShouldDeferHeavyContent() const;
+	void FinishDeferredFrame();
+	void RenderDeferredSummaryBlock(CUIRect *pParentRect, const char *pTitle, EBindOptionGroup Group, int ApproxRows);
 
 	CScrollRegion m_SettingsScrollRegion;
 	CButtonContainer m_ResetToDefaultButton;

@@ -6,6 +6,7 @@
 
 #include <base/log.h>
 #include <base/math.h>
+#include <base/perf_timer.h>
 #include <base/system.h>
 
 #include <engine/graphics.h>
@@ -42,10 +43,193 @@
 using namespace FontIcons;
 using namespace std::chrono_literals;
 
+namespace
+{
+bool PerfDebugEnabled()
+{
+	return g_Config.m_QmPerfDebug != 0;
+}
+
+double PerfDebugThresholdMs()
+{
+	return g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
+}
+
+void LogPerfStage(const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
+{
+	if(!PerfDebugEnabled())
+		return;
+	if(!Force && DurationMs < PerfDebugThresholdMs())
+		return;
+
+	if(pExtra != nullptr && pExtra[0] != '\0')
+		dbg_msg("perf/menu", "stage=%s duration_ms=%.3f %s", pStage, DurationMs, pExtra);
+	else
+		dbg_msg("perf/menu", "stage=%s duration_ms=%.3f", pStage, DurationMs);
+}
+
+constexpr size_t MAX_LANGUAGE_CACHE = 128;
+constexpr float LANGUAGE_ROW_HEIGHT = 28.0f;
+constexpr float LANGUAGE_FONT_SIZE = 16.0f;
+constexpr float LANGUAGE_CREDITS_FONT_SIZE = 14.0f;
+constexpr float LANGUAGE_CREDITS_MARGIN = 10.0f;
+constexpr float LANGUAGE_SCROLLBAR_WIDTH = 20.0f;
+
+CScrollRegion gs_LanguageScrollRegion;
+bool gs_LanguageScrollToSelected = false;
+std::array<unsigned char, MAX_LANGUAGE_CACHE> gs_aLanguageRowIds{};
+std::array<CUIElement, MAX_LANGUAGE_CACHE> gs_aLanguageLabelElements;
+bool gs_LanguageLabelElementsInit = false;
+float gs_LanguageLabelWidth = -1.0f;
+
+CScrollRegion gs_CreditsScrollRegion;
+CUIElement gs_CreditsLabelElement;
+bool gs_CreditsLabelElementInit = false;
+float gs_CreditsLineWidth = -1.0f;
+float gs_CreditsHeight = 0.0f;
+char gs_aCreditsLanguageFile[IO_MAX_PATH_LENGTH] = {};
+char gs_aLanguageCacheLanguageFile[IO_MAX_PATH_LENGTH] = {};
+int gs_SettingsDeferredPage = -1;
+int gs_SettingsDeferredFrames = 0;
+
+void EnsureLanguagePageCacheInit(CUi *pUi)
+{
+	if(!gs_LanguageLabelElementsInit)
+	{
+		for(CUIElement &LabelElement : gs_aLanguageLabelElements)
+			LabelElement.Init(pUi, 1);
+		gs_LanguageLabelElementsInit = true;
+	}
+
+	if(!gs_CreditsLabelElementInit)
+	{
+		gs_CreditsLabelElement.Init(pUi, 1);
+		gs_CreditsLabelElementInit = true;
+	}
+}
+
+void LayoutLanguagePageBaseRects(float MainViewWidth, CUIRect &List, CUIRect &CreditsScroll)
+{
+	CUIRect MainView;
+	MainView.x = 0.0f;
+	MainView.y = 0.0f;
+	MainView.w = MainViewWidth;
+	MainView.h = 600.0f;
+	MainView.HSplitBottom(4.0f * LANGUAGE_CREDITS_FONT_SIZE + 2.0f * LANGUAGE_CREDITS_MARGIN + CScrollRegion::HEIGHT_MAGIC_FIX, &List, &CreditsScroll);
+	List.HSplitBottom(5.0f, &List, nullptr);
+}
+
+float LanguageListLabelWidth(const CUIRect &ListRect)
+{
+	CUIRect ScrollClip = ListRect;
+	ScrollClip.VSplitRight(LANGUAGE_SCROLLBAR_WIDTH, &ScrollClip, nullptr);
+	CUIRect ItemRect = ScrollClip;
+	CUIRect Label;
+	ItemRect.h = LANGUAGE_ROW_HEIGHT;
+	ItemRect.VSplitLeft(ItemRect.h * 2.0f, nullptr, &Label);
+	return Label.w;
+}
+
+bool LanguageLabelCacheInvalid()
+{
+	if(g_Localization.Languages().size() > MAX_LANGUAGE_CACHE)
+		return true;
+
+	for(size_t i = 0; i < g_Localization.Languages().size(); ++i)
+	{
+		if(!gs_aLanguageLabelElements[i].Rect(0)->m_UITextContainer.Valid())
+			return true;
+	}
+	return false;
+}
+
+bool UseLanguagePageCache()
+{
+	return g_Localization.Languages().size() <= MAX_LANGUAGE_CACHE;
+}
+
+void RebuildLanguageCreditsCache(CUi *pUi, const char *pCreditsText, float CreditsLineWidth)
+{
+	CUIRect CreditsCacheRect;
+	CreditsCacheRect.x = 0.0f;
+	CreditsCacheRect.y = 0.0f;
+	CreditsCacheRect.w = CreditsLineWidth;
+	CreditsCacheRect.h = 128.0f;
+	SLabelProperties CreditsLabelProps;
+	CreditsLabelProps.m_MaxWidth = CreditsCacheRect.w;
+	pUi->DoLabelStreamed(*gs_CreditsLabelElement.Rect(0), &CreditsCacheRect, pCreditsText, LANGUAGE_CREDITS_FONT_SIZE, TEXTALIGN_TL, CreditsLabelProps);
+	gs_CreditsHeight = gs_CreditsLabelElement.Rect(0)->m_Cursor.Height();
+	gs_CreditsLineWidth = CreditsLineWidth;
+	str_copy(gs_aCreditsLanguageFile, g_Config.m_ClLanguagefile, sizeof(gs_aCreditsLanguageFile));
+}
+
+bool ShouldDeferSettingsTailSection(const int Page)
+{
+	return gs_SettingsDeferredPage == Page && gs_SettingsDeferredFrames > 0;
+}
+
+int DeferredSettingsTailFrames(const int Page)
+{
+	return gs_SettingsDeferredPage == Page ? gs_SettingsDeferredFrames : 0;
+}
+
+void BeginDeferredSettingsPage(const int Page)
+{
+	gs_SettingsDeferredPage = Page;
+	switch(Page)
+	{
+	case CMenus::SETTINGS_DDNET:
+		gs_SettingsDeferredFrames = 3;
+		break;
+	case CMenus::SETTINGS_GENERAL:
+	case CMenus::SETTINGS_GRAPHICS:
+	default:
+		gs_SettingsDeferredFrames = 1;
+		break;
+	}
+}
+
+void FinishDeferredSettingsFrame(const int Page)
+{
+	if(gs_SettingsDeferredPage != Page || gs_SettingsDeferredFrames <= 0)
+		return;
+
+	--gs_SettingsDeferredFrames;
+	if(gs_SettingsDeferredFrames <= 0)
+		gs_SettingsDeferredPage = -1;
+}
+
+const char *SettingsPageName(const int Page)
+{
+	switch(Page)
+	{
+	case CMenus::SETTINGS_LANGUAGE: return "language";
+	case CMenus::SETTINGS_GENERAL: return "general";
+	case CMenus::SETTINGS_PLAYER: return "player";
+	case CMenus::SETTINGS_TEE: return "tee";
+	case CMenus::SETTINGS_APPEARANCE: return "appearance";
+	case CMenus::SETTINGS_CONTROLS: return "controls";
+	case CMenus::SETTINGS_GRAPHICS: return "graphics";
+	case CMenus::SETTINGS_SOUND: return "sound";
+	case CMenus::SETTINGS_DDNET: return "ddnet";
+	case CMenus::SETTINGS_ASSETS: return "assets";
+	case CMenus::SETTINGS_TCLIENT: return "tclient";
+	case CMenus::SETTINGS_QMCLIENT: return "qmclient";
+	case CMenus::SETTINGS_PROFILES: return "profiles";
+	case CMenus::SETTINGS_CONFIGS: return "configs";
+	case CMenus::SETTINGS_CONTRIBUTORS: return "contributors";
+	default: return "unknown";
+	}
+}
+
+}
+
 void CMenus::RenderSettingsGeneral(CUIRect MainView)
 {
+	CPerfTimer RenderTimer;
 	char aBuf[128 + IO_MAX_PATH_LENGTH];
 	CUIRect Label, Button, Left, Right, Game, ClientSettings;
+	const bool DeferTailSections = ShouldDeferSettingsTailSection(SETTINGS_GENERAL);
 	MainView.HSplitTop(150.0f, &Game, &ClientSettings);
 
 	// game
@@ -173,58 +357,71 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_ThemesButtonId, &DirectoryButton, Localize("Open the directory to add custom themes"));
 
-		Left.HSplitTop(20.0f, nullptr, &Left);
-		RenderThemeSelection(Left);
-
-		// auto demo settings
+		if(!DeferTailSections)
 		{
-			Right.HSplitTop(40.0f, nullptr, &Right);
-			Right.HSplitTop(20.0f, &Button, &Right);
-			if(DoButton_CheckBox(&g_Config.m_ClAutoDemoRecord, Localize("Automatically record demos"), g_Config.m_ClAutoDemoRecord, &Button))
-				g_Config.m_ClAutoDemoRecord ^= 1;
-
-			Right.HSplitTop(2 * 20.0f, &Button, &Right);
-			if(g_Config.m_ClAutoDemoRecord)
-				Ui()->DoScrollbarOption(&g_Config.m_ClAutoDemoMax, &g_Config.m_ClAutoDemoMax, &Button, Localize("Max demos"), 1, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_MULTILINE);
-
-			Right.HSplitTop(10.0f, nullptr, &Right);
-			Right.HSplitTop(20.0f, &Button, &Right);
-			if(DoButton_CheckBox(&g_Config.m_ClAutoScreenshot, Localize("Automatically take game over screenshot"), g_Config.m_ClAutoScreenshot, &Button))
-				g_Config.m_ClAutoScreenshot ^= 1;
-
-			Right.HSplitTop(2 * 20.0f, &Button, &Right);
-			if(g_Config.m_ClAutoScreenshot)
-				Ui()->DoScrollbarOption(&g_Config.m_ClAutoScreenshotMax, &g_Config.m_ClAutoScreenshotMax, &Button, Localize("Max Screenshots"), 1, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_MULTILINE);
+			Left.HSplitTop(20.0f, nullptr, &Left);
+			{
+				CPerfTimer StageTimer;
+				RenderThemeSelection(Left);
+				LogPerfStage("general_theme_selection", StageTimer.ElapsedMs(), false, "page=general");
+			}
 		}
 
-		// auto statboard screenshot
+		// automatic recording
+		CUIRect AutoRecordView = Right;
+		AutoRecordView.HSplitTop(40.0f, nullptr, &AutoRecordView);
+		if(!DeferTailSections)
 		{
-			Right.HSplitTop(10.0f, nullptr, &Right);
-			Right.HSplitTop(20.0f, &Button, &Right);
-			if(DoButton_CheckBox(&g_Config.m_ClAutoStatboardScreenshot, Localize("Automatically take statboard screenshot"), g_Config.m_ClAutoStatboardScreenshot, &Button))
 			{
-				g_Config.m_ClAutoStatboardScreenshot ^= 1;
+				CPerfTimer StageTimer;
+				AutoRecordView.HSplitTop(20.0f, &Button, &AutoRecordView);
+				if(DoButton_CheckBox(&g_Config.m_ClAutoDemoRecord, Localize("Automatically record demos"), g_Config.m_ClAutoDemoRecord, &Button))
+					g_Config.m_ClAutoDemoRecord ^= 1;
+
+				AutoRecordView.HSplitTop(2 * 20.0f, &Button, &AutoRecordView);
+				if(g_Config.m_ClAutoDemoRecord)
+					Ui()->DoScrollbarOption(&g_Config.m_ClAutoDemoMax, &g_Config.m_ClAutoDemoMax, &Button, Localize("Max demos"), 1, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_MULTILINE);
+
+				AutoRecordView.HSplitTop(10.0f, nullptr, &AutoRecordView);
+				AutoRecordView.HSplitTop(20.0f, &Button, &AutoRecordView);
+				if(DoButton_CheckBox(&g_Config.m_ClAutoScreenshot, Localize("Automatically take game over screenshot"), g_Config.m_ClAutoScreenshot, &Button))
+					g_Config.m_ClAutoScreenshot ^= 1;
+
+				AutoRecordView.HSplitTop(2 * 20.0f, &Button, &AutoRecordView);
+				if(g_Config.m_ClAutoScreenshot)
+					Ui()->DoScrollbarOption(&g_Config.m_ClAutoScreenshotMax, &g_Config.m_ClAutoScreenshotMax, &Button, Localize("Max Screenshots"), 1, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_MULTILINE);
+
+				LogPerfStage("general_auto_record_core", StageTimer.ElapsedMs(), false, "page=general");
 			}
 
-			Right.HSplitTop(2 * 20.0f, &Button, &Right);
-			if(g_Config.m_ClAutoStatboardScreenshot)
-				Ui()->DoScrollbarOption(&g_Config.m_ClAutoStatboardScreenshotMax, &g_Config.m_ClAutoStatboardScreenshotMax, &Button, Localize("Max Screenshots"), 1, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_MULTILINE);
-		}
-
-		// auto statboard csv
-		{
-			Right.HSplitTop(10.0f, nullptr, &Right);
-			Right.HSplitTop(20.0f, &Button, &Right);
-			if(DoButton_CheckBox(&g_Config.m_ClAutoCSV, Localize("Automatically create statboard csv"), g_Config.m_ClAutoCSV, &Button))
 			{
-				g_Config.m_ClAutoCSV ^= 1;
-			}
+				CPerfTimer StageTimer;
+				AutoRecordView.HSplitTop(10.0f, nullptr, &AutoRecordView);
+				AutoRecordView.HSplitTop(20.0f, &Button, &AutoRecordView);
+				if(DoButton_CheckBox(&g_Config.m_ClAutoStatboardScreenshot, Localize("Automatically take statboard screenshot"), g_Config.m_ClAutoStatboardScreenshot, &Button))
+				{
+					g_Config.m_ClAutoStatboardScreenshot ^= 1;
+				}
 
-			Right.HSplitTop(2 * 20.0f, &Button, &Right);
-			if(g_Config.m_ClAutoCSV)
-				Ui()->DoScrollbarOption(&g_Config.m_ClAutoCSVMax, &g_Config.m_ClAutoCSVMax, &Button, Localize("Max CSVs"), 1, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_MULTILINE);
+				AutoRecordView.HSplitTop(2 * 20.0f, &Button, &AutoRecordView);
+				if(g_Config.m_ClAutoStatboardScreenshot)
+					Ui()->DoScrollbarOption(&g_Config.m_ClAutoStatboardScreenshotMax, &g_Config.m_ClAutoStatboardScreenshotMax, &Button, Localize("Max Screenshots"), 1, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_MULTILINE);
+				AutoRecordView.HSplitTop(10.0f, nullptr, &AutoRecordView);
+				AutoRecordView.HSplitTop(20.0f, &Button, &AutoRecordView);
+				if(DoButton_CheckBox(&g_Config.m_ClAutoCSV, Localize("Automatically create statboard csv"), g_Config.m_ClAutoCSV, &Button))
+				{
+					g_Config.m_ClAutoCSV ^= 1;
+				}
+
+				AutoRecordView.HSplitTop(2 * 20.0f, &Button, &AutoRecordView);
+				if(g_Config.m_ClAutoCSV)
+					Ui()->DoScrollbarOption(&g_Config.m_ClAutoCSVMax, &g_Config.m_ClAutoCSVMax, &Button, Localize("Max CSVs"), 1, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_MULTILINE);
+
+				LogPerfStage("general_auto_record_extended", StageTimer.ElapsedMs(), false, "page=general");
+			}
 		}
 	}
+	LogPerfStage("general_page_total", RenderTimer.ElapsedMs(), false, "page=general");
 }
 
 void CMenus::SetNeedSendInfo()
@@ -847,7 +1044,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		CUIRect QueueHeader, QueueControls, QueueList, QueuePresets;
 		QueueSection.HSplitTop(18.0f, &QueueHeader, &QueueSection);
 		char aQueueLabel[64];
-		str_format(aQueueLabel, sizeof(aQueueLabel), "%s (%d/%d)", Localize("皮肤队列"), (int)SkinQueue.size(), QueueLength);
+		str_format(aQueueLabel, sizeof(aQueueLabel), "%s (%d/%d)", Localize("Skin queue"), (int)SkinQueue.size(), QueueLength);
 		Ui()->DoLabel(&QueueHeader, aQueueLabel, 14.0f, TEXTALIGN_ML);
 
 		CUIRect RotateMapRect;
@@ -861,7 +1058,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		QueueSection.HSplitTop(20.0f, &QueueControls, &QueueSection);
 		CUIRect IntervalRect, LengthRect;
 		QueueControls.VSplitMid(&IntervalRect, &LengthRect, 10.0f);
-		Ui()->DoScrollbarOption(&QueueInterval, &QueueInterval, &IntervalRect, Localize("切换间隔"), 5, 120, &CUi::ms_LinearScrollbarScale, 0, "s");
+		Ui()->DoScrollbarOption(&QueueInterval, &QueueInterval, &IntervalRect, Localize("Switch interval"), 5, 120, &CUi::ms_LinearScrollbarScale, 0, "s");
 		if(Ui()->DoScrollbarOption(&QueueLength, &QueueLength, &LengthRect, Localize("Queue length"), 0, QueueMaxLimit))
 		{
 			GameClient()->m_Skins.TrimSkinQueueToLimit(QueueDummy);
@@ -970,7 +1167,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				{
 					RemoveIndex = (int)i;
 				}
-				GameClient()->m_Tooltips.DoToolTip(&s_QueueRemoveIds[i], &RemoveRect, Localize("从队列移除"));
+				GameClient()->m_Tooltips.DoToolTip(&s_QueueRemoveIds[i], &RemoveRect, Localize("Remove from queue"));
 
 				if(s_QueueDragIndex == -1 && Ui()->MouseButtonClicked(0) && Ui()->MouseHovered(&DragArea))
 				{
@@ -1032,13 +1229,13 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			{
 				GameClient()->m_Skins.AddSkinQueuePresetFromCurrent(QueueDummy);
 			}
-			GameClient()->m_Tooltips.DoToolTip(&s_SavePresetButton, &SavePresetButton, DisableSavePreset ? Localize("队列为空") : Localize("一键保存当前队列为新预设"));
+			GameClient()->m_Tooltips.DoToolTip(&s_SavePresetButton, &SavePresetButton, DisableSavePreset ? Localize("Queue is empty") : Localize("Save current queue as a new preset"));
 
 			QueuePresets.HSplitTop(3.0f, nullptr, &QueuePresets);
 			PresetList = QueuePresets;
 			if(vQueuePresets.empty())
 			{
-				Ui()->DoLabel(&PresetList, Localize("暂无预设"), 11.0f, TEXTALIGN_MC);
+				Ui()->DoLabel(&PresetList, Localize("No presets yet"), 11.0f, TEXTALIGN_MC);
 			}
 			else
 			{
@@ -1074,12 +1271,12 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 
 					const bool RenameHovered = Ui()->HotItem() == &s_vPresetRenameIds[i];
 					RenameRect.Draw(ColorRGBA(0.4f, 0.4f, 0.75f, RenameHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
-					Ui()->DoLabel(&RenameRect, Localize("改名"), 10.0f, TEXTALIGN_MC);
+					Ui()->DoLabel(&RenameRect, Localize("Rename"), 10.0f, TEXTALIGN_MC);
 					if(Ui()->DoButtonLogic(&s_vPresetRenameIds[i], 0, &RenameRect, BUTTONFLAG_LEFT))
 					{
 						RenamePresetIndex = (int)i;
 					}
-					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRenameIds[i], &RenameRect, Localize("打开重命名弹窗"));
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRenameIds[i], &RenameRect, Localize("Open rename dialog"));
 
 					const bool ApplyHovered = Ui()->HotItem() == &s_vPresetApplyIds[i];
 					ApplyRect.Draw(ColorRGBA(0.25f, 0.6f, 0.35f, ApplyHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
@@ -1088,7 +1285,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					{
 						ApplyPresetIndex = (int)i;
 					}
-					GameClient()->m_Tooltips.DoToolTip(&s_vPresetApplyIds[i], &ApplyRect, Localize("一键应用此预设到当前队列"));
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetApplyIds[i], &ApplyRect, Localize("Apply this preset to the current queue"));
 
 					const bool RemoveHovered = Ui()->HotItem() == &s_vPresetRemoveIds[i];
 					RemoveRect.Draw(ColorRGBA(0.75f, 0.25f, 0.25f, RemoveHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
@@ -1097,7 +1294,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					{
 						RemovePresetIndex = (int)i;
 					}
-					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRemoveIds[i], &RemoveRect, Localize("删除该预设"));
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRemoveIds[i], &RemoveRect, Localize("Delete this preset"));
 				}
 				s_PresetListBox.DoEnd();
 
@@ -1241,7 +1438,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					GameClient()->m_Skins.AddSkinQueue(pSkinContainer->Name(), *pUseCustomColor != 0, *pColorBody, *pColorFeet, QueueDummy);
 				}
 			}
-			const char *pQueueTooltip = QueueFull && !InQueue ? Localize("队列已满") : (InQueue ? Localize("从队列移除") : Localize("加入队列"));
+			const char *pQueueTooltip = QueueFull && !InQueue ? Localize("Queue is full") : (InQueue ? Localize("Remove from queue") : Localize("Add to queue"));
 			GameClient()->m_Tooltips.DoToolTip(&s_vQueueButtonIds[i], &QueueIcon, pQueueTooltip);
 
 			if(DoButton_Favorite(SkinListEntry.FavoriteButtonId(), SkinListEntry.ListItemId(), SkinListEntry.IsFavorite(), &FavIcon))
@@ -1327,6 +1524,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	CUIRect Button;
 	char aBuf[128];
 	bool CheckSettings = false;
+	const bool DeferHeavyGraphics = ShouldDeferSettingsTailSection(SETTINGS_GRAPHICS);
 
 	static const int MAX_RESOLUTIONS = 256;
 	static CVideoMode s_aModes[MAX_RESOLUTIONS];
@@ -1378,39 +1576,53 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		Ui()->DoLabel(&ModeLabel, aBuf, FontSizeResListHeader, TEXTALIGN_MC);
 	}
 
-	int SelectedOld = -1;
-	s_ListBox.SetActive(!Ui()->IsPopupOpen());
-	s_ListBox.DoStart(RowHeightResList, s_NumNodes, 1, 3, SelectedOld, &ModeList);
-
-	for(int i = 0; i < s_NumNodes; ++i)
+	if(DeferHeavyGraphics)
 	{
-		const int Depth = s_aModes[i].m_Red + s_aModes[i].m_Green + s_aModes[i].m_Blue > 16 ? 24 : 16;
-		if(g_Config.m_GfxColorDepth == Depth &&
-			g_Config.m_GfxScreenWidth == s_aModes[i].m_WindowWidth &&
-			g_Config.m_GfxScreenHeight == s_aModes[i].m_WindowHeight &&
-			g_Config.m_GfxScreenRefreshRate == s_aModes[i].m_RefreshRate)
+		ModeList.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 6.0f);
+		ModeList.Margin(8.0f, &ModeList);
+		ModeList.HSplitTop(18.0f * UiScale, &Button, &ModeList);
+		str_format(aBuf, sizeof(aBuf), Localize("Preparing %d display modes..."), s_NumNodes);
+		Ui()->DoLabel(&Button, aBuf, FontSizeResList, TEXTALIGN_ML);
+		ModeList.HSplitTop(8.0f * UiScale, nullptr, &ModeList);
+		ModeList.HSplitTop(18.0f * UiScale, &Button, &ModeList);
+		Ui()->DoLabel(&Button, Localize("Renderer and GPU options will appear next frame"), FontSizeResList, TEXTALIGN_ML);
+	}
+	else
+	{
+		int SelectedOld = -1;
+		s_ListBox.SetActive(!Ui()->IsPopupOpen());
+		s_ListBox.DoStart(RowHeightResList, s_NumNodes, 1, 3, SelectedOld, &ModeList);
+
+		for(int i = 0; i < s_NumNodes; ++i)
 		{
-			SelectedOld = i;
+			const int Depth = s_aModes[i].m_Red + s_aModes[i].m_Green + s_aModes[i].m_Blue > 16 ? 24 : 16;
+			if(g_Config.m_GfxColorDepth == Depth &&
+				g_Config.m_GfxScreenWidth == s_aModes[i].m_WindowWidth &&
+				g_Config.m_GfxScreenHeight == s_aModes[i].m_WindowHeight &&
+				g_Config.m_GfxScreenRefreshRate == s_aModes[i].m_RefreshRate)
+			{
+				SelectedOld = i;
+			}
+
+			const CListboxItem Item = s_ListBox.DoNextItem(&s_aModes[i], SelectedOld == i);
+			if(!Item.m_Visible)
+				continue;
+
+			int G = std::gcd(s_aModes[i].m_WindowWidth, s_aModes[i].m_WindowHeight);
+			str_format(aBuf, sizeof(aBuf), " %dx%d @%dhz %d bit (%d:%d)", s_aModes[i].m_CanvasWidth, s_aModes[i].m_CanvasHeight, s_aModes[i].m_RefreshRate, Depth, s_aModes[i].m_WindowWidth / G, s_aModes[i].m_WindowHeight / G);
+			Ui()->DoLabel(&Item.m_Rect, aBuf, FontSizeResList, TEXTALIGN_ML);
 		}
 
-		const CListboxItem Item = s_ListBox.DoNextItem(&s_aModes[i], SelectedOld == i);
-		if(!Item.m_Visible)
-			continue;
-
-		int G = std::gcd(s_aModes[i].m_WindowWidth, s_aModes[i].m_WindowHeight);
-		str_format(aBuf, sizeof(aBuf), " %dx%d @%dhz %d bit (%d:%d)", s_aModes[i].m_CanvasWidth, s_aModes[i].m_CanvasHeight, s_aModes[i].m_RefreshRate, Depth, s_aModes[i].m_WindowWidth / G, s_aModes[i].m_WindowHeight / G);
-		Ui()->DoLabel(&Item.m_Rect, aBuf, FontSizeResList, TEXTALIGN_ML);
-	}
-
-	const int NewSelected = s_ListBox.DoEnd();
-	if(SelectedOld != NewSelected)
-	{
-		const int Depth = s_aModes[NewSelected].m_Red + s_aModes[NewSelected].m_Green + s_aModes[NewSelected].m_Blue > 16 ? 24 : 16;
-		g_Config.m_GfxColorDepth = Depth;
-		g_Config.m_GfxScreenWidth = s_aModes[NewSelected].m_WindowWidth;
-		g_Config.m_GfxScreenHeight = s_aModes[NewSelected].m_WindowHeight;
-		g_Config.m_GfxScreenRefreshRate = s_aModes[NewSelected].m_RefreshRate;
-		Graphics()->ResizeToScreen();
+		const int NewSelected = s_ListBox.DoEnd();
+		if(SelectedOld != NewSelected)
+		{
+			const int Depth = s_aModes[NewSelected].m_Red + s_aModes[NewSelected].m_Green + s_aModes[NewSelected].m_Blue > 16 ? 24 : 16;
+			g_Config.m_GfxColorDepth = Depth;
+			g_Config.m_GfxScreenWidth = s_aModes[NewSelected].m_WindowWidth;
+			g_Config.m_GfxScreenHeight = s_aModes[NewSelected].m_WindowHeight;
+			g_Config.m_GfxScreenRefreshRate = s_aModes[NewSelected].m_RefreshRate;
+			Graphics()->ResizeToScreen();
+		}
 	}
 
 	// switches
@@ -1545,26 +1757,29 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	};
 	std::array<std::array<SMenuBackendInfo, EGraphicsDriverAgeType::GRAPHICS_DRIVER_AGE_TYPE_COUNT>, EBackendType::BACKEND_TYPE_COUNT> aaSupportedBackends{};
 	uint32_t FoundBackendCount = 0;
-	for(uint32_t i = 0; i < BACKEND_TYPE_COUNT; ++i)
+	if(!DeferHeavyGraphics)
 	{
-		if(EBackendType(i) == BACKEND_TYPE_AUTO)
-			continue;
-		for(uint32_t n = 0; n < GRAPHICS_DRIVER_AGE_TYPE_COUNT; ++n)
+		for(uint32_t i = 0; i < BACKEND_TYPE_COUNT; ++i)
 		{
-			auto &Info = aaSupportedBackends[i][n];
-			if(Graphics()->GetDriverVersion(EGraphicsDriverAgeType(n), Info.m_Major, Info.m_Minor, Info.m_Patch, Info.m_pBackendName, EBackendType(i)))
+			if(EBackendType(i) == BACKEND_TYPE_AUTO)
+				continue;
+			for(uint32_t n = 0; n < GRAPHICS_DRIVER_AGE_TYPE_COUNT; ++n)
 			{
-				// don't count blocked opengl drivers
-				if(EBackendType(i) != BACKEND_TYPE_OPENGL || EGraphicsDriverAgeType(n) == GRAPHICS_DRIVER_AGE_TYPE_LEGACY || g_Config.m_GfxDriverIsBlocked == 0)
+				auto &Info = aaSupportedBackends[i][n];
+				if(Graphics()->GetDriverVersion(EGraphicsDriverAgeType(n), Info.m_Major, Info.m_Minor, Info.m_Patch, Info.m_pBackendName, EBackendType(i)))
 				{
-					Info.m_Found = true;
-					++FoundBackendCount;
+					// don't count blocked opengl drivers
+					if(EBackendType(i) != BACKEND_TYPE_OPENGL || EGraphicsDriverAgeType(n) == GRAPHICS_DRIVER_AGE_TYPE_LEGACY || g_Config.m_GfxDriverIsBlocked == 0)
+					{
+						Info.m_Found = true;
+						++FoundBackendCount;
+					}
 				}
 			}
 		}
 	}
 
-	if(FoundBackendCount > 1)
+	if(FoundBackendCount > 1 || DeferHeavyGraphics)
 	{
 		CUIRect Text, BackendDropDown;
 		MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -1573,87 +1788,95 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		MainView.HSplitTop(20.0f, &BackendDropDown, &MainView);
 		Ui()->DoLabel(&Text, Localize("Renderer"), 16.0f, TEXTALIGN_MC);
 
-		static std::vector<std::string> s_vBackendIdNames;
-		static std::vector<const char *> s_vpBackendIdNamesCStr;
-		static std::vector<SMenuBackendInfo> s_vBackendInfos;
-
-		size_t BackendCount = FoundBackendCount + 1;
-		s_vBackendIdNames.resize(BackendCount);
-		s_vpBackendIdNamesCStr.resize(BackendCount);
-		s_vBackendInfos.resize(BackendCount);
-
-		char aTmpBackendName[256];
-
-		auto IsInfoDefault = [](const SMenuBackendInfo &CheckInfo) {
-			return str_comp_nocase(CheckInfo.m_pBackendName, CConfig::ms_pGfxBackend) == 0 && CheckInfo.m_Major == CConfig::ms_GfxGLMajor && CheckInfo.m_Minor == CConfig::ms_GfxGLMinor && CheckInfo.m_Patch == CConfig::ms_GfxGLPatch;
-		};
-
-		int SelectedOldBackend = -1;
-		uint32_t CurCounter = 0;
-		for(uint32_t i = 0; i < BACKEND_TYPE_COUNT; ++i)
+		if(DeferHeavyGraphics)
 		{
-			for(uint32_t n = 0; n < GRAPHICS_DRIVER_AGE_TYPE_COUNT; ++n)
-			{
-				auto &Info = aaSupportedBackends[i][n];
-				if(Info.m_Found)
-				{
-					bool IsDefault = IsInfoDefault(Info);
-					str_format(aTmpBackendName, sizeof(aTmpBackendName), "%s (%d.%d.%d)%s%s", Info.m_pBackendName, Info.m_Major, Info.m_Minor, Info.m_Patch, IsDefault ? " - " : "", IsDefault ? Localize("default") : "");
-					s_vBackendIdNames[CurCounter] = aTmpBackendName;
-					s_vpBackendIdNamesCStr[CurCounter] = s_vBackendIdNames[CurCounter].c_str();
-					if(str_comp_nocase(Info.m_pBackendName, g_Config.m_GfxBackend) == 0 && g_Config.m_GfxGLMajor == Info.m_Major && g_Config.m_GfxGLMinor == Info.m_Minor && g_Config.m_GfxGLPatch == Info.m_Patch)
-					{
-						SelectedOldBackend = CurCounter;
-					}
-
-					s_vBackendInfos[CurCounter] = Info;
-					++CurCounter;
-				}
-			}
-		}
-
-		if(SelectedOldBackend != -1)
-		{
-			// no custom selected
-			BackendCount -= 1;
+			str_copy(aBuf, Localize("Preparing renderer list..."), sizeof(aBuf));
+			Ui()->DoLabel(&BackendDropDown, aBuf, 13.0f, TEXTALIGN_ML);
 		}
 		else
 		{
-			// custom selected one
-			str_format(aTmpBackendName, sizeof(aTmpBackendName), "%s (%s %d.%d.%d)", Localize("custom"), g_Config.m_GfxBackend, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch);
-			s_vBackendIdNames[CurCounter] = aTmpBackendName;
-			s_vpBackendIdNamesCStr[CurCounter] = s_vBackendIdNames[CurCounter].c_str();
-			SelectedOldBackend = CurCounter;
+			static std::vector<std::string> s_vBackendIdNames;
+			static std::vector<const char *> s_vpBackendIdNamesCStr;
+			static std::vector<SMenuBackendInfo> s_vBackendInfos;
 
-			s_vBackendInfos[CurCounter].m_pBackendName = "custom";
-			s_vBackendInfos[CurCounter].m_Major = g_Config.m_GfxGLMajor;
-			s_vBackendInfos[CurCounter].m_Minor = g_Config.m_GfxGLMinor;
-			s_vBackendInfos[CurCounter].m_Patch = g_Config.m_GfxGLPatch;
-		}
+			size_t BackendCount = FoundBackendCount + 1;
+			s_vBackendIdNames.resize(BackendCount);
+			s_vpBackendIdNamesCStr.resize(BackendCount);
+			s_vBackendInfos.resize(BackendCount);
 
-		static int s_SelectedOldBackend = -1;
-		if(s_SelectedOldBackend == -1)
-			s_SelectedOldBackend = SelectedOldBackend;
+			char aTmpBackendName[256];
 
-		static CUi::SDropDownState s_BackendDropDownState;
-		static CScrollRegion s_BackendDropDownScrollRegion;
-		s_BackendDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_BackendDropDownScrollRegion;
-		const int NewBackend = Ui()->DoDropDown(&BackendDropDown, SelectedOldBackend, s_vpBackendIdNamesCStr.data(), BackendCount, s_BackendDropDownState);
-		if(SelectedOldBackend != NewBackend)
-		{
-			str_copy(g_Config.m_GfxBackend, s_vBackendInfos[NewBackend].m_pBackendName);
-			g_Config.m_GfxGLMajor = s_vBackendInfos[NewBackend].m_Major;
-			g_Config.m_GfxGLMinor = s_vBackendInfos[NewBackend].m_Minor;
-			g_Config.m_GfxGLPatch = s_vBackendInfos[NewBackend].m_Patch;
+			auto IsInfoDefault = [](const SMenuBackendInfo &CheckInfo) {
+				return str_comp_nocase(CheckInfo.m_pBackendName, CConfig::ms_pGfxBackend) == 0 && CheckInfo.m_Major == CConfig::ms_GfxGLMajor && CheckInfo.m_Minor == CConfig::ms_GfxGLMinor && CheckInfo.m_Patch == CConfig::ms_GfxGLPatch;
+			};
 
-			CheckSettings = true;
-			s_GfxBackendChanged = s_SelectedOldBackend != NewBackend;
+			int SelectedOldBackend = -1;
+			uint32_t CurCounter = 0;
+			for(uint32_t i = 0; i < BACKEND_TYPE_COUNT; ++i)
+			{
+				for(uint32_t n = 0; n < GRAPHICS_DRIVER_AGE_TYPE_COUNT; ++n)
+				{
+					auto &Info = aaSupportedBackends[i][n];
+					if(Info.m_Found)
+					{
+						bool IsDefault = IsInfoDefault(Info);
+						str_format(aTmpBackendName, sizeof(aTmpBackendName), "%s (%d.%d.%d)%s%s", Info.m_pBackendName, Info.m_Major, Info.m_Minor, Info.m_Patch, IsDefault ? " - " : "", IsDefault ? Localize("default") : "");
+						s_vBackendIdNames[CurCounter] = aTmpBackendName;
+						s_vpBackendIdNamesCStr[CurCounter] = s_vBackendIdNames[CurCounter].c_str();
+						if(str_comp_nocase(Info.m_pBackendName, g_Config.m_GfxBackend) == 0 && g_Config.m_GfxGLMajor == Info.m_Major && g_Config.m_GfxGLMinor == Info.m_Minor && g_Config.m_GfxGLPatch == Info.m_Patch)
+						{
+							SelectedOldBackend = CurCounter;
+						}
+
+						s_vBackendInfos[CurCounter] = Info;
+						++CurCounter;
+					}
+				}
+			}
+
+			if(SelectedOldBackend != -1)
+			{
+				// no custom selected
+				BackendCount -= 1;
+			}
+			else
+			{
+				// custom selected one
+				str_format(aTmpBackendName, sizeof(aTmpBackendName), "%s (%s %d.%d.%d)", Localize("custom"), g_Config.m_GfxBackend, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch);
+				s_vBackendIdNames[CurCounter] = aTmpBackendName;
+				s_vpBackendIdNamesCStr[CurCounter] = s_vBackendIdNames[CurCounter].c_str();
+				SelectedOldBackend = CurCounter;
+
+				s_vBackendInfos[CurCounter].m_pBackendName = "custom";
+				s_vBackendInfos[CurCounter].m_Major = g_Config.m_GfxGLMajor;
+				s_vBackendInfos[CurCounter].m_Minor = g_Config.m_GfxGLMinor;
+				s_vBackendInfos[CurCounter].m_Patch = g_Config.m_GfxGLPatch;
+			}
+
+			static int s_SelectedOldBackend = -1;
+			if(s_SelectedOldBackend == -1)
+				s_SelectedOldBackend = SelectedOldBackend;
+
+			static CUi::SDropDownState s_BackendDropDownState;
+			static CScrollRegion s_BackendDropDownScrollRegion;
+			s_BackendDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_BackendDropDownScrollRegion;
+			const int NewBackend = Ui()->DoDropDown(&BackendDropDown, SelectedOldBackend, s_vpBackendIdNamesCStr.data(), BackendCount, s_BackendDropDownState);
+			if(SelectedOldBackend != NewBackend)
+			{
+				str_copy(g_Config.m_GfxBackend, s_vBackendInfos[NewBackend].m_pBackendName);
+				g_Config.m_GfxGLMajor = s_vBackendInfos[NewBackend].m_Major;
+				g_Config.m_GfxGLMinor = s_vBackendInfos[NewBackend].m_Minor;
+				g_Config.m_GfxGLPatch = s_vBackendInfos[NewBackend].m_Patch;
+
+				CheckSettings = true;
+				s_GfxBackendChanged = s_SelectedOldBackend != NewBackend;
+			}
 		}
 	}
 
 	// GPU list
 	const auto &GpuList = Graphics()->GetGpus();
-	if(GpuList.m_vGpus.size() > 1)
+	if(GpuList.m_vGpus.size() > 1 || DeferHeavyGraphics)
 	{
 		CUIRect Text, GpuDropDown;
 		MainView.HSplitTop(10.0f, nullptr, &MainView);
@@ -1662,12 +1885,19 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		MainView.HSplitTop(20.0f, &GpuDropDown, &MainView);
 		Ui()->DoLabel(&Text, Localize("Graphics card"), 16.0f, TEXTALIGN_MC);
 
-		static std::vector<const char *> s_vpGpuIdNames;
+		if(DeferHeavyGraphics)
+		{
+			str_copy(aBuf, Localize("Preparing graphics device list..."), sizeof(aBuf));
+			Ui()->DoLabel(&GpuDropDown, aBuf, 13.0f, TEXTALIGN_ML);
+		}
+		else
+		{
+			static std::vector<const char *> s_vpGpuIdNames;
 
-		size_t GpuCount = GpuList.m_vGpus.size() + 1;
-		s_vpGpuIdNames.resize(GpuCount);
+			size_t GpuCount = GpuList.m_vGpus.size() + 1;
+			s_vpGpuIdNames.resize(GpuCount);
 
-		char aCurDeviceName[256 + 4];
+			char aCurDeviceName[256 + 4];
 
 		int OldSelectedGpu = -1;
 		for(size_t i = 0; i < GpuCount; ++i)
@@ -1691,22 +1921,23 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			}
 		}
 
-		static int s_OldSelectedGpu = -1;
-		if(s_OldSelectedGpu == -1)
-			s_OldSelectedGpu = OldSelectedGpu;
+			static int s_OldSelectedGpu = -1;
+			if(s_OldSelectedGpu == -1)
+				s_OldSelectedGpu = OldSelectedGpu;
 
-		static CUi::SDropDownState s_GpuDropDownState;
-		static CScrollRegion s_GpuDropDownScrollRegion;
-		s_GpuDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_GpuDropDownScrollRegion;
-		const int NewGpu = Ui()->DoDropDown(&GpuDropDown, OldSelectedGpu, s_vpGpuIdNames.data(), GpuCount, s_GpuDropDownState);
-		if(OldSelectedGpu != NewGpu)
-		{
-			if(NewGpu == 0)
-				str_copy(g_Config.m_GfxGpuName, "auto");
-			else
-				str_copy(g_Config.m_GfxGpuName, GpuList.m_vGpus[NewGpu - 1].m_aName);
-			CheckSettings = true;
-			s_GfxGpuChanged = NewGpu != s_OldSelectedGpu;
+			static CUi::SDropDownState s_GpuDropDownState;
+			static CScrollRegion s_GpuDropDownScrollRegion;
+			s_GpuDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_GpuDropDownScrollRegion;
+			const int NewGpu = Ui()->DoDropDown(&GpuDropDown, OldSelectedGpu, s_vpGpuIdNames.data(), GpuCount, s_GpuDropDownState);
+			if(OldSelectedGpu != NewGpu)
+			{
+				if(NewGpu == 0)
+					str_copy(g_Config.m_GfxGpuName, "auto");
+				else
+					str_copy(g_Config.m_GfxGpuName, GpuList.m_vGpus[NewGpu - 1].m_aName);
+				CheckSettings = true;
+				s_GfxGpuChanged = NewGpu != s_OldSelectedGpu;
+			}
 		}
 	}
 
@@ -1876,7 +2107,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 		HeaderRow.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
 
 		static CListBox s_AudioPackListBox;
-		s_AudioPackListBox.DoHeader(&AudioPackView, Localize("音频包"), HeaderHeight, HeaderSpacing);
+		s_AudioPackListBox.DoHeader(&AudioPackView, Localize("Audio packs"), HeaderHeight, HeaderSpacing);
 
 		static CButtonContainer s_AudioPackRefreshButton;
 		CUIRect RefreshButton;
@@ -1985,52 +2216,117 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 	}
 }
 
+void CMenus::PrepareLanguagePageCache(float MainViewWidth)
+{
+	EnsureLanguagePageCacheInit(Ui());
+	if(!UseLanguagePageCache())
+	{
+		gs_aLanguageCacheLanguageFile[0] = '\0';
+		return;
+	}
+
+	CUIRect List, CreditsScroll;
+	LayoutLanguagePageBaseRects(MainViewWidth, List, CreditsScroll);
+
+	const char *pCreditsText = Localize("English translation by the DDNet Team", "Translation credits: Add your own name here when you update translations");
+	const float CreditsLineWidth = CreditsScroll.w - 2.0f * LANGUAGE_CREDITS_MARGIN;
+	const float LabelWidth = LanguageListLabelWidth(List);
+	const bool LanguageChanged = str_comp(gs_aLanguageCacheLanguageFile, g_Config.m_ClLanguagefile) != 0;
+	const bool LabelCacheInvalid = LanguageLabelCacheInvalid();
+	const bool CreditsLanguageChanged = str_comp(gs_aCreditsLanguageFile, g_Config.m_ClLanguagefile) != 0;
+	const bool CreditsWidthChanged = absolute(gs_CreditsLineWidth - CreditsLineWidth) > 0.01f;
+	if(!LanguageChanged &&
+		!LabelCacheInvalid &&
+		absolute(gs_LanguageLabelWidth - LabelWidth) <= 0.01f &&
+		!(CreditsLanguageChanged || CreditsWidthChanged || !gs_CreditsLabelElement.Rect(0)->m_UITextContainer.Valid()))
+	{
+		return;
+	}
+
+	if(CreditsLanguageChanged || CreditsWidthChanged || !gs_CreditsLabelElement.Rect(0)->m_UITextContainer.Valid())
+		RebuildLanguageCreditsCache(Ui(), pCreditsText, CreditsLineWidth);
+
+	CUIRect ScrollClip = List;
+	ScrollClip.VSplitRight(LANGUAGE_SCROLLBAR_WIDTH, &ScrollClip, nullptr);
+	CUIRect Content = ScrollClip;
+	for(size_t i = 0; i < g_Localization.Languages().size(); ++i)
+	{
+		const auto &Language = g_Localization.Languages()[i];
+		CUIRect ItemRect;
+		Content.HSplitTop(LANGUAGE_ROW_HEIGHT, &ItemRect, &Content);
+
+		CUIRect FlagRect, Label;
+		ItemRect.VSplitLeft(ItemRect.h * 2.0f, &FlagRect, &Label);
+		Ui()->DoLabelStreamed(*gs_aLanguageLabelElements[i].Rect(0), &Label, Language.m_Name.c_str(), LANGUAGE_FONT_SIZE, TEXTALIGN_ML);
+	}
+
+	gs_LanguageLabelWidth = LabelWidth;
+	str_copy(gs_aLanguageCacheLanguageFile, g_Config.m_ClLanguagefile, sizeof(gs_aLanguageCacheLanguageFile));
+}
+
 void CMenus::RenderLanguageSettings(CUIRect MainView)
 {
-	const float CreditsFontSize = 14.0f;
-	const float CreditsMargin = 10.0f;
+	CPerfTimer RenderTimer;
+	const float CreditsFontSize = LANGUAGE_CREDITS_FONT_SIZE;
+	const float CreditsMargin = LANGUAGE_CREDITS_MARGIN;
 
 	CUIRect List, CreditsScroll;
 	MainView.HSplitBottom(4.0f * CreditsFontSize + 2.0f * CreditsMargin + CScrollRegion::HEIGHT_MAGIC_FIX, &List, &CreditsScroll);
 	List.HSplitBottom(5.0f, &List, nullptr);
 
-	RenderLanguageSelection(List);
+	const char *pCreditsText = Localize("English translation by the DDNet Team", "Translation credits: Add your own name here when you update translations");
+	const float CreditsLineWidth = CreditsScroll.w - 2.0f * CreditsMargin;
+	const int NumLanguages = (int)g_Localization.Languages().size();
+	EnsureLanguagePageCacheInit(Ui());
+	const bool LanguageChanged = str_comp(gs_aCreditsLanguageFile, g_Config.m_ClLanguagefile) != 0;
+	const bool WidthChanged = absolute(gs_CreditsLineWidth - CreditsLineWidth) > 0.01f;
+	const bool CreditsNeedRefresh = LanguageChanged || WidthChanged || !gs_CreditsLabelElement.Rect(0)->m_UITextContainer.Valid();
+	{
+		CPerfTimer StageTimer;
+		RenderLanguageSelection(List);
+		char aExtra[96];
+		str_format(aExtra, sizeof(aExtra), "page=language languages=%d", NumLanguages);
+		LogPerfStage("language_list_total", StageTimer.ElapsedMs(), false, aExtra);
+	}
 
 	CreditsScroll.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
 
-	static CScrollRegion s_CreditsScrollRegion;
-	vec2 ScrollOffset(0.0f, 0.0f);
-	CScrollRegionParams ScrollParams;
-	ScrollParams.m_ScrollUnit = CreditsFontSize;
-	s_CreditsScrollRegion.Begin(&CreditsScroll, &ScrollOffset, &ScrollParams);
-	CreditsScroll.y += ScrollOffset.y;
+	auto RefreshCreditsMetrics = [&]() {
+		CPerfTimer CreditsCreateTimer;
+		RebuildLanguageCreditsCache(Ui(), pCreditsText, CreditsLineWidth);
+		LogPerfStage("language_credits_create", CreditsCreateTimer.ElapsedMs(), false, "page=language");
+	};
 
-	CTextCursor Cursor;
-	Cursor.m_FontSize = CreditsFontSize;
-	Cursor.m_LineWidth = CreditsScroll.w - 2.0f * CreditsMargin;
+	if(CreditsNeedRefresh)
+		RefreshCreditsMetrics();
 
-	const unsigned OldRenderFlags = TextRender()->GetRenderFlags();
-	TextRender()->SetRenderFlags(OldRenderFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
-	STextContainerIndex CreditsTextContainer;
-	TextRender()->CreateTextContainer(CreditsTextContainer, &Cursor, Localize("English translation by the DDNet Team", "Translation credits: Add your own name here when you update translations"));
-	TextRender()->SetRenderFlags(OldRenderFlags);
-	if(CreditsTextContainer.Valid())
 	{
-		CUIRect CreditsLabel;
-		CreditsScroll.HSplitTop(TextRender()->GetBoundingBoxTextContainer(CreditsTextContainer).m_H + 2.0f * CreditsMargin, &CreditsLabel, &CreditsScroll);
-		s_CreditsScrollRegion.AddRect(CreditsLabel);
-		CreditsLabel.Margin(CreditsMargin, &CreditsLabel);
-		TextRender()->RenderTextContainer(CreditsTextContainer, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), CreditsLabel.x, CreditsLabel.y);
-		TextRender()->DeleteTextContainer(CreditsTextContainer);
-	}
+		vec2 ScrollOffset(0.0f, 0.0f);
+		CScrollRegionParams ScrollParams;
+		ScrollParams.m_ScrollUnit = CreditsFontSize;
+		gs_CreditsScrollRegion.Begin(&CreditsScroll, &ScrollOffset, &ScrollParams);
+		CreditsScroll.y += ScrollOffset.y;
 
-	s_CreditsScrollRegion.End();
+		CPerfTimer CreditsRenderTimer;
+		CUIRect CreditsLabel;
+		CreditsScroll.HSplitTop(gs_CreditsHeight + 2.0f * CreditsMargin, &CreditsLabel, &CreditsScroll);
+		gs_CreditsScrollRegion.AddRect(CreditsLabel);
+		CreditsLabel.Margin(CreditsMargin, &CreditsLabel);
+		SLabelProperties CreditsLabelProps;
+		CreditsLabelProps.m_MaxWidth = CreditsLabel.w;
+		Ui()->DoLabelStreamed(*gs_CreditsLabelElement.Rect(0), &CreditsLabel, pCreditsText, CreditsFontSize, TEXTALIGN_TL, CreditsLabelProps);
+		LogPerfStage("language_credits_text", CreditsRenderTimer.ElapsedMs(), false, "page=language");
+
+		gs_CreditsScrollRegion.End();
+	}
+	LogPerfStage("language_page_total", RenderTimer.ElapsedMs(), false, "page=language");
 }
 
 bool CMenus::RenderLanguageSelection(CUIRect MainView)
 {
 	static int s_SelectedLanguage = -2; // -2 = unloaded, -1 = unset
-	static CListBox s_ListBox;
+	EnsureLanguagePageCacheInit(Ui());
+	const bool UseCache = UseLanguagePageCache();
 
 	if(s_SelectedLanguage == -2)
 	{
@@ -2040,32 +2336,65 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView)
 			if(str_comp(g_Localization.Languages()[i].m_Filename.c_str(), g_Config.m_ClLanguagefile) == 0)
 			{
 				s_SelectedLanguage = i;
-				s_ListBox.ScrollToSelected();
+				gs_LanguageScrollToSelected = true;
 				break;
 			}
 		}
 	}
 
 	const int SelectedOld = s_SelectedLanguage;
+	bool Activated = false;
 
-	s_ListBox.DoStart(24.0f, g_Localization.Languages().size(), 1, 3, s_SelectedLanguage, &MainView);
+	vec2 ScrollOffset(0.0f, 0.0f);
+	CScrollRegionParams ScrollParams;
+	ScrollParams.m_ScrollUnit = LANGUAGE_ROW_HEIGHT;
+	ScrollParams.m_Flags = CScrollRegionParams::FLAG_CONTENT_STATIC_WIDTH;
+	ScrollParams.m_ScrollbarMargin = 5.0f;
+	gs_LanguageScrollRegion.Begin(&MainView, &ScrollOffset, &ScrollParams);
 
-	for(const auto &Language : g_Localization.Languages())
+	CUIRect Content = MainView;
+	Content.y += ScrollOffset.y;
+	for(size_t i = 0; i < g_Localization.Languages().size(); ++i)
 	{
-		const CListboxItem Item = s_ListBox.DoNextItem(&Language.m_Name, s_SelectedLanguage != -1 && !str_comp(g_Localization.Languages()[s_SelectedLanguage].m_Name.c_str(), Language.m_Name.c_str()));
-		if(!Item.m_Visible)
+		const auto &Language = g_Localization.Languages()[i];
+		CUIRect ItemRect;
+		Content.HSplitTop(LANGUAGE_ROW_HEIGHT, &ItemRect, &Content);
+		const bool Selected = s_SelectedLanguage == (int)i;
+		const bool Visible = gs_LanguageScrollRegion.AddRect(ItemRect, gs_LanguageScrollToSelected && Selected);
+		if(!Visible)
 			continue;
 
+		void *pRowId = UseCache ? static_cast<void *>(&gs_aLanguageRowIds[i]) : const_cast<char *>(Language.m_Filename.c_str());
+		const int ButtonResult = Ui()->DoButtonLogic(pRowId, 0, &ItemRect, BUTTONFLAG_LEFT);
+		if(ButtonResult)
+		{
+			s_SelectedLanguage = i;
+			Activated = true;
+		}
+
+		const ColorRGBA BgColor = Selected ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.14f) :
+			(Ui()->HotItem() == pRowId ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
+		if(BgColor.a > 0.0f)
+			ItemRect.Draw(BgColor, IGraphics::CORNER_ALL, 5.0f);
+
 		CUIRect FlagRect, Label;
-		Item.m_Rect.VSplitLeft(Item.m_Rect.h * 2.0f, &FlagRect, &Label);
+		ItemRect.VSplitLeft(ItemRect.h * 2.0f, &FlagRect, &Label);
 		FlagRect.VMargin(6.0f, &FlagRect);
 		FlagRect.HMargin(3.0f, &FlagRect);
 		GameClient()->m_CountryFlags.Render(Language.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
-
-		Ui()->DoLabel(&Label, Language.m_Name.c_str(), 16.0f, TEXTALIGN_ML);
+		if(UseCache)
+			Ui()->DoLabelStreamed(*gs_aLanguageLabelElements[i].Rect(0), &Label, Language.m_Name.c_str(), LANGUAGE_FONT_SIZE, TEXTALIGN_ML);
+		else
+			Ui()->DoLabel(&Label, Language.m_Name.c_str(), LANGUAGE_FONT_SIZE, TEXTALIGN_ML);
 	}
-
-	s_SelectedLanguage = s_ListBox.DoEnd();
+	gs_LanguageScrollToSelected = false;
+	CUIRect ScrollRegion;
+	ScrollRegion.x = MainView.x;
+	ScrollRegion.y = Content.y + CScrollRegion::HEIGHT_MAGIC_FIX;
+	ScrollRegion.w = MainView.w;
+	ScrollRegion.h = 0.0f;
+	gs_LanguageScrollRegion.AddRect(ScrollRegion);
+	gs_LanguageScrollRegion.End();
 
 	if(SelectedOld != s_SelectedLanguage)
 	{
@@ -2073,7 +2402,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView)
 		GameClient()->OnLanguageChange();
 	}
 
-	return s_ListBox.WasItemActivated();
+	return Activated;
 }
 
 void CMenus::RenderSettings(CUIRect MainView)
@@ -2118,49 +2447,52 @@ void CMenus::RenderSettings(CUIRect MainView)
 	TabBar.HSplitTop(50.0f, &Button, &TabBar);
 	Button.Draw(ms_ColorTabbarActive, IGraphics::CORNER_BR, 10.0f);
 
-	static const char *s_apTabs[SETTINGS_LENGTH] = {};
-	static char s_aTabsLanguageFile[IO_MAX_PATH_LENGTH] = {};
-	if(s_apTabs[0] == nullptr || str_comp(s_aTabsLanguageFile, g_Config.m_ClLanguagefile) != 0)
-	{
-		str_copy(s_aTabsLanguageFile, g_Config.m_ClLanguagefile, sizeof(s_aTabsLanguageFile));
-		s_apTabs[SETTINGS_LANGUAGE] = Localize("Language");
-		s_apTabs[SETTINGS_GENERAL] = Localize("General");
-		s_apTabs[SETTINGS_PLAYER] = Localize("Player");
-		s_apTabs[SETTINGS_TEE] = Client()->IsSixup() ? "Tee 0.7" : Localize("Tee");
-		s_apTabs[SETTINGS_APPEARANCE] = Localize("Appearance");
-		s_apTabs[SETTINGS_CONTROLS] = Localize("Controls");
-		s_apTabs[SETTINGS_GRAPHICS] = Localize("Graphics");
-		s_apTabs[SETTINGS_SOUND] = Localize("Sound");
-		s_apTabs[SETTINGS_DDNET] = Localize("DDNet");
-		s_apTabs[SETTINGS_ASSETS] = Localize("Assets");
-		s_apTabs[SETTINGS_TCLIENT] = Localize("TClient");
-		s_apTabs[SETTINGS_QMCLIENT] = Localize("QmClient");
-		s_apTabs[SETTINGS_PROFILES] = Localize("Profiles");
-		s_apTabs[SETTINGS_CONFIGS] = Localize("Configs");
-		s_apTabs[SETTINGS_CONTRIBUTORS] = Localize("Contributors");
-	}
+	PrepareSettingsTabLabelCache(MainView.w);
+	if(g_Config.m_UiSettingsPage != SETTINGS_LANGUAGE)
+		PrepareLanguagePageCache(MainView.w);
 
-	static CButtonContainer s_aTabButtons[SETTINGS_LENGTH];
-
-	for(int i = 0; i < SETTINGS_LENGTH; i++)
 	{
-		if(i == SETTINGS_PROFILES || i == SETTINGS_CONFIGS || i == SETTINGS_CONTRIBUTORS)
-			continue; // Profiles 已合并到 Tee 页面，Configs/Contributors 已并入 QmClient 顶部分页
-		TabBar.HSplitTop(10.0f, nullptr, &TabBar);
-		TabBar.HSplitTop(26.0f, &Button, &TabBar);
-		if(DoButton_MenuTab(&s_aTabButtons[i], s_apTabs[i], g_Config.m_UiSettingsPage == i, &Button, IGraphics::CORNER_R, &m_aAnimatorsSettingsTab[i]))
-			g_Config.m_UiSettingsPage = i;
+		CPerfTimer StageTimer;
+		for(int i = 0; i < SETTINGS_LENGTH; i++)
+		{
+			if(i == SETTINGS_PROFILES || i == SETTINGS_CONFIGS || i == SETTINGS_CONTRIBUTORS)
+				continue; // Profiles 已合并到 Tee 页面，Configs/Contributors 已并入 QmClient 顶部分页
+			TabBar.HSplitTop(10.0f, nullptr, &TabBar);
+			TabBar.HSplitTop(26.0f, &Button, &TabBar);
+			if(DoButton_MenuTab(&m_aSettingsTabButtons[i], m_apSettingsTabs[i], g_Config.m_UiSettingsPage == i, &Button, IGraphics::CORNER_R, &m_aAnimatorsSettingsTab[i], nullptr, nullptr, nullptr, 10.0f, nullptr, &m_aSettingsTabLabelElements[i]))
+				g_Config.m_UiSettingsPage = i;
+		}
+
+		char aTabBarExtra[96];
+		str_format(aTabBarExtra, sizeof(aTabBarExtra), "page=%s", SettingsPageName(g_Config.m_UiSettingsPage));
+		LogPerfStage("settings_tabbar", StageTimer.ElapsedMs(), false, aTabBarExtra);
 	}
 
 	if(!s_SettingsTransitionInitialized)
 	{
 		s_PrevSettingsPage = g_Config.m_UiSettingsPage;
 		s_SettingsTransitionInitialized = true;
+		if(g_Config.m_UiSettingsPage == SETTINGS_GENERAL || g_Config.m_UiSettingsPage == SETTINGS_DDNET || g_Config.m_UiSettingsPage == SETTINGS_GRAPHICS)
+			BeginDeferredSettingsPage(g_Config.m_UiSettingsPage);
+		else
+			gs_SettingsDeferredPage = -1;
+
+		if(g_Config.m_UiSettingsPage == SETTINGS_CONTROLS)
+			m_MenusSettingsControls.SetDeferredFrames(4);
 	}
 	else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
 	{
+		if(PerfDebugEnabled())
+			dbg_msg("perf/menu", "event=settings_page_switch from=%s to=%s", SettingsPageName(s_PrevSettingsPage), SettingsPageName(g_Config.m_UiSettingsPage));
 		s_SettingsTransitionDirection = g_Config.m_UiSettingsPage > s_PrevSettingsPage ? 1.0f : -1.0f;
 		TriggerUiSwitchAnimation(SettingsPageSwitchNode, 0.18f);
+		if(g_Config.m_UiSettingsPage == SETTINGS_GENERAL || g_Config.m_UiSettingsPage == SETTINGS_DDNET || g_Config.m_UiSettingsPage == SETTINGS_GRAPHICS)
+			BeginDeferredSettingsPage(g_Config.m_UiSettingsPage);
+		else
+			gs_SettingsDeferredPage = -1;
+
+		if(g_Config.m_UiSettingsPage == SETTINGS_CONTROLS)
+			m_MenusSettingsControls.SetDeferredFrames(4);
 		s_PrevSettingsPage = g_Config.m_UiSettingsPage;
 	}
 
@@ -2175,77 +2507,85 @@ void CMenus::RenderSettings(CUIRect MainView)
 		ApplyUiSwitchOffset(ContentView, TransitionStrength, s_SettingsTransitionDirection, true, 0.08f, 24.0f, 90.0f);
 	}
 
-	if(g_Config.m_UiSettingsPage == SETTINGS_LANGUAGE)
 	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_LANGUAGE);
-		RenderLanguageSettings(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_GENERAL)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_GENERAL);
-		RenderSettingsGeneral(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_PLAYER)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_PLAYER);
-		RenderSettingsPlayer(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_TEE);
-		if(Client()->IsSixup())
-			RenderSettingsTee7(ContentView);
+		CPerfTimer StageTimer;
+		if(g_Config.m_UiSettingsPage == SETTINGS_LANGUAGE)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_LANGUAGE);
+			RenderLanguageSettings(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_GENERAL)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_GENERAL);
+			RenderSettingsGeneral(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_PLAYER)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_PLAYER);
+			RenderSettingsPlayer(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_TEE);
+			if(Client()->IsSixup())
+				RenderSettingsTee7(ContentView);
+			else
+				RenderSettingsTee(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_APPEARANCE)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_APPEARANCE);
+			RenderSettingsAppearance(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_CONTROLS)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_CONTROLS);
+			m_MenusSettingsControls.Render(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_GRAPHICS)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_GRAPHICS);
+			RenderSettingsGraphics(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_SOUND)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_SOUND);
+			RenderSettingsSound(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_DDNET)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_DDNET);
+			RenderSettingsDDNet(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_ASSETS)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_ASSETS);
+			RenderSettingsCustom(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_TCLIENT)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(13);
+			RenderSettingsTClient(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_QMCLIENT)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(15);
+			RenderSettingsQmClient(ContentView);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
+		{
+			GameClient()->m_MenuBackground.ChangePosition(14);
+			RenderSettingsTClientProfiles(ContentView);
+		}
 		else
-			RenderSettingsTee(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_APPEARANCE)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_APPEARANCE);
-		RenderSettingsAppearance(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_CONTROLS)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_CONTROLS);
-		m_MenusSettingsControls.Render(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_GRAPHICS)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_GRAPHICS);
-		RenderSettingsGraphics(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_SOUND)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_SOUND);
-		RenderSettingsSound(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_DDNET)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_DDNET);
-		RenderSettingsDDNet(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_ASSETS)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_ASSETS);
-		RenderSettingsCustom(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_TCLIENT)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(13);
-		RenderSettingsTClient(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_QMCLIENT)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(15);
-		RenderSettingsQmClient(ContentView);
-	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
-	{
-		GameClient()->m_MenuBackground.ChangePosition(14);
-		RenderSettingsTClientProfiles(ContentView);
-	}
-	else
-	{
-		dbg_assert_failed("ui_settings_page invalid");
+		{
+			dbg_assert_failed("ui_settings_page invalid");
+		}
+
+		char aContentExtra[128];
+		str_format(aContentExtra, sizeof(aContentExtra), "page=%s transition=%d", SettingsPageName(g_Config.m_UiSettingsPage), TransitionActive ? 1 : 0);
+		LogPerfStage("settings_page_content", StageTimer.ElapsedMs(), TransitionActive, aContentExtra);
+		FinishDeferredSettingsFrame(g_Config.m_UiSettingsPage);
 	}
 
 	if(TransitionActive && TransitionAlpha > 0.0f)
@@ -2641,7 +2981,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		static CButtonContainer s_AuthedColor, s_SameClanColor, s_FriendsListFriendColor, s_FriendsListClanColor;
 		DoLine_ColorPicker(&s_AuthedColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("Authed name color in scoreboard"), &g_Config.m_ClAuthedPlayerColor, GreenDefault, false);
 		DoLine_ColorPicker(&s_SameClanColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("Same clan color in scoreboard"), &g_Config.m_ClSameClanColor, GreenDefault, false);
-		DoLine_ColorPicker(&s_FriendsListFriendColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("好友列表中好友条目颜色"), &g_Config.m_ClFriendsListFriendColor, ColorRGBA(0.949f, 0.806f, 0.368f), false);
+		DoLine_ColorPicker(&s_FriendsListFriendColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("Friend color in friends list"), &g_Config.m_ClFriendsListFriendColor, ColorRGBA(0.949f, 0.806f, 0.368f), false);
 		DoLine_ColorPicker(&s_FriendsListClanColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("Clan color in friends list"), &g_Config.m_ClFriendsListClanColor, ColorRGBA(0.336f, 0.231f, 0.867f), false);
 
 		// ***** DDRace HUD ***** //
@@ -2666,7 +3006,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 		// Switch for dummy actions display
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudDummyActions, Localize("Show dummy actions"), &g_Config.m_ClShowhudDummyActions, &RightView, LineSize);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusReset, Localize("显示卡键状态"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusReset, Localize("Show key stuck status"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusHammer, Localize("Show hammer status"), &g_Config.m_ClShowhudKeyStatusHammer, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusControl, Localize("Show dummy control status"), &g_Config.m_ClShowhudKeyStatusControl, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusSync, Localize("Show dummy sync status"), &g_Config.m_ClShowhudKeyStatusSync, &RightView, LineSize);
@@ -3254,7 +3594,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		const ColorRGBA DropPreviewColor(0.2f, 0.9f, 0.4f, 0.9f);
 		const ColorRGBA DragGhostColor(0.08f, 0.09f, 0.12f, 0.55f);
 
-		Ui()->DoLabel_AutoLineSize(Localize("昵称顺序"), HeadlineFontSize, TEXTALIGN_ML, &RightView, HeadlineHeight);
+		Ui()->DoLabel_AutoLineSize(Localize("Name order"), HeadlineFontSize, TEXTALIGN_ML, &RightView, HeadlineHeight);
 		RightView.HSplitTop(MarginSmall, nullptr, &RightView);
 
 		CUIRect RowOrderView;
@@ -3749,9 +4089,11 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	}
 }
 
-void CMenus::RenderSettingsDDNet(CUIRect MainView)
+	void CMenus::RenderSettingsDDNet(CUIRect MainView)
 {
 	CUIRect Button, Left, Right, LeftLeft, Label;
+	const int DeferredTailFrames = DeferredSettingsTailFrames(SETTINGS_DDNET);
+	const bool DeferTailSections = DeferredTailFrames > 0;
 
 
 	// demo
@@ -3868,134 +4210,250 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 		GameClient()->m_Camera.SetZoom(CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10), g_Config.m_ClSmoothZoomTime, true);
 
 	Right.HSplitTop(20.0f, &Button, &Right);
-	Ui()->DoScrollbarOption(&g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, Localize("预测边距"), 1, 300, &CUi::ms_LinearScrollbarScale, 0, "");
+	Ui()->DoScrollbarOption(&g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, Localize("Prediction margin"), 1, 300, &CUi::ms_LinearScrollbarScale, 0, "");
 
 	Right.HSplitTop(20.0f, &Button, &Right);
-	if(DoButton_CheckBox(&g_Config.m_ClPredictEvents, Localize("预测事件（实验性）"), g_Config.m_ClPredictEvents, &Button))
+	if(DoButton_CheckBox(&g_Config.m_ClPredictEvents, Localize("Predict events (experimental)"), g_Config.m_ClPredictEvents, &Button))
 	{
 		g_Config.m_ClPredictEvents ^= 1;
 	}
 
 	Right.HSplitTop(20.0f, &Button, &Right);
-	if(DoButton_CheckBox(&g_Config.m_ClAntiPing, Localize("延迟补偿（AntiPing）"), g_Config.m_ClAntiPing, &Button))
+	if(DoButton_CheckBox(&g_Config.m_ClAntiPing, Localize("AntiPing (latency compensation)"), g_Config.m_ClAntiPing, &Button))
 	{
 		g_Config.m_ClAntiPing ^= 1;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClAntiPing, &Button, Localize("尝试预测其他实体来降低高延迟带来的卡顿感"));
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClAntiPing, &Button, Localize("Try to predict other entities to reduce lag feeling at high latency"));
 
 	if(g_Config.m_ClAntiPing)
 	{
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingPlayers, Localize("延迟补偿：预测其他玩家"), g_Config.m_ClAntiPingPlayers, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingPlayers, Localize("AntiPing: predict other players"), g_Config.m_ClAntiPingPlayers, &Button))
 		{
 			g_Config.m_ClAntiPingPlayers ^= 1;
 		}
 
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingWeapons, Localize("延迟补偿：预测武器"), g_Config.m_ClAntiPingWeapons, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingWeapons, Localize("AntiPing: predict weapons"), g_Config.m_ClAntiPingWeapons, &Button))
 		{
 			g_Config.m_ClAntiPingWeapons ^= 1;
 		}
 
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingGrenade, Localize("延迟补偿：预测榴弹枪路径"), g_Config.m_ClAntiPingGrenade, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingGrenade, Localize("AntiPing: predict grenade path"), g_Config.m_ClAntiPingGrenade, &Button))
 		{
 			g_Config.m_ClAntiPingGrenade ^= 1;
 		}
 	}
 
-	CUIRect Background, Miscellaneous;
-	MainView.VSplitMid(&Background, &Miscellaneous, 20.0f);
-
-	// background
-	Background.HSplitTop(30.0f, &Label, &Background);
-	Background.HSplitTop(5.0f, nullptr, &Background);
-	Ui()->DoLabel(&Label, Localize("Background"), 20.0f, TEXTALIGN_ML);
-
-	ColorRGBA GreyDefault(0.5f, 0.5f, 0.5f, 1);
-
-	static CButtonContainer s_ResetId1;
-	DoLine_ColorPicker(&s_ResetId1, 25.0f, 13.0f, 5.0f, &Background, Localize("Regular background color"), &g_Config.m_ClBackgroundColor, GreyDefault, false);
-
-	static CButtonContainer s_ResetId2;
-	DoLine_ColorPicker(&s_ResetId2, 25.0f, 13.0f, 5.0f, &Background, Localize("Entities background color"), &g_Config.m_ClBackgroundEntitiesColor, GreyDefault, false);
-
-	CUIRect EditBox, ReloadButton;
-	Background.HSplitTop(20.0f, &Label, &Background);
-	Background.HSplitTop(2.0f, nullptr, &Background);
-	Label.VSplitLeft(100.0f, &Label, &EditBox);
-	EditBox.VSplitRight(60.0f, &EditBox, &Button);
-	Button.VSplitMid(&ReloadButton, &Button, 5.0f);
-	EditBox.VSplitRight(5.0f, &EditBox, nullptr);
-
-	Ui()->DoLabel(&Label, Localize("Map"), 14.0f, TEXTALIGN_ML);
-
-	static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
-	Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
-
-	static CButtonContainer s_BackgroundEntitiesMapPicker, s_BackgroundEntitiesReload;
-
-	if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesReload, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton, BUTTONFLAG_LEFT))
+	if(!DeferTailSections)
 	{
-		GameClient()->m_Background.LoadBackground();
-	}
+		CUIRect Background, Miscellaneous;
+		MainView.VSplitMid(&Background, &Miscellaneous, 20.0f);
 
-	if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesMapPicker, FONT_ICON_FOLDER, 0, &Button, BUTTONFLAG_LEFT))
-	{
-		static SPopupMenuId s_PopupMapPickerId;
-		static CPopupMapPickerContext s_PopupMapPickerContext;
-		s_PopupMapPickerContext.m_pMenus = this;
-		s_PopupMapPickerContext.MapListPopulate();
-		Ui()->DoPopupMenu(&s_PopupMapPickerId, Ui()->MouseX(), Ui()->MouseY(), 300.0f, 250.0f, &s_PopupMapPickerContext, PopupMapPicker);
-	}
+		// background
+		Background.HSplitTop(30.0f, &Label, &Background);
+		Background.HSplitTop(5.0f, nullptr, &Background);
+		Ui()->DoLabel(&Label, Localize("Background"), 20.0f, TEXTALIGN_ML);
 
-	Background.HSplitTop(20.0f, &Button, &Background);
-	const bool UseCurrentMap = str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP) == 0;
-	static int s_UseCurrentMapId = 0;
-	if(DoButton_CheckBox(&s_UseCurrentMapId, Localize("Use current map as background"), UseCurrentMap, &Button))
-	{
-		if(UseCurrentMap)
-			g_Config.m_ClBackgroundEntities[0] = '\0';
-		else
-			str_copy(g_Config.m_ClBackgroundEntities, CURRENT_MAP);
-		GameClient()->m_Background.LoadBackground();
-	}
+		ColorRGBA GreyDefault(0.5f, 0.5f, 0.5f, 1);
 
-	Background.HSplitTop(20.0f, &Button, &Background);
-	if(DoButton_CheckBox(&g_Config.m_ClBackgroundShowTilesLayers, Localize("Show tiles layers from BG map"), g_Config.m_ClBackgroundShowTilesLayers, &Button))
-		g_Config.m_ClBackgroundShowTilesLayers ^= 1;
+		static CButtonContainer s_ResetId1;
+		DoLine_ColorPicker(&s_ResetId1, 25.0f, 13.0f, 5.0f, &Background, Localize("Regular background color"), &g_Config.m_ClBackgroundColor, GreyDefault, false);
 
-	// miscellaneous
-	Miscellaneous.HSplitTop(30.0f, &Label, &Miscellaneous);
-	Miscellaneous.HSplitTop(5.0f, nullptr, &Miscellaneous);
+		static CButtonContainer s_ResetId2;
+		DoLine_ColorPicker(&s_ResetId2, 25.0f, 13.0f, 5.0f, &Background, Localize("Entities background color"), &g_Config.m_ClBackgroundEntitiesColor, GreyDefault, false);
 
-	Ui()->DoLabel(&Label, Localize("Miscellaneous"), 20.0f, TEXTALIGN_ML);
+		CUIRect EditBox, ReloadButton;
+		Background.HSplitTop(20.0f, &Label, &Background);
+		Background.HSplitTop(2.0f, nullptr, &Background);
+		Label.VSplitLeft(100.0f, &Label, &EditBox);
+		EditBox.VSplitRight(60.0f, &EditBox, &Button);
+		Button.VSplitMid(&ReloadButton, &Button, 5.0f);
+		EditBox.VSplitRight(5.0f, &EditBox, nullptr);
 
-	static CButtonContainer s_ButtonTimeout;
-	Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
-	if(DoButton_Menu(&s_ButtonTimeout, Localize("New random timeout code"), 0, &Button))
-	{
-		Client()->GenerateTimeoutSeed();
-	}
+		Ui()->DoLabel(&Label, Localize("Map"), 14.0f, TEXTALIGN_ML);
 
-	Miscellaneous.HSplitTop(5.0f, nullptr, &Miscellaneous);
-	Miscellaneous.HSplitTop(20.0f, &Label, &Miscellaneous);
-	Miscellaneous.HSplitTop(2.0f, nullptr, &Miscellaneous);
-	Ui()->DoLabel(&Label, Localize("Run on join"), 14.0f, TEXTALIGN_ML);
-	Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
-	static CLineInput s_RunOnJoinInput(g_Config.m_ClRunOnJoin, sizeof(g_Config.m_ClRunOnJoin));
-	s_RunOnJoinInput.SetEmptyText(Localize("Chat command (e.g. showall 1)"));
-	Ui()->DoEditBox(&s_RunOnJoinInput, &Button, 14.0f);
+		static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
+		Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
+
+		static CButtonContainer s_BackgroundEntitiesMapPicker, s_BackgroundEntitiesReload;
+
+		if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesReload, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton, BUTTONFLAG_LEFT))
+		{
+			GameClient()->m_Background.LoadBackground();
+		}
+
+		if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesMapPicker, FONT_ICON_FOLDER, 0, &Button, BUTTONFLAG_LEFT))
+		{
+			static SPopupMenuId s_PopupMapPickerId;
+			static CPopupMapPickerContext s_PopupMapPickerContext;
+			s_PopupMapPickerContext.m_pMenus = this;
+			s_PopupMapPickerContext.MapListPopulate();
+			Ui()->DoPopupMenu(&s_PopupMapPickerId, Ui()->MouseX(), Ui()->MouseY(), 300.0f, 250.0f, &s_PopupMapPickerContext, PopupMapPicker);
+		}
+
+		Background.HSplitTop(20.0f, &Button, &Background);
+		const bool UseCurrentMap = str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP) == 0;
+		static int s_UseCurrentMapId = 0;
+		if(DoButton_CheckBox(&s_UseCurrentMapId, Localize("Use current map as background"), UseCurrentMap, &Button))
+		{
+			if(UseCurrentMap)
+				g_Config.m_ClBackgroundEntities[0] = '\0';
+			else
+				str_copy(g_Config.m_ClBackgroundEntities, CURRENT_MAP);
+			GameClient()->m_Background.LoadBackground();
+		}
+
+		Background.HSplitTop(20.0f, &Button, &Background);
+		if(DoButton_CheckBox(&g_Config.m_ClBackgroundShowTilesLayers, Localize("Show tiles layers from BG map"), g_Config.m_ClBackgroundShowTilesLayers, &Button))
+			g_Config.m_ClBackgroundShowTilesLayers ^= 1;
+
+		// miscellaneous
+		Miscellaneous.HSplitTop(30.0f, &Label, &Miscellaneous);
+		Miscellaneous.HSplitTop(5.0f, nullptr, &Miscellaneous);
+
+		Ui()->DoLabel(&Label, Localize("Miscellaneous"), 20.0f, TEXTALIGN_ML);
+
+		static CButtonContainer s_ButtonTimeout;
+		Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
+		if(DoButton_Menu(&s_ButtonTimeout, Localize("New random timeout code"), 0, &Button))
+		{
+			Client()->GenerateTimeoutSeed();
+		}
+
+		Miscellaneous.HSplitTop(5.0f, nullptr, &Miscellaneous);
+		Miscellaneous.HSplitTop(20.0f, &Label, &Miscellaneous);
+		Miscellaneous.HSplitTop(2.0f, nullptr, &Miscellaneous);
+		Ui()->DoLabel(&Label, Localize("Run on join"), 14.0f, TEXTALIGN_ML);
+		Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
+		static CLineInput s_RunOnJoinInput(g_Config.m_ClRunOnJoin, sizeof(g_Config.m_ClRunOnJoin));
+		s_RunOnJoinInput.SetEmptyText(Localize("Chat command (e.g. showall 1)"));
+		Ui()->DoEditBox(&s_RunOnJoinInput, &Button, 14.0f);
 
 #if defined(CONF_FAMILY_WINDOWS)
-	static CButtonContainer s_ButtonUnregisterShell;
-	Miscellaneous.HSplitTop(10.0f, nullptr, &Miscellaneous);
-	Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
-	if(DoButton_Menu(&s_ButtonUnregisterShell, Localize("Unregister protocol and file extensions"), 0, &Button))
-	{
-		Client()->ShellUnregister();
-	}
+		static CButtonContainer s_ButtonUnregisterShell;
+		Miscellaneous.HSplitTop(10.0f, nullptr, &Miscellaneous);
+		Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
+		if(DoButton_Menu(&s_ButtonUnregisterShell, Localize("Unregister protocol and file extensions"), 0, &Button))
+		{
+			Client()->ShellUnregister();
+		}
 #endif
+	}
+	else
+	{
+		CUIRect Background, Miscellaneous;
+		MainView.VSplitMid(&Background, &Miscellaneous, 20.0f);
+
+		if(DeferredTailFrames <= 1)
+		{
+			// background
+			Background.HSplitTop(30.0f, &Label, &Background);
+			Background.HSplitTop(5.0f, nullptr, &Background);
+			Ui()->DoLabel(&Label, Localize("Background"), 20.0f, TEXTALIGN_ML);
+
+			ColorRGBA GreyDefault(0.5f, 0.5f, 0.5f, 1);
+
+			static CButtonContainer s_ResetId1;
+			DoLine_ColorPicker(&s_ResetId1, 25.0f, 13.0f, 5.0f, &Background, Localize("Regular background color"), &g_Config.m_ClBackgroundColor, GreyDefault, false);
+
+			static CButtonContainer s_ResetId2;
+			DoLine_ColorPicker(&s_ResetId2, 25.0f, 13.0f, 5.0f, &Background, Localize("Entities background color"), &g_Config.m_ClBackgroundEntitiesColor, GreyDefault, false);
+
+			CUIRect EditBox, ReloadButton;
+			Background.HSplitTop(20.0f, &Label, &Background);
+			Background.HSplitTop(2.0f, nullptr, &Background);
+			Label.VSplitLeft(100.0f, &Label, &EditBox);
+			EditBox.VSplitRight(60.0f, &EditBox, &Button);
+			Button.VSplitMid(&ReloadButton, &Button, 5.0f);
+			EditBox.VSplitRight(5.0f, &EditBox, nullptr);
+
+			Ui()->DoLabel(&Label, Localize("Map"), 14.0f, TEXTALIGN_ML);
+
+			static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
+			Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
+
+			static CButtonContainer s_BackgroundEntitiesMapPicker, s_BackgroundEntitiesReload;
+
+			if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesReload, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton, BUTTONFLAG_LEFT))
+			{
+				GameClient()->m_Background.LoadBackground();
+			}
+
+			if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesMapPicker, FONT_ICON_FOLDER, 0, &Button, BUTTONFLAG_LEFT))
+			{
+				static SPopupMenuId s_PopupMapPickerId;
+				static CPopupMapPickerContext s_PopupMapPickerContext;
+				s_PopupMapPickerContext.m_pMenus = this;
+				s_PopupMapPickerContext.MapListPopulate();
+				Ui()->DoPopupMenu(&s_PopupMapPickerId, Ui()->MouseX(), Ui()->MouseY(), 300.0f, 250.0f, &s_PopupMapPickerContext, PopupMapPicker);
+			}
+
+			Background.HSplitTop(20.0f, &Button, &Background);
+			const bool UseCurrentMap = str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP) == 0;
+			static int s_UseCurrentMapId = 0;
+			if(DoButton_CheckBox(&s_UseCurrentMapId, Localize("Use current map as background"), UseCurrentMap, &Button))
+			{
+				if(UseCurrentMap)
+					g_Config.m_ClBackgroundEntities[0] = '\0';
+				else
+					str_copy(g_Config.m_ClBackgroundEntities, CURRENT_MAP);
+				GameClient()->m_Background.LoadBackground();
+			}
+
+			Background.HSplitTop(20.0f, &Button, &Background);
+			if(DoButton_CheckBox(&g_Config.m_ClBackgroundShowTilesLayers, Localize("Show tiles layers from BG map"), g_Config.m_ClBackgroundShowTilesLayers, &Button))
+				g_Config.m_ClBackgroundShowTilesLayers ^= 1;
+		}
+		else
+		{
+			Background.HSplitTop(30.0f, &Label, &Background);
+			Ui()->DoLabel(&Label, Localize("Background"), 20.0f, TEXTALIGN_ML);
+			Background.HSplitTop(10.0f, nullptr, &Background);
+			Background.HSplitTop(20.0f, &Label, &Background);
+			Ui()->DoLabel(&Label, Localize("Background settings are committed on the next frame"), 14.0f, TEXTALIGN_ML);
+		}
+
+		Miscellaneous.HSplitTop(30.0f, &Label, &Miscellaneous);
+		Miscellaneous.HSplitTop(5.0f, nullptr, &Miscellaneous);
+		Ui()->DoLabel(&Label, Localize("Miscellaneous"), 20.0f, TEXTALIGN_ML);
+
+		if(DeferredTailFrames <= 1)
+		{
+			static CButtonContainer s_ButtonTimeout;
+			Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
+			if(DoButton_Menu(&s_ButtonTimeout, Localize("New random timeout code"), 0, &Button))
+			{
+				Client()->GenerateTimeoutSeed();
+			}
+
+			Miscellaneous.HSplitTop(5.0f, nullptr, &Miscellaneous);
+			Miscellaneous.HSplitTop(20.0f, &Label, &Miscellaneous);
+			Miscellaneous.HSplitTop(2.0f, nullptr, &Miscellaneous);
+			Ui()->DoLabel(&Label, Localize("Run on join"), 14.0f, TEXTALIGN_ML);
+			Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
+			static CLineInput s_RunOnJoinInput(g_Config.m_ClRunOnJoin, sizeof(g_Config.m_ClRunOnJoin));
+			s_RunOnJoinInput.SetEmptyText(Localize("Chat command (e.g. showall 1)"));
+			Ui()->DoEditBox(&s_RunOnJoinInput, &Button, 14.0f);
+
+#if defined(CONF_FAMILY_WINDOWS)
+			static CButtonContainer s_ButtonUnregisterShell;
+			Miscellaneous.HSplitTop(10.0f, nullptr, &Miscellaneous);
+			Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
+			if(DoButton_Menu(&s_ButtonUnregisterShell, Localize("Unregister protocol and file extensions"), 0, &Button))
+			{
+				Client()->ShellUnregister();
+			}
+#endif
+		}
+		else
+		{
+			Miscellaneous.HSplitTop(10.0f, nullptr, &Miscellaneous);
+			Miscellaneous.HSplitTop(20.0f, &Label, &Miscellaneous);
+			Ui()->DoLabel(&Label, Localize("Miscellaneous options are committed after background"), 14.0f, TEXTALIGN_ML);
+		}
+	}
 
 }
 
@@ -4017,7 +4475,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSkinQueuePresetRename(void *pContext,
 
 	CUIRect Label, Input, Buttons, Cancel, Confirm;
 	View.HSplitTop(12.0f, &Label, &View);
-	pMenus->Ui()->DoLabel(&Label, Localize("新预设名称"), FontSize, TEXTALIGN_ML);
+	pMenus->Ui()->DoLabel(&Label, Localize("New preset name"), FontSize, TEXTALIGN_ML);
 
 	View.HSplitTop(3.0f, nullptr, &View);
 	View.HSplitTop(18.0f, &Input, &View);
@@ -4027,11 +4485,11 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSkinQueuePresetRename(void *pContext,
 	View.HSplitTop(18.0f, &Buttons, &View);
 	Buttons.VSplitMid(&Cancel, &Confirm, 3.0f);
 
-	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, Localize("取消"), &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
+	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, Localize("Cancel"), &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
 	if(CancelPressed)
 		return CUi::POPUP_CLOSE_CURRENT;
 
-	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, Localize("重命名"), &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
+	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, Localize("Rename"), &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
 	if(ConfirmPressed)
 	{
 		if(pMenus->GameClient()->m_Skins.RenameSkinQueuePreset((size_t)pPopupContext->m_PresetIndex, pPopupContext->m_NameInput.GetString(), pPopupContext->m_Dummy))
