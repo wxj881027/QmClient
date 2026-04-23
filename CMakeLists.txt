@@ -932,7 +932,7 @@ add_dependencies(rust-bridge-shared generate_protocol)
 list(APPEND TARGETS_OWN rust-bridge-shared)
 
 set(CARGO_BUILD_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} DDNET_TEST_NO_LINK=1)
-set(CARGO_TEST_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR})
+set(CARGO_TEST_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} "DDNET_TEST_LIBRARIES_FILE=${PROJECT_BINARY_DIR}/rust_test_libraries.txt")
 
 if(TARGET_OS STREQUAL "android")
   set(CARGO_BUILD_DIR "${CARGO_NDK_TARGET}/")
@@ -3315,6 +3315,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     os_test.cpp
     packer_test.cpp
     prng_test.cpp
+    qmclient_state_override_test.cpp
     score_test.cpp
     secure_random_test.cpp
     server_test.cpp
@@ -3349,8 +3350,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   set(TESTS_EXTRA
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmLayout.cpp
-    src/game/client/components/qmclient/translate_parse.cpp
     src/game/client/components/assets_resource_registry.cpp
+    src/game/client/components/qmclient/translate_parse.cpp
     src/game/client/components/qmclient/voice_utils.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
@@ -3435,7 +3436,7 @@ file(GENERATE
   CONTENT "${RUST_TEST_LIBS_FILE_CONTENT}\n"
 )
 add_custom_target(run_rust_tests
-  COMMAND ${CMAKE_COMMAND} -E env "DDNET_TEST_LIBRARIES_FILE=${PROJECT_BINARY_DIR}/rust_test_libraries.txt" ${CARGO_TEST}
+  COMMAND ${CARGO_TEST}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   USES_TERMINAL
   DEPENDS rust_test

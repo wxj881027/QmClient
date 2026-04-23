@@ -270,7 +270,7 @@ void CMenus::RenderGame(CUIRect MainView)
 		const bool ShowTeamplayDDRaceButtons = !IsTeamPlay || IncludeTeamplayDDRaceButtons;
 		AddButtonWidth(ShowKillButton && ShowTeamplayDDRaceButtons, KillButtonWidth);
 		AddButtonWidth(ShowPauseButton && ShowTeamplayDDRaceButtons, CurrentPauseButtonWidth);
-		AddButtonWidth(ShowPracticeButton && ShowTeamplayDDRaceButtons, CompactPracticeButtonWidth);
+		AddButtonWidth(ShowPracticeButton && ShowTeamplayDDRaceButtons, NormalPracticeButtonWidth);
 		AddButtonWidth(ShowAutoCameraButton, AutoCameraButtonWidth);
 		return Width;
 	};

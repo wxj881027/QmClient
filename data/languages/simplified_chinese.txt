@@ -4521,6 +4521,9 @@ Stereo width
 Voice distance radius
 == 语音距离半径
 
+Voice distance radius (Tiles)
+== 语音距离半径（方块）
+
 Hear teammates globally
 == 同组全图收听
 
@@ -6643,13 +6646,22 @@ Off
 == ⚠️ LLM API 密钥未配置
 
 Translate UI
-== 翻译 UI
+== 翻译按钮
+
+Translate button
+== 翻译按钮
 
 Customize translate button and menu colors
 == 自定义翻译按钮和菜单颜色
 
 Button - Disabled
 == 按钮 - 未启用
+
+Auto-toggle fast input
+== 自动开关快速输入
+
+Auto-toggle fast input others
+== 自动开关快速输入其他玩家
 
 Button - Enabled
 == 按钮 - 已启用
@@ -6907,13 +6919,13 @@ Prediction
 == 预测
 
 Position
-== 位置
+== 坐标
 
 Race Time
 == 比赛时间
 
 FPS
-== 每秒帧数
+== 帧率
 
 Velocity
 == 速度
@@ -6961,3 +6973,21 @@ Not downloaded
 
 Hide overhead direction and hook indicators
 == 隐藏头顶方向键和强弱钩提示
+
+Minimum Target Language Characters
+== 目标语言最少字符数
+
+Target Language Ratio
+== 目标语言占比
+
+Auto-translate skips text that already looks like the target language.
+== 看起来已经像目标语言的文本会跳过自动翻译。
+
+Numeric-only messages are skipped locally.
+== 纯数字消息会在本地直接跳过。
+
+Concurrency (1 = automatic)
+== 并发数（1 = 自动）
+
+Hide Echo Messages
+== 隐藏 Echo 消息

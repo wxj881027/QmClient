@@ -863,6 +863,7 @@ public:
 
 	void DummyResetInput() override;
 	void Echo(const char *pString) override;
+	void Echo(const char *pString, bool ForceVisible);
 	bool IsOtherTeam(int ClientId) const;
 	int SwitchStateTeam() const;
 	bool IsLocalCharSuper() const;

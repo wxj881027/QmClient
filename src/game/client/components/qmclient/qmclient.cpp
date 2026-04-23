@@ -1,4 +1,5 @@
 #include "qmclient.h"
+#include "config_override.h"
 
 #include "data_version.h"
 
@@ -125,7 +126,7 @@ static constexpr const char *s_apKeywordClauseContrastWords[] = {
 static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s joined this server";
 
 static int AutoReplySeparatorLength(const char *pStr);
-static void AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
+static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
 static const json_value *JsonObjectField(const json_value *pObject, const char *pName);
 static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue);
 static bool JsonReadBoolean(const json_value *pValue, bool &OutValue);
@@ -625,7 +626,7 @@ static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReply
 	const char *pCursor = pRules;
 	while(*pCursor)
 	{
-		char aLine[1024];
+		char aLine[sizeof(g_Config.m_QmKeywordReplyRules)];
 		int LineLen = 0;
 		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
 		{
@@ -688,6 +689,65 @@ static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules,
 		str_append(pOutRules, "=>", OutRulesSize);
 		str_append(pOutRules, Rule.m_Reply.c_str(), OutRulesSize);
 	}
+}
+
+static bool MigrateKeywordReplyRulesAutoRenamePreservingLines(const char *pRules, char *pOutRules, size_t OutRulesSize)
+{
+	if(!pOutRules || OutRulesSize == 0)
+		return false;
+
+	pOutRules[0] = '\0';
+	if(!pRules || pRules[0] == '\0')
+		return true;
+
+	bool FirstLine = true;
+	const char *pCursor = pRules;
+	while(*pCursor)
+	{
+		char aLine[sizeof(g_Config.m_QmKeywordReplyRules)];
+		int LineLen = 0;
+		while(*pCursor && *pCursor != '\n' && *pCursor != '\r')
+		{
+			if(LineLen < (int)sizeof(aLine) - 1)
+				aLine[LineLen++] = *pCursor;
+			++pCursor;
+		}
+		aLine[LineLen] = '\0';
+
+		while(*pCursor == '\n' || *pCursor == '\r')
+			++pCursor;
+
+		char aMigratedLine[sizeof(aLine)];
+		str_copy(aMigratedLine, aLine, sizeof(aMigratedLine));
+
+		char aRuleLine[sizeof(aLine)];
+		str_copy(aRuleLine, aLine, sizeof(aRuleLine));
+		char *pTrimmedLine = (char *)str_utf8_skip_whitespaces(aRuleLine);
+		str_utf8_trim_right(pTrimmedLine);
+		if(pTrimmedLine[0] != '\0' && pTrimmedLine[0] != '#')
+		{
+			bool AutoRename = false;
+			bool RegexRule = false;
+			bool HasExplicitRenameFlag = false;
+			bool HasExplicitRegexFlag = false;
+			char *pRuleText = ParseAutoReplyRulePrefixes(pTrimmedLine, AutoRename, RegexRule, HasExplicitRenameFlag, HasExplicitRegexFlag);
+			if(!HasExplicitRenameFlag && str_find(pRuleText, "=>") != nullptr)
+				str_format(aMigratedLine, sizeof(aMigratedLine), "[rename] %s", pTrimmedLine);
+		}
+
+		const size_t CurrentLen = str_length(pOutRules);
+		const size_t LineLenOut = str_length(aMigratedLine);
+		const size_t SeparatorLen = FirstLine ? 0 : 1;
+		if(CurrentLen + SeparatorLen + LineLenOut >= OutRulesSize)
+			return false;
+
+		if(!FirstLine)
+			str_append(pOutRules, "\n", OutRulesSize);
+		str_append(pOutRules, aMigratedLine, OutRulesSize);
+		FirstLine = false;
+	}
+
+	return true;
 }
 
 static bool ReadQmClientAbsoluteTextFile(const char *pFilename, char *pBuf, size_t BufSize)
@@ -1066,9 +1126,11 @@ void CTClient::OnInit()
 
 		if(g_Config.m_QmQiaFenRules[0] != '\0')
 		{
-			AppendAutoReplyRuleBlock(aMergedRules, sizeof(aMergedRules), g_Config.m_QmQiaFenRules);
-			g_Config.m_QmQiaFenRules[0] = '\0';
-			MigratedLegacyAutoReply = true;
+			if(AppendAutoReplyRuleBlock(aMergedRules, sizeof(aMergedRules), g_Config.m_QmQiaFenRules))
+			{
+				g_Config.m_QmQiaFenRules[0] = '\0';
+				MigratedLegacyAutoReply = true;
+			}
 		}
 
 		if(g_Config.m_QmQiaFenKeywords[0] != '\0')
@@ -1079,19 +1141,13 @@ void CTClient::OnInit()
 
 		if(g_Config.m_QmKeywordReplyAutoRename)
 		{
-			std::vector<SKeywordReplyRule> vRules;
-			ParseKeywordReplyRules(aMergedRules, vRules);
-			for(auto &Rule : vRules)
-			{
-				if(!Rule.m_HasExplicitRenameFlag)
-					Rule.m_AutoRename = true;
-			}
-
 			char aMigratedRules[sizeof(g_Config.m_QmKeywordReplyRules)];
-			BuildKeywordReplyRules(vRules, aMigratedRules, sizeof(aMigratedRules));
-			str_copy(aMergedRules, aMigratedRules, sizeof(aMergedRules));
-			g_Config.m_QmKeywordReplyAutoRename = 0;
-			MigratedLegacyAutoReply = true;
+			if(MigrateKeywordReplyRulesAutoRenamePreservingLines(aMergedRules, aMigratedRules, sizeof(aMigratedRules)))
+			{
+				str_copy(aMergedRules, aMigratedRules, sizeof(aMergedRules));
+				g_Config.m_QmKeywordReplyAutoRename = 0;
+				MigratedLegacyAutoReply = true;
+			}
 		}
 
 		if(MigratedLegacyAutoReply)
@@ -1420,19 +1476,22 @@ static void ParseExplicitAutoReplyRegexPattern(std::string_view PatternText, std
 	OutPattern.assign(PatternText.begin(), PatternText.end());
 }
 
-static void AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules)
+static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules)
 {
 	if(!pOutRules || OutRulesSize == 0 || !pRules || pRules[0] == '\0')
-		return;
+		return false;
 
-	if(pOutRules[0] != '\0')
-	{
-		const int Len = str_length(pOutRules);
-		if(Len > 0 && pOutRules[Len - 1] != '\n')
-			str_append(pOutRules, "\n", OutRulesSize);
-	}
+	const size_t CurrentLen = str_length(pOutRules);
+	const size_t RulesLen = str_length(pRules);
+	const size_t SeparatorLen = CurrentLen > 0 && pOutRules[CurrentLen - 1] != '\n' ? 1 : 0;
+	if(CurrentLen + SeparatorLen + RulesLen >= OutRulesSize)
+		return false;
+
+	if(SeparatorLen > 0)
+		str_append(pOutRules, "\n", OutRulesSize);
 
 	str_append(pOutRules, pRules, OutRulesSize);
+	return true;
 }
 
 static bool IsKeywordClauseSeparatorCodepoint(int Codepoint)
@@ -3171,7 +3230,7 @@ void CTClient::SendQmClientPlayerData()
 		JsonWriter.WriteAttribute("dummy");
 		JsonWriter.WriteBoolValue(Dummy == 1);
 		JsonWriter.WriteAttribute("foot_particles_enabled");
-		JsonWriter.WriteBoolValue(g_Config.m_QmcFootParticles != 0);
+		JsonWriter.WriteBoolValue(g_Config.m_QmFootParticles != 0);
 		JsonWriter.WriteAttribute("remote_particles_enabled");
 		JsonWriter.WriteBoolValue(g_Config.m_QmClientMarkTrail != 0);
 		JsonWriter.WriteAttribute("voice_supported");
@@ -5251,6 +5310,9 @@ void CTClient::BuildGoresDistanceField()
 void CTClient::ApplyFocusModeEffects()
 {
 	const bool FocusActive = g_Config.m_QmFocusMode != 0;
+	const bool HideHud = FocusActive && g_Config.m_QmFocusModeHideHud != 0;
+	const bool HideUiOverlays = ShouldHideFocusUiOverlays(FocusActive, g_Config.m_QmFocusModeHideUI != 0);
+	const bool HideNames = FocusActive && g_Config.m_QmFocusModeHideNames != 0;
 	const bool StateWasKnown = m_FocusModeStateKnown;
 	if(!m_FocusModeStateKnown)
 	{
@@ -5262,40 +5324,59 @@ void CTClient::ApplyFocusModeEffects()
 		}
 		m_PrevFocusModeActive = false;
 	}
-	if(FocusActive == m_PrevFocusModeActive)
-		return;
 
-	if(StateWasKnown)
+	if(StateWasKnown && FocusActive != m_PrevFocusModeActive)
 	{
 		char aFocusMsg[128];
 		str_format(aFocusMsg, sizeof(aFocusMsg), "%s%s: %s",
 			FocusActive ? "[[$FF7F7F]]" : "[[$A5FFA5]]",
 			Localize("Focus Mode"),
 			Localize(FocusActive ? "On" : "Off"));
-		GameClient()->Echo(aFocusMsg);
+		GameClient()->Echo(aFocusMsg, true);
 	}
 
-	if(FocusActive)
-	{
-		if(g_Config.m_QmFocusModeHideHud)
-		{
-			m_SavedClShowhud = g_Config.m_ClShowhud;
-			g_Config.m_ClShowhud = 0;
-		}
-		if(g_Config.m_QmFocusModeHideNames)
-		{
-			m_SavedClNamePlates = g_Config.m_ClNamePlates;
-			m_SavedClNamePlatesOwn = g_Config.m_ClNamePlatesOwn;
-			g_Config.m_ClNamePlates = 0;
-			g_Config.m_ClNamePlatesOwn = 0;
-		}
-	}
-	else
-	{
-		g_Config.m_ClShowhud = m_SavedClShowhud;
-		g_Config.m_ClNamePlates = m_SavedClNamePlates;
-		g_Config.m_ClNamePlatesOwn = m_SavedClNamePlatesOwn;
-	}
+	SConfigIntOverrideEntry aHudEntries[] = {
+		{&g_Config.m_ClShowhud, &m_SavedHudConfig.m_ClShowhud, 0},
+		{&g_Config.m_ClShowhudHealthAmmo, &m_SavedHudConfig.m_ClShowhudHealthAmmo, 0},
+		{&g_Config.m_ClShowhudScore, &m_SavedHudConfig.m_ClShowhudScore, 0},
+		{&g_Config.m_ClShowhudTimer, &m_SavedHudConfig.m_ClShowhudTimer, 0},
+		{&g_Config.m_ClShowhudTimeCpDiff, &m_SavedHudConfig.m_ClShowhudTimeCpDiff, 0},
+		{&g_Config.m_ClShowLocalTimeAlways, &m_SavedHudConfig.m_ClShowLocalTimeAlways, 0},
+		{&g_Config.m_ClSpecCursor, &m_SavedHudConfig.m_ClSpecCursor, 0},
+		{&g_Config.m_ClShowVotesAfterVoting, &m_SavedHudConfig.m_ClShowVotesAfterVoting, 0},
+		{&g_Config.m_ClShowIds, &m_SavedHudConfig.m_ClShowIds, 0},
+		{&g_Config.m_ClShowhudDDRace, &m_SavedHudConfig.m_ClShowhudDDRace, 0},
+		{&g_Config.m_ClShowhudJumpsIndicator, &m_SavedHudConfig.m_ClShowhudJumpsIndicator, 0},
+		{&g_Config.m_ClShowhudSpectatorCount, &m_SavedHudConfig.m_ClShowhudSpectatorCount, 0},
+		{&g_Config.m_ClShowhudSpectator, &m_SavedHudConfig.m_ClShowhudSpectator, 0},
+		{&g_Config.m_ClShowhudDummyActions, &m_SavedHudConfig.m_ClShowhudDummyActions, 0},
+		{&g_Config.m_ClShowhudKeyStatusReset, &m_SavedHudConfig.m_ClShowhudKeyStatusReset, 0},
+		{&g_Config.m_ClShowhudKeyStatusHammer, &m_SavedHudConfig.m_ClShowhudKeyStatusHammer, 0},
+		{&g_Config.m_ClShowhudKeyStatusControl, &m_SavedHudConfig.m_ClShowhudKeyStatusControl, 0},
+		{&g_Config.m_ClShowhudKeyStatusSync, &m_SavedHudConfig.m_ClShowhudKeyStatusSync, 0},
+		{&g_Config.m_ClShowhudPlayerPosition, &m_SavedHudConfig.m_ClShowhudPlayerPosition, 0},
+		{&g_Config.m_ClShowhudPlayerSpeed, &m_SavedHudConfig.m_ClShowhudPlayerSpeed, 0},
+		{&g_Config.m_ClShowhudPlayerAngle, &m_SavedHudConfig.m_ClShowhudPlayerAngle, 0},
+		{&g_Config.m_ClShowFreezeBars, &m_SavedHudConfig.m_ClShowFreezeBars, 0},
+	};
+	UpdateConfigIntOverrides(aHudEntries, sizeof(aHudEntries) / sizeof(aHudEntries[0]), HideHud, m_FocusHudOverridden);
+
+	SConfigIntOverrideEntry aUiOverlayEntries[] = {
+		{&g_Config.m_TcStatusBar, &m_SavedHudConfig.m_TcStatusBar, 0},
+		{&g_Config.m_TcNotifyWhenLast, &m_SavedHudConfig.m_TcNotifyWhenLast, 0},
+		{&g_Config.m_QmDummyMiniView, &m_SavedHudConfig.m_QmDummyMiniView, 0},
+		{&g_Config.m_QmPlayerStatsMapProgress, &m_SavedHudConfig.m_QmPlayerStatsMapProgress, 0},
+		{&g_Config.m_QmSmtcShowHud, &m_SavedHudConfig.m_QmSmtcShowHud, 0},
+		{&g_Config.m_QmInputOverlay, &m_SavedHudConfig.m_QmInputOverlay, 0},
+		{&g_Config.m_QmVoiceShowOverlay, &m_SavedHudConfig.m_QmVoiceShowOverlay, 0},
+	};
+	UpdateConfigIntOverrides(aUiOverlayEntries, sizeof(aUiOverlayEntries) / sizeof(aUiOverlayEntries[0]), HideUiOverlays, m_FocusUiOverlayOverridden);
+
+	SConfigIntOverrideEntry aNameEntries[] = {
+		{&g_Config.m_ClNamePlates, &m_SavedClNamePlates, 0},
+		{&g_Config.m_ClNamePlatesOwn, &m_SavedClNamePlatesOwn, 0},
+	};
+	UpdateConfigIntOverrides(aNameEntries, sizeof(aNameEntries) / sizeof(aNameEntries[0]), HideNames, m_FocusNamesOverridden);
 
 	m_PrevFocusModeActive = FocusActive;
 }
@@ -5303,15 +5384,15 @@ void CTClient::ApplyFocusModeEffects()
 void CTClient::ApplyGoresFastInputLink()
 {
 	const bool GoresActive = g_Config.m_QmGores != 0;
+	const bool PreviousGoresActive = m_PrevGoresModeActive;
 	const bool StateWasKnown = m_GoresModeStateKnown;
+	const int PreviousTcFastInput = StateWasKnown ? m_PrevTcFastInput : g_Config.m_TcFastInput;
+	const int PreviousTcFastInputOthers = StateWasKnown ? m_PrevTcFastInputOthers : g_Config.m_TcFastInputOthers;
+	const int PreviousQmGoresFastInput = StateWasKnown ? m_PrevQmGoresFastInput : g_Config.m_QmGoresFastInput;
+	const int PreviousQmGoresFastInputOthers = StateWasKnown ? m_PrevQmGoresFastInputOthers : g_Config.m_QmGoresFastInputOthers;
 	if(!m_GoresModeStateKnown)
 	{
 		m_GoresModeStateKnown = true;
-		if(!GoresActive)
-		{
-			m_PrevGoresModeActive = false;
-			return;
-		}
 		m_PrevGoresModeActive = false;
 	}
 	if(GoresActive != m_PrevGoresModeActive)
@@ -5323,36 +5404,31 @@ void CTClient::ApplyGoresFastInputLink()
 				GoresActive ? "[[$FF7F7F]]" : "[[$A5FFA5]]",
 				Localize("Gores Mode"),
 				Localize(GoresActive ? "On" : "Off"));
-			GameClient()->Echo(aGoresMsg);
+			GameClient()->Echo(aGoresMsg, true);
 		}
-		m_PrevGoresModeActive = GoresActive;
 	}
 
-	const bool ShouldEnableFastInput = GoresActive && g_Config.m_QmGoresFastInput;
-	const bool ShouldEnableFastInputOthers = ShouldEnableFastInput && g_Config.m_QmGoresFastInputOthers;
-
-	if(ShouldEnableFastInput && !m_PrevGoresFastInputActive)
-	{
-		m_SavedTcFastInput = g_Config.m_TcFastInput;
-		g_Config.m_TcFastInput = 1;
-	}
-	else if(!ShouldEnableFastInput && m_PrevGoresFastInputActive)
-	{
-		g_Config.m_TcFastInput = m_SavedTcFastInput;
-	}
-
-	if(ShouldEnableFastInputOthers && !m_PrevGoresFastInputOthersActive)
-	{
-		m_SavedTcFastInputOthers = g_Config.m_TcFastInputOthers;
-		g_Config.m_TcFastInputOthers = 1;
-	}
-	else if(!ShouldEnableFastInputOthers && m_PrevGoresFastInputOthersActive)
-	{
-		g_Config.m_TcFastInputOthers = m_SavedTcFastInputOthers;
-	}
-
-	m_PrevGoresFastInputActive = ShouldEnableFastInput;
-	m_PrevGoresFastInputOthersActive = ShouldEnableFastInputOthers;
+	g_Config.m_QmGoresFastInput = DeriveGoresAutoTogglePreference(
+		GoresActive,
+		PreviousGoresActive,
+		PreviousQmGoresFastInput,
+		g_Config.m_QmGoresFastInput,
+		PreviousTcFastInput,
+		g_Config.m_TcFastInput);
+	g_Config.m_QmGoresFastInputOthers = DeriveGoresAutoTogglePreference(
+		GoresActive,
+		PreviousGoresActive,
+		PreviousQmGoresFastInputOthers,
+		g_Config.m_QmGoresFastInputOthers,
+		PreviousTcFastInputOthers,
+		g_Config.m_TcFastInputOthers);
+	g_Config.m_TcFastInput = DeriveGoresLinkedConfigValue(PreviousGoresActive, GoresActive, g_Config.m_QmGoresFastInput != 0, g_Config.m_TcFastInput);
+	g_Config.m_TcFastInputOthers = DeriveGoresLinkedConfigValue(PreviousGoresActive, GoresActive, g_Config.m_QmGoresFastInputOthers != 0, g_Config.m_TcFastInputOthers);
+	m_PrevTcFastInput = g_Config.m_TcFastInput;
+	m_PrevTcFastInputOthers = g_Config.m_TcFastInputOthers;
+	m_PrevQmGoresFastInput = g_Config.m_QmGoresFastInput;
+	m_PrevQmGoresFastInputOthers = g_Config.m_QmGoresFastInputOthers;
+	m_PrevGoresModeActive = GoresActive;
 }
 
 bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) const

@@ -116,6 +116,9 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("tc_show_ips*", EConfigTag::HUD);
 	RegisterTag("tc_streamer*", EConfigTag::HUD);
 	RegisterTag("cl_scoreboard*", EConfigTag::HUD);
+	RegisterTag("qm_scoreboard*", EConfigTag::HUD);
+	RegisterTag("qm_dummy_miniview*", EConfigTag::HUD);
+	RegisterTag("qm_smtc*", EConfigTag::HUD);
 	RegisterTag("cl_showhud*", EConfigTag::HUD);
 	RegisterTag("cl_show_chat*", EConfigTag::HUD);
 	RegisterTag("cl_show_local_time*", EConfigTag::HUD);

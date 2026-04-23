@@ -1378,7 +1378,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 
 	const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
 
-	Data.m_ShowName = pPlayerInfo->m_Local ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates;
+	const bool HideFocusNames = g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideNames;
+	Data.m_ShowName = !HideFocusNames && (pPlayerInfo->m_Local ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates);
 	GameClient()->FormatStreamerName(ClientId, Data.m_aName, sizeof(Data.m_aName));
 	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
 	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
@@ -1978,7 +1979,9 @@ void CNamePlates::OnRender()
 #endif
 	const bool ShowCoords = (g_Config.m_QmNameplateCoords || g_Config.m_QmNameplateCoordsOwn) &&
 				(g_Config.m_QmNameplateCoordX || g_Config.m_QmNameplateCoordY);
-	const bool RenderNameplates = g_Config.m_ClNamePlates || g_Config.m_ClNamePlatesOwn || ShowDirection != 0 || ShowCoords;
+	const bool HideFocusNames = g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideNames;
+	const bool RenderNames = !HideFocusNames && (g_Config.m_ClNamePlates || g_Config.m_ClNamePlatesOwn);
+	const bool RenderNameplates = RenderNames || ShowDirection != 0 || ShowCoords;
 	const bool RenderChatBubbles = g_Config.m_QmChatBubble != 0;
 	const bool RenderFreezeWakeupPopups = GameClient()->HasFreezeWakeupPopups();
 	if(!RenderNameplates && !RenderChatBubbles && !RenderFreezeWakeupPopups)

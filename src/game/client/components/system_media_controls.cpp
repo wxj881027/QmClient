@@ -678,7 +678,7 @@ void CSystemMediaControls::OnUpdate()
 bool CSystemMediaControls::GetStateSnapshot(SState &State) const
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!g_Config.m_ClSmtcEnable)
+	if(!g_Config.m_QmSmtcEnable)
 	{
 		State = SState{};
 		return false;
@@ -697,7 +697,7 @@ bool CSystemMediaControls::GetStateSnapshot(SState &State) const
 void CSystemMediaControls::Previous()
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!g_Config.m_ClSmtcEnable)
+	if(!g_Config.m_QmSmtcEnable)
 		return;
 
 	if(!m_pShared)
@@ -711,7 +711,7 @@ void CSystemMediaControls::Previous()
 void CSystemMediaControls::PlayPause()
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!g_Config.m_ClSmtcEnable)
+	if(!g_Config.m_QmSmtcEnable)
 		return;
 
 	if(!m_pShared)
@@ -725,7 +725,7 @@ void CSystemMediaControls::PlayPause()
 void CSystemMediaControls::Next()
 {
 #if defined(CONF_FAMILY_WINDOWS)
-	if(!g_Config.m_ClSmtcEnable)
+	if(!g_Config.m_QmSmtcEnable)
 		return;
 
 	if(!m_pShared)

@@ -833,7 +833,8 @@ void CHud::RenderSpeedrunTimer()
 	{
 		const int LegacyMinutes = g_Config.m_QmSpeedrunTimerTime / 100;
 		const int LegacySeconds = g_Config.m_QmSpeedrunTimerTime % 100;
-		TotalSpeedrunTimerMilliseconds = (LegacyMinutes * 60 + LegacySeconds) * 1000;
+		if(LegacySeconds < 60)
+			TotalSpeedrunTimerMilliseconds = (LegacyMinutes * 60 + LegacySeconds) * 1000;
 	}
 
 	if(TotalSpeedrunTimerMilliseconds <= 0)
@@ -1511,7 +1512,7 @@ SHudDummyMiniViewState BuildHudDummyMiniViewState(const CGameClient &GameClient,
 
 bool IsDummyMiniViewTargetOutsideCurrentView(const CGameClient &GameClient, IGraphics *pGraphics, int MiniViewClientId)
 {
-	if(!g_Config.m_ClDummyMiniViewAuto || pGraphics == nullptr)
+	if(!g_Config.m_QmDummyMiniViewAuto || pGraphics == nullptr)
 		return true;
 	if(MiniViewClientId < 0 || MiniViewClientId >= MAX_CLIENTS)
 		return true;
@@ -1537,11 +1538,11 @@ bool IsDummyMiniViewTargetOutsideCurrentView(const CGameClient &GameClient, IGra
 
 bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 {
-	if(!g_Config.m_ClDummyMiniView)
+	if(!g_Config.m_QmDummyMiniView)
 		return false;
 	if(GameClient()->m_HudEditor.IsActive())
 	{
-		const float SizeScale = g_Config.m_ClDummyMiniViewSize / 100.0f;
+		const float SizeScale = g_Config.m_QmDummyMiniViewSize / 100.0f;
 		const float MaxHeight = 80.0f * SizeScale;
 		const float Margin = 5.0f;
 		const float Aspect = m_Width / m_Height;
@@ -1590,7 +1591,7 @@ bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 	if(MapW <= 0 || MapH <= 0)
 		return false;
 
-	const float SizeScale = g_Config.m_ClDummyMiniViewSize / 100.0f;
+	const float SizeScale = g_Config.m_QmDummyMiniViewSize / 100.0f;
 	const float MaxHeight = 80.0f * SizeScale;
 	const float Margin = 5.0f;
 	const float Aspect = m_Width / m_Height;
@@ -1713,7 +1714,7 @@ void CHud::RenderDummyMiniMap()
 				return;
 			}
 
-			const float ZoomScale = maximum(0.1f, g_Config.m_ClDummyMiniViewZoom / 100.0f);
+			const float ZoomScale = maximum(0.1f, g_Config.m_QmDummyMiniViewZoom / 100.0f);
 			const float MiniZoom = GameClient()->m_Camera.m_Zoom * ZoomScale;
 
 			bool RenderedBackground = false;
@@ -2904,6 +2905,9 @@ bool CHud::HasVisibleMediaIsland() const
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return false;
 
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI && !GameClient()->m_HudEditor.IsActive())
+		return false;
+
 	SSwapCountdownInfo SwapInfo;
 	if(BuildSwapCountdownInfo(*GameClient(), *Client(), SwapInfo))
 		return true;
@@ -2921,7 +2925,7 @@ bool CHud::HasVisibleMediaIsland() const
 			return true;
 	}
 
-	if(!(g_Config.m_ClSmtcEnable && g_Config.m_ClSmtcShowHud))
+	if(!(g_Config.m_QmSmtcEnable && g_Config.m_QmSmtcShowHud))
 		return false;
 
 	CSystemMediaControls::SState MediaState;
@@ -2948,7 +2952,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 	const bool ShowSpectator = SpectatorCount > 0;
 
 	CSystemMediaControls::SState MediaState;
-	const bool MediaHudEnabled = g_Config.m_ClSmtcEnable && g_Config.m_ClSmtcShowHud;
+	const bool MediaHudEnabled = g_Config.m_QmSmtcEnable && g_Config.m_QmSmtcShowHud;
 	const bool HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(MediaState);
 	const bool ShowTopRow = HasMediaState || ShowLocalTime || TimerCapsule.m_Visible || ShowRecordingStatus || ShowSpectator;
 	if(!ShowTopRow)
@@ -3047,7 +3051,13 @@ float CHud::GetTopIslandAvoidanceRight() const
 void CHud::RenderMediaIsland()
 {
 	CSystemMediaControls::SState MediaState;
-	const bool MediaHudEnabled = g_Config.m_ClSmtcEnable && g_Config.m_ClSmtcShowHud;
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI && !GameClient()->m_HudEditor.IsActive())
+	{
+		m_MediaIslandAnimState.Reset();
+		return;
+	}
+
+	const bool MediaHudEnabled = g_Config.m_QmSmtcEnable && g_Config.m_QmSmtcShowHud;
 	const bool HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(MediaState);
 
 	SSwapCountdownInfo SwapInfo;
@@ -4012,11 +4022,11 @@ void CHud::RenderSpectatorCount()
 		return;
 	}
 
-	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI)
+	const bool Preview = GameClient()->m_HudEditor.IsActive();
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI && !Preview)
 		return;
 
 	int Count = 0;
-	const bool Preview = GameClient()->m_HudEditor.IsActive();
 	if(Client()->IsSixup())
 	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
@@ -4140,7 +4150,7 @@ void CHud::RenderDummyActions()
 		return;
 	}
 
-	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI)
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI && !GameClient()->m_HudEditor.IsActive())
 		return;
 	// render small dummy actions hud
 	const float BoxHeight = 29.0f;
@@ -4843,9 +4853,13 @@ void CHud::RenderMovementInformation()
 void CHud::RenderMapProgressBar()
 {
 	const bool Preview = GameClient()->m_HudEditor.IsActive();
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI && !Preview)
+		return;
+	if(!g_Config.m_QmPlayerStatsMapProgress && !Preview)
+		return;
 	if(!GameClient()->m_TClient.IsGoresMapProgressEnabled() && !Preview)
 		return;
-	if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && g_Config.m_QmPlayerStatsHud)
+	if(g_Config.m_QmPlayerStatsMapProgressStyle != 0)
 		return;
 
 	const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;
@@ -5007,7 +5021,7 @@ void CHud::RenderLocalTime(float x)
 		return;
 	}
 
-	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI)
+	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI && !GameClient()->m_HudEditor.IsActive())
 	{
 		m_LocalTimeV2AnimState.Reset();
 		return;
@@ -5108,11 +5122,11 @@ void CHud::RenderLocalTime(float x)
 
 float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 {
-	if(m_LegacyMediaInfoRendered || !g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_ClSmtcEnable || !g_Config.m_ClSmtcShowHud)
+	const bool Preview = GameClient()->m_HudEditor.IsActive();
+	if((g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideUI && !Preview) || m_LegacyMediaInfoRendered || !g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcEnable || !g_Config.m_QmSmtcShowHud)
 		return CenterY;
 
 	CSystemMediaControls::SState MediaState{};
-	const bool Preview = GameClient()->m_HudEditor.IsActive();
 	if(!GameClient()->m_SystemMediaControls.GetStateSnapshot(MediaState))
 	{
 		if(!Preview)
@@ -5349,11 +5363,12 @@ void CHud::OnRender()
 	const bool ShowMediaIsland = HasVisibleMediaIsland();
 	if(!ShowMediaIsland)
 		m_MediaIslandAnimState.Reset();
+	const bool HideFocusHud = g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideHud;
 
 #if defined(CONF_VIDEORECORDER)
-	if((IVideo::Current() && g_Config.m_ClVideoShowhud) || (!IVideo::Current() && g_Config.m_ClShowhud))
+	if(!HideFocusHud && ((IVideo::Current() && g_Config.m_ClVideoShowhud) || (!IVideo::Current() && g_Config.m_ClShowhud)))
 #else
-	if(g_Config.m_ClShowhud)
+	if(!HideFocusHud && g_Config.m_ClShowhud)
 #endif
 	{
 		if(GameClient()->m_Snap.m_pLocalCharacter && !GameClient()->m_Snap.m_SpecInfo.m_Active && !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))

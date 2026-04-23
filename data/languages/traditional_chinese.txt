@@ -3657,3 +3657,21 @@ Axiom auto login failed, retrying
 
 Axiom auto login failed
 == Axiom 自動登入失敗
+
+Minimum Target Language Characters
+== 目標語言最少字元數
+
+Target Language Ratio
+== 目標語言占比
+
+Auto-translate skips text that already looks like the target language.
+== 看起來已經像目標語言的文字會跳過自動翻譯。
+
+Numeric-only messages are skipped locally.
+== 純數字訊息會在本地直接跳過。
+
+Concurrency (1 = automatic)
+== 並發數（1 = 自動）
+
+Hide Echo Messages
+== 隱藏 Echo 訊息

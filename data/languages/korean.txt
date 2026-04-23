@@ -3388,3 +3388,18 @@ Changing name to %s near finish
 [translate]
 %s to %s failed: %s
 == 
+
+Minimum Target Language Characters
+== 대상 언어 최소 문자 수
+
+Target Language Ratio
+== 대상 언어 비율
+
+Auto-translate skips text that already looks like the target language.
+== 이미 대상 언어처럼 보이는 텍스트는 자동 번역을 건너뜁니다.
+
+Numeric-only messages are skipped locally.
+== 숫자만 있는 메시지는 로컬에서 건너뜁니다.
+
+Concurrency (1 = automatic)
+== 동시 실행 수(1 = 자동)
