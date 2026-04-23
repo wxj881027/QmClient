@@ -6923,7 +6923,6 @@ Displays current zoom value
 
 Gap between statusbar items
 == 状态栏条目之间的间隔
-
 Downloaded
 == 已下载
 
