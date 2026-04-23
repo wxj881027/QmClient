@@ -1,5 +1,6 @@
 #include "assets_resource_registry.h"
 
+#include <algorithm>
 #include <cstring>
 
 static constexpr SAssetResourceCategory s_aAssetCategories[] = {
@@ -26,4 +27,33 @@ const SAssetResourceCategory *FindAssetResourceCategory(const char *pId)
 	}
 
 	return nullptr;
+}
+
+bool IsProtectedDefaultAsset(std::string_view AssetName)
+{
+	return AssetName == "default";
+}
+
+bool AssetResourceNeedsLegacyImport(std::string_view CurrentName)
+{
+	return !IsProtectedDefaultAsset(CurrentName);
+}
+
+std::string NextLegacyAssetName(std::span<const std::string> ExistingNames)
+{
+	const auto HasName = [ExistingNames](std::string_view Name) {
+		return std::any_of(ExistingNames.begin(), ExistingNames.end(), [Name](const std::string &ExistingName) {
+			return ExistingName == Name;
+		});
+	};
+
+	if(!HasName("legacy"))
+		return "legacy";
+
+	for(int Suffix = 2;; ++Suffix)
+	{
+		std::string Candidate = "legacy_" + std::to_string(Suffix);
+		if(!HasName(Candidate))
+			return Candidate;
+	}
 }

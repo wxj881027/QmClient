@@ -3284,6 +3284,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     QmLayoutTest.cpp
     aio_test.cpp
     assets_preview_scale_test.cpp
+    assets_resource_migration_test.cpp
     assets_resource_registry_test.cpp
     bezier_test.cpp
     blocklist_driver_test.cpp

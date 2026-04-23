@@ -1,6 +1,10 @@
 #ifndef GAME_CLIENT_COMPONENTS_ASSETS_RESOURCE_REGISTRY_H
 #define GAME_CLIENT_COMPONENTS_ASSETS_RESOURCE_REGISTRY_H
 
+#include <span>
+#include <string>
+#include <string_view>
+
 enum class EAssetResourceKind
 {
 	DIRECTORY,
@@ -27,5 +31,8 @@ struct SAssetResourceCategory
 };
 
 const SAssetResourceCategory *FindAssetResourceCategory(const char *pId);
+bool AssetResourceNeedsLegacyImport(std::string_view CurrentName);
+std::string NextLegacyAssetName(std::span<const std::string> ExistingNames);
+bool IsProtectedDefaultAsset(std::string_view AssetName);
 
 #endif
