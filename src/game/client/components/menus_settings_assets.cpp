@@ -1936,6 +1936,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	float Margin = 10;
 	float TextureWidth = 150;
 	float TextureHeight = 150;
+	const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 	SMenuAssetScanUser LazyLoadUser;
 	LazyLoadUser.m_pUser = this;
 	constexpr int MaxPreviewUploadsPerFrame = 2;
@@ -2030,6 +2031,101 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		const int LastRelevant = minimum((int)SearchListSize - 1, LastIndex + PrefetchItems);
 		for(int Index = FirstRelevant; Index <= LastRelevant && PreviewDecodeStartsThisFrame < MaxPreviewDecodeStartsPerFrame; ++Index)
 			StartPreviewDecode((size_t)Index);
+	};
+
+	auto RenderCardBadge = [&](const CUIRect &Rect, const char *pLabel, const ColorRGBA &FillColor, float FontSize) {
+		CUIRect BadgeRect = Rect;
+		BadgeRect.Draw(FillColor, IGraphics::CORNER_ALL, minimum(BadgeRect.h / 2.0f, 6.0f));
+		Ui()->DoLabel(&BadgeRect, pLabel, FontSize, TEXTALIGN_MC);
+	};
+
+	struct SAssetCardHeaderLayout
+	{
+		CUIRect m_TextureRect;
+		CUIRect m_TitleRect;
+		CUIRect m_ActionButtonRect;
+		CUIRect m_StatusTagRect;
+		CUIRect m_LocalOnlyBadgeRect;
+		bool m_HasActionButton = false;
+		bool m_HasStatusTag = false;
+		bool m_HasLocalOnlyBadge = false;
+	};
+
+	auto LayoutAssetCardHeader = [&](const CUIRect &CardRect, bool HasActionButton, const char *pStatusLabel, bool ShowLocalOnlyBadge) {
+		SAssetCardHeaderLayout Layout;
+		CUIRect HeaderRect;
+		CUIRect BodyRect = CardRect;
+		BodyRect.HSplitTop(20.0f, &HeaderRect, &Layout.m_TextureRect);
+		Layout.m_TextureRect.HSplitTop(10.0f, nullptr, &Layout.m_TextureRect);
+
+		CUIRect TitleRect = HeaderRect;
+		TitleRect.Margin(2.0f, &TitleRect);
+
+		if(HasActionButton)
+		{
+			Layout.m_HasActionButton = true;
+			TitleRect.VSplitRight(24.0f, &TitleRect, &Layout.m_ActionButtonRect);
+		}
+
+		if(Layout.m_HasActionButton)
+			Layout.m_ActionButtonRect.Margin(2.0f, &Layout.m_ActionButtonRect);
+
+		const float BadgeGap = 4.0f;
+		const float TagPadding = 6.0f;
+		const float TagMinWidth = 58.0f;
+		const float LocalOnlyBadgeMinWidth = 58.0f;
+		const float TitleMinWidth = 36.0f;
+		const float TagFontSize = 7.5f;
+		const float BadgeFontSize = 7.5f;
+		auto ReserveTrailingRect = [&](CUIRect &AvailableRect, float DesiredWidth, float MinWidth, CUIRect &OutRect, bool &OutVisible) {
+			if(AvailableRect.w <= 0.0f)
+				return;
+
+			const float AvailableWidth = AvailableRect.w;
+			const float ReservedTitleWidth = minimum(TitleMinWidth, AvailableWidth);
+			const float MaxWidth = maximum(0.0f, AvailableWidth - ReservedTitleWidth);
+			if(MaxWidth <= 0.0f)
+				return;
+
+			const float Width = minimum(maximum(DesiredWidth, minimum(MinWidth, MaxWidth)), MaxWidth);
+			AvailableRect.VSplitRight(Width, &AvailableRect, &OutRect);
+			OutVisible = true;
+
+			if(AvailableRect.w > BadgeGap)
+			{
+				const float GapWidth = minimum(BadgeGap, AvailableRect.w);
+				AvailableRect.VSplitRight(GapWidth, &AvailableRect, nullptr);
+			}
+		};
+
+		if(pStatusLabel != nullptr && pStatusLabel[0] != '\0')
+		{
+			const float TagHeight = Layout.m_HasActionButton ? Layout.m_ActionButtonRect.h : TitleRect.h;
+			const float DesiredTagWidth = maximum(TagMinWidth, TextRender()->TextWidth(TagFontSize, pStatusLabel, -1, -1.0f) + TagPadding * 2.0f);
+			ReserveTrailingRect(TitleRect, DesiredTagWidth, TagMinWidth, Layout.m_StatusTagRect, Layout.m_HasStatusTag);
+			if(Layout.m_HasStatusTag && TagHeight > 0.0f && Layout.m_StatusTagRect.h > TagHeight)
+			{
+				const float VerticalInset = (Layout.m_StatusTagRect.h - TagHeight) / 2.0f;
+				Layout.m_StatusTagRect.Margin(VerticalInset, &Layout.m_StatusTagRect);
+			}
+		}
+
+		if(ShowLocalOnlyBadge)
+		{
+			const char *pBadgeLabel = Localize("仅本地资源");
+			const float BadgePadding = 6.0f;
+			const float BadgeHeight = Layout.m_HasActionButton ? Layout.m_ActionButtonRect.h : TitleRect.h;
+			const float DesiredBadgeWidth = maximum(LocalOnlyBadgeMinWidth, TextRender()->TextWidth(BadgeFontSize, pBadgeLabel, -1, -1.0f) + BadgePadding * 2.0f);
+			ReserveTrailingRect(TitleRect, DesiredBadgeWidth, LocalOnlyBadgeMinWidth, Layout.m_LocalOnlyBadgeRect, Layout.m_HasLocalOnlyBadge);
+			if(Layout.m_HasLocalOnlyBadge && BadgeHeight > 0.0f && Layout.m_LocalOnlyBadgeRect.h > BadgeHeight)
+			{
+				const float VerticalInset = (Layout.m_LocalOnlyBadgeRect.h - BadgeHeight) / 2.0f;
+				Layout.m_LocalOnlyBadgeRect.Margin(VerticalInset, &Layout.m_LocalOnlyBadgeRect);
+			}
+		}
+
+		Layout.m_TitleRect = TitleRect;
+		return Layout;
 	};
 
 	if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
@@ -2280,30 +2376,27 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			LastVisibleIndex = (int)i;
 
 			const CUIRect CardRect = ItemRect;
-
-			CUIRect TextureRect;
-			ItemRect.HSplitTop(15, &ItemRect, &TextureRect);
-			TextureRect.HSplitTop(10, nullptr, &TextureRect);
-			Ui()->DoLabel(&ItemRect, pItem->m_aName, ItemRect.h - 2, TEXTALIGN_MC);
+			const bool HasDeleteButton = str_comp(pItem->m_aName, "default") != 0;
+			const bool ShowLocalOnlyBadge = pCurrentCategory != nullptr && pCurrentCategory->m_LocalOnlyBadge && !pCurrentCategory->m_WorkshopEnabled;
+			const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, nullptr, ShowLocalOnlyBadge);
+			Ui()->DoLabel(&HeaderLayout.m_TitleRect, pItem->m_aName, HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
+			if(HeaderLayout.m_HasLocalOnlyBadge)
+				RenderCardBadge(HeaderLayout.m_LocalOnlyBadgeRect, Localize("仅本地资源"), ColorRGBA(0.46f, 0.41f, 0.20f, 0.88f), 7.5f);
 			if(pItem->m_RenderTexture.IsValid())
 			{
 				Graphics()->WrapClamp();
 				Graphics()->TextureSet(pItem->m_RenderTexture);
 				Graphics()->QuadsBegin();
 				Graphics()->SetColor(1, 1, 1, 1);
-				IGraphics::CQuadItem QuadItem(TextureRect.x + (TextureRect.w - TextureWidth) / 2, TextureRect.y + (TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight);
+				IGraphics::CQuadItem QuadItem(HeaderLayout.m_TextureRect.x + (HeaderLayout.m_TextureRect.w - TextureWidth) / 2, HeaderLayout.m_TextureRect.y + (HeaderLayout.m_TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight);
 				Graphics()->QuadsDrawTL(&QuadItem, 1);
 				Graphics()->QuadsEnd();
 				Graphics()->WrapNormal();
 			}
 
-			if(str_comp(pItem->m_aName, "default") != 0)
+			if(HasDeleteButton)
 			{
-				CUIRect DeleteButton = CardRect;
-				DeleteButton.HSplitTop(20.0f, &DeleteButton, nullptr);
-				DeleteButton.VSplitRight(24.0f, nullptr, &DeleteButton);
-				DeleteButton.Margin(2.0f, &DeleteButton);
-				if(Ui()->DoButton_FontIcon(&s_vLocalDeleteButtons[i], FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL))
+				if(Ui()->DoButton_FontIcon(&s_vLocalDeleteButtons[i], FONT_ICON_TRASH, 0, &HeaderLayout.m_ActionButtonRect, IGraphics::CORNER_ALL))
 				{
 					DeleteLocalRequested = true;
 					str_copy(aDeleteLocalName, pItem->m_aName, sizeof(aDeleteLocalName));
@@ -2830,14 +2923,11 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			CPerfTimer WorkshopCardsTimer;
 			int FirstVisibleLocalIndex = -1;
 			int LastVisibleLocalIndex = -1;
-			auto RenderAssetStatusTag = [&](const CUIRect &CardRect, bool Downloaded) {
-				CUIRect TagRect = CardRect;
-				TagRect.HSplitTop(16.0f, &TagRect, nullptr);
-				TagRect.VSplitLeft(58.0f, &TagRect, nullptr);
-				TagRect.Margin(3.0f, &TagRect);
+			auto RenderAssetStatusTag = [&](const CUIRect &TagRect, bool Downloaded) {
+				CUIRect StatusRect = TagRect;
 				const ColorRGBA TagColor = Downloaded ? ColorRGBA(0.18f, 0.62f, 0.32f, 0.88f) : ColorRGBA(0.52f, 0.52f, 0.58f, 0.82f);
-				TagRect.Draw(TagColor, IGraphics::CORNER_ALL, 5.0f);
-				Ui()->DoLabel(&TagRect, Localize(Downloaded ? "Downloaded" : "Not downloaded"), 7.5f, TEXTALIGN_MC);
+				StatusRect.Draw(TagColor, IGraphics::CORNER_ALL, minimum(StatusRect.h / 2.0f, 6.0f));
+				Ui()->DoLabel(&StatusRect, Localize(Downloaded ? "Downloaded" : "Not downloaded"), 7.5f, TEXTALIGN_MC);
 			};
 
 			for(size_t ListIndex = 0; ListIndex < CombinedCount; ++ListIndex)
@@ -2863,14 +2953,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					LastVisibleLocalIndex = (int)LocalIndex;
 
 					const CUIRect CardRect = ItemRect;
-
-					CUIRect TextureRect, HeaderRect, NameRect;
-					ItemRect.HSplitTop(18.0f, &HeaderRect, &TextureRect);
-					TextureRect.HSplitTop(10, nullptr, &TextureRect);
-					NameRect = HeaderRect;
-					NameRect.VSplitLeft(62.0f, nullptr, &NameRect);
-					NameRect.VSplitRight(30.0f, &NameRect, nullptr);
-					Ui()->DoLabel(&NameRect, pItem->m_aName, HeaderRect.h - 2, TEXTALIGN_MC);
+					const bool HasDeleteButton = str_comp(pItem->m_aName, "default") != 0;
+					const bool ShowLocalOnlyBadge = pCategory->m_LocalOnlyBadge && !pCategory->m_WorkshopEnabled;
+					const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, Localize("Downloaded"), ShowLocalOnlyBadge);
+					Ui()->DoLabel(&HeaderLayout.m_TitleRect, pItem->m_aName, HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
+					if(HeaderLayout.m_HasStatusTag)
+						RenderAssetStatusTag(HeaderLayout.m_StatusTagRect, true);
+					if(HeaderLayout.m_HasLocalOnlyBadge)
+						RenderCardBadge(HeaderLayout.m_LocalOnlyBadgeRect, Localize("仅本地资源"), ColorRGBA(0.46f, 0.41f, 0.20f, 0.88f), 7.5f);
 					if(s_CurCustomTab == ASSETS_TAB_ENTITIES && s_EntityGamePreview)
 					{
 						const auto *pEntitiesItem = static_cast<const SCustomEntities *>(pItem);
@@ -2905,8 +2995,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 							};
 
 							float TileSize = TextureWidth / (float)COLS;
-							float OffX = TextureRect.x + (TextureRect.w - TextureWidth) / 2.0f;
-							float OffY = TextureRect.y + (TextureRect.h - ROWS * TileSize) / 2.0f;
+							float OffX = HeaderLayout.m_TextureRect.x + (HeaderLayout.m_TextureRect.w - TextureWidth) / 2.0f;
+							float OffY = HeaderLayout.m_TextureRect.y + (HeaderLayout.m_TextureRect.h - ROWS * TileSize) / 2.0f;
 
 							const float kInset = 1.5f / 1024.0f;
 							const float kTile = 1.0f / 16.0f;
@@ -2957,22 +3047,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 							Graphics()->TextureSet(Tex);
 							Graphics()->QuadsBegin();
 							Graphics()->SetColor(1, 1, 1, 1);
-							IGraphics::CQuadItem QuadItem(TextureRect.x + (TextureRect.w - TextureWidth) / 2, TextureRect.y + (TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight);
+							IGraphics::CQuadItem QuadItem(HeaderLayout.m_TextureRect.x + (HeaderLayout.m_TextureRect.w - TextureWidth) / 2, HeaderLayout.m_TextureRect.y + (HeaderLayout.m_TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight);
 							Graphics()->QuadsDrawTL(&QuadItem, 1);
 							Graphics()->QuadsEnd();
 							Graphics()->WrapNormal();
 						}
 					}
 
-					RenderAssetStatusTag(CardRect, true);
-
-					if(str_comp(pItem->m_aName, "default") != 0)
+					if(HasDeleteButton)
 					{
-						CUIRect DeleteButton = CardRect;
-						DeleteButton.HSplitTop(20.0f, &DeleteButton, nullptr);
-						DeleteButton.VSplitRight(24.0f, nullptr, &DeleteButton);
-						DeleteButton.Margin(2.0f, &DeleteButton);
-						if(Ui()->DoButton_FontIcon(&s_vWorkshopLocalDeleteButtons[LocalIndex], FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL))
+						if(Ui()->DoButton_FontIcon(&s_vWorkshopLocalDeleteButtons[LocalIndex], FONT_ICON_TRASH, 0, &HeaderLayout.m_ActionButtonRect, IGraphics::CORNER_ALL))
 						{
 							DeleteLocalRequested = true;
 							str_copy(aDeleteLocalName, pItem->m_aName, sizeof(aDeleteLocalName));
@@ -3027,13 +3111,11 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					}
 
 					const CUIRect CardRect = ItemRect;
-					CUIRect TextureRect, HeaderRect, NameRect;
-					ItemRect.HSplitTop(18.0f, &HeaderRect, &TextureRect);
-					TextureRect.HSplitTop(10, nullptr, &TextureRect);
-					NameRect = HeaderRect;
-					NameRect.VSplitLeft(62.0f, nullptr, &NameRect);
-					NameRect.VSplitRight(30.0f, &NameRect, nullptr);
-					Ui()->DoLabel(&NameRect, Asset.m_Name.c_str(), HeaderRect.h - 2, TEXTALIGN_MC);
+					const bool Downloading = Asset.m_pDownloadTask && !Asset.m_pDownloadTask->Done();
+					const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, true, Localize(Asset.m_Installed ? "Downloaded" : "Not downloaded"), false);
+					Ui()->DoLabel(&HeaderLayout.m_TitleRect, Asset.m_Name.c_str(), HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
+					if(HeaderLayout.m_HasStatusTag)
+						RenderAssetStatusTag(HeaderLayout.m_StatusTagRect, Asset.m_Installed);
 
 					if(s_CurCustomTab == ASSETS_TAB_ENTITIES && s_EntityGamePreview && Asset.m_ThumbTexture.IsValid())
 					{
@@ -3049,8 +3131,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						};
 
 						float TileSize = TextureWidth / (float)COLS;
-						float OffX = TextureRect.x + (TextureRect.w - TextureWidth) / 2.0f;
-						float OffY = TextureRect.y + (TextureRect.h - ROWS * TileSize) / 2.0f;
+						float OffX = HeaderLayout.m_TextureRect.x + (HeaderLayout.m_TextureRect.w - TextureWidth) / 2.0f;
+						float OffY = HeaderLayout.m_TextureRect.y + (HeaderLayout.m_TextureRect.h - ROWS * TileSize) / 2.0f;
 
 						const float kInset = 1.5f / 1024.0f;
 						const float kTile = 1.0f / 16.0f;
@@ -3086,27 +3168,19 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						Graphics()->TextureSet(Asset.m_ThumbTexture);
 						Graphics()->QuadsBegin();
 						Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-						IGraphics::CQuadItem QuadItem(TextureRect.x + (TextureRect.w - TextureWidth) / 2, TextureRect.y + (TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight);
+						IGraphics::CQuadItem QuadItem(HeaderLayout.m_TextureRect.x + (HeaderLayout.m_TextureRect.w - TextureWidth) / 2, HeaderLayout.m_TextureRect.y + (HeaderLayout.m_TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight);
 						Graphics()->QuadsDrawTL(&QuadItem, 1);
 						Graphics()->QuadsEnd();
 						Graphics()->WrapNormal();
 					}
 					else
 					{
-						CUIRect LoadingRect = {TextureRect.x + (TextureRect.w - TextureWidth) / 2, TextureRect.y + (TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight};
+						CUIRect LoadingRect = {HeaderLayout.m_TextureRect.x + (HeaderLayout.m_TextureRect.w - TextureWidth) / 2, HeaderLayout.m_TextureRect.y + (HeaderLayout.m_TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight};
 						LoadingRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.10f), IGraphics::CORNER_ALL, 6.0f);
 						Ui()->DoLabel(&LoadingRect, Localize("Loading..."), 10.0f, TEXTALIGN_MC);
 					}
-
-					RenderAssetStatusTag(CardRect, Asset.m_Installed);
-
-					const bool Downloading = Asset.m_pDownloadTask && !Asset.m_pDownloadTask->Done();
-					CUIRect DownloadButton = CardRect;
-					DownloadButton.HSplitTop(20.0f, &DownloadButton, nullptr);
-					DownloadButton.VSplitRight(24.0f, nullptr, &DownloadButton);
-					DownloadButton.Margin(2.0f, &DownloadButton);
 					const char *pActionIcon = Downloading ? FONT_ICON_ARROW_ROTATE_RIGHT : FONT_ICON_CIRCLE_CHEVRON_DOWN;
-					if(Ui()->DoButton_FontIcon(&vWorkshopActionButtons[AssetIndex], pActionIcon, 0, &DownloadButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Downloading))
+					if(Ui()->DoButton_FontIcon(&vWorkshopActionButtons[AssetIndex], pActionIcon, 0, &HeaderLayout.m_ActionButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Downloading))
 					{
 						s_PendingDownloadAssetIndex = AssetIndex;
 						s_WorkshopDownloadConfirmPopup.Reset();
