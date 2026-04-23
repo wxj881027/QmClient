@@ -30,6 +30,7 @@ struct SVoiceOverlayEntry
 	int m_ClientId = -1;
 	uint64_t m_Order = 0;
 	bool m_IsLocal = false;
+	float m_Level = 0.0f;
 	char m_aName[MAX_NAME_LENGTH] = {};
 };
 
@@ -37,13 +38,14 @@ class CVoiceOverlayState
 {
 public:
 	void Reset();
-	void NoteSpeaker(int ClientId, const char *pName, bool IsLocal, int64_t Timestamp);
+	void NoteSpeaker(int ClientId, const char *pName, bool IsLocal, int64_t Timestamp, float Level);
 	std::vector<SVoiceOverlayEntry> CollectVisible(int64_t Now, int64_t VisibleWindow, bool ShowLocalWhenActive, size_t MaxEntries);
 
 private:
 	std::array<int64_t, MAX_CLIENTS> m_aLastHeard = {};
 	std::array<uint64_t, MAX_CLIENTS> m_aOrder = {};
 	std::array<bool, MAX_CLIENTS> m_aIsLocal = {};
+	std::array<float, MAX_CLIENTS> m_aLevels = {};
 	std::array<std::array<char, MAX_NAME_LENGTH>, MAX_CLIENTS> m_aaNames = {};
 	uint64_t m_NextOrder = 1;
 };
@@ -194,6 +196,8 @@ class CRClientVoice
 	uint16_t m_LastPingSeq = 0;
 	std::unique_ptr<std::array<SVoicePeer, MAX_CLIENTS>> m_pPeers;
 	std::array<std::atomic<int64_t>, MAX_CLIENTS> m_aLastHeard = {};
+	std::array<std::atomic<int64_t>, MAX_CLIENTS> m_aRoomMemberSeen = {};
+	std::array<std::atomic<float>, MAX_CLIENTS> m_aSpeakerLevel = {};
 	std::array<uint64_t, MAX_CLIENTS> m_aOverlayOrder = {};
 	uint64_t m_NextOverlayOrder = 1;
 

@@ -7070,7 +7070,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			TextRender()->TextColor(ColorRGBA(0.95f, 0.8f, 0.2f, 1.0f));
 			{
 				static const char *const s_apSponsors[] = {
-					"喵不一", "久桃", "芽芽", "碳烤綿芽", "骨头", "陌浅羽", "树羽小朋友", "望舒", "松子", "平凡..", "cixin", "洗点", "秀色", "朱朱", "Twen", "大恐龙", ":luv:", "小左", "Blue°F", "怯修", "yezeen", "鹑", "枫香°", "没问题啊", "·蓝蓝蓝蓝", "临渊捕鱼", "?hook?", "放肆zero", "Q币", "洛天依", "spider", "贝塔塔塔", "见月", "咩子的银耳", "Cancer", "少女`", "长亭寂寞独自愁", "fantuan", "无言鱼", "胖人老许", "夏日", "张宁我儿", "拌饭", "shengyan", "修勾在修沟", "taffy", "杀意没爱意", "DYL", "小信", "哆啦梦", "菜菜羊", "吃了吗chilem", "你就是我的", "xiaopang", "星星🌙", "軽い猫", "oxyzo1", "猫玖", "信息检索"};
+					"喵不一", "久桃", "芽芽", "碳烤綿芽", "骨头", "陌浅羽", "树羽小朋友", "望舒", "松子", "平凡..", "cixin", "洗点", "秀色", "朱朱", "Twen", "大恐龙", ":luv:", "小左", "Blue°F", "怯修", "yezeen", "鹑", "枫香°", "没问题啊", "·蓝蓝蓝蓝", "临渊捕鱼", "?hook?", "放肆zero", "Q币", "洛天依", "spider", "贝塔塔塔", "见月", "咩子的银耳", "Cancer", "少女`", "长亭寂寞独自愁", "fantuan", "无言鱼", "胖人老许", "夏日", "张宁我儿", "拌饭", "shengyan", "修勾在修沟", "taffy", "杀意没爱意", "DYL", "小信", "哆啦梦", "菜菜羊", "吃了吗chilem", "你就是我的", "xiaopang", "星星🌙", "軽い猫", "oxyzo1", "笨蛋猫猫", "信息检索"};
 				const float SponsorFontSize = maximum(LG_BodySize * 1.1f - SponsorFontShrink, MinSponsorFontSize);
 				const float MaxLineWidth = RightContent.w;
 				static std::vector<std::string> s_SponsorLines;
@@ -7123,7 +7123,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
 			RightContent.HSplitTop(LG_LineHeight * 0.9f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, Localize("Thank you for your companionship and belief, which gave me the courage to keep going"), LG_BodySize * 0.93f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, Localize("感谢您的陪伴与信任.正是如此,才给了我继续前行的勇气"), LG_BodySize * 0.93f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 			const float RightUsedHeight = RightContent.y - RightStartY;
@@ -7154,59 +7154,59 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 		switch(Id)
 		{
 		case EQmModuleId::ChatBubble:
-			return {0, Localize("Chat bubble"), Localize("Show chat bubbles above tees")};
+			return {0, Localize("消息气泡"), Localize("在Tee上方显示对话气泡")};
 		case EQmModuleId::GoresActor:
-			return {1, Localize("Gores actor tools"), Localize("Auto speak on water death")};
+			return {1, Localize("Gores演员专用"), Localize("在水中死亡时自动说话")};
 		case EQmModuleId::Gores:
-			return {2, Localize("Gores Mode"), Localize("King of Gores auto weapon swap")};
+			return {2, Localize("Gores模式"), Localize("Gores自动武器切换")};
 		case EQmModuleId::FocusMode:
-			return {2, Localize("Focus/Zen Mode"), Localize("Hide UI elements for immersive gameplay")};
+			return {2, Localize("禅模式"), Localize("隐去UI专注游戏")};
 		case EQmModuleId::KeyBinds:
-			return {3, Localize("Key binds"), Localize("Common bind collection")};
+			return {3, Localize("按键绑定"), Localize("常见的按键绑定")};
 		case EQmModuleId::MiniFeatures:
-			return {2, Localize("Qm mini features"), Localize("QmClient's assorted daily-use tools")};
+			return {2, Localize("梦的小功能"), Localize("只有你想不到,没有梦做不到")};
 		case EQmModuleId::CameraView:
-			return {10, Localize("Camera and view"), Localize("Camera drift, dynamic FOV and aspect ratio presets")};
+			return {10, Localize("镜头与视野"), Localize("调整游戏镜头和视野设置")};
 		case EQmModuleId::DummyMiniView:
-			return {12, Localize("Dummy mini view"), Localize("Cleaner monitor card with presets and HUD placement")};
+			return {12, Localize("分身小窗"), Localize("看看你操控本体的时候分身有没有被别人欺负")};
 		case EQmModuleId::Coords:
-			return {4, Localize("Coordinates"), Localize("Show player coordinate info")};
+			return {4, Localize("显示坐标"), Localize("显示自己和他人的坐标")};
 		case EQmModuleId::Streamer:
-			return {5, Localize("Streamer mode"), Localize("Stream and privacy protection toggles")};
+			return {5, Localize("主播模式"), Localize("他妈的炸弹人都给我死啊!")};
 		case EQmModuleId::FriendNotify:
-			return {6, Localize("Friend notifications"), Localize("Friend online and join alerts")};
+			return {6, Localize("好友提醒"), Localize("好友上线和加入提醒")};
 		case EQmModuleId::BlockWords:
-			return {7, Localize("Block words"), Localize("Chat block word filter")};
+			return {7, Localize("屏蔽词"), Localize("聊天屏蔽词过滤")};
 		case EQmModuleId::Translate:
-			return {8, Localize("Translate"), Localize("Chat translation settings")};
+			return {8, Localize("翻译"), Localize("聊天翻译设置")};
 		case EQmModuleId::TranslateUi:
-			return {9, Localize("Translate UI"), Localize("Customize translate button and menu colors")};
+			return {9, Localize("聊天翻译按钮UI"), Localize("聊天框按钮外观设置")};
 		case EQmModuleId::QiaFen:
-			return {8, Localize("Keyword reply"), Localize("Automatic replies for chat keywords")};
+			return {8, Localize("关键词回复"), Localize("我 是 机 器 人 ")};
 		case EQmModuleId::PieMenu:
-			return {9, Localize("Pie menu"), Localize("Open a prototype menu for quick access to common actions")};
+			return {9, Localize("饼菜单"), Localize("对玩家快捷操作菜单")};
 		case EQmModuleId::EntityOverlay:
-			return {6, Localize("Entity overlay colors"), Localize("Entity layer tile colors")};
+			return {6, Localize("实体层颜色"), Localize("调整各个实体层的透明度")};
 		case EQmModuleId::Laser:
-			return {5, Localize("Laser settings"), Localize("Laser style")};
+			return {5, Localize("激光增强"), Localize("你想做出怎样的激光?")};
 		case EQmModuleId::PlayerStats:
-			return {6, Localize("Player stats"), Localize("Player stats and info display")};
+			return {6, Localize("玩家统计"), Localize("看看你有多演")};
 		case EQmModuleId::CollisionHitbox:
-			return {7, Localize("Collision hitbox"), Localize("Show the base player collision box")};
+			return {7, Localize("碰撞体积可视化"), Localize("Hit一下你的Box")};
 		case EQmModuleId::FavoriteMaps:
-			return {7, Localize("Favorite maps"), Localize("Favorite map manager")};
+			return {7, Localize("收藏的地图"), Localize("你最爱的地图管家")};
 		case EQmModuleId::HJAssist:
-			return {11, Localize("HJ assist"), Localize("Unfreeze automation helpers")};
+			return {11, Localize("HJ辅助"), Localize("事已至此,多说无益")};
 		case EQmModuleId::SpeedrunTimer:
-			return {11, Localize("Speedrun timer"), Localize("Countdown timer for speedruns")};
+			return {11, Localize("速通计时器"), Localize("你想跑出怎样的Gores?")};
 		case EQmModuleId::InputOverlay:
-			return {11, Localize("Input overlay"), Localize("Input overlay display")};
+			return {11, Localize("按键显示"), Localize("谁把OBS塞进来了")};
 		case EQmModuleId::Voice:
-			return {12, Localize("Voice"), Localize("Voice connection, input, and display")};
+			return {12, Localize("语音"), Localize("当然是最好的语音啦!")};
 		case EQmModuleId::DynamicIsland:
-			return {14, Localize("Dynamic island"), Localize("Dynamic island")};
+			return {14, Localize("灵动岛"), Localize("Only Apple Can Do")};
 		case EQmModuleId::SystemMediaControls:
-			return {13, Localize("System media controls"), Localize("Media control toggles and buttons")};
+			return {13, Localize("SMTC"), Localize("基于Win的一坨所拉的一泡")};
 		case EQmModuleId::Info:
 			return {-1, "", ""};
 		}
@@ -7622,19 +7622,19 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 		SearchContent.VSplitLeft(LG_CardPadding, nullptr, &SearchContent);
 		SearchContent.VSplitRight(LG_CardPadding, &SearchContent, nullptr);
 		SearchContent.HSplitTop(LG_CardPadding, nullptr, &SearchContent);
-		DoModuleHeadline(SearchContent, -4, Localize("Feature search"), Localize("Quickly locate feature modules"));
+		DoModuleHeadline(SearchContent, -4, Localize("功能搜索"), Localize("快速定位功能模块"));
 		SearchContent.HSplitTop(LG_LineHeight, &Row, &SearchContent);
 		Ui()->DoEditBox_Search(&s_ModuleSearchInput, &Row, LG_BodySize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 		SearchContent.HSplitTop(LG_LineSpacing * 0.65f, nullptr, &SearchContent);
 
 		char aSearchHint[64];
-		str_format(aSearchHint, sizeof(aSearchHint), Localize("Matched %d feature modules"), VisibleModuleCount);
+		str_format(aSearchHint, sizeof(aSearchHint), Localize("匹配到 %d 个模块"), VisibleModuleCount);
 		SearchContent.HSplitTop(LG_LineHeight * 0.85f, &Row, &SearchContent);
 		TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.82f));
 		if(FunctionSnapshotPending)
-			Ui()->DoLabel(&Row, Localize("Updating function list..."), LG_BodySize * 0.92f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, Localize("更新功能列表..."), LG_BodySize * 0.92f, TEXTALIGN_ML);
 		else if(HasModuleSearch && VisibleModuleCount == 0)
-			Ui()->DoLabel(&Row, Localize("No matching feature found. Try another keyword"), LG_BodySize * 0.92f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, Localize("未找到匹配的功能模块。请尝试其他关键词"), LG_BodySize * 0.92f, TEXTALIGN_ML);
 		else
 			Ui()->DoLabel(&Row, aSearchHint, LG_BodySize * 0.92f, TEXTALIGN_ML);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -7713,41 +7713,41 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 0, Localize("Chat bubble"), Localize("Show chat bubbles above tees"));
+				DoModuleHeadline(CardContent, 0, Localize("消息气泡"), Localize("在玩家头顶显示聊天消息"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmChatBubble, Localize("Show chat bubbles above players"), &g_Config.m_QmChatBubble, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmChatBubble, Localize("显示玩家头顶的消息气泡"), &g_Config.m_QmChatBubble, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_QmChatBubble)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleDuration, &g_Config.m_QmChatBubbleDuration, &Row, Localize("Duration"), 1, 30, &CUi::ms_LinearScrollbarScale, 0, "s");
+					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleDuration, &g_Config.m_QmChatBubbleDuration, &Row, Localize("持续时间"), 1, 30, &CUi::ms_LinearScrollbarScale, 0, "s");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleAlpha, &g_Config.m_QmChatBubbleAlpha, &Row, Localize("Bubble opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleAlpha, &g_Config.m_QmChatBubbleAlpha, &Row, Localize("不透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleFontSize, &g_Config.m_QmChatBubbleFontSize, &Row, Localize("Font size"), 8, 32);
+					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleFontSize, &g_Config.m_QmChatBubbleFontSize, &Row, Localize("字体大小"), 8, 32);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
-					s_ChatBubbleAnimDropDownNames = {Localize("Fade out"), Localize("Shrink"), Localize("Float up")};
+					s_ChatBubbleAnimDropDownNames = {Localize("消散"), Localize("收缩"), Localize("弹跳")};
 					static CUi::SDropDownState s_ChatBubbleAnimDropDownState;
 					static CScrollRegion s_ChatBubbleAnimDropDownScrollRegion;
 					s_ChatBubbleAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatBubbleAnimDropDownScrollRegion;
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Animation"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("动画"), LG_BodySize, TEXTALIGN_ML);
 					const int AnimSelectedNew = Ui()->DoDropDown(&ControlCol, g_Config.m_QmChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState);
 					if(g_Config.m_QmChatBubbleAnimation != AnimSelectedNew)
 						g_Config.m_QmChatBubbleAnimation = AnimSelectedNew;
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					static CButtonContainer s_ChatBubbleBgColorId, s_ChatBubbleTextColorId;
-					DoLine_ColorPicker(&s_ChatBubbleBgColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, Localize("Background color"), &g_Config.m_QmChatBubbleBgColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.8f), false, nullptr, true);
+					DoLine_ColorPicker(&s_ChatBubbleBgColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, Localize("背景颜色"), &g_Config.m_QmChatBubbleBgColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.8f), false, nullptr, true);
 
-					DoLine_ColorPicker(&s_ChatBubbleTextColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, Localize("Text color"), &g_Config.m_QmChatBubbleTextColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+					DoLine_ColorPicker(&s_ChatBubbleTextColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, Localize("文字颜色"), &g_Config.m_QmChatBubbleTextColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
 				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -7767,35 +7767,35 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 1, Localize("Gores actor tools"), Localize("Auto speak on water death"));
+				DoModuleHeadline(CardContent, 1, Localize("Gores演员专用"), Localize("水中自动发言"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeChatEnabled, Localize("Auto chat and emote on water death"), &g_Config.m_TcFreezeChatEnabled, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeChatEnabled, Localize("水中自动发言"), &g_Config.m_TcFreezeChatEnabled, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_TcFreezeChatEnabled)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeChatEmoticon, Localize("Send an emote on water death"), &g_Config.m_TcFreezeChatEmoticon, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeChatEmoticon, Localize("水中发送表情"), &g_Config.m_TcFreezeChatEmoticon, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_TcFreezeChatEmoticon)
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_TcFreezeChatEmoticonId, &g_Config.m_TcFreezeChatEmoticonId, &Row, Localize("Emote ID"), 0, 15);
+						Ui()->DoScrollbarOption(&g_Config.m_TcFreezeChatEmoticonId, &g_Config.m_TcFreezeChatEmoticonId, &Row, Localize("表情 ID"), 0, 15);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Chat message"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("聊天消息"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_FreezeChatMessageQmClient(g_Config.m_TcFreezeChatMessage, sizeof(g_Config.m_TcFreezeChatMessage));
-					s_FreezeChatMessageQmClient.SetEmptyText(Localize("Leave empty to disable"));
+					s_FreezeChatMessageQmClient.SetEmptyText(Localize("留空以禁用"));
 					Ui()->DoEditBox(&s_FreezeChatMessageQmClient, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_TcFreezeChatChance, &g_Config.m_TcFreezeChatChance, &Row, Localize("Send chance"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_TcFreezeChatChance, &g_Config.m_TcFreezeChatChance, &Row, Localize("发送概率"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
@@ -7815,23 +7815,23 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 2, Localize("Gores Mode"), Localize("King of Gores auto weapon swap"));
+				DoModuleHeadline(CardContent, 2, Localize("Gores 模式"), Localize("King of Gores 自动切换枪"));
 
 				static CButtonContainer s_ReaderButtonGoresToggle, s_ClearButtonGoresToggle;
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGores, Localize("Enable Gores Mode"), &g_Config.m_QmGores, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGores, Localize("启用 Gores 模式"), &g_Config.m_QmGores, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAxiomAutoLogin, Localize("Auto login Axiom server"), &g_Config.m_QmAxiomAutoLogin, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAxiomAutoLogin, Localize("自动登录 Axiom 服务器"), &g_Config.m_QmAxiomAutoLogin, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
 
 				if(g_Config.m_QmAxiomAutoLogin)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Axiom login password"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("Axiom 登录密码"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_AxiomLoginPassword(g_Config.m_QmAxiomLoginPassword, sizeof(g_Config.m_QmAxiomLoginPassword));
 					s_AxiomLoginPassword.SetHidden(true);
 					Ui()->DoEditBox(&s_AxiomLoginPassword, &ControlCol, LG_BodySize);
@@ -7841,26 +7841,26 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				if(g_Config.m_QmGores)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresFastInput, Localize("Fast input"), &g_Config.m_QmGoresFastInput, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresFastInput, Localize("快速输入"), &g_Config.m_QmGoresFastInput, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmGoresFastInput)
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresFastInputOthers, Localize("Fast input others"), &g_Config.m_QmGoresFastInputOthers, &Row, LG_LineHeight);
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresFastInputOthers, Localize("其他人快速输入"), &g_Config.m_QmGoresFastInputOthers, &Row, LG_LineHeight);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresDisableIfWeapons, Localize("Disable after picking up other weapons"), &g_Config.m_QmGoresDisableIfWeapons, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresDisableIfWeapons, Localize("拾取其他武器后禁用"), &g_Config.m_QmGoresDisableIfWeapons, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresAutoEnable, Localize("Auto enable in Gores mode"), &g_Config.m_QmGoresAutoEnable, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresAutoEnable, Localize("Gores 模式下自动启用"), &g_Config.m_QmGoresAutoEnable, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresHideGuides, Localize("Hide guides"), &g_Config.m_QmGoresHideGuides, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmGoresHideGuides, Localize("隐藏辅助线"), &g_Config.m_QmGoresHideGuides, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
 				}
 
@@ -7868,7 +7868,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					CUIRect BindLabel, BindKey;
 					Row.VSplitLeft(Row.w * 0.45f, &BindLabel, &BindKey);
-					Ui()->DoLabel(&BindLabel, Localize("Gores mode bind:"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&BindLabel, Localize("Gores 模式按键:"), LG_BodySize, TEXTALIGN_ML);
 					CBindSlot GoresBind(KEY_UNKNOWN, KeyModifier::NONE);
 					{
 						const auto GoresIt = CommandBindCache.find("toggle qm_gores 0 1");
@@ -7908,42 +7908,42 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 2, Localize("Focus/Zen Mode"), Localize("Hide UI elements for immersive gameplay"));
+				DoModuleHeadline(CardContent, 2, Localize("禅模式"), Localize("你想跑出怎样的人生?"));
 
 				static CButtonContainer s_ReaderButtonFocusToggle, s_ClearButtonFocusToggle;
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusMode, Localize("Enable Focus Mode"), &g_Config.m_QmFocusMode, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusMode, Localize("启用禅模式"), &g_Config.m_QmFocusMode, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_QmFocusMode)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideHud, Localize("Hide HUD"), &g_Config.m_QmFocusModeHideHud, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideHud, Localize("隐藏 HUD"), &g_Config.m_QmFocusModeHideHud, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideUI, Localize("Hide unnecessary UI"), &g_Config.m_QmFocusModeHideUI, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideUI, Localize("隐藏不必要的 UI"), &g_Config.m_QmFocusModeHideUI, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideNames, Localize("Hide Player Names"), &g_Config.m_QmFocusModeHideNames, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideNames, Localize("隐藏玩家姓名"), &g_Config.m_QmFocusModeHideNames, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideOverheadIndicators, Localize("Hide overhead direction and hook indicators"), &g_Config.m_QmFocusModeHideOverheadIndicators, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideOverheadIndicators, Localize("隐藏方向和辅助线"), &g_Config.m_QmFocusModeHideOverheadIndicators, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideEffects, Localize("Hide Visual Effects"), &g_Config.m_QmFocusModeHideEffects, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideEffects, Localize("隐藏视觉效果"), &g_Config.m_QmFocusModeHideEffects, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideChat, Localize("Hide Chat"), &g_Config.m_QmFocusModeHideChat, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideChat, Localize("隐藏聊天"), &g_Config.m_QmFocusModeHideChat, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideScoreboard, Localize("Hide Scoreboard"), &g_Config.m_QmFocusModeHideScoreboard, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideScoreboard, Localize("隐藏记分板"), &g_Config.m_QmFocusModeHideScoreboard, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
 				}
 
@@ -7951,7 +7951,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					CUIRect BindLabel, BindKey;
 					Row.VSplitLeft(Row.w * 0.45f, &BindLabel, &BindKey);
-					Ui()->DoLabel(&BindLabel, Localize("Focus mode bind:"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&BindLabel, Localize("禅模式按键"), LG_BodySize, TEXTALIGN_ML);
 					CBindSlot FocusBind(KEY_UNKNOWN, KeyModifier::NONE);
 					{
 						const auto FocusIt = CommandBindCache.find("toggle qm_focus_mode 0 1");
@@ -7992,7 +7992,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 3, Localize("Key binds"), Localize("Common bind collection"));
+				DoModuleHeadline(CardContent, 3, Localize("按键绑定"), Localize("常用按键绑定"));
 
 				static CButtonContainer s_ReaderButtonDummyPseudo, s_ClearButtonDummyPseudo,
 					s_ReaderButtonDeepfly, s_ClearButtonDeepfly,
@@ -8007,13 +8007,13 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				DoKeyBindRow(CardContent, s_ReaderButtonDeepfly, s_ClearButtonDeepfly,
 					Localize("DF"), "+fire; +toggle cl_dummy_hammer 1 0");
 				DoKeyBindRow(CardContent, s_ReaderButton45Degrees, s_ClearButton45Degrees,
-					Localize("45-degree aim"), "echo You are using 45-degree aim;+toggle cl_mouse_max_distance 2 400; +toggle_restore inp_mousesens 1");
+					Localize("45°瞄准"), "echo You are using 45-degree aim;+toggle cl_mouse_max_distance 2 400; +toggle_restore inp_mousesens 1");
 				DoKeyBindRow(CardContent, s_ReaderButtonSmallSens, s_ClearButtonSmallSens,
-					Localize("Gap rescue aim"), "+toggle_restore inp_mousesens 1");
+					Localize("瞄缝救人"), "+toggle_restore inp_mousesens 1");
 				DoKeyBindRow(CardContent, s_ReaderButtonLeftJump, s_ClearButtonLeftJump,
-					Localize("Three-tile jump left"), "+jump; +left");
+					Localize("左跳"), "+jump; +left");
 				DoKeyBindRow(CardContent, s_ReaderButtonRightJump, s_ClearButtonRightJump,
-					Localize("Three-tile jump right"), "+jump; +right");
+					Localize("右跳"), "+jump; +right");
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
@@ -8032,55 +8032,55 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 2, Localize("Qm mini features"), Localize("QmClient's assorted daily-use tools"));
+				DoModuleHeadline(CardContent, 2, Localize("梦的小功能"), Localize("只有你想不到，没有梦做不到！"));
 
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, Localize("Local particles"), &g_Config.m_QmcFootParticles, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, Localize("本地粒子效果"), &g_Config.m_QmcFootParticles, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmClientMarkTrail, Localize("Remote particles"), &g_Config.m_QmClientMarkTrail, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmClientMarkTrail, Localize("远程粒子效果"), &g_Config.m_QmClientMarkTrail, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmClientShowBadge, Localize("Show Qm badge"), &g_Config.m_QmClientShowBadge, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmClientShowBadge, Localize("显示Qm标识"), &g_Config.m_QmClientShowBadge, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClScoreboardPoints, Localize("Show scoreboard points"), &g_Config.m_ClScoreboardPoints, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClScoreboardPoints, Localize("计分板查分"), &g_Config.m_ClScoreboardPoints, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRepeatEnabled, Localize("Enable repeat feature"), &g_Config.m_QmRepeatEnabled, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRepeatEnabled, Localize("启用复读"), &g_Config.m_QmRepeatEnabled, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHammerSwapSkin, Localize("Hammer hit copies skin"), &g_Config.m_QmHammerSwapSkin, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHammerSwapSkin, Localize("锤中偷皮"), &g_Config.m_QmHammerSwapSkin, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRandomEmoteOnHit, Localize("Random emote on hit"), &g_Config.m_QmRandomEmoteOnHit, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRandomEmoteOnHit, Localize("随机表情"), &g_Config.m_QmRandomEmoteOnHit, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmComboPopup, Localize("Combo popups"), &g_Config.m_QmComboPopup, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmComboPopup, Localize("连击"), &g_Config.m_QmComboPopup, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSayNoPop, Localize("Hide typing emote while chatting"), &g_Config.m_QmSayNoPop, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSayNoPop, Localize("隐藏输入表情"), &g_Config.m_QmSayNoPop, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowName, Localize("Rainbow name"), &g_Config.m_QmRainbowName, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowName, Localize("彩虹名字"), &g_Config.m_QmRainbowName, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWeaponTrajectory, Localize("Weapon trajectory guide"), &g_Config.m_QmWeaponTrajectory, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWeaponTrajectory, Localize("武器辅助线"), &g_Config.m_QmWeaponTrajectory, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcJumpHint, Localize("Position jump hint"), &g_Config.m_TcJumpHint, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcJumpHint, Localize("位置跳跃提示"), &g_Config.m_TcJumpHint, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
@@ -8101,22 +8101,22 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 4, Localize("Coordinates"), Localize("Show player coordinate info"));
+				DoModuleHeadline(CardContent, 4, Localize("显示坐标"), Localize("在玩家头顶显示坐标"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordsOwn, Localize("Show own coordinates"), &g_Config.m_QmNameplateCoordsOwn, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordsOwn, Localize("显示自己的坐标"), &g_Config.m_QmNameplateCoordsOwn, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoords, Localize("Show other players' coordinates"), &g_Config.m_QmNameplateCoords, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoords, Localize("显示其他玩家的坐标"), &g_Config.m_QmNameplateCoords, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordX, Localize("Show X"), &g_Config.m_QmNameplateCoordX, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordX, Localize("显示 X"), &g_Config.m_QmNameplateCoordX, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordY, Localize("Show Y"), &g_Config.m_QmNameplateCoordY, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCoordY, Localize("显示 Y"), &g_Config.m_QmNameplateCoordY, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -8136,18 +8136,18 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 5, Localize("Streamer mode"), Localize("Stream and privacy protection toggles"));
+				DoModuleHeadline(CardContent, 5, Localize("主播模式"), Localize("他妈的炸弹人全给我去Spa!"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmStreamerHideNames, Localize("Replace non-friend names with IDs"), &g_Config.m_QmStreamerHideNames, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmStreamerHideNames, Localize("用 ID 替换非好友名称"), &g_Config.m_QmStreamerHideNames, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmStreamerHideSkins, Localize("Replace non-friend skins with default skins"), &g_Config.m_QmStreamerHideSkins, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmStreamerHideSkins, Localize("用默认皮肤替换非好友皮肤"), &g_Config.m_QmStreamerHideSkins, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmStreamerScoreboardDefaultFlags, Localize("Use default flags on the scoreboard"), &g_Config.m_QmStreamerScoreboardDefaultFlags, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmStreamerScoreboardDefaultFlags, Localize("在记分板上使用默认旗"), &g_Config.m_QmStreamerScoreboardDefaultFlags, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -8167,38 +8167,38 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 6, Localize("Friend notifications"), Localize("Friend online and join alerts"));
+				DoModuleHeadline(CardContent, 6, Localize("好友提醒"), Localize("好友上线和加入提醒"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendOnlineNotify, Localize("Notify when friends come online"), &g_Config.m_QmFriendOnlineNotify, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendOnlineNotify, Localize("当好友上线时提醒"), &g_Config.m_QmFriendOnlineNotify, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendOnlineAutoRefresh, Localize("Auto-refresh the server list"), &g_Config.m_QmFriendOnlineAutoRefresh, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendOnlineAutoRefresh, Localize("自动刷新服务器列表"), &g_Config.m_QmFriendOnlineAutoRefresh, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_QmFriendOnlineAutoRefresh)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmFriendOnlineRefreshSeconds, &g_Config.m_QmFriendOnlineRefreshSeconds, &Row, Localize("Refresh interval"), 5, 300, &CUi::ms_LinearScrollbarScale, 0, "s");
+					Ui()->DoScrollbarOption(&g_Config.m_QmFriendOnlineRefreshSeconds, &g_Config.m_QmFriendOnlineRefreshSeconds, &Row, Localize("刷新间隔"), 5, 300, &CUi::ms_LinearScrollbarScale, 0, "s");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendEnterAutoGreet, Localize("Auto greet when a friend joins the map"), &g_Config.m_QmFriendEnterAutoGreet, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendEnterAutoGreet, Localize("自动问候进图的好友"), &g_Config.m_QmFriendEnterAutoGreet, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendEnterBroadcast, Localize("Big-screen friend join alert"), &g_Config.m_QmFriendEnterBroadcast, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFriendEnterBroadcast, Localize("大字播报进服好友"), &g_Config.m_QmFriendEnterBroadcast, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_QmFriendEnterBroadcast)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Big-screen message"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("大字文案"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_FriendEnterBroadcastText(g_Config.m_QmFriendEnterBroadcastText, sizeof(g_Config.m_QmFriendEnterBroadcastText));
-					s_FriendEnterBroadcastText.SetEmptyText(Localize("Use %s for the friend name"));
+					s_FriendEnterBroadcastText.SetEmptyText(Localize("请使用 %s 作为好友名称"));
 					Ui()->DoEditBox(&s_FriendEnterBroadcastText, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
@@ -8207,9 +8207,9 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Greeting text"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("招呼文案"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_FriendEnterGreetText(g_Config.m_QmFriendEnterGreetText, sizeof(g_Config.m_QmFriendEnterGreetText));
-					s_FriendEnterGreetText.SetEmptyText(Localize("Leave empty to disable"));
+					s_FriendEnterGreetText.SetEmptyText(Localize("留空以禁用"));
 					Ui()->DoEditBox(&s_FriendEnterGreetText, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
@@ -8231,21 +8231,21 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 7, Localize("Block words"), Localize("Chat block word filter"));
+				DoModuleHeadline(CardContent, 7, Localize("屏蔽词"), Localize("傻逼词过滤器"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsShowConsole, Localize("Show blocked words in the console"), &g_Config.m_QmBlockWordsShowConsole, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsShowConsole, Localize("在控制台中显示被屏蔽的词语"), &g_Config.m_QmBlockWordsShowConsole, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static CButtonContainer s_BlockWordsConsoleColorId;
-				DoLine_ColorPicker(&s_BlockWordsConsoleColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, Localize("Console color"), &g_Config.m_QmBlockWordsConsoleColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+				DoLine_ColorPicker(&s_BlockWordsConsoleColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, Localize("控制台颜色"), &g_Config.m_QmBlockWordsConsoleColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsEnabled, Localize("Enable block word list"), &g_Config.m_QmBlockWordsEnabled, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsEnabled, Localize("启用屏蔽词列表"), &g_Config.m_QmBlockWordsEnabled, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsMultiReplace, Localize("Use multi-character replacement based on word length"), &g_Config.m_QmBlockWordsMultiReplace, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmBlockWordsMultiReplace, Localize("根据词语长度使用多字符替换"), &g_Config.m_QmBlockWordsMultiReplace, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static CLineInputBuffered<8> s_BlockWordsReplaceInput;
@@ -8263,7 +8263,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Replacement char"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("替换字符"), LG_BodySize, TEXTALIGN_ML);
 				if(Ui()->DoEditBox(&s_BlockWordsReplaceInput, &ControlCol, LG_BodySize))
 				{
 					char aReplacement[8];
@@ -8276,18 +8276,18 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Replacement mode"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("替换模式"), LG_BodySize, TEXTALIGN_ML);
 				CUIRect ModeRow = ControlCol;
 				CUIRect ModeButton;
 				static CButtonContainer s_BlockWordsModeRegex, s_BlockWordsModeFull, s_BlockWordsModeBoth;
 				const float ModeWidth = ModeRow.w / 3.0f;
 				ModeRow.VSplitLeft(ModeWidth, &ModeButton, &ModeRow);
-				if(DoButtonLineSize_Menu(&s_BlockWordsModeRegex, Localize("Regex"), g_Config.m_QmBlockWordsMode == 0, &ModeButton, LG_LineHeight, false, 0, IGraphics::CORNER_L, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+				if(DoButtonLineSize_Menu(&s_BlockWordsModeRegex, Localize("正则表达式"), g_Config.m_QmBlockWordsMode == 0, &ModeButton, LG_LineHeight, false, 0, IGraphics::CORNER_L, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 					g_Config.m_QmBlockWordsMode = 0;
 				ModeRow.VSplitLeft(ModeWidth, &ModeButton, &ModeRow);
-				if(DoButtonLineSize_Menu(&s_BlockWordsModeFull, Localize("Literal"), g_Config.m_QmBlockWordsMode == 1, &ModeButton, LG_LineHeight, false, 0, IGraphics::CORNER_NONE, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+				if(DoButtonLineSize_Menu(&s_BlockWordsModeFull, Localize("字面量"), g_Config.m_QmBlockWordsMode == 1, &ModeButton, LG_LineHeight, false, 0, IGraphics::CORNER_NONE, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 					g_Config.m_QmBlockWordsMode = 1;
-				if(DoButtonLineSize_Menu(&s_BlockWordsModeBoth, Localize("Both"), g_Config.m_QmBlockWordsMode == 2, &ModeRow, LG_LineHeight, false, 0, IGraphics::CORNER_R, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+				if(DoButtonLineSize_Menu(&s_BlockWordsModeBoth, Localize("两者"), g_Config.m_QmBlockWordsMode == 2, &ModeRow, LG_LineHeight, false, 0, IGraphics::CORNER_R, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 					g_Config.m_QmBlockWordsMode = 2;
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
@@ -8302,14 +8302,14 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					s_BlockWordsInput.Set(g_Config.m_QmBlockWordsList);
 				}
-				s_BlockWordsInput.SetEmptyText(Localize("Separate with commas"));
+				s_BlockWordsInput.SetEmptyText(Localize("用逗号分隔"));
 
 				const float BlockInputWidth = CardContent.w - LG_LabelWidth;
 				const float BlockInputLineSpacing = std::clamp(2.0f * UiScale, 1.0f, 2.0f);
 				const float BlockInputHeight = CalcQiaFenInputHeight(TextRender(), s_BlockWordsInput.GetString(), BlockInputWidth, LG_BodySize, BlockInputLineSpacing, LG_LineHeight);
 				CardContent.HSplitTop(BlockInputHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Blocked words"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("屏蔽词"), LG_BodySize, TEXTALIGN_ML);
 				if(DoEditBoxMultiLine(Ui(), &s_BlockWordsInput, &ControlCol, LG_BodySize, BlockInputLineSpacing))
 					str_copy(g_Config.m_QmBlockWordsList, s_BlockWordsInput.GetString(), sizeof(g_Config.m_QmBlockWordsList));
 
@@ -8330,14 +8330,14 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 8, Localize("Translate"), Localize("Chat translation settings"));
+				DoModuleHeadline(CardContent, 8, Localize("翻译"), Localize("Chat translation settings"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAuto, Localize("Auto inbound translation"), &g_Config.m_QmTranslateAuto, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAuto, Localize("自动翻译其他人的"), &g_Config.m_QmTranslateAuto, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAutoOutgoing, Localize("Auto outbound translation"), &g_Config.m_QmTranslateAutoOutgoing, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAutoOutgoing, Localize("自动翻译自己的消息"), &g_Config.m_QmTranslateAutoOutgoing, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static std::vector<const char *> s_TranslateBackendDropDownNames;
@@ -8356,7 +8356,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Translation backend"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("翻译后端"), LG_BodySize, TEXTALIGN_ML);
 				const int BackendSelectedNew = Ui()->DoDropDown(&ControlCol, BackendSelectedOld, s_TranslateBackendDropDownNames.data(), s_TranslateBackendDropDownNames.size(), s_TranslateBackendDropDownState);
 				if(BackendSelectedNew != BackendSelectedOld)
 				{
@@ -8393,19 +8393,19 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				if(IsFtapiBackend)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateFtapiAutoEnable, Localize("Enable FTAPI auto-translate (may cause overload)"), &g_Config.m_QmTranslateFtapiAutoEnable, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateFtapiAutoEnable, Localize("启用 FTAPI 自动翻译（可能导致服务过载）"), &g_Config.m_QmTranslateFtapiAutoEnable, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					// FTAPI 警告提示
 					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
 					Row.VMargin(LG_LabelWidth, &Row);
-					Ui()->DoLabel(&Row, Localize("⚠️ FTAPI is a free service. Excessive use may cause service suspension."), LG_BodySize * 0.8f, TEXTALIGN_ML);
+					Ui()->DoLabel(&Row, Localize("⚠️ FTAPI 是一个免费服务。过度使用可能导致服务暂停。"), LG_BodySize * 0.8f, TEXTALIGN_ML);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Target language"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("目标语言"), LG_BodySize, TEXTALIGN_ML);
 
 				// 下拉框 + 输入框组合
 				{
@@ -8440,7 +8440,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("端点"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateTcEndpoint, sizeof(g_Config.m_QmTranslateTcEndpoint));
 					s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
 					Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
@@ -8450,7 +8450,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("端点"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateLibreEndpoint, sizeof(g_Config.m_QmTranslateLibreEndpoint));
 					s_TranslateEndpoint.SetEmptyText("http://localhost:5000");
 					Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
@@ -8470,15 +8470,15 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, "SecretId", LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("SecretId"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateSecretId(g_Config.m_QmTranslateTcSecretId, sizeof(g_Config.m_QmTranslateTcSecretId));
-					s_TranslateSecretId.SetEmptyText("AKID...");
+					s_TranslateSecretId.SetEmptyText("填写你的腾讯云翻译ID~");
 					Ui()->DoEditBox(&s_TranslateSecretId, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, "SecretKey", LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("SecretKey"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateSecretKey(g_Config.m_QmTranslateTcSecretKey, sizeof(g_Config.m_QmTranslateTcSecretKey));
 					s_TranslateSecretKey.SetHidden(true);
 					Ui()->DoEditBox(&s_TranslateSecretKey, &ControlCol, LG_BodySize);
@@ -8499,10 +8499,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					// LLM Provider 选择
 					static std::vector<const char *> s_LlmProviderDropDownNames = {
-						Localize("Zhipu AI"),
-						"DeepSeek",
-						"OpenAI",
-						Localize("Custom")
+						Localize("智谱 AI"),
+						Localize("DeepSeek"),
+						Localize("OpenAI"),
+						Localize("自定义")
 					};
 					static CUi::SDropDownState s_LlmProviderDropDownState;
 					static CScrollRegion s_LlmProviderDropDownScrollRegion;
@@ -8510,7 +8510,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("LLM Provider"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("LLM 提供商"), LG_BodySize, TEXTALIGN_ML);
 					const int NewProvider = Ui()->DoDropDown(&ControlCol, g_Config.m_QmTranslateLlmProvider, s_LlmProviderDropDownNames.data(), s_LlmProviderDropDownNames.size(), s_LlmProviderDropDownState);
 					if(NewProvider != g_Config.m_QmTranslateLlmProvider)
 					{
@@ -8533,7 +8533,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					switch(g_Config.m_QmTranslateLlmProvider)
 					{
 					case 0: // Zhipu AI
-						pKeyLabel = Localize("Zhipu AI API Key");
+						pKeyLabel = Localize("智谱 API Key");
 						s_LlmApiKeyZhipu.SetEmptyText("ZHIPU_API_KEY");
 						s_LlmApiKeyZhipu.SetHidden(true);
 						pActiveKeyInput = &s_LlmApiKeyZhipu;
@@ -8552,7 +8552,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						break;
 					case 3: // Custom
 					default:
-						pKeyLabel = Localize("Custom API Key");
+						pKeyLabel = Localize("自定义 API Key");
 						s_LlmApiKeyCustom.SetEmptyText("API_KEY");
 						s_LlmApiKeyCustom.SetHidden(true);
 						pActiveKeyInput = &s_LlmApiKeyCustom;
@@ -8567,7 +8567,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					// 各 Provider 的端点配置（允许覆盖默认）
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Endpoint (Optional)"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("端点 (可选)"), LG_BodySize, TEXTALIGN_ML);
 
 					static CLineInput s_LlmEndpointZhipu(g_Config.m_QmTranslateLlmEndpointZhipu, sizeof(g_Config.m_QmTranslateLlmEndpointZhipu));
 					static CLineInput s_LlmEndpointDeepseek(g_Config.m_QmTranslateLlmEndpointDeepseek, sizeof(g_Config.m_QmTranslateLlmEndpointDeepseek));
@@ -8602,7 +8602,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					// 各 Provider 的模型配置
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Model"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("模型"), LG_BodySize, TEXTALIGN_ML);
 
 					static CLineInput s_LlmModelZhipu(g_Config.m_QmTranslateLlmModelZhipu, sizeof(g_Config.m_QmTranslateLlmModelZhipu));
 					static CLineInput s_LlmModelDeepseek(g_Config.m_QmTranslateLlmModelDeepseek, sizeof(g_Config.m_QmTranslateLlmModelDeepseek));
@@ -8641,7 +8641,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					// LLM 并发数配置
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Concurrency"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("并发数"), LG_BodySize, TEXTALIGN_ML);
 
 					// 显示当前有效并发数
 					{
@@ -8727,21 +8727,16 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					s_CustomPrompt.SetEmptyText(Localize("Leave empty to use default prompt"));
 					Ui()->DoEditBox(&s_CustomPrompt, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &CardContent);
-
-					// 提示信息
-					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
-					Ui()->DoLabel(&Row, Localize("Use %s as placeholder for target language"), LG_BodySize * 0.8f, TEXTALIGN_ML);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
 				// 入站语言和出站语言配置
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Outbound Source Language"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("发送源语言"), LG_BodySize, TEXTALIGN_ML);
 
 				// 下拉框 + 输入框组合
 				{
-					static const char *s_apSourceNames[] = {Localize("Auto Detect"), "中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
+					static const char *s_apSourceNames[] = {Localize("自动"), "中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
 					static const char *s_apSourceCodes[] = {"auto", "zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
 					static CUi::SDropDownState s_SourceLangDropDown;
 
@@ -8769,7 +8764,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Outbound Target Language"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("发送目标语言"), LG_BodySize, TEXTALIGN_ML);
 
 				// 下拉框 + 输入框组合
 				{
@@ -8824,7 +8819,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 9, Localize("Translate UI"), Localize("Customize translate button and menu colors"));
+				DoModuleHeadline(CardContent, 9, Localize("翻译 UI"), Localize("自定义翻译按钮颜色"));
 
 				NTranslateUiSettings::RenderTranslateUiModule(this, CardContent, LG_LineHeight, LG_BodySize, LG_LineSpacing);
 
@@ -8837,7 +8832,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::QiaFen:
 			{
-				// ========== 模块 4: 关键词回复 ==========
+				// ========== 模块: 关键词回复 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect Card3_5Start = Column;
 				s_GlassCards.push_back(Card3_5Start);
@@ -8845,10 +8840,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 8, Localize("Keyword reply"), Localize("Automatic replies for chat keywords"));
+				DoModuleHeadline(CardContent, 8, Localize("关键词回复"), Localize("我 是 机 器 人 "));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				Ui()->DoScrollbarOption(&g_Config.m_QmAutoReplyCooldown, &g_Config.m_QmAutoReplyCooldown, &Row, Localize("Auto reply cooldown"), 0, 30, &CUi::ms_LinearScrollbarScale, 0, Localize(" sec"));
+				Ui()->DoScrollbarOption(&g_Config.m_QmAutoReplyCooldown, &g_Config.m_QmAutoReplyCooldown, &Row, Localize("自动回复冷却时间"), 0, 30, &CUi::ms_LinearScrollbarScale, 0, Localize(" 秒"));
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				auto SyncRuleRowsFromConfig = [](std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, bool &Inited, const char *pConfigRules) {
@@ -8883,10 +8878,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyEnabled, Localize("Enable keyword reply"), &g_Config.m_QmKeywordReplyEnabled, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyEnabled, Localize("启用关键词回复"), &g_Config.m_QmKeywordReplyEnabled, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyUseDummy, Localize("Reply with dummy"), &g_Config.m_QmKeywordReplyUseDummy, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmKeywordReplyUseDummy, Localize("使用分身回复"), &g_Config.m_QmKeywordReplyUseDummy, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> s_vKeywordRuleRows;
@@ -8903,7 +8898,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Keyword rules"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("关键词规则"), LG_BodySize, TEXTALIGN_ML);
 				CUIRect AddRuleButtonRect;
 				ControlCol.VSplitRight(maximum(LG_LineHeight, 24.0f * UiScale), &ControlCol, &AddRuleButtonRect);
 				if(DoButton_Menu(&s_KeywordAddRuleButton, "+", 0, &AddRuleButtonRect))
@@ -8929,10 +8924,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					ControlCol.VSplitLeft(maximum(40.0f, 40.0f * UiScale), &SendCol, &ReplyCol);
 					OptionsCol.VSplitLeft(maximum(54.0f, 54.0f * UiScale), &RenameCol, &OptionsCol);
 					OptionsCol.VSplitLeft(maximum(54.0f, 54.0f * UiScale), &RegexCol, &OptionsCol);
-					DoButton_CheckBoxAutoVMarginAndSet(&pRuleRow->m_AutoRename, Localize("Rename"), &pRuleRow->m_AutoRename, &RenameCol, LG_LineHeight);
-					DoButton_CheckBoxAutoVMarginAndSet(&pRuleRow->m_Regex, Localize("Regex"), &pRuleRow->m_Regex, &RegexCol, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&pRuleRow->m_AutoRename, Localize("改名"), &pRuleRow->m_AutoRename, &RenameCol, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&pRuleRow->m_Regex, Localize("正则"), &pRuleRow->m_Regex, &RegexCol, LG_LineHeight);
 					Ui()->DoEditBox(&pRuleRow->m_TriggerInput, &TriggerCol, LG_BodySize);
-					Ui()->DoLabel(&SendCol, Localize("Send"), LG_BodySize, TEXTALIGN_MC);
+					Ui()->DoLabel(&SendCol, Localize("发送"), LG_BodySize, TEXTALIGN_MC);
 					Ui()->DoEditBox(&pRuleRow->m_ReplyInput, &ReplyCol, LG_BodySize);
 					const bool RemoveClicked = DoButton_Menu(&s_vKeywordRemoveRuleButtons[i], "-", 0, &RemoveButtonRect);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
@@ -8963,7 +8958,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
 					TextRender()->TextColor(1.0f, 0.2f, 0.2f, 1.0f);
-					Ui()->DoLabel(&Row, Localize("Both sides of a keyword rule must be filled in"), LG_BodySize * 0.7f, TEXTALIGN_ML);
+					Ui()->DoLabel(&Row, Localize("关键词规则的两侧都必须填写"), LG_BodySize * 0.7f, TEXTALIGN_ML);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
@@ -8985,36 +8980,36 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 9, Localize("Pie menu"), Localize("Open a prototype menu for quick access to common actions"));
+				DoModuleHeadline(CardContent, 9, Localize("饼菜单"), Localize("画一张大饼"));
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPieMenuEnabled, Localize("Enable pie menu"), &g_Config.m_QmPieMenuEnabled, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPieMenuEnabled, Localize("启用饼菜单"), &g_Config.m_QmPieMenuEnabled, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				bool BlockPieMenuCardDrag = Ui()->IsPopupOpen(&m_ColorPickerPopupContext) || Ui()->IsPopupHovered();
 				if(g_Config.m_QmPieMenuEnabled)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuScale, &g_Config.m_QmPieMenuScale, &Row, Localize("UI scale"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuScale, &g_Config.m_QmPieMenuScale, &Row, Localize("UI缩放"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuOpacity, &g_Config.m_QmPieMenuOpacity, &Row, Localize("Pie menu opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuOpacity, &g_Config.m_QmPieMenuOpacity, &Row, Localize("不透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuMaxDistance, &g_Config.m_QmPieMenuMaxDistance, &Row, Localize("Detection distance"), 100, 2000);
+					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuMaxDistance, &g_Config.m_QmPieMenuMaxDistance, &Row, Localize("检测距离"), 100, 2000);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Rename queue"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("改名队列"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_PieMenuRenameQueue(g_Config.m_QmPieMenuRenameQueue, sizeof(g_Config.m_QmPieMenuRenameQueue));
-					s_PieMenuRenameQueue.SetEmptyText(Localize("Example: Name1|Name2|Name3"));
+					s_PieMenuRenameQueue.SetEmptyText(Localize("示例: 名字1|名字2|名字3"));
 					Ui()->DoEditBox(&s_PieMenuRenameQueue, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					CardContent.HSplitTop(LG_BodySize, &Row, &CardContent);
 					TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.8f));
-					Ui()->DoLabel(&Row, Localize("Option colors"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&Row, Localize("选项颜色"), LG_BodySize, TEXTALIGN_ML);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
@@ -9185,9 +9180,9 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					Graphics()->QuadsEnd();
 
 					const int FocusedSector = HoveredSector >= 0 ? HoveredSector : PopupSectorIndex;
-					const char *pCenterTitle = FocusedSector >= 0 ? aPieMenuColorEntries[FocusedSector].m_pName : Localize("Click a sector");
-					const char *pCenterSubtitle = FocusedSector >= 0 ? Localize("Open color picker") : Localize("Set colors");
-					const char *pHintText = FocusedSector >= 0 ? aPieMenuColorEntries[FocusedSector].m_pName : Localize("Click any sector to set its color");
+					const char *pCenterTitle = FocusedSector >= 0 ? aPieMenuColorEntries[FocusedSector].m_pName : Localize("点击以设置颜色");
+					const char *pCenterSubtitle = FocusedSector >= 0 ? Localize("打开颜色选择器") : Localize("设置颜色");
+					const char *pHintText = FocusedSector >= 0 ? aPieMenuColorEntries[FocusedSector].m_pName : Localize("点击以设置颜色");
 					const float CenterTitleSize = maximum(LG_BodySize * 1.05f, BaseOuterRadius * 0.095f);
 					const float CenterSubtitleSize = maximum(LG_TipSize, BaseOuterRadius * 0.055f);
 
@@ -9215,7 +9210,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					static CButtonContainer s_PieMenuColorResetAllButton;
 					CUIRect PieMenuColorResetButton;
 					PieMenuColorResetRow.VSplitRight(maximum(88.0f, 88.0f * UiScale), nullptr, &PieMenuColorResetButton);
-					if(DoButton_Menu(&s_PieMenuColorResetAllButton, Localize("Reset all"), 0, &PieMenuColorResetButton))
+					if(DoButton_Menu(&s_PieMenuColorResetAllButton, Localize("重置"), 0, &PieMenuColorResetButton))
 					{
 						for(const auto &Entry : aPieMenuColorEntries)
 							*Entry.m_pColorValue = color_cast<ColorHSLA>(Entry.m_DefaultColor).Pack(false);
@@ -9240,15 +9235,14 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 10, Localize("Camera and view"), Localize("Camera drift, dynamic FOV and aspect ratio presets"));
-
+				DoModuleHeadline(CardContent, 10, Localize("镜头与视野"), Localize("你想拍出怎样的大片"));
 				{
 					const float DriftSectionHeight = LG_LineHeight + LG_LineSpacing +
 						(g_Config.m_QmCameraDrift ? (LG_LineHeight + LG_LineSpacing) * 3.0f : 0.0f);
 					if(IsModuleContentBlockVisible(CardContent, DriftSectionHeight))
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmCameraDrift, Localize("Enable camera drift"), &g_Config.m_QmCameraDrift, &Row, LG_LineHeight);
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmCameraDrift, Localize("启用相机漂移"), &g_Config.m_QmCameraDrift, &Row, LG_LineHeight);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 						if(g_Config.m_QmCameraDrift)
 						{
@@ -9256,32 +9250,32 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 							{
 								char aBuf[128];
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								str_format(aBuf, sizeof(aBuf), "%s: %d", Localize("Drift intensity"), g_Config.m_QmCameraDriftAmount);
+								str_format(aBuf, sizeof(aBuf), "%s: %d", Localize("漂移强度"), g_Config.m_QmCameraDriftAmount);
 								Ui()->DoLabel(&Row, aBuf, LG_BodySize, TEXTALIGN_ML);
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								str_format(aBuf, sizeof(aBuf), "%s: %d%%", Localize("Drift smoothness"), g_Config.m_QmCameraDriftSmoothness);
+								str_format(aBuf, sizeof(aBuf), "%s: %d%%", Localize("漂移平滑度"), g_Config.m_QmCameraDriftSmoothness);
 								Ui()->DoLabel(&Row, aBuf, LG_BodySize, TEXTALIGN_ML);
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Reverse drift direction"), g_Config.m_QmCameraDriftReverse ? Localize("On") : Localize("Off"));
+								str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("漂移方向"), g_Config.m_QmCameraDriftReverse ? Localize("开") : Localize("关"));
 								Ui()->DoLabel(&Row, aBuf, LG_BodySize, TEXTALIGN_ML);
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 							}
 							else
 							{
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								Ui()->DoScrollbarOption(&g_Config.m_QmCameraDriftAmount, &g_Config.m_QmCameraDriftAmount, &Row, Localize("Drift intensity"), 0, 200);
+								Ui()->DoScrollbarOption(&g_Config.m_QmCameraDriftAmount, &g_Config.m_QmCameraDriftAmount, &Row, Localize("漂移强度"), 0, 200);
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								Ui()->DoScrollbarOption(&g_Config.m_QmCameraDriftSmoothness, &g_Config.m_QmCameraDriftSmoothness, &Row, Localize("Drift smoothness"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+								Ui()->DoScrollbarOption(&g_Config.m_QmCameraDriftSmoothness, &g_Config.m_QmCameraDriftSmoothness, &Row, Localize("漂移平滑度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmCameraDriftReverse, Localize("Reverse drift direction"), &g_Config.m_QmCameraDriftReverse, &Row, LG_LineHeight);
+								DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmCameraDriftReverse, Localize("漂移方向"), &g_Config.m_QmCameraDriftReverse, &Row, LG_LineHeight);
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 							}
 						}
@@ -9294,7 +9288,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					if(IsModuleContentBlockVisible(CardContent, DynamicFovSectionHeight))
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDynamicFov, Localize("Enable dynamic FOV"), &g_Config.m_QmDynamicFov, &Row, LG_LineHeight);
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDynamicFov, Localize("启用动态FOV"), &g_Config.m_QmDynamicFov, &Row, LG_LineHeight);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 						if(g_Config.m_QmDynamicFov)
 						{
@@ -9302,23 +9296,23 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 							{
 								char aBuf[128];
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								str_format(aBuf, sizeof(aBuf), "%s: %d", Localize("Dynamic FOV intensity"), g_Config.m_QmDynamicFovAmount);
+								str_format(aBuf, sizeof(aBuf), "%s: %d", Localize("动态FOV强度"), g_Config.m_QmDynamicFovAmount);
 								Ui()->DoLabel(&Row, aBuf, LG_BodySize, TEXTALIGN_ML);
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								str_format(aBuf, sizeof(aBuf), "%s: %d%%", Localize("Dynamic FOV smoothness"), g_Config.m_QmDynamicFovSmoothness);
+								str_format(aBuf, sizeof(aBuf), "%s: %d%%", Localize("动态FOV平滑度"), g_Config.m_QmDynamicFovSmoothness);
 								Ui()->DoLabel(&Row, aBuf, LG_BodySize, TEXTALIGN_ML);
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 							}
 							else
 							{
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								Ui()->DoScrollbarOption(&g_Config.m_QmDynamicFovAmount, &g_Config.m_QmDynamicFovAmount, &Row, Localize("Dynamic FOV intensity"), 0, 200);
+								Ui()->DoScrollbarOption(&g_Config.m_QmDynamicFovAmount, &g_Config.m_QmDynamicFovAmount, &Row, Localize("动态FOV强度"), 0, 200);
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								Ui()->DoScrollbarOption(&g_Config.m_QmDynamicFovSmoothness, &g_Config.m_QmDynamicFovSmoothness, &Row, Localize("Dynamic FOV smoothness"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+								Ui()->DoScrollbarOption(&g_Config.m_QmDynamicFovSmoothness, &g_Config.m_QmDynamicFovSmoothness, &Row, Localize("动态FOV平滑度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 							}
 						}
@@ -9328,13 +9322,13 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 					bool AspectChanged = false;
 					const char *apAspectPresetNames[] = {
-						Localize("Off"),
+						Localize("关"),
 						"5:4",
 						"4:3",
 						"3:2",
 						"16:9",
 						"21:9",
-						Localize("Custom"),
+						Localize("自定义"),
 					};
 					static CUi::SDropDownState s_AspectPresetDropDownState;
 					static CScrollRegion s_AspectPresetDropDownScrollRegion;
@@ -9347,7 +9341,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 						Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-						Ui()->DoLabel(&LabelCol, Localize("Aspect ratio preset"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelCol, Localize("宽高比预设"), LG_BodySize, TEXTALIGN_ML);
 						if(DeferQmVisualHeavyModules)
 						{
 							Ui()->DoLabel(&ControlCol, apAspectPresetNames[CurrentPreset], LG_BodySize, TEXTALIGN_ML);
@@ -9382,10 +9376,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 							if(DeferQmVisualHeavyModules)
 							{
 								char aAspectBuf[64];
-								str_format(aAspectBuf, sizeof(aAspectBuf), "%s: %d x100", Localize("Custom ratio"), g_Config.m_QmAspectRatio);
+								str_format(aAspectBuf, sizeof(aAspectBuf), "%s: %d x100", Localize("自定义宽高比"), g_Config.m_QmAspectRatio);
 								Ui()->DoLabel(&Row, aAspectBuf, LG_BodySize, TEXTALIGN_ML);
 							}
-							else if(Ui()->DoScrollbarOption(&g_Config.m_QmAspectRatio, &g_Config.m_QmAspectRatio, &Row, Localize("Custom ratio"), 100, 300, &CUi::ms_LinearScrollbarScale, 0, " x100"))
+							else if(Ui()->DoScrollbarOption(&g_Config.m_QmAspectRatio, &g_Config.m_QmAspectRatio, &Row, Localize("自定义宽高比"), 100, 300, &CUi::ms_LinearScrollbarScale, 0, " x100"))
 								AspectChanged = true;
 							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 						}
@@ -9405,14 +9399,11 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						CardContent.HSplitTop(LG_BodySize, &Row, &CardContent);
 						char aAspectInfo[128];
 						if(EffectiveAspectValue > 0)
-							str_format(aAspectInfo, sizeof(aAspectInfo), "%s %.2f:1", Localize("Current ratio:"), EffectiveAspectValue / 100.0f);
+							str_format(aAspectInfo, sizeof(aAspectInfo), "%s %.2f:1", Localize("当前宽高比:"), EffectiveAspectValue / 100.0f);
 						else
-							str_copy(aAspectInfo, Localize("Current ratio: Display default (global)"), sizeof(aAspectInfo));
+							str_copy(aAspectInfo, Localize("当前宽高比: 显示默认"), sizeof(aAspectInfo));
 						Ui()->DoLabel(&Row, aAspectInfo, LG_BodySize, TEXTALIGN_ML);
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-						CardContent.HSplitTop(LG_BodySize, &Row, &CardContent);
-						Ui()->DoLabel(&Row, Localize("Current aspect ratio preset applies to the entire client view"), LG_BodySize * 0.9f, TEXTALIGN_ML);
 					}
 					else
 						SkipModuleContentBlock(CardContent, AspectSectionHeight);
@@ -9430,7 +9421,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			break;
 			case EQmModuleId::EntityOverlay:
 			{
-				// ========== 模块 8.5: 实体层颜色 ==========
+				// ========== 模块: 实体层颜色 ==========
 				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
 				CUIRect CardEntityOverlayStart = Column;
 				s_GlassCards.push_back(CardEntityOverlayStart);
@@ -9438,19 +9429,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 6, Localize("Entity overlay colors"), Localize("Entity layer tile colors"));
+				DoModuleHeadline(CardContent, 6, Localize("实体层颜色"), Localize("TeeWorlds的世界不会再出现挡人的实体层了"));
 
 				{
 					const float HintHeight = LG_LineHeight + LG_LineSpacing;
-					if(IsModuleContentBlockVisible(CardContent, HintHeight))
-					{
-						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoLabel(&Row, Localize("The entities layer must be enabled"), LG_BodySize, TEXTALIGN_ML);
-						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					}
-					else
-						SkipModuleContentBlock(CardContent, HintHeight);
-
 					auto RenderOverlaySlider = [&](int *pValue, const char *pTitle) {
 						const float SliderHeight = LG_LineHeight + LG_LineSpacing;
 						if(IsModuleContentBlockVisible(CardContent, SliderHeight))
@@ -9472,15 +9454,15 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 							SkipModuleContentBlock(CardContent, SliderHeight);
 					};
 
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeathAlpha, Localize("Death opacity"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayFreezeAlpha, Localize("Freeze opacity"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayUnfreezeAlpha, Localize("Unfreeze opacity"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeepFreezeAlpha, Localize("Deep freeze opacity"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeepUnfreezeAlpha, Localize("Deep unfreeze opacity"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayTeleAlpha, Localize("Tele opacity"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayTeleCheckpointAlpha, Localize("Checkpoint tele opacity"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlaySwitchAlpha, Localize("Switch opacity"));
-					RenderOverlaySlider(&g_Config.m_ClOverlayEntities, Localize("Overlay opacity"));
+					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeathAlpha, Localize("死亡不透明度"));
+					RenderOverlaySlider(&g_Config.m_QmEntityOverlayFreezeAlpha, Localize("冻结不透明度"));
+					RenderOverlaySlider(&g_Config.m_QmEntityOverlayUnfreezeAlpha, Localize("解冻不透明度"));
+					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeepFreezeAlpha, Localize("深度冻结不透明度"));
+					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeepUnfreezeAlpha, Localize("深度解冻不透明度"));
+					RenderOverlaySlider(&g_Config.m_QmEntityOverlayTeleAlpha, Localize("传送不透明度"));
+					RenderOverlaySlider(&g_Config.m_QmEntityOverlayTeleCheckpointAlpha, Localize("CP点不透明度"));
+					RenderOverlaySlider(&g_Config.m_QmEntityOverlaySwitchAlpha, Localize("开关不透明度"));
+					RenderOverlaySlider(&g_Config.m_ClOverlayEntities, Localize("叠层不透明度"));
 				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -10083,10 +10065,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 12, Localize("Voice"), Localize("Voice connection, input, and display"));
+				DoModuleHeadline(CardContent, 12, Localize("语音"), Localize("噢噢噢噢噢噢噢噢噢噢噢噢噢噢噢噢"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceEnable, Localize("Enable voice"), &g_Config.m_QmVoiceEnable, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceEnable, Localize("启用语音"), &g_Config.m_QmVoiceEnable, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_QmVoiceEnable)
@@ -10104,7 +10086,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Server"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("服务器IP"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_VoiceServer(g_Config.m_QmVoiceServer, sizeof(g_Config.m_QmVoiceServer));
 					s_VoiceServer.SetEmptyText("42.194.185.210:9987");
 					Ui()->DoEditBox(&s_VoiceServer, &ControlCol, LG_BodySize);
@@ -10112,15 +10094,15 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Room password"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("房间密码"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_VoiceToken(g_Config.m_QmVoiceToken, sizeof(g_Config.m_QmVoiceToken));
-					s_VoiceToken.SetEmptyText(Localize("Leave empty for the public room"));
+					s_VoiceToken.SetEmptyText(Localize("留空以进入公共房间"));
 					Ui()->DoEditBox(&s_VoiceToken, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing * 1.15f, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Input device"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoLabel(&LabelCol, Localize("输入设备"), LG_BodySize, TEXTALIGN_ML);
 					static std::vector<std::string> s_VoiceInputDeviceDisplayNames;
 					static std::vector<std::string> s_VoiceInputDeviceConfigValues;
 					static std::vector<const char *> s_VoiceInputDeviceDropDownNames;
@@ -10134,7 +10116,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						s_VoiceInputDeviceConfigValues.clear();
 						s_VoiceInputDeviceDropDownNames.clear();
 
-						s_VoiceInputDeviceDisplayNames.emplace_back(Localize("Default microphone"));
+						s_VoiceInputDeviceDisplayNames.emplace_back(Localize("默认"));
 						s_VoiceInputDeviceConfigValues.emplace_back("");
 
 						const int NumInputs = SDL_GetNumAudioDevices(1);
@@ -10173,7 +10155,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 							if(!FoundCurrent)
 							{
 								char aDisplay[160];
-								str_format(aDisplay, sizeof(aDisplay), "%s (%s)", g_Config.m_QmVoiceInputDevice, Localize("Current config"));
+								str_format(aDisplay, sizeof(aDisplay), "%s (%s)", g_Config.m_QmVoiceInputDevice, Localize("已断开"));
 								s_VoiceInputDeviceDisplayNames.emplace_back(aDisplay);
 								s_VoiceInputDeviceConfigValues.emplace_back(g_Config.m_QmVoiceInputDevice);
 							}
@@ -10215,68 +10197,57 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						str_copy(g_Config.m_QmVoiceInputDevice, s_VoiceInputDeviceConfigValues[VoiceInputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceInputDevice));
 
 					static CButtonContainer s_VoiceInputRefreshButton;
-					if(DoButton_Menu(&s_VoiceInputRefreshButton, Localize("Refresh"), 0, &VoiceInputRefreshButton))
+					if(DoButton_Menu(&s_VoiceInputRefreshButton, Localize("刷新"), 0, &VoiceInputRefreshButton))
 						RefreshVoiceInputDeviceList();
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceMicMute, Localize("Mute microphone"), &g_Config.m_QmVoiceMicMute, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceMicMute, Localize("静音麦克风"), &g_Config.m_QmVoiceMicMute, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceMicVolume, &g_Config.m_QmVoiceMicVolume, &Row, Localize("Microphone volume"), 0, 300, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceMicVolume, &g_Config.m_QmVoiceMicVolume, &Row, Localize("麦克风音量"), 0, 300, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceVadEnable, Localize("Voice activation"), &g_Config.m_QmVoiceVadEnable, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceVadEnable, Localize("启用语音激活"), &g_Config.m_QmVoiceVadEnable, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmVoiceVadEnable)
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadThreshold, &g_Config.m_QmVoiceVadThreshold, &Row, Localize("Voice activation threshold"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadThreshold, &g_Config.m_QmVoiceVadThreshold, &Row, Localize("语音激活阈值"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadReleaseDelayMs, &g_Config.m_QmVoiceVadReleaseDelayMs, &Row, Localize("Voice activation release delay"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
+						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadReleaseDelayMs, &g_Config.m_QmVoiceVadReleaseDelayMs, &Row, Localize("语音激活释放延迟"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
 					CardContent.HSplitTop(LG_LineSpacing * 1.15f, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVolume, &g_Config.m_QmVoiceVolume, &Row, Localize("Playback volume"), 0, 400, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVolume, &g_Config.m_QmVoiceVolume, &Row, Localize("播放音量"), 0, 400, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceStereo, Localize("Enable stereo positioning"), &g_Config.m_QmVoiceStereo, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceStereo, Localize("启用立体声定位"), &g_Config.m_QmVoiceStereo, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					if(g_Config.m_QmVoiceStereo)
 					{
 						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceStereoWidth, &g_Config.m_QmVoiceStereoWidth, &Row, Localize("Stereo width"), 0, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
+						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceStereoWidth, &g_Config.m_QmVoiceStereoWidth, &Row, Localize("立体声宽度"), 0, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceRadius, &g_Config.m_QmVoiceRadius, &Row, Localize("Voice distance radius"), 1, 400, &CUi::ms_LinearScrollbarScale, 0, "tile");
+					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceRadius, &g_Config.m_QmVoiceRadius, &Row, Localize("语音距离半径"), 1, 400, &CUi::ms_LinearScrollbarScale, 0, "tile");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceGroupGlobal, Localize("Hear teammates globally"), &g_Config.m_QmVoiceGroupGlobal, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceGroupGlobal, Localize("同房间全图收听"), &g_Config.m_QmVoiceGroupGlobal, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowOverlay, Localize("Show the speaker list on the left"), &g_Config.m_QmVoiceShowOverlay, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					if(g_Config.m_QmVoiceShowOverlay)
-					{
-						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceShowWhenActive, Localize("Also show while you are speaking"), &g_Config.m_QmVoiceShowWhenActive, &Row, LG_LineHeight);
-						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					}
 				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -10296,27 +10267,26 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 12, Localize("Dummy mini view"), Localize("Cleaner monitor card with presets and HUD placement"));
+				DoModuleHeadline(CardContent, 12, Localize("分身小窗"), Localize("在你操控本体的时候分身有没有被欺负呢?"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClDummyMiniView, Localize("Enable dummy mini view"), &g_Config.m_ClDummyMiniView, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClDummyMiniView, Localize("启用分身小窗"), &g_Config.m_ClDummyMiniView, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
-				Ui()->DoLabel(&Row, Localize("Heavy render path. AMD + Vulkan stays blocked for safety."), LG_BodySize * 0.7f, TEXTALIGN_ML);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_ClDummyMiniView)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClDummyMiniViewAuto, Localize("Only show when the other tee is off-screen"), &g_Config.m_ClDummyMiniViewAuto, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClDummyMiniViewAuto, Localize("仅在另一个Tee不在屏幕上时显示"), &g_Config.m_ClDummyMiniViewAuto, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_ClDummyMiniViewSize, &g_Config.m_ClDummyMiniViewSize, &Row, Localize("Mini view size"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_ClDummyMiniViewSize, &g_Config.m_ClDummyMiniViewSize, &Row, Localize("分身小窗大小"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_ClDummyMiniViewZoom, &g_Config.m_ClDummyMiniViewZoom, &Row, Localize("Mini view zoom"), 10, 300, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_ClDummyMiniViewZoom, &g_Config.m_ClDummyMiniViewZoom, &Row, Localize("分身小窗缩放"), 10, 300, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
@@ -10337,10 +10307,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 14, Localize("Dynamic island"), Localize("Dynamic island"));
+				DoModuleHeadline(CardContent, 14, Localize("灵动岛"), Localize("Only Apple Can Do"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHudIslandUseOriginalStyle, Localize("Disable dynamic island"), &g_Config.m_QmHudIslandUseOriginalStyle, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHudIslandUseOriginalStyle, Localize("使用原始样式"), &g_Config.m_QmHudIslandUseOriginalStyle, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_QmHudIslandUseOriginalStyle)
@@ -10349,11 +10319,11 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				else
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmHudIslandBgOpacity, &g_Config.m_QmHudIslandBgOpacity, &Row, Localize("Background opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+					Ui()->DoScrollbarOption(&g_Config.m_QmHudIslandBgOpacity, &g_Config.m_QmHudIslandBgOpacity, &Row, Localize("不透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					static CButtonContainer s_DynamicIslandBgColorId;
-					DoLine_ColorPicker(&s_DynamicIslandBgColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, ColorRGBA(0.04f, 0.05f, 0.07f, 1.0f), false);
+					DoLine_ColorPicker(&s_DynamicIslandBgColorId, LG_LineHeight, LG_BodySize, LG_LineSpacing, &CardContent, Localize("背景颜色"), &g_Config.m_QmHudIslandBgColor, ColorRGBA(0.04f, 0.05f, 0.07f, 1.0f), false);
 				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -10373,16 +10343,16 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 13, Localize("System media controls"), Localize("Media control toggles and buttons"));
+				DoModuleHeadline(CardContent, 13, Localize("SMTC"), Localize("系统媒体控制"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSmtcEnable, Localize("Enable system media controls"), &g_Config.m_ClSmtcEnable, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSmtcEnable, Localize("启用系统媒体控制"), &g_Config.m_ClSmtcEnable, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_ClSmtcEnable)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSmtcShowHud, Localize("Show song info in the top-left corner"), &g_Config.m_ClSmtcShowHud, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSmtcShowHud, Localize("在左上角显示歌曲信息"), &g_Config.m_ClSmtcShowHud, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CUIRect MediaButtons, PrevButton, PlayButton, NextButton;
@@ -10394,15 +10364,15 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					NextButton = MediaButtons;
 
 					static CButtonContainer s_SmtcPrev;
-					if(DoButton_Menu(&s_SmtcPrev, Localize("Previous"), 0, &PrevButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f))
+					if(DoButton_Menu(&s_SmtcPrev, Localize("上一首"), 0, &PrevButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f))
 						GameClient()->m_SystemMediaControls.Previous();
 
 					static CButtonContainer s_SmtcPlayPause;
-					if(DoButton_Menu(&s_SmtcPlayPause, Localize("Play/Pause"), 0, &PlayButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f))
+					if(DoButton_Menu(&s_SmtcPlayPause, Localize("播放/暂停"), 0, &PlayButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f))
 						GameClient()->m_SystemMediaControls.PlayPause();
 
 					static CButtonContainer s_SmtcNext;
-					if(DoButton_Menu(&s_SmtcNext, Localize("Next"), 0, &NextButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f))
+					if(DoButton_Menu(&s_SmtcNext, Localize("下一首"), 0, &NextButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f))
 						GameClient()->m_SystemMediaControls.Next();
 
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);

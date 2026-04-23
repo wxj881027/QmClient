@@ -66,18 +66,20 @@ void CVoiceOverlayState::Reset()
 	m_aLastHeard.fill(0);
 	m_aOrder.fill(0);
 	m_aIsLocal.fill(false);
+	m_aLevels.fill(0.0f);
 	for(auto &aName : m_aaNames)
 		aName[0] = '\0';
 	m_NextOrder = 1;
 }
 
-void CVoiceOverlayState::NoteSpeaker(int ClientId, const char *pName, bool IsLocal, int64_t Timestamp)
+void CVoiceOverlayState::NoteSpeaker(int ClientId, const char *pName, bool IsLocal, int64_t Timestamp, float Level)
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || pName == nullptr || pName[0] == '\0')
 		return;
 
 	m_aLastHeard[ClientId] = Timestamp;
 	m_aIsLocal[ClientId] = IsLocal;
+	m_aLevels[ClientId] = std::clamp(Level, 0.0f, 1.0f);
 	str_copy(m_aaNames[ClientId].data(), pName, m_aaNames[ClientId].size());
 	if(m_aOrder[ClientId] == 0)
 	{
@@ -98,18 +100,21 @@ std::vector<SVoiceOverlayEntry> CVoiceOverlayState::CollectVisible(int64_t Now, 
 		if(LastHeard <= 0 || Now - LastHeard >= VisibleWindow)
 		{
 			m_aOrder[ClientId] = 0;
+			m_aLevels[ClientId] = 0.0f;
 			continue;
 		}
 
 		if(m_aaNames[ClientId][0] == '\0')
 		{
 			m_aOrder[ClientId] = 0;
+			m_aLevels[ClientId] = 0.0f;
 			continue;
 		}
 
 		if(m_aIsLocal[ClientId] && !ShowLocalWhenActive)
 		{
 			m_aOrder[ClientId] = 0;
+			m_aLevels[ClientId] = 0.0f;
 			continue;
 		}
 
@@ -124,6 +129,8 @@ std::vector<SVoiceOverlayEntry> CVoiceOverlayState::CollectVisible(int64_t Now, 
 		Entry.m_ClientId = ClientId;
 		Entry.m_Order = m_aOrder[ClientId];
 		Entry.m_IsLocal = m_aIsLocal[ClientId];
+		const float AgeAlpha = VisibleWindow > 0 ? std::clamp(1.0f - (Now - LastHeard) / (float)VisibleWindow, 0.0f, 1.0f) : 1.0f;
+		Entry.m_Level = std::clamp(m_aLevels[ClientId] * AgeAlpha, 0.0f, 1.0f);
 		str_copy(Entry.m_aName, m_aaNames[ClientId].data(), sizeof(Entry.m_aName));
 	}
 
@@ -1094,11 +1101,12 @@ void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const
 		aaClientNames = m_aClientNameSnap;
 	}
 
+	const int64_t Now = time_get();
 	bool LocalEntryAdded = false;
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
-		const int64_t LastHeard = m_aLastHeard[ClientId].load();
-		if(LastHeard <= 0 || aaClientNames[ClientId][0] == '\0')
+		int64_t LastSeen = m_aRoomMemberSeen[ClientId].load();
+		if(aaClientNames[ClientId][0] == '\0')
 			continue;
 
 		bool IsLocalSpeaker = false;
@@ -1113,14 +1121,21 @@ void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const
 
 		if(IsLocalSpeaker)
 		{
+			if(LastSeen <= 0)
+				LastSeen = Now;
 			if(PreferredLocalId >= 0 && ClientId != PreferredLocalId)
 				continue;
 			if(PreferredLocalId < 0 && LocalEntryAdded)
 				continue;
 			LocalEntryAdded = true;
 		}
+		else if(LastSeen <= 0)
+		{
+			continue;
+		}
 
-		Overlay.NoteSpeaker(ClientId, aaClientNames[ClientId].data(), IsLocalSpeaker, LastHeard);
+		const float Level = IsLocalSpeaker ? m_MicLevel.load() : m_aSpeakerLevel[ClientId].load();
+		Overlay.NoteSpeaker(ClientId, aaClientNames[ClientId].data(), IsLocalSpeaker, LastSeen, Level);
 	}
 }
 
@@ -1212,6 +1227,10 @@ void CRClientVoice::Shutdown()
 	m_AudioSubsystemInitializedByVoice = false;
 	m_PingMs.store(-1);
 	m_MicLevel.store(0.0f);
+	for(auto &RoomMemberSeen : m_aRoomMemberSeen)
+		RoomMemberSeen.store(0);
+	for(auto &SpeakerLevel : m_aSpeakerLevel)
+		SpeakerLevel.store(0.0f);
 	m_LastPingSentTime = 0;
 	m_LastPingSeq = 0;
 	m_LastConfigSnapshotUpdate = 0;
@@ -1376,7 +1395,7 @@ void CRClientVoice::ProcessCapture()
 	const int TestMode = std::clamp(Config.m_QmVoiceTestMode, 0, 2);
 	const bool TestLocal = TestMode == 1;
 	const bool NeedNetwork = !TestLocal;
-	const bool ShowMicLevel = TestMode != 0;
+	const bool ShowMicLevel = true;
 	const bool MicMuted = Config.m_QmVoiceMicMute != 0;
 	const float TestGain = std::clamp(Config.m_QmVoiceVolume / 100.0f, 0.0f, 4.0f);
 
@@ -1407,7 +1426,18 @@ void CRClientVoice::ProcessCapture()
 		for(const int Id : aLocalClientIds)
 		{
 			if(Id >= 0 && Id < MAX_CLIENTS)
+			{
 				m_aLastHeard[Id].store(Timestamp);
+				m_aRoomMemberSeen[Id].store(Timestamp);
+			}
+		}
+	};
+
+	const auto MarkLocalRoomMemberSeen = [&](int64_t Timestamp) {
+		for(const int Id : aLocalClientIds)
+		{
+			if(Id >= 0 && Id < MAX_CLIENTS)
+				m_aRoomMemberSeen[Id].store(Timestamp);
 		}
 	};
 
@@ -1470,6 +1500,7 @@ void CRClientVoice::ProcessCapture()
 		VoiceUtils::WriteFloat(aPacket + Offset, 0.0f);
 		Offset += sizeof(float);
 		net_udp_send(m_Socket, &ServerAddrLocal, aPacket, (int)Offset);
+		MarkLocalRoomMemberSeen(Now);
 		m_LastPingSentTime = Now;
 		m_LastPingSeq = m_Sequence;
 		m_LastKeepalive = Now;
@@ -1725,26 +1756,29 @@ void CRClientVoice::ProcessIncoming()
 			m_RxDropContext++;
 			continue;
 		}
-		if(Type == VOICE_TYPE_PING || Type == VOICE_TYPE_PONG)
-		{
-			if(TokenHash != 0 && TokenHash != Config.m_QmVoiceTokenHash)
-				continue;
-			if(m_LastPingSentTime != 0 && Sequence == m_LastPingSeq)
-			{
-				const int64_t Now = time_get();
-				const int RttMs = (int)std::clamp((Now - m_LastPingSentTime) * 1000 / time_freq(), (int64_t)0, (int64_t)9999);
-				m_PingMs.store(RttMs);
-			}
-			continue;
-		}
-		if(Type != VOICE_TYPE_AUDIO)
-			continue;
 		const uint32_t LocalToken = Config.m_QmVoiceTokenHash;
 		const uint32_t LocalGroup = VoiceTokenGroup(LocalToken);
 		const uint32_t SenderGroup = VoiceTokenGroup(TokenHash);
 		if(!VoiceShouldHear(SenderGroup, LocalGroup))
 			continue;
 		if(SenderId >= MAX_CLIENTS)
+			continue;
+
+		const int64_t PacketNow = time_get();
+		m_aRoomMemberSeen[SenderId].store(PacketNow);
+
+		if(Type == VOICE_TYPE_PING || Type == VOICE_TYPE_PONG)
+		{
+			if(TokenHash != 0 && TokenHash != Config.m_QmVoiceTokenHash)
+				continue;
+			if(m_LastPingSentTime != 0 && Sequence == m_LastPingSeq)
+			{
+				const int RttMs = (int)std::clamp((PacketNow - m_LastPingSentTime) * 1000 / time_freq(), (int64_t)0, (int64_t)9999);
+				m_PingMs.store(RttMs);
+			}
+			continue;
+		}
+		if(Type != VOICE_TYPE_AUDIO)
 			continue;
 
 		int LocalId = -1;
@@ -1805,7 +1839,7 @@ void CRClientVoice::ProcessIncoming()
 			if(SenderUsesVad && !Config.m_QmVoiceHearVad && !VoiceUtils::VoiceListMatch(Config.m_aQmVoiceVadAllow, pSenderName))
 				continue;
 		}
-		m_aLastHeard[SenderId].store(time_get());
+		m_aLastHeard[SenderId].store(PacketNow);
 
 		if(PayloadSize > (uint16_t)(VOICE_MAX_PACKET - VOICE_HEADER_SIZE))
 			continue;
@@ -2146,9 +2180,18 @@ void CRClientVoice::DecodeJitter()
 
 		if(Samples > 0)
 		{
+			const float Peak = std::clamp(VoiceUtils::VoiceFramePeak(aPcm, Samples) * std::max(LeftGain, RightGain), 0.0f, 1.0f);
+			const float PrevLevel = m_aSpeakerLevel[PeerId].load();
+			const float NextLevel = Peak >= PrevLevel ? Peak : (PrevLevel * 0.9f);
+			m_aSpeakerLevel[PeerId].store(NextLevel);
+
 			SDL_LockAudioDevice(m_OutputDevice);
 			PushPeerFrame(PeerId, aPcm, Samples, LeftGain, RightGain);
 			SDL_UnlockAudioDevice(m_OutputDevice);
+		}
+		else
+		{
+			m_aSpeakerLevel[PeerId].store(m_aSpeakerLevel[PeerId].load() * 0.92f);
 		}
 
 		Peer.m_LastSeq = Peer.m_NextSeq;
@@ -2307,6 +2350,10 @@ void CRClientVoice::OnRender()
 	{
 		StopWorker();
 		ClearPeerFrames();
+		for(auto &RoomMemberSeen : m_aRoomMemberSeen)
+			RoomMemberSeen.store(0);
+		for(auto &SpeakerLevel : m_aSpeakerLevel)
+			SpeakerLevel.store(0.0f);
 	}
 
 	if(NeedReinit)
@@ -2327,7 +2374,7 @@ void CRClientVoice::OnRender()
 
 void CRClientVoice::RenderSpeakerOverlay()
 {
-	if(!m_pGameClient || !m_pGraphics || !g_Config.m_QmVoiceEnable || !g_Config.m_QmVoiceShowOverlay)
+	if(!m_pGameClient || !m_pGraphics || !g_Config.m_QmVoiceEnable)
 		return;
 
 	const bool HudEditorPreview = m_pGameClient->m_HudEditor.IsActive();
@@ -2365,7 +2412,6 @@ void CRClientVoice::RenderSpeakerOverlay()
 
 	const int64_t Now = time_get();
 	const int64_t VisibleWindow = (int64_t)time_freq() * VOICE_OVERLAY_VISIBLE_MS / 1000;
-	const bool ShowLocalWhenActive = g_Config.m_QmVoiceShowWhenActive != 0;
 	std::array<bool, MAX_CLIENTS> aVisibleNow{};
 	aVisibleNow.fill(false);
 	std::vector<SSpeakerEntry> vEntries;
@@ -2395,8 +2441,6 @@ void CRClientVoice::RenderSpeakerOverlay()
 
 		if(IsLocalSpeaker)
 		{
-			if(!ShowLocalWhenActive)
-				continue;
 			if(PreferredLocalId >= 0 && ClientId != PreferredLocalId)
 				continue;
 			if(PreferredLocalId < 0 && LocalEntryAdded)

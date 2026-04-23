@@ -16,9 +16,8 @@
 
 namespace
 {
-static constexpr int VOICE_OVERLAY_VISIBLE_MS = 180;
-static constexpr int VOICE_OVERLAY_MAX_SPEAKERS = 5;
-static constexpr const char *s_pVoiceOverlayMicIcon = "\xEF\x84\xB0";
+static constexpr int VOICE_OVERLAY_MEMBER_VISIBLE_MS = 7000;
+static constexpr int VOICE_OVERLAY_MAX_SPEAKERS = MAX_CLIENTS;
 
 void DrawVoiceOverlay(CGameClient *pGameClient, IGraphics *pGraphics, ITextRender *pTextRender, std::vector<SVoiceOverlayEntry> vEntries)
 {
@@ -35,12 +34,14 @@ void DrawVoiceOverlay(CGameClient *pGameClient, IGraphics *pGraphics, ITextRende
 		LocalEntry.m_ClientId = 0;
 		LocalEntry.m_Order = 1;
 		LocalEntry.m_IsLocal = true;
+		LocalEntry.m_Level = 0.82f;
 		str_copy(LocalEntry.m_aName, "You", sizeof(LocalEntry.m_aName));
 
 		SVoiceOverlayEntry &TeammateEntry = vEntries.emplace_back();
 		TeammateEntry.m_ClientId = 1;
 		TeammateEntry.m_Order = 2;
 		TeammateEntry.m_IsLocal = false;
+		TeammateEntry.m_Level = 0.46f;
 		str_copy(TeammateEntry.m_aName, "Teammate", sizeof(TeammateEntry.m_aName));
 	}
 
@@ -69,27 +70,43 @@ void DrawVoiceOverlay(CGameClient *pGameClient, IGraphics *pGraphics, ITextRende
 
 	constexpr float PanelX = 6.0f;
 	constexpr float PanelY = 74.0f;
-	constexpr float RowHeight = 12.0f;
-	constexpr float RowGap = 2.0f;
-	constexpr float RowRadius = 5.0f;
-	constexpr float RowPaddingX = 3.0f;
-	constexpr float UserBoxWidth = 11.0f;
-	constexpr float UserToNameGap = 2.5f;
-	constexpr float NameToMicGap = 3.0f;
-	constexpr float NameFontSize = 5.5f;
-	constexpr float IconFontSize = 5.4f;
-	constexpr float UserIconFontSize = 5.1f;
-	constexpr float MaxNameWidth = 52.0f;
+	constexpr float BaseRowHeight = 12.0f;
+	constexpr float BaseRowGap = 2.0f;
+	constexpr float BaseRowRadius = 5.0f;
+	constexpr float BaseRowPaddingX = 4.0f;
+	constexpr float BaseRowInnerInset = 0.8f;
+	constexpr float BaseRowMinWidth = 20.0f;
+	constexpr float BaseNameFontSize = 5.5f;
+	constexpr float BaseMaxNameWidth = 56.0f;
+	constexpr float BaseActivityExtraWidth = 18.0f;
+
+	float LayoutScale = 1.0f;
+	if(vRenderEntries.size() > 5)
+		LayoutScale = std::clamp(1.0f - 0.045f * (vRenderEntries.size() - 5), 0.72f, 1.0f);
+
+	const float MaxPanelHeight = HudHeight - PanelY - 8.0f;
+	if(!vRenderEntries.empty())
+	{
+		const float EstimatedPanelHeight = vRenderEntries.size() * (BaseRowHeight * LayoutScale) + (vRenderEntries.size() - 1) * (BaseRowGap * LayoutScale);
+		if(EstimatedPanelHeight > MaxPanelHeight && EstimatedPanelHeight > 0.0f)
+			LayoutScale = std::max(0.58f, LayoutScale * (MaxPanelHeight / EstimatedPanelHeight));
+	}
+
+	const float RowHeight = BaseRowHeight * LayoutScale;
+	const float RowGap = BaseRowGap * LayoutScale;
+	const float RowRadius = BaseRowRadius * LayoutScale;
+	const float RowPaddingX = BaseRowPaddingX * LayoutScale;
+	const float RowInnerInset = BaseRowInnerInset * LayoutScale;
+	const float RowMinWidth = BaseRowMinWidth * LayoutScale;
+	const float NameFontSize = BaseNameFontSize * LayoutScale;
+	const float MaxNameWidth = BaseMaxNameWidth * LayoutScale;
+	const float ActivityExtraWidth = BaseActivityExtraWidth * LayoutScale;
 
 	const unsigned int PrevFlags = pTextRender->GetRenderFlags();
 	const ColorRGBA PrevTextColor = pTextRender->GetTextColor();
 	const ColorRGBA PrevOutlineColor = pTextRender->GetTextOutlineColor();
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 	pTextRender->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.40f);
-
-	pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
-	const float UserIconWidth = pTextRender->TextWidth(UserIconFontSize, FontIcons::FONT_ICON_USERS);
-	const float MicIconWidth = pTextRender->TextWidth(IconFontSize, s_pVoiceOverlayMicIcon);
 	pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
 
 	float PanelWidth = 0.0f;
@@ -97,7 +114,9 @@ void DrawVoiceOverlay(CGameClient *pGameClient, IGraphics *pGraphics, ITextRende
 	{
 		Entry.m_FullNameWidth = std::round(pTextRender->TextBoundingBox(NameFontSize, Entry.m_Entry.m_aName).m_W);
 		Entry.m_NameWidth = std::min(Entry.m_FullNameWidth, MaxNameWidth);
-		Entry.m_RowWidth = RowPaddingX + UserBoxWidth + UserToNameGap + Entry.m_NameWidth + NameToMicGap + MicIconWidth + RowPaddingX;
+		const float Activity = std::clamp(Entry.m_Entry.m_Level, 0.0f, 1.0f);
+		const float BaseRowWidth = std::max(RowMinWidth, RowPaddingX + Entry.m_NameWidth + RowPaddingX);
+		Entry.m_RowWidth = BaseRowWidth + ActivityExtraWidth * Activity;
 		PanelWidth = std::max(PanelWidth, Entry.m_RowWidth);
 	}
 
@@ -115,21 +134,23 @@ void DrawVoiceOverlay(CGameClient *pGameClient, IGraphics *pGraphics, ITextRende
 			RowColor = ColorRGBA(0.12f, 0.13f, 0.17f, 0.88f);
 		pGraphics->DrawRect(PanelX, RowY, Entry.m_RowWidth, RowHeight, RowColor, IGraphics::CORNER_ALL, RowRadius);
 
-		const ColorRGBA UserBoxColor(1.0f, 1.0f, 1.0f, 0.10f);
-		pGraphics->DrawRect(PanelX + 1.0f, RowY + 1.0f, UserBoxWidth, RowHeight - 2.0f, UserBoxColor, IGraphics::CORNER_ALL, RowRadius - 1.0f);
+		const float Activity = std::clamp(Entry.m_Entry.m_Level, 0.0f, 1.0f);
+		if(Activity > 0.001f)
+		{
+			const float FillWidth = std::max(1.0f, Entry.m_RowWidth - RowInnerInset * 2.0f);
+			const bool FillFullRow = FillWidth + RowInnerInset * 2.0f >= Entry.m_RowWidth - 0.01f;
+			const int FillCorners = FillFullRow ? IGraphics::CORNER_ALL : IGraphics::CORNER_L;
+			ColorRGBA FillColor(0.36f, 0.70f, 0.98f, 0.24f + 0.22f * Activity);
+			if(Entry.m_Entry.m_IsLocal)
+				FillColor = ColorRGBA(0.48f, 0.82f, 1.0f, 0.28f + 0.24f * Activity);
+			pGraphics->DrawRect(PanelX + RowInnerInset, RowY + RowInnerInset, FillWidth, RowHeight - RowInnerInset * 2.0f, FillColor, FillCorners, RowRadius - RowInnerInset);
 
-		const float UserIconX = PanelX + 1.0f + (UserBoxWidth - UserIconWidth) * 0.5f;
-		const float UserIconY = RowY + (RowHeight - UserIconFontSize) * 0.5f - 0.5f;
-		pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
-		pTextRender->TextColor(1.0f, 1.0f, 1.0f, 0.82f);
-		pTextRender->Text(UserIconX, UserIconY, UserIconFontSize, FontIcons::FONT_ICON_USERS, -1.0f);
+			const float HighlightWidth = std::max(1.0f, FillWidth * (0.34f + 0.18f * Activity));
+			const ColorRGBA HighlightColor(1.0f, 1.0f, 1.0f, 0.05f + 0.10f * Activity);
+			pGraphics->DrawRect(PanelX + RowInnerInset, RowY + RowInnerInset, HighlightWidth, std::max(0.8f, 1.1f * LayoutScale), HighlightColor, FillCorners, 0.55f * LayoutScale);
+		}
 
-		const float MicIconX = PanelX + Entry.m_RowWidth - RowPaddingX - MicIconWidth;
-		const float MicIconY = RowY + (RowHeight - IconFontSize) * 0.5f - 0.5f;
-		pTextRender->TextColor(1.0f, 1.0f, 1.0f, 0.90f);
-		pTextRender->Text(MicIconX, MicIconY, IconFontSize, s_pVoiceOverlayMicIcon, -1.0f);
-
-		const float NameX = PanelX + RowPaddingX + UserBoxWidth + UserToNameGap;
+		const float NameX = PanelX + RowPaddingX;
 		const float NameY = RowY + (RowHeight - NameFontSize) * 0.5f - 0.5f;
 		pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		pTextRender->TextColor(0.97f, 0.98f, 1.0f, 0.94f);
@@ -237,14 +258,14 @@ void CVoiceComponent::OnRender()
 
 void CVoiceComponent::RenderOverlay()
 {
-	if(!GameClient() || !Graphics() || !TextRender() || !g_Config.m_QmVoiceEnable || !g_Config.m_QmVoiceShowOverlay)
+	if(!GameClient() || !Graphics() || !TextRender() || !g_Config.m_QmVoiceEnable)
 		return;
 
-	const int64_t VisibleWindow = (int64_t)time_freq() * VOICE_OVERLAY_VISIBLE_MS / 1000;
+	const int64_t VisibleWindow = (int64_t)time_freq() * VOICE_OVERLAY_MEMBER_VISIBLE_MS / 1000;
 	auto vEntries = m_OverlayState.CollectVisible(
 		time_get(),
 		VisibleWindow,
-		g_Config.m_QmVoiceShowWhenActive != 0,
+		true,
 		VOICE_OVERLAY_MAX_SPEAKERS);
 	DrawVoiceOverlay(GameClient(), Graphics(), TextRender(), std::move(vEntries));
 }
