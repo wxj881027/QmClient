@@ -61,6 +61,11 @@ const SAssetResourceCategory *FindAssetResourceCategory(const char *pId)
 	return nullptr;
 }
 
+std::span<const SAssetResourceCategory> GetAssetResourceCategories()
+{
+	return s_aAssetCategories;
+}
+
 bool IsProtectedDefaultAsset(std::string_view AssetName)
 {
 	return AssetName == "default";
@@ -88,4 +93,41 @@ std::string NextLegacyAssetName(std::span<const std::string> ExistingNames)
 		if(!HasName(Candidate))
 			return Candidate;
 	}
+}
+
+bool AssetResourceNameLess(std::string_view LeftName, std::string_view RightName)
+{
+	const bool LeftIsDefault = IsProtectedDefaultAsset(LeftName);
+	const bool RightIsDefault = IsProtectedDefaultAsset(RightName);
+	if(LeftIsDefault != RightIsDefault)
+		return LeftIsDefault;
+
+	return LeftName < RightName;
+}
+
+void EnsureDefaultAssetVisible(std::vector<std::string> &vAssetNames)
+{
+	const auto HasDefault = std::any_of(vAssetNames.begin(), vAssetNames.end(), [](const std::string &Name) {
+		return IsProtectedDefaultAsset(Name);
+	});
+	if(!HasDefault)
+		vAssetNames.emplace_back("default");
+
+	std::sort(vAssetNames.begin(), vAssetNames.end(), [](const std::string &LeftName, const std::string &RightName) {
+		return AssetResourceNameLess(LeftName, RightName);
+	});
+}
+
+const char *LegacySingleFileAssetSourcePath(const SAssetResourceCategory &Category)
+{
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
+		return nullptr;
+
+	if(std::strcmp(Category.m_pId, "gui_cursor") == 0)
+		return "DDNet/gui_cursor.png";
+	if(std::strcmp(Category.m_pId, "arrow") == 0)
+		return "DDNet/arrow.png";
+	if(std::strcmp(Category.m_pId, "strong_weak") == 0)
+		return "DDNet/strong_weak.png";
+	return nullptr;
 }

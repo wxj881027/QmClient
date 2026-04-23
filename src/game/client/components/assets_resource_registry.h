@@ -4,6 +4,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 enum class EAssetResourceKind
 {
@@ -32,8 +33,12 @@ struct SAssetResourceCategory
 };
 
 const SAssetResourceCategory *FindAssetResourceCategory(const char *pId);
+std::span<const SAssetResourceCategory> GetAssetResourceCategories();
 bool AssetResourceNeedsLegacyImport(std::string_view CurrentName);
 std::string NextLegacyAssetName(std::span<const std::string> ExistingNames);
 bool IsProtectedDefaultAsset(std::string_view AssetName);
+bool AssetResourceNameLess(std::string_view LeftName, std::string_view RightName);
+void EnsureDefaultAssetVisible(std::vector<std::string> &vAssetNames);
+const char *LegacySingleFileAssetSourcePath(const SAssetResourceCategory &Category);
 
 #endif

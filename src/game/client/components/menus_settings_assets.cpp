@@ -1081,6 +1081,152 @@ std::string BuildSafeFilename(const char *pName, const char *pFallbackName, cons
 	return aFilename;
 }
 
+template<typename TName>
+void EnsureDefaultAssetVisible(const SAssetResourceCategory &Category, std::vector<TName> &vAssetList)
+{
+	(void)Category;
+
+	const auto HasDefault = std::any_of(vAssetList.begin(), vAssetList.end(), [](const TName &AssetItem) {
+		return IsProtectedDefaultAsset(AssetItem.m_aName);
+	});
+	if(!HasDefault)
+	{
+		TName DefaultItem;
+		str_copy(DefaultItem.m_aName, "default");
+		vAssetList.push_back(DefaultItem);
+	}
+
+	std::sort(vAssetList.begin(), vAssetList.end(), [](const TName &LeftItem, const TName &RightItem) {
+		return AssetResourceNameLess(LeftItem.m_aName, RightItem.m_aName);
+	});
+}
+
+struct SNamedSingleFileNameScanUser
+{
+	std::vector<std::string> *m_pNames;
+};
+
+int CollectNamedSingleFileAssetNamesCallback(const char *pName, int IsDir, int DirType, void *pUser)
+{
+	(void)DirType;
+	if(IsDir || pName[0] == '.')
+		return 0;
+	if(!str_endswith(pName, ".png"))
+		return 0;
+
+	auto *pScanUser = static_cast<SNamedSingleFileNameScanUser *>(pUser);
+	char aName[IO_MAX_PATH_LENGTH];
+	str_truncate(aName, sizeof(aName), pName, str_length(pName) - 4);
+	pScanUser->m_pNames->emplace_back(aName);
+	return 0;
+}
+
+bool TryReadSmallTextFile(IStorage *pStorage, const char *pPath, std::string &OutText)
+{
+	OutText.clear();
+
+	IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+
+	const long FileSize = io_length(File);
+	if(FileSize <= 0 || FileSize > 255)
+	{
+		io_close(File);
+		return false;
+	}
+
+	std::vector<char> vBuffer(FileSize + 1, '\0');
+	const size_t ReadSize = io_read(File, vBuffer.data(), FileSize);
+	io_close(File);
+	if(ReadSize != (size_t)FileSize)
+		return false;
+
+	OutText.assign(vBuffer.data(), FileSize);
+	while(!OutText.empty() && (OutText.back() == '\r' || OutText.back() == '\n' || OutText.back() == '\0'))
+		OutText.pop_back();
+	return !OutText.empty();
+}
+
+bool WriteSmallTextFile(IStorage *pStorage, const char *pPath, std::string_view Text)
+{
+	IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+
+	const size_t Written = io_write(File, Text.data(), Text.size());
+	io_close(File);
+	return Written == Text.size();
+}
+
+bool CopyStorageFile(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, int TargetStorageType)
+{
+	std::vector<uint8_t> vBuffer;
+	if(!LoadFileToBuffer(pStorage, pSourcePath, SourceStorageType, vBuffer))
+		return false;
+
+	IOHANDLE File = pStorage->OpenFile(pTargetPath, IOFLAG_WRITE, TargetStorageType);
+	if(!File)
+		return false;
+
+	const size_t Written = io_write(File, vBuffer.data(), vBuffer.size());
+	io_close(File);
+	return Written == vBuffer.size();
+}
+
+void CollectNamedSingleFileAssetNames(IStorage *pStorage, const SAssetResourceCategory &Category, std::vector<std::string> &vAssetNames)
+{
+	vAssetNames.clear();
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
+		return;
+
+	SNamedSingleFileNameScanUser ScanUser{&vAssetNames};
+	pStorage->ListDirectory(IStorage::TYPE_ALL, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
+	::EnsureDefaultAssetVisible(vAssetNames);
+}
+
+bool NamedSingleFileAssetExists(IStorage *pStorage, const SAssetResourceCategory &Category, std::string_view AssetName)
+{
+	const std::string AssetNameString(AssetName);
+	char aAssetPath[IO_MAX_PATH_LENGTH];
+	str_format(aAssetPath, sizeof(aAssetPath), "%s/%s.png", Category.m_pInstallFolder, AssetNameString.c_str());
+	return pStorage->FileExists(aAssetPath, IStorage::TYPE_SAVE);
+}
+
+void TryImportLegacySingleFileAsset(IStorage *pStorage, const SAssetResourceCategory &Category)
+{
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
+		return;
+
+	const char *pLegacySourcePath = LegacySingleFileAssetSourcePath(Category);
+	if(pLegacySourcePath == nullptr || !pStorage->FileExists(pLegacySourcePath, IStorage::TYPE_ALL))
+		return;
+
+	char aMarkerPath[IO_MAX_PATH_LENGTH];
+	str_format(aMarkerPath, sizeof(aMarkerPath), "%s/.legacy_imported", Category.m_pInstallFolder);
+
+	std::string ImportedName;
+	if(TryReadSmallTextFile(pStorage, aMarkerPath, ImportedName) && NamedSingleFileAssetExists(pStorage, Category, ImportedName))
+		return;
+
+	std::vector<std::string> vExistingNames;
+	CollectNamedSingleFileAssetNames(pStorage, Category, vExistingNames);
+	const std::string ImportedAssetName = NextLegacyAssetName(vExistingNames);
+
+	pStorage->CreateFolder("assets", IStorage::TYPE_SAVE);
+	pStorage->CreateFolder(Category.m_pInstallFolder, IStorage::TYPE_SAVE);
+
+	char aTargetPath[IO_MAX_PATH_LENGTH];
+	str_format(aTargetPath, sizeof(aTargetPath), "%s/%s.png", Category.m_pInstallFolder, ImportedAssetName.c_str());
+	if(!pStorage->FileExists(aTargetPath, IStorage::TYPE_SAVE) &&
+		!CopyStorageFile(pStorage, pLegacySourcePath, IStorage::TYPE_ALL, aTargetPath, IStorage::TYPE_SAVE))
+	{
+		return;
+	}
+
+	WriteSmallTextFile(pStorage, aMarkerPath, ImportedAssetName);
+}
+
 std::string NormalizeWorkshopAssetUrl(const char *pUrl)
 {
 	if(!pUrl || pUrl[0] == '\0')
@@ -1339,6 +1485,9 @@ static const char *GetWorkshopCacheFilename(int Tab)
 
 bool DeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetName)
 {
+	if(IsProtectedDefaultAsset(pAssetName))
+		return false;
+
 	const char *pSubFolder = nullptr;
 	switch(CurTab)
 	{
@@ -1590,48 +1739,34 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	// Start async loading if list is empty and not already loading
 	if(m_aAssetLoadStates[s_CurCustomTab] == ASSET_LOAD_STATE_UNLOADED)
 	{
-		// Add default item first
+		for(const SAssetResourceCategory &Category : GetAssetResourceCategories())
+		{
+			if(Category.m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE)
+				TryImportLegacySingleFileAsset(Storage(), Category);
+		}
+
+		const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 		switch(s_CurCustomTab)
 		{
 		case ASSETS_TAB_ENTITIES:
-			if(m_vEntitiesList.empty())
-			{
-				SCustomEntities EntitiesItem;
-				str_copy(EntitiesItem.m_aName, "default");
-				m_vEntitiesList.push_back(EntitiesItem);
-			}
+			dbg_assert(pCurrentCategory != nullptr, "entities category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList);
 			break;
 		case ASSETS_TAB_GAME:
-			if(m_vGameList.empty())
-			{
-				SCustomGame GameItem;
-				str_copy(GameItem.m_aName, "default");
-				m_vGameList.push_back(GameItem);
-			}
+			dbg_assert(pCurrentCategory != nullptr, "game category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList);
 			break;
 		case ASSETS_TAB_EMOTICONS:
-			if(m_vEmoticonList.empty())
-			{
-				SCustomEmoticon EmoticonItem;
-				str_copy(EmoticonItem.m_aName, "default");
-				m_vEmoticonList.push_back(EmoticonItem);
-			}
+			dbg_assert(pCurrentCategory != nullptr, "emoticons category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList);
 			break;
 		case ASSETS_TAB_PARTICLES:
-			if(m_vParticlesList.empty())
-			{
-				SCustomParticle ParticleItem;
-				str_copy(ParticleItem.m_aName, "default");
-				m_vParticlesList.push_back(ParticleItem);
-			}
+			dbg_assert(pCurrentCategory != nullptr, "particles category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList);
 			break;
 		case ASSETS_TAB_HUD:
-			if(m_vHudList.empty())
-			{
-				SCustomHud HudItem;
-				str_copy(HudItem.m_aName, "default");
-				m_vHudList.push_back(HudItem);
-			}
+			dbg_assert(pCurrentCategory != nullptr, "hud category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList);
 			break;
 		case ASSETS_TAB_EXTRAS:
 			if(m_vExtrasList.empty())
@@ -1671,6 +1806,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		m_aaCustomPreviewReadyQueue[s_CurCustomTab].clear();
 		m_aaCustomPreviewReadyQueued[s_CurCustomTab].clear();
 
+		const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
+
 		// Populate the appropriate list
 		CPerfTimer MergeTimer;
 		switch(s_CurCustomTab)
@@ -1684,7 +1821,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			{
 				CPerfTimer SortTimer;
-				std::sort(m_vEntitiesList.begin(), m_vEntitiesList.end());
+				dbg_assert(pCurrentCategory != nullptr, "entities category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vEntitiesList);
 				char aExtra[128];
 				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vEntitiesList.size());
 				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
@@ -1699,7 +1837,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			{
 				CPerfTimer SortTimer;
-				std::sort(m_vGameList.begin(), m_vGameList.end());
+				dbg_assert(pCurrentCategory != nullptr, "game category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vGameList);
 				char aExtra[128];
 				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vGameList.size());
 				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
@@ -1714,7 +1853,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			{
 				CPerfTimer SortTimer;
-				std::sort(m_vEmoticonList.begin(), m_vEmoticonList.end());
+				dbg_assert(pCurrentCategory != nullptr, "emoticons category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vEmoticonList);
 				char aExtra[128];
 				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vEmoticonList.size());
 				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
@@ -1729,7 +1869,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			{
 				CPerfTimer SortTimer;
-				std::sort(m_vParticlesList.begin(), m_vParticlesList.end());
+				dbg_assert(pCurrentCategory != nullptr, "particles category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vParticlesList);
 				char aExtra[128];
 				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vParticlesList.size());
 				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
@@ -1744,7 +1885,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			{
 				CPerfTimer SortTimer;
-				std::sort(m_vHudList.begin(), m_vHudList.end());
+				dbg_assert(pCurrentCategory != nullptr, "hud category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vHudList);
 				char aExtra[128];
 				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vHudList.size());
 				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
@@ -2376,7 +2518,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			LastVisibleIndex = (int)i;
 
 			const CUIRect CardRect = ItemRect;
-			const bool HasDeleteButton = str_comp(pItem->m_aName, "default") != 0;
+			const bool HasDeleteButton = !IsProtectedDefaultAsset(pItem->m_aName);
 			const bool ShowLocalOnlyBadge = pCurrentCategory != nullptr && pCurrentCategory->m_LocalOnlyBadge && !pCurrentCategory->m_WorkshopEnabled;
 			const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, nullptr, ShowLocalOnlyBadge);
 			Ui()->DoLabel(&HeaderLayout.m_TitleRect, pItem->m_aName, HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
@@ -2953,7 +3095,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					LastVisibleLocalIndex = (int)LocalIndex;
 
 					const CUIRect CardRect = ItemRect;
-					const bool HasDeleteButton = str_comp(pItem->m_aName, "default") != 0;
+					const bool HasDeleteButton = !IsProtectedDefaultAsset(pItem->m_aName);
 					const bool ShowLocalOnlyBadge = pCategory->m_LocalOnlyBadge && !pCategory->m_WorkshopEnabled;
 					const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, Localize("Downloaded"), ShowLocalOnlyBadge);
 					Ui()->DoLabel(&HeaderLayout.m_TitleRect, pItem->m_aName, HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
