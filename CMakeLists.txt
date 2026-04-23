@@ -2483,6 +2483,8 @@ if(CLIENT)
     animstate.h
     component.cpp
     component.h
+    components/assets_resource_registry.cpp
+    components/assets_resource_registry.h
     components/background.cpp
     components/background.h
     components/binds.cpp
@@ -3282,6 +3284,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     QmLayoutTest.cpp
     aio_test.cpp
     assets_preview_scale_test.cpp
+    assets_resource_registry_test.cpp
     bezier_test.cpp
     blocklist_driver_test.cpp
     bytes_be_test.cpp
@@ -3346,6 +3349,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmLayout.cpp
     src/game/client/components/qmclient/translate_parse.cpp
+    src/game/client/components/assets_resource_registry.cpp
     src/game/client/components/qmclient/voice_utils.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
