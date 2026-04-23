@@ -2022,12 +2022,21 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			static size_t s_PendingDownloadAssetIndex = SIZE_MAX;
 			static CUi::SConfirmPopupContext s_WorkshopDownloadConfirmPopup;
 
-			constexpr int MaxThumbStartsPerFrame = 2; // Keep low to avoid frame hitches
+			constexpr int MaxThumbStartsPerFrame = 16;
 			int ThumbStartsThisFrame = 0;
 			int OldCombinedSelected = -1;
 			bool DeleteLocalRequested = false;
 			char aDeleteLocalName[50] = "";
 			bool WorkshopActionTriggered = false;
+			auto RenderAssetStatusTag = [&](const CUIRect &CardRect, bool Downloaded) {
+				CUIRect TagRect = CardRect;
+				TagRect.HSplitTop(16.0f, &TagRect, nullptr);
+				TagRect.VSplitLeft(58.0f, &TagRect, nullptr);
+				TagRect.Margin(3.0f, &TagRect);
+				const ColorRGBA TagColor = Downloaded ? ColorRGBA(0.18f, 0.62f, 0.32f, 0.88f) : ColorRGBA(0.52f, 0.52f, 0.58f, 0.82f);
+				TagRect.Draw(TagColor, IGraphics::CORNER_ALL, 5.0f);
+				Ui()->DoLabel(&TagRect, Localize(Downloaded ? "Downloaded" : "Not downloaded"), 7.5f, TEXTALIGN_MC);
+			};
 
 			for(size_t ListIndex = 0; ListIndex < CombinedCount; ++ListIndex)
 			{
@@ -2050,10 +2059,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 					const CUIRect CardRect = ItemRect;
 
-					CUIRect TextureRect;
-					ItemRect.HSplitTop(15, &ItemRect, &TextureRect);
-					TextureRect.HSplitTop(10, nullptr, &TextureRect);
-					Ui()->DoLabel(&ItemRect, pItem->m_aName, ItemRect.h - 2, TEXTALIGN_MC);
+			CUIRect TextureRect, HeaderRect, NameRect;
+			ItemRect.HSplitTop(18.0f, &HeaderRect, &TextureRect);
+			TextureRect.HSplitTop(10, nullptr, &TextureRect);
+			NameRect = HeaderRect;
+			NameRect.VSplitLeft(62.0f, nullptr, &NameRect);
+			NameRect.VSplitRight(30.0f, &NameRect, nullptr);
+			Ui()->DoLabel(&NameRect, pItem->m_aName, HeaderRect.h - 2, TEXTALIGN_MC);
 					if(s_CurCustomTab == ASSETS_TAB_ENTITIES && s_EntityGamePreview)
 					{
 						const auto *pEntitiesItem = static_cast<const SCustomEntities *>(pItem);
@@ -2147,7 +2159,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						}
 					}
 
-					if(str_comp(pItem->m_aName, "default") != 0)
+			RenderAssetStatusTag(CardRect, true);
+
+			if(str_comp(pItem->m_aName, "default") != 0)
 					{
 						CUIRect DeleteButton = CardRect;
 						DeleteButton.HSplitTop(20.0f, &DeleteButton, nullptr);
@@ -2198,10 +2212,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					}
 
 					const CUIRect CardRect = ItemRect;
-					CUIRect TextureRect;
-					ItemRect.HSplitTop(15, &ItemRect, &TextureRect);
+					CUIRect TextureRect, HeaderRect, NameRect;
+					ItemRect.HSplitTop(18.0f, &HeaderRect, &TextureRect);
 					TextureRect.HSplitTop(10, nullptr, &TextureRect);
-					Ui()->DoLabel(&ItemRect, Asset.m_Name.c_str(), ItemRect.h - 2, TEXTALIGN_MC);
+					NameRect = HeaderRect;
+					NameRect.VSplitLeft(62.0f, nullptr, &NameRect);
+					NameRect.VSplitRight(30.0f, &NameRect, nullptr);
+					Ui()->DoLabel(&NameRect, Asset.m_Name.c_str(), HeaderRect.h - 2, TEXTALIGN_MC);
 
 					if(s_CurCustomTab == ASSETS_TAB_ENTITIES && s_EntityGamePreview && Asset.m_ThumbTexture.IsValid())
 					{
@@ -2265,6 +2282,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						LoadingRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.10f), IGraphics::CORNER_ALL, 6.0f);
 						Ui()->DoLabel(&LoadingRect, Localize("Loading..."), 10.0f, TEXTALIGN_MC);
 					}
+
+					RenderAssetStatusTag(CardRect, Asset.m_Installed);
 
 					const bool Downloading = Asset.m_pDownloadTask && !Asset.m_pDownloadTask->Done();
 					CUIRect DownloadButton = CardRect;

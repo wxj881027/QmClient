@@ -2185,7 +2185,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView)
 	StatusScheme.HSplitTop(MarginSmall, nullptr, &StatusScheme);
 
 	if(s_TypeSelectedOld >= 0)
-		Ui()->DoLabel(&ItemLabel, GameClient()->m_StatusBar.m_StatusItemTypes[s_TypeSelectedOld].m_aDesc, FontSize, TEXTALIGN_ML);
+		Ui()->DoLabel(&ItemLabel, Localize(GameClient()->m_StatusBar.m_StatusItemTypes[s_TypeSelectedOld].m_aDesc), FontSize, TEXTALIGN_ML);
 
 	StatusScheme.VSplitMid(&StatusButtons, &StatusScheme, MarginSmall);
 	StatusScheme.VSplitMid(&Label, &StatusScheme, MarginSmall);
@@ -2201,10 +2201,20 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView)
 	s_StatusScheme.SetEmptyText("");
 	Ui()->DoEditBox(&s_StatusScheme, &StatusScheme, EditBoxFontSize);
 
-	static std::vector<const char *> s_DropDownNames = {};
-	for(const CStatusItem &StatusItemType : GameClient()->m_StatusBar.m_StatusItemTypes)
-		if(s_DropDownNames.size() != GameClient()->m_StatusBar.m_StatusItemTypes.size())
-			s_DropDownNames.push_back(StatusItemType.m_aName);
+	static std::vector<std::string> s_DropDownNameStorage;
+	static std::vector<const char *> s_DropDownNames;
+	if(s_DropDownNameStorage.size() != GameClient()->m_StatusBar.m_StatusItemTypes.size())
+	{
+		s_DropDownNameStorage.clear();
+		s_DropDownNames.clear();
+		s_DropDownNameStorage.reserve(GameClient()->m_StatusBar.m_StatusItemTypes.size());
+		s_DropDownNames.reserve(GameClient()->m_StatusBar.m_StatusItemTypes.size());
+		for(const CStatusItem &StatusItemType : GameClient()->m_StatusBar.m_StatusItemTypes)
+		{
+			s_DropDownNameStorage.emplace_back(Localize(StatusItemType.m_aName));
+			s_DropDownNames.push_back(s_DropDownNameStorage.back().c_str());
+		}
+	}
 
 	static CUi::SDropDownState s_DropDownState;
 	static CScrollRegion s_DropDownScrollRegion;
@@ -2311,7 +2321,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView)
 			float Progress = std::pow(2.0, -5.0 * (1.0 - s_ItemSwaps[i].m_Duration / 0.15f));
 			TempItemButton.x = mix(TempItemButton.x, s_ItemSwaps[i].m_InitialPosition.x, Progress);
 		}
-		if(DoButtonLineSize_Menu(s_pItemButtons[i], StatusItem->m_aDisplayName, 0, &TempItemButton, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, Col))
+		if(DoButtonLineSize_Menu(s_pItemButtons[i], Localize(StatusItem->m_aDisplayName), 0, &TempItemButton, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, Col))
 		{
 			if(s_SelectedItem == -2)
 				s_SelectedItem++;
