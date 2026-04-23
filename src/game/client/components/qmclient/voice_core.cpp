@@ -1102,6 +1102,7 @@ void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const
 	}
 
 	const int64_t Now = time_get();
+	const bool LocalTxActive = m_TxWasActive.load();
 	bool LocalEntryAdded = false;
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
@@ -1134,7 +1135,9 @@ void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const
 			continue;
 		}
 
-		const float Level = IsLocalSpeaker ? m_MicLevel.load() : m_aSpeakerLevel[ClientId].load();
+		const float Level = IsLocalSpeaker ?
+			(LocalTxActive ? m_MicLevel.load() : 0.0f) :
+			m_aSpeakerLevel[ClientId].load();
 		Overlay.NoteSpeaker(ClientId, aaClientNames[ClientId].data(), IsLocalSpeaker, LastSeen, Level);
 	}
 }
@@ -1231,6 +1234,7 @@ void CRClientVoice::Shutdown()
 		RoomMemberSeen.store(0);
 	for(auto &SpeakerLevel : m_aSpeakerLevel)
 		SpeakerLevel.store(0.0f);
+	m_RoomMemberTokenHash.store(0);
 	m_LastPingSentTime = 0;
 	m_LastPingSeq = 0;
 	m_LastConfigSnapshotUpdate = 0;
@@ -1398,6 +1402,16 @@ void CRClientVoice::ProcessCapture()
 	const bool ShowMicLevel = true;
 	const bool MicMuted = Config.m_QmVoiceMicMute != 0;
 	const float TestGain = std::clamp(Config.m_QmVoiceVolume / 100.0f, 0.0f, 4.0f);
+
+	const uint32_t CachedRoomTokenHash = m_RoomMemberTokenHash.load();
+	if(CachedRoomTokenHash != Config.m_QmVoiceTokenHash)
+	{
+		for(auto &RoomMemberSeen : m_aRoomMemberSeen)
+			RoomMemberSeen.store(0);
+		for(auto &SpeakerLevel : m_aSpeakerLevel)
+			SpeakerLevel.store(0.0f);
+		m_RoomMemberTokenHash.store(Config.m_QmVoiceTokenHash);
+	}
 
 	if(!m_pEncoder)
 		return;

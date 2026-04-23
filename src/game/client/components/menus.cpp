@@ -232,8 +232,8 @@ CMenus::CMenus()
 	m_MenuActive = true;
 	m_ShowStart = true;
 
-	str_copy(m_aCurrentDemoFolder, "demos");
-	m_DemolistStorageType = IStorage::TYPE_ALL;
+	m_DemoBrowserSource = DEMO_BROWSER_SOURCE_DEMOS;
+	ResetDemoBrowserFolder();
 
 	m_DemoPlayerState = DEMOPLAYER_NONE;
 	m_Dummy = false;
@@ -2003,7 +2003,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	else if(m_Popup == POPUP_RENAME_DEMO)
 	{
 		dbg_assert(m_DemolistSelectedIndex >= 0, "m_DemolistSelectedIndex invalid for POPUP_RENAME_DEMO");
-		pTitle = m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir ? Localize("Rename folder") : Localize("Rename demo");
+		pTitle = m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir ? Localize("Rename folder") : (DemoBrowserBrowsingScreenshots() ? Localize("Rename screenshot") : Localize("Rename demo"));
 	}
 #if defined(CONF_VIDEORECORDER)
 	else if(m_Popup == POPUP_RENDER_DEMO)
@@ -2294,12 +2294,20 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		{
 			m_Popup = POPUP_NONE;
 			// rename demo
+			CDemoItem *pSelectedDemoItem = m_vpFilteredDemos[m_DemolistSelectedIndex];
+			const bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
 			char aBufOld[IO_MAX_PATH_LENGTH];
-			str_format(aBufOld, sizeof(aBufOld), "%s/%s", m_aCurrentDemoFolder, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_aFilename);
+			str_format(aBufOld, sizeof(aBufOld), "%s/%s", m_aCurrentDemoFolder, pSelectedDemoItem->m_aFilename);
 			char aBufNew[IO_MAX_PATH_LENGTH];
 			str_format(aBufNew, sizeof(aBufNew), "%s/%s", m_aCurrentDemoFolder, m_DemoRenameInput.GetString());
-			if(!m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir && !str_endswith(aBufNew, ".demo"))
-				str_append(aBufNew, ".demo");
+			if(!pSelectedDemoItem->m_IsDir)
+			{
+				char aNameWithoutExt[IO_MAX_PATH_LENGTH];
+				char aExtension[IO_MAX_PATH_LENGTH];
+				fs_split_file_extension(pSelectedDemoItem->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt), aExtension, sizeof(aExtension));
+				if(aExtension[0] != '\0' && str_endswith_nocase(aBufNew, aExtension) == nullptr)
+					str_append(aBufNew, aExtension);
+			}
 
 			if(str_comp(aBufOld, aBufNew) == 0)
 			{
@@ -2310,25 +2318,25 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENAME_DEMO);
 			}
 			else if(str_utf8_comp_nocase(aBufOld, aBufNew) != 0 && // Allow renaming if it only changes capitalization to support case-insensitive filesystems
-				Storage()->FileExists(aBufNew, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType))
+				Storage()->FileExists(aBufNew, pSelectedDemoItem->m_StorageType))
 			{
-				PopupMessage(Localize("Error"), Localize("A demo with this name already exists"), Localize("Ok"), POPUP_RENAME_DEMO);
+				PopupMessage(Localize("Error"), BrowsingScreenshots ? Localize("A screenshot with this name already exists") : Localize("A demo with this name already exists"), Localize("Ok"), POPUP_RENAME_DEMO);
 			}
-			else if(Storage()->FolderExists(aBufNew, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType))
+			else if(Storage()->FolderExists(aBufNew, pSelectedDemoItem->m_StorageType))
 			{
 				PopupMessage(Localize("Error"), Localize("A folder with this name already exists"), Localize("Ok"), POPUP_RENAME_DEMO);
 			}
-			else if(Storage()->RenameFile(aBufOld, aBufNew, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType))
+			else if(Storage()->RenameFile(aBufOld, aBufNew, pSelectedDemoItem->m_StorageType))
 			{
 				str_copy(m_aCurrentDemoSelectionName, m_DemoRenameInput.GetString());
-				if(!m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir)
+				if(!pSelectedDemoItem->m_IsDir)
 					fs_split_file_extension(m_DemoRenameInput.GetString(), m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
 				DemolistPopulate();
 				DemolistOnUpdate(false);
 			}
 			else
 			{
-				PopupMessage(Localize("Error"), m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir ? Localize("Unable to rename the folder") : Localize("Unable to rename the demo"), Localize("Ok"), POPUP_RENAME_DEMO);
+				PopupMessage(Localize("Error"), pSelectedDemoItem->m_IsDir ? Localize("Unable to rename the folder") : (BrowsingScreenshots ? Localize("Unable to rename the screenshot") : Localize("Unable to rename the demo")), Localize("Ok"), POPUP_RENAME_DEMO);
 			}
 		}
 

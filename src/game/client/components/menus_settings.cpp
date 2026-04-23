@@ -619,15 +619,27 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	const uint64_t TeeTabSwitchNode = UiAnimNodeKey("settings_tee_tab_switch");
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
 	TabBar.VSplitMid(&TabBar, &ChangeInfo, 20.f);
-	const float TeeTabWidth = TabBar.w / 3.0f;
+	const char *pPlayerTabLabel = Localize("Player");
+	const char *pDummyTabLabel = Localize("Dummy");
+	const char *pProfilesTabLabel = Localize("Profiles");
+	const float TabFontSize = TabBar.h * CUi::ms_FontmodHeight;
+	float PlayerDummyTabWidth = maximum(90.0f,
+		maximum(TextRender()->TextWidth(TabFontSize, pPlayerTabLabel), TextRender()->TextWidth(TabFontSize, pDummyTabLabel)) + 32.0f);
+	float ProfilesTabWidth = maximum(110.0f, TextRender()->TextWidth(TabFontSize, pProfilesTabLabel) + 32.0f);
+	if(PlayerDummyTabWidth * 2.0f + ProfilesTabWidth > TabBar.w)
+	{
+		ProfilesTabWidth = minimum(ProfilesTabWidth, TabBar.w / 2.0f);
+		PlayerDummyTabWidth = maximum(0.0f, (TabBar.w - ProfilesTabWidth) / 2.0f);
+	}
+	const bool SeparateProfilesTab = PlayerDummyTabWidth * 2.0f + ProfilesTabWidth < TabBar.w;
 	CUIRect TabsRemainder;
-	TabBar.VSplitLeft(TeeTabWidth, &PlayerTab, &TabsRemainder);
-	TabsRemainder.VSplitLeft(TeeTabWidth, &DummyTab, &TabsRemainder);
-	TabsRemainder.VSplitRight(TeeTabWidth, &TabsRemainder, &ProfilesTab);
+	TabBar.VSplitLeft(PlayerDummyTabWidth, &PlayerTab, &TabsRemainder);
+	TabsRemainder.VSplitLeft(PlayerDummyTabWidth, &DummyTab, nullptr);
+	TabBar.VSplitRight(ProfilesTabWidth, &TabsRemainder, &ProfilesTab);
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
 
 	static CButtonContainer s_PlayerTabButton;
-	if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
+	if(DoButton_MenuTab(&s_PlayerTabButton, pPlayerTabLabel, s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
 	{
 		s_TeeSubTab = 0;
 		m_Dummy = false;
@@ -635,7 +647,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 
 	static CButtonContainer s_DummyTabButton;
-	if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), s_TeeSubTab == 1, &DummyTab, IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, nullptr, 4.0f))
+	if(DoButton_MenuTab(&s_DummyTabButton, pDummyTabLabel, s_TeeSubTab == 1, &DummyTab,
+		   SeparateProfilesTab ? IGraphics::CORNER_R : IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, nullptr, 4.0f))
 	{
 		s_TeeSubTab = 1;
 		m_Dummy = true;
@@ -643,7 +656,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 
 	static CButtonContainer s_ProfilesTabButton;
-	if(DoButton_MenuTab(&s_ProfilesTabButton, Localize("Profiles"), s_TeeSubTab == 2, &ProfilesTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
+	if(DoButton_MenuTab(&s_ProfilesTabButton, pProfilesTabLabel, s_TeeSubTab == 2, &ProfilesTab,
+		   SeparateProfilesTab ? IGraphics::CORNER_ALL : IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
 	{
 		s_TeeSubTab = 2;
 	}

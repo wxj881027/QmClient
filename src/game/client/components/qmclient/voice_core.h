@@ -198,6 +198,7 @@ class CRClientVoice
 	std::array<std::atomic<int64_t>, MAX_CLIENTS> m_aLastHeard = {};
 	std::array<std::atomic<int64_t>, MAX_CLIENTS> m_aRoomMemberSeen = {};
 	std::array<std::atomic<float>, MAX_CLIENTS> m_aSpeakerLevel = {};
+	std::atomic<uint32_t> m_RoomMemberTokenHash = 0;
 	std::array<uint64_t, MAX_CLIENTS> m_aOverlayOrder = {};
 	uint64_t m_NextOverlayOrder = 1;
 
