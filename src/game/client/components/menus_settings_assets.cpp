@@ -408,7 +408,7 @@ private:
 
 		if(m_Type == ASSET_TYPE_EXTRAS)
 		{
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/extras", ScanCallback, &vEntries);
+			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/extras", ScanCallback, &ScanContext);
 		}
 		else
 		{
