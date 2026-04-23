@@ -59,6 +59,7 @@ static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 static constexpr int QMCLIENT_SYNC_INTERVAL_SECONDS = 30;
 static constexpr int QMCLIENT_VOICE_SYNC_INTERVAL_SECONDS = 10;
+static constexpr const char *QMCLIENT_DEFAULT_VOICE_SERVER = "42.194.185.210:9987";
 static constexpr const char *QMCLIENT_TOKEN_PATH = "/qm/token";
 static constexpr const char *QMCLIENT_REPORT_PATH = "/qm/report";
 static constexpr const char *QMCLIENT_USERS_PATH = "/qm/users.json";
@@ -562,7 +563,7 @@ static bool ParseQmClientServiceHostPort(const char *pAddrStr, char *pHost, size
 
 const char *GetEffectiveQmVoiceServer()
 {
-	return g_Config.m_QmVoiceServer;
+	return g_Config.m_QmVoiceServer[0] != '\0' ? g_Config.m_QmVoiceServer : QMCLIENT_DEFAULT_VOICE_SERVER;
 }
 
 static void TrimQmClientTextInPlace(char *pText)
