@@ -1,4 +1,5 @@
 #include "menus.h"
+#include "assets_resource_registry.h"
 #include "assets_preview_scale.h"
 
 #include <algorithm>
@@ -343,6 +344,12 @@ public:
 		bool m_IsDir;
 	};
 
+	struct SScanContext
+	{
+		std::vector<SAssetEntry> *m_pEntries;
+		EAssetResourceKind m_Kind;
+	};
+
 private:
 	EAssetType m_Type;
 	IStorage *m_pStorage;
@@ -353,10 +360,13 @@ private:
 	static int ScanCallback(const char *pName, int IsDir, int DirType, void *pUser)
 	{
 		(void)DirType;
-		auto *pEntries = static_cast<std::vector<SAssetEntry> *>(pUser);
+		const auto *pContext = static_cast<const SScanContext *>(pUser);
+		auto *pEntries = pContext->m_pEntries;
 
 		if(IsDir)
 		{
+			if(pContext->m_Kind != EAssetResourceKind::DIRECTORY)
+				return 0;
 			if(pName[0] == '.')
 				return 0;
 			if(str_comp(pName, "default") == 0)
@@ -369,10 +379,16 @@ private:
 		}
 		else
 		{
-			if(str_endswith(pName, ".png"))
+			const char *pExt = nullptr;
+			if(pContext->m_Kind == EAssetResourceKind::MAP_FILE)
+				pExt = ".map";
+			else
+				pExt = ".png";
+
+			if(str_endswith(pName, pExt))
 			{
 				char aName[50];
-				str_truncate(aName, sizeof(aName), pName, str_length(pName) - 4);
+				str_truncate(aName, sizeof(aName), pName, str_length(pName) - str_length(pExt));
 				if(str_comp(aName, "default") == 0)
 					return 0;
 
@@ -388,27 +404,39 @@ private:
 	void Run() override
 	{
 		std::vector<SAssetEntry> vEntries;
+		SScanContext ScanContext{&vEntries, EAssetResourceKind::DIRECTORY};
 
-		switch(m_Type)
+		if(m_Type == ASSET_TYPE_EXTRAS)
 		{
-		case ASSET_TYPE_ENTITIES:
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/entities", ScanCallback, &vEntries);
-			break;
-		case ASSET_TYPE_GAME:
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/game", ScanCallback, &vEntries);
-			break;
-		case ASSET_TYPE_EMOTICONS:
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/emoticons", ScanCallback, &vEntries);
-			break;
-		case ASSET_TYPE_PARTICLES:
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/particles", ScanCallback, &vEntries);
-			break;
-		case ASSET_TYPE_HUD:
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/hud", ScanCallback, &vEntries);
-			break;
-		case ASSET_TYPE_EXTRAS:
 			m_pStorage->ListDirectory(IStorage::TYPE_ALL, "assets/extras", ScanCallback, &vEntries);
-			break;
+		}
+		else
+		{
+			const SAssetResourceCategory *pCategory = nullptr;
+			switch(m_Type)
+			{
+			case ASSET_TYPE_ENTITIES:
+				pCategory = FindAssetResourceCategory("entities");
+				break;
+			case ASSET_TYPE_GAME:
+				pCategory = FindAssetResourceCategory("game");
+				break;
+			case ASSET_TYPE_EMOTICONS:
+				pCategory = FindAssetResourceCategory("emoticons");
+				break;
+			case ASSET_TYPE_PARTICLES:
+				pCategory = FindAssetResourceCategory("particles");
+				break;
+			case ASSET_TYPE_HUD:
+				pCategory = FindAssetResourceCategory("hud");
+				break;
+			case ASSET_TYPE_EXTRAS:
+				break;
+			}
+
+			dbg_assert(pCategory != nullptr, "asset list category must exist");
+			ScanContext.m_Kind = pCategory->m_Kind;
+			m_pStorage->ListDirectory(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, ScanCallback, &ScanContext);
 		}
 
 		// Sort entries by name
@@ -722,20 +750,32 @@ static int s_CurCustomTab = ASSETS_TAB_ENTITIES;
 namespace
 {
 constexpr const char *WORKSHOP_ASSETS_URL = "https://www.ddrace.cn/data/assets.json";
-constexpr const char *WORKSHOP_HUD_ASSETS_URL = WORKSHOP_ASSETS_URL;
-constexpr const char *WORKSHOP_HUD_CATEGORY = "HUD";
-constexpr const char *WORKSHOP_ENTITIES_ASSETS_URL = WORKSHOP_ASSETS_URL;
-constexpr const char *WORKSHOP_ENTITIES_CATEGORY = "实体层";
-constexpr const char *WORKSHOP_ENTITIES_CATEGORY_ALT = "实体（ENTITIES）";
-constexpr const char *WORKSHOP_GAME_ASSETS_URL = WORKSHOP_ASSETS_URL;
-constexpr const char *WORKSHOP_GAME_CATEGORY = "游戏";
-constexpr const char *WORKSHOP_GAME_CATEGORY_ALT = "游戏（GAME）";
-constexpr const char *WORKSHOP_EMOTICONS_ASSETS_URL = WORKSHOP_ASSETS_URL;
-constexpr const char *WORKSHOP_EMOTICONS_CATEGORY = "表情";
-constexpr const char *WORKSHOP_EMOTICONS_CATEGORY_ALT = "表情（EMOTICONS）";
-constexpr const char *WORKSHOP_PARTICLES_ASSETS_URL = WORKSHOP_ASSETS_URL;
-constexpr const char *WORKSHOP_PARTICLES_CATEGORY = "粒子";
-constexpr const char *WORKSHOP_PARTICLES_CATEGORY_ALT = "粒子（PARTICLES）";
+
+const char *AssetResourceCategoryIdByTab(int Tab)
+{
+	if(Tab == ASSETS_TAB_ENTITIES)
+		return "entities";
+	if(Tab == ASSETS_TAB_GAME)
+		return "game";
+	if(Tab == ASSETS_TAB_EMOTICONS)
+		return "emoticons";
+	if(Tab == ASSETS_TAB_PARTICLES)
+		return "particles";
+	if(Tab == ASSETS_TAB_HUD)
+		return "hud";
+	return nullptr;
+}
+
+const SAssetResourceCategory *AssetResourceCategoryByTab(int Tab)
+{
+	const char *pCategoryId = AssetResourceCategoryIdByTab(Tab);
+	if(pCategoryId == nullptr)
+		return nullptr;
+
+	const SAssetResourceCategory *pCategory = FindAssetResourceCategory(pCategoryId);
+	dbg_assert(pCategory != nullptr, "asset category must exist");
+	return pCategory;
+}
 
 struct SWorkshopHudAsset
 {
@@ -1053,43 +1093,25 @@ std::string NormalizeWorkshopAssetUrl(const char *pUrl)
 	return Url;
 }
 
-bool WorkshopCategoryMatches(const char *pCategoryValue, const char *pCategoryFilter, const char *pCategoryFilterAlt, const char *pInstallFolder)
+bool WorkshopCategoryMatches(const char *pCategoryValue, const SAssetResourceCategory &Category)
 {
 	if(!pCategoryValue || pCategoryValue[0] == '\0')
 		return false;
 
-	if((pCategoryFilter && pCategoryFilter[0] != '\0' && str_comp(pCategoryValue, pCategoryFilter) == 0) ||
-		(pCategoryFilterAlt && pCategoryFilterAlt[0] != '\0' && str_comp(pCategoryValue, pCategoryFilterAlt) == 0))
-	{
+	if((Category.m_pWorkshopCategory && Category.m_pWorkshopCategory[0] != '\0' && str_comp(pCategoryValue, Category.m_pWorkshopCategory) == 0) ||
+		(Category.m_pWorkshopCategoryAlt && Category.m_pWorkshopCategoryAlt[0] != '\0' && str_comp(pCategoryValue, Category.m_pWorkshopCategoryAlt) == 0))
 		return true;
+
+	for(const char *pAlias : Category.m_vWorkshopCategoryAliases)
+	{
+		if(pAlias != nullptr && pAlias[0] != '\0' && str_comp(pCategoryValue, pAlias) == 0)
+			return true;
 	}
-
-	if(!pInstallFolder || pInstallFolder[0] == '\0')
-		return false;
-
-	if(str_comp(pInstallFolder, "hud") == 0)
-		return str_comp(pCategoryValue, "HUD") == 0 || str_comp(pCategoryValue, "界面（HUD）") == 0;
-	if(str_comp(pInstallFolder, "entities") == 0)
-		return str_comp(pCategoryValue, "实体层") == 0 ||
-			str_comp(pCategoryValue, "实体（Entities）") == 0 ||
-			str_comp(pCategoryValue, "实体（ENTITIES）") == 0;
-	if(str_comp(pInstallFolder, "game") == 0)
-		return str_comp(pCategoryValue, "游戏") == 0 ||
-			str_comp(pCategoryValue, "游戏（Game）") == 0 ||
-			str_comp(pCategoryValue, "游戏（GAME）") == 0;
-	if(str_comp(pInstallFolder, "emoticons") == 0)
-		return str_comp(pCategoryValue, "表情") == 0 ||
-			str_comp(pCategoryValue, "表情（Emoticons）") == 0 ||
-			str_comp(pCategoryValue, "表情（EMOTICONS）") == 0;
-	if(str_comp(pInstallFolder, "particles") == 0)
-		return str_comp(pCategoryValue, "粒子") == 0 ||
-			str_comp(pCategoryValue, "粒子（Particles）") == 0 ||
-			str_comp(pCategoryValue, "粒子（PARTICLES）") == 0;
 
 	return false;
 }
 
-bool ParseWorkshopAssets(const json_value *pRoot, const char *pCategoryFilter, const char *pCategoryFilterAlt, const char *pInstallFolder, std::vector<SWorkshopHudAsset> &vOut, char *pErr, int ErrSize)
+bool ParseWorkshopAssets(const json_value *pRoot, const SAssetResourceCategory &Category, std::vector<SWorkshopHudAsset> &vOut, char *pErr, int ErrSize)
 {
 	vOut.clear();
 	if(!pRoot || pRoot->type != json_object)
@@ -1133,7 +1155,7 @@ bool ParseWorkshopAssets(const json_value *pRoot, const char *pCategoryFilter, c
 		if(pCategory == &json_value_none || pCategory->type != json_string)
 			continue;
 		const char *pCategoryValue = json_string_get(pCategory);
-		if(!WorkshopCategoryMatches(pCategoryValue, pCategoryFilter, pCategoryFilterAlt, pInstallFolder))
+		if(!WorkshopCategoryMatches(pCategoryValue, Category))
 			continue;
 
 		const json_value *pImage = json_object_get(&Entry, LegacyApi ? "image" : "image_url");
@@ -1163,7 +1185,7 @@ bool ParseWorkshopAssets(const json_value *pRoot, const char *pCategoryFilter, c
 		const size_t DotPos = SafeInstallName.find_last_of('.');
 		Asset.m_LocalName = DotPos == std::string::npos ? SafeInstallName : SafeInstallName.substr(0, DotPos);
 		char aInstallPath[IO_MAX_PATH_LENGTH];
-		str_format(aInstallPath, sizeof(aInstallPath), "assets/%s/%s", pInstallFolder, SafeInstallName.c_str());
+		str_format(aInstallPath, sizeof(aInstallPath), "%s/%s", Category.m_pInstallFolder, SafeInstallName.c_str());
 		Asset.m_InstallPath = aInstallPath;
 
 		char aSafeId[80];
@@ -2400,26 +2422,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	if((s_CurCustomTab == ASSETS_TAB_HUD || s_CurCustomTab == ASSETS_TAB_ENTITIES || s_CurCustomTab == ASSETS_TAB_GAME || s_CurCustomTab == ASSETS_TAB_EMOTICONS || s_CurCustomTab == ASSETS_TAB_PARTICLES) && WorkshopHudView.h > 0.0f)
 	{
+		const SAssetResourceCategory *pCategory = AssetResourceCategoryByTab(s_CurCustomTab);
+		dbg_assert(pCategory != nullptr, "workshop asset category must exist");
 		SWorkshopHudState &WorkshopState = s_CurCustomTab == ASSETS_TAB_HUD ? gs_WorkshopHudState :
 			(s_CurCustomTab == ASSETS_TAB_ENTITIES ? gs_WorkshopEntitiesState :
 				(s_CurCustomTab == ASSETS_TAB_GAME ? gs_WorkshopGameState :
 					(s_CurCustomTab == ASSETS_TAB_EMOTICONS ? gs_WorkshopEmoticonsState : gs_WorkshopParticlesState)));
-		const char *pWorkshopAssetsUrl = s_CurCustomTab == ASSETS_TAB_HUD ? WORKSHOP_HUD_ASSETS_URL :
-			(s_CurCustomTab == ASSETS_TAB_ENTITIES ? WORKSHOP_ENTITIES_ASSETS_URL :
-				(s_CurCustomTab == ASSETS_TAB_GAME ? WORKSHOP_GAME_ASSETS_URL :
-					(s_CurCustomTab == ASSETS_TAB_EMOTICONS ? WORKSHOP_EMOTICONS_ASSETS_URL : WORKSHOP_PARTICLES_ASSETS_URL)));
-		const char *pWorkshopCategory = s_CurCustomTab == ASSETS_TAB_HUD ? WORKSHOP_HUD_CATEGORY :
-			(s_CurCustomTab == ASSETS_TAB_ENTITIES ? WORKSHOP_ENTITIES_CATEGORY :
-				(s_CurCustomTab == ASSETS_TAB_GAME ? WORKSHOP_GAME_CATEGORY :
-					(s_CurCustomTab == ASSETS_TAB_EMOTICONS ? WORKSHOP_EMOTICONS_CATEGORY : WORKSHOP_PARTICLES_CATEGORY)));
-		const char *pWorkshopCategoryAlt = s_CurCustomTab == ASSETS_TAB_HUD ? nullptr :
-			(s_CurCustomTab == ASSETS_TAB_ENTITIES ? WORKSHOP_ENTITIES_CATEGORY_ALT :
-				(s_CurCustomTab == ASSETS_TAB_GAME ? WORKSHOP_GAME_CATEGORY_ALT :
-					(s_CurCustomTab == ASSETS_TAB_EMOTICONS ? WORKSHOP_EMOTICONS_CATEGORY_ALT : WORKSHOP_PARTICLES_CATEGORY_ALT)));
-		const char *pInstallFolder = s_CurCustomTab == ASSETS_TAB_HUD ? "hud" :
-			(s_CurCustomTab == ASSETS_TAB_ENTITIES ? "entities" :
-				(s_CurCustomTab == ASSETS_TAB_GAME ? "game" :
-					(s_CurCustomTab == ASSETS_TAB_EMOTICONS ? "emoticons" : "particles")));
+		const char *pInstallFolder = pCategory->m_pInstallFolder;
 
 		auto IsLocalAssetSelected = [&](const char *pName) {
 			if(s_CurCustomTab == ASSETS_TAB_HUD)
@@ -2462,7 +2471,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		};
 
 		auto StartWorkshopListTask = [&]() {
-			auto pTask = HttpGet(pWorkshopAssetsUrl);
+			auto pTask = HttpGet(WORKSHOP_ASSETS_URL);
 			pTask->Timeout(CTimeout{10000, 20000, 200, 10});
 			pTask->LogProgress(HTTPLOG::FAILURE);
 			pTask->FailOnErrorStatus(false);
@@ -2485,7 +2494,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		// Only start HTTP request if no cache exists (first time or after refresh)
-		if(!WorkshopState.m_Requested && !WorkshopState.m_pListTask && WorkshopState.m_vAssets.empty())
+		if(pCategory->m_WorkshopEnabled && !WorkshopState.m_Requested && !WorkshopState.m_pListTask && WorkshopState.m_vAssets.empty())
 		{
 			StartWorkshopListTask();
 		}
@@ -2503,7 +2512,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					json_value *pJson = WorkshopState.m_pListTask->ResultJson();
 					if(pJson)
 					{
-						Parsed = ParseWorkshopAssets(pJson, pWorkshopCategory, pWorkshopCategoryAlt, pInstallFolder, vParsedAssets, aError, sizeof(aError));
+						Parsed = ParseWorkshopAssets(pJson, *pCategory, vParsedAssets, aError, sizeof(aError));
 						json_value_free(pJson);
 					}
 					else
@@ -3169,10 +3178,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			if(s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::CONFIRMED && s_PendingDownloadAssetIndex < WorkshopState.m_vAssets.size())
 			{
 				SWorkshopHudAsset &Asset = WorkshopState.m_vAssets[s_PendingDownloadAssetIndex];
-				char aInstallFolderPath[64];
-				str_format(aInstallFolderPath, sizeof(aInstallFolderPath), "assets/%s", pInstallFolder);
 				Storage()->CreateFolder("assets", IStorage::TYPE_SAVE);
-				Storage()->CreateFolder(aInstallFolderPath, IStorage::TYPE_SAVE);
+				Storage()->CreateFolder(pInstallFolder, IStorage::TYPE_SAVE);
 
 				auto pDownloadTask = HttpGetFile(Asset.m_ImageUrl.c_str(), Storage(), Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE);
 				pDownloadTask->Timeout(CTimeout{10000, 30000, 100, 10});
@@ -3257,16 +3264,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	{
 		char aBuf[IO_MAX_PATH_LENGTH];
 		char aBufFull[IO_MAX_PATH_LENGTH + 7];
-		if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
-			str_copy(aBufFull, "assets/entities");
-		else if(s_CurCustomTab == ASSETS_TAB_GAME)
-			str_copy(aBufFull, "assets/game");
-		else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
-			str_copy(aBufFull, "assets/emoticons");
-		else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
-			str_copy(aBufFull, "assets/particles");
-		else if(s_CurCustomTab == ASSETS_TAB_HUD)
-			str_copy(aBufFull, "assets/hud");
+		const SAssetResourceCategory *pCategory = AssetResourceCategoryByTab(s_CurCustomTab);
+		if(pCategory != nullptr)
+			str_copy(aBufFull, pCategory->m_pInstallFolder);
 		else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 			str_copy(aBufFull, "assets/extras");
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, aBufFull, aBuf, sizeof(aBuf));

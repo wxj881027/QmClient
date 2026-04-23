@@ -26,6 +26,7 @@ struct SAssetResourceCategory
 	bool m_WorkshopEnabled;
 	const char *m_pWorkshopCategory;
 	const char *m_pWorkshopCategoryAlt;
+	std::span<const char *const> m_vWorkshopCategoryAliases;
 	EAssetPreviewKind m_PreviewKind;
 	bool m_LocalOnlyBadge;
 };
