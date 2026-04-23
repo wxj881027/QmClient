@@ -2617,6 +2617,8 @@ if(CLIENT)
     components/qmclient/trails.h
     components/qmclient/translate.cpp
     components/qmclient/translate.h
+    components/qmclient/translate_ui_settings.cpp
+    components/qmclient/translate_ui_settings.h
     components/qmclient/voice_component.cpp
     components/qmclient/voice_component.h
     components/qmclient/voice_callback.h
@@ -3327,6 +3329,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     thread_test.cpp
     time_test.cpp
     timestamp_test.cpp
+    translate_json_format_test.cpp
+    translate_llm_parse_test.cpp
+    translate_llm_provider_test.cpp
+    translate_llm_response_test.cpp
+    translate_safety_test.cpp
+    translate_integration_test.cpp
+    translate_boundary_test.cpp
     translate_test.cpp
     unix_test.cpp
     uuid_test.cpp
@@ -3336,6 +3345,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   set(TESTS_EXTRA
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmLayout.cpp
+    src/game/client/components/qmclient/translate_parse.cpp
     src/game/client/components/qmclient/voice_utils.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h

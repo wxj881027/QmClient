@@ -8,13 +8,7 @@
 #include <optional>
 #include <vector>
 
-enum class ELlmProvider
-{
-	ZHIPU_AI = 0,
-	DEEPSEEK = 1,
-	OPENAI = 2,
-	CUSTOM = 3,
-};
+#include "translate_parse.h"
 
 class CTranslate;
 
@@ -34,8 +28,9 @@ class CTranslate : public CComponent
 	{
 	public:
 		std::unique_ptr<ITranslateBackend> m_pBackend = nullptr;
-		// For chat translations
-		CChat::CLine *m_pLine = nullptr;
+		// For chat translations (使用索引和翻译ID代替裸指针，避免悬垂指针风险)
+		int m_LineIndex = -1;
+		unsigned int m_TranslationId = 0;
 		std::shared_ptr<CTranslateResponse> m_pTranslateResponse = nullptr;
 		bool m_AutoTriggered = false;
 		char m_aTarget[16] = "";
@@ -71,6 +66,18 @@ public:
 	bool TryTranslateOutgoingChat(int Team, const char *pText);
 
 	void AutoTranslate(CChat::CLine &Line);
+
+	// 自动出站翻译
+	bool ShouldAutoTranslateOutgoing(const char *pText) const;
+	void StartAutoOutgoingTranslate(int Team, const char *pText);
+
+private:
+	// 中文检测
+	static bool ContainsChinese(const char *pText);
+
+	// 获取最大并发数
+	int GetMaxConcurrency() const;
+	int GetEffectiveConcurrency() const;
 };
 
 #endif

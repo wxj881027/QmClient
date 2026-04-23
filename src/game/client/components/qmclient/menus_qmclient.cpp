@@ -26,6 +26,7 @@
 #include <game/client/components/qmclient/bindchat.h>
 #include <game/client/components/qmclient/bindwheel.h>
 #include <game/client/components/qmclient/trails.h>
+#include <game/client/components/qmclient/translate_ui_settings.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/skin.h>
@@ -5980,6 +5981,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		FriendNotify,
 		BlockWords,
 		Translate,
+		TranslateUi,
 		QiaFen,
 		PieMenu,
 		EntityOverlay,
@@ -6056,7 +6058,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		const char *m_pKey;
 	};
 
-	constexpr size_t kQmModuleCount = 27;
+	constexpr size_t kQmModuleCount = 28;
 
 	// Layout string format: key:column:order; entries separated by ';'.
 	static const std::array<SQmModuleEntry, kQmModuleCount> s_aQmModuleDefaults = {{
@@ -6072,6 +6074,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		{EQmModuleId::FriendNotify, EQmModuleColumn::Left, 8, "friend_notify"},
 		{EQmModuleId::BlockWords, EQmModuleColumn::Left, 9, "block_words"},
 		{EQmModuleId::Translate, EQmModuleColumn::Left, 12, "translate"},
+		{EQmModuleId::TranslateUi, EQmModuleColumn::Left, 13, "translate_ui"},
 		{EQmModuleId::QiaFen, EQmModuleColumn::Left, 10, "qiafen"},
 		{EQmModuleId::PieMenu, EQmModuleColumn::Left, 11, "pie_menu"},
 		{EQmModuleId::CameraView, EQmModuleColumn::Right, 0, "camera_view"},
@@ -6700,7 +6703,8 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 		case EQmModuleId::Streamer: return "主播模式 zhubo moshi 直播 zhibo 隐私 yinsi 非好友昵称改id feihaoyou nicheng id 非好友皮肤默认 pifu moren 计分板默认国旗 guoqi";
 		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi";
 		case EQmModuleId::BlockWords: return "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan";
-		case EQmModuleId::Translate: return "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.7-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过";
+		case EQmModuleId::Translate: return "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.5-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过";
+		case EQmModuleId::TranslateUi: return "翻译UI fanyi ui 颜色 yanse color 按钮 anniu button 菜单 caidan menu rgba 自定义 zidingyi custom";
 		case EQmModuleId::QiaFen: return "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming";
 		case EQmModuleId::PieMenu: return "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan";
 		case EQmModuleId::EntityOverlay: return "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng";
@@ -6735,7 +6739,8 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Id == EQmModuleId::Streamer ||
 				Id == EQmModuleId::EntityOverlay ||
 				Id == EQmModuleId::Laser ||
-				Id == EQmModuleId::CollisionHitbox;
+				Id == EQmModuleId::CollisionHitbox ||
+				Id == EQmModuleId::TranslateUi;
 		case QMCLIENT_SETTINGS_TAB_FUNCTION:
 			return Id == EQmModuleId::GoresActor ||
 				Id == EQmModuleId::Gores ||
@@ -6995,7 +7000,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 			RightContent.HSplitTop(LG_LineSpacing * 0.55f, nullptr, &RightContent);
 			RightContent.HSplitTop(LG_LineHeight * 0.9f, &Row, &RightContent);
-			Ui()->DoLabel(&Row, Localize("感谢你们一直以来的陪伴与坚信让我能够有勇气走下去,谢谢"), LG_BodySize * 0.93f, TEXTALIGN_ML);
+			Ui()->DoLabel(&Row, Localize("Thank you for your companionship and belief, which gave me the courage to keep going"), LG_BodySize * 0.93f, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 			const float RightUsedHeight = RightContent.y - RightStartY;
@@ -7051,6 +7056,8 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			return {7, Localize("Block words"), Localize("Chat block word filter")};
 		case EQmModuleId::Translate:
 			return {8, Localize("Translate"), Localize("Chat translation settings")};
+		case EQmModuleId::TranslateUi:
+			return {9, Localize("Translate UI"), Localize("Customize translate button and menu colors")};
 		case EQmModuleId::QiaFen:
 			return {8, Localize("Keyword reply"), Localize("Automatic replies for chat keywords")};
 		case EQmModuleId::PieMenu:
@@ -8175,21 +8182,25 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				DoModuleHeadline(CardContent, 8, Localize("Translate"), Localize("Chat translation settings"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTranslateAuto, Localize("Automatically translate chat messages"), &g_Config.m_TcTranslateAuto, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAuto, Localize("Auto inbound translation"), &g_Config.m_QmTranslateAuto, &Row, LG_LineHeight);
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateAutoOutgoing, Localize("Auto outbound translation"), &g_Config.m_QmTranslateAutoOutgoing, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				static std::vector<const char *> s_TranslateBackendDropDownNames;
-				s_TranslateBackendDropDownNames = {Localize("Tencent Cloud"), "LibreTranslate", "FTAPI", Localize("ZhipuAI")};
+				s_TranslateBackendDropDownNames = {Localize("Tencent Cloud"), "LibreTranslate", "FTAPI", "LLM API"};
 				static CUi::SDropDownState s_TranslateBackendDropDownState;
 				static CScrollRegion s_TranslateBackendDropDownScrollRegion;
 				s_TranslateBackendDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TranslateBackendDropDownScrollRegion;
 
 				int BackendSelectedOld = 0;
-				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0)
+				if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
 					BackendSelectedOld = 1;
-				else if(str_comp_nocase(g_Config.m_TcTranslateBackend, "ftapi") == 0)
+				else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 					BackendSelectedOld = 2;
-				else if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+				else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
 					BackendSelectedOld = 3;
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -8200,51 +8211,108 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					if(BackendSelectedNew == 1)
 					{
-						str_copy(g_Config.m_TcTranslateBackend, "libretranslate", sizeof(g_Config.m_TcTranslateBackend));
-						str_copy(g_Config.m_TcTranslateEndpoint, "", sizeof(g_Config.m_TcTranslateEndpoint)); // Use default localhost:5000
+						str_copy(g_Config.m_QmTranslateBackend, "libretranslate", sizeof(g_Config.m_QmTranslateBackend));
+						str_copy(g_Config.m_QmTranslateLibreEndpoint, "", sizeof(g_Config.m_QmTranslateLibreEndpoint)); // Use default localhost:5000
 					}
 					else if(BackendSelectedNew == 2)
 					{
-						str_copy(g_Config.m_TcTranslateBackend, "ftapi", sizeof(g_Config.m_TcTranslateBackend));
-						str_copy(g_Config.m_TcTranslateEndpoint, "", sizeof(g_Config.m_TcTranslateEndpoint)); // Use default ftapi.pythonanywhere.com
+						str_copy(g_Config.m_QmTranslateBackend, "ftapi", sizeof(g_Config.m_QmTranslateBackend));
+						str_copy(g_Config.m_QmTranslateTcEndpoint, "", sizeof(g_Config.m_QmTranslateTcEndpoint)); // Use default ftapi.pythonanywhere.com
 					}
 					else if(BackendSelectedNew == 3)
 					{
-						str_copy(g_Config.m_TcTranslateBackend, "zhipuai", sizeof(g_Config.m_TcTranslateBackend));
-						str_copy(g_Config.m_TcTranslateEndpoint, "", sizeof(g_Config.m_TcTranslateEndpoint)); // ZhipuAI uses hardcoded endpoint
+						// LLM API - 默认使用智谱AI预设
+						str_copy(g_Config.m_QmTranslateBackend, "llm", sizeof(g_Config.m_QmTranslateBackend));
+						// LLM API - 清空自定义端点，使用默认
+					str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "", sizeof(g_Config.m_QmTranslateLlmEndpointCustom));
 					}
 					else
 					{
-						str_copy(g_Config.m_TcTranslateBackend, "tencentcloud", sizeof(g_Config.m_TcTranslateBackend));
-						str_copy(g_Config.m_TcTranslateEndpoint, "", sizeof(g_Config.m_TcTranslateEndpoint)); // Use default tencent endpoint
+						str_copy(g_Config.m_QmTranslateBackend, "tencentcloud", sizeof(g_Config.m_QmTranslateBackend));
+						str_copy(g_Config.m_QmTranslateTcEndpoint, "", sizeof(g_Config.m_QmTranslateTcEndpoint)); // Use default tencent endpoint
 					}
 				}
-				const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_TcTranslateBackend, "tencentcloud") == 0;
-				const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_TcTranslateBackend, "libretranslate") == 0;
+				const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
+				const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0;
+				const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
+				const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				// FTAPI 自动翻译开关（仅在 FTAPI 后端时显示）
+				if(IsFtapiBackend)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateFtapiAutoEnable, Localize("Enable FTAPI auto-translate (may cause overload)"), &g_Config.m_QmTranslateFtapiAutoEnable, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// FTAPI 警告提示
+					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
+					Row.VMargin(LG_LabelWidth, &Row);
+					Ui()->DoLabel(&Row, Localize("⚠️ FTAPI is a free service. Excessive use may cause service suspension."), LG_BodySize * 0.8f, TEXTALIGN_ML);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 				Ui()->DoLabel(&LabelCol, Localize("Target language"), LG_BodySize, TEXTALIGN_ML);
-				static CLineInput s_TranslateTarget(g_Config.m_TcTranslateTarget, sizeof(g_Config.m_TcTranslateTarget));
-				s_TranslateTarget.SetEmptyText("zh");
-				Ui()->DoEditBox(&s_TranslateTarget, &ControlCol, LG_BodySize);
+
+				// 下拉框 + 输入框组合
+				{
+					static const char *s_apLangNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
+					static const char *s_apLangCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+					static CUi::SDropDownState s_TargetLangDropDown;
+
+					CUIRect DropRect, EditRect;
+					ControlCol.VSplitMid(&DropRect, &EditRect);
+					DropRect.VMargin(1.0f, &DropRect);
+					EditRect.VMargin(1.0f, &EditRect);
+
+					auto FindIndex = [](const char *pVal, const char **apCodes, int Count) -> int {
+						for(int i = 0; i < Count; ++i)
+							if(str_comp(pVal, apCodes[i]) == 0) return i;
+						return -1;
+					};
+
+					const int OldSel = FindIndex(g_Config.m_QmTranslateTarget, s_apLangCodes, std::size(s_apLangCodes));
+					const int NewSel = Ui()->DoDropDown(&DropRect, OldSel < 0 ? 0 : OldSel, s_apLangNames, std::size(s_apLangNames), s_TargetLangDropDown);
+					if(NewSel != OldSel && NewSel >= 0)
+						str_copy(g_Config.m_QmTranslateTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateTarget));
+
+					static CLineInput s_TranslateTarget(g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget));
+					s_TranslateTarget.SetEmptyText("zh");
+					Ui()->DoEditBox(&s_TranslateTarget, &EditRect, LG_BodySize);
+				}
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
-				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
-				static CLineInput s_TranslateEndpoint(g_Config.m_TcTranslateEndpoint, sizeof(g_Config.m_TcTranslateEndpoint));
-				s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
-				Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				// Endpoint 配置 - 根据后端类型显示不同的端点输入
+				if(IsTencentCloudBackend)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateTcEndpoint, sizeof(g_Config.m_QmTranslateTcEndpoint));
+					s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
+					Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+				else if(IsLibreTranslateBackend)
+				{
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Endpoint"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateLibreEndpoint, sizeof(g_Config.m_QmTranslateLibreEndpoint));
+					s_TranslateEndpoint.SetEmptyText("http://localhost:5000");
+					Ui()->DoEditBox(&s_TranslateEndpoint, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+				}
+				// LLM 后端的端点配置在 Provider 选择区域显示
 
 				if(IsTencentCloudBackend)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("Region"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_TranslateRegion(g_Config.m_TcTranslateRegion, sizeof(g_Config.m_TcTranslateRegion));
+					static CLineInput s_TranslateRegion(g_Config.m_QmTranslateTcRegion, sizeof(g_Config.m_QmTranslateTcRegion));
 					s_TranslateRegion.SetEmptyText("ap-guangzhou");
 					Ui()->DoEditBox(&s_TranslateRegion, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
@@ -8252,7 +8320,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, "SecretId", LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_TranslateSecretId(g_Config.m_TcTranslateSecretId, sizeof(g_Config.m_TcTranslateSecretId));
+					static CLineInput s_TranslateSecretId(g_Config.m_QmTranslateTcSecretId, sizeof(g_Config.m_QmTranslateTcSecretId));
 					s_TranslateSecretId.SetEmptyText("AKID...");
 					Ui()->DoEditBox(&s_TranslateSecretId, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
@@ -8260,7 +8328,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, "SecretKey", LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_TranslateSecretKey(g_Config.m_TcTranslateSecretKey, sizeof(g_Config.m_TcTranslateSecretKey));
+					static CLineInput s_TranslateSecretKey(g_Config.m_QmTranslateTcSecretKey, sizeof(g_Config.m_QmTranslateTcSecretKey));
 					s_TranslateSecretKey.SetHidden(true);
 					Ui()->DoEditBox(&s_TranslateSecretKey, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
@@ -8270,47 +8338,344 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("API key"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_TranslateKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
+					static CLineInput s_TranslateKey(g_Config.m_QmTranslateLibreKey, sizeof(g_Config.m_QmTranslateLibreKey));
 					s_TranslateKey.SetHidden(true);
 					Ui()->DoEditBox(&s_TranslateKey, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
-				if(str_comp_nocase(g_Config.m_TcTranslateBackend, "zhipuai") == 0)
+				if(IsLlmBackend)
 				{
+					// LLM Provider 选择
+					static std::vector<const char *> s_LlmProviderDropDownNames = {
+						Localize("Zhipu AI"),
+						"DeepSeek",
+						"OpenAI",
+						Localize("Custom")
+					};
+					static CUi::SDropDownState s_LlmProviderDropDownState;
+					static CScrollRegion s_LlmProviderDropDownScrollRegion;
+					s_LlmProviderDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_LlmProviderDropDownScrollRegion;
+
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("API key"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_ZhipuAiApiKey(g_Config.m_TcTranslateKey, sizeof(g_Config.m_TcTranslateKey));
-					s_ZhipuAiApiKey.SetEmptyText("ZHIPU_API_KEY");
-					s_ZhipuAiApiKey.SetHidden(true);
-					Ui()->DoEditBox(&s_ZhipuAiApiKey, &ControlCol, LG_BodySize);
+					Ui()->DoLabel(&LabelCol, Localize("LLM Provider"), LG_BodySize, TEXTALIGN_ML);
+					const int NewProvider = Ui()->DoDropDown(&ControlCol, g_Config.m_QmTranslateLlmProvider, s_LlmProviderDropDownNames.data(), s_LlmProviderDropDownNames.size(), s_LlmProviderDropDownState);
+					if(NewProvider != g_Config.m_QmTranslateLlmProvider)
+					{
+						g_Config.m_QmTranslateLlmProvider = NewProvider;
+					}
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
+					// 各 Provider 的 API Key 输入框（静态变量，分别绑定到不同配置）
+					static CLineInput s_LlmApiKeyZhipu(g_Config.m_QmTranslateLlmKeyZhipu, sizeof(g_Config.m_QmTranslateLlmKeyZhipu));
+					static CLineInput s_LlmApiKeyDeepseek(g_Config.m_QmTranslateLlmKeyDeepseek, sizeof(g_Config.m_QmTranslateLlmKeyDeepseek));
+					static CLineInput s_LlmApiKeyOpenai(g_Config.m_QmTranslateLlmKeyOpenai, sizeof(g_Config.m_QmTranslateLlmKeyOpenai));
+					static CLineInput s_LlmApiKeyCustom(g_Config.m_QmTranslateLlmKeyCustom, sizeof(g_Config.m_QmTranslateLlmKeyCustom));
+
+					// 根据 Provider 显示对应的 API Key 输入框
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+
+					CLineInput *pActiveKeyInput = nullptr;
+					const char *pKeyLabel = Localize("API Key");
+					switch(g_Config.m_QmTranslateLlmProvider)
+					{
+					case 0: // Zhipu AI
+						pKeyLabel = Localize("Zhipu AI API Key");
+						s_LlmApiKeyZhipu.SetEmptyText("ZHIPU_API_KEY");
+						s_LlmApiKeyZhipu.SetHidden(true);
+						pActiveKeyInput = &s_LlmApiKeyZhipu;
+						break;
+					case 1: // DeepSeek
+						pKeyLabel = Localize("DeepSeek API Key");
+						s_LlmApiKeyDeepseek.SetEmptyText("DEEPSEEK_API_KEY");
+						s_LlmApiKeyDeepseek.SetHidden(true);
+						pActiveKeyInput = &s_LlmApiKeyDeepseek;
+						break;
+					case 2: // OpenAI
+						pKeyLabel = Localize("OpenAI API Key");
+						s_LlmApiKeyOpenai.SetEmptyText("OPENAI_API_KEY");
+						s_LlmApiKeyOpenai.SetHidden(true);
+						pActiveKeyInput = &s_LlmApiKeyOpenai;
+						break;
+					case 3: // Custom
+					default:
+						pKeyLabel = Localize("Custom API Key");
+						s_LlmApiKeyCustom.SetEmptyText("API_KEY");
+						s_LlmApiKeyCustom.SetHidden(true);
+						pActiveKeyInput = &s_LlmApiKeyCustom;
+						break;
+					}
+
+					Ui()->DoLabel(&LabelCol, pKeyLabel, LG_BodySize, TEXTALIGN_ML);
+					if(pActiveKeyInput)
+						Ui()->DoEditBox(pActiveKeyInput, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 各 Provider 的端点配置（允许覆盖默认）
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Endpoint (Optional)"), LG_BodySize, TEXTALIGN_ML);
+
+					static CLineInput s_LlmEndpointZhipu(g_Config.m_QmTranslateLlmEndpointZhipu, sizeof(g_Config.m_QmTranslateLlmEndpointZhipu));
+					static CLineInput s_LlmEndpointDeepseek(g_Config.m_QmTranslateLlmEndpointDeepseek, sizeof(g_Config.m_QmTranslateLlmEndpointDeepseek));
+					static CLineInput s_LlmEndpointOpenai(g_Config.m_QmTranslateLlmEndpointOpenai, sizeof(g_Config.m_QmTranslateLlmEndpointOpenai));
+					static CLineInput s_LlmEndpointCustom(g_Config.m_QmTranslateLlmEndpointCustom, sizeof(g_Config.m_QmTranslateLlmEndpointCustom));
+
+					CLineInput *pActiveEndpointInput = nullptr;
+					switch(g_Config.m_QmTranslateLlmProvider)
+					{
+					case 0: // Zhipu AI
+						s_LlmEndpointZhipu.SetEmptyText("https://open.bigmodel.cn/api/paas/v4/chat/completions");
+						pActiveEndpointInput = &s_LlmEndpointZhipu;
+						break;
+					case 1: // DeepSeek
+						s_LlmEndpointDeepseek.SetEmptyText("https://api.deepseek.com/chat/completions");
+						pActiveEndpointInput = &s_LlmEndpointDeepseek;
+						break;
+					case 2: // OpenAI
+						s_LlmEndpointOpenai.SetEmptyText("https://api.openai.com/v1/chat/completions");
+						pActiveEndpointInput = &s_LlmEndpointOpenai;
+						break;
+					case 3: // Custom
+					default:
+						s_LlmEndpointCustom.SetEmptyText("https://api.example.com/v1/chat/completions");
+						pActiveEndpointInput = &s_LlmEndpointCustom;
+						break;
+					}
+					if(pActiveEndpointInput)
+						Ui()->DoEditBox(pActiveEndpointInput, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 各 Provider 的模型配置
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("Model"), LG_BodySize, TEXTALIGN_ML);
-					static CLineInput s_ZhipuAiModel(g_Config.m_QmTranslateZhipuaiModel, sizeof(g_Config.m_QmTranslateZhipuaiModel));
-					s_ZhipuAiModel.SetEmptyText("glm-4.7-flash");
-					Ui()->DoEditBox(&s_ZhipuAiModel, &ControlCol, LG_BodySize);
+
+					static CLineInput s_LlmModelZhipu(g_Config.m_QmTranslateLlmModelZhipu, sizeof(g_Config.m_QmTranslateLlmModelZhipu));
+					static CLineInput s_LlmModelDeepseek(g_Config.m_QmTranslateLlmModelDeepseek, sizeof(g_Config.m_QmTranslateLlmModelDeepseek));
+					static CLineInput s_LlmModelOpenai(g_Config.m_QmTranslateLlmModelOpenai, sizeof(g_Config.m_QmTranslateLlmModelOpenai));
+					static CLineInput s_LlmModelCustom(g_Config.m_QmTranslateLlmModelCustom, sizeof(g_Config.m_QmTranslateLlmModelCustom));
+
+					CLineInput *pActiveModelInput = nullptr;
+					const char *pModelEmptyText = "model-name";
+					switch(g_Config.m_QmTranslateLlmProvider)
+					{
+					case 0: // Zhipu AI
+						pModelEmptyText = "glm-4.5-flash";
+						s_LlmModelZhipu.SetEmptyText(pModelEmptyText);
+						pActiveModelInput = &s_LlmModelZhipu;
+						break;
+					case 1: // DeepSeek
+						pModelEmptyText = "deepseek-chat";
+						s_LlmModelDeepseek.SetEmptyText(pModelEmptyText);
+						pActiveModelInput = &s_LlmModelDeepseek;
+						break;
+					case 2: // OpenAI
+						pModelEmptyText = "gpt-4o-mini";
+						s_LlmModelOpenai.SetEmptyText(pModelEmptyText);
+						pActiveModelInput = &s_LlmModelOpenai;
+						break;
+					case 3: // Custom
+					default:
+						s_LlmModelCustom.SetEmptyText(pModelEmptyText);
+						pActiveModelInput = &s_LlmModelCustom;
+						break;
+					}
+					if(pActiveModelInput)
+						Ui()->DoEditBox(pActiveModelInput, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// LLM 并发数配置
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Concurrency"), LG_BodySize, TEXTALIGN_ML);
+
+					// 显示当前有效并发数
+					{
+						// 计算智能默认值（与 GetEffectiveConcurrency 逻辑一致）
+						int EffectiveConcurrency = 3; // 默认值
+						if(g_Config.m_QmTranslateLlmConcurrency != 1)
+						{
+							// 用户手动设置
+							EffectiveConcurrency = g_Config.m_QmTranslateLlmConcurrency;
+						}
+						else
+						{
+							// 根据 Provider 类型提供智能默认值
+							switch(g_Config.m_QmTranslateLlmProvider)
+							{
+							case 0: // Zhipu AI
+							case 1: // DeepSeek
+								EffectiveConcurrency = 3;
+								break;
+							case 2: // OpenAI
+								EffectiveConcurrency = 2;
+								break;
+							case 3: // Custom
+							default:
+								EffectiveConcurrency = g_Config.m_QmTranslateLlmConcurrencyDefault;
+								break;
+							}
+						}
+
+						// 显示有效并发数
+						char aBuf[64];
+						if(g_Config.m_QmTranslateLlmConcurrency == 1)
+						{
+							str_format(aBuf, sizeof(aBuf), Localize("Auto: %d (smart default)"), EffectiveConcurrency);
+						}
+						else
+						{
+							str_format(aBuf, sizeof(aBuf), Localize("Manual: %d"), EffectiveConcurrency);
+						}
+						Ui()->DoLabel(&ControlCol, aBuf, LG_BodySize, TEXTALIGN_ML);
+					}
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 手动并发数滑块
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Manual concurrency (1=auto)"), LG_BodySize, TEXTALIGN_ML);
+					Ui()->DoScrollbarOption(&g_Config.m_QmTranslateLlmConcurrency, &g_Config.m_QmTranslateLlmConcurrency, &ControlCol, Localize("Manual concurrency"), 1, 20, &CUi::ms_LinearScrollbarScale, 1);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 思考模式开关
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTranslateLlmEnableThinking, Localize("Enable thinking mode (slower)"), &g_Config.m_QmTranslateLlmEnableThinking, &Row, LG_LineHeight);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+					// 思考模式提示
+					if(g_Config.m_QmTranslateLlmEnableThinking)
+					{
+						const char *pHint = nullptr;
+						if(g_Config.m_QmTranslateLlmProvider == 2) // OpenAI
+						{
+							pHint = Localize("Enable thinking mode requires using reasoning models");
+						}
+						else if(g_Config.m_QmTranslateLlmProvider == 3) // Custom
+						{
+							pHint = Localize("Ensure backend supports OpenAI-compatible thinking parameter");
+						}
+
+						if(pHint)
+						{
+							CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
+							Row.VMargin(LG_LabelWidth, &Row);
+							Ui()->DoLabel(&Row, pHint, LG_BodySize * 0.8f, TEXTALIGN_ML);
+							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+						}
+					}
+
+					// 自定义提示词配置
+					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+					Ui()->DoLabel(&LabelCol, Localize("Custom prompt template"), LG_BodySize, TEXTALIGN_ML);
+					static CLineInput s_CustomPrompt(g_Config.m_QmTranslateSystemPrompt, sizeof(g_Config.m_QmTranslateSystemPrompt));
+					s_CustomPrompt.SetEmptyText(Localize("Leave empty to use default prompt"));
+					Ui()->DoEditBox(&s_CustomPrompt, &ControlCol, LG_BodySize);
+					CardContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &CardContent);
+
+					// 提示信息
+					CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
+					Ui()->DoLabel(&Row, Localize("Use %s as placeholder for target language"), LG_BodySize * 0.8f, TEXTALIGN_ML);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
+				// 入站语言和出站语言配置
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Region"), LG_BodySize, TEXTALIGN_ML);
-				static CLineInput s_TranslateRegion(g_Config.m_TcTranslateRegion, sizeof(g_Config.m_TcTranslateRegion));
-				s_TranslateRegion.SetEmptyText("ap-guangzhou");
-				Ui()->DoEditBox(&s_TranslateRegion, &ControlCol, LG_BodySize);
+				Ui()->DoLabel(&LabelCol, Localize("Outbound Source Language"), LG_BodySize, TEXTALIGN_ML);
+
+				// 下拉框 + 输入框组合
+				{
+					static const char *s_apSourceNames[] = {Localize("Auto Detect"), "中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
+					static const char *s_apSourceCodes[] = {"auto", "zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+					static CUi::SDropDownState s_SourceLangDropDown;
+
+					CUIRect DropRect, EditRect;
+					ControlCol.VSplitMid(&DropRect, &EditRect);
+					DropRect.VMargin(1.0f, &DropRect);
+					EditRect.VMargin(1.0f, &EditRect);
+
+					auto FindIndexSrc = [](const char *pVal, const char **apCodes, int Count) -> int {
+						for(int i = 0; i < Count; ++i)
+							if(str_comp(pVal, apCodes[i]) == 0) return i;
+						return -1;
+					};
+
+					const int OldSelSrc = FindIndexSrc(g_Config.m_QmTranslateSource, s_apSourceCodes, std::size(s_apSourceCodes));
+					const int NewSelSrc = Ui()->DoDropDown(&DropRect, OldSelSrc < 0 ? 0 : OldSelSrc, s_apSourceNames, std::size(s_apSourceNames), s_SourceLangDropDown);
+					if(NewSelSrc != OldSelSrc && NewSelSrc >= 0)
+						str_copy(g_Config.m_QmTranslateSource, s_apSourceCodes[NewSelSrc], sizeof(g_Config.m_QmTranslateSource));
+
+					static CLineInput s_SourceLang(g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource));
+					s_SourceLang.SetEmptyText("auto");
+					Ui()->DoEditBox(&s_SourceLang, &EditRect, LG_BodySize);
+				}
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+				Ui()->DoLabel(&LabelCol, Localize("Outbound Target Language"), LG_BodySize, TEXTALIGN_ML);
+
+				// 下拉框 + 输入框组合
+				{
+					static const char *s_apOutTargetNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
+					static const char *s_apOutTargetCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+					static CUi::SDropDownState s_OutTargetLangDropDown;
+
+					CUIRect DropRect, EditRect;
+					ControlCol.VSplitMid(&DropRect, &EditRect);
+					DropRect.VMargin(1.0f, &DropRect);
+					EditRect.VMargin(1.0f, &EditRect);
+
+					auto FindIndexOut = [](const char *pVal, const char **apCodes, int Count) -> int {
+						for(int i = 0; i < Count; ++i)
+							if(str_comp(pVal, apCodes[i]) == 0) return i;
+						return -1;
+					};
+
+					const int OldSelOut = FindIndexOut(g_Config.m_QmTranslateOutgoingTarget, s_apOutTargetCodes, std::size(s_apOutTargetCodes));
+					const int NewSelOut = Ui()->DoDropDown(&DropRect, OldSelOut < 0 ? 0 : OldSelOut, s_apOutTargetNames, std::size(s_apOutTargetNames), s_OutTargetLangDropDown);
+					if(NewSelOut != OldSelOut && NewSelOut >= 0)
+						str_copy(g_Config.m_QmTranslateOutgoingTarget, s_apOutTargetCodes[NewSelOut], sizeof(g_Config.m_QmTranslateOutgoingTarget));
+
+					static CLineInput s_TargetLang(g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget));
+					s_TargetLang.SetEmptyText("en");
+					Ui()->DoEditBox(&s_TargetLang, &EditRect, LG_BodySize);
+				}
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				// CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				// Ui()->DoLabel(&Row, Localize("自动翻译会跳过简体、繁体和服务器消息"), LG_BodySize * 0.8f, TEXTALIGN_ML);
+				// Ui()->DoLabel(&Row, Localize("Auto-translate will skip simplified Chinese, traditional Chinese, and server messages"), LG_BodySize * 0.8f, TEXTALIGN_ML);
 				// CardContent.HSplitTop(LG_LineSpacing / 2.0f, nullptr, &CardContent);
 				//
 				// CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				// Ui()->DoLabel(&Row, Localize("发送时可在末尾加 [ru]、[en]、[ja] 等目标语言代码"), LG_BodySize * 0.8f, TEXTALIGN_ML);
+				// Ui()->DoLabel(&Row, Localize("Append language codes like [ru], [en], [ja] at the end when sending"), LG_BodySize * 0.8f, TEXTALIGN_ML);
 				// CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
+				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
+				Column.y = CardContent.y;
+				s_GlassCards.back().h = Column.y - s_GlassCards.back().y;
+				RegisterModuleCard(pModule, ColumnId, s_GlassCards.back());
+				HandleModuleDragState(pModule, s_GlassCards.back());
+			}
+			break;
+			case EQmModuleId::TranslateUi:
+			{
+				// ========== 模块: 翻译 UI ==========
+				Column.HSplitTop(LG_CardSpacing, nullptr, &Column);
+				CUIRect CardTranslateUiStart = Column;
+				s_GlassCards.push_back(CardTranslateUiStart);
+
+				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
+				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
+				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
+				DoModuleHeadline(CardContent, 9, Localize("Translate UI"), Localize("Customize translate button and menu colors"));
+
+				NTranslateUiSettings::RenderTranslateUiModule(this, CardContent, LG_LineHeight, LG_BodySize, LG_LineSpacing);
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;

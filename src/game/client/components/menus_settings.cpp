@@ -1044,7 +1044,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		CUIRect QueueHeader, QueueControls, QueueList, QueuePresets;
 		QueueSection.HSplitTop(18.0f, &QueueHeader, &QueueSection);
 		char aQueueLabel[64];
-		str_format(aQueueLabel, sizeof(aQueueLabel), "%s (%d/%d)", Localize("皮肤队列"), (int)SkinQueue.size(), QueueLength);
+		str_format(aQueueLabel, sizeof(aQueueLabel), "%s (%d/%d)", Localize("Skin queue"), (int)SkinQueue.size(), QueueLength);
 		Ui()->DoLabel(&QueueHeader, aQueueLabel, 14.0f, TEXTALIGN_ML);
 
 		CUIRect RotateMapRect;
@@ -1058,7 +1058,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		QueueSection.HSplitTop(20.0f, &QueueControls, &QueueSection);
 		CUIRect IntervalRect, LengthRect;
 		QueueControls.VSplitMid(&IntervalRect, &LengthRect, 10.0f);
-		Ui()->DoScrollbarOption(&QueueInterval, &QueueInterval, &IntervalRect, Localize("切换间隔"), 5, 120, &CUi::ms_LinearScrollbarScale, 0, "s");
+		Ui()->DoScrollbarOption(&QueueInterval, &QueueInterval, &IntervalRect, Localize("Switch interval"), 5, 120, &CUi::ms_LinearScrollbarScale, 0, "s");
 		if(Ui()->DoScrollbarOption(&QueueLength, &QueueLength, &LengthRect, Localize("Queue length"), 0, QueueMaxLimit))
 		{
 			GameClient()->m_Skins.TrimSkinQueueToLimit(QueueDummy);
@@ -1167,7 +1167,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				{
 					RemoveIndex = (int)i;
 				}
-				GameClient()->m_Tooltips.DoToolTip(&s_QueueRemoveIds[i], &RemoveRect, Localize("从队列移除"));
+				GameClient()->m_Tooltips.DoToolTip(&s_QueueRemoveIds[i], &RemoveRect, Localize("Remove from queue"));
 
 				if(s_QueueDragIndex == -1 && Ui()->MouseButtonClicked(0) && Ui()->MouseHovered(&DragArea))
 				{
@@ -1229,13 +1229,13 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			{
 				GameClient()->m_Skins.AddSkinQueuePresetFromCurrent(QueueDummy);
 			}
-			GameClient()->m_Tooltips.DoToolTip(&s_SavePresetButton, &SavePresetButton, DisableSavePreset ? Localize("队列为空") : Localize("一键保存当前队列为新预设"));
+			GameClient()->m_Tooltips.DoToolTip(&s_SavePresetButton, &SavePresetButton, DisableSavePreset ? Localize("Queue is empty") : Localize("Save current queue as a new preset"));
 
 			QueuePresets.HSplitTop(3.0f, nullptr, &QueuePresets);
 			PresetList = QueuePresets;
 			if(vQueuePresets.empty())
 			{
-				Ui()->DoLabel(&PresetList, Localize("暂无预设"), 11.0f, TEXTALIGN_MC);
+				Ui()->DoLabel(&PresetList, Localize("No presets yet"), 11.0f, TEXTALIGN_MC);
 			}
 			else
 			{
@@ -1271,12 +1271,12 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 
 					const bool RenameHovered = Ui()->HotItem() == &s_vPresetRenameIds[i];
 					RenameRect.Draw(ColorRGBA(0.4f, 0.4f, 0.75f, RenameHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
-					Ui()->DoLabel(&RenameRect, Localize("改名"), 10.0f, TEXTALIGN_MC);
+					Ui()->DoLabel(&RenameRect, Localize("Rename"), 10.0f, TEXTALIGN_MC);
 					if(Ui()->DoButtonLogic(&s_vPresetRenameIds[i], 0, &RenameRect, BUTTONFLAG_LEFT))
 					{
 						RenamePresetIndex = (int)i;
 					}
-					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRenameIds[i], &RenameRect, Localize("打开重命名弹窗"));
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRenameIds[i], &RenameRect, Localize("Open rename dialog"));
 
 					const bool ApplyHovered = Ui()->HotItem() == &s_vPresetApplyIds[i];
 					ApplyRect.Draw(ColorRGBA(0.25f, 0.6f, 0.35f, ApplyHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
@@ -1285,7 +1285,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					{
 						ApplyPresetIndex = (int)i;
 					}
-					GameClient()->m_Tooltips.DoToolTip(&s_vPresetApplyIds[i], &ApplyRect, Localize("一键应用此预设到当前队列"));
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetApplyIds[i], &ApplyRect, Localize("Apply this preset to the current queue"));
 
 					const bool RemoveHovered = Ui()->HotItem() == &s_vPresetRemoveIds[i];
 					RemoveRect.Draw(ColorRGBA(0.75f, 0.25f, 0.25f, RemoveHovered ? 0.35f : 0.2f), IGraphics::CORNER_ALL, 3.0f);
@@ -1294,7 +1294,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					{
 						RemovePresetIndex = (int)i;
 					}
-					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRemoveIds[i], &RemoveRect, Localize("删除该预设"));
+					GameClient()->m_Tooltips.DoToolTip(&s_vPresetRemoveIds[i], &RemoveRect, Localize("Delete this preset"));
 				}
 				s_PresetListBox.DoEnd();
 
@@ -1438,7 +1438,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					GameClient()->m_Skins.AddSkinQueue(pSkinContainer->Name(), *pUseCustomColor != 0, *pColorBody, *pColorFeet, QueueDummy);
 				}
 			}
-			const char *pQueueTooltip = QueueFull && !InQueue ? Localize("队列已满") : (InQueue ? Localize("从队列移除") : Localize("加入队列"));
+			const char *pQueueTooltip = QueueFull && !InQueue ? Localize("Queue is full") : (InQueue ? Localize("Remove from queue") : Localize("Add to queue"));
 			GameClient()->m_Tooltips.DoToolTip(&s_vQueueButtonIds[i], &QueueIcon, pQueueTooltip);
 
 			if(DoButton_Favorite(SkinListEntry.FavoriteButtonId(), SkinListEntry.ListItemId(), SkinListEntry.IsFavorite(), &FavIcon))
@@ -2107,7 +2107,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 		HeaderRow.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
 
 		static CListBox s_AudioPackListBox;
-		s_AudioPackListBox.DoHeader(&AudioPackView, Localize("音频包"), HeaderHeight, HeaderSpacing);
+		s_AudioPackListBox.DoHeader(&AudioPackView, Localize("Audio packs"), HeaderHeight, HeaderSpacing);
 
 		static CButtonContainer s_AudioPackRefreshButton;
 		CUIRect RefreshButton;
@@ -2981,7 +2981,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		static CButtonContainer s_AuthedColor, s_SameClanColor, s_FriendsListFriendColor, s_FriendsListClanColor;
 		DoLine_ColorPicker(&s_AuthedColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("Authed name color in scoreboard"), &g_Config.m_ClAuthedPlayerColor, GreenDefault, false);
 		DoLine_ColorPicker(&s_SameClanColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("Same clan color in scoreboard"), &g_Config.m_ClSameClanColor, GreenDefault, false);
-		DoLine_ColorPicker(&s_FriendsListFriendColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("好友列表中好友条目颜色"), &g_Config.m_ClFriendsListFriendColor, ColorRGBA(0.949f, 0.806f, 0.368f), false);
+		DoLine_ColorPicker(&s_FriendsListFriendColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("Friend color in friends list"), &g_Config.m_ClFriendsListFriendColor, ColorRGBA(0.949f, 0.806f, 0.368f), false);
 		DoLine_ColorPicker(&s_FriendsListClanColor, ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing, &LeftView, Localize("Clan color in friends list"), &g_Config.m_ClFriendsListClanColor, ColorRGBA(0.336f, 0.231f, 0.867f), false);
 
 		// ***** DDRace HUD ***** //
@@ -3006,7 +3006,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 		// Switch for dummy actions display
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudDummyActions, Localize("Show dummy actions"), &g_Config.m_ClShowhudDummyActions, &RightView, LineSize);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusReset, Localize("显示卡键状态"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusReset, Localize("Show key stuck status"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusHammer, Localize("Show hammer status"), &g_Config.m_ClShowhudKeyStatusHammer, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusControl, Localize("Show dummy control status"), &g_Config.m_ClShowhudKeyStatusControl, &RightView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusSync, Localize("Show dummy sync status"), &g_Config.m_ClShowhudKeyStatusSync, &RightView, LineSize);
@@ -3594,7 +3594,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		const ColorRGBA DropPreviewColor(0.2f, 0.9f, 0.4f, 0.9f);
 		const ColorRGBA DragGhostColor(0.08f, 0.09f, 0.12f, 0.55f);
 
-		Ui()->DoLabel_AutoLineSize(Localize("昵称顺序"), HeadlineFontSize, TEXTALIGN_ML, &RightView, HeadlineHeight);
+		Ui()->DoLabel_AutoLineSize(Localize("Name order"), HeadlineFontSize, TEXTALIGN_ML, &RightView, HeadlineHeight);
 		RightView.HSplitTop(MarginSmall, nullptr, &RightView);
 
 		CUIRect RowOrderView;
@@ -4210,37 +4210,37 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		GameClient()->m_Camera.SetZoom(CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10), g_Config.m_ClSmoothZoomTime, true);
 
 	Right.HSplitTop(20.0f, &Button, &Right);
-	Ui()->DoScrollbarOption(&g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, Localize("预测边距"), 1, 300, &CUi::ms_LinearScrollbarScale, 0, "");
+	Ui()->DoScrollbarOption(&g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, Localize("Prediction margin"), 1, 300, &CUi::ms_LinearScrollbarScale, 0, "");
 
 	Right.HSplitTop(20.0f, &Button, &Right);
-	if(DoButton_CheckBox(&g_Config.m_ClPredictEvents, Localize("预测事件（实验性）"), g_Config.m_ClPredictEvents, &Button))
+	if(DoButton_CheckBox(&g_Config.m_ClPredictEvents, Localize("Predict events (experimental)"), g_Config.m_ClPredictEvents, &Button))
 	{
 		g_Config.m_ClPredictEvents ^= 1;
 	}
 
 	Right.HSplitTop(20.0f, &Button, &Right);
-	if(DoButton_CheckBox(&g_Config.m_ClAntiPing, Localize("延迟补偿（AntiPing）"), g_Config.m_ClAntiPing, &Button))
+	if(DoButton_CheckBox(&g_Config.m_ClAntiPing, Localize("AntiPing (latency compensation)"), g_Config.m_ClAntiPing, &Button))
 	{
 		g_Config.m_ClAntiPing ^= 1;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClAntiPing, &Button, Localize("尝试预测其他实体来降低高延迟带来的卡顿感"));
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClAntiPing, &Button, Localize("Try to predict other entities to reduce lag feeling at high latency"));
 
 	if(g_Config.m_ClAntiPing)
 	{
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingPlayers, Localize("延迟补偿：预测其他玩家"), g_Config.m_ClAntiPingPlayers, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingPlayers, Localize("AntiPing: predict other players"), g_Config.m_ClAntiPingPlayers, &Button))
 		{
 			g_Config.m_ClAntiPingPlayers ^= 1;
 		}
 
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingWeapons, Localize("延迟补偿：预测武器"), g_Config.m_ClAntiPingWeapons, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingWeapons, Localize("AntiPing: predict weapons"), g_Config.m_ClAntiPingWeapons, &Button))
 		{
 			g_Config.m_ClAntiPingWeapons ^= 1;
 		}
 
 		Right.HSplitTop(20.0f, &Button, &Right);
-		if(DoButton_CheckBox(&g_Config.m_ClAntiPingGrenade, Localize("延迟补偿：预测榴弹枪路径"), g_Config.m_ClAntiPingGrenade, &Button))
+		if(DoButton_CheckBox(&g_Config.m_ClAntiPingGrenade, Localize("AntiPing: predict grenade path"), g_Config.m_ClAntiPingGrenade, &Button))
 		{
 			g_Config.m_ClAntiPingGrenade ^= 1;
 		}
@@ -4475,7 +4475,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSkinQueuePresetRename(void *pContext,
 
 	CUIRect Label, Input, Buttons, Cancel, Confirm;
 	View.HSplitTop(12.0f, &Label, &View);
-	pMenus->Ui()->DoLabel(&Label, Localize("新预设名称"), FontSize, TEXTALIGN_ML);
+	pMenus->Ui()->DoLabel(&Label, Localize("New preset name"), FontSize, TEXTALIGN_ML);
 
 	View.HSplitTop(3.0f, nullptr, &View);
 	View.HSplitTop(18.0f, &Input, &View);
@@ -4485,11 +4485,11 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSkinQueuePresetRename(void *pContext,
 	View.HSplitTop(18.0f, &Buttons, &View);
 	Buttons.VSplitMid(&Cancel, &Confirm, 3.0f);
 
-	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, Localize("取消"), &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
+	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, Localize("Cancel"), &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
 	if(CancelPressed)
 		return CUi::POPUP_CLOSE_CURRENT;
 
-	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, Localize("重命名"), &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
+	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, Localize("Rename"), &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
 	if(ConfirmPressed)
 	{
 		if(pMenus->GameClient()->m_Skins.RenameSkinQueuePreset((size_t)pPopupContext->m_PresetIndex, pPopupContext->m_NameInput.GetString(), pPopupContext->m_Dummy))

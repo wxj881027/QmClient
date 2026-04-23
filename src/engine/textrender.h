@@ -82,6 +82,7 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_BAN = "\xEF\x81\x9E";
 	[[maybe_unused]] static const char *FONT_ICON_CIRCLE_CHEVRON_DOWN = "\xEF\x84\xBA";
 	[[maybe_unused]] static const char *FONT_ICON_KEY = "\xEF\x82\x84";
+	[[maybe_unused]] static const char *FONT_ICON_LANGUAGE = "\xEF\x86\xAB";
 	[[maybe_unused]] static const char *FONT_ICON_SQUARE_MINUS = "\xEF\x85\x86";
 	[[maybe_unused]] static const char *FONT_ICON_SQUARE_PLUS = "\xEF\x83\xBE";
 	[[maybe_unused]] static const char *FONT_ICON_SORT_UP = "\xEF\x83\x9E";
