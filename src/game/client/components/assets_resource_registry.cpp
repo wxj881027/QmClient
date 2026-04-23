@@ -131,3 +131,25 @@ const char *LegacySingleFileAssetSourcePath(const SAssetResourceCategory &Catego
 		return "DDNet/strong_weak.png";
 	return nullptr;
 }
+
+std::array<std::string, 3> BuildNamedSingleFileAssetCandidates(std::string_view CategoryId, std::string_view ActiveName)
+{
+	std::array<std::string, 3> aCandidates;
+	aCandidates[0] = "assets/" + std::string(CategoryId) + "/" + std::string(ActiveName) + ".png";
+
+	const std::string CategoryIdString(CategoryId);
+	if(const SAssetResourceCategory *pCategory = FindAssetResourceCategory(CategoryIdString.c_str()))
+	{
+		if(const char *pLegacyPath = LegacySingleFileAssetSourcePath(*pCategory))
+			aCandidates[1] = pLegacyPath;
+	}
+
+	if(CategoryId == "gui_cursor")
+		aCandidates[2] = "gui_cursor.png";
+	else if(CategoryId == "arrow")
+		aCandidates[2] = "arrow.png";
+	else if(CategoryId == "strong_weak")
+		aCandidates[2] = "strong_weak.png";
+
+	return aCandidates;
+}

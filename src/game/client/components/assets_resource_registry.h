@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_ASSETS_RESOURCE_REGISTRY_H
 #define GAME_CLIENT_COMPONENTS_ASSETS_RESOURCE_REGISTRY_H
 
+#include <array>
 #include <span>
 #include <string>
 #include <string_view>
@@ -40,5 +41,6 @@ bool IsProtectedDefaultAsset(std::string_view AssetName);
 bool AssetResourceNameLess(std::string_view LeftName, std::string_view RightName);
 void EnsureDefaultAssetVisible(std::vector<std::string> &vAssetNames);
 const char *LegacySingleFileAssetSourcePath(const SAssetResourceCategory &Category);
+std::array<std::string, 3> BuildNamedSingleFileAssetCandidates(std::string_view CategoryId, std::string_view ActiveName);
 
 #endif

@@ -78,3 +78,26 @@ TEST(AssetsResourceRegistry, KeepsLegacyWorkshopCategoryNames)
 	EXPECT_TRUE(ContainsWorkshopName(pParticles, "粒子（Particles）"));
 	EXPECT_TRUE(ContainsWorkshopName(pParticles, "粒子（PARTICLES）"));
 }
+
+TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesPreferCategoryAssetThenLegacyThenBuiltin)
+{
+	const auto aCandidates = BuildNamedSingleFileAssetCandidates("gui_cursor", "legacy");
+
+	EXPECT_EQ(aCandidates[0], "assets/gui_cursor/legacy.png");
+	EXPECT_EQ(aCandidates[1], "DDNet/gui_cursor.png");
+	EXPECT_EQ(aCandidates[2], "gui_cursor.png");
+}
+
+TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesUseBuiltinFallbackNamesPerCategory)
+{
+	const auto aArrowCandidates = BuildNamedSingleFileAssetCandidates("arrow", "default");
+	const auto aStrongWeakCandidates = BuildNamedSingleFileAssetCandidates("strong_weak", "default");
+
+	EXPECT_EQ(aArrowCandidates[0], "assets/arrow/default.png");
+	EXPECT_EQ(aArrowCandidates[1], "DDNet/arrow.png");
+	EXPECT_EQ(aArrowCandidates[2], "arrow.png");
+
+	EXPECT_EQ(aStrongWeakCandidates[0], "assets/strong_weak/default.png");
+	EXPECT_EQ(aStrongWeakCandidates[1], "DDNet/strong_weak.png");
+	EXPECT_EQ(aStrongWeakCandidates[2], "strong_weak.png");
+}

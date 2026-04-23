@@ -876,6 +876,7 @@ public:
 	void LoadParticlesSkin(const char *pPath, bool AsDir = false);
 	void LoadHudSkin(const char *pPath, bool AsDir = false);
 	void LoadExtrasSkin(const char *pPath, bool AsDir = false);
+	void ReloadNamedSingleFileAssetImage(int ImageId, const char *pCategoryId, const char *pActiveName);
 
 	struct SClientGameSkin
 	{

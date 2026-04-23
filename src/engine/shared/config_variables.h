@@ -370,6 +370,9 @@ MACRO_CONFIG_STR(ClAssetEmoticons, cl_asset_emoticons, 50, "default", CFGFLAG_SA
 MACRO_CONFIG_STR(ClAssetParticles, cl_asset_particles, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "粒子资产")
 MACRO_CONFIG_STR(ClAssetHud, cl_asset_hud, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "HUD 的资产")
 MACRO_CONFIG_STR(ClAssetExtras, cl_asset_extras, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "非来自 Teeworlds 的游戏图形资产")
+MACRO_CONFIG_STR(ClAssetGuiCursor, cl_asset_gui_cursor, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "GUI 光标资源")
+MACRO_CONFIG_STR(ClAssetArrow, cl_asset_arrow, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "箭头资源")
+MACRO_CONFIG_STR(ClAssetStrongWeak, cl_asset_strong_weak, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "强弱图标资源")
 
 MACRO_CONFIG_STR(BrFilterString, br_filter_string, 128, "Novice", CFGFLAG_SAVE | CFGFLAG_CLIENT, "服务器浏览器过滤字符串")
 MACRO_CONFIG_STR(BrExcludeString, br_exclude_string, 128, "", CFGFLAG_SAVE | CFGFLAG_CLIENT, "服务器浏览器排除字符串")

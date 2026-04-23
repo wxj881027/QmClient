@@ -5,6 +5,7 @@
 
 #include "gameclient.h"
 
+#include "components/assets_resource_registry.h"
 #include "components/background.h"
 #include "components/binds.h"
 #include "components/broadcast.h"
@@ -132,6 +133,25 @@ void SetDemoInputKeyState(unsigned char *pKeyStates, int Key, bool Pressed)
 		pKeyStates[Key >> 3] |= Mask;
 	else
 		pKeyStates[Key >> 3] &= ~Mask;
+}
+
+void LoadNamedSingleFileImage(CGameClient *pGameClient, int ImageId, const char *pCategoryId, const char *pActiveName)
+{
+	if(ImageId < 0 || ImageId >= g_pData->m_NumImages || pCategoryId == nullptr || pActiveName == nullptr)
+		return;
+
+	pGameClient->Graphics()->UnloadTexture(&g_pData->m_aImages[ImageId].m_Id);
+	g_pData->m_aImages[ImageId].m_Id = IGraphics::CTextureHandle();
+
+	for(const std::string &Candidate : BuildNamedSingleFileAssetCandidates(pCategoryId, pActiveName))
+	{
+		if(Candidate.empty())
+			continue;
+
+		g_pData->m_aImages[ImageId].m_Id = pGameClient->Graphics()->LoadTexture(Candidate.c_str(), IStorage::TYPE_ALL);
+		if(g_pData->m_aImages[ImageId].m_Id.IsValid())
+			return;
+	}
 }
 }
 
@@ -628,6 +648,10 @@ void CGameClient::OnInit()
 	{
 		if(i == IMAGE_GAME)
 			LoadGameSkin(g_Config.m_ClAssetGame);
+		else if(i == IMAGE_CURSOR)
+			LoadNamedSingleFileImage(this, i, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+		else if(i == IMAGE_ARROW)
+			LoadNamedSingleFileImage(this, i, "arrow", g_Config.m_ClAssetArrow);
 		else if(i == IMAGE_EMOTICONS)
 			LoadEmoticonsSkin(g_Config.m_ClAssetEmoticons);
 		else if(i == IMAGE_PARTICLES)
@@ -636,6 +660,8 @@ void CGameClient::OnInit()
 			LoadHudSkin(g_Config.m_ClAssetHud);
 		else if(i == IMAGE_EXTRAS)
 			LoadExtrasSkin(g_Config.m_ClAssetExtras);
+		else if(i == IMAGE_STRONGWEAK)
+			LoadNamedSingleFileImage(this, i, "strong_weak", g_Config.m_ClAssetStrongWeak);
 		else if(g_pData->m_aImages[i].m_pFilename[0] == '\0') // handle special null image without filename
 			g_pData->m_aImages[i].m_Id = IGraphics::CTextureHandle();
 		else
@@ -5531,6 +5557,11 @@ bool CGameClient::IsLocalCharSuper() const
 	if(m_Snap.m_LocalClientId < 0)
 		return false;
 	return m_aClients[m_Snap.m_LocalClientId].m_Super;
+}
+
+void CGameClient::ReloadNamedSingleFileAssetImage(int ImageId, const char *pCategoryId, const char *pActiveName)
+{
+	LoadNamedSingleFileImage(this, ImageId, pCategoryId, pActiveName);
 }
 
 void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
