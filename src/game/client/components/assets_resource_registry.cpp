@@ -6,25 +6,30 @@
 namespace
 {
 constexpr const char *s_apWorkshopHudAliases[] = {
+	"HUD",
 	"界面（HUD）",
 };
 
 constexpr const char *s_apWorkshopEntitiesAliases[] = {
+	"实体层",
 	"实体（Entities）",
 	"实体（ENTITIES）",
 };
 
 constexpr const char *s_apWorkshopGameAliases[] = {
+	"游戏",
 	"游戏（Game）",
 	"游戏（GAME）",
 };
 
 constexpr const char *s_apWorkshopEmoticonsAliases[] = {
+	"表情",
 	"表情（Emoticons）",
 	"表情（EMOTICONS）",
 };
 
 constexpr const char *s_apWorkshopParticlesAliases[] = {
+	"粒子",
 	"粒子（Particles）",
 	"粒子（PARTICLES）",
 };
