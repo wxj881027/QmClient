@@ -245,6 +245,9 @@ void CPlayers::RenderHookCollLine(
 	const CNetObj_Character *pPlayerChar,
 	int ClientId)
 {
+	if(GameClient()->m_TClient.ShouldHideGoresGuides())
+		return;
+
 	// TClient
 	if(ClientId >= 0 && GameClient()->m_aClients[ClientId].m_IsVolleyBall)
 		return;
@@ -546,6 +549,9 @@ void CPlayers::RenderWeaponTrajectory(
 	const CNetObj_Character *pPlayerChar,
 	int ClientId)
 {
+	if(GameClient()->m_TClient.ShouldHideGoresGuides())
+		return;
+
 	if(ClientId < 0 || !g_Config.m_QmWeaponTrajectory || !GameClient()->m_Controls.m_aShowWeaponTrajectory[g_Config.m_ClDummy])
 		return;
 

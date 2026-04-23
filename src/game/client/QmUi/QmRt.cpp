@@ -28,7 +28,7 @@ void LogPerfStage(const char *pStage, const double DurationMs, const bool Force 
 {
 	if(!PerfDebugEnabled())
 		return;
-	if(!Force && DurationMs < PerfDebugThresholdMs())
+	if(DurationMs < PerfDebugThresholdMs())
 		return;
 
 	if(pExtra != nullptr && pExtra[0] != '\0')
@@ -101,7 +101,7 @@ void CUiRuntimeV2::OnRender()
 	if(g_Config.m_QmUiRuntimeV2Debug)
 	{
 		m_DebugLogAccumulator += Dt;
-		if(m_DebugLogAccumulator >= 2.0f)
+		if(m_DebugLogAccumulator >= 2.0f && m_LastStats.m_AnimMs >= PerfDebugThresholdMs())
 		{
 			m_DebugLogAccumulator = 0.0f;
 			dbg_msg("qm_ui", "runtime active: nodes=%d, anim_ms=%.3f", m_LastStats.m_NodeCount, m_LastStats.m_AnimMs);

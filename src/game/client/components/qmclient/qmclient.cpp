@@ -77,6 +77,21 @@ static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
+static constexpr int QMCLIENT_AXIOM_AUTO_LOGIN_MAX_ATTEMPTS = 3;
+static constexpr int QMCLIENT_AXIOM_AUTO_LOGIN_RETRY_DELAY_SECONDS = 2;
+
+static bool TextContainsAny(const char *pText, const std::initializer_list<const char *> &Tokens)
+{
+	if(!pText || pText[0] == '\0')
+		return false;
+
+	for(const char *pToken : Tokens)
+	{
+		if(pToken && pToken[0] != '\0' && str_find_nocase(pText, pToken))
+			return true;
+	}
+	return false;
+}
 static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION = 2.0f;
 static constexpr float QMCLIENT_COMBO_POPUP_DURATION = 1.25f;
 static constexpr float QMCLIENT_TEXT_POPUP_FONT_SIZE = 30.0f;
@@ -543,6 +558,11 @@ static bool ParseQmClientServiceHostPort(const char *pAddrStr, char *pHost, size
 
 	Port = str_toint(pColon + 1);
 	return Port > 0 && Port <= 65535;
+}
+
+const char *GetEffectiveQmVoiceServer()
+{
+	return g_Config.m_QmVoiceServer;
 }
 
 static void TrimQmClientTextInPlace(char *pText)
@@ -1645,6 +1665,123 @@ const char *CTClient::CurrentCommunityIdForFinishCheck() const
 	return pCommunityId;
 }
 
+bool CTClient::IsAxiomCommunity() const
+{
+	const char *pCommunityId = CurrentCommunityIdForFinishCheck();
+	if(!pCommunityId)
+		return false;
+
+	if(str_find_nocase(pCommunityId, "axiom"))
+		return true;
+
+	IServerBrowser *pServerBrowser = ServerBrowser();
+	if(!pServerBrowser)
+		return false;
+
+	const CCommunity *pCommunity = pServerBrowser->Community(pCommunityId);
+	return pCommunity && pCommunity->Name() && str_find_nocase(pCommunity->Name(), "axiom");
+}
+
+void CTClient::ResetAxiomAutoLoginState()
+{
+	m_AxiomAutoLoginAnnounced = false;
+	m_AxiomAutoLoginSucceeded = false;
+	m_AxiomAutoLoginWaitingReply = false;
+	m_AxiomAutoLoginAttempts = 0;
+	m_AxiomAutoLoginNextTryTick = 0;
+	m_aAxiomAutoLoginServer[0] = '\0';
+}
+
+void CTClient::TrySendAxiomLogin()
+{
+	if(g_Config.m_QmAxiomAutoLogin == 0 || g_Config.m_QmAxiomLoginPassword[0] == '\0')
+		return;
+	if(Client()->State() != IClient::STATE_ONLINE || !IsAxiomCommunity())
+		return;
+	if(m_AxiomAutoLoginSucceeded || m_AxiomAutoLoginAttempts >= QMCLIENT_AXIOM_AUTO_LOGIN_MAX_ATTEMPTS)
+		return;
+
+	char aServerAddress[NETADDR_MAXSTRSIZE] = "";
+	net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
+	if(aServerAddress[0] != '\0')
+		str_copy(m_aAxiomAutoLoginServer, aServerAddress, sizeof(m_aAxiomAutoLoginServer));
+
+	char aLoginCommand[192];
+	str_format(aLoginCommand, sizeof(aLoginCommand), "/login %s", g_Config.m_QmAxiomLoginPassword);
+	GameClient()->m_Chat.SendChat(0, aLoginCommand);
+
+	m_AxiomAutoLoginAttempts++;
+	m_AxiomAutoLoginWaitingReply = true;
+	m_AxiomAutoLoginNextTryTick = 0;
+
+	if(!m_AxiomAutoLoginAnnounced)
+	{
+		GameClient()->Echo(Localize("Attempting Axiom auto login"));
+		m_AxiomAutoLoginAnnounced = true;
+	}
+}
+
+void CTClient::HandleAxiomAutoLoginMessage(const char *pText)
+{
+	if(!m_AxiomAutoLoginWaitingReply || !IsAxiomCommunity() || !pText || pText[0] == '\0')
+		return;
+
+	const bool IsLoginMessage = TextContainsAny(pText, {"login", "logged in", "登入", "登录"});
+	if(!IsLoginMessage)
+		return;
+
+	const bool Success = TextContainsAny(pText, {"success", "successful", "logged in", "welcome", "succeeded", "登入成功", "登录成功", "欢迎"});
+	const bool Failure = TextContainsAny(pText, {"fail", "failed", "incorrect", "invalid", "wrong", "denied", "error", "password incorrect", "登入失败", "登录失败", "密码错误"});
+
+	if(Success)
+	{
+		m_AxiomAutoLoginSucceeded = true;
+		m_AxiomAutoLoginWaitingReply = false;
+		m_AxiomAutoLoginNextTryTick = 0;
+		GameClient()->Echo(Localize("Axiom auto login succeeded"));
+	}
+	else if(Failure)
+	{
+		m_AxiomAutoLoginWaitingReply = false;
+		if(m_AxiomAutoLoginAttempts < QMCLIENT_AXIOM_AUTO_LOGIN_MAX_ATTEMPTS)
+		{
+			m_AxiomAutoLoginNextTryTick = time_get() + (int64_t)QMCLIENT_AXIOM_AUTO_LOGIN_RETRY_DELAY_SECONDS * time_freq();
+			GameClient()->Echo(Localize("Axiom auto login failed, retrying"));
+		}
+		else
+		{
+			m_AxiomAutoLoginNextTryTick = 0;
+			GameClient()->Echo(Localize("Axiom auto login failed"));
+		}
+	}
+}
+
+void CTClient::UpdateAxiomAutoLogin()
+{
+	if(Client()->State() != IClient::STATE_ONLINE || g_Config.m_QmAxiomAutoLogin == 0 || g_Config.m_QmAxiomLoginPassword[0] == '\0')
+	{
+		ResetAxiomAutoLoginState();
+		return;
+	}
+	if(!IsAxiomCommunity())
+	{
+		ResetAxiomAutoLoginState();
+		return;
+	}
+
+	char aServerAddress[NETADDR_MAXSTRSIZE] = "";
+	net_addr_str(&Client()->ServerAddress(), aServerAddress, sizeof(aServerAddress), true);
+	if(m_aAxiomAutoLoginServer[0] != '\0' && aServerAddress[0] != '\0' && str_comp(m_aAxiomAutoLoginServer, aServerAddress) != 0)
+		ResetAxiomAutoLoginState();
+
+	if(m_AxiomAutoLoginSucceeded || m_AxiomAutoLoginWaitingReply)
+		return;
+
+	const int64_t Now = time_get();
+	if(m_AxiomAutoLoginAttempts == 0 || (m_AxiomAutoLoginNextTryTick > 0 && Now >= m_AxiomAutoLoginNextTryTick))
+		TrySendAxiomLogin();
+}
+
 void CTClient::OnMessage(int MsgType, void *pRawMsg)
 {
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -1660,6 +1797,7 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			if(pMsg->m_pMessage)
 			{
 				const char *pText = pMsg->m_pMessage;
+				HandleAxiomAutoLoginMessage(pText);
 				if(str_find_nocase(pText, "has requested to swap with you"))
 				{
 					StartSwapCountdown();
@@ -1958,7 +2096,7 @@ void CTClient::AirRescue()
 		return;
 	if(GameClient()->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo && (GameClient()->m_Snap.m_aCharacters[ClientId].m_ExtendedData.m_Flags & CHARACTERFLAG_PRACTICE_MODE) == 0)
 	{
-		GameClient()->Echo("You are not in practice");
+		GameClient()->Echo(Localize("You are not in practice"));
 		return;
 	}
 
@@ -1994,7 +2132,7 @@ void CTClient::AirRescue()
 		return;
 	}
 
-	GameClient()->Echo("No safe position found");
+	GameClient()->Echo(Localize("No safe position found"));
 }
 
 void CTClient::ConAirRescue(IConsole::IResult *pResult, void *pUserData)
@@ -2308,6 +2446,7 @@ void CTClient::OnUpdate()
 	MaybeSaveMapCategoryCache();
 	ApplyFocusModeEffects();
 	ApplyGoresFastInputLink();
+	UpdateAxiomAutoLogin();
 }
 
 void CTClient::OnRender()
@@ -2858,7 +2997,12 @@ void CTClient::ResetQmClientRecognitionTasks()
 
 bool CTClient::NeedsQmClientRecognition() const
 {
-	return g_Config.m_QmVoiceServer[0] != '\0';
+	return HasQmClientRecognitionService();
+}
+
+bool CTClient::HasQmClientRecognitionService() const
+{
+	return GetEffectiveQmVoiceServer()[0] != '\0';
 }
 
 bool CTClient::NeedsFastQmClientSync() const
@@ -2870,12 +3014,11 @@ bool CTClient::BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t
 {
 	if(!pPath || pPath[0] == '\0' || !pBuf || BufSize == 0)
 		return false;
-	if(g_Config.m_QmVoiceServer[0] == '\0')
-		return false;
 
+	const char *pVoiceServer = GetEffectiveQmVoiceServer();
 	char aHost[128];
 	int Port = 0;
-	if(!ParseQmClientServiceHostPort(g_Config.m_QmVoiceServer, aHost, sizeof(aHost), Port))
+	if(!ParseQmClientServiceHostPort(pVoiceServer, aHost, sizeof(aHost), Port))
 		return false;
 
 	const bool NeedsIpv6Brackets = str_find(aHost, ":") != nullptr;
@@ -3201,7 +3344,7 @@ void CTClient::UpdateQmClientRecognition()
 		m_pQmClientUsersSendTask = nullptr;
 	}
 
-	const bool NeedRecognition = g_Config.m_QmVoiceServer[0] != '\0';
+	const bool NeedRecognition = NeedsQmClientRecognition();
 	if(!NeedRecognition)
 	{
 		if(m_pQmClientAuthTokenTask || m_pQmClientUsersTask || m_pQmClientUsersSendTask || m_pQmClientUsersParseJob || m_aQmClientAuthToken[0] != '\0' || m_QmClientLastSync != 0)
@@ -4370,6 +4513,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 
 	if(NewState != IClient::STATE_ONLINE)
 	{
+		ResetAxiomAutoLoginState();
 		ClearSwapCountdown();
 		m_aLastChatMessage[0] = '\0';
 		m_LastRepeatTime = 0;
@@ -4398,6 +4542,9 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	}
 	m_aLastGameplayLogicTick[0] = -1;
 	m_aLastGameplayLogicTick[1] = -1;
+
+	if(NewState == IClient::STATE_ONLINE)
+		ResetAxiomAutoLoginState();
 
 	// 进入服务器时重置统计数据
 	if(NewState == IClient::STATE_ONLINE && g_Config.m_QmPlayerStatsResetOnJoin)
@@ -4744,6 +4891,11 @@ bool CTClient::IsGoresGameMode() const
 bool CTClient::IsGoresModuleEnabled() const
 {
 	return g_Config.m_QmGores != 0 || (g_Config.m_QmGoresAutoEnable != 0 && IsGoresGameMode());
+}
+
+bool CTClient::ShouldHideGoresGuides() const
+{
+	return IsGoresModuleEnabled() && g_Config.m_QmGoresHideGuides != 0;
 }
 
 bool CTClient::HasBlockingGoresWeapon() const
@@ -5098,8 +5250,29 @@ void CTClient::BuildGoresDistanceField()
 void CTClient::ApplyFocusModeEffects()
 {
 	const bool FocusActive = g_Config.m_QmFocusMode != 0;
+	const bool StateWasKnown = m_FocusModeStateKnown;
+	if(!m_FocusModeStateKnown)
+	{
+		m_FocusModeStateKnown = true;
+		if(!FocusActive)
+		{
+			m_PrevFocusModeActive = false;
+			return;
+		}
+		m_PrevFocusModeActive = false;
+	}
 	if(FocusActive == m_PrevFocusModeActive)
 		return;
+
+	if(StateWasKnown)
+	{
+		char aFocusMsg[128];
+		str_format(aFocusMsg, sizeof(aFocusMsg), "%s%s: %s",
+			FocusActive ? "[[$FF7F7F]]" : "[[$A5FFA5]]",
+			Localize("Focus Mode"),
+			Localize(FocusActive ? "On" : "Off"));
+		GameClient()->Echo(aFocusMsg);
+	}
 
 	if(FocusActive)
 	{
@@ -5111,13 +5284,16 @@ void CTClient::ApplyFocusModeEffects()
 		if(g_Config.m_QmFocusModeHideNames)
 		{
 			m_SavedClNamePlates = g_Config.m_ClNamePlates;
+			m_SavedClNamePlatesOwn = g_Config.m_ClNamePlatesOwn;
 			g_Config.m_ClNamePlates = 0;
+			g_Config.m_ClNamePlatesOwn = 0;
 		}
 	}
 	else
 	{
 		g_Config.m_ClShowhud = m_SavedClShowhud;
 		g_Config.m_ClNamePlates = m_SavedClNamePlates;
+		g_Config.m_ClNamePlatesOwn = m_SavedClNamePlatesOwn;
 	}
 
 	m_PrevFocusModeActive = FocusActive;
@@ -5126,6 +5302,31 @@ void CTClient::ApplyFocusModeEffects()
 void CTClient::ApplyGoresFastInputLink()
 {
 	const bool GoresActive = g_Config.m_QmGores != 0;
+	const bool StateWasKnown = m_GoresModeStateKnown;
+	if(!m_GoresModeStateKnown)
+	{
+		m_GoresModeStateKnown = true;
+		if(!GoresActive)
+		{
+			m_PrevGoresModeActive = false;
+			return;
+		}
+		m_PrevGoresModeActive = false;
+	}
+	if(GoresActive != m_PrevGoresModeActive)
+	{
+		if(StateWasKnown)
+		{
+			char aGoresMsg[128];
+			str_format(aGoresMsg, sizeof(aGoresMsg), "%s%s: %s",
+				GoresActive ? "[[$FF7F7F]]" : "[[$A5FFA5]]",
+				Localize("Gores Mode"),
+				Localize(GoresActive ? "On" : "Off"));
+			GameClient()->Echo(aGoresMsg);
+		}
+		m_PrevGoresModeActive = GoresActive;
+	}
+
 	const bool ShouldEnableFastInput = GoresActive && g_Config.m_QmGoresFastInput;
 	const bool ShouldEnableFastInputOthers = ShouldEnableFastInput && g_Config.m_QmGoresFastInputOthers;
 
@@ -5299,7 +5500,7 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) 
 
 void CTClient::RenderGoresDebugRoute()
 {
-	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresMapProgressDebugRouteEnabled())
+	if(Client()->State() != IClient::STATE_ONLINE || !IsGoresMapProgressDebugRouteEnabled() || ShouldHideGoresGuides())
 		return;
 
 	EnsureGoresDistanceField();
@@ -5667,7 +5868,7 @@ void CTClient::ConSaveList(IConsole::IResult *pResult, void *pUserData)
 	IOHANDLE File = pThis->Storage()->OpenFile(SAVES_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
 	if(!File)
 	{
-		pThis->GameClient()->Echo("No local saves file found (ddnet-saves.txt)");
+		pThis->GameClient()->Echo(Localize("No local saves file found (ddnet-saves.txt)"));
 		return;
 	}
 
@@ -5677,7 +5878,7 @@ void CTClient::ConSaveList(IConsole::IResult *pResult, void *pUserData)
 
 	if(!pFileContent)
 	{
-		pThis->GameClient()->Echo("Failed to read saves file");
+		pThis->GameClient()->Echo(Localize("Failed to read saves file"));
 		return;
 	}
 

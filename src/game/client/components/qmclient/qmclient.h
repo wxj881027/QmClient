@@ -133,6 +133,11 @@ class CTClient : public CComponent
 	float m_FinishTextTimeout = 0.0f;
 	void DoFinishCheck();
 	const char *CurrentCommunityIdForFinishCheck() const;
+	bool IsAxiomCommunity() const;
+	void ResetAxiomAutoLoginState();
+	void UpdateAxiomAutoLogin();
+	void HandleAxiomAutoLoginMessage(const char *pText);
+	void TrySendAxiomLogin();
 	void StartUpdateDownload();
 	void ResetUpdateExeTask();
 	bool ReplaceClientFromUpdate();
@@ -367,6 +372,7 @@ class CTClient : public CComponent
 
 public:
 	CTClient();
+	bool HasQmClientRecognitionService() const;
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
 	void OnShutdown() override;
@@ -435,6 +441,7 @@ public:
 	int QmDdnetTotalFinishes() const { return m_QmDdnetTotalFinishes; }
 	const char *QmDdnetFavoritePartner() const { return m_aQmDdnetFavoritePartner; }
 	bool IsGoresMapProgressEnabled() const;
+	bool ShouldHideGoresGuides() const;
 	bool HasGoresMapProgress(int Dummy = 0) const
 	{
 		const int Idx = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
@@ -447,16 +454,26 @@ public:
 	}
 
 	// Focus Mode (Zen Mode)
+	bool m_FocusModeStateKnown = false;
 	bool m_PrevFocusModeActive = false;
 	int m_SavedClShowhud = 1;
 	int m_SavedClNamePlates = 1;
+	int m_SavedClNamePlatesOwn = 1;
 	void ApplyFocusModeEffects();
 
 	// Gores FastInput Link
+	bool m_GoresModeStateKnown = false;
+	bool m_PrevGoresModeActive = false;
 	bool m_PrevGoresFastInputActive = false;
 	int m_SavedTcFastInput = 0;
 	bool m_PrevGoresFastInputOthersActive = false;
 	int m_SavedTcFastInputOthers = 0;
+	bool m_AxiomAutoLoginAnnounced = false;
+	bool m_AxiomAutoLoginSucceeded = false;
+	bool m_AxiomAutoLoginWaitingReply = false;
+	int m_AxiomAutoLoginAttempts = 0;
+	int64_t m_AxiomAutoLoginNextTryTick = 0;
+	char m_aAxiomAutoLoginServer[NETADDR_MAXSTRSIZE] = "";
 	void ApplyGoresFastInputLink();
 
 };

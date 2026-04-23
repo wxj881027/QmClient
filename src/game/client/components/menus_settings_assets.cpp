@@ -45,7 +45,7 @@ void LogAssetsPerfStage(const char *pStage, double DurationMs, bool Force = fals
 {
 	if(!AssetsPerfDebugEnabled())
 		return;
-	if(!Force && DurationMs < AssetsPerfDebugThresholdMs())
+	if(DurationMs < AssetsPerfDebugThresholdMs())
 		return;
 
 	if(pExtra != nullptr && pExtra[0] != '\0')
@@ -2294,7 +2294,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			char aVisibleExtra[160];
 			str_format(aVisibleExtra, sizeof(aVisibleExtra), "tab=%d first=%d last=%d starts=%d",
 				s_CurCustomTab, FirstVisibleIndex, LastVisibleIndex, PreviewDecodeStartsThisFrame);
-			LogAssetsPerfStage("assets_preview_decode_start_visible", 0.0, true, aVisibleExtra);
+			LogAssetsPerfStage("assets_preview_decode_start_visible", 0.0, PreviewDecodeStartsThisFrame > 0, aVisibleExtra);
 		}
 
 		const int NewSelected = s_ListBox.DoEnd();
@@ -2713,7 +2713,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		char aWorkshopFinalizeExtra[160];
 		str_format(aWorkshopFinalizeExtra, sizeof(aWorkshopFinalizeExtra), "tab=%d finalized=%d deferred=%d ready_queue=%d",
 			s_CurCustomTab, WorkshopThumbFinalizesThisFrame, DeferredWorkshopThumbs, (int)WorkshopState.m_vReadyThumbQueue.size());
-		LogAssetsPerfStage("assets_workshop_thumb_decode_finalize_total", 0.0, true, aWorkshopFinalizeExtra);
+		LogAssetsPerfStage("assets_workshop_thumb_decode_finalize_total", 0.0, WorkshopThumbFinalizesThisFrame > 0 || DeferredWorkshopThumbs > 0 || !WorkshopState.m_vReadyThumbQueue.empty(), aWorkshopFinalizeExtra);
 		if(DeferredWorkshopThumbs > 0)
 		{
 			char aDeferredExtra[128];
@@ -2812,7 +2812,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			static size_t s_PendingDownloadAssetIndex = SIZE_MAX;
 			static CUi::SConfirmPopupContext s_WorkshopDownloadConfirmPopup;
 
-			constexpr int MaxThumbStartsPerFrame = 2; // Keep low to avoid frame hitches
+			constexpr int MaxThumbStartsPerFrame = 16;
 			int ThumbStartsThisFrame = 0;
 			int OldCombinedSelected = -1;
 			bool DeleteLocalRequested = false;
@@ -2821,6 +2821,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			CPerfTimer WorkshopCardsTimer;
 			int FirstVisibleLocalIndex = -1;
 			int LastVisibleLocalIndex = -1;
+			auto RenderAssetStatusTag = [&](const CUIRect &CardRect, bool Downloaded) {
+				CUIRect TagRect = CardRect;
+				TagRect.HSplitTop(16.0f, &TagRect, nullptr);
+				TagRect.VSplitLeft(58.0f, &TagRect, nullptr);
+				TagRect.Margin(3.0f, &TagRect);
+				const ColorRGBA TagColor = Downloaded ? ColorRGBA(0.18f, 0.62f, 0.32f, 0.88f) : ColorRGBA(0.52f, 0.52f, 0.58f, 0.82f);
+				TagRect.Draw(TagColor, IGraphics::CORNER_ALL, 5.0f);
+				Ui()->DoLabel(&TagRect, Localize(Downloaded ? "Downloaded" : "Not downloaded"), 7.5f, TEXTALIGN_MC);
+			};
 
 			for(size_t ListIndex = 0; ListIndex < CombinedCount; ++ListIndex)
 			{
@@ -2846,10 +2855,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 					const CUIRect CardRect = ItemRect;
 
-					CUIRect TextureRect;
-					ItemRect.HSplitTop(15, &ItemRect, &TextureRect);
+					CUIRect TextureRect, HeaderRect, NameRect;
+					ItemRect.HSplitTop(18.0f, &HeaderRect, &TextureRect);
 					TextureRect.HSplitTop(10, nullptr, &TextureRect);
-					Ui()->DoLabel(&ItemRect, pItem->m_aName, ItemRect.h - 2, TEXTALIGN_MC);
+					NameRect = HeaderRect;
+					NameRect.VSplitLeft(62.0f, nullptr, &NameRect);
+					NameRect.VSplitRight(30.0f, &NameRect, nullptr);
+					Ui()->DoLabel(&NameRect, pItem->m_aName, HeaderRect.h - 2, TEXTALIGN_MC);
 					if(s_CurCustomTab == ASSETS_TAB_ENTITIES && s_EntityGamePreview)
 					{
 						const auto *pEntitiesItem = static_cast<const SCustomEntities *>(pItem);
@@ -2943,6 +2955,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						}
 					}
 
+					RenderAssetStatusTag(CardRect, true);
+
 					if(str_comp(pItem->m_aName, "default") != 0)
 					{
 						CUIRect DeleteButton = CardRect;
@@ -3004,10 +3018,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					}
 
 					const CUIRect CardRect = ItemRect;
-					CUIRect TextureRect;
-					ItemRect.HSplitTop(15, &ItemRect, &TextureRect);
+					CUIRect TextureRect, HeaderRect, NameRect;
+					ItemRect.HSplitTop(18.0f, &HeaderRect, &TextureRect);
 					TextureRect.HSplitTop(10, nullptr, &TextureRect);
-					Ui()->DoLabel(&ItemRect, Asset.m_Name.c_str(), ItemRect.h - 2, TEXTALIGN_MC);
+					NameRect = HeaderRect;
+					NameRect.VSplitLeft(62.0f, nullptr, &NameRect);
+					NameRect.VSplitRight(30.0f, &NameRect, nullptr);
+					Ui()->DoLabel(&NameRect, Asset.m_Name.c_str(), HeaderRect.h - 2, TEXTALIGN_MC);
 
 					if(s_CurCustomTab == ASSETS_TAB_ENTITIES && s_EntityGamePreview && Asset.m_ThumbTexture.IsValid())
 					{
@@ -3072,6 +3089,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						Ui()->DoLabel(&LoadingRect, Localize("Loading..."), 10.0f, TEXTALIGN_MC);
 					}
 
+					RenderAssetStatusTag(CardRect, Asset.m_Installed);
+
 					const bool Downloading = Asset.m_pDownloadTask && !Asset.m_pDownloadTask->Done();
 					CUIRect DownloadButton = CardRect;
 					DownloadButton.HSplitTop(20.0f, &DownloadButton, nullptr);
@@ -3101,7 +3120,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				char aVisibleExtra[160];
 				str_format(aVisibleExtra, sizeof(aVisibleExtra), "tab=%d first=%d last=%d starts=%d",
 					s_CurCustomTab, FirstVisibleLocalIndex, LastVisibleLocalIndex, PreviewDecodeStartsThisFrame);
-				LogAssetsPerfStage("assets_preview_decode_start_visible", 0.0, true, aVisibleExtra);
+				LogAssetsPerfStage("assets_preview_decode_start_visible", 0.0, PreviewDecodeStartsThisFrame > 0, aVisibleExtra);
 			}
 			char aExtra[160];
 			str_format(aExtra, sizeof(aExtra), "tab=%d combined=%d local_visible=%d remote_visible=%d thumb_starts=%d",

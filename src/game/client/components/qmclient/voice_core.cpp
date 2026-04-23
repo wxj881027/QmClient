@@ -1,4 +1,5 @@
 #include "voice_core.h"
+#include "qmclient.h"
 #include "voice_utils.h"
 
 #include <base/log.h>
@@ -37,6 +38,8 @@ static constexpr int VOICE_CONFIG_SNAPSHOT_INTERVAL_MS = 50;
 static constexpr int VOICE_OVERLAY_VISIBLE_MS = 180;
 static constexpr int VOICE_OVERLAY_MAX_SPEAKERS = 5;
 static constexpr const char *s_pVoiceOverlayMicIcon = "\xEF\x84\xB0";
+
+const char *GetEffectiveQmVoiceServer();
 
 // !!WARNING!!
 // Voice full wrote by AI don't use that pls
@@ -1217,12 +1220,13 @@ void CRClientVoice::Shutdown()
 
 void CRClientVoice::UpdateServerAddrConfig()
 {
+	const char *pVoiceServer = GetEffectiveQmVoiceServer();
 	bool AddrChanged = false;
 	{
 		std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
-		AddrChanged = str_comp(m_aServerAddrStr, g_Config.m_QmVoiceServer) != 0;
+		AddrChanged = str_comp(m_aServerAddrStr, pVoiceServer) != 0;
 		if(AddrChanged)
-			str_copy(m_aServerAddrStr, g_Config.m_QmVoiceServer, sizeof(m_aServerAddrStr));
+			str_copy(m_aServerAddrStr, pVoiceServer, sizeof(m_aServerAddrStr));
 	}
 
 	if(!AddrChanged)
