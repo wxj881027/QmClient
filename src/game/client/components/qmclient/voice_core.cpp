@@ -1505,9 +1505,10 @@ void CRClientVoice::ProcessCapture()
 		WriteU32(aPacket + Offset, Config.m_QmVoiceTokenHash);
 		Offset += sizeof(uint32_t);
 		aPacket[Offset++] = TxFlags;
-		VoiceUtils::WriteU16(aPacket + Offset, 0);
+		const uint16_t PingSequence = m_Sequence++;
+		VoiceUtils::WriteU16(aPacket + Offset, (uint16_t)LocalClientId);
 		Offset += sizeof(uint16_t);
-		VoiceUtils::WriteU16(aPacket + Offset, m_Sequence);
+		VoiceUtils::WriteU16(aPacket + Offset, PingSequence);
 		Offset += sizeof(uint16_t);
 		VoiceUtils::WriteFloat(aPacket + Offset, 0.0f);
 		Offset += sizeof(float);
@@ -1516,7 +1517,7 @@ void CRClientVoice::ProcessCapture()
 		net_udp_send(m_Socket, &ServerAddrLocal, aPacket, (int)Offset);
 		MarkLocalRoomMemberSeen(Now);
 		m_LastPingSentTime = Now;
-		m_LastPingSeq = m_Sequence;
+		m_LastPingSeq = PingSequence;
 		m_LastKeepalive = Now;
 		m_LastTokenHashSent = Config.m_QmVoiceTokenHash;
 	}
