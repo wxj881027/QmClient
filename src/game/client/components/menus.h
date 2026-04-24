@@ -16,9 +16,12 @@
 #include <engine/shared/jobs.h>
 #include <engine/textrender.h>
 
+#include <generated/client_data.h>
+
 #include <game/client/component.h>
 #include <game/client/components/community_icons.h>
 #include <game/client/components/mapimages.h>
+#include <game/client/components/assets_resource_registry.h>
 #include <game/client/components/menus_ingame_touch_controls.h>
 #include <game/client/components/menus_settings_controls.h>
 #include <game/client/components/menus_start.h>
@@ -32,7 +35,9 @@
 #include <array>
 #include <deque>
 #include <optional>
+#include <set>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 struct CDataSprite;
@@ -155,7 +160,8 @@ public:
 
 		IGraphics::CTextureHandle m_RenderTexture;
 
-		char m_aName[50];
+		char m_aName[IO_MAX_PATH_LENGTH];
+		char m_aDisplayName[IO_MAX_PATH_LENGTH] = "";
 		std::shared_ptr<IJob> m_pDecodeJob;
 		EPreviewState m_PreviewState = PREVIEW_STATE_UNLOADED;
 		CImageInfo m_PreviewImage;
@@ -174,6 +180,7 @@ public:
 			m_PreviewResized(Other.m_PreviewResized)
 		{
 			str_copy(m_aName, Other.m_aName);
+			str_copy(m_aDisplayName, Other.m_aDisplayName);
 			if(Other.m_PreviewImage.m_pData != nullptr)
 				m_PreviewImage = Other.m_PreviewImage.DeepCopy();
 		}
@@ -185,6 +192,7 @@ public:
 
 			m_RenderTexture = Other.m_RenderTexture;
 			str_copy(m_aName, Other.m_aName);
+			str_copy(m_aDisplayName, Other.m_aDisplayName);
 			m_pDecodeJob = Other.m_pDecodeJob;
 			m_PreviewState = Other.m_PreviewState;
 			m_PreviewImage.Free();
@@ -250,6 +258,7 @@ public:
 
 	struct SCustomEntityBg : public SCustomItem
 	{
+		bool m_IsDirectory = false;
 	};
 
 	enum
@@ -257,8 +266,12 @@ public:
 		ASSETS_EDITOR_TYPE_GAME = 0,
 		ASSETS_EDITOR_TYPE_EMOTICONS,
 		ASSETS_EDITOR_TYPE_ENTITIES,
+		ASSETS_EDITOR_TYPE_SKIN,
 		ASSETS_EDITOR_TYPE_HUD,
 		ASSETS_EDITOR_TYPE_PARTICLES,
+		ASSETS_EDITOR_TYPE_GUI_CURSOR,
+		ASSETS_EDITOR_TYPE_ARROW,
+		ASSETS_EDITOR_TYPE_STRONG_WEAK,
 		ASSETS_EDITOR_TYPE_EXTRAS,
 		ASSETS_EDITOR_TYPE_COUNT,
 	};
@@ -286,9 +299,425 @@ public:
 		int m_SrcY = 0;
 		int m_SrcW = 0;
 		int m_SrcH = 0;
+		unsigned int m_Color = color_cast<ColorHSLA>(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)).Pack(true);
 		char m_aFamilyKey[64] = {0};
 		char m_aSourceAsset[64] = {0};
 	};
+
+	struct SAudioPackSlot
+	{
+		const char *m_pDisplayName = nullptr;
+		const char *m_pSetName = nullptr;
+		const char *m_pRelativePath = nullptr;
+		int m_SetId = -1;
+		int m_VariantIndex = 0;
+		int m_VariantCount = 0;
+	};
+
+	struct SAudioPackCandidateEntry
+	{
+		std::string m_Path;
+		std::string m_DisplayName;
+		bool m_IsCurrentFile = false;
+		bool m_IsCurrentPackFile = false;
+	};
+
+	enum
+	{
+		ASSETS_EDITOR_COLOR_BLEND_MULTIPLY = 0,
+		ASSETS_EDITOR_COLOR_BLEND_NORMAL,
+		ASSETS_EDITOR_COLOR_BLEND_SCREEN,
+		ASSETS_EDITOR_COLOR_BLEND_OVERLAY,
+		ASSETS_EDITOR_COLOR_BLEND_COUNT,
+	};
+
+	static void GetStrongWeakEditorGridSize(int &OutGridX, int &OutGridY)
+	{
+		OutGridX = 3;
+		OutGridY = 1;
+	}
+
+	static std::vector<SAssetsEditorPartSlot> BuildStrongWeakEditorSlots(const char *pMainAssetName)
+	{
+		static const char *s_apFamilyKeys[] = {
+			"strong_weak:top",
+			"strong_weak:middle",
+			"strong_weak:bottom",
+		};
+
+		std::vector<SAssetsEditorPartSlot> vSlots;
+		int GridX = 0;
+		int GridY = 0;
+		GetStrongWeakEditorGridSize(GridX, GridY);
+		vSlots.reserve(GridX);
+
+		const char *pResolvedMainAssetName = pMainAssetName != nullptr ? pMainAssetName : "";
+		for(int Index = 0; Index < GridX; ++Index)
+		{
+			SAssetsEditorPartSlot Slot;
+			Slot.m_SpriteId = -1;
+			Slot.m_SourceSpriteId = -1;
+			Slot.m_Group = 0;
+			Slot.m_DstX = Index;
+			Slot.m_DstY = 0;
+			Slot.m_DstW = 1;
+			Slot.m_DstH = GridY;
+			Slot.m_SrcX = Index;
+			Slot.m_SrcY = 0;
+			Slot.m_SrcW = 1;
+			Slot.m_SrcH = GridY;
+			str_copy(Slot.m_aFamilyKey, s_apFamilyKeys[Index], sizeof(Slot.m_aFamilyKey));
+			str_copy(Slot.m_aSourceAsset, pResolvedMainAssetName, sizeof(Slot.m_aSourceAsset));
+			vSlots.push_back(Slot);
+		}
+
+		return vSlots;
+	}
+
+	static std::vector<SAssetsEditorPartSlot> BuildSkinEditorSlots(const char *pMainAssetName)
+	{
+		struct SSkinSlotDef
+		{
+			const char *m_pFamilyKey;
+			int m_X;
+			int m_Y;
+			int m_W;
+			int m_H;
+		};
+
+		static const SSkinSlotDef s_aSlotDefs[] = {
+			{"skin:body", 0, 0, 96, 96},
+			{"skin:feet", 96, 0, 96, 96},
+			{"skin:right_strip_0", 192, 0, 32, 32},
+			{"skin:right_strip_1", 224, 0, 32, 32},
+			{"skin:right_strip_2", 192, 32, 64, 32},
+			{"skin:right_strip_3", 192, 64, 64, 32},
+			{"skin:bottom_strip_0", 0, 96, 32, 32},
+			{"skin:bottom_strip_1", 32, 96, 32, 32},
+			{"skin:bottom_strip_2", 64, 96, 32, 32},
+			{"skin:bottom_strip_3", 96, 96, 32, 32},
+			{"skin:bottom_strip_4", 128, 96, 32, 32},
+			{"skin:bottom_strip_5", 160, 96, 32, 32},
+			{"skin:bottom_strip_6", 192, 96, 32, 32},
+			{"skin:bottom_strip_7", 224, 96, 32, 32},
+		};
+
+		std::vector<SAssetsEditorPartSlot> vSlots;
+		vSlots.reserve(sizeof(s_aSlotDefs) / sizeof(s_aSlotDefs[0]));
+
+		const char *pResolvedMainAssetName = pMainAssetName != nullptr ? pMainAssetName : "";
+		for(const auto &SlotDef : s_aSlotDefs)
+		{
+			SAssetsEditorPartSlot Slot;
+			Slot.m_SpriteId = -1;
+			Slot.m_SourceSpriteId = -1;
+			Slot.m_Group = 0;
+			Slot.m_DstX = SlotDef.m_X;
+			Slot.m_DstY = SlotDef.m_Y;
+			Slot.m_DstW = SlotDef.m_W;
+			Slot.m_DstH = SlotDef.m_H;
+			Slot.m_SrcX = SlotDef.m_X;
+			Slot.m_SrcY = SlotDef.m_Y;
+			Slot.m_SrcW = SlotDef.m_W;
+			Slot.m_SrcH = SlotDef.m_H;
+			str_copy(Slot.m_aFamilyKey, SlotDef.m_pFamilyKey, sizeof(Slot.m_aFamilyKey));
+			str_copy(Slot.m_aSourceAsset, pResolvedMainAssetName, sizeof(Slot.m_aSourceAsset));
+			vSlots.push_back(Slot);
+		}
+
+		return vSlots;
+	}
+
+	static std::vector<SAudioPackSlot> BuildAudioPackSlots()
+	{
+		std::vector<SAudioPackSlot> vSlots;
+		vSlots.reserve(g_pData->m_NumSounds);
+
+		for(int SetIndex = 0; SetIndex < g_pData->m_NumSounds; ++SetIndex)
+		{
+			const CDataSoundset &Set = g_pData->m_aSounds[SetIndex];
+			for(int SoundIndex = 0; SoundIndex < Set.m_NumSounds; ++SoundIndex)
+			{
+				const char *pFilename = Set.m_aSounds[SoundIndex].m_pFilename;
+				const char *pRelativePath = pFilename;
+				if(str_startswith(pRelativePath, "audio/"))
+					pRelativePath += str_length("audio/");
+
+				vSlots.push_back({
+					pRelativePath,
+					Set.m_pName,
+					pRelativePath,
+					SetIndex,
+					SoundIndex,
+					Set.m_NumSounds,
+				});
+			}
+		}
+
+		return vSlots;
+	}
+
+	static std::string BuildAudioPackExportPath(const char *pPackName, const char *pRelativePath)
+	{
+		const char *pResolvedPackName = pPackName != nullptr && pPackName[0] != '\0' ? pPackName : "default";
+		const char *pResolvedRelativePath = pRelativePath != nullptr ? pRelativePath : "";
+		return std::string("audio/") + pResolvedPackName + "/" + pResolvedRelativePath;
+	}
+
+	static std::string BuildAudioPackBuiltinCandidatePath(const char *pRelativePath)
+	{
+		const char *pResolvedRelativePath = pRelativePath != nullptr ? pRelativePath : "";
+		if(str_startswith(pResolvedRelativePath, "audio/"))
+			pResolvedRelativePath += str_length("audio/");
+		return std::string("audio/") + pResolvedRelativePath;
+	}
+
+	struct SAudioPackCandidateScanRoot
+	{
+		const char *m_pScanRoot;
+		const char *m_pOutputPrefix;
+	};
+
+	static constexpr std::array<SAudioPackCandidateScanRoot, 2> BuildAudioPackCandidateScanRoots()
+	{
+		return {{
+			{"audio", "audio"},
+			{"data/audio", "audio"},
+		}};
+	}
+
+	static bool TryBuildAudioPackCandidatePathFromScan(const char *pOutputPrefix, const char *pRelativePath, std::string &OutPath)
+	{
+		OutPath.clear();
+
+		const char *pResolvedRelativePath = pRelativePath != nullptr ? pRelativePath : "";
+		while(*pResolvedRelativePath == '/')
+			++pResolvedRelativePath;
+
+		if(pResolvedRelativePath[0] == '\0' || !str_endswith(pResolvedRelativePath, ".wv"))
+			return false;
+
+		const char *pResolvedOutputPrefix = pOutputPrefix != nullptr && pOutputPrefix[0] != '\0' ? pOutputPrefix : "audio";
+		OutPath = pResolvedOutputPrefix;
+		OutPath += "/";
+		OutPath += pResolvedRelativePath;
+		return true;
+	}
+
+	static std::vector<SAudioPackCandidateEntry> BuildAudioPackCandidateEntries(const std::vector<std::string> &vPaths, const char *pPackName, const char *pCurrentPath)
+	{
+		std::vector<SAudioPackCandidateEntry> vEntries;
+		vEntries.reserve(vPaths.size());
+
+		std::unordered_set<std::string> vSeenPaths;
+		const char *pResolvedPackName = pPackName != nullptr && pPackName[0] != '\0' ? pPackName : "default";
+		const char *pResolvedCurrentPath = pCurrentPath != nullptr ? pCurrentPath : "";
+
+		char aCurrentPackPrefix[IO_MAX_PATH_LENGTH];
+		str_format(aCurrentPackPrefix, sizeof(aCurrentPackPrefix), "audio/%s/", pResolvedPackName);
+
+		for(const std::string &Path : vPaths)
+		{
+			if(!str_endswith(Path.c_str(), ".wv"))
+				continue;
+			if(!vSeenPaths.insert(Path).second)
+				continue;
+
+			SAudioPackCandidateEntry Entry;
+			Entry.m_Path = Path;
+
+			const char *pDisplayName = Path.c_str();
+			if(str_startswith(pDisplayName, "audio/"))
+				pDisplayName += str_length("audio/");
+			Entry.m_DisplayName = pDisplayName;
+			Entry.m_IsCurrentFile = pResolvedCurrentPath[0] != '\0' && str_comp(Path.c_str(), pResolvedCurrentPath) == 0;
+			Entry.m_IsCurrentPackFile = str_startswith(Path.c_str(), aCurrentPackPrefix) != nullptr;
+			vEntries.push_back(std::move(Entry));
+		}
+
+		std::sort(vEntries.begin(), vEntries.end(), [](const SAudioPackCandidateEntry &Left, const SAudioPackCandidateEntry &Right) {
+			if(Left.m_IsCurrentFile != Right.m_IsCurrentFile)
+				return Left.m_IsCurrentFile > Right.m_IsCurrentFile;
+			if(Left.m_IsCurrentPackFile != Right.m_IsCurrentPackFile)
+				return Left.m_IsCurrentPackFile > Right.m_IsCurrentPackFile;
+			return str_comp_nocase(Left.m_DisplayName.c_str(), Right.m_DisplayName.c_str()) < 0;
+		});
+
+		return vEntries;
+	}
+
+	static int FindAudioPackCandidateEntryIndex(const std::vector<SAudioPackCandidateEntry> &vEntries, const char *pPath)
+	{
+		if(pPath == nullptr || pPath[0] == '\0')
+			return -1;
+
+		for(int Index = 0; Index < (int)vEntries.size(); ++Index)
+		{
+			if(str_comp(vEntries[Index].m_Path.c_str(), pPath) == 0)
+				return Index;
+		}
+		return -1;
+	}
+
+	static std::string ResolveAudioPackPreviewPath(const char *pSelectedCandidatePath, const char *pManualSourcePath)
+	{
+		if(pSelectedCandidatePath != nullptr && pSelectedCandidatePath[0] != '\0')
+			return pSelectedCandidatePath;
+		if(pManualSourcePath != nullptr && pManualSourcePath[0] != '\0')
+			return pManualSourcePath;
+		return {};
+	}
+
+	static std::string ResolveAudioPackExportSourcePath(const char *pSelectedCandidatePath, const char *pManualSourcePath)
+	{
+		if(pManualSourcePath != nullptr && pManualSourcePath[0] != '\0')
+			return pManualSourcePath;
+		if(pSelectedCandidatePath != nullptr && pSelectedCandidatePath[0] != '\0')
+			return pSelectedCandidatePath;
+		return {};
+	}
+
+	inline static int ClampAssetsEditorColorBlendMode(int BlendMode)
+	{
+		if(BlendMode < 0 || BlendMode >= ASSETS_EDITOR_COLOR_BLEND_COUNT)
+			return ASSETS_EDITOR_COLOR_BLEND_MULTIPLY;
+		return BlendMode;
+	}
+
+	inline static const char *AssetsEditorColorBlendModeName(int BlendMode)
+	{
+		switch(ClampAssetsEditorColorBlendMode(BlendMode))
+		{
+		case ASSETS_EDITOR_COLOR_BLEND_NORMAL: return "Normal";
+		case ASSETS_EDITOR_COLOR_BLEND_SCREEN: return "Screen";
+		case ASSETS_EDITOR_COLOR_BLEND_OVERLAY: return "Overlay";
+		default: return "Multiply";
+		}
+	}
+
+	inline static ColorRGBA AssetsEditorSlotColorToRgba(unsigned int PackedColor)
+	{
+		return color_cast<ColorRGBA>(ColorHSLA(PackedColor, true));
+	}
+
+	inline static float AssetsEditorClampColorChannel(float Value)
+	{
+		return minimum(maximum(Value, 0.0f), 1.0f);
+	}
+
+	inline static float AssetsEditorColorLuma(const ColorRGBA &Base)
+	{
+		return AssetsEditorClampColorChannel(Base.r * 0.299f + Base.g * 0.587f + Base.b * 0.114f);
+	}
+
+	inline static float AssetsEditorScreenTone(float Luma)
+	{
+		return AssetsEditorClampColorChannel(Luma * (1.0f + (1.0f - Luma) * 0.65f));
+	}
+
+	inline static float AssetsEditorOverlayTone(float Luma)
+	{
+		if(Luma <= 0.5f)
+			return AssetsEditorClampColorChannel(2.0f * Luma * Luma);
+		return AssetsEditorClampColorChannel(1.0f - 2.0f * (1.0f - Luma) * (1.0f - Luma));
+	}
+
+	inline static ColorRGBA AssetsEditorRecolorColor(const ColorRGBA &Base, const ColorRGBA &Tint, float Tone, float DetailPreserve)
+	{
+		const float BaseLuma = AssetsEditorColorLuma(Base);
+		return ColorRGBA(
+			AssetsEditorClampColorChannel(Tint.r * Tone + (Base.r - BaseLuma) * DetailPreserve),
+			AssetsEditorClampColorChannel(Tint.g * Tone + (Base.g - BaseLuma) * DetailPreserve),
+			AssetsEditorClampColorChannel(Tint.b * Tone + (Base.b - BaseLuma) * DetailPreserve),
+			Base.a);
+	}
+
+	inline static ColorRGBA AssetsEditorMultiplyColor(const ColorRGBA &Base, const ColorRGBA &Tint)
+	{
+		return ColorRGBA(Base.r * Tint.r, Base.g * Tint.g, Base.b * Tint.b, Base.a * Tint.a);
+	}
+
+	inline static ColorRGBA AssetsEditorBlendColor(const ColorRGBA &Base, const ColorRGBA &Tint, int BlendMode)
+	{
+		const int ClampedBlendMode = ClampAssetsEditorColorBlendMode(BlendMode);
+		const float BlendStrength = minimum(maximum(Tint.a, 0.0f), 1.0f);
+		ColorRGBA Blended = Base;
+		const float BaseLuma = AssetsEditorColorLuma(Base);
+		switch(ClampedBlendMode)
+		{
+		case ASSETS_EDITOR_COLOR_BLEND_NORMAL:
+			Blended = AssetsEditorRecolorColor(Base, Tint, BaseLuma, 0.18f);
+			break;
+		case ASSETS_EDITOR_COLOR_BLEND_SCREEN:
+			Blended = AssetsEditorRecolorColor(Base, Tint, AssetsEditorScreenTone(BaseLuma), 0.10f);
+			break;
+		case ASSETS_EDITOR_COLOR_BLEND_OVERLAY:
+			Blended = AssetsEditorRecolorColor(Base, Tint, AssetsEditorOverlayTone(BaseLuma), 0.28f);
+			break;
+		default:
+			Blended = ColorRGBA(Base.r * Tint.r, Base.g * Tint.g, Base.b * Tint.b, Base.a);
+			break;
+		}
+
+		return ColorRGBA(
+			Base.r + (Blended.r - Base.r) * BlendStrength,
+			Base.g + (Blended.g - Base.g) * BlendStrength,
+			Base.b + (Blended.b - Base.b) * BlendStrength,
+			Base.a);
+	}
+
+	inline static bool AssetsEditorHasColorOverride(const ColorRGBA &Tint)
+	{
+		constexpr float Epsilon = 0.001f;
+		return absolute(Tint.r - 1.0f) > Epsilon ||
+			absolute(Tint.g - 1.0f) > Epsilon ||
+			absolute(Tint.b - 1.0f) > Epsilon ||
+			absolute(Tint.a - 1.0f) > Epsilon;
+	}
+
+	inline static bool AssetsEditorSlotNeedsProcessing(const SAssetsEditorPartSlot &Slot, const char *pMainAssetName)
+	{
+		const char *pResolvedMainAssetName = pMainAssetName != nullptr ? pMainAssetName : "";
+		const bool UsesMainSourceRect = str_comp(Slot.m_aSourceAsset, pResolvedMainAssetName) == 0 &&
+			Slot.m_SrcX == Slot.m_DstX && Slot.m_SrcY == Slot.m_DstY &&
+			Slot.m_SrcW == Slot.m_DstW && Slot.m_SrcH == Slot.m_DstH;
+		return !UsesMainSourceRect || AssetsEditorHasColorOverride(AssetsEditorSlotColorToRgba(Slot.m_Color));
+	}
+
+	inline static void AssetsEditorApplyColorOverrideToImageRect(CImageInfo &Image, int X, int Y, int W, int H, const ColorRGBA &Tint, int BlendMode)
+	{
+		if(Image.m_pData == nullptr || Image.m_Format != CImageInfo::FORMAT_RGBA || W <= 0 || H <= 0)
+			return;
+		if(!AssetsEditorHasColorOverride(Tint))
+			return;
+
+		const int ImageWidth = Image.m_Width;
+		const int ImageHeight = Image.m_Height;
+		if(X < 0 || Y < 0 || X + W > ImageWidth || Y + H > ImageHeight)
+			return;
+
+		uint8_t *pData = static_cast<uint8_t *>(Image.m_pData);
+		for(int PosY = Y; PosY < Y + H; ++PosY)
+		{
+			for(int PosX = X; PosX < X + W; ++PosX)
+			{
+				const int Offset = (PosY * ImageWidth + PosX) * 4;
+				if(pData[Offset + 3] == 0)
+					continue;
+
+				const ColorRGBA Base(
+					pData[Offset + 0] / 255.0f,
+					pData[Offset + 1] / 255.0f,
+					pData[Offset + 2] / 255.0f,
+					pData[Offset + 3] / 255.0f);
+				const ColorRGBA Result = AssetsEditorBlendColor(Base, Tint, BlendMode);
+				pData[Offset + 0] = round_truncate(Result.r * 255.0f);
+				pData[Offset + 1] = round_truncate(Result.g * 255.0f);
+				pData[Offset + 2] = round_truncate(Result.b * 255.0f);
+				pData[Offset + 3] = round_truncate(Result.a * 255.0f);
+			}
+		}
+	}
 
 protected:
 	std::vector<SCustomEntities> m_vEntitiesList;
@@ -300,6 +729,10 @@ protected:
 	std::vector<SCustomArrow> m_vArrowList;
 	std::vector<SCustomStrongWeak> m_vStrongWeakList;
 	std::vector<SCustomEntityBg> m_vEntityBgList;
+	std::vector<std::string> m_vEntityBgSourceNames;
+	std::unordered_map<std::string, EEntityBgHierarchyEntrySource> m_vEntityBgSourceKinds;
+	char m_aEntityBgCurrentFolder[IO_MAX_PATH_LENGTH] = "";
+	bool m_ShowWorkshopAssets = true;
 	std::vector<SCustomExtras> m_vExtrasList;
 	std::deque<SCustomItem *> m_aaCustomPreviewDecodeQueue[NUMBER_OF_ASSETS_TABS];
 	std::deque<SCustomItem *> m_aaCustomPreviewReadyQueue[NUMBER_OF_ASSETS_TABS];
@@ -325,9 +758,27 @@ protected:
 	static void ConchainAssetExtras(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	void ClearCustomItems(int CurTab);
+	void RefreshEntityBgHierarchyView();
+	void SyncEntityBgInstalledWorkshopSources();
 	void AssetsEditorOpen(int Type);
 
 private:
+	struct SAudioPackEditorState
+	{
+		bool m_Open = false;
+		bool m_Initialized = false;
+		int m_SelectedSlotIndex = 0;
+		int m_SelectedCandidateIndex = -1;
+		CLineInputBuffered<64> m_FilterInput;
+		CLineInputBuffered<64> m_CandidateFilterInput;
+		CLineInputBuffered<64> m_PackNameInput;
+		CLineInputBuffered<IO_MAX_PATH_LENGTH> m_SourcePathInput;
+		char m_aStatusMessage[256] = {0};
+		bool m_StatusIsError = false;
+		int m_PreviewSampleId = -1;
+		std::vector<SAudioPackCandidateEntry> m_vCandidateEntries;
+	};
+
 	struct SAssetsEditorState
 	{
 		bool m_Open = false;
@@ -337,9 +788,17 @@ private:
 		int m_aDonorAssetIndex[ASSETS_EDITOR_TYPE_COUNT] = {0};
 		bool m_ShowGrid = true;
 		bool m_ApplySameSize = false;
+		int m_ColorBlendMode = ASSETS_EDITOR_COLOR_BLEND_MULTIPLY;
 		bool m_DragActive = false;
 		int m_ActiveDraggedSlotIndex = -1;
 		char m_aDraggedSourceAsset[64] = {0};
+		bool m_TargetPressPending = false;
+		int m_PendingTargetSlotIndex = -1;
+		vec2 m_PendingTargetPressPos = vec2(0.0f, 0.0f);
+		int64_t m_PendingTargetPressTime = 0;
+		int m_ColorPickerSlotIndex = -1;
+		unsigned int m_ColorPickerValue = 0;
+		unsigned int m_LastColorPickerValue = 0;
 		int m_HoveredDonorSlotIndex = -1;
 		int m_HoveredTargetSlotIndex = -1;
 		bool m_DirtyPreview = true;
@@ -362,7 +821,18 @@ private:
 		std::vector<SAssetsEditorPartSlot> m_vPartSlots;
 	};
 
+	SAudioPackEditorState m_AudioPackEditorState;
 	SAssetsEditorState m_AssetsEditorState;
+	void AudioPackEditorOpen(const char *pPackName);
+	void AudioPackEditorClose();
+	void AudioPackEditorSetStatus(const char *pMessage, bool IsError);
+	void AudioPackEditorRefreshCandidates();
+	void AudioPackEditorStopPreview();
+	bool AudioPackEditorPlayPreview(const char *pFilename, int StorageType);
+	bool AudioPackEditorEnsureStorageDirectories(const char *pStoragePath);
+	bool AudioPackEditorCopyFileToStorage(const char *pSourcePath, int SourceStorageType, const char *pStoragePath);
+	bool AudioPackEditorCopyAbsoluteFileToStorage(const char *pSourcePath, const char *pStoragePath);
+	void RenderAudioPackEditorScreen(CUIRect MainView);
 	void RenderAssetsEditorScreen(CUIRect MainView);
 	void AssetsEditorClearAssets();
 	void AssetsEditorReloadAssets();
@@ -374,7 +844,7 @@ private:
 	void AssetsEditorValidateRequiredSlotsForType(int Type);
 	bool AssetsEditorComposeImage(CImageInfo &OutputImage);
 	bool AssetsEditorExport();
-	void AssetsEditorRenderCanvas(const CUIRect &Rect, IGraphics::CTextureHandle Texture, int W, int H, int Type, bool ShowGrid, int HighlightSlot);
+	void AssetsEditorRenderCanvas(const CUIRect &Rect, IGraphics::CTextureHandle Texture, int W, int H, int Type, bool ShowGrid, int HighlightSlot, bool ShowTintFeedback, int PersistentHighlightSlot);
 	void AssetsEditorCollectHoveredCandidates(const CUIRect &Rect, int Type, const std::vector<SAssetsEditorPartSlot> &vSlots, vec2 Mouse, std::vector<int> &vOutCandidates) const;
 	int AssetsEditorResolveHoveredSlotWithCycle(const CUIRect &Rect, int Type, const std::vector<SAssetsEditorPartSlot> &vSlots, vec2 Mouse, bool ClickedLmb, int PreferredSlotIndex);
 	void AssetsEditorCancelDrag();
@@ -943,6 +1413,8 @@ protected:
 	public:
 		std::vector<CMapListItem> m_vMaps;
 		char m_aCurrentMapFolder[IO_MAX_PATH_LENGTH] = "";
+		char *m_pTargetConfig = nullptr;
+		int m_TargetConfigSize = 0;
 		static int MapListFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
 		void MapListPopulate();
 		CMenus *m_pMenus;

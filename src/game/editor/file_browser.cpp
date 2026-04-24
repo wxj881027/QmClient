@@ -8,6 +8,7 @@
 #include <engine/storage.h>
 
 #include <game/editor/editor.h>
+#include <game/localization.h>
 
 using namespace FontIcons;
 
@@ -403,7 +404,7 @@ void CFileBrowser::OnRender(CUIRect _)
 
 	ButtonBar.VSplitRight(ButtonSpacing, &ButtonBar, nullptr);
 	ButtonBar.VSplitRight(50.0f, &ButtonBar, &Button);
-	if(Editor()->DoButton_Editor(&m_ButtonRefreshId, "刷新", 0, &Button, BUTTONFLAG_LEFT, "刷新文件列表.") ||
+	if(Editor()->DoButton_Editor(&m_ButtonRefreshId, Localize("Refresh"), 0, &Button, BUTTONFLAG_LEFT, "刷新文件列表.") ||
 		(m_ListBox.Active() && (Input()->KeyIsPressed(KEY_F5) || (Input()->ModifierIsPressed() && Input()->KeyIsPressed(KEY_R)))))
 	{
 		FilelistPopulate(m_StorageType, true);
@@ -413,7 +414,7 @@ void CFileBrowser::OnRender(CUIRect _)
 	{
 		ButtonBar.VSplitRight(ButtonSpacing, &ButtonBar, nullptr);
 		ButtonBar.VSplitRight(90.0f, &ButtonBar, &Button);
-		if(Editor()->DoButton_Editor(&m_ButtonShowDirectoryId, "显示目录", 0, &Button, BUTTONFLAG_LEFT, "在文件浏览器中打开当前目录."))
+		if(Editor()->DoButton_Editor(&m_ButtonShowDirectoryId, Localize("Show Directory"), 0, &Button, BUTTONFLAG_LEFT, "在文件浏览器中打开当前目录."))
 		{
 			char aOpenPath[IO_MAX_PATH_LENGTH];
 			Storage()->GetCompletePath(m_vpFilteredFileList[m_SelectedFileIndex]->m_StorageType, m_pCurrentPath, aOpenPath, sizeof(aOpenPath));

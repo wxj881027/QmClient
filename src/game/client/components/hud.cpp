@@ -4231,37 +4231,37 @@ SKeyStatusLines GetKeyStatusLines(const CGameClient *pGameClient)
 
 	if(Lines.m_ShowKey)
 	{
-		Lines.m_pKeyStatusText = "卡键: ?";
+		Lines.m_pKeyStatusText = Localize("Key Sticking: ?");
 		if(DummyResetOnSwitch == 0)
-			Lines.m_pKeyStatusText = "卡键: 开";
+			Lines.m_pKeyStatusText = Localize("Key Sticking: On");
 		else if(DummyResetOnSwitch == 1)
-			Lines.m_pKeyStatusText = "卡键: 关";
+			Lines.m_pKeyStatusText = Localize("Key Sticking: Off");
 		else if(DummyResetOnSwitch == 2)
-			Lines.m_pKeyStatusText = "卡键: 重置本体";
-	}
+			Lines.m_pKeyStatusText = Localize("Key Sticking: Reset Self");
+		}
 
 	if(Lines.m_ShowHammer)
 	{
-		const char *pHammerState = "正常";
+		const char *pHammerState = Localize("Normal");
 		if(DeepflyMode == 1)
-			pHammerState = "DF";
+			pHammerState = Localize("DF");
 		else if(DeepflyMode == 2)
-			pHammerState = "HDF";
+			pHammerState = Localize("HDF");
 		else if(DeepflyMode == 3)
-			pHammerState = "自定义";
-		str_format(Lines.m_aHammerLine, sizeof(Lines.m_aHammerLine), "锤: %s", pHammerState);
+			pHammerState = Localize("Custom");
+		str_format(Lines.m_aHammerLine, sizeof(Lines.m_aHammerLine), Localize("Hammer: %s"), pHammerState);
 	}
 
 	if(Lines.m_ShowControl)
 	{
-		const char *pControlState = DummyControl ? "开" : "关";
-		str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), "分身控制: %s", pControlState);
+		const char *pControlState = DummyControl ? Localize("On") : Localize("Off");
+		str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), Localize("Dummy Control: %s"), pControlState);
 	}
 
 	if(Lines.m_ShowSync)
 	{
-		const char *pSyncState = DummyCopyMoves ? "开" : "关";
-		str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), "分身同步: %s", pSyncState);
+		const char *pSyncState = DummyCopyMoves ? Localize("On") : Localize("Off");
+		str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), Localize("Dummy Copy: %s"), pSyncState);
 	}
 
 	return Lines;
@@ -4712,7 +4712,7 @@ void CHud::RenderMovementInformation()
 
 			if(ShowJumpHint)
 			{
-				TextRender()->Text(LeftX, y, Fontsize, "三格edge:", -1.0f);
+				TextRender()->Text(LeftX, y, Fontsize, Localize("3 Tiles Edge Jump:"), -1.0f);
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 
 				const char *pLeftJump = ".34|.31|.16";
@@ -4720,19 +4720,19 @@ void CHud::RenderMovementInformation()
 				const char *pRightJump = ".63|.66|.81";
 				const char *pRightDoubleJump = ".56|.69|.72|.84";
 
-				TextRender()->Text(LeftX, y, Fontsize, "左跳", -1.0f);
+				TextRender()->Text(LeftX, y, Fontsize, Localize("Left Jump:"), -1.0f);
 				TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, pLeftJump), y, Fontsize, pLeftJump, -1.0f);
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 
-				TextRender()->Text(LeftX, y, Fontsize, "左二跳", -1.0f);
+				TextRender()->Text(LeftX, y, Fontsize, Localize("Left Double Jump:"), -1.0f);
 				TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, pLeftDoubleJump), y, Fontsize, pLeftDoubleJump, -1.0f);
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 
-				TextRender()->Text(LeftX, y, Fontsize, "右跳", -1.0f);
+				TextRender()->Text(LeftX, y, Fontsize, Localize("Right Jump:"), -1.0f);
 				TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, pRightJump), y, Fontsize, pRightJump, -1.0f);
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 
-				TextRender()->Text(LeftX, y, Fontsize, "右二跳", -1.0f);
+				TextRender()->Text(LeftX, y, Fontsize, Localize("Right Double Jump:"), -1.0f);
 				TextRender()->Text(RightX - TextRender()->TextWidth(Fontsize, pRightDoubleJump), y, Fontsize, pRightDoubleJump, -1.0f);
 				y += MOVEMENT_INFORMATION_LINE_HEIGHT;
 			}
@@ -4753,7 +4753,7 @@ void CHud::RenderMovementInformation()
 				// 平均/最大存活时长
 				float AvgAlive = Stats.GetAverageAliveTime(TickSpeed);
 				float MaxAlive = Stats.GetMaxAliveTime(TickSpeed);
-				str_format(aBuf, sizeof(aBuf), "存活: %.1fs/%.1fs", AvgAlive, MaxAlive);
+				str_format(aBuf, sizeof(aBuf), Localize("Alive: %.1fs/%.1fs"), AvgAlive, MaxAlive);
 				TextRender()->TextColor(RainbowColor);
 				TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -4763,7 +4763,7 @@ void CHud::RenderMovementInformation()
 				const float Hue2 = std::fmod(StatsTime * 0.2f + 0.2f, 1.0f);
 				ColorHSLA RainbowHsla2(Hue2, 0.75f, 0.6f, 1.0f);
 				ColorRGBA RainbowColor2 = color_cast<ColorRGBA>(RainbowHsla2);
-				str_format(aBuf, sizeof(aBuf), "被救/落水: %d/%d", Stats.m_RescueCount, Stats.m_FreezeCount);
+				str_format(aBuf, sizeof(aBuf), Localize("Rescue/Freeze: %d/%d"), Stats.m_RescueCount, Stats.m_FreezeCount);
 				TextRender()->TextColor(RainbowColor2);
 				TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -4775,7 +4775,7 @@ void CHud::RenderMovementInformation()
 				ColorRGBA RainbowColor3 = color_cast<ColorRGBA>(RainbowHsla3);
 				float LeftRatio = Stats.GetHookLeftRatio() * 100.0f;
 				float RightRatio = Stats.GetHookRightRatio() * 100.0f;
-				str_format(aBuf, sizeof(aBuf), "出钩L/R: %.0f%%/%.0f%%", LeftRatio, RightRatio);
+				str_format(aBuf, sizeof(aBuf), Localize("Hooking L/R: %.0f%%/%.0f%%"), LeftRatio, RightRatio);
 				TextRender()->TextColor(RainbowColor3);
 				TextRender()->Text(LeftX, y, Fontsize, aBuf, -1.0f);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -4788,9 +4788,9 @@ void CHud::RenderMovementInformation()
 					const float Progress = HasProgress ? GameClient()->m_TClient.GetGoresMapProgress(DummyIndex) : 0.0f;
 
 					if(HasProgress)
-						str_format(aBuf, sizeof(aBuf), "地图进度: %.1f%%", Progress * 100.0f);
+						str_format(aBuf, sizeof(aBuf), Localize("Map Progress: %.1f%%"), Progress * 100.0f);
 					else
-						str_copy(aBuf, "地图进度: --");
+						str_copy(aBuf, Localize("Map Progress: --"));
 
 					const float Hue4 = std::fmod(StatsTime * 0.2f + 0.4f, 1.0f);
 					ColorHSLA RainbowHsla4(Hue4, 0.75f, 0.6f, 1.0f);
@@ -4859,7 +4859,7 @@ void CHud::RenderMapProgressBar()
 		return;
 	if(!GameClient()->m_TClient.IsGoresMapProgressEnabled() && !Preview)
 		return;
-	if(g_Config.m_QmPlayerStatsMapProgressStyle != 0)
+	if(g_Config.m_QmPlayerStatsMapProgressStyle != 0 && g_Config.m_QmPlayerStatsHud)
 		return;
 
 	const int DummyIndex = g_Config.m_ClDummy ? 1 : 0;

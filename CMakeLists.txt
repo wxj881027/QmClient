@@ -3283,6 +3283,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     QmAnimTest.cpp
     QmLayoutTest.cpp
     aio_test.cpp
+    audio_pack_editor_test.cpp
+    assets_editor_layout_test.cpp
     assets_preview_scale_test.cpp
     assets_resource_migration_test.cpp
     assets_resource_registry_test.cpp

@@ -37,6 +37,7 @@
 #include <chrono>
 #include <memory>
 #include <numeric>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -220,6 +221,50 @@ const char *SettingsPageName(const int Page)
 	case CMenus::SETTINGS_CONTRIBUTORS: return "contributors";
 	default: return "unknown";
 	}
+}
+
+static bool ApplyBackgroundEntitiesInputValue(CLineInput &Input)
+{
+	char aNormalized[IO_MAX_PATH_LENGTH];
+	const bool Changed = BuildBackgroundEntitiesCommitValueFromInput(Input.GetString(), g_Config.m_ClBackgroundEntities, aNormalized, sizeof(aNormalized));
+	if(Changed)
+		str_copy(g_Config.m_ClBackgroundEntities, aNormalized, sizeof(g_Config.m_ClBackgroundEntities));
+	if(Input.IsActive())
+		Input.Deactivate();
+	return Changed;
+}
+
+static void SyncBackgroundEntitiesInput(CLineInput &Input, char *pSync, int SyncSize)
+{
+	char aNormalizedConfig[IO_MAX_PATH_LENGTH];
+	BuildBackgroundEntitiesValueFromInput(g_Config.m_ClBackgroundEntities, aNormalizedConfig, sizeof(aNormalizedConfig));
+	if(str_comp(pSync, aNormalizedConfig) != 0)
+	{
+		if(!Input.IsActive())
+			Input.Set(aNormalizedConfig);
+	}
+	str_copy(pSync, aNormalizedConfig, SyncSize);
+}
+
+static bool CommitBackgroundEntitiesInputIfActive(CLineInput &Input, char *pSync, int SyncSize)
+{
+	if(!Input.IsActive())
+		return false;
+
+	const bool Changed = ApplyBackgroundEntitiesInputValue(Input);
+	SyncBackgroundEntitiesInput(Input, pSync, SyncSize);
+	return Changed;
+}
+
+static bool ToggleCurrentMapBackground(CLineInput &Input)
+{
+	const bool UseCurrentMap = IsCurrentMapBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities);
+	Input.Deactivate();
+	if(UseCurrentMap)
+		g_Config.m_ClBackgroundEntities[0] = '\0';
+	else
+		str_copy(g_Config.m_ClBackgroundEntities, CURRENT_MAP);
+	return true;
 }
 
 }
@@ -1322,12 +1367,14 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 
 	// Layout bottom controls and use remainder for skin selector
-	CUIRect QuickSearch, DatabaseButton, DirectoryButton, RefreshButton;
+	CUIRect QuickSearch, DatabaseButton, EditTextureButton, DirectoryButton, RefreshButton;
 	MainView.HSplitBottom(20.0f, &MainView, &QuickSearch);
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 	QuickSearch.VSplitLeft(220.0f, &QuickSearch, &DatabaseButton);
 	DatabaseButton.VSplitLeft(10.0f, nullptr, &DatabaseButton);
-	DatabaseButton.VSplitLeft(150.0f, &DatabaseButton, &DirectoryButton);
+	DatabaseButton.VSplitLeft(140.0f, &DatabaseButton, &EditTextureButton);
+	EditTextureButton.VSplitLeft(10.0f, nullptr, &EditTextureButton);
+	EditTextureButton.VSplitLeft(150.0f, &EditTextureButton, &DirectoryButton);
 	DirectoryButton.VSplitRight(175.0f, nullptr, &DirectoryButton);
 	DirectoryButton.VSplitRight(25.0f, &DirectoryButton, &RefreshButton);
 	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
@@ -1492,6 +1539,10 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	{
 		Client()->ViewLink("https://ddnet.org/skins/");
 	}
+
+	static CButtonContainer s_EditSkinTextureButton;
+	if(DoButton_Menu(&s_EditSkinTextureButton, Localize("Edit skin texture"), 0, &EditTextureButton))
+		AssetsEditorOpen(ASSETS_EDITOR_TYPE_SKIN);
 
 	static CButtonContainer s_DirectoryButton;
 	if(DoButton_Menu(&s_DirectoryButton, Localize("Skins directory"), 0, &DirectoryButton))
@@ -2018,8 +2069,657 @@ static void RefreshAudioPacks(IStorage *pStorage, std::vector<SAudioPackEntry> &
 	}
 }
 
+static std::vector<SAudioPackEntry> gs_vAudioPacks;
+static bool gs_AudioPacksInit = false;
+
+static void RefreshSharedAudioPacks(IStorage *pStorage)
+{
+	RefreshAudioPacks(pStorage, gs_vAudioPacks);
+	gs_AudioPacksInit = true;
+}
+
+static void EnsureSharedAudioPacks(IStorage *pStorage)
+{
+	if(!gs_AudioPacksInit)
+		RefreshSharedAudioPacks(pStorage);
+}
+
+static int FindAudioPackIndexByName(const std::vector<SAudioPackEntry> &vPacks, const char *pPackName)
+{
+	for(size_t i = 0; i < vPacks.size(); ++i)
+	{
+		if(str_comp(vPacks[i].m_aName, pPackName) == 0)
+			return (int)i;
+	}
+	return -1;
+}
+
+void CMenus::AudioPackEditorOpen(const char *pPackName)
+{
+	AudioPackEditorStopPreview();
+	m_AudioPackEditorState.m_Open = true;
+	m_AudioPackEditorState.m_Initialized = false;
+	m_AudioPackEditorState.m_SelectedSlotIndex = 0;
+	m_AudioPackEditorState.m_SelectedCandidateIndex = -1;
+	m_AudioPackEditorState.m_StatusIsError = false;
+	m_AudioPackEditorState.m_aStatusMessage[0] = '\0';
+	m_AudioPackEditorState.m_FilterInput.Clear();
+	m_AudioPackEditorState.m_CandidateFilterInput.Clear();
+	m_AudioPackEditorState.m_SourcePathInput.Clear();
+	if(pPackName != nullptr && pPackName[0] != '\0')
+		m_AudioPackEditorState.m_PackNameInput.Set(pPackName);
+	else
+		m_AudioPackEditorState.m_PackNameInput.Set("default");
+}
+
+void CMenus::AudioPackEditorClose()
+{
+	AudioPackEditorStopPreview();
+	m_AudioPackEditorState.m_Open = false;
+	m_AudioPackEditorState.m_Initialized = false;
+	m_AudioPackEditorState.m_SelectedCandidateIndex = -1;
+	m_AudioPackEditorState.m_vCandidateEntries.clear();
+}
+
+void CMenus::AudioPackEditorSetStatus(const char *pMessage, bool IsError)
+{
+	m_AudioPackEditorState.m_StatusIsError = IsError;
+	str_copy(m_AudioPackEditorState.m_aStatusMessage, pMessage != nullptr ? pMessage : "", sizeof(m_AudioPackEditorState.m_aStatusMessage));
+}
+
+namespace
+{
+struct SAudioPackCandidateScanContext
+{
+	IStorage *m_pStorage = nullptr;
+	std::set<std::string> *m_pEntries = nullptr;
+	char m_aScanRoot[IO_MAX_PATH_LENGTH] = "";
+	char m_aOutputPrefix[IO_MAX_PATH_LENGTH] = "";
+	char m_aRelativePath[IO_MAX_PATH_LENGTH] = "";
+};
+
+}
+
+namespace
+{
+
+static int AudioPackCandidateScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
+{
+	(void)StorageType;
+
+	auto *pContext = static_cast<SAudioPackCandidateScanContext *>(pUser);
+	if(!str_comp(pInfo->m_pName, ".") || !str_comp(pInfo->m_pName, ".."))
+		return 0;
+
+	char aRelativePath[IO_MAX_PATH_LENGTH];
+	if(pContext->m_aRelativePath[0] != '\0')
+		str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pContext->m_aRelativePath, pInfo->m_pName);
+	else
+		str_copy(aRelativePath, pInfo->m_pName);
+
+	char aScanPath[IO_MAX_PATH_LENGTH];
+	str_format(aScanPath, sizeof(aScanPath), "%s/%s", pContext->m_aScanRoot, aRelativePath);
+
+	if(IsDir)
+	{
+		if(pInfo->m_pName[0] == '.')
+			return 0;
+
+		SAudioPackCandidateScanContext NextContext = *pContext;
+		str_copy(NextContext.m_aRelativePath, aRelativePath, sizeof(NextContext.m_aRelativePath));
+		pContext->m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, aScanPath, AudioPackCandidateScanCallback, &NextContext);
+		return 0;
+	}
+
+	std::string CandidatePath;
+	if(CMenus::TryBuildAudioPackCandidatePathFromScan(pContext->m_aOutputPrefix, aRelativePath, CandidatePath))
+		pContext->m_pEntries->insert(std::move(CandidatePath));
+
+	return 0;
+}
+
+static const char *ResolveAudioPackEditorPackName(const CLineInputBuffered<64> &PackNameInput, const char *pFallbackPackName)
+{
+	if(PackNameInput.GetString()[0] != '\0')
+		return PackNameInput.GetString();
+	return pFallbackPackName != nullptr ? pFallbackPackName : "";
+}
+
+static void ResolveAudioPackEditorCurrentFilePath(IStorage *pStorage, const char *pPackName, const CMenus::SAudioPackSlot &Slot, char *pOut, int OutSize)
+{
+	pOut[0] = '\0';
+
+	char aDirectPath[IO_MAX_PATH_LENGTH];
+	char aLegacyPath[IO_MAX_PATH_LENGTH];
+	char aBuiltinPath[IO_MAX_PATH_LENGTH];
+
+	str_copy(aDirectPath, CMenus::BuildAudioPackExportPath(pPackName, Slot.m_pRelativePath).c_str(), sizeof(aDirectPath));
+	str_format(aLegacyPath, sizeof(aLegacyPath), "audio/%s/audio/%s", pPackName, Slot.m_pRelativePath);
+	str_copy(aBuiltinPath, CMenus::BuildAudioPackBuiltinCandidatePath(Slot.m_pRelativePath).c_str(), sizeof(aBuiltinPath));
+
+	if(pStorage->FileExists(aDirectPath, IStorage::TYPE_ALL))
+		str_copy(pOut, aDirectPath, OutSize);
+	else if(pStorage->FileExists(aLegacyPath, IStorage::TYPE_ALL))
+		str_copy(pOut, aLegacyPath, OutSize);
+	else if(pStorage->FileExists(aBuiltinPath, IStorage::TYPE_ALL))
+		str_copy(pOut, aBuiltinPath, OutSize);
+}
+
+}
+
+void CMenus::AudioPackEditorRefreshCandidates()
+{
+	std::set<std::string> vCandidatePaths;
+	for(const auto &ScanRoot : BuildAudioPackCandidateScanRoots())
+	{
+		if(!Storage()->FolderExists(ScanRoot.m_pScanRoot, IStorage::TYPE_ALL))
+			continue;
+
+		SAudioPackCandidateScanContext Context;
+		Context.m_pStorage = Storage();
+		Context.m_pEntries = &vCandidatePaths;
+		str_copy(Context.m_aScanRoot, ScanRoot.m_pScanRoot, sizeof(Context.m_aScanRoot));
+		str_copy(Context.m_aOutputPrefix, ScanRoot.m_pOutputPrefix, sizeof(Context.m_aOutputPrefix));
+		Storage()->ListDirectoryInfo(IStorage::TYPE_ALL, ScanRoot.m_pScanRoot, AudioPackCandidateScanCallback, &Context);
+	}
+
+	std::vector<std::string> vPaths(vCandidatePaths.begin(), vCandidatePaths.end());
+
+	char aCurrentPath[IO_MAX_PATH_LENGTH] = "";
+	const auto vSlots = BuildAudioPackSlots();
+	if(!vSlots.empty())
+	{
+		m_AudioPackEditorState.m_SelectedSlotIndex = std::clamp(m_AudioPackEditorState.m_SelectedSlotIndex, 0, (int)vSlots.size() - 1);
+		ResolveAudioPackEditorCurrentFilePath(Storage(), ResolveAudioPackEditorPackName(m_AudioPackEditorState.m_PackNameInput, g_Config.m_SndPack), vSlots[m_AudioPackEditorState.m_SelectedSlotIndex], aCurrentPath, sizeof(aCurrentPath));
+	}
+
+	std::string SelectedPath;
+	if(m_AudioPackEditorState.m_SelectedCandidateIndex >= 0 && m_AudioPackEditorState.m_SelectedCandidateIndex < (int)m_AudioPackEditorState.m_vCandidateEntries.size())
+		SelectedPath = m_AudioPackEditorState.m_vCandidateEntries[m_AudioPackEditorState.m_SelectedCandidateIndex].m_Path;
+
+	m_AudioPackEditorState.m_vCandidateEntries = BuildAudioPackCandidateEntries(vPaths, ResolveAudioPackEditorPackName(m_AudioPackEditorState.m_PackNameInput, g_Config.m_SndPack), aCurrentPath);
+
+	int SelectedIndex = FindAudioPackCandidateEntryIndex(m_AudioPackEditorState.m_vCandidateEntries, aCurrentPath);
+	if(SelectedIndex < 0 && !SelectedPath.empty())
+		SelectedIndex = FindAudioPackCandidateEntryIndex(m_AudioPackEditorState.m_vCandidateEntries, SelectedPath.c_str());
+	if(SelectedIndex < 0 && !m_AudioPackEditorState.m_vCandidateEntries.empty())
+		SelectedIndex = 0;
+	m_AudioPackEditorState.m_SelectedCandidateIndex = SelectedIndex;
+}
+
+void CMenus::AudioPackEditorStopPreview()
+{
+	if(m_AudioPackEditorState.m_PreviewSampleId >= 0)
+	{
+		Sound()->Stop(m_AudioPackEditorState.m_PreviewSampleId);
+		Sound()->UnloadSample(m_AudioPackEditorState.m_PreviewSampleId);
+		m_AudioPackEditorState.m_PreviewSampleId = -1;
+	}
+}
+
+bool CMenus::AudioPackEditorPlayPreview(const char *pFilename, int StorageType)
+{
+	if(pFilename == nullptr || pFilename[0] == '\0')
+		return false;
+
+	AudioPackEditorStopPreview();
+
+	const int SampleId = Sound()->LoadWV(pFilename, StorageType);
+	if(SampleId < 0)
+		return false;
+
+	m_AudioPackEditorState.m_PreviewSampleId = SampleId;
+	GameClient()->m_Sounds.PlaySample(CSounds::CHN_GUI, SampleId, ISound::FLAG_PREVIEW, 1.0f);
+	return true;
+}
+
+bool CMenus::AudioPackEditorEnsureStorageDirectories(const char *pStoragePath)
+{
+	if(pStoragePath == nullptr || pStoragePath[0] == '\0')
+		return false;
+
+	std::string CurrentDirectory;
+	for(const char *pCursor = pStoragePath; *pCursor != '\0'; ++pCursor)
+	{
+		if(*pCursor == '/')
+		{
+			if(!CurrentDirectory.empty() && !Storage()->FolderExists(CurrentDirectory.c_str(), IStorage::TYPE_SAVE) &&
+				!Storage()->CreateFolder(CurrentDirectory.c_str(), IStorage::TYPE_SAVE))
+			{
+				return false;
+			}
+		}
+		else
+		{
+			CurrentDirectory.push_back(*pCursor);
+		}
+	}
+
+	return true;
+}
+
+bool CMenus::AudioPackEditorCopyFileToStorage(const char *pSourcePath, int SourceStorageType, const char *pStoragePath)
+{
+	if(pSourcePath == nullptr || pSourcePath[0] == '\0' || pStoragePath == nullptr || pStoragePath[0] == '\0')
+		return false;
+	if(!Storage()->FileExists(pSourcePath, SourceStorageType))
+		return false;
+	if(!AudioPackEditorEnsureStorageDirectories(pStoragePath))
+		return false;
+
+	IOHANDLE SourceFile = Storage()->OpenFile(pSourcePath, IOFLAG_READ, SourceStorageType);
+	if(!SourceFile)
+		return false;
+
+	void *pData = nullptr;
+	unsigned DataSize = 0;
+	const bool ReadOk = io_read_all(SourceFile, &pData, &DataSize);
+	io_close(SourceFile);
+	if(!ReadOk || pData == nullptr)
+	{
+		if(pData != nullptr)
+			free(pData);
+		return false;
+	}
+
+	IOHANDLE DestFile = Storage()->OpenFile(pStoragePath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!DestFile)
+	{
+		free(pData);
+		return false;
+	}
+
+	const bool WriteOk = io_write(DestFile, pData, DataSize) == DataSize;
+	io_close(DestFile);
+	free(pData);
+	return WriteOk;
+}
+
+bool CMenus::AudioPackEditorCopyAbsoluteFileToStorage(const char *pSourcePath, const char *pStoragePath)
+{
+	return AudioPackEditorCopyFileToStorage(pSourcePath, IStorage::TYPE_ABSOLUTE, pStoragePath);
+}
+
+void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
+{
+	if(!m_AudioPackEditorState.m_Open)
+		return;
+
+	if(!m_AudioPackEditorState.m_Initialized)
+	{
+		AudioPackEditorRefreshCandidates();
+		m_AudioPackEditorState.m_Initialized = true;
+	}
+
+	if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+	{
+		AudioPackEditorClose();
+		return;
+	}
+
+	const auto vAllSlots = BuildAudioPackSlots();
+	if(vAllSlots.empty())
+	{
+		Ui()->DoLabel(&MainView, Localize("No audio slots found."), 14.0f, TEXTALIGN_MC);
+		return;
+	}
+
+	m_AudioPackEditorState.m_SelectedSlotIndex = std::clamp(m_AudioPackEditorState.m_SelectedSlotIndex, 0, (int)vAllSlots.size() - 1);
+
+	CUIRect EditorRect = MainView;
+	EditorRect.Margin(8.0f, &EditorRect);
+	EditorRect.Draw(ColorRGBA(0.10f, 0.11f, 0.15f, 1.0f), IGraphics::CORNER_ALL, 8.0f);
+
+	CUIRect WorkRect;
+	EditorRect.Margin(8.0f, &WorkRect);
+
+	CUIRect HeaderRow, PackRow, ContentRow, StatusRow;
+	WorkRect.HSplitTop(24.0f, &HeaderRow, &WorkRect);
+	WorkRect.HSplitTop(6.0f, nullptr, &WorkRect);
+	WorkRect.HSplitTop(24.0f, &PackRow, &WorkRect);
+	WorkRect.HSplitTop(8.0f, nullptr, &WorkRect);
+	WorkRect.HSplitBottom(20.0f, &ContentRow, &StatusRow);
+
+	static CButtonContainer s_AudioPackEditorBackButton;
+	static CButtonContainer s_AudioPackEditorRefreshButton;
+	static CButtonContainer s_AudioPackEditorPreviewButton;
+	static CButtonContainer s_AudioPackEditorExportButton;
+	static CButtonContainer s_AudioPackEditorImportPreviewButton;
+	static CListBox s_AudioPackEditorSlotListBox;
+	static CListBox s_AudioPackEditorCandidateListBox;
+
+	CUIRect BackButton, RefreshButton, TitleRow;
+	HeaderRow.VSplitLeft(90.0f, &BackButton, &HeaderRow);
+	HeaderRow.VSplitRight(110.0f, &HeaderRow, &RefreshButton);
+	BackButton.VMargin(2.0f, &BackButton);
+	RefreshButton.VMargin(2.0f, &RefreshButton);
+	TitleRow = HeaderRow;
+
+	if(DoButton_Menu(&s_AudioPackEditorBackButton, Localize("Back"), 0, &BackButton))
+	{
+		AudioPackEditorClose();
+		return;
+	}
+
+	if(DoButton_Menu(&s_AudioPackEditorRefreshButton, Localize("Refresh"), 0, &RefreshButton))
+		AudioPackEditorRefreshCandidates();
+
+	Ui()->DoLabel(&TitleRow, Localize("Edit audio pack"), 14.0f, TEXTALIGN_MC);
+
+	CUIRect PackLabel, PackInput;
+	PackRow.VSplitLeft(90.0f, &PackLabel, &PackInput);
+	Ui()->DoLabel(&PackLabel, Localize("Pack name"), 12.0f, TEXTALIGN_ML);
+	if(Ui()->DoEditBox(&m_AudioPackEditorState.m_PackNameInput, &PackInput, 12.0f))
+		AudioPackEditorRefreshCandidates();
+
+	CUIRect SlotColumn, CandidateColumn, DetailColumn;
+	ContentRow.VSplitLeft(260.0f, &SlotColumn, &ContentRow);
+	ContentRow.VSplitLeft(8.0f, nullptr, &ContentRow);
+	ContentRow.VSplitLeft(320.0f, &CandidateColumn, &ContentRow);
+	ContentRow.VSplitLeft(8.0f, nullptr, &ContentRow);
+	DetailColumn = ContentRow;
+
+	CUIRect SlotSearchRow, SlotListRow;
+	SlotColumn.HSplitTop(20.0f, &SlotSearchRow, &SlotColumn);
+	SlotColumn.HSplitTop(6.0f, nullptr, &SlotColumn);
+	SlotListRow = SlotColumn;
+	Ui()->DoLabel(&SlotSearchRow, Localize("Search"), 12.0f, TEXTALIGN_ML);
+	CUIRect SlotSearchInput;
+	SlotSearchRow.VSplitLeft(80.0f, nullptr, &SlotSearchInput);
+	Ui()->DoEditBox_Search(&m_AudioPackEditorState.m_FilterInput, &SlotSearchInput, 12.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+
+	std::vector<int> vVisibleSlotIndices;
+	vVisibleSlotIndices.reserve(vAllSlots.size());
+	const char *pSlotFilter = m_AudioPackEditorState.m_FilterInput.GetString();
+	for(int SlotIndex = 0; SlotIndex < (int)vAllSlots.size(); ++SlotIndex)
+	{
+		const auto &Slot = vAllSlots[SlotIndex];
+		if(pSlotFilter[0] != '\0' &&
+			!str_find_nocase(Slot.m_pDisplayName, pSlotFilter) &&
+			!str_find_nocase(Slot.m_pSetName, pSlotFilter) &&
+			!str_find_nocase(Slot.m_pRelativePath, pSlotFilter))
+		{
+			continue;
+		}
+		vVisibleSlotIndices.push_back(SlotIndex);
+	}
+
+	if(!vVisibleSlotIndices.empty())
+	{
+		if(std::find(vVisibleSlotIndices.begin(), vVisibleSlotIndices.end(), m_AudioPackEditorState.m_SelectedSlotIndex) == vVisibleSlotIndices.end())
+		{
+			m_AudioPackEditorState.m_SelectedSlotIndex = vVisibleSlotIndices.front();
+			AudioPackEditorRefreshCandidates();
+		}
+	}
+
+	s_AudioPackEditorSlotListBox.DoHeader(&SlotListRow, Localize("Audio slots"), 20.0f, 2.0f);
+	int SelectedVisibleSlot = 0;
+	for(int Index = 0; Index < (int)vVisibleSlotIndices.size(); ++Index)
+	{
+		if(vVisibleSlotIndices[Index] == m_AudioPackEditorState.m_SelectedSlotIndex)
+		{
+			SelectedVisibleSlot = Index;
+			break;
+		}
+	}
+	const int OldSelectedVisibleSlot = SelectedVisibleSlot;
+	s_AudioPackEditorSlotListBox.DoStart(18.0f, vVisibleSlotIndices.size(), 1, 6, SelectedVisibleSlot);
+	for(int VisibleIndex = 0; VisibleIndex < (int)vVisibleSlotIndices.size(); ++VisibleIndex)
+	{
+		const int SlotIndex = vVisibleSlotIndices[VisibleIndex];
+		const auto &Slot = vAllSlots[SlotIndex];
+		const CListboxItem Item = s_AudioPackEditorSlotListBox.DoNextItem(&Slot, SelectedVisibleSlot == VisibleIndex);
+		if(!Item.m_Visible)
+			continue;
+
+		char aLabel[256];
+		if(Slot.m_VariantCount > 1)
+			str_format(aLabel, sizeof(aLabel), "%s [%d/%d]", Slot.m_pSetName, Slot.m_VariantIndex + 1, Slot.m_VariantCount);
+		else
+			str_copy(aLabel, Slot.m_pSetName, sizeof(aLabel));
+		Ui()->DoLabel(&Item.m_Rect, aLabel, 11.0f, TEXTALIGN_ML);
+	}
+	SelectedVisibleSlot = s_AudioPackEditorSlotListBox.DoEnd();
+	if(SelectedVisibleSlot != OldSelectedVisibleSlot && SelectedVisibleSlot >= 0 && SelectedVisibleSlot < (int)vVisibleSlotIndices.size())
+	{
+		m_AudioPackEditorState.m_SelectedSlotIndex = vVisibleSlotIndices[SelectedVisibleSlot];
+		AudioPackEditorRefreshCandidates();
+	}
+
+	CUIRect CandidateSearchRow, CandidateListRow;
+	CandidateColumn.HSplitTop(20.0f, &CandidateSearchRow, &CandidateColumn);
+	CandidateColumn.HSplitTop(6.0f, nullptr, &CandidateColumn);
+	CandidateListRow = CandidateColumn;
+	Ui()->DoLabel(&CandidateSearchRow, Localize("Search"), 12.0f, TEXTALIGN_ML);
+	CUIRect CandidateSearchInput;
+	CandidateSearchRow.VSplitLeft(80.0f, nullptr, &CandidateSearchInput);
+	Ui()->DoEditBox_Search(&m_AudioPackEditorState.m_CandidateFilterInput, &CandidateSearchInput, 12.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+
+	std::vector<int> vVisibleCandidateIndices;
+	vVisibleCandidateIndices.reserve(m_AudioPackEditorState.m_vCandidateEntries.size());
+	const char *pCandidateFilter = m_AudioPackEditorState.m_CandidateFilterInput.GetString();
+	for(int CandidateIndex = 0; CandidateIndex < (int)m_AudioPackEditorState.m_vCandidateEntries.size(); ++CandidateIndex)
+	{
+		const auto &Entry = m_AudioPackEditorState.m_vCandidateEntries[CandidateIndex];
+		if(pCandidateFilter[0] != '\0' &&
+			!str_find_nocase(Entry.m_DisplayName.c_str(), pCandidateFilter) &&
+			!str_find_nocase(Entry.m_Path.c_str(), pCandidateFilter))
+		{
+			continue;
+		}
+		vVisibleCandidateIndices.push_back(CandidateIndex);
+	}
+
+	if(!vVisibleCandidateIndices.empty())
+	{
+		if(std::find(vVisibleCandidateIndices.begin(), vVisibleCandidateIndices.end(), m_AudioPackEditorState.m_SelectedCandidateIndex) == vVisibleCandidateIndices.end())
+			m_AudioPackEditorState.m_SelectedCandidateIndex = vVisibleCandidateIndices.front();
+	}
+	else
+	{
+		m_AudioPackEditorState.m_SelectedCandidateIndex = -1;
+	}
+
+	s_AudioPackEditorCandidateListBox.DoHeader(&CandidateListRow, Localize("Candidate files"), 20.0f, 2.0f);
+	int SelectedVisibleCandidate = 0;
+	for(int Index = 0; Index < (int)vVisibleCandidateIndices.size(); ++Index)
+	{
+		if(vVisibleCandidateIndices[Index] == m_AudioPackEditorState.m_SelectedCandidateIndex)
+		{
+			SelectedVisibleCandidate = Index;
+			break;
+		}
+	}
+	const int OldSelectedVisibleCandidate = SelectedVisibleCandidate;
+	s_AudioPackEditorCandidateListBox.DoStart(18.0f, vVisibleCandidateIndices.size(), 1, 6, SelectedVisibleCandidate);
+	for(int VisibleIndex = 0; VisibleIndex < (int)vVisibleCandidateIndices.size(); ++VisibleIndex)
+	{
+		const int CandidateIndex = vVisibleCandidateIndices[VisibleIndex];
+		const auto &Entry = m_AudioPackEditorState.m_vCandidateEntries[CandidateIndex];
+		const CListboxItem Item = s_AudioPackEditorCandidateListBox.DoNextItem(&Entry, SelectedVisibleCandidate == VisibleIndex);
+		if(!Item.m_Visible)
+			continue;
+
+		char aLabel[IO_MAX_PATH_LENGTH + 64];
+		if(Entry.m_IsCurrentFile)
+			str_format(aLabel, sizeof(aLabel), "%s (%s)", Entry.m_DisplayName.c_str(), Localize("Current file"));
+		else if(Entry.m_IsCurrentPackFile)
+			str_format(aLabel, sizeof(aLabel), "%s (%s)", Entry.m_DisplayName.c_str(), Localize("Pack name"));
+		else
+			str_copy(aLabel, Entry.m_DisplayName.c_str(), sizeof(aLabel));
+		Ui()->DoLabel(&Item.m_Rect, aLabel, 11.0f, TEXTALIGN_ML);
+	}
+	SelectedVisibleCandidate = s_AudioPackEditorCandidateListBox.DoEnd();
+	if(SelectedVisibleCandidate != OldSelectedVisibleCandidate && SelectedVisibleCandidate >= 0 && SelectedVisibleCandidate < (int)vVisibleCandidateIndices.size())
+		m_AudioPackEditorState.m_SelectedCandidateIndex = vVisibleCandidateIndices[SelectedVisibleCandidate];
+
+	const auto &SelectedSlot = vAllSlots[m_AudioPackEditorState.m_SelectedSlotIndex];
+	const char *pPackName = ResolveAudioPackEditorPackName(m_AudioPackEditorState.m_PackNameInput, g_Config.m_SndPack);
+	char aCurrentPath[IO_MAX_PATH_LENGTH] = "";
+	ResolveAudioPackEditorCurrentFilePath(Storage(), pPackName, SelectedSlot, aCurrentPath, sizeof(aCurrentPath));
+
+	const char *pSelectedCandidatePath = "";
+	if(m_AudioPackEditorState.m_SelectedCandidateIndex >= 0 && m_AudioPackEditorState.m_SelectedCandidateIndex < (int)m_AudioPackEditorState.m_vCandidateEntries.size())
+		pSelectedCandidatePath = m_AudioPackEditorState.m_vCandidateEntries[m_AudioPackEditorState.m_SelectedCandidateIndex].m_Path.c_str();
+
+	CUIRect DetailRow;
+	DetailColumn.HSplitTop(18.0f, &DetailRow, &DetailColumn);
+	char aSlotLabel[256];
+	if(SelectedSlot.m_VariantCount > 1)
+		str_format(aSlotLabel, sizeof(aSlotLabel), "%s [%d/%d]", SelectedSlot.m_pSetName, SelectedSlot.m_VariantIndex + 1, SelectedSlot.m_VariantCount);
+	else
+		str_copy(aSlotLabel, SelectedSlot.m_pSetName, sizeof(aSlotLabel));
+	Ui()->DoLabel(&DetailRow, aSlotLabel, 12.0f, TEXTALIGN_ML);
+
+	DetailColumn.HSplitTop(18.0f, &DetailRow, &DetailColumn);
+	char aRelativeLabel[256];
+	str_format(aRelativeLabel, sizeof(aRelativeLabel), "%s: %s", Localize("Relative path"), SelectedSlot.m_pRelativePath);
+	Ui()->DoLabel(&DetailRow, aRelativeLabel, 10.0f, TEXTALIGN_ML);
+
+	DetailColumn.HSplitTop(18.0f, &DetailRow, &DetailColumn);
+	char aCurrentLabel[IO_MAX_PATH_LENGTH + 32];
+	if(aCurrentPath[0] != '\0')
+		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%s: %s", Localize("Current file"), aCurrentPath);
+	else
+		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%s: %s", Localize("Current file"), Localize("Default"));
+	Ui()->DoLabel(&DetailRow, aCurrentLabel, 10.0f, TEXTALIGN_ML);
+
+	DetailColumn.HSplitTop(18.0f, &DetailRow, &DetailColumn);
+	char aSelectedLabel[IO_MAX_PATH_LENGTH + 48];
+	if(pSelectedCandidatePath[0] != '\0')
+		str_format(aSelectedLabel, sizeof(aSelectedLabel), "%s: %s", Localize("Selected candidate"), pSelectedCandidatePath);
+	else
+		str_format(aSelectedLabel, sizeof(aSelectedLabel), "%s: %s", Localize("Selected candidate"), Localize("Default"));
+	Ui()->DoLabel(&DetailRow, aSelectedLabel, 10.0f, TEXTALIGN_ML);
+
+	DetailColumn.HSplitTop(10.0f, nullptr, &DetailColumn);
+	CUIRect ManualRow;
+	DetailColumn.HSplitTop(22.0f, &ManualRow, &DetailColumn);
+	Ui()->DoLabel(&ManualRow, Localize("Manual source file"), 12.0f, TEXTALIGN_ML);
+	CUIRect ManualInput;
+	ManualRow.VSplitLeft(120.0f, nullptr, &ManualInput);
+	Ui()->DoEditBox(&m_AudioPackEditorState.m_SourcePathInput, &ManualInput, 12.0f);
+
+	DetailColumn.HSplitTop(8.0f, nullptr, &DetailColumn);
+	CUIRect ActionRowTop, ActionRowBottom;
+	DetailColumn.HSplitTop(24.0f, &ActionRowTop, &DetailColumn);
+	DetailColumn.HSplitTop(8.0f, nullptr, &DetailColumn);
+	DetailColumn.HSplitTop(24.0f, &ActionRowBottom, &DetailColumn);
+	CUIRect PreviewButton, ImportPreviewButton, ExportButton;
+	ActionRowTop.VSplitMid(&PreviewButton, &ImportPreviewButton, 8.0f);
+	ExportButton = ActionRowBottom;
+
+	if(DoButton_Menu(&s_AudioPackEditorPreviewButton, Localize("Preview selected file"), 0, &PreviewButton))
+	{
+		if(pSelectedCandidatePath[0] == '\0')
+		{
+			AudioPackEditorSetStatus(Localize("No candidate file selected."), true);
+		}
+		else if(!AudioPackEditorPlayPreview(pSelectedCandidatePath, IStorage::TYPE_ALL))
+		{
+			AudioPackEditorSetStatus(Localize("Failed to preview candidate file."), true);
+		}
+		else
+		{
+			AudioPackEditorSetStatus("", false);
+		}
+	}
+
+	if(DoButton_Menu(&s_AudioPackEditorImportPreviewButton, Localize("Preview import file"), 0, &ImportPreviewButton))
+	{
+		const char *pManualPath = m_AudioPackEditorState.m_SourcePathInput.GetString();
+		const std::string PreviewPath = ResolveAudioPackPreviewPath("", pManualPath);
+		if(PreviewPath.empty())
+		{
+			AudioPackEditorSetStatus(Localize("Source file is empty."), true);
+		}
+		else if(!Storage()->FileExists(PreviewPath.c_str(), IStorage::TYPE_ABSOLUTE))
+		{
+			AudioPackEditorSetStatus(Localize("Source file does not exist."), true);
+		}
+		else if(!str_endswith(PreviewPath.c_str(), ".wv"))
+		{
+			AudioPackEditorSetStatus(Localize("Only .wv files are supported right now."), true);
+		}
+		else if(!AudioPackEditorPlayPreview(PreviewPath.c_str(), IStorage::TYPE_ABSOLUTE))
+		{
+			AudioPackEditorSetStatus(Localize("Failed to preview import file."), true);
+		}
+		else
+		{
+			AudioPackEditorSetStatus("", false);
+		}
+	}
+
+	if(DoButton_Menu(&s_AudioPackEditorExportButton, Localize("Export selected file"), 0, &ExportButton))
+	{
+		const char *pManualPath = m_AudioPackEditorState.m_SourcePathInput.GetString();
+		const std::string SourcePath = ResolveAudioPackExportSourcePath(pSelectedCandidatePath, pManualPath);
+		const bool UseManualSource = pManualPath[0] != '\0';
+		int SourceStorageType = IStorage::TYPE_ALL;
+
+		if(SourcePath.empty())
+		{
+			AudioPackEditorSetStatus(UseManualSource ? Localize("Source file is empty.") : Localize("No candidate file selected."), true);
+		}
+		else
+		{
+			if(UseManualSource)
+			{
+				SourceStorageType = IStorage::TYPE_ABSOLUTE;
+				if(!Storage()->FileExists(SourcePath.c_str(), SourceStorageType))
+				{
+					AudioPackEditorSetStatus(Localize("Source file does not exist."), true);
+					goto AudioPackExportDone;
+				}
+				if(!str_endswith(SourcePath.c_str(), ".wv"))
+				{
+					AudioPackEditorSetStatus(Localize("Only .wv files are supported right now."), true);
+					goto AudioPackExportDone;
+				}
+			}
+
+			const std::string ExportPath = BuildAudioPackExportPath(pPackName, SelectedSlot.m_pRelativePath);
+			if(AudioPackEditorCopyFileToStorage(SourcePath.c_str(), SourceStorageType, ExportPath.c_str()))
+			{
+				str_copy(g_Config.m_SndPack, pPackName, sizeof(g_Config.m_SndPack));
+				RefreshSharedAudioPacks(Storage());
+				if(GameClient()->m_Sounds.Reload())
+				{
+					UpdateMusicState();
+					AudioPackEditorSetStatus(Localize("Audio pack exported."), false);
+				}
+				else
+				{
+					AudioPackEditorSetStatus(Localize("Audio file was exported, but reload failed. Restart sound to apply it."), true);
+				}
+				AudioPackEditorRefreshCandidates();
+			}
+			else
+			{
+				AudioPackEditorSetStatus(Localize("Failed to export audio pack file."), true);
+			}
+		}
+	}
+AudioPackExportDone:
+
+	if(m_AudioPackEditorState.m_aStatusMessage[0] != '\0')
+	{
+		TextRender()->TextColor(m_AudioPackEditorState.m_StatusIsError ? ColorRGBA(1.0f, 0.35f, 0.35f, 1.0f) : ColorRGBA(0.45f, 1.0f, 0.55f, 1.0f));
+		Ui()->DoLabel(&StatusRow, m_AudioPackEditorState.m_aStatusMessage, 10.0f, TEXTALIGN_ML);
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+	}
+}
+
 void CMenus::RenderSettingsSound(CUIRect MainView)
 {
+	if(m_AudioPackEditorState.m_Open)
+	{
+		RenderAudioPackEditorScreen(MainView);
+		return;
+	}
+
 	static int s_SndEnable = g_Config.m_SndEnable;
 	static bool s_SndPackInit = false;
 	static char s_aSndPack[sizeof(g_Config.m_SndPack)] = "";
@@ -2087,63 +2787,113 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 
 	// audio pack selector
 	{
-		static std::vector<SAudioPackEntry> s_vAudioPacks;
-		static bool s_AudioPacksInit = false;
-		if(!s_AudioPacksInit)
-		{
-			RefreshAudioPacks(Storage(), s_vAudioPacks);
-			s_AudioPacksInit = true;
-		}
-
-		MainView.HSplitTop(10.0f, nullptr, &MainView);
-		CUIRect AudioPackView;
-		MainView.HSplitTop(110.0f, &AudioPackView, &MainView);
-
-		const float HeaderHeight = 20.0f;
-		const float HeaderSpacing = 2.0f;
-
-		CUIRect HeaderRow = AudioPackView;
-		HeaderRow.HSplitTop(HeaderHeight + HeaderSpacing, &HeaderRow, nullptr);
-		HeaderRow.HSplitTop(HeaderHeight, &HeaderRow, nullptr);
-
-		static CListBox s_AudioPackListBox;
-		s_AudioPackListBox.DoHeader(&AudioPackView, Localize("Audio packs"), HeaderHeight, HeaderSpacing);
-
 		static CButtonContainer s_AudioPackRefreshButton;
-		CUIRect RefreshButton;
-		HeaderRow.VSplitRight(80.0f, nullptr, &RefreshButton);
-		RefreshButton.VMargin(2.0f, &RefreshButton);
-		if(DoButton_Menu(&s_AudioPackRefreshButton, Localize("Refresh"), 0, &RefreshButton))
-		{
-			RefreshAudioPacks(Storage(), s_vAudioPacks);
-		}
+		static CButtonContainer s_AudioPackEditorButton;
+		static CListBox s_AudioPackListBox;
+		EnsureSharedAudioPacks(Storage());
+
+		auto RefreshAudioPackState = [&]() {
+			RefreshSharedAudioPacks(Storage());
+			if(g_Config.m_SndPack[0] == '\0')
+				str_copy(g_Config.m_SndPack, "default", sizeof(g_Config.m_SndPack));
+			if(m_AudioPackEditorState.m_PackNameInput.IsEmpty())
+				m_AudioPackEditorState.m_PackNameInput.Set(g_Config.m_SndPack);
+		};
 
 		if(g_Config.m_SndPack[0] == '\0')
 			str_copy(g_Config.m_SndPack, "default", sizeof(g_Config.m_SndPack));
 
-		int SelectedPack = 0;
-		bool PackFound = false;
-		for(size_t i = 0; i < s_vAudioPacks.size(); ++i)
-		{
-			if(str_comp(s_vAudioPacks[i].m_aName, g_Config.m_SndPack) == 0)
+		auto FindSelectedPackIndex = [&]() {
+			int Result = FindAudioPackIndexByName(gs_vAudioPacks, g_Config.m_SndPack);
+			if(Result < 0)
 			{
-				SelectedPack = (int)i;
-				PackFound = true;
-				break;
+				RefreshSharedAudioPacks(Storage());
+				Result = FindAudioPackIndexByName(gs_vAudioPacks, g_Config.m_SndPack);
+			}
+			if(Result < 0)
+			{
+				str_copy(g_Config.m_SndPack, "default", sizeof(g_Config.m_SndPack));
+				Result = 0;
+			}
+			return Result;
+		};
+		int SelectedPack = FindSelectedPackIndex();
+
+		MainView.HSplitTop(10.0f, nullptr, &MainView);
+		CUIRect AudioPackView;
+		MainView.HSplitTop(176.0f, &AudioPackView, &MainView);
+		AudioPackView.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f), IGraphics::CORNER_ALL, 8.0f);
+
+		CUIRect AudioPackContent;
+		AudioPackView.Margin(8.0f, &AudioPackContent);
+		CUIRect HeaderRow, ListRow;
+		AudioPackContent.HSplitTop(24.0f, &HeaderRow, &AudioPackContent);
+		AudioPackContent.HSplitTop(8.0f, nullptr, &AudioPackContent);
+		ListRow = AudioPackContent;
+
+		const float ButtonPadding = 22.0f;
+		const float RefreshButtonW = minimum(112.0f, maximum(78.0f, TextRender()->TextWidth(12.0f, Localize("Refresh"), -1, -1.0f) + ButtonPadding));
+		const float EditButtonW = minimum(168.0f, maximum(114.0f, TextRender()->TextWidth(12.0f, Localize("Edit audio pack"), -1, -1.0f) + ButtonPadding));
+		CUIRect EditButton;
+		CUIRect RefreshButton;
+		HeaderRow.VSplitRight(RefreshButtonW, &HeaderRow, &RefreshButton);
+		RefreshButton.VMargin(2.0f, &RefreshButton);
+		if(DoButton_Menu(&s_AudioPackRefreshButton, Localize("Refresh"), 0, &RefreshButton))
+		{
+			RefreshAudioPackState();
+			SelectedPack = FindSelectedPackIndex();
+		}
+		HeaderRow.VSplitRight(8.0f, &HeaderRow, nullptr);
+		HeaderRow.VSplitRight(EditButtonW, &HeaderRow, &EditButton);
+		EditButton.VMargin(2.0f, &EditButton);
+		if(DoButton_Menu(&s_AudioPackEditorButton, Localize("Edit audio pack"), 0, &EditButton))
+			AudioPackEditorOpen(g_Config.m_SndPack);
+
+		const SAudioPackEntry &SelectedEntry = gs_vAudioPacks[SelectedPack];
+		const char *pSelectedPackName = str_comp(SelectedEntry.m_aName, "default") == 0 ? Localize("Default") : SelectedEntry.m_aName;
+		char aSelectedPackSummary[160];
+		if(str_comp(SelectedEntry.m_aName, "default") == 0)
+			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s (%s)", Localize("Selected pack"), pSelectedPackName, Localize("Built-in"));
+		else if(SelectedEntry.m_FileCount > 0)
+			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s (%d)", Localize("Selected pack"), pSelectedPackName, SelectedEntry.m_FileCount);
+		else
+			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s", Localize("Selected pack"), pSelectedPackName);
+
+		const float TitleWidth = minimum(HeaderRow.w, TextRender()->TextWidth(13.0f, Localize("Audio packs"), -1, -1.0f) + 8.0f);
+		CUIRect TitleRect, SummaryArea;
+		HeaderRow.VSplitLeft(TitleWidth, &TitleRect, &SummaryArea);
+		Ui()->DoLabel(&TitleRect, Localize("Audio packs"), 13.0f, TEXTALIGN_ML);
+
+		if(SummaryArea.w > 24.0f)
+		{
+			SummaryArea.VSplitLeft(8.0f, nullptr, &SummaryArea);
+			const float SummaryPillW = minimum(SummaryArea.w, TextRender()->TextWidth(11.0f, aSelectedPackSummary, -1, -1.0f) + 20.0f);
+			if(SummaryPillW > 0.0f)
+			{
+				CUIRect SummaryPill, SummaryLabel;
+				SummaryArea.VSplitLeft(SummaryPillW, &SummaryPill, nullptr);
+				SummaryPill.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 6.0f);
+				SummaryPill.VMargin(8.0f, &SummaryLabel);
+
+				SLabelProperties SummaryLabelProps;
+				SummaryLabelProps.m_MaxWidth = SummaryLabel.w;
+				SummaryLabelProps.m_EllipsisAtEnd = true;
+				SummaryLabelProps.m_MinimumFontSize = 9.0f;
+				Ui()->DoLabel(&SummaryLabel, aSelectedPackSummary, 11.0f, TEXTALIGN_ML, SummaryLabelProps);
 			}
 		}
-		if(!PackFound)
-		{
-			str_copy(g_Config.m_SndPack, "default", sizeof(g_Config.m_SndPack));
-			SelectedPack = 0;
-		}
+
+		ListRow.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f), IGraphics::CORNER_ALL, 6.0f);
+		ListRow.Margin(6.0f, &ListRow);
 
 		const int OldSelectedPack = SelectedPack;
-		s_AudioPackListBox.DoStart(20.0f, s_vAudioPacks.size(), 1, 4, SelectedPack);
+		s_AudioPackListBox.DoStart(22.0f, gs_vAudioPacks.size(), 1, 4, SelectedPack, &ListRow, false);
 
-		for(size_t i = 0; i < s_vAudioPacks.size(); ++i)
+		const float BuiltInBadgeW = minimum(72.0f, maximum(38.0f, TextRender()->TextWidth(10.0f, Localize("Built-in"), -1, -1.0f) + 16.0f));
+
+		for(size_t i = 0; i < gs_vAudioPacks.size(); ++i)
 		{
-			const SAudioPackEntry &Entry = s_vAudioPacks[i];
+			const SAudioPackEntry &Entry = gs_vAudioPacks[i];
 			const CListboxItem Item = s_AudioPackListBox.DoNextItem(&Entry, SelectedPack == (int)i);
 			if(!Item.m_Visible)
 				continue;
@@ -2153,27 +2903,38 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 			{
 				str_copy(aLabel, Localize("Default"), sizeof(aLabel));
 			}
-			else if(Entry.m_FileCount > 0)
-			{
-				str_format(aLabel, sizeof(aLabel), "%s (%d)", Entry.m_aName, Entry.m_FileCount);
-			}
 			else
 			{
 				str_copy(aLabel, Entry.m_aName, sizeof(aLabel));
 			}
 
-			Ui()->DoLabel(&Item.m_Rect, aLabel, 12.0f, TEXTALIGN_ML);
+			CUIRect NameRect, BadgeRect;
+			Item.m_Rect.VSplitRight(BuiltInBadgeW, &NameRect, &BadgeRect);
+			NameRect.VMargin(6.0f, &NameRect);
+			BadgeRect.VMargin(4.0f, &BadgeRect);
+
+			char aBadge[32];
+			if(str_comp(Entry.m_aName, "default") == 0)
+				str_copy(aBadge, Localize("Built-in"), sizeof(aBadge));
+			else
+				str_format(aBadge, sizeof(aBadge), "%d", Entry.m_FileCount);
+			BadgeRect.Draw(SelectedPack == (int)i ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 4.0f);
+
+			Ui()->DoLabel(&NameRect, aLabel, 12.0f, TEXTALIGN_ML);
+			Ui()->DoLabel(&BadgeRect, aBadge, 10.0f, TEXTALIGN_MC);
 		}
 
 		SelectedPack = s_AudioPackListBox.DoEnd();
-		if(SelectedPack != OldSelectedPack && SelectedPack >= 0 && SelectedPack < (int)s_vAudioPacks.size())
+		if(SelectedPack != OldSelectedPack && SelectedPack >= 0 && SelectedPack < (int)gs_vAudioPacks.size())
 		{
-			str_copy(g_Config.m_SndPack, s_vAudioPacks[SelectedPack].m_aName, sizeof(g_Config.m_SndPack));
+			str_copy(g_Config.m_SndPack, gs_vAudioPacks[SelectedPack].m_aName, sizeof(g_Config.m_SndPack));
 			if(GameClient()->m_Sounds.Reload())
 			{
 				str_copy(s_aSndPack, g_Config.m_SndPack, sizeof(s_aSndPack));
 				UpdateMusicState();
 			}
+			if(!m_AudioPackEditorState.m_PackNameInput.IsActive())
+				m_AudioPackEditorState.m_PackNameInput.Set(g_Config.m_SndPack);
 		}
 	}
 
@@ -2423,6 +3184,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 
 	if(g_Config.m_UiSettingsPage != SETTINGS_ASSETS && (m_AssetsEditorState.m_Open || m_AssetsEditorState.m_Initialized))
 		AssetsEditorCloseNow();
+	if(g_Config.m_UiSettingsPage != SETTINGS_SOUND && (m_AudioPackEditorState.m_Open || m_AudioPackEditorState.m_Initialized))
+		AudioPackEditorClose();
 
 	static bool s_SettingsTransitionInitialized = false;
 	static int s_PrevSettingsPage = SETTINGS_LANGUAGE;
@@ -3492,11 +4255,11 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		};
 		static constexpr size_t kNamePlateRowOrderCount = 5;
 		static constexpr std::array<SNamePlateRowOrderEntry, kNamePlateRowOrderCount> s_aNamePlateRowOrderDefaults = {{
-			{"keys", "按键显示"},
-			{"coords", "坐标"},
-			{"hook", "钩索强度"},
-			{"clan", "战队"},
-			{"name", "名称"}}};
+			{"keys", "Key Presses"},
+			{"coords", "Coords"},
+			{"hook", "Hook Strength"},
+			{"clan", "Clan"},
+			{"name", "Name"}}};
 		static std::array<int, kNamePlateRowOrderCount> s_aNamePlateRowOrder = {0, 1, 2, 3, 4};
 		static char s_aNamePlateRowOrderConfigCache[sizeof(g_Config.m_QmNameplateRowOrder)] = {};
 		static bool s_NamePlateRowOrderInitialized = false;
@@ -4276,38 +5039,50 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 		static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
 		static char s_aBackgroundEntitiesSync[sizeof(g_Config.m_ClBackgroundEntities)] = "";
-		if(!s_BackgroundEntitiesInput.IsActive() && str_comp(s_aBackgroundEntitiesSync, g_Config.m_ClBackgroundEntities) != 0)
-			s_BackgroundEntitiesInput.Set(g_Config.m_ClBackgroundEntities);
-		Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
-		str_copy(s_aBackgroundEntitiesSync, g_Config.m_ClBackgroundEntities, sizeof(s_aBackgroundEntitiesSync));
+		const bool WasInputActive = s_BackgroundEntitiesInput.IsActive();
+		const bool InputCommitted = Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
+		bool BackgroundChanged = false;
+		if(InputCommitted)
+			BackgroundChanged = ApplyBackgroundEntitiesInputValue(s_BackgroundEntitiesInput);
+		else if(ShouldCommitBackgroundEntitiesInputOnBlur(WasInputActive, s_BackgroundEntitiesInput.IsActive(), s_BackgroundEntitiesInput.GetString(), s_aBackgroundEntitiesSync))
+			BackgroundChanged = ApplyBackgroundEntitiesInputValue(s_BackgroundEntitiesInput);
+		SyncBackgroundEntitiesInput(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
 
 		static CButtonContainer s_BackgroundEntitiesMapPicker, s_BackgroundEntitiesReload;
 
 		if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesReload, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton, BUTTONFLAG_LEFT))
 		{
-			GameClient()->m_Background.LoadBackground();
+			BackgroundChanged |= CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
+			g_Config.m_ClBackgroundEntities[0] = '\0';
+			s_BackgroundEntitiesInput.Set("");
+			s_aBackgroundEntitiesSync[0] = '\0';
+			BackgroundChanged = true;
 		}
 
 		if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesMapPicker, FONT_ICON_FOLDER, 0, &Button, BUTTONFLAG_LEFT))
 		{
+			BackgroundChanged |= CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
 			static SPopupMenuId s_PopupMapPickerId;
 			static CPopupMapPickerContext s_PopupMapPickerContext;
 			s_PopupMapPickerContext.m_pMenus = this;
+			s_PopupMapPickerContext.m_pTargetConfig = g_Config.m_ClBackgroundEntities;
+			s_PopupMapPickerContext.m_TargetConfigSize = sizeof(g_Config.m_ClBackgroundEntities);
 			s_PopupMapPickerContext.MapListPopulate();
 			Ui()->DoPopupMenu(&s_PopupMapPickerId, Ui()->MouseX(), Ui()->MouseY(), 300.0f, 250.0f, &s_PopupMapPickerContext, PopupMapPicker);
 		}
 
 		Background.HSplitTop(20.0f, &Button, &Background);
-		const bool UseCurrentMap = str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP) == 0;
+		const bool UseCurrentMap = IsCurrentMapBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities);
 		static int s_UseCurrentMapId = 0;
 		if(DoButton_CheckBox(&s_UseCurrentMapId, Localize("Use current map as background"), UseCurrentMap, &Button))
 		{
-			if(UseCurrentMap)
-				g_Config.m_ClBackgroundEntities[0] = '\0';
-			else
-				str_copy(g_Config.m_ClBackgroundEntities, CURRENT_MAP);
-			GameClient()->m_Background.LoadBackground();
+			BackgroundChanged |= CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
+			BackgroundChanged |= ToggleCurrentMapBackground(s_BackgroundEntitiesInput);
+			SyncBackgroundEntitiesInput(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
 		}
+
+		if(BackgroundChanged)
+			GameClient()->m_Background.LoadBackground();
 
 		Background.HSplitTop(20.0f, &Button, &Background);
 		if(DoButton_CheckBox(&g_Config.m_ClBackgroundShowTilesLayers, Localize("Show tiles layers from BG map"), g_Config.m_ClBackgroundShowTilesLayers, &Button))
@@ -4377,38 +5152,50 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 			static CLineInput s_BackgroundEntitiesInput(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
 			static char s_aBackgroundEntitiesSync[sizeof(g_Config.m_ClBackgroundEntities)] = "";
-			if(!s_BackgroundEntitiesInput.IsActive() && str_comp(s_aBackgroundEntitiesSync, g_Config.m_ClBackgroundEntities) != 0)
-				s_BackgroundEntitiesInput.Set(g_Config.m_ClBackgroundEntities);
-			Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
-			str_copy(s_aBackgroundEntitiesSync, g_Config.m_ClBackgroundEntities, sizeof(s_aBackgroundEntitiesSync));
+			const bool WasInputActive = s_BackgroundEntitiesInput.IsActive();
+			const bool InputCommitted = Ui()->DoEditBox(&s_BackgroundEntitiesInput, &EditBox, 14.0f);
+			bool BackgroundChanged = false;
+			if(InputCommitted)
+				BackgroundChanged = ApplyBackgroundEntitiesInputValue(s_BackgroundEntitiesInput);
+			else if(ShouldCommitBackgroundEntitiesInputOnBlur(WasInputActive, s_BackgroundEntitiesInput.IsActive(), s_BackgroundEntitiesInput.GetString(), s_aBackgroundEntitiesSync))
+				BackgroundChanged = ApplyBackgroundEntitiesInputValue(s_BackgroundEntitiesInput);
+			SyncBackgroundEntitiesInput(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
 
 			static CButtonContainer s_BackgroundEntitiesMapPicker, s_BackgroundEntitiesReload;
 
-			if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesReload, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton, BUTTONFLAG_LEFT))
-			{
-				GameClient()->m_Background.LoadBackground();
-			}
+		if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesReload, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton, BUTTONFLAG_LEFT))
+		{
+			BackgroundChanged |= CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
+			g_Config.m_ClBackgroundEntities[0] = '\0';
+			s_BackgroundEntitiesInput.Set("");
+			s_aBackgroundEntitiesSync[0] = '\0';
+			BackgroundChanged = true;
+		}
 
 			if(Ui()->DoButton_FontIcon(&s_BackgroundEntitiesMapPicker, FONT_ICON_FOLDER, 0, &Button, BUTTONFLAG_LEFT))
 			{
+				BackgroundChanged |= CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
 				static SPopupMenuId s_PopupMapPickerId;
 				static CPopupMapPickerContext s_PopupMapPickerContext;
 				s_PopupMapPickerContext.m_pMenus = this;
+				s_PopupMapPickerContext.m_pTargetConfig = g_Config.m_ClBackgroundEntities;
+				s_PopupMapPickerContext.m_TargetConfigSize = sizeof(g_Config.m_ClBackgroundEntities);
 				s_PopupMapPickerContext.MapListPopulate();
 				Ui()->DoPopupMenu(&s_PopupMapPickerId, Ui()->MouseX(), Ui()->MouseY(), 300.0f, 250.0f, &s_PopupMapPickerContext, PopupMapPicker);
 			}
 
 			Background.HSplitTop(20.0f, &Button, &Background);
-			const bool UseCurrentMap = str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP) == 0;
+			const bool UseCurrentMap = IsCurrentMapBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities);
 			static int s_UseCurrentMapId = 0;
 			if(DoButton_CheckBox(&s_UseCurrentMapId, Localize("Use current map as background"), UseCurrentMap, &Button))
 			{
-				if(UseCurrentMap)
-					g_Config.m_ClBackgroundEntities[0] = '\0';
-				else
-					str_copy(g_Config.m_ClBackgroundEntities, CURRENT_MAP);
-				GameClient()->m_Background.LoadBackground();
+				BackgroundChanged |= CommitBackgroundEntitiesInputIfActive(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
+				BackgroundChanged |= ToggleCurrentMapBackground(s_BackgroundEntitiesInput);
+				SyncBackgroundEntitiesInput(s_BackgroundEntitiesInput, s_aBackgroundEntitiesSync, sizeof(s_aBackgroundEntitiesSync));
 			}
+
+			if(BackgroundChanged)
+				GameClient()->m_Background.LoadBackground();
 
 			Background.HSplitTop(20.0f, &Button, &Background);
 			if(DoButton_CheckBox(&g_Config.m_ClBackgroundShowTilesLayers, Localize("Show tiles layers from BG map"), g_Config.m_ClBackgroundShowTilesLayers, &Button))
@@ -4575,7 +5362,16 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect Vie
 		}
 		else
 		{
-			str_format(g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities), "%s/%s", pPopupContext->m_aCurrentMapFolder, SelectedItem.m_aFilename);
+			char aSelectedValue[IO_MAX_PATH_LENGTH];
+			if(pPopupContext->m_aCurrentMapFolder[0] != '\0')
+				str_format(aSelectedValue, sizeof(aSelectedValue), "%s/%s", pPopupContext->m_aCurrentMapFolder, SelectedItem.m_aFilename);
+			else
+				str_copy(aSelectedValue, SelectedItem.m_aFilename);
+
+			char *pTargetConfig = pPopupContext->m_pTargetConfig != nullptr ? pPopupContext->m_pTargetConfig : g_Config.m_ClBackgroundEntities;
+			const int TargetConfigSize = pPopupContext->m_TargetConfigSize > 0 ? pPopupContext->m_TargetConfigSize : (int)sizeof(g_Config.m_ClBackgroundEntities);
+			BuildBackgroundEntitiesValueFromInput(aSelectedValue, pTargetConfig, TargetConfigSize);
+			pMenus->Ui()->SetActiveItem(nullptr);
 			pMenus->GameClient()->m_Background.LoadBackground();
 			return CUi::POPUP_CLOSE_CURRENT;
 		}

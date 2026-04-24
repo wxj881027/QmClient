@@ -798,6 +798,46 @@ bool CSkins7::ValidateSkinParts(char *apPartNames[protocol7::NUM_SKINPARTS], int
 	return true;
 }
 
+static void SaveSkinfilePart(CJsonFileWriter &Writer, const char *pPartName, const char *pFilename)
+{
+	if(pFilename == nullptr || pFilename[0] == '\0')
+		return;
+
+	Writer.WriteAttribute(pPartName);
+	Writer.BeginObject();
+	Writer.WriteAttribute("filename");
+	Writer.WriteStrValue(pFilename);
+	Writer.WriteAttribute("custom_colors");
+	Writer.WriteBoolValue(false);
+	Writer.EndObject();
+}
+
+bool SaveSkinfileFromParts(IStorage *pStorage, const char *pName, const char *pBodyPartName, const char *pMarkingPartName, const char *pDecorationPartName, const char *pHandsPartName, const char *pFeetPartName, const char *pEyesPartName)
+{
+	if(pStorage == nullptr || pName == nullptr || pName[0] == '\0')
+		return false;
+
+	char aBuf[IO_MAX_PATH_LENGTH];
+	str_format(aBuf, sizeof(aBuf), SKINS_DIR "/%s.json", pName);
+	IOHANDLE File = pStorage->OpenFile(aBuf, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+
+	CJsonFileWriter Writer(File);
+	Writer.BeginObject();
+	Writer.WriteAttribute("skin");
+	Writer.BeginObject();
+	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_BODY], pBodyPartName);
+	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_MARKING], pMarkingPartName);
+	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_DECORATION], pDecorationPartName);
+	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_HANDS], pHandsPartName);
+	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_FEET], pFeetPartName);
+	SaveSkinfilePart(Writer, CSkins7::ms_apSkinPartNames[protocol7::SKINPART_EYES], pEyesPartName);
+	Writer.EndObject();
+	Writer.EndObject();
+	return true;
+}
+
 bool CSkins7::SaveSkinfile(const char *pName, int Dummy)
 {
 	dbg_assert(!IsSpecialSkin(pName), "Cannot save special skins");

@@ -1,6 +1,7 @@
 #include "menus.h"
 #include "assets_resource_registry.h"
 #include "assets_preview_scale.h"
+#include "background.h"
 
 #include <algorithm>
 
@@ -27,6 +28,7 @@
 #include <chrono>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 using namespace FontIcons;
@@ -346,15 +348,18 @@ public:
 
 	struct SAssetEntry
 	{
-		char m_aName[50];
+		char m_aName[IO_MAX_PATH_LENGTH];
 		bool m_IsDir;
+		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
 	};
 
 	struct SScanContext
 	{
+		IStorage *m_pStorage;
 		std::vector<SAssetEntry> *m_pEntries;
 		EAssetResourceKind m_Kind;
 		bool m_SkipReservedDefault;
+		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
 	};
 
 private:
@@ -382,6 +387,7 @@ private:
 			SAssetEntry Entry;
 			str_copy(Entry.m_aName, pName);
 			Entry.m_IsDir = true;
+			Entry.m_Source = pContext->m_Source;
 			pEntries->push_back(Entry);
 		}
 		else
@@ -394,7 +400,7 @@ private:
 
 			if(str_endswith(pName, pExt))
 			{
-				char aName[50];
+				char aName[IO_MAX_PATH_LENGTH];
 				str_truncate(aName, sizeof(aName), pName, str_length(pName) - str_length(pExt));
 				if(pContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
 					return 0;
@@ -402,16 +408,78 @@ private:
 				SAssetEntry Entry;
 				str_copy(Entry.m_aName, aName);
 				Entry.m_IsDir = false;
+				Entry.m_Source = pContext->m_Source;
 				pEntries->push_back(Entry);
 			}
 		}
 		return 0;
 	}
 
+	struct SRecursiveMapScanContext
+	{
+		SScanContext *m_pScanContext;
+		char m_aBasePath[IO_MAX_PATH_LENGTH];
+		char m_aRelativePath[IO_MAX_PATH_LENGTH];
+		char m_aNamePrefix[IO_MAX_PATH_LENGTH];
+		EEntityBgHierarchyEntrySource m_Source = EEntityBgHierarchyEntrySource::LOCAL;
+	};
+
+	static int RecursiveMapScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)
+	{
+		(void)StorageType;
+		auto *pContext = static_cast<SRecursiveMapScanContext *>(pUser);
+		if(!str_comp(pInfo->m_pName, ".") || !str_comp(pInfo->m_pName, ".."))
+			return 0;
+
+		char aRelativePath[IO_MAX_PATH_LENGTH];
+		if(pContext->m_aRelativePath[0] != '\0')
+			str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pContext->m_aRelativePath, pInfo->m_pName);
+		else
+			str_copy(aRelativePath, pInfo->m_pName);
+
+		if(IsDir)
+		{
+			if(pInfo->m_pName[0] == '.')
+				return 0;
+
+			SRecursiveMapScanContext NextContext = *pContext;
+			str_copy(NextContext.m_aRelativePath, aRelativePath, sizeof(NextContext.m_aRelativePath));
+
+			char aFullPath[IO_MAX_PATH_LENGTH];
+			str_format(aFullPath, sizeof(aFullPath), "%s/%s", pContext->m_aBasePath, aRelativePath);
+			pContext->m_pScanContext->m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, aFullPath, RecursiveMapScanCallback, &NextContext);
+			return 0;
+		}
+
+		if(!str_endswith(pInfo->m_pName, ".map"))
+			return 0;
+
+		char aName[IO_MAX_PATH_LENGTH];
+		if(pContext->m_aNamePrefix[0] != '\0')
+		{
+			char aWithoutExt[IO_MAX_PATH_LENGTH];
+			str_truncate(aWithoutExt, sizeof(aWithoutExt), aRelativePath, str_length(aRelativePath) - 4);
+			str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aWithoutExt);
+		}
+		else
+		{
+			str_truncate(aName, sizeof(aName), aRelativePath, str_length(aRelativePath) - 4);
+		}
+		if(pContext->m_pScanContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
+			return 0;
+
+		SAssetEntry Entry;
+		str_copy(Entry.m_aName, aName);
+		Entry.m_IsDir = false;
+		Entry.m_Source = pContext->m_Source;
+		pContext->m_pScanContext->m_pEntries->push_back(Entry);
+		return 0;
+	}
+
 	void Run() override
 	{
 		std::vector<SAssetEntry> vEntries;
-		SScanContext ScanContext{&vEntries, EAssetResourceKind::DIRECTORY, true};
+		SScanContext ScanContext{m_pStorage, &vEntries, EAssetResourceKind::DIRECTORY, true, EEntityBgHierarchyEntrySource::LOCAL};
 
 		if(m_Type == ASSET_TYPE_EXTRAS)
 		{
@@ -456,7 +524,50 @@ private:
 			dbg_assert(pCategory != nullptr, "asset list category must exist");
 			ScanContext.m_Kind = pCategory->m_Kind;
 			ScanContext.m_SkipReservedDefault = pCategory->m_Kind != EAssetResourceKind::MAP_FILE;
-			m_pStorage->ListDirectory(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, ScanCallback, &ScanContext);
+			if(m_Type == ASSET_TYPE_ENTITY_BG)
+			{
+				ScanContext.m_Kind = EAssetResourceKind::MAP_FILE;
+				ScanContext.m_SkipReservedDefault = false;
+
+				SRecursiveMapScanContext AssetsContext;
+				AssetsContext.m_pScanContext = &ScanContext;
+				str_copy(AssetsContext.m_aBasePath, pCategory->m_pInstallFolder, sizeof(AssetsContext.m_aBasePath));
+				AssetsContext.m_aRelativePath[0] = '\0';
+				str_copy(AssetsContext.m_aNamePrefix, "entity_bg", sizeof(AssetsContext.m_aNamePrefix));
+				AssetsContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
+				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &AssetsContext);
+
+				SRecursiveMapScanContext MapsContext;
+				MapsContext.m_pScanContext = &ScanContext;
+				str_copy(MapsContext.m_aBasePath, "maps", sizeof(MapsContext.m_aBasePath));
+				MapsContext.m_aRelativePath[0] = '\0';
+				MapsContext.m_aNamePrefix[0] = '\0';
+				MapsContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
+				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, "maps", RecursiveMapScanCallback, &MapsContext);
+			}
+			else if(pCategory->m_Kind == EAssetResourceKind::MAP_FILE)
+			{
+				SRecursiveMapScanContext RecursiveContext;
+				RecursiveContext.m_pScanContext = &ScanContext;
+				str_copy(RecursiveContext.m_aBasePath, pCategory->m_pInstallFolder, sizeof(RecursiveContext.m_aBasePath));
+				RecursiveContext.m_aRelativePath[0] = '\0';
+				RecursiveContext.m_aNamePrefix[0] = '\0';
+				RecursiveContext.m_Source = EEntityBgHierarchyEntrySource::LOCAL;
+				m_pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, RecursiveMapScanCallback, &RecursiveContext);
+			}
+			else
+			{
+				m_pStorage->ListDirectory(IStorage::TYPE_ALL, pCategory->m_pInstallFolder, ScanCallback, &ScanContext);
+			}
+		}
+
+		if(m_Type == ASSET_TYPE_ENTITY_BG)
+		{
+			std::unordered_set<std::string> vSeenNames;
+			const auto DuplicateIt = std::remove_if(vEntries.begin(), vEntries.end(), [&](const SAssetEntry &Entry) {
+				return !vSeenNames.insert(Entry.m_aName).second;
+			});
+			vEntries.erase(DuplicateIt, vEntries.end());
 		}
 
 		// Sort entries by name
@@ -633,8 +744,20 @@ static void StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage
 
 	if(str_comp(pAssetItem->m_aName, "default") == 0)
 	{
-		str_format(aPath, sizeof(aPath), "%s.png", pAssetName);
-		vPossiblePaths.emplace_back(aPath);
+		if(str_comp(pAssetName, "gui_cursor") == 0 || str_comp(pAssetName, "arrow") == 0 || str_comp(pAssetName, "strong_weak") == 0)
+		{
+			const auto aCandidates = BuildNamedSingleFileAssetCandidates(pAssetName, pAssetItem->m_aName);
+			for(const std::string &Candidate : aCandidates)
+			{
+				if(!Candidate.empty())
+					vPossiblePaths.emplace_back(Candidate);
+			}
+		}
+		else
+		{
+			str_format(aPath, sizeof(aPath), "%s.png", pAssetName);
+			vPossiblePaths.emplace_back(aPath);
+		}
 	}
 	else
 	{
@@ -651,26 +774,85 @@ static void StartAssetDecode(TName *pAssetItem, const char *pAssetName, IStorage
 
 static bool IsEntityBgSelectionMatched(const char *pItemName)
 {
-	const char *pValue = g_Config.m_ClBackgroundEntities;
 	if(str_comp(pItemName, "default") == 0)
-		return pValue[0] == '\0';
-	if(pValue[0] == '\0' || str_comp(pValue, CURRENT_MAP) == 0 || str_find(pValue, "/") != nullptr || str_endswith_nocase(pValue, ".png"))
-		return false;
-	if(str_comp(pValue, pItemName) == 0)
-		return true;
+		return IsDefaultBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities);
 
-	char aMapName[IO_MAX_PATH_LENGTH];
-	str_format(aMapName, sizeof(aMapName), "%s.map", pItemName);
-	return str_comp(pValue, aMapName) == 0;
+	char aSelectedAsset[IO_MAX_PATH_LENGTH];
+	if(!TryGetBackgroundEntitiesAssetName(g_Config.m_ClBackgroundEntities, aSelectedAsset, sizeof(aSelectedAsset)))
+		return false;
+	return str_comp(aSelectedAsset, pItemName) == 0;
 }
 
 static void ApplyEntityBgSelection(CGameClient *pGameClient, const char *pItemName)
 {
-	if(str_comp(pItemName, "default") == 0)
-		g_Config.m_ClBackgroundEntities[0] = '\0';
-	else
-		str_copy(g_Config.m_ClBackgroundEntities, pItemName, sizeof(g_Config.m_ClBackgroundEntities));
+	BuildBackgroundEntitiesValueFromAsset(pItemName, g_Config.m_ClBackgroundEntities, sizeof(g_Config.m_ClBackgroundEntities));
 	pGameClient->m_Background.LoadBackground();
+}
+
+static bool IsEntityBgManagedAssetName(const char *pAssetName)
+{
+	return pAssetName != nullptr && str_startswith(pAssetName, "entity_bg/");
+}
+
+static void CollectEntityBgPreviewPaths(IStorage *pStorage, const char *pAssetName, std::vector<std::string> &vOutPaths)
+{
+	vOutPaths.clear();
+	if(pAssetName == nullptr || pAssetName[0] == '\0')
+		return;
+
+	auto AddCandidate = [&vOutPaths](const char *pPath) {
+		if(pPath == nullptr || pPath[0] == '\0')
+			return;
+		if(std::find(vOutPaths.begin(), vOutPaths.end(), pPath) == vOutPaths.end())
+			vOutPaths.emplace_back(pPath);
+	};
+
+	char aManagedPath[IO_MAX_PATH_LENGTH];
+	char aMapPath[IO_MAX_PATH_LENGTH];
+	str_format(aManagedPath, sizeof(aManagedPath), "assets/%s.png", pAssetName);
+	str_format(aMapPath, sizeof(aMapPath), "maps/%s.png", pAssetName);
+
+	if(IsEntityBgManagedAssetName(pAssetName))
+	{
+		const bool ManagedExists = pStorage != nullptr && pStorage->FileExists(aManagedPath, IStorage::TYPE_ALL);
+		const bool MapExists = pStorage != nullptr && pStorage->FileExists(aMapPath, IStorage::TYPE_ALL);
+		if(ManagedExists || !MapExists)
+			AddCandidate(aManagedPath);
+		if(MapExists || !ManagedExists)
+			AddCandidate(aMapPath);
+	}
+	else
+	{
+		AddCandidate(aMapPath);
+	}
+}
+
+static void ResolveEntityBgLocalMapPath(IStorage *pStorage, const char *pAssetName, int StorageType, char *pOut, int OutSize)
+{
+	if(OutSize <= 0)
+		return;
+	pOut[0] = '\0';
+	if(pAssetName == nullptr || pAssetName[0] == '\0')
+		return;
+
+	char aManagedPath[IO_MAX_PATH_LENGTH];
+	char aMapPath[IO_MAX_PATH_LENGTH];
+	str_format(aManagedPath, sizeof(aManagedPath), "assets/%s.map", pAssetName);
+	str_format(aMapPath, sizeof(aMapPath), "maps/%s.map", pAssetName);
+
+	if(IsEntityBgManagedAssetName(pAssetName))
+	{
+		const bool ManagedExists = pStorage != nullptr && pStorage->FileExists(aManagedPath, StorageType);
+		const bool MapExists = pStorage != nullptr && pStorage->FileExists(aMapPath, StorageType);
+		if(ManagedExists || !MapExists)
+			str_copy(pOut, aManagedPath, OutSize);
+		else
+			str_copy(pOut, aMapPath, OutSize);
+	}
+	else
+	{
+		str_copy(pOut, aMapPath, OutSize);
+	}
 }
 
 static void StartEntityBgDecode(CMenus::SCustomEntityBg *pAssetItem, IStorage *pStorage, IEngine *pEngine)
@@ -679,9 +861,9 @@ static void StartEntityBgDecode(CMenus::SCustomEntityBg *pAssetItem, IStorage *p
 		return;
 
 	std::vector<std::string> vPossiblePaths;
-	char aPath[IO_MAX_PATH_LENGTH];
-	str_format(aPath, sizeof(aPath), "maps/%s.png", pAssetItem->m_aName);
-	vPossiblePaths.emplace_back(aPath);
+	CollectEntityBgPreviewPaths(pStorage, pAssetItem->m_aName, vPossiblePaths);
+	if(vPossiblePaths.empty())
+		return;
 
 	pAssetItem->m_pDecodeJob = std::make_shared<CFullAsyncImageLoadJob>(std::move(vPossiblePaths), pStorage, pAssetItem->m_aName, IStorage::TYPE_ALL, LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE);
 	pEngine->AddJob(pAssetItem->m_pDecodeJob);
@@ -844,6 +1026,8 @@ const char *AssetResourceCategoryIdByTab(int Tab)
 		return "strong_weak";
 	if(Tab == ASSETS_TAB_ENTITY_BG)
 		return "entity_bg";
+	if(Tab == ASSETS_TAB_EXTRAS)
+		return "extras";
 	return nullptr;
 }
 
@@ -865,6 +1049,7 @@ struct SWorkshopHudAsset
 	std::string m_Author;
 	std::string m_LocalName;
 	std::string m_ImageUrl;
+	std::string m_ThumbUrl;
 	std::string m_ThumbCachePath;
 	std::string m_InstallPath;
 	IGraphics::CTextureHandle m_ThumbTexture;
@@ -885,6 +1070,7 @@ struct SWorkshopHudAsset
 		m_Author(Other.m_Author),
 		m_LocalName(Other.m_LocalName),
 		m_ImageUrl(Other.m_ImageUrl),
+		m_ThumbUrl(Other.m_ThumbUrl),
 		m_ThumbCachePath(Other.m_ThumbCachePath),
 		m_InstallPath(Other.m_InstallPath),
 		m_ThumbTexture(Other.m_ThumbTexture),
@@ -910,6 +1096,7 @@ struct SWorkshopHudAsset
 		m_Author = Other.m_Author;
 		m_LocalName = Other.m_LocalName;
 		m_ImageUrl = Other.m_ImageUrl;
+		m_ThumbUrl = Other.m_ThumbUrl;
 		m_ThumbCachePath = Other.m_ThumbCachePath;
 		m_InstallPath = Other.m_InstallPath;
 		m_ThumbTexture = Other.m_ThumbTexture;
@@ -938,11 +1125,15 @@ struct SWorkshopHudAsset
 struct SWorkshopHudState
 {
 	std::vector<SWorkshopHudAsset> m_vAssets;
+	std::unordered_map<std::string, std::string> m_vEntityBgPreviewExtByName;
 	std::deque<std::string> m_vReadyThumbQueue;
 	std::unordered_set<std::string> m_vReadyThumbQueued;
 	std::shared_ptr<CHttpRequest> m_pListTask;
+	std::shared_ptr<CHttpRequest> m_pEntityBgPreviewTask;
 	bool m_Requested = false;
+	bool m_EntityBgPreviewRequested = false;
 	bool m_LoadFailed = false;
+	std::string m_EntityBgPreviewBaseUrl;
 	char m_aError[128] = "";
 	double m_CacheTime = 0.0;
 	double m_LastRefreshTime = 0.0;
@@ -959,16 +1150,70 @@ struct SDeleteDirectoryScanUser
 	std::vector<SDeleteDirectoryEntry> *m_pEntries;
 };
 
-static SWorkshopHudState gs_WorkshopHudState;
-static SWorkshopHudState gs_WorkshopEntitiesState;
-static SWorkshopHudState gs_WorkshopGameState;
-static SWorkshopHudState gs_WorkshopEmoticonsState;
-static SWorkshopHudState gs_WorkshopParticlesState;
+static SWorkshopHudState gs_aWorkshopStates[NUMBER_OF_ASSETS_TABS];
+
+static SWorkshopHudState *WorkshopStateByTab(int Tab)
+{
+	const SAssetResourceCategory *pCategory = AssetResourceCategoryByTab(Tab);
+	if(pCategory == nullptr || !pCategory->m_WorkshopEnabled)
+		return nullptr;
+	return &gs_aWorkshopStates[Tab];
+}
 
 } // namespace
 
 namespace
 {
+
+static bool SearchFilterMatches(const char *pFilter, const char *pName, const char *pAuthor = nullptr)
+{
+	if(pFilter == nullptr || pFilter[0] == '\0')
+		return true;
+	if(pName != nullptr && str_utf8_find_nocase(pName, pFilter))
+		return true;
+	if(pAuthor != nullptr && pAuthor[0] != '\0' && str_utf8_find_nocase(pAuthor, pFilter))
+		return true;
+	return false;
+}
+
+static const char *NormalizeWorkshopAuthorName(const char *pAuthor)
+{
+	if(pAuthor == nullptr || pAuthor[0] == '\0')
+		return "";
+	if(str_comp(pAuthor, "资源来源于网络") == 0)
+		return Localize("Internet (From online source)");
+	return pAuthor;
+}
+
+static const SWorkshopHudAsset *FindWorkshopAssetByLocalName(const SWorkshopHudState *pState, const char *pLocalName)
+{
+	if(pState == nullptr || pLocalName == nullptr || pLocalName[0] == '\0')
+		return nullptr;
+
+	for(const SWorkshopHudAsset &Asset : pState->m_vAssets)
+	{
+		if(str_comp(Asset.m_LocalName.c_str(), pLocalName) == 0)
+			return &Asset;
+	}
+	return nullptr;
+}
+
+static const char *FindWorkshopAuthorByLocalName(const SWorkshopHudState *pState, const char *pLocalName)
+{
+	if(const SWorkshopHudAsset *pAsset = FindWorkshopAssetByLocalName(pState, pLocalName))
+		return pAsset->m_Author.c_str();
+	return nullptr;
+}
+
+static bool IsEntityBgWorkshopFolderOrChild(const char *pPath)
+{
+	return pPath != nullptr && (IsEntityBgWorkshopFolderPath(pPath) || str_startswith(pPath, "entity_bg/"));
+}
+
+static bool UsesCombinedAssetList(const SAssetResourceCategory *pCategory)
+{
+	return pCategory != nullptr && pCategory->m_WorkshopEnabled;
+}
 
 static void StartBackgroundDecode(SWorkshopHudAsset &Asset, IStorage *pStorage, IEngine *pEngine)
 {
@@ -1182,6 +1427,16 @@ void EnsureDefaultAssetVisible(const SAssetResourceCategory &Category, std::vect
 	});
 }
 
+static const char *AssetCardDisplayName(const CMenus::SCustomItem *pItem)
+{
+	if(pItem == nullptr)
+		return "";
+	const char *pDisplayName = pItem->m_aDisplayName[0] != '\0' ? pItem->m_aDisplayName : pItem->m_aName;
+	if(str_comp(pDisplayName, "entity_bg (Workshop)") == 0)
+		return Localize("entity_bg (Workshop)");
+	return pDisplayName;
+}
+
 struct SNamedSingleFileNameScanUser
 {
 	std::vector<std::string> *m_pNames;
@@ -1255,6 +1510,21 @@ bool CopyStorageFile(IStorage *pStorage, const char *pSourcePath, int SourceStor
 	return Written == vBuffer.size();
 }
 
+bool CopyAbsoluteFileToStorage(IStorage *pStorage, const char *pAbsoluteSourcePath, const char *pTargetPath)
+{
+	std::vector<uint8_t> vBuffer;
+	if(!LoadFileToBuffer(pStorage, pAbsoluteSourcePath, IStorage::TYPE_ABSOLUTE, vBuffer))
+		return false;
+
+	IOHANDLE File = pStorage->OpenFile(pTargetPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+
+	const size_t Written = io_write(File, vBuffer.data(), vBuffer.size());
+	io_close(File);
+	return Written == vBuffer.size();
+}
+
 void CollectNamedSingleFileAssetNames(IStorage *pStorage, const SAssetResourceCategory &Category, std::vector<std::string> &vAssetNames)
 {
 	vAssetNames.clear();
@@ -1274,21 +1544,47 @@ bool NamedSingleFileAssetExists(IStorage *pStorage, const SAssetResourceCategory
 	return pStorage->FileExists(aAssetPath, IStorage::TYPE_SAVE);
 }
 
+void EnsureBuiltinDefaultSingleFileAsset(IStorage *pStorage, const SAssetResourceCategory &Category)
+{
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
+		return;
+
+	char aDefaultPath[IO_MAX_PATH_LENGTH];
+	str_format(aDefaultPath, sizeof(aDefaultPath), "%s/default.png", Category.m_pInstallFolder);
+	if(pStorage->FileExists(aDefaultPath, IStorage::TYPE_SAVE))
+		return;
+
+	const char *pBuiltinFilename = BuiltinSingleFileAssetFilename(Category);
+	if(pBuiltinFilename == nullptr)
+		return;
+
+	char aBinaryRelativePath[IO_MAX_PATH_LENGTH];
+	str_format(aBinaryRelativePath, sizeof(aBinaryRelativePath), "data/%s", pBuiltinFilename);
+
+	char aBuiltinAbsolutePath[IO_MAX_PATH_LENGTH];
+	pStorage->GetBinaryPath(aBinaryRelativePath, aBuiltinAbsolutePath, sizeof(aBuiltinAbsolutePath));
+	if(aBuiltinAbsolutePath[0] == '\0' || !pStorage->FileExists(aBuiltinAbsolutePath, IStorage::TYPE_ABSOLUTE))
+		return;
+
+	pStorage->CreateFolder("assets", IStorage::TYPE_SAVE);
+	pStorage->CreateFolder(Category.m_pInstallFolder, IStorage::TYPE_SAVE);
+	CopyAbsoluteFileToStorage(pStorage, aBuiltinAbsolutePath, aDefaultPath);
+}
+
 void TryImportLegacySingleFileAsset(IStorage *pStorage, const SAssetResourceCategory &Category)
 {
 	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
 		return;
 
-	const char *pLegacySourcePath = LegacySingleFileAssetSourcePath(Category);
-	if(pLegacySourcePath == nullptr || !pStorage->FileExists(pLegacySourcePath, IStorage::TYPE_ALL))
-		return;
-
 	char aMarkerPath[IO_MAX_PATH_LENGTH];
 	str_format(aMarkerPath, sizeof(aMarkerPath), "%s/.legacy_imported", Category.m_pInstallFolder);
-
-	std::string ImportedName;
-	if(TryReadSmallTextFile(pStorage, aMarkerPath, ImportedName) && NamedSingleFileAssetExists(pStorage, Category, ImportedName))
+	if(pStorage->FileExists(aMarkerPath, IStorage::TYPE_SAVE))
 		return;
+
+	const char *pLegacySourcePath = LegacySingleFileAssetSourcePath(Category);
+	if(pLegacySourcePath == nullptr || !pStorage->FileExists(pLegacySourcePath, IStorage::TYPE_SAVE))
+		return;
+
 
 	std::vector<std::string> vExistingNames;
 	CollectNamedSingleFileAssetNames(pStorage, Category, vExistingNames);
@@ -1300,7 +1596,7 @@ void TryImportLegacySingleFileAsset(IStorage *pStorage, const SAssetResourceCate
 	char aTargetPath[IO_MAX_PATH_LENGTH];
 	str_format(aTargetPath, sizeof(aTargetPath), "%s/%s.png", Category.m_pInstallFolder, ImportedAssetName.c_str());
 	if(!pStorage->FileExists(aTargetPath, IStorage::TYPE_SAVE) &&
-		!CopyStorageFile(pStorage, pLegacySourcePath, IStorage::TYPE_ALL, aTargetPath, IStorage::TYPE_SAVE))
+		!CopyStorageFile(pStorage, pLegacySourcePath, IStorage::TYPE_SAVE, aTargetPath, IStorage::TYPE_SAVE))
 	{
 		return;
 	}
@@ -1318,6 +1614,79 @@ std::string NormalizeWorkshopAssetUrl(const char *pUrl)
 	if(TransformPos != std::string::npos)
 		Url.resize(TransformPos);
 	return Url;
+}
+
+static constexpr const char *ENTITY_BG_PREVIEW_MAP_URL = "https://www.ddrace.cn/data/entity-bg-preview-map.json";
+
+bool ParseEntityBgPreviewMap(const json_value *pRoot, std::unordered_map<std::string, std::string> &vPreviewExtByName, std::string &BaseUrl, char *pErr, int ErrSize)
+{
+	vPreviewExtByName.clear();
+	BaseUrl.clear();
+
+	if(!pRoot || pRoot->type != json_object)
+	{
+		str_copy(pErr, "Invalid entity bg preview response", ErrSize);
+		return false;
+	}
+
+	const json_value *pBaseUrl = json_object_get(pRoot, "baseUrl");
+	const json_value *pPreviewMap = json_object_get(pRoot, "previewMap");
+	if(pBaseUrl == &json_value_none || pBaseUrl->type != json_string || pPreviewMap == &json_value_none || pPreviewMap->type != json_object)
+	{
+		str_copy(pErr, "Entity bg preview data is missing", ErrSize);
+		return false;
+	}
+
+	BaseUrl = NormalizeWorkshopAssetUrl(json_string_get(pBaseUrl));
+	if(BaseUrl.empty())
+	{
+		str_copy(pErr, "Entity bg preview base url is empty", ErrSize);
+		return false;
+	}
+
+	for(unsigned i = 0; i < pPreviewMap->u.object.length; ++i)
+	{
+		const auto &Entry = pPreviewMap->u.object.values[i];
+		if(Entry.name == nullptr || Entry.value == nullptr || Entry.value->type != json_string)
+			continue;
+		const char *pExt = json_string_get(Entry.value);
+		if(pExt == nullptr || pExt[0] == '\0')
+			continue;
+		vPreviewExtByName[Entry.name] = pExt;
+	}
+
+	str_copy(pErr, "", ErrSize);
+	return !vPreviewExtByName.empty();
+}
+
+bool BuildEntityBgPreviewThumbUrl(const SWorkshopHudState &WorkshopState, const char *pAssetName, char *pOut, int OutSize)
+{
+	if(OutSize <= 0)
+		return false;
+	pOut[0] = '\0';
+	if(pAssetName == nullptr || pAssetName[0] == '\0' || WorkshopState.m_EntityBgPreviewBaseUrl.empty())
+		return false;
+
+	const auto It = WorkshopState.m_vEntityBgPreviewExtByName.find(pAssetName);
+	if(It == WorkshopState.m_vEntityBgPreviewExtByName.end())
+		return false;
+
+	char aEscapedName[IO_MAX_PATH_LENGTH * 3];
+	EscapeUrl(aEscapedName, sizeof(aEscapedName), pAssetName);
+	str_format(pOut, OutSize, "%s/%s.%s", WorkshopState.m_EntityBgPreviewBaseUrl.c_str(), aEscapedName, It->second.c_str());
+	return true;
+}
+
+void ApplyEntityBgPreviewThumbUrls(SWorkshopHudState &WorkshopState)
+{
+	char aThumbUrl[IO_MAX_PATH_LENGTH * 2];
+	for(SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
+	{
+		if(BuildEntityBgPreviewThumbUrl(WorkshopState, Asset.m_Name.c_str(), aThumbUrl, sizeof(aThumbUrl)))
+			Asset.m_ThumbUrl = aThumbUrl;
+		else
+			Asset.m_ThumbUrl.clear();
+	}
 }
 
 bool WorkshopCategoryMatches(const char *pCategoryValue, const SAssetResourceCategory &Category)
@@ -1400,17 +1769,22 @@ bool ParseWorkshopAssets(const json_value *pRoot, const SAssetResourceCategory &
 		SWorkshopHudAsset Asset;
 		Asset.m_Id = pId != &json_value_none && pId->type == json_string ? json_string_get(pId) : std::to_string(i);
 		Asset.m_Name = pName != &json_value_none && pName->type == json_string ? json_string_get(pName) : Asset.m_Id;
-		Asset.m_Author = pAuthor != &json_value_none && pAuthor->type == json_string ? json_string_get(pAuthor) : "";
+		Asset.m_Author = pAuthor != &json_value_none && pAuthor->type == json_string ? NormalizeWorkshopAuthorName(json_string_get(pAuthor)) : "";
 		Asset.m_ImageUrl = NormalizeWorkshopAssetUrl(json_string_get(pImage));
 		if(Asset.m_ImageUrl.empty())
 			continue;
+		Asset.m_ThumbUrl = str_comp(Category.m_pId, "entity_bg") == 0 ? "" : Asset.m_ImageUrl;
 
 		char aExt[16];
 		GuessUrlExtension(Asset.m_ImageUrl.c_str(), aExt, sizeof(aExt));
 
 		const std::string SafeInstallName = BuildSafeFilename(Asset.m_Name.c_str(), Asset.m_Id.c_str(), aExt);
 		const size_t DotPos = SafeInstallName.find_last_of('.');
-		Asset.m_LocalName = DotPos == std::string::npos ? SafeInstallName : SafeInstallName.substr(0, DotPos);
+		const std::string LocalBaseName = DotPos == std::string::npos ? SafeInstallName : SafeInstallName.substr(0, DotPos);
+		if(str_comp(Category.m_pId, "entity_bg") == 0)
+			Asset.m_LocalName = "entity_bg/" + LocalBaseName;
+		else
+			Asset.m_LocalName = LocalBaseName;
 		char aInstallPath[IO_MAX_PATH_LENGTH];
 		str_format(aInstallPath, sizeof(aInstallPath), "%s/%s", Category.m_pInstallFolder, SafeInstallName.c_str());
 		Asset.m_InstallPath = aInstallPath;
@@ -1439,7 +1813,12 @@ void ResetWorkshopState(SWorkshopHudState &WorkshopState, IGraphics *pGraphics, 
 	{
 		WorkshopState.m_pListTask->Abort();
 	}
+	if(AbortTasks && WorkshopState.m_pEntityBgPreviewTask)
+	{
+		WorkshopState.m_pEntityBgPreviewTask->Abort();
+	}
 	WorkshopState.m_pListTask.reset();
+	WorkshopState.m_pEntityBgPreviewTask.reset();
 
 	for(SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
 	{
@@ -1447,8 +1826,11 @@ void ResetWorkshopState(SWorkshopHudState &WorkshopState, IGraphics *pGraphics, 
 	}
 
 	WorkshopState.m_vAssets.clear();
+	WorkshopState.m_vEntityBgPreviewExtByName.clear();
+	WorkshopState.m_EntityBgPreviewBaseUrl.clear();
 	ClearWorkshopReadyThumbQueue(WorkshopState);
 	WorkshopState.m_Requested = false;
+	WorkshopState.m_EntityBgPreviewRequested = false;
 	WorkshopState.m_LoadFailed = false;
 	// Keep m_CacheTime and m_LastRefreshTime for cache reuse
 	str_copy(WorkshopState.m_aError, "");
@@ -1477,6 +1859,7 @@ static bool SaveWorkshopCache(SWorkshopHudState &WorkshopState, IStorage *pStora
 		JsonStr += "\"name\":\"" + JsonEscape(Asset.m_Name) + "\",";
 		JsonStr += "\"author\":\"" + JsonEscape(Asset.m_Author) + "\",";
 		JsonStr += "\"image_url\":\"" + JsonEscape(Asset.m_ImageUrl) + "\",";
+		JsonStr += "\"thumb_url\":\"" + JsonEscape(Asset.m_ThumbUrl) + "\",";
 		JsonStr += "\"thumb_cache\":\"" + JsonEscape(Asset.m_ThumbCachePath) + "\",";
 		JsonStr += "\"install_path\":\"" + JsonEscape(Asset.m_InstallPath) + "\"";
 		JsonStr += "}";
@@ -1534,14 +1917,20 @@ static bool LoadWorkshopCache(SWorkshopHudState &WorkshopState, IStorage *pStora
 			else if(str_comp(pKey, "name") == 0 && pVal->type == json_string)
 				Asset.m_Name = pVal->u.string.ptr;
 			else if(str_comp(pKey, "author") == 0 && pVal->type == json_string)
-				Asset.m_Author = pVal->u.string.ptr;
+				Asset.m_Author = NormalizeWorkshopAuthorName(pVal->u.string.ptr);
 			else if(str_comp(pKey, "image_url") == 0 && pVal->type == json_string)
 				Asset.m_ImageUrl = pVal->u.string.ptr;
+			else if(str_comp(pKey, "thumb_url") == 0 && pVal->type == json_string)
+				Asset.m_ThumbUrl = pVal->u.string.ptr;
 			else if(str_comp(pKey, "thumb_cache") == 0 && pVal->type == json_string)
 				Asset.m_ThumbCachePath = pVal->u.string.ptr;
 			else if(str_comp(pKey, "install_path") == 0 && pVal->type == json_string)
 				Asset.m_InstallPath = pVal->u.string.ptr;
 		}
+		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && Asset.m_LocalName.empty() && !Asset.m_InstallPath.empty())
+			Asset.m_LocalName = RebuildEntityBgWorkshopLocalName(Asset.m_InstallPath);
+		if(Asset.m_ThumbUrl.empty() && !str_endswith_nocase(Asset.m_ImageUrl.c_str(), ".map"))
+			Asset.m_ThumbUrl = Asset.m_ImageUrl;
 		Asset.m_Installed = pStorage->FileExists(Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE);
 		WorkshopState.m_vAssets.push_back(std::move(Asset));
 	}
@@ -1560,6 +1949,11 @@ static const char *GetWorkshopCacheFilename(int Tab)
 	case ASSETS_TAB_GAME: return "workshop_game.json";
 	case ASSETS_TAB_EMOTICONS: return "workshop_emoticons.json";
 	case ASSETS_TAB_PARTICLES: return "workshop_particles.json";
+	case ASSETS_TAB_GUI_CURSOR: return "workshop_gui_cursor.json";
+	case ASSETS_TAB_ARROW: return "workshop_arrow.json";
+	case ASSETS_TAB_STRONG_WEAK: return "workshop_strong_weak.json";
+	case ASSETS_TAB_ENTITY_BG: return "workshop_entity_bg.json";
+	case ASSETS_TAB_EXTRAS: return "workshop_extras.json";
 	default: return nullptr;
 	}
 }
@@ -1583,7 +1977,7 @@ bool DeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAssetNam
 	case ASSETS_TAB_ENTITY_BG:
 	{
 		char aMapPath[IO_MAX_PATH_LENGTH];
-		str_format(aMapPath, sizeof(aMapPath), "maps/%s.map", pAssetName);
+		ResolveEntityBgLocalMapPath(pStorage, pAssetName, IStorage::TYPE_SAVE, aMapPath, sizeof(aMapPath));
 		return pStorage->RemoveFile(aMapPath, IStorage::TYPE_SAVE);
 	}
 	case ASSETS_TAB_EXTRAS: pSubFolder = "extras"; break;
@@ -1612,7 +2006,7 @@ bool CanDeleteLocalAssetByTab(IStorage *pStorage, int CurTab, const char *pAsset
 	case ASSETS_TAB_ENTITY_BG:
 	{
 		char aMapPath[IO_MAX_PATH_LENGTH];
-		str_format(aMapPath, sizeof(aMapPath), "maps/%s.map", pAssetName);
+		ResolveEntityBgLocalMapPath(pStorage, pAssetName, IStorage::TYPE_SAVE, aMapPath, sizeof(aMapPath));
 		return pStorage->FileExists(aMapPath, IStorage::TYPE_SAVE);
 	}
 	case ASSETS_TAB_ENTITIES:
@@ -1680,6 +2074,110 @@ static void ClearAssetList(std::vector<TName> &vList, IGraphics *pGraphics)
 		ResetCustomItemPreviewState(Asset);
 	}
 	vList.clear();
+}
+
+void CMenus::SyncEntityBgInstalledWorkshopSources()
+{
+	SWorkshopHudState *pWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG);
+	if(pWorkshopState == nullptr)
+		return;
+
+	for(auto NameIt = m_vEntityBgSourceNames.begin(); NameIt != m_vEntityBgSourceNames.end();)
+	{
+		const auto SourceIt = m_vEntityBgSourceKinds.find(*NameIt);
+		if(SourceIt != m_vEntityBgSourceKinds.end() && SourceIt->second == EEntityBgHierarchyEntrySource::WORKSHOP)
+		{
+			char aMapPath[IO_MAX_PATH_LENGTH];
+			ResolveEntityBgLocalMapPath(Storage(), NameIt->c_str(), IStorage::TYPE_SAVE, aMapPath, sizeof(aMapPath));
+			if(aMapPath[0] == '\0' || !Storage()->FileExists(aMapPath, IStorage::TYPE_SAVE))
+			{
+				m_vEntityBgSourceKinds.erase(SourceIt);
+				NameIt = m_vEntityBgSourceNames.erase(NameIt);
+				continue;
+			}
+			m_vEntityBgSourceKinds[*NameIt] = EEntityBgHierarchyEntrySource::LOCAL;
+		}
+		++NameIt;
+	}
+
+	for(const SWorkshopHudAsset &Asset : pWorkshopState->m_vAssets)
+	{
+		if(!Asset.m_Installed || Asset.m_LocalName.empty())
+			continue;
+
+		if(std::find(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), Asset.m_LocalName) == m_vEntityBgSourceNames.end())
+			m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
+		m_vEntityBgSourceKinds[Asset.m_LocalName] = EEntityBgHierarchyEntrySource::WORKSHOP;
+	}
+}
+
+void CMenus::RefreshEntityBgHierarchyView()
+{
+	++m_aCustomPreviewEpoch[ASSETS_TAB_ENTITY_BG];
+	m_aaCustomPreviewDecodeQueue[ASSETS_TAB_ENTITY_BG].clear();
+	m_aaCustomPreviewReadyQueue[ASSETS_TAB_ENTITY_BG].clear();
+	m_aaCustomPreviewReadyQueued[ASSETS_TAB_ENTITY_BG].clear();
+
+	ClearAssetList(m_vEntityBgList, Graphics());
+	gs_vpSearchEntityBgList.clear();
+
+	::EnsureDefaultAssetVisible(m_vEntityBgSourceNames);
+	m_vEntityBgSourceKinds["default"] = EEntityBgHierarchyEntrySource::LOCAL;
+	SyncEntityBgInstalledWorkshopSources();
+
+	if(!m_ShowWorkshopAssets && IsEntityBgWorkshopFolderOrChild(m_aEntityBgCurrentFolder))
+		m_aEntityBgCurrentFolder[0] = '\0';
+
+	std::vector<SEntityBgHierarchyEntry> vEntries;
+	if(s_aFilterInputs[ASSETS_TAB_ENTITY_BG].IsEmpty())
+	{
+		vEntries = BuildEntityBgHierarchyEntries(m_vEntityBgSourceNames, m_aEntityBgCurrentFolder, m_ShowWorkshopAssets, &m_vEntityBgSourceKinds);
+	}
+	else
+	{
+		const char *pFilter = s_aFilterInputs[ASSETS_TAB_ENTITY_BG].GetString();
+		const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG);
+		for(const std::string &AssetName : m_vEntityBgSourceNames)
+		{
+			const auto SourceIt = m_vEntityBgSourceKinds.find(AssetName);
+			const EEntityBgHierarchyEntrySource Source = SourceIt != m_vEntityBgSourceKinds.end() ? SourceIt->second : EEntityBgHierarchyEntrySource::LOCAL;
+			if(!m_ShowWorkshopAssets && Source == EEntityBgHierarchyEntrySource::WORKSHOP)
+				continue;
+
+			SEntityBgHierarchyEntry Entry;
+			str_copy(Entry.m_aName, AssetName.c_str(), sizeof(Entry.m_aName));
+			const char *pDisplayName = AssetName.c_str();
+			if(const char *pSlash = str_rchr(pDisplayName, '/'))
+				pDisplayName = pSlash + 1;
+			str_copy(Entry.m_aDisplayName, pDisplayName, sizeof(Entry.m_aDisplayName));
+			Entry.m_IsDirectory = false;
+			Entry.m_Source = Source;
+
+			const char *pAuthor = FindWorkshopAuthorByLocalName(pWorkshopState, Entry.m_aName);
+			if(!SearchFilterMatches(pFilter, Entry.m_aDisplayName, pAuthor) &&
+				!SearchFilterMatches(pFilter, Entry.m_aName, pAuthor))
+				continue;
+
+			vEntries.push_back(Entry);
+		}
+
+		std::stable_sort(vEntries.begin(), vEntries.end(), [](const SEntityBgHierarchyEntry &Left, const SEntityBgHierarchyEntry &Right) {
+			return AssetResourceNameLess(Left.m_aDisplayName, Right.m_aDisplayName);
+		});
+	}
+
+	m_vEntityBgList.reserve(vEntries.size());
+	for(const SEntityBgHierarchyEntry &Entry : vEntries)
+	{
+		SCustomEntityBg Item;
+		str_copy(Item.m_aName, Entry.m_aName, sizeof(Item.m_aName));
+		str_copy(Item.m_aDisplayName, Entry.m_aDisplayName, sizeof(Item.m_aDisplayName));
+		Item.m_IsDirectory = Entry.m_IsDirectory;
+		m_vEntityBgList.push_back(Item);
+	}
+
+	dbg_assert(s_CurCustomTab == ASSETS_TAB_ENTITY_BG, "entity bg hierarchy refresh is only valid for entity bg tab");
+	gs_aInitCustomList[s_CurCustomTab] = true;
 }
 
 void CMenus::ClearCustomItems(int CurTab)
@@ -1769,6 +2267,9 @@ void CMenus::ClearCustomItems(int CurTab)
 	else if(CurTab == ASSETS_TAB_ENTITY_BG)
 	{
 		ClearAssetList(m_vEntityBgList, Graphics());
+		m_vEntityBgSourceNames.clear();
+		m_vEntityBgSourceKinds.clear();
+		m_aEntityBgCurrentFolder[0] = '\0';
 		gs_vpSearchEntityBgList.clear();
 
 		GameClient()->m_Background.LoadBackground();
@@ -1810,13 +2311,31 @@ static int InitSearchList(std::vector<TName *> &vpSearchList, std::vector<TName>
 {
 	vpSearchList.clear();
 	int ListSize = vAssetList.size();
+	const char *pFilter = s_aFilterInputs[s_CurCustomTab].GetString();
+	const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab);
 	for(int i = 0; i < ListSize; ++i)
 	{
 		TName *pAsset = &vAssetList[i];
 
+		if constexpr(std::is_same_v<TName, CMenus::SCustomEntityBg>)
+		{
+			if(pAsset->m_IsDirectory)
+			{
+				if(!s_aFilterInputs[s_CurCustomTab].IsEmpty() && !str_utf8_find_nocase(pAsset->m_aDisplayName, pFilter))
+					continue;
+				vpSearchList.push_back(pAsset);
+				continue;
+			}
+		}
+
 		// filter quick search
-		if(!s_aFilterInputs[s_CurCustomTab].IsEmpty() && !str_utf8_find_nocase(pAsset->m_aName, s_aFilterInputs[s_CurCustomTab].GetString()))
-			continue;
+		if(!s_aFilterInputs[s_CurCustomTab].IsEmpty())
+		{
+			const char *pAuthor = FindWorkshopAuthorByLocalName(pWorkshopState, pAsset->m_aName);
+			const char *pDisplayName = pAsset->m_aDisplayName[0] != '\0' ? pAsset->m_aDisplayName : pAsset->m_aName;
+			if(!SearchFilterMatches(pFilter, pDisplayName, pAuthor) && !SearchFilterMatches(pFilter, pAsset->m_aName, pAuthor))
+				continue;
+		}
 
 		vpSearchList.push_back(pAsset);
 	}
@@ -1851,11 +2370,11 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		s_apAssetsTabNames[ASSETS_TAB_EMOTICONS] = Localize("Emoticons");
 		s_apAssetsTabNames[ASSETS_TAB_PARTICLES] = Localize("Particles");
 		s_apAssetsTabNames[ASSETS_TAB_HUD] = Localize("HUD");
-		s_apAssetsTabNames[ASSETS_TAB_GUI_CURSOR] = Localize("GUI Cursor");
-		s_apAssetsTabNames[ASSETS_TAB_ARROW] = Localize("Arrow");
-		s_apAssetsTabNames[ASSETS_TAB_STRONG_WEAK] = Localize("Strong Weak");
-		s_apAssetsTabNames[ASSETS_TAB_ENTITY_BG] = Localize("Entity BG");
-		s_apAssetsTabNames[ASSETS_TAB_EXTRAS] = Localize("Extras");
+		s_apAssetsTabNames[ASSETS_TAB_GUI_CURSOR] = Localize("Mouse");
+		s_apAssetsTabNames[ASSETS_TAB_ARROW] = Localize("Direction Keys");
+		s_apAssetsTabNames[ASSETS_TAB_STRONG_WEAK] = Localize("Strong Weak Hook");
+		s_apAssetsTabNames[ASSETS_TAB_ENTITY_BG] = Localize("Entity Background Image");
+		s_apAssetsTabNames[ASSETS_TAB_EXTRAS] = Localize("Other");
 	}
 
 	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
@@ -1900,7 +2419,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		for(const SAssetResourceCategory &Category : GetAssetResourceCategories())
 		{
 			if(Category.m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE)
+			{
 				TryImportLegacySingleFileAsset(Storage(), Category);
+				EnsureBuiltinDefaultSingleFileAsset(Storage(), Category);
+			}
 		}
 
 		const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
@@ -1940,17 +2462,11 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			break;
 		case ASSETS_TAB_ENTITY_BG:
 			dbg_assert(pCurrentCategory != nullptr, "entity bg category must exist");
-			std::sort(m_vEntityBgList.begin(), m_vEntityBgList.end(), [](const CMenus::SCustomEntityBg &LeftItem, const CMenus::SCustomEntityBg &RightItem) {
-				return AssetResourceNameLess(LeftItem.m_aName, RightItem.m_aName);
-			});
+			RefreshEntityBgHierarchyView();
 			break;
 		case ASSETS_TAB_EXTRAS:
-			if(m_vExtrasList.empty())
-			{
-				SCustomExtras ExtrasItem;
-				str_copy(ExtrasItem.m_aName, "default");
-				m_vExtrasList.push_back(ExtrasItem);
-			}
+			dbg_assert(pCurrentCategory != nullptr, "extras category must exist");
+			EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList);
 			break;
 		}
 
@@ -2117,18 +2633,18 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			break;
 		case ASSETS_TAB_ENTITY_BG:
+			m_vEntityBgSourceNames.clear();
+			m_vEntityBgSourceKinds.clear();
+			m_vEntityBgSourceNames.reserve(vEntries.size());
+			m_vEntityBgSourceKinds.reserve(vEntries.size());
 			for(const auto &Entry : vEntries)
 			{
-				SCustomEntityBg Item;
-				str_copy(Item.m_aName, Entry.m_aName);
-				m_vEntityBgList.push_back(Item);
+				m_vEntityBgSourceNames.emplace_back(Entry.m_aName);
+				m_vEntityBgSourceKinds[Entry.m_aName] = Entry.m_Source;
 			}
 			{
 				CPerfTimer SortTimer;
-				dbg_assert(pCurrentCategory != nullptr, "entity bg category must exist");
-				std::sort(m_vEntityBgList.begin(), m_vEntityBgList.end(), [](const CMenus::SCustomEntityBg &LeftItem, const CMenus::SCustomEntityBg &RightItem) {
-					return AssetResourceNameLess(LeftItem.m_aName, RightItem.m_aName);
-				});
+				RefreshEntityBgHierarchyView();
 				char aExtra[128];
 				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vEntityBgList.size());
 				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
@@ -2143,7 +2659,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 			{
 				CPerfTimer SortTimer;
-				std::sort(m_vExtrasList.begin(), m_vExtrasList.end());
+				dbg_assert(pCurrentCategory != nullptr, "extras category must exist");
+				EnsureDefaultAssetVisible(*pCurrentCategory, m_vExtrasList);
 				char aExtra[128];
 				str_format(aExtra, sizeof(aExtra), "tab=%d list_size=%d", s_CurCustomTab, (int)m_vExtrasList.size());
 				LogAssetsPerfStage("assets_sort_list", SortTimer.ElapsedMs(), false, aExtra);
@@ -2210,7 +2727,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	// skin selector
 	MainView.HSplitTop(MainView.h - 10.0f - ms_ButtonHeight, &CustomList, &MainView);
-	if(s_CurCustomTab == ASSETS_TAB_HUD || s_CurCustomTab == ASSETS_TAB_ENTITIES || s_CurCustomTab == ASSETS_TAB_GAME || s_CurCustomTab == ASSETS_TAB_EMOTICONS || s_CurCustomTab == ASSETS_TAB_PARTICLES)
+	if(UsesCombinedAssetList(AssetResourceCategoryByTab(s_CurCustomTab)))
 	{
 		WorkshopHudView = CustomList;
 	}
@@ -2394,6 +2911,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		SCustomItem *pItem = GetCustomItemMutable(s_CurCustomTab, Index);
 		if(pItem == nullptr || PreviewDecodeStartsThisFrame >= MaxPreviewDecodeStartsPerFrame)
 			return;
+		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && static_cast<SCustomEntityBg *>(pItem)->m_IsDirectory)
+			return;
 		if(pItem->m_RenderTexture.IsValid() || pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_LOADING ||
 			pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_READY || pItem->m_PreviewState == SCustomItem::PREVIEW_STATE_LOADED)
 			return;
@@ -2493,23 +3012,35 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	{
 		CUIRect m_TextureRect;
 		CUIRect m_TitleRect;
+		CUIRect m_AuthorRect;
 		CUIRect m_ActionButtonRect;
 		CUIRect m_StatusTagRect;
 		CUIRect m_LocalOnlyBadgeRect;
 		bool m_HasActionButton = false;
 		bool m_HasStatusTag = false;
+		bool m_HasAuthorRow = false;
 		bool m_HasLocalOnlyBadge = false;
 	};
 
-	auto LayoutAssetCardHeader = [&](const CUIRect &CardRect, bool HasActionButton, const char *pStatusLabel, bool ShowLocalOnlyBadge) {
+	constexpr float AssetCardFooterSpacing = 8.0f;
+	constexpr float AssetCardHeaderHeightSingleLine = 24.0f;
+	constexpr float AssetCardHeaderHeightWithAuthor = 34.0f;
+	constexpr float AssetCardHeaderMargin = 3.0f;
+	constexpr float AssetCardHeaderControlMargin = 2.0f;
+	constexpr float AssetCardHeaderControlHeight = AssetCardHeaderHeightSingleLine - AssetCardHeaderMargin * 2.0f - AssetCardHeaderControlMargin * 2.0f;
+	constexpr float AssetCardTextReserveSingleLine = 20.0f;
+	constexpr float AssetCardTextReserveWithAuthor = 34.0f;
+
+	auto LayoutAssetCardHeader = [&](const CUIRect &CardRect, bool HasActionButton, const char *pStatusLabel, bool ShowLocalOnlyBadge, bool ShowAuthorRow) {
 		SAssetCardHeaderLayout Layout;
 		CUIRect HeaderRect;
 		CUIRect BodyRect = CardRect;
-		BodyRect.HSplitTop(20.0f, &HeaderRect, &Layout.m_TextureRect);
-		Layout.m_TextureRect.HSplitTop(10.0f, nullptr, &Layout.m_TextureRect);
+		const float AssetCardHeaderHeight = ShowAuthorRow ? AssetCardHeaderHeightWithAuthor : AssetCardHeaderHeightSingleLine;
+		BodyRect.HSplitTop(AssetCardHeaderHeight, &HeaderRect, &Layout.m_TextureRect);
+		Layout.m_TextureRect.HSplitTop(8.0f, nullptr, &Layout.m_TextureRect);
 
 		CUIRect TitleRect = HeaderRect;
-		TitleRect.Margin(2.0f, &TitleRect);
+		TitleRect.Margin(AssetCardHeaderMargin, &TitleRect);
 
 		if(HasActionButton)
 		{
@@ -2518,15 +3049,27 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		}
 
 		if(Layout.m_HasActionButton)
-			Layout.m_ActionButtonRect.Margin(2.0f, &Layout.m_ActionButtonRect);
+		{
+			Layout.m_ActionButtonRect.Margin(AssetCardHeaderControlMargin, &Layout.m_ActionButtonRect);
+			const float ControlHeight = minimum(AssetCardHeaderControlHeight, Layout.m_ActionButtonRect.h);
+			if(Layout.m_ActionButtonRect.h > ControlHeight)
+			{
+				const float VerticalInset = (Layout.m_ActionButtonRect.h - ControlHeight) / 2.0f;
+				Layout.m_ActionButtonRect.y += VerticalInset;
+				Layout.m_ActionButtonRect.h = ControlHeight;
+			}
+		}
 
 		const float BadgeGap = 4.0f;
 		const float TagPadding = 6.0f;
-		const float TagMinWidth = 58.0f;
-		const float LocalOnlyBadgeMinWidth = 58.0f;
-		const float TitleMinWidth = 36.0f;
+		const float TagMinWidth = 0.0f;
+		const float LocalOnlyBadgeMinWidth = 0.0f;
+		const float TitleMinWidth = 52.0f;
 		const float TagFontSize = 7.5f;
 		const float BadgeFontSize = 7.5f;
+		const float DownloadedTagBaseWidth = TextRender()->TextWidth(TagFontSize, Localize("Downloaded"), -1, -1.0f) + TagPadding * 2.0f;
+		const float UnifiedStatusTagWidth = DownloadedTagBaseWidth;
+		const float HeaderControlHeight = minimum(AssetCardHeaderControlHeight, TitleRect.h);
 		auto ReserveTrailingRect = [&](CUIRect &AvailableRect, float DesiredWidth, float MinWidth, CUIRect &OutRect, bool &OutVisible) {
 			if(AvailableRect.w <= 0.0f)
 				return;
@@ -2550,31 +3093,37 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 		if(pStatusLabel != nullptr && pStatusLabel[0] != '\0')
 		{
-			const float TagHeight = Layout.m_HasActionButton ? Layout.m_ActionButtonRect.h : TitleRect.h;
-			const float DesiredTagWidth = maximum(TagMinWidth, TextRender()->TextWidth(TagFontSize, pStatusLabel, -1, -1.0f) + TagPadding * 2.0f);
+			const float TagHeight = HeaderControlHeight;
+			const float DesiredTagWidth = UnifiedStatusTagWidth;
 			ReserveTrailingRect(TitleRect, DesiredTagWidth, TagMinWidth, Layout.m_StatusTagRect, Layout.m_HasStatusTag);
 			if(Layout.m_HasStatusTag && TagHeight > 0.0f && Layout.m_StatusTagRect.h > TagHeight)
 			{
 				const float VerticalInset = (Layout.m_StatusTagRect.h - TagHeight) / 2.0f;
-				Layout.m_StatusTagRect.Margin(VerticalInset, &Layout.m_StatusTagRect);
+				Layout.m_StatusTagRect.y += VerticalInset;
+				Layout.m_StatusTagRect.h = TagHeight;
 			}
 		}
 
 		if(ShowLocalOnlyBadge)
 		{
-			const char *pBadgeLabel = Localize("仅本地资源");
+			const char *pBadgeLabel = Localize("Local-only");
 			const float BadgePadding = 6.0f;
-			const float BadgeHeight = Layout.m_HasActionButton ? Layout.m_ActionButtonRect.h : TitleRect.h;
-			const float DesiredBadgeWidth = maximum(LocalOnlyBadgeMinWidth, TextRender()->TextWidth(BadgeFontSize, pBadgeLabel, -1, -1.0f) + BadgePadding * 2.0f);
+			const float BadgeHeight = HeaderControlHeight;
+			const float DesiredBadgeWidth = TextRender()->TextWidth(BadgeFontSize, pBadgeLabel, -1, -1.0f) + BadgePadding * 2.0f;
 			ReserveTrailingRect(TitleRect, DesiredBadgeWidth, LocalOnlyBadgeMinWidth, Layout.m_LocalOnlyBadgeRect, Layout.m_HasLocalOnlyBadge);
 			if(Layout.m_HasLocalOnlyBadge && BadgeHeight > 0.0f && Layout.m_LocalOnlyBadgeRect.h > BadgeHeight)
 			{
 				const float VerticalInset = (Layout.m_LocalOnlyBadgeRect.h - BadgeHeight) / 2.0f;
-				Layout.m_LocalOnlyBadgeRect.Margin(VerticalInset, &Layout.m_LocalOnlyBadgeRect);
+				Layout.m_LocalOnlyBadgeRect.y += VerticalInset;
+				Layout.m_LocalOnlyBadgeRect.h = BadgeHeight;
 			}
 		}
 
-		Layout.m_TitleRect = TitleRect;
+		Layout.m_HasAuthorRow = ShowAuthorRow;
+		if(Layout.m_HasAuthorRow)
+			TitleRect.HSplitTop(11.0f, &Layout.m_TitleRect, &Layout.m_AuthorRect);
+		else
+			Layout.m_TitleRect = TitleRect;
 		return Layout;
 	};
 
@@ -2610,6 +3159,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
 	{
 		SearchListSize = gs_vpSearchStrongWeakList.size();
+		TextureHeight = 50;
 	}
 	else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
 	{
@@ -2619,6 +3169,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	{
 		SearchListSize = gs_vpSearchExtrasList.size();
 	}
+
+	const float AssetCardTextReserve = s_CurCustomTab == ASSETS_TAB_ENTITY_BG ? AssetCardTextReserveSingleLine : AssetCardTextReserveWithAuthor;
 
 	{
 		CPerfTimer ScanTimer;
@@ -2782,17 +3334,17 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		LogAssetsPerfStage("assets_preview_gpu_upload_scan", ScanTimer.ElapsedMs(), false, aExtra);
 	}
 
-	if(s_CurCustomTab != ASSETS_TAB_HUD && s_CurCustomTab != ASSETS_TAB_ENTITIES && s_CurCustomTab != ASSETS_TAB_GAME && s_CurCustomTab != ASSETS_TAB_EMOTICONS && s_CurCustomTab != ASSETS_TAB_PARTICLES)
+	if(!UsesCombinedAssetList(pCurrentCategory))
 	{
 		static CListBox s_ListBox;
 		const int LocalColumns = maximum(1, (int)(CustomList.w / (Margin + TextureWidth)));
-		s_ListBox.DoStart(TextureHeight + 15.0f + 10.0f + Margin, SearchListSize, LocalColumns, 1, OldSelected, &CustomList, false);
+		s_ListBox.DoStart(TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin, SearchListSize, LocalColumns, 1, OldSelected, &CustomList, false);
 		static std::vector<CButtonContainer> s_vLocalDeleteButtons;
 		s_vLocalDeleteButtons.resize(SearchListSize);
-		static char s_aPendingDeleteName[50] = "";
+		static char s_aPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
 		static CUi::SConfirmPopupContext s_DeleteConfirmPopup;
 		bool DeleteLocalRequested = false;
-		char aDeleteLocalName[50] = "";
+		char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
 		int FirstVisibleIndex = -1;
 		int LastVisibleIndex = -1;
 		for(size_t i = 0; i < SearchListSize; ++i)
@@ -2864,10 +3416,19 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			const CUIRect CardRect = ItemRect;
 			const bool HasDeleteButton = CanDeleteLocalAssetByTab(Storage(), s_CurCustomTab, pItem->m_aName);
 			const bool ShowLocalOnlyBadge = pCurrentCategory != nullptr && pCurrentCategory->m_LocalOnlyBadge && !pCurrentCategory->m_WorkshopEnabled;
-			const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, nullptr, ShowLocalOnlyBadge);
-			Ui()->DoLabel(&HeaderLayout.m_TitleRect, pItem->m_aName, HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
+			const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, nullptr, ShowLocalOnlyBadge, false);
+			CUIRect TitleRect = HeaderLayout.m_TitleRect;
+			SLabelProperties TitleProps;
+			TitleProps.m_MaxWidth = static_cast<int>(TitleRect.w);
+			Ui()->DoLabel(&TitleRect, AssetCardDisplayName(pItem), 9.5f, TEXTALIGN_ML, TitleProps);
 			if(HeaderLayout.m_HasLocalOnlyBadge)
-				RenderCardBadge(HeaderLayout.m_LocalOnlyBadgeRect, Localize("仅本地资源"), ColorRGBA(0.46f, 0.41f, 0.20f, 0.88f), 7.5f);
+				RenderCardBadge(HeaderLayout.m_LocalOnlyBadgeRect, Localize("Local-only"), ColorRGBA(0.46f, 0.41f, 0.20f, 0.88f), 7.5f);
+			if(HeaderLayout.m_HasAuthorRow)
+			{
+				SLabelProperties AuthorProps;
+				AuthorProps.m_MaxWidth = static_cast<int>(HeaderLayout.m_AuthorRect.w);
+				Ui()->DoLabel(&HeaderLayout.m_AuthorRect, "--", 7.0f, TEXTALIGN_ML, AuthorProps);
+			}
 			if(pItem->m_RenderTexture.IsValid())
 			{
 				Graphics()->WrapClamp();
@@ -2985,110 +3546,152 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			s_aPendingDeleteName[0] = '\0';
 		}
 
-		if(!DeleteLocalRequested && s_DeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && NewSelected >= 0 && OldSelected != NewSelected)
+		if(!DeleteLocalRequested && s_DeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && s_ListBox.WasItemSelected() && NewSelected >= 0 && OldSelected != NewSelected)
 		{
-			if(GetCustomItem(s_CurCustomTab, NewSelected)->m_aName[0] != '\0')
+			const SCustomItem *pSelectedItem = GetCustomItem(s_CurCustomTab, NewSelected);
+			if(pSelectedItem->m_aName[0] != '\0')
 			{
+				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+				{
+					const auto *pEntityBgItem = static_cast<const SCustomEntityBg *>(pSelectedItem);
+					if(pEntityBgItem->m_IsDirectory)
+					{
+						if(str_comp(pSelectedItem->m_aName, "..") == 0)
+						{
+							char aParentFolder[IO_MAX_PATH_LENGTH];
+							BuildEntityBgParentFolder(m_aEntityBgCurrentFolder, aParentFolder, sizeof(aParentFolder));
+							str_copy(m_aEntityBgCurrentFolder, aParentFolder, sizeof(m_aEntityBgCurrentFolder));
+						}
+						else
+						{
+							str_copy(m_aEntityBgCurrentFolder, pSelectedItem->m_aName, sizeof(m_aEntityBgCurrentFolder));
+						}
+						RefreshEntityBgHierarchyView();
+						return;
+					}
+				}
+
 				if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
 				{
-					str_copy(g_Config.m_ClAssetsEntities, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
-					GameClient()->m_MapImages.ChangeEntitiesPath(GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetsEntities, pSelectedItem->m_aName);
+					GameClient()->m_MapImages.ChangeEntitiesPath(pSelectedItem->m_aName);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_GAME)
 				{
-					str_copy(g_Config.m_ClAssetGame, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetGame, pSelectedItem->m_aName);
 					GameClient()->LoadGameSkin(g_Config.m_ClAssetGame);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
 				{
-					str_copy(g_Config.m_ClAssetEmoticons, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetEmoticons, pSelectedItem->m_aName);
 					GameClient()->LoadEmoticonsSkin(g_Config.m_ClAssetEmoticons);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
 				{
-					str_copy(g_Config.m_ClAssetParticles, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetParticles, pSelectedItem->m_aName);
 					GameClient()->LoadParticlesSkin(g_Config.m_ClAssetParticles);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_HUD)
 				{
-					str_copy(g_Config.m_ClAssetHud, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetHud, pSelectedItem->m_aName);
 					GameClient()->LoadHudSkin(g_Config.m_ClAssetHud);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR)
 				{
-					str_copy(g_Config.m_ClAssetGuiCursor, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetGuiCursor, pSelectedItem->m_aName);
 					GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_ARROW)
 				{
-					str_copy(g_Config.m_ClAssetArrow, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetArrow, pSelectedItem->m_aName);
 					GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
 				{
-					str_copy(g_Config.m_ClAssetStrongWeak, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetStrongWeak, pSelectedItem->m_aName);
 					GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
 				{
-					ApplyEntityBgSelection(GameClient(), GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					ApplyEntityBgSelection(GameClient(), pSelectedItem->m_aName);
 				}
 				else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 				{
-					str_copy(g_Config.m_ClAssetExtras, GetCustomItem(s_CurCustomTab, NewSelected)->m_aName);
+					str_copy(g_Config.m_ClAssetExtras, pSelectedItem->m_aName);
 					GameClient()->LoadExtrasSkin(g_Config.m_ClAssetExtras);
 				}
 			}
 		}
 	}
 
-	if((s_CurCustomTab == ASSETS_TAB_HUD || s_CurCustomTab == ASSETS_TAB_ENTITIES || s_CurCustomTab == ASSETS_TAB_GAME || s_CurCustomTab == ASSETS_TAB_EMOTICONS || s_CurCustomTab == ASSETS_TAB_PARTICLES) && WorkshopHudView.h > 0.0f)
+	if(const SAssetResourceCategory *pCategory = AssetResourceCategoryByTab(s_CurCustomTab); UsesCombinedAssetList(pCategory) && WorkshopHudView.h > 0.0f)
 	{
-		const SAssetResourceCategory *pCategory = AssetResourceCategoryByTab(s_CurCustomTab);
-		dbg_assert(pCategory != nullptr, "workshop asset category must exist");
-		SWorkshopHudState &WorkshopState = s_CurCustomTab == ASSETS_TAB_HUD ? gs_WorkshopHudState :
-			(s_CurCustomTab == ASSETS_TAB_ENTITIES ? gs_WorkshopEntitiesState :
-				(s_CurCustomTab == ASSETS_TAB_GAME ? gs_WorkshopGameState :
-					(s_CurCustomTab == ASSETS_TAB_EMOTICONS ? gs_WorkshopEmoticonsState : gs_WorkshopParticlesState)));
+		SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab);
+		dbg_assert(pWorkshopState != nullptr, "workshop asset state must exist");
+		SWorkshopHudState &WorkshopState = *pWorkshopState;
 		const char *pInstallFolder = pCategory->m_pInstallFolder;
 
 		auto IsLocalAssetSelected = [&](const char *pName) {
-			if(s_CurCustomTab == ASSETS_TAB_HUD)
-				return str_comp(pName, g_Config.m_ClAssetHud) == 0;
-			if(s_CurCustomTab == ASSETS_TAB_GAME)
-				return str_comp(pName, g_Config.m_ClAssetGame) == 0;
-			if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
-				return str_comp(pName, g_Config.m_ClAssetEmoticons) == 0;
-			if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
-				return str_comp(pName, g_Config.m_ClAssetParticles) == 0;
-			return str_comp(pName, g_Config.m_ClAssetsEntities) == 0;
+			switch(s_CurCustomTab)
+			{
+			case ASSETS_TAB_HUD: return str_comp(pName, g_Config.m_ClAssetHud) == 0;
+			case ASSETS_TAB_GAME: return str_comp(pName, g_Config.m_ClAssetGame) == 0;
+			case ASSETS_TAB_EMOTICONS: return str_comp(pName, g_Config.m_ClAssetEmoticons) == 0;
+			case ASSETS_TAB_PARTICLES: return str_comp(pName, g_Config.m_ClAssetParticles) == 0;
+			case ASSETS_TAB_GUI_CURSOR: return str_comp(pName, g_Config.m_ClAssetGuiCursor) == 0;
+			case ASSETS_TAB_ARROW: return str_comp(pName, g_Config.m_ClAssetArrow) == 0;
+			case ASSETS_TAB_STRONG_WEAK: return str_comp(pName, g_Config.m_ClAssetStrongWeak) == 0;
+			case ASSETS_TAB_ENTITY_BG: return IsEntityBgConfigSelected(pName);
+			case ASSETS_TAB_EXTRAS: return str_comp(pName, g_Config.m_ClAssetExtras) == 0;
+			case ASSETS_TAB_ENTITIES: return str_comp(pName, g_Config.m_ClAssetsEntities) == 0;
+			default: return false;
+			}
 		};
 
 		auto ApplyLocalAssetSelection = [&](const char *pName) {
-			if(s_CurCustomTab == ASSETS_TAB_HUD)
+			switch(s_CurCustomTab)
 			{
+			case ASSETS_TAB_HUD:
 				str_copy(g_Config.m_ClAssetHud, pName);
 				GameClient()->LoadHudSkin(g_Config.m_ClAssetHud);
-			}
-			else if(s_CurCustomTab == ASSETS_TAB_GAME)
-			{
+				break;
+			case ASSETS_TAB_GAME:
 				str_copy(g_Config.m_ClAssetGame, pName);
 				GameClient()->LoadGameSkin(g_Config.m_ClAssetGame);
-			}
-			else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
-			{
+				break;
+			case ASSETS_TAB_EMOTICONS:
 				str_copy(g_Config.m_ClAssetEmoticons, pName);
 				GameClient()->LoadEmoticonsSkin(g_Config.m_ClAssetEmoticons);
-			}
-			else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
-			{
+				break;
+			case ASSETS_TAB_PARTICLES:
 				str_copy(g_Config.m_ClAssetParticles, pName);
 				GameClient()->LoadParticlesSkin(g_Config.m_ClAssetParticles);
-			}
-			else
-			{
+				break;
+			case ASSETS_TAB_GUI_CURSOR:
+				str_copy(g_Config.m_ClAssetGuiCursor, pName);
+				GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+				break;
+			case ASSETS_TAB_ARROW:
+				str_copy(g_Config.m_ClAssetArrow, pName);
+				GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
+				break;
+			case ASSETS_TAB_STRONG_WEAK:
+				str_copy(g_Config.m_ClAssetStrongWeak, pName);
+				GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
+				break;
+			case ASSETS_TAB_ENTITY_BG:
+				ApplyEntityBgSelection(GameClient(), pName);
+				break;
+			case ASSETS_TAB_EXTRAS:
+				str_copy(g_Config.m_ClAssetExtras, pName);
+				GameClient()->LoadExtrasSkin(g_Config.m_ClAssetExtras);
+				break;
+			case ASSETS_TAB_ENTITIES:
 				str_copy(g_Config.m_ClAssetsEntities, pName);
 				GameClient()->m_MapImages.ChangeEntitiesPath(g_Config.m_ClAssetsEntities);
+				break;
+			default:
+				break;
 			}
 		};
 
@@ -3103,6 +3706,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			Http()->Run(WorkshopState.m_pListTask);
 		};
 
+		auto StartEntityBgPreviewTask = [&]() {
+			auto pTask = HttpGet(ENTITY_BG_PREVIEW_MAP_URL);
+			pTask->Timeout(CTimeout{10000, 20000, 200, 10});
+			pTask->LogProgress(HTTPLOG::FAILURE);
+			pTask->FailOnErrorStatus(false);
+			WorkshopState.m_pEntityBgPreviewTask = std::move(pTask);
+			Http()->Run(WorkshopState.m_pEntityBgPreviewTask);
+		};
+
 		// Load from local cache first for instant display
 		if(!WorkshopState.m_Requested && WorkshopState.m_vAssets.empty())
 		{
@@ -3111,8 +3723,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			{
 				WorkshopState.m_CacheTime = Client()->LocalTime();
 				WorkshopState.m_Requested = true; // Mark as loaded from cache
+				gs_aInitCustomList[s_CurCustomTab] = true;
+				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+					RefreshEntityBgHierarchyView();
 				// Don't set m_LastRefreshTime here, so we won't auto-refresh
 			}
+		}
+
+		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && !WorkshopState.m_EntityBgPreviewRequested && !WorkshopState.m_pEntityBgPreviewTask)
+		{
+			StartEntityBgPreviewTask();
 		}
 
 		// Only start HTTP request if no cache exists (first time or after refresh)
@@ -3214,10 +3834,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						}),
 					WorkshopState.m_vAssets.end()
 				);
+
+				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+					ApplyEntityBgPreviewThumbUrls(WorkshopState);
 				PruneWorkshopReadyThumbQueue(WorkshopState);
 				
 				WorkshopState.m_Requested = true;
 				WorkshopState.m_LastRefreshTime = Client()->LocalTime();
+				gs_aInitCustomList[s_CurCustomTab] = true;
+				if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+					RefreshEntityBgHierarchyView();
 				
 				// Save to local cache
 				const char *pCacheFile = GetWorkshopCacheFilename(s_CurCustomTab);
@@ -3353,27 +3979,30 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			LogAssetsPerfStage("assets_workshop_thumb_decode_deferred", 0.0, true, aDeferredExtra);
 		}
 		if(RefreshLocalList)
-			ClearCustomItems(s_CurCustomTab);
+		{
+			if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+			{
+				for(const SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
+				{
+					if(!Asset.m_Installed || Asset.m_LocalName.empty())
+						continue;
+					if(std::find(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), Asset.m_LocalName) == m_vEntityBgSourceNames.end())
+						m_vEntityBgSourceNames.push_back(Asset.m_LocalName);
+					if(m_vEntityBgSourceKinds.find(Asset.m_LocalName) == m_vEntityBgSourceKinds.end())
+						m_vEntityBgSourceKinds.emplace(Asset.m_LocalName, EEntityBgHierarchyEntrySource::WORKSHOP);
+				}
+				RefreshEntityBgHierarchyView();
+			}
+			else
+			{
+				ClearCustomItems(s_CurCustomTab);
+			}
+		}
 
 		WorkshopHudView.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_ALL, 8.0f);
 		WorkshopHudView.Margin(8.0f, &WorkshopHudView);
 
-		CUIRect WorkshopHeader, WorkshopListArea;
-		WorkshopHudView.HSplitTop(20.0f, &WorkshopHeader, &WorkshopListArea);
-
-		CUIRect WorkshopRefreshButton;
-		WorkshopHeader.VSplitRight(76.0f, &WorkshopHeader, &WorkshopRefreshButton);
-		static CButtonContainer s_WorkshopRefreshButton;
-		if(DoButton_Menu(&s_WorkshopRefreshButton, "刷新", 0, &WorkshopRefreshButton))
-		{
-			// Incremental refresh: don't clear data, just fetch updates
-			if(!WorkshopState.m_pListTask)
-			{
-				WorkshopState.m_Requested = false; // Allow new request
-				StartWorkshopListTask();
-			}
-		}
-
+		CUIRect WorkshopListArea = WorkshopHudView;
 		WorkshopListArea.HSplitTop(4.0f, nullptr, &WorkshopListArea);
 		const size_t LocalAssetTotalCount = SearchListSize;
 		std::vector<size_t> vVisibleLocalAssetIndices;
@@ -3386,25 +4015,34 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		const size_t LocalAssetCount = vVisibleLocalAssetIndices.size();
 
 			const size_t AssetCount = WorkshopState.m_vAssets.size();
-			static std::vector<CButtonContainer> s_vWorkshopHudActionButtons;
-			static std::vector<CButtonContainer> s_vWorkshopEntitiesActionButtons;
-			static std::vector<CButtonContainer> s_vWorkshopGameActionButtons;
-			static std::vector<CButtonContainer> s_vWorkshopEmoticonsActionButtons;
-			static std::vector<CButtonContainer> s_vWorkshopParticlesActionButtons;
-			auto &vWorkshopActionButtons = s_CurCustomTab == ASSETS_TAB_HUD ? s_vWorkshopHudActionButtons :
-				(s_CurCustomTab == ASSETS_TAB_ENTITIES ? s_vWorkshopEntitiesActionButtons :
-					(s_CurCustomTab == ASSETS_TAB_GAME ? s_vWorkshopGameActionButtons :
-						(s_CurCustomTab == ASSETS_TAB_EMOTICONS ? s_vWorkshopEmoticonsActionButtons : s_vWorkshopParticlesActionButtons)));
+			static std::array<std::vector<CButtonContainer>, NUMBER_OF_ASSETS_TABS> s_avWorkshopActionButtons;
+			auto &vWorkshopActionButtons = s_avWorkshopActionButtons[s_CurCustomTab];
 			vWorkshopActionButtons.resize(AssetCount);
 
 		std::vector<size_t> vVisibleDownloadableAssetIndices;
 		vVisibleDownloadableAssetIndices.reserve(AssetCount);
+		auto ShouldShowEntityBgWorkshopAssetsInCurrentFolder = [&]() {
+			return m_ShowWorkshopAssets && IsEntityBgWorkshopFolderOrChild(m_aEntityBgCurrentFolder);
+		};
+		auto WorkshopAssetMatchesCurrentEntityBgFolder = [&](const SWorkshopHudAsset &Asset) {
+			if(!ShouldShowEntityBgWorkshopAssetsInCurrentFolder())
+				return false;
+			if(IsEntityBgWorkshopFolderPath(m_aEntityBgCurrentFolder))
+				return true;
+			const int CurrentFolderLength = str_length(m_aEntityBgCurrentFolder);
+			return str_startswith(Asset.m_LocalName.c_str(), m_aEntityBgCurrentFolder) && Asset.m_LocalName[CurrentFolderLength] == '/';
+		};
 		for(size_t AssetIndex = 0; AssetIndex < AssetCount; ++AssetIndex)
 		{
 			const SWorkshopHudAsset &Asset = WorkshopState.m_vAssets[AssetIndex];
 			if(Asset.m_Installed)
 				continue;
-			if(!s_aFilterInputs[s_CurCustomTab].IsEmpty() && !str_utf8_find_nocase(Asset.m_Name.c_str(), s_aFilterInputs[s_CurCustomTab].GetString()))
+			if(!m_ShowWorkshopAssets)
+				continue;
+			if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && !WorkshopAssetMatchesCurrentEntityBgFolder(Asset))
+				continue;
+			if(!s_aFilterInputs[s_CurCustomTab].IsEmpty() &&
+				!SearchFilterMatches(s_aFilterInputs[s_CurCustomTab].GetString(), Asset.m_Name.c_str(), Asset.m_Author.c_str()))
 				continue;
 			vVisibleDownloadableAssetIndices.push_back(AssetIndex);
 		}
@@ -3414,7 +4052,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			if(WorkshopState.m_pListTask)
 			{
-				Ui()->DoLabel(&WorkshopListArea, Localize("Loading..."), 12.0f, TEXTALIGN_MC);
+				Ui()->DoLabel(&WorkshopListArea, Localize("Loading…"), 12.0f, TEXTALIGN_MC);
 			}
 			else if(WorkshopState.m_LoadFailed)
 			{
@@ -3433,12 +4071,12 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			const int Columns = std::max(1, static_cast<int>(WorkshopListArea.w / (Margin + TextureWidth)));
 			static CListBox s_WorkshopAssetsListBox;
-			s_WorkshopAssetsListBox.DoStart(TextureHeight + 15.0f + 10.0f + Margin, CombinedCount, Columns, 1, -1, &WorkshopListArea, false);
+			s_WorkshopAssetsListBox.DoStart(TextureHeight + AssetCardTextReserve + AssetCardFooterSpacing + Margin, CombinedCount, Columns, 1, -1, &WorkshopListArea, false);
 
 			static std::vector<CButtonContainer> s_vWorkshopLocalDeleteButtons;
 			s_vWorkshopLocalDeleteButtons.resize(LocalAssetTotalCount);
 
-			static char s_aWorkshopPendingDeleteName[50] = "";
+			static char s_aWorkshopPendingDeleteName[IO_MAX_PATH_LENGTH] = "";
 			static CUi::SConfirmPopupContext s_WorkshopDeleteConfirmPopup;
 			static size_t s_PendingDownloadAssetIndex = SIZE_MAX;
 			static CUi::SConfirmPopupContext s_WorkshopDownloadConfirmPopup;
@@ -3447,7 +4085,11 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			int ThumbStartsThisFrame = 0;
 			int OldCombinedSelected = -1;
 			bool DeleteLocalRequested = false;
-			char aDeleteLocalName[50] = "";
+			char aDeleteLocalName[IO_MAX_PATH_LENGTH] = "";
+			bool DownloadRequested = false;
+			size_t RequestedDownloadAssetIndex = SIZE_MAX;
+			float RequestedDownloadPopupX = 0.0f;
+			float RequestedDownloadPopupY = 0.0f;
 			bool WorkshopActionTriggered = false;
 			CPerfTimer WorkshopCardsTimer;
 			int FirstVisibleLocalIndex = -1;
@@ -3456,7 +4098,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				CUIRect StatusRect = TagRect;
 				const ColorRGBA TagColor = Downloaded ? ColorRGBA(0.18f, 0.62f, 0.32f, 0.88f) : ColorRGBA(0.52f, 0.52f, 0.58f, 0.82f);
 				StatusRect.Draw(TagColor, IGraphics::CORNER_ALL, minimum(StatusRect.h / 2.0f, 6.0f));
-				Ui()->DoLabel(&StatusRect, Localize(Downloaded ? "Downloaded" : "Not downloaded"), 7.5f, TEXTALIGN_MC);
+				SLabelProperties StatusLabelProps;
+				StatusLabelProps.m_MaxWidth = static_cast<int>(StatusRect.w - 2.0f);
+				Ui()->DoLabel(&StatusRect, Localize(Downloaded ? "Downloaded" : "Not downloaded"), 7.5f, TEXTALIGN_MC, StatusLabelProps);
 			};
 
 			for(size_t ListIndex = 0; ListIndex < CombinedCount; ++ListIndex)
@@ -3482,15 +4126,33 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					LastVisibleLocalIndex = (int)LocalIndex;
 
 					const CUIRect CardRect = ItemRect;
-					const bool HasDeleteButton = !IsProtectedDefaultAsset(pItem->m_aName);
+					const bool IsEntityBgDirectory = s_CurCustomTab == ASSETS_TAB_ENTITY_BG && static_cast<const SCustomEntityBg *>(pItem)->m_IsDirectory;
+					const bool HasDeleteButton = !IsEntityBgDirectory && !IsProtectedDefaultAsset(pItem->m_aName);
 					const bool ShowLocalOnlyBadge = pCategory->m_LocalOnlyBadge && !pCategory->m_WorkshopEnabled;
-					const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, Localize("Downloaded"), ShowLocalOnlyBadge);
-					Ui()->DoLabel(&HeaderLayout.m_TitleRect, pItem->m_aName, HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
-					if(HeaderLayout.m_HasStatusTag)
+					const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, HasDeleteButton, IsEntityBgDirectory ? nullptr : Localize("Downloaded"), ShowLocalOnlyBadge, false);
+					CUIRect TitleRect = HeaderLayout.m_TitleRect;
+					SLabelProperties TitleProps;
+					TitleProps.m_MaxWidth = static_cast<int>(TitleRect.w);
+					const char *pTitle = AssetCardDisplayName(pItem);
+					Ui()->DoLabel(&TitleRect, pTitle, 9.0f, TEXTALIGN_ML, TitleProps);
+					if(HeaderLayout.m_HasAuthorRow && ShouldShowEntityBgDirectorySubtitle(IsEntityBgDirectory))
+					{
+						SLabelProperties AuthorProps;
+						AuthorProps.m_MaxWidth = static_cast<int>(HeaderLayout.m_AuthorRect.w);
+						Ui()->DoLabel(&HeaderLayout.m_AuthorRect, "--", 7.0f, TEXTALIGN_ML, AuthorProps);
+					}
+					if(HeaderLayout.m_HasStatusTag && !IsEntityBgDirectory)
 						RenderAssetStatusTag(HeaderLayout.m_StatusTagRect, true);
 					if(HeaderLayout.m_HasLocalOnlyBadge)
-						RenderCardBadge(HeaderLayout.m_LocalOnlyBadgeRect, Localize("仅本地资源"), ColorRGBA(0.46f, 0.41f, 0.20f, 0.88f), 7.5f);
-					if(s_CurCustomTab == ASSETS_TAB_ENTITIES && s_EntityGamePreview)
+						RenderCardBadge(HeaderLayout.m_LocalOnlyBadgeRect, Localize("Local-only"), ColorRGBA(0.46f, 0.41f, 0.20f, 0.88f), 7.5f);
+					if(IsEntityBgDirectory)
+					{
+						CUIRect IconRect = HeaderLayout.m_TextureRect;
+						TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+						Ui()->DoLabel(&IconRect, str_comp(pItem->m_aName, "..") == 0 ? FONT_ICON_FOLDER_OPEN : FONT_ICON_FOLDER, 36.0f, TEXTALIGN_MC);
+						TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+					}
+					else if(s_CurCustomTab == ASSETS_TAB_ENTITIES && s_EntityGamePreview)
 					{
 						const auto *pEntitiesItem = static_cast<const SCustomEntities *>(pItem);
 						IGraphics::CTextureHandle Tex;
@@ -3563,7 +4225,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						{
 							for(const auto &Asset : WorkshopState.m_vAssets)
 							{
-								if(Asset.m_Name == pItem->m_aName && Asset.m_ThumbTexture.IsValid())
+								if(Asset.m_LocalName == pItem->m_aName && Asset.m_ThumbTexture.IsValid())
 								{
 									Tex = Asset.m_ThumbTexture;
 									break;
@@ -3622,8 +4284,11 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 							Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 							Storage()->CreateFolder("qmclient/workshop", IStorage::TYPE_SAVE);
 							Storage()->CreateFolder("qmclient/workshop/thumbs", IStorage::TYPE_SAVE);
+							const char *pThumbSourceUrl = Asset.m_ThumbUrl.empty() ? Asset.m_ImageUrl.c_str() : Asset.m_ThumbUrl.c_str();
+							if(pThumbSourceUrl[0] == '\0')
+								continue;
 							char aWebpUrl[IO_MAX_PATH_LENGTH];
-							str_format(aWebpUrl, sizeof(aWebpUrl), "%s!/format/webp", Asset.m_ImageUrl.c_str());
+							str_format(aWebpUrl, sizeof(aWebpUrl), "%s!/format/webp", pThumbSourceUrl);
 							auto pThumbTask = HttpGetFile(aWebpUrl, Storage(), Asset.m_ThumbCachePath.c_str(), IStorage::TYPE_SAVE);
 							pThumbTask->Timeout(CTimeout{8000, 20000, 100, 10});
 							pThumbTask->LogProgress(HTTPLOG::FAILURE);
@@ -3641,8 +4306,18 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 					const CUIRect CardRect = ItemRect;
 					const bool Downloading = Asset.m_pDownloadTask && !Asset.m_pDownloadTask->Done();
-					const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, true, Localize(Asset.m_Installed ? "Downloaded" : "Not downloaded"), false);
-					Ui()->DoLabel(&HeaderLayout.m_TitleRect, Asset.m_Name.c_str(), HeaderLayout.m_TitleRect.h - 1.0f, TEXTALIGN_ML);
+					const bool ShowAuthorRow = ShouldShowAssetCardAuthorRow(!Asset.m_Author.empty(), false);
+					const SAssetCardHeaderLayout HeaderLayout = LayoutAssetCardHeader(CardRect, true, Localize(Asset.m_Installed ? "Downloaded" : "Not downloaded"), false, ShowAuthorRow);
+					CUIRect TitleRect = HeaderLayout.m_TitleRect;
+					SLabelProperties TitleProps;
+					TitleProps.m_MaxWidth = static_cast<int>(TitleRect.w);
+					Ui()->DoLabel(&TitleRect, Asset.m_Name.c_str(), 9.0f, TEXTALIGN_ML, TitleProps);
+					if(HeaderLayout.m_HasAuthorRow)
+					{
+						SLabelProperties AuthorProps;
+						AuthorProps.m_MaxWidth = static_cast<int>(HeaderLayout.m_AuthorRect.w);
+						Ui()->DoLabel(&HeaderLayout.m_AuthorRect, Asset.m_Author.empty() ? "--" : Asset.m_Author.c_str(), 7.0f, TEXTALIGN_ML, AuthorProps);
+					}
 					if(HeaderLayout.m_HasStatusTag)
 						RenderAssetStatusTag(HeaderLayout.m_StatusTagRect, Asset.m_Installed);
 
@@ -3706,16 +4381,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					{
 						CUIRect LoadingRect = {HeaderLayout.m_TextureRect.x + (HeaderLayout.m_TextureRect.w - TextureWidth) / 2, HeaderLayout.m_TextureRect.y + (HeaderLayout.m_TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight};
 						LoadingRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.10f), IGraphics::CORNER_ALL, 6.0f);
-						Ui()->DoLabel(&LoadingRect, Localize("Loading..."), 10.0f, TEXTALIGN_MC);
+						Ui()->DoLabel(&LoadingRect, Localize("Loading…"), 10.0f, TEXTALIGN_MC);
 					}
 					const char *pActionIcon = Downloading ? FONT_ICON_ARROW_ROTATE_RIGHT : FONT_ICON_CIRCLE_CHEVRON_DOWN;
 					if(Ui()->DoButton_FontIcon(&vWorkshopActionButtons[AssetIndex], pActionIcon, 0, &HeaderLayout.m_ActionButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Downloading))
 					{
-						s_PendingDownloadAssetIndex = AssetIndex;
-						s_WorkshopDownloadConfirmPopup.Reset();
-						s_WorkshopDownloadConfirmPopup.YesNoButtons();
-						str_copy(s_WorkshopDownloadConfirmPopup.m_aMessage, Localize("Download this asset?"));
-						Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_WorkshopDownloadConfirmPopup);
+						DownloadRequested = true;
+						RequestedDownloadAssetIndex = AssetIndex;
+						RequestedDownloadPopupX = HeaderLayout.m_ActionButtonRect.x + HeaderLayout.m_ActionButtonRect.w;
+						RequestedDownloadPopupY = HeaderLayout.m_ActionButtonRect.y + HeaderLayout.m_ActionButtonRect.h + 4.0f;
+						WorkshopActionTriggered = true;
 					}
 
 					if(Asset.m_DownloadFailed)
@@ -3748,6 +4423,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				str_copy(s_WorkshopDeleteConfirmPopup.m_aMessage, Localize("Are you sure you want to delete this asset?"));
 				Ui()->ShowPopupConfirm(Ui()->MouseX(), Ui()->MouseY(), &s_WorkshopDeleteConfirmPopup);
 			}
+			if(DownloadRequested && RequestedDownloadAssetIndex < WorkshopState.m_vAssets.size())
+			{
+				s_PendingDownloadAssetIndex = RequestedDownloadAssetIndex;
+				s_WorkshopDownloadConfirmPopup.Reset();
+				s_WorkshopDownloadConfirmPopup.YesNoButtons();
+				str_copy(s_WorkshopDownloadConfirmPopup.m_aMessage, Localize("Download this asset?"));
+				Ui()->ShowPopupConfirm(RequestedDownloadPopupX, RequestedDownloadPopupY, &s_WorkshopDownloadConfirmPopup);
+			}
 
 			if(s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
 			{
@@ -3763,7 +4446,20 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 							break;
 						}
 					}
-					ClearCustomItems(s_CurCustomTab);
+					if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+					{
+						const auto EntryIt = std::find(m_vEntityBgSourceNames.begin(), m_vEntityBgSourceNames.end(), std::string(s_aWorkshopPendingDeleteName));
+						if(EntryIt != m_vEntityBgSourceNames.end())
+							m_vEntityBgSourceNames.erase(EntryIt);
+						const auto SourceIt = m_vEntityBgSourceKinds.find(s_aWorkshopPendingDeleteName);
+						if(SourceIt != m_vEntityBgSourceKinds.end() && SourceIt->second == EEntityBgHierarchyEntrySource::WORKSHOP)
+							m_vEntityBgSourceKinds.erase(SourceIt);
+						RefreshEntityBgHierarchyView();
+					}
+					else
+					{
+						ClearCustomItems(s_CurCustomTab);
+					}
 				}
 				else
 				{
@@ -3802,13 +4498,64 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				s_PendingDownloadAssetIndex = SIZE_MAX;
 			}
 
-			if(!DeleteLocalRequested && s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && !WorkshopActionTriggered && NewCombinedSelected >= 0 && NewCombinedSelected != OldCombinedSelected && static_cast<size_t>(NewCombinedSelected) < LocalAssetCount)
+			if(!DeleteLocalRequested && s_WorkshopDeleteConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && s_WorkshopDownloadConfirmPopup.m_Result == CUi::SConfirmPopupContext::UNSET && !WorkshopActionTriggered && s_WorkshopAssetsListBox.WasItemSelected() && NewCombinedSelected >= 0 && NewCombinedSelected != OldCombinedSelected && static_cast<size_t>(NewCombinedSelected) < LocalAssetCount)
 			{
 				const size_t LocalIndex = vVisibleLocalAssetIndices[static_cast<size_t>(NewCombinedSelected)];
 				const SCustomItem *pNewItem = GetCustomItem(s_CurCustomTab, LocalIndex);
 				if(pNewItem && pNewItem->m_aName[0] != '\0')
-					ApplyLocalAssetSelection(pNewItem->m_aName);
+				{
+					if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && static_cast<const SCustomEntityBg *>(pNewItem)->m_IsDirectory)
+					{
+						if(str_comp(pNewItem->m_aName, "..") == 0)
+						{
+							char aParentFolder[IO_MAX_PATH_LENGTH];
+							BuildEntityBgParentFolder(m_aEntityBgCurrentFolder, aParentFolder, sizeof(aParentFolder));
+							str_copy(m_aEntityBgCurrentFolder, aParentFolder, sizeof(m_aEntityBgCurrentFolder));
+						}
+						else
+						{
+							str_copy(m_aEntityBgCurrentFolder, pNewItem->m_aName, sizeof(m_aEntityBgCurrentFolder));
+						}
+						RefreshEntityBgHierarchyView();
+					}
+					else
+					{
+						ApplyLocalAssetSelection(pNewItem->m_aName);
+					}
+				}
 			}
+		}
+
+		if(WorkshopState.m_pEntityBgPreviewTask && WorkshopState.m_pEntityBgPreviewTask->Done())
+		{
+			char aPreviewError[sizeof(WorkshopState.m_aError)] = "";
+			const EHttpState PreviewTaskState = WorkshopState.m_pEntityBgPreviewTask->State();
+			if(PreviewTaskState == EHttpState::DONE && WorkshopState.m_pEntityBgPreviewTask->StatusCode() == 200)
+			{
+				if(json_value *pJson = WorkshopState.m_pEntityBgPreviewTask->ResultJson())
+				{
+					if(ParseEntityBgPreviewMap(pJson, WorkshopState.m_vEntityBgPreviewExtByName, WorkshopState.m_EntityBgPreviewBaseUrl, aPreviewError, sizeof(aPreviewError)))
+						ApplyEntityBgPreviewThumbUrls(WorkshopState);
+					json_value_free(pJson);
+				}
+				else
+				{
+					str_copy(aPreviewError, "Entity bg preview json parse failed", sizeof(aPreviewError));
+				}
+			}
+			else if(PreviewTaskState != EHttpState::DONE)
+			{
+				str_copy(aPreviewError, "Entity bg preview request failed", sizeof(aPreviewError));
+			}
+			else
+			{
+				str_format(aPreviewError, sizeof(aPreviewError), "Entity bg preview request failed (%d)", WorkshopState.m_pEntityBgPreviewTask->StatusCode());
+			}
+
+			WorkshopState.m_pEntityBgPreviewTask.reset();
+			WorkshopState.m_EntityBgPreviewRequested = true;
+			if(aPreviewError[0] != '\0' && WorkshopState.m_vEntityBgPreviewExtByName.empty())
+				dbg_msg("assets", "%s", aPreviewError);
 		}
 	}
 
@@ -3824,16 +4571,46 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 	// 从右往左切分按钮
 	DirectoryButton.HSplitTop(5.0f, nullptr, &DirectoryButton);
-	DirectoryButton.VSplitRight(175.0f, nullptr, &DirectoryButton);
-	DirectoryButton.VSplitRight(25.0f, &DirectoryButton, &ReloadButton);
-	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+	auto ComputeToolbarButtonWidth = [&](const char *pLabel) {
+		constexpr float MinButtonWidth = 90.0f;
+		constexpr float HorizontalPadding = 18.0f;
+		return maximum(MinButtonWidth, TextRender()->TextWidth(10.0f, Localize(pLabel), -1, -1.0f) + HorizontalPadding);
+	};
+	const bool SupportsWorkshopSync = pCurrentCategory != nullptr && pCurrentCategory->m_WorkshopEnabled;
 	const bool SupportsAssetsEditor = s_CurCustomTab == ASSETS_TAB_ENTITIES || s_CurCustomTab == ASSETS_TAB_GAME ||
 		s_CurCustomTab == ASSETS_TAB_EMOTICONS || s_CurCustomTab == ASSETS_TAB_PARTICLES ||
-		s_CurCustomTab == ASSETS_TAB_HUD || s_CurCustomTab == ASSETS_TAB_EXTRAS;
+		s_CurCustomTab == ASSETS_TAB_HUD || s_CurCustomTab == ASSETS_TAB_GUI_CURSOR ||
+		s_CurCustomTab == ASSETS_TAB_ARROW || s_CurCustomTab == ASSETS_TAB_STRONG_WEAK ||
+		s_CurCustomTab == ASSETS_TAB_EXTRAS;
+	const bool ShowEntityPreviewToggle = s_CurCustomTab == ASSETS_TAB_ENTITIES;
+	const float AssetsDirButtonWidth = ComputeToolbarButtonWidth("Assets directory");
+	const float AssetsEditorButtonWidth = ComputeToolbarButtonWidth("Assets editor");
+	const float EntityPreviewButtonWidth = ComputeToolbarButtonWidth("Entity Preview");
+	const float ShowWorkshopAssetsButtonWidth = ComputeToolbarButtonWidth("Show Workshop Assets");
+	const float WorkshopSyncButtonWidth = ComputeToolbarButtonWidth("Sync Workshop Assets");
+	float ToolbarWidth = 25.0f + 10.0f + AssetsDirButtonWidth;
+	if(ShowEntityPreviewToggle)
+		ToolbarWidth += 10.0f + EntityPreviewButtonWidth;
+	if(SupportsAssetsEditor)
+		ToolbarWidth += 10.0f + AssetsEditorButtonWidth;
+	if(SupportsWorkshopSync)
+		ToolbarWidth += 10.0f + WorkshopSyncButtonWidth + 10.0f + ShowWorkshopAssetsButtonWidth;
+	DirectoryButton.VSplitRight(ToolbarWidth, nullptr, &DirectoryButton);
+	DirectoryButton.VSplitRight(25.0f, &DirectoryButton, &ReloadButton);
+	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+	CUIRect ShowWorkshopAssetsButton;
+	CUIRect WorkshopSyncButton;
+	if(SupportsWorkshopSync)
+	{
+		DirectoryButton.VSplitRight(ShowWorkshopAssetsButtonWidth, &DirectoryButton, &ShowWorkshopAssetsButton);
+		DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+		DirectoryButton.VSplitRight(WorkshopSyncButtonWidth, &DirectoryButton, &WorkshopSyncButton);
+		DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+	}
 	static CButtonContainer s_AssetsEditorButton;
 	if(SupportsAssetsEditor)
 	{
-		DirectoryButton.VSplitRight(110.0f, &DirectoryButton, &AssetsEditorButton);
+		DirectoryButton.VSplitRight(AssetsEditorButtonWidth, &DirectoryButton, &AssetsEditorButton);
 		DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
 		if(DoButton_Menu(&s_AssetsEditorButton, Localize("Assets editor"), 0, &AssetsEditorButton))
 		{
@@ -3846,6 +4623,12 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				AssetsEditorType = ASSETS_EDITOR_TYPE_PARTICLES;
 			else if(s_CurCustomTab == ASSETS_TAB_HUD)
 				AssetsEditorType = ASSETS_EDITOR_TYPE_HUD;
+			else if(s_CurCustomTab == ASSETS_TAB_GUI_CURSOR)
+				AssetsEditorType = ASSETS_EDITOR_TYPE_GUI_CURSOR;
+			else if(s_CurCustomTab == ASSETS_TAB_ARROW)
+				AssetsEditorType = ASSETS_EDITOR_TYPE_ARROW;
+			else if(s_CurCustomTab == ASSETS_TAB_STRONG_WEAK)
+				AssetsEditorType = ASSETS_EDITOR_TYPE_STRONG_WEAK;
 			else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
 				AssetsEditorType = ASSETS_EDITOR_TYPE_EXTRAS;
 			AssetsEditorOpen(AssetsEditorType);
@@ -3854,14 +4637,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	}
 
 	CUIRect AssetsDirButton;
-	DirectoryButton.VSplitRight(100.0f, &DirectoryButton, &AssetsDirButton);
+	DirectoryButton.VSplitRight(AssetsDirButtonWidth, &DirectoryButton, &AssetsDirButton);
 
 	// Entity Preview 按钮（仅实体层标签页显示）
-	if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
+	if(ShowEntityPreviewToggle)
 	{
 		CUIRect ToggleRect;
 		DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
-		DirectoryButton.VSplitRight(100.0f, &DirectoryButton, &ToggleRect);
+		DirectoryButton.VSplitRight(EntityPreviewButtonWidth, &DirectoryButton, &ToggleRect);
 		static CButtonContainer s_EntityPreviewToggleId;
 		if(DoButton_Menu(&s_EntityPreviewToggleId, Localize("Entity Preview"), s_EntityGamePreview, &ToggleRect))
 			s_EntityGamePreview = !s_EntityGamePreview;
@@ -3869,6 +4652,26 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	}
 
 	static CButtonContainer s_AssetsDirId;
+	static CButtonContainer s_ShowWorkshopAssetsId;
+	static CButtonContainer s_WorkshopSyncId;
+	if(SupportsWorkshopSync && DoButton_Menu(&s_ShowWorkshopAssetsId, Localize("Show Workshop Assets"), m_ShowWorkshopAssets, &ShowWorkshopAssetsButton))
+	{
+		m_ShowWorkshopAssets = !m_ShowWorkshopAssets;
+		gs_aInitCustomList[s_CurCustomTab] = true;
+		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+			RefreshEntityBgHierarchyView();
+	}
+	if(SupportsWorkshopSync)
+		GameClient()->m_Tooltips.DoToolTip(&s_ShowWorkshopAssetsId, &ShowWorkshopAssetsButton, Localize("Show Workshop Assets"));
+
+	if(SupportsWorkshopSync && DoButton_Menu(&s_WorkshopSyncId, Localize("Sync Workshop Assets"), 0, &WorkshopSyncButton))
+	{
+		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
+			ResetWorkshopState(*pWorkshopState, Graphics(), true);
+	}
+	if(SupportsWorkshopSync)
+		GameClient()->m_Tooltips.DoToolTip(&s_WorkshopSyncId, &WorkshopSyncButton, Localize("Sync Workshop Assets"));
+
 	if(DoButton_Menu(&s_AssetsDirId, Localize("Assets directory"), 0, &AssetsDirButton))
 	{
 		char aBuf[IO_MAX_PATH_LENGTH];
@@ -3891,16 +4694,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	if(DoButton_Menu(&s_AssetsReloadBtnId, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 	{
 		ClearCustomItems(s_CurCustomTab);
-		if(s_CurCustomTab == ASSETS_TAB_HUD)
-			ResetWorkshopState(gs_WorkshopHudState, Graphics(), true);
-		else if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
-			ResetWorkshopState(gs_WorkshopEntitiesState, Graphics(), true);
-		else if(s_CurCustomTab == ASSETS_TAB_GAME)
-			ResetWorkshopState(gs_WorkshopGameState, Graphics(), true);
-		else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
-			ResetWorkshopState(gs_WorkshopEmoticonsState, Graphics(), true);
-		else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
-			ResetWorkshopState(gs_WorkshopParticlesState, Graphics(), true);
+		if(SWorkshopHudState *pWorkshopState = WorkshopStateByTab(s_CurCustomTab))
+			ResetWorkshopState(*pWorkshopState, Graphics(), true);
 	}
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);

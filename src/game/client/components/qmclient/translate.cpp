@@ -1598,7 +1598,10 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 		pTarget = "en";
 	}
 	str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
-	Job.m_pBackend = CreateTranslateBackend(*Http(), Line.m_aText, Job.m_aTarget);
+	const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
+	if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
+		pSource = "auto";
+	Job.m_pBackend = CreateTranslateBackend(*Http(), Line.m_aText, Job.m_aTarget, pSource);
 	if(!Job.m_pBackend)
 	{
 		GameClient()->m_Chat.Echo(Localize("Invalid translate backend"));

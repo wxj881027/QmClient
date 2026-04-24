@@ -94,7 +94,7 @@ static const char *GetSoundFilename(const char *pFilename, IStorage *pStorage, c
 		return pFilename;
 
 	const char *pPack = g_Config.m_SndPack;
-	if(pPack[0] == '\0' || str_comp(pPack, "default") == 0)
+	if(pPack[0] == '\0')
 		return pFilename;
 
 	const char *pRelative = pFilename;

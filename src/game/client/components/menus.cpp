@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
 #include "menus.h"
+#include "background.h"
 
 #include <base/color.h>
 #include <base/log.h>
@@ -543,7 +544,7 @@ void CMenus::UpdateSettingsTabLabels()
 	m_apSettingsTabs[SETTINGS_LANGUAGE] = Localize("Language");
 	m_apSettingsTabs[SETTINGS_GENERAL] = Localize("General");
 	m_apSettingsTabs[SETTINGS_PLAYER] = Localize("Player");
-	m_apSettingsTabs[SETTINGS_TEE] = Sixup ? "Tee 0.7" : Localize("Tee");
+	m_apSettingsTabs[SETTINGS_TEE] = Sixup ? Localize("Tee 0.7") : Localize("Tee");
 	m_apSettingsTabs[SETTINGS_APPEARANCE] = Localize("Appearance");
 	m_apSettingsTabs[SETTINGS_CONTROLS] = Localize("Controls");
 	m_apSettingsTabs[SETTINGS_GRAPHICS] = Localize("Graphics");
@@ -1590,7 +1591,9 @@ void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserD
 	if(pResult->NumArguments())
 	{
 		CMenus *pSelf = (CMenus *)pUserData;
-		if(str_comp(g_Config.m_ClBackgroundEntities, pSelf->GameClient()->m_Background.MapName()) != 0)
+		char aNormalized[IO_MAX_PATH_LENGTH];
+		NormalizeBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities, aNormalized, sizeof(aNormalized));
+		if(str_comp(aNormalized, pSelf->GameClient()->m_Background.MapName()) != 0)
 			pSelf->GameClient()->m_Background.LoadBackground();
 	}
 }
