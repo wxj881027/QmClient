@@ -1379,7 +1379,7 @@ void CGameConsole::OnRender()
 
 	if(m_ConsoleState == CONSOLE_CLOSED)
 	{
-		m_FilterMouseDown = false;
+		m_TopbarMouseDown = false;
 		return;
 	}
 
@@ -1959,6 +1959,7 @@ void CGameConsole::OnRender()
 
 		char aVersionBuf[128];
 		str_copy(aVersionBuf, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
+		const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
 
 		const char *apFilterLabels[] = {Localize("All"), Localize("Players"), Localize("System")};
 		const CInstance::ELogFilter aFilters[] = {CInstance::ELogFilter::ALL, CInstance::ELogFilter::PLAYER, CInstance::ELogFilter::SYSTEM};
@@ -1967,6 +1968,11 @@ void CGameConsole::OnRender()
 		const float FilterY = (RowHeight - FilterHeight) / 2.0f;
 		const float FilterPadding = 6.0f;
 		const float FilterSpacing = 4.0f;
+		const bool ShowDumpButton = m_ConsoleType == CONSOLETYPE_LOCAL;
+		const char *pDumpLabel = Localize("Dump");
+		const float DumpButtonWidth = ShowDumpButton ? TextRender()->TextWidth(FilterFontSize, pDumpLabel) + FilterPadding * 2.0f : 0.0f;
+		const float TopbarRightMargin = 10.0f;
+		const float VersionRight = ShowDumpButton ? Screen.w - TopbarRightMargin - DumpButtonWidth - FilterSpacing : Screen.w - TopbarRightMargin;
 		float aFilterWidths[3];
 		float TotalFilterWidth = 0.0f;
 		for(int i = 0; i < 3; ++i)
@@ -1980,7 +1986,7 @@ void CGameConsole::OnRender()
 		const float LinesWidth = TextRender()->TextWidth(FONT_SIZE, aLinesBuf);
 		float FilterX = LinesTextX + LinesWidth + 10.0f;
 		const float VersionWidth = TextRender()->TextWidth(FONT_SIZE, aVersionBuf);
-		const float FilterRightLimit = Screen.w - VersionWidth - 20.0f;
+		const float FilterRightLimit = VersionRight - VersionWidth - 10.0f;
 		if(FilterX + TotalFilterWidth > FilterRightLimit)
 			FilterX = maximum(LinesTextX + LinesWidth + 10.0f, FilterRightLimit - TotalFilterWidth);
 
@@ -1996,7 +2002,7 @@ void CGameConsole::OnRender()
 		if(WindowSize.x > 0.0f && WindowSize.y > 0.0f)
 			UiMousePos = UiMousePos / WindowSize * ScreenSize;
 		const bool MouseDown = Input()->NativeMousePressed(1);
-		const bool MousePressed = MouseDown && !m_FilterMouseDown;
+		const bool MousePressed = MouseDown && !m_TopbarMouseDown;
 
 		for(int i = 0; i < 3; ++i)
 		{
@@ -2009,7 +2015,15 @@ void CGameConsole::OnRender()
 			if(Active)
 				Button.DrawOutline(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
 		}
-		m_FilterMouseDown = MouseDown;
+		if(ShowDumpButton)
+		{
+			CUIRect Button = {Screen.w - TopbarRightMargin - DumpButtonWidth, FilterY, DumpButtonWidth, FilterHeight};
+			Ui()->DoButton_PopupMenu(&m_DumpLocalConsoleButton, pDumpLabel, &Button, FilterFontSize, TEXTALIGN_MC);
+			const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
+			if(ManualClicked)
+				m_LocalConsole.Dump();
+		}
+		m_TopbarMouseDown = MouseDown;
 
 		TextRender()->Text(LinesTextX, LinesTextY, FONT_SIZE, aLinesBuf);
 
@@ -2032,11 +2046,10 @@ void CGameConsole::OnRender()
 		}
 
 		// render version
-		TextRender()->Text(Screen.w - TextRender()->TextWidth(FONT_SIZE, aVersionBuf) - 10.0f, FONT_SIZE / 2.f, FONT_SIZE, aVersionBuf);
+		TextRender()->Text(VersionRight - VersionWidth, FONT_SIZE / 2.f, FONT_SIZE, aVersionBuf);
 
 		// TClient: render client version
-		const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
-		TextRender()->Text(Screen.w - TextRender()->TextWidth(FONT_SIZE, pClientVersion) - 10.0f, FONT_SIZE / 2.0f + FONT_SIZE * 1.5f, FONT_SIZE, pClientVersion);
+		TextRender()->Text(VersionRight - TextRender()->TextWidth(FONT_SIZE, pClientVersion), FONT_SIZE / 2.0f + FONT_SIZE * 1.5f, FONT_SIZE, pClientVersion);
 	}
 
 	if(UpdateConsoleUi)

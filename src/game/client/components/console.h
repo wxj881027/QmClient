@@ -184,7 +184,8 @@ class CGameConsole : public CComponent
 	bool m_WantsSelectionCopy = false;
 	CUi::CTouchState m_TouchState;
 	CButtonContainer m_aFilterButtons[3];
-	bool m_FilterMouseDown = false;
+	CButtonContainer m_DumpLocalConsoleButton;
+	bool m_TopbarMouseDown = false;
 
 	static constexpr ColorRGBA ms_SearchHighlightColor = ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f);
 	static constexpr ColorRGBA ms_SearchSelectedColor = ColorRGBA(1.0f, 1.0f, 0.0f, 1.0f);

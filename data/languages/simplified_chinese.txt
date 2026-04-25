@@ -2678,6 +2678,9 @@ DONT USE THIS! USE add_bindwheel INSTEAD!
 Draw on the in game background
 == 在游戏背景上绘制
 
+Dump
+== 导出
+
 Dump the current savestring
 == 导出当前存档字符串
 
