@@ -4311,7 +4311,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 							Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 							Storage()->CreateFolder("qmclient/workshop", IStorage::TYPE_SAVE);
 							Storage()->CreateFolder("qmclient/workshop/thumbs", IStorage::TYPE_SAVE);
-							const char *pThumbSourceUrl = Asset.m_ThumbUrl.empty() ? Asset.m_ImageUrl.c_str() : Asset.m_ThumbUrl.c_str();
+							const bool RequiresEntityBgPreviewUrl = s_CurCustomTab == ASSETS_TAB_ENTITY_BG;
+							const char *pThumbSourceUrl = Asset.m_ThumbUrl.c_str();
+							if(!RequiresEntityBgPreviewUrl && pThumbSourceUrl[0] == '\0')
+								pThumbSourceUrl = Asset.m_ImageUrl.c_str();
 							if(pThumbSourceUrl[0] == '\0')
 								continue;
 							char aWebpUrl[IO_MAX_PATH_LENGTH];
