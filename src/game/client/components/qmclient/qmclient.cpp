@@ -5368,7 +5368,6 @@ void CTClient::ApplyFocusModeEffects()
 		{&g_Config.m_QmPlayerStatsMapProgress, &m_SavedHudConfig.m_QmPlayerStatsMapProgress, 0},
 		{&g_Config.m_QmSmtcShowHud, &m_SavedHudConfig.m_QmSmtcShowHud, 0},
 		{&g_Config.m_QmInputOverlay, &m_SavedHudConfig.m_QmInputOverlay, 0},
-		{&g_Config.m_QmVoiceShowOverlay, &m_SavedHudConfig.m_QmVoiceShowOverlay, 0},
 	};
 	UpdateConfigIntOverrides(aUiOverlayEntries, sizeof(aUiOverlayEntries) / sizeof(aUiOverlayEntries[0]), HideUiOverlays, m_FocusUiOverlayOverridden);
 

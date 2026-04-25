@@ -484,7 +484,6 @@ public:
 		int m_QmPlayerStatsMapProgress = 0;
 		int m_QmSmtcShowHud = 1;
 		int m_QmInputOverlay = 0;
-		int m_QmVoiceShowOverlay = 1;
 	};
 
 	bool m_FocusModeStateKnown = false;

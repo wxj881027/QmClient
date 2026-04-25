@@ -8121,8 +8121,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFootParticles, Localize("Local particles"), &g_Config.m_QmFootParticles, &Row, LG_LineHeight);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmcFootParticles, Localize("本地粒子效果"), &g_Config.m_QmcFootParticles, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFootParticles, Localize("本地粒子效果"), &g_Config.m_QmFootParticles, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -8134,8 +8133,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmScoreboardPoints, Localize("Show scoreboard points"), &g_Config.m_QmScoreboardPoints, &Row, LG_LineHeight);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClScoreboardPoints, Localize("计分板查分"), &g_Config.m_ClScoreboardPoints, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmScoreboardPoints, Localize("计分板查分"), &g_Config.m_QmScoreboardPoints, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -9555,8 +9553,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 								RenderSliderWithValueInput(&s_QmAspectRatioInputId, ControlColValue, &g_Config.m_QmAspectRatio, 100, 300);
 								AspectChanged |= OldAspectRatio != g_Config.m_QmAspectRatio;
 							}
-							else if(Ui()->DoScrollbarOption(&g_Config.m_QmAspectRatio, &g_Config.m_QmAspectRatio, &Row, Localize("自定义宽高比"), 100, 300, &CUi::ms_LinearScrollbarScale, 0, " x100"))
-								AspectChanged = true;
 							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 						}
 
@@ -10591,8 +10587,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				DoModuleHeadline(CardContent, 12, Localize("分身小窗"), Localize("在你操控本体的时候分身有没有被欺负呢?"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDummyMiniView, Localize("Enable dummy mini view"), &g_Config.m_QmDummyMiniView, &Row, LG_LineHeight);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClDummyMiniView, Localize("启用分身小窗"), &g_Config.m_ClDummyMiniView, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDummyMiniView, Localize("启用分身小窗"), &g_Config.m_QmDummyMiniView, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
@@ -10600,14 +10595,14 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				if(g_Config.m_QmDummyMiniView)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDummyMiniViewAuto, Localize("Only show when the other tee is off-screen"), &g_Config.m_QmDummyMiniViewAuto, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmDummyMiniViewAuto, Localize("仅在另一个Tee不在屏幕上时显示"), &g_Config.m_QmDummyMiniViewAuto, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					{
 						CUIRect LabelColValue, ControlColValue;
 						Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-						Ui()->DoLabel(&LabelColValue, Localize("Mini view size"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelColValue, Localize("分身小窗大小"), LG_BodySize, TEXTALIGN_ML);
 						static int s_QmDummyMiniViewSizeInputId;
 						RenderSliderWithValueInput(&s_QmDummyMiniViewSizeInputId, ControlColValue, &g_Config.m_QmDummyMiniViewSize, 50, 200);
 					}
@@ -10617,20 +10612,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					{
 						CUIRect LabelColValue, ControlColValue;
 						Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-						Ui()->DoLabel(&LabelColValue, Localize("Mini view zoom"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelColValue, Localize("分身小窗缩放"), LG_BodySize, TEXTALIGN_ML);
 						static int s_QmDummyMiniViewZoomInputId;
 						RenderSliderWithValueInput(&s_QmDummyMiniViewZoomInputId, ControlColValue, &g_Config.m_QmDummyMiniViewZoom, 10, 300);
 					}
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClDummyMiniViewAuto, Localize("仅在另一个Tee不在屏幕上时显示"), &g_Config.m_ClDummyMiniViewAuto, &Row, LG_LineHeight);
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_ClDummyMiniViewSize, &g_Config.m_ClDummyMiniViewSize, &Row, Localize("分身小窗大小"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_ClDummyMiniViewZoom, &g_Config.m_ClDummyMiniViewZoom, &Row, Localize("分身小窗缩放"), 10, 300, &CUi::ms_LinearScrollbarScale, 0, "%");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -10696,15 +10681,13 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				DoModuleHeadline(CardContent, 13, Localize("SMTC"), Localize("系统媒体控制"));
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSmtcEnable, Localize("Enable system media controls"), &g_Config.m_QmSmtcEnable, &Row, LG_LineHeight);
-				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSmtcEnable, Localize("启用系统媒体控制"), &g_Config.m_ClSmtcEnable, &Row, LG_LineHeight);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSmtcEnable, Localize("启用系统媒体控制"), &g_Config.m_QmSmtcEnable, &Row, LG_LineHeight);
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				if(g_Config.m_QmSmtcEnable)
 				{
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSmtcShowHud, Localize("Show song info in the top-left corner"), &g_Config.m_QmSmtcShowHud, &Row, LG_LineHeight);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSmtcShowHud, Localize("在左上角显示歌曲信息"), &g_Config.m_ClSmtcShowHud, &Row, LG_LineHeight);
+					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSmtcShowHud, Localize("在左上角显示歌曲信息"), &g_Config.m_QmSmtcShowHud, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CUIRect MediaButtons, PrevButton, PlayButton, NextButton;
