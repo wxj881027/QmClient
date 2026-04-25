@@ -18,6 +18,7 @@
 
 #include <game/client/animstate.h>
 #include <game/client/components/censor.h>
+#include <game/client/components/qmclient/config_override.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
@@ -230,6 +231,7 @@ CChat::CLine::CLine()
 	m_aYOffset[1] = -1.0f;
 	m_TextYOffset = 0.0f;
 	m_CutOffProgress = 0.0f;
+	m_ForceVisible = false;
 }
 
 void CChat::CLine::Reset(CChat &This)
@@ -246,6 +248,7 @@ void CChat::CLine::Reset(CChat &This)
 	m_TextYOffset = 0.0f;
 	m_CutOffProgress = 0.0f;
 	m_Friend = false;
+	m_ForceVisible = false;
 	m_TimesRepeated = 0;
 	m_pManagedTeeRenderInfo = nullptr;
 	m_pTranslateResponse = nullptr;
@@ -522,6 +525,11 @@ void CChat::ConchainChatWidth(IConsole::IResult *pResult, void *pUserData, ICons
 void CChat::Echo(const char *pString)
 {
 	AddLine(CLIENT_MSG, 0, pString);
+}
+
+void CChat::Echo(const char *pString, bool ForceVisible)
+{
+	AddLine(CLIENT_MSG, 0, pString, ForceVisible);
 }
 
 void CChat::OnConsoleInit()
@@ -1025,7 +1033,7 @@ void CChat::StoreSave(const char *pText)
 	io_close(File);
 }
 
-void CChat::AddLine(int ClientId, int Team, const char *pLine)
+void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible)
 {
 	if(*pLine == 0 ||
 		(ClientId == SERVER_MSG && !g_Config.m_ClShowChatSystem) ||
@@ -1153,7 +1161,8 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 		PreviousLine.m_TeamNumber == Team &&
 		PreviousLine.m_ClientId == ClientId &&
 		str_comp(PreviousLine.m_aText, pLine) == 0 &&
-		PreviousLine.m_CustomColor == CustomColor)
+		PreviousLine.m_CustomColor == CustomColor &&
+		PreviousLine.m_ForceVisible == ForceVisible)
 	{
 		PreviousLine.m_TimesRepeated++;
 		TextRender()->DeleteTextContainer(PreviousLine.m_TextContainerIndex);
@@ -1191,6 +1200,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 	CurrentLine.m_Whisper = Team >= 2;
 	CurrentLine.m_NameColor = -2;
 	CurrentLine.m_CustomColor = CustomColor;
+	CurrentLine.m_ForceVisible = ForceVisible;
 
 	// check for highlighted name
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -1352,6 +1362,10 @@ void CChat::OnPrepareLines(float y)
 {
 	float x = 5.0f;
 	float FontSize = this->FontSize();
+	const bool FocusModeActive = g_Config.m_QmFocusMode != 0;
+	const bool FocusHideChat = FocusModeActive && g_Config.m_QmFocusModeHideChat;
+	const bool FocusHideEcho = FocusModeActive && g_Config.m_QmFocusModeHideEcho;
+	const bool FocusEchoOnly = FocusHideChat && !FocusHideEcho;
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
@@ -1385,6 +1399,8 @@ void CChat::OnPrepareLines(float y)
 		CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
 		if(!Line.m_Initialized)
 			break;
+		if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideEcho, Line.m_ClientId == CLIENT_MSG, Line.m_ForceVisible))
+			continue;
 		if(Now > Line.m_Time + VisibleTimeNoFocusTicks && !m_PrevShowChat)
 			break;
 
@@ -1694,7 +1710,12 @@ void CChat::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
-	if(g_Config.m_QmFocusMode && g_Config.m_QmFocusModeHideChat)
+	const bool FocusModeActive = g_Config.m_QmFocusMode != 0;
+	const bool FocusHideChat = FocusModeActive && g_Config.m_QmFocusModeHideChat;
+	const bool FocusHideEcho = FocusModeActive && g_Config.m_QmFocusModeHideEcho;
+	const bool FocusEchoOnly = FocusHideChat && !FocusHideEcho;
+	const bool HasForceVisibleLine = std::any_of(std::begin(m_aLines), std::end(m_aLines), [](const CLine &Line) { return Line.m_Initialized && Line.m_ForceVisible; });
+	if(!ShouldRenderAnyFocusFilteredChat(FocusHideChat, FocusHideEcho, HasForceVisibleLine))
 		return;
 
 	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
@@ -1875,6 +1896,8 @@ void CChat::OnRender()
 		CLine &Line = m_aLines[((m_CurrentLine - i) + MAX_LINES) % MAX_LINES];
 		if(!Line.m_Initialized)
 			break;
+		if(!ShouldRenderFocusFilteredChatLine(FocusHideChat, FocusHideEcho, Line.m_ClientId == CLIENT_MSG, Line.m_ForceVisible))
+			continue;
 		if(Now > Line.m_Time + VisibleTimeNoFocusTicks && !m_PrevShowChat)
 			break;
 
@@ -2175,12 +2198,13 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 			     MousePos.y <= ButtonRect.y + ButtonRect.h;
 
 	const bool IsOpen = m_LanguageMenuOpen;
+	m_TranslateButton.m_AutoTranslateEnabled = g_Config.m_QmTranslateAutoOutgoing != 0;
 	const bool IsEnabled = m_TranslateButton.m_AutoTranslateEnabled;
 
 	ColorRGBA ButtonColor;
 	if(IsEnabled)
 	{
-		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled));
+		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorEnabled, true));
 	}
 	else if(IsOpen)
 	{
@@ -2192,7 +2216,7 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 	}
 	else
 	{
-		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled));
+		ButtonColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateBtnColorDisabled, true));
 	}
 	const float ButtonRounding = maximum(6.0f, ButtonRect.h * 0.28f);
 
@@ -2295,8 +2319,8 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	const float RowHeight = 18.0f;
 	const float DropdownHeaderHeight = 20.0f;
 
-	ColorRGBA OptionSelectedColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionSelected));
-	ColorRGBA OptionNormalColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionNormal));
+	ColorRGBA OptionSelectedColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionSelected, true));
+	ColorRGBA OptionNormalColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionNormal, true));
 
 	// 应用透明度动画
 	OptionSelectedColor.a *= Progress;

@@ -31,9 +31,9 @@ public:
 	static constexpr int MAX_FRIEND_CATEGORIES = 64;
 	static constexpr int MAX_FRIEND_CATEGORY_LENGTH = 64;
 	static constexpr int MAX_FRIEND_NOTE_LENGTH = 128;
-	static constexpr const char *DEFAULT_CATEGORY = "好友";
-	static constexpr const char *CLAN_MEMBERS_CATEGORY = "战队成员";
-	static constexpr const char *OFFLINE_CATEGORY = "离线";
+	static constexpr const char *DEFAULT_CATEGORY = "Friends";
+	static constexpr const char *CLAN_MEMBERS_CATEGORY = "Clan Members";
+	static constexpr const char *OFFLINE_CATEGORY = "Offline";
 
 	virtual void Init(bool Foes = false) = 0;
 

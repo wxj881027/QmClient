@@ -903,12 +903,14 @@ CLabelResult CUi::DoLabel_AutoLineSize(const char *pText, float FontSize, int Al
 	return DoLabel(&LabelRect, pText, FontSize, Align);
 }
 
-bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits)
+bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, int Align)
 {
 	const bool Inside = MouseHovered(pRect);
-	const bool Active = m_pLastActiveItem == pLineInput;
+	bool Active = m_pLastActiveItem == pLineInput;
 	const bool Changed = pLineInput->WasChanged();
 	const bool CursorChanged = pLineInput->WasCursorChanged();
+	const bool SubmitPressed = Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || ConsumeHotkey(HOTKEY_ENTER);
+	const bool ClickedOutside = (MouseButtonClicked(0) || MouseButtonClicked(1)) && !Inside;
 
 	const float VSpacing = 2.0f;
 	CUIRect Textbox;
@@ -944,6 +946,12 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 	if(Inside && !MouseButton(0))
 		SetHotItem(pLineInput);
 
+	Active = m_pLastActiveItem == pLineInput;
+	if(Active && (SubmitPressed || ClickedOutside))
+	{
+		ReleaseActiveTextInput(pLineInput);
+		Active = false;
+	}
 	if(Enabled() && Active && !JustGotActive)
 		pLineInput->Activate(EInputPriority::UI);
 	else
@@ -989,7 +997,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 	pRect->Draw(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput), Corners, 3.0f);
 	ClipEnable(pRect);
 	Textbox.x -= ScrollOffset;
-	const STextBoundingBox BoundingBox = pLineInput->Render(&Textbox, FontSize, TEXTALIGN_ML, Changed || CursorChanged, -1.0f, 0.0f, vColorSplits);
+	const STextBoundingBox BoundingBox = pLineInput->Render(&Textbox, FontSize, Align, Changed || CursorChanged, -1.0f, 0.0f, vColorSplits);
 	ClipDisable();
 
 	// Scroll left or right if necessary
@@ -1214,7 +1222,13 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 		{
 			m_ActiveValueSelectorState.m_pLastTextId = pId;
 			m_ActiveValueSelectorState.m_NumberInput.SetInteger64(Current, Base, Props.m_HexPrefix);
-			m_ActiveValueSelectorState.m_NumberInput.SelectAll();
+			if(Props.m_SelectAllOnActivate)
+				m_ActiveValueSelectorState.m_NumberInput.SelectAll();
+			else
+			{
+				m_ActiveValueSelectorState.m_NumberInput.SetCursorOffset(m_ActiveValueSelectorState.m_NumberInput.GetLength());
+				m_ActiveValueSelectorState.m_NumberInput.SelectNothing();
+			}
 		}
 		m_ActiveValueSelectorState.m_Button = -1;
 	}
@@ -1222,20 +1236,20 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 	if(m_ActiveValueSelectorState.m_pLastTextId == pId)
 	{
 		SetActiveItem(&m_ActiveValueSelectorState.m_NumberInput);
-		DoEditBox(&m_ActiveValueSelectorState.m_NumberInput, pRect, 10.0f);
+		DoEditBox(&m_ActiveValueSelectorState.m_NumberInput, pRect, 10.0f, IGraphics::CORNER_ALL, {}, Props.m_TextAlign);
 
-		if(ConsumeHotkey(HOTKEY_ENTER) || ((MouseButtonClicked(1) || MouseButtonClicked(0)) && !Inside))
+		if(Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || ConsumeHotkey(HOTKEY_ENTER) || ((MouseButtonClicked(1) || MouseButtonClicked(0)) && !Inside))
 		{
 			Current = std::clamp(m_ActiveValueSelectorState.m_NumberInput.GetInteger64(Base), Min, Max);
 			DisableMouseLock();
-			SetActiveItem(nullptr);
+			ReleaseActiveTextInput(&m_ActiveValueSelectorState.m_NumberInput);
 			m_ActiveValueSelectorState.m_pLastTextId = nullptr;
 		}
 
 		if(ConsumeHotkey(HOTKEY_ESCAPE))
 		{
 			DisableMouseLock();
-			SetActiveItem(nullptr);
+			ReleaseActiveTextInput(&m_ActiveValueSelectorState.m_NumberInput);
 			m_ActiveValueSelectorState.m_pLastTextId = nullptr;
 		}
 	}

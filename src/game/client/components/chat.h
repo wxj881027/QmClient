@@ -61,6 +61,7 @@ class CChat : public CComponent
 		char m_aText[MAX_LINE_LENGTH];
 		bool m_Friend;
 		bool m_Highlighted;
+		bool m_ForceVisible;
 		std::optional<ColorRGBA> m_CustomColor;
 
 		STextContainerIndex m_TextContainerIndex;
@@ -238,13 +239,14 @@ public:
 
 	bool IsActive() const { return m_Mode != MODE_NONE; }
 	const char *GetInputText() const { return m_Input.GetString(); }
-	void AddLine(int ClientId, int Team, const char *pLine);
+	void AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible = false);
 	void EnableMode(int Team);
 	void DisableMode();
 	void SaveDraft();
 	void RegisterCommand(const char *pName, const char *pParams, const char *pHelpText);
 	void UnregisterCommand(const char *pName);
 	void Echo(const char *pString);
+	void Echo(const char *pString, bool ForceVisible);
 
 	void OnWindowResize() override;
 	void OnConsoleInit() override;

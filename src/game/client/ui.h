@@ -277,6 +277,8 @@ struct SValueSelectorProperties
 	bool m_IsHex = false;
 	int m_HexPrefix = 6;
 	ColorRGBA m_Color = ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f);
+	int m_TextAlign = TEXTALIGN_ML;
+	bool m_SelectAllOnActivate = true;
 };
 
 struct SProgressSpinnerProperties
@@ -530,6 +532,15 @@ public:
 		if(pId)
 			m_pLastActiveItem = pId;
 	}
+	void ReleaseActiveTextInput(CLineInput *pLineInput)
+	{
+		m_ActiveItemValid = true;
+		if(m_pActiveItem == pLineInput)
+			m_pActiveItem = nullptr;
+		if(m_pLastActiveItem == pLineInput)
+			m_pLastActiveItem = nullptr;
+		pLineInput->Deactivate();
+	}
 	bool CheckActiveItem(const void *pId)
 	{
 		if(m_pActiveItem == pId)
@@ -610,7 +621,7 @@ public:
 	 *
 	 * @return true if the value of the input field changed since the last call.
 	 */
-	bool DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners = IGraphics::CORNER_ALL, const std::vector<STextColorSplit> &vColorSplits = {});
+	bool DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners = IGraphics::CORNER_ALL, const std::vector<STextColorSplit> &vColorSplits = {}, int Align = TEXTALIGN_ML);
 
 	/**
 	 * Creates an input field with a clear [x] button attached to it.

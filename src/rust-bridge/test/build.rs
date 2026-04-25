@@ -19,6 +19,7 @@ fn main() {
         !rustc_version.starts_with(b"rustc ") || rustc_version >= &b"rustc 1.61.0"[..];
 
     println!("cargo:rerun-if-env-changed=DDNET_TEST_LIBRARIES");
+    println!("cargo:rerun-if-env-changed=DDNET_TEST_LIBRARIES_FILE");
     println!("cargo:rerun-if-env-changed=DDNET_TEST_NO_LINK");
     println!("cargo:rerun-if-env-changed=RA_RUSTC_WRAPPER");
     if env::var_os("DDNET_TEST_NO_LINK").is_some() || env::var_os("RA_RUSTC_WRAPPER").is_some() {
@@ -26,7 +27,7 @@ fn main() {
     }
     if env::var_os("CARGO_FEATURE_LINK_TEST_LIBRARIES").is_some() {
         let libraries = if let Some(path) = env::var_os("DDNET_TEST_LIBRARIES_FILE") {
-            fs::read_to_string(path).expect("failed to read DDNET_TEST_LIBRARIES_FILE")
+            fs::read_to_string(&path).expect("failed to read DDNET_TEST_LIBRARIES_FILE")
         } else {
             env::var("DDNET_TEST_LIBRARIES")
                 .expect("environment variable DDNET_TEST_LIBRARIES or DDNET_TEST_LIBRARIES_FILE required but not found")

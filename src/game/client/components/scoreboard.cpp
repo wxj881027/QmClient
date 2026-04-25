@@ -350,7 +350,7 @@ void CScoreboard::RenderSpectators(CUIRect Spectators)
 	TextRender()->TextColor(BaseTextColor);
 	TextRender()->TextOutlineColor(BaseOutlineColor);
 
-	const bool ShowMediaControls = g_Config.m_ClSmtcEnable != 0;
+	const bool ShowMediaControls = g_Config.m_QmSmtcEnable != 0;
 	CUIRect SpectatorPanel = Spectators;
 	CUIRect MediaPanel;
 	if(ShowMediaControls)
@@ -836,7 +836,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
 	const int NumPlayers = CountEnd - CountStart;
 	const bool LowScoreboardWidth = Scoreboard.w < 350.0f;
-	const bool ShowPoints = g_Config.m_ClScoreboardPoints != 0;
+	const bool ShowPoints = g_Config.m_QmScoreboardPoints != 0;
 	const float ContentAlpha = m_AnimContentAlpha;
 	const ColorRGBA BaseTextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha);
 	const ColorRGBA BaseOutlineColor = TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(ContentAlpha);
@@ -1364,7 +1364,7 @@ void CScoreboard::OnRender()
 
 
 	// 当记分板可见时（骗你的,不可见也查），为所有活跃玩家触发查询点
-	if(g_Config.m_ClScoreboardPoints || g_Config.m_ClScoreboardSortMode)
+	if(g_Config.m_QmScoreboardPoints || g_Config.m_QmScoreboardSortMode)
 	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
@@ -1423,7 +1423,7 @@ void CScoreboard::OnRender()
 	// Scoreboard width: clamp to screen width for narrow aspect ratios
 	const float ScreenMargin = 10.0f;
 	const float MaxScoreboardWidth = maximum(200.0f, Screen.w - ScreenMargin);
-	const float BaseScoreboardSmallWidth = g_Config.m_ClScoreboardPoints ? (450.0f + 10.0f) : 450.0f;
+	const float BaseScoreboardSmallWidth = g_Config.m_QmScoreboardPoints ? (450.0f + 10.0f) : 450.0f;
 	const float ScoreboardSmallWidth = minimum(BaseScoreboardSmallWidth, MaxScoreboardWidth);
 	const float BaseScoreboardWidth = !Teams && NumPlayers <= 16 ? ScoreboardSmallWidth : 850.0f;
 	const float ScoreboardWidth = minimum(BaseScoreboardWidth, MaxScoreboardWidth);
@@ -1436,18 +1436,18 @@ void CScoreboard::OnRender()
 	static CButtonContainer s_ScoreboardSortButton;
 	const float SortButtonFontSize = 10.0f;
 	const char *pSortLabel = nullptr;
-	if(g_Config.m_ClScoreboardSortMode)
+	if(g_Config.m_QmScoreboardSortMode)
 		pSortLabel = Localize("Current: Ranks");
 	else
 		pSortLabel = TimeScore ? Localize("Current: Time") : Localize("Current: Score");
 	const float SortButtonWidth = TextRender()->TextWidth(SortButtonFontSize, pSortLabel) + 18.0f;
-	const ColorRGBA SortButtonBaseColor = g_Config.m_ClScoreboardSortMode ? ColorRGBA(0.25f, 0.55f, 0.8f, 0.6f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f);
+	const ColorRGBA SortButtonBaseColor = g_Config.m_QmScoreboardSortMode ? ColorRGBA(0.25f, 0.55f, 0.8f, 0.6f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f);
 	const ColorRGBA SortButtonColor = SortButtonBaseColor.WithMultipliedAlpha(m_AnimContentAlpha);
 	auto &&DoSortButton = [&](CUIRect Rect) {
 		Rect.VMargin(4.0f, &Rect);
 		Rect.HMargin(6.0f, &Rect);
 		if(Ui()->DoButton_PopupMenu(&s_ScoreboardSortButton, pSortLabel, &Rect, SortButtonFontSize, TEXTALIGN_MC, 0.0f, false, true, SortButtonColor))
-			g_Config.m_ClScoreboardSortMode ^= 1;
+			g_Config.m_QmScoreboardSortMode ^= 1;
 	};
 
 	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
@@ -1724,7 +1724,7 @@ bool CScoreboard::IsActive() const
 	if(GameClient()->m_Snap.m_pLocalInfo && !GameClient()->m_Snap.m_SpecInfo.m_Active)
 	{
 		// we are not a spectator, check if we are dead and the game isn't paused
-		if(!GameClient()->m_Snap.m_pLocalCharacter && g_Config.m_ClScoreboardOnDeath &&
+		if(!GameClient()->m_Snap.m_pLocalCharacter && g_Config.m_QmScoreboardOnDeath &&
 			!(pGameInfoObj && pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED))
 			return true;
 	}

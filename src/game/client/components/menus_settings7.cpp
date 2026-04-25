@@ -36,7 +36,7 @@ using namespace FontIcons;
 
 void CMenus::RenderSettingsTee7(CUIRect MainView)
 {
-	CUIRect SkinPreview, NormalSkinPreview, RedTeamSkinPreview, BlueTeamSkinPreview, Buttons, QuickSearch, DirectoryButton, RefreshButton, SaveDeleteButton, TabBars, TabBar, LeftTab, RightTab;
+	CUIRect SkinPreview, NormalSkinPreview, RedTeamSkinPreview, BlueTeamSkinPreview, Buttons, QuickSearch, DirectoryButton, RefreshButton, SaveDeleteButton, EditTextureButton, TabBars, TabBar, LeftTab, RightTab;
 	static bool s_Tee7TransitionInitialized = false;
 	static bool s_PrevTee7Dummy = false;
 	static bool s_PrevTee7Custom = false;
@@ -50,6 +50,8 @@ void CMenus::RenderSettingsTee7(CUIRect MainView)
 	Buttons.VSplitLeft(220.0f, &QuickSearch, &Buttons);
 	Buttons.VSplitLeft(10.0f, nullptr, &Buttons);
 	Buttons.VSplitLeft(120.0f, &SaveDeleteButton, &Buttons);
+	Buttons.VSplitLeft(10.0f, nullptr, &Buttons);
+	Buttons.VSplitLeft(140.0f, &EditTextureButton, &Buttons);
 	MainView.HSplitTop(50.0f, &TabBars, &MainView);
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
 	TabBars.VSplitMid(&TabBars, &SkinPreview, 20.0f);
@@ -229,6 +231,10 @@ void CMenus::RenderSettingsTee7(CUIRect MainView)
 			PopupConfirm(Localize("Delete skin"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSkin7);
 		}
 	}
+
+	static CButtonContainer s_EditSkinTextureButton;
+	if(DoButton_Menu(&s_EditSkinTextureButton, Localize("Edit skin texture"), 0, &EditTextureButton))
+		AssetsEditorOpen(ASSETS_EDITOR_TYPE_SKIN);
 
 	static CLineInput s_SkinFilterInput(g_Config.m_ClSkinFilterString, sizeof(g_Config.m_ClSkinFilterString));
 	if(Ui()->DoEditBox_Search(&s_SkinFilterInput, &QuickSearch, 14.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive()))

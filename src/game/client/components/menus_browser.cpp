@@ -78,6 +78,19 @@ static bool IsProtectedFriendsCategory(const char *pCategory)
 	return pCategory != nullptr && (str_comp_nocase(pCategory, IFriends::DEFAULT_CATEGORY) == 0 || IsClanMembersCategory(pCategory) || IsOfflineFriendsCategory(pCategory));
 }
 
+static const char *LocalizeFriendsCategory(const char *pCategory)
+{
+	if(pCategory == nullptr || pCategory[0] == '\0')
+		return "";
+	if(str_comp_nocase(pCategory, IFriends::DEFAULT_CATEGORY) == 0)
+		return Localize("Friends");
+	if(IsClanMembersCategory(pCategory))
+		return Localize("Clan Members");
+	if(IsOfflineFriendsCategory(pCategory))
+		return Localize("Offline");
+	return pCategory;
+}
+
 static ColorRGBA PlayerBackgroundColor(bool Friend, bool Clan, bool Afk, bool Inside)
 {
 	const ColorRGBA FriendsColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendsListFriendColor));
@@ -1798,7 +1811,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		Ui()->DoLabel(&GroupIcon, m_vFriendsCategoryExpanded[CategoryIndex] ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		str_format(aBuf, sizeof(aBuf), "%s (%d)", pCategoryName, (int)vvFriends[CategoryIndex].size());
+		str_format(aBuf, sizeof(aBuf), "%s (%d)", LocalizeFriendsCategory(pCategoryName), (int)vvFriends[CategoryIndex].size());
 		Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);
 		if(DraggingThisHeader)
 			DrawCategoryDragOutline(Header);
@@ -2008,22 +2021,22 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 					if(CanMoveCategory)
 					{
-						m_FriendsActionPopupContext.m_vEntries.emplace_back("移动到分类");
+						m_FriendsActionPopupContext.m_vEntries.emplace_back(Localize("Move to category"));
 						m_vFriendsActionEntries.push_back(FRIEND_ACTION_MOVE_CATEGORY);
 					}
 
 					if(CanEditNote)
 					{
-						m_FriendsActionPopupContext.m_vEntries.emplace_back("编辑备注");
+						m_FriendsActionPopupContext.m_vEntries.emplace_back(Localize("Edit note"));
 						m_vFriendsActionEntries.push_back(FRIEND_ACTION_EDIT_NOTE);
 						if(HasNote)
 						{
-							m_FriendsActionPopupContext.m_vEntries.emplace_back("清除备注");
+							m_FriendsActionPopupContext.m_vEntries.emplace_back(Localize("Clear note"));
 							m_vFriendsActionEntries.push_back(FRIEND_ACTION_CLEAR_NOTE);
 						}
 					}
 
-					m_FriendsActionPopupContext.m_vEntries.emplace_back("移除好友");
+					m_FriendsActionPopupContext.m_vEntries.emplace_back(Localize("Remove friend"));
 					m_vFriendsActionEntries.push_back(FRIEND_ACTION_REMOVE);
 
 					if(!m_FriendsActionPopupContext.m_vEntries.empty())
@@ -2330,8 +2343,10 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Add to category"));
 		Ui()->DoLabel(&Button, aBuf, FontSize + 2.0f, TEXTALIGN_ML);
 		Button.VSplitLeft(80.0f, nullptr, &Button);
+		std::vector<std::string> vDisplayedCategories;
 		std::vector<const char *> vpCategories;
 		std::vector<int> vCategoryIndices;
+		vDisplayedCategories.reserve(NumCategories);
 		vpCategories.reserve(NumCategories);
 		vCategoryIndices.reserve(NumCategories);
 		for(int CategoryIndex = 0; CategoryIndex < NumCategories; ++CategoryIndex)
@@ -2339,7 +2354,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			const char *pCategory = GameClient()->Friends()->GetCategory(CategoryIndex);
 			if(IsClanMembersCategory(pCategory))
 				continue;
-			vpCategories.push_back(pCategory);
+			vDisplayedCategories.emplace_back(LocalizeFriendsCategory(pCategory));
+			vpCategories.push_back(vDisplayedCategories.back().c_str());
 			vCategoryIndices.push_back(CategoryIndex);
 		}
 
@@ -2347,7 +2363,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		{
 			const int DefaultCategoryIndex = maximum(0, GameClient()->Friends()->FindCategory(GameClient()->Friends()->DefaultCategory()));
 			vCategoryIndices.push_back(DefaultCategoryIndex);
-			vpCategories.push_back(GameClient()->Friends()->GetCategory(DefaultCategoryIndex));
+			vDisplayedCategories.emplace_back(LocalizeFriendsCategory(GameClient()->Friends()->GetCategory(DefaultCategoryIndex)));
+			vpCategories.push_back(vDisplayedCategories.back().c_str());
 		}
 
 		int DropDownSelection = 0;
@@ -2378,7 +2395,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		if(s_NameInput.IsEmpty() && !s_ClanInput.IsEmpty())
 			str_copy(aAddButtonLabel, "添加战队");
 		else
-			str_format(aAddButtonLabel, sizeof(aAddButtonLabel), "添加到%s", GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex));
+			str_format(aAddButtonLabel, sizeof(aAddButtonLabel), "添加到%s", LocalizeFriendsCategory(GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex)));
 		if(DoButton_Menu(&s_AddButton, aAddButtonLabel, 0, &Button))
 		{
 			const char *pCategory = GameClient()->Friends()->GetCategory(m_FriendAddCategoryIndex);
@@ -2412,7 +2429,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 	{
 		CUIRect Label, Button;
 		View.HSplitTop(12.0f, &Label, &View);
-		pMenus->Ui()->DoLabel(&Label, pCategory, FontSize + 1.0f, TEXTALIGN_ML);
+		pMenus->Ui()->DoLabel(&Label, LocalizeFriendsCategory(pCategory), FontSize + 1.0f, TEXTALIGN_ML);
 
 		View.HSplitTop(3.0f, nullptr, &View);
 		View.HSplitTop(18.0f, &Button, &View);
@@ -2503,7 +2520,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendNote(void *pContext, CUIRect Vi
 
 	CUIRect Label, Input, Buttons, Cancel, Confirm;
 	View.HSplitTop(12.0f, &Label, &View);
-	pMenus->Ui()->DoLabel(&Label, "好友备注", FontSize, TEXTALIGN_ML);
+	pMenus->Ui()->DoLabel(&Label, Localize("Friend note"), FontSize, TEXTALIGN_ML);
 
 	View.HSplitTop(3.0f, nullptr, &View);
 	View.HSplitTop(18.0f, &Input, &View);

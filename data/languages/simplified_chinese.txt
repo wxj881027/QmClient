@@ -1738,6 +1738,12 @@ Server filter
 Friends
 == 好友
 
+Clan Members
+== 战队成员
+
+Offline
+== 离线
+
 Loading…
 == 正在加载…
 
@@ -4524,6 +4530,9 @@ Stereo width
 Voice distance radius
 == 语音距离半径
 
+Voice distance radius (Tiles)
+== 语音距离半径（方块）
+
 Hear teammates globally
 == 同组全图收听
 
@@ -4696,6 +4705,21 @@ Export
 Show Grid
 == 显示网格
 
+Blend mode
+== 叠加模式
+
+Multiply
+== 正片叠底
+
+Normal
+== 普通
+
+Screen
+== 滤色
+
+Overlay
+== 叠加
+
 Donor (drag parts from left)
 == 来源材质（从左侧拖拽部件）
 
@@ -4704,6 +4728,12 @@ Frankenstein (drop parts on right)
 
 Part reset to main asset.
 == 部件已重置为主材质。
+
+Part reset to default asset.
+== 部件已重置为默认材质。
+
+Part color updated.
+== 部件颜色已更新。
 
 tile
 == 瓦片
@@ -4717,11 +4747,107 @@ Click again to cycle parts (%d options).
 Donor Asset
 == 来源材质
 
+Search
+== 搜索
+
+Search donor asset
+== 搜索来源材质
+
+Search main asset
+== 搜索主材质
+
+Edit skin texture
+== 编辑皮肤贴图
+
+Back
+== 返回
+
+Edit audio pack
+== 编辑音频包
+
+Audio slots
+== 音频槽位
+
+Candidate files
+== 候选文件
+
+Pack name
+== 包名
+
+Relative path
+== 相对路径
+
+Current file
+== 当前文件
+
+Selected pack
+== 当前音频包
+
+Built-in
+== 内置
+
+Selected candidate
+== 已选候选文件
+
+Manual source file
+== 手动源文件
+
+Source file
+== 源文件
+
+Preview selected file
+== 试听已选文件
+
+Preview import file
+== 试听导入文件
+
+Export selected file
+== 导出已选文件
+
+No audio slots found.
+== 未找到音频槽位。
+
+No candidate file selected.
+== 未选择候选文件。
+
+Failed to preview candidate file.
+== 试听候选文件失败。
+
+Failed to preview import file.
+== 试听导入文件失败。
+
+Audio pack exported.
+== 音频包已导出
+
+Audio file was exported, but reload failed. Restart sound to apply it.
+== 音频文件已导出，但重新加载失败。请重启声音以应用更改。
+
+Failed to export audio pack file.
+== 导出音频包文件失败
+
+Source file is empty.
+== 源文件为空
+
+Source file does not exist.
+== 源文件不存在
+
+Only .wv files are supported right now.
+== 当前仅支持 .wv 文件
+
 Main Asset
 == 主材质
 
 Drop on right canvas to replace one part.
 == 拖到右侧画布可替换一个部件。
+
+Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
+== 左键点击右侧部件可调色，拖拽可替换部件，右键可重置。
+
+The selected part stays highlighted while you adjust its color.
+== 调色时会持续高亮当前选中的部件。
+
+my_%s
+== 我的_%s
 
 Drag from left to right. Right-click a Frankenstein part to reset it.
 == 从左侧拖到右侧。右键拼合结果中的部件可将其重置。
@@ -5021,6 +5147,9 @@ keys
 == 按键显示
 
 coords
+== 坐标
+
+Coords
 == 坐标
 
 hook strength
@@ -6240,6 +6369,9 @@ Are you sure you want to delete this asset?
 Download this asset?
 == 确定要下载此资源吗？
 
+Download failed
+== 下载失败
+
 Show moving tiles in entities
 == 在实体层显示移动方块
 
@@ -6356,9 +6488,6 @@ Main
 
 Zoom
 == 缩放
-
-Offline
-== 离线
 
 Sync
 == 同步
@@ -6646,13 +6775,22 @@ Off
 == ⚠️ LLM API 密钥未配置
 
 Translate UI
-== 翻译 UI
+== 翻译按钮
+
+Translate button
+== 翻译按钮
 
 Customize translate button and menu colors
 == 自定义翻译按钮和菜单颜色
 
 Button - Disabled
 == 按钮 - 未启用
+
+Auto-toggle fast input
+== 自动开关快速输入
+
+Auto-toggle fast input others
+== 自动开关快速输入其他玩家
 
 Button - Enabled
 == 按钮 - 已启用
@@ -6761,6 +6899,9 @@ Add to queue
 
 Audio packs
 == 音频包
+
+Default
+== 默认
 
 Friend color in friends list
 == 好友列表中好友条目颜色
@@ -6910,13 +7051,13 @@ Prediction
 == 预测
 
 Position
-== 位置
+== 坐标
 
 Race Time
 == 比赛时间
 
 FPS
-== 每秒帧数
+== 帧率
 
 Velocity
 == 速度
@@ -6964,3 +7105,123 @@ Not downloaded
 
 Hide overhead direction and hook indicators
 == 隐藏头顶方向键和强弱钩提示
+
+Minimum Target Language Characters
+== 目标语言最少字符数
+
+Target Language Ratio
+== 目标语言占比
+
+Auto-translate skips text that already looks like the target language.
+== 看起来已经像目标语言的文本会跳过自动翻译。
+
+Numeric-only messages are skipped locally.
+== 纯数字消息会在本地直接跳过。
+
+Concurrency (1 = automatic)
+== 并发数（1 = 自动）
+
+Hide Echo Messages
+== 隐藏 Echo 消息
+
+Direction Keys
+== 方向键
+
+Strong Weak Hook
+== 强弱钩
+
+Entity Background Image
+== 实体层背景图
+
+Map Preview
+== 地图预览
+
+Sync Workshop Assets
+== 同步商店资源
+
+Show Workshop Assets
+== 显示商店资源
+
+Local-only
+== 仅本地资源
+
+Internet (From online source)
+== Internet（来源于网络）
+
+entity_bg (Workshop)
+== entity_bg（Workshop）
+
+Show Directory
+== 显示目录
+
+No matching assets.
+== 没有匹配的材质。
+
+Clear note
+== 移除备注
+
+Edit note
+== 编辑备注
+
+Move to category
+== 移动到分类
+
+Friend note
+== 好友备注
+
+Hammer: %s
+== 锤：%s
+
+Normal
+== 正常
+
+Dummy Control: %s
+== 分身控制：%s
+
+Dummy Copy: %s
+== 分身同步：%s
+
+Key Sticking: ?
+== 卡键：?
+
+Key Sticking: On
+== 卡键：开
+
+Key Sticking: Off
+== 卡键：关
+
+Key Sticking: Reset Self
+== 卡键：重置本体
+
+3 Tiles Edge Jump:
+== 三格 Edge:
+
+Left Jump:
+== 左跳:
+
+Left Double Jump:
+== 左二跳:
+
+Right Jump:
+== 右跳:
+
+Right Double Jump:
+== 右二跳:
+
+Alive: %.1fs/%.1fs
+== 存活：%.1fs/%.1fs
+
+Rescue/Freeze: %d/%d
+== 被救/落水：%d/%d
+
+Hooking L/R: %.0f%%/%.0f%%
+== 出钩 L/R：%.0f%%/%.0f%%
+
+Map Progress: %.1f%%
+== 地图进度：%.1f%%
+
+Map Progress: --
+== 地图进度：--
+
+Tee 0.7
+== Tee 0.7

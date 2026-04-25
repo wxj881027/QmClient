@@ -299,6 +299,145 @@ bool IsChineseLanguage(const char *pLanguage)
 		str_comp_nocase(pLanguage, "zh-tw") == 0;
 }
 
+bool IsChineseVariantLanguage(const char *pLanguage)
+{
+	if(!pLanguage || pLanguage[0] == '\0')
+		return false;
+	return str_comp_nocase(pLanguage, "zh-cn") == 0 ||
+		str_comp_nocase(pLanguage, "zh-tw") == 0;
+}
+
+const char *NormalizeTranslateSource(const char *pSource)
+{
+	if(!pSource || pSource[0] == '\0')
+		return "auto";
+	if(str_comp_nocase(pSource, "auto") == 0)
+		return "auto";
+	return pSource;
+}
+
+bool HasExplicitTranslateSource(const char *pSource)
+{
+	return str_comp_nocase(NormalizeTranslateSource(pSource), "auto") != 0;
+}
+
+struct SLocalLanguageStats
+{
+	int m_Han = 0;
+	int m_Kana = 0;
+	int m_Hangul = 0;
+	int m_Cyrillic = 0;
+	int m_Latin = 0;
+	int m_Digits = 0;
+	int m_Meaningful = 0;
+	int m_ScriptTotal = 0;
+};
+
+SLocalLanguageStats AnalyzeLocalLanguageStats(const char *pText)
+{
+	SLocalLanguageStats Stats;
+	if(!pText)
+		return Stats;
+
+	const char *p = pText;
+	while(*p)
+	{
+		const int Codepoint = str_utf8_decode(&p);
+		if(Codepoint <= 0)
+			continue;
+
+		const bool IsHan = (Codepoint >= 0x4E00 && Codepoint <= 0x9FFF) ||
+			(Codepoint >= 0x3400 && Codepoint <= 0x4DBF);
+		if(IsHan)
+		{
+			++Stats.m_Han;
+			++Stats.m_Meaningful;
+			++Stats.m_ScriptTotal;
+		}
+		else if(Codepoint >= 0x3040 && Codepoint <= 0x30FF)
+		{
+			++Stats.m_Kana;
+			++Stats.m_Meaningful;
+			++Stats.m_ScriptTotal;
+		}
+		else if(Codepoint >= 0xAC00 && Codepoint <= 0xD7AF)
+		{
+			++Stats.m_Hangul;
+			++Stats.m_Meaningful;
+			++Stats.m_ScriptTotal;
+		}
+		else if(Codepoint >= 0x0400 && Codepoint <= 0x04FF)
+		{
+			++Stats.m_Cyrillic;
+			++Stats.m_Meaningful;
+			++Stats.m_ScriptTotal;
+		}
+		else if((Codepoint >= 'A' && Codepoint <= 'Z') || (Codepoint >= 'a' && Codepoint <= 'z') ||
+			(Codepoint >= 0x00C0 && Codepoint <= 0x024F))
+		{
+			++Stats.m_Latin;
+			++Stats.m_Meaningful;
+			++Stats.m_ScriptTotal;
+		}
+		else if(Codepoint >= '0' && Codepoint <= '9')
+		{
+			++Stats.m_Digits;
+			++Stats.m_Meaningful;
+		}
+	}
+
+	return Stats;
+}
+
+bool PassLocalDetectThreshold(int Count, int Total)
+{
+	if(Count <= 0 || Total <= 0)
+		return false;
+	const int Threshold = std::clamp(g_Config.m_QmTranslateLocalDetectRatio, 50, 100);
+	return Count * 100 >= Total * Threshold;
+}
+
+bool IsPredominantlyNumeric(const SLocalLanguageStats &Stats)
+{
+	const int MinChars = std::clamp(g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
+	return Stats.m_Digits >= MinChars && PassLocalDetectThreshold(Stats.m_Digits, Stats.m_Meaningful);
+}
+
+bool MatchesTargetLanguageHeuristically(const SLocalLanguageStats &Stats, const char *pTarget)
+{
+	if(!pTarget || pTarget[0] == '\0' || Stats.m_ScriptTotal <= 0)
+		return false;
+
+	if(IsChineseLanguage(pTarget))
+	{
+		if(IsChineseVariantLanguage(pTarget))
+			return false;
+		const int MinChars = std::clamp(g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
+		return Stats.m_Han >= MinChars && Stats.m_Kana == 0 && Stats.m_Hangul == 0 &&
+			PassLocalDetectThreshold(Stats.m_Han, Stats.m_ScriptTotal);
+	}
+	if(str_comp_nocase(pTarget, "ja") == 0)
+	{
+		const int MinChars = std::clamp(g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
+		return Stats.m_Kana + Stats.m_Han >= MinChars &&
+			PassLocalDetectThreshold(Stats.m_Kana + Stats.m_Han, Stats.m_ScriptTotal);
+	}
+	if(str_comp_nocase(pTarget, "ko") == 0)
+	{
+		const int MinChars = std::clamp(g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
+		return Stats.m_Hangul >= MinChars &&
+			PassLocalDetectThreshold(Stats.m_Hangul, Stats.m_ScriptTotal);
+	}
+	if(str_comp_nocase(pTarget, "ru") == 0)
+	{
+		const int MinChars = std::clamp(g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
+		return Stats.m_Cyrillic >= MinChars &&
+			PassLocalDetectThreshold(Stats.m_Cyrillic, Stats.m_ScriptTotal);
+	}
+
+	return false;
+}
+
 const char *GetTencentCloudSecretId()
 {
 	if(g_Config.m_QmTranslateTcSecretId[0] != '\0')
@@ -653,14 +792,14 @@ public:
 	{
 		return "LibreTranslate";
 	}
-	CTranslateBackendLibretranslate(IHttp &Http, const char *pText, const char *pTarget)
+	CTranslateBackendLibretranslate(IHttp &Http, const char *pText, const char *pTarget, const char *pSource)
 	{
 		CJsonStringWriter Json = CJsonStringWriter();
 		Json.BeginObject();
 		Json.WriteAttribute("q");
 		Json.WriteStrValue(pText);
 		Json.WriteAttribute("source");
-		Json.WriteStrValue("auto");
+		Json.WriteStrValue(NormalizeTranslateSource(pSource));
 		Json.WriteAttribute("target");
 		Json.WriteStrValue(EncodeTarget(pTarget));
 		Json.WriteAttribute("format");
@@ -766,7 +905,7 @@ public:
 		return "TencentCloud";
 	}
 
-	CTranslateBackendTencentCloud(IHttp &Http, const char *pText, const char *pTarget)
+	CTranslateBackendTencentCloud(IHttp &Http, const char *pText, const char *pTarget, const char *pSource)
 	{
 		const char *pSecretId = GetTencentCloudSecretId();
 		const char *pSecretKey = GetTencentCloudSecretKey();
@@ -788,7 +927,7 @@ public:
 		Json.WriteAttribute("ProjectId");
 		Json.WriteIntValue(0);
 		Json.WriteAttribute("Source");
-		Json.WriteStrValue("auto");
+		Json.WriteStrValue(NormalizeTranslateSource(pSource));
 		Json.WriteAttribute("SourceText");
 		Json.WriteStrValue(pText);
 		Json.WriteAttribute("Target");
@@ -1136,7 +1275,7 @@ public:
 		}
 	}
 
-	CTranslateBackendLlm(IHttp &Http, const char *pText, const char *pTarget)
+	CTranslateBackendLlm(IHttp &Http, const char *pText, const char *pTarget, const char *pSource)
 	{
 		// 获取当前选择的 Provider（确保值在有效范围内）
 		constexpr int PROVIDER_MIN = static_cast<int>(ELlmProvider::ZHIPU_AI);
@@ -1169,6 +1308,12 @@ public:
 		else
 		{
 			str_format(aSystemMessage, sizeof(aSystemMessage), DEFAULT_TRANSLATE_PROMPT, EncodeTarget(pTarget));
+		}
+		if(HasExplicitTranslateSource(pSource))
+		{
+			char aSourceHint[128];
+			str_format(aSourceHint, sizeof(aSourceHint), " The input language is %s.", NormalizeTranslateSource(pSource));
+			str_append(aSystemMessage, aSourceHint, sizeof(aSystemMessage));
 		}
 
 		// Build JSON request body manually (CJsonStringWriter doesn't support float values)
@@ -1318,16 +1463,16 @@ public:
 	}
 };
 
-static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const char *pText, const char *pTarget)
+static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const char *pText, const char *pTarget, const char *pSource = "auto")
 {
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
-		return std::make_unique<CTranslateBackendLibretranslate>(Http, pText, pTarget);
+		return std::make_unique<CTranslateBackendLibretranslate>(Http, pText, pTarget, pSource);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 		return std::make_unique<CTranslateBackendFtapi>(Http, pText, pTarget);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
-		return std::make_unique<CTranslateBackendTencentCloud>(Http, pText, pTarget);
+		return std::make_unique<CTranslateBackendTencentCloud>(Http, pText, pTarget, pSource);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
-		return std::make_unique<CTranslateBackendLlm>(Http, pText, pTarget);
+		return std::make_unique<CTranslateBackendLlm>(Http, pText, pTarget, pSource);
 	return nullptr;
 }
 
@@ -1453,7 +1598,10 @@ void CTranslate::Translate(CChat::CLine &Line, bool ShowProgress, bool AutoTrigg
 		pTarget = "en";
 	}
 	str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
-	Job.m_pBackend = CreateTranslateBackend(*Http(), Line.m_aText, Job.m_aTarget);
+	const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
+	if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
+		pSource = "auto";
+	Job.m_pBackend = CreateTranslateBackend(*Http(), Line.m_aText, Job.m_aTarget, pSource);
 	if(!Job.m_pBackend)
 	{
 		GameClient()->m_Chat.Echo(Localize("Invalid translate backend"));
@@ -1492,7 +1640,10 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
 	COutgoingTranslateJob Job;
 	Job.m_Team = Team;
 	str_copy(Job.m_aTarget, Target.c_str(), sizeof(Job.m_aTarget));
-	Job.m_pBackend = CreateTranslateBackend(*Http(), Text.c_str(), Job.m_aTarget);
+	const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
+	if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
+		pSource = "auto";
+	Job.m_pBackend = CreateTranslateBackend(*Http(), Text.c_str(), Job.m_aTarget, pSource);
 	if(!Job.m_pBackend)
 	{
 		GameClient()->m_Chat.Echo(Localize("Invalid translate backend"));
@@ -1617,6 +1768,18 @@ void CTranslate::AutoTranslate(CChat::CLine &Line)
 			return;
 		}
 	}
+	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget);
+	const SLocalLanguageStats LocalStats = AnalyzeLocalLanguageStats(Line.m_aText);
+	if(IsPredominantlyNumeric(LocalStats))
+	{
+		dbg_msg("translate", "AutoTranslate skipped: predominantly numeric text");
+		return;
+	}
+	if(MatchesTargetLanguageHeuristically(LocalStats, pTarget))
+	{
+		dbg_msg("translate", "AutoTranslate skipped: local heuristic matched target language '%s'", pTarget);
+		return;
+	}
 	dbg_msg("translate", "AutoTranslate triggered for: '%.50s...' (ClientId=%d, Backend=%s)",
 		Line.m_aText, Line.m_ClientId, g_Config.m_QmTranslateBackend);
 	Translate(Line, false, true);
@@ -1648,6 +1811,13 @@ bool CTranslate::ShouldAutoTranslateOutgoing(const char *pText) const
 	if(!pText || pText[0] == '\0' || pText[0] == '/')
 		return false;
 
+	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateOutgoingTarget);
+	const SLocalLanguageStats LocalStats = AnalyzeLocalLanguageStats(pText);
+	if(IsPredominantlyNumeric(LocalStats))
+		return false;
+	if(MatchesTargetLanguageHeuristically(LocalStats, pTarget))
+		return false;
+
 	// 模式 0: 仅中文输入时触发
 	if(g_Config.m_QmTranslateAutoOutgoingMode == 0)
 		return ContainsChinese(pText);
@@ -1673,7 +1843,10 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 		pTarget = "en";
 	}
 	str_copy(Job.m_aTarget, pTarget, sizeof(Job.m_aTarget));
-	Job.m_pBackend = CreateTranslateBackend(*Http(), pText, Job.m_aTarget);
+	const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
+	if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
+		pSource = "auto";
+	Job.m_pBackend = CreateTranslateBackend(*Http(), pText, Job.m_aTarget, pSource);
 
 	if(!Job.m_pBackend)
 	{
