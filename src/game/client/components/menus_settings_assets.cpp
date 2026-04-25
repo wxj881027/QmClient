@@ -2129,14 +2129,15 @@ void CMenus::RefreshEntityBgHierarchyView()
 		m_aEntityBgCurrentFolder[0] = '\0';
 
 	std::vector<SEntityBgHierarchyEntry> vEntries;
+	const SWorkshopHudState *pEntityBgWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG);
 	if(s_aFilterInputs[ASSETS_TAB_ENTITY_BG].IsEmpty())
 	{
-		vEntries = BuildEntityBgHierarchyEntries(m_vEntityBgSourceNames, m_aEntityBgCurrentFolder, m_ShowWorkshopAssets, &m_vEntityBgSourceKinds);
+		const bool ForceShowWorkshopFolder = pEntityBgWorkshopState != nullptr && !pEntityBgWorkshopState->m_vAssets.empty();
+		vEntries = BuildEntityBgHierarchyEntries(m_vEntityBgSourceNames, m_aEntityBgCurrentFolder, m_ShowWorkshopAssets, &m_vEntityBgSourceKinds, ForceShowWorkshopFolder);
 	}
 	else
 	{
 		const char *pFilter = s_aFilterInputs[ASSETS_TAB_ENTITY_BG].GetString();
-		const SWorkshopHudState *pWorkshopState = WorkshopStateByTab(ASSETS_TAB_ENTITY_BG);
 		for(const std::string &AssetName : m_vEntityBgSourceNames)
 		{
 			const auto SourceIt = m_vEntityBgSourceKinds.find(AssetName);
@@ -2153,7 +2154,7 @@ void CMenus::RefreshEntityBgHierarchyView()
 			Entry.m_IsDirectory = false;
 			Entry.m_Source = Source;
 
-			const char *pAuthor = FindWorkshopAuthorByLocalName(pWorkshopState, Entry.m_aName);
+			const char *pAuthor = FindWorkshopAuthorByLocalName(pEntityBgWorkshopState, Entry.m_aName);
 			if(!SearchFilterMatches(pFilter, Entry.m_aDisplayName, pAuthor) &&
 				!SearchFilterMatches(pFilter, Entry.m_aName, pAuthor))
 				continue;

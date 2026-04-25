@@ -280,7 +280,7 @@ static std::string_view EntityBgLogicalFolder(std::string_view CurrentFolder)
 	return CurrentFolder;
 }
 
-std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::vector<std::string> &vAssetNames, const char *pCurrentFolder, bool ShowWorkshopFolder, const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> *pAssetSources)
+std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::vector<std::string> &vAssetNames, const char *pCurrentFolder, bool ShowWorkshopFolder, const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> *pAssetSources, bool ForceShowWorkshopFolder)
 {
 	std::vector<SEntityBgHierarchyEntry> vEntries;
 	std::unordered_set<std::string> vSeenNames;
@@ -375,7 +375,7 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 		}
 	}
 
-	if(aFolder[0] == '\0' && ShowWorkshopFolder && HasEntityBgWorkshopFolder(vAssetNames, pAssetSources))
+	if(aFolder[0] == '\0' && ShowWorkshopFolder && (ForceShowWorkshopFolder || HasEntityBgWorkshopFolder(vAssetNames, pAssetSources)))
 		AddEntry("entity_bg", ENTITY_BG_WORKSHOP_FOLDER_LABEL, true, EEntityBgHierarchyEntrySource::WORKSHOP);
 
 	std::stable_sort(vEntries.begin(), vEntries.end(), EntityBgHierarchyEntryLess);

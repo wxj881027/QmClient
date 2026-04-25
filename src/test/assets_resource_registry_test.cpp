@@ -268,6 +268,30 @@ TEST(AssetsResourceRegistry, EntityBgHierarchyViewCanHideWorkshopFolderAtRoot)
 	EXPECT_STREQ(vHiddenWorkshopEntries[1].m_aName, "default");
 }
 
+TEST(AssetsResourceRegistry, EntityBgHierarchyViewCanForceWorkshopFolderAtRootWithoutInstalledAssets)
+{
+	const std::vector<std::string> vAssetNames = {
+		"default",
+		"local_folder/demo",
+	};
+	const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> vSources = {
+		{"default", EEntityBgHierarchyEntrySource::LOCAL},
+		{"local_folder/demo", EEntityBgHierarchyEntrySource::LOCAL},
+	};
+
+	EXPECT_FALSE(HasEntityBgWorkshopFolder(vAssetNames, &vSources));
+
+	const auto vRootEntries = BuildEntityBgHierarchyEntries(vAssetNames, "", true, &vSources, true);
+
+	ASSERT_EQ(vRootEntries.size(), 3u);
+	EXPECT_STREQ(vRootEntries[0].m_aName, "entity_bg");
+	EXPECT_EQ(vRootEntries[0].m_Source, EEntityBgHierarchyEntrySource::WORKSHOP);
+	EXPECT_TRUE(vRootEntries[0].m_IsDirectory);
+	EXPECT_STREQ(vRootEntries[0].m_aDisplayName, "entity_bg (Workshop)");
+	EXPECT_STREQ(vRootEntries[1].m_aName, "local_folder");
+	EXPECT_STREQ(vRootEntries[2].m_aName, "default");
+}
+
 TEST(AssetsResourceRegistry, EntityBgHierarchyViewKeepsManagedLocalAssetsVisibleWhenWorkshopIsHidden)
 {
 	const std::vector<std::string> vAssetNames = {
