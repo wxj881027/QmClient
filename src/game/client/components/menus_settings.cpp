@@ -664,12 +664,27 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	const uint64_t TeeTabSwitchNode = UiAnimNodeKey("settings_tee_tab_switch");
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
 	TabBar.VSplitMid(&TabBar, &ChangeInfo, 20.f);
-	TabBar.VSplitLeft(TabBar.w / 3.0f, &PlayerTab, &TabBar);
-	TabBar.VSplitLeft(TabBar.w / 3.0f, &DummyTab, &ProfilesTab);
+	const char *pPlayerTabLabel = Localize("Player");
+	const char *pDummyTabLabel = Localize("Dummy");
+	const char *pProfilesTabLabel = Localize("Profiles");
+	const float TabFontSize = TabBar.h * CUi::ms_FontmodHeight;
+	float PlayerDummyTabWidth = maximum(90.0f,
+		maximum(TextRender()->TextWidth(TabFontSize, pPlayerTabLabel), TextRender()->TextWidth(TabFontSize, pDummyTabLabel)) + 32.0f);
+	float ProfilesTabWidth = maximum(110.0f, TextRender()->TextWidth(TabFontSize, pProfilesTabLabel) + 32.0f);
+	if(PlayerDummyTabWidth * 2.0f + ProfilesTabWidth > TabBar.w)
+	{
+		ProfilesTabWidth = minimum(ProfilesTabWidth, TabBar.w / 2.0f);
+		PlayerDummyTabWidth = maximum(0.0f, (TabBar.w - ProfilesTabWidth) / 2.0f);
+	}
+	const bool SeparateProfilesTab = PlayerDummyTabWidth * 2.0f + ProfilesTabWidth < TabBar.w;
+	CUIRect TabsRemainder;
+	TabBar.VSplitLeft(PlayerDummyTabWidth, &PlayerTab, &TabsRemainder);
+	TabsRemainder.VSplitLeft(PlayerDummyTabWidth, &DummyTab, nullptr);
+	TabBar.VSplitRight(ProfilesTabWidth, &TabsRemainder, &ProfilesTab);
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
 
 	static CButtonContainer s_PlayerTabButton;
-	if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
+	if(DoButton_MenuTab(&s_PlayerTabButton, pPlayerTabLabel, s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
 	{
 		s_TeeSubTab = 0;
 		m_Dummy = false;
@@ -677,7 +692,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 
 	static CButtonContainer s_DummyTabButton;
-	if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), s_TeeSubTab == 1, &DummyTab, IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, nullptr, 4.0f))
+	if(DoButton_MenuTab(&s_DummyTabButton, pDummyTabLabel, s_TeeSubTab == 1, &DummyTab,
+		   SeparateProfilesTab ? IGraphics::CORNER_R : IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, nullptr, 4.0f))
 	{
 		s_TeeSubTab = 1;
 		m_Dummy = true;
@@ -685,7 +701,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 
 	static CButtonContainer s_ProfilesTabButton;
-	if(DoButton_MenuTab(&s_ProfilesTabButton, Localize("Profiles"), s_TeeSubTab == 2, &ProfilesTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
+	if(DoButton_MenuTab(&s_ProfilesTabButton, pProfilesTabLabel, s_TeeSubTab == 2, &ProfilesTab,
+		   SeparateProfilesTab ? IGraphics::CORNER_ALL : IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
 	{
 		s_TeeSubTab = 2;
 	}
@@ -1103,8 +1120,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		QueueSection.HSplitTop(20.0f, &QueueControls, &QueueSection);
 		CUIRect IntervalRect, LengthRect;
 		QueueControls.VSplitMid(&IntervalRect, &LengthRect, 10.0f);
-		Ui()->DoScrollbarOption(&QueueInterval, &QueueInterval, &IntervalRect, Localize("Switch interval"), 5, 120, &CUi::ms_LinearScrollbarScale, 0, "s");
-		if(Ui()->DoScrollbarOption(&QueueLength, &QueueLength, &LengthRect, Localize("Queue length"), 0, QueueMaxLimit))
+		Ui()->DoScrollbarOption(&QueueInterval, &QueueInterval, &IntervalRect, Localize("间隔"), 5, 120, &CUi::ms_LinearScrollbarScale, 0, "s");
+		if(Ui()->DoScrollbarOption(&QueueLength, &QueueLength, &LengthRect, Localize("长度"), 0, QueueMaxLimit))
 		{
 			GameClient()->m_Skins.TrimSkinQueueToLimit(QueueDummy);
 		}
@@ -1378,6 +1395,33 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	DirectoryButton.VSplitRight(175.0f, nullptr, &DirectoryButton);
 	DirectoryButton.VSplitRight(25.0f, &DirectoryButton, &RefreshButton);
 	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
+	constexpr float SkinControlGap = 10.0f;
+	constexpr float SkinControlLabelFontSize = 14.0f;
+	constexpr float SkinControlLabelPadding = 24.0f;
+	constexpr float SkinRefreshButtonWidth = 25.0f;
+	constexpr float SkinSearchPreferredWidth = 220.0f;
+	const char *pSkinDatabaseLabel = Localize("Skin Database");
+	const char *pSkinDirectoryLabel = Localize("Skins directory");
+	const float DesiredDatabaseButtonWidth = maximum(110.0f, TextRender()->TextWidth(SkinControlLabelFontSize, pSkinDatabaseLabel, -1, -1.0f) + SkinControlLabelPadding);
+	const float DesiredDirectoryButtonWidth = maximum(110.0f, TextRender()->TextWidth(SkinControlLabelFontSize, pSkinDirectoryLabel, -1, -1.0f) + SkinControlLabelPadding);
+	const float AvailableLabelButtonWidth = maximum(0.0f, QuickSearch.w - SkinControlGap * 3.0f - SkinRefreshButtonWidth);
+	const float DesiredLabelButtonWidth = DesiredDatabaseButtonWidth + DesiredDirectoryButtonWidth;
+	const float LabelButtonWidthScale = DesiredLabelButtonWidth > 0.0f ? minimum(1.0f, AvailableLabelButtonWidth / DesiredLabelButtonWidth) : 1.0f;
+	const float DatabaseButtonWidth = DesiredDatabaseButtonWidth * LabelButtonWidthScale;
+	const float DirectoryButtonWidth = DesiredDirectoryButtonWidth * LabelButtonWidthScale;
+	const float ControlsWidth = minimum(QuickSearch.w, SkinControlGap * 3.0f + DatabaseButtonWidth + DirectoryButtonWidth + SkinRefreshButtonWidth);
+	CUIRect ControlsArea;
+	QuickSearch.VSplitRight(ControlsWidth, &QuickSearch, &ControlsArea);
+	if(QuickSearch.w > SkinSearchPreferredWidth)
+	{
+		QuickSearch.VSplitLeft(SkinSearchPreferredWidth, &QuickSearch, nullptr);
+	}
+	ControlsArea.VSplitLeft(SkinControlGap, nullptr, &ControlsArea);
+	ControlsArea.VSplitLeft(DatabaseButtonWidth, &DatabaseButton, &ControlsArea);
+	ControlsArea.VSplitLeft(SkinControlGap, nullptr, &ControlsArea);
+	ControlsArea.VSplitLeft(DirectoryButtonWidth, &DirectoryButton, &ControlsArea);
+	ControlsArea.VSplitLeft(SkinControlGap, nullptr, &ControlsArea);
+	ControlsArea.VSplitLeft(SkinRefreshButtonWidth, &RefreshButton, nullptr);
 
 	// Skin selector
 	static CListBox s_ListBox;
@@ -1535,7 +1579,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 
 	static CButtonContainer s_SkinDatabaseButton;
-	if(DoButton_Menu(&s_SkinDatabaseButton, Localize("Skin Database"), 0, &DatabaseButton))
+	if(DoButton_Menu(&s_SkinDatabaseButton, pSkinDatabaseLabel, 0, &DatabaseButton))
 	{
 		Client()->ViewLink("https://ddnet.org/skins/");
 	}
@@ -1545,7 +1589,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		AssetsEditorOpen(ASSETS_EDITOR_TYPE_SKIN);
 
 	static CButtonContainer s_DirectoryButton;
-	if(DoButton_Menu(&s_DirectoryButton, Localize("Skins directory"), 0, &DirectoryButton))
+	if(DoButton_Menu(&s_DirectoryButton, pSkinDirectoryLabel, 0, &DirectoryButton))
 	{
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, "skins", aBuf, sizeof(aBuf));
 		Storage()->CreateFolder("skins", IStorage::TYPE_SAVE);

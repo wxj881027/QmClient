@@ -981,6 +981,13 @@ protected:
 		SORT_DATE,
 	};
 
+	enum EDemoBrowserSource
+	{
+		DEMO_BROWSER_SOURCE_DEMOS = 0,
+		DEMO_BROWSER_SOURCE_SCREENSHOTS,
+		NUM_DEMO_BROWSER_SOURCES,
+	};
+
 	class CDemoItem
 	{
 	public:
@@ -993,12 +1000,18 @@ protected:
 		bool m_DateLoaded;
 		bool m_DateValid;
 		int64_t m_Size;
+		bool m_SizeLoaded;
 
 		bool m_InfosLoaded;
 		bool m_Valid;
 		CDemoHeader m_Info;
 		CTimelineMarkers m_TimelineMarkers;
 		CMapInfo m_MapInfo;
+
+		bool IsDemoFile() const
+		{
+			return !m_IsDir && str_endswith_nocase(m_aFilename, ".demo") != nullptr;
+		}
 
 		int NumMarkers() const
 		{
@@ -1033,6 +1046,8 @@ protected:
 				return str_comp_filenames(Left.m_aFilename, Right.m_aFilename) < 0;
 			if(g_Config.m_BrDemoSort == SORT_DATE)
 				return Left.m_Date < Right.m_Date;
+			if(!Left.IsDemoFile() || !Right.IsDemoFile())
+				return str_comp_filenames(Left.m_aFilename, Right.m_aFilename) < 0;
 
 			if(!Other.m_InfosLoaded)
 				return m_InfosLoaded;
@@ -1078,6 +1093,7 @@ protected:
 	bool m_DemolistSelectedReveal = false;
 	int m_DemolistStorageType;
 	bool m_DemolistMultipleStorages = false;
+	EDemoBrowserSource m_DemoBrowserSource;
 	std::vector<SDemoSelectionEntry> m_vDemoSelection;
 	std::vector<SDemoDeleteTarget> m_vDemoDeleteTargets;
 	int m_DemoSelectionAnchorIndex = -1;
@@ -1102,7 +1118,12 @@ protected:
 	void DemolistOnUpdate(bool Reset);
 	static int DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 	bool EnsureDemoDate(CDemoItem &Item);
+	bool EnsureDemoSize(CDemoItem &Item);
 	void EnsureAllDemoDates();
+	const char *DemoBrowserBaseFolder() const;
+	bool DemoBrowserBrowsingScreenshots() const;
+	bool DemoBrowserSupportedFile(const char *pName) const;
+	void ResetDemoBrowserFolder();
 
 	// friends
 	class CFriendItem

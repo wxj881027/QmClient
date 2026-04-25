@@ -30,6 +30,33 @@
 using namespace FontIcons;
 using namespace std::chrono_literals;
 
+namespace
+{
+
+bool IsScreenshotBrowserFile(const char *pName)
+{
+	return str_endswith_nocase(pName, ".png") != nullptr ||
+		str_endswith_nocase(pName, ".jpg") != nullptr ||
+		str_endswith_nocase(pName, ".jpeg") != nullptr ||
+		str_endswith_nocase(pName, ".webp") != nullptr;
+}
+
+const char *DemoBrowserListColumnLabel(bool BrowsingScreenshots)
+{
+	return BrowsingScreenshots ? Localize("Screenshot") : Localize("Demo");
+}
+
+void FormatBrowserFileSize(int64_t SizeBytes, char *pBuf, size_t BufSize)
+{
+	const float SizeKiB = SizeBytes / 1024.0f;
+	if(SizeKiB > 1024.0f)
+		str_format(pBuf, BufSize, Localize("%.2f MiB"), SizeKiB / 1024.0f);
+	else
+		str_format(pBuf, BufSize, Localize("%.2f KiB"), SizeKiB);
+}
+
+}
+
 bool CMenus::DemoFilterChat(const void *pData, int Size, void *pUser)
 {
 	bool DoFilterChat = *(bool *)pUser;
@@ -81,6 +108,27 @@ void CMenus::DemoSeekTick(IDemoPlayer::ETickOffset TickOffset)
 	DemoPlayer()->SeekTick(TickOffset);
 	GameClient()->m_SuppressEvents = false;
 	DemoPlayer()->Pause();
+}
+
+const char *CMenus::DemoBrowserBaseFolder() const
+{
+	return DemoBrowserBrowsingScreenshots() ? "screenshots" : "demos";
+}
+
+bool CMenus::DemoBrowserBrowsingScreenshots() const
+{
+	return m_DemoBrowserSource == DEMO_BROWSER_SOURCE_SCREENSHOTS;
+}
+
+bool CMenus::DemoBrowserSupportedFile(const char *pName) const
+{
+	return DemoBrowserBrowsingScreenshots() ? IsScreenshotBrowserFile(pName) : str_endswith_nocase(pName, ".demo") != nullptr;
+}
+
+void CMenus::ResetDemoBrowserFolder()
+{
+	str_copy(m_aCurrentDemoFolder, DemoBrowserBaseFolder());
+	m_DemolistStorageType = IStorage::TYPE_ALL;
 }
 
 void CMenus::RenderDemoPlayer(CUIRect MainView)
@@ -920,9 +968,10 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 int CMenus::DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
 {
 	CMenus *pSelf = (CMenus *)pUser;
+	const char *pBaseFolder = pSelf->DemoBrowserBaseFolder();
 	if(str_comp(pName, ".") == 0 ||
-		(str_comp(pName, "..") == 0 && (pSelf->m_aCurrentDemoFolder[0] == '\0' || (!pSelf->m_DemolistMultipleStorages && str_comp(pSelf->m_aCurrentDemoFolder, "demos") == 0))) ||
-		(!IsDir && !str_endswith(pName, ".demo")))
+		(str_comp(pName, "..") == 0 && (pSelf->m_aCurrentDemoFolder[0] == '\0' || (!pSelf->m_DemolistMultipleStorages && str_comp(pSelf->m_aCurrentDemoFolder, pBaseFolder) == 0))) ||
+		(!IsDir && !pSelf->DemoBrowserSupportedFile(pName)))
 	{
 		return 0;
 	}
@@ -935,13 +984,17 @@ int CMenus::DemolistFetchCallback(const char *pName, int IsDir, int StorageType,
 		Item.m_Date = 0;
 		Item.m_DateLoaded = true;
 		Item.m_DateValid = false;
+		Item.m_Size = 0;
+		Item.m_SizeLoaded = true;
 	}
 	else
 	{
-		str_truncate(Item.m_aName, sizeof(Item.m_aName), pName, str_length(pName) - str_length(".demo"));
+		str_copy(Item.m_aName, pName);
 		Item.m_Date = 0;
 		Item.m_DateLoaded = false;
 		Item.m_DateValid = false;
+		Item.m_Size = 0;
+		Item.m_SizeLoaded = false;
 	}
 	Item.m_InfosLoaded = false;
 	Item.m_Valid = false;
@@ -952,7 +1005,7 @@ int CMenus::DemolistFetchCallback(const char *pName, int IsDir, int StorageType,
 
 	if(time_get_nanoseconds() - pSelf->m_DemoPopulateStartTime > 500ms)
 	{
-		pSelf->RenderLoading(Localize("Loading demo files"), "", 0);
+		pSelf->RenderLoading(pSelf->DemoBrowserBrowsingScreenshots() ? Localize("Loading screenshot files") : Localize("Loading demo files"), "", 0);
 	}
 
 	return 0;
@@ -975,6 +1028,25 @@ bool CMenus::EnsureDemoDate(CDemoItem &Item)
 	return Item.m_DateValid;
 }
 
+bool CMenus::EnsureDemoSize(CDemoItem &Item)
+{
+	if(Item.m_IsDir)
+		return false;
+	if(Item.m_SizeLoaded)
+		return true;
+
+	char aBuffer[IO_MAX_PATH_LENGTH];
+	str_format(aBuffer, sizeof(aBuffer), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
+	IOHANDLE File = Storage()->OpenFile(aBuffer, IOFLAG_READ, Item.m_StorageType);
+	if(!File)
+		return false;
+
+	Item.m_Size = io_length(File);
+	Item.m_SizeLoaded = true;
+	io_close(File);
+	return true;
+}
+
 void CMenus::EnsureAllDemoDates()
 {
 	for(auto &Item : m_vDemos)
@@ -988,9 +1060,10 @@ void CMenus::DemolistPopulate()
 	m_vDemos.clear();
 
 	int NumStoragesWithDemos = 0;
+	const char *pBaseFolder = DemoBrowserBaseFolder();
 	for(int StorageType = IStorage::TYPE_SAVE; StorageType < Storage()->NumPaths(); ++StorageType)
 	{
-		if(Storage()->FolderExists("demos", StorageType))
+		if(Storage()->FolderExists(pBaseFolder, StorageType))
 		{
 			NumStoragesWithDemos++;
 		}
@@ -1001,13 +1074,15 @@ void CMenus::DemolistPopulate()
 	{
 		{
 			CDemoItem Item;
-			str_copy(Item.m_aFilename, "demos");
+			str_copy(Item.m_aFilename, pBaseFolder);
 			str_copy(Item.m_aName, Localize("All combined"));
 			Item.m_InfosLoaded = false;
 			Item.m_Valid = false;
 			Item.m_Date = 0;
 			Item.m_DateLoaded = true;
 			Item.m_DateValid = false;
+			Item.m_Size = 0;
+			Item.m_SizeLoaded = true;
 			Item.m_IsDir = true;
 			Item.m_IsLink = true;
 			Item.m_StorageType = IStorage::TYPE_ALL;
@@ -1016,17 +1091,19 @@ void CMenus::DemolistPopulate()
 
 		for(int StorageType = IStorage::TYPE_SAVE; StorageType < Storage()->NumPaths(); ++StorageType)
 		{
-			if(Storage()->FolderExists("demos", StorageType))
+			if(Storage()->FolderExists(pBaseFolder, StorageType))
 			{
 				CDemoItem Item;
-				str_copy(Item.m_aFilename, "demos");
-				Storage()->GetCompletePath(StorageType, "demos", Item.m_aName, sizeof(Item.m_aName));
+				str_copy(Item.m_aFilename, pBaseFolder);
+				Storage()->GetCompletePath(StorageType, pBaseFolder, Item.m_aName, sizeof(Item.m_aName));
 				str_append(Item.m_aName, "/", sizeof(Item.m_aName));
 				Item.m_InfosLoaded = false;
 				Item.m_Valid = false;
 				Item.m_Date = 0;
 				Item.m_DateLoaded = true;
 				Item.m_DateValid = false;
+				Item.m_Size = 0;
+				Item.m_SizeLoaded = true;
 				Item.m_IsDir = true;
 				Item.m_IsLink = true;
 				Item.m_StorageType = StorageType;
@@ -1040,7 +1117,10 @@ void CMenus::DemolistPopulate()
 		Storage()->ListDirectory(m_DemolistStorageType, m_aCurrentDemoFolder, DemolistFetchCallback, this);
 
 		if(g_Config.m_BrDemoFetchInfo)
-			FetchAllHeaders();
+		{
+			if(!DemoBrowserBrowsingScreenshots())
+				FetchAllHeaders();
+		}
 		else if(g_Config.m_BrDemoSort == SORT_DATE)
 			EnsureAllDemoDates();
 
@@ -1054,7 +1134,7 @@ void CMenus::RefreshFilteredDemos()
 	m_vpFilteredDemos.clear();
 	for(auto &Demo : m_vDemos)
 	{
-		if(str_find_nocase(Demo.m_aFilename, m_DemoSearchInput.GetString()))
+		if(str_find_nocase(Demo.m_aFilename, m_DemoSearchInput.GetString()) || str_find_nocase(Demo.m_aName, m_DemoSearchInput.GetString()))
 		{
 			m_vpFilteredDemos.push_back(&Demo);
 		}
@@ -1321,6 +1401,9 @@ void CMenus::DemolistOnUpdate(bool Reset)
 
 bool CMenus::FetchHeader(CDemoItem &Item)
 {
+	if(!Item.IsDemoFile())
+		return false;
+
 	if(!Item.m_InfosLoaded)
 	{
 		char aBuffer[IO_MAX_PATH_LENGTH];
@@ -1332,6 +1415,7 @@ bool CMenus::FetchHeader(CDemoItem &Item)
 		if(Item.m_Valid && File)
 		{
 			Item.m_Size = io_length(File);
+			Item.m_SizeLoaded = true;
 			io_close(File);
 		}
 	}
@@ -1342,7 +1426,8 @@ void CMenus::FetchAllHeaders()
 {
 	for(auto &Item : m_vDemos)
 	{
-		FetchHeader(Item);
+		if(Item.IsDemoFile())
+			FetchHeader(Item);
 	}
 	if(g_Config.m_BrDemoSort == SORT_DATE)
 		EnsureAllDemoDates();
@@ -1368,6 +1453,8 @@ void CMenus::RenderDemoBrowser(CUIRect MainView)
 
 void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivated)
 {
+	bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
+
 	if(!m_DemoBrowserListInitialized)
 	{
 		DemolistPopulate();
@@ -1376,7 +1463,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	}
 
 #if defined(CONF_VIDEORECORDER)
-	if(!m_DemoRenderInput.IsEmpty())
+	if(!BrowsingScreenshots && !m_DemoRenderInput.IsEmpty())
 	{
 		if(DemoPlayer()->ErrorMessage()[0] == '\0')
 		{
@@ -1425,6 +1512,13 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		{COL_DATE, SORT_DATE, Localizable("Date"), 1, false, 150.0f, {0}, nullptr},
 		{-1, -1, "", 1, false, s_ListBox.ScrollbarWidthMax(), {0}, nullptr},
 	};
+	s_aCols[3].m_pCaption = DemoBrowserListColumnLabel(BrowsingScreenshots);
+	s_aCols[4].m_Width = BrowsingScreenshots ? 0.0f : 2.0f;
+	s_aCols[5].m_Width = BrowsingScreenshots ? 0.0f : 30.0f;
+	s_aCols[6].m_Width = BrowsingScreenshots ? 0.0f : 2.0f;
+	s_aCols[7].m_Width = BrowsingScreenshots ? 0.0f : 75.0f;
+	s_aCols[8].m_Width = BrowsingScreenshots ? 0.0f : 2.0f;
+	s_aCols[9].m_Width = BrowsingScreenshots ? 170.0f : 150.0f;
 
 	CUIRect Headers, ListBox;
 	ListView.HSplitTop(ms_ListheaderHeight, &Headers, &ListBox);
@@ -1457,6 +1551,33 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	{
 		if(Col.m_pCaption[0] != '\0' && Col.m_Sort != -1)
 		{
+			if(Col.m_Id == COL_DEMONAME)
+			{
+				static CUi::SDropDownState s_DemoSourceDropDownState;
+				static CScrollRegion s_DemoSourceDropDownScrollRegion;
+				s_DemoSourceDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_DemoSourceDropDownScrollRegion;
+				const char *apBrowserSources[NUM_DEMO_BROWSER_SOURCES] = {
+					Localize("Replay"),
+					Localize("Screenshots"),
+				};
+				const int NewSource = Ui()->DoDropDown(&Col.m_Rect, m_DemoBrowserSource, apBrowserSources, NUM_DEMO_BROWSER_SOURCES, s_DemoSourceDropDownState);
+				if(NewSource != m_DemoBrowserSource && NewSource >= 0 && NewSource < NUM_DEMO_BROWSER_SOURCES)
+				{
+					m_DemoBrowserSource = (EDemoBrowserSource)NewSource;
+					if(DemoBrowserBrowsingScreenshots() && (g_Config.m_BrDemoSort == SORT_MARKERS || g_Config.m_BrDemoSort == SORT_LENGTH))
+						g_Config.m_BrDemoSort = SORT_DATE;
+					ResetDemoBrowserFolder();
+					m_DemoSearchInput.Clear();
+					DemolistPopulate();
+					DemolistOnUpdate(true);
+					WasListboxItemActivated = false;
+					return;
+				}
+				GameClient()->m_Tooltips.DoToolTip(&s_DemoSourceDropDownState.m_ButtonContainer, &Col.m_Rect, Localize("Choose whether to browse replays or screenshots"));
+				continue;
+			}
+			if(BrowsingScreenshots && (Col.m_Id == COL_MARKERS || Col.m_Id == COL_LENGTH))
+				continue;
 			if(Col.m_FontIcon)
 			{
 				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
@@ -1528,11 +1649,13 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 					pIconType = FONT_ICON_FOLDER_TREE;
 				else if(pItem->m_IsDir)
 					pIconType = FONT_ICON_FOLDER;
+				else if(BrowsingScreenshots)
+					pIconType = FONT_ICON_IMAGE;
 				else
 					pIconType = FONT_ICON_FILM;
 
 				ColorRGBA IconColor;
-				if(!pItem->m_IsDir && (!pItem->m_InfosLoaded || !pItem->m_Valid))
+				if(!pItem->m_IsDir && pItem->IsDemoFile() && (!pItem->m_InfosLoaded || !pItem->m_Valid))
 					IconColor = ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f); // not loaded
 				else
 					IconColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1553,15 +1676,20 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 				Props.m_EnableWidthCheck = false;
 				Ui()->DoLabel(&Button, pItem->m_aName, 12.0f, TEXTALIGN_ML, Props);
 			}
-			else if(Col.m_Id == COL_MARKERS && !pItem->m_IsDir && pItem->m_Valid)
+			else if(Col.m_Id == COL_MARKERS && pItem->IsDemoFile() && pItem->m_Valid)
 			{
 				str_format(aBuf, sizeof(aBuf), "%d", pItem->NumMarkers());
 				Button.VMargin(4.0f, &Button);
 				Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
 			}
-			else if(Col.m_Id == COL_LENGTH && !pItem->m_IsDir && pItem->m_Valid)
+			else if(Col.m_Id == COL_LENGTH)
 			{
-				str_time((int64_t)pItem->Length() * 100, TIME_HOURS, aBuf, sizeof(aBuf));
+				if(pItem->IsDemoFile() && pItem->m_Valid)
+					str_time((int64_t)pItem->Length() * 100, TIME_HOURS, aBuf, sizeof(aBuf));
+				else if(!pItem->m_IsDir)
+					str_copy(aBuf, "-");
+				else
+					continue;
 				Button.VMargin(4.0f, &Button);
 				Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
 			}
@@ -1627,7 +1755,7 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 	Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_T, 5.0f);
 	const char *pHeaderLabel;
 	if(NumSelected == 0)
-		pHeaderLabel = Localize("No demo selected");
+		pHeaderLabel = DemoBrowserBrowsingScreenshots() ? Localize("No screenshot selected") : Localize("No demo selected");
 	else if(NumSelected > 1)
 		pHeaderLabel = Localize("Selection");
 	else if(str_comp(pItem->m_aFilename, "..") == 0)
@@ -1636,8 +1764,10 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 		pHeaderLabel = Localize("Folder Link");
 	else if(pItem->m_IsDir)
 		pHeaderLabel = Localize("Folder");
-	else if(!FetchHeader(*pItem))
+	else if(pItem->IsDemoFile() && !FetchHeader(*pItem))
 		pHeaderLabel = Localize("Invalid Demo");
+	else if(DemoBrowserBrowsingScreenshots())
+		pHeaderLabel = Localize("Screenshot");
 	else
 		pHeaderLabel = Localize("Demo");
 	Ui()->DoLabel(&Header, pHeaderLabel, FontSize + 2.0f, TEXTALIGN_MC);
@@ -1659,8 +1789,7 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 	Contents.HSplitTop(18.0f, &Left, &Contents);
 	Left.VSplitLeft(Contents.w / 2.f + 30.f, &Left, &Right);
 	Ui()->DoLabel(&Left, Localize("Created"), FontSize, TEXTALIGN_ML);
-	if(pItem->m_Valid)
-		Ui()->DoLabel(&Right, Localize("Size"), FontSize, TEXTALIGN_ML);
+	Ui()->DoLabel(&Right, Localize("Size"), FontSize, TEXTALIGN_ML);
 	if(EnsureDemoDate(*pItem))
 		str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
 	else
@@ -1668,17 +1797,18 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 	Contents.HSplitTop(18.0f, &Left, &Contents);
 	Left.VSplitLeft(Contents.w / 2.f + 30.f, &Left, &Right);
 	Ui()->DoLabel(&Left, aBuf, FontSize - 1.0f, TEXTALIGN_ML);
+	if(EnsureDemoSize(*pItem))
+		FormatBrowserFileSize(pItem->m_Size, aBuf, sizeof(aBuf));
+	else
+		str_copy(aBuf, "-");
+	Ui()->DoLabel(&Right, aBuf, FontSize - 1.0f, TEXTALIGN_ML);
+	Contents.HSplitTop(4.0f, nullptr, &Contents);
+
+	if(!pItem->IsDemoFile())
+		return;
 
 	if(!pItem->m_Valid)
 		return;
-
-	const float DemoSize = pItem->m_Size / 1024.0f;
-	if(DemoSize > 1024)
-		str_format(aBuf, sizeof(aBuf), Localize("%.2f MiB"), DemoSize / 1024.0f);
-	else
-		str_format(aBuf, sizeof(aBuf), Localize("%.2f KiB"), DemoSize);
-	Ui()->DoLabel(&Right, aBuf, FontSize - 1.0f, TEXTALIGN_ML);
-	Contents.HSplitTop(4.0f, nullptr, &Contents);
 
 	Contents.HSplitTop(18.0f, &Left, &Contents);
 	Left.VSplitLeft(Contents.w / 2.f + 30.f, &Left, &Right);
@@ -1753,6 +1883,9 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 
 void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemActivated)
 {
+	const bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
+	const char *pBaseFolder = DemoBrowserBaseFolder();
+
 	const auto &&SetIconMode = [&](bool Enable) {
 		if(Enable)
 		{
@@ -1812,6 +1945,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 	}
 
 	// fetch info checkbox
+	if(!BrowsingScreenshots)
 	{
 		CUIRect FetchInfo;
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h * 7.0f, &FetchInfo, &ButtonBarBottom);
@@ -1831,13 +1965,13 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h * 10.0f, &DemosDirectoryButton, &ButtonBarBottom);
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h / 2.0f, nullptr, &ButtonBarBottom);
 		static CButtonContainer s_DemosDirectoryButton;
-		if(DoButton_Menu(&s_DemosDirectoryButton, Localize("Demos directory"), 0, &DemosDirectoryButton))
+		if(DoButton_Menu(&s_DemosDirectoryButton, BrowsingScreenshots ? Localize("Screenshots directory") : Localize("Demos directory"), 0, &DemosDirectoryButton))
 		{
 			char aBuf[IO_MAX_PATH_LENGTH];
-			Storage()->GetCompletePath(pSelectedItem->m_StorageType, m_aCurrentDemoFolder[0] == '\0' ? "demos" : m_aCurrentDemoFolder, aBuf, sizeof(aBuf));
+			Storage()->GetCompletePath(pSelectedItem->m_StorageType, m_aCurrentDemoFolder[0] == '\0' ? pBaseFolder : m_aCurrentDemoFolder, aBuf, sizeof(aBuf));
 			Client()->ViewFile(aBuf);
 		}
-		GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, Localize("Open the directory that contains the demo files"));
+		GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, BrowsingScreenshots ? Localize("Open the directory that contains the screenshot files") : Localize("Open the directory that contains the demo files"));
 	}
 
 	// play/open button
@@ -1848,7 +1982,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		ButtonBarBottom.VSplitRight(ButtonBarBottom.h, &ButtonBarBottom, nullptr);
 		SetIconMode(true);
 		static CButtonContainer s_PlayButton;
-		if(DoButton_Menu(&s_PlayButton, pSelectedItem->m_IsDir ? FONT_ICON_FOLDER_OPEN : FONT_ICON_PLAY, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
+		const char *pOpenIcon = pSelectedItem->m_IsDir ? FONT_ICON_FOLDER_OPEN : (BrowsingScreenshots ? FONT_ICON_IMAGE : FONT_ICON_PLAY);
+		if(DoButton_Menu(&s_PlayButton, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (!BrowsingScreenshots && Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 		{
 			SetIconMode(false);
 			if(pSelectedItem->m_IsDir) // folder
@@ -1868,7 +2003,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 						}
 						else
 						{
-							Storage()->GetCompletePath(m_DemolistStorageType, "demos", m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
+							Storage()->GetCompletePath(m_DemolistStorageType, pBaseFolder, m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
 							str_append(m_aCurrentDemoSelectionName, "/");
 						}
 					}
@@ -1886,10 +2021,23 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			}
 			else // file
 			{
-				if(GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
+				if(BrowsingScreenshots)
+				{
+					char aBuf[IO_MAX_PATH_LENGTH];
+					str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
+					char aFullPath[IO_MAX_PATH_LENGTH];
+					Storage()->GetCompletePath(pSelectedItem->m_StorageType, aBuf, aFullPath, sizeof(aFullPath));
+					if(!Client()->ViewFile(aFullPath))
+						PopupMessage(Localize("Error opening screenshot"), Localize("Unable to open the screenshot file"), Localize("Ok"));
+				}
+				else if(GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
+				{
 					PopupConfirm(Localize("Disconnect"), Localize("Are you sure that you want to disconnect and play this demo?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmPlayDemo);
+				}
 				else
+				{
 					CMenus::PopupConfirmPlayDemo();
+				}
 				return;
 			}
 		}
@@ -1943,8 +2091,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				if(m_vDemoDeleteTargets.size() == 1)
 				{
 					char aBuf[128 + IO_MAX_PATH_LENGTH];
-					str_format(aBuf, sizeof(aBuf), m_vDemoDeleteTargets[0].m_IsDir ? Localize("Are you sure that you want to delete the folder '%s'?") : Localize("Are you sure that you want to delete the demo '%s'?"), m_vDemoDeleteTargets[0].m_Selection.m_aFilename);
-					PopupConfirm(m_vDemoDeleteTargets[0].m_IsDir ? Localize("Delete folder") : Localize("Delete demo"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSelectedDemos);
+					str_format(aBuf, sizeof(aBuf), m_vDemoDeleteTargets[0].m_IsDir ? Localize("Are you sure that you want to delete the folder '%s'?") : (BrowsingScreenshots ? Localize("Are you sure that you want to delete the screenshot '%s'?") : Localize("Are you sure that you want to delete the demo '%s'?")), m_vDemoDeleteTargets[0].m_Selection.m_aFilename);
+					PopupConfirm(m_vDemoDeleteTargets[0].m_IsDir ? Localize("Delete folder") : (BrowsingScreenshots ? Localize("Delete screenshot") : Localize("Delete demo")), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSelectedDemos);
 				}
 				else
 				{
@@ -1959,7 +2107,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 
 #if defined(CONF_VIDEORECORDER)
 		// render demo button
-		if(HasSingleSelection && !pSelectedItem->m_IsDir)
+		if(!BrowsingScreenshots && HasSingleSelection && !pSelectedItem->m_IsDir && pSelectedItem->IsDemoFile())
 		{
 			CUIRect RenderButton;
 			ButtonBarTop.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarTop, &RenderButton);
@@ -2051,7 +2199,7 @@ void CMenus::PopupConfirmDeleteSelectedDemos()
 	char aError[256 + IO_MAX_PATH_LENGTH];
 	if(NumFailed == 1)
 	{
-		str_format(aError, sizeof(aError), FirstFailedWasDir ? Localize("Unable to delete the folder '%s'. Make sure it's empty first.") : Localize("Unable to delete the demo '%s'"), aFirstFailedName);
+		str_format(aError, sizeof(aError), FirstFailedWasDir ? Localize("Unable to delete the folder '%s'. Make sure it's empty first.") : (DemoBrowserBrowsingScreenshots() ? Localize("Unable to delete the screenshot '%s'") : Localize("Unable to delete the demo '%s'")), aFirstFailedName);
 	}
 	else if(NumDeleted == 0)
 	{
