@@ -50,7 +50,7 @@ void CTrails::OnRender()
 	};
 
 	// TClient: Foot particles - render falling particles behind tee
-	if(g_Config.m_QmcFootParticles)
+	if(g_Config.m_QmFootParticles)
 	{
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 		{

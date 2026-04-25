@@ -3388,3 +3388,18 @@ Changing name to %s near finish
 [translate]
 %s to %s failed: %s
 == 
+
+Minimum Target Language Characters
+== 対象言語の最小文字数
+
+Target Language Ratio
+== 対象言語の比率
+
+Auto-translate skips text that already looks like the target language.
+== すでに対象言語らしく見える文章は自動翻訳をスキップします。
+
+Numeric-only messages are skipped locally.
+== 数字だけのメッセージはローカルでスキップします。
+
+Concurrency (1 = automatic)
+== 並列数（1 = 自動）

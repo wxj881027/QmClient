@@ -454,9 +454,45 @@ public:
 	}
 
 	// Focus Mode (Zen Mode)
+	struct SFocusHudConfigSnapshot
+	{
+		int m_ClShowhud = 1;
+		int m_ClShowhudHealthAmmo = 1;
+		int m_ClShowhudScore = 1;
+		int m_ClShowhudTimer = 1;
+		int m_ClShowhudTimeCpDiff = 1;
+		int m_ClShowLocalTimeAlways = 0;
+		int m_ClSpecCursor = 1;
+		int m_ClShowVotesAfterVoting = 1;
+		int m_ClShowIds = 0;
+		int m_ClShowhudDDRace = 1;
+		int m_ClShowhudJumpsIndicator = 1;
+		int m_ClShowhudSpectatorCount = 1;
+		int m_ClShowhudSpectator = 1;
+		int m_ClShowhudDummyActions = 1;
+		int m_ClShowhudKeyStatusReset = 1;
+		int m_ClShowhudKeyStatusHammer = 1;
+		int m_ClShowhudKeyStatusControl = 1;
+		int m_ClShowhudKeyStatusSync = 1;
+		int m_ClShowhudPlayerPosition = 1;
+		int m_ClShowhudPlayerSpeed = 1;
+		int m_ClShowhudPlayerAngle = 1;
+		int m_ClShowFreezeBars = 1;
+		int m_TcStatusBar = 0;
+		int m_TcNotifyWhenLast = 0;
+		int m_QmDummyMiniView = 0;
+		int m_QmPlayerStatsMapProgress = 0;
+		int m_QmSmtcShowHud = 1;
+		int m_QmInputOverlay = 0;
+		int m_QmVoiceShowOverlay = 1;
+	};
+
 	bool m_FocusModeStateKnown = false;
 	bool m_PrevFocusModeActive = false;
-	int m_SavedClShowhud = 1;
+	bool m_FocusHudOverridden = false;
+	bool m_FocusUiOverlayOverridden = false;
+	bool m_FocusNamesOverridden = false;
+	SFocusHudConfigSnapshot m_SavedHudConfig;
 	int m_SavedClNamePlates = 1;
 	int m_SavedClNamePlatesOwn = 1;
 	void ApplyFocusModeEffects();
@@ -464,10 +500,10 @@ public:
 	// Gores FastInput Link
 	bool m_GoresModeStateKnown = false;
 	bool m_PrevGoresModeActive = false;
-	bool m_PrevGoresFastInputActive = false;
-	int m_SavedTcFastInput = 0;
-	bool m_PrevGoresFastInputOthersActive = false;
-	int m_SavedTcFastInputOthers = 0;
+	int m_PrevTcFastInput = 0;
+	int m_PrevTcFastInputOthers = 0;
+	int m_PrevQmGoresFastInput = 0;
+	int m_PrevQmGoresFastInputOthers = 0;
 	bool m_AxiomAutoLoginAnnounced = false;
 	bool m_AxiomAutoLoginSucceeded = false;
 	bool m_AxiomAutoLoginWaitingReply = false;

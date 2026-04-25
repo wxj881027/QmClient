@@ -503,7 +503,7 @@ void CPieMenu::RenderCenterInfo()
 	if(m_SelectedRenameIndex >= 0 && m_SelectedRenameIndex < (int)m_vRenameQueue.size())
 	{
 		char aPreview[128];
-		str_format(aPreview, sizeof(aPreview), "改名: %s", m_vRenameQueue[m_SelectedRenameIndex].c_str());
+		str_format(aPreview, sizeof(aPreview), Localize("Rename: %s"), m_vRenameQueue[m_SelectedRenameIndex].c_str());
 		const float PreviewFontSize = 18.0f;
 		const float PreviewWidth = TextRender()->TextWidth(PreviewFontSize, aPreview);
 		TextRender()->Text(m_MenuCenter.x - PreviewWidth / 2.0f, m_MenuCenter.y + FontSize * 0.40f, PreviewFontSize, aPreview);
@@ -529,12 +529,12 @@ const char *CPieMenu::GetOptionName(EMenuOption Option) const
 {
 	switch(Option)
 	{
-	case EMenuOption::FRIEND: return "好友";
-	case EMenuOption::WHISPER: return "私聊";
-	case EMenuOption::MENTION: return "提及";
-	case EMenuOption::COPY_SKIN: return "复制皮肤";
-	case EMenuOption::SWAP: return "交换";
-	case EMenuOption::SPECTATE: return "观战";
+	case EMenuOption::FRIEND: return Localize("Friends");
+	case EMenuOption::WHISPER: return Localize("Whisper");
+	case EMenuOption::MENTION: return Localize("Mention");
+	case EMenuOption::COPY_SKIN: return Localize("Copy skin");
+	case EMenuOption::SWAP: return Localize("Swap");
+	case EMenuOption::SPECTATE: return Localize("Spectate");
 	default: return "";
 	}
 }

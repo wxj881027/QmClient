@@ -3,6 +3,7 @@
 
 #include <engine/graphics.h>
 #include <engine/map.h>
+#include <engine/storage.h>
 #include <engine/shared/config.h>
 
 #include <game/client/components/mapimages.h>
@@ -10,6 +11,70 @@
 #include <game/client/gameclient.h>
 #include <game/layers.h>
 #include <game/localization.h>
+
+namespace
+{
+bool TryMigrateLegacyEntityBgMapPath(IStorage *pStorage, const char *pManagedPath)
+{
+	if(pStorage == nullptr || pManagedPath == nullptr || !str_endswith_nocase(pManagedPath, ".map"))
+		return false;
+	if(pStorage->FileExists(pManagedPath, IStorage::TYPE_ALL))
+		return true;
+
+	char aLegacyPath[IO_MAX_PATH_LENGTH];
+	str_copy(aLegacyPath, pManagedPath, sizeof(aLegacyPath));
+	aLegacyPath[str_length(aLegacyPath) - 4] = '\0';
+
+	static constexpr const char *s_apLegacyExtensions[] = {
+		".png",
+		".webp",
+		".jpg",
+		".jpeg",
+	};
+
+	for(const char *pExtension : s_apLegacyExtensions)
+	{
+		char aCandidatePath[IO_MAX_PATH_LENGTH];
+		str_format(aCandidatePath, sizeof(aCandidatePath), "%s%s", aLegacyPath, pExtension);
+		if(pStorage->FileExists(aCandidatePath, IStorage::TYPE_SAVE))
+		{
+			if(pStorage->RenameFile(aCandidatePath, pManagedPath, IStorage::TYPE_SAVE))
+				return true;
+		}
+	}
+
+	return pStorage->FileExists(pManagedPath, IStorage::TYPE_ALL);
+}
+
+void ResolveBackgroundEntitiesStoragePath(IStorage *pStorage, const char *pBackgroundEntities, bool IsImageFile, char *pOut, int OutSize)
+{
+	if(OutSize <= 0)
+		return;
+	pOut[0] = '\0';
+	if(pBackgroundEntities == nullptr || pBackgroundEntities[0] == '\0')
+		return;
+
+	const char *pExtension = IsImageFile ? ".png" : ".map";
+	if(str_startswith_nocase(pBackgroundEntities, "entity_bg/"))
+	{
+		char aManagedPath[IO_MAX_PATH_LENGTH];
+		char aMapPath[IO_MAX_PATH_LENGTH];
+		str_format(aManagedPath, sizeof(aManagedPath), "assets/%s%s", pBackgroundEntities, str_endswith(pBackgroundEntities, pExtension) ? "" : pExtension);
+		str_format(aMapPath, sizeof(aMapPath), "maps/%s%s", pBackgroundEntities, str_endswith(pBackgroundEntities, pExtension) ? "" : pExtension);
+
+		const bool ManagedExists = pStorage != nullptr && (IsImageFile ? pStorage->FileExists(aManagedPath, IStorage::TYPE_ALL) : TryMigrateLegacyEntityBgMapPath(pStorage, aManagedPath));
+		const bool MapExists = pStorage != nullptr && pStorage->FileExists(aMapPath, IStorage::TYPE_ALL);
+		if(ManagedExists || !MapExists)
+			str_copy(pOut, aManagedPath, OutSize);
+		else
+			str_copy(pOut, aMapPath, OutSize);
+	}
+	else
+	{
+		str_format(pOut, OutSize, "maps/%s%s", pBackgroundEntities, str_endswith(pBackgroundEntities, pExtension) ? "" : pExtension);
+	}
+}
+}
 
 CBackground::CBackground(ERenderType MapType, bool OnlineOnly) :
 	CMapLayers(MapType, OnlineOnly)
@@ -65,7 +130,7 @@ void CBackground::OnInit()
 
 	m_pImages->OnInterfacesInit(GameClient());
 	Kernel()->RegisterInterface(m_pBackgroundMap);
-	if(g_Config.m_ClBackgroundEntities[0] != '\0' && str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP))
+	if(!IsDefaultBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities) && !IsCurrentMapBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities))
 		LoadBackground();
 }
 
@@ -85,13 +150,17 @@ void CBackground::LoadBackground()
 	m_pLayers = m_pBackgroundLayers;
 	m_pImages = m_pBackgroundImages;
 
-	str_copy(m_aMapName, g_Config.m_ClBackgroundEntities);
-	if(g_Config.m_ClBackgroundEntities[0] != '\0')
+	char aBackgroundEntities[IO_MAX_PATH_LENGTH];
+	NormalizeBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities, aBackgroundEntities, sizeof(aBackgroundEntities));
+
+	str_copy(m_aMapName, aBackgroundEntities);
+	const char *pBackgroundEntities = aBackgroundEntities;
+	if(pBackgroundEntities[0] != '\0')
 	{
 		bool NeedImageLoading = false;
 
 		char aBuf[IO_MAX_PATH_LENGTH];
-		if(str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP) == 0)
+		if(str_comp(pBackgroundEntities, CURRENT_MAP) == 0)
 		{
 			m_pMap = Kernel()->RequestInterface<IEngineMap>();
 			if(m_pMap->IsLoaded())
@@ -101,14 +170,14 @@ void CBackground::LoadBackground()
 				m_Loaded = true;
 			}
 		}
-		else if(str_endswith_nocase(g_Config.m_ClBackgroundEntities, ".png"))
+		else if(str_endswith_nocase(pBackgroundEntities, ".png"))
 		{
-			str_format(aBuf, sizeof(aBuf), "maps/%s", g_Config.m_ClBackgroundEntities);
+			ResolveBackgroundEntitiesStoragePath(Storage(), pBackgroundEntities, true, aBuf, sizeof(aBuf));
 			LoadImageBackground(aBuf);
 		}
 		else
 		{
-			str_format(aBuf, sizeof(aBuf), "maps/%s%s", g_Config.m_ClBackgroundEntities, str_endswith(g_Config.m_ClBackgroundEntities, ".map") ? "" : ".map");
+			ResolveBackgroundEntitiesStoragePath(Storage(), pBackgroundEntities, false, aBuf, sizeof(aBuf));
 			if(m_pMap->Load(aBuf))
 			{
 				m_pLayers->Init(m_pMap, true);
@@ -130,7 +199,9 @@ void CBackground::LoadBackground()
 
 void CBackground::OnMapLoad()
 {
-	if(str_comp(g_Config.m_ClBackgroundEntities, CURRENT_MAP) == 0 || str_comp(g_Config.m_ClBackgroundEntities, m_aMapName))
+	char aNormalized[IO_MAX_PATH_LENGTH];
+	NormalizeBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities, aNormalized, sizeof(aNormalized));
+	if(str_comp(aNormalized, CURRENT_MAP) == 0 || str_comp(aNormalized, m_aMapName))
 	{
 		LoadBackground();
 	}

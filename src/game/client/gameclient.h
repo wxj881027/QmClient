@@ -863,6 +863,7 @@ public:
 
 	void DummyResetInput() override;
 	void Echo(const char *pString) override;
+	void Echo(const char *pString, bool ForceVisible);
 	bool IsOtherTeam(int ClientId) const;
 	int SwitchStateTeam() const;
 	bool IsLocalCharSuper() const;
@@ -875,6 +876,7 @@ public:
 	void LoadParticlesSkin(const char *pPath, bool AsDir = false);
 	void LoadHudSkin(const char *pPath, bool AsDir = false);
 	void LoadExtrasSkin(const char *pPath, bool AsDir = false);
+	void ReloadNamedSingleFileAssetImage(int ImageId, const char *pCategoryId, const char *pActiveName);
 
 	struct SClientGameSkin
 	{

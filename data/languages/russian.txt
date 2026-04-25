@@ -1287,3 +1287,18 @@ Activating mod weapon on %d: %s\n
 [data_version.h]
 You have probably only installed the TClient DDNet.exe which is not supported, please use the entire TClient folder
 == 
+
+Minimum Target Language Characters
+== Минимальное число символов целевого языка
+
+Target Language Ratio
+== Доля целевого языка
+
+Auto-translate skips text that already looks like the target language.
+== Автоперевод пропускает текст, который уже выглядит как целевой язык.
+
+Numeric-only messages are skipped locally.
+== Сообщения только из цифр пропускаются локально.
+
+Concurrency (1 = automatic)
+== Параллелизм (1 = автоматически)
