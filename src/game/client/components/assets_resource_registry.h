@@ -61,6 +61,7 @@ void EnsureDefaultAssetVisible(std::vector<std::string> &vAssetNames);
 bool IsEntityBgWorkshopFolderPath(const char *pPath);
 bool HasEntityBgWorkshopFolder(const std::vector<std::string> &vAssetNames, const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> *pAssetSources = nullptr);
 std::string RebuildEntityBgWorkshopLocalName(std::string_view InstallPath);
+std::string NormalizeEntityBgWorkshopInstallPath(std::string_view InstallPath);
 bool EntityBgHierarchyEntryLess(const SEntityBgHierarchyEntry &Left, const SEntityBgHierarchyEntry &Right);
 std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::vector<std::string> &vAssetNames, const char *pCurrentFolder, bool ShowWorkshopFolder = true, const std::unordered_map<std::string, EEntityBgHierarchyEntrySource> *pAssetSources = nullptr, bool ForceShowWorkshopFolder = false);
 bool ShouldShowEntityBgDirectorySubtitle(bool IsDirectory);

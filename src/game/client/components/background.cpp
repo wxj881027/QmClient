@@ -14,6 +14,38 @@
 
 namespace
 {
+bool TryMigrateLegacyEntityBgMapPath(IStorage *pStorage, const char *pManagedPath)
+{
+	if(pStorage == nullptr || pManagedPath == nullptr || !str_endswith_nocase(pManagedPath, ".map"))
+		return false;
+	if(pStorage->FileExists(pManagedPath, IStorage::TYPE_ALL))
+		return true;
+
+	char aLegacyPath[IO_MAX_PATH_LENGTH];
+	str_copy(aLegacyPath, pManagedPath, sizeof(aLegacyPath));
+	aLegacyPath[str_length(aLegacyPath) - 4] = '\0';
+
+	static constexpr const char *s_apLegacyExtensions[] = {
+		".png",
+		".webp",
+		".jpg",
+		".jpeg",
+	};
+
+	for(const char *pExtension : s_apLegacyExtensions)
+	{
+		char aCandidatePath[IO_MAX_PATH_LENGTH];
+		str_format(aCandidatePath, sizeof(aCandidatePath), "%s%s", aLegacyPath, pExtension);
+		if(pStorage->FileExists(aCandidatePath, IStorage::TYPE_SAVE))
+		{
+			if(pStorage->RenameFile(aCandidatePath, pManagedPath, IStorage::TYPE_SAVE))
+				return true;
+		}
+	}
+
+	return pStorage->FileExists(pManagedPath, IStorage::TYPE_ALL);
+}
+
 void ResolveBackgroundEntitiesStoragePath(IStorage *pStorage, const char *pBackgroundEntities, bool IsImageFile, char *pOut, int OutSize)
 {
 	if(OutSize <= 0)
@@ -30,7 +62,7 @@ void ResolveBackgroundEntitiesStoragePath(IStorage *pStorage, const char *pBackg
 		str_format(aManagedPath, sizeof(aManagedPath), "assets/%s%s", pBackgroundEntities, str_endswith(pBackgroundEntities, pExtension) ? "" : pExtension);
 		str_format(aMapPath, sizeof(aMapPath), "maps/%s%s", pBackgroundEntities, str_endswith(pBackgroundEntities, pExtension) ? "" : pExtension);
 
-		const bool ManagedExists = pStorage != nullptr && pStorage->FileExists(aManagedPath, IStorage::TYPE_ALL);
+		const bool ManagedExists = pStorage != nullptr && (IsImageFile ? pStorage->FileExists(aManagedPath, IStorage::TYPE_ALL) : TryMigrateLegacyEntityBgMapPath(pStorage, aManagedPath));
 		const bool MapExists = pStorage != nullptr && pStorage->FileExists(aMapPath, IStorage::TYPE_ALL);
 		if(ManagedExists || !MapExists)
 			str_copy(pOut, aManagedPath, OutSize);

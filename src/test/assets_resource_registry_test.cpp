@@ -333,6 +333,14 @@ TEST(AssetsResourceRegistry, RebuildEntityBgWorkshopLocalNameRestoresLocalNameFr
 	EXPECT_TRUE(RebuildEntityBgWorkshopLocalName("assets/game/demo.png").empty());
 }
 
+TEST(AssetsResourceRegistry, NormalizeEntityBgWorkshopInstallPathForcesMapExtension)
+{
+	EXPECT_EQ(NormalizeEntityBgWorkshopInstallPath("assets/entity_bg/demo.png"), "assets/entity_bg/demo.map");
+	EXPECT_EQ(NormalizeEntityBgWorkshopInstallPath("assets/entity_bg/folder/demo.webp"), "assets/entity_bg/folder/demo.map");
+	EXPECT_EQ(NormalizeEntityBgWorkshopInstallPath("assets/entity_bg/demo.map"), "assets/entity_bg/demo.map");
+	EXPECT_TRUE(NormalizeEntityBgWorkshopInstallPath("assets/game/demo.png").empty());
+}
+
 TEST(AssetsResourceRegistry, EntityBgHierarchyEntryLessKeepsParentBeforeFoldersAndDefault)
 {
 	SEntityBgHierarchyEntry ParentEntry;

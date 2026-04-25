@@ -177,6 +177,32 @@ std::string RebuildEntityBgWorkshopLocalName(std::string_view InstallPath)
 	return std::string(ENTITY_BG_WORKSHOP_PREFIX) + std::string(PathView);
 }
 
+std::string NormalizeEntityBgWorkshopInstallPath(std::string_view InstallPath)
+{
+	std::string NormalizedPath(InstallPath);
+	std::replace(NormalizedPath.begin(), NormalizedPath.end(), '\\', '/');
+
+	std::string_view PathView(NormalizedPath);
+	if(!PathView.starts_with(ENTITY_BG_INSTALL_PREFIX))
+		return {};
+
+	PathView.remove_prefix(ENTITY_BG_INSTALL_PREFIX.size());
+	if(PathView.empty())
+		return {};
+
+	const size_t LastSlashPos = PathView.find_last_of('/');
+	std::string_view Filename = LastSlashPos == std::string_view::npos ? PathView : PathView.substr(LastSlashPos + 1);
+	if(Filename.empty())
+		return {};
+
+	if(const size_t DotPos = PathView.find_last_of('.'); DotPos != std::string_view::npos && (LastSlashPos == std::string_view::npos || DotPos > LastSlashPos))
+		PathView = PathView.substr(0, DotPos);
+	if(PathView.empty())
+		return {};
+
+	return std::string(ENTITY_BG_INSTALL_PREFIX) + std::string(PathView) + std::string(ENTITY_BG_MAP_SUFFIX);
+}
+
 const char *LegacySingleFileAssetSourcePath(const SAssetResourceCategory &Category)
 {
 	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)

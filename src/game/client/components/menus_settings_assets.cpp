@@ -1205,6 +1205,28 @@ static const char *FindWorkshopAuthorByLocalName(const SWorkshopHudState *pState
 	return nullptr;
 }
 
+static void NormalizeEntityBgWorkshopAsset(SWorkshopHudAsset &Asset, IStorage *pStorage)
+{
+	if(Asset.m_InstallPath.empty())
+		return;
+
+	const std::string NormalizedInstallPath = NormalizeEntityBgWorkshopInstallPath(Asset.m_InstallPath);
+	if(!NormalizedInstallPath.empty() && NormalizedInstallPath != Asset.m_InstallPath)
+	{
+		if(pStorage != nullptr &&
+			pStorage->FileExists(Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE) &&
+			!pStorage->FileExists(NormalizedInstallPath.c_str(), IStorage::TYPE_SAVE))
+		{
+			pStorage->RenameFile(Asset.m_InstallPath.c_str(), NormalizedInstallPath.c_str(), IStorage::TYPE_SAVE);
+		}
+		Asset.m_InstallPath = NormalizedInstallPath;
+	}
+
+	const std::string LocalName = RebuildEntityBgWorkshopLocalName(Asset.m_InstallPath);
+	if(!LocalName.empty())
+		Asset.m_LocalName = LocalName;
+}
+
 static bool IsEntityBgWorkshopFolderOrChild(const char *pPath)
 {
 	return pPath != nullptr && (IsEntityBgWorkshopFolderPath(pPath) || str_startswith(pPath, "entity_bg/"));
@@ -1788,6 +1810,8 @@ bool ParseWorkshopAssets(const json_value *pRoot, const SAssetResourceCategory &
 		char aInstallPath[IO_MAX_PATH_LENGTH];
 		str_format(aInstallPath, sizeof(aInstallPath), "%s/%s", Category.m_pInstallFolder, SafeInstallName.c_str());
 		Asset.m_InstallPath = aInstallPath;
+		if(str_comp(Category.m_pId, "entity_bg") == 0)
+			NormalizeEntityBgWorkshopAsset(Asset, nullptr);
 
 		char aSafeId[80];
 		str_copy(aSafeId, Asset.m_Id.c_str(), sizeof(aSafeId));
@@ -1927,8 +1951,8 @@ static bool LoadWorkshopCache(SWorkshopHudState &WorkshopState, IStorage *pStora
 			else if(str_comp(pKey, "install_path") == 0 && pVal->type == json_string)
 				Asset.m_InstallPath = pVal->u.string.ptr;
 		}
-		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG && Asset.m_LocalName.empty() && !Asset.m_InstallPath.empty())
-			Asset.m_LocalName = RebuildEntityBgWorkshopLocalName(Asset.m_InstallPath);
+		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+			NormalizeEntityBgWorkshopAsset(Asset, pStorage);
 		if(Asset.m_ThumbUrl.empty() && !str_endswith_nocase(Asset.m_ImageUrl.c_str(), ".map"))
 			Asset.m_ThumbUrl = Asset.m_ImageUrl;
 		Asset.m_Installed = pStorage->FileExists(Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE);
@@ -3794,6 +3818,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				
 				for(SWorkshopHudAsset &NewAsset : vParsedAssets)
 				{
+					if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+						NormalizeEntityBgWorkshopAsset(NewAsset, Storage());
 					NewAsset.m_Installed = Storage()->FileExists(NewAsset.m_InstallPath.c_str(), IStorage::TYPE_SAVE);
 					NewAssetIds.insert(NewAsset.m_Id);
 					
