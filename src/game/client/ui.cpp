@@ -1211,26 +1211,31 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 	const bool Inside = MouseInside(pRect);
 	const int Base = Props.m_IsHex ? 16 : 10;
 
-	if(HotItem() == pId && m_ActiveValueSelectorState.m_Button >= 0 && !MouseButton(m_ActiveValueSelectorState.m_Button))
+	if(CheckActiveItem(pId))
 	{
-		DisableMouseLock();
-		if(CheckActiveItem(pId))
+		if(m_ActiveValueSelectorState.m_Button < 0)
 		{
+			DisableMouseLock();
 			SetActiveItem(nullptr);
 		}
-		if(Inside && ((m_ActiveValueSelectorState.m_Button == 0 && !m_ActiveValueSelectorState.m_DidScroll) || m_ActiveValueSelectorState.m_Button == 1))
+		else if(!MouseButton(m_ActiveValueSelectorState.m_Button))
 		{
-			m_ActiveValueSelectorState.m_pLastTextId = pId;
-			m_ActiveValueSelectorState.m_NumberInput.SetInteger64(Current, Base, Props.m_HexPrefix);
-			if(Props.m_SelectAllOnActivate)
-				m_ActiveValueSelectorState.m_NumberInput.SelectAll();
-			else
+			DisableMouseLock();
+			SetActiveItem(nullptr);
+			if(Inside && ((m_ActiveValueSelectorState.m_Button == 0 && !m_ActiveValueSelectorState.m_DidScroll) || m_ActiveValueSelectorState.m_Button == 1))
 			{
-				m_ActiveValueSelectorState.m_NumberInput.SetCursorOffset(m_ActiveValueSelectorState.m_NumberInput.GetLength());
-				m_ActiveValueSelectorState.m_NumberInput.SelectNothing();
+				m_ActiveValueSelectorState.m_pLastTextId = pId;
+				m_ActiveValueSelectorState.m_NumberInput.SetInteger64(Current, Base, Props.m_HexPrefix);
+				if(Props.m_SelectAllOnActivate)
+					m_ActiveValueSelectorState.m_NumberInput.SelectAll();
+				else
+				{
+					m_ActiveValueSelectorState.m_NumberInput.SetCursorOffset(m_ActiveValueSelectorState.m_NumberInput.GetLength());
+					m_ActiveValueSelectorState.m_NumberInput.SelectNothing();
+				}
 			}
+			m_ActiveValueSelectorState.m_Button = -1;
 		}
-		m_ActiveValueSelectorState.m_Button = -1;
 	}
 
 	if(m_ActiveValueSelectorState.m_pLastTextId == pId)
@@ -2093,10 +2098,13 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 		HuePartialArea.Draw4(TL, TL, BL, BL, IGraphics::CORNER_NONE, 0.0f);
 	}
 
+	SValueSelectorProperties ColorValueProps;
+	ColorValueProps.m_UseScroll = false;
+
 	const auto &&RenderAlphaSelector = [&](unsigned OldA) -> SEditResult<int64_t> {
 		if(pColorPicker->m_Alpha)
 		{
-			return pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[3], &AlphaRect, "A:", OldA, 0, 255);
+			return pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[3], &AlphaRect, "A:", OldA, 0, 255, ColorValueProps);
 		}
 		else
 		{
@@ -2116,9 +2124,9 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 		const unsigned OldV = round_to_int(PickerColorHSV.v * 255.0f);
 		const unsigned OldA = round_to_int(PickerColorHSV.a * 255.0f);
 
-		const auto [StateH, H] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[0], &HueRect, "H:", OldH, 0, 255);
-		const auto [StateS, S] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[1], &SatRect, "S:", OldS, 0, 255);
-		const auto [StateV, V] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[2], &ValueRect, "V:", OldV, 0, 255);
+		const auto [StateH, H] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[0], &HueRect, "H:", OldH, 0, 255, ColorValueProps);
+		const auto [StateS, S] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[1], &SatRect, "S:", OldS, 0, 255, ColorValueProps);
+		const auto [StateV, V] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[2], &ValueRect, "V:", OldV, 0, 255, ColorValueProps);
 		const auto [StateA, A] = RenderAlphaSelector(OldA);
 
 		if(OldH != H || OldS != S || OldV != V || OldA != A)
@@ -2144,9 +2152,9 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 		const unsigned OldB = round_to_int(PickerColorRGB.b * 255.0f);
 		const unsigned OldA = round_to_int(PickerColorRGB.a * 255.0f);
 
-		const auto [StateR, R] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[0], &HueRect, "R:", OldR, 0, 255);
-		const auto [StateG, G] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[1], &SatRect, "G:", OldG, 0, 255);
-		const auto [StateB, B] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[2], &ValueRect, "B:", OldB, 0, 255);
+		const auto [StateR, R] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[0], &HueRect, "R:", OldR, 0, 255, ColorValueProps);
+		const auto [StateG, G] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[1], &SatRect, "G:", OldG, 0, 255, ColorValueProps);
+		const auto [StateB, B] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[2], &ValueRect, "B:", OldB, 0, 255, ColorValueProps);
 		const auto [StateA, A] = RenderAlphaSelector(OldA);
 
 		if(OldR != R || OldG != G || OldB != B || OldA != A)
@@ -2172,9 +2180,9 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 		const unsigned OldL = round_to_int(PickerColorHSL.l * 255.0f);
 		const unsigned OldA = round_to_int(PickerColorHSL.a * 255.0f);
 
-		const auto [StateH, H] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[0], &HueRect, "H:", OldH, 0, 255);
-		const auto [StateS, S] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[1], &SatRect, "S:", OldS, 0, 255);
-		const auto [StateL, L] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[2], &ValueRect, "L:", OldL, 0, 255);
+		const auto [StateH, H] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[0], &HueRect, "H:", OldH, 0, 255, ColorValueProps);
+		const auto [StateS, S] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[1], &SatRect, "S:", OldS, 0, 255, ColorValueProps);
+		const auto [StateL, L] = pUI->DoValueSelectorWithState(&pColorPicker->m_aValueSelectorIds[2], &ValueRect, "L:", OldL, 0, 255, ColorValueProps);
 		const auto [StateA, A] = RenderAlphaSelector(OldA);
 
 		if(OldH != H || OldS != S || OldL != L || OldA != A)

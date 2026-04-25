@@ -939,9 +939,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	{
 		char aPath[IO_MAX_PATH_LENGTH];
 		str_format(aPath, sizeof(aPath), "%s/%s.demo", m_aCurrentDemoFolder, m_DemoSliceInput.GetString());
-		str_copy(m_aCurrentDemoSelectionName, m_DemoSliceInput.GetString());
-		if(str_endswith(m_aCurrentDemoSelectionName, ".demo"))
-			m_aCurrentDemoSelectionName[str_length(m_aCurrentDemoSelectionName) - str_length(".demo")] = '\0';
+		str_format(m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName), "%s.demo", m_DemoSliceInput.GetString());
 
 		Client()->DemoSlice(aPath, CMenus::DemoFilterChat, &s_RemoveChat);
 		DemolistPopulate();
@@ -952,7 +950,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		{
 			m_Popup = POPUP_RENDER_DEMO;
 			m_StartPaused = false;
-			m_DemoRenderInput.Set(m_aCurrentDemoSelectionName);
+			m_DemoRenderInput.Set(m_DemoSliceInput.GetString());
 			Ui()->SetActiveItem(&m_DemoRenderInput);
 			if(m_DemolistStorageType != IStorage::TYPE_ALL && m_DemolistStorageType != IStorage::TYPE_SAVE)
 				m_DemolistStorageType = IStorage::TYPE_ALL; // Select a storage type containing the sliced demo

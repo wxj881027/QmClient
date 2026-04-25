@@ -2863,7 +2863,11 @@ void CMenus::RenderPopupLoading(CUIRect Screen)
 void CMenus::PopupConfirmDemoReplaceVideo()
 {
 	char aBuf[IO_MAX_PATH_LENGTH];
-	str_format(aBuf, sizeof(aBuf), "%s/%s.demo", m_aCurrentDemoFolder, m_aCurrentDemoSelectionName);
+	char aDemoFilename[IO_MAX_PATH_LENGTH];
+	str_copy(aDemoFilename, m_aCurrentDemoSelectionName);
+	if(str_endswith_nocase(aDemoFilename, ".demo") == nullptr)
+		str_append(aDemoFilename, ".demo", sizeof(aDemoFilename));
+	str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, aDemoFilename);
 	char aVideoName[IO_MAX_PATH_LENGTH];
 	str_copy(aVideoName, m_DemoRenderInput.GetString());
 	const char *pError = Client()->DemoPlayer_Render(aBuf, m_DemolistStorageType, aVideoName, m_Speed, m_StartPaused);

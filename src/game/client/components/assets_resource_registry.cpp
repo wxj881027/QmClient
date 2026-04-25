@@ -234,12 +234,20 @@ const char *BuiltinSingleFileAssetFilename(const SAssetResourceCategory &Categor
 std::array<std::string, 3> BuildNamedSingleFileAssetCandidates(std::string_view CategoryId, std::string_view ActiveName)
 {
 	std::array<std::string, 3> aCandidates;
-	aCandidates[0] = "assets/" + std::string(CategoryId) + "/" + std::string(ActiveName) + ".png";
 
 	const std::string CategoryIdString(CategoryId);
 	if(const SAssetResourceCategory *pCategory = FindAssetResourceCategory(CategoryIdString.c_str()))
 	{
-		if(const char *pBuiltinFilename = BuiltinSingleFileAssetFilename(*pCategory))
+		const char *pBuiltinFilename = BuiltinSingleFileAssetFilename(*pCategory);
+		if(ActiveName == "default")
+		{
+			if(pBuiltinFilename != nullptr)
+				aCandidates[0] = pBuiltinFilename;
+			return aCandidates;
+		}
+
+		aCandidates[0] = "assets/" + std::string(CategoryId) + "/" + std::string(ActiveName) + ".png";
+		if(pBuiltinFilename != nullptr)
 			aCandidates[1] = pBuiltinFilename;
 	}
 

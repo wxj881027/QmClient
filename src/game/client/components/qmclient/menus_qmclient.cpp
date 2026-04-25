@@ -6611,14 +6611,25 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 	SyncQmModuleCollapsed();
 	SyncQmModuleUsage();
 
-	auto RenderSliderWithValueInput = [this](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue) {
+	auto RenderSliderWithValueInput = [this, UiScale](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue) {
 		CUIRect SliderRect, InputRect;
-		ControlColumn.VSplitRight(58.0f, &SliderRect, &InputRect);
-		SliderRect.VMargin(1.0f, &SliderRect);
-		InputRect.VMargin(1.0f, &InputRect);
+		const float InputWidth = std::clamp(58.0f * UiScale, 44.0f, 58.0f);
+		const float GapWidth = std::clamp(6.0f * UiScale, 3.0f, 6.0f);
+		const float MinSliderWidth = std::clamp(46.0f * UiScale, 36.0f, 46.0f);
+		if(ControlColumn.w > InputWidth + GapWidth + MinSliderWidth)
+		{
+			ControlColumn.VSplitRight(InputWidth, &SliderRect, &InputRect);
+			SliderRect.VSplitRight(GapWidth, &SliderRect, nullptr);
+			SliderRect.VMargin(1.0f, &SliderRect);
 
-		const float Relative = CUi::ms_LinearScrollbarScale.ToRelative(*pValue, MinValue, MaxValue);
-		*pValue = CUi::ms_LinearScrollbarScale.ToAbsolute(Ui()->DoScrollbarH(pValue, &SliderRect, Relative), MinValue, MaxValue);
+			const float Relative = CUi::ms_LinearScrollbarScale.ToRelative(*pValue, MinValue, MaxValue);
+			*pValue = CUi::ms_LinearScrollbarScale.ToAbsolute(Ui()->DoScrollbarH(pValue, &SliderRect, Relative), MinValue, MaxValue);
+		}
+		else
+		{
+			InputRect = ControlColumn;
+		}
+		InputRect.VMargin(1.0f, &InputRect);
 
 		SValueSelectorProperties Props;
 		Props.m_UseScroll = false;
@@ -7792,14 +7803,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					Ui()->DoLabel(&LabelCol, Localize("Font size"), LG_BodySize, TEXTALIGN_ML);
 					static int s_QmChatBubbleFontSizeInputId;
 					RenderSliderWithValueInput(&s_QmChatBubbleFontSizeInputId, ControlCol, &g_Config.m_QmChatBubbleFontSize, 8, 32);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleDuration, &g_Config.m_QmChatBubbleDuration, &Row, Localize("持续时间"), 1, 30, &CUi::ms_LinearScrollbarScale, 0, "s");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleAlpha, &g_Config.m_QmChatBubbleAlpha, &Row, Localize("不透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmChatBubbleFontSize, &g_Config.m_QmChatBubbleFontSize, &Row, Localize("字体大小"), 8, 32);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					static std::vector<const char *> s_ChatBubbleAnimDropDownNames;
@@ -8269,7 +8272,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					Ui()->DoLabel(&LabelCol, Localize("Refresh interval"), LG_BodySize, TEXTALIGN_ML);
 					static int s_QmFriendOnlineRefreshSecondsInputId;
 					RenderSliderWithValueInput(&s_QmFriendOnlineRefreshSecondsInputId, ControlCol, &g_Config.m_QmFriendOnlineRefreshSeconds, 5, 300);
-					Ui()->DoScrollbarOption(&g_Config.m_QmFriendOnlineRefreshSeconds, &g_Config.m_QmFriendOnlineRefreshSeconds, &Row, Localize("刷新间隔"), 5, 300, &CUi::ms_LinearScrollbarScale, 0, "s");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
 
@@ -8525,22 +8527,8 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						str_copy(pConfigValue, LineInput.GetString(), ConfigValueSize);
 					}
 				};
-				auto RenderSliderWithNumberInput = [this](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue) {
-					CUIRect SliderRect, InputRect;
-					ControlColumn.VSplitRight(58.0f, &SliderRect, &InputRect);
-					SliderRect.VMargin(1.0f, &SliderRect);
-					InputRect.VMargin(1.0f, &InputRect);
-
-					const float Relative = CUi::ms_LinearScrollbarScale.ToRelative(*pValue, MinValue, MaxValue);
-					*pValue = CUi::ms_LinearScrollbarScale.ToAbsolute(
-						Ui()->DoScrollbarH(pValue, &SliderRect, Relative), MinValue, MaxValue);
-
-					SValueSelectorProperties Props;
-					Props.m_UseScroll = false;
-					Props.m_TextAlign = TEXTALIGN_MC;
-					Props.m_SelectAllOnActivate = false;
-					const auto Result = Ui()->DoValueSelectorWithState(pId, &InputRect, "", *pValue, MinValue, MaxValue, Props);
-					*pValue = (int)Result.m_Value;
+				auto RenderSliderWithNumberInput = [&RenderSliderWithValueInput](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue) {
+					RenderSliderWithValueInput(pId, ControlColumn, pValue, MinValue, MaxValue);
 				};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -8794,7 +8782,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					Ui()->DoLabel(&LabelCol, Localize("Concurrency (1 = automatic)"), LG_BodySize, TEXTALIGN_ML);
 					static int s_LlmConcurrencySelectorId;
 					RenderSliderWithNumberInput(&s_LlmConcurrencySelectorId, ControlCol, &g_Config.m_QmTranslateLlmConcurrency, 1, 20);
-					Ui()->DoLabel(&LabelCol, Localize("并发数"), LG_BodySize, TEXTALIGN_ML);
+					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					// 显示当前有效并发数
 					{
@@ -8834,15 +8822,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						{
 							str_format(aBuf, sizeof(aBuf), Localize("Manual concurrency: %d"), EffectiveConcurrency);
 						}
-						Ui()->DoLabel(&ControlCol, aBuf, LG_BodySize, TEXTALIGN_ML);
+						CardContent.HSplitTop(LG_LineHeight * 0.85f, &Row, &CardContent);
+						Row.VSplitLeft(LG_LabelWidth, nullptr, &ControlCol);
+						Ui()->DoLabel(&ControlCol, aBuf, LG_BodySize * 0.85f, TEXTALIGN_ML);
 					}
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					// 手动并发数滑块
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-					Ui()->DoLabel(&LabelCol, Localize("Manual concurrency (1=auto)"), LG_BodySize, TEXTALIGN_ML);
-					Ui()->DoScrollbarOption(&g_Config.m_QmTranslateLlmConcurrency, &g_Config.m_QmTranslateLlmConcurrency, &ControlCol, Localize("Manual concurrency"), 1, 20, &CUi::ms_LinearScrollbarScale, 1);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					// 思考模式开关
@@ -8967,7 +8950,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Ui()->DoLabel(&LabelCol, Localize("Auto reply cooldown"), LG_BodySize, TEXTALIGN_ML);
 				static int s_QmAutoReplyCooldownInputId;
 				RenderSliderWithValueInput(&s_QmAutoReplyCooldownInputId, ControlCol, &g_Config.m_QmAutoReplyCooldown, 0, 30);
-				Ui()->DoScrollbarOption(&g_Config.m_QmAutoReplyCooldown, &g_Config.m_QmAutoReplyCooldown, &Row, Localize("自动回复冷却时间"), 0, 30, &CUi::ms_LinearScrollbarScale, 0, Localize(" 秒"));
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				auto SyncRuleRowsFromConfig = [](std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, bool &Inited, const char *pConfigRules) {
@@ -9129,13 +9111,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					Ui()->DoLabel(&LabelCol, Localize("Detection distance"), LG_BodySize, TEXTALIGN_ML);
 					static int s_QmPieMenuMaxDistanceInputId;
 					RenderSliderWithValueInput(&s_QmPieMenuMaxDistanceInputId, ControlCol, &g_Config.m_QmPieMenuMaxDistance, 100, 2000);
-					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuScale, &g_Config.m_QmPieMenuScale, &Row, Localize("UI缩放"), 50, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuOpacity, &g_Config.m_QmPieMenuOpacity, &Row, Localize("不透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					Ui()->DoScrollbarOption(&g_Config.m_QmPieMenuMaxDistance, &g_Config.m_QmPieMenuMaxDistance, &Row, Localize("检测距离"), 100, 2000);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -9419,11 +9394,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 								Ui()->DoLabel(&LabelColValue, Localize("Drift smoothness"), LG_BodySize, TEXTALIGN_ML);
 								static int s_QmCameraDriftSmoothnessInputId;
 								RenderSliderWithValueInput(&s_QmCameraDriftSmoothnessInputId, ControlColValue, &g_Config.m_QmCameraDriftSmoothness, 0, 100);
-								Ui()->DoScrollbarOption(&g_Config.m_QmCameraDriftAmount, &g_Config.m_QmCameraDriftAmount, &Row, Localize("漂移强度"), 0, 200);
-								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								Ui()->DoScrollbarOption(&g_Config.m_QmCameraDriftSmoothness, &g_Config.m_QmCameraDriftSmoothness, &Row, Localize("漂移平滑度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -9472,11 +9442,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 								Ui()->DoLabel(&LabelColValue, Localize("Dynamic FOV smoothness"), LG_BodySize, TEXTALIGN_ML);
 								static int s_QmDynamicFovSmoothnessInputId;
 								RenderSliderWithValueInput(&s_QmDynamicFovSmoothnessInputId, ControlColValue, &g_Config.m_QmDynamicFovSmoothness, 0, 100);
-								Ui()->DoScrollbarOption(&g_Config.m_QmDynamicFovAmount, &g_Config.m_QmDynamicFovAmount, &Row, Localize("动态FOV强度"), 0, 200);
-								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-								CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-								Ui()->DoScrollbarOption(&g_Config.m_QmDynamicFovSmoothness, &g_Config.m_QmDynamicFovSmoothness, &Row, Localize("动态FOV平滑度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 							}
 						}
@@ -9603,12 +9568,11 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
 				DoModuleHeadline(CardContent, 6, Localize("实体层颜色"), Localize("TeeWorlds的世界不会再出现挡人的实体层了"));
 
-				{
-					const float HintHeight = LG_LineHeight + LG_LineSpacing;
-					auto RenderOverlaySlider = [&](int *pValue, const char *pTitle) {
-						const float SliderHeight = LG_LineHeight + LG_LineSpacing;
-						if(IsModuleContentBlockVisible(CardContent, SliderHeight))
-						{
+					{
+						auto RenderOverlaySlider = [&](const void *pInputId, int *pValue, const char *pTitle) {
+							const float SliderHeight = LG_LineHeight + LG_LineSpacing;
+							if(IsModuleContentBlockVisible(CardContent, SliderHeight))
+							{
 							CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 							if(DeferQmVisualHeavyModules)
 							{
@@ -9618,27 +9582,36 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 							}
 							else
 							{
-								Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-								Ui()->DoLabel(&LabelCol, pTitle, LG_BodySize, TEXTALIGN_ML);
+									Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+									Ui()->DoLabel(&LabelCol, pTitle, LG_BodySize, TEXTALIGN_ML);
 
-								RenderSliderWithValueInput(pValue, ControlCol, pValue, 0, 100);
+									RenderSliderWithValueInput(pInputId, ControlCol, pValue, 0, 100);
+								}
+								CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 							}
-							CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-						}
 						else
 							SkipModuleContentBlock(CardContent, SliderHeight);
 					};
 
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeathAlpha, Localize("死亡不透明度"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayFreezeAlpha, Localize("冻结不透明度"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayUnfreezeAlpha, Localize("解冻不透明度"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeepFreezeAlpha, Localize("深度冻结不透明度"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayDeepUnfreezeAlpha, Localize("深度解冻不透明度"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayTeleAlpha, Localize("传送不透明度"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlayTeleCheckpointAlpha, Localize("CP点不透明度"));
-					RenderOverlaySlider(&g_Config.m_QmEntityOverlaySwitchAlpha, Localize("开关不透明度"));
-					RenderOverlaySlider(&g_Config.m_ClOverlayEntities, Localize("叠层不透明度"));
-				}
+						static int s_QmEntityOverlayDeathAlphaInputId;
+						static int s_QmEntityOverlayFreezeAlphaInputId;
+						static int s_QmEntityOverlayUnfreezeAlphaInputId;
+						static int s_QmEntityOverlayDeepFreezeAlphaInputId;
+						static int s_QmEntityOverlayDeepUnfreezeAlphaInputId;
+						static int s_QmEntityOverlayTeleAlphaInputId;
+						static int s_QmEntityOverlayTeleCheckpointAlphaInputId;
+						static int s_QmEntityOverlaySwitchAlphaInputId;
+						static int s_ClOverlayEntitiesInputId;
+						RenderOverlaySlider(&s_QmEntityOverlayDeathAlphaInputId, &g_Config.m_QmEntityOverlayDeathAlpha, Localize("死亡不透明度"));
+						RenderOverlaySlider(&s_QmEntityOverlayFreezeAlphaInputId, &g_Config.m_QmEntityOverlayFreezeAlpha, Localize("冻结不透明度"));
+						RenderOverlaySlider(&s_QmEntityOverlayUnfreezeAlphaInputId, &g_Config.m_QmEntityOverlayUnfreezeAlpha, Localize("解冻不透明度"));
+						RenderOverlaySlider(&s_QmEntityOverlayDeepFreezeAlphaInputId, &g_Config.m_QmEntityOverlayDeepFreezeAlpha, Localize("深度冻结不透明度"));
+						RenderOverlaySlider(&s_QmEntityOverlayDeepUnfreezeAlphaInputId, &g_Config.m_QmEntityOverlayDeepUnfreezeAlpha, Localize("深度解冻不透明度"));
+						RenderOverlaySlider(&s_QmEntityOverlayTeleAlphaInputId, &g_Config.m_QmEntityOverlayTeleAlpha, Localize("传送不透明度"));
+						RenderOverlaySlider(&s_QmEntityOverlayTeleCheckpointAlphaInputId, &g_Config.m_QmEntityOverlayTeleCheckpointAlpha, Localize("CP点不透明度"));
+						RenderOverlaySlider(&s_QmEntityOverlaySwitchAlphaInputId, &g_Config.m_QmEntityOverlaySwitchAlpha, Localize("开关不透明度"));
+						RenderOverlaySlider(&s_ClOverlayEntitiesInputId, &g_Config.m_ClOverlayEntities, Localize("叠层不透明度"));
+					}
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
 				Column.y = CardContent.y;
@@ -10481,7 +10454,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						static int s_QmVoiceMicVolumeInputId;
 						RenderSliderWithValueInput(&s_QmVoiceMicVolumeInputId, ControlColValue, &g_Config.m_QmVoiceMicVolume, 0, 300);
 					}
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceMicVolume, &g_Config.m_QmVoiceMicVolume, &Row, Localize("麦克风音量"), 0, 300, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -10508,11 +10480,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 							static int s_QmVoiceVadReleaseDelayMsInputId;
 							RenderSliderWithValueInput(&s_QmVoiceVadReleaseDelayMsInputId, ControlColValue, &g_Config.m_QmVoiceVadReleaseDelayMs, 0, 1000);
 						}
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadThreshold, &g_Config.m_QmVoiceVadThreshold, &Row, Localize("语音激活阈值"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-						CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVadReleaseDelayMs, &g_Config.m_QmVoiceVadReleaseDelayMs, &Row, Localize("语音激活释放延迟"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
@@ -10526,7 +10493,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						static int s_QmVoiceVolumeInputId;
 						RenderSliderWithValueInput(&s_QmVoiceVolumeInputId, ControlColValue, &g_Config.m_QmVoiceVolume, 0, 400);
 					}
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceVolume, &g_Config.m_QmVoiceVolume, &Row, Localize("播放音量"), 0, 400, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -10543,7 +10509,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 							static int s_QmVoiceStereoWidthInputId;
 							RenderSliderWithValueInput(&s_QmVoiceStereoWidthInputId, ControlColValue, &g_Config.m_QmVoiceStereoWidth, 0, 200);
 						}
-						Ui()->DoScrollbarOption(&g_Config.m_QmVoiceStereoWidth, &g_Config.m_QmVoiceStereoWidth, &Row, Localize("立体声宽度"), 0, 200, &CUi::ms_LinearScrollbarScale, 0, "%");
 						CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 					}
 
@@ -10559,7 +10524,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceGroupGlobal, Localize("Hear teammates globally"), &g_Config.m_QmVoiceGroupGlobal, &Row, LG_LineHeight);
-					Ui()->DoScrollbarOption(&g_Config.m_QmVoiceRadius, &g_Config.m_QmVoiceRadius, &Row, Localize("语音距离半径"), 1, 400, &CUi::ms_LinearScrollbarScale, 0, "tile");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
@@ -10654,7 +10618,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						static int s_QmHudIslandBgOpacityInputId;
 						RenderSliderWithValueInput(&s_QmHudIslandBgOpacityInputId, ControlColValue, &g_Config.m_QmHudIslandBgOpacity, 0, 100);
 					}
-					Ui()->DoScrollbarOption(&g_Config.m_QmHudIslandBgOpacity, &g_Config.m_QmHudIslandBgOpacity, &Row, Localize("不透明度"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					static CButtonContainer s_DynamicIslandBgColorId;

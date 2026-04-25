@@ -5562,6 +5562,8 @@ bool CGameClient::IsLocalCharSuper() const
 void CGameClient::ReloadNamedSingleFileAssetImage(int ImageId, const char *pCategoryId, const char *pActiveName)
 {
 	LoadNamedSingleFileImage(this, ImageId, pCategoryId, pActiveName);
+	if(ImageId == IMAGE_ARROW || ImageId == IMAGE_STRONGWEAK)
+		m_NamePlates.ResetNamePlates();
 }
 
 void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)

@@ -101,17 +101,22 @@ TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesPreferCategoryAssetTh
 	EXPECT_TRUE(aCandidates[2].empty());
 }
 
-TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesUseBuiltinFallbackNamesPerCategory)
+TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesUseBuiltinNamesForDefault)
 {
+	const auto aGuiCursorCandidates = BuildNamedSingleFileAssetCandidates("gui_cursor", "default");
 	const auto aArrowCandidates = BuildNamedSingleFileAssetCandidates("arrow", "default");
 	const auto aStrongWeakCandidates = BuildNamedSingleFileAssetCandidates("strong_weak", "default");
 
-	EXPECT_EQ(aArrowCandidates[0], "assets/arrow/default.png");
-	EXPECT_EQ(aArrowCandidates[1], "arrow.png");
+	EXPECT_EQ(aGuiCursorCandidates[0], "gui_cursor.png");
+	EXPECT_TRUE(aGuiCursorCandidates[1].empty());
+	EXPECT_TRUE(aGuiCursorCandidates[2].empty());
+
+	EXPECT_EQ(aArrowCandidates[0], "arrow.png");
+	EXPECT_TRUE(aArrowCandidates[1].empty());
 	EXPECT_TRUE(aArrowCandidates[2].empty());
 
-	EXPECT_EQ(aStrongWeakCandidates[0], "assets/strong_weak/default.png");
-	EXPECT_EQ(aStrongWeakCandidates[1], "strong_weak.png");
+	EXPECT_EQ(aStrongWeakCandidates[0], "strong_weak.png");
+	EXPECT_TRUE(aStrongWeakCandidates[1].empty());
 	EXPECT_TRUE(aStrongWeakCandidates[2].empty());
 }
 

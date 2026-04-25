@@ -1532,21 +1532,6 @@ bool CopyStorageFile(IStorage *pStorage, const char *pSourcePath, int SourceStor
 	return Written == vBuffer.size();
 }
 
-bool CopyAbsoluteFileToStorage(IStorage *pStorage, const char *pAbsoluteSourcePath, const char *pTargetPath)
-{
-	std::vector<uint8_t> vBuffer;
-	if(!LoadFileToBuffer(pStorage, pAbsoluteSourcePath, IStorage::TYPE_ABSOLUTE, vBuffer))
-		return false;
-
-	IOHANDLE File = pStorage->OpenFile(pTargetPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-
-	const size_t Written = io_write(File, vBuffer.data(), vBuffer.size());
-	io_close(File);
-	return Written == vBuffer.size();
-}
-
 void CollectNamedSingleFileAssetNames(IStorage *pStorage, const SAssetResourceCategory &Category, std::vector<std::string> &vAssetNames)
 {
 	vAssetNames.clear();
@@ -1556,41 +1541,6 @@ void CollectNamedSingleFileAssetNames(IStorage *pStorage, const SAssetResourceCa
 	SNamedSingleFileNameScanUser ScanUser{&vAssetNames};
 	pStorage->ListDirectory(IStorage::TYPE_ALL, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
 	::EnsureDefaultAssetVisible(vAssetNames);
-}
-
-bool NamedSingleFileAssetExists(IStorage *pStorage, const SAssetResourceCategory &Category, std::string_view AssetName)
-{
-	const std::string AssetNameString(AssetName);
-	char aAssetPath[IO_MAX_PATH_LENGTH];
-	str_format(aAssetPath, sizeof(aAssetPath), "%s/%s.png", Category.m_pInstallFolder, AssetNameString.c_str());
-	return pStorage->FileExists(aAssetPath, IStorage::TYPE_SAVE);
-}
-
-void EnsureBuiltinDefaultSingleFileAsset(IStorage *pStorage, const SAssetResourceCategory &Category)
-{
-	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
-		return;
-
-	char aDefaultPath[IO_MAX_PATH_LENGTH];
-	str_format(aDefaultPath, sizeof(aDefaultPath), "%s/default.png", Category.m_pInstallFolder);
-	if(pStorage->FileExists(aDefaultPath, IStorage::TYPE_SAVE))
-		return;
-
-	const char *pBuiltinFilename = BuiltinSingleFileAssetFilename(Category);
-	if(pBuiltinFilename == nullptr)
-		return;
-
-	char aBinaryRelativePath[IO_MAX_PATH_LENGTH];
-	str_format(aBinaryRelativePath, sizeof(aBinaryRelativePath), "data/%s", pBuiltinFilename);
-
-	char aBuiltinAbsolutePath[IO_MAX_PATH_LENGTH];
-	pStorage->GetBinaryPath(aBinaryRelativePath, aBuiltinAbsolutePath, sizeof(aBuiltinAbsolutePath));
-	if(aBuiltinAbsolutePath[0] == '\0' || !pStorage->FileExists(aBuiltinAbsolutePath, IStorage::TYPE_ABSOLUTE))
-		return;
-
-	pStorage->CreateFolder("assets", IStorage::TYPE_SAVE);
-	pStorage->CreateFolder(Category.m_pInstallFolder, IStorage::TYPE_SAVE);
-	CopyAbsoluteFileToStorage(pStorage, aBuiltinAbsolutePath, aDefaultPath);
 }
 
 void TryImportLegacySingleFileAsset(IStorage *pStorage, const SAssetResourceCategory &Category)
@@ -2446,7 +2396,6 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			if(Category.m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE)
 			{
 				TryImportLegacySingleFileAsset(Storage(), Category);
-				EnsureBuiltinDefaultSingleFileAsset(Storage(), Category);
 			}
 		}
 
