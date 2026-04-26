@@ -39,7 +39,7 @@ class CVoiceOverlayState
 public:
 	void Reset();
 	void NoteSpeaker(int ClientId, const char *pName, bool IsLocal, int64_t Timestamp, float Level);
-	std::vector<SVoiceOverlayEntry> CollectVisible(int64_t Now, int64_t VisibleWindow, bool ShowLocalWhenActive, size_t MaxEntries);
+	int CollectVisible(int64_t Now, int64_t VisibleWindow, bool ShowLocalWhenActive, size_t MaxEntries, std::array<SVoiceOverlayEntry, MAX_CLIENTS> &aEntries);
 
 private:
 	std::array<int64_t, MAX_CLIENTS> m_aLastHeard = {};

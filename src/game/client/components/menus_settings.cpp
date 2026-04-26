@@ -1385,43 +1385,57 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 
 	// Layout bottom controls and use remainder for skin selector
 	CUIRect QuickSearch, DatabaseButton, EditTextureButton, DirectoryButton, RefreshButton;
-	MainView.HSplitBottom(20.0f, &MainView, &QuickSearch);
-	MainView.HSplitBottom(5.0f, &MainView, nullptr);
-	QuickSearch.VSplitLeft(220.0f, &QuickSearch, &DatabaseButton);
-	DatabaseButton.VSplitLeft(10.0f, nullptr, &DatabaseButton);
-	DatabaseButton.VSplitLeft(140.0f, &DatabaseButton, &EditTextureButton);
-	EditTextureButton.VSplitLeft(10.0f, nullptr, &EditTextureButton);
-	EditTextureButton.VSplitLeft(150.0f, &EditTextureButton, &DirectoryButton);
-	DirectoryButton.VSplitRight(175.0f, nullptr, &DirectoryButton);
-	DirectoryButton.VSplitRight(25.0f, &DirectoryButton, &RefreshButton);
-	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, nullptr);
 	constexpr float SkinControlGap = 10.0f;
+	constexpr float SkinControlLineHeight = 20.0f;
 	constexpr float SkinControlLabelFontSize = 14.0f;
 	constexpr float SkinControlLabelPadding = 24.0f;
 	constexpr float SkinRefreshButtonWidth = 25.0f;
 	constexpr float SkinSearchPreferredWidth = 220.0f;
 	const char *pSkinDatabaseLabel = Localize("Skin Database");
 	const char *pSkinDirectoryLabel = Localize("Skins directory");
+	const char *pEditSkinTextureLabel = Localize("Edit skin texture");
 	const float DesiredDatabaseButtonWidth = maximum(110.0f, TextRender()->TextWidth(SkinControlLabelFontSize, pSkinDatabaseLabel, -1, -1.0f) + SkinControlLabelPadding);
 	const float DesiredDirectoryButtonWidth = maximum(110.0f, TextRender()->TextWidth(SkinControlLabelFontSize, pSkinDirectoryLabel, -1, -1.0f) + SkinControlLabelPadding);
-	const float AvailableLabelButtonWidth = maximum(0.0f, QuickSearch.w - SkinControlGap * 3.0f - SkinRefreshButtonWidth);
-	const float DesiredLabelButtonWidth = DesiredDatabaseButtonWidth + DesiredDirectoryButtonWidth;
+	const float DesiredEditTextureButtonWidth = maximum(125.0f, TextRender()->TextWidth(SkinControlLabelFontSize, pEditSkinTextureLabel, -1, -1.0f) + SkinControlLabelPadding);
+	const float DesiredLabelButtonWidth = DesiredDatabaseButtonWidth + DesiredDirectoryButtonWidth + DesiredEditTextureButtonWidth;
+	const float DesiredControlsWidth = DesiredLabelButtonWidth + SkinRefreshButtonWidth + SkinControlGap * 3.0f;
+	const bool SplitToolbarRows = MainView.w < SkinSearchPreferredWidth + SkinControlGap + DesiredControlsWidth;
+	CUIRect Toolbar, ControlsArea;
+	MainView.HSplitBottom(SplitToolbarRows ? SkinControlLineHeight * 2.0f + 5.0f : SkinControlLineHeight, &MainView, &Toolbar);
+	MainView.HSplitBottom(5.0f, &MainView, nullptr);
+	if(SplitToolbarRows)
+	{
+		Toolbar.HSplitTop(SkinControlLineHeight, &QuickSearch, &ControlsArea);
+		ControlsArea.HSplitTop(5.0f, nullptr, &ControlsArea);
+		ControlsArea.HSplitTop(SkinControlLineHeight, &ControlsArea, nullptr);
+	}
+	else
+	{
+		const float ControlsWidth = minimum(Toolbar.w, DesiredControlsWidth);
+		Toolbar.VSplitRight(ControlsWidth, &QuickSearch, &ControlsArea);
+		if(QuickSearch.w > SkinSearchPreferredWidth)
+		{
+			QuickSearch.VSplitLeft(SkinSearchPreferredWidth, &QuickSearch, nullptr);
+		}
+	}
+	const float AvailableLabelButtonWidth = maximum(0.0f, ControlsArea.w - SkinControlGap * 3.0f - SkinRefreshButtonWidth);
 	const float LabelButtonWidthScale = DesiredLabelButtonWidth > 0.0f ? minimum(1.0f, AvailableLabelButtonWidth / DesiredLabelButtonWidth) : 1.0f;
 	const float DatabaseButtonWidth = DesiredDatabaseButtonWidth * LabelButtonWidthScale;
 	const float DirectoryButtonWidth = DesiredDirectoryButtonWidth * LabelButtonWidthScale;
-	const float ControlsWidth = minimum(QuickSearch.w, SkinControlGap * 3.0f + DatabaseButtonWidth + DirectoryButtonWidth + SkinRefreshButtonWidth);
-	CUIRect ControlsArea;
-	QuickSearch.VSplitRight(ControlsWidth, &QuickSearch, &ControlsArea);
-	if(QuickSearch.w > SkinSearchPreferredWidth)
-	{
-		QuickSearch.VSplitLeft(SkinSearchPreferredWidth, &QuickSearch, nullptr);
-	}
-	ControlsArea.VSplitLeft(SkinControlGap, nullptr, &ControlsArea);
-	ControlsArea.VSplitLeft(DatabaseButtonWidth, &DatabaseButton, &ControlsArea);
-	ControlsArea.VSplitLeft(SkinControlGap, nullptr, &ControlsArea);
-	ControlsArea.VSplitLeft(DirectoryButtonWidth, &DirectoryButton, &ControlsArea);
-	ControlsArea.VSplitLeft(SkinControlGap, nullptr, &ControlsArea);
-	ControlsArea.VSplitLeft(SkinRefreshButtonWidth, &RefreshButton, nullptr);
+	const float EditTextureButtonWidth = DesiredEditTextureButtonWidth * LabelButtonWidthScale;
+	auto SplitSkinToolbarLeft = [](CUIRect &Rect, float Width, CUIRect *pLeft) {
+		Rect.VSplitLeft(std::clamp(Width, 0.0f, Rect.w), pLeft, &Rect);
+	};
+	auto SplitSkinToolbarGap = [&](CUIRect &Rect) {
+		SplitSkinToolbarLeft(Rect, SkinControlGap, nullptr);
+	};
+	SplitSkinToolbarLeft(ControlsArea, DatabaseButtonWidth, &DatabaseButton);
+	SplitSkinToolbarGap(ControlsArea);
+	SplitSkinToolbarLeft(ControlsArea, DirectoryButtonWidth, &DirectoryButton);
+	SplitSkinToolbarGap(ControlsArea);
+	SplitSkinToolbarLeft(ControlsArea, SkinRefreshButtonWidth, &RefreshButton);
+	SplitSkinToolbarGap(ControlsArea);
+	SplitSkinToolbarLeft(ControlsArea, EditTextureButtonWidth, &EditTextureButton);
 
 	// Skin selector
 	static CListBox s_ListBox;
@@ -1585,7 +1599,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 
 	static CButtonContainer s_EditSkinTextureButton;
-	if(DoButton_Menu(&s_EditSkinTextureButton, Localize("Edit skin texture"), 0, &EditTextureButton))
+	if(DoButton_Menu(&s_EditSkinTextureButton, pEditSkinTextureLabel, 0, &EditTextureButton))
 		AssetsEditorOpen(ASSETS_EDITOR_TYPE_SKIN);
 
 	static CButtonContainer s_DirectoryButton;

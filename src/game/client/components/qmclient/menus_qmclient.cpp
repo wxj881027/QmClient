@@ -8028,7 +8028,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideScoreboard, Localize("Hide Scoreboard"), &g_Config.m_QmFocusModeHideScoreboard, &Row, LG_LineHeight);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFocusModeHideScoreboard, Localize("隐藏记分板"), &g_Config.m_QmFocusModeHideScoreboard, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing * 0.7f, nullptr, &CardContent);
 				}
@@ -8037,8 +8036,6 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				{
 					CUIRect BindLabel, BindKey;
 					Row.VSplitLeft(LG_LabelWidth, &BindLabel, &BindKey);
-					Ui()->DoLabel(&BindLabel, Localize("Focus mode bind:"), LG_BodySize, TEXTALIGN_ML);
-					Row.VSplitLeft(Row.w * 0.45f, &BindLabel, &BindKey);
 					Ui()->DoLabel(&BindLabel, Localize("禅模式按键"), LG_BodySize, TEXTALIGN_ML);
 					CBindSlot FocusBind(KEY_UNKNOWN, KeyModifier::NONE);
 					{

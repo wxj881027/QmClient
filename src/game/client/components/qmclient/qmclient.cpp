@@ -5334,6 +5334,10 @@ void CTClient::ApplyFocusModeEffects()
 			Localize(FocusActive ? "On" : "Off"));
 		GameClient()->Echo(aFocusMsg, true);
 	}
+	else if(StateWasKnown && !FocusActive && !m_FocusHudOverridden && !m_FocusUiOverlayOverridden && !m_FocusNamesOverridden)
+	{
+		return;
+	}
 
 	SConfigIntOverrideEntry aHudEntries[] = {
 		{&g_Config.m_ClShowhud, &m_SavedHudConfig.m_ClShowhud, 0},
@@ -5393,6 +5397,14 @@ void CTClient::ApplyGoresFastInputLink()
 	{
 		m_GoresModeStateKnown = true;
 		m_PrevGoresModeActive = false;
+	}
+	else if(GoresActive == m_PrevGoresModeActive &&
+		g_Config.m_TcFastInput == m_PrevTcFastInput &&
+		g_Config.m_TcFastInputOthers == m_PrevTcFastInputOthers &&
+		g_Config.m_QmGoresFastInput == m_PrevQmGoresFastInput &&
+		g_Config.m_QmGoresFastInputOthers == m_PrevQmGoresFastInputOthers)
+	{
+		return;
 	}
 	if(GoresActive != m_PrevGoresModeActive)
 	{

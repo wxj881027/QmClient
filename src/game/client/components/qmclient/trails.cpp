@@ -194,6 +194,8 @@ void CTrails::OnRender()
 		float Width = g_Config.m_TcTeeTrailWidth;
 
 		static std::vector<CTrailPart> s_Trail;
+		if(s_Trail.capacity() < 202)
+			s_Trail.reserve(202);
 		s_Trail.clear();
 
 		// TODO: figure out why this is required
@@ -239,18 +241,18 @@ void CTrails::OnRender()
 			continue;
 
 		if(PredictPlayer)
-			s_Trail.at(0).m_Pos = GameClient()->m_aClients[ClientId].m_RenderPos;
+			s_Trail[0].m_Pos = GameClient()->m_aClients[ClientId].m_RenderPos;
 		else
-			s_Trail.at(0).m_Pos = mix(PrevServerPos, CurServerPos, IntraTick);
+			s_Trail[0].m_Pos = mix(PrevServerPos, CurServerPos, IntraTick);
 
 		if(TrailFull)
-			s_Trail.at(s_Trail.size() - 1).m_Pos = mix(s_Trail.at(s_Trail.size() - 1).m_Pos, s_Trail.at(s_Trail.size() - 2).m_Pos, std::fmod(IntraTick, 1.0f));
+			s_Trail[s_Trail.size() - 1].m_Pos = mix(s_Trail[s_Trail.size() - 1].m_Pos, s_Trail[s_Trail.size() - 2].m_Pos, std::fmod(IntraTick, 1.0f));
 
 		// Set progress
 		for(int i = 0; i < (int)s_Trail.size(); i++)
 		{
 			float Size = float(s_Trail.size() - 1 + TrimTicks);
-			CTrailPart &Part = s_Trail.at(i);
+			CTrailPart &Part = s_Trail[i];
 			if(i == 0)
 				Part.m_Progress = 0.0f;
 			else if(i == (int)s_Trail.size() - 1)
@@ -282,9 +284,9 @@ void CTrails::OnRender()
 				if(s_Trail.size() > 3)
 				{
 					if(i < 2)
-						Speed = distance(s_Trail.at(i + 2).m_UnmovedPos, Part.m_UnmovedPos) / std::abs(s_Trail.at(i + 2).m_Tick - Part.m_Tick);
+						Speed = distance(s_Trail[i + 2].m_UnmovedPos, Part.m_UnmovedPos) / std::abs(s_Trail[i + 2].m_Tick - Part.m_Tick);
 					else
-						Speed = distance(Part.m_UnmovedPos, s_Trail.at(i - 2).m_UnmovedPos) / std::abs(Part.m_Tick - s_Trail.at(i - 2).m_Tick);
+						Speed = distance(Part.m_UnmovedPos, s_Trail[i - 2].m_UnmovedPos) / std::abs(Part.m_Tick - s_Trail[i - 2].m_Tick);
 				}
 				Part.m_Col = color_cast<ColorRGBA>(ColorHSLA(65280 * ((int)(Speed * Speed / 12.5f) + 1)).UnclampLighting(ColorHSLA::DARKEST_LGT));
 				break;
@@ -313,26 +315,26 @@ void CTrails::OnRender()
 		// Calculate the widths
 		for(int i = 0; i < (int)s_Trail.size(); i++)
 		{
-			CTrailPart &Part = s_Trail.at(i);
+			CTrailPart &Part = s_Trail[i];
 			vec2 PrevPos;
-			vec2 Pos = s_Trail.at(i).m_Pos;
+			vec2 Pos = Part.m_Pos;
 			vec2 NextPos;
 
 			if(i == 0)
 			{
-				vec2 Direction = normalize(s_Trail.at(i + 1).m_Pos - Pos);
+				vec2 Direction = normalize(s_Trail[i + 1].m_Pos - Pos);
 				PrevPos = Pos - Direction;
 			}
 			else
-				PrevPos = s_Trail.at(i - 1).m_Pos;
+				PrevPos = s_Trail[i - 1].m_Pos;
 
 			if(i == (int)s_Trail.size() - 1)
 			{
-				vec2 Direction = normalize(Pos - s_Trail.at(i - 1).m_Pos);
+				vec2 Direction = normalize(Pos - s_Trail[i - 1].m_Pos);
 				NextPos = Pos + Direction;
 			}
 			else
-				NextPos = s_Trail.at(i + 1).m_Pos;
+				NextPos = s_Trail[i + 1].m_Pos;
 
 			vec2 NextDirection = normalize(NextPos - Pos);
 			vec2 PrevDirection = normalize(Pos - PrevPos);
@@ -370,14 +372,14 @@ void CTrails::OnRender()
 					Part.m_Top = Top;
 					Part.m_Bot = Bot;
 					if(i > 0)
-						s_Trail.at(i).m_Flip = true;
+						Part.m_Flip = true;
 				}
 				else // <-Left Direction
 				{
 					Part.m_Top = Bot;
 					Part.m_Bot = Top;
 					if(i > 0)
-						s_Trail.at(i).m_Flip = true;
+						Part.m_Flip = true;
 				}
 			}
 		}
@@ -390,21 +392,21 @@ void CTrails::OnRender()
 		// Draw the trail
 		for(int i = 0; i < (int)s_Trail.size() - 1; i++)
 		{
-			const CTrailPart &Part = s_Trail.at(i);
-			const CTrailPart &NextPart = s_Trail.at(i + 1);
+			const CTrailPart &Part = s_Trail[i];
+			const CTrailPart &NextPart = s_Trail[i + 1];
 			const float Dist = distance(Part.m_UnmovedPos, NextPart.m_UnmovedPos);
 
 			const float MaxDiff = 120.0f;
 			if(i > 0)
 			{
-				const CTrailPart &PrevPart = s_Trail.at(i - 1);
+				const CTrailPart &PrevPart = s_Trail[i - 1];
 				float PrevDist = distance(PrevPart.m_UnmovedPos, Part.m_UnmovedPos);
 				if(std::abs(Dist - PrevDist) > MaxDiff)
 					continue;
 			}
 			if(i < (int)s_Trail.size() - 2)
 			{
-				const CTrailPart &NextNextPart = s_Trail.at(i + 2);
+				const CTrailPart &NextNextPart = s_Trail[i + 2];
 				float NextDist = distance(NextPart.m_UnmovedPos, NextNextPart.m_UnmovedPos);
 				if(std::abs(Dist - NextDist) > MaxDiff)
 					continue;

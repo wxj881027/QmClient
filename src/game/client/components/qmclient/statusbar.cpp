@@ -7,6 +7,9 @@
 #include <game/client/render.h>
 #include <game/client/ui.h>
 
+#include <algorithm>
+#include <array>
+
 CStatusItem::CStatusItem(std::function<void()> Render, std::function<float()> Width, const char *pLetters, const char *pName, const char *pDisplayName, const char *pDesc, bool ShowLabel)
 {
 	m_RenderItem = std::move(Render);
@@ -323,24 +326,25 @@ void CStatusBar::OnRender()
 	};
 
 	int SpaceCount = 0;
-	const int ItemCount = (int)m_StatusBarItems.size();
+	const int ItemCount = std::min((int)m_StatusBarItems.size(), (int)STATUSBAR_MAX_SIZE);
 	float UsedWidth = 0.0f;
 	float AvailableWidth = m_Width - m_Margin * 2.0f; // 1 extra margin on the sides
-	std::vector<SStatusLayoutItem> vLayoutItems;
-	vLayoutItems.reserve(ItemCount);
+	std::array<SStatusLayoutItem, STATUSBAR_MAX_SIZE> aLayoutItems;
+	int LayoutItemCount = 0;
 	// Count the number of spaces and determine how much unused space there is
-	for(const CStatusItem *Item : m_StatusBarItems)
+	for(int ItemIndex = 0; ItemIndex < ItemCount; ++ItemIndex)
 	{
-		SStatusLayoutItem &LayoutItem = vLayoutItems.emplace_back();
-		LayoutItem.m_pItem = Item;
-		LayoutItem.m_IsSpace = str_comp(Item->m_aName, "Space") == 0;
+		const CStatusItem *pItem = m_StatusBarItems[ItemIndex];
+		SStatusLayoutItem &LayoutItem = aLayoutItems[LayoutItemCount++];
+		LayoutItem.m_pItem = pItem;
+		LayoutItem.m_IsSpace = str_comp(pItem->m_aName, "Space") == 0;
 		if(LayoutItem.m_IsSpace)
 			++SpaceCount;
 		else
 		{
-			LayoutItem.m_ItemWidth = Item->m_GetWidth();
-			if(g_Config.m_TcStatusBarLabels && Item->m_ShowLabel && LayoutItem.m_ItemWidth > 0.0f)
-				LayoutItem.m_LabelWidth = LabelWidth(Localize(Item->m_aDisplayName));
+			LayoutItem.m_ItemWidth = pItem->m_GetWidth();
+			if(g_Config.m_TcStatusBarLabels && pItem->m_ShowLabel && LayoutItem.m_ItemWidth > 0.0f)
+				LayoutItem.m_LabelWidth = LabelWidth(Localize(pItem->m_aDisplayName));
 			UsedWidth += LayoutItem.m_ItemWidth + LayoutItem.m_LabelWidth;
 		}
 	}
@@ -357,8 +361,9 @@ void CStatusBar::OnRender()
 
 	m_CursorX = m_Margin;
 	// Render items
-	for(const SStatusLayoutItem &LayoutItem : vLayoutItems)
+	for(int LayoutItemIndex = 0; LayoutItemIndex < LayoutItemCount; ++LayoutItemIndex)
 	{
+		const SStatusLayoutItem &LayoutItem = aLayoutItems[LayoutItemIndex];
 		m_CursorX += m_Margin;
 		const CStatusItem *pItem = LayoutItem.m_pItem;
 

@@ -28,6 +28,7 @@
 #include <SDL.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <thread>
@@ -89,10 +90,9 @@ void CVoiceOverlayState::NoteSpeaker(int ClientId, const char *pName, bool IsLoc
 	}
 }
 
-std::vector<SVoiceOverlayEntry> CVoiceOverlayState::CollectVisible(int64_t Now, int64_t VisibleWindow, bool ShowLocalWhenActive, size_t MaxEntries)
+int CVoiceOverlayState::CollectVisible(int64_t Now, int64_t VisibleWindow, bool ShowLocalWhenActive, size_t MaxEntries, std::array<SVoiceOverlayEntry, MAX_CLIENTS> &aEntries)
 {
-	std::vector<SVoiceOverlayEntry> vEntries;
-	vEntries.reserve(MAX_CLIENTS);
+	int EntryCount = 0;
 
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
@@ -125,7 +125,7 @@ std::vector<SVoiceOverlayEntry> CVoiceOverlayState::CollectVisible(int64_t Now, 
 				m_NextOrder = 1;
 		}
 
-		SVoiceOverlayEntry &Entry = vEntries.emplace_back();
+		SVoiceOverlayEntry &Entry = aEntries[EntryCount++];
 		Entry.m_ClientId = ClientId;
 		Entry.m_Order = m_aOrder[ClientId];
 		Entry.m_IsLocal = m_aIsLocal[ClientId];
@@ -134,16 +134,20 @@ std::vector<SVoiceOverlayEntry> CVoiceOverlayState::CollectVisible(int64_t Now, 
 		str_copy(Entry.m_aName, m_aaNames[ClientId].data(), sizeof(Entry.m_aName));
 	}
 
-	std::stable_sort(vEntries.begin(), vEntries.end(), [](const SVoiceOverlayEntry &Left, const SVoiceOverlayEntry &Right) {
-		if(Left.m_Order != Right.m_Order)
-			return Left.m_Order < Right.m_Order;
-		return Left.m_ClientId < Right.m_ClientId;
-	});
+	if(EntryCount > 1)
+	{
+		std::sort(aEntries.begin(), aEntries.begin() + EntryCount, [](const SVoiceOverlayEntry &Left, const SVoiceOverlayEntry &Right) {
+			if(Left.m_Order != Right.m_Order)
+				return Left.m_Order < Right.m_Order;
+			return Left.m_ClientId < Right.m_ClientId;
+		});
+	}
 
-	if(vEntries.size() > MaxEntries)
-		vEntries.resize(MaxEntries);
+	const int MaxEntryCount = MaxEntries > MAX_CLIENTS ? MAX_CLIENTS : (int)MaxEntries;
+	if(EntryCount > MaxEntryCount)
+		EntryCount = MaxEntryCount;
 
-	return vEntries;
+	return EntryCount;
 }
 
 static constexpr char VOICE_MAGIC[4] = {'R', 'V', '0', '1'};
@@ -2429,8 +2433,8 @@ void CRClientVoice::RenderSpeakerOverlay()
 	const int64_t VisibleWindow = (int64_t)time_freq() * VOICE_OVERLAY_VISIBLE_MS / 1000;
 	std::array<bool, MAX_CLIENTS> aVisibleNow{};
 	aVisibleNow.fill(false);
-	std::vector<SSpeakerEntry> vEntries;
-	vEntries.reserve(MAX_CLIENTS);
+	std::array<SSpeakerEntry, MAX_CLIENTS> aEntries{};
+	int EntryCount = 0;
 
 	bool LocalEntryAdded = false;
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
@@ -2471,7 +2475,7 @@ void CRClientVoice::RenderSpeakerOverlay()
 				m_NextOverlayOrder = 1;
 		}
 
-		SSpeakerEntry &Entry = vEntries.emplace_back();
+		SSpeakerEntry &Entry = aEntries[EntryCount++];
 		Entry.m_ClientId = ClientId;
 		Entry.m_OverlayOrder = m_aOverlayOrder[ClientId];
 		Entry.m_IsLocal = IsLocalSpeaker;
@@ -2484,32 +2488,35 @@ void CRClientVoice::RenderSpeakerOverlay()
 			m_aOverlayOrder[ClientId] = 0;
 	}
 
-	if(vEntries.empty() && !HudEditorPreview)
+	if(EntryCount == 0 && !HudEditorPreview)
 		return;
 
-	if(vEntries.empty() && HudEditorPreview)
+	if(EntryCount == 0 && HudEditorPreview)
 	{
-		SSpeakerEntry &LocalEntry = vEntries.emplace_back();
+		SSpeakerEntry &LocalEntry = aEntries[EntryCount++];
 		LocalEntry.m_ClientId = 0;
 		LocalEntry.m_OverlayOrder = 1;
 		LocalEntry.m_IsLocal = true;
 		str_copy(LocalEntry.m_aName, "You", sizeof(LocalEntry.m_aName));
 
-		SSpeakerEntry &TeammateEntry = vEntries.emplace_back();
+		SSpeakerEntry &TeammateEntry = aEntries[EntryCount++];
 		TeammateEntry.m_ClientId = 1;
 		TeammateEntry.m_OverlayOrder = 2;
 		TeammateEntry.m_IsLocal = false;
 		str_copy(TeammateEntry.m_aName, "Teammate", sizeof(TeammateEntry.m_aName));
 	}
 
-	std::stable_sort(vEntries.begin(), vEntries.end(), [](const SSpeakerEntry &Left, const SSpeakerEntry &Right) {
-		if(Left.m_OverlayOrder != Right.m_OverlayOrder)
-			return Left.m_OverlayOrder < Right.m_OverlayOrder;
-		return Left.m_ClientId < Right.m_ClientId;
-	});
+	if(EntryCount > 1)
+	{
+		std::sort(aEntries.begin(), aEntries.begin() + EntryCount, [](const SSpeakerEntry &Left, const SSpeakerEntry &Right) {
+			if(Left.m_OverlayOrder != Right.m_OverlayOrder)
+				return Left.m_OverlayOrder < Right.m_OverlayOrder;
+			return Left.m_ClientId < Right.m_ClientId;
+		});
+	}
 
-	if(vEntries.size() > VOICE_OVERLAY_MAX_SPEAKERS)
-		vEntries.resize(VOICE_OVERLAY_MAX_SPEAKERS);
+	if(EntryCount > VOICE_OVERLAY_MAX_SPEAKERS)
+		EntryCount = VOICE_OVERLAY_MAX_SPEAKERS;
 
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	m_pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
@@ -2543,20 +2550,21 @@ void CRClientVoice::RenderSpeakerOverlay()
 	const float MicIconWidth = pTextRender->TextWidth(IconFontSize, s_pVoiceOverlayMicIcon);
 	pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	float PanelWidth = 0.0f;
-	for(SSpeakerEntry &Entry : vEntries)
+	for(int EntryIndex = 0; EntryIndex < EntryCount; ++EntryIndex)
 	{
+		SSpeakerEntry &Entry = aEntries[EntryIndex];
 		Entry.m_FullNameWidth = std::round(pTextRender->TextBoundingBox(NameFontSize, Entry.m_aName).m_W);
 		Entry.m_NameWidth = std::min(Entry.m_FullNameWidth, MaxNameWidth);
 		Entry.m_RowWidth = RowPaddingX + UserBoxWidth + UserToNameGap + Entry.m_NameWidth + NameToMicGap + MicIconWidth + RowPaddingX;
 		PanelWidth = std::max(PanelWidth, Entry.m_RowWidth);
 	}
-	const float PanelHeight = vEntries.empty() ? 0.0f : vEntries.size() * RowHeight + (vEntries.size() - 1) * RowGap;
+	const float PanelHeight = EntryCount == 0 ? 0.0f : EntryCount * RowHeight + (EntryCount - 1) * RowGap;
 	const CUIRect PanelRect = {PanelX, PanelY, PanelWidth, PanelHeight};
 	const auto HudEditorScope = m_pGameClient->m_HudEditor.BeginTransform(EHudEditorElement::VoiceOverlay, PanelRect);
 
-	for(size_t Index = 0; Index < vEntries.size(); ++Index)
+	for(int Index = 0; Index < EntryCount; ++Index)
 	{
-		const SSpeakerEntry &Entry = vEntries[Index];
+		const SSpeakerEntry &Entry = aEntries[Index];
 		const float NameWidth = Entry.m_NameWidth;
 		const float RowWidth = Entry.m_RowWidth;
 		const float RowY = PanelY + Index * (RowHeight + RowGap);
