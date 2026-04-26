@@ -2179,6 +2179,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   config_tags.cpp
   config_tags.h
   config_variables.h
+  config_variables_tclient.h
   config_variables_qmclient.h
   config_variables_qmclient_extra.h
   console.cpp
@@ -2570,22 +2571,22 @@ if(CLIENT)
     components/player_points.h
     components/players.cpp
     components/players.h
-    components/qmclient/bg_draw.cpp
-    components/qmclient/bg_draw.h
-    components/qmclient/bg_draw_file.cpp
-    components/qmclient/bg_draw_file.h
-    components/qmclient/bindchat.cpp
-    components/qmclient/bindchat.h
-    components/qmclient/bindwheel.cpp
-    components/qmclient/bindwheel.h
+    components/tclient/bg_draw.cpp
+    components/tclient/bg_draw.h
+    components/tclient/bg_draw_file.cpp
+    components/tclient/bg_draw_file.h
+    components/tclient/bindchat.cpp
+    components/tclient/bindchat.h
+    components/tclient/bindwheel.cpp
+    components/tclient/bindwheel.h
     components/qmclient/collision_hitbox.cpp
     components/qmclient/collision_hitbox.h
     components/qmclient/colored_parts.h
-    components/qmclient/custom_communities.cpp
-    components/qmclient/custom_communities.h
+    components/tclient/custom_communities.cpp
+    components/tclient/custom_communities.h
     components/qmclient/data_version.h
-    components/qmclient/fast_practice.cpp
-    components/qmclient/fast_practice.h
+    components/tclient/fast_practice.cpp
+    components/tclient/fast_practice.h
     components/qmclient/input_overlay.cpp
     components/qmclient/input_overlay.h
     components/qmclient/jelly_tee.cpp
@@ -2593,30 +2594,33 @@ if(CLIENT)
     components/qmclient/lyrics_component.cpp
     components/qmclient/lyrics_component.h
     components/qmclient/menus_qmclient.cpp
-    components/qmclient/mod.cpp
-    components/qmclient/mod.h
-    components/qmclient/moving_tiles.cpp
-    components/qmclient/moving_tiles.h
-    components/qmclient/outlines.cpp
-    components/qmclient/outlines.h
-    components/qmclient/pet.cpp
-    components/qmclient/pet.h
-    components/qmclient/player_indicator.cpp
-    components/qmclient/player_indicator.h
     components/qmclient/qmclient.cpp
     components/qmclient/qmclient.h
-    components/qmclient/rainbow.cpp
-    components/qmclient/rainbow.h
+    components/tclient/mod.cpp
+    components/tclient/mod.h
+    components/tclient/moving_tiles.cpp
+    components/tclient/moving_tiles.h
+    components/tclient/outlines.cpp
+    components/tclient/outlines.h
+    components/tclient/pet.cpp
+    components/tclient/pet.h
+    components/tclient/player_indicator.cpp
+    components/tclient/player_indicator.h
+    components/tclient/menus_tclient.cpp
+    components/tclient/tclient.cpp
+    components/tclient/tclient.h
+    components/tclient/rainbow.cpp
+    components/tclient/rainbow.h
     components/qmclient/scripting.cpp
     components/qmclient/scripting.h
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
-    components/qmclient/skinprofiles.cpp
-    components/qmclient/skinprofiles.h
-    components/qmclient/statusbar.cpp
-    components/qmclient/statusbar.h
-    components/qmclient/trails.cpp
-    components/qmclient/trails.h
+    components/tclient/skinprofiles.cpp
+    components/tclient/skinprofiles.h
+    components/tclient/statusbar.cpp
+    components/tclient/statusbar.h
+    components/tclient/trails.cpp
+    components/tclient/trails.h
     components/qmclient/translate.cpp
     components/qmclient/translate.h
     components/qmclient/translate_ui_settings.cpp
@@ -2628,8 +2632,8 @@ if(CLIENT)
     components/qmclient/voice_core.h
     components/qmclient/voice_utils.cpp
     components/qmclient/voice_utils.h
-    components/qmclient/warlist.cpp
-    components/qmclient/warlist.h
+    components/tclient/warlist.cpp
+    components/tclient/warlist.h
     components/race_demo.cpp
     components/race_demo.h
     components/scoreboard.cpp

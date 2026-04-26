@@ -96,13 +96,6 @@ struct SPlayerStats
 	}
 };
 
-struct SQmClientServerDistribution
-{
-	std::string m_ServerAddress;
-	int m_UserCount = 0;
-	int m_DummyCount = 0;
-};
-
 class CTClient : public CComponent
 {
 	std::deque<vec2> m_aAirRescuePositions[NUM_DUMMIES];
@@ -298,81 +291,10 @@ class CTClient : public CComponent
 	float m_FriendEnterPendingSendAt = 0.0f;
 	void CheckFriendEnterGreet();
 
-	// Q1menG client recognition sync
-	std::shared_ptr<CHttpRequest> m_pQmClientAuthTokenTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pQmClientUsersTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pQmClientUsersSendTask = nullptr;
-	std::shared_ptr<IJob> m_pQmClientUsersParseJob = nullptr;
-	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleStartTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleCrashTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pQmClientLifecycleStopTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pQmClientServerTimeTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pQmClientPlaytimeQueryTask = nullptr;
-	std::shared_ptr<IJob> m_pQmClientLifecycleMarkerWriteJob = nullptr;
-	char m_aQmClientAuthToken[256] = "";
-	char m_aQmClientMachineHash[SHA256_MAXSTRSIZE] = "";
-	char m_aQmClientLifecycleSessionId[64] = "";
-	char m_aQmClientPlaytimeClientId[65] = "";
-	int64_t m_QmClientLastSync = 0;
-	int64_t m_QmClientServerNow = 0;
-	int64_t m_QmClientServerSessionStart = 0;
-	int64_t m_QmClientServerTimeLastSync = 0;
-	int64_t m_QmClientServerPlaytimeSeconds = -1;
-	int64_t m_QmClientPlaytimeLastSync = 0;
-	int64_t m_QmClientRecoveryStopAt = 0;
-	int64_t m_QmClientRecoveryNextRetry = 0;
-	int64_t m_QmClientStartupNextRetry = 0;
-	int64_t m_QmClientMarkerStartedAt = 0;
-	int64_t m_QmClientMarkerLastSeenAt = 0;
-	int64_t m_QmClientMarkerLastFlushTick = 0;
-	std::vector<SQmClientServerDistribution> m_vQmClientServerDistribution;
-	int m_QmClientOnlineUserCount = 0;
-	int m_QmClientOnlineDummyCount = 0;
-	bool m_QmClientShutdownReported = false;
-	bool m_QmClientAwaitingRecoveryStop = false;
-	bool m_QmClientStartupSent = false;
-	void UpdateQmClientRecognition();
-	void SyncQmClientUsers();
-	void FetchQmClientAuthToken();
-	void SendQmClientPlayerData();
-	void FetchQmClientUsers();
-	void FinishQmClientAuthToken();
-	void FinishQmClientUsers();
-	void ResetQmClientRecognitionTasks();
-	bool NeedsQmClientRecognition() const;
-	bool NeedsFastQmClientSync() const;
-	bool EnsureQmClientMachineHash();
-	bool BuildQmClientRecognitionUrl(const char *pPath, char *pBuf, size_t BufSize, const char *pQuery = nullptr) const;
-	void ClearQmClientServerDistribution();
-	void InitQmClientLifecycle();
-	void UpdateQmClientLifecycleAndServerTime();
-	void SendQmClientLifecyclePing(const char *pEvent, std::shared_ptr<CHttpRequest> &pTaskSlot);
-	void FinishQmClientServerTimeTask();
-	bool FinishQmClientPlaytimeTask(std::shared_ptr<CHttpRequest> &pTaskSlot, bool UpdateSessionStart);
-	void SendQmClientPlaytimeRequest(const char *pUrl, std::shared_ptr<CHttpRequest> &pTaskSlot, int64_t StopAt = 0);
-	void EnsureQmClientPlaytimeClientId();
-	bool ReadQmClientLifecycleMarker(int64_t &OutStartedAt, int64_t &OutLastSeenAt);
-	void TouchQmClientLifecycleMarker(bool ForceWrite);
-	void WriteQmClientLifecycleMarker();
-	void ClearQmClientLifecycleMarker();
-
-	// DDNet player stats (favorite partner + total finishes)
-	std::shared_ptr<CHttpRequest> m_pQmDdnetPlayerTask = nullptr;
-	std::shared_ptr<IJob> m_pQmDdnetPlayerParseJob = nullptr;
-	int64_t m_QmDdnetPlayerLastSync = 0;
-	int64_t m_QmDdnetPlayerNextRetry = 0;
-	char m_aQmDdnetPlayerName[MAX_NAME_LENGTH] = "";
-	char m_aQmDdnetFavoritePartner[MAX_NAME_LENGTH] = "";
-	int m_QmDdnetTotalFinishes = -1;
 	bool m_QmAspectApplyPending = false;
-	void UpdateQmDdnetPlayerStats();
-	void FetchQmDdnetPlayerStats(const char *pPlayerName);
-	void FinishQmDdnetPlayerStats();
-
 
 public:
 	CTClient();
-	bool HasQmClientRecognitionService() const;
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
 	void OnShutdown() override;
@@ -430,16 +352,6 @@ public:
 	const std::set<std::string> &GetFavoriteMaps() const { return m_FavoriteMaps; }
 	const char *GetCachedMapCategoryKey(const char *pMapName) const;
 	void UpdateMapCategoryCache(const char *pMapName, const char *pCategoryKey);
-	bool HasQmServerTime() const { return m_QmClientServerNow > 0; }
-	int64_t QmServerTimeNow() const { return m_QmClientServerNow; }
-	int64_t QmServerSessionStartTime() const { return m_QmClientServerSessionStart; }
-	bool HasQmServerPlaytime() const { return m_QmClientServerPlaytimeSeconds >= 0; }
-	int64_t QmServerPlaytimeSeconds() const { return m_QmClientServerPlaytimeSeconds; }
-	const std::vector<SQmClientServerDistribution> &QmClientServerDistribution() const { return m_vQmClientServerDistribution; }
-	int QmClientOnlineUserCount() const { return m_QmClientOnlineUserCount; }
-	int QmClientOnlineDummyCount() const { return m_QmClientOnlineDummyCount; }
-	int QmDdnetTotalFinishes() const { return m_QmDdnetTotalFinishes; }
-	const char *QmDdnetFavoritePartner() const { return m_aQmDdnetFavoritePartner; }
 	bool IsGoresMapProgressEnabled() const;
 	bool ShouldHideGoresGuides() const;
 	bool HasGoresMapProgress(int Dummy = 0) const

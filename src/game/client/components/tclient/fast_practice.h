@@ -1,6 +1,6 @@
 /* Copyright © 2026 BestProject Team */
-#ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_FAST_PRACTICE_H
-#define GAME_CLIENT_COMPONENTS_QMCLIENT_FAST_PRACTICE_H
+#ifndef GAME_CLIENT_COMPONENTS_TCLIENT_FAST_PRACTICE_H
+#define GAME_CLIENT_COMPONENTS_TCLIENT_FAST_PRACTICE_H
 
 #include <engine/console.h>
 #include <engine/client/enums.h>

@@ -2699,9 +2699,9 @@ void CMenus::RenderServerbrowserQm(CUIRect View)
 {
 	const float RowHeight = 18.0f;
 	const float FontSize = (RowHeight - 4.0f) * CUi::ms_FontmodHeight;
-	const auto &vQmServers = GameClient()->m_TClient.QmClientServerDistribution();
-	const int QmUsers = GameClient()->m_TClient.QmClientOnlineUserCount();
-	const int QmDummies = GameClient()->m_TClient.QmClientOnlineDummyCount();
+	const auto &vQmServers = GameClient()->m_QmClient.QmClientServerDistribution();
+	const int QmUsers = GameClient()->m_QmClient.QmClientOnlineUserCount();
+	const int QmDummies = GameClient()->m_QmClient.QmClientOnlineDummyCount();
 
 	View.Margin(5.0f, &View);
 
@@ -2711,7 +2711,7 @@ void CMenus::RenderServerbrowserQm(CUIRect View)
 	View.HSplitTop(5.0f, nullptr, &View);
 	View.HSplitTop(28.0f, &Summary, &View);
 
-	if(!GameClient()->m_TClient.HasQmClientRecognitionService())
+	if(!GameClient()->m_QmClient.HasQmClientRecognitionService())
 	{
 		Ui()->DoLabel(&Summary, Localize("Set a voice server to enable QmClient distribution"), 9.0f, TEXTALIGN_ML);
 		return;

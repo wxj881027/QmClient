@@ -31,34 +31,18 @@ EXCEPTIONS = [
 ]
 
 GUARD_OVERRIDES = {
-    "src/game/client/components/qmclient/qmclient.h": "GAME_CLIENT_COMPONENTS_TCLIENT_TCLIENT_H",
+    "src/game/client/components/qmclient/qmclient.h": "GAME_CLIENT_COMPONENTS_QMCLIENT_QMCLIENT_H",
     "src/game/client/components/qmclient/input_overlay.h": "GAME_CLIENT_COMPONENTS_TCLIENT_INPUT_OVERLAY_H",
-    "src/game/client/components/qmclient/warlist.h": "GAME_CLIENT_COMPONENTS_TCLIENT_WARLIST_H",
     "src/game/client/components/qmclient/colored_parts.h": "GAME_CLIENT_COMPONENTS_TCLIENT_COLORED_PARTS_H",
     "src/game/client/components/qmclient/translate.h": "GAME_CLIENT_COMPONENTS_TCLIENT_TRANSLATE_H",
     "src/game/client/components/qmclient/data_version.h": "GAME_CLIENT_COMPONENTS_TCLIENT_DATA_VERSION_H",
     "src/game/client/components/qmclient/voice_core.h": "GAME_CLIENT_COMPONENTS_RCLIENT_VOICE_H",
-    "src/game/client/components/qmclient/voice_component.h": "GAME_CLIENT_COMPONENTS_TCLIENT_VOICE_COMPONENT_H",
-    "src/game/client/components/qmclient/trails.h": "GAME_CLIENT_COMPONENTS_TCLIENT_TRAILS_H",
-    "src/game/client/components/qmclient/skinprofiles.h": "GAME_CLIENT_COMPONENTS_TCLIENT_SKINPROFILES_H",
-    "src/game/client/components/qmclient/statusbar.h": "GAME_CLIENT_COMPONENTS_TCLIENT_STATUSBAR_H",
-    "src/game/client/components/qmclient/rainbow.h": "GAME_CLIENT_COMPONENTS_TCLIENT_RAINBOW_H",
+    "src/game/client/components/qmclient/voice_component.h": "GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_COMPONENT_H",
     "src/game/client/components/qmclient/scripting/impl.h": "GAME_CLIENT_COMPONENTS_TCLIENT_SCRIPTING_SCRIPTING_H",
     "src/game/client/components/qmclient/scripting.h": "GAME_CLIENT_COMPONENTS_TCLIENT_CHAISCRIPT_COMPONENT_H",
-    "src/game/client/components/qmclient/pet.h": "GAME_CLIENT_COMPONENTS_TCLIENT_PET_H",
-    "src/game/client/components/qmclient/player_indicator.h": "GAME_CLIENT_COMPONENTS_TCLIENT_PLAYER_INDICATOR_H",
-    "src/game/client/components/qmclient/outlines.h": "GAME_CLIENT_COMPONENTS_TCLIENT_OUTLINES_H",
-    "src/game/client/components/qmclient/mod.h": "GAME_CLIENT_COMPONENTS_TCLIENT_MOD_H",
     "src/game/client/components/qmclient/lyrics_component.h": "GAME_CLIENT_COMPONENTS_TCLIENT_LYRICS_COMPONENT_H",
-    "src/game/client/components/qmclient/custom_communities.h": "GAME_CLIENT_COMPONENTS_TCLIENT_CUSTOM_COMMUNITIES_H",
-    "src/game/client/components/qmclient/bindwheel.h": "GAME_CLIENT_COMPONENTS_TCLIENT_BINDWHEEL_H",
     "src/game/client/components/qmclient/collision_hitbox.h": "GAME_CLIENT_COMPONENTS_TCLIENT_COLLISION_HITBOX_H",
-    "src/game/client/components/qmclient/bg_draw.h": "GAME_CLIENT_COMPONENTS_TCLIENT_BG_DRAW_H",
-    "src/game/client/components/qmclient/bg_draw_file.h": "GAME_CLIENT_COMPONENTS_TCLIENT_BG_DRAW_FILE_H",
-    "src/game/client/components/qmclient/bindchat.h": "GAME_CLIENT_COMPONENTS_TCLIENT_BINDCHAT_H",
-    "src/game/client/components/qmclient/moving_tiles.h": "GAME_CLIENT_COMPONENTS_QMCLIENT_MOVING_TILES_H",
     "src/game/client/components/qmclient/jelly_tee.h": "GAME_CLIENT_COMPONENTS_QMCLIENT_JELLY_TEE_H",
-    "src/game/client/components/qmclient/fast_practice.h": "GAME_CLIENT_COMPONENTS_QMCLIENT_FAST_PRACTICE_H",
     "src/game/client/QmUi/QmTree.h": "GAME_CLIENT_QM_UI_QM_TREE_H",
     "src/game/client/QmUi/QmLegacy.h": "GAME_CLIENT_QM_UI_QM_LEGACY_H",
     "src/game/client/QmUi/QmRender.h": "GAME_CLIENT_QM_UI_QM_RENDER_H",
@@ -69,6 +53,7 @@ GUARD_OVERRIDES = {
 
 QMCLIENT_DIRS = [
     "src/game/client/components/qmclient/",
+    "src/game/client/components/tclient/",
     "src/game/client/QmUi/",
 ]
 
@@ -91,7 +76,8 @@ def check_file(filename, show_fix=False):
         for line in file:
             if line == "// This file can be included several times.\n":
                 break
-            if line[0] == "/" or line[0] == "*" or line[0] == "\r" or line[0] == "\n" or line[0] == "\t":
+            stripped = line.lstrip()
+            if stripped.startswith("/") or stripped.startswith("*") or stripped == "" or stripped == "\r\n" or stripped == "\n":
                 continue
             expected_guard = get_expected_guard(filename)
             path_guard = "#ifndef " + path_to_guard(filename)

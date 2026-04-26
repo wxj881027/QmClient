@@ -2,9 +2,10 @@
 """
 QmClient 配置变量使用检查工具
 
-基于上游 scripts/check_config_variables.py 适配，支持 QmClient 的三套配置变量文件：
+基于上游 scripts/check_config_variables.py 适配，支持 QmClient 的配置变量文件：
   - src/engine/shared/config_variables.h          (DDNet 上游，无前缀)
-  - src/engine/shared/config_variables_qmclient.h (TaterClient 继承，Tc 前缀)
+  - src/engine/shared/config_variables_tclient.h  (TaterClient 继承，Tc 前缀)
+  - src/engine/shared/config_variables_qmclient.h (QmClient 主配置，Qm 前缀)
   - src/engine/shared/config_variables_qmclient_extra.h (QmClient 自研，Qm 前缀)
 
 用法：
@@ -21,7 +22,9 @@ os.chdir(os.path.dirname(__file__) + "/..")
 
 CONFIG_FILES = {
     'ddnet': 'src/engine/shared/config_variables.h',
+    'tclient': 'src/engine/shared/config_variables_tclient.h',
     'qmclient': 'src/engine/shared/config_variables_qmclient.h',
+    'qmclient_extra': 'src/engine/shared/config_variables_qmclient_extra.h',
     'qimeng': 'src/engine/shared/config_variables_qimeng.h',
 }
 
@@ -90,7 +93,12 @@ def main():
     if args.ddnet:
         files_to_check = {'ddnet': CONFIG_FILES['ddnet']}
     elif args.qm:
-        files_to_check = {'qmclient': CONFIG_FILES['qmclient'], 'qimeng': CONFIG_FILES['qimeng']}
+        files_to_check = {
+            'tclient': CONFIG_FILES['tclient'],
+            'qmclient': CONFIG_FILES['qmclient'],
+            'qmclient_extra': CONFIG_FILES['qmclient_extra'],
+            'qimeng': CONFIG_FILES['qimeng'],
+        }
     else:
         files_to_check = CONFIG_FILES
 

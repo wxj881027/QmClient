@@ -28,7 +28,7 @@
 #include <game/mapitems.h>
 
 // TClient
-#include <game/client/components/qmclient/rainbow.h>
+#include <game/client/components/tclient/rainbow.h>
 #include <game/client/prediction/entities/character.h>
 
 #include <algorithm>

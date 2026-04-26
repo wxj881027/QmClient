@@ -40,7 +40,7 @@
 #include "components/spectator.h"
 #include "components/statboard.h"
 #include "components/voting.h"
-#include "components/qmclient/fast_practice.h"
+#include "components/tclient/fast_practice.h"
 #include "components/qmclient/jelly_tee.h"
 #include "lineinput.h"
 #include "prediction/entities/character.h"
@@ -247,6 +247,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Trails,
 					      &m_Translate,
 					      &m_Ghost,
+					      &m_QmClient,
 					      &m_TClient, // Must be before chat and players
 					      &m_FastPractice,
 					      &m_Voice,

@@ -178,6 +178,9 @@ class CChat : public CComponent
 
 	bool LineShouldHighlight(const char *pLine, const char *pName);
 	void StoreSave(const char *pText);
+	const CCommand *FindServerCommand(const char *pName) const;
+	const char *LocalizeCommandPreviewText(const char *pText) const;
+	bool BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufSize) const;
 	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
 
 	static float EaseInQuad(float t);
@@ -194,11 +197,13 @@ class CChat : public CComponent
 	{
 		bool m_IsPressed = false;
 		bool m_RectValid = false;
+		bool m_IconUiElementInit = false;
 		float m_X = 0.0f;
 		float m_Y = 0.0f;
 		float m_W = 0.0f;
 		float m_H = 0.0f;
 		bool m_AutoTranslateEnabled = false;
+		CUIElement m_IconUiElement;
 	};
 	STranslateButtonState m_TranslateButton;
 
@@ -222,9 +227,32 @@ class CChat : public CComponent
 		CUi::SDropDownState m_OutboundLangDropDownState;
 		CUi::SDropDownState m_BackendDropDownState;
 
+		enum
+		{
+			LABEL_TITLE = 0,
+			LABEL_INBOUND_TOGGLE,
+			LABEL_OUTBOUND_TOGGLE,
+			LABEL_INBOUND_LANG,
+			LABEL_OUTBOUND_LANG,
+			LABEL_BACKEND,
+			LABEL_WARNING,
+			LABEL_COUNT,
+		};
+		CUIElement m_aLabelUiElements[LABEL_COUNT];
+		bool m_LabelUiElementsInit = false;
+
 		// 菜单动画状态
 		int64_t m_OpenTime = 0;
 		float m_AnimationProgress = 1.0f;
+
+		void InitLabelUiElements(CUi *pUi)
+		{
+			if(m_LabelUiElementsInit)
+				return;
+			for(CUIElement &LabelUiElement : m_aLabelUiElements)
+				LabelUiElement.Init(pUi, 1);
+			m_LabelUiElementsInit = true;
+		}
 	};
 	CLanguagePopupContext m_LanguagePopupContext;
 	bool m_LanguageMenuOpen = false;

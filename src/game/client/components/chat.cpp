@@ -223,6 +223,87 @@ static bool ApplyBlockWords(std::string &Text, std::vector<std::string> *pMatche
 	return Replaced;
 }
 
+static constexpr int COMMAND_PREVIEW_TOKEN_LENGTH = 128;
+
+static bool CommandPreviewNameIs(const char *pName, const char *pCommand)
+{
+	return str_comp_nocase(pName, pCommand) == 0;
+}
+
+static const char *ReadCommandPreviewToken(const char *pText, char *pToken, size_t TokenSize)
+{
+	if(TokenSize == 0)
+		return pText;
+
+	pToken[0] = '\0';
+	if(pText == nullptr)
+		return "";
+
+	const char *pCursor = str_skip_whitespaces_const(pText);
+	char *pDst = pToken;
+	char *pEnd = pToken + TokenSize;
+
+	if(*pCursor == '"')
+	{
+		pCursor++;
+		while(*pCursor != '\0' && *pCursor != '"')
+		{
+			if(*pCursor == '\\' && pCursor[1] != '\0')
+				pCursor++;
+			if(pDst + 1 < pEnd)
+				*pDst++ = *pCursor;
+			pCursor++;
+		}
+		if(*pCursor == '"')
+			pCursor++;
+	}
+	else
+	{
+		while(*pCursor != '\0' && !str_isspace(*pCursor))
+		{
+			if(pDst + 1 < pEnd)
+				*pDst++ = *pCursor;
+			pCursor++;
+		}
+	}
+
+	*pDst = '\0';
+	return pCursor;
+}
+
+static void CopyCommandPreviewRest(const char *pText, char *pBuf, size_t BufSize)
+{
+	if(BufSize == 0)
+		return;
+
+	pBuf[0] = '\0';
+	if(pText == nullptr)
+		return;
+
+	const char *pRest = str_skip_whitespaces_const(pText);
+	if(pRest[0] == '\0')
+		return;
+
+	if(pRest[0] == '"')
+	{
+		char aQuoted[COMMAND_PREVIEW_TOKEN_LENGTH];
+		const char *pAfterQuoted = ReadCommandPreviewToken(pRest, aQuoted, sizeof(aQuoted));
+		if(*str_skip_whitespaces_const(pAfterQuoted) == '\0')
+		{
+			str_copy(pBuf, aQuoted, BufSize);
+			return;
+		}
+	}
+
+	str_copy(pBuf, pRest, BufSize);
+	str_utf8_trim_right(pBuf);
+}
+
+static void DoCachedChatPopupLabel(CUi *pUi, CUIElement &LabelUiElement, const CUIRect &Rect, const char *pText, float Size, int Align)
+{
+	pUi->DoLabelStreamed(*LabelUiElement.Rect(0), &Rect, pText, Size, Align);
+}
+
 CChat::CLine::CLine()
 {
 	m_TextContainerIndex.Reset();
@@ -312,6 +393,209 @@ CChat::CChat()
 		}
 		return pStr;
 	});
+}
+
+const CChat::CCommand *CChat::FindServerCommand(const char *pName) const
+{
+	for(const CCommand &Command : m_vServerCommands)
+	{
+		if(str_comp_nocase(Command.m_aName, pName) == 0)
+			return &Command;
+	}
+	return nullptr;
+}
+
+const char *CChat::LocalizeCommandPreviewText(const char *pText) const
+{
+	if(pText == nullptr || pText[0] == '\0')
+		return pText;
+
+	static CLocalizationDatabase s_SimplifiedChineseLocalization;
+	static bool s_LoadedSimplifiedChineseLocalization = false;
+	if(!s_LoadedSimplifiedChineseLocalization)
+	{
+		s_LoadedSimplifiedChineseLocalization = true;
+		if(!s_SimplifiedChineseLocalization.Load("languages/simplified_chinese.txt", Storage(), Console()))
+			log_error("chat-preview", "failed to load simplified chinese localization");
+	}
+
+	const char *pLocalizedText = s_SimplifiedChineseLocalization.FindString(str_quickhash(pText), str_quickhash(""));
+	return pLocalizedText != nullptr ? pLocalizedText : Localize(pText);
+}
+
+bool CChat::BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufSize) const
+{
+	if(BufSize == 0)
+		return false;
+
+	pBuf[0] = '\0';
+	const int PreviewBufSize = (int)BufSize;
+	if(pInput == nullptr || pInput[0] != '/' || pInput[1] == '\0')
+		return false;
+
+	char aCommand[COMMAND_PREVIEW_TOKEN_LENGTH];
+	const char *pAfterCommand = ReadCommandPreviewToken(pInput + 1, aCommand, sizeof(aCommand));
+	if(aCommand[0] == '\0')
+		return false;
+
+	char aFirstArg[COMMAND_PREVIEW_TOKEN_LENGTH];
+	const char *pAfterFirstArg = ReadCommandPreviewToken(pAfterCommand, aFirstArg, sizeof(aFirstArg));
+
+	char aRestArg[MAX_LINE_LENGTH];
+	CopyCommandPreviewRest(pAfterCommand, aRestArg, sizeof(aRestArg));
+
+	char aRestAfterFirstArg[MAX_LINE_LENGTH];
+	CopyCommandPreviewRest(pAfterFirstArg, aRestAfterFirstArg, sizeof(aRestAfterFirstArg));
+
+	if(CommandPreviewNameIs(aCommand, "points"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "查询玩家%s的分数", aRestArg);
+		else
+			str_copy(pBuf, "查询自己的分数", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "rank"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "查询玩家%s的排名", aRestArg);
+		else
+			str_copy(pBuf, "查询自己的排名", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "teamrank") || CommandPreviewNameIs(aCommand, "rankteam"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "查询玩家%s所在队伍的排名", aRestArg);
+		else
+			str_copy(pBuf, "查询自己队伍的排名", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "w") || CommandPreviewNameIs(aCommand, "whisper"))
+	{
+		if(aFirstArg[0] != '\0' && aRestAfterFirstArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "对%s说悄悄话：%s", aFirstArg, aRestAfterFirstArg);
+		else if(aFirstArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "对%s说悄悄话", aFirstArg);
+		else
+			str_copy(pBuf, "发送悄悄话：/w 玩家名 内容", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "c") || CommandPreviewNameIs(aCommand, "converse"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "对上一个私聊对象说：%s", aRestArg);
+		else
+			str_copy(pBuf, "继续给上一个私聊对象发送悄悄话", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "mapinfo"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "查询地图%s的信息", aRestArg);
+		else
+			str_copy(pBuf, "查询当前地图的信息", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "team"))
+	{
+		if(aFirstArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "加入队伍%s", aFirstArg);
+		else
+			str_copy(pBuf, "查看自己所在队伍", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "lock"))
+	{
+		if(str_comp(aFirstArg, "0") == 0)
+			str_copy(pBuf, "解锁队伍", BufSize);
+		else
+			str_copy(pBuf, "锁定队伍，其他玩家不能直接加入", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "invite"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "邀请%s加入锁定队伍", aRestArg);
+		else
+			str_copy(pBuf, "邀请玩家加入锁定队伍", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "swap"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "请求和%s交换位置", aRestArg);
+		else
+			str_copy(pBuf, "请求交换 tee", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "save"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "将队伍保存为代码%s", aRestArg);
+		else
+			str_copy(pBuf, "保存当前队伍", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "load"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "载入代码%s", aRestArg);
+		else
+			str_copy(pBuf, "查看已有存档", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "settings"))
+	{
+		if(aFirstArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "查询服务器设置：%s", aFirstArg);
+		else
+			str_copy(pBuf, "查看服务器设置列表", BufSize);
+		return true;
+	}
+
+	if(CommandPreviewNameIs(aCommand, "help"))
+	{
+		if(aRestArg[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "查看 /%s 的帮助", aRestArg);
+		else
+			str_copy(pBuf, "查看命令帮助", BufSize);
+		return true;
+	}
+
+	const CCommand *pCommand = FindServerCommand(aCommand);
+	if(pCommand == nullptr)
+		return false;
+
+	const char *pHelpText = LocalizeCommandPreviewText(pCommand->m_aHelpText);
+	if(pHelpText != nullptr && pHelpText[0] != '\0')
+	{
+		if(pCommand->m_aParams[0] != '\0')
+			str_format(pBuf, PreviewBufSize, "%s（/%s %s）", pHelpText, pCommand->m_aName, pCommand->m_aParams);
+		else
+			str_copy(pBuf, pHelpText, BufSize);
+		return true;
+	}
+
+	if(pCommand->m_aParams[0] != '\0')
+	{
+		str_format(pBuf, PreviewBufSize, "用法：/%s %s", pCommand->m_aName, pCommand->m_aParams);
+		return true;
+	}
+
+	return false;
 }
 
 void CChat::RegisterCommand(const char *pName, const char *pParams, const char *pHelpText)
@@ -610,10 +894,10 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	// ESC 键处理：优先关闭弹出菜单
 	if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE)
 	{
-		if(Ui()->IsPopupOpen())
+		if(Ui()->IsPopupOpen(&m_LanguagePopupContext))
 		{
+			Ui()->ClosePopupMenu(&m_LanguagePopupContext, true);
 			m_LanguageMenuOpen = false;
-			// UI 系统会自动关闭弹出菜单
 			return true;
 		}
 
@@ -910,6 +1194,10 @@ void CChat::EnableMode(int Team)
 
 void CChat::DisableMode()
 {
+	if(Ui()->IsPopupOpen(&m_LanguagePopupContext))
+		Ui()->ClosePopupMenu(&m_LanguagePopupContext, true);
+	m_LanguageMenuOpen = false;
+
 	if(m_Mode != MODE_NONE)
 	{
 		m_Mode = MODE_NONE;
@@ -1766,29 +2054,37 @@ void CChat::OnRender()
 	// float y = 300.0f - 20.0f * FontSize() / 6.0f;
 
 	float ScaledFontSize = FontSize() * (8.0f / 6.0f);
+	const float CommandPreviewFontSize = ScaledFontSize * 0.5f;
+	const float TranslateButtonSize = maximum(16.0f, ScaledFontSize * 1.35f);
+	const float TranslateButtonGap = 4.0f;
+	const float InputLineWidth = std::max(Width - 190.0f, 190.0f);
+	const char *pInputModeLabel = m_Mode == MODE_ALL ? Localize("All") : (m_Mode == MODE_TEAM ? Localize("Team") : Localize("Chat"));
+	const float InputPrefixWidth = TextRender()->TextWidth(ScaledFontSize, pInputModeLabel) + TextRender()->TextWidth(ScaledFontSize, ": ");
+	const float CommandPreviewMaxWidth = maximum(1.0f, InputLineWidth - InputPrefixWidth - TranslateButtonSize - TranslateButtonGap);
+	char aCommandPreview[MAX_LINE_LENGTH];
+	const bool HasCommandPreview = m_Mode != MODE_NONE && BuildCommandUsagePreview(m_Input.GetString(), aCommandPreview, sizeof(aCommandPreview));
+	if(HasCommandPreview)
+	{
+		const STextBoundingBox PreviewBoundingBox = TextRender()->TextBoundingBox(CommandPreviewFontSize, aCommandPreview, -1, CommandPreviewMaxWidth);
+		y -= PreviewBoundingBox.m_H + 4.0f;
+	}
+
 	if(m_Mode != MODE_NONE)
 	{
 		// render chat input
 		CTextCursor InputCursor;
 		InputCursor.SetPosition(vec2(x, y));
 		InputCursor.m_FontSize = ScaledFontSize;
-		InputCursor.m_LineWidth = Width - 190.0f;
+		InputCursor.m_LineWidth = InputLineWidth;
 
 		// TClient
-		InputCursor.m_LineWidth = std::max(Width - 190.0f, 190.0f);
+		InputCursor.m_LineWidth = InputLineWidth;
 
-		if(m_Mode == MODE_ALL)
-			TextRender()->TextEx(&InputCursor, Localize("All"));
-		else if(m_Mode == MODE_TEAM)
-			TextRender()->TextEx(&InputCursor, Localize("Team"));
-		else
-			TextRender()->TextEx(&InputCursor, Localize("Chat"));
+		TextRender()->TextEx(&InputCursor, pInputModeLabel);
 
 		TextRender()->TextEx(&InputCursor, ": ");
 
 		// 计算翻译按钮大小并调整输入框宽度
-		const float TranslateButtonSize = maximum(16.0f, ScaledFontSize * 1.35f);
-		const float TranslateButtonGap = 4.0f;
 		const float MessageMaxWidth = InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX) - TranslateButtonSize - TranslateButtonGap;
 		const CUIRect ClippingRect = {InputCursor.m_X, InputCursor.m_Y, MessageMaxWidth, 2.25f * InputCursor.m_FontSize};
 		ExtendBounds(x, InputCursor.m_Y, ChatRect.w - x, ClippingRect.h);
@@ -1835,6 +2131,20 @@ void CChat::OnRender()
 					break;
 				}
 			}
+		}
+
+		if(HasCommandPreview)
+		{
+			CTextCursor PreviewCursor;
+			const float PreviewY = ClippingRect.y + minimum(BoundingBox.m_H, ClippingRect.h) + 2.0f;
+			PreviewCursor.SetPosition(vec2(ClippingRect.x, PreviewY));
+			PreviewCursor.m_FontSize = CommandPreviewFontSize;
+			PreviewCursor.m_LineWidth = MessageMaxWidth;
+			PreviewCursor.m_Flags = TEXTFLAG_RENDER;
+			TextRender()->TextColor(0.72f, 0.88f, 1.0f, 0.78f);
+			TextRender()->TextEx(&PreviewCursor, aCommandPreview);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			ExtendBounds(PreviewCursor.m_StartX, PreviewCursor.m_StartY, MessageMaxWidth, PreviewCursor.Height());
 		}
 
 		// 渲染翻译按钮
@@ -2011,7 +2321,7 @@ void CChat::OnRender()
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 
 	// 渲染弹出菜单（当有弹出菜单打开时）
-	if(m_Mode != MODE_NONE && Ui()->IsPopupOpen())
+	if(m_Mode != MODE_NONE && Ui()->IsPopupOpen(&m_LanguagePopupContext))
 	{
 		Ui()->StartCheck();
 		Ui()->Update();
@@ -2019,7 +2329,12 @@ void CChat::OnRender()
 		Ui()->RenderPopupMenus();
 		Ui()->FinishCheck();
 		Ui()->ClearHotkeys();
+		m_LanguageMenuOpen = Ui()->IsPopupOpen(&m_LanguagePopupContext);
 		Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
+	}
+	else
+	{
+		m_LanguageMenuOpen = false;
 	}
 
 	// 渲染鼠标光标（当聊天框激活时）
@@ -2197,7 +2512,7 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 			     MousePos.y >= ButtonRect.y &&
 			     MousePos.y <= ButtonRect.y + ButtonRect.h;
 
-	const bool IsOpen = m_LanguageMenuOpen;
+	const bool IsOpen = Ui()->IsPopupOpen(&m_LanguagePopupContext);
 	m_TranslateButton.m_AutoTranslateEnabled = g_Config.m_QmTranslateAutoOutgoing != 0;
 	const bool IsEnabled = m_TranslateButton.m_AutoTranslateEnabled;
 
@@ -2226,6 +2541,12 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 	ButtonRect.Margin(1.0f, &IconRect);
 	const float IconSize = IconRect.h * CUi::ms_FontmodHeight;
 
+	if(!m_TranslateButton.m_IconUiElementInit)
+	{
+		m_TranslateButton.m_IconUiElement.Init(Ui(), 1);
+		m_TranslateButton.m_IconUiElementInit = true;
+	}
+
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |
 				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
@@ -2233,7 +2554,7 @@ void CChat::RenderTranslateButton(const CUIRect &InputRect)
 				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT |
 				      ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.95f);
-	Ui()->DoLabel(&IconRect, FONT_ICON_LANGUAGE, IconSize, TEXTALIGN_MC);
+	Ui()->DoLabelStreamed(*m_TranslateButton.m_IconUiElement.Rect(0), &IconRect, FONT_ICON_LANGUAGE, IconSize, TEXTALIGN_MC);
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -2253,64 +2574,56 @@ void CChat::ToggleAutoTranslate()
 
 void CChat::OpenLanguageMenu()
 {
-	m_LanguageMenuOpen = !m_LanguageMenuOpen;
-	if(m_LanguageMenuOpen)
+	if(Ui()->IsPopupOpen(&m_LanguagePopupContext))
 	{
-		m_LanguagePopupContext.m_pChat = this;
-
-		// Chat 坐标转换为 UI 坐标（DoPopupMenu 需要 UI 坐标系）
-		const float Height = 300.0f;
-		const float Width = Height * Graphics()->ScreenAspect();
-		const vec2 ChatToUiScale(Ui()->Screen()->w / Width, Ui()->Screen()->h / Height);
-
-		// 菜单尺寸（根据内容动态计算高度）
-		const float MenuWidth = 150.0f;
-		const float FontSize = 10.0f;
-		const float RowHeight = 18.0f;
-		const float DropdownHeaderHeight = 20.0f;
-		const float LabelHeight = RowHeight * 0.8f;
-		const float Spacing = 4.0f;
-		const float Margin = 5.0f;
-
-		float ContentHeight =
-			RowHeight + // 标题
-			RowHeight + // 入站 Toggle
-			Spacing +
-			RowHeight + // 出站 Toggle
-			LabelHeight + DropdownHeaderHeight + // 入站语言
-			LabelHeight + DropdownHeaderHeight + // 出站语言
-			LabelHeight + DropdownHeaderHeight + // 后端
-			RowHeight; // 警告（可能）
-		const float MenuHeight = ContentHeight + Margin * 2;
-
-		// 菜单在按钮上方弹出
-		vec2 MenuPos = vec2(m_TranslateButton.m_X, m_TranslateButton.m_Y) * ChatToUiScale;
-		MenuPos.y -= MenuHeight;
-
-		Ui()->DoPopupMenu(&m_LanguagePopupContext, MenuPos.x, MenuPos.y, MenuWidth, MenuHeight, &m_LanguagePopupContext, PopupLanguageMenu);
+		Ui()->ClosePopupMenu(&m_LanguagePopupContext, true);
+		m_LanguageMenuOpen = false;
+		return;
 	}
+
+	m_LanguageMenuOpen = true;
+	m_LanguagePopupContext.m_pChat = this;
+	m_LanguagePopupContext.m_OpenTime = time();
+	m_LanguagePopupContext.m_AnimationProgress = 0.0f;
+
+	// Chat 坐标转换为 UI 坐标（DoPopupMenu 需要 UI 坐标系）
+	const float Height = 300.0f;
+	const float Width = Height * Graphics()->ScreenAspect();
+	const vec2 ChatToUiScale(Ui()->Screen()->w / Width, Ui()->Screen()->h / Height);
+
+	// 菜单尺寸（根据内容动态计算高度）
+	const float MenuWidth = 150.0f;
+	const float RowHeight = 18.0f;
+	const float DropdownHeaderHeight = 20.0f;
+	const float LabelHeight = RowHeight * 0.8f;
+	const float Spacing = 4.0f;
+	const float Margin = 5.0f;
+
+	float ContentHeight =
+		RowHeight + // 标题
+		RowHeight + // 入站 Toggle
+		Spacing +
+		RowHeight + // 出站 Toggle
+		LabelHeight + DropdownHeaderHeight + // 入站语言
+		LabelHeight + DropdownHeaderHeight + // 出站语言
+		LabelHeight + DropdownHeaderHeight + // 后端
+		RowHeight; // 警告（可能）
+	const float MenuHeight = ContentHeight + Margin * 2;
+
+	// 菜单在按钮上方弹出
+	vec2 MenuPos = vec2(m_TranslateButton.m_X, m_TranslateButton.m_Y) * ChatToUiScale;
+	MenuPos.y -= MenuHeight;
+
+	Ui()->DoPopupMenu(&m_LanguagePopupContext, MenuPos.x, MenuPos.y, MenuWidth, MenuHeight, &m_LanguagePopupContext, PopupLanguageMenu);
 }
 
 CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect View, bool Active)
 {
+	(void)Active;
 	CLanguagePopupContext *pPopupContext = static_cast<CLanguagePopupContext *>(pContext);
 	CChat *pChat = pPopupContext->m_pChat;
 	CUi *pUi = pChat->Ui();
-
-	// 菜单动画：首次打开记录时间
-	if(pPopupContext->m_OpenTime == 0)
-		pPopupContext->m_OpenTime = pChat->time();
-	const float AnimationDuration = 0.15f;
-	pPopupContext->m_AnimationProgress = std::clamp((float)(pChat->time() - pPopupContext->m_OpenTime) / (float)time_freq() / AnimationDuration, 0.0f, 1.0f);
-	const float Progress = pPopupContext->m_AnimationProgress;
-
-	// 对 View 应用缩放动画（从中心 0.95 -> 1.0）
-	const float Scale = 0.95f + 0.05f * Progress;
-	const vec2 Center(View.x + View.w / 2.0f, View.y + View.h / 2.0f);
-	View.x = Center.x - (View.w * Scale) / 2.0f;
-	View.y = Center.y - (View.h * Scale) / 2.0f;
-	View.w *= Scale;
-	View.h *= Scale;
+	pPopupContext->InitLabelUiElements(pUi);
 
 	const float Margin = 5.0f;
 	View.Margin(Margin, &View);
@@ -2322,14 +2635,10 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	ColorRGBA OptionSelectedColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionSelected, true));
 	ColorRGBA OptionNormalColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionNormal, true));
 
-	// 应用透明度动画
-	OptionSelectedColor.a *= Progress;
-	OptionNormalColor.a *= Progress;
-
 	// 标题
 	CUIRect TitleRect;
 	View.HSplitTop(RowHeight, &TitleRect, &View);
-	pUi->DoLabel(&TitleRect, Localize("Translation Settings"), FontSize, TEXTALIGN_MC);
+	DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_TITLE], TitleRect, Localize("Translation Settings"), FontSize, TEXTALIGN_MC);
 
 	// 自动入站翻译开关
 	{
@@ -2350,7 +2659,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto Inbound Translation"), InboundEnabled ? Localize("On") : Localize("Off"));
-		pUi->DoLabel(&ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_INBOUND_TOGGLE], ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
 	}
 
 	// Toggle 间距
@@ -2378,7 +2687,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto Outbound Translation"), OutboundEnabled ? Localize("On") : Localize("Off"));
-		pUi->DoLabel(&ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_OUTBOUND_TOGGLE], ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
 	}
 
 	// 语言/后端名称数组（用于 DoDropDown）
@@ -2398,7 +2707,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	{
 		CUIRect LabelRect, DropdownRect;
 		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
-		pUi->DoLabel(&LabelRect, Localize("Inbound Language (Receive)"), FontSize * 0.9f, TEXTALIGN_MC);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_INBOUND_LANG], LabelRect, Localize("Inbound Language (Receive)"), FontSize * 0.9f, TEXTALIGN_MC);
 		View.HSplitTop(DropdownHeaderHeight, &DropdownRect, &View);
 		DropdownRect.VMargin(2.0f, &DropdownRect);
 
@@ -2412,7 +2721,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	{
 		CUIRect LabelRect, DropdownRect;
 		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
-		pUi->DoLabel(&LabelRect, Localize("Outbound Language (Send)"), FontSize * 0.9f, TEXTALIGN_MC);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_OUTBOUND_LANG], LabelRect, Localize("Outbound Language (Send)"), FontSize * 0.9f, TEXTALIGN_MC);
 		View.HSplitTop(DropdownHeaderHeight, &DropdownRect, &View);
 		DropdownRect.VMargin(2.0f, &DropdownRect);
 
@@ -2426,7 +2735,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	{
 		CUIRect LabelRect, DropdownRect;
 		View.HSplitTop(RowHeight * 0.8f, &LabelRect, &View);
-		pUi->DoLabel(&LabelRect, Localize("Translate Backend"), FontSize * 0.9f, TEXTALIGN_MC);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_BACKEND], LabelRect, Localize("Translate Backend"), FontSize * 0.9f, TEXTALIGN_MC);
 		View.HSplitTop(DropdownHeaderHeight, &DropdownRect, &View);
 		DropdownRect.VMargin(2.0f, &DropdownRect);
 
@@ -2464,7 +2773,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		View.HSplitTop(RowHeight, &WarningRect, &View);
 		WarningRect.VMargin(2.0f, &WarningRect);
 		WarningRect.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, 4.0f);
-		pUi->DoLabel(&WarningRect, pConfigWarning, FontSize * 0.9f, TEXTALIGN_MC);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_WARNING], WarningRect, pConfigWarning, FontSize * 0.9f, TEXTALIGN_MC);
 	}
 
 	return CUi::POPUP_KEEP_OPEN;

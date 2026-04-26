@@ -4,10 +4,12 @@
 #include "score.h"
 
 #include <base/log.h>
+#include <base/system.h>
 
 #include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
 
+#include <game/localization.h>
 #include <game/mapitems.h>
 #include <game/server/entities/character.h>
 #include <game/server/gamemodes/DDRace.h>
@@ -15,6 +17,24 @@
 #include <game/team_state.h>
 #include <game/teamscore.h>
 #include <game/version.h>
+
+static const char *LocalizeChatHelp(CGameContext *pSelf, const char *pText)
+{
+	if(pText == nullptr || pText[0] == '\0')
+		return pText;
+
+	static CLocalizationDatabase s_SimplifiedChineseLocalization;
+	static bool s_LoadedSimplifiedChineseLocalization = false;
+	if(!s_LoadedSimplifiedChineseLocalization)
+	{
+		s_LoadedSimplifiedChineseLocalization = true;
+		if(!s_SimplifiedChineseLocalization.Load("languages/simplified_chinese.txt", pSelf->Storage(), pSelf->Console()))
+			log_error("chat-help", "failed to load simplified chinese localization");
+	}
+
+	const char *pLocalizedText = s_SimplifiedChineseLocalization.FindString(str_quickhash(pText), str_quickhash(""));
+	return pLocalizedText != nullptr ? pLocalizedText : pText;
+}
 
 void CGameContext::ConCredits(IConsole::IResult *pResult, void *pUserData)
 {
@@ -91,11 +111,11 @@ void CGameContext::ConHelp(IConsole::IResult *pResult, void *pUserData)
 	if(pResult->NumArguments() == 0)
 	{
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"/cmdlist will show a list of all chat commands");
+			"/cmdlist 会显示所有聊天命令列表");
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"/help + any command will show you the help for this command");
+			"/help + 任意命令 会显示该命令的帮助");
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"Example /help settings will display the help about /settings");
+			"例如 /help settings 会显示 /settings 的帮助");
 	}
 	else
 	{
@@ -107,17 +127,17 @@ void CGameContext::ConHelp(IConsole::IResult *pResult, void *pUserData)
 			if(pCmdInfo->Params())
 			{
 				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "Usage: %s %s", pCmdInfo->Name(), pCmdInfo->Params());
+				str_format(aBuf, sizeof(aBuf), "用法：%s %s", pCmdInfo->Name(), pCmdInfo->Params());
 				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
 			}
 
 			if(pCmdInfo->Help())
-				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", pCmdInfo->Help());
+				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", LocalizeChatHelp(pSelf, pCmdInfo->Help()));
 		}
 		else
 		{
 			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "Unknown command %s", pArg);
+			str_format(aBuf, sizeof(aBuf), "未知命令：%s", pArg);
 			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
 		}
 	}

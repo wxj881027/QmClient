@@ -1304,23 +1304,23 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	const int64_t LocalUptimeSeconds = static_cast<int64_t>(std::max(0.0f, Client()->LocalTime()));
 	int64_t CurrentTimestamp = time_timestamp();
 	int64_t StartupTimestamp = std::max<int64_t>(0, CurrentTimestamp - LocalUptimeSeconds);
-	const bool UsingServerTime = GameClient()->m_TClient.HasQmServerTime();
+	const bool UsingServerTime = GameClient()->m_QmClient.HasQmServerTime();
 	if(UsingServerTime)
 	{
-		CurrentTimestamp = GameClient()->m_TClient.QmServerTimeNow();
-		if(GameClient()->m_TClient.QmServerSessionStartTime() > 0)
-			StartupTimestamp = GameClient()->m_TClient.QmServerSessionStartTime();
+		CurrentTimestamp = GameClient()->m_QmClient.QmServerTimeNow();
+		if(GameClient()->m_QmClient.QmServerSessionStartTime() > 0)
+			StartupTimestamp = GameClient()->m_QmClient.QmServerSessionStartTime();
 		else
 			StartupTimestamp = std::max<int64_t>(0, CurrentTimestamp - LocalUptimeSeconds);
 	}
 	int64_t UptimeSeconds = std::max<int64_t>(0, CurrentTimestamp - StartupTimestamp);
-	if(GameClient()->m_TClient.HasQmServerPlaytime())
-		UptimeSeconds = GameClient()->m_TClient.QmServerPlaytimeSeconds();
+	if(GameClient()->m_QmClient.HasQmServerPlaytime())
+		UptimeSeconds = GameClient()->m_QmClient.QmServerPlaytimeSeconds();
 
 	char aUptime[64];
 	str_time(UptimeSeconds * 100, TIME_HOURS, aUptime, sizeof(aUptime));
 
-	const int FinishedMaps = GameClient()->m_TClient.QmDdnetTotalFinishes();
+	const int FinishedMaps = GameClient()->m_QmClient.QmDdnetTotalFinishes();
 
 	char aFinishedMapsText[32];
 	if(FinishedMaps >= 0)
@@ -1328,7 +1328,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	else
 		str_copy(aFinishedMapsText, "加载中", sizeof(aFinishedMapsText));
 
-	const char *pFavoritePartner = GameClient()->m_TClient.QmDdnetFavoritePartner();
+	const char *pFavoritePartner = GameClient()->m_QmClient.QmDdnetFavoritePartner();
 	char aFavoriteFriendText[160];
 	if(pFavoritePartner && pFavoritePartner[0] != '\0')
 		str_copy(aFavoriteFriendText, pFavoritePartner, sizeof(aFavoriteFriendText));

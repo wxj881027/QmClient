@@ -7,7 +7,7 @@
 #include <engine/console.h>
 
 #include <game/client/component.h>
-#include <game/client/components/qmclient/bindwheel.h>
+#include <game/client/components/tclient/bindwheel.h>
 #include <game/client/ui.h>
 
 class CEmoticon : public CComponent

@@ -71,29 +71,30 @@
 #include "components/spectator.h"
 #include "components/statboard.h"
 #include "components/system_media_controls.h"
-#include "components/qmclient/bg_draw.h"
-#include "components/qmclient/bindchat.h"
-#include "components/qmclient/bindwheel.h"
+#include "components/tclient/bg_draw.h"
+#include "components/tclient/bindchat.h"
+#include "components/tclient/bindwheel.h"
 #include "components/qmclient/collision_hitbox.h"
-#include "components/qmclient/custom_communities.h"
+#include "components/tclient/custom_communities.h"
 #include "components/qmclient/data_version.h"
-#include "components/qmclient/fast_practice.h"
+#include "components/tclient/fast_practice.h"
 #include "components/qmclient/input_overlay.h"
 #include "components/qmclient/lyrics_component.h"
-#include "components/qmclient/mod.h"
-#include "components/qmclient/moving_tiles.h"
-#include "components/qmclient/outlines.h"
-#include "components/qmclient/pet.h"
-#include "components/qmclient/player_indicator.h"
-#include "components/qmclient/rainbow.h"
-#include "components/qmclient/scripting.h"
-#include "components/qmclient/skinprofiles.h"
-#include "components/qmclient/statusbar.h"
 #include "components/qmclient/qmclient.h"
-#include "components/qmclient/trails.h"
+#include "components/tclient/mod.h"
+#include "components/tclient/moving_tiles.h"
+#include "components/tclient/outlines.h"
+#include "components/tclient/pet.h"
+#include "components/tclient/player_indicator.h"
+#include "components/tclient/rainbow.h"
+#include "components/qmclient/scripting.h"
+#include "components/tclient/skinprofiles.h"
+#include "components/tclient/statusbar.h"
+#include "components/tclient/tclient.h"
+#include "components/tclient/trails.h"
 #include "components/qmclient/translate.h"
 #include "components/qmclient/voice_component.h"
-#include "components/qmclient/warlist.h"
+#include "components/tclient/warlist.h"
 #include "components/tooltips.h"
 #include "components/touch_controls.h"
 #include "components/voting.h"
@@ -254,6 +255,7 @@ public:
 	CBindChat m_BindChat;
 	CBindWheel m_BindWheel;
 	CBgDraw m_BgDraw;
+	CQmClient m_QmClient;
 	CTClient m_TClient;
 	CFastPractice m_FastPractice;
 	CVoiceComponent m_Voice;
@@ -413,6 +415,8 @@ public:
 	{
 		return m_pHttp;
 	}
+	CTClient &TClientComponent() { return m_TClient; }
+	const CTClient &TClientComponent() const { return m_TClient; }
 	bool HasFreezeWakeupPopups() const { return m_TClient.HasFreezeWakeupPopups(); }
 	void RenderFreezeWakeupPopups() { m_TClient.RenderFreezeWakeupPopups(); }
 

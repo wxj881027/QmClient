@@ -37,7 +37,9 @@ IGNORE_DIRS = [
 
 QMCLIENT_DIRS = [
     "src/game/client/components/qmclient",
+    "src/game/client/components/tclient",
     "src/game/client/QmUi",
+    "src/engine/shared/config_variables_tclient.h",
     "src/engine/shared/config_variables_qmclient.h",
     "src/engine/shared/config_variables_qimeng.h",
 ]
@@ -55,9 +57,9 @@ def filter_qmclient(filenames):
     result = []
     for filename in filenames:
         real_filename = os.path.realpath(filename)
-        if any(real_filename.startswith(os.path.realpath(d) + os.path.sep) for d in QMCLIENT_DIRS[:2]):
+        if any(real_filename.startswith(os.path.realpath(d) + os.path.sep) for d in QMCLIENT_DIRS[:3]):
             result.append(filename)
-        elif any(real_filename == os.path.realpath(d) for d in QMCLIENT_DIRS[2:]):
+        elif any(real_filename == os.path.realpath(d) for d in QMCLIENT_DIRS[3:]):
             result.append(filename)
     return result
 
