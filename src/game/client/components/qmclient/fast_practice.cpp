@@ -949,15 +949,24 @@ bool CFastPractice::OverridePredict()
 		DummyClientId != m_LastResolvedDummyClientId ||
 		LocalInputConn != m_LastResolvedLocalInputConn ||
 		DummyInputConn != m_LastResolvedDummyInputConn;
-		if(InputMappingChanged)
+	const bool DummyRoleSwap = m_LastResolvedLocalClientId >= 0 &&
+		m_LastResolvedDummyClientId >= 0 &&
+		LocalClientId == m_LastResolvedDummyClientId &&
+		DummyClientId == m_LastResolvedLocalClientId &&
+		LocalInputConn == m_LastResolvedLocalInputConn &&
+		DummyInputConn == m_LastResolvedDummyInputConn;
+	if(InputMappingChanged)
+	{
+		if(g_Config.m_Debug)
+			dbg_msg("fast_practice", "role/input remap: local_id=%d dummy_id=%d local_conn=%d dummy_conn=%d",
+				LocalClientId, DummyClientId, LocalInputConn, DummyInputConn);
+		if(!DummyRoleSwap && !GameClient()->m_IsDummySwapping)
 		{
-			if(g_Config.m_Debug)
-				dbg_msg("fast_practice", "role/input remap: local_id=%d dummy_id=%d local_conn=%d dummy_conn=%d",
-					LocalClientId, DummyClientId, LocalInputConn, DummyInputConn);
 			m_SuppressFireOnNextPredictTick = true;
 			m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 			ReleaseBufferedInputState();
 		}
+	}
 
 	GameClient()->m_PredictedDummyId = DummyClientId;
 
