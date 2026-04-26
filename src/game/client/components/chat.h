@@ -304,6 +304,7 @@ public:
 	void RenderTranslateButton(const CUIRect &InputRect);
 	void ToggleAutoTranslate();
 	void OpenLanguageMenu();
+	void CloseLanguageMenu();
 	bool IsLanguageMenuOpen() const { return m_LanguageMenuOpen; }
 	static CUi::EPopupMenuFunctionResult PopupLanguageMenu(void *pContext, CUIRect View, bool Active);
 

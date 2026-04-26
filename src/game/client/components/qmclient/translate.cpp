@@ -1732,27 +1732,15 @@ void CTranslate::OnRender()
 void CTranslate::AutoTranslate(CChat::CLine &Line)
 {
 	if(!g_Config.m_QmTranslateAuto)
-	{
-		dbg_msg("translate", "AutoTranslate skipped: m_QmTranslateAuto=%d", g_Config.m_QmTranslateAuto);
 		return;
-	}
 	if(Line.m_ClientId == CChat::CLIENT_MSG)
-	{
-		dbg_msg("translate", "AutoTranslate skipped: CLIENT_MSG");
 		return;
-	}
 	if(Line.m_ClientId == CChat::SERVER_MSG)
-	{
-		dbg_msg("translate", "AutoTranslate skipped: SERVER_MSG");
 		return;
-	}
 	for(const int Id : GameClient()->m_aLocalIds)
 	{
 		if(Id >= 0 && Id == Line.m_ClientId)
-		{
-			dbg_msg("translate", "AutoTranslate skipped: local player msg (Id=%d)", Id);
 			return;
-		}
 	}
 	if(str_comp(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 	{
@@ -1771,17 +1759,9 @@ void CTranslate::AutoTranslate(CChat::CLine &Line)
 	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateTarget);
 	const SLocalLanguageStats LocalStats = AnalyzeLocalLanguageStats(Line.m_aText);
 	if(IsPredominantlyNumeric(LocalStats))
-	{
-		dbg_msg("translate", "AutoTranslate skipped: predominantly numeric text");
 		return;
-	}
 	if(MatchesTargetLanguageHeuristically(LocalStats, pTarget))
-	{
-		dbg_msg("translate", "AutoTranslate skipped: local heuristic matched target language '%s'", pTarget);
 		return;
-	}
-	dbg_msg("translate", "AutoTranslate triggered for: '%.50s...' (ClientId=%d, Backend=%s)",
-		Line.m_aText, Line.m_ClientId, g_Config.m_QmTranslateBackend);
 	Translate(Line, false, true);
 }
 
