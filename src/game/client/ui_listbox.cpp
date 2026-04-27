@@ -179,6 +179,14 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 	return Item;
 }
 
+CListboxItem CListBox::DoCustomRow(float Height, bool ScrollHere)
+{
+	CListboxItem Item = {};
+	m_ListBoxView.HSplitTop(Height, &Item.m_Rect, &m_ListBoxView);
+	Item.m_Visible = m_ScrollRegion.AddRect(Item.m_Rect, ScrollHere);
+	return Item;
+}
+
 CListboxItem CListBox::DoSubheader()
 {
 	CListboxItem Item = DoNextRow();

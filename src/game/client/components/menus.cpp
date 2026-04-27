@@ -3005,10 +3005,12 @@ void CMenus::SetActive(bool Active)
 
 void CMenus::OnReset()
 {
+	ResetDemoScreenshotPreview();
 }
 
 void CMenus::OnShutdown()
 {
+	ResetDemoScreenshotPreview();
 	m_CommunityIcons.Shutdown();
 }
 

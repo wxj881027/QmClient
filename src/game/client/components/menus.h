@@ -1097,6 +1097,13 @@ protected:
 	std::vector<SDemoSelectionEntry> m_vDemoSelection;
 	std::vector<SDemoDeleteTarget> m_vDemoDeleteTargets;
 	int m_DemoSelectionAnchorIndex = -1;
+	bool m_DemoScreenshotPreviewOpen = false;
+	bool m_DemoScreenshotPreviewLoadFailed = false;
+	char m_aDemoScreenshotPreviewFolder[IO_MAX_PATH_LENGTH] = "";
+	SDemoSelectionEntry m_DemoScreenshotPreviewSelection{};
+	IGraphics::CTextureHandle m_DemoScreenshotPreviewTexture;
+	int m_DemoScreenshotPreviewWidth = 0;
+	int m_DemoScreenshotPreviewHeight = 0;
 	int m_Speed = 4;
 	bool m_StartPaused = false;
 
@@ -1115,6 +1122,12 @@ protected:
 	int NumSelectedDemos() const;
 	int NumSelectedDeletableDemos() const;
 	void PrepareDemoDeleteTargetsFromSelection();
+	void ResetDemoScreenshotPreview();
+	bool IsDemoScreenshotPreviewItem(const CDemoItem &Item) const;
+	void ToggleDemoScreenshotPreview(const CDemoItem &Item);
+	void SyncDemoScreenshotPreview();
+	bool LoadDemoScreenshotPreviewTexture(const CDemoItem &Item);
+	void RenderDemoScreenshotPreview(CUIRect PreviewRect, const CDemoItem &Item);
 	void DemolistOnUpdate(bool Reset);
 	static int DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 	bool EnsureDemoDate(CDemoItem &Item);

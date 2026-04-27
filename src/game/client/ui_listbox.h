@@ -50,6 +50,7 @@ public:
 	void DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll, int SelectedIndex, const CUIRect *pRect = nullptr, bool Background = true, int BackgroundCorners = IGraphics::CORNER_ALL, bool ForceShowScrollbar = false);
 	void ScrollToSelected() { m_ListBoxUpdateScroll = true; }
 	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = 5.0f);
+	CListboxItem DoCustomRow(float Height, bool ScrollHere = false);
 	CListboxItem DoSubheader();
 	int DoEnd();
 
