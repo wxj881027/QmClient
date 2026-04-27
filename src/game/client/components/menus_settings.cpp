@@ -2155,6 +2155,7 @@ static int FindAudioPackIndexByName(const std::vector<SAudioPackEntry> &vPacks, 
 void CMenus::AudioPackEditorOpen(const char *pPackName)
 {
 	AudioPackEditorStopPreview();
+	g_Config.m_UiSettingsPage = SETTINGS_SOUND;
 	m_AudioPackEditorState.m_Open = true;
 	m_AudioPackEditorState.m_Initialized = false;
 	m_AudioPackEditorState.m_SelectedSlotIndex = 0;
@@ -2400,6 +2401,12 @@ bool CMenus::AudioPackEditorCopyAbsoluteFileToStorage(const char *pSourcePath, c
 
 void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 {
+	constexpr float EditorFontSize = 14.0f;
+	constexpr float EditorEditBoxFontSize = 12.0f;
+	constexpr float EditorLineSize = 20.0f;
+	constexpr float EditorMarginSmall = 5.0f;
+	constexpr float EditorMarginExtraSmall = 2.5f;
+
 	if(!m_AudioPackEditorState.m_Open)
 		return;
 
@@ -2431,14 +2438,14 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	CUIRect WorkRect;
 	EditorRect.Margin(8.0f, &WorkRect);
 
-	CUIRect HeaderRow, PackRow, ContentRow, StatusRow;
-	WorkRect.HSplitTop(24.0f, &HeaderRow, &WorkRect);
-	WorkRect.HSplitTop(6.0f, nullptr, &WorkRect);
-	WorkRect.HSplitTop(24.0f, &PackRow, &WorkRect);
-	WorkRect.HSplitTop(8.0f, nullptr, &WorkRect);
-	WorkRect.HSplitBottom(20.0f, &ContentRow, &StatusRow);
+	CUIRect TopPanel, TopBarRow1, TopBarRow2, ContentRow, StatusRow;
+	WorkRect.HSplitTop(EditorLineSize * 2.0f + EditorMarginSmall + 8.0f, &TopPanel, &ContentRow);
+	TopPanel.HSplitTop(EditorLineSize + 4.0f, &TopBarRow1, &TopPanel);
+	TopPanel.HSplitTop(EditorMarginExtraSmall, nullptr, &TopPanel);
+	TopBarRow2 = TopPanel;
+	ContentRow.HSplitBottom(EditorLineSize + EditorMarginSmall, &ContentRow, &StatusRow);
 
-	static CButtonContainer s_AudioPackEditorBackButton;
+	static CButtonContainer s_AudioPackEditorCloseButton;
 	static CButtonContainer s_AudioPackEditorRefreshButton;
 	static CButtonContainer s_AudioPackEditorPreviewButton;
 	static CButtonContainer s_AudioPackEditorExportButton;
@@ -2446,29 +2453,41 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	static CListBox s_AudioPackEditorSlotListBox;
 	static CListBox s_AudioPackEditorCandidateListBox;
 
-	CUIRect BackButton, RefreshButton, TitleRow;
-	HeaderRow.VSplitLeft(90.0f, &BackButton, &HeaderRow);
-	HeaderRow.VSplitRight(110.0f, &HeaderRow, &RefreshButton);
-	BackButton.VMargin(2.0f, &BackButton);
-	RefreshButton.VMargin(2.0f, &RefreshButton);
-	TitleRow = HeaderRow;
+	auto SplitLeftSafe = [](CUIRect &Source, float Wanted, CUIRect *pLeft, CUIRect *pRight) {
+		const float Cut = minimum(Wanted, Source.w);
+		Source.VSplitLeft(Cut, pLeft, pRight);
+	};
+	auto SplitRightSafe = [](CUIRect &Source, float Wanted, CUIRect *pLeft, CUIRect *pRight) {
+		const float Cut = minimum(Wanted, Source.w);
+		Source.VSplitRight(Cut, pLeft, pRight);
+	};
 
-	if(DoButton_Menu(&s_AudioPackEditorBackButton, Localize("返回"), 0, &BackButton))
+	CUIRect CloseButton, PackRow, TitleRow, RefreshButton;
+	SplitLeftSafe(TopBarRow1, 28.0f, &CloseButton, &TopBarRow1);
+	SplitLeftSafe(TopBarRow1, EditorMarginSmall, nullptr, &TopBarRow1);
+	PackRow = TopBarRow1;
+
+	constexpr float TopButtonPadding = 18.0f;
+	const float RefreshW = minimum(122.0f, maximum(74.0f, TextRender()->TextWidth(EditorFontSize, Localize("Reload"), -1, -1.0f) + TopButtonPadding));
+	SplitRightSafe(TopBarRow2, RefreshW, &TitleRow, &RefreshButton);
+
+	if(Ui()->DoButton_FontIcon(&s_AudioPackEditorCloseButton, FONT_ICON_XMARK, 0, &CloseButton, IGraphics::CORNER_ALL))
 	{
 		AudioPackEditorClose();
 		return;
 	}
 
-	if(DoButton_Menu(&s_AudioPackEditorRefreshButton, Localize("刷新"), 0, &RefreshButton))
-		AudioPackEditorRefreshCandidates();
-
-	Ui()->DoLabel(&TitleRow, Localize("编辑音频包"), 14.0f, TEXTALIGN_MC);
-
 	CUIRect PackLabel, PackInput;
 	PackRow.VSplitLeft(90.0f, &PackLabel, &PackInput);
-	Ui()->DoLabel(&PackLabel, Localize("音频包名称"), 12.0f, TEXTALIGN_ML);
-	if(Ui()->DoEditBox(&m_AudioPackEditorState.m_PackNameInput, &PackInput, 12.0f))
+	Ui()->DoLabel(&PackLabel, Localize("音频包名称"), EditorFontSize, TEXTALIGN_ML);
+	if(Ui()->DoEditBox(&m_AudioPackEditorState.m_PackNameInput, &PackInput, EditorEditBoxFontSize))
 		AudioPackEditorRefreshCandidates();
+
+	Ui()->DoLabel(&TitleRow, Localize("编辑音频包"), EditorFontSize, TEXTALIGN_ML);
+	if(DoButton_Menu(&s_AudioPackEditorRefreshButton, Localize("Reload"), 0, &RefreshButton))
+		AudioPackEditorRefreshCandidates();
+
+	ContentRow.HSplitTop(EditorMarginSmall, nullptr, &ContentRow);
 
 	CUIRect SlotColumn, CandidateColumn, DetailColumn;
 	ContentRow.VSplitLeft(260.0f, &SlotColumn, &ContentRow);

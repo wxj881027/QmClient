@@ -284,6 +284,7 @@ public:
 		char m_aName[64] = {0};
 		char m_aPath[IO_MAX_PATH_LENGTH] = {0};
 		bool m_IsDefault = false;
+		bool m_PreviewLoaded = false;
 	};
 
 	struct SAssetsEditorPartSlot
@@ -784,6 +785,7 @@ private:
 		bool m_Open = false;
 		bool m_Initialized = false;
 		int m_Type = ASSETS_EDITOR_TYPE_GAME;
+		bool m_aAssetsLoaded[ASSETS_EDITOR_TYPE_COUNT] = {false};
 		int m_aMainAssetIndex[ASSETS_EDITOR_TYPE_COUNT] = {0};
 		int m_aDonorAssetIndex[ASSETS_EDITOR_TYPE_COUNT] = {0};
 		bool m_ShowGrid = true;
@@ -835,6 +837,9 @@ private:
 	void RenderAudioPackEditorScreen(CUIRect MainView);
 	void RenderAssetsEditorScreen(CUIRect MainView);
 	void AssetsEditorClearAssets();
+	void AssetsEditorEnsureAssetsLoadedForType(int Type);
+	void AssetsEditorEnsurePreviewLoaded(SAssetsEditorAssetEntry &Asset);
+	void AssetsEditorReloadAssetType(int Type);
 	void AssetsEditorReloadAssets();
 	void AssetsEditorReloadAssetsImagesOnly();
 	void AssetsEditorResetPartSlots();

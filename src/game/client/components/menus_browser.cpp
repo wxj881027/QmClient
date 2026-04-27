@@ -3,6 +3,7 @@
 #include "menus.h"
 
 #include <algorithm>
+#include <unordered_map>
 
 #include <base/log.h>
 
@@ -24,10 +25,118 @@
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
+#include <game/voting.h>
 
 using namespace FontIcons;
 
 static constexpr ColorRGBA gs_HighlightedTextColor = ColorRGBA(0.4f, 0.4f, 1.0f, 1.0f);
+
+static const char *FavoriteMapCategoryKeyFromText(const char *pText)
+{
+	if(!pText || pText[0] == '\0')
+		return nullptr;
+	if(str_find_nocase(pText, "DDmaX"))
+	{
+		if(str_find_nocase(pText, "Easy"))
+			return "DDmaX Easy";
+		if(str_find_nocase(pText, "Next"))
+			return "DDmaX Next";
+		if(str_find_nocase(pText, "Pro"))
+			return "DDmaX Pro";
+		if(str_find_nocase(pText, "Nut"))
+			return "DDmaX Nut";
+		return "DDmaX";
+	}
+	if(str_find_nocase(pText, "Oldschool"))
+		return "Oldschool";
+	if(str_find_nocase(pText, "Novice"))
+		return "Novice";
+	if(str_find_nocase(pText, "Moderate"))
+		return "Moderate";
+	if(str_find_nocase(pText, "Brutal"))
+		return "Brutal";
+	if(str_find_nocase(pText, "Insane"))
+		return "Insane";
+	if(str_find_nocase(pText, "Dummy"))
+		return "Dummy";
+	if(str_find_nocase(pText, "Solo"))
+		return "Solo";
+	if(str_find_nocase(pText, "Race"))
+		return "Race";
+	if(str_find_nocase(pText, "Fun"))
+		return "Fun";
+	if(str_find_nocase(pText, "Event"))
+		return "Event";
+	return nullptr;
+}
+
+static const char *FavoriteMapCategoryDisplayName(const char *pType)
+{
+	if(!pType || pType[0] == '\0')
+		return Localize("未知");
+	if(str_comp_nocase(pType, "DDmaX Easy") == 0)
+		return Localize("Classic easy");
+	if(str_comp_nocase(pType, "DDmaX Next") == 0)
+		return Localize("Classic next");
+	if(str_comp_nocase(pType, "DDmaX Pro") == 0)
+		return Localize("Classic pro");
+	if(str_comp_nocase(pType, "DDmaX Nut") == 0)
+		return Localize("Classic nut");
+	if(str_comp_nocase(pType, "DDmaX") == 0)
+		return Localize("Classic");
+	if(str_comp_nocase(pType, "Novice") == 0)
+		return Localize("Novice");
+	if(str_comp_nocase(pType, "Moderate") == 0)
+		return Localize("Moderate");
+	if(str_comp_nocase(pType, "Brutal") == 0)
+		return Localize("Brutal");
+	if(str_comp_nocase(pType, "Insane") == 0)
+		return Localize("Insane");
+	if(str_comp_nocase(pType, "Dummy") == 0)
+		return Localize("Dummy");
+	if(str_comp_nocase(pType, "Solo") == 0)
+		return Localize("Solo");
+	if(str_comp_nocase(pType, "Oldschool") == 0)
+		return Localize("Oldschool");
+	if(str_comp_nocase(pType, "Race") == 0)
+		return Localize("Race");
+	if(str_comp_nocase(pType, "Fun") == 0)
+		return Localize("Fun");
+	if(str_comp_nocase(pType, "Event") == 0)
+		return Localize("Event");
+	return Localize("未知");
+}
+
+static bool TryParseVoteMapDifficulty(const char *pDescription, const char *pMapName, char *pOut, int OutSize)
+{
+	if(!pDescription || !pMapName || pMapName[0] == '\0')
+		return false;
+
+	const char *pBy = str_find_nocase(pDescription, " by ");
+	const char *pStars = str_find(pDescription, "/5");
+	if(!pBy || !pStars || pStars <= pDescription)
+		return false;
+
+	const int MapNameLength = (int)(pBy - pDescription);
+	if((int)str_length(pMapName) != MapNameLength || str_comp_nocase_num(pDescription, pMapName, MapNameLength) != 0)
+		return false;
+
+	const char *pStarNumber = pStars;
+	while(pStarNumber > pDescription && pStarNumber[-1] >= '0' && pStarNumber[-1] <= '9')
+		--pStarNumber;
+	if(pStarNumber == pStars)
+		return false;
+
+	char aStars[8];
+	const int StarNumberLength = minimum((int)(pStars - pStarNumber), (int)sizeof(aStars) - 1);
+	str_copy(aStars, pStarNumber, StarNumberLength + 1);
+	const int Stars = str_toint(aStars);
+	if(Stars < 0 || Stars > 5)
+		return false;
+
+	str_format(pOut, OutSize, "%d/5 ★", Stars);
+	return true;
+}
 
 struct SLocalSaveDisplayEntry
 {
@@ -620,6 +729,15 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					});
 				if(!Printed)
 					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_1), &Button, pItem->m_aMap, FontSize, TEXTALIGN_ML, Props);
+
+				const char *pMapNote = GameClient()->m_TClient.GetMapNote(pItem->m_aMap);
+				if(pMapNote && pMapNote[0] != '\0' && Ui()->MouseHovered(&Button))
+				{
+					static char s_aMapNoteTooltip[512];
+					str_format(s_aMapNoteTooltip, sizeof(s_aMapNoteTooltip), "%s: %s", Localize("备注"), pMapNote);
+					Ui()->DoButtonLogic(&pItem->m_aMap, 0, &Button, BUTTONFLAG_NONE);
+					GameClient()->m_Tooltips.DoToolTip(&pItem->m_aMap, &Button, s_aMapNoteTooltip, 320.0f);
+				}
 
 				if(IsFavoriteMap)
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -2978,6 +3096,115 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	RenderPanelHeader(FavoritePanel, Localize("收藏地图"), Localize("玩家收藏的地图会显示在这里"), s_FavoriteMapsExpanded, s_FavoriteMapsHeaderButton);
 	RenderPanelHeader(SavesPanel, Localize("本地存档"), aSavesPath, s_LocalSavesExpanded, s_LocalSavesHeaderButton);
 
+	static std::vector<SLocalSaveDisplayEntry> s_vSaveEntries;
+	static int64_t s_LastSaveReloadTick = 0;
+	static bool s_SaveFileExists = false;
+	const int64_t Now = time_get();
+	if(s_LastSaveReloadTick == 0 || Now - s_LastSaveReloadTick > time_freq() * 2)
+	{
+		s_vSaveEntries = LoadLocalSaveDisplayEntries(Storage(), s_SaveFileExists);
+		s_LastSaveReloadTick = Now;
+	}
+
+	static std::unordered_map<std::string, std::string> s_MapCategories;
+	static int s_MapCategoryScanIndex = 0;
+	static int s_LastNumServers = -1;
+	static float s_NextFullScan = 0.0f;
+	IServerBrowser *pServerBrowser = ServerBrowser();
+	const int NumServers = pServerBrowser ? pServerBrowser->NumSortedServers() : 0;
+	if(NumServers != s_LastNumServers)
+	{
+		s_LastNumServers = NumServers;
+		s_MapCategoryScanIndex = 0;
+		s_NextFullScan = 0.0f;
+	}
+	const float LocalNow = Client()->LocalTime();
+	if(NumServers > 0 && (LocalNow >= s_NextFullScan || s_MapCategoryScanIndex > 0))
+	{
+		if(s_MapCategoryScanIndex == 0)
+		{
+			s_MapCategories.clear();
+			s_MapCategories.reserve((size_t)NumServers);
+		}
+		constexpr int ServersPerFrame = 64;
+		int ProcessedServers = 0;
+		while(s_MapCategoryScanIndex < NumServers && ProcessedServers < ServersPerFrame)
+		{
+			const CServerInfo *pInfo = pServerBrowser->SortedGet(s_MapCategoryScanIndex);
+			++s_MapCategoryScanIndex;
+			++ProcessedServers;
+			if(!pInfo || pInfo->m_aMap[0] == '\0')
+				continue;
+			const char *pCategoryKey = FavoriteMapCategoryKeyFromText(pInfo->m_aCommunityType);
+			if(!pCategoryKey)
+				pCategoryKey = FavoriteMapCategoryKeyFromText(pInfo->m_aName);
+			if(!pCategoryKey)
+				continue;
+			auto It = s_MapCategories.find(pInfo->m_aMap);
+			if(It == s_MapCategories.end() || It->second != pCategoryKey)
+			{
+				s_MapCategories[pInfo->m_aMap] = pCategoryKey;
+				GameClient()->m_TClient.UpdateMapCategoryCache(pInfo->m_aMap, pCategoryKey);
+			}
+		}
+		if(s_MapCategoryScanIndex >= NumServers)
+		{
+			s_MapCategoryScanIndex = 0;
+			s_NextFullScan = LocalNow + 2.0f;
+		}
+	}
+
+	auto GetFavoriteMapCategory = [&](const char *pMapName) -> const char * {
+		if(!pMapName || pMapName[0] == '\0')
+			return Localize("未知");
+		const auto It = s_MapCategories.find(pMapName);
+		if(It != s_MapCategories.end() && !It->second.empty())
+			return FavoriteMapCategoryDisplayName(It->second.c_str());
+		const char *pCachedCategory = GameClient()->m_TClient.GetCachedMapCategoryKey(pMapName);
+		if(pCachedCategory)
+			return FavoriteMapCategoryDisplayName(pCachedCategory);
+		return Localize("未知");
+	};
+
+	auto GetFavoriteMapDifficulty = [&](const char *pMapName, char *pOut, int OutSize) {
+		for(const CVoteOptionClient *pOption = GameClient()->m_Voting.FirstOption(); pOption; pOption = pOption->m_pNext)
+		{
+			if(TryParseVoteMapDifficulty(pOption->m_aDescription, pMapName, pOut, OutSize))
+				return;
+		}
+		str_copy(pOut, Localize("未知"), OutSize);
+	};
+
+	auto HasLocalSaveForMap = [&](const char *pMapName) {
+		if(!s_SaveFileExists || !pMapName || pMapName[0] == '\0')
+			return false;
+		for(const SLocalSaveDisplayEntry &Entry : s_vSaveEntries)
+		{
+			if(!Entry.m_Map.empty() && str_comp(Entry.m_Map.c_str(), pMapName) == 0)
+				return true;
+		}
+		return false;
+	};
+
+	auto DoFavoriteMapColumnLabel = [this](CUIRect Rect, const char *pText, float FontSize, int Align = TEXTALIGN_ML) {
+		Rect.VMargin(4.0f, &Rect);
+		SLabelProperties Props;
+		Props.m_MaxWidth = Rect.w;
+		Props.m_StopAtEnd = true;
+		Ui()->DoLabel(&Rect, pText, FontSize, Align, Props);
+	};
+
+	auto SplitFavoriteMapColumns = [](CUIRect Row, CUIRect *pMap, CUIRect *pCategory, CUIRect *pDifficulty, CUIRect *pNote, CUIRect *pSaved) {
+		const float MapWidth = std::clamp(Row.w * 0.24f, 130.0f, 230.0f);
+		const float CategoryWidth = std::clamp(Row.w * 0.15f, 86.0f, 130.0f);
+		const float DifficultyWidth = std::clamp(Row.w * 0.13f, 78.0f, 120.0f);
+		const float SavedWidth = std::clamp(Row.w * 0.10f, 62.0f, 86.0f);
+		Row.VSplitLeft(MapWidth, pMap, &Row);
+		Row.VSplitLeft(CategoryWidth, pCategory, &Row);
+		Row.VSplitLeft(DifficultyWidth, pDifficulty, &Row);
+		Row.VSplitRight(SavedWidth, pNote, pSaved);
+	};
+
 	if(s_FavoriteMapsExpanded)
 	{
 		const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
@@ -2988,10 +3215,22 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 		else
 		{
 			const int NumFavoriteMaps = (int)FavoriteMaps.size();
+			CUIRect HeaderRow;
+			FavoritePanel.HSplitTop(20.0f, &HeaderRow, &FavoritePanel);
+			CUIRect HeaderMap, HeaderCategory, HeaderDifficulty, HeaderNote, HeaderSaved;
+			SplitFavoriteMapColumns(HeaderRow, &HeaderMap, &HeaderCategory, &HeaderDifficulty, &HeaderNote, &HeaderSaved);
+			TextRender()->TextColor(0.75f, 0.75f, 0.75f, 1.0f);
+			DoFavoriteMapColumnLabel(HeaderMap, Localize("地图"), 10.0f);
+			DoFavoriteMapColumnLabel(HeaderCategory, Localize("分类"), 10.0f);
+			DoFavoriteMapColumnLabel(HeaderDifficulty, Localize("难度星级"), 10.0f);
+			DoFavoriteMapColumnLabel(HeaderNote, Localize("备注"), 10.0f);
+			DoFavoriteMapColumnLabel(HeaderSaved, Localize("是否存档"), 10.0f, TEXTALIGN_MR);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+
 			static CListBox s_FavoriteMapsListBox;
 			static std::vector<int> s_vFavoriteMapItemIds;
 			s_vFavoriteMapItemIds.resize(NumFavoriteMaps);
-			s_FavoriteMapsListBox.DoStart(24.0f, NumFavoriteMaps, 1, 3, -1, &FavoritePanel, false, IGraphics::CORNER_NONE, true);
+			s_FavoriteMapsListBox.DoStart(34.0f, NumFavoriteMaps, 1, 3, -1, &FavoritePanel, false, IGraphics::CORNER_NONE, true);
 
 			size_t FavoriteMapIndex = 0;
 			for(const std::string &MapName : FavoriteMaps)
@@ -3003,9 +3242,21 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 					Row.Margin(4.0f, &Row);
 					Row.Draw(ColorRGBA(1.0f, 0.85f, 0.0f, 0.08f), IGraphics::CORNER_ALL, 5.0f);
 					Row.Margin(6.0f, &Row);
+					CUIRect MapColumn, CategoryColumn, DifficultyColumn, NoteColumn, SavedColumn;
+					SplitFavoriteMapColumns(Row, &MapColumn, &CategoryColumn, &DifficultyColumn, &NoteColumn, &SavedColumn);
+
+					char aDifficulty[32];
+					GetFavoriteMapDifficulty(MapName.c_str(), aDifficulty, sizeof(aDifficulty));
+					const char *pNote = GameClient()->m_TClient.GetMapNote(MapName.c_str());
+					const char *pSaved = HasLocalSaveForMap(MapName.c_str()) ? Localize("是") : Localize("否");
+
 					TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f);
-					Ui()->DoLabel(&Row, MapName.c_str(), 13.0f, TEXTALIGN_ML);
+					DoFavoriteMapColumnLabel(MapColumn, MapName.c_str(), 12.0f);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					DoFavoriteMapColumnLabel(CategoryColumn, GetFavoriteMapCategory(MapName.c_str()), 11.0f);
+					DoFavoriteMapColumnLabel(DifficultyColumn, aDifficulty, 11.0f);
+					DoFavoriteMapColumnLabel(NoteColumn, pNote && pNote[0] != '\0' ? pNote : Localize("无"), 11.0f);
+					DoFavoriteMapColumnLabel(SavedColumn, pSaved, 11.0f, TEXTALIGN_MR);
 				}
 				++FavoriteMapIndex;
 			}
@@ -3015,16 +3266,6 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 
 	if(!s_LocalSavesExpanded)
 		return;
-
-	static std::vector<SLocalSaveDisplayEntry> s_vSaveEntries;
-	static int64_t s_LastSaveReloadTick = 0;
-	static bool s_SaveFileExists = false;
-	const int64_t Now = time_get();
-	if(s_LastSaveReloadTick == 0 || Now - s_LastSaveReloadTick > time_freq() * 2)
-	{
-		s_vSaveEntries = LoadLocalSaveDisplayEntries(Storage(), s_SaveFileExists);
-		s_LastSaveReloadTick = Now;
-	}
 
 	if(!s_SaveFileExists)
 	{

@@ -1902,11 +1902,16 @@ bool CGameConsole::CInstance::ExportSelectedChat()
 		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", Localize("聊天记录导出失败"));
 		return false;
 	}
+	if(!m_pGameConsole->Storage()->CreateFolder("dumps/local_chat_export", IStorage::TYPE_SAVE) && !m_pGameConsole->Storage()->FolderExists("dumps/local_chat_export", IStorage::TYPE_SAVE))
+	{
+		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", Localize("聊天记录导出失败"));
+		return false;
+	}
 
 	char aTimestamp[20];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
 	char aBaseFilename[IO_MAX_PATH_LENGTH];
-	str_format(aBaseFilename, sizeof(aBaseFilename), "dumps/local_chat_export_%s", aTimestamp);
+	str_format(aBaseFilename, sizeof(aBaseFilename), "dumps/local_chat_export/local_chat_export_%s", aTimestamp);
 
 	char aTxtFilename[IO_MAX_PATH_LENGTH];
 	char aHtmlFilename[IO_MAX_PATH_LENGTH];

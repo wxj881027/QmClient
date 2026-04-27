@@ -245,6 +245,14 @@ class CTClient : public CComponent
 	void SaveMapCategoryCache();
 	void MaybeSaveMapCategoryCache();
 
+	// Map notes
+	std::unordered_map<std::string, std::string> m_MapNotes;
+	bool m_MapNotesDirty = false;
+	int64_t m_MapNotesNextSave = 0;
+	void LoadMapNotes();
+	void SaveMapNotes();
+	void MaybeSaveMapNotes();
+
 	// 本地存档列表
 	static void ConSaveList(IConsole::IResult *pResult, void *pUserData);
 
@@ -352,6 +360,8 @@ public:
 	const std::set<std::string> &GetFavoriteMaps() const { return m_FavoriteMaps; }
 	const char *GetCachedMapCategoryKey(const char *pMapName) const;
 	void UpdateMapCategoryCache(const char *pMapName, const char *pCategoryKey);
+	const char *GetMapNote(const char *pMapName) const;
+	void SetMapNote(const char *pMapName, const char *pNote);
 	bool IsGoresMapProgressEnabled() const;
 	bool ShouldHideGoresGuides() const;
 	bool HasGoresMapProgress(int Dummy = 0) const
