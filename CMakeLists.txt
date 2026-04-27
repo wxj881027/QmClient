@@ -2963,6 +2963,7 @@ if(CLIENT)
 
   if(VULKAN)
     target_compile_definitions(game-client PRIVATE CONF_BACKEND_VULKAN)
+    target_compile_definitions(engine-shared PRIVATE CONF_BACKEND_VULKAN)
   endif()
 
   if(TARGET sync_runtime_data)
