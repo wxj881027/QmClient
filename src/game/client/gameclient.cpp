@@ -149,7 +149,7 @@ void LoadNamedSingleFileImage(CGameClient *pGameClient, int ImageId, const char 
 			continue;
 
 		g_pData->m_aImages[ImageId].m_Id = pGameClient->Graphics()->LoadTexture(Candidate.c_str(), IStorage::TYPE_ALL);
-		if(g_pData->m_aImages[ImageId].m_Id.IsValid())
+		if(g_pData->m_aImages[ImageId].m_Id.IsValid() && !g_pData->m_aImages[ImageId].m_Id.IsNullTexture())
 			return;
 	}
 }

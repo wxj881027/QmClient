@@ -88,6 +88,9 @@ dependencies = [
 [[package]]
 name = "ddnet-test"
 version = "0.0.1"
+dependencies = [
+ "link-cplusplus",
+]
 
 [[package]]
 name = "libtw2-buffer"

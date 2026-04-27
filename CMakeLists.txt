@@ -3761,7 +3761,7 @@ if(CLIENT AND DMGBUILD)
 	"{\n"
 	"    \"file_format_version\": \"1.0.0\",\n"
 	"    \"ICD\": {\n"
-	"        \"library_path\": \"../../libMoltenVK.dylib\",\n"
+	"        \"library_path\": \"../../../Frameworks/libMoltenVK.dylib\",\n"
 	"        \"api_version\": \"1.4.0\",\n"
 	"        \"is_portability_driver\": true\n"
 	"    }\n"

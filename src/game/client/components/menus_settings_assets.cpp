@@ -1893,14 +1893,16 @@ static bool LoadWorkshopCache(SWorkshopHudState &WorkshopState, IStorage *pStora
 			else if(str_comp(pKey, "author") == 0 && pVal->type == json_string)
 				Asset.m_Author = NormalizeWorkshopAuthorName(pVal->u.string.ptr);
 			else if(str_comp(pKey, "image_url") == 0 && pVal->type == json_string)
-				Asset.m_ImageUrl = pVal->u.string.ptr;
+				Asset.m_ImageUrl = NormalizeWorkshopAssetUrl(pVal->u.string.ptr);
 			else if(str_comp(pKey, "thumb_url") == 0 && pVal->type == json_string)
-				Asset.m_ThumbUrl = pVal->u.string.ptr;
+				Asset.m_ThumbUrl = NormalizeWorkshopAssetUrl(pVal->u.string.ptr);
 			else if(str_comp(pKey, "thumb_cache") == 0 && pVal->type == json_string)
 				Asset.m_ThumbCachePath = pVal->u.string.ptr;
 			else if(str_comp(pKey, "install_path") == 0 && pVal->type == json_string)
 				Asset.m_InstallPath = pVal->u.string.ptr;
 		}
+		if(Asset.m_ImageUrl.empty())
+			continue;
 		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
 			NormalizeEntityBgWorkshopAsset(Asset, pStorage);
 		if(Asset.m_ThumbUrl.empty() && !str_endswith_nocase(Asset.m_ImageUrl.c_str(), ".map"))
