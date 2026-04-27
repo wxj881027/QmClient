@@ -30,7 +30,7 @@ public:
 	bool ConsumePracticeChatCommand(int Team, const char *pLine);
 	void ResetPracticeToAnchor();
 
-	void PrepareInputForSend(int *pData, int Size, bool Dummy) const;
+	void PrepareInputForSend(int *pData, int Size, bool Dummy);
 	bool OverridePredict();
 	bool ForcePredictWeapons() const;
 	bool ForcePredictGrenade() const;
@@ -71,6 +71,16 @@ private:
 		bool m_HasDDNet = false;
 	};
 
+	struct SPracticeInputFilterState
+	{
+		bool m_LeftHeld = false;
+		bool m_LeftReleased = true;
+		bool m_RightHeld = false;
+		bool m_RightReleased = true;
+		bool m_JumpReleased = true;
+		bool m_HookReleased = true;
+	};
+
 	struct SPracticeCommandState
 	{
 		static constexpr int MAX_SAFE_POSITIONS = 256;
@@ -99,8 +109,11 @@ private:
 	int m_LastResolvedDummyClientId = -1;
 	int m_LastResolvedLocalInputConn = -1;
 	int m_LastResolvedDummyInputConn = -1;
-	std::array<ivec2, NUM_DUMMIES> m_aServerLockedTargets{};
-	std::array<bool, NUM_DUMMIES> m_aHasServerLockedTargets{};
+	std::array<CNetObj_PlayerInput, NUM_DUMMIES> m_aServerLockedInputs{};
+	std::array<bool, NUM_DUMMIES> m_aHasServerLockedInputs{};
+	std::array<int, NUM_DUMMIES> m_aPostPracticeInputSuppressTicks{};
+	std::array<int, NUM_DUMMIES> m_aServerReleasedFireStates{};
+	std::array<SPracticeInputFilterState, NUM_DUMMIES> m_aPracticeInputFilterStates{};
 
 	SGhostData m_MainGhost;
 	SGhostData m_DummyGhost;
@@ -134,6 +147,10 @@ private:
 	void MaybePlayHammerHitEffect(CCharacter *pChar);
 	void RenderGhost(const SGhostData &Ghost, float Alpha) const;
 	void ReleaseBufferedInputState();
+	void CaptureServerReleasedFireStates();
+	void ReleaseBufferedActionInputState();
+	void CapturePracticeInputFilterStates();
+	void FilterPracticeInput(CNetObj_PlayerInput &Input, int InputConn, bool Commit);
 
 	void EchoPractice(const char *pFormat, ...) const;
 	static bool ParseCommandArgs(const char *pLine, std::vector<std::string> &vArgs);
@@ -144,7 +161,7 @@ private:
 	void TeleportCharacter(CCharacter *pChar, const vec2 &Pos) const;
 	void StoreLastTeleport(int ClientId, const vec2 &Pos);
 	void StoreLastDeathPosition(int ClientId, const vec2 &Pos);
-	void CaptureServerLockedTargets();
+	void CaptureServerLockedInputs();
 	bool IsSafeRescueTile(int Tile) const;
 	bool IsSafeRescuePosition(const vec2 &Pos, float ProximityRadius) const;
 	void TrackSafeRescuePosition(int ClientId, CCharacter *pChar);
