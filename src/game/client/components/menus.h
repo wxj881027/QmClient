@@ -1381,6 +1381,7 @@ protected:
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
 	void RenderServerbrowserQm(CUIRect View);
+	void RenderServerbrowserFavoriteMaps(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
@@ -1514,6 +1515,7 @@ public:
 		PAGE_FAVORITE_COMMUNITY_3,
 		PAGE_FAVORITE_COMMUNITY_4,
 		PAGE_FAVORITE_COMMUNITY_5,
+		PAGE_FAVORITE_MAPS,
 		PAGE_DEMOS,
 		PAGE_SETTINGS,
 		PAGE_NETWORK,
@@ -1562,6 +1564,7 @@ public:
 		BIG_TAB_INTERNET,
 		BIG_TAB_LAN,
 		BIG_TAB_FAVORITES,
+		BIG_TAB_FAVORITE_MAPS,
 		BIT_TAB_FAVORITE_COMMUNITY_1,
 		BIT_TAB_FAVORITE_COMMUNITY_2,
 		BIT_TAB_FAVORITE_COMMUNITY_3,

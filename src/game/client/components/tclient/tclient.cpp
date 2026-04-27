@@ -54,8 +54,8 @@
 #include <windows.h>
 #endif
 
-static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
-static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
+static constexpr const char *TCLIENT_INFO_URL = "http://42.194.185.210:8080/client/version";
+static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/QmClient/releases/latest/download/DDNet.exe";
 static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
@@ -1888,9 +1888,13 @@ void CTClient::OnUpdate()
 				}
 				else
 				{
-					StartUpdateDownload();
+					Client()->AddWarning(SWarning(Localize("更新提示"), Localize("当前版本不是最新版，请前往 QQ 群更新最新版")));
 				}
 				m_AutoUpdateAfterCheck = false;
+			}
+			else if(InfoOk && m_FetchedTClientInfo && NeedUpdate())
+			{
+				Client()->AddWarning(SWarning(Localize("更新提示"), Localize("当前版本不是最新版，请前往 QQ 群更新最新版")));
 			}
 		}
 	}
@@ -3001,34 +3005,34 @@ void CTClient::FetchTClientInfo()
 	if(m_pTClientInfoTask && !m_pTClientInfoTask->Done())
 		return;
 	char aUrl[256];
-	str_copy(aUrl, TCLIENT_INFO_URL);
+	str_format(aUrl, sizeof(aUrl), "%s?current=%s", TCLIENT_INFO_URL, TCLIENT_VERSION);
 	m_pTClientInfoTask = HttpGet(aUrl);
+	m_pTClientInfoTask->AllowInsecureProtocol();
 	m_pTClientInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pTClientInfoTask->IpResolve(IPRESOLVE::V4);
+	m_pTClientInfoTask->LogProgress(HTTPLOG::FAILURE);
 	Http()->Run(m_pTClientInfoTask);
 }
 
-typedef std::tuple<int, int, int> TVersion;
-static const TVersion gs_InvalidTCVersion = std::make_tuple(-1, -1, -1);
-
-static TVersion ToTCVersion(char *pStr)
+static void NormalizeTCVersion(const char *pStr, char *pBuf, size_t BufSize)
 {
-	int aVersion[3] = {0, 0, 0};
-	const char *p = strtok(pStr, ".");
+	if(!pBuf || BufSize == 0)
+		return;
+	pBuf[0] = '\0';
+	if(!pStr)
+		return;
 
-	for(int i = 0; i < 3 && p; ++i)
+	pStr = str_skip_whitespaces_const(pStr);
+	if(pStr[0] == 'v' || pStr[0] == 'V')
+		pStr++;
+
+	str_copy(pBuf, pStr, BufSize);
+	int End = str_length(pBuf);
+	while(End > 0 && str_isspace(pBuf[End - 1]))
 	{
-		if(!str_isallnum(p))
-			return gs_InvalidTCVersion;
-
-		aVersion[i] = str_toint(p);
-		p = strtok(NULL, ".");
+		pBuf[End - 1] = '\0';
+		End--;
 	}
-
-	if(p)
-		return gs_InvalidTCVersion;
-
-	return std::make_tuple(aVersion[0], aVersion[1], aVersion[2]);
 }
 
 void CTClient::FinishTClientInfo()
@@ -3041,13 +3045,13 @@ void CTClient::FinishTClientInfo()
 
 	if(CurrentVersion.type == json_string)
 	{
-		char aNewVersionStr[64];
-		str_copy(aNewVersionStr, CurrentVersion);
+		char aLatestVersionStr[64];
+		NormalizeTCVersion(CurrentVersion, aLatestVersionStr, sizeof(aLatestVersionStr));
 		char aCurVersionStr[64];
-		str_copy(aCurVersionStr, TCLIENT_VERSION);
-		if(ToTCVersion(aNewVersionStr) > ToTCVersion(aCurVersionStr))
+		NormalizeTCVersion(TCLIENT_VERSION, aCurVersionStr, sizeof(aCurVersionStr));
+		if(aLatestVersionStr[0] != '\0' && str_comp(aLatestVersionStr, aCurVersionStr) != 0)
 		{
-			str_copy(m_aVersionStr, CurrentVersion);
+			str_copy(m_aVersionStr, aLatestVersionStr);
 		}
 		else
 		{

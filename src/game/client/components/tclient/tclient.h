@@ -332,7 +332,7 @@ public:
 	bool m_FetchedTClientInfo = false;
 	bool m_AutoUpdateAfterCheck = false;
 	char m_aUpdateExeTmp[64] = "";
-	char m_aVersionStr[10] = "0";
+	char m_aVersionStr[32] = "0";
 
 	Regex m_RegexChatIgnore;
 

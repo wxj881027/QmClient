@@ -14,9 +14,11 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
+#include <engine/storage.h>
 #include <engine/textrender.h>
 
 #include <game/client/animstate.h>
+#include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
@@ -26,6 +28,101 @@
 using namespace FontIcons;
 
 static constexpr ColorRGBA gs_HighlightedTextColor = ColorRGBA(0.4f, 0.4f, 1.0f, 1.0f);
+
+struct SLocalSaveDisplayEntry
+{
+	std::string m_Time;
+	std::string m_Players;
+	std::string m_Map;
+	std::string m_Code;
+	std::string m_RawLine;
+};
+
+static void TrimDisplayField(std::string &Field)
+{
+	while(!Field.empty() && str_isspace(Field.front()))
+		Field.erase(Field.begin());
+	while(!Field.empty() && str_isspace(Field.back()))
+		Field.pop_back();
+}
+
+static std::array<std::string, 4> ParseSaveCsvFields(const char *pLine)
+{
+	std::array<std::string, 4> aFields;
+	int FieldIndex = 0;
+	bool InQuotes = false;
+
+	for(int CharIndex = 0; pLine[CharIndex] != '\0' && FieldIndex < (int)aFields.size(); ++CharIndex)
+	{
+		if(pLine[CharIndex] == '"')
+		{
+			if(InQuotes && pLine[CharIndex + 1] == '"')
+			{
+				aFields[FieldIndex].push_back('"');
+				++CharIndex;
+			}
+			else
+			{
+				InQuotes = !InQuotes;
+			}
+		}
+		else if(pLine[CharIndex] == ',' && !InQuotes)
+		{
+			++FieldIndex;
+		}
+		else
+		{
+			aFields[FieldIndex].push_back(pLine[CharIndex]);
+		}
+	}
+
+	for(std::string &Field : aFields)
+		TrimDisplayField(Field);
+	return aFields;
+}
+
+static std::vector<SLocalSaveDisplayEntry> LoadLocalSaveDisplayEntries(IStorage *pStorage, bool &FileExists)
+{
+	FileExists = false;
+	std::vector<SLocalSaveDisplayEntry> vEntries;
+	IOHANDLE File = pStorage->OpenFile(SAVES_FILE, IOFLAG_READ, IStorage::TYPE_SAVE);
+	if(!File)
+		return vEntries;
+	FileExists = true;
+
+	char *pFileContent = io_read_all_str(File);
+	io_close(File);
+	if(!pFileContent)
+		return vEntries;
+
+	const char *pCursor = pFileContent;
+	char aLine[2048];
+	bool FirstLine = true;
+	while((pCursor = str_next_token(pCursor, "\n", aLine, sizeof(aLine))))
+	{
+		str_utf8_trim_right(aLine);
+		if(aLine[0] == '\0')
+			continue;
+		if(FirstLine)
+		{
+			FirstLine = false;
+			if(str_startswith(aLine, "Time"))
+				continue;
+		}
+
+		std::array<std::string, 4> aFields = ParseSaveCsvFields(aLine);
+		SLocalSaveDisplayEntry Entry;
+		Entry.m_Time = aFields[0];
+		Entry.m_Players = aFields[1];
+		Entry.m_Map = aFields[2];
+		Entry.m_Code = aFields[3];
+		Entry.m_RawLine = aLine;
+		vEntries.push_back(std::move(Entry));
+	}
+
+	free(pFileContent);
+	return vEntries;
+}
 
 static const CServerInfo *FindSortedServerByAddress(IServerBrowser *pServerBrowser, const char *pAddress, int *pIndex = nullptr)
 {
@@ -2815,6 +2912,126 @@ void CMenus::RenderServerbrowserQm(CUIRect View)
 	}
 }
 
+void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
+{
+	View.Margin(10.0f, &View);
+
+	CUIRect FavoritePanel, SavesPanel;
+	View.HSplitMid(&FavoritePanel, &SavesPanel, 10.0f);
+
+	auto RenderPanelHeader = [this](CUIRect &Panel, const char *pTitle, const char *pSubTitle) {
+		Panel.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.22f), IGraphics::CORNER_ALL, 8.0f);
+		Panel.Margin(10.0f, &Panel);
+
+		CUIRect Title;
+		Panel.HSplitTop(22.0f, &Title, &Panel);
+		Ui()->DoLabel(&Title, pTitle, 16.0f, TEXTALIGN_ML);
+
+		if(pSubTitle && pSubTitle[0] != '\0')
+		{
+			CUIRect SubTitle;
+			Panel.HSplitTop(16.0f, &SubTitle, &Panel);
+			Ui()->DoLabel(&SubTitle, pSubTitle, 10.0f, TEXTALIGN_ML);
+		}
+		Panel.HSplitTop(6.0f, nullptr, &Panel);
+	};
+
+	char aSavesPath[IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
+
+	RenderPanelHeader(FavoritePanel, Localize("收藏地图"), Localize("玩家收藏的地图会显示在这里"));
+	RenderPanelHeader(SavesPanel, Localize("本地存档"), aSavesPath);
+
+	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
+	if(FavoriteMaps.empty())
+	{
+		Ui()->DoLabel(&FavoritePanel, Localize("暂无收藏地图"), 13.0f, TEXTALIGN_MC);
+	}
+	else
+	{
+		const int NumFavoriteMaps = (int)FavoriteMaps.size();
+		static CListBox s_FavoriteMapsListBox;
+		static std::vector<int> s_vFavoriteMapItemIds;
+		s_vFavoriteMapItemIds.resize(NumFavoriteMaps);
+		s_FavoriteMapsListBox.DoStart(24.0f, NumFavoriteMaps, 1, 3, -1, &FavoritePanel, false, IGraphics::CORNER_NONE, true);
+
+		size_t FavoriteMapIndex = 0;
+		for(const std::string &MapName : FavoriteMaps)
+		{
+			const CListboxItem Item = s_FavoriteMapsListBox.DoNextItem(&s_vFavoriteMapItemIds[FavoriteMapIndex], false);
+			if(Item.m_Visible)
+			{
+				CUIRect Row = Item.m_Rect;
+				Row.Margin(4.0f, &Row);
+				Row.Draw(ColorRGBA(1.0f, 0.85f, 0.0f, 0.08f), IGraphics::CORNER_ALL, 5.0f);
+				Row.Margin(6.0f, &Row);
+				TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f);
+				Ui()->DoLabel(&Row, MapName.c_str(), 13.0f, TEXTALIGN_ML);
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+			}
+			++FavoriteMapIndex;
+		}
+		s_FavoriteMapsListBox.DoEnd();
+	}
+
+	static std::vector<SLocalSaveDisplayEntry> s_vSaveEntries;
+	static int64_t s_LastSaveReloadTick = 0;
+	static bool s_SaveFileExists = false;
+	const int64_t Now = time_get();
+	if(s_LastSaveReloadTick == 0 || Now - s_LastSaveReloadTick > time_freq() * 2)
+	{
+		s_vSaveEntries = LoadLocalSaveDisplayEntries(Storage(), s_SaveFileExists);
+		s_LastSaveReloadTick = Now;
+	}
+
+	if(!s_SaveFileExists)
+	{
+		Ui()->DoLabel(&SavesPanel, Localize("未找到 ddnet-saves.txt"), 13.0f, TEXTALIGN_MC);
+		return;
+	}
+	if(s_vSaveEntries.empty())
+	{
+		Ui()->DoLabel(&SavesPanel, Localize("ddnet-saves.txt 暂无内容"), 13.0f, TEXTALIGN_MC);
+		return;
+	}
+
+	const int NumSaveEntries = (int)s_vSaveEntries.size();
+	static CListBox s_SavesListBox;
+	static std::vector<int> s_vSaveItemIds;
+	s_vSaveItemIds.resize(NumSaveEntries);
+	s_SavesListBox.DoStart(42.0f, NumSaveEntries, 1, 3, -1, &SavesPanel, false, IGraphics::CORNER_NONE, true);
+
+	for(size_t SaveIndex = 0; SaveIndex < s_vSaveEntries.size(); ++SaveIndex)
+	{
+		const SLocalSaveDisplayEntry &Entry = s_vSaveEntries[SaveIndex];
+		const CListboxItem Item = s_SavesListBox.DoNextItem(&s_vSaveItemIds[SaveIndex], false);
+		if(!Item.m_Visible)
+			continue;
+
+		CUIRect Row, TopLine, BottomLine, TimeLabel;
+		Item.m_Rect.Margin(4.0f, &Row);
+		Row.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f), IGraphics::CORNER_ALL, 5.0f);
+		Row.Margin(6.0f, &Row);
+		Row.HSplitTop(17.0f, &TopLine, &BottomLine);
+		BottomLine.VSplitRight(105.0f, &BottomLine, &TimeLabel);
+
+		const char *pMap = Entry.m_Map.empty() ? Entry.m_RawLine.c_str() : Entry.m_Map.c_str();
+		SLabelProperties Props;
+		Props.m_MaxWidth = TopLine.w;
+		Props.m_StopAtEnd = true;
+		Ui()->DoLabel(&TopLine, pMap, 12.0f, TEXTALIGN_ML, Props);
+
+		char aDetail[512];
+		str_format(aDetail, sizeof(aDetail), "[%s] %s",
+			Entry.m_Players.empty() ? "Unknown" : Entry.m_Players.c_str(),
+			Entry.m_Code.empty() ? "no-code" : Entry.m_Code.c_str());
+		Props.m_MaxWidth = BottomLine.w;
+		Ui()->DoLabel(&BottomLine, aDetail, 10.0f, TEXTALIGN_ML, Props);
+		Ui()->DoLabel(&TimeLabel, Entry.m_Time.empty() ? "-" : Entry.m_Time.c_str(), 9.0f, TEXTALIGN_MR);
+	}
+	s_SavesListBox.DoEnd();
+}
+
 enum
 {
 	UI_TOOLBOX_PAGE_FILTERS = 0,
@@ -2939,6 +3156,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView)
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_BROWSER_LAN);
 		break;
 	case PAGE_FAVORITES:
+	case PAGE_FAVORITE_MAPS:
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_BROWSER_FAVORITES);
 		break;
 	case PAGE_FAVORITE_COMMUNITY_1:
@@ -2968,6 +3186,12 @@ void CMenus::RenderServerbrowser(CUIRect MainView)
 	CUIRect View = MainView;
 	View.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	View.Margin(10.0f, &View);
+
+	if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
+	{
+		RenderServerbrowserFavoriteMaps(View);
+		return;
+	}
 
 	CUIRect ServerListBase, StatusBox, ToolBoxBase, TabBar;
 	CUIRect ContentLayout = View;
