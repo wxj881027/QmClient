@@ -159,7 +159,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           export HOMEBREW_NO_AUTO_UPDATE=1
-          for pkg in cmake ninja pkg-config python freetype sdl2 libpng webp libogg opus opusfile sqlite wavpack ffmpeg; do
+          for pkg in cmake ninja pkg-config python freetype sdl2 libpng webp libogg opus opusfile sqlite wavpack ffmpeg molten-vk vulkan-loader glslang; do
             if brew list --formula "$pkg" &>/dev/null; then
               brew link --overwrite "$pkg" 2>/dev/null || true
             else
@@ -202,6 +202,35 @@ jobs:
           otool -D ddnet-libs/webp/mac/libarm64/libwebp.7.dylib 2>/dev/null || true
           ls -la ddnet-libs/webp/mac/lib64/
 
+      - name: Copy Vulkan libraries for macOS
+        if: runner.os == 'macOS'
+        run: |
+          VULKAN_LIBDIR=$(brew --prefix vulkan-loader)/lib
+          MOLTENVK_LIBDIR=$(brew --prefix molten-vk)/lib
+          for DIR in lib64 libarm64; do
+            mkdir -p "ddnet-libs/vulkan/mac/${DIR}"
+            cp "${VULKAN_LIBDIR}/libvulkan.1.dylib" "ddnet-libs/vulkan/mac/${DIR}/" 2>/dev/null || true
+            cp "${MOLTENVK_LIBDIR}/libMoltenVK.dylib" "ddnet-libs/vulkan/mac/${DIR}/" 2>/dev/null || true
+            install_name_tool -id @rpath/libvulkan.1.dylib "ddnet-libs/vulkan/mac/${DIR}/libvulkan.1.dylib" 2>/dev/null || true
+            install_name_tool -id @rpath/libMoltenVK.dylib "ddnet-libs/vulkan/mac/${DIR}/libMoltenVK.dylib" 2>/dev/null || true
+          done
+          # Create ICD JSON for bundled MoltenVK
+          mkdir -p "ddnet-libs/vulkan/mac/icd.d"
+          cat > "ddnet-libs/vulkan/mac/icd.d/MoltenVK_icd.json" << 'ICDEOF'
+          {
+              "file_format_version": "1.0.0",
+              "ICD": {
+                  "library_path": "../../libMoltenVK.dylib",
+                  "api_version": "1.4.0",
+                  "is_portability_driver": true
+              }
+          }
+          ICDEOF
+          echo "Verifying Vulkan install_name:"
+          otool -D ddnet-libs/vulkan/mac/libarm64/libvulkan.1.dylib 2>/dev/null || true
+          otool -D ddnet-libs/vulkan/mac/libarm64/libMoltenVK.dylib 2>/dev/null || true
+          ls -la ddnet-libs/vulkan/mac/lib64/
+
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         run: >
@@ -221,6 +250,7 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DPREFER_BUNDLED_LIBS=ON \
             -DDOWNLOAD_GTEST=ON \
+            -DVULKAN=ON \
             -DCMAKE_OSX_SYSROOT="${SDKROOT}" \
             -DIPO=OFF
 
