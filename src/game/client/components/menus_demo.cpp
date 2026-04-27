@@ -2105,13 +2105,13 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h * 10.0f, &DemosDirectoryButton, &ButtonBarBottom);
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h / 2.0f, nullptr, &ButtonBarBottom);
 		static CButtonContainer s_DemosDirectoryButton;
-		if(DoButton_Menu(&s_DemosDirectoryButton, BrowsingScreenshots ? Localize("Screenshots directory") : Localize("Demos directory"), 0, &DemosDirectoryButton))
+		if(DoButton_Menu(&s_DemosDirectoryButton, BrowsingScreenshots ? Localize("截图目录") : Localize("Demos directory"), 0, &DemosDirectoryButton))
 		{
 			char aBuf[IO_MAX_PATH_LENGTH];
 			Storage()->GetCompletePath(pSelectedItem->m_StorageType, m_aCurrentDemoFolder[0] == '\0' ? pBaseFolder : m_aCurrentDemoFolder, aBuf, sizeof(aBuf));
 			Client()->ViewFile(aBuf);
 		}
-		GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, BrowsingScreenshots ? Localize("Open the directory that contains the screenshot files") : Localize("Open the directory that contains the demo files"));
+		GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, BrowsingScreenshots ? Localize("打开包含截图文件的目录") : Localize("打开包含Demo文件的目录"));
 	}
 
 	// play/open button
