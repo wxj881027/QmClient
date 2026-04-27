@@ -2916,21 +2916,57 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 {
 	View.Margin(10.0f, &View);
 
-	CUIRect FavoritePanel, SavesPanel;
-	View.HSplitMid(&FavoritePanel, &SavesPanel, 10.0f);
+	static bool s_FavoriteMapsExpanded = true;
+	static bool s_LocalSavesExpanded = true;
+	static CButtonContainer s_FavoriteMapsHeaderButton;
+	static CButtonContainer s_LocalSavesHeaderButton;
+	constexpr float PanelSpacing = 10.0f;
+	constexpr float CollapsedPanelHeight = 58.0f;
 
-	auto RenderPanelHeader = [this](CUIRect &Panel, const char *pTitle, const char *pSubTitle) {
+	CUIRect FavoritePanel, SavesPanel;
+	if(s_FavoriteMapsExpanded && s_LocalSavesExpanded)
+	{
+		View.HSplitMid(&FavoritePanel, &SavesPanel, PanelSpacing);
+	}
+	else if(s_FavoriteMapsExpanded)
+	{
+		View.HSplitBottom(CollapsedPanelHeight, &FavoritePanel, &SavesPanel);
+		FavoritePanel.HSplitBottom(PanelSpacing, &FavoritePanel, nullptr);
+	}
+	else if(s_LocalSavesExpanded)
+	{
+		View.HSplitTop(CollapsedPanelHeight, &FavoritePanel, &SavesPanel);
+		SavesPanel.HSplitTop(PanelSpacing, nullptr, &SavesPanel);
+	}
+	else
+	{
+		View.HSplitTop(CollapsedPanelHeight, &FavoritePanel, &View);
+		View.HSplitTop(PanelSpacing, nullptr, &View);
+		View.HSplitTop(CollapsedPanelHeight, &SavesPanel, nullptr);
+	}
+
+	auto RenderPanelHeader = [this](CUIRect &Panel, const char *pTitle, const char *pSubTitle, bool &Expanded, CButtonContainer &HeaderButton) {
 		Panel.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.22f), IGraphics::CORNER_ALL, 8.0f);
 		Panel.Margin(10.0f, &Panel);
 
+		CUIRect Header;
+		Panel.HSplitTop(38.0f, &Header, &Panel);
+		if(Ui()->MouseHovered(&Header))
+			Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 5.0f);
+		if(Ui()->DoButtonLogic(&HeaderButton, Expanded ? 1 : 0, &Header, BUTTONFLAG_LEFT))
+			Expanded = !Expanded;
+
 		CUIRect Title;
-		Panel.HSplitTop(22.0f, &Title, &Panel);
-		Ui()->DoLabel(&Title, pTitle, 16.0f, TEXTALIGN_ML);
+		Header.HSplitTop(22.0f, &Title, &Header);
+		Title.VMargin(4.0f, &Title);
+		char aTitle[128];
+		str_format(aTitle, sizeof(aTitle), "%s %s", Expanded ? "▾" : "▸", pTitle);
+		Ui()->DoLabel(&Title, aTitle, 16.0f, TEXTALIGN_ML);
 
 		if(pSubTitle && pSubTitle[0] != '\0')
 		{
-			CUIRect SubTitle;
-			Panel.HSplitTop(16.0f, &SubTitle, &Panel);
+			CUIRect SubTitle = Header;
+			SubTitle.VMargin(4.0f, &SubTitle);
 			Ui()->DoLabel(&SubTitle, pSubTitle, 10.0f, TEXTALIGN_ML);
 		}
 		Panel.HSplitTop(6.0f, nullptr, &Panel);
@@ -2939,40 +2975,46 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	char aSavesPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, SAVES_FILE, aSavesPath, sizeof(aSavesPath));
 
-	RenderPanelHeader(FavoritePanel, Localize("收藏地图"), Localize("玩家收藏的地图会显示在这里"));
-	RenderPanelHeader(SavesPanel, Localize("本地存档"), aSavesPath);
+	RenderPanelHeader(FavoritePanel, Localize("收藏地图"), Localize("玩家收藏的地图会显示在这里"), s_FavoriteMapsExpanded, s_FavoriteMapsHeaderButton);
+	RenderPanelHeader(SavesPanel, Localize("本地存档"), aSavesPath, s_LocalSavesExpanded, s_LocalSavesHeaderButton);
 
-	const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
-	if(FavoriteMaps.empty())
+	if(s_FavoriteMapsExpanded)
 	{
-		Ui()->DoLabel(&FavoritePanel, Localize("暂无收藏地图"), 13.0f, TEXTALIGN_MC);
-	}
-	else
-	{
-		const int NumFavoriteMaps = (int)FavoriteMaps.size();
-		static CListBox s_FavoriteMapsListBox;
-		static std::vector<int> s_vFavoriteMapItemIds;
-		s_vFavoriteMapItemIds.resize(NumFavoriteMaps);
-		s_FavoriteMapsListBox.DoStart(24.0f, NumFavoriteMaps, 1, 3, -1, &FavoritePanel, false, IGraphics::CORNER_NONE, true);
-
-		size_t FavoriteMapIndex = 0;
-		for(const std::string &MapName : FavoriteMaps)
+		const std::set<std::string> &FavoriteMaps = GameClient()->m_TClient.GetFavoriteMaps();
+		if(FavoriteMaps.empty())
 		{
-			const CListboxItem Item = s_FavoriteMapsListBox.DoNextItem(&s_vFavoriteMapItemIds[FavoriteMapIndex], false);
-			if(Item.m_Visible)
-			{
-				CUIRect Row = Item.m_Rect;
-				Row.Margin(4.0f, &Row);
-				Row.Draw(ColorRGBA(1.0f, 0.85f, 0.0f, 0.08f), IGraphics::CORNER_ALL, 5.0f);
-				Row.Margin(6.0f, &Row);
-				TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f);
-				Ui()->DoLabel(&Row, MapName.c_str(), 13.0f, TEXTALIGN_ML);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
-			}
-			++FavoriteMapIndex;
+			Ui()->DoLabel(&FavoritePanel, Localize("暂无收藏地图"), 13.0f, TEXTALIGN_MC);
 		}
-		s_FavoriteMapsListBox.DoEnd();
+		else
+		{
+			const int NumFavoriteMaps = (int)FavoriteMaps.size();
+			static CListBox s_FavoriteMapsListBox;
+			static std::vector<int> s_vFavoriteMapItemIds;
+			s_vFavoriteMapItemIds.resize(NumFavoriteMaps);
+			s_FavoriteMapsListBox.DoStart(24.0f, NumFavoriteMaps, 1, 3, -1, &FavoritePanel, false, IGraphics::CORNER_NONE, true);
+
+			size_t FavoriteMapIndex = 0;
+			for(const std::string &MapName : FavoriteMaps)
+			{
+				const CListboxItem Item = s_FavoriteMapsListBox.DoNextItem(&s_vFavoriteMapItemIds[FavoriteMapIndex], false);
+				if(Item.m_Visible)
+				{
+					CUIRect Row = Item.m_Rect;
+					Row.Margin(4.0f, &Row);
+					Row.Draw(ColorRGBA(1.0f, 0.85f, 0.0f, 0.08f), IGraphics::CORNER_ALL, 5.0f);
+					Row.Margin(6.0f, &Row);
+					TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f);
+					Ui()->DoLabel(&Row, MapName.c_str(), 13.0f, TEXTALIGN_ML);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+				}
+				++FavoriteMapIndex;
+			}
+			s_FavoriteMapsListBox.DoEnd();
+		}
 	}
+
+	if(!s_LocalSavesExpanded)
+		return;
 
 	static std::vector<SLocalSaveDisplayEntry> s_vSaveEntries;
 	static int64_t s_LastSaveReloadTick = 0;

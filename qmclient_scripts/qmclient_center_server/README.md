@@ -43,7 +43,7 @@ qm_client_mark_trail 1
 请求示例：
 
 ```text
-GET /client/version?current=2.35.2
+GET /client/version?current=2.36.0
 ```
 
 返回：
@@ -51,11 +51,11 @@ GET /client/version?current=2.35.2
 ```json
 {
   "ok": true,
-  "version": "2.35.2",
-  "latest_version": "2.35.2",
-  "latest_tag": "v2.35.2",
-  "release_url": "https://github.com/wxj881027/QmClient/releases/tag/v2.35.2",
-  "current_version": "2.35.2",
+  "version": "2.36.0",
+  "latest_version": "2.36.0",
+  "latest_tag": "v2.36.0",
+  "release_url": "https://github.com/wxj881027/QmClient/releases/tag/v2.36.0",
+  "current_version": "2.36.0",
   "up_to_date": true,
   "cache_source": "github",
   "cache_expires_at": 1777321482,
@@ -134,7 +134,7 @@ https://api.github.com/repos/wxj881027/QmClient/releases/latest
 - `RATE_LIMIT_PER_MIN` 默认 `120`
 - `REQUIRE_IP_BIND` 默认 `1`（token 绑定请求 IP）
 - `TRUST_PROXY` 默认 `0`（反代场景可设为 `1`）
-- `CLIENT_LATEST_VERSION` 默认 `2.35.2`
+- `CLIENT_LATEST_VERSION` 默认 `2.36.0`
 - `CLIENT_RELEASE_OWNER` 默认 `wxj881027`
 - `CLIENT_RELEASE_REPO` 默认 `QmClient`
 - `CLIENT_RELEASES_API_URL` 默认 GitHub latest release API 地址
