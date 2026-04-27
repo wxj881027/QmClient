@@ -3724,6 +3724,50 @@ if(CLIENT AND DMGBUILD)
     list(APPEND TARGET_TOOLS_FILES $<TARGET_FILE:${target}>)
   endforeach()
 
+
+	# macOS DMG: resolve Homebrew library paths at configure time
+	if(APPLE)
+	  # WebP: use find_package results (works for both Homebrew and bundled)
+	  if(WebP_FOUND AND WebP_LIBRARY)
+	    get_filename_component(WEBP_LIB_DIR "${WebP_LIBRARY}" DIRECTORY)
+	  else()
+	    set(WEBP_LIB_DIR "${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}")
+	  endif()
+
+	  # Vulkan: resolve dylib paths (brew on CI, ddnet-libs fallback for local)
+	  if(VULKAN)
+	    find_program(BREW brew)
+	    if(BREW)
+	      execute_process(COMMAND ${BREW} --prefix vulkan-loader
+	        OUTPUT_VARIABLE VK_LOADER_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	      execute_process(COMMAND ${BREW} --prefix molten-vk
+	        OUTPUT_VARIABLE MOLTENVK_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	      if(VK_LOADER_PREFIX AND EXISTS "${VK_LOADER_PREFIX}/lib/libvulkan.1.dylib")
+	        set(MACOS_VULKAN_LIB_DIR "${VK_LOADER_PREFIX}/lib")
+	      endif()
+	      if(MOLTENVK_PREFIX AND EXISTS "${MOLTENVK_PREFIX}/lib/libMoltenVK.dylib")
+	        set(MACOS_MOLTENVK_LIB_DIR "${MOLTENVK_PREFIX}/lib")
+	      endif()
+	    endif()
+	    if(NOT MACOS_VULKAN_LIB_DIR)
+	      set(MACOS_VULKAN_LIB_DIR "${PROJECT_SOURCE_DIR}/ddnet-libs/vulkan/${LIB_DIR}")
+	    endif()
+	    if(NOT MACOS_MOLTENVK_LIB_DIR)
+	      set(MACOS_MOLTENVK_LIB_DIR "${MACOS_VULKAN_LIB_DIR}")
+	    endif()
+	    # Generate MoltenVK ICD JSON at configure time
+	    file(WRITE "${PROJECT_BINARY_DIR}/MoltenVK_icd.json"
+	"{\n"
+	"    \"file_format_version\": \"1.0.0\",\n"
+	"    \"ICD\": {\n"
+	"        \"library_path\": \"../../libMoltenVK.dylib\",\n"
+	"        \"api_version\": \"1.4.0\",\n"
+	"        \"is_portability_driver\": true\n"
+	"    }\n"
+	"}\n")
+	  endif()
+	endif()
+
   add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.dmg
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${DMG_TMPDIR}
     ${DMG_MKDIR_COMMANDS}
@@ -3743,14 +3787,14 @@ if(CLIENT AND DMGBUILD)
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/ffmpeg/${LIB_DIR}/libswresample.5.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/ffmpeg/${LIB_DIR}/libswscale.8.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/libsteam_api.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebp.7.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebpdemux.2.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebpmux.3.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libsharpyuv.0.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/vulkan/${LIB_DIR}/libvulkan.1.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/vulkan/${LIB_DIR}/libMoltenVK.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/vulkan/icd.d
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/vulkan/mac/icd.d/MoltenVK_icd.json ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/vulkan/icd.d/
+	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libwebp.7.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libwebpdemux.2.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libwebpmux.3.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libsharpyuv.0.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${MACOS_VULKAN_LIB_DIR}/libvulkan.1.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${MACOS_MOLTENVK_LIB_DIR}/libMoltenVK.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/vulkan/icd.d
+	COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/MoltenVK_icd.json ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/vulkan/icd.d/
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/../Frameworks ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/darwin_fix_install_names.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks --executable ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
