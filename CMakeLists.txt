@@ -3793,8 +3793,6 @@ if(CLIENT AND DMGBUILD)
 	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libsharpyuv.0.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
 	COMMAND ${CMAKE_COMMAND} -E copy ${MACOS_VULKAN_LIB_DIR}/libvulkan.1.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
 	COMMAND ${CMAKE_COMMAND} -E copy ${MACOS_MOLTENVK_LIB_DIR}/libMoltenVK.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-	COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/vulkan/icd.d
-	COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/MoltenVK_icd.json ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/vulkan/icd.d/
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/../Frameworks ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/darwin_fix_install_names.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks --executable ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
@@ -3809,6 +3807,10 @@ if(CLIENT AND DMGBUILD)
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
     COMMAND codesign --force --sign - ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
     COMMAND ${CMAKE_COMMAND} -E copy ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
+
+	# ICD JSON for MoltenVK (non-code, placed after codesign)
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/vulkan/icd.d
+	COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/MoltenVK_icd.json ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/vulkan/icd.d/
 
     # DMG
     COMMAND dmgbuild -s ${PROJECT_SOURCE_DIR}/other/dmgsettings.py -D client=${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app -D server=${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app -D background=${PROJECT_SOURCE_DIR}/other/dmgbackground.png "${CPACK_PACKAGE_NAME} ${CPACK_PACKAGE_VERSION}" ${CPACK_PACKAGE_FILE_NAME}.dmg
