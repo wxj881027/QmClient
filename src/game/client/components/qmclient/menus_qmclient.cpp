@@ -5630,7 +5630,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					{
 						CUIRect LabelColValue, ControlColValue;
 						Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-						Ui()->DoLabel(&LabelColValue, Localize("Microphone volume"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelColValue, Localize("麦克风音量"), LG_BodySize, TEXTALIGN_ML);
 						static int s_QmVoiceMicVolumeInputId;
 						RenderSliderWithValueInput(&s_QmVoiceMicVolumeInputId, ControlColValue, &g_Config.m_QmVoiceMicVolume, 0, 300);
 					}
@@ -5646,7 +5646,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						{
 							CUIRect LabelColValue, ControlColValue;
 							Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-							Ui()->DoLabel(&LabelColValue, Localize("Voice activation threshold"), LG_BodySize, TEXTALIGN_ML);
+							Ui()->DoLabel(&LabelColValue, Localize("语音激活阈值"), LG_BodySize, TEXTALIGN_ML);
 							static int s_QmVoiceVadThresholdInputId;
 							RenderSliderWithValueInput(&s_QmVoiceVadThresholdInputId, ControlColValue, &g_Config.m_QmVoiceVadThreshold, 0, 100);
 						}
@@ -5656,7 +5656,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						{
 							CUIRect LabelColValue, ControlColValue;
 							Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-							Ui()->DoLabel(&LabelColValue, Localize("Voice activation release delay"), LG_BodySize, TEXTALIGN_ML);
+							Ui()->DoLabel(&LabelColValue, Localize("语音激活释放延迟"), LG_BodySize, TEXTALIGN_ML);
 							static int s_QmVoiceVadReleaseDelayMsInputId;
 							RenderSliderWithValueInput(&s_QmVoiceVadReleaseDelayMsInputId, ControlColValue, &g_Config.m_QmVoiceVadReleaseDelayMs, 0, 1000);
 						}
@@ -5669,7 +5669,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					{
 						CUIRect LabelColValue, ControlColValue;
 						Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-						Ui()->DoLabel(&LabelColValue, Localize("Playback volume"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelColValue, Localize("播放音量"), LG_BodySize, TEXTALIGN_ML);
 						static int s_QmVoiceVolumeInputId;
 						RenderSliderWithValueInput(&s_QmVoiceVolumeInputId, ControlColValue, &g_Config.m_QmVoiceVolume, 0, 400);
 					}
@@ -5685,7 +5685,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						{
 							CUIRect LabelColValue, ControlColValue;
 							Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-							Ui()->DoLabel(&LabelColValue, Localize("Stereo width"), LG_BodySize, TEXTALIGN_ML);
+							Ui()->DoLabel(&LabelColValue, Localize("左右声道宽度"), LG_BodySize, TEXTALIGN_ML);
 							static int s_QmVoiceStereoWidthInputId;
 							RenderSliderWithValueInput(&s_QmVoiceStereoWidthInputId, ControlColValue, &g_Config.m_QmVoiceStereoWidth, 0, 200);
 						}
@@ -5696,14 +5696,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					{
 						CUIRect LabelColValue, ControlColValue;
 						Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-						Ui()->DoLabel(&LabelColValue, Localize("Voice distance radius (Tiles)"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelColValue, Localize("语音距离半径（格）"), LG_BodySize, TEXTALIGN_ML);
 						static int s_QmVoiceRadiusInputId;
 						RenderSliderWithValueInput(&s_QmVoiceRadiusInputId, ControlColValue, &g_Config.m_QmVoiceRadius, 1, 400);
 					}
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceGroupGlobal, Localize("Hear teammates globally"), &g_Config.m_QmVoiceGroupGlobal, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);

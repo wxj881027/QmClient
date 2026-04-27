@@ -2418,7 +2418,7 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	const auto vAllSlots = BuildAudioPackSlots();
 	if(vAllSlots.empty())
 	{
-		Ui()->DoLabel(&MainView, Localize("No audio slots found."), 14.0f, TEXTALIGN_MC);
+		Ui()->DoLabel(&MainView, Localize("未找到音频槽。"), 14.0f, TEXTALIGN_MC);
 		return;
 	}
 
@@ -2453,20 +2453,20 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	RefreshButton.VMargin(2.0f, &RefreshButton);
 	TitleRow = HeaderRow;
 
-	if(DoButton_Menu(&s_AudioPackEditorBackButton, Localize("Back"), 0, &BackButton))
+	if(DoButton_Menu(&s_AudioPackEditorBackButton, Localize("返回"), 0, &BackButton))
 	{
 		AudioPackEditorClose();
 		return;
 	}
 
-	if(DoButton_Menu(&s_AudioPackEditorRefreshButton, Localize("Refresh"), 0, &RefreshButton))
+	if(DoButton_Menu(&s_AudioPackEditorRefreshButton, Localize("刷新"), 0, &RefreshButton))
 		AudioPackEditorRefreshCandidates();
 
-	Ui()->DoLabel(&TitleRow, Localize("Edit audio pack"), 14.0f, TEXTALIGN_MC);
+	Ui()->DoLabel(&TitleRow, Localize("编辑音频包"), 14.0f, TEXTALIGN_MC);
 
 	CUIRect PackLabel, PackInput;
 	PackRow.VSplitLeft(90.0f, &PackLabel, &PackInput);
-	Ui()->DoLabel(&PackLabel, Localize("Pack name"), 12.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&PackLabel, Localize("音频包名称"), 12.0f, TEXTALIGN_ML);
 	if(Ui()->DoEditBox(&m_AudioPackEditorState.m_PackNameInput, &PackInput, 12.0f))
 		AudioPackEditorRefreshCandidates();
 
@@ -2481,7 +2481,7 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	SlotColumn.HSplitTop(20.0f, &SlotSearchRow, &SlotColumn);
 	SlotColumn.HSplitTop(6.0f, nullptr, &SlotColumn);
 	SlotListRow = SlotColumn;
-	Ui()->DoLabel(&SlotSearchRow, Localize("Search"), 12.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&SlotSearchRow, Localize("搜索"), 12.0f, TEXTALIGN_ML);
 	CUIRect SlotSearchInput;
 	SlotSearchRow.VSplitLeft(80.0f, nullptr, &SlotSearchInput);
 	Ui()->DoEditBox_Search(&m_AudioPackEditorState.m_FilterInput, &SlotSearchInput, 12.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
@@ -2511,7 +2511,7 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 		}
 	}
 
-	s_AudioPackEditorSlotListBox.DoHeader(&SlotListRow, Localize("Audio slots"), 20.0f, 2.0f);
+	s_AudioPackEditorSlotListBox.DoHeader(&SlotListRow, Localize("音频槽"), 20.0f, 2.0f);
 	int SelectedVisibleSlot = 0;
 	for(int Index = 0; Index < (int)vVisibleSlotIndices.size(); ++Index)
 	{
@@ -2549,7 +2549,7 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	CandidateColumn.HSplitTop(20.0f, &CandidateSearchRow, &CandidateColumn);
 	CandidateColumn.HSplitTop(6.0f, nullptr, &CandidateColumn);
 	CandidateListRow = CandidateColumn;
-	Ui()->DoLabel(&CandidateSearchRow, Localize("Search"), 12.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&CandidateSearchRow, Localize("搜索"), 12.0f, TEXTALIGN_ML);
 	CUIRect CandidateSearchInput;
 	CandidateSearchRow.VSplitLeft(80.0f, nullptr, &CandidateSearchInput);
 	Ui()->DoEditBox_Search(&m_AudioPackEditorState.m_CandidateFilterInput, &CandidateSearchInput, 12.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
@@ -2579,7 +2579,7 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 		m_AudioPackEditorState.m_SelectedCandidateIndex = -1;
 	}
 
-	s_AudioPackEditorCandidateListBox.DoHeader(&CandidateListRow, Localize("Candidate files"), 20.0f, 2.0f);
+	s_AudioPackEditorCandidateListBox.DoHeader(&CandidateListRow, Localize("候选文件"), 20.0f, 2.0f);
 	int SelectedVisibleCandidate = 0;
 	for(int Index = 0; Index < (int)vVisibleCandidateIndices.size(); ++Index)
 	{
@@ -2601,9 +2601,9 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 
 		char aLabel[IO_MAX_PATH_LENGTH + 64];
 		if(Entry.m_IsCurrentFile)
-			str_format(aLabel, sizeof(aLabel), "%s (%s)", Entry.m_DisplayName.c_str(), Localize("Current file"));
+			str_format(aLabel, sizeof(aLabel), "%s (%s)", Entry.m_DisplayName.c_str(), Localize("当前文件"));
 		else if(Entry.m_IsCurrentPackFile)
-			str_format(aLabel, sizeof(aLabel), "%s (%s)", Entry.m_DisplayName.c_str(), Localize("Pack name"));
+			str_format(aLabel, sizeof(aLabel), "%s (%s)", Entry.m_DisplayName.c_str(), Localize("音频包名称"));
 		else
 			str_copy(aLabel, Entry.m_DisplayName.c_str(), sizeof(aLabel));
 		Ui()->DoLabel(&Item.m_Rect, aLabel, 11.0f, TEXTALIGN_ML);
@@ -2632,29 +2632,29 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 
 	DetailColumn.HSplitTop(18.0f, &DetailRow, &DetailColumn);
 	char aRelativeLabel[256];
-	str_format(aRelativeLabel, sizeof(aRelativeLabel), "%s: %s", Localize("Relative path"), SelectedSlot.m_pRelativePath);
+	str_format(aRelativeLabel, sizeof(aRelativeLabel), "%s: %s", Localize("相对路径"), SelectedSlot.m_pRelativePath);
 	Ui()->DoLabel(&DetailRow, aRelativeLabel, 10.0f, TEXTALIGN_ML);
 
 	DetailColumn.HSplitTop(18.0f, &DetailRow, &DetailColumn);
 	char aCurrentLabel[IO_MAX_PATH_LENGTH + 32];
 	if(aCurrentPath[0] != '\0')
-		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%s: %s", Localize("Current file"), aCurrentPath);
+		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%s: %s", Localize("当前文件"), aCurrentPath);
 	else
-		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%s: %s", Localize("Current file"), Localize("Default"));
+		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%s: %s", Localize("当前文件"), Localize("默认"));
 	Ui()->DoLabel(&DetailRow, aCurrentLabel, 10.0f, TEXTALIGN_ML);
 
 	DetailColumn.HSplitTop(18.0f, &DetailRow, &DetailColumn);
 	char aSelectedLabel[IO_MAX_PATH_LENGTH + 48];
 	if(pSelectedCandidatePath[0] != '\0')
-		str_format(aSelectedLabel, sizeof(aSelectedLabel), "%s: %s", Localize("Selected candidate"), pSelectedCandidatePath);
+		str_format(aSelectedLabel, sizeof(aSelectedLabel), "%s: %s", Localize("已选候选"), pSelectedCandidatePath);
 	else
-		str_format(aSelectedLabel, sizeof(aSelectedLabel), "%s: %s", Localize("Selected candidate"), Localize("Default"));
+		str_format(aSelectedLabel, sizeof(aSelectedLabel), "%s: %s", Localize("已选候选"), Localize("默认"));
 	Ui()->DoLabel(&DetailRow, aSelectedLabel, 10.0f, TEXTALIGN_ML);
 
 	DetailColumn.HSplitTop(10.0f, nullptr, &DetailColumn);
 	CUIRect ManualRow;
 	DetailColumn.HSplitTop(22.0f, &ManualRow, &DetailColumn);
-	Ui()->DoLabel(&ManualRow, Localize("Manual source file"), 12.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&ManualRow, Localize("手动源文件"), 12.0f, TEXTALIGN_ML);
 	CUIRect ManualInput;
 	ManualRow.VSplitLeft(120.0f, nullptr, &ManualInput);
 	Ui()->DoEditBox(&m_AudioPackEditorState.m_SourcePathInput, &ManualInput, 12.0f);
@@ -2668,15 +2668,15 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 	ActionRowTop.VSplitMid(&PreviewButton, &ImportPreviewButton, 8.0f);
 	ExportButton = ActionRowBottom;
 
-	if(DoButton_Menu(&s_AudioPackEditorPreviewButton, Localize("Preview selected file"), 0, &PreviewButton))
+	if(DoButton_Menu(&s_AudioPackEditorPreviewButton, Localize("预览已选文件"), 0, &PreviewButton))
 	{
 		if(pSelectedCandidatePath[0] == '\0')
 		{
-			AudioPackEditorSetStatus(Localize("No candidate file selected."), true);
+			AudioPackEditorSetStatus(Localize("未选择候选文件。"), true);
 		}
 		else if(!AudioPackEditorPlayPreview(pSelectedCandidatePath, IStorage::TYPE_ALL))
 		{
-			AudioPackEditorSetStatus(Localize("Failed to preview candidate file."), true);
+			AudioPackEditorSetStatus(Localize("预览候选文件失败。"), true);
 		}
 		else
 		{
@@ -2684,25 +2684,25 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 		}
 	}
 
-	if(DoButton_Menu(&s_AudioPackEditorImportPreviewButton, Localize("Preview import file"), 0, &ImportPreviewButton))
+	if(DoButton_Menu(&s_AudioPackEditorImportPreviewButton, Localize("预览导入文件"), 0, &ImportPreviewButton))
 	{
 		const char *pManualPath = m_AudioPackEditorState.m_SourcePathInput.GetString();
 		const std::string PreviewPath = ResolveAudioPackPreviewPath("", pManualPath);
 		if(PreviewPath.empty())
 		{
-			AudioPackEditorSetStatus(Localize("Source file is empty."), true);
+			AudioPackEditorSetStatus(Localize("源文件为空。"), true);
 		}
 		else if(!Storage()->FileExists(PreviewPath.c_str(), IStorage::TYPE_ABSOLUTE))
 		{
-			AudioPackEditorSetStatus(Localize("Source file does not exist."), true);
+			AudioPackEditorSetStatus(Localize("源文件不存在。"), true);
 		}
 		else if(!str_endswith(PreviewPath.c_str(), ".wv"))
 		{
-			AudioPackEditorSetStatus(Localize("Only .wv files are supported right now."), true);
+			AudioPackEditorSetStatus(Localize("目前仅支持 .wv 文件。"), true);
 		}
 		else if(!AudioPackEditorPlayPreview(PreviewPath.c_str(), IStorage::TYPE_ABSOLUTE))
 		{
-			AudioPackEditorSetStatus(Localize("Failed to preview import file."), true);
+			AudioPackEditorSetStatus(Localize("预览导入文件失败。"), true);
 		}
 		else
 		{
@@ -2710,7 +2710,7 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 		}
 	}
 
-	if(DoButton_Menu(&s_AudioPackEditorExportButton, Localize("Export selected file"), 0, &ExportButton))
+	if(DoButton_Menu(&s_AudioPackEditorExportButton, Localize("导出已选文件"), 0, &ExportButton))
 	{
 		const char *pManualPath = m_AudioPackEditorState.m_SourcePathInput.GetString();
 		const std::string SourcePath = ResolveAudioPackExportSourcePath(pSelectedCandidatePath, pManualPath);
@@ -2719,7 +2719,7 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 
 		if(SourcePath.empty())
 		{
-			AudioPackEditorSetStatus(UseManualSource ? Localize("Source file is empty.") : Localize("No candidate file selected."), true);
+			AudioPackEditorSetStatus(UseManualSource ? Localize("源文件为空。") : Localize("未选择候选文件。"), true);
 		}
 		else
 		{
@@ -2728,12 +2728,12 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 				SourceStorageType = IStorage::TYPE_ABSOLUTE;
 				if(!Storage()->FileExists(SourcePath.c_str(), SourceStorageType))
 				{
-					AudioPackEditorSetStatus(Localize("Source file does not exist."), true);
+					AudioPackEditorSetStatus(Localize("源文件不存在。"), true);
 					goto AudioPackExportDone;
 				}
 				if(!str_endswith(SourcePath.c_str(), ".wv"))
 				{
-					AudioPackEditorSetStatus(Localize("Only .wv files are supported right now."), true);
+					AudioPackEditorSetStatus(Localize("目前仅支持 .wv 文件。"), true);
 					goto AudioPackExportDone;
 				}
 			}
@@ -2746,17 +2746,17 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 				if(GameClient()->m_Sounds.Reload())
 				{
 					UpdateMusicState();
-					AudioPackEditorSetStatus(Localize("Audio pack exported."), false);
+					AudioPackEditorSetStatus(Localize("音频包已导出。"), false);
 				}
 				else
 				{
-					AudioPackEditorSetStatus(Localize("Audio file was exported, but reload failed. Restart sound to apply it."), true);
+					AudioPackEditorSetStatus(Localize("音频文件已导出，但重新加载失败。重启以应用。"), true);
 				}
 				AudioPackEditorRefreshCandidates();
 			}
 			else
 			{
-				AudioPackEditorSetStatus(Localize("Failed to export audio pack file."), true);
+				AudioPackEditorSetStatus(Localize("导出音频包文件失败。"), true);
 			}
 		}
 	}
@@ -2790,7 +2790,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 
 	CUIRect Button;
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndEnable, Localize("Use sounds"), g_Config.m_SndEnable, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndEnable, Localize("启用声音"), g_Config.m_SndEnable, &Button))
 	{
 		g_Config.m_SndEnable ^= 1;
 		UpdateMusicState();
@@ -2805,42 +2805,42 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 	}
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndMusic, Localize("Play background music"), g_Config.m_SndMusic, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndMusic, Localize("播放背景音乐"), g_Config.m_SndMusic, &Button))
 	{
 		g_Config.m_SndMusic ^= 1;
 		UpdateMusicState();
 	}
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndNonactiveMute, Localize("Mute when not active"), g_Config.m_SndNonactiveMute, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndNonactiveMute, Localize("客户端后台静音"), g_Config.m_SndNonactiveMute, &Button))
 		g_Config.m_SndNonactiveMute ^= 1;
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndGame, Localize("Enable game sounds"), g_Config.m_SndGame, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndGame, Localize("启用游戏音效"), g_Config.m_SndGame, &Button))
 		g_Config.m_SndGame ^= 1;
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndGun, Localize("Enable gun sound"), g_Config.m_SndGun, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndGun, Localize("启用枪声"), g_Config.m_SndGun, &Button))
 		g_Config.m_SndGun ^= 1;
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndLongPain, Localize("Enable long pain sound (used when shooting in freeze)"), g_Config.m_SndLongPain, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndLongPain, Localize("启用水中呼救音"), g_Config.m_SndLongPain, &Button))
 		g_Config.m_SndLongPain ^= 1;
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndServerMessage, Localize("Enable server message sound"), g_Config.m_SndServerMessage, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndServerMessage, Localize("启用服务器消息提示音"), g_Config.m_SndServerMessage, &Button))
 		g_Config.m_SndServerMessage ^= 1;
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndChat, Localize("Enable regular chat sound"), g_Config.m_SndChat, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndChat, Localize("启用普通聊天提示音"), g_Config.m_SndChat, &Button))
 		g_Config.m_SndChat ^= 1;
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndTeamChat, Localize("Enable team chat sound"), g_Config.m_SndTeamChat, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndTeamChat, Localize("启用队伍聊天提示音"), g_Config.m_SndTeamChat, &Button))
 		g_Config.m_SndTeamChat ^= 1;
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_SndHighlight, Localize("Enable highlighted chat sound"), g_Config.m_SndHighlight, &Button))
+	if(DoButton_CheckBox(&g_Config.m_SndHighlight, Localize("启用高亮聊天提示音"), g_Config.m_SndHighlight, &Button))
 		g_Config.m_SndHighlight ^= 1;
 
 	// audio pack selector
@@ -2890,13 +2890,13 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 		ListRow = AudioPackContent;
 
 		const float ButtonPadding = 22.0f;
-		const float RefreshButtonW = minimum(112.0f, maximum(78.0f, TextRender()->TextWidth(12.0f, Localize("Refresh"), -1, -1.0f) + ButtonPadding));
-		const float EditButtonW = minimum(168.0f, maximum(114.0f, TextRender()->TextWidth(12.0f, Localize("Edit audio pack"), -1, -1.0f) + ButtonPadding));
+		const float RefreshButtonW = minimum(112.0f, maximum(78.0f, TextRender()->TextWidth(12.0f, Localize("刷新"), -1, -1.0f) + ButtonPadding));
+		const float EditButtonW = minimum(168.0f, maximum(114.0f, TextRender()->TextWidth(12.0f, Localize("编辑音频包"), -1, -1.0f) + ButtonPadding));
 		CUIRect EditButton;
 		CUIRect RefreshButton;
 		HeaderRow.VSplitRight(RefreshButtonW, &HeaderRow, &RefreshButton);
 		RefreshButton.VMargin(2.0f, &RefreshButton);
-		if(DoButton_Menu(&s_AudioPackRefreshButton, Localize("Refresh"), 0, &RefreshButton))
+		if(DoButton_Menu(&s_AudioPackRefreshButton, Localize("刷新"), 0, &RefreshButton))
 		{
 			RefreshAudioPackState();
 			SelectedPack = FindSelectedPackIndex();
@@ -2904,23 +2904,23 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 		HeaderRow.VSplitRight(8.0f, &HeaderRow, nullptr);
 		HeaderRow.VSplitRight(EditButtonW, &HeaderRow, &EditButton);
 		EditButton.VMargin(2.0f, &EditButton);
-		if(DoButton_Menu(&s_AudioPackEditorButton, Localize("Edit audio pack"), 0, &EditButton))
+		if(DoButton_Menu(&s_AudioPackEditorButton, Localize("编辑音频包"), 0, &EditButton))
 			AudioPackEditorOpen(g_Config.m_SndPack);
 
 		const SAudioPackEntry &SelectedEntry = gs_vAudioPacks[SelectedPack];
-		const char *pSelectedPackName = str_comp(SelectedEntry.m_aName, "default") == 0 ? Localize("Default") : SelectedEntry.m_aName;
+		const char *pSelectedPackName = str_comp(SelectedEntry.m_aName, "default") == 0 ? Localize("默认") : SelectedEntry.m_aName;
 		char aSelectedPackSummary[160];
 		if(str_comp(SelectedEntry.m_aName, "default") == 0)
-			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s (%s)", Localize("Selected pack"), pSelectedPackName, Localize("Built-in"));
+			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s (%s)", Localize("已选音频包"), pSelectedPackName, Localize("内置"));
 		else if(SelectedEntry.m_FileCount > 0)
-			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s (%d)", Localize("Selected pack"), pSelectedPackName, SelectedEntry.m_FileCount);
+			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s (%d)", Localize("已选音频包"), pSelectedPackName, SelectedEntry.m_FileCount);
 		else
-			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s", Localize("Selected pack"), pSelectedPackName);
+			str_format(aSelectedPackSummary, sizeof(aSelectedPackSummary), "%s: %s", Localize("已选音频包"), pSelectedPackName);
 
-		const float TitleWidth = minimum(HeaderRow.w, TextRender()->TextWidth(13.0f, Localize("Audio packs"), -1, -1.0f) + 8.0f);
+		const float TitleWidth = minimum(HeaderRow.w, TextRender()->TextWidth(13.0f, Localize("音频包"), -1, -1.0f) + 8.0f);
 		CUIRect TitleRect, SummaryArea;
 		HeaderRow.VSplitLeft(TitleWidth, &TitleRect, &SummaryArea);
-		Ui()->DoLabel(&TitleRect, Localize("Audio packs"), 13.0f, TEXTALIGN_ML);
+		Ui()->DoLabel(&TitleRect, Localize("音频包"), 13.0f, TEXTALIGN_ML);
 
 		if(SummaryArea.w > 24.0f)
 		{
@@ -2947,7 +2947,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 		const int OldSelectedPack = SelectedPack;
 		s_AudioPackListBox.DoStart(22.0f, gs_vAudioPacks.size(), 1, 4, SelectedPack, &ListRow, false);
 
-		const float BuiltInBadgeW = minimum(72.0f, maximum(38.0f, TextRender()->TextWidth(10.0f, Localize("Built-in"), -1, -1.0f) + 16.0f));
+		const float BuiltInBadgeW = minimum(72.0f, maximum(38.0f, TextRender()->TextWidth(10.0f, Localize("内置"), -1, -1.0f) + 16.0f));
 
 		for(size_t i = 0; i < gs_vAudioPacks.size(); ++i)
 		{
@@ -2959,7 +2959,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 			char aLabel[128];
 			if(str_comp(Entry.m_aName, "default") == 0)
 			{
-				str_copy(aLabel, Localize("Default"), sizeof(aLabel));
+				str_copy(aLabel, Localize("默认"), sizeof(aLabel));
 			}
 			else
 			{
@@ -2973,7 +2973,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 
 			char aBadge[32];
 			if(str_comp(Entry.m_aName, "default") == 0)
-				str_copy(aBadge, Localize("Built-in"), sizeof(aBadge));
+				str_copy(aBadge, Localize("内置"), sizeof(aBadge));
 			else
 				str_format(aBadge, sizeof(aBadge), "%d", Entry.m_FileCount);
 			BadgeRect.Draw(SelectedPack == (int)i ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 4.0f);
@@ -3003,35 +3003,35 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 	{
 		MainView.HSplitTop(5.0f, nullptr, &MainView);
 		MainView.HSplitTop(20.0f, &Button, &MainView);
-		Ui()->DoScrollbarOption(&g_Config.m_SndVolume, &g_Config.m_SndVolume, &Button, Localize("Sound volume"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
+		Ui()->DoScrollbarOption(&g_Config.m_SndVolume, &g_Config.m_SndVolume, &Button, Localize("总音量"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
 	}
 
 	// volume slider game sounds
 	{
 		MainView.HSplitTop(5.0f, nullptr, &MainView);
 		MainView.HSplitTop(20.0f, &Button, &MainView);
-		Ui()->DoScrollbarOption(&g_Config.m_SndGameVolume, &g_Config.m_SndGameVolume, &Button, Localize("Game sound volume"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
+		Ui()->DoScrollbarOption(&g_Config.m_SndGameVolume, &g_Config.m_SndGameVolume, &Button, Localize("游戏音效音量"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
 	}
 
 	// volume slider gui sounds
 	{
 		MainView.HSplitTop(5.0f, nullptr, &MainView);
 		MainView.HSplitTop(20.0f, &Button, &MainView);
-		Ui()->DoScrollbarOption(&g_Config.m_SndChatVolume, &g_Config.m_SndChatVolume, &Button, Localize("Chat sound volume"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
+		Ui()->DoScrollbarOption(&g_Config.m_SndChatVolume, &g_Config.m_SndChatVolume, &Button, Localize("聊天提示音量"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
 	}
 
 	// volume slider map sounds
 	{
 		MainView.HSplitTop(5.0f, nullptr, &MainView);
 		MainView.HSplitTop(20.0f, &Button, &MainView);
-		Ui()->DoScrollbarOption(&g_Config.m_SndMapVolume, &g_Config.m_SndMapVolume, &Button, Localize("Map sound volume"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
+		Ui()->DoScrollbarOption(&g_Config.m_SndMapVolume, &g_Config.m_SndMapVolume, &Button, Localize("地图声音音量"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
 	}
 
 	// volume slider background music
 	{
 		MainView.HSplitTop(5.0f, nullptr, &MainView);
 		MainView.HSplitTop(20.0f, &Button, &MainView);
-		Ui()->DoScrollbarOption(&g_Config.m_SndBackgroundMusicVolume, &g_Config.m_SndBackgroundMusicVolume, &Button, Localize("Background music volume"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
+		Ui()->DoScrollbarOption(&g_Config.m_SndBackgroundMusicVolume, &g_Config.m_SndBackgroundMusicVolume, &Button, Localize("背景音乐音量"), 0, 100, &CUi::ms_LogarithmicScrollbarScale, 0u, "%");
 	}
 }
 
@@ -3826,11 +3826,11 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudSpectatorCount, Localize("Show number of spectators"), &g_Config.m_ClShowhudSpectatorCount, &RightView, LineSize);
 
 		// Switch for dummy actions display
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudDummyActions, Localize("Show dummy actions"), &g_Config.m_ClShowhudDummyActions, &RightView, LineSize);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusReset, Localize("Show key stuck status"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusHammer, Localize("Show hammer status"), &g_Config.m_ClShowhudKeyStatusHammer, &RightView, LineSize);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusControl, Localize("Show dummy control status"), &g_Config.m_ClShowhudKeyStatusControl, &RightView, LineSize);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusSync, Localize("Show dummy sync status"), &g_Config.m_ClShowhudKeyStatusSync, &RightView, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudDummyActions, Localize("显示分身操作"), &g_Config.m_ClShowhudDummyActions, &RightView, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusReset, Localize("显示卡键状态"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusHammer, Localize("显示锤状态"), &g_Config.m_ClShowhudKeyStatusHammer, &RightView, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusControl, Localize("显示分身控制状态"), &g_Config.m_ClShowhudKeyStatusControl, &RightView, LineSize);
+		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudKeyStatusSync, Localize("显示分身同步状态"), &g_Config.m_ClShowhudKeyStatusSync, &RightView, LineSize);
 
 		// Player movement information display settings
 		RightView.HSplitTop(MarginSmall, nullptr, &RightView); // TClient

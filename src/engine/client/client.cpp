@@ -5030,6 +5030,53 @@ static bool SaveUnknownCommandCallback(const char *pCommand, void *pUser)
 	return true;
 }
 
+static bool EnsureConfigPathFolder(IStorage *pStorage, const char *pConfigPath)
+{
+	const char *pSlash = str_rchr(pConfigPath, '/');
+	if(pSlash == nullptr)
+		return true;
+
+	const int FolderBufferSize = static_cast<int>(pSlash - pConfigPath) + 1;
+	char aFolder[IO_MAX_PATH_LENGTH];
+	if(FolderBufferSize <= 1 || FolderBufferSize > static_cast<int>(sizeof(aFolder)))
+		return false;
+
+	str_copy(aFolder, pConfigPath, FolderBufferSize);
+	if(pStorage->FolderExists(aFolder, IStorage::TYPE_SAVE))
+		return true;
+	return pStorage->CreateFolder(aFolder, IStorage::TYPE_SAVE) || pStorage->FolderExists(aFolder, IStorage::TYPE_SAVE);
+}
+
+static void MigrateConfigFile(IStorage *pStorage, const CConfigDomain &ConfigDomain)
+{
+	if(ConfigDomain.m_aLegacyConfigPath == nullptr)
+		return;
+	if(pStorage->FileExists(ConfigDomain.m_aConfigPath, IStorage::TYPE_SAVE))
+		return;
+	if(!pStorage->FileExists(ConfigDomain.m_aLegacyConfigPath, IStorage::TYPE_SAVE))
+		return;
+	if(!EnsureConfigPathFolder(pStorage, ConfigDomain.m_aConfigPath))
+	{
+		log_error("client", "failed to create config folder for '%s'", ConfigDomain.m_aConfigPath);
+		return;
+	}
+	if(!pStorage->RenameFile(ConfigDomain.m_aLegacyConfigPath, ConfigDomain.m_aConfigPath, IStorage::TYPE_SAVE))
+	{
+		log_error("client", "failed to migrate config from '%s' to '%s'", ConfigDomain.m_aLegacyConfigPath, ConfigDomain.m_aConfigPath);
+	}
+}
+
+static const char *GetConfigLoadPath(IStorage *pStorage, const CConfigDomain &ConfigDomain)
+{
+	if(ConfigDomain.m_aConfigPath == nullptr)
+		return nullptr;
+	if(pStorage->FileExists(ConfigDomain.m_aConfigPath, IStorage::TYPE_ALL))
+		return ConfigDomain.m_aConfigPath;
+	if(ConfigDomain.m_aLegacyConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aLegacyConfigPath, IStorage::TYPE_ALL))
+		return ConfigDomain.m_aLegacyConfigPath;
+	return nullptr;
+}
+
 /*
 	Server Time
 	Client Mirror Time
@@ -5330,8 +5377,10 @@ int main(int argc, const char **argv)
 	pConsole->SetUnknownCommandCallback(SaveUnknownCommandCallback, pClient);
 	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
 	{
-		const char *pConfigPath = s_aConfigDomains[ConfigDomain].m_aConfigPath;
-		if(!pStorage->FileExists(pConfigPath, IStorage::TYPE_ALL))
+		MigrateConfigFile(pStorage, s_aConfigDomains[ConfigDomain]);
+
+		const char *pConfigPath = GetConfigLoadPath(pStorage, s_aConfigDomains[ConfigDomain]);
+		if(pConfigPath == nullptr)
 		{
 			continue;
 		}

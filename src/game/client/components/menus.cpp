@@ -548,7 +548,7 @@ void CMenus::UpdateSettingsTabLabels()
 	m_apSettingsTabs[SETTINGS_APPEARANCE] = Localize("Appearance");
 	m_apSettingsTabs[SETTINGS_CONTROLS] = Localize("Controls");
 	m_apSettingsTabs[SETTINGS_GRAPHICS] = Localize("Graphics");
-	m_apSettingsTabs[SETTINGS_SOUND] = Localize("Sound");
+	m_apSettingsTabs[SETTINGS_SOUND] = Localize("声音");
 	m_apSettingsTabs[SETTINGS_DDNET] = Localize("DDNet");
 	m_apSettingsTabs[SETTINGS_ASSETS] = Localize("Assets");
 	m_apSettingsTabs[SETTINGS_TCLIENT] = Localize("TClient");
