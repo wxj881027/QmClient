@@ -1,4 +1,4 @@
-# Q1menG 客户端
+# QmClient Qm客户端
 
 <p align="center">
    <img src="data\qmclient\gui_logo.png" alt="Q1menG 客户端标志" style="width:60%; max-width:760px;" />
