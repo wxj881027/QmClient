@@ -187,10 +187,10 @@ TEST(TranslateIntegration, ConfigVariablesIntegration)
 	// 测试配置变量的默认值和类型
 
 	// Provider 默认应该是 0 (ZhipuAI)
-	EXPECT_EQ(g_Config.m_QmTranslateLlmProvider, 0);
+	EXPECT_EQ(CConfig::ms_QmTranslateLlmProvider, 0);
 
 	// 并发默认值应该是 1（表示使用智能默认）
-	EXPECT_EQ(g_Config.m_QmTranslateLlmConcurrency, 1);
+	EXPECT_EQ(CConfig::ms_QmTranslateLlmConcurrency, 1);
 
 	// 测试配置变量可读写
 	g_Config.m_QmTranslateLlmConcurrency = 5;
