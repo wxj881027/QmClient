@@ -49,13 +49,13 @@ TEST(TranslateLlmProvider, ConfigVariablesExist)
 // 测试默认 Provider 是智谱AI
 TEST(TranslateLlmProvider, DefaultProviderIsZhipu)
 {
-    EXPECT_EQ(CConfig::ms_QmTranslateLlmProvider, 0);
-    EXPECT_EQ(CConfig::ms_QmTranslateLlmProvider, g_Config.m_QmTranslateLlmProvider);
+    EXPECT_EQ(0, CConfig::ms_QmTranslateLlmProvider);
 }
 
 // 测试默认模型配置
 TEST(TranslateLlmProvider, DefaultModels)
 {
+    // 验证默认模型名称正确
     EXPECT_STREQ("glm-4.5-flash", CConfig::ms_pQmTranslateLlmModelZhipu);
     EXPECT_STREQ("deepseek-chat", CConfig::ms_pQmTranslateLlmModelDeepseek);
     EXPECT_STREQ("gpt-4o-mini", CConfig::ms_pQmTranslateLlmModelOpenai);

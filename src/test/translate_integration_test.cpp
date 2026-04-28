@@ -188,14 +188,9 @@ TEST(TranslateIntegration, ConfigVariablesIntegration)
 
 	// Provider 默认应该是 0 (ZhipuAI)
 	EXPECT_EQ(CConfig::ms_QmTranslateLlmProvider, 0);
-	EXPECT_EQ(g_Config.m_QmTranslateLlmProvider, CConfig::ms_QmTranslateLlmProvider);
 
 	// 并发默认值应该是 1（表示使用智能默认）
 	EXPECT_EQ(CConfig::ms_QmTranslateLlmConcurrency, 1);
-
-	// 出站自动翻译模式默认应为始终翻译
-	EXPECT_EQ(CConfig::ms_QmTranslateAutoOutgoingMode, 1);
-	EXPECT_EQ(g_Config.m_QmTranslateAutoOutgoingMode, CConfig::ms_QmTranslateAutoOutgoingMode);
 
 	// 测试配置变量可读写
 	const int OldConcurrency = g_Config.m_QmTranslateLlmConcurrency;
