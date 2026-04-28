@@ -97,8 +97,9 @@ TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesPreferCategoryAssetTh
 	const auto aCandidates = BuildNamedSingleFileAssetCandidates("gui_cursor", "legacy");
 
 	EXPECT_EQ(aCandidates[0], "assets/gui_cursor/legacy.png");
-	EXPECT_EQ(aCandidates[1], "gui_cursor.png");
-	EXPECT_TRUE(aCandidates[2].empty());
+	EXPECT_EQ(aCandidates[1], "assets/gui_cursor/legacy/gui_cursor.png");
+	EXPECT_EQ(aCandidates[2], "gui_cursor.png");
+	EXPECT_TRUE(aCandidates[3].empty());
 }
 
 TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesUseBuiltinNamesForDefault)
