@@ -5,6 +5,7 @@
 
 #include <algorithm>
 
+#include <base/lock.h>
 #include <base/perf_timer.h>
 #include <base/system.h>
 
@@ -26,7 +27,6 @@
 #include <game/mapitems.h>
 
 #include <chrono>
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -74,15 +74,15 @@ public:
 private:
 	std::vector<uint8_t> m_vFileData;
 	std::string m_Name;
-	mutable std::mutex m_Mutex;
+	mutable CLock m_Lock;
 	SResult m_Result;
 	mutable bool m_Completed = false;
 
-	void Run() override
+	void Run() override REQUIRES(!m_Lock)
 	{
 		if(m_vFileData.empty())
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_Completed = true;
 			return;
 		}
@@ -117,7 +117,7 @@ private:
 		}
 
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_Result.m_Image = std::move(Image);
 			m_Result.m_Success = Success;
 			m_Completed = true;
@@ -134,15 +134,15 @@ public:
 	{
 	}
 
-	bool IsCompleted() const
+	bool IsCompleted() const REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		return m_Completed;
 	}
 
-	SResult GetResult()
+	SResult GetResult() REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;
@@ -168,7 +168,7 @@ private:
 	int m_StorageType; // 存储类型
 	int m_MaxTextureSize;
 	std::string m_Name;
-	mutable std::mutex m_Mutex;
+	mutable CLock m_Lock;
 	SResult m_Result;
 	mutable bool m_Completed = false;
 
@@ -196,7 +196,7 @@ private:
 		return Read == (size_t)Size;
 	}
 
-	void Run() override
+	void Run() override REQUIRES(!m_Lock)
 	{
 		// 1. 尝试按优先级读取文件
 		std::vector<uint8_t> vFileData;
@@ -208,7 +208,7 @@ private:
 
 		if(vFileData.empty())
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_Completed = true;
 			return;
 		}
@@ -259,7 +259,7 @@ private:
 		}
 
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_Result.m_Image = std::move(Image);
 			m_Result.m_Success = Success;
 			m_Result.m_Resized = Resized;
@@ -279,15 +279,15 @@ public:
 	{
 	}
 
-	bool IsCompleted() const
+	bool IsCompleted() const REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		return m_Completed;
 	}
 
-	SResult GetResult()
+	SResult GetResult() REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;
@@ -365,7 +365,7 @@ public:
 private:
 	EAssetType m_Type;
 	IStorage *m_pStorage;
-	mutable std::mutex m_Mutex;
+	mutable CLock m_Lock;
 	std::vector<SAssetEntry> m_vEntries;
 	mutable bool m_Completed = false;
 
@@ -476,7 +476,7 @@ private:
 		return 0;
 	}
 
-	void Run() override
+	void Run() override REQUIRES(!m_Lock)
 	{
 		std::vector<SAssetEntry> vEntries;
 		SScanContext ScanContext{m_pStorage, &vEntries, EAssetResourceKind::DIRECTORY, true, EEntityBgHierarchyEntrySource::LOCAL};
@@ -577,7 +577,7 @@ private:
 			});
 
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_vEntries = std::move(vEntries);
 			m_Completed = true;
 		}
@@ -590,15 +590,15 @@ public:
 	{
 	}
 
-	bool IsCompleted() const
+	bool IsCompleted() const REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		return m_Completed;
 	}
 
-	std::vector<SAssetEntry> GetEntries()
+	std::vector<SAssetEntry> GetEntries() REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		return m_vEntries;
 	}
 
@@ -1429,6 +1429,34 @@ std::string BuildSafeFilename(const char *pName, const char *pFallbackName, cons
 	return aFilename;
 }
 
+std::string UniqueWorkshopAssetBaseName(const SAssetResourceCategory &Category, std::string_view PreferredBaseName, const char *pAssetId, const std::unordered_set<std::string> &vUsedLocalNames)
+{
+	std::string BaseName(PreferredBaseName);
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
+		return BaseName;
+
+	const bool ReservedName = IsReservedNamedSingleFileAssetName(Category, BaseName);
+	const bool DuplicateName = vUsedLocalNames.find(BaseName) != vUsedLocalNames.end();
+	if(!ReservedName && !DuplicateName)
+		return BaseName;
+
+	char aSafeId[80];
+	str_copy(aSafeId, pAssetId != nullptr && pAssetId[0] != '\0' ? pAssetId : "workshop", sizeof(aSafeId));
+	SanitizeFilenameInPlace(aSafeId);
+	if(aSafeId[0] == '\0')
+		str_copy(aSafeId, "workshop", sizeof(aSafeId));
+
+	std::string Candidate = BaseName + "_" + aSafeId;
+	int Suffix = 2;
+	while(IsReservedNamedSingleFileAssetName(Category, Candidate) || vUsedLocalNames.find(Candidate) != vUsedLocalNames.end())
+	{
+		Candidate = BaseName + "_" + aSafeId + "_" + std::to_string(Suffix);
+		++Suffix;
+	}
+
+	return Candidate;
+}
+
 template<typename TName>
 void EnsureDefaultAssetVisible(const SAssetResourceCategory &Category, std::vector<TName> &vAssetList)
 {
@@ -1479,33 +1507,6 @@ int CollectNamedSingleFileAssetNamesCallback(const char *pName, int IsDir, int D
 	return 0;
 }
 
-bool TryReadSmallTextFile(IStorage *pStorage, const char *pPath, std::string &OutText)
-{
-	OutText.clear();
-
-	IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-
-	const long FileSize = io_length(File);
-	if(FileSize <= 0 || FileSize > 255)
-	{
-		io_close(File);
-		return false;
-	}
-
-	std::vector<char> vBuffer(FileSize + 1, '\0');
-	const size_t ReadSize = io_read(File, vBuffer.data(), FileSize);
-	io_close(File);
-	if(ReadSize != (size_t)FileSize)
-		return false;
-
-	OutText.assign(vBuffer.data(), FileSize);
-	while(!OutText.empty() && (OutText.back() == '\r' || OutText.back() == '\n' || OutText.back() == '\0'))
-		OutText.pop_back();
-	return !OutText.empty();
-}
-
 bool WriteSmallTextFile(IStorage *pStorage, const char *pPath, std::string_view Text)
 {
 	IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
@@ -1541,6 +1542,77 @@ void CollectNamedSingleFileAssetNames(IStorage *pStorage, const SAssetResourceCa
 	SNamedSingleFileNameScanUser ScanUser{&vAssetNames};
 	pStorage->ListDirectory(IStorage::TYPE_ALL, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
 	::EnsureDefaultAssetVisible(vAssetNames);
+}
+
+std::string NextReservedNamedSingleFileMigrationName(const SAssetResourceCategory &Category, std::string_view OldName, const std::vector<std::string> &vExistingNames)
+{
+	const auto NameExists = [&Category, &vExistingNames](std::string_view Candidate) {
+		if(IsReservedNamedSingleFileAssetName(Category, Candidate))
+			return true;
+		return std::find(vExistingNames.begin(), vExistingNames.end(), Candidate) != vExistingNames.end();
+	};
+
+	std::string Candidate = std::string(OldName) + "_local";
+	if(!NameExists(Candidate))
+		return Candidate;
+
+	for(int Suffix = 2;; ++Suffix)
+	{
+		Candidate = std::string(OldName) + "_local_" + std::to_string(Suffix);
+		if(!NameExists(Candidate))
+			return Candidate;
+	}
+}
+
+void UpdateNamedSingleFileConfigSelectionAfterMigration(const SAssetResourceCategory &Category, const char *pOldName, const char *pNewName)
+{
+	if(str_comp(Category.m_pId, "gui_cursor") == 0)
+	{
+		if(str_comp(g_Config.m_ClAssetGuiCursor, pOldName) == 0)
+			str_copy(g_Config.m_ClAssetGuiCursor, pNewName, sizeof(g_Config.m_ClAssetGuiCursor));
+	}
+	else if(str_comp(Category.m_pId, "arrow") == 0)
+	{
+		if(str_comp(g_Config.m_ClAssetArrow, pOldName) == 0)
+			str_copy(g_Config.m_ClAssetArrow, pNewName, sizeof(g_Config.m_ClAssetArrow));
+	}
+	else if(str_comp(Category.m_pId, "strong_weak") == 0)
+	{
+		if(str_comp(g_Config.m_ClAssetStrongWeak, pOldName) == 0)
+			str_copy(g_Config.m_ClAssetStrongWeak, pNewName, sizeof(g_Config.m_ClAssetStrongWeak));
+	}
+}
+
+void MigrateReservedNamedSingleFileAssets(IStorage *pStorage, const SAssetResourceCategory &Category)
+{
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
+		return;
+
+	std::vector<std::string> vExistingNames;
+	CollectNamedSingleFileAssetNames(pStorage, Category, vExistingNames);
+
+	std::vector<std::string> vSaveNames;
+	SNamedSingleFileNameScanUser ScanUser{&vSaveNames};
+	pStorage->ListDirectory(IStorage::TYPE_SAVE, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
+
+	for(const std::string &Name : vSaveNames)
+	{
+		if(IsProtectedDefaultAsset(Name) || !IsReservedNamedSingleFileAssetName(Category, Name))
+			continue;
+
+		const std::string NewName = NextReservedNamedSingleFileMigrationName(Category, Name, vExistingNames);
+		char aOldPath[IO_MAX_PATH_LENGTH];
+		char aNewPath[IO_MAX_PATH_LENGTH];
+		str_format(aOldPath, sizeof(aOldPath), "%s/%s.png", Category.m_pInstallFolder, Name.c_str());
+		str_format(aNewPath, sizeof(aNewPath), "%s/%s.png", Category.m_pInstallFolder, NewName.c_str());
+		if(pStorage->FileExists(aOldPath, IStorage::TYPE_SAVE) &&
+			!pStorage->FileExists(aNewPath, IStorage::TYPE_SAVE) &&
+			pStorage->RenameFile(aOldPath, aNewPath, IStorage::TYPE_SAVE))
+		{
+			vExistingNames.emplace_back(NewName);
+			UpdateNamedSingleFileConfigSelectionAfterMigration(Category, Name.c_str(), NewName.c_str());
+		}
+	}
 }
 
 void TryImportLegacySingleFileAsset(IStorage *pStorage, const SAssetResourceCategory &Category)
@@ -1682,6 +1754,7 @@ bool WorkshopCategoryMatches(const char *pCategoryValue, const SAssetResourceCat
 bool ParseWorkshopAssets(const json_value *pRoot, const SAssetResourceCategory &Category, std::vector<SWorkshopHudAsset> &vOut, char *pErr, int ErrSize)
 {
 	vOut.clear();
+	std::unordered_set<std::string> vUsedLocalNames;
 	if(!pRoot || pRoot->type != json_object)
 	{
 		str_copy(pErr, "Invalid workshop response", ErrSize);
@@ -1750,13 +1823,17 @@ bool ParseWorkshopAssets(const json_value *pRoot, const SAssetResourceCategory &
 		char aExt[16];
 		GuessUrlExtension(Asset.m_ImageUrl.c_str(), aExt, sizeof(aExt));
 
-		const std::string SafeInstallName = BuildSafeFilename(Asset.m_Name.c_str(), Asset.m_Id.c_str(), aExt);
+		std::string SafeInstallName = BuildSafeFilename(Asset.m_Name.c_str(), Asset.m_Id.c_str(), aExt);
 		const size_t DotPos = SafeInstallName.find_last_of('.');
-		const std::string LocalBaseName = DotPos == std::string::npos ? SafeInstallName : SafeInstallName.substr(0, DotPos);
+		const std::string PreferredLocalBaseName = DotPos == std::string::npos ? SafeInstallName : SafeInstallName.substr(0, DotPos);
+		const std::string LocalBaseName = UniqueWorkshopAssetBaseName(Category, PreferredLocalBaseName, Asset.m_Id.c_str(), vUsedLocalNames);
+		if(LocalBaseName != PreferredLocalBaseName)
+			SafeInstallName = LocalBaseName + "." + aExt;
 		if(str_comp(Category.m_pId, "entity_bg") == 0)
 			Asset.m_LocalName = "entity_bg/" + LocalBaseName;
 		else
 			Asset.m_LocalName = LocalBaseName;
+		vUsedLocalNames.insert(Asset.m_LocalName);
 		char aInstallPath[IO_MAX_PATH_LENGTH];
 		str_format(aInstallPath, sizeof(aInstallPath), "%s/%s", Category.m_pInstallFolder, SafeInstallName.c_str());
 		Asset.m_InstallPath = aInstallPath;
@@ -2398,8 +2475,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			if(Category.m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE)
 			{
 				TryImportLegacySingleFileAsset(Storage(), Category);
+				MigrateReservedNamedSingleFileAssets(Storage(), Category);
 			}
 		}
+
+		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
+		GameClient()->ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
 
 		const SAssetResourceCategory *pCurrentCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 		switch(s_CurCustomTab)
@@ -2858,8 +2940,6 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	constexpr int MaxPreviewDecodeFinalizesPerFrame = 2;
 	constexpr double MaxPreviewDecodeFinalizeMsPerFrame = 95.0;
 	constexpr int PreviewPrefetchRows = 2;
-	constexpr int MaxGpuUploadsPerFrame = 30;
-	int GpuUploadsThisFrame = 0;
 	int UploadedPreviewsThisFrame = 0;
 	int ResizedPreviewsThisFrame = 0;
 	int PreviewDecodeStartsThisFrame = 0;
@@ -3285,7 +3365,6 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			pItem->m_PreviewBytes = 0;
 			pItem->m_PreviewState = pItem->m_RenderTexture.IsValid() ? SCustomItem::PREVIEW_STATE_LOADED : SCustomItem::PREVIEW_STATE_FAILED;
 			UploadedBytesThisFrame += ItemBytes;
-			++GpuUploadsThisFrame;
 			++UploadedPreviewsThisFrame;
 			if(pItem->m_PreviewResized)
 				++ResizedPreviewsThisFrame;
@@ -3844,7 +3923,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		
 		constexpr int MaxWorkshopThumbDecodeFinalizesPerFrame = 1;
 		constexpr int MaxWorkshopThumbUploadsPerFrame = 1;
-		int GpuUploadsThisFrame = 0;
+		int WorkshopGpuUploadsThisFrame = 0;
 		int WorkshopThumbFinalizesThisFrame = 0;
 		int DeferredWorkshopThumbs = 0;
 		size_t WorkshopThumbUploadedBytesThisFrame = 0;
@@ -3916,7 +3995,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				}
 			}
 		}
-		while(!WorkshopState.m_vReadyThumbQueue.empty() && GpuUploadsThisFrame < MaxWorkshopThumbUploadsPerFrame)
+		while(!WorkshopState.m_vReadyThumbQueue.empty() && WorkshopGpuUploadsThisFrame < MaxWorkshopThumbUploadsPerFrame)
 		{
 			const std::string ReadyAssetId = WorkshopState.m_vReadyThumbQueue.front();
 			WorkshopState.m_vReadyThumbQueue.pop_front();
@@ -3937,10 +4016,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			const size_t AssetBytes = pAsset->m_ThumbBytes;
 			pAsset->m_ThumbTexture = Graphics()->LoadTextureRawMove(pAsset->m_ThumbImage, 0, pAsset->m_Name.c_str());
 			WorkshopThumbUploadedBytesThisFrame += AssetBytes;
-			++GpuUploadsThisFrame;
+			++WorkshopGpuUploadsThisFrame;
 			char aExtra[192];
 			str_format(aExtra, sizeof(aExtra), "tab=%d asset=%s uploads_this_frame=%d bytes=%u bytes_used=%u queue_remaining=%d resized=%d",
-				s_CurCustomTab, pAsset->m_Name.c_str(), GpuUploadsThisFrame, (unsigned)AssetBytes,
+				s_CurCustomTab, pAsset->m_Name.c_str(), WorkshopGpuUploadsThisFrame, (unsigned)AssetBytes,
 				(unsigned)WorkshopThumbUploadedBytesThisFrame, (int)WorkshopState.m_vReadyThumbQueue.size(), pAsset->m_ThumbResized ? 1 : 0);
 			LogAssetsPerfStage("assets_workshop_thumb_upload_batch", UploadBatchTimer.ElapsedMs(), false, aExtra);
 			ResetWorkshopThumbReadyState(*pAsset);
@@ -3953,7 +4032,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			char aDeferredExtra[128];
 			str_format(aDeferredExtra, sizeof(aDeferredExtra), "tab=%d deferred=%d uploads=%d ready_queue=%d",
-				s_CurCustomTab, DeferredWorkshopThumbs, GpuUploadsThisFrame, (int)WorkshopState.m_vReadyThumbQueue.size());
+				s_CurCustomTab, DeferredWorkshopThumbs, WorkshopGpuUploadsThisFrame, (int)WorkshopState.m_vReadyThumbQueue.size());
 			LogAssetsPerfStage("assets_workshop_thumb_decode_deferred", 0.0, true, aDeferredExtra);
 		}
 		if(RefreshLocalList)

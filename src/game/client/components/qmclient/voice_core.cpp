@@ -188,7 +188,7 @@ static uint32_t VoiceTokenGroup(uint32_t TokenHash)
 	return TokenHash & VOICE_GROUP_MASK;
 }
 
-static uint32_t VoiceTokenMode(uint32_t TokenHash)
+[[maybe_unused]] static uint32_t VoiceTokenMode(uint32_t TokenHash)
 {
 	return (TokenHash >> VOICE_MODE_SHIFT) & VOICE_MODE_MASK;
 }
@@ -198,7 +198,7 @@ static bool VoiceShouldHear(uint32_t SenderGroup, uint32_t ReceiverGroup)
 	return SenderGroup == ReceiverGroup;
 }
 
-static void WriteU16(uint8_t *pBuf, uint16_t Value)
+[[maybe_unused]] static void WriteU16(uint8_t *pBuf, uint16_t Value)
 {
 	pBuf[0] = Value & 0xff;
 	pBuf[1] = (Value >> 8) & 0xff;
@@ -212,7 +212,7 @@ static void WriteU32(uint8_t *pBuf, uint32_t Value)
 	pBuf[3] = (Value >> 24) & 0xff;
 }
 
-static void WriteFloat(uint8_t *pBuf, float Value)
+[[maybe_unused]] static void WriteFloat(uint8_t *pBuf, float Value)
 {
 	static_assert(sizeof(float) == 4, "float must be 4 bytes");
 	uint32_t Bits = 0;
@@ -220,7 +220,7 @@ static void WriteFloat(uint8_t *pBuf, float Value)
 	WriteU32(pBuf, Bits);
 }
 
-static uint16_t ReadU16(const uint8_t *pBuf)
+[[maybe_unused]] static uint16_t ReadU16(const uint8_t *pBuf)
 {
 	return (uint16_t)pBuf[0] | ((uint16_t)pBuf[1] << 8);
 }
@@ -230,7 +230,7 @@ static uint32_t ReadU32(const uint8_t *pBuf)
 	return (uint32_t)pBuf[0] | ((uint32_t)pBuf[1] << 8) | ((uint32_t)pBuf[2] << 16) | ((uint32_t)pBuf[3] << 24);
 }
 
-static float ReadFloat(const uint8_t *pBuf)
+[[maybe_unused]] static float ReadFloat(const uint8_t *pBuf)
 {
 	uint32_t Bits = ReadU32(pBuf);
 	float Value = 0.0f;
@@ -238,7 +238,7 @@ static float ReadFloat(const uint8_t *pBuf)
 	return Value;
 }
 
-static float SanitizeFloat(float Value)
+[[maybe_unused]] static float SanitizeFloat(float Value)
 {
 	if(!std::isfinite(Value))
 		return 0.0f;
@@ -249,7 +249,7 @@ static float SanitizeFloat(float Value)
 	return Value;
 }
 
-static float VoiceFramePeak(const int16_t *pSamples, int Count)
+[[maybe_unused]] static float VoiceFramePeak(const int16_t *pSamples, int Count)
 {
 	int Peak = 0;
 	for(int i = 0; i < Count; i++)
@@ -262,7 +262,7 @@ static float VoiceFramePeak(const int16_t *pSamples, int Count)
 	return Peak / 32768.0f;
 }
 
-static void ApplyMicGain(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count)
+[[maybe_unused]] static void ApplyMicGain(const SRClientVoiceConfigSnapshot &Config, int16_t *pSamples, int Count)
 {
 	const float Gain = std::clamp(Config.m_QmVoiceMicVolume / 100.0f, 0.0f, 3.0f);
 	if(Gain == 1.0f)
@@ -1087,7 +1087,7 @@ void CRClientVoice::ListDevices()
 	}
 }
 
-void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const
+void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const NO_THREAD_SAFETY_ANALYSIS
 {
 	std::array<std::array<char, MAX_NAME_LENGTH>, MAX_CLIENTS> aaClientNames{};
 	std::array<int, 2> aLocalClientIds{};
@@ -1095,7 +1095,7 @@ void CRClientVoice::ExportOverlayState(CVoiceOverlayState &Overlay) const
 	int PreferredLocalId = -1;
 	bool Online = false;
 	{
-		std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
+		const CLockScope Guard(m_SnapshotMutex);
 		Online = m_OnlineSnap;
 		if(!Online)
 			return;
@@ -1245,12 +1245,12 @@ void CRClientVoice::Shutdown()
 	m_LastClientSnapshotUpdate = 0;
 }
 
-void CRClientVoice::UpdateServerAddrConfig()
+void CRClientVoice::UpdateServerAddrConfig() NO_THREAD_SAFETY_ANALYSIS
 {
 	const char *pVoiceServer = GetEffectiveQmVoiceServer();
 	bool AddrChanged = false;
 	{
-		std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
+		const CLockScope Guard(m_ServerAddrMutex);
 		AddrChanged = str_comp(m_aServerAddrStr, pVoiceServer) != 0;
 		if(AddrChanged)
 			str_copy(m_aServerAddrStr, pVoiceServer, sizeof(m_aServerAddrStr));
@@ -1264,7 +1264,7 @@ void CRClientVoice::UpdateServerAddrConfig()
 	m_ServerAddrResolveRequested.store(true);
 }
 
-void CRClientVoice::ResolveServerAddr()
+void CRClientVoice::ResolveServerAddr() NO_THREAD_SAFETY_ANALYSIS
 {
 	const int64_t Now = time_get();
 	const bool ShouldRetry = !m_ServerAddrValid.load() && (m_LastServerResolveAttempt == 0 || Now - m_LastServerResolveAttempt > time_freq() * 5);
@@ -1273,7 +1273,7 @@ void CRClientVoice::ResolveServerAddr()
 
 	char aServerAddrStr[sizeof(m_aServerAddrStr)];
 	{
-		std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
+		const CLockScope Guard(m_ServerAddrMutex);
 		str_copy(aServerAddrStr, m_aServerAddrStr, sizeof(aServerAddrStr));
 	}
 
@@ -1290,7 +1290,7 @@ void CRClientVoice::ResolveServerAddr()
 	if(net_addr_from_str(&NewAddr, aServerAddrStr) == 0)
 	{
 		{
-			std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
+			const CLockScope Guard(m_ServerAddrMutex);
 			m_ServerAddr = NewAddr;
 		}
 		m_ServerAddrValid.store(true);
@@ -1312,7 +1312,7 @@ void CRClientVoice::ResolveServerAddr()
 	{
 		NewAddr.port = Port;
 		{
-			std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
+			const CLockScope Guard(m_ServerAddrMutex);
 			m_ServerAddr = NewAddr;
 		}
 		m_ServerAddrValid.store(true);
@@ -1340,12 +1340,12 @@ bool CRClientVoice::UpdateContext()
 	return NewHash != Old;
 }
 
-void CRClientVoice::UpdateClientSnapshot(bool Force)
+void CRClientVoice::UpdateClientSnapshot(bool Force) NO_THREAD_SAFETY_ANALYSIS
 {
 	const bool Online = m_pClient && m_pGameClient && m_pClient->State() == IClient::STATE_ONLINE;
 	if(!Online)
 	{
-		std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
+		const CLockScope Guard(m_SnapshotMutex);
 		if(!m_OnlineSnap && m_LocalClientIdSnap == -1 && !m_SpecActiveSnap)
 			return;
 
@@ -1364,7 +1364,7 @@ void CRClientVoice::UpdateClientSnapshot(bool Force)
 		return;
 
 	m_LastClientSnapshotUpdate = Now;
-	std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
+	const CLockScope Guard(m_SnapshotMutex);
 	m_OnlineSnap = true;
 	m_LocalClientIdSnap = m_pGameClient->m_Snap.m_LocalClientId;
 	m_aLocalClientIdsSnap.fill(-1);
@@ -1393,7 +1393,7 @@ void CRClientVoice::UpdateClientSnapshot(bool Force)
 	}
 }
 
-void CRClientVoice::ProcessCapture()
+void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 {
 	if(!m_CaptureDevice)
 		return;
@@ -1428,7 +1428,7 @@ void CRClientVoice::ProcessCapture()
 	vec2 LocalPos = vec2(0.0f, 0.0f);
 	bool Online = false;
 	{
-		std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
+		const CLockScope Guard(m_SnapshotMutex);
 		Online = m_OnlineSnap;
 		LocalClientId = m_LocalClientIdSnap;
 		aLocalClientIds = m_aLocalClientIdsSnap;
@@ -1492,7 +1492,7 @@ void CRClientVoice::ProcessCapture()
 	{
 		NETADDR ServerAddrLocal = NETADDR_ZEROED;
 		{
-			std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
+			const CLockScope Guard(m_ServerAddrMutex);
 			ServerAddrLocal = m_ServerAddr;
 		}
 		uint8_t aPacket[VOICE_MAX_PACKET];
@@ -1679,7 +1679,7 @@ void CRClientVoice::ProcessCapture()
 
 		NETADDR ServerAddrLocal = NETADDR_ZEROED;
 		{
-			std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
+			const CLockScope Guard(m_ServerAddrMutex);
 			ServerAddrLocal = m_ServerAddr;
 		}
 		net_udp_send(m_Socket, &ServerAddrLocal, aPacket, (int)Offset);
@@ -1707,7 +1707,7 @@ void CRClientVoice::ProcessCapture()
 	}
 }
 
-void CRClientVoice::ProcessIncoming()
+void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 {
 	if(!m_OutputDevice || !m_Socket)
 		return;
@@ -1730,7 +1730,7 @@ void CRClientVoice::ProcessIncoming()
 
 		NETADDR ServerAddrLocal = NETADDR_ZEROED;
 		{
-			std::lock_guard<std::mutex> Guard(m_ServerAddrMutex);
+			const CLockScope Guard(m_ServerAddrMutex);
 			ServerAddrLocal = m_ServerAddr;
 		}
 		if(net_addr_comp(&Addr, &ServerAddrLocal) != 0)
@@ -1809,7 +1809,7 @@ void CRClientVoice::ProcessIncoming()
 		bool SenderActive = false;
 		bool SenderSpec = false;
 		{
-			std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
+			const CLockScope Guard(m_SnapshotMutex);
 			if(!m_OnlineSnap)
 				continue;
 			LocalId = m_LocalClientIdSnap;
@@ -1973,7 +1973,7 @@ void CRClientVoice::ProcessIncoming()
 	}
 }
 
-void CRClientVoice::UpdateConfigSnapshot(bool Force)
+void CRClientVoice::UpdateConfigSnapshot(bool Force) NO_THREAD_SAFETY_ANALYSIS
 {
 	const int64_t Now = time_get();
 	const int64_t RefreshInterval = (int64_t)time_freq() * VOICE_CONFIG_SNAPSHOT_INTERVAL_MS / 1000;
@@ -1981,7 +1981,7 @@ void CRClientVoice::UpdateConfigSnapshot(bool Force)
 		return;
 
 	m_LastConfigSnapshotUpdate = Now;
-	std::lock_guard<std::mutex> Guard(m_ConfigMutex);
+	const CLockScope Guard(m_ConfigMutex);
 	m_ConfigSnapshot.m_QmVoiceFilterEnable = g_Config.m_QmVoiceFilterEnable;
 	m_ConfigSnapshot.m_QmVoiceProtocolVersion = g_Config.m_QmVoiceProtocolVersion;
 	m_ConfigSnapshot.m_QmVoiceNoiseSuppressEnable = g_Config.m_QmVoiceNoiseSuppressEnable;
@@ -2022,9 +2022,9 @@ void CRClientVoice::UpdateConfigSnapshot(bool Force)
 	str_copy(m_ConfigSnapshot.m_aQmVoiceNameVolumes, g_Config.m_QmVoiceNameVolumes, sizeof(m_ConfigSnapshot.m_aQmVoiceNameVolumes));
 }
 
-void CRClientVoice::GetConfigSnapshot(SRClientVoiceConfigSnapshot &Out) const
+void CRClientVoice::GetConfigSnapshot(SRClientVoiceConfigSnapshot &Out) const NO_THREAD_SAFETY_ANALYSIS
 {
-	std::lock_guard<std::mutex> Guard(m_ConfigMutex);
+	const CLockScope Guard(m_ConfigMutex);
 	Out = m_ConfigSnapshot;
 }
 
@@ -2391,7 +2391,7 @@ void CRClientVoice::OnRender()
 	StartWorker();
 }
 
-void CRClientVoice::RenderSpeakerOverlay()
+void CRClientVoice::RenderSpeakerOverlay() NO_THREAD_SAFETY_ANALYSIS
 {
 	if(!m_pGameClient || !m_pGraphics || !g_Config.m_QmVoiceEnable)
 		return;
@@ -2419,7 +2419,7 @@ void CRClientVoice::RenderSpeakerOverlay()
 	int PreferredLocalId = -1;
 	bool Online = false;
 	{
-		std::lock_guard<std::mutex> Guard(m_SnapshotMutex);
+		const CLockScope Guard(m_SnapshotMutex);
 		Online = m_OnlineSnap;
 		if(!Online)
 			return;

@@ -33,7 +33,6 @@ namespace
 constexpr float FontSize = 14.0f;
 constexpr float EditBoxFontSize = 12.0f;
 constexpr float LineSize = 20.0f;
-constexpr float HeadlineFontSize = 20.0f;
 constexpr float MarginSmall = 5.0f;
 constexpr float MarginExtraSmall = 2.5f;
 constexpr float TargetSlotClickDragDistance = 6.0f;
@@ -1629,7 +1628,7 @@ void CMenus::AssetsEditorApplyDrop(int TargetSlotIndex, const char *pDonorName, 
 		return;
 	}
 
-	auto AssignSlot = [this, pDonorName, &SourceSlot](SAssetsEditorPartSlot &Slot) {
+	auto AssignSlot = [pDonorName, &SourceSlot](SAssetsEditorPartSlot &Slot) {
 		str_copy(Slot.m_aSourceAsset, pDonorName);
 		Slot.m_SourceSpriteId = SourceSlot.m_SpriteId;
 		Slot.m_SrcX = SourceSlot.m_DstX;

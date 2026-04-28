@@ -1783,6 +1783,27 @@ bool CTranslate::ContainsChinese(const char *pText)
 	return false;
 }
 
+static bool ShouldAutoTranslateOutgoingInPreferredMode(const SLocalLanguageStats &Stats, const char *pTarget)
+{
+	if(!pTarget || pTarget[0] == '\0' || Stats.m_ScriptTotal <= 0)
+		return false;
+
+	const int MinChars = std::clamp(g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
+	if(IsChineseLanguage(pTarget))
+	{
+		return Stats.m_Latin >= MinChars &&
+			Stats.m_Han == 0 &&
+			Stats.m_Kana == 0 &&
+			Stats.m_Hangul == 0 &&
+			PassLocalDetectThreshold(Stats.m_Latin, Stats.m_ScriptTotal);
+	}
+
+	return Stats.m_Han >= MinChars &&
+		Stats.m_Kana == 0 &&
+		Stats.m_Hangul == 0 &&
+		PassLocalDetectThreshold(Stats.m_Han, Stats.m_ScriptTotal);
+}
+
 bool CTranslate::ShouldAutoTranslateOutgoing(const char *pText) const
 {
 	if(!g_Config.m_QmTranslateAutoOutgoing)
@@ -1798,9 +1819,9 @@ bool CTranslate::ShouldAutoTranslateOutgoing(const char *pText) const
 	if(MatchesTargetLanguageHeuristically(LocalStats, pTarget))
 		return false;
 
-	// 模式 0: 仅中文输入时触发
+	// 模式 0: 仅在常见的源语言输入时触发（中文 <-> 拉丁字母）
 	if(g_Config.m_QmTranslateAutoOutgoingMode == 0)
-		return ContainsChinese(pText);
+		return ShouldAutoTranslateOutgoingInPreferredMode(LocalStats, pTarget);
 
 	// 模式 1: 始终翻译
 	return true;

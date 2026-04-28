@@ -85,7 +85,9 @@ void CCollision::Init(class CLayers *pLayers)
 		return;
 	}
 
-	if(m_pLayers->Map()->GetDataSize(m_pLayers->GameLayer()->m_Data) < static_cast<size_t>(TileCount) * sizeof(CTile))
+	const int TileDataSize = m_pLayers->Map()->GetDataSize(m_pLayers->GameLayer()->m_Data);
+	const size_t RequiredTileDataSize = static_cast<size_t>(TileCount) * sizeof(CTile);
+	if(TileDataSize < 0 || static_cast<size_t>(TileDataSize) < RequiredTileDataSize)
 	{
 		Unload();
 		return;

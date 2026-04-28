@@ -369,7 +369,10 @@ void CUpdater::InitiateUpdate()
 	m_ServerUpdate = false;
 	m_ClientFetched = true;
 	m_ServerFetched = false;
-	m_Percent = 0;
+	{
+		CLockScope Lock(m_Lock);
+		m_Percent = 0;
+	}
 	SetCurrentState(IUpdater::DOWNLOADING);
 	FetchFile(UPDATE_CLIENT_FILE, m_aClientExecTmp);
 }

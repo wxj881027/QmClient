@@ -120,6 +120,20 @@ TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesUseBuiltinNamesForDef
 	EXPECT_TRUE(aStrongWeakCandidates[2].empty());
 }
 
+TEST(AssetsResourceRegistry, NamedSingleFileAssetReservedNamesCoverBuiltinAndDefaultAliases)
+{
+	const SAssetResourceCategory *pArrow = FindAssetResourceCategory("arrow");
+	const SAssetResourceCategory *pStrongWeak = FindAssetResourceCategory("strong_weak");
+	ASSERT_NE(pArrow, nullptr);
+	ASSERT_NE(pStrongWeak, nullptr);
+
+	EXPECT_TRUE(IsReservedNamedSingleFileAssetName(*pArrow, "default"));
+	EXPECT_TRUE(IsReservedNamedSingleFileAssetName(*pArrow, "arrow"));
+	EXPECT_TRUE(IsReservedNamedSingleFileAssetName(*pStrongWeak, "strong_weak"));
+	EXPECT_FALSE(IsReservedNamedSingleFileAssetName(*pArrow, "arrow_pack"));
+	EXPECT_FALSE(IsReservedNamedSingleFileAssetName(*pStrongWeak, "strong_weak_pack"));
+}
+
 TEST(AssetsResourceRegistry, EnsureDefaultAssetVisibleInjectsAndSortsDefaultFirst)
 {
 	std::vector<std::string> vAssetNames = {"entity_bg/demo", "entity_bg/alpha"};

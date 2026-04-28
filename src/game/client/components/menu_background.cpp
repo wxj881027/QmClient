@@ -1,6 +1,7 @@
 #include "menu_background.h"
 #include "theme_scan.h"
 
+#include <base/lock.h>
 #include <base/system.h>
 
 #include <engine/engine.h>
@@ -36,7 +37,7 @@ public:
 
 private:
 	IStorage *m_pStorage;
-	mutable std::mutex m_Mutex;
+	mutable CLock m_Lock;
 	std::vector<SThemeEntry> m_vEntries;
 	bool m_Completed = false;
 
@@ -60,7 +61,7 @@ private:
 		return 0;
 	}
 
-	void Run() override
+	void Run() override REQUIRES(!m_Lock)
 	{
 		std::vector<SThemeEntry> vEntries;
 		m_pStorage->ListDirectory(IStorage::TYPE_ALL, "themes", ScanCallback, &vEntries);
@@ -68,7 +69,7 @@ private:
 			return Left.m_Name < Right.m_Name;
 		});
 
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		m_vEntries = std::move(vEntries);
 		m_Completed = true;
 	}
@@ -79,15 +80,15 @@ public:
 	{
 	}
 
-	bool IsCompleted() const
+	bool IsCompleted() const REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		return m_Completed;
 	}
 
-	std::vector<SThemeEntry> Entries() const
+	std::vector<SThemeEntry> Entries() const REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		return m_vEntries;
 	}
 };
@@ -106,17 +107,17 @@ private:
 	IStorage *m_pStorage;
 	std::string m_ThemeName;
 	std::string m_IconPath;
-	mutable std::mutex m_Mutex;
+	mutable CLock m_Lock;
 	SResult m_Result;
 	bool m_Completed = false;
 
-	void Run() override
+	void Run() override REQUIRES(!m_Lock)
 	{
 		void *pFileData = nullptr;
 		unsigned FileSize = 0;
 		if(!m_pStorage->ReadFile(m_IconPath.c_str(), IStorage::TYPE_ALL, &pFileData, &FileSize))
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_Completed = true;
 			return;
 		}
@@ -126,7 +127,7 @@ private:
 			Image.m_Format == CImageInfo::FORMAT_RGBA;
 		free(pFileData);
 
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		if(Loaded)
 		{
 			m_Result.m_Image = std::move(Image);
@@ -150,15 +151,15 @@ public:
 		m_Result.m_Image.Free();
 	}
 
-	bool IsCompleted() const
+	bool IsCompleted() const REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		return m_Completed;
 	}
 
-	SResult TakeResult()
+	SResult TakeResult() REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;

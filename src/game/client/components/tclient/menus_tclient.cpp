@@ -69,8 +69,8 @@ typedef struct
 
 using namespace FontIcons;
 
-static float s_Time = 0.0f;
-static bool s_StartedTime = false;
+[[maybe_unused]] static float s_Time = 0.0f;
+[[maybe_unused]] static bool s_StartedTime = false;
 
 extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 extern bool g_CommandBindCacheInitialized;
@@ -88,7 +88,7 @@ double PerfDebugThresholdMs()
 	return g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
 }
 
-void LogQmPerfStage(const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)
+[[maybe_unused]] void LogQmPerfStage(const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)
 {
 	if(!PerfDebugEnabled())
 		return;
@@ -114,7 +114,7 @@ void LogTClientPerfStage(const char *pStage, double DurationMs, bool Force = fal
 		dbg_msg("perf/tclient", "stage=%s duration_ms=%.3f", pStage, DurationMs);
 }
 
-const char *QmSettingsTabName(int Tab)
+[[maybe_unused]] const char *QmSettingsTabName(int Tab)
 {
 	switch(Tab)
 	{
@@ -171,7 +171,7 @@ bool ShouldDeferTClientVisualStage(const float ScrollY, const int MinRemainingFr
 	return gs_TClientSettingsDeferredFrames >= MinRemainingFrames && absolute(ScrollY) <= 1.0f;
 }
 
-bool ShouldDeferTClientTabContent(const int Tab)
+[[maybe_unused]] bool ShouldDeferTClientTabContent(const int Tab)
 {
 	return gs_TClientDeferredTab == Tab && gs_TClientTabDeferredFrames > 0;
 }
@@ -196,17 +196,17 @@ void FinishDeferredTClientTabFrame(const int Tab)
 		gs_TClientDeferredTab = -1;
 }
 
-void BeginDeferredQmVisualTab()
+[[maybe_unused]] void BeginDeferredQmVisualTab()
 {
 	gs_QmVisualDeferredFrames = 1;
 }
 
-bool ShouldDeferQmVisualHeavyStage(const int ActiveTab, const float ScrollY)
+[[maybe_unused]] bool ShouldDeferQmVisualHeavyStage(const int ActiveTab, const float ScrollY)
 {
 	return ActiveTab == 0 && gs_QmVisualDeferredFrames > 0 && absolute(ScrollY) <= 1.0f;
 }
 
-void FinishDeferredQmVisualFrame(const int ActiveTab)
+[[maybe_unused]] void FinishDeferredQmVisualFrame(const int ActiveTab)
 {
 	if(ActiveTab == 0 && gs_QmVisualDeferredFrames > 0)
 		--gs_QmVisualDeferredFrames;
@@ -242,7 +242,7 @@ uint64_t HashValueFnv1a64(uint64_t Hash, const T &Value)
 	return HashBytesFnv1a64(Hash, &Value, sizeof(Value));
 }
 
-uint64_t HashStringFnv1a64(uint64_t Hash, const char *pString)
+[[maybe_unused]] uint64_t HashStringFnv1a64(uint64_t Hash, const char *pString)
 {
 	return pString == nullptr ? Hash : HashBytesFnv1a64(Hash, pString, str_length(pString));
 }
@@ -344,7 +344,7 @@ static bool CopyTrimmedString(const char *pSrc, char *pOut, size_t OutSize)
 	return pOut[0] != '\0';
 }
 
-static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const char *pTrigger = "", const char *pReply = "", bool AutoRename = false, bool Regex = false)
+[[maybe_unused]] static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const char *pTrigger = "", const char *pReply = "", bool AutoRename = false, bool Regex = false)
 {
 	auto pRow = std::make_unique<SAutoReplyRuleInputRow>();
 	pRow->m_TriggerInput.Set(pTrigger);
@@ -354,7 +354,7 @@ static std::unique_ptr<SAutoReplyRuleInputRow> CreateAutoReplyRuleInputRow(const
 	return pRow;
 }
 
-static void ParseAutoReplyRules(const char *pRules, std::vector<SAutoReplyRulePlain> &vOutRules)
+[[maybe_unused]] static void ParseAutoReplyRules(const char *pRules, std::vector<SAutoReplyRulePlain> &vOutRules)
 {
 	vOutRules.clear();
 	if(!pRules || pRules[0] == '\0')
@@ -408,7 +408,7 @@ static void ParseAutoReplyRules(const char *pRules, std::vector<SAutoReplyRulePl
 	}
 }
 
-static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, const std::vector<SAutoReplyRulePlain> &vRules)
+[[maybe_unused]] static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, const std::vector<SAutoReplyRulePlain> &vRules)
 {
 	std::vector<SAutoReplyRulePlain> vCompleteRows;
 	vCompleteRows.reserve(vRows.size());
@@ -437,7 +437,7 @@ static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReply
 	return true;
 }
 
-static bool IsAutoReplyRuleRowHalfFilled(const SAutoReplyRuleInputRow &Row)
+[[maybe_unused]] static bool IsAutoReplyRuleRowHalfFilled(const SAutoReplyRuleInputRow &Row)
 {
 	char aTrigger[512];
 	char aReply[256];
@@ -446,7 +446,7 @@ static bool IsAutoReplyRuleRowHalfFilled(const SAutoReplyRuleInputRow &Row)
 	return HasTrigger != HasReply;
 }
 
-static void BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, char *pOutRules, size_t OutRulesSize)
+[[maybe_unused]] static void BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, char *pOutRules, size_t OutRulesSize)
 {
 	pOutRules[0] = '\0';
 	for(const auto &pRow : vRows)
@@ -470,16 +470,16 @@ static void BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoR
 	}
 }
 
-static float CalcQiaFenInputHeight(ITextRender *pTextRender, const char *pText, float Width, float FontSize, float LineSpacing, float MinHeight)
+[[maybe_unused]] static float CalcQiaFenInputHeight(ITextRender *pTextRender, const char *pText, float Width, float TextFontSize, float LineSpacing, float MinHeight)
 {
 	const float VPadding = 2.0f;
 	const float LineWidth = maximum(1.0f, Width - VPadding * 2.0f);
 	const char *pMeasureText = (pText && pText[0] != '\0') ? pText : " ";
-	const STextBoundingBox Box = pTextRender->TextBoundingBox(FontSize, pMeasureText, -1, LineWidth, LineSpacing);
+	const STextBoundingBox Box = pTextRender->TextBoundingBox(TextFontSize, pMeasureText, -1, LineWidth, LineSpacing);
 	return maximum(MinHeight, Box.m_H + VPadding * 2.0f);
 }
 
-static bool DoEditBoxMultiLine(CUi *pUi, CLineInput *pLineInput, const CUIRect *pRect, float FontSize, float LineSpacing)
+[[maybe_unused]] static bool DoEditBoxMultiLine(CUi *pUi, CLineInput *pLineInput, const CUIRect *pRect, float TextFontSize, float LineSpacing)
 {
 	const bool Inside = pUi->MouseHovered(pRect);
 	const bool Active = pUi->ActiveItem() == pLineInput || pLineInput->IsActive();
@@ -548,7 +548,7 @@ static bool DoEditBoxMultiLine(CUi *pUi, CLineInput *pLineInput, const CUIRect *
 
 	pRect->Draw(CUi::ms_LightButtonColorFunction.GetColor(Active, pUi->HotItem() == pLineInput), IGraphics::CORNER_ALL, 3.0f);
 	pUi->ClipEnable(pRect);
-	pLineInput->Render(&Textbox, FontSize, TEXTALIGN_TL, Changed || CursorChanged, LineWidth, LineSpacing);
+	pLineInput->Render(&Textbox, TextFontSize, TEXTALIGN_TL, Changed || CursorChanged, LineWidth, LineSpacing);
 	pUi->ClipDisable();
 
 	pLineInput->SetScrollOffset(0.0f);
@@ -985,7 +985,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 		Section.HSplitTop(LineSize, &Row, &Section);
 		Ui()->DoLabel(&Row, pSummary, FontSize, TEXTALIGN_ML);
 	};
-	auto CalcHudSectionHeight = [&]() {
+	[[maybe_unused]] auto CalcHudSectionHeight = [&]() {
 		float Height = 0.0f;
 		Height += HeadlineHeight + MarginSmall;
 		Height += LineSize * 5.0f;
@@ -997,27 +997,27 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 		Height += MarginExtraSmall;
 		return Height;
 	};
-	auto CalcTeeStatusBarSectionHeight = [&]() {
+	[[maybe_unused]] auto CalcTeeStatusBarSectionHeight = [&]() {
 		return HeadlineHeight + MarginSmall + LineSize * 7.0f;
 	};
-	static float s_InputSectionCachedHeight = 0.0f;
-	static float s_AntiLatencyToolsSectionCachedHeight = 0.0f;
-	static float s_AntiPingSmoothingSectionCachedHeight = 0.0f;
-	static float s_AutoExecuteSectionCachedHeight = 0.0f;
-	static float s_VotingSectionCachedHeight = 0.0f;
-	static float s_AutoReplySectionCachedHeight = 0.0f;
-	static float s_PlayerIndicatorSectionCachedHeight = 0.0f;
-	static float s_PetSectionCachedHeight = 0.0f;
-	static float s_VisualFontSectionCachedHeight = 0.0f;
-	static float s_VisualNameplateSectionCachedHeight = 0.0f;
-	static float s_VisualEffectsSectionCachedHeight = 0.0f;
-	static float s_HudSectionCachedHeight = 0.0f;
-	static float s_TeeStatusBarSectionCachedHeight = 0.0f;
-	static float s_GhostToolsSectionCachedHeight = 0.0f;
-	static float s_RainbowSectionCachedHeight = 0.0f;
-	static float s_TeeTrailsSectionCachedHeight = 0.0f;
-	static float s_BackgroundDrawSectionCachedHeight = 0.0f;
-	static float s_FinishNameSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_InputSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_AntiLatencyToolsSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_AntiPingSmoothingSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_AutoExecuteSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_VotingSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_AutoReplySectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_PlayerIndicatorSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_PetSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_VisualFontSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_VisualNameplateSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_VisualEffectsSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_HudSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_TeeStatusBarSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_GhostToolsSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_RainbowSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_TeeTrailsSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_BackgroundDrawSectionCachedHeight = 0.0f;
+	[[maybe_unused]] static float s_FinishNameSectionCachedHeight = 0.0f;
 	const int SettingsDeferredFrames = gs_TClientSettingsDeferredFrames;
 	const bool DeferVisualFontHeavyControls = ShouldDeferTClientVisualStage(ScrollOffset.y, 3);
 	const bool DeferVisualNameplateHeavyControls = ShouldDeferTClientVisualStage(ScrollOffset.y, 2);
@@ -1067,7 +1067,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 			auto ShouldRenderVisualBlock = [&](float Height) {
 				return Render && ShouldRenderSection(CurrentColumn, 0.0f, Height);
 			};
-			auto SkipVisualBlock = [&](float Height) {
+			[[maybe_unused]] auto SkipVisualBlock = [&](float Height) {
 				SkipSection(CurrentColumn, 0.0f, Height);
 			};
 			CurrentColumn.HSplitTop(MarginBetweenSections, nullptr, &CurrentColumn);
@@ -1235,7 +1235,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView)
 			auto ShouldRenderVisualBlock = [&](float Height) {
 				return Render && ShouldRenderSection(CurrentColumn, 0.0f, Height);
 			};
-			auto SkipVisualBlock = [&](float Height) {
+			[[maybe_unused]] auto SkipVisualBlock = [&](float Height) {
 				SkipSection(CurrentColumn, 0.0f, Height);
 			};
 			CurrentColumn.HSplitTop(MarginBetweenSections, nullptr, &CurrentColumn);
@@ -4262,10 +4262,10 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 		RightView.HSplitTop(HeadlineHeight, &Label, &RightView);
 		Ui()->DoLabel(&Label, Localize("TClient Developers"), HeadlineFontSize, TEXTALIGN_ML);
 		RightView.HSplitTop(MarginSmall, nullptr, &RightView);
-		char aBuf[128];
+		char aBufDevelopers[128];
 		RightView.HSplitTop(LineSize, &Label, &RightView);
-		str_format(aBuf, sizeof(aBuf), Localize("Developers: %d"), 5);
-		Ui()->DoLabel(&Label, aBuf, FontSize, TEXTALIGN_ML);
+		str_format(aBufDevelopers, sizeof(aBufDevelopers), Localize("Developers: %d"), 5);
+		Ui()->DoLabel(&Label, aBufDevelopers, FontSize, TEXTALIGN_ML);
 		RightView.HSplitTop(LineSize, &Label, &RightView);
 		Ui()->DoLabel(&Label, "Tater / SollyBunny / PeBox", FontSize, TEXTALIGN_ML);
 		RightView.HSplitTop(MarginSmall, nullptr, &RightView);
@@ -4299,10 +4299,10 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 		int HiddenTabs = 0;
 		for(int i = 0; i < NUMBER_OF_TCLIENT_TABS; ++i)
 			HiddenTabs += IsFlagSet(g_Config.m_TcTClientSettingsTabs, i) ? 1 : 0;
-		char aBuf[96];
-		str_format(aBuf, sizeof(aBuf), Localize("Hidden tabs: %d"), HiddenTabs);
+		char aBufHiddenTabs[96];
+		str_format(aBufHiddenTabs, sizeof(aBufHiddenTabs), Localize("Hidden tabs: %d"), HiddenTabs);
 		RightView.HSplitTop(LineSize, &Label, &RightView);
-		Ui()->DoLabel(&Label, aBuf, FontSize, TEXTALIGN_ML);
+		Ui()->DoLabel(&Label, aBufHiddenTabs, FontSize, TEXTALIGN_ML);
 		return;
 	}
 
@@ -5386,4 +5386,3 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView)
 	s_ScrollRegion.AddRect(EndPad);
 	s_ScrollRegion.End();
 }
-

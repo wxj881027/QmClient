@@ -69,6 +69,7 @@ void BuildEntityBgParentFolder(const char *pCurrentFolder, char *pOut, int OutSi
 bool ShouldShowAssetCardAuthorRow(bool HasAuthorText, bool IsDirectory);
 const char *LegacySingleFileAssetSourcePath(const SAssetResourceCategory &Category);
 const char *BuiltinSingleFileAssetFilename(const SAssetResourceCategory &Category);
-std::array<std::string, 3> BuildNamedSingleFileAssetCandidates(std::string_view CategoryId, std::string_view ActiveName);
+bool IsReservedNamedSingleFileAssetName(const SAssetResourceCategory &Category, std::string_view AssetName);
+std::array<std::string, 4> BuildNamedSingleFileAssetCandidates(std::string_view CategoryId, std::string_view ActiveName);
 
 #endif

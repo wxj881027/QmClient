@@ -1,3 +1,4 @@
+#include <base/lock.h>
 #include <base/log.h>
 #include <base/math.h>
 #include <base/perf_timer.h>
@@ -69,8 +70,8 @@ typedef struct
 
 using namespace FontIcons;
 
-static float s_Time = 0.0f;
-static bool s_StartedTime = false;
+[[maybe_unused]] static float s_Time = 0.0f;
+[[maybe_unused]] static bool s_StartedTime = false;
 
 extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 extern bool g_CommandBindCacheInitialized;
@@ -101,7 +102,7 @@ void LogQmPerfStage(const char *pStage, double DurationMs, bool Force = false, c
 		dbg_msg("perf/qmclient", "stage=%s duration_ms=%.3f", pStage, DurationMs);
 }
 
-void LogTClientPerfStage(const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)
+[[maybe_unused]] void LogTClientPerfStage(const char *pStage, double DurationMs, bool Force = false, const char *pExtra = nullptr)
 {
 	if(!PerfDebugEnabled())
 		return;
@@ -132,12 +133,12 @@ int gs_TClientTabDeferredFrames = 0;
 int gs_TClientDeferredTab = -1;
 int gs_QmVisualDeferredFrames = 0;
 
-void BeginDeferredTClientSettings()
+[[maybe_unused]] void BeginDeferredTClientSettings()
 {
 	gs_TClientSettingsDeferredFrames = 6;
 }
 
-void BeginDeferredTClientTab(const int Tab)
+[[maybe_unused]] void BeginDeferredTClientTab(const int Tab)
 {
 	gs_TClientDeferredTab = Tab;
 	switch(Tab)
@@ -166,28 +167,28 @@ void BeginDeferredTClientTab(const int Tab)
 	}
 }
 
-bool ShouldDeferTClientVisualStage(const float ScrollY, const int MinRemainingFrames)
+[[maybe_unused]] bool ShouldDeferTClientVisualStage(const float ScrollY, const int MinRemainingFrames)
 {
 	return gs_TClientSettingsDeferredFrames >= MinRemainingFrames && absolute(ScrollY) <= 1.0f;
 }
 
-bool ShouldDeferTClientTabContent(const int Tab)
+[[maybe_unused]] bool ShouldDeferTClientTabContent(const int Tab)
 {
 	return gs_TClientDeferredTab == Tab && gs_TClientTabDeferredFrames > 0;
 }
 
-int GetDeferredTClientTabFrames(const int Tab)
+[[maybe_unused]] int GetDeferredTClientTabFrames(const int Tab)
 {
 	return gs_TClientDeferredTab == Tab ? gs_TClientTabDeferredFrames : 0;
 }
 
-void FinishDeferredTClientSettingsFrame()
+[[maybe_unused]] void FinishDeferredTClientSettingsFrame()
 {
 	if(gs_TClientSettingsDeferredFrames > 0)
 		--gs_TClientSettingsDeferredFrames;
 }
 
-void FinishDeferredTClientTabFrame(const int Tab)
+[[maybe_unused]] void FinishDeferredTClientTabFrame(const int Tab)
 {
 	if(gs_TClientDeferredTab != Tab || gs_TClientTabDeferredFrames <= 0)
 		return;
@@ -249,22 +250,22 @@ uint64_t HashStringFnv1a64(uint64_t Hash, const char *pString)
 
 }
 
-const float FontSize = 14.0f;
-const float EditBoxFontSize = 12.0f;
+[[maybe_unused]] const float FontSize = 14.0f;
+[[maybe_unused]] const float EditBoxFontSize = 12.0f;
 const float LineSize = 20.0f;
-const float ColorPickerLineSize = 25.0f;
+[[maybe_unused]] const float ColorPickerLineSize = 25.0f;
 const float HeadlineFontSize = 20.0f;
-const float StandardFontSize = 14.0f;
+[[maybe_unused]] const float StandardFontSize = 14.0f;
 
-const float HeadlineHeight = HeadlineFontSize + 0.0f;
+[[maybe_unused]] const float HeadlineHeight = HeadlineFontSize + 0.0f;
 const float Margin = 10.0f;
-const float MarginSmall = 5.0f;
-const float MarginExtraSmall = 2.5f;
-const float MarginBetweenSections = 30.0f;
-const float MarginBetweenViews = 30.0f;
+[[maybe_unused]] const float MarginSmall = 5.0f;
+[[maybe_unused]] const float MarginExtraSmall = 2.5f;
+[[maybe_unused]] const float MarginBetweenSections = 30.0f;
+[[maybe_unused]] const float MarginBetweenViews = 30.0f;
 
-const float ColorPickerLabelSize = 13.0f;
-const float ColorPickerLineSpacing = 5.0f;
+[[maybe_unused]] const float ColorPickerLabelSize = 13.0f;
+[[maybe_unused]] const float ColorPickerLineSpacing = 5.0f;
 
 struct SAutoReplyRulePlain
 {
@@ -470,16 +471,16 @@ static void BuildAutoReplyRulesFromRows(const std::vector<std::unique_ptr<SAutoR
 	}
 }
 
-static float CalcQiaFenInputHeight(ITextRender *pTextRender, const char *pText, float Width, float FontSize, float LineSpacing, float MinHeight)
+static float CalcQiaFenInputHeight(ITextRender *pTextRender, const char *pText, float Width, float TextFontSize, float LineSpacing, float MinHeight)
 {
 	const float VPadding = 2.0f;
 	const float LineWidth = maximum(1.0f, Width - VPadding * 2.0f);
 	const char *pMeasureText = (pText && pText[0] != '\0') ? pText : " ";
-	const STextBoundingBox Box = pTextRender->TextBoundingBox(FontSize, pMeasureText, -1, LineWidth, LineSpacing);
+	const STextBoundingBox Box = pTextRender->TextBoundingBox(TextFontSize, pMeasureText, -1, LineWidth, LineSpacing);
 	return maximum(MinHeight, Box.m_H + VPadding * 2.0f);
 }
 
-static bool DoEditBoxMultiLine(CUi *pUi, CLineInput *pLineInput, const CUIRect *pRect, float FontSize, float LineSpacing)
+static bool DoEditBoxMultiLine(CUi *pUi, CLineInput *pLineInput, const CUIRect *pRect, float TextFontSize, float LineSpacing)
 {
 	const bool Inside = pUi->MouseHovered(pRect);
 	const bool Active = pUi->ActiveItem() == pLineInput || pLineInput->IsActive();
@@ -548,7 +549,7 @@ static bool DoEditBoxMultiLine(CUi *pUi, CLineInput *pLineInput, const CUIRect *
 
 	pRect->Draw(CUi::ms_LightButtonColorFunction.GetColor(Active, pUi->HotItem() == pLineInput), IGraphics::CORNER_ALL, 3.0f);
 	pUi->ClipEnable(pRect);
-	pLineInput->Render(&Textbox, FontSize, TEXTALIGN_TL, Changed || CursorChanged, LineWidth, LineSpacing);
+	pLineInput->Render(&Textbox, TextFontSize, TEXTALIGN_TL, Changed || CursorChanged, LineWidth, LineSpacing);
 	pUi->ClipDisable();
 
 	pLineInput->SetScrollOffset(0.0f);
@@ -557,7 +558,7 @@ static bool DoEditBoxMultiLine(CUi *pUi, CLineInput *pLineInput, const CUIRect *
 	return Changed;
 }
 
-static void SetFlag(int32_t &Flags, int n, bool Value)
+[[maybe_unused]] static void SetFlag(int32_t &Flags, int n, bool Value)
 {
 	if(Value)
 		Flags |= (1 << n);
@@ -565,7 +566,7 @@ static void SetFlag(int32_t &Flags, int n, bool Value)
 		Flags &= ~(1 << n);
 }
 
-static bool IsFlagSet(int32_t Flags, int n)
+[[maybe_unused]] static bool IsFlagSet(int32_t Flags, int n)
 {
 	return (Flags & (1 << n)) != 0;
 }
@@ -1263,6 +1264,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		case EQmModuleId::FriendNotify: return "friend_notify";
 		case EQmModuleId::BlockWords: return "block_words";
 		case EQmModuleId::Translate: return "translate";
+		case EQmModuleId::TranslateUi: return "translate_ui";
 		case EQmModuleId::QiaFen: return "keyword_reply";
 		case EQmModuleId::PieMenu: return "pie_menu";
 		case EQmModuleId::EntityOverlay: return "entity_overlay";
@@ -2504,7 +2506,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 		bool m_CompactLayout;
 		std::string m_SearchText;
 		std::vector<SQmFunctionSnapshotEntry> m_vEntries;
-		mutable std::mutex m_Mutex;
+		mutable CLock m_Lock;
 		std::shared_ptr<SQmFunctionSnapshotResult> m_pResult;
 		bool m_Completed = false;
 
@@ -2513,7 +2515,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			return State() == IJob::STATE_ABORTED;
 		}
 
-		void Run() override
+		void Run() override REQUIRES(!m_Lock)
 		{
 			auto pResult = std::make_shared<SQmFunctionSnapshotResult>();
 			pResult->m_Signature = m_Signature;
@@ -2590,7 +2592,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				}
 			}
 
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_pResult = std::move(pResult);
 			m_Completed = true;
 		}
@@ -2606,15 +2608,15 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			Abortable(true);
 		}
 
-		bool IsCompleted() const
+		bool IsCompleted() const REQUIRES(!m_Lock)
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			return m_Completed;
 		}
 
-		std::shared_ptr<SQmFunctionSnapshotResult> GetResult()
+		std::shared_ptr<SQmFunctionSnapshotResult> GetResult() REQUIRES(!m_Lock)
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			std::shared_ptr<SQmFunctionSnapshotResult> pResult = std::move(m_pResult);
 			m_pResult.reset();
 			return pResult;
@@ -3264,11 +3266,11 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				static CButtonContainer s_ReaderButtonDummyPseudo, s_ClearButtonDummyPseudo,
 					s_ReaderButtonDeepfly, s_ClearButtonDeepfly,
-					s_ReaderButtonDeepflyToggle, s_ClearButtonDeepflyToggle,
 					s_ReaderButton45Degrees, s_ClearButton45Degrees,
 					s_ReaderButtonSmallSens, s_ClearButtonSmallSens,
 					s_ReaderButtonLeftJump, s_ClearButtonLeftJump,
 					s_ReaderButtonRightJump, s_ClearButtonRightJump;
+				[[maybe_unused]] static CButtonContainer s_ReaderButtonDeepflyToggle, s_ClearButtonDeepflyToggle;
 
 				DoKeyBindRow(CardContent, s_ReaderButtonDummyPseudo, s_ClearButtonDummyPseudo,
 					Localize("HDF"), "+toggle cl_dummy_hammer 1 0");
@@ -5492,7 +5494,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				if(g_Config.m_QmVoiceEnable)
 				{
-					auto AddVoiceSectionLabel = [&](const char *pTitle, const char *pHint) {
+					[[maybe_unused]] auto AddVoiceSectionLabel = [&](const char *pTitle, const char *pHint) {
 						CardContent.HSplitTop(LG_LineHeight * 0.78f, &Row, &CardContent);
 						Ui()->DoLabel(&Row, pTitle, LG_BodySize * 0.96f, TEXTALIGN_ML);
 						if(pHint != nullptr && pHint[0] != '\0')

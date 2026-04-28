@@ -579,7 +579,6 @@ static bool SaveChatExportHtml(IStorage *pStorage, const char *pFilename, const 
 static std::vector<SChatExportLayout> BuildChatExportLayouts(ITextRender *pTextRender, const std::vector<SChatExportLine> &vLines)
 {
 	static constexpr int FONT_SIZE_MESSAGE = 58;
-	static constexpr int FONT_SIZE_TIME = 34;
 	static constexpr int CARD_MAX_WIDTH = 620;
 	static constexpr int CARD_MIN_WIDTH = 220;
 	static constexpr int CARD_PADDING_X = 46;
@@ -1563,7 +1562,7 @@ void CGameConsole::CInstance::ClearChatExportSelection()
 	m_ChatExportAnchorId = -1;
 }
 
-void CGameConsole::CInstance::SelectAllChatExportable()
+void CGameConsole::CInstance::SelectAllChatExportable() REQUIRES(!m_BacklogPendingLock)
 {
 	PumpBacklogPending();
 	for(CBacklogEntry *pEntry = m_Backlog.First(); pEntry; pEntry = m_Backlog.Next(pEntry))

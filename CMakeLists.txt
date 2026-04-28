@@ -933,6 +933,14 @@ list(APPEND TARGETS_OWN rust-bridge-shared)
 
 set(CARGO_BUILD_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} DDNET_TEST_NO_LINK=1)
 set(CARGO_TEST_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} "DDNET_TEST_LIBRARIES_FILE=${PROJECT_BINARY_DIR}/rust_test_libraries.txt")
+if(APPLE)
+  list(APPEND CARGO_BUILD_ENV MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET})
+  list(APPEND CARGO_TEST_ENV MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET})
+  if(CMAKE_OSX_SYSROOT)
+    list(APPEND CARGO_BUILD_ENV SDKROOT=${CMAKE_OSX_SYSROOT})
+    list(APPEND CARGO_TEST_ENV SDKROOT=${CMAKE_OSX_SYSROOT})
+  endif()
+endif()
 
 if(TARGET_OS STREQUAL "android")
   set(CARGO_BUILD_DIR "${CARGO_NDK_TARGET}/")
@@ -3727,7 +3735,7 @@ if(CLIENT AND DMGBUILD)
 
 
 	# macOS DMG: resolve Homebrew library paths at configure time
-	if(APPLE)
+  if(APPLE)
 	  # WebP: use find_package results (works for both Homebrew and bundled)
 	  if(WebP_FOUND AND WebP_LIBRARY)
 	    get_filename_component(WEBP_LIB_DIR "${WebP_LIBRARY}" DIRECTORY)
@@ -3769,12 +3777,23 @@ if(CLIENT AND DMGBUILD)
 	  endif()
 	endif()
 
+  set(DMG_VULKAN_SHADER_COPY_COMMANDS)
+  if(VULKAN)
+    list(APPEND DMG_VULKAN_SHADER_COPY_COMMANDS
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/data/shader/vulkan)
+    foreach(file ${VULKAN_SHADER_FILE_LIST})
+      list(APPEND DMG_VULKAN_SHADER_COPY_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/${file} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/${file})
+    endforeach()
+  endif()
+
   add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.dmg
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${DMG_TMPDIR}
     ${DMG_MKDIR_COMMANDS}
 
     # CLIENT
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/data ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/data
+    ${DMG_VULKAN_SHADER_COPY_COMMANDS}
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/other/icons/${CLIENT_EXECUTABLE}.icns ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/
     COMMAND ${CMAKE_COMMAND} -E copy bundle/client/Info.plist ${PROJECT_SOURCE_DIR}/other/bundle/client/PkgInfo ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:game-client> ${TARGET_TOOLS_FILES} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/

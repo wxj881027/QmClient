@@ -244,7 +244,7 @@ static char *ParseAutoReplyRulePrefixes(char *pLine, bool &OutAutoRename, bool &
 	return pTrimmedLine;
 }
 
-static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReplyRule> &vOutRules)
+[[maybe_unused]] static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReplyRule> &vOutRules)
 {
 	vOutRules.clear();
 	if(!pRules || pRules[0] == '\0')
@@ -295,7 +295,7 @@ static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReply
 	}
 }
 
-static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules, char *pOutRules, size_t OutRulesSize)
+[[maybe_unused]] static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules, char *pOutRules, size_t OutRulesSize)
 {
 	if(!pOutRules || OutRulesSize == 0)
 		return;
