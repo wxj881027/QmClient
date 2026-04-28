@@ -1544,6 +1544,125 @@ void CollectNamedSingleFileAssetNames(IStorage *pStorage, const SAssetResourceCa
 	::EnsureDefaultAssetVisible(vAssetNames);
 }
 
+std::string LocalNameFromNamedSingleFileInstallPath(const SAssetResourceCategory &Category, std::string_view InstallPath)
+{
+	if(InstallPath.empty())
+		return {};
+
+	const std::string Prefix = std::string(Category.m_pInstallFolder) + "/";
+	if(InstallPath.size() >= Prefix.size() && InstallPath.substr(0, Prefix.size()) == Prefix)
+		InstallPath.remove_prefix(Prefix.size());
+	if(const size_t SlashPos = InstallPath.find_last_of('/'); SlashPos != std::string_view::npos)
+		InstallPath = InstallPath.substr(SlashPos + 1);
+	if(const size_t DotPos = InstallPath.find_last_of('.'); DotPos != std::string_view::npos)
+		InstallPath = InstallPath.substr(0, DotPos);
+	return std::string(InstallPath);
+}
+
+void BuildNamedSingleFileWorkshopInstallInfo(const SAssetResourceCategory &Category, const SWorkshopHudAsset &Asset, std::string &OutLocalName, std::string &OutInstallPath)
+{
+	OutLocalName.clear();
+	OutInstallPath.clear();
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE || Asset.m_ImageUrl.empty())
+		return;
+
+	std::unordered_set<std::string> vUsedLocalNames;
+	char aExt[16];
+	GuessUrlExtension(Asset.m_ImageUrl.c_str(), aExt, sizeof(aExt));
+	std::string SafeInstallName = BuildSafeFilename(Asset.m_Name.c_str(), Asset.m_Id.c_str(), aExt);
+	const size_t DotPos = SafeInstallName.find_last_of('.');
+	const std::string PreferredLocalBaseName = DotPos == std::string::npos ? SafeInstallName : SafeInstallName.substr(0, DotPos);
+	const std::string LocalBaseName = UniqueWorkshopAssetBaseName(Category, PreferredLocalBaseName, Asset.m_Id.c_str(), vUsedLocalNames);
+	if(LocalBaseName != PreferredLocalBaseName)
+		SafeInstallName = LocalBaseName + "." + aExt;
+
+	OutLocalName = LocalBaseName;
+	OutInstallPath = std::string(Category.m_pInstallFolder) + "/" + SafeInstallName;
+}
+
+std::string FindLegacyMigratedNamedSingleFileInstallPath(IStorage *pStorage, const SAssetResourceCategory &Category, std::string_view LegacyBaseName)
+{
+	if(pStorage == nullptr || LegacyBaseName.empty())
+		return {};
+
+	std::vector<std::string> vSaveNames;
+	SNamedSingleFileNameScanUser ScanUser{&vSaveNames};
+	pStorage->ListDirectory(IStorage::TYPE_SAVE, Category.m_pInstallFolder, CollectNamedSingleFileAssetNamesCallback, &ScanUser);
+
+	const std::string Prefix = std::string(LegacyBaseName) + "_local";
+	std::string BestName;
+	int BestPriority = 0x7fffffff;
+	for(const std::string &Name : vSaveNames)
+	{
+		if(Name == Prefix)
+		{
+			BestName = Name;
+			BestPriority = 1;
+			break;
+		}
+
+		if(Name.size() <= Prefix.size() + 1 || Name.compare(0, Prefix.size() + 1, Prefix + "_") != 0)
+			continue;
+
+		const char *pSuffix = Name.c_str() + Prefix.size() + 1;
+		int SuffixValue = 0;
+		if(!str_toint(pSuffix, &SuffixValue) || SuffixValue < 2)
+			continue;
+		if(SuffixValue < BestPriority)
+		{
+			BestPriority = SuffixValue;
+			BestName = Name;
+		}
+	}
+
+	if(BestName.empty())
+		return {};
+	return std::string(Category.m_pInstallFolder) + "/" + BestName + ".png";
+}
+
+void NormalizeNamedSingleFileWorkshopAsset(SWorkshopHudAsset &Asset, IStorage *pStorage, const SAssetResourceCategory &Category)
+{
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
+		return;
+
+	const std::string CachedInstallPath = Asset.m_InstallPath;
+	const std::string CachedLocalName = !Asset.m_LocalName.empty() ? Asset.m_LocalName : LocalNameFromNamedSingleFileInstallPath(Category, CachedInstallPath);
+
+	std::string CanonicalLocalName;
+	std::string CanonicalInstallPath;
+	BuildNamedSingleFileWorkshopInstallInfo(Category, Asset, CanonicalLocalName, CanonicalInstallPath);
+	if(CanonicalInstallPath.empty())
+		return;
+
+	if(pStorage != nullptr && pStorage->FileExists(CanonicalInstallPath.c_str(), IStorage::TYPE_SAVE))
+	{
+		Asset.m_LocalName = CanonicalLocalName;
+		Asset.m_InstallPath = CanonicalInstallPath;
+		return;
+	}
+
+	if(!CachedInstallPath.empty() && pStorage != nullptr && pStorage->FileExists(CachedInstallPath.c_str(), IStorage::TYPE_SAVE))
+	{
+		Asset.m_LocalName = !CachedLocalName.empty() ? CachedLocalName : CanonicalLocalName;
+		Asset.m_InstallPath = CachedInstallPath;
+		return;
+	}
+
+	if(IsReservedNamedSingleFileAssetName(Category, CachedLocalName))
+	{
+		const std::string MigratedInstallPath = FindLegacyMigratedNamedSingleFileInstallPath(pStorage, Category, CachedLocalName);
+		if(!MigratedInstallPath.empty())
+		{
+			Asset.m_LocalName = LocalNameFromNamedSingleFileInstallPath(Category, MigratedInstallPath);
+			Asset.m_InstallPath = MigratedInstallPath;
+			return;
+		}
+	}
+
+	Asset.m_LocalName = CanonicalLocalName;
+	Asset.m_InstallPath = CanonicalInstallPath;
+}
+
 std::string NextReservedNamedSingleFileMigrationName(const SAssetResourceCategory &Category, std::string_view OldName, const std::vector<std::string> &vExistingNames)
 {
 	const auto NameExists = [&Category, &vExistingNames](std::string_view Candidate) {
@@ -1925,6 +2044,7 @@ static bool SaveWorkshopCache(SWorkshopHudState &WorkshopState, IStorage *pStora
 // Load Workshop assets from local cache
 static bool LoadWorkshopCache(SWorkshopHudState &WorkshopState, IStorage *pStorage, const char *pCachePath)
 {
+	const SAssetResourceCategory *pCategory = AssetResourceCategoryByTab(s_CurCustomTab);
 	char aFullPath[IO_MAX_PATH_LENGTH];
 	str_format(aFullPath, sizeof(aFullPath), "cache/%s", pCachePath);
 
@@ -1977,14 +2097,16 @@ static bool LoadWorkshopCache(SWorkshopHudState &WorkshopState, IStorage *pStora
 				Asset.m_ThumbCachePath = pVal->u.string.ptr;
 			else if(str_comp(pKey, "install_path") == 0 && pVal->type == json_string)
 				Asset.m_InstallPath = pVal->u.string.ptr;
-		}
-		if(Asset.m_ImageUrl.empty())
-			continue;
-		if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
-			NormalizeEntityBgWorkshopAsset(Asset, pStorage);
-		if(Asset.m_ThumbUrl.empty() && !str_endswith_nocase(Asset.m_ImageUrl.c_str(), ".map"))
-			Asset.m_ThumbUrl = Asset.m_ImageUrl;
-		Asset.m_Installed = pStorage->FileExists(Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE);
+			}
+			if(Asset.m_ImageUrl.empty())
+				continue;
+			if(s_CurCustomTab == ASSETS_TAB_ENTITY_BG)
+				NormalizeEntityBgWorkshopAsset(Asset, pStorage);
+			else if(pCategory != nullptr && pCategory->m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE)
+				NormalizeNamedSingleFileWorkshopAsset(Asset, pStorage, *pCategory);
+			if(Asset.m_ThumbUrl.empty() && !str_endswith_nocase(Asset.m_ImageUrl.c_str(), ".map"))
+				Asset.m_ThumbUrl = Asset.m_ImageUrl;
+			Asset.m_Installed = pStorage->FileExists(Asset.m_InstallPath.c_str(), IStorage::TYPE_SAVE);
 		WorkshopState.m_vAssets.push_back(std::move(Asset));
 	}
 
@@ -3853,14 +3975,25 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					NewAsset.m_Installed = Storage()->FileExists(NewAsset.m_InstallPath.c_str(), IStorage::TYPE_SAVE);
 					NewAssetIds.insert(NewAsset.m_Id);
 					
-					auto It = ExistingAssetIndexMap.find(NewAsset.m_Id);
-					if(It != ExistingAssetIndexMap.end())
-					{
-						// Update existing asset: preserve texture and tasks
-						SWorkshopHudAsset &ExistingAsset = WorkshopState.m_vAssets[It->second];
-						NewAsset.m_ThumbTexture = ExistingAsset.m_ThumbTexture;
-						ExistingAsset.m_ThumbTexture = IGraphics::CTextureHandle();
-						NewAsset.m_ThumbImage = std::move(ExistingAsset.m_ThumbImage);
+						auto It = ExistingAssetIndexMap.find(NewAsset.m_Id);
+						if(It != ExistingAssetIndexMap.end())
+						{
+							// Update existing asset: preserve texture and tasks
+							SWorkshopHudAsset &ExistingAsset = WorkshopState.m_vAssets[It->second];
+							if(!NewAsset.m_Installed &&
+								pCategory->m_Kind == EAssetResourceKind::NAMED_SINGLE_FILE &&
+								ExistingAsset.m_Installed &&
+								!ExistingAsset.m_InstallPath.empty() &&
+								Storage()->FileExists(ExistingAsset.m_InstallPath.c_str(), IStorage::TYPE_SAVE))
+							{
+								NewAsset.m_Installed = true;
+								NewAsset.m_InstallPath = ExistingAsset.m_InstallPath;
+								if(!ExistingAsset.m_LocalName.empty())
+									NewAsset.m_LocalName = ExistingAsset.m_LocalName;
+							}
+							NewAsset.m_ThumbTexture = ExistingAsset.m_ThumbTexture;
+							ExistingAsset.m_ThumbTexture = IGraphics::CTextureHandle();
+							NewAsset.m_ThumbImage = std::move(ExistingAsset.m_ThumbImage);
 						NewAsset.m_ThumbBytes = ExistingAsset.m_ThumbBytes;
 						NewAsset.m_ThumbResized = ExistingAsset.m_ThumbResized;
 						ExistingAsset.m_ThumbBytes = 0;
