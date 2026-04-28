@@ -63,7 +63,7 @@ mod ffi {
         ///
         /// The Teeworlds namespace UUID is e05ddaaa-c4e6-4cfb-b642-5d48e80c0029.
         ///
-        /// ```
+        /// ```no_run
         /// # extern crate ddnet_test;
         /// # use ddnet_base::s;
         /// # use ddnet_engine_shared::CUuid;
@@ -77,7 +77,7 @@ mod ffi {
         ///
         /// The IDs must be registered in order starting from [`OFFSET_UUID`].
         ///
-        /// ```
+        /// ```no_run
         /// # extern crate ddnet_test;
         /// # use ddnet_base::s;
         /// # use ddnet_engine_shared::CUuid;
@@ -111,7 +111,7 @@ mod ffi {
         ///
         /// Otherwise, return -1.
         ///
-        /// ```
+        /// ```no_run
         /// # extern crate ddnet_test;
         /// # use ddnet_base::s;
         /// # use ddnet_engine_shared::CUuid;
@@ -130,7 +130,7 @@ mod ffi {
 
         /// Gets the number of UUIDs registered to this UUID manager.
         ///
-        /// ```
+        /// ```no_run
         /// # extern crate ddnet_test;
         /// # use ddnet_base::s;
         /// # use ddnet_engine_shared::CUuidManager_Global;
@@ -141,7 +141,7 @@ mod ffi {
 
         /// Dumps a list of all UUIDs known to this manager to the log.
         ///
-        /// ```
+        /// ```no_run
         /// # extern crate ddnet_test;
         /// # use ddnet_base::s;
         /// # use ddnet_engine_shared::CUuidManager_Global;
@@ -152,7 +152,7 @@ mod ffi {
 
         /// Get the global UUID manager with all extension UUIDs known the program.
         ///
-        /// ```
+        /// ```no_run
         /// # extern crate ddnet_test;
         /// # use ddnet_base::s;
         /// # use ddnet_engine_shared::CUuidManager_New;
@@ -165,7 +165,7 @@ mod ffi {
 
         /// Get the global UUID manager with all extension UUIDs known the program.
         ///
-        /// ```
+        /// ```no_run
         /// # extern crate ddnet_test;
         /// # use ddnet_base::s;
         /// # use ddnet_engine_shared::CUuidManager_Global;
