@@ -4078,6 +4078,22 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				}
 				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
+				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
+				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
+				Ui()->DoLabel(&LabelCol, Localize("发送自动翻译模式"), LG_BodySize, TEXTALIGN_ML);
+				{
+					static const char *s_apOutgoingModeNames[] = {
+						Localize("仅常见源语言输入时触发"),
+						Localize("始终翻译"),
+					};
+					static CUi::SDropDownState s_OutgoingModeDropDown;
+					const int OldMode = std::clamp(g_Config.m_QmTranslateAutoOutgoingMode, 0, 1);
+					const int NewMode = Ui()->DoDropDown(&ControlCol, OldMode, s_apOutgoingModeNames, std::size(s_apOutgoingModeNames), s_OutgoingModeDropDown);
+					if(NewMode != OldMode)
+						g_Config.m_QmTranslateAutoOutgoingMode = NewMode;
+				}
+				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
+
 				// CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				// Ui()->DoLabel(&Row, Localize("Auto-translate will skip simplified Chinese, traditional Chinese, and server messages"), LG_BodySize * 0.8f, TEXTALIGN_ML);
 				// CardContent.HSplitTop(LG_LineSpacing / 2.0f, nullptr, &CardContent);

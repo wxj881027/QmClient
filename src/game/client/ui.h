@@ -239,6 +239,7 @@ enum EButtonFlags : unsigned
 struct SMenuButtonProperties
 {
 	int m_Checked = 0;
+	bool m_Enabled = true;
 	bool m_HintRequiresStringCheck = false;
 	bool m_HintCanChangePositionOrSize = false;
 	bool m_UseIconFont = false;
@@ -798,6 +799,7 @@ public:
 		bool m_Init = false;
 	};
 	int DoDropDown(CUIRect *pRect, int CurSelection, const char **pStrs, int Num, SDropDownState &State);
+	int DoDropDown(CUIRect *pRect, int CurSelection, const char **pStrs, int Num, SDropDownState &State, bool Enabled);
 };
 
 #endif

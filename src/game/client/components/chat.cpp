@@ -301,7 +301,10 @@ static void CopyCommandPreviewRest(const char *pText, char *pBuf, size_t BufSize
 
 static void DoCachedChatPopupLabel(CUi *pUi, CUIElement &LabelUiElement, const CUIRect &Rect, const char *pText, float Size, int Align)
 {
-	pUi->DoLabelStreamed(*LabelUiElement.Rect(0), &Rect, pText, Size, Align);
+	SLabelProperties LabelProps;
+	LabelProps.m_MaxWidth = maximum(0.0f, Rect.w - 2.0f);
+	LabelProps.m_EllipsisAtEnd = true;
+	pUi->DoLabelStreamed(*LabelUiElement.Rect(0), &Rect, pText, Size, Align, LabelProps);
 }
 
 static const char *ChatTranslateBackendWarning()
@@ -2602,15 +2605,17 @@ void CChat::OpenLanguageMenu()
 	m_LanguagePopupContext.m_OpenTime = time();
 	m_LanguagePopupContext.m_AnimationProgress = 1.0f;
 
-	constexpr float MenuWidth = 220.0f;
+	constexpr float MenuWidth = 240.0f;
 	constexpr float TitleHeight = 16.0f;
 	constexpr float ToggleHeight = 16.0f;
 	constexpr float DropdownLabelHeight = 11.0f;
 	constexpr float DropdownHeight = 18.0f;
 	constexpr float SectionSpacing = 4.0f;
-	constexpr float Margin = 6.0f;
+	constexpr float ContentMargin = 3.0f;
+	// Matches the popup border and margin trimmed by CUi::RenderPopupMenus.
+	constexpr float PopupChromeHeight = 10.0f;
 	const bool HasWarning = ChatTranslateBackendWarning() != nullptr;
-	const float MenuHeight =
+	const float ContentHeight =
 		TitleHeight +
 		SectionSpacing +
 		ToggleHeight +
@@ -2623,7 +2628,8 @@ void CChat::OpenLanguageMenu()
 		SectionSpacing +
 		DropdownLabelHeight + DropdownHeight +
 		(HasWarning ? (SectionSpacing + ToggleHeight) : 0.0f) +
-		Margin * 2.0f;
+		ContentMargin * 2.0f;
+	const float MenuHeight = ContentHeight + PopupChromeHeight;
 
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
@@ -2646,7 +2652,6 @@ void CChat::CloseLanguageMenu()
 
 CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect View, bool Active)
 {
-	(void)Active;
 	CLanguagePopupContext *pPopupContext = static_cast<CLanguagePopupContext *>(pContext);
 	CChat *pChat = pPopupContext->m_pChat;
 	CUi *pUi = pChat->Ui();
@@ -2681,7 +2686,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
 
 		static int s_InboundToggleId = 0;
-		if(pUi->DoButtonLogic(&s_InboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
+		if(Active && pUi->DoButtonLogic(&s_InboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
 		{
 			g_Config.m_QmTranslateAuto = InboundEnabled ? 0 : 1;
 			return CUi::POPUP_KEEP_OPEN;
@@ -2703,7 +2708,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
 
 		static int s_OutboundToggleId = 0;
-		if(pUi->DoButtonLogic(&s_OutboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
+		if(Active && pUi->DoButtonLogic(&s_OutboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
 		{
 			g_Config.m_QmTranslateAutoOutgoing = OutboundEnabled ? 0 : 1;
 			return CUi::POPUP_KEEP_OPEN;
@@ -2736,7 +2741,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
 
 		const int OldSel = FindIndex(g_Config.m_QmTranslateTarget, s_apLangCodes, std::size(s_apLangCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_InboundLangDropDownState);
+		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_InboundLangDropDownState, Active);
 		if(NewSel != OldSel)
 			str_copy(g_Config.m_QmTranslateTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateTarget));
 	}
@@ -2750,7 +2755,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
 
 		const int OldSel = FindIndex(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes, std::size(s_apLangCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_OutboundLangDropDownState);
+		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_OutboundLangDropDownState, Active);
 		if(NewSel != OldSel)
 			str_copy(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateOutgoingTarget));
 	}
@@ -2764,7 +2769,7 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
 
 		const int OldSel = FindIndex(g_Config.m_QmTranslateBackend, s_apBackendCodes, std::size(s_apBackendCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apBackendNames, std::size(s_apBackendNames), pPopupContext->m_BackendDropDownState);
+		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apBackendNames, std::size(s_apBackendNames), pPopupContext->m_BackendDropDownState, Active);
 		if(NewSel != OldSel)
 			str_copy(g_Config.m_QmTranslateBackend, s_apBackendCodes[NewSel], sizeof(g_Config.m_QmTranslateBackend));
 	}
@@ -2774,10 +2779,11 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	if(pConfigWarning != nullptr)
 	{
 		View.HSplitTop(SectionSpacing, nullptr, &View);
-		CUIRect WarningRect;
+		CUIRect WarningRect, WarningLabelRect;
 		View.HSplitTop(ToggleHeight, &WarningRect, &View);
 		WarningRect.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, 4.0f);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_WARNING], WarningRect, pConfigWarning, FontSize, TEXTALIGN_MC);
+		WarningRect.VMargin(4.0f, &WarningLabelRect);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_WARNING], WarningLabelRect, pConfigWarning, FontSize, TEXTALIGN_ML);
 	}
 
 	return CUi::POPUP_KEEP_OPEN;

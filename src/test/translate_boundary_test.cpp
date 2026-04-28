@@ -305,7 +305,7 @@ TEST(TranslateBoundary, TranslationTextLengthBoundaries)
 
 	// 最大长度文本
 	char aMaxText[MAX_LINE_LENGTH];
-	for(int i = 0; i < MAX_LINE_LENGTH - 1; i++)
+	for(size_t i = 0; i < MAX_LINE_LENGTH - 1; i++)
 	{
 		aMaxText[i] = 'a';
 	}

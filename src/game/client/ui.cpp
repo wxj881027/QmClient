@@ -1060,6 +1060,7 @@ bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float F
 
 int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const std::function<const char *()> &GetTextLambda, const CUIRect *pRect, const SMenuButtonProperties &Props)
 {
+	const bool Enabled = Props.m_Enabled;
 	CUIRect Text = *pRect, DropDownIcon;
 	Text.HMargin(pRect->h >= 20.0f ? 2.0f : 1.0f, &Text);
 	Text.HMargin((Text.h * Props.m_FontFactor) / 2.0f, &Text);
@@ -1111,6 +1112,8 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 					Color.a *= ButtonColorMulHot();
 				else if(i == 2)
 					Color.a *= ButtonColorMulDefault();
+				if(!Enabled)
+					Color.a *= 0.65f;
 				Graphics()->SetColor(Color);
 
 				CUIElement::SUIElementRect &NewRect = *UIElement.Rect(i);
@@ -1139,9 +1142,9 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 	}
 	// render
 	size_t Index = 2;
-	if(CheckActiveItem(pId))
+	if(Enabled && CheckActiveItem(pId))
 		Index = 0;
-	else if(HotItem() == pId)
+	else if(Enabled && HotItem() == pId)
 		Index = 1;
 	Graphics()->TextureClear();
 	Graphics()->RenderQuadContainer(UIElement.Rect(Index)->m_UIRectQuadContainer, -1);
@@ -1155,8 +1158,15 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 	}
 	ColorRGBA ColorText(TextRender()->DefaultTextColor());
 	ColorRGBA ColorTextOutline(TextRender()->DefaultTextOutlineColor());
+	if(!Enabled)
+	{
+		ColorText.a *= 0.65f;
+		ColorTextOutline.a *= 0.65f;
+	}
 	if(UIElement.Rect(0)->m_UITextContainer.Valid())
 		TextRender()->RenderTextContainer(UIElement.Rect(0)->m_UITextContainer, ColorText, ColorTextOutline);
+	if(!Enabled)
+		return 0;
 	return DoButtonLogic(pId, Props.m_Checked, pRect, Props.m_Flags);
 }
 
@@ -2017,6 +2027,32 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char **pStrs, int Nu
 		return NewSelection;
 	}
 
+	return CurSelection;
+}
+
+int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char **pStrs, int Num, SDropDownState &State, bool Enabled)
+{
+	if(Enabled)
+		return DoDropDown(pRect, CurSelection, pStrs, Num, State);
+
+	if(!State.m_Init)
+	{
+		State.m_UiElement.Init(this, -1);
+		State.m_Init = true;
+	}
+
+	const auto LabelFunc = [CurSelection, pStrs]() {
+		return CurSelection > -1 ? pStrs[CurSelection] : "";
+	};
+
+	SMenuButtonProperties Props;
+	Props.m_Enabled = false;
+	Props.m_HintRequiresStringCheck = true;
+	Props.m_HintCanChangePositionOrSize = true;
+	Props.m_ShowDropDownIcon = true;
+	if(IsPopupOpen(&State.m_SelectionPopupContext))
+		Props.m_Corners = IGraphics::CORNER_ALL & (~State.m_SelectionPopupContext.m_Props.m_Corners);
+	DoButton_Menu(State.m_UiElement, &State.m_ButtonContainer, LabelFunc, pRect, Props);
 	return CurSelection;
 }
 

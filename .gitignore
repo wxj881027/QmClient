@@ -5,6 +5,7 @@ data/
 
 # Agent documentation (local only)
 AGENTS.md
+CLAUDE.md
 
 # Local documentation
 dyl/
