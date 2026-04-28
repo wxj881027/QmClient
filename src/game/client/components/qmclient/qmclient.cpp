@@ -1,5 +1,6 @@
 #include "qmclient.h"
 #include <base/hash.h>
+#include <base/lock.h>
 #include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
@@ -50,10 +51,10 @@
 #include <windows.h>
 #endif
 
-static constexpr const char *TCLIENT_INFO_URL = "http://42.194.185.210:8080/client/version";
-static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/QmClient/releases/latest/download/DDNet.exe";
-static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
-static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
+[[maybe_unused]] static constexpr const char *TCLIENT_INFO_URL = "http://42.194.185.210:8080/client/version";
+[[maybe_unused]] static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/QmClient/releases/latest/download/DDNet.exe";
+[[maybe_unused]] static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
+[[maybe_unused]] static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 static constexpr int QMCLIENT_SYNC_INTERVAL_SECONDS = 30;
 static constexpr int QMCLIENT_VOICE_SYNC_INTERVAL_SECONDS = 10;
 static constexpr const char *QMCLIENT_DEFAULT_VOICE_SERVER = "42.194.185.210:9987";
@@ -75,10 +76,10 @@ static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
-static constexpr int QMCLIENT_AXIOM_AUTO_LOGIN_MAX_ATTEMPTS = 3;
-static constexpr int QMCLIENT_AXIOM_AUTO_LOGIN_RETRY_DELAY_SECONDS = 2;
+[[maybe_unused]] static constexpr int QMCLIENT_AXIOM_AUTO_LOGIN_MAX_ATTEMPTS = 3;
+[[maybe_unused]] static constexpr int QMCLIENT_AXIOM_AUTO_LOGIN_RETRY_DELAY_SECONDS = 2;
 
-static bool TextContainsAny(const char *pText, const std::initializer_list<const char *> &Tokens)
+[[maybe_unused]] static bool TextContainsAny(const char *pText, const std::initializer_list<const char *> &Tokens)
 {
 	if(!pText || pText[0] == '\0')
 		return false;
@@ -92,14 +93,14 @@ static bool TextContainsAny(const char *pText, const std::initializer_list<const
 }
 static constexpr float QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION = 2.0f;
 static constexpr float QMCLIENT_COMBO_POPUP_DURATION = 1.25f;
-static constexpr float QMCLIENT_TEXT_POPUP_FONT_SIZE = 30.0f;
-static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET = vec2(34.0f, -78.0f);
-static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT = vec2(18.0f, -16.0f);
-static constexpr int QMCLIENT_COMBO_POPUP_WINDOW_SECONDS = 2;
-static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_FROM = ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f);
-static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_TO = ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f);
-static constexpr ColorRGBA QMCLIENT_COMBO_POPUP_COLOR = ColorRGBA(1.0f, 0.96f, 0.45f, 1.0f);
-static constexpr const char *s_apKeywordNegationWords[] = {
+[[maybe_unused]] static constexpr float QMCLIENT_TEXT_POPUP_FONT_SIZE = 30.0f;
+[[maybe_unused]] static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_OFFSET = vec2(34.0f, -78.0f);
+[[maybe_unused]] static constexpr vec2 QMCLIENT_FREEZE_WAKEUP_POPUP_DRIFT = vec2(18.0f, -16.0f);
+[[maybe_unused]] static constexpr int QMCLIENT_COMBO_POPUP_WINDOW_SECONDS = 2;
+[[maybe_unused]] static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_FROM = ColorRGBA(0.0f, 1.0f, 1.0f, 1.0f);
+[[maybe_unused]] static constexpr ColorRGBA QMCLIENT_POPUP_ROLL_COLOR_TO = ColorRGBA(1.0f, 0.0f, 1.0f, 1.0f);
+[[maybe_unused]] static constexpr ColorRGBA QMCLIENT_COMBO_POPUP_COLOR = ColorRGBA(1.0f, 0.96f, 0.45f, 1.0f);
+[[maybe_unused]] static constexpr const char *s_apKeywordNegationWords[] = {
 	"不",
 	"没",
 	"無",
@@ -112,7 +113,7 @@ static constexpr const char *s_apKeywordNegationWords[] = {
 	"未",
 	"沒",
 };
-static constexpr const char *s_apKeywordClauseContrastWords[] = {
+[[maybe_unused]] static constexpr const char *s_apKeywordClauseContrastWords[] = {
 	"但是",
 	"但",
 	"不过",
@@ -121,8 +122,8 @@ static constexpr const char *s_apKeywordClauseContrastWords[] = {
 };
 static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s joined this server";
 
-static int AutoReplySeparatorLength(const char *pStr);
-static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
+[[maybe_unused]] static int AutoReplySeparatorLength(const char *pStr);
+[[maybe_unused]] static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
 static const json_value *JsonObjectField(const json_value *pObject, const char *pName);
 static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue);
 static bool JsonReadBoolean(const json_value *pValue, bool &OutValue);
@@ -144,7 +145,7 @@ struct STextPopupDefinition
 	const char *m_pText;
 };
 
-static constexpr std::array<STextPopupDefinition, (int)ETextPopupType::NUM_TYPES> s_aTextPopupDefinitions = {{
+[[maybe_unused]] static constexpr std::array<STextPopupDefinition, (int)ETextPopupType::NUM_TYPES> s_aTextPopupDefinitions = {{
 	{QMCLIENT_FREEZE_WAKEUP_TEXT},
 	{"Amazing!"},
 	{"Fantastic!"},
@@ -177,10 +178,10 @@ private:
 	std::shared_ptr<CHttpRequest> m_pTask;
 	char m_aServerAddress[NETADDR_MAXSTRSIZE] = "";
 	int64_t m_ExpireTick = 0;
-	std::mutex m_Mutex;
+	CLock m_Lock;
 	SResult m_Result;
 
-	void Run() override
+	void Run() override REQUIRES(!m_Lock)
 	{
 		SResult Result;
 		if(m_pTask && m_pTask->State() == EHttpState::DONE)
@@ -281,7 +282,7 @@ private:
 		}
 
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_Result = std::move(Result);
 		}
 		m_pTask = nullptr;
@@ -295,9 +296,9 @@ public:
 		str_copy(m_aServerAddress, pServerAddress, sizeof(m_aServerAddress));
 	}
 
-	SResult TakeResult()
+	SResult TakeResult() REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;
@@ -318,10 +319,10 @@ public:
 
 private:
 	std::shared_ptr<CHttpRequest> m_pTask;
-	std::mutex m_Mutex;
+	CLock m_Lock;
 	SResult m_Result;
 
-	void Run() override
+	void Run() override REQUIRES(!m_Lock)
 	{
 		SResult Result;
 		if(m_pTask && m_pTask->State() == EHttpState::DONE && m_pTask->StatusCode() == 200)
@@ -414,7 +415,7 @@ private:
 		}
 
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			const CLockScope Lock(m_Lock);
 			m_Result = std::move(Result);
 		}
 		m_pTask = nullptr;
@@ -426,9 +427,9 @@ public:
 	{
 	}
 
-	SResult TakeResult()
+	SResult TakeResult() REQUIRES(!m_Lock)
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		const CLockScope Lock(m_Lock);
 		SResult Result = std::move(m_Result);
 		m_Result = SResult();
 		return Result;
@@ -475,7 +476,7 @@ enum class EFreezeWakeupType
 	EXTERNAL_HAMMER,
 };
 
-int ComboPopupTextTypeFromCount(int ComboCount)
+[[maybe_unused]] int ComboPopupTextTypeFromCount(int ComboCount)
 {
 	switch(ComboCount)
 	{
@@ -492,12 +493,12 @@ bool IsComboPopupTextType(int TextType)
 		TextType <= (int)ETextPopupType::COMBO_UNSTOPPABLE;
 }
 
-float TextPopupDuration(int TextType)
+[[maybe_unused]] float TextPopupDuration(int TextType)
 {
 	return IsComboPopupTextType(TextType) ? QMCLIENT_COMBO_POPUP_DURATION : QMCLIENT_FREEZE_WAKEUP_POPUP_DURATION;
 }
 
-EFreezeWakeupType DetectFreezeWakeupType(CGameClient *pGameClient, int ClientId)
+[[maybe_unused]] EFreezeWakeupType DetectFreezeWakeupType(CGameClient *pGameClient, int ClientId)
 {
 	const CCharacter *pPredictedChar = pGameClient->m_PredictedWorld.GetCharacterById(ClientId);
 	if(pPredictedChar == nullptr)
@@ -613,7 +614,7 @@ static char *ParseAutoReplyRulePrefixes(char *pLine, bool &OutAutoRename, bool &
 	return pTrimmedLine;
 }
 
-static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReplyRule> &vOutRules)
+[[maybe_unused]] static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReplyRule> &vOutRules)
 {
 	vOutRules.clear();
 	if(!pRules || pRules[0] == '\0')
@@ -664,7 +665,7 @@ static void ParseKeywordReplyRules(const char *pRules, std::vector<SKeywordReply
 	}
 }
 
-static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules, char *pOutRules, size_t OutRulesSize)
+[[maybe_unused]] static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules, char *pOutRules, size_t OutRulesSize)
 {
 	if(!pOutRules || OutRulesSize == 0)
 		return;
@@ -687,7 +688,7 @@ static void BuildKeywordReplyRules(const std::vector<SKeywordReplyRule> &vRules,
 	}
 }
 
-static bool MigrateKeywordReplyRulesAutoRenamePreservingLines(const char *pRules, char *pOutRules, size_t OutRulesSize)
+[[maybe_unused]] static bool MigrateKeywordReplyRulesAutoRenamePreservingLines(const char *pRules, char *pOutRules, size_t OutRulesSize)
 {
 	if(!pOutRules || OutRulesSize == 0)
 		return false;
@@ -746,7 +747,7 @@ static bool MigrateKeywordReplyRulesAutoRenamePreservingLines(const char *pRules
 	return true;
 }
 
-static bool ReadQmClientAbsoluteTextFile(const char *pFilename, char *pBuf, size_t BufSize)
+[[maybe_unused]] static bool ReadQmClientAbsoluteTextFile(const char *pFilename, char *pBuf, size_t BufSize)
 {
 	if(!pFilename || !pBuf || BufSize == 0)
 		return false;
@@ -815,7 +816,7 @@ static bool IsValidQmClientMachineHash(const char *pHash)
 	return true;
 }
 
-static std::string BuildFriendEnterBroadcastText(const char *pTemplate, std::string_view FriendNames)
+[[maybe_unused]] static std::string BuildFriendEnterBroadcastText(const char *pTemplate, std::string_view FriendNames)
 {
 	const char *pFormat = pTemplate != nullptr && pTemplate[0] != '\0' ? pTemplate : s_pFriendEnterBroadcastDefaultText;
 	std::string Result;
@@ -997,8 +998,8 @@ bool CQmClient::ReadQmClientLifecycleMarker(int64_t &OutStartedAt, int64_t &OutL
 	{
 		if(const char *pValue = str_startswith(aLine, "started_at="))
 			OutStartedAt = maximum<int64_t>(0, str_toint(pValue));
-		else if(const char *pValue = str_startswith(aLine, "last_seen_at="))
-			OutLastSeenAt = maximum<int64_t>(0, str_toint(pValue));
+		else if(const char *pLastSeenValue = str_startswith(aLine, "last_seen_at="))
+			OutLastSeenAt = maximum<int64_t>(0, str_toint(pLastSeenValue));
 	}
 	return true;
 }

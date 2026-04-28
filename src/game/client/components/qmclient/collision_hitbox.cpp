@@ -178,18 +178,15 @@ void CCollisionHitbox::RenderTileHitboxes()
 				continue;
 
 			// 只检查freeze与death类型
-			bool Enabled = false;
 			ColorRGBA RgbaColor;
 
 			if(Type == HITBOX_FREEZE)
 			{
-				Enabled = true;
 				RgbaColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmCollisionHitboxColorFreeze));
 				RgbaColor.a = Alpha;
 			}
 			else if(Type == HITBOX_DEATH)
 			{
-				Enabled = true;
 				RgbaColor = ColorRGBA(0.0f, 0.0f, 0.0f, Alpha);
 			}
 			else

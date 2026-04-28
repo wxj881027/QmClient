@@ -3,13 +3,14 @@
 #ifndef GAME_CLIENT_COMPONENTS_COUNTRYFLAGS_H
 #define GAME_CLIENT_COMPONENTS_COUNTRYFLAGS_H
 
+#include <base/lock.h>
+
 #include <engine/graphics.h>
 #include <engine/shared/jobs.h>
 
 #include <game/client/component.h>
 
 #include <deque>
-#include <mutex>
 #include <vector>
 
 class CCountryFlags : public CComponent
@@ -37,27 +38,26 @@ public:
 
 	private:
 		std::string m_Path;
-		int m_CountryCode;
 		IStorage *m_pStorage;
-		std::mutex m_Mutex;
+		mutable CLock m_Mutex;
 		SResult m_Result;
 		bool m_Completed = false;
 
-		void Run() override;
+		void Run() override REQUIRES(!m_Mutex);
 
 	public:
 		CCountryFlagLoadJob(const char *pPath, int CountryCode, IStorage *pStorage);
 		~CCountryFlagLoadJob() override;
 
-		bool IsCompleted() const
+		bool IsCompleted() const REQUIRES(!m_Mutex)
 		{
-			std::lock_guard<std::mutex> Lock(const_cast<std::mutex &>(m_Mutex));
+			CLockScope Lock(m_Mutex);
 			return m_Completed;
 		}
 
-		SResult GetResult()
+		SResult GetResult() REQUIRES(!m_Mutex)
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			CLockScope Lock(m_Mutex);
 			SResult Result = std::move(m_Result);
 			m_Result = SResult();
 			return Result;

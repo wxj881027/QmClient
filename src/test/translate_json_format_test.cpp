@@ -117,8 +117,8 @@ TEST(TranslateJsonFormat, PayloadFormatIsValid)
 
 	// 验证 system 消息
 	const json_value *pSystemMsg = pMessages->u.array.values[0];
-	const json_value *pSystemContent = json_object_get(json_object_get(pSystemMsg, "message"), "content");
-	// content 在正确的 JSON 中应该是一个字符串值
+	ASSERT_NE(pSystemMsg, &json_value_none);
+	EXPECT_EQ(pSystemMsg->type, json_object);
 
 	json_value_free(pJson);
 }

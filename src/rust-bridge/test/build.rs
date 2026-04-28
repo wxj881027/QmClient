@@ -51,7 +51,7 @@ fn main() {
                 Some("so") => "dylib=",
                 Some("a") => {
                     if supports_whole_archive {
-                        "static:-whole-archive="
+                        "static:+whole-archive="
                     } else {
                         ""
                     }

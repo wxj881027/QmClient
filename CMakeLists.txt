@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 3.12...3.27.4)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE INTERNAL "Minimum macOS deployment version")
+set(DEFAULT_MACOS_DEPLOYMENT_TARGET "10.15")
+if(APPLE)
+  set(DEFAULT_MACOS_DEPLOYMENT_TARGET "${CMAKE_HOST_SYSTEM_VERSION}")
+  string(REGEX MATCH "^[0-9]+" DEFAULT_MACOS_DEPLOYMENT_TARGET_MAJOR "${DEFAULT_MACOS_DEPLOYMENT_TARGET}")
+  if(NOT DEFAULT_MACOS_DEPLOYMENT_TARGET_MAJOR STREQUAL "")
+    set(DEFAULT_MACOS_DEPLOYMENT_TARGET "${DEFAULT_MACOS_DEPLOYMENT_TARGET_MAJOR}.0")
+  endif()
+  if(DEFAULT_MACOS_DEPLOYMENT_TARGET STREQUAL "" OR DEFAULT_MACOS_DEPLOYMENT_TARGET VERSION_LESS 10.15)
+    set(DEFAULT_MACOS_DEPLOYMENT_TARGET "10.15")
+  endif()
+endif()
+set(CMAKE_OSX_DEPLOYMENT_TARGET "${DEFAULT_MACOS_DEPLOYMENT_TARGET}" CACHE STRING "Minimum macOS deployment version")
 if(CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 10.15)
   message(WARNING "Building for macOS < 10.15 is not supported")
 endif()
@@ -765,11 +776,12 @@ elseif(TARGET_OS STREQUAL "mac")
   find_library(COCOA Cocoa)
   find_library(OPENGL OpenGL)
   find_library(SECURITY Security)
+  find_library(USERNOTIFICATIONS UserNotifications)
   set(PLATFORM_CLIENT
     src/macos/client.mm
     src/macos/notifications.mm
   )
-  set(PLATFORM_CLIENT_LIBS ${COCOA} ${OPENGL})
+  set(PLATFORM_CLIENT_LIBS ${COCOA} ${OPENGL} ${USERNOTIFICATIONS})
   set(PLATFORM_LIBS ${CARBON} ${SECURITY})
 elseif(TARGET_OS STREQUAL "haiku")
     set(PLATFORM_CLIENT)
@@ -933,6 +945,14 @@ list(APPEND TARGETS_OWN rust-bridge-shared)
 
 set(CARGO_BUILD_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} DDNET_TEST_NO_LINK=1)
 set(CARGO_TEST_ENV CARGO_TARGET_DIR=${PROJECT_BINARY_DIR} "DDNET_TEST_LIBRARIES_FILE=${PROJECT_BINARY_DIR}/rust_test_libraries.txt")
+if(APPLE)
+  list(APPEND CARGO_BUILD_ENV MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET})
+  list(APPEND CARGO_TEST_ENV MACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET})
+  if(CMAKE_OSX_SYSROOT)
+    list(APPEND CARGO_BUILD_ENV SDKROOT=${CMAKE_OSX_SYSROOT})
+    list(APPEND CARGO_TEST_ENV SDKROOT=${CMAKE_OSX_SYSROOT})
+  endif()
+endif()
 
 if(TARGET_OS STREQUAL "android")
   set(CARGO_BUILD_DIR "${CARGO_NDK_TARGET}/")
@@ -2963,6 +2983,7 @@ if(CLIENT)
 
   if(VULKAN)
     target_compile_definitions(game-client PRIVATE CONF_BACKEND_VULKAN)
+    target_compile_definitions(engine-shared PRIVATE CONF_BACKEND_VULKAN)
   endif()
 
   if(TARGET sync_runtime_data)
@@ -3724,12 +3745,67 @@ if(CLIENT AND DMGBUILD)
     list(APPEND TARGET_TOOLS_FILES $<TARGET_FILE:${target}>)
   endforeach()
 
+
+	# macOS DMG: resolve Homebrew library paths at configure time
+  if(APPLE)
+	  # WebP: use find_package results (works for both Homebrew and bundled)
+	  if(WebP_FOUND AND WebP_LIBRARY)
+	    get_filename_component(WEBP_LIB_DIR "${WebP_LIBRARY}" DIRECTORY)
+	  else()
+	    set(WEBP_LIB_DIR "${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}")
+	  endif()
+
+	  # Vulkan: resolve dylib paths (brew on CI, ddnet-libs fallback for local)
+	  if(VULKAN)
+	    find_program(BREW brew)
+	    if(BREW)
+	      execute_process(COMMAND ${BREW} --prefix vulkan-loader
+	        OUTPUT_VARIABLE VK_LOADER_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	      execute_process(COMMAND ${BREW} --prefix molten-vk
+	        OUTPUT_VARIABLE MOLTENVK_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	      if(VK_LOADER_PREFIX AND EXISTS "${VK_LOADER_PREFIX}/lib/libvulkan.1.dylib")
+	        set(MACOS_VULKAN_LIB_DIR "${VK_LOADER_PREFIX}/lib")
+	      endif()
+	      if(MOLTENVK_PREFIX AND EXISTS "${MOLTENVK_PREFIX}/lib/libMoltenVK.dylib")
+	        set(MACOS_MOLTENVK_LIB_DIR "${MOLTENVK_PREFIX}/lib")
+	      endif()
+	    endif()
+	    if(NOT MACOS_VULKAN_LIB_DIR)
+	      set(MACOS_VULKAN_LIB_DIR "${PROJECT_SOURCE_DIR}/ddnet-libs/vulkan/${LIB_DIR}")
+	    endif()
+	    if(NOT MACOS_MOLTENVK_LIB_DIR)
+	      set(MACOS_MOLTENVK_LIB_DIR "${MACOS_VULKAN_LIB_DIR}")
+	    endif()
+	    # Generate MoltenVK ICD JSON at configure time
+	    file(WRITE "${PROJECT_BINARY_DIR}/MoltenVK_icd.json"
+	"{\n"
+	"    \"file_format_version\": \"1.0.0\",\n"
+	"    \"ICD\": {\n"
+	"        \"library_path\": \"../../../Frameworks/libMoltenVK.dylib\",\n"
+	"        \"api_version\": \"1.4.0\",\n"
+	"        \"is_portability_driver\": true\n"
+	"    }\n"
+	"}\n")
+	  endif()
+	endif()
+
+  set(DMG_VULKAN_SHADER_COPY_COMMANDS)
+  if(VULKAN)
+    list(APPEND DMG_VULKAN_SHADER_COPY_COMMANDS
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/data/shader/vulkan)
+    foreach(file ${VULKAN_SHADER_FILE_LIST})
+      list(APPEND DMG_VULKAN_SHADER_COPY_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/${file} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/${file})
+    endforeach()
+  endif()
+
   add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.dmg
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${DMG_TMPDIR}
     ${DMG_MKDIR_COMMANDS}
 
     # CLIENT
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/data ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/data
+    ${DMG_VULKAN_SHADER_COPY_COMMANDS}
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/other/icons/${CLIENT_EXECUTABLE}.icns ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/
     COMMAND ${CMAKE_COMMAND} -E copy bundle/client/Info.plist ${PROJECT_SOURCE_DIR}/other/bundle/client/PkgInfo ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:game-client> ${TARGET_TOOLS_FILES} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/
@@ -3743,10 +3819,12 @@ if(CLIENT AND DMGBUILD)
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/ffmpeg/${LIB_DIR}/libswresample.5.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/ffmpeg/${LIB_DIR}/libswscale.8.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/libsteam_api.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebp.7.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebpdemux.2.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libwebpmux.3.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/ddnet-libs/webp/${LIB_DIR}/libsharpyuv.0.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libwebp.7.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libwebpdemux.2.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libwebpmux.3.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${WEBP_LIB_DIR}/libsharpyuv.0.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${MACOS_VULKAN_LIB_DIR}/libvulkan.1.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
+	COMMAND ${CMAKE_COMMAND} -E copy ${MACOS_MOLTENVK_LIB_DIR}/libMoltenVK.dylib ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks/
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/../Frameworks ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/darwin_fix_install_names.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Frameworks --executable ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${CLIENT_EXECUTABLE}
@@ -3761,6 +3839,10 @@ if(CLIENT AND DMGBUILD)
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/darwin_strip_rpath.py ${CMAKE_OTOOL} ${CMAKE_INSTALL_NAME_TOOL} ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
     COMMAND codesign --force --sign - ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
     COMMAND ${CMAKE_COMMAND} -E copy ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/${SERVER_EXECUTABLE}
+
+	# ICD JSON for MoltenVK (non-code, placed after codesign)
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/vulkan/icd.d
+	COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/MoltenVK_icd.json ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/vulkan/icd.d/
 
     # DMG
     COMMAND dmgbuild -s ${PROJECT_SOURCE_DIR}/other/dmgsettings.py -D client=${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app -D server=${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app -D background=${PROJECT_SOURCE_DIR}/other/dmgbackground.png "${CPACK_PACKAGE_NAME} ${CPACK_PACKAGE_VERSION}" ${CPACK_PACKAGE_FILE_NAME}.dmg

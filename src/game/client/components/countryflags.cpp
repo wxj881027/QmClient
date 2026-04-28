@@ -17,7 +17,6 @@
 
 CCountryFlags::CCountryFlagLoadJob::CCountryFlagLoadJob(const char *pPath, int CountryCode, IStorage *pStorage) :
 	m_Path(pPath),
-	m_CountryCode(CountryCode),
 	m_pStorage(pStorage)
 {
 	m_Result.m_CountryCode = CountryCode;
@@ -35,7 +34,7 @@ void CCountryFlags::CCountryFlagLoadJob::Run()
 	if(!m_pStorage->ReadFile(m_Path.c_str(), IStorage::TYPE_ALL, &pFileData, &FileSize))
 	{
 		log_error("countryflags", "Failed to read flag file '%s'", m_Path.c_str());
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		CLockScope Lock(m_Mutex);
 		m_Completed = true;
 		return;
 	}
@@ -45,14 +44,14 @@ void CCountryFlags::CCountryFlagLoadJob::Run()
 	{
 		free(pFileData);
 		log_error("countryflags", "Failed to decode flag PNG '%s'", m_Path.c_str());
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		CLockScope Lock(m_Mutex);
 		m_Completed = true;
 		return;
 	}
 	free(pFileData);
 
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		CLockScope Lock(m_Mutex);
 		m_Result.m_Image = std::move(Image);
 		m_Result.m_Success = true;
 		m_Completed = true;

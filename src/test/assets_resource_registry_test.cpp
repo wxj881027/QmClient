@@ -97,8 +97,9 @@ TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesPreferCategoryAssetTh
 	const auto aCandidates = BuildNamedSingleFileAssetCandidates("gui_cursor", "legacy");
 
 	EXPECT_EQ(aCandidates[0], "assets/gui_cursor/legacy.png");
-	EXPECT_EQ(aCandidates[1], "gui_cursor.png");
-	EXPECT_TRUE(aCandidates[2].empty());
+	EXPECT_EQ(aCandidates[1], "assets/gui_cursor/legacy/gui_cursor.png");
+	EXPECT_EQ(aCandidates[2], "gui_cursor.png");
+	EXPECT_TRUE(aCandidates[3].empty());
 }
 
 TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesUseBuiltinNamesForDefault)
@@ -118,6 +119,20 @@ TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesUseBuiltinNamesForDef
 	EXPECT_EQ(aStrongWeakCandidates[0], "strong_weak.png");
 	EXPECT_TRUE(aStrongWeakCandidates[1].empty());
 	EXPECT_TRUE(aStrongWeakCandidates[2].empty());
+}
+
+TEST(AssetsResourceRegistry, NamedSingleFileAssetReservedNamesCoverBuiltinAndDefaultAliases)
+{
+	const SAssetResourceCategory *pArrow = FindAssetResourceCategory("arrow");
+	const SAssetResourceCategory *pStrongWeak = FindAssetResourceCategory("strong_weak");
+	ASSERT_NE(pArrow, nullptr);
+	ASSERT_NE(pStrongWeak, nullptr);
+
+	EXPECT_TRUE(IsReservedNamedSingleFileAssetName(*pArrow, "default"));
+	EXPECT_TRUE(IsReservedNamedSingleFileAssetName(*pArrow, "arrow"));
+	EXPECT_TRUE(IsReservedNamedSingleFileAssetName(*pStrongWeak, "strong_weak"));
+	EXPECT_FALSE(IsReservedNamedSingleFileAssetName(*pArrow, "arrow_pack"));
+	EXPECT_FALSE(IsReservedNamedSingleFileAssetName(*pStrongWeak, "strong_weak_pack"));
 }
 
 TEST(AssetsResourceRegistry, EnsureDefaultAssetVisibleInjectsAndSortsDefaultFirst)

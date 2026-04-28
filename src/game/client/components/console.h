@@ -141,7 +141,7 @@ class CGameConsole : public CComponent
 		void Dump() REQUIRES(!m_BacklogPendingLock);
 		void SetChatExportMode(bool Enable) REQUIRES(!m_BacklogPendingLock);
 		void ClearChatExportSelection();
-		void SelectAllChatExportable();
+		void SelectAllChatExportable() REQUIRES(!m_BacklogPendingLock);
 		int SelectedChatExportCount();
 		bool IsChatExportableEntry(const CBacklogEntry *pEntry) const;
 		void ToggleChatExportEntry(CBacklogEntry *pEntry, bool RangeSelect);

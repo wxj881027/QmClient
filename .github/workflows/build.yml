@@ -159,7 +159,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           export HOMEBREW_NO_AUTO_UPDATE=1
-          for pkg in cmake ninja pkg-config python freetype sdl2 libpng webp libogg opus opusfile sqlite wavpack ffmpeg; do
+          for pkg in cmake ninja pkg-config python freetype sdl2 libpng webp libogg opus opusfile sqlite wavpack ffmpeg molten-vk vulkan-loader glslang; do
             if brew list --formula "$pkg" &>/dev/null; then
               brew link --overwrite "$pkg" 2>/dev/null || true
             else
@@ -172,35 +172,7 @@ jobs:
           python -m pip install dmgbuild
           echo "${PWD}/.venv-dmgbuild/bin" >> "$GITHUB_PATH"
 
-      - name: Copy WebP libraries for macOS
-        if: runner.os == 'macOS'
-        run: |
-          WEBP_LIBDIR=$(brew --prefix webp)/lib
-          WEBP_OLD_ID=$(otool -D "${WEBP_LIBDIR}/libwebp.7.dylib" | tail -1)
-          SHARPYUV_OLD_ID=$(otool -D "${WEBP_LIBDIR}/libsharpyuv.0.dylib" 2>/dev/null | tail -1)
-          for DIR in lib64 libarm64; do
-            mkdir -p "ddnet-libs/webp/mac/${DIR}"
-            cp "${WEBP_LIBDIR}/libwebp.7.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
-            cp "${WEBP_LIBDIR}/libwebpdemux.2.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
-            cp "${WEBP_LIBDIR}/libwebpmux.3.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
-            cp "${WEBP_LIBDIR}/libsharpyuv.0.dylib" "ddnet-libs/webp/mac/${DIR}/" 2>/dev/null || true
-            install_name_tool -id @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebp.7.dylib" 2>/dev/null || true
-            install_name_tool -id @rpath/libwebpdemux.2.dylib "ddnet-libs/webp/mac/${DIR}/libwebpdemux.2.dylib" 2>/dev/null || true
-            install_name_tool -id @rpath/libwebpmux.3.dylib "ddnet-libs/webp/mac/${DIR}/libwebpmux.3.dylib" 2>/dev/null || true
-            install_name_tool -id @rpath/libsharpyuv.0.dylib "ddnet-libs/webp/mac/${DIR}/libsharpyuv.0.dylib" 2>/dev/null || true
-            if [ -n "${WEBP_OLD_ID}" ]; then
-              install_name_tool -change "${WEBP_OLD_ID}" @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebpdemux.2.dylib" 2>/dev/null || true
-              install_name_tool -change "${WEBP_OLD_ID}" @rpath/libwebp.7.dylib "ddnet-libs/webp/mac/${DIR}/libwebpmux.3.dylib" 2>/dev/null || true
-            fi
-            if [ -n "${SHARPYUV_OLD_ID}" ]; then
-              install_name_tool -change "${SHARPYUV_OLD_ID}" @rpath/libsharpyuv.0.dylib "ddnet-libs/webp/mac/${DIR}/libwebp.7.dylib" 2>/dev/null || true
-              install_name_tool -change "${SHARPYUV_OLD_ID}" @rpath/libsharpyuv.0.dylib "ddnet-libs/webp/mac/${DIR}/libwebpdemux.2.dylib" 2>/dev/null || true
-              install_name_tool -change "${SHARPYUV_OLD_ID}" @rpath/libsharpyuv.0.dylib "ddnet-libs/webp/mac/${DIR}/libwebpmux.3.dylib" 2>/dev/null || true
-            fi
-          done
-          echo "Verifying WebP install_name:"
-          otool -D ddnet-libs/webp/mac/libarm64/libwebp.7.dylib 2>/dev/null || true
-          ls -la ddnet-libs/webp/mac/lib64/
+
 
       - name: Configure (Linux)
         if: runner.os == 'Linux'
@@ -221,6 +193,7 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DPREFER_BUNDLED_LIBS=ON \
             -DDOWNLOAD_GTEST=ON \
+            -DVULKAN=ON \
             -DCMAKE_OSX_SYSROOT="${SDKROOT}" \
             -DIPO=OFF
 

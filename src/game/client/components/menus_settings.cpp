@@ -566,7 +566,7 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	}
 
 	// player name
-	CUIRect Button, Label;
+	CUIRect Label;
 	CUIRect NameRow;
 	MainView.HSplitTop(20.0f, &NameRow, &MainView);
 	char aBuf[128];

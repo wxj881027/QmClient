@@ -89,7 +89,7 @@ void CSkins7::CSkinPartLoadJob::Run()
 	if(!m_pStorage->ReadFile(m_Path.c_str(), m_StorageType, &pFileData, &FileSize))
 	{
 		log_error("skins7", "Failed to read skin part file '%s'", m_Path.c_str());
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		CLockScope Lock(m_Mutex);
 		m_Completed = true;
 		return;
 	}
@@ -99,7 +99,7 @@ void CSkins7::CSkinPartLoadJob::Run()
 	{
 		free(pFileData);
 		log_error("skins7", "Failed to decode skin part PNG '%s'", m_Path.c_str());
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		CLockScope Lock(m_Mutex);
 		m_Completed = true;
 		return;
 	}
@@ -109,7 +109,7 @@ void CSkins7::CSkinPartLoadJob::Run()
 	{
 		log_error("skins7", "Skin part '%s' must be RGBA format", m_Path.c_str());
 		OriginalImage.Free();
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		CLockScope Lock(m_Mutex);
 		m_Completed = true;
 		return;
 	}
@@ -120,7 +120,7 @@ void CSkins7::CSkinPartLoadJob::Run()
 	ColorRGBA BloodColor = DetermineBloodColorFromInfo(OriginalImage);
 
 	{
-		std::lock_guard<std::mutex> Lock(m_Mutex);
+		CLockScope Lock(m_Mutex);
 		m_Result.m_OriginalImage = std::move(OriginalImage);
 		m_Result.m_GrayscaleImage = std::move(GrayscaleImage);
 		m_Result.m_BloodColor = BloodColor;

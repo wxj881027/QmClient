@@ -409,6 +409,7 @@ public:
 	}
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
+		m_Texture = g_pData->m_aImages[IMAGE_ARROW].m_Id;
 		if(!Data.m_ShowDirection)
 		{
 			m_ShiftOnInvis = false;
@@ -624,6 +625,7 @@ class CNamePlatePartHookStrongWeak : public CNamePlatePartSprite
 protected:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
+		m_Texture = g_pData->m_aImages[IMAGE_STRONGWEAK].m_Id;
 		m_Visible = Data.m_ShowHookStrongWeak;
 		if(!m_Visible)
 			return;
@@ -2041,4 +2043,3 @@ CNamePlates::~CNamePlates()
 {
 	delete m_pData;
 }
-

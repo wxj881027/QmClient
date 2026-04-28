@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_RCLIENT_VOICE_H
 #define GAME_CLIENT_COMPONENTS_RCLIENT_VOICE_H
 
+#include <base/lock.h>
 #include <base/system.h>
 #include <base/types.h>
 #include <base/vmath.h>
@@ -227,12 +228,12 @@ class CRClientVoice
 	std::atomic<bool> m_ShutdownDone = true;
 	int64_t m_LastConfigSnapshotUpdate = 0;
 	int64_t m_LastClientSnapshotUpdate = 0;
-	std::mutex m_ServerAddrMutex;
+	CLock m_ServerAddrMutex;
 
-	mutable std::mutex m_ConfigMutex;
+	mutable CLock m_ConfigMutex;
 	SRClientVoiceConfigSnapshot m_ConfigSnapshot = {};
 
-	mutable std::mutex m_SnapshotMutex;
+	mutable CLock m_SnapshotMutex;
 	int m_LocalClientIdSnap = -1;
 	std::array<int, 2> m_aLocalClientIdsSnap = {};
 	bool m_OnlineSnap = false;
@@ -252,8 +253,8 @@ class CRClientVoice
 	void UpdateClientSnapshot(bool Force = false);
 	void UpdateConfigSnapshot(bool Force = false);
 	void GetConfigSnapshot(SRClientVoiceConfigSnapshot &Out) const;
-	void ProcessCapture();
-	void ProcessIncoming();
+	void ProcessCapture() NO_THREAD_SAFETY_ANALYSIS;
+	void ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS;
 	void DecodeJitter();
 	void UpdateEncoderParams();
 	void UpdateMicLevel(float Peak);

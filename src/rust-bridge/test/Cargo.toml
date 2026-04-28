@@ -9,5 +9,8 @@ license = "Zlib"
 [lib]
 path = "lib.rs"
 
+[dependencies]
+link-cplusplus = "1.0.6"
+
 [features]
 link-test-libraries = []

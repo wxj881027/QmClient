@@ -140,18 +140,24 @@ void LoadNamedSingleFileImage(CGameClient *pGameClient, int ImageId, const char 
 	if(ImageId < 0 || ImageId >= g_pData->m_NumImages || pCategoryId == nullptr || pActiveName == nullptr)
 		return;
 
-	pGameClient->Graphics()->UnloadTexture(&g_pData->m_aImages[ImageId].m_Id);
-	g_pData->m_aImages[ImageId].m_Id = IGraphics::CTextureHandle();
+	IGraphics::CTextureHandle NewTexture;
 
 	for(const std::string &Candidate : BuildNamedSingleFileAssetCandidates(pCategoryId, pActiveName))
 	{
 		if(Candidate.empty())
 			continue;
 
-		g_pData->m_aImages[ImageId].m_Id = pGameClient->Graphics()->LoadTexture(Candidate.c_str(), IStorage::TYPE_ALL);
-		if(g_pData->m_aImages[ImageId].m_Id.IsValid())
-			return;
+		NewTexture = pGameClient->Graphics()->LoadTexture(Candidate.c_str(), IStorage::TYPE_ALL);
+		if(NewTexture.IsValid() && !NewTexture.IsNullTexture())
+			break;
+		NewTexture = IGraphics::CTextureHandle();
 	}
+
+	if(!NewTexture.IsValid() || NewTexture.IsNullTexture())
+		return;
+
+	pGameClient->Graphics()->UnloadTexture(&g_pData->m_aImages[ImageId].m_Id);
+	g_pData->m_aImages[ImageId].m_Id = NewTexture;
 }
 }
 
@@ -3441,12 +3447,12 @@ void CGameClient::HandleHammerSkinSwap(CCharacter *pChar)
 				g_Config.m_ClDummyUseCustomColor = 1;
 				Changed = true;
 			}
-			if(g_Config.m_ClDummyColorBody != TargetClient.m_ColorBody)
+			if(static_cast<int>(g_Config.m_ClDummyColorBody) != TargetClient.m_ColorBody)
 			{
 				g_Config.m_ClDummyColorBody = TargetClient.m_ColorBody;
 				Changed = true;
 			}
-			if(g_Config.m_ClDummyColorFeet != TargetClient.m_ColorFeet)
+			if(static_cast<int>(g_Config.m_ClDummyColorFeet) != TargetClient.m_ColorFeet)
 			{
 				g_Config.m_ClDummyColorFeet = TargetClient.m_ColorFeet;
 				Changed = true;
@@ -3475,12 +3481,12 @@ void CGameClient::HandleHammerSkinSwap(CCharacter *pChar)
 				g_Config.m_ClPlayerUseCustomColor = 1;
 				Changed = true;
 			}
-			if(g_Config.m_ClPlayerColorBody != TargetClient.m_ColorBody)
+			if(static_cast<int>(g_Config.m_ClPlayerColorBody) != TargetClient.m_ColorBody)
 			{
 				g_Config.m_ClPlayerColorBody = TargetClient.m_ColorBody;
 				Changed = true;
 			}
-			if(g_Config.m_ClPlayerColorFeet != TargetClient.m_ColorFeet)
+			if(static_cast<int>(g_Config.m_ClPlayerColorFeet) != TargetClient.m_ColorFeet)
 			{
 				g_Config.m_ClPlayerColorFeet = TargetClient.m_ColorFeet;
 				Changed = true;

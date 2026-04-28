@@ -193,12 +193,13 @@ TEST(TranslateIntegration, ConfigVariablesIntegration)
 	EXPECT_EQ(CConfig::ms_QmTranslateLlmConcurrency, 1);
 
 	// 测试配置变量可读写
+	const int OldConcurrency = g_Config.m_QmTranslateLlmConcurrency;
 	g_Config.m_QmTranslateLlmConcurrency = 5;
 	EXPECT_EQ(g_Config.m_QmTranslateLlmConcurrency, 5);
 
-	// 恢复默认值
-	g_Config.m_QmTranslateLlmConcurrency = 1;
-	EXPECT_EQ(g_Config.m_QmTranslateLlmConcurrency, 1);
+	// 恢复原值，避免依赖测试执行顺序
+	g_Config.m_QmTranslateLlmConcurrency = OldConcurrency;
+	EXPECT_EQ(g_Config.m_QmTranslateLlmConcurrency, OldConcurrency);
 }
 
 // 测试后端名称比较

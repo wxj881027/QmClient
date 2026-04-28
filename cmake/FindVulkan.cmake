@@ -5,6 +5,12 @@ if(NOT CMAKE_CROSSCOMPILING)
     set(VULKAN_INCLUDE_DIRS "${PC_VULKAN_INCLUDE_DIRS}")
     set(VULKAN_LIBRARIES "${PC_VULKAN_LIBRARIES}")
     set(VULKAN_FOUND TRUE)
+    # Use full library path to avoid rpath issues (e.g. PREFER_BUNDLED_LIBS)
+    find_library(VULKAN_LIBRARY_ABS NAMES vulkan vulkan-1
+      HINTS ${PC_VULKAN_LIBDIR} ${PC_VULKAN_LIBRARY_DIRS})
+    if(VULKAN_LIBRARY_ABS)
+      set(VULKAN_LIBRARIES "${VULKAN_LIBRARY_ABS}")
+    endif()
   endif()
 endif()
 

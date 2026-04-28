@@ -3512,11 +3512,15 @@ public:
 			return false;
 		}
 
-		vVKExtensions.reserve(ExtCount);
+		vVKExtensions.reserve(ExtCount + 1);
 		for(uint32_t i = 0; i < ExtCount; i++)
 		{
 			vVKExtensions.emplace_back(vExtensionList[i]);
 		}
+
+#ifdef VK_KHR_portability_enumeration
+		vVKExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#endif
 
 		return true;
 	}
@@ -3646,6 +3650,9 @@ public:
 		VKInstanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		VKInstanceInfo.pNext = pExt;
 		VKInstanceInfo.flags = 0;
+#ifdef VK_KHR_portability_enumeration
+		VKInstanceInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
 		VKInstanceInfo.pApplicationInfo = &VKAppInfo;
 		VKInstanceInfo.enabledExtensionCount = static_cast<uint32_t>(vExtCStr.size());
 		VKInstanceInfo.ppEnabledExtensionNames = vExtCStr.data();

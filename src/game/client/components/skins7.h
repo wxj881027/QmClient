@@ -4,6 +4,7 @@
 #define GAME_CLIENT_COMPONENTS_SKINS7_H
 
 #include <base/color.h>
+#include <base/lock.h>
 #include <base/vmath.h>
 
 #include <engine/client/enums.h>
@@ -18,7 +19,6 @@
 
 #include <chrono>
 #include <deque>
-#include <mutex>
 #include <vector>
 
 class CSkins7 : public CComponent
@@ -84,27 +84,27 @@ public:
 		std::string m_PartName;
 		IStorage *m_pStorage;
 		int m_StorageType;
-		int m_PartType;
-		int m_Flags;
-		std::mutex m_Mutex;
+		[[maybe_unused]] int m_PartType;
+		[[maybe_unused]] int m_Flags;
+		mutable CLock m_Mutex;
 		SResult m_Result;
 		bool m_Completed = false;
 
-		void Run() override;
+		void Run() override REQUIRES(!m_Mutex);
 
 	public:
 		CSkinPartLoadJob(const char *pPath, const char *pPartName, IStorage *pStorage, int StorageType, int PartType, int Flags);
 		~CSkinPartLoadJob() override;
 
-		bool IsCompleted() const
+		bool IsCompleted() const REQUIRES(!m_Mutex)
 		{
-			std::lock_guard<std::mutex> Lock(const_cast<std::mutex &>(m_Mutex));
+			CLockScope Lock(m_Mutex);
 			return m_Completed;
 		}
 
-		SResult GetResult()
+		SResult GetResult() REQUIRES(!m_Mutex)
 		{
-			std::lock_guard<std::mutex> Lock(m_Mutex);
+			CLockScope Lock(m_Mutex);
 			SResult Result = std::move(m_Result);
 			m_Result = SResult();
 			return Result;

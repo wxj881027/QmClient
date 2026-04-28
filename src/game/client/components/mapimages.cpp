@@ -303,7 +303,6 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 				for(int i = 0; i < 256; ++i)
 				{
 					int TileIndex = i;
-					const int OriginalTileIndex = TileIndex;
 					if(IsValidTile(LayerType, EntitiesAreMasked, EntitiesModType, TileIndex))
 					{
 						if(LayerType == MAP_IMAGE_ENTITY_LAYER_TYPE_SWITCH && TileIndex == TILE_SWITCHTIMEDOPEN)

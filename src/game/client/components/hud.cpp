@@ -3323,8 +3323,6 @@ void CHud::RenderMediaIsland()
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f);
 
 	const float StatusSectionX = TimerCapsule.m_BoxX + TimerCapsule.m_BoxW + TimerToStatusGap;
-	const float CollapsedStatusWidth = RawCollapsedStatusWidth;
-	const float ExpandedStatusWidth = RawExpandedStatusWidth;
 	const float TargetStatusWidth = PlannedStatusWidth;
 	const float TargetStatusAlpha = (ShowFrozenSummaryInStatus || ShowRecordingStatus) ? 1.0f : 0.0f;
 	const float TargetTextAlpha = ShowFrozenSummaryInStatus ? 1.0f : (ShowRecordingStatus && ScoreboardExpanded ? 1.0f : 0.0f);

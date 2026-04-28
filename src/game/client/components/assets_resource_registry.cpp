@@ -231,9 +231,31 @@ const char *BuiltinSingleFileAssetFilename(const SAssetResourceCategory &Categor
 	return nullptr;
 }
 
-std::array<std::string, 3> BuildNamedSingleFileAssetCandidates(std::string_view CategoryId, std::string_view ActiveName)
+bool IsReservedNamedSingleFileAssetName(const SAssetResourceCategory &Category, std::string_view AssetName)
 {
-	std::array<std::string, 3> aCandidates;
+	if(Category.m_Kind != EAssetResourceKind::NAMED_SINGLE_FILE)
+		return false;
+	if(IsProtectedDefaultAsset(AssetName))
+		return true;
+	if(AssetName == Category.m_pId)
+		return true;
+
+	const auto MatchesFilenameStem = [AssetName](const char *pFilename) {
+		if(pFilename == nullptr || pFilename[0] == '\0')
+			return false;
+
+		std::string_view Filename(pFilename);
+		if(const size_t DotPos = Filename.find_last_of('.'); DotPos != std::string_view::npos)
+			Filename = Filename.substr(0, DotPos);
+		return Filename == AssetName;
+	};
+
+	return MatchesFilenameStem(BuiltinSingleFileAssetFilename(Category)) || MatchesFilenameStem(LegacySingleFileAssetSourcePath(Category));
+}
+
+std::array<std::string, 4> BuildNamedSingleFileAssetCandidates(std::string_view CategoryId, std::string_view ActiveName)
+{
+	std::array<std::string, 4> aCandidates;
 
 	const std::string CategoryIdString(CategoryId);
 	if(const SAssetResourceCategory *pCategory = FindAssetResourceCategory(CategoryIdString.c_str()))
@@ -247,8 +269,9 @@ std::array<std::string, 3> BuildNamedSingleFileAssetCandidates(std::string_view 
 		}
 
 		aCandidates[0] = "assets/" + std::string(CategoryId) + "/" + std::string(ActiveName) + ".png";
+		aCandidates[1] = "assets/" + std::string(CategoryId) + "/" + std::string(ActiveName) + "/" + std::string(CategoryId) + ".png";
 		if(pBuiltinFilename != nullptr)
-			aCandidates[1] = pBuiltinFilename;
+			aCandidates[2] = pBuiltinFilename;
 	}
 
 	return aCandidates;

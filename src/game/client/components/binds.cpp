@@ -112,7 +112,7 @@ static void ForEachTopLevelBindCommand(const char *pCommand, F &&Fn)
 	FlushCommand();
 }
 
-static bool BindContainsCommand(const char *pBind, const char *pCommand)
+[[maybe_unused]] static bool BindContainsCommand(const char *pBind, const char *pCommand)
 {
 	if(!pBind || !pCommand || pCommand[0] == '\0')
 		return false;
