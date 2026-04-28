@@ -323,7 +323,6 @@ std::vector<SEntityBgHierarchyEntry> BuildEntityBgHierarchyEntries(const std::ve
 	str_copy(aFolder, pCurrentFolder != nullptr ? pCurrentFolder : "", sizeof(aFolder));
 	const bool IsWorkshopFolder = IsEntityBgWorkshopFolderOrChildPath(aFolder);
 	const std::string_view LogicalFolder = EntityBgLogicalFolder(aFolder);
-	const int FolderLength = str_length(aFolder);
 
 	auto AddEntry = [&](const char *pName, const char *pDisplayName, bool IsDirectory, EEntityBgHierarchyEntrySource Source) {
 		if(pName == nullptr || pName[0] == '\0')

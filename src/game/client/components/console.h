@@ -48,6 +48,8 @@ class CGameConsole : public CComponent
 			ColorRGBA m_PrintColor;
 			size_t m_Length;
 			ELogCategory m_LogCategory;
+			int m_ExportId;
+			bool m_ExportSelected;
 			char m_aText[1];
 		};
 		CStaticRingBuffer<CBacklogEntry, 1024 * 1024, CRingBufferBase::FLAG_RECYCLE> m_Backlog;
@@ -63,6 +65,10 @@ class CGameConsole : public CComponent
 		int m_BacklogLastActiveLine = -1;
 		int m_LinesRendered;
 		ELogFilter m_LogFilter = ELogFilter::ALL;
+		ELogFilter m_ChatExportPreviousFilter = ELogFilter::ALL;
+		int m_NextExportId = 1;
+		int m_ChatExportAnchorId = -1;
+		bool m_ChatExportMode = false;
 
 		STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
 		float m_LastInputHeight = 0.0f;
@@ -133,6 +139,13 @@ class CGameConsole : public CComponent
 		int GetLinesToScroll(int Direction, int LinesToScroll);
 		void ScrollToCenter(int StartLine, int EndLine);
 		void Dump() REQUIRES(!m_BacklogPendingLock);
+		void SetChatExportMode(bool Enable) REQUIRES(!m_BacklogPendingLock);
+		void ClearChatExportSelection();
+		void SelectAllChatExportable();
+		int SelectedChatExportCount();
+		bool IsChatExportableEntry(const CBacklogEntry *pEntry) const;
+		void ToggleChatExportEntry(CBacklogEntry *pEntry, bool RangeSelect);
+		bool ExportSelectedChat() REQUIRES(!m_BacklogPendingLock);
 
 		const char *GetString() const { return m_Input.GetString(); }
 		/**
@@ -184,7 +197,11 @@ class CGameConsole : public CComponent
 	bool m_WantsSelectionCopy = false;
 	CUi::CTouchState m_TouchState;
 	CButtonContainer m_aFilterButtons[3];
-	CButtonContainer m_DumpLocalConsoleButton;
+	CButtonContainer m_ChatExportButton;
+	CButtonContainer m_ChatExportSelectAllButton;
+	CButtonContainer m_ChatExportClearButton;
+	CButtonContainer m_ChatExportSaveButton;
+	CButtonContainer m_ChatExportCancelButton;
 	bool m_TopbarMouseDown = false;
 
 	static constexpr ColorRGBA ms_SearchHighlightColor = ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f);

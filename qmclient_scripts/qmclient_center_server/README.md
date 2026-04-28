@@ -1,7 +1,8 @@
 # Q1menG 客户端中心识别服务器
 
-这个服务端与当前客户端代码对齐，提供 3 个接口：
+这个服务端与当前客户端代码对齐，提供 4 个接口：
 
+- `GET /client/version`
 - `GET /token`
 - `POST /report`
 - `GET /users.json`
@@ -18,6 +19,7 @@ AUTH_SECRET="replace-with-random-long-secret" PORT=8080 npm start
 
 当前客户端已写死中心服务器地址为：
 
+- `http://42.194.185.210:8080/client/version`
 - `http://42.194.185.210:8080/token`
 - `http://42.194.185.210:8080/report`
 - `http://42.194.185.210:8080/users.json`
@@ -35,6 +37,40 @@ qm_client_mark_trail 1
 - `QMCLIENT_USERS_URL`
 
 ## 3. 接口契约
+
+### `GET /client/version`
+
+请求示例：
+
+```text
+GET /client/version?current=2.36.0
+```
+
+返回：
+
+```json
+{
+  "ok": true,
+  "version": "2.36.0",
+  "latest_version": "2.36.0",
+  "latest_tag": "v2.36.0",
+  "release_url": "https://github.com/wxj881027/QmClient/releases/tag/v2.36.0",
+  "current_version": "2.36.0",
+  "up_to_date": true,
+  "cache_source": "github",
+  "cache_expires_at": 1777321482,
+  "last_error": "",
+  "update_message": "当前版本不是最新版，请前往 QQ 群更新最新版"
+}
+```
+
+服务端会请求 GitHub Releases API：
+
+```text
+https://api.github.com/repos/wxj881027/QmClient/releases/latest
+```
+
+默认缓存 5 分钟；GitHub 请求失败时会使用上一次成功结果，若服务刚启动且尚未成功拉取，则回退到 `CLIENT_LATEST_VERSION`。
 
 ### `GET /token`
 
@@ -98,6 +134,15 @@ qm_client_mark_trail 1
 - `RATE_LIMIT_PER_MIN` 默认 `120`
 - `REQUIRE_IP_BIND` 默认 `1`（token 绑定请求 IP）
 - `TRUST_PROXY` 默认 `0`（反代场景可设为 `1`）
+- `CLIENT_LATEST_VERSION` 默认 `2.36.0`
+- `CLIENT_RELEASE_OWNER` 默认 `wxj881027`
+- `CLIENT_RELEASE_REPO` 默认 `QmClient`
+- `CLIENT_RELEASES_API_URL` 默认 GitHub latest release API 地址
+- `CLIENT_VERSION_CACHE_TTL_SEC` 默认 `300`
+- `CLIENT_VERSION_RETRY_DELAY_SEC` 默认 `60`
+- `CLIENT_VERSION_FETCH_TIMEOUT_MS` 默认 `5000`
+- `CLIENT_LATEST_TAG` 默认 `v${CLIENT_LATEST_VERSION}`，仅作为 GitHub 拉取失败时的回退
+- `CLIENT_RELEASE_URL` 默认 GitHub release tag 地址，仅作为 GitHub 拉取失败时的回退
 
 ## 5. 生产建议
 

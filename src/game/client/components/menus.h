@@ -284,6 +284,7 @@ public:
 		char m_aName[64] = {0};
 		char m_aPath[IO_MAX_PATH_LENGTH] = {0};
 		bool m_IsDefault = false;
+		bool m_PreviewLoaded = false;
 	};
 
 	struct SAssetsEditorPartSlot
@@ -784,6 +785,7 @@ private:
 		bool m_Open = false;
 		bool m_Initialized = false;
 		int m_Type = ASSETS_EDITOR_TYPE_GAME;
+		bool m_aAssetsLoaded[ASSETS_EDITOR_TYPE_COUNT] = {false};
 		int m_aMainAssetIndex[ASSETS_EDITOR_TYPE_COUNT] = {0};
 		int m_aDonorAssetIndex[ASSETS_EDITOR_TYPE_COUNT] = {0};
 		bool m_ShowGrid = true;
@@ -835,6 +837,9 @@ private:
 	void RenderAudioPackEditorScreen(CUIRect MainView);
 	void RenderAssetsEditorScreen(CUIRect MainView);
 	void AssetsEditorClearAssets();
+	void AssetsEditorEnsureAssetsLoadedForType(int Type);
+	void AssetsEditorEnsurePreviewLoaded(SAssetsEditorAssetEntry &Asset);
+	void AssetsEditorReloadAssetType(int Type);
 	void AssetsEditorReloadAssets();
 	void AssetsEditorReloadAssetsImagesOnly();
 	void AssetsEditorResetPartSlots();
@@ -1097,6 +1102,13 @@ protected:
 	std::vector<SDemoSelectionEntry> m_vDemoSelection;
 	std::vector<SDemoDeleteTarget> m_vDemoDeleteTargets;
 	int m_DemoSelectionAnchorIndex = -1;
+	bool m_DemoScreenshotPreviewOpen = false;
+	bool m_DemoScreenshotPreviewLoadFailed = false;
+	char m_aDemoScreenshotPreviewFolder[IO_MAX_PATH_LENGTH] = "";
+	SDemoSelectionEntry m_DemoScreenshotPreviewSelection{};
+	IGraphics::CTextureHandle m_DemoScreenshotPreviewTexture;
+	int m_DemoScreenshotPreviewWidth = 0;
+	int m_DemoScreenshotPreviewHeight = 0;
 	int m_Speed = 4;
 	bool m_StartPaused = false;
 
@@ -1115,6 +1127,12 @@ protected:
 	int NumSelectedDemos() const;
 	int NumSelectedDeletableDemos() const;
 	void PrepareDemoDeleteTargetsFromSelection();
+	void ResetDemoScreenshotPreview();
+	bool IsDemoScreenshotPreviewItem(const CDemoItem &Item) const;
+	void ToggleDemoScreenshotPreview(const CDemoItem &Item);
+	void SyncDemoScreenshotPreview();
+	bool LoadDemoScreenshotPreviewTexture(const CDemoItem &Item);
+	void RenderDemoScreenshotPreview(CUIRect PreviewRect, const CDemoItem &Item);
 	void DemolistOnUpdate(bool Reset);
 	static int DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 	bool EnsureDemoDate(CDemoItem &Item);
@@ -1368,6 +1386,7 @@ protected:
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
 	void RenderServerbrowserQm(CUIRect View);
+	void RenderServerbrowserFavoriteMaps(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
@@ -1501,6 +1520,7 @@ public:
 		PAGE_FAVORITE_COMMUNITY_3,
 		PAGE_FAVORITE_COMMUNITY_4,
 		PAGE_FAVORITE_COMMUNITY_5,
+		PAGE_FAVORITE_MAPS,
 		PAGE_DEMOS,
 		PAGE_SETTINGS,
 		PAGE_NETWORK,
@@ -1549,6 +1569,7 @@ public:
 		BIG_TAB_INTERNET,
 		BIG_TAB_LAN,
 		BIG_TAB_FAVORITES,
+		BIG_TAB_FAVORITE_MAPS,
 		BIT_TAB_FAVORITE_COMMUNITY_1,
 		BIT_TAB_FAVORITE_COMMUNITY_2,
 		BIT_TAB_FAVORITE_COMMUNITY_3,

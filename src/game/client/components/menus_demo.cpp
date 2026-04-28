@@ -10,6 +10,7 @@
 
 #include <engine/client.h>
 #include <engine/demo.h>
+#include <engine/gfx/image_loader.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/shared/localization.h>
@@ -1356,6 +1357,134 @@ void CMenus::PrepareDemoDeleteTargetsFromSelection()
 	}
 }
 
+void CMenus::ResetDemoScreenshotPreview()
+{
+	if(m_DemoScreenshotPreviewTexture.IsValid())
+		Graphics()->UnloadTexture(&m_DemoScreenshotPreviewTexture);
+	m_DemoScreenshotPreviewOpen = false;
+	m_DemoScreenshotPreviewLoadFailed = false;
+	m_aDemoScreenshotPreviewFolder[0] = '\0';
+	m_DemoScreenshotPreviewSelection = {};
+	m_DemoScreenshotPreviewWidth = 0;
+	m_DemoScreenshotPreviewHeight = 0;
+}
+
+bool CMenus::IsDemoScreenshotPreviewItem(const CDemoItem &Item) const
+{
+	return m_DemoScreenshotPreviewOpen &&
+	       str_comp(m_aDemoScreenshotPreviewFolder, m_aCurrentDemoFolder) == 0 &&
+	       m_DemoScreenshotPreviewSelection.m_StorageType == Item.m_StorageType &&
+	       str_comp(m_DemoScreenshotPreviewSelection.m_aFilename, Item.m_aFilename) == 0;
+}
+
+void CMenus::ToggleDemoScreenshotPreview(const CDemoItem &Item)
+{
+	if(!DemoBrowserBrowsingScreenshots() || Item.m_IsDir)
+	{
+		ResetDemoScreenshotPreview();
+		return;
+	}
+
+	if(IsDemoScreenshotPreviewItem(Item))
+	{
+		ResetDemoScreenshotPreview();
+		return;
+	}
+
+	ResetDemoScreenshotPreview();
+	m_DemoScreenshotPreviewOpen = true;
+	str_copy(m_aDemoScreenshotPreviewFolder, m_aCurrentDemoFolder);
+	m_DemoScreenshotPreviewSelection = DemoSelectionEntryFromItem(Item);
+}
+
+void CMenus::SyncDemoScreenshotPreview()
+{
+	if(!m_DemoScreenshotPreviewOpen)
+		return;
+	if(!DemoBrowserBrowsingScreenshots() || str_comp(m_aDemoScreenshotPreviewFolder, m_aCurrentDemoFolder) != 0)
+	{
+		ResetDemoScreenshotPreview();
+		return;
+	}
+
+	for(const CDemoItem *pItem : m_vpFilteredDemos)
+	{
+		if(IsDemoScreenshotPreviewItem(*pItem))
+			return;
+	}
+	ResetDemoScreenshotPreview();
+}
+
+bool CMenus::LoadDemoScreenshotPreviewTexture(const CDemoItem &Item)
+{
+	if(m_DemoScreenshotPreviewTexture.IsValid())
+		return true;
+	if(m_DemoScreenshotPreviewLoadFailed)
+		return false;
+
+	char aPath[IO_MAX_PATH_LENGTH];
+	str_format(aPath, sizeof(aPath), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
+
+	CImageInfo Image;
+	bool Loaded = false;
+	if(str_endswith_nocase(Item.m_aFilename, ".png") != nullptr)
+	{
+		int PngliteIncompatible = 0;
+		Loaded = CImageLoader::LoadPng(Storage()->OpenFile(aPath, IOFLAG_READ, Item.m_StorageType), aPath, Image, PngliteIncompatible);
+	}
+	else if(str_endswith_nocase(Item.m_aFilename, ".webp") != nullptr)
+	{
+		Loaded = CImageLoader::LoadWebP(Storage()->OpenFile(aPath, IOFLAG_READ, Item.m_StorageType), aPath, Image);
+	}
+
+	if(!Loaded)
+	{
+		m_DemoScreenshotPreviewLoadFailed = true;
+		return false;
+	}
+
+	m_DemoScreenshotPreviewWidth = (int)Image.m_Width;
+	m_DemoScreenshotPreviewHeight = (int)Image.m_Height;
+	m_DemoScreenshotPreviewTexture = Graphics()->LoadTextureRawMove(Image, 0, aPath);
+	if(!m_DemoScreenshotPreviewTexture.IsValid())
+	{
+		m_DemoScreenshotPreviewLoadFailed = true;
+		m_DemoScreenshotPreviewWidth = 0;
+		m_DemoScreenshotPreviewHeight = 0;
+		return false;
+	}
+	return true;
+}
+
+void CMenus::RenderDemoScreenshotPreview(CUIRect PreviewRect, const CDemoItem &Item)
+{
+	PreviewRect.Margin(3.0f, &PreviewRect);
+	PreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.28f), IGraphics::CORNER_ALL, 6.0f);
+	PreviewRect.Margin(5.0f, &PreviewRect);
+
+	if(!LoadDemoScreenshotPreviewTexture(Item) || m_DemoScreenshotPreviewWidth <= 0 || m_DemoScreenshotPreviewHeight <= 0)
+	{
+		Ui()->DoLabel(&PreviewRect, Localize("无法预览此图片"), 12.0f, TEXTALIGN_MC);
+		return;
+	}
+
+	const float Scale = minimum(PreviewRect.w / m_DemoScreenshotPreviewWidth, PreviewRect.h / m_DemoScreenshotPreviewHeight);
+	CUIRect ImageRect;
+	ImageRect.w = m_DemoScreenshotPreviewWidth * Scale;
+	ImageRect.h = m_DemoScreenshotPreviewHeight * Scale;
+	ImageRect.x = PreviewRect.x + (PreviewRect.w - ImageRect.w) * 0.5f;
+	ImageRect.y = PreviewRect.y + (PreviewRect.h - ImageRect.h) * 0.5f;
+
+	Graphics()->TextureSet(m_DemoScreenshotPreviewTexture);
+	Graphics()->WrapClamp();
+	Graphics()->QuadsBegin();
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	IGraphics::CQuadItem QuadItem(ImageRect.x, ImageRect.y, ImageRect.w, ImageRect.h);
+	Graphics()->QuadsDrawTL(&QuadItem, 1);
+	Graphics()->QuadsEnd();
+	Graphics()->WrapNormal();
+}
+
 void CMenus::DemolistOnUpdate(bool Reset)
 {
 	if(Reset)
@@ -1392,6 +1521,7 @@ void CMenus::DemolistOnUpdate(bool Reset)
 	}
 
 	SyncDemoSelection();
+	SyncDemoScreenshotPreview();
 
 	if(m_DemolistSelectedIndex >= 0)
 		m_DemolistSelectedReveal = true;
@@ -1624,88 +1754,98 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		const bool Focused = ItemIndex == m_DemolistSelectedIndex;
 		const bool Selected = IsDemoItemSelected(*pItem);
 		const CListboxItem ListItem = s_ListBox.DoNextItem(pItem, Focused);
-		if(!ListItem.m_Visible)
-			continue;
 
-		if(Selected && !Focused)
-			ListItem.m_Rect.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
-
-		for(const auto &Col : s_aCols)
+		if(ListItem.m_Visible)
 		{
-			CUIRect Button;
-			Button.x = Col.m_Rect.x;
-			Button.y = ListItem.m_Rect.y;
-			Button.h = ListItem.m_Rect.h;
-			Button.w = Col.m_Rect.w;
+			if(Selected && !Focused)
+				ListItem.m_Rect.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 5.0f);
 
-			if(Col.m_Id == COL_ICON)
+			for(const auto &Col : s_aCols)
 			{
-				Button.Margin(1.0f, &Button);
+				CUIRect Button;
+				Button.x = Col.m_Rect.x;
+				Button.y = ListItem.m_Rect.y;
+				Button.h = ListItem.m_Rect.h;
+				Button.w = Col.m_Rect.w;
 
-				const char *pIconType;
-				if(pItem->m_IsLink || str_comp(pItem->m_aFilename, "..") == 0)
-					pIconType = FONT_ICON_FOLDER_TREE;
-				else if(pItem->m_IsDir)
-					pIconType = FONT_ICON_FOLDER;
-				else if(BrowsingScreenshots)
-					pIconType = FONT_ICON_IMAGE;
-				else
-					pIconType = FONT_ICON_FILM;
+				if(Col.m_Id == COL_ICON)
+				{
+					Button.Margin(1.0f, &Button);
 
-				ColorRGBA IconColor;
-				if(!pItem->m_IsDir && pItem->IsDemoFile() && (!pItem->m_InfosLoaded || !pItem->m_Valid))
-					IconColor = ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f); // not loaded
-				else
-					IconColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+					const char *pIconType;
+					if(pItem->m_IsLink || str_comp(pItem->m_aFilename, "..") == 0)
+						pIconType = FONT_ICON_FOLDER_TREE;
+					else if(pItem->m_IsDir)
+						pIconType = FONT_ICON_FOLDER;
+					else if(BrowsingScreenshots)
+						pIconType = FONT_ICON_IMAGE;
+					else
+						pIconType = FONT_ICON_FILM;
 
-				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-				TextRender()->TextColor(IconColor);
-				TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-				Ui()->DoLabel(&Button, pIconType, 12.0f, TEXTALIGN_ML);
-				TextRender()->SetRenderFlags(0);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
-				TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+					ColorRGBA IconColor;
+					if(!pItem->m_IsDir && pItem->IsDemoFile() && (!pItem->m_InfosLoaded || !pItem->m_Valid))
+						IconColor = ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f); // not loaded
+					else
+						IconColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+
+					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+					TextRender()->TextColor(IconColor);
+					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
+					Ui()->DoLabel(&Button, pIconType, 12.0f, TEXTALIGN_ML);
+					TextRender()->SetRenderFlags(0);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+				}
+				else if(Col.m_Id == COL_DEMONAME)
+				{
+					SLabelProperties Props;
+					Props.m_MaxWidth = Button.w;
+					Props.m_EllipsisAtEnd = true;
+					Props.m_EnableWidthCheck = false;
+					Ui()->DoLabel(&Button, pItem->m_aName, 12.0f, TEXTALIGN_ML, Props);
+				}
+				else if(Col.m_Id == COL_MARKERS && pItem->IsDemoFile() && pItem->m_Valid)
+				{
+					str_format(aBuf, sizeof(aBuf), "%d", pItem->NumMarkers());
+					Button.VMargin(4.0f, &Button);
+					Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
+				}
+				else if(Col.m_Id == COL_LENGTH)
+				{
+					if(pItem->IsDemoFile() && pItem->m_Valid)
+						str_time((int64_t)pItem->Length() * 100, TIME_HOURS, aBuf, sizeof(aBuf));
+					else if(!pItem->m_IsDir)
+						str_copy(aBuf, "-");
+					else
+						continue;
+					Button.VMargin(4.0f, &Button);
+					Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
+				}
+				else if(Col.m_Id == COL_DATE && !pItem->m_IsDir)
+				{
+					if(EnsureDemoDate(*pItem))
+						str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
+					else
+						str_copy(aBuf, "-");
+					Button.VMargin(4.0f, &Button);
+					Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
+				}
 			}
-			else if(Col.m_Id == COL_DEMONAME)
-			{
-				SLabelProperties Props;
-				Props.m_MaxWidth = Button.w;
-				Props.m_EllipsisAtEnd = true;
-				Props.m_EnableWidthCheck = false;
-				Ui()->DoLabel(&Button, pItem->m_aName, 12.0f, TEXTALIGN_ML, Props);
-			}
-			else if(Col.m_Id == COL_MARKERS && pItem->IsDemoFile() && pItem->m_Valid)
-			{
-				str_format(aBuf, sizeof(aBuf), "%d", pItem->NumMarkers());
-				Button.VMargin(4.0f, &Button);
-				Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
-			}
-			else if(Col.m_Id == COL_LENGTH)
-			{
-				if(pItem->IsDemoFile() && pItem->m_Valid)
-					str_time((int64_t)pItem->Length() * 100, TIME_HOURS, aBuf, sizeof(aBuf));
-				else if(!pItem->m_IsDir)
-					str_copy(aBuf, "-");
-				else
-					continue;
-				Button.VMargin(4.0f, &Button);
-				Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
-			}
-			else if(Col.m_Id == COL_DATE && !pItem->m_IsDir)
-			{
-				if(EnsureDemoDate(*pItem))
-					str_timestamp_ex(pItem->m_Date, aBuf, sizeof(aBuf), FORMAT_SPACE);
-				else
-					str_copy(aBuf, "-");
-				Button.VMargin(4.0f, &Button);
-				Ui()->DoLabel(&Button, aBuf, 12.0f, TEXTALIGN_MR);
-			}
+		}
+
+		if(BrowsingScreenshots && IsDemoScreenshotPreviewItem(*pItem))
+		{
+			const float PreviewHeight = minimum(240.0f, maximum(120.0f, ListBox.w * 0.36f));
+			const CListboxItem PreviewItem = s_ListBox.DoCustomRow(PreviewHeight, Focused);
+			if(PreviewItem.m_Visible)
+				RenderDemoScreenshotPreview(PreviewItem.m_Rect, *pItem);
 		}
 	}
 
 	const int OldSelected = m_DemolistSelectedIndex;
 	const bool WasItemSelected = s_ListBox.WasItemSelected();
 	const int NewSelected = s_ListBox.DoEnd();
+	const bool PlainItemClick = WasItemSelected && !Input()->ShiftIsPressed() && !Input()->ModifierIsPressed();
 	if(WasItemSelected && NewSelected >= 0)
 	{
 		if(Input()->ShiftIsPressed())
@@ -1723,6 +1863,8 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		{
 			SetDemoSelectionSingle(NewSelected);
 		}
+		if(PlainItemClick && BrowsingScreenshots && IsValidDemoIndex(NewSelected))
+			ToggleDemoScreenshotPreview(*m_vpFilteredDemos[NewSelected]);
 	}
 	else if(NewSelected != OldSelected)
 	{
@@ -1963,13 +2105,13 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h * 10.0f, &DemosDirectoryButton, &ButtonBarBottom);
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h / 2.0f, nullptr, &ButtonBarBottom);
 		static CButtonContainer s_DemosDirectoryButton;
-		if(DoButton_Menu(&s_DemosDirectoryButton, BrowsingScreenshots ? Localize("Screenshots directory") : Localize("Demos directory"), 0, &DemosDirectoryButton))
+		if(DoButton_Menu(&s_DemosDirectoryButton, BrowsingScreenshots ? Localize("截图目录") : Localize("Demos directory"), 0, &DemosDirectoryButton))
 		{
 			char aBuf[IO_MAX_PATH_LENGTH];
 			Storage()->GetCompletePath(pSelectedItem->m_StorageType, m_aCurrentDemoFolder[0] == '\0' ? pBaseFolder : m_aCurrentDemoFolder, aBuf, sizeof(aBuf));
 			Client()->ViewFile(aBuf);
 		}
-		GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, BrowsingScreenshots ? Localize("Open the directory that contains the screenshot files") : Localize("Open the directory that contains the demo files"));
+		GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, BrowsingScreenshots ? Localize("打开包含截图文件的目录") : Localize("打开包含Demo文件的目录"));
 	}
 
 	// play/open button

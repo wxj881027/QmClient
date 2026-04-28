@@ -54,10 +54,12 @@
 #include <windows.h>
 #endif
 
-static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
-static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
+static constexpr const char *TCLIENT_INFO_URL = "http://42.194.185.210:8080/client/version";
+static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/QmClient/releases/latest/download/DDNet.exe";
 static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
+static constexpr const char *MAP_NOTES_FILE = "qmclient/map_notes.json";
+static constexpr int64_t MAP_NOTES_SAVE_DELAY_SEC = 5;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
 static constexpr int QMCLIENT_AXIOM_AUTO_LOGIN_MAX_ATTEMPTS = 3;
 static constexpr int QMCLIENT_AXIOM_AUTO_LOGIN_RETRY_DELAY_SECONDS = 2;
@@ -588,6 +590,7 @@ void CTClient::OnInit()
 		}
 	}
 	LoadMapCategoryCache();
+	LoadMapNotes();
 
 	// 兼容旧版恰分配置：将旧规则并入关键词回复，旧隐式关键词和预设触发词不再保留。
 	{
@@ -653,6 +656,8 @@ void CTClient::OnShutdown()
 
 	AbortTask(m_pTClientInfoTask);
 	AbortTask(m_pUpdateExeTask);
+	if(m_MapNotesDirty)
+		SaveMapNotes();
 	UnloadTextPopupCaches();
 	ClearFreezeWakeupPopups();
 }
@@ -1888,9 +1893,13 @@ void CTClient::OnUpdate()
 				}
 				else
 				{
-					StartUpdateDownload();
+					Client()->AddWarning(SWarning(Localize("更新提示"), Localize("当前版本不是最新版，请前往 QQ 群更新最新版")));
 				}
 				m_AutoUpdateAfterCheck = false;
+			}
+			else if(InfoOk && m_FetchedTClientInfo && NeedUpdate())
+			{
+				Client()->AddWarning(SWarning(Localize("更新提示"), Localize("当前版本不是最新版，请前往 QQ 群更新最新版")));
 			}
 		}
 	}
@@ -1966,6 +1975,7 @@ void CTClient::OnUpdate()
 	}
 
 	MaybeSaveMapCategoryCache();
+	MaybeSaveMapNotes();
 	ApplyFocusModeEffects();
 	ApplyGoresFastInputLink();
 	UpdateAxiomAutoLogin();
@@ -3001,34 +3011,34 @@ void CTClient::FetchTClientInfo()
 	if(m_pTClientInfoTask && !m_pTClientInfoTask->Done())
 		return;
 	char aUrl[256];
-	str_copy(aUrl, TCLIENT_INFO_URL);
+	str_format(aUrl, sizeof(aUrl), "%s?current=%s", TCLIENT_INFO_URL, TCLIENT_VERSION);
 	m_pTClientInfoTask = HttpGet(aUrl);
+	m_pTClientInfoTask->AllowInsecureProtocol();
 	m_pTClientInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pTClientInfoTask->IpResolve(IPRESOLVE::V4);
+	m_pTClientInfoTask->LogProgress(HTTPLOG::FAILURE);
 	Http()->Run(m_pTClientInfoTask);
 }
 
-typedef std::tuple<int, int, int> TVersion;
-static const TVersion gs_InvalidTCVersion = std::make_tuple(-1, -1, -1);
-
-static TVersion ToTCVersion(char *pStr)
+static void NormalizeTCVersion(const char *pStr, char *pBuf, size_t BufSize)
 {
-	int aVersion[3] = {0, 0, 0};
-	const char *p = strtok(pStr, ".");
+	if(!pBuf || BufSize == 0)
+		return;
+	pBuf[0] = '\0';
+	if(!pStr)
+		return;
 
-	for(int i = 0; i < 3 && p; ++i)
+	pStr = str_skip_whitespaces_const(pStr);
+	if(pStr[0] == 'v' || pStr[0] == 'V')
+		pStr++;
+
+	str_copy(pBuf, pStr, BufSize);
+	int End = str_length(pBuf);
+	while(End > 0 && str_isspace(pBuf[End - 1]))
 	{
-		if(!str_isallnum(p))
-			return gs_InvalidTCVersion;
-
-		aVersion[i] = str_toint(p);
-		p = strtok(NULL, ".");
+		pBuf[End - 1] = '\0';
+		End--;
 	}
-
-	if(p)
-		return gs_InvalidTCVersion;
-
-	return std::make_tuple(aVersion[0], aVersion[1], aVersion[2]);
 }
 
 void CTClient::FinishTClientInfo()
@@ -3041,13 +3051,13 @@ void CTClient::FinishTClientInfo()
 
 	if(CurrentVersion.type == json_string)
 	{
-		char aNewVersionStr[64];
-		str_copy(aNewVersionStr, CurrentVersion);
+		char aLatestVersionStr[64];
+		NormalizeTCVersion(CurrentVersion, aLatestVersionStr, sizeof(aLatestVersionStr));
 		char aCurVersionStr[64];
-		str_copy(aCurVersionStr, TCLIENT_VERSION);
-		if(ToTCVersion(aNewVersionStr) > ToTCVersion(aCurVersionStr))
+		NormalizeTCVersion(TCLIENT_VERSION, aCurVersionStr, sizeof(aCurVersionStr));
+		if(aLatestVersionStr[0] != '\0' && str_comp(aLatestVersionStr, aCurVersionStr) != 0)
 		{
-			str_copy(m_aVersionStr, CurrentVersion);
+			str_copy(m_aVersionStr, aLatestVersionStr);
 		}
 		else
 		{
@@ -4481,6 +4491,146 @@ void CTClient::UpdateMapCategoryCache(const char *pMapName, const char *pCategor
 	{
 		m_MapCategoryCacheDirty = true;
 		m_MapCategoryCacheNextSave = time_get() + time_freq() * MAP_CATEGORY_CACHE_SAVE_DELAY_SEC;
+	}
+}
+
+void CTClient::LoadMapNotes()
+{
+	void *pFileData = nullptr;
+	unsigned FileSize = 0;
+	if(!Storage()->ReadFile(MAP_NOTES_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize))
+		return;
+
+	json_settings JsonSettings{};
+	char aError[256];
+	json_value *pJson = json_parse_ex(&JsonSettings, static_cast<json_char *>(pFileData), FileSize, aError);
+	free(pFileData);
+
+	if(pJson == nullptr)
+	{
+		log_error("qmclient", "map notes json parse error: %s", aError);
+		return;
+	}
+
+	if(pJson->type != json_object)
+	{
+		json_value_free(pJson);
+		return;
+	}
+
+	const json_value *pNotes = json_object_get(pJson, "notes");
+	const json_value *pNotesObject = (pNotes && pNotes->type == json_object) ? pNotes : pJson;
+	if(pNotesObject->type == json_object)
+	{
+		m_MapNotes.clear();
+		for(unsigned i = 0; i < pNotesObject->u.object.length; ++i)
+		{
+			const char *pMapName = pNotesObject->u.object.values[i].name;
+			const json_value *pNoteValue = pNotesObject->u.object.values[i].value;
+			if(!pMapName || !pNoteValue || pNoteValue->type != json_string)
+				continue;
+			if(pNotesObject == pJson && str_comp(pMapName, "version") == 0)
+				continue;
+			const char *pNote = json_string_get(pNoteValue);
+			if(!pNote || pNote[0] == '\0')
+				continue;
+			m_MapNotes.emplace(pMapName, pNote);
+		}
+	}
+
+	json_value_free(pJson);
+	m_MapNotesDirty = false;
+	m_MapNotesNextSave = 0;
+}
+
+void CTClient::SaveMapNotes()
+{
+	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+
+	IOHANDLE File = Storage()->OpenFile(MAP_NOTES_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+	{
+		log_error("qmclient", "map notes file open failed");
+		m_MapNotesNextSave = time_get() + time_freq() * MAP_NOTES_SAVE_DELAY_SEC;
+		return;
+	}
+
+	CJsonFileWriter Writer(File);
+	Writer.BeginObject();
+	Writer.WriteAttribute("version");
+	Writer.WriteIntValue(1);
+	Writer.WriteAttribute("notes");
+	Writer.BeginObject();
+	for(const auto &Entry : m_MapNotes)
+	{
+		if(Entry.first.empty() || Entry.second.empty())
+			continue;
+		Writer.WriteAttribute(Entry.first.c_str());
+		Writer.WriteStrValue(Entry.second.c_str());
+	}
+	Writer.EndObject();
+	Writer.EndObject();
+
+	m_MapNotesDirty = false;
+	m_MapNotesNextSave = 0;
+}
+
+void CTClient::MaybeSaveMapNotes()
+{
+	if(!m_MapNotesDirty)
+		return;
+
+	// Avoid synchronous disk writes during active gameplay frames.
+	if(Client()->State() == IClient::STATE_ONLINE && !GameClient()->m_Menus.IsActive())
+		return;
+
+	if(m_MapNotesNextSave == 0)
+		m_MapNotesNextSave = time_get() + time_freq() * MAP_NOTES_SAVE_DELAY_SEC;
+	if(time_get() >= m_MapNotesNextSave)
+		SaveMapNotes();
+}
+
+const char *CTClient::GetMapNote(const char *pMapName) const
+{
+	if(!pMapName || pMapName[0] == '\0')
+		return nullptr;
+	const auto It = m_MapNotes.find(pMapName);
+	if(It == m_MapNotes.end() || It->second.empty())
+		return nullptr;
+	return It->second.c_str();
+}
+
+void CTClient::SetMapNote(const char *pMapName, const char *pNote)
+{
+	if(!pMapName || pMapName[0] == '\0')
+		return;
+
+	bool Updated = false;
+	const bool HasNote = pNote && pNote[0] != '\0';
+	auto It = m_MapNotes.find(pMapName);
+	if(!HasNote)
+	{
+		if(It != m_MapNotes.end())
+		{
+			m_MapNotes.erase(It);
+			Updated = true;
+		}
+	}
+	else if(It == m_MapNotes.end())
+	{
+		m_MapNotes.emplace(pMapName, pNote);
+		Updated = true;
+	}
+	else if(It->second != pNote)
+	{
+		It->second = pNote;
+		Updated = true;
+	}
+
+	if(Updated && !m_MapNotesDirty)
+	{
+		m_MapNotesDirty = true;
+		m_MapNotesNextSave = time_get() + time_freq() * MAP_NOTES_SAVE_DELAY_SEC;
 	}
 }
 

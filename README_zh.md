@@ -1,4 +1,4 @@
-# Q1menG 客户端
+# QmClient Qm客户端
 
 <p align="center">
    <img src="data\qmclient\gui_logo.png" alt="Q1menG 客户端标志" style="width:60%; max-width:760px;" />
@@ -12,7 +12,7 @@
 
 ## 📝 项目概述
 
-Q1menG 客户端是基于 DDNet 和 TaterClient 构建的定制版本。  
+QmClient客户端是基于 DDNet 和 TaterClient 构建的定制版本。  
 项目旨在提供更现代的 UI 体验、更丰富的视觉效果配置选项，同时保持与核心游戏玩法的兼容性。
 
 ## ✨ 功能特性

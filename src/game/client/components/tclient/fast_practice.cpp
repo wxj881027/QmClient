@@ -53,6 +53,14 @@ int ReleasedFireState(int FireState)
 	return FireState;
 }
 
+void SuppressActionInput(CNetObj_PlayerInput &Input, int ReleasedFire)
+{
+	Input.m_Fire = ReleasedFire & INPUT_STATE_MASK;
+	Input.m_WantedWeapon = 0;
+	Input.m_NextWeapon = 0;
+	Input.m_PrevWeapon = 0;
+}
+
 float EffectiveFastInputOffsetTicks(const CGameClient *pGameClient)
 {
 	(void)pGameClient;
@@ -181,10 +189,12 @@ void CFastPractice::ResetPracticeState()
 	m_LastResolvedDummyClientId = -1;
 	m_LastResolvedLocalInputConn = -1;
 	m_LastResolvedDummyInputConn = -1;
-	m_aHasServerLockedTargets.fill(false);
-	m_aServerLockedTargets.fill(ivec2(1, 0));
+	m_aHasServerLockedInputs.fill(false);
+	m_aServerLockedInputs = {};
+	m_aPostPracticeInputSuppressTicks.fill(0);
 	m_MainAnchor = {};
 	m_DummyAnchor = {};
+	m_aPracticeInputFilterStates = {};
 	m_PracticeBaseWorld.Clear();
 	ResetAttackTickHistory();
 	ResetCommandState();
@@ -518,8 +528,8 @@ void CFastPractice::ResetAttackTickHistory()
 
 void CFastPractice::ReleaseBufferedInputState()
 {
-	// Prevent stuck fire/weapon toggles from leaking through when roles change
-	// or when fast practice gets disabled while fire is held.
+	// Hard invalidation path for reconnects/disconnects where stale movement
+	// buffers should not survive into a different server-side input stream.
 	for(int Conn = 0; Conn < NUM_DUMMIES; Conn++)
 	{
 		NeutralizeInput(GameClient()->m_Controls.m_aInputData[Conn]);
@@ -537,6 +547,133 @@ void CFastPractice::ReleaseBufferedInputState()
 	GameClient()->m_DummyFire = 0;
 }
 
+void CFastPractice::CaptureServerReleasedFireStates()
+{
+	for(int Slot = 0; Slot < NUM_DUMMIES; Slot++)
+	{
+		int FireState = GameClient()->m_DummyInput.m_Fire;
+		if(Slot == g_Config.m_ClDummy)
+			FireState = GameClient()->m_Controls.m_aLastData[Slot].m_Fire;
+		else if(g_Config.m_ClDummyHammer)
+			FireState = GameClient()->m_HammerInput.m_Fire;
+		m_aServerReleasedFireStates[Slot] = ReleasedFireState(FireState);
+	}
+}
+
+void CFastPractice::ReleaseBufferedActionInputState()
+{
+	for(int Conn = 0; Conn < NUM_DUMMIES; Conn++)
+	{
+		const int ReleasedFire = m_aServerReleasedFireStates[Conn];
+		SuppressActionInput(GameClient()->m_Controls.m_aInputData[Conn], ReleasedFire);
+		SuppressActionInput(GameClient()->m_Controls.m_aLastData[Conn], ReleasedFire);
+		SuppressActionInput(GameClient()->m_Controls.m_aFastInput[Conn], ReleasedFire);
+	}
+
+	const int DummySlot = !g_Config.m_ClDummy;
+	const int DummyReleasedFire = m_aServerReleasedFireStates[DummySlot];
+	SuppressActionInput(GameClient()->m_DummyInput, DummyReleasedFire);
+	SuppressActionInput(GameClient()->m_HammerInput, DummyReleasedFire);
+	GameClient()->m_DummyFire = 0;
+}
+
+void CFastPractice::CapturePracticeInputFilterStates()
+{
+	for(int Slot = 0; Slot < NUM_DUMMIES; Slot++)
+	{
+		CNetObj_PlayerInput Input = GameClient()->m_Controls.m_aInputData[Slot];
+		int Left = 0;
+		int Right = 0;
+		if(Slot == g_Config.m_ClDummy)
+		{
+			Left = GameClient()->m_Controls.m_aInputDirectionLeft[Slot];
+			Right = GameClient()->m_Controls.m_aInputDirectionRight[Slot];
+		}
+		else if(Input.m_Direction < 0)
+		{
+			Left = 1;
+		}
+		else if(Input.m_Direction > 0)
+		{
+			Right = 1;
+		}
+
+		SPracticeInputFilterState State;
+		State.m_LeftHeld = Left != 0;
+		State.m_LeftReleased = !State.m_LeftHeld;
+		State.m_RightHeld = Right != 0;
+		State.m_RightReleased = !State.m_RightHeld;
+		State.m_JumpReleased = Input.m_Jump == 0;
+		State.m_HookReleased = Input.m_Hook == 0;
+		m_aPracticeInputFilterStates[Slot] = State;
+	}
+}
+
+void CFastPractice::FilterPracticeInput(CNetObj_PlayerInput &Input, int InputConn, bool Commit)
+{
+	const int Slot = InputConn ^ g_Config.m_ClDummy;
+	if(Slot < 0 || Slot >= NUM_DUMMIES)
+		return;
+
+	SPracticeInputFilterState State = m_aPracticeInputFilterStates[Slot];
+	int LiveLeft = 0;
+	int LiveRight = 0;
+	if(Slot == g_Config.m_ClDummy)
+	{
+		LiveLeft = GameClient()->m_Controls.m_aInputDirectionLeft[Slot];
+		LiveRight = GameClient()->m_Controls.m_aInputDirectionRight[Slot];
+	}
+	else if(GameClient()->m_Controls.m_aInputData[Slot].m_Direction < 0)
+	{
+		LiveLeft = 1;
+	}
+	else if(GameClient()->m_Controls.m_aInputData[Slot].m_Direction > 0)
+	{
+		LiveRight = 1;
+	}
+
+	if(State.m_LeftHeld && !State.m_LeftReleased)
+	{
+		if(LiveLeft == 0)
+			State.m_LeftReleased = true;
+		else
+			LiveLeft = 0;
+	}
+	if(State.m_RightHeld && !State.m_RightReleased)
+	{
+		if(LiveRight == 0)
+			State.m_RightReleased = true;
+		else
+			LiveRight = 0;
+	}
+	if(Slot == g_Config.m_ClDummy || (State.m_LeftHeld && !State.m_LeftReleased) || (State.m_RightHeld && !State.m_RightReleased))
+		Input.m_Direction = LiveRight - LiveLeft;
+
+	if(!State.m_JumpReleased)
+	{
+		if(GameClient()->m_Controls.m_aInputData[Slot].m_Jump == 0)
+			State.m_JumpReleased = true;
+	}
+	if(!State.m_JumpReleased)
+	{
+		if(Input.m_Jump != 0)
+			Input.m_Jump = 0;
+	}
+	if(!State.m_HookReleased)
+	{
+		if(GameClient()->m_Controls.m_aInputData[Slot].m_Hook == 0)
+			State.m_HookReleased = true;
+	}
+	if(!State.m_HookReleased)
+	{
+		if(Input.m_Hook != 0)
+			Input.m_Hook = 0;
+	}
+
+	if(Commit)
+		m_aPracticeInputFilterStates[Slot] = State;
+}
+
 void CFastPractice::InvalidateBufferedInputState()
 {
 	ReleaseBufferedInputState();
@@ -544,20 +681,27 @@ void CFastPractice::InvalidateBufferedInputState()
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 }
 
-void CFastPractice::CaptureServerLockedTargets()
+void CFastPractice::CaptureServerLockedInputs()
 {
 	for(int Slot = 0; Slot < NUM_DUMMIES; Slot++)
 	{
-		const CNetObj_PlayerInput &Input = GameClient()->m_Controls.m_aInputData[Slot];
-		int TargetX = Input.m_TargetX;
-		int TargetY = Input.m_TargetY;
-		if(TargetX == 0 && TargetY == 0)
+		CNetObj_PlayerInput Input = {};
+		if(Slot == g_Config.m_ClDummy)
 		{
-			TargetX = 1;
-			TargetY = 0;
+			Input = GameClient()->m_Controls.m_aInputData[Slot];
+			Input.m_Direction = GameClient()->m_Controls.m_aInputDirectionRight[Slot] - GameClient()->m_Controls.m_aInputDirectionLeft[Slot];
 		}
-		m_aServerLockedTargets[Slot] = ivec2(TargetX, TargetY);
-		m_aHasServerLockedTargets[Slot] = true;
+		else
+		{
+			Input = g_Config.m_ClDummyHammer ? GameClient()->m_HammerInput : GameClient()->m_DummyInput;
+		}
+
+		if(Input.m_TargetX == 0 && Input.m_TargetY == 0)
+			Input.m_TargetX = 1;
+
+		SuppressActionInput(Input, ReleasedFireState(Input.m_Fire));
+		m_aServerLockedInputs[Slot] = Input;
+		m_aHasServerLockedInputs[Slot] = true;
 	}
 }
 
@@ -593,7 +737,10 @@ void CFastPractice::Enable()
 		return;
 	}
 
-	CaptureServerLockedTargets();
+	CaptureServerLockedInputs();
+	CaptureServerReleasedFireStates();
+	CapturePracticeInputFilterStates();
+	ReleaseBufferedActionInputState();
 	m_Enabled = true;
 	m_PracticeBaseWorld.m_GameTick = Client()->PredGameTick(g_Config.m_ClDummy);
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
@@ -604,7 +751,8 @@ void CFastPractice::Enable()
 	if(m_RequireDummy && m_EnableDummyClientId >= 0)
 		if(CCharacter *pDummy = m_PracticeBaseWorld.GetCharacterById(m_EnableDummyClientId))
 			TrackSafeRescuePosition(m_EnableDummyClientId, pDummy);
-	ReleaseBufferedInputState();
+	m_SuppressFireOnNextPredictTick = true;
+	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
 
 	// Snap renderer/camera prediction state to the local practice world immediately.
 	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
@@ -629,11 +777,15 @@ void CFastPractice::Enable()
 
 void CFastPractice::Disable()
 {
+	const bool WasEnabled = m_Enabled;
 	if(m_Enabled)
 		GameClient()->m_PredictedDummyId = -1;
-	ReleaseBufferedInputState();
-	m_aHasServerLockedTargets.fill(false);
+	m_aHasServerLockedInputs.fill(false);
+	if(WasEnabled)
+		ReleaseBufferedActionInputState();
 	ResetPracticeState();
+	if(WasEnabled)
+		m_aPostPracticeInputSuppressTicks.fill(2);
 }
 
 void CFastPractice::Toggle()
@@ -698,7 +850,7 @@ void CFastPractice::ResetPracticeToAnchor()
 			TrackSafeRescuePosition(m_EnableDummyClientId, pDummy);
 	m_SuppressFireOnNextPredictTick = true;
 	m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
-	ReleaseBufferedInputState();
+	ReleaseBufferedActionInputState();
 
 	// Keep camera interpolation coherent after hard reset.
 	GameClient()->m_PredictedWorld.CopyWorldClean(&m_PracticeBaseWorld);
@@ -721,26 +873,31 @@ void CFastPractice::ResetPracticeToAnchor()
 	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
 }
 
-void CFastPractice::PrepareInputForSend(int *pData, int Size, bool Dummy) const
+void CFastPractice::PrepareInputForSend(int *pData, int Size, bool Dummy)
 {
-	if(!m_Enabled || !pData || Size < (int)sizeof(CNetObj_PlayerInput))
+	if(!pData || Size < (int)sizeof(CNetObj_PlayerInput))
 		return;
+	auto *pInput = reinterpret_cast<CNetObj_PlayerInput *>(pData);
+	const int Slot = g_Config.m_ClDummy ^ (int)Dummy;
+	if(!m_Enabled)
+	{
+		if(Slot >= 0 && Slot < NUM_DUMMIES && m_aPostPracticeInputSuppressTicks[Slot] > 0)
+		{
+			SuppressActionInput(*pInput, m_aServerReleasedFireStates[Slot]);
+			m_aPostPracticeInputSuppressTicks[Slot]--;
+		}
+		return;
+	}
+
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active || (GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS))
 		return;
 
-	auto *pInput = reinterpret_cast<CNetObj_PlayerInput *>(pData);
-	NeutralizeInput(*pInput);
-	// Never propagate shoot toggles to the server while fast practice is active.
-	pInput->m_Fire = 0;
-
-	// Keep server-side cursor fully locked per input stream so real world
-	// doesn't move when aiming inside local practice.
-	const int Slot = g_Config.m_ClDummy ^ (int)Dummy;
-	ivec2 LockedTarget = ivec2(1, 0);
-	if(Slot >= 0 && Slot < NUM_DUMMIES && m_aHasServerLockedTargets[Slot])
-		LockedTarget = m_aServerLockedTargets[Slot];
-	pInput->m_TargetX = LockedTarget.x;
-	pInput->m_TargetY = LockedTarget.y;
+	// Keep the real server stream locked to the exact input state that was
+	// active when fast practice was opened. Practice inputs must not move it.
+	if(Slot >= 0 && Slot < NUM_DUMMIES && m_aHasServerLockedInputs[Slot])
+		*pInput = m_aServerLockedInputs[Slot];
+	else
+		NeutralizeInput(*pInput);
 }
 
 int CFastPractice::WeaponFireSound(int Weapon)
@@ -843,41 +1000,43 @@ bool CFastPractice::AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, in
 
 		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInput(Tick, LocalInputConn);
 		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
-		CNetObj_PlayerInput LocalSuppressedInput = {};
-		CNetObj_PlayerInput DummySuppressedInput = {};
-			const bool SuppressTransitionTick = Tick == FirstBaseTick && m_SuppressFireOnNextPredictTick;
-			const bool SuppressCooldownTick = Tick >= FirstBaseTick && m_InputSuppressTicks > 0;
-			if(SuppressTransitionTick || SuppressCooldownTick)
-			{
-				if(pInputData)
-				{
-				LocalSuppressedInput = *pInputData;
-				LocalSuppressedInput.m_Fire = ReleasedFireState(pLocalChar->LatestInput()->m_Fire);
-				LocalSuppressedInput.m_WantedWeapon = 0;
-				LocalSuppressedInput.m_NextWeapon = 0;
-				LocalSuppressedInput.m_PrevWeapon = 0;
-				pInputData = &LocalSuppressedInput;
-			}
+		CNetObj_PlayerInput LocalPracticeInput = {};
+		CNetObj_PlayerInput DummyPracticeInput = {};
+		if(pInputData)
+		{
+			LocalPracticeInput = *pInputData;
+			pInputData = &LocalPracticeInput;
+		}
+		if(pDummyInputData)
+		{
+			DummyPracticeInput = *pDummyInputData;
+			pDummyInputData = &DummyPracticeInput;
+		}
+
+		const bool SuppressTransitionTick = Tick == FirstBaseTick && m_SuppressFireOnNextPredictTick;
+		const bool SuppressCooldownTick = Tick >= FirstBaseTick && m_InputSuppressTicks > 0;
+		if(SuppressTransitionTick || SuppressCooldownTick)
+		{
+			if(pInputData)
+				SuppressActionInput(*pInputData, ReleasedFireState(pLocalChar->LatestInput()->m_Fire));
 			if(pDummyInputData)
-			{
-				DummySuppressedInput = *pDummyInputData;
-				DummySuppressedInput.m_Fire = ReleasedFireState(pDummyChar->LatestInput()->m_Fire);
-				DummySuppressedInput.m_WantedWeapon = 0;
-				DummySuppressedInput.m_NextWeapon = 0;
-				DummySuppressedInput.m_PrevWeapon = 0;
-					pDummyInputData = &DummySuppressedInput;
-				}
-				if(m_InputSuppressTicks > 0)
-					m_InputSuppressTicks--;
-				m_SuppressFireOnNextPredictTick = false;
-			}
+				SuppressActionInput(*pDummyInputData, ReleasedFireState(pDummyChar->LatestInput()->m_Fire));
+			if(m_InputSuppressTicks > 0)
+				m_InputSuppressTicks--;
+			m_SuppressFireOnNextPredictTick = false;
+		}
+
+		if(pInputData)
+			FilterPracticeInput(*pInputData, LocalInputConn, true);
+		if(pDummyInputData)
+			FilterPracticeInput(*pDummyInputData, DummyInputConn, true);
 
 		if(pDummyChar && g_Config.m_ClDummyHammer)
 		{
-			if(!pDummyInputData || pDummyInputData != &DummySuppressedInput)
+			if(!pDummyInputData)
 			{
-				DummySuppressedInput = pDummyInputData ? *pDummyInputData : CNetObj_PlayerInput{};
-				pDummyInputData = &DummySuppressedInput;
+				DummyPracticeInput = {};
+				pDummyInputData = &DummyPracticeInput;
 			}
 			const vec2 Dir = pLocalChar->Core()->m_Pos - pDummyChar->Core()->m_Pos;
 			pDummyInputData->m_TargetX = (int)Dir.x;
@@ -964,7 +1123,7 @@ bool CFastPractice::OverridePredict()
 		{
 			m_SuppressFireOnNextPredictTick = true;
 			m_InputSuppressTicks = std::max(m_InputSuppressTicks, 2);
-			ReleaseBufferedInputState();
+			ReleaseBufferedActionInputState();
 		}
 	}
 
@@ -1044,41 +1203,43 @@ bool CFastPractice::OverridePredict()
 
 		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInput(Tick, LocalInputConn);
 		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
-		CNetObj_PlayerInput LocalNeutralizedInput = {};
-		CNetObj_PlayerInput DummyNeutralizedInput = {};
+		CNetObj_PlayerInput LocalPracticeInput = {};
+		CNetObj_PlayerInput DummyPracticeInput = {};
+		if(pInputData)
+		{
+			LocalPracticeInput = *pInputData;
+			pInputData = &LocalPracticeInput;
+		}
+		if(pDummyInputData)
+		{
+			DummyPracticeInput = *pDummyInputData;
+			pDummyInputData = &DummyPracticeInput;
+		}
+
 		const bool SuppressTransitionTick = Tick == BaseGameTick + 1 && (m_SuppressFireOnNextPredictTick || GameClient()->m_IsDummySwapping);
 		const bool SuppressCooldownTick = Tick >= BaseGameTick + 1 && m_InputSuppressTicks > 0;
 		if(SuppressTransitionTick || SuppressCooldownTick)
 		{
 			if(pInputData)
-			{
-				LocalNeutralizedInput = *pInputData;
-				LocalNeutralizedInput.m_Fire = ReleasedFireState(pLocalChar->LatestInput()->m_Fire);
-				LocalNeutralizedInput.m_WantedWeapon = 0;
-				LocalNeutralizedInput.m_NextWeapon = 0;
-				LocalNeutralizedInput.m_PrevWeapon = 0;
-				pInputData = &LocalNeutralizedInput;
-			}
+				SuppressActionInput(*pInputData, ReleasedFireState(pLocalChar->LatestInput()->m_Fire));
 			if(pDummyInputData)
-			{
-				DummyNeutralizedInput = *pDummyInputData;
-				DummyNeutralizedInput.m_Fire = ReleasedFireState(pDummyChar->LatestInput()->m_Fire);
-				DummyNeutralizedInput.m_WantedWeapon = 0;
-				DummyNeutralizedInput.m_NextWeapon = 0;
-				DummyNeutralizedInput.m_PrevWeapon = 0;
-				pDummyInputData = &DummyNeutralizedInput;
-			}
+				SuppressActionInput(*pDummyInputData, ReleasedFireState(pDummyChar->LatestInput()->m_Fire));
 			if(m_InputSuppressTicks > 0)
 				m_InputSuppressTicks--;
 			m_SuppressFireOnNextPredictTick = false;
 		}
 
+		if(pInputData)
+			FilterPracticeInput(*pInputData, LocalInputConn, true);
+		if(pDummyInputData)
+			FilterPracticeInput(*pDummyInputData, DummyInputConn, true);
+
 		if(pDummyChar && g_Config.m_ClDummyHammer)
 		{
-			if(!pDummyInputData || pDummyInputData != &DummyNeutralizedInput)
+			if(!pDummyInputData)
 			{
-				DummyNeutralizedInput = pDummyInputData ? *pDummyInputData : CNetObj_PlayerInput{};
-				pDummyInputData = &DummyNeutralizedInput;
+				DummyPracticeInput = {};
+				pDummyInputData = &DummyPracticeInput;
 			}
 			const vec2 Dir = pLocalChar->Core()->m_Pos - pDummyChar->Core()->m_Pos;
 			pDummyInputData->m_TargetX = (int)Dir.x;
@@ -1276,12 +1437,22 @@ int CFastPractice::ApplyVisualFastInputPrediction(int FinalTickRegular, int Loca
 
 		CNetObj_PlayerInput *pInputData = (CNetObj_PlayerInput *)Client()->GetInput(Tick, LocalInputConn);
 		CNetObj_PlayerInput *pDummyInputData = pDummyChar ? (CNetObj_PlayerInput *)Client()->GetInput(Tick, DummyInputConn) : nullptr;
+		CNetObj_PlayerInput LocalFastInput = GameClient()->m_Controls.m_aFastInput[LocalTee];
 		CNetObj_PlayerInput DummyFastInput = {};
+		CNetObj_PlayerInput DummyVisualInput = {};
 		const bool DummyFirst = pInputData && pDummyInputData && pDummyChar->GetCid() < pLocalChar->GetCid();
 
-		pInputData = &GameClient()->m_Controls.m_aFastInput[LocalTee];
+		pInputData = &LocalFastInput;
+		FilterPracticeInput(*pInputData, LocalInputConn, false);
+		if(pDummyInputData)
+		{
+			DummyVisualInput = *pDummyInputData;
+			pDummyInputData = &DummyVisualInput;
+		}
 		if(pDummyChar && GameClient()->GetDummyFastInput(DummyFastInput, pDummyInputData, pDummyChar, LocalTee, DummyTee))
 			pDummyInputData = &DummyFastInput;
+		if(pDummyInputData)
+			FilterPracticeInput(*pDummyInputData, DummyInputConn, false);
 		if(pDummyChar && g_Config.m_ClDummyHammer)
 		{
 			if(!pDummyInputData || pDummyInputData != &DummyFastInput)

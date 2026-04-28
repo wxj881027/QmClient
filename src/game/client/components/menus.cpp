@@ -166,6 +166,7 @@ const char *MenuPageName(const int Page)
 	case CMenus::PAGE_FAVORITE_COMMUNITY_3: return "favorite_community_3";
 	case CMenus::PAGE_FAVORITE_COMMUNITY_4: return "favorite_community_4";
 	case CMenus::PAGE_FAVORITE_COMMUNITY_5: return "favorite_community_5";
+	case CMenus::PAGE_FAVORITE_MAPS: return "favorite_maps";
 	case CMenus::PAGE_DEMOS: return "demos";
 	case CMenus::PAGE_SETTINGS: return "settings";
 	case CMenus::PAGE_STATS: return "stats";
@@ -548,7 +549,7 @@ void CMenus::UpdateSettingsTabLabels()
 	m_apSettingsTabs[SETTINGS_APPEARANCE] = Localize("Appearance");
 	m_apSettingsTabs[SETTINGS_CONTROLS] = Localize("Controls");
 	m_apSettingsTabs[SETTINGS_GRAPHICS] = Localize("Graphics");
-	m_apSettingsTabs[SETTINGS_SOUND] = Localize("Sound");
+	m_apSettingsTabs[SETTINGS_SOUND] = Localize("声音");
 	m_apSettingsTabs[SETTINGS_DDNET] = Localize("DDNet");
 	m_apSettingsTabs[SETTINGS_ASSETS] = Localize("Assets");
 	m_apSettingsTabs[SETTINGS_TCLIENT] = Localize("TClient");
@@ -1011,24 +1012,59 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
 
+		TextRender()->SetRenderFlags(0);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		Box.VSplitLeft(BrowserButtonWidth, &Button, &Box);
+		static CButtonContainer s_FavoriteMapsButton;
+		if(DoButton_MenuTab(&s_FavoriteMapsButton, "🔖", ActivePage == PAGE_FAVORITE_MAPS, &Button, IGraphics::CORNER_T, &m_aAnimatorsBigPage[BIG_TAB_FAVORITE_MAPS]))
+		{
+			NewPage = PAGE_FAVORITE_MAPS;
+		}
+		GameClient()->m_Tooltips.DoToolTip(&s_FavoriteMapsButton, &Button, Localize("收藏地图"));
+
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+
 		int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
 		if(
 			!Ui()->IsPopupOpen() &&
 			CLineInput::GetActiveInput() == nullptr &&
-			(g_Config.m_UiPage >= PAGE_INTERNET && g_Config.m_UiPage <= MaxPage) &&
-			(m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_FAVORITE_COMMUNITY_5))
+			((g_Config.m_UiPage >= PAGE_INTERNET && g_Config.m_UiPage <= MaxPage) || g_Config.m_UiPage == PAGE_FAVORITE_MAPS) &&
+			((m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_FAVORITE_COMMUNITY_5) || m_MenuPage == PAGE_FAVORITE_MAPS))
 		{
 			if(Input()->KeyPress(KEY_RIGHT))
 			{
-				NewPage = g_Config.m_UiPage + 1;
-				if(NewPage > MaxPage)
+				if(g_Config.m_UiPage == PAGE_FAVORITES)
+				{
+					NewPage = PAGE_FAVORITE_MAPS;
+				}
+				else if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
+				{
+					NewPage = ServerBrowser()->FavoriteCommunities().empty() ? PAGE_INTERNET : PAGE_FAVORITE_COMMUNITY_1;
+				}
+				else
+				{
+					NewPage = g_Config.m_UiPage + 1;
+				}
+				if(NewPage > MaxPage && NewPage != PAGE_FAVORITE_MAPS)
 					NewPage = PAGE_INTERNET;
 			}
 			if(Input()->KeyPress(KEY_LEFT))
 			{
-				NewPage = g_Config.m_UiPage - 1;
+				if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
+				{
+					NewPage = PAGE_FAVORITES;
+				}
+				else if(!ServerBrowser()->FavoriteCommunities().empty() && g_Config.m_UiPage == PAGE_FAVORITE_COMMUNITY_1)
+				{
+					NewPage = PAGE_FAVORITE_MAPS;
+				}
+				else
+				{
+					NewPage = g_Config.m_UiPage - 1;
+				}
 				if(NewPage < PAGE_INTERNET)
-					NewPage = MaxPage;
+					NewPage = ServerBrowser()->FavoriteCommunities().empty() ? PAGE_FAVORITE_MAPS : MaxPage;
 			}
 		}
 
@@ -1810,7 +1846,7 @@ void CMenus::Render()
 			{
 				RenderStatistics(MainView);
 			}
-			else if(m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_FAVORITE_COMMUNITY_5)
+			else if((m_MenuPage >= PAGE_INTERNET && m_MenuPage <= PAGE_FAVORITE_COMMUNITY_5) || m_MenuPage == PAGE_FAVORITE_MAPS)
 			{
 				RenderServerbrowser(MainView);
 			}
@@ -3005,10 +3041,12 @@ void CMenus::SetActive(bool Active)
 
 void CMenus::OnReset()
 {
+	ResetDemoScreenshotPreview();
 }
 
 void CMenus::OnShutdown()
 {
+	ResetDemoScreenshotPreview();
 	m_CommunityIcons.Shutdown();
 }
 
@@ -3300,13 +3338,26 @@ void CMenus::SetMenuPage(int NewPage)
 	}
 	m_MenuPage = NewPage;
 	auto IsBrowserPage = [](int Page) {
-		return Page >= PAGE_INTERNET && Page <= PAGE_FAVORITE_COMMUNITY_5;
+		return (Page >= PAGE_INTERNET && Page <= PAGE_FAVORITE_COMMUNITY_5) || Page == PAGE_FAVORITE_MAPS;
+	};
+	auto BrowserPageVisualOrder = [](int Page) {
+		if(Page == PAGE_INTERNET)
+			return 0;
+		if(Page == PAGE_LAN)
+			return 1;
+		if(Page == PAGE_FAVORITES)
+			return 2;
+		if(Page == PAGE_FAVORITE_MAPS)
+			return 3;
+		if(Page >= PAGE_FAVORITE_COMMUNITY_1 && Page <= PAGE_FAVORITE_COMMUNITY_5)
+			return 4 + Page - PAGE_FAVORITE_COMMUNITY_1;
+		return Page;
 	};
 	const bool OldIsBrowser = IsBrowserPage(OldPage);
 	const bool NewIsBrowser = IsBrowserPage(NewPage);
 	if(OldIsBrowser && NewIsBrowser && OldPage != NewPage)
 	{
-		m_BrowserTabTransitionDirection = NewPage > OldPage ? 1.0f : -1.0f;
+		m_BrowserTabTransitionDirection = BrowserPageVisualOrder(NewPage) > BrowserPageVisualOrder(OldPage) ? 1.0f : -1.0f;
 		TriggerUiSwitchAnimation(UiAnimNodeKey("browser_page_switch"), MENU_SWITCH_DURATION);
 	}
 	else
@@ -3322,7 +3373,7 @@ void CMenus::SetMenuPage(int NewPage)
 	{
 		m_MenuPageTransitionDirection = 0.0f;
 	}
-	if(NewPage >= PAGE_INTERNET && NewPage <= PAGE_FAVORITE_COMMUNITY_5)
+	if(IsBrowserPage(NewPage))
 	{
 		g_Config.m_UiPage = NewPage;
 		bool ForceRefresh = false;

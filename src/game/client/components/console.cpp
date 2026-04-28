@@ -11,7 +11,9 @@
 
 #include <engine/console.h>
 #include <engine/engine.h>
+#include <engine/gfx/image_loader.h>
 #include <engine/graphics.h>
+#include <engine/image.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 #include <engine/shared/ringbuffer.h>
@@ -26,7 +28,12 @@
 #include <game/localization.h>
 #include <game/version.h>
 
+#include <algorithm>
+#include <cstdlib>
 #include <iterator>
+#include <string>
+#include <utility>
+#include <vector>
 
 static constexpr float FONT_SIZE = 10.0f;
 static constexpr float LINE_SPACING = 1.0f;
@@ -172,6 +179,570 @@ static void BuildLinkColorSplits(const std::vector<SLinkRange> &vRanges, std::ve
 		Cursor = Range.m_EndChar;
 	}
 	vSplits.emplace_back(Cursor, 9999, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
+}
+
+struct SChatExportLine
+{
+	std::string m_Raw;
+	std::string m_Time;
+	std::string m_Sender;
+	std::string m_Message;
+	bool m_Local;
+};
+
+struct SChatExportLayout
+{
+	SChatExportLine m_Line;
+	std::vector<std::string> m_vMessageLines;
+	int m_CardWidth;
+	int m_CardHeight;
+	int m_RecordHeight;
+};
+
+struct SChatExportPage
+{
+	int m_Start;
+	int m_End;
+	int m_Height;
+};
+
+static bool WriteAll(IOHANDLE File, const void *pData, size_t Size)
+{
+	return Size == 0 || io_write(File, pData, Size) == Size;
+}
+
+static bool WriteString(IOHANDLE File, const std::string &Text)
+{
+	return WriteAll(File, Text.data(), Text.size());
+}
+
+static void AppendHtmlEscaped(std::string &Output, const std::string &Text)
+{
+	for(const char Char : Text)
+	{
+		switch(Char)
+		{
+		case '&':
+			Output.append("&amp;");
+			break;
+		case '<':
+			Output.append("&lt;");
+			break;
+		case '>':
+			Output.append("&gt;");
+			break;
+		case '"':
+			Output.append("&quot;");
+			break;
+		case '\'':
+			Output.append("&#39;");
+			break;
+		default:
+			Output.push_back(Char);
+			break;
+		}
+	}
+}
+
+static void TrimAsciiSpaces(std::string &Text)
+{
+	size_t Start = 0;
+	while(Start < Text.size() && (Text[Start] == ' ' || Text[Start] == '\t' || Text[Start] == '\r' || Text[Start] == '\n'))
+		++Start;
+	size_t End = Text.size();
+	while(End > Start && (Text[End - 1] == ' ' || Text[End - 1] == '\t' || Text[End - 1] == '\r' || Text[End - 1] == '\n'))
+		--End;
+	if(Start != 0 || End != Text.size())
+		Text = Text.substr(Start, End - Start);
+}
+
+static std::string ChatExportDisplayText(const SChatExportLine &Line)
+{
+	if(Line.m_Sender.empty())
+		return Line.m_Message;
+	std::string Text = Line.m_Sender;
+	Text.append(":");
+	Text.append(Line.m_Message);
+	return Text;
+}
+
+static bool TryParseChatExportLine(const char *pText, const char *pLocalName, SChatExportLine &Line)
+{
+	struct SChatPrefix
+	{
+		const char *m_pNeedle;
+	};
+	static const SChatPrefix s_aPrefixes[] = {
+		{" chat/all: "},
+		{" chat/team: "},
+		{" chat/whisper: "},
+	};
+
+	const char *pMessage = nullptr;
+	for(const auto &Prefix : s_aPrefixes)
+	{
+		const char *pFound = str_find(pText, Prefix.m_pNeedle);
+		if(pFound)
+		{
+			pMessage = pFound + str_length(Prefix.m_pNeedle);
+			break;
+		}
+	}
+	if(!pMessage)
+		return false;
+
+	Line.m_Raw = pText;
+	Line.m_Time.clear();
+	if(str_length(pText) >= 19 && pText[4] == '-' && pText[7] == '-' && pText[10] == ' ' && pText[13] == ':' && pText[16] == ':')
+		Line.m_Time.assign(pText, 19);
+
+	const char *pNameEnd = str_find(pMessage, ": ");
+	if(pNameEnd && pNameEnd > pMessage)
+	{
+		Line.m_Sender.assign(pMessage, pNameEnd - pMessage);
+		Line.m_Message = pNameEnd + 2;
+	}
+	else
+	{
+		Line.m_Sender.clear();
+		Line.m_Message = pMessage;
+	}
+	Line.m_Local = pLocalName && pLocalName[0] != '\0' && !Line.m_Sender.empty() && str_comp(Line.m_Sender.c_str(), pLocalName) == 0;
+	return true;
+}
+
+static std::vector<std::string> WrapChatExportText(ITextRender *pTextRender, const std::string &Text, int FontSize, int MaxWidth)
+{
+	std::vector<std::string> vLines;
+	std::string Remaining = Text;
+	TrimAsciiSpaces(Remaining);
+	if(Remaining.empty())
+	{
+		vLines.emplace_back("");
+		return vLines;
+	}
+
+	while(!Remaining.empty())
+	{
+		if(pTextRender->TextWidth(FontSize, Remaining.c_str()) <= MaxWidth)
+		{
+			vLines.push_back(Remaining);
+			break;
+		}
+
+		int BestEnd = 0;
+		int LastSpaceEnd = -1;
+		int Cursor = 0;
+		while(Cursor < (int)Remaining.size())
+		{
+			const int NextCursor = str_utf8_forward(Remaining.c_str(), Cursor);
+			const int SafeNextCursor = NextCursor > Cursor ? NextCursor : Cursor + 1;
+			std::string Candidate = Remaining.substr(0, SafeNextCursor);
+			if(pTextRender->TextWidth(FontSize, Candidate.c_str()) > MaxWidth && BestEnd > 0)
+				break;
+			BestEnd = SafeNextCursor;
+			if(Remaining[SafeNextCursor - 1] == ' ' || Remaining[SafeNextCursor - 1] == '\t')
+				LastSpaceEnd = SafeNextCursor;
+			Cursor = SafeNextCursor;
+		}
+
+		int Cut = BestEnd;
+		if(BestEnd < (int)Remaining.size() && LastSpaceEnd > 0)
+			Cut = LastSpaceEnd;
+		if(Cut <= 0)
+			Cut = maximum(1, str_utf8_forward(Remaining.c_str(), 0));
+
+		std::string Line = Remaining.substr(0, Cut);
+		TrimAsciiSpaces(Line);
+		if(!Line.empty())
+			vLines.push_back(Line);
+		Remaining.erase(0, Cut);
+		TrimAsciiSpaces(Remaining);
+	}
+
+	return vLines;
+}
+
+static unsigned char ColorByte(float Value)
+{
+	return (unsigned char)std::clamp(round_to_int(Value * 255.0f), 0, 255);
+}
+
+static void BlendPixel(CImageInfo &Image, int PosX, int PosY, ColorRGBA Color, float AlphaMultiplier = 1.0f)
+{
+	if(PosX < 0 || PosY < 0 || PosX >= (int)Image.m_Width || PosY >= (int)Image.m_Height)
+		return;
+
+	const float Alpha = std::clamp(Color.a * AlphaMultiplier, 0.0f, 1.0f);
+	const size_t Offset = ((size_t)PosY * Image.m_Width + (size_t)PosX) * Image.PixelSize();
+	Image.m_pData[Offset + 0] = ColorByte(Color.r * Alpha + (Image.m_pData[Offset + 0] / 255.0f) * (1.0f - Alpha));
+	Image.m_pData[Offset + 1] = ColorByte(Color.g * Alpha + (Image.m_pData[Offset + 1] / 255.0f) * (1.0f - Alpha));
+	Image.m_pData[Offset + 2] = ColorByte(Color.b * Alpha + (Image.m_pData[Offset + 2] / 255.0f) * (1.0f - Alpha));
+	Image.m_pData[Offset + 3] = 255;
+}
+
+static void FillRect(CImageInfo &Image, int PosX, int PosY, int Width, int Height, ColorRGBA Color)
+{
+	const int StartX = std::clamp(PosX, 0, (int)Image.m_Width);
+	const int StartY = std::clamp(PosY, 0, (int)Image.m_Height);
+	const int EndX = std::clamp(PosX + Width, 0, (int)Image.m_Width);
+	const int EndY = std::clamp(PosY + Height, 0, (int)Image.m_Height);
+	for(int Row = StartY; Row < EndY; ++Row)
+	{
+		for(int Column = StartX; Column < EndX; ++Column)
+			BlendPixel(Image, Column, Row, Color);
+	}
+}
+
+static void FillRoundedRect(CImageInfo &Image, int PosX, int PosY, int Width, int Height, int Radius, ColorRGBA Color)
+{
+	const int StartX = std::clamp(PosX, 0, (int)Image.m_Width);
+	const int StartY = std::clamp(PosY, 0, (int)Image.m_Height);
+	const int EndX = std::clamp(PosX + Width, 0, (int)Image.m_Width);
+	const int EndY = std::clamp(PosY + Height, 0, (int)Image.m_Height);
+	const int RadiusSq = Radius * Radius;
+	for(int Row = StartY; Row < EndY; ++Row)
+	{
+		for(int Column = StartX; Column < EndX; ++Column)
+		{
+			int CornerX = 0;
+			if(Column < PosX + Radius)
+				CornerX = PosX + Radius - Column;
+			else if(Column >= PosX + Width - Radius)
+				CornerX = Column - (PosX + Width - Radius - 1);
+			int CornerY = 0;
+			if(Row < PosY + Radius)
+				CornerY = PosY + Radius - Row;
+			else if(Row >= PosY + Height - Radius)
+				CornerY = Row - (PosY + Height - Radius - 1);
+			if(CornerX > 0 && CornerY > 0 && CornerX * CornerX + CornerY * CornerY > RadiusSq)
+				continue;
+			BlendPixel(Image, Column, Row, Color);
+		}
+	}
+}
+
+static void DrawCircleOutline(CImageInfo &Image, int CenterX, int CenterY, int Radius, int Thickness, ColorRGBA Color)
+{
+	const int OuterSq = Radius * Radius;
+	const int InnerRadius = maximum(0, Radius - Thickness);
+	const int InnerSq = InnerRadius * InnerRadius;
+	for(int Row = CenterY - Radius; Row <= CenterY + Radius; ++Row)
+	{
+		for(int Column = CenterX - Radius; Column <= CenterX + Radius; ++Column)
+		{
+			const int DistX = Column - CenterX;
+			const int DistY = Row - CenterY;
+			const int DistSq = DistX * DistX + DistY * DistY;
+			if(DistSq <= OuterSq && DistSq >= InnerSq)
+				BlendPixel(Image, Column, Row, Color);
+		}
+	}
+}
+
+static void ClearImageRect(CImageInfo &Image, int PosX, int PosY, int Width, int Height)
+{
+	const int StartX = std::clamp(PosX, 0, (int)Image.m_Width);
+	const int StartY = std::clamp(PosY, 0, (int)Image.m_Height);
+	const int EndX = std::clamp(PosX + Width, 0, (int)Image.m_Width);
+	const int EndY = std::clamp(PosY + Height, 0, (int)Image.m_Height);
+	for(int Row = StartY; Row < EndY; ++Row)
+	{
+		uint8_t *pRow = Image.m_pData + ((size_t)Row * Image.m_Width + (size_t)StartX) * Image.PixelSize();
+		mem_zero(pRow, (EndX - StartX) * Image.PixelSize());
+	}
+}
+
+static void DrawPngText(ITextRender *pTextRender, CImageInfo &Image, CImageInfo &Mask, int PosX, int PosY, int MaxWidth, int FontSize, const std::string &Text, ColorRGBA Color)
+{
+	if(Text.empty() || PosX >= (int)Image.m_Width || PosY >= (int)Image.m_Height)
+		return;
+
+	const int RectWidth = std::clamp(MaxWidth, 1, (int)Image.m_Width - PosX);
+	const int RectHeight = std::clamp(FontSize + 14, 1, (int)Image.m_Height - PosY);
+	ClearImageRect(Mask, PosX, PosY, RectWidth, RectHeight);
+
+	int Cursor = 0;
+	int DrawX = PosX;
+	const int EndX = PosX + RectWidth;
+	while(Cursor < (int)Text.size() && DrawX < EndX)
+	{
+		const int NextCursor = str_utf8_forward(Text.c_str(), Cursor);
+		const int SafeNextCursor = NextCursor > Cursor ? NextCursor : Cursor + 1;
+		const std::string Character = Text.substr(Cursor, SafeNextCursor - Cursor);
+		int Advance = round_to_int(pTextRender->TextWidth(FontSize, Character.c_str()));
+		if(Character == " " || Character == "\t")
+			Advance = maximum(Advance, FontSize / 3);
+		else
+			Advance = maximum(Advance, 1);
+
+		if(Character != " " && Character != "\t")
+			pTextRender->UploadEntityLayerText(Mask, EndX - DrawX, RectHeight, Character.c_str(), str_length(Character.c_str()), DrawX, PosY, FontSize);
+
+		DrawX += Advance;
+		Cursor = SafeNextCursor;
+	}
+
+	for(int Row = PosY; Row < PosY + RectHeight && Row < (int)Image.m_Height; ++Row)
+	{
+		for(int Column = PosX; Column < PosX + RectWidth && Column < (int)Image.m_Width; ++Column)
+		{
+			const size_t Offset = ((size_t)Row * Mask.m_Width + (size_t)Column) * Mask.PixelSize();
+			const float Alpha = Mask.m_pData[Offset + 3] / 255.0f;
+			if(Alpha > 0.0f)
+				BlendPixel(Image, Column, Row, Color, Alpha);
+		}
+	}
+	ClearImageRect(Mask, PosX, PosY, RectWidth, RectHeight);
+}
+
+static void DrawPngTextCentered(ITextRender *pTextRender, CImageInfo &Image, CImageInfo &Mask, int CenterX, int PosY, int MaxWidth, int FontSize, const std::string &Text, ColorRGBA Color)
+{
+	if(Text.empty())
+		return;
+	const int TextWidth = round_to_int(pTextRender->TextWidth(FontSize, Text.c_str()));
+	const int DrawWidth = minimum(TextWidth, MaxWidth);
+	const int TextX = std::clamp(CenterX - TextWidth / 2, 0, maximum(0, (int)Image.m_Width - DrawWidth));
+	DrawPngText(pTextRender, Image, Mask, TextX, PosY, MaxWidth, FontSize, Text, Color);
+}
+
+static bool SaveChatExportTxt(IStorage *pStorage, const char *pFilename, const std::vector<SChatExportLine> &vLines)
+{
+	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+	{
+		log_error("console", "Failed to open '%s'", pFilename);
+		return false;
+	}
+
+	bool Success = true;
+	for(const SChatExportLine &Line : vLines)
+	{
+		Success &= WriteString(File, Line.m_Raw);
+		Success &= io_write_newline(File);
+	}
+	io_close(File);
+	if(!Success)
+		log_error("console", "Failed to write '%s'", pFilename);
+	return Success;
+}
+
+static bool SaveChatExportHtml(IStorage *pStorage, const char *pFilename, const std::vector<SChatExportLine> &vLines)
+{
+	IOHANDLE File = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+	{
+		log_error("console", "Failed to open '%s'", pFilename);
+		return false;
+	}
+
+	std::string Html;
+	Html.reserve(vLines.size() * 256 + 2048);
+	Html.append("<!doctype html><html><head><meta charset=\"utf-8\"><title>");
+	AppendHtmlEscaped(Html, Localize("QmClient 聊天记录"));
+	Html.append("</title>");
+	Html.append("<style>body{margin:0;background:#eef1f5;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:#202124}.wrap{max-width:920px;margin:0 auto;padding:28px}.title{font-size:26px;font-weight:700;margin-bottom:6px}.sub{color:#68707a;margin-bottom:24px}.msg{display:flex;margin:12px 0}.msg.local{justify-content:flex-end}.bubble{max-width:72%;border-radius:16px;padding:10px 14px;background:#fff;box-shadow:0 1px 3px #0002;white-space:pre-wrap;word-break:break-word}.local .bubble{background:#3d7eff;color:#fff}.time{font-size:12px;opacity:.68;margin-top:6px}</style>");
+	Html.append("</head><body><div class=\"wrap\"><div class=\"title\">");
+	AppendHtmlEscaped(Html, Localize("QmClient 聊天记录"));
+	Html.append("</div><div class=\"sub\">");
+	AppendHtmlEscaped(Html, Localize("共"));
+	Html.append(" ");
+	Html.append(std::to_string(vLines.size()));
+	Html.append(" ");
+	AppendHtmlEscaped(Html, Localize("条消息"));
+	Html.append("</div>");
+	for(const SChatExportLine &Line : vLines)
+	{
+		const std::string DisplayText = ChatExportDisplayText(Line);
+		Html.append("<div class=\"msg");
+		if(Line.m_Local)
+			Html.append(" local");
+		Html.append("\"><div class=\"bubble\">");
+		AppendHtmlEscaped(Html, DisplayText);
+		if(!Line.m_Time.empty())
+		{
+			Html.append("<div class=\"time\">");
+			AppendHtmlEscaped(Html, Line.m_Time);
+			Html.append("</div>");
+		}
+		Html.append("</div></div>");
+	}
+	Html.append("</div></body></html>\n");
+
+	const bool Success = WriteString(File, Html);
+	io_close(File);
+	if(!Success)
+		log_error("console", "Failed to write '%s'", pFilename);
+	return Success;
+}
+
+static std::vector<SChatExportLayout> BuildChatExportLayouts(ITextRender *pTextRender, const std::vector<SChatExportLine> &vLines)
+{
+	static constexpr int FONT_SIZE_MESSAGE = 58;
+	static constexpr int FONT_SIZE_TIME = 34;
+	static constexpr int CARD_MAX_WIDTH = 620;
+	static constexpr int CARD_MIN_WIDTH = 220;
+	static constexpr int CARD_PADDING_X = 46;
+	static constexpr int CARD_PADDING_Y = 26;
+	static constexpr int MESSAGE_LINE_HEIGHT = 72;
+	static constexpr int TIME_LINE_HEIGHT = 52;
+	static constexpr int TIME_TOP_MARGIN = 18;
+	static constexpr int RECORD_GAP = 54;
+
+	std::vector<SChatExportLayout> vLayouts;
+	vLayouts.reserve(vLines.size());
+	for(const SChatExportLine &Line : vLines)
+	{
+		SChatExportLayout Layout;
+		Layout.m_Line = Line;
+		const int TextMaxWidth = CARD_MAX_WIDTH - CARD_PADDING_X * 2;
+		Layout.m_vMessageLines = WrapChatExportText(pTextRender, ChatExportDisplayText(Line), FONT_SIZE_MESSAGE, TextMaxWidth);
+
+		float MaxTextWidth = 0.0f;
+		for(const std::string &MessageLine : Layout.m_vMessageLines)
+			MaxTextWidth = maximum(MaxTextWidth, pTextRender->TextWidth(FONT_SIZE_MESSAGE, MessageLine.c_str()));
+		Layout.m_CardWidth = std::clamp(round_to_int(MaxTextWidth) + CARD_PADDING_X * 2, CARD_MIN_WIDTH, CARD_MAX_WIDTH);
+		Layout.m_CardHeight = CARD_PADDING_Y * 2 + (int)Layout.m_vMessageLines.size() * MESSAGE_LINE_HEIGHT;
+		Layout.m_RecordHeight = Layout.m_CardHeight + (Line.m_Time.empty() ? 0 : TIME_TOP_MARGIN + TIME_LINE_HEIGHT) + RECORD_GAP;
+		vLayouts.push_back(std::move(Layout));
+	}
+	return vLayouts;
+}
+
+static std::vector<SChatExportPage> BuildChatExportPages(const std::vector<SChatExportLayout> &vLayouts)
+{
+	static constexpr int TOP_MARGIN = 36;
+	static constexpr int BOTTOM_MARGIN = 44;
+	static constexpr int MIN_IMAGE_HEIGHT = 360;
+	static constexpr int MAX_IMAGE_HEIGHT = 12000;
+
+	std::vector<SChatExportPage> vPages;
+	int PageStart = 0;
+	int PageHeight = TOP_MARGIN;
+	for(int LayoutIndex = 0; LayoutIndex < (int)vLayouts.size(); ++LayoutIndex)
+	{
+		if(LayoutIndex > PageStart && PageHeight + vLayouts[LayoutIndex].m_RecordHeight + BOTTOM_MARGIN > MAX_IMAGE_HEIGHT)
+		{
+			vPages.push_back({PageStart, LayoutIndex, std::clamp(PageHeight + BOTTOM_MARGIN, MIN_IMAGE_HEIGHT, MAX_IMAGE_HEIGHT)});
+			PageStart = LayoutIndex;
+			PageHeight = TOP_MARGIN;
+		}
+		PageHeight += vLayouts[LayoutIndex].m_RecordHeight;
+	}
+	if(PageStart < (int)vLayouts.size())
+		vPages.push_back({PageStart, (int)vLayouts.size(), std::clamp(PageHeight + BOTTOM_MARGIN, MIN_IMAGE_HEIGHT, MAX_IMAGE_HEIGHT)});
+	return vPages;
+}
+
+static bool AllocateImage(CImageInfo &Image, int Width, int Height, ColorRGBA FillColor)
+{
+	Image.m_Width = Width;
+	Image.m_Height = Height;
+	Image.m_Format = CImageInfo::FORMAT_RGBA;
+	Image.m_pData = static_cast<uint8_t *>(malloc(Image.DataSize()));
+	if(!Image.m_pData)
+	{
+		Image.Free();
+		return false;
+	}
+	mem_zero(Image.m_pData, Image.DataSize());
+	FillRect(Image, 0, 0, Width, Height, FillColor);
+	return true;
+}
+
+static bool AllocateClearImage(CImageInfo &Image, int Width, int Height)
+{
+	Image.m_Width = Width;
+	Image.m_Height = Height;
+	Image.m_Format = CImageInfo::FORMAT_RGBA;
+	Image.m_pData = static_cast<uint8_t *>(calloc(Image.DataSize(), sizeof(uint8_t)));
+	if(!Image.m_pData)
+	{
+		Image.Free();
+		return false;
+	}
+	return true;
+}
+
+static bool SaveChatExportPngPage(IStorage *pStorage, ITextRender *pTextRender, const char *pFilename, const std::vector<SChatExportLayout> &vLayouts, const SChatExportPage &Page, int, int, int)
+{
+	static constexpr int IMAGE_WIDTH = 1080;
+	static constexpr int TOP_MARGIN = 36;
+	static constexpr int CARD_CENTER_X = 720;
+	static constexpr int CARD_PADDING_X = 46;
+	static constexpr int CARD_PADDING_Y = 26;
+	static constexpr int MESSAGE_LINE_HEIGHT = 72;
+	static constexpr int TIME_TOP_MARGIN = 18;
+	static constexpr int CIRCLE_OFFSET_X = 92;
+	static constexpr int FONT_SIZE_MESSAGE = 58;
+	static constexpr int FONT_SIZE_TIME = 34;
+	static constexpr int FONT_SIZE_PLUS = 34;
+
+	CImageInfo Image;
+	CImageInfo Mask;
+	if(!AllocateImage(Image, IMAGE_WIDTH, Page.m_Height, ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f)) || !AllocateClearImage(Mask, IMAGE_WIDTH, Page.m_Height))
+	{
+		Image.Free();
+		Mask.Free();
+		log_error("console", "Failed to allocate chat export image");
+		return false;
+	}
+
+	int PosY = TOP_MARGIN;
+	for(int LayoutIndex = Page.m_Start; LayoutIndex < Page.m_End; ++LayoutIndex)
+	{
+		const SChatExportLayout &Layout = vLayouts[LayoutIndex];
+		const int CardX = CARD_CENTER_X - Layout.m_CardWidth / 2;
+		const int CardY = PosY;
+		const int CardCenterY = CardY + Layout.m_CardHeight / 2;
+		const int CircleCenterX = CardX - CIRCLE_OFFSET_X;
+
+		for(int Glow = 18; Glow >= 4; Glow -= 4)
+		{
+			const float Alpha = 0.035f + (18 - Glow) * 0.003f;
+			FillRoundedRect(Image, CardX - Glow, CardY - Glow, Layout.m_CardWidth + Glow * 2, Layout.m_CardHeight + Glow * 2, 24 + Glow, ColorRGBA(1.0f, 1.0f, 1.0f, Alpha));
+		}
+		FillRoundedRect(Image, CardX, CardY, Layout.m_CardWidth, Layout.m_CardHeight, 20, ColorRGBA(1.0f, 1.0f, 1.0f, 0.98f));
+
+		DrawCircleOutline(Image, CircleCenterX, CardCenterY, 34, 4, ColorRGBA(0.0f, 0.55f, 1.0f, 1.0f));
+		DrawPngTextCentered(pTextRender, Image, Mask, CircleCenterX, CardCenterY - FONT_SIZE_PLUS / 2 - 4, 72, FONT_SIZE_PLUS, "+1", ColorRGBA(0.0f, 0.60f, 1.0f, 1.0f));
+
+		int TextY = CardY + CARD_PADDING_Y;
+		for(const std::string &MessageLine : Layout.m_vMessageLines)
+		{
+			DrawPngTextCentered(pTextRender, Image, Mask, CardX + Layout.m_CardWidth / 2, TextY, Layout.m_CardWidth - CARD_PADDING_X * 2, FONT_SIZE_MESSAGE, MessageLine, ColorRGBA(0.30f, 0.30f, 0.30f, 1.0f));
+			TextY += MESSAGE_LINE_HEIGHT;
+		}
+		if(!Layout.m_Line.m_Time.empty())
+			DrawPngTextCentered(pTextRender, Image, Mask, CardX + Layout.m_CardWidth / 2, CardY + Layout.m_CardHeight + TIME_TOP_MARGIN, Layout.m_CardWidth + 180, FONT_SIZE_TIME, Layout.m_Line.m_Time, ColorRGBA(0.94f, 0.94f, 0.94f, 1.0f));
+
+		PosY += Layout.m_RecordHeight;
+	}
+
+	char aWholePath[IO_MAX_PATH_LENGTH];
+	const bool Success = CImageLoader::SavePng(pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath)), pFilename, Image);
+	if(Success)
+		log_info("console", "Saved chat export image to '%s'", aWholePath);
+	Image.Free();
+	Mask.Free();
+	return Success;
+}
+
+static bool SaveChatExportPng(IStorage *pStorage, ITextRender *pTextRender, const char *pBaseFilename, const std::vector<SChatExportLine> &vLines)
+{
+	const std::vector<SChatExportLayout> vLayouts = BuildChatExportLayouts(pTextRender, vLines);
+	const std::vector<SChatExportPage> vPages = BuildChatExportPages(vLayouts);
+	bool Success = true;
+	for(int PageIndex = 0; PageIndex < (int)vPages.size(); ++PageIndex)
+	{
+		char aFilename[IO_MAX_PATH_LENGTH];
+		if(vPages.size() == 1)
+			str_format(aFilename, sizeof(aFilename), "%s.png", pBaseFilename);
+		else
+			str_format(aFilename, sizeof(aFilename), "%s_%03d.png", pBaseFilename, PageIndex + 1);
+		Success &= SaveChatExportPngPage(pStorage, pTextRender, aFilename, vLayouts, vPages[PageIndex], PageIndex, (int)vPages.size(), (int)vLines.size());
+	}
+	return Success;
 }
 
 class CConsoleLogger : public ILogger
@@ -392,6 +963,8 @@ CGameConsole::CInstance::CInstance(int Type)
 				SearchMatch.m_EntryLine += pEntry->m_LineCount;
 			}
 		}
+		if(pEntry->m_ExportId == m_ChatExportAnchorId)
+			m_ChatExportAnchorId = -1;
 	});
 
 	m_Input.SetClipboardLineCallback([this](const char *pStr) { ExecuteLine(pStr); });
@@ -412,10 +985,13 @@ void CGameConsole::CInstance::ClearBacklog()
 		// m_BacklogPendingLock or this will result in a dead lock.
 		const CLockScope LockScope(m_BacklogPendingLock);
 		m_BacklogPending.Init();
+		m_NextExportId = 1;
 	}
 
 	m_Backlog.Init();
 	m_BacklogCurLine = 0;
+	m_ChatExportAnchorId = -1;
+	m_ChatExportMode = false;
 	ClearSearch();
 }
 
@@ -918,6 +1494,8 @@ void CGameConsole::CInstance::PrintLine(const char *pLine, int Len, ColorRGBA Pr
 	pEntry->m_PrintColor = PrintColor;
 	pEntry->m_Length = Len;
 	pEntry->m_LogCategory = ClassifyLogCategory(pLine, (size_t)Len);
+	pEntry->m_ExportId = m_NextExportId++;
+	pEntry->m_ExportSelected = false;
 	pEntry->m_LineCount = -1;
 	str_copy(pEntry->m_aText, pLine, Len + 1);
 }
@@ -971,6 +1549,92 @@ void CGameConsole::CInstance::SetLogFilter(ELogFilter Filter)
 	m_MouseIsPress = false;
 	if(m_Searching)
 		UpdateSearch();
+}
+
+bool CGameConsole::CInstance::IsChatExportableEntry(const CBacklogEntry *pEntry) const
+{
+	return pEntry && pEntry->m_LogCategory == ELogCategory::PLAYER;
+}
+
+void CGameConsole::CInstance::ClearChatExportSelection()
+{
+	for(CBacklogEntry *pEntry = m_Backlog.First(); pEntry; pEntry = m_Backlog.Next(pEntry))
+		pEntry->m_ExportSelected = false;
+	m_ChatExportAnchorId = -1;
+}
+
+void CGameConsole::CInstance::SelectAllChatExportable()
+{
+	PumpBacklogPending();
+	for(CBacklogEntry *pEntry = m_Backlog.First(); pEntry; pEntry = m_Backlog.Next(pEntry))
+	{
+		if(IsChatExportableEntry(pEntry))
+			pEntry->m_ExportSelected = true;
+	}
+}
+
+int CGameConsole::CInstance::SelectedChatExportCount()
+{
+	int Count = 0;
+	for(CBacklogEntry *pEntry = m_Backlog.First(); pEntry; pEntry = m_Backlog.Next(pEntry))
+	{
+		if(IsChatExportableEntry(pEntry) && pEntry->m_ExportSelected)
+			++Count;
+	}
+	return Count;
+}
+
+void CGameConsole::CInstance::ToggleChatExportEntry(CBacklogEntry *pEntry, bool RangeSelect)
+{
+	if(!IsChatExportableEntry(pEntry))
+		return;
+
+	const bool Select = !pEntry->m_ExportSelected;
+	if(RangeSelect && m_ChatExportAnchorId >= 0)
+	{
+		const int RangeStart = minimum(m_ChatExportAnchorId, pEntry->m_ExportId);
+		const int RangeEnd = maximum(m_ChatExportAnchorId, pEntry->m_ExportId);
+		for(CBacklogEntry *pRangeEntry = m_Backlog.First(); pRangeEntry; pRangeEntry = m_Backlog.Next(pRangeEntry))
+		{
+			if(IsChatExportableEntry(pRangeEntry) && pRangeEntry->m_ExportId >= RangeStart && pRangeEntry->m_ExportId <= RangeEnd)
+				pRangeEntry->m_ExportSelected = Select;
+		}
+	}
+	else
+	{
+		pEntry->m_ExportSelected = Select;
+	}
+	m_ChatExportAnchorId = pEntry->m_ExportId;
+	m_HasSelection = false;
+	m_CurSelStart = 0;
+	m_CurSelEnd = 0;
+}
+
+void CGameConsole::CInstance::SetChatExportMode(bool Enable)
+{
+	if(m_ChatExportMode == Enable)
+		return;
+
+	if(Enable)
+	{
+		PumpBacklogPending();
+		if(m_Searching)
+			SetSearching(false);
+		ClearChatExportSelection();
+		m_ChatExportPreviousFilter = m_LogFilter;
+		SetLogFilter(ELogFilter::PLAYER);
+		m_ChatExportMode = true;
+		m_HasSelection = false;
+		m_MouseIsPress = false;
+	}
+	else
+	{
+		m_ChatExportMode = false;
+		ClearChatExportSelection();
+		SetLogFilter(m_ChatExportPreviousFilter);
+		m_HasSelection = false;
+		m_MouseIsPress = false;
+	}
 }
 
 int CGameConsole::CInstance::GetLinesToScroll(int Direction, int LinesToScroll)
@@ -1206,6 +1870,71 @@ void CGameConsole::CInstance::Dump()
 	{
 		log_error("console", "Failed to open '%s'", aFilename);
 	}
+}
+
+bool CGameConsole::CInstance::ExportSelectedChat()
+{
+	PumpBacklogPending();
+
+	const char *pLocalName = "";
+	const int LocalClientId = m_pGameConsole->GameClient()->m_Snap.m_LocalClientId;
+	if(LocalClientId >= 0 && LocalClientId < MAX_CLIENTS)
+		pLocalName = m_pGameConsole->GameClient()->m_aClients[LocalClientId].m_aName;
+
+	std::vector<SChatExportLine> vLines;
+	for(CBacklogEntry *pEntry = m_Backlog.First(); pEntry; pEntry = m_Backlog.Next(pEntry))
+	{
+		if(!IsChatExportableEntry(pEntry) || !pEntry->m_ExportSelected)
+			continue;
+		SChatExportLine Line;
+		if(TryParseChatExportLine(pEntry->m_aText, pLocalName, Line))
+			vLines.push_back(std::move(Line));
+	}
+
+	if(vLines.empty())
+	{
+		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", Localize("未选择聊天记录"));
+		return false;
+	}
+
+	if(!m_pGameConsole->Storage()->CreateFolder("dumps", IStorage::TYPE_SAVE) && !m_pGameConsole->Storage()->FolderExists("dumps", IStorage::TYPE_SAVE))
+	{
+		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", Localize("聊天记录导出失败"));
+		return false;
+	}
+	if(!m_pGameConsole->Storage()->CreateFolder("dumps/local_chat_export", IStorage::TYPE_SAVE) && !m_pGameConsole->Storage()->FolderExists("dumps/local_chat_export", IStorage::TYPE_SAVE))
+	{
+		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", Localize("聊天记录导出失败"));
+		return false;
+	}
+
+	char aTimestamp[20];
+	str_timestamp(aTimestamp, sizeof(aTimestamp));
+	char aBaseFilename[IO_MAX_PATH_LENGTH];
+	str_format(aBaseFilename, sizeof(aBaseFilename), "dumps/local_chat_export/local_chat_export_%s", aTimestamp);
+
+	char aTxtFilename[IO_MAX_PATH_LENGTH];
+	char aHtmlFilename[IO_MAX_PATH_LENGTH];
+	str_format(aTxtFilename, sizeof(aTxtFilename), "%s.txt", aBaseFilename);
+	str_format(aHtmlFilename, sizeof(aHtmlFilename), "%s.html", aBaseFilename);
+
+	bool Success = true;
+	Success &= SaveChatExportTxt(m_pGameConsole->Storage(), aTxtFilename, vLines);
+	Success &= SaveChatExportHtml(m_pGameConsole->Storage(), aHtmlFilename, vLines);
+	Success &= SaveChatExportPng(m_pGameConsole->Storage(), m_pGameConsole->TextRender(), aBaseFilename, vLines);
+
+	if(Success)
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), Localize("已导出 %d 条聊天记录"), (int)vLines.size());
+		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", aBuf);
+		SetChatExportMode(false);
+	}
+	else
+	{
+		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", Localize("聊天记录导出失败"));
+	}
+	return Success;
 }
 
 CGameConsole::CGameConsole() :
@@ -1471,6 +2200,8 @@ void CGameConsole::OnRender()
 		bool LinkClickPending = false;
 		vec2 LinkClickPos = vec2(0.0f, 0.0f);
 		vec2 LinkClickPress = vec2(0.0f, 0.0f);
+		bool ChatExportClickPending = false;
+		vec2 ChatExportClickPos = vec2(0.0f, 0.0f);
 		const bool CtrlPressed = Input()->ModifierIsPressed();
 		const bool WasMousePressed = pConsole->m_MouseIsPress;
 		Ui()->UpdateTouchState(m_TouchState);
@@ -1494,7 +2225,12 @@ void CGameConsole::OnRender()
 			const vec2 ReleasePos = GetMousePosition();
 			pConsole->m_MouseRelease = ReleasePos;
 			pConsole->m_MouseIsPress = false;
-			if(WasMousePressed && CtrlPressed && !m_TouchState.m_PrimaryPressed)
+			if(WasMousePressed && pConsole->m_ChatExportMode && pConsole->m_MousePress.y < pConsole->m_BoundingBox.m_Y && length(ReleasePos - pConsole->m_MousePress) <= LINK_CLICK_DRAG_THRESHOLD)
+			{
+				ChatExportClickPending = true;
+				ChatExportClickPos = ReleasePos;
+			}
+			else if(WasMousePressed && CtrlPressed && !m_TouchState.m_PrimaryPressed)
 			{
 				LinkClickPending = true;
 				LinkClickPos = ReleasePos;
@@ -1750,13 +2486,36 @@ void CGameConsole::OnRender()
 			const int LinesNotRendered = pEntry->m_LineCount - minimum((int)std::floor((y - LocalOffsetY) / RowHeight), pEntry->m_LineCount);
 			pConsole->m_LinesRendered -= LinesNotRendered;
 
+			const bool ChatExportable = pConsole->IsChatExportableEntry(pEntry);
+			if(pConsole->m_ChatExportMode && ChatExportable)
+			{
+				CUIRect EntryRect = {0.0f, EntryTop, Screen.w, EntryBottom - EntryTop};
+				if(pEntry->m_ExportSelected)
+					EntryRect.Draw(ColorRGBA(0.20f, 0.48f, 1.0f, 0.18f), IGraphics::CORNER_NONE, 0.0f);
+				CUIRect CheckBox = {5.0f, EntryTop + maximum(2.0f, (EntryBottom - EntryTop - 11.0f) / 2.0f), 11.0f, 11.0f};
+				CheckBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.35f), IGraphics::CORNER_ALL, 2.0f);
+				CheckBox.DrawOutline(ColorRGBA(1.0f, 1.0f, 1.0f, 0.65f));
+				if(pEntry->m_ExportSelected)
+				{
+					CUIRect Inner = {CheckBox.x + 3.0f, CheckBox.y + 3.0f, CheckBox.w - 6.0f, CheckBox.h - 6.0f};
+					Inner.Draw(ColorRGBA(0.35f, 0.65f, 1.0f, 0.95f), IGraphics::CORNER_ALL, 1.0f);
+				}
+				if(ChatExportClickPending && ChatExportClickPos.y >= EntryTop && ChatExportClickPos.y <= EntryBottom)
+				{
+					pConsole->ToggleChatExportEntry(pEntry, GameClient()->Input()->ShiftIsPressed());
+					ChatExportClickPending = false;
+				}
+			}
+
+			const float EntryTextX = pConsole->m_ChatExportMode ? 22.0f : 0.0f;
+			const float EntryLineWidth = Screen.w - 10.0f - EntryTextX;
 			CTextCursor EntryCursor;
-			EntryCursor.SetPosition(vec2(0.0f, y - OffsetY));
+			EntryCursor.SetPosition(vec2(EntryTextX, y - OffsetY));
 			EntryCursor.m_FontSize = FONT_SIZE;
-			EntryCursor.m_LineWidth = Screen.w - 10.0f;
+			EntryCursor.m_LineWidth = EntryLineWidth;
 			EntryCursor.m_MaxLines = pEntry->m_LineCount;
 			EntryCursor.m_LineSpacing = LINE_SPACING;
-			EntryCursor.m_CalculateSelectionMode = (m_ConsoleState == CONSOLE_OPEN && pConsole->m_MousePress.y < pConsole->m_BoundingBox.m_Y && (pConsole->m_MouseIsPress || (pConsole->m_CurSelStart != pConsole->m_CurSelEnd) || pConsole->m_HasSelection)) ? TEXT_CURSOR_SELECTION_MODE_CALCULATE : TEXT_CURSOR_SELECTION_MODE_NONE;
+			EntryCursor.m_CalculateSelectionMode = (!pConsole->m_ChatExportMode && m_ConsoleState == CONSOLE_OPEN && pConsole->m_MousePress.y < pConsole->m_BoundingBox.m_Y && (pConsole->m_MouseIsPress || (pConsole->m_CurSelStart != pConsole->m_CurSelEnd) || pConsole->m_HasSelection)) ? TEXT_CURSOR_SELECTION_MODE_CALCULATE : TEXT_CURSOR_SELECTION_MODE_NONE;
 			EntryCursor.m_PressMouse = pConsole->m_MousePress;
 			EntryCursor.m_ReleaseMouse = pConsole->m_MouseRelease;
 
@@ -1802,9 +2561,9 @@ void CGameConsole::OnRender()
 			{
 				LinkClickHandled = true;
 				CTextCursor LinkCursor;
-				LinkCursor.SetPosition(vec2(0.0f, EntryTop));
+				LinkCursor.SetPosition(vec2(EntryTextX, EntryTop));
 				LinkCursor.m_FontSize = FONT_SIZE;
-				LinkCursor.m_LineWidth = Screen.w - 10.0f;
+				LinkCursor.m_LineWidth = EntryLineWidth;
 				LinkCursor.m_MaxLines = pEntry->m_LineCount;
 				LinkCursor.m_LineSpacing = LINE_SPACING;
 				LinkCursor.m_Flags = 0;
@@ -1857,9 +2616,9 @@ void CGameConsole::OnRender()
 				for(const auto &Range : vLinkRanges)
 				{
 					CTextCursor UnderlineCursor;
-					UnderlineCursor.SetPosition(vec2(0.0f, EntryTop));
+					UnderlineCursor.SetPosition(vec2(EntryTextX, EntryTop));
 					UnderlineCursor.m_FontSize = FONT_SIZE;
-					UnderlineCursor.m_LineWidth = Screen.w - 10.0f;
+					UnderlineCursor.m_LineWidth = EntryLineWidth;
 					UnderlineCursor.m_MaxLines = pEntry->m_LineCount;
 					UnderlineCursor.m_LineSpacing = LINE_SPACING;
 					UnderlineCursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
@@ -1882,9 +2641,9 @@ void CGameConsole::OnRender()
 				{
 					const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
 					CTextCursor LinkCursor;
-					LinkCursor.SetPosition(vec2(0.0f, EntryTop));
+					LinkCursor.SetPosition(vec2(EntryTextX, EntryTop));
 					LinkCursor.m_FontSize = FONT_SIZE;
-					LinkCursor.m_LineWidth = Screen.w - 10.0f;
+					LinkCursor.m_LineWidth = EntryLineWidth;
 					LinkCursor.m_MaxLines = pEntry->m_LineCount;
 					LinkCursor.m_LineSpacing = LINE_SPACING;
 					LinkCursor.m_vColorSplits = vLinkColorSplits;
@@ -1957,46 +2716,12 @@ void CGameConsole::OnRender()
 		const float LinesTextX = 10.0f;
 		const float LinesTextY = FONT_SIZE / 2.f;
 
-		char aVersionBuf[128];
-		str_copy(aVersionBuf, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
-		const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
-
-		const char *apFilterLabels[] = {Localize("All"), Localize("Players"), Localize("System")};
-		const CInstance::ELogFilter aFilters[] = {CInstance::ELogFilter::ALL, CInstance::ELogFilter::PLAYER, CInstance::ELogFilter::SYSTEM};
 		const float FilterFontSize = FONT_SIZE;
 		const float FilterHeight = RowHeight - 6.0f;
 		const float FilterY = (RowHeight - FilterHeight) / 2.0f;
 		const float FilterPadding = 6.0f;
 		const float FilterSpacing = 4.0f;
-		const bool ShowDumpButton = m_ConsoleType == CONSOLETYPE_LOCAL;
-		const char *pDumpLabel = Localize("Dump");
-		const float DumpButtonWidth = ShowDumpButton ? TextRender()->TextWidth(FilterFontSize, pDumpLabel) + FilterPadding * 2.0f : 0.0f;
 		const float TopbarRightMargin = 10.0f;
-		const float VersionRight = ShowDumpButton ? Screen.w - TopbarRightMargin - DumpButtonWidth - FilterSpacing : Screen.w - TopbarRightMargin;
-		float aFilterWidths[3];
-		float TotalFilterWidth = 0.0f;
-		for(int i = 0; i < 3; ++i)
-		{
-			aFilterWidths[i] = TextRender()->TextWidth(FilterFontSize, apFilterLabels[i]) + FilterPadding * 2.0f;
-			TotalFilterWidth += aFilterWidths[i];
-			if(i != 2)
-				TotalFilterWidth += FilterSpacing;
-		}
-
-		const float LinesWidth = TextRender()->TextWidth(FONT_SIZE, aLinesBuf);
-		float FilterX = LinesTextX + LinesWidth + 10.0f;
-		const float VersionWidth = TextRender()->TextWidth(FONT_SIZE, aVersionBuf);
-		const float FilterRightLimit = VersionRight - VersionWidth - 10.0f;
-		if(FilterX + TotalFilterWidth > FilterRightLimit)
-			FilterX = maximum(LinesTextX + LinesWidth + 10.0f, FilterRightLimit - TotalFilterWidth);
-
-		CUIRect aFilterRects[3];
-		float FilterLayoutX = FilterX;
-		for(int i = 0; i < 3; ++i)
-		{
-			aFilterRects[i] = {FilterLayoutX, FilterY, aFilterWidths[i], FilterHeight};
-			FilterLayoutX += aFilterWidths[i] + FilterSpacing;
-		}
 
 		vec2 UiMousePos = Input()->NativeMousePos();
 		if(WindowSize.x > 0.0f && WindowSize.y > 0.0f)
@@ -2004,52 +2729,132 @@ void CGameConsole::OnRender()
 		const bool MouseDown = Input()->NativeMousePressed(1);
 		const bool MousePressed = MouseDown && !m_TopbarMouseDown;
 
-		for(int i = 0; i < 3; ++i)
+		const float LinesWidth = TextRender()->TextWidth(FONT_SIZE, aLinesBuf);
+		if(pConsole->m_ChatExportMode)
 		{
-			CUIRect Button = aFilterRects[i];
-			const bool Active = pConsole->m_LogFilter == aFilters[i];
-			const bool UiClicked = Ui()->DoButton_PopupMenu(&m_aFilterButtons[i], apFilterLabels[i], &Button, FilterFontSize, TEXTALIGN_MC);
-			const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
-			if(UiClicked || ManualClicked)
-				pConsole->SetLogFilter(aFilters[i]);
-			if(Active)
-				Button.DrawOutline(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
+			char aSelectedBuf[64];
+			str_format(aSelectedBuf, sizeof(aSelectedBuf), Localize("已选 %d 条"), pConsole->SelectedChatExportCount());
+			TextRender()->Text(LinesTextX + LinesWidth + 10.0f, LinesTextY, FONT_SIZE, aSelectedBuf);
+
+			enum class EExportAction
+			{
+				CANCEL = 0,
+				SAVE,
+				CLEAR,
+				SELECT_ALL,
+			};
+			struct SExportButton
+			{
+				CButtonContainer *m_pButton;
+				const char *m_pLabel;
+				EExportAction m_Action;
+			};
+			SExportButton aButtons[] = {
+				{&m_ChatExportCancelButton, Localize("取消"), EExportAction::CANCEL},
+				{&m_ChatExportSaveButton, Localize("导出所选"), EExportAction::SAVE},
+				{&m_ChatExportClearButton, Localize("清空"), EExportAction::CLEAR},
+				{&m_ChatExportSelectAllButton, Localize("全选聊天"), EExportAction::SELECT_ALL},
+			};
+			float ButtonRight = Screen.w - TopbarRightMargin;
+			for(const SExportButton &ExportButton : aButtons)
+			{
+				const float ButtonWidth = TextRender()->TextWidth(FilterFontSize, ExportButton.m_pLabel) + FilterPadding * 2.0f;
+				CUIRect Button = {ButtonRight - ButtonWidth, FilterY, ButtonWidth, FilterHeight};
+				Ui()->DoButton_PopupMenu(ExportButton.m_pButton, ExportButton.m_pLabel, &Button, FilterFontSize, TEXTALIGN_MC);
+				const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
+				if(ManualClicked)
+				{
+					if(ExportButton.m_Action == EExportAction::CANCEL)
+						pConsole->SetChatExportMode(false);
+					else if(ExportButton.m_Action == EExportAction::SAVE)
+						pConsole->ExportSelectedChat();
+					else if(ExportButton.m_Action == EExportAction::CLEAR)
+						pConsole->ClearChatExportSelection();
+					else if(ExportButton.m_Action == EExportAction::SELECT_ALL)
+						pConsole->SelectAllChatExportable();
+				}
+				ButtonRight -= ButtonWidth + FilterSpacing;
+			}
 		}
-		if(ShowDumpButton)
+		else
 		{
-			CUIRect Button = {Screen.w - TopbarRightMargin - DumpButtonWidth, FilterY, DumpButtonWidth, FilterHeight};
-			Ui()->DoButton_PopupMenu(&m_DumpLocalConsoleButton, pDumpLabel, &Button, FilterFontSize, TEXTALIGN_MC);
-			const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
-			if(ManualClicked)
-				m_LocalConsole.Dump();
+			char aVersionBuf[128];
+			str_copy(aVersionBuf, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
+			const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
+			const char *apFilterLabels[] = {Localize("All"), Localize("Players"), Localize("System")};
+			const CInstance::ELogFilter aFilters[] = {CInstance::ELogFilter::ALL, CInstance::ELogFilter::PLAYER, CInstance::ELogFilter::SYSTEM};
+			const bool ShowExportButton = m_ConsoleType == CONSOLETYPE_LOCAL;
+			const char *pExportLabel = Localize("选择导出");
+			const float ExportButtonWidth = ShowExportButton ? TextRender()->TextWidth(FilterFontSize, pExportLabel) + FilterPadding * 2.0f : 0.0f;
+			const float VersionRight = ShowExportButton ? Screen.w - TopbarRightMargin - ExportButtonWidth - FilterSpacing : Screen.w - TopbarRightMargin;
+			float aFilterWidths[3];
+			float TotalFilterWidth = 0.0f;
+			for(int i = 0; i < 3; ++i)
+			{
+				aFilterWidths[i] = TextRender()->TextWidth(FilterFontSize, apFilterLabels[i]) + FilterPadding * 2.0f;
+				TotalFilterWidth += aFilterWidths[i];
+				if(i != 2)
+					TotalFilterWidth += FilterSpacing;
+			}
+
+			float FilterX = LinesTextX + LinesWidth + 10.0f;
+			const float VersionWidth = TextRender()->TextWidth(FONT_SIZE, aVersionBuf);
+			const float FilterRightLimit = VersionRight - VersionWidth - 10.0f;
+			if(FilterX + TotalFilterWidth > FilterRightLimit)
+				FilterX = maximum(LinesTextX + LinesWidth + 10.0f, FilterRightLimit - TotalFilterWidth);
+
+			CUIRect aFilterRects[3];
+			float FilterLayoutX = FilterX;
+			for(int i = 0; i < 3; ++i)
+			{
+				aFilterRects[i] = {FilterLayoutX, FilterY, aFilterWidths[i], FilterHeight};
+				FilterLayoutX += aFilterWidths[i] + FilterSpacing;
+			}
+
+			for(int i = 0; i < 3; ++i)
+			{
+				CUIRect Button = aFilterRects[i];
+				const bool Active = pConsole->m_LogFilter == aFilters[i];
+				const bool UiClicked = Ui()->DoButton_PopupMenu(&m_aFilterButtons[i], apFilterLabels[i], &Button, FilterFontSize, TEXTALIGN_MC);
+				const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
+				if(UiClicked || ManualClicked)
+					pConsole->SetLogFilter(aFilters[i]);
+				if(Active)
+					Button.DrawOutline(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
+			}
+			if(ShowExportButton)
+			{
+				CUIRect Button = {Screen.w - TopbarRightMargin - ExportButtonWidth, FilterY, ExportButtonWidth, FilterHeight};
+				Ui()->DoButton_PopupMenu(&m_ChatExportButton, pExportLabel, &Button, FilterFontSize, TEXTALIGN_MC);
+				const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
+				if(ManualClicked)
+					m_LocalConsole.SetChatExportMode(true);
+			}
+
+			if(m_ConsoleType == CONSOLETYPE_REMOTE && (Client()->ReceivingRconCommands() || Client()->ReceivingMaplist()))
+			{
+				const float Percentage = Client()->ReceivingRconCommands() ? Client()->GotRconCommandsPercentage() : Client()->GotMaplistPercentage();
+				SProgressSpinnerProperties ProgressProps;
+				ProgressProps.m_Progress = Percentage;
+				Ui()->RenderProgressSpinner(vec2(Screen.w / 4.0f + FONT_SIZE / 2.f, FONT_SIZE), FONT_SIZE / 2.f, ProgressProps);
+
+				char aLoading[128];
+				str_copy(aLoading, Client()->ReceivingRconCommands() ? Localize("Loading commands…") : Localize("Loading maps…"));
+				if(Percentage > 0)
+				{
+					char aPercentage[8];
+					str_format(aPercentage, sizeof(aPercentage), " %d%%", (int)(Percentage * 100));
+					str_append(aLoading, aPercentage);
+				}
+				TextRender()->Text(Screen.w / 4.0f + FONT_SIZE + 2.0f, FONT_SIZE / 2.f, FONT_SIZE, aLoading);
+			}
+
+			TextRender()->Text(VersionRight - VersionWidth, FONT_SIZE / 2.f, FONT_SIZE, aVersionBuf);
+			TextRender()->Text(VersionRight - TextRender()->TextWidth(FONT_SIZE, pClientVersion), FONT_SIZE / 2.0f + FONT_SIZE * 1.5f, FONT_SIZE, pClientVersion);
 		}
 		m_TopbarMouseDown = MouseDown;
 
 		TextRender()->Text(LinesTextX, LinesTextY, FONT_SIZE, aLinesBuf);
-
-		if(m_ConsoleType == CONSOLETYPE_REMOTE && (Client()->ReceivingRconCommands() || Client()->ReceivingMaplist()))
-		{
-			const float Percentage = Client()->ReceivingRconCommands() ? Client()->GotRconCommandsPercentage() : Client()->GotMaplistPercentage();
-			SProgressSpinnerProperties ProgressProps;
-			ProgressProps.m_Progress = Percentage;
-			Ui()->RenderProgressSpinner(vec2(Screen.w / 4.0f + FONT_SIZE / 2.f, FONT_SIZE), FONT_SIZE / 2.f, ProgressProps);
-
-			char aLoading[128];
-			str_copy(aLoading, Client()->ReceivingRconCommands() ? Localize("Loading commands…") : Localize("Loading maps…"));
-			if(Percentage > 0)
-			{
-				char aPercentage[8];
-				str_format(aPercentage, sizeof(aPercentage), " %d%%", (int)(Percentage * 100));
-				str_append(aLoading, aPercentage);
-			}
-			TextRender()->Text(Screen.w / 4.0f + FONT_SIZE + 2.0f, FONT_SIZE / 2.f, FONT_SIZE, aLoading);
-		}
-
-		// render version
-		TextRender()->Text(VersionRight - VersionWidth, FONT_SIZE / 2.f, FONT_SIZE, aVersionBuf);
-
-		// TClient: render client version
-		TextRender()->Text(VersionRight - TextRender()->TextWidth(FONT_SIZE, pClientVersion), FONT_SIZE / 2.0f + FONT_SIZE * 1.5f, FONT_SIZE, pClientVersion);
 	}
 
 	if(UpdateConsoleUi)
@@ -2071,7 +2876,9 @@ bool CGameConsole::OnInput(const IInput::CEvent &Event)
 	if((Event.m_Key >= KEY_F1 && Event.m_Key <= KEY_F12) || (Event.m_Key >= KEY_F13 && Event.m_Key <= KEY_F24))
 		return false;
 
-	if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS) && !CurrentConsole()->m_Searching)
+	if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS) && CurrentConsole()->m_ChatExportMode)
+		CurrentConsole()->SetChatExportMode(false);
+	else if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS) && !CurrentConsole()->m_Searching)
 		Toggle(m_ConsoleType);
 	else if(!CurrentConsole()->OnInput(Event))
 	{

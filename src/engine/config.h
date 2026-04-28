@@ -5,7 +5,7 @@
 
 #include "kernel.h"
 
-#define CONFIG_DOMAIN(Name, ConfigPath, HasVars) Name,
+#define CONFIG_DOMAIN(Name, ConfigPath, LegacyConfigPath, HasVars) Name,
 enum ConfigDomain // NOLINT(readability-enum-initial-value)
 {
 #include "shared/config_domains.h"
@@ -23,9 +23,10 @@ class CConfigDomain
 {
 public:
 	const char *m_aConfigPath;
+	const char *m_aLegacyConfigPath;
 	bool m_HasVars;
 };
-#define CONFIG_DOMAIN(Name, ConfigPath, HasVars) {ConfigPath, HasVars},
+#define CONFIG_DOMAIN(Name, ConfigPath, LegacyConfigPath, HasVars) {ConfigPath, LegacyConfigPath, HasVars},
 static const CConfigDomain s_aConfigDomains[ConfigDomain::NUM] = {
 #include "shared/config_domains.h"
 };

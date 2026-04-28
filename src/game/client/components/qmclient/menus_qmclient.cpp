@@ -1959,8 +1959,8 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 		const int ModuleIndex = GetQmModuleIndexById(pModule->m_Id);
 		const bool Collapsed = IsQmModuleCollapsed(pModule->m_Id);
-		const char *pIcon = Collapsed ? FONT_ICON_PLUS : FONT_ICON_MINUS;
-		if(Ui()->DoButton_FontIcon(&s_aModuleCollapseButtons[ModuleIndex], pIcon, 0, &ButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
+		const char *pIcon = Collapsed ? "▸" : "▾";
+		if(DoButton_Menu(&s_aModuleCollapseButtons[ModuleIndex], pIcon, 0, &ButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f))
 			ToggleQmModuleCollapsed(pModule->m_Id);
 		if(Ui()->MouseHovered(&ButtonRect))
 		{
@@ -2074,7 +2074,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 		case EQmModuleId::FriendNotify: return "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi";
 		case EQmModuleId::BlockWords: return "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan";
 		case EQmModuleId::Translate: return "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.5-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过";
-		case EQmModuleId::TranslateUi: return "翻译UI fanyi ui 颜色 yanse color 按钮 anniu button 菜单 caidan menu rgba 自定义 zidingyi custom";
+		case EQmModuleId::TranslateUi: return "fanyi ui 颜色 yanse color 按钮 anniu button 菜单 caidan menu rgba 自定义 zidingyi custom";
 		case EQmModuleId::QiaFen: return "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming";
 		case EQmModuleId::PieMenu: return "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan";
 		case EQmModuleId::EntityOverlay: return "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng";
@@ -4101,9 +4101,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 				Column.HSplitTop(LG_CardPadding, nullptr, &Column);
 				Column.VSplitLeft(LG_CardPadding, nullptr, &CardContent);
 				CardContent.VSplitRight(LG_CardPadding, &CardContent, nullptr);
-				DoModuleHeadline(CardContent, 9, Localize("Translate button"), Localize("Customize translate button and menu colors"));
-				DoModuleHeadline(CardContent, 9, Localize("翻译 UI"), Localize("自定义翻译按钮颜色"));
-
+				DoModuleHeadline(CardContent, 9, Localize("翻译按钮"), Localize("自定义翻译按钮和菜单的颜色"));
 				NTranslateUiSettings::RenderTranslateUiModule(this, CardContent, LG_LineHeight, LG_BodySize, LG_LineSpacing);
 
 				CardContent.HSplitTop(LG_CardPadding, nullptr, &CardContent);
@@ -5630,7 +5628,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					{
 						CUIRect LabelColValue, ControlColValue;
 						Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-						Ui()->DoLabel(&LabelColValue, Localize("Microphone volume"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelColValue, Localize("麦克风音量"), LG_BodySize, TEXTALIGN_ML);
 						static int s_QmVoiceMicVolumeInputId;
 						RenderSliderWithValueInput(&s_QmVoiceMicVolumeInputId, ControlColValue, &g_Config.m_QmVoiceMicVolume, 0, 300);
 					}
@@ -5646,7 +5644,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						{
 							CUIRect LabelColValue, ControlColValue;
 							Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-							Ui()->DoLabel(&LabelColValue, Localize("Voice activation threshold"), LG_BodySize, TEXTALIGN_ML);
+							Ui()->DoLabel(&LabelColValue, Localize("语音激活阈值"), LG_BodySize, TEXTALIGN_ML);
 							static int s_QmVoiceVadThresholdInputId;
 							RenderSliderWithValueInput(&s_QmVoiceVadThresholdInputId, ControlColValue, &g_Config.m_QmVoiceVadThreshold, 0, 100);
 						}
@@ -5656,7 +5654,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						{
 							CUIRect LabelColValue, ControlColValue;
 							Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-							Ui()->DoLabel(&LabelColValue, Localize("Voice activation release delay"), LG_BodySize, TEXTALIGN_ML);
+							Ui()->DoLabel(&LabelColValue, Localize("语音激活释放延迟"), LG_BodySize, TEXTALIGN_ML);
 							static int s_QmVoiceVadReleaseDelayMsInputId;
 							RenderSliderWithValueInput(&s_QmVoiceVadReleaseDelayMsInputId, ControlColValue, &g_Config.m_QmVoiceVadReleaseDelayMs, 0, 1000);
 						}
@@ -5669,7 +5667,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					{
 						CUIRect LabelColValue, ControlColValue;
 						Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-						Ui()->DoLabel(&LabelColValue, Localize("Playback volume"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelColValue, Localize("播放音量"), LG_BodySize, TEXTALIGN_ML);
 						static int s_QmVoiceVolumeInputId;
 						RenderSliderWithValueInput(&s_QmVoiceVolumeInputId, ControlColValue, &g_Config.m_QmVoiceVolume, 0, 400);
 					}
@@ -5685,7 +5683,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 						{
 							CUIRect LabelColValue, ControlColValue;
 							Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-							Ui()->DoLabel(&LabelColValue, Localize("Stereo width"), LG_BodySize, TEXTALIGN_ML);
+							Ui()->DoLabel(&LabelColValue, Localize("左右声道宽度"), LG_BodySize, TEXTALIGN_ML);
 							static int s_QmVoiceStereoWidthInputId;
 							RenderSliderWithValueInput(&s_QmVoiceStereoWidthInputId, ControlColValue, &g_Config.m_QmVoiceStereoWidth, 0, 200);
 						}
@@ -5696,14 +5694,10 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					{
 						CUIRect LabelColValue, ControlColValue;
 						Row.VSplitLeft(LG_LabelWidth, &LabelColValue, &ControlColValue);
-						Ui()->DoLabel(&LabelColValue, Localize("Voice distance radius (Tiles)"), LG_BodySize, TEXTALIGN_ML);
+						Ui()->DoLabel(&LabelColValue, Localize("语音距离半径（格）"), LG_BodySize, TEXTALIGN_ML);
 						static int s_QmVoiceRadiusInputId;
 						RenderSliderWithValueInput(&s_QmVoiceRadiusInputId, ControlColValue, &g_Config.m_QmVoiceRadius, 1, 400);
 					}
-					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
-
-					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
-					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmVoiceGroupGlobal, Localize("Hear teammates globally"), &g_Config.m_QmVoiceGroupGlobal, &Row, LG_LineHeight);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 					CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);

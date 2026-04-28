@@ -18,6 +18,23 @@ CConfig g_Config;
 namespace
 {
 	std::unordered_map<const SIntConfigVariable *, int> s_ToggleRestoreInts;
+
+	static bool EnsureConfigPathFolder(IStorage *pStorage, const char *pConfigPath)
+	{
+		const char *pSlash = str_rchr(pConfigPath, '/');
+		if(pSlash == nullptr)
+			return true;
+
+		const int FolderBufferSize = static_cast<int>(pSlash - pConfigPath) + 1;
+		char aFolder[IO_MAX_PATH_LENGTH];
+		if(FolderBufferSize <= 1 || FolderBufferSize > static_cast<int>(sizeof(aFolder)))
+			return false;
+
+		str_copy(aFolder, pConfigPath, FolderBufferSize);
+		if(pStorage->FolderExists(aFolder, IStorage::TYPE_SAVE))
+			return true;
+		return pStorage->CreateFolder(aFolder, IStorage::TYPE_SAVE) || pStorage->FolderExists(aFolder, IStorage::TYPE_SAVE);
+	}
 }
 
 static void EscapeParam(char *pDst, const char *pSrc, int Size)
@@ -391,6 +408,13 @@ bool CConfigManager::Save()
 		if(s_aConfigDomains[ConfigDomain].m_aConfigPath == nullptr)
 		{
 			m_aConfigFile[ConfigDomain] = nullptr;
+			continue;
+		}
+		if(!EnsureConfigPathFolder(m_pStorage, s_aConfigDomains[ConfigDomain].m_aConfigPath))
+		{
+			log_error("config", "ERROR: creating config folder for %s failed", s_aConfigDomains[ConfigDomain].m_aConfigPath);
+			m_aConfigFile[ConfigDomain] = nullptr;
+			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 			continue;
 		}
 		m_aConfigFile[ConfigDomain] = m_pStorage->OpenFile(IStorage::FormatTmpPath(

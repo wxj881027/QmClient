@@ -1205,6 +1205,27 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	str_format(aBuf, sizeof(aBuf), "%s: %d/%d", Localize("Players"), GameClient()->m_Snap.m_NumPlayers, CurrentServerInfo.m_MaxClients);
 	Ui()->DoLabel(&Label, aBuf, FontSizeBody, TEXTALIGN_ML);
 
+	if(CurrentServerInfo.m_aMap[0] != '\0' && GameInfo.h >= 34.0f)
+	{
+		static CLineInputBuffered<256> s_MapNoteInput;
+		static char s_aMapNoteInputMap[MAX_MAP_LENGTH] = "";
+		if(str_comp(s_aMapNoteInputMap, CurrentServerInfo.m_aMap) != 0)
+		{
+			const char *pNote = GameClient()->m_TClient.GetMapNote(CurrentServerInfo.m_aMap);
+			s_MapNoteInput.Set(pNote ? pNote : "");
+			str_copy(s_aMapNoteInputMap, CurrentServerInfo.m_aMap);
+		}
+
+		CUIRect NoteRow, NoteLabel, NoteInput;
+		GameInfo.HSplitTop(8.0f, nullptr, &GameInfo);
+		GameInfo.HSplitTop(22.0f, &NoteRow, &GameInfo);
+		NoteRow.VSplitLeft(72.0f, &NoteLabel, &NoteInput);
+		str_format(aBuf, sizeof(aBuf), "%s:", Localize("备注"));
+		Ui()->DoLabel(&NoteLabel, aBuf, FontSizeBody, TEXTALIGN_ML);
+		if(Ui()->DoEditBox(&s_MapNoteInput, &NoteInput, FontSizeBody * 0.85f))
+			GameClient()->m_TClient.SetMapNote(CurrentServerInfo.m_aMap, s_MapNoteInput.GetString());
+	}
+
 	RenderServerInfoMotd(Motd);
 }
 
@@ -1895,6 +1916,19 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		NewPage = PAGE_FAVORITES;
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
+
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
+	static CButtonContainer s_FavoriteMapsButton;
+	if(DoButton_MenuTab(&s_FavoriteMapsButton, "🔖", g_Config.m_UiPage == PAGE_FAVORITE_MAPS, &Button, IGraphics::CORNER_NONE))
+	{
+		NewPage = PAGE_FAVORITE_MAPS;
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_FavoriteMapsButton, &Button, Localize("收藏地图"));
+
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
 	size_t FavoriteCommunityIndex = 0;
 	static CButtonContainer s_aFavoriteCommunityButtons[5];

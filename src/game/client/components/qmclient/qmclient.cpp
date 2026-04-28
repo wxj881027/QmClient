@@ -50,8 +50,8 @@
 #include <windows.h>
 #endif
 
-static constexpr const char *TCLIENT_INFO_URL = "https://raw.githubusercontent.com/wxj881027/Q1menG_Client/master/docs/info.json";
-static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/Q1menG_Client/releases/latest/download/DDNet.exe";
+static constexpr const char *TCLIENT_INFO_URL = "http://42.194.185.210:8080/client/version";
+static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/QmClient/releases/latest/download/DDNet.exe";
 static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 static constexpr int QMCLIENT_SYNC_INTERVAL_SECONDS = 30;

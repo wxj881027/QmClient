@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const https = require("node:https");
 const express = require("express");
 
 const app = express();
@@ -16,6 +17,15 @@ const REQUIRE_IP_BIND = process.env.REQUIRE_IP_BIND !== "0";
 const TRUST_PROXY = process.env.TRUST_PROXY === "1";
 const RATE_LIMIT_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 120);
 const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString("hex");
+const CLIENT_RELEASE_OWNER = process.env.CLIENT_RELEASE_OWNER || "wxj881027";
+const CLIENT_RELEASE_REPO = process.env.CLIENT_RELEASE_REPO || "QmClient";
+const CLIENT_VERSION_FALLBACK = NormalizeClientVersion(process.env.CLIENT_LATEST_VERSION || "2.36.0");
+const CLIENT_VERSION_CACHE_TTL_SEC = Number(process.env.CLIENT_VERSION_CACHE_TTL_SEC || 300);
+const CLIENT_VERSION_RETRY_DELAY_SEC = Number(process.env.CLIENT_VERSION_RETRY_DELAY_SEC || 60);
+const CLIENT_VERSION_FETCH_TIMEOUT_MS = Number(process.env.CLIENT_VERSION_FETCH_TIMEOUT_MS || 5000);
+const CLIENT_RELEASES_API_URL = process.env.CLIENT_RELEASES_API_URL || `https://api.github.com/repos/${CLIENT_RELEASE_OWNER}/${CLIENT_RELEASE_REPO}/releases/latest`;
+const CLIENT_FALLBACK_TAG = process.env.CLIENT_LATEST_TAG || `v${CLIENT_VERSION_FALLBACK}`;
+const CLIENT_FALLBACK_RELEASE_URL = process.env.CLIENT_RELEASE_URL || BuildClientReleaseUrl(CLIENT_FALLBACK_TAG);
 
 if(TRUST_PROXY)
 {
@@ -25,6 +35,16 @@ if(TRUST_PROXY)
 const g_Tokens = new Map();
 const g_Users = new Map();
 const g_Rate = new Map();
+const g_ClientVersionCache = {
+	version: CLIENT_VERSION_FALLBACK,
+	tag: CLIENT_FALLBACK_TAG,
+	releaseUrl: CLIENT_FALLBACK_RELEASE_URL,
+	source: "fallback",
+	fetchedAt: 0,
+	expiresAt: 0,
+	lastError: "",
+	pending: null
+};
 
 function NowSec()
 {
@@ -34,6 +54,111 @@ function NowSec()
 function ClientIp(req)
 {
 	return req.ip || req.socket.remoteAddress || "unknown";
+}
+
+function NormalizeClientVersion(Value)
+{
+	if(typeof Value !== "string")
+		return "";
+
+	const Trimmed = Value.trim();
+	if(Trimmed.startsWith("v") || Trimmed.startsWith("V"))
+		return Trimmed.slice(1).trim();
+	return Trimmed;
+}
+
+function BuildClientReleaseUrl(Tag)
+{
+	return `https://github.com/${CLIENT_RELEASE_OWNER}/${CLIENT_RELEASE_REPO}/releases/tag/${Tag}`;
+}
+
+function IsClientVersionCacheFresh()
+{
+	return g_ClientVersionCache.version !== "" && g_ClientVersionCache.expiresAt > NowSec();
+}
+
+function ReadJsonUrl(Url, TimeoutMs)
+{
+	return new Promise((resolve, reject) => {
+		const Request = https.get(Url, {
+			headers: {
+				"Accept": "application/vnd.github+json",
+				"User-Agent": "QmClient-Center-Server"
+			},
+			timeout: TimeoutMs
+		}, (Response) => {
+			let Body = "";
+			Response.setEncoding("utf8");
+			Response.on("data", (Chunk) => {
+				Body += Chunk;
+				if(Body.length > 128 * 1024)
+				{
+					Request.destroy(new Error("response_too_large"));
+				}
+			});
+			Response.on("end", () => {
+				if(Response.statusCode < 200 || Response.statusCode >= 300)
+				{
+					reject(new Error(`http_${Response.statusCode}`));
+					return;
+				}
+
+				try
+				{
+					resolve(JSON.parse(Body));
+				}
+				catch(Error)
+				{
+					reject(Error);
+				}
+			});
+		});
+
+		Request.on("timeout", () => {
+			Request.destroy(new Error("timeout"));
+		});
+		Request.on("error", reject);
+	});
+}
+
+async function RefreshClientVersionCache()
+{
+	if(IsClientVersionCacheFresh())
+		return g_ClientVersionCache;
+	if(g_ClientVersionCache.pending)
+		return g_ClientVersionCache.pending;
+
+	g_ClientVersionCache.pending = (async () => {
+		const Now = NowSec();
+		try
+		{
+			const Release = await ReadJsonUrl(CLIENT_RELEASES_API_URL, CLIENT_VERSION_FETCH_TIMEOUT_MS);
+			const Tag = typeof Release.tag_name === "string" ? Release.tag_name.trim() : "";
+			const Version = NormalizeClientVersion(Tag);
+			if(Version === "")
+				throw new Error("missing_tag_name");
+
+			g_ClientVersionCache.version = Version;
+			g_ClientVersionCache.tag = Tag;
+			g_ClientVersionCache.releaseUrl = typeof Release.html_url === "string" && Release.html_url !== "" ? Release.html_url : BuildClientReleaseUrl(Tag);
+			g_ClientVersionCache.source = "github";
+			g_ClientVersionCache.fetchedAt = Now;
+			g_ClientVersionCache.expiresAt = Now + CLIENT_VERSION_CACHE_TTL_SEC;
+			g_ClientVersionCache.lastError = "";
+		}
+		catch(Error)
+		{
+			g_ClientVersionCache.lastError = Error && Error.message ? Error.message : String(Error);
+			g_ClientVersionCache.expiresAt = Now + CLIENT_VERSION_RETRY_DELAY_SEC;
+		}
+		finally
+		{
+			g_ClientVersionCache.pending = null;
+		}
+		return g_ClientVersionCache;
+	})();
+
+	return g_ClientVersionCache.pending;
 }
 
 function Cleanup()
@@ -141,6 +266,24 @@ function IsValidPlayerId(PlayerId)
 
 app.get("/healthz", (_req, res) => {
 	res.json({ ok: true, ts: NowSec() });
+});
+
+app.get("/client/version", async (req, res) => {
+	const CurrentVersion = NormalizeClientVersion(req.query.current || "");
+	const VersionInfo = await RefreshClientVersionCache();
+	res.json({
+		ok: true,
+		version: VersionInfo.version,
+		latest_version: VersionInfo.version,
+		latest_tag: VersionInfo.tag,
+		release_url: VersionInfo.releaseUrl,
+		current_version: CurrentVersion,
+		up_to_date: CurrentVersion !== "" && CurrentVersion === VersionInfo.version,
+		cache_source: VersionInfo.source,
+		cache_expires_at: VersionInfo.expiresAt,
+		last_error: VersionInfo.lastError,
+		update_message: "当前版本不是最新版，请前往 QQ 群更新最新版"
+	});
 });
 
 app.get("/token", (req, res) => {

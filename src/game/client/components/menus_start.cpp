@@ -384,7 +384,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		static CButtonContainer s_PlayButton;
 		if(GameClient()->m_Menus.DoButton_Menu(&s_PlayButton, Localize("Play", "Start menu"), 0, &ScaledButton, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "play_game" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || CheckHotKey(KEY_P))
 		{
-			NewPage = g_Config.m_UiPage >= CMenus::PAGE_INTERNET && g_Config.m_UiPage <= CMenus::PAGE_FAVORITE_COMMUNITY_5 ? g_Config.m_UiPage : CMenus::PAGE_INTERNET;
+			NewPage = ((g_Config.m_UiPage >= CMenus::PAGE_INTERNET && g_Config.m_UiPage <= CMenus::PAGE_FAVORITE_COMMUNITY_5) || g_Config.m_UiPage == CMenus::PAGE_FAVORITE_MAPS) ? g_Config.m_UiPage : CMenus::PAGE_INTERNET;
 		}
 	}
 
@@ -407,13 +407,17 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 	CUIRect UpdateToDateText;
 	MainView.HSplitTop(15.0f, &UpdateToDateText, nullptr);
 	UpdateToDateText.VSplitRight(40.0f, &UpdateToDateText, nullptr);
-	if(!GameClient()->m_TClient.NeedUpdate() && GameClient()->m_TClient.m_FetchedTClientInfo)
+	if(!GameClient()->m_TClient.m_FetchedTClientInfo)
 	{
-		Ui()->DoLabel(&UpdateToDateText, Localize("(On Latest)"), 14.0f, TEXTALIGN_MR);
+		Ui()->DoLabel(&UpdateToDateText, Localize("(Fetching Update Info)"), 14.0f, TEXTALIGN_MR);
+	}
+	else if(GameClient()->m_TClient.NeedUpdate())
+	{
+		Ui()->DoLabel(&UpdateToDateText, Localize("(需要更新)"), 14.0f, TEXTALIGN_MR);
 	}
 	else
 	{
-		Ui()->DoLabel(&UpdateToDateText, Localize("(Fetching Update Info)"), 14.0f, TEXTALIGN_MR);
+		Ui()->DoLabel(&UpdateToDateText, Localize("(On Latest)"), 14.0f, TEXTALIGN_MR);
 	}
 #endif
 	static CButtonContainer s_ConsoleButton;

@@ -1485,7 +1485,7 @@ SHudDummyMiniViewState BuildHudDummyMiniViewState(const CGameClient &GameClient,
 	SHudDummyMiniViewState State;
 	const bool TargetIsDummy = MiniViewClientId >= 0 ? (MiniViewClientId == DummyClientId) : !g_Config.m_ClDummy;
 	State.m_TargetAccent = TargetIsDummy ? ColorRGBA(0.35f, 0.78f, 1.0f, 1.0f) : ColorRGBA(1.0f, 0.74f, 0.34f, 1.0f);
-	str_copy(State.m_aPlaceholderTitle, Localize("Dummy mini view"), sizeof(State.m_aPlaceholderTitle));
+	str_copy(State.m_aPlaceholderTitle, Localize("分身小窗"), sizeof(State.m_aPlaceholderTitle));
 
 	if(MiniViewClientId >= 0 && MiniViewClientId < MAX_CLIENTS)
 	{
@@ -4157,7 +4157,7 @@ void CHud::RenderDummyActions()
 	const float BoxWidth = 16.0f;
 
 	float StartX = m_Width - BoxWidth;
-	float StartY = 285.0f - BoxHeight - 4; // 4 units distance to the next display;
+	float StartY = 285.0f - BoxHeight - 4; // 距离显示下一个还有4个单位；
 
 	if(g_Config.m_ClShowhudScore)
 	{
@@ -4231,37 +4231,37 @@ SKeyStatusLines GetKeyStatusLines(const CGameClient *pGameClient)
 
 	if(Lines.m_ShowKey)
 	{
-		Lines.m_pKeyStatusText = Localize("Key Sticking: ?");
+		Lines.m_pKeyStatusText = Localize("卡键: ?");
 		if(DummyResetOnSwitch == 0)
-			Lines.m_pKeyStatusText = Localize("Key Sticking: On");
+			Lines.m_pKeyStatusText = Localize("卡键: 开");
 		else if(DummyResetOnSwitch == 1)
-			Lines.m_pKeyStatusText = Localize("Key Sticking: Off");
+			Lines.m_pKeyStatusText = Localize("卡键: 关");
 		else if(DummyResetOnSwitch == 2)
-			Lines.m_pKeyStatusText = Localize("Key Sticking: Reset Self");
+			Lines.m_pKeyStatusText = Localize("卡键: 重置自身");
 		}
 
 	if(Lines.m_ShowHammer)
 	{
-		const char *pHammerState = Localize("Normal");
+		const char *pHammerState = Localize("正常");
 		if(DeepflyMode == 1)
 			pHammerState = Localize("DF");
 		else if(DeepflyMode == 2)
 			pHammerState = Localize("HDF");
 		else if(DeepflyMode == 3)
-			pHammerState = Localize("Custom");
-		str_format(Lines.m_aHammerLine, sizeof(Lines.m_aHammerLine), Localize("Hammer: %s"), pHammerState);
+			pHammerState = Localize("自定义");
+		str_format(Lines.m_aHammerLine, sizeof(Lines.m_aHammerLine), Localize("锤: %s"), pHammerState);
 	}
 
 	if(Lines.m_ShowControl)
 	{
-		const char *pControlState = DummyControl ? Localize("On") : Localize("Off");
-		str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), Localize("Dummy Control: %s"), pControlState);
+		const char *pControlState = DummyControl ? Localize("开") : Localize("关");
+		str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), Localize("分身控制: %s"), pControlState);
 	}
 
 	if(Lines.m_ShowSync)
 	{
-		const char *pSyncState = DummyCopyMoves ? Localize("On") : Localize("Off");
-		str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), Localize("Dummy Copy: %s"), pSyncState);
+		const char *pSyncState = DummyCopyMoves ? Localize("开") : Localize("关");
+		str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), Localize("分身同步: %s"), pSyncState);
 	}
 
 	return Lines;

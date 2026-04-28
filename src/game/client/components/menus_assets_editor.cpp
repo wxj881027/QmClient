@@ -54,7 +54,6 @@ struct SAssetsEditorPartDef
 struct SAssetsEditorScanContext
 {
 	std::vector<CMenus::SAssetsEditorAssetEntry> *m_pAssets;
-	IGraphics *m_pGraphics;
 	IStorage *m_pStorage;
 	const char *m_pAssetType;
 	int m_Type;
@@ -200,14 +199,6 @@ static int AssetsEditorScanCallback(const char *pName, int IsDir, int DirType, v
 	if(AssetsEditorHasAssetName(*pContext->m_pAssets, Entry.m_aName))
 		return 0;
 
-	Entry.m_PreviewTexture = pContext->m_pGraphics->LoadTexture(Entry.m_aPath, IStorage::TYPE_ALL);
-	CImageInfo PreviewInfo;
-	if(pContext->m_pGraphics->LoadPng(PreviewInfo, Entry.m_aPath, IStorage::TYPE_ALL))
-	{
-		Entry.m_PreviewWidth = PreviewInfo.m_Width;
-		Entry.m_PreviewHeight = PreviewInfo.m_Height;
-		PreviewInfo.Free();
-	}
 	pContext->m_pAssets->push_back(Entry);
 	return 0;
 }
@@ -393,6 +384,21 @@ static void AssetsEditorClearImageCache()
 	gs_vAssetsEditorImageCache.clear();
 }
 
+static void AssetsEditorClearImageCacheForType(int Type)
+{
+	for(size_t Index = 0; Index < gs_vAssetsEditorImageCache.size();)
+	{
+		if(gs_vAssetsEditorImageCache[Index].m_Type != Type)
+		{
+			++Index;
+			continue;
+		}
+
+		gs_vAssetsEditorImageCache[Index].m_Image.Free();
+		gs_vAssetsEditorImageCache.erase(gs_vAssetsEditorImageCache.begin() + Index);
+	}
+}
+
 static bool AssetsEditorCalcFittedRect(const CUIRect &Rect, int SourceWidth, int SourceHeight, CUIRect &OutRect)
 {
 	if(SourceWidth <= 0 || SourceHeight <= 0 || Rect.w <= 0.0f || Rect.h <= 0.0f)
@@ -539,6 +545,7 @@ void CMenus::AssetsEditorOpen(int Type)
 {
 	AssetsEditorCloseNow();
 
+	g_Config.m_UiSettingsPage = SETTINGS_ASSETS;
 	m_AssetsEditorState.m_Open = true;
 	m_AssetsEditorState.m_Initialized = false;
 	m_AssetsEditorState.m_Type = std::clamp(Type, 0, ASSETS_EDITOR_TYPE_COUNT - 1);
@@ -561,7 +568,10 @@ void CMenus::AssetsEditorClearAssets()
 	};
 
 	for(int Type = 0; Type < ASSETS_EDITOR_TYPE_COUNT; ++Type)
+	{
 		UnloadAssets(m_AssetsEditorState.m_avAssets[Type]);
+		m_AssetsEditorState.m_aAssetsLoaded[Type] = false;
+	}
 	Graphics()->UnloadTexture(&m_AssetsEditorState.m_ComposedPreviewTexture);
 	m_AssetsEditorState.m_vPartSlots.clear();
 	AssetsEditorCancelDrag();
@@ -589,94 +599,108 @@ void CMenus::AssetsEditorClearAssets()
 	AssetsEditorClearImageCache();
 }
 
+void CMenus::AssetsEditorEnsureAssetsLoadedForType(int Type)
+{
+	if(Type < 0 || Type >= ASSETS_EDITOR_TYPE_COUNT)
+		return;
+	if(m_AssetsEditorState.m_aAssetsLoaded[Type])
+		return;
+	AssetsEditorReloadAssetType(Type);
+}
+
+void CMenus::AssetsEditorEnsurePreviewLoaded(SAssetsEditorAssetEntry &Asset)
+{
+	if(Asset.m_PreviewLoaded)
+		return;
+	Asset.m_PreviewLoaded = true;
+
+	Asset.m_PreviewTexture = Graphics()->LoadTexture(Asset.m_aPath, IStorage::TYPE_ALL);
+	CImageInfo PreviewInfo;
+	if(Graphics()->LoadPng(PreviewInfo, Asset.m_aPath, IStorage::TYPE_ALL))
+	{
+		Asset.m_PreviewWidth = PreviewInfo.m_Width;
+		Asset.m_PreviewHeight = PreviewInfo.m_Height;
+		PreviewInfo.Free();
+	}
+}
+
+void CMenus::AssetsEditorReloadAssetType(int Type)
+{
+	if(Type < 0 || Type >= ASSETS_EDITOR_TYPE_COUNT)
+		return;
+
+	AssetsEditorClearImageCacheForType(Type);
+
+	auto &vAssets = m_AssetsEditorState.m_avAssets[Type];
+	char aPrevMainName[64] = {};
+	char aPrevDonorName[64] = {};
+	const int MainIndex = m_AssetsEditorState.m_aMainAssetIndex[Type];
+	const int DonorIndex = m_AssetsEditorState.m_aDonorAssetIndex[Type];
+	if(MainIndex >= 0 && MainIndex < (int)vAssets.size())
+		str_copy(aPrevMainName, vAssets[MainIndex].m_aName);
+	if(DonorIndex >= 0 && DonorIndex < (int)vAssets.size())
+		str_copy(aPrevDonorName, vAssets[DonorIndex].m_aName);
+
+	for(auto &Asset : vAssets)
+		Graphics()->UnloadTexture(&Asset.m_PreviewTexture);
+	vAssets.clear();
+
+	const char *pAssetType = AssetsEditorTypeName(Type);
+	SAssetsEditorAssetEntry DefaultAsset;
+	DefaultAsset.m_IsDefault = true;
+	str_copy(DefaultAsset.m_aName, "default");
+	if(Type == ASSETS_EDITOR_TYPE_ENTITIES)
+		str_copy(DefaultAsset.m_aPath, "editor/entities_clear/ddnet.png");
+	else if(Type == ASSETS_EDITOR_TYPE_SKIN)
+		str_copy(DefaultAsset.m_aPath, "skins/default.png");
+	else if(AssetsEditorIsSingleImageType(Type))
+	{
+		str_format(DefaultAsset.m_aPath, sizeof(DefaultAsset.m_aPath), "assets/%s/default.png", pAssetType);
+		if(!Storage()->FileExists(DefaultAsset.m_aPath, IStorage::TYPE_ALL))
+		{
+			if(const char *pBuiltinPath = AssetsEditorDefaultSingleImageBuiltinPath(Type))
+				str_copy(DefaultAsset.m_aPath, pBuiltinPath, sizeof(DefaultAsset.m_aPath));
+		}
+	}
+	else
+	{
+		const int DefaultImageId = AssetsEditorTypeImageId(Type);
+		str_copy(DefaultAsset.m_aPath, g_pData->m_aImages[DefaultImageId].m_pFilename);
+	}
+	vAssets.push_back(DefaultAsset);
+
+	SAssetsEditorScanContext Context;
+	Context.m_pAssets = &vAssets;
+	Context.m_pStorage = Storage();
+	Context.m_pAssetType = pAssetType;
+	Context.m_Type = Type;
+
+	char aPath[128];
+	if(Type == ASSETS_EDITOR_TYPE_ENTITIES)
+		str_copy(aPath, "assets/entities");
+	else if(Type == ASSETS_EDITOR_TYPE_SKIN)
+		str_copy(aPath, "skins");
+	else
+		str_format(aPath, sizeof(aPath), "assets/%s", pAssetType);
+	Storage()->ListDirectory(IStorage::TYPE_ALL, aPath, AssetsEditorScanCallback, &Context);
+
+	std::sort(vAssets.begin(), vAssets.end(), [](const SAssetsEditorAssetEntry &Left, const SAssetsEditorAssetEntry &Right) {
+		if(Left.m_IsDefault != Right.m_IsDefault)
+			return Left.m_IsDefault;
+		return str_comp(Left.m_aName, Right.m_aName) < 0;
+	});
+
+	const int NewMainIndex = AssetsEditorFindAssetIndexByName(vAssets, aPrevMainName);
+	const int NewDonorIndex = AssetsEditorFindAssetIndexByName(vAssets, aPrevDonorName);
+	m_AssetsEditorState.m_aMainAssetIndex[Type] = NewMainIndex >= 0 ? NewMainIndex : 0;
+	m_AssetsEditorState.m_aDonorAssetIndex[Type] = NewDonorIndex >= 0 ? NewDonorIndex : m_AssetsEditorState.m_aMainAssetIndex[Type];
+	m_AssetsEditorState.m_aAssetsLoaded[Type] = true;
+}
+
 void CMenus::AssetsEditorReloadAssets()
 {
-	AssetsEditorClearImageCache();
-
-	auto ReloadType = [this](std::vector<SAssetsEditorAssetEntry> &vAssets, int Type) {
-		for(auto &Asset : vAssets)
-			Graphics()->UnloadTexture(&Asset.m_PreviewTexture);
-		vAssets.clear();
-
-		const char *pAssetType = AssetsEditorTypeName(Type);
-		SAssetsEditorAssetEntry DefaultAsset;
-		DefaultAsset.m_IsDefault = true;
-		str_copy(DefaultAsset.m_aName, "default");
-		if(Type == ASSETS_EDITOR_TYPE_ENTITIES)
-			str_copy(DefaultAsset.m_aPath, "editor/entities_clear/ddnet.png");
-		else if(Type == ASSETS_EDITOR_TYPE_SKIN)
-			str_copy(DefaultAsset.m_aPath, "skins/default.png");
-		else if(AssetsEditorIsSingleImageType(Type))
-		{
-			str_format(DefaultAsset.m_aPath, sizeof(DefaultAsset.m_aPath), "assets/%s/default.png", pAssetType);
-			if(!Storage()->FileExists(DefaultAsset.m_aPath, IStorage::TYPE_ALL))
-			{
-				if(const char *pBuiltinPath = AssetsEditorDefaultSingleImageBuiltinPath(Type))
-					str_copy(DefaultAsset.m_aPath, pBuiltinPath, sizeof(DefaultAsset.m_aPath));
-			}
-		}
-		else
-		{
-			const int DefaultImageId = AssetsEditorTypeImageId(Type);
-			str_copy(DefaultAsset.m_aPath, g_pData->m_aImages[DefaultImageId].m_pFilename);
-		}
-		DefaultAsset.m_PreviewTexture = Graphics()->LoadTexture(DefaultAsset.m_aPath, IStorage::TYPE_ALL);
-		CImageInfo PreviewInfo;
-		if(Graphics()->LoadPng(PreviewInfo, DefaultAsset.m_aPath, IStorage::TYPE_ALL))
-		{
-			DefaultAsset.m_PreviewWidth = PreviewInfo.m_Width;
-			DefaultAsset.m_PreviewHeight = PreviewInfo.m_Height;
-			PreviewInfo.Free();
-		}
-		vAssets.push_back(DefaultAsset);
-
-		SAssetsEditorScanContext Context;
-		Context.m_pAssets = &vAssets;
-		Context.m_pGraphics = Graphics();
-		Context.m_pStorage = Storage();
-		Context.m_pAssetType = pAssetType;
-		Context.m_Type = Type;
-
-		char aPath[128];
-		if(Type == ASSETS_EDITOR_TYPE_ENTITIES)
-			str_copy(aPath, "assets/entities");
-		else if(Type == ASSETS_EDITOR_TYPE_SKIN)
-			str_copy(aPath, "skins");
-		else
-			str_format(aPath, sizeof(aPath), "assets/%s", pAssetType);
-		Storage()->ListDirectory(IStorage::TYPE_ALL, aPath, AssetsEditorScanCallback, &Context);
-
-		std::sort(vAssets.begin(), vAssets.end(), [](const SAssetsEditorAssetEntry &Left, const SAssetsEditorAssetEntry &Right) {
-			if(Left.m_IsDefault != Right.m_IsDefault)
-				return Left.m_IsDefault;
-			return str_comp(Left.m_aName, Right.m_aName) < 0;
-		});
-	};
-
-	char aaPrevMainName[ASSETS_EDITOR_TYPE_COUNT][64] = {};
-	char aaPrevDonorName[ASSETS_EDITOR_TYPE_COUNT][64] = {};
 	for(int Type = 0; Type < ASSETS_EDITOR_TYPE_COUNT; ++Type)
-	{
-		const auto &vAssets = m_AssetsEditorState.m_avAssets[Type];
-		const int MainIndex = m_AssetsEditorState.m_aMainAssetIndex[Type];
-		const int DonorIndex = m_AssetsEditorState.m_aDonorAssetIndex[Type];
-		if(MainIndex >= 0 && MainIndex < (int)vAssets.size())
-			str_copy(aaPrevMainName[Type], vAssets[MainIndex].m_aName);
-		if(DonorIndex >= 0 && DonorIndex < (int)vAssets.size())
-			str_copy(aaPrevDonorName[Type], vAssets[DonorIndex].m_aName);
-	}
-
-	for(int Type = 0; Type < ASSETS_EDITOR_TYPE_COUNT; ++Type)
-		ReloadType(m_AssetsEditorState.m_avAssets[Type], Type);
-
-	for(int Type = 0; Type < ASSETS_EDITOR_TYPE_COUNT; ++Type)
-	{
-		auto &vAssets = m_AssetsEditorState.m_avAssets[Type];
-		const int NewMainIndex = AssetsEditorFindAssetIndexByName(vAssets, aaPrevMainName[Type]);
-		const int NewDonorIndex = AssetsEditorFindAssetIndexByName(vAssets, aaPrevDonorName[Type]);
-		m_AssetsEditorState.m_aMainAssetIndex[Type] = NewMainIndex >= 0 ? NewMainIndex : 0;
-		m_AssetsEditorState.m_aDonorAssetIndex[Type] = NewDonorIndex >= 0 ? NewDonorIndex : m_AssetsEditorState.m_aMainAssetIndex[Type];
-	}
+		AssetsEditorReloadAssetType(Type);
 
 	AssetsEditorCancelDrag();
 	m_AssetsEditorState.m_DirtyPreview = true;
@@ -685,7 +709,8 @@ void CMenus::AssetsEditorReloadAssets()
 void CMenus::AssetsEditorReloadAssetsImagesOnly()
 {
 	const int Type = m_AssetsEditorState.m_Type;
-	AssetsEditorReloadAssets();
+	AssetsEditorReloadAssetType(Type);
+	AssetsEditorCancelDrag();
 
 	auto &vSlots = m_AssetsEditorState.m_vPartSlots;
 	const auto &vReloadedAssets = m_AssetsEditorState.m_avAssets[Type];
@@ -1739,7 +1764,7 @@ void CMenus::RenderAssetsEditorScreen(CUIRect MainView)
 {
 	if(!m_AssetsEditorState.m_Initialized)
 	{
-		AssetsEditorReloadAssets();
+		AssetsEditorEnsureAssetsLoadedForType(m_AssetsEditorState.m_Type);
 		AssetsEditorResetPartSlots();
 		AssetsEditorEnsureDefaultExportNames();
 		AssetsEditorSyncExportNameFromType();
@@ -1831,6 +1856,7 @@ void CMenus::RenderAssetsEditorScreen(CUIRect MainView)
 		AssetsEditorCommitExportNameForType();
 		AssetsEditorCancelDrag();
 		m_AssetsEditorState.m_Type = NewMode;
+		AssetsEditorEnsureAssetsLoadedForType(m_AssetsEditorState.m_Type);
 		AssetsEditorSyncExportNameFromType();
 		Graphics()->UnloadTexture(&m_AssetsEditorState.m_ComposedPreviewTexture);
 		m_AssetsEditorState.m_ComposedPreviewWidth = 0;
@@ -1845,7 +1871,7 @@ void CMenus::RenderAssetsEditorScreen(CUIRect MainView)
 
 	if(vAssets.empty())
 	{
-		AssetsEditorReloadAssets();
+		AssetsEditorReloadAssetType(m_AssetsEditorState.m_Type);
 		AssetsEditorResetPartSlots();
 	}
 	if(vAssets.empty())
@@ -1981,6 +2007,7 @@ void CMenus::RenderAssetsEditorScreen(CUIRect MainView)
 	m_AssetsEditorState.m_HoveredDonorSlotIndex = -1;
 	m_AssetsEditorState.m_HoveredTargetSlotIndex = -1;
 
+	AssetsEditorEnsurePreviewLoaded(vAssets[DonorAssetIndex]);
 	const SAssetsEditorAssetEntry &DonorAsset = vAssets[DonorAssetIndex];
 	CUIRect DonorFittedRect;
 	const bool HasDonorFitted = AssetsEditorCalcFittedRect(LeftCanvas, DonorAsset.m_PreviewWidth, DonorAsset.m_PreviewHeight, DonorFittedRect);

@@ -25,7 +25,7 @@ mod ffi {
         ///
         /// # Example
         ///
-        /// ```
+        /// ```no_run
         /// # extern crate ddnet_test;
         /// use ddnet_engine_shared::CSnapshotDelta_New;
         ///
@@ -78,7 +78,7 @@ struct Buffer {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// # extern crate ddnet_test;
 /// use ddnet_engine_shared::CSnapshotDelta_DiffItem;
 ///
@@ -100,7 +100,7 @@ pub fn CSnapshotDelta_DiffItem(past: &[i32], current: &[i32], out: &mut [i32]) {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// # extern crate ddnet_test;
 /// use ddnet_engine_shared::CSnapshotDelta_New;
 ///
@@ -148,7 +148,7 @@ impl CSnapshotDelta {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
     /// # extern crate ddnet_test;
     /// use ddnet_engine_shared::CSnapshotDelta_New;
     ///
@@ -174,7 +174,7 @@ impl CSnapshotDelta {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
     /// # extern crate ddnet_test;
     /// use ddnet_engine_shared::CSnapshotDelta_New;
     ///

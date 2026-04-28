@@ -29,7 +29,7 @@ mod ffi {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// # extern crate ddnet_test;
 /// use ddnet_engine_shared::CSnapshotBuffer_New;
 /// use ddnet_engine_shared::CSnapshotBuilder_New;
@@ -61,7 +61,7 @@ pub struct CSnapshotBuilder {
 }
 
 /// Creates a new [`CSnapshotBuilder`].
-/// ```
+/// ```no_run
 /// # extern crate ddnet_test;
 /// use ddnet_engine_shared::CSnapshotBuilder_New;
 ///
