@@ -500,6 +500,12 @@ bool CChat::BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufS
 		return true;
 	}
 
+	if(CommandPreviewNameIs(aCommand, "r") || CommandPreviewNameIs(aCommand, "rescue"))
+	{
+		str_copy(pBuf, "救援：自动模式下传送出冻结；手动模式下落地记录救援点，冻结时传送出去", BufSize);
+		return true;
+	}
+
 	if(CommandPreviewNameIs(aCommand, "w") || CommandPreviewNameIs(aCommand, "whisper"))
 	{
 		if(aFirstArg[0] != '\0' && aRestAfterFirstArg[0] != '\0')
@@ -561,14 +567,14 @@ bool CChat::BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufS
 		if(aRestArg[0] != '\0')
 			str_format(pBuf, PreviewBufSize, "请求和%s交换位置", aRestArg);
 		else
-			str_copy(pBuf, "请求交换 tee", BufSize);
+			str_copy(pBuf, "请求交换!球球惹", BufSize);
 		return true;
 	}
 
 	if(CommandPreviewNameIs(aCommand, "save"))
 	{
 		if(aRestArg[0] != '\0')
-			str_format(pBuf, PreviewBufSize, "将队伍保存为代码%s", aRestArg);
+			str_format(pBuf, PreviewBufSize, "将队伍保存为%s", aRestArg);
 		else
 			str_copy(pBuf, "保存当前队伍", BufSize);
 		return true;
@@ -577,7 +583,7 @@ bool CChat::BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufS
 	if(CommandPreviewNameIs(aCommand, "load"))
 	{
 		if(aRestArg[0] != '\0')
-			str_format(pBuf, PreviewBufSize, "载入代码%s", aRestArg);
+			str_format(pBuf, PreviewBufSize, "载入存档%s", aRestArg);
 		else
 			str_copy(pBuf, "查看已有存档", BufSize);
 		return true;
