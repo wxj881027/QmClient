@@ -3730,7 +3730,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Minimum Target Language Characters"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("目标语言的最小字符数"), LG_BodySize, TEXTALIGN_ML);
 				{
 					static int s_LocalDetectMinCharsSelectorId;
 					RenderSliderWithNumberInput(&s_LocalDetectMinCharsSelectorId, ControlCol, &g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
@@ -3739,21 +3739,12 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 				CardContent.HSplitTop(LG_LineHeight, &Row, &CardContent);
 				Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
-				Ui()->DoLabel(&LabelCol, Localize("Target Language Ratio"), LG_BodySize, TEXTALIGN_ML);
+				Ui()->DoLabel(&LabelCol, Localize("目标语言比例"), LG_BodySize, TEXTALIGN_ML);
 				{
 					static int s_LocalDetectRatioSelectorId;
 					RenderSliderWithNumberInput(&s_LocalDetectRatioSelectorId, ControlCol, &g_Config.m_QmTranslateLocalDetectRatio, 50, 100);
 				}
 				CardContent.HSplitTop(LG_LineSpacing * 0.5f, nullptr, &CardContent);
-
-				CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
-				Row.VMargin(LG_LabelWidth, &Row);
-				Ui()->DoLabel(&Row, Localize("Auto-translate skips text that already looks like the target language."), LG_BodySize * 0.8f, TEXTALIGN_ML);
-				CardContent.HSplitTop(LG_LineSpacing * 0.35f, nullptr, &CardContent);
-				CardContent.HSplitTop(LG_LineHeight * 0.8f, &Row, &CardContent);
-				Row.VMargin(LG_LabelWidth, &Row);
-				Ui()->DoLabel(&Row, Localize("Numeric-only messages are skipped locally."), LG_BodySize * 0.8f, TEXTALIGN_ML);
-				CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
 				// Endpoint 配置 - 根据后端类型显示不同的端点输入
 				if(IsTencentCloudBackend)
@@ -3792,7 +3783,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("SecretId"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateSecretId(g_Config.m_QmTranslateTcSecretId, sizeof(g_Config.m_QmTranslateTcSecretId));
-					s_TranslateSecretId.SetEmptyText("填写你的腾讯云翻译ID~");
+					s_TranslateSecretId.SetEmptyText("填写我的腾讯云翻译ID");
 					Ui()->DoEditBox(&s_TranslateSecretId, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 
@@ -3800,7 +3791,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 					Row.VSplitLeft(LG_LabelWidth, &LabelCol, &ControlCol);
 					Ui()->DoLabel(&LabelCol, Localize("SecretKey"), LG_BodySize, TEXTALIGN_ML);
 					static CLineInput s_TranslateSecretKey(g_Config.m_QmTranslateTcSecretKey, sizeof(g_Config.m_QmTranslateTcSecretKey));
-					s_TranslateSecretKey.SetHidden(true);
+					s_TranslateSecretId.SetEmptyText("填写我分发的Key");
 					Ui()->DoEditBox(&s_TranslateSecretKey, &ControlCol, LG_BodySize);
 					CardContent.HSplitTop(LG_LineSpacing, nullptr, &CardContent);
 				}
