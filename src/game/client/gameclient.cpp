@@ -2001,6 +2001,11 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 		pComponent->OnStateChange(NewState, OldState);
 }
 
+void CGameClient::OnScreenshotTaken(CImageInfo &&Image)
+{
+	m_UiEffects.StartScreenshotAnimation(std::move(Image));
+}
+
 void CGameClient::OnShutdown()
 {
 	for(auto &pComponent : m_vpAll)

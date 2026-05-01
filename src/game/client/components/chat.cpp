@@ -871,8 +871,10 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	if(m_Mode == MODE_NONE)
 		return false;
 
+	const bool LanguageMenuOpen = m_LanguageMenuOpen || Ui()->IsPopupOpen(&m_LanguagePopupContext);
+
 	// ===== 翻译按钮处理（优先级高于输入框）=====
-	if(m_TranslateButton.m_RectValid)
+	if(!LanguageMenuOpen && m_TranslateButton.m_RectValid)
 	{
 		const vec2 MousePos = GetChatMousePos();
 		const bool InsideButton =
@@ -921,6 +923,13 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				return true;
 			}
 		}
+	}
+
+	// 翻译设置弹窗打开时，键盘确认/取消只作用于弹窗，不能穿透到聊天提交/关闭。
+	if(LanguageMenuOpen && (Event.m_Flags & IInput::FLAG_PRESS) && (Event.m_Key == KEY_ESCAPE || Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER))
+	{
+		CloseLanguageMenu();
+		return true;
 	}
 
 	// ESC 键处理：优先关闭弹出菜单
@@ -2654,6 +2663,7 @@ void CChat::CloseLanguageMenu()
 	if(Ui()->IsPopupOpen(&m_LanguagePopupContext))
 		Ui()->ClosePopupMenu(&m_LanguagePopupContext, true);
 	m_LanguageMenuOpen = false;
+	m_TranslateButton.m_IsPressed = false;
 }
 
 CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect View, bool Active)

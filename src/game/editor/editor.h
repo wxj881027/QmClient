@@ -3,6 +3,7 @@
 #ifndef GAME_EDITOR_EDITOR_H
 #define GAME_EDITOR_EDITOR_H
 
+#include "drawing_tools.h"
 #include "editor_history.h"
 #include "editor_server_settings.h"
 #include "editor_trackers.h"
@@ -111,6 +112,8 @@ enum
 
 class CEditor : public IEditor, public IEnvelopeEval
 {
+	friend class CEditorDrawingTools;
+
 	class IInput *m_pInput = nullptr;
 	class IClient *m_pClient = nullptr;
 	class IConfigManager *m_pConfigManager = nullptr;
@@ -579,6 +582,7 @@ public:
 	std::shared_ptr<CLayerGroup> m_pBrush;
 	std::shared_ptr<CLayerTiles> m_pTilesetPicker;
 	std::shared_ptr<CLayerQuads> m_pQuadsetPicker;
+	CEditorDrawingTools m_DrawingTools;
 
 	const void *m_pUiGotContext = nullptr;
 

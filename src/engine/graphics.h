@@ -515,7 +515,9 @@ public:
 	 * The pointer must be valid until the next swap operation.
 	 */
 	virtual void ReadPixel(ivec2 Position, ColorRGBA *pColor) = 0;
+	using FScreenshotCallback = std::function<void(CImageInfo &&)>;
 	virtual void TakeScreenshot(const char *pFilename) = 0;
+	virtual void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback) = 0;
 	virtual void TakeCustomScreenshot(const char *pFilename) = 0;
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) = 0;
 	virtual void GetCurrentVideoMode(CVideoMode &CurMode, int Screen) = 0;

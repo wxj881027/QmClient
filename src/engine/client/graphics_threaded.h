@@ -796,6 +796,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	EDrawing m_Drawing;
 	bool m_DoScreenshot;
 	char m_aScreenshotName[IO_MAX_PATH_LENGTH];
+	FScreenshotCallback m_pfnScreenshotCallback;
 
 	CTextureHandle m_NullTexture;
 
@@ -1255,6 +1256,7 @@ public:
 
 	void ReadPixel(ivec2 Position, ColorRGBA *pColor) override;
 	void TakeScreenshot(const char *pFilename) override;
+	void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback) override;
 	void TakeCustomScreenshot(const char *pFilename) override;
 	void Swap() override;
 	bool SetVSync(bool State) override;

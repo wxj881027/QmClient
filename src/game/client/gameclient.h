@@ -729,6 +729,7 @@ public:
 	void OnConnected() override;
 	void OnRender() override;
 	void OnUpdate() override;
+	void OnScreenshotTaken(class CImageInfo &&Image) override;
 	void OnDummyDisconnect() override;
 	virtual void OnRelease();
 	void OnInit() override;

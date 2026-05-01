@@ -3,6 +3,7 @@
 
 #include <base/color.h>
 #include <base/vmath.h>
+#include <engine/graphics.h>
 #include <game/client/component.h>
 
 // UI Effects component for smooth transitions and animations
@@ -33,13 +34,27 @@ private:
 	std::vector<CSmoothValue> m_vSmoothValues;
 	float m_Time;
 
+	struct CScreenshotAnimation
+	{
+		IGraphics::CTextureHandle m_Texture;
+		int m_ImageWidth = 0;
+		int m_ImageHeight = 0;
+		float m_Time = 0.0f;
+		bool m_Active = false;
+	};
+	CScreenshotAnimation m_ScreenshotAnimation;
+
 	float ApplyTransition(float t, ETransitionType Type);
+	void RenderScreenshotAnimation();
 
 public:
 	CUiEffects();
 	int Sizeof() const override { return sizeof(*this); }
 	void OnRender() override;
 	void OnReset() override;
+	void OnShutdown() override;
+
+	void StartScreenshotAnimation(class CImageInfo &&Image);
 
 	// Smooth value transitions
 	int CreateSmoothValue(float Initial = 0.0f, float Speed = 1.0f, ETransitionType Type = TRANSITION_EASE_OUT);

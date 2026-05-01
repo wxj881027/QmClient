@@ -3910,7 +3910,9 @@ void CClient::AutoCSV_Cleanup()
 void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	pSelf->Graphics()->TakeScreenshot(nullptr);
+	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image) {
+		pSelf->GameClient()->OnScreenshotTaken(std::move(Image));
+	});
 }
 
 #if defined(CONF_VIDEORECORDER)

@@ -2729,6 +2729,8 @@ if(CLIENT)
     auto_map.h
     component.cpp
     component.h
+    drawing_tools.cpp
+    drawing_tools.h
     editor.cpp
     editor.h
     editor_action.h
@@ -3983,6 +3985,7 @@ foreach(target ${TARGETS})
     target_compile_options(${target} PRIVATE /GS) # Protect the stack pointer.
     target_compile_options(${target} PRIVATE /wd4996) # Use of non-_s functions.
     target_compile_options(${target} PRIVATE /utf-8) # Use UTF-8 for source files.
+    target_compile_definitions(${target} PRIVATE _USE_STD_VECTOR_ALGORITHMS=0) # Avoid unresolved MSVC STL vectorized algorithm helpers with some bundled toolchains.
     # Enable Edit & Continue (Hot Reload) support
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.25)
       set_property(TARGET ${target} PROPERTY MSVC_DEBUG_INFORMATION_FORMAT $<IF:$<CONFIG:Debug>,EditAndContinue,Embedded>)

@@ -1050,6 +1050,11 @@ void CEditor::DoToolbarLayers(CUIRect ToolBar)
 				m_BrushDrawDestructive = !m_BrushDrawDestructive;
 			ToolbarBottom.VSplitLeft(5.0f, &Button, &ToolbarBottom);
 		}
+
+		if(GetSelectedLayerType(0, LAYERTYPE_TILES) != nullptr)
+		{
+			m_DrawingTools.RenderToolbar(this, &ToolbarBottom);
+		}
 	}
 }
 
@@ -2832,9 +2837,10 @@ void CEditor::DoMapEditor(CUIRect View)
 			m_pContainerPanned = nullptr;
 	}
 
-	if(Inside)
+	if(Inside || m_DrawingTools.IsDrawing())
 	{
-		Ui()->SetHotItem(&m_MapEditorId);
+		if(Inside)
+			Ui()->SetHotItem(&m_MapEditorId);
 
 		// do global operations like pan and zoom
 		if(Ui()->CheckActiveItem(nullptr) && (Ui()->MouseButton(0) || Ui()->MouseButton(2)))
@@ -2847,7 +2853,7 @@ void CEditor::DoMapEditor(CUIRect View)
 		}
 
 		// brush editing
-		if(Ui()->HotItem() == &m_MapEditorId)
+		if(Ui()->HotItem() == &m_MapEditorId || m_DrawingTools.IsDrawing())
 		{
 			if(m_ShowPicker)
 			{
@@ -2904,7 +2910,13 @@ void CEditor::DoMapEditor(CUIRect View)
 				str_copy(m_aTooltip, "使用鼠标左键用画笔绘制。右键清空画笔。按住 Alt 将鼠标移动锁定到单轴。");
 			}
 
-			if(Ui()->CheckActiveItem(&m_MapEditorId))
+			const bool DrawingToolsHandled = (s_Operation == OP_NONE || m_DrawingTools.IsDrawing()) && m_pContainerPanned == nullptr && m_DrawingTools.HandleMapEditorInput(this, apEditLayers, NumEditLayers, Inside);
+			if(DrawingToolsHandled)
+			{
+				m_DrawingTools.RenderPreview(this);
+			}
+
+			if(!DrawingToolsHandled && Ui()->CheckActiveItem(&m_MapEditorId))
 			{
 				CUIRect r;
 				r.x = s_StartWx;
@@ -3008,7 +3020,7 @@ void CEditor::DoMapEditor(CUIRect View)
 					}
 				}
 			}
-			else
+			else if(!DrawingToolsHandled)
 			{
 				if(Ui()->MouseButton(1))
 				{
@@ -3070,6 +3082,11 @@ void CEditor::DoMapEditor(CUIRect View)
 						BorderRect.DrawOutline(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 					}
 				}
+			}
+			else
+			{
+				if(!Ui()->MouseButton(0))
+					Ui()->SetActiveItem(nullptr);
 			}
 		}
 
@@ -6968,14 +6985,15 @@ void CEditor::Render()
 				MapView()->ResetZoom();
 		}
 
-		if(m_pBrush->IsEmpty() || !Input()->ShiftIsPressed())
+		const bool DrawingToolsWheelHandled = m_DrawingTools.HandleWheelInput(this, View);
+		if(!DrawingToolsWheelHandled && (m_pBrush->IsEmpty() || !Input()->ShiftIsPressed()))
 		{
 			if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
 				MapView()->Zoom()->ChangeValue(20.0f);
 			if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
 				MapView()->Zoom()->ChangeValue(-20.0f);
 		}
-		if(!m_pBrush->IsEmpty())
+		if(!DrawingToolsWheelHandled && !m_pBrush->IsEmpty())
 		{
 			const bool HasTeleTiles = std::any_of(m_pBrush->m_vpLayers.begin(), m_pBrush->m_vpLayers.end(), [](const auto &pLayer) {
 				return pLayer->m_Type == LAYERTYPE_TILES && std::static_pointer_cast<CLayerTiles>(pLayer)->m_HasTele;
@@ -7399,6 +7417,7 @@ void CEditor::RenderSwitchEntities(const std::shared_ptr<CLayerTiles> &pTiles)
 void CEditor::Reset(bool CreateDefault)
 {
 	Ui()->ClosePopupMenus();
+	m_DrawingTools.CancelDrawing();
 	m_Map.Clean();
 
 	for(CEditorComponent &Component : m_vComponents)
@@ -7898,6 +7917,7 @@ void CEditor::OnWindowResize()
 void CEditor::OnClose()
 {
 	m_ColorPipetteActive = false;
+	m_DrawingTools.CancelDrawing();
 
 	if(m_ToolbarPreviewSound >= 0 && Sound()->IsPlaying(m_ToolbarPreviewSound))
 		Sound()->Pause(m_ToolbarPreviewSound);
@@ -7907,6 +7927,7 @@ void CEditor::OnClose()
 
 void CEditor::OnDialogClose()
 {
+	m_DrawingTools.CancelDrawing();
 	m_Dialog = DIALOG_NONE;
 	m_FileBrowser.OnDialogClose();
 }

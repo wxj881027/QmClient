@@ -829,7 +829,10 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 		return;
 	m_DoScreenshot = false;
 	if(!WindowActive())
+	{
+		m_pfnScreenshotCallback = nullptr;
 		return;
+	}
 
 	CImageInfo Image;
 
@@ -843,8 +846,11 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 
 	if(Image.m_pData)
 	{
+		if(m_pfnScreenshotCallback)
+			m_pfnScreenshotCallback(Image.DeepCopy());
 		m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image)));
 	}
+	m_pfnScreenshotCallback = nullptr;
 }
 
 void CGraphics_Threaded::TextureSet(CTextureHandle TextureId)
@@ -2945,16 +2951,23 @@ void CGraphics_Threaded::ReadPixelDirect(bool *pSwapped)
 
 void CGraphics_Threaded::TakeScreenshot(const char *pFilename)
 {
+	TakeScreenshot(pFilename, nullptr);
+}
+
+void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback)
+{
 	// TODO: screenshot support
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
 	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename ? pFilename : "screenshot", aDate);
+	m_pfnScreenshotCallback = std::move(pfnCallback);
 	m_DoScreenshot = true;
 }
 
 void CGraphics_Threaded::TakeCustomScreenshot(const char *pFilename)
 {
 	str_copy(m_aScreenshotName, pFilename);
+	m_pfnScreenshotCallback = nullptr;
 	m_DoScreenshot = true;
 }
 
