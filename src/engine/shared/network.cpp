@@ -76,6 +76,8 @@ int CNetRecvUnpacker::FetchChunk(CNetChunk *pChunk)
 			// anti spoof: ignore unknown sequence
 			if(Header.m_Sequence == (m_pConnection->m_Ack + 1) % NET_MAX_SEQUENCE || m_pConnection->m_UnknownSeq)
 			{
+				m_pConnection->m_ReceivedVitalChunks++;
+				m_pConnection->m_LastMissingVitalSequence = -1;
 				m_pConnection->m_UnknownSeq = false;
 
 				// in sequence
@@ -90,6 +92,12 @@ int CNetRecvUnpacker::FetchChunk(CNetChunk *pChunk)
 				// out of sequence, request resend
 				if(g_Config.m_Debug)
 					dbg_msg("conn", "asking for resend %d %d", Header.m_Sequence, (m_pConnection->m_Ack + 1) % NET_MAX_SEQUENCE);
+				const int MissingSequence = (m_pConnection->m_Ack + 1) % NET_MAX_SEQUENCE;
+				if(m_pConnection->m_LastMissingVitalSequence != MissingSequence)
+				{
+					m_pConnection->m_MissingVitalChunks++;
+					m_pConnection->m_LastMissingVitalSequence = MissingSequence;
+				}
 				m_pConnection->SignalResend();
 				continue; // take the next chunk in the packet
 			}

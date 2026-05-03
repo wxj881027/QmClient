@@ -30,6 +30,7 @@ class CSemaphore;
 
 static std::thread::id gs_MainThreadId;
 static bool gs_MainThreadIdInitialized = false;
+static constexpr int RECT_CORNER_SEGMENTS = 16;
 
 static void EnsureMainThreadIdInitialized()
 {
@@ -1170,7 +1171,7 @@ void CGraphics_Threaded::QuadsText(float x, float y, float Size, const char *pTe
 
 void CGraphics_Threaded::DrawRectExt(float x, float y, float w, float h, float r, int Corners)
 {
-	const int NumSegments = 8;
+	constexpr int NumSegments = RECT_CORNER_SEGMENTS;
 	const float SegmentsAngle = pi / 2 / NumSegments;
 	IGraphics::CFreeformItem aFreeform[NumSegments * 4];
 	size_t NumItems = 0;
@@ -1247,7 +1248,7 @@ void CGraphics_Threaded::DrawRectExt4(float x, float y, float w, float h, ColorR
 		return;
 	}
 
-	const int NumSegments = 8;
+	constexpr int NumSegments = RECT_CORNER_SEGMENTS;
 	const float SegmentsAngle = pi / 2 / NumSegments;
 	for(int i = 0; i < NumSegments; i += 2)
 	{
@@ -1368,7 +1369,7 @@ int CGraphics_Threaded::CreateRectQuadContainer(float x, float y, float w, float
 		return ContainerIndex;
 	}
 
-	const int NumSegments = 8;
+	constexpr int NumSegments = RECT_CORNER_SEGMENTS;
 	const float SegmentsAngle = pi / 2 / NumSegments;
 	IGraphics::CFreeformItem aFreeform[NumSegments * 4];
 	size_t NumItems = 0;

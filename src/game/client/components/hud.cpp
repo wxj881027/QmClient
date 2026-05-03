@@ -56,12 +56,23 @@ struct SHudTextInfoLayout
 	float m_FpsY = 5.0f;
 	float m_PredX = 0.0f;
 	float m_PredY = 5.0f;
+	float m_LossX = 0.0f;
+	float m_LossY = 5.0f;
 };
 
-SHudTextInfoLayout ComputeHudTextInfoLayoutV2(bool ShowFps, bool ShowPred, bool UseMiniLayout, float HudWidth, float MiniX, float MiniY, float MiniW, float MiniH, float FpsWidth, float PredWidth, std::vector<SUiLayoutChild> &vChildrenScratch)
+ColorRGBA GetPredictionNetworkColor(float PacketLoss, bool ConnectionProblems)
+{
+	if(ConnectionProblems || PacketLoss >= 5.0f)
+		return ColorRGBA(1.0f, 0.25f, 0.18f, 1.0f);
+	if(PacketLoss >= 1.0f)
+		return ColorRGBA(1.0f, 0.74f, 0.18f, 1.0f);
+	return ColorRGBA(0.35f, 1.0f, 0.38f, 1.0f);
+}
+
+SHudTextInfoLayout ComputeHudTextInfoLayoutV2(bool ShowFps, bool ShowPred, bool ShowLoss, bool UseMiniLayout, float HudWidth, float MiniX, float MiniY, float MiniW, float MiniH, float FpsWidth, float PredWidth, float LossWidth, std::vector<SUiLayoutChild> &vChildrenScratch)
 {
 	SHudTextInfoLayout Result;
-	if(!ShowFps && !ShowPred)
+	if(!ShowFps && !ShowPred && !ShowLoss)
 		return Result;
 
 	CUiV2LayoutEngine LayoutEngine;
@@ -73,44 +84,52 @@ SHudTextInfoLayout ComputeHudTextInfoLayoutV2(bool ShowFps, bool ShowPred, bool 
 	{
 		SUiLayoutChild Child;
 		Child.m_Style.m_Width = SUiLength::Px(FpsWidth);
-		Child.m_Style.m_Height = SUiLength::Px(12.0f);
+		Child.m_Style.m_Height = SUiLength::Px(10.0f);
 		vChildren.push_back(Child);
 	}
 	if(ShowPred)
 	{
 		SUiLayoutChild Child;
 		Child.m_Style.m_Width = SUiLength::Px(PredWidth);
-		Child.m_Style.m_Height = SUiLength::Px(12.0f);
+		Child.m_Style.m_Height = SUiLength::Px(10.0f);
+		vChildren.push_back(Child);
+	}
+	if(ShowLoss)
+	{
+		SUiLayoutChild Child;
+		Child.m_Style.m_Width = SUiLength::Px(LossWidth);
+		Child.m_Style.m_Height = SUiLength::Px(10.0f);
 		vChildren.push_back(Child);
 	}
 
 	SUiStyle ContainerStyle;
 	SUiLayoutBox ContainerBox;
+	const bool HasMultipleLines = vChildren.size() > 1;
 	if(UseMiniLayout)
 	{
 		ContainerStyle.m_Axis = EUiAxis::ROW;
-		ContainerStyle.m_Gap = (ShowFps && ShowPred) ? 6.0f : 0.0f;
+		ContainerStyle.m_Gap = HasMultipleLines ? 6.0f : 0.0f;
 		ContainerStyle.m_AlignItems = EUiAlign::START;
 		ContainerStyle.m_JustifyContent = EUiAlign::START;
 
-		const float TotalWidth = FpsWidth + PredWidth + ContainerStyle.m_Gap;
+		const float TotalWidth = FpsWidth + PredWidth + LossWidth + ContainerStyle.m_Gap * maximum(0, (int)vChildren.size() - 1);
 		ContainerBox.m_X = MiniX + MiniW - TotalWidth;
 		ContainerBox.m_Y = MiniY + MiniH + 4.0f;
 		ContainerBox.m_W = TotalWidth;
-		ContainerBox.m_H = 12.0f;
+		ContainerBox.m_H = 10.0f;
 	}
 	else
 	{
 		ContainerStyle.m_Axis = EUiAxis::COLUMN;
-		ContainerStyle.m_Gap = (ShowFps && ShowPred) ? 3.0f : 0.0f;
+		ContainerStyle.m_Gap = HasMultipleLines ? 3.0f : 0.0f;
 		ContainerStyle.m_AlignItems = EUiAlign::END;
 		ContainerStyle.m_JustifyContent = EUiAlign::START;
 
-		const float MaxWidth = maximum(FpsWidth, PredWidth);
+		const float MaxWidth = maximum(maximum(FpsWidth, PredWidth), LossWidth);
 		ContainerBox.m_X = HudWidth - 10.0f - MaxWidth;
 		ContainerBox.m_Y = 5.0f;
 		ContainerBox.m_W = MaxWidth;
-		ContainerBox.m_H = (ShowFps && ShowPred) ? 27.0f : 12.0f;
+		ContainerBox.m_H = (float)vChildren.size() * 10.0f + (float)maximum(0, (int)vChildren.size() - 1) * ContainerStyle.m_Gap;
 	}
 
 	LayoutEngine.ComputeChildren(ContainerStyle, ContainerBox, vChildren);
@@ -126,6 +145,12 @@ SHudTextInfoLayout ComputeHudTextInfoLayoutV2(bool ShowFps, bool ShowPred, bool 
 	{
 		Result.m_PredX = vChildren[ChildIndex].m_Box.m_X;
 		Result.m_PredY = vChildren[ChildIndex].m_Box.m_Y;
+		++ChildIndex;
+	}
+	if(ShowLoss && ChildIndex < vChildren.size())
+	{
+		Result.m_LossX = vChildren[ChildIndex].m_Box.m_X;
+		Result.m_LossY = vChildren[ChildIndex].m_Box.m_Y;
 	}
 
 	return Result;
@@ -1835,19 +1860,22 @@ void CHud::RenderTextInfo()
 
 	char aFpsBuf[16] = {0};
 	char aPredBuf[64] = {0};
+	char aLossBuf[16] = {0};
+	constexpr float TextInfoFontSize = 10.0f;
 	float FpsWidth = 0.0f;
 	float PredWidth = 0.0f;
+	float LossWidth = 0.0f;
 	int DigitIndex = 0;
 	if(Showfps)
 	{
 		const int FramesPerSecond = round_to_int(1.0f / Client()->FrameTimeAverage());
 		str_format(aFpsBuf, sizeof(aFpsBuf), "%d", FramesPerSecond);
 
-		static float s_TextWidth0 = TextRender()->TextWidth(12.f, "0", -1, -1.0f);
-		static float s_TextWidth00 = TextRender()->TextWidth(12.f, "00", -1, -1.0f);
-		static float s_TextWidth000 = TextRender()->TextWidth(12.f, "000", -1, -1.0f);
-		static float s_TextWidth0000 = TextRender()->TextWidth(12.f, "0000", -1, -1.0f);
-		static float s_TextWidth00000 = TextRender()->TextWidth(12.f, "00000", -1, -1.0f);
+		static float s_TextWidth0 = TextRender()->TextWidth(TextInfoFontSize, "0", -1, -1.0f);
+		static float s_TextWidth00 = TextRender()->TextWidth(TextInfoFontSize, "00", -1, -1.0f);
+		static float s_TextWidth000 = TextRender()->TextWidth(TextInfoFontSize, "000", -1, -1.0f);
+		static float s_TextWidth0000 = TextRender()->TextWidth(TextInfoFontSize, "0000", -1, -1.0f);
+		static float s_TextWidth00000 = TextRender()->TextWidth(TextInfoFontSize, "00000", -1, -1.0f);
 		static const float s_aTextWidth[5] = {s_TextWidth0, s_TextWidth00, s_TextWidth000, s_TextWidth0000, s_TextWidth00000};
 
 		DigitIndex = GetDigitsIndex(FramesPerSecond, 4);
@@ -1858,9 +1886,16 @@ void CHud::RenderTextInfo()
 	if(Showpred)
 	{
 		str_format(aPredBuf, sizeof(aPredBuf), "%d", Client()->GetPredictionTime());
-		PredWidth = TextRender()->TextWidth(12.0f, aPredBuf, -1, -1.0f);
+		PredWidth = TextRender()->TextWidth(TextInfoFontSize, aPredBuf, -1, -1.0f);
 		str_copy(AnimState.m_aLastPredText, aPredBuf);
 		AnimState.m_LastPredWidth = PredWidth;
+	}
+	const bool ShowLoss = Showpred;
+	const float PacketLoss = Client()->PacketLoss();
+	if(ShowLoss)
+	{
+		str_format(aLossBuf, sizeof(aLossBuf), "%.1f%%", PacketLoss);
+		LossWidth = TextRender()->TextWidth(TextInfoFontSize, aLossBuf, -1, -1.0f);
 	}
 
 	float FpsAlpha = Showfps ? 1.0f : 0.0f;
@@ -1873,16 +1908,18 @@ void CHud::RenderTextInfo()
 
 	const bool RenderFps = Showfps || (UseV2TextInfoLayout && FpsAlpha > 0.01f && AnimState.m_aLastFpsText[0] != '\0');
 	const bool RenderPred = Showpred || (UseV2TextInfoLayout && PredAlpha > 0.01f && AnimState.m_aLastPredText[0] != '\0');
+	const bool RenderLoss = RenderPred && ShowLoss;
 	const float DisplayFpsWidth = Showfps ? FpsWidth : (RenderFps ? AnimState.m_LastFpsWidth : 0.0f);
 	const float DisplayPredWidth = Showpred ? PredWidth : (RenderPred ? AnimState.m_LastPredWidth : 0.0f);
+	const float DisplayLossWidth = RenderLoss ? LossWidth : 0.0f;
 	const char *pFpsText = Showfps ? aFpsBuf : AnimState.m_aLastFpsText;
 	const char *pPredText = Showpred ? aPredBuf : AnimState.m_aLastPredText;
-	const bool UseMiniLayout = HasMiniMap && (RenderFps || RenderPred);
+	const bool UseMiniLayout = HasMiniMap && (RenderFps || RenderPred || RenderLoss);
 
 	SHudTextInfoLayout V2Layout;
 	if(UseV2TextInfoLayout)
 	{
-		V2Layout = ComputeHudTextInfoLayoutV2(RenderFps, RenderPred, UseMiniLayout, m_Width, MiniX, MiniY, MiniW, MiniH, DisplayFpsWidth, DisplayPredWidth, m_vTextInfoLayoutChildrenScratch);
+		V2Layout = ComputeHudTextInfoLayoutV2(RenderFps, RenderPred, RenderLoss, UseMiniLayout, m_Width, MiniX, MiniY, MiniW, MiniH, DisplayFpsWidth, DisplayPredWidth, DisplayLossWidth, m_vTextInfoLayoutChildrenScratch);
 	}
 
 	if(UseV2TextInfoLayout && pAnimRuntime != nullptr)
@@ -1910,13 +1947,14 @@ void CHud::RenderTextInfo()
 	float Gap = 0.0f;
 	if(UseMiniLayout && !UseV2TextInfoLayout)
 	{
-		Gap = (RenderFps && RenderPred) ? 6.0f : 0.0f;
-		const float TotalWidth = DisplayFpsWidth + DisplayPredWidth + Gap;
+		const int TextInfoCount = (RenderFps ? 1 : 0) + (RenderPred ? 1 : 0) + (RenderLoss ? 1 : 0);
+		Gap = TextInfoCount > 1 ? 6.0f : 0.0f;
+		const float TotalWidth = DisplayFpsWidth + DisplayPredWidth + DisplayLossWidth + Gap * maximum(0, TextInfoCount - 1);
 		StartX = MiniX + MiniW - TotalWidth;
 		TextY = MiniY + MiniH + 4.0f;
 	}
 	CHudEditor::STransformScope TextInfoScope;
-	if(RenderFps || RenderPred)
+	if(RenderFps || RenderPred || RenderLoss)
 	{
 		bool BoundsInitialized = false;
 		float BoundsX = 0.0f;
@@ -1957,7 +1995,7 @@ void CHud::RenderTextInfo()
 		}
 
 		float PredRectX = m_Width - 10.0f - DisplayPredWidth;
-		float PredRectY = RenderFps ? 20.0f : 5.0f;
+		float PredRectY = RenderFps ? 18.0f : 5.0f;
 		if(UseV2TextInfoLayout)
 		{
 			PredRectX = V2Layout.m_PredX;
@@ -1969,10 +2007,25 @@ void CHud::RenderTextInfo()
 			PredRectY = TextY;
 		}
 
+		float LossRectX = m_Width - 10.0f - DisplayLossWidth;
+		float LossRectY = RenderPred ? PredRectY + 13.0f : (RenderFps ? 18.0f : 5.0f);
+		if(UseV2TextInfoLayout)
+		{
+			LossRectX = V2Layout.m_LossX;
+			LossRectY = V2Layout.m_LossY;
+		}
+		else if(UseMiniLayout)
+		{
+			LossRectX = StartX + (RenderFps ? (DisplayFpsWidth + Gap) : 0.0f) + (RenderPred ? (DisplayPredWidth + Gap) : 0.0f);
+			LossRectY = TextY;
+		}
+
 		if(RenderFps)
-			ExtendBounds(FpsRectX, FpsRectY, DisplayFpsWidth, 12.0f);
+			ExtendBounds(FpsRectX, FpsRectY, DisplayFpsWidth, TextInfoFontSize);
 		if(RenderPred)
-			ExtendBounds(PredRectX, PredRectY, DisplayPredWidth, 12.0f);
+			ExtendBounds(PredRectX, PredRectY, DisplayPredWidth, TextInfoFontSize);
+		if(RenderLoss)
+			ExtendBounds(LossRectX, LossRectY, DisplayLossWidth, TextInfoFontSize);
 		if(BoundsInitialized)
 			TextInfoScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::TextInfo, {BoundsX - 2.0f, BoundsY - 2.0f, BoundsW + 4.0f, BoundsH + 4.0f});
 	}
@@ -2001,7 +2054,7 @@ void CHud::RenderTextInfo()
 			FpsY = TextY;
 		}
 		Cursor.SetPosition(vec2(FpsX, FpsY));
-		Cursor.m_FontSize = 12.0f;
+		Cursor.m_FontSize = TextInfoFontSize;
 		auto OldFlags = TextRender()->GetRenderFlags();
 		TextRender()->SetRenderFlags(OldFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
 		if(m_FPSTextContainerIndex.Valid())
@@ -2024,7 +2077,7 @@ void CHud::RenderTextInfo()
 	if(RenderPred)
 	{
 		float PredX = m_Width - 10 - DisplayPredWidth;
-		float PredY = RenderFps ? 20.0f : 5.0f;
+		float PredY = RenderFps ? 18.0f : 5.0f;
 		if(UseV2TextInfoLayout)
 		{
 			if(pAnimRuntime != nullptr)
@@ -2047,20 +2100,50 @@ void CHud::RenderTextInfo()
 		{
 			ColorRGBA OldColor = TextRender()->GetTextColor();
 			ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
-			ColorRGBA PredTextColor = TextRender()->DefaultTextColor();
+			ColorRGBA PredTextColor = GetPredictionNetworkColor(PacketLoss, Client()->ConnectionProblems());
 			ColorRGBA PredOutlineColor = TextRender()->DefaultTextOutlineColor();
 			PredTextColor.a *= PredAlpha;
 			PredOutlineColor.a *= PredAlpha;
 			TextRender()->TextColor(PredTextColor);
 			TextRender()->TextOutlineColor(PredOutlineColor);
-			TextRender()->Text(PredX, PredY, 12.0f, pPredText, -1.0f);
+			TextRender()->Text(PredX, PredY, TextInfoFontSize, pPredText, -1.0f);
 			TextRender()->TextColor(OldColor);
 			TextRender()->TextOutlineColor(OldOutlineColor);
 		}
 		else
 		{
-			TextRender()->Text(PredX, PredY, 12.0f, pPredText, -1.0f);
+			const ColorRGBA OldColor = TextRender()->GetTextColor();
+			TextRender()->TextColor(GetPredictionNetworkColor(PacketLoss, Client()->ConnectionProblems()));
+			TextRender()->Text(PredX, PredY, TextInfoFontSize, pPredText, -1.0f);
+			TextRender()->TextColor(OldColor);
 		}
+	}
+	if(RenderLoss)
+	{
+		float LossX = m_Width - 10.0f - DisplayLossWidth;
+		float LossY = RenderPred ? 31.0f : (RenderFps ? 18.0f : 5.0f);
+		if(UseV2TextInfoLayout)
+		{
+			LossX = V2Layout.m_LossX;
+			LossY = V2Layout.m_LossY;
+		}
+		else if(UseMiniLayout)
+		{
+			LossX = StartX + (RenderFps ? (DisplayFpsWidth + Gap) : 0.0f) + (RenderPred ? (DisplayPredWidth + Gap) : 0.0f);
+			LossY = TextY;
+		}
+
+		ColorRGBA OldColor = TextRender()->GetTextColor();
+		ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
+		ColorRGBA LossTextColor = GetPredictionNetworkColor(PacketLoss, Client()->ConnectionProblems());
+		ColorRGBA LossOutlineColor = TextRender()->DefaultTextOutlineColor();
+		LossTextColor.a *= PredAlpha;
+		LossOutlineColor.a *= PredAlpha;
+		TextRender()->TextColor(LossTextColor);
+		TextRender()->TextOutlineColor(LossOutlineColor);
+		TextRender()->Text(LossX, LossY, TextInfoFontSize, aLossBuf, -1.0f);
+		TextRender()->TextColor(OldColor);
+		TextRender()->TextOutlineColor(OldOutlineColor);
 	}
 
 	GameClient()->m_HudEditor.EndTransform(TextInfoScope);

@@ -23,6 +23,9 @@ void CNetConnection::ClearPeerAddr()
 void CNetConnection::ResetStats()
 {
 	m_Stats = {};
+	m_ReceivedVitalChunks = 0;
+	m_MissingVitalChunks = 0;
+	m_LastMissingVitalSequence = -1;
 	ClearPeerAddr();
 	m_LastUpdateTime = 0;
 }
@@ -95,6 +98,14 @@ void CNetConnection::AckChunks(int Ack)
 void CNetConnection::SignalResend()
 {
 	m_Construct.m_Flags |= NET_PACKETFLAG_RESEND;
+}
+
+float CNetConnection::PacketLoss() const
+{
+	const uint64_t TotalVitalChunks = m_ReceivedVitalChunks + m_MissingVitalChunks;
+	if(TotalVitalChunks == 0)
+		return 0.0f;
+	return (float)m_MissingVitalChunks * 100.0f / (float)TotalVitalChunks;
 }
 
 int CNetConnection::Flush()

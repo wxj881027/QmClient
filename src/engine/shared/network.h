@@ -262,6 +262,9 @@ private:
 	NETADDR m_PeerAddr;
 	NETSOCKET m_Socket;
 	NETSTATS m_Stats;
+	uint64_t m_ReceivedVitalChunks = 0;
+	uint64_t m_MissingVitalChunks = 0;
+	int m_LastMissingVitalSequence = -1;
 
 	std::array<char, NETADDR_MAXSTRSIZE> m_aPeerAddrStr;
 	std::array<char, NETADDR_MAXSTRSIZE> m_aPeerAddrStrNoPort;
@@ -326,6 +329,7 @@ public:
 	int AckSequence() const { return m_Ack; }
 	int SeqSequence() const { return m_Sequence; }
 	int SecurityToken() const { return m_SecurityToken; }
+	float PacketLoss() const;
 	CStaticRingBuffer<CNetChunkResend, NET_CONN_BUFFERSIZE> *ResendBuffer() { return &m_Buffer; }
 
 	void ResumeConnection(const NETADDR *pAddr, int Sequence, int Ack, SECURITY_TOKEN SecurityToken, CStaticRingBuffer<CNetChunkResend, NET_CONN_BUFFERSIZE> *pResendBuffer, bool Sixup);
@@ -598,6 +602,7 @@ public:
 	const NETADDR *ServerAddress() const { return m_Connection.PeerAddress(); }
 	void ConnectAddresses(const NETADDR **ppAddrs, int *pNumAddrs) const { m_Connection.ConnectAddresses(ppAddrs, pNumAddrs); }
 	bool GotProblems(int64_t MaxLatency) const;
+	float PacketLoss() const;
 	const char *ErrorString() const;
 
 	// stun

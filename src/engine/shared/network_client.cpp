@@ -192,6 +192,11 @@ bool CNetClient::GotProblems(int64_t MaxLatency) const
 	return time_get() - m_Connection.LastRecvTime() > MaxLatency;
 }
 
+float CNetClient::PacketLoss() const
+{
+	return m_Connection.PacketLoss();
+}
+
 const char *CNetClient::ErrorString() const
 {
 	return m_Connection.ErrorString();

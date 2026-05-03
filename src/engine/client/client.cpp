@@ -424,6 +424,11 @@ bool CClient::ConnectionProblems() const
 	return m_aNetClient[g_Config.m_ClDummy].GotProblems(MaxLatencyTicks() * time_freq() / GameTickSpeed());
 }
 
+float CClient::PacketLoss() const
+{
+	return m_aNetClient[g_Config.m_ClDummy].PacketLoss();
+}
+
 void CClient::SendInput()
 {
 	int64_t Now = time_get();

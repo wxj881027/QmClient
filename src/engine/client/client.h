@@ -347,6 +347,7 @@ public:
 	const std::vector<std::string> &MaplistEntries() const override { return m_vMaplistEntries; }
 
 	bool ConnectionProblems() const override;
+	float PacketLoss() const override;
 
 	IGraphics::CTextureHandle GetDebugFont() const override { return m_DebugFont; }
 
