@@ -69,6 +69,20 @@ ColorRGBA GetPredictionNetworkColor(float PacketLoss, bool ConnectionProblems)
 	return ColorRGBA(0.35f, 1.0f, 0.38f, 1.0f);
 }
 
+ColorRGBA GetPredictionMarginColor(IClient::EPredictionMarginState PredictionMarginState)
+{
+	switch(PredictionMarginState)
+	{
+	case IClient::EPredictionMarginState::UNSTABLE:
+		return ColorRGBA(1.0f, 0.25f, 0.18f, 1.0f);
+	case IClient::EPredictionMarginState::IGNORED_SPIKE:
+		return ColorRGBA(1.0f, 0.90f, 0.18f, 1.0f);
+	case IClient::EPredictionMarginState::STABLE:
+		return ColorRGBA(0.35f, 1.0f, 0.38f, 1.0f);
+	}
+	return ColorRGBA(0.35f, 1.0f, 0.38f, 1.0f);
+}
+
 SHudTextInfoLayout ComputeHudTextInfoLayoutV2(bool ShowFps, bool ShowPred, bool ShowLoss, bool UseMiniLayout, float HudWidth, float MiniX, float MiniY, float MiniW, float MiniH, float FpsWidth, float PredWidth, float LossWidth, std::vector<SUiLayoutChild> &vChildrenScratch)
 {
 	SHudTextInfoLayout Result;
@@ -1892,6 +1906,7 @@ void CHud::RenderTextInfo()
 	}
 	const bool ShowLoss = Showpred;
 	const float PacketLoss = Client()->PacketLoss();
+	const ColorRGBA PredictionMarginColor = GetPredictionMarginColor(Client()->PredictionMarginState());
 	if(ShowLoss)
 	{
 		str_format(aLossBuf, sizeof(aLossBuf), "%.1f%%", PacketLoss);
@@ -2100,7 +2115,7 @@ void CHud::RenderTextInfo()
 		{
 			ColorRGBA OldColor = TextRender()->GetTextColor();
 			ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
-			ColorRGBA PredTextColor = GetPredictionNetworkColor(PacketLoss, Client()->ConnectionProblems());
+			ColorRGBA PredTextColor = PredictionMarginColor;
 			ColorRGBA PredOutlineColor = TextRender()->DefaultTextOutlineColor();
 			PredTextColor.a *= PredAlpha;
 			PredOutlineColor.a *= PredAlpha;
@@ -2113,7 +2128,7 @@ void CHud::RenderTextInfo()
 		else
 		{
 			const ColorRGBA OldColor = TextRender()->GetTextColor();
-			TextRender()->TextColor(GetPredictionNetworkColor(PacketLoss, Client()->ConnectionProblems()));
+			TextRender()->TextColor(PredictionMarginColor);
 			TextRender()->Text(PredX, PredY, TextInfoFontSize, pPredText, -1.0f);
 			TextRender()->TextColor(OldColor);
 		}

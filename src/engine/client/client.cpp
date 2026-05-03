@@ -2183,7 +2183,21 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			}
 
 			if(Target)
-				m_PredictedTime.Update(&m_InputtimeMarginGraph, Target, TimeLeft, CSmoothTime::ADJUSTDIRECTION_UP);
+			{
+				const CSmoothTime::EUpdateStatus UpdateStatus = m_PredictedTime.Update(&m_InputtimeMarginGraph, Target, TimeLeft, CSmoothTime::ADJUSTDIRECTION_UP);
+				switch(UpdateStatus)
+				{
+				case CSmoothTime::EUpdateStatus::IGNORED_SPIKE:
+					m_PredictionMarginState = EPredictionMarginState::IGNORED_SPIKE;
+					break;
+				case CSmoothTime::EUpdateStatus::UNSTABLE:
+					m_PredictionMarginState = EPredictionMarginState::UNSTABLE;
+					break;
+				case CSmoothTime::EUpdateStatus::STABLE:
+					m_PredictionMarginState = EPredictionMarginState::STABLE;
+					break;
+				}
+			}
 		}
 		else if(Msg == NETMSG_SNAP || Msg == NETMSG_SNAPSINGLE || Msg == NETMSG_SNAPEMPTY)
 		{
@@ -5655,6 +5669,11 @@ int CClient::GetPredictionTick()
 		PredictionTick = GameTick(g_Config.m_ClDummy) + 1;
 	}
 	return PredictionTick;
+}
+
+IClient::EPredictionMarginState CClient::PredictionMarginState() const
+{
+	return m_PredictionMarginState;
 }
 
 void CClient::GetSmoothTick(int *pSmoothTick, float *pSmoothIntraTick, float MixAmount)

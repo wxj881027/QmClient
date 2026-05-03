@@ -31,6 +31,41 @@ class CSemaphore;
 static std::thread::id gs_MainThreadId;
 static bool gs_MainThreadIdInitialized = false;
 static constexpr int RECT_CORNER_SEGMENTS = 16;
+static constexpr float RECT_ANTIALIAS_PIXEL_SIZE = 1.25f;
+
+static ColorRGBA CommandColorToColorRGBA(const CCommandBuffer::SColor &Color)
+{
+	return ColorRGBA(Color.r / 255.0f, Color.g / 255.0f, Color.b / 255.0f, Color.a / 255.0f);
+}
+
+static CCommandBuffer::SColor ColorRGBAToCommandColor(ColorRGBA Color)
+{
+	CCommandBuffer::SColor Result;
+	Result.r = (unsigned char)(std::clamp(Color.r, 0.0f, 1.0f) * 255.0f + 0.5f);
+	Result.g = (unsigned char)(std::clamp(Color.g, 0.0f, 1.0f) * 255.0f + 0.5f);
+	Result.b = (unsigned char)(std::clamp(Color.b, 0.0f, 1.0f) * 255.0f + 0.5f);
+	Result.a = (unsigned char)(std::clamp(Color.a, 0.0f, 1.0f) * 255.0f + 0.5f);
+	return Result;
+}
+
+static ColorRGBA ColorWithAlpha(ColorRGBA Color, float Alpha)
+{
+	Color.a = Alpha;
+	return Color;
+}
+
+static IGraphics::CFreeformItem RoundedRectAntialiasSegment(float CenterX, float CenterY, float InnerRadius, float OuterRadius, float AngleStart, float AngleEnd, float XDirection, float YDirection)
+{
+	const float InnerStartX = CenterX + XDirection * std::cos(AngleStart) * InnerRadius;
+	const float InnerStartY = CenterY + YDirection * std::sin(AngleStart) * InnerRadius;
+	const float OuterStartX = CenterX + XDirection * std::cos(AngleStart) * OuterRadius;
+	const float OuterStartY = CenterY + YDirection * std::sin(AngleStart) * OuterRadius;
+	const float OuterEndX = CenterX + XDirection * std::cos(AngleEnd) * OuterRadius;
+	const float OuterEndY = CenterY + YDirection * std::sin(AngleEnd) * OuterRadius;
+	const float InnerEndX = CenterX + XDirection * std::cos(AngleEnd) * InnerRadius;
+	const float InnerEndY = CenterY + YDirection * std::sin(AngleEnd) * InnerRadius;
+	return IGraphics::CFreeformItem(InnerStartX, InnerStartY, OuterStartX, OuterStartY, OuterEndX, OuterEndY, InnerEndX, InnerEndY);
+}
 
 static void EnsureMainThreadIdInitialized()
 {
@@ -987,6 +1022,14 @@ void CGraphics_Threaded::SetColor4(ColorRGBA TopLeft, ColorRGBA TopRight, ColorR
 	SetColorVertex(aArray, std::size(aArray));
 }
 
+void CGraphics_Threaded::SetColor4Raw(ColorRGBA TopLeft, ColorRGBA TopRight, ColorRGBA BottomLeft, ColorRGBA BottomRight)
+{
+	m_aColor[0] = ColorRGBAToCommandColor(TopLeft);
+	m_aColor[1] = ColorRGBAToCommandColor(TopRight);
+	m_aColor[2] = ColorRGBAToCommandColor(BottomRight);
+	m_aColor[3] = ColorRGBAToCommandColor(BottomLeft);
+}
+
 void CGraphics_Threaded::ChangeColorOfCurrentQuadVertices(float r, float g, float b, float a)
 {
 	m_aColor[0].r = NormalizeColorComponent(r);
@@ -1169,6 +1212,93 @@ void CGraphics_Threaded::QuadsText(float x, float y, float Size, const char *pTe
 	}
 }
 
+float CGraphics_Threaded::RoundedRectAntialiasSize() const
+{
+	const float ScreenWidth = absolute(m_State.m_ScreenBR.x - m_State.m_ScreenTL.x);
+	const float ScreenHeight = absolute(m_State.m_ScreenBR.y - m_State.m_ScreenTL.y);
+	if(ScreenWidth <= 0.0f || ScreenHeight <= 0.0f || m_ScreenWidth <= 0 || m_ScreenHeight <= 0)
+		return 0.0f;
+	return maximum(ScreenWidth / (float)m_ScreenWidth, ScreenHeight / (float)m_ScreenHeight) * RECT_ANTIALIAS_PIXEL_SIZE;
+}
+
+void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h, float r, int Corners, ColorRGBA Color)
+{
+	if(Corners == 0 || r <= 0.0f || Color.a <= 0.0f)
+		return;
+
+	const float AntialiasSize = minimum(RoundedRectAntialiasSize(), r);
+	if(AntialiasSize <= 0.0f)
+		return;
+
+	CCommandBuffer::SColor aOldColor[4];
+	std::copy(std::begin(m_aColor), std::end(m_aColor), std::begin(aOldColor));
+
+	const ColorRGBA TransparentColor = ColorWithAlpha(Color, 0.0f);
+	const float TopX = (Corners & CORNER_TL) ? x + r : x;
+	const float TopWidth = ((Corners & CORNER_TR) ? x + w - r : x + w) - TopX;
+	if(TopWidth > 0.0f && (Corners & CORNER_T))
+	{
+		SetColor4(TransparentColor, TransparentColor, Color, Color);
+		CQuadItem Quad(TopX, y - AntialiasSize, TopWidth, AntialiasSize);
+		QuadsDrawTL(&Quad, 1);
+	}
+
+	const float BottomX = (Corners & CORNER_BL) ? x + r : x;
+	const float BottomWidth = ((Corners & CORNER_BR) ? x + w - r : x + w) - BottomX;
+	if(BottomWidth > 0.0f && (Corners & CORNER_B))
+	{
+		SetColor4(Color, Color, TransparentColor, TransparentColor);
+		CQuadItem Quad(BottomX, y + h, BottomWidth, AntialiasSize);
+		QuadsDrawTL(&Quad, 1);
+	}
+
+	const float LeftY = (Corners & CORNER_TL) ? y + r : y;
+	const float LeftHeight = ((Corners & CORNER_BL) ? y + h - r : y + h) - LeftY;
+	if(LeftHeight > 0.0f && (Corners & CORNER_L))
+	{
+		SetColor4(TransparentColor, Color, TransparentColor, Color);
+		CQuadItem Quad(x - AntialiasSize, LeftY, AntialiasSize, LeftHeight);
+		QuadsDrawTL(&Quad, 1);
+	}
+
+	const float RightY = (Corners & CORNER_TR) ? y + r : y;
+	const float RightHeight = ((Corners & CORNER_BR) ? y + h - r : y + h) - RightY;
+	if(RightHeight > 0.0f && (Corners & CORNER_R))
+	{
+		SetColor4(Color, TransparentColor, Color, TransparentColor);
+		CQuadItem Quad(x + w, RightY, AntialiasSize, RightHeight);
+		QuadsDrawTL(&Quad, 1);
+	}
+
+	const float OuterRadius = r + AntialiasSize;
+	const float SegmentsAngle = pi / 2 / RECT_CORNER_SEGMENTS;
+	IGraphics::CFreeformItem aFreeform[RECT_CORNER_SEGMENTS * 4];
+	size_t NumItems = 0;
+
+	for(int Segment = 0; Segment < RECT_CORNER_SEGMENTS; ++Segment)
+	{
+		const float AngleStart = Segment * SegmentsAngle;
+		const float AngleEnd = (Segment + 1) * SegmentsAngle;
+
+		if(Corners & CORNER_TL)
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + r, y + r, r, OuterRadius, AngleStart, AngleEnd, -1.0f, -1.0f);
+		if(Corners & CORNER_TR)
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + w - r, y + r, r, OuterRadius, AngleStart, AngleEnd, 1.0f, -1.0f);
+		if(Corners & CORNER_BL)
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + r, y + h - r, r, OuterRadius, AngleStart, AngleEnd, -1.0f, 1.0f);
+		if(Corners & CORNER_BR)
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + w - r, y + h - r, r, OuterRadius, AngleStart, AngleEnd, 1.0f, 1.0f);
+	}
+
+	if(NumItems > 0)
+	{
+		SetColor4(Color, TransparentColor, Color, TransparentColor);
+		QuadsDrawFreeform(aFreeform, NumItems);
+	}
+
+	std::copy(std::begin(aOldColor), std::end(aOldColor), std::begin(m_aColor));
+}
+
 void CGraphics_Threaded::DrawRectExt(float x, float y, float w, float h, float r, int Corners)
 {
 	constexpr int NumSegments = RECT_CORNER_SEGMENTS;
@@ -1236,6 +1366,87 @@ void CGraphics_Threaded::DrawRectExt(float x, float y, float w, float h, float r
 		aQuads[NumItems++] = CQuadItem(x + w, y + h, -r, -r);
 
 	QuadsDrawTL(aQuads, NumItems);
+	DrawRectExtAntialias(x, y, w, h, r, Corners, CommandColorToColorRGBA(m_aColor[0]));
+}
+
+void CGraphics_Threaded::DrawRectExt4Antialias(float x, float y, float w, float h, float r, int Corners, ColorRGBA ColorTopLeft, ColorRGBA ColorTopRight, ColorRGBA ColorBottomLeft, ColorRGBA ColorBottomRight)
+{
+	if(Corners == 0 || r <= 0.0f)
+		return;
+
+	const float AntialiasSize = minimum(RoundedRectAntialiasSize(), r);
+	if(AntialiasSize <= 0.0f)
+		return;
+
+	CCommandBuffer::SColor aOldColor[4];
+	std::copy(std::begin(m_aColor), std::end(m_aColor), std::begin(aOldColor));
+
+	const ColorRGBA TransparentTopLeft = ColorWithAlpha(ColorTopLeft, 0.0f);
+	const ColorRGBA TransparentTopRight = ColorWithAlpha(ColorTopRight, 0.0f);
+	const ColorRGBA TransparentBottomLeft = ColorWithAlpha(ColorBottomLeft, 0.0f);
+	const ColorRGBA TransparentBottomRight = ColorWithAlpha(ColorBottomRight, 0.0f);
+
+	const float TopX = (Corners & CORNER_TL) ? x + r : x;
+	const float TopWidth = ((Corners & CORNER_TR) ? x + w - r : x + w) - TopX;
+	if(TopWidth > 0.0f && (Corners & CORNER_T) && (ColorTopLeft.a > 0.0f || ColorTopRight.a > 0.0f))
+	{
+		SetColor4(TransparentTopLeft, TransparentTopRight, ColorTopLeft, ColorTopRight);
+		CQuadItem Quad(TopX, y - AntialiasSize, TopWidth, AntialiasSize);
+		QuadsDrawTL(&Quad, 1);
+	}
+
+	const float BottomX = (Corners & CORNER_BL) ? x + r : x;
+	const float BottomWidth = ((Corners & CORNER_BR) ? x + w - r : x + w) - BottomX;
+	if(BottomWidth > 0.0f && (Corners & CORNER_B) && (ColorBottomLeft.a > 0.0f || ColorBottomRight.a > 0.0f))
+	{
+		SetColor4(ColorBottomLeft, ColorBottomRight, TransparentBottomLeft, TransparentBottomRight);
+		CQuadItem Quad(BottomX, y + h, BottomWidth, AntialiasSize);
+		QuadsDrawTL(&Quad, 1);
+	}
+
+	const float LeftY = (Corners & CORNER_TL) ? y + r : y;
+	const float LeftHeight = ((Corners & CORNER_BL) ? y + h - r : y + h) - LeftY;
+	if(LeftHeight > 0.0f && (Corners & CORNER_L) && (ColorTopLeft.a > 0.0f || ColorBottomLeft.a > 0.0f))
+	{
+		SetColor4(TransparentTopLeft, ColorTopLeft, TransparentBottomLeft, ColorBottomLeft);
+		CQuadItem Quad(x - AntialiasSize, LeftY, AntialiasSize, LeftHeight);
+		QuadsDrawTL(&Quad, 1);
+	}
+
+	const float RightY = (Corners & CORNER_TR) ? y + r : y;
+	const float RightHeight = ((Corners & CORNER_BR) ? y + h - r : y + h) - RightY;
+	if(RightHeight > 0.0f && (Corners & CORNER_R) && (ColorTopRight.a > 0.0f || ColorBottomRight.a > 0.0f))
+	{
+		SetColor4(ColorTopRight, TransparentTopRight, ColorBottomRight, TransparentBottomRight);
+		CQuadItem Quad(x + w, RightY, AntialiasSize, RightHeight);
+		QuadsDrawTL(&Quad, 1);
+	}
+
+	const float OuterRadius = r + AntialiasSize;
+	const float SegmentsAngle = pi / 2 / RECT_CORNER_SEGMENTS;
+	auto DrawCorner = [&](int Corner, ColorRGBA CornerColor, float CenterX, float CenterY, float XDirection, float YDirection) {
+		if(!(Corners & Corner) || CornerColor.a <= 0.0f)
+			return;
+
+		IGraphics::CFreeformItem aFreeform[RECT_CORNER_SEGMENTS];
+		for(int Segment = 0; Segment < RECT_CORNER_SEGMENTS; ++Segment)
+		{
+			const float AngleStart = Segment * SegmentsAngle;
+			const float AngleEnd = (Segment + 1) * SegmentsAngle;
+			aFreeform[Segment] = RoundedRectAntialiasSegment(CenterX, CenterY, r, OuterRadius, AngleStart, AngleEnd, XDirection, YDirection);
+		}
+
+		const ColorRGBA TransparentColor = ColorWithAlpha(CornerColor, 0.0f);
+		SetColor4(CornerColor, TransparentColor, CornerColor, TransparentColor);
+		QuadsDrawFreeform(aFreeform, std::size(aFreeform));
+	};
+
+	DrawCorner(CORNER_TL, ColorTopLeft, x + r, y + r, -1.0f, -1.0f);
+	DrawCorner(CORNER_TR, ColorTopRight, x + w - r, y + r, 1.0f, -1.0f);
+	DrawCorner(CORNER_BL, ColorBottomLeft, x + r, y + h - r, -1.0f, 1.0f);
+	DrawCorner(CORNER_BR, ColorBottomRight, x + w - r, y + h - r, 1.0f, 1.0f);
+
+	std::copy(std::begin(aOldColor), std::end(aOldColor), std::begin(m_aColor));
 }
 
 void CGraphics_Threaded::DrawRectExt4(float x, float y, float w, float h, ColorRGBA ColorTopLeft, ColorRGBA ColorTopRight, ColorRGBA ColorBottomLeft, ColorRGBA ColorBottomRight, float r, int Corners)
@@ -1354,6 +1565,86 @@ void CGraphics_Threaded::DrawRectExt4(float x, float y, float w, float h, ColorR
 		ItemQ = CQuadItem(x + w, y + h, -r, -r);
 		QuadsDrawTL(&ItemQ, 1);
 	}
+
+	DrawRectExt4Antialias(x, y, w, h, r, Corners, ColorTopLeft, ColorTopRight, ColorBottomLeft, ColorBottomRight);
+}
+
+void CGraphics_Threaded::AddRectExtAntialiasToContainer(int ContainerIndex, float x, float y, float w, float h, float r, int Corners, ColorRGBA Color)
+{
+	if(Corners == 0 || r <= 0.0f || Color.a <= 0.0f)
+		return;
+
+	const float AntialiasSize = minimum(RoundedRectAntialiasSize(), r);
+	if(AntialiasSize <= 0.0f)
+		return;
+
+	CCommandBuffer::SColor aOldColor[4];
+	std::copy(std::begin(m_aColor), std::end(m_aColor), std::begin(aOldColor));
+
+	const ColorRGBA TransparentColor = ColorWithAlpha(Color, 0.0f);
+	const float TopX = (Corners & CORNER_TL) ? x + r : x;
+	const float TopWidth = ((Corners & CORNER_TR) ? x + w - r : x + w) - TopX;
+	if(TopWidth > 0.0f && (Corners & CORNER_T))
+	{
+		SetColor4Raw(TransparentColor, TransparentColor, Color, Color);
+		CQuadItem Quad(TopX, y - AntialiasSize, TopWidth, AntialiasSize);
+		QuadContainerAddQuads(ContainerIndex, &Quad, 1);
+	}
+
+	const float BottomX = (Corners & CORNER_BL) ? x + r : x;
+	const float BottomWidth = ((Corners & CORNER_BR) ? x + w - r : x + w) - BottomX;
+	if(BottomWidth > 0.0f && (Corners & CORNER_B))
+	{
+		SetColor4Raw(Color, Color, TransparentColor, TransparentColor);
+		CQuadItem Quad(BottomX, y + h, BottomWidth, AntialiasSize);
+		QuadContainerAddQuads(ContainerIndex, &Quad, 1);
+	}
+
+	const float LeftY = (Corners & CORNER_TL) ? y + r : y;
+	const float LeftHeight = ((Corners & CORNER_BL) ? y + h - r : y + h) - LeftY;
+	if(LeftHeight > 0.0f && (Corners & CORNER_L))
+	{
+		SetColor4Raw(TransparentColor, Color, TransparentColor, Color);
+		CQuadItem Quad(x - AntialiasSize, LeftY, AntialiasSize, LeftHeight);
+		QuadContainerAddQuads(ContainerIndex, &Quad, 1);
+	}
+
+	const float RightY = (Corners & CORNER_TR) ? y + r : y;
+	const float RightHeight = ((Corners & CORNER_BR) ? y + h - r : y + h) - RightY;
+	if(RightHeight > 0.0f && (Corners & CORNER_R))
+	{
+		SetColor4Raw(Color, TransparentColor, Color, TransparentColor);
+		CQuadItem Quad(x + w, RightY, AntialiasSize, RightHeight);
+		QuadContainerAddQuads(ContainerIndex, &Quad, 1);
+	}
+
+	const float OuterRadius = r + AntialiasSize;
+	const float SegmentsAngle = pi / 2 / RECT_CORNER_SEGMENTS;
+	IGraphics::CFreeformItem aFreeform[RECT_CORNER_SEGMENTS * 4];
+	size_t NumItems = 0;
+
+	for(int Segment = 0; Segment < RECT_CORNER_SEGMENTS; ++Segment)
+	{
+		const float AngleStart = Segment * SegmentsAngle;
+		const float AngleEnd = (Segment + 1) * SegmentsAngle;
+
+		if(Corners & CORNER_TL)
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + r, y + r, r, OuterRadius, AngleStart, AngleEnd, -1.0f, -1.0f);
+		if(Corners & CORNER_TR)
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + w - r, y + r, r, OuterRadius, AngleStart, AngleEnd, 1.0f, -1.0f);
+		if(Corners & CORNER_BL)
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + r, y + h - r, r, OuterRadius, AngleStart, AngleEnd, -1.0f, 1.0f);
+		if(Corners & CORNER_BR)
+			aFreeform[NumItems++] = RoundedRectAntialiasSegment(x + w - r, y + h - r, r, OuterRadius, AngleStart, AngleEnd, 1.0f, 1.0f);
+	}
+
+	if(NumItems > 0)
+	{
+		SetColor4Raw(Color, TransparentColor, Color, TransparentColor);
+		QuadContainerAddQuads(ContainerIndex, aFreeform, NumItems);
+	}
+
+	std::copy(std::begin(aOldColor), std::end(aOldColor), std::begin(m_aColor));
 }
 
 int CGraphics_Threaded::CreateRectQuadContainer(float x, float y, float w, float h, float r, int Corners)
@@ -1437,6 +1728,8 @@ int CGraphics_Threaded::CreateRectQuadContainer(float x, float y, float w, float
 
 	if(NumItems > 0)
 		QuadContainerAddQuads(ContainerIndex, aQuads, NumItems);
+
+	AddRectExtAntialiasToContainer(ContainerIndex, x, y, w, h, r, Corners, CommandColorToColorRGBA(m_aColor[0]));
 
 	QuadContainerUpload(ContainerIndex);
 	QuadContainerChangeAutomaticUpload(ContainerIndex, true);

@@ -69,9 +69,10 @@ void CSmoothTime::UpdateInt(int64_t Target)
 	m_Target = Target;
 }
 
-void CSmoothTime::Update(CGraph *pGraph, int64_t Target, int TimeLeft, EAdjustDirection AdjustDirection)
+CSmoothTime::EUpdateStatus CSmoothTime::Update(CGraph *pGraph, int64_t Target, int TimeLeft, EAdjustDirection AdjustDirection)
 {
 	bool UpdateTimer = true;
+	EUpdateStatus UpdateStatus = EUpdateStatus::STABLE;
 
 	if(TimeLeft < 0)
 	{
@@ -89,10 +90,12 @@ void CSmoothTime::Update(CGraph *pGraph, int64_t Target, int TimeLeft, EAdjustDi
 		{
 			// ignore this ping spike
 			UpdateTimer = false;
+			UpdateStatus = EUpdateStatus::IGNORED_SPIKE;
 			pGraph->Add(TimeLeft, ColorRGBA(1.0f, 1.0f, 0.0f, 0.75f));
 		}
 		else
 		{
+			UpdateStatus = EUpdateStatus::UNSTABLE;
 			pGraph->Add(TimeLeft, ColorRGBA(1.0f, 0.0f, 0.0f, 0.75f));
 			if(m_aAdjustSpeed[AdjustDirection] < 30.0f)
 				m_aAdjustSpeed[AdjustDirection] *= 2.0f;
@@ -112,6 +115,8 @@ void CSmoothTime::Update(CGraph *pGraph, int64_t Target, int TimeLeft, EAdjustDi
 
 	if(UpdateTimer)
 		UpdateInt(Target);
+
+	return UpdateStatus;
 }
 
 void CSmoothTime::UpdateMargin(int64_t Margin)

@@ -18,6 +18,13 @@ public:
 		NUM_ADJUSTDIRECTIONS,
 	};
 
+	enum class EUpdateStatus
+	{
+		STABLE,
+		IGNORED_SPIKE,
+		UNSTABLE,
+	};
+
 private:
 	int64_t m_Snap;
 	int64_t m_Current;
@@ -37,7 +44,7 @@ public:
 	int64_t Get(int64_t Now) const;
 
 	void UpdateInt(int64_t Target);
-	void Update(CGraph *pGraph, int64_t Target, int TimeLeft, EAdjustDirection AdjustDirection);
+	EUpdateStatus Update(CGraph *pGraph, int64_t Target, int TimeLeft, EAdjustDirection AdjustDirection);
 
 	void UpdateMargin(int64_t Margin);
 	int64_t GetMargin(int64_t Now) const;

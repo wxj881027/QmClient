@@ -222,8 +222,16 @@ public:
 	virtual void GetServerInfo(class CServerInfo *pServerInfo) const = 0;
 	virtual bool ServerCapAnyPlayerFlag() const = 0;
 
+	enum class EPredictionMarginState
+	{
+		STABLE,
+		IGNORED_SPIKE,
+		UNSTABLE,
+	};
+
 	virtual int GetPredictionTime() = 0;
 	virtual int GetPredictionTick() = 0;
+	virtual EPredictionMarginState PredictionMarginState() const = 0;
 
 	// snapshot interface
 

@@ -195,6 +195,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	// time
 	CSmoothTime m_aGameTime[NUM_DUMMIES];
 	CSmoothTime m_PredictedTime;
+	EPredictionMarginState m_PredictionMarginState = EPredictionMarginState::STABLE;
 
 	// input
 	struct // TODO: handle input better
@@ -389,6 +390,7 @@ public:
 	int GetPredictionTime() override;
 	CSnapItem SnapGetItem(int SnapId, int Index) const override;
 	int GetPredictionTick() override;
+	EPredictionMarginState PredictionMarginState() const override;
 	const void *SnapFindItem(int SnapId, int Type, int Id) const override;
 	int SnapNumItems(int SnapId) const override;
 	void SnapSetStaticsize(int ItemType, int Size) override;
