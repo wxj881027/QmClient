@@ -11,6 +11,7 @@
 #include <engine/shared/uuid_manager.h>
 
 #include <cstdint>
+#include <vector>
 
 enum
 {
@@ -24,6 +25,12 @@ static constexpr int DEMO_SPEED_INDEX_DEFAULT = 4;
 static_assert(DEMO_SPEEDS[DEMO_SPEED_INDEX_DEFAULT] == 1.0);
 
 typedef bool (*DEMOFUNC_FILTER)(const void *pData, int DataSize, void *pUser);
+
+struct SDemoSliceSegment
+{
+	int m_StartTick;
+	int m_EndTick;
+};
 
 // TODO: Properly extend demo format using uuids
 // "6be6da4a-cebd-380c-9b5b-1289c842d780"
@@ -123,6 +130,7 @@ class IDemoEditor : public IInterface
 	MACRO_INTERFACE("demoeditor")
 public:
 	virtual bool Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) = 0;
+	virtual bool Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) = 0;
 };
 
 #endif

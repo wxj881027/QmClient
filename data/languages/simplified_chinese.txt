@@ -517,6 +517,18 @@ Hue
 Record demo
 == 录制回放
 
+Save last %d min
+== 保存前 %d 分钟
+
+Mark demo
+== 标记回放
+
+Demo marker added
+== 已添加回放标记
+
+No demo is being recorded
+== 当前没有正在录制的回放
+
 Your skin
 == 你的皮肤
 
@@ -849,6 +861,9 @@ Hammerfly dummy
 
 Default length
 == 默认时长
+
+ESC replay minutes
+== ESC 保存回放分钟数
 
 Toggle ghost
 == 影子记录开关
@@ -1530,6 +1545,21 @@ Cut interval
 
 Cut length
 == 裁剪时长
+
+Cut segments
+== 裁剪片段
+
+%d more cut segments
+== 还有 %d 个裁剪片段
+
+Current cut is invalid or already added
+== 当前裁剪无效或已添加
+
+Please add a valid cut first
+== 请先添加有效裁剪片段
+
+Failed to export demo cut
+== 导出回放裁剪失败
 
 Axis
 == 轴

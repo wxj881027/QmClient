@@ -4938,7 +4938,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 	// demo
 	CUIRect Demo;
-	MainView.HSplitTop(110.0f, &Demo, &MainView);
+	MainView.HSplitTop(130.0f, &Demo, &MainView);
 	Demo.HSplitTop(30.0f, &Label, &Demo);
 	Ui()->DoLabel(&Label, Localize("Demo"), 20.0f, TEXTALIGN_ML);
 	Label.VSplitMid(nullptr, &Label, 20.0f);
@@ -4963,6 +4963,10 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	Left.HSplitTop(20.0f, &Button, &Left);
 	if(g_Config.m_ClReplays)
 		Ui()->DoScrollbarOption(&g_Config.m_ClReplayLength, &g_Config.m_ClReplayLength, &Button, Localize("Default length"), 10, 600, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE);
+
+	Left.HSplitTop(20.0f, &Button, &Left);
+	if(g_Config.m_ClReplays)
+		Ui()->DoScrollbarOption(&g_Config.m_ClEscReplayLengthMinutes, &g_Config.m_ClEscReplayLengthMinutes, &Button, Localize("ESC replay minutes"), 1, 60, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE);
 
 	Right.HSplitTop(20.0f, &Button, &Right);
 	if(DoButton_CheckBox(&g_Config.m_ClRaceGhost, Localize("Enable ghost"), g_Config.m_ClRaceGhost, &Button))

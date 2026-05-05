@@ -4178,7 +4178,8 @@ void CClient::SaveReplay(const int Length, const char *pFilename)
 		{
 			char aTimestamp[20];
 			str_timestamp(aTimestamp, sizeof(aTimestamp));
-			str_format(aFilename, sizeof(aFilename), "demos/replays/%s_%s_(replay).demo", m_aCurrentMap, aTimestamp);
+			m_pStorage->CreateFolder("demos/highlight", IStorage::TYPE_SAVE);
+			str_format(aFilename, sizeof(aFilename), "demos/highlight/高光-%s.demo", aTimestamp);
 		}
 		else
 		{
@@ -4213,12 +4214,22 @@ void CClient::SaveReplay(const int Length, const char *pFilename)
 	}
 }
 
-void CClient::DemoSlice(const char *pDstPath, CLIENTFUNC_FILTER pfnFilter, void *pUser)
+bool CClient::DemoSlice(const char *pDstPath, CLIENTFUNC_FILTER pfnFilter, void *pUser)
 {
 	if(m_DemoPlayer.IsPlaying())
 	{
-		m_DemoEditor.Slice(m_DemoPlayer.Filename(), pDstPath, g_Config.m_ClDemoSliceBegin, g_Config.m_ClDemoSliceEnd, pfnFilter, pUser);
+		return m_DemoEditor.Slice(m_DemoPlayer.Filename(), pDstPath, g_Config.m_ClDemoSliceBegin, g_Config.m_ClDemoSliceEnd, pfnFilter, pUser);
 	}
+	return false;
+}
+
+bool CClient::DemoSlice(const char *pDstPath, const std::vector<SDemoSliceSegment> &vSegments, CLIENTFUNC_FILTER pfnFilter, void *pUser)
+{
+	if(m_DemoPlayer.IsPlaying())
+	{
+		return m_DemoEditor.Slice(m_DemoPlayer.Filename(), pDstPath, vSegments, pfnFilter, pUser);
+	}
+	return false;
 }
 
 const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
@@ -4425,9 +4436,9 @@ void CClient::DemoRecorder_UpdateReplayRecorder()
 	}
 }
 
-void CClient::DemoRecorder_AddDemoMarker(int Recorder)
+bool CClient::DemoRecorder_AddDemoMarker(int Recorder)
 {
-	m_aDemoRecorder[Recorder].AddDemoMarker();
+	return m_aDemoRecorder[Recorder].AddDemoMarker();
 }
 
 class IDemoRecorder *CClient::DemoRecorder(int Recorder)
@@ -5609,6 +5620,17 @@ void CClient::RaceRecord_Stop()
 bool CClient::RaceRecord_IsRecording()
 {
 	return m_aDemoRecorder[RECORDER_RACE].IsRecording();
+}
+
+EDemoMarkerResult CClient::AddDemoMarker()
+{
+	bool Added = false;
+	for(auto &DemoRecorder : m_aDemoRecorder)
+	{
+		if(DemoRecorder.IsRecording())
+			Added |= DemoRecorder.AddDemoMarker();
+	}
+	return Added ? EDemoMarkerResult::ADDED : EDemoMarkerResult::NONE;
 }
 
 void CClient::RequestDDNetInfo()

@@ -666,6 +666,7 @@ MACRO_CONFIG_INT(ClScoreboardOnDeathLegacy, cl_scoreboard_on_death, 1, 0, 1, CFG
 MACRO_CONFIG_INT(ClAutoRaceRecord, cl_auto_race_record, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "保存每场游戏最佳记录的回放")
 MACRO_CONFIG_INT(ClReplays, cl_replays, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用/禁用重播")
 MACRO_CONFIG_INT(ClReplayLength, cl_replay_length, 30, 10, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "设置重播的默认长度")
+MACRO_CONFIG_INT(ClEscReplayLengthMinutes, cl_esc_replay_length_minutes, 5, 1, 60, CFGFLAG_CLIENT | CFGFLAG_SAVE, "ESC菜单保存回放的分钟数")
 MACRO_CONFIG_INT(ClRaceRecordServerControl, cl_race_record_server_control, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "让服务器启动比赛记录器")
 MACRO_CONFIG_INT(ClDemoName, cl_demo_name, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "在回放中保存玩家名称")
 MACRO_CONFIG_INT(ClRaceGhost, cl_race_ghost, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用影子")

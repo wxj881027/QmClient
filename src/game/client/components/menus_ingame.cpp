@@ -6,6 +6,7 @@
 #include "voting.h"
 
 #include <base/color.h>
+#include <base/hash_ctxt.h>
 #include <base/math.h>
 #include <base/system.h>
 
@@ -46,6 +47,101 @@ using namespace std::chrono_literals;
 
 namespace
 {
+constexpr const char *REPORT_SCAN_PATH = "/v1/scan";
+constexpr const char *REPORT_BALANCE_VOTE_PATH = "/v1/report/balance-vote";
+constexpr const char *REPORT_CONTENT_TYPE = "application/json; charset=utf-8";
+
+void HmacSha256Hex(const char *pSecret, const char *pMessage, char *pBuffer, int BufferSize)
+{
+	const unsigned char *pSecretBytes = reinterpret_cast<const unsigned char *>(pSecret);
+	size_t SecretLength = str_length(pSecret);
+	unsigned char aKeyBlock[64] = {0};
+
+	if(SecretLength > sizeof(aKeyBlock))
+	{
+		const SHA256_DIGEST SecretDigest = sha256(pSecretBytes, SecretLength);
+		mem_copy(aKeyBlock, SecretDigest.data, sizeof(SecretDigest.data));
+	}
+	else
+	{
+		mem_copy(aKeyBlock, pSecretBytes, SecretLength);
+	}
+
+	unsigned char aOuterPad[64];
+	unsigned char aInnerPad[64];
+	for(size_t KeyIndex = 0; KeyIndex < sizeof(aKeyBlock); ++KeyIndex)
+	{
+		aOuterPad[KeyIndex] = aKeyBlock[KeyIndex] ^ 0x5c;
+		aInnerPad[KeyIndex] = aKeyBlock[KeyIndex] ^ 0x36;
+	}
+
+	SHA256_CTX InnerContext;
+	sha256_init(&InnerContext);
+	sha256_update(&InnerContext, aInnerPad, sizeof(aInnerPad));
+	sha256_update(&InnerContext, pMessage, str_length(pMessage));
+	const SHA256_DIGEST InnerDigest = sha256_finish(&InnerContext);
+
+	SHA256_CTX OuterContext;
+	sha256_init(&OuterContext);
+	sha256_update(&OuterContext, aOuterPad, sizeof(aOuterPad));
+	sha256_update(&OuterContext, InnerDigest.data, sizeof(InnerDigest.data));
+	const SHA256_DIGEST Digest = sha256_finish(&OuterContext);
+	sha256_str(Digest, pBuffer, BufferSize);
+}
+
+void BuildReportUrl(const char *pPath, char *pBuffer, int BufferSize)
+{
+	str_copy(pBuffer, g_Config.m_QmReportEndpoint, BufferSize);
+	while(pBuffer[0] != '\0' && pBuffer[str_length(pBuffer) - 1] == '/')
+		pBuffer[str_length(pBuffer) - 1] = '\0';
+	str_append(pBuffer, pPath, BufferSize);
+}
+
+bool AddReportHeaders(CHttpRequest *pRequest, const char *pPath, const char *pBody)
+{
+	if(g_Config.m_QmReportAppId[0] == '\0' || g_Config.m_QmReportSecret[0] == '\0')
+		return false;
+
+	char aTimestamp[32];
+	str_format(aTimestamp, sizeof(aTimestamp), "%" PRId64, time_timestamp());
+
+	char aNonce[33];
+	secure_random_password(aNonce, sizeof(aNonce), 32);
+
+	const SHA256_DIGEST BodyDigest = sha256(pBody, str_length(pBody));
+	char aBodySha256[SHA256_MAXSTRSIZE];
+	sha256_str(BodyDigest, aBodySha256, sizeof(aBodySha256));
+
+	char aMessage[1024];
+	str_format(aMessage, sizeof(aMessage), "POST\n%s\n%s\n%s\n%s", pPath, aTimestamp, aNonce, aBodySha256);
+
+	char aSignature[SHA256_MAXSTRSIZE];
+	HmacSha256Hex(g_Config.m_QmReportSecret, aMessage, aSignature, sizeof(aSignature));
+
+	pRequest->HeaderString("Content-Type", REPORT_CONTENT_TYPE);
+	pRequest->HeaderString("X-Adrastia-App-Id", g_Config.m_QmReportAppId);
+	pRequest->HeaderString("X-Adrastia-Timestamp", aTimestamp);
+	pRequest->HeaderString("X-Adrastia-Nonce", aNonce);
+	pRequest->HeaderString("X-Adrastia-Signature", aSignature);
+	return true;
+}
+
+std::shared_ptr<CHttpRequest> CreateReportRequest(const char *pPath, const char *pBody)
+{
+	char aUrl[256];
+	BuildReportUrl(pPath, aUrl, sizeof(aUrl));
+
+	auto pRequest = std::make_shared<CHttpRequest>(aUrl);
+	pRequest->AllowInsecureProtocol();
+	pRequest->LogProgress(HTTPLOG::FAILURE);
+	pRequest->FailOnErrorStatus(false);
+	pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
+	if(!AddReportHeaders(pRequest.get(), pPath, pBody))
+		return nullptr;
+	pRequest->Post(reinterpret_cast<const unsigned char *>(pBody), str_length(pBody));
+	return pRequest;
+}
+
 struct SUnfinishedMapsQuery
 {
 	enum class EState
@@ -198,8 +294,110 @@ struct SUnfinishedMapsQuery
 };
 } // namespace
 
+void CMenus::ResetReportVote()
+{
+	if(m_pReportVoteRequest)
+		m_pReportVoteRequest->Abort();
+	m_pReportVoteRequest.reset();
+	m_ReportVoteState = EReportVoteState::IDLE;
+	m_aReportVoteAddress[0] = '\0';
+}
+
+void CMenus::StartReportVoteScan()
+{
+	if(m_ReportVoteState != EReportVoteState::IDLE)
+	{
+		GameClient()->Echo("举报请求正在处理中");
+		return;
+	}
+	if(Client()->State() != IClient::STATE_ONLINE)
+	{
+		GameClient()->Echo("需要先连接到服务器");
+		return;
+	}
+	if(g_Config.m_QmReportAppId[0] == '\0' || g_Config.m_QmReportSecret[0] == '\0')
+	{
+		GameClient()->Echo("请先设置 qm_report_app_id 和 qm_report_secret");
+		return;
+	}
+
+	net_addr_str(&Client()->ServerAddress(), m_aReportVoteAddress, sizeof(m_aReportVoteAddress), true);
+	if(m_aReportVoteAddress[0] == '\0')
+	{
+		GameClient()->Echo("无法获取当前服务器地址");
+		return;
+	}
+
+	char aEscapedAddress[NETADDR_MAXSTRSIZE * 2];
+	EscapeJson(aEscapedAddress, sizeof(aEscapedAddress), m_aReportVoteAddress);
+
+	char aBody[256];
+	str_format(aBody, sizeof(aBody), "{\"address\":\"%s\"}", aEscapedAddress);
+
+	m_pReportVoteRequest = CreateReportRequest(REPORT_SCAN_PATH, aBody);
+	if(!m_pReportVoteRequest)
+	{
+		ResetReportVote();
+		GameClient()->Echo("创建举报扫描请求失败");
+		return;
+	}
+
+	m_ReportVoteState = EReportVoteState::SCANNING;
+	Http()->Run(m_pReportVoteRequest);
+	GameClient()->Echo("正在扫描当前服务器...");
+}
+
+void CMenus::UpdateReportVote()
+{
+	if(m_ReportVoteState == EReportVoteState::IDLE || !m_pReportVoteRequest || !m_pReportVoteRequest->Done())
+		return;
+
+	const EHttpState RequestState = m_pReportVoteRequest->State();
+	const int StatusCode = m_pReportVoteRequest->StatusCode();
+	if(RequestState != EHttpState::DONE || StatusCode < 200 || StatusCode >= 300)
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "举报请求失败，HTTP 状态码：%d", StatusCode);
+		ResetReportVote();
+		GameClient()->Echo(aBuf);
+		return;
+	}
+
+	if(m_ReportVoteState == EReportVoteState::SCANNING)
+	{
+		m_pReportVoteRequest.reset();
+
+		char aEscapedAddress[NETADDR_MAXSTRSIZE * 2];
+		EscapeJson(aEscapedAddress, sizeof(aEscapedAddress), m_aReportVoteAddress);
+
+		char aBody[256];
+		str_format(aBody, sizeof(aBody), "{\"address\":\"%s\"}", aEscapedAddress);
+
+		m_pReportVoteRequest = CreateReportRequest(REPORT_BALANCE_VOTE_PATH, aBody);
+		if(!m_pReportVoteRequest)
+		{
+			ResetReportVote();
+			GameClient()->Echo("创建举报投票请求失败");
+			return;
+		}
+
+		m_ReportVoteState = EReportVoteState::STARTING_VOTE;
+		Http()->Run(m_pReportVoteRequest);
+		GameClient()->Echo("正在发起 kick/spec 平衡性投票...");
+		return;
+	}
+
+	if(m_ReportVoteState == EReportVoteState::STARTING_VOTE)
+	{
+		ResetReportVote();
+		GameClient()->Echo("已发起 kick/spec 平衡性投票");
+	}
+}
+
 void CMenus::RenderGame(CUIRect MainView)
 {
+	UpdateReportVote();
+
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
 	constexpr float MenuButtonHeight = 25.0f;
 	constexpr float PrimaryButtonSpacing = 5.0f;
@@ -241,6 +439,10 @@ void CMenus::RenderGame(CUIRect MainView)
 		pDummyButtonLabel = Localize("Disconnect Dummy");
 	const char *pEditHudButtonLabel = Localize("Edit HUD");
 	const char *pDemoButtonLabel = Recording ? Localize("Stop record") : Localize("Record demo");
+	char aSaveReplayButtonLabel[64];
+	str_format(aSaveReplayButtonLabel, sizeof(aSaveReplayButtonLabel), Localize("Save last %d min"), g_Config.m_ClEscReplayLengthMinutes);
+	const char *pDemoMarkerButtonLabel = Localize("Mark demo");
+	const char *pReportButtonLabel = "举报";
 	const char *pSpectateButtonLabel = Localize("Spectate");
 	const char *pJoinRedButtonLabel = Localize("Join red");
 	const char *pJoinBlueButtonLabel = Localize("Join blue");
@@ -265,6 +467,12 @@ void CMenus::RenderGame(CUIRect MainView)
 	const float EditHudButtonWidthCompact = CalcMenuButtonWidth(pEditHudButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
 	const float DemoButtonWidthNormal = CalcMenuButtonWidth(pDemoButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
 	const float DemoButtonWidthCompact = CalcMenuButtonWidth(pDemoButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
+	const float SaveReplayButtonWidthNormal = CalcMenuButtonWidth(aSaveReplayButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
+	const float SaveReplayButtonWidthCompact = CalcMenuButtonWidth(aSaveReplayButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
+	const float DemoMarkerButtonWidthNormal = CalcMenuButtonWidth(pDemoMarkerButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
+	const float DemoMarkerButtonWidthCompact = CalcMenuButtonWidth(pDemoMarkerButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
+	const float ReportButtonWidthNormal = CalcMenuButtonWidth(pReportButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
+	const float ReportButtonWidthCompact = CalcMenuButtonWidth(pReportButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
 
 	const bool ShowGameplayButtons = HasLocalInfo && HasGameInfo && !Paused && !Spec;
 	const bool ShowSpectateButton = ShowGameplayButtons && LocalTeam != TEAM_SPECTATORS;
@@ -277,9 +485,9 @@ void CMenus::RenderGame(CUIRect MainView)
 	const bool ShowAutoCameraButton = HasLocalInfo && (LocalTeam == TEAM_SPECTATORS || Paused || Spec);
 
 	const float UtilityButtonWidthNormal =
-		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + UtilityButtonSpacingNormal * 3.0f;
+		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + SaveReplayButtonWidthNormal + DemoMarkerButtonWidthNormal + ReportButtonWidthNormal + UtilityButtonSpacingNormal * 6.0f;
 	const float UtilityButtonWidthCompact =
-		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + UtilityButtonSpacingCompact * 3.0f;
+		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + SaveReplayButtonWidthCompact + DemoMarkerButtonWidthCompact + ReportButtonWidthCompact + UtilityButtonSpacingCompact * 6.0f;
 	const float PrimaryButtonBarWidth = maximum(0.0f, MainView.w - 20.0f);
 
 	auto CalcPrimaryButtonsWidth = [&](bool IncludeTeamplayDDRaceButtons) {
@@ -374,6 +582,9 @@ void CMenus::RenderGame(CUIRect MainView)
 	const float DummyButtonWidth = UseCompactUtilityButtons ? DummyButtonWidthCompact : DummyButtonWidthNormal;
 	const float EditHudButtonWidth = UseCompactUtilityButtons ? EditHudButtonWidthCompact : EditHudButtonWidthNormal;
 	const float DemoButtonWidth = UseCompactUtilityButtons ? DemoButtonWidthCompact : DemoButtonWidthNormal;
+	const float SaveReplayButtonWidth = UseCompactUtilityButtons ? SaveReplayButtonWidthCompact : SaveReplayButtonWidthNormal;
+	const float DemoMarkerButtonWidth = UseCompactUtilityButtons ? DemoMarkerButtonWidthCompact : DemoMarkerButtonWidthNormal;
+	const float ReportButtonWidth = UseCompactUtilityButtons ? ReportButtonWidthCompact : ReportButtonWidthNormal;
 
 	UtilityButtonBar.VSplitRight(DisconnectButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_DisconnectButton;
@@ -462,6 +673,39 @@ void CMenus::RenderGame(CUIRect MainView)
 			Client()->DemoRecorder_Start(Client()->GetCurrentMap(), true, RECORDER_MANUAL);
 		else
 			Client()->DemoRecorder(RECORDER_MANUAL)->Stop(IDemoRecorder::EStopMode::KEEP_FILE);
+	}
+
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(SaveReplayButtonWidth, &UtilityButtonBar, &Button);
+	static CButtonContainer s_SaveReplayButton;
+	if(DoButton_Menu(&s_SaveReplayButton, aSaveReplayButtonLabel, 0, &Button))
+	{
+		Client()->SaveReplay(g_Config.m_ClEscReplayLengthMinutes * 60);
+	}
+
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(DemoMarkerButtonWidth, &UtilityButtonBar, &Button);
+	static CButtonContainer s_DemoMarkerButton;
+	if(DoButton_Menu(&s_DemoMarkerButton, pDemoMarkerButtonLabel, 0, &Button))
+	{
+		const EDemoMarkerResult DemoMarkerResult = Client()->AddDemoMarker();
+		if(DemoMarkerResult == EDemoMarkerResult::ADDED)
+			GameClient()->Echo(Localize("Demo marker added"));
+		else
+			GameClient()->Echo(Localize("No demo is being recorded"));
+	}
+
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(ReportButtonWidth, &UtilityButtonBar, &Button);
+	static CButtonContainer s_ReportButton;
+	if(m_ReportVoteState != EReportVoteState::IDLE)
+	{
+		DoButton_Menu(&s_ReportButton, pReportButtonLabel, 1, &Button);
+		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, m_ReportVoteState == EReportVoteState::SCANNING ? "正在扫描当前服务器" : "正在发起平衡性投票");
+	}
+	else if(DoButton_Menu(&s_ReportButton, pReportButtonLabel, 0, &Button))
+	{
+		StartReportVoteScan();
 	}
 
 	if(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pGameInfoObj && !Paused && !Spec)

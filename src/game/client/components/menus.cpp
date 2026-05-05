@@ -2907,6 +2907,9 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	char aVideoName[IO_MAX_PATH_LENGTH];
 	str_copy(aVideoName, m_DemoRenderInput.GetString());
 	const char *pError = Client()->DemoPlayer_Render(aBuf, m_DemolistStorageType, aVideoName, m_Speed, m_StartPaused);
+	m_vDemoCutSegments.clear();
+	g_Config.m_ClDemoSliceBegin = -1;
+	g_Config.m_ClDemoSliceEnd = -1;
 	m_Speed = DEMO_SPEED_INDEX_DEFAULT;
 	m_StartPaused = false;
 	m_LastPauseChange = -1.0f;
@@ -3041,6 +3044,7 @@ void CMenus::SetActive(bool Active)
 
 void CMenus::OnReset()
 {
+	ResetReportVote();
 	ResetDemoScreenshotPreview();
 }
 
@@ -3085,6 +3089,7 @@ void CMenus::OnStateChange(int NewState, int OldState)
 
 	if(NewState == IClient::STATE_OFFLINE)
 	{
+		ResetReportVote();
 		if(OldState >= IClient::STATE_ONLINE && NewState < IClient::STATE_QUITTING)
 			UpdateMusicState();
 		m_Popup = POPUP_NONE;

@@ -10,6 +10,11 @@ MACRO_CONFIG_INT(QmPerfDebug, qm_perf_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_S
 MACRO_CONFIG_INT(QmPerfDebugThresholdMs, qm_perf_debug_threshold_ms, 20, 1, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "性能调试日志阈值（毫秒）")
 MACRO_CONFIG_INT(QmUiRuntimeV2Debug, qm_ui_runtime_v2_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "启用 UI 运行时 v2 调试日志")
 
+// Report / 举报
+MACRO_CONFIG_STR(QmReportEndpoint, qm_report_endpoint, 128, "http://124.222.146.111:8790", CFGFLAG_CLIENT | CFGFLAG_SAVE, "举报服务地址")
+MACRO_CONFIG_STR(QmReportAppId, qm_report_app_id, 128, "desktop", CFGFLAG_CLIENT | CFGFLAG_SAVE, "举报服务 App ID")
+MACRO_CONFIG_STR(QmReportSecret, qm_report_secret, 128, "SsF-7wLdC9dO-RCb5sGieLII9gVW0v5lPpiK6zitUNo", CFGFLAG_CLIENT | CFGFLAG_SAVE, "举报服务签名密钥")
+
 // Scoreboard
 MACRO_CONFIG_INT(ClScoreboardPointsLegacy, cl_scoreboard_points, 0, 0, 1, CFGFLAG_CLIENT, "旧版记分牌设置")
 MACRO_CONFIG_INT(ClScoreboardSortModeLegacy, cl_scoreboard_sort_mode, 0, 0, 1, CFGFLAG_CLIENT, "旧版记分牌设置")

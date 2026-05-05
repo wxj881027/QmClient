@@ -105,6 +105,7 @@ public:
 			"demos/auto",
 			"demos/auto/race",
 			"demos/auto/server",
+			"demos/highlight",
 			"demos/replays",
 			"editor",
 			"ghosts",

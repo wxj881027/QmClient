@@ -513,7 +513,7 @@ public:
 	void DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int Recorder, bool Verbose = false) override;
 	void DemoRecorder_HandleAutoStart() override;
 	void DemoRecorder_UpdateReplayRecorder() override;
-	void DemoRecorder_AddDemoMarker(int Recorder);
+	bool DemoRecorder_AddDemoMarker(int Recorder);
 	IDemoRecorder *DemoRecorder(int Recorder) override;
 
 	void AutoScreenshot_Start() override;
@@ -554,11 +554,13 @@ public:
 	void RaceRecord_Start(const char *pFilename) override;
 	void RaceRecord_Stop() override;
 	bool RaceRecord_IsRecording() override;
+	EDemoMarkerResult AddDemoMarker() override;
 
 	void DemoSliceBegin() override;
 	void DemoSliceEnd() override;
-	void DemoSlice(const char *pDstPath, CLIENTFUNC_FILTER pfnFilter, void *pUser) override;
-	virtual void SaveReplay(int Length, const char *pFilename = "");
+	bool DemoSlice(const char *pDstPath, CLIENTFUNC_FILTER pfnFilter, void *pUser) override;
+	bool DemoSlice(const char *pDstPath, const std::vector<SDemoSliceSegment> &vSegments, CLIENTFUNC_FILTER pfnFilter, void *pUser) override;
+	void SaveReplay(int Length, const char *pFilename = "") override;
 
 	bool EditorHasUnsavedData() const override { return m_pEditor->HasUnsavedData(); }
 

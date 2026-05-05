@@ -17,6 +17,8 @@
 #include "network.h"
 #include "snapshot.h"
 
+#include <algorithm>
+
 const CUuid SHA256_EXTENSION =
 	{{0x6b, 0xe6, 0xda, 0x4a, 0xce, 0xbd, 0x38, 0x0c,
 		0x9b, 0x5b, 0x12, 0x89, 0xc8, 0x42, 0xd7, 0x80}};
@@ -324,7 +326,12 @@ void CDemoRecorder::Write(int Type, const void *pData, int Size)
 
 void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
 {
-	if(m_LastKeyFrame == -1 || (Tick - m_LastKeyFrame) > SERVER_TICK_SPEED * 5)
+	RecordSnapshot(Tick, pData, Size, false);
+}
+
+void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool Keyframe)
+{
+	if(Keyframe || m_LastKeyFrame == -1 || (Tick - m_LastKeyFrame) > SERVER_TICK_SPEED * 5)
 	{
 		// write full tickmarker
 		WriteTickMarker(Tick, true);
@@ -352,6 +359,11 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
 			mem_copy(m_aLastSnapshotData, pData, Size);
 		}
 	}
+}
+
+void CDemoRecorder::RecordTickMarker(int Tick, bool Keyframe)
+{
+	WriteTickMarker(Tick, Keyframe);
 }
 
 void CDemoRecorder::RecordMessage(const void *pData, int Size)
@@ -432,14 +444,14 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 	return 0;
 }
 
-void CDemoRecorder::AddDemoMarker()
+bool CDemoRecorder::AddDemoMarker()
 {
 	if(m_LastTickMarker < 0)
-		return;
-	AddDemoMarker(m_LastTickMarker);
+		return false;
+	return AddDemoMarker(m_LastTickMarker);
 }
 
-void CDemoRecorder::AddDemoMarker(int Tick)
+bool CDemoRecorder::AddDemoMarker(int Tick)
 {
 	dbg_assert(Tick >= 0, "invalid marker tick");
 	if(m_NumTimelineMarkers >= MAX_TIMELINE_MARKERS)
@@ -448,7 +460,7 @@ void CDemoRecorder::AddDemoMarker(int Tick)
 		{
 			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_recorder", "Too many timeline markers", gs_DemoPrintColor);
 		}
-		return;
+		return false;
 	}
 
 	// not more than 1 marker in a second
@@ -461,7 +473,7 @@ void CDemoRecorder::AddDemoMarker(int Tick)
 			{
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_recorder", "Previous timeline marker too close", gs_DemoPrintColor);
 			}
-			return;
+			return false;
 		}
 	}
 
@@ -471,6 +483,7 @@ void CDemoRecorder::AddDemoMarker(int Tick)
 	{
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_recorder", "Added timeline marker", gs_DemoPrintColor);
 	}
+	return true;
 }
 
 CDemoPlayer::CDemoPlayer(class CSnapshotDelta *pSnapshotDelta, bool UseVideo, TUpdateIntraTimesFunc &&UpdateIntraTimesFunc)
@@ -1377,6 +1390,9 @@ public:
 	bool m_Stop;
 	int m_StartTick;
 	int m_EndTick;
+	int m_TickOffset;
+	int m_LastRecordedTick;
+	bool m_NeedsKeyframe;
 
 	void OnDemoPlayerSnapshot(void *pData, int Size) override
 	{
@@ -1385,7 +1401,12 @@ public:
 		if(m_EndTick != -1 && pInfo->m_Info.m_CurrentTick > m_EndTick)
 			m_Stop = true;
 		else if(m_StartTick == -1 || pInfo->m_Info.m_CurrentTick >= m_StartTick)
-			m_pDemoRecorder->RecordSnapshot(pInfo->m_Info.m_CurrentTick, pData, Size);
+		{
+			const int OutputTick = pInfo->m_Info.m_CurrentTick + m_TickOffset;
+			m_pDemoRecorder->RecordSnapshot(OutputTick, pData, Size, m_NeedsKeyframe);
+			m_LastRecordedTick = OutputTick;
+			m_NeedsKeyframe = false;
+		}
 	}
 
 	void OnDemoPlayerMessage(void *pData, int Size) override
@@ -1395,7 +1416,15 @@ public:
 		if(m_EndTick != -1 && pInfo->m_Info.m_CurrentTick > m_EndTick)
 			m_Stop = true;
 		else if(m_StartTick == -1 || pInfo->m_Info.m_CurrentTick >= m_StartTick)
+		{
+			const int OutputTick = pInfo->m_Info.m_CurrentTick + m_TickOffset;
+			if(OutputTick != m_LastRecordedTick)
+			{
+				m_pDemoRecorder->RecordTickMarker(OutputTick);
+				m_LastRecordedTick = OutputTick;
+			}
 			m_pDemoRecorder->RecordMessage(pData, Size);
+		}
 	}
 };
 
@@ -1407,6 +1436,11 @@ void CDemoEditor::Init(class CSnapshotDelta *pSnapshotDelta, class IConsole *pCo
 }
 
 bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser)
+{
+	return Slice(pDemo, pDst, std::vector<SDemoSliceSegment>{{StartTick, EndTick}}, pfnFilter, pUser);
+}
+
+bool CDemoEditor::Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser)
 {
 	CDemoPlayer DemoPlayer(m_pSnapshotDelta, false);
 	if(DemoPlayer.Load(m_pStorage, m_pConsole, pDemo, IStorage::TYPE_ALL_OR_ABSOLUTE) == -1)
@@ -1432,31 +1466,65 @@ bool CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int 
 		return false;
 	}
 
-	CDemoRecordingListener Listener;
-	Listener.m_pDemoRecorder = &DemoRecorder;
-	Listener.m_pDemoPlayer = &DemoPlayer;
-	Listener.m_Stop = false;
-	Listener.m_StartTick = StartTick;
-	Listener.m_EndTick = EndTick;
-	DemoPlayer.SetListener(&Listener);
-
-	DemoPlayer.Play();
-
-	while(DemoPlayer.IsPlaying() && !Listener.m_Stop)
+	std::vector<SDemoSliceSegment> vNormalizedSegments;
+	vNormalizedSegments.reserve(vSegments.size());
+	for(const auto &Segment : vSegments)
 	{
-		DemoPlayer.Update(false);
-
-		if(pInfo->m_Info.m_Paused)
-			break;
+		const int StartTick = Segment.m_StartTick == -1 ? pInfo->m_Info.m_FirstTick : Segment.m_StartTick;
+		const int EndTick = Segment.m_EndTick == -1 ? pInfo->m_Info.m_LastTick : Segment.m_EndTick;
+		if(StartTick > EndTick)
+			continue;
+		vNormalizedSegments.push_back({StartTick, EndTick});
 	}
+	if(vNormalizedSegments.empty())
+		vNormalizedSegments.push_back({pInfo->m_Info.m_FirstTick, pInfo->m_Info.m_LastTick});
+	std::sort(vNormalizedSegments.begin(), vNormalizedSegments.end(), [](const SDemoSliceSegment &Left, const SDemoSliceSegment &Right) {
+		if(Left.m_StartTick != Right.m_StartTick)
+			return Left.m_StartTick < Right.m_StartTick;
+		return Left.m_EndTick < Right.m_EndTick;
+	});
+
+	int NextOutputTick = vNormalizedSegments[0].m_StartTick;
+	DemoPlayer.Play();
+	for(const auto &Segment : vNormalizedSegments)
+	{
+		CDemoRecordingListener Listener;
+		Listener.m_pDemoRecorder = &DemoRecorder;
+		Listener.m_pDemoPlayer = &DemoPlayer;
+		Listener.m_Stop = false;
+		Listener.m_StartTick = Segment.m_StartTick;
+		Listener.m_EndTick = Segment.m_EndTick;
+		Listener.m_TickOffset = NextOutputTick - Segment.m_StartTick;
+		Listener.m_LastRecordedTick = -1;
+		Listener.m_NeedsKeyframe = true;
+		DemoPlayer.SetListener(&Listener);
+
+		DemoPlayer.SetPos(Segment.m_StartTick + 1);
+
+		while(DemoPlayer.IsPlaying() && !Listener.m_Stop)
+		{
+			DemoPlayer.Update(false);
+
+			if(pInfo->m_Info.m_Paused)
+				break;
+		}
+
+		NextOutputTick += Segment.m_EndTick - Segment.m_StartTick + 1;
+	}
+	DemoPlayer.SetListener(nullptr);
 
 	// Copy timeline markers to sliced demo
-	for(int i = 0; i < pInfo->m_Info.m_NumTimelineMarkers; i++)
+	int MarkerOutputTick = vNormalizedSegments[0].m_StartTick;
+	for(const auto &Segment : vNormalizedSegments)
 	{
-		if((StartTick == -1 || pInfo->m_Info.m_aTimelineMarkers[i] >= StartTick) && (EndTick == -1 || pInfo->m_Info.m_aTimelineMarkers[i] <= EndTick))
+		for(int i = 0; i < pInfo->m_Info.m_NumTimelineMarkers; i++)
 		{
-			DemoRecorder.AddDemoMarker(pInfo->m_Info.m_aTimelineMarkers[i]);
+			if(pInfo->m_Info.m_aTimelineMarkers[i] >= Segment.m_StartTick && pInfo->m_Info.m_aTimelineMarkers[i] <= Segment.m_EndTick)
+			{
+				DemoRecorder.AddDemoMarker(MarkerOutputTick + pInfo->m_Info.m_aTimelineMarkers[i] - Segment.m_StartTick);
+			}
 		}
+		MarkerOutputTick += Segment.m_EndTick - Segment.m_StartTick + 1;
 	}
 
 	DemoPlayer.Stop();

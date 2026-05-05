@@ -9,6 +9,7 @@
 #include <base/hash.h>
 
 #include <engine/client/enums.h>
+#include <engine/demo.h>
 #include <engine/friends.h>
 #include <engine/shared/translation_context.h>
 
@@ -30,6 +31,12 @@ enum
 	RECORDER_RACE = 2,
 	RECORDER_REPLAYS = 3,
 	RECORDER_MAX = 4,
+};
+
+enum class EDemoMarkerResult
+{
+	NONE,
+	ADDED,
 };
 
 typedef bool (*CLIENTFUNC_FILTER)(const void *pData, int DataSize, void *pUser);
@@ -298,10 +305,13 @@ public:
 	virtual void RaceRecord_Start(const char *pFilename) = 0;
 	virtual void RaceRecord_Stop() = 0;
 	virtual bool RaceRecord_IsRecording() = 0;
+	virtual EDemoMarkerResult AddDemoMarker() = 0;
 
 	virtual void DemoSliceBegin() = 0;
 	virtual void DemoSliceEnd() = 0;
-	virtual void DemoSlice(const char *pDstPath, CLIENTFUNC_FILTER pfnFilter, void *pUser) = 0;
+	virtual bool DemoSlice(const char *pDstPath, CLIENTFUNC_FILTER pfnFilter, void *pUser) = 0;
+	virtual bool DemoSlice(const char *pDstPath, const std::vector<SDemoSliceSegment> &vSegments, CLIENTFUNC_FILTER pfnFilter, void *pUser) = 0;
+	virtual void SaveReplay(int Length, const char *pFilename = "") = 0;
 
 	enum class EInfoState
 	{

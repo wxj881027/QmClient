@@ -3,9 +3,9 @@
 #ifndef GAME_CLIENT_COMPONENTS_MENUS_H
 #define GAME_CLIENT_COMPONENTS_MENUS_H
 
+#include <base/system.h>
 #include <base/types.h>
 #include <base/vmath.h>
-#include <base/system.h>
 
 #include <engine/console.h>
 #include <engine/demo.h>
@@ -34,6 +34,7 @@
 #include <chrono>
 #include <array>
 #include <deque>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -41,6 +42,8 @@
 #include <unordered_set>
 #include <vector>
 struct CDataSprite;
+
+class CHttpRequest;
 
 // IDs of the tabs in the Assets menu
 enum
@@ -1086,6 +1089,12 @@ protected:
 		bool m_IsDir;
 	};
 
+	struct SDemoCutSegment
+	{
+		int m_StartTick;
+		int m_EndTick;
+	};
+
 	char m_aCurrentDemoFolder[IO_MAX_PATH_LENGTH];
 	char m_aCurrentDemoSelectionName[IO_MAX_PATH_LENGTH];
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenameInput;
@@ -1101,6 +1110,7 @@ protected:
 	EDemoBrowserSource m_DemoBrowserSource;
 	std::vector<SDemoSelectionEntry> m_vDemoSelection;
 	std::vector<SDemoDeleteTarget> m_vDemoDeleteTargets;
+	std::vector<SDemoCutSegment> m_vDemoCutSegments;
 	int m_DemoSelectionAnchorIndex = -1;
 	bool m_DemoScreenshotPreviewOpen = false;
 	bool m_DemoScreenshotPreviewLoadFailed = false;
@@ -1334,6 +1344,19 @@ protected:
 
 	// found in menus_ingame.cpp
 	STextContainerIndex m_MotdTextContainerIndex;
+	enum class EReportVoteState
+	{
+		IDLE,
+		SCANNING,
+		STARTING_VOTE,
+	};
+
+	std::shared_ptr<CHttpRequest> m_pReportVoteRequest;
+	EReportVoteState m_ReportVoteState = EReportVoteState::IDLE;
+	char m_aReportVoteAddress[NETADDR_MAXSTRSIZE] = "";
+	void ResetReportVote();
+	void StartReportVoteScan();
+	void UpdateReportVote();
 	void RenderGame(CUIRect MainView);
 	void PopupConfirmDisconnect();
 	void PopupConfirmDisconnectDummy();

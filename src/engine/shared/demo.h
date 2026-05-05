@@ -48,10 +48,12 @@ public:
 	int Start(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, const char *pNetversion, const char *pMap, const SHA256_DIGEST &Sha256, unsigned MapCrc, const char *pType, unsigned MapSize, unsigned char *pMapData, IOHANDLE MapFile, DEMOFUNC_FILTER pfnFilter, void *pUser);
 	int Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilename = "") override;
 
-	void AddDemoMarker();
-	void AddDemoMarker(int Tick);
+	bool AddDemoMarker();
+	bool AddDemoMarker(int Tick);
 
 	void RecordSnapshot(int Tick, const void *pData, int Size);
+	void RecordSnapshot(int Tick, const void *pData, int Size, bool Keyframe);
+	void RecordTickMarker(int Tick, bool Keyframe = false);
 	void RecordMessage(const void *pData, int Size);
 
 	bool IsRecording() const override { return m_File != nullptr; }
@@ -207,6 +209,7 @@ class CDemoEditor : public IDemoEditor
 public:
 	virtual void Init(class CSnapshotDelta *pSnapshotDelta, class IConsole *pConsole, class IStorage *pStorage);
 	bool Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
+	bool Slice(const char *pDemo, const char *pDst, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
 };
 
 #endif
