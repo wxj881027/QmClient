@@ -1344,19 +1344,18 @@ protected:
 
 	// found in menus_ingame.cpp
 	STextContainerIndex m_MotdTextContainerIndex;
-	enum class EReportVoteState
+	enum class EReportScanState
 	{
 		IDLE,
 		SCANNING,
-		STARTING_VOTE,
 	};
 
-	std::shared_ptr<CHttpRequest> m_pReportVoteRequest;
-	EReportVoteState m_ReportVoteState = EReportVoteState::IDLE;
-	char m_aReportVoteAddress[NETADDR_MAXSTRSIZE] = "";
-	void ResetReportVote();
-	void StartReportVoteScan();
-	void UpdateReportVote();
+	std::shared_ptr<CHttpRequest> m_pReportScanRequest;
+	EReportScanState m_ReportScanState = EReportScanState::IDLE;
+	char m_aReportScanAddress[NETADDR_MAXSTRSIZE] = "";
+	void ResetReportScan();
+	void StartReportScan();
+	void UpdateReportScan();
 	void RenderGame(CUIRect MainView);
 	void PopupConfirmDisconnect();
 	void PopupConfirmDisconnectDummy();

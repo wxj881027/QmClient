@@ -3044,7 +3044,7 @@ void CMenus::SetActive(bool Active)
 
 void CMenus::OnReset()
 {
-	ResetReportVote();
+	ResetReportScan();
 	ResetDemoScreenshotPreview();
 }
 
@@ -3089,7 +3089,7 @@ void CMenus::OnStateChange(int NewState, int OldState)
 
 	if(NewState == IClient::STATE_OFFLINE)
 	{
-		ResetReportVote();
+		ResetReportScan();
 		if(OldState >= IClient::STATE_ONLINE && NewState < IClient::STATE_QUITTING)
 			UpdateMusicState();
 		m_Popup = POPUP_NONE;

@@ -48,7 +48,6 @@ using namespace std::chrono_literals;
 namespace
 {
 constexpr const char *REPORT_SCAN_PATH = "/v1/scan";
-constexpr const char *REPORT_BALANCE_VOTE_PATH = "/v1/report/balance-vote";
 constexpr const char *REPORT_CONTENT_TYPE = "application/json; charset=utf-8";
 
 void HmacSha256Hex(const char *pSecret, const char *pMessage, char *pBuffer, int BufferSize)
@@ -294,18 +293,18 @@ struct SUnfinishedMapsQuery
 };
 } // namespace
 
-void CMenus::ResetReportVote()
+void CMenus::ResetReportScan()
 {
-	if(m_pReportVoteRequest)
-		m_pReportVoteRequest->Abort();
-	m_pReportVoteRequest.reset();
-	m_ReportVoteState = EReportVoteState::IDLE;
-	m_aReportVoteAddress[0] = '\0';
+	if(m_pReportScanRequest)
+		m_pReportScanRequest->Abort();
+	m_pReportScanRequest.reset();
+	m_ReportScanState = EReportScanState::IDLE;
+	m_aReportScanAddress[0] = '\0';
 }
 
-void CMenus::StartReportVoteScan()
+void CMenus::StartReportScan()
 {
-	if(m_ReportVoteState != EReportVoteState::IDLE)
+	if(m_ReportScanState != EReportScanState::IDLE)
 	{
 		GameClient()->Echo("举报请求正在处理中");
 		return;
@@ -321,82 +320,55 @@ void CMenus::StartReportVoteScan()
 		return;
 	}
 
-	net_addr_str(&Client()->ServerAddress(), m_aReportVoteAddress, sizeof(m_aReportVoteAddress), true);
-	if(m_aReportVoteAddress[0] == '\0')
+	net_addr_str(&Client()->ServerAddress(), m_aReportScanAddress, sizeof(m_aReportScanAddress), true);
+	if(m_aReportScanAddress[0] == '\0')
 	{
 		GameClient()->Echo("无法获取当前服务器地址");
 		return;
 	}
 
 	char aEscapedAddress[NETADDR_MAXSTRSIZE * 2];
-	EscapeJson(aEscapedAddress, sizeof(aEscapedAddress), m_aReportVoteAddress);
+	EscapeJson(aEscapedAddress, sizeof(aEscapedAddress), m_aReportScanAddress);
 
 	char aBody[256];
 	str_format(aBody, sizeof(aBody), "{\"address\":\"%s\"}", aEscapedAddress);
 
-	m_pReportVoteRequest = CreateReportRequest(REPORT_SCAN_PATH, aBody);
-	if(!m_pReportVoteRequest)
+	m_pReportScanRequest = CreateReportRequest(REPORT_SCAN_PATH, aBody);
+	if(!m_pReportScanRequest)
 	{
-		ResetReportVote();
+		ResetReportScan();
 		GameClient()->Echo("创建举报扫描请求失败");
 		return;
 	}
 
-	m_ReportVoteState = EReportVoteState::SCANNING;
-	Http()->Run(m_pReportVoteRequest);
+	m_ReportScanState = EReportScanState::SCANNING;
+	Http()->Run(m_pReportScanRequest);
 	GameClient()->Echo("正在扫描当前服务器...");
 }
 
-void CMenus::UpdateReportVote()
+void CMenus::UpdateReportScan()
 {
-	if(m_ReportVoteState == EReportVoteState::IDLE || !m_pReportVoteRequest || !m_pReportVoteRequest->Done())
+	if(m_ReportScanState == EReportScanState::IDLE || !m_pReportScanRequest || !m_pReportScanRequest->Done())
 		return;
 
-	const EHttpState RequestState = m_pReportVoteRequest->State();
-	const int StatusCode = m_pReportVoteRequest->StatusCode();
+	const EHttpState RequestState = m_pReportScanRequest->State();
+	const int StatusCode = m_pReportScanRequest->StatusCode();
 	if(RequestState != EHttpState::DONE || StatusCode < 200 || StatusCode >= 300)
 	{
 		char aBuf[128];
 		str_format(aBuf, sizeof(aBuf), "举报请求失败，HTTP 状态码：%d", StatusCode);
-		ResetReportVote();
+		ResetReportScan();
 		GameClient()->Echo(aBuf);
 		return;
 	}
 
-	if(m_ReportVoteState == EReportVoteState::SCANNING)
-	{
-		m_pReportVoteRequest.reset();
-
-		char aEscapedAddress[NETADDR_MAXSTRSIZE * 2];
-		EscapeJson(aEscapedAddress, sizeof(aEscapedAddress), m_aReportVoteAddress);
-
-		char aBody[256];
-		str_format(aBody, sizeof(aBody), "{\"address\":\"%s\"}", aEscapedAddress);
-
-		m_pReportVoteRequest = CreateReportRequest(REPORT_BALANCE_VOTE_PATH, aBody);
-		if(!m_pReportVoteRequest)
-		{
-			ResetReportVote();
-			GameClient()->Echo("创建举报投票请求失败");
-			return;
-		}
-
-		m_ReportVoteState = EReportVoteState::STARTING_VOTE;
-		Http()->Run(m_pReportVoteRequest);
-		GameClient()->Echo("正在发起 kick/spec 平衡性投票...");
-		return;
-	}
-
-	if(m_ReportVoteState == EReportVoteState::STARTING_VOTE)
-	{
-		ResetReportVote();
-		GameClient()->Echo("已发起 kick/spec 平衡性投票");
-	}
+	ResetReportScan();
+	GameClient()->Echo("举报扫描请求已提交");
 }
 
 void CMenus::RenderGame(CUIRect MainView)
 {
-	UpdateReportVote();
+	UpdateReportScan();
 
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
 	constexpr float MenuButtonHeight = 25.0f;
@@ -698,14 +670,14 @@ void CMenus::RenderGame(CUIRect MainView)
 	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
 	UtilityButtonBar.VSplitRight(ReportButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_ReportButton;
-	if(m_ReportVoteState != EReportVoteState::IDLE)
+	if(m_ReportScanState != EReportScanState::IDLE)
 	{
 		DoButton_Menu(&s_ReportButton, pReportButtonLabel, 1, &Button);
-		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, m_ReportVoteState == EReportVoteState::SCANNING ? "正在扫描当前服务器" : "正在发起平衡性投票");
+		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, "正在扫描当前服务器");
 	}
 	else if(DoButton_Menu(&s_ReportButton, pReportButtonLabel, 0, &Button))
 	{
-		StartReportVoteScan();
+		StartReportScan();
 	}
 
 	if(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pGameInfoObj && !Paused && !Spec)
