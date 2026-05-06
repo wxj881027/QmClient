@@ -4376,7 +4376,16 @@ void CClient::DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int 
 		{
 			char aTimestamp[20];
 			str_timestamp(aTimestamp, sizeof(aTimestamp));
-			str_format(aFilename, sizeof(aFilename), "demos/%s_%s.demo", pFilename, aTimestamp);
+			if(Recorder == RECORDER_REPLAYS)
+			{
+				char aRandomSuffix[9];
+				secure_random_password(aRandomSuffix, sizeof(aRandomSuffix), 8);
+				str_format(aFilename, sizeof(aFilename), "demos/%s_%s_%s.demo", pFilename, aTimestamp, aRandomSuffix);
+			}
+			else
+			{
+				str_format(aFilename, sizeof(aFilename), "demos/%s_%s.demo", pFilename, aTimestamp);
+			}
 		}
 		else
 		{

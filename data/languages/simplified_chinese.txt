@@ -7223,6 +7223,30 @@ Key Sticking: Off
 Key Sticking: Reset Self
 == 卡键：重置本体
 
+All stars
+== 全部星级
+
+1 star
+== 1 星
+
+2 stars
+== 2 星
+
+3 stars
+== 3 星
+
+4 stars
+== 4 星
+
+5 stars
+== 5 星
+
+Low to high
+== 由低到高
+
+High to low
+== 由高到低
+
 3 Tiles Edge Jump:
 == 三格 Edge:
 

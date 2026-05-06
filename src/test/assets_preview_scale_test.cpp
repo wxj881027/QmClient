@@ -2,11 +2,11 @@
 
 #include <gtest/gtest.h>
 
-TEST(AssetsPreviewScale, KeepsLocalPreviewAtOrAbove1024Cap)
+TEST(AssetsPreviewScale, KeepsLocalPreviewAtOrAbove4096Cap)
 {
 	const auto Scaled = ComputePreviewTargetSize(2048, 1024, LOCAL_ASSET_PREVIEW_MAX_TEXTURE_SIZE);
-	EXPECT_EQ(Scaled.m_Width, 1024);
-	EXPECT_EQ(Scaled.m_Height, 512);
+	EXPECT_EQ(Scaled.m_Width, 2048);
+	EXPECT_EQ(Scaled.m_Height, 1024);
 }
 
 TEST(AssetsPreviewScale, KeepsWorkshopPreviewAtOrAbove512Cap)

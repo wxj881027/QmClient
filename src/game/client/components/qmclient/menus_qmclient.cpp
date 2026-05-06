@@ -679,6 +679,18 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 		if(m_QmClientSettingsTab < 0 || m_QmClientSettingsTab >= NUMBER_OF_QMCLIENT_SETTINGS_TABS)
 			m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 
+		auto ReleaseActiveQmClientSearchInput = [&]() {
+			for(CLineInputBuffered<128> &SearchInput : m_aQmClientModuleSearchInputs)
+			{
+				if(Ui()->ActiveItem() == &SearchInput || SearchInput.IsActive())
+				{
+					Ui()->ReleaseActiveTextInput(&SearchInput);
+					return true;
+				}
+			}
+			return false;
+		};
+
 		static bool s_QmTabTransitionInitialized = false;
 		static int s_PrevQmTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 		static float s_QmTabTransitionDirection = 0.0f;
@@ -708,7 +720,8 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage)
 				const int Corners = Tab == 0 ? IGraphics::CORNER_L :
 					Tab == NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1 ? IGraphics::CORNER_R :
 					IGraphics::CORNER_NONE;
-				if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apQmTabNames[Tab], m_QmClientSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f))
+				const bool ClickedSearchBlurredTab = Ui()->MouseButtonClicked(0) && Ui()->MouseHovered(&Button) && ReleaseActiveQmClientSearchInput();
+				if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apQmTabNames[Tab], m_QmClientSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) || ClickedSearchBlurredTab)
 					m_QmClientSettingsTab = Tab;
 			}
 
@@ -2054,8 +2067,8 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 	const std::vector<const SQmModuleEntry *> &LeftModules = s_vCachedLeftModules;
 	const std::vector<const SQmModuleEntry *> &RightModules = s_vCachedRightModules;
 
-	static CLineInputBuffered<128> s_ModuleSearchInput;
-	const char *pModuleSearch = s_ModuleSearchInput.GetString();
+	CLineInputBuffered<128> &ModuleSearchInput = m_aQmClientModuleSearchInputs[m_QmClientSettingsTab];
+	const char *pModuleSearch = ModuleSearchInput.GetString();
 	const bool AllowModuleSearch = m_QmClientSettingsTab != QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
 	const bool HasModuleSearch = AllowModuleSearch && pModuleSearch[0] != '\0';
 	ShowSearchModuleControls = AllowModuleSearch;
@@ -2319,7 +2332,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 			TextRender()->TextColor(ColorRGBA(0.95f, 0.8f, 0.2f, 1.0f));
 			{
 				static const char *const s_apSponsors[] = {
-					"喵不一", "久桃", "芽芽", "碳烤綿芽", "骨头", "陌浅羽", "树羽小朋友", "望舒", "松子", "平凡..", "cixin", "洗点", "秀色", "朱朱", "Twen", "大恐龙", ":luv:", "小左", "Blue°F", "怯修", "yezeen", "鹑", "枫香°", "没问题啊", "·蓝蓝蓝蓝", "临渊捕鱼", "?hook?", "放肆zero", "Q币", "洛天依", "spider", "贝塔塔塔", "见月", "咩子的银耳", "Cancer", "少女`", "长亭寂寞独自愁", "fantuan", "无言鱼", "胖人老许", "夏日", "张宁我儿", "拌饭", "shengyan", "修勾在修沟", "taffy", "杀意没爱意", "DYL", "小信", "哆啦梦", "菜菜羊", "吃了吗chilem", "你就是我的", "xiaopang", "星星🌙", "軽い猫", "oxyzo1", "笨蛋猫猫", "信息检索", "炭", "江江"};
+					"喵不一", "久桃", "芽芽", "碳烤綿芽", "骨头", "陌浅羽", "树羽小朋友", "望舒", "松子", "平凡..", "cixin", "洗点", "秀色", "朱朱", "Twen", "大恐龙", ":luv:", "小左", "Blue°F", "怯修", "yezeen", "鹑", "枫香°", "没问题啊", "·蓝蓝蓝蓝", "临渊捕鱼", "?hook?", "放肆zero", "Q币", "洛天依", "spider", "贝塔塔塔", "见月", "咩子的银耳", "Cancer", "少女`", "长亭寂寞独自愁", "fantuan", "无言鱼", "胖人老许", "夏日", "张宁我儿", "拌饭", "shengyan", "修勾在修沟", "taffy", "杀意没爱意", "DYL", "小信", "哆啦梦", "菜菜羊", "吃了吗chilem", "你就是我的", "xiaopang", "星星🌙", "軽い猫", "oxyzo1", "笨蛋猫猫", "信息检索", "炭", "江江", "晚晚晚上好"};
 				const float SponsorFontSize = maximum(LG_BodySize * 1.1f - SponsorFontShrink, MinSponsorFontSize);
 				const float MaxLineWidth = RightContent.w;
 				static std::vector<std::string> s_SponsorLines;
@@ -2873,7 +2886,7 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 		SearchContent.HSplitTop(LG_CardPadding, nullptr, &SearchContent);
 		DoModuleHeadline(SearchContent, -4, Localize("功能搜索"), Localize("快速定位功能模块"));
 		SearchContent.HSplitTop(LG_LineHeight, &Row, &SearchContent);
-		Ui()->DoEditBox_Search(&s_ModuleSearchInput, &Row, LG_BodySize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+		Ui()->DoEditBox_Search(&ModuleSearchInput, &Row, LG_BodySize, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
 		SearchContent.HSplitTop(LG_LineSpacing * 0.65f, nullptr, &SearchContent);
 
 		char aSearchHint[64];
@@ -6164,3 +6177,15 @@ static std::array<float, kQmModuleCount> s_aQmModuleLastHeights = {};
 
 std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 bool g_CommandBindCacheInitialized = false;
+
+void CMenus::ClearQmClientSettingsSearchInputs()
+{
+	for(CLineInputBuffered<128> &SearchInput : m_aQmClientModuleSearchInputs)
+	{
+		if(Ui()->ActiveItem() == &SearchInput)
+			Ui()->ReleaseActiveTextInput(&SearchInput);
+		else
+			SearchInput.Deactivate();
+		SearchInput.Clear();
+	}
+}

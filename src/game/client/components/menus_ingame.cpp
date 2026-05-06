@@ -38,6 +38,7 @@
 #include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
 
+#include <algorithm>
 #include <chrono>
 #include <string>
 #include <unordered_map>
@@ -49,6 +50,7 @@ namespace
 {
 constexpr const char *REPORT_SCAN_PATH = "/v1/scan";
 constexpr const char *REPORT_CONTENT_TYPE = "application/json; charset=utf-8";
+constexpr int REPORT_SCAN_COOLDOWN_SECONDS = 120;
 
 void HmacSha256Hex(const char *pSecret, const char *pMessage, char *pBuffer, int BufferSize)
 {
@@ -291,6 +293,30 @@ struct SUnfinishedMapsQuery
 		m_State = EState::READY;
 	}
 };
+
+int ParseCallvoteMapStars(const char *pDescription)
+{
+	if(!pDescription)
+		return -1;
+
+	const char *pStars = str_find(pDescription, "/5");
+	if(!pStars || pStars <= pDescription)
+		return -1;
+
+	const char *pStarNumber = pStars;
+	while(pStarNumber > pDescription && pStarNumber[-1] >= '0' && pStarNumber[-1] <= '9')
+		--pStarNumber;
+	if(pStarNumber == pStars)
+		return -1;
+
+	char aStars[8];
+	const int StarNumberLength = minimum((int)(pStars - pStarNumber), (int)sizeof(aStars) - 1);
+	str_copy(aStars, pStarNumber, StarNumberLength + 1);
+	const int Stars = str_toint(aStars);
+	if(Stars < 1 || Stars > 5)
+		return -1;
+	return Stars;
+}
 } // namespace
 
 void CMenus::ResetReportScan()
@@ -307,6 +333,15 @@ void CMenus::StartReportScan()
 	if(m_ReportScanState != EReportScanState::IDLE)
 	{
 		GameClient()->Echo("举报请求正在处理中");
+		return;
+	}
+	const int64_t Now = time();
+	if(m_ReportScanCooldownEndTime > Now)
+	{
+		const int RemainingSeconds = (int)((m_ReportScanCooldownEndTime - Now + time_freq() - 1) / time_freq());
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), "举报冷却中，还剩 %d 秒", RemainingSeconds);
+		GameClient()->Echo(aBuf);
 		return;
 	}
 	if(Client()->State() != IClient::STATE_ONLINE)
@@ -342,6 +377,7 @@ void CMenus::StartReportScan()
 	}
 
 	m_ReportScanState = EReportScanState::SCANNING;
+	m_ReportScanCooldownEndTime = Now + time_freq() * REPORT_SCAN_COOLDOWN_SECONDS;
 	Http()->Run(m_pReportScanRequest);
 	GameClient()->Echo("正在扫描当前服务器...");
 }
@@ -670,10 +706,19 @@ void CMenus::RenderGame(CUIRect MainView)
 	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
 	UtilityButtonBar.VSplitRight(ReportButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_ReportButton;
+	const int64_t Now = time();
+	const int ReportCooldownSecondsLeft = m_ReportScanCooldownEndTime > Now ? (int)((m_ReportScanCooldownEndTime - Now + time_freq() - 1) / time_freq()) : 0;
 	if(m_ReportScanState != EReportScanState::IDLE)
 	{
 		DoButton_Menu(&s_ReportButton, pReportButtonLabel, 1, &Button);
 		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, "正在扫描当前服务器");
+	}
+	else if(ReportCooldownSecondsLeft > 0)
+	{
+		DoButton_Menu(&s_ReportButton, pReportButtonLabel, 1, &Button);
+		char aTooltip[64];
+		str_format(aTooltip, sizeof(aTooltip), "举报冷却中，还剩 %d 秒", ReportCooldownSecondsLeft);
+		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, aTooltip);
 	}
 	else if(DoButton_Menu(&s_ReportButton, pReportButtonLabel, 0, &Button))
 	{
@@ -1492,9 +1537,14 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 {
 	CUIRect List = MainView;
 	int NumVoteOptions = 0;
-	int aIndices[MAX_VOTE_OPTIONS];
 	int Selected = -1;
-	int TotalShown = 0;
+	struct SCallvoteOptionRenderEntry
+	{
+		const CVoteOptionClient *m_pOption;
+		int m_OptionIndex;
+		int m_Stars;
+	};
+	SCallvoteOptionRenderEntry aOptions[MAX_VOTE_OPTIONS];
 
 	// 检查是否为地图投票并提取地图名的辅助函数
 	auto ExtractMapName = [](const char *pDescription, char *pMapName, int MaxLen) -> bool {
@@ -1526,26 +1576,75 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 		return false;
 	};
 
+	auto IsVisibleBySortMode = [this](int Stars) {
+		switch(m_CallvoteMapSort)
+		{
+		case ECallvoteMapSort::ALL:
+			return true;
+		case ECallvoteMapSort::STAR_1:
+			return Stars == 1;
+		case ECallvoteMapSort::STAR_2:
+			return Stars == 2;
+		case ECallvoteMapSort::STAR_3:
+			return Stars == 3;
+		case ECallvoteMapSort::STAR_4:
+			return Stars == 4;
+		case ECallvoteMapSort::STAR_5:
+			return Stars == 5;
+		case ECallvoteMapSort::LOW_TO_HIGH:
+		case ECallvoteMapSort::HIGH_TO_LOW:
+			return Stars > 0;
+		case ECallvoteMapSort::NUM_MODES:
+			break;
+		}
+		return true;
+	};
+
 	int i = 0;
 	for(const CVoteOptionClient *pOption = GameClient()->m_Voting.FirstOption(); pOption; pOption = pOption->m_pNext, i++)
 	{
 		if(!m_FilterInput.IsEmpty() && !str_utf8_find_nocase(pOption->m_aDescription, m_FilterInput.GetString()))
 			continue;
-		if(i == m_CallvoteSelectedOption)
-			Selected = TotalShown;
-		TotalShown++;
+		const int Stars = ParseCallvoteMapStars(pOption->m_aDescription);
+		if(!IsVisibleBySortMode(Stars))
+			continue;
+
+		aOptions[NumVoteOptions] = {pOption, i, Stars};
+		NumVoteOptions++;
+	}
+
+	if(m_CallvoteMapSort == ECallvoteMapSort::LOW_TO_HIGH || m_CallvoteMapSort == ECallvoteMapSort::HIGH_TO_LOW)
+	{
+		std::stable_sort(aOptions, aOptions + NumVoteOptions, [this](const SCallvoteOptionRenderEntry &Left, const SCallvoteOptionRenderEntry &Right) {
+			if(Left.m_Stars != Right.m_Stars)
+			{
+				if(m_CallvoteMapSort == ECallvoteMapSort::LOW_TO_HIGH)
+					return Left.m_Stars < Right.m_Stars;
+				return Left.m_Stars > Right.m_Stars;
+			}
+			return Left.m_OptionIndex < Right.m_OptionIndex;
+		});
+	}
+
+	for(int OptionIndex = 0; OptionIndex < NumVoteOptions; ++OptionIndex)
+	{
+		if(aOptions[OptionIndex].m_OptionIndex == m_CallvoteSelectedOption)
+		{
+			Selected = OptionIndex;
+			break;
+		}
 	}
 
 	static CListBox s_ListBox;
-	s_ListBox.DoStart(19.0f, TotalShown, 1, 3, Selected, &List);
+	s_ListBox.DoStart(19.0f, NumVoteOptions, 1, 3, Selected, &List);
 
-	i = 0;
-	for(const CVoteOptionClient *pOption = GameClient()->m_Voting.FirstOption(); pOption; pOption = pOption->m_pNext, i++)
+	CServerInfo CurrentServerInfo;
+	Client()->GetServerInfo(&CurrentServerInfo);
+	const CCommunity *pCurrentCommunity = ServerBrowser()->Community(CurrentServerInfo.m_aCommunityId);
+
+	for(int OptionIndex = 0; OptionIndex < NumVoteOptions; ++OptionIndex)
 	{
-		if(!m_FilterInput.IsEmpty() && !str_utf8_find_nocase(pOption->m_aDescription, m_FilterInput.GetString()))
-			continue;
-		aIndices[NumVoteOptions] = i;
-		NumVoteOptions++;
+		const CVoteOptionClient *pOption = aOptions[OptionIndex].m_pOption;
 
 		const CListboxItem Item = s_ListBox.DoNextItem(pOption);
 		if(!Item.m_Visible)
@@ -1557,9 +1656,19 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 		// 检查是否是收藏地图，用金色高亮
 		char aMapName[128];
 		bool IsFavorite = false;
+		bool IsFinished = false;
 		if(ExtractMapName(pOption->m_aDescription, aMapName, sizeof(aMapName)))
 		{
 			IsFavorite = GameClient()->m_TClient.IsFavoriteMap(aMapName);
+			IsFinished = g_Config.m_BrIndicateFinished && pCurrentCommunity != nullptr && pCurrentCommunity->HasRank(aMapName) == CServerInfo::RANK_RANKED;
+		}
+
+		if(IsFinished)
+		{
+			CUIRect Icon;
+			Label.VSplitLeft(Label.h, &Icon, &Label);
+			Icon.Margin(2.0f, &Icon);
+			RenderFontIcon(Icon, FONT_ICON_FLAG_CHECKERED, 13.0f, TEXTALIGN_MC);
 		}
 
 		if(IsFavorite)
@@ -1579,7 +1688,7 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 	Selected = s_ListBox.DoEnd();
 	if(UpdateScroll)
 		s_ListBox.ScrollToSelected();
-	m_CallvoteSelectedOption = Selected != -1 ? aIndices[Selected] : -1;
+	m_CallvoteSelectedOption = Selected != -1 ? aOptions[Selected].m_OptionIndex : -1;
 	return s_ListBox.WasItemActivated();
 }
 
@@ -1711,6 +1820,33 @@ void CMenus::RenderServerControl(CUIRect MainView)
 		m_FilterInput.SelectAll();
 	}
 	bool Searching = Ui()->DoEditBox_Search(&m_FilterInput, &QuickSearch, 14.0f, !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive());
+
+	if(s_ControlPage == EServerControlTab::SETTINGS)
+	{
+		static CScrollRegion s_CallvoteMapSortScrollRegion;
+		m_CallvoteMapSortDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_CallvoteMapSortScrollRegion;
+		const char *apSortLabels[] = {
+			Localize("All stars"),
+			Localize("1 star"),
+			Localize("2 stars"),
+			Localize("3 stars"),
+			Localize("4 stars"),
+			Localize("5 stars"),
+			Localize("Low to high"),
+			Localize("High to low"),
+		};
+		static_assert(std::size(apSortLabels) == (int)ECallvoteMapSort::NUM_MODES);
+		const int OldSort = (int)m_CallvoteMapSort;
+		CUIRect SortDropDown;
+		Bottom.VSplitLeft(10.0f, nullptr, &Bottom);
+		Bottom.VSplitLeft(130.0f, &SortDropDown, &Bottom);
+		const int NewSort = Ui()->DoDropDown(&SortDropDown, OldSort, apSortLabels, std::size(apSortLabels), m_CallvoteMapSortDropDownState);
+		if(NewSort != OldSort && NewSort >= 0 && NewSort < (int)ECallvoteMapSort::NUM_MODES)
+		{
+			m_CallvoteMapSort = (ECallvoteMapSort)NewSort;
+			Searching = true;
+		}
+	}
 
 	// vote menu
 	CUIRect VoteContent = MainView;

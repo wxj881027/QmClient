@@ -183,7 +183,7 @@ private:
 		const int64_t Size = io_tell(File);
 		io_seek(File, 0, IOSEEK_START);
 
-		if(Size <= 0 || Size > 10 * 1024 * 1024)
+		if(Size <= 0 || Size > LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE)
 		{
 			io_close(File);
 			return false;
@@ -451,19 +451,30 @@ private:
 			return 0;
 		}
 
-		if(!str_endswith(pInfo->m_pName, ".map"))
+		const char *pExtension = str_endswith_nocase(pInfo->m_pName, ".map") ? ".map" : FindBackgroundFileExtension(pInfo->m_pName);
+		if(pExtension == nullptr)
 			return 0;
 
 		char aName[IO_MAX_PATH_LENGTH];
 		if(pContext->m_aNamePrefix[0] != '\0')
 		{
-			char aWithoutExt[IO_MAX_PATH_LENGTH];
-			str_truncate(aWithoutExt, sizeof(aWithoutExt), aRelativePath, str_length(aRelativePath) - 4);
-			str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aWithoutExt);
+			if(str_comp_nocase(pExtension, ".map") == 0)
+			{
+				char aWithoutExt[IO_MAX_PATH_LENGTH];
+				str_truncate(aWithoutExt, sizeof(aWithoutExt), aRelativePath, str_length(aRelativePath) - str_length(pExtension));
+				str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aWithoutExt);
+			}
+			else
+			{
+				str_format(aName, sizeof(aName), "%s/%s", pContext->m_aNamePrefix, aRelativePath);
+			}
 		}
 		else
 		{
-			str_truncate(aName, sizeof(aName), aRelativePath, str_length(aRelativePath) - 4);
+			if(str_comp_nocase(pExtension, ".map") == 0)
+				str_truncate(aName, sizeof(aName), aRelativePath, str_length(aRelativePath) - str_length(pExtension));
+			else
+				str_copy(aName, aRelativePath);
 		}
 		if(pContext->m_pScanContext->m_SkipReservedDefault && str_comp(aName, "default") == 0)
 			return 0;
@@ -615,7 +626,7 @@ static bool LoadFileToBuffer(IStorage *pStorage, const char *pFilename, int Stor
 	const int64_t Size = io_tell(File);
 	io_seek(File, 0, IOSEEK_START);
 
-	if(Size <= 0 || Size > 10 * 1024 * 1024)
+	if(Size <= 0 || Size > LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE)
 	{
 		io_close(File);
 		return false;
@@ -809,21 +820,37 @@ static void CollectEntityBgPreviewPaths(IStorage *pStorage, const char *pAssetNa
 
 	char aManagedPath[IO_MAX_PATH_LENGTH];
 	char aMapPath[IO_MAX_PATH_LENGTH];
-	str_format(aManagedPath, sizeof(aManagedPath), "assets/%s.png", pAssetName);
-	str_format(aMapPath, sizeof(aMapPath), "maps/%s.png", pAssetName);
 
+	const char *pExplicitExtension = IsBackgroundImageExtension(pAssetName) ? FindBackgroundFileExtension(pAssetName) : nullptr;
 	if(IsEntityBgManagedAssetName(pAssetName))
 	{
-		const bool ManagedExists = pStorage != nullptr && pStorage->FileExists(aManagedPath, IStorage::TYPE_ALL);
-		const bool MapExists = pStorage != nullptr && pStorage->FileExists(aMapPath, IStorage::TYPE_ALL);
-		if(ManagedExists || !MapExists)
-			AddCandidate(aManagedPath);
-		if(MapExists || !ManagedExists)
-			AddCandidate(aMapPath);
+		for(const char *pExtension : BACKGROUND_IMAGE_EXTENSIONS)
+		{
+			if(pExplicitExtension != nullptr && str_comp_nocase(pExplicitExtension, pExtension) != 0)
+				continue;
+			str_format(aManagedPath, sizeof(aManagedPath), "assets/%s%s", pAssetName, pExplicitExtension != nullptr ? "" : pExtension);
+			str_format(aMapPath, sizeof(aMapPath), "maps/%s%s", pAssetName, pExplicitExtension != nullptr ? "" : pExtension);
+			const bool ManagedExists = pStorage != nullptr && pStorage->FileExists(aManagedPath, IStorage::TYPE_ALL);
+			const bool MapExists = pStorage != nullptr && pStorage->FileExists(aMapPath, IStorage::TYPE_ALL);
+			if(ManagedExists || !MapExists)
+				AddCandidate(aManagedPath);
+			if(MapExists || !ManagedExists)
+				AddCandidate(aMapPath);
+			if(pExplicitExtension != nullptr)
+				break;
+		}
 	}
 	else
 	{
-		AddCandidate(aMapPath);
+		for(const char *pExtension : BACKGROUND_IMAGE_EXTENSIONS)
+		{
+			if(pExplicitExtension != nullptr && str_comp_nocase(pExplicitExtension, pExtension) != 0)
+				continue;
+			str_format(aMapPath, sizeof(aMapPath), "maps/%s%s", pAssetName, pExplicitExtension != nullptr ? "" : pExtension);
+			AddCandidate(aMapPath);
+			if(pExplicitExtension != nullptr)
+				break;
+		}
 	}
 }
 
@@ -834,6 +861,27 @@ static void ResolveEntityBgLocalMapPath(IStorage *pStorage, const char *pAssetNa
 	pOut[0] = '\0';
 	if(pAssetName == nullptr || pAssetName[0] == '\0')
 		return;
+
+	const char *pExplicitExtension = FindBackgroundFileExtension(pAssetName);
+	if(pExplicitExtension != nullptr && str_comp_nocase(pExplicitExtension, ".map") != 0)
+	{
+		if(IsEntityBgManagedAssetName(pAssetName))
+		{
+			char aManagedPath[IO_MAX_PATH_LENGTH];
+			char aMapPath[IO_MAX_PATH_LENGTH];
+			str_format(aManagedPath, sizeof(aManagedPath), "assets/%s", pAssetName);
+			str_format(aMapPath, sizeof(aMapPath), "maps/%s", pAssetName);
+			const bool ManagedExists = pStorage != nullptr && pStorage->FileExists(aManagedPath, StorageType);
+			const bool MapExists = pStorage != nullptr && pStorage->FileExists(aMapPath, StorageType);
+			if(ManagedExists || !MapExists)
+				str_copy(pOut, aManagedPath, OutSize);
+			else
+				str_copy(pOut, aMapPath, OutSize);
+		}
+		else
+			str_format(pOut, OutSize, "maps/%s", pAssetName);
+		return;
+	}
 
 	char aManagedPath[IO_MAX_PATH_LENGTH];
 	char aMapPath[IO_MAX_PATH_LENGTH];
@@ -858,6 +906,8 @@ static void ResolveEntityBgLocalMapPath(IStorage *pStorage, const char *pAssetNa
 static void StartEntityBgDecode(CMenus::SCustomEntityBg *pAssetItem, IStorage *pStorage, IEngine *pEngine)
 {
 	if(pAssetItem->m_pDecodeJob || pAssetItem->m_RenderTexture.IsValid())
+		return;
+	if(IsBackgroundVideoExtension(pAssetItem->m_aName))
 		return;
 
 	std::vector<std::string> vPossiblePaths;

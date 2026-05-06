@@ -3019,6 +3019,8 @@ void CMenus::SetActive(bool Active)
 	m_MenuActive = Active;
 	if(!m_MenuActive)
 	{
+		ClearQmClientSettingsSearchInputs();
+
 		if(m_NeedSendinfo)
 		{
 			GameClient()->SendInfo(false);
@@ -3046,6 +3048,7 @@ void CMenus::OnReset()
 {
 	ResetReportScan();
 	ResetDemoScreenshotPreview();
+	ClearQmClientSettingsSearchInputs();
 }
 
 void CMenus::OnShutdown()
@@ -3337,6 +3340,8 @@ const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 void CMenus::SetMenuPage(int NewPage)
 {
 	const int OldPage = m_MenuPage;
+	if(OldPage == PAGE_SETTINGS && NewPage != PAGE_SETTINGS)
+		ClearQmClientSettingsSearchInputs();
 	if(PerfDebugEnabled() && OldPage != NewPage)
 	{
 		dbg_msg("perf/menu", "event=menu_page_switch from=%s to=%s", MenuPageName(OldPage), MenuPageName(NewPage));

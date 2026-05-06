@@ -464,12 +464,15 @@ TEST(BackgroundEntitiesValue, ExtractsAssetNameFromMapConfig)
 	EXPECT_STREQ(aAssetName, "entity_bg/demo");
 }
 
-TEST(BackgroundEntitiesValue, RejectsDefaultCurrentMapAndImageValues)
+TEST(BackgroundEntitiesValue, RejectsDefaultAndCurrentMapValues)
 {
 	char aAssetName[IO_MAX_PATH_LENGTH];
 	EXPECT_FALSE(TryGetBackgroundEntitiesAssetName("", aAssetName, sizeof(aAssetName)));
 	EXPECT_FALSE(TryGetBackgroundEntitiesAssetName(CURRENT_MAP, aAssetName, sizeof(aAssetName)));
-	EXPECT_FALSE(TryGetBackgroundEntitiesAssetName("entity_bg/demo.png", aAssetName, sizeof(aAssetName)));
+	ASSERT_TRUE(TryGetBackgroundEntitiesAssetName("entity_bg/demo.png", aAssetName, sizeof(aAssetName)));
+	EXPECT_STREQ(aAssetName, "entity_bg/demo.png");
+	ASSERT_TRUE(TryGetBackgroundEntitiesAssetName("entity_bg/demo.mp4", aAssetName, sizeof(aAssetName)));
+	EXPECT_STREQ(aAssetName, "entity_bg/demo.mp4");
 }
 
 TEST(BackgroundEntitiesValue, BuildsConfigValueFromAssetName)

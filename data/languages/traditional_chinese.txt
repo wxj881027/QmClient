@@ -3675,3 +3675,27 @@ Concurrency (1 = automatic)
 
 Hide Echo Messages
 == 隱藏 Echo 訊息
+
+All stars
+== 全部星級
+
+1 star
+== 1 星
+
+2 stars
+== 2 星
+
+3 stars
+== 3 星
+
+4 stars
+== 4 星
+
+5 stars
+== 5 星
+
+Low to high
+== 由低到高
+
+High to low
+== 由高到低

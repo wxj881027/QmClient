@@ -123,7 +123,8 @@ private:
 		}
 
 		CImageInfo Image;
-		const bool Loaded = CImageLoader::LoadPng(pFileData, FileSize, m_IconPath.c_str(), Image) &&
+		const bool Loaded = (CImageLoader::LoadPng(pFileData, FileSize, m_IconPath.c_str(), Image) ||
+					CImageLoader::LoadWebP(pFileData, FileSize, m_IconPath.c_str(), Image)) &&
 			Image.m_Format == CImageInfo::FORMAT_RGBA;
 		free(pFileData);
 
@@ -359,11 +360,12 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 	if(!m_IsInit)
 		return;
 
-	if(m_Loaded && !m_ImageBackground && m_pMap == m_pBackgroundMap)
+	if(m_Loaded && !m_ImageBackground && !m_VideoBackground && m_pMap == m_pBackgroundMap)
 		m_pMap->Unload();
 
 	m_Loaded = false;
 	ClearImageBackground();
+	ClearVideoBackground();
 	m_pMap = m_pBackgroundMap;
 	m_pLayers = m_pBackgroundLayers;
 	m_pImages = m_pBackgroundImages;
@@ -419,24 +421,23 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 			}
 		}
 
-		char aBuf[128];
+		char aBuf[IO_MAX_PATH_LENGTH];
 
 		const int HourOfTheDay = time_houroftheday();
 		const bool IsDaytime = HourOfTheDay >= 6 && HourOfTheDay < 18;
-		const bool HasPngExtension = str_endswith_nocase(pMenuMap, ".png") != nullptr;
+		const bool HasImageExtension = IsBackgroundImageExtension(pMenuMap);
+		const bool HasVideoExtension = IsBackgroundVideoExtension(pMenuMap);
 		const bool HasMapExtension = str_endswith_nocase(pMenuMap, ".map") != nullptr;
-		const bool HasExplicitExtension = HasPngExtension || HasMapExtension;
+		const bool HasExplicitExtension = HasImageExtension || HasVideoExtension || HasMapExtension;
 		char aMenuMapBase[IO_MAX_PATH_LENGTH];
 		str_copy(aMenuMapBase, pMenuMap, sizeof(aMenuMapBase));
 		while(true)
 		{
-			const char *pExtension = str_endswith_nocase(aMenuMapBase, ".png");
-			if(!pExtension)
-				pExtension = str_endswith_nocase(aMenuMapBase, ".map");
-			if(!pExtension)
+			const char *pExtension = FindBackgroundFileExtension(aMenuMapBase);
+			if(pExtension == nullptr)
 				break;
 			char aMenuMapTmp[IO_MAX_PATH_LENGTH];
-			str_truncate(aMenuMapTmp, sizeof(aMenuMapTmp), aMenuMapBase, pExtension - aMenuMapBase);
+			str_truncate(aMenuMapTmp, sizeof(aMenuMapTmp), aMenuMapBase, str_length(aMenuMapBase) - str_length(pExtension));
 			str_copy(aMenuMapBase, aMenuMapTmp, sizeof(aMenuMapBase));
 		}
 		const char *pMenuMapBase = aMenuMapBase;
@@ -471,14 +472,29 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 				m_Loaded = true;
 				return true;
 			}
-			str_format(aBuf, sizeof(aBuf), "%s.png", pBasePath);
-			if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && LoadImageBackground(aBuf))
+			for(const char *pExtension : BACKGROUND_IMAGE_EXTENSIONS)
 			{
-				return true;
+				str_format(aBuf, sizeof(aBuf), "%s%s", pBasePath, pExtension);
+				if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && LoadImageBackground(aBuf))
+				{
+					return true;
+				}
+				if(FindThemeFile(pBasePath, pExtension, aFound, sizeof(aFound)) && LoadImageBackground(aFound))
+				{
+					return true;
+				}
 			}
-			if(FindThemeFile(pBasePath, ".png", aFound, sizeof(aFound)) && LoadImageBackground(aFound))
+			for(const char *pExtension : BACKGROUND_VIDEO_EXTENSIONS)
 			{
-				return true;
+				str_format(aBuf, sizeof(aBuf), "%s%s", pBasePath, pExtension);
+				if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && LoadVideoBackground(aBuf))
+				{
+					return true;
+				}
+				if(FindThemeFile(pBasePath, pExtension, aFound, sizeof(aFound)) && LoadVideoBackground(aFound))
+				{
+					return true;
+				}
 			}
 			return false;
 		};
@@ -501,7 +517,7 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 					}
 				}
 			}
-			else if(HasPngExtension)
+			else if(HasImageExtension)
 			{
 				if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && LoadImageBackground(aBuf))
 				{
@@ -513,6 +529,21 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 					if(FindThemeFile(aBuf, "", aFound, sizeof(aFound)) && LoadImageBackground(aFound))
 					{
 						// LoadImageBackground updates m_Loaded/m_ImageBackground.
+					}
+				}
+			}
+			else if(HasVideoExtension)
+			{
+				if(Storage()->FileExists(aBuf, IStorage::TYPE_ALL) && LoadVideoBackground(aBuf))
+				{
+					// LoadVideoBackground updates m_Loaded/m_VideoBackground.
+				}
+				else
+				{
+					char aFound[IO_MAX_PATH_LENGTH];
+					if(FindThemeFile(aBuf, "", aFound, sizeof(aFound)) && LoadVideoBackground(aFound))
+					{
+						// LoadVideoBackground updates m_Loaded/m_VideoBackground.
 					}
 				}
 			}
@@ -549,7 +580,7 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 			}
 		}
 
-		if(m_Loaded && !m_ImageBackground)
+		if(m_Loaded && !m_ImageBackground && !m_VideoBackground)
 		{
 			m_pLayers->Init(m_pMap, true);
 
@@ -607,22 +638,8 @@ bool CMenuBackground::Render()
 	if(!m_Loaded)
 		return false;
 
-	if(m_ImageBackground)
-	{
-		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		const float ScreenHeight = 300.0f;
-		const float ScreenWidth = ScreenHeight * Graphics()->ScreenAspect();
-		Graphics()->MapScreen(0.0f, 0.0f, ScreenWidth, ScreenHeight);
-		Graphics()->TextureSet(m_BackgroundTexture);
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-		const IGraphics::CQuadItem QuadItem(0.0f, 0.0f, ScreenWidth, ScreenHeight);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
-		Graphics()->QuadsEnd();
-		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	if(RenderBackgroundTexture())
 		return true;
-	}
 
 	m_Camera.m_Zoom = 0.7f;
 

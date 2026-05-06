@@ -3,17 +3,19 @@
 
 #include <base/system.h>
 
+#include <game/client/components/background.h>
+
 #include <string>
 
 inline bool IsThemeFileCandidate(const char *pName)
 {
-	return str_endswith_nocase(pName, ".map") || str_endswith_nocase(pName, ".png");
+	return str_endswith_nocase(pName, ".map") || IsBackgroundImageExtension(pName) || IsBackgroundVideoExtension(pName);
 }
 
 inline std::string ThemeIconPathFromName(const char *pName)
 {
 	const char *pThemeName = pName != nullptr && pName[0] != '\0' ? pName : "none";
-	if(str_endswith_nocase(pThemeName, ".png"))
+	if(IsBackgroundImageExtension(pThemeName))
 		return std::string("themes/") + pThemeName;
 
 	char aBaseName[IO_MAX_PATH_LENGTH];
@@ -22,6 +24,12 @@ inline std::string ThemeIconPathFromName(const char *pName)
 	{
 		char aTmp[IO_MAX_PATH_LENGTH];
 		str_truncate(aTmp, sizeof(aTmp), aBaseName, pExt - aBaseName);
+		str_copy(aBaseName, aTmp, sizeof(aBaseName));
+	}
+	else if(const char *pExt = FindBackgroundFileExtension(aBaseName))
+	{
+		char aTmp[IO_MAX_PATH_LENGTH];
+		str_truncate(aTmp, sizeof(aTmp), aBaseName, str_length(aBaseName) - str_length(pExt));
 		str_copy(aBaseName, aTmp, sizeof(aBaseName));
 	}
 

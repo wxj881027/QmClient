@@ -974,8 +974,22 @@ protected:
 	CLineInput m_PasswordInput;
 
 	// for call vote
+	enum class ECallvoteMapSort
+	{
+		ALL,
+		STAR_1,
+		STAR_2,
+		STAR_3,
+		STAR_4,
+		STAR_5,
+		LOW_TO_HIGH,
+		HIGH_TO_LOW,
+		NUM_MODES,
+	};
 	int m_CallvoteSelectedOption;
 	int m_CallvoteSelectedPlayer;
+	ECallvoteMapSort m_CallvoteMapSort = ECallvoteMapSort::ALL;
+	CUi::SDropDownState m_CallvoteMapSortDropDownState;
 	CLineInputBuffered<VOTE_REASON_LENGTH> m_CallvoteReasonInput;
 	CLineInputBuffered<64> m_FilterInput;
 	bool m_ControlPageOpening;
@@ -1352,6 +1366,7 @@ protected:
 
 	std::shared_ptr<CHttpRequest> m_pReportScanRequest;
 	EReportScanState m_ReportScanState = EReportScanState::IDLE;
+	int64_t m_ReportScanCooldownEndTime = 0;
 	char m_aReportScanAddress[NETADDR_MAXSTRSIZE] = "";
 	void ResetReportScan();
 	void StartReportScan();
@@ -1625,6 +1640,8 @@ public:
 	std::array<CUIElement, SETTINGS_LENGTH> m_aSettingsTabLabelElements;
 	std::array<const char *, SETTINGS_LENGTH> m_apSettingsTabs{};
 	int m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
+	CLineInputBuffered<128> m_aQmClientModuleSearchInputs[NUMBER_OF_QMCLIENT_SETTINGS_TABS];
+	void ClearQmClientSettingsSearchInputs();
 
 	// DDRace
 	int DoButton_CheckBox_Tristate(const void *pId, const char *pText, TRISTATE Checked, const CUIRect *pRect);

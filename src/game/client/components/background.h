@@ -8,12 +8,77 @@
 
 #include <game/client/components/maplayers.h>
 
+#include <array>
 #include <cstdint>
+#include <vector>
+
+#if defined(CONF_VIDEORECORDER)
+struct AVFormatContext;
+struct AVCodecContext;
+struct SwsContext;
+struct AVFrame;
+struct AVPacket;
+#endif
 
 class CLayers;
 class CMapImages;
 // Special value to use background of current map
 #define CURRENT_MAP "%current%"
+
+inline constexpr std::array<const char *, 2> BACKGROUND_IMAGE_EXTENSIONS = {
+	".png",
+	".webp",
+};
+
+inline constexpr std::array<const char *, 4> BACKGROUND_VIDEO_EXTENSIONS = {
+	".mp4",
+	".webm",
+	".mov",
+	".mkv",
+};
+
+inline bool IsBackgroundImageExtension(const char *pName)
+{
+	if(pName == nullptr)
+		return false;
+	for(const char *pExtension : BACKGROUND_IMAGE_EXTENSIONS)
+	{
+		if(str_endswith_nocase(pName, pExtension))
+			return true;
+	}
+	return false;
+}
+
+inline const char *FindBackgroundFileExtension(const char *pName)
+{
+	if(pName == nullptr)
+		return nullptr;
+	if(str_endswith_nocase(pName, ".map"))
+		return ".map";
+	for(const char *pExtension : BACKGROUND_IMAGE_EXTENSIONS)
+	{
+		if(str_endswith_nocase(pName, pExtension))
+			return pExtension;
+	}
+	for(const char *pExtension : BACKGROUND_VIDEO_EXTENSIONS)
+	{
+		if(str_endswith_nocase(pName, pExtension))
+			return pExtension;
+	}
+	return nullptr;
+}
+
+inline bool IsBackgroundVideoExtension(const char *pName)
+{
+	if(pName == nullptr)
+		return false;
+	for(const char *pExtension : BACKGROUND_VIDEO_EXTENSIONS)
+	{
+		if(str_endswith_nocase(pName, pExtension))
+			return true;
+	}
+	return false;
+}
 
 inline void NormalizeBackgroundEntitiesValue(const char *pValue, char *pOut, int OutSize)
 {
@@ -56,7 +121,7 @@ inline bool TryGetBackgroundEntitiesAssetName(const char *pValue, char *pOut, in
 {
 	char aNormalized[IO_MAX_PATH_LENGTH];
 	NormalizeBackgroundEntitiesValue(pValue, aNormalized, sizeof(aNormalized));
-	if(aNormalized[0] == '\0' || str_comp(aNormalized, CURRENT_MAP) == 0 || str_endswith_nocase(aNormalized, ".png"))
+	if(aNormalized[0] == '\0' || str_comp(aNormalized, CURRENT_MAP) == 0)
 	{
 		if(OutSize > 0)
 			pOut[0] = '\0';
@@ -88,7 +153,7 @@ inline void BuildBackgroundEntitiesValueFromAsset(const char *pAssetName, char *
 		return;
 	}
 
-	if(str_endswith_nocase(aNormalized, ".map") || str_endswith_nocase(aNormalized, ".png"))
+	if(str_endswith_nocase(aNormalized, ".map") || IsBackgroundImageExtension(aNormalized) || IsBackgroundVideoExtension(aNormalized))
 		str_copy(pOut, aNormalized, OutSize);
 	else
 		str_format(pOut, OutSize, "%s.map", aNormalized);
@@ -154,8 +219,25 @@ protected:
 	IEngineMap *m_pMap;
 	bool m_Loaded;
 	bool m_ImageBackground;
+	bool m_VideoBackground = false;
 	char m_aMapName[MAX_MAP_LENGTH];
 	IGraphics::CTextureHandle m_BackgroundTexture;
+#if defined(CONF_VIDEORECORDER)
+	AVFormatContext *m_pVideoFormatContext = nullptr;
+	AVCodecContext *m_pVideoCodecContext = nullptr;
+	SwsContext *m_pVideoSwsContext = nullptr;
+	AVFrame *m_pVideoFrame = nullptr;
+	AVFrame *m_pVideoRgbaFrame = nullptr;
+	AVPacket *m_pVideoPacket = nullptr;
+	int m_VideoStreamIndex = -1;
+	int64_t m_VideoStartTime = 0;
+	double m_VideoDuration = 0.0;
+	double m_VideoLastFrameTime = -1.0;
+	double m_VideoFrameInterval = 1.0 / 30.0;
+	int m_VideoWidth = 0;
+	int m_VideoHeight = 0;
+	std::vector<uint8_t> m_vVideoFrameBuffer;
+#endif
 
 	//to avoid memory leak when switching to %current%
 	CBackgroundEngineMap *m_pBackgroundMap;
@@ -165,6 +247,16 @@ protected:
 	virtual CBackgroundEngineMap *CreateBGMap();
 	void ClearImageBackground(bool UnloadTexture = true);
 	bool LoadImageBackground(const char *pPath);
+	void ClearVideoBackground(bool UnloadTexture = true);
+	bool LoadVideoBackground(const char *pPath);
+	bool UpdateVideoBackground();
+	bool RenderBackgroundTexture();
+	IGraphics::CTextureHandle ActiveBackgroundTexture() const { return m_BackgroundTexture; }
+#if defined(CONF_VIDEORECORDER)
+	bool DecodeNextVideoFrame();
+	bool RestartVideoBackground();
+	bool UploadVideoFrame();
+#endif
 
 public:
 	CBackground(ERenderType MapType = ERenderType::RENDERTYPE_BACKGROUND_FORCE, bool OnlineOnly = true);
