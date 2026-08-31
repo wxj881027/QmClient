@@ -35,6 +35,7 @@
 #include <game/client/components/message_gradient.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/qm_bind_status_hud.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/components/qmclient/tee_color_code.h>
 #include <game/client/components/qmclient/tee_hue_cycle.h>
@@ -919,7 +920,7 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 				Row.VSplitMid(&LeftButton, &RightButton, GeneralMetrics.m_LineSpacing);
 				if(RowIndex == 0)
 				{
-					DoOpenButton(s_SettingsButtonId, "general-settings-file", Localize("Settings file"), s_aConfigDomains[ConfigDomain::DDNET].m_aConfigPath, false, Localize("Open the settings file"), LeftButton);
+					DoOpenButton(s_SettingsButtonId, "general-settings-file", Localize("Settings file"), s_aConfigDomains[ConfigDomain::QMCLIENT].m_aConfigPath, false, Localize("Open the settings file"), LeftButton);
 					DoOpenButton(s_SavesButtonId, "general-saves-file", Localize("Saves file"), SAVES_FILE, false, Localize("Open the saves file"), RightButton);
 				}
 				else
@@ -6457,7 +6458,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			LogPerfStage(Client(), "appearance_hud_tab_shell", HudShellTimer.ElapsedMs(), false, "page=appearance tab=hud");
 			const float HudLeftMinCardHeight = ResolveSettingsRowsHeight(6, LineSize, MarginSmall) + MarginSmall + MarginBetweenViews + HeadlineHeight + MarginSmall + ColorPickerRowHeight * 4.0f;
 			const auto ResolveHudRightMinCardHeight = [LineSize, MarginSmall]() {
-				const int HudRightCheckboxRowCount = 12 + (g_Config.m_ClShowhudDDRace ? 2 : 0);
+				const int HudRightCheckboxRowCount = 8 + (g_Config.m_ClShowhudDDRace ? 2 : 0);
 				return ResolveSettingsRowsHeight(HudRightCheckboxRowCount, LineSize, MarginSmall) + MarginSmall * 3.0f + (g_Config.m_ClShowFreezeBars ? LineSize : 0.0f);
 			};
 			AddCard(0, HudLeftMinCardHeight, [=, this](CUIRect ContentRect) mutable {
@@ -6495,10 +6496,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				}
 				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudSpectatorCount, "appearance-show-spectator-count", Localize("Show number of spectators"), &g_Config.m_ClShowhudSpectatorCount, &RightView, LineSize, MarginSmall, AppearanceBodySize);
 				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudDummyActions, "appearance-show-dummy-actions", Localize("Show dummy actions"), &g_Config.m_ClShowhudDummyActions, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudKeyStatusReset, "appearance-show-key-stuck-status", Localize("Show key stuck status"), &g_Config.m_ClShowhudKeyStatusReset, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudKeyStatusHammer, "appearance-show-hammer-status", Localize("Show hammer status"), &g_Config.m_ClShowhudKeyStatusHammer, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudKeyStatusControl, "appearance-show-dummy-control-status", Localize("Show dummy control status"), &g_Config.m_ClShowhudKeyStatusControl, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudKeyStatusSync, "appearance-show-dummy-copy-status", Localize("Show dummy copy status"), &g_Config.m_ClShowhudKeyStatusSync, &RightView, LineSize, MarginSmall, AppearanceBodySize);
+				// 卡键/锤子/分身控制/分身同步四个状态开关与自定义 bind 状态列表已迁移到 QmClient → HUD → DDRace HUD Pro 卡片
 				RightView.HSplitTop(MarginSmall, nullptr, &RightView);
 				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudPlayerPosition, "appearance-show-player-position", Localize("Show player position"), &g_Config.m_ClShowhudPlayerPosition, &RightView, LineSize, MarginSmall, AppearanceBodySize);
 				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudPlayerSpeed, "appearance-show-player-speed", Localize("Show player speed"), &g_Config.m_ClShowhudPlayerSpeed, &RightView, LineSize, MarginSmall, AppearanceBodySize);
@@ -6539,7 +6537,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					NextRow();
 					NextRow();
 				}
-				for(int RowIndex = 0; RowIndex < 6; ++RowIndex)
+				for(int RowIndex = 0; RowIndex < 2; ++RowIndex)
 					NextRow();
 				RightView.HSplitTop(MarginSmall, nullptr, &RightView);
 				for(int RowIndex = 0; RowIndex < 3; ++RowIndex)

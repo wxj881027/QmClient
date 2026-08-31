@@ -19,11 +19,15 @@ qm_perf_debug 1
 qm_perf_logfile 1
 ```
 
+也可以直接在 设置 → QmClient → HUD → 调试模式 卡片中一键开启（总开关等效于同时设置 `qm_perf_debug`、`qm_perf_logfile`、`qm_perf_stutter_diagnostics` 三个开关，并可单独微调与设置采样阈值 `qm_perf_debug_threshold_ms`）。
+
+开关在游戏内即时生效：打开即立刻创建日志文件并开始落盘，关闭即立刻停止写入并关闭文件；同一次运行中重复开关会生成独立的时间戳文件。
+
 日志输出到 `%APPDATA%/DDNet/dumps/QmClient_Perf/qm_perf_*.log`。
 
 ## 客户端卡顿诊断
 
-在启动客户端前显式开启：
+开启 `qm_perf_stutter_diagnostics 1`（或调试模式总开关）：
 
 ```
 qm_perf_stutter_diagnostics 1

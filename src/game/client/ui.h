@@ -1096,6 +1096,8 @@ public:
 	void ClosePopupMenus();
 	bool IsPopupOpen() const;
 	bool IsPopupOpen(const SPopupMenuId *pId) const;
+	// 返回指定弹窗的当前矩形（UI 屏幕坐标）；弹窗未打开时返回 nullptr。
+	const CUIRect *GetPopupMenuRect(const SPopupMenuId *pId) const;
 	bool IsPopupHovered() const;
 	void SetPopupMenuClosedCallback(FPopupMenuClosedCallback pfnCallback);
 

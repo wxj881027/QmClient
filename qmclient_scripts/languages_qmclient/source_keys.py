@@ -583,6 +583,30 @@ def extract_known_indirect_records(path: Path, content: str) -> list[SourceKeyRe
                 )
             )
 
+    if normalized.endswith("src/game/client/components/qmclient/qm_music_hook_registry.h"):
+        # 音乐 Hook 注册表条目:{&g_Config.m_..., "按钮 id", "显示文案", L"进程名"}
+        hook_entry_re = re.compile(r"\{\s*&g_Config\.m_[A-Za-z0-9_]+\s*,")
+        for match in hook_entry_re.finditer(content):
+            open_brace = content.find("{", match.start())
+            close_brace = content.find("}", open_brace)
+            if close_brace == -1:
+                continue
+            args = _split_top_level_args(content[open_brace + 1 : close_brace])
+            for index in (1, 2):
+                if index >= len(args):
+                    continue
+                literals = _extract_string_literals(args[index])
+                if len(literals) == 1 and literals[0]:
+                    records.append(
+                        SourceKeyRecord(
+                            literals[0],
+                            "indirect",
+                            path,
+                            "",
+                            _line_number(content, match.start()),
+                        )
+                    )
+
     if any(normalized.endswith(header) for header in CONFIG_MACRO_HELP_HEADERS):
         for match in CONFIG_MACRO_CALL_RE.finditer(content):
             open_paren = content.find("(", match.start())

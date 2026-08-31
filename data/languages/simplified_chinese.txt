@@ -2138,6 +2138,9 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 == 配置激光形状、辉光和动画
 
+Configure lyrics sources and display
+== 配置歌词来源与显示
+
 Configure nameplate text, badges, and visibility
 == 配置名称牌文字、标识和可见性
 
@@ -2477,6 +2480,12 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == 自定义纵横比，按 x100 存储（例如 178=16:9，233=21:9）
 
+Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
+== 自定义 bind 状态 HUD 条目。为空时使用内置四项（卡键/锤子/分身控制/分身同步）。格式：变量名|状态值=文本|状态值=文本；变量名|文本（非零时显示）；变量名（仅填变量名时非零显示变量名本身）。条目用 ';' 分隔，字段用 '|' 分隔
+
+Custom bind status list
+== 自定义 bind 状态列表
+
 Custom colors
 == 自定义颜色
 
@@ -2615,6 +2624,9 @@ DDNet/total CPU
 DDRace HUD
 == DDRace HUD
 
+DDRace HUD Pro
+== DDRace HUD Pro
+
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 == DDraceNetwork 是一款在线合作游戏，你和你团体里的 Tee 的目标是抵达地图的终点。作为新手你应该从有着最简单的地图的简单（Novice）服务器入门。根据延迟来选择离你相近的服务器。
 
@@ -2647,6 +2659,9 @@ Debug graph panel opacity (percent)
 
 Debug group clipping.
 == 调试组裁剪
+
+Debug mode
+== 调试模式
 
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == 调试模式已启用。按 Ctrl+Shift+D 禁用调试模式。
@@ -3200,6 +3215,9 @@ Dummy is currently connected.
 Dummy jump
 == 分身跳
 
+Dummy key/hammer/control/copy status switches and custom bind status list
+== 卡键/锤子/分身控制/分身同步状态开关，以及自定义 bind 状态列表
+
 Dummy marking color
 == 分身标记颜色
 
@@ -3385,6 +3403,9 @@ Emoticon shadow
 
 Emoticons
 == 表情
+
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== 为空时使用内置四项。格式：var|0=Off|1=On；var|Text
 
 enable
 == 开启
@@ -3596,6 +3617,9 @@ Enable new IME candidate bar
 Enable new settings page UI
 == 启用新版设置页面 UI
 
+Enable performance debug logging and diagnostics
+== 启用性能调试日志与卡顿诊断
+
 Enable Pie Menu
 == 启用饼菜单
 
@@ -3679,6 +3703,12 @@ Enable spectator cursor (if available)
 
 Enable speedrun timer
 == 启用速通计时器
+
+Enable Spotify lyric integration
+== 启用 Spotify 歌词集成
+
+Enable Spotify lyrics
+== 启用 Spotify 歌词
 
 Enable squishy Tee deformation
 == 启用 Q 弹 Tee 形变
@@ -7229,6 +7259,9 @@ Password incorrect
 Password required to use reserved slots.
 == 使用预留插槽所需的密码
 
+Paste sp_dc from Spotify web cookies
+== 粘贴浏览器中的 sp_dc cookie
+
 Pause
 == 暂停
 
@@ -8464,6 +8497,9 @@ Reset mouse position when opening bind wheel
 
 Reset position of mouse when opening bindwheel
 == 打开快捷绑定轮盘时重置鼠标位置
+
+Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
+== 将 qm_bind_status_items 重置为内置四项（卡键/锤子/分身控制/分身同步）
 
 Reset stats on server join (0=persistent, 1=reset on join)
 == 进入服务器时重置统计（0=累计统计，1=每次进服重置）
@@ -10414,6 +10450,12 @@ Sponsor support
 
 Sponsors:
 == 赞助者：
+
+Spotify sp_dc
+== Spotify sp_dc（浏览器登录 Cookie）
+
+Spotify sp_dc cookie (from browser DevTools, long-lived)
+== Spotify sp_dc cookie（来自浏览器 DevTools，长期有效）
 
 Spree
 == 连杀
@@ -16779,8 +16821,8 @@ Could not initialize the given graphics backend, this is probably because you di
 == 无法初始化当前配置的图形后端，请检查此电脑是否已安装集成显卡的驱动程序。
 
 [Graphics error]
-Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== 初始化失败。请尝试打开配置目录中的设置文件（qmclient/settings_ddnet.cfg）并将 “gfx_backend” 设置为 “gfx_backend OpenGL” 或 “gfx_backend Vulkan” 再重试。
+Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== 初始化失败。请尝试打开配置目录中的设置文件（qmclient/settings.cfg）并将 “gfx_backend” 设置为 “gfx_backend OpenGL” 或 “gfx_backend Vulkan” 再重试。
 
 [Graphics error]
 Failed to swap framebuffers. Try to update your GPU drivers.
@@ -16795,8 +16837,8 @@ Submitting the render commands failed. Try to update your GPU drivers.
 == 渲染指令提交失败。请尝试更新显卡驱动程序。
 
 [Graphics error]
-Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== 未知错误。请尝试打开配置目录中的设置文件（qmclient/settings_ddnet.cfg）并将 “gfx_backend” 设置为 “gfx_backend OpenGL” 或 “gfx_backend Vulkan” 再重试。
+Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== 未知错误。请尝试打开配置目录中的设置文件（qmclient/settings.cfg）并将 “gfx_backend” 设置为 “gfx_backend OpenGL” 或 “gfx_backend Vulkan” 再重试。
 
 [Hammer Mode]
 Normal

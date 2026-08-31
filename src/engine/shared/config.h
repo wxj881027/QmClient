@@ -421,17 +421,19 @@ public:
 
 	CConfig *Values() override { return &g_Config; }
 
-	void RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain = ConfigDomain::DDNET) override;
+	void RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 
-	void WriteLine(const char *pLine, ConfigDomain ConfigDomain = ConfigDomain::DDNET) override;
+	void WriteLine(const char *pLine, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 
-	void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::DDNET) override;
+	void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) override;
 
 	void PossibleConfigVariables(const char *pStr, int FlagMask, POSSIBLECFGFUNC pfnCallback, void *pUserData) override;
 	EColorInputAlphaMode ColorValueInputAlphaMode(const char *pScriptName) const override;
 };
 
 bool QmConfigMigrationPending(class IStorage *pStorage);
-bool QmFinalizeConfigMigration(class IStorage *pStorage, const bool *pArchivePreviousPaths = nullptr);
+bool QmFinalizeConfigMigration(class IStorage *pStorage);
+// v3：收集变量配置的候选读取路径（qmclient/settings.cfg 优先，否则按 v2 → v1 → v0 回退）。
+void QmGetVariableConfigLoadPaths(class IStorage *pStorage, std::vector<const char *> &vOut);
 
 #endif

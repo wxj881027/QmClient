@@ -2138,6 +2138,9 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 == Configure laser shape, glow, and animation
 
+Configure lyrics sources and display
+== 歌詞のソースと表示を設定
+
 Configure nameplate text, badges, and visibility
 == Configure nameplate text, badges, and visibility
 
@@ -2477,6 +2480,12 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == カスタムアスペクト比、x100 で保存（例：178=16:9、233=21:9）
 
+Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
+== カスタム bind 状態 HUD エントリ。空の場合は組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）。形式：変数名|状態値=テキスト|状態値=テキスト；変数名|テキスト（非ゼロ時に表示）；変数名（変数名のみの場合は非ゼロ時に変数名を表示）。エントリは ';' で、フィールドは '|' で区切る
+
+Custom bind status list
+== カスタム bind 状態リスト
+
 Custom colors
 == カスタムカラー
 
@@ -2615,6 +2624,9 @@ DDNet/total CPU
 DDRace HUD
 == DDRace HUD
 
+DDRace HUD Pro
+== DDRace HUD Pro（分身ステータス）
+
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 == DDraceNetwork は協力型オンラインゲームで、あなたとあなたのグループの Tee がマップのゴールに到達することを目指します。初心者は最も簡単なマップがある Novice サーバーから始めるべきです。自分に近いサーバーを選ぶために ping を考慮してください。
 
@@ -2647,6 +2659,9 @@ Debug graph panel opacity (percent)
 
 Debug group clipping.
 == グループクリッピングのデバッグ
+
+Debug mode
+== デバッグモード
 
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == デバッグモードが有効になりました。Ctrl+Shift+D でデバッグモードを無効にできます。
@@ -3200,6 +3215,9 @@ Dummy is currently connected.
 Dummy jump
 == ダミージャンプ
 
+Dummy key/hammer/control/copy status switches and custom bind status list
+== キー固定/ハンマー/分身操作/分身同期の状態スイッチとカスタム bind 状態リスト
+
 Dummy marking color
 == ダミーマーキング色
 
@@ -3385,6 +3403,9 @@ Emoticon shadow
 
 Emoticons
 == エモート
+
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== 空の場合は組み込みの4項目。形式：var|0=Off|1=On；var|Text
 
 enable
 == 有効
@@ -3596,6 +3617,9 @@ Enable new IME candidate bar
 Enable new settings page UI
 == 新しい設定ページ UI を有効化
 
+Enable performance debug logging and diagnostics
+== パフォーマンスデバッグログとカクつき診断を有効化
+
 Enable Pie Menu
 == パイメニューを有効化
 
@@ -3679,6 +3703,12 @@ Enable spectator cursor (if available)
 
 Enable speedrun timer
 == スピードランのタイマーを有効にする
+
+Enable Spotify lyric integration
+== Spotify 歌詞統合を有効化
+
+Enable Spotify lyrics
+== Spotify 歌詞を有効化
 
 Enable squishy Tee deformation
 == 弾む Tee 変形を有効化
@@ -7229,6 +7259,9 @@ Password incorrect
 Password required to use reserved slots.
 == 予約スロットを使用するために必要なパスワード
 
+Paste sp_dc from Spotify web cookies
+== ブラウザの sp_dc クッキーを貼り付け
+
 Pause
 == 一時停止
 
@@ -8464,6 +8497,9 @@ Reset mouse position when opening bind wheel
 
 Reset position of mouse when opening bindwheel
 == バインドホイールを開くときにマウス位置をリセット
+
+Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
+== qm_bind_status_items を組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）にリセット
 
 Reset stats on server join (0=persistent, 1=reset on join)
 == サーバー参加時に統計をリセット（0=累積統計、1=参加ごとにリセット）
@@ -10414,6 +10450,12 @@ Sponsor support
 
 Sponsors:
 == スポンサー：
+
+Spotify sp_dc
+== Spotify の sp_dc クッキー
+
+Spotify sp_dc cookie (from browser DevTools, long-lived)
+== Spotify sp_dc クッキー（ブラウザ DevTools から取得、長期有効）
 
 Spree
 == 連続キル
@@ -12875,8 +12917,8 @@ Could not initialize the given graphics backend, this is probably because you di
 == 指定のグラフィックスバックエンドを初期化できませんでした。内蔵グラフィックカードのドライバがインストールされていない可能性があります。
 
 [Graphics error]
-Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== 初期化に失敗しました。設定ディレクトリの qmclient/settings_ddnet.cfg で gfx_backend を OpenGL または Vulkan に変更して、再試行してください。
+Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== 初期化に失敗しました。設定ディレクトリの qmclient/settings.cfg で gfx_backend を OpenGL または Vulkan に変更して、再試行してください。
 
 [Graphics error]
 Failed to swap framebuffers. Try to update your GPU drivers.
@@ -12891,8 +12933,8 @@ Submitting the render commands failed. Try to update your GPU drivers.
 == レンダリングコマンドの送信に失敗しました。GPU ドライバーを更新してみてください。
 
 [Graphics error]
-Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== 不明なエラー。設定ディレクトリの qmclient/settings_ddnet.cfg で gfx_backend を OpenGL または Vulkan に変更して、再試行してください。
+Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== 不明なエラー。設定ディレクトリの qmclient/settings.cfg で gfx_backend を OpenGL または Vulkan に変更して、再試行してください。
 
 [Hammer Mode]
 Normal

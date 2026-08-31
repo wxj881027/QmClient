@@ -79,8 +79,11 @@
 #include "components/qmclient/hud_notifications/hud_notifications.h"
 #include "components/qmclient/input_overlay.h"
 #include "components/qmclient/monitoring/monitoring.h"
+#include "components/qmclient/music_app_watcher.h"
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
+#include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
+#include "components/qmclient/qm_bind_status_hud.h"
 #include "components/qmclient/qmclient.h"
 #include "components/qmclient/scripting.h"
 #include "components/qmclient/stutter_diagnostics.h"
@@ -252,6 +255,8 @@ public:
 	CSystemMediaControls m_SystemMediaControls;
 	CNeteaseIntegration m_NeteaseIntegration;
 	CMusicLyricsIntegration m_MusicLyricsIntegration;
+	CQmMusicAppWatcher m_MusicAppWatcher;
+	CSpotifyIntegration m_SpotifyIntegration;
 
 	CDamageInd m_DamageInd;
 	CTouchControls m_TouchControls;
@@ -293,6 +298,7 @@ public:
 	CQmChatEmoji m_QmChatEmoji;
 	CQmMonitoring m_QmMonitoring;
 	CQmHudNotifications m_QmHudNotifications;
+	CQmBindStatusHud m_QmBindStatusHud;
 	CQmWeaponTrajectory m_QmWeaponTrajectory;
 	CTClient m_TClient;
 	CFastPractice m_FastPractice;

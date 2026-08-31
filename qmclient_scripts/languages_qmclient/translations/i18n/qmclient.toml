@@ -4432,6 +4432,22 @@ turkish = "Hata ayıklama performans grafiği paneli"
 polish = "Panel wykresu wydajności debugowania"
 
 [[message]]
+key = "Debug mode"
+[message.translations]
+simplified_chinese = "调试模式"
+traditional_chinese = "調試模式"
+japanese = "デバッグモード"
+korean = "디버그 모드"
+russian = "Режим отладки"
+german = "Debug-Modus"
+spanish = "Modo de depuración"
+french = "Mode de débogage"
+brazilian_portuguese = "Modo de depuração"
+portuguese = "Modo de depuração"
+turkish = "Hata ayıklama modu"
+polish = "Tryb debugowania"
+
+[[message]]
 key = "Deep freeze opacity"
 [message.translations]
 simplified_chinese = "深度冻结不透明度"
@@ -6014,6 +6030,22 @@ brazilian_portuguese = "Ativar menu de torta"
 portuguese = "Ativar menu de pizza"
 turkish = "Pasta menüsünü etkinleştir"
 polish = "Włącz menu kołowe"
+
+[[message]]
+key = "Enable performance debug logging and diagnostics"
+[message.translations]
+simplified_chinese = "启用性能调试日志与卡顿诊断"
+traditional_chinese = "啟用性能調試日誌與卡頓診斷"
+japanese = "パフォーマンスデバッグログとカクつき診断を有効化"
+korean = "성능 디버그 로그 및 끊김 진단 활성화"
+russian = "Включить журнал отладки производительности и диагностику зависаний"
+german = "Leistungs-Debug-Logging und Ruckel-Diagnose aktivieren"
+spanish = "Activar registro de depuración de rendimiento y diagnóstico de tartamudeos"
+french = "Activer les journaux de débogage des performances et le diagnostic des ralentissements"
+brazilian_portuguese = "Ativar log de depuração de desempenho e diagnóstico de engasgos"
+portuguese = "Ativar registo de depuração de desempenho e diagnóstico de gaguejos"
+turkish = "Performans hata ayıklama günlüğünü ve takılma teşhisini etkinleştir"
+polish = "Włącz dziennik debugowania wydajności i diagnostykę przycinań"
 
 [[message]]
 key = "Enable player statistics panel"
@@ -26039,6 +26071,38 @@ turkish = "SodaMusic Hook entegrasyonunu etkinleştir"
 polish = "Włącz integrację SodaMusic przez Hook"
 
 [[message]]
+key = "Enable Spotify lyric integration"
+[message.translations]
+simplified_chinese = "启用 Spotify 歌词集成"
+traditional_chinese = "啟用 Spotify 歌詞整合"
+japanese = "Spotify 歌詞統合を有効化"
+korean = "Spotify 가사 통합 활성화"
+russian = "Включить интеграцию текстов песен Spotify"
+german = "Spotify-Songtext-Integration aktivieren"
+spanish = "Habilitar la integración de letras de Spotify"
+french = "Activer l'intégration des paroles de Spotify"
+brazilian_portuguese = "Ativar a integração de letras do Spotify"
+portuguese = "Ativar a integração de letras do Spotify"
+turkish = "Spotify şarkı sözü entegrasyonunu etkinleştir"
+polish = "Włącz integrację tekstów Spotify"
+
+[[message]]
+key = "Spotify sp_dc cookie (from browser DevTools, long-lived)"
+[message.translations]
+simplified_chinese = "Spotify sp_dc cookie（来自浏览器 DevTools，长期有效）"
+traditional_chinese = "Spotify sp_dc cookie（來自瀏覽器 DevTools，長期有效）"
+japanese = "Spotify sp_dc クッキー（ブラウザ DevTools から取得、長期有効）"
+korean = "Spotify sp_dc 쿠키(브라우저 DevTools에서 가져옴, 장기 유효)"
+russian = "Cookie sp_dc Spotify (из DevTools браузера, длительного действия)"
+german = "Spotify-sp_dc-Cookie (aus den Browser-DevTools, langlebig)"
+spanish = "Cookie sp_dc de Spotify (desde DevTools del navegador, de larga duración)"
+french = "Cookie sp_dc Spotify (depuis les DevTools du navigateur, longue durée)"
+brazilian_portuguese = "Cookie sp_dc do Spotify (dos DevTools do navegador, longa duração)"
+portuguese = "Cookie sp_dc do Spotify (dos DevTools do navegador, longa duração)"
+turkish = "Spotify sp_dc çerezi (tarayıcı DevTools'tan, uzun ömürlü)"
+polish = "Ciasteczko sp_dc Spotify (z DevTools przeglądarki, długoterminowe)"
+
+[[message]]
 key = "Netease hook heartbeat timeout (milliseconds)"
 [message.translations]
 simplified_chinese = "网易云音乐 Hook 心跳超时时间（毫秒）"
@@ -26199,6 +26263,70 @@ turkish = "SodaMusic Hook'u etkinleştir"
 polish = "Włącz SodaMusic Hook"
 
 [[message]]
+key = "Enable Spotify lyrics"
+[message.translations]
+simplified_chinese = "启用 Spotify 歌词"
+traditional_chinese = "啟用 Spotify 歌詞"
+japanese = "Spotify 歌詞を有効化"
+korean = "Spotify 가사 활성화"
+russian = "Включить тексты Spotify"
+german = "Spotify-Songtexte aktivieren"
+spanish = "Activar letras de Spotify"
+french = "Activer les paroles de Spotify"
+brazilian_portuguese = "Ativar letras do Spotify"
+portuguese = "Ativar letras do Spotify"
+turkish = "Spotify şarkı sözlerini etkinleştir"
+polish = "Włącz teksty Spotify"
+
+[[message]]
+key = "Spotify sp_dc"
+[message.translations]
+simplified_chinese = "Spotify sp_dc（浏览器登录 Cookie）"
+traditional_chinese = "Spotify sp_dc（瀏覽器登入 Cookie）"
+japanese = "Spotify の sp_dc クッキー"
+korean = "Spotify sp_dc 쿠키"
+russian = "Cookie sp_dc Spotify"
+german = "Spotify-sp_dc-Cookie"
+spanish = "Cookie sp_dc de Spotify"
+french = "Cookie sp_dc de Spotify"
+brazilian_portuguese = "Cookie sp_dc do Spotify"
+portuguese = "Cookie sp_dc do Spotify"
+turkish = "Spotify sp_dc çerezi"
+polish = "Ciasteczko sp_dc Spotify"
+
+[[message]]
+key = "Configure lyrics sources and display"
+[message.translations]
+simplified_chinese = "配置歌词来源与显示"
+traditional_chinese = "設定歌詞來源與顯示"
+japanese = "歌詞のソースと表示を設定"
+korean = "가사 소스 및 표시 구성"
+russian = "Настройка источников и отображения текстов"
+german = "Songtext-Quellen und Anzeige konfigurieren"
+spanish = "Configurar fuentes de letras y visualización"
+french = "Configurer les sources et l'affichage des paroles"
+brazilian_portuguese = "Configurar fontes de letras e exibição"
+portuguese = "Configurar fontes de letras e exibição"
+turkish = "Şarkı sözü kaynaklarını ve görünümünü yapılandır"
+polish = "Skonfiguruj źródła tekstów i wyświetlanie"
+
+[[message]]
+key = "Paste sp_dc from Spotify web cookies"
+[message.translations]
+simplified_chinese = "粘贴浏览器中的 sp_dc cookie"
+traditional_chinese = "貼上瀏覽器中的 sp_dc cookie"
+japanese = "ブラウザの sp_dc クッキーを貼り付け"
+korean = "브라우저의 sp_dc 쿠키 붙여넣기"
+russian = "Вставьте sp_dc cookie из браузера"
+german = "sp_dc-Cookie aus dem Browser einfügen"
+spanish = "Pegar la cookie sp_dc del navegador"
+french = "Coller le cookie sp_dc du navigateur"
+brazilian_portuguese = "Cole o cookie sp_dc do navegador"
+portuguese = "Cole o cookie sp_dc do navegador"
+turkish = "Tarayıcıdan sp_dc çerezini yapıştırın"
+polish = "Wklej ciasteczko sp_dc z przeglądarki"
+
+[[message]]
 key = "Format: QmClient input overlay v3"
 [message.translations]
 simplified_chinese = "格式：QmClient 输入叠加层 v3"
@@ -26325,3 +26453,163 @@ brazilian_portuguese = "Caminho do ZIP"
 portuguese = "Caminho do ZIP"
 turkish = "ZIP yolu"
 polish = "Ścieżka ZIP"
+
+[[message]]
+key = "Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'"
+[message.translations]
+simplified_chinese = "自定义 bind 状态 HUD 条目。为空时使用内置四项（卡键/锤子/分身控制/分身同步）。格式：变量名|状态值=文本|状态值=文本；变量名|文本（非零时显示）；变量名（仅填变量名时非零显示变量名本身）。条目用 ';' 分隔，字段用 '|' 分隔"
+traditional_chinese = "自訂 bind 狀態 HUD 條目。為空時使用內建四項（卡鍵/錘子/分控/同步）。格式：變數名|狀態值=文字|狀態值=文字；變數名|文字（非零時顯示）；變數名（僅填變數名時非零顯示變數名本身）。條目用 ';' 分隔，欄位用 '|' 分隔"
+japanese = "カスタム bind 状態 HUD エントリ。空の場合は組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）。形式：変数名|状態値=テキスト|状態値=テキスト；変数名|テキスト（非ゼロ時に表示）；変数名（変数名のみの場合は非ゼロ時に変数名を表示）。エントリは ';' で、フィールドは '|' で区切る"
+korean = "사용자 지정 bind 상태 HUD 항목입니다. 비어 있으면 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)을 사용합니다. 형식: 변수명|상태값=텍스트|상태값=텍스트; 변수명|텍스트(0이 아닐 때 표시); 변수명(변수명만 입력 시 0이 아닐 때 변수명 표시). 항목은 ';', 필드는 '|'로 구분합니다"
+russian = "Пользовательские элементы HUD состояния bind. Пусто — встроенные 4 элемента (фиксация клавиш/молот/управление дамми/синхронизация дамми). Формат: переменная|значение=текст|значение=текст; переменная|текст (показывать при ненулевом значении); переменная (только имя переменной — показывать имя при ненулевом значении). Элементы разделяются ';', поля — '|'"
+german = "Benutzerdefinierte Bind-Status-HUD-Einträge. Leer: die 4 integrierten Einträge (Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation). Format: Variable|Wert=Text|Wert=Text; Variable|Text (bei ungleich 0 anzeigen); Variable (nur Variablenname: bei ungleich 0 den Namen anzeigen). Einträge durch ';' trennen, Felder durch '|'"
+spanish = "Entradas de HUD de estado de bind personalizadas. Vacío: las 4 entradas integradas (fijación de teclas/martillo/control de dummy/sincronización de dummy). Formato: variable|valor=texto|valor=texto; variable|texto (se muestra si no es cero); variable (solo nombre: se muestra el nombre si no es cero). Entradas separadas por ';', campos por '|'"
+french = "Entrées HUD d'état de bind personnalisées. Vide : les 4 entrées intégrées (blocage des touches/marteau/contrôle du dummy/synchronisation du dummy). Format : variable|valeur=texte|valeur=texte ; variable|texte (affiché si non nul) ; variable (nom seul : affiché si non nul). Entrées séparées par ';', champs par '|'"
+brazilian_portuguese = "Entradas de HUD de estado de bind personalizadas. Vazio: as 4 entradas integradas (fixação de teclas/martelo/controle do dummy/sincronização do dummy). Formato: variável|valor=texto|valor=texto; variável|texto (exibido quando diferente de zero); variável (apenas nome: exibe o nome quando diferente de zero). Entradas separadas por ';', campos por '|'"
+portuguese = "Entradas de HUD de estado de bind personalizadas. Vazio: as 4 entradas integradas (fixação de teclas/martelo/controlo do dummy/sincronização do dummy). Formato: variável|valor=texto|valor=texto; variável|texto (exibido quando diferente de zero); variável (apenas nome: exibe o nome quando diferente de zero). Entradas separadas por ';', campos por '|'"
+turkish = "Özel bind durumu HUD girdileri. Boş: yerleşik 4 girdi (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu). Biçim: değişken|değer=metin|değer=metin; değişken|metin (sıfır değilken göster); değişken (yalnızca ad: sıfır değilken adı göster). Girdiler ';' ile, alanlar '|' ile ayrılır"
+polish = "Niestandardowe wpisy HUD stanu bind. Puste: 4 wbudowane wpisy (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy). Format: zmienna|wartość=tekst|wartość=tekst; zmienna|tekst (pokazuj, gdy niezerowe); zmienna (tylko nazwa: pokazuj nazwę, gdy niezerowa). Wpisy oddzielaj ';', pola '|'"
+
+[[message]]
+key = "Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)"
+[message.translations]
+simplified_chinese = "将 qm_bind_status_items 重置为内置四项（卡键/锤子/分身控制/分身同步）"
+traditional_chinese = "將 qm_bind_status_items 重置為內建四項（卡鍵/錘子/分身控制/分身同步）"
+japanese = "qm_bind_status_items を組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）にリセット"
+korean = "qm_bind_status_items를 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)으로 재설정"
+russian = "Сбросить qm_bind_status_items к встроенным 4 элементам (фиксация клавиш/молот/управление дамми/синхронизация дамми)"
+german = "qm_bind_status_items auf die 4 integrierten Einträge zurücksetzen (Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation)"
+spanish = "Restablecer qm_bind_status_items a las 4 entradas integradas (fijación de teclas/martillo/control de dummy/sincronización de dummy)"
+french = "Réinitialiser qm_bind_status_items aux 4 entrées intégrées (blocage des touches/marteau/contrôle du dummy/synchronisation du dummy)"
+brazilian_portuguese = "Redefinir qm_bind_status_items para as 4 entradas integradas (fixação de teclas/martelo/controle do dummy/sincronização do dummy)"
+portuguese = "Repor qm_bind_status_items para as 4 entradas integradas (fixação de teclas/martelo/controlo do dummy/sincronização do dummy)"
+turkish = "qm_bind_status_items öğesini yerleşik 4 girdiye sıfırla (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu)"
+polish = "Zresetuj qm_bind_status_items do 4 wbudowanych wpisów (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy)"
+
+[[message]]
+key = "Show key stuck status"
+[message.translations]
+simplified_chinese = "显示卡键状态"
+traditional_chinese = "顯示卡鍵狀態"
+japanese = "キー固着ステータスを表示"
+korean = "키 고정 상태 표시"
+russian = "Показывать статус залипших клавиш"
+german = "Tastensteck-Status anzeigen"
+spanish = "Mostrar estado de tecla atascada"
+french = "Afficher le statut de touche bloquée"
+brazilian_portuguese = "Mostrar status de tecla presa"
+portuguese = "Mostrar estado de tecla presa"
+turkish = "Tuş sıkışma durumunu göster"
+polish = "Pokaż stan zablokowanych klawiszy"
+
+[[message]]
+key = "Show hammer status"
+[message.translations]
+simplified_chinese = "显示锤状态"
+traditional_chinese = "顯示錘狀態"
+japanese = "ハンマーステータスを表示"
+korean = "망치 상태 표시"
+russian = "Показать статус молота"
+german = "Hammer-Status anzeigen"
+spanish = "Mostrar estado del martillo"
+french = "Afficher le statut du marteau"
+brazilian_portuguese = "Mostrar status do martelo"
+portuguese = "Mostrar estado do martelo"
+turkish = "Çekiç durumunu göster"
+polish = "Pokaż status młotka"
+
+[[message]]
+key = "Show dummy control status"
+[message.translations]
+simplified_chinese = "显示分身控制状态"
+traditional_chinese = "顯示分身控制狀態"
+japanese = "ダミーコントロール状態を表示"
+korean = "더미 제어 상태 표시"
+russian = "Показать статус управления дамми"
+german = "Dummy-Steuerungsstatus anzeigen"
+spanish = "Mostrar estado de control del Dummy"
+french = "Afficher le statut de contrôle du dummy"
+brazilian_portuguese = "Mostrar status de controle do dummy"
+portuguese = "Mostrar estado de controlo do Dummy"
+turkish = "Dummy kontrol durumunu göster"
+polish = "Pokaż status sterowania kukłą"
+
+[[message]]
+key = "Show dummy copy status"
+[message.translations]
+simplified_chinese = "显示分身同步状态"
+traditional_chinese = "顯示分身同步狀態"
+japanese = "ダミー同期状態を表示"
+korean = "더미 동기화 상태 표시"
+russian = "Показать статус синхронизации дамми"
+german = "Dummy-Synchronisationsstatus anzeigen"
+spanish = "Mostrar estado de sincronización del Dummy"
+french = "Afficher le statut de synchronisation du dummy"
+brazilian_portuguese = "Mostrar status de sincronização do dummy"
+portuguese = "Mostrar estado de sincronização do Dummy"
+turkish = "Dummy senkronizasyon durumunu göster"
+polish = "Pokaż status synchronizacji kukły"
+
+[[message]]
+key = "Custom bind status list"
+[message.translations]
+simplified_chinese = "自定义 bind 状态列表"
+traditional_chinese = "自訂 bind 狀態列表"
+japanese = "カスタム bind 状態リスト"
+korean = "사용자 지정 bind 상태 목록"
+russian = "Список пользовательских bind-статусов"
+german = "Benutzerdefinierte Bind-Status-Liste"
+spanish = "Lista de estado de bind personalizada"
+french = "Liste des états de bind personnalisés"
+brazilian_portuguese = "Lista de estado de bind personalizada"
+portuguese = "Lista de estado de bind personalizada"
+turkish = "Özel bind durumu listesi"
+polish = "Lista niestandardowych stanów bind"
+
+[[message]]
+key = "Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text"
+[message.translations]
+simplified_chinese = "为空时使用内置四项。格式：var|0=Off|1=On；var|Text"
+traditional_chinese = "為空時使用內建四項。格式：var|0=Off|1=On；var|Text"
+japanese = "空の場合は組み込みの4項目。形式：var|0=Off|1=On；var|Text"
+korean = "비어 있으면 내장 4개 항목. 형식: var|0=Off|1=On; var|Text"
+russian = "Пусто — встроенные 4 элемента. Формат: var|0=Off|1=On; var|Text"
+german = "Leer: die 4 integrierten Einträge. Format: var|0=Off|1=On; var|Text"
+spanish = "Vacío: las 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
+french = "Vide : les 4 entrées intégrées. Format : var|0=Off|1=On ; var|Text"
+brazilian_portuguese = "Vazio: as 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
+portuguese = "Vazio: as 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
+turkish = "Boş: yerleşik 4 girdi. Biçim: var|0=Off|1=On; var|Text"
+polish = "Puste: 4 wbudowane wpisy. Format: var|0=Off|1=On; var|Text"
+
+[[message]]
+key = "DDRace HUD Pro"
+[message.translations]
+simplified_chinese = 'DDRace HUD Pro'
+traditional_chinese = 'DDRace HUD Pro'
+japanese = 'DDRace HUD Pro（分身ステータス）'
+korean = 'DDRace HUD Pro（분신 상태）'
+russian = 'DDRace HUD Pro（статус дамми）'
+german = 'DDRace HUD Pro（Dummy-Status）'
+spanish = 'DDRace HUD Pro（estado del dummy）'
+french = 'DDRace HUD Pro（état du dummy）'
+brazilian_portuguese = 'DDRace HUD Pro（estado do dummy）'
+portuguese = 'DDRace HUD Pro（estado do dummy）'
+turkish = 'DDRace HUD Pro（dummy durumu）'
+polish = 'DDRace HUD Pro（status dummy）'
+
+[[message]]
+key = "Dummy key/hammer/control/copy status switches and custom bind status list"
+[message.translations]
+simplified_chinese = '卡键/锤子/分身控制/分身同步状态开关，以及自定义 bind 状态列表'
+traditional_chinese = '卡鍵/錘子/分身控制/分身同步狀態開關，以及自訂 bind 狀態列表'
+japanese = 'キー固定/ハンマー/分身操作/分身同期の状態スイッチとカスタム bind 状態リスト'
+korean = '키 고정/해머/분신 조작/분신 동기화 상태 스위치와 사용자 지정 bind 상태 목록'
+russian = 'Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми и пользовательский список состояния bind'
+german = 'Status-Schalter für Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation und benutzerdefinierte Bind-Status-Liste'
+spanish = 'Interruptores de estado de fijación de teclas/martillo/control de dummy/sincronización de dummy y lista de estado de bind personalizada'
+french = "Interrupteurs d'état de blocage des touches/marteau/contrôle du dummy/synchronisation du dummy et liste d'états de bind personnalisés"
+brazilian_portuguese = 'Interruptores de estado de fixação de teclas/martelo/controle do dummy/sincronização do dummy e lista de estado de bind personalizada'
+portuguese = 'Interruptores de estado de fixação de teclas/martelo/controlo do dummy/sincronização do dummy e lista de estado de bind personalizada'
+turkish = 'Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları ve özel bind durumu listesi'
+polish = 'Przełączniki stanu blokady klawiszy/młota/sterowania dummy/synchronizacji dummy oraz lista niestandardowych stanów bind'

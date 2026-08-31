@@ -56,11 +56,11 @@ public:
 	virtual bool Save(bool Force = false) = 0;
 	virtual class CConfig *Values() = 0;
 
-	virtual void RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain = ConfigDomain::DDNET) = 0;
+	virtual void RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;
 
-	virtual void WriteLine(const char *pLine, ConfigDomain ConfigDomain = ConfigDomain::DDNET) = 0;
+	virtual void WriteLine(const char *pLine, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;
 
-	virtual void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::DDNET) = 0;
+	virtual void StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain = ConfigDomain::QMCLIENT) = 0;
 
 	virtual void PossibleConfigVariables(const char *pStr, int FlagMask, POSSIBLECFGFUNC pfnCallback, void *pUserData) = 0;
 	virtual EColorInputAlphaMode ColorValueInputAlphaMode(const char *pScriptName) const = 0;

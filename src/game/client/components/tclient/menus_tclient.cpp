@@ -6418,12 +6418,13 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 		}
 
 		auto GetConfigSource = [&](const SConfigVariable *pVar) {
-			if(pVar->m_ConfigDomain == ConfigDomain::DDNET)
-				return EConfigSource::DDNET;
+			// v3 起所有变量合并进单一 QMCLIENT 域，按前缀区分来源
 			const char *pName = pVar->m_pScriptName ? pVar->m_pScriptName : "";
 			if(str_startswith(pName, "qm_"))
 				return EConfigSource::QM;
-			return EConfigSource::TCLIENT;
+			if(str_startswith(pName, "tc_"))
+				return EConfigSource::TCLIENT;
+			return EConfigSource::DDNET;
 		};
 
 		auto SourceEnabled = [&](EConfigSource Source) {

@@ -2138,6 +2138,9 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 == Configure laser shape, glow, and animation
 
+Configure lyrics sources and display
+== 가사 소스 및 표시 구성
+
 Configure nameplate text, badges, and visibility
 == Configure nameplate text, badges, and visibility
 
@@ -2477,6 +2480,12 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == 사용자 정의 화면비, x100 배율로 저장 (예: 178=16:9, 233=21:9)
 
+Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
+== 사용자 지정 bind 상태 HUD 항목입니다. 비어 있으면 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)을 사용합니다. 형식: 변수명|상태값=텍스트|상태값=텍스트; 변수명|텍스트(0이 아닐 때 표시); 변수명(변수명만 입력 시 0이 아닐 때 변수명 표시). 항목은 ';', 필드는 '|'로 구분합니다
+
+Custom bind status list
+== 사용자 지정 bind 상태 목록
+
 Custom colors
 == 사용자 정의 색상
 
@@ -2615,6 +2624,9 @@ DDNet/total CPU
 DDRace HUD
 == DDRace HUD
 
+DDRace HUD Pro
+== DDRace HUD Pro（분신 상태）
+
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 == DDraceNetwork는 협동 온라인 게임으로, 당신과 당신의 티 그룹이 맵의 결승선에 도달하는 것이 목표입니다. 초보자라면 가장 쉬운 맵을 제공하는 Novice 서버에서 시작해야 합니다. 핑을 고려하여 가까운 서버를 선택하세요.
 
@@ -2647,6 +2659,9 @@ Debug graph panel opacity (percent)
 
 Debug group clipping.
 == 그룹 클리핑 디버그
+
+Debug mode
+== 디버그 모드
 
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == 디버그 모드가 활성화되었습니다. Ctrl+Shift+D 를 눌러 디버그 모드를 비활성화하세요.
@@ -3200,6 +3215,9 @@ Dummy is currently connected.
 Dummy jump
 == 더미 점프
 
+Dummy key/hammer/control/copy status switches and custom bind status list
+== 키 고정/해머/분신 조작/분신 동기화 상태 스위치와 사용자 지정 bind 상태 목록
+
 Dummy marking color
 == 더미 마킹 색상
 
@@ -3385,6 +3403,9 @@ Emoticon shadow
 
 Emoticons
 == 이모티콘
+
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== 비어 있으면 내장 4개 항목. 형식: var|0=Off|1=On; var|Text
 
 enable
 == 활성화
@@ -3596,6 +3617,9 @@ Enable new IME candidate bar
 Enable new settings page UI
 == 새 설정 페이지 UI 활성화
 
+Enable performance debug logging and diagnostics
+== 성능 디버그 로그 및 끊김 진단 활성화
+
 Enable Pie Menu
 == 파이 메뉴 활성화
 
@@ -3679,6 +3703,12 @@ Enable spectator cursor (if available)
 
 Enable speedrun timer
 == 스피드런 타이머 활성화
+
+Enable Spotify lyric integration
+== Spotify 가사 통합 활성화
+
+Enable Spotify lyrics
+== Spotify 가사 활성화
 
 Enable squishy Tee deformation
 == Q 탄력 Tee 변형 활성화
@@ -7229,6 +7259,9 @@ Password incorrect
 Password required to use reserved slots.
 == 예약된 슬롯을 사용하는 데 필요한 비밀번호
 
+Paste sp_dc from Spotify web cookies
+== 브라우저의 sp_dc 쿠키 붙여넣기
+
 Pause
 == 일시정지
 
@@ -8464,6 +8497,9 @@ Reset mouse position when opening bind wheel
 
 Reset position of mouse when opening bindwheel
 == 바인드휠 열 때 마우스 위치 초기화
+
+Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
+== qm_bind_status_items를 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)으로 재설정
 
 Reset stats on server join (0=persistent, 1=reset on join)
 == 서버 입장 시 통계 초기화 (0=누적 통계, 1=입장 시마다 초기화)
@@ -10414,6 +10450,12 @@ Sponsor support
 
 Sponsors:
 == 스폰서:
+
+Spotify sp_dc
+== Spotify sp_dc 쿠키
+
+Spotify sp_dc cookie (from browser DevTools, long-lived)
+== Spotify sp_dc 쿠키(브라우저 DevTools에서 가져옴, 장기 유효)
 
 Spree
 == 연속 처치
@@ -12875,8 +12917,8 @@ Could not initialize the given graphics backend, this is probably because you di
 == 지정된 그래픽 백엔드를 초기화할 수 없습니다. 통합 그래픽 카드 드라이버가 설치되지 않았을 수 있습니다.
 
 [Graphics error]
-Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== 초기화 중 실패했습니다. 설정 디렉토리의 qmclient/settings_ddnet.cfg에서 gfx_backend를 OpenGL 또는 Vulkan으로 변경한 후 다시 시도하세요.
+Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== 초기화 중 실패했습니다. 설정 디렉토리의 qmclient/settings.cfg에서 gfx_backend를 OpenGL 또는 Vulkan으로 변경한 후 다시 시도하세요.
 
 [Graphics error]
 Failed to swap framebuffers. Try to update your GPU drivers.
@@ -12891,8 +12933,8 @@ Submitting the render commands failed. Try to update your GPU drivers.
 == 렌더 명령 제출에 실패했습니다. GPU 드라이버를 업데이트해 보세요.
 
 [Graphics error]
-Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== 알 수 없는 오류입니다. 설정 디렉터리의 qmclient/settings_ddnet.cfg에서 gfx_backend를 OpenGL 또는 Vulkan으로 변경하고 다시 시도하세요.
+Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== 알 수 없는 오류입니다. 설정 디렉터리의 qmclient/settings.cfg에서 gfx_backend를 OpenGL 또는 Vulkan으로 변경하고 다시 시도하세요.
 
 [Hammer Mode]
 Normal

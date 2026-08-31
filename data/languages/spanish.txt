@@ -2138,6 +2138,9 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 == Configure laser shape, glow, and animation
 
+Configure lyrics sources and display
+== Configurar fuentes de letras y visualización
+
 Configure nameplate text, badges, and visibility
 == Configure nameplate text, badges, and visibility
 
@@ -2477,6 +2480,12 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Relación de aspecto personalizada, almacenada como x100 (ej. 178=16:9, 233=21:9)
 
+Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
+== Entradas de HUD de estado de bind personalizadas. Vacío: las 4 entradas integradas (fijación de teclas/martillo/control de dummy/sincronización de dummy). Formato: variable|valor=texto|valor=texto; variable|texto (se muestra si no es cero); variable (solo nombre: se muestra el nombre si no es cero). Entradas separadas por ';', campos por '|'
+
+Custom bind status list
+== Lista de estado de bind personalizada
+
 Custom colors
 == Colores personalizados
 
@@ -2615,6 +2624,9 @@ DDNet/total CPU
 DDRace HUD
 == HUD de DDRace
 
+DDRace HUD Pro
+== DDRace HUD Pro（estado del dummy）
+
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 == DDraceNetwork es un juego cooperativo en línea donde el objetivo es que tú y tu grupo de tees lleguéis a la línea de meta del mapa. Como novato, deberías empezar en servidores Novice, que albergan los mapas más fáciles. Considera el ping para elegir un servidor cercano a ti.
 
@@ -2647,6 +2659,9 @@ Debug graph panel opacity (percent)
 
 Debug group clipping.
 == Depuración de recorte de grupo.
+
+Debug mode
+== Modo de depuración
 
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == Modo de depuración activado. Presiona Ctrl+Shift+D para desactivar el modo de depuración.
@@ -3200,6 +3215,9 @@ Dummy is currently connected.
 Dummy jump
 == Salto del dummy
 
+Dummy key/hammer/control/copy status switches and custom bind status list
+== Interruptores de estado de fijación de teclas/martillo/control de dummy/sincronización de dummy y lista de estado de bind personalizada
+
 Dummy marking color
 == Color de marcado del dummy
 
@@ -3385,6 +3403,9 @@ Emoticon shadow
 
 Emoticons
 == Emoticonos
+
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== Vacío: las 4 entradas integradas. Formato: var|0=Off|1=On; var|Text
 
 enable
 == activar
@@ -3596,6 +3617,9 @@ Enable new IME candidate bar
 Enable new settings page UI
 == Activar nueva interfaz de página de configuración UI
 
+Enable performance debug logging and diagnostics
+== Activar registro de depuración de rendimiento y diagnóstico de tartamudeos
+
 Enable Pie Menu
 == Activar menú circular
 
@@ -3679,6 +3703,12 @@ Enable spectator cursor (if available)
 
 Enable speedrun timer
 == Activar temporizador de speedrun
+
+Enable Spotify lyric integration
+== Habilitar la integración de letras de Spotify
+
+Enable Spotify lyrics
+== Activar letras de Spotify
 
 Enable squishy Tee deformation
 == Activar deformación elástica de Tee
@@ -7229,6 +7259,9 @@ Password incorrect
 Password required to use reserved slots.
 == Contraseña requerida para usar espacios reservados.
 
+Paste sp_dc from Spotify web cookies
+== Pegar la cookie sp_dc del navegador
+
 Pause
 == Pausa
 
@@ -8464,6 +8497,9 @@ Reset mouse position when opening bind wheel
 
 Reset position of mouse when opening bindwheel
 == Restablecer la posición del ratón al abrir la rueda de binds
+
+Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
+== Restablecer qm_bind_status_items a las 4 entradas integradas (fijación de teclas/martillo/control de dummy/sincronización de dummy)
 
 Reset stats on server join (0=persistent, 1=reset on join)
 == Restablecer estadísticas al entrar al servidor (0=estadísticas acumuladas, 1=restablecer cada vez que entras)
@@ -10414,6 +10450,12 @@ Sponsor support
 
 Sponsors:
 == Patrocinadores:
+
+Spotify sp_dc
+== Cookie sp_dc de Spotify
+
+Spotify sp_dc cookie (from browser DevTools, long-lived)
+== Cookie sp_dc de Spotify (desde DevTools del navegador, de larga duración)
 
 Spree
 == Racha
@@ -12875,8 +12917,8 @@ Could not initialize the given graphics backend, this is probably because you di
 == No se pudo inicializar el backend gráfico dado, probablemente porque no instalaste el controlador de la tarjeta gráfica integrada.
 
 [Graphics error]
-Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== Falló durante la inicialización. Intenta cambiar gfx_backend a OpenGL o Vulkan en qmclient/settings_ddnet.cfg en el directorio de configuración e inténtalo de nuevo.
+Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== Falló durante la inicialización. Intenta cambiar gfx_backend a OpenGL o Vulkan en qmclient/settings.cfg en el directorio de configuración e inténtalo de nuevo.
 
 [Graphics error]
 Failed to swap framebuffers. Try to update your GPU drivers.
@@ -12891,8 +12933,8 @@ Submitting the render commands failed. Try to update your GPU drivers.
 == Falló el envío de los comandos de renderizado. Intenta actualizar los controladores de tu GPU.
 
 [Graphics error]
-Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== Error desconocido. Intenta cambiar gfx_backend a OpenGL o Vulkan en qmclient/settings_ddnet.cfg en el directorio de configuración e inténtalo de nuevo.
+Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== Error desconocido. Intenta cambiar gfx_backend a OpenGL o Vulkan en qmclient/settings.cfg en el directorio de configuración e inténtalo de nuevo.
 
 [Hammer Mode]
 Normal

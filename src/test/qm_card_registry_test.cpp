@@ -6,6 +6,7 @@
 #include <engine/storage.h>
 
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmModuleLayoutAdapter.h>
 #include <game/localization.h>
 
 #include <gtest/gtest.h>
@@ -1015,6 +1016,20 @@ TEST(QmCardRegistry, DataDebtCardsHaveTabAssignment)
 {
 	EXPECT_NE(qm_card_registry::FindByStableId("qm:laser")->m_pDefaultTab, nullptr);
 	EXPECT_NE(qm_card_registry::FindByStableId("qm:nameplate_text")->m_pDefaultTab, nullptr);
+}
+
+// 意图：调试模式卡片必须挂在 HUD 页，携带可搜索的中文/拼音关键词，且模块枚举可反查。
+TEST(QmCardRegistry, DebugModeCardRegisteredInHudTab)
+{
+	const auto *pDefault = qm_card_registry::FindByStableId("qm:debug_mode");
+	ASSERT_NE(pDefault, nullptr);
+	EXPECT_STREQ(pDefault->m_pDefaultTab, "hud");
+	EXPECT_EQ(pDefault->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	ASSERT_NE(pDefault->m_pSearchKeywords, nullptr);
+	EXPECT_NE(std::string(pDefault->m_pSearchKeywords).find("调试模式"), std::string::npos);
+	qm_module::EQmModuleId Id;
+	ASSERT_TRUE(qm_module::QmModuleIdFromStableId("qm:debug_mode", &Id));
+	EXPECT_EQ(Id, qm_module::EQmModuleId::DebugMode);
 }
 
 // 意图：全局卡片的默认 placement 必须包含 tab，否则搜索结果和按 tab 筛选没有稳定落点。

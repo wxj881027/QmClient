@@ -5,7 +5,9 @@
 #define SET_CONFIG_DOMAIN(CONFIGDOMAIN) ;
 #endif
 
-SET_CONFIG_DOMAIN(ConfigDomain::DDNET)
+// QmClient v3：全部变量（DDNet 官方 + TClient + QmClient）合并进单一 QMCLIENT 域，
+// 统一保存到 qmclient/settings.cfg。
+SET_CONFIG_DOMAIN(ConfigDomain::QMCLIENT)
 #include "config_variables.h"
 
 SET_CONFIG_DOMAIN(ConfigDomain::QMCLIENT)

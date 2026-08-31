@@ -504,6 +504,28 @@ TEST(QmChatInteractions, ChatLineMenuUsesContentBoundsAndKeepsTargetHighlighted)
 	EXPECT_NE(OnRender.find("OpenChatLineMenu(*pMenuLine, GetUiMousePos());"), std::string::npos);
 }
 
+TEST(QmChatInteractions, ChatLineMenuReopensOnOtherLinesAndClosesOnEmptySpaceOrOutsideLeftClick)
+{
+	const std::string Source = ReadTestSourceFile("src/game/client/components/chat.cpp");
+	const std::string OnRender = SourceFunctionBody(Source, "void CChat::OnRender()");
+	const std::string UiHeader = ReadTestSourceFile("src/game/client/ui.h");
+	const std::string UiSource = ReadTestSourceFile("src/game/client/ui.cpp");
+
+	// 菜单打开时右键不再被整体屏蔽：允许在其它消息行重新定位菜单
+	EXPECT_NE(OnRender.find("const bool ChatLineMenuRequested = m_Mode != MODE_NONE && !LanguageMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !m_ScrollbarDragging && !InsideChatLineMenu && Input()->KeyPress(KEY_MOUSE_2);"), std::string::npos);
+	EXPECT_EQ(OnRender.find("const bool ChatLineMenuRequested = ChatCopyActive && Input()->KeyPress(KEY_MOUSE_2);"), std::string::npos);
+	// 左键拖拽复制仍只在菜单关闭时生效，避免关闭菜单时误复制消息
+	EXPECT_NE(OnRender.find("const bool ChatCopyActive = m_Mode != MODE_NONE && !LanguageMenuOpen && !ChatLineMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !m_ScrollbarDragging;"), std::string::npos);
+	// 空白处右键关闭已打开的菜单
+	EXPECT_NE(OnRender.find("else if(ChatLineMenuOpen)"), std::string::npos);
+	// 左键按下非菜单区域立即关闭菜单
+	EXPECT_NE(OnRender.find("Ui()->GetPopupMenuRect(&m_ChatLinePopupContext)"), std::string::npos);
+	EXPECT_NE(OnRender.find("Input()->KeyPress(KEY_MOUSE_1)"), std::string::npos);
+	// CUi 提供弹窗矩形访问器
+	EXPECT_NE(UiHeader.find("const CUIRect *GetPopupMenuRect(const SPopupMenuId *pId) const;"), std::string::npos);
+	EXPECT_NE(UiSource.find("const CUIRect *CUi::GetPopupMenuRect("), std::string::npos);
+}
+
 TEST(QmChatCommandCompletion, KeepsDdnetTabCompletionWithoutQmExtensions)
 {
 	const std::string ChatHeader = ReadTestSourceFile("src/game/client/components/chat.h");

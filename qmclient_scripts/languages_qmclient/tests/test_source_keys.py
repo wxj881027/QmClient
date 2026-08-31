@@ -98,6 +98,25 @@ class SourceKeysTest(unittest.TestCase):
             {"War Entries", "TClient Links", "Settings"},
         )
 
+    def test_extracts_qm_music_hook_registry_labels(self):
+        path = Path("src/game/client/components/qmclient/qm_music_hook_registry.h")
+        content = "\n".join(
+            (
+                "static const SQmMusicHookEntry aEntries[] = {",
+                '{&g_Config.m_QmNeteaseHookEnable, "Enable Netease music Hook", "Enable Netease music Hook", L"cloudmusic.exe"},',
+                '{&g_Config.m_QmSodaHookEnable, "Enable SodaMusic Hook", "Enable SodaMusic Hook", L"SodaMusic.exe"},',
+                '{&g_Config.m_QmSpotifyEnable, "Enable Spotify lyrics", "Enable Spotify lyrics", L"Spotify.exe"},',
+                "};",
+            )
+        )
+
+        records = source_keys.extract_known_indirect_records(path, content)
+
+        self.assertEqual(
+            {record.key for record in records},
+            {"Enable Netease music Hook", "Enable SodaMusic Hook", "Enable Spotify lyrics"},
+        )
+
     def test_extracts_concatenated_literals_in_first_argument(self):
         content = 'Localize("Demo " "Player");'
         self.assertEqual(

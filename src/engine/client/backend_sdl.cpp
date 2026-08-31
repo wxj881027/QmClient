@@ -316,7 +316,7 @@ void CCommandProcessor_SDL_GL::HandleError()
 	switch(m_Error.m_ErrorType)
 	{
 	case GFX_ERROR_TYPE_INIT:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.", "Graphics error")});
+		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
 		break;
 	case GFX_ERROR_TYPE_OUT_OF_MEMORY_IMAGE:
 		[[fallthrough]];
@@ -340,7 +340,7 @@ void CCommandProcessor_SDL_GL::HandleError()
 	case GFX_ERROR_TYPE_UNKNOWN:
 		[[fallthrough]];
 	default:
-		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.", "Graphics error")});
+		m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{true, Localizable("Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.", "Graphics error")});
 		break;
 	}
 }

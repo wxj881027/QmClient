@@ -515,11 +515,13 @@ void CMenus::RenderGame(CUIRect MainView)
 	const bool ShowPauseButton = GameClient()->m_ReceivedDDNetPlayer && HasLocalInfo && (LocalTeam != TEAM_SPECTATORS || Paused || Spec);
 	const bool ShowPracticeButton = GameClient()->m_ReceivedDDNetPlayer && HasLocalInfo && LocalTeam != TEAM_SPECTATORS && !Paused && !Spec;
 	const bool ShowAutoCameraButton = HasLocalInfo && (LocalTeam == TEAM_SPECTATORS || Paused || Spec);
+	// 短时回放总开关（cl_replays）关闭时，隐藏 ESC 菜单的"保存回放"按钮
+	const bool ShowSaveReplayButton = g_Config.m_ClReplays != 0;
 
 	const float UtilityButtonWidthNormal =
-		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + SaveReplayButtonWidthNormal + DemoMarkerButtonWidthNormal + ReportButtonWidthNormal + UtilityButtonSpacingNormal * 6.0f;
+		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + (ShowSaveReplayButton ? SaveReplayButtonWidthNormal : 0.0f) + DemoMarkerButtonWidthNormal + ReportButtonWidthNormal + UtilityButtonSpacingNormal * (ShowSaveReplayButton ? 6.0f : 5.0f);
 	const float UtilityButtonWidthCompact =
-		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + SaveReplayButtonWidthCompact + DemoMarkerButtonWidthCompact + ReportButtonWidthCompact + UtilityButtonSpacingCompact * 6.0f;
+		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + (ShowSaveReplayButton ? SaveReplayButtonWidthCompact : 0.0f) + DemoMarkerButtonWidthCompact + ReportButtonWidthCompact + UtilityButtonSpacingCompact * (ShowSaveReplayButton ? 6.0f : 5.0f);
 	const float PrimaryButtonBarWidth = maximum(0.0f, MainView.w - 20.0f);
 
 	auto CalcPrimaryButtonsWidth = [&](bool IncludeTeamplayDDRaceButtons) {
@@ -723,12 +725,15 @@ void CMenus::RenderGame(CUIRect MainView)
 			Client()->DemoRecorder(RECORDER_MANUAL)->Stop(IDemoRecorder::EStopMode::KEEP_FILE);
 	}
 
-	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
-	UtilityButtonBar.VSplitRight(SaveReplayButtonWidth, &UtilityButtonBar, &Button);
-	static CButtonContainer s_SaveReplayButton;
-	if(DoIngameMenuButton(PAGE_GAME, "ingame-game-save-replay", &s_SaveReplayButton, aSaveReplayButtonLabel, 0, &Button))
+	if(ShowSaveReplayButton)
 	{
-		Client()->SaveReplay(g_Config.m_ClEscReplayLengthMinutes * 60);
+		UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+		UtilityButtonBar.VSplitRight(SaveReplayButtonWidth, &UtilityButtonBar, &Button);
+		static CButtonContainer s_SaveReplayButton;
+		if(DoIngameMenuButton(PAGE_GAME, "ingame-game-save-replay", &s_SaveReplayButton, aSaveReplayButtonLabel, 0, &Button))
+		{
+			Client()->SaveReplay(g_Config.m_ClEscReplayLengthMinutes * 60);
+		}
 	}
 
 	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);

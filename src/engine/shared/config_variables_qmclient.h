@@ -396,6 +396,13 @@ MACRO_CONFIG_INT(QmPlayerStatsMapProgressPosY, qm_player_stats_map_progress_pos_
 MACRO_CONFIG_INT(QmPlayerStatsMapProgressDbgRoute, qm_player_stats_map_progress_dbg_route, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show map progress test point route")
 MACRO_CONFIG_INT(QmPlayerStatsResetOnJoin, qm_player_stats_reset_on_join, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reset stats on server join (0=persistent, 1=reset on join)")
 
+// Custom bind status HUD - 自定义 bind 状态显示
+// 非空时完全替换右侧信息框里的内置四项状态（卡键/锤子/分控/同步）。
+// 条目格式：变量名|状态值=文本|状态值=文本; 变量名|文本（非零时显示）;
+// 变量名（仅填变量名时非零显示变量名本身）。条目用 ';' 分隔，字段用 '|' 分隔。
+// 示例: "cl_dummy_hammer|0=Hammer: Off|1=Hammer: On; qm_deepfly_mode|DF"
+MACRO_CONFIG_STR(QmBindStatusItems, qm_bind_status_items, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'")
+
 // Switch Countdown - 开关倒计时
 MACRO_CONFIG_INT(QmSwitchCountdown, qm_switch_countdown, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable switch countdown")
 MACRO_CONFIG_INT(QmSwitchCountdownMode, qm_switch_countdown_mode, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)")
@@ -509,6 +516,11 @@ MACRO_CONFIG_INT(QmLyricsInMediaIsland, qm_lyrics_in_media_island, 1, 0, 1, CFGF
 MACRO_CONFIG_INT(QmSodaHookEnable, qm_soda_hook_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable SodaMusic hook integration")
 MACRO_CONFIG_INT(QmSodaHookTimeoutMs, qm_soda_hook_timeout_ms, 1500, 250, 10000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "SodaMusic hook heartbeat timeout (milliseconds)")
 MACRO_CONFIG_STR(QmSodaHookHelperPath, qm_soda_hook_helper_path, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "SodaMusic hook helper path (empty=beside QmClient)")
+
+// Spotify 歌词链路(纯网络:sp_dc → TOTP token → color-lyrics,LRCLIB 兜底)。
+// 共享同一套歌词展示开关(qm_lyrics / qm_lyrics_in_media_island)。
+MACRO_CONFIG_INT(QmSpotifyEnable, qm_spotify_enable, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Spotify lyric integration")
+MACRO_CONFIG_STR(QmSpotifySpDc, qm_spotify_sp_dc, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spotify sp_dc cookie (from browser DevTools, long-lived)")
 
 // Speedrun Timer - 速通倒计时器
 MACRO_CONFIG_INT(QmSpeedrunTimer, qm_speedrun_timer, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Speedrun countdown timer")

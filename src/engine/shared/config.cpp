@@ -18,10 +18,24 @@ CConfig g_Config;
 // ----------------------- Config Variables
 namespace
 {
-	constexpr const char *QM_CONFIG_MIGRATION_MARKER = "qmclient/config_migration_v2.done";
-	constexpr const char *QM_CONFIG_MIGRATION_BACKUP_DIR = "qmclient/migration_backup_v2";
-	constexpr const char *QM_CONFIG_MIGRATION_V1_BACKUP_DDNET = "qmclient/migration_backup_v1/settings_ddnet.cfg";
-	constexpr const char *QM_CONFIG_SHARED_DDNET_PATH = "settings_ddnet.cfg";
+	// QmClient v3：单一变量文件 qmclient/settings.cfg 存在即视为配置系统已收敛，
+	// 不再需要额外的迁移标记文件。
+	constexpr const char *QM_CONFIG_MAIN_PATH = "qmclient/settings.cfg";
+	// v3 迁移需要删除的历史残留：
+	// - v2 时代 qmclient/ 下的两个旧变量文件（已合并进 settings.cfg）
+	// - v1 时代的大写 QmClient/ 目录（含 4 个旧文件）
+	// - v0 时代散落在配置根目录的 qm 专属文件（settings_ddnet.cfg 保留给官方客户端）
+	// - v2 迁移的备份目录与完成标记
+	constexpr const char *QM_CONFIG_V2_QMCLIENT_PATH = "qmclient/settings_qmclient.cfg";
+	constexpr const char *QM_CONFIG_V2_DDNET_PATH = "qmclient/settings_ddnet.cfg";
+	constexpr const char *QM_CONFIG_V1_DIR = "QmClient";
+	constexpr const char *QM_CONFIG_V2_BACKUP_DIR = "qmclient/migration_backup_v2";
+	constexpr const char *QM_CONFIG_V1_BACKUP_DIR = "qmclient/migration_backup_v1";
+	constexpr const char *QM_CONFIG_V2_MARKER = "qmclient/config_migration_v2.done";
+	constexpr const char *QM_CONFIG_V0_QMCLIENT_PATH = "settings_qmclient.cfg";
+	constexpr const char *QM_CONFIG_V0_PROFILES_PATH = "qmclient_profiles.cfg";
+	constexpr const char *QM_CONFIG_V0_CHATBINDS_PATH = "qmclient_chatbinds.cfg";
+	constexpr const char *QM_CONFIG_V0_WARLIST_PATH = "qmclient_warlist.cfg";
 
 	std::unordered_map<const SIntConfigVariable *, int> *s_pToggleRestoreInts = nullptr;
 
@@ -48,6 +62,36 @@ namespace
 			return true;
 		return pStorage->CreateFolder(aFolder, IStorage::TYPE_SAVE) || pStorage->FolderExists(aFolder, IStorage::TYPE_SAVE);
 	}
+
+	// 递归删除存储目录（先删内容，再删目录本身）。
+	static void RemoveStorageDirRecursive(IStorage *pStorage, const char *pDir)
+	{
+		struct SRemoveContext
+		{
+			IStorage *m_pStorage;
+			const char *m_pDir;
+		};
+		SRemoveContext Context{pStorage, pDir};
+		const auto RemoveEntry = [](const CFsFileInfo *pInfo, int IsDir, int Type, void *pUser) -> int {
+			(void)Type;
+			SRemoveContext *pCtx = static_cast<SRemoveContext *>(pUser);
+			if(pInfo == nullptr || pInfo->m_pName == nullptr)
+				return 0;
+			// Windows FindFirstFileW 会返回 "." 与 ".."，必须跳过，否则递归会删到父目录。
+			if(str_comp(pInfo->m_pName, ".") == 0 || str_comp(pInfo->m_pName, "..") == 0)
+				return 0;
+			char aPath[IO_MAX_PATH_LENGTH];
+			str_format(aPath, sizeof(aPath), "%s/%s", pCtx->m_pDir, pInfo->m_pName);
+			if(IsDir)
+				RemoveStorageDirRecursive(pCtx->m_pStorage, aPath);
+			else
+				pCtx->m_pStorage->RemoveFile(aPath, IStorage::TYPE_SAVE);
+			return 0;
+		};
+		pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, pDir, RemoveEntry, &Context);
+		pStorage->RemoveFolder(pDir, IStorage::TYPE_SAVE);
+	}
+
 	EColorInputAlphaMode ColorInputAlphaMode(const char *pValue)
 	{
 		if(pValue == nullptr || pValue[0] == '\0')
@@ -69,130 +113,113 @@ namespace
 			return EColorInputAlphaMode::PACKED;
 		return EColorInputAlphaMode::OMITTED;
 	}
-
-	bool WriteStorageFileAtomically(IStorage *pStorage, const char *pPath, const void *pContents, size_t ContentsSize)
-	{
-		if(!EnsureConfigPathFolder(pStorage, pPath))
-			return false;
-
-		char aTmpPath[IO_MAX_PATH_LENGTH];
-		IStorage::FormatTmpPath(aTmpPath, sizeof(aTmpPath), pPath);
-		IOHANDLE File = pStorage->OpenFile(aTmpPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!File)
-			return false;
-
-		bool Success = io_write(File, pContents, ContentsSize) == ContentsSize;
-		if(Success && io_sync(File) != 0)
-			Success = false;
-		if(io_close(File) != 0)
-			Success = false;
-		if(Success)
-			Success = pStorage->RenameFile(aTmpPath, pPath, IStorage::TYPE_SAVE);
-		if(!Success)
-			pStorage->RemoveFile(aTmpPath, IStorage::TYPE_SAVE);
-		return Success;
-	}
-
-	bool CopyStorageFile(IStorage *pStorage, const char *pSourcePath, const char *pDestinationPath)
-	{
-		void *pContents = nullptr;
-		unsigned ContentsSize = 0;
-		if(!pStorage->ReadFile(pSourcePath, IStorage::TYPE_SAVE, &pContents, &ContentsSize))
-			return false;
-		const bool Success = WriteStorageFileAtomically(pStorage, pDestinationPath, pContents, ContentsSize);
-		free(pContents);
-		return Success;
-	}
-
-	bool StorageFileIsEmpty(IStorage *pStorage, const char *pPath)
-	{
-		void *pContents = nullptr;
-		unsigned ContentsSize = 0;
-		if(!pStorage->ReadFile(pPath, IStorage::TYPE_SAVE, &pContents, &ContentsSize))
-			return false;
-		free(pContents);
-		return ContentsSize == 0;
-	}
 }
 
 bool QmConfigMigrationPending(IStorage *pStorage)
 {
-	return pStorage && !pStorage->FileExists(QM_CONFIG_MIGRATION_MARKER, IStorage::TYPE_SAVE);
+	// v3：qmclient/settings.cfg 存在即视为配置已收敛，无需额外标记文件。
+	return pStorage && !pStorage->FileExists(QM_CONFIG_MAIN_PATH, IStorage::TYPE_SAVE);
 }
 
-bool QmFinalizeConfigMigration(IStorage *pStorage, const bool *pArchivePreviousPaths)
+// 读取变量配置的候选路径列表（v3 合并语义）：
+// 1. 优先 qmclient/settings.cfg（v3 合并文件）；
+// 2. 否则按 v2 → v1 → v0 顺序回退读取旧变量文件（存在才读），
+//    根目录 settings_ddnet.cfg 仅作为全新用户的官方导入源，不会被删除。
+void QmGetVariableConfigLoadPaths(IStorage *pStorage, std::vector<const char *> &vOut)
+{
+	vOut.clear();
+	if(!pStorage)
+		return;
+
+	if(pStorage->FileExists(QM_CONFIG_MAIN_PATH, IStorage::TYPE_SAVE))
+	{
+		vOut.push_back(QM_CONFIG_MAIN_PATH);
+		return;
+	}
+
+	// v2 时代：qmclient/ 下两个旧变量文件（官方 + qm/tc）合并读取。
+	// 注意：Windows 文件系统大小写不敏感，QmClient/ 与 qmclient/ 是同一物理目录，
+	// v1 用户的 qm 文件在此也会被命中；此时官方配置可能仍在根目录，需要补读。
+	const bool V2DdnetExists = pStorage->FileExists(QM_CONFIG_V2_DDNET_PATH, IStorage::TYPE_SAVE);
+	const bool V2QmclientExists = pStorage->FileExists(QM_CONFIG_V2_QMCLIENT_PATH, IStorage::TYPE_SAVE);
+	if(V2DdnetExists || V2QmclientExists)
+	{
+		if(V2DdnetExists)
+			vOut.push_back(QM_CONFIG_V2_DDNET_PATH);
+		if(V2QmclientExists)
+			vOut.push_back(QM_CONFIG_V2_QMCLIENT_PATH);
+		if(!V2DdnetExists && pStorage->FileExists("settings_ddnet.cfg", IStorage::TYPE_SAVE))
+			vOut.push_back("settings_ddnet.cfg");
+		return;
+	}
+
+	// v1 时代：大写 QmClient/ 目录（qm 专属文件）+ 根目录官方共享配置
+	if(pStorage->FileExists("QmClient/settings_qmclient.cfg", IStorage::TYPE_SAVE))
+	{
+		vOut.push_back("QmClient/settings_qmclient.cfg");
+		if(pStorage->FileExists("settings_ddnet.cfg", IStorage::TYPE_SAVE))
+			vOut.push_back("settings_ddnet.cfg");
+		return;
+	}
+
+	// v0 时代 / 全新用户：根目录官方配置（保留）+ qm/tc 旧配置（将删除）
+	if(pStorage->FileExists("settings_ddnet.cfg", IStorage::TYPE_SAVE))
+		vOut.push_back("settings_ddnet.cfg");
+	if(pStorage->FileExists(QM_CONFIG_V0_QMCLIENT_PATH, IStorage::TYPE_SAVE))
+		vOut.push_back(QM_CONFIG_V0_QMCLIENT_PATH);
+}
+
+bool QmFinalizeConfigMigration(IStorage *pStorage)
 {
 	if(!pStorage)
 		return false;
-	if(!QmConfigMigrationPending(pStorage))
-		return true;
 
-	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
+	// 安全边界：只有合并文件 qmclient/settings.cfg 已生成（调用方 Save 成功）才清理旧文件，
+	// 防止保存失败时误删用户数据。调用时机在 Save(true) 之后，此时 settings.cfg 应已存在。
+	if(!pStorage->FileExists(QM_CONFIG_MAIN_PATH, IStorage::TYPE_SAVE))
 	{
-		if(!pStorage->FileExists(s_aConfigDomains[ConfigDomain].m_aConfigPath, IStorage::TYPE_SAVE))
-		{
-			log_error("config", "Cannot finish config migration because '%s' is missing", s_aConfigDomains[ConfigDomain].m_aConfigPath);
-			return false;
-		}
-	}
-
-	if(!pStorage->FolderExists(QM_CONFIG_MIGRATION_BACKUP_DIR, IStorage::TYPE_SAVE) &&
-		!pStorage->CreateFolder(QM_CONFIG_MIGRATION_BACKUP_DIR, IStorage::TYPE_SAVE) &&
-		!pStorage->FolderExists(QM_CONFIG_MIGRATION_BACKUP_DIR, IStorage::TYPE_SAVE))
-	{
-		log_error("config", "Cannot create config migration backup folder '%s'", QM_CONFIG_MIGRATION_BACKUP_DIR);
+		log_error("config", "Cannot finalize config migration because '%s' is missing", QM_CONFIG_MAIN_PATH);
 		return false;
 	}
 
-	// 配置根目录同时供 DDNet/TClient 使用，迁移只能复制备份，不能移动原文件。
-	const auto BackupConfig = [pStorage](const char *pSourcePath, const char *pBackupName) {
-		if(!pSourcePath || !pStorage->FileExists(pSourcePath, IStorage::TYPE_SAVE))
-			return true;
+	// 变量文件已合并进 qmclient/settings.cfg（由调用方 Save 完成），
+	// 这里清理所有历史残留；根目录 settings_ddnet.cfg 保留给官方客户端。
+	pStorage->RemoveFile(QM_CONFIG_V2_QMCLIENT_PATH, IStorage::TYPE_SAVE);
+	pStorage->RemoveFile(QM_CONFIG_V2_DDNET_PATH, IStorage::TYPE_SAVE);
 
-		char aBackupPath[IO_MAX_PATH_LENGTH];
-		str_format(aBackupPath, sizeof(aBackupPath), "%s/%s", QM_CONFIG_MIGRATION_BACKUP_DIR, pBackupName);
-		if(pStorage->FileExists(aBackupPath, IStorage::TYPE_SAVE))
-		{
-			return true;
-		}
-
-		if(CopyStorageFile(pStorage, pSourcePath, aBackupPath))
-			return true;
-		log_error("config", "Cannot back up legacy config '%s' to '%s'", pSourcePath, aBackupPath);
-		return false;
-	};
-
-	const bool SharedDdnetConfigMissing = !pStorage->FileExists(QM_CONFIG_SHARED_DDNET_PATH, IStorage::TYPE_SAVE);
-	const bool SharedDdnetConfigEmpty = !SharedDdnetConfigMissing && StorageFileIsEmpty(pStorage, QM_CONFIG_SHARED_DDNET_PATH);
-	if((SharedDdnetConfigMissing || SharedDdnetConfigEmpty) &&
-		pStorage->FileExists(QM_CONFIG_MIGRATION_V1_BACKUP_DDNET, IStorage::TYPE_SAVE) &&
-		!StorageFileIsEmpty(pStorage, QM_CONFIG_MIGRATION_V1_BACKUP_DDNET) &&
-		!CopyStorageFile(pStorage, QM_CONFIG_MIGRATION_V1_BACKUP_DDNET, QM_CONFIG_SHARED_DDNET_PATH))
+	// v1 时代目录。注意：Windows 文件系统大小写不敏感，QmClient/ 与 qmclient/ 是同一物理目录，
+	// 其中的 settings_qmclient.cfg 等与当前 qmclient/ 文件是同一文件（已在 v2 清理中合并删除），
+	// 而 qmclient_profiles.cfg 等无变量文件仍是当前生效配置，绝不能动。
+	// 只有独立存在的 v1 目录（Linux/macOS）才删除其中的文件并移除目录。
+	char aV1DirPath[IO_MAX_PATH_LENGTH];
+	char aCurrentDirPath[IO_MAX_PATH_LENGTH];
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, QM_CONFIG_V1_DIR, aV1DirPath, sizeof(aV1DirPath));
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient", aCurrentDirPath, sizeof(aCurrentDirPath));
+	if(str_comp_nocase(aV1DirPath, aCurrentDirPath) != 0)
 	{
-		log_error("config", "Cannot restore shared config '%s' from the v1 backup", QM_CONFIG_SHARED_DDNET_PATH);
-		return false;
+		pStorage->RemoveFile("QmClient/settings_ddnet.cfg", IStorage::TYPE_SAVE);
+		pStorage->RemoveFile("QmClient/settings_qmclient.cfg", IStorage::TYPE_SAVE);
+		pStorage->RemoveFile("QmClient/qmclient_profiles.cfg", IStorage::TYPE_SAVE);
+		pStorage->RemoveFile("QmClient/qmclient_chatbinds.cfg", IStorage::TYPE_SAVE);
+		pStorage->RemoveFile("QmClient/qmclient_warlist.cfg", IStorage::TYPE_SAVE);
+		if(pStorage->FolderExists(QM_CONFIG_V1_DIR, IStorage::TYPE_SAVE))
+			pStorage->RemoveFolder(QM_CONFIG_V1_DIR, IStorage::TYPE_SAVE);
 	}
 
-	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
-	{
-		const char *pLegacyPath = s_aConfigDomains[ConfigDomain].m_aLegacyConfigPath;
-		if(!BackupConfig(pLegacyPath, pLegacyPath))
-			return false;
+	// v0 时代散落在根目录的 qm 专属文件（settings_ddnet.cfg 不删）
+	pStorage->RemoveFile(QM_CONFIG_V0_QMCLIENT_PATH, IStorage::TYPE_SAVE);
+	pStorage->RemoveFile(QM_CONFIG_V0_PROFILES_PATH, IStorage::TYPE_SAVE);
+	pStorage->RemoveFile(QM_CONFIG_V0_CHATBINDS_PATH, IStorage::TYPE_SAVE);
+	pStorage->RemoveFile(QM_CONFIG_V0_WARLIST_PATH, IStorage::TYPE_SAVE);
 
-		if(pArchivePreviousPaths && pArchivePreviousPaths[ConfigDomain] && s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath)
-		{
-			char aBackupName[IO_MAX_PATH_LENGTH];
-			str_format(aBackupName, sizeof(aBackupName), "previous_%s", fs_filename(s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath));
-			if(!BackupConfig(s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath, aBackupName))
-				return false;
-		}
-	}
+	// v2 迁移残留：备份目录 + 完成标记
+	if(pStorage->FolderExists(QM_CONFIG_V2_BACKUP_DIR, IStorage::TYPE_SAVE))
+		RemoveStorageDirRecursive(pStorage, QM_CONFIG_V2_BACKUP_DIR);
+	if(pStorage->FolderExists(QM_CONFIG_V1_BACKUP_DIR, IStorage::TYPE_SAVE))
+		RemoveStorageDirRecursive(pStorage, QM_CONFIG_V1_BACKUP_DIR);
+	pStorage->RemoveFile(QM_CONFIG_V2_MARKER, IStorage::TYPE_SAVE);
 
-	if(!WriteStorageFileAtomically(pStorage, QM_CONFIG_MIGRATION_MARKER, "1\n", 2))
-	{
-		log_error("config", "Cannot write config migration marker '%s'", QM_CONFIG_MIGRATION_MARKER);
-		return false;
-	}
+	log_info("config", "Merged managed client configs into qmclient/settings.cfg and cleaned up legacy files");
 	return true;
 }
 

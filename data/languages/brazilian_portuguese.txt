@@ -2138,6 +2138,9 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 == Configure laser shape, glow, and animation
 
+Configure lyrics sources and display
+== Configurar fontes de letras e exibição
+
 Configure nameplate text, badges, and visibility
 == Configure nameplate text, badges, and visibility
 
@@ -2477,6 +2480,12 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Proporção personalizada, armazenada como x100 (ex.: 178=16:9, 233=21:9)
 
+Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
+== Entradas de HUD de estado de bind personalizadas. Vazio: as 4 entradas integradas (fixação de teclas/martelo/controle do dummy/sincronização do dummy). Formato: variável|valor=texto|valor=texto; variável|texto (exibido quando diferente de zero); variável (apenas nome: exibe o nome quando diferente de zero). Entradas separadas por ';', campos por '|'
+
+Custom bind status list
+== Lista de estado de bind personalizada
+
 Custom colors
 == Cores personalizadas
 
@@ -2615,6 +2624,9 @@ DDNet/total CPU
 DDRace HUD
 == HUD DDRace
 
+DDRace HUD Pro
+== DDRace HUD Pro（estado do dummy）
+
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 == DDraceNetwork é um jogo cooperativo online onde o objetivo é que você e seu grupo de tees alcancem a linha de chegada do mapa. Como novato, você deve começar em servidores Novice, que hospedam os mapas mais fáceis. Considere o ping para escolher um servidor próximo a você.
 
@@ -2647,6 +2659,9 @@ Debug graph panel opacity (percent)
 
 Debug group clipping.
 == Depuração de recorte de grupo.
+
+Debug mode
+== Modo de depuração
 
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == Modo de depuração ativado. Pressione Ctrl+Shift+D para desativar o modo de depuração.
@@ -3200,6 +3215,9 @@ Dummy is currently connected.
 Dummy jump
 == Pulo do Dummy
 
+Dummy key/hammer/control/copy status switches and custom bind status list
+== Interruptores de estado de fixação de teclas/martelo/controle do dummy/sincronização do dummy e lista de estado de bind personalizada
+
 Dummy marking color
 == Cor de marcação do Dummy
 
@@ -3385,6 +3403,9 @@ Emoticon shadow
 
 Emoticons
 == Emoticons
+
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== Vazio: as 4 entradas integradas. Formato: var|0=Off|1=On; var|Text
 
 enable
 == ativar
@@ -3596,6 +3617,9 @@ Enable new IME candidate bar
 Enable new settings page UI
 == Ativar nova UI da página de configurações
 
+Enable performance debug logging and diagnostics
+== Ativar log de depuração de desempenho e diagnóstico de engasgos
+
 Enable Pie Menu
 == Ativar menu radial
 
@@ -3679,6 +3703,12 @@ Enable spectator cursor (if available)
 
 Enable speedrun timer
 == Ativar cronômetro de speedrun
+
+Enable Spotify lyric integration
+== Ativar a integração de letras do Spotify
+
+Enable Spotify lyrics
+== Ativar letras do Spotify
 
 Enable squishy Tee deformation
 == Ativar deformação elástica do Tee
@@ -7229,6 +7259,9 @@ Password incorrect
 Password required to use reserved slots.
 == Senha necessária para usar slots reservados.
 
+Paste sp_dc from Spotify web cookies
+== Cole o cookie sp_dc do navegador
+
 Pause
 == Pausar
 
@@ -8464,6 +8497,9 @@ Reset mouse position when opening bind wheel
 
 Reset position of mouse when opening bindwheel
 == Redefinir posição do mouse ao abrir a roda de atalhos
+
+Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
+== Redefinir qm_bind_status_items para as 4 entradas integradas (fixação de teclas/martelo/controle do dummy/sincronização do dummy)
 
 Reset stats on server join (0=persistent, 1=reset on join)
 == Redefinir estatísticas ao entrar no servidor (0=acumulativo, 1=redefinir a cada entrada)
@@ -10414,6 +10450,12 @@ Sponsor support
 
 Sponsors:
 == Patrocinadores:
+
+Spotify sp_dc
+== Cookie sp_dc do Spotify
+
+Spotify sp_dc cookie (from browser DevTools, long-lived)
+== Cookie sp_dc do Spotify (dos DevTools do navegador, longa duração)
 
 Spree
 == Sequência
@@ -12875,8 +12917,8 @@ Could not initialize the given graphics backend, this is probably because you di
 == Não foi possível inicializar o backend gráfico fornecido, provavelmente porque você não instalou o driver da placa gráfica integrada.
 
 [Graphics error]
-Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== Falha durante a inicialização. Tente alterar gfx_backend para OpenGL ou Vulkan em qmclient/settings_ddnet.cfg no diretório de configuração e tente novamente.
+Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== Falha durante a inicialização. Tente alterar gfx_backend para OpenGL ou Vulkan em qmclient/settings.cfg no diretório de configuração e tente novamente.
 
 [Graphics error]
 Failed to swap framebuffers. Try to update your GPU drivers.
@@ -12891,8 +12933,8 @@ Submitting the render commands failed. Try to update your GPU drivers.
 == Falha ao enviar os comandos de renderização. Tente atualizar seus drivers de GPU.
 
 [Graphics error]
-Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== Erro desconhecido. Tente alterar gfx_backend para OpenGL ou Vulkan em qmclient/settings_ddnet.cfg no diretório de configuração e tente novamente.
+Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== Erro desconhecido. Tente alterar gfx_backend para OpenGL ou Vulkan em qmclient/settings.cfg no diretório de configuração e tente novamente.
 
 [Hammer Mode]
 Normal

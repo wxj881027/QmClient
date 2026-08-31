@@ -1,15 +1,16 @@
 # 多音乐客户端歌词获取链路调研
 
-> 状态:调研已完成(三客户端全部收口)
-> 目标:为 QmClient 增加酷狗音乐、汽水音乐、QQ 音乐三客户端的歌词获取能力,复用网易云歌词模块的架构与交付格式:统一的歌曲信息、完整歌词、逐字时间轴、翻译数据,不优先做 UI 层 Hook。
+> 状态:调研已完成(酷狗/汽水/QQ 收口;Spotify 调研收口,实现待排期)
+> 目标:为 QmClient 增加酷狗音乐、汽水音乐、QQ 音乐、Spotify 四客户端的歌词获取能力,复用网易云歌词模块的架构与交付格式:统一的歌曲信息、完整歌词、逐字时间轴、翻译数据,不优先做 UI 层 Hook。
 
-## 总评估(三方案结论)
+## 总评估(四方案结论)
 
 | 客户端 | 用户方案 | 评估 | 落地建议 |
 |---|---|---|---|
 | 酷狗 | hash + KRC 本地缓存,不足则进程内对象 | 合理 | 本地 `<hash>.krc` 缓存 + 解密(密钥表已确认)+ API 兜底;hash 来源用注入/本地库 |
 | 汽水 | 确认本地缓存,无则 DLL 注入观察已解析数据 | 方向合理,手段修正 | 无本地缓存;社区成熟路径是 **CDP(Node inspector 9229)** 读 sharedState 一次拿全,比 DLL 注入稳 |
 | QQ 音乐 | .qm.qrc 本地缓存解码解析 + 歌曲匹配,不足则 DLL 注入 | 合理,需调整顺序 | QRC 解密链已实测;本地缓存 + 网络 API 兜底,先做纯数据链路,注入作最后手段 |
+| Spotify | 自提方案:官方内置 color-lyrics 接口 + sp_dc 鉴权 | 合理,已有开源实现可移植 | 以 Lyricify-Lyrics-Helper 开源实现为参考:sp_dc + TOTP → color-lyrics 主源,LRCLIB 兜底;翻译取 alternatives[];SMTC 身份 + OAuth 预留 |
 
 统一交付:`QmMusicLyrics::SLyricsData`(歌曲信息 + STimeline 行/词时间轴 + 翻译轨),复用 `NeteaseLyrics` 的解析/时间轴模型。
 
@@ -43,6 +44,7 @@
 - 客户端侧集成:在 CSystemMediaControls 或独立组件中管理 soda provider 生命周期(启停/读取),并接入 HUD 歌词岛。
 - 酷狗/QQ 歌曲身份获取(当前播放 hash / songmid)与统一数据通道接入。
 - 酷狗/QQ 的缓存扫描 + 网络 API 兜底链路。
+- Spotify:已实现(qm_spotify_{crypto,token,parser,integration} + 21 单测 + gate quick 通过;TOTP 链路已线上实证 401=通过);设置页 UI 已接入(QmMusicHookRegistry 注册 + sp_dc 输入框),客户端完整构建链接通过。
 - `qmclient_scripts/tests/test_netease_package_contract.py` 扩展覆盖 qm-soda-helper 打包。
 - gate 验证(quick/default)。
 
@@ -153,6 +155,47 @@ v5 快照字段:Magic/SchemaVersion/SnapshotSize/Sequence/CloudMusicPid/Flags/So
 - 当前歌曲 songmid 来源:SMTC 只有标题/歌手;窗口标题匹配或本地缓存目录文件名(含 songmid)可作为来源。
 - 优先实现「缓存读取 + 网络 API + 解密解析」纯数据链路(可单测),DLL 注入观察进程内数据仅作最后手段。
 
+## Spotify 音乐(Spotify)
+
+### 结论
+
+- **Lyricify 已实现完整 Spotify 歌词链路**:其 App 本体闭源(仓库仅留文档),但歌词处理库 `WXRIW/Lyricify-Lyrics-Helper` **完全开源**且即 App 实际所用库,包含 Spotify 全部链路,可直接参考移植,无需从零逆向。
+- 歌词源 = **Spotify 官方内置歌词接口 color-lyrics**(`spclient.wg.spotify.com/color-lyrics/v2/track/{trackId}`),与 Spotify App 内显示一致,非第三方源。
+- 鉴权 = **sp_dc 登录 cookie → `open.spotify.com/api/token`(TOTP 挑战)换 Bearer token**(约 1 小时有效,自动刷新);免费账号可用,无需注册 Developer app、无 client_id/secret。
+- 数据能力:**行级 + 音节级时间轴 + 官方翻译轨**;`syncType` 三档:UNSYNCED / LINE_SYNCED / SYLLABLE_SYNCED。
+- 桌面本地 API(spotilocal:4380)新版已不稳定/有停用报告(2025) → 不作基础,与前述三家不同,Spotify **不需要注入/CDP/共享内存**,纯网络链路。
+
+### 歌词获取链路(Lyricify-Lyrics-Helper 开源实现,已读源码)
+
+1. **sp_dc 获取**:浏览器 DevTools 复制登录 cookie(长期有效,失效需重配;Lyricify App 做法为内嵌登录自动抓,可作后续增强)。
+2. **Token 换取**(`Providers/Web/Spotify/Api.cs`):
+   - `GET https://open.spotify.com/api/token?reason=init&productType=web-player&totp=<TOTP>&totpVer=<ver>&totpServer=<TOTP>`,请求头 `Cookie: sp_dc=<spDc>`、`App-Platform: WebPlayer`、`Origin: https://open.spotify.com`。
+   - TOTP = HMAC-SHA1(secret, `serverTime/30` 计数器)截断取 6 位;serverTime 取自 `open.spotify.com/api/server-time`。
+   - secret 从公开 spotify-secrets 镜像拉取(3 个 URL 轮询)+ 内置 3 组兜底;还原公式 `value[i] ^ ((i % 33) + 9)`,版本取最大 key。
+   - 失败降级:旧参数 `reason=transport` + `ts=<unix秒>`。
+3. **歌词获取**:`GET https://spclient.wg.spotify.com/color-lyrics/v2/track/{trackId}?format=json&market=from_token`,`Authorization: Bearer <token>`;响应 `{lyrics{...}, colors{...}, hasVocalRemoval}`。
+4. **歌曲搜索(拿 trackId)**:pathfinder `searchDesktop` persisted query(两个 sha256 hash 轮换)→ 降级官方 `GET /v1/search?q=&type=track&market=from_token`。
+5. **歌词数据结构**(对应 `Parsers/Models/Spotify.cs`):
+
+| 字段 | 含义 |
+|---|---|
+| `lyrics.syncType` | `UNSYNCED` / `LINE_SYNCED` / `SYLLABLE_SYNCED` |
+| `lines[]` | 行级:`startTimeMs` / `endTimeMs` / `words` |
+| `lines[].syllables[]` | 音节级:`startTimeMs` / `endTimeMs` / `numChars`,按 `words[i..i+numChars]` 切词 → 可映射词级时间轴 |
+| `alternatives[]` | `{language, lines[]}` —— 官方翻译轨 |
+| `provider` | 歌词提供方(如 musixmatch) |
+
+### 方案评估(修正自初版方案)
+
+- **主源**:color-lyrics 官方内置接口(初版曾建议 LRCLIB 主源,现修正)—— 覆盖率/质量/逐字能力全面优于 LRCLIB,且最难点(TOTP 动态 secret 管理、token 刷新、双参数降级)已有开源实现可移植。
+- **兜底(已定)**:LRCLIB(ISRC 精确匹配),用于 color-lyrics 未收录歌曲;不引入网易云搜索(保持链路最简,翻译由 alternatives[] 覆盖)。
+- **鉴权(已定)**:sp_dc 粘贴配置为第一版;无 client_id/secret、无 PKCE。
+- **身份层(已定)**:SMTC 当前曲目为主 → pathfinder 搜索 → trackId(与 Lyricify 同构,免配置);**OAuth 预留接口**,后续增强可直拿 trackId/ISRC、支持 Connect 跨设备。
+- **范围(已定)**:只做歌词显示链路(身份+进度+歌词 → 歌词岛),不做播放控制热键(需 Premium)。
+- **翻译轨**:解析 `alternatives[]` 即得官方翻译。
+- **逐字能力**:`SYLLABLE_SYNCED` → 按 numChars 切分映射 STimeline 词级;`LINE_SYNCED` → 行级;`UNSYNCED` → 无时间轴。
+- **已知坑**:sp_dc 失效需重配;TOTP secret 仓库为社区维护(需多镜像 + 内置兜底);`market=from_token` 下部分区域歌词可用性有差异。
+
 ## 统一交付格式(目标)
 
 复用 `NeteaseLyrics` 的 STimeline/SLine/SWord 模型(行级 + 词级时间轴),扩展翻译轨;输出:歌曲信息(标题/歌手/专辑/时长/封面)、完整歌词、逐字时间轴、翻译。
@@ -162,3 +205,4 @@ v5 快照字段:Magic/SchemaVersion/SnapshotSize/Sequence/CloudMusicPid/Flags/So
 - 酷狗:KRC 格式 https://www.jianshu.com/p/dfae11a9599b 、https://github.com/emako/KRCLib 、歌词接口 https://www.cnblogs.com/mmm/p/18144203/kugou_krc 、TaskbarLyrics https://github.com/ANYNC/TaskbarLyrics
 - 汽水:PlayerCap https://github.com/VTB-LINK/Metabox-Nexus-PlayerCap 、qishui-api https://github.com/guowenye/qishui-api 、qishui-music-parser https://github.com/MiraHikari/qishui-music-parser
 - QQ:QQMusicDecoder https://github.com/WXRIW/QQMusicDecoder 、Lyricify
+- Spotify:Lyricify-Lyrics-Helper https://github.com/WXRIW/Lyricify-Lyrics-Helper 、Lyricify-App https://github.com/WXRIW/Lyricify-App 、DeepWiki 歌词源分析 https://deepwiki.com/WXRIW/Lyricify-App/8-lyrics-sources-and-processing 、spotify-secrets(镜像示例)https://github.com/xyloflake/spot-secrets-go 、本地 API 停用讨论 https://community.latenode.com/t/has-spotifys-local-web-server-api-been-discontinued/32664

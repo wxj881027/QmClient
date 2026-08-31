@@ -711,6 +711,7 @@ Configure HUD island appearance
 Configure input helpers and cursor behavior
 Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
+Configure lyrics sources and display
 Configure nameplate text, badges, and visibility
 Configure player identity and country
 Configure qm_report_app_id and qm_report_secret first
@@ -824,6 +825,8 @@ custom
 Custom API key
 Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
+Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
+Custom bind status list
 Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
 Custom font
@@ -870,6 +873,7 @@ ddnet-saves.txt is empty
 ddnet-saves.txt not found
 DDNet/total CPU
 DDRace HUD
+DDRace HUD Pro
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 Deactivate
 Deactivate all
@@ -881,6 +885,7 @@ Debug Curl.
 Debug graph
 Debug graph panel opacity (percent)
 Debug group clipping.
+Debug mode
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 Debug mode.
 Debug performance graph panel
@@ -1065,6 +1070,7 @@ Dummy hook
 Dummy is allowed on this server.
 Dummy is currently connected.
 Dummy jump
+Dummy key/hammer/control/copy status switches and custom bind status list
 Dummy marking color
 Dummy mini view
 Dummy mini view size (percent)
@@ -1127,6 +1133,7 @@ Emoticon
 Emoticon ID
 Emoticon shadow
 Emoticons
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
 enable
 Enable /swap
 Enable /team0 mode
@@ -1197,6 +1204,7 @@ Enable Netease music Hook
 Enable Netease Music hook integration
 Enable new IME candidate bar
 Enable new settings page UI
+Enable performance debug logging and diagnostics
 Enable Pie Menu
 Enable pie menu
 Enable pistol sound
@@ -1225,6 +1233,8 @@ Enable sound
 Enable sound when rendering video
 Enable spectator cursor (if available)
 Enable speedrun timer
+Enable Spotify lyric integration
+Enable Spotify lyrics
 Enable squishy Tee deformation
 Enable status bar
 Enable stereo positioning
@@ -2408,6 +2418,7 @@ Password for Axiom alt account auto-login
 Password for Axiom main account auto-login
 Password incorrect
 Password required to use reserved slots.
+Paste sp_dc from Spotify web cookies
 Pause
 Pause the current demo
 Pause video rendering when demo playback is paused
@@ -2820,6 +2831,7 @@ Reset filter
 Reset layout
 Reset mouse position when opening bind wheel
 Reset position of mouse when opening bindwheel
+Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
 Reset stats on server join (0=persistent, 1=reset on join)
 Reset stats when joining a server
 Reset to defaults
@@ -3470,6 +3482,8 @@ Sphere
 Spin pop
 Sponsor support
 Sponsors:
+Spotify sp_dc
+Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 SQL Server name for record table
 Squishy Tee deformation duration
@@ -5254,11 +5268,11 @@ Zoom to current mouse target
 [Graphics error]	An error during command recording occurred. Try to update your GPU drivers.
 [Graphics error]	Could not initialize the given graphics backend, reverting to the default backend now.
 [Graphics error]	Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
-[Graphics error]	Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
+[Graphics error]	Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
 [Graphics error]	Failed to swap framebuffers. Try to update your GPU drivers.
 [Graphics error]	Out of VRAM. Try setting 'cl_skins_loaded_max' to a lower value or remove custom assets (skins, entities, etc.), especially those with high resolution.
 [Graphics error]	Submitting the render commands failed. Try to update your GPU drivers.
-[Graphics error]	Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
+[Graphics error]	Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
 [Hammer Mode]	Normal
 [Hammer Mode]	Rotate with cursor
 [Hammer Mode]	Rotate with cursor like gun

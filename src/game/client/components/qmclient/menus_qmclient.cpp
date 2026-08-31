@@ -39,6 +39,7 @@
 #include <game/client/components/qmclient/input_overlay.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/components/qmclient/translate/translate_ui_settings.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/tclient/bindchat.h>
@@ -134,7 +135,9 @@ namespace
 		{qm_module::EQmModuleId::DynamicIsland, qm_module::EQmModuleColumn::Right, 14, "dynamic_island"},
 		{qm_module::EQmModuleId::SystemMediaControls, qm_module::EQmModuleColumn::Right, 15, "system_media_controls"},
 		{qm_module::EQmModuleId::Lyrics, qm_module::EQmModuleColumn::Right, 16, "lyrics"},
-		{qm_module::EQmModuleId::Background3D, qm_module::EQmModuleColumn::Right, 17, "background_3d"}}};
+		{qm_module::EQmModuleId::Background3D, qm_module::EQmModuleColumn::Right, 17, "background_3d"},
+		{qm_module::EQmModuleId::DebugMode, qm_module::EQmModuleColumn::Right, 19, "debug_mode"},
+		{qm_module::EQmModuleId::BindStatusHud, qm_module::EQmModuleColumn::Right, 20, "bind_status_hud"}}};
 }
 
 using SQmGlobalSearchCard = qm_card_registry::SCardSearchResult;
@@ -3198,6 +3201,37 @@ void CMenus::RenderQmHudSpeedrunTimerContent(CUIRect &Content, float LineHeight,
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
 
+void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	// 内置四项状态开关（自外观页 DDRace HUD 卡片迁移）
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusReset, "appearance-show-key-stuck-status", Localize("Show key stuck status"), &g_Config.m_ClShowhudKeyStatusReset);
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusHammer, "appearance-show-hammer-status", Localize("Show hammer status"), &g_Config.m_ClShowhudKeyStatusHammer);
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusControl, "appearance-show-dummy-control-status", Localize("Show dummy control status"), &g_Config.m_ClShowhudKeyStatusControl);
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusSync, "appearance-show-dummy-copy-status", Localize("Show dummy copy status"), &g_Config.m_ClShowhudKeyStatusSync);
+
+	// 自定义 bind 状态列表（非空时替换上面四项内置状态显示）
+	CUIRect Row, LabelColumn, ControlColumn;
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+	RenderQmHudLabel("qmclient-bind-status-label", &LabelColumn, Localize("Custom bind status list"), BodySize);
+	static CButtonContainer s_BindStatusResetButton;
+	CUIRect BindStatusEdit, BindStatusResetButtonRect;
+	ControlColumn.VSplitRight(LineHeight + 5.0f, &BindStatusEdit, &BindStatusResetButtonRect);
+	if(Ui()->DoButton_FontIcon(&s_BindStatusResetButton, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &BindStatusResetButtonRect, BUTTONFLAG_LEFT))
+	{
+		Console()->ExecuteLine("qm_bind_status_reset");
+	}
+	static CLineInput s_BindStatusItemsInput(g_Config.m_QmBindStatusItems, sizeof(g_Config.m_QmBindStatusItems));
+	IUiContext BindStatusItemsInputCtx = SettingsUiContext("settings_qmclient_bind_status_items_input", BodySize / ui_token::font::BODY);
+	ui_widget::InputField(BindStatusItemsInputCtx, &s_BindStatusItemsInput, BindStatusEdit, nullptr, BodySize);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+	// 格式提示
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	RenderQmHudLabel("qmclient-bind-status-hint", &Row, Localize("Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text"), BodySize);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+}
+
 void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	static CButtonContainer s_ReaderButtonDebugGraphToggle;
@@ -3211,6 +3245,42 @@ void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, fl
 	static int s_QmMonitoringHudOpacityInputId;
 	RenderQmSettingsSliderWithValueInput(&s_QmMonitoringHudOpacityInputId, ControlColumn, &g_Config.m_QmMonitoringHudOpacity, 0, 100, "%", PrewarmOnly);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
+}
+
+void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	// 调试模式总开关：任一性能开关开启即视为"调试模式"开启；点击时统一开启/关闭三个开关。
+	const bool DebugModeEnabled = g_Config.m_QmPerfDebug != 0 || g_Config.m_QmPerfLogfile != 0 || g_Config.m_QmPerfStutterDiagnostics != 0;
+
+	CUIRect Row, LabelColumn, ControlColumn;
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	static int s_QmPerfDebugModeSwitchId;
+	if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_QmPerfDebugModeSwitchId, "Debug mode", Localize("Debug mode"), DebugModeEnabled, &Row))
+	{
+		const int NewValue = DebugModeEnabled ? 0 : 1;
+		g_Config.m_QmPerfDebug = NewValue;
+		g_Config.m_QmPerfLogfile = NewValue;
+		g_Config.m_QmPerfStutterDiagnostics = NewValue;
+	}
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+	auto RenderCheckbox = [this, &Content, &Row, LineHeight, LineSpacing](const void *pId, const char *pText, int *pValue) {
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, pId, pText, Localize(pText), *pValue, &Row))
+			*pValue ^= 1;
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	};
+	RenderCheckbox(&g_Config.m_QmPerfDebug, "Enable main thread and render stage performance debug logging", &g_Config.m_QmPerfDebug);
+	RenderCheckbox(&g_Config.m_QmPerfLogfile, "Write performance debug logs to dedicated file", &g_Config.m_QmPerfLogfile);
+
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-debug-mode-threshold", &LabelColumn, Localize("Performance debug log threshold (ms)"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+	static int s_QmPerfDebugThresholdMsInputId;
+	RenderQmSettingsSliderWithValueInput(&s_QmPerfDebugThresholdMsInputId, ControlColumn, &g_Config.m_QmPerfDebugThresholdMs, 1, 1000, "ms", PrewarmOnly);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+	RenderCheckbox(&g_Config.m_QmPerfStutterDiagnostics, "Enable client stutter diagnostics at startup", &g_Config.m_QmPerfStutterDiagnostics);
 }
 
 void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly)
@@ -3309,13 +3379,50 @@ void CMenus::RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineH
 
 void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly)
 {
-	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmNeteaseHookEnable, "Enable Netease music Hook", Localize("Enable Netease music Hook"), &g_Config.m_QmNeteaseHookEnable);
-	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSodaHookEnable, "Enable SodaMusic Hook", Localize("Enable SodaMusic Hook"), &g_Config.m_QmSodaHookEnable);
-	// 两个 Hook 互斥:同一时间只能有一个歌词来源,避免优先级歧义。
-	if(g_Config.m_QmNeteaseHookEnable != 0 && g_Config.m_QmSodaHookEnable != 0)
-		g_Config.m_QmSodaHookEnable = 0;
+	// 音乐 Hook 开关:同一时间只能启用一个,点开其中一个时自动关闭其余。
+	// 未来新增 Hook 只需在 QmMusicHookRegistry 注册,这里自动覆盖。
+	size_t HookCount = 0;
+	const SQmMusicHookEntry *apHooks = QmMusicHookRegistry(&HookCount);
+	for(size_t i = 0; i < HookCount; ++i)
+	{
+		const SQmMusicHookEntry &Hook = apHooks[i];
+		const bool Changed = RenderQmHudCheckbox(Content, LineHeight, LineSpacing, Hook.m_pEnableConfig, Hook.m_pSettingsTextId, Localize(Hook.m_pSettingsText), Hook.m_pEnableConfig);
+		if(Changed && *Hook.m_pEnableConfig != 0)
+		{
+			// 互斥:打开一个 Hook 时自动关闭其余 Hook。
+			for(size_t j = 0; j < HookCount; ++j)
+			{
+				if(j != i)
+					*apHooks[j].m_pEnableConfig = 0;
+			}
+		}
+	}
+	// 兜底:配置被外部直接改成多个 Hook 同时开启时,保留第一个,关闭其余。
+	int FirstEnabled = -1;
+	for(size_t i = 0; i < HookCount; ++i)
+	{
+		if(*apHooks[i].m_pEnableConfig != 0)
+		{
+			if(FirstEnabled == -1)
+				FirstEnabled = (int)i;
+			else
+				*apHooks[i].m_pEnableConfig = 0;
+		}
+	}
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyrics, "Enable lyrics", Localize("Enable lyrics"), &g_Config.m_QmLyrics);
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsInMediaIsland, "Show lyrics inside Dynamic Island", Localize("Show lyrics inside Dynamic Island"), &g_Config.m_QmLyricsInMediaIsland);
+	// Spotify 纯网络链路需要 sp_dc 登录 cookie(浏览器 DevTools 的 open.spotify.com cookie)。
+	if(g_Config.m_QmSpotifyEnable != 0)
+	{
+		static CLineInput s_SpotifySpDc(g_Config.m_QmSpotifySpDc, sizeof(g_Config.m_QmSpotifySpDc));
+		CUIRect Row, LabelColumn, InputColumn;
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(150.0f, &LabelColumn, &InputColumn);
+		RenderQmHudLabel("qmclient-lyrics-spotify-sp-dc", &LabelColumn, Localize("Spotify sp_dc"), LineHeight * 0.75f);
+		IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_lyrics_spotify_text_inputs", LineHeight / ui_token::font::BODY);
+		ui_widget::InputField(TextInputCtx, &s_SpotifySpDc, InputColumn, Localize("Paste sp_dc from Spotify web cookies"), LineHeight * 0.8f);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
 }
 
 void CMenus::RenderQmHudNotificationsBasicContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly)
@@ -4327,13 +4434,21 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 		case EQmModuleId::PlayerStats: return ResolveQmHudPlayerStatsHeight(Metrics, g_Config.m_QmPlayerStatsMapProgress != 0, g_Config.m_QmPlayerStatsMapProgressStyle != 0);
 		case EQmModuleId::SpeedrunTimer: return g_Config.m_QmSpeedrunTimer ? Rows(6.0f) : Rows(1.0f);
 		case EQmModuleId::DebugGraph: return Rows(2.0f);
+		case EQmModuleId::DebugMode: return Rows(5.0f);
 		case EQmModuleId::InputOverlay: return ResolveQmHudInputOverlayHeight(Metrics, g_Config.m_QmInputOverlay != 0);
 		case EQmModuleId::HudNotifications: return ResolveQmHudNotificationsHeight(Metrics, g_Config.m_QmHudNotificationsShowAdvanced != 0, g_Config.m_QmHudNotificationsUseCategoryFilters != 0);
 		case EQmModuleId::Voice: return ResolveQmHudVoiceHeight(Metrics, g_Config.m_QmVoiceEnable != 0, g_Config.m_QmVoiceShowAdvanced != 0, g_Config.m_QmVoiceShowConnectionStatus != 0, g_Config.m_QmVoiceNoiseSuppressEnable, g_Config.m_QmVoiceVadEnable != 0, g_Config.m_QmVoiceStereo != 0);
 		case EQmModuleId::DynamicIsland: return ResolveQmHudDynamicIslandHeight(Metrics, DynamicIslandOriginalStyle, ContentWidth);
 		case EQmModuleId::SystemMediaControls: return g_Config.m_QmSmtcEnable ? Rows(3.0f) : Rows(1.0f);
-		case EQmModuleId::Lyrics: return Rows(4.0f);
+		case EQmModuleId::Lyrics:
+		{
+			// Hook 开关(注册表行数)+ 歌词两个开关 + Spotify 启用时的 sp_dc 输入行。
+			size_t HookCount = 0;
+			QmMusicHookRegistry(&HookCount);
+			return Rows((float)HookCount + 2.0f + (g_Config.m_QmSpotifyEnable != 0 ? 1.0f : 0.0f));
+		}
 		case EQmModuleId::Background3D: return ResolveQmHudBackground3DHeight(Metrics, ContentWidth, g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
+		case EQmModuleId::BindStatusHud: return Rows(6.0f); // 4 个状态开关 + 自定义列表编辑行 + 格式提示行
 		default: return Rows(1.0f);
 		}
 	};
@@ -4354,7 +4469,7 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 		case EQmModuleId::Voice: return ResolveQmHudVoiceRevision(g_Config.m_QmVoiceEnable != 0, g_Config.m_QmVoiceShowAdvanced != 0, g_Config.m_QmVoiceShowConnectionStatus != 0, g_Config.m_QmVoiceNoiseSuppressEnable, g_Config.m_QmVoiceVadEnable != 0, g_Config.m_QmVoiceStereo != 0);
 		case EQmModuleId::DynamicIsland: return DynamicIslandOriginalStyle ? 1u : 0u;
 		case EQmModuleId::SystemMediaControls: return g_Config.m_QmSmtcEnable ? 1u : 0u;
-		case EQmModuleId::Lyrics: return 0u;
+		case EQmModuleId::Lyrics: return g_Config.m_QmSpotifyEnable ? 1u : 0u; // sp_dc 输入行影响布局高度
 		case EQmModuleId::Background3D: return ResolveQmHudBackground3DRevision(g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
 		default: return 0u;
 		}
@@ -4469,14 +4584,41 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 				return Changed;
 			};
 		case EQmModuleId::Lyrics:
-			return [this, LineHeight, LineSpacing](CUIRect Content) {
-				bool Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmNeteaseHookEnable, &g_Config.m_QmNeteaseHookEnable);
-				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmSodaHookEnable, &g_Config.m_QmSodaHookEnable) || Changed;
-				// 互斥:同一时间只能有一个歌词来源。
-				if(g_Config.m_QmNeteaseHookEnable != 0 && g_Config.m_QmSodaHookEnable != 0)
-					g_Config.m_QmSodaHookEnable = 0;
+			return [this, LineHeight, LineSpacing, ConsumeQmHudRow](CUIRect Content) {
+				bool Changed = false;
+				// 音乐 Hook 开关互斥:点开一个时自动关闭其余(见 QmMusicHookRegistry)。
+				size_t HookCount = 0;
+				const SQmMusicHookEntry *apHooks = QmMusicHookRegistry(&HookCount);
+				for(size_t i = 0; i < HookCount; ++i)
+				{
+					const SQmMusicHookEntry &Hook = apHooks[i];
+					const bool HookChanged = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, Hook.m_pEnableConfig, Hook.m_pEnableConfig);
+					if(HookChanged && *Hook.m_pEnableConfig != 0)
+					{
+						for(size_t j = 0; j < HookCount; ++j)
+						{
+							if(j != i)
+								*apHooks[j].m_pEnableConfig = 0;
+						}
+					}
+					Changed = HookChanged || Changed;
+				}
+				// 兜底:配置被外部直接改成多个 Hook 同时开启时,保留第一个,关闭其余。
+				int FirstEnabled = -1;
+				for(size_t i = 0; i < HookCount; ++i)
+				{
+					if(*apHooks[i].m_pEnableConfig != 0)
+					{
+						if(FirstEnabled == -1)
+							FirstEnabled = (int)i;
+						else
+							*apHooks[i].m_pEnableConfig = 0;
+					}
+				}
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmLyrics, &g_Config.m_QmLyrics) || Changed;
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmLyricsInMediaIsland, &g_Config.m_QmLyricsInMediaIsland) || Changed;
+				if(g_Config.m_QmSpotifyEnable != 0)
+					ConsumeQmHudRow(Content); // Spotify sp_dc 输入行(与渲染保持一致)
 				return Changed;
 			};
 		case EQmModuleId::Background3D:
@@ -4515,6 +4657,16 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_Qm3DParticlesTwinkle, &g_Config.m_Qm3DParticlesTwinkle) || Changed;
 				return Changed;
 			};
+		case EQmModuleId::BindStatusHud:
+			return [this, LineHeight, LineSpacing, ConsumeQmHudRow](CUIRect Content) {
+				bool Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusReset, &g_Config.m_ClShowhudKeyStatusReset);
+				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusHammer, &g_Config.m_ClShowhudKeyStatusHammer) || Changed;
+				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusControl, &g_Config.m_ClShowhudKeyStatusControl) || Changed;
+				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusSync, &g_Config.m_ClShowhudKeyStatusSync) || Changed;
+				ConsumeQmHudRow(Content); // 自定义列表编辑行
+				ConsumeQmHudRow(Content); // 格式提示行
+				return Changed;
+			};
 		default:
 			return {};
 		}
@@ -4547,6 +4699,7 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 		AddCard(EQmModuleId::PlayerStats, "qm:player_stats", "Player data", "Player stats and info display", [this, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudPlayerStatsContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 		AddCard(EQmModuleId::SpeedrunTimer, "qm:speedrun_timer", "Speedrun Timer", "Speedrun countdown timer", [this, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudSpeedrunTimerContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 		AddCard(EQmModuleId::DebugGraph, "qm:debug_graph", "Debug graph", "Debug performance graph panel", [this, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudDebugGraphContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
+		AddCard(EQmModuleId::DebugMode, "qm:debug_mode", "Debug mode", "Enable performance debug logging and diagnostics", [this, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudDebugModeContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 		AddCard(EQmModuleId::InputOverlay, "qm:input_overlay", "Input overlay", "Input overlay display", [this, Metrics, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudInputOverlayContent(Content, Metrics, LabelWidth, ReadOnly); });
 		AddCard(EQmModuleId::HudNotifications, "qm:hud_notifications", "Notifications", "Show important server prompts and Echo messages as popups", [this, Metrics, LabelWidth, ReadOnly](CUIRect &Content) {
 			RenderQmHudNotificationsBasicContent(Content, Metrics, LabelWidth, ReadOnly);
@@ -4558,6 +4711,7 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 		AddCard(EQmModuleId::SystemMediaControls, "qm:system_media_controls", "SMTC", "System media control", [this, LineHeight, BodySize, LineSpacing, ReadOnly](CUIRect &Content) { RenderQmHudSystemMediaControlsContent(Content, LineHeight, BodySize, LineSpacing, ReadOnly); });
 		AddCard(EQmModuleId::Lyrics, "qm:lyrics", "Lyrics", "Lyrics sources and display", [this, LineHeight, LineSpacing, ReadOnly](CUIRect &Content) { RenderQmHudLyricsContent(Content, LineHeight, LineSpacing, ReadOnly); });
 		AddCard(EQmModuleId::Background3D, "qm:background_3d", "3D Background", "Configure background 3D particle effects", [this, Metrics, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudBackground3DContent(Content, Metrics, LabelWidth, ReadOnly); });
+		AddCard(EQmModuleId::BindStatusHud, "qm:bind_status_hud", "DDRace HUD Pro", "Dummy key/hammer/control/copy status switches and custom bind status list", [this, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudBindStatusContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 	};
 	uint64_t CardLayoutRevision = 0;
 	for(int ModuleIndex = 0; ModuleIndex < (int)QmModuleCount; ++ModuleIndex)

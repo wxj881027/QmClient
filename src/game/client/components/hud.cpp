@@ -3666,13 +3666,13 @@ void CHud::EnsureMediaIslandFrameCache() const
 	Cache.Reset();
 	Cache.m_Frame = CurrentFrame;
 	Cache.m_Valid = true;
-	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || g_Config.m_QmSodaHookEnable != 0);
+	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || g_Config.m_QmSodaHookEnable != 0 || g_Config.m_QmSpotifyEnable != 0);
 	Cache.m_HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(Cache.m_MediaState);
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 
-	// 歌词来源选择:两个 Hook 互斥(菜单已保证同一时间只启用一个)。
-	// 若用户手动同时开启,网易云优先,汽水兜底。
+	// 歌词来源选择:各来源可同时开启(菜单已保证同一时间只启用一个 Hook)。
+	// 若用户手动同时开启,网易云优先,汽水兜底,Spotify 再后备。
 	if(g_Config.m_QmNeteaseHookEnable != 0)
 	{
 		Cache.m_LyricsActive = GameClient()->m_NeteaseIntegration.HasActiveLyrics();
@@ -3683,6 +3683,12 @@ void CHud::EnsureMediaIslandFrameCache() const
 		// 汽水音乐歌词作为网易云无歌词时的备选来源。
 		Cache.m_LyricsActive = GameClient()->m_MusicLyricsIntegration.HasActiveLyrics();
 		Cache.m_ShowLyrics = GameClient()->m_MusicLyricsIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics));
+	}
+	if(!Cache.m_ShowLyrics && g_Config.m_QmSpotifyEnable != 0)
+	{
+		// Spotify 歌词(官方内置 color-lyrics)作为再后备来源。
+		Cache.m_LyricsActive = GameClient()->m_SpotifyIntegration.HasActiveLyrics();
+		Cache.m_ShowLyrics = GameClient()->m_SpotifyIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics));
 	}
 	Cache.m_SpectatorCount = GetMediaIslandSpectatorCount(*GameClient(), *Client());
 
@@ -6050,6 +6056,36 @@ namespace
 		Layout.m_X = std::clamp(HudWidth - Layout.m_W - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxX);
 		return Layout;
 	}
+
+	SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const std::vector<std::string> &vLines, float HudWidth)
+	{
+		SKeyStatusLayout Layout{};
+		Layout.m_FontSize = 7.0f;
+		Layout.m_LineHeight = 9.0f;
+		Layout.m_PaddingX = 4.0f;
+		Layout.m_PaddingY = 3.0f;
+		Layout.m_Y = 38.0f;
+
+		const int LineCount = (int)vLines.size();
+		if(LineCount == 0)
+		{
+			Layout.m_W = 0.0f;
+			Layout.m_H = 0.0f;
+			return Layout;
+		}
+
+		float MaxWidth = 0.0f;
+		for(const std::string &Line : vLines)
+		{
+			MaxWidth = maximum(MaxWidth, pTextRender->TextWidth(Layout.m_FontSize, Line.c_str(), -1, -1.0f));
+		}
+
+		Layout.m_W = MaxWidth + Layout.m_PaddingX * 2.0f;
+		Layout.m_H = Layout.m_LineHeight * LineCount + Layout.m_PaddingY * 2.0f;
+		const float MaxX = maximum(HudWidth - Layout.m_W, 0.0f);
+		Layout.m_X = std::clamp(HudWidth - Layout.m_W - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxX);
+		return Layout;
+	}
 }
 
 void CHud::RenderKeyStatus()
@@ -6222,7 +6258,14 @@ void CHud::RenderMovementInformation()
 	const float KeyStatusGap = 2.0f;
 
 	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines(GameClient());
-	const SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines, m_Width);
+	SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines, m_Width);
+	// 自定义 bind 状态列表非空时完全替换内置四项
+	std::vector<std::string> vCustomKeyStatusLines;
+	if(GameClient()->m_QmBindStatusHud.IsCustomListActive())
+	{
+		vCustomKeyStatusLines = GameClient()->m_QmBindStatusHud.GetVisibleLines();
+		KeyStatusLayout = GetKeyStatusLayout(TextRender(), vCustomKeyStatusLines, m_Width);
+	}
 	const bool ShowKeyStatus = KeyStatusLayout.m_H > 0.0f;
 
 	float MovementBoxHeight = ShowMovementInfo ? GetMovementInformationBoxHeight() : 0.0f;
@@ -6518,7 +6561,15 @@ void CHud::RenderMovementInformation()
 		ColorRGBA KeyRainbowColor = color_cast<ColorRGBA>(KeyRainbowHsla);
 
 		TextRender()->TextColor(g_Config.m_ClHudRainbowColors ? KeyRainbowColor : TextRender()->DefaultTextColor());
-		if(KeyStatusLines.m_ShowKey)
+		if(GameClient()->m_QmBindStatusHud.IsCustomListActive())
+		{
+			for(const std::string &Line : vCustomKeyStatusLines)
+			{
+				TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, Line.c_str(), -1.0f);
+				KeyTextY += KeyStatusLayout.m_LineHeight;
+			}
+		}
+		else if(KeyStatusLines.m_ShowKey)
 		{
 			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_pKeyStatusText, -1.0f);
 			KeyTextY += KeyStatusLayout.m_LineHeight;

@@ -92,6 +92,8 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::SystemMediaControls, EQmModuleColumn::Right, 15, "system_media_controls"},
 		{EQmModuleId::Lyrics, EQmModuleColumn::Right, 16, "lyrics"},
 		{EQmModuleId::Background3D, EQmModuleColumn::Right, 17, "background_3d"},
+		{EQmModuleId::DebugMode, EQmModuleColumn::Right, 19, "debug_mode"},
+		{EQmModuleId::BindStatusHud, EQmModuleColumn::Right, 20, "bind_status_hud"},
 	};
 }
 

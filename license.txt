@@ -54,6 +54,13 @@ Copyright 2013 Google LLC
 
 Noto Emoji is licensed under the SIL Open Font License, Version 1.1.
 
+NotoSansThai-Regular.ttf:
+--------------------------
+
+Copyright 2012-2023 Google LLC
+
+Noto Sans Thai is licensed under the SIL Open Font License, Version 1.1.
+
 SourceHanSans.ttc:
 ------------------
 

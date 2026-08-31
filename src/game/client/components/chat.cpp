@@ -2538,6 +2538,23 @@ void CChat::OnRender()
 		m_Input.SetScrollOffset(ScrollOffset);
 		m_Input.SetScrollOffsetChange(ScrollOffsetChange);
 
+		// 自动补全提示：以半透明文字显示当前补全命令的剩余部分（与官方 DDNet 一致）
+		if(m_Input.GetString()[0] == '/' && m_Input.GetString()[1] != '\0' && !m_vServerCommands.empty())
+		{
+			for(const auto &Command : m_vServerCommands)
+			{
+				if(str_startswith_nocase(Command.m_aName, m_Input.GetString() + 1))
+				{
+					InputCursor.m_X = InputCursor.m_X + TextRender()->TextWidth(InputCursor.m_FontSize, m_Input.GetString(), -1, InputCursor.m_LineWidth);
+					InputCursor.m_Y = m_Input.GetCaretPosition().y;
+					TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.5f);
+					TextRender()->TextEx(&InputCursor, Command.m_aName + str_length(m_Input.GetString() + 1));
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					break;
+				}
+			}
+		}
+
 		// 渲染翻译按钮
 		CUIRect TranslateButtonRect = {InputContentRect.x + InputContentRect.w + TranslateButtonGap, InputContentRect.y, TranslateButtonSize, maximum(InputCursor.m_FontSize + 4.0f, 16.0f)};
 		RenderTranslateButton(TranslateButtonRect);
@@ -2663,7 +2680,15 @@ void CChat::OnRender()
 		MousePos.y <= ScrollbarRect.y + ScrollbarRect.h;
 	const bool ChatCopyActive = m_Mode != MODE_NONE && !LanguageMenuOpen && !ChatLineMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !m_ScrollbarDragging;
 	const bool CopyClickReleased = m_MouseIsPress && !MouseDown && IsCopyClickDrag(m_MousePress, MousePos);
-	const bool ChatLineMenuRequested = ChatCopyActive && Input()->KeyPress(KEY_MOUSE_2);
+	// 菜单打开时也允许右键：在其它消息行重新定位菜单，在空白处关闭菜单；
+	// 菜单自身区域内的右键不处理，避免与菜单按钮交互冲突。
+	const CUIRect *pChatLineMenuRect = ChatLineMenuOpen ? Ui()->GetPopupMenuRect(&m_ChatLinePopupContext) : nullptr;
+	const bool InsideChatLineMenu = pChatLineMenuRect != nullptr && pChatLineMenuRect->Inside(GetUiMousePos());
+	const bool ChatLineMenuRequested = m_Mode != MODE_NONE && !LanguageMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !m_ScrollbarDragging && !InsideChatLineMenu && Input()->KeyPress(KEY_MOUSE_2);
+
+	// 菜单打开时，左键按下非菜单区域立即关闭菜单。
+	if(ChatLineMenuOpen && !InsideChatLineMenu && Input()->KeyPress(KEY_MOUSE_1))
+		CloseChatLineMenu();
 	if(ChatCopyActive)
 	{
 		if(!m_MouseIsPress && MouseDown)
@@ -2831,9 +2856,12 @@ void CChat::OnRender()
 	{
 		Input()->SetClipboardText(pClickedLine->m_aText);
 	}
-	if(ChatLineMenuRequested && pMenuLine != nullptr && pMenuLine->m_aText[0] != '\0')
+	if(ChatLineMenuRequested)
 	{
-		OpenChatLineMenu(*pMenuLine, GetUiMousePos());
+		if(pMenuLine != nullptr && pMenuLine->m_aText[0] != '\0')
+			OpenChatLineMenu(*pMenuLine, GetUiMousePos());
+		else if(ChatLineMenuOpen)
+			CloseChatLineMenu();
 	}
 
 	if(ShowChatScrollbar)

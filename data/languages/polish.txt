@@ -2138,6 +2138,9 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 == Configure laser shape, glow, and animation
 
+Configure lyrics sources and display
+== Skonfiguruj źródła tekstów i wyświetlanie
+
 Configure nameplate text, badges, and visibility
 == Configure nameplate text, badges, and visibility
 
@@ -2477,6 +2480,12 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Niestandardowy współczynnik proporcji, przechowywany jako x100 (np. 178=16:9, 233=21:9)
 
+Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
+== Niestandardowe wpisy HUD stanu bind. Puste: 4 wbudowane wpisy (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy). Format: zmienna|wartość=tekst|wartość=tekst; zmienna|tekst (pokazuj, gdy niezerowe); zmienna (tylko nazwa: pokazuj nazwę, gdy niezerowa). Wpisy oddzielaj ';', pola '|'
+
+Custom bind status list
+== Lista niestandardowych stanów bind
+
 Custom colors
 == Niestandardowe kolory
 
@@ -2615,6 +2624,9 @@ DDNet/total CPU
 DDRace HUD
 == HUD DDRace
 
+DDRace HUD Pro
+== DDRace HUD Pro（status dummy）
+
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 == DDraceNetwork to kooperacyjna gra online, w której celem jest dotarcie z grupą tee do mety mapy. Jako nowy gracz powinieneś zacząć na serwerach Novice, które hostują najłatwiejsze mapy. Wybierz serwer blisko siebie, biorąc pod uwagę ping.
 
@@ -2647,6 +2659,9 @@ Debug graph panel opacity (percent)
 
 Debug group clipping.
 == Debugowanie przycinania grup.
+
+Debug mode
+== Tryb debugowania
 
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == Tryb debugowania włączony. Naciśnij Ctrl+Shift+D, aby wyłączyć tryb debugowania.
@@ -3200,6 +3215,9 @@ Dummy is currently connected.
 Dummy jump
 == Skok dummy
 
+Dummy key/hammer/control/copy status switches and custom bind status list
+== Przełączniki stanu blokady klawiszy/młota/sterowania dummy/synchronizacji dummy oraz lista niestandardowych stanów bind
+
 Dummy marking color
 == Kolor oznaczenia dummy
 
@@ -3385,6 +3403,9 @@ Emoticon shadow
 
 Emoticons
 == Emotikony
+
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== Puste: 4 wbudowane wpisy. Format: var|0=Off|1=On; var|Text
 
 enable
 == włącz
@@ -3596,6 +3617,9 @@ Enable new IME candidate bar
 Enable new settings page UI
 == Włącz nowy interfejs strony ustawień
 
+Enable performance debug logging and diagnostics
+== Włącz dziennik debugowania wydajności i diagnostykę przycinań
+
 Enable Pie Menu
 == Włącz menu kołowe
 
@@ -3679,6 +3703,12 @@ Enable spectator cursor (if available)
 
 Enable speedrun timer
 == Włącz timer speedrun
+
+Enable Spotify lyric integration
+== Włącz integrację tekstów Spotify
+
+Enable Spotify lyrics
+== Włącz teksty Spotify
 
 Enable squishy Tee deformation
 == Włącz deformację Tee Q-Bounce
@@ -7229,6 +7259,9 @@ Password incorrect
 Password required to use reserved slots.
 == Hasło wymagane do korzystania z zarezerwowanych slotów.
 
+Paste sp_dc from Spotify web cookies
+== Wklej ciasteczko sp_dc z przeglądarki
+
 Pause
 == Pauza
 
@@ -8464,6 +8497,9 @@ Reset mouse position when opening bind wheel
 
 Reset position of mouse when opening bindwheel
 == Zresetuj pozycję myszy przy otwieraniu koła wiązań
+
+Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
+== Zresetuj qm_bind_status_items do 4 wbudowanych wpisów (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy)
 
 Reset stats on server join (0=persistent, 1=reset on join)
 == Resetuj statystyki przy wejściu na serwer (0 = statystyki skumulowane, 1 = resetuj przy każdym wejściu)
@@ -10414,6 +10450,12 @@ Sponsor support
 
 Sponsors:
 == Sponsorzy:
+
+Spotify sp_dc
+== Ciasteczko sp_dc Spotify
+
+Spotify sp_dc cookie (from browser DevTools, long-lived)
+== Ciasteczko sp_dc Spotify (z DevTools przeglądarki, długoterminowe)
 
 Spree
 == Seria
@@ -12875,8 +12917,8 @@ Could not initialize the given graphics backend, this is probably because you di
 == Nie można zainicjować podanego backendu graficznego, prawdopodobnie dlatego, że nie zainstalowałeś sterownika zintegrowanej karty graficznej.
 
 [Graphics error]
-Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== Niepowodzenie podczas inicjalizacji. Spróbuj zmienić gfx_backend na OpenGL lub Vulkan w qmclient/settings_ddnet.cfg w katalogu konfiguracyjnym i spróbuj ponownie.
+Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== Niepowodzenie podczas inicjalizacji. Spróbuj zmienić gfx_backend na OpenGL lub Vulkan w qmclient/settings.cfg w katalogu konfiguracyjnym i spróbuj ponownie.
 
 [Graphics error]
 Failed to swap framebuffers. Try to update your GPU drivers.
@@ -12891,8 +12933,8 @@ Submitting the render commands failed. Try to update your GPU drivers.
 == Przesyłanie poleceń renderowania nie powiodło się. Spróbuj zaktualizować sterowniki GPU.
 
 [Graphics error]
-Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== Nieznany błąd. Spróbuj zmienić gfx_backend na OpenGL lub Vulkan w qmclient/settings_ddnet.cfg w katalogu konfiguracyjnym i spróbuj ponownie.
+Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== Nieznany błąd. Spróbuj zmienić gfx_backend na OpenGL lub Vulkan w qmclient/settings.cfg w katalogu konfiguracyjnym i spróbuj ponownie.
 
 [Hammer Mode]
 Normal

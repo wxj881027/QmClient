@@ -2138,6 +2138,9 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 == Configure laser shape, glow, and animation
 
+Configure lyrics sources and display
+== Şarkı sözü kaynaklarını ve görünümünü yapılandır
+
 Configure nameplate text, badges, and visibility
 == Configure nameplate text, badges, and visibility
 
@@ -2477,6 +2480,12 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Özel En Boy Oranı, x100 ile Saklanır (örn. 178=16:9, 233=21:9)
 
+Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
+== Özel bind durumu HUD girdileri. Boş: yerleşik 4 girdi (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu). Biçim: değişken|değer=metin|değer=metin; değişken|metin (sıfır değilken göster); değişken (yalnızca ad: sıfır değilken adı göster). Girdiler ';' ile, alanlar '|' ile ayrılır
+
+Custom bind status list
+== Özel bind durumu listesi
+
 Custom colors
 == Özel renkler
 
@@ -2615,6 +2624,9 @@ DDNet/total CPU
 DDRace HUD
 == DDRace HUD
 
+DDRace HUD Pro
+== DDRace HUD Pro（dummy durumu）
+
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 == DDraceNetwork, sizin ve tee grubunuzun haritanın bitiş çizgisine ulaşmayı hedeflediği işbirlikçi bir çevrimiçi oyundur. Yeni başlayan biri olarak, en kolay haritaları barındıran Novice sunucularında başlamalısınız. Size yakın bir sunucu seçmek için ping'i göz önünde bulundurun.
 
@@ -2647,6 +2659,9 @@ Debug graph panel opacity (percent)
 
 Debug group clipping.
 == Grup kırpma hata ayıklama.
+
+Debug mode
+== Hata ayıklama modu
 
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == Hata ayıklama modu etkin. Hata ayıklama modunu devre dışı bırakmak için Ctrl+Shift+D tuşlarına basın.
@@ -3200,6 +3215,9 @@ Dummy is currently connected.
 Dummy jump
 == Kukla zıplaması
 
+Dummy key/hammer/control/copy status switches and custom bind status list
+== Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları ve özel bind durumu listesi
+
 Dummy marking color
 == Kukla işaret rengi
 
@@ -3385,6 +3403,9 @@ Emoticon shadow
 
 Emoticons
 == İfadeler
+
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== Boş: yerleşik 4 girdi. Biçim: var|0=Off|1=On; var|Text
 
 enable
 == etkinleştir
@@ -3596,6 +3617,9 @@ Enable new IME candidate bar
 Enable new settings page UI
 == Yeni ayarlar sayfası UI’ını etkinleştir
 
+Enable performance debug logging and diagnostics
+== Performans hata ayıklama günlüğünü ve takılma teşhisini etkinleştir
+
 Enable Pie Menu
 == Pasta menüsünü etkinleştir
 
@@ -3679,6 +3703,12 @@ Enable spectator cursor (if available)
 
 Enable speedrun timer
 == Hızlı koşu zamanlayıcısını etkinleştir
+
+Enable Spotify lyric integration
+== Spotify şarkı sözü entegrasyonunu etkinleştir
+
+Enable Spotify lyrics
+== Spotify şarkı sözlerini etkinleştir
 
 Enable squishy Tee deformation
 == Q Esnek Tee Deformasyonu’nu etkinleştir
@@ -7229,6 +7259,9 @@ Password incorrect
 Password required to use reserved slots.
 == Ayrılmış yuvaları kullanmak için gereken şifre.
 
+Paste sp_dc from Spotify web cookies
+== Tarayıcıdan sp_dc çerezini yapıştırın
+
 Pause
 == Duraklat
 
@@ -8464,6 +8497,9 @@ Reset mouse position when opening bind wheel
 
 Reset position of mouse when opening bindwheel
 == Bind tekerleğini açarken farenin konumunu sıfırla
+
+Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
+== qm_bind_status_items öğesini yerleşik 4 girdiye sıfırla (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu)
 
 Reset stats on server join (0=persistent, 1=reset on join)
 == Sunucuya girerken istatistikleri sıfırla (0=Kümülatif istatistikler, 1=Her girişte sıfırla)
@@ -10414,6 +10450,12 @@ Sponsor support
 
 Sponsors:
 == Sponsorlar:
+
+Spotify sp_dc
+== Spotify sp_dc çerezi
+
+Spotify sp_dc cookie (from browser DevTools, long-lived)
+== Spotify sp_dc çerezi (tarayıcı DevTools'tan, uzun ömürlü)
 
 Spree
 == Seri
@@ -12875,8 +12917,8 @@ Could not initialize the given graphics backend, this is probably because you di
 == Verilen grafik arka ucu başlatılamadı, bunun nedeni muhtemelen tümleşik grafik kartının sürücüsünü yüklememiş olmanızdır.
 
 [Graphics error]
-Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== Başlatma sırasında başarısız oldu. Yapılandırma dizinindeki qmclient/settings_ddnet.cfg dosyasında gfx_backend'i OpenGL veya Vulkan olarak değiştirmeyi ve tekrar denemeyi deneyin.
+Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== Başlatma sırasında başarısız oldu. Yapılandırma dizinindeki qmclient/settings.cfg dosyasında gfx_backend'i OpenGL veya Vulkan olarak değiştirmeyi ve tekrar denemeyi deneyin.
 
 [Graphics error]
 Failed to swap framebuffers. Try to update your GPU drivers.
@@ -12891,8 +12933,8 @@ Submitting the render commands failed. Try to update your GPU drivers.
 == Render komutlarının gönderilmesi başarısız oldu. GPU sürücülerinizi güncellemeyi deneyin.
 
 [Graphics error]
-Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings_ddnet.cfg in the config directory and try again.
-== Bilinmeyen hata. Yapılandırma dizinindeki qmclient/settings_ddnet.cfg dosyasında gfx_backend'i OpenGL veya Vulkan olarak değiştirmeyi ve tekrar denemeyi deneyin.
+Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.
+== Bilinmeyen hata. Yapılandırma dizinindeki qmclient/settings.cfg dosyasında gfx_backend'i OpenGL veya Vulkan olarak değiştirmeyi ve tekrar denemeyi deneyin.
 
 [Hammer Mode]
 Normal

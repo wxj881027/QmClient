@@ -1656,6 +1656,7 @@ set(EXPECTED_DATA
   fonts/Phosphor-Bold.ttf
   fonts/GlowSansJ-Compressed-Book.otf
   fonts/NotoEmoji-Regular.ttf
+  fonts/NotoSansThai-Regular.ttf
   fonts/SourceHanSans.ttc
   fonts/index.json
   game.png
@@ -3062,6 +3063,8 @@ if(CLIENT)
     components/qmclient/monitoring/monitoring.cpp
     components/qmclient/monitoring/monitoring_device_perf.cpp
     components/qmclient/monitoring/monitoring.h
+    components/qmclient/music_app_watcher.cpp
+    components/qmclient/music_app_watcher.h
     components/qmclient/music_lyrics/music_lyrics_integration.cpp
     components/qmclient/music_lyrics/music_lyrics_integration.h
     components/qmclient/music_lyrics/music_lyrics_krc.cpp
@@ -3073,6 +3076,14 @@ if(CLIENT)
     components/qmclient/music_lyrics/qm_soda_hook_provider.h
     components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
     components/qmclient/music_lyrics/qm_soda_lyric_file.h
+    components/qmclient/music_lyrics/qm_spotify_crypto.cpp
+    components/qmclient/music_lyrics/qm_spotify_crypto.h
+    components/qmclient/music_lyrics/qm_spotify_integration.cpp
+    components/qmclient/music_lyrics/qm_spotify_integration.h
+    components/qmclient/music_lyrics/qm_spotify_parser.cpp
+    components/qmclient/music_lyrics/qm_spotify_parser.h
+    components/qmclient/music_lyrics/qm_spotify_token.cpp
+    components/qmclient/music_lyrics/qm_spotify_token.h
     ../../qm-soda-hook/qm_soda_protocol.cpp
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
@@ -3090,6 +3101,9 @@ if(CLIENT)
     components/qmclient/netease_hook/qm_netease_hook_v5_writer.h
     components/qmclient/netease_hook/qm_netease_hook_provider.cpp
     components/qmclient/netease_hook/qm_netease_hook_provider.h
+    components/qmclient/qm_bind_status_hud.cpp
+    components/qmclient/qm_bind_status_hud.h
+    components/qmclient/qm_music_hook_registry.h
     components/qmclient/qmclient.cpp
     components/qmclient/qmclient.h
     components/qmclient/qmclient_utils.cpp
@@ -3936,6 +3950,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     prng_test.cpp
     qm_background_particles_test.cpp
     qm_axiom_scores_test.cpp
+    qm_bind_status_hud_test.cpp
     qm_chat_emoji_test.cpp
     qm_chat_interactions_test.cpp
     qm_hammer_hit_detection_test.cpp
@@ -3952,6 +3967,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_netease_hook_protocol_test.cpp
     music_lyrics_krc_test.cpp
     music_lyrics_qrc_test.cpp
+    qm_spotify_crypto_test.cpp
+    qm_spotify_token_test.cpp
+    qm_spotify_parser_test.cpp
     qm_modes_test.cpp
     qm_tee_hue_cycle_test.cpp
     qm_weapon_trajectory_test.cpp
@@ -4038,11 +4056,15 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/monitoring/monitoring_device_perf.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
+    src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
+    src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
+    src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
     src/game/client/components/qmclient/netease/netease_shared_memory.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
+    src/qm-nmt-hook/qm_netease_bootstrap.cpp
     src/qm-nmt-hook/qm_netease_cdp.cpp
     src/qm-nmt-hook/qm_netease_cdp_client.cpp
     src/game/client/components/qmclient/modes.cpp
@@ -4056,6 +4078,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/voice/voice_utils.cpp
     src/game/client/components/qmclient/input_overlay_format.cpp
     src/game/client/components/qmclient/input_overlay_format.h
+    src/game/client/components/qmclient/qm_bind_status_hud.cpp
     src/game/client/frame_scheduler.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
@@ -4123,11 +4146,17 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/netease_shared_memory_test.cpp
       src/test/qm_netease_cdp_test.cpp
       src/test/qm_netease_hook_protocol_test.cpp
+      src/test/qm_spotify_crypto_test.cpp
+      src/test/qm_spotify_token_test.cpp
+      src/test/qm_spotify_parser_test.cpp
       src/qm-soda-hook/qm_soda_probe.cpp
       src/qm-soda-hook/qm_soda_protocol.cpp
       src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
       src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
       src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
+      src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
+      src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
+      src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
       src/game/client/components/qmclient/netease/netease_lyric_state.cpp
       src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp

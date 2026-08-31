@@ -41,6 +41,14 @@ bool IsDeepflyAuxiliaryCommand(const char *pCommand)
 		return true;
 	if(str_comp_nocase(pCommand, "+showhookcoll") == 0)
 		return true;
+	// 表情类命令与深飞判定无关：发射键上常附加 emote/emote_cycle，
+	// 不应让这些多命令里的无关部分把 DF/HDF bind 误判为 Custom。
+	if(str_comp_nocase(pCommand, "+emote") == 0)
+		return true;
+	if(IsCommandWithName(pCommand, "emote"))
+		return true;
+	if(IsCommandWithName(pCommand, "emote_cycle"))
+		return true;
 	return false;
 }
 

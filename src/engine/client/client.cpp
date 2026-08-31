@@ -10,6 +10,7 @@
 #include <base/crashdump.h>
 #include <base/hash.h>
 #include <base/hash_ctxt.h>
+#include <base/lock.h>
 #include <base/log.h>
 #include <base/logger.h>
 #include <base/math.h>
@@ -73,6 +74,44 @@
 
 #include "SDL.h"
 
+// 性能日志文件的运行时开关包装：CFutureLogger 只能 Set 一次，游戏内
+// 开/关文件通过替换内部 logger（文件 logger ↔ noop）实现。旧 logger 在
+// 锁内被析构（CLoggerAsync 析构时关闭文件并等待排空）。
+class CQmPerfFileSwitchLogger : public ILogger
+{
+public:
+	void Set(std::shared_ptr<ILogger> pLogger)
+	{
+		const CLockScope LockScope(m_SwitchLock);
+		m_pLogger = std::move(pLogger);
+	}
+
+	void Log(const CLogMessage *pMessage) override
+	{
+		const CLockScope LockScope(m_SwitchLock);
+		if(m_pLogger)
+			m_pLogger->Log(pMessage);
+	}
+
+	void GlobalFinish() override
+	{
+		const CLockScope LockScope(m_SwitchLock);
+		if(m_pLogger)
+			m_pLogger->GlobalFinish();
+	}
+
+	void OnFilterChange() override
+	{
+		const CLockScope LockScope(m_SwitchLock);
+		if(m_pLogger)
+			m_pLogger->SetFilter(m_Filter);
+	}
+
+private:
+	CLock m_SwitchLock;
+	std::shared_ptr<ILogger> m_pLogger;
+};
+
 namespace
 {
 }
@@ -124,7 +163,6 @@ static constexpr int64_t gs_HangTimeoutSeconds = 10;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
 static constexpr const char *gs_pQmLifecycleMarkerFile = "qmclient/lifecycle_pending.marker";
 static constexpr const char *gs_pQmGraphicsRecoveryStateFile = "qmclient/graphics_recovery.marker";
-static bool gs_aLoadedPreviousConfigPath[ConfigDomain::NUM] = {};
 
 struct SQmLatestCrashReport
 {
@@ -4082,6 +4120,7 @@ void CClient::Run()
 	while(true)
 	{
 		const bool PerfEnabled = QmPerfEnabled();
+		UpdateQmPerfFileLogger(); // 游戏内开关立即开/关性能日志文件（状态无变化时仅几次内存读）
 		std::optional<CPerfTimer> LoopTimer;
 		if(PerfEnabled)
 			LoopTimer.emplace();
@@ -4424,12 +4463,12 @@ void CClient::FinishQmConfigMigration()
 	if(!QmConfigMigrationPending(m_pStorage))
 		return;
 
-	if(!m_pConfigManager->Save(true) || !QmFinalizeConfigMigration(m_pStorage, gs_aLoadedPreviousConfigPath))
+	if(!m_pConfigManager->Save(true) || !QmFinalizeConfigMigration(m_pStorage))
 	{
 		AddWarning(SWarning(Localize("Error saving settings")));
 		return;
 	}
-	log_info("config", "Migrated managed client configs to the qmclient folder");
+	log_info("config", "Merged managed client configs into qmclient/settings.cfg");
 }
 
 bool CClient::InitNetworkClient(char *pError, size_t ErrorSize)
@@ -6250,27 +6289,32 @@ int main(int argc, const char **argv)
 	// execute config file
 	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
 	{
-		const char *pConfigPath = GetConfigLoadPath(pStorage, s_aConfigDomains[ConfigDomain]);
-		if(pConfigPath == nullptr)
+		std::vector<const char *> vConfigPaths;
+		if(ConfigDomain == ConfigDomain::QMCLIENT)
 		{
-			continue;
+			// 变量域（v3 合并）：优先 qmclient/settings.cfg，否则按 v2 → v1 → v0 回退读取旧文件
+			QmGetVariableConfigLoadPaths(pStorage, vConfigPaths);
 		}
-		if(s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath != nullptr && str_comp(pConfigPath, s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath) == 0)
-			gs_aLoadedPreviousConfigPath[ConfigDomain] = true;
-
-		SSaveUnknownCommandContext UnknownCommandContext{pClient, ConfigDomain};
-		pConsole->SetUnknownCommandCallback(SaveUnknownDomainCommandCallback, &UnknownCommandContext);
-		if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED))
+		else if(const char *pConfigPath = GetConfigLoadPath(pStorage, s_aConfigDomains[ConfigDomain]); pConfigPath != nullptr)
 		{
+			vConfigPaths.push_back(pConfigPath);
+		}
+		for(const char *pConfigPath : vConfigPaths)
+		{
+			SSaveUnknownCommandContext UnknownCommandContext{pClient, ConfigDomain};
+			pConsole->SetUnknownCommandCallback(SaveUnknownDomainCommandCallback, &UnknownCommandContext);
+			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED))
+			{
+				pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
+				char aError[2048];
+				str_format(aError, sizeof(aError), "Failed to load config from '%s'.", pConfigPath);
+				log_error("client", "%s", aError);
+				pClient->ShowMessageBox({.m_pTitle = "Config File Error", .m_pMessage = aError});
+				PerformAllCleanup();
+				return -1;
+			}
 			pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
-			char aError[2048];
-			str_format(aError, sizeof(aError), "Failed to load config from '%s'.", pConfigPath);
-			log_error("client", "%s", aError);
-			pClient->ShowMessageBox({.m_pTitle = "Config File Error", .m_pMessage = aError});
-			PerformAllCleanup();
-			return -1;
 		}
-		pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 	}
 
 	if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, IStorage::TYPE_ALL))
@@ -6366,47 +6410,13 @@ int main(int argc, const char **argv)
 		pFutureFileLogger->Set(log_logger_noop());
 	}
 
-	if(g_Config.m_QmPerfLogfile || g_Config.m_QmPerfDebug || g_Config.m_QmPerfStutterDiagnostics)
-	{
-		pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
-		pStorage->CreateFolder("dumps/QmClient_Perf", IStorage::TYPE_SAVE);
-		char aDate[64];
-		str_timestamp(aDate, sizeof(aDate));
-		char aPerfLogPath[128];
-		str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s.log", aDate);
-		char aPerfLogCompletePath[IO_MAX_PATH_LENGTH];
-		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aPerfLogPath, aPerfLogCompletePath, sizeof(aPerfLogCompletePath));
-		IOHANDLE PerfLogfile = pStorage->OpenFile(aPerfLogPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!PerfLogfile)
-		{
-			fs_makedir_rec_for(aPerfLogCompletePath);
-			PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
-		}
-		if(!PerfLogfile)
-		{
-			char aWorkingDir[IO_MAX_PATH_LENGTH];
-			if(fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
-			{
-				str_format(aPerfLogCompletePath, sizeof(aPerfLogCompletePath), "%s/%s", aWorkingDir, aPerfLogPath);
-				fs_makedir_rec_for(aPerfLogCompletePath);
-				PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
-			}
-		}
-		if(PerfLogfile)
-		{
-			pFuturePerfFileLogger->Set(log_logger_prefix_file(PerfLogfile, "perf/"));
-			log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
-		}
-		else
-		{
-			log_error("client", "failed to open '%s' for performance logging", aPerfLogCompletePath);
-			pFuturePerfFileLogger->Set(log_logger_noop());
-		}
-	}
-	else
-	{
-		pFuturePerfFileLogger->Set(log_logger_noop());
-	}
+	// 性能日志文件：CFutureLogger 只能 Set 一次，启动时固定到可切换包装；
+	// 游戏内 qm_perf_debug / qm_perf_logfile / qm_perf_stutter_diagnostics 任一
+	// 变化由 CClient::UpdateQmPerfFileLogger 按帧检测，立即打开/关闭文件。
+	std::shared_ptr<CQmPerfFileSwitchLogger> pQmPerfFileSwitchLogger = std::make_shared<CQmPerfFileSwitchLogger>();
+	pFuturePerfFileLogger->Set(pQmPerfFileSwitchLogger);
+	pClient->SetQmPerfFileSwitch(std::move(pQmPerfFileSwitchLogger));
+	pClient->UpdateQmPerfFileLogger();
 
 	ApplyProcessPriorityConfig();
 
@@ -6934,4 +6944,70 @@ void CClient::SetLoggers(std::shared_ptr<ILogger> &&pFileLogger, std::shared_ptr
 	m_pFileLogger = pFileLogger;
 	m_pStdoutLogger = pStdoutLogger;
 	m_pPerfFileLogger = pPerfFileLogger;
+}
+
+void CClient::SetQmPerfFileSwitch(std::shared_ptr<CQmPerfFileSwitchLogger> pSwitch)
+{
+	m_pQmPerfFileSwitchLogger = std::move(pSwitch);
+	m_pQmPerfFileSwitch = static_cast<CQmPerfFileSwitchLogger *>(m_pQmPerfFileSwitchLogger.get());
+}
+
+// 按配置开/关性能日志文件：任一性能开关开启即打开专用文件并立即落盘，
+// 全部关闭则关闭文件。启动时调用一次建立初始状态，主循环按帧调用处理游戏内切换。
+void CClient::UpdateQmPerfFileLogger()
+{
+	const bool Wanted = g_Config.m_QmPerfLogfile != 0 || g_Config.m_QmPerfDebug != 0 || g_Config.m_QmPerfStutterDiagnostics != 0;
+	if(Wanted == m_QmPerfFileLoggerActive || m_pQmPerfFileSwitch == nullptr)
+		return;
+	m_QmPerfFileLoggerActive = Wanted;
+
+	if(Wanted)
+	{
+		m_pStorage->CreateFolder("dumps", IStorage::TYPE_SAVE);
+		m_pStorage->CreateFolder("dumps/QmClient_Perf", IStorage::TYPE_SAVE);
+		char aDate[64];
+		str_timestamp(aDate, sizeof(aDate));
+		char aPerfLogPath[128];
+		// 每次开启都新建文件、绝不覆盖旧日志：首次用干净时间戳名，
+		// 之后（同一进程内）追加递增序号。
+		++m_QmPerfLogReopenCounter;
+		if(m_QmPerfLogReopenCounter == 1)
+			str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s.log", aDate);
+		else
+			str_format(aPerfLogPath, sizeof(aPerfLogPath), "dumps/QmClient_Perf/qm_perf_%s_%d.log", aDate, m_QmPerfLogReopenCounter);
+
+		char aPerfLogCompletePath[IO_MAX_PATH_LENGTH];
+		m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, aPerfLogPath, aPerfLogCompletePath, sizeof(aPerfLogCompletePath));
+		IOHANDLE PerfLogfile = m_pStorage->OpenFile(aPerfLogPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		if(!PerfLogfile)
+		{
+			fs_makedir_rec_for(aPerfLogCompletePath);
+			PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
+		}
+		if(!PerfLogfile)
+		{
+			char aWorkingDir[IO_MAX_PATH_LENGTH];
+			if(fs_getcwd(aWorkingDir, sizeof(aWorkingDir)))
+			{
+				str_format(aPerfLogCompletePath, sizeof(aPerfLogCompletePath), "%s/%s", aWorkingDir, aPerfLogPath);
+				fs_makedir_rec_for(aPerfLogCompletePath);
+				PerfLogfile = io_open(aPerfLogCompletePath, IOFLAG_WRITE);
+			}
+		}
+		if(PerfLogfile)
+		{
+			m_pQmPerfFileSwitch->Set(log_logger_prefix_file(PerfLogfile, "perf/"));
+			log_info("client", "writing performance log to '%s'", aPerfLogCompletePath);
+		}
+		else
+		{
+			// 打开失败不重试（避免每帧刷屏），等下次配置变化再尝试。
+			log_error("client", "failed to open '%s' for performance logging", aPerfLogCompletePath);
+		}
+	}
+	else
+	{
+		m_pQmPerfFileSwitch->Set(log_logger_noop());
+		log_info("client", "stopped writing performance log");
+	}
 }

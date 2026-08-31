@@ -106,7 +106,7 @@ namespace qm_card_registry
 	{
 		// clang-format off
 		static const std::vector<SCardDefault> s_aDefaults = {
-			// === 栖梦侧栏模块（38）· qm:<key>（显式默认值齐全，来源 s_aQmModuleDefaults）===
+			// === 栖梦侧栏模块（39）· qm:<key>（显式默认值齐全，来源 s_aQmModuleDefaults）===
 			{"qm:info", "visual", ECardColumn::Full, 0, "QmClient", "qmclient info", "QmClient information and project links"},
 			{"qm:chat_bubble", "visual", ECardColumn::Left, 0, "Chat bubble", "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao visual", "Show chat messages above players"},
 			{"qm:camera_view", "visual", ECardColumn::Right, 0, "Camera view", "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao visual", "Adjust game camera and FOV settings"},
@@ -142,6 +142,8 @@ namespace qm_card_registry
 			{"qm:system_media_controls", "hud", ECardColumn::Right, 15, "System media controls", "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige hud", "Expose playback controls to the operating system"},
 			{"qm:lyrics", "hud", ECardColumn::Right, 16, "Lyrics", "歌词 geci lyrics 来源 laiyuan source 网易云 wangyi netease 汽水 qishui soda 显示 xianshi 灵动岛 lingdongdao hud", "Configure lyrics sources and display"},
 			{"qm:background_3d", "hud", ECardColumn::Right, 17, "3D background", "3d背景 3d beijing background particles 粒子 lizi 方块 fangkuai cube 爱心 aixin heart 球体 qiuti sphere 金字塔 jinzita pyramid 钻石 zuanshi diamond 圆环 yuanhuan ring 星形 xingxing star 月牙 yueya crescent 混合 hunhe mixed 数量 shuliang 速度 sudu 尺寸 chicun 深度 shendu 透明度 touming 颜色 yanse 随机 suiji 自定义 zidingyi 辉光 huiguang 拖尾 tuowei trail 脉冲 maichong pulse 闪烁 shanshuo twinkle 推动 tuidong 碰撞 pengzhuang 淡入 danru 淡出 danchu hud", "Configure background 3D particle effects"},
+			{"qm:debug_mode", "hud", ECardColumn::Right, 19, "Debug mode", "调试模式 tiaoshi moshi debug mode 性能日志 xingneng rizhi perf log 性能调试 xingneng tiaoshi 日志文件 rizhi wenjian 采样阈值 caiyang yuzhi threshold 卡顿诊断 kadun zhenduan stutter diagnostics hud", "Enable performance debug logging and diagnostics"},
+			{"qm:bind_status_hud", "hud", ECardColumn::Right, 20, "DDRace HUD Pro", "bind status hud 分身状态 fenshen zhuangtai 卡键 kajian 锤子 chuizi 分身控制 fenshen kongzhi 分身同步 fenshen tongbu 同步 tongbu 自定义 zidingyi 列表 liebiao ddrace hud pro", "Dummy key/hammer/control/copy status switches and custom bind status list"},
 			{"qm:nameplate_text", "hud", ECardColumn::Right, 18, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text"}, // 数据债：原无 tab 归属，B1 补 hud
 			{"qm:laser", "visual", ECardColumn::Right, 3, "Laser", "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu visual", "Customize laser shape and effects"}, // 数据债：原无 tab 归属，B1 补 visual
 

@@ -1,4 +1,5 @@
 # 请抬头享受阳光｜日子很好 我很我---------致咩子
+
 [[message]]
 key = "%s from %s"
 [message.translations]
@@ -14720,38 +14721,6 @@ turkish = "Dummy eylemlerini göster"
 polish = "Pokaż akcje kukły"
 
 [[message]]
-key = "Show dummy control status"
-[message.translations]
-simplified_chinese = "显示分身控制状态"
-traditional_chinese = "顯示分身控制狀態"
-japanese = "ダミーコントロール状態を表示"
-korean = "더미 제어 상태 표시"
-russian = "Показать статус управления дамми"
-german = "Dummy-Steuerungsstatus anzeigen"
-spanish = "Mostrar estado de control del Dummy"
-french = "Afficher le statut de contrôle du dummy"
-brazilian_portuguese = "Mostrar status de controle do dummy"
-portuguese = "Mostrar estado de controlo do Dummy"
-turkish = "Dummy kontrol durumunu göster"
-polish = "Pokaż status sterowania kukłą"
-
-[[message]]
-key = "Show dummy copy status"
-[message.translations]
-simplified_chinese = "显示分身同步状态"
-traditional_chinese = "顯示分身同步狀態"
-japanese = "ダミー同期状態を表示"
-korean = "더미 동기화 상태 표시"
-russian = "Показать статус синхронизации дамми"
-german = "Dummy-Synchronisationsstatus anzeigen"
-spanish = "Mostrar estado de sincronización del Dummy"
-french = "Afficher le statut de synchronisation du dummy"
-brazilian_portuguese = "Mostrar status de sincronização do dummy"
-portuguese = "Mostrar estado de sincronização do Dummy"
-turkish = "Dummy senkronizasyon durumunu göster"
-polish = "Pokaż status synchronizacji kukły"
-
-[[message]]
 key = "Show entities"
 [message.translations]
 simplified_chinese = "实体层显示开关"
@@ -14942,22 +14911,6 @@ brazilian_portuguese = "Mostrar grade"
 portuguese = "Mostrar Grelha"
 turkish = "Izgarayı Göster"
 polish = "Pokaż siatkę"
-
-[[message]]
-key = "Show hammer status"
-[message.translations]
-simplified_chinese = "显示锤状态"
-traditional_chinese = "顯示錘狀態"
-japanese = "ハンマーステータスを表示"
-korean = "망치 상태 표시"
-russian = "Показать статус молота"
-german = "Hammer-Status anzeigen"
-spanish = "Mostrar estado del martillo"
-french = "Afficher le statut du marteau"
-brazilian_portuguese = "Mostrar status do martelo"
-portuguese = "Mostrar estado do martelo"
-turkish = "Çekiç durumunu göster"
-polish = "Pokaż status młotka"
 
 [[message]]
 key = "Show health, shields and ammo"
@@ -15422,22 +15375,6 @@ brazilian_portuguese = "Mostrar teclas pressionadas (1 = outros, 2 = todos, 3 = 
 portuguese = "Mostrar teclas pressionadas (1 = outros, 2 = todos, 3 = apenas o próprio)"
 turkish = "Tuş basımlarını göster (1 = diğerleri, 2 = tümü, 3 = yalnızca kendin)"
 polish = "Pokaż wciśnięte klawisze (1 = innych, 2 = wszystkich, 3 = tylko własne)"
-
-[[message]]
-key = "Show key stuck status"
-[message.translations]
-simplified_chinese = "显示卡键状态"
-traditional_chinese = "顯示卡鍵狀態"
-japanese = "キー固着ステータスを表示"
-korean = "키 고정 상태 표시"
-russian = "Показывать статус залипших клавиш"
-german = "Tastensteck-Status anzeigen"
-spanish = "Mostrar estado de tecla atascada"
-french = "Afficher le statut de touche bloquée"
-brazilian_portuguese = "Mostrar status de tecla presa"
-portuguese = "Mostrar estado de tecla presa"
-turkish = "Tuş sıkışma durumunu göster"
-polish = "Pokaż stan zablokowanych klawiszy"
 
 [[message]]
 key = "Show kill messages"

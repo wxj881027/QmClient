@@ -59,6 +59,20 @@ TEST(Binds, AllowsWhitelistedDeepflyAuxiliaryCommands)
 	EXPECT_EQ(DetectDeepflyModeFromBindCommand("echo \"normal fire\";+fire"), DEEPFLY_MODE_NORMAL);
 }
 
+TEST(Binds, IgnoresEmoteCommandsInDeepflyDetection)
+{
+	EXPECT_EQ(DetectDeepflyModeFromBindCommand("+fire;+toggle cl_dummy_hammer 1 0;emote 14"), DEEPFLY_MODE_DF);
+	EXPECT_EQ(DetectDeepflyModeFromBindCommand("+fire;+toggle cl_dummy_hammer 1 0;+emote"), DEEPFLY_MODE_DF);
+	EXPECT_EQ(DetectDeepflyModeFromBindCommand("+fire;+toggle cl_dummy_hammer 1 0;emote_cycle"), DEEPFLY_MODE_DF);
+	EXPECT_EQ(DetectDeepflyModeFromBindCommand("emote 2;+toggle cl_dummy_hammer 1 0"), DEEPFLY_MODE_HDF);
+	EXPECT_EQ(DetectDeepflyModeFromBindCommand("+fire;emote 5"), DEEPFLY_MODE_NORMAL);
+	EXPECT_TRUE(IsDeepflyAuxiliaryCommand("emote 14"));
+	EXPECT_TRUE(IsDeepflyAuxiliaryCommand("+emote"));
+	EXPECT_TRUE(IsDeepflyAuxiliaryCommand("emote_cycle"));
+	EXPECT_FALSE(IsDeepflyAuxiliaryCommand("emotefoo"));
+	EXPECT_EQ(DetectDeepflyModeFromBindCommand("emotefoo;+fire;+toggle cl_dummy_hammer 1 0"), DEEPFLY_MODE_CUSTOM);
+}
+
 TEST(Binds, KeepsInputAndScriptCommandsCustomForDeepflyModes)
 {
 	EXPECT_EQ(DetectDeepflyModeFromBindCommand("+fire;+toggle cl_dummy_hammer 1 0;+left"), DEEPFLY_MODE_CUSTOM);

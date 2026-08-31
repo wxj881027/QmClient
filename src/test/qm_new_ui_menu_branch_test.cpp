@@ -1469,7 +1469,7 @@ TEST(QmNewUiMenuBranches, QmDefaultOffMigrationKeepsExplicitLegacyValues)
 	const std::string IncludeSource = ReadTextFile("src/engine/shared/config_includes.h");
 
 	EXPECT_NE(IncludeSource.find("SET_CONFIG_DOMAIN(ConfigDomain::QMCLIENT)\n#include \"config_variables_qmclient.h\""), std::string::npos);
-	EXPECT_NE(DomainSource.find("CONFIG_DOMAIN(QMCLIENT, \"qmclient/settings_qmclient.cfg\", \"QmClient/settings_qmclient.cfg\", \"settings_qmclient.cfg\", true)"), std::string::npos);
+	EXPECT_NE(DomainSource.find("CONFIG_DOMAIN(QMCLIENT, \"qmclient/settings.cfg\", nullptr, nullptr, true)"), std::string::npos);
 	EXPECT_NE(ClientSource.find("pConfigManager->Init();"), std::string::npos);
 	EXPECT_NE(ClientSource.find("if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED))"), std::string::npos);
 	EXPECT_LT(ClientSource.find("pConfigManager->Init();"), ClientSource.find("if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED))"));
@@ -3318,7 +3318,7 @@ TEST(QmNewUiMenuBranches, AppearanceTabsUseQmCards)
 	ASSERT_FALSE(HudBranch.empty());
 	EXPECT_NE(HudBranch.find("AddCard(0, HudLeftMinCardHeight"), std::string::npos);
 	EXPECT_NE(SettingsSource.find("AddCard(1, ResolveHudRightMinCardHeight()"), std::string::npos);
-	EXPECT_NE(HudBranch.find("const int HudRightCheckboxRowCount = 12 + (g_Config.m_ClShowhudDDRace ? 2 : 0);"), std::string::npos);
+	EXPECT_NE(HudBranch.find("const int HudRightCheckboxRowCount = 8 + (g_Config.m_ClShowhudDDRace ? 2 : 0);"), std::string::npos);
 	EXPECT_NE(HudBranch.find("ResolveSettingsRowsHeight(HudRightCheckboxRowCount, LineSize, MarginSmall)"), std::string::npos);
 	EXPECT_EQ(HudBranch.find("LineSize * 16.0f"), std::string::npos);
 	EXPECT_EQ(HudBranch.find("RightView.HSplitTop(LineSize * 2.0f, nullptr, &RightView);"), std::string::npos);

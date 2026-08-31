@@ -34,6 +34,10 @@
 #include <optional>
 #include <thread>
 
+// 性能日志文件的运行时开关包装（定义见 client.cpp）：CFutureLogger 只能 Set
+// 一次，游戏内开/关通过切换内部 logger（文件 logger ↔ noop）实现。
+class CQmPerfFileSwitchLogger;
+
 class CDemoEdit;
 class IDemoRecorder;
 class CMsgPacker;
@@ -316,6 +320,13 @@ private:
 	void WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat);
 	void FinishQmConfigMigration();
 
+	// 性能日志文件的运行时开关：CFutureLogger 只能 Set 一次，游戏内开/关
+	// 通过 CQmPerfFileSwitchLogger 包装切换内部 logger（文件 ↔ noop）实现。
+	std::shared_ptr<ILogger> m_pQmPerfFileSwitchLogger = nullptr; // 持有包装（基类引用，跨线程安全）
+	CQmPerfFileSwitchLogger *m_pQmPerfFileSwitch = nullptr; // 具体类型指针，仅 client.cpp 使用
+	bool m_QmPerfFileLoggerActive = false; // 当前是否已打开性能日志文件
+	int m_QmPerfLogReopenCounter = 0; // 本进程内第几次开启性能日志（文件名序号，避免覆盖旧日志）
+
 	std::shared_ptr<ILogger> m_pFileLogger = nullptr;
 	std::shared_ptr<ILogger> m_pStdoutLogger = nullptr;
 	std::shared_ptr<ILogger> m_pPerfFileLogger = nullptr;
@@ -349,6 +360,10 @@ public:
 	IHttp *Http() { return &m_Http; }
 
 	CClient();
+
+	// 性能日志文件运行时开/关（供 client.cpp 启动与主循环调用）。
+	void SetQmPerfFileSwitch(std::shared_ptr<CQmPerfFileSwitchLogger> pSwitch);
+	void UpdateQmPerfFileLogger();
 
 	// ----- send functions -----
 	int SendMsg(int Conn, CMsgPacker *pMsg, int Flags) override;
