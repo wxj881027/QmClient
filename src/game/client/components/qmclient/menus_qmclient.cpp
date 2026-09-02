@@ -1432,7 +1432,7 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 			"临渊捕鱼", "?hook?", "放肆zero", "Q币", "洛天依", "spider", "贝塔塔塔", "见月", "咩子的银耳", "Cancer", "少女`",
 			"长亭寂寞独自愁", "fantuan", "无言鱼", "胖人老许", "夏日", "张宁我儿", "拌饭", "shengyan", "修勾在修沟", "taffy",
 			"杀意没爱意", "DYL", "小信", "哆啦梦", "菜菜羊", "吃了吗chilem", "你就是我的", "xiaopang", "星星🌙", "軽い猫",
-			"oxyzo1", "笨蛋猫猫", "信息检索", "炭", "江江", "晚晚晚上好", "AAA乐土猫猫", "一個廢物", "黄花的忧伤", "丘卡", "迟渔", "潇洒的吗喽", "weijiu", "2284463973"};
+			"oxyzo1", "笨蛋猫猫", "信息检索", "炭", "江江", "晚晚晚上好", "AAA乐土猫猫", "一個廢物", "黄花的忧伤", "丘卡", "迟渔", "潇洒的吗喽", "weijiu", "2284463973", "二师兄"};
 		const auto BuildSponsorLines = [this, TipSize](float MaxLineWidth) {
 			static std::vector<std::string> Lines;
 			static float s_CachedMaxLineWidth = -1.0f;
@@ -3417,10 +3417,11 @@ void CMenus::RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float 
 		static CLineInput s_SpotifySpDc(g_Config.m_QmSpotifySpDc, sizeof(g_Config.m_QmSpotifySpDc));
 		CUIRect Row, LabelColumn, InputColumn;
 		Content.HSplitTop(LineHeight, &Row, &Content);
-		Row.VSplitLeft(150.0f, &LabelColumn, &InputColumn);
-		RenderQmHudLabel("qmclient-lyrics-spotify-sp-dc", &LabelColumn, Localize("Spotify sp_dc"), LineHeight * 0.75f);
-		IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_lyrics_spotify_text_inputs", LineHeight / ui_token::font::BODY);
-		ui_widget::InputField(TextInputCtx, &s_SpotifySpDc, InputColumn, Localize("Paste sp_dc from Spotify web cookies"), LineHeight * 0.8f);
+		Row.VSplitLeft(100.0f, &LabelColumn, &InputColumn);
+		// 配置名标签,不参与翻译。
+		RenderQmHudLabel("qmclient-lyrics-spotify-sp-dc", &LabelColumn, "spotify_ck", ui_token::font::BODY);
+		IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_lyrics_spotify_text_inputs");
+		ui_widget::InputField(TextInputCtx, &s_SpotifySpDc, InputColumn, Localize("Paste sp_dc from Spotify web cookies"), ui_token::font::BODY);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 }

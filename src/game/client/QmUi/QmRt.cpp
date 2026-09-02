@@ -131,7 +131,13 @@ void CUiRuntimeV2::OnRender()
 		m_LastStats.m_QueuedAnimCount,
 		m_LastStats.m_RenderBridgeMs,
 		RenderTimer.ElapsedMs());
-	QmPerfLogPayload("perf/ui_runtime", aPayload, m_pGameClient->Client(), m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr);
+	// 逐帧全量写 perf/ui_runtime 会以 ~300 行/秒 的速率产出性能日志（单次会话可达 200MB+），
+	// 既有持续的主线程格式化/写盘开销，也会诱发杀软等对日志文件的周期性扫描干扰帧率。
+	// 降采样为最多每 30 帧一条；单帧运行时超过阈值（真实卡顿）时仍然立即记录。
+	m_PerfLogFrameCounter = (m_PerfLogFrameCounter + 1) % 30;
+	const bool PerfLogDue = m_PerfLogFrameCounter == 0 || RenderTimer.ElapsedMs() >= QmPerfThresholdMs();
+	if(PerfLogDue)
+		QmPerfLogPayload("perf/ui_runtime", aPayload, m_pGameClient->Client(), m_aPerfPage[0] != '\0' ? m_aPerfPage : nullptr);
 }
 
 const SUiV2PerfStats &CUiRuntimeV2::LastStats() const

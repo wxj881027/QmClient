@@ -73,6 +73,14 @@ TEST(Binds, IgnoresEmoteCommandsInDeepflyDetection)
 	EXPECT_EQ(DetectDeepflyModeFromBindCommand("emotefoo;+fire;+toggle cl_dummy_hammer 1 0"), DEEPFLY_MODE_CUSTOM);
 }
 
+TEST(Binds, NestedBindWrapperDoesNotCountAsDeepflyBind)
+{
+	// 包装脚本（echo + 内嵌 bind mouse1 + emote）：顶层无 +fire / 锤子切换 → NONE；
+	// 嵌套 bind 执行后 mouse1 单独识别为 HDF，其中 emote 2 被辅助命令过滤。
+	EXPECT_EQ(DetectDeepflyModeFromBindCommand("echo 鼠标后侧键键开启hdf;bind mouse1 \"+toggle cl_dummy_hammer 1 0;emote 2\";emote 1"), DEEPFLY_MODE_NONE);
+	EXPECT_EQ(DetectDeepflyModeFromBindCommand("+toggle cl_dummy_hammer 1 0;emote 2"), DEEPFLY_MODE_HDF);
+}
+
 TEST(Binds, KeepsInputAndScriptCommandsCustomForDeepflyModes)
 {
 	EXPECT_EQ(DetectDeepflyModeFromBindCommand("+fire;+toggle cl_dummy_hammer 1 0;+left"), DEEPFLY_MODE_CUSTOM);

@@ -10451,9 +10451,6 @@ Sponsor support
 Sponsors:
 == Sponsoren:
 
-Spotify sp_dc
-== Spotify-sp_dc-Cookie
-
 Spotify sp_dc cookie (from browser DevTools, long-lived)
 == Spotify-sp_dc-Cookie (aus den Browser-DevTools, langlebig)
 

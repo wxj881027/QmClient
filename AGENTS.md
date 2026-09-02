@@ -22,6 +22,7 @@ QmClient（Q1menG Client）是基于 DDNet / TaterClient 的第三方定制客�
 ### 完成任务后
 
 - 代码改动默认至少 `python3 qmclient_scripts/gate/check_gate.py --mode quick`；提交前优先 `--mode default`；准发布再用 `--mode full`。Windows 使用 `py -3` 或环境中的 `python`。纯文档人工核对，不跑代码 gate。
+- 开发期「改完代码后」默认只跑 quick 源码卫生门禁（quick 本身不构建、不测试）：不执行游戏编译（`game-client`），不运行测试（`testrunner` / `run_cxx_tests` / `run_rust_tests`）。编译与测试验证留给提交前 `--mode default`、准发布 `--mode full`，或用户当次明确要求时再执行。
 - 核心逻辑改完后进行只读代码审查，先列 findings，再给结论。
 - 汇报：写清改动、验证命令与结果、gaps。没跑的不说通过。
 

@@ -8,6 +8,7 @@
 
 #include <engine/graphics.h>
 
+#include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -470,12 +471,6 @@ struct SHudMediaIslandEntrancePose
 	float m_ContentAlpha = 0.0f;
 };
 
-struct SHudMediaIslandEntranceTimeline
-{
-	float m_DropProgress = 0.0f;
-	float m_ExpandProgress = 0.0f;
-};
-
 inline float QmHudMediaIslandLiquidSmoothStep(float Value)
 {
 	Value = std::clamp(Value, 0.0f, 1.0f);
@@ -487,41 +482,6 @@ inline float QmHudMediaIslandLiquidSegment(float Progress, float Start, float En
 	if(End <= Start)
 		return Progress >= End ? 1.0f : 0.0f;
 	return QmHudMediaIslandLiquidSmoothStep((Progress - Start) / (End - Start));
-}
-
-inline float QmHudAdvanceMediaIslandEntranceProgress(float Current, float DeltaSeconds, int MotionLevel)
-{
-	Current = std::clamp(Current, 0.0f, 1.0f);
-	MotionLevel = std::clamp(MotionLevel, 0, 2);
-	if(MotionLevel == 0)
-		return 1.0f;
-	if(DeltaSeconds <= 0.0f)
-		return Current;
-	const float DurationSeconds = 0.55f * (MotionLevel == 1 ? 0.45f : 1.0f);
-	return std::clamp(Current + DeltaSeconds / DurationSeconds, 0.0f, 1.0f);
-}
-
-inline float QmHudAdvanceMediaIslandEntranceDropProgress(float Current, float DeltaSeconds, int MotionLevel)
-{
-	Current = std::clamp(Current, 0.0f, 1.0f);
-	MotionLevel = std::clamp(MotionLevel, 0, 2);
-	if(MotionLevel == 0)
-		return 1.0f;
-	if(DeltaSeconds <= 0.0f)
-		return Current;
-	const float DurationSeconds = 0.18f * (MotionLevel == 1 ? 0.45f : 1.0f);
-	return std::clamp(Current + DeltaSeconds / DurationSeconds, 0.0f, 1.0f);
-}
-
-inline SHudMediaIslandEntranceTimeline QmHudAdvanceMediaIslandEntranceTimeline(SHudMediaIslandEntranceTimeline Timeline, float DeltaSeconds, int MotionLevel)
-{
-	if(MotionLevel <= 0)
-		return {1.0f, 1.0f};
-	if(Timeline.m_DropProgress < 1.0f)
-		Timeline.m_DropProgress = QmHudAdvanceMediaIslandEntranceDropProgress(Timeline.m_DropProgress, DeltaSeconds, MotionLevel);
-	else
-		Timeline.m_ExpandProgress = QmHudAdvanceMediaIslandEntranceProgress(Timeline.m_ExpandProgress, DeltaSeconds, MotionLevel);
-	return Timeline;
 }
 
 inline SHudMediaIslandEntrancePose QmHudMediaIslandEntrancePose(const CUIRect &TargetRect, float TargetRadius, const ColorRGBA &TargetColor, float Progress, float DropProgress = 1.0f, float ScreenTop = 0.0f)
@@ -557,6 +517,70 @@ inline SHudMediaIslandEntrancePose QmHudMediaIslandEntrancePose(const CUIRect &T
 		Lerp(1.0f, TargetColor.a, ShapeProgress));
 	Pose.m_ContentAlpha = QmHudMediaIslandLiquidSegment(Progress, 0.92f, 1.0f);
 	return Pose;
+}
+
+// ==== 入场弹簧驱动（可中断 + 速度继承） ====
+// 掉落→展开两阶段各自独立弹簧轨道；展开阶段仅在掉落阶段完成后才开始（阶段语义保留）。
+// 可见时目标为 1，隐藏时目标为 0：隐藏即打断，弹簧以当前速度回落，重现时继承速度继续。
+// motion level 由 RequestAnimation 的 ApplyMotionLevel 统一处理（level 0 瞬移到位）。
+
+// 掉落：临界阻尼，响应≈0.18s（落定不反弹）。
+inline SUiSpringConfig QmHudMediaIslandEntranceDropSpring()
+{
+	SUiSpringConfig Spring;
+	Spring.m_Mass = 1.0f;
+	Spring.m_Stiffness = 1218.0f;
+	Spring.m_Damping = 69.8f;
+	Spring.m_RestEpsilon = 0.001f;
+	Spring.m_RestVelocity = 0.02f;
+	return Spring;
+}
+
+// 展开：轻微欠阻尼，响应≈0.66s（形态展开带一丝韧性）。
+inline SUiSpringConfig QmHudMediaIslandEntranceExpandSpring()
+{
+	SUiSpringConfig Spring;
+	Spring.m_Mass = 1.0f;
+	Spring.m_Stiffness = 90.0f;
+	Spring.m_Damping = 16.0f;
+	Spring.m_RestEpsilon = 0.001f;
+	Spring.m_RestVelocity = 0.02f;
+	return Spring;
+}
+
+struct SHudMediaIslandEntranceSpringResult
+{
+	float m_DropProgress = 0.0f;
+	float m_ExpandProgress = 0.0f;
+};
+
+inline SHudMediaIslandEntranceSpringResult QmHudMediaIslandResolveEntranceSprings(
+	CUiV2AnimationRuntime &AnimRuntime,
+	uint64_t DropNode,
+	uint64_t ExpandNode,
+	bool Visible,
+	float DropSettledEpsilon = 0.001f)
+{
+	SHudMediaIslandEntranceSpringResult Result;
+	const float DropTarget = Visible ? 1.0f : 0.0f;
+	Result.m_DropProgress = ResolveUiPresentationStateValue(AnimRuntime, DropNode, EUiAnimProperty::ALPHA, DropTarget, QmHudMediaIslandEntranceDropSpring(), 3, DropSettledEpsilon);
+	const float ExpandTarget = Visible && Result.m_DropProgress >= 1.0f - DropSettledEpsilon ? 1.0f : 0.0f;
+	Result.m_ExpandProgress = ResolveUiPresentationStateValue(AnimRuntime, ExpandNode, EUiAnimProperty::ALPHA, ExpandTarget, QmHudMediaIslandEntranceExpandSpring(), 3, DropSettledEpsilon);
+	return Result;
+}
+
+// 胶囊挤压形态：morph 弹簧进度驱动挤压量（SqueezeAmount=1 完全挤压，0 无挤压），
+// 输出挤压后的目标矩形，供胶囊弹簧追赶。
+inline void QmHudMediaIslandApplyCapsuleSqueeze(
+	float FromCenterX, float FromWidth, float FromHeight, float SqueezeAmount,
+	float BaseIslandHeight, float PaddingX, float ScreenPadding, float ScreenWidth,
+	float &EffectiveX, float &EffectiveWidth, float &EffectiveHeight)
+{
+	const float WidthSqueeze = std::clamp(FromWidth * 0.08f, QmHudMediaIslandScaled(2.0f), QmHudMediaIslandScaled(7.0f)) * SqueezeAmount;
+	const float HeightSqueeze = std::clamp(FromHeight * 0.10f, QmHudMediaIslandScaled(1.0f), QmHudMediaIslandScaled(2.4f)) * SqueezeAmount;
+	EffectiveWidth = std::max(PaddingX * 2.0f + QmHudMediaIslandScaled(4.0f), FromWidth - WidthSqueeze);
+	EffectiveHeight = std::max(BaseIslandHeight - QmHudMediaIslandScaled(2.0f), FromHeight - HeightSqueeze);
+	EffectiveX = std::clamp(FromCenterX - EffectiveWidth * 0.5f, ScreenPadding, std::max(ScreenPadding, ScreenWidth - ScreenPadding - EffectiveWidth));
 }
 
 inline float QmHudMediaIslandBlobSpringTravel(float Progress)

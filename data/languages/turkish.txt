@@ -10451,9 +10451,6 @@ Sponsor support
 Sponsors:
 == Sponsorlar:
 
-Spotify sp_dc
-== Spotify sp_dc çerezi
-
 Spotify sp_dc cookie (from browser DevTools, long-lived)
 == Spotify sp_dc çerezi (tarayıcı DevTools'tan, uzun ömürlü)
 

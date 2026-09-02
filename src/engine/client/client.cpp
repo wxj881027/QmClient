@@ -3582,7 +3582,20 @@ void CClient::UpdateDemoIntraTimers()
 
 void CClient::Update()
 {
+	// Qm 性能诊断：把 client_update 拆成子阶段计时，定位卡顿到底花在哪个环节。
+	// 只有开启 qm_perf_debug / qm_perf_logfile / qm_perf_stutter_diagnostics 时才计时，
+	// 且仍走 QmPerfLogStage 的阈值门控（正常帧不产生任何日志行）。
+	const bool PerfEnabled = QmPerfEnabled();
+	std::optional<CPerfTimer> PumpNetworkTimer;
+	if(PerfEnabled)
+		PumpNetworkTimer.emplace();
 	PumpNetwork();
+	if(PerfEnabled)
+		QmPerfLogStage("perf/main_thread", "update_pump_network", PumpNetworkTimer->ElapsedMs(), false, this);
+
+	std::optional<CPerfTimer> SnapshotPredictTimer;
+	if(PerfEnabled)
+		SnapshotPredictTimer.emplace();
 
 	if(State() == IClient::STATE_ONLINE)
 	{
@@ -3786,6 +3799,9 @@ void CClient::Update()
 		m_LastDummy = (bool)g_Config.m_ClDummy;
 	}
 
+	if(PerfEnabled)
+		QmPerfLogStage("perf/main_thread", "update_snapshot_predict", SnapshotPredictTimer->ElapsedMs(), false, this);
+
 	// STRESS TEST: join the server again
 	if(g_Config.m_DbgStress)
 	{
@@ -3877,16 +3893,37 @@ void CClient::Update()
 	}
 
 	// update the server browser
-	m_ServerBrowser.Update();
+	{
+		std::optional<CPerfTimer> ServerBrowserTimer;
+		if(PerfEnabled)
+			ServerBrowserTimer.emplace();
+		m_ServerBrowser.Update();
+		if(PerfEnabled)
+			QmPerfLogStage("perf/main_thread", "update_serverbrowser", ServerBrowserTimer->ElapsedMs(), false, this);
+	}
 
 	// update editor/gameclient
-	if(m_EditorActive)
-		m_pEditor->OnUpdate();
-	else
-		GameClient()->OnUpdate();
+	{
+		std::optional<CPerfTimer> GameClientUpdateTimer;
+		if(PerfEnabled)
+			GameClientUpdateTimer.emplace();
+		if(m_EditorActive)
+			m_pEditor->OnUpdate();
+		else
+			GameClient()->OnUpdate();
+		if(PerfEnabled)
+			QmPerfLogStage("perf/main_thread", "update_gameclient", GameClientUpdateTimer->ElapsedMs(), false, this);
+	}
 
-	Discord()->Update(g_Config.m_TcDiscordRPC);
-	Steam()->Update();
+	{
+		std::optional<CPerfTimer> DiscordSteamTimer;
+		if(PerfEnabled)
+			DiscordSteamTimer.emplace();
+		Discord()->Update(g_Config.m_TcDiscordRPC);
+		Steam()->Update();
+		if(PerfEnabled)
+			QmPerfLogStage("perf/main_thread", "update_discord_steam", DiscordSteamTimer->ElapsedMs(), false, this);
+	}
 	if(Steam()->GetConnectAddress())
 	{
 		HandleConnectAddress(Steam()->GetConnectAddress());

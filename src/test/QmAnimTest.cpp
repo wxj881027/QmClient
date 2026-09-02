@@ -810,11 +810,13 @@ TEST(UiV2Anim, ReplacePolicyReplacesCurrentTrack)
 	EXPECT_GT(MidValue, 0.0f);
 	EXPECT_LT(MidValue, 10.0f);
 
+	// REPLACE 打断：值连续（不从起点重放），运动转弹簧接管（速度继承）。
 	EXPECT_TRUE(Runtime.RequestAnimation(MakeRequest(1, EUiAnimProperty::POS_X, 20.0f, 0.4f, 2, EUiAnimInterruptPolicy::REPLACE, 12)));
 	EXPECT_EQ(Runtime.ActiveTrackCount(), 1);
+	EXPECT_NEAR(Runtime.GetValue(1, EUiAnimProperty::POS_X), MidValue, 1e-3f);
 
-	AdvanceFor(Runtime, 0.5f);
-	EXPECT_NEAR(Runtime.GetValue(1, EUiAnimProperty::POS_X), 20.0f, 0.001f);
+	AdvanceFor(Runtime, 1.0f);
+	EXPECT_NEAR(Runtime.GetValue(1, EUiAnimProperty::POS_X), 20.0f, 0.02f);
 
 	SUiAnimCompleteEvent Event;
 	ASSERT_TRUE(Runtime.PollCompletedEvent(Event));
@@ -861,7 +863,8 @@ TEST(UiV2Anim, KeepHigherPriorityRejectsLowerPriorityRequest)
 	EXPECT_LT(AfterRejected, 2.5f);
 
 	EXPECT_TRUE(Runtime.RequestAnimation(MakeRequest(3, EUiAnimProperty::SCALE, 5.0f, 0.3f, 20, EUiAnimInterruptPolicy::KEEP_HIGHER_PRIORITY, 33)));
-	AdvanceFor(Runtime, 0.4f);
+	// 打断后转弹簧接管，收敛时间比原 tween 略长。
+	AdvanceFor(Runtime, 0.7f);
 	EXPECT_NEAR(Runtime.GetValue(3, EUiAnimProperty::SCALE), 5.0f, 0.001f);
 
 	SUiAnimCompleteEvent Event;
@@ -1239,6 +1242,102 @@ TEST(UiV2AnimSpring, MergeTargetPreservesVelocity)
 	AdvanceFor(Runtime, 3.0f);
 	EXPECT_NEAR(Runtime.GetValue(301, EUiAnimProperty::POS_X), -100.0f, 0.5f);
 	EXPECT_FALSE(Runtime.HasActiveAnimation(301, EUiAnimProperty::POS_X));
+}
+
+TEST(UiV2AnimSpring, AnalyticSolverIsFrameRateIndependent)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	SUiSpringConfig Spring;
+	Spring.m_Mass = 1.0f;
+	Spring.m_Stiffness = 100.0f; // ω0 = 10
+	Spring.m_Damping = 10.0f; // ζ = 0.5（欠阻尼）
+	Spring.m_RestEpsilon = 0.0001f;
+	Spring.m_RestVelocity = 0.001f;
+
+	const auto RunHalfSecond = [&Spring](float Dt) {
+		CUiV2AnimationRuntime Runtime;
+		Runtime.SetValue(501, EUiAnimProperty::POS_X, 0.0f);
+		EXPECT_TRUE(Runtime.RequestAnimation(MakeSpringRequest(501, EUiAnimProperty::POS_X, 100.0f, 141)));
+		const int Steps = static_cast<int>(0.5f / Dt);
+		for(int i = 0; i < Steps; ++i)
+			Runtime.Advance(Dt);
+		return Runtime.GetValue(501, EUiAnimProperty::POS_X);
+	};
+
+	// 解析解与帧率无关：不同步长推进同一时长得到一致结果。
+	const float Value60 = RunHalfSecond(1.0f / 60.0f);
+	const float Value240 = RunHalfSecond(1.0f / 240.0f);
+	EXPECT_NEAR(Value60, Value240, 1e-3f);
+
+	// 解析解核对：ζ=0.5、ω0=10、t=0.5s → 107.47（欠阻尼过冲后回落中）。
+	EXPECT_NEAR(Value60, 107.47f, 0.05f);
+}
+
+TEST(UiV2AnimSpring, ReplaceInheritsVelocity)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
+	Runtime.SetValue(601, EUiAnimProperty::POS_X, 0.0f);
+
+	EXPECT_TRUE(Runtime.RequestAnimation(MakeSpringRequest(601, EUiAnimProperty::POS_X, 100.0f, 151)));
+	AdvanceFor(Runtime, 0.15f);
+	const float Before = Runtime.GetValue(601, EUiAnimProperty::POS_X);
+	EXPECT_GT(Before, 0.0f);
+	EXPECT_LT(Before, 100.0f);
+
+	// REPLACE 打断运行中的弹簧：值连续，且继承当前速度（首帧继续上行，而不是静止重放）。
+	EXPECT_TRUE(Runtime.RequestAnimation(MakeSpringRequest(601, EUiAnimProperty::POS_X, 0.0f, 152)));
+	EXPECT_NEAR(Before, Runtime.GetValue(601, EUiAnimProperty::POS_X), 1e-3f);
+
+	Runtime.Advance(1.0f / 60.0f);
+	const float AfterOneFrame = Runtime.GetValue(601, EUiAnimProperty::POS_X);
+	EXPECT_GT(AfterOneFrame, Before);
+
+	AdvanceFor(Runtime, 3.0f);
+	EXPECT_NEAR(Runtime.GetValue(601, EUiAnimProperty::POS_X), 0.0f, 0.5f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(601, EUiAnimProperty::POS_X));
+}
+
+TEST(UiV2Anim, TweenInterruptTakeoverInheritsVelocity)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
+	Runtime.SetValue(701, EUiAnimProperty::POS_X, 0.0f);
+
+	EXPECT_TRUE(Runtime.RequestAnimation(MakeRequest(701, EUiAnimProperty::POS_X, 100.0f, 1.0f, 1, EUiAnimInterruptPolicy::REPLACE, 161)));
+	AdvanceFor(Runtime, 0.5f);
+	const float Before = Runtime.GetValue(701, EUiAnimProperty::POS_X);
+	EXPECT_NEAR(Before, 50.0f, 0.05f);
+
+	// REPLACE 打断线性 tween：转弹簧接管（响应≈0.75s），初速度=线性曲线速度 100/s。
+	EXPECT_TRUE(Runtime.RequestAnimation(MakeRequest(701, EUiAnimProperty::POS_X, 0.0f, 1.0f, 1, EUiAnimInterruptPolicy::REPLACE, 162)));
+	EXPECT_NEAR(Before, Runtime.GetValue(701, EUiAnimProperty::POS_X), 1e-3f);
+
+	Runtime.Advance(1.0f / 60.0f);
+	const float AfterOneFrame = Runtime.GetValue(701, EUiAnimProperty::POS_X);
+	// 继承速度：接管首帧继续上行（冲向原目标方向），而不是从当前值静止重放。
+	EXPECT_GT(AfterOneFrame, Before);
+
+	AdvanceFor(Runtime, 2.0f);
+	EXPECT_NEAR(Runtime.GetValue(701, EUiAnimProperty::POS_X), 0.0f, 0.05f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(701, EUiAnimProperty::POS_X));
+}
+
+TEST(UiV2Anim, MergeTargetInstantRequestStillSnaps)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
+	Runtime.SetValue(702, EUiAnimProperty::POS_X, 0.0f);
+
+	EXPECT_TRUE(Runtime.RequestAnimation(MakeSpringRequest(702, EUiAnimProperty::POS_X, 100.0f, 171)));
+	AdvanceFor(Runtime, 0.1f);
+	EXPECT_TRUE(Runtime.HasActiveAnimation(702, EUiAnimProperty::POS_X));
+
+	// 0 时长 tween 是显式瞬移：MERGE_TARGET 直接到位，不转弹簧接管。
+	SUiAnimRequest Snap = MakeRequest(702, EUiAnimProperty::POS_X, 50.0f, 0.0f, 5, EUiAnimInterruptPolicy::MERGE_TARGET, 172);
+	EXPECT_TRUE(Runtime.RequestAnimation(Snap));
+	EXPECT_NEAR(Runtime.GetValue(702, EUiAnimProperty::POS_X), 50.0f, 1e-6f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(702, EUiAnimProperty::POS_X));
 }
 
 TEST(UiV2AnimSpring, ResolveSpringValueUsesRuntimeSpringTrack)
@@ -2102,45 +2201,43 @@ TEST(UiV2AnimEasing, MergeTargetRefreshesCustomEasing)
 	FastState.m_Calls = 0;
 	AdvanceFor(Runtime, 0.2f);
 
+	// 打断后转弹簧接管：接管轨道由弹簧驱动，新的自定义缓动不再参与（FastState 不应被调用）。
 	EXPECT_EQ(SlowState.m_Calls, 0);
-	EXPECT_GT(FastState.m_Calls, 0);
+	EXPECT_EQ(FastState.m_Calls, 0);
+	EXPECT_GT(Runtime.GetValue(206, EUiAnimProperty::ALPHA), 0.45f);
 }
 
-TEST(UiV2AnimEasing, MergeTargetRestartsTweenFromCurrentValue)
+TEST(UiV2AnimEasing, MergeTargetInterruptsTweenViaSpringTakeover)
 {
-	struct SCustomEasingState
-	{
-		float m_Multiplier = 1.0f;
-	};
-	SCustomEasingState SlowState{0.25f};
-	SCustomEasingState FastState{2.0f};
-	auto CustomEase = [](float Progress, void *pUser) -> float {
-		const SCustomEasingState *pState = static_cast<const SCustomEasingState *>(pUser);
-		return std::min(1.0f, Progress * pState->m_Multiplier);
-	};
-
 	CUiV2AnimationRuntime Runtime;
 	Runtime.SetValue(207, EUiAnimProperty::POS_X, 0.0f);
-	Runtime.RegisterCustomEasing(11, CustomEase, &SlowState);
-	Runtime.RegisterCustomEasing(12, CustomEase, &FastState);
 
-	SUiAnimRequest Request = MakeTweenRequest(207, EUiAnimProperty::POS_X, 100.0f, 1.0f, EEasing::CUSTOM, 110);
-	Request.m_Transition.m_CustomEasingId = 11;
+	SUiAnimRequest Request = MakeTweenRequest(207, EUiAnimProperty::POS_X, 100.0f, 1.0f, EEasing::LINEAR, 110);
 	EXPECT_TRUE(Runtime.RequestAnimation(Request));
 	AdvanceFor(Runtime, 0.2f);
 	const float BeforeMerge = Runtime.GetValue(207, EUiAnimProperty::POS_X);
+	EXPECT_NEAR(BeforeMerge, 20.0f, 0.05f);
 
+	// MERGE_TARGET 打断运行中的 tween：值连续，运动转弹簧接管（初速度=线性曲线速度 100/s）。
 	Request.m_Target = 200.0f;
 	Request.m_Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-	Request.m_Transition.m_CustomEasingId = 12;
 	Request.m_TrackId = 111;
 	EXPECT_TRUE(Runtime.RequestAnimation(Request));
-	EXPECT_NEAR(Runtime.GetValue(207, EUiAnimProperty::POS_X), BeforeMerge, 1e-6f);
+	EXPECT_NEAR(Runtime.GetValue(207, EUiAnimProperty::POS_X), BeforeMerge, 1e-3f);
 
 	Runtime.Advance(1.0f / 60.0f);
 	const float AfterOneFrame = Runtime.GetValue(207, EUiAnimProperty::POS_X);
-	EXPECT_GE(AfterOneFrame, BeforeMerge);
+	// 继承速度：接管首帧继续上行，而不是从当前值静止重放。
+	EXPECT_GT(AfterOneFrame, BeforeMerge);
 	EXPECT_LT(AfterOneFrame - BeforeMerge, 10.0f);
+
+	AdvanceFor(Runtime, 2.0f);
+	EXPECT_NEAR(Runtime.GetValue(207, EUiAnimProperty::POS_X), 200.0f, 0.5f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(207, EUiAnimProperty::POS_X));
+
+	SUiAnimCompleteEvent Event;
+	ASSERT_TRUE(Runtime.PollCompletedEvent(Event));
+	EXPECT_EQ(Event.m_TrackId, 111u);
 }
 
 TEST(UiV2AnimColor, DefaultInterpolationUsesLinearSrgb)

@@ -10451,9 +10451,6 @@ Sponsor support
 Sponsors:
 == スポンサー：
 
-Spotify sp_dc
-== Spotify の sp_dc クッキー
-
 Spotify sp_dc cookie (from browser DevTools, long-lived)
 == Spotify sp_dc クッキー（ブラウザ DevTools から取得、長期有効）
 

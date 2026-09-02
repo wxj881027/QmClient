@@ -359,6 +359,10 @@ public:
 // Part Types
 
 static constexpr float DEFAULT_PADDING = 5.0f;
+// 名牌文字按“整数相机缩放档位”的像素密度栅格化：档位变化时才重建文字容器。
+// 每帧最多重建的文本部件数量用于摊平重建（字形栅格化/上传）开销，避免缩放瞬间卡顿。
+static constexpr int NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME = 16;
+static int s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME;
 
 class CNamePlatePart
 {
@@ -392,6 +396,8 @@ class CNamePlatePartText : public CNamePlatePart
 protected:
 	STextContainerIndex m_TextContainerIndex;
 	vec2 m_RenderSize = vec2(0.0f, 0.0f);
+	// 上次栅格化字形对应的相机缩放档位（0 = 默认缩放），档位变化时重建字形以保持清晰
+	int m_BakedZoomLevel = -1;
 	virtual bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) = 0;
 	virtual void UpdateText(CGameClient &This, const CNamePlateData &Data) = 0;
 	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
@@ -406,7 +412,32 @@ protected:
 public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
-		const bool NeedsTextUpdate = UpdateNeeded(This, Data);
+		// 名牌文字在世界映射下渲染。相机缩放是离散档位（每档 1/ZOOM_STEP 倍），
+		// 字形按档位化的像素密度栅格化：档位变化时才重建文字容器（带每帧预算摊平开销），
+		// 保证缩放稳定后任何档位下所有玩家的名字文字都清晰，同时避免缩放瞬间卡顿。
+		bool NeedsTextUpdate = UpdateNeeded(This, Data);
+		int LevelNow = 0;
+		if(Data.m_InGame)
+		{
+			// 当前映射密度相对默认缩放密度的倍数即相机缩放档位
+			float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+			This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+			const float DensityNow = This.Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0);
+			float RefWidth, RefHeight;
+			This.Graphics()->CalcScreenParams(This.Graphics()->GameScreenAspect(), 1.0f, &RefWidth, &RefHeight);
+			const float DensityRef = This.Graphics()->ScreenHeight() / RefHeight;
+			const float DensityRatio = DensityNow / DensityRef;
+			LevelNow = DensityRatio > 0.0f ? round_to_int(std::log(DensityRatio) / std::log(1.0f / CCamera::ZOOM_STEP)) : 0;
+			if(!NeedsTextUpdate && m_TextContainerIndex.Valid() && m_BakedZoomLevel >= 0 && LevelNow != m_BakedZoomLevel)
+			{
+				// 档位变化：预算内立即重建，预算耗尽则顺延到后续帧，摊平字形栅格化开销
+				if(s_NameplateTextRebuildBudget > 0)
+				{
+					NeedsTextUpdate = true;
+					--s_NameplateTextRebuildBudget;
+				}
+			}
+		}
 		if(!NeedsTextUpdate && m_TextContainerIndex.Valid())
 		{
 			const float EffectPadding = m_UseTextEffects ? QmNameplateTextEffectPadding(g_Config.m_QmNameplateTextEffects, g_Config.m_QmNameplateTextBorderRange, g_Config.m_QmNameplateTextGlowRange) : 0.0f;
@@ -427,9 +458,9 @@ public:
 		float ScreenX0 = 0.0f, ScreenY0 = 0.0f, ScreenX1 = 0.0f, ScreenY1 = 0.0f;
 		if(Data.m_InGame)
 		{
-			// Create text at standard zoom
+			// 切到当前档位的标准映射再栅格化，保证字形密度与绘制密度一致（不受平滑缩放动画中间值影响）
 			This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y);
+			This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, std::pow(CCamera::ZOOM_STEP, LevelNow));
 		}
 		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 		UpdateText(This, Data);
@@ -441,8 +472,12 @@ public:
 		if(!m_TextContainerIndex.Valid())
 		{
 			m_Visible = false;
+			m_BakedZoomLevel = -1;
 			return;
 		}
+
+		// 记录本次栅格化采用的缩放档位，供档位变化时判断是否需要重建
+		m_BakedZoomLevel = Data.m_InGame ? LevelNow : -1;
 
 		const STextBoundingBox Container = This.TextRender()->GetBoundingBoxTextContainer(m_TextContainerIndex);
 		m_RenderSize = vec2(Container.m_W, Container.m_H);
@@ -452,6 +487,7 @@ public:
 	void Reset(CGameClient &This) override
 	{
 		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
+		m_BakedZoomLevel = -1;
 	}
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
@@ -2679,6 +2715,9 @@ void CNamePlates::OnRender()
 {
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
+
+	// 每帧重置名牌文字重建预算，把缩放档位变化带来的重建开销摊平到多帧
+	s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME;
 
 	int ShowDirection = g_Config.m_ClShowDirection;
 #if defined(CONF_VIDEORECORDER)

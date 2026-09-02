@@ -332,8 +332,11 @@ void CBinds::UnbindAll()
 
 int CBinds::DetectDeepflyModeFromAllBinds() const
 {
-	bool HasFire = false;
-	bool HasDummyHammerToggle = false;
+	// 汇总规则：DF 必须是「同一个 bind 里开火+锤子切换」；单独的 +fire 键（如备用开火键）
+	// 只在没有任何深飞 bind 时才作为 Normal，不参与把 HDF 抬成 DF。
+	bool HasDf = false;
+	bool HasHdf = false;
+	bool HasNormal = false;
 	bool HasCustom = false;
 
 	for(int Modifier = KeyModifier::NONE; Modifier < KeyModifier::COMBINATION_COUNT; Modifier++)
@@ -344,29 +347,24 @@ int CBinds::DetectDeepflyModeFromAllBinds() const
 			if(!pBind[0])
 				continue;
 
-			const int DeepflyMode = DetectDeepflyModeFromBindCommand(pBind);
-			if(DeepflyMode == DEEPFLY_MODE_NONE)
-				continue;
-
-			if(DeepflyMode == DEEPFLY_MODE_CUSTOM)
+			switch(DetectDeepflyModeFromBindCommand(pBind))
 			{
-				HasCustom = true;
-				continue;
+			case DEEPFLY_MODE_CUSTOM: HasCustom = true; break;
+			case DEEPFLY_MODE_DF: HasDf = true; break;
+			case DEEPFLY_MODE_HDF: HasHdf = true; break;
+			case DEEPFLY_MODE_NORMAL: HasNormal = true; break;
+			default: break; // DEEPFLY_MODE_NONE：不算深飞 bind
 			}
-
-			if(DeepflyMode == DEEPFLY_MODE_DF || DeepflyMode == DEEPFLY_MODE_NORMAL)
-				HasFire = true;
-			if(DeepflyMode == DEEPFLY_MODE_DF || DeepflyMode == DEEPFLY_MODE_HDF)
-				HasDummyHammerToggle = true;
 		}
 	}
 
 	if(HasCustom)
 		return DEEPFLY_MODE_CUSTOM;
-	if(HasFire && HasDummyHammerToggle)
+	if(HasDf)
 		return DEEPFLY_MODE_DF;
-	if(HasDummyHammerToggle)
+	if(HasHdf)
 		return DEEPFLY_MODE_HDF;
+	// 无任何深飞 bind 时保持 Normal（与配置默认 0=Normal 一致）
 	return DEEPFLY_MODE_NORMAL;
 }
 

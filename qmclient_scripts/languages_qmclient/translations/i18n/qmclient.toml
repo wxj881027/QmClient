@@ -26279,22 +26279,6 @@ turkish = "Spotify şarkı sözlerini etkinleştir"
 polish = "Włącz teksty Spotify"
 
 [[message]]
-key = "Spotify sp_dc"
-[message.translations]
-simplified_chinese = "Spotify sp_dc（浏览器登录 Cookie）"
-traditional_chinese = "Spotify sp_dc（瀏覽器登入 Cookie）"
-japanese = "Spotify の sp_dc クッキー"
-korean = "Spotify sp_dc 쿠키"
-russian = "Cookie sp_dc Spotify"
-german = "Spotify-sp_dc-Cookie"
-spanish = "Cookie sp_dc de Spotify"
-french = "Cookie sp_dc de Spotify"
-brazilian_portuguese = "Cookie sp_dc do Spotify"
-portuguese = "Cookie sp_dc do Spotify"
-turkish = "Spotify sp_dc çerezi"
-polish = "Ciasteczko sp_dc Spotify"
-
-[[message]]
 key = "Configure lyrics sources and display"
 [message.translations]
 simplified_chinese = "配置歌词来源与显示"

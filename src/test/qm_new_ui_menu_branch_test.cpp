@@ -4859,7 +4859,7 @@ TEST(QmNewUiMenuBranches, TeeStandardPageUsesUnifiedSettingsStack)
 	EXPECT_NE(Tee.find("DrawRoundedSurface(Ui(), QueueSection, ui_token::color::SURFACE_OVERLAY"), std::string::npos);
 	EXPECT_NE(Tee.find("const float MinimumSearchWidth = 140.0f * UiScale;"), std::string::npos);
 	EXPECT_EQ(Tee.find("SkinSearchPreferredWidth"), std::string::npos);
-	EXPECT_NE(Tee.find("AddCard(IdentitySpec, [ResolveTeeTopContentHeight]"), std::string::npos);
+	EXPECT_NE(Tee.find("AddCard(IdentitySpec, [IdentityContentHeight]"), std::string::npos);
 	EXPECT_NE(Tee.find("vCards.back().m_PreLayoutInput = [this, TeeMetrics, ControlSpacing, ControlLineHeight, pUseCustomColor]"), std::string::npos);
 	EXPECT_NE(Tee.find("AddCard(OptionsSpec, [ResolveTeeTopContentHeight]"), std::string::npos);
 	EXPECT_EQ(Tee.find("TeePage.m_ScrollViewport.h * 0.8f"), std::string::npos);

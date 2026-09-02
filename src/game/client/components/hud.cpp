@@ -208,6 +208,12 @@ namespace
 		return (s_BaseKey << 32) | static_cast<uint64_t>(str_quickhash(pScope));
 	}
 
+	void RelaxMediaIslandEntranceSprings(CUiV2AnimationRuntime &AnimRuntime)
+	{
+		// 隐藏即打断：入场弹簧目标回落到 0，以当前速度回落；重现时继承速度继续（可中断 + 速度继承）。
+		QmHudMediaIslandResolveEntranceSprings(AnimRuntime, HudMediaIslandNodeKey("entrance_drop"), HudMediaIslandNodeKey("entrance_expand"), false);
+	}
+
 	uint64_t HudMediaIslandSatelliteNodeKey(EHudMediaIslandCountdownType Type, int Id)
 	{
 		static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_media_island_satellite_item"));
@@ -4129,6 +4135,7 @@ void CHud::RenderMediaIsland()
 
 	if(!ShowTopRow && !ShowLyricsIslandLine && !HasSatellitePresentation)
 	{
+		RelaxMediaIslandEntranceSprings(GameClient()->UiRuntimeV2()->AnimRuntime());
 		m_MediaIslandAnimState.Reset();
 		m_MediaIslandLastVisibleRectValid = false;
 		return;
@@ -4165,7 +4172,7 @@ void CHud::RenderMediaIsland()
 			AnimState.m_VisualState = SHudMediaIslandAnimState::EVisualState::EXPANDED;
 			AnimState.m_ExpandUntilTick = Now + AutoCollapseTicks;
 			AnimState.m_TrackDetailsUntilTick = Now + AutoCollapseTicks;
-			AnimState.StartCapsuleMorph(Now);
+			AnimState.StartCapsuleMorph();
 		}
 	}
 	else if(AnimState.m_HasTrackIdentity && !LyricsActive)
@@ -4188,7 +4195,7 @@ void CHud::RenderMediaIsland()
 		if(AnimState.m_VisualState != SHudMediaIslandAnimState::EVisualState::EXPANDED)
 		{
 			AnimState.m_VisualState = SHudMediaIslandAnimState::EVisualState::EXPANDED;
-			AnimState.StartCapsuleMorph(Now);
+			AnimState.StartCapsuleMorph();
 		}
 	}
 	else
@@ -4200,7 +4207,7 @@ void CHud::RenderMediaIsland()
 			AnimState.m_VisualState = SHudMediaIslandAnimState::EVisualState::MINIMIZED;
 			AnimState.m_ExpandUntilTick = 0;
 			AnimState.m_TrackDetailsUntilTick = 0;
-			AnimState.StartCapsuleMorph(Now);
+			AnimState.StartCapsuleMorph();
 		}
 	}
 	AnimState.m_LyricsActive = LyricsActive;
@@ -4365,14 +4372,6 @@ void CHud::RenderMediaIsland()
 	const float TitleOffsetTarget = TrackDetailsExpanded ? 0.0f : QmHudMediaIslandScaled(4.0f);
 	const float BottomAlphaTarget = ShowBottomRow ? 1.0f : 0.0f;
 	const int MotionLevel = std::clamp(g_Config.m_QmUiMotionLevel, 0, 2);
-	float EntranceDeltaSeconds = 0.0f;
-	if(AnimState.m_EntranceLastTick > 0 && Now >= AnimState.m_EntranceLastTick)
-		EntranceDeltaSeconds = std::min((Now - AnimState.m_EntranceLastTick) / (float)time_freq(), 0.10f);
-	AnimState.m_EntranceLastTick = Now;
-	const SHudMediaIslandEntranceTimeline EntranceTimeline = QmHudAdvanceMediaIslandEntranceTimeline(
-		{AnimState.m_EntranceDropProgress, AnimState.m_EntranceProgress}, EntranceDeltaSeconds, MotionLevel);
-	AnimState.m_EntranceDropProgress = EntranceTimeline.m_DropProgress;
-	AnimState.m_EntranceProgress = EntranceTimeline.m_ExpandProgress;
 	const bool FullTrackMotion = MotionLevel >= 2;
 	const float TrackTextOffset = FullTrackMotion ? QmHudMediaIslandScaled(5.0f) : 0.0f;
 	const float CoverEnterScale = FullTrackMotion ? 0.95f : 1.0f;
@@ -4432,6 +4431,16 @@ void CHud::RenderMediaIsland()
 	const uint64_t TrackTitleOutNode = HudMediaIslandNodeKey("track_title_out");
 	const uint64_t TrackMetaInNode = HudMediaIslandNodeKey("track_meta_in");
 	const uint64_t TrackMetaOutNode = HudMediaIslandNodeKey("track_meta_out");
+	// 入场弹簧：掉落→展开两阶段（阶段语义保留，隐藏时回落、重现时继承速度）。
+	const SHudMediaIslandEntranceSpringResult EntranceSprings = QmHudMediaIslandResolveEntranceSprings(
+		AnimRuntime, HudMediaIslandNodeKey("entrance_drop"), HudMediaIslandNodeKey("entrance_expand"), true);
+	// 胶囊挤压弹簧：展开/折叠时的 squeeze 形态（响应≈0.18s，ζ≈0.95）。
+	SUiSpringConfig MorphSpring;
+	MorphSpring.m_Stiffness = 1200.0f;
+	MorphSpring.m_Damping = 66.0f;
+	MorphSpring.m_RestEpsilon = 0.002f;
+	MorphSpring.m_RestVelocity = 0.02f;
+	const uint64_t MorphNode = HudMediaIslandNodeKey("capsule_morph");
 	if(!AnimState.m_LayoutInitialized)
 	{
 		AnimState.m_TargetX = TargetX;
@@ -4516,21 +4525,23 @@ void CHud::RenderMediaIsland()
 			if(AnimState.m_CapsuleMorphFromHeight <= 0.01f)
 				AnimState.m_CapsuleMorphFromHeight = TargetHeight;
 			AnimState.m_CapsuleMorphNeedsCapture = false;
+			// 新一次挤压从头开始：把 morph 弹簧进度瞬移到 0（目标仍为 1，弹簧重新起跳）。
+			SetUiPresentationStateValue(AnimRuntime, MorphNode, EUiAnimProperty::ALPHA, 0.0f);
 		}
+	}
 
-		const float MorphElapsedSec = (Now - AnimState.m_CapsuleMorphStartTick) / (float)time_freq();
-		constexpr float MorphCompressSec = 0.085f;
-		constexpr float MorphMaxSec = 0.75f;
-		if(FullTrackMotion && MorphElapsedSec < MorphCompressSec)
+	// 挤压弹簧：morph 意图开启时目标 1，SqueezeAmount = 1 - MorphProgress 平滑衰减挤压量；
+	// 弹簧落定后本次 morph 结束，目标回落 0（下次 morph 由 capture 重新从 0 起跳）。
+	const float MorphTarget = AnimState.m_CapsuleMorphActive ? 1.0f : 0.0f;
+	const float MorphProgress = ResolveUiPresentationStateValue(AnimRuntime, MorphNode, EUiAnimProperty::ALPHA, MorphTarget, MorphSpring, 3, 0.001f);
+	if(AnimState.m_CapsuleMorphActive)
+	{
+		if(FullTrackMotion && MorphProgress < 1.0f)
 		{
 			const float FromCenterX = AnimState.m_CapsuleMorphFromX + AnimState.m_CapsuleMorphFromWidth * 0.5f;
-			const float WidthSqueeze = std::clamp(AnimState.m_CapsuleMorphFromWidth * 0.08f, QmHudMediaIslandScaled(2.0f), QmHudMediaIslandScaled(7.0f));
-			const float HeightSqueeze = std::clamp(AnimState.m_CapsuleMorphFromHeight * 0.10f, QmHudMediaIslandScaled(1.0f), QmHudMediaIslandScaled(2.4f));
-			EffectiveTargetWidth = std::max(PaddingX * 2.0f + QmHudMediaIslandScaled(4.0f), AnimState.m_CapsuleMorphFromWidth - WidthSqueeze);
-			EffectiveTargetHeight = std::max(BaseIslandHeight - QmHudMediaIslandScaled(2.0f), AnimState.m_CapsuleMorphFromHeight - HeightSqueeze);
-			EffectiveTargetX = std::clamp(FromCenterX - EffectiveTargetWidth * 0.5f, ScreenPadding, std::max(ScreenPadding, m_Width - ScreenPadding - EffectiveTargetWidth));
+			QmHudMediaIslandApplyCapsuleSqueeze(FromCenterX, AnimState.m_CapsuleMorphFromWidth, AnimState.m_CapsuleMorphFromHeight, 1.0f - MorphProgress, BaseIslandHeight, PaddingX, ScreenPadding, m_Width, EffectiveTargetX, EffectiveTargetWidth, EffectiveTargetHeight);
 		}
-		else if(MorphElapsedSec > MorphMaxSec)
+		else if(MorphProgress >= 1.0f - 0.001f)
 		{
 			AnimState.m_CapsuleMorphActive = false;
 		}
@@ -4807,7 +4818,7 @@ void CHud::RenderMediaIsland()
 	float TransformedScreenX0, TransformedScreenY0, TransformedScreenX1, TransformedScreenY1;
 	Graphics()->GetScreen(&TransformedScreenX0, &TransformedScreenY0, &TransformedScreenX1, &TransformedScreenY1);
 	const CUIRect TargetMainIslandSdfRect = {IslandX, IslandY, UnifiedWidth, AnimatedIslandHeight};
-	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, Radius, IslandBackgroundColor, AnimState.m_EntranceProgress, AnimState.m_EntranceDropProgress, TransformedScreenY0);
+	const SHudMediaIslandEntrancePose EntrancePose = QmHudMediaIslandEntrancePose(TargetMainIslandSdfRect, Radius, IslandBackgroundColor, EntranceSprings.m_ExpandProgress, EntranceSprings.m_DropProgress, TransformedScreenY0);
 	const float EntranceContentAlpha = EntrancePose.m_ContentAlpha;
 	const CUIRect MainIslandSdfRect = EntrancePose.m_Rect;
 	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.42f * EntranceContentAlpha);
@@ -7138,6 +7149,7 @@ void CHud::OnRender()
 	const bool ShowMediaIsland = HasVisibleMediaIsland();
 	if(!ShowMediaIsland)
 	{
+		RelaxMediaIslandEntranceSprings(GameClient()->UiRuntimeV2()->AnimRuntime());
 		m_MediaIslandAnimState.Reset();
 		m_MediaIslandLastVisibleRectValid = false;
 	}

@@ -177,7 +177,10 @@ private:
 	float ApplyTrackEasing(float t, const SActiveTrack &Track) const;
 	float TrackProgress(const SActiveTrack &Track) const;
 	void AdvanceSpring(SActiveTrack &Track, float Dt) const;
-	bool StartTrack(const STrackKey &Key, const SUiAnimRequest &Request, float StartValue);
+	// 统一打断语义：任何打断都以 (当前值, 当前速度) 为初值落到弹簧继续运动
+	// （请求本身是弹簧用其参数，是 tween 按时长映射接管弹簧；0 时长 tween 仍瞬移）。
+	bool StartTrackInterrupt(const STrackKey &Key, const SUiAnimRequest &Request, const SActiveTrack &Active);
+	bool StartTrack(const STrackKey &Key, const SUiAnimRequest &Request, float StartValue, float StartVelocity = 0.0f);
 	void StartQueuedTracks(const STrackKey &Key, float StartValue);
 	void CompleteTrack(const STrackKey &Key, const SActiveTrack &Track);
 	void CancelAwaitedTrack(uint32_t TrackId);

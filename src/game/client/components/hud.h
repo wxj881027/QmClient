@@ -176,9 +176,6 @@ class CHud : public CComponent
 		float m_TargetTrackMetaOutAlpha = 0.0f;
 		float m_TargetTrackMetaInOffset = 0.0f;
 		float m_TargetTrackMetaOutOffset = 0.0f;
-		float m_EntranceDropProgress = 0.0f;
-		float m_EntranceProgress = 0.0f;
-		int64_t m_EntranceLastTick = 0;
 		bool m_WaveformWasPlaying = false;
 		bool m_WaveformSettling = false;
 		int64_t m_WaveformSettleStartTick = 0;
@@ -194,7 +191,6 @@ class CHud : public CComponent
 		float m_NewTrackEnterProgress = 1.0f;
 		bool m_CapsuleMorphActive = false;
 		bool m_CapsuleMorphNeedsCapture = false;
-		int64_t m_CapsuleMorphStartTick = 0;
 		float m_CapsuleMorphFromX = 0.0f;
 		float m_CapsuleMorphFromWidth = 0.0f;
 		float m_CapsuleMorphFromHeight = 0.0f;
@@ -235,11 +231,10 @@ class CHud : public CComponent
 		float m_SpectatorExitLiquidStart = 0.0f;
 		float m_SpectatorExitIconStart = 1.0f;
 
-		void StartCapsuleMorph(int64_t Now)
+		void StartCapsuleMorph()
 		{
 			m_CapsuleMorphActive = true;
 			m_CapsuleMorphNeedsCapture = true;
-			m_CapsuleMorphStartTick = Now;
 		}
 
 		bool HasVisibleSatellite() const
@@ -282,9 +277,6 @@ class CHud : public CComponent
 			m_TargetTrackMetaOutAlpha = 0.0f;
 			m_TargetTrackMetaInOffset = 0.0f;
 			m_TargetTrackMetaOutOffset = 0.0f;
-			m_EntranceDropProgress = 0.0f;
-			m_EntranceProgress = 0.0f;
-			m_EntranceLastTick = 0;
 			m_WaveformWasPlaying = false;
 			m_WaveformSettling = false;
 			m_WaveformSettleStartTick = 0;
@@ -300,7 +292,6 @@ class CHud : public CComponent
 			m_NewTrackEnterProgress = 1.0f;
 			m_CapsuleMorphActive = false;
 			m_CapsuleMorphNeedsCapture = false;
-			m_CapsuleMorphStartTick = 0;
 			m_CapsuleMorphFromX = 0.0f;
 			m_CapsuleMorphFromWidth = 0.0f;
 			m_CapsuleMorphFromHeight = 0.0f;

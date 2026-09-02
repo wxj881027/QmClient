@@ -130,14 +130,14 @@ float CUiV2AnimationRuntime::TrackProgress(const SActiveTrack &Track) const
 	return std::clamp(LocalElapsed / Duration, 0.0f, 1.0f);
 }
 
-bool CUiV2AnimationRuntime::StartTrack(const STrackKey &Key, const SUiAnimRequest &Request, float StartValue)
+bool CUiV2AnimationRuntime::StartTrack(const STrackKey &Key, const SUiAnimRequest &Request, float StartValue, float StartVelocity)
 {
 	SActiveTrack Track;
 	Track.m_Start = StartValue;
 	Track.m_Target = Request.m_Target;
 	Track.m_Current = StartValue;
 	Track.m_ElapsedSec = 0.0f;
-	Track.m_Velocity = 0.0f;
+	Track.m_Velocity = StartVelocity;
 	Track.m_RestTimerSec = 0.0f;
 	Track.m_Transition = Request.m_Transition;
 	if(Track.m_Transition.m_DurationSec < 0.0f)
@@ -164,7 +164,7 @@ bool CUiV2AnimationRuntime::StartTrack(const STrackKey &Key, const SUiAnimReques
 		return false;
 	}
 
-	if(IsSpring && std::abs(Track.m_Current - Track.m_Target) < Track.m_Transition.m_Spring.m_RestEpsilon)
+	if(IsSpring && std::abs(Track.m_Current - Track.m_Target) < Track.m_Transition.m_Spring.m_RestEpsilon && std::abs(Track.m_Velocity) < Track.m_Transition.m_Spring.m_RestVelocity)
 	{
 		m_Values[Key] = Track.m_Target;
 		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, Track.m_TrackId});
@@ -196,6 +196,60 @@ void CUiV2AnimationRuntime::StartQueuedTracks(const STrackKey &Key, float StartV
 
 		CurrentStartValue = Next.m_Target;
 	}
+}
+
+namespace
+{
+	// 固定时长缓动被打断后转弹簧接管：响应时间≈原时长、轻微欠阻尼，保留速度感。
+	// 映射是启发式的（苹果把曲线动画打断后同样落到弹簧语义），集中在此便于统一调参。
+	SUiSpringConfig InterruptSpringFromTween(const SUiAnimTransition &Transition)
+	{
+		constexpr float QM_PI = 3.14159265358979323846f;
+		constexpr float TAKEOVER_DAMPING_RATIO = 0.85f;
+		constexpr float MIN_RESPONSE_SEC = 0.05f;
+		constexpr float MAX_RESPONSE_SEC = 0.75f;
+
+		SUiSpringConfig Spring;
+		Spring.m_Mass = 1.0f;
+		const float Response = std::clamp(Transition.m_DurationSec, MIN_RESPONSE_SEC, MAX_RESPONSE_SEC);
+		const float Omega = 2.0f * QM_PI / std::max(Response, 1e-4f);
+		Spring.m_Stiffness = Omega * Omega;
+		Spring.m_Damping = 2.0f * TAKEOVER_DAMPING_RATIO * Omega;
+		Spring.m_RestEpsilon = 0.001f;
+		Spring.m_RestVelocity = 0.05f;
+		return Spring;
+	}
+} // namespace
+
+bool CUiV2AnimationRuntime::StartTrackInterrupt(const STrackKey &Key, const SUiAnimRequest &Request, const SActiveTrack &Active)
+{
+	// 0 时长 tween = 显式瞬移（如 motion level 0 下 ApplyMotionLevel 产生的请求）：
+	// 所有中断策略都直接到位，不转弹簧接管。
+	const bool RequestIsTween = Request.m_Transition.m_Driver == EUiAnimDriver::TWEEN;
+	if(RequestIsTween && Request.m_Transition.m_DurationSec <= 0.0f && Request.m_Transition.m_DelaySec <= 0.0f)
+	{
+		const uint32_t TrackId = Request.m_TrackId != 0 ? Request.m_TrackId : Active.m_TrackId;
+		m_Values[Key] = Request.m_Target;
+		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, TrackId});
+		if(TrackId != Active.m_TrackId)
+			CancelAwaitedTrack(Active.m_TrackId);
+		m_ActiveTracks.erase(Key);
+		StartQueuedTracks(Key, Request.m_Target);
+		return true;
+	}
+
+	// 统一打断语义（可中断 + 速度继承）：任何打断都以 (当前值, 当前速度) 为初值
+	// 落到弹簧继续运动——请求本身是弹簧就用它的参数，是 tween 就按时长映射接管弹簧，
+	// 不再“从当前值重放曲线”。
+	SUiAnimRequest Takeover = Request;
+	Takeover.m_Transition.m_Driver = EUiAnimDriver::SPRING;
+	Takeover.m_Transition.m_DurationSec = 0.0f;
+	Takeover.m_Transition.m_DelaySec = 0.0f;
+	if(Request.m_Transition.m_Driver != EUiAnimDriver::SPRING)
+		Takeover.m_Transition.m_Spring = InterruptSpringFromTween(Request.m_Transition);
+	if(Takeover.m_TrackId != Active.m_TrackId)
+		CancelAwaitedTrack(Active.m_TrackId);
+	return StartTrack(Key, Takeover, Active.m_Current, Active.m_Velocity);
 }
 
 void CUiV2AnimationRuntime::CompleteTrack(const STrackKey &Key, const SActiveTrack &Track)
@@ -345,9 +399,7 @@ bool CUiV2AnimationRuntime::RequestAnimation(const SUiAnimRequest &Request)
 	case EUiAnimInterruptPolicy::REPLACE:
 	{
 		CancelQueuedTracksForKey(Key);
-		CancelAwaitedTrack(Active.m_TrackId);
-		StartTrack(Key, EffectiveRequest, Active.m_Current);
-		return true;
+		return StartTrackInterrupt(Key, EffectiveRequest, Active);
 	}
 	case EUiAnimInterruptPolicy::QUEUE:
 	{
@@ -359,66 +411,17 @@ bool CUiV2AnimationRuntime::RequestAnimation(const SUiAnimRequest &Request)
 		if(Active.m_Transition.m_Priority > EffectiveRequest.m_Transition.m_Priority)
 			return false;
 		CancelQueuedTracksForKey(Key);
-		CancelAwaitedTrack(Active.m_TrackId);
-		StartTrack(Key, EffectiveRequest, Active.m_Current);
-		return true;
+		return StartTrackInterrupt(Key, EffectiveRequest, Active);
 	}
 	case EUiAnimInterruptPolicy::MERGE_TARGET:
 	{
 		if(Active.m_Transition.m_Priority > EffectiveRequest.m_Transition.m_Priority)
 			return false;
-		const bool RequestIsTween = EffectiveRequest.m_Transition.m_Driver == EUiAnimDriver::TWEEN;
-		if(RequestIsTween && EffectiveRequest.m_Transition.m_DurationSec <= 0.0f && EffectiveRequest.m_Transition.m_DelaySec <= 0.0f)
-		{
-			const uint32_t TrackId = EffectiveRequest.m_TrackId != 0 ? EffectiveRequest.m_TrackId : Active.m_TrackId;
-			m_Values[Key] = EffectiveRequest.m_Target;
-			m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, TrackId});
-			if(TrackId != Active.m_TrackId)
-				CancelAwaitedTrack(Active.m_TrackId);
-			m_ActiveTracks.erase(Key);
-			StartQueuedTracks(Key, EffectiveRequest.m_Target);
-			return true;
-		}
-
-		if(Active.m_Transition.m_Driver == EUiAnimDriver::SPRING)
-		{
-			const uint32_t OldTrackId = Active.m_TrackId;
-			Active.m_Target = EffectiveRequest.m_Target;
-			Active.m_Transition.m_Priority = EffectiveRequest.m_Transition.m_Priority;
-			if(!RequestIsTween)
-				Active.m_Transition.m_Spring = EffectiveRequest.m_Transition.m_Spring;
-			Active.m_RestTimerSec = 0.0f;
-			Active.m_TrackId = EffectiveRequest.m_TrackId != 0 ? EffectiveRequest.m_TrackId : Active.m_TrackId;
-			if(Active.m_TrackId != OldTrackId)
-				CancelAwaitedTrack(OldTrackId);
-			return true;
-		}
-
-		const float Current = Active.m_Current;
-		Active.m_Start = Current;
-		Active.m_Target = EffectiveRequest.m_Target;
-		Active.m_ElapsedSec = 0.0f;
-		Active.m_Transition = EffectiveRequest.m_Transition;
-		if(Active.m_Transition.m_DurationSec < 0.0f)
-			Active.m_Transition.m_DurationSec = 0.0f;
-		if(Active.m_Transition.m_DelaySec < 0.0f)
-			Active.m_Transition.m_DelaySec = 0.0f;
-		Active.m_pfnCustomEasing = nullptr;
-		Active.m_pCustomEasingUser = nullptr;
-		if(Active.m_Transition.m_Easing == EEasing::CUSTOM)
-		{
-			const auto ItCustom = m_CustomEasings.find(Active.m_Transition.m_CustomEasingId);
-			if(ItCustom != m_CustomEasings.end())
-			{
-				Active.m_pfnCustomEasing = ItCustom->second.m_pfnEasing;
-				Active.m_pCustomEasingUser = ItCustom->second.m_pUser;
-			}
-		}
-		const uint32_t OldTrackId = Active.m_TrackId;
-		Active.m_TrackId = EffectiveRequest.m_TrackId != 0 ? EffectiveRequest.m_TrackId : Active.m_TrackId;
-		if(Active.m_TrackId != OldTrackId)
-			CancelAwaitedTrack(OldTrackId);
-		return true;
+		// MERGE_TARGET 语义：轨道延续，未显式给 TrackId 时沿用活动轨道 id，
+		// 让等待组跟踪不被打断（与打断前行为一致）。
+		if(EffectiveRequest.m_TrackId == 0)
+			EffectiveRequest.m_TrackId = Active.m_TrackId;
+		return StartTrackInterrupt(Key, EffectiveRequest, Active);
 	}
 	}
 
@@ -436,18 +439,63 @@ void CUiV2AnimationRuntime::AdvanceSpring(SActiveTrack &Track, float Dt) const
 	const float Stiffness = std::max(Cfg.m_Stiffness, 0.0f);
 	const float Damping = std::max(Cfg.m_Damping, 0.0f);
 
-	constexpr float KFixedSubStep = 1.0f / 240.0f;
-	constexpr int KMaxSubSteps = 8;
-	int SubSteps = static_cast<int>(std::ceil(Dt / KFixedSubStep));
-	SubSteps = std::clamp(SubSteps, 1, KMaxSubSteps);
-	const float SubDt = Dt / static_cast<float>(SubSteps);
-
-	for(int i = 0; i < SubSteps; ++i)
+	// 解析解闭式积分：阻尼谐振子。每步以 (当前值, 当前速度) 为初值在 [t, t+Dt] 上
+	// 解析推进；线性常系数 ODE 下与全局闭式解完全等价，帧率无关、无条件稳定。
+	const float Omega0 = std::sqrt(Stiffness / Mass);
+	if(Omega0 <= 1e-6f)
 	{
-		const float Disp = Track.m_Current - Track.m_Target;
-		const float Accel = (-Stiffness * Disp - Damping * Track.m_Velocity) / Mass;
-		Track.m_Velocity += Accel * SubDt;
-		Track.m_Current += Track.m_Velocity * SubDt;
+		// 无刚度退化：自由阻尼运动（指数衰减）或匀速直线运动。
+		const float Lambda = Damping / Mass;
+		if(Lambda <= 1e-9f)
+		{
+			Track.m_Current += Track.m_Velocity * Dt;
+		}
+		else
+		{
+			const float Decay = std::exp(-Lambda * Dt);
+			Track.m_Current += Track.m_Velocity * (1.0f - Decay) / Lambda;
+			Track.m_Velocity *= Decay;
+		}
+	}
+	else
+	{
+		const float Zeta = Damping / (2.0f * Mass * Omega0);
+		const float Displacement = Track.m_Current - Track.m_Target;
+		const float Velocity = Track.m_Velocity;
+		if(Zeta < 1.0f)
+		{
+			// 欠阻尼：x(t) = e^(-ζω0 t)·(A·cos(ωd·t) + B·sin(ωd·t))，A=d0，B=(v0+ζω0·d0)/ωd
+			const float OmegaD = Omega0 * std::sqrt(std::max(0.0f, 1.0f - Zeta * Zeta));
+			const float A = Displacement;
+			const float B = (Velocity + Zeta * Omega0 * Displacement) / OmegaD;
+			const float Decay = std::exp(-Zeta * Omega0 * Dt);
+			const float CosDt = std::cos(OmegaD * Dt);
+			const float SinDt = std::sin(OmegaD * Dt);
+			Track.m_Current = Track.m_Target + Decay * (A * CosDt + B * SinDt);
+			Track.m_Velocity = Decay * ((B * OmegaD - A * Zeta * Omega0) * CosDt - (A * OmegaD + B * Zeta * Omega0) * SinDt);
+		}
+		else if(Zeta > 1.0f)
+		{
+			// 过阻尼：x(t) = A·e^(s1·t) + B·e^(s2·t)，s1/s2 为两个负实根
+			const float Root = Omega0 * std::sqrt(std::max(0.0f, Zeta * Zeta - 1.0f));
+			const float S1 = -Zeta * Omega0 + Root;
+			const float S2 = -Zeta * Omega0 - Root;
+			const float A = (Velocity - S2 * Displacement) / (S1 - S2);
+			const float B = (S1 * Displacement - Velocity) / (S1 - S2);
+			const float Exp1 = std::exp(S1 * Dt);
+			const float Exp2 = std::exp(S2 * Dt);
+			Track.m_Current = Track.m_Target + A * Exp1 + B * Exp2;
+			Track.m_Velocity = A * S1 * Exp1 + B * S2 * Exp2;
+		}
+		else
+		{
+			// 临界阻尼：x(t) = (d0 + (v0 + ω0·d0)·t)·e^(-ω0 t)
+			const float A = Displacement;
+			const float B = Velocity + Omega0 * Displacement;
+			const float Decay = std::exp(-Omega0 * Dt);
+			Track.m_Current = Track.m_Target + (A + B * Dt) * Decay;
+			Track.m_Velocity = (Velocity - Omega0 * B * Dt) * Decay;
+		}
 	}
 
 	const bool AtRest = std::abs(Track.m_Current - Track.m_Target) < Cfg.m_RestEpsilon && std::abs(Track.m_Velocity) < Cfg.m_RestVelocity;
@@ -490,9 +538,13 @@ void CUiV2AnimationRuntime::Advance(float Dt)
 		}
 		else
 		{
+			const float Previous = Track.m_Current;
 			const float RawProgress = TrackProgress(Track);
 			const float Progress = ApplyTrackEasing(RawProgress, Track);
 			Track.m_Current = Track.m_Start + (Track.m_Target - Track.m_Start) * Progress;
+			// 有限差分速度：供打断时做 tween→弹簧接管的初速度（速度继承）。
+			if(ClampedDt > 0.0f)
+				Track.m_Velocity = (Track.m_Current - Previous) / ClampedDt;
 			m_Values[Key] = Track.m_Current;
 
 			if(RawProgress >= 1.0f)

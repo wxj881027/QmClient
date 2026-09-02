@@ -10451,9 +10451,6 @@ Sponsor support
 Sponsors:
 == 贊助者：
 
-Spotify sp_dc
-== Spotify sp_dc（瀏覽器登入 Cookie）
-
 Spotify sp_dc cookie (from browser DevTools, long-lived)
 == Spotify sp_dc cookie（來自瀏覽器 DevTools，長期有效）
 

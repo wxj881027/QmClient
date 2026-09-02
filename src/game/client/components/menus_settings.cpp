@@ -1481,12 +1481,14 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	const float OptionsCheckboxHeight = ResolveSettingsRowsHeight(4, ControlLineHeight, ControlSpacing);
 	const float OptionsPrefixHeight = ResolveSettingsRowsHeight(6, ControlLineHeight, ControlSpacing);
 	const float OptionsTopHeight = maximum(OptionsCheckboxHeight, OptionsPrefixHeight);
-	constexpr int EyesPerRow = 3;
+	// 六个默认眼睛表情平铺为一行，不再占两行高度。
+	constexpr int EyesPerRow = NUM_EMOTES;
 	const float EyesHeight = ResolveSettingsGridHeight(NUM_EMOTES, EyesPerRow, EyeLineSize, ControlSpacing);
 	const float IdentityContentHeight = ResolveSettingsTeeIdentityHeight(TeeMetrics);
-	const auto ResolveTeeTopContentHeight = [IdentityContentHeight, OptionsTopHeight, EyesHeight, TeeMetrics, pUseCustomColor]() {
+	// 皮肤选项卡片只按自身内容测量；左侧玩家预览卡片不再跟随它的高度一起拉伸。
+	const auto ResolveTeeTopContentHeight = [OptionsTopHeight, EyesHeight, TeeMetrics, pUseCustomColor]() {
 		const float CustomColorsHeight = ResolveSettingsTeeCustomColorsLayout({}, *pUseCustomColor != 0, TeeMetrics).m_Height;
-		return maximum(IdentityContentHeight, OptionsTopHeight + EyesHeight + CustomColorsHeight);
+		return OptionsTopHeight + EyesHeight + CustomColorsHeight;
 	};
 	const auto RenderOptions = [this, OptionsTopHeight, EyesHeight, ControlLineHeight, ControlSpacing, EyeLineSize, UiScale, BodySize, TeeMetrics, pUseCustomColor, pColorBody, pColorFeet, pEmote](CUIRect Content) {
 		CUIRect MainView = Content;
@@ -1504,7 +1506,6 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		OptionsTop.VSplitLeft(OptionsTop.w * 0.42f, &Checkboxes, &SkinPrefix);
 		Checkboxes.VSplitRight(12.0f * UiScale, &Checkboxes, nullptr);
 		SkinPrefix.VSplitLeft(12.0f * UiScale, nullptr, &SkinPrefix);
-		const bool RenderEyesBelow = false;
 		MainView.HSplitTop(EyesHeight, &Eyes, &MainView);
 		int CheckboxRowsRemaining = 4;
 		const auto NextCheckboxRow = [&]() {
@@ -1620,13 +1621,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			static CButtonContainer s_aEyeButtons[NUM_EMOTES];
 			for(int CurrentEyeEmote = 0; CurrentEyeEmote < NUM_EMOTES; CurrentEyeEmote++)
 			{
-				EyesRow.VSplitLeft(EyeLineSize, &Button, &EyesRow);
-				EyesRow.VSplitLeft(5.0f, nullptr, &EyesRow);
-				if(!RenderEyesBelow && (CurrentEyeEmote + 1) % EyesPerRow == 0 && CurrentEyeEmote + 1 < NUM_EMOTES)
-				{
-					Eyes.HSplitTop(ControlSpacing, nullptr, &Eyes);
-					Eyes.HSplitTop(EyeLineSize, &EyesRow, &Eyes);
-				}
+				// 单行平铺：每个表情均分剩余行宽，表情在按钮内居中。
+				EyesRow.VSplitLeft(EyesRow.w / (NUM_EMOTES - CurrentEyeEmote), &Button, &EyesRow);
 
 				const ColorRGBA EyeButtonColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f + (*pEmote == CurrentEyeEmote ? 0.25f : 0.0f));
 				if(DoButton_Menu(&s_aEyeButtons[CurrentEyeEmote], "", 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, EyeButtonColor))
@@ -3483,7 +3479,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	const float TeeQueuePanelMinHeight = ResolveSettingsTeeQueuePanelHeight(TeeMetrics, QueueItemCount, QueuePresetCount);
 	const float ListContentHeight = maximum(TeeQueuePanelMinHeight, TeeSkinGridVisibleRows * TeeSkinGridRowHeight + TeeSkinToolbarHeight);
 	const bool RenderOnly = Ui()->RenderOnly();
-	const auto BuildDefinitions = [this, pIdentityDefault, pOptionsDefault, pListDefault, ListContentHeight, RenderIdentity, RenderOptions, RenderList, AdvanceListOffscreen, TeeSectionVisible, pUseCustomColor, ResolveTeeTopContentHeight, TeeMetrics, ControlSpacing, ControlLineHeight](std::vector<SSettingsCardDefinition> &vCards) {
+	const auto BuildDefinitions = [this, pIdentityDefault, pOptionsDefault, pListDefault, ListContentHeight, RenderIdentity, RenderOptions, RenderList, AdvanceListOffscreen, TeeSectionVisible, pUseCustomColor, IdentityContentHeight, ResolveTeeTopContentHeight, TeeMetrics, ControlSpacing, ControlLineHeight](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(3);
 		const SSettingsCardSpec IdentitySpec{pIdentityDefault->m_pStableId, Localize(pIdentityDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pIdentityDefault)};
 		const SSettingsCardSpec OptionsSpec{pOptionsDefault->m_pStableId, Localize(pOptionsDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pOptionsDefault)};
@@ -3497,7 +3493,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			Definition.m_MeasureRevision = MeasureRevision;
 			vCards.push_back(std::move(Definition));
 		};
-		AddCard(IdentitySpec, [ResolveTeeTopContentHeight](float) { return ResolveTeeTopContentHeight(); }, RenderIdentity, false, *pUseCustomColor != 0);
+		AddCard(IdentitySpec, [IdentityContentHeight](float) { return IdentityContentHeight; }, RenderIdentity);
 		vCards.back().m_PreLayoutInput = [this, TeeMetrics, ControlSpacing, ControlLineHeight, pUseCustomColor](CUIRect Content) {
 			if(m_MenuTextPlanCollecting)
 				return false;

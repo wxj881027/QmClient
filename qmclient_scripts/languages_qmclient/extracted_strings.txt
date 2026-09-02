@@ -3482,7 +3482,6 @@ Sphere
 Spin pop
 Sponsor support
 Sponsors:
-Spotify sp_dc
 Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
 SQL Server name for record table

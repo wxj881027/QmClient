@@ -2,6 +2,7 @@
 #include "test.h"
 
 #include <engine/graphics.h>
+#include <engine/shared/config.h>
 
 #include <game/client/components/hud_frozen_tee_state.h>
 #include <game/client/components/hud_media_island_logic.h>
@@ -55,6 +56,14 @@ namespace
 		const SHudMediaIslandTrackInput &Input)
 	{
 		return QmHudMediaIslandUpdateTrackSnapshots(Current, Outgoing, HasIdentity, TransitionActive, NeedsNodeReset, StartTick, Now, Input);
+	}
+
+	void AdvanceIslandRuntime(CUiV2AnimationRuntime &Runtime, float Seconds)
+	{
+		const float Dt = 1.0f / 60.0f;
+		int Steps = static_cast<int>(Seconds / Dt) + 1;
+		for(int i = 0; i < Steps; ++i)
+			Runtime.Advance(Dt);
 	}
 }
 
@@ -431,21 +440,111 @@ TEST(QmHudMediaIslandEntrance, SettlesExactlyAtConfiguredAppearance)
 	EXPECT_FLOAT_EQ(Pose.m_ContentAlpha, 1.0f);
 }
 
-TEST(QmHudMediaIslandEntrance, ProgressesForwardAndMotionDisabledSnapsToSettled)
+TEST(QmHudMediaIslandEntranceSpring, DropRunsFirstAndExpandWaitsForSettle)
 {
-	EXPECT_GT(QmHudAdvanceMediaIslandEntranceProgress(0.0f, 0.10f, 2), 0.0f);
-	EXPECT_FLOAT_EQ(QmHudAdvanceMediaIslandEntranceProgress(0.4f, -1.0f, 2), 0.4f);
-	EXPECT_FLOAT_EQ(QmHudAdvanceMediaIslandEntranceProgress(0.95f, 1.0f, 2), 1.0f);
-	EXPECT_FLOAT_EQ(QmHudAdvanceMediaIslandEntranceProgress(0.4f, 0.0f, 0), 1.0f);
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
+
+	const SHudMediaIslandEntranceSpringResult Early = QmHudMediaIslandResolveEntranceSprings(Runtime, 101, 102, true);
+	EXPECT_NEAR(Early.m_DropProgress, 0.0f, 1e-6f);
+	EXPECT_NEAR(Early.m_ExpandProgress, 0.0f, 1e-6f);
+	EXPECT_TRUE(Runtime.HasActiveAnimation(101, EUiAnimProperty::ALPHA));
+	EXPECT_FALSE(Runtime.HasActiveAnimation(102, EUiAnimProperty::ALPHA));
+
+	// 掉落阶段进行中：展开不启动（阶段语义：掉落先完成，展开才开始）。
+	AdvanceIslandRuntime(Runtime, 0.10f);
+	const SHudMediaIslandEntranceSpringResult Mid = QmHudMediaIslandResolveEntranceSprings(Runtime, 101, 102, true);
+	EXPECT_GT(Mid.m_DropProgress, 0.0f);
+	EXPECT_LT(Mid.m_DropProgress, 1.0f);
+	EXPECT_NEAR(Mid.m_ExpandProgress, 0.0f, 1e-6f);
+
+	// 落定后展开才推进，两阶段最终都到位。
+	AdvanceIslandRuntime(Runtime, 1.0f);
+	const SHudMediaIslandEntranceSpringResult Done = QmHudMediaIslandResolveEntranceSprings(Runtime, 101, 102, true);
+	EXPECT_NEAR(Done.m_DropProgress, 1.0f, 1e-3f);
+	EXPECT_NEAR(Done.m_ExpandProgress, 1.0f, 1e-3f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(101, EUiAnimProperty::ALPHA));
+	EXPECT_FALSE(Runtime.HasActiveAnimation(102, EUiAnimProperty::ALPHA));
 }
 
-TEST(QmHudMediaIslandEntrance, ReducedMotionUsesProjectShortenedDuration)
+TEST(QmHudMediaIslandEntranceSpring, HiddenRelaxesAndReappearInheritsVelocity)
 {
-	const float FullMotionProgress = QmHudAdvanceMediaIslandEntranceProgress(0.0f, 0.10f, 2);
-	const float ReducedMotionProgress = QmHudAdvanceMediaIslandEntranceProgress(0.0f, 0.10f, 1);
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
 
-	EXPECT_GT(ReducedMotionProgress, FullMotionProgress);
-	EXPECT_LT(ReducedMotionProgress, 1.0f);
+	QmHudMediaIslandResolveEntranceSprings(Runtime, 201, 202, true);
+	AdvanceIslandRuntime(Runtime, 0.06f);
+	const SHudMediaIslandEntranceSpringResult BeforeHide = QmHudMediaIslandResolveEntranceSprings(Runtime, 201, 202, true);
+	EXPECT_GT(BeforeHide.m_DropProgress, 0.0f);
+	EXPECT_LT(BeforeHide.m_DropProgress, 1.0f);
+
+	// 隐藏即打断：目标回落 0，弹簧以当前速度回落（不瞬移）。
+	QmHudMediaIslandResolveEntranceSprings(Runtime, 201, 202, false);
+	AdvanceIslandRuntime(Runtime, 0.05f);
+	const SHudMediaIslandEntranceSpringResult Relaxed = QmHudMediaIslandResolveEntranceSprings(Runtime, 201, 202, false);
+	EXPECT_GT(Relaxed.m_DropProgress, 0.0f);
+	EXPECT_LT(Relaxed.m_DropProgress, BeforeHide.m_DropProgress);
+
+	// 重现：值连续（不从 0 重放），并继承回落速度平滑掉头继续入场。
+	const SHudMediaIslandEntranceSpringResult Reappeared = QmHudMediaIslandResolveEntranceSprings(Runtime, 201, 202, true);
+	EXPECT_NEAR(Reappeared.m_DropProgress, Relaxed.m_DropProgress, 1e-4f);
+	AdvanceIslandRuntime(Runtime, 0.05f);
+	const SHudMediaIslandEntranceSpringResult Continued = QmHudMediaIslandResolveEntranceSprings(Runtime, 201, 202, true);
+	EXPECT_GT(Continued.m_DropProgress, Reappeared.m_DropProgress);
+	EXPECT_LT(Continued.m_DropProgress, 1.0f);
+}
+
+TEST(QmHudMediaIslandEntranceSpring, MotionLevelZeroSnapsToSettled)
+{
+	g_Config.m_QmUiMotionLevel = 0;
+	CUiV2AnimationRuntime Runtime;
+
+	const SHudMediaIslandEntranceSpringResult Result = QmHudMediaIslandResolveEntranceSprings(Runtime, 301, 302, true);
+	EXPECT_NEAR(Result.m_DropProgress, 1.0f, 1e-6f);
+	EXPECT_NEAR(Result.m_ExpandProgress, 1.0f, 1e-6f);
+	EXPECT_FALSE(Runtime.HasActiveAnimation(301, EUiAnimProperty::ALPHA));
+	EXPECT_FALSE(Runtime.HasActiveAnimation(302, EUiAnimProperty::ALPHA));
+	g_Config.m_QmUiMotionLevel = 2;
+}
+
+TEST(QmHudMediaIslandEntranceSpring, ReducedMotionStillAnimatesAndSettles)
+{
+	g_Config.m_QmUiMotionLevel = 1;
+	CUiV2AnimationRuntime Runtime;
+
+	QmHudMediaIslandResolveEntranceSprings(Runtime, 401, 402, true);
+	AdvanceIslandRuntime(Runtime, 0.10f);
+	const SHudMediaIslandEntranceSpringResult Mid = QmHudMediaIslandResolveEntranceSprings(Runtime, 401, 402, true);
+	EXPECT_GT(Mid.m_DropProgress, 0.0f);
+	EXPECT_LT(Mid.m_DropProgress, 1.0f);
+	EXPECT_NEAR(Mid.m_ExpandProgress, 0.0f, 1e-6f);
+
+	AdvanceIslandRuntime(Runtime, 1.5f);
+	const SHudMediaIslandEntranceSpringResult Done = QmHudMediaIslandResolveEntranceSprings(Runtime, 401, 402, true);
+	EXPECT_NEAR(Done.m_DropProgress, 1.0f, 1e-3f);
+	EXPECT_NEAR(Done.m_ExpandProgress, 1.0f, 1e-3f);
+	g_Config.m_QmUiMotionLevel = 2;
+}
+
+TEST(QmHudMediaIslandEntranceSpring, CapsuleSqueezeScalesWithAmount)
+{
+	constexpr float BaseIslandHeight = 32.0f;
+	constexpr float PaddingX = 8.0f;
+	constexpr float ScreenPadding = 4.0f;
+	constexpr float ScreenWidth = 800.0f;
+
+	float X = 0.0f, W = 0.0f, H = 0.0f;
+	QmHudMediaIslandApplyCapsuleSqueeze(400.0f, 300.0f, 32.0f, 1.0f, BaseIslandHeight, PaddingX, ScreenPadding, ScreenWidth, X, W, H);
+	EXPECT_LT(W, 300.0f);
+	EXPECT_GT(H, 30.0f);
+	EXPECT_LT(H, 32.0f);
+	EXPECT_NEAR(X + W * 0.5f, 400.0f, 1e-4f);
+
+	float NoSqueezeX = 0.0f, NoSqueezeW = 0.0f, NoSqueezeH = 0.0f;
+	QmHudMediaIslandApplyCapsuleSqueeze(400.0f, 300.0f, 32.0f, 0.0f, BaseIslandHeight, PaddingX, ScreenPadding, ScreenWidth, NoSqueezeX, NoSqueezeW, NoSqueezeH);
+	EXPECT_FLOAT_EQ(NoSqueezeW, 300.0f);
+	EXPECT_FLOAT_EQ(NoSqueezeH, 32.0f);
+	EXPECT_NEAR(NoSqueezeX + NoSqueezeW * 0.5f, 400.0f, 1e-4f);
 }
 
 TEST(QmHudMediaIslandEntrance, DropStartsFullyAboveScreenAndEndsAtExpansionOrigin)
@@ -463,28 +562,6 @@ TEST(QmHudMediaIslandEntrance, DropStartsFullyAboveScreenAndEndsAtExpansionOrigi
 	EXPECT_FLOAT_EQ(Arrived.m_Rect.w, 12.8f);
 	EXPECT_FLOAT_EQ(Arrived.m_Rect.h, 12.8f);
 	EXPECT_FLOAT_EQ(Arrived.m_ContentAlpha, 0.0f);
-}
-
-TEST(QmHudMediaIslandEntrance, DropUsesDedicatedDurationAndReducedMotionRule)
-{
-	EXPECT_FLOAT_EQ(QmHudAdvanceMediaIslandEntranceDropProgress(0.0f, 0.18f, 2), 1.0f);
-	EXPECT_GT(QmHudAdvanceMediaIslandEntranceDropProgress(0.0f, 0.04f, 1), QmHudAdvanceMediaIslandEntranceDropProgress(0.0f, 0.04f, 2));
-	EXPECT_FLOAT_EQ(QmHudAdvanceMediaIslandEntranceDropProgress(0.4f, 0.0f, 0), 1.0f);
-}
-
-TEST(QmHudMediaIslandEntrance, TimelineWaitsOnePhaseBoundaryBeforeExpanding)
-{
-	SHudMediaIslandEntranceTimeline Timeline;
-	Timeline = QmHudAdvanceMediaIslandEntranceTimeline(Timeline, 0.18f, 2);
-	EXPECT_FLOAT_EQ(Timeline.m_DropProgress, 1.0f);
-	EXPECT_FLOAT_EQ(Timeline.m_ExpandProgress, 0.0f);
-
-	Timeline = QmHudAdvanceMediaIslandEntranceTimeline(Timeline, 0.01f, 2);
-	EXPECT_GT(Timeline.m_ExpandProgress, 0.0f);
-
-	const SHudMediaIslandEntranceTimeline MotionDisabled = QmHudAdvanceMediaIslandEntranceTimeline({}, 0.0f, 0);
-	EXPECT_FLOAT_EQ(MotionDisabled.m_DropProgress, 1.0f);
-	EXPECT_FLOAT_EQ(MotionDisabled.m_ExpandProgress, 1.0f);
 }
 
 TEST(QmHudMediaIslandEntrance, KeepsContentHiddenUntilShapeNearlySettlesThenFadesItIn)
@@ -1423,12 +1500,14 @@ TEST(QmHudMediaIslandSource, RenderPathKeepsStableNodesAndEditorRect)
 	EXPECT_NE(RenderBody.find("HudMediaIslandNodeKey(\"track_title_out\")"), std::string::npos);
 	EXPECT_NE(RenderBody.find("HudMediaIslandNodeKey(\"track_meta_in\")"), std::string::npos);
 	EXPECT_NE(RenderBody.find("HudMediaIslandNodeKey(\"track_meta_out\")"), std::string::npos);
-	EXPECT_NE(RenderBody.find("StartCapsuleMorph(Now)"), std::string::npos);
+	EXPECT_NE(RenderBody.find("StartCapsuleMorph()"), std::string::npos);
 	EXPECT_NE(RenderBody.find("m_CapsuleMorphNeedsCapture"), std::string::npos);
-	EXPECT_NE(RenderBody.find("MorphCompressSec"), std::string::npos);
-	EXPECT_NE(RenderBody.find("QmHudAdvanceMediaIslandEntranceTimeline"), std::string::npos);
-	EXPECT_NE(RenderBody.find("AnimState.m_EntranceDropProgress = EntranceTimeline.m_DropProgress"), std::string::npos);
-	EXPECT_NE(RenderBody.find("EntranceDeltaSeconds, MotionLevel"), std::string::npos);
+	EXPECT_NE(RenderBody.find("QmHudMediaIslandApplyCapsuleSqueeze"), std::string::npos);
+	EXPECT_NE(RenderBody.find("HudMediaIslandNodeKey(\"capsule_morph\")"), std::string::npos);
+	EXPECT_NE(RenderBody.find("QmHudMediaIslandResolveEntranceSprings"), std::string::npos);
+	EXPECT_NE(RenderBody.find("HudMediaIslandNodeKey(\"entrance_drop\")"), std::string::npos);
+	EXPECT_NE(RenderBody.find("EntranceSprings.m_ExpandProgress"), std::string::npos);
+	EXPECT_NE(RenderBody.find("RelaxMediaIslandEntranceSprings"), std::string::npos);
 	EXPECT_NE(RenderBody.find("QmHudMediaIslandEntrancePose"), std::string::npos);
 	EXPECT_NE(RenderBody.find("EntrancePose.m_BackgroundColor"), std::string::npos);
 	EXPECT_NE(RenderBody.find("EntrancePose.m_ContentAlpha"), std::string::npos);
