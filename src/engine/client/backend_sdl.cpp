@@ -1028,6 +1028,10 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		EmitGraphicsEvent("graphics.backend_fallback_attempt", aDetails);
 	}
 
+	char aSelectionDetails[128];
+	str_format(aSelectionDetails, sizeof(aSelectionDetails), "selected_backend=%s;selection_source=%s", GraphicsBackendName(m_BackendType), SDL_getenv("DDNET_DRIVER") != nullptr ? "environment" : "config");
+	EmitGraphicsEvent("graphics.backend_selection", aSelectionDetails);
+
 	ClampDriverVersion(m_BackendType);
 
 	const bool UseModernGL = IsModernAPI(m_BackendType);

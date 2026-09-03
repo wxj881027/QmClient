@@ -80,6 +80,7 @@ private:
 	void PushSample(std::vector<int64_t> &vSamples, int64_t Sample);
 	void RecordNonBlockingDrop(ENonBlockingWriteResult Reason);
 	void RecordRecentEvent(const char *pName, const char *pDetails);
+	void UpdateGraphicsSelection(const char *pName, const char *pDetails);
 
 	IStorage *m_pStorage = nullptr;
 	IGraphics *m_pGraphics = nullptr;
@@ -89,9 +90,11 @@ private:
 	char m_aSessionName[128]{};
 	char m_aRequestedBackend[256]{};
 	char m_aBackendConfig[256]{};
+	char m_aBackendSelectionSource[32]{};
 	char m_aActiveApiName[64]{};
 	bool m_GraphicsInfoRecorded = false;
 	bool m_ActiveApiAvailable = false;
+	bool m_BackendFallbackApplied = false;
 	int64_t m_SessionStart = 0;
 	int64_t m_UpdateStart = 0;
 	int64_t m_FrameStart = 0;

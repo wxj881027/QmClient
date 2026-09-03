@@ -84,6 +84,31 @@ bool BackendNamesMatch(const char *pConfiguredBackend, const char *pActiveApi)
 		return str_comp_nocase(pActiveApi, "opengl es") == 0 || str_comp_nocase(pActiveApi, "gles") == 0;
 	return str_comp_nocase(pConfiguredBackend, pActiveApi) == 0;
 }
+
+bool CopyEventField(const char *pDetails, const char *pFieldName, char *pDestination, size_t DestinationSize)
+{
+	if(!pDetails || !pFieldName || !pDestination || DestinationSize == 0)
+		return false;
+	const int FieldNameLength = str_length(pFieldName);
+	const char *pField = str_find(pDetails, pFieldName);
+	while(pField != nullptr)
+	{
+		if((pField == pDetails || pField[-1] == ';') && pField[FieldNameLength] == '=')
+		{
+			const char *pValue = pField + FieldNameLength + 1;
+			size_t ValueLength = 0;
+			while(pValue[ValueLength] != '\0' && pValue[ValueLength] != ';')
+				++ValueLength;
+			if(ValueLength >= DestinationSize)
+				ValueLength = DestinationSize - 1;
+			std::memcpy(pDestination, pValue, ValueLength);
+			pDestination[ValueLength] = '\0';
+			return true;
+		}
+		pField = str_find(pField + FieldNameLength, pFieldName);
+	}
+	return false;
+}
 }
 
 void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
@@ -109,9 +134,11 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_WindowFrameCount = 0;
 	m_aRequestedBackend[0] = '\0';
 	m_aBackendConfig[0] = '\0';
+	str_copy(m_aBackendSelectionSource, "unknown", sizeof(m_aBackendSelectionSource));
 	m_aActiveApiName[0] = '\0';
 	m_GraphicsInfoRecorded = false;
 	m_ActiveApiAvailable = false;
+	m_BackendFallbackApplied = false;
 	m_vUpdateSamples.clear();
 	m_vFrameSamples.clear();
 	m_vRenderSamples.clear();
@@ -292,6 +319,7 @@ void CQmDiagnostics::RecordEventNonBlocking(const char *pName, const char *pDeta
 	}
 	RecordRecentEvent(pName, pDetails);
 	std::unique_lock<CLock> SessionLock(m_SessionLock, std::adopt_lock);
+	UpdateGraphicsSelection(pName, pDetails);
 	if(!m_pAsyncSession || m_WriteFailed)
 	{
 		m_NonBlockingSessionInactive.fetch_add(1, std::memory_order_relaxed);
@@ -327,6 +355,7 @@ void CQmDiagnostics::RecordEventImpl(const char *pName, const char *pDetails, bo
 	if(!m_pAsyncSession)
 		return;
 	RecordRecentEvent(pName, pDetails);
+	UpdateGraphicsSelection(pName, pDetails);
 	try
 	{
 		if(!NonBlocking)
@@ -365,6 +394,21 @@ void CQmDiagnostics::RecordEventImpl(const char *pName, const char *pDetails, bo
 		// 诊断是旁路能力，分配失败不能改变客户端或图形后端的控制流。
 		log_warn("qm/diagnostics", "failed to allocate diagnostic event '%s'", pName ? pName : "(unnamed)");
 	}
+}
+
+void CQmDiagnostics::UpdateGraphicsSelection(const char *pName, const char *pDetails)
+{
+	if(!pName || !pDetails)
+		return;
+	const bool IsSelectionEvent = str_comp(pName, "graphics.backend_selection") == 0 || str_comp(pName, "graphics.backend_fallback_attempt") == 0;
+	if(!IsSelectionEvent)
+		return;
+
+	char aValue[32];
+	if(CopyEventField(pDetails, "selection_source", aValue, sizeof(aValue)))
+		str_copy(m_aBackendSelectionSource, aValue, sizeof(m_aBackendSelectionSource));
+	if(str_comp(pName, "graphics.backend_fallback_attempt") == 0 && CopyEventField(pDetails, "applied", aValue, sizeof(aValue)))
+		m_BackendFallbackApplied = m_BackendFallbackApplied || str_comp(aValue, "true") == 0;
 }
 
 CQmDiagnostics::ENonBlockingWriteResult CQmDiagnostics::WriteJsonLine(const char *pJson, bool NonBlocking)
@@ -490,7 +534,7 @@ void CQmDiagnostics::RecordGraphicsInfo()
 		const bool ActiveApiAvailable = pActiveApiName[0] != '\0' && str_comp_nocase(pActiveApiName, "unknown") != 0;
 
 		std::string Json = "{\"type\":\"graphics_info\"";
-		if(!AppendJsonStringField(Json, "backend_config", g_Config.m_GfxBackend) || !AppendJsonStringField(Json, "active_api_name", pActiveApiName) ||
+		if(!AppendJsonStringField(Json, "backend_config", g_Config.m_GfxBackend) || !AppendJsonStringField(Json, "backend_selection_source", m_aBackendSelectionSource) || !AppendJsonStringField(Json, "effective_backend", pActiveApiName) || !AppendJsonStringField(Json, "active_api_name", pActiveApiName) ||
 			!AppendJsonStringField(Json, "vendor", m_pGraphics->GetVendorString()) || !AppendJsonStringField(Json, "renderer", m_pGraphics->GetRendererString()) ||
 			!AppendJsonStringField(Json, "version", m_pGraphics->GetVersionString()))
 		{
@@ -603,14 +647,15 @@ void CQmDiagnostics::WriteReport()
 	try
 	{
 		Json = "{\"type\":\"report\"";
-		if(!AppendJsonStringField(Json, "session", m_aSessionName) || !AppendJsonStringField(Json, "requested_backend", m_aRequestedBackend) || !AppendJsonStringField(Json, "backend_config", m_aBackendConfig) || !AppendJsonStringField(Json, "active_api_name", m_aActiveApiName))
+		if(!AppendJsonStringField(Json, "session", m_aSessionName) || !AppendJsonStringField(Json, "requested_backend", m_aRequestedBackend) || !AppendJsonStringField(Json, "requested_backend_config", m_aRequestedBackend) || !AppendJsonStringField(Json, "backend_config", m_aBackendConfig) || !AppendJsonStringField(Json, "backend_selection_source", m_aBackendSelectionSource) || !AppendJsonStringField(Json, "effective_backend", m_aActiveApiName) || !AppendJsonStringField(Json, "active_api_name", m_aActiveApiName))
 		{
 			log_warn("qm/diagnostics", "failed to serialize automatic diagnostics report");
 			io_close(Report);
 			m_pStorage->RemoveFile(aReportTmpName, IStorage::TYPE_SAVE);
 			return;
 		}
-		const bool BackendFallback = m_GraphicsInfoRecorded && m_ActiveApiAvailable && str_comp_nocase(m_aRequestedBackend, "auto") != 0 && m_aRequestedBackend[0] != '\0' && !BackendNamesMatch(m_aRequestedBackend, m_aActiveApiName);
+		const bool ConfigBackendMismatch = str_comp_nocase(m_aRequestedBackend, "auto") != 0 && m_aRequestedBackend[0] != '\0' && !BackendNamesMatch(m_aRequestedBackend, m_aActiveApiName);
+		const bool BackendFallback = m_GraphicsInfoRecorded && m_ActiveApiAvailable && (m_BackendFallbackApplied || (str_comp(m_aBackendSelectionSource, "config") == 0 && ConfigBackendMismatch));
 		const SNonBlockingDropStats Stats = NonBlockingDropStats();
 		AppendJsonRawField(Json, "frames", std::to_string(m_FrameCount));
 		AppendJsonRawField(Json, "write_failed", m_WriteFailed ? "true" : "false");

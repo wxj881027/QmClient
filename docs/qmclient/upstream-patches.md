@@ -63,6 +63,7 @@ baseline: ddnet-20.0
 - `CGraphics_Threaded` 在 listener 注册前暂存最多 64 个启动事件，Qm 诊断初始化后注册 listener 并按序回放；超过有界队列的事件记录丢弃计数，不能宣称启动期事件绝对不丢失。
 - 默认渲染、debug 配置和 API 选择不变；采集失败只写 `available=false` 或明确的不可用原因，不阻断启动。
 - 现有 Vulkan 初始化失败后的 OpenGL 重试增加 `graphics.backend_fallback_attempt` 旁路事件，记录实际 `from`/`to`、请求的 `requested_to`、是否真的应用了回退的 `applied`、选择来源 `selection_source` 和固定 `reason`；这是回退尝试事件，不把它当作目标 backend 已初始化成功的结果，不改变原有配置回退、版本重试或初始化控制流。环境变量强制覆盖配置时允许记录 `applied=false`，避免把重复 Vulkan 重试误报为已切换到 OpenGL。
+- backend 选择完成后增加 `graphics.backend_selection` 旁路事件，记录选择出的 backend 和 `selection_source=config|environment`；Qm report 同时保留配置请求、选择来源和实际 active backend，环境变量覆盖时不把配置差异误判为 fallback。
 - 监听器回放在 Qm session 建立后进行；注册、pending 队列和 listener 快照读取使用窄 mutex，回调在锁外执行并对单个 listener 异常隔离，快照失败只丢弃当前事件，回放期间的新事件继续进入同一队列，避免乱序；这仍不是每帧路径的同步保证。窗口属性/显示器切换记录为 request，VSync/MSAA 记录为 request result，不把后端接受请求等同于 swapchain 或 context 已完成重建。
 - fatal graphics error 的 observer 使用有界 non-blocking 写入；在格式化、分配、session 关闭、writer 忙、writer 容量不足或 observer 异常时仍回到原有 `dbg_assert_failed()`，诊断失败不能替代原始 fatal 行为。
 - `ProcessError()` 在保留 `graphics.backend_error` 通用事件的同时，按统一错误类型和可用的原始后端错误文本发出稳定分类事件：
