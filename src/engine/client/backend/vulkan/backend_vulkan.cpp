@@ -1385,14 +1385,19 @@ protected:
 	}
 #endif
 
+	void EmitVulkanResult(VkResult CallResult, const char *pStage)
+	{
+		if(CallResult == VK_SUCCESS)
+			return;
+
+		char aDetails[160];
+		str_format(aDetails, sizeof(aDetails), "backend=vulkan;result=%d;class=%s;stage=%s", static_cast<int>(CallResult), VulkanResultClass(CallResult), pStage != nullptr ? pStage : "unspecified");
+		EmitGraphicsEvent("graphics.vulkan.result", aDetails);
+	}
+
 	const char *CheckVulkanCriticalError(VkResult CallResult, const char *pStage = nullptr)
 	{
-		if(CallResult != VK_SUCCESS)
-		{
-			char aDetails[160];
-			str_format(aDetails, sizeof(aDetails), "backend=vulkan;result=%d;class=%s;stage=%s", static_cast<int>(CallResult), VulkanResultClass(CallResult), pStage != nullptr ? pStage : "unspecified");
-			EmitGraphicsEvent("graphics.vulkan.result", aDetails);
-		}
+		EmitVulkanResult(CallResult, pStage);
 
 		const char *pCriticalError = nullptr;
 		switch(CallResult)
@@ -2551,7 +2556,7 @@ protected:
 		VkResult QueueSubmitRes = vkQueueSubmit(m_VKGraphicsQueue, 1, &SubmitInfo, m_vQueueSubmitFences[m_CurImageIndex]);
 		if(QueueSubmitRes != VK_SUCCESS)
 		{
-			const char *pCritErrorMsg = CheckVulkanCriticalError(QueueSubmitRes);
+			const char *pCritErrorMsg = CheckVulkanCriticalError(QueueSubmitRes, "queue_submit");
 			if(pCritErrorMsg != nullptr)
 			{
 				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Submitting to graphics queue failed.", pCritErrorMsg);
@@ -2578,6 +2583,7 @@ protected:
 		VkResult QueuePresentRes = vkQueuePresentKHR(m_VKPresentQueue, &PresentInfo);
 		if(QueuePresentRes == VK_SUBOPTIMAL_KHR)
 		{
+			EmitVulkanResult(QueuePresentRes, "present");
 			m_RecreateSwapChain = true;
 			EmitGraphicsEvent("graphics.swapchain_suboptimal", "backend=vulkan;stage=present");
 		}
@@ -2612,7 +2618,10 @@ protected:
 			if(AcqResult == VK_ERROR_OUT_OF_DATE_KHR || m_RecreateSwapChain)
 			{
 				if(AcqResult == VK_ERROR_OUT_OF_DATE_KHR)
+				{
+					EmitVulkanResult(AcqResult, "acquire");
 					EmitGraphicsEvent("graphics.swapchain_out_of_date", "backend=vulkan;stage=acquire");
+				}
 				m_RecreateSwapChain = false;
 				if(IsVerbose())
 				{
@@ -3929,7 +3938,7 @@ public:
 		bool TryAgain = false;
 
 		VkResult Res = vkCreateInstance(&VKInstanceInfo, nullptr, &m_VKInstance);
-		const char *pCritErrorMsg = CheckVulkanCriticalError(Res);
+		const char *pCritErrorMsg = CheckVulkanCriticalError(Res, "instance_create");
 		if(pCritErrorMsg != nullptr)
 		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating instance failed.", pCritErrorMsg);
@@ -4038,7 +4047,7 @@ public:
 		auto Res = vkEnumeratePhysicalDevices(m_VKInstance, &DevicesCount, nullptr);
 		if(Res != VK_SUCCESS)
 		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, CheckVulkanCriticalError(Res));
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, CheckVulkanCriticalError(Res, "enumerate_physical_devices"));
 			return false;
 		}
 		if(DevicesCount == 0)
@@ -4051,7 +4060,7 @@ public:
 		Res = vkEnumeratePhysicalDevices(m_VKInstance, &DevicesCount, vDeviceList.data());
 		if(Res != VK_SUCCESS && Res != VK_INCOMPLETE)
 		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, CheckVulkanCriticalError(Res));
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, CheckVulkanCriticalError(Res, "enumerate_physical_devices"));
 			return false;
 		}
 		if(DevicesCount == 0)
@@ -4598,7 +4607,7 @@ public:
 
 		m_VKSwapChain = VK_NULL_HANDLE;
 		VkResult SwapchainCreateRes = vkCreateSwapchainKHR(m_VKDevice, &SwapInfo, nullptr, &m_VKSwapChain);
-		const char *pCritErrorMsg = CheckVulkanCriticalError(SwapchainCreateRes);
+		const char *pCritErrorMsg = CheckVulkanCriticalError(SwapchainCreateRes, "swapchain_create");
 		if(pCritErrorMsg != nullptr)
 		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the swap chain failed.", pCritErrorMsg);
