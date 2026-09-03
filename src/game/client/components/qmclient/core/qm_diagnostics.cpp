@@ -122,6 +122,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_NonBlockingEventDropped.store(0, std::memory_order_relaxed);
 	m_NonBlockingSessionLockBusy.store(0, std::memory_order_relaxed);
 	m_NonBlockingSessionInactive.store(0, std::memory_order_relaxed);
+	m_NonBlockingStatsGateBusy.store(0, std::memory_order_relaxed);
 	m_NonBlockingWriterLockBusy.store(0, std::memory_order_relaxed);
 	m_NonBlockingBufferCapacity.store(0, std::memory_order_relaxed);
 	m_NonBlockingSerializationFailures.store(0, std::memory_order_relaxed);
@@ -277,10 +278,13 @@ void CQmDiagnostics::RecordEvent(const char *pName, const char *pDetails)
 
 void CQmDiagnostics::RecordEventNonBlocking(const char *pName, const char *pDetails)
 {
-	if(!m_NonBlockingStatsLock.try_lock_shared())
-		return;
-	std::shared_lock<std::shared_mutex> NonBlockingStatsLock(m_NonBlockingStatsLock, std::adopt_lock);
 	m_NonBlockingEventAttempts.fetch_add(1, std::memory_order_relaxed);
+	if(!m_NonBlockingStatsLock.try_lock_shared())
+	{
+		RecordNonBlockingDrop(ENonBlockingWriteResult::STATS_GATE_BUSY);
+		return;
+	}
+	std::shared_lock<std::shared_mutex> NonBlockingStatsLock(m_NonBlockingStatsLock, std::adopt_lock);
 	if(!m_SessionLock.try_lock())
 	{
 		RecordNonBlockingDrop(ENonBlockingWriteResult::SESSION_LOCK_BUSY);
@@ -406,6 +410,9 @@ void CQmDiagnostics::RecordNonBlockingDrop(ENonBlockingWriteResult Reason)
 		break;
 	case ENonBlockingWriteResult::SESSION_INACTIVE:
 		m_NonBlockingSessionInactive.fetch_add(1, std::memory_order_relaxed);
+		break;
+	case ENonBlockingWriteResult::STATS_GATE_BUSY:
+		m_NonBlockingStatsGateBusy.fetch_add(1, std::memory_order_relaxed);
 		break;
 	case ENonBlockingWriteResult::WRITER_LOCK_BUSY:
 		m_NonBlockingWriterLockBusy.fetch_add(1, std::memory_order_relaxed);
@@ -548,6 +555,7 @@ CQmDiagnostics::SNonBlockingDropStats CQmDiagnostics::NonBlockingDropStats() con
 		.m_EventDropped = m_NonBlockingEventDropped.load(std::memory_order_relaxed),
 		.m_SessionLockBusy = m_NonBlockingSessionLockBusy.load(std::memory_order_relaxed),
 		.m_SessionInactive = m_NonBlockingSessionInactive.load(std::memory_order_relaxed),
+		.m_StatsGateBusy = m_NonBlockingStatsGateBusy.load(std::memory_order_relaxed),
 		.m_WriterLockBusy = m_NonBlockingWriterLockBusy.load(std::memory_order_relaxed),
 		.m_BufferCapacity = m_NonBlockingBufferCapacity.load(std::memory_order_relaxed),
 		.m_SerializationFailures = m_NonBlockingSerializationFailures.load(std::memory_order_relaxed),
@@ -571,7 +579,7 @@ void CQmDiagnostics::WriteDiagnosticsSummary()
 
 	const SNonBlockingDropStats Stats = NonBlockingDropStats();
 	char aJson[1024];
-	str_format(aJson, sizeof(aJson), "{\"type\":\"diagnostics_summary\",\"non_blocking_event_attempts\":%" PRIu64 ",\"non_blocking_event_enqueued\":%" PRIu64 ",\"non_blocking_event_dropped\":%" PRIu64 ",\"drop_session_lock_busy\":%" PRIu64 ",\"drop_session_inactive\":%" PRIu64 ",\"drop_writer_lock_busy\":%" PRIu64 ",\"drop_buffer_capacity\":%" PRIu64 ",\"drop_serialization_failure\":%" PRIu64 "}", Stats.m_EventAttempts, Stats.m_EventEnqueued, Stats.m_EventDropped, Stats.m_SessionLockBusy, Stats.m_SessionInactive, Stats.m_WriterLockBusy, Stats.m_BufferCapacity, Stats.m_SerializationFailures);
+	str_format(aJson, sizeof(aJson), "{\"type\":\"diagnostics_summary\",\"non_blocking_event_attempts\":%" PRIu64 ",\"non_blocking_event_enqueued\":%" PRIu64 ",\"non_blocking_event_dropped\":%" PRIu64 ",\"drop_session_lock_busy\":%" PRIu64 ",\"drop_session_inactive\":%" PRIu64 ",\"drop_stats_gate_busy\":%" PRIu64 ",\"drop_writer_lock_busy\":%" PRIu64 ",\"drop_buffer_capacity\":%" PRIu64 ",\"drop_serialization_failure\":%" PRIu64 "}", Stats.m_EventAttempts, Stats.m_EventEnqueued, Stats.m_EventDropped, Stats.m_SessionLockBusy, Stats.m_SessionInactive, Stats.m_StatsGateBusy, Stats.m_WriterLockBusy, Stats.m_BufferCapacity, Stats.m_SerializationFailures);
 	WriteJsonLine(aJson);
 }
 
@@ -614,6 +622,7 @@ void CQmDiagnostics::WriteReport()
 		AppendJsonRawField(Json, "non_blocking_event_dropped", std::to_string(Stats.m_EventDropped));
 		AppendJsonRawField(Json, "drop_session_lock_busy", std::to_string(Stats.m_SessionLockBusy));
 		AppendJsonRawField(Json, "drop_session_inactive", std::to_string(Stats.m_SessionInactive));
+		AppendJsonRawField(Json, "drop_stats_gate_busy", std::to_string(Stats.m_StatsGateBusy));
 		AppendJsonRawField(Json, "drop_writer_lock_busy", std::to_string(Stats.m_WriterLockBusy));
 		AppendJsonRawField(Json, "drop_buffer_capacity", std::to_string(Stats.m_BufferCapacity));
 		AppendJsonRawField(Json, "drop_serialization_failure", std::to_string(Stats.m_SerializationFailures));

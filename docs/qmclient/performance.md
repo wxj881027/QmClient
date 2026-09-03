@@ -128,3 +128,5 @@ status: active
   requested 值为准；`graphics_info_recorded` 仅在 graphics_info 成功提交到 session writer 后置为 true。
 - report 现在自动导出固定容量的最近事件 ring buffer（按时间顺序，包含截断标记、容量和是否回绕）；
   它覆盖异常事件前后的上下文，不依赖手动复制日志，也不在事件生产路径分配内存。
+- 非阻塞图形事件在 shutdown 统计闸门争用时也会计入 attempts/dropped，并单独记录
+  `drop_stats_gate_busy`，保持丢弃原因不被伪装成 session 或 writer 锁争用。

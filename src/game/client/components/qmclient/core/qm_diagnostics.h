@@ -24,6 +24,7 @@ public:
 		uint64_t m_EventDropped = 0;
 		uint64_t m_SessionLockBusy = 0;
 		uint64_t m_SessionInactive = 0;
+		uint64_t m_StatsGateBusy = 0;
 		uint64_t m_WriterLockBusy = 0;
 		uint64_t m_BufferCapacity = 0;
 		uint64_t m_SerializationFailures = 0;
@@ -63,6 +64,7 @@ private:
 		WRITTEN,
 		SESSION_LOCK_BUSY,
 		SESSION_INACTIVE,
+		STATS_GATE_BUSY,
 		WRITER_LOCK_BUSY,
 		BUFFER_CAPACITY,
 	};
@@ -111,6 +113,7 @@ private:
 	std::atomic<uint64_t> m_NonBlockingEventDropped{0};
 	std::atomic<uint64_t> m_NonBlockingSessionLockBusy{0};
 	std::atomic<uint64_t> m_NonBlockingSessionInactive{0};
+	std::atomic<uint64_t> m_NonBlockingStatsGateBusy{0};
 	std::atomic<uint64_t> m_NonBlockingWriterLockBusy{0};
 	std::atomic<uint64_t> m_NonBlockingBufferCapacity{0};
 	std::atomic<uint64_t> m_NonBlockingSerializationFailures{0};
