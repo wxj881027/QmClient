@@ -2761,13 +2761,16 @@ void CGraphics_Threaded::EmitGraphicsEvent(const char *pName, const char *pDetai
 {
 	// 事件只用于生命周期和诊断，不在每帧命令路径上；串行化整个事件
 	// 分发过程以建立明确的事件线性化顺序。listener 不得回调 graphics。
+	unsigned PendingEventsDropped = 0;
 	try
 	{
 		std::lock_guard<std::mutex> DispatchLock(m_GraphicsEventDispatchMutex);
+		bool QueueEvent = false;
 		{
 			std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
 			if(m_vGraphicsEventListeners.empty() || m_GraphicsEventReplayInProgress)
 			{
+				QueueEvent = true;
 				if(m_vPendingGraphicsEvents.size() < 64)
 				{
 					try
@@ -2782,10 +2785,30 @@ void CGraphics_Threaded::EmitGraphicsEvent(const char *pName, const char *pDetai
 				}
 				else
 					++m_PendingGraphicsEventsDropped;
-				return;
+			}
+			else
+			{
+				PendingEventsDropped = m_PendingGraphicsEventsDropped;
+				m_PendingGraphicsEventsDropped = 0;
 			}
 		}
-		DispatchGraphicsEvent(pName, pDetails);
+		if(QueueEvent)
+			return;
+		if(PendingEventsDropped != 0)
+		{
+			char aDetails[64];
+			str_format(aDetails, sizeof(aDetails), "%u", PendingEventsDropped);
+			if(!DispatchGraphicsEvent("graphics.pending_events_dropped", aDetails))
+			{
+				std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
+				m_PendingGraphicsEventsDropped += PendingEventsDropped;
+			}
+		}
+		if(!DispatchGraphicsEvent(pName, pDetails))
+		{
+			std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
+			++m_PendingGraphicsEventsDropped;
+		}
 	}
 	catch(...)
 	{
@@ -2794,7 +2817,7 @@ void CGraphics_Threaded::EmitGraphicsEvent(const char *pName, const char *pDetai
 	}
 }
 
-void CGraphics_Threaded::DispatchGraphicsEvent(const char *pName, const char *pDetails)
+bool CGraphics_Threaded::DispatchGraphicsEvent(const char *pName, const char *pDetails)
 {
 	std::vector<GRAPHICS_EVENT_FUNC> Listeners;
 	try
@@ -2805,7 +2828,7 @@ void CGraphics_Threaded::DispatchGraphicsEvent(const char *pName, const char *pD
 	catch(...)
 	{
 		log_warn("gfx", "failed to snapshot graphics event listeners for '%s'", pName ? pName : "(unnamed)");
-		return;
+		return false;
 	}
 	for(const auto &EventListener : Listeners)
 	{
@@ -2821,10 +2844,12 @@ void CGraphics_Threaded::DispatchGraphicsEvent(const char *pName, const char *pD
 			log_warn("gfx", "graphics event listener failed for '%s'", pName ? pName : "(unnamed)");
 		}
 	}
+	return true;
 }
 
 void CGraphics_Threaded::ReplayPendingGraphicsEvents()
 {
+	unsigned RecoveryEventsDropped = 0;
 	try
 	{
 		std::lock_guard<std::mutex> DispatchLock(m_GraphicsEventDispatchMutex);
@@ -2855,13 +2880,27 @@ void CGraphics_Threaded::ReplayPendingGraphicsEvents()
 
 			if(HaveEvent)
 			{
-				DispatchGraphicsEvent(Event.m_Name.c_str(), Event.m_Details.c_str());
+				if(!DispatchGraphicsEvent(Event.m_Name.c_str(), Event.m_Details.c_str()))
+				{
+					std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
+					RecoveryEventsDropped = 1 + m_PendingGraphicsEventsDropped + static_cast<unsigned>(m_vPendingGraphicsEvents.size());
+					m_PendingGraphicsEventsDropped = 0;
+					m_vPendingGraphicsEvents.clear();
+					m_GraphicsEventReplayInProgress = false;
+					break;
+				}
 			}
 			else
 			{
 				char aDetails[64];
 				str_format(aDetails, sizeof(aDetails), "%u", PendingEventsDropped);
-				DispatchGraphicsEvent("graphics.pending_events_dropped", aDetails);
+				if(!DispatchGraphicsEvent("graphics.pending_events_dropped", aDetails))
+				{
+					log_warn("gfx", "failed to dispatch pending graphics event drop count");
+					std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
+					m_GraphicsEventReplayInProgress = false;
+					break;
+				}
 			}
 		}
 	}
@@ -2870,7 +2909,8 @@ void CGraphics_Threaded::ReplayPendingGraphicsEvents()
 		try
 		{
 			std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
-			m_PendingGraphicsEventsDropped += static_cast<unsigned>(m_vPendingGraphicsEvents.size());
+			RecoveryEventsDropped = m_PendingGraphicsEventsDropped + static_cast<unsigned>(m_vPendingGraphicsEvents.size());
+			m_PendingGraphicsEventsDropped = 0;
 			m_vPendingGraphicsEvents.clear();
 			m_GraphicsEventReplayInProgress = false;
 		}
@@ -2879,6 +2919,13 @@ void CGraphics_Threaded::ReplayPendingGraphicsEvents()
 			// 这里只能尽力恢复 replay 标志，不能让诊断异常卡住后续事件。
 		}
 		log_warn("gfx", "failed to replay pending graphics events; remaining events dropped");
+	}
+	if(RecoveryEventsDropped != 0)
+	{
+		char aDetails[64];
+		str_format(aDetails, sizeof(aDetails), "%u", RecoveryEventsDropped);
+		if(!DispatchGraphicsEvent("graphics.pending_events_dropped", aDetails))
+			log_warn("gfx", "failed to dispatch recovered graphics event drop count");
 	}
 }
 

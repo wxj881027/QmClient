@@ -2420,7 +2420,10 @@ protected:
 
 		VkResult QueuePresentRes = vkQueuePresentKHR(m_VKPresentQueue, &PresentInfo);
 		if(QueuePresentRes == VK_SUBOPTIMAL_KHR)
+		{
+			m_RecreateSwapChain = true;
 			EmitGraphicsEvent("graphics.swapchain_suboptimal", "backend=vulkan;stage=present");
+		}
 		if(QueuePresentRes != VK_SUCCESS && QueuePresentRes != VK_SUBOPTIMAL_KHR)
 		{
 			const char *pCritErrorMsg = CheckVulkanCriticalError(QueuePresentRes, "present");

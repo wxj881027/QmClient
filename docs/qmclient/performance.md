@@ -39,11 +39,12 @@ status: active
 - 非阻塞 GPU query、shader/pipeline 失败、device loss、fallback 和资源重建事件；
 - 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
-- 异常前后的 ring buffer、队列溢出统计、原子 report 生成和同场景 A/B 采样工具。
+- 日志保留/轮转策略和同场景 A/B 采样工具。
 - session JSONL 已改用 DDNet `ASYNCIO` writer；主线程只提交固定大小的短记录，退出时等待
   writer 完成并生成 report。non-blocking graphics observer 现在自动记录尝试、成功和丢弃原因
   （session lock、writer lock、buffer capacity、serialization、session inactive），并在 session
-  末尾写入 `diagnostics_summary`、在 report 中写入同一组摘要；这仍不是异常前后的事件 ring buffer。
+  末尾写入 `diagnostics_summary`、在 report 中写入同一组摘要；异常前后的事件 ring buffer
+  已由 report 自动导出，但其容量固定且仍没有日志保留/轮转策略。
 - graphics 对象创建后、backend `Init()` 前已启动最小 Qm session 并注册 listener；失败分支会自动记录 `graphics_init_failed` 并生成尽力而为的 report。诊断初始化阶段不访问未就绪 backend。OpenGL/GLES context 成功后的专属字段已经接入；初始化失败前的具体 Vulkan/device 字段仍未覆盖。
 - resize 事件已接入 runtime，但 renderer switch、device loss、shader failure、fallback 和
   resource rebuild 尚未从各后端统一发出结构化事件。

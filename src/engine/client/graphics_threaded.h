@@ -905,7 +905,7 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	void KickCommandBuffer();
 	void EmitGraphicsEvent(const char *pName, const char *pDetails = nullptr);
-	void DispatchGraphicsEvent(const char *pName, const char *pDetails);
+	bool DispatchGraphicsEvent(const char *pName, const char *pDetails);
 	void ReplayPendingGraphicsEvents();
 
 	void AddBackEndWarningIfExists();
