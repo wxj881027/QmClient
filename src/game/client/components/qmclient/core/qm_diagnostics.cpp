@@ -17,6 +17,7 @@
 #include <cstring>
 #include <limits>
 #include <mutex>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -114,6 +115,8 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_vUpdateSamples.clear();
 	m_vFrameSamples.clear();
 	m_vRenderSamples.clear();
+	m_RecentEventNext = 0;
+	m_RecentEventCount = 0;
 	m_NonBlockingEventAttempts.store(0, std::memory_order_relaxed);
 	m_NonBlockingEventEnqueued.store(0, std::memory_order_relaxed);
 	m_NonBlockingEventDropped.store(0, std::memory_order_relaxed);
@@ -283,6 +286,7 @@ void CQmDiagnostics::RecordEventNonBlocking(const char *pName, const char *pDeta
 		RecordNonBlockingDrop(ENonBlockingWriteResult::SESSION_LOCK_BUSY);
 		return;
 	}
+	RecordRecentEvent(pName, pDetails);
 	std::unique_lock<CLock> SessionLock(m_SessionLock, std::adopt_lock);
 	if(!m_pAsyncSession || m_WriteFailed)
 	{
@@ -318,6 +322,7 @@ void CQmDiagnostics::RecordEventImpl(const char *pName, const char *pDetails, bo
 {
 	if(!m_pAsyncSession)
 		return;
+	RecordRecentEvent(pName, pDetails);
 	try
 	{
 		if(!NonBlocking)
@@ -424,6 +429,7 @@ void CQmDiagnostics::MarkWriteFailure(const char *pOperation)
 	if(!m_WriteFailed)
 	{
 		m_WriteFailed = true;
+		RecordRecentEvent("diagnostics.write_failure", pOperation);
 		log_warn("qm/diagnostics", "automatic diagnostics %s failed", pOperation ? pOperation : "unknown operation");
 	}
 }
@@ -433,6 +439,21 @@ void CQmDiagnostics::PushSample(std::vector<int64_t> &vSamples, int64_t Sample)
 	if(vSamples.size() >= DIAGNOSTICS_WINDOW_SIZE)
 		vSamples.erase(vSamples.begin());
 	vSamples.push_back(Sample);
+}
+
+void CQmDiagnostics::RecordRecentEvent(const char *pName, const char *pDetails)
+{
+	SRecentEvent &Event = m_aRecentEvents[m_RecentEventNext];
+	const char *pSafeName = pName ? pName : "";
+	const char *pSafeDetails = pDetails ? pDetails : "";
+	Event.m_MonotonicNs = time_get_nanoseconds().count();
+	Event.m_NameTruncated = str_length(pSafeName) >= static_cast<int>(sizeof(Event.m_aName));
+	Event.m_DetailsTruncated = str_length(pSafeDetails) >= static_cast<int>(sizeof(Event.m_aDetails));
+	str_copy(Event.m_aName, pSafeName, sizeof(Event.m_aName));
+	str_copy(Event.m_aDetails, pSafeDetails, sizeof(Event.m_aDetails));
+	m_RecentEventNext = (m_RecentEventNext + 1) % m_aRecentEvents.size();
+	if(m_RecentEventCount < m_aRecentEvents.size())
+		++m_RecentEventCount;
 }
 
 void CQmDiagnostics::WriteSessionStart()
@@ -490,10 +511,12 @@ void CQmDiagnostics::RecordGraphicsInfo()
 		AppendJsonRawField(Json, "height", std::to_string(m_pGraphics->ScreenHeight()));
 		AppendJsonRawField(Json, "hidpi", std::to_string(m_pGraphics->ScreenHiDPIScale()));
 		Json += '}';
-		if(WriteJsonLine(Json.c_str()) == ENonBlockingWriteResult::WRITTEN)
+		const bool GraphicsInfoEnqueued = WriteJsonLine(Json.c_str()) == ENonBlockingWriteResult::WRITTEN;
+		if(GraphicsInfoEnqueued)
 		{
 			m_GraphicsInfoRecorded = true;
 			m_ActiveApiAvailable = ActiveApiAvailable;
+			RecordRecentEvent("graphics_info", pActiveApiName);
 		}
 		else
 			log_warn("qm/diagnostics", "failed to enqueue graphics diagnostic record");
@@ -594,6 +617,24 @@ void CQmDiagnostics::WriteReport()
 		AppendJsonRawField(Json, "drop_writer_lock_busy", std::to_string(Stats.m_WriterLockBusy));
 		AppendJsonRawField(Json, "drop_buffer_capacity", std::to_string(Stats.m_BufferCapacity));
 		AppendJsonRawField(Json, "drop_serialization_failure", std::to_string(Stats.m_SerializationFailures));
+		AppendJsonRawField(Json, "recent_event_count", std::to_string(m_RecentEventCount));
+		AppendJsonRawField(Json, "recent_event_ring_capacity", std::to_string(m_aRecentEvents.size()));
+		AppendJsonRawField(Json, "recent_event_ring_wrapped", m_RecentEventCount == m_aRecentEvents.size() ? "true" : "false");
+		Json += ",\"recent_events\":[";
+		const size_t FirstEvent = (m_RecentEventNext + m_aRecentEvents.size() - m_RecentEventCount) % m_aRecentEvents.size();
+		for(size_t i = 0; i < m_RecentEventCount; ++i)
+		{
+			if(i != 0)
+				Json += ',';
+			const SRecentEvent &Event = m_aRecentEvents[(FirstEvent + i) % m_aRecentEvents.size()];
+			Json += "{\"monotonic_ns\":" + std::to_string(Event.m_MonotonicNs);
+			if(!AppendJsonStringField(Json, "name", Event.m_aName) || !AppendJsonStringField(Json, "details", Event.m_aDetails))
+				throw std::bad_alloc();
+			AppendJsonRawField(Json, "name_truncated", Event.m_NameTruncated ? "true" : "false");
+			AppendJsonRawField(Json, "details_truncated", Event.m_DetailsTruncated ? "true" : "false");
+			Json += '}';
+		}
+		Json += ']';
 		Json += '}';
 	}
 	catch(...)

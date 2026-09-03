@@ -126,3 +126,5 @@ status: active
   `active_api_version_available` 表示 driver-age 版本查询可用；不能用后者替代前者，尤其是 GLES。
 - report 同时保留 `requested_backend` 和当前 `backend_config`，fallback 判断以初始化开始时的
   requested 值为准；`graphics_info_recorded` 仅在 graphics_info 成功提交到 session writer 后置为 true。
+- report 现在自动导出固定容量的最近事件 ring buffer（按时间顺序，包含截断标记、容量和是否回绕）；
+  它覆盖异常事件前后的上下文，不依赖手动复制日志，也不在事件生产路径分配内存。

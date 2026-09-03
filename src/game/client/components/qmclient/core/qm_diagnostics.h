@@ -5,6 +5,7 @@
 #include <base/types.h>
 #include <base/lock.h>
 
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <shared_mutex>
@@ -48,6 +49,15 @@ public:
 	SNonBlockingDropStats NonBlockingDropStats() const;
 
 private:
+	struct SRecentEvent
+	{
+		int64_t m_MonotonicNs = 0;
+		char m_aName[96]{};
+		char m_aDetails[512]{};
+		bool m_NameTruncated = false;
+		bool m_DetailsTruncated = false;
+	};
+
 	enum class ENonBlockingWriteResult
 	{
 		WRITTEN,
@@ -67,6 +77,7 @@ private:
 	void MarkWriteFailure(const char *pOperation);
 	void PushSample(std::vector<int64_t> &vSamples, int64_t Sample);
 	void RecordNonBlockingDrop(ENonBlockingWriteResult Reason);
+	void RecordRecentEvent(const char *pName, const char *pDetails);
 
 	IStorage *m_pStorage = nullptr;
 	IGraphics *m_pGraphics = nullptr;
@@ -89,6 +100,10 @@ private:
 	std::vector<int64_t> m_vUpdateSamples;
 	std::vector<int64_t> m_vFrameSamples;
 	std::vector<int64_t> m_vRenderSamples;
+	static constexpr size_t RECENT_EVENT_RING_SIZE = 64;
+	std::array<SRecentEvent, RECENT_EVENT_RING_SIZE> m_aRecentEvents;
+	size_t m_RecentEventNext = 0;
+	size_t m_RecentEventCount = 0;
 	mutable std::shared_mutex m_NonBlockingStatsLock;
 
 	std::atomic<uint64_t> m_NonBlockingEventAttempts{0};
