@@ -53,7 +53,7 @@ status: active
   当前诊断开销视为已经量化为零。
 
 因此当前日志只能证明“有自动诊断证据”和“基础帧统计可用”，不能据此宣称已经完成图形后端性能定位。
-通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，Vulkan 运行期 validation 消息已接入，但 Vulkan instance 创建阶段、Metal 专属字段、device loss、shader failure 和资源重建事件仍需分别接入。
+通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult` 结构化事件已接入，但 Metal 专属字段、完整 device-fault 事件、shader failure 和资源重建事件仍需分别接入。
 
 ## OpenGL/GLES debug callback 增量（2026-09-03）
 
@@ -87,6 +87,7 @@ status: active
 - 事件使用 Vulkan 专属 `severity_errors`、`severity_warnings`、`severity_info`、`severity_verbose` 和 `severity_unknown` 字段，不把 Vulkan severity 映射为 OpenGL 的 high/medium/low/notification；`last_seen_type` 与 recent message 的 type 保存真实 `VkDebugUtilsMessageTypeFlagsEXT`。
 - `EndCommands()` 按一秒窗口限流 flush，shutdown 和初始化失败回退强制 flush；callback 注销等待 in-flight callback 完成，Vulkan instance 销毁前一定清理 messenger。初始化失败不再清空 instance 句柄后跳过清理。
 - 已通过 `VkInstanceCreateInfo.pNext` 捕获 `vkCreateInstance` 期间的 validation/performance 消息；当前仍未在实际 Vulkan 成功路径上运行，本机默认仍是 Vulkan 请求、OpenGL active 的 fallback。
+- `CheckVulkanCriticalError` 对非成功结果自动记录 `graphics.vulkan.result`，包含数值 result、稳定分类和调用 stage；原有 swapchain 专用事件和错误返回保持不变。
 
 实际 JSON 字段名为 `active_api_name`（不是 `active_api`）；分析工具应同时读取
 `backend_config` 与 `active_api_name`，并把 `active_api_available=false` 视为不可用状态。

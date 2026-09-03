@@ -63,6 +63,25 @@ static const char *VulkanPresentModeName(VkPresentModeKHR PresentMode)
 	}
 }
 
+static const char *VulkanResultClass(VkResult Result)
+{
+	switch(Result)
+	{
+	case VK_ERROR_DEVICE_LOST: return "device_lost";
+	case VK_ERROR_OUT_OF_HOST_MEMORY: return "out_of_host_memory";
+	case VK_ERROR_OUT_OF_DEVICE_MEMORY: return "out_of_device_memory";
+	case VK_ERROR_SURFACE_LOST_KHR: return "surface_lost";
+	case VK_ERROR_OUT_OF_DATE_KHR: return "out_of_date";
+	case VK_ERROR_INITIALIZATION_FAILED: return "initialization_failed";
+	case VK_ERROR_INCOMPATIBLE_DRIVER: return "incompatible_driver";
+	case VK_ERROR_LAYER_NOT_PRESENT: return "layer_missing";
+	case VK_ERROR_EXTENSION_NOT_PRESENT: return "extension_missing";
+	case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR: return "native_window_in_use";
+	case VK_SUBOPTIMAL_KHR: return "suboptimal";
+	default: return "other";
+	}
+}
+
 #ifndef VK_API_VERSION_MAJOR
 #define VK_API_VERSION_MAJOR VK_VERSION_MAJOR
 #define VK_API_VERSION_MINOR VK_VERSION_MINOR
@@ -1368,6 +1387,13 @@ protected:
 
 	const char *CheckVulkanCriticalError(VkResult CallResult, const char *pStage = nullptr)
 	{
+		if(CallResult != VK_SUCCESS)
+		{
+			char aDetails[160];
+			str_format(aDetails, sizeof(aDetails), "backend=vulkan;result=%d;class=%s;stage=%s", static_cast<int>(CallResult), VulkanResultClass(CallResult), pStage != nullptr ? pStage : "unspecified");
+			EmitGraphicsEvent("graphics.vulkan.result", aDetails);
+		}
+
 		const char *pCriticalError = nullptr;
 		switch(CallResult)
 		{
