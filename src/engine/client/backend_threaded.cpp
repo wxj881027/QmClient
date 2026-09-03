@@ -27,19 +27,30 @@ class IStorage;
 
 static const char *GraphicsErrorEventName(const SGfxErrorContainer &Error)
 {
+	bool HasDeviceLost = false;
+	bool HasPipelineFailure = false;
+	bool HasShaderFailure = false;
 	for(const auto &ErrStr : Error.m_vErrors)
 	{
 		if(str_find_nocase(ErrStr.m_Err.c_str(), "device lost") != nullptr)
-			return "graphics.device_lost";
+			HasDeviceLost = true;
 		if(str_find_nocase(ErrStr.m_Err.c_str(), "shader") != nullptr)
-			return "graphics.shader_failure";
+			HasShaderFailure = true;
 		if(str_find_nocase(ErrStr.m_Err.c_str(), "pipeline") != nullptr)
-			return "graphics.pipeline_failure";
+			HasPipelineFailure = true;
 	}
+
+	if(HasDeviceLost)
+		return "graphics.device_lost";
 
 	switch(Error.m_ErrorType)
 	{
-	case GFX_ERROR_TYPE_INIT: return "graphics.initialization_failure";
+	case GFX_ERROR_TYPE_INIT:
+		if(HasPipelineFailure)
+			return "graphics.pipeline_failure";
+		if(HasShaderFailure)
+			return "graphics.shader_failure";
+		return "graphics.initialization_failure";
 	case GFX_ERROR_TYPE_OUT_OF_MEMORY_IMAGE:
 	case GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER:
 	case GFX_ERROR_TYPE_OUT_OF_MEMORY_STAGING: return "graphics.out_of_memory";
