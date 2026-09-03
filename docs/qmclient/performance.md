@@ -41,7 +41,9 @@ status: active
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
 - 异常前后的 ring buffer、队列溢出统计、原子 report 生成和同场景 A/B 采样工具。
 - session JSONL 已改用 DDNet `ASYNCIO` writer；主线程只提交固定大小的短记录，退出时等待
-  writer 完成并生成 report。当前仍未记录队列深度/丢弃计数，也未实现异常前后的事件 ring buffer。
+  writer 完成并生成 report。non-blocking graphics observer 现在自动记录尝试、成功和丢弃原因
+  （session lock、writer lock、buffer capacity、serialization、session inactive），并在 session
+  末尾写入 `diagnostics_summary`、在 report 中写入同一组摘要；这仍不是异常前后的事件 ring buffer。
 - graphics 对象创建后、backend `Init()` 前已启动最小 Qm session 并注册 listener；失败分支会自动记录 `graphics_init_failed` 并生成尽力而为的 report。诊断初始化阶段不访问未就绪 backend。OpenGL/GLES context 成功后的专属字段已经接入；初始化失败前的具体 Vulkan/device 字段仍未覆盖。
 - resize 事件已接入 runtime，但 renderer switch、device loss、shader failure、fallback 和
   resource rebuild 尚未从各后端统一发出结构化事件。
@@ -108,3 +110,13 @@ status: active
 - diagnostics session 的关闭与 graphics observer 通过可尝试获取的 session 锁协调；non-blocking 写入在 async buffer 容量不足时直接丢弃，不触发 writer 扩容。初始化 pending 事件在统一 replay 队列中按序派发，并复用普通 listener 的异常隔离。
 - Release `game-client`：通过；Release `run_cxx_tests`：373/373 通过；boundary check：通过。
 - 当前工作区 Release smoke：进程正常退出（`CloseMainWindow`，退出码 0），最新 session 21 行全部可解析，含 `session_end`，report 已生成且 `write_failed=false`；本机仍是 `backend_config=Vulkan`、`active_api_name=OpenGL` 的 fallback，未验证 Vulkan 成功路径。
+
+## 诊断丢弃统计增量（2026-09-03）
+
+- non-blocking observer 事件使用原子计数记录 attempts/enqueued/dropped；`enqueued` 只表示
+  成功提交到 `ASYNCIO` 环形缓冲区，不等于已经落盘。丢弃原因分为
+  `session_lock_busy`、`session_inactive`、`writer_lock_busy`、`buffer_capacity` 和
+  `serialization_failure`。
+- `session_start` 增加 schema version 2 和 non-blocking 策略标识；session 结束前写入
+  `diagnostics_summary`，自动 report 同时包含事件计数和 graphics fallback/availability 摘要。
+- 计数读取只发生在 session 收尾和 report 生成路径；事件生产路径不等待、不扩容。

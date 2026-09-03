@@ -69,6 +69,19 @@ void AppendJsonRawField(std::string &Json, const char *pName, const std::string 
 	Json += "\":";
 	Json += Value;
 }
+
+bool BackendNamesMatch(const char *pConfiguredBackend, const char *pActiveApi)
+{
+	if(!pConfiguredBackend || !pActiveApi)
+		return false;
+	if(str_comp_nocase(pConfiguredBackend, "vulkan") == 0)
+		return str_comp_nocase(pActiveApi, "vulkan") == 0;
+	if(str_comp_nocase(pConfiguredBackend, "opengl") == 0)
+		return str_comp_nocase(pActiveApi, "opengl") == 0;
+	if(str_comp_nocase(pConfiguredBackend, "gles") == 0)
+		return str_comp_nocase(pActiveApi, "opengl es") == 0 || str_comp_nocase(pActiveApi, "gles") == 0;
+	return str_comp_nocase(pConfiguredBackend, pActiveApi) == 0;
+}
 }
 
 void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
@@ -92,9 +105,21 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_RenderStart = 0;
 	m_FrameCount = 0;
 	m_WindowFrameCount = 0;
+	m_aBackendConfig[0] = '\0';
+	m_aActiveApiName[0] = '\0';
+	m_GraphicsInfoRecorded = false;
+	m_ActiveApiAvailable = false;
 	m_vUpdateSamples.clear();
 	m_vFrameSamples.clear();
 	m_vRenderSamples.clear();
+	m_NonBlockingEventAttempts.store(0, std::memory_order_relaxed);
+	m_NonBlockingEventEnqueued.store(0, std::memory_order_relaxed);
+	m_NonBlockingEventDropped.store(0, std::memory_order_relaxed);
+	m_NonBlockingSessionLockBusy.store(0, std::memory_order_relaxed);
+	m_NonBlockingSessionInactive.store(0, std::memory_order_relaxed);
+	m_NonBlockingWriterLockBusy.store(0, std::memory_order_relaxed);
+	m_NonBlockingBufferCapacity.store(0, std::memory_order_relaxed);
+	m_NonBlockingSerializationFailures.store(0, std::memory_order_relaxed);
 	m_vUpdateSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
 	m_vFrameSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
 	m_vRenderSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
@@ -150,6 +175,7 @@ void CQmDiagnostics::Shutdown()
 		return;
 
 	WriteWindowSummary();
+	WriteDiagnosticsSummary();
 	WriteJsonLine("{\"type\":\"session_end\"}");
 	aio_close(m_pAsyncSession);
 	aio_wait(m_pAsyncSession);
@@ -241,11 +267,19 @@ void CQmDiagnostics::RecordEvent(const char *pName, const char *pDetails)
 
 void CQmDiagnostics::RecordEventNonBlocking(const char *pName, const char *pDetails)
 {
+	m_NonBlockingEventAttempts.fetch_add(1, std::memory_order_relaxed);
 	if(!m_SessionLock.try_lock())
+	{
+		RecordNonBlockingDrop(ENonBlockingWriteResult::SESSION_LOCK_BUSY);
 		return;
+	}
 	std::unique_lock<CLock> SessionLock(m_SessionLock, std::adopt_lock);
 	if(!m_pAsyncSession || m_WriteFailed)
+	{
+		m_NonBlockingSessionInactive.fetch_add(1, std::memory_order_relaxed);
+		m_NonBlockingEventDropped.fetch_add(1, std::memory_order_relaxed);
 		return;
+	}
 
 	// Graphics callbacks are observers of a real-time path. Keep this path
 	// allocation-free and do not wait for the asynchronous writer lock.
@@ -258,8 +292,16 @@ void CQmDiagnostics::RecordEventNonBlocking(const char *pName, const char *pDeta
 		str_copy(aName, "graphics.event", sizeof(aName));
 	const int Written = str_format(aJson, sizeof(aJson), "{\"type\":\"event\",\"name\":\"%s\",\"details\":\"%s\",\"details_truncated\":%s}", aName, aDetails, DetailsComplete ? "false" : "true");
 	if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aJson))
+	{
+		m_NonBlockingSerializationFailures.fetch_add(1, std::memory_order_relaxed);
+		m_NonBlockingEventDropped.fetch_add(1, std::memory_order_relaxed);
 		return;
-	WriteJsonLine(aJson, true);
+	}
+	const ENonBlockingWriteResult Result = WriteJsonLine(aJson, true);
+	if(Result == ENonBlockingWriteResult::WRITTEN)
+		m_NonBlockingEventEnqueued.fetch_add(1, std::memory_order_relaxed);
+	else
+		RecordNonBlockingDrop(Result);
 }
 
 void CQmDiagnostics::RecordEventImpl(const char *pName, const char *pDetails, bool NonBlocking)
@@ -306,19 +348,19 @@ void CQmDiagnostics::RecordEventImpl(const char *pName, const char *pDetails, bo
 	}
 }
 
-void CQmDiagnostics::WriteJsonLine(const char *pJson, bool NonBlocking)
+CQmDiagnostics::ENonBlockingWriteResult CQmDiagnostics::WriteJsonLine(const char *pJson, bool NonBlocking)
 {
 	if(!m_pAsyncSession || m_WriteFailed)
-		return;
+		return ENonBlockingWriteResult::SESSION_INACTIVE;
 	const size_t Length = std::strlen(pJson);
 	if(Length > std::numeric_limits<unsigned>::max())
-		return;
+		return ENonBlockingWriteResult::BUFFER_CAPACITY;
 	// 同一行必须在一次锁区间内入队，避免未来多线程事件把内容和换行交错。
 	// Graphics callbacks use try-lock so diagnostics cannot stall the render path.
 	if(NonBlocking)
 	{
 		if(!aio_try_lock(m_pAsyncSession))
-			return;
+			return ENonBlockingWriteResult::WRITER_LOCK_BUSY;
 		constexpr unsigned NewlineLength =
 #if defined(CONF_FAMILY_WINDOWS)
 			2;
@@ -328,7 +370,7 @@ void CQmDiagnostics::WriteJsonLine(const char *pJson, bool NonBlocking)
 		if(Length > std::numeric_limits<unsigned>::max() - NewlineLength || !aio_write_would_fit_unlocked(m_pAsyncSession, static_cast<unsigned>(Length) + NewlineLength))
 		{
 			aio_unlock(m_pAsyncSession);
-			return;
+			return ENonBlockingWriteResult::BUFFER_CAPACITY;
 		}
 	}
 	else
@@ -336,6 +378,29 @@ void CQmDiagnostics::WriteJsonLine(const char *pJson, bool NonBlocking)
 	aio_write_unlocked(m_pAsyncSession, pJson, static_cast<unsigned>(Length));
 	aio_write_newline_unlocked(m_pAsyncSession);
 	aio_unlock(m_pAsyncSession);
+	return ENonBlockingWriteResult::WRITTEN;
+}
+
+void CQmDiagnostics::RecordNonBlockingDrop(ENonBlockingWriteResult Reason)
+{
+	m_NonBlockingEventDropped.fetch_add(1, std::memory_order_relaxed);
+	switch(Reason)
+	{
+	case ENonBlockingWriteResult::SESSION_LOCK_BUSY:
+		m_NonBlockingSessionLockBusy.fetch_add(1, std::memory_order_relaxed);
+		break;
+	case ENonBlockingWriteResult::SESSION_INACTIVE:
+		m_NonBlockingSessionInactive.fetch_add(1, std::memory_order_relaxed);
+		break;
+	case ENonBlockingWriteResult::WRITER_LOCK_BUSY:
+		m_NonBlockingWriterLockBusy.fetch_add(1, std::memory_order_relaxed);
+		break;
+	case ENonBlockingWriteResult::BUFFER_CAPACITY:
+		m_NonBlockingBufferCapacity.fetch_add(1, std::memory_order_relaxed);
+		break;
+	case ENonBlockingWriteResult::WRITTEN:
+		break;
+	}
 }
 
 void CQmDiagnostics::CheckAsyncWriteError()
@@ -365,7 +430,7 @@ void CQmDiagnostics::WriteSessionStart()
 	char aTimestamp[64];
 	char aJson[1024];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
-	str_format(aJson, sizeof(aJson), "{\"type\":\"session_start\",\"timestamp\":\"%s\",\"monotonic_ns\":%" PRId64 "}", aTimestamp, m_SessionStart);
+	str_format(aJson, sizeof(aJson), "{\"type\":\"session_start\",\"schema_version\":2,\"timestamp\":\"%s\",\"monotonic_ns\":%" PRId64 ",\"non_blocking_event_policy\":\"try_lock_bounded_buffer\"}", aTimestamp, m_SessionStart);
 	WriteJsonLine(aJson);
 }
 
@@ -393,6 +458,10 @@ void CQmDiagnostics::RecordGraphicsInfo()
 			log_warn("qm/diagnostics", "failed to serialize graphics diagnostic strings");
 			return;
 		}
+		str_copy(m_aBackendConfig, g_Config.m_GfxBackend, sizeof(m_aBackendConfig));
+		str_copy(m_aActiveApiName, pActiveApiName, sizeof(m_aActiveApiName));
+		m_GraphicsInfoRecorded = true;
+		m_ActiveApiAvailable = HasActiveApi;
 
 		AppendJsonRawField(Json, "active_api_available", HasActiveApi ? "true" : "false");
 		AppendJsonRawField(Json, "active_api_major", std::to_string(Major));
@@ -432,6 +501,20 @@ bool CQmDiagnostics::IsActive() const
 	return m_pAsyncSession != nullptr && !m_WriteFailed;
 }
 
+CQmDiagnostics::SNonBlockingDropStats CQmDiagnostics::NonBlockingDropStats() const
+{
+	return {
+		.m_EventAttempts = m_NonBlockingEventAttempts.load(std::memory_order_relaxed),
+		.m_EventEnqueued = m_NonBlockingEventEnqueued.load(std::memory_order_relaxed),
+		.m_EventDropped = m_NonBlockingEventDropped.load(std::memory_order_relaxed),
+		.m_SessionLockBusy = m_NonBlockingSessionLockBusy.load(std::memory_order_relaxed),
+		.m_SessionInactive = m_NonBlockingSessionInactive.load(std::memory_order_relaxed),
+		.m_WriterLockBusy = m_NonBlockingWriterLockBusy.load(std::memory_order_relaxed),
+		.m_BufferCapacity = m_NonBlockingBufferCapacity.load(std::memory_order_relaxed),
+		.m_SerializationFailures = m_NonBlockingSerializationFailures.load(std::memory_order_relaxed),
+	};
+}
+
 void CQmDiagnostics::WriteWindowSummary()
 {
 	if(!m_pAsyncSession || m_vFrameSamples.empty())
@@ -439,6 +522,17 @@ void CQmDiagnostics::WriteWindowSummary()
 
 	char aJson[1024];
 	str_format(aJson, sizeof(aJson), "{\"type\":\"frame_window\",\"frames\":%u,\"frame_interval_avg_ms\":%.3f,\"frame_interval_p95_ms\":%.3f,\"frame_interval_p99_ms\":%.3f,\"frame_interval_max_ms\":%.3f,\"frame_interval_1percent_low_fps\":%.3f,\"update_cpu_avg_ms\":%.3f,\"update_cpu_p95_ms\":%.3f,\"update_cpu_p99_ms\":%.3f,\"update_cpu_max_ms\":%.3f,\"render_cpu_avg_ms\":%.3f,\"render_cpu_p95_ms\":%.3f,\"render_cpu_p99_ms\":%.3f,\"render_cpu_max_ms\":%.3f,\"texture_bytes\":%" PRIu64 ",\"buffer_bytes\":%" PRIu64 ",\"write_failed\":%s}", m_WindowFrameCount, QmDiagnostics::Average(m_vFrameSamples), QmDiagnostics::Percentile(m_vFrameSamples, 0.95), QmDiagnostics::Percentile(m_vFrameSamples, 0.99), QmDiagnostics::Percentile(m_vFrameSamples, 1.0), QmDiagnostics::OnePercentLow(m_vFrameSamples), QmDiagnostics::Average(m_vUpdateSamples), QmDiagnostics::Percentile(m_vUpdateSamples, 0.95), QmDiagnostics::Percentile(m_vUpdateSamples, 0.99), QmDiagnostics::Percentile(m_vUpdateSamples, 1.0), QmDiagnostics::Average(m_vRenderSamples), QmDiagnostics::Percentile(m_vRenderSamples, 0.95), QmDiagnostics::Percentile(m_vRenderSamples, 0.99), QmDiagnostics::Percentile(m_vRenderSamples, 1.0), m_pGraphics ? m_pGraphics->TextureMemoryUsage() : 0, m_pGraphics ? m_pGraphics->BufferMemoryUsage() : 0, m_WriteFailed ? "true" : "false");
+	WriteJsonLine(aJson);
+}
+
+void CQmDiagnostics::WriteDiagnosticsSummary()
+{
+	if(!m_pAsyncSession)
+		return;
+
+	const SNonBlockingDropStats Stats = NonBlockingDropStats();
+	char aJson[1024];
+	str_format(aJson, sizeof(aJson), "{\"type\":\"diagnostics_summary\",\"non_blocking_event_attempts\":%" PRIu64 ",\"non_blocking_event_enqueued\":%" PRIu64 ",\"non_blocking_event_dropped\":%" PRIu64 ",\"drop_session_lock_busy\":%" PRIu64 ",\"drop_session_inactive\":%" PRIu64 ",\"drop_writer_lock_busy\":%" PRIu64 ",\"drop_buffer_capacity\":%" PRIu64 ",\"drop_serialization_failure\":%" PRIu64 "}", Stats.m_EventAttempts, Stats.m_EventEnqueued, Stats.m_EventDropped, Stats.m_SessionLockBusy, Stats.m_SessionInactive, Stats.m_WriterLockBusy, Stats.m_BufferCapacity, Stats.m_SerializationFailures);
 	WriteJsonLine(aJson);
 }
 
@@ -458,11 +552,43 @@ void CQmDiagnostics::WriteReport()
 		log_warn("qm/diagnostics", "failed to open report '%s'", aReportName);
 		return;
 	}
-	char aJson[256];
-	char aSessionName[256];
-	QmDiagnostics::EscapeJson(aSessionName, sizeof(aSessionName), m_aSessionName);
-	str_format(aJson, sizeof(aJson), "{\"type\":\"report\",\"session\":\"%s\",\"frames\":%u,\"write_failed\":%s}", aSessionName, m_FrameCount, m_WriteFailed ? "true" : "false");
-	const bool WriteOk = io_write(Report, aJson, str_length(aJson)) == str_length(aJson) && io_write_newline(Report);
+	std::string Json;
+	try
+	{
+		Json = "{\"type\":\"report\"";
+		if(!AppendJsonStringField(Json, "session", m_aSessionName) || !AppendJsonStringField(Json, "backend_config", m_aBackendConfig) || !AppendJsonStringField(Json, "active_api_name", m_aActiveApiName))
+		{
+			log_warn("qm/diagnostics", "failed to serialize automatic diagnostics report");
+			io_close(Report);
+			m_pStorage->RemoveFile(aReportTmpName, IStorage::TYPE_SAVE);
+			return;
+		}
+		const bool BackendFallback = m_GraphicsInfoRecorded && m_ActiveApiAvailable && str_comp_nocase(m_aBackendConfig, "auto") != 0 && !BackendNamesMatch(m_aBackendConfig, m_aActiveApiName);
+		const SNonBlockingDropStats Stats = NonBlockingDropStats();
+		AppendJsonRawField(Json, "frames", std::to_string(m_FrameCount));
+		AppendJsonRawField(Json, "write_failed", m_WriteFailed ? "true" : "false");
+		AppendJsonRawField(Json, "graphics_info_recorded", m_GraphicsInfoRecorded ? "true" : "false");
+		AppendJsonRawField(Json, "active_api_available", m_ActiveApiAvailable ? "true" : "false");
+		AppendJsonRawField(Json, "backend_fallback", BackendFallback ? "true" : "false");
+		AppendJsonRawField(Json, "non_blocking_event_attempts", std::to_string(Stats.m_EventAttempts));
+		AppendJsonRawField(Json, "non_blocking_event_enqueued", std::to_string(Stats.m_EventEnqueued));
+		AppendJsonRawField(Json, "non_blocking_event_dropped", std::to_string(Stats.m_EventDropped));
+		AppendJsonRawField(Json, "drop_session_lock_busy", std::to_string(Stats.m_SessionLockBusy));
+		AppendJsonRawField(Json, "drop_session_inactive", std::to_string(Stats.m_SessionInactive));
+		AppendJsonRawField(Json, "drop_writer_lock_busy", std::to_string(Stats.m_WriterLockBusy));
+		AppendJsonRawField(Json, "drop_buffer_capacity", std::to_string(Stats.m_BufferCapacity));
+		AppendJsonRawField(Json, "drop_serialization_failure", std::to_string(Stats.m_SerializationFailures));
+		Json += '}';
+	}
+	catch(...)
+	{
+		log_warn("qm/diagnostics", "failed to allocate automatic diagnostics report");
+		io_close(Report);
+		m_pStorage->RemoveFile(aReportTmpName, IStorage::TYPE_SAVE);
+		return;
+	}
+	const size_t JsonLength = Json.size();
+	const bool WriteOk = JsonLength <= std::numeric_limits<unsigned>::max() && io_write(Report, Json.data(), static_cast<unsigned>(JsonLength)) == JsonLength && io_write_newline(Report);
 	const int CloseResult = io_close(Report);
 	if(!WriteOk || CloseResult != 0)
 	{
