@@ -3843,10 +3843,19 @@ public:
 			vExtCStr.emplace_back(Ext.c_str());
 
 #ifdef VK_EXT_debug_utils
+		VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo = {};
+		bool UseDebugCreateInfo = false;
 		if(TryDebugExtensions && (g_Config.m_DbgGfx == DEBUG_GFX_MODE_MINIMUM || g_Config.m_DbgGfx == DEBUG_GFX_MODE_ALL))
 		{
 			// debug message support
 			vExtCStr.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			DebugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+			DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+			DebugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+			DebugCreateInfo.pfnUserCallback = VKDebugCallback;
+			DebugCreateInfo.pUserData = m_pGraphicsDebugCallbackState;
+			UseDebugCreateInfo = true;
+			m_GraphicsDebugCallbackEnabled = true;
 		}
 #endif
 
@@ -3870,6 +3879,14 @@ public:
 			Features.pEnabledValidationFeatures = aEnables.data();
 
 			pExt = &Features;
+		}
+#endif
+
+#ifdef VK_EXT_debug_utils
+		if(UseDebugCreateInfo)
+		{
+			DebugCreateInfo.pNext = pExt;
+			pExt = &DebugCreateInfo;
 		}
 #endif
 
@@ -3898,7 +3915,10 @@ public:
 		}
 
 		if(TryAgain && TryDebugExtensions)
+		{
+			m_GraphicsDebugCallbackEnabled = false;
 			return CreateVulkanInstance(vVKLayers, vVKExtensions, false);
+		}
 
 		if(m_pDiagnostics)
 			str_format(m_pDiagnostics->m_aVulkanInstanceApiVersion, sizeof(m_pDiagnostics->m_aVulkanInstanceApiVersion), "%d.%d.%d", VK_API_VERSION_MAJOR(VK_API_VERSION_1_1), VK_API_VERSION_MINOR(VK_API_VERSION_1_1), VK_API_VERSION_PATCH(VK_API_VERSION_1_1));

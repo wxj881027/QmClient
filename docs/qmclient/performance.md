@@ -35,7 +35,7 @@ status: active
 
 这不是完整性能系统。尚未完成：
 
-- Metal 的后端专属字段、Vulkan instance 创建阶段 validation 消息和跨后端字段收口；Vulkan 基础初始化快照与运行期 validation 消息已接入，但成功路径仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
+- Metal 的后端专属字段和跨后端字段收口；Vulkan 基础初始化快照、instance 创建阶段与运行期 validation 消息已接入，但成功路径仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
 - 非阻塞 GPU query、shader/pipeline 失败、device loss、fallback 和资源重建事件；
 - 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
@@ -86,7 +86,7 @@ status: active
 - Vulkan validation/performance 消息通过 `VK_EXT_debug_utils` callback 进入与 OpenGL/GLES 相同的固定容量 ring 和自动 diagnostics 事件链；callback 的 user data 使用 backend 生命周期之外仍有效的共享状态。
 - 事件使用 Vulkan 专属 `severity_errors`、`severity_warnings`、`severity_info`、`severity_verbose` 和 `severity_unknown` 字段，不把 Vulkan severity 映射为 OpenGL 的 high/medium/low/notification；`last_seen_type` 与 recent message 的 type 保存真实 `VkDebugUtilsMessageTypeFlagsEXT`。
 - `EndCommands()` 按一秒窗口限流 flush，shutdown 和初始化失败回退强制 flush；callback 注销等待 in-flight callback 完成，Vulkan instance 销毁前一定清理 messenger。初始化失败不再清空 instance 句柄后跳过清理。
-- 当前仍未捕获 `vkCreateInstance` 期间的 validation 消息，也未在实际 Vulkan 成功路径上运行；本机默认仍是 Vulkan 请求、OpenGL active 的 fallback。
+- 已通过 `VkInstanceCreateInfo.pNext` 捕获 `vkCreateInstance` 期间的 validation/performance 消息；当前仍未在实际 Vulkan 成功路径上运行，本机默认仍是 Vulkan 请求、OpenGL active 的 fallback。
 
 实际 JSON 字段名为 `active_api_name`（不是 `active_api`）；分析工具应同时读取
 `backend_config` 与 `active_api_name`，并把 `active_api_available=false` 视为不可用状态。
