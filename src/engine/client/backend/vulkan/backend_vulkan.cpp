@@ -142,7 +142,6 @@ static void RecordVulkanDebugMessage(SGraphicsDebugCallbackState *pState, unsign
 	else
 		pState->m_MessageRingLockBusy.fetch_add(1, std::memory_order_relaxed);
 
-	pState->m_MessageCount.fetch_add(1, std::memory_order_relaxed);
 	if((Severity & DEBUG_SEVERITY_ERROR) != 0)
 		pState->m_VulkanSeverityErrorCount.fetch_add(1, std::memory_order_relaxed);
 	else if((Severity & DEBUG_SEVERITY_WARNING) != 0)
@@ -153,6 +152,8 @@ static void RecordVulkanDebugMessage(SGraphicsDebugCallbackState *pState, unsign
 		pState->m_VulkanSeverityVerboseCount.fetch_add(1, std::memory_order_relaxed);
 	else
 		pState->m_VulkanSeverityUnknownCount.fetch_add(1, std::memory_order_relaxed);
+	// 总数最后递增，作为本条消息已经完成写入和分类统计的提交标记。
+	pState->m_MessageCount.fetch_add(1, std::memory_order_release);
 }
 
 static bool AppendEncodedVulkanDebugMessage(char *pDst, size_t DstSize, size_t &Offset, const char *pMessage)
@@ -4719,7 +4720,7 @@ public:
 			return;
 
 		SGraphicsDebugCallbackState *pState = m_pGraphicsDebugCallbackState;
-		const uint64_t MessageCount = pState->m_MessageCount.load(std::memory_order_relaxed);
+		const uint64_t MessageCount = pState->m_MessageCount.load(std::memory_order_acquire);
 		if(MessageCount == 0 || MessageCount == m_LastGraphicsDebugMessageCount)
 			return;
 		const uint64_t Now = time_get_nanoseconds().count();

@@ -447,7 +447,6 @@ static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsi
 	else
 		pState->m_MessageRingLockBusy.fetch_add(1, std::memory_order_relaxed);
 
-	pState->m_MessageCount.fetch_add(1, std::memory_order_relaxed);
 	if(Type == DEBUG_TYPE_ERROR)
 		pState->m_ErrorCount.fetch_add(1, std::memory_order_relaxed);
 	switch(Severity)
@@ -458,6 +457,8 @@ static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsi
 	case DEBUG_SEVERITY_NOTIFICATION: pState->m_NotificationCount.fetch_add(1, std::memory_order_relaxed); break;
 	default: pState->m_UnknownSeverityCount.fetch_add(1, std::memory_order_relaxed); break;
 	}
+	// 总数最后递增，作为本条消息已经完成写入和分类统计的提交标记。
+	pState->m_MessageCount.fetch_add(1, std::memory_order_release);
 }
 
 static bool BeginGraphicsDebugCallback(SGraphicsDebugCallbackState *pState)
@@ -482,7 +483,7 @@ void CCommandProcessorFragment_OpenGL::FlushGraphicsDebugMessages(bool Force)
 		return;
 
 	SGraphicsDebugCallbackState *pState = m_pGraphicsDebugCallbackState;
-	const uint64_t MessageCount = pState->m_MessageCount.load(std::memory_order_relaxed);
+	const uint64_t MessageCount = pState->m_MessageCount.load(std::memory_order_acquire);
 	if(MessageCount == 0 || MessageCount == m_LastGraphicsDebugMessageCount)
 		return;
 	const uint64_t Now = time_get_nanoseconds().count();
