@@ -299,7 +299,37 @@ static const char *GetSeverityString(GLenum Severity)
 
 static bool BeginGraphicsDebugCallback(SGraphicsDebugCallbackState *pState);
 static void EndGraphicsDebugCallback(SGraphicsDebugCallbackState *pState);
-static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsigned int Source, unsigned int Type, unsigned int Id, unsigned int Severity);
+static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsigned int Source, unsigned int Type, unsigned int Id, unsigned int Severity, const char *pMessage, bool MessageTruncated);
+
+static size_t CopyGraphicsDebugMessage(char *pDst, size_t DstSize, const GLchar *pMsg, GLsizei Length, bool &MessageTruncated)
+{
+	MessageTruncated = false;
+	if(pDst == nullptr || DstSize == 0)
+		return 0;
+	if(pMsg == nullptr)
+	{
+		pDst[0] = '\0';
+		return 0;
+	}
+	if(Length > 0)
+	{
+		const size_t CopyLength = std::min(static_cast<size_t>(Length), DstSize - 1);
+		if(CopyLength != 0)
+			std::memcpy(pDst, pMsg, CopyLength);
+		pDst[CopyLength] = '\0';
+		MessageTruncated = static_cast<size_t>(Length) >= DstSize;
+		return CopyLength;
+	}
+	size_t MessageLength = 0;
+	while(MessageLength < DstSize && pMsg[MessageLength] != '\0')
+		++MessageLength;
+	const size_t CopyLength = std::min(MessageLength, DstSize - 1);
+	if(CopyLength != 0)
+		std::memcpy(pDst, pMsg, CopyLength);
+	pDst[CopyLength] = '\0';
+	MessageTruncated = MessageLength == DstSize;
+	return CopyLength;
+}
 
 static void GLAPIENTRY
 GfxOpenGLMessageCallback(GLenum Source,
@@ -313,13 +343,11 @@ GfxOpenGLMessageCallback(GLenum Source,
 	auto *pState = static_cast<SGraphicsDebugCallbackState *>(const_cast<void *>(pUserParam));
 	if(pState == nullptr || !BeginGraphicsDebugCallback(pState))
 		return;
-	char aMessage[512];
-	const size_t MessageLength = pMsg == nullptr || Length <= 0 ? 0 : std::min(static_cast<size_t>(Length), sizeof(aMessage) - 1);
-	if(MessageLength != 0)
-		std::memcpy(aMessage, pMsg, MessageLength);
-	aMessage[MessageLength] = '\0';
+	char aMessage[SGraphicsDebugMessage::MESSAGE_SIZE];
+	bool MessageTruncated = false;
+	CopyGraphicsDebugMessage(aMessage, sizeof(aMessage), pMsg, Length, MessageTruncated);
 	log_log(GetLogSeverity(Severity), "gfx/opengl", "[%s] (importance: %s) %s", GetErrorName(Type), GetSeverityString(Severity), aMessage);
-	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity);
+	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity, aMessage, MessageTruncated);
 	EndGraphicsDebugCallback(pState);
 }
 #else
@@ -335,14 +363,12 @@ GfxOpenGLESMessageCallback(GLenum Source,
 	auto *pState = static_cast<SGraphicsDebugCallbackState *>(const_cast<void *>(pUserParam));
 	if(pState == nullptr || !BeginGraphicsDebugCallback(pState))
 		return;
-	char aMessage[512];
-	const size_t MessageLength = pMsg == nullptr || Length <= 0 ? 0 : std::min(static_cast<size_t>(Length), sizeof(aMessage) - 1);
-	if(MessageLength != 0)
-		std::memcpy(aMessage, pMsg, MessageLength);
-	aMessage[MessageLength] = '\0';
+	char aMessage[SGraphicsDebugMessage::MESSAGE_SIZE];
+	bool MessageTruncated = false;
+	CopyGraphicsDebugMessage(aMessage, sizeof(aMessage), pMsg, Length, MessageTruncated);
 	const LEVEL LogLevel = Severity == GL_DEBUG_SEVERITY_HIGH_KHR ? LEVEL_ERROR : Severity == GL_DEBUG_SEVERITY_MEDIUM_KHR ? LEVEL_WARN : LEVEL_DEBUG;
 	log_log(LogLevel, "gfx/opengles", "debug message id=%u type=0x%x severity=0x%x: %s", Id, Type, Severity, aMessage);
-	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity);
+	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity, aMessage, MessageTruncated);
 	EndGraphicsDebugCallback(pState);
 }
 #endif
@@ -363,13 +389,39 @@ static bool HasGraphicsExtension(const char *pExtensions, const char *pExtension
 	return false;
 }
 
-static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsigned int Source, unsigned int Type, unsigned int Id, unsigned int Severity)
+static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsigned int Source, unsigned int Type, unsigned int Id, unsigned int Severity, const char *pMessage, bool MessageTruncated)
 {
 	constexpr unsigned int DEBUG_TYPE_ERROR = 0x824C;
 	constexpr unsigned int DEBUG_SEVERITY_HIGH = 0x9146;
 	constexpr unsigned int DEBUG_SEVERITY_MEDIUM = 0x9147;
 	constexpr unsigned int DEBUG_SEVERITY_LOW = 0x9148;
 	constexpr unsigned int DEBUG_SEVERITY_NOTIFICATION = 0x826B;
+	if(MessageTruncated)
+		pState->m_MessageRingTruncated.fetch_add(1, std::memory_order_relaxed);
+	pState->m_LastSource.store(Source, std::memory_order_relaxed);
+	pState->m_LastType.store(Type, std::memory_order_relaxed);
+	pState->m_LastId.store(Id, std::memory_order_relaxed);
+	pState->m_LastSeverity.store(Severity, std::memory_order_relaxed);
+	if(!pState->m_MessageLock.test_and_set(std::memory_order_acquire))
+	{
+		const uint32_t RingIndex = pState->m_MessageRingNext;
+		SGraphicsDebugMessage &Message = pState->m_aMessageRing[RingIndex];
+		Message.m_Source = Source;
+		Message.m_Type = Type;
+		Message.m_Id = Id;
+		Message.m_Severity = Severity;
+		Message.m_MessageTruncated = MessageTruncated;
+		str_copy(Message.m_aMessage, pMessage ? pMessage : "", sizeof(Message.m_aMessage));
+		pState->m_MessageRingNext = (RingIndex + 1) % SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY;
+		if(pState->m_MessageRingCount < SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY)
+			++pState->m_MessageRingCount;
+		else
+			++pState->m_MessageRingDropped;
+		pState->m_MessageLock.clear(std::memory_order_release);
+	}
+	else
+		pState->m_MessageRingLockBusy.fetch_add(1, std::memory_order_relaxed);
+
 	pState->m_MessageCount.fetch_add(1, std::memory_order_relaxed);
 	if(Type == DEBUG_TYPE_ERROR)
 		pState->m_ErrorCount.fetch_add(1, std::memory_order_relaxed);
@@ -381,16 +433,6 @@ static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsi
 	case DEBUG_SEVERITY_NOTIFICATION: pState->m_NotificationCount.fetch_add(1, std::memory_order_relaxed); break;
 	default: pState->m_UnknownSeverityCount.fetch_add(1, std::memory_order_relaxed); break;
 	}
-	while(pState->m_LastMessageLock.test_and_set(std::memory_order_acquire))
-	{
-		// callback 线程之间只在极短的固定快照区间竞争，不阻塞图形命令提交。
-		thread_yield();
-	}
-	pState->m_LastSource.store(Source, std::memory_order_relaxed);
-	pState->m_LastType.store(Type, std::memory_order_relaxed);
-	pState->m_LastId.store(Id, std::memory_order_relaxed);
-	pState->m_LastSeverity.store(Severity, std::memory_order_relaxed);
-	pState->m_LastMessageLock.clear(std::memory_order_release);
 }
 
 static bool BeginGraphicsDebugCallback(SGraphicsDebugCallbackState *pState)
@@ -428,19 +470,38 @@ void CCommandProcessorFragment_OpenGL::FlushGraphicsDebugMessages(bool Force)
 	const uint64_t LowCount = pState->m_LowCount.load(std::memory_order_relaxed);
 	const uint64_t NotificationCount = pState->m_NotificationCount.load(std::memory_order_relaxed);
 	const uint64_t UnknownSeverityCount = pState->m_UnknownSeverityCount.load(std::memory_order_relaxed);
+	const uint64_t RecentMessageLockBusy = pState->m_MessageRingLockBusy.load(std::memory_order_relaxed);
+	const uint64_t RecentMessageTruncated = pState->m_MessageRingTruncated.load(std::memory_order_relaxed);
 	uint32_t LastSource = 0;
 	uint32_t LastType = 0;
 	uint32_t LastId = 0;
 	uint32_t LastSeverity = 0;
-	while(pState->m_LastMessageLock.test_and_set(std::memory_order_acquire))
+	SGraphicsDebugMessage aRecentMessages[SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY];
+	uint32_t RecentMessageCount = 0;
+	uint64_t RecentMessageDropped = 0;
+	while(pState->m_MessageLock.test_and_set(std::memory_order_acquire))
 		thread_yield();
 	LastSource = pState->m_LastSource.load(std::memory_order_relaxed);
 	LastType = pState->m_LastType.load(std::memory_order_relaxed);
 	LastId = pState->m_LastId.load(std::memory_order_relaxed);
 	LastSeverity = pState->m_LastSeverity.load(std::memory_order_relaxed);
-	pState->m_LastMessageLock.clear(std::memory_order_release);
-	char aDetails[384];
-	str_format(aDetails, sizeof(aDetails), "backend=%s;scope=backend_attempt_cumulative;messages=%" PRIu64 ";errors=%" PRIu64 ";high=%" PRIu64 ";medium=%" PRIu64 ";low=%" PRIu64 ";notifications=%" PRIu64 ";unknown=%" PRIu64 ";last_source=0x%x;last_type=0x%x;last_id=%u;last_severity=0x%x", m_IsOpenGLES ? "opengles" : "opengl", MessageCount, ErrorCount, HighCount, MediumCount, LowCount, NotificationCount, UnknownSeverityCount, LastSource, LastType, LastId, LastSeverity);
+	RecentMessageCount = pState->m_MessageRingCount;
+	RecentMessageDropped = pState->m_MessageRingDropped;
+	const uint32_t FirstMessage = (pState->m_MessageRingNext + SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY - RecentMessageCount) % SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY;
+	for(uint32_t i = 0; i < RecentMessageCount; ++i)
+		aRecentMessages[i] = pState->m_aMessageRing[(FirstMessage + i) % SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY];
+	pState->m_MessageLock.clear(std::memory_order_release);
+	char aDetails[16 * 1024];
+	int DetailsLength = str_format(aDetails, sizeof(aDetails), "backend=%s;scope=backend_attempt_cumulative;messages=%" PRIu64 ";errors=%" PRIu64 ";high=%" PRIu64 ";medium=%" PRIu64 ";low=%" PRIu64 ";notifications=%" PRIu64 ";unknown=%" PRIu64 ";last_source=0x%x;last_type=0x%x;last_id=%u;last_severity=0x%x;recent_count=%u;recent_dropped=%" PRIu64 ";recent_lock_dropped=%" PRIu64 ";recent_truncated=%" PRIu64, m_IsOpenGLES ? "opengles" : "opengl", MessageCount, ErrorCount, HighCount, MediumCount, LowCount, NotificationCount, UnknownSeverityCount, LastSource, LastType, LastId, LastSeverity, RecentMessageCount, RecentMessageDropped, RecentMessageLockBusy, RecentMessageTruncated);
+	if(DetailsLength < 0)
+		DetailsLength = 0;
+	for(uint32_t i = 0; i < RecentMessageCount && static_cast<size_t>(DetailsLength) < sizeof(aDetails); ++i)
+	{
+		const int Written = str_format(aDetails + DetailsLength, sizeof(aDetails) - static_cast<size_t>(DetailsLength), ";recent_%u_source=0x%x;recent_%u_type=0x%x;recent_%u_id=%u;recent_%u_severity=0x%x;recent_%u_truncated=%s;recent_%u_message=%s", i, aRecentMessages[i].m_Source, i, aRecentMessages[i].m_Type, i, aRecentMessages[i].m_Id, i, aRecentMessages[i].m_Severity, i, aRecentMessages[i].m_MessageTruncated ? "true" : "false", i, aRecentMessages[i].m_aMessage);
+		if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - static_cast<size_t>(DetailsLength))
+			break;
+		DetailsLength += Written;
+	}
 	EmitGraphicsEvent("graphics.opengl.debug_messages", aDetails);
 	m_LastGraphicsDebugEventNs = Now;
 	m_LastGraphicsDebugMessageCount = MessageCount;
@@ -635,6 +696,18 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 	m_pGraphicsDebugCallbackState->m_LowCount.store(0, std::memory_order_relaxed);
 	m_pGraphicsDebugCallbackState->m_NotificationCount.store(0, std::memory_order_relaxed);
 	m_pGraphicsDebugCallbackState->m_UnknownSeverityCount.store(0, std::memory_order_relaxed);
+	while(m_pGraphicsDebugCallbackState->m_MessageLock.test_and_set(std::memory_order_acquire))
+		thread_yield();
+	m_pGraphicsDebugCallbackState->m_MessageRingNext = 0;
+	m_pGraphicsDebugCallbackState->m_MessageRingCount = 0;
+	m_pGraphicsDebugCallbackState->m_MessageRingDropped = 0;
+	m_pGraphicsDebugCallbackState->m_MessageRingLockBusy.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_MessageRingTruncated.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_LastSource.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_LastType.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_LastId.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_LastSeverity.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_MessageLock.clear(std::memory_order_release);
 	if(pCommand->m_pDiagnostics)
 	{
 		*pCommand->m_pDiagnostics = {};

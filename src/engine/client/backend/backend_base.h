@@ -19,9 +19,23 @@ struct SDL_Window;
 
 struct SBackendCapabilities;
 
+struct SGraphicsDebugMessage
+{
+	static constexpr size_t MESSAGE_SIZE = 256;
+
+	uint32_t m_Source = 0;
+	uint32_t m_Type = 0;
+	uint32_t m_Id = 0;
+	uint32_t m_Severity = 0;
+	bool m_MessageTruncated = false;
+	char m_aMessage[MESSAGE_SIZE]{};
+};
+
 // OpenGL debug callback 的 user data 必须在 backend fragment 销毁后仍保持有效，直到 context teardown 完成。
 struct SGraphicsDebugCallbackState
 {
+	static constexpr size_t MESSAGE_RING_CAPACITY = 32;
+
 	std::atomic<bool> m_Closing{false};
 	std::atomic<uint32_t> m_InFlight{0};
 	std::atomic<uint64_t> m_MessageCount{0};
@@ -31,11 +45,17 @@ struct SGraphicsDebugCallbackState
 	std::atomic<uint64_t> m_LowCount{0};
 	std::atomic<uint64_t> m_NotificationCount{0};
 	std::atomic<uint64_t> m_UnknownSeverityCount{0};
-	std::atomic_flag m_LastMessageLock = ATOMIC_FLAG_INIT;
+	std::atomic_flag m_MessageLock = ATOMIC_FLAG_INIT;
 	std::atomic<uint32_t> m_LastSource{0};
 	std::atomic<uint32_t> m_LastType{0};
 	std::atomic<uint32_t> m_LastId{0};
 	std::atomic<uint32_t> m_LastSeverity{0};
+	uint32_t m_MessageRingNext = 0;
+	uint32_t m_MessageRingCount = 0;
+	uint64_t m_MessageRingDropped = 0;
+	std::atomic<uint64_t> m_MessageRingLockBusy{0};
+	std::atomic<uint64_t> m_MessageRingTruncated{0};
+	SGraphicsDebugMessage m_aMessageRing[MESSAGE_RING_CAPACITY]{};
 };
 
 // 可选的图形后端诊断输出。它只由图形线程写入，在命令完成并等待空闲后读取。
