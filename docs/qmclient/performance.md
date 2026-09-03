@@ -120,3 +120,9 @@ status: active
 - `session_start` 增加 schema version 2 和 non-blocking 策略标识；session 结束前写入
   `diagnostics_summary`，自动 report 同时包含事件计数和 graphics fallback/availability 摘要。
 - 计数读取只发生在 session 收尾和 report 生成路径；事件生产路径不等待、不扩容。
+- non-blocking observer 先通过可尝试获取的共享统计闸门进入；shutdown 取得独占闸门后，
+  不再接受新的 observer 统计，并等待已进入的回调结束，再写出 summary/report，避免收尾期间
+  的计数漂移。`active_api_available` 表示当前 backend 名称已识别，另有
+  `active_api_version_available` 表示 driver-age 版本查询可用；不能用后者替代前者，尤其是 GLES。
+- report 同时保留 `requested_backend` 和当前 `backend_config`，fallback 判断以初始化开始时的
+  requested 值为准；`graphics_info_recorded` 仅在 graphics_info 成功提交到 session writer 后置为 true。

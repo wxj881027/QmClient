@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <shared_mutex>
 #include <vector>
 
 class IGraphics;
@@ -73,6 +74,7 @@ private:
 	mutable CLock m_SessionLock;
 	bool m_WriteFailed = false;
 	char m_aSessionName[128]{};
+	char m_aRequestedBackend[256]{};
 	char m_aBackendConfig[256]{};
 	char m_aActiveApiName[64]{};
 	bool m_GraphicsInfoRecorded = false;
@@ -87,6 +89,7 @@ private:
 	std::vector<int64_t> m_vUpdateSamples;
 	std::vector<int64_t> m_vFrameSamples;
 	std::vector<int64_t> m_vRenderSamples;
+	mutable std::shared_mutex m_NonBlockingStatsLock;
 
 	std::atomic<uint64_t> m_NonBlockingEventAttempts{0};
 	std::atomic<uint64_t> m_NonBlockingEventEnqueued{0};

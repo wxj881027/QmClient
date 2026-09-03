@@ -16,6 +16,7 @@
 #include <cinttypes>
 #include <cstring>
 #include <limits>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -105,6 +106,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_RenderStart = 0;
 	m_FrameCount = 0;
 	m_WindowFrameCount = 0;
+	m_aRequestedBackend[0] = '\0';
 	m_aBackendConfig[0] = '\0';
 	m_aActiveApiName[0] = '\0';
 	m_GraphicsInfoRecorded = false;
@@ -159,6 +161,10 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 
 void CQmDiagnostics::RecordGraphicsInitBegin()
 {
+	{
+		CLockScope SessionLock(m_SessionLock);
+		str_copy(m_aRequestedBackend, g_Config.m_GfxBackend, sizeof(m_aRequestedBackend));
+	}
 	RecordEvent("graphics_init_begin", g_Config.m_GfxBackend);
 }
 
@@ -170,6 +176,7 @@ void CQmDiagnostics::RecordGraphicsInitFailed(const char *pDetails)
 
 void CQmDiagnostics::Shutdown()
 {
+	std::unique_lock<std::shared_mutex> NonBlockingStatsLock(m_NonBlockingStatsLock);
 	CLockScope SessionLock(m_SessionLock);
 	if(!m_pAsyncSession)
 		return;
@@ -267,6 +274,9 @@ void CQmDiagnostics::RecordEvent(const char *pName, const char *pDetails)
 
 void CQmDiagnostics::RecordEventNonBlocking(const char *pName, const char *pDetails)
 {
+	if(!m_NonBlockingStatsLock.try_lock_shared())
+		return;
+	std::shared_lock<std::shared_mutex> NonBlockingStatsLock(m_NonBlockingStatsLock, std::adopt_lock);
 	m_NonBlockingEventAttempts.fetch_add(1, std::memory_order_relaxed);
 	if(!m_SessionLock.try_lock())
 	{
@@ -446,9 +456,10 @@ void CQmDiagnostics::RecordGraphicsInfo()
 		int Minor = 0;
 		int Patch = 0;
 		const char *pReportedApiName = nullptr;
-		const bool HasActiveApi = m_pGraphics->GetDriverVersion(GRAPHICS_DRIVER_AGE_TYPE_DEFAULT, Major, Minor, Patch, pReportedApiName, BACKEND_TYPE_AUTO);
+		const bool HasActiveApiVersion = m_pGraphics->GetDriverVersion(GRAPHICS_DRIVER_AGE_TYPE_DEFAULT, Major, Minor, Patch, pReportedApiName, BACKEND_TYPE_AUTO);
 		if(pReportedApiName)
 			pActiveApiName = pReportedApiName;
+		const bool ActiveApiAvailable = pActiveApiName[0] != '\0' && str_comp_nocase(pActiveApiName, "unknown") != 0;
 
 		std::string Json = "{\"type\":\"graphics_info\"";
 		if(!AppendJsonStringField(Json, "backend_config", g_Config.m_GfxBackend) || !AppendJsonStringField(Json, "active_api_name", pActiveApiName) ||
@@ -460,10 +471,9 @@ void CQmDiagnostics::RecordGraphicsInfo()
 		}
 		str_copy(m_aBackendConfig, g_Config.m_GfxBackend, sizeof(m_aBackendConfig));
 		str_copy(m_aActiveApiName, pActiveApiName, sizeof(m_aActiveApiName));
-		m_GraphicsInfoRecorded = true;
-		m_ActiveApiAvailable = HasActiveApi;
 
-		AppendJsonRawField(Json, "active_api_available", HasActiveApi ? "true" : "false");
+		AppendJsonRawField(Json, "active_api_available", ActiveApiAvailable ? "true" : "false");
+		AppendJsonRawField(Json, "active_api_version_available", HasActiveApiVersion ? "true" : "false");
 		AppendJsonRawField(Json, "active_api_major", std::to_string(Major));
 		AppendJsonRawField(Json, "active_api_minor", std::to_string(Minor));
 		AppendJsonRawField(Json, "active_api_patch", std::to_string(Patch));
@@ -480,7 +490,13 @@ void CQmDiagnostics::RecordGraphicsInfo()
 		AppendJsonRawField(Json, "height", std::to_string(m_pGraphics->ScreenHeight()));
 		AppendJsonRawField(Json, "hidpi", std::to_string(m_pGraphics->ScreenHiDPIScale()));
 		Json += '}';
-		WriteJsonLine(Json.c_str());
+		if(WriteJsonLine(Json.c_str()) == ENonBlockingWriteResult::WRITTEN)
+		{
+			m_GraphicsInfoRecorded = true;
+			m_ActiveApiAvailable = ActiveApiAvailable;
+		}
+		else
+			log_warn("qm/diagnostics", "failed to enqueue graphics diagnostic record");
 	}
 	catch(...)
 	{
@@ -556,14 +572,14 @@ void CQmDiagnostics::WriteReport()
 	try
 	{
 		Json = "{\"type\":\"report\"";
-		if(!AppendJsonStringField(Json, "session", m_aSessionName) || !AppendJsonStringField(Json, "backend_config", m_aBackendConfig) || !AppendJsonStringField(Json, "active_api_name", m_aActiveApiName))
+		if(!AppendJsonStringField(Json, "session", m_aSessionName) || !AppendJsonStringField(Json, "requested_backend", m_aRequestedBackend) || !AppendJsonStringField(Json, "backend_config", m_aBackendConfig) || !AppendJsonStringField(Json, "active_api_name", m_aActiveApiName))
 		{
 			log_warn("qm/diagnostics", "failed to serialize automatic diagnostics report");
 			io_close(Report);
 			m_pStorage->RemoveFile(aReportTmpName, IStorage::TYPE_SAVE);
 			return;
 		}
-		const bool BackendFallback = m_GraphicsInfoRecorded && m_ActiveApiAvailable && str_comp_nocase(m_aBackendConfig, "auto") != 0 && !BackendNamesMatch(m_aBackendConfig, m_aActiveApiName);
+		const bool BackendFallback = m_GraphicsInfoRecorded && m_ActiveApiAvailable && str_comp_nocase(m_aRequestedBackend, "auto") != 0 && m_aRequestedBackend[0] != '\0' && !BackendNamesMatch(m_aRequestedBackend, m_aActiveApiName);
 		const SNonBlockingDropStats Stats = NonBlockingDropStats();
 		AppendJsonRawField(Json, "frames", std::to_string(m_FrameCount));
 		AppendJsonRawField(Json, "write_failed", m_WriteFailed ? "true" : "false");
