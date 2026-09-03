@@ -1345,44 +1345,132 @@ protected:
 		}
 	}
 
-	// Queries and logs VK_EXT_device_fault information. Safe to call unconditionally:
-	// it is a no-op unless the extension was enabled at device creation.
+	static bool AppendEncodedVulkanFaultText(char *pDst, size_t DstSize, size_t &Offset, const char *pText)
+	{
+		static constexpr char aHex[] = "0123456789ABCDEF";
+		if(pText == nullptr)
+			return true;
+		for(const auto *pChar = reinterpret_cast<const unsigned char *>(pText); *pChar != '\0'; ++pChar)
+		{
+			const bool Encode = *pChar < 0x20 || *pChar == '%' || *pChar == ';' || *pChar == '=';
+			const size_t EncodedSize = Encode ? 3 : 1;
+			if(Offset + EncodedSize >= DstSize)
+				return false;
+			if(Encode)
+			{
+				pDst[Offset++] = '%';
+				pDst[Offset++] = aHex[*pChar >> 4];
+				pDst[Offset++] = aHex[*pChar & 0xf];
+			}
+			else
+				pDst[Offset++] = static_cast<char>(*pChar);
+		}
+		pDst[Offset] = '\0';
+		return true;
+	}
+
+	// 查询并自动记录 VK_EXT_device_fault 信息；不请求可能很大的 vendor binary dump。
 	void LogDeviceFaultInfo()
 	{
 		if(!m_DeviceFaultAvailable || m_pfnGetDeviceFaultInfoEXT == nullptr)
 			return;
 
+		constexpr uint32_t MAX_CAPTURED_ADDRESS_FAULTS = 8;
+		constexpr uint32_t MAX_CAPTURED_VENDOR_FAULTS = 8;
 		VkDeviceFaultCountsEXT FaultCounts = {};
 		FaultCounts.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT;
-		if(m_pfnGetDeviceFaultInfoEXT(m_VKDevice, &FaultCounts, nullptr) != VK_SUCCESS)
+		const VkResult CountsResult = m_pfnGetDeviceFaultInfoEXT(m_VKDevice, &FaultCounts, nullptr);
+		if(CountsResult != VK_SUCCESS)
+		{
+			char aDetails[160];
+			str_format(aDetails, sizeof(aDetails), "backend=vulkan;available=false;query=counts;result=%d;class=%s", static_cast<int>(CountsResult), VulkanResultClass(CountsResult));
+			EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
 			return;
+		}
 
-		std::vector<VkDeviceFaultAddressInfoEXT> vAddressInfos(FaultCounts.addressInfoCount);
-		std::vector<VkDeviceFaultVendorInfoEXT> vVendorInfos(FaultCounts.vendorInfoCount);
+		const uint32_t AvailableAddressCount = FaultCounts.addressInfoCount;
+		const uint32_t AvailableVendorCount = FaultCounts.vendorInfoCount;
+		const uint32_t RequestedAddressCount = std::min(AvailableAddressCount, MAX_CAPTURED_ADDRESS_FAULTS);
+		const uint32_t RequestedVendorCount = std::min(AvailableVendorCount, MAX_CAPTURED_VENDOR_FAULTS);
+		const uint64_t AvailableVendorBinarySize = FaultCounts.vendorBinarySize;
+		std::array<VkDeviceFaultAddressInfoEXT, MAX_CAPTURED_ADDRESS_FAULTS> aAddressInfos = {};
+		std::array<VkDeviceFaultVendorInfoEXT, MAX_CAPTURED_VENDOR_FAULTS> aVendorInfos = {};
 
 		VkDeviceFaultInfoEXT FaultInfo = {};
 		FaultInfo.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT;
-		FaultInfo.pAddressInfos = vAddressInfos.data();
-		FaultInfo.pVendorInfos = vVendorInfos.data();
-		// We do not request the (potentially large) vendor binary crash dump here.
-		// pVendorBinaryData stays null, so the size passed to the driver must be zero.
+		FaultInfo.pAddressInfos = RequestedAddressCount > 0 ? aAddressInfos.data() : nullptr;
+		FaultInfo.pVendorInfos = RequestedVendorCount > 0 ? aVendorInfos.data() : nullptr;
 		FaultCounts.vendorBinarySize = 0;
-		if(m_pfnGetDeviceFaultInfoEXT(m_VKDevice, &FaultCounts, &FaultInfo) != VK_SUCCESS)
+		FaultCounts.addressInfoCount = RequestedAddressCount;
+		FaultCounts.vendorInfoCount = RequestedVendorCount;
+		const VkResult InfoResult = m_pfnGetDeviceFaultInfoEXT(m_VKDevice, &FaultCounts, &FaultInfo);
+		if(InfoResult != VK_SUCCESS && InfoResult != VK_INCOMPLETE)
+		{
+			char aDetails[192];
+			str_format(aDetails, sizeof(aDetails), "backend=vulkan;available=false;query=info;result=%d;class=%s;available_address_count=%u;available_vendor_count=%u", static_cast<int>(InfoResult), VulkanResultClass(InfoResult), AvailableAddressCount, AvailableVendorCount);
+			EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
 			return;
+		}
+		const uint32_t CapturedAddressCount = std::min(FaultCounts.addressInfoCount, RequestedAddressCount);
+		const uint32_t CapturedVendorCount = std::min(FaultCounts.vendorInfoCount, RequestedVendorCount);
 
 		log_error("gfx/vulkan", "Device fault info (VK_EXT_device_fault): %s", FaultInfo.description);
-		for(uint32_t i = 0; i < FaultCounts.addressInfoCount; ++i)
+		for(uint32_t i = 0; i < CapturedAddressCount; ++i)
 		{
-			const VkDeviceFaultAddressInfoEXT &Info = vAddressInfos[i];
+			const VkDeviceFaultAddressInfoEXT &Info = aAddressInfos[i];
 			log_error("gfx/vulkan", "  address fault: type=%s reportedAddress=0x%" PRIx64 " precision=0x%" PRIx64,
 				DeviceFaultAddressTypeName(Info.addressType), (uint64_t)Info.reportedAddress, (uint64_t)Info.addressPrecision);
 		}
-		for(uint32_t i = 0; i < FaultCounts.vendorInfoCount; ++i)
+		for(uint32_t i = 0; i < CapturedVendorCount; ++i)
 		{
-			const VkDeviceFaultVendorInfoEXT &Info = vVendorInfos[i];
+			const VkDeviceFaultVendorInfoEXT &Info = aVendorInfos[i];
 			log_error("gfx/vulkan", "  vendor fault: %s code=0x%" PRIx64 " data=0x%" PRIx64,
 				Info.description, (uint64_t)Info.vendorFaultCode, (uint64_t)Info.vendorFaultData);
 		}
+
+		char aDetails[16 * 1024];
+		int DetailsLength = str_format(aDetails, sizeof(aDetails), "backend=vulkan;available=true;query_result=%d;query_incomplete=%s;available_address_count=%u;captured_address_count=%u;omitted_address_count=%u;available_vendor_count=%u;captured_vendor_count=%u;omitted_vendor_count=%u;vendor_binary_size=%" PRIu64 ";vendor_binary_requested=false;description=", static_cast<int>(InfoResult), InfoResult == VK_INCOMPLETE ? "true" : "false", AvailableAddressCount, CapturedAddressCount, AvailableAddressCount - CapturedAddressCount, AvailableVendorCount, CapturedVendorCount, AvailableVendorCount - CapturedVendorCount, AvailableVendorBinarySize);
+		if(DetailsLength < 0)
+			DetailsLength = 0;
+		size_t DetailsOffset = static_cast<size_t>(DetailsLength);
+		bool DetailsTruncated = !AppendEncodedVulkanFaultText(aDetails, sizeof(aDetails), DetailsOffset, FaultInfo.description);
+		for(uint32_t i = 0; i < CapturedAddressCount && !DetailsTruncated; ++i)
+		{
+			const auto &Info = aAddressInfos[i];
+			const int Written = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";address_%u_type=%s;address_%u_reported=0x%" PRIx64 ";address_%u_precision=0x%" PRIx64, i, DeviceFaultAddressTypeName(Info.addressType), i, (uint64_t)Info.reportedAddress, i, (uint64_t)Info.addressPrecision);
+			if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - DetailsOffset)
+			{
+				DetailsTruncated = true;
+				break;
+			}
+			DetailsOffset += static_cast<size_t>(Written);
+		}
+		for(uint32_t i = 0; i < CapturedVendorCount && !DetailsTruncated; ++i)
+		{
+			const auto &Info = aVendorInfos[i];
+			const int Written = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";vendor_%u_description=", i);
+			if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - DetailsOffset)
+			{
+				DetailsTruncated = true;
+				break;
+			}
+			DetailsOffset += static_cast<size_t>(Written);
+			if(!AppendEncodedVulkanFaultText(aDetails, sizeof(aDetails), DetailsOffset, Info.description))
+			{
+				DetailsTruncated = true;
+				break;
+			}
+			const int MetadataWritten = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";vendor_%u_code=0x%" PRIx64 ";vendor_%u_data=0x%" PRIx64, i, (uint64_t)Info.vendorFaultCode, i, (uint64_t)Info.vendorFaultData);
+			if(MetadataWritten < 0 || static_cast<size_t>(MetadataWritten) >= sizeof(aDetails) - DetailsOffset)
+			{
+				DetailsTruncated = true;
+				break;
+			}
+			DetailsOffset += static_cast<size_t>(MetadataWritten);
+		}
+		if(DetailsTruncated)
+			str_format(aDetails + std::min(DetailsOffset, sizeof(aDetails) - 1), sizeof(aDetails) - std::min(DetailsOffset, sizeof(aDetails) - 1), ";details_truncated=true");
+		EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
 	}
 #endif
 
@@ -6061,6 +6149,10 @@ public:
 			vkDestroyInstance(m_VKInstance, nullptr);
 			m_VKInstance = VK_NULL_HANDLE;
 		}
+#ifdef VK_EXT_device_fault
+		m_DeviceFaultAvailable = false;
+		m_pfnGetDeviceFaultInfoEXT = nullptr;
+#endif
 	}
 
 	int RecreateSwapChain()
@@ -8065,6 +8157,10 @@ public:
 		m_GraphicsDebugCallbackEnabled = false;
 		m_LastGraphicsDebugEventNs = 0;
 		m_LastGraphicsDebugMessageCount = 0;
+#ifdef VK_EXT_device_fault
+		m_DeviceFaultAvailable = false;
+		m_pfnGetDeviceFaultInfoEXT = nullptr;
+#endif
 		ResetVulkanDebugState(m_pGraphicsDebugCallbackState);
 		if(m_pDiagnostics)
 			*m_pDiagnostics = {};

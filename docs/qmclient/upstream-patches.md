@@ -73,6 +73,7 @@ baseline: ddnet-20.0
   `graphics.swapchain_suboptimal` 以及 `graphics.swapchain_recreate_begin/end`；
   acquire/present 的特殊分支会记录统一的 `stage` 字段，重建事件携带旧/新 image count 和返回值。
   事件只观察现有路径，不改变 Vulkan 的递归重试、错误返回或资源清理顺序。
+- Vulkan `VK_EXT_device_fault` 事件使用固定容量数组和有界摘要，查询失败也记录 `available=false`；不读取 vendor binary。后续同步时保留该诊断旁路，不改变 device-lost 错误处理和资源销毁流程。
 - graphics 事件注册、启动队列入队和 pending 回放增加异常恢复；监听器分配、队列分配或同步异常只丢弃诊断事件并恢复 replay 状态，不传播到原始图形路径。
 - fatal graphics 事件分类先收集所有错误文本再按固定优先级选择根因，避免错误容器顺序变化造成 device lost、pipeline 或 shader 分类漂移。
 - OpenGL/GLES debug callback 的具体消息只写入 backend-owned 固定容量 ring，事件 flush 时复制最近 8 条消息和 ring 覆盖、锁竞争、截断计数；初始化失败回退使用 callback-only shutdown 收口，不引入动态内存或同步 I/O，默认渲染行为不变。
