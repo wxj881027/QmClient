@@ -35,8 +35,8 @@ status: active
 
 这不是完整性能系统。尚未完成：
 
-- Metal 的后端专属字段和跨后端字段收口；Vulkan 基础初始化快照、instance 创建阶段与运行期 validation 消息已接入，但成功路径仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
-- 非阻塞 GPU query、shader/pipeline 失败、device loss、fallback 和资源重建事件；
+- Metal 的后端专属字段和跨后端字段收口；Vulkan 基础初始化快照、instance 创建阶段与运行期 validation 消息、device-fault 事件已接入，但成功路径和 device-lost 仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
+- 非阻塞 GPU query、精确的 shader/pipeline 后端事件、统一 fallback 和跨后端资源重建事件；Vulkan 已有 device loss 与交换链重建的基础事件；
 - 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
 - 日志保留/轮转策略和同场景 A/B 采样工具。
@@ -46,14 +46,13 @@ status: active
   末尾写入 `diagnostics_summary`、在 report 中写入同一组摘要；异常前后的事件 ring buffer
   已由 report 自动导出，但其容量固定且仍没有日志保留/轮转策略。
 - graphics 对象创建后、backend `Init()` 前已启动最小 Qm session 并注册 listener；失败分支会自动记录 `graphics_init_failed` 并生成尽力而为的 report。诊断初始化阶段不访问未就绪 backend。OpenGL/GLES context 成功后的专属字段已经接入；初始化失败前的具体 Vulkan/device 字段仍未覆盖。
-- resize 事件已接入 runtime，但 renderer switch、device loss、shader failure、fallback 和
-  resource rebuild 尚未从各后端统一发出结构化事件。
+- resize 事件已接入 runtime；Vulkan 已有 device loss、shader/pipeline 失败和交换链重建基础事件，但 renderer switch、统一 fallback、OpenGL/GLES 精确 shader 失败和跨后端 resource rebuild 仍未统一。
 - 普通 JSONL 单行在一个 ASYNCIO 锁区间内提交，避免多线程事件把 JSON 内容和换行交错；graphics observer 事件使用固定栈缓冲区和 ASYNCIO try-lock，忙时允许丢弃，避免阻塞渲染/致命错误路径；
   但每 600 个样本的精确分位数排序仍在主线程执行，尚未迁移到后台统计 worker，不能把
   当前诊断开销视为已经量化为零。
 
 因此当前日志只能证明“有自动诊断证据”和“基础帧统计可用”，不能据此宣称已经完成图形后端性能定位。
-通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult` 结构化事件已接入，但 Metal 专属字段、完整 device-fault 事件、shader failure 和资源重建事件仍需分别接入。
+通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult`、device-fault 和交换链重建基础事件已接入，但 Metal 专属字段、GPU query、统一 fallback、跨后端 shader failure 和资源重建事件仍需分别接入。
 
 ## OpenGL/GLES debug callback 增量（2026-09-03）
 
