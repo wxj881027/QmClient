@@ -138,6 +138,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_aActiveApiName[0] = '\0';
 	m_GraphicsInfoRecorded = false;
 	m_ActiveApiAvailable = false;
+	m_BackendFallbackAttempted = false;
 	m_BackendFallbackApplied = false;
 	m_vUpdateSamples.clear();
 	m_vFrameSamples.clear();
@@ -407,8 +408,12 @@ void CQmDiagnostics::UpdateGraphicsSelection(const char *pName, const char *pDet
 	char aValue[32];
 	if(CopyEventField(pDetails, "selection_source", aValue, sizeof(aValue)))
 		str_copy(m_aBackendSelectionSource, aValue, sizeof(m_aBackendSelectionSource));
-	if(str_comp(pName, "graphics.backend_fallback_attempt") == 0 && CopyEventField(pDetails, "applied", aValue, sizeof(aValue)))
-		m_BackendFallbackApplied = m_BackendFallbackApplied || str_comp(aValue, "true") == 0;
+	if(str_comp(pName, "graphics.backend_fallback_attempt") == 0)
+	{
+		m_BackendFallbackAttempted = true;
+		if(CopyEventField(pDetails, "applied", aValue, sizeof(aValue)))
+			m_BackendFallbackApplied = m_BackendFallbackApplied || str_comp(aValue, "true") == 0;
+	}
 }
 
 CQmDiagnostics::ENonBlockingWriteResult CQmDiagnostics::WriteJsonLine(const char *pJson, bool NonBlocking)
@@ -661,6 +666,8 @@ void CQmDiagnostics::WriteReport()
 		AppendJsonRawField(Json, "write_failed", m_WriteFailed ? "true" : "false");
 		AppendJsonRawField(Json, "graphics_info_recorded", m_GraphicsInfoRecorded ? "true" : "false");
 		AppendJsonRawField(Json, "active_api_available", m_ActiveApiAvailable ? "true" : "false");
+		AppendJsonRawField(Json, "backend_fallback_attempted", m_BackendFallbackAttempted ? "true" : "false");
+		AppendJsonRawField(Json, "backend_fallback_applied", m_BackendFallbackApplied ? "true" : "false");
 		AppendJsonRawField(Json, "backend_fallback", BackendFallback ? "true" : "false");
 		AppendJsonRawField(Json, "non_blocking_event_attempts", std::to_string(Stats.m_EventAttempts));
 		AppendJsonRawField(Json, "non_blocking_event_enqueued", std::to_string(Stats.m_EventEnqueued));

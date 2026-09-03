@@ -94,6 +94,7 @@ private:
 	char m_aActiveApiName[64]{};
 	bool m_GraphicsInfoRecorded = false;
 	bool m_ActiveApiAvailable = false;
+	bool m_BackendFallbackAttempted = false;
 	bool m_BackendFallbackApplied = false;
 	int64_t m_SessionStart = 0;
 	int64_t m_UpdateStart = 0;
