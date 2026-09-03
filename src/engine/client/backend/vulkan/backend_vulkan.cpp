@@ -1235,7 +1235,7 @@ protected:
 	}
 #endif
 
-	const char *CheckVulkanCriticalError(VkResult CallResult)
+	const char *CheckVulkanCriticalError(VkResult CallResult, const char *pStage = nullptr)
 	{
 		const char *pCriticalError = nullptr;
 		switch(CallResult)
@@ -1259,6 +1259,12 @@ protected:
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
 		{
+			char aDetails[64];
+			if(pStage != nullptr)
+				str_format(aDetails, sizeof(aDetails), "backend=vulkan;stage=%s", pStage);
+			else
+				str_copy(aDetails, "backend=vulkan");
+			EmitGraphicsEvent("graphics.swapchain_out_of_date", aDetails);
 			if(IsVerbose())
 			{
 				log_debug("gfx/vulkan", "Queueing swap chain recreation because the current is out of date.");
@@ -1289,12 +1295,20 @@ protected:
 		case VK_SUCCESS:
 			break;
 		case VK_SUBOPTIMAL_KHR:
+		{
 			if(IsVerbose())
 			{
 				log_debug("gfx/vulkan", "Queueing swap chain recreation because the current is suboptimal.");
 			}
+			char aDetails[64];
+			if(pStage != nullptr)
+				str_format(aDetails, sizeof(aDetails), "backend=vulkan;stage=%s", pStage);
+			else
+				str_copy(aDetails, "backend=vulkan");
+			EmitGraphicsEvent("graphics.swapchain_suboptimal", aDetails);
 			m_RecreateSwapChain = true;
 			break;
+		}
 		default:
 			m_ErrorHelper = "Unknown error: ";
 			m_ErrorHelper.append(std::to_string(CallResult));
@@ -2405,9 +2419,11 @@ protected:
 		m_LastPresentedSwapChainImageIndex = m_CurImageIndex;
 
 		VkResult QueuePresentRes = vkQueuePresentKHR(m_VKPresentQueue, &PresentInfo);
+		if(QueuePresentRes == VK_SUBOPTIMAL_KHR)
+			EmitGraphicsEvent("graphics.swapchain_suboptimal", "backend=vulkan;stage=present");
 		if(QueuePresentRes != VK_SUCCESS && QueuePresentRes != VK_SUBOPTIMAL_KHR)
 		{
-			const char *pCritErrorMsg = CheckVulkanCriticalError(QueuePresentRes);
+			const char *pCritErrorMsg = CheckVulkanCriticalError(QueuePresentRes, "present");
 			if(pCritErrorMsg != nullptr)
 			{
 				SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "Presenting graphics queue failed.", pCritErrorMsg);
@@ -2435,6 +2451,8 @@ protected:
 		{
 			if(AcqResult == VK_ERROR_OUT_OF_DATE_KHR || m_RecreateSwapChain)
 			{
+				if(AcqResult == VK_ERROR_OUT_OF_DATE_KHR)
+					EmitGraphicsEvent("graphics.swapchain_out_of_date", "backend=vulkan;stage=acquire");
 				m_RecreateSwapChain = false;
 				if(IsVerbose())
 				{
@@ -2445,7 +2463,7 @@ protected:
 			}
 			else
 			{
-				const char *pCritErrorMsg = CheckVulkanCriticalError(AcqResult);
+				const char *pCritErrorMsg = CheckVulkanCriticalError(AcqResult, "acquire");
 				if(pCritErrorMsg != nullptr)
 				{
 					SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "Acquiring next image failed.", pCritErrorMsg);
@@ -5755,6 +5773,10 @@ public:
 	int RecreateSwapChain()
 	{
 		int Ret = 0;
+		const uint32_t OldSwapChainImageCount = m_SwapChainImageCount;
+		char aBeginDetails[64];
+		str_format(aBeginDetails, sizeof(aBeginDetails), "backend=vulkan;old_image_count=%u", OldSwapChainImageCount);
+		EmitGraphicsEvent("graphics.swapchain_recreate_begin", aBeginDetails);
 		vkDeviceWaitIdle(m_VKDevice);
 
 		if(IsVerbose())
@@ -5763,8 +5785,6 @@ public:
 		}
 
 		VkSwapchainKHR OldSwapChain = VK_NULL_HANDLE;
-		uint32_t OldSwapChainImageCount = m_SwapChainImageCount;
-
 		if(m_SwapchainCreated)
 			CleanupVulkanSwapChain(false);
 
@@ -5793,6 +5813,9 @@ public:
 		{
 			log_warn("gfx/vulkan", "Recreating swap chain failed.");
 		}
+		char aEndDetails[96];
+		str_format(aEndDetails, sizeof(aEndDetails), "backend=vulkan;result=%d;old_image_count=%u;new_image_count=%u", Ret, OldSwapChainImageCount, m_SwapChainImageCount);
+		EmitGraphicsEvent("graphics.swapchain_recreate_end", aEndDetails);
 
 		return Ret;
 	}

@@ -14,6 +14,7 @@ struct SDL_Window;
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 struct SBackendCapabilities;
@@ -129,6 +130,7 @@ struct SGfxWarningContainer
 class CCommandProcessorFragment_GLBase
 {
 protected:
+	GRAPHICS_EVENT_FUNC m_GraphicsEventFunc;
 	SGfxErrorContainer m_Error;
 	SGfxWarningContainer m_Warning;
 
@@ -142,11 +144,17 @@ public:
 
 	virtual void StartCommands(size_t CommandCount, size_t EstimatedRenderCallCount) {}
 	virtual void EndCommands() {}
+	void EmitGraphicsEvent(const char *pName, const char *pDetails = nullptr)
+	{
+		if(m_GraphicsEventFunc)
+			m_GraphicsEventFunc(pName, pDetails);
+	}
 
 	const SGfxErrorContainer &GetError() { return m_Error; }
 	virtual void ErroneousCleanup() {}
 
 	const SGfxWarningContainer &GetWarning() { return m_Warning; }
+	void SetGraphicsEventFunc(GRAPHICS_EVENT_FUNC GraphicsEventFunc) { m_GraphicsEventFunc = std::move(GraphicsEventFunc); }
 
 	enum
 	{

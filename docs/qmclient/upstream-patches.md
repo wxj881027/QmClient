@@ -68,6 +68,10 @@ baseline: ddnet-20.0
   其中 shader/pipeline/device loss 需要错误容器提供对应原始文本；当前 OpenGL/GLES 的部分 shader 失败仍按通用初始化失败记录，
   后续再补充精确的 backend 触点。这一步只增加 observer 旁路，不改变原有错误翻译、日志和 `dbg_assert_failed()` 控制流；
   Vulkan 私有 swapchain 重建的 begin/end 事件另作为独立 hook 评估。
+- Vulkan 关键结果现在通过同一事件 sink 记录 `graphics.swapchain_out_of_date`、
+  `graphics.swapchain_suboptimal` 以及 `graphics.swapchain_recreate_begin/end`；
+  acquire/present 的特殊分支会记录统一的 `stage` 字段，重建事件携带旧/新 image count 和返回值。
+  事件只观察现有路径，不改变 Vulkan 的递归重试、错误返回或资源清理顺序。
 - 上游冲突风险：中。新增内容集中在一个可选 command 输出结构和一个 listener 入口；同步时优先保留 upstream 的 command 字段顺序与 backend init 流程，只重放诊断字段和事件调用。
 - 删除条件：上游提供等价的 backend diagnostics sink、统一生命周期事件和自动落盘能力后，移除该输出指针、pending event 缓冲和 Qm 事件映射。
 

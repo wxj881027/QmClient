@@ -229,7 +229,7 @@ void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer)
 	m_pGLBackend->EndCommands();
 }
 
-CCommandProcessor_SDL_GL::CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch)
+CCommandProcessor_SDL_GL::CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch, GRAPHICS_EVENT_FUNC GraphicsEventFunc)
 {
 	m_BackendType = BackendType;
 
@@ -277,6 +277,8 @@ CCommandProcessor_SDL_GL::CCommandProcessor_SDL_GL(EBackendType BackendType, int
 #endif
 	}
 #endif
+	if(m_pGLBackend)
+		m_pGLBackend->SetGraphicsEventFunc(std::move(GraphicsEventFunc));
 }
 
 CCommandProcessor_SDL_GL::~CCommandProcessor_SDL_GL()
@@ -1242,7 +1244,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 	// start the command processor
 	dbg_assert(m_pProcessor == nullptr, "Processor was not cleaned up properly.");
-	m_pProcessor = new CCommandProcessor_SDL_GL(m_BackendType, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch);
+	m_pProcessor = new CCommandProcessor_SDL_GL(m_BackendType, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch, [this](const char *pName, const char *pDetails) {
+		EmitGraphicsEvent(pName, pDetails);
+	});
 	StartProcessor(m_pProcessor);
 
 	// issue init commands for OpenGL and SDL
