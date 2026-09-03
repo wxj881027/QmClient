@@ -67,10 +67,9 @@ baseline: ddnet-20.0
 - `ProcessError()` 在保留 `graphics.backend_error` 通用事件的同时，按统一错误类型和可用的原始后端错误文本发出稳定分类事件：
   `graphics.device_lost`、`graphics.shader_failure`、`graphics.pipeline_failure`、
   `graphics.out_of_memory`、`graphics.swapchain_failure`、命令记录/提交失败和初始化失败。
-  其中 shader/pipeline/device loss 需要错误容器提供对应原始文本；当前 OpenGL/GLES 的部分 shader 失败仍按通用初始化失败记录，
-  后续再补充精确的 backend 触点。这一步只增加 observer 旁路，不改变原有错误翻译、日志和 `dbg_assert_failed()` 控制流；
+  其中 OpenGL/GLES 的部分 shader 失败仍按通用初始化失败记录，后续再补充精确的 backend 触点。这一步只增加 observer 旁路，不改变原有错误翻译、日志和 `dbg_assert_failed()` 控制流；
   Vulkan 私有 swapchain 重建的 begin/end 事件另作为独立 hook 评估。
-- Vulkan 关键结果现在通过同一事件 sink 记录 `graphics.vulkan.result`，包含数值 result、稳定分类和调用 stage；同时记录 `graphics.swapchain_out_of_date`、
+- Vulkan 关键结果现在通过同一事件 sink 记录 `graphics.vulkan.result`，包含数值 result、稳定分类和调用 stage；shader module、pipeline layout、graphics pipeline 的创建失败也会带上明确 stage；同时记录 `graphics.swapchain_out_of_date`、
   `graphics.swapchain_suboptimal` 以及 `graphics.swapchain_recreate_begin/end`；
   acquire/present 的特殊分支会记录统一的 `stage` 字段，重建事件携带旧/新 image count 和返回值。
   事件只观察现有路径，不改变 Vulkan 的递归重试、错误返回或资源清理顺序。

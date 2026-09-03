@@ -5002,9 +5002,14 @@ public:
 		CreateInfo.codeSize = vCode.size();
 		CreateInfo.pCode = (const uint32_t *)(vCode.data());
 
-		if(vkCreateShaderModule(m_VKDevice, &CreateInfo, nullptr, &ShaderModule) != VK_SUCCESS)
+		const VkResult Result = vkCreateShaderModule(m_VKDevice, &CreateInfo, nullptr, &ShaderModule);
+		if(Result != VK_SUCCESS)
 		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Shader module was not created.");
+			const char *pCriticalError = CheckVulkanCriticalError(Result, "shader_module");
+			if(pCriticalError != nullptr)
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Shader module was not created.", pCriticalError);
+			else
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Shader module was not created.");
 			return false;
 		}
 
@@ -5220,9 +5225,14 @@ public:
 		VkPipelineLayout &PipeLayout = GetPipeLayout(PipeContainer, HasSampler, size_t(BlendMode), size_t(DynamicMode));
 		VkPipeline &Pipeline = GetPipeline(PipeContainer, HasSampler, size_t(BlendMode), size_t(DynamicMode));
 
-		if(vkCreatePipelineLayout(m_VKDevice, &PipelineLayoutInfo, nullptr, &PipeLayout) != VK_SUCCESS)
+		const VkResult PipelineLayoutResult = vkCreatePipelineLayout(m_VKDevice, &PipelineLayoutInfo, nullptr, &PipeLayout);
+		if(PipelineLayoutResult != VK_SUCCESS)
 		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating pipeline layout failed.");
+			const char *pCriticalError = CheckVulkanCriticalError(PipelineLayoutResult, "pipeline_layout");
+			if(pCriticalError != nullptr)
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating pipeline layout failed.", pCriticalError);
+			else
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating pipeline layout failed.");
 			return false;
 		}
 
@@ -5256,9 +5266,14 @@ public:
 			PipelineInfo.pDynamicState = &DynamicStateCreate;
 		}
 
-		if(vkCreateGraphicsPipelines(m_VKDevice, VK_NULL_HANDLE, 1, &PipelineInfo, nullptr, &Pipeline) != VK_SUCCESS)
+		const VkResult PipelineResult = vkCreateGraphicsPipelines(m_VKDevice, VK_NULL_HANDLE, 1, &PipelineInfo, nullptr, &Pipeline);
+		if(PipelineResult != VK_SUCCESS)
 		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the graphic pipeline failed.");
+			const char *pCriticalError = CheckVulkanCriticalError(PipelineResult, "graphics_pipeline");
+			if(pCriticalError != nullptr)
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the graphic pipeline failed.", pCriticalError);
+			else
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the graphic pipeline failed.");
 			return false;
 		}
 
