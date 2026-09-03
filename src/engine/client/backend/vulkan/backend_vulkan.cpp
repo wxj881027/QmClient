@@ -44,6 +44,23 @@
 // main render thread. See AllocateVulkanMemory().
 static thread_local bool s_ThreadIsRenderWorker = false;
 
+static const char *VulkanPresentModeName(VkPresentModeKHR PresentMode)
+{
+	switch(PresentMode)
+	{
+	case VK_PRESENT_MODE_IMMEDIATE_KHR:
+		return "immediate";
+	case VK_PRESENT_MODE_MAILBOX_KHR:
+		return "mailbox";
+	case VK_PRESENT_MODE_FIFO_KHR:
+		return "fifo";
+	case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+		return "fifo_relaxed";
+	default:
+		return "unknown";
+	}
+}
+
 #ifndef VK_API_VERSION_MAJOR
 #define VK_API_VERSION_MAJOR VK_VERSION_MAJOR
 #define VK_API_VERSION_MINOR VK_VERSION_MINOR
@@ -929,6 +946,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	std::array<VkSampler, SUPPORTED_SAMPLER_TYPE_COUNT> m_aSamplers;
 
 	class IStorage *m_pStorage;
+	SGraphicsBackendDiagnostics *m_pDiagnostics = nullptr;
 
 	struct SDelayedBufferCleanupItem
 	{
@@ -3562,6 +3580,8 @@ public:
 		}
 
 		vVKExtensions.reserve(ExtCount);
+		if(m_pDiagnostics)
+			m_pDiagnostics->m_VulkanInstanceExtensionCount = static_cast<int>(ExtCount);
 		for(uint32_t i = 0; i < ExtCount; i++)
 		{
 			vVKExtensions.emplace_back(vExtensionList[i]);
@@ -3617,6 +3637,11 @@ public:
 		}
 
 		std::vector<VkLayerProperties> vVKInstanceLayers(LayerCount);
+		if(m_pDiagnostics)
+		{
+			m_pDiagnostics->m_VulkanLayerCount = static_cast<int>(LayerCount);
+			m_pDiagnostics->m_VulkanValidationLayerRequested = !OurVKLayers().empty();
+		}
 		Res = vkEnumerateInstanceLayerProperties(&LayerCount, vVKInstanceLayers.data());
 		if(Res != VK_SUCCESS)
 		{
@@ -3723,6 +3748,8 @@ public:
 		if(TryAgain && TryDebugExtensions)
 			return CreateVulkanInstance(vVKLayers, vVKExtensions, false);
 
+		if(m_pDiagnostics)
+			str_format(m_pDiagnostics->m_aVulkanInstanceApiVersion, sizeof(m_pDiagnostics->m_aVulkanInstanceApiVersion), "%d.%d.%d", VK_API_VERSION_MAJOR(VK_API_VERSION_1_1), VK_API_VERSION_MINOR(VK_API_VERSION_1_1), VK_API_VERSION_PATCH(VK_API_VERSION_1_1));
 		return true;
 	}
 
@@ -3910,6 +3937,21 @@ public:
 			GetVendorString(DeviceProp.vendorID, pVendorName, GPU_INFO_STRING_SIZE);
 			char aDriverVersion[256];
 			FormatDriverVersion(aDriverVersion, DeviceProp.driverVersion, DeviceProp.vendorID);
+			if(m_pDiagnostics)
+			{
+				str_format(m_pDiagnostics->m_aVulkanDeviceApiVersion, sizeof(m_pDiagnostics->m_aVulkanDeviceApiVersion), "%d.%d.%d", DevApiMajor, DevApiMinor, DevApiPatch);
+				str_copy(m_pDiagnostics->m_aVulkanDeviceName, DeviceProp.deviceName);
+				str_copy(m_pDiagnostics->m_aVulkanDriverVersion, aDriverVersion);
+				VkPhysicalDeviceMemoryProperties MemoryProperties;
+				vkGetPhysicalDeviceMemoryProperties(vDeviceList[FoundDeviceIndex], &MemoryProperties);
+				m_pDiagnostics->m_VulkanMemoryHeapCount = static_cast<int>(MemoryProperties.memoryHeapCount);
+				m_pDiagnostics->m_VulkanMemoryTypeCount = static_cast<int>(MemoryProperties.memoryTypeCount);
+				VkPhysicalDeviceFeatures Features;
+				vkGetPhysicalDeviceFeatures(vDeviceList[FoundDeviceIndex], &Features);
+				m_pDiagnostics->m_VulkanTimestampQuerySupported = Features.timestampComputeAndGraphics == VK_TRUE;
+				if(!m_pDiagnostics->m_VulkanTimestampQuerySupported)
+					str_copy(m_pDiagnostics->m_aVulkanTimestampQueryUnavailableReason, "timestampComputeAndGraphics=false");
+			}
 			str_format(pVersionName, GPU_INFO_STRING_SIZE, "Vulkan %d.%d.%d (driver: %s)",
 				DevApiMajor, DevApiMinor, DevApiPatch, aDriverVersion);
 
@@ -3942,6 +3984,8 @@ public:
 		}
 
 		std::vector<VkQueueFamilyProperties> vQueuePropList(FamQueueCount);
+		if(m_pDiagnostics)
+			m_pDiagnostics->m_VulkanQueueFamilyCount = static_cast<int>(FamQueueCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(CurDevice, &FamQueueCount, vQueuePropList.data());
 
 		uint32_t QueueNodeIndex = std::numeric_limits<uint32_t>::max();
@@ -3965,6 +4009,8 @@ public:
 
 		m_VKGPU = CurDevice;
 		m_VKGraphicsQueueIndex = QueueNodeIndex;
+		if(m_pDiagnostics)
+			m_pDiagnostics->m_VulkanGraphicsQueueFamily = static_cast<int>(QueueNodeIndex);
 		return true;
 	}
 
@@ -4057,6 +4103,8 @@ public:
 			VKCreateInfo.pNext = &FaultFeatures;
 		}
 #endif
+		if(m_pDiagnostics)
+			m_pDiagnostics->m_VulkanValidationLayerEnabled = !vLayerCNames.empty();
 
 		if(vkCreateDevice(m_VKGPU, &VKCreateInfo, nullptr, &m_VKDevice) != VK_SUCCESS)
 		{
@@ -4071,6 +4119,11 @@ public:
 			m_DeviceFaultAvailable = m_pfnGetDeviceFaultInfoEXT != nullptr;
 			if(m_DeviceFaultAvailable)
 				log_debug("gfx/vulkan", "VK_EXT_device_fault enabled; detailed fault info will be logged on device loss.");
+			if(m_pDiagnostics)
+			{
+				m_pDiagnostics->m_VulkanDeviceFaultAvailable = m_DeviceFaultAvailable;
+				m_pDiagnostics->m_VulkanDeviceFaultEnabled = true;
+			}
 		}
 #endif
 
@@ -4093,6 +4146,8 @@ public:
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "The device surface does not support presenting the framebuffer to a screen. Maybe the wrong GPU was selected?");
 			return false;
 		}
+		if(m_pDiagnostics)
+			m_pDiagnostics->m_VulkanPresentQueueFamily = static_cast<int>(m_VKGraphicsQueueIndex);
 
 		return true;
 	}
@@ -4122,7 +4177,11 @@ public:
 		for(const auto &Mode : vPresentModeList)
 		{
 			if(Mode == VKIOMode)
+			{
+				if(m_pDiagnostics)
+					str_copy(m_pDiagnostics->m_aVulkanPresentMode, VulkanPresentModeName(VKIOMode));
 				return true;
+			}
 		}
 
 		log_warn("gfx/vulkan", "Requested presentation mode was not available. Falling back to mailbox / FIFO relaxed.");
@@ -4130,12 +4189,20 @@ public:
 		for(const auto &Mode : vPresentModeList)
 		{
 			if(Mode == VKIOMode)
+			{
+				if(m_pDiagnostics)
+					str_copy(m_pDiagnostics->m_aVulkanPresentMode, VulkanPresentModeName(VKIOMode));
 				return true;
+			}
 		}
 
 		log_warn("gfx/vulkan", "Requested presentation mode was not available. Using first available.");
 		if(PresentModeCount > 0)
+		{
 			VKIOMode = vPresentModeList[0];
+			if(m_pDiagnostics)
+				str_copy(m_pDiagnostics->m_aVulkanPresentMode, VulkanPresentModeName(VKIOMode));
+		}
 
 		return true;
 	}
@@ -4251,6 +4318,8 @@ public:
 		{
 			m_VKSurfFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
 			m_VKSurfFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+			if(m_pDiagnostics)
+				str_format(m_pDiagnostics->m_aVulkanSurfaceFormat, sizeof(m_pDiagnostics->m_aVulkanSurfaceFormat), "format=%d;color_space=%d", m_VKSurfFormat.format, m_VKSurfFormat.colorSpace);
 			log_warn("gfx/vulkan", "Surface format was undefined. This can potentially cause bugs.");
 			return true;
 		}
@@ -4260,17 +4329,23 @@ public:
 			if(FindFormat.format == VK_FORMAT_B8G8R8A8_UNORM && FindFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 			{
 				m_VKSurfFormat = FindFormat;
+				if(m_pDiagnostics)
+					str_format(m_pDiagnostics->m_aVulkanSurfaceFormat, sizeof(m_pDiagnostics->m_aVulkanSurfaceFormat), "format=%d;color_space=%d", m_VKSurfFormat.format, m_VKSurfFormat.colorSpace);
 				return true;
 			}
 			else if(FindFormat.format == VK_FORMAT_R8G8B8A8_UNORM && FindFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 			{
 				m_VKSurfFormat = FindFormat;
+				if(m_pDiagnostics)
+					str_format(m_pDiagnostics->m_aVulkanSurfaceFormat, sizeof(m_pDiagnostics->m_aVulkanSurfaceFormat), "format=%d;color_space=%d", m_VKSurfFormat.format, m_VKSurfFormat.colorSpace);
 				return true;
 			}
 		}
 
 		log_warn("gfx/vulkan", "Surface format was not RGBA (or variants of it). This can potentially cause weird looking images (too bright etc.).");
 		m_VKSurfFormat = vSurfFormatList[0];
+		if(m_pDiagnostics)
+			str_format(m_pDiagnostics->m_aVulkanSurfaceFormat, sizeof(m_pDiagnostics->m_aVulkanSurfaceFormat), "format=%d;color_space=%d", m_VKSurfFormat.format, m_VKSurfFormat.colorSpace);
 		return true;
 	}
 
@@ -4331,6 +4406,11 @@ public:
 		{
 			return false;
 		}
+		if(m_pDiagnostics)
+		{
+			m_pDiagnostics->m_VulkanSwapchainWidth = static_cast<int>(m_VKSwapImgAndViewportExtent.m_SwapImageViewport.width);
+			m_pDiagnostics->m_VulkanSwapchainHeight = static_cast<int>(m_VKSwapImgAndViewportExtent.m_SwapImageViewport.height);
+		}
 
 		return true;
 	}
@@ -4354,6 +4434,8 @@ public:
 		}
 
 		m_SwapChainImageCount = ImgCount;
+		if(m_pDiagnostics)
+			m_pDiagnostics->m_VulkanSwapchainImageCount = static_cast<int>(ImgCount);
 
 		m_vSwapChainImages.resize(ImgCount);
 		if(vkGetSwapchainImagesKHR(m_VKDevice, m_VKSwapChain, &ImgCount, m_vSwapChainImages.data()) != VK_SUCCESS)
@@ -4430,6 +4512,8 @@ public:
 		}
 		else
 		{
+			if(m_pDiagnostics)
+				m_pDiagnostics->m_VulkanDebugCallbackEnabled = true;
 			log_info("gfx/vulkan", "Enabled Vulkan debug context.");
 		}
 #endif
@@ -7654,6 +7738,9 @@ public:
 	[[nodiscard]] bool Cmd_PreInit(const CCommandProcessorFragment_GLBase::SCommand_PreInit *pCommand)
 	{
 		m_pGpuList = pCommand->m_pGpuList;
+		m_pDiagnostics = pCommand->m_pDiagnostics;
+		if(m_pDiagnostics)
+			*m_pDiagnostics = {};
 		if(InitVulkanSDL(pCommand->m_pWindow, pCommand->m_Width, pCommand->m_Height, pCommand->m_pRendererString, pCommand->m_pVendorString, pCommand->m_pVersionString) != 0)
 		{
 			m_VKInstance = VK_NULL_HANDLE;

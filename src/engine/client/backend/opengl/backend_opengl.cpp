@@ -305,6 +305,102 @@ GfxOpenGLMessageCallback(GLenum Source,
 }
 #endif
 
+static void CopyGraphicsDiagnosticString(char *pDst, int DstSize, const char *pSrc, bool &Available)
+{
+	if(pSrc == nullptr || pSrc[0] == '\0')
+		return;
+	str_copy(pDst, pSrc, DstSize);
+	Available = true;
+}
+
+static void AppendGraphicsDiagnosticExtension(SGraphicsBackendDiagnostics *pDiagnostics, const char *pExtension)
+{
+	if(pExtension == nullptr || pExtension[0] == '\0')
+		return;
+
+	const int CurrentLength = str_length(pDiagnostics->m_aExtensions);
+	const int ExtensionLength = str_length(pExtension);
+	const int SeparatorLength = CurrentLength == 0 ? 0 : 1;
+	if(CurrentLength + SeparatorLength >= (int)sizeof(pDiagnostics->m_aExtensions))
+	{
+		pDiagnostics->m_ExtensionsTruncated = true;
+		return;
+	}
+	if(SeparatorLength != 0)
+		str_append(pDiagnostics->m_aExtensions, " ");
+	if(CurrentLength + SeparatorLength + ExtensionLength >= (int)sizeof(pDiagnostics->m_aExtensions))
+	{
+		str_append(pDiagnostics->m_aExtensions, pExtension, sizeof(pDiagnostics->m_aExtensions));
+		pDiagnostics->m_ExtensionsTruncated = true;
+		return;
+	}
+	str_append(pDiagnostics->m_aExtensions, pExtension);
+}
+
+static void CollectGraphicsDiagnosticExtensions(SGraphicsBackendDiagnostics *pDiagnostics)
+{
+#ifndef BACKEND_AS_OPENGL_ES
+	if(GLEW_VERSION_3_0 && glGetStringi != nullptr)
+	{
+		GLint ExtensionCount = 0;
+		glGetIntegerv(GL_NUM_EXTENSIONS, &ExtensionCount);
+		if(ExtensionCount >= 0)
+		{
+			pDiagnostics->m_ExtensionCount = ExtensionCount;
+			pDiagnostics->m_ExtensionsAvailable = true;
+			for(GLint i = 0; i < ExtensionCount; ++i)
+				AppendGraphicsDiagnosticExtension(pDiagnostics, (const char *)glGetStringi(GL_EXTENSIONS, i));
+			return;
+		}
+	}
+#elif defined(BACKEND_GL_MODERN_API)
+	GLint ExtensionCount = 0;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &ExtensionCount);
+	if(ExtensionCount >= 0)
+	{
+		pDiagnostics->m_ExtensionCount = ExtensionCount;
+		pDiagnostics->m_ExtensionsAvailable = true;
+		for(GLint i = 0; i < ExtensionCount; ++i)
+			AppendGraphicsDiagnosticExtension(pDiagnostics, (const char *)glGetStringi(GL_EXTENSIONS, i));
+		return;
+	}
+#endif
+
+	const char *pExtensions = (const char *)glGetString(GL_EXTENSIONS);
+	if(pExtensions == nullptr)
+		return;
+	pDiagnostics->m_ExtensionsAvailable = true;
+	int ExtensionCount = 0;
+	for(const char *p = pExtensions; *p; ++p)
+	{
+		if(*p == ' ')
+			++ExtensionCount;
+	}
+	pDiagnostics->m_ExtensionCount = pExtensions[0] == '\0' ? 0 : ExtensionCount + 1;
+	AppendGraphicsDiagnosticExtension(pDiagnostics, pExtensions);
+}
+
+static void CollectGraphicsDiagnosticContext(SGraphicsBackendDiagnostics *pDiagnostics)
+{
+#ifdef BACKEND_AS_OPENGL_ES
+	str_copy(pDiagnostics->m_aContextProfile, "es");
+	pDiagnostics->m_ContextProfileAvailable = true;
+#else
+	if(GLEW_VERSION_3_2)
+	{
+		GLint Profile = 0;
+		glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &Profile);
+		if(Profile & GL_CONTEXT_CORE_PROFILE_BIT)
+			str_copy(pDiagnostics->m_aContextProfile, "core");
+		else if(Profile & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT)
+			str_copy(pDiagnostics->m_aContextProfile, "compatibility");
+		else
+			str_copy(pDiagnostics->m_aContextProfile, "unknown");
+		pDiagnostics->m_ContextProfileAvailable = true;
+	}
+#endif
+}
+
 bool CCommandProcessorFragment_OpenGL::GetPresentedImageData(uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData)
 {
 	if(m_CanvasWidth == 0 || m_CanvasHeight == 0)
@@ -339,6 +435,11 @@ bool CCommandProcessorFragment_OpenGL::GetPresentedImageData(uint32_t &Width, ui
 bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 {
 	m_IsOpenGLES = pCommand->m_RequestedBackend == BACKEND_TYPE_OPENGL_ES;
+	if(pCommand->m_pDiagnostics)
+	{
+		*pCommand->m_pDiagnostics = {};
+		CollectGraphicsDiagnosticContext(pCommand->m_pDiagnostics);
+	}
 
 	*pCommand->m_pReadPresentedImageDataFunc = [this](uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData) {
 		return GetPresentedImageData(Width, Height, Format, vDstData);
@@ -355,6 +456,24 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 
 	const char *pRendererString = (const char *)glGetString(GL_RENDERER);
 	dbg_assert(pRendererString != nullptr, "glGetString(GL_RENDERER) failure");
+	if(pCommand->m_pDiagnostics)
+	{
+		#if !defined(BACKEND_AS_OPENGL_ES) || defined(CONF_BACKEND_OPENGL_ES3)
+		#if !defined(BACKEND_AS_OPENGL_ES)
+		if(GLEW_VERSION_2_0)
+		{
+		#endif
+		const char *pShadingLanguageVersion = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
+		CopyGraphicsDiagnosticString(pCommand->m_pDiagnostics->m_aShadingLanguageVersion, sizeof(pCommand->m_pDiagnostics->m_aShadingLanguageVersion), pShadingLanguageVersion, pCommand->m_pDiagnostics->m_ShadingLanguageVersionAvailable);
+		#if !defined(BACKEND_AS_OPENGL_ES)
+		}
+		#endif
+		#endif
+		CollectGraphicsDiagnosticExtensions(pCommand->m_pDiagnostics);
+		GLint MaxTextureSize = 0;
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &MaxTextureSize);
+		pCommand->m_pDiagnostics->m_MaxTextureSize = MaxTextureSize;
+	}
 
 	str_copy(pCommand->m_pVendorString, pVendorString, GPU_INFO_STRING_SIZE);
 	str_copy(pCommand->m_pVersionString, pVersionString, GPU_INFO_STRING_SIZE);
@@ -587,6 +706,14 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 		glDepthMask(0);
 
 #ifndef BACKEND_AS_OPENGL_ES
+			if(pCommand->m_pDiagnostics)
+			{
+				pCommand->m_pDiagnostics->m_DebugOutputSupported = GLEW_KHR_debug || GLEW_ARB_debug_output;
+				if(!pCommand->m_pDiagnostics->m_DebugOutputSupported)
+					str_copy(pCommand->m_pDiagnostics->m_aDebugCallbackUnavailableReason, "extension_unavailable");
+				else if(g_Config.m_DbgGfx == DEBUG_GFX_MODE_NONE)
+					str_copy(pCommand->m_pDiagnostics->m_aDebugCallbackUnavailableReason, "disabled_by_configuration");
+			}
 		if(g_Config.m_DbgGfx != DEBUG_GFX_MODE_NONE)
 		{
 			if(GLEW_KHR_debug || GLEW_ARB_debug_output)
@@ -596,11 +723,18 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 				{
 					glEnable(GL_DEBUG_OUTPUT);
 					glDebugMessageCallback((GLDEBUGPROC)GfxOpenGLMessageCallback, nullptr);
+					if(pCommand->m_pDiagnostics)
+						pCommand->m_pDiagnostics->m_DebugCallbackEnabled = true;
 				}
 				else if(GLEW_ARB_debug_output)
 				{
 					glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 					glDebugMessageCallbackARB((GLDEBUGPROC)GfxOpenGLMessageCallback, nullptr);
+					if(pCommand->m_pDiagnostics)
+					{
+						pCommand->m_pDiagnostics->m_DebugCallbackEnabled = true;
+						pCommand->m_pDiagnostics->m_DebugCallbackSynchronous = true;
+					}
 				}
 				log_info("gfx/opengl", "Enabled OpenGL debug mode");
 			}
@@ -610,6 +744,13 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 			}
 		}
 #endif
+		#ifdef BACKEND_AS_OPENGL_ES
+		if(pCommand->m_pDiagnostics)
+		{
+				pCommand->m_pDiagnostics->m_DebugOutputSupported = str_find(pCommand->m_pDiagnostics->m_aExtensions, "GL_KHR_debug") != nullptr;
+				str_copy(pCommand->m_pDiagnostics->m_aDebugCallbackUnavailableReason, pCommand->m_pDiagnostics->m_DebugOutputSupported ? "gles_callback_not_wired" : "extension_unavailable");
+		}
+		#endif
 
 		return true;
 	}

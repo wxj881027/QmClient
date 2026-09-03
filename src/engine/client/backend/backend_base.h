@@ -18,6 +18,50 @@ struct SDL_Window;
 
 struct SBackendCapabilities;
 
+// 可选的图形后端诊断输出。它只由图形线程写入，在命令完成并等待空闲后读取。
+struct SGraphicsBackendDiagnostics
+{
+	static constexpr size_t STRING_SIZE = 256;
+	static constexpr size_t EXTENSIONS_SIZE = 4096;
+
+	char m_aShadingLanguageVersion[STRING_SIZE]{};
+	char m_aExtensions[EXTENSIONS_SIZE]{};
+	char m_aContextProfile[32]{};
+	char m_aDebugCallbackUnavailableReason[128]{};
+	char m_aVulkanInstanceApiVersion[STRING_SIZE]{};
+	char m_aVulkanDeviceApiVersion[STRING_SIZE]{};
+	char m_aVulkanDeviceName[STRING_SIZE]{};
+	char m_aVulkanDriverVersion[STRING_SIZE]{};
+	char m_aVulkanPresentMode[32]{};
+	char m_aVulkanSurfaceFormat[64]{};
+	char m_aVulkanTimestampQueryUnavailableReason[128]{};
+	int m_ExtensionCount = -1;
+	int m_MaxTextureSize = 0;
+	int m_VulkanInstanceExtensionCount = -1;
+	int m_VulkanLayerCount = -1;
+	int m_VulkanQueueFamilyCount = -1;
+	int m_VulkanGraphicsQueueFamily = -1;
+	int m_VulkanPresentQueueFamily = -1;
+	int m_VulkanMemoryHeapCount = -1;
+	int m_VulkanMemoryTypeCount = -1;
+	int m_VulkanSwapchainImageCount = -1;
+	int m_VulkanSwapchainWidth = 0;
+	int m_VulkanSwapchainHeight = 0;
+	bool m_ShadingLanguageVersionAvailable = false;
+	bool m_ExtensionsAvailable = false;
+	bool m_ExtensionsTruncated = false;
+	bool m_ContextProfileAvailable = false;
+	bool m_DebugOutputSupported = false;
+	bool m_DebugCallbackEnabled = false;
+	bool m_DebugCallbackSynchronous = false;
+	bool m_VulkanValidationLayerRequested = false;
+	bool m_VulkanValidationLayerEnabled = false;
+	bool m_VulkanDebugCallbackEnabled = false;
+	bool m_VulkanDeviceFaultAvailable = false;
+	bool m_VulkanDeviceFaultEnabled = false;
+	bool m_VulkanTimestampQuerySupported = false;
+};
+
 enum EDebugGfxModes
 {
 	DEBUG_GFX_MODE_NONE = 0,
@@ -126,6 +170,7 @@ public:
 		char *m_pRendererString;
 
 		TTwGraphicsGpuList *m_pGpuList;
+		SGraphicsBackendDiagnostics *m_pDiagnostics = nullptr;
 	};
 
 	struct SCommand_Init : public CCommandBuffer::SCommand
@@ -148,6 +193,7 @@ public:
 		TGLBackendReadPresentedImageData *m_pReadPresentedImageDataFunc;
 
 		SBackendCapabilities *m_pCapabilities;
+		SGraphicsBackendDiagnostics *m_pDiagnostics;
 		int *m_pInitError;
 
 		const char **m_pErrStringPtr;

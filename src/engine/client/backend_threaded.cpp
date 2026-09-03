@@ -60,8 +60,9 @@ void CGraphicsBackend_Threaded::ThreadFunc(void *pUser)
 }
 #endif
 
-CGraphicsBackend_Threaded::CGraphicsBackend_Threaded(TTranslateFunc &&TranslateFunc) :
-	m_TranslateFunc(std::move(TranslateFunc))
+CGraphicsBackend_Threaded::CGraphicsBackend_Threaded(TTranslateFunc &&TranslateFunc, GRAPHICS_EVENT_FUNC GraphicsEventFunc) :
+ m_TranslateFunc(std::move(TranslateFunc)),
+ m_GraphicsEventFunc(std::move(GraphicsEventFunc))
 {
 	m_pProcessor = nullptr;
 	m_Shutdown = true;
@@ -98,6 +99,22 @@ void CGraphicsBackend_Threaded::StopProcessor()
 	}
 	thread_wait(m_pThread);
 #endif
+}
+
+void CGraphicsBackend_Threaded::EmitGraphicsEvent(const char *pName, const char *pDetails)
+{
+	if(!m_GraphicsEventFunc)
+		return;
+
+	try
+	{
+		m_GraphicsEventFunc(pName, pDetails);
+	}
+	catch(...)
+	{
+		// 诊断回调失败不能阻断原始图形错误路径。
+		log_warn("gfx", "graphics event listener failed for '%s'", pName ? pName : "(unnamed)");
+	}
 }
 
 void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
@@ -167,20 +184,27 @@ void CGraphicsBackend_Threaded::WaitForIdle()
 
 void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error)
 {
-	m_FatalError = "";
-	for(const auto &ErrStr : Error.m_vErrors)
+	try
 	{
-		if(!m_FatalError.empty())
+		m_FatalError.clear();
+		for(const auto &ErrStr : Error.m_vErrors)
 		{
-			m_FatalError.append("\n");
+			if(!m_FatalError.empty())
+				m_FatalError.append("\n");
+			if(ErrStr.m_RequiresTranslation)
+				m_FatalError.append(m_TranslateFunc(ErrStr.m_Err.c_str(), ""));
+			else
+				m_FatalError.append(ErrStr.m_Err);
 		}
-		if(ErrStr.m_RequiresTranslation)
-			m_FatalError.append(m_TranslateFunc(ErrStr.m_Err.c_str(), ""));
-		else
-			m_FatalError.append(ErrStr.m_Err);
+		std::string LogMessage = "Graphics Error:\n" + m_FatalError;
+		EmitGraphicsEvent("graphics.backend_error", m_FatalError.c_str());
+		dbg_assert_failed("%s", LogMessage.c_str());
 	}
-	std::string LogMessage = "Graphics Error:\n" + m_FatalError;
-	dbg_assert_failed("%s", LogMessage.c_str());
+	catch(...)
+	{
+		// 格式化或诊断分配失败时仍保持原始 fatal 行为。
+		dbg_assert_failed("Graphics Error: failed to format the fatal error message");
+	}
 }
 
 const char *CGraphicsBackend_Threaded::GetFatalError() const

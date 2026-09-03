@@ -127,6 +127,7 @@ tags
 # tidy-alphabetical-start
 *.a
 *.cmd
+!qmclient_scripts/*.cmd
 *.csv
 *.dll
 *.dmg

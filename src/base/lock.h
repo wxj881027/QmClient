@@ -101,6 +101,11 @@ public:
 		m_Mutex.unlock();
 	}
 
+	bool try_lock()
+	{
+		return m_Mutex.try_lock();
+	}
+
 	// To support negative capabilities, otherwise EXCLUDES(m_Lock) must be used instead of REQUIRES(!m_Lock)
 	const CLock &operator!() const { return *this; }
 

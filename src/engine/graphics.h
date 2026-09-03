@@ -177,6 +177,7 @@ typedef STWGraphicGpu TTwGraphicsGpuList;
 
 typedef std::function<void()> WINDOW_RESIZE_FUNC;
 typedef std::function<void()> WINDOW_PROPS_CHANGED_FUNC;
+typedef std::function<void(const char *, const char *)> GRAPHICS_EVENT_FUNC;
 
 typedef std::function<bool(uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData)> TGLBackendReadPresentedImageData;
 
@@ -315,6 +316,13 @@ public:
 	 * Listens to various window property changes, such as minimize, maximize, move, fullscreen mode
 	 */
 	virtual void AddWindowPropChangeListener(WINDOW_PROPS_CHANGED_FUNC pFunc) = 0;
+	/**
+	 * Listens to structured graphics lifecycle and backend events.
+	 * The callback is executed on the thread that emits the event. Handlers must
+	 * be thread-safe, must not block or call back into graphics, and the strings
+	 * are only valid for the duration of the callback.
+	 */
+	virtual void AddGraphicsEventListener(GRAPHICS_EVENT_FUNC pFunc) { }
 
 	virtual void WindowDestroyNtf(uint32_t WindowId) = 0;
 	virtual void WindowCreateNtf(uint32_t WindowId) = 0;

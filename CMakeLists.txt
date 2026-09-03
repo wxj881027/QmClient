@@ -2718,6 +2718,20 @@ if(CLIENT)
     components/particles.h
     components/players.cpp
     components/players.h
+    components/qmclient/core/qm_diagnostics.cpp
+    components/qmclient/core/qm_diagnostics.h
+    components/qmclient/core/qm_diagnostics_json.h
+    components/qmclient/core/qm_diagnostics_metrics.h
+    components/qmclient/core/qm_game_state_adapter.cpp
+    components/qmclient/core/qm_game_state_adapter.h
+    components/qmclient/core/qm_i18n.h
+    components/qmclient/core/qm_runtime.cpp
+    components/qmclient/core/qm_runtime.h
+    components/qmclient/core/qm_ui_model.cpp
+    components/qmclient/core/qm_ui_model.h
+    components/qmclient/features/player_indicator/qm_player_indicator.cpp
+    components/qmclient/features/player_indicator/qm_player_indicator.h
+    components/qmclient/features/player_indicator/qm_player_indicator_logic.h
     components/race_demo.cpp
     components/race_demo.h
     components/scoreboard.cpp
@@ -3466,6 +3480,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     os_test.cpp
     packer_test.cpp
     prng_test.cpp
+    qmclient_diagnostics_test.cpp
+    qmclient_player_indicator_test.cpp
+    qmclient_ui_model_test.cpp
     replace_words_test.cpp
     score_test.cpp
     secure_random_test.cpp
@@ -3500,6 +3517,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/engine/client/sqlite.cpp
     src/game/client/components/censor.cpp
     src/game/client/components/censor.h
+    src/game/client/components/qmclient/core/qm_ui_model.cpp
     # tidy-alphabetical-end
   )
 

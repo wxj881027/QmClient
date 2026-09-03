@@ -803,3 +803,18 @@ MACRO_CONFIG_INT(ClVideoRecorderFPS, cl_video_recorder_fps, 60, 1, 1000, CFGFLAG
 /*
  * Add config variables for mods below this comment to avoid merge conflicts.
  */
+
+// QmClient: 独立的队友方向指示器，默认关闭以保持 DDNet 行为不变。
+MACRO_CONFIG_INT(QmPlayerIndicator, qm_player_indicator, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show direction indicators for other players")
+MACRO_CONFIG_INT(QmPlayerIndicatorTeamOnly, qm_player_indicator_team_only, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show direction indicators only for players in your team")
+MACRO_CONFIG_INT(QmPlayerIndicatorFrozenOnly, qm_player_indicator_frozen_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show direction indicators only for frozen players")
+MACRO_CONFIG_INT(QmPlayerIndicatorHideVisible, qm_player_indicator_hide_visible, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide direction indicators for players visible on screen")
+MACRO_CONFIG_INT(QmPlayerIndicatorVariableDistance, qm_player_indicator_variable_distance, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Increase indicator distance for farther players")
+MACRO_CONFIG_INT(QmPlayerIndicatorOffset, qm_player_indicator_offset, 42, 16, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Direction indicator offset distance")
+MACRO_CONFIG_INT(QmPlayerIndicatorOffsetMax, qm_player_indicator_offset_max, 100, 16, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Maximum direction indicator offset distance")
+MACRO_CONFIG_INT(QmPlayerIndicatorMaxDistance, qm_player_indicator_max_distance, 1000, 500, 7000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Distance at which the maximum indicator offset is reached")
+MACRO_CONFIG_INT(QmPlayerIndicatorRadius, qm_player_indicator_radius, 4, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Direction indicator radius")
+MACRO_CONFIG_INT(QmPlayerIndicatorOpacity, qm_player_indicator_opacity, 50, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Direction indicator opacity")
+MACRO_CONFIG_INT(QmPlayerIndicatorUseTees, qm_player_indicator_use_tees, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use tee icons instead of circles for direction indicators")
+MACRO_CONFIG_COL(QmPlayerIndicatorAliveColor, qm_player_indicator_alive_color, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Direction indicator color for active players")
+MACRO_CONFIG_COL(QmPlayerIndicatorFrozenColor, qm_player_indicator_frozen_color, 65407, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Direction indicator color for frozen players")

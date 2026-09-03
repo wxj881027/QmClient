@@ -409,7 +409,11 @@ public:
 	virtual void OnNewSnapshot(bool DummySwapped) = 0;
 	virtual void OnEnterGame() = 0;
 	virtual void OnShutdown() = 0;
+	virtual void OnGraphicsInitBegin(IGraphics *pGraphics) { (void)pGraphics; }
+	virtual void OnGraphicsInitFailed(const char *pDetails) { (void)pDetails; }
+	virtual void OnFrameStart() {}
 	virtual void OnRender() = 0;
+	virtual void OnFrameEnd() {}
 	virtual void OnUpdate() = 0;
 	virtual void OnStateChange(int NewState, int OldState) = 0;
 	virtual void OnConnected() = 0;

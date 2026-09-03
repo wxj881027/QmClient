@@ -52,6 +52,7 @@ class CGraphicsBackend_Threaded : public IGraphicsBackend
 {
 private:
 	TTranslateFunc m_TranslateFunc;
+	GRAPHICS_EVENT_FUNC m_GraphicsEventFunc;
 	std::string m_FatalError;
 	SGfxWarningContainer m_Warning;
 
@@ -69,7 +70,7 @@ public:
 		virtual const SGfxWarningContainer &GetWarning() const = 0;
 	};
 
-	CGraphicsBackend_Threaded(TTranslateFunc &&TranslateFunc);
+	CGraphicsBackend_Threaded(TTranslateFunc &&TranslateFunc, GRAPHICS_EVENT_FUNC GraphicsEventFunc);
 
 	void RunBuffer(CCommandBuffer *pBuffer) override;
 	void RunBufferSingleThreadedUnsafe(CCommandBuffer *pBuffer) override;
@@ -81,6 +82,7 @@ public:
 protected:
 	void StartProcessor(ICommandProcessor *pProcessor);
 	void StopProcessor();
+	void EmitGraphicsEvent(const char *pName, const char *pDetails = nullptr);
 
 	bool HasWarning() const
 	{
@@ -224,6 +226,7 @@ class CGraphicsBackend_SDL_GL : public CGraphicsBackend_Threaded
 	int m_NumScreens;
 
 	SBackendCapabilities m_Capabilities;
+	SGraphicsBackendDiagnostics m_Diagnostics;
 
 	char m_aVendorString[GPU_INFO_STRING_SIZE] = {};
 	char m_aVersionString[GPU_INFO_STRING_SIZE] = {};
@@ -235,9 +238,11 @@ class CGraphicsBackend_SDL_GL : public CGraphicsBackend_Threaded
 
 	static EBackendType DetectBackend();
 	static void ClampDriverVersion(EBackendType BackendType);
+	void EmitOpenGLDiagnostics();
+	void EmitVulkanDiagnostics();
 
 public:
-	CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc);
+	CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc, GRAPHICS_EVENT_FUNC GraphicsEventFunc);
 	int Init(const char *pName, int *pScreen, int *pWidth, int *pHeight, int *pRefreshRate, int *pFsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight, int *pCurrentWidth, int *pCurrentHeight, class IStorage *pStorage) override;
 	int Shutdown() override;
 

@@ -59,6 +59,7 @@
 #include "components/nameplates.h"
 #include "components/particles.h"
 #include "components/players.h"
+#include "components/qmclient/core/qm_runtime.h"
 #include "components/race_demo.h"
 #include "components/scoreboard.h"
 #include "components/skins.h"
@@ -190,6 +191,7 @@ public:
 	CMapLayers m_MapLayersForeground = CMapLayers{ERenderType::RENDERTYPE_FOREGROUND};
 	CBackground m_Background;
 	CMenuBackground m_MenuBackground;
+	CQmRuntime m_QmRuntime;
 
 	CMapSounds m_MapSounds;
 
@@ -611,7 +613,9 @@ public:
 
 	// hooks
 	void OnConnected() override;
+	void OnFrameStart() override;
 	void OnRender() override;
+	void OnFrameEnd() override;
 	void OnUpdate() override;
 	void OnDummyDisconnect() override;
 	virtual void OnRelease();
@@ -633,6 +637,8 @@ public:
 	int OnSnapInput(int *pData, bool Dummy, bool Force) override;
 	void OnShutdown() override;
 	void OnEnterGame() override;
+	void OnGraphicsInitBegin(IGraphics *pGraphics) override;
+	void OnGraphicsInitFailed(const char *pDetails) override;
 	void OnRconType(bool UsernameReq) override;
 	void OnRconLine(const char *pLine) override;
 	virtual void OnGameOver();

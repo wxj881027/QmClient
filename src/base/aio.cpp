@@ -192,9 +192,19 @@ static unsigned int next_buffer_size(unsigned int cur_size, unsigned int need_si
 	return cur_size;
 }
 
+bool aio_write_would_fit_unlocked(ASYNCIO *aio, unsigned size)
+{
+	return size < aio->buffer_size - buffer_len(aio);
+}
+
 void aio_lock(ASYNCIO *aio) ACQUIRE(aio->lock)
 {
 	aio->lock.lock();
+}
+
+bool aio_try_lock(ASYNCIO *aio)
+{
+	return aio->lock.try_lock();
 }
 
 void aio_unlock(ASYNCIO *aio) RELEASE(aio->lock)

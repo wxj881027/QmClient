@@ -149,6 +149,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Particles.m_RenderGeneral,
 					      &m_FreezeBars,
 					      &m_DamageInd,
+					      &m_QmRuntime,
 					      &m_Hud,
 					      &m_Spectator,
 					      &m_Emoticon,
@@ -454,6 +455,8 @@ void CGameClient::OnInit()
 
 void CGameClient::OnUpdate()
 {
+	m_QmRuntime.BeginGameUpdate();
+	m_QmRuntime.UpdateFeatureModels();
 	HandleLanguageChanged();
 
 	CUIElementBase::Init(Ui()); // update static pointer because game and editor use separate UI
@@ -495,6 +498,27 @@ void CGameClient::OnUpdate()
 	{
 		pComponent->OnUpdate();
 	}
+	m_QmRuntime.EndGameUpdate();
+}
+
+void CGameClient::OnFrameStart()
+{
+	m_QmRuntime.BeginFrame();
+}
+
+void CGameClient::OnFrameEnd()
+{
+	m_QmRuntime.EndFrame();
+}
+
+void CGameClient::OnGraphicsInitBegin(IGraphics *pGraphics)
+{
+	m_QmRuntime.OnGraphicsInitBegin(pGraphics);
+}
+
+void CGameClient::OnGraphicsInitFailed(const char *pDetails)
+{
+	m_QmRuntime.OnGraphicsInitFailed(pDetails);
 }
 
 void CGameClient::OnInput(const IInput::CEvent &Event)
@@ -769,6 +793,7 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	m_QmRuntime.BeginGameRender();
 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
 	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
 
@@ -897,6 +922,7 @@ void CGameClient::OnRender()
 	}
 
 	UpdateManagedTeeRenderInfos();
+	m_QmRuntime.EndGameRender();
 }
 
 void CGameClient::OnDummyDisconnect()

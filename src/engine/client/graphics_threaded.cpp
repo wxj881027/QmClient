@@ -2420,7 +2420,9 @@ int CGraphics_Threaded::Init()
 	m_FirstFreeBufferObjectIndex = -1;
 	m_FirstFreeQuadContainer = -1;
 
-	m_pBackend = CreateGraphicsBackend(Localize);
+	m_pBackend = CreateGraphicsBackend(Localize, [this](const char *pName, const char *pDetails) {
+		EmitGraphicsEvent(pName, pDetails);
+	});
 	if(InitWindow() != 0)
 		return -1;
 
@@ -2509,6 +2511,7 @@ void CGraphics_Threaded::Minimize()
 
 	for(auto &PropChangedListener : m_vPropChangeListeners)
 		PropChangedListener();
+	EmitGraphicsEvent("graphics.window_properties_changed", "action=minimize");
 }
 
 void CGraphics_Threaded::WarnPngliteIncompatibleImages(bool Warn)
@@ -2528,6 +2531,9 @@ void CGraphics_Threaded::SetWindowParams(int FullscreenMode, bool IsBorderless)
 
 	for(auto &PropChangedListener : m_vPropChangeListeners)
 		PropChangedListener();
+	char aDetails[128];
+	str_format(aDetails, sizeof(aDetails), "action=fullscreen;fullscreen=%d;borderless=%d", g_Config.m_GfxFullscreen, g_Config.m_GfxBorderless);
+	EmitGraphicsEvent("graphics.window_properties_request", aDetails);
 }
 
 bool CGraphics_Threaded::SetWindowScreen(int Index, bool MoveToCenter)
@@ -2542,6 +2548,9 @@ bool CGraphics_Threaded::SetWindowScreen(int Index, bool MoveToCenter)
 
 	for(auto &PropChangedListener : m_vPropChangeListeners)
 		PropChangedListener();
+	char aDetails[128];
+	str_format(aDetails, sizeof(aDetails), "action=display_changed;screen=%d", g_Config.m_GfxScreen);
+	EmitGraphicsEvent("graphics.display_change_request", aDetails);
 
 	return true;
 }
@@ -2598,6 +2607,9 @@ void CGraphics_Threaded::Move(int x, int y)
 
 	for(auto &PropChangedListener : m_vPropChangeListeners)
 		PropChangedListener();
+	char aDetails[128];
+	str_format(aDetails, sizeof(aDetails), "action=display_changed;screen=%d", CurScreen);
+	EmitGraphicsEvent("graphics.display_change_request", aDetails);
 }
 
 void CGraphics_Threaded::SetScreenSize(int Width, int Height)
@@ -2623,6 +2635,9 @@ bool CGraphics_Threaded::Resize(int w, int h, int RefreshRate)
 		CVideoMode CurMode;
 		m_pBackend->GetCurrentVideoMode(CurMode, m_ScreenHiDPIScale, m_DesktopSize.x, m_DesktopSize.y, g_Config.m_GfxScreen);
 		GotResized(w, h, RefreshRate);
+		char aDetails[160];
+		str_format(aDetails, sizeof(aDetails), "action=resize_requested;width=%d;height=%d;refresh_rate=%d", w, h, RefreshRate);
+		EmitGraphicsEvent("graphics.window_resize_requested", aDetails);
 		return true;
 	}
 	return false;
@@ -2687,6 +2702,10 @@ void CGraphics_Threaded::GotResized(int w, int h, int RefreshRate)
 		for(auto &ResizeListener : m_vResizeListeners)
 			ResizeListener();
 	}
+
+	char aDetails[224];
+	str_format(aDetails, sizeof(aDetails), "logical_width=%d;logical_height=%d;canvas_width=%d;canvas_height=%d;refresh_rate=%d;hidpi=%.3f;canvas_changed=%s", g_Config.m_GfxScreenWidth, g_Config.m_GfxScreenHeight, m_ScreenWidth, m_ScreenHeight, m_ScreenRefreshRate, m_ScreenHiDPIScale, (PrevCanvasWidth != m_ScreenWidth || PrevCanvasHeight != m_ScreenHeight) ? "true" : "false");
+	EmitGraphicsEvent("graphics.window_resized", aDetails);
 }
 
 bool CGraphics_Threaded::IsScreenKeyboardShown()
@@ -2702,6 +2721,115 @@ void CGraphics_Threaded::AddWindowResizeListener(WINDOW_RESIZE_FUNC pFunc)
 void CGraphics_Threaded::AddWindowPropChangeListener(WINDOW_PROPS_CHANGED_FUNC pFunc)
 {
 	m_vPropChangeListeners.emplace_back(pFunc);
+}
+
+void CGraphics_Threaded::AddGraphicsEventListener(GRAPHICS_EVENT_FUNC pFunc)
+{
+	if(!pFunc)
+		return;
+
+	bool StartReplay = false;
+	{
+		std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
+		m_vGraphicsEventListeners.emplace_back(std::move(pFunc));
+		if(m_vGraphicsEventListeners.size() == 1 && (!m_vPendingGraphicsEvents.empty() || m_PendingGraphicsEventsDropped != 0))
+		{
+			m_GraphicsEventReplayInProgress = true;
+			StartReplay = true;
+		}
+	}
+
+	if(StartReplay)
+		ReplayPendingGraphicsEvents();
+}
+
+void CGraphics_Threaded::EmitGraphicsEvent(const char *pName, const char *pDetails)
+{
+	// 事件只用于生命周期和诊断，不在每帧命令路径上；串行化整个事件
+	// 分发过程以建立明确的事件线性化顺序。listener 不得回调 graphics。
+	std::lock_guard<std::mutex> DispatchLock(m_GraphicsEventDispatchMutex);
+	{
+		std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
+		if(m_vGraphicsEventListeners.empty() || m_GraphicsEventReplayInProgress)
+		{
+			if(m_vPendingGraphicsEvents.size() < 64)
+				m_vPendingGraphicsEvents.push_back({pName ? pName : "", pDetails ? pDetails : ""});
+			else
+				++m_PendingGraphicsEventsDropped;
+			return;
+		}
+	}
+	DispatchGraphicsEvent(pName, pDetails);
+}
+
+void CGraphics_Threaded::DispatchGraphicsEvent(const char *pName, const char *pDetails)
+{
+	std::vector<GRAPHICS_EVENT_FUNC> Listeners;
+	try
+	{
+		std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
+		Listeners = m_vGraphicsEventListeners;
+	}
+	catch(...)
+	{
+		log_warn("gfx", "failed to snapshot graphics event listeners for '%s'", pName ? pName : "(unnamed)");
+		return;
+	}
+	for(const auto &EventListener : Listeners)
+	{
+		try
+		{
+			if(EventListener)
+				EventListener(pName, pDetails);
+		}
+		catch(...)
+		{
+			// A diagnostic listener is an observer and must not break the
+			// graphics event producer or its fatal error path.
+			log_warn("gfx", "graphics event listener failed for '%s'", pName ? pName : "(unnamed)");
+		}
+	}
+}
+
+void CGraphics_Threaded::ReplayPendingGraphicsEvents()
+{
+	std::lock_guard<std::mutex> DispatchLock(m_GraphicsEventDispatchMutex);
+	for(;;)
+	{
+		SGraphicsEvent Event;
+		unsigned PendingEventsDropped = 0;
+		bool HaveEvent = false;
+		{
+			std::lock_guard<std::mutex> Lock(m_GraphicsEventListenersMutex);
+			if(!m_vPendingGraphicsEvents.empty())
+			{
+				Event = std::move(m_vPendingGraphicsEvents.front());
+				m_vPendingGraphicsEvents.pop_front();
+				HaveEvent = true;
+			}
+			else if(m_PendingGraphicsEventsDropped != 0)
+			{
+				PendingEventsDropped = m_PendingGraphicsEventsDropped;
+				m_PendingGraphicsEventsDropped = 0;
+			}
+			else
+			{
+				m_GraphicsEventReplayInProgress = false;
+				return;
+			}
+		}
+
+		if(HaveEvent)
+		{
+			DispatchGraphicsEvent(Event.m_Name.c_str(), Event.m_Details.c_str());
+		}
+		else
+		{
+			char aDetails[64];
+			str_format(aDetails, sizeof(aDetails), "%u", PendingEventsDropped);
+			DispatchGraphicsEvent("graphics.pending_events_dropped", aDetails);
+		}
+	}
 }
 
 int CGraphics_Threaded::GetWindowScreen()
@@ -2720,6 +2848,9 @@ void CGraphics_Threaded::WindowDestroyNtf(uint32_t WindowId)
 	// wait
 	KickCommandBuffer();
 	WaitForIdle();
+	char aDetails[64];
+	str_format(aDetails, sizeof(aDetails), "window_id=%u", WindowId);
+	EmitGraphicsEvent("graphics.window_destroyed", aDetails);
 }
 
 void CGraphics_Threaded::WindowCreateNtf(uint32_t WindowId)
@@ -2733,6 +2864,9 @@ void CGraphics_Threaded::WindowCreateNtf(uint32_t WindowId)
 	// wait
 	KickCommandBuffer();
 	WaitForIdle();
+	char aDetails[64];
+	str_format(aDetails, sizeof(aDetails), "window_id=%u", WindowId);
+	EmitGraphicsEvent("graphics.window_created", aDetails);
 }
 
 int CGraphics_Threaded::WindowActive()
@@ -2852,6 +2986,7 @@ bool CGraphics_Threaded::SetVSync(bool State)
 	if(RetOk)
 	{
 		g_Config.m_GfxVsync = State;
+	EmitGraphicsEvent("graphics.vsync_request_result", State ? "accepted=true;enabled=true" : "accepted=true;enabled=false");
 	}
 	return RetOk;
 }
@@ -2872,6 +3007,12 @@ bool CGraphics_Threaded::SetMultiSampling(uint32_t ReqMultiSamplingCount, uint32
 	// kick the command buffer
 	KickCommandBuffer();
 	WaitForIdle();
+	if(RetOk)
+	{
+		char aDetails[96];
+		str_format(aDetails, sizeof(aDetails), "requested=%u;actual=%u", ReqMultiSamplingCount, MultiSamplingCountBackend);
+		EmitGraphicsEvent("graphics.multisampling_request_result", aDetails);
+	}
 	return RetOk;
 }
 

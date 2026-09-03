@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -850,6 +851,19 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	std::vector<WINDOW_RESIZE_FUNC> m_vResizeListeners;
 	std::vector<WINDOW_PROPS_CHANGED_FUNC> m_vPropChangeListeners;
+	std::mutex m_GraphicsEventListenersMutex;
+	// 将来自主线程和 graphics worker 的低频诊断事件线性化，避免日志顺序
+	// 取决于 observer 获取诊断 writer 锁的时机。
+	std::mutex m_GraphicsEventDispatchMutex;
+	std::vector<GRAPHICS_EVENT_FUNC> m_vGraphicsEventListeners;
+	struct SGraphicsEvent
+	{
+		std::string m_Name;
+		std::string m_Details;
+	};
+	std::deque<SGraphicsEvent> m_vPendingGraphicsEvents;
+	unsigned m_PendingGraphicsEventsDropped = 0;
+	bool m_GraphicsEventReplayInProgress = false;
 
 	void *AllocCommandBufferData(size_t AllocSize);
 
@@ -890,6 +904,9 @@ class CGraphics_Threaded : public IEngineGraphics
 	}
 
 	void KickCommandBuffer();
+	void EmitGraphicsEvent(const char *pName, const char *pDetails = nullptr);
+	void DispatchGraphicsEvent(const char *pName, const char *pDetails);
+	void ReplayPendingGraphicsEvents();
 
 	void AddBackEndWarningIfExists();
 
@@ -1219,6 +1236,7 @@ public:
 
 	void AddWindowResizeListener(WINDOW_RESIZE_FUNC pFunc) override;
 	void AddWindowPropChangeListener(WINDOW_PROPS_CHANGED_FUNC pFunc) override;
+	void AddGraphicsEventListener(GRAPHICS_EVENT_FUNC pFunc) override;
 	int GetWindowScreen() override;
 
 	void WindowDestroyNtf(uint32_t WindowId) override;
@@ -1276,6 +1294,6 @@ public:
 };
 
 typedef std::function<const char *(const char *, const char *)> TTranslateFunc;
-extern IGraphicsBackend *CreateGraphicsBackend(TTranslateFunc &&TranslateFunc);
+extern IGraphicsBackend *CreateGraphicsBackend(TTranslateFunc &&TranslateFunc, GRAPHICS_EVENT_FUNC GraphicsEventFunc);
 
 #endif // ENGINE_CLIENT_GRAPHICS_THREADED_H

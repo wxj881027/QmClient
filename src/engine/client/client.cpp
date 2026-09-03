@@ -3216,6 +3216,7 @@ void CClient::Run()
 
 	// init graphics
 	m_pGraphics = CreateEngineGraphicsThreaded();
+	GameClient()->OnGraphicsInitBegin(m_pGraphics);
 	Kernel()->RegisterInterface(m_pGraphics); // IEngineGraphics
 	Kernel()->RegisterInterface(static_cast<IGraphics *>(m_pGraphics), false);
 	{
@@ -3228,6 +3229,7 @@ void CClient::Run()
 		}
 		if(!Success)
 		{
+			GameClient()->OnGraphicsInitFailed(MemoryLogger.ConcatenatedLines().c_str());
 			log_error("client", "Failed to initialize the graphics (see details above)");
 			const std::string Message = std::string(
 							    "Failed to initialize the graphics. See details below.\n\n"
@@ -3484,8 +3486,10 @@ void CClient::Run()
 					NextRenderTime = std::max(NextRenderTime + time_freq() / GfxRefreshRate, Now);
 				m_LastRenderTime = Now;
 
+				GameClient()->OnFrameStart();
 				Render();
 				m_pGraphics->Swap();
+				GameClient()->OnFrameEnd();
 			}
 
 			// Wake up for the next update or frame, whichever comes first. While playing, also wake up for

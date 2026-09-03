@@ -25,6 +25,14 @@ ASYNCIO *aio_new(IOHANDLE io);
 void aio_lock(ASYNCIO *aio);
 
 /**
+ * Tries to lock the asynchronous writer without waiting.
+ *
+ * @return `true` if the lock was acquired, or `false` if another operation
+ * currently owns it.
+ */
+bool aio_try_lock(ASYNCIO *aio);
+
+/**
  * Unlocks the `ASYNCIO` structure after finishing the contiguous
  * write.
  *
@@ -65,6 +73,12 @@ void aio_write_newline(ASYNCIO *aio);
  * @param size Number of bytes to write.
  */
 void aio_write_unlocked(ASYNCIO *aio, const void *buffer, unsigned size);
+
+/**
+ * Checks whether an unlocked write fits without reallocating the buffer.
+ * The caller must hold the `ASYNCIO` lock.
+ */
+bool aio_write_would_fit_unlocked(ASYNCIO *aio, unsigned size);
 
 /**
  * Queues a newline for writing. The `ASYNCIO` struct must be locked
