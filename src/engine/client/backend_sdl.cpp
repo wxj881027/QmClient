@@ -572,6 +572,18 @@ static int IsVersionSupportedGlew(EBackendType BackendType, int VersionMajor, in
 }
 #endif // !CONF_HEADLESS_CLIENT
 
+static const char *GraphicsBackendName(EBackendType BackendType)
+{
+	switch(BackendType)
+	{
+	case BACKEND_TYPE_OPENGL: return "opengl";
+	case BACKEND_TYPE_OPENGL_ES: return "opengles";
+	case BACKEND_TYPE_VULKAN: return "vulkan";
+	case BACKEND_TYPE_AUTO: return "auto";
+	default: return "unknown";
+	}
+}
+
 EBackendType CGraphicsBackend_SDL_GL::DetectBackend()
 {
 	EBackendType RetBackendType = BACKEND_TYPE_OPENGL;
@@ -1001,6 +1013,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	if(OldBackendType != BACKEND_TYPE_AUTO &&
 		m_BackendType == BACKEND_TYPE_VULKAN)
 	{
+		const EBackendType FallbackFrom = m_BackendType;
 		// try default opengl settings
 		str_copy(g_Config.m_GfxBackend, "OpenGL");
 		g_Config.m_GfxGLMajor = 3;
@@ -1010,6 +1023,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		g_Config.m_Gfx3DTextureAnalysisRan = 0;
 		g_Config.m_GfxDriverIsBlocked = 0;
 		m_BackendType = DetectBackend();
+		char aDetails[160];
+		str_format(aDetails, sizeof(aDetails), "from=%s;requested_to=opengl;to=%s;applied=%s;selection_source=%s;reason=backend_init_retry", GraphicsBackendName(FallbackFrom), GraphicsBackendName(m_BackendType), m_BackendType != FallbackFrom ? "true" : "false", SDL_getenv("DDNET_DRIVER") != nullptr ? "environment" : "config");
+		EmitGraphicsEvent("graphics.backend_fallback_attempt", aDetails);
 	}
 
 	ClampDriverVersion(m_BackendType);
