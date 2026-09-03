@@ -25,6 +25,33 @@ class IStorage;
 
 // ------------ CGraphicsBackend_Threaded
 
+static const char *GraphicsErrorEventName(const SGfxErrorContainer &Error)
+{
+	for(const auto &ErrStr : Error.m_vErrors)
+	{
+		if(str_find_nocase(ErrStr.m_Err.c_str(), "device lost") != nullptr)
+			return "graphics.device_lost";
+		if(str_find_nocase(ErrStr.m_Err.c_str(), "shader") != nullptr)
+			return "graphics.shader_failure";
+		if(str_find_nocase(ErrStr.m_Err.c_str(), "pipeline") != nullptr)
+			return "graphics.pipeline_failure";
+	}
+
+	switch(Error.m_ErrorType)
+	{
+	case GFX_ERROR_TYPE_INIT: return "graphics.initialization_failure";
+	case GFX_ERROR_TYPE_OUT_OF_MEMORY_IMAGE:
+	case GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER:
+	case GFX_ERROR_TYPE_OUT_OF_MEMORY_STAGING: return "graphics.out_of_memory";
+	case GFX_ERROR_TYPE_RENDER_RECORDING: return "graphics.command_recording_failure";
+	case GFX_ERROR_TYPE_RENDER_CMD_FAILED: return "graphics.command_failure";
+	case GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED: return "graphics.queue_submit_failure";
+	case GFX_ERROR_TYPE_SWAP_FAILED: return "graphics.swapchain_failure";
+	case GFX_ERROR_TYPE_UNKNOWN:
+	default: return "graphics.unknown_failure";
+	}
+}
+
 // Run everything single threaded when compiling for Emscripten, as context binding does not work outside of the main thread with SDL2.
 // TODO SDL3: Check if SDL3 supports threaded graphics and PROXY_TO_PTHREAD, OFFSCREENCANVAS_SUPPORT and OFFSCREEN_FRAMEBUFFER correctly.
 #if !defined(CONF_PLATFORM_EMSCRIPTEN)
@@ -197,6 +224,7 @@ void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error)
 				m_FatalError.append(ErrStr.m_Err);
 		}
 		std::string LogMessage = "Graphics Error:\n" + m_FatalError;
+		EmitGraphicsEvent(GraphicsErrorEventName(Error), m_FatalError.c_str());
 		EmitGraphicsEvent("graphics.backend_error", m_FatalError.c_str());
 		dbg_assert_failed("%s", LogMessage.c_str());
 	}

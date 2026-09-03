@@ -62,6 +62,12 @@ baseline: ddnet-20.0
 - 默认渲染、debug 配置和 API 选择不变；采集失败只写 `available=false` 或明确的不可用原因，不阻断启动。
 - 监听器回放在 Qm session 建立后进行；注册、pending 队列和 listener 快照读取使用窄 mutex，回调在锁外执行并对单个 listener 异常隔离，快照失败只丢弃当前事件，回放期间的新事件继续进入同一队列，避免乱序；这仍不是每帧路径的同步保证。窗口属性/显示器切换记录为 request，VSync/MSAA 记录为 request result，不把后端接受请求等同于 swapchain 或 context 已完成重建。
 - fatal graphics error 的 observer 使用有界 non-blocking 写入；在格式化、分配、session 关闭、writer 忙、writer 容量不足或 observer 异常时仍回到原有 `dbg_assert_failed()`，诊断失败不能替代原始 fatal 行为。
+- `ProcessError()` 在保留 `graphics.backend_error` 通用事件的同时，按统一错误类型和可用的原始后端错误文本发出稳定分类事件：
+  `graphics.device_lost`、`graphics.shader_failure`、`graphics.pipeline_failure`、
+  `graphics.out_of_memory`、`graphics.swapchain_failure`、命令记录/提交失败和初始化失败。
+  其中 shader/pipeline/device loss 需要错误容器提供对应原始文本；当前 OpenGL/GLES 的部分 shader 失败仍按通用初始化失败记录，
+  后续再补充精确的 backend 触点。这一步只增加 observer 旁路，不改变原有错误翻译、日志和 `dbg_assert_failed()` 控制流；
+  Vulkan 私有 swapchain 重建的 begin/end 事件另作为独立 hook 评估。
 - 上游冲突风险：中。新增内容集中在一个可选 command 输出结构和一个 listener 入口；同步时优先保留 upstream 的 command 字段顺序与 backend init 流程，只重放诊断字段和事件调用。
 - 删除条件：上游提供等价的 backend diagnostics sink、统一生命周期事件和自动落盘能力后，移除该输出指针、pending event 缓冲和 Qm 事件映射。
 
