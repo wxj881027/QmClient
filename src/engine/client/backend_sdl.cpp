@@ -1312,10 +1312,14 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 	if(InitError != 0)
 	{
-		if(InitError != -2)
+		char aDetails[64];
+		str_format(aDetails, sizeof(aDetails), "error_code=%d", InitError);
+		EmitGraphicsEvent("graphics.backend_init_failed", aDetails);
+		if(InitError != -2 || m_BackendType == BACKEND_TYPE_OPENGL || m_BackendType == BACKEND_TYPE_OPENGL_ES)
 		{
 			// shutdown the context, as it might have been initialized
 			CCommandProcessorFragment_GLBase::SCommand_Shutdown CmdGL;
+			CmdGL.m_CallbackOnly = InitError == -2;
 			CmdBuffer.AddCommandUnsafe(CmdGL);
 			RunBuffer(&CmdBuffer);
 			WaitForIdle();

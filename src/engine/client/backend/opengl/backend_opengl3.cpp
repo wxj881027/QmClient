@@ -476,6 +476,12 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
 {
+	if(pCommand->m_CallbackOnly)
+	{
+		CCommandProcessorFragment_OpenGL::Cmd_Shutdown(pCommand);
+		return;
+	}
+
 	glUseProgram(0);
 
 	m_pPrimitiveProgram->DeleteProgram();

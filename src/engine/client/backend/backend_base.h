@@ -266,6 +266,7 @@ public:
 	{
 		SCommand_Shutdown() :
 			SCommand(CMD_SHUTDOWN) {}
+		bool m_CallbackOnly = false;
 	};
 
 	struct SCommand_PostShutdown : public CCommandBuffer::SCommand

@@ -331,6 +331,31 @@ static size_t CopyGraphicsDebugMessage(char *pDst, size_t DstSize, const GLchar 
 	return CopyLength;
 }
 
+static bool AppendEncodedGraphicsDebugMessage(char *pDst, size_t DstSize, size_t &Offset, const char *pMessage)
+{
+	static constexpr char aHex[] = "0123456789ABCDEF";
+	if(pMessage == nullptr)
+		return true;
+	for(const auto *pChar = reinterpret_cast<const unsigned char *>(pMessage); *pChar != '\0'; ++pChar)
+	{
+		const bool Encode = *pChar < 0x20 || *pChar == '%' || *pChar == ';' || *pChar == '=';
+		const size_t EncodedSize = Encode ? 3 : 1;
+		if(Offset + EncodedSize >= DstSize)
+			return false;
+		if(Encode)
+		{
+			pDst[Offset++] = '%';
+			pDst[Offset++] = aHex[*pChar >> 4];
+			pDst[Offset++] = aHex[*pChar & 0xf];
+		}
+		else
+			pDst[Offset++] = static_cast<char>(*pChar);
+	}
+	if(Offset < DstSize)
+		pDst[Offset] = '\0';
+	return true;
+}
+
 static void GLAPIENTRY
 GfxOpenGLMessageCallback(GLenum Source,
 	GLenum Type,
@@ -343,11 +368,11 @@ GfxOpenGLMessageCallback(GLenum Source,
 	auto *pState = static_cast<SGraphicsDebugCallbackState *>(const_cast<void *>(pUserParam));
 	if(pState == nullptr || !BeginGraphicsDebugCallback(pState))
 		return;
-	char aMessage[SGraphicsDebugMessage::MESSAGE_SIZE];
+	char aMessage[512];
 	bool MessageTruncated = false;
 	CopyGraphicsDebugMessage(aMessage, sizeof(aMessage), pMsg, Length, MessageTruncated);
 	log_log(GetLogSeverity(Severity), "gfx/opengl", "[%s] (importance: %s) %s", GetErrorName(Type), GetSeverityString(Severity), aMessage);
-	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity, aMessage, MessageTruncated);
+	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity, aMessage, MessageTruncated || str_length(aMessage) >= SGraphicsDebugMessage::MESSAGE_SIZE);
 	EndGraphicsDebugCallback(pState);
 }
 #else
@@ -363,12 +388,12 @@ GfxOpenGLESMessageCallback(GLenum Source,
 	auto *pState = static_cast<SGraphicsDebugCallbackState *>(const_cast<void *>(pUserParam));
 	if(pState == nullptr || !BeginGraphicsDebugCallback(pState))
 		return;
-	char aMessage[SGraphicsDebugMessage::MESSAGE_SIZE];
+	char aMessage[512];
 	bool MessageTruncated = false;
 	CopyGraphicsDebugMessage(aMessage, sizeof(aMessage), pMsg, Length, MessageTruncated);
 	const LEVEL LogLevel = Severity == GL_DEBUG_SEVERITY_HIGH_KHR ? LEVEL_ERROR : Severity == GL_DEBUG_SEVERITY_MEDIUM_KHR ? LEVEL_WARN : LEVEL_DEBUG;
 	log_log(LogLevel, "gfx/opengles", "debug message id=%u type=0x%x severity=0x%x: %s", Id, Type, Severity, aMessage);
-	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity, aMessage, MessageTruncated);
+	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity, aMessage, MessageTruncated || str_length(aMessage) >= SGraphicsDebugMessage::MESSAGE_SIZE);
 	EndGraphicsDebugCallback(pState);
 }
 #endif
@@ -476,8 +501,10 @@ void CCommandProcessorFragment_OpenGL::FlushGraphicsDebugMessages(bool Force)
 	uint32_t LastType = 0;
 	uint32_t LastId = 0;
 	uint32_t LastSeverity = 0;
-	SGraphicsDebugMessage aRecentMessages[SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY];
+	static constexpr uint32_t RECENT_MESSAGES_PER_EVENT = 8;
+	SGraphicsDebugMessage aRecentMessages[RECENT_MESSAGES_PER_EVENT];
 	uint32_t RecentMessageCount = 0;
+	uint32_t RingMessageCount = 0;
 	uint64_t RecentMessageDropped = 0;
 	while(pState->m_MessageLock.test_and_set(std::memory_order_acquire))
 		thread_yield();
@@ -485,22 +512,26 @@ void CCommandProcessorFragment_OpenGL::FlushGraphicsDebugMessages(bool Force)
 	LastType = pState->m_LastType.load(std::memory_order_relaxed);
 	LastId = pState->m_LastId.load(std::memory_order_relaxed);
 	LastSeverity = pState->m_LastSeverity.load(std::memory_order_relaxed);
-	RecentMessageCount = pState->m_MessageRingCount;
+	RingMessageCount = pState->m_MessageRingCount;
+	RecentMessageCount = std::min(RingMessageCount, RECENT_MESSAGES_PER_EVENT);
 	RecentMessageDropped = pState->m_MessageRingDropped;
 	const uint32_t FirstMessage = (pState->m_MessageRingNext + SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY - RecentMessageCount) % SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY;
 	for(uint32_t i = 0; i < RecentMessageCount; ++i)
 		aRecentMessages[i] = pState->m_aMessageRing[(FirstMessage + i) % SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY];
 	pState->m_MessageLock.clear(std::memory_order_release);
 	char aDetails[16 * 1024];
-	int DetailsLength = str_format(aDetails, sizeof(aDetails), "backend=%s;scope=backend_attempt_cumulative;messages=%" PRIu64 ";errors=%" PRIu64 ";high=%" PRIu64 ";medium=%" PRIu64 ";low=%" PRIu64 ";notifications=%" PRIu64 ";unknown=%" PRIu64 ";last_source=0x%x;last_type=0x%x;last_id=%u;last_severity=0x%x;recent_count=%u;recent_dropped=%" PRIu64 ";recent_lock_dropped=%" PRIu64 ";recent_truncated=%" PRIu64, m_IsOpenGLES ? "opengles" : "opengl", MessageCount, ErrorCount, HighCount, MediumCount, LowCount, NotificationCount, UnknownSeverityCount, LastSource, LastType, LastId, LastSeverity, RecentMessageCount, RecentMessageDropped, RecentMessageLockBusy, RecentMessageTruncated);
+	int DetailsLength = str_format(aDetails, sizeof(aDetails), "backend=%s;scope=backend_attempt_cumulative;messages=%" PRIu64 ";errors=%" PRIu64 ";high=%" PRIu64 ";medium=%" PRIu64 ";low=%" PRIu64 ";notifications=%" PRIu64 ";unknown=%" PRIu64 ";last_seen_source=0x%x;last_seen_type=0x%x;last_seen_id=%u;last_seen_severity=0x%x;recent_count=%u;recent_ring_count=%u;recent_dropped=%" PRIu64 ";recent_lock_dropped=%" PRIu64 ";recent_truncated=%" PRIu64, m_IsOpenGLES ? "opengles" : "opengl", MessageCount, ErrorCount, HighCount, MediumCount, LowCount, NotificationCount, UnknownSeverityCount, LastSource, LastType, LastId, LastSeverity, RecentMessageCount, RingMessageCount, RecentMessageDropped, RecentMessageLockBusy, RecentMessageTruncated);
 	if(DetailsLength < 0)
 		DetailsLength = 0;
 	for(uint32_t i = 0; i < RecentMessageCount && static_cast<size_t>(DetailsLength) < sizeof(aDetails); ++i)
 	{
-		const int Written = str_format(aDetails + DetailsLength, sizeof(aDetails) - static_cast<size_t>(DetailsLength), ";recent_%u_source=0x%x;recent_%u_type=0x%x;recent_%u_id=%u;recent_%u_severity=0x%x;recent_%u_truncated=%s;recent_%u_message=%s", i, aRecentMessages[i].m_Source, i, aRecentMessages[i].m_Type, i, aRecentMessages[i].m_Id, i, aRecentMessages[i].m_Severity, i, aRecentMessages[i].m_MessageTruncated ? "true" : "false", i, aRecentMessages[i].m_aMessage);
+		const int Written = str_format(aDetails + DetailsLength, sizeof(aDetails) - static_cast<size_t>(DetailsLength), ";recent_%u_source=0x%x;recent_%u_type=0x%x;recent_%u_id=%u;recent_%u_severity=0x%x;recent_%u_truncated=%s;recent_%u_message=", i, aRecentMessages[i].m_Source, i, aRecentMessages[i].m_Type, i, aRecentMessages[i].m_Id, i, aRecentMessages[i].m_Severity, i, aRecentMessages[i].m_MessageTruncated ? "true" : "false", i);
 		if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - static_cast<size_t>(DetailsLength))
 			break;
-		DetailsLength += Written;
+		size_t MessageOffset = static_cast<size_t>(DetailsLength) + static_cast<size_t>(Written);
+		if(!AppendEncodedGraphicsDebugMessage(aDetails, sizeof(aDetails), MessageOffset, aRecentMessages[i].m_aMessage))
+			break;
+		DetailsLength = static_cast<int>(MessageOffset);
 	}
 	EmitGraphicsEvent("graphics.opengl.debug_messages", aDetails);
 	m_LastGraphicsDebugEventNs = Now;
@@ -539,16 +570,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_Shutdown(const SCommand_Shutdown *pCo
 			pCallback(nullptr, nullptr);
 	}
 #endif
-	const uint64_t WaitStart = time_get_nanoseconds().count();
 	while(m_pGraphicsDebugCallbackState != nullptr && m_pGraphicsDebugCallbackState->m_InFlight.load(std::memory_order_acquire) != 0)
-	{
-		if(time_get_nanoseconds().count() - WaitStart >= 1000000000ULL)
-		{
-			log_warn("gfx/opengl", "Timed out waiting for OpenGL debug callbacks during shutdown");
-			break;
-		}
 		thread_yield();
-	}
 	FlushGraphicsDebugMessages(true);
 	m_GraphicsDebugCallbackEnabled = false;
 }
@@ -2260,6 +2283,8 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 
 void CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
 {
+	if(!pCommand->m_CallbackOnly)
+	{
 	if(m_HasShaders)
 	{
 		glUseProgram(0);
@@ -2288,6 +2313,7 @@ void CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(const SCommand_Shutdown *pC
 	{
 		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
 		free(BufferObject.m_pData);
+	}
 	}
 
 	CCommandProcessorFragment_OpenGL::Cmd_Shutdown(pCommand);
