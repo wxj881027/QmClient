@@ -1261,6 +1261,8 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	CmdPre.m_pVersionString = m_aVersionString;
 	CmdPre.m_pRendererString = m_aRendererString;
 	CmdPre.m_pGpuList = &m_GpuList;
+	CmdPre.m_pDiagnostics = &m_Diagnostics;
+	CmdPre.m_pGraphicsDebugCallbackState = &m_GraphicsDebugCallbackState;
 	CmdBuffer.AddCommandUnsafe(CmdPre);
 	RunBufferSingleThreadedUnsafe(&CmdBuffer);
 	CmdBuffer.Reset();

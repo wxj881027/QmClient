@@ -40,6 +40,11 @@ struct SGraphicsDebugCallbackState
 	std::atomic<uint32_t> m_InFlight{0};
 	std::atomic<uint64_t> m_MessageCount{0};
 	std::atomic<uint64_t> m_ErrorCount{0};
+	std::atomic<uint64_t> m_VulkanSeverityErrorCount{0};
+	std::atomic<uint64_t> m_VulkanSeverityWarningCount{0};
+	std::atomic<uint64_t> m_VulkanSeverityInfoCount{0};
+	std::atomic<uint64_t> m_VulkanSeverityVerboseCount{0};
+	std::atomic<uint64_t> m_VulkanSeverityUnknownCount{0};
 	std::atomic<uint64_t> m_HighCount{0};
 	std::atomic<uint64_t> m_MediumCount{0};
 	std::atomic<uint64_t> m_LowCount{0};
@@ -219,6 +224,7 @@ public:
 
 		TTwGraphicsGpuList *m_pGpuList;
 		SGraphicsBackendDiagnostics *m_pDiagnostics = nullptr;
+		SGraphicsDebugCallbackState *m_pGraphicsDebugCallbackState = nullptr;
 	};
 
 	struct SCommand_Init : public CCommandBuffer::SCommand

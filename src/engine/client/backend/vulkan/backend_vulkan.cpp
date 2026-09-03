@@ -23,9 +23,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cinttypes>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <map>
@@ -68,6 +70,129 @@ static const char *VulkanPresentModeName(VkPresentModeKHR PresentMode)
 #endif
 
 using namespace std::chrono_literals;
+
+#ifdef VK_EXT_debug_utils
+static bool BeginVulkanDebugCallback(SGraphicsDebugCallbackState *pState)
+{
+	pState->m_InFlight.fetch_add(1, std::memory_order_acquire);
+	if(pState->m_Closing.load(std::memory_order_acquire))
+	{
+		pState->m_InFlight.fetch_sub(1, std::memory_order_release);
+		return false;
+	}
+	return true;
+}
+
+static void EndVulkanDebugCallback(SGraphicsDebugCallbackState *pState)
+{
+	pState->m_InFlight.fetch_sub(1, std::memory_order_release);
+}
+
+static void RecordVulkanDebugMessage(SGraphicsDebugCallbackState *pState, unsigned int Severity, unsigned int Type, unsigned int Id, const char *pMessage)
+{
+	constexpr unsigned int DEBUG_SEVERITY_ERROR = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	constexpr unsigned int DEBUG_SEVERITY_WARNING = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+	constexpr unsigned int DEBUG_SEVERITY_INFO = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+	constexpr unsigned int DEBUG_SEVERITY_VERBOSE = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+	const bool MessageTruncated = pMessage != nullptr && str_length(pMessage) >= SGraphicsDebugMessage::MESSAGE_SIZE;
+	if(MessageTruncated)
+		pState->m_MessageRingTruncated.fetch_add(1, std::memory_order_relaxed);
+	// Vulkan 没有 OpenGL 那样的 source 枚举；source 保持为 0，type 保存
+	// VkDebugUtilsMessageTypeFlagsEXT，避免把 Vulkan severity 伪装成 type。
+	pState->m_LastSource.store(0, std::memory_order_relaxed);
+	pState->m_LastType.store(Type, std::memory_order_relaxed);
+	pState->m_LastId.store(Id, std::memory_order_relaxed);
+	pState->m_LastSeverity.store(Severity, std::memory_order_relaxed);
+	if(!pState->m_MessageLock.test_and_set(std::memory_order_acquire))
+	{
+		const uint32_t RingIndex = pState->m_MessageRingNext;
+		SGraphicsDebugMessage &Message = pState->m_aMessageRing[RingIndex];
+		Message.m_Source = 0;
+		Message.m_Type = Type;
+		Message.m_Id = Id;
+		Message.m_Severity = Severity;
+		Message.m_MessageTruncated = MessageTruncated;
+		str_copy(Message.m_aMessage, pMessage ? pMessage : "", sizeof(Message.m_aMessage));
+		pState->m_MessageRingNext = (RingIndex + 1) % SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY;
+		if(pState->m_MessageRingCount < SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY)
+			++pState->m_MessageRingCount;
+		else
+			++pState->m_MessageRingDropped;
+		pState->m_MessageLock.clear(std::memory_order_release);
+	}
+	else
+		pState->m_MessageRingLockBusy.fetch_add(1, std::memory_order_relaxed);
+
+	pState->m_MessageCount.fetch_add(1, std::memory_order_relaxed);
+	if((Severity & DEBUG_SEVERITY_ERROR) != 0)
+		pState->m_VulkanSeverityErrorCount.fetch_add(1, std::memory_order_relaxed);
+	else if((Severity & DEBUG_SEVERITY_WARNING) != 0)
+		pState->m_VulkanSeverityWarningCount.fetch_add(1, std::memory_order_relaxed);
+	else if((Severity & DEBUG_SEVERITY_INFO) != 0)
+		pState->m_VulkanSeverityInfoCount.fetch_add(1, std::memory_order_relaxed);
+	else if((Severity & DEBUG_SEVERITY_VERBOSE) != 0)
+		pState->m_VulkanSeverityVerboseCount.fetch_add(1, std::memory_order_relaxed);
+	else
+		pState->m_VulkanSeverityUnknownCount.fetch_add(1, std::memory_order_relaxed);
+}
+
+static bool AppendEncodedVulkanDebugMessage(char *pDst, size_t DstSize, size_t &Offset, const char *pMessage)
+{
+	static constexpr char aHex[] = "0123456789ABCDEF";
+	if(pMessage == nullptr)
+		return true;
+	for(const auto *pChar = reinterpret_cast<const unsigned char *>(pMessage); *pChar != '\0'; ++pChar)
+	{
+		const bool Encode = *pChar < 0x20 || *pChar == '%' || *pChar == ';' || *pChar == '=';
+		const size_t EncodedSize = Encode ? 3 : 1;
+		if(Offset + EncodedSize >= DstSize)
+			return false;
+		if(Encode)
+		{
+			pDst[Offset++] = '%';
+			pDst[Offset++] = aHex[*pChar >> 4];
+			pDst[Offset++] = aHex[*pChar & 0xf];
+		}
+		else
+			pDst[Offset++] = static_cast<char>(*pChar);
+	}
+	if(Offset < DstSize)
+		pDst[Offset] = '\0';
+	return true;
+}
+#endif
+
+static void ResetVulkanDebugState(SGraphicsDebugCallbackState *pState)
+{
+	pState->m_Closing.store(true, std::memory_order_release);
+	while(pState->m_InFlight.load(std::memory_order_acquire) != 0)
+		std::this_thread::yield();
+	while(pState->m_MessageLock.test_and_set(std::memory_order_acquire))
+		std::this_thread::yield();
+	pState->m_MessageRingNext = 0;
+	pState->m_MessageRingCount = 0;
+	pState->m_MessageRingDropped = 0;
+	pState->m_LastSource.store(0, std::memory_order_relaxed);
+	pState->m_LastType.store(0, std::memory_order_relaxed);
+	pState->m_LastId.store(0, std::memory_order_relaxed);
+	pState->m_LastSeverity.store(0, std::memory_order_relaxed);
+	pState->m_MessageCount.store(0, std::memory_order_relaxed);
+	pState->m_VulkanSeverityErrorCount.store(0, std::memory_order_relaxed);
+	pState->m_VulkanSeverityWarningCount.store(0, std::memory_order_relaxed);
+	pState->m_VulkanSeverityInfoCount.store(0, std::memory_order_relaxed);
+	pState->m_VulkanSeverityVerboseCount.store(0, std::memory_order_relaxed);
+	pState->m_VulkanSeverityUnknownCount.store(0, std::memory_order_relaxed);
+	pState->m_ErrorCount.store(0, std::memory_order_relaxed);
+	pState->m_HighCount.store(0, std::memory_order_relaxed);
+	pState->m_MediumCount.store(0, std::memory_order_relaxed);
+	pState->m_LowCount.store(0, std::memory_order_relaxed);
+	pState->m_NotificationCount.store(0, std::memory_order_relaxed);
+	pState->m_UnknownSeverityCount.store(0, std::memory_order_relaxed);
+	pState->m_MessageRingLockBusy.store(0, std::memory_order_relaxed);
+	pState->m_MessageRingTruncated.store(0, std::memory_order_relaxed);
+	pState->m_MessageLock.clear(std::memory_order_release);
+	pState->m_Closing.store(false, std::memory_order_release);
+}
 
 class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 {
@@ -947,6 +1072,11 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 
 	class IStorage *m_pStorage;
 	SGraphicsBackendDiagnostics *m_pDiagnostics = nullptr;
+	SGraphicsDebugCallbackState *m_pGraphicsDebugCallbackState = nullptr;
+	SGraphicsDebugCallbackState m_LocalGraphicsDebugCallbackState;
+	bool m_GraphicsDebugCallbackEnabled = false;
+	uint64_t m_LastGraphicsDebugEventNs = 0;
+	uint64_t m_LastGraphicsDebugMessageCount = 0;
 
 	struct SDelayedBufferCleanupItem
 	{
@@ -1006,16 +1136,17 @@ private:
 
 	std::vector<SBufferContainer> m_vBufferContainers;
 
-	VkInstance m_VKInstance;
-	VkPhysicalDevice m_VKGPU;
+	VkInstance m_VKInstance = VK_NULL_HANDLE;
+	VkPhysicalDevice m_VKGPU = VK_NULL_HANDLE;
 	uint32_t m_VKGraphicsQueueIndex = std::numeric_limits<uint32_t>::max();
-	VkDevice m_VKDevice;
-	VkQueue m_VKGraphicsQueue, m_VKPresentQueue;
-	VkSurfaceKHR m_VKPresentSurface;
+	VkDevice m_VKDevice = VK_NULL_HANDLE;
+	VkQueue m_VKGraphicsQueue = VK_NULL_HANDLE;
+	VkQueue m_VKPresentQueue = VK_NULL_HANDLE;
+	VkSurfaceKHR m_VKPresentSurface = VK_NULL_HANDLE;
 	SSwapImgViewportExtent m_VKSwapImgAndViewportExtent;
 
 #ifdef VK_EXT_debug_utils
-	VkDebugUtilsMessengerEXT m_DebugMessenger;
+	VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
 #endif
 
 #ifdef VK_EXT_device_fault
@@ -4175,7 +4306,11 @@ public:
 
 	void DestroySurface()
 	{
-		vkDestroySurfaceKHR(m_VKInstance, m_VKPresentSurface, nullptr);
+		if(m_VKInstance != VK_NULL_HANDLE && m_VKPresentSurface != VK_NULL_HANDLE)
+		{
+			vkDestroySurfaceKHR(m_VKInstance, m_VKPresentSurface, nullptr);
+			m_VKPresentSurface = VK_NULL_HANDLE;
+		}
 	}
 
 	[[nodiscard]] bool GetPresentationMode(VkPresentModeKHR &VKIOMode)
@@ -4482,14 +4617,20 @@ public:
 #ifdef VK_EXT_debug_utils
 	static VKAPI_ATTR VkBool32 VKAPI_CALL VKDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, VkDebugUtilsMessageTypeFlagsEXT MessageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 	{
+		auto *pState = static_cast<SGraphicsDebugCallbackState *>(pUserData);
+		if(pState == nullptr || !BeginVulkanDebugCallback(pState))
+			return VK_FALSE;
+		const char *pMessage = pCallbackData != nullptr ? pCallbackData->pMessage : nullptr;
 		if((MessageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0)
 		{
-			log_error("gfx/vulkan", "Validation error: %s", pCallbackData->pMessage);
+			log_error("gfx/vulkan", "Validation error: %s", pMessage ? pMessage : "(no message)");
 		}
 		else
 		{
-			log_info("gfx/vulkan", "Validation info: %s", pCallbackData->pMessage);
+			log_info("gfx/vulkan", "Validation info: %s", pMessage ? pMessage : "(no message)");
 		}
+		RecordVulkanDebugMessage(pState, MessageSeverity, MessageType, pCallbackData != nullptr ? static_cast<unsigned int>(pCallbackData->messageIdNumber) : 0, pMessage);
+		EndVulkanDebugCallback(pState);
 
 		return VK_FALSE;
 	}
@@ -4517,6 +4658,70 @@ public:
 	}
 #endif
 
+	void FlushVulkanDebugMessages(bool Force)
+	{
+		if(!m_GraphicsDebugCallbackEnabled || m_pGraphicsDebugCallbackState == nullptr)
+			return;
+
+		SGraphicsDebugCallbackState *pState = m_pGraphicsDebugCallbackState;
+		const uint64_t MessageCount = pState->m_MessageCount.load(std::memory_order_relaxed);
+		if(MessageCount == 0 || MessageCount == m_LastGraphicsDebugMessageCount)
+			return;
+		const uint64_t Now = time_get_nanoseconds().count();
+		if(!Force && m_LastGraphicsDebugEventNs != 0 && Now - m_LastGraphicsDebugEventNs < 1000000000ULL)
+			return;
+
+		const uint64_t SeverityErrorCount = pState->m_VulkanSeverityErrorCount.load(std::memory_order_relaxed);
+		const uint64_t SeverityWarningCount = pState->m_VulkanSeverityWarningCount.load(std::memory_order_relaxed);
+		const uint64_t SeverityInfoCount = pState->m_VulkanSeverityInfoCount.load(std::memory_order_relaxed);
+		const uint64_t SeverityVerboseCount = pState->m_VulkanSeverityVerboseCount.load(std::memory_order_relaxed);
+		const uint64_t SeverityUnknownCount = pState->m_VulkanSeverityUnknownCount.load(std::memory_order_relaxed);
+		const uint64_t RecentMessageLockBusy = pState->m_MessageRingLockBusy.load(std::memory_order_relaxed);
+		const uint64_t RecentMessageTruncated = pState->m_MessageRingTruncated.load(std::memory_order_relaxed);
+		uint32_t LastSource = 0;
+		uint32_t LastType = 0;
+		uint32_t LastId = 0;
+		uint32_t LastSeverity = 0;
+		static constexpr uint32_t RECENT_MESSAGES_PER_EVENT = 8;
+		SGraphicsDebugMessage aRecentMessages[RECENT_MESSAGES_PER_EVENT];
+		uint32_t RecentMessageCount = 0;
+		uint32_t RingMessageCount = 0;
+		uint64_t RecentMessageDropped = 0;
+		// callback 持锁时不阻塞图形线程；本次不消费 ring，下一次 command
+		// boundary 会重试，避免 validation 消息影响渲染线程的 1% low。
+		if(pState->m_MessageLock.test_and_set(std::memory_order_acquire))
+			return;
+		LastSource = pState->m_LastSource.load(std::memory_order_relaxed);
+		LastType = pState->m_LastType.load(std::memory_order_relaxed);
+		LastId = pState->m_LastId.load(std::memory_order_relaxed);
+		LastSeverity = pState->m_LastSeverity.load(std::memory_order_relaxed);
+		RingMessageCount = pState->m_MessageRingCount;
+		RecentMessageCount = std::min(RingMessageCount, RECENT_MESSAGES_PER_EVENT);
+		RecentMessageDropped = pState->m_MessageRingDropped;
+		const uint32_t FirstMessage = (pState->m_MessageRingNext + SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY - RecentMessageCount) % SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY;
+		for(uint32_t i = 0; i < RecentMessageCount; ++i)
+			aRecentMessages[i] = pState->m_aMessageRing[(FirstMessage + i) % SGraphicsDebugCallbackState::MESSAGE_RING_CAPACITY];
+		pState->m_MessageLock.clear(std::memory_order_release);
+
+		char aDetails[16 * 1024];
+		int DetailsLength = str_format(aDetails, sizeof(aDetails), "backend=vulkan;scope=backend_attempt_cumulative;messages=%" PRIu64 ";severity_errors=%" PRIu64 ";severity_warnings=%" PRIu64 ";severity_info=%" PRIu64 ";severity_verbose=%" PRIu64 ";severity_unknown=%" PRIu64 ";last_seen_source=0x%x;last_seen_type=0x%x;last_seen_id=%u;last_seen_severity=0x%x;recent_count=%u;recent_ring_count=%u;recent_dropped=%" PRIu64 ";recent_lock_dropped=%" PRIu64 ";recent_truncated=%" PRIu64, MessageCount, SeverityErrorCount, SeverityWarningCount, SeverityInfoCount, SeverityVerboseCount, SeverityUnknownCount, LastSource, LastType, LastId, LastSeverity, RecentMessageCount, RingMessageCount, RecentMessageDropped, RecentMessageLockBusy, RecentMessageTruncated);
+		if(DetailsLength < 0)
+			DetailsLength = 0;
+		for(uint32_t i = 0; i < RecentMessageCount && static_cast<size_t>(DetailsLength) < sizeof(aDetails); ++i)
+		{
+			const int Written = str_format(aDetails + DetailsLength, sizeof(aDetails) - static_cast<size_t>(DetailsLength), ";recent_%u_source=0x%x;recent_%u_type=0x%x;recent_%u_id=%u;recent_%u_severity=0x%x;recent_%u_truncated=%s;recent_%u_message=", i, aRecentMessages[i].m_Source, i, aRecentMessages[i].m_Type, i, aRecentMessages[i].m_Id, i, aRecentMessages[i].m_Severity, i, aRecentMessages[i].m_MessageTruncated ? "true" : "false", i);
+			if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - static_cast<size_t>(DetailsLength))
+				break;
+			size_t MessageOffset = static_cast<size_t>(DetailsLength) + static_cast<size_t>(Written);
+			if(!AppendEncodedVulkanDebugMessage(aDetails, sizeof(aDetails), MessageOffset, aRecentMessages[i].m_aMessage))
+				break;
+			DetailsLength = static_cast<int>(MessageOffset);
+		}
+		EmitGraphicsEvent("graphics.vulkan.debug_messages", aDetails);
+		m_LastGraphicsDebugEventNs = Now;
+		m_LastGraphicsDebugMessageCount = MessageCount;
+	}
+
 	void SetupDebugCallback()
 	{
 #ifdef VK_EXT_debug_utils
@@ -4525,6 +4730,7 @@ public:
 		CreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 		CreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT; // | VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT <- too annoying
 		CreateInfo.pfnUserCallback = VKDebugCallback;
+		CreateInfo.pUserData = m_pGraphicsDebugCallbackState;
 
 		if(CreateDebugUtilsMessengerEXT(&CreateInfo, nullptr, &m_DebugMessenger) != VK_SUCCESS)
 		{
@@ -4533,6 +4739,7 @@ public:
 		}
 		else
 		{
+			m_GraphicsDebugCallbackEnabled = true;
 			if(m_pDiagnostics)
 				m_pDiagnostics->m_VulkanDebugCallbackEnabled = true;
 			log_info("gfx/vulkan", "Enabled Vulkan debug context.");
@@ -4543,8 +4750,17 @@ public:
 	void UnregisterDebugCallback()
 	{
 #ifdef VK_EXT_debug_utils
-		if(m_DebugMessenger != VK_NULL_HANDLE)
+		if(m_pGraphicsDebugCallbackState != nullptr)
+			m_pGraphicsDebugCallbackState->m_Closing.store(true, std::memory_order_release);
+		if(m_DebugMessenger != VK_NULL_HANDLE && m_VKInstance != VK_NULL_HANDLE)
+		{
 			DestroyDebugUtilsMessengerEXT(m_DebugMessenger);
+		}
+		m_DebugMessenger = VK_NULL_HANDLE;
+		while(m_pGraphicsDebugCallbackState != nullptr && m_pGraphicsDebugCallbackState->m_InFlight.load(std::memory_order_acquire) != 0)
+			std::this_thread::yield();
+		FlushVulkanDebugMessages(true);
+		m_GraphicsDebugCallbackEnabled = false;
 #endif
 	}
 
@@ -5759,15 +5975,18 @@ public:
 
 	void CleanupVulkanSDL()
 	{
+		DestroySurface();
+		if(m_VKDevice != VK_NULL_HANDLE)
+		{
+			vkDestroyDevice(m_VKDevice, nullptr);
+			m_VKDevice = VK_NULL_HANDLE;
+		}
+		// messenger 属于 instance，必须在销毁 instance 前移除。这里不重新检查
+		// dbg_gfx，因为配置可能在初始化后变化，实际 callback 状态由后端跟踪。
+		UnregisterDebugCallback();
+
 		if(m_VKInstance != VK_NULL_HANDLE)
 		{
-			DestroySurface();
-			vkDestroyDevice(m_VKDevice, nullptr);
-
-			if(g_Config.m_DbgGfx == DEBUG_GFX_MODE_MINIMUM || g_Config.m_DbgGfx == DEBUG_GFX_MODE_ALL)
-			{
-				UnregisterDebugCallback();
-			}
 			vkDestroyInstance(m_VKInstance, nullptr);
 			m_VKInstance = VK_NULL_HANDLE;
 		}
@@ -6869,6 +7088,12 @@ public:
 
 	[[nodiscard]] bool Cmd_Shutdown(const SCommand_Shutdown *pCommand)
 	{
+		if(pCommand->m_CallbackOnly)
+		{
+			UnregisterDebugCallback();
+			return true;
+		}
+
 		vkDeviceWaitIdle(m_VKDevice);
 
 		DestroyIndexBuffer(m_IndexBuffer, m_IndexBufferMemory);
@@ -7765,11 +7990,16 @@ public:
 	{
 		m_pGpuList = pCommand->m_pGpuList;
 		m_pDiagnostics = pCommand->m_pDiagnostics;
+		m_pGraphicsDebugCallbackState = pCommand->m_pGraphicsDebugCallbackState != nullptr ? pCommand->m_pGraphicsDebugCallbackState : &m_LocalGraphicsDebugCallbackState;
+		m_GraphicsDebugCallbackEnabled = false;
+		m_LastGraphicsDebugEventNs = 0;
+		m_LastGraphicsDebugMessageCount = 0;
+		ResetVulkanDebugState(m_pGraphicsDebugCallbackState);
 		if(m_pDiagnostics)
 			*m_pDiagnostics = {};
 		if(InitVulkanSDL(pCommand->m_pWindow, pCommand->m_Width, pCommand->m_Height, pCommand->m_pRendererString, pCommand->m_pVendorString, pCommand->m_pVersionString) != 0)
 		{
-			m_VKInstance = VK_NULL_HANDLE;
+			CleanupVulkanSDL();
 		}
 
 		RegisterCommands();
@@ -7844,6 +8074,7 @@ public:
 	void EndCommands() override
 	{
 		FinishRenderThreads();
+		FlushVulkanDebugMessages(false);
 		m_CommandsInPipe = 0;
 		m_RenderCallsInPipe = 0;
 	}

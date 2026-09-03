@@ -35,7 +35,7 @@ status: active
 
 这不是完整性能系统。尚未完成：
 
-- Metal 的后端专属字段、Vulkan validation 消息和跨后端字段收口；Vulkan 基础初始化快照已接入，但成功路径仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
+- Metal 的后端专属字段、Vulkan instance 创建阶段 validation 消息和跨后端字段收口；Vulkan 基础初始化快照与运行期 validation 消息已接入，但成功路径仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
 - 非阻塞 GPU query、shader/pipeline 失败、device loss、fallback 和资源重建事件；
 - 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
@@ -53,7 +53,7 @@ status: active
   当前诊断开销视为已经量化为零。
 
 因此当前日志只能证明“有自动诊断证据”和“基础帧统计可用”，不能据此宣称已经完成图形后端性能定位。
-通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，但 Vulkan/Metal 专属字段、validation 消息、device loss、shader failure 和资源重建事件仍需分别接入。
+通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，Vulkan 运行期 validation 消息已接入，但 Vulkan instance 创建阶段、Metal 专属字段、device loss、shader failure 和资源重建事件仍需分别接入。
 
 ## OpenGL/GLES debug callback 增量（2026-09-03）
 
@@ -80,6 +80,13 @@ status: active
 - `RecordEvent` 增加 JSON 容量计算的整数溢出保护；边界门禁和 373 个 C++ 测试仍通过。
 - Vulkan 后端现在通过现有可选诊断快照输出初始化元数据，并由 SDL 后端统一转成自动 JSONL 事件；未新增协议、渲染语义或 Qm 业务依赖。
 - 当前机器本次仍实际运行 OpenGL fallback，因此 Vulkan 专属字段只完成编译和静态路径验证，不能标记为 Vulkan runtime verified。
+
+## Vulkan validation debug callback 增量（2026-09-03）
+
+- Vulkan validation/performance 消息通过 `VK_EXT_debug_utils` callback 进入与 OpenGL/GLES 相同的固定容量 ring 和自动 diagnostics 事件链；callback 的 user data 使用 backend 生命周期之外仍有效的共享状态。
+- 事件使用 Vulkan 专属 `severity_errors`、`severity_warnings`、`severity_info`、`severity_verbose` 和 `severity_unknown` 字段，不把 Vulkan severity 映射为 OpenGL 的 high/medium/low/notification；`last_seen_type` 与 recent message 的 type 保存真实 `VkDebugUtilsMessageTypeFlagsEXT`。
+- `EndCommands()` 按一秒窗口限流 flush，shutdown 和初始化失败回退强制 flush；callback 注销等待 in-flight callback 完成，Vulkan instance 销毁前一定清理 messenger。初始化失败不再清空 instance 句柄后跳过清理。
+- 当前仍未捕获 `vkCreateInstance` 期间的 validation 消息，也未在实际 Vulkan 成功路径上运行；本机默认仍是 Vulkan 请求、OpenGL active 的 fallback。
 
 实际 JSON 字段名为 `active_api_name`（不是 `active_api`）；分析工具应同时读取
 `backend_config` 与 `active_api_name`，并把 `active_api_available=false` 视为不可用状态。
