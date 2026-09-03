@@ -35,7 +35,7 @@ status: active
 
 这不是完整性能系统。尚未完成：
 
-- Metal 的后端专属字段、Vulkan validation 消息、GLES debug callback 消息和跨后端字段收口；Vulkan 基础初始化快照已接入，但成功路径仍需真实运行样本；
+- Metal 的后端专属字段、Vulkan validation 消息和跨后端字段收口；Vulkan 基础初始化快照已接入，但成功路径仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
 - 非阻塞 GPU query、shader/pipeline 失败、device loss、fallback 和资源重建事件；
 - 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
@@ -53,7 +53,16 @@ status: active
   当前诊断开销视为已经量化为零。
 
 因此当前日志只能证明“有自动诊断证据”和“基础帧统计可用”，不能据此宣称已经完成图形后端性能定位。
-通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照已接入，但 Vulkan/Metal 专属字段、validation/debug callback 消息、device loss、shader failure 和资源重建事件仍需分别接入。
+通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，但 Vulkan/Metal 专属字段、validation 消息、device loss、shader failure 和资源重建事件仍需分别接入。
+
+## OpenGL/GLES debug callback 增量（2026-09-03）
+
+- 桌面 OpenGL 的 `GL_KHR_debug` / `GL_ARB_debug_output` 与 GLES 的 `GL_KHR_debug` 均通过当前图形 context 注册 callback；GLES 使用 `SDL_GL_GetProcAddress`，扩展名按空格分隔 token 精确匹配。
+- callback 只做有界消息复制、普通日志输出和原子累计；事件 `graphics.opengl.debug_messages` 最多每秒一次，字段为 session 累计值，并包含 error/severity 分类、未知 severity 数量以及最后一条消息的 source/type/id/severity。
+- callback 的 user data 是由 `CGraphicsBackend_SDL_GL` 持有的独立状态，生命周期覆盖 processor 删除和 context teardown；GL context 仍有效时注销 callback，关闭闸门阻止新 callback 进入，并等待已进入 callback 结束后再 flush 最终统计，避免 backend 删除后的悬空 `this`。等待有 1 秒上限，超时只记录 warning，不阻塞客户端退出。
+- GL command error/warning 的提前返回路径调用强制 `FlushCommands()`，普通帧路径仍由 `EndCommands()` 按 1 秒限流，避免错误发生前已经收到的驱动消息只存在于普通日志而不进入自动诊断事件。
+- 具体驱动消息文本暂不逐条写 JSONL，也未实现独立 debug-message ring buffer；这是为了避免高频 callback 的同步 I/O 影响 1% low，后续应以固定容量、异步导出方式补齐。统计事件字段的 scope 是 `backend_attempt_cumulative`，因为图形初始化重试会重新建立 backend state。
+- 当前 Windows 桌面 Release 已通过 OpenGL 构建；使用同一 MSVC 参数强制编译 GLES wrapper 时被环境缺少 `GLES3/gl3.h` 阻断，Android/Emscripten/GLES runtime 仍未验证，不能据此标记 GLES 完成。
 
 ## 验证记录（2026-09-03）
 

@@ -16,6 +16,8 @@
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
 
+#include <atomic>
+
 class CGLSLTWProgram;
 class CGLSLPrimitiveProgram;
 class CGLSLTileProgram;
@@ -77,6 +79,11 @@ protected:
 	int m_OpenGLTextureLodBIAS;
 
 	bool m_IsOpenGLES;
+	bool m_GraphicsDebugCallbackEnabled = false;
+	SGraphicsDebugCallbackState m_LocalGraphicsDebugCallbackState;
+	SGraphicsDebugCallbackState *m_pGraphicsDebugCallbackState = nullptr;
+	uint64_t m_LastGraphicsDebugEventNs = 0;
+	uint64_t m_LastGraphicsDebugMessageCount = 0;
 
 	bool IsTexturedState(const CCommandBuffer::SState &State);
 
@@ -85,6 +92,7 @@ protected:
 	void SetState(const CCommandBuffer::SState &State, bool Use2DArrayTexture = false);
 	virtual bool IsNewApi() { return false; }
 	void DestroyTexture(int Slot);
+	void FlushGraphicsDebugMessages(bool Force);
 
 	bool GetPresentedImageData(uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData) override;
 
@@ -94,7 +102,7 @@ protected:
 	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, uint8_t *pTexData);
 
 	virtual bool Cmd_Init(const SCommand_Init *pCommand);
-	virtual void Cmd_Shutdown(const SCommand_Shutdown *pCommand) {}
+	virtual void Cmd_Shutdown(const SCommand_Shutdown *pCommand);
 	virtual void Cmd_Texture_Destroy(const CCommandBuffer::SCommand_Texture_Destroy *pCommand);
 	virtual void Cmd_Texture_Create(const CCommandBuffer::SCommand_Texture_Create *pCommand);
 	virtual void Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand);
@@ -129,6 +137,9 @@ protected:
 
 public:
 	CCommandProcessorFragment_OpenGL();
+
+	void EndCommands() override;
+	void FlushCommands() override;
 
 	ERunCommandReturnTypes RunCommand(const CCommandBuffer::SCommand *pBaseCommand) override;
 };

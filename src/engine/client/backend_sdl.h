@@ -227,6 +227,7 @@ class CGraphicsBackend_SDL_GL : public CGraphicsBackend_Threaded
 
 	SBackendCapabilities m_Capabilities;
 	SGraphicsBackendDiagnostics m_Diagnostics;
+	SGraphicsDebugCallbackState m_GraphicsDebugCallbackState;
 
 	char m_aVendorString[GPU_INFO_STRING_SIZE] = {};
 	char m_aVersionString[GPU_INFO_STRING_SIZE] = {};

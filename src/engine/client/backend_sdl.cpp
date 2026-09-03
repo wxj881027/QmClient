@@ -206,12 +206,14 @@ void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer)
 		}
 		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR)
 		{
+			m_pGLBackend->FlushCommands();
 			m_Error = m_pGLBackend->GetError();
 			HandleError();
 			return;
 		}
 		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_WARNING)
 		{
+			m_pGLBackend->FlushCommands();
 			m_Warning = m_pGLBackend->GetWarning();
 			HandleWarning();
 			return;
@@ -1287,6 +1289,8 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		CmdGL.m_pReadPresentedImageDataFunc = &m_ReadPresentedImageDataFunc;
 		CmdGL.m_pStorage = pStorage;
 		CmdGL.m_pCapabilities = &m_Capabilities;
+		CmdGL.m_pDiagnostics = &m_Diagnostics;
+		CmdGL.m_pGraphicsDebugCallbackState = &m_GraphicsDebugCallbackState;
 		CmdGL.m_pInitError = &InitError;
 		CmdGL.m_RequestedMajor = g_Config.m_GfxGLMajor;
 		CmdGL.m_RequestedMinor = g_Config.m_GfxGLMinor;

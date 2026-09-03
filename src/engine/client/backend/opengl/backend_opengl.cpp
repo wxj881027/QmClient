@@ -5,13 +5,18 @@
 #include <base/log.h>
 #include <base/mem.h>
 #include <base/str.h>
+#include <base/time.h>
+#include <base/thread.h>
 
 #ifndef BACKEND_NO_SDL
 #include <engine/client/backend_sdl.h>
 #endif
 #include <engine/graphics.h>
 
+#include <algorithm>
+#include <cinttypes>
 #include <cstdint>
+#include <cstring>
 
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
 
@@ -255,7 +260,7 @@ static LEVEL GetLogSeverity(GLenum Severity)
 	case GL_DEBUG_SEVERITY_MEDIUM: return LEVEL_WARN;
 	case GL_DEBUG_SEVERITY_LOW: return LEVEL_INFO;
 	case GL_DEBUG_SEVERITY_NOTIFICATION: return LEVEL_DEBUG;
-	default: dbg_assert_failed("Severity invalid: %d", (int)Severity);
+	default: return LEVEL_DEBUG;
 	}
 }
 
@@ -288,9 +293,13 @@ static const char *GetSeverityString(GLenum Severity)
 	case GL_DEBUG_SEVERITY_LOW: return "low";
 	// Anything that isn't an error or performance issue.
 	case GL_DEBUG_SEVERITY_NOTIFICATION: return "notification";
-	default: dbg_assert_failed("Severity invalid: %d", (int)Severity);
+	default: return "unknown";
 	}
 }
+
+static bool BeginGraphicsDebugCallback(SGraphicsDebugCallbackState *pState);
+static void EndGraphicsDebugCallback(SGraphicsDebugCallbackState *pState);
+static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsigned int Source, unsigned int Type, unsigned int Id, unsigned int Severity);
 
 static void GLAPIENTRY
 GfxOpenGLMessageCallback(GLenum Source,
@@ -301,9 +310,187 @@ GfxOpenGLMessageCallback(GLenum Source,
 	const GLchar *pMsg,
 	const void *pUserParam)
 {
-	log_log(GetLogSeverity(Severity), "gfx/opengl", "[%s] (importance: %s) %s", GetErrorName(Type), GetSeverityString(Severity), pMsg);
+	auto *pState = static_cast<SGraphicsDebugCallbackState *>(const_cast<void *>(pUserParam));
+	if(pState == nullptr || !BeginGraphicsDebugCallback(pState))
+		return;
+	char aMessage[512];
+	const size_t MessageLength = pMsg == nullptr || Length <= 0 ? 0 : std::min(static_cast<size_t>(Length), sizeof(aMessage) - 1);
+	if(MessageLength != 0)
+		std::memcpy(aMessage, pMsg, MessageLength);
+	aMessage[MessageLength] = '\0';
+	log_log(GetLogSeverity(Severity), "gfx/opengl", "[%s] (importance: %s) %s", GetErrorName(Type), GetSeverityString(Severity), aMessage);
+	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity);
+	EndGraphicsDebugCallback(pState);
+}
+#else
+static void GL_APIENTRY
+GfxOpenGLESMessageCallback(GLenum Source,
+	GLenum Type,
+	GLuint Id,
+	GLenum Severity,
+	GLsizei Length,
+	const GLchar *pMsg,
+	const void *pUserParam)
+{
+	auto *pState = static_cast<SGraphicsDebugCallbackState *>(const_cast<void *>(pUserParam));
+	if(pState == nullptr || !BeginGraphicsDebugCallback(pState))
+		return;
+	char aMessage[512];
+	const size_t MessageLength = pMsg == nullptr || Length <= 0 ? 0 : std::min(static_cast<size_t>(Length), sizeof(aMessage) - 1);
+	if(MessageLength != 0)
+		std::memcpy(aMessage, pMsg, MessageLength);
+	aMessage[MessageLength] = '\0';
+	const LEVEL LogLevel = Severity == GL_DEBUG_SEVERITY_HIGH_KHR ? LEVEL_ERROR : Severity == GL_DEBUG_SEVERITY_MEDIUM_KHR ? LEVEL_WARN : LEVEL_DEBUG;
+	log_log(LogLevel, "gfx/opengles", "debug message id=%u type=0x%x severity=0x%x: %s", Id, Type, Severity, aMessage);
+	RecordGraphicsDebugMessage(pState, Source, Type, Id, Severity);
+	EndGraphicsDebugCallback(pState);
 }
 #endif
+
+static bool HasGraphicsExtension(const char *pExtensions, const char *pExtension)
+{
+	if(pExtensions == nullptr || pExtension == nullptr || pExtension[0] == '\0')
+		return false;
+
+	const int ExtensionLength = str_length(pExtension);
+	for(const char *pMatch = pExtensions; (pMatch = str_find(pMatch, pExtension)) != nullptr; pMatch += ExtensionLength)
+	{
+		const bool HasLeftBoundary = pMatch == pExtensions || pMatch[-1] == ' ';
+		const bool HasRightBoundary = pMatch[ExtensionLength] == '\0' || pMatch[ExtensionLength] == ' ';
+		if(HasLeftBoundary && HasRightBoundary)
+			return true;
+	}
+	return false;
+}
+
+static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsigned int Source, unsigned int Type, unsigned int Id, unsigned int Severity)
+{
+	constexpr unsigned int DEBUG_TYPE_ERROR = 0x824C;
+	constexpr unsigned int DEBUG_SEVERITY_HIGH = 0x9146;
+	constexpr unsigned int DEBUG_SEVERITY_MEDIUM = 0x9147;
+	constexpr unsigned int DEBUG_SEVERITY_LOW = 0x9148;
+	constexpr unsigned int DEBUG_SEVERITY_NOTIFICATION = 0x826B;
+	pState->m_MessageCount.fetch_add(1, std::memory_order_relaxed);
+	if(Type == DEBUG_TYPE_ERROR)
+		pState->m_ErrorCount.fetch_add(1, std::memory_order_relaxed);
+	switch(Severity)
+	{
+	case DEBUG_SEVERITY_HIGH: pState->m_HighCount.fetch_add(1, std::memory_order_relaxed); break;
+	case DEBUG_SEVERITY_MEDIUM: pState->m_MediumCount.fetch_add(1, std::memory_order_relaxed); break;
+	case DEBUG_SEVERITY_LOW: pState->m_LowCount.fetch_add(1, std::memory_order_relaxed); break;
+	case DEBUG_SEVERITY_NOTIFICATION: pState->m_NotificationCount.fetch_add(1, std::memory_order_relaxed); break;
+	default: pState->m_UnknownSeverityCount.fetch_add(1, std::memory_order_relaxed); break;
+	}
+	while(pState->m_LastMessageLock.test_and_set(std::memory_order_acquire))
+	{
+		// callback 线程之间只在极短的固定快照区间竞争，不阻塞图形命令提交。
+		thread_yield();
+	}
+	pState->m_LastSource.store(Source, std::memory_order_relaxed);
+	pState->m_LastType.store(Type, std::memory_order_relaxed);
+	pState->m_LastId.store(Id, std::memory_order_relaxed);
+	pState->m_LastSeverity.store(Severity, std::memory_order_relaxed);
+	pState->m_LastMessageLock.clear(std::memory_order_release);
+}
+
+static bool BeginGraphicsDebugCallback(SGraphicsDebugCallbackState *pState)
+{
+	pState->m_InFlight.fetch_add(1, std::memory_order_acquire);
+	if(pState->m_Closing.load(std::memory_order_acquire))
+	{
+		pState->m_InFlight.fetch_sub(1, std::memory_order_release);
+		return false;
+	}
+	return true;
+}
+
+static void EndGraphicsDebugCallback(SGraphicsDebugCallbackState *pState)
+{
+	pState->m_InFlight.fetch_sub(1, std::memory_order_release);
+}
+
+void CCommandProcessorFragment_OpenGL::FlushGraphicsDebugMessages(bool Force)
+{
+	if(!m_GraphicsDebugCallbackEnabled || m_pGraphicsDebugCallbackState == nullptr)
+		return;
+
+	SGraphicsDebugCallbackState *pState = m_pGraphicsDebugCallbackState;
+	const uint64_t MessageCount = pState->m_MessageCount.load(std::memory_order_relaxed);
+	if(MessageCount == 0 || MessageCount == m_LastGraphicsDebugMessageCount)
+		return;
+	const uint64_t Now = time_get_nanoseconds().count();
+	if(!Force && m_LastGraphicsDebugEventNs != 0 && Now - m_LastGraphicsDebugEventNs < 1000000000ULL)
+		return;
+
+	const uint64_t ErrorCount = pState->m_ErrorCount.load(std::memory_order_relaxed);
+	const uint64_t HighCount = pState->m_HighCount.load(std::memory_order_relaxed);
+	const uint64_t MediumCount = pState->m_MediumCount.load(std::memory_order_relaxed);
+	const uint64_t LowCount = pState->m_LowCount.load(std::memory_order_relaxed);
+	const uint64_t NotificationCount = pState->m_NotificationCount.load(std::memory_order_relaxed);
+	const uint64_t UnknownSeverityCount = pState->m_UnknownSeverityCount.load(std::memory_order_relaxed);
+	uint32_t LastSource = 0;
+	uint32_t LastType = 0;
+	uint32_t LastId = 0;
+	uint32_t LastSeverity = 0;
+	while(pState->m_LastMessageLock.test_and_set(std::memory_order_acquire))
+		thread_yield();
+	LastSource = pState->m_LastSource.load(std::memory_order_relaxed);
+	LastType = pState->m_LastType.load(std::memory_order_relaxed);
+	LastId = pState->m_LastId.load(std::memory_order_relaxed);
+	LastSeverity = pState->m_LastSeverity.load(std::memory_order_relaxed);
+	pState->m_LastMessageLock.clear(std::memory_order_release);
+	char aDetails[384];
+	str_format(aDetails, sizeof(aDetails), "backend=%s;scope=backend_attempt_cumulative;messages=%" PRIu64 ";errors=%" PRIu64 ";high=%" PRIu64 ";medium=%" PRIu64 ";low=%" PRIu64 ";notifications=%" PRIu64 ";unknown=%" PRIu64 ";last_source=0x%x;last_type=0x%x;last_id=%u;last_severity=0x%x", m_IsOpenGLES ? "opengles" : "opengl", MessageCount, ErrorCount, HighCount, MediumCount, LowCount, NotificationCount, UnknownSeverityCount, LastSource, LastType, LastId, LastSeverity);
+	EmitGraphicsEvent("graphics.opengl.debug_messages", aDetails);
+	m_LastGraphicsDebugEventNs = Now;
+	m_LastGraphicsDebugMessageCount = MessageCount;
+}
+
+void CCommandProcessorFragment_OpenGL::EndCommands()
+{
+	FlushGraphicsDebugMessages(false);
+}
+
+void CCommandProcessorFragment_OpenGL::FlushCommands()
+{
+	FlushGraphicsDebugMessages(true);
+}
+
+void CCommandProcessorFragment_OpenGL::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
+{
+	if(m_pGraphicsDebugCallbackState != nullptr)
+		m_pGraphicsDebugCallbackState->m_Closing.store(true, std::memory_order_release);
+
+#ifndef BACKEND_AS_OPENGL_ES
+	if(m_GraphicsDebugCallbackEnabled)
+	{
+		if(GLEW_KHR_debug)
+			glDebugMessageCallback(nullptr, nullptr);
+		else if(GLEW_ARB_debug_output)
+			glDebugMessageCallbackARB(nullptr, nullptr);
+	}
+#else
+	if(m_GraphicsDebugCallbackEnabled)
+	{
+		using TGlesDebugMessageCallback = void (GL_APIENTRY *)(GLDEBUGPROCKHR, const void *);
+		auto pCallback = reinterpret_cast<TGlesDebugMessageCallback>(SDL_GL_GetProcAddress("glDebugMessageCallbackKHR"));
+		if(pCallback != nullptr)
+			pCallback(nullptr, nullptr);
+	}
+#endif
+	const uint64_t WaitStart = time_get_nanoseconds().count();
+	while(m_pGraphicsDebugCallbackState != nullptr && m_pGraphicsDebugCallbackState->m_InFlight.load(std::memory_order_acquire) != 0)
+	{
+		if(time_get_nanoseconds().count() - WaitStart >= 1000000000ULL)
+		{
+			log_warn("gfx/opengl", "Timed out waiting for OpenGL debug callbacks during shutdown");
+			break;
+		}
+		thread_yield();
+	}
+	FlushGraphicsDebugMessages(true);
+	m_GraphicsDebugCallbackEnabled = false;
+}
 
 static void CopyGraphicsDiagnosticString(char *pDst, int DstSize, const char *pSrc, bool &Available)
 {
@@ -435,6 +622,19 @@ bool CCommandProcessorFragment_OpenGL::GetPresentedImageData(uint32_t &Width, ui
 bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 {
 	m_IsOpenGLES = pCommand->m_RequestedBackend == BACKEND_TYPE_OPENGL_ES;
+	m_pGraphicsDebugCallbackState = pCommand->m_pGraphicsDebugCallbackState != nullptr ? pCommand->m_pGraphicsDebugCallbackState : &m_LocalGraphicsDebugCallbackState;
+	m_GraphicsDebugCallbackEnabled = false;
+	m_LastGraphicsDebugEventNs = 0;
+	m_LastGraphicsDebugMessageCount = 0;
+	m_pGraphicsDebugCallbackState->m_Closing.store(false, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_InFlight.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_MessageCount.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_ErrorCount.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_HighCount.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_MediumCount.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_LowCount.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_NotificationCount.store(0, std::memory_order_relaxed);
+	m_pGraphicsDebugCallbackState->m_UnknownSeverityCount.store(0, std::memory_order_relaxed);
 	if(pCommand->m_pDiagnostics)
 	{
 		*pCommand->m_pDiagnostics = {};
@@ -722,14 +922,16 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 				if(GLEW_KHR_debug)
 				{
 					glEnable(GL_DEBUG_OUTPUT);
-					glDebugMessageCallback((GLDEBUGPROC)GfxOpenGLMessageCallback, nullptr);
+					m_GraphicsDebugCallbackEnabled = true;
+					glDebugMessageCallback((GLDEBUGPROC)GfxOpenGLMessageCallback, m_pGraphicsDebugCallbackState);
 					if(pCommand->m_pDiagnostics)
 						pCommand->m_pDiagnostics->m_DebugCallbackEnabled = true;
 				}
 				else if(GLEW_ARB_debug_output)
 				{
 					glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-					glDebugMessageCallbackARB((GLDEBUGPROC)GfxOpenGLMessageCallback, nullptr);
+					m_GraphicsDebugCallbackEnabled = true;
+					glDebugMessageCallbackARB((GLDEBUGPROC)GfxOpenGLMessageCallback, m_pGraphicsDebugCallbackState);
 					if(pCommand->m_pDiagnostics)
 					{
 						pCommand->m_pDiagnostics->m_DebugCallbackEnabled = true;
@@ -744,11 +946,41 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 			}
 		}
 #endif
-		#ifdef BACKEND_AS_OPENGL_ES
+	#ifdef BACKEND_AS_OPENGL_ES
+	const char *pExtensions = reinterpret_cast<const char *>(glGetString(GL_EXTENSIONS));
+	const bool DebugOutputSupported = HasGraphicsExtension(pExtensions, "GL_KHR_debug");
 		if(pCommand->m_pDiagnostics)
 		{
-				pCommand->m_pDiagnostics->m_DebugOutputSupported = str_find(pCommand->m_pDiagnostics->m_aExtensions, "GL_KHR_debug") != nullptr;
-				str_copy(pCommand->m_pDiagnostics->m_aDebugCallbackUnavailableReason, pCommand->m_pDiagnostics->m_DebugOutputSupported ? "gles_callback_not_wired" : "extension_unavailable");
+			pCommand->m_pDiagnostics->m_DebugOutputSupported = DebugOutputSupported;
+			if(!DebugOutputSupported)
+				str_copy(pCommand->m_pDiagnostics->m_aDebugCallbackUnavailableReason, "extension_unavailable");
+			else if(g_Config.m_DbgGfx == DEBUG_GFX_MODE_NONE)
+				str_copy(pCommand->m_pDiagnostics->m_aDebugCallbackUnavailableReason, "disabled_by_configuration");
+		}
+		if(g_Config.m_DbgGfx != DEBUG_GFX_MODE_NONE)
+		{
+			if(DebugOutputSupported)
+			{
+				using TGlesDebugMessageCallback = void (GL_APIENTRY *)(GLDEBUGPROCKHR, const void *);
+				auto pCallback = reinterpret_cast<TGlesDebugMessageCallback>(SDL_GL_GetProcAddress("glDebugMessageCallbackKHR"));
+				if(pCallback == nullptr)
+				{
+					log_warn("gfx/opengles", "Requested OpenGL ES debug mode, but glDebugMessageCallbackKHR is unavailable");
+					if(pCommand->m_pDiagnostics)
+						str_copy(pCommand->m_pDiagnostics->m_aDebugCallbackUnavailableReason, "function_unavailable");
+				}
+				else
+				{
+					glEnable(GL_DEBUG_OUTPUT_KHR);
+					pCallback((GLDEBUGPROCKHR)GfxOpenGLESMessageCallback, m_pGraphicsDebugCallbackState);
+					m_GraphicsDebugCallbackEnabled = true;
+					if(pCommand->m_pDiagnostics)
+						pCommand->m_pDiagnostics->m_DebugCallbackEnabled = true;
+					log_info("gfx/opengles", "Enabled OpenGL ES debug mode");
+				}
+			}
+			else
+				log_warn("gfx/opengles", "Requested OpenGL ES debug mode, but the driver does not support GL_KHR_debug");
 		}
 		#endif
 
@@ -1984,6 +2216,8 @@ void CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(const SCommand_Shutdown *pC
 		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
 		free(BufferObject.m_pData);
 	}
+
+	CCommandProcessorFragment_OpenGL::Cmd_Shutdown(pCommand);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_RenderTex3D(const CCommandBuffer::SCommand_RenderTex3D *pCommand)

@@ -19,6 +19,25 @@ struct SDL_Window;
 
 struct SBackendCapabilities;
 
+// OpenGL debug callback 的 user data 必须在 backend fragment 销毁后仍保持有效，直到 context teardown 完成。
+struct SGraphicsDebugCallbackState
+{
+	std::atomic<bool> m_Closing{false};
+	std::atomic<uint32_t> m_InFlight{0};
+	std::atomic<uint64_t> m_MessageCount{0};
+	std::atomic<uint64_t> m_ErrorCount{0};
+	std::atomic<uint64_t> m_HighCount{0};
+	std::atomic<uint64_t> m_MediumCount{0};
+	std::atomic<uint64_t> m_LowCount{0};
+	std::atomic<uint64_t> m_NotificationCount{0};
+	std::atomic<uint64_t> m_UnknownSeverityCount{0};
+	std::atomic_flag m_LastMessageLock = ATOMIC_FLAG_INIT;
+	std::atomic<uint32_t> m_LastSource{0};
+	std::atomic<uint32_t> m_LastType{0};
+	std::atomic<uint32_t> m_LastId{0};
+	std::atomic<uint32_t> m_LastSeverity{0};
+};
+
 // 可选的图形后端诊断输出。它只由图形线程写入，在命令完成并等待空闲后读取。
 struct SGraphicsBackendDiagnostics
 {
@@ -144,6 +163,7 @@ public:
 
 	virtual void StartCommands(size_t CommandCount, size_t EstimatedRenderCallCount) {}
 	virtual void EndCommands() {}
+	virtual void FlushCommands() { EndCommands(); }
 	void EmitGraphicsEvent(const char *pName, const char *pDetails = nullptr)
 	{
 		if(m_GraphicsEventFunc)
@@ -202,6 +222,7 @@ public:
 
 		SBackendCapabilities *m_pCapabilities;
 		SGraphicsBackendDiagnostics *m_pDiagnostics;
+		SGraphicsDebugCallbackState *m_pGraphicsDebugCallbackState = nullptr;
 		int *m_pInitError;
 
 		const char **m_pErrStringPtr;

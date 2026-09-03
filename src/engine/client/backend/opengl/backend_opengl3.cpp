@@ -535,6 +535,8 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Shutdown(const SCommand_Shutdown *
 	}
 
 	m_vBufferContainers.clear();
+
+	CCommandProcessorFragment_OpenGL::Cmd_Shutdown(pCommand);
 }
 
 void CCommandProcessorFragment_OpenGL3_3::TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, uint8_t *pTexData)
