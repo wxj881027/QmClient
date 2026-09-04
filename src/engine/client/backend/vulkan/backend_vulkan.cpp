@@ -1169,12 +1169,33 @@ private:
 	VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
 #endif
 
-#ifdef VK_EXT_device_fault
-	// Optional VK_EXT_device_fault support. When the driver exposes the extension
-	// we enable it so that a VK_ERROR_DEVICE_LOST can be followed up with detailed
-	// fault information (faulting GPU addresses and vendor specific fault codes).
+#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
+	enum class EVulkanDeviceFaultApi
+	{
+		NONE,
+		KHR,
+		EXT,
+	};
+
+	static const char *VulkanDeviceFaultApiName(EVulkanDeviceFaultApi Api)
+	{
+		switch(Api)
+		{
+		case EVulkanDeviceFaultApi::KHR: return "khr";
+		case EVulkanDeviceFaultApi::EXT: return "ext";
+		default: return "none";
+		}
+	}
+
+	// KHR 是新 API；EXT 仅作为旧驱动的兼容路径。运行时只选择一个 API。
+	EVulkanDeviceFaultApi m_DeviceFaultApi = EVulkanDeviceFaultApi::NONE;
 	bool m_DeviceFaultAvailable = false;
+#if defined(VK_KHR_device_fault)
+	PFN_vkGetDeviceFaultReportsKHR m_pfnGetDeviceFaultReportsKHR = nullptr;
+#endif
+#if defined(VK_EXT_device_fault)
 	PFN_vkGetDeviceFaultInfoEXT m_pfnGetDeviceFaultInfoEXT = nullptr;
+#endif
 #endif
 
 	VkDescriptorSetLayout m_StandardTexturedDescriptorSetLayout;
@@ -1329,11 +1350,20 @@ protected:
 		m_Warning.m_WarningType = WarningType;
 	}
 
-#ifdef VK_EXT_device_fault
-	static const char *DeviceFaultAddressTypeName(VkDeviceFaultAddressTypeEXT Type)
+#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
+	static const char *DeviceFaultAddressTypeName(int Type)
 	{
 		switch(Type)
 		{
+#if defined(VK_KHR_device_fault)
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_NONE_KHR: return "none";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_KHR: return "read_invalid";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_KHR: return "write_invalid";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_KHR: return "execute_invalid";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_KHR: return "instruction_pointer_unknown";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_KHR: return "instruction_pointer_invalid";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_KHR: return "instruction_pointer_fault";
+#else
 		case VK_DEVICE_FAULT_ADDRESS_TYPE_NONE_EXT: return "none";
 		case VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT: return "read_invalid";
 		case VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT: return "write_invalid";
@@ -1341,6 +1371,7 @@ protected:
 		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT: return "instruction_pointer_unknown";
 		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT: return "instruction_pointer_invalid";
 		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT: return "instruction_pointer_fault";
+#endif
 		default: return "unknown";
 		}
 	}
@@ -1369,12 +1400,153 @@ protected:
 		return true;
 	}
 
-	// 查询并自动记录 VK_EXT_device_fault 信息；不请求可能很大的 vendor binary dump。
+	// 查询并自动记录设备故障信息；不请求可能很大的 vendor binary dump。
 	void LogDeviceFaultInfo()
 	{
-		if(!m_DeviceFaultAvailable || m_pfnGetDeviceFaultInfoEXT == nullptr)
+		if(!m_DeviceFaultAvailable)
 			return;
 
+#if defined(VK_KHR_device_fault)
+		if(m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR)
+		{
+			if(m_pfnGetDeviceFaultReportsKHR == nullptr)
+				return;
+			constexpr uint32_t MAX_CAPTURED_FAULTS = 8;
+			uint32_t AvailableFaultCount = 0;
+			const VkResult CountResult = m_pfnGetDeviceFaultReportsKHR(m_VKDevice, 0, &AvailableFaultCount, nullptr);
+			if(CountResult == VK_TIMEOUT)
+			{
+				EmitGraphicsEvent("graphics.vulkan.device_fault", "backend=vulkan;api=khr;available=true;query=reports;result=timeout;reports_available=false;vendor_binary_requested=false");
+				return;
+			}
+			if(CountResult != VK_SUCCESS && CountResult != VK_INCOMPLETE)
+			{
+				char aDetails[192];
+				str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=khr;available=true;query=reports;result=%d;class=%s;vendor_binary_requested=false", static_cast<int>(CountResult), VulkanResultClass(CountResult));
+				EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
+				return;
+			}
+
+			const uint32_t RequestedFaultCount = std::min(AvailableFaultCount, MAX_CAPTURED_FAULTS);
+			std::array<VkDeviceFaultInfoKHR, MAX_CAPTURED_FAULTS> aFaultInfos = {};
+			for(uint32_t i = 0; i < RequestedFaultCount; ++i)
+			{
+				aFaultInfos[i].sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_KHR;
+				aFaultInfos[i].pNext = nullptr;
+			}
+			uint32_t CapturedFaultCount = RequestedFaultCount;
+			VkResult ReportsResult = VK_SUCCESS;
+			if(RequestedFaultCount > 0)
+				ReportsResult = m_pfnGetDeviceFaultReportsKHR(m_VKDevice, 0, &CapturedFaultCount, aFaultInfos.data());
+			if(ReportsResult != VK_SUCCESS && ReportsResult != VK_INCOMPLETE)
+			{
+				char aDetails[224];
+				str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=khr;available=true;query=reports;result=%d;class=%s;available_fault_count=%u;vendor_binary_requested=false", static_cast<int>(ReportsResult), VulkanResultClass(ReportsResult), AvailableFaultCount);
+				EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
+				return;
+			}
+			CapturedFaultCount = std::min(CapturedFaultCount, RequestedFaultCount);
+
+			log_error("gfx/vulkan", "Device fault reports (VK_KHR_device_fault): count=%u", CapturedFaultCount);
+			for(uint32_t i = 0; i < CapturedFaultCount; ++i)
+			{
+				const VkDeviceFaultInfoKHR &Info = aFaultInfos[i];
+				const bool HasFaultAddress = (Info.flags & VK_DEVICE_FAULT_FLAG_MEMORY_ADDRESS_KHR) != 0;
+				const bool HasInstructionAddress = (Info.flags & VK_DEVICE_FAULT_FLAG_INSTRUCTION_ADDRESS_KHR) != 0;
+				const bool HasVendorInfo = (Info.flags & VK_DEVICE_FAULT_FLAG_VENDOR_KHR) != 0;
+				log_error("gfx/vulkan", "  fault report: group=%" PRIu64 " flags=0x%x description=%s", Info.groupId, static_cast<uint32_t>(Info.flags), Info.description);
+				if(HasFaultAddress)
+					log_error("gfx/vulkan", "    fault address: type=%s reportedAddress=0x%" PRIx64 " precision=0x%" PRIx64, DeviceFaultAddressTypeName(Info.faultAddressInfo.addressType), (uint64_t)Info.faultAddressInfo.reportedAddress, (uint64_t)Info.faultAddressInfo.addressPrecision);
+				if(HasInstructionAddress)
+					log_error("gfx/vulkan", "    instruction address: type=%s reportedAddress=0x%" PRIx64 " precision=0x%" PRIx64, DeviceFaultAddressTypeName(Info.instructionAddressInfo.addressType), (uint64_t)Info.instructionAddressInfo.reportedAddress, (uint64_t)Info.instructionAddressInfo.addressPrecision);
+				if(HasVendorInfo)
+					log_error("gfx/vulkan", "    vendor fault: %s code=0x%" PRIx64 " data=0x%" PRIx64, Info.vendorInfo.description, (uint64_t)Info.vendorInfo.vendorFaultCode, (uint64_t)Info.vendorInfo.vendorFaultData);
+			}
+
+			char aDetails[16 * 1024];
+			int DetailsLength = str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=khr;available=true;query_result=%d;query_incomplete=%s;available_fault_count=%u;captured_fault_count=%u;omitted_fault_count=%u;vendor_binary_requested=false", static_cast<int>(ReportsResult), ReportsResult == VK_INCOMPLETE ? "true" : "false", AvailableFaultCount, CapturedFaultCount, AvailableFaultCount - CapturedFaultCount);
+			if(DetailsLength < 0)
+				DetailsLength = 0;
+			size_t DetailsOffset = static_cast<size_t>(DetailsLength);
+			bool DetailsTruncated = false;
+			for(uint32_t i = 0; i < CapturedFaultCount && !DetailsTruncated; ++i)
+			{
+				const VkDeviceFaultInfoKHR &Info = aFaultInfos[i];
+				const bool HasFaultAddress = (Info.flags & VK_DEVICE_FAULT_FLAG_MEMORY_ADDRESS_KHR) != 0;
+				const bool HasInstructionAddress = (Info.flags & VK_DEVICE_FAULT_FLAG_INSTRUCTION_ADDRESS_KHR) != 0;
+				const bool HasVendorInfo = (Info.flags & VK_DEVICE_FAULT_FLAG_VENDOR_KHR) != 0;
+				int Written = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";fault_%u_group=%" PRIu64 ";fault_%u_flags=0x%x;fault_%u_description=", i, Info.groupId, i, static_cast<uint32_t>(Info.flags), i);
+				if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - DetailsOffset)
+				{
+					DetailsTruncated = true;
+					break;
+				}
+				DetailsOffset += static_cast<size_t>(Written);
+				if(!AppendEncodedVulkanFaultText(aDetails, sizeof(aDetails), DetailsOffset, Info.description))
+				{
+					DetailsTruncated = true;
+					break;
+				}
+				Written = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";fault_%u_has_address=%s;fault_%u_has_instruction=%s;fault_%u_has_vendor=%s", i, HasFaultAddress ? "true" : "false", i, HasInstructionAddress ? "true" : "false", i, HasVendorInfo ? "true" : "false");
+				if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - DetailsOffset)
+				{
+					DetailsTruncated = true;
+					break;
+				}
+				DetailsOffset += static_cast<size_t>(Written);
+				if(HasFaultAddress)
+				{
+					Written = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";fault_%u_address_type=%s;fault_%u_address=0x%" PRIx64 ";fault_%u_address_precision=0x%" PRIx64, i, DeviceFaultAddressTypeName(Info.faultAddressInfo.addressType), i, (uint64_t)Info.faultAddressInfo.reportedAddress, i, (uint64_t)Info.faultAddressInfo.addressPrecision);
+					if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - DetailsOffset)
+					{
+						DetailsTruncated = true;
+						break;
+					}
+					DetailsOffset += static_cast<size_t>(Written);
+				}
+				if(HasInstructionAddress)
+				{
+					Written = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";fault_%u_instruction_type=%s;fault_%u_instruction=0x%" PRIx64 ";fault_%u_instruction_precision=0x%" PRIx64, i, DeviceFaultAddressTypeName(Info.instructionAddressInfo.addressType), i, (uint64_t)Info.instructionAddressInfo.reportedAddress, i, (uint64_t)Info.instructionAddressInfo.addressPrecision);
+					if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - DetailsOffset)
+					{
+						DetailsTruncated = true;
+						break;
+					}
+					DetailsOffset += static_cast<size_t>(Written);
+				}
+				if(HasVendorInfo)
+				{
+					Written = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";fault_%u_vendor_description=", i);
+					if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - DetailsOffset)
+					{
+						DetailsTruncated = true;
+						break;
+					}
+					DetailsOffset += static_cast<size_t>(Written);
+					if(!AppendEncodedVulkanFaultText(aDetails, sizeof(aDetails), DetailsOffset, Info.vendorInfo.description))
+					{
+						DetailsTruncated = true;
+						break;
+					}
+					Written = str_format(aDetails + DetailsOffset, sizeof(aDetails) - DetailsOffset, ";fault_%u_vendor_code=0x%" PRIx64 ";fault_%u_vendor_data=0x%" PRIx64, i, (uint64_t)Info.vendorInfo.vendorFaultCode, i, (uint64_t)Info.vendorInfo.vendorFaultData);
+					if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aDetails) - DetailsOffset)
+					{
+						DetailsTruncated = true;
+						break;
+					}
+					DetailsOffset += static_cast<size_t>(Written);
+				}
+			}
+			if(DetailsTruncated)
+				str_format(aDetails + std::min(DetailsOffset, sizeof(aDetails) - 1), sizeof(aDetails) - std::min(DetailsOffset, sizeof(aDetails) - 1), ";details_truncated=true");
+			EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
+			return;
+		}
+#endif
+
+#if defined(VK_EXT_device_fault)
+		if(m_DeviceFaultApi != EVulkanDeviceFaultApi::EXT || m_pfnGetDeviceFaultInfoEXT == nullptr)
+			return;
 		constexpr uint32_t MAX_CAPTURED_ADDRESS_FAULTS = 8;
 		constexpr uint32_t MAX_CAPTURED_VENDOR_FAULTS = 8;
 		VkDeviceFaultCountsEXT FaultCounts = {};
@@ -1383,7 +1555,7 @@ protected:
 		if(CountsResult != VK_SUCCESS)
 		{
 			char aDetails[160];
-			str_format(aDetails, sizeof(aDetails), "backend=vulkan;available=false;query=counts;result=%d;class=%s", static_cast<int>(CountsResult), VulkanResultClass(CountsResult));
+			str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=ext;available=true;query=counts;result=%d;class=%s", static_cast<int>(CountsResult), VulkanResultClass(CountsResult));
 			EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
 			return;
 		}
@@ -1407,7 +1579,7 @@ protected:
 		if(InfoResult != VK_SUCCESS && InfoResult != VK_INCOMPLETE)
 		{
 			char aDetails[192];
-			str_format(aDetails, sizeof(aDetails), "backend=vulkan;available=false;query=info;result=%d;class=%s;available_address_count=%u;available_vendor_count=%u", static_cast<int>(InfoResult), VulkanResultClass(InfoResult), AvailableAddressCount, AvailableVendorCount);
+			str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=ext;available=true;query=info;result=%d;class=%s;available_address_count=%u;available_vendor_count=%u", static_cast<int>(InfoResult), VulkanResultClass(InfoResult), AvailableAddressCount, AvailableVendorCount);
 			EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
 			return;
 		}
@@ -1429,7 +1601,7 @@ protected:
 		}
 
 		char aDetails[16 * 1024];
-		int DetailsLength = str_format(aDetails, sizeof(aDetails), "backend=vulkan;available=true;query_result=%d;query_incomplete=%s;available_address_count=%u;captured_address_count=%u;omitted_address_count=%u;available_vendor_count=%u;captured_vendor_count=%u;omitted_vendor_count=%u;vendor_binary_size=%" PRIu64 ";vendor_binary_requested=false;description=", static_cast<int>(InfoResult), InfoResult == VK_INCOMPLETE ? "true" : "false", AvailableAddressCount, CapturedAddressCount, AvailableAddressCount - CapturedAddressCount, AvailableVendorCount, CapturedVendorCount, AvailableVendorCount - CapturedVendorCount, AvailableVendorBinarySize);
+		int DetailsLength = str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=ext;available=true;query_result=%d;query_incomplete=%s;available_address_count=%u;captured_address_count=%u;omitted_address_count=%u;available_vendor_count=%u;captured_vendor_count=%u;omitted_vendor_count=%u;vendor_binary_size=%" PRIu64 ";vendor_binary_requested=false;description=", static_cast<int>(InfoResult), InfoResult == VK_INCOMPLETE ? "true" : "false", AvailableAddressCount, CapturedAddressCount, AvailableAddressCount - CapturedAddressCount, AvailableVendorCount, CapturedVendorCount, AvailableVendorCount - CapturedVendorCount, AvailableVendorBinarySize);
 		if(DetailsLength < 0)
 			DetailsLength = 0;
 		size_t DetailsOffset = static_cast<size_t>(DetailsLength);
@@ -1472,6 +1644,7 @@ protected:
 			str_format(aDetails + std::min(DetailsOffset, sizeof(aDetails) - 1), sizeof(aDetails) - std::min(DetailsOffset, sizeof(aDetails) - 1), ";details_truncated=true");
 		EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
 	}
+	#endif
 #endif
 
 	void EmitVulkanResult(VkResult CallResult, const char *pStage)
@@ -1502,11 +1675,11 @@ protected:
 		case VK_ERROR_DEVICE_LOST:
 			pCriticalError = "Device lost.";
 			log_error("gfx/vulkan", "%s", pCriticalError);
-#ifdef VK_EXT_device_fault
+		#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
 			LogDeviceFaultInfo();
-#else
-			log_error("gfx/vulkan", "Detailed fault info unavailable: built without VK_EXT_device_fault support (Vulkan headers too old).");
-#endif
+		#else
+			log_error("gfx/vulkan", "Detailed fault info unavailable: built without Vulkan device fault support (Vulkan headers too old).");
+		#endif
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
 		{
@@ -2535,7 +2708,7 @@ protected:
 		}
 	}
 
-	void ExecuteMemoryCommandBuffer()
+	[[nodiscard]] bool ExecuteMemoryCommandBuffer()
 	{
 		if(m_vUsedMemoryCommandBuffer[m_CurImageIndex])
 		{
@@ -2547,12 +2720,24 @@ protected:
 
 			SubmitInfo.commandBufferCount = 1;
 			SubmitInfo.pCommandBuffers = &MemoryCommandBuffer;
-			vkQueueSubmit(m_VKGraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
+			const VkResult QueueSubmitResult = vkQueueSubmit(m_VKGraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
+			const char *pCriticalError = CheckVulkanCriticalError(QueueSubmitResult, "memory_command_queue_submit");
+			if(QueueSubmitResult != VK_SUCCESS)
+			{
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Submitting memory command buffer failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan queue submission returned an error.");
+				return false;
+			}
 			const VkResult QueueWaitResult = vkQueueWaitIdle(m_VKGraphicsQueue);
-			EmitVulkanResult(QueueWaitResult, "memory_command_queue_wait_idle");
+			pCriticalError = CheckVulkanCriticalError(QueueWaitResult, "memory_command_queue_wait_idle");
+			if(QueueWaitResult != VK_SUCCESS)
+			{
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Waiting for memory command buffer failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan queue wait returned an error.");
+				return false;
+			}
 
 			m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 		}
+		return true;
 	}
 
 	void ClearFrameMemoryUsage()
@@ -2700,7 +2885,8 @@ protected:
 			{
 				log_debug("gfx/vulkan", "Recreating swap chain requested by user (prepare frame).");
 			}
-			RecreateSwapChain();
+			if(RecreateSwapChain() != 0)
+				return false;
 		}
 
 		auto AcqResult = vkAcquireNextImageKHR(m_VKDevice, m_VKSwapChain, std::numeric_limits<uint64_t>::max(), m_AcquireImageSemaphore, VK_NULL_HANDLE, &m_CurImageIndex);
@@ -2718,7 +2904,8 @@ protected:
 				{
 					log_debug("gfx/vulkan", "Recreating swap chain requested by acquire next image (prepare frame).");
 				}
-				RecreateSwapChain();
+				if(RecreateSwapChain() != 0)
+					return false;
 				return PrepareFrame();
 			}
 			else
@@ -2816,7 +3003,8 @@ protected:
 
 	[[nodiscard]] bool PureMemoryFrame()
 	{
-		ExecuteMemoryCommandBuffer();
+		if(!ExecuteMemoryCommandBuffer())
+			return false;
 
 		// reset streamed data
 		UploadNonFlushedBuffers<false>();
@@ -3886,11 +4074,14 @@ public:
 	{
 		std::set<std::string> OurExt;
 		OurExt.emplace(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-#ifdef VK_EXT_device_fault
+	#if defined(VK_EXT_device_fault)
 		// Only used when actually supported by the device (see device creation);
 		// enables detailed diagnostics after a VK_ERROR_DEVICE_LOST.
 		OurExt.emplace(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
-#endif
+	#endif
+	#if defined(VK_KHR_device_fault)
+		OurExt.emplace(VK_KHR_DEVICE_FAULT_EXTENSION_NAME);
+	#endif
 		return OurExt;
 	}
 
@@ -4344,29 +4535,92 @@ public:
 			}
 		}
 
-#ifdef VK_EXT_device_fault
-		bool DeviceFaultRequested = false;
-		for(const char *pDevExt : vDevPropCNames)
+#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
+		m_DeviceFaultApi = EVulkanDeviceFaultApi::NONE;
+		m_DeviceFaultAvailable = false;
+#if defined(VK_KHR_device_fault)
+		m_pfnGetDeviceFaultReportsKHR = nullptr;
+#endif
+#if defined(VK_EXT_device_fault)
+		m_pfnGetDeviceFaultInfoEXT = nullptr;
+#endif
+		for(const auto &CurExtProp : vDevPropList)
 		{
-			if(str_comp(pDevExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME) == 0)
+#if defined(VK_KHR_device_fault)
+			if(str_comp(CurExtProp.extensionName, VK_KHR_DEVICE_FAULT_EXTENSION_NAME) == 0)
 			{
-				DeviceFaultRequested = true;
+				m_DeviceFaultApi = EVulkanDeviceFaultApi::KHR;
 				break;
 			}
+#endif
 		}
+#if defined(VK_EXT_device_fault)
+		if(m_DeviceFaultApi == EVulkanDeviceFaultApi::NONE)
+		{
+			for(const auto &CurExtProp : vDevPropList)
+			{
+				if(str_comp(CurExtProp.extensionName, VK_EXT_DEVICE_FAULT_EXTENSION_NAME) == 0)
+				{
+					m_DeviceFaultApi = EVulkanDeviceFaultApi::EXT;
+					break;
+				}
+			}
+		}
+#endif
+		log_debug("gfx/vulkan", "Device fault extension selection: api=%s", VulkanDeviceFaultApiName(m_DeviceFaultApi));
 
-		VkPhysicalDeviceFaultFeaturesEXT FaultFeatures = {};
-		FaultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
-		if(DeviceFaultRequested)
+		std::vector<const char *> FilteredDevPropCNames;
+		FilteredDevPropCNames.reserve(vDevPropCNames.size());
+		for(const char *pDevExt : vDevPropCNames)
+		{
+			bool Keep = true;
+#if defined(VK_KHR_device_fault)
+			if(str_comp(pDevExt, VK_KHR_DEVICE_FAULT_EXTENSION_NAME) == 0)
+				Keep = m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR;
+#endif
+#if defined(VK_EXT_device_fault)
+			if(str_comp(pDevExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME) == 0)
+				Keep = m_DeviceFaultApi == EVulkanDeviceFaultApi::EXT;
+#endif
+			if(Keep)
+				FilteredDevPropCNames.emplace_back(pDevExt);
+		}
+		vDevPropCNames = std::move(FilteredDevPropCNames);
+#endif
+
+#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
+		bool DeviceFaultFeatureEnabled = false;
+#if defined(VK_KHR_device_fault)
+		VkPhysicalDeviceFaultFeaturesKHR FaultFeaturesKHR = {};
+		FaultFeaturesKHR.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_KHR;
+#endif
+#if defined(VK_EXT_device_fault)
+		VkPhysicalDeviceFaultFeaturesEXT FaultFeaturesEXT = {};
+		FaultFeaturesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
+#endif
+		if(m_DeviceFaultApi != EVulkanDeviceFaultApi::NONE)
 		{
 			auto pfnGetPhysicalDeviceFeatures2 = (PFN_vkGetPhysicalDeviceFeatures2)vkGetInstanceProcAddr(m_VKInstance, "vkGetPhysicalDeviceFeatures2");
 			if(pfnGetPhysicalDeviceFeatures2 != nullptr)
 			{
-				// The extension's core deviceFault feature must be enabled explicitly.
 				VkPhysicalDeviceFeatures2 PhysFeatures2 = {};
 				PhysFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-				PhysFeatures2.pNext = &FaultFeatures;
-				pfnGetPhysicalDeviceFeatures2(m_VKGPU, &PhysFeatures2);
+#if defined(VK_KHR_device_fault)
+				if(m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR)
+				{
+					PhysFeatures2.pNext = &FaultFeaturesKHR;
+					pfnGetPhysicalDeviceFeatures2(m_VKGPU, &PhysFeatures2);
+					DeviceFaultFeatureEnabled = FaultFeaturesKHR.deviceFault != VK_FALSE;
+				}
+#endif
+#if defined(VK_EXT_device_fault)
+				if(m_DeviceFaultApi == EVulkanDeviceFaultApi::EXT)
+				{
+					PhysFeatures2.pNext = &FaultFeaturesEXT;
+					pfnGetPhysicalDeviceFeatures2(m_VKGPU, &PhysFeatures2);
+					DeviceFaultFeatureEnabled = FaultFeaturesEXT.deviceFault != VK_FALSE;
+				}
+#endif
 			}
 		}
 #endif
@@ -4392,13 +4646,29 @@ public:
 		VKCreateInfo.pEnabledFeatures = nullptr;
 		VKCreateInfo.flags = 0;
 
-#ifdef VK_EXT_device_fault
-		if(DeviceFaultRequested && FaultFeatures.deviceFault)
+#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
+		if(DeviceFaultFeatureEnabled)
 		{
-			FaultFeatures.pNext = nullptr;
-			// We never read the vendor binary crash dump, so do not opt into generating it.
-			FaultFeatures.deviceFaultVendorBinary = VK_FALSE;
-			VKCreateInfo.pNext = &FaultFeatures;
+#if defined(VK_KHR_device_fault)
+			if(m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR)
+			{
+				FaultFeaturesKHR.pNext = nullptr;
+				FaultFeaturesKHR.deviceFault = VK_TRUE;
+				FaultFeaturesKHR.deviceFaultVendorBinary = VK_FALSE;
+				FaultFeaturesKHR.deviceFaultReportMasked = VK_FALSE;
+				FaultFeaturesKHR.deviceFaultDeviceLostOnMasked = VK_FALSE;
+				VKCreateInfo.pNext = &FaultFeaturesKHR;
+			}
+#endif
+#if defined(VK_EXT_device_fault)
+			if(m_DeviceFaultApi == EVulkanDeviceFaultApi::EXT)
+			{
+				FaultFeaturesEXT.pNext = nullptr;
+				FaultFeaturesEXT.deviceFault = VK_TRUE;
+				FaultFeaturesEXT.deviceFaultVendorBinary = VK_FALSE;
+				VKCreateInfo.pNext = &FaultFeaturesEXT;
+			}
+#endif
 		}
 #endif
 		if(m_pDiagnostics)
@@ -4410,18 +4680,45 @@ public:
 			return false;
 		}
 
-#ifdef VK_EXT_device_fault
-		if(DeviceFaultRequested && FaultFeatures.deviceFault)
+#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
+		if(DeviceFaultFeatureEnabled)
 		{
-			m_pfnGetDeviceFaultInfoEXT = (PFN_vkGetDeviceFaultInfoEXT)vkGetDeviceProcAddr(m_VKDevice, "vkGetDeviceFaultInfoEXT");
-			m_DeviceFaultAvailable = m_pfnGetDeviceFaultInfoEXT != nullptr;
+#if defined(VK_KHR_device_fault)
+			if(m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR)
+				m_pfnGetDeviceFaultReportsKHR = (PFN_vkGetDeviceFaultReportsKHR)vkGetDeviceProcAddr(m_VKDevice, "vkGetDeviceFaultReportsKHR");
+#endif
+#if defined(VK_EXT_device_fault)
+			if(m_DeviceFaultApi == EVulkanDeviceFaultApi::EXT)
+				m_pfnGetDeviceFaultInfoEXT = (PFN_vkGetDeviceFaultInfoEXT)vkGetDeviceProcAddr(m_VKDevice, "vkGetDeviceFaultInfoEXT");
+#endif
+			m_DeviceFaultAvailable =
+#if defined(VK_KHR_device_fault)
+				(m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR && m_pfnGetDeviceFaultReportsKHR != nullptr) ||
+#endif
+#if defined(VK_EXT_device_fault)
+				(m_DeviceFaultApi == EVulkanDeviceFaultApi::EXT && m_pfnGetDeviceFaultInfoEXT != nullptr) ||
+#endif
+				false;
 			if(m_DeviceFaultAvailable)
-				log_debug("gfx/vulkan", "VK_EXT_device_fault enabled; detailed fault info will be logged on device loss.");
+				log_debug("gfx/vulkan", "Vulkan device fault diagnostics enabled via %s.", VulkanDeviceFaultApiName(m_DeviceFaultApi));
 			if(m_pDiagnostics)
 			{
 				m_pDiagnostics->m_VulkanDeviceFaultAvailable = m_DeviceFaultAvailable;
 				m_pDiagnostics->m_VulkanDeviceFaultEnabled = true;
 			}
+			if(!m_DeviceFaultAvailable)
+			{
+				char aDetails[160];
+				str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=%s;available=false;enabled=true;reason=function_pointer_missing", VulkanDeviceFaultApiName(m_DeviceFaultApi));
+				EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
+			}
+		}
+		else
+		{
+			const char *pReason = m_DeviceFaultApi == EVulkanDeviceFaultApi::NONE ? "extension_unavailable" : "feature_unsupported";
+			char aDetails[160];
+			str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=%s;available=false;enabled=false;reason=%s", VulkanDeviceFaultApiName(m_DeviceFaultApi), pReason);
+			EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
 		}
 #endif
 
@@ -6151,9 +6448,15 @@ public:
 			vkDestroyInstance(m_VKInstance, nullptr);
 			m_VKInstance = VK_NULL_HANDLE;
 		}
-#ifdef VK_EXT_device_fault
+#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
+		m_DeviceFaultApi = EVulkanDeviceFaultApi::NONE;
 		m_DeviceFaultAvailable = false;
+#if defined(VK_KHR_device_fault)
+		m_pfnGetDeviceFaultReportsKHR = nullptr;
+#endif
+#if defined(VK_EXT_device_fault)
 		m_pfnGetDeviceFaultInfoEXT = nullptr;
+#endif
 #endif
 	}
 
@@ -6166,11 +6469,16 @@ public:
 		str_format(aBeginDetails, sizeof(aBeginDetails), "backend=vulkan;old_image_count=%u", OldSwapChainImageCount);
 		EmitGraphicsEvent("graphics.swapchain_recreate_begin", aBeginDetails);
 		const VkResult WaitIdleResult = vkDeviceWaitIdle(m_VKDevice);
-		EmitVulkanResult(WaitIdleResult, "swapchain_recreate_wait_idle");
+		const char *pCriticalError = CheckVulkanCriticalError(WaitIdleResult, "swapchain_recreate_wait_idle");
 		if(WaitIdleResult != VK_SUCCESS)
 		{
-			Ret = -1;
-			pFailureStage = "wait_idle";
+			// 设备未进入 idle 时不能安全地销毁或重建其资源。尤其是
+			// VK_ERROR_DEVICE_LOST，继续执行会把原始故障扩大成级联错误。
+			SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "Waiting for Vulkan device to become idle failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan device wait returned an error.");
+			char aEndDetails[96];
+			str_format(aEndDetails, sizeof(aEndDetails), "backend=vulkan;result=-1;stage=wait_idle;old_image_count=%u;new_image_count=%u", OldSwapChainImageCount, m_SwapChainImageCount);
+			EmitGraphicsEvent("graphics.swapchain_recreate_end", aEndDetails);
+			return -1;
 		}
 
 		if(IsVerbose())
@@ -8182,9 +8490,15 @@ public:
 		m_GraphicsDebugCallbackEnabled = false;
 		m_LastGraphicsDebugEventNs = 0;
 		m_LastGraphicsDebugMessageCount = 0;
-#ifdef VK_EXT_device_fault
+#if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
+		m_DeviceFaultApi = EVulkanDeviceFaultApi::NONE;
 		m_DeviceFaultAvailable = false;
+#if defined(VK_KHR_device_fault)
+		m_pfnGetDeviceFaultReportsKHR = nullptr;
+#endif
+#if defined(VK_EXT_device_fault)
 		m_pfnGetDeviceFaultInfoEXT = nullptr;
+#endif
 #endif
 		ResetVulkanDebugState(m_pGraphicsDebugCallbackState);
 		if(m_pDiagnostics)
