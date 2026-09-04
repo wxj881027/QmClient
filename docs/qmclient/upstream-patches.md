@@ -29,6 +29,10 @@ baseline: ddnet-20.0
 - 必须记录修改前后的默认行为、调用阶段、线程归属、性能预算、冲突重放方式和删除条件。
 - 如果实现需要协议、snapshot、demo、物理、预测或服务端玩法变化，必须改标为 UPSTREAM_CHANGE，暂停普通迁移流程，单独评审。
 - 暂定 hook 不能提前加入官方代码；先在 Qm 独立文件中证明需求确实存在。
+
+## 2026-09-04 诊断范围冻结
+
+现有图形诊断只作为 QmClient 阶段性 A/B 和基础故障定位基础，不再继续向官方 Vulkan、OpenGL 或 SDL 文件添加深层诊断字段。后续若要补充 Metal 成功路径、GPU query、device fault 深度信息或 renderer switch，必须先提交独立的需求证据、上游冲突评估和可删除条件；在此之前保持现状，不把 diagnostics 继续扩展成官方后端的平行实现。
 ## 当前重构分支新增触点
 
 ### `src/engine/shared/config_variables.h`

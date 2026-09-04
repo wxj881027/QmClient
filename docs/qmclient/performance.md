@@ -62,6 +62,12 @@ status: active
 - 计时只对已注册 feature 生效；采样存储在预留的窗口 vector 中，计时路径不做文件 I/O 或动态字符串构造。诊断 session 不可用时不改变 feature 行为。
 - UI 首次打开、搜索、滚动、布局和其他 Qm feature 的独立计时仍是后续缺口。
 
+## 诊断范围冻结（2026-09-04）
+
+- 当前诊断能力冻结为支持同场景 A/B 和基础故障定位所需的范围：自动 session/report、帧窗口、1% low、图形初始化/重建/fallback 事件、OpenGL/GLES/Vulkan 已有快照与错误摘要。
+- 暂不继续扩大官方 Vulkan/OpenGL/SDL 文件的诊断侵入面；Metal 成功路径、真实 GPU query、device fault 深度信息和更多 renderer switch 事件转为后续独立评估项。
+- 后续性能工作优先使用现有日志验证真实 feature 的关闭开销、1% low 和内存变化；任何新增后端触点必须先证明现有诊断无法回答目标问题，并单独记录上游冲突成本。
+
 ## Resource rebuild 事件增量（2026-09-04）
 
 - 画布尺寸发生变化并调用官方 resize listeners 时，自动记录 `graphics.resource_rebuild_begin` 和 `graphics.resource_rebuild_end`。事件保留旧/新画布尺寸、listener 数、原因和结束结果；`result=completed` 只表示 listener 调用序列返回，不代表每个资源内部都报告成功，便于把 resize、资源重建和后续帧抖动关联起来。
