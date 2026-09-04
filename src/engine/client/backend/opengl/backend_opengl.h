@@ -177,6 +177,7 @@ class CCommandProcessorFragment_OpenGL2 : public CCommandProcessorFragment_OpenG
 #endif
 
 	void UseProgram(CGLSLTWProgram *pProgram);
+	void DestroyPrograms();
 
 protected:
 	void SetState(const CCommandBuffer::SState &State, CGLSLTWProgram *pProgram, bool Use2DArrayTextures = false);
@@ -202,12 +203,12 @@ protected:
 	void Cmd_RenderBorderTile(const CCommandBuffer::SCommand_RenderBorderTile *pCommand) override;
 #endif
 
-	CGLSLTileProgram *m_pTileProgram;
-	CGLSLTileProgram *m_pTileProgramTextured;
-	CGLSLTileProgram *m_pBorderTileProgram;
-	CGLSLTileProgram *m_pBorderTileProgramTextured;
-	CGLSLPrimitiveProgram *m_pPrimitive3DProgram;
-	CGLSLPrimitiveProgram *m_pPrimitive3DProgramTextured;
+	CGLSLTileProgram *m_pTileProgram = nullptr;
+	CGLSLTileProgram *m_pTileProgramTextured = nullptr;
+	CGLSLTileProgram *m_pBorderTileProgram = nullptr;
+	CGLSLTileProgram *m_pBorderTileProgramTextured = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitive3DProgram = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitive3DProgramTextured = nullptr;
 };
 
 class CCommandProcessorFragment_OpenGL3 : public CCommandProcessorFragment_OpenGL2

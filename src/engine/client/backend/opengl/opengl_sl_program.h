@@ -48,8 +48,8 @@ public:
 	virtual ~CGLSLProgram();
 
 protected:
-	TWGLuint m_ProgramId;
-	bool m_IsLinked;
+	TWGLuint m_ProgramId = 0;
+	bool m_IsLinked = false;
 };
 
 class CGLSLTWProgram : public CGLSLProgram

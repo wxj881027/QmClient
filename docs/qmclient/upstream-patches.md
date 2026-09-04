@@ -81,6 +81,7 @@ baseline: ddnet-20.0
 - graphics 事件注册、启动队列入队和 pending 回放增加异常恢复；监听器分配、队列分配或同步异常只丢弃诊断事件并恢复 replay 状态，不传播到原始图形路径。
 - fatal graphics 事件分类先收集所有错误文本再按固定优先级选择根因，避免错误容器顺序变化造成 device lost、pipeline 或 shader 分类漂移。
 - OpenGL/GLES debug callback 的具体消息只写入 backend-owned 固定容量 ring，事件 flush 时复制最近 8 条消息和 ring 覆盖、锁竞争、截断计数；初始化失败回退使用 callback-only shutdown 收口，不引入动态内存或同步 I/O，默认渲染行为不变。
+- OpenGL2 初始化失败回退现在统一销毁已创建的 tile/border/3D shader program；正常 shutdown 也覆盖 border program。`CGLSLProgram` 对已创建但 link 失败的 program 同样执行 `glDeleteProgram`，避免 callback-only 路径或 shader 初始化失败留下 GPU 对象；未改变 shader 选择、渲染结果和 fallback 语义。
 - 上游冲突风险：中。新增内容集中在一个可选 command 输出结构和一个 listener 入口；同步时优先保留 upstream 的 command 字段顺序与 backend init 流程，只重放诊断字段和事件调用。
 - 删除条件：上游提供等价的 backend diagnostics sink、统一生命周期事件和自动落盘能力后，移除该输出指针、pending event 缓冲和 Qm 事件映射。
 

@@ -27,10 +27,11 @@ void CGLSLProgram::CreateProgram()
 
 void CGLSLProgram::DeleteProgram()
 {
-	if(!m_IsLinked)
+	if(m_ProgramId == 0)
 		return;
-	m_IsLinked = false;
 	glDeleteProgram(m_ProgramId);
+	m_ProgramId = 0;
+	m_IsLinked = false;
 }
 
 bool CGLSLProgram::AddShader(CGLSL *pShader) const
@@ -157,7 +158,6 @@ TWGLuint CGLSLProgram::GetProgramId() const
 
 CGLSLProgram::CGLSLProgram()
 {
-	m_IsLinked = false;
 }
 
 CGLSLProgram::~CGLSLProgram()

@@ -2282,29 +2282,50 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 	return true;
 }
 
+void CCommandProcessorFragment_OpenGL2::DestroyPrograms()
+{
+	if(m_pTileProgram != nullptr)
+	{
+		m_pTileProgram->DeleteProgram();
+		delete m_pTileProgram;
+		m_pTileProgram = nullptr;
+	}
+	if(m_pTileProgramTextured != nullptr)
+	{
+		m_pTileProgramTextured->DeleteProgram();
+		delete m_pTileProgramTextured;
+		m_pTileProgramTextured = nullptr;
+	}
+	if(m_pBorderTileProgram != nullptr)
+	{
+		m_pBorderTileProgram->DeleteProgram();
+		delete m_pBorderTileProgram;
+		m_pBorderTileProgram = nullptr;
+	}
+	if(m_pBorderTileProgramTextured != nullptr)
+	{
+		m_pBorderTileProgramTextured->DeleteProgram();
+		delete m_pBorderTileProgramTextured;
+		m_pBorderTileProgramTextured = nullptr;
+	}
+	if(m_pPrimitive3DProgram != nullptr)
+	{
+		m_pPrimitive3DProgram->DeleteProgram();
+		delete m_pPrimitive3DProgram;
+		m_pPrimitive3DProgram = nullptr;
+	}
+	if(m_pPrimitive3DProgramTextured != nullptr)
+	{
+		m_pPrimitive3DProgramTextured->DeleteProgram();
+		delete m_pPrimitive3DProgramTextured;
+		m_pPrimitive3DProgramTextured = nullptr;
+	}
+}
+
 void CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
 {
 	if(!pCommand->m_CallbackOnly)
 	{
-	if(m_HasShaders)
-	{
-		glUseProgram(0);
-
-		m_pTileProgram->DeleteProgram();
-		m_pTileProgramTextured->DeleteProgram();
-		m_pBorderTileProgram->DeleteProgram();
-		m_pBorderTileProgramTextured->DeleteProgram();
-		m_pPrimitive3DProgram->DeleteProgram();
-		m_pPrimitive3DProgramTextured->DeleteProgram();
-
-		delete m_pTileProgram;
-		delete m_pTileProgramTextured;
-		delete m_pBorderTileProgram;
-		delete m_pBorderTileProgramTextured;
-		delete m_pPrimitive3DProgram;
-		delete m_pPrimitive3DProgramTextured;
-	}
-
 	for(int i = 0; i < (int)m_vTextures.size(); ++i)
 	{
 		DestroyTexture(i);
@@ -2315,7 +2336,10 @@ void CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(const SCommand_Shutdown *pC
 		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
 		free(BufferObject.m_pData);
 	}
+		DestroyPrograms();
 	}
+	else
+		DestroyPrograms();
 
 	CCommandProcessorFragment_OpenGL::Cmd_Shutdown(pCommand);
 }
