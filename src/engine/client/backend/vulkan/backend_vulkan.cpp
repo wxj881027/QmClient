@@ -1997,8 +1997,6 @@ protected:
 				m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 				return false;
 			}
-			m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
-
 			VkSubmitInfo SubmitInfo{};
 			SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 			SubmitInfo.commandBufferCount = 1;
@@ -2025,6 +2023,7 @@ protected:
 				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Waiting for presented image command buffer failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan fence wait returned an error.");
 				return false;
 			}
+			m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 
 			VkMappedMemoryRange MemRange{};
 			MemRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -2035,7 +2034,7 @@ protected:
 			if(InvalidateResult != VK_SUCCESS)
 			{
 				const char *pCriticalError = CheckVulkanCriticalError(InvalidateResult, "presented_image_memory_invalidate");
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Invalidating presented image memory failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan mapped memory invalidation returned an error.");
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Invalidating presented image memory failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan mapped memory invalidation returned an error.");
 				return false;
 			}
 
