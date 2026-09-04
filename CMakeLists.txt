@@ -2705,6 +2705,7 @@ if(CLIENT)
     components/menus_settings_graphics.cpp
     components/menus_settings_language.cpp
     components/menus_settings_player.cpp
+    components/qmclient/presentation/qm_legacy_settings.cpp
     components/menus_settings_sound.cpp
     components/menus_settings_tee.cpp
     components/menus_settings_tee7.cpp

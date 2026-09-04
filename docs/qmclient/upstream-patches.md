@@ -106,3 +106,16 @@ baseline: ddnet-20.0
 - 注册 Qm core、player indicator、诊断保留策略头文件和 C++ 测试源文件；不修改依赖版本和协议生成流程。
 - 冲突风险：中。上游源文件清单可能新增条目；同步时按路径插入，不做全文件重排。
 - 删除条件：对应 Qm 模块和测试删除，或改为独立目标。
+
+### `src/engine/shared/config_variables.h` / `src/game/client/components/menus.h` / `menus_settings.cpp`
+
+- 在官方设置页列表末尾追加 `QmClient` 页，保留原有设置页枚举值和 `ui_settings_page` 持久化编号不变，并把该配置的合法上限从 `10` 扩展到 `11`；页面实现位于独立的 `qmclient/presentation/qm_legacy_settings.cpp`。
+- 触点范围：旧 UI 导航、页面分发和页面索引范围，不改变官方已有页面内容、输入优先级或配置字段；Qm 页面直接绑定现有 `qm_` 配置，暂不复制 feature 业务状态。
+- 冲突风险：中。上游新增设置页时需保持 Qm 页追加在末尾，并重新核对枚举与 tab 文本数量。
+- 删除条件：Qm legacy presentation 被新旧 UI 统一桥接替代，或对应 Qm 设置全部移除。
+
+### `src/game/client/components/qmclient/presentation/qm_legacy_settings.cpp`
+
+- 提供当前已迁移的 diagnostics 开关和 player indicator 配置的旧 UI 入口；diagnostics 明确标注重启生效，player indicator 参数实时写入同一 `CConfig` 状态。
+- 页面只负责 presentation，不读取 `CTClient`、不拥有重复 feature 状态，也不进入游戏热路径；颜色使用官方 `CMenus::DoLine_ColorPicker`。
+- 删除条件：新旧 UI presentation 共用正式 card provider 且旧页面完成行为对照后移除。

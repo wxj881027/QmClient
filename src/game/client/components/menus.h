@@ -590,6 +590,9 @@ protected:
 	void RenderLanguageSettings(CUIRect MainView);
 	bool RenderLanguageSelection(CUIRect MainView);
 
+	// found in qmclient/presentation/qm_legacy_settings.cpp
+	void RenderSettingsQmClient(CUIRect MainView);
+
 	// found in menus_settings_player.cpp
 	void RenderSettingsPlayer(CUIRect MainView);
 
@@ -714,6 +717,7 @@ public:
 		SETTINGS_DDNET,
 		SETTINGS_ASSETS,
 		SETTINGS_CREDITS,
+		SETTINGS_QMCLIENT,
 
 		SETTINGS_LENGTH,
 	};
