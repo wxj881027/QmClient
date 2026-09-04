@@ -88,8 +88,8 @@ status: active
 - 事件使用 Vulkan 专属 `severity_errors`、`severity_warnings`、`severity_info`、`severity_verbose` 和 `severity_unknown` 字段，不把 Vulkan severity 映射为 OpenGL 的 high/medium/low/notification；`last_seen_type` 与 recent message 的 type 保存真实 `VkDebugUtilsMessageTypeFlagsEXT`。
 - `EndCommands()` 按一秒窗口限流 flush，shutdown 和初始化失败回退强制 flush；callback 注销等待 in-flight callback 完成，Vulkan instance 销毁前一定清理 messenger。初始化失败不再清空 instance 句柄后跳过清理。
 - 已通过 `VkInstanceCreateInfo.pNext` 捕获 `vkCreateInstance` 期间的 validation/performance 消息；当前仍未在实际 Vulkan 成功路径上运行，本机默认仍是 Vulkan 请求、OpenGL active 的 fallback。
-- Vulkan 结果事件由独立 helper 统一发出；所有关键路径（instance 创建、物理设备枚举、swapchain 创建、关键帧提交、memory command 提交、present-image helper 提交、acquire、present）都带固定 stage，acquire/present 的 out-of-date/suboptimal 特殊分支也不会遗漏通用结果事件。shader module、pipeline layout、graphics pipeline 创建失败同样经过该路径，能区分 shader/pipeline 创建失败和 shader 文件加载失败；原有错误返回保持不变。
-- Vulkan device fault 在 device lost 后自动记录有界的 `graphics.vulkan.device_fault` 事件：运行时优先选择 `VK_KHR_device_fault`，仅在 KHR 不可用时使用 `VK_EXT_device_fault`；事件包含 `api=khr|ext|none`、查询结果、fault 数量或 address/vendor 摘要、省略数量和“不请求 vendor binary”的事实。扩展存在但 feature 不支持、设备级故障查询函数指针缺失和扩展不可用分别记录原因；不请求或落盘 vendor binary，描述字段按事件格式转义。当前仍只有编译/静态路径验证，尚未在真实 Vulkan device-lost 场景触发验证。
+- Vulkan 结果事件由独立 helper 统一发出；所有关键路径（instance 创建、物理设备枚举、swapchain 创建、关键帧提交、memory command 提交、present-image helper 提交、acquire、present）都带固定 stage，acquire/present 的 out-of-date/suboptimal 特殊分支也不会遗漏通用结果事件。shader module、pipeline layout、graphics pipeline 创建失败同样经过该路径，能区分 shader/pipeline 创建失败和 shader 文件加载失败；成功路径和默认渲染行为保持不变，presented-image helper 的 Vulkan 错误路径现在按固定 stage fail-fast 并返回失败。
+- Vulkan device fault 在 device lost 后自动记录有界的 `graphics.vulkan.device_fault` 事件：运行时优先选择 `VK_KHR_device_fault`；若 KHR 扩展存在但 feature 不支持，则在 EXT 编译支持、扩展存在且 feature 可用时切换到 `VK_EXT_device_fault`。事件包含 `api=khr|ext|none`、查询结果、fault 数量或 address/vendor 摘要、省略数量和“不请求 vendor binary”的事实。扩展不可用、feature 不支持、feature 查询入口不可用和设备级故障查询函数指针缺失分别记录原因；不请求或落盘 vendor binary，描述字段按事件格式转义。当前仍只有编译/静态路径验证，尚未在真实 Vulkan device-lost 场景触发验证。
 
 实际 JSON 字段名为 `active_api_name`（不是 `active_api`）；分析工具应同时读取
 `backend_config` 与 `active_api_name`，并把 `active_api_available=false` 视为不可用状态。
@@ -101,7 +101,7 @@ status: active
 - `backend_config` 是成功生成 `graphics_info` 时观察到的配置值；初始化失败或 `graphics_info` 未入队时可能为空。
 - `backend_selection_source` 表示 backend 选择来自 `config`、有效/空/无效的 `DDNET_DRIVER` 或编译期默认值；`effective_backend` 与 `active_api_name` 是同一实际 API 名称的兼容字段。空值和无效值只改变诊断分类，不改变 DDNet 20.0 当前对环境变量的选择行为：仍保持初始 OpenGL 选择，不回读配置。
 - `backend_fallback_attempted` / `backend_fallback_applied` 是当前 session 内累计事实；`backend_fallback_result` 是当前 session 最后一次已观察到的结果，不是按 attempt 对齐的记录。事件或 report 写入失败时，结果可能为 `unknown`，不能据此反推没有发生过 fallback。
-- `graphics.vulkan.device_fault` 的 KHR/EXT 字段不强行做一一对应：KHR 记录 report 的 `group`、`flags`、fault/instruction address 和 vendor 摘要；EXT 保留原有 counts/info 数组字段。两条路径都使用固定容量并记录省略/截断事实，`VK_TIMEOUT` 仅表示 KHR 当前没有可用 report，不当作渲染初始化失败。
+- `graphics.vulkan.device_fault` 的 KHR/EXT 字段不强行做一一对应：KHR 记录 report 的 `group`、`flags`、fault/instruction address 和 vendor 摘要；EXT 保留原有 counts/info 数组字段。两条路径都使用固定容量并记录省略/截断事实，`VK_TIMEOUT` 仅表示 KHR 当前没有可用 report，不当作渲染初始化失败。presented-image helper 的 fence 只有等待成功后才标记 command buffer 可复用；mapped-memory invalidate 失败按 render command failure 分类。
 
 ## 只读 review 收口（2026-09-03）
 
