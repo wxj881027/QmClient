@@ -36,7 +36,7 @@ status: active
 这不是完整性能系统。尚未完成：
 
 - Metal 的后端专属字段和跨后端字段收口；Vulkan 基础初始化快照、instance 创建阶段与运行期 validation 消息、device-fault 事件已接入，但成功路径和 device-lost 仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
-- 非阻塞 GPU query、精确的 shader/pipeline 后端事件、统一 fallback 和跨后端资源重建事件；Vulkan 已记录 wait-idle 结果，并在交换链重建结束事件中记录失败阶段，但跨后端资源重建仍未统一；
+- 非阻塞 GPU query、统一 fallback 和跨后端资源重建事件；当前 OpenGL/GLES/Vulkan 都自动记录 `gpu_time_available=false` 及 `measurement_not_implemented`，不生成伪造的 `gpu_ms`；Vulkan 另记录 timestamp query capability。Vulkan 已记录 wait-idle 结果，并在交换链重建结束事件中记录失败阶段，但跨后端资源重建仍未统一；
 - 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
 - 同场景 A/B 采样工具。
@@ -54,7 +54,7 @@ status: active
   当前诊断开销视为已经量化为零。
 
 因此当前日志只能证明“有自动诊断证据”和“基础帧统计可用”，不能据此宣称已经完成图形后端性能定位。
-通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照、debug callback 统计、shader load/compile failure 和 program link failure 事件已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult`、device-fault、wait-idle、交换链重建以及 Vulkan→OpenGL fallback 的 attempt/result 事件已接入，但 Metal 专属字段、GPU query、其他 fallback、renderer switch、跨后端 pipeline failure 和资源重建事件仍需分别接入。
+通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照、debug callback 统计、shader load/compile failure、program link failure 和统一 GPU 时间可用性字段已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult`、device-fault、wait-idle、交换链重建以及 Vulkan→OpenGL fallback 的 attempt/result 事件已接入，但 Metal 专属字段、真正的非阻塞 GPU query、其他 fallback、renderer switch、跨后端 pipeline failure 和资源重建事件仍需分别接入。
 
 ## 诊断日志保留/轮转增量（2026-09-04）
 

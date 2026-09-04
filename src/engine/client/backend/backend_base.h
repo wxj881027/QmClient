@@ -80,6 +80,7 @@ struct SGraphicsBackendDiagnostics
 	char m_aVulkanPresentMode[32]{};
 	char m_aVulkanSurfaceFormat[64]{};
 	char m_aVulkanTimestampQueryUnavailableReason[128]{};
+	char m_aGpuTimeUnavailableReason[128] = "measurement_not_implemented";
 	int m_ExtensionCount = -1;
 	int m_MaxTextureSize = 0;
 	int m_VulkanInstanceExtensionCount = -1;
@@ -105,6 +106,7 @@ struct SGraphicsBackendDiagnostics
 	bool m_VulkanDeviceFaultAvailable = false;
 	bool m_VulkanDeviceFaultEnabled = false;
 	bool m_VulkanTimestampQuerySupported = false;
+	bool m_GpuTimeAvailable = false;
 };
 
 enum EDebugGfxModes

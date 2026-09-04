@@ -1002,6 +1002,73 @@ CGraphicsBackend_SDL_GL::CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc)
 	m_aErrorString[0] = '\0';
 }
 
+void CGraphicsBackend_SDL_GL::EmitOpenGLDiagnostics()
+{
+	if(m_BackendType != BACKEND_TYPE_OPENGL && m_BackendType != BACKEND_TYPE_OPENGL_ES)
+		return;
+
+	EmitGraphicsEvent("graphics.opengl.context_profile", m_Diagnostics.m_aContextProfile);
+	EmitGraphicsEvent("graphics.opengl.context_profile_available", m_Diagnostics.m_ContextProfileAvailable ? "true" : "false");
+	EmitGraphicsEvent("graphics.opengl.shading_language_version", m_Diagnostics.m_aShadingLanguageVersion);
+	EmitGraphicsEvent("graphics.opengl.shading_language_version_available", m_Diagnostics.m_ShadingLanguageVersionAvailable ? "true" : "false");
+	EmitGraphicsEvent("graphics.opengl.extensions", m_Diagnostics.m_aExtensions);
+	EmitGraphicsEvent("graphics.opengl.extensions_available", m_Diagnostics.m_ExtensionsAvailable ? "true" : "false");
+	char aValue[64];
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_ExtensionCount);
+	EmitGraphicsEvent("graphics.opengl.extension_count", aValue);
+	EmitGraphicsEvent("graphics.opengl.extensions_truncated", m_Diagnostics.m_ExtensionsTruncated ? "true" : "false");
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_MaxTextureSize);
+	EmitGraphicsEvent("graphics.opengl.max_texture_size", aValue);
+	EmitGraphicsEvent("graphics.opengl.debug_output_supported", m_Diagnostics.m_DebugOutputSupported ? "true" : "false");
+	EmitGraphicsEvent("graphics.opengl.debug_callback_enabled", m_Diagnostics.m_DebugCallbackEnabled ? "true" : "false");
+	EmitGraphicsEvent("graphics.opengl.debug_callback_synchronous", m_Diagnostics.m_DebugCallbackSynchronous ? "true" : "false");
+	EmitGraphicsEvent("graphics.opengl.debug_callback_unavailable_reason", m_Diagnostics.m_aDebugCallbackUnavailableReason);
+	EmitGraphicsEvent("graphics.gpu_time_available", m_Diagnostics.m_GpuTimeAvailable ? "true" : "false");
+	EmitGraphicsEvent("graphics.gpu_time_unavailable_reason", m_Diagnostics.m_aGpuTimeUnavailableReason);
+}
+
+void CGraphicsBackend_SDL_GL::EmitVulkanDiagnostics()
+{
+	if(m_BackendType != BACKEND_TYPE_VULKAN)
+		return;
+
+	EmitGraphicsEvent("graphics.vulkan.instance_api_version", m_Diagnostics.m_aVulkanInstanceApiVersion);
+	EmitGraphicsEvent("graphics.vulkan.device_api_version", m_Diagnostics.m_aVulkanDeviceApiVersion);
+	EmitGraphicsEvent("graphics.vulkan.device_name", m_Diagnostics.m_aVulkanDeviceName);
+	EmitGraphicsEvent("graphics.vulkan.driver_version", m_Diagnostics.m_aVulkanDriverVersion);
+	EmitGraphicsEvent("graphics.vulkan.present_mode", m_Diagnostics.m_aVulkanPresentMode);
+	EmitGraphicsEvent("graphics.vulkan.surface_format", m_Diagnostics.m_aVulkanSurfaceFormat);
+	EmitGraphicsEvent("graphics.vulkan.timestamp_query_unavailable_reason", m_Diagnostics.m_aVulkanTimestampQueryUnavailableReason);
+
+	char aValue[64];
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanInstanceExtensionCount);
+	EmitGraphicsEvent("graphics.vulkan.instance_extension_count", aValue);
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanLayerCount);
+	EmitGraphicsEvent("graphics.vulkan.layer_count", aValue);
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanQueueFamilyCount);
+	EmitGraphicsEvent("graphics.vulkan.queue_family_count", aValue);
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanGraphicsQueueFamily);
+	EmitGraphicsEvent("graphics.vulkan.graphics_queue_family", aValue);
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanPresentQueueFamily);
+	EmitGraphicsEvent("graphics.vulkan.present_queue_family", aValue);
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanMemoryHeapCount);
+	EmitGraphicsEvent("graphics.vulkan.memory_heap_count", aValue);
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanMemoryTypeCount);
+	EmitGraphicsEvent("graphics.vulkan.memory_type_count", aValue);
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanSwapchainImageCount);
+	EmitGraphicsEvent("graphics.vulkan.swapchain_image_count", aValue);
+	str_format(aValue, sizeof(aValue), "%dx%d", m_Diagnostics.m_VulkanSwapchainWidth, m_Diagnostics.m_VulkanSwapchainHeight);
+	EmitGraphicsEvent("graphics.vulkan.swapchain_extent", aValue);
+	EmitGraphicsEvent("graphics.vulkan.validation_layer_requested", m_Diagnostics.m_VulkanValidationLayerRequested ? "true" : "false");
+	EmitGraphicsEvent("graphics.vulkan.validation_layer_enabled", m_Diagnostics.m_VulkanValidationLayerEnabled ? "true" : "false");
+	EmitGraphicsEvent("graphics.vulkan.debug_callback_enabled", m_Diagnostics.m_VulkanDebugCallbackEnabled ? "true" : "false");
+	EmitGraphicsEvent("graphics.vulkan.device_fault_available", m_Diagnostics.m_VulkanDeviceFaultAvailable ? "true" : "false");
+	EmitGraphicsEvent("graphics.vulkan.device_fault_enabled", m_Diagnostics.m_VulkanDeviceFaultEnabled ? "true" : "false");
+	EmitGraphicsEvent("graphics.vulkan.timestamp_query_supported", m_Diagnostics.m_VulkanTimestampQuerySupported ? "true" : "false");
+	EmitGraphicsEvent("graphics.gpu_time_available", m_Diagnostics.m_GpuTimeAvailable ? "true" : "false");
+	EmitGraphicsEvent("graphics.gpu_time_unavailable_reason", m_Diagnostics.m_aGpuTimeUnavailableReason);
+}
+
 int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, int *pHeight, int *pRefreshRate, int *pFsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight, int *pCurrentWidth, int *pCurrentHeight, IStorage *pStorage)
 {
 	bool BackendFallbackAttempted = false;
