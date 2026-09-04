@@ -584,33 +584,74 @@ static const char *GraphicsBackendName(EBackendType BackendType)
 	}
 }
 
+enum class EBackendSelectionSource
+{
+	CONFIG,
+	ENVIRONMENT_VALID,
+	ENVIRONMENT_EMPTY,
+	ENVIRONMENT_INVALID,
+	DEFAULT,
+};
+
+static bool ParseBackendName(const char *pName, EBackendType &BackendType)
+{
+	if(!pName)
+		return false;
+	if(str_comp_nocase(pName, "GLES") == 0)
+		BackendType = BACKEND_TYPE_OPENGL_ES;
+	else if(str_comp_nocase(pName, "Vulkan") == 0)
+		BackendType = BACKEND_TYPE_VULKAN;
+	else if(str_comp_nocase(pName, "OpenGL") == 0)
+		BackendType = BACKEND_TYPE_OPENGL;
+	else
+		return false;
+	return true;
+}
+
+static EBackendSelectionSource DetectBackendSelectionSource()
+{
+#if defined(CONF_BACKEND_VULKAN)
+	const char *pEnvDriver = SDL_getenv("DDNET_DRIVER");
+	if(pEnvDriver)
+	{
+		if(pEnvDriver[0] == '\0')
+			return EBackendSelectionSource::ENVIRONMENT_EMPTY;
+		EBackendType UnusedBackendType;
+		return ParseBackendName(pEnvDriver, UnusedBackendType) ? EBackendSelectionSource::ENVIRONMENT_VALID : EBackendSelectionSource::ENVIRONMENT_INVALID;
+	}
+
+	EBackendType UnusedBackendType;
+	return ParseBackendName(g_Config.m_GfxBackend, UnusedBackendType) ? EBackendSelectionSource::CONFIG : EBackendSelectionSource::DEFAULT;
+#else
+	return EBackendSelectionSource::DEFAULT;
+#endif
+}
+
+static const char *BackendSelectionSourceName(EBackendSelectionSource Source)
+{
+	switch(Source)
+	{
+	case EBackendSelectionSource::CONFIG: return "config";
+	case EBackendSelectionSource::ENVIRONMENT_VALID: return "environment_valid";
+	case EBackendSelectionSource::ENVIRONMENT_EMPTY: return "environment_empty";
+	case EBackendSelectionSource::ENVIRONMENT_INVALID: return "environment_invalid";
+	default: return "default";
+	}
+}
+
 EBackendType CGraphicsBackend_SDL_GL::DetectBackend()
 {
 	EBackendType RetBackendType = BACKEND_TYPE_OPENGL;
 #if defined(CONF_BACKEND_VULKAN)
 	const char *pEnvDriver = SDL_getenv("DDNET_DRIVER");
-	if(pEnvDriver && str_comp_nocase(pEnvDriver, "GLES") == 0)
+	if(pEnvDriver)
 	{
-		RetBackendType = BACKEND_TYPE_OPENGL_ES;
-	}
-	else if(pEnvDriver && str_comp_nocase(pEnvDriver, "Vulkan") == 0)
-	{
-		RetBackendType = BACKEND_TYPE_VULKAN;
-	}
-	else if(pEnvDriver && str_comp_nocase(pEnvDriver, "OpenGL") == 0)
-	{
-		RetBackendType = BACKEND_TYPE_OPENGL;
+		ParseBackendName(pEnvDriver, RetBackendType);
 	}
 	else if(pEnvDriver == nullptr)
 	{
 		// load the config backend
-		const char *pConfBackend = g_Config.m_GfxBackend;
-		if(str_comp_nocase(pConfBackend, "GLES") == 0)
-			RetBackendType = BACKEND_TYPE_OPENGL_ES;
-		else if(str_comp_nocase(pConfBackend, "Vulkan") == 0)
-			RetBackendType = BACKEND_TYPE_VULKAN;
-		else if(str_comp_nocase(pConfBackend, "OpenGL") == 0)
-			RetBackendType = BACKEND_TYPE_OPENGL;
+		ParseBackendName(g_Config.m_GfxBackend, RetBackendType);
 	}
 #else
 	RetBackendType = BACKEND_TYPE_OPENGL;
@@ -1042,12 +1083,12 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		FallbackTo = m_BackendType;
 		BackendFallbackApplied = m_BackendType != FallbackFrom;
 		char aDetails[160];
-		str_format(aDetails, sizeof(aDetails), "from=%s;requested_to=opengl;to=%s;applied=%s;selection_source=%s;reason=backend_init_retry", GraphicsBackendName(FallbackFrom), GraphicsBackendName(FallbackTo), BackendFallbackApplied ? "true" : "false", SDL_getenv("DDNET_DRIVER") != nullptr ? "environment" : "config");
+		str_format(aDetails, sizeof(aDetails), "from=%s;requested_to=opengl;to=%s;applied=%s;selection_source=%s;reason=backend_init_retry", GraphicsBackendName(FallbackFrom), GraphicsBackendName(FallbackTo), BackendFallbackApplied ? "true" : "false", BackendSelectionSourceName(DetectBackendSelectionSource()));
 		EmitGraphicsEvent("graphics.backend_fallback_attempt", aDetails);
 	}
 
 	char aSelectionDetails[128];
-	str_format(aSelectionDetails, sizeof(aSelectionDetails), "selected_backend=%s;selection_source=%s", GraphicsBackendName(m_BackendType), SDL_getenv("DDNET_DRIVER") != nullptr ? "environment" : "config");
+	str_format(aSelectionDetails, sizeof(aSelectionDetails), "selected_backend=%s;selection_source=%s", GraphicsBackendName(m_BackendType), BackendSelectionSourceName(DetectBackendSelectionSource()));
 	EmitGraphicsEvent("graphics.backend_selection", aSelectionDetails);
 
 	ClampDriverVersion(m_BackendType);
