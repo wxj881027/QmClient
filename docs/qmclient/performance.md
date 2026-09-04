@@ -88,7 +88,7 @@ status: active
 - 事件使用 Vulkan 专属 `severity_errors`、`severity_warnings`、`severity_info`、`severity_verbose` 和 `severity_unknown` 字段，不把 Vulkan severity 映射为 OpenGL 的 high/medium/low/notification；`last_seen_type` 与 recent message 的 type 保存真实 `VkDebugUtilsMessageTypeFlagsEXT`。
 - `EndCommands()` 按一秒窗口限流 flush，shutdown 和初始化失败回退强制 flush；callback 注销等待 in-flight callback 完成，Vulkan instance 销毁前一定清理 messenger。初始化失败不再清空 instance 句柄后跳过清理。
 - 已通过 `VkInstanceCreateInfo.pNext` 捕获 `vkCreateInstance` 期间的 validation/performance 消息；当前仍未在实际 Vulkan 成功路径上运行，本机默认仍是 Vulkan 请求、OpenGL active 的 fallback。
-- Vulkan 结果事件由独立 helper 统一发出；所有关键路径（instance 创建、物理设备枚举、swapchain 创建、queue submit、acquire、present）都带固定 stage，acquire/present 的 out-of-date/suboptimal 特殊分支也不会遗漏通用结果事件。shader module、pipeline layout、graphics pipeline 创建失败同样经过该路径，能区分 shader/pipeline 创建失败和 shader 文件加载失败；原有错误返回保持不变。
+- Vulkan 结果事件由独立 helper 统一发出；所有关键路径（instance 创建、物理设备枚举、swapchain 创建、关键帧提交、memory command 提交、present-image helper 提交、acquire、present）都带固定 stage，acquire/present 的 out-of-date/suboptimal 特殊分支也不会遗漏通用结果事件。shader module、pipeline layout、graphics pipeline 创建失败同样经过该路径，能区分 shader/pipeline 创建失败和 shader 文件加载失败；原有错误返回保持不变。
 - Vulkan device fault 在 device lost 后自动记录有界的 `graphics.vulkan.device_fault` 事件：运行时优先选择 `VK_KHR_device_fault`，仅在 KHR 不可用时使用 `VK_EXT_device_fault`；事件包含 `api=khr|ext|none`、查询结果、fault 数量或 address/vendor 摘要、省略数量和“不请求 vendor binary”的事实。扩展存在但 feature 不支持、设备级故障查询函数指针缺失和扩展不可用分别记录原因；不请求或落盘 vendor binary，描述字段按事件格式转义。当前仍只有编译/静态路径验证，尚未在真实 Vulkan device-lost 场景触发验证。
 
 实际 JSON 字段名为 `active_api_name`（不是 `active_api`）；分析工具应同时读取

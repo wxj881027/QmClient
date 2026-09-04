@@ -1989,7 +1989,14 @@ protected:
 			if(!ImageBarrier(SwapImg, 0, 1, 0, 1, m_VKSurfFormat.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
 				return false;
 
-			vkEndCommandBuffer(CommandBuffer);
+			const VkResult EndCommandBufferResult = vkEndCommandBuffer(CommandBuffer);
+			if(EndCommandBufferResult != VK_SUCCESS)
+			{
+				const char *pCriticalError = CheckVulkanCriticalError(EndCommandBufferResult, "presented_image_command_end");
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Ending presented image command buffer failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan command buffer end returned an error.");
+				m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
+				return false;
+			}
 			m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 
 			VkSubmitInfo SubmitInfo{};
@@ -1997,16 +2004,40 @@ protected:
 			SubmitInfo.commandBufferCount = 1;
 			SubmitInfo.pCommandBuffers = &CommandBuffer;
 
-			vkResetFences(m_VKDevice, 1, &m_GetPresentedImgDataHelperFence);
-			vkQueueSubmit(m_VKGraphicsQueue, 1, &SubmitInfo, m_GetPresentedImgDataHelperFence);
-			vkWaitForFences(m_VKDevice, 1, &m_GetPresentedImgDataHelperFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+			const VkResult ResetFenceResult = vkResetFences(m_VKDevice, 1, &m_GetPresentedImgDataHelperFence);
+			if(ResetFenceResult != VK_SUCCESS)
+			{
+				const char *pCriticalError = CheckVulkanCriticalError(ResetFenceResult, "presented_image_fence_reset");
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Resetting presented image fence failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan fence reset returned an error.");
+				return false;
+			}
+			const VkResult QueueSubmitResult = vkQueueSubmit(m_VKGraphicsQueue, 1, &SubmitInfo, m_GetPresentedImgDataHelperFence);
+			if(QueueSubmitResult != VK_SUCCESS)
+			{
+				const char *pCriticalError = CheckVulkanCriticalError(QueueSubmitResult, "presented_image_queue_submit");
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Submitting presented image command buffer failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan queue submission returned an error.");
+				return false;
+			}
+			const VkResult WaitFenceResult = vkWaitForFences(m_VKDevice, 1, &m_GetPresentedImgDataHelperFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+			if(WaitFenceResult != VK_SUCCESS)
+			{
+				const char *pCriticalError = CheckVulkanCriticalError(WaitFenceResult, "presented_image_fence_wait");
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Waiting for presented image command buffer failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan fence wait returned an error.");
+				return false;
+			}
 
 			VkMappedMemoryRange MemRange{};
 			MemRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
 			MemRange.memory = m_GetPresentedImgDataHelperMem.m_Mem;
 			MemRange.offset = m_GetPresentedImgDataHelperMappedLayoutOffset;
 			MemRange.size = VK_WHOLE_SIZE;
-			vkInvalidateMappedMemoryRanges(m_VKDevice, 1, &MemRange);
+			const VkResult InvalidateResult = vkInvalidateMappedMemoryRanges(m_VKDevice, 1, &MemRange);
+			if(InvalidateResult != VK_SUCCESS)
+			{
+				const char *pCriticalError = CheckVulkanCriticalError(InvalidateResult, "presented_image_memory_invalidate");
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Invalidating presented image memory failed.", pCriticalError != nullptr ? pCriticalError : "Vulkan mapped memory invalidation returned an error.");
+				return false;
+			}
 
 			size_t RealFullImageSize = std::max(ImageTotalSize, (size_t)(Height * m_GetPresentedImgDataHelperMappedLayoutPitch));
 			size_t ExtraRowSize = Width * 4;
