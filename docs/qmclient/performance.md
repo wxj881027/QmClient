@@ -70,6 +70,7 @@ status: active
 ## 诊断日志保留/轮转增量（2026-09-04）
 
 - Qm diagnostics 启动时自动扫描 `qmclient/diagnostics/`，只匹配自身生成的 `session-*.jsonl` 和 `report-*.json` 文件；按文件修改时间、文件名稳定排序，分别保留最近 32 个，旧文件自动删除。
+- 自动报告中的 `recent_event_ring_wrapped` 只有在第 65 条事件真正覆盖固定容量 ring 中的旧事件后才为 `true`；恰好填满 64 条时仍为 `false`。
 - 轮转失败只写普通 warning/debug 日志，不阻止客户端启动，也不影响当前 session 的创建；轮转结果在当前 session 中以 `diagnostics.retention` 事件记录。
 - 轮转使用 `IStorage::TYPE_SAVE` 和精确的前缀/后缀过滤，不触碰目录中的其他文件。当前仍未提供用户可配置的保留数量，也未实现跨版本/跨安装目录的日志归档。
 

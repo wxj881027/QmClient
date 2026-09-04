@@ -215,6 +215,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	}
 	m_RecentEventNext = 0;
 	m_RecentEventCount = 0;
+	m_RecentEventRingWrapped = false;
 	m_NonBlockingEventAttempts.store(0, std::memory_order_relaxed);
 	m_NonBlockingEventEnqueued.store(0, std::memory_order_relaxed);
 	m_NonBlockingEventDropped.store(0, std::memory_order_relaxed);
@@ -235,8 +236,8 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 		m_pGraphics = nullptr;
 		return;
 	}
-	const size_t RemovedSessionFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "session-", ".jsonl", MAX_RETAINED_SESSION_FILES);
-	const size_t RemovedReportFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "report-", ".json", MAX_RETAINED_REPORT_FILES);
+	const size_t RemovedSessionFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "session-", ".jsonl", MAX_RETAINED_SESSION_FILES - 1);
+	const size_t RemovedReportFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "report-", ".json", MAX_RETAINED_REPORT_FILES - 1);
 
 	char aTimestamp[64];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
@@ -732,6 +733,8 @@ void CQmDiagnostics::RecordRecentEvent(const char *pName, const char *pDetails)
 	m_RecentEventNext = (m_RecentEventNext + 1) % m_aRecentEvents.size();
 	if(m_RecentEventCount < m_aRecentEvents.size())
 		++m_RecentEventCount;
+	else
+		m_RecentEventRingWrapped = true;
 }
 
 void CQmDiagnostics::WriteSessionStart()
@@ -931,7 +934,7 @@ void CQmDiagnostics::WriteReport()
 		AppendJsonRawField(Json, "drop_serialization_failure", std::to_string(Stats.m_SerializationFailures));
 		AppendJsonRawField(Json, "recent_event_count", std::to_string(m_RecentEventCount));
 		AppendJsonRawField(Json, "recent_event_ring_capacity", std::to_string(m_aRecentEvents.size()));
-		AppendJsonRawField(Json, "recent_event_ring_wrapped", m_RecentEventCount == m_aRecentEvents.size() ? "true" : "false");
+		AppendJsonRawField(Json, "recent_event_ring_wrapped", m_RecentEventRingWrapped ? "true" : "false");
 		Json += ",\"recent_events\":[";
 		const size_t FirstEvent = (m_RecentEventNext + m_aRecentEvents.size() - m_RecentEventCount) % m_aRecentEvents.size();
 		for(size_t i = 0; i < m_RecentEventCount; ++i)

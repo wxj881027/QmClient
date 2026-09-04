@@ -158,6 +158,7 @@ private:
 	std::array<SRecentEvent, RECENT_EVENT_RING_SIZE> m_aRecentEvents;
 	size_t m_RecentEventNext = 0;
 	size_t m_RecentEventCount = 0;
+	bool m_RecentEventRingWrapped = false;
 	mutable std::shared_mutex m_NonBlockingStatsLock;
 
 	std::atomic<uint64_t> m_NonBlockingEventAttempts{0};
