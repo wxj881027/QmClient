@@ -2112,6 +2112,7 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 			m_pPrimitive3DProgramTextured = new CGLSLPrimitiveProgram;
 
 			CGLSLCompiler ShaderCompiler(g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch, m_IsOpenGLES, m_OpenGLTextureLodBIAS / 1000.0f);
+			ShaderCompiler.SetGraphicsEventFunc(m_GraphicsEventFunc);
 			ShaderCompiler.SetHasTextureArray(pCommand->m_pCapabilities->m_2DArrayTextures);
 
 			if(pCommand->m_pCapabilities->m_2DArrayTextures)

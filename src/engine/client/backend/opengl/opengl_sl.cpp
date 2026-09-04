@@ -3,6 +3,7 @@
 #include <base/detect.h>
 #include <base/io.h>
 #include <base/log.h>
+#include <base/str.h>
 
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
 
@@ -26,6 +27,23 @@
 #endif
 #endif
 
+namespace
+{
+const char *ShaderStageName(int Type)
+{
+	return Type == GL_VERTEX_SHADER ? "vertex" : Type == GL_FRAGMENT_SHADER ? "fragment" : "unknown";
+}
+
+void EmitShaderEvent(CGLSLCompiler *pCompiler, const char *pPhase, const char *pFile, int Type)
+{
+	if(pCompiler == nullptr)
+		return;
+	char aDetails[512];
+	str_format(aDetails, sizeof(aDetails), "backend=opengl;api=%s;stage=%s;phase=%s;file=%s", pCompiler->IsOpenGLES() ? "gles" : "desktop", ShaderStageName(Type), pPhase, pFile ? pFile : "");
+	pCompiler->EmitGraphicsEvent("graphics.opengl.shader_failure", aDetails);
+}
+}
+
 bool CGLSL::LoadShader(CGLSLCompiler *pCompiler, IStorage *pStorage, const char *pFile, int Type)
 {
 	if(m_IsLoaded)
@@ -35,6 +53,7 @@ bool CGLSL::LoadShader(CGLSLCompiler *pCompiler, IStorage *pStorage, const char 
 	std::vector<std::string> vLines;
 	if(!LineReader.OpenFile(pStorage->OpenFile(pFile, IOFLAG_READ, IStorage::TYPE_ALL)))
 	{
+		EmitShaderEvent(pCompiler, "load", pFile, Type);
 		return false;
 	}
 
@@ -118,6 +137,7 @@ bool CGLSL::LoadShader(CGLSLCompiler *pCompiler, IStorage *pStorage, const char 
 
 	if(CompilationStatus == GL_FALSE)
 	{
+		EmitShaderEvent(pCompiler, "compile", pFile, Type);
 		TWGLint LogLength = 0;
 		glGetShaderiv(ShaderId, GL_INFO_LOG_LENGTH, &LogLength);
 		if(LogLength > 0)

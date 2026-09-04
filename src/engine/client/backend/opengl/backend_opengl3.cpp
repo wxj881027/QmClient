@@ -120,6 +120,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 	m_LastProgramId = 0;
 
 	CGLSLCompiler ShaderCompiler(g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch, m_IsOpenGLES, m_OpenGLTextureLodBIAS / 1000.0f);
+	ShaderCompiler.SetGraphicsEventFunc(m_GraphicsEventFunc);
 
 	GLint CapVal;
 	glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &CapVal);

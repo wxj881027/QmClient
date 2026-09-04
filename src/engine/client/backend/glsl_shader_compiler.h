@@ -1,7 +1,9 @@
 #ifndef ENGINE_CLIENT_BACKEND_GLSL_SHADER_COMPILER_H
 #define ENGINE_CLIENT_BACKEND_GLSL_SHADER_COMPILER_H
 
+#include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 enum EGLSLShaderCompilerType
@@ -27,6 +29,7 @@ private:
 	};
 
 	std::vector<SGLSLCompilerDefine> m_vDefines;
+	std::function<void(const char *, const char *)> m_GraphicsEventFunc;
 
 	int m_OpenGLVersionMajor;
 	int m_OpenGLVersionMinor;
@@ -46,6 +49,9 @@ public:
 	void AddDefine(const std::string &DefineName, const std::string &DefineValue);
 	void AddDefine(const char *pDefineName, const char *pDefineValue);
 	void ClearDefines();
+	void SetGraphicsEventFunc(std::function<void(const char *, const char *)> GraphicsEventFunc) { m_GraphicsEventFunc = std::move(GraphicsEventFunc); }
+	bool IsOpenGLES() const { return m_IsOpenGLES; }
+	void EmitGraphicsEvent(const char *pName, const char *pDetails) const { if(m_GraphicsEventFunc) m_GraphicsEventFunc(pName, pDetails); }
 
 	void ParseLine(std::string &Line, const char *pReadLine, EGLSLShaderCompilerType Type);
 
