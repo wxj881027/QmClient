@@ -37,7 +37,7 @@ status: active
 
 - Metal 的后端专属字段和跨后端字段收口；Vulkan 基础初始化快照、instance 创建阶段与运行期 validation 消息、device-fault 事件已接入，但成功路径和 device-lost 仍需真实运行样本；OpenGL/GLES debug callback 已接入代码，但仍需各目标平台的 runtime smoke；
 - 非阻塞 GPU query、统一 fallback 和跨后端资源重建事件；当前 OpenGL/GLES/Vulkan 都自动记录 `gpu_time_available=false` 及 `measurement_not_implemented`，不生成伪造的 `gpu_ms`；Vulkan 另记录 timestamp query capability。Vulkan 已记录 wait-idle 结果，并在交换链重建结束事件中记录失败阶段，但跨后端资源重建仍未统一；
-- 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；
+- 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；当前已接入 `qm.player_indicator` 的 update/render 窗口汇总，其他 feature 和 UI 阶段仍未接入；
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
 - 同场景 A/B 采样工具。
 - session JSONL 已改用 DDNet `ASYNCIO` writer；主线程只提交固定大小的短记录，退出时等待
@@ -55,6 +55,12 @@ status: active
 
 因此当前日志只能证明“有自动诊断证据”和“基础帧统计可用”，不能据此宣称已经完成图形后端性能定位。
 通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照、debug callback 统计、shader load/compile failure、program link failure 和统一 GPU 时间可用性字段已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult`、device-fault、wait-idle、交换链重建以及 Vulkan→OpenGL fallback 的 attempt/result 事件已接入，但 Metal 专属字段、真正的非阻塞 GPU query、其他 fallback、renderer switch、跨后端 pipeline failure 和资源重建事件仍需分别接入。
+
+## Qm feature 计时增量（2026-09-04）
+
+- `qm.player_indicator` 已注册独立的 update/render 计时。每个性能窗口自动写入 `feature_window` JSONL 记录，包含 feature ID、阶段样本数、平均值、p95、p99 和最大值。
+- 计时只对已注册 feature 生效；采样存储在预留的窗口 vector 中，计时路径不做文件 I/O 或动态字符串构造。诊断 session 不可用时不改变 feature 行为。
+- UI 首次打开、搜索、滚动、布局和其他 Qm feature 的独立计时仍是后续缺口。
 
 ## 诊断日志保留/轮转增量（2026-09-04）
 

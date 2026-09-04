@@ -181,6 +181,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	}
 	if(!pStorage)
 		return;
+	m_FeatureTimingActive.store(false, std::memory_order_relaxed);
 	const uint32_t PreviousGeneration = m_SessionGeneration.load(std::memory_order_relaxed);
 	const uint32_t NewGeneration = PreviousGeneration == std::numeric_limits<uint32_t>::max() ? 1 : PreviousGeneration + 1;
 	m_SessionGeneration.store(NewGeneration, std::memory_order_relaxed);
@@ -205,6 +206,13 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_vUpdateSamples.clear();
 	m_vFrameSamples.clear();
 	m_vRenderSamples.clear();
+	for(size_t i = 0; i < m_FeatureTimingCount; ++i)
+	{
+		m_aFeatureTimings[i].m_vUpdateSamples.clear();
+		m_aFeatureTimings[i].m_vRenderSamples.clear();
+		m_aFeatureTimings[i].m_UpdateStart = 0;
+		m_aFeatureTimings[i].m_RenderStart = 0;
+	}
 	m_RecentEventNext = 0;
 	m_RecentEventCount = 0;
 	m_NonBlockingEventAttempts.store(0, std::memory_order_relaxed);
@@ -250,6 +258,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 		m_pGraphics = nullptr;
 		return;
 	}
+	m_FeatureTimingActive.store(true, std::memory_order_release);
 	const uint64_t GenerationBits = static_cast<uint64_t>(NewGeneration) << BACKEND_FALLBACK_GENERATION_SHIFT;
 	m_BackendFallbackState.store(GenerationBits | BACKEND_FALLBACK_ACTIVE, std::memory_order_release);
 
@@ -282,6 +291,7 @@ void CQmDiagnostics::Shutdown()
 {
 	// 先关闭无锁状态更新入口，再等待已进入 observer 的回调退出，避免迟到事件污染 report 或下一 session。
 	m_BackendFallbackState.fetch_and(~BACKEND_FALLBACK_ACTIVE, std::memory_order_acq_rel);
+	m_FeatureTimingActive.store(false, std::memory_order_release);
 	std::unique_lock<std::shared_mutex> NonBlockingStatsLock(m_NonBlockingStatsLock);
 	CLockScope SessionLock(m_SessionLock);
 	if(!m_pAsyncSession)
@@ -321,6 +331,13 @@ void CQmDiagnostics::BeginFrame()
 			m_vUpdateSamples.clear();
 			m_vFrameSamples.clear();
 			m_vRenderSamples.clear();
+			for(size_t i = 0; i < m_FeatureTimingCount; ++i)
+			{
+				m_aFeatureTimings[i].m_vUpdateSamples.clear();
+				m_aFeatureTimings[i].m_vRenderSamples.clear();
+				m_aFeatureTimings[i].m_UpdateStart = 0;
+				m_aFeatureTimings[i].m_RenderStart = 0;
+			}
 			m_WindowFrameCount = 0;
 		}
 	}
@@ -370,6 +387,61 @@ void CQmDiagnostics::EndGameRender()
 
 	PushSample(m_vRenderSamples, time_get_nanoseconds().count() - m_RenderStart);
 	m_RenderStart = 0;
+}
+
+CQmDiagnostics::TFeatureTimingId CQmDiagnostics::RegisterFeatureTiming(const char *pFeatureId)
+{
+	if(!pFeatureId || pFeatureId[0] == '\0')
+		return INVALID_FEATURE_TIMING;
+
+	CLockScope SessionLock(m_SessionLock);
+	for(size_t i = 0; i < m_FeatureTimingCount; ++i)
+	{
+		if(str_comp(m_aFeatureTimings[i].m_aId, pFeatureId) == 0)
+			return static_cast<TFeatureTimingId>(i);
+	}
+	if(m_FeatureTimingCount >= m_aFeatureTimings.size() || str_length(pFeatureId) >= sizeof(m_aFeatureTimings[0].m_aId))
+		return INVALID_FEATURE_TIMING;
+
+	SFeatureTiming &Timing = m_aFeatureTimings[m_FeatureTimingCount];
+	try
+	{
+		Timing.m_vUpdateSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
+		Timing.m_vRenderSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
+	}
+	catch(...)
+	{
+		Timing.m_vUpdateSamples.clear();
+		Timing.m_vRenderSamples.clear();
+		log_warn("qm/diagnostics", "failed to reserve feature timing samples for '%s'", pFeatureId);
+		return INVALID_FEATURE_TIMING;
+	}
+	str_copy(Timing.m_aId, pFeatureId, sizeof(Timing.m_aId));
+	const TFeatureTimingId TimingId = static_cast<TFeatureTimingId>(m_FeatureTimingCount);
+	++m_FeatureTimingCount;
+	return TimingId;
+}
+
+void CQmDiagnostics::BeginFeatureTiming(TFeatureTimingId FeatureTimingId, EFeatureTimingPhase Phase)
+{
+	if(!m_FeatureTimingActive.load(std::memory_order_acquire) || FeatureTimingId == INVALID_FEATURE_TIMING || FeatureTimingId >= m_FeatureTimingCount)
+		return;
+	SFeatureTiming &Timing = m_aFeatureTimings[FeatureTimingId];
+	int64_t &Start = Phase == EFeatureTimingPhase::UPDATE ? Timing.m_UpdateStart : Timing.m_RenderStart;
+	if(Start == 0)
+		Start = time_get_nanoseconds().count();
+}
+
+void CQmDiagnostics::EndFeatureTiming(TFeatureTimingId FeatureTimingId, EFeatureTimingPhase Phase)
+{
+	if(!m_FeatureTimingActive.load(std::memory_order_acquire) || FeatureTimingId == INVALID_FEATURE_TIMING || FeatureTimingId >= m_FeatureTimingCount)
+		return;
+	SFeatureTiming &Timing = m_aFeatureTimings[FeatureTimingId];
+	int64_t &Start = Phase == EFeatureTimingPhase::UPDATE ? Timing.m_UpdateStart : Timing.m_RenderStart;
+	if(Start == 0)
+		return;
+	PushSample(Phase == EFeatureTimingPhase::UPDATE ? Timing.m_vUpdateSamples : Timing.m_vRenderSamples, time_get_nanoseconds().count() - Start);
+	Start = 0;
 }
 
 void CQmDiagnostics::RecordEvent(const char *pName, const char *pDetails)
@@ -631,6 +703,7 @@ void CQmDiagnostics::CheckAsyncWriteError()
 
 void CQmDiagnostics::MarkWriteFailure(const char *pOperation)
 {
+	m_FeatureTimingActive.store(false, std::memory_order_release);
 	if(!m_WriteFailed)
 	{
 		m_WriteFailed = true;
@@ -668,6 +741,27 @@ void CQmDiagnostics::WriteSessionStart()
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
 	str_format(aJson, sizeof(aJson), "{\"type\":\"session_start\",\"schema_version\":2,\"timestamp\":\"%s\",\"monotonic_ns\":%" PRId64 ",\"non_blocking_event_policy\":\"try_lock_bounded_buffer\"}", aTimestamp, m_SessionStart);
 	WriteJsonLine(aJson);
+}
+
+void CQmDiagnostics::WriteFeatureWindowSummaries()
+{
+	if(!m_pAsyncSession)
+		return;
+	for(size_t i = 0; i < m_FeatureTimingCount; ++i)
+	{
+		const SFeatureTiming &Timing = m_aFeatureTimings[i];
+		char aFeatureId[sizeof(Timing.m_aId) * 2 + 1];
+		if(!QmDiagnostics::EscapeJson(aFeatureId, sizeof(aFeatureId), Timing.m_aId))
+			continue;
+		char aJson[2048];
+		const int Written = str_format(aJson, sizeof(aJson), "{\"type\":\"feature_window\",\"feature\":\"%s\",\"frames\":%u,\"update_samples\":%u,\"update_avg_ms\":%.3f,\"update_p95_ms\":%.3f,\"update_p99_ms\":%.3f,\"update_max_ms\":%.3f,\"render_samples\":%u,\"render_avg_ms\":%.3f,\"render_p95_ms\":%.3f,\"render_p99_ms\":%.3f,\"render_max_ms\":%.3f}", aFeatureId, m_WindowFrameCount, static_cast<unsigned>(Timing.m_vUpdateSamples.size()), QmDiagnostics::Average(Timing.m_vUpdateSamples), QmDiagnostics::Percentile(Timing.m_vUpdateSamples, 0.95), QmDiagnostics::Percentile(Timing.m_vUpdateSamples, 0.99), QmDiagnostics::Percentile(Timing.m_vUpdateSamples, 1.0), static_cast<unsigned>(Timing.m_vRenderSamples.size()), QmDiagnostics::Average(Timing.m_vRenderSamples), QmDiagnostics::Percentile(Timing.m_vRenderSamples, 0.95), QmDiagnostics::Percentile(Timing.m_vRenderSamples, 0.99), QmDiagnostics::Percentile(Timing.m_vRenderSamples, 1.0));
+		if(Written < 0 || static_cast<size_t>(Written) >= sizeof(aJson))
+		{
+			log_warn("qm/diagnostics", "feature timing summary is too large for '%s'", Timing.m_aId);
+			continue;
+		}
+		WriteJsonLine(aJson);
+	}
 }
 
 void CQmDiagnostics::RecordGraphicsInfo()
@@ -768,6 +862,7 @@ void CQmDiagnostics::WriteWindowSummary()
 	char aJson[1024];
 	str_format(aJson, sizeof(aJson), "{\"type\":\"frame_window\",\"frames\":%u,\"frame_interval_avg_ms\":%.3f,\"frame_interval_p95_ms\":%.3f,\"frame_interval_p99_ms\":%.3f,\"frame_interval_max_ms\":%.3f,\"frame_interval_1percent_low_fps\":%.3f,\"update_cpu_avg_ms\":%.3f,\"update_cpu_p95_ms\":%.3f,\"update_cpu_p99_ms\":%.3f,\"update_cpu_max_ms\":%.3f,\"render_cpu_avg_ms\":%.3f,\"render_cpu_p95_ms\":%.3f,\"render_cpu_p99_ms\":%.3f,\"render_cpu_max_ms\":%.3f,\"texture_bytes\":%" PRIu64 ",\"buffer_bytes\":%" PRIu64 ",\"write_failed\":%s}", m_WindowFrameCount, QmDiagnostics::Average(m_vFrameSamples), QmDiagnostics::Percentile(m_vFrameSamples, 0.95), QmDiagnostics::Percentile(m_vFrameSamples, 0.99), QmDiagnostics::Percentile(m_vFrameSamples, 1.0), QmDiagnostics::OnePercentLow(m_vFrameSamples), QmDiagnostics::Average(m_vUpdateSamples), QmDiagnostics::Percentile(m_vUpdateSamples, 0.95), QmDiagnostics::Percentile(m_vUpdateSamples, 0.99), QmDiagnostics::Percentile(m_vUpdateSamples, 1.0), QmDiagnostics::Average(m_vRenderSamples), QmDiagnostics::Percentile(m_vRenderSamples, 0.95), QmDiagnostics::Percentile(m_vRenderSamples, 0.99), QmDiagnostics::Percentile(m_vRenderSamples, 1.0), m_pGraphics ? m_pGraphics->TextureMemoryUsage() : 0, m_pGraphics ? m_pGraphics->BufferMemoryUsage() : 0, m_WriteFailed ? "true" : "false");
 	WriteJsonLine(aJson);
+	WriteFeatureWindowSummaries();
 }
 
 void CQmDiagnostics::WriteDiagnosticsSummary()

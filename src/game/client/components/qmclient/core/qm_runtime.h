@@ -30,6 +30,7 @@ class CQmRuntime final : public CComponent
 	CQmI18n m_I18n;
 	SQmFeatureModel m_DiagnosticsModel{"qm.diagnostics", "qm.diagnostics.title", true, true};
 	CQmPlayerIndicator m_PlayerIndicator;
+	CQmDiagnostics::TFeatureTimingId m_PlayerIndicatorTiming = CQmDiagnostics::INVALID_FEATURE_TIMING;
 
 public:
 	int Sizeof() const override;

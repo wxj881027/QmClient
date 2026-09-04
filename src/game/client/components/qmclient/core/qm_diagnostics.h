@@ -17,6 +17,15 @@ class IStorage;
 class CQmDiagnostics final
 {
 public:
+	using TFeatureTimingId = uint8_t;
+	static constexpr TFeatureTimingId INVALID_FEATURE_TIMING = UINT8_MAX;
+
+	enum class EFeatureTimingPhase
+	{
+		UPDATE,
+		RENDER,
+	};
+
 	struct SNonBlockingDropStats
 	{
 		uint64_t m_EventAttempts = 0;
@@ -42,6 +51,9 @@ public:
 	void ResetFramePacing();
 	void BeginGameRender();
 	void EndGameRender();
+	TFeatureTimingId RegisterFeatureTiming(const char *pFeatureId);
+	void BeginFeatureTiming(TFeatureTimingId FeatureTimingId, EFeatureTimingPhase Phase);
+	void EndFeatureTiming(TFeatureTimingId FeatureTimingId, EFeatureTimingPhase Phase);
 
 	void RecordEvent(const char *pName, const char *pDetails = nullptr);
 	void RecordEventNonBlocking(uint32_t SessionGeneration, const char *pName, const char *pDetails = nullptr);
@@ -68,6 +80,15 @@ private:
 		bool m_DetailsTruncated = false;
 	};
 
+	struct SFeatureTiming
+	{
+		char m_aId[64]{};
+		std::vector<int64_t> m_vUpdateSamples;
+		std::vector<int64_t> m_vRenderSamples;
+		int64_t m_UpdateStart = 0;
+		int64_t m_RenderStart = 0;
+	};
+
 	enum class ENonBlockingWriteResult
 	{
 		WRITTEN,
@@ -82,6 +103,7 @@ private:
 	ENonBlockingWriteResult WriteJsonLine(const char *pJson, bool NonBlocking = false);
 	void WriteSessionStart();
 	void WriteWindowSummary();
+	void WriteFeatureWindowSummaries();
 	void WriteDiagnosticsSummary();
 	void WriteReport();
 	void CheckAsyncWriteError();
@@ -127,6 +149,11 @@ private:
 	std::vector<int64_t> m_vUpdateSamples;
 	std::vector<int64_t> m_vFrameSamples;
 	std::vector<int64_t> m_vRenderSamples;
+	static constexpr size_t MAX_FEATURE_TIMINGS = 32;
+	std::array<SFeatureTiming, MAX_FEATURE_TIMINGS> m_aFeatureTimings;
+	size_t m_FeatureTimingCount = 0;
+	// 计时只由游戏主线程采样；原子闸门只负责跨 session/写入失败时停用无锁热路径。
+	std::atomic<bool> m_FeatureTimingActive{false};
 	static constexpr size_t RECENT_EVENT_RING_SIZE = 64;
 	std::array<SRecentEvent, RECENT_EVENT_RING_SIZE> m_aRecentEvents;
 	size_t m_RecentEventNext = 0;

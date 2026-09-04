@@ -31,6 +31,9 @@ void CQmRuntime::OnInit()
 		log_error("qm/runtime", "failed to register a UI card");
 	m_UiModel.Freeze();
 	m_pDiagnostics->Init(Storage(), Graphics());
+	m_PlayerIndicatorTiming = m_pDiagnostics->RegisterFeatureTiming("qm.player_indicator");
+	if(m_PlayerIndicatorTiming == CQmDiagnostics::INVALID_FEATURE_TIMING)
+		log_error("qm/runtime", "failed to register player indicator diagnostics timing");
 	RegisterGraphicsEventListener(Graphics());
 	m_pDiagnostics->RecordGraphicsInfo();
 	UpdateFeatureModels();
@@ -100,17 +103,24 @@ void CQmRuntime::OnWindowResize()
 
 void CQmRuntime::OnRender()
 {
+	m_pDiagnostics->BeginFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 	const bool Available = QmPlayerIndicatorAvailable(*GameClient(), *Client());
 	const bool Enabled = g_Config.m_QmPlayerIndicator != 0 && Available;
 	m_PlayerIndicator.UpdateModel(Enabled, Available);
 	if(!Enabled)
+	{
+		m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 		return;
+	}
 	const SQmPlayerIndicatorFrame Frame = BuildQmPlayerIndicatorFrame(*GameClient(), *Client(), *Graphics());
 	m_PlayerIndicator.Render(Frame, Graphics(), RenderTools());
+	m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 }
 
 void CQmRuntime::UpdateFeatureModels()
 {
+	m_pDiagnostics->BeginFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::UPDATE);
 	const bool Available = QmPlayerIndicatorAvailable(*GameClient(), *Client());
 	m_PlayerIndicator.UpdateModel(g_Config.m_QmPlayerIndicator != 0 && Available, Available);
+	m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::UPDATE);
 }
