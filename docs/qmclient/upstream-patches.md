@@ -81,7 +81,7 @@ baseline: ddnet-20.0
 - graphics 事件注册、启动队列入队和 pending 回放增加异常恢复；监听器分配、队列分配或同步异常只丢弃诊断事件并恢复 replay 状态，不传播到原始图形路径。
 - fatal graphics 事件分类先收集所有错误文本再按固定优先级选择根因，避免错误容器顺序变化造成 device lost、pipeline 或 shader 分类漂移。
 - OpenGL/GLES debug callback 的具体消息只写入 backend-owned 固定容量 ring，事件 flush 时复制最近 8 条消息和 ring 覆盖、锁竞争、截断计数；初始化失败回退使用 callback-only shutdown 收口，不引入动态内存或同步 I/O，默认渲染行为不变。
-- OpenGL/GLES shader 编译器持有可选的 graphics event sink；shader 文件加载失败和编译失败通过 `graphics.opengl.shader_failure` 记录 `api`、`stage`、`phase` 和 `file`，不改变原有 `LoadShader` 返回值、初始化控制流或 shader 日志。链接失败仍由现有 program/pipeline 错误路径处理，后续若需 shader 对应关系再单独设计。
+- OpenGL/GLES shader 编译器持有可选的 graphics event sink；shader 文件加载失败和编译失败通过 `graphics.opengl.shader_failure` 记录 `api`、`stage`、`phase` 和 `file`，program link 失败通过 `graphics.opengl.program_link_failure` 记录 `api`、`phase`、`program_id` 和 linker log 是否可用；不改变原有 `LoadShader`/`LinkProgram` 返回值、初始化控制流或 shader 日志。shader 与 program 的源文件对应关系仍未进入事件，后续再单独设计。
 - OpenGL2 初始化失败回退现在统一销毁已创建的 tile/border/3D shader program；正常 shutdown 也覆盖 border program。`CGLSLProgram` 对已创建但 link 失败的 program 同样执行 `glDeleteProgram`，避免 callback-only 路径或 shader 初始化失败留下 GPU 对象；未改变 shader 选择、渲染结果和 fallback 语义。
 - 上游冲突风险：中。device-fault 诊断直接修改 `backend_vulkan.cpp` 的成员/函数指针、device-fault 查询摘要、device-lost 触发路径、设备扩展候选、逻辑设备 feature 查询、device `pNext` 和最终扩展过滤；同步时必须按上游 Vulkan backend 初始化流程重新定位，不能只重放 listener 调用。其他图形诊断仍集中在可选 command 输出结构和 listener 入口，优先保留 upstream 的 command 字段顺序与 backend init 流程。
 - 删除条件：上游提供等价的 backend diagnostics sink、统一生命周期事件和自动落盘能力后，移除该输出指针、pending event 缓冲和 Qm 事件映射。

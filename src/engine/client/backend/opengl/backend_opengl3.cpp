@@ -60,7 +60,7 @@ void CCommandProcessorFragment_OpenGL3_3::InitPrimExProgram(CGLSLPrimitiveExProg
 	pProgram->CreateProgram();
 	pProgram->AddShader(&PrimitiveVertexShader);
 	pProgram->AddShader(&PrimitiveFragmentShader);
-	pProgram->LinkProgram();
+	pProgram->LinkProgram(pCompiler);
 
 	UseProgram(pProgram);
 
@@ -136,7 +136,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pPrimitiveProgram->CreateProgram();
 		m_pPrimitiveProgram->AddShader(&PrimitiveVertexShader);
 		m_pPrimitiveProgram->AddShader(&PrimitiveFragmentShader);
-		m_pPrimitiveProgram->LinkProgram();
+		m_pPrimitiveProgram->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pPrimitiveProgram);
 
@@ -154,7 +154,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pPrimitiveProgramTextured->CreateProgram();
 		m_pPrimitiveProgramTextured->AddShader(&PrimitiveVertexShader);
 		m_pPrimitiveProgramTextured->AddShader(&PrimitiveFragmentShader);
-		m_pPrimitiveProgramTextured->LinkProgram();
+		m_pPrimitiveProgramTextured->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pPrimitiveProgramTextured);
 
@@ -173,7 +173,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pPrimitive3DProgram->CreateProgram();
 		m_pPrimitive3DProgram->AddShader(&PrimitiveVertexShader);
 		m_pPrimitive3DProgram->AddShader(&PrimitiveFragmentShader);
-		m_pPrimitive3DProgram->LinkProgram();
+		m_pPrimitive3DProgram->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pPrimitive3DProgram);
 
@@ -193,7 +193,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pPrimitive3DProgramTextured->CreateProgram();
 		m_pPrimitive3DProgramTextured->AddShader(&PrimitiveVertexShader);
 		m_pPrimitive3DProgramTextured->AddShader(&PrimitiveFragmentShader);
-		m_pPrimitive3DProgramTextured->LinkProgram();
+		m_pPrimitive3DProgramTextured->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pPrimitive3DProgramTextured);
 
@@ -210,7 +210,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pTileProgram->CreateProgram();
 		m_pTileProgram->AddShader(&VertexShader);
 		m_pTileProgram->AddShader(&FragmentShader);
-		m_pTileProgram->LinkProgram();
+		m_pTileProgram->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pTileProgram);
 
@@ -228,7 +228,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pTileProgramTextured->CreateProgram();
 		m_pTileProgramTextured->AddShader(&VertexShader);
 		m_pTileProgramTextured->AddShader(&FragmentShader);
-		m_pTileProgramTextured->LinkProgram();
+		m_pTileProgramTextured->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pTileProgramTextured);
 
@@ -246,7 +246,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pBorderTileProgram->CreateProgram();
 		m_pBorderTileProgram->AddShader(&VertexShader);
 		m_pBorderTileProgram->AddShader(&FragmentShader);
-		m_pBorderTileProgram->LinkProgram();
+		m_pBorderTileProgram->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pBorderTileProgram);
 
@@ -266,7 +266,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pBorderTileProgramTextured->CreateProgram();
 		m_pBorderTileProgramTextured->AddShader(&VertexShader);
 		m_pBorderTileProgramTextured->AddShader(&FragmentShader);
-		m_pBorderTileProgramTextured->LinkProgram();
+		m_pBorderTileProgramTextured->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pBorderTileProgramTextured);
 
@@ -287,7 +287,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pQuadProgram->CreateProgram();
 		m_pQuadProgram->AddShader(&VertexShader);
 		m_pQuadProgram->AddShader(&FragmentShader);
-		m_pQuadProgram->LinkProgram();
+		m_pQuadProgram->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pQuadProgram);
 
@@ -309,7 +309,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pQuadProgramTextured->CreateProgram();
 		m_pQuadProgramTextured->AddShader(&VertexShader);
 		m_pQuadProgramTextured->AddShader(&FragmentShader);
-		m_pQuadProgramTextured->LinkProgram();
+		m_pQuadProgramTextured->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pQuadProgramTextured);
 
@@ -331,7 +331,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pQuadProgramGrouped->CreateProgram();
 		m_pQuadProgramGrouped->AddShader(&VertexShader);
 		m_pQuadProgramGrouped->AddShader(&FragmentShader);
-		m_pQuadProgramGrouped->LinkProgram();
+		m_pQuadProgramGrouped->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pQuadProgramGrouped);
 
@@ -352,7 +352,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pQuadProgramTexturedGrouped->CreateProgram();
 		m_pQuadProgramTexturedGrouped->AddShader(&VertexShader);
 		m_pQuadProgramTexturedGrouped->AddShader(&FragmentShader);
-		m_pQuadProgramTexturedGrouped->LinkProgram();
+		m_pQuadProgramTexturedGrouped->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pQuadProgramTexturedGrouped);
 
@@ -371,7 +371,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pTextProgram->CreateProgram();
 		m_pTextProgram->AddShader(&VertexShader);
 		m_pTextProgram->AddShader(&FragmentShader);
-		m_pTextProgram->LinkProgram();
+		m_pTextProgram->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pTextProgram);
 
@@ -396,7 +396,7 @@ bool CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 		m_pSpriteProgramMultiple->CreateProgram();
 		m_pSpriteProgramMultiple->AddShader(&PrimitiveVertexShader);
 		m_pSpriteProgramMultiple->AddShader(&PrimitiveFragmentShader);
-		m_pSpriteProgramMultiple->LinkProgram();
+		m_pSpriteProgramMultiple->LinkProgram(&ShaderCompiler);
 
 		UseProgram(m_pSpriteProgramMultiple);
 

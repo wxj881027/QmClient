@@ -16,6 +16,7 @@
 #include <engine/client/graphics_defines.h>
 
 class CGLSL;
+class CGLSLCompiler;
 
 class CGLSLProgram
 {
@@ -25,7 +26,7 @@ public:
 
 	bool AddShader(CGLSL *pShader) const;
 
-	bool LinkProgram();
+	bool LinkProgram(CGLSLCompiler *pCompiler = nullptr);
 	void UseProgram() const;
 	TWGLuint GetProgramId() const;
 

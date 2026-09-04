@@ -2129,7 +2129,7 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 				m_pPrimitive3DProgram->CreateProgram();
 				m_pPrimitive3DProgram->AddShader(&PrimitiveVertexShader);
 				m_pPrimitive3DProgram->AddShader(&PrimitiveFragmentShader);
-				m_pPrimitive3DProgram->LinkProgram();
+				m_pPrimitive3DProgram->LinkProgram(&ShaderCompiler);
 
 				UseProgram(m_pPrimitive3DProgram);
 
@@ -2149,7 +2149,7 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 				m_pPrimitive3DProgramTextured->CreateProgram();
 				m_pPrimitive3DProgramTextured->AddShader(&PrimitiveVertexShader);
 				m_pPrimitive3DProgramTextured->AddShader(&PrimitiveFragmentShader);
-				m_pPrimitive3DProgramTextured->LinkProgram();
+				m_pPrimitive3DProgramTextured->LinkProgram(&ShaderCompiler);
 
 				UseProgram(m_pPrimitive3DProgramTextured);
 
@@ -2169,7 +2169,7 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 
 				glBindAttribLocation(m_pTileProgram->GetProgramId(), 0, "inVertex");
 
-				m_pTileProgram->LinkProgram();
+				m_pTileProgram->LinkProgram(&ShaderCompiler);
 
 				UseProgram(m_pTileProgram);
 
@@ -2194,7 +2194,7 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 				glBindAttribLocation(m_pTileProgramTextured->GetProgramId(), 0, "inVertex");
 				glBindAttribLocation(m_pTileProgramTextured->GetProgramId(), 1, "inVertexTexCoord");
 
-				m_pTileProgramTextured->LinkProgram();
+				m_pTileProgramTextured->LinkProgram(&ShaderCompiler);
 
 				UseProgram(m_pTileProgramTextured);
 
@@ -2216,7 +2216,7 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 
 				glBindAttribLocation(m_pBorderTileProgram->GetProgramId(), 0, "inVertex");
 
-				m_pBorderTileProgram->LinkProgram();
+				m_pBorderTileProgram->LinkProgram(&ShaderCompiler);
 
 				UseProgram(m_pBorderTileProgram);
 
@@ -2243,7 +2243,7 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 				glBindAttribLocation(m_pBorderTileProgramTextured->GetProgramId(), 0, "inVertex");
 				glBindAttribLocation(m_pBorderTileProgramTextured->GetProgramId(), 1, "inVertexTexCoord");
 
-				m_pBorderTileProgramTextured->LinkProgram();
+				m_pBorderTileProgramTextured->LinkProgram(&ShaderCompiler);
 
 				UseProgram(m_pBorderTileProgramTextured);
 

@@ -4,6 +4,9 @@
 
 #include <base/detect.h>
 #include <base/log.h>
+#include <base/str.h>
+
+#include <engine/client/backend/glsl_shader_compiler.h>
 
 #include <string>
 
@@ -19,6 +22,18 @@
 #include <GLES3/gl3.h>
 #endif
 #endif
+
+namespace
+{
+void EmitProgramLinkEvent(CGLSLCompiler *pCompiler, TWGLuint ProgramId, bool LogAvailable)
+{
+	if(pCompiler == nullptr)
+		return;
+	char aDetails[256];
+	str_format(aDetails, sizeof(aDetails), "backend=opengl;api=%s;phase=link;program_id=%u;log_available=%s", pCompiler->IsOpenGLES() ? "gles" : "desktop", static_cast<unsigned int>(ProgramId), LogAvailable ? "true" : "false");
+	pCompiler->EmitGraphicsEvent("graphics.opengl.program_link_failure", aDetails);
+}
+}
 
 void CGLSLProgram::CreateProgram()
 {
@@ -57,7 +72,7 @@ void CGLSLProgram::DetachShaderById(TWGLuint ShaderId) const
 	glDetachShader(m_ProgramId, ShaderId);
 }
 
-bool CGLSLProgram::LinkProgram()
+bool CGLSLProgram::LinkProgram(CGLSLCompiler *pCompiler)
 {
 	glLinkProgram(m_ProgramId);
 	TWGLint LinkStatus;
@@ -67,6 +82,7 @@ bool CGLSLProgram::LinkProgram()
 	{
 		TWGLint LogLength = 0;
 		glGetProgramiv(m_ProgramId, GL_INFO_LOG_LENGTH, &LogLength);
+		EmitProgramLinkEvent(pCompiler, m_ProgramId, LogLength > 0);
 		if(LogLength > 0)
 		{
 			std::string Log(LogLength, '\0');
