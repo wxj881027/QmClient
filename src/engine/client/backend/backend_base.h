@@ -84,6 +84,7 @@ struct SGraphicsBackendDiagnostics
 	int m_ExtensionCount = -1;
 	int m_MaxTextureSize = 0;
 	int m_VulkanInstanceExtensionCount = -1;
+	int m_VulkanEnabledInstanceExtensionCount = -1;
 	int m_VulkanLayerCount = -1;
 	int m_VulkanQueueFamilyCount = -1;
 	int m_VulkanGraphicsQueueFamily = -1;

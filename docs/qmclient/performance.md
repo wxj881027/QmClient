@@ -18,7 +18,7 @@ status: active
 - 纹理/Buffer 内存使用量；
 - graphics 主线程事件：窗口属性/显示器切换请求、窗口重建、VSync/MSAA 请求结果和后端 fatal error；窗口尺寸同时记录逻辑尺寸与实际 canvas 尺寸；
 - OpenGL/GLES context 事件：profile、GLSL 版本、extension 列表/数量/截断状态、最大纹理尺寸和 debug callback 可用性/启用状态；
-- Vulkan 初始化快照：实例/设备 API、设备名/驱动、实例扩展和 layer 数量、验证层/debug messenger、队列族、内存 heap/type、timestamp query 能力、present mode、surface format 和 swapchain 尺寸/图像数；
+- Vulkan 初始化快照：实例/设备 API、设备名/驱动、SDL 必需 instance extension 数、最终启用 instance extension 数和 layer 数量、验证层/debug messenger、队列族、内存 heap/type、timestamp query 能力、present mode、surface format 和 swapchain 尺寸/图像数；
 - 图形后端配置值、实际 active API/vendor/renderer/version、active API 能力版本、通用 buffering 能力、纹理/Buffer/stream/staging 内存、窗口尺寸和 HiDPI。配置值与实际 active API 分开记录，能识别 fallback，避免误导性能分析。
 
 计时 hook 位于 `CGameClient::OnUpdate`、`CGameClient::OnRender` 和
@@ -79,6 +79,7 @@ status: active
 
 - 桌面 OpenGL 的 `GL_KHR_debug` / `GL_ARB_debug_output` 与 GLES 的 `GL_KHR_debug` 均通过当前图形 context 注册 callback；GLES 使用 `SDL_GL_GetProcAddress`，扩展名按空格分隔 token 精确匹配。
 - callback 只做有界消息复制、固定容量 ring 写入、普通日志输出和原子累计；事件 `graphics.opengl.debug_messages` 最多每秒一次，字段为 session 累计值，并包含 error/severity 分类、未知 severity 数量、最后观察到回调的 `last_seen_*` 元数据，以及 ring 中最近 8 条消息的有界快照。普通日志仍保留 512 字节上限；ring 总容量为 32，覆盖次数通过 `recent_dropped` 记录；锁竞争和文本截断分别通过 `recent_lock_dropped`、`recent_truncated` 记录。
+- frame-boundary flush 在 callback ring 锁竞争时使用 try-lock，增加 `recent_lock_dropped` 后立即返回，下一次 command boundary 再重试；初始化阶段仍等待锁收口。该策略避免 validation/debug 消息把渲染线程卡在无限自旋上，代价是自动事件可能延迟一个 flush 窗口。
 - callback 的 user data 是由 `CGraphicsBackend_SDL_GL` 持有的独立状态，生命周期覆盖 processor 删除和 context teardown；GL context 仍有效时注销 callback，关闭闸门阻止新 callback 进入，并等待已进入 callback 结束后再 flush 最终统计，避免 backend 删除后的悬空 `this`。shutdown 不以固定超时换取退出，而是等待 callback 生命周期真正收口。
 - GL command error/warning 的提前返回路径调用强制 `FlushCommands()`，普通帧路径仍由 `EndCommands()` 按 1 秒限流，避免错误发生前已经收到的驱动消息只存在于普通日志而不进入自动诊断事件。
 - 具体驱动消息文本不在 callback 中写 JSONL，而是先进入固定容量 ring，再由图形线程按限流事件带入自动 JSONL；这样保留故障前后的上下文，同时避免高频 callback 的同步 I/O 影响 1% low。统计事件字段的 scope 是 `backend_attempt_cumulative`，因为图形初始化重试会重新建立 backend state。

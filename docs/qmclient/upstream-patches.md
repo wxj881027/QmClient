@@ -86,6 +86,14 @@ baseline: ddnet-20.0
 - `CGraphics_Threaded::GotResized` 在画布尺寸实际变化时，对官方 resize listener 资源重建窗口发出 `graphics.resource_rebuild_begin/end`；事件包含旧/新画布尺寸、listener 数和结束结果（`completed` 只表示回调序列返回，不伪称资源内部成功），位于 listener 调用前后，不改变 listener 顺序、viewport、等待或默认渲染行为。该触点只覆盖 DDNet 20.0 当前的 resize-driven rebuild；初始化/后端 fallback 和未来显式 renderer switch 仍由各自事件记录。
 - OpenGL2 初始化失败回退现在统一销毁已创建的 tile/border/3D shader program；正常 shutdown 也覆盖 border program。`CGLSLProgram` 对已创建但 link 失败的 program 同样执行 `glDeleteProgram`，避免 callback-only 路径或 shader 初始化失败留下 GPU 对象；未改变 shader 选择、渲染结果和 fallback 语义。
 - 上游冲突风险：中。device-fault 诊断直接修改 `backend_vulkan.cpp` 的成员/函数指针、device-fault 查询摘要、device-lost 触发路径、设备扩展候选、逻辑设备 feature 查询、device `pNext` 和最终扩展过滤；同步时必须按上游 Vulkan backend 初始化流程重新定位，不能只重放 listener 调用。其他图形诊断仍集中在可选 command 输出结构和 listener 入口，优先保留 upstream 的 command 字段顺序与 backend init 流程。
+
+## Review 修复（2026-09-04）
+
+- Qm 测试边界脚本现在递归扫描根层 `qmclient_*.cpp/.h` 和路径中包含 `qmclient` 的嵌套测试目录，避免新增测试文件通过目录层级绕过 `TClient` 字段门禁；这是 Qm 工具脚本改动，不改变客户端运行时。
+- OpenGL frame-boundary debug ring flush 改为 try-lock。图形 callback 持锁时本次 flush 记录 `recent_lock_dropped` 并在后续 command boundary 重试，不在渲染线程无限自旋；初始化阶段的锁收口仍保留等待语义。
+- GLES backend 显式包含项目随 SDL 提供的 `SDL_opengles2_gl2ext.h`，使 `GL_KHR_debug` 类型和常量不依赖间接 include。
+- Vulkan 快照区分 SDL 提供的必需 instance extension 数 `instance_extension_count` 与最终传给 `vkCreateInstance` 的启用数 `enabled_instance_extension_count`，后者包含可选 debug utils 扩展；默认扩展选择和初始化控制流不变。
+- graphics listener 异常现在使 dispatch 返回失败，同时继续遍历其他 listener；调用方会准确计入该事件未完整 dispatch，且不会让诊断异常传播到原始图形路径。
 - 删除条件：上游提供等价的 backend diagnostics sink、统一生命周期事件和自动落盘能力后，移除该输出指针、pending event 缓冲和 Qm 事件映射。
 
 ### `CMakeLists.txt`

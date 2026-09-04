@@ -4205,6 +4205,8 @@ public:
 			m_GraphicsDebugCallbackEnabled = true;
 		}
 #endif
+		if(m_pDiagnostics)
+			m_pDiagnostics->m_VulkanEnabledInstanceExtensionCount = static_cast<int>(vExtCStr.size());
 
 		VkApplicationInfo VKAppInfo = {};
 		VKAppInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;

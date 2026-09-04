@@ -1043,6 +1043,8 @@ void CGraphicsBackend_SDL_GL::EmitVulkanDiagnostics()
 	char aValue[64];
 	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanInstanceExtensionCount);
 	EmitGraphicsEvent("graphics.vulkan.instance_extension_count", aValue);
+	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanEnabledInstanceExtensionCount);
+	EmitGraphicsEvent("graphics.vulkan.enabled_instance_extension_count", aValue);
 	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanLayerCount);
 	EmitGraphicsEvent("graphics.vulkan.layer_count", aValue);
 	str_format(aValue, sizeof(aValue), "%d", m_Diagnostics.m_VulkanQueueFamilyCount);

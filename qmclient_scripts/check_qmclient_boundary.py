@@ -41,6 +41,19 @@ def iter_source_files(roots: list[Path]) -> list[Path]:
     return sorted(set(files))
 
 
+def iter_qm_test_files() -> list[Path]:
+    """扫描根层和嵌套目录中的 Qm 测试源文件。"""
+    test_root = REPO_ROOT / "src/test"
+    files: list[Path] = []
+    for path in test_root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in SOURCE_SUFFIXES:
+            continue
+        relative_parts = path.relative_to(test_root).parts
+        if path.name.startswith("qmclient_") or any(part.lower().startswith("qmclient") for part in relative_parts[:-1]):
+            files.append(path)
+    return sorted(files)
+
+
 def check_file(path: Path) -> list[str]:
     violations: list[str] = []
     try:
@@ -67,7 +80,7 @@ def main() -> int:
     explicit_paths = bool(args.paths)
     roots = [path.resolve() for path in args.paths] if explicit_paths else [REPO_ROOT / path for path in DEFAULT_SCAN_PATHS]
     if not args.paths:
-        roots.extend(sorted((REPO_ROOT / "src/test").glob("qmclient_*")))
+        roots.extend(iter_qm_test_files())
 
     if not explicit_paths:
         roots = [path for path in roots if path.exists()]

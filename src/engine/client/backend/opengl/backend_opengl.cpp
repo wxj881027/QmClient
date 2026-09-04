@@ -33,7 +33,9 @@
 #include <OpenGLES/ES3/gl.h>
 #include <OpenGLES/ES3/glext.h>
 #else
+#include <SDL_opengles2_gl2ext.h>
 #include <GLES3/gl3.h>
+#endif
 #endif
 #define GL_TEXTURE_2D_ARRAY_EXT GL_TEXTURE_2D_ARRAY
 // GLES doesn't support GL_QUADS, but the code is also never executed
@@ -507,8 +509,13 @@ void CCommandProcessorFragment_OpenGL::FlushGraphicsDebugMessages(bool Force)
 	uint32_t RecentMessageCount = 0;
 	uint32_t RingMessageCount = 0;
 	uint64_t RecentMessageDropped = 0;
-	while(pState->m_MessageLock.test_and_set(std::memory_order_acquire))
-		thread_yield();
+	if(pState->m_MessageLock.test_and_set(std::memory_order_acquire))
+	{
+		// Debug callbacks may run concurrently with the render thread. Never
+		// spin here, as this is a frame-boundary path and can hurt 1% low.
+		pState->m_MessageRingLockBusy.fetch_add(1, std::memory_order_relaxed);
+		return;
+	}
 	LastSource = pState->m_LastSource.load(std::memory_order_relaxed);
 	LastType = pState->m_LastType.load(std::memory_order_relaxed);
 	LastId = pState->m_LastId.load(std::memory_order_relaxed);

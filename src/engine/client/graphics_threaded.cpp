@@ -2824,6 +2824,7 @@ void CGraphics_Threaded::EmitGraphicsEvent(const char *pName, const char *pDetai
 
 bool CGraphics_Threaded::DispatchGraphicsEvent(const char *pName, const char *pDetails)
 {
+	bool DispatchSucceeded = true;
 	std::vector<GRAPHICS_EVENT_FUNC> Listeners;
 	try
 	{
@@ -2847,9 +2848,10 @@ bool CGraphics_Threaded::DispatchGraphicsEvent(const char *pName, const char *pD
 			// A diagnostic listener is an observer and must not break the
 			// graphics event producer or its fatal error path.
 			log_warn("gfx", "graphics event listener failed for '%s'", pName ? pName : "(unnamed)");
+			DispatchSucceeded = false;
 		}
 	}
-	return true;
+	return DispatchSucceeded;
 }
 
 void CGraphics_Threaded::ReplayPendingGraphicsEvents()
