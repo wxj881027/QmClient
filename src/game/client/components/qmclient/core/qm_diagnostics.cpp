@@ -13,6 +13,7 @@
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 
+#include <algorithm>
 #include <cinttypes>
 #include <cstring>
 #include <limits>
@@ -24,10 +25,68 @@
 namespace
 {
 constexpr size_t DIAGNOSTICS_WINDOW_SIZE = 600;
+constexpr size_t MAX_RETAINED_SESSION_FILES = 32;
+constexpr size_t MAX_RETAINED_REPORT_FILES = 32;
 constexpr size_t JSON_EVENT_OVERHEAD = 64;
 constexpr size_t NON_BLOCKING_EVENT_NAME_SIZE = 256;
 constexpr size_t NON_BLOCKING_EVENT_DETAILS_SIZE = 16 * 1024;
 constexpr size_t NON_BLOCKING_EVENT_JSON_SIZE = NON_BLOCKING_EVENT_NAME_SIZE + NON_BLOCKING_EVENT_DETAILS_SIZE + JSON_EVENT_OVERHEAD + 64;
+
+struct SDiagnosticFileEntry
+{
+	std::string m_Name;
+	time_t m_TimeModified = 0;
+};
+
+struct SDiagnosticFileScan
+{
+	const char *m_pPrefix;
+	const char *m_pSuffix;
+	std::vector<SDiagnosticFileEntry> *m_pEntries;
+};
+
+int ScanDiagnosticFile(const CFsFileInfo *pInfo, int IsDir, int, void *pUser)
+{
+	if(IsDir || pInfo == nullptr || pInfo->m_pName == nullptr)
+		return 0;
+	auto *pScan = static_cast<SDiagnosticFileScan *>(pUser);
+	if(str_startswith(pInfo->m_pName, pScan->m_pPrefix) == nullptr || str_endswith(pInfo->m_pName, pScan->m_pSuffix) == nullptr)
+		return 0;
+	pScan->m_pEntries->push_back({pInfo->m_pName, pInfo->m_TimeModified});
+	return 0;
+}
+
+size_t RotateDiagnosticFiles(IStorage *pStorage, const char *pDirectory, const char *pPrefix, const char *pSuffix, size_t MaxFiles)
+{
+	try
+	{
+		std::vector<SDiagnosticFileEntry> vEntries;
+		SDiagnosticFileScan Scan{pPrefix, pSuffix, &vEntries};
+		pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, pDirectory, ScanDiagnosticFile, &Scan);
+		std::sort(vEntries.begin(), vEntries.end(), [](const SDiagnosticFileEntry &Lhs, const SDiagnosticFileEntry &Rhs) {
+			if(Lhs.m_TimeModified != Rhs.m_TimeModified)
+				return Lhs.m_TimeModified > Rhs.m_TimeModified;
+			return Lhs.m_Name > Rhs.m_Name;
+		});
+
+		size_t RemovedFiles = 0;
+		for(size_t i = MaxFiles; i < vEntries.size(); ++i)
+		{
+			char aFilename[IO_MAX_PATH_LENGTH];
+			str_format(aFilename, sizeof(aFilename), "%s/%s", pDirectory, vEntries[i].m_Name.c_str());
+			if(pStorage->RemoveFile(aFilename, IStorage::TYPE_SAVE))
+				++RemovedFiles;
+			else
+				log_debug("qm/diagnostics", "failed to rotate diagnostics file '%s'", aFilename);
+		}
+		return RemovedFiles;
+	}
+	catch(...)
+	{
+		log_warn("qm/diagnostics", "failed to rotate automatic diagnostics files");
+		return 0;
+	}
+}
 
 bool CalculateJsonEscapeCapacity(const char *pString, size_t &Capacity)
 {
@@ -168,6 +227,8 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 		m_pGraphics = nullptr;
 		return;
 	}
+	const size_t RemovedSessionFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "session-", ".jsonl", MAX_RETAINED_SESSION_FILES);
+	const size_t RemovedReportFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "report-", ".json", MAX_RETAINED_REPORT_FILES);
 
 	char aTimestamp[64];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
@@ -193,6 +254,12 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_BackendFallbackState.store(GenerationBits | BACKEND_FALLBACK_ACTIVE, std::memory_order_release);
 
 	WriteSessionStart();
+	if(RemovedSessionFiles > 0 || RemovedReportFiles > 0)
+	{
+		char aDetails[128];
+		str_format(aDetails, sizeof(aDetails), "session_files_removed=%" PRIu64 ";report_files_removed=%" PRIu64 ";session_file_limit=%" PRIu64 ";report_file_limit=%" PRIu64, static_cast<uint64_t>(RemovedSessionFiles), static_cast<uint64_t>(RemovedReportFiles), static_cast<uint64_t>(MAX_RETAINED_SESSION_FILES), static_cast<uint64_t>(MAX_RETAINED_REPORT_FILES));
+		RecordEvent("diagnostics.retention", aDetails);
+	}
 	log_info("qm/diagnostics", "automatic diagnostics session started: %s", m_aSessionName);
 }
 

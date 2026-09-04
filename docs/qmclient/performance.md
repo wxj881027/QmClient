@@ -39,12 +39,12 @@ status: active
 - 非阻塞 GPU query、精确的 shader/pipeline 后端事件、统一 fallback 和跨后端资源重建事件；Vulkan 已记录 wait-idle 结果，并在交换链重建结束事件中记录失败阶段，但跨后端资源重建仍未统一；
 - 每个 feature、UI 首次打开/搜索/滚动/布局阶段的独立计时；
 - 工作集、Qm owned、纹理/字体 cache、后台 job 和 helper 的分项内存统计；
-- 日志保留/轮转策略和同场景 A/B 采样工具。
+- 同场景 A/B 采样工具。
 - session JSONL 已改用 DDNet `ASYNCIO` writer；主线程只提交固定大小的短记录，退出时等待
   writer 完成并生成 report。non-blocking graphics observer 现在自动记录尝试、成功和丢弃原因
   （session lock、writer lock、buffer capacity、serialization、session inactive），并在 session
   末尾写入 `diagnostics_summary`、在 report 中写入同一组摘要；异常前后的事件 ring buffer
-  已由 report 自动导出，但其容量固定且仍没有日志保留/轮转策略。
+  已由 report 自动导出，但其容量固定。
 - graphics 对象创建后、backend `Init()` 前已启动最小 Qm session 并注册 listener；失败分支会自动记录 `graphics_init_failed` 并生成尽力而为的 report。诊断初始化阶段不访问未就绪 backend。OpenGL/GLES context 成功后的专属字段已经接入；初始化失败前的具体 Vulkan/device 字段仍未覆盖。
 - resize 事件已接入 runtime；Vulkan 已有 device loss、shader/pipeline 失败、wait-idle、交换链重建和 Vulkan→OpenGL fallback 尝试事件（含实际是否应用），但 renderer switch、其他 fallback、OpenGL/GLES 精确 shader 失败和跨后端 resource rebuild 仍未统一；当前 fallback 事件是 attempt，不等同于目标 backend 初始化成功。
 - graphics report 已区分初始化开始时的配置请求、backend 选择来源（`config`、`environment_valid`、`environment_empty`、`environment_invalid`、`default`）和实际 active backend；`requested_backend_config` 是当前兼容字段，暂与 `requested_backend` 保持同值，`backend_config` 则表示最近一次 graphics info 采样到的配置。环境变量覆盖不再仅凭配置与 active API 的差异标记为 fallback。
@@ -55,6 +55,12 @@ status: active
 
 因此当前日志只能证明“有自动诊断证据”和“基础帧统计可用”，不能据此宣称已经完成图形后端性能定位。
 通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult`、device-fault、wait-idle、交换链重建以及 Vulkan→OpenGL fallback 的 attempt/result 事件已接入，但 Metal 专属字段、GPU query、其他 fallback、renderer switch、跨后端 shader failure 和资源重建事件仍需分别接入。
+
+## 诊断日志保留/轮转增量（2026-09-04）
+
+- Qm diagnostics 启动时自动扫描 `qmclient/diagnostics/`，只匹配自身生成的 `session-*.jsonl` 和 `report-*.json` 文件；按文件修改时间、文件名稳定排序，分别保留最近 32 个，旧文件自动删除。
+- 轮转失败只写普通 warning/debug 日志，不阻止客户端启动，也不影响当前 session 的创建；轮转结果在当前 session 中以 `diagnostics.retention` 事件记录。
+- 轮转使用 `IStorage::TYPE_SAVE` 和精确的前缀/后缀过滤，不触碰目录中的其他文件。当前仍未提供用户可配置的保留数量，也未实现跨版本/跨安装目录的日志归档。
 
 ## OpenGL/GLES debug callback 增量（2026-09-03）
 
