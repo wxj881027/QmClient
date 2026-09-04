@@ -42,6 +42,14 @@ TEST(QmPlayerIndicator, HidesVisibleCandidates)
 	EXPECT_TRUE(QmPlayerIndicatorShouldRender(Candidate));
 }
 
+TEST(QmPlayerIndicator, DetectsUnfreezingPlayers)
+{
+	EXPECT_FALSE(QmPlayerIndicatorIsUnfreezing(false, false));
+	EXPECT_FALSE(QmPlayerIndicatorIsUnfreezing(false, true));
+	EXPECT_FALSE(QmPlayerIndicatorIsUnfreezing(true, true));
+	EXPECT_TRUE(QmPlayerIndicatorIsUnfreezing(true, false));
+}
+
 TEST(QmPlayerIndicator, CalculatesDistanceAndPosition)
 {
 	EXPECT_FLOAT_EQ(QmPlayerIndicatorOffset(42.0f, 100.0f, true, 1000, 500.0f), 71.0f);

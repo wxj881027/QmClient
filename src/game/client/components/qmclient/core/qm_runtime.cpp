@@ -87,6 +87,8 @@ void CQmRuntime::OnShutdown()
 void CQmRuntime::OnReset()
 {
 	log_trace("qm/runtime", "component state reset at map generation %u", m_MapGeneration);
+	if(m_Initialized)
+		UpdateFeatureModels();
 }
 
 void CQmRuntime::OnMapLoad()
@@ -102,6 +104,8 @@ void CQmRuntime::OnStateChange(int NewState, int OldState)
 	str_format(aDetails, sizeof(aDetails), "%d->%d", OldState, NewState);
 	m_pDiagnostics->RecordEvent("client_state_change", aDetails);
 	log_trace("qm/runtime", "client state changed: %d -> %d", OldState, NewState);
+	if(m_Initialized)
+		UpdateFeatureModels();
 }
 
 void CQmRuntime::OnWindowResize()

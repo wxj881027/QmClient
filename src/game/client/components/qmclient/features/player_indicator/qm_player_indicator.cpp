@@ -42,7 +42,8 @@ void CQmPlayerIndicator::Render(const SQmPlayerIndicatorFrame &Frame, IGraphics 
 			Frame.m_Settings.m_MaxDistance,
 			Distance);
 		const vec2 IndicatorPosition = QmPlayerIndicatorPosition(Frame.m_LocalPosition, Player.m_Position, Offset);
-		const int IndicatorColor = Player.m_Frozen ? Frame.m_Settings.m_FrozenColor : Frame.m_Settings.m_AliveColor;
+		const int IndicatorColor = Player.m_Unfreezing ?
+			Frame.m_Settings.m_UnfreezingColor : (Player.m_Frozen ? Frame.m_Settings.m_FrozenColor : Frame.m_Settings.m_AliveColor);
 		ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(IndicatorColor));
 		Color.a = Frame.m_Settings.m_Opacity / 100.0f;
 
@@ -50,6 +51,16 @@ void CQmPlayerIndicator::Render(const SQmPlayerIndicatorFrame &Frame, IGraphics 
 		{
 			CTeeRenderInfo TeeInfo = *Player.m_pRenderInfo;
 			TeeInfo.m_Size = Frame.m_Settings.m_Radius * 4.0f;
+			if(Player.m_Frozen)
+			{
+				TeeInfo.m_ColorBody.r *= 0.4f;
+				TeeInfo.m_ColorBody.g *= 0.4f;
+				TeeInfo.m_ColorBody.b *= 0.4f;
+				TeeInfo.m_ColorFeet.r *= 0.4f;
+				TeeInfo.m_ColorFeet.g *= 0.4f;
+				TeeInfo.m_ColorFeet.b *= 0.4f;
+				Color.a *= 0.8f;
+			}
 			pRenderTools->RenderTee(CAnimState::GetIdle(), &TeeInfo, Player.m_Emote, vec2(1.0f, 0.0f), IndicatorPosition, Color.a);
 		}
 		else

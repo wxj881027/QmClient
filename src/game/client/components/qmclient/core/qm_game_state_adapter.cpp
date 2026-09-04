@@ -1,6 +1,8 @@
 /* (c) QmClient contributors. See licence.txt in the root of the distribution. */
 #include "qm_game_state_adapter.h"
 
+#include "../features/player_indicator/qm_player_indicator_logic.h"
+
 #include <engine/client.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -9,7 +11,10 @@
 
 bool QmPlayerIndicatorAvailable(const CGameClient &GameClient, const IClient &Client)
 {
-	return Client.State() != IClient::STATE_DEMOPLAYBACK && GameClient.m_GameInfo.m_Race && GameClient.m_Camera.ZoomAllowed();
+	const int LocalClientId = GameClient.m_Snap.m_LocalClientId;
+	return Client.State() == IClient::STATE_ONLINE && !GameClient.m_Snap.m_SpecInfo.m_Active &&
+		GameClient.m_GameInfo.m_Race && GameClient.m_Camera.ZoomAllowed() &&
+		LocalClientId >= 0 && LocalClientId < MAX_CLIENTS && GameClient.m_Snap.m_aCharacters[LocalClientId].m_Active;
 }
 
 SQmPlayerIndicatorFrame BuildQmPlayerIndicatorFrame(const CGameClient &GameClient, const IClient &Client, const IGraphics &Graphics)
@@ -28,6 +33,7 @@ SQmPlayerIndicatorFrame BuildQmPlayerIndicatorFrame(const CGameClient &GameClien
 	Frame.m_Settings.m_Opacity = g_Config.m_QmPlayerIndicatorOpacity;
 	Frame.m_Settings.m_AliveColor = g_Config.m_QmPlayerIndicatorAliveColor;
 	Frame.m_Settings.m_FrozenColor = g_Config.m_QmPlayerIndicatorFrozenColor;
+	Frame.m_Settings.m_UnfreezingColor = g_Config.m_QmPlayerIndicatorUnfreezingColor;
 	Frame.m_Settings.m_UseTees = g_Config.m_QmPlayerIndicatorUseTees != 0;
 	Frame.m_Screen = Graphics.GetScreen();
 
@@ -52,6 +58,8 @@ SQmPlayerIndicatorFrame BuildQmPlayerIndicatorFrame(const CGameClient &GameClien
 		Player.m_IsLocal = ClientId == LocalClientId || ClientId == GameClient.m_aLocalIds[0] || ClientId == GameClient.m_aLocalIds[1];
 		Player.m_Spectator = OtherClient.m_Spec;
 		Player.m_Frozen = OtherClient.m_FreezeEnd != 0 || OtherClient.m_DeepFrozen || OtherClient.m_LiveFrozen;
+		const bool FreezeState = OtherClient.m_FreezeEnd != 0 || OtherClient.m_DeepFrozen;
+		Player.m_Unfreezing = QmPlayerIndicatorIsUnfreezing(FreezeState, OtherClient.m_Predicted.m_IsInFreeze);
 		Player.m_pRenderInfo = &OtherClient.m_RenderInfo;
 		Player.m_Emote = OtherClient.m_RenderCur.m_Emote;
 	}

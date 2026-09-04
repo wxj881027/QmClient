@@ -30,6 +30,7 @@ struct SQmPlayerIndicatorSettings
 	int m_Opacity = 50;
 	int m_AliveColor = 0;
 	int m_FrozenColor = 0;
+	int m_UnfreezingColor = 0;
 	bool m_UseTees = false;
 };
 
@@ -41,6 +42,7 @@ struct SQmPlayerIndicatorPlayer
 	bool m_IsLocal = false;
 	bool m_Spectator = false;
 	bool m_Frozen = false;
+	bool m_Unfreezing = false;
 	const CTeeRenderInfo *m_pRenderInfo = nullptr;
 	int m_Emote = 0;
 };

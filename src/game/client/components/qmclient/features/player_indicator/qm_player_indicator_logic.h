@@ -44,6 +44,11 @@ inline float QmPlayerIndicatorOffset(float BaseOffset, float MaxOffset, bool Var
 	return BaseOffset + (MaxOffset - BaseOffset) * Progress;
 }
 
+inline bool QmPlayerIndicatorIsUnfreezing(bool Frozen, bool InFreeze)
+{
+	return Frozen && !InFreeze;
+}
+
 inline vec2 QmPlayerIndicatorPosition(vec2 LocalPosition, vec2 OtherPosition, float Offset)
 {
 	const vec2 Delta = OtherPosition - LocalPosition;

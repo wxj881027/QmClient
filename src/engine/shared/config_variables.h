@@ -819,3 +819,4 @@ MACRO_CONFIG_INT(QmPlayerIndicatorOpacity, qm_player_indicator_opacity, 50, 0, 1
 MACRO_CONFIG_INT(QmPlayerIndicatorUseTees, qm_player_indicator_use_tees, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use tee icons instead of circles for direction indicators")
 MACRO_CONFIG_COL(QmPlayerIndicatorAliveColor, qm_player_indicator_alive_color, 255, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Direction indicator color for active players")
 MACRO_CONFIG_COL(QmPlayerIndicatorFrozenColor, qm_player_indicator_frozen_color, 65407, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Direction indicator color for frozen players")
+MACRO_CONFIG_COL(QmPlayerIndicatorUnfreezingColor, qm_player_indicator_unfreezing_color, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Direction indicator color for players leaving freeze")
