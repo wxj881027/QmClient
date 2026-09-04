@@ -72,9 +72,9 @@ baseline: ddnet-20.0
   `graphics.out_of_memory`、`graphics.swapchain_failure`、命令记录/提交失败和初始化失败。
   其中 OpenGL/GLES 的部分 shader 失败仍按通用初始化失败记录，后续再补充精确的 backend 触点。这一步只增加 observer 旁路，不改变原有错误翻译、日志和 `dbg_assert_failed()` 控制流；
   Vulkan 私有 swapchain 重建的 begin/end 事件另作为独立 hook 评估。
-- Vulkan 关键结果现在通过同一事件 sink 记录 `graphics.vulkan.result`，包含数值 result、稳定分类和固定调用 stage；instance 创建、物理设备枚举、swapchain 创建、queue submit、acquire、present 均覆盖，acquire/present 的 out-of-date/suboptimal 特殊分支也会记录通用结果；shader module、pipeline layout、graphics pipeline 的创建失败也会带上明确 stage；同时记录 `graphics.swapchain_out_of_date`、
+- Vulkan 关键结果现在通过同一事件 sink 记录 `graphics.vulkan.result`，包含数值 result、稳定分类和固定调用 stage；instance 创建、物理设备枚举、swapchain 创建、queue submit、acquire、present、memory recovery/command wait、swapchain recreate wait-idle、shutdown 和 window destroy wait-idle 均覆盖，acquire/present 的 out-of-date/suboptimal 特殊分支也会记录通用结果；shader module、pipeline layout、graphics pipeline 的创建失败也会带上明确 stage；同时记录 `graphics.swapchain_out_of_date`、
   `graphics.swapchain_suboptimal` 以及 `graphics.swapchain_recreate_begin/end`；
-  acquire/present 的特殊分支会记录统一的 `stage` 字段，重建事件携带旧/新 image count 和返回值。
+  acquire/present 的特殊分支会记录统一的 `stage` 字段，重建事件携带旧/新 image count、失败阶段和返回值；依赖资源初始化失败会并入重建结果。
   事件只观察现有路径，不改变 Vulkan 的递归重试、错误返回或资源清理顺序。
 - Vulkan `VK_EXT_device_fault` 事件使用固定容量数组和有界摘要，查询失败也记录 `available=false`；不读取 vendor binary。后续同步时保留该诊断旁路，不改变 device-lost 错误处理和资源销毁流程。
 - graphics 事件注册、启动队列入队和 pending 回放增加异常恢复；监听器分配、队列分配或同步异常只丢弃诊断事件并恢复 replay 状态，不传播到原始图形路径。

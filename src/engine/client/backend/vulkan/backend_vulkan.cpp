@@ -1914,7 +1914,8 @@ protected:
 			if((Res == VK_ERROR_OUT_OF_HOST_MEMORY || Res == VK_ERROR_OUT_OF_DEVICE_MEMORY) && !s_ThreadIsRenderWorker)
 			{
 				// aggressively try to get more memory
-				vkDeviceWaitIdle(m_VKDevice);
+				const VkResult WaitIdleResult = vkDeviceWaitIdle(m_VKDevice);
+				EmitVulkanResult(WaitIdleResult, "memory_recovery_wait_idle");
 				for(size_t i = 0; i < m_SwapChainImageCount + 1; ++i)
 				{
 					if(!NextFrame())
@@ -2547,7 +2548,8 @@ protected:
 			SubmitInfo.commandBufferCount = 1;
 			SubmitInfo.pCommandBuffers = &MemoryCommandBuffer;
 			vkQueueSubmit(m_VKGraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
-			vkQueueWaitIdle(m_VKGraphicsQueue);
+			const VkResult QueueWaitResult = vkQueueWaitIdle(m_VKGraphicsQueue);
+			EmitVulkanResult(QueueWaitResult, "memory_command_queue_wait_idle");
 
 			m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 		}
@@ -6158,11 +6160,18 @@ public:
 	int RecreateSwapChain()
 	{
 		int Ret = 0;
+		const char *pFailureStage = nullptr;
 		const uint32_t OldSwapChainImageCount = m_SwapChainImageCount;
 		char aBeginDetails[64];
 		str_format(aBeginDetails, sizeof(aBeginDetails), "backend=vulkan;old_image_count=%u", OldSwapChainImageCount);
 		EmitGraphicsEvent("graphics.swapchain_recreate_begin", aBeginDetails);
-		vkDeviceWaitIdle(m_VKDevice);
+		const VkResult WaitIdleResult = vkDeviceWaitIdle(m_VKDevice);
+		EmitVulkanResult(WaitIdleResult, "swapchain_recreate_wait_idle");
+		if(WaitIdleResult != VK_SUCCESS)
+		{
+			Ret = -1;
+			pFailureStage = "wait_idle";
+		}
 
 		if(IsVerbose())
 		{
@@ -6181,12 +6190,26 @@ public:
 		}
 
 		if(!m_SwapchainCreated)
-			Ret = InitVulkanSwapChain(OldSwapChain);
+		{
+			const int InitResult = InitVulkanSwapChain(OldSwapChain);
+			if(InitResult != 0)
+			{
+				Ret = InitResult;
+				if(pFailureStage == nullptr)
+					pFailureStage = "swapchain_init";
+			}
+		}
 
 		if(OldSwapChainImageCount != m_SwapChainImageCount)
 		{
 			CleanupVulkan<false>(OldSwapChainImageCount);
-			InitVulkan<false>();
+			const int InitResult = InitVulkan<false>();
+			if(InitResult != 0)
+			{
+				Ret = InitResult;
+				if(pFailureStage == nullptr)
+					pFailureStage = "dependent_resources_init";
+			}
 		}
 
 		if(OldSwapChain != VK_NULL_HANDLE)
@@ -6199,7 +6222,7 @@ public:
 			log_warn("gfx/vulkan", "Recreating swap chain failed.");
 		}
 		char aEndDetails[96];
-		str_format(aEndDetails, sizeof(aEndDetails), "backend=vulkan;result=%d;old_image_count=%u;new_image_count=%u", Ret, OldSwapChainImageCount, m_SwapChainImageCount);
+		str_format(aEndDetails, sizeof(aEndDetails), "backend=vulkan;result=%d;stage=%s;old_image_count=%u;new_image_count=%u", Ret, pFailureStage != nullptr ? pFailureStage : "complete", OldSwapChainImageCount, m_SwapChainImageCount);
 		EmitGraphicsEvent("graphics.swapchain_recreate_end", aEndDetails);
 
 		return Ret;
@@ -7257,7 +7280,8 @@ public:
 			return true;
 		}
 
-		vkDeviceWaitIdle(m_VKDevice);
+		const VkResult WaitIdleResult = vkDeviceWaitIdle(m_VKDevice);
+		EmitVulkanResult(WaitIdleResult, "shutdown_wait_idle");
 
 		DestroyIndexBuffer(m_IndexBuffer, m_IndexBufferMemory);
 		DestroyIndexBuffer(m_RenderIndexBuffer, m_RenderIndexBufferMemory);
@@ -8140,7 +8164,8 @@ public:
 			if(!WaitFrame())
 				return false;
 			m_RenderingPaused = true;
-			vkDeviceWaitIdle(m_VKDevice);
+			const VkResult WaitIdleResult = vkDeviceWaitIdle(m_VKDevice);
+			EmitVulkanResult(WaitIdleResult, "window_destroy_wait_idle");
 #ifdef CONF_PLATFORM_ANDROID
 			CleanupVulkanSwapChain(true);
 #endif
