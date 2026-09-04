@@ -1,5 +1,6 @@
 #include <game/client/components/qmclient/core/qm_diagnostics_json.h>
 #include <game/client/components/qmclient/core/qm_diagnostics_metrics.h>
+#include <game/client/components/qmclient/core/qm_diagnostics_retention.h>
 
 #include <gtest/gtest.h>
 
@@ -35,4 +36,24 @@ TEST(QmDiagnostics, EscapesInvalidUtf8AndTruncatesSafely)
 	char aFullBuffer[32];
 	EXPECT_TRUE(QmDiagnostics::EscapeJson(aFullBuffer, sizeof(aFullBuffer), "a\\\"b"));
 	EXPECT_STREQ(aFullBuffer, "a\\\\\\\"b");
+}
+
+TEST(QmDiagnostics, RetentionKeepsNewestFilesAndUsesStableTieBreak)
+{
+	std::vector<QmDiagnostics::SDiagnosticFileEntry> vEntries{
+		{"report-old.tmp", 10},
+		{"report-tie-a.tmp", 20},
+		{"report-new.tmp", 30},
+		{"report-tie-b.tmp", 20},
+	};
+
+	QmDiagnostics::SortDiagnosticFileEntries(vEntries);
+	ASSERT_EQ(vEntries.size(), 4U);
+	EXPECT_EQ(vEntries[0].m_Name, "report-new.tmp");
+	EXPECT_EQ(vEntries[1].m_Name, "report-tie-b.tmp");
+	EXPECT_EQ(vEntries[2].m_Name, "report-tie-a.tmp");
+	EXPECT_EQ(vEntries[3].m_Name, "report-old.tmp");
+	EXPECT_EQ(QmDiagnostics::FirstDiagnosticFileToRemove(vEntries.size(), 3), 3U);
+	EXPECT_EQ(QmDiagnostics::FirstDiagnosticFileToRemove(vEntries.size(), 8), 4U);
+	EXPECT_EQ(QmDiagnostics::FirstDiagnosticFileToRemove(0, 3), 0U);
 }

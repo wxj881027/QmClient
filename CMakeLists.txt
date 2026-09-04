@@ -2722,6 +2722,7 @@ if(CLIENT)
     components/qmclient/core/qm_diagnostics.h
     components/qmclient/core/qm_diagnostics_json.h
     components/qmclient/core/qm_diagnostics_metrics.h
+    components/qmclient/core/qm_diagnostics_retention.h
     components/qmclient/core/qm_game_state_adapter.cpp
     components/qmclient/core/qm_game_state_adapter.h
     components/qmclient/core/qm_i18n.h

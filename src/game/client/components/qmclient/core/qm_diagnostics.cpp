@@ -2,6 +2,7 @@
 
 #include "qm_diagnostics_json.h"
 #include "qm_diagnostics_metrics.h"
+#include "qm_diagnostics_retention.h"
 
 #include <base/aio.h>
 #include <base/io.h>
@@ -32,17 +33,11 @@ constexpr size_t NON_BLOCKING_EVENT_NAME_SIZE = 256;
 constexpr size_t NON_BLOCKING_EVENT_DETAILS_SIZE = 16 * 1024;
 constexpr size_t NON_BLOCKING_EVENT_JSON_SIZE = NON_BLOCKING_EVENT_NAME_SIZE + NON_BLOCKING_EVENT_DETAILS_SIZE + JSON_EVENT_OVERHEAD + 64;
 
-struct SDiagnosticFileEntry
-{
-	std::string m_Name;
-	time_t m_TimeModified = 0;
-};
-
 struct SDiagnosticFileScan
 {
 	const char *m_pPrefix;
 	const char *m_pSuffix;
-	std::vector<SDiagnosticFileEntry> *m_pEntries;
+	std::vector<QmDiagnostics::SDiagnosticFileEntry> *m_pEntries;
 };
 
 int ScanDiagnosticFile(const CFsFileInfo *pInfo, int IsDir, int, void *pUser)
@@ -60,17 +55,13 @@ size_t RotateDiagnosticFiles(IStorage *pStorage, const char *pDirectory, const c
 {
 	try
 	{
-		std::vector<SDiagnosticFileEntry> vEntries;
+		std::vector<QmDiagnostics::SDiagnosticFileEntry> vEntries;
 		SDiagnosticFileScan Scan{pPrefix, pSuffix, &vEntries};
 		pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, pDirectory, ScanDiagnosticFile, &Scan);
-		std::sort(vEntries.begin(), vEntries.end(), [](const SDiagnosticFileEntry &Lhs, const SDiagnosticFileEntry &Rhs) {
-			if(Lhs.m_TimeModified != Rhs.m_TimeModified)
-				return Lhs.m_TimeModified > Rhs.m_TimeModified;
-			return Lhs.m_Name > Rhs.m_Name;
-		});
+		QmDiagnostics::SortDiagnosticFileEntries(vEntries);
 
 		size_t RemovedFiles = 0;
-		for(size_t i = MaxFiles; i < vEntries.size(); ++i)
+		for(size_t i = QmDiagnostics::FirstDiagnosticFileToRemove(vEntries.size(), MaxFiles); i < vEntries.size(); ++i)
 		{
 			char aFilename[IO_MAX_PATH_LENGTH];
 			str_format(aFilename, sizeof(aFilename), "%s/%s", pDirectory, vEntries[i].m_Name.c_str());

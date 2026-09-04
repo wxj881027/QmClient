@@ -90,6 +90,6 @@ baseline: ddnet-20.0
 
 ### `CMakeLists.txt`
 
-- 注册 Qm core、player indicator 和 C++ 测试源文件；不修改依赖版本和协议生成流程。
+- 注册 Qm core、player indicator、诊断保留策略头文件和 C++ 测试源文件；不修改依赖版本和协议生成流程。
 - 冲突风险：中。上游源文件清单可能新增条目；同步时按路径插入，不做全文件重排。
 - 删除条件：对应 Qm 模块和测试删除，或改为独立目标。
