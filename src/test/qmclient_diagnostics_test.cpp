@@ -1,11 +1,40 @@
+#include "test.h"
+
+#include <game/client/components/qmclient/core/qm_diagnostics.h>
 #include <game/client/components/qmclient/core/qm_diagnostics_json.h>
 #include <game/client/components/qmclient/core/qm_diagnostics_metrics.h>
 #include <game/client/components/qmclient/core/qm_diagnostics_retention.h>
 
+#include <base/fs.h>
+#include <engine/storage.h>
+
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <cstdlib>
+#include <string>
 #include <vector>
+
+namespace
+{
+int CollectDiagnosticFiles(const CFsFileInfo *pInfo, int IsDir, int, void *pUser)
+{
+	if(!IsDir && pInfo != nullptr && pInfo->m_pName != nullptr)
+		static_cast<std::vector<std::string> *>(pUser)->emplace_back(pInfo->m_pName);
+	return 0;
+}
+
+std::string ReadDiagnosticFile(IStorage *pStorage, const std::string &Name)
+{
+	const std::string Path = "qmclient/diagnostics/" + Name;
+	char *pContents = pStorage->ReadFileStr(Path.c_str(), IStorage::TYPE_SAVE);
+	if(!pContents)
+		return {};
+	std::string Contents = pContents;
+	std::free(pContents);
+	return Contents;
+}
+}
 
 TEST(QmDiagnostics, CalculatesFrameMetrics)
 {
@@ -56,4 +85,70 @@ TEST(QmDiagnostics, RetentionKeepsNewestFilesAndUsesStableTieBreak)
 	EXPECT_EQ(QmDiagnostics::FirstDiagnosticFileToRemove(vEntries.size(), 3), 3U);
 	EXPECT_EQ(QmDiagnostics::FirstDiagnosticFileToRemove(vEntries.size(), 8), 4U);
 	EXPECT_EQ(QmDiagnostics::FirstDiagnosticFileToRemove(0, 3), 0U);
+}
+
+TEST(QmDiagnostics, WritesLifecycleAndRejectsStaleGenerationEvents)
+{
+	CTestInfo Info;
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	Info.m_DeleteTestStorageFilesOnSuccess = true;
+
+	CQmDiagnostics Diagnostics;
+	Diagnostics.Init(pStorage.get(), nullptr);
+	ASSERT_TRUE(Diagnostics.IsActive());
+	const uint32_t FirstGeneration = Diagnostics.SessionGeneration();
+	Diagnostics.RecordEvent("qm.test.first", "first");
+	Diagnostics.Shutdown();
+	EXPECT_FALSE(Diagnostics.IsActive());
+	Diagnostics.Shutdown();
+
+	Diagnostics.Init(pStorage.get(), nullptr);
+	ASSERT_TRUE(Diagnostics.IsActive());
+	const uint32_t SecondGeneration = Diagnostics.SessionGeneration();
+	EXPECT_NE(FirstGeneration, SecondGeneration);
+	Diagnostics.RecordEventNonBlocking(FirstGeneration, "qm.test.stale", "must_not_be_written");
+	Diagnostics.RecordEvent("qm.test.second", "second");
+	Diagnostics.RecordEventNonBlocking(SecondGeneration, "qm.test.current", "written");
+	Diagnostics.Shutdown();
+
+	std::vector<std::string> vDiagnosticFiles;
+	pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, "qmclient/diagnostics", CollectDiagnosticFiles, &vDiagnosticFiles);
+	size_t SessionCount = 0;
+	size_t ReportCount = 0;
+	size_t FirstEventCount = 0;
+	size_t SecondEventCount = 0;
+	size_t CurrentEventCount = 0;
+	for(const std::string &Name : vDiagnosticFiles)
+	{
+		if(Name.rfind("session-", 0) == 0)
+		{
+			++SessionCount;
+			const std::string Contents = ReadDiagnosticFile(pStorage.get(), Name);
+			EXPECT_NE(Contents.find("\"type\":\"session_start\""), std::string::npos);
+			EXPECT_NE(Contents.find("\"type\":\"session_end\""), std::string::npos);
+			if(Contents.find("qm.test.first") != std::string::npos)
+				++FirstEventCount;
+			if(Contents.find("qm.test.second") != std::string::npos)
+				++SecondEventCount;
+			if(Contents.find("qm.test.current") != std::string::npos)
+				++CurrentEventCount;
+		EXPECT_EQ(Contents.find("qm.test.stale"), std::string::npos);
+			continue;
+		}
+		const bool IsReport = Name.rfind("report-", 0) == 0;
+		const bool IsTemporaryReport = Name.size() >= 4 && Name.compare(Name.size() - 4, 4, ".tmp") == 0;
+		if(IsReport && !IsTemporaryReport)
+		{
+			++ReportCount;
+			const std::string Contents = ReadDiagnosticFile(pStorage.get(), Name);
+			EXPECT_NE(Contents.find("\"type\":\"report\""), std::string::npos);
+			EXPECT_NE(Contents.find("\"write_failed\":false"), std::string::npos);
+		}
+	}
+	EXPECT_EQ(SessionCount, 2U);
+	EXPECT_EQ(ReportCount, 2U);
+	EXPECT_EQ(FirstEventCount, 1U);
+	EXPECT_EQ(SecondEventCount, 1U);
+	EXPECT_EQ(CurrentEventCount, 1U);
 }

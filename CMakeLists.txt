@@ -3518,6 +3518,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/engine/client/sqlite.cpp
     src/game/client/components/censor.cpp
     src/game/client/components/censor.h
+    src/game/client/components/qmclient/core/qm_diagnostics.cpp
     src/game/client/components/qmclient/core/qm_ui_model.cpp
     # tidy-alphabetical-end
   )
