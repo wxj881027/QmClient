@@ -963,6 +963,19 @@ CGraphicsBackend_SDL_GL::CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc)
 
 int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, int *pHeight, int *pRefreshRate, int *pFsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight, int *pCurrentWidth, int *pCurrentHeight, IStorage *pStorage)
 {
+	bool BackendFallbackAttempted = false;
+	EBackendType FallbackFrom = BACKEND_TYPE_AUTO;
+	EBackendType FallbackTo = BACKEND_TYPE_AUTO;
+	bool BackendFallbackApplied = false;
+	auto EmitBackendFallbackResult = [&](int ErrorCode) {
+		if(!BackendFallbackAttempted)
+			return;
+		const char *pResult = BackendFallbackApplied ? (ErrorCode == EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_NONE ? "success" : "failed") : "not_applied";
+		const char *pInitResult = ErrorCode == EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_NONE ? "success" : "failed";
+		char aDetails[192];
+		str_format(aDetails, sizeof(aDetails), "from=%s;requested_to=opengl;to=%s;applied=%s;result=%s;init_result=%s;error_code=%d;reason=backend_init_retry", GraphicsBackendName(FallbackFrom), GraphicsBackendName(FallbackTo), BackendFallbackApplied ? "true" : "false", pResult, pInitResult, ErrorCode);
+		EmitGraphicsEvent("graphics.backend_fallback_result", aDetails);
+	};
 #if defined(CONF_HEADLESS_CLIENT)
 	m_BackendType = BACKEND_TYPE_OPENGL;
 	g_Config.m_GfxGLMajor = 0;
@@ -1003,7 +1016,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		if(SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
 		{
 			log_error("gfx", "Unable to initialize SDL video: %s", SDL_GetError());
-			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_INIT_FAILED;
+			const int ErrorCode = EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_INIT_FAILED;
+			EmitBackendFallbackResult(ErrorCode);
+			return ErrorCode;
 		}
 	}
 
@@ -1013,7 +1028,8 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	if(OldBackendType != BACKEND_TYPE_AUTO &&
 		m_BackendType == BACKEND_TYPE_VULKAN)
 	{
-		const EBackendType FallbackFrom = m_BackendType;
+		BackendFallbackAttempted = true;
+		FallbackFrom = m_BackendType;
 		// try default opengl settings
 		str_copy(g_Config.m_GfxBackend, "OpenGL");
 		g_Config.m_GfxGLMajor = 3;
@@ -1023,8 +1039,10 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		g_Config.m_Gfx3DTextureAnalysisRan = 0;
 		g_Config.m_GfxDriverIsBlocked = 0;
 		m_BackendType = DetectBackend();
+		FallbackTo = m_BackendType;
+		BackendFallbackApplied = m_BackendType != FallbackFrom;
 		char aDetails[160];
-		str_format(aDetails, sizeof(aDetails), "from=%s;requested_to=opengl;to=%s;applied=%s;selection_source=%s;reason=backend_init_retry", GraphicsBackendName(FallbackFrom), GraphicsBackendName(m_BackendType), m_BackendType != FallbackFrom ? "true" : "false", SDL_getenv("DDNET_DRIVER") != nullptr ? "environment" : "config");
+		str_format(aDetails, sizeof(aDetails), "from=%s;requested_to=opengl;to=%s;applied=%s;selection_source=%s;reason=backend_init_retry", GraphicsBackendName(FallbackFrom), GraphicsBackendName(FallbackTo), BackendFallbackApplied ? "true" : "false", SDL_getenv("DDNET_DRIVER") != nullptr ? "environment" : "config");
 		EmitGraphicsEvent("graphics.backend_fallback_attempt", aDetails);
 	}
 
@@ -1090,13 +1108,17 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		if(SDL_GetDisplayBounds(*pScreen, &ScreenPos) != 0)
 		{
 			log_error("gfx", "Unable to get display bounds of screen %d: %s", *pScreen, SDL_GetError());
-			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_INFO_REQUEST_FAILED;
+			const int ErrorCode = EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_INFO_REQUEST_FAILED;
+			EmitBackendFallbackResult(ErrorCode);
+			return ErrorCode;
 		}
 	}
 	else
 	{
 		log_error("gfx", "Unable to get number of screens: %s", SDL_GetError());
-		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_REQUEST_FAILED;
+		const int ErrorCode = EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_REQUEST_FAILED;
+		EmitBackendFallbackResult(ErrorCode);
+		return ErrorCode;
 	}
 
 	// store desktop resolution for settings reset button
@@ -1104,7 +1126,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	if(SDL_GetDesktopDisplayMode(*pScreen, &DisplayMode))
 	{
 		log_error("gfx", "Unable to get desktop display mode of screen %d: %s", *pScreen, SDL_GetError());
-		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_RESOLUTION_REQUEST_FAILED;
+		const int ErrorCode = EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_RESOLUTION_REQUEST_FAILED;
+		EmitBackendFallbackResult(ErrorCode);
+		return ErrorCode;
 	}
 
 	bool IsDesktopChanged = *pDesktopWidth == 0 || *pDesktopHeight == 0 || *pDesktopWidth != DisplayMode.w || *pDesktopHeight != DisplayMode.h;
@@ -1191,9 +1215,17 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	{
 		log_error("gfx", "Unable to create window: %s", SDL_GetError());
 		if(m_BackendType == BACKEND_TYPE_VULKAN)
-			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED;
+		{
+			const int ErrorCode = EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED;
+			EmitBackendFallbackResult(ErrorCode);
+			return ErrorCode;
+		}
 		else
-			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_WINDOW_CREATE_FAILED;
+		{
+			const int ErrorCode = EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_WINDOW_CREATE_FAILED;
+			EmitBackendFallbackResult(ErrorCode);
+			return ErrorCode;
+		}
 	}
 
 	int GlewMajor = 0;
@@ -1209,7 +1241,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 			log_error("gfx", "Unable to create graphics context: %s", SDL_GetError());
 			SDL_DestroyWindow(m_pWindow);
 			m_pWindow = nullptr;
-			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED;
+			const int ErrorCode = EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED;
+			EmitBackendFallbackResult(ErrorCode);
+			return ErrorCode;
 		}
 
 		if(!BackendInitGlew(m_BackendType, GlewMajor, GlewMinor, GlewPatch))
@@ -1217,7 +1251,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 			SDL_GL_DeleteContext(m_GLContext);
 			SDL_DestroyWindow(m_pWindow);
 			m_pWindow = nullptr;
-			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GLEW_INIT_FAILED;
+			const int ErrorCode = EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GLEW_INIT_FAILED;
+			EmitBackendFallbackResult(ErrorCode);
+			return ErrorCode;
 		}
 	}
 
@@ -1260,6 +1296,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		g_Config.m_GfxGLMinor = GlewMinor;
 		g_Config.m_GfxGLPatch = GlewPatch;
 
+		EmitBackendFallbackResult(EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED);
 		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED;
 	}
 #endif // !CONF_HEADLESS_CLIENT
@@ -1382,6 +1419,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 			str_copy(m_aErrorString, pErrorStr);
 		}
 
+		EmitBackendFallbackResult(EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED);
 		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED;
 	}
 
@@ -1400,6 +1438,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		CmdBuffer.Reset();
 	}
 
+	EmitBackendFallbackResult(EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_NONE);
 	return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_NONE;
 }
 

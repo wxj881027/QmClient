@@ -64,6 +64,7 @@ public:
 private:
 	void RegisterGraphicsEventListener(IGraphics *pGraphics);
 	IGraphics *m_pGraphicsEventSource = nullptr;
+	uint32_t m_GraphicsEventListenerGeneration = 0;
 };
 
 #endif

@@ -109,6 +109,7 @@ bool CopyEventField(const char *pDetails, const char *pFieldName, char *pDestina
 	}
 	return false;
 }
+
 }
 
 void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
@@ -121,6 +122,9 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	}
 	if(!pStorage)
 		return;
+	const uint32_t PreviousGeneration = m_SessionGeneration.load(std::memory_order_relaxed);
+	const uint32_t NewGeneration = PreviousGeneration == std::numeric_limits<uint32_t>::max() ? 1 : PreviousGeneration + 1;
+	m_SessionGeneration.store(NewGeneration, std::memory_order_relaxed);
 
 	m_pStorage = pStorage;
 	m_pGraphics = pGraphics;
@@ -138,8 +142,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_aActiveApiName[0] = '\0';
 	m_GraphicsInfoRecorded = false;
 	m_ActiveApiAvailable = false;
-	m_BackendFallbackAttempted = false;
-	m_BackendFallbackApplied = false;
+	m_BackendFallbackState.store(0, std::memory_order_relaxed);
 	m_vUpdateSamples.clear();
 	m_vFrameSamples.clear();
 	m_vRenderSamples.clear();
@@ -186,6 +189,8 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 		m_pGraphics = nullptr;
 		return;
 	}
+	const uint64_t GenerationBits = static_cast<uint64_t>(NewGeneration) << BACKEND_FALLBACK_GENERATION_SHIFT;
+	m_BackendFallbackState.store(GenerationBits | BACKEND_FALLBACK_ACTIVE, std::memory_order_release);
 
 	WriteSessionStart();
 	log_info("qm/diagnostics", "automatic diagnostics session started: %s", m_aSessionName);
@@ -208,6 +213,8 @@ void CQmDiagnostics::RecordGraphicsInitFailed(const char *pDetails)
 
 void CQmDiagnostics::Shutdown()
 {
+	// 先关闭无锁状态更新入口，再等待已进入 observer 的回调退出，避免迟到事件污染 report 或下一 session。
+	m_BackendFallbackState.fetch_and(~BACKEND_FALLBACK_ACTIVE, std::memory_order_acq_rel);
 	std::unique_lock<std::shared_mutex> NonBlockingStatsLock(m_NonBlockingStatsLock);
 	CLockScope SessionLock(m_SessionLock);
 	if(!m_pAsyncSession)
@@ -304,9 +311,15 @@ void CQmDiagnostics::RecordEvent(const char *pName, const char *pDetails)
 	RecordEventImpl(pName, pDetails, false);
 }
 
-void CQmDiagnostics::RecordEventNonBlocking(const char *pName, const char *pDetails)
+void CQmDiagnostics::RecordEventNonBlocking(uint32_t EventSessionGeneration, const char *pName, const char *pDetails)
 {
 	m_NonBlockingEventAttempts.fetch_add(1, std::memory_order_relaxed);
+	if(!IsSessionGenerationActive(EventSessionGeneration))
+	{
+		RecordNonBlockingDrop(ENonBlockingWriteResult::SESSION_INACTIVE);
+		return;
+	}
+	UpdateBackendFallbackState(EventSessionGeneration, pName, pDetails);
 	if(!m_NonBlockingStatsLock.try_lock_shared())
 	{
 		RecordNonBlockingDrop(ENonBlockingWriteResult::STATS_GATE_BUSY);
@@ -351,10 +364,25 @@ void CQmDiagnostics::RecordEventNonBlocking(const char *pName, const char *pDeta
 		RecordNonBlockingDrop(Result);
 }
 
+bool CQmDiagnostics::IsSessionGenerationActive(uint32_t EventSessionGeneration) const
+{
+	const uint64_t State = m_BackendFallbackState.load(std::memory_order_acquire);
+	if((State & BACKEND_FALLBACK_ACTIVE) == 0)
+		return false;
+	const uint32_t StateGeneration = static_cast<uint32_t>((State & BACKEND_FALLBACK_GENERATION_MASK) >> BACKEND_FALLBACK_GENERATION_SHIFT);
+	return StateGeneration == EventSessionGeneration;
+}
+
+uint32_t CQmDiagnostics::SessionGeneration() const
+{
+	return m_SessionGeneration.load(std::memory_order_acquire);
+}
+
 void CQmDiagnostics::RecordEventImpl(const char *pName, const char *pDetails, bool NonBlocking)
 {
 	if(!m_pAsyncSession)
 		return;
+	UpdateBackendFallbackState(SessionGeneration(), pName, pDetails);
 	RecordRecentEvent(pName, pDetails);
 	UpdateGraphicsSelection(pName, pDetails);
 	try
@@ -401,18 +429,72 @@ void CQmDiagnostics::UpdateGraphicsSelection(const char *pName, const char *pDet
 {
 	if(!pName || !pDetails)
 		return;
-	const bool IsSelectionEvent = str_comp(pName, "graphics.backend_selection") == 0 || str_comp(pName, "graphics.backend_fallback_attempt") == 0;
+	const bool IsSelectionEvent = str_comp(pName, "graphics.backend_selection") == 0 || str_comp(pName, "graphics.backend_fallback_attempt") == 0 || str_comp(pName, "graphics.backend_fallback_result") == 0;
 	if(!IsSelectionEvent)
 		return;
 
 	char aValue[32];
 	if(CopyEventField(pDetails, "selection_source", aValue, sizeof(aValue)))
 		str_copy(m_aBackendSelectionSource, aValue, sizeof(m_aBackendSelectionSource));
+}
+
+void CQmDiagnostics::UpdateBackendFallbackState(uint32_t SessionGeneration, const char *pName, const char *pDetails)
+{
+	if(!pName || !pDetails)
+		return;
+
+	char aValue[32];
+	uint64_t SetBits = 0;
+	uint64_t ResultBits = 0;
+	bool HasResult = false;
 	if(str_comp(pName, "graphics.backend_fallback_attempt") == 0)
 	{
-		m_BackendFallbackAttempted = true;
-		if(CopyEventField(pDetails, "applied", aValue, sizeof(aValue)))
-			m_BackendFallbackApplied = m_BackendFallbackApplied || str_comp(aValue, "true") == 0;
+		SetBits |= BACKEND_FALLBACK_ATTEMPTED;
+		if(CopyEventField(pDetails, "applied", aValue, sizeof(aValue)) && str_comp(aValue, "true") == 0)
+			SetBits |= BACKEND_FALLBACK_APPLIED;
+	}
+	else if(str_comp(pName, "graphics.backend_fallback_result") == 0 && CopyEventField(pDetails, "result", aValue, sizeof(aValue)))
+	{
+		EBackendFallbackResult Result = EBackendFallbackResult::UNKNOWN;
+		if(str_comp(aValue, "success") == 0)
+			Result = EBackendFallbackResult::SUCCESS;
+		else if(str_comp(aValue, "failed") == 0)
+			Result = EBackendFallbackResult::FAILED;
+		else if(str_comp(aValue, "not_applied") == 0)
+			Result = EBackendFallbackResult::NOT_APPLIED;
+		if(Result != EBackendFallbackResult::UNKNOWN)
+		{
+			ResultBits = static_cast<uint64_t>(Result) << BACKEND_FALLBACK_RESULT_SHIFT;
+			HasResult = true;
+		}
+	}
+	else
+		return;
+
+	uint64_t State = m_BackendFallbackState.load(std::memory_order_acquire);
+	for(;;)
+	{
+		if((State & BACKEND_FALLBACK_ACTIVE) == 0)
+			return;
+		const uint32_t StateGeneration = static_cast<uint32_t>((State & BACKEND_FALLBACK_GENERATION_MASK) >> BACKEND_FALLBACK_GENERATION_SHIFT);
+		if(StateGeneration != SessionGeneration)
+			return;
+		uint64_t NewState = State | SetBits;
+		if(HasResult)
+			NewState = (NewState & ~BACKEND_FALLBACK_RESULT_MASK) | ResultBits;
+		if(m_BackendFallbackState.compare_exchange_weak(State, NewState, std::memory_order_relaxed, std::memory_order_relaxed))
+			return;
+	}
+}
+
+const char *CQmDiagnostics::BackendFallbackResultName(EBackendFallbackResult Result)
+{
+	switch(Result)
+	{
+	case EBackendFallbackResult::SUCCESS: return "success";
+	case EBackendFallbackResult::FAILED: return "failed";
+	case EBackendFallbackResult::NOT_APPLIED: return "not_applied";
+	default: return "unknown";
 	}
 }
 
@@ -660,14 +742,21 @@ void CQmDiagnostics::WriteReport()
 			return;
 		}
 		const bool ConfigBackendMismatch = str_comp_nocase(m_aRequestedBackend, "auto") != 0 && m_aRequestedBackend[0] != '\0' && !BackendNamesMatch(m_aRequestedBackend, m_aActiveApiName);
-		const bool BackendFallback = m_GraphicsInfoRecorded && m_ActiveApiAvailable && (m_BackendFallbackApplied || (str_comp(m_aBackendSelectionSource, "config") == 0 && ConfigBackendMismatch));
+		const uint64_t BackendFallbackState = m_BackendFallbackState.load(std::memory_order_acquire);
+		const bool BackendFallbackAttempted = (BackendFallbackState & BACKEND_FALLBACK_ATTEMPTED) != 0;
+		const bool BackendFallbackApplied = (BackendFallbackState & BACKEND_FALLBACK_APPLIED) != 0;
+		const EBackendFallbackResult BackendFallbackResult = static_cast<EBackendFallbackResult>((BackendFallbackState & BACKEND_FALLBACK_RESULT_MASK) >> BACKEND_FALLBACK_RESULT_SHIFT);
+		const char *pBackendFallbackResult = BackendFallbackResultName(BackendFallbackResult);
+		const bool BackendFallback = m_GraphicsInfoRecorded && m_ActiveApiAvailable && (BackendFallbackApplied || (str_comp(m_aBackendSelectionSource, "config") == 0 && ConfigBackendMismatch));
 		const SNonBlockingDropStats Stats = NonBlockingDropStats();
 		AppendJsonRawField(Json, "frames", std::to_string(m_FrameCount));
 		AppendJsonRawField(Json, "write_failed", m_WriteFailed ? "true" : "false");
 		AppendJsonRawField(Json, "graphics_info_recorded", m_GraphicsInfoRecorded ? "true" : "false");
 		AppendJsonRawField(Json, "active_api_available", m_ActiveApiAvailable ? "true" : "false");
-		AppendJsonRawField(Json, "backend_fallback_attempted", m_BackendFallbackAttempted ? "true" : "false");
-		AppendJsonRawField(Json, "backend_fallback_applied", m_BackendFallbackApplied ? "true" : "false");
+		AppendJsonRawField(Json, "backend_fallback_attempted", BackendFallbackAttempted ? "true" : "false");
+		AppendJsonRawField(Json, "backend_fallback_applied", BackendFallbackApplied ? "true" : "false");
+		if(!AppendJsonStringField(Json, "backend_fallback_result", pBackendFallbackResult))
+			throw std::bad_alloc();
 		AppendJsonRawField(Json, "backend_fallback", BackendFallback ? "true" : "false");
 		AppendJsonRawField(Json, "non_blocking_event_attempts", std::to_string(Stats.m_EventAttempts));
 		AppendJsonRawField(Json, "non_blocking_event_enqueued", std::to_string(Stats.m_EventEnqueued));

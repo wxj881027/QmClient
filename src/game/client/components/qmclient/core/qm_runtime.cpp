@@ -48,16 +48,20 @@ void CQmRuntime::OnGraphicsInitBegin(IGraphics *pGraphics)
 
 void CQmRuntime::RegisterGraphicsEventListener(IGraphics *pGraphics)
 {
-	if(pGraphics == nullptr || m_pGraphicsEventSource == pGraphics)
+	if(pGraphics == nullptr)
+		return;
+	const uint32_t SessionGeneration = m_pDiagnostics->SessionGeneration();
+	if(m_pGraphicsEventSource == pGraphics && m_GraphicsEventListenerGeneration == SessionGeneration)
 		return;
 
 	const std::weak_ptr<CQmDiagnostics> WeakDiagnostics = m_pDiagnostics;
-	pGraphics->AddGraphicsEventListener([WeakDiagnostics](const char *pName, const char *pDetails) {
+	pGraphics->AddGraphicsEventListener([WeakDiagnostics, SessionGeneration](const char *pName, const char *pDetails) {
 		const std::shared_ptr<CQmDiagnostics> pDiagnostics = WeakDiagnostics.lock();
 		if(pDiagnostics)
-			pDiagnostics->RecordEventNonBlocking(pName, pDetails);
+			pDiagnostics->RecordEventNonBlocking(SessionGeneration, pName, pDetails);
 	});
 	m_pGraphicsEventSource = pGraphics;
+	m_GraphicsEventListenerGeneration = SessionGeneration;
 }
 
 void CQmRuntime::OnShutdown()

@@ -44,12 +44,21 @@ public:
 	void EndGameRender();
 
 	void RecordEvent(const char *pName, const char *pDetails = nullptr);
-	void RecordEventNonBlocking(const char *pName, const char *pDetails = nullptr);
+	void RecordEventNonBlocking(uint32_t SessionGeneration, const char *pName, const char *pDetails = nullptr);
+	uint32_t SessionGeneration() const;
 	void RecordGraphicsInfo();
 	bool IsActive() const;
 	SNonBlockingDropStats NonBlockingDropStats() const;
 
 private:
+	enum class EBackendFallbackResult
+	{
+		UNKNOWN,
+		SUCCESS,
+		FAILED,
+		NOT_APPLIED,
+	};
+
 	struct SRecentEvent
 	{
 		int64_t m_MonotonicNs = 0;
@@ -80,7 +89,17 @@ private:
 	void PushSample(std::vector<int64_t> &vSamples, int64_t Sample);
 	void RecordNonBlockingDrop(ENonBlockingWriteResult Reason);
 	void RecordRecentEvent(const char *pName, const char *pDetails);
+	bool IsSessionGenerationActive(uint32_t EventSessionGeneration) const;
+	void UpdateBackendFallbackState(uint32_t SessionGeneration, const char *pName, const char *pDetails);
 	void UpdateGraphicsSelection(const char *pName, const char *pDetails);
+	static const char *BackendFallbackResultName(EBackendFallbackResult Result);
+	static constexpr uint64_t BACKEND_FALLBACK_ACTIVE = 1ULL << 0;
+	static constexpr uint64_t BACKEND_FALLBACK_ATTEMPTED = 1ULL << 1;
+	static constexpr uint64_t BACKEND_FALLBACK_APPLIED = 1ULL << 2;
+	static constexpr uint64_t BACKEND_FALLBACK_RESULT_SHIFT = 3;
+	static constexpr uint64_t BACKEND_FALLBACK_RESULT_MASK = 3ULL << BACKEND_FALLBACK_RESULT_SHIFT;
+	static constexpr uint64_t BACKEND_FALLBACK_GENERATION_SHIFT = 32;
+	static constexpr uint64_t BACKEND_FALLBACK_GENERATION_MASK = 0xffffffffULL << BACKEND_FALLBACK_GENERATION_SHIFT;
 
 	IStorage *m_pStorage = nullptr;
 	IGraphics *m_pGraphics = nullptr;
@@ -94,8 +113,10 @@ private:
 	char m_aActiveApiName[64]{};
 	bool m_GraphicsInfoRecorded = false;
 	bool m_ActiveApiAvailable = false;
-	bool m_BackendFallbackAttempted = false;
-	bool m_BackendFallbackApplied = false;
+	// 单个原子字同时保存 session generation、生命周期闸门和 fallback 摘要，避免
+	// report 读取到互相矛盾的字段，也拒绝旧 graphics listener 的迟到事件。
+	std::atomic<uint64_t> m_BackendFallbackState{0};
+	std::atomic<uint32_t> m_SessionGeneration{0};
 	int64_t m_SessionStart = 0;
 	int64_t m_UpdateStart = 0;
 	int64_t m_FrameStart = 0;

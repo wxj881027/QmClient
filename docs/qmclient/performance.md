@@ -47,14 +47,14 @@ status: active
   已由 report 自动导出，但其容量固定且仍没有日志保留/轮转策略。
 - graphics 对象创建后、backend `Init()` 前已启动最小 Qm session 并注册 listener；失败分支会自动记录 `graphics_init_failed` 并生成尽力而为的 report。诊断初始化阶段不访问未就绪 backend。OpenGL/GLES context 成功后的专属字段已经接入；初始化失败前的具体 Vulkan/device 字段仍未覆盖。
 - resize 事件已接入 runtime；Vulkan 已有 device loss、shader/pipeline 失败、交换链重建和 Vulkan→OpenGL fallback 尝试事件（含实际是否应用），但 renderer switch、其他 fallback、OpenGL/GLES 精确 shader 失败和跨后端 resource rebuild 仍未统一；当前 fallback 事件是 attempt，不等同于目标 backend 初始化成功。
-- graphics report 已区分配置请求、backend 选择来源（config/environment）和实际 active backend；环境变量覆盖不再仅凭配置与 active API 的差异标记为 fallback。
-- graphics report 另外保留 `backend_fallback_attempted` 与 `backend_fallback_applied`，即使目标 backend 最终初始化失败也不会丢失 fallback 证据；`backend_fallback` 仍表示已观察到 active backend 后的最终判定。
+- graphics report 已区分初始化开始时的配置请求、backend 选择来源（config/environment）和实际 active backend；`requested_backend_config` 是当前兼容字段，暂与 `requested_backend` 保持同值，`backend_config` 则表示最近一次 graphics info 采样到的配置。环境变量覆盖不再仅凭配置与 active API 的差异标记为 fallback。
+- graphics report 另外保留 `backend_fallback_attempted`、`backend_fallback_applied` 和 `backend_fallback_result`；结果为 `success`、`failed`、`not_applied` 或尚未观察到结果时的 `unknown`。其中前两个是当前 session 内的累计事实，后者是当前 session 最后一次已观察结果；`not_applied` 只表示 fallback 请求发出后最终选择仍未改变，不单独断言一定由环境变量阻止。三个摘要字段由同一个原子状态字形成一致快照；事件进入 diagnostics observer 后，即使非阻塞写入因 session/writer 锁或 buffer 竞争而丢弃事件行，也能保留已观察到的 fallback 状态。listener、pending 队列或 session 不可用时，事件未必能进入 observer；关闭生命周期后迟到事件会被拒绝。`backend_fallback` 仍表示已观察到 active backend 后的最终判定。
 - 普通 JSONL 单行在一个 ASYNCIO 锁区间内提交，避免多线程事件把 JSON 内容和换行交错；graphics observer 事件使用固定栈缓冲区和 ASYNCIO try-lock，忙时允许丢弃，避免阻塞渲染/致命错误路径；
   但每 600 个样本的精确分位数排序仍在主线程执行，尚未迁移到后台统计 worker，不能把
   当前诊断开销视为已经量化为零。
 
 因此当前日志只能证明“有自动诊断证据”和“基础帧统计可用”，不能据此宣称已经完成图形后端性能定位。
-通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult`、device-fault、交换链重建和 Vulkan→OpenGL fallback 尝试事件已接入，但 Metal 专属字段、GPU query、统一 fallback 结果、跨后端 shader failure 和资源重建事件仍需分别接入。
+通用 graphics 事件入口已经建立；OpenGL/GLES 基础能力快照和 debug callback 统计已接入，Vulkan instance 创建阶段与运行期 validation 消息、关键 `VkResult`、device-fault、交换链重建以及 Vulkan→OpenGL fallback 的 attempt/result 事件已接入，但 Metal 专属字段、GPU query、其他 fallback、renderer switch、跨后端 shader failure 和资源重建事件仍需分别接入。
 
 ## OpenGL/GLES debug callback 增量（2026-09-03）
 
@@ -93,6 +93,14 @@ status: active
 
 实际 JSON 字段名为 `active_api_name`（不是 `active_api`）；分析工具应同时读取
 `backend_config` 与 `active_api_name`，并把 `active_api_available=false` 视为不可用状态。
+
+### Graphics report 字段契约
+
+- `requested_backend` 是 `graphics_init_begin` 时保存的原始配置请求；即使初始化失败也可能有值。
+- `requested_backend_config` 当前是同一原始请求的兼容别名，不代表第二次独立选择。
+- `backend_config` 是成功生成 `graphics_info` 时观察到的配置值；初始化失败或 `graphics_info` 未入队时可能为空。
+- `backend_selection_source` 表示 backend 选择来自配置还是 `DDNET_DRIVER` 环境变量；`effective_backend` 与 `active_api_name` 是同一实际 API 名称的兼容字段。
+- `backend_fallback_attempted` / `backend_fallback_applied` 是当前 session 内累计事实；`backend_fallback_result` 是当前 session 最后一次已观察到的结果，不是按 attempt 对齐的记录。事件或 report 写入失败时，结果可能为 `unknown`，不能据此反推没有发生过 fallback。
 
 ## 只读 review 收口（2026-09-03）
 
