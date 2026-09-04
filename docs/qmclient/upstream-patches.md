@@ -21,6 +21,7 @@ baseline: ddnet-20.0
 | qm.ui.presentation | 待定 | 为 legacy/new UI 提供稳定菜单桥接 | Qm_ADAPTER | legacy 模式保持官方 UI | menus 生命周期和输入优先级 | 官方 UI 提供可插拔页面槽位 | keyboard/touch/IME smoke | INVENTORY |
 | qm.frame.telemetry | src/engine/client/client.h; src/engine/client/client.cpp; src/game/client/gameclient.h; src/game/client/gameclient.cpp | 在 Render/Swap 外围提供完整 frame interval 计时边界 | Qm_ADAPTER | 默认 hook 为空；不改变官方渲染和同步语义 | engine/client 接口与主循环冲突 | 官方提供等价 frame telemetry hook | Release build; C++ tests; pacing smoke | active |
 | qm.graphics.bootstrap | src/engine/client/client.h; src/engine/client/client.cpp; src/game/client/gameclient.h; src/game/client/gameclient.cpp | 在 graphics Init 前启动诊断，并在 Init 失败时自动记录上下文 | Qm_ADAPTER | 默认 hook 为空；图形初始化和错误对话框行为不变 | 启动顺序、失败路径、接口扩展 | 官方提供等价初始化诊断回调 | Release build; graphics failure smoke | active |
+| qm.aio.close_error | src/base/aio.cpp | 将异步 writer 的最终 `io_close` 错误保留到 `aio_error`，使 diagnostics 能识别关闭阶段失败 | UPSTREAM_CHANGE | 成功关闭和已有写入错误行为不变；只补充错误状态 | base aio 生命周期和其他异步日志调用方 | 上游 `ASYNCIO` 提供等价 close/flush 错误状态 | Release C++ tests; diagnostics lifecycle smoke | active |
 
 ## 记录规则
 

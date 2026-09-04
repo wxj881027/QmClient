@@ -93,7 +93,9 @@ static void aio_thread(void *user)
 			{
 				if(aio->finish == EAsyncIoFinishState::CLOSE)
 				{
-					io_close(aio->io);
+					const int CloseError = io_close(aio->io);
+					if(aio->error == 0)
+						aio->error = CloseError;
 				}
 				aio_handle_free_and_unlock(aio);
 				break;
