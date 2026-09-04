@@ -94,6 +94,7 @@ status: active
 - `py -3 qmclient_scripts/check_qmclient_runtime_smoke.py`：自动启动当前工作区 Release 客户端，使用临时 storage 校验 session/report JSON、`session_end`、backend 字段、`write_failed=false` 和 `.tmp` 清理。
 - Release `QmDiagnostics.WritesLifecycleAndRejectsStaleGenerationEvents`：通过真实临时 storage 校验两次 session 的 start/end、report 完整写入、幂等 shutdown，以及旧 generation 图形事件不会污染新 session。
 - `ASYNCIO` 关闭阶段现在保留 `io_close` 返回值（仅在此前没有错误时写入），diagnostics 的 `aio_error` 检查因此覆盖最终 close/flush 失败；默认 writer 控制流不变。
+- `qm_diagnostics=1` 时自动启动 session writer 和 graphics listener；`qm_diagnostics=0` 时跳过 timing buffer、writer 和 graphics listener，runtime smoke 已覆盖两种配置，关闭路径不创建 diagnostics 文件。该配置在启动时读取，运行中修改需重启客户端才能生效。
 - `codegraph sync`：最终一次同步 1 个变更文件；CodeGraph v1.6.0，状态为 `Index is up to date`。
 - 当前工作区 Release 客户端正常退出 smoke：退出码 0，自动生成 session JSONL（5 行，全部可解析）和 report，`session_end` 存在且 `write_failed=false`；实际记录 `backend_config=Vulkan`、`active_api_name=OpenGL`，验证了 fallback 可见。
 - 尚未完成真实联网游戏场景、Vulkan 实际成功路径、GLES 后端 smoke、后端 validation/debug callback、同场景 A/B 性能采样；这些不能由构建或单元测试替代。

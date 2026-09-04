@@ -33,7 +33,7 @@ baseline: ddnet-20.0
 
 ### `src/engine/shared/config_variables.h`
 
-- 在文件末尾的 mod 配置区域增加 `qm_player_indicator_*` 配置；默认关闭，不改变官方默认行为。
+- 在文件末尾的 mod 配置区域增加 `qm_diagnostics` 和 `qm_player_indicator_*` 配置；diagnostics 默认开启以保证自动证据，显式关闭时不启动 writer/listener；player indicator 默认关闭，不改变官方默认行为。
 - 触点范围：配置声明和自动生成的 `CConfig` 字段；没有协议、snapshot、预测或 demo 格式变化。
 - 冲突风险：低。后续上游同步优先把配置继续放在 mod 区域；若官方提供等价配置，按功能台账做一次映射评估。
 - 删除条件：Qm 功能删除或配置收口到独立扩展配置注册机制后，连同样板功能一起移除。

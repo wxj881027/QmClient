@@ -805,6 +805,7 @@ MACRO_CONFIG_INT(ClVideoRecorderFPS, cl_video_recorder_fps, 60, 1, 1000, CFGFLAG
  */
 
 // QmClient: 独立的队友方向指示器，默认关闭以保持 DDNet 行为不变。
+MACRO_CONFIG_INT(QmDiagnostics, qm_diagnostics, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Write automatic QmClient diagnostics logs (read at startup)")
 MACRO_CONFIG_INT(QmPlayerIndicator, qm_player_indicator, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show direction indicators for other players")
 MACRO_CONFIG_INT(QmPlayerIndicatorTeamOnly, qm_player_indicator_team_only, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show direction indicators only for players in your team")
 MACRO_CONFIG_INT(QmPlayerIndicatorFrozenOnly, qm_player_indicator_frozen_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show direction indicators only for frozen players")

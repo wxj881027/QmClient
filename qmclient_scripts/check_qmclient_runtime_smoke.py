@@ -21,6 +21,36 @@ def fail(message: str) -> int:
     return 1
 
 
+def run_client(executable: Path, data_dir: Path, run_dir: Path, user_dir: Path, config: str, timeout: float):
+    run_dir.mkdir(exist_ok=True)
+    user_dir.mkdir()
+    (run_dir / "storage.cfg").write_text(
+        f"add_path {user_dir.as_posix()}\n"
+        f"add_path {data_dir.as_posix()}\n",
+        encoding="utf-8",
+    )
+    config_file = run_dir / "smoke.cfg"
+    config_file.write_text(config, encoding="utf-8")
+    try:
+        completed = subprocess.run(
+            [str(executable), "-s", "-f", str(config_file)],
+            cwd=run_dir,
+            env=os.environ.copy(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            errors="replace",
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        output = str(error.stdout or "")
+        return None, f"客户端超过 {timeout:.1f}s 未退出\n{output[-2000:]}"
+    if completed.returncode != 0:
+        return None, f"客户端退出码为 {completed.returncode}\n{completed.stdout[-2000:]}"
+    return completed, None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -50,42 +80,22 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="qmclient-runtime-smoke-") as temp_name:
         temp_dir = Path(temp_name)
         user_dir = temp_dir / "user"
-        user_dir.mkdir()
-        (temp_dir / "storage.cfg").write_text(
-            f"add_path {user_dir.as_posix()}\n"
-            f"add_path {data_dir.as_posix()}\n",
-            encoding="utf-8",
-        )
         benchmark_file = temp_dir / "benchmark.csv"
-        config_file = temp_dir / "smoke.cfg"
-        config_file.write_text(
+        _, error = run_client(
+            executable,
+            data_dir,
+            temp_dir,
+            user_dir,
             "gfx_backend OpenGL\n"
             "gfx_fullscreen 0\n"
             "gfx_vsync 0\n"
             "dbg_gfx 0\n"
+            "qm_diagnostics 1\n"
             f"benchmark_quit 2 {benchmark_file.as_posix()}\n",
-            encoding="utf-8",
+            args.timeout,
         )
-
-        environment = os.environ.copy()
-        try:
-            completed = subprocess.run(
-                [str(executable), "-s", "-f", str(config_file)],
-                cwd=temp_dir,
-                env=environment,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                errors="replace",
-                timeout=args.timeout,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as error:
-            output = error.stdout or ""
-            return fail(f"客户端超过 {args.timeout:.1f}s 未退出\n{output[-2000:]}")
-
-        if completed.returncode != 0:
-            return fail(f"客户端退出码为 {completed.returncode}\n{completed.stdout[-2000:]}")
+        if error:
+            return fail(error)
 
         diagnostics_dir = user_dir / "qmclient" / "diagnostics"
         sessions = sorted(diagnostics_dir.glob("session-*.jsonl"), key=lambda path: path.stat().st_mtime)
@@ -115,12 +125,36 @@ def main() -> int:
         if not benchmark_file.is_file() or benchmark_file.stat().st_size == 0:
             return fail("benchmark 文件缺失或为空")
 
+        disabled_dir = temp_dir / "disabled"
+        disabled_user_dir = disabled_dir / "user"
+        disabled_benchmark_file = disabled_dir / "benchmark.csv"
+        _, error = run_client(
+            executable,
+            data_dir,
+            disabled_dir,
+            disabled_user_dir,
+            "gfx_backend OpenGL\n"
+            "gfx_fullscreen 0\n"
+            "gfx_vsync 0\n"
+            "dbg_gfx 0\n"
+            "qm_diagnostics 0\n"
+            f"benchmark_quit 2 {disabled_benchmark_file.as_posix()}\n",
+            args.timeout,
+        )
+        if error:
+            return fail(f"diagnostics 关闭路径失败: {error}")
+        disabled_diagnostics_dir = disabled_user_dir / "qmclient" / "diagnostics"
+        if disabled_diagnostics_dir.exists():
+            return fail("qm_diagnostics=0 时仍创建了 diagnostics 目录")
+        if not disabled_benchmark_file.is_file() or disabled_benchmark_file.stat().st_size == 0:
+            return fail("diagnostics 关闭路径 benchmark 文件缺失或为空")
+
         print(
             "QmClient runtime smoke passed: "
             f"session_lines={len(session_events)}, "
             f"backend_config={report['backend_config']}, "
             f"active_api_name={report['active_api_name']}, "
-            "write_failed=false, report_tmp=0"
+            "write_failed=false, report_tmp=0, diagnostics_disabled=no_files"
         )
         return 0
 

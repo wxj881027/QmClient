@@ -21,6 +21,7 @@ void CQmRuntime::OnInit()
 {
 	m_Initialized = true;
 	m_I18n.SetLookup(Localize);
+	m_DiagnosticsModel.m_Enabled = g_Config.m_QmDiagnostics != 0;
 	const bool DiagnosticsFeatureRegistered = m_UiModel.RegisterFeature(m_DiagnosticsModel);
 	const bool PlayerIndicatorFeatureRegistered = m_UiModel.RegisterFeature(m_PlayerIndicator.Model());
 	if(!DiagnosticsFeatureRegistered || !PlayerIndicatorFeatureRegistered)
@@ -30,12 +31,19 @@ void CQmRuntime::OnInit()
 	if(!DiagnosticsCardRegistered || !PlayerIndicatorCardRegistered)
 		log_error("qm/runtime", "failed to register a UI card");
 	m_UiModel.Freeze();
-	m_pDiagnostics->Init(Storage(), Graphics());
-	m_PlayerIndicatorTiming = m_pDiagnostics->RegisterFeatureTiming("qm.player_indicator");
-	if(m_PlayerIndicatorTiming == CQmDiagnostics::INVALID_FEATURE_TIMING)
-		log_error("qm/runtime", "failed to register player indicator diagnostics timing");
-	RegisterGraphicsEventListener(Graphics());
-	m_pDiagnostics->RecordGraphicsInfo();
+	if(g_Config.m_QmDiagnostics != 0)
+		m_pDiagnostics->Init(Storage(), Graphics());
+	if(g_Config.m_QmDiagnostics != 0)
+	{
+		m_PlayerIndicatorTiming = m_pDiagnostics->RegisterFeatureTiming("qm.player_indicator");
+		if(m_PlayerIndicatorTiming == CQmDiagnostics::INVALID_FEATURE_TIMING)
+			log_error("qm/runtime", "failed to register player indicator diagnostics timing");
+	}
+	if(g_Config.m_QmDiagnostics != 0)
+	{
+		RegisterGraphicsEventListener(Graphics());
+		m_pDiagnostics->RecordGraphicsInfo();
+	}
 	UpdateFeatureModels();
 	log_trace("qm/runtime", "composition root initialized");
 }
@@ -44,6 +52,8 @@ void CQmRuntime::OnGraphicsInitBegin(IGraphics *pGraphics)
 {
 	// Graphics backend events can happen during Init(), so the listener must be
 	// attached before CClient starts initializing the backend.
+	if(g_Config.m_QmDiagnostics == 0)
+		return;
 	m_pDiagnostics->Init(Storage(), pGraphics);
 	RegisterGraphicsEventListener(pGraphics);
 	m_pDiagnostics->RecordGraphicsInitBegin();
