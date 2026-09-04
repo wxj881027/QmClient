@@ -639,6 +639,8 @@ public:
 	void OnEnterGame() override;
 	void OnGraphicsInitBegin(IGraphics *pGraphics) override;
 	void OnGraphicsInitFailed(const char *pDetails) override;
+	bool OnConfigUnknownCommand(const char *pCommand, IConfigManager *pConfigManager) override;
+	void OnConfigLoaded(IConfigManager *pConfigManager) override;
 	void OnRconType(bool UsernameReq) override;
 	void OnRconLine(const char *pLine) override;
 	virtual void OnGameOver();

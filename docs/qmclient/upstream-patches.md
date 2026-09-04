@@ -107,6 +107,14 @@ baseline: ddnet-20.0
 - 冲突风险：中。上游源文件清单可能新增条目；同步时按路径插入，不做全文件重排。
 - 删除条件：对应 Qm 模块和测试删除，或改为独立目标。
 
+### `src/engine/client.h` / `src/engine/client/client.cpp` / `src/game/client/gameclient.*`
+
+- 增加两个默认空的配置生命周期触点：主配置加载期间转发未识别命令，主配置执行完成后通知 game client。Qm 迁移器只消费白名单中的旧 `tc_*` 指示器键，其他未知命令仍由官方配置管理器原样保存。
+- 新键通过 console chain 记录是否在主配置中明确出现；只有对应新键未出现时才迁移旧键。迁移值复用官方 console 的类型、范围和颜色解析，不把旧配置头重新注册，也不让 engine client 依赖 Qm 业务类型。
+- 默认行为：无旧键时新配置保持默认；新键优先；命令按官方 console 的引号、分号和注释规则截取为单条命令；可解析但越界的整数交给官方配置命令继续 clamp；无法解析、超限或捕获失败的旧命令由配置管理器按单条命令保留，不阻断启动且不推进迁移版本。成功迁移后由 `qm_config_migration_version` 标记完成。
+- 冲突风险：中低。上游同步时只需重放两个 IGameClient 默认 hook 和配置加载后通知点；若官方提供配置迁移生命周期，应改为接入官方能力。
+- 删除条件：所有已迁移功能完成旧配置淘汰、用户配置迁移窗口结束，或官方提供等价的兼容机制。
+
 ### `src/engine/shared/config_variables.h` / `src/game/client/components/menus.h` / `menus_settings.cpp`
 
 - 在官方设置页列表末尾追加 `QmClient` 页，保留原有设置页枚举值和 `ui_settings_page` 持久化编号不变，并把该配置的合法上限从 `10` 扩展到 `11`；页面实现位于独立的 `qmclient/presentation/qm_legacy_settings.cpp`。

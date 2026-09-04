@@ -521,6 +521,16 @@ void CGameClient::OnGraphicsInitFailed(const char *pDetails)
 	m_QmRuntime.OnGraphicsInitFailed(pDetails);
 }
 
+bool CGameClient::OnConfigUnknownCommand(const char *pCommand, IConfigManager *pConfigManager)
+{
+	return m_QmRuntime.OnConfigUnknownCommand(pCommand, pConfigManager);
+}
+
+void CGameClient::OnConfigLoaded(IConfigManager *pConfigManager)
+{
+	m_QmRuntime.OnConfigLoaded(pConfigManager);
+}
+
 void CGameClient::OnInput(const IInput::CEvent &Event)
 {
 	for(auto &pComponent : m_vpInput)

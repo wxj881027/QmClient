@@ -4770,6 +4770,8 @@ static bool UnknownArgumentCallback(const char *pCommand, void *pUser)
 static bool SaveUnknownCommandCallback(const char *pCommand, void *pUser)
 {
 	CClient *pClient = static_cast<CClient *>(pUser);
+	if(pClient->GameClient()->OnConfigUnknownCommand(pCommand, pClient->ConfigManager()))
+		return true;
 	pClient->ConfigManager()->StoreUnknownCommand(pCommand);
 	return true;
 }
@@ -5164,6 +5166,7 @@ int main(int argc, const char **argv)
 		}
 		pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 	}
+	pClient->GameClient()->OnConfigLoaded(pClient->ConfigManager());
 
 	// execute autoexec file
 	if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, IStorage::TYPE_ALL))

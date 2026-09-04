@@ -5,6 +5,7 @@
 #include <game/client/component.h>
 
 #include "qm_diagnostics.h"
+#include "qm_config_migration.h"
 #include "qm_game_state_adapter.h"
 #include "qm_i18n.h"
 #include "qm_render_slots.h"
@@ -32,10 +33,12 @@ class CQmRuntime final : public CComponent
 	SQmFeatureModel m_DiagnosticsModel{"qm.diagnostics", "qm.diagnostics.title", true, true};
 	CQmPlayerIndicator m_PlayerIndicator;
 	CQmDiagnostics::TFeatureTimingId m_PlayerIndicatorTiming = CQmDiagnostics::INVALID_FEATURE_TIMING;
+	CQmConfigMigration m_ConfigMigration;
 
 public:
 	int Sizeof() const override;
 	void OnInterfacesInit(CGameClient *pClient) override;
+	void OnConsoleInit() override;
 
 	void OnInit() override;
 	void OnShutdown() override;
@@ -49,6 +52,8 @@ public:
 
 	void OnGraphicsInitBegin(IGraphics *pGraphics);
 	void OnGraphicsInitFailed(const char *pDetails) { m_pDiagnostics->RecordGraphicsInitFailed(pDetails); }
+	bool OnConfigUnknownCommand(const char *pCommand, IConfigManager *pConfigManager);
+	void OnConfigLoaded(IConfigManager *pConfigManager);
 
 	void BeginFrame() { m_pDiagnostics->BeginFrame(); }
 	void EndFrame() { m_pDiagnostics->EndFrame(); }

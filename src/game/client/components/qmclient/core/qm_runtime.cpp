@@ -17,6 +17,11 @@ void CQmRuntime::OnInterfacesInit(CGameClient *pClient)
 	CComponent::OnInterfacesInit(pClient);
 }
 
+void CQmRuntime::OnConsoleInit()
+{
+	m_ConfigMigration.OnConsoleInit(Console());
+}
+
 void CQmRuntime::OnInit()
 {
 	m_Initialized = true;
@@ -57,6 +62,16 @@ void CQmRuntime::OnGraphicsInitBegin(IGraphics *pGraphics)
 	m_pDiagnostics->Init(Storage(), pGraphics);
 	RegisterGraphicsEventListener(pGraphics);
 	m_pDiagnostics->RecordGraphicsInitBegin();
+}
+
+bool CQmRuntime::OnConfigUnknownCommand(const char *pCommand, IConfigManager *pConfigManager)
+{
+	return m_ConfigMigration.OnUnknownCommand(pCommand, pConfigManager);
+}
+
+void CQmRuntime::OnConfigLoaded(IConfigManager *pConfigManager)
+{
+	m_ConfigMigration.OnConfigLoaded(Console(), pConfigManager);
 }
 
 void CQmRuntime::RegisterGraphicsEventListener(IGraphics *pGraphics)

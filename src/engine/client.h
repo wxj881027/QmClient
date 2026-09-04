@@ -24,6 +24,7 @@
 class CSnapshot;
 class CSnapshotBuffer;
 class IMap;
+class IConfigManager;
 struct SWarning;
 
 enum
@@ -455,6 +456,8 @@ public:
 	virtual void InitializeLanguage() = 0;
 
 	virtual void ForceUpdateConsoleRemoteCompletionSuggestions() = 0;
+	virtual bool OnConfigUnknownCommand(const char *pCommand, IConfigManager *pConfigManager) { (void)pCommand; (void)pConfigManager; return false; }
+	virtual void OnConfigLoaded(IConfigManager *pConfigManager) { (void)pConfigManager; }
 };
 
 extern IGameClient *CreateGameClient();

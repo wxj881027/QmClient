@@ -2719,6 +2719,8 @@ if(CLIENT)
     components/particles.h
     components/players.cpp
     components/players.h
+    components/qmclient/core/qm_config_migration.cpp
+    components/qmclient/core/qm_config_migration.h
     components/qmclient/core/qm_diagnostics.cpp
     components/qmclient/core/qm_diagnostics.h
     components/qmclient/core/qm_diagnostics_json.h
@@ -3483,6 +3485,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     os_test.cpp
     packer_test.cpp
     prng_test.cpp
+    qmclient_config_migration_test.cpp
     qmclient_diagnostics_test.cpp
     qmclient_player_indicator_test.cpp
     qmclient_ui_model_test.cpp
@@ -3520,6 +3523,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/engine/client/sqlite.cpp
     src/game/client/components/censor.cpp
     src/game/client/components/censor.h
+    src/game/client/components/qmclient/core/qm_config_migration.cpp
+    src/game/client/components/qmclient/core/qm_config_migration.h
     src/game/client/components/qmclient/core/qm_diagnostics.cpp
     src/game/client/components/qmclient/core/qm_ui_model.cpp
     # tidy-alphabetical-end
