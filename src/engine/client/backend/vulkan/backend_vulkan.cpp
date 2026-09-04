@@ -4597,25 +4597,6 @@ public:
 			}
 		}
 #endif
-		log_debug("gfx/vulkan", "Device fault extension selection: api=%s", VulkanDeviceFaultApiName(m_DeviceFaultApi));
-
-		std::vector<const char *> FilteredDevPropCNames;
-		FilteredDevPropCNames.reserve(vDevPropCNames.size());
-		for(const char *pDevExt : vDevPropCNames)
-		{
-			bool Keep = true;
-#if defined(VK_KHR_device_fault)
-			if(str_comp(pDevExt, VK_KHR_DEVICE_FAULT_EXTENSION_NAME) == 0)
-				Keep = m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR;
-#endif
-#if defined(VK_EXT_device_fault)
-			if(str_comp(pDevExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME) == 0)
-				Keep = m_DeviceFaultApi == EVulkanDeviceFaultApi::EXT;
-#endif
-			if(Keep)
-				FilteredDevPropCNames.emplace_back(pDevExt);
-		}
-		vDevPropCNames = std::move(FilteredDevPropCNames);
 #endif
 
 #if defined(VK_KHR_device_fault) || defined(VK_EXT_device_fault)
@@ -4628,31 +4609,85 @@ public:
 		VkPhysicalDeviceFaultFeaturesEXT FaultFeaturesEXT = {};
 		FaultFeaturesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
 #endif
-		if(m_DeviceFaultApi != EVulkanDeviceFaultApi::NONE)
-		{
+		auto QueryDeviceFaultFeature = [&](EVulkanDeviceFaultApi Api) -> std::optional<bool> {
+			if(Api == EVulkanDeviceFaultApi::NONE)
+				return {};
 			auto pfnGetPhysicalDeviceFeatures2 = (PFN_vkGetPhysicalDeviceFeatures2)vkGetInstanceProcAddr(m_VKInstance, "vkGetPhysicalDeviceFeatures2");
-			if(pfnGetPhysicalDeviceFeatures2 != nullptr)
-			{
-				VkPhysicalDeviceFeatures2 PhysFeatures2 = {};
-				PhysFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			if(pfnGetPhysicalDeviceFeatures2 == nullptr)
+				return {};
+
+			VkPhysicalDeviceFeatures2 PhysFeatures2 = {};
+			PhysFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 #if defined(VK_KHR_device_fault)
-				if(m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR)
-				{
-					PhysFeatures2.pNext = &FaultFeaturesKHR;
-					pfnGetPhysicalDeviceFeatures2(m_VKGPU, &PhysFeatures2);
-					DeviceFaultFeatureEnabled = FaultFeaturesKHR.deviceFault != VK_FALSE;
-				}
+			if(Api == EVulkanDeviceFaultApi::KHR)
+			{
+				FaultFeaturesKHR = {};
+				FaultFeaturesKHR.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_KHR;
+				PhysFeatures2.pNext = &FaultFeaturesKHR;
+				pfnGetPhysicalDeviceFeatures2(m_VKGPU, &PhysFeatures2);
+				return FaultFeaturesKHR.deviceFault != VK_FALSE;
+			}
 #endif
 #if defined(VK_EXT_device_fault)
-				if(m_DeviceFaultApi == EVulkanDeviceFaultApi::EXT)
-				{
-					PhysFeatures2.pNext = &FaultFeaturesEXT;
-					pfnGetPhysicalDeviceFeatures2(m_VKGPU, &PhysFeatures2);
-					DeviceFaultFeatureEnabled = FaultFeaturesEXT.deviceFault != VK_FALSE;
-				}
-#endif
+			if(Api == EVulkanDeviceFaultApi::EXT)
+			{
+				FaultFeaturesEXT = {};
+				FaultFeaturesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
+				PhysFeatures2.pNext = &FaultFeaturesEXT;
+				pfnGetPhysicalDeviceFeatures2(m_VKGPU, &PhysFeatures2);
+				return FaultFeaturesEXT.deviceFault != VK_FALSE;
 			}
+#endif
+			return {};
+		};
+
+		bool DeviceFaultFeatureQueryAvailable = false;
+		if(m_DeviceFaultApi != EVulkanDeviceFaultApi::NONE)
+		{
+			const auto FeatureResult = QueryDeviceFaultFeature(m_DeviceFaultApi);
+			DeviceFaultFeatureQueryAvailable = FeatureResult.has_value();
+			DeviceFaultFeatureEnabled = FeatureResult.value_or(false);
+#if defined(VK_KHR_device_fault) && defined(VK_EXT_device_fault)
+			bool ExtDeviceFaultAvailable = false;
+			for(const auto &CurExtProp : vDevPropList)
+			{
+				if(str_comp(CurExtProp.extensionName, VK_EXT_DEVICE_FAULT_EXTENSION_NAME) == 0)
+				{
+					ExtDeviceFaultAvailable = true;
+					break;
+				}
+			}
+			if(FeatureResult.has_value() && !DeviceFaultFeatureEnabled && m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR && ExtDeviceFaultAvailable)
+			{
+				log_debug("gfx/vulkan", "KHR device fault feature is unavailable; probing EXT device fault feature.");
+				const auto ExtFeatureResult = QueryDeviceFaultFeature(EVulkanDeviceFaultApi::EXT);
+				if(ExtFeatureResult.has_value() && ExtFeatureResult.value())
+				{
+					m_DeviceFaultApi = EVulkanDeviceFaultApi::EXT;
+					DeviceFaultFeatureEnabled = true;
+				}
+			}
+#endif
 		}
+
+		std::vector<const char *> FilteredDevPropCNames;
+		FilteredDevPropCNames.reserve(vDevPropCNames.size());
+		for(const char *pDevExt : vDevPropCNames)
+		{
+			bool Keep = true;
+#if defined(VK_KHR_device_fault)
+			if(str_comp(pDevExt, VK_KHR_DEVICE_FAULT_EXTENSION_NAME) == 0)
+				Keep = m_DeviceFaultApi == EVulkanDeviceFaultApi::KHR && DeviceFaultFeatureEnabled;
+#endif
+#if defined(VK_EXT_device_fault)
+			if(str_comp(pDevExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME) == 0)
+				Keep = m_DeviceFaultApi == EVulkanDeviceFaultApi::EXT && DeviceFaultFeatureEnabled;
+#endif
+			if(Keep)
+				FilteredDevPropCNames.emplace_back(pDevExt);
+		}
+		vDevPropCNames = std::move(FilteredDevPropCNames);
+		log_debug("gfx/vulkan", "Device fault extension selection: api=%s, feature_enabled=%s", VulkanDeviceFaultApiName(m_DeviceFaultApi), DeviceFaultFeatureEnabled ? "true" : "false");
 #endif
 
 		VkDeviceQueueCreateInfo VKQueueCreateInfo;
@@ -4745,7 +4780,7 @@ public:
 		}
 		else
 		{
-			const char *pReason = m_DeviceFaultApi == EVulkanDeviceFaultApi::NONE ? "extension_unavailable" : "feature_unsupported";
+			const char *pReason = m_DeviceFaultApi == EVulkanDeviceFaultApi::NONE ? "extension_unavailable" : (DeviceFaultFeatureQueryAvailable ? "feature_unsupported" : "feature_query_unavailable");
 			char aDetails[160];
 			str_format(aDetails, sizeof(aDetails), "backend=vulkan;api=%s;available=false;enabled=false;reason=%s", VulkanDeviceFaultApiName(m_DeviceFaultApi), pReason);
 			EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
