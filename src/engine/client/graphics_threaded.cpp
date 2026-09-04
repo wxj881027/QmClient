@@ -2699,8 +2699,13 @@ void CGraphics_Threaded::GotResized(int w, int h, int RefreshRate)
 
 	if(PrevCanvasWidth != m_ScreenWidth || PrevCanvasHeight != m_ScreenHeight)
 	{
+		char aRebuildDetails[256];
+		str_format(aRebuildDetails, sizeof(aRebuildDetails), "reason=window_resize;old_canvas_width=%d;old_canvas_height=%d;new_canvas_width=%d;new_canvas_height=%d;listener_count=%u", PrevCanvasWidth, PrevCanvasHeight, m_ScreenWidth, m_ScreenHeight, static_cast<unsigned>(m_vResizeListeners.size()));
+		EmitGraphicsEvent("graphics.resource_rebuild_begin", aRebuildDetails);
 		for(auto &ResizeListener : m_vResizeListeners)
 			ResizeListener();
+		str_format(aRebuildDetails, sizeof(aRebuildDetails), "reason=window_resize;old_canvas_width=%d;old_canvas_height=%d;new_canvas_width=%d;new_canvas_height=%d;listener_count=%u;result=completed", PrevCanvasWidth, PrevCanvasHeight, m_ScreenWidth, m_ScreenHeight, static_cast<unsigned>(m_vResizeListeners.size()));
+		EmitGraphicsEvent("graphics.resource_rebuild_end", aRebuildDetails);
 	}
 
 	char aDetails[224];

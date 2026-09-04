@@ -46,7 +46,7 @@ status: active
   末尾写入 `diagnostics_summary`、在 report 中写入同一组摘要；异常前后的事件 ring buffer
   已由 report 自动导出，但其容量固定。
 - graphics 对象创建后、backend `Init()` 前已启动最小 Qm session 并注册 listener；失败分支会自动记录 `graphics_init_failed` 并生成尽力而为的 report。诊断初始化阶段不访问未就绪 backend。OpenGL/GLES context 成功后的专属字段已经接入；OpenGL/GLES shader 文件加载和编译失败现在通过 `graphics.opengl.shader_failure` 记录 backend、API、stage、phase 和 file；初始化失败前的具体 Vulkan/device 字段仍未覆盖。
-- resize 事件已接入 runtime；Vulkan 已有 device loss、shader/pipeline 失败、wait-idle、交换链重建和 Vulkan→OpenGL fallback 尝试事件（含实际是否应用），OpenGL/GLES 的 shader 加载/编译和 program link 失败也已有精确事件；但 renderer switch、其他 fallback、OpenGL/GLES pipeline failure 和跨后端 resource rebuild 仍未统一；当前 fallback 事件是 attempt，不等同于目标 backend 初始化成功。
+- resize 事件已接入 runtime；Vulkan 已有 device loss、shader/pipeline 失败、wait-idle、交换链重建和 Vulkan→OpenGL fallback 尝试事件（含实际是否应用），OpenGL/GLES 的 shader 加载/编译和 program link 失败也已有精确事件；跨后端 resize-driven resource rebuild 已通过统一 begin/end 事件接入，但显式 renderer switch、其他 fallback 和 OpenGL/GLES pipeline failure 仍未统一；当前 fallback 事件是 attempt，不等同于目标 backend 初始化成功。
 - graphics report 已区分初始化开始时的配置请求、backend 选择来源（`config`、`environment_valid`、`environment_empty`、`environment_invalid`、`default`）和实际 active backend；`requested_backend_config` 是当前兼容字段，暂与 `requested_backend` 保持同值，`backend_config` 则表示最近一次 graphics info 采样到的配置。环境变量覆盖不再仅凭配置与 active API 的差异标记为 fallback。
 - graphics report 另外保留 `backend_fallback_attempted`、`backend_fallback_applied` 和 `backend_fallback_result`；结果为 `success`、`failed`、`not_applied` 或尚未观察到结果时的 `unknown`。其中前两个是当前 session 内的累计事实，后者是当前 session 最后一次已观察结果；`not_applied` 只表示 fallback 请求发出后最终选择仍未改变，不单独断言一定由环境变量阻止。三个摘要字段由同一个原子状态字形成一致快照；事件进入 diagnostics observer 后，即使非阻塞写入因 session/writer 锁或 buffer 竞争而丢弃事件行，也能保留已观察到的 fallback 状态。listener、pending 队列或 session 不可用时，事件未必能进入 observer；关闭生命周期后迟到事件会被拒绝。`backend_fallback` 仍表示已观察到 active backend 后的最终判定。
 - 普通 JSONL 单行在一个 ASYNCIO 锁区间内提交，避免多线程事件把 JSON 内容和换行交错；graphics observer 事件使用固定栈缓冲区和 ASYNCIO try-lock，忙时允许丢弃，避免阻塞渲染/致命错误路径；
@@ -61,6 +61,11 @@ status: active
 - `qm.player_indicator` 已注册独立的 update/render 计时。每个性能窗口自动写入 `feature_window` JSONL 记录，包含 feature ID、阶段样本数、平均值、p95、p99 和最大值。
 - 计时只对已注册 feature 生效；采样存储在预留的窗口 vector 中，计时路径不做文件 I/O 或动态字符串构造。诊断 session 不可用时不改变 feature 行为。
 - UI 首次打开、搜索、滚动、布局和其他 Qm feature 的独立计时仍是后续缺口。
+
+## Resource rebuild 事件增量（2026-09-04）
+
+- 画布尺寸发生变化并调用官方 resize listeners 时，自动记录 `graphics.resource_rebuild_begin` 和 `graphics.resource_rebuild_end`。事件保留旧/新画布尺寸、listener 数、原因和结束结果；`result=completed` 只表示 listener 调用序列返回，不代表每个资源内部都报告成功，便于把 resize、资源重建和后续帧抖动关联起来。
+- 该事件只覆盖 DDNet 20.0 现有的 resize-driven listener 重建入口；初始化、backend fallback 和尚不存在的显式 runtime renderer switch 不混用该事件名。
 
 ## 诊断日志保留/轮转增量（2026-09-04）
 
