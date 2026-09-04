@@ -91,6 +91,7 @@ status: active
 - Release `run_cxx_tests`：373/373 通过，3 个既有 disabled；包含诊断指标/JSON 转义测试。
 - Release `run_rust_tests`：`cargo test --locked` 通过，单元测试 0 个，doc-tests 18 个通过。
 - `py -3 qmclient_scripts/check_qmclient_boundary.py`：通过，默认扫描 22 个 Qm/官方触点源文件；显式不存在路径返回失败。
+- `py -3 qmclient_scripts/check_qmclient_runtime_smoke.py`：自动启动当前工作区 Release 客户端，使用临时 storage 校验 session/report JSON、`session_end`、backend 字段、`write_failed=false` 和 `.tmp` 清理。
 - `codegraph sync`：最终一次同步 1 个变更文件；CodeGraph v1.6.0，状态为 `Index is up to date`。
 - 当前工作区 Release 客户端正常退出 smoke：退出码 0，自动生成 session JSONL（5 行，全部可解析）和 report，`session_end` 存在且 `write_failed=false`；实际记录 `backend_config=Vulkan`、`active_api_name=OpenGL`，验证了 fallback 可见。
 - 尚未完成真实联网游戏场景、Vulkan 实际成功路径、GLES 后端 smoke、后端 validation/debug callback、同场景 A/B 性能采样；这些不能由构建或单元测试替代。

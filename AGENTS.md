@@ -224,6 +224,7 @@ disconnect / reconnect / renderer switch / fullscreen / resize / shutdown
 
 - 同一构建目录内 `game-client`、`testrunner`、`run_cxx_tests`、`run_rust_tests` 和 `package_default` 必须串行执行，避免 CMake/Ninja 锁和生成物互相覆盖。
 - Windows 测试命令示例：`cmd /c qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target run_cxx_tests`，随后再运行 `run_rust_tests`。
+- 自动 diagnostics runtime smoke：先构建 `game-client`，再运行 `py -3 qmclient_scripts/check_qmclient_runtime_smoke.py`；脚本使用临时 storage 目录，只启动当前工作区的 `cmake-build-release/DDNet.exe`，并检查 session/report JSON、`session_end`、`write_failed=false`、backend 字段和 `.tmp` 清理。
 - i18n 维护源是 `translations/i18n/*.toml`，标准流程为 `extract_strings` → `generate_all` → `validate` → `review_duplicate_entries`；`data/languages/*.txt` 是产物。
 - 日志和临时文件放在 `tmp/`，不要把构建日志、诊断导出或临时文件堆到仓库根目录。
 - 历史项目门禁入口为 `qmclient_scripts/gate/check_gate.py`，支持 `quick`、`default`、`full` 三档；当前分支尚未恢复该目录时，不得假定它存在或宣称已运行，使用当前实际存在的构建、测试和 `check_qmclient_boundary.py` 入口，并在汇报中写明 gap。
