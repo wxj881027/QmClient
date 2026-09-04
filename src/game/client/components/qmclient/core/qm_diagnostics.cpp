@@ -238,6 +238,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	}
 	const size_t RemovedSessionFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "session-", ".jsonl", MAX_RETAINED_SESSION_FILES - 1);
 	const size_t RemovedReportFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "report-", ".json", MAX_RETAINED_REPORT_FILES - 1);
+	const size_t RemovedReportTempFiles = RotateDiagnosticFiles(m_pStorage, "qmclient/diagnostics", "report-", ".tmp", MAX_RETAINED_REPORT_FILES);
 
 	char aTimestamp[64];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
@@ -264,10 +265,10 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_BackendFallbackState.store(GenerationBits | BACKEND_FALLBACK_ACTIVE, std::memory_order_release);
 
 	WriteSessionStart();
-	if(RemovedSessionFiles > 0 || RemovedReportFiles > 0)
+	if(RemovedSessionFiles > 0 || RemovedReportFiles > 0 || RemovedReportTempFiles > 0)
 	{
-		char aDetails[128];
-		str_format(aDetails, sizeof(aDetails), "session_files_removed=%" PRIu64 ";report_files_removed=%" PRIu64 ";session_file_limit=%" PRIu64 ";report_file_limit=%" PRIu64, static_cast<uint64_t>(RemovedSessionFiles), static_cast<uint64_t>(RemovedReportFiles), static_cast<uint64_t>(MAX_RETAINED_SESSION_FILES), static_cast<uint64_t>(MAX_RETAINED_REPORT_FILES));
+		char aDetails[224];
+		str_format(aDetails, sizeof(aDetails), "session_files_removed=%" PRIu64 ";report_files_removed=%" PRIu64 ";report_temp_files_removed=%" PRIu64 ";session_file_limit=%" PRIu64 ";report_file_limit=%" PRIu64, static_cast<uint64_t>(RemovedSessionFiles), static_cast<uint64_t>(RemovedReportFiles), static_cast<uint64_t>(RemovedReportTempFiles), static_cast<uint64_t>(MAX_RETAINED_SESSION_FILES), static_cast<uint64_t>(MAX_RETAINED_REPORT_FILES));
 		RecordEvent("diagnostics.retention", aDetails);
 	}
 	log_info("qm/diagnostics", "automatic diagnostics session started: %s", m_aSessionName);
