@@ -1,0 +1,14 @@
+/* (c) QmClient contributors. See licence.txt in the root of the distribution. */
+#ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_CORE_QM_RENDER_SLOTS_H
+#define GAME_CLIENT_COMPONENTS_QMCLIENT_CORE_QM_RENDER_SLOTS_H
+
+// QmClient 使用少量有明确语义的绘制槽位，避免 feature 依赖 runtime 在组件列表中的隐含位置。
+enum class EQmRenderSlot
+{
+	WORLD_BACKGROUND,
+	ENTITY_OVERLAY,
+	HUD,
+	MENU,
+};
+
+#endif

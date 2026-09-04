@@ -7,6 +7,7 @@
 #include "qm_diagnostics.h"
 #include "qm_game_state_adapter.h"
 #include "qm_i18n.h"
+#include "qm_render_slots.h"
 #include "qm_ui_model.h"
 #include "../features/player_indicator/qm_player_indicator.h"
 
@@ -43,6 +44,7 @@ public:
 	void OnStateChange(int NewState, int OldState) override;
 	void OnWindowResize() override;
 	void OnRender() override;
+	void RenderSlot(EQmRenderSlot Slot);
 	void UpdateFeatureModels();
 
 	void OnGraphicsInitBegin(IGraphics *pGraphics);

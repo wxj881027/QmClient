@@ -117,6 +117,14 @@ void CQmRuntime::OnWindowResize()
 
 void CQmRuntime::OnRender()
 {
+	RenderSlot(EQmRenderSlot::ENTITY_OVERLAY);
+}
+
+void CQmRuntime::RenderSlot(const EQmRenderSlot Slot)
+{
+	if(Slot != EQmRenderSlot::ENTITY_OVERLAY)
+		return;
+
 	m_pDiagnostics->BeginFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 	const bool Available = QmPlayerIndicatorAvailable(*GameClient(), *Client());
 	const bool Enabled = g_Config.m_QmPlayerIndicator != 0 && Available;

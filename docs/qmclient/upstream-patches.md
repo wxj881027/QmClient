@@ -45,7 +45,7 @@ baseline: ddnet-20.0
 ### `src/game/client/gameclient.cpp` / `gameclient.h`
 
 - `gameclient.h` 只增加 `CQmRuntime` 组合根成员和 include；`gameclient.cpp` 保留一个 Qm 组件集成点，并将其放在伤害指示器之后、官方 HUD 之前。
-- `CQmRuntime` 在该触点内转发 `CComponent` 生命周期给 `CQmPlayerIndicator`，不让官方组件依赖 Qm 业务类型。
+- `CQmRuntime` 在该触点内转发 `CComponent` 生命周期给 `CQmPlayerIndicator`，不让官方组件依赖 Qm 业务类型；runtime 内部将当前触点明确命名为 `ENTITY_OVERLAY`，并保留 `WORLD_BACKGROUND`、`HUD`、`MENU` 作为后续窄 adapter 的槽位契约。
 - 默认行为：`qm_player_indicator=0` 时不执行渲染；诊断计时仍只记录，不改变游戏逻辑。
 - 冲突风险：中低。组件列表排序是上游可能改动的位置；重放时只需重新选择 HUD 前的窄 hook。
 - 删除条件：QmRuntime 改为官方 manifest/adapter 集成，或所有 Qm 功能不再需要该组合根。

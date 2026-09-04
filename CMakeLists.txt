@@ -2727,6 +2727,7 @@ if(CLIENT)
     components/qmclient/core/qm_game_state_adapter.cpp
     components/qmclient/core/qm_game_state_adapter.h
     components/qmclient/core/qm_i18n.h
+    components/qmclient/core/qm_render_slots.h
     components/qmclient/core/qm_runtime.cpp
     components/qmclient/core/qm_runtime.h
     components/qmclient/core/qm_ui_model.cpp
