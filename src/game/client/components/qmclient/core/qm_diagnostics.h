@@ -5,6 +5,8 @@
 #include <base/types.h>
 #include <base/lock.h>
 
+#include "qm_diagnostics_metrics.h"
+
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -83,8 +85,8 @@ private:
 	struct SFeatureTiming
 	{
 		char m_aId[64]{};
-		std::vector<int64_t> m_vUpdateSamples;
-		std::vector<int64_t> m_vRenderSamples;
+		QmDiagnostics::CSampleWindow m_vUpdateSamples;
+		QmDiagnostics::CSampleWindow m_vRenderSamples;
 		int64_t m_UpdateStart = 0;
 		int64_t m_RenderStart = 0;
 	};
@@ -108,7 +110,7 @@ private:
 	void WriteReport();
 	void CheckAsyncWriteError();
 	void MarkWriteFailure(const char *pOperation);
-	void PushSample(std::vector<int64_t> &vSamples, int64_t Sample);
+	void PushSample(QmDiagnostics::CSampleWindow &Samples, int64_t Sample);
 	void RecordNonBlockingDrop(ENonBlockingWriteResult Reason);
 	void RecordRecentEvent(const char *pName, const char *pDetails);
 	bool IsSessionGenerationActive(uint32_t EventSessionGeneration) const;
@@ -146,9 +148,9 @@ private:
 	int64_t m_RenderStart = 0;
 	unsigned m_FrameCount = 0;
 	unsigned m_WindowFrameCount = 0;
-	std::vector<int64_t> m_vUpdateSamples;
-	std::vector<int64_t> m_vFrameSamples;
-	std::vector<int64_t> m_vRenderSamples;
+	QmDiagnostics::CSampleWindow m_vUpdateSamples;
+	QmDiagnostics::CSampleWindow m_vFrameSamples;
+	QmDiagnostics::CSampleWindow m_vRenderSamples;
 	static constexpr size_t MAX_FEATURE_TIMINGS = 32;
 	std::array<SFeatureTiming, MAX_FEATURE_TIMINGS> m_aFeatureTimings;
 	size_t m_FeatureTimingCount = 0;

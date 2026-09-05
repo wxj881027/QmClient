@@ -33,8 +33,8 @@ TEST(QmUiModel, FiltersCardsByPage)
 	const auto vSearchCards = Model.CardsForPage(EQmUiPage::SEARCH);
 	ASSERT_EQ(vHomeCards.size(), 1);
 	ASSERT_EQ(vSearchCards.size(), 1);
-	EXPECT_STREQ(vHomeCards.front()->m_pId, "qm.diagnostics");
-	EXPECT_STREQ(vSearchCards.front()->m_pId, "qm.search");
+	EXPECT_EQ(vHomeCards.front()->m_Id, "qm.diagnostics");
+	EXPECT_EQ(vSearchCards.front()->m_Id, "qm.search");
 }
 
 TEST(QmUiModel, KeepsFindCardPointersStableAndFreezesRegistration)

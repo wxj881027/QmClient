@@ -1,5 +1,5 @@
 # QmClient
-.codegraph
+tmp/
 
 # Ignore data-folders outside the root, these are copied around to build
 # directories.

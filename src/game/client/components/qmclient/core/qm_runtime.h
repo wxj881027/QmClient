@@ -12,6 +12,7 @@
 #include "qm_ui_model.h"
 #include "../features/player_indicator/qm_player_indicator.h"
 
+#include <atomic>
 #include <memory>
 
 class IGraphics;
@@ -70,9 +71,15 @@ public:
 	int LastState() const { return m_LastState; }
 
 private:
+	struct SGraphicsEventListenerState
+	{
+		std::atomic<bool> m_Active = false;
+		std::atomic<uint32_t> m_SessionGeneration = 0;
+	};
+
 	void RegisterGraphicsEventListener(IGraphics *pGraphics);
 	IGraphics *m_pGraphicsEventSource = nullptr;
-	uint32_t m_GraphicsEventListenerGeneration = 0;
+	std::shared_ptr<SGraphicsEventListenerState> m_pGraphicsEventListenerState;
 };
 
 #endif

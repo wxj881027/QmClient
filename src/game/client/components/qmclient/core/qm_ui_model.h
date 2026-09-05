@@ -5,6 +5,7 @@
 #include <array>
 #include <deque>
 #include <string>
+#include <utility>
 #include <vector>
 
 enum class EQmUiPage
@@ -16,18 +17,50 @@ enum class EQmUiPage
 
 struct SQmFeatureModel
 {
-	const char *m_pId = nullptr;
-	const char *m_pTitleKey = nullptr;
+	std::string m_Id;
+	std::string m_TitleKey;
 	bool m_Enabled = false;
 	bool m_Available = true;
+
+	SQmFeatureModel() = default;
+	SQmFeatureModel(const char *pId, const char *pTitleKey, bool Enabled, bool Available) :
+		m_Id(pId ? pId : ""),
+		m_TitleKey(pTitleKey ? pTitleKey : ""),
+		m_Enabled(Enabled),
+		m_Available(Available)
+	{
+	}
+	SQmFeatureModel(std::string Id, std::string TitleKey, bool Enabled, bool Available) :
+		m_Id(std::move(Id)),
+		m_TitleKey(std::move(TitleKey)),
+		m_Enabled(Enabled),
+		m_Available(Available)
+	{
+	}
 };
 
 struct SQmUiCard
 {
-	EQmUiPage m_Page;
-	const char *m_pId = nullptr;
-	const char *m_pIconId = nullptr;
+	EQmUiPage m_Page = EQmUiPage::HOME;
+	std::string m_Id;
+	std::string m_IconId;
 	const SQmFeatureModel *m_pFeature = nullptr;
+
+	SQmUiCard() = default;
+	SQmUiCard(EQmUiPage Page, const char *pId, const char *pIconId, const SQmFeatureModel *pFeature) :
+		m_Page(Page),
+		m_Id(pId ? pId : ""),
+		m_IconId(pIconId ? pIconId : ""),
+		m_pFeature(pFeature)
+	{
+	}
+	SQmUiCard(EQmUiPage Page, std::string Id, std::string IconId, const SQmFeatureModel *pFeature) :
+		m_Page(Page),
+		m_Id(std::move(Id)),
+		m_IconId(std::move(IconId)),
+		m_pFeature(pFeature)
+	{
+	}
 };
 
 class CQmUiModel final
@@ -46,7 +79,7 @@ public:
 	const std::vector<const SQmUiCard *> &CardsForPage(EQmUiPage Page) const;
 
 private:
-	static bool IsStableId(const char *pId);
+	static bool IsStableId(const std::string &Id);
 };
 
 #endif

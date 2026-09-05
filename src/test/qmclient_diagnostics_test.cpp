@@ -44,7 +44,23 @@ TEST(QmDiagnostics, CalculatesFrameMetrics)
 	EXPECT_DOUBLE_EQ(QmDiagnostics::Percentile(Samples, 0.95), 5.0);
 	EXPECT_DOUBLE_EQ(QmDiagnostics::Percentile(Samples, 1.0), 5.0);
 	EXPECT_NEAR(QmDiagnostics::OnePercentLow(Samples), 200.0, 0.0001);
-	EXPECT_DOUBLE_EQ(QmDiagnostics::Average({}), 0.0);
+	EXPECT_DOUBLE_EQ(QmDiagnostics::Average(std::vector<int64_t>{}), 0.0);
+}
+
+TEST(QmDiagnostics, SampleWindowKeepsRecentSamplesWithoutShifting)
+{
+	QmDiagnostics::CSampleWindow Samples;
+	Samples.Prepare(3);
+	Samples.Push(1000000, 3);
+	Samples.Push(2000000, 3);
+	Samples.Push(3000000, 3);
+	Samples.Push(4000000, 3);
+
+	const std::vector<int64_t> Ordered = Samples.Ordered();
+	ASSERT_EQ(Ordered.size(), 3U);
+	EXPECT_EQ(Ordered[0], 2000000);
+	EXPECT_EQ(Ordered[1], 3000000);
+	EXPECT_EQ(Ordered[2], 4000000);
 }
 
 TEST(QmDiagnostics, EscapesInvalidUtf8AndTruncatesSafely)

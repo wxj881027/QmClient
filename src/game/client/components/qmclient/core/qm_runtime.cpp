@@ -72,6 +72,9 @@ bool CQmRuntime::OnConfigUnknownCommand(const char *pCommand, IConfigManager *pC
 void CQmRuntime::OnConfigLoaded(IConfigManager *pConfigManager)
 {
 	m_ConfigMigration.OnConfigLoaded(Console(), pConfigManager);
+	m_DiagnosticsModel.m_Enabled = g_Config.m_QmDiagnostics != 0;
+	if(m_Initialized)
+		UpdateFeatureModels();
 }
 
 void CQmRuntime::RegisterGraphicsEventListener(IGraphics *pGraphics)
@@ -79,21 +82,36 @@ void CQmRuntime::RegisterGraphicsEventListener(IGraphics *pGraphics)
 	if(pGraphics == nullptr)
 		return;
 	const uint32_t SessionGeneration = m_pDiagnostics->SessionGeneration();
-	if(m_pGraphicsEventSource == pGraphics && m_GraphicsEventListenerGeneration == SessionGeneration)
+	if(m_pGraphicsEventSource == pGraphics && m_pGraphicsEventListenerState)
+	{
+		m_pGraphicsEventListenerState->m_SessionGeneration.store(SessionGeneration, std::memory_order_release);
+		m_pGraphicsEventListenerState->m_Active.store(true, std::memory_order_release);
 		return;
+	}
+	if(m_pGraphicsEventListenerState)
+		m_pGraphicsEventListenerState->m_Active.store(false, std::memory_order_release);
 
 	const std::weak_ptr<CQmDiagnostics> WeakDiagnostics = m_pDiagnostics;
-	pGraphics->AddGraphicsEventListener([WeakDiagnostics, SessionGeneration](const char *pName, const char *pDetails) {
+	const std::shared_ptr<SGraphicsEventListenerState> pListenerState = std::make_shared<SGraphicsEventListenerState>();
+	pListenerState->m_SessionGeneration.store(SessionGeneration, std::memory_order_release);
+	pListenerState->m_Active.store(true, std::memory_order_release);
+	pGraphics->AddGraphicsEventListener([WeakDiagnostics, pListenerState](const char *pName, const char *pDetails) {
+		if(!pListenerState->m_Active.load(std::memory_order_acquire))
+			return;
 		const std::shared_ptr<CQmDiagnostics> pDiagnostics = WeakDiagnostics.lock();
 		if(pDiagnostics)
-			pDiagnostics->RecordEventNonBlocking(SessionGeneration, pName, pDetails);
+			pDiagnostics->RecordEventNonBlocking(pListenerState->m_SessionGeneration.load(std::memory_order_acquire), pName, pDetails);
 	});
 	m_pGraphicsEventSource = pGraphics;
-	m_GraphicsEventListenerGeneration = SessionGeneration;
+	m_pGraphicsEventListenerState = pListenerState;
 }
 
 void CQmRuntime::OnShutdown()
 {
+	if(m_pGraphicsEventListenerState)
+		m_pGraphicsEventListenerState->m_Active.store(false, std::memory_order_release);
+	m_pGraphicsEventListenerState.reset();
+	m_pGraphicsEventSource = nullptr;
 	m_pDiagnostics->Shutdown();
 	log_trace("qm/runtime", "composition root shutdown after %u map generations", m_MapGeneration);
 	m_Initialized = false;
@@ -141,15 +159,17 @@ void CQmRuntime::RenderSlot(const EQmRenderSlot Slot)
 		return;
 
 	m_pDiagnostics->BeginFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
-	const bool Available = QmPlayerIndicatorAvailable(*GameClient(), *Client());
-	const bool Enabled = g_Config.m_QmPlayerIndicator != 0 && Available;
-	m_PlayerIndicator.UpdateModel(Enabled, Available);
-	if(!Enabled)
+	if(!m_PlayerIndicator.Model().m_Enabled)
 	{
 		m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 		return;
 	}
 	const SQmPlayerIndicatorFrame Frame = BuildQmPlayerIndicatorFrame(*GameClient(), *Client(), *Graphics());
+	if(!Frame.m_Settings.m_Enabled)
+	{
+		m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
+		return;
+	}
 	m_PlayerIndicator.Render(Frame, Graphics(), RenderTools());
 	m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 }

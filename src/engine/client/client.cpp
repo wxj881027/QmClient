@@ -4776,6 +4776,16 @@ static bool SaveUnknownCommandCallback(const char *pCommand, void *pUser)
 	return true;
 }
 
+struct SUnknownCommandCallbackGuard
+{
+	IConsole *m_pConsole = nullptr;
+	~SUnknownCommandCallbackGuard()
+	{
+		if(m_pConsole)
+			m_pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
+	}
+};
+
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 extern "C" {
 
@@ -5152,30 +5162,41 @@ int main(int argc, const char **argv)
 	// init client's interfaces
 	pClient->InitInterfaces();
 
-	// execute config file
-	if(pStorage->FileExists(CONFIG_FILE, IStorage::TYPE_ALL))
+	bool ConfigFileError = false;
 	{
+		// The callback must cover both the main config and autoexec so that
+		// current settings in autoexec can take precedence over legacy values.
+		// Keep its lifetime shorter than PerformAllCleanup(): pConsole is owned
+		// by the kernel and must still be alive when the guard is destroyed.
+		SUnknownCommandCallbackGuard UnknownCommandCallbackGuard{pConsole};
 		pConsole->SetUnknownCommandCallback(SaveUnknownCommandCallback, pClient);
-		if(!pConsole->ExecuteFile(CONFIG_FILE, IConsole::CLIENT_ID_UNSPECIFIED))
+		// execute config file
+		if(pStorage->FileExists(CONFIG_FILE, IStorage::TYPE_ALL) && !pConsole->ExecuteFile(CONFIG_FILE, IConsole::CLIENT_ID_UNSPECIFIED))
 		{
-			const char *pError = "Failed to load config from '" CONFIG_FILE "'.";
-			log_error("client", "%s", pError);
-			pClient->ShowMessageBox({.m_pTitle = "Config File Error", .m_pMessage = pError});
-			PerformAllCleanup();
-			return -1;
+			ConfigFileError = true;
 		}
-		pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
-	}
-	pClient->GameClient()->OnConfigLoaded(pClient->ConfigManager());
 
-	// execute autoexec file
-	if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, IStorage::TYPE_ALL))
-	{
-		pConsole->ExecuteFile(AUTOEXEC_CLIENT_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
+		if(!ConfigFileError)
+		{
+			// execute autoexec file
+			if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, IStorage::TYPE_ALL))
+			{
+				pConsole->ExecuteFile(AUTOEXEC_CLIENT_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
+			}
+			else // fallback
+			{
+				pConsole->ExecuteFile(AUTOEXEC_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
+			}
+			pClient->GameClient()->OnConfigLoaded(pClient->ConfigManager());
+		}
 	}
-	else // fallback
+	if(ConfigFileError)
 	{
-		pConsole->ExecuteFile(AUTOEXEC_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
+		const char *pError = "Failed to load config from '" CONFIG_FILE "'.";
+		log_error("client", "%s", pError);
+		pClient->ShowMessageBox({.m_pTitle = "Config File Error", .m_pMessage = pError});
+		PerformAllCleanup();
+		return -1;
 	}
 
 	if(g_Config.m_ClConfigVersion < 1)

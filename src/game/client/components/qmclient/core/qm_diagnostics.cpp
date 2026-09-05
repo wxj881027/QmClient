@@ -194,13 +194,13 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_GraphicsInfoRecorded = false;
 	m_ActiveApiAvailable = false;
 	m_BackendFallbackState.store(0, std::memory_order_relaxed);
-	m_vUpdateSamples.clear();
-	m_vFrameSamples.clear();
-	m_vRenderSamples.clear();
+	m_vUpdateSamples.Clear();
+	m_vFrameSamples.Clear();
+	m_vRenderSamples.Clear();
 	for(size_t i = 0; i < m_FeatureTimingCount; ++i)
 	{
-		m_aFeatureTimings[i].m_vUpdateSamples.clear();
-		m_aFeatureTimings[i].m_vRenderSamples.clear();
+		m_aFeatureTimings[i].m_vUpdateSamples.Clear();
+		m_aFeatureTimings[i].m_vRenderSamples.Clear();
 		m_aFeatureTimings[i].m_UpdateStart = 0;
 		m_aFeatureTimings[i].m_RenderStart = 0;
 	}
@@ -216,9 +216,26 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	m_NonBlockingWriterLockBusy.store(0, std::memory_order_relaxed);
 	m_NonBlockingBufferCapacity.store(0, std::memory_order_relaxed);
 	m_NonBlockingSerializationFailures.store(0, std::memory_order_relaxed);
-	m_vUpdateSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
-	m_vFrameSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
-	m_vRenderSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
+	try
+	{
+		m_vUpdateSamples.Prepare(DIAGNOSTICS_WINDOW_SIZE);
+		m_vFrameSamples.Prepare(DIAGNOSTICS_WINDOW_SIZE);
+		m_vRenderSamples.Prepare(DIAGNOSTICS_WINDOW_SIZE);
+		for(size_t i = 0; i < m_FeatureTimingCount; ++i)
+		{
+			m_aFeatureTimings[i].m_vUpdateSamples.Prepare(DIAGNOSTICS_WINDOW_SIZE);
+			m_aFeatureTimings[i].m_vRenderSamples.Prepare(DIAGNOSTICS_WINDOW_SIZE);
+		}
+	}
+	catch(...)
+	{
+		// Diagnostics is fail-open: an allocation failure must not prevent the
+		// client or graphics backend from starting.
+		log_warn("qm/diagnostics", "failed to reserve diagnostics samples");
+		m_pStorage = nullptr;
+		m_pGraphics = nullptr;
+		return;
+	}
 
 	if(!m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE) || !m_pStorage->CreateFolder("qmclient/diagnostics", IStorage::TYPE_SAVE))
 	{
@@ -321,13 +338,13 @@ void CQmDiagnostics::BeginFrame()
 		if(m_WindowFrameCount >= DIAGNOSTICS_WINDOW_SIZE)
 		{
 			WriteWindowSummary();
-			m_vUpdateSamples.clear();
-			m_vFrameSamples.clear();
-			m_vRenderSamples.clear();
+			m_vUpdateSamples.Clear();
+			m_vFrameSamples.Clear();
+			m_vRenderSamples.Clear();
 			for(size_t i = 0; i < m_FeatureTimingCount; ++i)
 			{
-				m_aFeatureTimings[i].m_vUpdateSamples.clear();
-				m_aFeatureTimings[i].m_vRenderSamples.clear();
+				m_aFeatureTimings[i].m_vUpdateSamples.Clear();
+				m_aFeatureTimings[i].m_vRenderSamples.Clear();
 				m_aFeatureTimings[i].m_UpdateStart = 0;
 				m_aFeatureTimings[i].m_RenderStart = 0;
 			}
@@ -399,13 +416,13 @@ CQmDiagnostics::TFeatureTimingId CQmDiagnostics::RegisterFeatureTiming(const cha
 	SFeatureTiming &Timing = m_aFeatureTimings[m_FeatureTimingCount];
 	try
 	{
-		Timing.m_vUpdateSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
-		Timing.m_vRenderSamples.reserve(DIAGNOSTICS_WINDOW_SIZE);
+		Timing.m_vUpdateSamples.Prepare(DIAGNOSTICS_WINDOW_SIZE);
+		Timing.m_vRenderSamples.Prepare(DIAGNOSTICS_WINDOW_SIZE);
 	}
 	catch(...)
 	{
-		Timing.m_vUpdateSamples.clear();
-		Timing.m_vRenderSamples.clear();
+		Timing.m_vUpdateSamples.Clear();
+		Timing.m_vRenderSamples.Clear();
 		log_warn("qm/diagnostics", "failed to reserve feature timing samples for '%s'", pFeatureId);
 		return INVALID_FEATURE_TIMING;
 	}
@@ -705,11 +722,9 @@ void CQmDiagnostics::MarkWriteFailure(const char *pOperation)
 	}
 }
 
-void CQmDiagnostics::PushSample(std::vector<int64_t> &vSamples, int64_t Sample)
+void CQmDiagnostics::PushSample(QmDiagnostics::CSampleWindow &Samples, int64_t Sample)
 {
-	if(vSamples.size() >= DIAGNOSTICS_WINDOW_SIZE)
-		vSamples.erase(vSamples.begin());
-	vSamples.push_back(Sample);
+	Samples.Push(Sample, DIAGNOSTICS_WINDOW_SIZE);
 }
 
 void CQmDiagnostics::RecordRecentEvent(const char *pName, const char *pDetails)

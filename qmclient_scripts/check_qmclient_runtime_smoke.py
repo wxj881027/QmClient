@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -21,9 +24,69 @@ def fail(message: str) -> int:
     return 1
 
 
-def run_client(executable: Path, data_dir: Path, run_dir: Path, user_dir: Path, config: str, timeout: float):
+def hide_process_windows(process_id: int) -> None:
+    if os.name != "nt":
+        return
+
+    user32 = ctypes.windll.user32
+    callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+
+    @callback_type
+    def hide_window(hwnd, _):
+        window_process_id = ctypes.c_ulong()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_process_id))
+        if window_process_id.value == process_id:
+            user32.ShowWindow(hwnd, 0)  # SW_HIDE
+        return True
+
+    user32.EnumWindows(hide_window, 0)
+
+
+def run_hidden_client(command: list[str], run_dir: Path, timeout: float):
+    startup_info = None
+    creation_flags = 0
+    if os.name == "nt":
+        startup_info = subprocess.STARTUPINFO()
+        startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup_info.wShowWindow = subprocess.SW_HIDE
+        creation_flags = subprocess.CREATE_NO_WINDOW
+
+    process = subprocess.Popen(
+        command,
+        cwd=run_dir,
+        env=os.environ.copy(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        startupinfo=startup_info,
+        creationflags=creation_flags,
+    )
+    deadline = time.monotonic() + timeout
+    while process.poll() is None:
+        hide_process_windows(process.pid)
+        if time.monotonic() >= deadline:
+            process.kill()
+            output, _ = process.communicate()
+            return None, f"客户端超过 {timeout:.1f}s 未退出\n{output[-2000:]}"
+        time.sleep(0.02)
+    output, _ = process.communicate()
+    return process.returncode, output
+
+
+def run_client(
+    executable: Path,
+    data_dir: Path,
+    run_dir: Path,
+    user_dir: Path,
+    config: str,
+    timeout: float,
+    base_config: Path | None,
+):
     run_dir.mkdir(exist_ok=True)
     user_dir.mkdir()
+    if base_config is not None:
+        shutil.copy2(base_config, user_dir / "settings_ddnet.cfg")
     (run_dir / "storage.cfg").write_text(
         f"add_path {user_dir.as_posix()}\n"
         f"add_path {data_dir.as_posix()}\n",
@@ -31,24 +94,14 @@ def run_client(executable: Path, data_dir: Path, run_dir: Path, user_dir: Path, 
     )
     config_file = run_dir / "smoke.cfg"
     config_file.write_text(config, encoding="utf-8")
-    try:
-        completed = subprocess.run(
-            [str(executable), "-s", "-f", str(config_file)],
-            cwd=run_dir,
-            env=os.environ.copy(),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            errors="replace",
-            timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as error:
-        output = str(error.stdout or "")
-        return None, f"客户端超过 {timeout:.1f}s 未退出\n{output[-2000:]}"
-    if completed.returncode != 0:
-        return None, f"客户端退出码为 {completed.returncode}\n{completed.stdout[-2000:]}"
-    return completed, None
+    return_code, output = run_hidden_client(
+        [str(executable), "-s", "-f", str(config_file)], run_dir, timeout
+    )
+    if return_code is None:
+        return None, output
+    if return_code != 0:
+        return None, f"客户端退出码为 {return_code}\n{output[-2000:]}"
+    return return_code, None
 
 
 def main() -> int:
@@ -65,6 +118,12 @@ def main() -> int:
         default=30.0,
         help="客户端最大运行秒数",
     )
+    parser.add_argument(
+        "--base-config",
+        type=Path,
+        default=None,
+        help="复制到临时用户目录的初始化 settings_ddnet.cfg；未指定时自动使用 APPDATA/DDNet/settings_ddnet.cfg（如果存在）",
+    )
     args = parser.parse_args()
 
     build_dir = args.build_dir.resolve()
@@ -76,6 +135,18 @@ def main() -> int:
         return fail(f"找不到运行时 data 目录: {data_dir}")
     if args.timeout <= 0:
         return fail("--timeout 必须大于 0")
+
+    base_config = args.base_config
+    if base_config is None:
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            candidate = Path(appdata) / "DDNet" / "settings_ddnet.cfg"
+            if candidate.is_file():
+                base_config = candidate
+    elif not base_config.is_file():
+        return fail(f"找不到初始化配置: {base_config}")
+    if base_config is not None:
+        base_config = base_config.resolve()
 
     with tempfile.TemporaryDirectory(prefix="qmclient-runtime-smoke-") as temp_name:
         temp_dir = Path(temp_name)
@@ -93,6 +164,7 @@ def main() -> int:
             "qm_diagnostics 1\n"
             f"benchmark_quit 2 {benchmark_file.as_posix()}\n",
             args.timeout,
+            base_config,
         )
         if error:
             return fail(error)
@@ -140,6 +212,7 @@ def main() -> int:
             "qm_diagnostics 0\n"
             f"benchmark_quit 2 {disabled_benchmark_file.as_posix()}\n",
             args.timeout,
+            base_config,
         )
         if error:
             return fail(f"diagnostics 关闭路径失败: {error}")
@@ -154,7 +227,8 @@ def main() -> int:
             f"session_lines={len(session_events)}, "
             f"backend_config={report['backend_config']}, "
             f"active_api_name={report['active_api_name']}, "
-            "write_failed=false, report_tmp=0, diagnostics_disabled=no_files"
+            "write_failed=false, report_tmp=0, diagnostics_disabled=no_files, "
+            f"base_config={base_config if base_config is not None else 'none'}"
         )
         return 0
 
