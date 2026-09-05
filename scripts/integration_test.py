@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from collections import namedtuple
+import ctypes
 from queue import Queue
 from threading import Thread
-from time import time
+from time import sleep, time
 from urllib import request
 from urllib.request import Request, urlopen
 from uuid import UUID, uuid4
@@ -102,7 +103,43 @@ def popen(args, *, cwd, **kwargs):
 		# If relative and contains a path separator.
 		if not os.path.isabs(args[0]) and os.path.dirname(args[0]) != "":
 			args = [relpath(os.path.join(cwd, args[0]))] + args[1:]
+	if os.name == "nt":
+		startup_info = subprocess.STARTUPINFO()
+		startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+		startup_info.wShowWindow = subprocess.SW_HIDE
+		kwargs.setdefault("startupinfo", startup_info)
+		kwargs.setdefault("creationflags", subprocess.CREATE_NO_WINDOW)
 	return subprocess.Popen(args, cwd=cwd, **kwargs)
+
+
+def hide_process_windows(process_id):
+	if os.name != "nt":
+		return
+
+	user32 = ctypes.windll.user32
+	callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+
+	@callback_type
+	def hide_window(hwnd, _):
+		window_process_id = ctypes.c_ulong()
+		user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_process_id))
+		if window_process_id.value == process_id:
+			user32.ShowWindow(hwnd, 0)  # SW_HIDE
+		return True
+
+	user32.EnumWindows(hide_window, 0)
+
+
+def run_window_hiding_thread(process):
+	if os.name != "nt":
+		return
+
+	def hide_windows():
+		while process.poll() is None:
+			hide_process_windows(process.pid)
+			sleep(0.02)
+
+	Thread(target=hide_windows, daemon=True).start()
 
 
 GREEN = "\x1b[32m"
@@ -375,6 +412,7 @@ class Runnable:
 			stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE,
 		)
+		run_window_hiding_thread(self.process)
 		stdout_wrapper = io.TextIOWrapper(self.process.stdout, encoding="utf-8")
 		stderr_wrapper = io.TextIOWrapper(self.process.stderr, encoding="utf-8")
 		self.full_stdout = []
@@ -474,6 +512,7 @@ class Client(Runnable):
 				f"conn_timeout {test_env.runner.conn_timeout}",
 			]
 			+ extra_args,
+			extra_env_vars={"DDNET_TEST_HIDE_WINDOW": "1"},
 		)
 		test_env.num_clients += 1
 

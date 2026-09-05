@@ -69,6 +69,12 @@ status: active
 - 暂不继续扩大官方 Vulkan/OpenGL/SDL 文件的诊断侵入面；Metal 成功路径、真实 GPU query、device fault 深度信息和更多 renderer switch 事件转为后续独立评估项。
 - 后续性能工作优先使用现有日志验证真实 feature 的关闭开销、1% low 和内存变化；任何新增后端触点必须先证明现有诊断无法回答目标问题，并单独记录上游冲突成本。
 
+## Speedrun Timer 增量（2026-09-05）
+
+- `qm.speedrun_timer` 已接入独立的 update/render feature timing；计时器逻辑只做整数 tick 运算、固定栈缓冲区格式化和 HUD 文本绘制，不在每帧执行文件 I/O、网络请求或后台任务。
+- 计时器关闭、无本地角色、非 race、无效时长和非在线状态都会在逻辑层短路；过期 kill 只产生一次 action，随后由 feature 自己维护有限时长的提示状态。
+- 当前证据只证明构建、单元逻辑和启动 smoke；真实联网 race、过期时刻、断线/重连和不同 tick speed 的 1% low 与内存 A/B 尚未完成，不能把本模块标记为性能完成。
+
 ## Resource rebuild 事件增量（2026-09-04）
 
 - 画布尺寸发生变化并调用官方 resize listeners 时，自动记录 `graphics.resource_rebuild_begin` 和 `graphics.resource_rebuild_end`。事件保留旧/新画布尺寸、listener 数、原因和结束结果；`result=completed` 只表示 listener 调用序列返回，不代表每个资源内部都报告成功，便于把 resize、资源重建和后续帧抖动关联起来。
@@ -192,3 +198,9 @@ status: active
   `drop_stats_gate_busy`，保持丢弃原因不被伪装成 session 或 writer 锁争用。
 - 图形事件注册、启动 pending 队列和回放路径对分配/同步异常做隔离；异常时记录 warning、丢弃受影响事件并清除 replay 状态，避免诊断系统卡住后续事件或改变图形错误控制流。
 - fatal graphics 事件分类改为与错误文本顺序无关的固定优先级，组合错误不会因附加错误字符串排列变化而产生不同诊断事件。
+
+## Auto Team Lock 启动路径验证（2026-09-05）
+
+- Auto Team Lock 启用时曾出现一次 Windows `0xC0000005` 启动崩溃；minidump 将指令定位到官方 `CSkins::OnConsoleInit` 的 `ConfigManager()` 调用链，未证实为 Auto Team Lock 逻辑越界或空指针。
+- 对 `cmake-build-release` 执行 `game-client --clean-first` 后，完整重编译通过；同一构建目录启用 `qm_auto_team_lock=1`、`qm_auto_team_lock_delay=0` 的后台 runtime smoke 退出码为 0，session/report 均正常生成。当前证据支持“旧增量产物不一致是首要原因”，不把它误记为功能逻辑已导致崩溃。
+- 标准 `check_qmclient_runtime_smoke.py` 已默认开启 Auto Team Lock 的离线启动路径，仍使用临时 storage、无窗口运行，不会发送网络命令；后续若修改配置头或 `CGameClient` 布局，优先执行 clean rebuild 再归因。

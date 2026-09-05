@@ -51,10 +51,12 @@ def run_hidden_client(command: list[str], run_dir: Path, timeout: float):
         startup_info.wShowWindow = subprocess.SW_HIDE
         creation_flags = subprocess.CREATE_NO_WINDOW
 
+    environment = os.environ.copy()
+    environment["DDNET_TEST_HIDE_WINDOW"] = "1"
     process = subprocess.Popen(
         command,
         cwd=run_dir,
-        env=os.environ.copy(),
+        env=environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -167,6 +169,8 @@ def main() -> int:
             "dbg_gfx 0\n"
             "cl_save_settings 1\n"
             "qm_diagnostics 1\n"
+            "qm_auto_team_lock 1\n"
+            "qm_auto_team_lock_delay 0\n"
             f"benchmark_quit 2 {benchmark_file.as_posix()}\n",
             args.timeout,
             base_config,

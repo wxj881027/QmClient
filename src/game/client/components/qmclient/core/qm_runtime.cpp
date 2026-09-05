@@ -5,7 +5,12 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/components/qmclient/features/speedrun_timer/qm_speedrun_timer_adapter.h>
+#include <game/client/components/qmclient/features/auto_team_lock/qm_auto_team_lock_adapter.h>
+#include <engine/client.h>
+
 #include <game/localization.h>
+#include <game/client/gameclient.h>
 
 int CQmRuntime::Sizeof() const
 {
@@ -29,11 +34,15 @@ void CQmRuntime::OnInit()
 	m_DiagnosticsModel.m_Enabled = g_Config.m_QmDiagnostics != 0;
 	const bool DiagnosticsFeatureRegistered = m_UiModel.RegisterFeature(m_DiagnosticsModel);
 	const bool PlayerIndicatorFeatureRegistered = m_UiModel.RegisterFeature(m_PlayerIndicator.Model());
-	if(!DiagnosticsFeatureRegistered || !PlayerIndicatorFeatureRegistered)
+	const bool AutoTeamLockFeatureRegistered = m_UiModel.RegisterFeature(m_AutoTeamLock.Model());
+	const bool SpeedrunTimerFeatureRegistered = m_UiModel.RegisterFeature(m_SpeedrunTimer.Model());
+	if(!DiagnosticsFeatureRegistered || !PlayerIndicatorFeatureRegistered || !AutoTeamLockFeatureRegistered || !SpeedrunTimerFeatureRegistered)
 		log_error("qm/runtime", "failed to register a feature model");
 	const bool DiagnosticsCardRegistered = m_UiModel.RegisterCard({EQmUiPage::HOME, "qm.diagnostics", "activity", m_DiagnosticsModel});
 	const bool PlayerIndicatorCardRegistered = m_UiModel.RegisterCard({EQmUiPage::HOME, "qm.player_indicator", "compass", m_PlayerIndicator.Model()});
-	if(!DiagnosticsCardRegistered || !PlayerIndicatorCardRegistered)
+	const bool AutoTeamLockCardRegistered = m_UiModel.RegisterCard({EQmUiPage::HOME, "qm.auto_team_lock", "lock", m_AutoTeamLock.Model()});
+	const bool SpeedrunTimerCardRegistered = m_UiModel.RegisterCard({EQmUiPage::HOME, "qm.speedrun_timer", "timer", m_SpeedrunTimer.Model()});
+	if(!DiagnosticsCardRegistered || !PlayerIndicatorCardRegistered || !AutoTeamLockCardRegistered || !SpeedrunTimerCardRegistered)
 		log_error("qm/runtime", "failed to register a UI card");
 	m_UiModel.Freeze();
 	if(g_Config.m_QmDiagnostics != 0)
@@ -43,6 +52,18 @@ void CQmRuntime::OnInit()
 		m_PlayerIndicatorTiming = m_pDiagnostics->RegisterFeatureTiming("qm.player_indicator");
 		if(m_PlayerIndicatorTiming == CQmDiagnostics::INVALID_FEATURE_TIMING)
 			log_error("qm/runtime", "failed to register player indicator diagnostics timing");
+	}
+	if(g_Config.m_QmDiagnostics != 0)
+	{
+		m_AutoTeamLockTiming = m_pDiagnostics->RegisterFeatureTiming("qm.auto_team_lock");
+		if(m_AutoTeamLockTiming == CQmDiagnostics::INVALID_FEATURE_TIMING)
+			log_error("qm/runtime", "failed to register auto team lock diagnostics timing");
+	}
+	if(g_Config.m_QmDiagnostics != 0)
+	{
+		m_SpeedrunTimerTiming = m_pDiagnostics->RegisterFeatureTiming("qm.speedrun_timer");
+		if(m_SpeedrunTimerTiming == CQmDiagnostics::INVALID_FEATURE_TIMING)
+			log_error("qm/runtime", "failed to register speedrun timer diagnostics timing");
 	}
 	if(g_Config.m_QmDiagnostics != 0)
 	{
@@ -119,6 +140,8 @@ void CQmRuntime::OnShutdown()
 
 void CQmRuntime::OnReset()
 {
+	m_AutoTeamLock.Reset();
+	m_SpeedrunTimer.Reset();
 	log_trace("qm/runtime", "component state reset at map generation %u", m_MapGeneration);
 	if(m_Initialized)
 		UpdateFeatureModels();
@@ -126,12 +149,19 @@ void CQmRuntime::OnReset()
 
 void CQmRuntime::OnMapLoad()
 {
+	m_AutoTeamLock.Reset();
+	m_SpeedrunTimer.Reset();
 	++m_MapGeneration;
 	log_trace("qm/runtime", "map lifecycle entered, generation=%u", m_MapGeneration);
 }
 
 void CQmRuntime::OnStateChange(int NewState, int OldState)
 {
+	if(NewState != IClient::STATE_ONLINE)
+	{
+		m_AutoTeamLock.Reset();
+		m_SpeedrunTimer.Reset();
+	}
 	m_LastState = NewState;
 	char aDetails[64];
 	str_format(aDetails, sizeof(aDetails), "%d->%d", OldState, NewState);
@@ -153,25 +183,50 @@ void CQmRuntime::OnRender()
 	RenderSlot(EQmRenderSlot::ENTITY_OVERLAY);
 }
 
+void CQmRuntime::OnUpdate()
+{
+	m_pDiagnostics->BeginFeatureTiming(m_AutoTeamLockTiming, CQmDiagnostics::EFeatureTimingPhase::UPDATE);
+	const SQmAutoTeamLockAction AutoTeamLockAction = m_AutoTeamLock.Update(BuildQmAutoTeamLockInput(*GameClient(), *Client()));
+	m_pDiagnostics->EndFeatureTiming(m_AutoTeamLockTiming, CQmDiagnostics::EFeatureTimingPhase::UPDATE);
+	if(AutoTeamLockAction.m_SendLockCommand)
+		GameClient()->m_Chat.SendChat(0, "/lock 1");
+
+	m_pDiagnostics->BeginFeatureTiming(m_SpeedrunTimerTiming, CQmDiagnostics::EFeatureTimingPhase::UPDATE);
+	const SQmSpeedrunTimerAction Action = m_SpeedrunTimer.Update(BuildQmSpeedrunTimerInput(*GameClient(), *Client()));
+	m_pDiagnostics->EndFeatureTiming(m_SpeedrunTimerTiming, CQmDiagnostics::EFeatureTimingPhase::UPDATE);
+	if(Action.m_RequestKill)
+		GameClient()->SendKill();
+	if(Action.m_Disable)
+		g_Config.m_QmSpeedrunTimer = 0;
+}
+
 void CQmRuntime::RenderSlot(const EQmRenderSlot Slot)
 {
-	if(Slot != EQmRenderSlot::ENTITY_OVERLAY)
-		return;
-
-	m_pDiagnostics->BeginFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
-	if(!m_PlayerIndicator.Model().m_Enabled)
+	if(Slot == EQmRenderSlot::ENTITY_OVERLAY)
 	{
+		m_pDiagnostics->BeginFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
+		if(!m_PlayerIndicator.Model().m_Enabled)
+		{
+			m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
+			return;
+		}
+		const SQmPlayerIndicatorFrame Frame = BuildQmPlayerIndicatorFrame(*GameClient(), *Client(), *Graphics());
+		if(!Frame.m_Settings.m_Enabled)
+		{
+			m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
+			return;
+		}
+		m_PlayerIndicator.Render(Frame, Graphics(), RenderTools());
 		m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 		return;
 	}
-	const SQmPlayerIndicatorFrame Frame = BuildQmPlayerIndicatorFrame(*GameClient(), *Client(), *Graphics());
-	if(!Frame.m_Settings.m_Enabled)
+	if(Slot == EQmRenderSlot::HUD_OVERLAY)
 	{
-		m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
+		m_pDiagnostics->BeginFeatureTiming(m_SpeedrunTimerTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
+		m_SpeedrunTimer.Render(300.0f * Graphics()->ScreenAspect(), TextRender());
+		m_pDiagnostics->EndFeatureTiming(m_SpeedrunTimerTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 		return;
 	}
-	m_PlayerIndicator.Render(Frame, Graphics(), RenderTools());
-	m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::RENDER);
 }
 
 void CQmRuntime::UpdateFeatureModels()
@@ -180,4 +235,6 @@ void CQmRuntime::UpdateFeatureModels()
 	const bool Available = QmPlayerIndicatorAvailable(*GameClient(), *Client());
 	m_PlayerIndicator.UpdateModel(g_Config.m_QmPlayerIndicator != 0 && Available, Available);
 	m_pDiagnostics->EndFeatureTiming(m_PlayerIndicatorTiming, CQmDiagnostics::EFeatureTimingPhase::UPDATE);
+	m_AutoTeamLock.UpdateModel(g_Config.m_QmAutoTeamLock != 0, Client()->State() == IClient::STATE_ONLINE);
+	m_SpeedrunTimer.UpdateModel(g_Config.m_QmSpeedrunTimer != 0, Client()->State() == IClient::STATE_ONLINE);
 }

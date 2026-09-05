@@ -1267,6 +1267,10 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	// set flags
 	int SdlFlags = SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_ALLOW_HIGHDPI;
 	SdlFlags |= (IsOpenGLFamilyBackend) ? SDL_WINDOW_OPENGL : SDL_WINDOW_VULKAN;
+	// 集成 smoke 通过环境变量请求创建后保持隐藏，避免测试窗口出现可见闪现。
+	const char *pHideWindow = SDL_getenv("DDNET_TEST_HIDE_WINDOW");
+	if(pHideWindow != nullptr && str_comp(pHideWindow, "1") == 0)
+		SdlFlags |= SDL_WINDOW_HIDDEN;
 	if(Flags & IGraphicsBackend::INITFLAG_RESIZABLE)
 		SdlFlags |= SDL_WINDOW_RESIZABLE;
 	if(Flags & IGraphicsBackend::INITFLAG_BORDERLESS)

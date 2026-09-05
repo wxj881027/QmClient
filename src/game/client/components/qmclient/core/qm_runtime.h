@@ -11,6 +11,8 @@
 #include "qm_render_slots.h"
 #include "qm_ui_model.h"
 #include "../features/player_indicator/qm_player_indicator.h"
+#include "../features/auto_team_lock/qm_auto_team_lock.h"
+#include "../features/speedrun_timer/qm_speedrun_timer.h"
 
 #include <atomic>
 #include <memory>
@@ -33,7 +35,11 @@ class CQmRuntime final : public CComponent
 	CQmI18n m_I18n;
 	SQmFeatureModel m_DiagnosticsModel{"qm.diagnostics", "qm.diagnostics.title", true, true};
 	CQmPlayerIndicator m_PlayerIndicator;
+	CQmAutoTeamLock m_AutoTeamLock;
+	CQmSpeedrunTimer m_SpeedrunTimer;
 	CQmDiagnostics::TFeatureTimingId m_PlayerIndicatorTiming = CQmDiagnostics::INVALID_FEATURE_TIMING;
+	CQmDiagnostics::TFeatureTimingId m_AutoTeamLockTiming = CQmDiagnostics::INVALID_FEATURE_TIMING;
+	CQmDiagnostics::TFeatureTimingId m_SpeedrunTimerTiming = CQmDiagnostics::INVALID_FEATURE_TIMING;
 	CQmConfigMigration m_ConfigMigration;
 
 public:
@@ -47,6 +53,7 @@ public:
 	void OnMapLoad() override;
 	void OnStateChange(int NewState, int OldState) override;
 	void OnWindowResize() override;
+	void OnUpdate() override;
 	void OnRender() override;
 	void RenderSlot(EQmRenderSlot Slot);
 	void UpdateFeatureModels();

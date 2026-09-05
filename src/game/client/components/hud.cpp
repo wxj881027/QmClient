@@ -1743,6 +1743,7 @@ void CHud::OnRender()
 		GameClient()->m_Voting.Render();
 		if(g_Config.m_ClShowRecord)
 			RenderRecord();
+		GameClient()->m_QmRuntime.RenderSlot(EQmRenderSlot::HUD_OVERLAY);
 	}
 	RenderCursor();
 }

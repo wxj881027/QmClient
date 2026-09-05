@@ -2737,6 +2737,15 @@ if(CLIENT)
     components/qmclient/features/player_indicator/qm_player_indicator.cpp
     components/qmclient/features/player_indicator/qm_player_indicator.h
     components/qmclient/features/player_indicator/qm_player_indicator_logic.h
+    components/qmclient/features/auto_team_lock/qm_auto_team_lock.h
+    components/qmclient/features/auto_team_lock/qm_auto_team_lock_adapter.cpp
+    components/qmclient/features/auto_team_lock/qm_auto_team_lock_adapter.h
+    components/qmclient/features/auto_team_lock/qm_auto_team_lock_logic.h
+    components/qmclient/features/speedrun_timer/qm_speedrun_timer.cpp
+    components/qmclient/features/speedrun_timer/qm_speedrun_timer.h
+    components/qmclient/features/speedrun_timer/qm_speedrun_timer_adapter.cpp
+    components/qmclient/features/speedrun_timer/qm_speedrun_timer_adapter.h
+    components/qmclient/features/speedrun_timer/qm_speedrun_timer_logic.h
     components/race_demo.cpp
     components/race_demo.h
     components/scoreboard.cpp
@@ -3487,7 +3496,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     prng_test.cpp
     qmclient_config_migration_test.cpp
     qmclient_diagnostics_test.cpp
+    qmclient_auto_team_lock_test.cpp
     qmclient_player_indicator_test.cpp
+    qmclient_speedrun_timer_test.cpp
     qmclient_ui_model_test.cpp
     replace_words_test.cpp
     score_test.cpp
