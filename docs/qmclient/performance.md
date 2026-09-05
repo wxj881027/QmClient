@@ -60,6 +60,7 @@ status: active
 
 - `qm.player_indicator` 已注册独立的 update/render 计时。每个性能窗口自动写入 `feature_window` JSONL 记录，包含 feature ID、阶段样本数、平均值、p95、p99 和最大值。
 - 计时只对已注册 feature 生效；采样存储在预留的窗口 vector 中，计时路径不做文件 I/O 或动态字符串构造。诊断 session 不可用时不改变 feature 行为。
+- 帧、update、render 和 feature 采样只由游戏主线程拥有，热路径使用原子 session 闸门，不再为每次 Begin/End 采样进入 `m_SessionLock`；文件 writer、图形事件和 session 收尾仍使用独立锁。这样降低诊断对 1% low 的干扰，但仍需在同硬件、同后端、同场景下做关闭诊断与开启诊断的 A/B，不能仅凭代码结构宣称开销为零。
 - UI 首次打开、搜索、滚动、布局和其他 Qm feature 的独立计时仍是后续缺口。
 
 ## 诊断范围冻结（2026-09-04）

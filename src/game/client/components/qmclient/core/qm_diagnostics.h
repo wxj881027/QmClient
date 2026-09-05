@@ -154,8 +154,9 @@ private:
 	static constexpr size_t MAX_FEATURE_TIMINGS = 32;
 	std::array<SFeatureTiming, MAX_FEATURE_TIMINGS> m_aFeatureTimings;
 	size_t m_FeatureTimingCount = 0;
-	// 计时只由游戏主线程采样；原子闸门只负责跨 session/写入失败时停用无锁热路径。
-	std::atomic<bool> m_FeatureTimingActive{false};
+	// 帧、update、render 和 feature 采样只由游戏主线程执行；原子闸门负责
+	// 在 session 失效或写入失败时停用无锁热路径。
+	std::atomic<bool> m_HotPathActive{false};
 	static constexpr size_t RECENT_EVENT_RING_SIZE = 64;
 	std::array<SRecentEvent, RECENT_EVENT_RING_SIZE> m_aRecentEvents;
 	size_t m_RecentEventNext = 0;

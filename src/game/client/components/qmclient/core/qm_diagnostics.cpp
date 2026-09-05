@@ -172,7 +172,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 	}
 	if(!pStorage)
 		return;
-	m_FeatureTimingActive.store(false, std::memory_order_relaxed);
+	m_HotPathActive.store(false, std::memory_order_relaxed);
 	const uint32_t PreviousGeneration = m_SessionGeneration.load(std::memory_order_relaxed);
 	const uint32_t NewGeneration = PreviousGeneration == std::numeric_limits<uint32_t>::max() ? 1 : PreviousGeneration + 1;
 	m_SessionGeneration.store(NewGeneration, std::memory_order_relaxed);
@@ -268,7 +268,7 @@ void CQmDiagnostics::Init(IStorage *pStorage, IGraphics *pGraphics)
 		m_pGraphics = nullptr;
 		return;
 	}
-	m_FeatureTimingActive.store(true, std::memory_order_release);
+	m_HotPathActive.store(true, std::memory_order_release);
 	const uint64_t GenerationBits = static_cast<uint64_t>(NewGeneration) << BACKEND_FALLBACK_GENERATION_SHIFT;
 	m_BackendFallbackState.store(GenerationBits | BACKEND_FALLBACK_ACTIVE, std::memory_order_release);
 
@@ -301,7 +301,7 @@ void CQmDiagnostics::Shutdown()
 {
 	// 先关闭无锁状态更新入口，再等待已进入 observer 的回调退出，避免迟到事件污染 report 或下一 session。
 	m_BackendFallbackState.fetch_and(~BACKEND_FALLBACK_ACTIVE, std::memory_order_acq_rel);
-	m_FeatureTimingActive.store(false, std::memory_order_release);
+	m_HotPathActive.store(false, std::memory_order_release);
 	std::unique_lock<std::shared_mutex> NonBlockingStatsLock(m_NonBlockingStatsLock);
 	CLockScope SessionLock(m_SessionLock);
 	if(!m_pAsyncSession)
@@ -323,8 +323,7 @@ void CQmDiagnostics::Shutdown()
 
 void CQmDiagnostics::BeginFrame()
 {
-	CLockScope SessionLock(m_SessionLock);
-	if(!m_pAsyncSession || m_WriteFailed)
+	if(!m_HotPathActive.load(std::memory_order_acquire) || m_WriteFailed)
 		return;
 	CheckAsyncWriteError();
 	if(m_WriteFailed)
@@ -357,8 +356,7 @@ void CQmDiagnostics::BeginFrame()
 
 void CQmDiagnostics::EndFrame()
 {
-	CLockScope SessionLock(m_SessionLock);
-	if(!m_pAsyncSession || m_WriteFailed || m_FrameStart == 0)
+	if(!m_HotPathActive.load(std::memory_order_acquire) || m_WriteFailed || m_FrameStart == 0)
 		return;
 
 	m_FrameStart = 0;
@@ -367,15 +365,13 @@ void CQmDiagnostics::EndFrame()
 
 void CQmDiagnostics::BeginGameUpdate()
 {
-	CLockScope SessionLock(m_SessionLock);
-	if(m_pAsyncSession)
+	if(m_HotPathActive.load(std::memory_order_acquire))
 		m_UpdateStart = time_get_nanoseconds().count();
 }
 
 void CQmDiagnostics::EndGameUpdate()
 {
-	CLockScope SessionLock(m_SessionLock);
-	if(!m_pAsyncSession || m_UpdateStart == 0)
+	if(!m_HotPathActive.load(std::memory_order_acquire) || m_UpdateStart == 0)
 		return;
 
 	PushSample(m_vUpdateSamples, time_get_nanoseconds().count() - m_UpdateStart);
@@ -384,15 +380,13 @@ void CQmDiagnostics::EndGameUpdate()
 
 void CQmDiagnostics::BeginGameRender()
 {
-	CLockScope SessionLock(m_SessionLock);
-	if(m_pAsyncSession)
+	if(m_HotPathActive.load(std::memory_order_acquire))
 		m_RenderStart = time_get_nanoseconds().count();
 }
 
 void CQmDiagnostics::EndGameRender()
 {
-	CLockScope SessionLock(m_SessionLock);
-	if(!m_pAsyncSession || m_RenderStart == 0)
+	if(!m_HotPathActive.load(std::memory_order_acquire) || m_RenderStart == 0)
 		return;
 
 	PushSample(m_vRenderSamples, time_get_nanoseconds().count() - m_RenderStart);
@@ -434,7 +428,7 @@ CQmDiagnostics::TFeatureTimingId CQmDiagnostics::RegisterFeatureTiming(const cha
 
 void CQmDiagnostics::BeginFeatureTiming(TFeatureTimingId FeatureTimingId, EFeatureTimingPhase Phase)
 {
-	if(!m_FeatureTimingActive.load(std::memory_order_acquire) || FeatureTimingId == INVALID_FEATURE_TIMING || FeatureTimingId >= m_FeatureTimingCount)
+	if(!m_HotPathActive.load(std::memory_order_acquire) || FeatureTimingId == INVALID_FEATURE_TIMING || FeatureTimingId >= m_FeatureTimingCount)
 		return;
 	SFeatureTiming &Timing = m_aFeatureTimings[FeatureTimingId];
 	int64_t &Start = Phase == EFeatureTimingPhase::UPDATE ? Timing.m_UpdateStart : Timing.m_RenderStart;
@@ -444,7 +438,7 @@ void CQmDiagnostics::BeginFeatureTiming(TFeatureTimingId FeatureTimingId, EFeatu
 
 void CQmDiagnostics::EndFeatureTiming(TFeatureTimingId FeatureTimingId, EFeatureTimingPhase Phase)
 {
-	if(!m_FeatureTimingActive.load(std::memory_order_acquire) || FeatureTimingId == INVALID_FEATURE_TIMING || FeatureTimingId >= m_FeatureTimingCount)
+	if(!m_HotPathActive.load(std::memory_order_acquire) || FeatureTimingId == INVALID_FEATURE_TIMING || FeatureTimingId >= m_FeatureTimingCount)
 		return;
 	SFeatureTiming &Timing = m_aFeatureTimings[FeatureTimingId];
 	int64_t &Start = Phase == EFeatureTimingPhase::UPDATE ? Timing.m_UpdateStart : Timing.m_RenderStart;
@@ -713,7 +707,7 @@ void CQmDiagnostics::CheckAsyncWriteError()
 
 void CQmDiagnostics::MarkWriteFailure(const char *pOperation)
 {
-	m_FeatureTimingActive.store(false, std::memory_order_release);
+	m_HotPathActive.store(false, std::memory_order_release);
 	if(!m_WriteFailed)
 	{
 		m_WriteFailed = true;
