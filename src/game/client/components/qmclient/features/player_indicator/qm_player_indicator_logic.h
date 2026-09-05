@@ -27,7 +27,9 @@ inline bool QmPlayerIndicatorShouldRender(const SQmPlayerIndicatorCandidate &Can
 		return false;
 	if(Candidate.m_TeamOnly && Candidate.m_LocalRaceTeam == 0)
 		return false;
-	if(Candidate.m_TeamOnly && Candidate.m_OtherTeam != Candidate.m_LocalTeam)
+	// 旧 TClient 行为始终限制在同一服务器队伍；m_TeamOnly 只控制
+	// 是否要求本地已经加入 DDRace 队伍。
+	if(Candidate.m_OtherTeam != Candidate.m_LocalTeam)
 		return false;
 	if(Candidate.m_FrozenOnly && !Candidate.m_OtherFrozen)
 		return false;
@@ -47,6 +49,11 @@ inline float QmPlayerIndicatorOffset(float BaseOffset, float MaxOffset, bool Var
 inline bool QmPlayerIndicatorIsUnfreezing(bool Frozen, bool InFreeze)
 {
 	return Frozen && !InFreeze;
+}
+
+inline bool QmPlayerIndicatorIsFrozen(int FreezeEnd, bool DeepFrozen)
+{
+	return FreezeEnd > 0 || DeepFrozen;
 }
 
 inline vec2 QmPlayerIndicatorPosition(vec2 LocalPosition, vec2 OtherPosition, float Offset)

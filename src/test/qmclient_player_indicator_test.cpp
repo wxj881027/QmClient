@@ -18,7 +18,12 @@ TEST(QmPlayerIndicator, FiltersCandidates)
 	EXPECT_FALSE(QmPlayerIndicatorShouldRender(Candidate));
 
 	Candidate.m_TeamOnly = false;
+	Candidate.m_OtherTeam = 1;
 	EXPECT_TRUE(QmPlayerIndicatorShouldRender(Candidate));
+	Candidate.m_OtherTeam = 2;
+	EXPECT_FALSE(QmPlayerIndicatorShouldRender(Candidate));
+
+	Candidate.m_OtherTeam = 1;
 	Candidate.m_TeamOnly = true;
 	Candidate.m_LocalRaceTeam = 0;
 	EXPECT_FALSE(QmPlayerIndicatorShouldRender(Candidate));
@@ -48,6 +53,14 @@ TEST(QmPlayerIndicator, DetectsUnfreezingPlayers)
 	EXPECT_FALSE(QmPlayerIndicatorIsUnfreezing(false, true));
 	EXPECT_FALSE(QmPlayerIndicatorIsUnfreezing(true, true));
 	EXPECT_TRUE(QmPlayerIndicatorIsUnfreezing(true, false));
+}
+
+TEST(QmPlayerIndicator, PreservesFreezeStateSemantics)
+{
+	EXPECT_FALSE(QmPlayerIndicatorIsFrozen(0, false));
+	EXPECT_TRUE(QmPlayerIndicatorIsFrozen(1, false));
+	EXPECT_FALSE(QmPlayerIndicatorIsFrozen(-1, false));
+	EXPECT_TRUE(QmPlayerIndicatorIsFrozen(-1, true));
 }
 
 TEST(QmPlayerIndicator, CalculatesDistanceAndPosition)

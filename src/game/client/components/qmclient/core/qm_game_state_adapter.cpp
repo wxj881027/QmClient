@@ -57,8 +57,8 @@ SQmPlayerIndicatorFrame BuildQmPlayerIndicatorFrame(const CGameClient &GameClien
 		Player.m_Active = GameClient.m_Snap.m_aCharacters[ClientId].m_Active;
 		Player.m_IsLocal = ClientId == LocalClientId || ClientId == GameClient.m_aLocalIds[0] || ClientId == GameClient.m_aLocalIds[1];
 		Player.m_Spectator = OtherClient.m_Spec;
-		Player.m_Frozen = OtherClient.m_FreezeEnd != 0 || OtherClient.m_DeepFrozen || OtherClient.m_LiveFrozen;
-		const bool FreezeState = OtherClient.m_FreezeEnd != 0 || OtherClient.m_DeepFrozen;
+		Player.m_Frozen = QmPlayerIndicatorIsFrozen(OtherClient.m_FreezeEnd, OtherClient.m_DeepFrozen);
+		const bool FreezeState = Player.m_Frozen;
 		Player.m_Unfreezing = QmPlayerIndicatorIsUnfreezing(FreezeState, OtherClient.m_Predicted.m_IsInFreeze);
 		Player.m_pRenderInfo = &OtherClient.m_RenderInfo;
 		Player.m_Emote = OtherClient.m_RenderCur.m_Emote;
