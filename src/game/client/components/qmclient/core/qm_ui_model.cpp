@@ -36,7 +36,7 @@ bool CQmUiModel::IsStableId(const std::string &Id)
 	return !PreviousWasSeparator;
 }
 
-bool CQmUiModel::RegisterFeature(const SQmFeatureModel &Feature)
+bool CQmUiModel::RegisterFeature(SQmFeatureModel &Feature)
 {
 	if(m_Frozen || !IsStableId(Feature.m_Id) || Feature.m_TitleKey.empty() || FindFeature(Feature.m_Id))
 		return false;
@@ -47,7 +47,7 @@ bool CQmUiModel::RegisterFeature(const SQmFeatureModel &Feature)
 bool CQmUiModel::RegisterCard(SQmUiCard Card)
 {
 	const size_t Page = PageIndex(Card.m_Page);
-	if(m_Frozen || Page >= static_cast<size_t>(EQmUiPage::COUNT) || !IsStableId(Card.m_Id) || Card.m_IconId.empty() || !Card.m_pFeature || Card.m_pFeature->m_Id.empty() || FindFeature(Card.m_pFeature->m_Id) != Card.m_pFeature || FindCard(Card.m_Id))
+	if(m_Frozen || Page >= static_cast<size_t>(EQmUiPage::COUNT) || !IsStableId(Card.m_Id) || Card.m_IconId.empty() || Card.m_FeatureId.empty() || !FindFeature(Card.m_FeatureId) || FindCard(Card.m_Id))
 		return false;
 	m_vCards.push_back(Card);
 	m_aaCardsByPage[Page].push_back(&m_vCards.back());

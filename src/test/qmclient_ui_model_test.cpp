@@ -10,14 +10,14 @@ TEST(QmUiModel, RegistersUniqueCards)
 	CQmUiModel Model;
 	SQmFeatureModel Diagnostics{"qm.diagnostics", "qm.diagnostics.title", true, true};
 	EXPECT_TRUE(Model.RegisterFeature(Diagnostics));
-	EXPECT_TRUE(Model.RegisterCard({EQmUiPage::HOME, "qm.diagnostics", "activity", &Diagnostics}));
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::SEARCH, "qm.diagnostics", "activity", &Diagnostics}));
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "", "activity", &Diagnostics}));
+	EXPECT_TRUE(Model.RegisterCard({EQmUiPage::HOME, "qm.diagnostics", "activity", Diagnostics}));
+	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::SEARCH, "qm.diagnostics", "activity", Diagnostics}));
+	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "", "activity", Diagnostics}));
 	ASSERT_NE(Model.FindCard("qm.diagnostics"), nullptr);
 	EXPECT_EQ(Model.FindCard("qm.diagnostics")->m_Page, EQmUiPage::HOME);
-	EXPECT_EQ(Model.FindCard("qm.diagnostics")->m_pFeature, &Diagnostics);
+	EXPECT_EQ(Model.FindCard("qm.diagnostics")->m_FeatureId, "qm.diagnostics");
 	Diagnostics.m_Enabled = false;
-	EXPECT_FALSE(Model.FindCard("qm.diagnostics")->m_pFeature->m_Enabled);
+	EXPECT_FALSE(Model.FindFeature(Model.FindCard("qm.diagnostics")->m_FeatureId)->m_Enabled);
 }
 
 TEST(QmUiModel, FiltersCardsByPage)
@@ -27,8 +27,8 @@ TEST(QmUiModel, FiltersCardsByPage)
 	SQmFeatureModel Search{"qm.search", "qm.search.title", false, true};
 	ASSERT_TRUE(Model.RegisterFeature(Diagnostics));
 	ASSERT_TRUE(Model.RegisterFeature(Search));
-	ASSERT_TRUE(Model.RegisterCard({EQmUiPage::HOME, "qm.diagnostics", "activity", &Diagnostics}));
-	ASSERT_TRUE(Model.RegisterCard({EQmUiPage::SEARCH, "qm.search", "magnifying-glass", &Search}));
+	ASSERT_TRUE(Model.RegisterCard({EQmUiPage::HOME, "qm.diagnostics", "activity", Diagnostics}));
+	ASSERT_TRUE(Model.RegisterCard({EQmUiPage::SEARCH, "qm.search", "magnifying-glass", Search}));
 	const auto vHomeCards = Model.CardsForPage(EQmUiPage::HOME);
 	const auto vSearchCards = Model.CardsForPage(EQmUiPage::SEARCH);
 	ASSERT_EQ(vHomeCards.size(), 1);
@@ -42,7 +42,7 @@ TEST(QmUiModel, KeepsFindCardPointersStableAndFreezesRegistration)
 	CQmUiModel Model;
 	SQmFeatureModel First{"qm.first", "qm.first.title", false, true};
 	ASSERT_TRUE(Model.RegisterFeature(First));
-	ASSERT_TRUE(Model.RegisterCard({EQmUiPage::HOME, "qm.first", "circle", &First}));
+	ASSERT_TRUE(Model.RegisterCard({EQmUiPage::HOME, "qm.first", "circle", First}));
 	const SQmUiCard *pFirst = Model.FindCard("qm.first");
 	ASSERT_NE(pFirst, nullptr);
 	std::deque<std::string> Ids;
@@ -55,12 +55,12 @@ TEST(QmUiModel, KeepsFindCardPointersStableAndFreezesRegistration)
 		Ids.push_back(Id);
 		Features.push_back({Ids.back().c_str(), "qm.card.title", false, true});
 		ASSERT_TRUE(Model.RegisterFeature(Features.back()));
-		ASSERT_TRUE(Model.RegisterCard({EQmUiPage::HOME, Ids.back().c_str(), "circle", &Features.back()}));
+		ASSERT_TRUE(Model.RegisterCard({EQmUiPage::HOME, Ids.back().c_str(), "circle", Features.back()}));
 	}
 	EXPECT_EQ(Model.FindCard("qm.first"), pFirst);
 
 	Model.Freeze();
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.after_freeze", "circle", &First}));
+	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.after_freeze", "circle", First}));
 }
 
 TEST(QmUiModel, RejectsUnstableIdsAndUnknownFeatures)
@@ -72,15 +72,15 @@ TEST(QmUiModel, RejectsUnstableIdsAndUnknownFeatures)
 	SQmFeatureModel Feature{"qm.valid", "title", false, true};
 	SQmFeatureModel Unknown{"qm.unknown", "title", false, true};
 	ASSERT_TRUE(Model.RegisterFeature(Feature));
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.valid", "circle", &Unknown}));
+	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.valid", "circle", Unknown}));
 	SQmFeatureModel SameId{"qm.valid", "other-title", false, true};
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.same-model", "circle", &SameId}));
+	EXPECT_TRUE(Model.RegisterCard({EQmUiPage::HOME, "qm.same-model", "circle", SameId}));
 	SQmFeatureModel NoId{nullptr, "title", false, true};
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.no-feature-id", "circle", &NoId}));
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.valid ", "circle", &Feature}));
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "", "circle", &Feature}));
-	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.", "circle", &Feature}));
-	EXPECT_FALSE(Model.RegisterCard({static_cast<EQmUiPage>(99), "qm.other", "circle", &Feature}));
+	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.no-feature-id", "circle", NoId}));
+	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.valid ", "circle", Feature}));
+	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "", "circle", Feature}));
+	EXPECT_FALSE(Model.RegisterCard({EQmUiPage::HOME, "qm.", "circle", Feature}));
+	EXPECT_FALSE(Model.RegisterCard({static_cast<EQmUiPage>(99), "qm.other", "circle", Feature}));
 }
 
 namespace

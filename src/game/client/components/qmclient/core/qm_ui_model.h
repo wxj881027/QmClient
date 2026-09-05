@@ -44,21 +44,21 @@ struct SQmUiCard
 	EQmUiPage m_Page = EQmUiPage::HOME;
 	std::string m_Id;
 	std::string m_IconId;
-	const SQmFeatureModel *m_pFeature = nullptr;
+	std::string m_FeatureId;
 
 	SQmUiCard() = default;
-	SQmUiCard(EQmUiPage Page, const char *pId, const char *pIconId, const SQmFeatureModel *pFeature) :
+	SQmUiCard(EQmUiPage Page, const char *pId, const char *pIconId, const SQmFeatureModel &Feature) :
 		m_Page(Page),
 		m_Id(pId ? pId : ""),
 		m_IconId(pIconId ? pIconId : ""),
-		m_pFeature(pFeature)
+		m_FeatureId(Feature.m_Id)
 	{
 	}
-	SQmUiCard(EQmUiPage Page, std::string Id, std::string IconId, const SQmFeatureModel *pFeature) :
+	SQmUiCard(EQmUiPage Page, std::string Id, std::string IconId, const SQmFeatureModel &Feature) :
 		m_Page(Page),
 		m_Id(std::move(Id)),
 		m_IconId(std::move(IconId)),
-		m_pFeature(pFeature)
+		m_FeatureId(Feature.m_Id)
 	{
 	}
 };
@@ -71,7 +71,8 @@ class CQmUiModel final
 	bool m_Frozen = false;
 
 public:
-	bool RegisterFeature(const SQmFeatureModel &Feature);
+	// Feature 必须由调用方持有，并且生命周期长于本 registry。
+	bool RegisterFeature(SQmFeatureModel &Feature);
 	bool RegisterCard(SQmUiCard Card);
 	void Freeze() { m_Frozen = true; }
 	const SQmFeatureModel *FindFeature(const std::string &Id) const;

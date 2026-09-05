@@ -62,6 +62,7 @@ class CQmPlayerIndicator final
 	SQmFeatureModel m_Model{"qm.player_indicator", "qm.player_indicator.title", false, true};
 
 public:
+	SQmFeatureModel &Model() { return m_Model; }
 	const SQmFeatureModel &Model() const { return m_Model; }
 	void UpdateModel(bool Enabled, bool Available)
 	{

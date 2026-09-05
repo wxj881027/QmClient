@@ -31,8 +31,8 @@ void CQmRuntime::OnInit()
 	const bool PlayerIndicatorFeatureRegistered = m_UiModel.RegisterFeature(m_PlayerIndicator.Model());
 	if(!DiagnosticsFeatureRegistered || !PlayerIndicatorFeatureRegistered)
 		log_error("qm/runtime", "failed to register a feature model");
-	const bool DiagnosticsCardRegistered = m_UiModel.RegisterCard({EQmUiPage::HOME, "qm.diagnostics", "activity", &m_DiagnosticsModel});
-	const bool PlayerIndicatorCardRegistered = m_UiModel.RegisterCard({EQmUiPage::HOME, "qm.player_indicator", "compass", &m_PlayerIndicator.Model()});
+	const bool DiagnosticsCardRegistered = m_UiModel.RegisterCard({EQmUiPage::HOME, "qm.diagnostics", "activity", m_DiagnosticsModel});
+	const bool PlayerIndicatorCardRegistered = m_UiModel.RegisterCard({EQmUiPage::HOME, "qm.player_indicator", "compass", m_PlayerIndicator.Model()});
 	if(!DiagnosticsCardRegistered || !PlayerIndicatorCardRegistered)
 		log_error("qm/runtime", "failed to register a UI card");
 	m_UiModel.Freeze();
