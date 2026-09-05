@@ -323,10 +323,10 @@ void CQmDiagnostics::Shutdown()
 
 void CQmDiagnostics::BeginFrame()
 {
-	if(!m_HotPathActive.load(std::memory_order_acquire) || m_WriteFailed)
+	if(!m_HotPathActive.load(std::memory_order_acquire))
 		return;
 	CheckAsyncWriteError();
-	if(m_WriteFailed)
+	if(!m_HotPathActive.load(std::memory_order_acquire))
 		return;
 
 	const int64_t Now = time_get_nanoseconds().count();
@@ -356,7 +356,7 @@ void CQmDiagnostics::BeginFrame()
 
 void CQmDiagnostics::EndFrame()
 {
-	if(!m_HotPathActive.load(std::memory_order_acquire) || m_WriteFailed || m_FrameStart == 0)
+	if(!m_HotPathActive.load(std::memory_order_acquire) || m_FrameStart == 0)
 		return;
 
 	m_FrameStart = 0;
@@ -863,10 +863,19 @@ void CQmDiagnostics::WriteWindowSummary()
 	if(!m_pAsyncSession || m_vFrameSamples.empty())
 		return;
 
-	char aJson[1024];
-	str_format(aJson, sizeof(aJson), "{\"type\":\"frame_window\",\"frames\":%u,\"frame_interval_avg_ms\":%.3f,\"frame_interval_p95_ms\":%.3f,\"frame_interval_p99_ms\":%.3f,\"frame_interval_max_ms\":%.3f,\"frame_interval_1percent_low_fps\":%.3f,\"update_cpu_avg_ms\":%.3f,\"update_cpu_p95_ms\":%.3f,\"update_cpu_p99_ms\":%.3f,\"update_cpu_max_ms\":%.3f,\"render_cpu_avg_ms\":%.3f,\"render_cpu_p95_ms\":%.3f,\"render_cpu_p99_ms\":%.3f,\"render_cpu_max_ms\":%.3f,\"texture_bytes\":%" PRIu64 ",\"buffer_bytes\":%" PRIu64 ",\"write_failed\":%s}", m_WindowFrameCount, QmDiagnostics::Average(m_vFrameSamples), QmDiagnostics::Percentile(m_vFrameSamples, 0.95), QmDiagnostics::Percentile(m_vFrameSamples, 0.99), QmDiagnostics::Percentile(m_vFrameSamples, 1.0), QmDiagnostics::OnePercentLow(m_vFrameSamples), QmDiagnostics::Average(m_vUpdateSamples), QmDiagnostics::Percentile(m_vUpdateSamples, 0.95), QmDiagnostics::Percentile(m_vUpdateSamples, 0.99), QmDiagnostics::Percentile(m_vUpdateSamples, 1.0), QmDiagnostics::Average(m_vRenderSamples), QmDiagnostics::Percentile(m_vRenderSamples, 0.95), QmDiagnostics::Percentile(m_vRenderSamples, 0.99), QmDiagnostics::Percentile(m_vRenderSamples, 1.0), m_pGraphics ? m_pGraphics->TextureMemoryUsage() : 0, m_pGraphics ? m_pGraphics->BufferMemoryUsage() : 0, m_WriteFailed ? "true" : "false");
-	WriteJsonLine(aJson);
-	WriteFeatureWindowSummaries();
+	try
+	{
+		char aJson[1024];
+		str_format(aJson, sizeof(aJson), "{\"type\":\"frame_window\",\"frames\":%u,\"frame_interval_avg_ms\":%.3f,\"frame_interval_p95_ms\":%.3f,\"frame_interval_p99_ms\":%.3f,\"frame_interval_max_ms\":%.3f,\"frame_interval_1percent_low_fps\":%.3f,\"update_cpu_avg_ms\":%.3f,\"update_cpu_p95_ms\":%.3f,\"update_cpu_p99_ms\":%.3f,\"update_cpu_max_ms\":%.3f,\"render_cpu_avg_ms\":%.3f,\"render_cpu_p95_ms\":%.3f,\"render_cpu_p99_ms\":%.3f,\"render_cpu_max_ms\":%.3f,\"texture_bytes\":%" PRIu64 ",\"buffer_bytes\":%" PRIu64 ",\"write_failed\":%s}", m_WindowFrameCount, QmDiagnostics::Average(m_vFrameSamples), QmDiagnostics::Percentile(m_vFrameSamples, 0.95), QmDiagnostics::Percentile(m_vFrameSamples, 0.99), QmDiagnostics::Percentile(m_vFrameSamples, 1.0), QmDiagnostics::OnePercentLow(m_vFrameSamples), QmDiagnostics::Average(m_vUpdateSamples), QmDiagnostics::Percentile(m_vUpdateSamples, 0.95), QmDiagnostics::Percentile(m_vUpdateSamples, 0.99), QmDiagnostics::Percentile(m_vUpdateSamples, 1.0), QmDiagnostics::Average(m_vRenderSamples), QmDiagnostics::Percentile(m_vRenderSamples, 0.95), QmDiagnostics::Percentile(m_vRenderSamples, 0.99), QmDiagnostics::Percentile(m_vRenderSamples, 1.0), m_pGraphics ? m_pGraphics->TextureMemoryUsage() : 0, m_pGraphics ? m_pGraphics->BufferMemoryUsage() : 0, m_WriteFailed ? "true" : "false");
+		WriteJsonLine(aJson);
+		WriteFeatureWindowSummaries();
+	}
+	catch(...)
+	{
+		// 分位数统计会在汇总阶段申请临时排序空间。诊断是旁路能力，
+		// 内存不足时丢弃本窗口汇总，不能让游戏主循环异常退出。
+		log_warn("qm/diagnostics", "failed to allocate frame window summary");
+	}
 }
 
 void CQmDiagnostics::WriteDiagnosticsSummary()

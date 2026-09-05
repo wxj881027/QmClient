@@ -4781,7 +4781,11 @@ static bool SaveUnknownCommandCallback(const char *pCommand, void *pUser)
 static bool MigrateUnknownCommandCallback(const char *pCommand, void *pUser)
 {
 	CClient *pClient = static_cast<CClient *>(pUser);
-	return pClient->GameClient()->OnConfigUnknownCommand(pCommand, pClient->ConfigManager());
+	// autoexec 中的普通未知命令保持静默且不持久化；只有 Qm 白名单旧键
+	// 交给迁移器处理。这样不把 autoexec 的独立内容复制到主配置，也不在
+	// 每次启动时制造无关的 "No such command" 噪声。
+	pClient->GameClient()->OnConfigUnknownCommand(pCommand, pClient->ConfigManager());
+	return true;
 }
 
 struct SUnknownCommandCallbackGuard
