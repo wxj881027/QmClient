@@ -25,3 +25,5 @@ CQmRuntime 组合根
 图形事件 listener 目前采用“每个 graphics source 注册一次”的策略。listener 通过可失效 token 绑定 source 生命周期，runtime shutdown 或切换 source 时先使 token 失效；回调再以当前 diagnostics session generation 作为写入闸门。这样避免按 session 重复注册，也避免旧 graphics source 的迟到事件污染新 session。若未来需要真正移除任意 listener，再单独设计带句柄的官方接口，不在 feature 层私自维护函数指针。
 
 旧 QmClient/TClient 代码只作为功能盘点和行为对照来源。新实现是按功能重新设计、重构和重实现，不要求复制旧代码结构，也不得依赖 TClient 字段。
+
+配置兼容层也有明确边界：主配置沿用官方未知命令保留机制，autoexec 只让 Qm 迁移器识别白名单旧键，不把普通未知命令复制回主配置；命令行和 `-f` 外部配置在同一次启动迁移收口前参与旧键捕获。这样既不丢旧配置，又不会改变 autoexec 的独立语义。

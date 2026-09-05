@@ -87,6 +87,10 @@ def run_client(
     user_dir.mkdir()
     if base_config is not None:
         shutil.copy2(base_config, user_dir / "settings_ddnet.cfg")
+    (user_dir / "autoexec_client.cfg").write_text(
+        "qmclient_smoke_unknown_command 1\n",
+        encoding="utf-8",
+    )
     (run_dir / "storage.cfg").write_text(
         f"add_path {user_dir.as_posix()}\n"
         f"add_path {data_dir.as_posix()}\n",
@@ -161,6 +165,7 @@ def main() -> int:
             "gfx_fullscreen 0\n"
             "gfx_vsync 0\n"
             "dbg_gfx 0\n"
+            "cl_save_settings 1\n"
             "qm_diagnostics 1\n"
             f"benchmark_quit 2 {benchmark_file.as_posix()}\n",
             args.timeout,
@@ -196,6 +201,11 @@ def main() -> int:
             return fail("report 缺少 backend_config 或 active_api_name")
         if not benchmark_file.is_file() or benchmark_file.stat().st_size == 0:
             return fail("benchmark 文件缺失或为空")
+        settings_file = user_dir / "settings_ddnet.cfg"
+        if not settings_file.is_file():
+            return fail("客户端退出后未生成 settings_ddnet.cfg")
+        if "qmclient_smoke_unknown_command" in settings_file.read_text(encoding="utf-8"):
+            return fail("autoexec 的普通未知命令被错误写回 settings_ddnet.cfg")
 
         disabled_dir = temp_dir / "disabled"
         disabled_user_dir = disabled_dir / "user"
@@ -209,6 +219,7 @@ def main() -> int:
             "gfx_fullscreen 0\n"
             "gfx_vsync 0\n"
             "dbg_gfx 0\n"
+            "cl_save_settings 1\n"
             "qm_diagnostics 0\n"
             f"benchmark_quit 2 {disabled_benchmark_file.as_posix()}\n",
             args.timeout,

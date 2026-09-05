@@ -4749,6 +4749,8 @@ void CClient::HandleMapPath(const char *pPath)
 static bool UnknownArgumentCallback(const char *pCommand, void *pUser)
 {
 	CClient *pClient = static_cast<CClient *>(pUser);
+	if(pClient->GameClient()->OnConfigUnknownCommand(pCommand, pClient->ConfigManager()))
+		return true;
 	if(str_startswith(pCommand, CONNECTLINK_NO_SLASH))
 	{
 		pClient->HandleConnectLink(pCommand);
@@ -4774,6 +4776,12 @@ static bool SaveUnknownCommandCallback(const char *pCommand, void *pUser)
 		return true;
 	pClient->ConfigManager()->StoreUnknownCommand(pCommand);
 	return true;
+}
+
+static bool MigrateUnknownCommandCallback(const char *pCommand, void *pUser)
+{
+	CClient *pClient = static_cast<CClient *>(pUser);
+	return pClient->GameClient()->OnConfigUnknownCommand(pCommand, pClient->ConfigManager());
 }
 
 struct SUnknownCommandCallbackGuard
@@ -5178,6 +5186,8 @@ int main(int argc, const char **argv)
 
 		if(!ConfigFileError)
 		{
+			// autoexec 只参与旧键迁移，不把普通未知命令写回主配置。
+			pConsole->SetUnknownCommandCallback(MigrateUnknownCommandCallback, pClient);
 			// execute autoexec file
 			if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, IStorage::TYPE_ALL))
 			{
@@ -5187,7 +5197,6 @@ int main(int argc, const char **argv)
 			{
 				pConsole->ExecuteFile(AUTOEXEC_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
 			}
-			pClient->GameClient()->OnConfigLoaded(pClient->ConfigManager());
 		}
 	}
 	if(ConfigFileError)
@@ -5214,6 +5223,7 @@ int main(int argc, const char **argv)
 	pConsole->SetUnknownCommandCallback(UnknownArgumentCallback, pClient);
 	pConsole->ParseArguments(argc - 1, &argv[1]);
 	pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
+	pClient->GameClient()->OnConfigLoaded(pClient->ConfigManager());
 
 	if(pSteam->GetConnectAddress())
 	{
