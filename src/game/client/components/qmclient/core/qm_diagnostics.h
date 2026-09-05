@@ -109,6 +109,7 @@ private:
 	void WriteDiagnosticsSummary();
 	void WriteReport();
 	void CheckAsyncWriteError();
+	void CheckAsyncWriteErrorLocked();
 	void MarkWriteFailure(const char *pOperation);
 	void PushSample(QmDiagnostics::CSampleWindow &Samples, int64_t Sample);
 	void RecordNonBlockingDrop(ENonBlockingWriteResult Reason);

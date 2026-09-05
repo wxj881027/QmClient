@@ -531,7 +531,7 @@ void CQmDiagnostics::RecordEventImpl(const char *pName, const char *pDetails, bo
 	try
 	{
 		if(!NonBlocking)
-			CheckAsyncWriteError();
+			CheckAsyncWriteErrorLocked();
 		if(m_WriteFailed)
 			return;
 
@@ -700,6 +700,16 @@ void CQmDiagnostics::RecordNonBlockingDrop(ENonBlockingWriteResult Reason)
 }
 
 void CQmDiagnostics::CheckAsyncWriteError()
+{
+	// BeginFrame 处于游戏主循环热路径，不能等待 session lock。若当前正由
+	// 图形回调或 shutdown 持锁，本帧跳过检查，下一帧继续检查即可。
+	if(!m_SessionLock.try_lock())
+		return;
+	std::unique_lock<CLock> SessionLock(m_SessionLock, std::adopt_lock);
+	CheckAsyncWriteErrorLocked();
+}
+
+void CQmDiagnostics::CheckAsyncWriteErrorLocked()
 {
 	if(m_pAsyncSession && aio_error(m_pAsyncSession) != 0)
 		MarkWriteFailure("session write");
