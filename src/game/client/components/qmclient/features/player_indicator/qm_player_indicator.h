@@ -10,7 +10,7 @@
 
 #include <game/client/render.h>
 
-#include "../../core/qm_ui_model.h"
+#include <game/client/ui/card_registry.h>
 
 #include <array>
 

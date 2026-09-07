@@ -15,6 +15,12 @@ enum class EQmRenderSlot
 	HUD_OVERLAY,
 	// 菜单和外部 UI 层。
 	MENU_OVERLAY,
+	COUNT,
 };
+
+constexpr bool QmRenderSlotValid(EQmRenderSlot Slot)
+{
+	return Slot >= EQmRenderSlot::WORLD_BACKGROUND && Slot < EQmRenderSlot::COUNT;
+}
 
 #endif

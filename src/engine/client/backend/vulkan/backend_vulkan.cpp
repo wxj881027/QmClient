@@ -1641,7 +1641,7 @@ protected:
 			DetailsOffset += static_cast<size_t>(MetadataWritten);
 		}
 		if(DetailsTruncated)
-			str_format(aDetails + std::min(DetailsOffset, sizeof(aDetails) - 1), sizeof(aDetails) - std::min(DetailsOffset, sizeof(aDetails) - 1), ";details_truncated=true");
+			str_copy(aDetails + std::min(DetailsOffset, sizeof(aDetails) - 1), ";details_truncated=true", sizeof(aDetails) - std::min(DetailsOffset, sizeof(aDetails) - 1));
 		EmitGraphicsEvent("graphics.vulkan.device_fault", aDetails);
 	}
 	#endif
@@ -4467,9 +4467,7 @@ public:
 				vkGetPhysicalDeviceMemoryProperties(vDeviceList[FoundDeviceIndex], &MemoryProperties);
 				m_pDiagnostics->m_VulkanMemoryHeapCount = static_cast<int>(MemoryProperties.memoryHeapCount);
 				m_pDiagnostics->m_VulkanMemoryTypeCount = static_cast<int>(MemoryProperties.memoryTypeCount);
-				VkPhysicalDeviceFeatures Features;
-				vkGetPhysicalDeviceFeatures(vDeviceList[FoundDeviceIndex], &Features);
-				m_pDiagnostics->m_VulkanTimestampQuerySupported = Features.timestampComputeAndGraphics == VK_TRUE;
+				m_pDiagnostics->m_VulkanTimestampQuerySupported = DeviceProp.limits.timestampComputeAndGraphics == VK_TRUE;
 				if(!m_pDiagnostics->m_VulkanTimestampQuerySupported)
 					str_copy(m_pDiagnostics->m_aVulkanTimestampQueryUnavailableReason, "timestampComputeAndGraphics=false");
 			}

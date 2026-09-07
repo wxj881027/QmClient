@@ -53,27 +53,36 @@ def run_hidden_client(command: list[str], run_dir: Path, timeout: float):
 
     environment = os.environ.copy()
     environment["DDNET_TEST_HIDE_WINDOW"] = "1"
-    process = subprocess.Popen(
-        command,
-        cwd=run_dir,
-        env=environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        errors="replace",
-        startupinfo=startup_info,
-        creationflags=creation_flags,
+    # 轮询窗口期间不能让无人读取的 stdout 管道阻塞客户端。
+    log_dir = REPO_ROOT / "tmp"
+    log_dir.mkdir(exist_ok=True)
+    log_file_descriptor, log_file_name = tempfile.mkstemp(
+        prefix="qmclient-runtime-smoke-", suffix=".log", dir=log_dir, text=True
     )
-    deadline = time.monotonic() + timeout
-    while process.poll() is None:
-        hide_process_windows(process.pid)
-        if time.monotonic() >= deadline:
-            process.kill()
-            output, _ = process.communicate()
-            return None, f"客户端超过 {timeout:.1f}s 未退出\n{output[-2000:]}"
-        time.sleep(0.02)
-    output, _ = process.communicate()
-    return process.returncode, output
+    log_path = Path(log_file_name)
+    with os.fdopen(log_file_descriptor, mode="w+t", encoding="utf-8", errors="replace") as log:
+        process = subprocess.Popen(
+            command,
+            cwd=run_dir,
+            env=environment,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            startupinfo=startup_info,
+            creationflags=creation_flags,
+        )
+        deadline = time.monotonic() + timeout
+        timed_out = False
+        while process.poll() is None:
+            hide_process_windows(process.pid)
+            if time.monotonic() >= deadline:
+                timed_out = True
+                process.kill()
+                break
+            time.sleep(0.02)
+        process.wait()
+        if timed_out:
+            return None, f"客户端超过 {timeout:.1f}s 未退出；日志: {log_path}"
+        return process.returncode, f"日志: {log_path}"
 
 
 def run_client(
@@ -101,12 +110,12 @@ def run_client(
     config_file = run_dir / "smoke.cfg"
     config_file.write_text(config, encoding="utf-8")
     return_code, output = run_hidden_client(
-        [str(executable), "-s", "-f", str(config_file)], run_dir, timeout
+        [str(executable), "-f", str(config_file)], run_dir, timeout
     )
     if return_code is None:
         return None, output
     if return_code != 0:
-        return None, f"客户端退出码为 {return_code}\n{output[-2000:]}"
+        return None, f"客户端退出码为 {return_code}\n{output}"
     return return_code, None
 
 
@@ -128,11 +137,13 @@ def main() -> int:
         "--base-config",
         type=Path,
         default=None,
-        help="复制到临时用户目录的初始化 settings_ddnet.cfg；未指定时自动使用 APPDATA/DDNet/settings_ddnet.cfg（如果存在）",
+        help="显式指定测试 fixture 配置；默认空配置，不读取正式客户端 settings/binds",
     )
     args = parser.parse_args()
 
     build_dir = args.build_dir.resolve()
+    if not build_dir.is_relative_to(REPO_ROOT):
+        return fail("--build-dir 必须位于当前工作区")
     executable = build_dir / "DDNet.exe"
     data_dir = build_dir / "data"
     if not executable.is_file():
@@ -143,18 +154,13 @@ def main() -> int:
         return fail("--timeout 必须大于 0")
 
     base_config = args.base_config
-    if base_config is None:
-        appdata = os.environ.get("APPDATA")
-        if appdata:
-            candidate = Path(appdata) / "DDNet" / "settings_ddnet.cfg"
-            if candidate.is_file():
-                base_config = candidate
-    elif not base_config.is_file():
+    if base_config is not None and not base_config.is_file():
         return fail(f"找不到初始化配置: {base_config}")
     if base_config is not None:
         base_config = base_config.resolve()
 
-    with tempfile.TemporaryDirectory(prefix="qmclient-runtime-smoke-") as temp_name:
+    (REPO_ROOT / "tmp").mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="qmclient-runtime-smoke-", dir=REPO_ROOT / "tmp") as temp_name:
         temp_dir = Path(temp_name)
         user_dir = temp_dir / "user"
         benchmark_file = temp_dir / "benchmark.csv"

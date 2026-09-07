@@ -332,6 +332,14 @@ if(NOT MSVC AND NOT HAIKU)
     endif()
   endif()
 
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set_property(SOURCE
+      src/engine/client/backend_sdl.cpp
+      src/engine/client/graphics_threaded.cpp
+      src/game/client/components/qmclient/core/qm_diagnostics.cpp
+      APPEND PROPERTY COMPILE_OPTIONS -fexceptions)
+  endif()
+
   # Disable exceptions as DDNet does not use them.
   add_cxx_compiler_flag_if_supported(OUR_FLAGS -fno-exceptions)
 
@@ -1775,6 +1783,13 @@ set(EXPECTED_DATA
   menuimages/play_game.png
   menuimages/settings.png
   particles.png
+  qmclient/icons/LICENSE_PHOSPHOR.txt
+  qmclient/icons/qm_icons_bold_1x.json
+  qmclient/icons/qm_icons_bold_1x.png
+  qmclient/icons/qm_icons_bold_2x.json
+  qmclient/icons/qm_icons_bold_2x.png
+  qmclient/icons/qm_icons_bold_4x.json
+  qmclient/icons/qm_icons_bold_4x.png
   race_flag.png
   shader/pipeline.frag
   shader/pipeline.vert
@@ -2533,6 +2548,21 @@ endif()
 
 if(CLIENT)
   # Sources
+  add_custom_command(
+    OUTPUT "${PROJECT_BINARY_DIR}/src/generated/qm_icon_manifest.h"
+    COMMAND ${Python3_EXECUTABLE} "${PROJECT_SOURCE_DIR}/qmclient_scripts/generate_qm_icon_manifest.py"
+      --source "${PROJECT_SOURCE_DIR}/data/qmclient/icons"
+      --output "${PROJECT_BINARY_DIR}/src/generated/qm_icon_manifest.h"
+    DEPENDS
+      qmclient_scripts/generate_qm_icon_manifest.py
+      data/qmclient/icons/qm_icons_bold_1x.json
+      data/qmclient/icons/qm_icons_bold_1x.png
+      data/qmclient/icons/qm_icons_bold_2x.json
+      data/qmclient/icons/qm_icons_bold_2x.png
+      data/qmclient/icons/qm_icons_bold_4x.json
+      data/qmclient/icons/qm_icons_bold_4x.png
+    VERBATIM
+  )
   set_src(STEAMAPI_SRC GLOB_RECURSE src/steam
     # tidy-alphabetical-start
     steam_api_flat.h
@@ -2726,26 +2756,50 @@ if(CLIENT)
     components/qmclient/core/qm_diagnostics_json.h
     components/qmclient/core/qm_diagnostics_metrics.h
     components/qmclient/core/qm_diagnostics_retention.h
-    components/qmclient/core/qm_game_state_adapter.cpp
-    components/qmclient/core/qm_game_state_adapter.h
     components/qmclient/core/qm_i18n.h
     components/qmclient/core/qm_render_slots.h
+    components/qmclient/core/qm_dispatch_logic.h
     components/qmclient/core/qm_runtime.cpp
     components/qmclient/core/qm_runtime.h
-    components/qmclient/core/qm_ui_model.cpp
-    components/qmclient/core/qm_ui_model.h
     components/qmclient/features/player_indicator/qm_player_indicator.cpp
     components/qmclient/features/player_indicator/qm_player_indicator.h
     components/qmclient/features/player_indicator/qm_player_indicator_logic.h
     components/qmclient/features/auto_team_lock/qm_auto_team_lock.h
     components/qmclient/features/auto_team_lock/qm_auto_team_lock_adapter.cpp
     components/qmclient/features/auto_team_lock/qm_auto_team_lock_adapter.h
+    components/qmclient/features/player_indicator/qm_player_indicator_adapter.cpp
+    components/qmclient/features/player_indicator/qm_player_indicator_adapter.h
     components/qmclient/features/auto_team_lock/qm_auto_team_lock_logic.h
     components/qmclient/features/speedrun_timer/qm_speedrun_timer.cpp
     components/qmclient/features/speedrun_timer/qm_speedrun_timer.h
     components/qmclient/features/speedrun_timer/qm_speedrun_timer_adapter.cpp
     components/qmclient/features/speedrun_timer/qm_speedrun_timer_adapter.h
     components/qmclient/features/speedrun_timer/qm_speedrun_timer_logic.h
+    ui/card_registry.cpp
+    ui/card_registry.h
+    ui/card_order_model.cpp
+    ui/card_order_model.h
+    ui/card_deck_projection.cpp
+    ui/card_deck_projection.h
+    ui/card_presentation.cpp
+    ui/card_presentation.h
+    ui/card_ui_model.cpp
+    ui/card_ui_model.h
+    ui/asset_page_resources.cpp
+    ui/asset_page_resources.h
+    ui/card_preferences_storage.cpp
+    ui/card_preferences_storage.h
+    ui/card_settings_adapter.h
+    components/qmclient/presentation/qm_card_settings_adapter.cpp
+    components/qmclient/presentation/qm_card_settings_adapter.h
+    components/qmclient/presentation/qm_card_settings_view.cpp
+    components/qmclient/presentation/qm_card_settings_view.h
+    ui/resource_page_cache.cpp
+    ui/resource_page_loader.cpp
+    ui/resource_page_loader.h
+    ui/resource_page_graphics.cpp
+    ui/resource_page_graphics.h
+    ui/resource_page_cache.h
     components/race_demo.cpp
     components/race_demo.h
     components/scoreboard.cpp
@@ -2930,6 +2984,7 @@ if(CLIENT)
     src/generated/client_data.h
     src/generated/client_data7.cpp
     src/generated/client_data7.h
+    src/generated/qm_icon_manifest.h
     # tidy-alphabetical-end
   )
   set(CLIENT_SRC ${ENGINE_CLIENT} ${PLATFORM_CLIENT} ${GAME_CLIENT} ${GAME_EDITOR} ${GAME_MAP} ${GAME_GENERATED_CLIENT})
@@ -3499,7 +3554,14 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qmclient_auto_team_lock_test.cpp
     qmclient_player_indicator_test.cpp
     qmclient_speedrun_timer_test.cpp
-    qmclient_ui_model_test.cpp
+    qmclient_card_registry_test.cpp
+    qmclient_card_order_model_test.cpp
+    qmclient_card_deck_projection_test.cpp
+    qmclient_card_presentation_test.cpp
+    qmclient_ui_foundation_test.cpp
+    qmclient_card_preferences_test.cpp
+    qmclient_card_settings_adapter_test.cpp
+    qmclient_dispatch_test.cpp
     replace_words_test.cpp
     score_test.cpp
     secure_random_test.cpp
@@ -3537,7 +3599,17 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/core/qm_config_migration.cpp
     src/game/client/components/qmclient/core/qm_config_migration.h
     src/game/client/components/qmclient/core/qm_diagnostics.cpp
-    src/game/client/components/qmclient/core/qm_ui_model.cpp
+    src/game/client/ui/card_registry.cpp
+    src/game/client/ui/card_order_model.cpp
+    src/game/client/ui/card_deck_projection.cpp
+    src/game/client/ui/card_presentation.cpp
+    src/game/client/ui/card_ui_model.cpp
+    src/game/client/ui/card_preferences_storage.cpp
+    src/game/client/ui/asset_page_resources.cpp
+    src/game/client/components/qmclient/presentation/qm_card_settings_adapter.cpp
+    src/game/client/ui/resource_page_cache.cpp
+    src/game/client/ui/resource_page_loader.cpp
+    src/game/client/ui/resource_page_graphics.cpp
     # tidy-alphabetical-end
   )
 
@@ -4250,6 +4322,9 @@ foreach(target ${TARGETS_OWN})
   target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CONF_DEBUG>)
   target_include_directories(${target} SYSTEM PRIVATE ${CURL_INCLUDE_DIRS} ${SQLite3_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
   target_compile_definitions(${target} PRIVATE GLEW_STATIC)
+  if(GLEW_BUNDLED)
+    target_compile_definitions(${target} PRIVATE GLEW_NO_GLU)
+  endif()
   target_compile_definitions(${target} PRIVATE _FILE_OFFSET_BITS=64) # Ensure off_t is 64 bit for ftello and fseeko functions
 
   # Enable additional assertions. See:

@@ -10,10 +10,14 @@
 #include <engine/textrender.h>
 
 #include <game/client/gameclient.h>
+#include <game/client/ui/asset_page_resources.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 
+#include <algorithm>
+#include <array>
 #include <chrono>
+#include <type_traits>
 
 using namespace std::chrono_literals;
 
@@ -229,6 +233,35 @@ static size_t gs_aCustomListSize[NUMBER_OF_ASSETS_TABS] = {
 static CLineInputBuffered<64> s_aFilterInputs[NUMBER_OF_ASSETS_TABS];
 
 static int s_CurCustomTab = ASSETS_TAB_ENTITIES;
+static std::array<uint32_t, NUMBER_OF_ASSETS_TABS> s_aQmAssetRevisions{};
+
+static EAssetPageKind QmAssetPageKind(int Tab)
+{
+	return static_cast<EAssetPageKind>(std::clamp(Tab, 0, NUMBER_OF_ASSETS_TABS - 1));
+}
+
+template<typename TName>
+static void ApplyQmAssetNames(std::vector<TName> &vList, const std::vector<std::string> &vNames, IGraphics *pGraphics)
+{
+	for(auto &Item : vList)
+	{
+		if constexpr(std::is_same_v<TName, CMenus::SCustomEntities>)
+		{
+			for(auto &Image : Item.m_aImages)
+				pGraphics->UnloadTexture(&Image.m_Texture);
+		}
+		else
+			pGraphics->UnloadTexture(&Item.m_RenderTexture);
+	}
+	vList.clear();
+	vList.reserve(vNames.size());
+	for(const auto &Name : vNames)
+	{
+		TName Item{};
+		str_copy(Item.m_aName, Name.c_str());
+		vList.push_back(Item);
+	}
+}
 
 static const CMenus::SCustomItem *GetCustomItem(int CurTab, size_t Index)
 {
@@ -377,6 +410,28 @@ void CMenus::RenderSettingsAssets(CUIRect MainView)
 		}
 	}
 
+	CAssetPageResources *pQmResources = GameClient()->m_QmRuntime.AssetPageResources();
+	const EAssetPageKind QmKind = QmAssetPageKind(s_CurCustomTab);
+	const SAssetPageSnapshot QmSnapshot = pQmResources ? pQmResources->BeginFrame(QmKind) : SAssetPageSnapshot{};
+	if(pQmResources && QmSnapshot.m_State == EAssetListState::READY &&
+		s_aQmAssetRevisions[s_CurCustomTab] != QmSnapshot.m_Revision)
+	{
+		if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
+			ApplyQmAssetNames(m_vEntitiesList, *QmSnapshot.m_pNames, Graphics());
+		else if(s_CurCustomTab == ASSETS_TAB_GAME)
+			ApplyQmAssetNames(m_vGameList, *QmSnapshot.m_pNames, Graphics());
+		else if(s_CurCustomTab == ASSETS_TAB_EMOTICONS)
+			ApplyQmAssetNames(m_vEmoticonList, *QmSnapshot.m_pNames, Graphics());
+		else if(s_CurCustomTab == ASSETS_TAB_PARTICLES)
+			ApplyQmAssetNames(m_vParticlesList, *QmSnapshot.m_pNames, Graphics());
+		else if(s_CurCustomTab == ASSETS_TAB_HUD)
+			ApplyQmAssetNames(m_vHudList, *QmSnapshot.m_pNames, Graphics());
+		else if(s_CurCustomTab == ASSETS_TAB_EXTRAS)
+			ApplyQmAssetNames(m_vExtrasList, *QmSnapshot.m_pNames, Graphics());
+		s_aQmAssetRevisions[s_CurCustomTab] = QmSnapshot.m_Revision;
+		gs_aInitCustomList[s_CurCustomTab] = true;
+	}
+
 	auto LoadStartTime = time_get_nanoseconds();
 	SMenuAssetScanUser User;
 	User.m_pUser = this;
@@ -384,7 +439,16 @@ void CMenus::RenderSettingsAssets(CUIRect MainView)
 		if(time_get_nanoseconds() - LoadStartTime > 500ms)
 			RenderLoading(Localize("Loading assets"), "", 0);
 	};
-	if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
+	if(pQmResources)
+	{
+		if(QmSnapshot.m_State != EAssetListState::READY)
+		{
+			CUIRect Status;
+			MainView.HSplitTop(ms_ButtonHeight, &Status, &MainView);
+			Ui()->DoLabel(&Status, QmSnapshot.m_State == EAssetListState::FAILED ? Localize("Error") : Localize("Loading assets"), 14.0f, TEXTALIGN_ML);
+		}
+	}
+	else if(s_CurCustomTab == ASSETS_TAB_ENTITIES)
 	{
 		if(m_vEntitiesList.empty())
 		{
@@ -505,7 +569,8 @@ void CMenus::RenderSettingsAssets(CUIRect MainView)
 	}
 
 	static CListBox s_ListBox;
-	s_ListBox.DoStart(TextureHeight + 15.0f + 10.0f + Margin, SearchListSize, CustomList.w / (Margin + TextureWidth), 1, OldSelected, &CustomList, false);
+	const int PreviewSize = std::clamp(static_cast<int>(TextureWidth * Graphics()->ScreenHeight() / std::max(1.0f, Ui()->Screen()->h)), 32, 512);
+	s_ListBox.DoStart(TextureHeight + 15.0f + 10.0f + Margin, SearchListSize, std::max(1, static_cast<int>(CustomList.w / (Margin + TextureWidth))), 1, OldSelected, &CustomList, false);
 	for(size_t i = 0; i < SearchListSize; ++i)
 	{
 		const SCustomItem *pItem = GetCustomItem(s_CurCustomTab, i);
@@ -553,10 +618,13 @@ void CMenus::RenderSettingsAssets(CUIRect MainView)
 		ItemRect.HSplitTop(15, &ItemRect, &TextureRect);
 		TextureRect.HSplitTop(10, nullptr, &TextureRect);
 		Ui()->DoLabel(&ItemRect, pItem->m_aName, ItemRect.h - 2, TEXTALIGN_MC);
-		if(pItem->m_RenderTexture.IsValid())
+		const IGraphics::CTextureHandle PreviewTexture = pQmResources ?
+			pQmResources->Preview(QmKind, pItem->m_aName, PreviewSize) :
+			pItem->m_RenderTexture;
+		if(PreviewTexture.IsValid() && !PreviewTexture.IsNullTexture())
 		{
 			Graphics()->WrapClamp();
-			Graphics()->TextureSet(pItem->m_RenderTexture);
+			Graphics()->TextureSet(PreviewTexture);
 			Graphics()->QuadsBegin();
 			Graphics()->SetColor(1, 1, 1, 1);
 			IGraphics::CQuadItem QuadItem(TextureRect.x + (TextureRect.w - TextureWidth) / 2, TextureRect.y + (TextureRect.h - TextureHeight) / 2, TextureWidth, TextureHeight);
@@ -564,10 +632,12 @@ void CMenus::RenderSettingsAssets(CUIRect MainView)
 			Graphics()->QuadsEnd();
 			Graphics()->WrapNormal();
 		}
+		else if(pQmResources)
+			Ui()->DoLabel(&TextureRect, pQmResources->PreviewState(QmKind, pItem->m_aName) == EResourcePageState::FAILED ? Localize("Error") : Localize("Loading assets"), 12.0f, TEXTALIGN_MC);
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();
-	if(OldSelected != NewSelected)
+	if(OldSelected != NewSelected && NewSelected >= 0 && static_cast<size_t>(NewSelected) < SearchListSize)
 	{
 		if(GetCustomItem(s_CurCustomTab, NewSelected)->m_aName[0] != '\0')
 		{
@@ -646,6 +716,11 @@ void CMenus::RenderSettingsAssets(CUIRect MainView)
 	static CButtonContainer s_AssetsReloadBtnId;
 	if(DoButton_Menu(&s_AssetsReloadBtnId, FontIcon::ARROW_ROTATE_RIGHT, 0, &ReloadButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 	{
+		if(pQmResources)
+		{
+			pQmResources->Reload(QmKind);
+			s_aQmAssetRevisions[s_CurCustomTab] = 0;
+		}
 		ClearCustomItems(s_CurCustomTab);
 	}
 	TextRender()->SetRenderFlags(0);

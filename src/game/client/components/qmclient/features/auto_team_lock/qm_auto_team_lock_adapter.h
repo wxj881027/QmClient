@@ -8,5 +8,6 @@ class CGameClient;
 class IClient;
 
 SQmAutoTeamLockInput BuildQmAutoTeamLockInput(const CGameClient &GameClient, const IClient &Client);
+void ApplyQmAutoTeamLockAction(CGameClient &GameClient, const SQmAutoTeamLockAction &Action);
 
 #endif

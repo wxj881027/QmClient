@@ -1,0 +1,115 @@
+{
+  "atlas": {
+    "height": 256,
+    "image": "qmclient/icons/qm_icons_bold_2x.png",
+    "padding": 8,
+    "width": 320
+  },
+  "icons": {
+    "bookmark": {
+      "h": 48,
+      "w": 48,
+      "x": 8,
+      "y": 8
+    },
+    "chevron-down": {
+      "h": 48,
+      "w": 48,
+      "x": 72,
+      "y": 8
+    },
+    "close": {
+      "h": 48,
+      "w": 48,
+      "x": 72,
+      "y": 200
+    },
+    "eye": {
+      "h": 48,
+      "w": 48,
+      "x": 200,
+      "y": 8
+    },
+    "eye-off": {
+      "h": 48,
+      "w": 48,
+      "x": 136,
+      "y": 8
+    },
+    "magnifying-glass": {
+      "h": 48,
+      "w": 48,
+      "x": 264,
+      "y": 8
+    },
+    "plus": {
+      "h": 48,
+      "w": 48,
+      "x": 8,
+      "y": 72
+    },
+    "satellite-check": {
+      "h": 48,
+      "w": 48,
+      "x": 72,
+      "y": 72
+    },
+    "satellite-mute": {
+      "h": 48,
+      "w": 48,
+      "x": 136,
+      "y": 72
+    },
+    "satellite-spectator-eye": {
+      "h": 48,
+      "w": 48,
+      "x": 264,
+      "y": 72
+    },
+    "satellite-spectator-eye-closed": {
+      "h": 48,
+      "w": 48,
+      "x": 200,
+      "y": 72
+    },
+    "satellite-swap": {
+      "h": 48,
+      "w": 48,
+      "x": 136,
+      "y": 136
+    },
+    "satellite-swap-incoming": {
+      "h": 48,
+      "w": 48,
+      "x": 8,
+      "y": 136
+    },
+    "satellite-swap-outgoing": {
+      "h": 48,
+      "w": 48,
+      "x": 72,
+      "y": 136
+    },
+    "satellite-switch": {
+      "h": 48,
+      "w": 48,
+      "x": 200,
+      "y": 136
+    },
+    "star": {
+      "h": 48,
+      "w": 48,
+      "x": 264,
+      "y": 136
+    },
+    "trash": {
+      "h": 48,
+      "w": 48,
+      "x": 8,
+      "y": 200
+    }
+  },
+  "scale": 2,
+  "source": "QmClient SVG icon sources, rendered at build time",
+  "version": 1
+}

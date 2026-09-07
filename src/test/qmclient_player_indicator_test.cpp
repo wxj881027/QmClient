@@ -35,6 +35,14 @@ TEST(QmPlayerIndicator, FiltersCandidates)
 	EXPECT_TRUE(QmPlayerIndicatorShouldRender(Candidate));
 }
 
+TEST(QmPlayerIndicator, ExcludesBothLocalClientIds)
+{
+	EXPECT_TRUE(QmPlayerIndicatorIsLocalClient(3, 3, 7));
+	EXPECT_TRUE(QmPlayerIndicatorIsLocalClient(7, 3, 7));
+	EXPECT_FALSE(QmPlayerIndicatorIsLocalClient(4, 3, 7));
+	EXPECT_FALSE(QmPlayerIndicatorIsLocalClient(4, -1, -1));
+}
+
 TEST(QmPlayerIndicator, HidesVisibleCandidates)
 {
 	SQmPlayerIndicatorCandidate Candidate;

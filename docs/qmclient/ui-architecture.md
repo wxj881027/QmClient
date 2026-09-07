@@ -2,6 +2,12 @@
 
 日期：2026-09-03
 
+当前状态：**架构设计已定，底层接入进行中**。全局 `CCardRegistry`、页面/卡片 descriptor、presentation contract、基础搜索/排序/可见性模型和资源 cache 已有实现与测试；真实双 UI、官方卡片 adapter、完整持久化和资源 provider 接入仍以 `plan.md`、`feature-ledger.md` 和 `verification-checklist.md` 为准。
+
+可执行的字段、presentation、交互、资源生命周期和验收规则统一见 [`card-ui-spec.md`](card-ui-spec.md)；旧 Qm 的真实卡片/UI 实现与测试来源见 [`qm-legacy-card-audit.md`](qm-legacy-card-audit.md)。本文保留架构决策、所有权边界和长期方向，不重复维护实现细节。
+
+2026-09-07：`CCardUiModel` 通过受控生命周期接入 `CQmRuntime`；真实 smoke 证据和剩余缺口只记录在 `verification-checklist.md`，本文件不再重复维护运行快照。
+
 ## 1. 决策结论
 
 卡片模型是整个客户端的 UI 基础设施，不是 Qm 功能专属模块。官方 DDNet 功能、Qm 功能、重构后的 TC 功能和确认纳入的 BC 功能，都必须能够通过统一卡片注册系统进入新 UI。
@@ -127,5 +133,4 @@ ui.card.audio.collapsed = false
 
 ## 11. 完成标准
 
-不能因为卡片已经注册就认为功能完成。每个官方或第三方功能都必须在 `feature-migration.tsv` 中登记功能行为和配置、卡片接入状态、新旧 UI 状态、搜索/输入/资源、生命周期和模式矩阵、测试与 smoke、性能预算、旧配置处理、当前 owner 和官方触点。
-
+不能因为卡片已经注册就认为功能完成。每个官方或第三方功能都必须在 `feature-ledger.md` 中登记功能行为和配置、卡片接入状态、新旧 UI 状态、搜索/输入/资源、生命周期和模式矩阵、测试与 smoke、性能预算、旧配置处理、当前 owner 和官方触点。

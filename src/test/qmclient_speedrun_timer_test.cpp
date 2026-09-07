@@ -1,4 +1,5 @@
 #include <game/client/components/qmclient/features/speedrun_timer/qm_speedrun_timer_logic.h>
+#include <game/client/components/qmclient/features/speedrun_timer/qm_speedrun_timer.h>
 
 #include <gtest/gtest.h>
 
@@ -65,6 +66,53 @@ TEST(QmSpeedrunTimer, RequestsKillOnlyOnceAndAutoDisables)
 	EXPECT_TRUE(Timer.State().m_Visible);
 }
 
+TEST(QmSpeedrunTimer, KeepsExpiredMessageWhileLocalCharacterIsTemporarilyMissing)
+{
+	CQmSpeedrunTimerLogic Timer;
+	SQmSpeedrunTimerInput Input;
+	Input.m_Enabled = true;
+	Input.m_HasLocalCharacter = true;
+	Input.m_RaceStarted = true;
+	Input.m_CanRequestKill = true;
+	Input.m_StartTick = 100;
+	Input.m_TickSpeed = 50;
+	Input.m_DurationMilliseconds = 1000;
+	Input.m_CurrentTick = 150;
+	Timer.Update(Input);
+
+	Input.m_HasLocalCharacter = false;
+	Input.m_RaceStarted = false;
+	Input.m_CurrentTick = 199;
+	EXPECT_FALSE(Timer.Update(Input).m_RequestKill);
+	EXPECT_FALSE(Timer.State().m_Visible);
+
+	Input.m_HasLocalCharacter = true;
+	Input.m_CurrentTick = 200;
+	EXPECT_FALSE(Timer.Update(Input).m_RequestKill);
+	EXPECT_TRUE(Timer.State().m_Visible);
+	EXPECT_TRUE(Timer.State().m_Expired);
+}
+
+TEST(QmSpeedrunTimer, DoesNotRequestKillOrDisableOffline)
+{
+	CQmSpeedrunTimerLogic Timer;
+	SQmSpeedrunTimerInput Input;
+	Input.m_Enabled = true;
+	Input.m_HasLocalCharacter = true;
+	Input.m_RaceStarted = true;
+	Input.m_CanRequestKill = false;
+	Input.m_AutoDisable = true;
+	Input.m_StartTick = 100;
+	Input.m_TickSpeed = 50;
+	Input.m_DurationMilliseconds = 1000;
+	Input.m_CurrentTick = 150;
+
+	const SQmSpeedrunTimerAction Action = Timer.Update(Input);
+	EXPECT_FALSE(Action.m_RequestKill);
+	EXPECT_FALSE(Action.m_Disable);
+	EXPECT_TRUE(Timer.State().m_Expired);
+}
+
 TEST(QmSpeedrunTimer, ExpiresMessageThenResetsOnNewRace)
 {
 	CQmSpeedrunTimerLogic Timer;
@@ -90,4 +138,40 @@ TEST(QmSpeedrunTimer, ExpiresMessageThenResetsOnNewRace)
 	EXPECT_FALSE(Timer.Update(Input).m_RequestKill);
 	EXPECT_FALSE(Timer.State().m_Expired);
 	EXPECT_EQ(Timer.State().m_RemainingMilliseconds, 1000);
+}
+
+TEST(QmSpeedrunTimer, DisablingFeatureClearsExpiredState)
+{
+	CQmSpeedrunTimer Feature;
+	SQmSpeedrunTimerInput Input;
+	Input.m_Enabled = true;
+	Input.m_HasLocalCharacter = true;
+	Input.m_RaceStarted = true;
+	Input.m_CanRequestKill = true;
+	Input.m_StartTick = 100;
+	Input.m_TickSpeed = 50;
+	Input.m_DurationMilliseconds = 1000;
+	Input.m_CurrentTick = 150;
+	Feature.UpdateModel(true, true);
+	Feature.Update(Input);
+	EXPECT_TRUE(Feature.State().m_Expired);
+
+	Feature.UpdateModel(false, true);
+	Feature.UpdateModel(true, true);
+	EXPECT_FALSE(Feature.State().m_Visible);
+	EXPECT_FALSE(Feature.State().m_Expired);
+}
+
+TEST(QmSpeedrunTimer, UnavailableFeatureCannotEnterEnabledDispatch)
+{
+	CQmSpeedrunTimer Feature;
+	for(const bool ConfigEnabled : {false, true})
+	{
+		Feature.UpdateModel(ConfigEnabled, false);
+		EXPECT_FALSE(Feature.Model().m_Enabled);
+		EXPECT_FALSE(Feature.Model().m_Available);
+		Feature.UpdateModel(ConfigEnabled, true);
+		EXPECT_EQ(Feature.Model().m_Enabled, ConfigEnabled);
+		EXPECT_TRUE(Feature.Model().m_Available);
+	}
 }

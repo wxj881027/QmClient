@@ -4,7 +4,7 @@
 
 #include "qm_speedrun_timer_logic.h"
 
-#include "../../core/qm_ui_model.h"
+#include <game/client/ui/card_registry.h>
 
 class ITextRender;
 
@@ -19,7 +19,9 @@ public:
 
 	void UpdateModel(bool Enabled, bool Available)
 	{
-		m_Model.m_Enabled = Enabled;
+		if(m_Model.m_Enabled && (!Enabled || !Available))
+			m_Logic.Reset();
+		m_Model.m_Enabled = Enabled && Available;
 		m_Model.m_Available = Available;
 	}
 	SQmSpeedrunTimerAction Update(const SQmSpeedrunTimerInput &Input) { return m_Logic.Update(Input); }

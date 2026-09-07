@@ -21,6 +21,11 @@ struct SQmPlayerIndicatorCandidate
 	bool m_OtherVisible = false;
 };
 
+inline bool QmPlayerIndicatorIsLocalClient(int ClientId, int LocalClientId, int DummyClientId)
+{
+	return ClientId == LocalClientId || ClientId == DummyClientId;
+}
+
 inline bool QmPlayerIndicatorShouldRender(const SQmPlayerIndicatorCandidate &Candidate)
 {
 	if(!Candidate.m_OtherActive || Candidate.m_OtherIsLocal || Candidate.m_OtherSpectator)

@@ -4,7 +4,7 @@
 
 #include "qm_auto_team_lock_logic.h"
 
-#include "../../core/qm_ui_model.h"
+#include <game/client/ui/card_registry.h>
 
 class CQmAutoTeamLock final
 {
@@ -17,7 +17,11 @@ public:
 
 	void UpdateModel(bool Enabled, bool Available)
 	{
-		m_Model.m_Enabled = Enabled;
+		if(!Available && m_Model.m_Available)
+			m_Logic.Reset();
+		else if(m_Model.m_Enabled && !Enabled)
+			m_Logic.Disable();
+		m_Model.m_Enabled = Enabled && Available;
 		m_Model.m_Available = Available;
 	}
 	SQmAutoTeamLockAction Update(const SQmAutoTeamLockInput &Input) { return m_Logic.Update(Input); }

@@ -8,5 +8,6 @@ class CGameClient;
 class IClient;
 
 SQmSpeedrunTimerInput BuildQmSpeedrunTimerInput(const CGameClient &GameClient, const IClient &Client);
+void ApplyQmSpeedrunTimerAction(CGameClient &GameClient, const SQmSpeedrunTimerAction &Action);
 
 #endif

@@ -144,7 +144,7 @@ status: active
 
 三个子代理分别审查了架构/上游边界、性能/图形诊断、功能/UI/i18n。已处理的问题包括：
 
-- 官方 `CGameClient` 状态读取集中到 `qm_game_state_adapter.*`；
+- 官方 `CGameClient` 状态读取集中到对应 feature-owned adapter；
 - 关闭 player indicator 时跳过完整 frame 构造；
 - i18n 缺失 key 回退、card canonical model 校验和空 ID 防护；
 - JSONL 单行原子入队；Windows Ninja/MSVC 前缀修复的构建前置与错误码传播。
@@ -204,3 +204,12 @@ status: active
 - Auto Team Lock 启用时曾出现一次 Windows `0xC0000005` 启动崩溃；minidump 将指令定位到官方 `CSkins::OnConsoleInit` 的 `ConfigManager()` 调用链，未证实为 Auto Team Lock 逻辑越界或空指针。
 - 对 `cmake-build-release` 执行 `game-client --clean-first` 后，完整重编译通过；同一构建目录启用 `qm_auto_team_lock=1`、`qm_auto_team_lock_delay=0` 的后台 runtime smoke 退出码为 0，session/report 均正常生成。当前证据支持“旧增量产物不一致是首要原因”，不把它误记为功能逻辑已导致崩溃。
 - 标准 `check_qmclient_runtime_smoke.py` 已默认开启 Auto Team Lock 的离线启动路径，仍使用临时 storage、无窗口运行，不会发送网络命令；后续若修改配置头或 `CGameClient` 布局，优先执行 clean rebuild 再归因。
+
+## UI 资源指标与待验边界（2026-09-07）
+
+本批实际消费者为 Qm 设置图标 atlas 与官方六类 Assets 预览页。页面关闭/切页/shutdown 时通过 runtime 窄回调写 `ui.resource_page`，diagnostics 启动关闭时不写。事件提供 load attempts、cache hits、cancelled、failures、uploads、最近 worker load_ns 和 decoded_bytes；不按帧格式化日志。
+
+- atlas 的 scale 为 1/2/4；Assets 的 scale=0 表示目录聚合。Assets 的耗时/保留字节是该目录仍在 resident 集合内预览的最近值之和，peak 是逐预览峰值之和；已淘汰项不在汇总中，不是全会话累计量或真实进程峰值。
+- decoded_bytes 是 PNG 解码并缩略后 artifact 的保留像素，不包含原图解码峰值、缩放临时缓冲、driver staging 或 GPU 显存。常驻预览上限 64 项；manifest 上限 8192，目录名上限每类 4096，pending 解码上限 2。
+- 对照要求：同 Release/硬件/后端/窗口/DPI/资源目录，A 首开和 B 完成后关页重开至少 10 对，结合同窗口 frame pacing 和独立内存 profiler。Debug coverage 数据不得作为性能结论。
+- 当前代码中的 metrics、日志存在或 cache 单测通过都不是实测加速证据。本批尚无真实画面 A/B 数据；验收步骤见 `verification-checklist.md`，允许按用户授权列为人工待验后先推送。

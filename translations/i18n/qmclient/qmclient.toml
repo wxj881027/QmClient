@@ -1,0 +1,218 @@
+# QmClient 文案维护源骨架。
+# 当前仅登记稳定 key、fallback 和 context，不参与构建或运行时加载。
+# 语言 txt 是未来生成物；正式接入前需要补齐提取、生成、校验和语言切换通知。
+
+[meta]
+namespace = "qmclient"
+source_language = "en"
+format_version = 1
+
+[[messages]]
+key = "qm.ui.list_mode"
+fallback = "List"
+context = ""
+
+[[messages]]
+key = "qm.ui.cards_mode"
+fallback = "Cards"
+context = ""
+
+[[messages]]
+key = "qm.ui.show_hidden"
+fallback = "Show hidden cards"
+context = ""
+
+[[messages]]
+key = "qm.ui.light_theme"
+fallback = "Light theme"
+context = ""
+
+[[messages]]
+key = "qm.ui.animations"
+fallback = "Animations"
+context = ""
+
+[[messages]]
+key = "qm.ui.restore_layout"
+fallback = "Restore layout"
+context = ""
+
+[[messages]]
+key = "qm.ui.save"
+fallback = "Save"
+context = ""
+
+[[messages]]
+key = "qm.ui.save_failed"
+fallback = "Could not save preferences"
+context = ""
+
+[[messages]]
+key = "qm.ui.enabled"
+fallback = "Enabled"
+context = ""
+
+[[messages]]
+key = "qm.ui.unavailable"
+fallback = "Unavailable"
+context = ""
+
+[[messages]]
+key = "qm.ui.up"
+fallback = "Up"
+context = ""
+
+[[messages]]
+key = "qm.ui.down"
+fallback = "Down"
+context = ""
+
+[[messages]]
+key = "qm.ui.hide"
+fallback = "Hide"
+context = ""
+
+[[messages]]
+key = "qm.ui.restore"
+fallback = "Restore"
+context = ""
+
+[[messages]]
+key = "qm.ui.expand"
+fallback = "Expand"
+context = ""
+
+[[messages]]
+key = "qm.ui.collapse"
+fallback = "Collapse"
+context = ""
+
+[[messages]]
+key = "qm.ui.reset"
+fallback = "Reset"
+context = ""
+
+[[messages]]
+key = "qm.ui.no_matching_cards"
+fallback = "No matching cards"
+context = ""
+
+[[messages]]
+key = "qm.ui.restart_required"
+fallback = "Restart required"
+context = ""
+
+[[messages]]
+key = "qm.diagnostics.title"
+fallback = "Diagnostics"
+context = ""
+
+[[messages]]
+key = "qm.player_indicator.title"
+fallback = "Player indicators"
+context = ""
+
+[[messages]]
+key = "qm.auto_team_lock.title"
+fallback = "Auto team lock"
+context = ""
+
+[[messages]]
+key = "qm.speedrun_timer.title"
+fallback = "Speedrun timer"
+context = ""
+
+[[messages]]
+key = "qm.speedrun_timer.expired"
+fallback = "TIME EXPIRED!"
+context = ""
+
+[[messages]]
+key = "qm.ui.title"
+fallback = "QmClient"
+context = ""
+
+[[messages]]
+key = "qm.ui.player_indicators"
+fallback = "Player indicators"
+context = ""
+
+[[messages]]
+key = "qm.ui.indicator_colors"
+fallback = "Indicator colors"
+context = ""
+
+[[messages]]
+key = "qm.ui.write_automatic_diagnostics"
+fallback = "Write automatic diagnostics (restart required)"
+context = ""
+
+[[messages]]
+key = "qm.ui.show_player_indicators"
+fallback = "Show player indicators"
+context = ""
+
+[[messages]]
+key = "qm.ui.only_show_teammates"
+fallback = "Only show teammates"
+context = ""
+
+[[messages]]
+key = "qm.ui.only_show_frozen_players"
+fallback = "Only show frozen players"
+context = ""
+
+[[messages]]
+key = "qm.ui.hide_visible_players"
+fallback = "Hide visible players"
+context = ""
+
+[[messages]]
+key = "qm.ui.use_variable_distance"
+fallback = "Use variable distance"
+context = ""
+
+[[messages]]
+key = "qm.ui.indicator_offset"
+fallback = "Indicator offset"
+context = ""
+
+[[messages]]
+key = "qm.ui.maximum_offset"
+fallback = "Maximum offset"
+context = ""
+
+[[messages]]
+key = "qm.ui.maximum_distance"
+fallback = "Maximum distance"
+context = ""
+
+[[messages]]
+key = "qm.ui.indicator_radius"
+fallback = "Indicator radius"
+context = ""
+
+[[messages]]
+key = "qm.ui.indicator_opacity"
+fallback = "Indicator opacity"
+context = ""
+
+[[messages]]
+key = "qm.ui.use_tee_icons"
+fallback = "Use tee icons"
+context = ""
+
+[[messages]]
+key = "qm.ui.alive_color"
+fallback = "Alive color"
+context = ""
+
+[[messages]]
+key = "qm.ui.frozen_color"
+fallback = "Frozen color"
+context = ""
+
+[[messages]]
+key = "qm.ui.unfreezing_color"
+fallback = "Unfreezing color"
+context = ""

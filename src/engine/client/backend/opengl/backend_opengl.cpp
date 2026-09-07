@@ -299,6 +299,8 @@ static const char *GetSeverityString(GLenum Severity)
 	}
 }
 
+#endif
+
 static bool BeginGraphicsDebugCallback(SGraphicsDebugCallbackState *pState);
 static void EndGraphicsDebugCallback(SGraphicsDebugCallbackState *pState);
 static void RecordGraphicsDebugMessage(SGraphicsDebugCallbackState *pState, unsigned int Source, unsigned int Type, unsigned int Id, unsigned int Severity, const char *pMessage, bool MessageTruncated);
@@ -358,6 +360,7 @@ static bool AppendEncodedGraphicsDebugMessage(char *pDst, size_t DstSize, size_t
 	return true;
 }
 
+#ifndef BACKEND_AS_OPENGL_ES
 static void GLAPIENTRY
 GfxOpenGLMessageCallback(GLenum Source,
 	GLenum Type,
@@ -649,13 +652,13 @@ static void CollectGraphicsDiagnosticExtensions(SGraphicsBackendDiagnostics *pDi
 	if(pExtensions == nullptr)
 		return;
 	pDiagnostics->m_ExtensionsAvailable = true;
-	int ExtensionCount = 0;
+	int StringExtensionCount = 0;
 	for(const char *p = pExtensions; *p; ++p)
 	{
 		if(*p == ' ')
-			++ExtensionCount;
+			++StringExtensionCount;
 	}
-	pDiagnostics->m_ExtensionCount = pExtensions[0] == '\0' ? 0 : ExtensionCount + 1;
+	pDiagnostics->m_ExtensionCount = pExtensions[0] == '\0' ? 0 : StringExtensionCount + 1;
 	AppendGraphicsDiagnosticExtension(pDiagnostics, pExtensions);
 }
 

@@ -7,7 +7,21 @@ baseline: ddnet-20.0
 
 # QmClient 官方上游补丁台账
 
+2026-09-07 Assets 预览 adapter：`menus_settings_assets.cpp` 在原有六分类页面中，优先从 runtime 所有的 `CAssetPageResources` 读取后台目录快照与可见项预览句柄；官方 `Load*Skin` / `ChangeEntitiesPath`、配置写入、搜索及用户显式刷新行为保留。资源选择增加 `NewSelected` 边界校验，避免空搜索结果索引越界。业务 provider 在 `src/game/client/ui/asset_page_resources.*`，通过现有 CMake 客户端/测试源清单接入；没有 server、协议或预测修改。冲突面是 Assets 页初始化/预览/刷新三个窄调用点及源清单，按这三个阶段重放；官方提供等价异步预览 provider 时移除。原同步路径保留为 runtime 未初始化时的回退，不在正常 Qm 路径执行；只有性能及真实 UI 验证通过后才考虑删除。
+
+同批 Linux 编译补充：`backend_sdl.cpp` 的现有诊断异常捕获也加入按源文件启用异常的清单；`backend_opengl.cpp` 的 GLES 分支将 `GLES3/gl3.h` 放到 `SDL_opengles2_gl2ext.h` 前，先定义扩展头依赖的 GL 类型及调用约定。只修正 include 顺序，不删 GLES 后端或 debug callback；上游等价修复后删除，按 include 顺序重放。
+
+该批补充将 GL/GLES 共用 callback helper 移出 desktop-only 条件，并区分扩展字符串计数变量，修复 GLES 翻译单元作用域错误；不增加字段或改变回调行为。Assets 加载/失败提示复用官方翻译，DPI 只改变预览尺寸；替换旧目录列表前仅释放旧预览句柄，不重新加载当前游戏资源，实际选择和显式刷新仍走官方原入口。
+
+2026-09-07 Linux 诊断编译修复：现有 `qm.graphics.backend_snapshot` 的时间戳能力字段改从 `VkPhysicalDeviceProperties::limits` 读取；device fault 截断标记改用 `str_copy`，不更改字符串内容。`CMakeLists.txt` 仅为已有 try/catch 的 `graphics_threaded.cpp`、`qm_diagnostics.cpp` 在 GNU/Clang 下追加 `-fexceptions`，保留其他翻译单元的 `-fno-exceptions`，不删除失败回退。冲突面为已有诊断行及源文件编译属性；按路径和字段重放，不新增诊断字段。移除相应诊断或上游提供等价实现时删除。
+
+2026-09-07 `qm.build.bundled_glew_no_glu`：`cmake/FindGLEW.cmake` 的 bundled GLEW object target 和 `CMakeLists.txt` 的 bundled GLEW 使用方定义 `GLEW_NO_GLU`。仓库无 GLU 调用，移除的是 GLEW 默认附带的 GLU 头依赖，不关闭 OpenGL、不改变渲染行为；系统 GLEW 路径不变，不修改第三方源码或 `ddnet-libs` 快照。冲突面限于这两处编译定义；按 `GLEW_BUNDLED` 条件重放。上游提供等价配置或移除 bundled GLEW 后删除。验证：Linux bundled 路径编译及 Windows Release；执行结果另记验证清单。
+
+2026-09-07 真实卡片视图集成：现有 `CMakeLists.txt` Qm presentation 源列表追加 `qm_card_settings_view.h/.cpp`，以现有 `RenderSettingsQmClient` 扩展实现入口呈现列表/卡片/指示器页，不增加官方菜单分支。状态由 runtime 的受控 view 指针和同一个 `CCardUiModel` 持有，shutdown 清除输入引用后按 view → model 顺序释放；resize 仅失效本视图滚动状态。默认官方其他页面、配置默认值和游戏执行路径不变。冲突面仅源清单，按文件名重放；正式通用菜单插槽替代该入口时删除。键盘/触控/IME/DPI 实际 smoke 未运行前保持 DOING。
+
 本文件只登记重构过程中必须修改官方 DDNet 文件的窄适配点。Qm 业务、provider、卡片布局和统计逻辑不得放入官方核心文件。当前触点保持默认行为不变，尚未引入协议、物理、预测或服务端玩法补丁。
+
+2026-09-07 卡片偏好与调度底座构建登记：`CMakeLists.txt` 的现有客户端 UI 源列表及 testrunner 源列表追加 `ui/card_preferences_storage.*`、`ui/card_settings_adapter.h`、`presentation/qm_card_settings_adapter.*` 和对应 `qmclient_card_preferences_test.cpp`、`qmclient_card_settings_adapter_test.cpp`、`qmclient_dispatch_test.cpp`；纯调度头登记在 Qm core 源列表。只登记独立实现，不改变官方构建选项、发布版本或默认行为。冲突面为源文件 manifest 列表；重放时按文件名补入对应列表；移除卡片偏好/调度实现时删除对应条目。测试及 runtime 验证结果另见 `verification-checklist.md`。官方 HUD adapter 仅引用已有 `ClShowhud` 字段，不新增官方代码触点或配置键，默认值和原 checkbox 不变。
 
 | hook_id | official_file | reason | category | default_behavior | conflict_risk | removal_condition | tests | status |
 |---|---|---|---|---|---|---|---|---|
@@ -35,6 +49,11 @@ baseline: ddnet-20.0
 ## 2026-09-04 诊断范围冻结
 
 现有图形诊断只作为 QmClient 阶段性 A/B 和基础故障定位基础，不再继续向官方 Vulkan、OpenGL 或 SDL 文件添加深层诊断字段。后续若要补充 Metal 成功路径、GPU query、device fault 深度信息或 renderer switch，必须先提交独立的需求证据、上游冲突评估和可删除条件；在此之前保持现状，不把 diagnostics 继续扩展成官方后端的平行实现。
+
+## 2026-09-06 平行诊断实现决策
+
+官方 backend 文件内的平行诊断实现（graphics 事件入口、debug callback、device fault 查询、backend snapshot 等）被接受为诊断能力的必要成本：不为"合并方便"把多个 hook 合成粗粒度入口而牺牲更合理的架构形状。"一切皆插件"是理想方向，但落地时逐触点权衡取舍。约束不变：每个触点保持窄、默认行为不变、可单独重放、有删除条件；新增触点仍逐个登记并评估冲突面。2026-09-04 的范围冻结（不新增深层诊断字段）继续有效。
+
 ## 当前重构分支新增触点
 
 ### `src/engine/shared/config_variables.h`
@@ -106,6 +125,7 @@ baseline: ddnet-20.0
 ### `CMakeLists.txt`
 
 - 注册 Qm core、player indicator、诊断保留策略头文件和 C++ 测试源文件；不修改依赖版本和协议生成流程。
+- 2026-09-07 卡片资源接入：将旧 Qm 已生成的 Phosphor Bold 1x/2x/4x PNG、JSON manifest 和 MIT 许可证加入 data 清单；新增独立 Python 标准库生成步骤，校验 atlas 尺寸、稳定 ID、UV 边界和各倍率一致性，生成只读 C++ manifest。运行时不解析 SVG，不复制旧 icon manager，不添加字体或后端依赖。默认游戏渲染不变，只有打开 Qm 设置页才请求资源。
 - 冲突风险：中。上游源文件清单可能新增条目；同步时按路径插入，不做全文件重排。
 - 删除条件：对应 Qm 模块和测试删除，或改为独立目标。
 

@@ -4,12 +4,14 @@
 
 #include <game/client/component.h>
 
+#include <game/client/ui/card_registry.h>
+#include <game/client/ui/card_ui_model.h>
+
 #include "qm_diagnostics.h"
 #include "qm_config_migration.h"
-#include "qm_game_state_adapter.h"
 #include "qm_i18n.h"
 #include "qm_render_slots.h"
-#include "qm_ui_model.h"
+#include "qm_dispatch_logic.h"
 #include "../features/player_indicator/qm_player_indicator.h"
 #include "../features/auto_team_lock/qm_auto_team_lock.h"
 #include "../features/speedrun_timer/qm_speedrun_timer.h"
@@ -18,6 +20,8 @@
 #include <memory>
 
 class IGraphics;
+class CQmCardSettingsView;
+class CAssetPageResources;
 
 /**
  * QmClient 的组合根。
@@ -31,7 +35,12 @@ class CQmRuntime final : public CComponent
 	unsigned m_MapGeneration = 0;
 	int m_LastState = -1;
 	std::shared_ptr<CQmDiagnostics> m_pDiagnostics = std::make_shared<CQmDiagnostics>();
-	CQmUiModel m_UiModel;
+	CCardRegistry m_CardRegistry;
+	std::unique_ptr<CCardUiModel> m_pCardUiModel;
+	std::unique_ptr<CQmCardSettingsView> m_pCardSettingsView;
+	std::unique_ptr<CAssetPageResources> m_pAssetPageResources;
+	CQmDispatchRegistry<EQmRenderSlot, 4> m_RenderDispatch;
+	CQmDispatchRegistry<EQmUpdateSlot, 4> m_UpdateDispatch;
 	CQmI18n m_I18n;
 	SQmFeatureModel m_DiagnosticsModel{"qm.diagnostics", "qm.diagnostics.title", true, true};
 	CQmPlayerIndicator m_PlayerIndicator;
@@ -43,6 +52,8 @@ class CQmRuntime final : public CComponent
 	CQmConfigMigration m_ConfigMigration;
 
 public:
+	CQmRuntime();
+	~CQmRuntime() override;
 	int Sizeof() const override;
 	void OnInterfacesInit(CGameClient *pClient) override;
 	void OnConsoleInit() override;
@@ -64,13 +75,17 @@ public:
 	void OnConfigLoaded(IConfigManager *pConfigManager);
 
 	void BeginFrame() { m_pDiagnostics->BeginFrame(); }
-	void EndFrame() { m_pDiagnostics->EndFrame(); }
+	void EndFrame();
 	void BeginGameUpdate() { m_pDiagnostics->BeginGameUpdate(); }
 	void EndGameUpdate() { m_pDiagnostics->EndGameUpdate(); }
 	void BeginGameRender() { m_pDiagnostics->BeginGameRender(); }
 	void EndGameRender() { m_pDiagnostics->EndGameRender(); }
 
-	const CQmUiModel &UiModel() const { return m_UiModel; }
+	const CCardRegistry &CardRegistry() const { return m_CardRegistry; }
+	CCardUiModel *CardUiModel() { return m_pCardUiModel.get(); }
+	const CCardUiModel *CardUiModel() const { return m_pCardUiModel.get(); }
+	CQmCardSettingsView *CardSettingsView() { return m_pCardSettingsView.get(); }
+	CAssetPageResources *AssetPageResources() { return m_pAssetPageResources.get(); }
 	const CQmI18n &I18n() const { return m_I18n; }
 
 	bool IsInitialized() const { return m_Initialized; }

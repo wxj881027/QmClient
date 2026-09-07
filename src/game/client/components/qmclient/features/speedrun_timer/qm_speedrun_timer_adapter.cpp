@@ -31,3 +31,11 @@ SQmSpeedrunTimerInput BuildQmSpeedrunTimerInput(const CGameClient &GameClient, c
 		Input.m_DurationMilliseconds = QmSpeedrunTimerLegacyDurationMilliseconds(g_Config.m_QmSpeedrunTimerTime);
 	return Input;
 }
+
+void ApplyQmSpeedrunTimerAction(CGameClient &GameClient, const SQmSpeedrunTimerAction &Action)
+{
+	if(Action.m_RequestKill)
+		GameClient.SendKill();
+	if(Action.m_Disable)
+		g_Config.m_QmSpeedrunTimer = 0;
+}

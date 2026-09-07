@@ -1,7 +1,7 @@
 /* (c) QmClient contributors. See licence.txt in the root of the distribution. */
-#include "qm_game_state_adapter.h"
+#include "qm_player_indicator_adapter.h"
 
-#include "../features/player_indicator/qm_player_indicator_logic.h"
+#include "qm_player_indicator_logic.h"
 
 #include <engine/client.h>
 #include <engine/graphics.h>
@@ -55,7 +55,7 @@ SQmPlayerIndicatorFrame BuildQmPlayerIndicatorFrame(const CGameClient &GameClien
 		Player.m_Position = OtherClient.m_RenderPos;
 		Player.m_Team = OtherClient.m_Team;
 		Player.m_Active = GameClient.m_Snap.m_aCharacters[ClientId].m_Active;
-		Player.m_IsLocal = ClientId == LocalClientId || ClientId == GameClient.m_aLocalIds[0] || ClientId == GameClient.m_aLocalIds[1];
+		Player.m_IsLocal = QmPlayerIndicatorIsLocalClient(ClientId, GameClient.m_aLocalIds[0], GameClient.m_aLocalIds[1]);
 		Player.m_Spectator = OtherClient.m_Spec;
 		Player.m_Frozen = QmPlayerIndicatorIsFrozen(OtherClient.m_FreezeEnd, OtherClient.m_DeepFrozen);
 		const bool FreezeState = Player.m_Frozen;

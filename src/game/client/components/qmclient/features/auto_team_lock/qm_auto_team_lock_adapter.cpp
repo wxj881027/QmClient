@@ -19,6 +19,7 @@ SQmAutoTeamLockInput BuildQmAutoTeamLockInput(const CGameClient &GameClient, con
 		return Input;
 
 	const int Connection = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
+	Input.m_Dummy = Connection;
 	const int ClientId = GameClient.m_aLocalIds[Connection];
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS ||
 		GameClient.m_Snap.m_LocalClientId != ClientId || !GameClient.m_Snap.m_pLocalInfo)
@@ -29,4 +30,10 @@ SQmAutoTeamLockInput BuildQmAutoTeamLockInput(const CGameClient &GameClient, con
 	Input.m_TeamCanBeLocked = Input.m_Team > TEAM_FLOCK && Input.m_Team < TEAM_SUPER;
 	Input.m_CurrentTick = Client.GameTick(Connection);
 	return Input;
+}
+
+void ApplyQmAutoTeamLockAction(CGameClient &GameClient, const SQmAutoTeamLockAction &Action)
+{
+	if(Action.m_SendLockCommand)
+		GameClient.m_Chat.SendChat(0, "/lock 1");
 }
