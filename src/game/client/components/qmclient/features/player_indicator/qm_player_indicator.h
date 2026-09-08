@@ -9,8 +9,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/render.h>
-
-#include <game/client/ui/card_registry.h>
+#include <game/client/components/qmclient/core/qm_feature_model.h>
 
 #include <array>
 

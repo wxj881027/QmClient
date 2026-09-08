@@ -335,6 +335,7 @@ if(NOT MSVC AND NOT HAIKU)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     set_property(SOURCE
       src/engine/client/backend_sdl.cpp
+      src/engine/client/backend_threaded.cpp
       src/engine/client/graphics_threaded.cpp
       src/game/client/components/qmclient/core/qm_diagnostics.cpp
       APPEND PROPERTY COMPILE_OPTIONS -fexceptions)
@@ -2756,7 +2757,7 @@ if(CLIENT)
     components/qmclient/core/qm_diagnostics_json.h
     components/qmclient/core/qm_diagnostics_metrics.h
     components/qmclient/core/qm_diagnostics_retention.h
-    components/qmclient/core/qm_i18n.h
+    components/qmclient/core/qm_feature_model.h
     components/qmclient/core/qm_render_slots.h
     components/qmclient/core/qm_dispatch_logic.h
     components/qmclient/core/qm_runtime.cpp
@@ -2785,6 +2786,12 @@ if(CLIENT)
     ui/card_presentation.h
     ui/card_ui_model.cpp
     ui/card_ui_model.h
+    ui/card_search_logic.cpp
+    ui/card_search_logic.h
+    ui/card_search_index.cpp
+    ui/card_search_index.h
+    ui/card_drag_logic.cpp
+    ui/card_drag_logic.h
     ui/asset_page_resources.cpp
     ui/asset_page_resources.h
     ui/card_preferences_storage.cpp
@@ -3558,6 +3565,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qmclient_card_order_model_test.cpp
     qmclient_card_deck_projection_test.cpp
     qmclient_card_presentation_test.cpp
+    qmclient_card_search_logic_test.cpp
+    qmclient_card_drag_logic_test.cpp
     qmclient_ui_foundation_test.cpp
     qmclient_card_preferences_test.cpp
     qmclient_card_settings_adapter_test.cpp
@@ -3605,6 +3614,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/ui/card_presentation.cpp
     src/game/client/ui/card_ui_model.cpp
     src/game/client/ui/card_preferences_storage.cpp
+    src/game/client/ui/card_search_logic.cpp
+    src/game/client/ui/card_search_index.cpp
+    src/game/client/ui/card_drag_logic.cpp
     src/game/client/ui/asset_page_resources.cpp
     src/game/client/components/qmclient/presentation/qm_card_settings_adapter.cpp
     src/game/client/ui/resource_page_cache.cpp

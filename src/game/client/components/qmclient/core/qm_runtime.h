@@ -9,7 +9,6 @@
 
 #include "qm_diagnostics.h"
 #include "qm_config_migration.h"
-#include "qm_i18n.h"
 #include "qm_render_slots.h"
 #include "qm_dispatch_logic.h"
 #include "../features/player_indicator/qm_player_indicator.h"
@@ -41,7 +40,6 @@ class CQmRuntime final : public CComponent
 	std::unique_ptr<CAssetPageResources> m_pAssetPageResources;
 	CQmDispatchRegistry<EQmRenderSlot, 4> m_RenderDispatch;
 	CQmDispatchRegistry<EQmUpdateSlot, 4> m_UpdateDispatch;
-	CQmI18n m_I18n;
 	SQmFeatureModel m_DiagnosticsModel{"qm.diagnostics", "qm.diagnostics.title", true, true};
 	CQmPlayerIndicator m_PlayerIndicator;
 	CQmAutoTeamLock m_AutoTeamLock;
@@ -86,8 +84,6 @@ public:
 	const CCardUiModel *CardUiModel() const { return m_pCardUiModel.get(); }
 	CQmCardSettingsView *CardSettingsView() { return m_pCardSettingsView.get(); }
 	CAssetPageResources *AssetPageResources() { return m_pAssetPageResources.get(); }
-	const CQmI18n &I18n() const { return m_I18n; }
-
 	bool IsInitialized() const { return m_Initialized; }
 	unsigned MapGeneration() const { return m_MapGeneration; }
 	int LastState() const { return m_LastState; }

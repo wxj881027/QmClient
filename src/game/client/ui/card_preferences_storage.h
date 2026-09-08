@@ -8,7 +8,7 @@ class CCardUiModel;
 class IStorage;
 
 constexpr const char *CARD_PREFERENCES_PATH = "qmclient/ui-preferences.json";
-constexpr int CARD_PREFERENCES_VERSION = 2;
+constexpr int CARD_PREFERENCES_VERSION = 3;
 
 std::string SerializeCardPreferences(const CCardUiModel &Model);
 bool ParseCardPreferences(const std::string &Json, CCardUiModel &Model, std::string &Error);

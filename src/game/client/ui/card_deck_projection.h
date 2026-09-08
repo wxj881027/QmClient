@@ -17,6 +17,8 @@ struct SCardDeckProjection
 	bool m_TwoColumns = false;
 };
 
+// 把全局卡片按当前页面、用户 order、可见性和列布局投影出来。
+// 同一卡片在多个页面的投影共享业务状态，只是放置记录不同。
 SCardDeckProjection BuildCardDeckProjection(const CCardRegistry &Registry, const CCardOrderModel &OrderModel, const CCardUiModel &UiModel, const std::string &PageId);
 
 #endif

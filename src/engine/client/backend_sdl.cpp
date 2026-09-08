@@ -996,8 +996,8 @@ void CGraphicsBackend_SDL_GL::GetCurrentVideoMode(CVideoMode &CurMode, float HiD
 	DisplayToVideoMode(&CurMode, &DpMode, HiDPIScale, DpMode.refresh_rate);
 }
 
-CGraphicsBackend_SDL_GL::CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc) :
-	CGraphicsBackend_Threaded(std::move(TranslateFunc))
+CGraphicsBackend_SDL_GL::CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc, GRAPHICS_EVENT_FUNC GraphicsEventFunc) :
+	CGraphicsBackend_Threaded(std::move(TranslateFunc), std::move(GraphicsEventFunc))
 {
 	m_aErrorString[0] = '\0';
 }
@@ -1832,4 +1832,4 @@ TGLBackendReadPresentedImageData &CGraphicsBackend_SDL_GL::GetReadPresentedImage
 	return m_ReadPresentedImageDataFunc;
 }
 
-IGraphicsBackend *CreateGraphicsBackend(TTranslateFunc &&TranslateFunc) { return new CGraphicsBackend_SDL_GL(std::move(TranslateFunc)); }
+IGraphicsBackend *CreateGraphicsBackend(TTranslateFunc &&TranslateFunc, GRAPHICS_EVENT_FUNC GraphicsEventFunc) { return new CGraphicsBackend_SDL_GL(std::move(TranslateFunc), std::move(GraphicsEventFunc)); }

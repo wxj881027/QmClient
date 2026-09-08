@@ -117,7 +117,7 @@
 - motion/geometry diagnostics；
 - 旧 Qm theme/token/navigation 的实际接入。
 
-因此当前不能把 `card-ui-spec.md` 视为最终实现规格。下一步必须先按本文来源把这些行为拆成可测试的 model/logic，再接入官方 UI。
+因此当前不能把旧版行为审计直接视为实现规格。下一步必须按本文来源和 `ui-ux-refactor-plan.md` 的全局卡片契约，把这些行为拆成可测试的 model/logic，再接入官方 UI。
 
 ## 读取命令
 

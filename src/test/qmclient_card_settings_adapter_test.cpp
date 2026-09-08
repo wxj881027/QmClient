@@ -9,9 +9,8 @@
 TEST(CardSettingsAdapter, OfficialAndQmCardsUseTheSameConfigContract)
 {
 	CCardRegistry Registry;
-	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0}));
 	ASSERT_TRUE(RegisterQmSettingsAdapterCards(Registry));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.diagnostics", "home", "Diagnostics", {}, "icon", {}, {}, ECardOwner::QM, 0, true, "toggle"}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.diagnostics", "Diagnostics", {}, "icon", "", {}, ECardOwner::QM, 0, true, "toggle"}));
 	Registry.Freeze();
 	const auto pConfig = std::make_unique<CConfig>();
 	pConfig->m_ClShowhud = 1;
@@ -19,8 +18,8 @@ TEST(CardSettingsAdapter, OfficialAndQmCardsUseTheSameConfigContract)
 	CQmCardSettingsAdapter Adapter(*pConfig);
 	ICardSettingsAdapter &Contract = Adapter;
 	CCardUiModel Model(Registry);
-	const auto Hud = Model.Snapshot("ddnet.hud");
-	const auto Diagnostics = Model.Snapshot("qm.diagnostics");
+	const auto Hud = Model.Snapshot("official", "ddnet.hud");
+	const auto Diagnostics = Model.Snapshot("official", "qm.diagnostics");
 	ASSERT_NE(Hud.m_pDescriptor, nullptr);
 	ASSERT_NE(Diagnostics.m_pDescriptor, nullptr);
 	EXPECT_EQ(Hud.m_pDescriptor->m_PresentationId, Diagnostics.m_pDescriptor->m_PresentationId);
@@ -43,7 +42,7 @@ TEST(CardSettingsAdapter, RejectsInvalidValuesAndUnrelatedDescriptors)
 	const auto pConfig = std::make_unique<CConfig>();
 	pConfig->m_ClShowhud = 1;
 	CQmCardSettingsAdapter Adapter(*pConfig);
-	SCardDescriptor Hud{"ddnet.hud", "official", "HUD", {}, "icon", {}, {}, ECardOwner::UPSTREAM, 0, true, "toggle"};
+	SCardDescriptor Hud{"ddnet.hud", "HUD", {}, "icon", "", {}, ECardOwner::UPSTREAM, 0, true, "toggle"};
 	EXPECT_EQ(Adapter.Apply(Hud, -1), ECardSettingResult::INVALID_VALUE);
 	EXPECT_EQ(Adapter.Apply(Hud, 2), ECardSettingResult::INVALID_VALUE);
 	EXPECT_EQ(pConfig->m_ClShowhud, 1);
@@ -62,16 +61,32 @@ TEST(CardSettingsAdapter, SnapshotDoesNotExposeMutableFeatureState)
 	SFeatureModel Feature{"qm.feature", "Feature", true, true};
 	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0}));
 	ASSERT_TRUE(Registry.RegisterFeature(Feature));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.feature", "home", "Feature", {}, "icon", Feature.m_Id}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.feature", "Feature", {}, "icon", Feature.m_Id}));
 	Registry.Freeze();
 	CCardUiModel Model(Registry);
-	const SCardModelSnapshot Before = Model.Snapshot("qm.feature");
+	const SCardModelSnapshot Before = Model.Snapshot("home", "qm.feature");
 	Feature.m_Enabled = false;
 	Feature.m_Available = false;
 	EXPECT_TRUE(Before.m_Enabled);
 	EXPECT_TRUE(Before.m_Available);
-	EXPECT_FALSE(Model.Snapshot("qm.feature").m_Enabled);
-	EXPECT_FALSE(Model.Snapshot("qm.feature").m_Available);
-	EXPECT_EQ(Model.Snapshot("qm.missing").m_pDescriptor, nullptr);
-	EXPECT_FALSE(Model.Snapshot("qm.missing").m_Available);
+	EXPECT_FALSE(Model.Snapshot("home", "qm.feature").m_Enabled);
+	EXPECT_FALSE(Model.Snapshot("home", "qm.feature").m_Available);
+	EXPECT_EQ(Model.Snapshot("home", "qm.missing").m_pDescriptor, nullptr);
+	EXPECT_FALSE(Model.Snapshot("home", "qm.missing").m_Available);
+}
+
+TEST(CardSettingsAdapter, SnapshotPreferencesFollowPlacementDefaults)
+{
+	CCardRegistry Registry;
+	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "A", {}, "icon", "", {}, ECardOwner::QM, 0, true, "toggle", 0, true}));
+	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0, {"qm.a"}}));
+	Registry.Freeze();
+	CCardUiModel Model(Registry);
+	// 描述符默认折叠进入快照偏好；SetPreferences 按 (page, card) 生效。
+	EXPECT_TRUE(Model.Snapshot("home", "qm.a").m_Preferences.m_Collapsed);
+	EXPECT_TRUE(Model.Snapshot("home", "qm.a").m_Preferences.m_Visible);
+	SCardUiPreferences Preferences = Model.Snapshot("home", "qm.a").m_Preferences;
+	Preferences.m_Collapsed = false;
+	ASSERT_TRUE(Model.SetPreferences("home", "qm.a", Preferences));
+	EXPECT_FALSE(Model.Snapshot("home", "qm.a").m_Preferences.m_Collapsed);
 }

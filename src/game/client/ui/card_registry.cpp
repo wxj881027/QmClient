@@ -2,7 +2,9 @@
 #include "card_registry.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <set>
 #include <utility>
 
 namespace
@@ -10,19 +12,6 @@ namespace
 bool IsAsciiLowerOrDigit(char Character)
 {
 	return (Character >= 'a' && Character <= 'z') || (Character >= '0' && Character <= '9');
-}
-
-std::string LowerAscii(const std::string &Value)
-{
-	std::string Lower = Value;
-	for(char &Character : Lower)
-		Character = static_cast<char>(std::tolower(static_cast<unsigned char>(Character)));
-	return Lower;
-}
-
-bool Contains(const std::string &Haystack, const std::string &Needle)
-{
-	return !Needle.empty() && LowerAscii(Haystack).find(LowerAscii(Needle)) != std::string::npos;
 }
 
 bool CardOrderLess(const SCardDescriptor *pLeft, const SCardDescriptor *pRight)
@@ -73,7 +62,7 @@ bool CCardRegistry::RegisterFeature(SFeatureModel &Feature)
 
 bool CCardRegistry::RegisterCard(SCardDescriptor Card)
 {
-	if(m_Frozen || !IsStableId(Card.m_Id) || Card.m_PageId.empty() || Card.m_TitleKey.empty() || Card.m_IconId.empty() || FindCard(Card.m_Id) || !FindPage(Card.m_PageId))
+	if(m_Frozen || !IsStableId(Card.m_Id) || Card.m_TitleKey.empty() || Card.m_IconId.empty() || FindCard(Card.m_Id))
 		return false;
 	if(Card.m_PresentationId.empty())
 		Card.m_PresentationId = "default";
@@ -88,6 +77,29 @@ bool CCardRegistry::RegisterCard(SCardDescriptor Card)
 		return false;
 	m_vCards.push_back(std::move(Card));
 	return true;
+}
+
+bool CCardRegistry::Freeze()
+{
+	if(m_Frozen)
+		return m_Valid;
+	// 页面声明的 card ID 必须已注册；未注册的声明使冻结失败，不带病上线。
+	std::set<std::pair<std::string, std::string>> Declared;
+	for(const SCardPage &Page : m_vPages)
+	{
+		for(const std::string &CardId : Page.m_vCardIds)
+		{
+			if(CardId.empty() || !FindCard(CardId))
+			{
+				m_Valid = false;
+				continue;
+			}
+			if(!Declared.insert({Page.m_Id, CardId}).second)
+				m_Valid = false;
+		}
+	}
+	m_Frozen = true;
+	return m_Valid;
 }
 
 const SCardPage *CCardRegistry::FindPage(const std::string &Id) const
@@ -130,11 +142,14 @@ std::vector<const SCardPage *> CCardRegistry::Pages() const
 
 std::vector<const SCardDescriptor *> CCardRegistry::CardsForPage(const std::string &PageId) const
 {
+	// 页面声明是默认位置的来源：按声明顺序返回本页卡片。
+	const SCardPage *pPage = FindPage(PageId);
+	if(!pPage)
+		return {};
 	std::vector<const SCardDescriptor *> Cards;
-	for(const SCardDescriptor &Card : m_vCards)
-		if(Card.m_PageId == PageId)
-			Cards.push_back(&Card);
-	std::sort(Cards.begin(), Cards.end(), CardOrderLess);
+	for(const std::string &CardId : pPage->m_vCardIds)
+		if(const SCardDescriptor *pCard = FindCard(CardId))
+			Cards.push_back(pCard);
 	return Cards;
 }
 
@@ -152,32 +167,24 @@ std::vector<const SCardDescriptor *> CCardRegistry::CardsByInputPriority() const
 	return Cards;
 }
 
-std::vector<const SCardDescriptor *> CCardRegistry::Search(const std::string &Query) const
-{
-	std::vector<const SCardDescriptor *> Results;
-	const std::string LowerQuery = LowerAscii(Query);
-	if(LowerQuery.empty())
-		return Results;
-
-	for(const SCardDescriptor &Card : m_vCards)
-	{
-		bool Matches = Contains(Card.m_Id, LowerQuery) || Contains(Card.m_TitleKey, LowerQuery) || Contains(Card.m_DescriptionKey, LowerQuery);
-		for(const std::string &Keyword : Card.m_SearchKeywords)
-			Matches = Matches || Contains(Keyword, LowerQuery);
-		if(Matches)
-			Results.push_back(&Card);
-	}
-	std::sort(Results.begin(), Results.end(), CardOrderLess);
-	return Results;
-}
-
 CCardOrderModel CCardRegistry::BuildDefaultOrderModel() const
 {
+	// 默认布局完全由页面声明推导：同一卡片在多个声明页各有一个默认放置；
+	// 列取卡片默认列，列内顺序取声明顺序。
 	CCardOrderModel Model;
 	std::vector<SCardOrderEntry> Entries;
-	Entries.reserve(m_vCards.size());
-	for(const SCardDescriptor &Card : m_vCards)
-		Entries.push_back({Card.m_Id, Card.m_PageId, Card.m_DefaultColumn, Card.m_Order});
+	for(const SCardPage *pPage : Pages())
+	{
+		std::array<int, 3> aNextOrder{};
+		for(const std::string &CardId : pPage->m_vCardIds)
+		{
+			const SCardDescriptor *pCard = FindCard(CardId);
+			if(!pCard)
+				continue;
+			const int ColumnIndex = static_cast<int>(pCard->m_DefaultColumn);
+			Entries.push_back({CardId, pPage->m_Id, pCard->m_DefaultColumn, aNextOrder[ColumnIndex]++, true});
+		}
+	}
 	Model.SetDefaults(std::move(Entries));
 	return Model;
 }

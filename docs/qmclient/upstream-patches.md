@@ -7,6 +7,8 @@ baseline: ddnet-20.0
 
 # QmClient 官方上游补丁台账
 
+2026-09-08 OpenGL 合并回归修复：`backend/opengl/backend_opengl.cpp` 恢复桌面 GL / GLES 条件编译边界，确保 `GL_QUADS` 到 `GL_TRIANGLES` 的兼容宏仅在 GLES 分支定义，并恢复文件级 backend guard 的闭合。默认桌面四边形绘制恢复官方语义；不新增诊断字段或渲染功能。冲突面为文件头平台 include 与文件尾 guard，重放时逐层核对嵌套，不能只补齐预处理器数量。分类为恢复 UPSTREAM_BASELINE；上游合并边界正确后不需要独立补丁。同轮 WSL 验证发现 GLES 扩展头在基础 GL 类型定义之前，以及 `backend_threaded.cpp` 的既有 try/catch 缺少按文件异常编译选项；恢复 GLES 头顺序，并仅将该源文件加入现有 `-fexceptions` 白名单，默认渲染和异常回退语义不变。冲突面另含 CMake 现有白名单，重放时按实际 catch 使用者核对；回调异常边界删除后移除该选项。验证结果见 verification-checklist.md，截图视觉恢复需另验。
+
 2026-09-07 Assets 预览 adapter：`menus_settings_assets.cpp` 在原有六分类页面中，优先从 runtime 所有的 `CAssetPageResources` 读取后台目录快照与可见项预览句柄；官方 `Load*Skin` / `ChangeEntitiesPath`、配置写入、搜索及用户显式刷新行为保留。资源选择增加 `NewSelected` 边界校验，避免空搜索结果索引越界。业务 provider 在 `src/game/client/ui/asset_page_resources.*`，通过现有 CMake 客户端/测试源清单接入；没有 server、协议或预测修改。冲突面是 Assets 页初始化/预览/刷新三个窄调用点及源清单，按这三个阶段重放；官方提供等价异步预览 provider 时移除。原同步路径保留为 runtime 未初始化时的回退，不在正常 Qm 路径执行；只有性能及真实 UI 验证通过后才考虑删除。
 
 同批 Linux 编译补充：`backend_sdl.cpp` 的现有诊断异常捕获也加入按源文件启用异常的清单；`backend_opengl.cpp` 的 GLES 分支将 `GLES3/gl3.h` 放到 `SDL_opengles2_gl2ext.h` 前，先定义扩展头依赖的 GL 类型及调用约定。只修正 include 顺序，不删 GLES 后端或 debug callback；上游等价修复后删除，按 include 顺序重放。

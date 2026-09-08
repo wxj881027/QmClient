@@ -15,120 +15,155 @@
 
 #include <algorithm>
 
-TEST(CardUiModel, AppliesVisibilityAndUserOrder)
+TEST(CardUiModel, AppliesPerPlacementVisibilityAndPageOrder)
 {
 	CCardRegistry Registry;
-	ASSERT_TRUE(Registry.RegisterPage({"home", "ui.home", 0}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "home", "A", {}, "a", {}, {}, ECardOwner::QM, 20, true}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.b", "home", "B", {}, "b", {}, {}, ECardOwner::QM, 10, true}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "A", {}, "a", {}, {}, ECardOwner::QM, 20}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.b", "B", {}, "b", {}, {}, ECardOwner::QM, 10}));
+	ASSERT_TRUE(Registry.RegisterPage({"home", "ui.home", 0, {"qm.b", "qm.a"}}));
+	ASSERT_TRUE(Registry.Freeze());
 	CCardUiModel Ui(Registry);
-	ASSERT_TRUE(Ui.SetPreferences("qm.a", {true, false, 0}));
-	ASSERT_TRUE(Ui.SetPreferences("qm.b", {false, false, 0}));
+	// 页面声明顺序即默认列内顺序。
+	ASSERT_EQ(Ui.CardsForPage("home").size(), 2);
+	EXPECT_EQ(Ui.CardsForPage("home").front()->m_Id, "qm.b");
+	// 隐藏是 (page, card) 级别的偏好，只影响本页投影。
+	ASSERT_TRUE(Ui.SetPreferences("home", "qm.b", {false, false}));
 	ASSERT_EQ(Ui.CardsForPage("home").size(), 1);
 	EXPECT_EQ(Ui.CardsForPage("home").front()->m_Id, "qm.a");
-	EXPECT_FALSE(Ui.SetPreferences("qm.missing", {true, false, 0}));
+	EXPECT_FALSE(Ui.Preferences("home", "qm.b").m_Visible);
+	EXPECT_FALSE(Ui.SetPreferences("home", "qm.missing", {true, false}));
+	EXPECT_FALSE(Ui.SetPreferences("other", "qm.a", {true, false}));
 }
 
-TEST(CardUiModel, SearchesVisibleGlobalCards)
+TEST(CardUiModel, PreferencesArePerPlacementNotGlobal)
 {
 	CCardRegistry Registry;
-	ASSERT_TRUE(Registry.RegisterPage({"home", "ui.home", 0}));
-	ASSERT_TRUE(Registry.RegisterCard({"ddnet.video", "home", "Video", "graphics", "video", {}, {"vsync"}, ECardOwner::UPSTREAM, 0, true}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.timer", "home", "Timer", "race", "timer", {}, {"countdown"}, ECardOwner::QM, 0, true}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "A", {}, "a"}));
+	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0, {"qm.a"}}));
+	ASSERT_TRUE(Registry.RegisterPage({"other", "Other", 1, {"qm.a"}}));
+	ASSERT_TRUE(Registry.Freeze());
 	CCardUiModel Ui(Registry);
-	ASSERT_TRUE(Ui.SetPreferences("ddnet.video", {false, false, 0}));
-	EXPECT_TRUE(Ui.Search("vsync").empty());
-	ASSERT_EQ(Ui.Search("countdown").size(), 1);
-	EXPECT_EQ(Ui.Search("countdown").front()->m_Id, "qm.timer");
+	ASSERT_TRUE(Ui.SetPreferences("home", "qm.a", {false, true}));
+	EXPECT_FALSE(Ui.Preferences("home", "qm.a").m_Visible);
+	EXPECT_TRUE(Ui.Preferences("home", "qm.a").m_Collapsed);
+	EXPECT_TRUE(Ui.Preferences("other", "qm.a").m_Visible);
+	EXPECT_FALSE(Ui.Preferences("other", "qm.a").m_Collapsed);
+	EXPECT_EQ(Ui.CardsForPage("other").size(), 1);
+	// 同一卡片在多页的放置各自独立导出。
+	const SCardUiState State = Ui.ExportState();
+	ASSERT_EQ(State.m_vPlacements.size(), 1);
+	EXPECT_EQ(State.m_vPlacements.front().m_PageId, "home");
+	EXPECT_EQ(State.m_vPlacements.front().m_CardId, "qm.a");
+	EXPECT_FALSE(State.m_vPlacements.front().m_Visible);
 }
 
-TEST(CardUiModel, UsesDescriptorDefaultsAndRoundTripsPreferences)
+TEST(CardUiModel, UsesDescriptorDefaultsAndRoundTripsState)
 {
 	CCardRegistry Registry;
 	SFeatureModel Feature{"qm.feature", "Feature", true, false};
-	ASSERT_TRUE(Registry.RegisterPage({"home", "ui.home", 0}));
 	ASSERT_TRUE(Registry.RegisterFeature(Feature));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.feature.card", "home", "Feature", {}, "icon", Feature.m_Id, {}, ECardOwner::QM, 4, true, "panel", 7, true}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.feature.card", "Feature", {}, "icon", Feature.m_Id, {}, ECardOwner::QM, 4, true, "panel", 0, true}));
+	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0, {"qm.feature.card"}}));
+	ASSERT_TRUE(Registry.Freeze());
 	CCardUiModel Ui(Registry);
-	EXPECT_FALSE(Ui.Preferences("qm.feature.card").m_Visible == false);
+	// 未设置偏好时回退到 descriptor 默认（可见、折叠）。
+	EXPECT_TRUE(Ui.Preferences("home", "qm.feature.card").m_Visible);
+	EXPECT_TRUE(Ui.Preferences("home", "qm.feature.card").m_Collapsed);
+	// 功能不可用时卡片不投影到页面。
 	EXPECT_TRUE(Ui.CardsForPage("home").empty());
-	ASSERT_TRUE(Ui.SetPreferences("qm.feature.card", {true, false, 12}));
-	const auto Exported = Ui.ExportPreferences();
-	ASSERT_EQ(Exported.size(), 1);
-	CCardUiModel Imported(Registry);
-	ASSERT_TRUE(Imported.ImportPreferences(Exported));
-	EXPECT_EQ(Imported.Preferences("qm.feature.card").m_Order, 0);
-}
-
-TEST(CardUiModel, FailedImportDoesNotPartiallyModifyPreferences)
-{
-	CCardRegistry Registry;
-	ASSERT_TRUE(Registry.RegisterPage({"home", "ui.home", 0}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "home", "A", {}, "icon"}));
-	CCardUiModel Ui(Registry);
-	ASSERT_TRUE(Ui.SetPreferences("qm.a", {true, false, 7}));
-	EXPECT_FALSE(Ui.ImportPreferences({{"qm.a", {false, true, 12}}, {"qm.missing", {}}}));
-	EXPECT_TRUE(Ui.Preferences("qm.a").m_Visible);
-	EXPECT_FALSE(Ui.Preferences("qm.a").m_Collapsed);
-	EXPECT_EQ(Ui.Preferences("qm.a").m_Order, 0);
-}
-
-TEST(CardUiModel, DuplicateImportIsRejectedWithoutMutation)
-{
-	CCardRegistry Registry;
-	ASSERT_TRUE(Registry.RegisterPage({"home", "ui.home", 0}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "home", "A", {}, "icon"}));
-	CCardUiModel Ui(Registry);
-	EXPECT_FALSE(Ui.ImportPreferences({{"qm.a", {false, false, 2}}, {"qm.a", {true, true, 3}}}));
-	EXPECT_TRUE(Ui.ExportPreferences().empty());
-}
-
-TEST(CardUiModel, SearchUsesUserOrderAndAvailability)
-{
-	CCardRegistry Registry;
-	SFeatureModel Feature{"qm.feature", "Feature", true, false};
-	ASSERT_TRUE(Registry.RegisterPage({"home", "ui.home", 0}));
-	ASSERT_TRUE(Registry.RegisterFeature(Feature));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "home", "Shared A", {}, "icon", Feature.m_Id}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.b", "home", "Shared B", {}, "icon"}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.c", "home", "Shared C", {}, "icon"}));
-	CCardUiModel Ui(Registry);
-	ASSERT_TRUE(Ui.SetPreferences("qm.c", {true, false, 0}));
-	const auto vResults = Ui.Search("shared");
-	ASSERT_EQ(vResults.size(), 2);
-	EXPECT_EQ(vResults[0]->m_Id, "qm.c");
-	EXPECT_EQ(vResults[1]->m_Id, "qm.b");
+	// 折叠覆盖默认（默认折叠=true），可见保持默认。
+	ASSERT_TRUE(Ui.SetPreferences("home", "qm.feature.card", {true, false}));
 	Feature.m_Available = true;
-	EXPECT_EQ(Ui.Search("shared").size(), 3);
+	EXPECT_EQ(Ui.CardsForPage("home").size(), 1);
+	const SCardUiState Exported = Ui.ExportState();
+	ASSERT_EQ(Exported.m_vPlacements.size(), 1);
+	CCardUiModel Imported(Registry);
+	std::string Error;
+	ASSERT_TRUE(Imported.ImportState(Exported, Error)) << Error;
+	EXPECT_TRUE(Imported.Preferences("home", "qm.feature.card").m_Visible);
+	EXPECT_FALSE(Imported.Preferences("home", "qm.feature.card").m_Collapsed);
+}
+
+TEST(CardUiModel, FailedImportDoesNotPartiallyModifyState)
+{
+	CCardRegistry Registry;
+	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "A", {}, "icon"}));
+	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0, {"qm.a"}}));
+	ASSERT_TRUE(Registry.Freeze());
+	CCardUiModel Ui(Registry);
+	ASSERT_TRUE(Ui.SetPreferences("home", "qm.a", {true, true}));
+	const SCardUiState Before = Ui.ExportState();
+	ASSERT_EQ(Before.m_vPlacements.size(), 1);
+	SCardUiState Bad = Before;
+	Bad.m_vPlacements.push_back({"qm.missing", "home", ECardColumn::FULL, 0, true, true, false});
+	std::string Error;
+	EXPECT_FALSE(Ui.ImportState(Bad, Error));
+	EXPECT_FALSE(Error.empty());
+	EXPECT_TRUE(Ui.Preferences("home", "qm.a").m_Collapsed);
+	EXPECT_EQ(Ui.ExportState().m_vPlacements.size(), Before.m_vPlacements.size());
+}
+
+TEST(CardUiModel, DuplicatePlacementImportIsRejectedWithoutMutation)
+{
+	CCardRegistry Registry;
+	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "A", {}, "icon"}));
+	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0, {"qm.a"}}));
+	ASSERT_TRUE(Registry.Freeze());
+	CCardUiModel Ui(Registry);
+	SCardUiState State;
+	State.m_vPlacements.push_back({"qm.a", "home", ECardColumn::FULL, 0, true, true, false});
+	State.m_vPlacements.push_back({"qm.a", "home", ECardColumn::FULL, 1, true, true, false});
+	std::string Error;
+	EXPECT_FALSE(Ui.ImportState(State, Error));
+	EXPECT_TRUE(Ui.ExportState().m_vPlacements.empty());
 }
 
 TEST(CardUiModel, RelativeMoveRespectsPageAndColumnBoundaries)
 {
 	CCardRegistry Registry;
-	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0}));
-	ASSERT_TRUE(Registry.RegisterPage({"other", "Other", 1}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "home", "A", {}, "icon"}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.b", "home", "B", {}, "icon"}));
-	ASSERT_TRUE(Registry.RegisterCard({"qm.c", "other", "C", {}, "icon"}));
-	Registry.Freeze();
+	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "A", {}, "icon"}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.b", "B", {}, "icon"}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.c", "C", {}, "icon"}));
+	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0, {"qm.a", "qm.b"}}));
+	ASSERT_TRUE(Registry.RegisterPage({"other", "Other", 1, {"qm.c"}}));
+	ASSERT_TRUE(Registry.Freeze());
 	CCardUiModel Model(Registry);
-	ASSERT_TRUE(Model.MoveCardRelative("qm.a", "qm.b", true));
-	EXPECT_EQ(Model.OrderModel().Find("qm.a")->m_Order, 1);
-	ASSERT_TRUE(Model.MoveCardRelative("qm.a", "qm.c", true));
-	EXPECT_EQ(Model.OrderModel().Find("qm.a")->m_PageId, "other");
-	EXPECT_EQ(Model.OrderModel().Find("qm.a")->m_Order, 1);
-	EXPECT_EQ(Model.OrderModel().Find("qm.c")->m_Order, 0);
-	ASSERT_TRUE(Model.MoveCard("qm.b", "other", ECardColumn::RIGHT, 0));
-	ASSERT_TRUE(Model.MoveCardRelative("qm.a", "qm.b", true));
-	EXPECT_EQ(Model.OrderModel().Find("qm.a")->m_Column, ECardColumn::RIGHT);
-	EXPECT_EQ(Model.OrderModel().Find("qm.a")->m_Order, 1);
-	ASSERT_TRUE(Model.MoveCardRelative("qm.a", "qm.b", false));
-	EXPECT_EQ(Model.OrderModel().Find("qm.a")->m_Order, 0);
+	ASSERT_TRUE(Model.MoveCardRelative("home", "qm.a", "qm.b", true));
+	EXPECT_EQ(Model.OrderModel().Find("home", "qm.a")->m_Order, 1);
+	// 目标在另一页：相对移动不跨页。
+	EXPECT_FALSE(Model.MoveCardRelative("home", "qm.a", "qm.c", true));
+	ASSERT_TRUE(Model.MoveCard("qm.a", "home", "other", ECardColumn::RIGHT, 0));
+	EXPECT_FALSE(Model.OrderModel().Find("home", "qm.a")->m_Present);
+	ASSERT_TRUE(Model.MoveCardRelative("other", "qm.a", "qm.c", true));
+	EXPECT_EQ(Model.OrderModel().Find("other", "qm.a")->m_Column, ECardColumn::FULL);
+	EXPECT_EQ(Model.OrderModel().Find("other", "qm.a")->m_Order, 1);
+	ASSERT_TRUE(Model.MoveCardRelative("other", "qm.a", "qm.c", false));
+	EXPECT_EQ(Model.OrderModel().Find("other", "qm.a")->m_Order, 0);
 	const unsigned Revision = Model.Revision();
-	EXPECT_FALSE(Model.MoveCardRelative("qm.a", "qm.a", false));
-	EXPECT_FALSE(Model.MoveCardRelative("missing", "qm.a", true));
-	EXPECT_FALSE(Model.MoveCardRelative("qm.a", "missing", true));
+	EXPECT_FALSE(Model.MoveCardRelative("other", "qm.a", "qm.a", false));
+	EXPECT_FALSE(Model.MoveCardRelative("other", "missing", "qm.c", true));
+	EXPECT_FALSE(Model.MoveCardRelative("other", "qm.a", "missing", true));
 	EXPECT_EQ(Model.Revision(), Revision);
+}
+
+TEST(CardUiModel, ResetPageRestoresDeclarationAndClearsPlacementPreferences)
+{
+	CCardRegistry Registry;
+	ASSERT_TRUE(Registry.RegisterCard({"qm.a", "A", {}, "a", {}, {}, ECardOwner::QM, 0, true, "default", 0, false, ECardColumn::LEFT}));
+	ASSERT_TRUE(Registry.RegisterCard({"qm.b", "B", {}, "b"}));
+	ASSERT_TRUE(Registry.RegisterPage({"home", "Home", 0, {"qm.a", "qm.b"}}));
+	ASSERT_TRUE(Registry.Freeze());
+	CCardUiModel Ui(Registry);
+	ASSERT_TRUE(Ui.MoveCard("qm.a", "home", "home", ECardColumn::RIGHT, 0));
+	ASSERT_TRUE(Ui.SetPreferences("home", "qm.a", {false, true}));
+	ASSERT_TRUE(Ui.ResetPagePreferences("home"));
+	EXPECT_EQ(Ui.OrderModel().Find("home", "qm.a")->m_Column, ECardColumn::LEFT);
+	EXPECT_EQ(Ui.OrderModel().Find("home", "qm.a")->m_Order, 0);
+	EXPECT_TRUE(Ui.Preferences("home", "qm.a").m_Visible);
+	EXPECT_FALSE(Ui.Preferences("home", "qm.a").m_Collapsed);
+	EXPECT_TRUE(Ui.ExportState().m_vPlacements.empty());
+	// 未知页面被拒绝。
+	EXPECT_FALSE(Ui.ResetPagePreferences("missing"));
 }
 
 TEST(ResourcePageCache, DeduplicatesLoadsAndRejectsStaleResults)

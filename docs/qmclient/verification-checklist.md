@@ -1,12 +1,45 @@
 # QmClient 阶段 0–5 验证清单
 
-更新时间：2026-09-07
+更新时间：2026-09-08
 
 本清单区分“功能切片完成”和“架构/交互验证完成”。切片可以在纯逻辑、构建和静态门禁齐全时标记 DONE；真实 UI、联网和性能证据单独记录，不用未运行的场景冒充通过。
 
-## 本轮增量证据（2026-09-07）
+## 本轮增量证据（截至 2026-09-08）
 
 本节按批次记录证据；最新工作树状态见“阶段 0–5 最终代码批次”。历史通过结果不能覆盖其后尚未验证的代码。
+
+### 2026-09-08 全局卡片重构批次（(page,card) 放置模型 + 统一搜索 + 真实拖拽）
+
+- 按目标模型 `ui-ux-refactor-plan.md` 重构全局卡片底层：descriptor 与页面声明分离、`(page, card)` 放置 order model（present 标记、跨页合并）、每页投影与新卡补位、schema v3 与 v2/v1 迁移、`card_search_logic` + `CCardSearchIndex` 统一搜索、`card_drag_logic` 拖拽事务/让位/自动滚动；设置视图接页面 tabs、真实拖拽、跨页投放与自动保存。明细与行为变更登记见 `feature-ledger.md` `qm.ui` 条目。
+- 构建：`qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target testrunner` 与 `--target game-client` 均增量成功；期间停止了占用 `DDNet.exe` 的工作区客户端实例后完成链接。
+- 测试：`cmake-build-release\testrunner.exe` 全量 **500 passed / 3 disabled**（含卡片 order/registry/projection/preferences/adapter/search/drag 与资源加载共 87 项专项）。
+- 门禁：`py -3 qmclient_scripts/check_qmclient_boundary.py` 通过（51 source / 3 logic）；`py -3 qmclient_scripts/qmclient_i18n.py validate` 通过（44 messages / 41 source records，本批补登记 `Open page`、`Reset page`、`Toggle`）；`py -3 qmclient_scripts/check_qmclient_runtime_smoke.py` 通过（11 session lines，OpenGL，`write_failed=false`）。
+- 本批测试侧修复（均非业务逻辑放宽）：projection 测试 feature 局部变量悬空改为 static；拖拽阈值零距离断言按实现语义修正；搜索优先级断言与实现/头文件文档对齐（DESCRIPTION > ALIAS）。
+- gap：多页拖拽、跨页投放、搜索导航与列表/卡片双 presentation 的真实鼠标/触控/IME 交互未验证；性能 A/B 未运行。
+
+### 2026-09-08 OpenGL 四边形绘制回归修复
+
+- 原构建日志 `tmp/build-game-client.log` 记录 `GL_QUADS` 和 `GL_TEXTURE_2D_ARRAY_EXT` 重定义；条件编译边界使 GLES 三角形替代宏泄漏到桌面 GL。恢复 GLES 分支和文件级 guard，保留现有平台适配。
+- `cmd /c qmclient_scripts\cmake-windows.cmd --build cmake-build-release --target game-client --parallel 14`：通过，重新编译 OpenGL backend 并链接客户端，无上述宏重定义警告。
+- `py -3 qmclient_scripts/check_qmclient_runtime_smoke.py`：通过；另以 `--base-config tmp/opengl-quad-regression.cfg` 请求 OpenGL 1.1 路径，通过。两次均为临时 storage，diagnostics 开关路径和正常退出通过；不以启动成功冒充截图视觉验收。
+- 只读 review 核对 GL/GLES guard、QUADS draw 调用、backend callback 声明/定义/调用一致性。最终 Windows 增量构建及 OpenGL 1.1 fixture smoke 再次通过。WSL 首次构建发现 GLES 头顺序和 backend_threaded.cpp 异常编译选项问题，修复后两个翻译单元及桌面 GL 均编译通过；完整 game-client 被检查期间并行变化的卡片接口阻断（Find/Move/RegisterCard 等调用不匹配），日志 `tmp/opengl-regression-linux-build.log`。未覆盖这些并行改动；最终工作树全量构建不标通过。真实画面恢复、Android/iOS 运行尚未验证。
+
+### 2026-09-08 i18n 工具重写证据
+
+- `py -3 qmclient_scripts/qmclient_i18n.py migrate --write`：完成旧 Qm key/fallback 到官方 source-key TOML 的迁移。
+- `py -3 qmclient_scripts/qmclient_i18n.py validate`：通过，41 条英文 source key、39 条源码 source record。
+- `scan`、`generate --languages simplified_chinese --output-dir tmp/qmclient-languages`：通过；保留现有 867 条官方条目并按官方格式加入 Qm source。
+- DeepSeek 翻译未执行真实 API 请求，未写入新译文。
+- 本轮未进行人工 UI、联网、demo/观战或性能验收；这些由用户手工执行。
+
+### 2026-09-08 地基修复增量证据
+
+- 修复卡片 presentation 缺口：`qm.player_indicator`、`qm.auto_team_lock`、`qm.speedrun_timer` 现在与 `qm.diagnostics` 一样注册为 `toggle` 并绑定各自 `qm_` 配置键；新增 adapter 回归测试。
+- runtime 初始化改为 fail-closed：feature、card 或 dispatch 注册失败时不进入 `m_Initialized`，避免部分接线继续运行。
+- `SQmFeatureModel` 移到 `core/qm_feature_model.h`；feature header 不再反向 include `game/client/ui/card_registry.h`。
+- 规定入口构建：`cmd /c qmclient_scripts\\cmake-windows.cmd --build cmake-build-release --target testrunner --parallel 14`、`--target game-client --parallel 14` 均成功。
+- 自动验证：Qm/UI/资源专项 `82 passed`；完整 Windows `testrunner` **469 passed / 3 disabled**；runtime smoke 通过（26 session events，OpenGL，`write_failed=false`）；boundary `50 source / 3 logic`、i18n `41 source key / 39 source record` 通过。
+- 人工验收仍未完成：当前 CUA 环境未暴露本机原生窗口，无法可靠点击检查设置页；联网、demo/观战、触控/IME/DPI 和性能 A/B 继续保留为待验。
 
 - 基础修复前新增 3 个测试真实失败：非法偏好部分导入、重复 ID、搜索忽略 availability/用户排序；修复后全量 420 tests passed / 3 disabled。
 - 偏好 schema 与调度接入后增量构建成功，测试曾出现 432 passed / 1 failed（dirty 初值异常）；runtime smoke 曾 30 秒超时，去掉 `-s` 后观察到 sound SampleId 断言。未通过改配置禁音或跳过路径掩盖问题。
@@ -52,7 +85,7 @@
 - Windows：clean Release `game-client`、`testrunner` 构建完成；审查修复后串行增量重编译、全量 **468 passed / 3 disabled**。证据 `tmp/final-verification/windows-testrunner-final-20260907.xml`。
 - disabled：`ReplaceWords.DISABLED_MissingBoundaries`、`ReplaceWords.DISABLED_Cyrillic`、`ReplaceWords.DISABLED_Spread`，是官方既有禁用项，本轮未启用或修改；不计入通过数。
 - runtime：`py -3 qmclient_scripts/check_qmclient_runtime_smoke.py` 通过；`base_config=none`、26 session events、OpenGL、`write_failed=false`、临时 report=0、diagnostics 关闭无文件。该测试不打开资源页面，不证明 UI/预览或 A/B 通过。
-- 静态/脚本：boundary 49 source / 3 logic、i18n 42 messages / 39 fallback；Python 语法、图标 manifest 3 tests、coverage 汇总 2 tests、`git diff --cached --check` 均通过。
+- 静态/脚本：boundary 49 source / 3 logic、i18n 41 source key / 39 source record；Python 语法、图标 manifest 3 tests、coverage 汇总 2 tests、`git diff --cached --check` 均通过。
 - 只读审查复核：terra / high 确认资源元数据 LRU 和 Windows 偏好替换两项 P2 已闭合，限定范围未发现具体残余；该复核没有代跑 UI、真实联网或性能采样。相关测试已包含在上述 468 passed 中。
 - Linux：WSL 内 GCC/gcov 13.3 Debug coverage 配置成功，`game-client` 350/350、`testrunner` 136/136 编译链接成功，实际覆盖 GLES、Assets provider 和 loader 翻译单元。仓库挂载目录作为 test cwd 时为 459 passed / 2 failed / 3 disabled，失败均为官方 `Filesystem.RenameOpenFileSource*`；同一插桩二进制改用 `--test-work-root /tmp` 后为 **461 passed / 3 disabled**。这组 A/B 将差异定位到测试 scratch 文件系统语义，不是 Qm 测试或依赖缺失。标准 Release 已恢复配置并成功链接 `game-client`，最后的 runtime 配置门控也已在 Linux 增量编译。
 - 最终 coverage：`test_exit_code=0`、`collection_errors=0`；Qm 扩展和 `src/game/client/ui/` 单元测试口径 line **60.23% (2055/3412)**、branch **25.75% (1792/6960)**。报告在 `tmp/final-verification/linux-native-coverage-final/`；这不是 UI/runtime/联网覆盖率，未插桩源码清单以报告为准。其后仅补 runtime 的当前配置关闭门控；该 4 条门控已两平台编译和 runtime smoke，但没有重配 coverage，因此报告不声称覆盖该最后 delta。

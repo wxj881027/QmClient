@@ -3,8 +3,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FEATURES_SPEEDRUN_TIMER_QM_SPEEDRUN_TIMER_H
 
 #include "qm_speedrun_timer_logic.h"
-
-#include <game/client/ui/card_registry.h>
+#include <game/client/components/qmclient/core/qm_feature_model.h>
 
 class ITextRender;
 

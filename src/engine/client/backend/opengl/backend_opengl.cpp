@@ -33,17 +33,16 @@
 #include <OpenGLES/ES3/gl.h>
 #include <OpenGLES/ES3/glext.h>
 #else
-#include <SDL_opengles2_gl2ext.h>
 #include <GLES3/gl3.h>
-#endif
+#include <SDL_opengles2_gl2ext.h>
 #endif
 #define GL_TEXTURE_2D_ARRAY_EXT GL_TEXTURE_2D_ARRAY
 // GLES doesn't support GL_QUADS, but the code is also never executed
 #define GL_QUADS GL_TRIANGLES
-#ifndef CONF_BACKEND_OPENGL_ES3
-#include <GLES/gl.h>
+#if defined(BACKEND_AS_OPENGL_ES) && !defined(CONF_BACKEND_OPENGL_ES3)
+#include <SDL_opengles2_gl2.h>
 #define glOrtho glOrthof
-#else
+#elif defined(BACKEND_AS_OPENGL_ES)
 #define BACKEND_GL_MODERN_API 1
 #endif
 #endif

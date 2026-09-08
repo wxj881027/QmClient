@@ -8,6 +8,7 @@
 #include <engine/shared/jsonwriter.h>
 #include <engine/storage.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <limits>
 #include <memory>
@@ -16,7 +17,7 @@
 namespace
 {
 constexpr size_t MAX_FILE_SIZE = 1024 * 1024;
-constexpr unsigned MAX_CARDS = 4096;
+constexpr unsigned MAX_PLACEMENTS = 4096;
 
 bool Fail(std::string &Error, const char *pMessage)
 {
@@ -37,52 +38,74 @@ bool HasUniqueFields(const json_value &Object, unsigned ExpectedCount)
 	}
 	return true;
 }
+
+// 旧 schema（v1/v2）的偏好是全局按卡片保存的；迁移时挂到卡片的第一处页面声明（主页面）。
+std::string PrimaryPageForCard(const CCardRegistry &Registry, const std::string &CardId)
+{
+	for(const SCardPage *pPage : Registry.Pages())
+		for(const std::string &DeclaredId : pPage->m_vCardIds)
+			if(DeclaredId == CardId)
+				return pPage->m_Id;
+	return {};
+}
+
+bool IsValidCardIdToken(const json_value &Value, std::string &Out)
+{
+	if(Value.type != json_string || Value.u.string.length == 0 || Value.u.string.length > 128)
+		return false;
+	Out.assign(Value.u.string.ptr, Value.u.string.length);
+	return Out.find('\0') == std::string::npos;
+}
+
+bool ParseIntInRange(const json_value &Value, int64_t Min, int64_t Max, int &Out)
+{
+	if(Value.type != json_integer || Value.u.integer < Min || Value.u.integer > Max)
+		return false;
+	Out = static_cast<int>(Value.u.integer);
+	return true;
+}
+
+void WritePlacement(CJsonStringWriter &Writer, const SCardPlacementState &Placement)
+{
+	Writer.BeginObject();
+	Writer.WriteAttribute("card");
+	Writer.WriteStrValue(Placement.m_CardId.c_str());
+	Writer.WriteAttribute("page");
+	Writer.WriteStrValue(Placement.m_PageId.c_str());
+	Writer.WriteAttribute("column");
+	Writer.WriteIntValue(static_cast<int>(Placement.m_Column));
+	Writer.WriteAttribute("order");
+	Writer.WriteIntValue(Placement.m_Order);
+	Writer.WriteAttribute("present");
+	Writer.WriteBoolValue(Placement.m_Present);
+	Writer.WriteAttribute("visible");
+	Writer.WriteBoolValue(Placement.m_Visible);
+	Writer.WriteAttribute("collapsed");
+	Writer.WriteBoolValue(Placement.m_Collapsed);
+	Writer.EndObject();
+}
 }
 
 std::string SerializeCardPreferences(const CCardUiModel &Model)
 {
+	const SCardUiState State = Model.ExportState();
 	CJsonStringWriter Writer;
 	Writer.BeginObject();
 	Writer.WriteAttribute("version");
 	Writer.WriteIntValue(CARD_PREFERENCES_VERSION);
-	Writer.WriteAttribute("cards");
-	Writer.BeginArray();
-	for(const auto &Entry : Model.ExportPreferences())
-	{
-		Writer.BeginObject();
-		Writer.WriteAttribute("id");
-		Writer.WriteStrValue(Entry.first.c_str());
-		Writer.WriteAttribute("visible");
-		Writer.WriteBoolValue(Entry.second.m_Visible);
-		Writer.WriteAttribute("collapsed");
-		Writer.WriteBoolValue(Entry.second.m_Collapsed);
-		Writer.EndObject();
-	}
-	Writer.EndArray();
 	Writer.WriteAttribute("placements");
 	Writer.BeginArray();
-	for(const SCardOrderEntry &Entry : Model.OrderModel().Entries())
-	{
-		Writer.BeginObject();
-		Writer.WriteAttribute("id");
-		Writer.WriteStrValue(Entry.m_Id.c_str());
-		Writer.WriteAttribute("page");
-		Writer.WriteStrValue(Entry.m_PageId.c_str());
-		Writer.WriteAttribute("column");
-		Writer.WriteIntValue(static_cast<int>(Entry.m_Column));
-		Writer.WriteAttribute("order");
-		Writer.WriteIntValue(Entry.m_Order);
-		Writer.EndObject();
-	}
+	for(const SCardPlacementState &Placement : State.m_vPlacements)
+		WritePlacement(Writer, Placement);
 	Writer.EndArray();
 	Writer.WriteAttribute("view");
 	Writer.BeginObject();
 	Writer.WriteAttribute("mode");
-	Writer.WriteIntValue(Model.ViewPreferences().m_Mode);
+	Writer.WriteIntValue(State.m_View.m_Mode);
 	Writer.WriteAttribute("light");
-	Writer.WriteBoolValue(Model.ViewPreferences().m_LightTheme);
+	Writer.WriteBoolValue(State.m_View.m_LightTheme);
 	Writer.WriteAttribute("animations");
-	Writer.WriteBoolValue(Model.ViewPreferences().m_Animations);
+	Writer.WriteBoolValue(State.m_View.m_Animations);
 	Writer.EndObject();
 	Writer.EndObject();
 	return Writer.GetOutputString();
@@ -100,43 +123,129 @@ bool ParseCardPreferences(const std::string &Json, CCardUiModel &Model, std::str
 		JsonParseEx(&Settings, Json.data(), Json.size(), aParseError), json_value_free);
 	if(!pRoot)
 		return Fail(Error, "invalid card preferences JSON");
-	if(!HasUniqueFields(*pRoot, 2) && !HasUniqueFields(*pRoot, 4))
+	if(HasUniqueFields(*pRoot, 2) + HasUniqueFields(*pRoot, 3) + HasUniqueFields(*pRoot, 4) != 1)
 		return Fail(Error, "invalid card preferences root fields");
 	const json_value &Version = *json_object_get(pRoot.get(), "version");
-	const json_value &Cards = *json_object_get(pRoot.get(), "cards");
-	if(Version.type != json_integer || (Version.u.integer != 1 && Version.u.integer != CARD_PREFERENCES_VERSION))
+	if(Version.type != json_integer || Version.u.integer < 1 || Version.u.integer > CARD_PREFERENCES_VERSION)
 		return Fail(Error, "unsupported card preferences version");
-	if(!HasUniqueFields(*pRoot, Version.u.integer == 1 ? 2 : 4))
+	const unsigned ExpectedRootFields = Version.u.integer == 1 ? 2 : Version.u.integer == 2 ? 4 : 3;
+	if(!HasUniqueFields(*pRoot, ExpectedRootFields))
 		return Fail(Error, "invalid card preferences version fields");
-	if(Cards.type != json_array || Cards.u.array.length > MAX_CARDS)
-		return Fail(Error, "invalid card preferences array");
 
-	std::vector<std::pair<std::string, SCardUiPreferences>> vPreferences;
-	const CCardOrderModel Defaults = Model.Registry().BuildDefaultOrderModel();
+	const CCardRegistry &Registry = Model.Registry();
+	SCardUiState State;
 	std::unordered_set<std::string> Seen;
-	for(const json_value *pCard : Cards.u.array)
+	if(Version.u.integer <= 2)
 	{
-		if(!HasUniqueFields(*pCard, Version.u.integer == 1 ? 4 : 3))
-			return Fail(Error, "invalid card preference fields");
-		const json_value &Id = *json_object_get(pCard, "id");
-		const json_value &Visible = *json_object_get(pCard, "visible");
-		const json_value &Collapsed = *json_object_get(pCard, "collapsed");
-		const json_value &Order = *json_object_get(pCard, "order");
-		if(Id.type != json_string || Id.u.string.length == 0 || Id.u.string.length > 128 ||
-			Visible.type != json_boolean || Collapsed.type != json_boolean ||
-			(Version.u.integer == 1 && (Order.type != json_integer || Order.u.integer < 0 || Order.u.integer > std::numeric_limits<int>::max())))
-			return Fail(Error, "invalid card preference value");
-		const std::string CardId(Id.u.string.ptr, Id.u.string.length);
-		if(CardId.find('\0') != std::string::npos || !Seen.insert(CardId).second)
-			return Fail(Error, "duplicate or invalid card preference id");
-		// 未注册的旧卡片不参与当前模型；文件加载不立即回写。
-		if(const auto *pDefault = Defaults.Find(CardId))
-			vPreferences.emplace_back(CardId, SCardUiPreferences{Visible.u.boolean != 0, Collapsed.u.boolean != 0, Version.u.integer == 1 ? static_cast<int>(Order.u.integer) : pDefault->m_Order});
+		// 旧 schema 迁移：v1 的 cards 带 order、无放置表；v2 有独立 placements 表。
+		// 全部映射为 present=true 的放置；偏好挂到主页面。
+		const json_value &Cards = *json_object_get(pRoot.get(), "cards");
+		if(Cards.type != json_array || Cards.u.array.length > MAX_PLACEMENTS)
+			return Fail(Error, "invalid card preferences array");
+		std::vector<std::pair<std::string, SCardUiPreferences>> vLegacyPreferences;
+		for(const json_value *pCard : Cards.u.array)
+		{
+			if(!HasUniqueFields(*pCard, Version.u.integer == 1 ? 4 : 3))
+				return Fail(Error, "invalid card preference fields");
+			const json_value &Id = *json_object_get(pCard, "id");
+			const json_value &Visible = *json_object_get(pCard, "visible");
+			const json_value &Collapsed = *json_object_get(pCard, "collapsed");
+			std::string CardId;
+			if(!IsValidCardIdToken(Id, CardId) || Visible.type != json_boolean || Collapsed.type != json_boolean)
+				return Fail(Error, "invalid card preference value");
+			if(!Seen.insert(CardId).second)
+				return Fail(Error, "duplicate or invalid card preference id");
+			const SCardDescriptor *pDescriptor = Registry.FindCard(CardId);
+			if(!pDescriptor)
+				continue;
+			SCardUiPreferences Prefs{Visible.u.boolean != 0, Collapsed.u.boolean != 0};
+			if(Version.u.integer == 1)
+			{
+				int LegacyOrder = 0;
+				if(!ParseIntInRange(*json_object_get(pCard, "order"), 0, std::numeric_limits<int>::max(), LegacyOrder))
+					return Fail(Error, "invalid card preference value");
+				const std::string PageId = PrimaryPageForCard(Registry, CardId);
+				if(PageId.empty())
+					continue;
+				State.m_vPlacements.push_back({CardId, PageId, pDescriptor->m_DefaultColumn, LegacyOrder, true, Prefs.m_Visible, Prefs.m_Collapsed});
+			}
+			else
+				vLegacyPreferences.emplace_back(CardId, Prefs);
+		}
+		if(Version.u.integer == 2)
+		{
+			const json_value &Placements = *json_object_get(pRoot.get(), "placements");
+			if(Placements.type != json_array || Placements.u.array.length > MAX_PLACEMENTS)
+				return Fail(Error, "invalid card placements array");
+			Seen.clear();
+			for(const json_value *pPlacement : Placements.u.array)
+			{
+				if(!HasUniqueFields(*pPlacement, 4))
+					return Fail(Error, "invalid card placement fields");
+				std::string CardId, PageId;
+				int Column = 0, Order = 0;
+				if(!IsValidCardIdToken(*json_object_get(pPlacement, "id"), CardId) ||
+					!IsValidCardIdToken(*json_object_get(pPlacement, "page"), PageId) ||
+					!ParseIntInRange(*json_object_get(pPlacement, "column"), 0, 2, Column) ||
+					!ParseIntInRange(*json_object_get(pPlacement, "order"), 0, std::numeric_limits<int>::max(), Order))
+					return Fail(Error, "invalid card placement value");
+				if(!Seen.insert(CardId).second)
+					return Fail(Error, "duplicate or invalid card placement id");
+				if(!Registry.FindCard(CardId) || !Registry.FindPage(PageId))
+					continue;
+				State.m_vPlacements.push_back({CardId, PageId, static_cast<ECardColumn>(Column), Order, true, true, false});
+			}
+			// v2 偏好是全局的：迁到主页面；没有放置记录的卡片补一个默认放置。
+			const CCardOrderModel Defaults = Registry.BuildDefaultOrderModel();
+			for(const auto &[CardId, Prefs] : vLegacyPreferences)
+			{
+				const std::string PageId = PrimaryPageForCard(Registry, CardId);
+				if(PageId.empty())
+					continue;
+				const SCardOrderEntry *pDefault = Defaults.Find(PageId, CardId);
+				const auto It = std::find_if(State.m_vPlacements.begin(), State.m_vPlacements.end(), [&](const SCardPlacementState &Placement) {
+					return Placement.m_CardId == CardId && Placement.m_PageId == PageId;
+				});
+				if(It != State.m_vPlacements.end())
+				{
+					It->m_Visible = Prefs.m_Visible;
+					It->m_Collapsed = Prefs.m_Collapsed;
+				}
+				else if(pDefault)
+					State.m_vPlacements.push_back({CardId, PageId, pDefault->m_Column, pDefault->m_Order, true, Prefs.m_Visible, Prefs.m_Collapsed});
+			}
+		}
 	}
-	std::vector<SCardOrderEntry> vPlacements;
-	SCardViewPreferences ViewPreferences;
-	Seen.clear();
-	if(Version.u.integer == CARD_PREFERENCES_VERSION)
+	else
+	{
+		const json_value &Placements = *json_object_get(pRoot.get(), "placements");
+		if(Placements.type != json_array || Placements.u.array.length > MAX_PLACEMENTS)
+			return Fail(Error, "invalid card placements array");
+		for(const json_value *pPlacement : Placements.u.array)
+		{
+			if(!HasUniqueFields(*pPlacement, 7))
+				return Fail(Error, "invalid card placement fields");
+			std::string CardId, PageId;
+			int Column = 0, Order = 0;
+			if(!IsValidCardIdToken(*json_object_get(pPlacement, "card"), CardId) ||
+				!IsValidCardIdToken(*json_object_get(pPlacement, "page"), PageId) ||
+				!ParseIntInRange(*json_object_get(pPlacement, "column"), 0, 2, Column) ||
+				!ParseIntInRange(*json_object_get(pPlacement, "order"), 0, std::numeric_limits<int>::max(), Order))
+				return Fail(Error, "invalid card placement value");
+			const json_value &Present = *json_object_get(pPlacement, "present");
+			const json_value &Visible = *json_object_get(pPlacement, "visible");
+			const json_value &Collapsed = *json_object_get(pPlacement, "collapsed");
+			if(Present.type != json_boolean || Visible.type != json_boolean || Collapsed.type != json_boolean)
+				return Fail(Error, "invalid card placement value");
+			if(!Seen.insert(CardId + '\x1f' + PageId).second)
+				return Fail(Error, "duplicate or invalid card placement key");
+			// 未注册的旧卡片/旧页面不参与当前模型；文件加载不立即回写。
+			if(!Registry.FindCard(CardId) || !Registry.FindPage(PageId))
+				continue;
+			State.m_vPlacements.push_back({CardId, PageId, static_cast<ECardColumn>(Column), Order, Present.u.boolean != 0, Visible.u.boolean != 0, Collapsed.u.boolean != 0});
+		}
+	}
+	if(Version.u.integer >= 2)
 	{
 		const json_value &View = *json_object_get(pRoot.get(), "view");
 		if(!HasUniqueFields(View, 3))
@@ -146,35 +255,16 @@ bool ParseCardPreferences(const std::string &Json, CCardUiModel &Model, std::str
 		const auto &Animations = *json_object_get(&View, "animations");
 		if(Mode.type != json_integer || Mode.u.integer < 0 || Mode.u.integer > 2 || Light.type != json_boolean || Animations.type != json_boolean)
 			return Fail(Error, "invalid card view value");
-		ViewPreferences = {static_cast<int>(Mode.u.integer), Light.u.boolean != 0, Animations.u.boolean != 0};
-		const json_value &Placements = *json_object_get(pRoot.get(), "placements");
-		if(Placements.type != json_array || Placements.u.array.length > MAX_CARDS)
-			return Fail(Error, "invalid card placements array");
-		for(const json_value *pPlacement : Placements.u.array)
-		{
-			if(!HasUniqueFields(*pPlacement, 4))
-				return Fail(Error, "invalid card placement fields");
-			const auto &Id = *json_object_get(pPlacement, "id");
-			const auto &Page = *json_object_get(pPlacement, "page");
-			const auto &Column = *json_object_get(pPlacement, "column");
-			const auto &Order = *json_object_get(pPlacement, "order");
-			if(Id.type != json_string || Id.u.string.length == 0 || Id.u.string.length > 128 ||
-				Page.type != json_string || Page.u.string.length == 0 || Page.u.string.length > 128 ||
-				Column.type != json_integer || Column.u.integer < 0 || Column.u.integer > 2 ||
-				Order.type != json_integer || Order.u.integer < 0 || Order.u.integer > std::numeric_limits<int>::max())
-				return Fail(Error, "invalid card placement value");
-			const std::string CardId(Id.u.string.ptr, Id.u.string.length);
-			const std::string PageId(Page.u.string.ptr, Page.u.string.length);
-			if(CardId.find('\0') != std::string::npos || PageId.find('\0') != std::string::npos || !Seen.insert(CardId).second)
-				return Fail(Error, "duplicate or invalid card placement id");
-			if(Model.Registry().FindCard(CardId) && Model.Registry().FindPage(PageId))
-				vPlacements.push_back({CardId, PageId, static_cast<ECardColumn>(Column.u.integer), static_cast<int>(Order.u.integer)});
-		}
+		State.m_View = {static_cast<int>(Mode.u.integer), Light.u.boolean != 0, Animations.u.boolean != 0};
 	}
+
 	// 先验证完整文档，再一次性交换，坏文件不能覆盖现有偏好。
-	if(!Model.ReplaceState(vPreferences, vPlacements))
-		return Fail(Error, "card preferences import failed");
-	Model.SetViewPreferences(ViewPreferences);
+	if(!Model.ImportState(State, Error))
+	{
+		if(Error.empty())
+			Error = "card preferences import failed";
+		return false;
+	}
 	Model.ClearDirty();
 	return true;
 }
@@ -209,7 +299,7 @@ bool SaveCardPreferences(IStorage &Storage, CCardUiModel &Model, std::string &Er
 	if(!Storage.FolderExists("qmclient", IStorage::TYPE_SAVE) && !Storage.CreateFolder("qmclient", IStorage::TYPE_SAVE))
 		return Fail(Error, "could not create card preferences directory");
 	const std::string Json = SerializeCardPreferences(Model);
-	if(Json.size() > MAX_FILE_SIZE || Model.OrderModel().Entries().size() > MAX_CARDS)
+	if(Json.size() > MAX_FILE_SIZE || Model.OrderModel().Entries().size() > MAX_PLACEMENTS)
 		return Fail(Error, "card preferences exceed the size limit");
 	char aTemporaryPath[IO_MAX_PATH_LENGTH];
 	IStorage::FormatTmpPath(aTemporaryPath, sizeof(aTemporaryPath), CARD_PREFERENCES_PATH);

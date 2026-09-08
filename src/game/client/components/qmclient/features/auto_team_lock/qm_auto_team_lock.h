@@ -3,8 +3,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FEATURES_AUTO_TEAM_LOCK_QM_AUTO_TEAM_LOCK_H
 
 #include "qm_auto_team_lock_logic.h"
-
-#include <game/client/ui/card_registry.h>
+#include <game/client/components/qmclient/core/qm_feature_model.h>
 
 class CQmAutoTeamLock final
 {

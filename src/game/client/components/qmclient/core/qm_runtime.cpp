@@ -38,25 +38,33 @@ void CQmRuntime::OnConsoleInit()
 
 void CQmRuntime::OnInit()
 {
-	m_Initialized = true;
-	m_I18n.SetLookup(Localize);
+	m_Initialized = false;
 	m_DiagnosticsModel.m_Enabled = g_Config.m_QmDiagnostics != 0;
-	const bool HomePageRegistered = m_CardRegistry.RegisterPage({"home", "qm.ui.home", 0});
-	const bool SearchPageRegistered = m_CardRegistry.RegisterPage({"search", "qm.ui.search", 1000});
+	// 页面只声明本页卡片与默认顺序；卡片定义不再绑定单一页面，搜索页是动态投影不是持久页面。
+	const bool HomePageRegistered = m_CardRegistry.RegisterPage({"home", "qm.ui.home", 0, {"qm.diagnostics", "qm.player_indicator", "qm.auto_team_lock", "qm.speedrun_timer"}});
 	const bool DiagnosticsFeatureRegistered = m_CardRegistry.RegisterFeature(m_DiagnosticsModel);
 	const bool PlayerIndicatorFeatureRegistered = m_CardRegistry.RegisterFeature(m_PlayerIndicator.Model());
 	const bool AutoTeamLockFeatureRegistered = m_CardRegistry.RegisterFeature(m_AutoTeamLock.Model());
 	const bool SpeedrunTimerFeatureRegistered = m_CardRegistry.RegisterFeature(m_SpeedrunTimer.Model());
-	if(!HomePageRegistered || !SearchPageRegistered || !DiagnosticsFeatureRegistered || !PlayerIndicatorFeatureRegistered || !AutoTeamLockFeatureRegistered || !SpeedrunTimerFeatureRegistered)
+	if(!HomePageRegistered || !DiagnosticsFeatureRegistered || !PlayerIndicatorFeatureRegistered || !AutoTeamLockFeatureRegistered || !SpeedrunTimerFeatureRegistered)
+	{
 		log_error("qm/runtime", "failed to register a feature model");
-	const bool DiagnosticsCardRegistered = m_CardRegistry.RegisterCard({"qm.diagnostics", "home", "qm.diagnostics.title", "qm.diagnostics.description", "activity", m_DiagnosticsModel.m_Id, {"diagnostics", "performance"}, ECardOwner::QM, 10, true, "toggle"});
-	const bool PlayerIndicatorCardRegistered = m_CardRegistry.RegisterCard({"qm.player_indicator", "home", "qm.player_indicator.title", "qm.player_indicator.description", "compass", m_PlayerIndicator.Model().m_Id, {"player", "teammate", "direction"}, ECardOwner::QM, 20, true});
-	const bool AutoTeamLockCardRegistered = m_CardRegistry.RegisterCard({"qm.auto_team_lock", "home", "qm.auto_team_lock.title", "qm.auto_team_lock.description", "lock", m_AutoTeamLock.Model().m_Id, {"team", "lock"}, ECardOwner::QM, 30, true});
-	const bool SpeedrunTimerCardRegistered = m_CardRegistry.RegisterCard({"qm.speedrun_timer", "home", "qm.speedrun_timer.title", "qm.speedrun_timer.description", "timer", m_SpeedrunTimer.Model().m_Id, {"speedrun", "timer", "race"}, ECardOwner::QM, 40, true});
+		return;
+	}
+	const bool DiagnosticsCardRegistered = m_CardRegistry.RegisterCard({"qm.diagnostics", "qm.diagnostics.title", "qm.diagnostics.description", "activity", m_DiagnosticsModel.m_Id, {"diagnostics", "performance"}, ECardOwner::QM, 10, true, "toggle"});
+	const bool PlayerIndicatorCardRegistered = m_CardRegistry.RegisterCard({"qm.player_indicator", "qm.player_indicator.title", "qm.player_indicator.description", "compass", m_PlayerIndicator.Model().m_Id, {"player", "teammate", "direction"}, ECardOwner::QM, 20, true});
+	const bool AutoTeamLockCardRegistered = m_CardRegistry.RegisterCard({"qm.auto_team_lock", "qm.auto_team_lock.title", "qm.auto_team_lock.description", "lock", m_AutoTeamLock.Model().m_Id, {"team", "lock"}, ECardOwner::QM, 30, true});
+	const bool SpeedrunTimerCardRegistered = m_CardRegistry.RegisterCard({"qm.speedrun_timer", "qm.speedrun_timer.title", "qm.speedrun_timer.description", "timer", m_SpeedrunTimer.Model().m_Id, {"speedrun", "timer", "race"}, ECardOwner::QM, 40, true});
 	if(!DiagnosticsCardRegistered || !PlayerIndicatorCardRegistered || !AutoTeamLockCardRegistered || !SpeedrunTimerCardRegistered)
+	{
 		log_error("qm/runtime", "failed to register a UI card");
+		return;
+	}
 	if(!RegisterQmSettingsAdapterCards(m_CardRegistry))
+	{
 		log_error("qm/runtime", "failed to register official settings cards");
+		return;
+	}
 	m_CardRegistry.Freeze();
 	// 注册表先冻结，UI 状态仅在组件已初始化的生命周期内存在。
 	m_pCardUiModel = std::make_unique<CCardUiModel>(m_CardRegistry);
@@ -84,14 +92,17 @@ void CQmRuntime::OnInit()
 	};
 	m_pCardSettingsView->SetResourceReporter(ResourceReporter);
 	m_pAssetPageResources->SetReporter(ResourceReporter);
-	const bool RenderRegistered =
-		m_RenderDispatch.Register(EQmRenderSlot::ENTITY_OVERLAY, 0, "qm.player_indicator", 0) == EQmDispatchRegistration::REGISTERED &&
-		m_RenderDispatch.Register(EQmRenderSlot::HUD_OVERLAY, 0, "qm.speedrun_timer", 1) == EQmDispatchRegistration::REGISTERED;
-	const bool UpdateRegistered =
-		m_UpdateDispatch.Register(EQmUpdateSlot::UPDATE, 0, "qm.auto_team_lock", 0) == EQmDispatchRegistration::REGISTERED &&
-		m_UpdateDispatch.Register(EQmUpdateSlot::UPDATE, 0, "qm.speedrun_timer", 1) == EQmDispatchRegistration::REGISTERED;
+	const bool RenderPlayerIndicatorRegistered = m_RenderDispatch.Register(EQmRenderSlot::ENTITY_OVERLAY, 0, "qm.player_indicator", 0) == EQmDispatchRegistration::REGISTERED;
+	const bool RenderSpeedrunTimerRegistered = m_RenderDispatch.Register(EQmRenderSlot::HUD_OVERLAY, 0, "qm.speedrun_timer", 1) == EQmDispatchRegistration::REGISTERED;
+	const bool UpdateAutoTeamLockRegistered = m_UpdateDispatch.Register(EQmUpdateSlot::UPDATE, 0, "qm.auto_team_lock", 0) == EQmDispatchRegistration::REGISTERED;
+	const bool UpdateSpeedrunTimerRegistered = m_UpdateDispatch.Register(EQmUpdateSlot::UPDATE, 0, "qm.speedrun_timer", 1) == EQmDispatchRegistration::REGISTERED;
+	const bool RenderRegistered = RenderPlayerIndicatorRegistered && RenderSpeedrunTimerRegistered;
+	const bool UpdateRegistered = UpdateAutoTeamLockRegistered && UpdateSpeedrunTimerRegistered;
 	if(!RenderRegistered || !UpdateRegistered)
+	{
 		log_error("qm/runtime", "failed to register feature dispatch");
+		return;
+	}
 	m_RenderDispatch.Freeze();
 	m_UpdateDispatch.Freeze();
 	if(g_Config.m_QmDiagnostics != 0)
@@ -119,6 +130,7 @@ void CQmRuntime::OnInit()
 		RegisterGraphicsEventListener(Graphics());
 		m_pDiagnostics->RecordGraphicsInfo();
 	}
+	m_Initialized = true;
 	UpdateFeatureModels();
 	log_trace("qm/runtime", "composition root initialized");
 }

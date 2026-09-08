@@ -35,14 +35,16 @@ ECardSettingResult CQmCardSettingsAdapter::Apply(const SCardDescriptor &Card, in
 	// 与官方 checkbox 共用同一配置字段，不创建副本，不改变默认值或执行链。
 	if(IsHudCard(Card))
 		m_Config.m_ClShowhud = Value;
-	else
+	else if(IsDiagnosticsCard(Card))
 		m_Config.m_QmDiagnostics = Value;
+	else
+		return ECardSettingResult::UNSUPPORTED;
 	return ECardSettingResult::APPLIED;
 }
 
 bool RegisterQmSettingsAdapterCards(CCardRegistry &Registry)
 {
-	if(!Registry.RegisterPage({"official", "Settings", 100}))
+	if(!Registry.RegisterPage({"official", "Settings", 100, {"ddnet.hud"}}))
 		return false;
-	return Registry.RegisterCard({"ddnet.hud", "official", "Show ingame HUD", {}, "activity", {}, {"hud", "interface"}, ECardOwner::UPSTREAM, 0, true, "toggle"});
+	return Registry.RegisterCard({"ddnet.hud", "Show ingame HUD", {}, "activity", {}, {"hud", "interface"}, ECardOwner::UPSTREAM, 0, true, "toggle"});
 }

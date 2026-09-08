@@ -53,15 +53,18 @@
 
 ### `qm.ui` 设置页与卡片 UI —— DOING
 
-- 来源：旧 Qm 卡片行为对照见 `qm-legacy-card-audit.md`；全局底座见 `src/game/client/ui/`，组合根见 `core/qm_runtime.cpp`。BC 对照仍有缺口，不阻塞底座工作。
-- 重构说明：保留稳定 descriptor 和独立 model，不搬旧聚合器及其字段依赖。由 runtime 的受控指针在 registry 冻结后创建 `CCardUiModel`，shutdown 先销毁；优点是生命周期明确且不增加每帧构造，代价是初始化一次堆分配和访问前的空指针检查。旧值成员接入的访问冲突根因尚未确认，不宣称已经定位。
-- 行为不变量：默认官方设置和游戏行为不变；reset、切图、重连不清除 UI 偏好；shutdown 后 UI model 不可访问；偏好导入包含未知或重复 ID 时整批拒绝，不污染已有状态。搜索与页面列表使用同一可见性、availability 和用户排序规则。
-- 状态 owner：descriptor 由全局 registry 所有，feature model 仍归 feature，UI 偏好由 `CCardUiModel` 所有。UI 的 `SCardModelSnapshot` 拷贝 enabled/availability/偏好，仅保留冻结 descriptor 的只读指针，不暴露 feature 对象。新增 Phosphor 图标资源与 UI 文案见下方本批条目；没有新增配置键或命令，构建 manifest 触点已登记。
-- 持久化 schema v2：用户 storage 的 `qmclient/ui-preferences.json` 保存 `version`、`cards`（id/visible/collapsed）、`placements`（id/page/column/order）和 `view`（mode/light/animations）；同一 order model 是排序的唯一事实源。兼容读取 v1 的 card order；上限 1 MiB / 4096 条，order 为非负有符号 32 位整数；检查类型、重复字段/ID、版本、嵌入 NUL、文件读写/flush/close/rename 错误。完整验证后才替换模型，坏文件保留已有偏好；缺失文件用默认值，未修改不写文件。同目录临时文件替换失败保持 dirty。未注册 ID 验证后忽略，加载不回写，后续主动保存会丢弃未知条目。启动加载、shutdown 保存已接入；旧 Qm stable ID 到新卡片的完整迁移尚未完成。
-- 官方 adapter：`presentation/qm_card_settings_adapter.*` 实现 `ICardSettingsAdapter` 的 snapshot/动作接口；官方 `ddnet.hud` 与 `qm.diagnostics` 都使用 `toggle` presentation。分别引用现有 `ClShowhud` 与 `QmDiagnostics`，从 `DefaultConfig` 读取默认值；非法值、未知 descriptor/owner/presentation 均拒绝，读取不修改配置。官方旧 checkbox 未修改，Qm 设置页已接列表/卡片两种展示；真实 UI smoke 未运行，不把接口测试当作 UI smoke。
-- 旧布局对照：本轮已直接读快照 `QmCardOrderModel.cpp` 与其测试、`SettingsCardDeckLogic.cpp`。新 order model 补齐按页面/列归一化、精确插入与跨页移动；不搬旧字符串所有权、聚合器或配置依赖。deck 投影不再把已移到其他页的卡片按默认页重新补入。旧 stable ID 映射与整个布局兼容迁移尚待完成。
-- 验证入口：`qmclient_card_registry_test.cpp`、`qmclient_ui_foundation_test.cpp`、`qmclient_card_preferences_test.cpp`、`qmclient_card_settings_adapter_test.cpp`、order/deck tests；runtime smoke 验证实际初始化/释放。卡片视图用冻结 input dispatch 明确“激活搜索框先处理文本/IME，Tab 再转卡片导航，其余卡片快捷键后处理”；当前没有 gameplay 输入型迁移 feature。双 presentation 和 UI 保存/恢复仍待真实验证，不因模型或序列化测试通过而判定完成。
-- 要点：legacy 模式在官方设置页末尾追加 Qm 页；新 UI 卡片模型见 `ui-architecture.md`；两套模式共用 feature model。
+- 来源：旧 Qm 卡片行为对照见 `qm-legacy-card-audit.md`；全局底座见 `src/game/client/ui/`，组合根见 `core/qm_runtime.cpp`；目标模型见 `ui-ux-refactor-plan.md`（卡片定义与页面声明分离，主体按新标准重构，dyl_dev 旧代码只作行为对照）。BC 对照仍有缺口，不阻塞底座工作。
+- 重构说明：保留稳定 descriptor 和独立 model，不搬旧聚合器及其字段依赖。本轮把 descriptor 去页面所有权：`SCardPage` 只声明 card ID 列表，`SCardOrderModel` 放置身份改为 `(page, card)`，present 标记防止重启 merge 把移出的卡片补回默认页，跨页移动在目标页已有放置时合并。相比旧实现的收益：一张卡片可被多页声明且只有一份实现与一份业务状态；代价：偏好与投影都要按放置寻址，旧全局偏好需迁移。旧值的成员接入访问冲突根因仍未确认，不宣称已定位。
+- 行为不变量：默认官方设置和游戏行为不变；reset、切图、重连不清除 UI 偏好；shutdown 后 UI model 不可访问；状态导入包含未知或重复 ID 时整批拒绝，不污染已有状态。搜索与页面列表使用同一可见性、availability 和用户排序规则。
+- 行为变更登记：旧版隐藏是卡片全局状态（隐藏后从所有页面消失且不参与搜索）；新版隐藏是 `(page, card)` 放置级状态，只影响本页投影，其他声明页与全局搜索仍可见（`ui-ux-refactor-plan.md` 2.10 既定方向）。理由：多页声明后"全局隐藏"语义不再成立。用户迁移：升级后此前隐藏的卡片会在其他声明页恢复显示，需按页重新隐藏。
+- 状态 owner：descriptor/页面声明由冻结的 registry 所有，feature model 仍归 feature，放置（列/序/present）由 `CCardOrderModel` 所有，`(page, card)` 偏好由 `CCardUiModel` 所有，页面级视图偏好由 `SCardViewPreferences` 所有。`SCardModelSnapshot` 拷贝 enabled/availability/偏好，仅保留冻结 descriptor 的只读指针。新增 Phosphor 图标资源与 UI 文案见下方本批条目；没有新增配置键或命令，构建 manifest 触点已登记。
+- 持久化 schema v3：用户 storage 的 `qmclient/ui-preferences.json` 保存 `version`、`placements`（card/page/column/order/present/visible/collapsed 的按放置完整状态）和 `view`（mode/light/animations）；同一 order model 是排序的唯一事实源，偏好只跟随放置、不构成第二排序来源。迁移：v2 全局 `cards` 偏好映射到其声明的每个页面放置并直接保留 `placements`；v1 card order 继续兼容读取。上限 1 MiB / 4096 条，order 为非负有符号 32 位整数；检查类型、重复字段/ID、版本、嵌入 NUL、文件读写/flush/close/rename 错误。完整验证后才替换模型，坏文件保留已有偏好；缺失文件用默认值，未修改不写文件，同目录临时文件替换失败保持 dirty。启动加载、布局事务后自动安排保存（连续操作合并写入，失败保留旧文件重试）；旧 Qm stable ID 到新卡片的完整迁移尚未完成。
+- 统一搜索：`card_search_logic`（纯逻辑：分词、CJK 子串匹配、字段优先级、多分词跨字段全命中）+ `CCardSearchIndex`（registry + 可选 provider 聚合卡片标题/描述/别名/控件文本），与渲染共用本地化文本源，不索引任意用户数据；搜索结果排序不写回分类布局。
+- 拖拽：`card_drag_logic`（纯逻辑：armed→dragging→commit/cancel 状态机、阈值、页 tab 悬停跨页预览、可见序 drop order、单视觉列提交映射、让位动画轨道、边缘自动滚动）；松手才提交事务，预览不改已提交布局；视图按帧输入同一份 geometry snapshot 解析目标，避免让位动画造成目标抖动。
+- 官方 adapter：`presentation/qm_card_settings_adapter.*` 实现 `ICardSettingsAdapter` 的 snapshot/动作接口；官方 `ddnet.hud` 与四个当前 Qm feature 卡片使用 `toggle` presentation，分别绑定 `ClShowhud`、`QmDiagnostics`、`QmPlayerIndicator`、`QmAutoTeamLock` 和 `QmSpeedrunTimer`，从 `DefaultConfig` 读取默认值；非法值、未知 descriptor/owner/presentation 均拒绝，读取不修改配置。官方旧 checkbox 未修改，Qm 设置页已接列表/卡片两种展示；真实 UI smoke 未运行，不把接口测试当作 UI smoke。
+- 旧布局对照：本轮已对照旧快照 `QmCardOrderModel.cpp`、`SettingsCardDeckLogic.cpp` 及其测试。新实现把旧"页面绑定卡片列表"改为声明式投影（`card_deck_projection`：按页过滤 present/可见/availability，OrderModel 缺失的声明卡片按默认位置补位，隐藏卡片不回流默认页）；旧跨页移动语义保留为"源页移出 + 目标页合并"。不搬旧字符串所有权、聚合器或配置依赖。
+- 验证入口：`qmclient_card_registry_test.cpp`、`qmclient_card_order_model_test.cpp`、`qmclient_card_deck_projection_test.cpp`、`qmclient_card_preferences_test.cpp`、`qmclient_card_settings_adapter_test.cpp`、`qmclient_card_search_logic_test.cpp`、`qmclient_card_drag_logic_test.cpp`、`qmclient_ui_foundation_test.cpp`；runtime smoke 验证实际初始化/释放。2026-09-08 本批实跑：Release 构建 game-client + testrunner 通过，testrunner 全量 500 项通过（含卡片/搜索/拖拽/资源 87 项），`check_qmclient_boundary.py` 通过（51 源文件、3 纯逻辑文件），`qmclient_i18n.py validate` 通过（补登记 Open page / Reset page / Toggle 三条文案），`check_qmclient_runtime_smoke.py` 通过。卡片视图用冻结 input dispatch 明确"激活搜索框先处理文本/IME，Tab 再转卡片导航，其余卡片快捷键后处理"。gap：多页拖拽、跨页投放与搜索导航的真实鼠标/触控交互未验证，不因模型或序列化测试通过而判定完成。
+- 要点：legacy 模式在官方设置页末尾追加 Qm 页；新 UI 卡片模型见 `ui-ux-refactor-plan.md`；两套模式共用 feature model。
 - 注意：card ID / 排序 / 折叠 / 搜索是兼容接口；卡片注册冻结；不在卡片中散落 SVG 或每帧重建文本。
 - 验证：`run_cxx_tests`；UI 打开/切换/搜索性能待 diagnostics 指标补齐后补 A/B 证据。
 
@@ -126,7 +129,7 @@
 
 ## Qm 媒体与扩展
 
-- [ ] `qm.i18n` Qm 翻译 —— TODO（source skeleton 已建立，运行时接入未完成）
+- [ ] `qm.i18n` Qm 翻译 —— 进行中（官方 source-key TOML、DeepSeek Python 翻译和官方 txt 生成链已建立；实际语言回填待执行）
 - [ ] `qm.voice` 语音 —— TODO
 - [ ] `qm.lyrics` 歌词 —— TODO
 - [ ] `qm.provider_netease` 网易云 provider —— TODO
