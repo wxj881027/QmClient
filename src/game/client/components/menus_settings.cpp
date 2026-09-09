@@ -753,7 +753,7 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 {
 	CPerfTimer RenderTimer;
 	CScopedSettingsTextPerfStats TextStats(this);
-	const SSettingsContentMetrics GeneralMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics GeneralMetrics = ResolveSettingsContentMetrics(MainView.w);
 	const float UiScale = GeneralMetrics.m_UiScale;
 	const float BodySize = GeneralMetrics.m_BodySize;
 	const SSettingsListCardGeometry GeneralLanguageGeometry = ResolveSettingsGeneralLanguageListGeometry((int)g_Localization.Languages().size(), GeneralMetrics);
@@ -1164,7 +1164,7 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 {
 	CPerfTimer RenderTimer;
 	CScopedSettingsTextPerfStats TextStats(this);
-	const SSettingsContentMetrics PlayerMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics PlayerMetrics = ResolveSettingsContentMetrics(MainView.w);
 	const float UiScale = PlayerMetrics.m_UiScale;
 	const float BodySize = PlayerMetrics.m_BodySize;
 	const IUiContext PlayerCardCtx = SettingsUiContext("settings_player", UiScale);
@@ -1355,7 +1355,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 {
 	CPerfTimer RenderTimer;
 	CScopedSettingsTextPerfStats TextStats(this);
-	const SSettingsContentMetrics TeeMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics TeeMetrics = ResolveSettingsContentMetrics(MainView.w);
 	const float UiScale = TeeMetrics.m_UiScale;
 	const float BodySize = TeeMetrics.m_BodySize;
 	const IUiContext TeeCardCtx = SettingsUiContext("settings_tee", UiScale);
@@ -3596,7 +3596,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	}
 
 	const float ViewWidth = MainView.w;
-	const SSettingsContentMetrics GraphicsMetrics = ResolveSettingsContentMetrics(ViewWidth, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics GraphicsMetrics = ResolveSettingsContentMetrics(ViewWidth);
 	const float UiScale = GraphicsMetrics.m_UiScale;
 	const float BodySize = GraphicsMetrics.m_BodySize;
 
@@ -4662,7 +4662,7 @@ bool CMenus::AudioPackEditorCopyAbsoluteFileToStorage(const char *pSourcePath, c
 
 void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 {
-	const SSettingsContentMetrics EditorMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics EditorMetrics = ResolveSettingsContentMetrics(MainView.w);
 	const float EditorFontSize = EditorMetrics.m_BodySize;
 	const float EditorSecondaryFontSize = maximum(9.0f, EditorFontSize - 2.0f);
 	const float EditorLineSize = EditorMetrics.m_LineHeight;
@@ -5089,7 +5089,7 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 		s_SndPackInit = true;
 	}
 
-	const SSettingsContentMetrics SoundMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics SoundMetrics = ResolveSettingsContentMetrics(MainView.w);
 	const float UiScale = SoundMetrics.m_UiScale;
 	const float BodySize = SoundMetrics.m_BodySize;
 	const float LineHeight = SoundMetrics.m_LineHeight;
@@ -5407,7 +5407,7 @@ void CMenus::PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete)
 
 	CUIRect List;
 	LayoutLanguagePageBaseRects(MainViewWidth, List);
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainViewWidth, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainViewWidth);
 
 	const float LabelWidth = LanguageListLabelWidth(List, Metrics);
 	const bool LanguageChanged = str_comp(gs_aLanguageCacheLanguageFile, g_Config.m_ClLanguagefile) != 0;
@@ -5473,7 +5473,7 @@ void CMenus::RenderLanguageSettings(CUIRect MainView)
 	CPerfTimer RenderTimer;
 	const char *pCreditsText = Localize("English translation by the DDNet Team", "Translation credits: Add your own name here when you update translations");
 	const int NumLanguages = (int)g_Localization.Languages().size();
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
 	EnsureLanguagePageCacheInit(Ui());
 
 	CUIRect Header, CreditsButton, List;
@@ -5507,7 +5507,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	static int s_SelectedLanguage = -2; // -2 = unloaded, -1 = unset
 	EnsureLanguagePageCacheInit(Ui());
 	const bool UseCache = UseLanguagePageCache();
-	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
 
 	if(s_SelectedLanguage == -2)
 	{
@@ -5665,7 +5665,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		const SSettingsShellLayoutFrame Shell = ResolveSettingsShellLayout(MainView, NeedRestart ? 30.0f : 0.0f);
 		m_SettingsShellLayout = Shell;
-		m_SettingsContentMetrics = ResolveSettingsContentMetrics(Shell.m_ContentRect.w, g_Config.m_QmSettingsFontScale);
+		m_SettingsContentMetrics = ResolveSettingsContentMetrics(Shell.m_ContentRect.w);
 		m_SettingsShellLayoutValid = true;
 		MainView = Shell.m_ContentRect;
 		TabBar = Shell.m_TabBarRect;
@@ -5685,7 +5685,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		if(!CollectingMenuTextPlan)
 			MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 		MainView.Margin(std::clamp(MainView.w * 0.02f, 12.0f, 20.0f), &MainView);
-		m_SettingsContentMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+		m_SettingsContentMetrics = ResolveSettingsContentMetrics(MainView.w);
 	}
 	const float PreviousDropDownFontSize = Ui()->DropDownFontSize();
 	Ui()->SetDropDownFontSize(m_SettingsContentMetrics.m_BodySize);
@@ -6010,7 +6010,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 	if(NeedRestart)
 	{
 		const int64_t StageStartTime = PerfDebugStartTime();
-		const SSettingsContentMetrics RestartMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+		const SSettingsContentMetrics RestartMetrics = ResolveSettingsContentMetrics(MainView.w);
 		CUIRect RestartWarning, RestartButton;
 		RestartBar.VSplitRight(125.0f * RestartMetrics.m_UiScale, &RestartWarning, &RestartButton);
 		RestartWarning.VSplitRight(RestartMetrics.m_SectionGap, &RestartWarning, nullptr);
@@ -6341,7 +6341,7 @@ bool CMenus::RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alp
 
 void CMenus::RenderSettingsAppearance(CUIRect MainView)
 {
-	const SSettingsContentMetrics AppearanceMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics AppearanceMetrics = ResolveSettingsContentMetrics(MainView.w);
 	const float AppearanceUiScale = AppearanceMetrics.m_UiScale;
 	const float AppearanceBodySize = AppearanceMetrics.m_BodySize;
 
@@ -7927,7 +7927,7 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 	CUIRect Button, Left, Right, LeftLeft, Label;
 	LogPerfStage(Client(), "ddnet_tab_shell", ShellTimer.ElapsedMs(), false, "page=ddnet");
 
-	const SSettingsContentMetrics DDNetMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics DDNetMetrics = ResolveSettingsContentMetrics(MainView.w);
 	const float UiScale = DDNetMetrics.m_UiScale;
 	const float BodySize = DDNetMetrics.m_BodySize;
 	const float DDNetRowPitch = DDNetMetrics.m_LineHeight + DDNetMetrics.m_LineSpacing;

@@ -2421,14 +2421,14 @@ TEST(SettingsWarmup, RemainingSettingsPagesUseResponsiveContentMetrics)
 	const std::string Assets = ReadTestSourceFile("src/game/client/components/menus_settings_assets.cpp");
 	const std::string Settings = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
 
-	EXPECT_NE(TClient.find("const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth, g_Config.m_QmSettingsFontScale);"), std::string::npos);
+	EXPECT_NE(TClient.find("const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth);"), std::string::npos);
 	EXPECT_NE(TClient.find("FontSize = Metrics.m_BodySize;"), std::string::npos);
 	EXPECT_NE(TClient.find("LineSize = Metrics.m_LineHeight;"), std::string::npos);
 	EXPECT_NE(TClient.find("MarginSmall = Metrics.m_LineSpacing;"), std::string::npos);
 	EXPECT_NE(Controls.find("ApplyControlsContentMetrics(MainView.w);"), std::string::npos);
 	EXPECT_NE(Controls.find("BUTTON_HEIGHT = Metrics.m_LineHeight;"), std::string::npos);
 	EXPECT_NE(Controls.find("BUTTON_SPACING = Metrics.m_LineSpacing;"), std::string::npos);
-	EXPECT_NE(Assets.find("const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);"), std::string::npos);
+	EXPECT_NE(Assets.find("const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w);"), std::string::npos);
 	EXPECT_NE(Assets.find("Localize(\"Loading assets...\"), ContentMetrics.m_BodySize"), std::string::npos);
 	EXPECT_NE(Assets.find("Localize(\"No assets\"), ContentMetrics.m_BodySize"), std::string::npos);
 	EXPECT_NE(Settings.find("pCheckBoxValue, float LineHeight, float LineSpacing, float BodySize, float ButtonHeight)"), std::string::npos);

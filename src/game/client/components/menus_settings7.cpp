@@ -42,7 +42,7 @@ using namespace FontIcons;
 
 void CMenus::RenderSettingsTee7(CUIRect MainView)
 {
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
 	const float UiScale = Metrics.m_UiScale;
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
 	const qm_card_registry::SCardDefault *pEditorDefault = qm_card_registry::FindByStableId("deck:tee7-editor");

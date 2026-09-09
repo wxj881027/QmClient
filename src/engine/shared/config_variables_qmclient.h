@@ -24,8 +24,6 @@ MACRO_CONFIG_INT(QmAssetsPreviewBudgetPercent, qm_assets_preview_budget_percent,
 MACRO_CONFIG_INT(QmUiRuntimeV2Debug, qm_ui_runtime_v2_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable UI runtime v2 debug logging")
 MACRO_CONFIG_INT(QmUiMotionLevel, qm_ui_motion_level, 2, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi animation intensity: 0=Off, 1=Reduced, 2=Full")
 MACRO_CONFIG_INT(QmUiScale, qm_ui_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global UI size percentage")
-MACRO_CONFIG_INT(QmSettingsFontScale, qm_settings_font_scale, 100, 80, 160, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings page font size percentage (independent of UI scale)")
-MACRO_CONFIG_INT(QmZoomLinear, qm_zoom_linear, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Zoom+/- uses linear interpolation instead of cubic bezier damping")
 MACRO_CONFIG_INT(QmUiListEntryAnimations, qm_ui_list_entry_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate lists when entering a page")
 MACRO_CONFIG_INT(QmUiCardHeightAnimations, qm_ui_card_height_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate settings card expand and collapse height changes")
 MACRO_CONFIG_INT(QmUiCardReflowAnimations, qm_ui_card_reflow_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate settings card reorder and layout reflow")

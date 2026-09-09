@@ -49,7 +49,7 @@ namespace
 
 	void ApplyControlsContentMetrics(const float ContentWidth)
 	{
-		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth, g_Config.m_QmSettingsFontScale);
+		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth);
 		HEADER_FONT_SIZE = std::clamp(ui_token::font::HEADLINE * Metrics.m_UiScale, 13.0f, ui_token::font::HEADLINE);
 		FONT_SIZE = Metrics.m_BodySize;
 		BUTTON_HEIGHT = Metrics.m_LineHeight;
@@ -338,7 +338,7 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 			Content.HSplitTop(BUTTON_SPACING, nullptr, &Content);
 			Content.HSplitTop(BUTTON_HEIGHT, nullptr, &Content);
 
-			const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Content.w, g_Config.m_QmSettingsFontScale);
+			const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Content.w);
 			const bool WasAbsolute = g_Config.m_InpControllerAbsolute != 0;
 			const SSettingsRadioRowLayout ModeLayout = ResolveSettingsRadioRowLayout(Content, 2, Metrics);
 			CUIRect ModeButtons = ModeLayout.m_ButtonsRect;
@@ -784,7 +784,7 @@ void CMenusSettingsControls::RenderSettingsJoystick(CUIRect View, bool ReadOnly)
 			{Localize("Relative", "Ingame controller mode"), Localize("Absolute", "Ingame controller mode")},
 			{0, 1},
 			g_Config.m_InpControllerAbsolute,
-			ResolveSettingsContentMetrics(View.w, g_Config.m_QmSettingsFontScale));
+			ResolveSettingsContentMetrics(View.w));
 
 		if(!WasAbsolute) // Use old value because this was used to allocate the available height
 		{
