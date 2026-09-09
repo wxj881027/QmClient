@@ -178,28 +178,6 @@ namespace
 		EXPECT_FLOAT_EQ(Standard.m_SmallSize, ResolveSettingsSmallFontSize(Standard.m_UiScale));
 	}
 
-	TEST(SettingsPageLayout, SettingsFontScaleScalesFontsAndRowsTogether)
-	{
-		EXPECT_FLOAT_EQ(NormalizeSettingsFontScale(100), 1.0f);
-		EXPECT_FLOAT_EQ(NormalizeSettingsFontScale(160), 1.6f);
-		EXPECT_FLOAT_EQ(NormalizeSettingsFontScale(50), 0.80f);
-		EXPECT_FLOAT_EQ(NormalizeSettingsFontScale(300), 1.60f);
-
-		const SSettingsContentMetrics Base = ResolveSettingsContentMetrics(1000.0f, 100);
-		EXPECT_FLOAT_EQ(Base.m_BodySize, ui_token::font::BODY);
-		EXPECT_FLOAT_EQ(Base.m_LineHeight, ui_token::settings::ROW_HEIGHT);
-
-		const SSettingsContentMetrics Large = ResolveSettingsContentMetrics(1000.0f, 160);
-		EXPECT_FLOAT_EQ(Large.m_BodySize, ui_token::font::BODY * 1.5f);
-		EXPECT_GE(Large.m_LineHeight, Large.m_BodySize + 4.0f);
-		EXPECT_GT(Large.m_LineHeight, Base.m_LineHeight);
-
-		// 默认参数（不传 FontScale）应与 100% 一致，保证旧调用点契约
-		const SSettingsContentMetrics Defaulted = ResolveSettingsContentMetrics(1000.0f);
-		EXPECT_FLOAT_EQ(Defaulted.m_BodySize, Base.m_BodySize);
-		EXPECT_FLOAT_EQ(Defaulted.m_LineHeight, Base.m_LineHeight);
-	}
-
 	TEST(SettingsPageLayout, DisplayCycleStateStartsOncePerVisiblePage)
 	{
 		SSettingsCardDeckDisplayCycleState State;

@@ -132,7 +132,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 			SLabelProperties SubtitleProps;
 			SubtitleProps.m_MaxWidth = DrawFrame.m_SubtitleRect.w;
 			SubtitleProps.m_EllipsisAtEnd = true;
-			const float SubtitleSize = ResolveSettingsSmallFontSize(UiScale) * NormalizeSettingsFontScale(g_Config.m_QmSettingsFontScale);
+			const float SubtitleSize = ResolveSettingsSmallFontSize(UiScale);
 			Ctx.m_pUi->DoLabel(&DrawFrame.m_SubtitleRect, pSubtitle, SubtitleSize, TEXTALIGN_ML, SubtitleProps);
 		}
 		// 标题和副标题只影响本卡片，不能把调用方的文本状态写死为默认白色。

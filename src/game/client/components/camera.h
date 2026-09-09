@@ -64,8 +64,6 @@ private:
 	CCubicBezier m_ZoomSmoothing;
 	float m_ZoomSmoothingStart;
 	float m_ZoomSmoothingEnd;
-	// 线性缩放模式下记录起始倍率，用于 lerp，避免贝塞尔阻尼感
-	float m_ZoomSmoothingFrom;
 
 	void ScaleZoom(float Factor);
 	void ChangeZoom(float Target, int Smoothness, bool IsUser);
