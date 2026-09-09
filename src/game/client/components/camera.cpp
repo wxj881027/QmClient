@@ -154,13 +154,12 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser)
 	}
 
 	float Now = Client()->LocalTime();
-	// 以当前实际倍率为起点：线性与贝塞尔模式都保证可中断续接
+	// 中断时以 m_Zoom 为起点：线性路径与贝塞尔路径都保证视觉连续，避免模式切换跳变
 	float Current = m_Zoom;
 	float Derivative = 0.0f;
 	if(m_Zooming && !g_Config.m_QmZoomLinear)
 	{
-		float Progress = ZoomProgress(Now);
-		Current = m_ZoomSmoothing.Evaluate(Progress);
+		const float Progress = ZoomProgress(Now);
 		Derivative = m_ZoomSmoothing.Derivative(Progress);
 	}
 
