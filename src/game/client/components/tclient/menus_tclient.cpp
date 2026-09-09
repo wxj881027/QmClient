@@ -592,7 +592,7 @@ public:
 
 static void ApplyTClientContentMetrics(const float ContentWidth)
 {
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth, g_Config.m_QmSettingsFontScale);
 	FontSize = Metrics.m_BodySize;
 	EditBoxFontSize = Metrics.m_BodySize;
 	LineSize = Metrics.m_LineHeight;
@@ -616,7 +616,7 @@ static constexpr const char *SETTINGS_RUNTIME_CACHE_METADATA_FILE = "qmclient/se
 
 CUIRect TClientSettingsContentView(CUIRect MainView, CUIRect *pTabBar = nullptr)
 {
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const SSettingsSubTabLayoutFrame SubTabs = ResolveSettingsSubTabLayout(MainView, Metrics.m_UiScale);
 	if(pTabBar != nullptr)
 		*pTabBar = SubTabs.m_TabBarRect;
@@ -2052,7 +2052,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Visual: Effects"), HeadlineFontSize, TEXTALIGN_ML);
 			CurrentColumn.HSplitTop(MarginSmall, nullptr, &CurrentColumn);
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
-			const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(CurrentColumn.w);
+			const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(CurrentColumn.w, g_Config.m_QmSettingsFontScale);
 			const float TinyTeeModeHeight = ResolveSettingsRadioRowLayout(CurrentColumn, 3, ContentMetrics).m_Height;
 			const bool RenderTinyTeeMode = ShouldRenderVisualBlock(TinyTeeModeHeight);
 			CUIRect Row = Rows.Next(TinyTeeModeHeight);
@@ -2335,7 +2335,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Voting"), HeadlineFontSize, TEXTALIGN_ML);
 			CurrentColumn.HSplitTop(MarginSmall, nullptr, &CurrentColumn);
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
-			const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w);
+			const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 			const float AutoVoteHeight = ResolveSettingsRadioRowLayout(CurrentColumn, 3, ContentMetrics).m_Height;
 			CUIRect Row = Rows.Next(AutoVoteHeight);
 
@@ -3671,7 +3671,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					if(m_MenuTextPlanCollecting)
 						return false;
 					CTClientSettingsRowAllocator Rows(Content);
-					const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(Content.w);
+					const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(Content.w, g_Config.m_QmSettingsFontScale);
 					const CUIRect TinyTeeModeRow = Rows.Next(ResolveSettingsRadioRowLayout(Content, 3, ContentMetrics).m_Height);
 					const SSettingsRadioRowLayout TinyTeeModeLayout = ResolveSettingsRadioRowLayout(TinyTeeModeRow, 3, ContentMetrics);
 					CUIRect TinyTeeModeButtons = TinyTeeModeLayout.m_ButtonsRect;
@@ -3886,7 +3886,7 @@ void CMenus::RenderSettingsTClientBindWheel(CUIRect MainView, bool PrewarmOnly)
 	ApplyTClientContentMetrics(MainView.w);
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	const float UiScale = SettingsPageUiScale(MainView.w);
-	const float SmallSize = ResolveSettingsContentMetrics(MainView.w).m_SmallSize;
+	const float SmallSize = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale).m_SmallSize;
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
 	IUiContext TClientBindWheelTextInputCtx = SettingsUiContext("settings_tclient_bindwheel_text_inputs", UiScale);
 	if(ReadOnly)
@@ -4217,7 +4217,7 @@ void CMenus::RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly)
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	const float UiScale = SettingsPageUiScale(MainView.w);
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
-	const SSettingsContentMetrics WarListMetrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics WarListMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const float ListRowHeight = WarListMetrics.m_ListRowHeight;
 	constexpr int WarListViewportRows = 8;
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
@@ -5546,7 +5546,7 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)
 	CPerfTimer RenderTimer;
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	const float UiScale = SettingsPageUiScale(MainView.w);
-	const SSettingsContentMetrics ProfileMetrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics ProfileMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
 	if(ReadOnly && !Ui()->RenderOnly())
@@ -6001,7 +6001,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 	CPerfTimer RenderTimer;
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	const float UiScale = SettingsPageUiScale(MainView.w);
-	const SSettingsContentMetrics ConfigMetrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics ConfigMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
 	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
 	if(ReadOnly && !Ui()->RenderOnly())
