@@ -4043,6 +4043,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
     src/game/client/components/qmclient/netease/netease_shared_memory.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
+    src/qm-nmt-hook/qm_netease_bootstrap.cpp
     src/qm-nmt-hook/qm_netease_cdp.cpp
     src/qm-nmt-hook/qm_netease_cdp_client.cpp
     src/game/client/components/qmclient/modes.cpp
