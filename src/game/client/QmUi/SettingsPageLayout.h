@@ -8,8 +8,6 @@
 #include <base/color.h>
 #include <base/math.h>
 
-#include <engine/shared/config.h>
-
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -152,18 +150,19 @@ inline float ResolveSettingsSmallFontSize(const float UiScale)
 	return std::clamp(ui_token::font::SMALL * std::max(0.0f, UiScale), 9.0f, ui_token::font::SMALL);
 }
 
-// 设置页字体独立缩放百分比（100 = 原尺寸）
-inline float ResolveSettingsFontScale()
+// 设置页字体缩放系数（纯函数，无配置依赖）。Percent=100 为原尺寸
+inline float NormalizeSettingsFontScale(const int FontScalePercent)
 {
-	return std::clamp(g_Config.m_QmSettingsFontScale / 100.0f, 0.80f, 1.60f);
+	return std::clamp(FontScalePercent / 100.0f, 0.80f, 1.60f);
 }
 
-inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float ContentWidth)
+// FontScalePercent：设置页字体百分比，调用方负责从配置读入（默认 100 保持原行为）
+inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float ContentWidth, const float FontScalePercent = 100.0f)
 {
 	SSettingsContentMetrics Metrics;
 	Metrics.m_UiScale = ResolveSettingsUiScale(ContentWidth);
 	// 设置页字体独立缩放：响应“设置字体偏小”，不牵动整体布局比例
-	const float FontScale = ResolveSettingsFontScale();
+	const float FontScale = NormalizeSettingsFontScale((int)FontScalePercent);
 	// 行高与字号同比例放大，避免高缩放下文字被裁切
 	const float RowFactor = FontScale;
 	Metrics.m_LineHeight = std::clamp(ui_token::settings::ROW_HEIGHT * Metrics.m_UiScale * RowFactor, 16.0f, ui_token::settings::ROW_HEIGHT * 1.60f);
@@ -587,7 +586,7 @@ inline float ResolveSettingsControllerAxisPickerHeight(const int AxisCount, cons
 	return (std::clamp(AxisCount, 0, std::max(0, MaxAxisCount)) + 1) * (std::max(0.0f, RowHeight) + std::max(0.0f, RowSpacing));
 }
 
-inline float ResolveSettingsControllerContentHeight(const float ContentWidth, const bool Enabled, const bool HasJoystick, const bool AbsoluteMode, const int AxisCount, const int MaxAxisCount, const float RowHeight, const float RowSpacing)
+inline float ResolveSettingsControllerContentHeight(const float ContentWidth, const bool Enabled, const bool HasJoystick, const bool AbsoluteMode, const int AxisCount, const int MaxAxisCount, const float RowHeight, const float RowSpacing, const float FontScalePercent = 100.0f)
 {
 	float Height = std::max(0.0f, RowHeight) + std::max(0.0f, RowSpacing);
 	if(!Enabled)
@@ -597,7 +596,7 @@ inline float ResolveSettingsControllerContentHeight(const float ContentWidth, co
 	if(!HasJoystick)
 		return Height + std::max(0.0f, RowSpacing);
 
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(ContentWidth, FontScalePercent);
 	const SSettingsRadioRowLayout Radio = ResolveSettingsRadioRowLayout({0.0f, 0.0f, std::max(0.0f, ContentWidth), RowHeight * 2.0f + RowSpacing}, 2, Metrics);
 	Height += Radio.m_Height;
 	if(!AbsoluteMode)

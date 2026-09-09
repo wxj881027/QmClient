@@ -3064,7 +3064,7 @@ TEST(QmNewUiMenuBranches, QmSettingsCardsUseSharedStyleHelpers)
 
 	for(const std::string *pDeck : {&VisualDeck, &FunctionDeck, &HudDeck})
 	{
-		EXPECT_NE(pDeck->find("ResolveSettingsContentMetrics(MainView.w)"), std::string::npos);
+		EXPECT_NE(pDeck->find("ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale)"), std::string::npos);
 		EXPECT_NE(pDeck->find("CardDeck.RenderCached("), std::string::npos);
 		EXPECT_NE(pDeck->find("ResolveSettingsCardDefinitionsRevision("), std::string::npos);
 		EXPECT_NE(pDeck->find("static std::array<CButtonContainer, QmModuleCount> s_aCollapseButtons;"), std::string::npos);

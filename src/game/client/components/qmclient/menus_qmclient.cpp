@@ -1360,7 +1360,7 @@ void CMenus::FinishSettingsQmScrollContainer(CQmScrollState &ScrollState, CQmScr
 void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly)
 {
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const float UiScale = Metrics.m_UiScale;
 	const float BodySize = Metrics.m_BodySize;
 	const float LineHeight = Metrics.m_LineHeight;
@@ -4283,7 +4283,7 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 {
 	using namespace qm_module;
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const float UiScale = Metrics.m_UiScale;
 	const float LineHeight = Metrics.m_LineHeight;
 	const float BodySize = Metrics.m_BodySize;
@@ -4598,7 +4598,7 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 {
 	using namespace qm_module;
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const float UiScale = Metrics.m_UiScale;
 	const float LineHeight = Metrics.m_LineHeight;
 	const float BodySize = Metrics.m_BodySize;
@@ -4827,7 +4827,7 @@ void CMenus::RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly
 {
 	using namespace qm_module;
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const float UiScale = Metrics.m_UiScale;
 	const float LineHeight = Metrics.m_LineHeight;
 	const float BodySize = Metrics.m_BodySize;
@@ -5067,7 +5067,7 @@ void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage, boo
 
 void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnly)
 {
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	const float UiScale = Metrics.m_UiScale;
 	const float BodySize = Metrics.m_BodySize;
 	const float SmallSize = Metrics.m_SmallSize;
@@ -5239,7 +5239,7 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPa
 	}
 
 	CPerfTimer RenderTimer;
-	const float QmClientUiScale = ResolveSettingsContentMetrics(MainView.w).m_UiScale;
+	const float QmClientUiScale = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale).m_UiScale;
 	bool TabTransitionActive = false;
 	static bool s_QmTabTelemetryInitialized = false;
 	static int s_PrevQmTab = QMCLIENT_SETTINGS_TAB_VISUAL;

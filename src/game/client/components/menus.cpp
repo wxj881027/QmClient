@@ -4739,7 +4739,7 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	CPerfTimer RenderTimer;
 	static CListBox s_ListBox;
 	auto &MenuBackground = GameClient()->m_MenuBackground;
-	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::COMPOSITE_CONTROL);
 	s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);

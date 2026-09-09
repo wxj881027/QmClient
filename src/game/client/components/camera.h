@@ -15,19 +15,19 @@
 
 namespace QmCameraEffects
 {
-inline float ZoomWithoutDynamicFov(float EffectiveZoom, float AppliedFactor)
-{
-	return AppliedFactor > 0.0f ? EffectiveZoom / AppliedFactor : EffectiveZoom;
-}
+	inline float ZoomWithoutDynamicFov(float EffectiveZoom, float AppliedFactor)
+	{
+		return AppliedFactor > 0.0f ? EffectiveZoom / AppliedFactor : EffectiveZoom;
+	}
 
-inline vec2 SmoothCinematicPosition(vec2 Current, vec2 Target, float FrameTime)
-{
-	constexpr float HalfLife = 0.09f;
-	if(!std::isfinite(FrameTime) || FrameTime <= 0.0f)
-		return Current;
-	const float Step = 1.0f - std::exp2(-FrameTime / HalfLife);
-	return Current + (Target - Current) * Step;
-}
+	inline vec2 SmoothCinematicPosition(vec2 Current, vec2 Target, float FrameTime)
+	{
+		constexpr float HalfLife = 0.09f;
+		if(!std::isfinite(FrameTime) || FrameTime <= 0.0f)
+			return Current;
+		const float Step = 1.0f - std::exp2(-FrameTime / HalfLife);
+		return Current + (Target - Current) * Step;
+	}
 }
 
 class CCamera : public CComponent

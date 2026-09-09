@@ -180,26 +180,24 @@ namespace
 
 	TEST(SettingsPageLayout, SettingsFontScaleScalesFontsAndRowsTogether)
 	{
-		const int Saved = g_Config.m_QmSettingsFontScale;
-		g_Config.m_QmSettingsFontScale = 100;
-		const SSettingsContentMetrics Base = ResolveSettingsContentMetrics(1000.0f);
-		EXPECT_FLOAT_EQ(ResolveSettingsFontScale(), 1.0f);
+		EXPECT_FLOAT_EQ(NormalizeSettingsFontScale(100), 1.0f);
+		EXPECT_FLOAT_EQ(NormalizeSettingsFontScale(160), 1.6f);
+		EXPECT_FLOAT_EQ(NormalizeSettingsFontScale(50), 0.80f);
+		EXPECT_FLOAT_EQ(NormalizeSettingsFontScale(300), 1.60f);
+
+		const SSettingsContentMetrics Base = ResolveSettingsContentMetrics(1000.0f, 100);
 		EXPECT_FLOAT_EQ(Base.m_BodySize, ui_token::font::BODY);
 		EXPECT_FLOAT_EQ(Base.m_LineHeight, ui_token::settings::ROW_HEIGHT);
 
-		g_Config.m_QmSettingsFontScale = 160;
-		const SSettingsContentMetrics Large = ResolveSettingsContentMetrics(1000.0f);
-		EXPECT_FLOAT_EQ(ResolveSettingsFontScale(), 1.6f);
+		const SSettingsContentMetrics Large = ResolveSettingsContentMetrics(1000.0f, 160);
 		EXPECT_FLOAT_EQ(Large.m_BodySize, ui_token::font::BODY * 1.5f);
 		EXPECT_GE(Large.m_LineHeight, Large.m_BodySize + 4.0f);
 		EXPECT_GT(Large.m_LineHeight, Base.m_LineHeight);
 
-		g_Config.m_QmSettingsFontScale = 50; // 越界，应夹到 80
-		EXPECT_FLOAT_EQ(ResolveSettingsFontScale(), 0.80f);
-		g_Config.m_QmSettingsFontScale = 300; // 越界，应夹到 160
-		EXPECT_FLOAT_EQ(ResolveSettingsFontScale(), 1.60f);
-
-		g_Config.m_QmSettingsFontScale = Saved;
+		// 默认参数（不传 FontScale）应与 100% 一致，保证旧调用点契约
+		const SSettingsContentMetrics Defaulted = ResolveSettingsContentMetrics(1000.0f);
+		EXPECT_FLOAT_EQ(Defaulted.m_BodySize, Base.m_BodySize);
+		EXPECT_FLOAT_EQ(Defaulted.m_LineHeight, Base.m_LineHeight);
 	}
 
 	TEST(SettingsPageLayout, DisplayCycleStateStartsOncePerVisiblePage)
