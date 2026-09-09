@@ -5,7 +5,8 @@
 
 #include <base/time.h>
 
-// SyncNeteaseHookConfiguration 在非 WINRT 平台也会编译，需无条件提供 g_Config
+// SyncNeteaseHookConfiguration / OnUpdate 在非 WINRT 平台也会编译
+#include <engine/client.h>
 #include <engine/shared/config.h>
 
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
