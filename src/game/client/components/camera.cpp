@@ -78,6 +78,8 @@ CCamera::CCamera()
 	m_ZoomSet = false;
 	m_Zoom = 1.0f;
 	m_Zooming = false;
+	m_ZoomSmoothingFrom = 1.0f;
+	m_ZoomSmoothingTarget = 1.0f;
 	m_ForceFreeview = false;
 	m_GotoSwitchOffset = 0;
 	m_GotoTeleOffset = 0;
@@ -152,9 +154,10 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser)
 	}
 
 	float Now = Client()->LocalTime();
+	// 以当前实际倍率为起点：线性与贝塞尔模式都保证可中断续接
 	float Current = m_Zoom;
 	float Derivative = 0.0f;
-	if(m_Zooming)
+	if(m_Zooming && !g_Config.m_QmZoomLinear)
 	{
 		float Progress = ZoomProgress(Now);
 		Current = m_ZoomSmoothing.Evaluate(Progress);
@@ -163,6 +166,7 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser)
 
 	m_ZoomSmoothingTarget = Target;
 	m_ZoomSmoothing = CCubicBezier::With(Current, Derivative, 0, m_ZoomSmoothingTarget);
+	m_ZoomSmoothingFrom = Current;
 	m_ZoomSmoothingStart = Now;
 	m_ZoomSmoothingEnd = Now + (float)Smoothness / 1000;
 
@@ -257,7 +261,16 @@ void CCamera::UpdateCamera()
 		else
 		{
 			const float OldLevel = m_Zoom;
-			m_Zoom = m_ZoomSmoothing.Evaluate(ZoomProgress(Time));
+			// 线性模式：匀速过渡，去掉贝塞尔阻尼感；否则保持原贝塞尔曲线
+			if(g_Config.m_QmZoomLinear)
+			{
+				const float Progress = std::clamp(ZoomProgress(Time), 0.0f, 1.0f);
+				m_Zoom = m_ZoomSmoothingFrom + (m_ZoomSmoothingTarget - m_ZoomSmoothingFrom) * Progress;
+			}
+			else
+			{
+				m_Zoom = m_ZoomSmoothing.Evaluate(ZoomProgress(Time));
+			}
 			if((OldLevel < m_ZoomSmoothingTarget && m_Zoom > m_ZoomSmoothingTarget) || (OldLevel > m_ZoomSmoothingTarget && m_Zoom < m_ZoomSmoothingTarget))
 			{
 				m_Zoom = m_ZoomSmoothingTarget;

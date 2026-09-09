@@ -1260,6 +1260,9 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, "Cinematic camera", Localize("Cinematic camera"), &g_Config.m_QmCinematicCamera);
 	static int s_QmUiScaleInputId;
 	RenderValue("qmclient-ui-scale", "UI scale", &s_QmUiScaleInputId, &g_Config.m_QmUiScale, 50, 200, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+	static int s_QmSettingsFontScaleInputId;
+	RenderValue("qmclient-settings-font-scale", "Settings font scale", &s_QmSettingsFontScaleInputId, &g_Config.m_QmSettingsFontScale, 80, 160, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomLinear, "Linear zoom (no damping)", Localize("Linear zoom (no damping)"), &g_Config.m_QmZoomLinear);
 	const char *apAspectPresetNames[] = {Localize("Off"), "5:4", "4:3", "3:2", "16:9", "21:9", Localize("Custom")};
 	static CUi::SDropDownState s_AspectPresetDropDownState;
 	static CScrollRegion s_AspectPresetDropDownScrollRegion;
@@ -4868,7 +4871,7 @@ void CMenus::RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly
 		case EQmModuleId::ChatBubble:
 			return g_Config.m_QmChatBubble ? Rows(5.0f) + 2.0f * Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing : Rows(1.0f);
 		case EQmModuleId::CameraView:
-			return Rows(5.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;
+			return Rows(7.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;
 		case EQmModuleId::SkinTransition:
 			return ResolveQmVisualSkinTransitionHeight(Metrics, g_Config.m_QmSkinChangeTransition != 0);
 		case EQmModuleId::FocusMode:
@@ -4941,6 +4944,11 @@ void CMenus::RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly
 					ConsumeVisualRow(Content);
 				}
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, &g_Config.m_QmCinematicCamera) || Changed;
+				// UI scale / settings font scale / linear zoom / aspect rows
+				ConsumeVisualRow(Content);
+				ConsumeVisualRow(Content);
+				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomLinear, &g_Config.m_QmZoomLinear) || Changed;
+				ConsumeVisualRow(Content);
 				return Changed;
 			};
 		case EQmModuleId::SkinTransition:

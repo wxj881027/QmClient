@@ -8,6 +8,8 @@
 #include <base/color.h>
 #include <base/math.h>
 
+#include <engine/shared/config.h>
+
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -154,11 +156,13 @@ inline SSettingsContentMetrics ResolveSettingsContentMetrics(const float Content
 {
 	SSettingsContentMetrics Metrics;
 	Metrics.m_UiScale = ResolveSettingsUiScale(ContentWidth);
-	Metrics.m_LineHeight = std::clamp(ui_token::settings::ROW_HEIGHT * Metrics.m_UiScale, 16.0f, ui_token::settings::ROW_HEIGHT);
-	Metrics.m_BodySize = std::clamp(ui_token::font::BODY * Metrics.m_UiScale, 10.0f, ui_token::font::BODY);
-	Metrics.m_SmallSize = ResolveSettingsSmallFontSize(Metrics.m_UiScale);
-	Metrics.m_HeadlineSize = std::clamp(ui_token::font::HEADLINE * Metrics.m_UiScale, 12.0f, ui_token::font::HEADLINE);
-	Metrics.m_LineSpacing = std::clamp(ui_token::settings::ROW_GAP * Metrics.m_UiScale, 3.0f, ui_token::settings::ROW_GAP);
+	// 设置页字体独立缩放：响应“设置字体偏小”，不牵动整体布局比例
+	const float FontScale = std::clamp(g_Config.m_QmSettingsFontScale / 100.0f, 0.80f, 1.60f);
+	Metrics.m_LineHeight = std::clamp(ui_token::settings::ROW_HEIGHT * Metrics.m_UiScale * (0.85f + 0.15f * FontScale), 16.0f, ui_token::settings::ROW_HEIGHT * 1.25f);
+	Metrics.m_BodySize = std::clamp(ui_token::font::BODY * Metrics.m_UiScale * FontScale, 10.0f, ui_token::font::BODY * 1.5f);
+	Metrics.m_SmallSize = std::clamp(ui_token::font::SMALL * std::max(0.0f, Metrics.m_UiScale) * FontScale, 9.0f, ui_token::font::SMALL * 1.5f);
+	Metrics.m_HeadlineSize = std::clamp(ui_token::font::HEADLINE * Metrics.m_UiScale * FontScale, 12.0f, ui_token::font::HEADLINE * 1.4f);
+	Metrics.m_LineSpacing = std::clamp(ui_token::settings::ROW_GAP * Metrics.m_UiScale * (0.85f + 0.15f * FontScale), 3.0f, ui_token::settings::ROW_GAP * 1.25f);
 	Metrics.m_RowStep = Metrics.m_LineHeight + Metrics.m_LineSpacing;
 	Metrics.m_InputHeight = Metrics.m_LineHeight;
 	Metrics.m_ButtonHeight = Metrics.m_LineHeight;
