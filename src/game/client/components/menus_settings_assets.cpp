@@ -4155,7 +4155,7 @@ static int InitSearchList(std::vector<TName *> &vpSearchList, std::vector<TName>
 
 void CMenus::RenderSettingsCustom(CUIRect MainView)
 {
-	const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w);
+	const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);
 	s_CurCustomTab = std::clamp(s_CurCustomTab, (int)ASSETS_TAB_ENTITIES, NUMBER_OF_ASSETS_TABS - 1);
 
 	if(m_AssetsEditorState.m_Open)

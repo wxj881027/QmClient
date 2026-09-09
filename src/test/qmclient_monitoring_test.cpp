@@ -2044,10 +2044,10 @@ TEST(QmMonitoringHelpers, SettingsTextColdStartAvoidsGlobalLanguageCacheAndCache
 		EXPECT_NE(Source.find("DoSettingsButton_CheckBox(SETTINGS_GRAPHICS"), std::string::npos);
 		EXPECT_NE(Source.find("DoSettingsButton_CheckBox(SETTINGS_SOUND"), std::string::npos);
 		EXPECT_NE(Source.find("DoSettingsButton_CheckBox(SETTINGS_DDNET"), std::string::npos);
-		const size_t NewShellMetrics = Source.find("m_SettingsContentMetrics = ResolveSettingsContentMetrics(Shell.m_ContentRect.w);");
+		const size_t NewShellMetrics = Source.find("m_SettingsContentMetrics = ResolveSettingsContentMetrics(Shell.m_ContentRect.w, g_Config.m_QmSettingsFontScale);");
 		const size_t LegacyShellSplit = Source.find("MainView.VSplitRight(TabBarWidth, &MainView, &TabBar);");
 		const size_t LegacyShellMargin = Source.find("MainView.Margin(std::clamp(MainView.w * 0.02f, 12.0f, 20.0f), &MainView);");
-		const size_t LegacyShellMetrics = Source.find("m_SettingsContentMetrics = ResolveSettingsContentMetrics(MainView.w);");
+		const size_t LegacyShellMetrics = Source.find("m_SettingsContentMetrics = ResolveSettingsContentMetrics(MainView.w, g_Config.m_QmSettingsFontScale);");
 		const size_t FirstPageRender = Source.find("if(g_Config.m_UiSettingsPage == SETTINGS_GENERAL)");
 		ASSERT_NE(NewShellMetrics, std::string::npos);
 		ASSERT_NE(LegacyShellSplit, std::string::npos);

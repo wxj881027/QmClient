@@ -1,10 +1,1 @@
-#include <game/client/ui.h>
-
-float CUi::PixelSize()
-{
-	return 0.001f;
-}
-
-void CUi::RenderGaussianBlur(const CUIRect &Rect, float Alpha, int Corners, float Rounding)
-{
-}
+// CUi 测试桩实现已合并到 ui_rect_test_helpers.cpp，避免同一 testrunner 内重复定义。

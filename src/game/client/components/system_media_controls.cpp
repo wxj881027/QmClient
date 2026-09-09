@@ -5,6 +5,10 @@
 
 #include <base/time.h>
 
+// SyncNeteaseHookConfiguration / OnUpdate 在非 WINRT 平台也会编译
+#include <engine/client.h>
+#include <engine/shared/config.h>
+
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
 #include <base/perf_timer.h>
 #include <base/str.h>
@@ -13,7 +17,6 @@
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/image.h>
-#include <engine/shared/config.h>
 
 #include <game/client/components/qmclient/perf_logging.h>
 

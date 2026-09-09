@@ -43,6 +43,15 @@
 #define VK_API_VERSION_PATCH VK_VERSION_PATCH
 #endif
 
+// 旧版 Vulkan 头文件可能没有 1.4 宏，补一个与官方编码一致的定义
+#ifndef VK_API_VERSION_1_4
+#ifdef VK_MAKE_API_VERSION
+#define VK_API_VERSION_1_4 VK_MAKE_API_VERSION(0, 1, 4, 0)
+#else
+#define VK_API_VERSION_1_4 VK_MAKE_VERSION(1, 4, 0)
+#endif
+#endif
+
 using namespace std::chrono_literals;
 
 class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
