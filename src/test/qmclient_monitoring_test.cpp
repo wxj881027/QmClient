@@ -4046,6 +4046,222 @@ TEST(QmMonitoringHelpers, VulkanFrameSubmitFailureRecordsFrameContext)
 	EXPECT_EQ(SubmitBlock.find("else"), std::string::npos);
 }
 
+TEST(QmMonitoringHelpers, VulkanWorkerThreadSkipsFrameAdvancingMemoryRecovery)
+{
+	const std::string VulkanSource = ReadRepoFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
+
+	// 渲染工作线程必须被标记，否则显存分配失败的恢复流程会在工作线程上驱动整个帧循环。
+	const size_t FlagPos = VulkanSource.find("static thread_local bool s_ThreadIsRenderWorker = false;");
+	ASSERT_NE(FlagPos, std::string::npos);
+
+	const std::string RunThreadBody = ExtractSourceFunctionBody(VulkanSource, "void RunThread(size_t ThreadIndex)");
+	ASSERT_FALSE(RunThreadBody.empty());
+	EXPECT_NE(RunThreadBody.find("s_ThreadIsRenderWorker = true;"), std::string::npos);
+
+	const std::string AllocateBody = ExtractSourceFunctionBody(VulkanSource, "[[nodiscard]] bool AllocateVulkanMemory(const VkMemoryAllocateInfo *pAllocateInfo, VkDeviceMemory *pMemory)");
+	ASSERT_FALSE(AllocateBody.empty());
+	// 恢复分支必须同时要求「显存不足」且「不在渲染工作线程上」。
+	const size_t GuardPos = AllocateBody.find("if((Res == VK_ERROR_OUT_OF_HOST_MEMORY || Res == VK_ERROR_OUT_OF_DEVICE_MEMORY) && !s_ThreadIsRenderWorker)");
+	ASSERT_NE(GuardPos, std::string::npos);
+	const size_t RecoveryPos = AllocateBody.find("for(size_t i = 0; i < m_SwapChainImageCount + 1; ++i)", GuardPos);
+	ASSERT_NE(RecoveryPos, std::string::npos);
+	EXPECT_LT(GuardPos, RecoveryPos);
+	// 不得存在绕过守卫的工作线程恢复分支。
+	EXPECT_EQ(AllocateBody.find("if(Res == VK_ERROR_OUT_OF_HOST_MEMORY || Res == VK_ERROR_OUT_OF_DEVICE_MEMORY)\n"), std::string::npos);
+}
+
+TEST(QmMonitoringHelpers, VulkanDeviceLostLogsDeviceFaultInfo)
+{
+	const std::string VulkanSource = ReadRepoFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
+
+	const std::string CriticalBody = ExtractSourceFunctionBody(VulkanSource, "const char *CheckVulkanCriticalError(VkResult CallResult)");
+	ASSERT_FALSE(CriticalBody.empty());
+	const size_t LostPos = CriticalBody.find("case VK_ERROR_DEVICE_LOST:");
+	ASSERT_NE(LostPos, std::string::npos);
+	const size_t FaultPos = CriticalBody.find("LogDeviceFaultInfo();", LostPos);
+	ASSERT_NE(FaultPos, std::string::npos);
+
+	// 可选扩展缺失时不得让设备创建失败。
+	const std::string RequiredExtBody = ExtractSourceFunctionBody(VulkanSource, "std::set<std::string> OurDeviceExtensions()");
+	ASSERT_FALSE(RequiredExtBody.empty());
+	EXPECT_EQ(RequiredExtBody.find("VK_EXT_DEVICE_FAULT_EXTENSION_NAME"), std::string::npos);
+
+	const std::string OptionalExtBody = ExtractSourceFunctionBody(VulkanSource, "std::set<std::string> OurOptionalDeviceExtensions()");
+	ASSERT_FALSE(OptionalExtBody.empty());
+	EXPECT_NE(OptionalExtBody.find("VK_EXT_DEVICE_FAULT_EXTENSION_NAME"), std::string::npos);
+}
+
+TEST(QmMonitoringHelpers, GraphicsRecoveryRunsBeforeFatalErrorIsSubmitted)
+{
+	const std::string ClientSource = ReadRepoFile("src/engine/client/client.cpp");
+	const std::string BackendSource = ReadRepoFile("src/engine/client/backend_sdl.cpp");
+
+	// 后端必须提供非破坏性的致命错误查询：ProcessError 一旦提交就会断言退出。
+	const std::string HasFatalErrorBody = ExtractSourceFunctionBody(BackendSource, "bool CGraphicsBackend_Threaded::HasFatalError() const");
+	ASSERT_FALSE(HasFatalErrorBody.empty());
+	EXPECT_NE(HasFatalErrorBody.find("m_pProcessor->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE"), std::string::npos);
+	EXPECT_EQ(HasFatalErrorBody.find("ProcessError"), std::string::npos);
+
+	// 消费错误时必须同时清掉后端标记，否则收尾流程提交清理命令会再次断言。
+	const std::string TakeErrorBody = ExtractSourceFunctionBody(BackendSource, "bool CGraphicsBackend_Threaded::TakeFatalError()");
+	ASSERT_FALSE(TakeErrorBody.empty());
+	EXPECT_NE(TakeErrorBody.find("m_pProcessor->ClearFatalError();"), std::string::npos);
+	EXPECT_EQ(TakeErrorBody.find("ProcessError"), std::string::npos);
+	EXPECT_NE(BackendSource.find("void CCommandProcessor_SDL_GL::ClearFatalError()"), std::string::npos);
+
+	// 主循环必须在处理输入/渲染之前轮询该状态，并立即结束循环交给重启流程。
+	const size_t RunStart = ClientSource.find("void CClient::Run()");
+	ASSERT_NE(RunStart, std::string::npos);
+	const size_t ProbePos = ClientSource.find("if(Graphics()->TakeFatalError())", RunStart);
+	ASSERT_NE(ProbePos, std::string::npos);
+	const size_t HandlePos = ClientSource.find("HandleQmGraphicsFatalError()", ProbePos);
+	ASSERT_NE(HandlePos, std::string::npos);
+	const size_t InputPos = ClientSource.find("QuitRequested = Input()->Update();", RunStart);
+	ASSERT_NE(InputPos, std::string::npos);
+	EXPECT_LT(ProbePos, InputPos);
+
+	// 恢复入口只能尝试一次，避免无限重启循环。
+	const std::string HandlerBody = ExtractSourceFunctionBody(ClientSource, "bool CClient::HandleQmGraphicsFatalError()");
+	ASSERT_FALSE(HandlerBody.empty());
+	EXPECT_NE(HandlerBody.find("if(m_QmGraphicsRecoveryAttempted)"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("m_QmGraphicsRecoveryAttempted = true;"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("Restart();"), std::string::npos);
+
+	// 报告文件名必须能被下次启动的驱动崩溃恢复流程识别（_fatal_report.txt 前缀匹配）。
+	ASSERT_NE(HandlerBody.find("_fatal_report.txt"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("gs_pQmCrashDumpDir"), std::string::npos);
+}
+
+TEST(QmMonitoringHelpers, GraphicsDriverFaultSwitchesBackendToOpenGL)
+{
+	const std::string ClientSource = ReadRepoFile("src/engine/client/client.cpp");
+
+	const std::string RecoveryBody = ExtractSourceFunctionBody(ClientSource, "static bool ApplyQmSafeGraphicsRecovery(bool GraphicsDriverFault)");
+	ASSERT_FALSE(RecoveryBody.empty());
+	// 驱动故障时必须显式切到 OpenGL，否则下次启动还会走同一个后端再炸一次。
+	const size_t GuardPos = RecoveryBody.find("if(GraphicsDriverFault)");
+	ASSERT_NE(GuardPos, std::string::npos);
+	const size_t SwitchPos = RecoveryBody.find("str_copy(g_Config.m_GfxBackend, \"OpenGL\");", GuardPos);
+	ASSERT_NE(SwitchPos, std::string::npos);
+	const size_t FallbackMajorPos = RecoveryBody.find("const int FallbackGLMajor = 0;", SwitchPos);
+	ASSERT_NE(FallbackMajorPos, std::string::npos);
+	EXPECT_LT(SwitchPos, FallbackMajorPos);
+	// 调用点必须把「是否驱动故障」传进去。
+	EXPECT_NE(ClientSource.find("ApplyQmSafeGraphicsRecovery(HasGraphicsDriverFault)"), std::string::npos);
+	EXPECT_EQ(ClientSource.find("ApplyQmSafeGraphicsRecovery()"), std::string::npos);
+}
+
+TEST(QmMonitoringHelpers, GraphicsDeviceRecycleInvalidatesStaleResources)
+{
+	const std::string Header = ReadRepoFile("src/engine/client/graphics_threaded.h");
+	const std::string Source = ReadRepoFile("src/engine/client/graphics_threaded.cpp");
+
+	// 纹理句柄必须带上「设备纪元」，否则设备重建后同槽位同代数的旧句柄会被误判为有效。
+	EXPECT_NE(Header.find("uint32_t m_TextureHandleEpoch = 0;"), std::string::npos);
+	EXPECT_NE(Source.find("(m_TextureHandleEpoch << 16) | (m_vTextureGenerations[Tex] & 0xffffu)"), std::string::npos);
+	EXPECT_NE(Source.find("(m_TextureHandleEpoch << 16) | (m_vTextureGenerations[TextureIndex] & 0xffffu)"), std::string::npos);
+	EXPECT_EQ(Source.find("m_vTextureGenerations[TextureIndex] == TextureId.Generation()"), std::string::npos);
+
+	const std::string ResetBody = ExtractSourceFunctionBody(Source, "void CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()");
+	ASSERT_FALSE(ResetBody.empty());
+	EXPECT_NE(ResetBody.find("++m_TextureHandleEpoch;"), std::string::npos);
+
+	// Init 必须允许重复调用：先回收旧 backend，再抬高纪元，最后才重建。
+	const std::string InitBody = ExtractSourceFunctionBody(Source, "int CGraphics_Threaded::Init()");
+	ASSERT_FALSE(InitBody.empty());
+	const size_t ShutdownPos = InitBody.find("if(m_pBackend != nullptr)");
+	ASSERT_NE(ShutdownPos, std::string::npos);
+	const size_t EpochPos = InitBody.find("BumpTextureHandleEpochAndResetSlots();", ShutdownPos);
+	ASSERT_NE(EpochPos, std::string::npos);
+	const size_t CreatePos = InitBody.find("m_pBackend = CreateGraphicsBackend(Localize);", EpochPos);
+	ASSERT_NE(CreatePos, std::string::npos);
+	EXPECT_LT(ShutdownPos, EpochPos);
+	EXPECT_LT(EpochPos, CreatePos);
+
+	// 无代数的资源必须连容器一起清空，不能只把空闲链表头置 -1 留下孤儿索引。
+	EXPECT_NE(InitBody.find("m_vQuadContainers.clear();"), std::string::npos);
+	EXPECT_NE(InitBody.find("m_vBufferObjectIndices.clear();"), std::string::npos);
+	EXPECT_NE(InitBody.find("m_vVertexArrayInfo.clear();"), std::string::npos);
+
+	// 旧索引在设备重建后可能越界，所有按索引取用容器的入口都要先校验。
+	const std::string ValidatorBody = ExtractSourceFunctionBody(Source, "bool CGraphics_Threaded::IsQuadContainerIndexValid(int ContainerIndex) const");
+	ASSERT_FALSE(ValidatorBody.empty());
+	EXPECT_NE(ValidatorBody.find("(size_t)ContainerIndex < m_vQuadContainers.size()"), std::string::npos);
+	const std::vector<const char *> vGuardedEntries = {
+		"void CGraphics_Threaded::QuadContainerUpload(int ContainerIndex)",
+		"void CGraphics_Threaded::QuadContainerChangeAutomaticUpload(int ContainerIndex, bool AutomaticUpload)",
+		"int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num)",
+		"int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num)",
+		"void CGraphics_Threaded::QuadContainerReset(int ContainerIndex)",
+		"void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset, int QuadDrawNum, bool ChangeWrapMode)",
+		"void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffset, int QuadDrawNum, float X, float Y, float ScaleX, float ScaleY)",
+		"void CGraphics_Threaded::RenderQuadContainerAsSpriteMultiple(int ContainerIndex, int QuadOffset, int DrawCount, SRenderSpriteInfo *pRenderInfo)",
+	};
+	for(const char *pSignature : vGuardedEntries)
+	{
+		const std::string Body = ExtractSourceFunctionBody(Source, pSignature);
+		ASSERT_FALSE(Body.empty());
+		EXPECT_NE(Body.find("IsQuadContainerIndexValid(ContainerIndex)"), std::string::npos);
+	}
+	// 删除与更新缓冲容器同样要防越界索引。
+	EXPECT_NE(ExtractSourceFunctionBody(Source, "void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool DestroyAllBO)").find("(size_t)ContainerIndex >= m_vVertexArrayInfo.size()"), std::string::npos);
+	EXPECT_NE(ExtractSourceFunctionBody(Source, "void CGraphics_Threaded::UpdateBufferContainerInternal(int ContainerIndex, SBufferContainerInfo *pContainerInfo)").find("(size_t)ContainerIndex >= m_vVertexArrayInfo.size()"), std::string::npos);
+}
+
+TEST(QmMonitoringHelpers, GraphicsResourcesResetIsBroadcastToConsumers)
+{
+	const std::string GraphicsHeader = ReadRepoFile("src/engine/graphics.h");
+	const std::string ThreadedHeader = ReadRepoFile("src/engine/client/graphics_threaded.h");
+	const std::string ThreadedSource = ReadRepoFile("src/engine/client/graphics_threaded.cpp");
+	const std::string GameClientSource = ReadRepoFile("src/game/client/gameclient.cpp");
+	const std::string GameClientHeader = ReadRepoFile("src/game/client/gameclient.h");
+	const std::string IconManagerSource = ReadRepoFile("src/game/client/qm_icon_manager.cpp");
+	const std::string IconManagerHeader = ReadRepoFile("src/game/client/qm_icon_manager.h");
+
+	// 引擎必须提供「资源重置」广播入口与可查询的版本号。
+	EXPECT_NE(GraphicsHeader.find("typedef std::function<void()> GRAPHICS_RESOURCES_RESET_FUNC;"), std::string::npos);
+	EXPECT_NE(GraphicsHeader.find("virtual void AddGraphicsResourcesResetListener(GRAPHICS_RESOURCES_RESET_FUNC pFunc) = 0;"), std::string::npos);
+	EXPECT_NE(GraphicsHeader.find("virtual uint32_t GraphicsResourcesResetVersion() const = 0;"), std::string::npos);
+	EXPECT_NE(ThreadedHeader.find("void NotifyGraphicsResourcesReset();"), std::string::npos);
+
+	// 广播必须先重建引擎自己的空纹理再通知监听者，并自增版本号。
+	const std::string NotifyBody = ExtractSourceFunctionBody(ThreadedSource, "void CGraphics_Threaded::NotifyGraphicsResourcesReset()");
+	ASSERT_FALSE(NotifyBody.empty());
+	const size_t NullTexPos = NotifyBody.find("CreateNullTexture();");
+	ASSERT_NE(NullTexPos, std::string::npos);
+	const size_t VersionPos = NotifyBody.find("++m_GraphicsResourcesResetVersion;");
+	ASSERT_NE(VersionPos, std::string::npos);
+	const size_t LoopPos = NotifyBody.find("for(const GRAPHICS_RESOURCES_RESET_FUNC &Listener", VersionPos);
+	ASSERT_NE(LoopPos, std::string::npos);
+	EXPECT_LT(NullTexPos, VersionPos);
+	EXPECT_LT(VersionPos, LoopPos);
+
+	// 游戏侧必须注册监听、把图片表加载抽成可复用路径，并在重置时先作废旧句柄。
+	EXPECT_NE(GameClientSource.find("AddGraphicsResourcesResetListener([this]() { OnGraphicsResourcesReset(); })"), std::string::npos);
+	EXPECT_NE(GameClientHeader.find("void LoadInitialGraphicsAssets();"), std::string::npos);
+	const std::string ResetBody = ExtractSourceFunctionBody(GameClientSource, "void CGameClient::OnGraphicsResourcesReset()");
+	ASSERT_FALSE(ResetBody.empty());
+	const size_t InvalidatePos = ResetBody.find("m_aImages[i].m_Id.Invalidate();");
+	ASSERT_NE(InvalidatePos, std::string::npos);
+	const size_t ReloadPos = ResetBody.find("LoadInitialGraphicsAssets();", InvalidatePos);
+	ASSERT_NE(ReloadPos, std::string::npos);
+	EXPECT_LT(InvalidatePos, ReloadPos);
+	// 各个 Load*Skin 会因为“已加载”标记直接返回，重置时必须先清掉这些标记。
+	for(const char *pFlag : {"m_GameSkinLoaded = false;", "m_EmoticonsSkinLoaded = false;", "m_ParticlesSkinLoaded = false;", "m_HudSkinLoaded = false;", "m_ExtrasSkinLoaded = false;"})
+		EXPECT_NE(ResetBody.find(pFlag), std::string::npos);
+	// 字体纹理与图标图集缓存了独立资源，必须一并重建。
+	EXPECT_NE(ResetBody.find("TextRender()->OnGraphicsResourcesReset();"), std::string::npos);
+	EXPECT_NE(ResetBody.find("m_QmIconManager.OnGraphicsResourcesReset();"), std::string::npos);
+	EXPECT_NE(GameClientSource.find("void CGameClient::LoadInitialGraphicsAssets()"), std::string::npos);
+
+	// 图标图集重置不得对已失效的旧句柄发删除命令。
+	EXPECT_NE(IconManagerHeader.find("void ResetForDeviceRecreate();"), std::string::npos);
+	const std::string AtlasResetBody = ExtractSourceFunctionBody(IconManagerSource, "void CQmIconAtlas::ResetForDeviceRecreate()");
+	ASSERT_FALSE(AtlasResetBody.empty());
+	EXPECT_NE(AtlasResetBody.find("m_Texture.Invalidate();"), std::string::npos);
+	EXPECT_EQ(AtlasResetBody.find("UnloadTexture"), std::string::npos);
+}
+
 TEST(QmMonitoringHelpers, VulkanNoVsyncPrefersImmediateAndKeepsNormalSwapchainDepth)
 {
 	const std::string VulkanSource = ReadRepoFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");

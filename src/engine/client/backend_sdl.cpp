@@ -203,6 +203,23 @@ const char *CGraphicsBackend_Threaded::GetFatalError() const
 	return m_FatalError.c_str();
 }
 
+bool CGraphicsBackend_Threaded::HasFatalError() const
+{
+	if(m_pProcessor == nullptr)
+		return false;
+	return m_pProcessor->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE;
+}
+
+bool CGraphicsBackend_Threaded::TakeFatalError()
+{
+	if(m_pProcessor == nullptr)
+		return false;
+	if(m_pProcessor->GetError().m_ErrorType == GFX_ERROR_TYPE_NONE)
+		return false;
+	m_pProcessor->ClearFatalError();
+	return true;
+}
+
 bool CGraphicsBackend_Threaded::GetWarning(std::vector<std::string> &WarningStrings)
 {
 	if(m_Warning.m_WarningType != GFX_WARNING_TYPE_NONE)
@@ -468,6 +485,16 @@ CCommandProcessor_SDL_GL::~CCommandProcessor_SDL_GL()
 const SGfxErrorContainer &CCommandProcessor_SDL_GL::GetError() const
 {
 	return m_Error;
+}
+
+void CCommandProcessor_SDL_GL::ClearFatalError()
+{
+	// 同步约定：m_Error/m_Warning 只由渲染线程在 RunBuffer 内写入，主线程只在
+	// 「提交一次 RunBuffer 之后、下一次提交之前」读取。调用本函数的场景是主循环
+	// 已经消费掉致命错误并准备收尾，此时渲染线程正阻塞等待下一个命令缓冲，
+	// 因此这个写入不会和渲染线程的写入竞争。
+	m_Error = {};
+	m_Warning = {};
 }
 
 void CCommandProcessor_SDL_GL::ErroneousCleanup()

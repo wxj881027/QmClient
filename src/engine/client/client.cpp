@@ -296,9 +296,22 @@ static bool QmCrashTextHasGraphicsDriverFault(const char *pText)
 	return false;
 }
 
-static bool ApplyQmSafeGraphicsRecovery()
+static bool ApplyQmSafeGraphicsRecovery(bool GraphicsDriverFault)
 {
 	bool Changed = false;
+	// 崩溃报告指向图形驱动时，继续留在 Vulkan/GLES 上只会重复故障：
+	// 显式切到 OpenGL 并让版本回到自动探测。
+	if(GraphicsDriverFault)
+	{
+#if !defined(CONF_PLATFORM_ANDROID) && !defined(CONF_PLATFORM_EMSCRIPTEN) && (defined(CONF_BACKEND_OPENGL) || defined(CONF_BACKEND_OPENGL_ES) || defined(CONF_BACKEND_OPENGL_ES3))
+		if(str_comp_nocase(g_Config.m_GfxBackend, "OpenGL") != 0 && str_comp_nocase(g_Config.m_GfxBackend, "GLES") != 0)
+		{
+			log_warn("client", "previous graphics driver fault, switching gfx_backend from '%s' to OpenGL", g_Config.m_GfxBackend);
+			str_copy(g_Config.m_GfxBackend, "OpenGL");
+			Changed = true;
+		}
+#endif
+	}
 	const int FallbackGLMajor = 0;
 	const int FallbackGLMinor = 0;
 	if(g_Config.m_GfxGLMajor != FallbackGLMajor || g_Config.m_GfxGLMinor != FallbackGLMinor || g_Config.m_GfxGLPatch != 0)
@@ -360,7 +373,7 @@ static void RecoverQmGraphicsSettingsAfterDriverCrash(IStorage *pStorage)
 	if(!HasGraphicsDriverFault)
 		return;
 
-	const bool Changed = ApplyQmSafeGraphicsRecovery();
+	const bool Changed = ApplyQmSafeGraphicsRecovery(HasGraphicsDriverFault);
 	if(Changed)
 	{
 		log_warn("client", "previous crash report '%s' points to the graphics driver; resetting safe graphics settings in windowed mode without FSAA", Latest.m_aPath);
@@ -4165,6 +4178,16 @@ void CClient::Run()
 		set_new_tick();
 		UpdateHangHeartbeat();
 
+		// 图形后端已经记录致命错误时，立刻在提交（会断言退出）之前收口。
+		// 这样设备丢失等故障走的是「写诊断 + 干净重启」，而不是弹模态框把
+		// 主线程和心跳一起卡住（那会写出误导性的 hang 报告）。
+		// TakeFatalError 会同时清掉标记，让随后的收尾流程不再重复触发断言。
+		if(Graphics()->TakeFatalError())
+		{
+			if(HandleQmGraphicsFatalError())
+				break;
+		}
+
 		// handle pending connects
 		if(m_aCmdConnect[0])
 		{
@@ -5486,6 +5509,78 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 	fs_makedir_rec_for(aDumpPath);
 	WriteMiniDumpFile(aDumpPath);
 #endif
+}
+
+bool CClient::HandleQmGraphicsFatalError()
+{
+	// 图形后端已经记录了致命错误（例如 Vulkan VK_ERROR_DEVICE_LOST）。
+	// 一旦这个错误被提交（CGraphicsBackend_Threaded::ProcessError）就会断言退出，
+	// 而断言弹窗会阻塞主线程、停掉心跳，看门狗随后写出误导性的 hang 报告。
+	// 这里在提交之前主动收口：写诊断报告 -> 干净重启走安全图形设置。
+	if(m_QmGraphicsRecoveryAttempted)
+		return false;
+	m_QmGraphicsRecoveryAttempted = true;
+
+	const char *pFatalError = Graphics()->GetFatalError();
+	char aGpuInfo[512];
+	GetGpuInfoString(aGpuInfo);
+	char aDate[64];
+	str_timestamp(aDate, sizeof(aDate));
+	char aBackend[64];
+	str_copy(aBackend, g_Config.m_GfxBackend);
+	char aServerAddr[NETADDR_MAXSTRSIZE];
+	const NETADDR *pAddr = ServerAddress();
+	if(!pAddr || pAddr->type == NETTYPE_INVALID)
+		str_copy(aServerAddr, "unknown");
+	else
+		net_addr_str(pAddr, aServerAddr, sizeof(aServerAddr), true);
+	char aFilename[IO_MAX_PATH_LENGTH];
+	// 文件名必须与 echndl 的崩溃报告一致，才能在下次启动时被
+	// RecoverQmGraphicsSettingsAfterDriverCrash 识别并做安全图形恢复。
+	str_format(aFilename, sizeof(aFilename), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s_fatal_report.txt",
+		gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+
+	char aPath[IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, aFilename, aPath, sizeof(aPath));
+	fs_makedir_rec_for(aPath);
+
+	IOHANDLE File = io_open(aPath, IOFLAG_WRITE);
+	if(File)
+	{
+		char aBuf[2048];
+		str_format(aBuf, sizeof(aBuf),
+			"QmClient runtime graphics fault report\n"
+			"Report type: graphics_fatal_error\n"
+			"Timestamp: %s\n"
+			"Process ID: %d\n"
+			"Configured graphics backend: %s\n"
+			"Client state: %s (%d)\n"
+			"Current map: %s\n"
+			"Server address: %s\n"
+			"Game version: %s %s %s\n"
+			"\n"
+			"Graphics error:\n%s\n"
+			"\n"
+			"%s\n",
+			aDate, pid(), aBackend, ClientStateToString(m_State), m_State,
+			m_aCurrentMap[0] != '\0' ? m_aCurrentMap : "(none)",
+			aServerAddr,
+			GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "",
+			pFatalError[0] != '\0' ? pFatalError : "(not reported by the backend)",
+			aGpuInfo);
+		io_write(File, aBuf, str_length(aBuf));
+		io_sync(File);
+		io_close(File);
+	}
+	else
+	{
+		log_error("gfx", "could not write runtime graphics fault report to '%s'", aPath);
+	}
+
+	log_error("gfx", "graphics backend reported a fatal error, restarting the client with safe graphics settings: %s",
+		pFatalError[0] != '\0' ? pFatalError : "(no details)");
+	Restart();
+	return true;
 }
 
 void CClient::UpdateAndSwap()

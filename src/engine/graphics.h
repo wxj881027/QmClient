@@ -237,6 +237,9 @@ typedef STWGraphicGpu TTwGraphicsGpuList;
 
 typedef std::function<void()> WINDOW_RESIZE_FUNC;
 typedef std::function<void()> WINDOW_PROPS_CHANGED_FUNC;
+// 图形资源被整体丢弃时触发（例如 Vulkan 设备丢失后重建了设备）。
+// 回调里必须丢弃并重新加载所有 GPU 资源，例如皮肤、字体、图标图集、四边形容器。
+typedef std::function<void()> GRAPHICS_RESOURCES_RESET_FUNC;
 
 typedef std::function<bool(uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData)> TGLBackendReadPresentedImageData;
 
@@ -452,6 +455,15 @@ public:
 	 * Listens to various window property changes, such as minimize, maximize, move, fullscreen mode
 	 */
 	virtual void AddWindowPropChangeListener(WINDOW_PROPS_CHANGED_FUNC pFunc) = 0;
+	/**
+	 * 监听「图形资源整体重置」事件。设备重建后所有 GPU 资源都已失效，
+	 * 由引擎在安全时机（主线程、非活动渲染目标）统一广播，监听者据此重建自己的资源。
+	 */
+	virtual void AddGraphicsResourcesResetListener(GRAPHICS_RESOURCES_RESET_FUNC pFunc) = 0;
+	/**
+	 * 图形资源重置版本号。每次设备重建都会自增，可用于判断自己缓存的资源是否过期。
+	 */
+	virtual uint32_t GraphicsResourcesResetVersion() const = 0;
 
 	virtual void WindowDestroyNtf(uint32_t WindowId) = 0;
 	virtual void WindowCreateNtf(uint32_t WindowId) = 0;
@@ -529,6 +541,9 @@ public:
 	// Must be called outside an active render target. Source, Temporary and Destination
 	// must be distinct render targets with identical dimensions.
 	virtual bool GaussianBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Temporary, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) = 0;
+	// 必须在非活动渲染目标状态下调用。Source 和 Destination 为完整分辨率目标，
+	// 三个中间目标必须使用相同的较小尺寸。操作依次执行降采样、模糊和升采样。
+	virtual bool DualBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Downsample, CRenderTargetHandle DownsampleTemporary, CRenderTargetHandle DownsampleBlurred, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) = 0;
 	virtual CRenderTargetReadbackHandle BeginRenderTargetReadback(CRenderTargetHandle Target) = 0;
 	virtual ERenderTargetReadbackState PollRenderTargetReadback(CRenderTargetReadbackHandle Handle) = 0;
 	virtual bool ResolveRenderTargetReadback(CRenderTargetReadbackHandle *pHandle, CImageInfo &Image) = 0;
@@ -609,6 +624,26 @@ public:
 	virtual const char *GetVersionString() = 0;
 	virtual const char *GetRendererString() = 0;
 	virtual const char *GetFatalError() const = 0;
+	/**
+	 * 非破坏性查询图形后端是否已经记录了致命错误。
+	 *
+	 * 后端一旦把致命错误提交出去（CGraphicsBackend_Threaded::ProcessError 会调用
+	 * dbg_assert_failed 直接中止进程），就没有任何恢复余地，所以主循环必须在提交
+	 * 之前轮询这个接口，才能在设备丢失这类故障上主动做恢复/退出，而不是让进程
+	 * 卡在断言弹出的模态错误框里（那会让心跳停止并写出误导性的 hang 报告）。
+	 *
+	 * @return true 表示后端已记录致命错误，图形输出不可继续信任。
+	 */
+	virtual bool HasFatalError() const { return false; }
+	/**
+	 * 检查并清除图形后端的致命错误标记。
+	 *
+	 * 只有在「已经决定不再信任本帧图形输出、准备收尾/重启」时才允许调用：
+	 * 清除标记的目的是让随后的收尾流程（关停仍会提交清理命令）不再重复触发断言。
+	 *
+	 * @return true 表示刚刚消费掉一个致命错误。
+	 */
+	virtual bool TakeFatalError() { return false; }
 
 	class CLineItem
 	{

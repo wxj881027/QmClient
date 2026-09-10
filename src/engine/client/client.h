@@ -131,6 +131,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	std::thread m_HangWatchdogThread;
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
 
+	// 本进程内是否已经尝试过图形致命错误恢复：只尝试一次，避免
+	// 「图形故障 -> 重启 -> 又故障」形成无限重启循环。
+	bool m_QmGraphicsRecoveryAttempted = false;
+
 	IGraphics::CTextureHandle m_DebugFont;
 
 	int64_t m_LastRenderTime;
@@ -318,6 +322,10 @@ private:
 	void StopHangWatchdog();
 	void UpdateHangHeartbeat();
 	void WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat);
+	// 运行期图形致命错误的恢复入口：写诊断报告，尝试一次干净重启（下次启动走安全图形设置），
+	// 避免落入断言模态框导致心跳停止、写出误导性 hang 报告。
+	// @return true 表示已触发恢复（调用方应立即停止当前帧的图形操作）
+	bool HandleQmGraphicsFatalError();
 	void FinishQmConfigMigration();
 
 	// 性能日志文件的运行时开关：CFutureLogger 只能 Set 一次，游戏内开/关
