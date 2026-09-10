@@ -37,6 +37,11 @@
 #include <utility>
 #include <vector>
 
+// 渲染工作线程标记：显存分配失败后的恢复流程会驱动整个帧循环（vkDeviceWaitIdle +
+// NextFrame -> WaitFrame -> FinishRenderThreads -> vkQueueSubmit/vkQueuePresentKHR），
+// 这只能在主渲染线程上做。详见 AllocateVulkanMemory()。
+static thread_local bool s_ThreadIsRenderWorker = false;
+
 #ifndef VK_API_VERSION_MAJOR
 #define VK_API_VERSION_MAJOR VK_VERSION_MAJOR
 #define VK_API_VERSION_MINOR VK_VERSION_MINOR
@@ -1202,6 +1207,14 @@ private:
 	VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
 #endif
 
+#ifdef VK_EXT_device_fault
+	// 可选的 VK_EXT_device_fault 支持：驱动暴露该扩展时启用，
+	// 这样 VK_ERROR_DEVICE_LOST 之后可以打印详细的故障信息
+	// （出错的 GPU 地址及访问类型、厂商故障码）。
+	bool m_DeviceFaultAvailable = false;
+	PFN_vkGetDeviceFaultInfoEXT m_pfnGetDeviceFaultInfoEXT = nullptr;
+#endif
+
 	VkDescriptorSetLayout m_StandardTexturedDescriptorSetLayout;
 	VkDescriptorSetLayout m_Standard3DTexturedDescriptorSetLayout;
 
@@ -1392,6 +1405,63 @@ protected:
 		m_HasError = false;
 	}
 
+#ifdef VK_EXT_device_fault
+	static const char *DeviceFaultAddressTypeName(VkDeviceFaultAddressTypeEXT Type)
+	{
+		switch(Type)
+		{
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_NONE_EXT: return "none";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT: return "read_invalid";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT: return "write_invalid";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_EXT: return "execute_invalid";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT: return "instruction_pointer_unknown";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT: return "instruction_pointer_invalid";
+		case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT: return "instruction_pointer_fault";
+		default: return "unknown";
+		}
+	}
+
+	// 查询并记录 VK_EXT_device_fault 信息。可以无条件调用：
+	// 设备创建时没有启用该扩展时它什么都不做。
+	void LogDeviceFaultInfo()
+	{
+		if(!m_DeviceFaultAvailable || m_pfnGetDeviceFaultInfoEXT == nullptr)
+			return;
+
+		VkDeviceFaultCountsEXT FaultCounts = {};
+		FaultCounts.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT;
+		if(m_pfnGetDeviceFaultInfoEXT(m_VKDevice, &FaultCounts, nullptr) != VK_SUCCESS)
+			return;
+
+		std::vector<VkDeviceFaultAddressInfoEXT> vAddressInfos(FaultCounts.addressInfoCount);
+		std::vector<VkDeviceFaultVendorInfoEXT> vVendorInfos(FaultCounts.vendorInfoCount);
+
+		VkDeviceFaultInfoEXT FaultInfo = {};
+		FaultInfo.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT;
+		FaultInfo.pAddressInfos = vAddressInfos.data();
+		FaultInfo.pVendorInfos = vVendorInfos.data();
+		// 这里不索取（可能很大的）厂商二进制崩溃转储，
+		// pVendorBinaryData 保持为空，因此传给驱动的尺寸必须为 0。
+		FaultCounts.vendorBinarySize = 0;
+		if(m_pfnGetDeviceFaultInfoEXT(m_VKDevice, &FaultCounts, &FaultInfo) != VK_SUCCESS)
+			return;
+
+		log_error("gfx/vulkan", "Device fault info (VK_EXT_device_fault): %s", FaultInfo.description);
+		for(uint32_t i = 0; i < FaultCounts.addressInfoCount; ++i)
+		{
+			const VkDeviceFaultAddressInfoEXT &Info = vAddressInfos[i];
+			log_error("gfx/vulkan", "  address fault: type=%s reportedAddress=0x%" PRIx64 " precision=0x%" PRIx64,
+				DeviceFaultAddressTypeName(Info.addressType), (uint64_t)Info.reportedAddress, (uint64_t)Info.addressPrecision);
+		}
+		for(uint32_t i = 0; i < FaultCounts.vendorInfoCount; ++i)
+		{
+			const VkDeviceFaultVendorInfoEXT &Info = vVendorInfos[i];
+			log_error("gfx/vulkan", "  vendor fault: %s code=0x%" PRIx64 " data=0x%" PRIx64,
+				Info.description, (uint64_t)Info.vendorFaultCode, (uint64_t)Info.vendorFaultData);
+		}
+	}
+#endif
+
 	const char *CheckVulkanCriticalError(VkResult CallResult)
 	{
 		const char *pCriticalError = nullptr;
@@ -1408,6 +1478,11 @@ protected:
 		case VK_ERROR_DEVICE_LOST:
 			pCriticalError = "device lost";
 			dbg_msg("vulkan", "%s", pCriticalError);
+#ifdef VK_EXT_device_fault
+			LogDeviceFaultInfo();
+#else
+			log_error("gfx/vulkan", "无法获取详细故障信息：编译时缺少 VK_EXT_device_fault 支持（Vulkan 头文件过旧）。");
+#endif
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
 		{
@@ -1851,7 +1926,15 @@ protected:
 		if(Res != VK_SUCCESS)
 		{
 			dbg_msg("vulkan", "vulkan memory allocation failed, trying to recover.");
-			if(Res == VK_ERROR_OUT_OF_HOST_MEMORY || Res == VK_ERROR_OUT_OF_DEVICE_MEMORY)
+			// 下面的恢复流程会推进整个帧循环（vkDeviceWaitIdle +
+			// NextFrame -> WaitFrame -> FinishRenderThreads -> 队列提交/呈现），
+			// 以便释放延迟清理的资源后重试。这只允许在主渲染线程上执行。
+			// 在渲染工作线程上它会等待正在执行恢复的那个工作线程（并重新加锁
+			// 该工作线程自己的互斥量），造成渲染器死锁；同时会和主线程并发
+			// 提交队列操作，导致 VK_ERROR_DEVICE_LOST。
+			// 因此工作线程上直接干净地失败：分配失败的上层调用者会报告
+			// 显存不足错误，由主线程统一处理。
+			if((Res == VK_ERROR_OUT_OF_HOST_MEMORY || Res == VK_ERROR_OUT_OF_DEVICE_MEMORY) && !s_ThreadIsRenderWorker)
 			{
 				// aggressively try to get more memory
 				VkResult WaitIdleResult = DeviceWaitIdle();
@@ -4260,6 +4343,17 @@ public:
 		return OurExt;
 	}
 
+	// 可选设备扩展：设备不支持时静默跳过，绝不导致初始化失败。
+	std::set<std::string> OurOptionalDeviceExtensions()
+	{
+		std::set<std::string> OurExt;
+#ifdef VK_EXT_device_fault
+		// 仅用于诊断：设备丢失后打印详细的 GPU 故障信息。
+		OurExt.emplace(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
+#endif
+		return OurExt;
+	}
+
 	[[nodiscard]] bool ResolveRequestedVulkanApiVersion()
 	{
 		uint32_t LoaderApiVersion = VK_API_VERSION_1_0;
@@ -4796,6 +4890,41 @@ public:
 			}
 		}
 
+		// 可选扩展：只有设备真正暴露时才启用，缺失不影响初始化。
+		const std::set<std::string> OurOptDevExt = OurOptionalDeviceExtensions();
+		for(const auto &CurExtProp : vDevPropList)
+		{
+			if(OurOptDevExt.contains(std::string(CurExtProp.extensionName)))
+				vDevPropCNames.emplace_back(CurExtProp.extensionName);
+		}
+
+#ifdef VK_EXT_device_fault
+		bool DeviceFaultRequested = false;
+		for(const char *pDevExt : vDevPropCNames)
+		{
+			if(str_comp(pDevExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME) == 0)
+			{
+				DeviceFaultRequested = true;
+				break;
+			}
+		}
+
+		VkPhysicalDeviceFaultFeaturesEXT FaultFeatures = {};
+		FaultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
+		if(DeviceFaultRequested)
+		{
+			auto pfnGetPhysicalDeviceFeatures2 = (PFN_vkGetPhysicalDeviceFeatures2)vkGetInstanceProcAddr(m_VKInstance, "vkGetPhysicalDeviceFeatures2");
+			if(pfnGetPhysicalDeviceFeatures2 != nullptr)
+			{
+				// 必须显式启用该扩展的核心 deviceFault 特性。
+				VkPhysicalDeviceFeatures2 PhysFeatures2 = {};
+				PhysFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+				PhysFeatures2.pNext = &FaultFeatures;
+				pfnGetPhysicalDeviceFeatures2(m_VKGPU, &PhysFeatures2);
+			}
+		}
+#endif
+
 		VkDeviceQueueCreateInfo VKQueueCreateInfo;
 		VKQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		VKQueueCreateInfo.queueFamilyIndex = m_VKGraphicsQueueIndex;
@@ -4817,11 +4946,31 @@ public:
 		VKCreateInfo.pEnabledFeatures = NULL;
 		VKCreateInfo.flags = 0;
 
+#ifdef VK_EXT_device_fault
+		if(DeviceFaultRequested && FaultFeatures.deviceFault)
+		{
+			FaultFeatures.pNext = nullptr;
+			// 我们不会读取厂商二进制崩溃转储，因此不启用其生成。
+			FaultFeatures.deviceFaultVendorBinary = VK_FALSE;
+			VKCreateInfo.pNext = &FaultFeatures;
+		}
+#endif
+
 		if(vkCreateDevice(m_VKGPU, &VKCreateInfo, nullptr, &m_VKDevice) != VK_SUCCESS)
 		{
 			SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Logical device could not be created.");
 			return false;
 		}
+
+#ifdef VK_EXT_device_fault
+		if(DeviceFaultRequested && FaultFeatures.deviceFault)
+		{
+			m_pfnGetDeviceFaultInfoEXT = (PFN_vkGetDeviceFaultInfoEXT)vkGetDeviceProcAddr(m_VKDevice, "vkGetDeviceFaultInfoEXT");
+			m_DeviceFaultAvailable = m_pfnGetDeviceFaultInfoEXT != nullptr;
+			if(m_DeviceFaultAvailable)
+				dbg_msg("vulkan", "VK_EXT_device_fault enabled; detailed fault info will be logged on device loss.");
+		}
+#endif
 
 		m_pfnCreateSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(m_VKDevice, "vkCreateSwapchainKHR"));
 		m_pfnDestroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(m_VKDevice, "vkDestroySwapchainKHR"));
@@ -9948,6 +10097,7 @@ public:
 
 	void RunThread(size_t ThreadIndex)
 	{
+		s_ThreadIsRenderWorker = true;
 		auto *pThread = m_vpRenderThreads[ThreadIndex].get();
 		std::unique_lock<std::mutex> Lock(pThread->m_Mutex);
 		pThread->m_Started = true;
