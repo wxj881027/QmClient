@@ -666,6 +666,14 @@ public:
 	// TClient
 	std::vector<FT_Face> *GetFaces() { return &m_vFtFaces; }
 
+	// 图形设备重建后调用：字形的 CPU 侧位图数据（m_apTextureData）与图集分配都还在，
+	// 因此只需要把字体纹理重新上传到新设备。旧句柄因为设备纪元自增已经失效，
+	// 这里不需要（也不能）对旧句柄发删除命令。
+	void OnGraphicsResourcesReset()
+	{
+		UploadTextures();
+	}
+
 	FT_Face DefaultFace() const
 	{
 		return m_DefaultFace;
@@ -2730,6 +2738,13 @@ public:
 				dbg_assert_failed("Text container was forgotten by the implementation (the index was overwritten).");
 			}
 		}
+	}
+
+	void OnGraphicsResourcesReset() override
+	{
+		if(m_pGlyphMap == nullptr)
+			return;
+		m_pGlyphMap->OnGraphicsResourcesReset();
 	}
 
 	void OnWindowResize() override

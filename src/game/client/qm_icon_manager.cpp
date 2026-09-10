@@ -123,6 +123,14 @@ void CQmIconAtlas::Clear(IGraphics *pGraphics)
 	if(m_Texture.IsValid() && pGraphics != nullptr)
 		pGraphics->UnloadTexture(&m_Texture);
 	m_Texture = IGraphics::CTextureHandle();
+	ResetForDeviceRecreate();
+}
+
+void CQmIconAtlas::ResetForDeviceRecreate()
+{
+	// 纹理对象已经随设备消失，旧句柄也已因设备纪元自增而失效，
+	// 因此这里只丢弃本地状态，不做任何 GPU 侧操作。
+	m_Texture.Invalidate();
 	for(SEntry &Entry : m_aEntries)
 		Entry = {};
 	m_LoadedIconCount = 0;
@@ -142,6 +150,20 @@ void CQmIconManager::Init(IGraphics *pGraphics, IStorage *pStorage, IConsole *pC
 	m_pStorage = pStorage;
 	m_pConsole = pConsole;
 	m_DiagnosticsEnabled = IconDiagnosticsEnabled();
+	Reload();
+}
+
+void CQmIconManager::OnGraphicsResourcesReset()
+{
+	if(m_pGraphics == nullptr)
+		return;
+
+	// 旧的图集纹理已经随设备消失，句柄也已失效：只清本地状态，不再对它发删除命令。
+	m_Atlas.ResetForDeviceRecreate();
+	m_AtlasWeight = -1;
+	m_NextReloadAttemptTime = 0;
+	m_NextMsdfProbeTime = 0;
+	m_HasFailedReloadTarget = false;
 	Reload();
 }
 

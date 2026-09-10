@@ -418,7 +418,23 @@ IGraphics::CTextureHandle CGraphics_Threaded::FindFreeTextureIndex()
 	const size_t Tex = m_FirstFreeTexture;
 	m_FirstFreeTexture = m_vTextureIndices[Tex];
 	m_vTextureIndices[Tex] = -1;
-	return CreateTextureHandle(Tex, m_vTextureGenerations[Tex]);
+	return CreateTextureHandle(Tex, (m_TextureHandleEpoch << 16) | (m_vTextureGenerations[Tex] & 0xffffu));
+}
+
+// 使现存的所有纹理句柄失效，并把全部槽位重新交回空闲链表。
+// 图形设备重建时必须调用：此时旧的纹理对象已经随设备一起消失，
+// 旧句柄绝不能再被当成有效句柄使用（否则会画出垃圾或触发断言）。
+void CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
+{
+	++m_TextureHandleEpoch;
+	m_vTextureIndices.resize(CCommandBuffer::MAX_TEXTURES);
+	m_vTextureGenerations.resize(CCommandBuffer::MAX_TEXTURES);
+	// 已经空闲过的槽位也必须再进一次代数，避免「槽位 + 代数」组合和旧句柄撞车。
+	for(size_t i = 0; i < m_vTextureGenerations.size(); ++i)
+		++m_vTextureGenerations[i];
+	for(size_t i = 0; i < m_vTextureIndices.size(); ++i)
+		m_vTextureIndices[i] = i + 1;
+	m_FirstFreeTexture = 0;
 }
 
 bool CGraphics_Threaded::IsTextureHandleAllocated(CTextureHandle TextureId) const
@@ -430,7 +446,8 @@ bool CGraphics_Threaded::IsTextureHandleAllocated(CTextureHandle TextureId) cons
 	if(TextureIndex >= m_vTextureIndices.size() || TextureIndex >= m_vTextureGenerations.size())
 		return false;
 
-	return m_vTextureIndices[TextureIndex] == -1 && m_vTextureGenerations[TextureIndex] == TextureId.Generation();
+	const uint32_t ExpectedGeneration = (m_TextureHandleEpoch << 16) | (m_vTextureGenerations[TextureIndex] & 0xffffu);
+	return m_vTextureIndices[TextureIndex] == -1 && ExpectedGeneration == TextureId.Generation();
 }
 
 void CGraphics_Threaded::FreeTextureIndex(CTextureHandle *pIndex)
@@ -1169,6 +1186,56 @@ bool CGraphics_Threaded::GaussianBlurRenderTarget(CRenderTargetHandle Source, CR
 	Vertical.m_Horizontal = false;
 	Vertical.m_aWeights = aWeights;
 	AddCmd(Vertical);
+	EndRenderTarget();
+	return true;
+}
+
+bool CGraphics_Threaded::DualBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Downsample, CRenderTargetHandle DownsampleTemporary, CRenderTargetHandle DownsampleBlurred, CRenderTargetHandle Destination, const SGaussianBlurParams &Params)
+{
+	if(!IsRenderTargetGaussianBlurSupported() || !Source.IsValid() || !Downsample.IsValid() || !DownsampleTemporary.IsValid() || !DownsampleBlurred.IsValid() || !Destination.IsValid())
+		return false;
+	const std::array<CRenderTargetHandle, 5> aTargets = {Source, Downsample, DownsampleTemporary, DownsampleBlurred, Destination};
+	for(size_t i = 0; i < aTargets.size(); ++i)
+	{
+		for(size_t j = i + 1; j < aTargets.size(); ++j)
+		{
+			if(aTargets[i].Id() == aTargets[j].Id())
+				return false;
+		}
+	}
+	const size_t MaxTargetId = (size_t)std::max({Source.Id(), Downsample.Id(), DownsampleTemporary.Id(), DownsampleBlurred.Id(), Destination.Id()});
+	if(MaxTargetId >= m_vRenderTargetIndices.size() || MaxTargetId >= m_vRenderTargetSizes.size())
+		return false;
+	for(const CRenderTargetHandle Target : aTargets)
+	{
+		if(m_vRenderTargetIndices[Target.Id()] != -1)
+			return false;
+	}
+	const ivec2 SourceSize = m_vRenderTargetSizes[Source.Id()];
+	const ivec2 DownsampleSize = m_vRenderTargetSizes[Downsample.Id()];
+	if(SourceSize.x <= 0 || SourceSize.y <= 0 || DownsampleSize.x <= 0 || DownsampleSize.y <= 0 ||
+		m_vRenderTargetSizes[DownsampleTemporary.Id()] != DownsampleSize || m_vRenderTargetSizes[DownsampleBlurred.Id()] != DownsampleSize ||
+		m_vRenderTargetSizes[Destination.Id()] != SourceSize || DownsampleSize.x > SourceSize.x || DownsampleSize.y > SourceSize.y)
+		return false;
+
+	// 普通渲染目标绘制使用线性过滤，因此无需新增 shader 即可完成低成本降采样和柔和升采样。
+	if(!BeginRenderTarget(Downsample, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
+		return false;
+	SRenderTargetDrawParams DownsampleParams;
+	DownsampleParams.m_W = (float)DownsampleSize.x;
+	DownsampleParams.m_H = (float)DownsampleSize.y;
+	DrawRenderTarget(Source, DownsampleParams);
+	EndRenderTarget();
+
+	if(!GaussianBlurRenderTarget(Downsample, DownsampleTemporary, DownsampleBlurred, Params))
+		return false;
+
+	if(!BeginRenderTarget(Destination, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
+		return false;
+	SRenderTargetDrawParams UpsampleParams;
+	UpsampleParams.m_W = (float)SourceSize.x;
+	UpsampleParams.m_H = (float)SourceSize.y;
+	DrawRenderTarget(DownsampleBlurred, UpsampleParams);
 	EndRenderTarget();
 	return true;
 }
@@ -2853,6 +2920,11 @@ void CGraphics_Threaded::RenderTexturedMsdf(const IGraphics::STexturedMsdfParams
 #endif
 }
 
+bool CGraphics_Threaded::IsQuadContainerIndexValid(int ContainerIndex) const
+{
+	return ContainerIndex >= 0 && (size_t)ContainerIndex < m_vQuadContainers.size();
+}
+
 int CGraphics_Threaded::CreateQuadContainer(bool AutomaticUpload)
 {
 	int Index = -1;
@@ -2873,12 +2945,18 @@ int CGraphics_Threaded::CreateQuadContainer(bool AutomaticUpload)
 
 void CGraphics_Threaded::QuadContainerChangeAutomaticUpload(int ContainerIndex, bool AutomaticUpload)
 {
+	if(!IsQuadContainerIndexValid(ContainerIndex))
+		return;
+
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 	Container.m_AutomaticUpload = AutomaticUpload;
 }
 
 void CGraphics_Threaded::QuadContainerUpload(int ContainerIndex)
 {
+	if(!IsQuadContainerIndexValid(ContainerIndex))
+		return;
+
 	if(IsQuadContainerBufferingEnabled())
 	{
 		SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
@@ -2931,6 +3009,9 @@ void CGraphics_Threaded::QuadContainerUpload(int ContainerIndex)
 
 int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pArray, int Num)
 {
+	if(!IsQuadContainerIndexValid(ContainerIndex))
+		return -1;
+
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
 	if((int)Container.m_vQuads.size() > Num + CCommandBuffer::CCommandBuffer::MAX_VERTICES)
@@ -2981,6 +3062,9 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pAr
 
 int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num)
 {
+	if(!IsQuadContainerIndexValid(ContainerIndex))
+		return -1;
+
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
 	if((int)Container.m_vQuads.size() > Num + CCommandBuffer::CCommandBuffer::MAX_VERTICES)
@@ -3025,6 +3109,9 @@ void CGraphics_Threaded::QuadContainerReset(int ContainerIndex)
 	if(ContainerIndex == -1)
 		return;
 
+	if(!IsQuadContainerIndexValid(ContainerIndex))
+		return;
+
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 	if(IsQuadContainerBufferingEnabled())
 		DeleteBufferContainer(Container.m_QuadBufferContainerIndex, true);
@@ -3036,6 +3123,13 @@ void CGraphics_Threaded::DeleteQuadContainer(int &ContainerIndex)
 {
 	if(ContainerIndex == -1)
 		return;
+
+	// 设备重建后旧索引会失效，不能把越界索引塞进空闲链表。
+	if(!IsQuadContainerIndexValid(ContainerIndex))
+	{
+		ContainerIndex = -1;
+		return;
+	}
 
 	QuadContainerReset(ContainerIndex);
 
@@ -3052,6 +3146,10 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadDrawNum
 
 void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset, int QuadDrawNum, bool ChangeWrapMode)
 {
+	// 设备重建后旧索引会失效：容器已被清空时不能再按索引取用。
+	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vQuadContainers.size())
+		return;
+
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
 	if(QuadDrawNum == -1)
@@ -3109,6 +3207,9 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 
 void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffset, int QuadDrawNum, float X, float Y, float ScaleX, float ScaleY)
 {
+	if(!IsQuadContainerIndexValid(ContainerIndex))
+		return;
+
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
 	if((int)Container.m_vQuads.size() < QuadOffset + 1)
@@ -3234,6 +3335,9 @@ void CGraphics_Threaded::RenderQuadContainerAsSprite(int ContainerIndex, int Qua
 
 void CGraphics_Threaded::RenderQuadContainerAsSpriteMultiple(int ContainerIndex, int QuadOffset, int DrawCount, SRenderSpriteInfo *pRenderInfo)
 {
+	if(!IsQuadContainerIndexValid(ContainerIndex))
+		return;
+
 	SQuadContainer &Container = m_vQuadContainers[ContainerIndex];
 
 	if(DrawCount == 0)
@@ -3515,6 +3619,14 @@ void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool Destroy
 	if(ContainerIndex == -1)
 		return;
 
+	// 设备重建后旧索引会失效：这里的容器可能已被清空，越界索引必须直接丢弃。
+	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vVertexArrayInfo.size())
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer container index %d during delete.", ContainerIndex);
+		ContainerIndex = -1;
+		return;
+	}
+
 	CCommandBuffer::SCommand_DeleteBufferContainer Cmd;
 	Cmd.m_BufferContainerIndex = ContainerIndex;
 	Cmd.m_DestroyAllBO = DestroyAllBO;
@@ -3541,6 +3653,13 @@ void CGraphics_Threaded::DeleteBufferContainer(int &ContainerIndex, bool Destroy
 
 void CGraphics_Threaded::UpdateBufferContainerInternal(int ContainerIndex, SBufferContainerInfo *pContainerInfo)
 {
+	// 设备重建后旧索引会失效，越界索引必须直接丢弃。
+	if(ContainerIndex < 0 || (size_t)ContainerIndex >= m_vVertexArrayInfo.size())
+	{
+		log_error("graphics/buffer", "Ignoring stale buffer container index %d during update.", ContainerIndex);
+		return;
+	}
+
 	CCommandBuffer::SCommand_UpdateBufferContainer Cmd;
 	Cmd.m_BufferContainerIndex = ContainerIndex;
 	Cmd.m_AttrCount = pContainerInfo->m_vAttributes.size();
@@ -3875,12 +3994,15 @@ int CGraphics_Threaded::Init()
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
 
-	// init textures
-	m_FirstFreeTexture = 0;
-	m_vTextureIndices.resize(CCommandBuffer::MAX_TEXTURES);
-	m_vTextureGenerations.resize(CCommandBuffer::MAX_TEXTURES);
-	for(size_t i = 0; i < m_vTextureIndices.size(); ++i)
-		m_vTextureIndices[i] = i + 1;
+	// 允许在同一个实例上重复初始化（图形设备故障恢复会走到这里）。
+	// 之前这里直接覆盖 m_pBackend，会把旧 backend、SDL 窗口和渲染线程一起泄漏。
+	if(m_pBackend != nullptr)
+		Shutdown();
+
+	// 设备可能已经换了一个：先让所有现存纹理句柄失效，再把槽位全部回收。
+	// 必须在重建 backend 之前做，保证此后创建的资源都是新纪元的。
+	BumpTextureHandleEpochAndResetSlots();
+
 	m_FirstFreeRenderTarget = 0;
 	m_vRenderTargetIndices.clear();
 	m_vRenderTargetSizes.clear();
@@ -3888,9 +4010,15 @@ int CGraphics_Threaded::Init()
 	m_vRenderTargetReadbackRequests.clear();
 	m_FirstFreeRenderTargetReadback = -1;
 
-	m_FirstFreeVertexArrayInfo = -1;
-	m_FirstFreeBufferObjectIndex = -1;
+	// 这三类资源由 vector 自身保存对象，没有独立的代数校验，因此必须连容器一起清空。
+	// 只把空闲链表头置 -1 会把旧条目留成「看起来仍然已分配」的孤儿：
+	// 旧的 GPU 对象已经随设备消失，但索引仍会被当作有效值返回。
+	m_vQuadContainers.clear();
 	m_FirstFreeQuadContainer = -1;
+	m_vBufferObjectIndices.clear();
+	m_FirstFreeBufferObjectIndex = -1;
+	m_vVertexArrayInfo.clear();
+	m_FirstFreeVertexArrayInfo = -1;
 
 	m_pBackend = CreateGraphicsBackend(Localize);
 	if(InitWindow() != 0)
@@ -3908,41 +4036,7 @@ int CGraphics_Threaded::Init()
 		pCommandBuffer = new CCommandBuffer(CMD_BUFFER_CMD_BUFFER_SIZE, CMD_BUFFER_DATA_BUFFER_SIZE);
 	m_pCommandBuffer = m_apCommandBuffers[0];
 
-	// create null texture, will get id=0
-	{
-		const size_t PixelSize = 4;
-		const unsigned char aRed[] = {0xff, 0x00, 0x00, 0xff};
-		const unsigned char aGreen[] = {0x00, 0xff, 0x00, 0xff};
-		const unsigned char aBlue[] = {0x00, 0x00, 0xff, 0xff};
-		const unsigned char aYellow[] = {0xff, 0xff, 0x00, 0xff};
-		constexpr size_t NullTextureDimension = 16;
-		unsigned char aNullTextureData[NullTextureDimension * NullTextureDimension * PixelSize];
-		for(size_t y = 0; y < NullTextureDimension; ++y)
-		{
-			for(size_t x = 0; x < NullTextureDimension; ++x)
-			{
-				const unsigned char *pColor;
-				if(x < NullTextureDimension / 2 && y < NullTextureDimension / 2)
-					pColor = aRed;
-				else if(x >= NullTextureDimension / 2 && y < NullTextureDimension / 2)
-					pColor = aGreen;
-				else if(x < NullTextureDimension / 2 && y >= NullTextureDimension / 2)
-					pColor = aBlue;
-				else
-					pColor = aYellow;
-				mem_copy(&aNullTextureData[(y * NullTextureDimension + x) * PixelSize], pColor, PixelSize);
-			}
-		}
-		CImageInfo NullTextureInfo;
-		NullTextureInfo.m_Width = NullTextureDimension;
-		NullTextureInfo.m_Height = NullTextureDimension;
-		NullTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
-		NullTextureInfo.m_pData = aNullTextureData;
-		const int TextureLoadFlags = Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
-		m_NullTexture.Invalidate();
-		m_NullTexture = LoadTextureRaw(NullTextureInfo, TextureLoadFlags, "null-texture");
-		dbg_assert(m_NullTexture.IsNullTexture(), "Null texture invalid");
-	}
+	CreateNullTexture();
 
 	static constexpr LOG_COLOR GPU_INFO_LOG_COLOR = LOG_COLOR{153, 127, 255};
 	log_info_color(GPU_INFO_LOG_COLOR, "gfx", "GPU vendor: %s", GetVendorString());
@@ -4213,6 +4307,62 @@ void CGraphics_Threaded::AddWindowResizeListener(WINDOW_RESIZE_FUNC pFunc)
 void CGraphics_Threaded::AddWindowPropChangeListener(WINDOW_PROPS_CHANGED_FUNC pFunc)
 {
 	m_vPropChangeListeners.emplace_back(pFunc);
+}
+
+void CGraphics_Threaded::AddGraphicsResourcesResetListener(GRAPHICS_RESOURCES_RESET_FUNC pFunc)
+{
+	m_vGraphicsResourcesResetListeners.emplace_back(pFunc);
+}
+
+void CGraphics_Threaded::CreateNullTexture()
+{
+	// create null texture, will get id=0
+	const size_t PixelSize = 4;
+	const unsigned char aRed[] = {0xff, 0x00, 0x00, 0xff};
+	const unsigned char aGreen[] = {0x00, 0xff, 0x00, 0xff};
+	const unsigned char aBlue[] = {0x00, 0x00, 0xff, 0xff};
+	const unsigned char aYellow[] = {0xff, 0xff, 0x00, 0xff};
+	constexpr size_t NullTextureDimension = 16;
+	unsigned char aNullTextureData[NullTextureDimension * NullTextureDimension * PixelSize];
+	for(size_t y = 0; y < NullTextureDimension; ++y)
+	{
+		for(size_t x = 0; x < NullTextureDimension; ++x)
+		{
+			const unsigned char *pColor;
+			if(x < NullTextureDimension / 2 && y < NullTextureDimension / 2)
+				pColor = aRed;
+			else if(x >= NullTextureDimension / 2 && y < NullTextureDimension / 2)
+				pColor = aGreen;
+			else if(x < NullTextureDimension / 2 && y >= NullTextureDimension / 2)
+				pColor = aBlue;
+			else
+				pColor = aYellow;
+			mem_copy(&aNullTextureData[(y * NullTextureDimension + x) * PixelSize], pColor, PixelSize);
+		}
+	}
+	CImageInfo NullTextureInfo;
+	NullTextureInfo.m_Width = NullTextureDimension;
+	NullTextureInfo.m_Height = NullTextureDimension;
+	NullTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
+	NullTextureInfo.m_pData = aNullTextureData;
+	const int TextureLoadFlags = Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+	m_NullTexture.Invalidate();
+	m_NullTexture = LoadTextureRaw(NullTextureInfo, TextureLoadFlags, "null-texture");
+	dbg_assert(m_NullTexture.IsNullTexture(), "Null texture invalid");
+}
+
+void CGraphics_Threaded::NotifyGraphicsResourcesReset()
+{
+	// 引擎自己持有的 GPU 资源（空纹理）已经随设备一起丢失，先重建，
+	// 否则监听者在重建期间拿到的空纹理句柄也是失效的。
+	CreateNullTexture();
+
+	++m_GraphicsResourcesResetVersion;
+	for(const GRAPHICS_RESOURCES_RESET_FUNC &Listener : m_vGraphicsResourcesResetListeners)
+	{
+		if(Listener)
+			Listener();
+	}
 }
 
 int CGraphics_Threaded::GetWindowScreen()
@@ -4531,6 +4681,16 @@ const char *CGraphics_Threaded::GetRendererString()
 const char *CGraphics_Threaded::GetFatalError() const
 {
 	return m_pBackend == nullptr ? "" : m_pBackend->GetFatalError();
+}
+
+bool CGraphics_Threaded::HasFatalError() const
+{
+	return m_pBackend != nullptr && m_pBackend->HasFatalError();
+}
+
+bool CGraphics_Threaded::TakeFatalError()
+{
+	return m_pBackend != nullptr && m_pBackend->TakeFatalError();
 }
 
 TGLBackendReadPresentedImageData &CGraphics_Threaded::GetReadPresentedImageDataFuncUnsafe()

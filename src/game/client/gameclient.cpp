@@ -879,6 +879,9 @@ void CGameClient::OnInit()
 	});
 
 	m_pGraphics = Kernel()->RequestInterface<IGraphics>();
+	// 设备重建后引擎会广播「图形资源已重置」，这里负责把游戏侧资源重新建起来。
+	// 注意必须早于任何资源加载：需要在 OnInit 的资产加载之前完成注册。
+	Graphics()->AddGraphicsResourcesResetListener([this]() { OnGraphicsResourcesReset(); });
 
 	// propagate pointers
 	m_UI.Init(Kernel());
@@ -972,30 +975,8 @@ void CGameClient::OnInit()
 
 	// setup load amount, load textures
 	const char *pLoadingMessageAssets = Localize("Initializing assets");
-	for(int i = 0; i < g_pData->m_NumImages; i++)
-	{
-		if(i == IMAGE_GAME)
-			LoadGameSkin(g_Config.m_ClAssetGame);
-		else if(i == IMAGE_CURSOR)
-			LoadNamedSingleFileImage(this, i, "gui_cursor", g_Config.m_ClAssetGuiCursor);
-		else if(i == IMAGE_ARROW)
-			LoadNamedSingleFileImage(this, i, "arrow", g_Config.m_ClAssetArrow);
-		else if(i == IMAGE_EMOTICONS)
-			LoadEmoticonsSkin(g_Config.m_ClAssetEmoticons);
-		else if(i == IMAGE_PARTICLES)
-			LoadParticlesSkin(g_Config.m_ClAssetParticles);
-		else if(i == IMAGE_HUD)
-			LoadHudSkin(g_Config.m_ClAssetHud);
-		else if(i == IMAGE_EXTRAS)
-			LoadExtrasSkin(g_Config.m_ClAssetExtras);
-		else if(i == IMAGE_STRONGWEAK)
-			LoadNamedSingleFileImage(this, i, "strong_weak", g_Config.m_ClAssetStrongWeak);
-		else if(g_pData->m_aImages[i].m_pFilename[0] == '\0') // handle special null image without filename
-			g_pData->m_aImages[i].m_Id = IGraphics::CTextureHandle();
-		else
-			g_pData->m_aImages[i].m_Id = Graphics()->LoadTexture(g_pData->m_aImages[i].m_pFilename, IStorage::TYPE_ALL);
-		m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 1);
-	}
+	LoadInitialGraphicsAssets();
+	m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 1);
 
 	m_GameWorld.Init(Collision(), m_aTuningList, &m_MapBugs);
 	if(!m_pJellyTee)
@@ -7055,6 +7036,62 @@ void CGameClient::ReloadNamedSingleFileAssetImage(int ImageId, const char *pCate
 	LoadNamedSingleFileImage(this, ImageId, pCategoryId, pActiveName);
 	if(ImageId == IMAGE_ARROW || ImageId == IMAGE_STRONGWEAK)
 		m_NamePlates.ResetNamePlates();
+}
+
+void CGameClient::LoadInitialGraphicsAssets()
+{
+	// 按 g_pData 的图片表加载全部初始资源。启动与「图形资源重置后重建」共用这一条路径，
+	// 保证两条路径不会各自漂移。
+	for(int i = 0; i < g_pData->m_NumImages; i++)
+	{
+		if(i == IMAGE_GAME)
+			LoadGameSkin(g_Config.m_ClAssetGame);
+		else if(i == IMAGE_CURSOR)
+			LoadNamedSingleFileImage(this, i, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+		else if(i == IMAGE_ARROW)
+			LoadNamedSingleFileImage(this, i, "arrow", g_Config.m_ClAssetArrow);
+		else if(i == IMAGE_EMOTICONS)
+			LoadEmoticonsSkin(g_Config.m_ClAssetEmoticons);
+		else if(i == IMAGE_PARTICLES)
+			LoadParticlesSkin(g_Config.m_ClAssetParticles);
+		else if(i == IMAGE_HUD)
+			LoadHudSkin(g_Config.m_ClAssetHud);
+		else if(i == IMAGE_EXTRAS)
+			LoadExtrasSkin(g_Config.m_ClAssetExtras);
+		else if(i == IMAGE_STRONGWEAK)
+			LoadNamedSingleFileImage(this, i, "strong_weak", g_Config.m_ClAssetStrongWeak);
+		else if(g_pData->m_aImages[i].m_pFilename[0] == '\0') // handle special null image without filename
+			g_pData->m_aImages[i].m_Id = IGraphics::CTextureHandle();
+		else
+			g_pData->m_aImages[i].m_Id = Graphics()->LoadTexture(g_pData->m_aImages[i].m_pFilename, IStorage::TYPE_ALL);
+	}
+}
+
+void CGameClient::OnGraphicsResourcesReset()
+{
+	// 设备重建后所有 GPU 资源都已随设备消失。引擎侧的句柄已经通过纪元自增全部失效，
+	// 这里负责把游戏侧的资源重新建起来。
+	log_info("gfx", "graphics resources were reset, reloading game assets (generation %u)", Graphics()->GraphicsResourcesResetVersion());
+
+	// 先让所有旧句柄显式作废，避免任何一次误用旧句柄的绘制落到新设备上。
+	for(int i = 0; i < g_pData->m_NumImages; i++)
+		g_pData->m_aImages[i].m_Id.Invalidate();
+
+	// 标记为未加载，让各个 Load*Skin 走完整的加载分支（而不是因为“已加载”直接返回）。
+	m_GameSkinLoaded = false;
+	m_EmoticonsSkinLoaded = false;
+	m_ParticlesSkinLoaded = false;
+	m_HudSkinLoaded = false;
+	m_ExtrasSkinLoaded = false;
+
+	m_QmIconManager.OnGraphicsResourcesReset();
+
+	LoadInitialGraphicsAssets();
+
+	// 文本渲染器缓存了字体纹理，必须同样重建。
+	TextRender()->OnGraphicsResourcesReset();
+
+	log_info("gfx", "game assets reloaded after graphics resources reset");
 }
 
 void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)

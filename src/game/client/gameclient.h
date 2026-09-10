@@ -907,6 +907,11 @@ public:
 	virtual void OnStartRound();
 	virtual void OnFlagGrab(int TeamId);
 	void OnWindowResize() override;
+	// 图形设备重建（例如 Vulkan 设备丢失后重建）后由 IGraphics 广播触发：
+	// 丢弃并重新加载所有 GPU 资源。
+	void OnGraphicsResourcesReset();
+	// 按 g_pData 图片表加载全部初始资源；启动与资源重置后重建共用这一条路径。
+	void LoadInitialGraphicsAssets();
 
 	void InitializeLanguage() override;
 	bool m_LanguageChanged = false;

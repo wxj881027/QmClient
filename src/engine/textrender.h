@@ -384,6 +384,11 @@ public:
 
 	virtual void OnPreWindowResize() = 0;
 	virtual void OnWindowResize() = 0;
+	/**
+	 * 图形设备重建后调用：字体纹理已随设备消失，需要重新上传。
+	 * 由 IGraphics 的「图形资源重置」广播驱动。
+	 */
+	virtual void OnGraphicsResourcesReset() = 0;
 };
 
 class IEngineTextRender : public ITextRender

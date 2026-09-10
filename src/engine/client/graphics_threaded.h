@@ -880,6 +880,13 @@ public:
 	virtual const char *GetVersionString() = 0;
 	virtual const char *GetRendererString() = 0;
 	virtual const char *GetFatalError() const = 0;
+	// 非破坏性查询：后端是否已记录致命错误。提交（ProcessError）致命错误会断言退出，
+	// 因此必须在提交之前轮询此接口才有机会做恢复。
+	// @see CGraphicsBackend_Threaded::HasFatalError
+	virtual bool HasFatalError() const { return false; }
+	// 检查并清除致命错误标记：返回 true 表示刚刚消费掉一个致命错误。
+	// @see CGraphicsBackend_Threaded::TakeFatalError
+	virtual bool TakeFatalError() { return false; }
 
 	// be aware that this function should only be called from the graphics thread, and even then you should really know what you are doing
 	virtual TGLBackendReadPresentedImageData &GetReadPresentedImageDataFuncUnsafe() = 0;
@@ -961,6 +968,10 @@ class CGraphics_Threaded : public IEngineGraphics
 	std::vector<int> m_vTextureIndices;
 	// Tracks slot generations so copied handles become stale once a slot is freed and reused.
 	std::vector<uint32_t> m_vTextureGenerations;
+	// 纹理句柄纪元：每次图形设备重建都自增。句柄里存的是
+	// (纪元 << 16) | 槽位代数，因此设备重建后所有旧句柄都会立刻失效，
+	// 不会因为「槽位与代数恰好相同」被误判为仍然有效。
+	uint32_t m_TextureHandleEpoch = 0;
 	size_t m_FirstFreeTexture;
 	int m_TextureMemoryUsage;
 
@@ -1042,6 +1053,9 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	std::vector<WINDOW_RESIZE_FUNC> m_vResizeListeners;
 	std::vector<WINDOW_PROPS_CHANGED_FUNC> m_vPropChangeListeners;
+	std::vector<GRAPHICS_RESOURCES_RESET_FUNC> m_vGraphicsResourcesResetListeners;
+	// 「GPU 资源已经被丢弃」的版本号：设备重建、以及引擎自身重建内部资源时都会自增。
+	uint32_t m_GraphicsResourcesResetVersion = 0;
 
 	void *AllocCommandBufferData(size_t AllocSize);
 
@@ -1133,8 +1147,12 @@ public:
 	void LinesBatchDraw(CLineItemBatch *pBatch, const CLineItem *pArray, size_t Num) override;
 
 	IGraphics::CTextureHandle FindFreeTextureIndex();
+	void BumpTextureHandleEpochAndResetSlots();
 	bool IsTextureHandleAllocated(CTextureHandle TextureId) const;
 	void FreeTextureIndex(CTextureHandle *pIndex);
+	// 显卡设备重建会清空 m_vQuadContainers，旧索引随之失效；
+	// 所有按索引取用容器的入口都必须先过这一层校验。
+	bool IsQuadContainerIndexValid(int ContainerIndex) const;
 	void UnloadTexture(IGraphics::CTextureHandle *pIndex) override;
 	void LoadTextureAddWarning(size_t Width, size_t Height, int Flags, const char *pTexName);
 	IGraphics::CTextureHandle LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName = nullptr) override;
@@ -1151,6 +1169,7 @@ public:
 	void DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &Params) override;
 	bool CaptureBackbufferToRenderTarget(CRenderTargetHandle Target) override;
 	bool GaussianBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Temporary, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) override;
+	bool DualBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Downsample, CRenderTargetHandle DownsampleTemporary, CRenderTargetHandle DownsampleBlurred, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) override;
 	CRenderTargetReadbackHandle BeginRenderTargetReadback(CRenderTargetHandle Target) override;
 	ERenderTargetReadbackState PollRenderTargetReadback(CRenderTargetReadbackHandle Handle) override;
 	bool ResolveRenderTargetReadback(CRenderTargetReadbackHandle *pHandle, CImageInfo &Image) override;
@@ -1457,6 +1476,13 @@ public:
 
 	void AddWindowResizeListener(WINDOW_RESIZE_FUNC pFunc) override;
 	void AddWindowPropChangeListener(WINDOW_PROPS_CHANGED_FUNC pFunc) override;
+	void AddGraphicsResourcesResetListener(GRAPHICS_RESOURCES_RESET_FUNC pFunc) override;
+	uint32_t GraphicsResourcesResetVersion() const override { return m_GraphicsResourcesResetVersion; }
+	// 重建引擎自己持有的 GPU 资源（空纹理等），并广播「资源已重置」给所有监听者。
+	// 必须在主线程、且没有活动渲染目标时调用。设备重建后由恢复流程调用。
+	void NotifyGraphicsResourcesReset();
+	// 创建/重建引擎内部的空纹理（槽位 0）。设备重建后必须重新创建。
+	void CreateNullTexture();
 	int GetWindowScreen() override;
 
 	void WindowDestroyNtf(uint32_t WindowId) override;
@@ -1511,6 +1537,8 @@ public:
 	const char *GetVersionString() override;
 	const char *GetRendererString() override;
 	const char *GetFatalError() const override;
+	bool HasFatalError() const override;
+	bool TakeFatalError() override;
 
 	TGLBackendReadPresentedImageData &GetReadPresentedImageDataFuncUnsafe() override;
 

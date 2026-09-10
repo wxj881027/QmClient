@@ -244,6 +244,8 @@ public:
 	};
 
 	void Clear(IGraphics *pGraphics);
+	// 图形设备重建后使用：纹理已随设备消失，只清本地状态，绝不对旧句柄发删除命令。
+	void ResetForDeviceRecreate();
 	void Swap(CQmIconAtlas &Other)
 	{
 		std::swap(m_Texture, Other.m_Texture);
@@ -284,6 +286,11 @@ class CQmIconManager
 public:
 	void Init(IGraphics *pGraphics, IStorage *pStorage, IConsole *pConsole);
 	void Shutdown();
+	/**
+	 * 图形设备重建后调用：图集纹理已随设备消失，清掉图集状态并立刻重建。
+	 * 旧的纹理句柄因为设备纪元自增已经失效，不需要再发删除命令。
+	 */
+	void OnGraphicsResourcesReset();
 	bool Reload();
 	void RefreshForCurrentDpi();
 	bool IsReady() const { return m_Atlas.IsReady(); }
