@@ -1056,6 +1056,22 @@ turkish = "En iyi"
 polish = "Najlepszy"
 
 [[message]]
+key = "Binds"
+[message.translations]
+simplified_chinese = "绑定"
+traditional_chinese = "綁定"
+japanese = "バインド"
+korean = "바인드"
+russian = "Привязки"
+german = "Tastenbelegungen"
+spanish = "Vinculaciones"
+french = "Touches liées"
+brazilian_portuguese = "Atalhos"
+portuguese = "Atalhos"
+turkish = "Bağlamalar"
+polish = "Przypisania"
+
+[[message]]
 key = "Bind key to execute a command or view keybindings"
 [message.translations]
 simplified_chinese = "绑定按键以执行命令或查看按键绑定"
@@ -1134,6 +1150,22 @@ brazilian_portuguese = "Mensagem de transmissão"
 portuguese = "Mensagem de transmissão"
 turkish = "Duyuru mesajı"
 polish = "Wiadomość ogólna"
+
+[[message]]
+key = "Commands"
+[message.translations]
+simplified_chinese = "指令"
+traditional_chinese = "指令"
+japanese = "コマンド"
+korean = "명령"
+russian = "Команды"
+german = "Befehle"
+spanish = "Comandos"
+french = "Commandes"
+brazilian_portuguese = "Comandos"
+portuguese = "Comandos"
+turkish = "Komutlar"
+polish = "Polecenia"
 
 [[message]]
 key = "c = Player position"

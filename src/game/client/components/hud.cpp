@@ -24,6 +24,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/qm_bind_status_hud.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
@@ -6095,36 +6096,6 @@ namespace
 		Layout.m_X = std::clamp(HudWidth - Layout.m_W - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxX);
 		return Layout;
 	}
-
-	SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const std::vector<std::string> &vLines, float HudWidth)
-	{
-		SKeyStatusLayout Layout{};
-		Layout.m_FontSize = 7.0f;
-		Layout.m_LineHeight = 9.0f;
-		Layout.m_PaddingX = 4.0f;
-		Layout.m_PaddingY = 3.0f;
-		Layout.m_Y = 38.0f;
-
-		const int LineCount = (int)vLines.size();
-		if(LineCount == 0)
-		{
-			Layout.m_W = 0.0f;
-			Layout.m_H = 0.0f;
-			return Layout;
-		}
-
-		float MaxWidth = 0.0f;
-		for(const std::string &Line : vLines)
-		{
-			MaxWidth = maximum(MaxWidth, pTextRender->TextWidth(Layout.m_FontSize, Line.c_str(), -1, -1.0f));
-		}
-
-		Layout.m_W = MaxWidth + Layout.m_PaddingX * 2.0f;
-		Layout.m_H = Layout.m_LineHeight * LineCount + Layout.m_PaddingY * 2.0f;
-		const float MaxX = maximum(HudWidth - Layout.m_W, 0.0f);
-		Layout.m_X = std::clamp(HudWidth - Layout.m_W - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxX);
-		return Layout;
-	}
 }
 
 void CHud::RenderKeyStatus()
@@ -6307,13 +6278,6 @@ void CHud::RenderMovementInformation()
 
 	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines(GameClient());
 	SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines, m_Width);
-	// 自定义 bind 状态列表非空时完全替换内置四项
-	std::vector<std::string> vCustomKeyStatusLines;
-	if(GameClient()->m_QmBindStatusHud.IsCustomListActive())
-	{
-		vCustomKeyStatusLines = GameClient()->m_QmBindStatusHud.GetVisibleLines();
-		KeyStatusLayout = GetKeyStatusLayout(TextRender(), vCustomKeyStatusLines, m_Width);
-	}
 	const bool ShowKeyStatus = KeyStatusLayout.m_H > 0.0f;
 
 	float MovementBoxHeight = ShowMovementInfo ? GetMovementInformationBoxHeight() : 0.0f;
@@ -6614,17 +6578,7 @@ void CHud::RenderMovementInformation()
 			return g_Config.m_ClHudRainbowColors ? KeyRainbowColor : KeyStatusToneColor(Tone, DefaultKeyStatusColor);
 		};
 
-		if(GameClient()->m_QmBindStatusHud.IsCustomListActive())
-		{
-			// 自定义列表条目没有状态语义，关闭彩虹色时沿用默认文字色
-			TextRender()->TextColor(g_Config.m_ClHudRainbowColors ? KeyRainbowColor : DefaultKeyStatusColor);
-			for(const std::string &Line : vCustomKeyStatusLines)
-			{
-				TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, Line.c_str(), -1.0f);
-				KeyTextY += KeyStatusLayout.m_LineHeight;
-			}
-		}
-		else if(KeyStatusLines.m_ShowKey)
+		if(KeyStatusLines.m_ShowKey)
 		{
 			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_KeyTone));
 			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_pKeyStatusText, -1.0f);

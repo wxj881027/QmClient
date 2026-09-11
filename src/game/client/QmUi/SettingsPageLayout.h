@@ -655,8 +655,8 @@ inline float ResolveQmHudInputOverlayHeight(const SSettingsContentMetrics &Metri
 {
 	if(!Enabled)
 		return Metrics.m_LineHeight;
-	// 复选框、三个数值项和编辑器按钮共五行（水平/垂直位置已删除，由 HUD 编辑器接管）。
-	return 5.0f * Metrics.m_RowStep;
+	// 复选框与键盘/鼠标大小、不透明度、水平/垂直位置五个数值项共六行。
+	return 6.0f * Metrics.m_RowStep;
 }
 
 inline float ResolveQmHudDummyMiniViewHeight(const SSettingsContentMetrics &Metrics, const bool Expanded)

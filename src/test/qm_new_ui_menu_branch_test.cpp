@@ -747,36 +747,6 @@ TEST(QmCameraEffects, DynamicFovRemovalKeepsBaseZoomStable)
 	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomWithoutDynamicFov(1.6f, 0.0f), 1.6f);
 }
 
-TEST(QmCameraEffects, ZoomReverseRetargetKeepsStepsButDropsInertiaOnReversal)
-{
-	constexpr float ZoomInFactor = 0.866025f;
-	constexpr float ZoomOutFactor = 1.154700f;
-
-	// 未在缩放动画中：步进基准就是画面当前值
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(1.0f, 0.5f, ZoomInFactor, false, true), 1.0f);
-	// 同向按键：基准仍是旧目标，连点 N 下仍是 N 步
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomInFactor, true, true), 0.866f);
-	// 反向按键：改以画面当前值为基准，本次动画立刻朝新方向运动
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomOutFactor, true, true), 0.95f);
-	// 关闭开关：完全保留上游"以旧目标为基准"的行为
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomOutFactor, true, false), 0.866f);
-
-	// 反向：新目标在速度反方向，继承速度归零
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomDerivativeOnRetarget(0.95f, -0.5f, 1.1f, true), 0.0f);
-	// 同向：保留继承速度，维持 C1 连续
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomDerivativeOnRetarget(0.95f, -0.5f, 0.8f, true), -0.5f);
-	// 关闭开关：保留上游继承速度（先沿旧方向滑行再掉头）
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomDerivativeOnRetarget(0.95f, -0.5f, 1.1f, false), -0.5f);
-
-	// 曲线层面：上游曲线在反向按键后仍朝旧方向走，修复后的曲线第一帧就朝新目标走
-	const float StartZoom = 0.95f;
-	const float ReverseTarget = 1.1f;
-	const CCubicBezier UpstreamCurve = CCubicBezier::With(StartZoom, -0.5f, 0.0f, ReverseTarget);
-	const CCubicBezier RetargetedCurve = CCubicBezier::With(StartZoom, QmCameraEffects::ZoomDerivativeOnRetarget(StartZoom, -0.5f, ReverseTarget, true), 0.0f, ReverseTarget);
-	EXPECT_LT(UpstreamCurve.Evaluate(0.05f), StartZoom);
-	EXPECT_GT(RetargetedCurve.Evaluate(0.05f), StartZoom);
-}
-
 TEST(QmCameraEffects, CinematicFreeviewSmoothingIsFrameRateIndependent)
 {
 	const vec2 Start(10.0f, 20.0f);
@@ -808,15 +778,14 @@ TEST(QmCameraEffectsSource, CinematicCameraAndDynamicFovKeepScopedState)
 	const std::string GameClient = ReadTextFile("src/game/client/gameclient.cpp");
 
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmCinematicCamera, qm_cinematic_camera"), std::string::npos);
-	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmZoomInstantReverse, qm_zoom_instant_reverse, 1, 0, 1"), std::string::npos);
 	EXPECT_NE(Header.find("m_CinematicCameraSmoothing"), std::string::npos);
 	EXPECT_NE(OnRender.find("GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_Snap.m_SpecInfo.m_UsePosition"), std::string::npos);
 	EXPECT_NE(OnRender.find("if(g_Config.m_QmCinematicCamera)"), std::string::npos);
 	EXPECT_NE(OnRender.find("m_CinematicCameraSmoothing = false;"), std::string::npos);
 	EXPECT_NE(ScaleZoom.find("RemoveDynamicFovZoom();"), std::string::npos);
 	EXPECT_NE(ChangeZoom.find("RemoveDynamicFovZoom();"), std::string::npos);
-	EXPECT_NE(ScaleZoom.find("QmCameraEffects::ZoomTargetBaseOnRetarget(m_Zoom, m_ZoomSmoothingTarget, Factor, m_Zooming, g_Config.m_QmZoomInstantReverse != 0)"), std::string::npos);
-	EXPECT_NE(ChangeZoom.find("QmCameraEffects::ZoomDerivativeOnRetarget(Current, m_ZoomSmoothing.Derivative(Progress), Target, IsUser && g_Config.m_QmZoomInstantReverse != 0)"), std::string::npos);
+	// 反向按键立即生效已移除：步进基准回到上游「缩放中沿用旧目标」的行为
+	EXPECT_NE(ScaleZoom.find("float CurrentTarget = m_Zooming ? m_ZoomSmoothingTarget : m_Zoom;"), std::string::npos);
 	EXPECT_NE(UpdateCamera.find("RemoveDynamicFovZoom();"), std::string::npos);
 	EXPECT_NE(OnReset.find("m_DynamicFovAppliedFactor = 1.0f;"), std::string::npos);
 	EXPECT_EQ(UpdateCamera.find("m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy] += m_DriftCurrentOffset;"), std::string::npos);
@@ -826,16 +795,16 @@ TEST(QmCameraEffectsSource, CinematicCameraAndDynamicFovKeepScopedState)
 	EXPECT_EQ(GameClient.find("float ShowDistanceZoom = m_Camera.m_Zoom;"), std::string::npos);
 }
 
-TEST(QmCameraEffectsSource, CameraViewCardCountsInstantZoomReverseRow)
+TEST(QmCameraEffectsSource, CameraViewCardHeightTracksRowCount)
 {
 	const std::string QmMenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 	const std::string CameraView = FunctionBody(QmMenusSource, "void CMenus::RenderQmVisualCameraViewContent(");
 
-	// 渲染、预布局输入、卡片高度三处必须同时带上新增开关，否则点击热区与卡片高度会错位
-	EXPECT_NE(CameraView.find("RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, \"Instant zoom reverse\", Localize(\"Instant zoom reverse\"), &g_Config.m_QmZoomInstantReverse);"), std::string::npos);
-	EXPECT_NE(QmMenusSource.find("HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, &g_Config.m_QmZoomInstantReverse)"), std::string::npos);
-	// EstimateContentHeight 的基础行数必须随新增一行从 5 变 6
-	EXPECT_NE(QmMenusSource.find("return Rows(6.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;"), std::string::npos);
+	// 「反向缩放立即生效」已连同 qm_zoom_instant_reverse 一起移除，渲染与预布局输入不得再残留该行
+	EXPECT_EQ(CameraView.find("m_QmZoomInstantReverse"), std::string::npos);
+	EXPECT_EQ(QmMenusSource.find("m_QmZoomInstantReverse"), std::string::npos);
+	// EstimateContentHeight 的基础行数去掉该行后为 5；行数与渲染行数不一致会让卡片高度错位
+	EXPECT_NE(QmMenusSource.find("return Rows(5.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;"), std::string::npos);
 }
 
 TEST(QmStoragePath, BuildsCandidatesRelativeToExecutable)
@@ -2076,14 +2045,14 @@ TEST(QmNewUiMenuBranches, PlayerTitlePrecedesInlineClientIdAndNameWithoutOverrid
 TEST(QmNewUiMenuBranches, NameplatePreviewShowsPlayerStrongHookMarker)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
-	const std::string RenderNamePlatePreview = FunctionBody(Source, "void CNamePlates::RenderNamePlatePreview");
+	const std::string BuildPreviewData = FunctionBody(Source, "static void BuildNamePlatePreviewData");
 
-	EXPECT_NE(RenderNamePlatePreview.find("const bool PreviewIsLocal = DummyIdx == g_Config.m_ClDummy;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("if(DummyIdx == g_Config.m_ClDummy)"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_HookStrongWeakState = EHookStrongWeakState::NEUTRAL;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_HookStrongWeakState = Data.m_HookStrongWeakId == 2 ? EHookStrongWeakState::STRONG : EHookStrongWeakState::WEAK;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowHookStrongWeak = NameplateScopeAllowsPreview && (Data.m_ShowHookStrongWeakId || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, true, false, false)));"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowHookStrongWeak = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, false, Strong, Weak);"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("const bool PreviewIsLocal = DummyIdx == g_Config.m_ClDummy;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("if(DummyIdx == g_Config.m_ClDummy)"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_HookStrongWeakState = EHookStrongWeakState::NEUTRAL;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_HookStrongWeakState = Data.m_HookStrongWeakId == 2 ? EHookStrongWeakState::STRONG : EHookStrongWeakState::WEAK;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowHookStrongWeak = NameplateScopeAllowsPreview && (Data.m_ShowHookStrongWeakId || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, true, false, false)));"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowHookStrongWeak = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, false, Strong, Weak);"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, NameplateStrongHookRowReservesLayoutWithoutContentWidth)
@@ -2109,45 +2078,53 @@ TEST(QmNewUiMenuBranches, NameplateStrongHookRowReservesLayoutWithoutContentWidt
 TEST(QmNewUiMenuBranches, NameplatePreviewNameScopeGatesPlateExceptDirectionKeys)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
-	const std::string RenderNamePlatePreview = FunctionBody(Source, "void CNamePlates::RenderNamePlatePreview");
+	const std::string BuildPreviewData = FunctionBody(Source, "static void BuildNamePlatePreviewData");
 
-	EXPECT_NE(RenderNamePlatePreview.find("const bool IsOwnPreview = DummyIdx == 0;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("const bool NameplateScopeAllowsPreview = ForceNameplateScopeAll || (IsOwnPreview ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates);"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("const bool CoordModuleAllowsPreview = IsOwnPreview ? g_Config.m_QmNameplateCoordsOwn : g_Config.m_QmNameplateCoords;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowName = NameplateScopeAllowsPreview;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowCoords = CoordModuleAllowsPreview;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowCoordX = Data.m_ShowCoords && g_Config.m_QmNameplateCoordX != 0;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowCoordY = Data.m_ShowCoords && g_Config.m_QmNameplateCoordY != 0;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("case 1: // Others\n\t\t\tData.m_ShowDirection = !PreviewIsLocal;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("case 2: // Everyone\n\t\t\tData.m_ShowDirection = true;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("case 3: // Only self\n\t\t\tData.m_ShowDirection = PreviewIsLocal;"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("Data.m_ShowHookStrongWeakId = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong == 2;"), std::string::npos);
-	EXPECT_EQ(RenderNamePlatePreview.find("Data.m_ShowHookStrongWeakId = g_Config.m_ClNamePlatesStrong == 2;"), std::string::npos);
-	EXPECT_EQ(RenderNamePlatePreview.find("Data.m_ShowName = g_Config.m_ClNamePlates || g_Config.m_ClNamePlatesOwn;"), std::string::npos);
-	EXPECT_EQ(RenderNamePlatePreview.find("Data.m_ShowDirection = NameplateScopeAllowsPreview && !IsOwnPreview;"), std::string::npos);
-	EXPECT_EQ(RenderNamePlatePreview.find("Data.m_ShowDirection = NameplateScopeAllowsPreview;"), std::string::npos);
-	EXPECT_EQ(RenderNamePlatePreview.find("Data.m_ShowDirection = NameplateScopeAllowsPreview && IsOwnPreview;"), std::string::npos);
-	EXPECT_EQ(RenderNamePlatePreview.find("Data.m_ShowDirection = g_Config.m_ClShowDirection != 0 ? true : false;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("const bool IsOwnPreview = DummyIdx == 0;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("const bool NameplateScopeAllowsPreview = ForceNameplateScopeAll || (IsOwnPreview ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates);"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("const bool CoordModuleAllowsPreview = IsOwnPreview ? g_Config.m_QmNameplateCoordsOwn : g_Config.m_QmNameplateCoords;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowName = NameplateScopeAllowsPreview;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowCoords = CoordModuleAllowsPreview;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowCoordX = Data.m_ShowCoords && g_Config.m_QmNameplateCoordX != 0;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowCoordY = Data.m_ShowCoords && g_Config.m_QmNameplateCoordY != 0;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("case 1: // Others\n\t\tData.m_ShowDirection = !PreviewIsLocal;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("case 2: // Everyone\n\t\tData.m_ShowDirection = true;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("case 3: // Only self\n\t\tData.m_ShowDirection = PreviewIsLocal;"), std::string::npos);
+	EXPECT_NE(BuildPreviewData.find("Data.m_ShowHookStrongWeakId = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong == 2;"), std::string::npos);
+	EXPECT_EQ(BuildPreviewData.find("Data.m_ShowHookStrongWeakId = g_Config.m_ClNamePlatesStrong == 2;"), std::string::npos);
+	EXPECT_EQ(BuildPreviewData.find("Data.m_ShowName = g_Config.m_ClNamePlates || g_Config.m_ClNamePlatesOwn;"), std::string::npos);
+	EXPECT_EQ(BuildPreviewData.find("Data.m_ShowDirection = NameplateScopeAllowsPreview && !IsOwnPreview;"), std::string::npos);
+	EXPECT_EQ(BuildPreviewData.find("Data.m_ShowDirection = NameplateScopeAllowsPreview;"), std::string::npos);
+	EXPECT_EQ(BuildPreviewData.find("Data.m_ShowDirection = NameplateScopeAllowsPreview && IsOwnPreview;"), std::string::npos);
+	EXPECT_EQ(BuildPreviewData.find("Data.m_ShowDirection = g_Config.m_ClShowDirection != 0 ? true : false;"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, NameplatePreviewUsesFullScopeReferenceFrame)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
+	const std::string BuildPreviewData = FunctionBody(Source, "static void BuildNamePlatePreviewData");
 	const std::string RenderNamePlatePreview = FunctionBody(Source, "void CNamePlates::RenderNamePlatePreview");
 
-	EXPECT_NE(RenderNamePlatePreview.find("auto BuildPreviewData = [&](int DummyIdx, CNamePlateData &Data, bool ForceNameplateScopeAll = false)"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("BuildPreviewData(Dummy, Data);"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("BuildPreviewData(Dummy, FrameData, true);"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("BuildPreviewData(Dummy == 0 ? 1 : 0, OtherFrameData, true);"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("pFrameNamePlate->ComputeBaselineFrame(NameplateBottomMiddle"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("NamePlate.CollectCoreRowRects(Position, aEditorRects, pFrameNamePlate);"), std::string::npos);
+	ASSERT_FALSE(BuildPreviewData.empty());
+	EXPECT_NE(Source.find("static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, bool ForceNameplateScopeAll, CNamePlateData &Data)"), std::string::npos);
+	EXPECT_NE(RenderNamePlatePreview.find("BuildNamePlatePreviewData(*GameClient(), Dummy, false, Data);"), std::string::npos);
+	// 全 scope 参考框仍在：只用于行基线布局，切换预览/开关模块时行位置不漂移。
+	EXPECT_NE(RenderNamePlatePreview.find("BuildNamePlatePreviewData(*GameClient(), Dummy, true, FrameData);"), std::string::npos);
+	EXPECT_NE(RenderNamePlatePreview.find("NamePlate.CollectCoreRowRects(NameplateBottomMiddle, aEditorRects, pFrameNamePlate);"), std::string::npos);
 	EXPECT_NE(RenderNamePlatePreview.find("DragHasRow, DragRowCenter, DragRowSize, pFrameNamePlate);"), std::string::npos);
-	EXPECT_NE(RenderNamePlatePreview.find("NamePlate.Render(*GameClient(), Position, pFrameNamePlate);"), std::string::npos);
-	EXPECT_EQ(RenderNamePlatePreview.find("NamePlate.ComputeBaselineFrame(NameplateBottomMiddle"), std::string::npos);
+	EXPECT_NE(RenderNamePlatePreview.find("NamePlate.Render(*GameClient(), NameplateBottomMiddle, pFrameNamePlate);"), std::string::npos);
+	EXPECT_NE(Source.find("float ContentSpan(const CNamePlate *pLayoutReference = nullptr) const"), std::string::npos);
 	EXPECT_NE(Source.find("LayoutCoreRowSize(const SCoreRowParts &CoreRow, const CNamePlate *pLayoutReference) const"), std::string::npos);
 	EXPECT_NE(Source.find("Position.y -= LayoutSize.y;"), std::string::npos);
+	// 拖动边界改成预览框本身：不再有 3 倍基准框，白框也就不会画到卡片外面。
+	EXPECT_EQ(Source.find("NAMEPLATE_FREE_MOVE_FRAME_SCALE"), std::string::npos);
+	EXPECT_EQ(Source.find("ScaleFrameAroundCenter"), std::string::npos);
+	EXPECT_NE(RenderNamePlatePreview.find("const vec2 FrameMin = vec2(PreviewArea.x + NAMEPLATE_PREVIEW_FRAME_INSET, PreviewArea.y + NAMEPLATE_PREVIEW_FRAME_INSET);"), std::string::npos);
+	// 铭牌与脚本体贴框底排布，框高由 MeasurePreviewAreaHeight() 按内容撑开。
+	EXPECT_NE(Source.find("float CNamePlates::MeasurePreviewAreaHeight() const"), std::string::npos);
+	EXPECT_NE(RenderNamePlatePreview.find("const vec2 NameplateBottomMiddle = TeeRenderPosition - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, NameplateGameUsesFullScopeReferenceFrame)
@@ -2225,7 +2202,7 @@ TEST(QmNewUiMenuBranches, WeaponImpactEventsUseInferredOwnerAlpha)
 
 	EXPECT_NE(Source.find("float QmKnownOwnerEventAlpha(CGameClient *pGameClient, int Owner)"), std::string::npos);
 	EXPECT_NE(Source.find("int QmInferExplosionOwner(CGameClient *pGameClient, vec2 Pos)"), std::string::npos);
-	EXPECT_NE(Source.find("SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick)"), std::string::npos);
+	EXPECT_NE(Source.find("SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick,"), std::string::npos);
 	EXPECT_NE(ProcessEvents.find("const float ExplosionAlpha = QmKnownOwnerEventAlpha(this, QmInferExplosionOwner(this, ExplosionPos));"), std::string::npos);
 	EXPECT_NE(ProcessEvents.find("m_Effects.Explosion(ExplosionPos, ExplosionAlpha);"), std::string::npos);
 	EXPECT_NE(ProcessEvents.find("m_vPendingHammerHitEvents.push_back({"), std::string::npos);
@@ -2233,7 +2210,12 @@ TEST(QmNewUiMenuBranches, WeaponImpactEventsUseInferredOwnerAlpha)
 	EXPECT_EQ(ProcessEvents.find("QmInferHammerHit(this"), std::string::npos);
 	EXPECT_EQ(ProcessEvents.find("m_HammerHitTracker.Record(Hit)"), std::string::npos);
 	EXPECT_EQ(ProcessEvents.find("m_Effects.HammerHit("), std::string::npos);
-	EXPECT_NE(FinalizeHammerHitEvents.find("const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick);"), std::string::npos);
+	EXPECT_NE(FinalizeHammerHitEvents.find("const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick, apCurrent, apPrevious);"), std::string::npos);
+	// 回归守卫：每个快照只允许做一次角色项收集，不允许回到「每个事件 × 每个客户端」的
+	// 线性快照查找（CSnapshot::GetItemIndex 是 O(items)，满员时会被放大到百万次比较量级）。
+	EXPECT_NE(FinalizeHammerHitEvents.find("QmCollectCharactersById(this, IClient::SNAP_CURRENT, apCurrent);"), std::string::npos);
+	EXPECT_NE(FinalizeHammerHitEvents.find("QmCollectCharactersById(this, IClient::SNAP_PREV, apPrevious);"), std::string::npos);
+	EXPECT_EQ(FinalizeHammerHitEvents.find("SnapFindItem"), std::string::npos);
 	EXPECT_NE(FinalizeHammerHitEvents.find("m_PredictedWorld.CheckPredictedHammerHitHandled("), std::string::npos);
 	EXPECT_NE(FinalizeHammerHitEvents.find("Match.m_AttackerId, Event.m_SnapshotTick, Match.m_TargetId"), std::string::npos);
 	EXPECT_NE(FinalizeHammerHitEvents.find("m_HammerHitTracker.Record(Hit)"), std::string::npos);
@@ -2331,6 +2313,8 @@ TEST(QmNewUiMenuBranches, HammerHitConsumersUseDeferredServerEvidenceOnly)
 	EXPECT_EQ(GameClientSource.find("ConfirmPredictedEvent"), std::string::npos);
 	EXPECT_EQ(GameClientSource.find("MatchPredictedEvent"), std::string::npos);
 	EXPECT_EQ(InferHammerHit.find("m_PredictedWorld"), std::string::npos);
+	// 回归守卫：推断函数本身不得再做逐客户端快照查找。
+	EXPECT_EQ(InferHammerHit.find("SnapFindItem"), std::string::npos);
 	EXPECT_NE(InferHammerHit.find("QmIsHammerSuperTeam(DDTeam, pGameClient->m_Teams.m_IsDDRace16)"), std::string::npos);
 	EXPECT_NE(FinalizeHammerHitEvents.find("m_HammerHitTracker.Record(Hit)"), std::string::npos);
 	EXPECT_NE(FinalizeHammerHitEvents.find("QmIsHammerWakeupTransition("), std::string::npos);
@@ -3395,7 +3379,7 @@ TEST(QmNewUiMenuBranches, QmSettingsCardsUseSharedStyleHelpers)
 	const std::string NamePlateBranch = BlockBodyAfter(SettingsSource, "else if(m_AppearanceSettingsTab == APPEARANCE_TAB_NAME_PLATE)");
 	ASSERT_FALSE(NamePlateBranch.empty());
 	EXPECT_NE(NamePlateBranch.find("AddMeasuredCard(5,"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("AddCard(6, NamePlatePreviewMinCardHeight"), std::string::npos);
+	EXPECT_NE(NamePlateBranch.find("AddMeasuredCard(6, ResolveNamePlatePreviewCardHeight"), std::string::npos);
 	EXPECT_NE(NamePlateBranch.find("const auto NamePlateStrongEnabled = [] { return g_Config.m_ClNamePlatesStrong != 0; };"), std::string::npos);
 	EXPECT_NE(NamePlateBranch.find("ResolveSettingsRadioRowLayout"), std::string::npos);
 	EXPECT_NE(NamePlateBranch.find("if(NamePlateStrongEnabled())"), std::string::npos);
@@ -3717,8 +3701,10 @@ TEST(QmNewUiMenuBranches, AppearanceTabsUseQmCards)
 	EXPECT_NE(NamePlateBranch.find("const auto NextNamePlateRow"), std::string::npos);
 	EXPECT_NE(NamePlateBranch.find("const auto DoNamePlateCheckBox"), std::string::npos);
 	EXPECT_NE(SettingsSource.find("AddMeasuredCard(5, ResolveNamePlateContentHeight"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("AddCard(6, NamePlatePreviewMinCardHeight"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("NamePlatePreviewAreaHeight + MarginSmall + NamePlatePreviewControlsHeight"), std::string::npos);
+	EXPECT_NE(SettingsSource.find("AddMeasuredCard(6, ResolveNamePlatePreviewCardHeight"), std::string::npos);
+	EXPECT_NE(SettingsSource.find("ResolveNamePlatePreviewAreaHeight() + MarginSmall + NamePlatePreviewControlsHeight"), std::string::npos);
+	EXPECT_NE(SettingsSource.find("maximum(NamePlatePreviewMinAreaHeight, GameClient()->m_NamePlates.MeasurePreviewAreaHeight())"), std::string::npos);
+	EXPECT_NE(SettingsSource.find("}, ResolveNamePlatePreviewMeasureRevision());"), std::string::npos);
 	EXPECT_NE(SettingsSource.find("const auto NextPreviewControl"), std::string::npos);
 	EXPECT_NE(SettingsSource.find("PreviewArea.Draw(ui_token::color::SURFACE_OVERLAY"), std::string::npos);
 	EXPECT_EQ(NamePlateBranch.find("RenderQmSettingsGlassCard(NamePlateSettingsCard, QmCardStyle);"), std::string::npos);
@@ -6038,4 +6024,79 @@ TEST(QmNewUiMenuBranches, RetinaNameplatesPreferPhysicalPixelAlignment)
 	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
 	EXPECT_NE(Source.find("#if defined(CONF_PLATFORM_MACOS)"), std::string::npos);
 	EXPECT_NE(Source.find("QmNameplateUsesPhysicalPixelAlignment(This.Graphics()->ScreenHiDPIScale(), true)"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, NameplateTextRasterizesAtExactScreenDensity)
+{
+	// 密度取自实际屏幕映射：字形栅格化像素数 = FontSize * 该密度，绘制时又按同一映射缩放，
+	// 两者一致才不会"整条名字发虚"（按相机档位取整最多会偏 12%）。
+	EXPECT_FLOAT_EQ(QmNameplateTextRasterizationDensity(1080.0f, 1050.0f), 1080.0f / 1050.0f);
+	EXPECT_FLOAT_EQ(QmNameplateTextRasterizationDensity(1080.0f, 2100.0f), 1080.0f / 2100.0f);
+	EXPECT_FLOAT_EQ(QmNameplateTextRasterizationDensity(1080.0f, 0.0f), 1.0f);
+	EXPECT_FLOAT_EQ(QmNameplateTextRasterizationDensity(0.0f, 1050.0f), 1.0f);
+	EXPECT_FLOAT_EQ(QmNameplateTextRasterizationDensity(1080.0f, -1.0f), 1.0f);
+
+	// 首次没有可用的栅格化状态，必须重建。
+	const SQmNameplateTextRasterization Fresh;
+	EXPECT_FALSE(Fresh.m_Valid);
+	EXPECT_TRUE(QmNameplateTextNeedsRebake(Fresh, 0.5f));
+
+	// 容差 1%：默认缩放下档位化带来的 1.11 比例偏差属于必须重建的情况。
+	const SQmNameplateTextRasterization Baked = QmNameplateTextRasterizationAfterRebake(0.5f);
+	EXPECT_TRUE(Baked.m_Valid);
+	EXPECT_FLOAT_EQ(Baked.m_Density, 0.5f);
+	EXPECT_FALSE(QmNameplateTextNeedsRebake(Baked, 0.5f));
+	EXPECT_FALSE(QmNameplateTextNeedsRebake(Baked, 0.5049f));
+	EXPECT_TRUE(QmNameplateTextNeedsRebake(Baked, 0.5051f));
+	EXPECT_TRUE(QmNameplateTextNeedsRebake(Baked, 0.55f));
+	EXPECT_TRUE(QmNameplateTextNeedsRebake(Baked, 0.4f));
+
+	// 密度不合法时不重建，避免每帧重排字形。
+	const SQmNameplateTextRasterization ZeroDensity = QmNameplateTextRasterizationAfterRebake(0.0f);
+	EXPECT_FALSE(ZeroDensity.m_Valid);
+	EXPECT_FALSE(QmNameplateTextNeedsRebake(Baked, 0.0f));
+
+	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
+	// 仍在世界映射下栅格化，但必须用真实相机缩放，而不是档位化后的缩放。
+	EXPECT_NE(Source.find("This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, This.m_Camera.m_Zoom);"), std::string::npos);
+	EXPECT_EQ(Source.find("std::pow(CCamera::ZOOM_STEP, LevelNow)"), std::string::npos);
+	EXPECT_EQ(Source.find("m_BakedZoomLevel"), std::string::npos);
+	EXPECT_EQ(Source.find("LevelNow"), std::string::npos);
+	EXPECT_NE(Source.find("QmNameplateTextNeedsRebake(m_Rasterization, DensityNow)"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, NameplateTextBakesOnlyAfterZoomSettles)
+{
+	// 平滑缩放动画期间密度每帧都变：不得重建，否则动画期间每帧重排所有玩家的文字容器（严重卡顿）。
+	SQmNameplateTextZoomStability Zoom;
+	EXPECT_FALSE(Zoom.RecordDensity(0.500f)); // 首帧
+	EXPECT_FALSE(Zoom.RecordDensity(0.510f)); // 动画中，密度持续变化
+	EXPECT_FALSE(Zoom.RecordDensity(0.520f));
+	EXPECT_FALSE(Zoom.RecordDensity(0.530f));
+	EXPECT_FALSE(Zoom.m_ZoomSettled);
+
+	// 动画停止：同一密度连续出现到阈值帧数才判定稳定，且只在"刚稳定"那一帧返回 true
+	EXPECT_FALSE(Zoom.RecordDensity(0.540f)); // 第 1 帧
+	EXPECT_TRUE(Zoom.RecordDensity(0.540f)); // 第 2 帧：刚稳定，允许重建一次
+	EXPECT_TRUE(Zoom.m_ZoomSettled);
+	EXPECT_FALSE(Zoom.RecordDensity(0.540f)); // 之后不得重复触发
+	EXPECT_FALSE(Zoom.RecordDensity(0.540f));
+
+	// 再次缩放：密度一变就重新进入"动画中"，连续 2 帧同值才重新判定稳定
+	EXPECT_FALSE(Zoom.RecordDensity(0.600f));
+	EXPECT_FALSE(Zoom.m_ZoomSettled);
+	EXPECT_TRUE(Zoom.RecordDensity(0.600f)); // 第 2 帧：刚稳定，允许重建一次
+	EXPECT_FALSE(Zoom.RecordDensity(0.600f)); // 之后不得重复触发
+
+	// 与容差判定组合后的完整决策：动画中即使偏差很大也不重建；停稳后若偏差超容差才重建。
+	const SQmNameplateTextRasterization BakedAt050 = QmNameplateTextRasterizationAfterRebake(0.500f);
+	SQmNameplateTextZoomStability Decision;
+	EXPECT_FALSE(Decision.RecordDensity(0.800f)); // 密度刚变：动画中
+	EXPECT_TRUE(QmNameplateTextNeedsRebake(BakedAt050, 0.800f)); // 偏差超容差，但被稳定门挡住
+	EXPECT_TRUE(Decision.RecordDensity(0.800f)); // 停稳那一帧才允许重建
+	EXPECT_TRUE(QmNameplateTextNeedsRebake(BakedAt050, 0.800f));
+
+	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
+	EXPECT_NE(Source.find("const bool ZoomSettled = m_ZoomStability.RecordDensity(DensityNow);"), std::string::npos);
+	EXPECT_NE(Source.find("if(!NeedsTextUpdate && ZoomSettled && QmNameplateTextNeedsRebake(m_Rasterization, DensityNow))"), std::string::npos);
 }

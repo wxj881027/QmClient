@@ -480,6 +480,21 @@ void CSpectator::OnRender()
 
 	int OldDDTeam = -1;
 
+	// 预先做一次逆序扫描，求出每个下标之后最近的「非观战者」队伍，
+	// 取代原先在循环内为每个玩家各做一次前向线性扫描（满员时是 O(N²)）。
+	// 语义与逐点前向扫描逐位一致：找不到后续非观战者时取 0（与原 NextDDTeam 初值相同）。
+	int aNextDDTeam[MAX_CLIENTS];
+	{
+		int DDTeamAfter = 0;
+		for(int j = MAX_CLIENTS - 1; j >= 0; --j)
+		{
+			aNextDDTeam[j] = DDTeamAfter;
+			const CNetObj_PlayerInfo *pInfoNext = GameClient()->m_Snap.m_apInfoByDDTeamName[j];
+			if(pInfoNext != nullptr && pInfoNext->m_Team != TEAM_SPECTATORS)
+				DDTeamAfter = GameClient()->m_Teams.Team(pInfoNext->m_ClientId);
+		}
+	}
+
 	for(int i = 0, Count = 0; i < MAX_CLIENTS; ++i)
 	{
 		if(!GameClient()->m_Snap.m_apInfoByDDTeamName[i] || GameClient()->m_Snap.m_apInfoByDDTeamName[i]->m_Team == TEAM_SPECTATORS)
@@ -495,18 +510,7 @@ void CSpectator::OnRender()
 
 		const CNetObj_PlayerInfo *pInfo = GameClient()->m_Snap.m_apInfoByDDTeamName[i];
 		int DDTeam = GameClient()->m_Teams.Team(pInfo->m_ClientId);
-		int NextDDTeam = 0;
-
-		for(int j = i + 1; j < MAX_CLIENTS; j++)
-		{
-			const CNetObj_PlayerInfo *pInfo2 = GameClient()->m_Snap.m_apInfoByDDTeamName[j];
-
-			if(!pInfo2 || pInfo2->m_Team == TEAM_SPECTATORS)
-				continue;
-
-			NextDDTeam = GameClient()->m_Teams.Team(pInfo2->m_ClientId);
-			break;
-		}
+		const int NextDDTeam = aNextDDTeam[i];
 
 		if(OldDDTeam == -1)
 		{

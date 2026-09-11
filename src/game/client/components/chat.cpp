@@ -24,6 +24,7 @@
 #include <game/client/components/message_gradient.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/qm_title_color.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
@@ -2064,6 +2065,9 @@ void CChat::OnPrepareLines(float y)
 	float Begin = x;
 	float TextBegin = Begin + RealMsgPaddingX / 2.0f;
 	int OffsetType = IsScoreBoardOpen ? 1 : 0;
+	// [] 内头衔的本地配色：默认档不改变既有表现，聊天继续沿用玩家名色。
+	// 颜色烘焙在文本容器里，设置变化时由设置页调用 RebuildChat() 重建。
+	const SQmTitleColorStyle QmTitleColorStyle = ResolveQmTitleColorStyle(g_Config.m_QmTitleColorMode, g_Config.m_QmTitleColor, g_Config.m_QmTitleOpacity, false);
 
 	for(int i = m_BacklogCurLine; i < MAX_LINES; i++)
 	{
@@ -2311,6 +2315,23 @@ void CChat::OnPrepareLines(float y)
 		else
 			NameColor = PlayerNameColor(Line.m_ClientId, Line.m_NameColor, Line.m_Team);
 
+		// [] 内头衔单独上色；自定义档结束后必须回到调用方原本的颜色。
+		const auto AppendQmTitle = [&](const char *pTitle, const ColorRGBA &FallbackColor) {
+			const bool CustomColor = pTitle[0] != '\0' && QmTitleColorStyle.m_Mode != EQmTitleColorMode::FOLLOW_SERVER;
+			if(CustomColor && QmTitleColorStyle.m_Rainbow)
+			{
+				QmAddTitleRainbowSplits(LineCursor, pTitle, QmTitleColorStyle.m_Alpha);
+				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, pTitle);
+				LineCursor.m_vColorSplits.clear();
+				return;
+			}
+			if(CustomColor)
+				TextRender()->TextColor(QmTitleColorStyle.m_Color);
+			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, pTitle);
+			if(CustomColor)
+				TextRender()->TextColor(FallbackColor);
+		};
+
 		if(MergedPlayerMessages)
 		{
 			TextRender()->TextColor(Line.m_vMergedAuthors.front().m_NameColor);
@@ -2320,7 +2341,7 @@ void CChat::OnPrepareLines(float y)
 				TextRender()->TextColor(Line.m_vMergedAuthors[i].m_NameColor);
 				if(i > 0)
 					TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, ",");
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_vMergedAuthors[i].m_aQmTitle);
+				AppendQmTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_NameColor);
 				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_vMergedAuthors[i].m_aName);
 			}
 			NameColor = Line.m_vMergedAuthors.back().m_NameColor;
@@ -2329,7 +2350,7 @@ void CChat::OnPrepareLines(float y)
 		{
 			TextRender()->TextColor(NameColor);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, aClientId);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_aQmTitle);
+			AppendQmTitle(Line.m_aQmTitle, NameColor);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_aName);
 		}
 

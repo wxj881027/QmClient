@@ -44,7 +44,9 @@
 #include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/player_title.h>
+#include <game/client/components/qmclient/qm_markdown.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
+#include <game/client/components/qmclient/qmclient.h>
 #include <game/client/components/qmclient/translate/translate_ui_settings.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/tclient/bindchat.h>
@@ -1215,7 +1217,6 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 		RenderValue("qmclient-camera-dynamic-fov-smoothness", "Dynamic FOV smoothness", &s_QmDynamicFovSmoothnessInputId, &g_Config.m_QmDynamicFovSmoothness, 0, 100, "%");
 	}
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, "Cinematic camera", Localize("Cinematic camera"), &g_Config.m_QmCinematicCamera);
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, "Instant zoom reverse", Localize("Instant zoom reverse"), &g_Config.m_QmZoomInstantReverse);
 	static int s_QmUiScaleInputId;
 	RenderValue("qmclient-ui-scale", "UI scale", &s_QmUiScaleInputId, &g_Config.m_QmUiScale, 50, 200, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);
 	const char *apAspectPresetNames[] = {Localize("Off"), "5:4", "4:3", "3:2", "16:9", "21:9", Localize("Custom")};
@@ -1336,8 +1337,10 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (ReadOnly ? 1u : 0u);
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (s_ShowSponsorQrCode ? 1u : 0u);
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (SponsorImageVisible ? 1u : 0u);
+	// 头衔配色档位决定赞助头衔卡片多一行控件，档位变化必须重建卡片定义以重新测量。
+	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (uint64_t)(g_Config.m_QmTitleColorMode & 3);
 	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, CardLayoutRevision);
-	const auto BuildDefinitions = [this, UiScale, BodySize, LineHeight, LineSpacing, TipSize, ReadOnly](std::vector<SSettingsCardDefinition> &vCards) {
+	const auto BuildDefinitions = [this, UiScale, BodySize, LineHeight, LineSpacing, TipSize, ReadOnly, Metrics](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(3);
 
 		SSettingsCardDefinition Community;
@@ -1500,8 +1503,12 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 
 		SSettingsCardDefinition TitleCard;
 		TitleCard.m_Spec = {"deck:qmclient-contributors-title", Localize("Sponsor title"), Localize("Redeem your code and customize your title")};
-		TitleCard.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(9, LineHeight, LineSpacing); };
-		TitleCard.m_Render = [this, UiScale, BodySize, TipSize, LineHeight, LineSpacing, ReadOnly](CUIRect Content) {
+		TitleCard.m_Measure = [LineHeight, LineSpacing](float) {
+			// 默认档只占一行档位选择，单色/彩虹档再多一行颜色或透明度控件。
+			const int Rows = g_Config.m_QmTitleColorMode == (int)EQmTitleColorMode::FOLLOW_SERVER ? 10 : 11;
+			return ResolveSettingsRowsHeight(Rows, LineHeight, LineSpacing);
+		};
+		TitleCard.m_Render = [this, UiScale, BodySize, TipSize, LineHeight, LineSpacing, ReadOnly, Metrics](CUIRect Content) {
 			auto &Auth = GameClient()->m_QmClient;
 			static CLineInputBuffered<64> s_Code;
 			static CLineInputBuffered<64> s_Title;
@@ -1556,6 +1563,36 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 			Ui()->DoLabel(&Row, Localize("Up to 6 Chinese or 12 ASCII characters"), TipSize, TEXTALIGN_ML);
 			Row = NextRow();
 			Ui()->DoLabel(&Row, Localize("Permanent access; up to 4 online IP addresses"), TipSize, TEXTALIGN_ML);
+			// [] 内头衔配色：仅影响本机显示，默认档沿用服务器下发的样式。
+			Row = NextRow();
+			CUIRect TitleColorLabel, TitleColorControl;
+			Row.VSplitLeft(Row.w * 0.45f, &TitleColorLabel, &TitleColorControl);
+			Ui()->DoLabel(&TitleColorLabel, Localize("Title color"), BodySize, TEXTALIGN_ML);
+			static std::vector<const char *> s_TitleColorModeNames;
+			s_TitleColorModeNames = {Localize("Follow server"), Localize("Single color"), Localize("Rainbow")};
+			static CUi::SDropDownState s_TitleColorModeDropDownState;
+			static CScrollRegion s_TitleColorModeDropDownScrollRegion;
+			s_TitleColorModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TitleColorModeDropDownScrollRegion;
+			const int TitleColorMode = DoSettingsDropDown(&TitleColorControl, std::clamp(g_Config.m_QmTitleColorMode, 0, 2), s_TitleColorModeNames.data(), s_TitleColorModeNames.size(), s_TitleColorModeDropDownState);
+			if(TitleColorMode != g_Config.m_QmTitleColorMode)
+			{
+				g_Config.m_QmTitleColorMode = TitleColorMode;
+				GameClient()->m_Chat.RebuildChat();
+			}
+			if(g_Config.m_QmTitleColorMode == (int)EQmTitleColorMode::SINGLE)
+			{
+				// 颜色与透明度共用一个色板弹窗，与其它 Qm 颜色设置一致；
+				// 该控件自行从 Content 消费一整行，这里不能再额外占用一行。
+				static CButtonContainer s_TitleColorResetId;
+				if(DoLine_AlphaColorPicker(&s_TitleColorResetId, Metrics, &Content, Localize("Color & opacity"), &g_Config.m_QmTitleColor, &g_Config.m_QmTitleOpacity, QM_TITLE_COLOR_DEFAULT, QM_TITLE_OPACITY_DEFAULT))
+					GameClient()->m_Chat.RebuildChat();
+			}
+			else if(g_Config.m_QmTitleColorMode == (int)EQmTitleColorMode::RAINBOW)
+			{
+				Row = NextRow();
+				if(DoSettingsScrollbarOption(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, "qm-title-opacity", &g_Config.m_QmTitleOpacity, &g_Config.m_QmTitleOpacity, &Row, Localize("Opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%"))
+					GameClient()->m_Chat.RebuildChat();
+			}
 			Row = NextRow();
 			Row.VSplitMid(&Row, &Button, LineSpacing);
 			if(DoButton_Menu(&s_SaveButton, Localize("Save"), 0, &Row) && Enabled && Auth.TitleAuthenticated() && (!s_BindName || s_Name.GetString()[0]))
@@ -3221,35 +3258,13 @@ void CMenus::RenderQmHudSpeedrunTimerContent(CUIRect &Content, float LineHeight,
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
 
-void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float LineSpacing)
 {
 	// 内置四项状态开关（自外观页 DDRace HUD 卡片迁移）
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusReset, "appearance-show-key-stuck-status", Localize("Show key stuck status"), &g_Config.m_ClShowhudKeyStatusReset);
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusHammer, "appearance-show-hammer-status", Localize("Show hammer status"), &g_Config.m_ClShowhudKeyStatusHammer);
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusControl, "appearance-show-dummy-control-status", Localize("Show dummy control status"), &g_Config.m_ClShowhudKeyStatusControl);
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusSync, "appearance-show-dummy-copy-status", Localize("Show dummy copy status"), &g_Config.m_ClShowhudKeyStatusSync);
-
-	// 自定义 bind 状态列表（非空时替换上面四项内置状态显示）
-	CUIRect Row, LabelColumn, ControlColumn;
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	RenderQmHudLabel("qmclient-bind-status-label", &LabelColumn, Localize("Custom bind status list"), BodySize);
-	static CButtonContainer s_BindStatusResetButton;
-	CUIRect BindStatusEdit, BindStatusResetButtonRect;
-	ControlColumn.VSplitRight(LineHeight + 5.0f, &BindStatusEdit, &BindStatusResetButtonRect);
-	if(Ui()->DoButton_FontIcon(&s_BindStatusResetButton, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &BindStatusResetButtonRect, BUTTONFLAG_LEFT))
-	{
-		Console()->ExecuteLine("qm_bind_status_reset");
-	}
-	static CLineInput s_BindStatusItemsInput(g_Config.m_QmBindStatusItems, sizeof(g_Config.m_QmBindStatusItems));
-	IUiContext BindStatusItemsInputCtx = SettingsUiContext("settings_qmclient_bind_status_items_input", BodySize / ui_token::font::BODY);
-	ui_widget::InputField(BindStatusItemsInputCtx, &s_BindStatusItemsInput, BindStatusEdit, nullptr, BodySize);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	// 格式提示
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	RenderQmHudLabel("qmclient-bind-status-hint", &Row, Localize("Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text"), BodySize);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
 
 void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -3323,16 +3338,13 @@ void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsCon
 	static int s_QmInputOverlayScaleInputId;
 	static int s_QmInputOverlayMouseScaleInputId;
 	static int s_QmInputOverlayOpacityInputId;
+	static int s_QmInputOverlayPosXInputId;
+	static int s_QmInputOverlayPosYInputId;
 	RenderValue("qmclient-input-overlay-keyboard-size", "Keyboard size", &s_QmInputOverlayScaleInputId, &g_Config.m_QmInputOverlayScale, 1, 200);
 	RenderValue("qmclient-input-overlay-mouse-size", "Mouse size", &s_QmInputOverlayMouseScaleInputId, &g_Config.m_QmInputOverlayMouseScale, 1, 200);
 	RenderValue("qmclient-input-overlay-opacity", "Opacity", &s_QmInputOverlayOpacityInputId, &g_Config.m_QmInputOverlayOpacity, 0, 100);
-
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	RenderQmHudLabel("qmclient-input-overlay-editor", &LabelColumn, Localize("Editor"), BodySize);
-	static CButtonContainer s_InputOverlayEditorButton;
-	if(!PrewarmOnly && DoButton_Menu(&s_InputOverlayEditorButton, Localize("Open editor"), 0, &ControlColumn))
-		GameClient()->m_InputOverlay.OpenEditor();
+	RenderValue("qmclient-input-overlay-horizontal-position", "Horizontal position", &s_QmInputOverlayPosXInputId, &g_Config.m_QmInputOverlayPosX, 0, 100);
+	RenderValue("qmclient-input-overlay-vertical-position", "Vertical position", &s_QmInputOverlayPosYInputId, &g_Config.m_QmInputOverlayPosY, 0, 100);
 }
 
 void CMenus::RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly)
@@ -4471,7 +4483,7 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 			return Rows((float)HookCount + 2.0f + (g_Config.m_QmSpotifyEnable != 0 ? 1.0f : 0.0f));
 		}
 		case EQmModuleId::Background3D: return ResolveQmHudBackground3DHeight(Metrics, ContentWidth, g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
-		case EQmModuleId::BindStatusHud: return Rows(6.0f); // 4 个状态开关 + 自定义列表编辑行 + 格式提示行
+		case EQmModuleId::BindStatusHud: return Rows(4.0f); // 4 个状态开关
 		default: return Rows(1.0f);
 		}
 	};
@@ -4681,13 +4693,11 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 				return Changed;
 			};
 		case EQmModuleId::BindStatusHud:
-			return [this, LineHeight, LineSpacing, ConsumeQmHudRow](CUIRect Content) {
+			return [this, LineHeight, LineSpacing](CUIRect Content) {
 				bool Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusReset, &g_Config.m_ClShowhudKeyStatusReset);
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusHammer, &g_Config.m_ClShowhudKeyStatusHammer) || Changed;
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusControl, &g_Config.m_ClShowhudKeyStatusControl) || Changed;
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusSync, &g_Config.m_ClShowhudKeyStatusSync) || Changed;
-				ConsumeQmHudRow(Content); // 自定义列表编辑行
-				ConsumeQmHudRow(Content); // 格式提示行
 				return Changed;
 			};
 		default:
@@ -4734,7 +4744,7 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 		AddCard(EQmModuleId::SystemMediaControls, "qm:system_media_controls", "SMTC", "System media control", [this, LineHeight, BodySize, LineSpacing, ReadOnly](CUIRect &Content) { RenderQmHudSystemMediaControlsContent(Content, LineHeight, BodySize, LineSpacing, ReadOnly); });
 		AddCard(EQmModuleId::Lyrics, "qm:lyrics", "Lyrics", "Lyrics sources and display", [this, LineHeight, LineSpacing, ReadOnly](CUIRect &Content) { RenderQmHudLyricsContent(Content, LineHeight, LineSpacing, ReadOnly); });
 		AddCard(EQmModuleId::Background3D, "qm:background_3d", "3D Background", "Configure background 3D particle effects", [this, Metrics, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudBackground3DContent(Content, Metrics, LabelWidth, ReadOnly); });
-		AddCard(EQmModuleId::BindStatusHud, "qm:bind_status_hud", "DDRace HUD Pro", "Dummy key/hammer/control/copy status switches and custom bind status list", [this, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { RenderQmHudBindStatusContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
+		AddCard(EQmModuleId::BindStatusHud, "qm:bind_status_hud", "DDRace HUD Pro", "Dummy key/hammer/control/copy status switches", [this, LineHeight, LineSpacing](CUIRect &Content) { RenderQmHudBindStatusContent(Content, LineHeight, LineSpacing); });
 	};
 	uint64_t CardLayoutRevision = 0;
 	for(int ModuleIndex = 0; ModuleIndex < (int)QmModuleCount; ++ModuleIndex)
@@ -5045,7 +5055,7 @@ void CMenus::RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly
 		case EQmModuleId::ChatBubble:
 			return g_Config.m_QmChatBubble ? Rows(5.0f) + 2.0f * Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing : Rows(1.0f);
 		case EQmModuleId::CameraView:
-			return Rows(6.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;
+			return Rows(5.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;
 		case EQmModuleId::SkinTransition:
 			return ResolveQmVisualSkinTransitionHeight(Metrics, g_Config.m_QmSkinChangeTransition != 0);
 		case EQmModuleId::FocusMode:
@@ -5118,7 +5128,6 @@ void CMenus::RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly
 					ConsumeVisualRow(Content);
 				}
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, &g_Config.m_QmCinematicCamera) || Changed;
-				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, &g_Config.m_QmZoomInstantReverse) || Changed;
 				return Changed;
 			};
 		case EQmModuleId::SkinTransition:
@@ -5716,10 +5725,11 @@ void CMenus::RenderSponsorNudge(CUIRect Screen)
 {
 	CGameClient *pGameClient = GameClient();
 	// 两种触发共用同一套灵动岛表现：启动提醒，以及关掉提醒后的那句问话。
-	const bool Farewell = pGameClient->SponsorNudgeFarewellActive();
-	if(!pGameClient->SponsorNudgeVisible() && !Farewell)
+	const bool Visible = pGameClient->SponsorNudgeVisible() || pGameClient->SponsorNudgeFarewellActive();
+	// 出场动画收完之前必须继续画，否则「收缩成黑球再上滑」会退化成瞬间消失。
+	if(!qm_island::NeedsRender(m_QmSponsorNudgeNotice, Visible))
 	{
-		m_QmSponsorNudgeElapsed = 0.0f;
+		qm_island::Reset(m_QmSponsorNudgeNotice);
 		return;
 	}
 
@@ -5728,40 +5738,37 @@ void CMenus::RenderSponsorNudge(CUIRect Screen)
 	const float UiScale = g_Config.m_QmUiScale / 100.0f;
 
 	// 顶部居中；主体高度取 HUD 动态岛同一档设计高度的量级，保证「一眼是灵动岛」。
+	// 倒计时环整条都在主体外轮廓外侧，所以外边距还要留出环的宽度。
 	const float BodyH = 26.0f * UiScale;
 	const qm_island::SNoticeLayout Layout = qm_island::ResolveLayout(
-		Screen, 300.0f * UiScale, BodyH, 10.0f * UiScale, 2.0f * UiScale);
+		Screen, 300.0f * UiScale, BodyH, 10.0f * UiScale, 2.0f * UiScale, 1.5f * UiScale);
 
-	// 入场：掉落 → 展开两段弹簧，先落定再展开（与 HUD 动态岛同源）。
+	// 入场「掉落 → 展开」与出场「收缩 → 上滑」共用同两条弹簧，先后顺序由状态机门控。
 	CUiV2AnimationRuntime &Anim = GameClient()->UiRuntimeV2()->AnimRuntime();
 	const uint64_t NodeBase = MakeUiScopeHash("menu_sponsor_nudge_island");
-	const SHudMediaIslandEntranceSpringResult Entrance =
-		QmHudMediaIslandResolveEntranceSprings(Anim, NodeBase ^ 0x11u, NodeBase ^ 0x22u, true);
+	const SHudMediaIslandEntranceSpringResult Entrance = qm_island::ResolveSprings(
+		Anim, NodeBase ^ 0x11u, NodeBase ^ 0x22u, m_QmSponsorNudgeNotice, Visible);
+	m_QmSponsorNudgeNotice.m_DropProgress = Entrance.m_DropProgress;
+	m_QmSponsorNudgeNotice.m_ExpandProgress = Entrance.m_ExpandProgress;
+
+	// 倒计时只在完整展开后开始，否则形变阶段就把时间吃掉一截；到时收起，转入出场动画。
+	if(qm_island::AdvanceCountdown(m_QmSponsorNudgeNotice, Visible, DeltaSeconds))
+		pGameClient->DismissSponsorNudge(false);
+	const float Remaining = qm_island::RemainingFraction(m_QmSponsorNudgeNotice);
 
 	const SHudMediaIslandEntrancePose Pose = QmHudMediaIslandEntrancePose(
 		Layout.m_Body, Layout.m_Body.h * 0.5f, ui_token::color::SURFACE_ELEVATED, Entrance.m_ExpandProgress, Entrance.m_DropProgress, Screen.y);
 
-	// 5 秒倒计时只在展开落定后开始，否则形变阶段就把时间吃掉一截。
-	if(Entrance.m_ExpandProgress >= 0.999f)
-	{
-		m_QmSponsorNudgeElapsed += DeltaSeconds;
-		if(m_QmSponsorNudgeElapsed >= 5.0f)
-		{
-			pGameClient->DismissSponsorNudge(false);
-			m_QmSponsorNudgeElapsed = 0.0f;
-			return;
-		}
-	}
-	const float Remaining = std::clamp(1.0f - m_QmSponsorNudgeElapsed / 5.0f, 0.0f, 1.0f);
-
-	// 组 SDF 状态：主体是胶囊，环绕倒计时条由 RingRadius 贴外沿画一圈。
-	// 环是「每个 item 自己的环」且不裁剪到主体形状，正好用来环绕灵动岛外框。
+	// 组 SDF 状态：主体是胶囊；倒计时环贴主体外轮廓绕一圈（完全展开后随 ContentAlpha 淡入）。
+	// 不画外圈阴影：整块岛与黑球都只留本体轮廓。
 	SHudMediaIslandSdfRenderState SdfState;
 	SdfState.m_MainRect = Pose.m_Rect;
 	SdfState.m_MainRadius = Pose.m_Rect.h * 0.5f;
 	SdfState.m_MainCorners = IGraphics::CORNER_ALL;
 	SdfState.m_BackgroundColor = Pose.m_BackgroundColor;
 	SdfState.m_ScreenPixelSize = Ui()->PixelSize();
+	SdfState.m_OutlineRingThickness = Layout.m_RingThickness;
+	SdfState.m_OutlineRingOffset = Layout.m_RingOffset;
 	SdfState.m_ItemCount = 1;
 	SdfState.m_Items[0].m_Center = vec2(Pose.m_Rect.x + Pose.m_Rect.w * 0.5f, Pose.m_Rect.y + Pose.m_Rect.h * 0.5f);
 	SdfState.m_Items[0].m_Radii = vec2(Pose.m_Rect.w * 0.5f, Pose.m_Rect.h * 0.5f);
@@ -5769,10 +5776,7 @@ void CMenus::RenderSponsorNudge(CUIRect Screen)
 	// 进度取「剩余」：弧线随时间消耗，时间到走满一圈。
 	SdfState.m_Items[0].m_CountdownProgress = Remaining;
 	SdfState.m_Items[0].m_RingColor = qm_island::CountdownRingColor(Remaining);
-	SdfState.m_RingRadius = Layout.m_RingRadius;
-	SdfState.m_RingThickness = Layout.m_RingThickness;
 	SdfState.m_Rect = QmHudMediaIslandSdfOuterRect(SdfState);
-	qm_island::ApplyOuterShadow(SdfState);
 
 	qm_island::Render(Graphics(), SdfState);
 
@@ -5780,7 +5784,7 @@ void CMenus::RenderSponsorNudge(CUIRect Screen)
 		return;
 
 	char aText[256];
-	if(Farewell)
+	if(pGameClient->SponsorNudgeFarewellActive())
 		str_copy(aText, Localize("Really? Not even a little?"), sizeof(aText));
 	else
 		str_format(aText, sizeof(aText), Localize("Still free after %d sponsors. Take a look?"), (int)std::size(QM_SPONSOR_NAMES));
@@ -5795,81 +5799,89 @@ void CMenus::RenderSponsorNudge(CUIRect Screen)
 
 namespace
 {
-	// 「新功能」弹窗条目：名称 / 说明 / 用法 / 入口。
-	// 入口按「设置 → QmClient → 页签 → 卡片」拼装，全部复用已有译文；
-	// 带 tab 与 stableId 时额外显示跳转按钮，直接跳到设置页对应卡片。
-	struct SQmNewFeatureEntry
+	// ===== 「新功能」弹窗的受限 Markdown 渲染 =====
+	// 内容由中心服广播，这里只做纯文本级排版：不解析 HTML / 图片 / 表格，
+	// 长度由解析层设上限，远端内容无法影响客户端稳定性。
+
+	// 逐码点宽度缓存：同一字号下每个字形只测量一次。
+	struct SQmMdGlyphCache
 	{
-		const char *m_pName;
-		const char *m_pSummary;
-		const char *m_pUsage;
-		const char *m_pSection;
-		const char *m_pCardTab;
-		const char *m_pCardStableId;
+		float m_FontSize = -1.0f;
+		std::unordered_map<std::string, float> m_Widths;
 	};
 
-	// 表内字符串用 Localizable 标记为 i18n 源 key，绘制时再走 Localize。
-	const SQmNewFeatureEntry g_aQmNewFeatures[] = {
+	float QmMdGlyphWidth(ITextRender *pTextRender, float FontSize, const std::string &Glyph)
+	{
+		static SQmMdGlyphCache s_Cache;
+		if(s_Cache.m_FontSize != FontSize)
 		{
-			Localizable("Sponsor title"),
-			Localizable("Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate."),
-			Localizable("Enter the sponsor code, press Redeem, then write the title and press Save. Tick \"Only show with this nickname\" to bind it to one nickname."),
-			Localizable("Contributors"),
-			"qmclient-contributors",
-			"deck:qmclient-contributors-title",
-		},
-		{
-			Localizable("DDRace HUD Pro"),
-			Localizable("Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list."),
-			Localizable("Switch on the status rows you need, then list the binds you want to watch."),
-			Localizable("HUD"),
-			"hud",
-			"qm:bind_status_hud",
-		},
-		{
-			Localizable("Lyrics"),
-			Localizable("Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island."),
-			Localizable("Pick the source that matches your music app and keep it playing; the lyrics follow automatically."),
-			Localizable("HUD"),
-			"hud",
-			"qm:lyrics",
-		},
-		{
-			Localizable("Weapon animation"),
-			Localizable("Your weapon slides and rotates in when you switch, and flips while reloading."),
-			Localizable("Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing."),
-			Localizable("Visuals"),
-			"visual",
-			"qm:weapon_animation",
-		},
-		{
-			Localizable("Skin transition"),
-			Localizable("Plays an animation whenever your skin changes, including skins stolen with the hammer."),
-			Localizable("Enable skin transition animation, then choose the type, scope, duration and easing."),
-			Localizable("Visuals"),
-			"visual",
-			"qm:skin_transition",
-		},
-		{
-			Localizable("Message merging"),
-			Localizable("Merges chat messages repeated within a short time into a single line."),
-			Localizable("Turn on \"Message merging\" in Dream Features."),
-			Localizable("Functions"),
-			"function",
-			"qm:mini_features",
-		},
+			s_Cache.m_FontSize = FontSize;
+			s_Cache.m_Widths.clear();
+		}
+		const auto It = s_Cache.m_Widths.find(Glyph);
+		if(It != s_Cache.m_Widths.end())
+			return It->second;
+		const float Width = pTextRender->TextWidth(FontSize, Glyph.c_str(), -1);
+		s_Cache.m_Widths.emplace(Glyph, Width);
+		return Width;
+	}
+
+	struct SQmMdLineSpan
+	{
+		qm_md::SSpan m_Style;
+		std::string m_Text;
+		float m_Width = 0.0f;
 	};
 
-	// 文本按 m_MaxWidth 换行后的行数，用于给弹窗条目预留高度。
-	int QmWrappedLineCount(ITextRender *pTextRender, float FontSize, const char *pText, float MaxWidth)
+	struct SQmMdLine
 	{
-		if(pTextRender == nullptr || pText == nullptr || pText[0] == '\0' || MaxWidth <= 0.0f)
-			return 1;
-		int LineCount = 0;
-		STextSizeProperties TextSizeProps{};
-		TextSizeProps.m_pLineCount = &LineCount;
-		pTextRender->TextWidth(FontSize, pText, -1, MaxWidth, 0, TextSizeProps);
-		return maximum(1, LineCount);
+		std::vector<SQmMdLineSpan> m_vSpans;
+		float m_Width = 0.0f;
+	};
+
+	bool QmMdSameStyle(const qm_md::SSpan &A, const qm_md::SSpan &B)
+	{
+		return A.m_Bold == B.m_Bold && A.m_Italic == B.m_Italic && A.m_Code == B.m_Code && A.m_Link == B.m_Link;
+	}
+
+	// 按字符宽度贪心换行：中文没有空格，因此按码点而非按词切分。
+	std::vector<SQmMdLine> QmMdWrapSpans(ITextRender *pTextRender, const std::vector<qm_md::SSpan> &vSpans, float FontSize, float MaxWidth)
+	{
+		std::vector<SQmMdLine> vLines(1);
+		float LineWidth = 0.0f;
+		for(const qm_md::SSpan &Span : vSpans)
+		{
+			for(const std::string &Glyph : qm_md::SplitUtf8(Span.m_Text))
+			{
+				const float GlyphWidth = QmMdGlyphWidth(pTextRender, FontSize, Glyph);
+				if(LineWidth > 0.0f && LineWidth + GlyphWidth > MaxWidth)
+				{
+					vLines.emplace_back();
+					LineWidth = 0.0f;
+					if(Glyph == " ")
+						continue;
+				}
+				SQmMdLine &Line = vLines.back();
+				if(Line.m_vSpans.empty() || !QmMdSameStyle(Line.m_vSpans.back().m_Style, Span))
+				{
+					SQmMdLineSpan NewSpan;
+					NewSpan.m_Style = Span;
+					NewSpan.m_Text = Glyph;
+					NewSpan.m_Width = GlyphWidth;
+					Line.m_vSpans.push_back(std::move(NewSpan));
+				}
+				else
+				{
+					Line.m_vSpans.back().m_Text += Glyph;
+					Line.m_vSpans.back().m_Width += GlyphWidth;
+				}
+				Line.m_Width += GlyphWidth;
+				LineWidth += GlyphWidth;
+			}
+		}
+		while(vLines.size() > 1 && vLines.back().m_vSpans.empty())
+			vLines.pop_back();
+		return vLines;
 	}
 }
 
@@ -5920,13 +5932,78 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	Inner.HSplitTop(Gap, nullptr, &Inner);
 
-	// 底部：关闭按钮
-	CUIRect ButtonRow, CloseButtonRect;
+	// 底部：关闭 / 重新加载（内容全部来自中心服广播，失败时可手动重试）。
+	CGameClient *pGameClient = GameClient();
+	CQmClient &QmClient = pGameClient->m_QmClient;
+
+	CUIRect ButtonRow, CloseButtonRect, RefreshButtonRect;
 	Inner.HSplitBottom(ButtonH, &Inner, &ButtonRow);
 	Inner.HSplitBottom(Gap, &Inner, nullptr);
+	if(QmClient.HasDeveloperCredential())
+	{
+		// 开发者面板：仅当保存目录存在 developer_token.txt 时出现；发布权限由服务端判定。
+		CUIRect DevRow, DevStatus;
+		Inner.HSplitBottom(ButtonH, &Inner, &DevRow);
+		Inner.HSplitBottom(Gap, &Inner, nullptr);
+		const float DevButtonW = std::min(DevRow.w * 0.28f, 150.0f * UiScale);
+		CUIRect ReloadDraftRect = DevRow, PublishRect, OpenFolderRect;
+		ReloadDraftRect.VSplitLeft(DevButtonW, &ReloadDraftRect, &DevRow);
+		DevRow.VSplitLeft(Gap, nullptr, &DevRow);
+		DevRow.VSplitLeft(DevButtonW, &PublishRect, &DevRow);
+		DevRow.VSplitLeft(Gap, nullptr, &DevRow);
+		DevRow.VSplitLeft(DevButtonW, &OpenFolderRect, &DevStatus);
+		DevStatus.VSplitLeft(Gap, nullptr, &DevStatus);
+		ReloadDraftRect.h = minimum(ReloadDraftRect.h, ButtonH);
+		PublishRect.h = minimum(PublishRect.h, ButtonH);
+		OpenFolderRect.h = minimum(OpenFolderRect.h, ButtonH);
+
+		static CButtonContainer s_ReloadDraftButton;
+		static CButtonContainer s_PublishButton;
+		static CButtonContainer s_OpenFolderButton;
+		if(ui_widget::SecondaryButton(Ctx, &s_ReloadDraftButton, Localize("Reload"), ReloadDraftRect))
+			QmClient.QmNewsReloadDraft();
+		if(ui_widget::PrimaryButton(Ctx, &s_PublishButton, Localize("Publish"), PublishRect, QmClient.QmNewsPublishing() || QmClient.QmNewsDraft()[0] == '\0'))
+			QmClient.QmNewsPublishDraft();
+		if(ui_widget::SecondaryButton(Ctx, &s_OpenFolderButton, Localize("Open folder"), OpenFolderRect))
+		{
+			char aFolder[IO_MAX_PATH_LENGTH];
+			Storage()->GetCompletePath(IStorage::TYPE_SAVE, "qmclient", aFolder, sizeof(aFolder));
+			Client()->ViewFile(aFolder);
+		}
+
+		const char *pDevStatus = nullptr;
+		switch(QmClient.QmNewsStatus())
+		{
+		case CQmClient::EQmNewsStatus::PUBLISHING: pDevStatus = Localize("Publishing…"); break;
+		case CQmClient::EQmNewsStatus::PUBLISH_DENIED: pDevStatus = Localize("Publish failed"); break;
+		case CQmClient::EQmNewsStatus::PUBLISH_TOO_LARGE: pDevStatus = Localize("Publish failed"); break;
+		case CQmClient::EQmNewsStatus::PUBLISH_FAILED: pDevStatus = Localize("Publish failed"); break;
+		case CQmClient::EQmNewsStatus::PUBLISHED: pDevStatus = Localize("Published"); break;
+		default:
+			if(QmClient.QmNewsDraft()[0] == '\0')
+				pDevStatus = Localize("Draft file is empty");
+			break;
+		}
+		if(pDevStatus != nullptr)
+		{
+			TextRender()->TextColor(ui_token::color::TEXT_TIP);
+			Ui()->DoLabel(&DevStatus, pDevStatus, TipSize, TEXTALIGN_ML);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+		}
+	}
+
 	CloseButtonRect = ButtonRow;
-	CloseButtonRect.w = std::min(ButtonRow.w, 200.0f * UiScale);
-	CloseButtonRect.x = ButtonRow.x + (ButtonRow.w - CloseButtonRect.w) * 0.5f;
+	RefreshButtonRect = ButtonRow;
+	const float FooterButtonW = std::min(ButtonRow.w * 0.3f, 200.0f * UiScale);
+	CloseButtonRect.w = FooterButtonW;
+	RefreshButtonRect.w = FooterButtonW;
+	CloseButtonRect.x = ButtonRow.x + ButtonRow.w * 0.5f - FooterButtonW - Gap * 0.5f;
+	RefreshButtonRect.x = ButtonRow.x + ButtonRow.w * 0.5f + Gap * 0.5f;
+
+	static CButtonContainer s_RefreshButton;
+	if(ui_widget::SecondaryButton(Ctx, &s_RefreshButton, Localize("Reload"), RefreshButtonRect))
+		QmClient.QmNewsRefresh(true);
+
 	static CButtonContainer s_CloseButton;
 	if(ui_widget::PrimaryButton(Ctx, &s_CloseButton, Localize("Close"), CloseButtonRect) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 	{
@@ -5934,7 +6011,7 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 		return;
 	}
 
-	// 条目区：内容超出时滚动；每次打开回到顶部。
+	// 内容区：渲染中心服广播的受限 Markdown；内容超出时滚动，每次打开回到顶部。
 	static CScrollRegion s_ScrollRegion;
 	if(m_QmNewFeaturesScrollReset)
 	{
@@ -5950,79 +6027,183 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 	CUIRect Content = ScrollArea;
 	Content.x += ScrollOffset.x;
 	Content.y += ScrollOffset.y;
-	const float TextWidth = std::max(80.0f, Content.w - JumpButtonW - Gap - ui_token::spacing::MD * UiScale);
 
-	static CButtonContainer s_aJumpButtons[std::size(g_aQmNewFeatures)] = {};
-	for(size_t Index = 0; Index < std::size(g_aQmNewFeatures); ++Index)
+	// 远端内容按修订号解析一次，避免每帧重解析。
+	static std::vector<qm_md::SBlock> s_vNewsBlocks;
+	static int s_NewsParsedRevision = -1;
+	if(s_NewsParsedRevision != QmClient.QmNewsRevision())
 	{
-		const SQmNewFeatureEntry &Entry = g_aQmNewFeatures[Index];
-		char aEntryPath[192];
-		str_format(aEntryPath, sizeof(aEntryPath), "%s → QmClient → %s → %s", Localize("Settings"), Localize(Entry.m_pSection), Localize(Entry.m_pName));
-		char aEntryLine[256];
-		str_format(aEntryLine, sizeof(aEntryLine), Localize("Entry: %s"), aEntryPath);
-		const int SummaryLines = QmWrappedLineCount(TextRender(), BodySize, Localize(Entry.m_pSummary), TextWidth);
-		const int UsageLines = QmWrappedLineCount(TextRender(), TipSize, Localize(Entry.m_pUsage), TextWidth);
-		const int EntryLines = QmWrappedLineCount(TextRender(), TipSize, aEntryLine, TextWidth);
-		const float EntryHeight = HeadlineSize * 1.3f + ui_token::spacing::XS * UiScale +
-					  SummaryLines * BodySize * 1.5f + (UsageLines + EntryLines) * TipSize * 1.6f +
-					  Gap;
+		s_vNewsBlocks = qm_md::Parse(QmClient.QmNewsMarkdown());
+		s_NewsParsedRevision = QmClient.QmNewsRevision();
+	}
 
-		CUIRect EntryRect;
-		Content.HSplitTop(EntryHeight, &EntryRect, &Content);
-		if(!s_ScrollRegion.AddRect(EntryRect))
+	if(s_vNewsBlocks.empty())
+	{
+		CUIRect EmptyRow;
+		Content.HSplitTop(BodySize * 4.0f, &EmptyRow, &Content);
+		if(s_ScrollRegion.AddRect(EmptyRow))
+		{
+			const bool Loading = QmClient.QmNewsStatus() == CQmClient::EQmNewsStatus::LOADING || QmClient.QmNewsStatus() == CQmClient::EQmNewsStatus::IDLE;
+			const char *pMessage = Loading ? Localize("Loading") : (QmClient.QmNewsStatus() == CQmClient::EQmNewsStatus::FAILED ? Localize("Could not load new features") : Localize("No new features yet"));
+			TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
+			Ui()->DoLabel(&EmptyRow, pMessage, BodySize, TEXTALIGN_TC);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+		}
+	}
+
+	static CButtonContainer s_aSettingsButtons[16] = {};
+	int SettingsButtonIndex = 0;
+	for(const qm_md::SBlock &Block : s_vNewsBlocks)
+	{
+		float BlockFontSize = BodySize;
+		if(Block.m_Kind == qm_md::EBlockKind::HEADING1)
+			BlockFontSize = HeadlineSize * 1.25f;
+		else if(Block.m_Kind == qm_md::EBlockKind::HEADING2)
+			BlockFontSize = HeadlineSize * 1.1f;
+		else if(Block.m_Kind == qm_md::EBlockKind::HEADING3)
+			BlockFontSize = HeadlineSize;
+		const float LineHeight = BlockFontSize * 1.45f;
+
+		float Indent = 0.0f;
+		if(Block.m_Kind == qm_md::EBlockKind::QUOTE)
+			Indent = ui_token::spacing::MD * UiScale;
+		else if(Block.m_Kind == qm_md::EBlockKind::BULLET || Block.m_Kind == qm_md::EBlockKind::NUMBERED)
+			Indent = 14.0f * UiScale;
+
+		float GapAfter = Gap * 0.5f;
+		if(Block.m_Kind == qm_md::EBlockKind::SEPARATOR)
+			GapAfter = Gap;
+		else if(Block.m_Kind == qm_md::EBlockKind::HEADING1 || Block.m_Kind == qm_md::EBlockKind::HEADING2)
+			GapAfter = Gap * 0.6f;
+		else if(Block.m_Kind == qm_md::EBlockKind::BULLET || Block.m_Kind == qm_md::EBlockKind::NUMBERED)
+			GapAfter = ui_token::spacing::XS * UiScale;
+
+		CUIRect BlockRect;
+		if(Block.m_Kind == qm_md::EBlockKind::SEPARATOR)
+		{
+			Content.HSplitTop(1.0f + GapAfter, &BlockRect, &Content);
+			if(s_ScrollRegion.AddRect(BlockRect))
+			{
+				CUIRect Line = BlockRect;
+				Line.h = 1.0f;
+				DrawRoundedSurface(Ctx, Line, ui_token::color::BORDER_SUBTLE, ColorRGBA(), 0.0f);
+			}
+			continue;
+		}
+
+		if(Block.m_Kind == qm_md::EBlockKind::SETTINGS_BUTTON)
+		{
+			const qm_card_registry::SCardDefault *pCard = qm_card_registry::FindByStableId(Block.m_SettingsCardId.c_str());
+			if(pCard == nullptr || pCard->m_pDefaultTab == nullptr)
+				continue; // 未知卡片：不渲染死链按钮
+			Content.HSplitTop(ButtonH + GapAfter, &BlockRect, &Content);
+			if(s_ScrollRegion.AddRect(BlockRect))
+			{
+				CUIRect ButtonRect = BlockRect;
+				ButtonRect.w = std::min(ButtonRect.w, 240.0f * UiScale);
+				ButtonRect.h = ButtonH;
+				const char *pLabel = Block.m_SettingsLabel.empty() ? Localize("Open settings") : Block.m_SettingsLabel.c_str();
+				if(SettingsButtonIndex < (int)std::size(s_aSettingsButtons) &&
+					ui_widget::SecondaryButton(Ctx, &s_aSettingsButtons[SettingsButtonIndex], pLabel, ButtonRect))
+				{
+					qm_card_registry::SCardNavigationTarget Target;
+					Target.m_pTab = pCard->m_pDefaultTab;
+					Target.m_pStableId = pCard->m_pStableId;
+					NavigateToSettingsCard(Target);
+					m_Popup = POPUP_NONE;
+					SetShowStart(false);
+					SetMenuPage(PAGE_SETTINGS);
+					s_ScrollRegion.End();
+					return;
+				}
+				++SettingsButtonIndex;
+			}
+			continue;
+		}
+
+		const float TextWidth = std::max(80.0f, Content.w - Indent);
+		const std::vector<SQmMdLine> vLines = QmMdWrapSpans(TextRender(), Block.m_vSpans, BlockFontSize, TextWidth);
+		Content.HSplitTop((float)vLines.size() * LineHeight + GapAfter, &BlockRect, &Content);
+		if(!s_ScrollRegion.AddRect(BlockRect))
 			continue;
 
-		CUIRect EntryContent = EntryRect;
-		CUIRect JumpRow;
-		EntryContent.HSplitTop(HeadlineSize * 1.3f, &JumpRow, &EntryContent);
-		if(Index > 0)
+		CUIRect TextArea = BlockRect;
+		TextArea.h = (float)vLines.size() * LineHeight;
+		if(Block.m_Kind == qm_md::EBlockKind::QUOTE)
 		{
-			CUIRect Separator;
-			Separator.x = EntryRect.x;
-			Separator.w = EntryRect.w;
-			Separator.h = 1.0f;
-			Separator.y = EntryRect.y - Gap * 0.5f;
-			DrawRoundedSurface(Ctx, Separator, ui_token::color::BORDER_SUBTLE, ColorRGBA(), 0.0f);
+			CUIRect Bar = TextArea;
+			Bar.w = 3.0f;
+			DrawRoundedSurface(Ctx, Bar, ui_token::color::ACCENT_PRIMARY_DIM, ColorRGBA(), 0.0f);
+			TextArea.VSplitLeft(Indent, nullptr, &TextArea);
+		}
+		else if(Block.m_Kind == qm_md::EBlockKind::BULLET || Block.m_Kind == qm_md::EBlockKind::NUMBERED)
+		{
+			CUIRect Marker = TextArea;
+			Marker.w = Indent;
+			char aMarker[16];
+			if(Block.m_Kind == qm_md::EBlockKind::BULLET)
+				str_copy(aMarker, "•", sizeof(aMarker));
+			else
+				str_format(aMarker, sizeof(aMarker), "%d.", Block.m_Number);
+			TextRender()->TextColor(ui_token::color::TEXT_TIP);
+			Ui()->DoLabel(&Marker, aMarker, BodySize, TEXTALIGN_TL);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			TextArea.VSplitLeft(Indent, nullptr, &TextArea);
 		}
 
-		CUIRect TitleRect = JumpRow;
-		TextRender()->TextColor(ui_token::color::TEXT_PRIMARY);
-		Ui()->DoLabel(&TitleRect, Localize(Entry.m_pName), HeadlineSize, TEXTALIGN_ML);
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-
-		if(Entry.m_pCardTab != nullptr && Entry.m_pCardStableId != nullptr)
+		const bool Heading = Block.m_Kind == qm_md::EBlockKind::HEADING1 || Block.m_Kind == qm_md::EBlockKind::HEADING2 || Block.m_Kind == qm_md::EBlockKind::HEADING3;
+		float LineY = TextArea.y;
+		for(const SQmMdLine &Line : vLines)
 		{
-			CUIRect JumpButtonRect = JumpRow;
-			JumpButtonRect.VSplitRight(JumpButtonW, nullptr, &JumpButtonRect);
-			JumpButtonRect.h = minimum(JumpButtonRect.h, ButtonH);
-			if(ui_widget::SecondaryButton(Ctx, &s_aJumpButtons[Index], Localize("Open settings"), JumpButtonRect))
+			float X = TextArea.x;
+			for(const SQmMdLineSpan &Span : Line.m_vSpans)
 			{
-				qm_card_registry::SCardNavigationTarget Target;
-				Target.m_pTab = Entry.m_pCardTab;
-				Target.m_pStableId = Entry.m_pCardStableId;
-				NavigateToSettingsCard(Target);
-				m_Popup = POPUP_NONE;
-				SetShowStart(false);
-				SetMenuPage(PAGE_SETTINGS);
-				s_ScrollRegion.End();
-				return;
+				ColorRGBA Color = ui_token::color::TEXT_PRIMARY;
+				if(!Heading && !Span.m_Style.m_Link.empty())
+					Color = ui_token::color::ACCENT_PRIMARY;
+				else if(Block.m_Kind == qm_md::EBlockKind::QUOTE)
+					Color = ui_token::color::TEXT_TIP;
+				else if(!Heading && Span.m_Style.m_Code)
+					Color = ColorRGBA(0.85f, 0.92f, 1.0f, 0.95f);
+				else if(!Heading)
+					Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.88f);
+				if(Span.m_Style.m_Italic)
+					Color.a *= 0.85f;
+
+				if(Span.m_Style.m_Code)
+				{
+					CUIRect Chip = {X - 2.0f * UiScale, LineY, Span.m_Width + 4.0f * UiScale, LineHeight};
+					DrawRoundedSurface(Ctx, Chip, ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f), ColorRGBA(), ui_token::radius::TIGHT);
+				}
+
+				const bool Clickable = !Span.m_Style.m_Link.empty() && !Ui()->RenderOnly();
+				CTextCursor Cursor;
+				Cursor.SetPosition(vec2(X, LineY));
+				Cursor.m_FontSize = BlockFontSize;
+				Cursor.m_Flags = TEXTFLAG_RENDER;
+				TextRender()->TextColor(Color);
+				TextRender()->TextEx(&Cursor, Span.m_Text.c_str(), -1);
+				if(Span.m_Style.m_Bold)
+				{
+					// 没有独立粗体字模：同色偏移再画一次模拟加粗。
+					CTextCursor BoldCursor;
+					BoldCursor.SetPosition(vec2(X + 0.7f * UiScale, LineY));
+					BoldCursor.m_FontSize = BlockFontSize;
+					BoldCursor.m_Flags = TEXTFLAG_RENDER;
+					TextRender()->TextEx(&BoldCursor, Span.m_Text.c_str(), -1);
+				}
+				if(Clickable)
+				{
+					CUIRect LinkRect = {X, LineY, Span.m_Width, LineHeight};
+					const uint64_t LinkId = ((uint64_t)std::hash<std::string>()(Span.m_Style.m_Link) << 8) ^ (uint64_t)(uintptr_t)&Block;
+					if(Ui()->DoButtonLogic((void *)(uintptr_t)LinkId, 0, &LinkRect, BUTTONFLAG_LEFT))
+						Client()->ViewLink(Span.m_Style.m_Link.c_str());
+				}
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+				X += Span.m_Width;
 			}
+			LineY += LineHeight;
 		}
-
-		CUIRect SummaryRow, UsageRow, EntryRow;
-		EntryContent.HSplitTop(SummaryLines * BodySize * 1.5f, &SummaryRow, &EntryContent);
-		TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
-		Ui()->DoLabel(&SummaryRow, Localize(Entry.m_pSummary), BodySize, TEXTALIGN_TL, {.m_MaxWidth = TextWidth});
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-
-		EntryContent.HSplitTop(UsageLines * TipSize * 1.6f, &UsageRow, &EntryContent);
-		EntryContent.HSplitTop(EntryLines * TipSize * 1.6f, &EntryRow, &EntryContent);
-		TextRender()->TextColor(ui_token::color::TEXT_TIP);
-		char aUsage[512];
-		str_format(aUsage, sizeof(aUsage), Localize("Usage: %s"), Localize(Entry.m_pUsage));
-		Ui()->DoLabel(&UsageRow, aUsage, TipSize, TEXTALIGN_TL, {.m_MaxWidth = TextWidth});
-		Ui()->DoLabel(&EntryRow, aEntryLine, TipSize, TEXTALIGN_TL, {.m_MaxWidth = TextWidth});
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}
 	s_ScrollRegion.End();
 }

@@ -357,7 +357,26 @@ namespace
 		Sample.m_Super = Super;
 	}
 
-	SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick)
+	// 把快照中 NETOBJTYPE_CHARACTER 项按 Id 收集到 [0, MAX_CLIENTS) 槽位。
+	// CClient::SnapFindItem 内部走 CSnapshot::GetItemIndex 的线性查找（源码自带
+	// "TODO: OPT: this should not be a linear search. very bad"），逐个客户端调用会让
+	// 每个 hammer hit 事件付出上百次全表比较；这里每个快照只遍历一次。
+	// 取值语义与逐个查找一致：SnapFindItem/FindItem 返回键匹配的第一个项，这里同样保留首个匹配。
+	void QmCollectCharactersById(CGameClient *pGameClient, int SnapId, const CNetObj_Character *apOut[MAX_CLIENTS])
+	{
+		const int NumItems = pGameClient->Client()->SnapNumItems(SnapId);
+		for(int Index = 0; Index < NumItems; ++Index)
+		{
+			const IClient::CSnapItem Item = pGameClient->Client()->SnapGetItem(SnapId, Index);
+			if(Item.m_Type != NETOBJTYPE_CHARACTER || Item.m_Id >= MAX_CLIENTS)
+				continue;
+			if(apOut[Item.m_Id] == nullptr)
+				apOut[Item.m_Id] = static_cast<const CNetObj_Character *>(Item.m_pData);
+		}
+	}
+
+	SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick,
+		const CNetObj_Character *const apCurrent[MAX_CLIENTS], const CNetObj_Character *const apPrevious[MAX_CLIENTS])
 	{
 		SQmHammerAttackSample aAttackSamples[MAX_CLIENTS];
 		SQmHammerTargetSample aTargetSamples[MAX_CLIENTS];
@@ -365,8 +384,8 @@ namespace
 		int NumTargetSamples = 0;
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 		{
-			const auto *pCurrent = static_cast<const CNetObj_Character *>(pGameClient->Client()->SnapFindItem(IClient::SNAP_CURRENT, NETOBJTYPE_CHARACTER, ClientId));
-			const auto *pPrevious = static_cast<const CNetObj_Character *>(pGameClient->Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, ClientId));
+			const CNetObj_Character *pCurrent = apCurrent[ClientId];
+			const CNetObj_Character *pPrevious = apPrevious[ClientId];
 			const CGameClient::CSnapState::CCharacterInfo &Character = pGameClient->m_Snap.m_aCharacters[ClientId];
 			const int CharacterFlags = Character.m_HasExtendedData ? Character.m_ExtendedData.m_Flags : 0;
 			const bool HammerHitEnabled = (CharacterFlags & CHARACTERFLAG_HAMMER_HIT_DISABLED) == 0;
@@ -619,7 +638,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_InfoMessages, "info_messages");
 	AddComponent(&m_Chat, "chat");
 	AddComponent(&m_QmHudNotifications, "hud_notifications");
-	AddComponent(&m_QmBindStatusHud, "qm_bind_status_hud");
 	AddComponent(&m_Broadcast, "broadcast");
 	AddComponent(&m_ImportantAlert, "important_alert");
 	AddComponent(&m_DebugHud, "debug_hud");
@@ -1642,7 +1660,6 @@ void CGameClient::OnReset()
 	m_PredictedWorld.CopyWorld(&m_GameWorld);
 	m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
 	m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
-	m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
 
 	m_vSnapEntities.clear();
 
@@ -3256,9 +3273,20 @@ void CGameClient::ProcessEvents()
 
 void CGameClient::FinalizeHammerHitEvents()
 {
+	if(m_vPendingHammerHitEvents.empty())
+		return;
+
+	// 每个快照只收集一次角色项，供本快照的所有 hammer hit 事件共用；
+	// 循环体内不会修改快照（HandleConfirmedHammerHit 只动本地状态与配置），
+	// 因此指针在整个循环期间保持有效。
+	const CNetObj_Character *apCurrent[MAX_CLIENTS] = {};
+	const CNetObj_Character *apPrevious[MAX_CLIENTS] = {};
+	QmCollectCharactersById(this, IClient::SNAP_CURRENT, apCurrent);
+	QmCollectCharactersById(this, IClient::SNAP_PREV, apPrevious);
+
 	for(const SPendingHammerHitEvent &Event : m_vPendingHammerHitEvents)
 	{
-		const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick);
+		const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick, apCurrent, apPrevious);
 		bool TargetWoke = false;
 		if(Match.m_TargetId >= 0 && Match.m_TargetId < MAX_CLIENTS)
 		{
@@ -4711,9 +4739,14 @@ void CGameClient::OnPredict()
 	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
 		return;
 
-	vec2 aBeforeRender[MAX_CLIENTS];
-	for(int i = 0; i < MAX_CLIENTS; i++)
-		aBeforeRender[i] = GetSmoothPos(i);
+	// 这份「预测前位置」快照只被下面的反 ping 平滑块消费（其门控以 m_ClAntiPingSmooth 开头），
+	// 关闭该选项时无需为全部 128 个客户端各算一次 GetSmoothPos。
+	vec2 aBeforeRender[MAX_CLIENTS] = {};
+	if(g_Config.m_ClAntiPingSmooth)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+			aBeforeRender[i] = GetSmoothPos(i);
+	}
 
 	// init
 	bool Dummy = g_Config.m_ClDummy ^ m_IsDummySwapping;
@@ -4785,9 +4818,6 @@ void CGameClient::OnPredict()
 			if(pDummyChar)
 				m_aClients[m_aLocalIds[!g_Config.m_ClDummy]].m_PrevPredicted = pDummyChar->GetCore();
 		}
-
-		if(Tick == FinalTickRegular)
-			m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
 
 		// optionally allow some movement in freeze by not predicting freeze the last one to two ticks
 		if(g_Config.m_ClPredictFreeze == 2 && Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Client()->PredGameTick(g_Config.m_ClDummy) % 2 <= Tick)
@@ -5489,6 +5519,28 @@ namespace
 		}
 	}
 
+	// 0.7 侧的默认外观来自默认皮肤（data/skins7/default.json）：standard 部件 + 自身配色。
+	// 只套用无色的 standard 部件会让回退 Tee 渲染成白色，因此这里同步套用默认皮肤的部件与颜色。
+	void ApplySixupDefaultSkin(CGameClient *pGameClient, CTeeRenderInfo &Info)
+	{
+		const CSkins7::CSkin *pDefaultSkin = pGameClient->m_Skins7.FindSkin("default", false);
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		{
+			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
+			{
+				const CSkins7::CSkinPart *pPart = pDefaultSkin != nullptr ? pDefaultSkin->m_apParts[Part] : pGameClient->m_Skins7.FindDefaultSkinPart(Part);
+				if(pPart)
+					pPart->ApplyTo(Info.m_aSixup[Dummy]);
+				if(pDefaultSkin != nullptr)
+					pGameClient->m_Skins7.ApplyColorTo(Info.m_aSixup[Dummy], pDefaultSkin->m_aUseCustomColors[Part] != 0, (int)pDefaultSkin->m_aPartColors[Part], Part);
+				else
+					pGameClient->m_Skins7.ApplyColorTo(Info.m_aSixup[Dummy], false, 0, Part);
+			}
+			Info.m_aSixup[Dummy].m_HatTexture.Invalidate();
+			Info.m_aSixup[Dummy].m_BotTexture.Invalidate();
+		}
+	}
+
 	bool ApplyDefaultSkin(CGameClient *pGameClient, CTeeRenderInfo &Info)
 	{
 		if(!pGameClient)
@@ -5499,19 +5551,7 @@ namespace
 		{
 			Info.Apply(pSkin);
 		}
-
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-		{
-			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
-			{
-				const CSkins7::CSkinPart *pPart = pGameClient->m_Skins7.FindDefaultSkinPart(Part);
-				if(pPart)
-					pPart->ApplyTo(Info.m_aSixup[Dummy]);
-				pGameClient->m_Skins7.ApplyColorTo(Info.m_aSixup[Dummy], false, 0, Part);
-			}
-			Info.m_aSixup[Dummy].m_HatTexture.Invalidate();
-			Info.m_aSixup[Dummy].m_BotTexture.Invalidate();
-		}
+		ApplySixupDefaultSkin(pGameClient, Info);
 		return Info.SixDescriptorReady() || Info.SevenDescriptorReady();
 	}
 
@@ -6230,32 +6270,46 @@ IGameClient *CreateGameClient()
 	return new CGameClient();
 }
 
+void CGameClient::UpdateHookCollTargets()
+{
+	// 每渲染帧刷新一次：这些取值在两次 OnRender 之间不会变化，而模拟循环会重复读取上万次。
+	const float Intra = Client()->IntraGameTick(g_Config.m_ClDummy);
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		const CClientData &Data = m_aClients[i];
+		SHookCollTarget &Target = m_aHookCollTargets[i];
+		Target.m_Valid = Data.m_Active && m_Snap.m_aCharacters[i].m_Active;
+		Target.m_Super = Data.m_Super;
+		Target.m_Solo = Data.m_Solo;
+		Target.m_HookHitDisabled = Data.m_HookHitDisabled;
+		const CNetObj_Character &Prev = m_Snap.m_aCharacters[i].m_Prev;
+		const CNetObj_Character &Cur = m_Snap.m_aCharacters[i].m_Cur;
+		Target.m_Pos = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Cur.m_X, Cur.m_Y), Intra);
+	}
+}
+
 int CGameClient::IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, int OwnId, vec2 *pPlayerPosition)
 {
 	float Distance = 0.0f;
 	int ClosestId = -1;
 
-	const CClientData &OwnClientData = m_aClients[OwnId];
+	const SHookCollTarget &OwnTarget = m_aHookCollTargets[OwnId];
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(i == OwnId)
 			continue;
 
-		const CClientData &Data = m_aClients[i];
-
-		if(!Data.m_Active || !m_Snap.m_aCharacters[i].m_Active)
+		const SHookCollTarget &Target = m_aHookCollTargets[i];
+		if(!Target.m_Valid)
 			continue;
 
-		CNetObj_Character Prev = m_Snap.m_aCharacters[i].m_Prev;
-		CNetObj_Character Player = m_Snap.m_aCharacters[i].m_Cur;
+		const vec2 Position = Target.m_Pos;
 
-		vec2 Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), Client()->IntraGameTick(g_Config.m_ClDummy));
+		bool IsOneSuper = Target.m_Super || OwnTarget.m_Super;
+		bool IsOneSolo = Target.m_Solo || OwnTarget.m_Solo;
 
-		bool IsOneSuper = Data.m_Super || OwnClientData.m_Super;
-		bool IsOneSolo = Data.m_Solo || OwnClientData.m_Solo;
-
-		if(!IsOneSuper && (!m_Teams.SameTeam(i, OwnId) || IsOneSolo || OwnClientData.m_HookHitDisabled))
+		if(!IsOneSuper && (!m_Teams.SameTeam(i, OwnId) || IsOneSolo || OwnTarget.m_HookHitDisabled))
 			continue;
 
 		vec2 ClosestPoint;
@@ -7887,9 +7941,12 @@ std::shared_ptr<CManagedTeeRenderInfo> CGameClient::CreateManagedTeeRenderInfo(c
 	if(ShouldHideStreamerSkin(Client.ClientId()))
 	{
 		CTeeRenderInfo TeeRenderInfo;
-		TeeRenderInfo.m_Size = Client.m_RenderInfo.m_Size;
 		CSkinDescriptor SkinDescriptor;
 		BuildDefaultSkinDescriptor(SkinDescriptor);
+		// 主播模式下击杀提示、聊天栏等处的 Tee 也必须是默认皮肤（黄色），而不是空皮肤的白 Tee。
+		if(!ApplyDefaultSkin(this, TeeRenderInfo))
+			TeeRenderInfo.Reset();
+		TeeRenderInfo.m_Size = Client.m_RenderInfo.m_Size;
 		return CreateManagedTeeRenderInfo(TeeRenderInfo, SkinDescriptor);
 	}
 

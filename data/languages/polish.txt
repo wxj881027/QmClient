@@ -491,9 +491,6 @@ Adds a specific war entry
 Adds default chat binds
 == Dodaje domyślne wiązania czatu
 
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
-== Pokazuje na HUD stan klawiszy, młotka, sterowania i kopiowania kukiełki oraz własną listę statusów bindów.
-
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
 
@@ -1412,6 +1409,9 @@ Bind Wheel
 Bind Wheel Key
 == Klawisz koła wiązań
 
+Binds
+== Przypisania
+
 Bit flags for disabling settings tabs
 == Flagi bitowe do wyłączania zakładek ustawień
 
@@ -1468,6 +1468,15 @@ Both sides of keyword rules must be filled
 
 Bounce
 == Odbicie
+
+Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
+== Kolor tytułu w nawiasach: 0 = zgodnie z serwerem, 1 = jeden kolor, 2 = tęcza
+
+Bracketed title opacity (0-100)
+== Nieprzezroczystość tytułu w nawiasach (0-100)
+
+Bracketed title single color
+== Jeden kolor tytułu w nawiasach
 
 Brightness shift
 == Przesunięcie jasności
@@ -1958,6 +1967,9 @@ Collision Line Opacity
 Color
 == Kolor
 
+Color & opacity
+== Kolor i nieprzezroczystość
+
 Color of authenticated player names on scoreboard
 == Kolor nazw uwierzytelnionych graczy na tablicy wyników
 
@@ -2011,6 +2023,9 @@ Command to run when joining server
 
 Command:
 == Komenda:
+
+Commands
+== Polecenia
 
 Commands run in the console
 == Komendy uruchamiane w konsoli
@@ -2351,6 +2366,9 @@ Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
 == Nie można załadować domyślnych ustawień sterowania dotykowego z pliku. Sprawdź konsolę lokalną, aby uzyskać szczegóły.
 
+Could not load new features
+== Nie udało się wczytać nowości
+
 Could not load sponsor QR code. Check the Base64 data
 == Nie można załadować kodu QR sponsora. Sprawdź dane Base64
 
@@ -2467,12 +2485,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Niestandardowy współczynnik proporcji, przechowywany jako x100 (np. 178=16:9, 233=21:9)
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== Niestandardowe wpisy HUD stanu bind. Puste: 4 wbudowane wpisy (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy). Format: zmienna|wartość=tekst|wartość=tekst; zmienna|tekst (pokazuj, gdy niezerowe); zmienna (tylko nazwa: pokazuj nazwę, gdy niezerowa). Wpisy oddzielaj ';', pola '|'
-
-Custom bind status list
-== Lista niestandardowych stanów bind
 
 Custom colors
 == Niestandardowe kolory
@@ -3083,6 +3095,9 @@ Downloading update...
 Downscaled (0.78)
 == Pomniejszone (0.78)
 
+Draft file is empty
+== Plik roboczy jest pusty
+
 Drag HUD modules with the left mouse button
 == Przeciągaj moduły HUD lewym przyciskiem myszy
 
@@ -3206,8 +3221,8 @@ Dummy is currently connected.
 Dummy jump
 == Skok dummy
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== Przełączniki stanu blokady klawiszy/młota/sterowania dummy/synchronizacji dummy oraz lista niestandardowych stanów bind
+Dummy key/hammer/control/copy status switches
+== Przełączniki stanu blokady klawiszy/młota/sterowania dummy/synchronizacji dummy
 
 Dummy marking color
 == Kolor oznaczenia dummy
@@ -3394,9 +3409,6 @@ Emoticon shadow
 
 Emoticons
 == Emotikony
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== Puste: 4 wbudowane wpisy. Format: var|0=Off|1=On; var|Text
 
 enable
 == włącz
@@ -3674,9 +3686,6 @@ Enable skin queue rotation
 Enable skin switch animation
 == Włącz animację zmiany skórki
 
-Enable skin transition animation, then choose the type, scope, duration and easing.
-== Włącz animację zmiany skina, a następnie wybierz typ, zasięg, czas i wygładzanie.
-
 Enable smooth cinematic camera while free spectating
 == Włącz płynną kamerę filmową podczas swobodnej obserwacji
 
@@ -3767,9 +3776,6 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Włącz listę wrogów
 
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
-== Włącz animację zmiany lub przeładowania broni, a potem dostosuj zasięg, czas, obrót i wygładzanie.
-
 Enable word filter list
 == Włącz listę filtrów słów
 
@@ -3815,9 +3821,6 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == Wprowadź hasło
 
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
-== Wpisz kod sponsora i naciśnij „Zrealizuj”, następnie wpisz tytuł i naciśnij „Zapisz”. Zaznacz „Pokazuj tylko z tym nickiem”, aby przypisać tytuł do jednego nicku.
-
 Enter Username
 == Wprowadź nazwę użytkownika
 
@@ -3850,9 +3853,6 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
-
-Entry: %s
-== Gdzie znaleźć: %s
 
 Erase items on the in game background
 == Usuń elementy z tła gry
@@ -4186,6 +4186,9 @@ Folder Link
 
 Follow
 == Obserwuj
+
+Follow server
+== Zgodnie z serwerem
 
 Following
 == Obserwowany
@@ -5210,6 +5213,12 @@ Input overlay mouse scale (percent)
 Input overlay opacity (percent)
 == Nieprzezroczystość nakładki wejściowej (procent)
 
+Input overlay X position (percent)
+== Pozycja X nakładki wejściowej (procent)
+
+Input overlay Y position (percent)
+== Pozycja Y nakładki wejściowej (procent)
+
 Input smoothing
 == Wygładzanie wejścia
 
@@ -5221,9 +5230,6 @@ Insane
 
 Installing update. Please wait...
 == Instalowanie aktualizacji. Proszę czekać...
-
-Instant zoom reverse
-== Natychmiastowe odwrócenie zoomu
 
 Interface
 == Interfejs
@@ -5780,6 +5786,9 @@ Local
 Local + Dummy
 == Lokalny + kukła
 
+Local console log category filter mask (bit flags)
+== Maska filtra kategorii dziennika konsoli lokalnej (flagi bitowe)
+
 Local only
 == Tylko lokalny
 
@@ -6142,9 +6151,6 @@ Menu option - selected
 
 Merge consecutive identical player messages within 2 seconds
 == Łącz kolejne identyczne wiadomości gracza w ciągu 2 sekund
-
-Merges chat messages repeated within a short time into a single line.
-== Scala powtórzone w krótkim czasie wiadomości czatu w jedną linię.
 
 Message color
 == Kolor wiadomości
@@ -6722,6 +6728,9 @@ No matching assets.
 No matching features found. Try other keywords
 == Nie znaleziono pasujących funkcji. Spróbuj innych słów kluczowych
 
+No new features yet
+== Brak nowych funkcji
+
 No noise reduction
 == Bez redukcji szumów
 
@@ -7004,11 +7013,11 @@ Open color picker
 Open DDNet Wiki
 == Otwórz DDNet Wiki
 
-Open editor
-== Otwórz edytor
-
 Open emote selector
 == Otwórz selektor emotek
+
+Open folder
+== Otwórz folder
 
 Open map editor
 == Otwórz edytor map
@@ -7051,9 +7060,6 @@ Open the folder containing demo files
 
 Open the folder containing screenshots
 == Otwórz folder ze zrzutami ekranu
-
-Open the input overlay editor
-== Otwórz edytor nakładki wejściowej
 
 Open the saves file
 == Otwórz plik zapisów
@@ -7334,9 +7340,6 @@ Pet Skin:
 Pick result: %s
 == Wynik losowania: %s
 
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
-== Wybierz źródło zgodne z twoją aplikacją muzyczną i pozostaw ją włączoną; tekst podąży automatycznie.
-
 Pickup range
 == Zasięg podnoszenia
 
@@ -7531,9 +7534,6 @@ Players can't hook each other on this server
 
 Playing effects
 == Efekty odtwarzania
-
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
-== Odtwarza animację przy zmianie skina, także tego skradzionego młotkiem.
 
 Please add a valid cut first
 == Najpierw dodaj prawidłowe przycięcie
@@ -7820,6 +7820,18 @@ PTT release delay (ms)
 Publicly messages everyone your current time in this current running race
 == Publicznie wysyła wszystkim twój aktualny czas w bieżącym wyścigu
 
+Publish
+== Opublikuj
+
+Publish failed
+== Publikowanie nie powiodło się
+
+Published
+== Opublikowano
+
+Publishing…
+== Publikowanie…
+
 Pulse
 == Puls
 
@@ -8077,9 +8089,6 @@ Redeem
 
 Redeem your code and customize your title
 == Wykorzystaj kod i dostosuj tytuł
-
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
-== Wykorzystaj kod sponsora, aby odblokować własny tytuł. Tytuł jest widoczny na czacie i przy nicku.
 
 Reduce antiping and player prediction when frozen
 == Zmniejsz antiping i predykcję gracza podczas zamrożenia
@@ -8498,9 +8507,6 @@ Reset mouse position when opening bind wheel
 Reset position of mouse when opening bindwheel
 == Zresetuj pozycję myszy przy otwieraniu koła wiązań
 
-Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== Zresetuj qm_bind_status_items do 4 wbudowanych wpisów (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy)
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == Resetuj statystyki przy wejściu na serwer (0 = statystyki skumulowane, 1 = resetuj przy każdym wejściu)
 
@@ -8545,9 +8551,6 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == Ponawianie…
-
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
-== Natychmiastowa zmiana kierunku zoomu przeciwnym klawiszem (0=zachowaj płynny zoom)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -10061,9 +10064,6 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == Pokazuje pomoc dla polecenia r, ogólną pomoc, jeśli pozostawione puste
 
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
-== Pobiera teksty z NetEase Cloud Music, Soda Music, Kugou i QQ Music i pokazuje je na dynamicznej wyspie.
-
 Shows the credits of the DDNet mod
 == Pokazuje napisy końcowe moda DDNet
 
@@ -10102,6 +10102,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == Siła prostej redukcji szumów
+
+Single color
+== Jeden kolor
 
 Size
 == Rozmiar
@@ -10675,9 +10678,6 @@ Switch failed
 
 Switch interval
 == Interwał przełączania
-
-Switch on the status rows you need, then list the binds you want to watch.
-== Włącz potrzebne przełączniki stanu, a następnie wpisz do listy bindy, które chcesz śledzić.
 
 Switch opacity
 == Nieprzezroczystość przełącznika
@@ -11261,6 +11261,9 @@ Timer isn't displayed.
 Tiny Tee Size
 == Rozmiar małego tee
 
+Title color
+== Kolor tytułu
+
 Title server unavailable; retry
 == Serwer tytułów niedostępny; spróbuj ponownie
 
@@ -11540,9 +11543,6 @@ Tune variable to value
 Tune variable to value or show current value
 == Dostrój zmienną do wartości lub pokaż bieżącą wartość
 
-Turn on "Message merging" in Dream Features.
-== Włącz „Message merging” w „Dream Features”.
-
 Tutorial
 == Samouczek
 
@@ -11798,9 +11798,6 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == URL do pobierania skórek
 
-Usage: %s
-== Użycie: %s
-
 Usage: %s %s
 == Użycie: %s %s
 
@@ -11866,9 +11863,6 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == Użyj czułości myszy, gdy włączona jest dynamiczna kamera
-
-Use MSDF text rendering for nameplates (requires TexturedMsdf)
-== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == Użyj zamiany wieloznakowej na podstawie długości słowa
@@ -12751,9 +12745,6 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Twój kod timeout został ustawiony. Klienci 0.7 nie mogą odzyskać swoich Tee po timeout; jednak klient 0.6 może przejąć twoje Tee
-
-Your weapon slides and rotates in when you switch, and flips while reloading.
-== Broń wsuwa się z obrotem przy zmianie, a przy przeładowaniu obraca się.
 
 z = Zoom
 == z = Zoom (przybliżenie)

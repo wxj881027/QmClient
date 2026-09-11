@@ -627,6 +627,12 @@ void CRenderTools::RenderTee6(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 
 	const CSkin::CSkinTextures *pSkinTextures = pInfo->m_CustomColoredSkin ? &pInfo->m_ColorableRenderSkin : &pInfo->m_OriginalRenderSkin;
 
+	// TClient：白脚皮肤只由配置与皮肤系统状态决定，与 Pass/Filling 无关。
+	// 提到循环外解析，避免每个 Tee 每帧重复做 4 次皮肤名查找与 usage 记录。
+	const CSkin *pWhiteFeetSkin = nullptr;
+	if(g_Config.m_TcWhiteFeet && pInfo->m_CustomColoredSkin)
+		pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_TcWhiteFeetSkin);
+
 	// first pass we draw the outline
 	// second pass we draw the filling
 	for(int Pass = 0; Pass < 2; Pass++)
@@ -755,15 +761,11 @@ void CRenderTools::RenderTee6(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 						     ColorRGBA(pInfo->m_ColorFeet.r * ColorScale, pInfo->m_ColorFeet.g * ColorScale, pInfo->m_ColorFeet.b * ColorScale, Alpha));
 
 			const IGraphics::CTextureHandle *pFeetTexture = OutLine == 1 ? &pSkinTextures->m_FeetOutline : &pSkinTextures->m_Feet;
-			if(g_Config.m_TcWhiteFeet && pInfo->m_CustomColoredSkin)
+			if(pWhiteFeetSkin != nullptr)
 			{
-				const CSkin *pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_TcWhiteFeetSkin);
-				if(pWhiteFeetSkin != nullptr)
-				{
-					const IGraphics::CTextureHandle &WhiteFeetTexture = OutLine == 1 ? pWhiteFeetSkin->m_OriginalSkin.m_FeetOutline : pWhiteFeetSkin->m_OriginalSkin.m_Feet;
-					if(CTeeRenderInfo::IsDrawableTexture(WhiteFeetTexture))
-						pFeetTexture = &WhiteFeetTexture;
-				}
+				const IGraphics::CTextureHandle &WhiteFeetTexture = OutLine == 1 ? pWhiteFeetSkin->m_OriginalSkin.m_FeetOutline : pWhiteFeetSkin->m_OriginalSkin.m_Feet;
+				if(CTeeRenderInfo::IsDrawableTexture(WhiteFeetTexture))
+					pFeetTexture = &WhiteFeetTexture;
 			}
 			if(!CTeeRenderInfo::IsDrawableTexture(*pFeetTexture))
 				continue;

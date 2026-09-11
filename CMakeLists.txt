@@ -1665,11 +1665,13 @@ set(EXPECTED_DATA
   gui_icons.png
   gui_logo.png
   hud.png
-  qmclient/InputOverlay/input_overlay.json
-  qmclient/InputOverlay/mouse.json
-  qmclient/InputOverlay/mouse.png
-  qmclient/InputOverlay/wasd.json
-  qmclient/InputOverlay/wasd.png
+  "input overlay-Zac/mouse-no-movement.json"
+  "input overlay-Zac/mouse.json"
+  "input overlay-Zac/mouse.png"
+  "input overlay-Zac/wasd.json"
+  "input overlay-Zac/wasd.png"
+  "input overlay-Zac/参数.txt"
+  input_overlay.json
   languages/arabic.txt
   languages/azerbaijani.txt
   languages/belarusian.txt
@@ -1743,10 +1745,6 @@ set(EXPECTED_DATA
   qmclient/icons/qm_icons_thin_4x.png
   qmclient/icons/qm_icons_thin_msdf.json
   qmclient/icons/qm_icons_thin_msdf.png
-  qmclient/nameplate_msdf/nameplate_base_msdf.json
-  qmclient/nameplate_msdf/nameplate_base_msdf.png
-  qmclient/nameplate_msdf/nameplate_cjk_msdf.json
-  qmclient/nameplate_msdf/nameplate_cjk_msdf.png
   mapres/basic_freeze.png
   mapres/bg_cloud1.png
   mapres/bg_cloud2.png
@@ -1863,7 +1861,6 @@ set(EXPECTED_DATA
   qmclient/fonts/Rubik-Regular.ttf
   qmclient/fonts/minecraft_font.ttf
   qmclient/gui_logo.png
-  qmclient/input_overlay_editor.html
   race_flag.png
   shader/gaussian_blur.frag
   shader/gaussian_blur.vert
@@ -3036,6 +3033,7 @@ if(CLIENT)
     components/player_points.h
     components/players.cpp
     components/players.h
+    components/qm_console_log_filter.h
     components/qmclient/axiom_auto_login.cpp
     components/qmclient/axiom_auto_login.h
     components/qmclient/axiom_scores.cpp
@@ -3059,16 +3057,12 @@ if(CLIENT)
     components/qmclient/hud_notifications/hud_notifications.h
     components/qmclient/input_overlay.cpp
     components/qmclient/input_overlay.h
-    components/qmclient/input_overlay_format.cpp
-    components/qmclient/input_overlay_format.h
     components/qmclient/jelly_tee.cpp
     components/qmclient/jelly_tee.h
     components/qmclient/keyword_reply_rules.h
     components/qmclient/menus_qmclient.cpp
     components/qmclient/modes.cpp
     components/qmclient/modes.h
-    components/qmclient/nameplate_msdf/qm_nameplate_msdf_renderer.cpp
-    components/qmclient/nameplate_msdf/qm_nameplate_msdf_renderer.h
     components/qmclient/monitoring/monitoring.cpp
     components/qmclient/monitoring/monitoring_device_perf.cpp
     components/qmclient/monitoring/monitoring.h
@@ -3112,6 +3106,8 @@ if(CLIENT)
     components/qmclient/netease_hook/qm_netease_hook_provider.h
     components/qmclient/qm_bind_status_hud.cpp
     components/qmclient/qm_bind_status_hud.h
+    components/qmclient/qm_markdown.cpp
+    components/qmclient/qm_markdown.h
     components/qmclient/qm_music_hook_registry.h
     components/qmclient/qmclient.cpp
     components/qmclient/qmclient.h
@@ -3910,7 +3906,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     QmAnimTest.cpp
     QmIconAtlasTest.cpp
     QmLayoutTest.cpp
-    input_overlay_format_test.cpp
     QmUiTokensTest.cpp
     qm_card_order_model_test.cpp
     qm_card_registry_test.cpp
@@ -3962,10 +3957,12 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_bind_status_hud_test.cpp
     qm_chat_emoji_test.cpp
     qm_chat_interactions_test.cpp
+    qm_console_log_filter_test.cpp
     qm_hammer_hit_detection_test.cpp
     qm_hud_media_island_logic_test.cpp
     qm_hud_notifications_test.cpp
     qm_ime_platform_test.cpp
+    qm_markdown_test.cpp
     qm_new_ui_menu_branch_test.cpp
     qm_update_arguments_test.cpp
     netease_lyric_parser_test.cpp
@@ -3980,7 +3977,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_spotify_token_test.cpp
     qm_spotify_parser_test.cpp
     qm_modes_test.cpp
-    qm_nameplate_msdf_atlas_test.cpp
     qm_tee_hue_cycle_test.cpp
     qm_weapon_trajectory_test.cpp
     qmclient_update_version_test.cpp
@@ -4035,6 +4031,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/test/render_tee_offset_helpers.cpp
     src/game/client/components/section_loader.cpp
+    src/game/client/components/qmclient/qm_markdown.cpp
     src/game/client/components/settings_runtime_cache.cpp
     src/game/client/components/settings_resource_jobs.cpp
     src/game/client/components/settings_warmup.cpp
@@ -4086,8 +4083,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/translate/translate_parse.cpp
     src/game/client/components/qmclient/voice/voice_capture_pipeline.cpp
     src/game/client/components/qmclient/voice/voice_utils.cpp
-    src/game/client/components/qmclient/input_overlay_format.cpp
-    src/game/client/components/qmclient/input_overlay_format.h
     src/game/client/components/qmclient/qm_bind_status_hud.cpp
     src/game/client/frame_scheduler.cpp
     src/engine/client/blocklist_driver.cpp

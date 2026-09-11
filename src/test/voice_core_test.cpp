@@ -2,6 +2,7 @@
 #define CONF_TEST 1
 #include "test.h"
 
+#include <base/color.h>
 #include <base/str.h>
 #include <base/system.h>
 #include <base/vmath.h>
@@ -2368,4 +2369,71 @@ TEST(QmClient, CustomTitleLengthAndPresenceValidation)
 	EXPECT_EQ(Presences[0].m_Title, "小猫");
 	EXPECT_EQ(Presences[0].m_RemainingSeconds, 15);
 	json_value_free(pJson);
+}
+
+// 意图：默认档必须保持既有表现——名牌沿用服务器下发的彩虹样式，且本地透明度配置不生效。
+TEST(QmClient, TitleColorStyleFollowsServerByDefault)
+{
+	const unsigned PackedWhite = ColorHSLA(0.0f, 0.0f, 1.0f).Pack(false);
+	const SQmTitleColorStyle Rainbow = ResolveQmTitleColorStyle((int)EQmTitleColorMode::FOLLOW_SERVER, PackedWhite, 100, true);
+	EXPECT_EQ(Rainbow.m_Mode, EQmTitleColorMode::FOLLOW_SERVER);
+	EXPECT_TRUE(Rainbow.m_Rainbow);
+
+	const SQmTitleColorStyle Plain = ResolveQmTitleColorStyle((int)EQmTitleColorMode::FOLLOW_SERVER, PackedWhite, 30, false);
+	EXPECT_EQ(Plain.m_Mode, EQmTitleColorMode::FOLLOW_SERVER);
+	EXPECT_FALSE(Plain.m_Rainbow);
+	EXPECT_FLOAT_EQ(Plain.m_Alpha, 1.0f);
+}
+
+// 意图：单色档使用配置颜色与透明度，并且必须覆盖服务器下发的彩虹样式。
+TEST(QmClient, TitleColorStyleSingleColorCarriesConfiguredOpacity)
+{
+	const unsigned PackedColor = ColorHSLA(0.25f, 1.0f, 0.5f).Pack(false);
+	const SQmTitleColorStyle Style = ResolveQmTitleColorStyle((int)EQmTitleColorMode::SINGLE, PackedColor, 40, true);
+	EXPECT_EQ(Style.m_Mode, EQmTitleColorMode::SINGLE);
+	EXPECT_FALSE(Style.m_Rainbow);
+	EXPECT_FLOAT_EQ(Style.m_Alpha, 0.4f);
+	const ColorRGBA Expected = color_cast<ColorRGBA>(ColorHSLA(0.25f, 1.0f, 0.5f, 0.4f));
+	EXPECT_FLOAT_EQ(Style.m_Color.r, Expected.r);
+	EXPECT_FLOAT_EQ(Style.m_Color.g, Expected.g);
+	EXPECT_FLOAT_EQ(Style.m_Color.b, Expected.b);
+	EXPECT_FLOAT_EQ(Style.m_Color.a, Expected.a);
+}
+
+// 意图：彩虹档同样受透明度控制，且服务器的黑白样式不再影响结果。
+TEST(QmClient, TitleColorStyleRainbowKeepsOpacityAndDropsServerStyle)
+{
+	const unsigned PackedColor = ColorHSLA(0.6f, 1.0f, 0.5f).Pack(false);
+	for(const bool ServerRainbow : {false, true})
+	{
+		const SQmTitleColorStyle Style = ResolveQmTitleColorStyle((int)EQmTitleColorMode::RAINBOW, PackedColor, 75, ServerRainbow);
+		EXPECT_EQ(Style.m_Mode, EQmTitleColorMode::RAINBOW);
+		EXPECT_TRUE(Style.m_Rainbow);
+		EXPECT_FLOAT_EQ(Style.m_Alpha, 0.75f);
+	}
+}
+
+// 意图：越界配置不能让透明度溢出或多乘，未知模式回落到跟随服务器。
+TEST(QmClient, TitleColorStyleClampsOpacityAndUnknownMode)
+{
+	const unsigned PackedWhite = ColorHSLA(0.0f, 0.0f, 1.0f).Pack(false);
+	EXPECT_FLOAT_EQ(ResolveQmTitleColorStyle((int)EQmTitleColorMode::SINGLE, PackedWhite, -20, false).m_Alpha, 0.0f);
+	EXPECT_FLOAT_EQ(ResolveQmTitleColorStyle((int)EQmTitleColorMode::SINGLE, PackedWhite, 250, false).m_Alpha, 1.0f);
+	EXPECT_EQ(ResolveQmTitleColorStyle(99, PackedWhite, 100, false).m_Mode, EQmTitleColorMode::FOLLOW_SERVER);
+	EXPECT_EQ(ResolveQmTitleColorStyle(-1, PackedWhite, 100, false).m_Mode, EQmTitleColorMode::FOLLOW_SERVER);
+}
+
+// 意图：彩虹分色与名牌既有实现一致（0.8 饱和度 / 0.65 亮度），并独立携带透明度。
+TEST(QmClient, TitleRainbowColorMatchesLegacyNameplateRamp)
+{
+	const ColorRGBA Expected = color_cast<ColorRGBA>(ColorHSLA(2.0f / 6.0f, 0.8f, 0.65f));
+	const ColorRGBA Actual = QmTitleRainbowColor(2, 6, 1.0f);
+	EXPECT_FLOAT_EQ(Actual.r, Expected.r);
+	EXPECT_FLOAT_EQ(Actual.g, Expected.g);
+	EXPECT_FLOAT_EQ(Actual.b, Expected.b);
+	EXPECT_FLOAT_EQ(Actual.a, 1.0f);
+
+	EXPECT_FLOAT_EQ(QmTitleRainbowColor(2, 6, 0.5f).a, 0.5f);
+	EXPECT_FLOAT_EQ(QmTitleRainbowColor(2, 6, 3.0f).a, 1.0f);
+	EXPECT_FLOAT_EQ(QmTitleRainbowColor(0, 0, 1.0f).r, color_cast<ColorRGBA>(ColorHSLA(0.0f, 0.8f, 0.65f)).r);
 }

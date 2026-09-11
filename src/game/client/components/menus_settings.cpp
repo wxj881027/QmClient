@@ -36,7 +36,6 @@
 #include <game/client/components/message_gradient.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
-#include <game/client/components/qmclient/qm_bind_status_hud.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/components/qmclient/tee_color_code.h>
 #include <game/client/components/qmclient/tee_hue_cycle.h>
@@ -7484,10 +7483,50 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					LeftView.HSplitTop(LineSize, nullptr, &LeftView);
 				return Changed;
 			};
-			const float NamePlatePreviewAreaHeight = std::clamp(190.0f * AppearanceUiScale, 160.0f, 210.0f);
+			const float NamePlatePreviewMinAreaHeight = std::clamp(190.0f * AppearanceUiScale, 160.0f, 210.0f);
 			const float NamePlatePreviewControlsHeight = ResolveSettingsRowsHeight(2, LineSize, MarginSmall) + MarginSmall + AppearanceMetrics.m_ButtonHeight;
-			const float NamePlatePreviewMinCardHeight = NamePlatePreviewAreaHeight + MarginSmall + NamePlatePreviewControlsHeight;
-			AddCard(6, NamePlatePreviewMinCardHeight, [=, this](CUIRect ContentRect) mutable {
+			// 预览框高度按当前铭牌实际内容撑开：字号拉大或模块开多时，
+			// 固定框高会让铭牌与脚本体溢出到下面的控件行。
+			const auto ResolveNamePlatePreviewAreaHeight = [this, NamePlatePreviewMinAreaHeight]() {
+				return maximum(NamePlatePreviewMinAreaHeight, GameClient()->m_NamePlates.MeasurePreviewAreaHeight());
+			};
+			const auto ResolveNamePlatePreviewCardHeight = [ResolveNamePlatePreviewAreaHeight, NamePlatePreviewControlsHeight, MarginSmall](float) {
+				return ResolveNamePlatePreviewAreaHeight() + MarginSmall + NamePlatePreviewControlsHeight;
+			};
+			// 上面这组高度只在这些配置变化时才需要重算；漏项会让卡片停在旧字号上。
+			const auto ResolveNamePlatePreviewMeasureRevision = []() {
+				const int aRevisionInputs[] = {
+					g_Config.m_ClNamePlates,
+					g_Config.m_ClNamePlatesOwn,
+					g_Config.m_ClNamePlatesClan,
+					g_Config.m_ClNamePlatesFriendMark,
+					g_Config.m_ClNamePlatesIds,
+					g_Config.m_ClNamePlatesIdsSeparateLine,
+					g_Config.m_ClNamePlatesStrong,
+					g_Config.m_Debug,
+					g_Config.m_ClNamePlatesSize,
+					g_Config.m_ClNamePlatesClanSize,
+					g_Config.m_ClNamePlatesIdsSize,
+					g_Config.m_ClNamePlatesCoordsSize,
+					g_Config.m_ClDirectionSize,
+					g_Config.m_ClNamePlatesStrongSize,
+					g_Config.m_QmNameplateCoords,
+					g_Config.m_QmNameplateCoordsOwn,
+					g_Config.m_QmNameplateCoordX,
+					g_Config.m_QmNameplateCoordY,
+					g_Config.m_ClShowDirection,
+					g_Config.m_QmNameplateHookStrongWeakScope,
+					g_Config.m_QmNameplateFreeMove,
+					g_Config.m_QmNameplateFreeMoveX,
+					g_Config.m_QmNameplateFreeMoveY,
+					g_Config.m_ClDummy,
+				};
+				uint64_t Revision = 1469598103934665603ull;
+				for(const int Input : aRevisionInputs)
+					Revision = (Revision ^ static_cast<uint64_t>(static_cast<uint32_t>(Input))) * 1099511628211ull;
+				return Revision;
+			};
+			AddMeasuredCard(6, ResolveNamePlatePreviewCardHeight, [=, this](CUIRect ContentRect) mutable {
 				CUIRect RightView = ContentRect;
 				CUIRect PreviewArea, Controls;
 				RightView.HSplitBottom(NamePlatePreviewControlsHeight, &PreviewArea, &Controls);
@@ -7531,9 +7570,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					g_Config.m_QmNameplateNameOffsetY = 0;
 				}
 				int Dummy = g_Config.m_ClDummy != (m_DummyNamePlatePreview ? 1 : 0);
-				const vec2 Position = PreviewArea.Center();
-				GameClient()->m_NamePlates.RenderNamePlatePreview(Position, Dummy);
-			});
+				GameClient()->m_NamePlates.RenderNamePlatePreview(PreviewArea, Dummy); }, ResolveNamePlatePreviewMeasureRevision());
 		}
 		else if(m_AppearanceSettingsTab == APPEARANCE_TAB_HOOK_COLLISION)
 		{

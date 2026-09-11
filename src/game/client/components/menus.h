@@ -20,6 +20,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmIslandNotice.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
@@ -2258,8 +2259,8 @@ public:
 	std::array<CUIElement, SETTINGS_LENGTH> m_aSettingsTabLabelElements;
 	std::array<const char *, SETTINGS_LENGTH> m_apSettingsTabs{};
 	int m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
-	// 启动赞助提醒（灵动岛）已显示时长，用于 5 秒后自动收回。
-	float m_QmSponsorNudgeElapsed = 0.0f;
+	// 启动赞助提醒（灵动岛）的生命周期：入场 → 完全展开后倒计时 → 收缩成黑球再上滑。
+	qm_island::SNoticeState m_QmSponsorNudgeNotice;
 	bool m_QmNewFeaturesScrollReset = true;
 	int m_TClientSettingsTab = 0;
 	int m_AppearanceSettingsTab = APPEARANCE_TAB_HUD;
@@ -2826,7 +2827,7 @@ private:
 	void RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 	void RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudSpeedrunTimerContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-	void RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	void RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float LineSpacing);
 	void RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);

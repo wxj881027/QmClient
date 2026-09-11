@@ -2576,6 +2576,54 @@ turkish = "Sekme"
 polish = "Odbicie"
 
 [[message]]
+key = "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow"
+[message.translations]
+simplified_chinese = "方括号头衔颜色：0 = 跟随服务器，1 = 单色，2 = 彩虹"
+traditional_chinese = "方括號頭銜顏色：0 = 跟隨伺服器，1 = 單色，2 = 彩虹"
+japanese = "括弧内の称号の色：0 = サーバーに従う、1 = 単色、2 = 虹色"
+korean = "대괄호 칭호 색상: 0 = 서버 설정 따르기, 1 = 단색, 2 = 무지개"
+russian = "Цвет титула в скобках: 0 = как на сервере, 1 = один цвет, 2 = радуга"
+german = "Farbe des Titels in Klammern: 0 = Server folgen, 1 = einfarbig, 2 = Regenbogen"
+spanish = "Color del título entre corchetes: 0 = seguir al servidor, 1 = color único, 2 = arcoíris"
+french = "Couleur du titre entre crochets : 0 = suivre le serveur, 1 = couleur unique, 2 = arc-en-ciel"
+brazilian_portuguese = "Cor do título entre colchetes: 0 = seguir o servidor, 1 = cor única, 2 = arco-íris"
+portuguese = "Cor do título entre parênteses retos: 0 = seguir o servidor, 1 = cor única, 2 = arco-íris"
+turkish = "Köşeli parantezli unvan rengi: 0 = sunucuyu takip et, 1 = tek renk, 2 = gökkuşağı"
+polish = "Kolor tytułu w nawiasach: 0 = zgodnie z serwerem, 1 = jeden kolor, 2 = tęcza"
+
+[[message]]
+key = "Bracketed title opacity (0-100)"
+[message.translations]
+simplified_chinese = "方括号头衔不透明度（0-100）"
+traditional_chinese = "方括號頭銜不透明度（0-100）"
+japanese = "括弧内の称号の不透明度 (0-100)"
+korean = "대괄호 칭호 불투명도 (0-100)"
+russian = "Прозрачность титула в скобках (0-100)"
+german = "Deckkraft des Titels in Klammern (0-100)"
+spanish = "Opacidad del título entre corchetes (0-100)"
+french = "Opacité du titre entre crochets (0-100)"
+brazilian_portuguese = "Opacidade do título entre colchetes (0-100)"
+portuguese = "Opacidade do título entre parênteses retos (0-100)"
+turkish = "Köşeli parantezli unvan opaklığı (0-100)"
+polish = "Nieprzezroczystość tytułu w nawiasach (0-100)"
+
+[[message]]
+key = "Bracketed title single color"
+[message.translations]
+simplified_chinese = "方括号头衔单色"
+traditional_chinese = "方括號頭銜單色"
+japanese = "括弧内の称号の単色"
+korean = "대괄호 칭호 단색"
+russian = "Один цвет для титула в скобках"
+german = "Einfarbig für Titel in Klammern"
+spanish = "Color único del título entre corchetes"
+french = "Couleur unique du titre entre crochets"
+brazilian_portuguese = "Cor única do título entre colchetes"
+portuguese = "Cor única do título entre parênteses retos"
+turkish = "Köşeli parantezli unvan tek renk"
+polish = "Jeden kolor tytułu w nawiasach"
+
+[[message]]
 key = "Brightness shift"
 [message.translations]
 simplified_chinese = "明暗切换"
@@ -3470,6 +3518,22 @@ brazilian_portuguese = "Transparência das linhas de colisão"
 portuguese = "Opacidade das linhas de volume de colisão"
 turkish = "Çarpışma hacmi çizgi şeffaflığı"
 polish = "Przezroczystość linii obszarów kolizji"
+
+[[message]]
+key = "Color & opacity"
+[message.translations]
+simplified_chinese = "颜色与透明度"
+traditional_chinese = "顏色與透明度"
+japanese = "色と不透明度"
+korean = "색상 및 불투명도"
+russian = "Цвет и прозрачность"
+german = "Farbe und Deckkraft"
+spanish = "Color y opacidad"
+french = "Couleur et opacité"
+brazilian_portuguese = "Cor e opacidade"
+portuguese = "Cor e opacidade"
+turkish = "Renk ve opaklık"
+polish = "Kolor i nieprzezroczystość"
 
 [[message]]
 key = "Combo"
@@ -6734,6 +6798,22 @@ brazilian_portuguese = "Cor do console para palavras bloqueadas"
 portuguese = "Cor da consola para palavras bloqueadas"
 turkish = "Engellenen Kelime Konsol Rengi"
 polish = "Kolor konsoli dla zablokowanych słów"
+
+[[message]]
+key = "Follow server"
+[message.translations]
+simplified_chinese = "跟随服务器"
+traditional_chinese = "跟隨伺服器"
+japanese = "サーバーに従う"
+korean = "서버 설정 따르기"
+russian = "Как на сервере"
+german = "Server folgen"
+spanish = "Seguir al servidor"
+french = "Suivre le serveur"
+brazilian_portuguese = "Seguir o servidor"
+portuguese = "Seguir o servidor"
+turkish = "Sunucuyu takip et"
+polish = "Zgodnie z serwerem"
 
 [[message]]
 key = "Font size"
@@ -10046,6 +10126,22 @@ brazilian_portuguese = "Concorrência padrão de tradução do LLM (ajuste intel
 portuguese = "Número predefinido de traduções LLM simultâneas (ajuste inteligente)"
 turkish = "LLM çeviri varsayılan eşzamanlılık sayısı (akıllı ayarlama)"
 polish = "Domyślna liczba jednoczesnych tłumaczeń LLM (inteligentne dostosowanie)"
+
+[[message]]
+key = "Local console log category filter mask (bit flags)"
+[message.translations]
+simplified_chinese = "本地控制台日志分类过滤掩码（位标志）"
+traditional_chinese = "本地控制台日誌分類過濾遮罩（位元標誌）"
+japanese = "ローカルコンソールのログ分類フィルターマスク（ビットフラグ）"
+korean = "로컬 콘솔 로그 분류 필터 마스크(비트 플래그)"
+russian = "Маска фильтра категорий логов локальной консоли (битовые флаги)"
+german = "Filtermaske für Log-Kategorien der lokalen Konsole (Bitflags)"
+spanish = "Máscara de filtro de categorías del registro de la consola local (indicadores de bits)"
+french = "Masque de filtre des catégories de journal de la console locale (indicateurs binaires)"
+brazilian_portuguese = "Máscara de filtro de categorias do log da consola local (sinalizadores de bits)"
+portuguese = "Máscara de filtro de categorias de registo da consola local (sinalizadores de bits)"
+turkish = "Yerel konsol günlük kategori filtresi maskesi (bit bayrakları)"
+polish = "Maska filtra kategorii dziennika konsoli lokalnej (flagi bitowe)"
 
 [[message]]
 key = "Local + Dummy"
@@ -17856,6 +17952,22 @@ turkish = "Basit gürültü azaltma gücü"
 polish = "Siła prostej redukcji szumów"
 
 [[message]]
+key = "Single color"
+[message.translations]
+simplified_chinese = "单色"
+traditional_chinese = "單色"
+japanese = "単色"
+korean = "단색"
+russian = "Один цвет"
+german = "Einfarbig"
+spanish = "Color único"
+french = "Couleur unique"
+brazilian_portuguese = "Cor única"
+portuguese = "Cor única"
+turkish = "Tek renk"
+polish = "Jeden kolor"
+
+[[message]]
 key = "Skin list sort mode (0=Name, 1=Release date)"
 [message.translations]
 simplified_chinese = "皮肤列表排序模式（0=名称，1=发布时间）"
@@ -20078,6 +20190,22 @@ brazilian_portuguese = "O temporizador não está exibido."
 portuguese = "O temporizador não está exibido."
 turkish = "Zamanlayıcı görüntülenmiyor."
 polish = "Licznik czasu nie jest wyświetlany."
+
+[[message]]
+key = "Title color"
+[message.translations]
+simplified_chinese = "头衔颜色"
+traditional_chinese = "頭銜顏色"
+japanese = "称号の色"
+korean = "칭호 색상"
+russian = "Цвет титула"
+german = "Titelfarbe"
+spanish = "Color del título"
+french = "Couleur du titre"
+brazilian_portuguese = "Cor do título"
+portuguese = "Cor do título"
+turkish = "Unvan rengi"
+polish = "Kolor tytułu"
 
 [[message]]
 key = "To save all players in your team have to be alive and not in '/spec'"
@@ -26391,38 +26519,6 @@ turkish = "ZIP yolu"
 polish = "Ścieżka ZIP"
 
 [[message]]
-key = "Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'"
-[message.translations]
-simplified_chinese = "自定义 bind 状态 HUD 条目。为空时使用内置四项（卡键/锤子/分身控制/分身同步）。格式：变量名|状态值=文本|状态值=文本；变量名|文本（非零时显示）；变量名（仅填变量名时非零显示变量名本身）。条目用 ';' 分隔，字段用 '|' 分隔"
-traditional_chinese = "自訂 bind 狀態 HUD 條目。為空時使用內建四項（卡鍵/錘子/分控/同步）。格式：變數名|狀態值=文字|狀態值=文字；變數名|文字（非零時顯示）；變數名（僅填變數名時非零顯示變數名本身）。條目用 ';' 分隔，欄位用 '|' 分隔"
-japanese = "カスタム bind 状態 HUD エントリ。空の場合は組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）。形式：変数名|状態値=テキスト|状態値=テキスト；変数名|テキスト（非ゼロ時に表示）；変数名（変数名のみの場合は非ゼロ時に変数名を表示）。エントリは ';' で、フィールドは '|' で区切る"
-korean = "사용자 지정 bind 상태 HUD 항목입니다. 비어 있으면 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)을 사용합니다. 형식: 변수명|상태값=텍스트|상태값=텍스트; 변수명|텍스트(0이 아닐 때 표시); 변수명(변수명만 입력 시 0이 아닐 때 변수명 표시). 항목은 ';', 필드는 '|'로 구분합니다"
-russian = "Пользовательские элементы HUD состояния bind. Пусто — встроенные 4 элемента (фиксация клавиш/молот/управление дамми/синхронизация дамми). Формат: переменная|значение=текст|значение=текст; переменная|текст (показывать при ненулевом значении); переменная (только имя переменной — показывать имя при ненулевом значении). Элементы разделяются ';', поля — '|'"
-german = "Benutzerdefinierte Bind-Status-HUD-Einträge. Leer: die 4 integrierten Einträge (Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation). Format: Variable|Wert=Text|Wert=Text; Variable|Text (bei ungleich 0 anzeigen); Variable (nur Variablenname: bei ungleich 0 den Namen anzeigen). Einträge durch ';' trennen, Felder durch '|'"
-spanish = "Entradas de HUD de estado de bind personalizadas. Vacío: las 4 entradas integradas (fijación de teclas/martillo/control de dummy/sincronización de dummy). Formato: variable|valor=texto|valor=texto; variable|texto (se muestra si no es cero); variable (solo nombre: se muestra el nombre si no es cero). Entradas separadas por ';', campos por '|'"
-french = "Entrées HUD d'état de bind personnalisées. Vide : les 4 entrées intégrées (blocage des touches/marteau/contrôle du dummy/synchronisation du dummy). Format : variable|valeur=texte|valeur=texte ; variable|texte (affiché si non nul) ; variable (nom seul : affiché si non nul). Entrées séparées par ';', champs par '|'"
-brazilian_portuguese = "Entradas de HUD de estado de bind personalizadas. Vazio: as 4 entradas integradas (fixação de teclas/martelo/controle do dummy/sincronização do dummy). Formato: variável|valor=texto|valor=texto; variável|texto (exibido quando diferente de zero); variável (apenas nome: exibe o nome quando diferente de zero). Entradas separadas por ';', campos por '|'"
-portuguese = "Entradas de HUD de estado de bind personalizadas. Vazio: as 4 entradas integradas (fixação de teclas/martelo/controlo do dummy/sincronização do dummy). Formato: variável|valor=texto|valor=texto; variável|texto (exibido quando diferente de zero); variável (apenas nome: exibe o nome quando diferente de zero). Entradas separadas por ';', campos por '|'"
-turkish = "Özel bind durumu HUD girdileri. Boş: yerleşik 4 girdi (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu). Biçim: değişken|değer=metin|değer=metin; değişken|metin (sıfır değilken göster); değişken (yalnızca ad: sıfır değilken adı göster). Girdiler ';' ile, alanlar '|' ile ayrılır"
-polish = "Niestandardowe wpisy HUD stanu bind. Puste: 4 wbudowane wpisy (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy). Format: zmienna|wartość=tekst|wartość=tekst; zmienna|tekst (pokazuj, gdy niezerowe); zmienna (tylko nazwa: pokazuj nazwę, gdy niezerowa). Wpisy oddzielaj ';', pola '|'"
-
-[[message]]
-key = "Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)"
-[message.translations]
-simplified_chinese = "将 qm_bind_status_items 重置为内置四项（卡键/锤子/分身控制/分身同步）"
-traditional_chinese = "將 qm_bind_status_items 重置為內建四項（卡鍵/錘子/分身控制/分身同步）"
-japanese = "qm_bind_status_items を組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）にリセット"
-korean = "qm_bind_status_items를 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)으로 재설정"
-russian = "Сбросить qm_bind_status_items к встроенным 4 элементам (фиксация клавиш/молот/управление дамми/синхронизация дамми)"
-german = "qm_bind_status_items auf die 4 integrierten Einträge zurücksetzen (Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation)"
-spanish = "Restablecer qm_bind_status_items a las 4 entradas integradas (fijación de teclas/martillo/control de dummy/sincronización de dummy)"
-french = "Réinitialiser qm_bind_status_items aux 4 entrées intégrées (blocage des touches/marteau/contrôle du dummy/synchronisation du dummy)"
-brazilian_portuguese = "Redefinir qm_bind_status_items para as 4 entradas integradas (fixação de teclas/martelo/controle do dummy/sincronização do dummy)"
-portuguese = "Repor qm_bind_status_items para as 4 entradas integradas (fixação de teclas/martelo/controlo do dummy/sincronização do dummy)"
-turkish = "qm_bind_status_items öğesini yerleşik 4 girdiye sıfırla (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu)"
-polish = "Zresetuj qm_bind_status_items do 4 wbudowanych wpisów (blokada klawiszy/młot/sterowanie dummy/synchronizacja dummy)"
-
-[[message]]
 key = "Show key stuck status"
 [message.translations]
 simplified_chinese = "显示卡键状态"
@@ -26487,38 +26583,6 @@ turkish = "Dummy senkronizasyon durumunu göster"
 polish = "Pokaż status synchronizacji kukły"
 
 [[message]]
-key = "Custom bind status list"
-[message.translations]
-simplified_chinese = "自定义 bind 状态列表"
-traditional_chinese = "自訂 bind 狀態列表"
-japanese = "カスタム bind 状態リスト"
-korean = "사용자 지정 bind 상태 목록"
-russian = "Список пользовательских bind-статусов"
-german = "Benutzerdefinierte Bind-Status-Liste"
-spanish = "Lista de estado de bind personalizada"
-french = "Liste des états de bind personnalisés"
-brazilian_portuguese = "Lista de estado de bind personalizada"
-portuguese = "Lista de estado de bind personalizada"
-turkish = "Özel bind durumu listesi"
-polish = "Lista niestandardowych stanów bind"
-
-[[message]]
-key = "Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text"
-[message.translations]
-simplified_chinese = "为空时使用内置四项。格式：var|0=Off|1=On；var|Text"
-traditional_chinese = "為空時使用內建四項。格式：var|0=Off|1=On；var|Text"
-japanese = "空の場合は組み込みの4項目。形式：var|0=Off|1=On；var|Text"
-korean = "비어 있으면 내장 4개 항목. 형식: var|0=Off|1=On; var|Text"
-russian = "Пусто — встроенные 4 элемента. Формат: var|0=Off|1=On; var|Text"
-german = "Leer: die 4 integrierten Einträge. Format: var|0=Off|1=On; var|Text"
-spanish = "Vacío: las 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
-french = "Vide : les 4 entrées intégrées. Format : var|0=Off|1=On ; var|Text"
-brazilian_portuguese = "Vazio: as 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
-portuguese = "Vazio: as 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
-turkish = "Boş: yerleşik 4 girdi. Biçim: var|0=Off|1=On; var|Text"
-polish = "Puste: 4 wbudowane wpisy. Format: var|0=Off|1=On; var|Text"
-
-[[message]]
 key = "DDRace HUD Pro"
 [message.translations]
 simplified_chinese = 'DDRace HUD Pro'
@@ -26535,20 +26599,20 @@ turkish = 'DDRace HUD Pro（dummy durumu）'
 polish = 'DDRace HUD Pro（status dummy）'
 
 [[message]]
-key = "Dummy key/hammer/control/copy status switches and custom bind status list"
+key = "Dummy key/hammer/control/copy status switches"
 [message.translations]
-simplified_chinese = '卡键/锤子/分身控制/分身同步状态开关，以及自定义 bind 状态列表'
-traditional_chinese = '卡鍵/錘子/分身控制/分身同步狀態開關，以及自訂 bind 狀態列表'
-japanese = 'キー固定/ハンマー/分身操作/分身同期の状態スイッチとカスタム bind 状態リスト'
-korean = '키 고정/해머/분신 조작/분신 동기화 상태 스위치와 사용자 지정 bind 상태 목록'
-russian = 'Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми и пользовательский список состояния bind'
-german = 'Status-Schalter für Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation und benutzerdefinierte Bind-Status-Liste'
-spanish = 'Interruptores de estado de fijación de teclas/martillo/control de dummy/sincronización de dummy y lista de estado de bind personalizada'
-french = "Interrupteurs d'état de blocage des touches/marteau/contrôle du dummy/synchronisation du dummy et liste d'états de bind personnalisés"
-brazilian_portuguese = 'Interruptores de estado de fixação de teclas/martelo/controle do dummy/sincronização do dummy e lista de estado de bind personalizada'
-portuguese = 'Interruptores de estado de fixação de teclas/martelo/controlo do dummy/sincronização do dummy e lista de estado de bind personalizada'
-turkish = 'Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları ve özel bind durumu listesi'
-polish = 'Przełączniki stanu blokady klawiszy/młota/sterowania dummy/synchronizacji dummy oraz lista niestandardowych stanów bind'
+simplified_chinese = '卡键/锤子/分身控制/分身同步状态开关'
+traditional_chinese = '卡鍵/錘子/分身控制/分身同步狀態開關'
+japanese = 'キー固定/ハンマー/分身操作/分身同期の状態スイッチ'
+korean = '키 고정/해머/분신 조작/분신 동기화 상태 스위치'
+russian = 'Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми'
+german = 'Status-Schalter für Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation'
+spanish = 'Interruptores de estado de fijación de teclas/martillo/control de dummy/sincronización de dummy'
+french = "Interrupteurs d'état de blocage des touches/marteau/contrôle du dummy/synchronisation du dummy"
+brazilian_portuguese = 'Interruptores de estado de fixação de teclas/martelo/controle do dummy/sincronização do dummy'
+portuguese = 'Interruptores de estado de fixação de teclas/martelo/controlo do dummy/sincronização do dummy'
+turkish = 'Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları'
+polish = 'Przełączniki stanu blokady klawiszy/młota/sterowania dummy/synchronizacji dummy'
 
 [[message]]
 key = "Sponsor title"
@@ -26855,38 +26919,6 @@ turkish = "Kullan"
 polish = "Wykorzystaj"
 
 [[message]]
-key = "Instant zoom reverse"
-[message.translations]
-simplified_chinese = "反向缩放立即生效"
-traditional_chinese = "反向縮放立即生效"
-japanese = "ズームの逆方向操作を即時反映"
-korean = "줌 반전 즉시 적용"
-russian = "Мгновенный разворот зума"
-german = "Zoomrichtung sofort umkehren"
-spanish = "Inversión de zoom inmediata"
-french = "Inversion du zoom immédiate"
-brazilian_portuguese = "Inversão de zoom imediata"
-portuguese = "Inversão do zoom imediata"
-turkish = "Zoom yönünü anında çevir"
-polish = "Natychmiastowe odwrócenie zoomu"
-
-[[message]]
-key = "Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)"
-[message.translations]
-simplified_chinese = "反向按键时立即反向缩放（0=保留原有平滑缩放）"
-traditional_chinese = "反向按鍵時立即反向縮放（0=保留原有平滑縮放）"
-japanese = "逆方向キーでズームを即座に反転（0=元の滑らかなズームを維持）"
-korean = "반대 줌 키를 누르면 즉시 방향 전환 (0=기존 부드러운 줌 유지)"
-russian = "Мгновенно менять направление зума при нажатии противоположной клавиши (0=оставить прежний плавный зум)"
-german = "Zoomrichtung beim Drücken der Gegentaste sofort umkehren (0=ursprüngliches weiches Zoomen beibehalten)"
-spanish = "Invertir el zoom al instante al pulsar la tecla opuesta (0=mantener el zoom suave original)"
-french = "Inverser le zoom instantanément avec la touche opposée (0=garder le zoom fluide d'origine)"
-brazilian_portuguese = "Inverter o zoom na hora ao apertar a tecla oposta (0=manter o zoom suave original)"
-portuguese = "Inverter o zoom de imediato ao premir a tecla oposta (0=manter o zoom suave original)"
-turkish = "Karşı zoom tuşuna basınca yönü anında çevir (0=özgün yumuşak zoom korunur)"
-polish = "Natychmiastowa zmiana kierunku zoomu przeciwnym klawiszem (0=zachowaj płynny zoom)"
-
-[[message]]
 key = "New features"
 [message.translations]
 simplified_chinese = "新功能"
@@ -26917,230 +26949,6 @@ brazilian_portuguese = "Abrir configurações"
 portuguese = "Abrir definições"
 turkish = "Ayarları aç"
 polish = "Otwórz ustawienia"
-
-[[message]]
-key = "Usage: %s"
-[message.translations]
-simplified_chinese = "用法：%s"
-traditional_chinese = "用法：%s"
-japanese = "使い方：%s"
-korean = "사용법: %s"
-russian = "Использование: %s"
-german = "Verwendung: %s"
-spanish = "Uso: %s"
-french = "Utilisation : %s"
-brazilian_portuguese = "Como usar: %s"
-portuguese = "Como usar: %s"
-turkish = "Kullanım: %s"
-polish = "Użycie: %s"
-
-[[message]]
-key = "Entry: %s"
-[message.translations]
-simplified_chinese = "入口：%s"
-traditional_chinese = "入口：%s"
-japanese = "場所：%s"
-korean = "위치: %s"
-russian = "Где найти: %s"
-german = "Fundort: %s"
-spanish = "Ubicación: %s"
-french = "Emplacement : %s"
-brazilian_portuguese = "Onde encontrar: %s"
-portuguese = "Onde encontrar: %s"
-turkish = "Konum: %s"
-polish = "Gdzie znaleźć: %s"
-
-[[message]]
-key = "Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate."
-[message.translations]
-simplified_chinese = "使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。"
-traditional_chinese = "使用贊助兌換碼解鎖自訂稱號，稱號會顯示在聊天與名牌上。"
-japanese = "スポンサーコードを引き換えるとカスタム称号を解除できます。称号はチャットとネームプレートに表示されます。"
-korean = "후원 코드를 등록하면 사용자 지정 칭호를 사용할 수 있습니다. 칭호는 채팅과 이름표에 표시됩니다."
-russian = "Активируйте спонсорский код, чтобы получить свой титул. Титул отображается в чате и на табличке имени."
-german = "Löse deinen Sponsor-Code ein, um einen eigenen Titel freizuschalten. Der Titel erscheint im Chat und am Namensschild."
-spanish = "Canjea tu código de patrocinador para desbloquear un título personalizado. El título se muestra en el chat y en la placa de nombre."
-french = "Échangez votre code de sponsor pour débloquer un titre personnalisé. Le titre s'affiche dans le chat et sur la plaque de nom."
-brazilian_portuguese = "Resgate seu código de patrocinador para liberar um título personalizado. O título aparece no chat e na placa de nome."
-portuguese = "Resgate o seu código de patrocinador para desbloquear um título personalizado. O título aparece no chat e na placa de nome."
-turkish = "Özel bir unvan açmak için sponsor kodunu kullan. Unvan sohbette ve isim etiketinde görünür."
-polish = "Wykorzystaj kod sponsora, aby odblokować własny tytuł. Tytuł jest widoczny na czacie i przy nicku."
-
-[[message]]
-key = "Enter the sponsor code, press Redeem, then write the title and press Save. Tick \"Only show with this nickname\" to bind it to one nickname."
-[message.translations]
-simplified_chinese = "填入赞助兑换码并点「兑换」，写下称号后点「保存」。勾选「仅在指定昵称下显示」可把称号绑定到某一个昵称。"
-traditional_chinese = "填入贊助兌換碼並點「兌換」，寫下稱號後點「儲存」。勾選「僅在指定暱稱下顯示」可把稱號綁定到某一個暱稱。"
-japanese = "スポンサーコードを入力して「引き換える」を押し、称号を書いて「保存」を押します。「このニックネームのみ表示」を有効にすると1つのニックネームに紐付けられます。"
-korean = "후원 코드를 입력하고 \"등록\"을 누른 뒤 칭호를 작성하고 \"저장\"을 누르세요. \"이 닉네임에서만 표시\"를 켜면 하나의 닉네임에만 연결됩니다."
-russian = "Введите спонсорский код и нажмите «Активировать», затем впишите титул и нажмите «Сохранить». Включите «Показывать только с этим ником», чтобы привязать титул к одному нику."
-german = "Gib den Sponsor-Code ein und drücke „Einlösen“, schreibe dann den Titel und drücke „Speichern“. Aktiviere „Nur mit diesem Nicknamen anzeigen“, um den Titel an einen Nicknamen zu binden."
-spanish = "Introduce el código de patrocinador y pulsa «Canjear», escribe el título y pulsa «Guardar». Activa «Mostrar solo con este apodo» para vincularlo a un apodo."
-french = "Saisissez le code de sponsor et cliquez sur « Échanger », écrivez le titre puis cliquez sur « Enregistrer ». Cochez « Afficher uniquement avec ce pseudo » pour le lier à un seul pseudo."
-brazilian_portuguese = "Insira o código de patrocinador e clique em \"Resgatar\", escreva o título e clique em \"Salvar\". Marque \"Mostrar apenas com este apelido\" para vinculá-lo a um apelido."
-portuguese = "Introduza o código de patrocinador e clique em «Resgatar», escreva o título e clique em «Guardar». Ative «Mostrar apenas com este nick» para o associar a um nick."
-turkish = "Sponsor kodunu gir ve \"Kullan\" düğmesine bas, ardından unvanı yaz ve \"Kaydet\"e bas. Tek bir takma ada bağlamak için \"Yalnızca bu takma adla göster\" seçeneğini işaretle."
-polish = "Wpisz kod sponsora i naciśnij „Zrealizuj”, następnie wpisz tytuł i naciśnij „Zapisz”. Zaznacz „Pokazuj tylko z tym nickiem”, aby przypisać tytuł do jednego nicku."
-
-[[message]]
-key = "Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list."
-[message.translations]
-simplified_chinese = "在 HUD 上显示分身的按键、锤子、控制与同步状态，并支持自定义 bind 状态列表。"
-traditional_chinese = "在 HUD 上顯示分身的按鍵、錘子、控制與同步狀態，並支援自訂 bind 狀態清單。"
-japanese = "分身のキー、ハンマー、コントロール、コピー状態をHUDに表示し、独自のbind状態リストも使えます。"
-korean = "더미의 키, 해머, 컨트롤, 복사 상태를 HUD에 표시하고 사용자 지정 bind 상태 목록도 지원합니다."
-russian = "Показывает на HUD состояние клавиш, молота, управления и копирования у дамми, а также свой список bind-статусов."
-german = "Zeigt Tasten-, Hammer-, Steuer- und Kopierstatus des Dummys im HUD, plus eine eigene Bind-Status-Liste."
-spanish = "Muestra en el HUD el estado de teclas, martillo, control y copia del dummy, además de tu propia lista de binds."
-french = "Affiche dans le HUD l'état des touches, du marteau, du contrôle et de la copie du dummy, plus votre liste de binds."
-brazilian_portuguese = "Mostra no HUD o estado de teclas, martelo, controle e cópia do dummy, além da sua própria lista de binds."
-portuguese = "Mostra no HUD o estado de teclas, martelo, controlo e cópia do dummy, além da sua própria lista de binds."
-turkish = "HUD'da kukla tuş, çekiç, kontrol ve kopyalama durumunu ve kendi bind durum listesini gösterir."
-polish = "Pokazuje na HUD stan klawiszy, młotka, sterowania i kopiowania kukiełki oraz własną listę statusów bindów."
-
-[[message]]
-key = "Switch on the status rows you need, then list the binds you want to watch."
-[message.translations]
-simplified_chinese = "打开需要的状态开关，再在自定义列表里填想监控的 bind。"
-traditional_chinese = "開啟需要的狀態開關，再在自訂清單裡填想監控的 bind。"
-japanese = "必要な状態スイッチをオンにし、監視したいbindをカスタムリストに入力します。"
-korean = "필요한 상태 스위치를 켜고, 감시할 bind를 사용자 지정 목록에 입력하세요."
-russian = "Включите нужные переключатели состояний и укажите bind-команды для отслеживания в своём списке."
-german = "Schalte die benötigten Status-Schalter ein und trage die zu überwachenden Binds in die eigene Liste ein."
-spanish = "Activa los interruptores de estado que necesites y añade a la lista los binds que quieras vigilar."
-french = "Activez les interrupteurs d'état nécessaires, puis listez les binds à surveiller."
-brazilian_portuguese = "Ative os interruptores de estado que precisar e liste os binds que deseja acompanhar."
-portuguese = "Ative os interruptores de estado necessários e liste os binds que quer acompanhar."
-turkish = "Gereken durum anahtarlarını aç, ardından izlemek istediğin bind'leri listeye ekle."
-polish = "Włącz potrzebne przełączniki stanu, a następnie wpisz do listy bindy, które chcesz śledzić."
-
-[[message]]
-key = "Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island."
-[message.translations]
-simplified_chinese = "从网易云音乐、汽水音乐、酷狗、QQ 音乐获取歌词，并显示在灵动岛上。"
-traditional_chinese = "從網易雲音樂、汽水音樂、酷狗、QQ 音樂取得歌詞，並顯示在靈動島上。"
-japanese = "NetEase Cloud Music、Soda Music、Kugou、QQ Musicの歌詞を取得し、ダイナミックアイランドに表示します。"
-korean = "NetEase Cloud Music, Soda Music, Kugou, QQ Music의 가사를 가져와 다이내믹 아일랜드에 표시합니다."
-russian = "Получает текст песен из NetEase Cloud Music, Soda Music, Kugou и QQ Music и показывает его на динамическом острове."
-german = "Holt Songtexte aus NetEase Cloud Music, Soda Music, Kugou und QQ Music und zeigt sie auf der Dynamic Island."
-spanish = "Obtiene la letra de NetEase Cloud Music, Soda Music, Kugou y QQ Music y la muestra en la isla dinámica."
-french = "Récupère les paroles de NetEase Cloud Music, Soda Music, Kugou et QQ Music et les affiche sur l'île dynamique."
-brazilian_portuguese = "Obtém a letra do NetEase Cloud Music, Soda Music, Kugou e QQ Music e mostra na ilha dinâmica."
-portuguese = "Obtém a letra do NetEase Cloud Music, Soda Music, Kugou e QQ Music e mostra-a na ilha dinâmica."
-turkish = "NetEase Cloud Music, Soda Music, Kugou ve QQ Music'ten şarkı sözlerini alıp dinamik adada gösterir."
-polish = "Pobiera teksty z NetEase Cloud Music, Soda Music, Kugou i QQ Music i pokazuje je na dynamicznej wyspie."
-
-[[message]]
-key = "Pick the source that matches your music app and keep it playing; the lyrics follow automatically."
-[message.translations]
-simplified_chinese = "选择与你使用的音乐客户端匹配的来源并保持播放，歌词会自动跟随。"
-traditional_chinese = "選擇與你使用的音樂客戶端相符的來源並保持播放，歌詞會自動跟隨。"
-japanese = "使用中の音楽アプリに合うソースを選んで再生しておくだけで、歌詞が自動的に追従します。"
-korean = "사용하는 음악 앱에 맞는 소스를 선택하고 재생만 하면 가사가 자동으로 따라옵니다."
-russian = "Выберите источник, соответствующий вашему музыкальному приложению, и просто включите музыку — текст подтянется сам."
-german = "Wähle die zu deiner Musik-App passende Quelle und lass sie laufen; der Text folgt automatisch."
-spanish = "Elige la fuente que corresponda a tu app de música y deja que suene; la letra se sincroniza sola."
-french = "Choisissez la source correspondant à votre application de musique et laissez-la jouer ; les paroles suivent automatiquement."
-brazilian_portuguese = "Escolha a fonte que corresponde ao seu app de música e deixe tocando; a letra acompanha automaticamente."
-portuguese = "Escolha a fonte correspondente à sua aplicação de música e deixe-a a tocar; a letra acompanha automaticamente."
-turkish = "Müzik uygulamanla eşleşen kaynağı seç ve çalmaya devam et; sözler otomatik olarak takip eder."
-polish = "Wybierz źródło zgodne z twoją aplikacją muzyczną i pozostaw ją włączoną; tekst podąży automatycznie."
-
-[[message]]
-key = "Your weapon slides and rotates in when you switch, and flips while reloading."
-[message.translations]
-simplified_chinese = "切换武器时滑入旋转，装填时按装填时间翻转。"
-traditional_chinese = "切換武器時滑入旋轉，裝填時依裝填時間翻轉。"
-japanese = "武器切り替え時にスライドしながら回転し、リロード中は回転して裏返ります。"
-korean = "무기를 바꿀 때 미끄러지듯 회전하며 등장하고, 재장전 중에는 뒤집힙니다."
-russian = "При смене оружие въезжает с поворотом, а при перезарядке переворачивается."
-german = "Beim Waffenwechsel fährt die Waffe mit Drehung ein, beim Nachladen dreht sie sich um."
-spanish = "Al cambiar de arma, esta entra girando, y al recargar da una vuelta."
-french = "L'arme entre en glissant et en tournant lors du changement, et se retourne pendant le rechargement."
-brazilian_portuguese = "A arma entra deslizando e girando na troca, e vira durante o recarregamento."
-portuguese = "A arma entra a deslizar e a rodar na troca, e vira durante o recarregamento."
-turkish = "Silah değiştirirken kayarak dönerek girer, şarjör doldururken takla atar."
-polish = "Broń wsuwa się z obrotem przy zmianie, a przy przeładowaniu obraca się."
-
-[[message]]
-key = "Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing."
-[message.translations]
-simplified_chinese = "打开武器切换动画或装填动画，再调整作用范围、时长、旋转角度与缓动。"
-traditional_chinese = "開啟武器切換動畫或裝填動畫，再調整作用範圍、時長、旋轉角度與緩動。"
-japanese = "武器切り替えアニメかリロードアニメを有効にし、範囲・時間・回転・イージングを調整します。"
-korean = "무기 교체 애니메이션 또는 재장전 애니메이션을 켜고 범위, 시간, 회전, 이징을 조정하세요."
-russian = "Включите анимацию смены или перезарядки оружия, затем настройте радиус, длительность, поворот и сглаживание."
-german = "Aktiviere die Waffenwechsel- oder Nachladeanimation und stelle dann Reichweite, Dauer, Drehung und Easing ein."
-spanish = "Activa la animación de cambio o de recarga y ajusta alcance, duración, rotación y suavizado."
-french = "Activez l'animation de changement ou de rechargement, puis réglez portée, durée, rotation et lissage."
-brazilian_portuguese = "Ative a animação de troca ou de recarga e ajuste alcance, duração, rotação e suavização."
-portuguese = "Ative a animação de troca ou de recarregamento e ajuste alcance, duração, rotação e suavização."
-turkish = "Silah değiştirme veya şarjör doldurma animasyonunu aç, ardından menzil, süre, dönüş ve yumuşatmayı ayarla."
-polish = "Włącz animację zmiany lub przeładowania broni, a potem dostosuj zasięg, czas, obrót i wygładzanie."
-
-[[message]]
-key = "Plays an animation whenever your skin changes, including skins stolen with the hammer."
-[message.translations]
-simplified_chinese = "皮肤变化时播放动画，包括锤子偷来的皮肤。"
-traditional_chinese = "皮膚變化時播放動畫，包括錘子偷來的皮膚。"
-japanese = "ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。"
-korean = "해머로 빼앗은 스킨을 포함해 스킨이 바뀔 때 애니메이션을 재생합니다."
-russian = "Проигрывает анимацию при смене скина, в том числе скина, украденного молотом."
-german = "Spielt eine Animation ab, wenn sich dein Skin ändert, auch bei mit dem Hammer gestohlenen Skins."
-spanish = "Reproduce una animación cuando cambia tu skin, incluidas las robadas con el martillo."
-french = "Joue une animation à chaque changement de skin, y compris ceux volés au marteau."
-brazilian_portuguese = "Reproduz uma animação quando o skin muda, incluindo os roubados com o martelo."
-portuguese = "Reproduz uma animação sempre que o skin muda, incluindo os roubados com o martelo."
-turkish = "Çekiçle çalınanlar dahil, skinin değiştiğinde bir animasyon oynatır."
-polish = "Odtwarza animację przy zmianie skina, także tego skradzionego młotkiem."
-
-[[message]]
-key = "Enable skin transition animation, then choose the type, scope, duration and easing."
-[message.translations]
-simplified_chinese = "打开皮肤切换动画，再选择类型、作用范围、时长与缓动。"
-traditional_chinese = "開啟皮膚切換動畫，再選擇類型、作用範圍、時長與緩動。"
-japanese = "スキン切り替えアニメを有効にし、種類・範囲・時間・イージングを選びます。"
-korean = "스킨 전환 애니메이션을 켜고 종류, 범위, 시간, 이징을 선택하세요."
-russian = "Включите анимацию смены скина и выберите тип, область, длительность и сглаживание."
-german = "Aktiviere die Skin-Übergangsanimation und wähle Typ, Reichweite, Dauer und Easing."
-spanish = "Activa la animación de transición de skin y elige tipo, alcance, duración y suavizado."
-french = "Activez l'animation de transition de skin, puis choisissez type, portée, durée et lissage."
-brazilian_portuguese = "Ative a animação de transição de skin e escolha tipo, alcance, duração e suavização."
-portuguese = "Ative a animação de transição de skin e escolha tipo, alcance, duração e suavização."
-turkish = "Skin geçiş animasyonunu aç, ardından tür, menzil, süre ve yumuşatmayı seç."
-polish = "Włącz animację zmiany skina, a następnie wybierz typ, zasięg, czas i wygładzanie."
-
-[[message]]
-key = "Merges chat messages repeated within a short time into a single line."
-[message.translations]
-simplified_chinese = "短时间内重复的聊天消息会合并成一条。"
-traditional_chinese = "短時間內重複的聊天訊息會合併成一條。"
-japanese = "短時間に繰り返されたチャットメッセージを1行にまとめます。"
-korean = "짧은 시간 안에 반복된 채팅 메시지를 한 줄로 합칩니다."
-russian = "Объединяет повторяющиеся за короткое время сообщения чата в одну строку."
-german = "Fasst innerhalb kurzer Zeit wiederholte Chatnachrichten zu einer Zeile zusammen."
-spanish = "Une en una sola línea los mensajes de chat repetidos en poco tiempo."
-french = "Fusionne en une seule ligne les messages de chat répétés en peu de temps."
-brazilian_portuguese = "Junta em uma linha as mensagens de chat repetidas em pouco tempo."
-portuguese = "Junta numa só linha as mensagens de chat repetidas em pouco tempo."
-turkish = "Kısa sürede tekrarlanan sohbet mesajlarını tek satırda birleştirir."
-polish = "Scala powtórzone w krótkim czasie wiadomości czatu w jedną linię."
-
-[[message]]
-key = "Turn on \"Message merging\" in Dream Features."
-[message.translations]
-simplified_chinese = "在「梦的小功能」里打开「消息合并」。"
-traditional_chinese = "在「夢的小功能」裡開啟「訊息合併」。"
-japanese = "「ドリーム機能」で「Message merging」をオンにします。"
-korean = "\"드림 기능\"에서 \"Message merging\"을 켜세요."
-russian = "Включите «Message merging» в разделе «Dream Features»."
-german = "Aktiviere „Message merging“ in den „Dream Features“."
-spanish = "Activa «Message merging» en «Dream Features»."
-french = "Activez « Message merging » dans « Dream Features »."
-brazilian_portuguese = "Ative \"Message merging\" em \"Dream Features\"."
-portuguese = "Ative «Message merging» em «Dream Features»."
-turkish = "\"Dream Features\" bölümünde \"Message merging\" seçeneğini aç."
-polish = "Włącz „Message merging” w „Dream Features”."
 
 [[message]]
 key = "Still free after %d sponsors. Take a look?"
@@ -27262,3 +27070,131 @@ brazilian_portuguese = "Pré-visualizar o lembrete sem alterar a contagem"
 portuguese = "Pré-visualizar o lembrete sem alterar a contagem"
 turkish = "Başlatma sayısını değiştirmeden hatırlatmayı önizle"
 polish = "Podejrzyj przypomnienie bez zmiany licznika uruchomień"
+
+[[message]]
+key = "Publish"
+[message.translations]
+simplified_chinese = "发布"
+traditional_chinese = "發佈"
+japanese = "公開"
+korean = "게시"
+russian = "Опубликовать"
+german = "Veröffentlichen"
+spanish = "Publicar"
+french = "Publier"
+brazilian_portuguese = "Publicar"
+portuguese = "Publicar"
+turkish = "Yayınla"
+polish = "Opublikuj"
+
+[[message]]
+key = "Open folder"
+[message.translations]
+simplified_chinese = "打开目录"
+traditional_chinese = "開啟資料夾"
+japanese = "フォルダを開く"
+korean = "폴더 열기"
+russian = "Открыть папку"
+german = "Ordner öffnen"
+spanish = "Abrir carpeta"
+french = "Ouvrir le dossier"
+brazilian_portuguese = "Abrir pasta"
+portuguese = "Abrir pasta"
+turkish = "Klasörü aç"
+polish = "Otwórz folder"
+
+[[message]]
+key = "No new features yet"
+[message.translations]
+simplified_chinese = "暂无新功能内容"
+traditional_chinese = "暫無新功能內容"
+japanese = "新機能の内容はまだありません"
+korean = "아직 새 기능 내용이 없습니다"
+russian = "Новых возможностей пока нет"
+german = "Noch keine Neuerungen vorhanden"
+spanish = "Todavía no hay novedades"
+french = "Pas encore de nouveautés"
+brazilian_portuguese = "Ainda não há novidades"
+portuguese = "Ainda não há novidades"
+turkish = "Henüz yeni özellik yok"
+polish = "Brak nowych funkcji"
+
+[[message]]
+key = "Could not load new features"
+[message.translations]
+simplified_chinese = "新功能内容加载失败"
+traditional_chinese = "新功能內容載入失敗"
+japanese = "新機能の内容を読み込めませんでした"
+korean = "새 기능 내용을 불러오지 못했습니다"
+russian = "Не удалось загрузить новости"
+german = "Neuerungen konnten nicht geladen werden"
+spanish = "No se pudieron cargar las novedades"
+french = "Impossible de charger les nouveautés"
+brazilian_portuguese = "Não foi possível carregar as novidades"
+portuguese = "Não foi possível carregar as novidades"
+turkish = "Yeni özellikler yüklenemedi"
+polish = "Nie udało się wczytać nowości"
+
+[[message]]
+key = "Publish failed"
+[message.translations]
+simplified_chinese = "发布失败"
+traditional_chinese = "發佈失敗"
+japanese = "公開に失敗しました"
+korean = "게시 실패"
+russian = "Не удалось опубликовать"
+german = "Veröffentlichen fehlgeschlagen"
+spanish = "Error al publicar"
+french = "Échec de la publication"
+brazilian_portuguese = "Falha ao publicar"
+portuguese = "Falha ao publicar"
+turkish = "Yayınlama başarısız"
+polish = "Publikowanie nie powiodło się"
+
+[[message]]
+key = "Draft file is empty"
+[message.translations]
+simplified_chinese = "草稿文件为空"
+traditional_chinese = "草稿檔案為空"
+japanese = "下書きファイルが空です"
+korean = "초안 파일이 비어 있습니다"
+russian = "Файл черновика пуст"
+german = "Entwurfsdatei ist leer"
+spanish = "El archivo borrador está vacío"
+french = "Le brouillon est vide"
+brazilian_portuguese = "O arquivo de rascunho está vazio"
+portuguese = "O ficheiro de rascunho está vazio"
+turkish = "Taslak dosyası boş"
+polish = "Plik roboczy jest pusty"
+
+[[message]]
+key = "Publishing…"
+[message.translations]
+simplified_chinese = "发布中…"
+traditional_chinese = "發佈中…"
+japanese = "公開中…"
+korean = "게시 중…"
+russian = "Публикация…"
+german = "Wird veröffentlicht…"
+spanish = "Publicando…"
+french = "Publication…"
+brazilian_portuguese = "Publicando…"
+portuguese = "A publicar…"
+turkish = "Yayınlanıyor…"
+polish = "Publikowanie…"
+
+[[message]]
+key = "Published"
+[message.translations]
+simplified_chinese = "已发布"
+traditional_chinese = "已發佈"
+japanese = "公開しました"
+korean = "게시됨"
+russian = "Опубликовано"
+german = "Veröffentlicht"
+spanish = "Publicado"
+french = "Publié"
+brazilian_portuguese = "Publicado"
+portuguese = "Publicado"
+turkish = "Yayınlandı"
+polish = "Opublikowano"

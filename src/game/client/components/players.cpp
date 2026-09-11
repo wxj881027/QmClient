@@ -645,11 +645,6 @@ void CPlayers::RenderHook(
 	else
 		Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), Intra);
 
-	// draw hook
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-	if(ClientId < 0)
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
-
 	vec2 Pos = Position;
 	vec2 HookPos;
 
@@ -665,6 +660,28 @@ void CPlayers::RenderHook(
 	{
 		HookPos = mix(vec2(Prev.m_HookX, Prev.m_HookY), vec2(Player.m_HookX, Player.m_HookY), Intra);
 	}
+
+	// 屏幕外的钩子（钩头、钩链与手）不会产生任何像素：按「玩家位置 ∪ 钩头位置」的 AABB 剔除。
+	// 缓冲与 Tee 剔除一致（100 世界单位），保证跨屏幕边缘的半可见钩子不被误裁。
+	// 早退发生在任何 Graphics 状态写入之前；后续绘制要么经 QuadsBegin 归位、要么自行设置颜色与旋转，
+	// 因此被裁掉的钩子不会给后续绘制留下状态差异。
+	{
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const float BorderBuffer = 100.0f;
+		if(std::max(Pos.x, HookPos.x) < ScreenX0 - BorderBuffer ||
+			std::min(Pos.x, HookPos.x) > ScreenX1 + BorderBuffer ||
+			std::max(Pos.y, HookPos.y) < ScreenY0 - BorderBuffer ||
+			std::min(Pos.y, HookPos.y) > ScreenY1 + BorderBuffer)
+		{
+			return;
+		}
+	}
+
+	// draw hook
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	if(ClientId < 0)
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
 
 	float d = distance(Pos, HookPos);
 	vec2 Dir = normalize(Pos - HookPos);
@@ -1838,6 +1855,10 @@ void CPlayers::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
+	// 刷新钩子碰撞线的目标缓存：IntersectCharacter 会被每秒模拟循环调用上万次，
+	// 必须在任何 RenderHookCollLine 之前完成（本帧内数据不变）。
+	GameClient()->UpdateHookCollTargets();
+
 	// update render info for ninja
 	CTeeRenderInfo aRenderInfo[MAX_CLIENTS];
 	CNetObj_Character aRenderCurForTee[MAX_CLIENTS];
@@ -1950,28 +1971,42 @@ void CPlayers::OnRender()
 	const int RenderLastId = FollowingPlayer ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : LocalClientId;
 
 	// render spectating players
-	for(const auto &Client : GameClient()->m_aClients)
+	// 观战幽灵皮肤与渲染信息在本帧内是循环不变量：循环外解析一次，
+	// 避免每个 spec char（满员时可达上百个）重复做皮肤名查找与加载请求。
+	const bool SpectatorTeeRenderable =
+		GameClient()->m_Skins.FindOrNullptr("x_spec") != nullptr &&
+		SpectatorTeeRenderInfo() != nullptr &&
+		SpectatorTeeRenderInfo()->TeeRenderInfo().Valid();
+	if(SpectatorTeeRenderable)
 	{
-		if(!Client.m_SpecCharPresent)
+		for(const auto &Client : GameClient()->m_aClients)
 		{
-			continue;
-		}
+			if(!Client.m_SpecCharPresent)
+			{
+				continue;
+			}
 
-		const int ClientId = Client.ClientId();
-		if(FollowingPlayer && ClientId == RenderLastId && IsPlayerInfoAvailable(ClientId))
-			continue;
+			// 屏幕外的观战幽灵不会产生任何像素，裁剪窗口与上方 Tee 循环一致（100 世界单位缓冲，
+			// 远大于 Tee 的最大可视半径，因此不会裁掉任何可见像素）。
+			if(!in_range(Client.m_SpecChar.x, ScreenX0, ScreenX1) || !in_range(Client.m_SpecChar.y, ScreenY0, ScreenY1))
+			{
+				continue;
+			}
 
-		float Alpha = 1.0f;
-		const bool LocalSpecChar = GameClient()->IsLocalClientId(ClientId);
-		const bool OtherSpecChar = !LocalSpecChar && (GameClient()->IsOtherTeam(ClientId) || ClientId < 0);
-		Alpha = OtherSpecChar ? g_Config.m_ClShowOthersAlpha / 100.f : 1.f;
-		if(ClientId == -2) // ghost
-		{
-			Alpha = g_Config.m_ClRaceGhostAlpha / 100.f;
+			const int ClientId = Client.ClientId();
+			if(FollowingPlayer && ClientId == RenderLastId && IsPlayerInfoAvailable(ClientId))
+				continue;
+
+			float Alpha = 1.0f;
+			const bool LocalSpecChar = GameClient()->IsLocalClientId(ClientId);
+			const bool OtherSpecChar = !LocalSpecChar && (GameClient()->IsOtherTeam(ClientId) || ClientId < 0);
+			Alpha = OtherSpecChar ? g_Config.m_ClShowOthersAlpha / 100.f : 1.f;
+			if(ClientId == -2) // ghost
+			{
+				Alpha = g_Config.m_ClRaceGhostAlpha / 100.f;
+			}
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &SpectatorTeeRenderInfo()->TeeRenderInfo(), EMOTE_BLINK, vec2(1, 0), Client.m_SpecChar, Alpha);
 		}
-		if(GameClient()->m_Skins.FindOrNullptr("x_spec") == nullptr || !SpectatorTeeRenderInfo() || !SpectatorTeeRenderInfo()->TeeRenderInfo().Valid())
-			continue;
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &SpectatorTeeRenderInfo()->TeeRenderInfo(), EMOTE_BLINK, vec2(1, 0), Client.m_SpecChar, Alpha);
 	}
 
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)

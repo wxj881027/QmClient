@@ -127,7 +127,7 @@ float CCamera::ZoomProgress(float CurrentTime) const
 void CCamera::ScaleZoom(float Factor)
 {
 	RemoveDynamicFovZoom();
-	float CurrentTarget = QmCameraEffects::ZoomTargetBaseOnRetarget(m_Zoom, m_ZoomSmoothingTarget, Factor, m_Zooming, g_Config.m_QmZoomInstantReverse != 0);
+	float CurrentTarget = m_Zooming ? m_ZoomSmoothingTarget : m_Zoom;
 	ChangeZoom(CurrentTarget * Factor, GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_MultiViewActivated ? g_Config.m_ClMultiViewZoomSmoothness : g_Config.m_ClSmoothZoomTime, true);
 
 	m_AutoSpecCamera = false;
@@ -158,8 +158,7 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser)
 	{
 		float Progress = ZoomProgress(Now);
 		Current = m_ZoomSmoothing.Evaluate(Progress);
-		// 丢速度只作用于玩家按键路径：多分屏与自动旁观每帧重设目标，丢速度会让平滑反复从静止起步
-		Derivative = QmCameraEffects::ZoomDerivativeOnRetarget(Current, m_ZoomSmoothing.Derivative(Progress), Target, IsUser && g_Config.m_QmZoomInstantReverse != 0);
+		Derivative = m_ZoomSmoothing.Derivative(Progress);
 	}
 
 	m_ZoomSmoothingTarget = Target;

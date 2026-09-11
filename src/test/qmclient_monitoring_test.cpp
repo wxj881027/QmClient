@@ -5577,7 +5577,7 @@ TEST(QmMonitoringHelpers, AppearanceNamePlateTabUsesCardBackedScrollRegion)
 	EXPECT_EQ(NamePlateBranch.find("const float NamePlateContentPaddingY = std::clamp(14.0f * UiScale, 10.0f, 14.0f);"), std::string::npos);
 	EXPECT_NE(NamePlateBranch.find("AddMeasuredCard(5,"), std::string::npos);
 	EXPECT_NE(NamePlateBranch.find("ResolveSettingsRadioRowLayout"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("AddCard(6, NamePlatePreviewMinCardHeight"), std::string::npos);
+	EXPECT_NE(NamePlateBranch.find("AddMeasuredCard(6, ResolveNamePlatePreviewCardHeight"), std::string::npos);
 	EXPECT_EQ(NamePlateBranch.find("const float NamePlateCardHeight"), std::string::npos);
 	EXPECT_EQ(NamePlateBranch.find("NamePlateSettingsCard.h = NamePlateSettingsCardHeight;"), std::string::npos);
 	EXPECT_EQ(NamePlateBranch.find("NamePlateSettingsShadow.Draw(NamePlateSettingsShadowColor, IGraphics::CORNER_ALL, NamePlateCardCornerRadius);"), std::string::npos);

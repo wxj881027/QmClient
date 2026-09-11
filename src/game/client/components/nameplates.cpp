@@ -14,7 +14,7 @@
 #include <game/client/components/nameplate_text_effects.h>
 #include <game/client/components/qmclient/chat_emoji.h>
 #include <game/client/components/qmclient/modes.h>
-#include <game/client/components/qmclient/nameplate_msdf/qm_nameplate_msdf_renderer.h>
+#include <game/client/components/qmclient/qm_title_color.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
@@ -121,19 +121,14 @@ static float ResolveChatBubbleAnimValue(
 
 static constexpr int NAMEPLATE_FREE_MOVE_OFFSET_MIN = -300;
 static constexpr int NAMEPLATE_FREE_MOVE_OFFSET_MAX = 300;
-// Multiplier applied to the baseline frame to give users more room to move
-// nameplate elements around. Width and height are both scaled by this factor
-// around the baseline frame's center.
-static constexpr float NAMEPLATE_FREE_MOVE_FRAME_SCALE = 3.0f;
 static constexpr float NAMEPLATE_FREE_MOVE_SNAP_DISTANCE = 8.0f;
-
-static void ScaleFrameAroundCenter(vec2 &Min, vec2 &Max, float Scale)
-{
-	const vec2 Center = (Min + Max) * 0.5f;
-	const vec2 HalfExtent = (Max - Min) * 0.5f * Scale;
-	Min = Center - HalfExtent;
-	Max = Center + HalfExtent;
-}
+// 设置页预览区域：脚本体与铭牌内容贴框底排布，上下各留这么多内边距。
+// 框高由 MeasurePreviewAreaHeight() 按内容撑开，所以任何字号都不会溢出。
+static constexpr float NAMEPLATE_PREVIEW_AREA_MARGIN = 10.0f;
+// 自由移动的边界就是预览框本身（内缩这么多），白框画在框边内侧，
+// 因此可拖动范围与看得见的范围始终一致。
+static constexpr float NAMEPLATE_PREVIEW_FRAME_INSET = 3.0f;
+static constexpr float NAMEPLATE_PREVIEW_TEE_SIZE = 64.0f;
 
 static bool NameplateFreeMoveEnabled()
 {
@@ -326,7 +321,7 @@ public:
 	char m_aName[std::max<size_t>(MAX_NAME_LENGTH, protocol7::MAX_NAME_ARRAY_SIZE)];
 	bool m_ShowFriendMark;
 	char m_aQmTitle[64] = "";
-	bool m_DeveloperRainbow;
+	SQmTitleColorStyle m_TitleColorStyle;
 	bool m_ShowClientId;
 	int m_ClientId;
 	float m_FontSizeClientId;
@@ -360,10 +355,26 @@ public:
 // Part Types
 
 static constexpr float DEFAULT_PADDING = 5.0f;
-// 名牌文字按“整数相机缩放档位”的像素密度栅格化：档位变化时才重建文字容器。
-// 每帧最多重建的文本部件数量用于摊平重建（字形栅格化/上传）开销，避免缩放瞬间卡顿。
-static constexpr int NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME = 16;
+// 名牌文字按"当前屏幕映射密度"栅格化字形：密度变化超过容差、且缩放已停稳时才重建文字容器。
+// 每帧最多重建的文本部件数量用于摊平重建（字形栅格化/上传）开销。
+// 注意口径是"文本部件"而非"玩家"：每个玩家的铭牌有名字/队标/ID/坐标等多个文字部件，
+// 满员 64 人时上百个部件都可能同时需要重建，预算过小会让排在后面的玩家长期停留在旧密度上（发虚）。
+static constexpr int NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME = 64;
 static int s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME;
+
+// 当前屏幕映射对应的字形栅格化密度。它在同一次渲染内对所有铭牌部件都是同一个值
+// （部件内部临时切到 MapScreenToGameInterface 是在读取之后才发生的），因此由
+// CNamePlates::OnRender 每帧算一次即可，避免每个文本部件各自重复 GetScreen 与密度计算：
+// 满员 128 人 × 12 个文本部件 ≈ 1536 次/帧。
+// 注意：各部件自己的 m_ZoomStability.RecordDensity() 仍必须按部件调用，不能一起外提。
+static float s_NameplateRasterizationDensity = 0.0f;
+
+static float ComputeNameplateRasterizationDensity(CGameClient &This)
+{
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	return QmNameplateTextRasterizationDensity(This.Graphics()->ScreenHeight(), ScreenY1 - ScreenY0);
+}
 
 class CNamePlatePart
 {
@@ -397,63 +408,15 @@ class CNamePlatePartText : public CNamePlatePart
 protected:
 	STextContainerIndex m_TextContainerIndex;
 	vec2 m_RenderSize = vec2(0.0f, 0.0f);
-	// 上次栅格化字形对应的相机缩放档位（0 = 默认缩放），档位变化时重建字形以保持清晰
-	int m_BakedZoomLevel = -1;
-	// MSDF 路径：缓存纯文本，不随缩放档位重建
-	char m_aMsdfText[512] = "";
-	float m_MsdfFontSize = 0.0f;
-	bool m_MsdfTextValid = false;
+	// 上次栅格化字形所用的屏幕映射密度（像素/世界单位）；仅当密度变化超过容差才重建
+	SQmNameplateTextRasterization m_Rasterization;
+	// 缩放稳定判定：平滑缩放动画期间不重建，停稳后补齐一次
+	SQmNameplateTextZoomStability m_ZoomStability;
 	virtual bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) = 0;
 	virtual void UpdateText(CGameClient &This, const CNamePlateData &Data) = 0;
 	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 	bool m_UseTextEffects = false;
 	virtual ColorRGBA GetRenderTextColor() const { return m_Color; }
-
-	static bool NameplateMsdfActive()
-	{
-		return g_Config.m_QmNameplateMsdf != 0 && QmNameplateMsdf().IsReady();
-	}
-
-	// 整名回退：图集覆盖不到任何一个字符就整条交给原 FreeType 路径，
-	// 避免同一个名字混用两种清晰度（混排在缩放时会明显不一致）。
-	bool MsdfCoversText() const
-	{
-		return NameplateMsdfActive() && m_MsdfTextValid && QmNameplateMsdf().SupportsText(m_aMsdfText);
-	}
-
-	void SetMsdfPlainText(const char *pText, float FontSize)
-	{
-		str_copy(m_aMsdfText, pText != nullptr ? pText : "");
-		m_MsdfFontSize = FontSize;
-		m_MsdfTextValid = m_aMsdfText[0] != '\0';
-	}
-
-	SQmNameplateMsdfTextStyle BuildMsdfStyle() const
-	{
-		SQmNameplateMsdfTextStyle Style;
-		Style.m_TextColor = GetRenderTextColor();
-		Style.m_OutlineColor = s_OutlineColor;
-		Style.m_OutlineWidth = 1.0f;
-		if(m_UseTextEffects)
-		{
-			const int Effects = g_Config.m_QmNameplateTextEffects;
-			if((Effects & QM_TEXT_EFFECT_BORDER) != 0)
-			{
-				Style.m_OutlineWidth = (float)std::clamp(g_Config.m_QmNameplateTextBorderRange, 1, 4);
-				Style.m_OutlineColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNameplateTextBorderColor, true));
-			}
-			Style.m_RainbowEnabled = (Effects & QM_TEXT_EFFECT_RAINBOW) != 0;
-		}
-		return Style;
-	}
-
-	// MSDF 路径的尺寸外扩只考虑描边：描边用 8 向偏移实现，不需要像位图光晕那样留大边距。
-	float MsdfEffectPadding() const
-	{
-		if(!m_UseTextEffects || (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_BORDER) == 0)
-			return 0.0f;
-		return (float)std::clamp(g_Config.m_QmNameplateTextBorderRange, 1, 4);
-	}
 
 	CNamePlatePartText(CGameClient &This) :
 		CNamePlatePart(This)
@@ -464,48 +427,20 @@ protected:
 public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
-		// MSDF：分辨率无关，不按缩放档位重建
-		if(NameplateMsdfActive())
-		{
-			bool NeedsMsdfUpdate = UpdateNeeded(This, Data);
-			if(NeedsMsdfUpdate || !m_MsdfTextValid)
-			{
-				This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
-				m_MsdfTextValid = false;
-				m_aMsdfText[0] = '\0';
-				UpdateText(This, Data);
-			}
-			if(!m_Visible || !m_MsdfTextValid)
-			{
-				m_Size = vec2(0.0f, 0.0f);
-				return;
-			}
-			const vec2 Measured = QmNameplateMsdf().Measure(m_aMsdfText, m_MsdfFontSize);
-			m_RenderSize = Measured;
-			const float EffectPadding = MsdfEffectPadding();
-			m_Size = m_RenderSize + vec2(EffectPadding * 2.0f, EffectPadding * 2.0f);
-			return;
-		}
-
-		// 名牌文字在世界映射下渲染。相机缩放是离散档位（每档 1/ZOOM_STEP 倍），
-		// 字形按档位化的像素密度栅格化：档位变化时才重建文字容器（带每帧预算摊平开销），
-		// 保证缩放稳定后任何档位下所有玩家的名字文字都清晰，同时避免缩放瞬间卡顿。
+		// 名字牌文字在世界映射下栅格化。字形按"当前屏幕映射密度"的像素数栅格化，
+		// 绘制时又按同一映射缩放回去，因此始终是 1:1 采样：任何相机缩放下都清晰。
+		// 注意：不能按"相机缩放档位"取整密度——档位与实际缩放最多相差 12%，
+		// 那会让字形被放大后采样，表现为整条名字发虚。
 		bool NeedsTextUpdate = UpdateNeeded(This, Data);
-		int LevelNow = 0;
+		const float DensityNow = Data.m_InGame ? s_NameplateRasterizationDensity : 0.0f;
 		if(Data.m_InGame)
 		{
-			// 当前映射密度相对默认缩放密度的倍数即相机缩放档位
-			float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-			This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			const float DensityNow = This.Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0);
-			float RefWidth, RefHeight;
-			This.Graphics()->CalcScreenParams(This.Graphics()->GameScreenAspect(), 1.0f, &RefWidth, &RefHeight);
-			const float DensityRef = This.Graphics()->ScreenHeight() / RefHeight;
-			const float DensityRatio = DensityNow / DensityRef;
-			LevelNow = DensityRatio > 0.0f ? round_to_int(std::log(DensityRatio) / std::log(1.0f / CCamera::ZOOM_STEP)) : 0;
-			if(!NeedsTextUpdate && m_TextContainerIndex.Valid() && m_BakedZoomLevel >= 0 && LevelNow != m_BakedZoomLevel)
+			// 平滑缩放动画期间密度每帧都在变，此时绝不能重建：否则动画期间每帧都要重排
+			// 所有玩家的文字容器（实测为严重卡顿）。只在缩放停下来后补齐一次。
+			const bool ZoomSettled = m_ZoomStability.RecordDensity(DensityNow);
+			if(!NeedsTextUpdate && ZoomSettled && QmNameplateTextNeedsRebake(m_Rasterization, DensityNow))
 			{
-				// 档位变化：预算内立即重建，预算耗尽则顺延到后续帧，摊平字形栅格化开销
+				// 缩放停止后密度已固定：预算内立即重建，预算耗尽则顺延到后续帧，摊平字形栅格化开销
 				if(s_NameplateTextRebuildBudget > 0)
 				{
 					NeedsTextUpdate = true;
@@ -513,7 +448,7 @@ public:
 				}
 			}
 		}
-		if(!NeedsTextUpdate && m_TextContainerIndex.Valid())
+		if(!NeedsTextUpdate)
 		{
 			const float EffectPadding = m_UseTextEffects ? QmNameplateTextEffectPadding(g_Config.m_QmNameplateTextEffects, g_Config.m_QmNameplateTextBorderRange, g_Config.m_QmNameplateTextGlowRange) : 0.0f;
 			m_Size = m_RenderSize + vec2(EffectPadding * 2.0f, EffectPadding * 2.0f);
@@ -533,9 +468,9 @@ public:
 		float ScreenX0 = 0.0f, ScreenY0 = 0.0f, ScreenX1 = 0.0f, ScreenY1 = 0.0f;
 		if(Data.m_InGame)
 		{
-			// 切到当前档位的标准映射再栅格化，保证字形密度与绘制密度一致（不受平滑缩放动画中间值影响）
+			// 切到当前真实缩放的映射再栅格化，保证字形密度与绘制密度一致
 			This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, std::pow(CCamera::ZOOM_STEP, LevelNow));
+			This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, This.m_Camera.m_Zoom);
 		}
 		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 		UpdateText(This, Data);
@@ -547,12 +482,12 @@ public:
 		if(!m_TextContainerIndex.Valid())
 		{
 			m_Visible = false;
-			m_BakedZoomLevel = -1;
+			m_Rasterization = SQmNameplateTextRasterization();
 			return;
 		}
 
-		// 记录本次栅格化采用的缩放档位，供档位变化时判断是否需要重建
-		m_BakedZoomLevel = Data.m_InGame ? LevelNow : -1;
+		// 记录本次栅格化采用的密度，供密度变化时判断是否需要重建
+		m_Rasterization = Data.m_InGame ? QmNameplateTextRasterizationAfterRebake(DensityNow) : SQmNameplateTextRasterization();
 
 		const STextBoundingBox Container = This.TextRender()->GetBoundingBoxTextContainer(m_TextContainerIndex);
 		m_RenderSize = vec2(Container.m_W, Container.m_H);
@@ -562,19 +497,10 @@ public:
 	void Reset(CGameClient &This) override
 	{
 		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
-		m_BakedZoomLevel = -1;
-		m_MsdfTextValid = false;
-		m_aMsdfText[0] = '\0';
+		m_Rasterization = SQmNameplateTextRasterization();
 	}
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
-		if(MsdfCoversText())
-		{
-			SQmNameplateMsdfTextStyle Style = BuildMsdfStyle();
-			// 与 FreeType 路径一致：中心对齐
-			QmNameplateMsdf().DrawCentered(m_aMsdfText, Pos.x, Pos.y, m_MsdfFontSize, Style);
-			return;
-		}
 		if(!m_TextContainerIndex.Valid())
 			return;
 
@@ -727,11 +653,6 @@ protected:
 			str_format(m_aText, sizeof(m_aText), "%d", m_ClientId);
 		else
 			str_format(m_aText, sizeof(m_aText), "%d:", m_ClientId);
-		if(NameplateMsdfActive())
-		{
-			SetMsdfPlainText(m_aText, m_FontSize);
-			return;
-		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
@@ -784,48 +705,31 @@ private:
 	static constexpr float ms_FontSizeScale = 0.8f;
 	float m_FontSize = -INFINITY;
 	float m_Alpha = 1.0f;
-	bool m_Rainbow = false;
+	SQmTitleColorStyle m_TitleColorStyle;
 
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = Data.m_aQmTitle[0] != '\0';
-		m_Alpha = Data.m_Color.a;
 		if(!m_Visible)
 			return false;
+		// 跟随服务器档沿用名牌整体淡入淡出的透明度，自定义档改用本地透明度。
+		m_Alpha = Data.m_TitleColorStyle.m_Mode == EQmTitleColorMode::FOLLOW_SERVER ? Data.m_Color.a : Data.m_TitleColorStyle.m_Alpha;
 		const float FontSize = Data.m_FontSize * ms_FontSizeScale;
-		return m_FontSize != FontSize || m_Rainbow != Data.m_DeveloperRainbow || str_comp(m_aText, Data.m_aQmTitle) != 0;
+		return m_FontSize != FontSize || m_TitleColorStyle != Data.m_TitleColorStyle || str_comp(m_aText, Data.m_aQmTitle) != 0;
 	}
 
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_FontSize = Data.m_FontSize * ms_FontSizeScale;
-		m_Rainbow = Data.m_DeveloperRainbow;
+		m_TitleColorStyle = Data.m_TitleColorStyle;
 		str_copy(m_aText, Data.m_aQmTitle);
-		if(NameplateMsdfActive())
-		{
-			SetMsdfPlainText(m_aText, m_FontSize);
-			return;
-		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
-		if(m_Rainbow)
+		if(m_TitleColorStyle.m_Rainbow)
 		{
-			int NumChars = 0;
-			const char *pCurrent = m_aText;
-			while(str_utf8_decode(&pCurrent) > 0)
-				++NumChars;
-			Cursor.m_vColorSplits.reserve(NumChars);
-			pCurrent = m_aText;
-			for(int CharIndex = 0; CharIndex < NumChars; ++CharIndex)
-			{
-				const char *pNext = pCurrent;
-				if(str_utf8_decode(&pNext) <= 0)
-					break;
-				const float Hue = (float)CharIndex / NumChars;
-				Cursor.m_vColorSplits.emplace_back((int)(pCurrent - m_aText), (int)(pNext - pCurrent), color_cast<ColorRGBA>(ColorHSLA(Hue, 0.8f, 0.65f)));
-				pCurrent = pNext;
-			}
+			// 透明度统一由 Render 施加，色段只负责色相。
+			QmAddTitleRainbowSplits(Cursor, m_aText, 1.0f);
 		}
 		else
 		{
@@ -836,19 +740,22 @@ protected:
 
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
-		if(MsdfCoversText())
-		{
-			SQmNameplateMsdfTextStyle Style = BuildMsdfStyle();
-			Style.m_TextColor = m_Rainbow ? ColorRGBA(1.0f, 1.0f, 1.0f, m_Alpha) : ColorRGBA(0.0f, 0.0f, 0.0f, m_Alpha);
-			Style.m_OutlineColor = m_Rainbow ? s_OutlineColor.WithMultipliedAlpha(m_Alpha) : ColorRGBA(0.85f, 0.85f, 0.85f, m_Alpha);
-			Style.m_RainbowEnabled = m_Rainbow;
-			QmNameplateMsdf().DrawCentered(m_aMsdfText, Pos.x, Pos.y, m_MsdfFontSize, Style);
-			return;
-		}
 		if(!m_TextContainerIndex.Valid())
 			return;
-		const ColorRGBA Color = m_Rainbow ? ColorRGBA(1.0f, 1.0f, 1.0f, m_Alpha) : ColorRGBA(0.0f, 0.0f, 0.0f, m_Alpha);
-		const ColorRGBA OutlineColor = m_Rainbow ? s_OutlineColor.WithMultipliedAlpha(m_Alpha) : ColorRGBA(0.85f, 0.85f, 0.85f, m_Alpha);
+		const bool CustomColor = m_TitleColorStyle.m_Mode != EQmTitleColorMode::FOLLOW_SERVER;
+		ColorRGBA Color(0.0f, 0.0f, 0.0f, m_Alpha);
+		ColorRGBA OutlineColor(0.85f, 0.85f, 0.85f, m_Alpha);
+		if(m_TitleColorStyle.m_Rainbow)
+		{
+			Color = ColorRGBA(1.0f, 1.0f, 1.0f, m_Alpha);
+			OutlineColor = s_OutlineColor.WithMultipliedAlpha(m_Alpha);
+		}
+		else if(CustomColor)
+		{
+			Color = m_TitleColorStyle.m_Color.WithAlpha(m_Alpha);
+			// 自定义颜色无法预判明暗，统一使用彩虹档的深色描边。
+			OutlineColor = s_OutlineColor.WithMultipliedAlpha(m_Alpha);
+		}
 		This.TextRender()->RenderTextContainer(m_TextContainerIndex, Color, OutlineColor, Pos.x - Size().x / 2.0f, Pos.y - Size().y / 2.0f);
 	}
 
@@ -920,11 +827,6 @@ protected:
 	{
 		m_FontSize = Data.m_FontSize;
 		str_copy(m_aText, Data.m_aName, sizeof(m_aText));
-		if(NameplateMsdfActive())
-		{
-			SetMsdfPlainText(m_aText, m_FontSize);
-			return;
-		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		m_GradientEnabled = m_UseTextEffects && (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_GRADIENT) != 0;
@@ -978,11 +880,6 @@ protected:
 	{
 		m_FontSize = Data.m_FontSizeClan;
 		str_copy(m_aText, Data.m_aClan[0] != '\0' ? Data.m_aClan : " ", sizeof(m_aText));
-		if(NameplateMsdfActive())
-		{
-			SetMsdfPlainText(m_aText, m_FontSize);
-			return;
-		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		m_GradientEnabled = m_UseTextEffects && (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_GRADIENT) != 0;
@@ -1211,11 +1108,6 @@ protected:
 		m_FontSize = Data.m_FontSizeClan;
 		const char *pSkin = Data.m_InGame ? This.m_aClients[Data.m_ClientId].m_aSkinName : (Data.m_ClientId == 0 ? g_Config.m_ClPlayerSkin : g_Config.m_ClDummySkin);
 		str_copy(m_aText, pSkin, sizeof(m_aText));
-		if(NameplateMsdfActive())
-		{
-			SetMsdfPlainText(m_aText, m_FontSize);
-			return;
-		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
@@ -1260,11 +1152,6 @@ protected:
 		m_Aligned = m_IsX && Data.m_CoordXAligned;
 		m_Coord = RoundCoordToCentitiles(m_IsX ? Data.m_Coords.x : Data.m_Coords.y) / 100.0f;
 		str_format(m_aText, sizeof(m_aText), "%c:%.2f", m_IsX ? 'X' : 'Y', m_Coord);
-		if(NameplateMsdfActive())
-		{
-			SetMsdfPlainText(m_aText, m_FontSize);
-			return;
-		}
 
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
@@ -1302,11 +1189,6 @@ protected:
 		m_FontSize = Data.m_FontSizeClan;
 		const char *pReason = This.m_WarList.GetWarData(Data.m_ClientId).m_aReason;
 		str_copy(m_aText, pReason, sizeof(m_aText));
-		if(NameplateMsdfActive())
-		{
-			SetMsdfPlainText(m_aText, m_FontSize);
-			return;
-		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
@@ -1548,6 +1430,20 @@ public:
 		ComputeBaselineLayout(PositionBottomMiddle, ENameplateCoreRow::NUM_ROWS,
 			HasFrame, FrameMin, FrameMax, DummyHasRow, DummyCenter, DummySize);
 	}
+	// 按渲染实际使用的布局（含 pLayoutReference）测量内容包围盒，返回它相对锚点的垂直跨度。
+	// 行偏移不参与测量：拖动范围由预览边界单独夹取，否则框高会随拖动自我放大。
+	float ContentSpan(const CNamePlate *pLayoutReference = nullptr) const
+	{
+		bool HasFrame = false;
+		vec2 FrameMin = vec2(0.0f, 0.0f);
+		vec2 FrameMax = vec2(0.0f, 0.0f);
+		bool DummyHasRow = false;
+		vec2 DummyCenter = vec2(0.0f, 0.0f);
+		vec2 DummySize = vec2(0.0f, 0.0f);
+		ComputeBaselineLayout(vec2(0.0f, 0.0f), ENameplateCoreRow::NUM_ROWS,
+			HasFrame, FrameMin, FrameMax, DummyHasRow, DummyCenter, DummySize, pLayoutReference);
+		return HasFrame ? -FrameMin.y : 0.0f;
+	}
 
 private:
 	template<typename PartType, typename... ArgsType>
@@ -1705,9 +1601,8 @@ public:
 		if(NameplateFreeMoveEnabled())
 		{
 			// Use the baseline frame top so chat bubbles etc. anchor to a
-			// stable, drag-independent position. The drag area is visually
-			// larger (see NAMEPLATE_FREE_MOVE_FRAME_SCALE), but TopY is for
-			// layout neighbors that should hug the actual content.
+			// stable, drag-independent position. TopY is for layout neighbors
+			// that should hug the actual content, not the draggable area.
 			bool HasFrame = false;
 			vec2 FrameMin = vec2(0.0f, 0.0f);
 			vec2 FrameMax = vec2(0.0f, 0.0f);
@@ -1716,22 +1611,6 @@ public:
 		}
 
 		return RangeTopY(PositionBottomMiddle, 0, m_vpParts.size());
-	}
-	vec2 Size() const
-	{
-		dbg_assert(m_Inited, "Tried to get size of uninited nameplate");
-		if(NameplateFreeMoveEnabled())
-		{
-			// Reported size stays at the baseline stack bbox so layout code
-			// (chat bubbles, preview-page tee placement) hugs the actual
-			// content. The drag area is scaled separately at draw time.
-			bool HasFrame = false;
-			vec2 FrameMin = vec2(0.0f, 0.0f);
-			vec2 FrameMax = vec2(0.0f, 0.0f);
-			ComputeBaselineFrame(vec2(0.0f, 0.0f), HasFrame, FrameMin, FrameMax);
-			return HasFrame ? FrameMax - FrameMin : vec2(0.0f, 0.0f);
-		}
-		return RangeSize(0, m_vpParts.size());
 	}
 	void CollectCoreRowRects(vec2 PositionBottomMiddle, std::array<SNameplateCoreRowRect, kNameplateCoreRowCount> &aRects, const CNamePlate *pLayoutReference = nullptr) const
 	{
@@ -1929,7 +1808,11 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	Data.m_ShowName = pPlayerInfo->m_Local ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates;
 	GameClient()->FormatStreamerName(ClientId, Data.m_aName, sizeof(Data.m_aName));
 	str_copy(Data.m_aQmTitle, Data.m_ShowName ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
-	Data.m_DeveloperRainbow = Data.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId);
+	Data.m_TitleColorStyle = ResolveQmTitleColorStyle(
+		g_Config.m_QmTitleColorMode,
+		g_Config.m_QmTitleColor,
+		g_Config.m_QmTitleOpacity,
+		Data.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId));
 	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
 	const bool Spectating = !DemoPlayback && GameClient()->m_Snap.m_SpecInfo.m_Active;
 	const bool SpectateTarget = GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == ClientId;
@@ -2115,7 +1998,11 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		FrameData.m_ShowName = true;
 		FrameData.m_ShowFriendMark = FrameData.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
 		str_copy(FrameData.m_aQmTitle, FrameData.m_ShowName ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
-		FrameData.m_DeveloperRainbow = FrameData.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId);
+		FrameData.m_TitleColorStyle = ResolveQmTitleColorStyle(
+			g_Config.m_QmTitleColorMode,
+			g_Config.m_QmTitleColor,
+			g_Config.m_QmTitleOpacity,
+			FrameData.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId));
 		FrameData.m_ShowClientId = FrameData.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
 		FrameData.m_ShowClan = FrameData.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
 		const bool FrameShowLocalAlignedCoordX = CoordModuleAllowsCoords && CoordXAlignHintEnabled && LocalCoordXAligned;
@@ -2137,105 +2024,138 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		NamePlate.Render(*GameClient(), Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset), pLayoutReference);
 }
 
-void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
+// 构造预览用铭牌数据。ForceNameplateScopeAll=true 生成「全 scope 参考框」：
+// 切换玩家/分身预览或开关模块时，各行的基线位置都按它计算，与游戏内保持一致。
+static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, bool ForceNameplateScopeAll, CNamePlateData &Data)
 {
 	const float FontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
 	const float FontSizeClan = 18.0f + 20.0f * g_Config.m_ClNamePlatesClanSize / 100.0f;
 	const float FontSizeCoords = 18.0f + 20.0f * g_Config.m_ClNamePlatesCoordsSize / 100.0f;
-
 	const float FontSizeDirection = 18.0f + 20.0f * g_Config.m_ClDirectionSize / 100.0f;
 	const float FontSizeHookStrongWeak = 18.0f + 20.0f * g_Config.m_ClNamePlatesStrongSize / 100.0f;
 
-	auto BuildPreviewData = [&](int DummyIdx, CNamePlateData &Data, bool ForceNameplateScopeAll = false) {
-		Data.m_InGame = false;
-		Data.m_Color = g_Config.m_ClNamePlatesTeamcolors ? GameClient()->GetDDTeamColor(13, 0.75f) : TextRender()->DefaultTextColor();
-		Data.m_Color.a = 1.0f;
-		const bool IsOwnPreview = DummyIdx == 0;
-		const bool NameplateScopeAllowsPreview = ForceNameplateScopeAll || (IsOwnPreview ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates);
-		const bool CoordModuleAllowsPreview = IsOwnPreview ? g_Config.m_QmNameplateCoordsOwn : g_Config.m_QmNameplateCoords;
+	Data.m_InGame = false;
+	Data.m_Color = g_Config.m_ClNamePlatesTeamcolors ? This.GetDDTeamColor(13, 0.75f) : This.TextRender()->DefaultTextColor();
+	Data.m_Color.a = 1.0f;
+	const bool IsOwnPreview = DummyIdx == 0;
+	const bool NameplateScopeAllowsPreview = ForceNameplateScopeAll || (IsOwnPreview ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates);
+	const bool CoordModuleAllowsPreview = IsOwnPreview ? g_Config.m_QmNameplateCoordsOwn : g_Config.m_QmNameplateCoords;
 
-		Data.m_ShowName = NameplateScopeAllowsPreview;
-		Data.m_aQmTitle[0] = '\0';
-		Data.m_DeveloperRainbow = false;
-		// 设置页预览必须展示当前选择的效果，不能受游戏中 Playing/Spectate/Demo scope 限制。
-		Data.m_UseTextEffects = g_Config.m_QmNameplateTextEffects != 0;
-		const char *pName = DummyIdx == 0 ? Client()->PlayerName() : Client()->DummyName();
-		str_copy(Data.m_aName, str_utf8_skip_whitespaces(pName));
-		str_utf8_trim_right(Data.m_aName);
-		Data.m_FontSize = FontSize;
+	Data.m_ShowName = NameplateScopeAllowsPreview;
+	Data.m_aQmTitle[0] = '\0';
+	Data.m_TitleColorStyle = {};
+	// 设置页预览必须展示当前选择的效果，不能受游戏中 Playing/Spectate/Demo scope 限制。
+	Data.m_UseTextEffects = g_Config.m_QmNameplateTextEffects != 0;
+	const char *pName = DummyIdx == 0 ? This.Client()->PlayerName() : This.Client()->DummyName();
+	str_copy(Data.m_aName, str_utf8_skip_whitespaces(pName));
+	str_utf8_trim_right(Data.m_aName);
+	Data.m_FontSize = FontSize;
 
-		Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark;
+	Data.m_ShowFriendMark = Data.m_ShowName && g_Config.m_ClNamePlatesFriendMark;
 
-		Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
-		Data.m_ClientId = DummyIdx;
-		Data.m_ClientIdSeparateLine = g_Config.m_ClNamePlatesIdsSeparateLine;
-		Data.m_FontSizeClientId = Data.m_ClientIdSeparateLine ? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
+	Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
+	Data.m_ClientId = DummyIdx;
+	Data.m_ClientIdSeparateLine = g_Config.m_ClNamePlatesIdsSeparateLine;
+	Data.m_FontSizeClientId = Data.m_ClientIdSeparateLine ? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
 
-		Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan;
-		const char *pClan = DummyIdx == 0 ? g_Config.m_PlayerClan : g_Config.m_ClDummyClan;
-		str_copy(Data.m_aClan, str_utf8_skip_whitespaces(pClan));
-		str_utf8_trim_right(Data.m_aClan);
-		if(Data.m_aClan[0] == '\0')
-			str_copy(Data.m_aClan, Localize("Clan Name"));
-		Data.m_FontSizeClan = FontSizeClan;
+	Data.m_ShowClan = Data.m_ShowName && g_Config.m_ClNamePlatesClan;
+	const char *pClan = DummyIdx == 0 ? g_Config.m_PlayerClan : g_Config.m_ClDummyClan;
+	str_copy(Data.m_aClan, str_utf8_skip_whitespaces(pClan));
+	str_utf8_trim_right(Data.m_aClan);
+	if(Data.m_aClan[0] == '\0')
+		str_copy(Data.m_aClan, Localize("Clan Name"));
+	Data.m_FontSizeClan = FontSizeClan;
 
-		Data.m_ShowCoords = CoordModuleAllowsPreview;
-		Data.m_ShowCoordX = Data.m_ShowCoords && g_Config.m_QmNameplateCoordX != 0;
-		Data.m_ShowCoordY = Data.m_ShowCoords && g_Config.m_QmNameplateCoordY != 0;
-		Data.m_Coords = vec2(12.34f + DummyIdx, 56.78f + DummyIdx);
-		Data.m_FontSizeCoords = FontSizeCoords;
-		Data.m_CoordXAlignHint = false;
-		Data.m_CoordXAlignHintStrict = false;
-		Data.m_CoordXAligned = false;
-		Data.m_CoordXAlignColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNameplateCoordXAlignHintColor));
+	Data.m_ShowCoords = CoordModuleAllowsPreview;
+	Data.m_ShowCoordX = Data.m_ShowCoords && g_Config.m_QmNameplateCoordX != 0;
+	Data.m_ShowCoordY = Data.m_ShowCoords && g_Config.m_QmNameplateCoordY != 0;
+	Data.m_Coords = vec2(12.34f + DummyIdx, 56.78f + DummyIdx);
+	Data.m_FontSizeCoords = FontSizeCoords;
+	Data.m_CoordXAlignHint = false;
+	Data.m_CoordXAlignHintStrict = false;
+	Data.m_CoordXAligned = false;
+	Data.m_CoordXAlignColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNameplateCoordXAlignHintColor));
 
-		// Preview has no player info; treat the active dummy as local (mirrors pPlayerInfo->m_Local),
-		// so Others/Only self show different direction across the two dummies.
-		const bool PreviewIsLocal = DummyIdx == g_Config.m_ClDummy;
-		switch(g_Config.m_ClShowDirection)
+	// 预览没有玩家信息，把当前分身当作本地玩家（对应 pPlayerInfo->m_Local），
+	// 这样 Others/Only self 在两个分身之间才会显示差异。
+	const bool PreviewIsLocal = DummyIdx == g_Config.m_ClDummy;
+	switch(g_Config.m_ClShowDirection)
+	{
+	case 0: // Off
+		Data.m_ShowDirection = false;
+		break;
+	case 1: // Others
+		Data.m_ShowDirection = !PreviewIsLocal;
+		break;
+	case 2: // Everyone
+		Data.m_ShowDirection = true;
+		break;
+	case 3: // Only self
+		Data.m_ShowDirection = PreviewIsLocal;
+		break;
+	default:
+		Data.m_ShowDirection = false;
+		dbg_assert_failed("ShowDirectionConfig invalid");
+	}
+	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = true;
+	Data.m_FontSizeDirection = FontSizeDirection;
+
+	Data.m_FontSizeHookStrongWeak = FontSizeHookStrongWeak;
+	Data.m_HookStrongWeakId = Data.m_ClientId;
+	Data.m_ReserveHookStrongWeakRow = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong > 0;
+	Data.m_ShowHookStrongWeakId = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong == 2;
+	if(DummyIdx == g_Config.m_ClDummy)
+	{
+		Data.m_HookStrongWeakState = EHookStrongWeakState::NEUTRAL;
+		Data.m_ShowHookStrongWeak = NameplateScopeAllowsPreview && (Data.m_ShowHookStrongWeakId || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, true, false, false)));
+	}
+	else
+	{
+		Data.m_HookStrongWeakState = Data.m_HookStrongWeakId == 2 ? EHookStrongWeakState::STRONG : EHookStrongWeakState::WEAK;
+		const bool Strong = Data.m_HookStrongWeakState == EHookStrongWeakState::STRONG;
+		const bool Weak = Data.m_HookStrongWeakState == EHookStrongWeakState::WEAK;
+		Data.m_ShowHookStrongWeak = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, false, Strong, Weak);
+	}
+
+	// TClient
+	Data.m_Local = false;
+}
+
+// 预览框需要的高度：最高的那份铭牌内容 + cl_nameplates_offset + 脚本体 + 上下留白。
+// 两个分身取较大者，所以切换预览时框高与脚本体位置都不变。
+// 设置页据此撑开卡片高度，任何字号/模块组合下铭牌与脚本体都不会溢出预览框。
+float CNamePlates::MeasurePreviewAreaHeight() const
+{
+	float MaxContentSpan = 0.0f;
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+	{
+		CNamePlateData Data;
+		BuildNamePlatePreviewData(*GameClient(), Dummy, false, Data);
+		CNamePlate PreviewPlate(*GameClient(), Data);
+
+		CNamePlate FramePlate;
+		CNamePlate *pFramePlate = nullptr;
+		if(NameplateFreeMoveEnabled())
 		{
-		case 0: // Off
-			Data.m_ShowDirection = false;
-			break;
-		case 1: // Others
-			Data.m_ShowDirection = !PreviewIsLocal;
-			break;
-		case 2: // Everyone
-			Data.m_ShowDirection = true;
-			break;
-		case 3: // Only self
-			Data.m_ShowDirection = PreviewIsLocal;
-			break;
-		default:
-			Data.m_ShowDirection = false;
-			dbg_assert_failed("ShowDirectionConfig invalid");
-		}
-		Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = true;
-		Data.m_FontSizeDirection = FontSizeDirection;
-
-		Data.m_FontSizeHookStrongWeak = FontSizeHookStrongWeak;
-		Data.m_HookStrongWeakId = Data.m_ClientId;
-		Data.m_ReserveHookStrongWeakRow = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong > 0;
-		Data.m_ShowHookStrongWeakId = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong == 2;
-		if(DummyIdx == g_Config.m_ClDummy)
-		{
-			Data.m_HookStrongWeakState = EHookStrongWeakState::NEUTRAL;
-			Data.m_ShowHookStrongWeak = NameplateScopeAllowsPreview && (Data.m_ShowHookStrongWeakId || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, true, false, false)));
-		}
-		else
-		{
-			Data.m_HookStrongWeakState = Data.m_HookStrongWeakId == 2 ? EHookStrongWeakState::STRONG : EHookStrongWeakState::WEAK;
-			const bool Strong = Data.m_HookStrongWeakState == EHookStrongWeakState::STRONG;
-			const bool Weak = Data.m_HookStrongWeakState == EHookStrongWeakState::WEAK;
-			Data.m_ShowHookStrongWeak = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, false, Strong, Weak);
+			CNamePlateData FrameData;
+			BuildNamePlatePreviewData(*GameClient(), Dummy, true, FrameData);
+			FramePlate.Update(*GameClient(), FrameData);
+			pFramePlate = &FramePlate;
 		}
 
-		// TClient
-		Data.m_Local = false;
-	};
+		MaxContentSpan = std::max(MaxContentSpan, PreviewPlate.ContentSpan(pFramePlate));
+		PreviewPlate.Reset(*GameClient());
+		if(pFramePlate != nullptr)
+			pFramePlate->Reset(*GameClient());
+	}
 
+	return NAMEPLATE_PREVIEW_AREA_MARGIN * 2.0f + MaxContentSpan + (float)g_Config.m_ClNamePlatesOffset + NAMEPLATE_PREVIEW_TEE_SIZE / 2.0f;
+}
+
+void CNamePlates::RenderNamePlatePreview(const CUIRect &PreviewArea, int Dummy)
+{
 	CNamePlateData Data;
-	BuildPreviewData(Dummy, Data);
+	BuildNamePlatePreviewData(*GameClient(), Dummy, false, Data);
 	CNamePlate &NamePlate = m_pData->m_aPreviewNamePlates[Dummy];
 	NamePlate.Update(*GameClient(), Data);
 
@@ -2250,62 +2170,23 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 		TeeRenderInfo.Apply(GameClient()->m_Skins.Find(g_Config.m_ClDummySkin));
 		TeeRenderInfo.ApplyColors(g_Config.m_ClDummyUseCustomColor, g_Config.m_ClDummyColorBody, g_Config.m_ClDummyColorFeet);
 	}
-	TeeRenderInfo.m_Size = 64.0f;
+	TeeRenderInfo.m_Size = NAMEPLATE_PREVIEW_TEE_SIZE;
 
-	// To keep the drag area visually identical when toggling between
-	// player/dummy preview, take the union of both sides' baseline frame
-	// sizes and use that as the unified size for sizing/anchoring/clamping.
-	vec2 UnifiedFrameSize = NamePlate.Size();
+	// 全 scope 参考框只用来定行基线：切换预览或开关模块时行位置保持稳定，与游戏内一致。
 	CNamePlate FrameNamePlate;
 	CNamePlate *pFrameNamePlate = nullptr;
 	if(NameplateFreeMoveEnabled())
 	{
 		CNamePlateData FrameData;
-		BuildPreviewData(Dummy, FrameData, true);
+		BuildNamePlatePreviewData(*GameClient(), Dummy, true, FrameData);
 		FrameNamePlate.Update(*GameClient(), FrameData);
 		pFrameNamePlate = &FrameNamePlate;
-
-		CNamePlateData OtherFrameData;
-		BuildPreviewData(Dummy == 0 ? 1 : 0, OtherFrameData, true);
-		CNamePlate OtherFrameNamePlate(*GameClient(), OtherFrameData);
-		UnifiedFrameSize = FrameNamePlate.Size();
-		const vec2 OtherSize = OtherFrameNamePlate.Size();
-		UnifiedFrameSize.x = std::max(UnifiedFrameSize.x, OtherSize.x);
-		UnifiedFrameSize.y = std::max(UnifiedFrameSize.y, OtherSize.y);
-		OtherFrameNamePlate.Reset(*GameClient());
 	}
 
-	Position.y += UnifiedFrameSize.y / 2.0f;
-	Position.y += (float)g_Config.m_ClNamePlatesOffset / 2.0f;
-
-	// Free-move preview: the tee stays at the original preview position (the
-	// same relative offset to the nameplate content as in-game), so what the
-	// user sees in the preview matches the actual in-game layout. The frame
-	// (used for clamping the drag area) is still computed below, but it does
-	// not move the tee.
-	const vec2 TeeRenderPosition = Position;
-	const vec2 NameplateBottomMiddle = Position - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);
-	bool HasFrame = false;
-	vec2 FrameMin = vec2(0.0f, 0.0f);
-	vec2 FrameMax = vec2(0.0f, 0.0f);
-	if(NameplateFreeMoveEnabled())
-	{
-		// Anchor the unified frame at this preview's baseline-frame center,
-		// then expand to the unified size and apply the visual scale.
-		bool BaseHasFrame = false;
-		vec2 BaseFrameMin = vec2(0.0f, 0.0f);
-		vec2 BaseFrameMax = vec2(0.0f, 0.0f);
-		pFrameNamePlate->ComputeBaselineFrame(NameplateBottomMiddle, BaseHasFrame, BaseFrameMin, BaseFrameMax);
-		if(BaseHasFrame)
-		{
-			const vec2 Center = (BaseFrameMin + BaseFrameMax) * 0.5f;
-			const vec2 HalfUnified = UnifiedFrameSize * 0.5f;
-			FrameMin = Center - HalfUnified;
-			FrameMax = Center + HalfUnified;
-			ScaleFrameAroundCenter(FrameMin, FrameMax, NAMEPLATE_FREE_MOVE_FRAME_SCALE);
-			HasFrame = true;
-		}
-	}
+	// 脚本体贴框底留白，铭牌按 cl_nameplates_offset 挂在脚本体正上方（与游戏内一致）。
+	// 框高由 MeasurePreviewAreaHeight() 按内容撑开，所以两者都不会越出预览框。
+	const vec2 TeeRenderPosition = vec2(PreviewArea.Center().x, PreviewArea.y + PreviewArea.h - NAMEPLATE_PREVIEW_AREA_MARGIN - NAMEPLATE_PREVIEW_TEE_SIZE / 2.0f);
+	const vec2 NameplateBottomMiddle = TeeRenderPosition - vec2(0.0f, (float)g_Config.m_ClNamePlatesOffset);
 
 	// tee looking towards cursor, and it is happy when you touch it
 	const vec2 DeltaPosition = Ui()->MousePos() - TeeRenderPosition;
@@ -2314,11 +2195,16 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 	const vec2 TeeDirection = Distance < InteractionDistance ? normalize(vec2(DeltaPosition.x, maximum(DeltaPosition.y, 0.5f))) : normalize(DeltaPosition);
 	const int TeeEmote = Distance < InteractionDistance ? EMOTE_HAPPY : (Dummy ? g_Config.m_ClDummyDefaultEyes : g_Config.m_ClPlayerDefaultEyes);
 	RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeRenderInfo, TeeEmote, TeeDirection, TeeRenderPosition);
-	Position.y -= (float)g_Config.m_ClNamePlatesOffset;
+
+	// 自由移动边界就是预览框本身（内缩一点）：白框画的就是可拖动范围，
+	// 拖动范围与看得见的范围一致，不会再画到卡片外面。
+	const bool HasFrame = NameplateFreeMoveEnabled();
+	const vec2 FrameMin = vec2(PreviewArea.x + NAMEPLATE_PREVIEW_FRAME_INSET, PreviewArea.y + NAMEPLATE_PREVIEW_FRAME_INSET);
+	const vec2 FrameMax = vec2(PreviewArea.x + PreviewArea.w - NAMEPLATE_PREVIEW_FRAME_INSET, PreviewArea.y + PreviewArea.h - NAMEPLATE_PREVIEW_FRAME_INSET);
 	if(NameplateFreeMoveEnabled())
 	{
 		std::array<SNameplateCoreRowRect, kNameplateCoreRowCount> aEditorRects;
-		NamePlate.CollectCoreRowRects(Position, aEditorRects, pFrameNamePlate);
+		NamePlate.CollectCoreRowRects(NameplateBottomMiddle, aEditorRects, pFrameNamePlate);
 
 		const vec2 MousePosition = Ui()->MousePos();
 		ENameplateCoreRow HoveredRow = ENameplateCoreRow::NUM_ROWS;
@@ -2349,17 +2235,16 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 			int *pOffsetX = NameplateCoreRowOffsetX(m_pData->m_FreeMoveDragRow);
 			int *pOffsetY = NameplateCoreRowOffsetY(m_pData->m_FreeMoveDragRow);
 
-			// Offset range = (FrameMin - BaselineRowMin, FrameMax - BaselineRowMax),
-			// where BaselineRowMin/Max derive from row center & size at offset=0.
-			// The frame here is the SAME unified+scaled frame the outline is
-			// drawn from, so clamp matches the visible drag area exactly.
+			// 可拖动范围 = (FrameMin - 行的基准矩形左上, FrameMax - 行的基准矩形右下)，
+			// 行的基准矩形取 offset=0 时的中心与尺寸。这里的边界框与上面画出的
+			// 白框是同一个，所以能拖到的范围与看到的范围完全一致。
 			bool DragHasRow = false;
 			bool DragIgnoreFrame = false;
 			vec2 DragIgnoreFrameMin = vec2(0.0f, 0.0f);
 			vec2 DragIgnoreFrameMax = vec2(0.0f, 0.0f);
 			vec2 DragRowCenter = vec2(0.0f, 0.0f);
 			vec2 DragRowSize = vec2(0.0f, 0.0f);
-			NamePlate.ComputeBaselineLayout(Position, m_pData->m_FreeMoveDragRow,
+			NamePlate.ComputeBaselineLayout(NameplateBottomMiddle, m_pData->m_FreeMoveDragRow,
 				DragIgnoreFrame, DragIgnoreFrameMin, DragIgnoreFrameMax,
 				DragHasRow, DragRowCenter, DragRowSize, pFrameNamePlate);
 			const vec2 DragFrameMin = FrameMin;
@@ -2412,7 +2297,7 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 				const int NewOffsetY = std::clamp(round_to_int(m_pData->m_FreeMoveDragStartOffset.y + MousePosition.y - m_pData->m_FreeMoveDragStartMouse.y), LimitMinY, LimitMaxY);
 				*pOffsetY = NewOffsetY;
 			}
-			NamePlate.CollectCoreRowRects(Position, aEditorRects, pFrameNamePlate);
+			NamePlate.CollectCoreRowRects(NameplateBottomMiddle, aEditorRects, pFrameNamePlate);
 		}
 
 		const bool DraggingAnyRow = m_pData->m_FreeMoveDragRow != ENameplateCoreRow::NUM_ROWS;
@@ -2458,7 +2343,7 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 	{
 		m_pData->m_FreeMoveDragRow = ENameplateCoreRow::NUM_ROWS;
 	}
-	NamePlate.Render(*GameClient(), Position, pFrameNamePlate);
+	NamePlate.Render(*GameClient(), NameplateBottomMiddle, pFrameNamePlate);
 	if(pFrameNamePlate != nullptr)
 		pFrameNamePlate->Reset(*GameClient());
 }
@@ -2845,12 +2730,10 @@ void CNamePlates::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
-	// MSDF 名牌渲染：首次可用时懒加载图集（预烤资产，加载后无每帧生成开销）
-	if(g_Config.m_QmNameplateMsdf != 0)
-		QmNameplateMsdf().EnsureInitialized(Storage(), Graphics());
-
 	// 每帧重置名牌文字重建预算，把缩放档位变化带来的重建开销摊平到多帧
 	s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME;
+	// 栅格化密度每帧只算一次，供所有文本部件读取
+	s_NameplateRasterizationDensity = ComputeNameplateRasterizationDensity(*GameClient());
 
 	int ShowDirection = g_Config.m_ClShowDirection;
 #if defined(CONF_VIDEORECORDER)
@@ -2933,7 +2816,6 @@ void CNamePlates::OnShutdown()
 	ResetNamePlates();
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 		ResetChatBubbleAnimState(i, true);
-	QmNameplateMsdf().Shutdown();
 }
 
 CNamePlates::CNamePlates() :

@@ -1614,46 +1614,35 @@ void CGameConsole::CInstance::PrintLine(const char *pLine, int Len, ColorRGBA Pr
 	str_copy(pEntry->m_aText, pLine, Len + 1);
 }
 
-CGameConsole::CInstance::ELogCategory CGameConsole::CInstance::ClassifyLogCategory(const char *pLine, size_t Length)
+int CGameConsole::CInstance::ClassifyLogCategory(const char *pLine, size_t Length)
 {
-	if(!pLine || Length == 0)
-		return ELogCategory::SYSTEM;
-
-	const char *pSearchEnd = pLine + Length;
-	const char *pSystemStart = pLine;
-	if(const char *pColon = str_find(pLine, ": "))
-	{
-		pSearchEnd = pColon;
-		const char *pIt = pColon;
-		while(pIt > pLine && pIt[-1] != ' ')
-			--pIt;
-		pSystemStart = pIt;
-	}
-
-	const char *pChat = str_find_nocase(pSystemStart, "chat/");
-	if(pChat && pChat < pSearchEnd)
-	{
-		if(str_startswith_nocase(pChat, "chat/all") || str_startswith_nocase(pChat, "chat/team") || str_startswith_nocase(pChat, "chat/whisper"))
-			return ELogCategory::PLAYER;
-	}
-	return ELogCategory::SYSTEM;
+	return QmClassifyConsoleLogLine(pLine, Length);
 }
 
 bool CGameConsole::CInstance::MatchesLogFilter(const CBacklogEntry *pEntry) const
 {
-	if(m_LogFilter == ELogFilter::ALL)
-		return true;
-	const ELogCategory Category = ClassifyLogCategory(pEntry->m_aText, pEntry->m_Length);
-	if(Category == ELogCategory::PLAYER)
-		return m_LogFilter == ELogFilter::PLAYER;
-	return m_LogFilter == ELogFilter::SYSTEM;
+	return QmConsoleLogCategoryPassesFilter(pEntry->m_LogCategory, m_LogFilterMask);
 }
 
-void CGameConsole::CInstance::SetLogFilter(ELogFilter Filter)
+int CGameConsole::CInstance::LogFilterCategoryForButton(int ButtonIndex)
 {
-	if(m_LogFilter == Filter)
+	switch(ButtonIndex)
+	{
+	case 0: return QM_CONSOLE_LOG_CATEGORY_ALL;
+	case 1: return QM_CONSOLE_LOG_CATEGORY_PLAYER;
+	case 2: return QM_CONSOLE_LOG_CATEGORY_SYSTEM;
+	case 3: return QM_CONSOLE_LOG_CATEGORY_COMMAND;
+	case 4: return QM_CONSOLE_LOG_CATEGORY_BINDS;
+	default: return QM_CONSOLE_LOG_CATEGORY_ALL;
+	}
+}
+
+void CGameConsole::CInstance::SetLogFilterMask(int Mask)
+{
+	const int Normalized = QmNormalizeConsoleLogFilterMask(Mask);
+	if(m_LogFilterMask == Normalized)
 		return;
-	m_LogFilter = Filter;
+	m_LogFilterMask = Normalized;
 	m_BacklogCurLine = 0;
 	m_BacklogLastActiveLine = -1;
 	m_NewLineCounter = 0;
@@ -1666,6 +1655,10 @@ void CGameConsole::CInstance::SetLogFilter(ELogFilter Filter)
 	m_ScrollbarDragOffset = 0.0f;
 	if(m_Searching)
 		UpdateSearch();
+
+	// 顶栏分类选择跨启动保留；只写变量，落盘交给常规配置保存
+	if(m_Type == CONSOLETYPE_LOCAL)
+		g_Config.m_QmConsoleFilterMask = Normalized;
 }
 
 int CGameConsole::CInstance::TotalBacklogLines()
@@ -1692,7 +1685,7 @@ void CGameConsole::CInstance::InvalidateTotalBacklogLines()
 
 bool CGameConsole::CInstance::IsChatExportableEntry(const CBacklogEntry *pEntry) const
 {
-	return pEntry && pEntry->m_LogCategory == ELogCategory::PLAYER;
+	return pEntry && pEntry->m_LogCategory == QM_CONSOLE_LOG_CATEGORY_PLAYER;
 }
 
 void CGameConsole::CInstance::ClearChatExportSelection()
@@ -1760,8 +1753,8 @@ void CGameConsole::CInstance::SetChatExportMode(bool Enable)
 		if(m_Searching)
 			SetSearching(false);
 		ClearChatExportSelection();
-		m_ChatExportPreviousFilter = m_LogFilter;
-		SetLogFilter(ELogFilter::PLAYER);
+		m_ChatExportPreviousFilterMask = m_LogFilterMask;
+		SetLogFilterMask(QM_CONSOLE_LOG_CATEGORY_PLAYER);
 		m_ChatExportMode = true;
 		m_HasSelection = false;
 		m_MouseIsPress = false;
@@ -1770,7 +1763,7 @@ void CGameConsole::CInstance::SetChatExportMode(bool Enable)
 	{
 		m_ChatExportMode = false;
 		ClearChatExportSelection();
-		SetLogFilter(m_ChatExportPreviousFilter);
+		SetLogFilterMask(m_ChatExportPreviousFilterMask);
 		m_HasSelection = false;
 		m_MouseIsPress = false;
 	}
@@ -3010,19 +3003,24 @@ void CGameConsole::OnRender()
 			char aVersionBuf[128];
 			str_copy(aVersionBuf, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
 			const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
-			const char *apFilterLabels[] = {Localize("All"), Localize("Players"), Localize("System")};
-			const CInstance::ELogFilter aFilters[] = {CInstance::ELogFilter::ALL, CInstance::ELogFilter::PLAYER, CInstance::ELogFilter::SYSTEM};
+			const char *apFilterLabels[CInstance::LOG_FILTER_BUTTON_COUNT] = {
+				Localize("All"),
+				Localize("Players"),
+				Localize("System"),
+				Localize("Commands"),
+				Localize("Binds"),
+			};
 			const bool ShowExportButton = m_ConsoleType == CONSOLETYPE_LOCAL;
 			const char *pExportLabel = Localize("Select export");
 			const float ExportButtonWidth = ShowExportButton ? TextRender()->TextWidth(FilterFontSize, pExportLabel) + FilterPadding * 2.0f : 0.0f;
 			const float VersionRight = ShowExportButton ? Screen.w - TopbarRightMargin - ExportButtonWidth - FilterSpacing : Screen.w - TopbarRightMargin;
-			float aFilterWidths[3];
+			float aFilterWidths[CInstance::LOG_FILTER_BUTTON_COUNT];
 			float TotalFilterWidth = 0.0f;
-			for(int i = 0; i < 3; ++i)
+			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
 				aFilterWidths[i] = TextRender()->TextWidth(FilterFontSize, apFilterLabels[i]) + FilterPadding * 2.0f;
 				TotalFilterWidth += aFilterWidths[i];
-				if(i != 2)
+				if(i != CInstance::LOG_FILTER_BUTTON_COUNT - 1)
 					TotalFilterWidth += FilterSpacing;
 			}
 
@@ -3032,22 +3030,29 @@ void CGameConsole::OnRender()
 			if(FilterX + TotalFilterWidth > FilterRightLimit)
 				FilterX = maximum(LinesTextX + LinesWidth + 10.0f, FilterRightLimit - TotalFilterWidth);
 
-			CUIRect aFilterRects[3];
+			CUIRect aFilterRects[CInstance::LOG_FILTER_BUTTON_COUNT];
 			float FilterLayoutX = FilterX;
-			for(int i = 0; i < 3; ++i)
+			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
 				aFilterRects[i] = {FilterLayoutX, FilterY, aFilterWidths[i], FilterHeight};
 				FilterLayoutX += aFilterWidths[i] + FilterSpacing;
 			}
 
-			for(int i = 0; i < 3; ++i)
+			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
 				CUIRect Button = aFilterRects[i];
-				const bool Active = pConsole->m_LogFilter == aFilters[i];
+				const int Category = CInstance::LogFilterCategoryForButton(i);
+				const bool Active = (pConsole->m_LogFilterMask & Category) != 0;
 				const bool UiClicked = Ui()->DoButton_PopupMenu(&m_aFilterButtons[i], apFilterLabels[i], &Button, FilterFontSize, TEXTALIGN_MC);
 				const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
 				if(UiClicked || ManualClicked)
-					pConsole->SetLogFilter(aFilters[i]);
+				{
+					// i==0 的「全部」是总开关：点亮即其余全亮，再点一次则全部熄灭（熄灭会归一化回全亮）
+					const unsigned int Mask = (unsigned int)pConsole->m_LogFilterMask;
+					const unsigned int CategoryMask = (unsigned int)Category;
+					const unsigned int NewMask = i == 0 ? (Active ? 0u : (unsigned int)QM_CONSOLE_LOG_CATEGORY_ALL) : (Active ? (Mask & ~CategoryMask) : (Mask | CategoryMask));
+					pConsole->SetLogFilterMask((int)NewMask);
+				}
 				if(Active)
 					Button.DrawOutline(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
 			}
@@ -3264,6 +3269,9 @@ void CGameConsole::OnConsoleInit()
 	// init console instances
 	m_LocalConsole.Init(this);
 	m_RemoteConsole.Init(this);
+
+	// 本地控制台的分类选择跨启动保留（远程控制台保持独立，不受该配置影响）
+	m_LocalConsole.m_LogFilterMask = QmNormalizeConsoleLogFilterMask(g_Config.m_QmConsoleFilterMask);
 
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
 

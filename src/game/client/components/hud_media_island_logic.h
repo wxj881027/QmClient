@@ -942,6 +942,11 @@ struct SHudMediaIslandSdfRenderState
 	float m_ScreenPixelSize = 1.0f;
 	float m_OuterShadowSize = 0.0f;
 	float m_OuterShadowOpacity = 0.0f;
+	// 轮廓环：贴着主体外轮廓（圆角矩形/胶囊）绕一圈的倒计时环，供「一整块宽岛」使用。
+	// 厚度为 0 时关闭，退回「每个 item 各自一个圆环」的卫星环语义（HUD 动态岛走那条）。
+	float m_OutlineRingThickness = 0.0f;
+	// 环中心线相对主体轮廓外扩的距离；环整条都在轮廓外侧。
+	float m_OutlineRingOffset = 0.0f;
 	vec4 m_BackdropUv{};
 };
 
@@ -961,7 +966,9 @@ inline float QmHudMediaIslandSdfPadding(const SHudMediaIslandSdfRenderState &Sta
 	const float Feather = std::max(State.m_ScreenPixelSize, 0.0001f) * 0.9f;
 	const float ShapeOverflow = std::max(0.0f, MaxSmoothUnion) * 0.25f + Feather;
 	const float ShadowOverflow = std::max(0.0f, State.m_OuterShadowSize) + Feather;
-	return std::max(1.5f, std::max(ShapeOverflow, ShadowOverflow));
+	// 轮廓环整条都在主体外侧：外沿 = 中心线外扩距离 + 半个厚度。
+	const float OutlineOverflow = std::max(0.0f, State.m_OutlineRingOffset) + std::max(0.0f, State.m_OutlineRingThickness) * 0.5f + Feather;
+	return std::max(1.5f, std::max(std::max(ShapeOverflow, ShadowOverflow), OutlineOverflow));
 }
 
 inline CUIRect QmHudMediaIslandSdfOuterRect(const SHudMediaIslandSdfRenderState &State)
@@ -1012,7 +1019,7 @@ inline bool QmHudMediaIslandBuildGpuSdfParams(const SHudMediaIslandSdfRenderStat
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_MAIN_PARAMS] = vec4(State.m_MainRadius, State.m_MainDisabledCornerRadius, State.m_RingRadius, State.m_RingThickness);
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_METADATA] = vec4((float)State.m_ItemCount, (float)State.m_MainCorners, State.m_HasRightCapsule ? 1.0f : 0.0f, std::max(State.m_ScreenPixelSize, 0.0001f));
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_CAPSULE_PARAMS] = vec4(State.m_RightCapsule.m_Radius, State.m_RightCapsule.m_SmoothUnion, 0.0f, 0.0f);
-	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_RESERVED] = vec4(std::max(0.0f, State.m_OuterShadowSize), std::clamp(State.m_OuterShadowOpacity, 0.0f, 1.0f), 0.0f, 0.0f);
+	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_RESERVED] = vec4(std::max(0.0f, State.m_OuterShadowSize), std::clamp(State.m_OuterShadowOpacity, 0.0f, 1.0f), std::max(0.0f, State.m_OutlineRingThickness), std::max(0.0f, State.m_OutlineRingOffset));
 	Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_BACKDROP_UV] = State.m_BackdropUv;
 
 	for(int i = 0; i < State.m_ItemCount; ++i)

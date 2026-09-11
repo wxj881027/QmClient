@@ -162,7 +162,6 @@ Address
 Address to bind the external console. Anything other than "localhost" is dangerous.
 Adds a specific war entry
 Adds default chat binds
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
 Adjust DDNet gameplay indicators and assists
 Adjust DDRace-specific HUD indicators
 Adjust game camera and FOV settings
@@ -469,6 +468,7 @@ Bind voting and server browser actions
 Bind weapon selection and switching actions
 Bind Wheel
 Bind Wheel Key
+Binds
 Bit flags for disabling settings tabs
 Black
 Blend mode
@@ -488,6 +488,9 @@ Borderless window (not for fullscreen)
 Both
 Both sides of keyword rules must be filled
 Bounce
+Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
+Bracketed title opacity (0-100)
+Bracketed title single color
 Brightness shift
 Broadcast message
 Broadcast shown to players using old DDNet client
@@ -651,6 +654,7 @@ Close window after changing settings
 Collision hitbox
 Collision Line Opacity
 Color
+Color & opacity
 Color of authenticated player names on scoreboard
 Color of hook collision line tip segment
 Color of hook line hitting hookable tile
@@ -669,6 +673,7 @@ Command executed when pointing at someone and shooting (default kill, only works
 Command is not available on solo servers
 Command to run when joining server
 Command:
+Commands
 Commands run in the console
 Common key bindings
 Communities
@@ -782,6 +787,7 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 Could not find your Team
 Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
+Could not load new features
 Could not load sponsor QR code. Check the Base64 data
 Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
@@ -821,8 +827,6 @@ custom
 Custom API key
 Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-Custom bind status list
 Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
 Custom font
@@ -1026,6 +1030,7 @@ Downloaded
 Downloading map
 Downloading update...
 Downscaled (0.78)
+Draft file is empty
 Drag HUD modules with the left mouse button
 Dragger Inner Color
 Dragger laser inner color
@@ -1067,7 +1072,7 @@ Dummy hook
 Dummy is allowed on this server.
 Dummy is currently connected.
 Dummy jump
-Dummy key/hammer/control/copy status switches and custom bind status list
+Dummy key/hammer/control/copy status switches
 Dummy marking color
 Dummy mini view
 Dummy mini view size (percent)
@@ -1130,7 +1135,6 @@ Emoticon
 Emoticon ID
 Emoticon shadow
 Emoticons
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
 enable
 Enable /swap
 Enable /team0 mode
@@ -1223,7 +1227,6 @@ Enable shout when holding fire while in water
 Enable Sixup connection.
 Enable skin queue rotation
 Enable skin switch animation
-Enable skin transition animation, then choose the type, scope, duration and easing.
 Enable smooth cinematic camera while free spectating
 Enable SodaMusic Hook
 Enable SodaMusic hook integration
@@ -1254,7 +1257,6 @@ Enable voice activation (VAD)
 Enable voice chat
 Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
 Enable word filter list
 Enable Zen Mode
 Enable Zen mode
@@ -1270,7 +1272,6 @@ Endpoint
 Endpoint (optional)
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 Enter Password
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 Enter Username
 Enter your sponsor code
 Entities
@@ -1282,7 +1283,6 @@ Entity overlay
 Entity Preview
 Entity wall outline opacity
 entity_bg (Workshop)
-Entry: %s
 Erase items on the in game background
 Error
 Error checking player name
@@ -1394,6 +1394,7 @@ Focus mode
 Folder
 Folder Link
 Follow
+Follow server
 Following
 Font cursor
 Font size
@@ -1735,11 +1736,12 @@ Input overlay display
 Input overlay keyboard scale (percent)
 Input overlay mouse scale (percent)
 Input overlay opacity (percent)
+Input overlay X position (percent)
+Input overlay Y position (percent)
 Input smoothing
 Input switch
 Insane
 Installing update. Please wait...
-Instant zoom reverse
 Interface
 Interface accent color
 Interface animations
@@ -1925,6 +1927,7 @@ Loading sound files
 Loading…
 Local
 Local + Dummy
+Local console log category filter mask (bit flags)
 Local only
 Local particle effects
 Local particles: show particles behind own Tee (e.g. freeze snow)
@@ -2046,7 +2049,6 @@ Menu opened. Press Esc key again to close menu.
 Menu option - normal
 Menu option - selected
 Merge consecutive identical player messages within 2 seconds
-Merges chat messages repeated within a short time into a single line.
 Message color
 Message displayed to players on join.
 Message merging
@@ -2239,6 +2241,7 @@ No login required
 No map play history yet
 No matching assets.
 No matching features found. Try other keywords
+No new features yet
 No noise reduction
 No obvious anomaly
 No output device available
@@ -2333,8 +2336,8 @@ Open a matching settings card directly
 Open bindwheel selector
 Open color picker
 Open DDNet Wiki
-Open editor
 Open emote selector
+Open folder
 Open map editor
 Open modal
 Open pie menu
@@ -2349,7 +2352,6 @@ Open the directory to add custom skins
 Open the directory to add custom themes
 Open the folder containing demo files
 Open the folder containing screenshots
-Open the input overlay editor
 Open the saves file
 Open the selected folder
 Open the selected screenshot
@@ -2443,7 +2445,6 @@ Pet size relative to normal player
 Pet skin
 Pet Skin:
 Pick result: %s
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 Pickup range
 Pie Menu
 Pie menu
@@ -2509,7 +2510,6 @@ Players can hook each other on this server
 Players can't collide on this server
 Players can't hook each other on this server
 Playing effects
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
 Please add a valid cut first
 Please balance teams!
 Please enable finished indicator first
@@ -2605,6 +2605,10 @@ Projectile / explosion range
 Protect names and skins while streaming
 PTT release delay (ms)
 Publicly messages everyone your current time in this current running race
+Publish
+Publish failed
+Published
+Publishing…
 Pulse
 Pulse amplitude
 Pulse Amplitude (0-100)
@@ -2691,7 +2695,6 @@ Red team
 Red team wins!
 Redeem
 Redeem your code and customize your title
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
 Reduce antiping and player prediction when frozen
 Reduce prediction while frozen
 Reduced
@@ -2831,7 +2834,6 @@ Reset filter
 Reset layout
 Reset mouse position when opening bind wheel
 Reset position of mouse when opening bindwheel
-Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
 Reset stats on server join (0=persistent, 1=reset on join)
 Reset stats when joining a server
 Reset to defaults
@@ -2847,7 +2849,6 @@ Restart the client
 Restarting. Please wait…
 Restore old single-segment hook collision line behavior
 Retrying…
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 Review and edit custom key bindings
 Review and reset changed configuration values
 Rifle Laser Inner Color
@@ -3352,7 +3353,6 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 Shows gameplay information for this server
 Shows help to command r, general help if left blank
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
 Shows the credits of the DDNet mod
 Shows the global points of a player beginning with name r (your rank by default)
 Shows the rank of player with name r (your rank by default)
@@ -3366,6 +3366,7 @@ Silently disconnect from the current server while keeping Tee timeout protection
 Simple
 Simple noise reduction
 Simple noise reduction strength
+Single color
 Size
 Size of entity text data (20% to 100%)
 Size of hook strength icon and number indicator
@@ -3557,7 +3558,6 @@ Switch
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 Switch failed
 Switch interval
-Switch on the status rows you need, then list the binds you want to watch.
 Switch opacity
 Switch skin on hammer
 Switch spectator mode
@@ -3752,6 +3752,7 @@ Timeout seed
 Timer is displayed in %s
 Timer isn't displayed.
 Tiny Tee Size
+Title color
 Title server unavailable; retry
 Title too long or contains unsupported characters
 To save all players in your team have to be alive and not in '/spec'
@@ -3845,7 +3846,6 @@ Tune in zone a variable to value
 Tune layer opacity
 Tune variable to value
 Tune variable to value or show current value
-Turn on "Message merging" in Dream Features.
 Tutorial
 Twinkle strength
 Type
@@ -3931,7 +3931,6 @@ Uploading map data to GPU
 URL for downloading community skins
 URL for downloading maps (must start with https://)
 URL for downloading skins
-Usage: %s
 Usage: %s %s
 Use 12 hour clock
 Use 12-hour clock for local time
@@ -3954,7 +3953,6 @@ Use enemy list to drive player indicators
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 Use mouse sensitivity when dynamic camera is on
-Use MSDF text rendering for nameplates (requires TexturedMsdf)
 Use multi-char replacement based on word length
 Use native UI for IME (may break IME in fullscreen mode, requires restart)
 Use new smoothing algorithm
@@ -4249,7 +4247,6 @@ Your team is currently saving
 Your team was killed because it couldn't finish anymore and hasn't entered /practice mode
 Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
-Your weapon slides and rotates in when you switch, and flips while reloading.
 z = Zoom
 Zen Mode
 Zen mode key

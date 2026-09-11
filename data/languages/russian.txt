@@ -491,9 +491,6 @@ Adds a specific war entry
 Adds default chat binds
 == Добавляет стандартные чат-привязки
 
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
-== Показывает на HUD состояние клавиш, молота, управления и копирования у дамми, а также свой список bind-статусов.
-
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
 
@@ -1412,6 +1409,9 @@ Bind Wheel
 Bind Wheel Key
 == Клавиша колёсика привязок
 
+Binds
+== Привязки
+
 Bit flags for disabling settings tabs
 == Битовые флаги для отключения вкладок настроек
 
@@ -1468,6 +1468,15 @@ Both sides of keyword rules must be filled
 
 Bounce
 == Отскок
+
+Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
+== Цвет титула в скобках: 0 = как на сервере, 1 = один цвет, 2 = радуга
+
+Bracketed title opacity (0-100)
+== Прозрачность титула в скобках (0-100)
+
+Bracketed title single color
+== Один цвет для титула в скобках
 
 Brightness shift
 == Сдвиг яркости
@@ -1958,6 +1967,9 @@ Collision Line Opacity
 Color
 == Цвет
 
+Color & opacity
+== Цвет и прозрачность
+
 Color of authenticated player names on scoreboard
 == Цвет имён авторизованных игроков на табло
 
@@ -2011,6 +2023,9 @@ Command to run when joining server
 
 Command:
 == Команда:
+
+Commands
+== Команды
 
 Commands run in the console
 == Команды, выполняемые в консоли
@@ -2351,6 +2366,9 @@ Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
 == Не удалось загрузить стандартное сенсорное управление из файла. Подробности в локальной консоли.
 
+Could not load new features
+== Не удалось загрузить новости
+
 Could not load sponsor QR code. Check the Base64 data
 == Не удалось загрузить QR-код спонсора. Проверьте данные Base64.
 
@@ -2467,12 +2485,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Пользовательское соотношение сторон, хранится как x100 (например, 178=16:9, 233=21:9)
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== Пользовательские элементы HUD состояния bind. Пусто — встроенные 4 элемента (фиксация клавиш/молот/управление дамми/синхронизация дамми). Формат: переменная|значение=текст|значение=текст; переменная|текст (показывать при ненулевом значении); переменная (только имя переменной — показывать имя при ненулевом значении). Элементы разделяются ';', поля — '|'
-
-Custom bind status list
-== Список пользовательских bind-статусов
 
 Custom colors
 == Пользовательские цвета
@@ -3083,6 +3095,9 @@ Downloading update...
 Downscaled (0.78)
 == Уменьшенный масштаб (0.78)
 
+Draft file is empty
+== Файл черновика пуст
+
 Drag HUD modules with the left mouse button
 == Перетаскивайте модули HUD левой кнопкой мыши
 
@@ -3206,8 +3221,8 @@ Dummy is currently connected.
 Dummy jump
 == Прыжок дамми
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми и пользовательский список состояния bind
+Dummy key/hammer/control/copy status switches
+== Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми
 
 Dummy marking color
 == Цвет метки дамми
@@ -3394,9 +3409,6 @@ Emoticon shadow
 
 Emoticons
 == Эмотиконы
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== Пусто — встроенные 4 элемента. Формат: var|0=Off|1=On; var|Text
 
 enable
 == включить
@@ -3674,9 +3686,6 @@ Enable skin queue rotation
 Enable skin switch animation
 == Включить анимацию смены скина
 
-Enable skin transition animation, then choose the type, scope, duration and easing.
-== Включите анимацию смены скина и выберите тип, область, длительность и сглаживание.
-
 Enable smooth cinematic camera while free spectating
 == Включить плавную кинематографическую камеру в свободном наблюдении
 
@@ -3767,9 +3776,6 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Включить список врагов
 
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
-== Включите анимацию смены или перезарядки оружия, затем настройте радиус, длительность, поворот и сглаживание.
-
 Enable word filter list
 == Включить список фильтрации слов
 
@@ -3815,9 +3821,6 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == Введите пароль
 
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
-== Введите спонсорский код и нажмите «Активировать», затем впишите титул и нажмите «Сохранить». Включите «Показывать только с этим ником», чтобы привязать титул к одному нику.
-
 Enter Username
 == Введите имя пользователя
 
@@ -3850,9 +3853,6 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Мастерская)
-
-Entry: %s
-== Где найти: %s
 
 Erase items on the in game background
 == Стирать элементы на игровом фоне
@@ -4186,6 +4186,9 @@ Folder Link
 
 Follow
 == Следовать
+
+Follow server
+== Как на сервере
 
 Following
 == Следую
@@ -5210,6 +5213,12 @@ Input overlay mouse scale (percent)
 Input overlay opacity (percent)
 == Непрозрачность наложения ввода (в процентах)
 
+Input overlay X position (percent)
+== Положение наложения ввода по X (в процентах)
+
+Input overlay Y position (percent)
+== Положение наложения ввода по Y (в процентах)
+
 Input smoothing
 == Сглаживание ввода
 
@@ -5221,9 +5230,6 @@ Insane
 
 Installing update. Please wait...
 == Установка обновления. Пожалуйста, подождите...
-
-Instant zoom reverse
-== Мгновенный разворот зума
 
 Interface
 == Интерфейс
@@ -5780,6 +5786,9 @@ Local
 Local + Dummy
 == Локальный + дамми
 
+Local console log category filter mask (bit flags)
+== Маска фильтра категорий логов локальной консоли (битовые флаги)
+
 Local only
 == Только локальный
 
@@ -6142,9 +6151,6 @@ Menu option - selected
 
 Merge consecutive identical player messages within 2 seconds
 == Объединять последовательные одинаковые сообщения игрока в течение 2 секунд
-
-Merges chat messages repeated within a short time into a single line.
-== Объединяет повторяющиеся за короткое время сообщения чата в одну строку.
 
 Message color
 == Цвет сообщения
@@ -6722,6 +6728,9 @@ No matching assets.
 No matching features found. Try other keywords
 == Совпадающих функций не найдено. Попробуйте другие ключевые слова.
 
+No new features yet
+== Новых возможностей пока нет
+
 No noise reduction
 == Без шумоподавления
 
@@ -7004,11 +7013,11 @@ Open color picker
 Open DDNet Wiki
 == Открыть DDNet Wiki
 
-Open editor
-== Открыть редактор
-
 Open emote selector
 == Открыть выбор эмоций
+
+Open folder
+== Открыть папку
 
 Open map editor
 == Открыть редактор карт
@@ -7051,9 +7060,6 @@ Open the folder containing demo files
 
 Open the folder containing screenshots
 == Открыть папку со скриншотами
-
-Open the input overlay editor
-== Открыть редактор оверлея ввода
 
 Open the saves file
 == Открыть файл сохранений
@@ -7334,9 +7340,6 @@ Pet Skin:
 Pick result: %s
 == Результат выбора: %s
 
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
-== Выберите источник, соответствующий вашему музыкальному приложению, и просто включите музыку — текст подтянется сам.
-
 Pickup range
 == Диапазон подбора
 
@@ -7531,9 +7534,6 @@ Players can't hook each other on this server
 
 Playing effects
 == Эффекты воспроизведения
-
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
-== Проигрывает анимацию при смене скина, в том числе скина, украденного молотом.
 
 Please add a valid cut first
 == Сначала добавьте действительный отрезок обрезки
@@ -7820,6 +7820,18 @@ PTT release delay (ms)
 Publicly messages everyone your current time in this current running race
 == Публично сообщает всем ваше текущее время в этом забеге
 
+Publish
+== Опубликовать
+
+Publish failed
+== Не удалось опубликовать
+
+Published
+== Опубликовано
+
+Publishing…
+== Публикация…
+
 Pulse
 == Пульс
 
@@ -8077,9 +8089,6 @@ Redeem
 
 Redeem your code and customize your title
 == Активируйте код и настройте титул
-
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
-== Активируйте спонсорский код, чтобы получить свой титул. Титул отображается в чате и на табличке имени.
 
 Reduce antiping and player prediction when frozen
 == Уменьшить антипинг и предсказание игрока при заморозке
@@ -8498,9 +8507,6 @@ Reset mouse position when opening bind wheel
 Reset position of mouse when opening bindwheel
 == Сбросить позицию мыши при открытии колёсика привязок
 
-Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== Сбросить qm_bind_status_items к встроенным 4 элементам (фиксация клавиш/молот/управление дамми/синхронизация дамми)
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == Сброс статистики при входе на сервер (0 = накопительная статистика, 1 = сброс при каждом входе)
 
@@ -8545,9 +8551,6 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == Повторная попытка…
-
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
-== Мгновенно менять направление зума при нажатии противоположной клавиши (0=оставить прежний плавный зум)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -10061,9 +10064,6 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == Показывает справку по команде r, общую справку, если оставить пустым
 
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
-== Получает текст песен из NetEase Cloud Music, Soda Music, Kugou и QQ Music и показывает его на динамическом острове.
-
 Shows the credits of the DDNet mod
 == Показывает титры мода DDNet
 
@@ -10102,6 +10102,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == Сила простого шумоподавления
+
+Single color
+== Один цвет
 
 Size
 == Размер
@@ -10675,9 +10678,6 @@ Switch failed
 
 Switch interval
 == Интервал переключения
-
-Switch on the status rows you need, then list the binds you want to watch.
-== Включите нужные переключатели состояний и укажите bind-команды для отслеживания в своём списке.
 
 Switch opacity
 == Непрозрачность переключателя
@@ -11261,6 +11261,9 @@ Timer isn't displayed.
 Tiny Tee Size
 == Размер мини-ти
 
+Title color
+== Цвет титула
+
 Title server unavailable; retry
 == Сервер титулов недоступен; повторите попытку
 
@@ -11540,9 +11543,6 @@ Tune variable to value
 Tune variable to value or show current value
 == Установить переменную тюнинга в значение или показать текущее значение
 
-Turn on "Message merging" in Dream Features.
-== Включите «Message merging» в разделе «Dream Features».
-
 Tutorial
 == Обучение
 
@@ -11798,9 +11798,6 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == URL для загрузки скинов
 
-Usage: %s
-== Использование: %s
-
 Usage: %s %s
 == Использование: %s %s
 
@@ -11866,9 +11863,6 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == Использовать чувствительность мыши при включённой динамической камере
-
-Use MSDF text rendering for nameplates (requires TexturedMsdf)
-== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == Использовать замену несколькими символами в зависимости от длины слова
@@ -12751,9 +12745,6 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Ваш код тайм-аута установлен. Клиенты 0.7 не могут вернуть своих ти после тайм-аута; однако клиент 0.6 может завладеть вашим ти
-
-Your weapon slides and rotates in when you switch, and flips while reloading.
-== При смене оружие въезжает с поворотом, а при перезарядке переворачивается.
 
 z = Zoom
 == z = Масштаб

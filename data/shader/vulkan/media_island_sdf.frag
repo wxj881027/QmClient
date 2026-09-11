@@ -97,6 +97,41 @@ float ArcSdf(vec2 Point, vec2 Center, float Radius, float HalfThickness, float P
 	return min(distance(Point, StartPoint), distance(Point, EndPoint)) - HalfThickness;
 }
 
+// 圆角矩形（胶囊是 Radius = 半高的特例）的轮廓周长。
+float RoundedRectPerimeterLength(vec4 Rect, float Radius)
+{
+	vec2 HalfSize = max(Rect.zw * 0.5, vec2(0.0));
+	float CornerRadius = clamp(Radius, 0.0, min(HalfSize.x, HalfSize.y));
+	return 4.0 * max(HalfSize.x - CornerRadius, 0.0) + 2.0 * PI * CornerRadius;
+}
+
+// 轮廓周长位置：从正上方中点起顺时针量到 Point 的垂足，返回 0 → 1 的比例。
+// 直边按 x 线性推进，两端圆弧按角度推进；与 C++ 侧 RoundedRectPerimeterPoint 互为逆映射。
+float RoundedRectPerimeterFraction(vec2 Point, vec4 Rect, float Radius)
+{
+	vec2 HalfSize = max(Rect.zw * 0.5, vec2(0.0));
+	float CornerRadius = clamp(Radius, 0.0, min(HalfSize.x, HalfSize.y));
+	float StraightHalf = max(HalfSize.x - CornerRadius, 0.0);
+	float CapLength = PI * CornerRadius;
+	float Perimeter = 4.0 * StraightHalf + 2.0 * CapLength;
+	if(Perimeter <= 0.0001)
+		return 0.0;
+	vec2 Local = Point - (Rect.xy + HalfSize);
+	float Distance;
+	if(abs(Local.x) <= StraightHalf)
+	{
+		Distance = Local.y <= 0.0 ? abs(Local.x) : 2.0 * StraightHalf + CapLength - abs(Local.x);
+	}
+	else
+	{
+		float Angle = atan(Local.y, abs(Local.x) - StraightHalf);
+		Distance = StraightHalf + (Angle + PI * 0.5) * CornerRadius;
+	}
+	if(Local.x < 0.0)
+		Distance = Perimeter - Distance;
+	return fract(Distance / Perimeter);
+}
+
 void Composite(inout vec3 PremulColor, inout float Alpha, vec4 Color, float ShapeCoverage)
 {
 	float SourceAlpha = clamp(Color.a * ShapeCoverage, 0.0, 1.0);
@@ -165,24 +200,61 @@ void main()
 	}
 	else
 		Composite(PremulColor, Alpha, Background, ShapeCoverage);
-	for(int i = 0; i < ItemCount; ++i)
+	// 轮廓环：贴着主体外轮廓绕一圈的倒计时环（Data(7).z = 厚度，0 表示关闭；
+	// Data(7).w = 环中心线相对轮廓外扩的距离）。颜色、进度、淡入都取第 0 个 item，
+	// 与圆形环共用同一套参数语义，区别只在「环的形状由主体轮廓决定」。
+	// 关闭时走原来的「每个 item 各自一个圆环」，HUD 卫星岛不受影响。
+	float OutlineThickness = max(ShadowParams.z, 0.0);
+	if(OutlineThickness > 0.0 && ItemCount > 0)
 	{
-		vec4 ItemShape = Data(ITEM_BASE + i * ITEM_STRIDE);
-		vec4 ItemParams = Data(ITEM_BASE + i * ITEM_STRIDE + 1);
-		if(ItemParams.y > 0.001)
+		vec4 OutlineParams = Data(ITEM_BASE + 1);
+		float OutlineAlpha = OutlineParams.y;
+		if(OutlineAlpha > 0.001)
 		{
-			float RingRadius = MainParams.z * ItemParams.z;
-			float RingThickness = MainParams.w * ItemParams.z;
-			vec2 Relative = Point - ItemShape.xy;
-			if(abs(Relative.x) <= RingRadius + RingThickness + Feather && abs(Relative.y) <= RingRadius + RingThickness + Feather)
+			vec4 OutlineColor = Data(ITEM_BASE + 2);
+			float OutlineDistance = abs(MainDistance + max(ShadowParams.w, 0.0)) - OutlineThickness * 0.5;
+			float OutlineCoverage = Coverage(OutlineDistance, Feather);
+			vec4 OutlineTrack = OutlineColor;
+			OutlineTrack.a *= 0.18 * OutlineAlpha;
+			Composite(PremulColor, Alpha, OutlineTrack, OutlineCoverage);
+			float OutlineProgress = clamp(OutlineParams.w, 0.0, 1.0);
+			float OutlineArc = 1.0;
+			if(OutlineProgress < 0.9999)
 			{
-				float TrackDistance = abs(length(Relative) - RingRadius) - RingThickness * 0.5;
-				vec4 ItemColor = Data(ITEM_BASE + i * ITEM_STRIDE + 2);
-				vec4 TrackColor = ItemColor;
-				TrackColor.a *= 0.18 * ItemParams.y;
-				Composite(PremulColor, Alpha, TrackColor, Coverage(TrackDistance, Feather));
-				ItemColor.a *= ItemParams.y;
-				Composite(PremulColor, Alpha, ItemColor, Coverage(ArcSdf(Point, ItemShape.xy, RingRadius, RingThickness * 0.5, ItemParams.w), Feather));
+				float Perimeter = RoundedRectPerimeterLength(Data(1), MainRadius);
+				if(Perimeter > 0.0001)
+				{
+					float Along = RoundedRectPerimeterFraction(Point, Data(1), MainRadius);
+					float ArcEdge = Feather / Perimeter;
+					OutlineArc = 1.0 - smoothstep(OutlineProgress - ArcEdge, OutlineProgress + ArcEdge, Along);
+				}
+			}
+			vec4 OutlineArcColor = OutlineColor;
+			OutlineArcColor.a *= OutlineAlpha;
+			Composite(PremulColor, Alpha, OutlineArcColor, OutlineCoverage * OutlineArc);
+		}
+	}
+	else
+	{
+		for(int i = 0; i < ItemCount; ++i)
+		{
+			vec4 ItemShape = Data(ITEM_BASE + i * ITEM_STRIDE);
+			vec4 ItemParams = Data(ITEM_BASE + i * ITEM_STRIDE + 1);
+			if(ItemParams.y > 0.001)
+			{
+				float RingRadius = MainParams.z * ItemParams.z;
+				float RingThickness = MainParams.w * ItemParams.z;
+				vec2 Relative = Point - ItemShape.xy;
+				if(abs(Relative.x) <= RingRadius + RingThickness + Feather && abs(Relative.y) <= RingRadius + RingThickness + Feather)
+				{
+					float TrackDistance = abs(length(Relative) - RingRadius) - RingThickness * 0.5;
+					vec4 ItemColor = Data(ITEM_BASE + i * ITEM_STRIDE + 2);
+					vec4 TrackColor = ItemColor;
+					TrackColor.a *= 0.18 * ItemParams.y;
+					Composite(PremulColor, Alpha, TrackColor, Coverage(TrackDistance, Feather));
+					ItemColor.a *= ItemParams.y;
+					Composite(PremulColor, Alpha, ItemColor, Coverage(ArcSdf(Point, ItemShape.xy, RingRadius, RingThickness * 0.5, ItemParams.w), Feather));
+				}
 			}
 		}
 	}

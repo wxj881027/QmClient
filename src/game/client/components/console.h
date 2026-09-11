@@ -9,6 +9,7 @@
 #include <engine/shared/ringbuffer.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qm_console_log_filter.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 
@@ -40,26 +41,20 @@ private:
 	class CInstance
 	{
 	public:
-		enum class ELogCategory : unsigned char
+		enum
 		{
-			SYSTEM = 0,
-			PLAYER,
+			LOG_FILTER_BUTTON_COUNT = 5,
 		};
 
-		enum class ELogFilter : unsigned char
-		{
-			ALL = 0,
-			PLAYER,
-			SYSTEM,
-		};
-
+		// 单行日志的类别与筛选掩码见 qm_console_log_filter.h；顶栏按钮是多选，
+		// 点亮哪些类别就显示哪些，全部点亮等价于不筛选。
 		struct CBacklogEntry
 		{
 			float m_YOffset;
 			int m_LineCount;
 			ColorRGBA m_PrintColor;
 			size_t m_Length;
-			ELogCategory m_LogCategory;
+			int m_LogCategory;
 			int m_ExportId;
 			bool m_ExportSelected;
 			char m_aText[1];
@@ -78,8 +73,9 @@ private:
 		int m_BacklogCurLine;
 		int m_BacklogLastActiveLine = -1;
 		int m_LinesRendered;
-		ELogFilter m_LogFilter = ELogFilter::ALL;
-		ELogFilter m_ChatExportPreviousFilter = ELogFilter::ALL;
+		// 顶栏筛选是多选掩码，见 qm_console_log_filter.h
+		int m_LogFilterMask = QM_CONSOLE_LOG_CATEGORY_ALL;
+		int m_ChatExportPreviousFilterMask = QM_CONSOLE_LOG_CATEGORY_ALL;
 		int m_NextExportId = 1;
 		int m_ChatExportAnchorId = -1;
 		bool m_ChatExportMode = false;
@@ -185,10 +181,13 @@ private:
 		bool IsInputHidden() const;
 		void UpdateCompletionSuggestions();
 
+		/** 顶栏筛选按钮对应的日志类别位；下标即按钮顺序（与 m_aFilterButtons 一致）。 */
+		static int LogFilterCategoryForButton(int ButtonIndex);
+
 	private:
-		void SetLogFilter(ELogFilter Filter);
+		void SetLogFilterMask(int Mask);
 		bool MatchesLogFilter(const CBacklogEntry *pEntry) const;
-		static ELogCategory ClassifyLogCategory(const char *pLine, size_t Length);
+		static int ClassifyLogCategory(const char *pLine, size_t Length);
 		void SetSearching(bool Searching);
 		void ClearSearch();
 		void UpdateSearch();
@@ -214,7 +213,7 @@ private:
 
 	bool m_WantsSelectionCopy = false;
 	CUi::CTouchState m_TouchState;
-	CButtonContainer m_aFilterButtons[3];
+	CButtonContainer m_aFilterButtons[CInstance::LOG_FILTER_BUTTON_COUNT];
 	CButtonContainer m_ChatExportButton;
 	CButtonContainer m_ChatExportSelectAllButton;
 	CButtonContainer m_ChatExportClearButton;

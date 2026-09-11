@@ -1,13 +1,14 @@
-// OBS Input Overlay v5/v5.1 runtime for QmClient.
+// 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "input_overlay.h"
 
-#include <base/fs.h>
+#include <base/color.h>
 #include <base/log.h>
 #include <base/str.h>
 #include <base/vmath.h>
 
 #include <engine/graphics.h>
-#include <engine/input.h>
+#include <engine/keys.h>
+#include <engine/shared/config.h>
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 
@@ -15,15 +16,26 @@
 #include <game/client/ui.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
-#include <iterator>
-#include <string>
-#include <utility>
+#include <ctime>
 
 namespace
 {
-	static constexpr int OBS_INNER_BORDER = 3;
-	static constexpr float WHEEL_HOLD_TIME = 0.15f;
+	static constexpr const char *CONFIGURATION_FILENAME = "input_overlay.json";
+
+	static ColorRGBA ApplyOpacity(ColorRGBA Color, float Opacity)
+	{
+		Color.a *= Opacity;
+		return Color;
+	}
+
+	static ColorRGBA RainbowColor(float Hue, float Alpha)
+	{
+		ColorRGBA Col = color_cast<ColorRGBA>(ColorHSLA(std::fmod(Hue, 1.0f), 1.0f, 0.5f));
+		Col.a = Alpha;
+		return Col;
+	}
 
 	bool DemoInputKeyIsPressed(const CGameClient::SDemoInputPlaybackState *pState, int Key)
 	{
@@ -32,139 +44,15 @@ namespace
 		return (pState->m_aKeyStates[Key >> 3] & (1U << (Key & 7))) != 0;
 	}
 
-	bool ReadJsonNumber(const json_value &Value, float &Out)
-	{
-		if(Value.type == json_integer)
-			Out = static_cast<float>(Value.u.integer);
-		else if(Value.type == json_double)
-			Out = static_cast<float>(Value.u.dbl);
-		else
-			return false;
-		return std::isfinite(Out);
-	}
-
-	bool ReadJsonOffset(const json_value &Object, float &OutX, float &OutY)
-	{
-		const json_value &Offset = Object["offset"];
-		float Values[2];
-		if(Offset.type == json_array && Offset.u.array.length == 2 && ReadJsonNumber(Offset[0], Values[0]) && ReadJsonNumber(Offset[1], Values[1]))
-		{
-			OutX = Values[0];
-			OutY = Values[1];
-			return true;
-		}
-		if(Offset.type == json_object && ReadJsonNumber(Offset["x"], OutX) && ReadJsonNumber(Offset["y"], OutY))
-			return true;
-		const bool HasX = ReadJsonNumber(Object["offset_x"], OutX);
-		const bool HasY = ReadJsonNumber(Object["offset_y"], OutY);
-		return HasX || HasY;
-	}
-
-	std::string ReplaceExtension(const std::string &Path, const char *pExtension)
-	{
-		const size_t Slash = Path.find_last_of('/');
-		const size_t Dot = Path.find_last_of('.');
-		if(Dot == std::string::npos || (Slash != std::string::npos && Dot < Slash))
-			return Path + pExtension;
-		return Path.substr(0, Dot) + pExtension;
-	}
-
-	std::string JoinPath(const char *pBasePath, const char *pRelativePath)
-	{
-		if(pBasePath == nullptr || pRelativePath == nullptr || pBasePath[0] == '\0' || pRelativePath[0] == '\0')
-			return {};
-		const std::string BasePath = pBasePath;
-		const size_t Slash = BasePath.find_last_of('/');
-		if(Slash == std::string::npos)
-			return pRelativePath;
-		return BasePath.substr(0, Slash + 1) + pRelativePath;
-	}
-
-	void AddPathCandidate(std::vector<std::string> &vCandidates, const std::string &Path)
-	{
-		if(Path.empty() || !QmInputOverlay::IsSafeRelativePath(Path.c_str()))
-			return;
-		if(std::find(vCandidates.begin(), vCandidates.end(), Path) == vCandidates.end())
-			vCandidates.push_back(Path);
-	}
-
-	int MouseButtonFromCode(int Code)
-	{
-		// OBS uses left, right, middle, X1, X2 as 1, 2, 3, 4, 5.
-		switch(Code)
-		{
-		case 1: return 1;
-		case 2: return 3;
-		case 3: return 2;
-		case 4: return 4;
-		case 5: return 5;
-		case 6: return 6;
-		case 7: return 7;
-		case 8: return 8;
-		case 9: return 9;
-		default: return 0;
-		}
-	}
-
-	int MouseButtonFromId(const std::string &Id)
-	{
-		if(str_comp_nocase(Id.c_str(), "lmb") == 0 || str_comp_nocase(Id.c_str(), "mouse1") == 0 || str_comp_nocase(Id.c_str(), "mouse_left") == 0)
-			return 1;
-		if(str_comp_nocase(Id.c_str(), "rmb") == 0 || str_comp_nocase(Id.c_str(), "mouse2") == 0 || str_comp_nocase(Id.c_str(), "mouse_right") == 0)
-			return 3;
-		if(str_comp_nocase(Id.c_str(), "mmb") == 0 || str_comp_nocase(Id.c_str(), "mouse3") == 0 || str_comp_nocase(Id.c_str(), "mouse_middle") == 0)
-			return 2;
-		if(str_comp_nocase(Id.c_str(), "smb1") == 0 || str_comp_nocase(Id.c_str(), "mb4") == 0 || str_comp_nocase(Id.c_str(), "mouse4") == 0)
-			return 4;
-		if(str_comp_nocase(Id.c_str(), "smb2") == 0 || str_comp_nocase(Id.c_str(), "mb5") == 0 || str_comp_nocase(Id.c_str(), "mouse5") == 0)
-			return 5;
-		return 0;
-	}
-
-	int WheelDirectionFromId(const std::string &Id)
-	{
-		if(str_comp_nocase(Id.c_str(), "wheel_up") == 0 || str_comp_nocase(Id.c_str(), "wheelup") == 0 || str_comp_nocase(Id.c_str(), "mousewheelup") == 0 || str_comp_nocase(Id.c_str(), "mwheelup") == 0)
-			return 1;
-		if(str_comp_nocase(Id.c_str(), "wheel_down") == 0 || str_comp_nocase(Id.c_str(), "wheeldown") == 0 || str_comp_nocase(Id.c_str(), "mousewheeldown") == 0 || str_comp_nocase(Id.c_str(), "mwheeldown") == 0)
-			return 2;
-		if(str_comp_nocase(Id.c_str(), "wheel_left") == 0 || str_comp_nocase(Id.c_str(), "wheelleft") == 0 || str_comp_nocase(Id.c_str(), "mousewheelleft") == 0 || str_comp_nocase(Id.c_str(), "mwheelleft") == 0)
-			return 3;
-		if(str_comp_nocase(Id.c_str(), "wheel_right") == 0 || str_comp_nocase(Id.c_str(), "wheelright") == 0 || str_comp_nocase(Id.c_str(), "mousewheelright") == 0 || str_comp_nocase(Id.c_str(), "mwheelright") == 0)
-			return 4;
-		return 0;
-	}
-
-	bool MakeAbsolutePath(const char *pPath, char *pBuffer, int BufferSize)
-	{
-		if(pPath == nullptr || pPath[0] == '\0' || pBuffer == nullptr || BufferSize <= 0)
-			return false;
-		if(!fs_is_relative_path(pPath))
-		{
-			str_copy(pBuffer, pPath, BufferSize);
-			return pBuffer[0] != '\0';
-		}
-		char aWorkingDirectory[IO_MAX_PATH_LENGTH];
-		if(!fs_getcwd(aWorkingDirectory, sizeof(aWorkingDirectory)))
-			return false;
-		str_format(pBuffer, BufferSize, "%s/%s", aWorkingDirectory, pPath);
-		return pBuffer[0] != '\0';
-	}
-}
+} // namespace
 
 void CInputOverlay::OnInit()
 {
-	m_Time = 0.0f;
-	m_ConfigCheckTimer = 0.0f;
-	m_ConfigLoaded = false;
-	m_ConfigValid = false;
-	m_UsingDemoInputState = false;
-	m_HasMousePositionSample = false;
-	m_LastDemoWheelSequence = 0;
 	LoadConfiguration(IStorage::TYPE_ALL);
-	const vec2 MousePos = Input()->GlobalMousePos();
+	const vec2 MousePos = Input()->NativeMousePos();
 	m_LastMouseX = MousePos.x;
 	m_LastMouseY = MousePos.y;
-	m_HasMousePositionSample = true;
+
 	time_t Modified;
 	if(GetConfigModifiedTime(Modified))
 	{
@@ -173,325 +61,1581 @@ void CInputOverlay::OnInit()
 	}
 }
 
-void CInputOverlay::OnShutdown()
+void CInputOverlay::OnRender()
 {
-	ClearObsLayouts();
-	m_ConfigLoaded = false;
-	m_ConfigValid = false;
+	if(!g_Config.m_QmInputOverlay)
+		return;
+	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		return;
+	if(GameClient()->m_Menus.IsActive())
+		return;
+	if(GameClient()->m_Scoreboard.IsActive())
+		return;
+
+	if(!m_ConfigLoaded)
+		LoadConfiguration(IStorage::TYPE_ALL);
+
+	m_ConfigCheckTimer += Client()->RenderFrameTime();
+	if(m_ConfigCheckTimer >= 0.5f)
+	{
+		m_ConfigCheckTimer = 0.0f;
+		time_t Modified;
+		if(GetConfigModifiedTime(Modified))
+		{
+			if(!m_HasConfigModifiedTime || Modified != m_ConfigModifiedTime)
+			{
+				LoadConfiguration(IStorage::TYPE_ALL);
+				m_ConfigModifiedTime = Modified;
+				m_HasConfigModifiedTime = true;
+			}
+		}
+	}
+
+	if(!m_ConfigValid)
+		return;
+	if(m_ConfigMode == EConfigMode::VECTOR && m_vElements.empty())
+		return;
+	if(m_ConfigMode == EConfigMode::OBS)
+	{
+		bool HasLayout = false;
+		for(const SObsLayout &Layout : m_vObsLayouts)
+		{
+			if(!Layout.m_vElements.empty() && Layout.m_Texture.IsValid())
+			{
+				HasLayout = true;
+				break;
+			}
+		}
+		if(!HasLayout)
+			return;
+	}
+
+	const CUIRect *pScreen = Ui()->Screen();
+	Graphics()->MapScreen(pScreen->x, pScreen->y, pScreen->w, pScreen->h);
+
+	const float KeyboardScale = g_Config.m_QmInputOverlayScale / 100.0f;
+	const float MouseScale = g_Config.m_QmInputOverlayMouseScale / 100.0f;
+	const float Scale = KeyboardScale;
+	const float Opacity = g_Config.m_QmInputOverlayOpacity / 100.0f;
+	const float PosXPercent = g_Config.m_QmInputOverlayPosX;
+	const float PosYPercent = g_Config.m_QmInputOverlayPosY;
+	float ObsMinX = 0.0f;
+	float ObsMinY = 0.0f;
+	float CanvasW = m_CanvasWidth * Scale;
+	float CanvasH = m_CanvasHeight * Scale;
+	if(m_ConfigMode == EConfigMode::OBS)
+	{
+		bool HasBounds = false;
+		QmInputOverlay::SScaledBounds Bounds{};
+		for(const SObsLayout &Layout : m_vObsLayouts)
+		{
+			if(Layout.m_vElements.empty() || !Layout.m_Texture.IsValid())
+				continue;
+			const float LayoutScale = QmInputOverlay::LayoutScale(Layout.m_IsMouseLayout, KeyboardScale, MouseScale);
+			const auto LayoutBounds = QmInputOverlay::ScaledLayoutBounds(
+				Layout.m_OffsetX,
+				Layout.m_OffsetY,
+				Layout.m_OverlayWidth,
+				Layout.m_OverlayHeight,
+				KeyboardScale,
+				LayoutScale);
+			if(!HasBounds)
+			{
+				Bounds = LayoutBounds;
+				HasBounds = true;
+			}
+			else
+				Bounds = QmInputOverlay::UnionBounds(Bounds, LayoutBounds);
+		}
+		if(HasBounds)
+		{
+			ObsMinX = Bounds.m_MinX;
+			ObsMinY = Bounds.m_MinY;
+			CanvasW = Bounds.m_MaxX - Bounds.m_MinX;
+			CanvasH = Bounds.m_MaxY - Bounds.m_MinY;
+		}
+	}
+	float OriginX = pScreen->w * PosXPercent / 100.0f;
+	float OriginY = pScreen->h * PosYPercent / 100.0f;
+	if(CanvasW > 0.0f && CanvasH > 0.0f)
+	{
+		if(CanvasW <= pScreen->w)
+			OriginX = std::clamp(OriginX, 0.0f, pScreen->w - CanvasW);
+		if(CanvasH <= pScreen->h)
+			OriginY = std::clamp(OriginY, 0.0f, pScreen->h - CanvasH);
+	}
+	const CUIRect OverlayRect = {OriginX, OriginY, std::max(CanvasW, 1.0f), std::max(CanvasH, 1.0f)};
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::InputOverlay, OverlayRect);
+
+	m_Time += Client()->RenderFrameTime();
+
+	if(m_ConfigMode == EConfigMode::OBS)
+	{
+		const CGameClient::SDemoInputPlaybackState *pDemoInputState = Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->DemoInputPlaybackState() : nullptr;
+		const bool UseDemoInputState = pDemoInputState != nullptr;
+		const vec2 MousePos = UseDemoInputState ? vec2((float)pDemoInputState->m_TargetX, (float)pDemoInputState->m_TargetY) : Input()->NativeMousePos();
+		if(UseDemoInputState != m_UsingDemoInputState)
+		{
+			m_LastMouseX = MousePos.x;
+			m_LastMouseY = MousePos.y;
+			m_MouseDeltaX = 0.0f;
+			m_MouseDeltaY = 0.0f;
+			m_UsingDemoInputState = UseDemoInputState;
+		}
+		else
+		{
+			m_MouseDeltaX = MousePos.x - m_LastMouseX;
+			m_MouseDeltaY = MousePos.y - m_LastMouseY;
+			m_LastMouseX = MousePos.x;
+			m_LastMouseY = MousePos.y;
+		}
+
+		const float WheelHoldTime = 0.5f;
+		auto UpdateWheel = [&](int Index, int Key) {
+			if(Input()->KeyPress(Key))
+				m_aWheelLastTime[Index] = m_Time;
+			if(m_aWheelLastTime[Index] < 0.0f)
+			{
+				m_aWheelAlpha[Index] = 0.0f;
+				return;
+			}
+			const float Age = m_Time - m_aWheelLastTime[Index];
+			if(Age <= WheelHoldTime)
+			{
+				m_aWheelAlpha[Index] = 1.0f;
+			}
+			else
+			{
+				m_aWheelAlpha[Index] = 0.0f;
+				m_aWheelLastTime[Index] = -1.0f;
+			}
+		};
+
+		if(UseDemoInputState)
+		{
+			if(m_LastDemoWheelSequence != pDemoInputState->m_WheelSequence)
+			{
+				if((pDemoInputState->m_WheelMask & (1U << 0)) != 0)
+					m_aWheelLastTime[0] = m_Time;
+				if((pDemoInputState->m_WheelMask & (1U << 1)) != 0)
+					m_aWheelLastTime[1] = m_Time;
+				if((pDemoInputState->m_WheelMask & (1U << 2)) != 0)
+					m_aWheelLastTime[2] = m_Time;
+				if((pDemoInputState->m_WheelMask & (1U << 3)) != 0)
+					m_aWheelLastTime[3] = m_Time;
+				m_LastDemoWheelSequence = pDemoInputState->m_WheelSequence;
+			}
+			for(int i = 0; i < 4; ++i)
+			{
+				if(m_aWheelLastTime[i] < 0.0f)
+				{
+					m_aWheelAlpha[i] = 0.0f;
+					continue;
+				}
+				const float Age = m_Time - m_aWheelLastTime[i];
+				if(Age <= WheelHoldTime)
+				{
+					m_aWheelAlpha[i] = 1.0f;
+				}
+				else
+				{
+					m_aWheelAlpha[i] = 0.0f;
+					m_aWheelLastTime[i] = -1.0f;
+				}
+			}
+		}
+		else
+		{
+			m_LastDemoWheelSequence = 0;
+			UpdateWheel(0, KEY_MOUSE_WHEEL_UP);
+			UpdateWheel(1, KEY_MOUSE_WHEEL_DOWN);
+			UpdateWheel(2, KEY_MOUSE_WHEEL_LEFT);
+			UpdateWheel(3, KEY_MOUSE_WHEEL_RIGHT);
+		}
+
+		const vec2 AimPos = UseDemoInputState ? vec2((float)pDemoInputState->m_TargetX, (float)pDemoInputState->m_TargetY) : GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+		float MouseMoveAngle = std::atan2(AimPos.y, AimPos.x);
+		MouseMoveAngle += (float)(pi / 2.0);
+
+		for(const SObsLayout &Layout : m_vObsLayouts)
+		{
+			if(Layout.m_vElements.empty() || !Layout.m_Texture.IsValid())
+				continue;
+
+			const float LayoutScale = QmInputOverlay::LayoutScale(Layout.m_IsMouseLayout, KeyboardScale, MouseScale);
+			const float LayoutOriginX = OriginX + Layout.m_OffsetX * KeyboardScale - ObsMinX;
+			const float LayoutOriginY = OriginY + Layout.m_OffsetY * KeyboardScale - ObsMinY;
+
+			Graphics()->TextureSet(Layout.m_Texture);
+			Graphics()->QuadsBegin();
+
+			for(const SObsElement &Element : Layout.m_vElements)
+			{
+				float MapW = Element.m_MapW;
+				float MapH = Element.m_MapH;
+				if(MapW <= 0.0f)
+					MapW = Layout.m_DefaultWidth;
+				if(MapH <= 0.0f)
+					MapH = Layout.m_DefaultHeight;
+				if(MapW <= 0.0f || MapH <= 0.0f)
+					continue;
+
+				const bool IsPressable = Element.m_InputKind == EObsInputKind::KEY ||
+							 Element.m_InputKind == EObsInputKind::MOUSE ||
+							 Element.m_InputKind == EObsInputKind::WHEEL;
+				float WheelAlpha = 1.0f;
+				if(Element.m_InputKind == EObsInputKind::WHEEL)
+				{
+					if(Element.m_WheelDir >= 1 && Element.m_WheelDir <= 4)
+						WheelAlpha = m_aWheelAlpha[Element.m_WheelDir - 1];
+					else
+						WheelAlpha = std::max(std::max(m_aWheelAlpha[0], m_aWheelAlpha[1]), std::max(m_aWheelAlpha[2], m_aWheelAlpha[3]));
+				}
+				const bool Active = IsObsActive(Element);
+				bool UsePressedAtlas = Active && IsPressable && Layout.m_HasPressedOffset;
+				float MapX = Element.m_MapX;
+				float MapY = Element.m_MapY;
+				if(UsePressedAtlas)
+				{
+					const float Candidate = MapY + (float)Layout.m_PressedOffsetY;
+					if(Layout.m_TextureHeight > 0 && Candidate + MapH <= (float)Layout.m_TextureHeight)
+						MapY = Candidate;
+					else
+						UsePressedAtlas = false;
+				}
+
+				const float X = LayoutOriginX + Element.m_PosX * LayoutScale;
+				const float Y = LayoutOriginY + Element.m_PosY * LayoutScale;
+				const float W = MapW * LayoutScale;
+				const float H = MapH * LayoutScale;
+
+				const float U0 = Layout.m_TextureWidth > 0 ? MapX / (float)Layout.m_TextureWidth : 0.0f;
+				const float V0 = Layout.m_TextureHeight > 0 ? MapY / (float)Layout.m_TextureHeight : 0.0f;
+				const float U1 = Layout.m_TextureWidth > 0 ? (MapX + MapW) / (float)Layout.m_TextureWidth : 1.0f;
+				const float V1 = Layout.m_TextureHeight > 0 ? (MapY + MapH) / (float)Layout.m_TextureHeight : 1.0f;
+				Graphics()->QuadsSetSubset(U0, V0, U1, V1);
+
+				const bool Highlight = Active && IsPressable;
+				ColorRGBA DrawColor = m_ObsColor;
+				if(Highlight && !UsePressedAtlas)
+					DrawColor = m_ObsActiveColor;
+				float Alpha = Opacity;
+				if(IsPressable || Element.m_InputKind == EObsInputKind::MOUSE_MOVE)
+					Alpha *= Active ? 1.0f : m_ObsInactiveAlpha;
+				if(Element.m_InputKind == EObsInputKind::WHEEL)
+					Alpha *= WheelAlpha;
+				if(Element.m_ActiveOnly && !Active)
+					Alpha = 0.0f;
+				if(Alpha <= 0.0f)
+					continue;
+				DrawColor.a *= Alpha;
+				Graphics()->SetColor(DrawColor);
+
+				if(Element.m_InputKind == EObsInputKind::MOUSE_MOVE && Element.m_MouseType == 1)
+					Graphics()->QuadsSetRotation(MouseMoveAngle);
+				else
+					Graphics()->QuadsSetRotation(0.0f);
+
+				IGraphics::CQuadItem Quad(X + W * 0.5f, Y + H * 0.5f, W, H);
+				Graphics()->QuadsDraw(&Quad, 1);
+			}
+
+			Graphics()->QuadsSetRotation(0.0f);
+			Graphics()->QuadsEnd();
+		}
+
+		Graphics()->TextureClear();
+		GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::InputOverlay, OverlayRect);
+		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
+		return;
+	}
+
+	Graphics()->TextureClear();
+	Graphics()->QuadsBegin();
+
+	for(const SElement &Element : m_vElements)
+	{
+		const bool Active = IsActiveInput(Element);
+		const SStyle &Style = Element.m_Style;
+
+		float X = OriginX + Element.m_X * Scale;
+		float Y = OriginY + Element.m_Y * Scale;
+		float W = Element.m_W * Scale;
+		float H = Element.m_H * Scale;
+		const float Skew = Element.m_Shape == EShape::PARALLELOGRAM ? Element.m_Skew * Scale : 0.0f;
+
+		if(W <= 0.0f || H <= 0.0f)
+			continue;
+
+		auto MakeQuad = [&](float Qx, float Qy, float Qw, float Qh, float Qskew) {
+			const vec2 TL(Qx + Qskew, Qy);
+			const vec2 TR(Qx + Qw + Qskew, Qy);
+			const vec2 BR(Qx + Qw, Qy + Qh);
+			const vec2 BL(Qx, Qy + Qh);
+			return IGraphics::CFreeformItem(TL, TR, BR, BL);
+		};
+
+		const bool BorderRainbow = Active ? Style.m_BorderRainbowActive : Style.m_BorderRainbow;
+		const ColorRGBA BorderBaseColor = Active ? Style.m_BorderColorActive : Style.m_BorderColor;
+		float BorderWidth = Style.m_BorderWidth * Scale;
+		if(BorderWidth > 0.0f)
+		{
+			BorderWidth = std::min(BorderWidth, std::min(W, H) * 0.49f);
+			const float InnerW = W - BorderWidth * 2.0f;
+			const float InnerH = H - BorderWidth * 2.0f;
+			const float InnerX = X + BorderWidth;
+			const float InnerY = Y + BorderWidth;
+			const float InnerSkew = Skew;
+
+			const IGraphics::CFreeformItem Outer = MakeQuad(X, Y, W, H, Skew);
+			const IGraphics::CFreeformItem Inner = MakeQuad(InnerX, InnerY, InnerW, InnerH, InnerSkew);
+
+			ColorRGBA Ctl;
+			ColorRGBA Ctr;
+			ColorRGBA Cbr;
+			ColorRGBA Cbl;
+			const float BorderAlpha = BorderBaseColor.a * Opacity;
+			if(BorderRainbow)
+			{
+				const float BaseHue = m_Time * Style.m_BorderRainbowSpeed + Style.m_BorderRainbowOffset;
+				Ctl = RainbowColor(BaseHue + 0.0f, BorderAlpha);
+				Ctr = RainbowColor(BaseHue + 0.25f, BorderAlpha);
+				Cbr = RainbowColor(BaseHue + 0.5f, BorderAlpha);
+				Cbl = RainbowColor(BaseHue + 0.75f, BorderAlpha);
+			}
+			else
+			{
+				Ctl = ApplyOpacity(BorderBaseColor, Opacity);
+				Ctr = Ctl;
+				Cbr = Ctl;
+				Cbl = Ctl;
+			}
+
+			const IGraphics::CFreeformItem aEdges[4] = {
+				IGraphics::CFreeformItem(Outer.m_X0, Outer.m_Y0, Outer.m_X1, Outer.m_Y1, Inner.m_X1, Inner.m_Y1, Inner.m_X0, Inner.m_Y0),
+				IGraphics::CFreeformItem(Outer.m_X1, Outer.m_Y1, Outer.m_X2, Outer.m_Y2, Inner.m_X2, Inner.m_Y2, Inner.m_X1, Inner.m_Y1),
+				IGraphics::CFreeformItem(Outer.m_X2, Outer.m_Y2, Outer.m_X3, Outer.m_Y3, Inner.m_X3, Inner.m_Y3, Inner.m_X2, Inner.m_Y2),
+				IGraphics::CFreeformItem(Outer.m_X3, Outer.m_Y3, Outer.m_X0, Outer.m_Y0, Inner.m_X0, Inner.m_Y0, Inner.m_X3, Inner.m_Y3)};
+
+			Graphics()->SetColor4(Ctl, Ctr, Ctl, Ctr);
+			Graphics()->QuadsDrawFreeform(&aEdges[0], 1);
+			Graphics()->SetColor4(Ctr, Cbr, Ctr, Cbr);
+			Graphics()->QuadsDrawFreeform(&aEdges[1], 1);
+			Graphics()->SetColor4(Cbr, Cbl, Cbr, Cbl);
+			Graphics()->QuadsDrawFreeform(&aEdges[2], 1);
+			Graphics()->SetColor4(Cbl, Ctl, Cbl, Ctl);
+			Graphics()->QuadsDrawFreeform(&aEdges[3], 1);
+
+			if(InnerW > 0.0f && InnerH > 0.0f)
+			{
+				const ColorRGBA FillColor = ApplyOpacity(Active ? Style.m_FillColorActive : Style.m_FillColor, Opacity);
+				if(FillColor.a > 0.0f)
+				{
+					Graphics()->SetColor(FillColor);
+					Graphics()->QuadsDrawFreeform(&Inner, 1);
+				}
+			}
+			continue;
+		}
+
+		const ColorRGBA FillColor = ApplyOpacity(Active ? Style.m_FillColorActive : Style.m_FillColor, Opacity);
+		if(FillColor.a > 0.0f)
+		{
+			const IGraphics::CFreeformItem Quad = MakeQuad(X, Y, W, H, Skew);
+			Graphics()->SetColor(FillColor);
+			Graphics()->QuadsDrawFreeform(&Quad, 1);
+		}
+	}
+
+	Graphics()->QuadsEnd();
+
+	for(const SElement &Element : m_vElements)
+	{
+		if(Element.m_Label.empty() || !Element.m_Style.m_TextEnabled)
+			continue;
+
+		const bool Active = IsActiveInput(Element);
+		const SStyle &Style = Element.m_Style;
+		const ColorRGBA TextColor = ApplyOpacity(Active ? Style.m_TextColorActive : Style.m_TextColor, Opacity);
+		if(TextColor.a <= 0.0f)
+			continue;
+
+		const float X = OriginX + Element.m_X * Scale;
+		const float Y = OriginY + Element.m_Y * Scale;
+		const float W = Element.m_W * Scale;
+		const float H = Element.m_H * Scale;
+		const float Skew = Element.m_Shape == EShape::PARALLELOGRAM ? Element.m_Skew * Scale : 0.0f;
+		const float CenterX = X + W * 0.5f + Skew * 0.5f + Style.m_TextOffsetX * Scale;
+		const float CenterY = Y + H * 0.5f + Style.m_TextOffsetY * Scale;
+
+		const float TextSize = Style.m_TextSize * Scale;
+		const float TextWidth = TextRender()->TextWidth(TextSize, Element.m_Label.c_str());
+		const float TextX = CenterX - TextWidth * 0.5f;
+		const float TextY = CenterY - TextSize * 0.5f;
+
+		TextRender()->TextColor(TextColor);
+		TextRender()->Text(TextX, TextY, TextSize, Element.m_Label.c_str());
+	}
+
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::InputOverlay, OverlayRect);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 bool CInputOverlay::LoadConfiguration(int StorageType)
 {
-	void *pFileData = nullptr;
-	unsigned FileLength = 0;
-	if(!Storage()->ReadFile(QmInputOverlay::CONFIGURATION_PATH, StorageType, &pFileData, &FileLength))
+	void *pFileData;
+	unsigned FileLength;
+	if(!Storage()->ReadFile(CONFIGURATION_FILENAME, StorageType, &pFileData, &FileLength))
 	{
-		log_error("input_overlay", "Failed to read configuration from '%s'", QmInputOverlay::CONFIGURATION_PATH);
-		ClearObsLayouts();
+		log_error("input_overlay", "Failed to read configuration from '%s'", CONFIGURATION_FILENAME);
 		m_ConfigLoaded = true;
 		m_ConfigValid = false;
 		return false;
 	}
+
+	const bool HadValid = m_ConfigValid;
 	const bool Result = ParseConfiguration(pFileData, FileLength);
+
 	free(pFileData);
+
 	m_ConfigLoaded = true;
-	m_ConfigValid = Result;
+	if(Result)
+		m_ConfigValid = true;
+	else if(!HadValid)
+		m_ConfigValid = false;
 	return Result;
 }
 
 bool CInputOverlay::ParseConfiguration(const void *pFileData, unsigned FileLength)
 {
-	QmInputOverlay::SLayout DirectLayout;
-	std::string Error;
-	if(QmInputOverlay::ParseLayout(pFileData, FileLength, DirectLayout, Error))
+	json_settings JsonSettings{};
+	JsonSettings.settings = json_enable_comments;
+	char aError[256];
+	json_value *pJson = JsonParseEx(&JsonSettings, static_cast<const json_char *>(pFileData), FileLength, aError);
+	if(pJson == nullptr)
 	{
-		SObsLayout Parsed;
-		const char *pImagePath = DirectLayout.m_ImagePath.empty() ? QmInputOverlay::IMAGE_PATH : DirectLayout.m_ImagePath.c_str();
-		if(!LoadParsedLayout(DirectLayout, QmInputOverlay::CONFIGURATION_PATH, pImagePath, 0.0f, 0.0f, Parsed))
-		{
-			ClearObsLayouts();
-			return false;
-		}
-		ClearObsLayouts();
-		m_vObsLayouts.emplace_back(std::move(Parsed));
-		m_CanvasWidth = DirectLayout.m_OverlayWidth;
-		m_CanvasHeight = DirectLayout.m_OverlayHeight;
-		m_HasConfigModifiedTime = false;
-		return true;
+		log_error("input_overlay", "Failed to parse configuration (invalid json): '%s'", aError);
+		return false;
+	}
+	if(pJson->type != json_object)
+	{
+		log_error("input_overlay", "Failed to parse configuration: root must be an object");
+		json_value_free(pJson);
+		return false;
 	}
 
-	// OBS 5.0.x also shipped a small wrapper that composes several layouts,
-	// and forked presets use a root-level "layout" string pointing at one
-	// layout file. Both are accepted only for official layout objects, never
-	// for Qm v3 profiles.
-	json_settings Settings{};
-	Settings.settings = json_enable_comments;
-	char aJsonError[256];
-	json_value *pRoot = JsonParseEx(&Settings, static_cast<const json_char *>(pFileData), FileLength, aJsonError);
-	if(pRoot == nullptr || pRoot->type != json_object)
-	{
-		if(pRoot != nullptr)
-			json_value_free(pRoot);
-		log_error("input_overlay", "Failed to parse OBS configuration: %s", Error.c_str());
-		ClearObsLayouts();
-		return false;
-	}
-	const json_value &Root = *pRoot;
-	if(Root["format"].type == json_string && (str_comp_nocase(Root["format"].u.string.ptr, "qm_input_overlay") == 0 || str_comp_nocase(Root["format"].u.string.ptr, "input_overlay_v3") == 0))
-	{
-		json_value_free(pRoot);
-		ClearObsLayouts();
-		log_error("input_overlay", "Legacy QmClient input overlay profiles are not supported");
-		return false;
-	}
-	const bool HasLayouts = Root["layouts"].type == json_array && Root["layouts"].u.array.length > 0;
-	const bool HasRootLayout = Root["layout"].type == json_string;
-	if(!HasLayouts && !HasRootLayout)
-	{
-		json_value_free(pRoot);
-		ClearObsLayouts();
-		log_error("input_overlay", "Failed to parse OBS configuration: no layouts array or root layout string found");
-		return false;
-	}
+	const json_value &Root = *pJson;
+	ColorRGBA ObsColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	ColorRGBA ObsActiveColor = ColorRGBA(1.0f, 0.9f, 0.2f, 1.0f);
+	float ObsInactiveAlpha = 0.65f;
+	if(auto Parsed = ParseColor(Root["obs_color"]); Parsed.has_value())
+		ObsColor = Parsed.value();
+	if(auto Parsed = ParseColor(Root["obs_active_color"]); Parsed.has_value())
+		ObsActiveColor = Parsed.value();
+	ParseFloat(Root["obs_inactive_alpha"], ObsInactiveAlpha);
+	ObsInactiveAlpha = std::clamp(ObsInactiveAlpha, 0.0f, 1.0f);
+
+	float PosX = m_PosXPercent;
+	float PosY = m_PosYPercent;
+	bool HasPosX = false;
+	bool HasPosY = false;
+	ParsePosition(Root, PosX, PosY, HasPosX, HasPosY);
 
 	float RootOffsetX = 0.0f;
 	float RootOffsetY = 0.0f;
-	ReadJsonOffset(Root, RootOffsetX, RootOffsetY);
-	float RootPressedOffset = 0.0f;
-	const bool HasRootPressedOffset = ReadJsonNumber(Root["pressed_offset_y"], RootPressedOffset);
-
-	// 加载一个 wrapper 条目（layouts[] 条目或根级 "layout" wrapper 本身）。
-	const auto LoadEntry = [&](const json_value &Entry, float OffsetX, float OffsetY, SObsLayout &Out, std::string &EntryError) -> bool {
-		if(Entry["layout"].type != json_string || !QmInputOverlay::IsSafeRelativePath(Entry["layout"].u.string.ptr))
-		{
-			EntryError = "layout entry must be a safe relative string path";
-			return false;
-		}
-		const std::string LayoutPath = QmInputOverlay::NormalizePathSlashes(Entry["layout"].u.string.ptr);
-		std::vector<std::string> LayoutCandidates;
-		AddPathCandidate(LayoutCandidates, JoinPath(QmInputOverlay::CONFIGURATION_PATH, LayoutPath.c_str()));
-		AddPathCandidate(LayoutCandidates, LayoutPath);
-		void *pLayoutData = nullptr;
-		unsigned LayoutLength = 0;
-		std::string ResolvedLayoutPath;
-		for(const std::string &Candidate : LayoutCandidates)
-		{
-			if(Storage()->ReadFile(Candidate.c_str(), IStorage::TYPE_ALL, &pLayoutData, &LayoutLength))
-			{
-				ResolvedLayoutPath = Candidate;
-				break;
-			}
-		}
-		if(ResolvedLayoutPath.empty())
-		{
-			EntryError = "layout file was not found";
-			return false;
-		}
-		QmInputOverlay::SLayout Layout;
-		std::string LayoutError;
-		const bool LayoutValid = QmInputOverlay::ParseLayout(pLayoutData, LayoutLength, Layout, LayoutError);
-		free(pLayoutData);
-		if(!LayoutValid)
-		{
-			EntryError = LayoutError;
-			return false;
-		}
-		ReadJsonOffset(Entry, OffsetX, OffsetY);
-		std::string ImagePath;
-		if(Entry["image"].type == json_string)
-			ImagePath = QmInputOverlay::NormalizePathSlashes(Entry["image"].u.string.ptr);
-		else if(!Layout.m_ImagePath.empty())
-			ImagePath = Layout.m_ImagePath;
-		else
-			ImagePath = ReplaceExtension(LayoutPath, ".png");
-		if(!QmInputOverlay::IsSafeRelativePath(ImagePath.c_str()) || str_endswith_nocase(ImagePath.c_str(), ".png") == nullptr)
-		{
-			EntryError = "image path is invalid";
-			return false;
-		}
-		if(!LoadParsedLayout(Layout, ResolvedLayoutPath.c_str(), ImagePath.c_str(), OffsetX, OffsetY, Out))
-		{
-			EntryError = "failed to load layout image or texture";
-			return false;
-		}
-		float PressedOffset = 0.0f;
-		if(ReadJsonNumber(Entry["pressed_offset_y"], PressedOffset))
-		{
-			Out.m_PressedOffsetY = std::max(0, static_cast<int>(std::round(PressedOffset)));
-			Out.m_HasPressedOffset = Out.m_PressedOffsetY > 0;
-		}
-		else if(HasRootPressedOffset)
-		{
-			Out.m_PressedOffsetY = std::max(0, static_cast<int>(std::round(RootPressedOffset)));
-			Out.m_HasPressedOffset = Out.m_PressedOffsetY > 0;
-		}
-		return true;
-	};
-
-	std::vector<SObsLayout> ParsedLayouts;
-	const auto FailWrapper = [&](const char *pContext, const std::string &EntryError) {
-		json_value_free(pRoot);
-		ClearObsLayouts();
-		log_error("input_overlay", "%s: %s", pContext, EntryError.c_str());
-		return false;
-	};
-	if(HasLayouts)
+	ParseOffset(Root, RootOffsetX, RootOffsetY);
+	int RootPressedOffset = 0;
+	bool HasRootPressedOffset = false;
+	float RootPressedOffsetValue = 0.0f;
+	if(ParseFloat(Root["pressed_offset_y"], RootPressedOffsetValue))
 	{
-		ParsedLayouts.reserve(Root["layouts"].u.array.length);
-		for(unsigned i = 0; i < Root["layouts"].u.array.length; ++i)
+		RootPressedOffset = std::max(0, (int)std::round(RootPressedOffsetValue));
+		HasRootPressedOffset = true;
+	}
+
+	auto ClearLayouts = [&](std::vector<SObsLayout> &Layouts) {
+		for(SObsLayout &Layout : Layouts)
 		{
-			const json_value &Entry = Root["layouts"][i];
+			if(Layout.m_Texture.IsValid())
+				Graphics()->UnloadTexture(&Layout.m_Texture);
+		}
+		Layouts.clear();
+	};
+
+	const json_value &LayoutsValue = Root["layouts"];
+	if(LayoutsValue.type == json_array)
+	{
+		std::vector<SObsLayout> ParsedLayouts;
+		ParsedLayouts.reserve(LayoutsValue.u.array.length);
+		for(unsigned i = 0; i < LayoutsValue.u.array.length; ++i)
+		{
+			const json_value &Entry = LayoutsValue[i];
 			if(Entry.type != json_object)
-				return FailWrapper("Invalid OBS layout wrapper entry", "entry " + std::to_string(i) + " is not an object");
-			SObsLayout Parsed;
-			std::string EntryError;
-			if(!LoadEntry(Entry, RootOffsetX, RootOffsetY, Parsed, EntryError))
-				return FailWrapper("Failed to load OBS layout", "entry " + std::to_string(i) + ": " + EntryError);
-			ParsedLayouts.emplace_back(std::move(Parsed));
+			{
+				log_error("input_overlay", "Failed to parse configuration: layouts entry '%u' must be an object", i);
+				ClearLayouts(ParsedLayouts);
+				json_value_free(pJson);
+				return false;
+			}
+
+			const json_value &LayoutValue = Entry["layout"];
+			if(LayoutValue.type != json_string)
+			{
+				log_error("input_overlay", "Failed to parse configuration: layouts entry '%u' missing 'layout'", i);
+				ClearLayouts(ParsedLayouts);
+				json_value_free(pJson);
+				return false;
+			}
+
+			const json_value &ImageValue = Entry["image"];
+			const char *pImageOverride = ImageValue.type == json_string ? ImageValue.u.string.ptr : nullptr;
+			float OffsetX = RootOffsetX;
+			float OffsetY = RootOffsetY;
+			ParseOffset(Entry, OffsetX, OffsetY);
+			int EntryPressedOffset = 0;
+			bool HasEntryPressedOffset = false;
+			float EntryPressedOffsetValue = 0.0f;
+			if(ParseFloat(Entry["pressed_offset_y"], EntryPressedOffsetValue))
+			{
+				EntryPressedOffset = std::max(0, (int)std::round(EntryPressedOffsetValue));
+				HasEntryPressedOffset = true;
+			}
+
+			void *pLayoutData;
+			unsigned LayoutLength;
+			const char *pLayoutPath = LayoutValue.u.string.ptr;
+			if(!Storage()->ReadFile(pLayoutPath, IStorage::TYPE_ALL, &pLayoutData, &LayoutLength))
+			{
+				log_error("input_overlay", "Failed to read layout file '%s'", pLayoutPath);
+				ClearLayouts(ParsedLayouts);
+				json_value_free(pJson);
+				return false;
+			}
+
+			json_settings LayoutSettings{};
+			LayoutSettings.settings = json_enable_comments;
+			char aLayoutError[256];
+			json_value *pLayoutJson = JsonParseEx(&LayoutSettings, static_cast<const json_char *>(pLayoutData), LayoutLength, aLayoutError);
+			free(pLayoutData);
+			if(pLayoutJson == nullptr)
+			{
+				log_error("input_overlay", "Failed to parse layout file '%s': '%s'", pLayoutPath, aLayoutError);
+				ClearLayouts(ParsedLayouts);
+				json_value_free(pJson);
+				return false;
+			}
+			if(pLayoutJson->type != json_object)
+			{
+				log_error("input_overlay", "Layout file '%s' must be a JSON object", pLayoutPath);
+				json_value_free(pLayoutJson);
+				ClearLayouts(ParsedLayouts);
+				json_value_free(pJson);
+				return false;
+			}
+
+			SObsLayout Layout;
+			const json_value &LayoutRoot = *pLayoutJson;
+			const bool Result = ParseObsConfiguration(LayoutRoot, pLayoutPath, pImageOverride, OffsetX, OffsetY, Layout);
+			json_value_free(pLayoutJson);
+			if(!Result)
+			{
+				ClearLayouts(ParsedLayouts);
+				json_value_free(pJson);
+				return false;
+			}
+			if(HasEntryPressedOffset)
+			{
+				Layout.m_PressedOffsetY = EntryPressedOffset;
+				Layout.m_HasPressedOffset = EntryPressedOffset > 0;
+			}
+			else if(HasRootPressedOffset)
+			{
+				Layout.m_PressedOffsetY = RootPressedOffset;
+				Layout.m_HasPressedOffset = RootPressedOffset > 0;
+			}
+
+			ParsedLayouts.push_back(std::move(Layout));
+		}
+
+		ClearObsLayouts();
+		m_ConfigMode = EConfigMode::OBS;
+		m_vObsLayouts = std::move(ParsedLayouts);
+		m_ObsColor = ObsColor;
+		m_ObsActiveColor = ObsActiveColor;
+		m_ObsInactiveAlpha = ObsInactiveAlpha;
+		m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
+		m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
+
+		json_value_free(pJson);
+		return true;
+	}
+
+	const json_value &LayoutValue = Root["layout"];
+	const json_value &ImageValue = Root["image"];
+	const char *pImageOverride = ImageValue.type == json_string ? ImageValue.u.string.ptr : nullptr;
+	if(LayoutValue.type == json_string)
+	{
+		void *pLayoutData;
+		unsigned LayoutLength;
+		const char *pLayoutPath = LayoutValue.u.string.ptr;
+		if(!Storage()->ReadFile(pLayoutPath, IStorage::TYPE_ALL, &pLayoutData, &LayoutLength))
+		{
+			log_error("input_overlay", "Failed to read layout file '%s'", pLayoutPath);
+			json_value_free(pJson);
+			return false;
+		}
+
+		json_settings LayoutSettings{};
+		LayoutSettings.settings = json_enable_comments;
+		char aLayoutError[256];
+		json_value *pLayoutJson = JsonParseEx(&LayoutSettings, static_cast<const json_char *>(pLayoutData), LayoutLength, aLayoutError);
+		free(pLayoutData);
+		if(pLayoutJson == nullptr)
+		{
+			log_error("input_overlay", "Failed to parse layout file '%s': '%s'", pLayoutPath, aLayoutError);
+			json_value_free(pJson);
+			return false;
+		}
+		if(pLayoutJson->type != json_object)
+		{
+			log_error("input_overlay", "Layout file '%s' must be a JSON object", pLayoutPath);
+			json_value_free(pLayoutJson);
+			json_value_free(pJson);
+			return false;
+		}
+
+		SObsLayout Layout;
+		const json_value &LayoutRoot = *pLayoutJson;
+		const bool Result = ParseObsConfiguration(LayoutRoot, pLayoutPath, pImageOverride, RootOffsetX, RootOffsetY, Layout);
+		json_value_free(pLayoutJson);
+		if(!Result)
+		{
+			json_value_free(pJson);
+			return false;
+		}
+		if(HasRootPressedOffset)
+		{
+			Layout.m_PressedOffsetY = RootPressedOffset;
+			Layout.m_HasPressedOffset = RootPressedOffset > 0;
+		}
+
+		ClearObsLayouts();
+		m_ConfigMode = EConfigMode::OBS;
+		m_vObsLayouts.clear();
+		m_vObsLayouts.push_back(std::move(Layout));
+		m_ObsColor = ObsColor;
+		m_ObsActiveColor = ObsActiveColor;
+		m_ObsInactiveAlpha = ObsInactiveAlpha;
+		m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
+		m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
+
+		json_value_free(pJson);
+		return true;
+	}
+
+	const json_value &ElementsProbe = Root["elements"];
+	const json_value &OverlayWidthProbe = Root["overlay_width"];
+	const json_value &DefaultWidthProbe = Root["default_width"];
+	const bool LooksLikeObs = OverlayWidthProbe.type == json_integer || OverlayWidthProbe.type == json_double ||
+				  DefaultWidthProbe.type == json_integer || DefaultWidthProbe.type == json_double ||
+				  (ElementsProbe.type == json_array && ElementsProbe.u.array.length > 0 &&
+					  ElementsProbe[0].type == json_object && ElementsProbe[0]["mapping"].type == json_array && ElementsProbe[0]["pos"].type == json_array);
+	if(LooksLikeObs)
+	{
+		SObsLayout Layout;
+		const bool Result = ParseObsConfiguration(Root, CONFIGURATION_FILENAME, pImageOverride, RootOffsetX, RootOffsetY, Layout);
+		if(!Result)
+		{
+			json_value_free(pJson);
+			return false;
+		}
+
+		ClearObsLayouts();
+		m_ConfigMode = EConfigMode::OBS;
+		m_vObsLayouts.clear();
+		m_vObsLayouts.push_back(std::move(Layout));
+		m_ObsColor = ObsColor;
+		m_ObsActiveColor = ObsActiveColor;
+		m_ObsInactiveAlpha = ObsInactiveAlpha;
+		m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
+		m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
+
+		json_value_free(pJson);
+		return true;
+	}
+
+	SElementDefaults Defaults;
+	if(const json_value &DefaultsObj = Root["defaults"]; DefaultsObj.type == json_object)
+	{
+		ParseStyleObject(DefaultsObj, Defaults.m_Style);
+		if(const json_value &ShapeValue = DefaultsObj["shape"]; ShapeValue.type == json_string)
+			Defaults.m_Shape = ParseShape(ShapeValue.u.string.ptr);
+		if(const json_value &SkewValue = DefaultsObj["skew"]; ParseFloat(SkewValue, Defaults.m_Skew))
+		{
 		}
 	}
-	else
+
+	float CanvasW = m_CanvasWidth;
+	float CanvasH = m_CanvasHeight;
+	const json_value &Canvas = Root["canvas"];
+	if(Canvas.type == json_object)
 	{
-		// 根级 "layout" 只支持字符串路径，内嵌对象形式不支持并给出明确错误。
-		SObsLayout Parsed;
-		std::string EntryError;
-		if(!LoadEntry(Root, 0.0f, 0.0f, Parsed, EntryError))
-			return FailWrapper("Failed to load root OBS layout", EntryError);
-		ParsedLayouts.emplace_back(std::move(Parsed));
+		if(const json_value &WidthValue = Canvas["width"]; ParseFloat(WidthValue, CanvasW))
+		{
+		}
+		if(const json_value &HeightValue = Canvas["height"]; ParseFloat(HeightValue, CanvasH))
+		{
+		}
 	}
-	json_value_free(pRoot);
-	if(ParsedLayouts.empty())
+
+	const json_value &Elements = Root["elements"];
+	if(Elements.type != json_array)
 	{
-		ClearObsLayouts();
+		log_error("input_overlay", "Failed to parse configuration: attribute 'elements' must specify an array");
+		json_value_free(pJson);
 		return false;
 	}
-	ClearObsLayouts();
-	m_vObsLayouts = std::move(ParsedLayouts);
-	m_CanvasWidth = 0.0f;
-	m_CanvasHeight = 0.0f;
-	for(const SObsLayout &Layout : m_vObsLayouts)
+
+	std::vector<SElement> ParsedElements;
+	ParsedElements.reserve(Elements.u.array.length);
+	for(unsigned i = 0; i < Elements.u.array.length; ++i)
 	{
-		m_CanvasWidth = std::max(m_CanvasWidth, Layout.m_OffsetX + Layout.m_OverlayWidth);
-		m_CanvasHeight = std::max(m_CanvasHeight, Layout.m_OffsetY + Layout.m_OverlayHeight);
+		SElement Element;
+		if(!ParseElement(Elements[i], Defaults, Element))
+		{
+			log_error("input_overlay", "Failed to parse configuration: invalid element at index '%u'", i);
+			json_value_free(pJson);
+			return false;
+		}
+		ParsedElements.push_back(std::move(Element));
 	}
-	m_HasConfigModifiedTime = false;
+
+	m_vElements = std::move(ParsedElements);
+	m_CanvasWidth = CanvasW;
+	m_CanvasHeight = CanvasH;
+	if(m_ConfigMode != EConfigMode::VECTOR)
+		ClearObsLayouts();
+	m_ConfigMode = EConfigMode::VECTOR;
+	m_PosXPercent = std::clamp(PosX, 0.0f, 100.0f);
+	m_PosYPercent = std::clamp(PosY, 0.0f, 100.0f);
+
+	json_value_free(pJson);
 	return true;
 }
 
-bool CInputOverlay::LoadParsedLayout(const QmInputOverlay::SLayout &Layout, const char *pLayoutPath, const char *pImagePath, float OffsetX, float OffsetY, SObsLayout &Out)
+void CInputOverlay::ParseStyleObject(const json_value &Object, SStyle &Style) const
 {
-	if(pImagePath == nullptr || !QmInputOverlay::IsSafeRelativePath(pImagePath) || str_endswith_nocase(pImagePath, ".png") == nullptr)
-		return false;
-	std::vector<std::string> ImageCandidates;
-	// OBS stores image names relative to the selected layout in several
-	// official and forked presets. Keep the original path as a fallback for
-	// wrappers that already provide a workspace-relative path.
-	AddPathCandidate(ImageCandidates, JoinPath(pLayoutPath, pImagePath));
-	AddPathCandidate(ImageCandidates, pImagePath);
-	std::string ResolvedImagePath;
-	// CImageInfo 是 move-only 类型：Image = {} 触发移动赋值，会先 Free 旧数据
-	// 再接管空对象，失败候选不会泄漏，成功候选随后由 LoadTextureRawMove 接管。
-	CImageInfo Image;
-	for(const std::string &Candidate : ImageCandidates)
+	const json_value &Fill = Object["fill"];
+	if(Fill.type == json_string)
 	{
-		Image = {};
-		if(!Graphics()->LoadPng(Image, Candidate.c_str(), IStorage::TYPE_ALL))
-			continue;
-		if(Image.m_Width == 0 || Image.m_Height == 0 || Image.m_Width > QmInputOverlay::MAX_IMAGE_DIMENSION || Image.m_Height > QmInputOverlay::MAX_IMAGE_DIMENSION)
+		if(auto Parsed = ParseColor(Fill); Parsed.has_value())
+			Style.m_FillColor = Parsed.value();
+	}
+	else if(Fill.type == json_object)
+	{
+		if(auto Parsed = ParseColor(Fill["color"]); Parsed.has_value())
+			Style.m_FillColor = Parsed.value();
+		if(auto Parsed = ParseColor(Fill["active_color"]); Parsed.has_value())
+			Style.m_FillColorActive = Parsed.value();
+		if(auto Parsed = ParseColor(Fill["active"]); Parsed.has_value())
+			Style.m_FillColorActive = Parsed.value();
+	}
+
+	const json_value &Border = Object["border"];
+	if(Border.type == json_object)
+	{
+		if(auto Parsed = ParseColor(Border["color"]); Parsed.has_value())
+			Style.m_BorderColor = Parsed.value();
+		if(auto Parsed = ParseColor(Border["active_color"]); Parsed.has_value())
+			Style.m_BorderColorActive = Parsed.value();
+		if(auto Parsed = ParseColor(Border["active"]); Parsed.has_value())
+			Style.m_BorderColorActive = Parsed.value();
+
+		if(const json_value &WidthValue = Border["width"]; WidthValue.type == json_double || WidthValue.type == json_integer)
+			ParseFloat(WidthValue, Style.m_BorderWidth);
+
+		if(const json_value &GradientValue = Border["gradient"]; GradientValue.type == json_string)
+			Style.m_BorderRainbow = str_comp_nocase(GradientValue.u.string.ptr, "rainbow") == 0;
+		if(const json_value &GradientActiveValue = Border["gradient_active"]; GradientActiveValue.type == json_string)
+			Style.m_BorderRainbowActive = str_comp_nocase(GradientActiveValue.u.string.ptr, "rainbow") == 0;
+
+		if(const json_value &SpeedValue = Border["rainbow_speed"]; SpeedValue.type == json_double || SpeedValue.type == json_integer)
+			ParseFloat(SpeedValue, Style.m_BorderRainbowSpeed);
+		if(const json_value &OffsetValue = Border["rainbow_offset"]; OffsetValue.type == json_double || OffsetValue.type == json_integer)
+			ParseFloat(OffsetValue, Style.m_BorderRainbowOffset);
+	}
+
+	const json_value &Text = Object["text"];
+	if(Text.type == json_object)
+	{
+		if(auto Parsed = ParseColor(Text["color"]); Parsed.has_value())
+			Style.m_TextColor = Parsed.value();
+		if(auto Parsed = ParseColor(Text["active_color"]); Parsed.has_value())
+			Style.m_TextColorActive = Parsed.value();
+		if(auto Parsed = ParseColor(Text["active"]); Parsed.has_value())
+			Style.m_TextColorActive = Parsed.value();
+		if(const json_value &SizeValue = Text["size"]; SizeValue.type == json_double || SizeValue.type == json_integer)
+			ParseFloat(SizeValue, Style.m_TextSize);
+		if(const json_value &OffsetX = Text["offset_x"]; OffsetX.type == json_double || OffsetX.type == json_integer)
+			ParseFloat(OffsetX, Style.m_TextOffsetX);
+		if(const json_value &OffsetY = Text["offset_y"]; OffsetY.type == json_double || OffsetY.type == json_integer)
+			ParseFloat(OffsetY, Style.m_TextOffsetY);
+		if(const json_value &Enabled = Text["enabled"]; Enabled.type == json_boolean)
+			Style.m_TextEnabled = Enabled.u.boolean != 0;
+	}
+}
+
+bool CInputOverlay::ParseElement(const json_value &Object, const SElementDefaults &Defaults, SElement &Out) const
+{
+	if(Object.type != json_object)
+		return false;
+
+	Out.m_Style = Defaults.m_Style;
+	Out.m_Shape = Defaults.m_Shape;
+	Out.m_Skew = Defaults.m_Skew;
+	Out.m_InputKind = EInputKind::NONE;
+	Out.m_Key = 0;
+	Out.m_MouseButton = 0;
+
+	if(const json_value &IdValue = Object["id"]; IdValue.type == json_string)
+		Out.m_Id = IdValue.u.string.ptr;
+	if(const json_value &LabelValue = Object["label"]; LabelValue.type == json_string)
+		Out.m_Label = LabelValue.u.string.ptr;
+
+	const json_value &InputValue = Object["input"];
+	const json_value &KeyValue = Object["key"];
+	const json_value &MouseValue = Object["mouse"];
+	if(InputValue.type == json_string)
+	{
+		if(!ParseInputBinding(InputValue, Out))
+			return false;
+	}
+	else if(KeyValue.type == json_string)
+	{
+		if(!ParseInputBinding(KeyValue, Out))
+			return false;
+	}
+	else if(MouseValue.type == json_string)
+	{
+		if(!ParseInputBinding(MouseValue, Out))
+			return false;
+	}
+
+	if(const json_value &ShapeValue = Object["shape"]; ShapeValue.type == json_string)
+		Out.m_Shape = ParseShape(ShapeValue.u.string.ptr);
+
+	if(!ParseFloat(Object["x"], Out.m_X))
+		return false;
+	if(!ParseFloat(Object["y"], Out.m_Y))
+		return false;
+	if(!ParseFloat(Object["w"], Out.m_W))
+		return false;
+	if(!ParseFloat(Object["h"], Out.m_H))
+		return false;
+
+	if(const json_value &SkewValue = Object["skew"]; SkewValue.type == json_double || SkewValue.type == json_integer)
+		ParseFloat(SkewValue, Out.m_Skew);
+
+	ParseStyleObject(Object, Out.m_Style);
+	if(const json_value &StyleObject = Object["style"]; StyleObject.type == json_object)
+		ParseStyleObject(StyleObject, Out.m_Style);
+
+	return true;
+}
+
+bool CInputOverlay::ParseFloat(const json_value &Value, float &Out) const
+{
+	if(Value.type == json_integer)
+	{
+		Out = (float)Value.u.integer;
+		return true;
+	}
+	if(Value.type == json_double)
+	{
+		Out = (float)Value.u.dbl;
+		return true;
+	}
+	return false;
+}
+
+bool CInputOverlay::ParseFloatArray(const json_value &Value, float *pOut, int Count) const
+{
+	if(Value.type != json_array || (int)Value.u.array.length < Count)
+		return false;
+	for(int i = 0; i < Count; ++i)
+	{
+		if(!ParseFloat(Value[i], pOut[i]))
+			return false;
+	}
+	return true;
+}
+
+void CInputOverlay::ParsePosition(const json_value &Root, float &PosX, float &PosY, bool &HasPosX, bool &HasPosY) const
+{
+	const json_value &Position = Root["position"];
+	if(Position.type == json_object)
+	{
+		if(const json_value &PosXValue = Position["x"]; ParseFloat(PosXValue, PosX))
+			HasPosX = true;
+		if(const json_value &PosYValue = Position["y"]; ParseFloat(PosYValue, PosY))
+			HasPosY = true;
+	}
+
+	if(const json_value &PosXValue = Root["x"]; ParseFloat(PosXValue, PosX))
+		HasPosX = true;
+	if(const json_value &PosYValue = Root["y"]; ParseFloat(PosYValue, PosY))
+		HasPosY = true;
+}
+
+void CInputOverlay::ParseOffset(const json_value &Root, float &OffsetX, float &OffsetY) const
+{
+	const json_value &Offset = Root["offset"];
+	if(Offset.type == json_object)
+	{
+		ParseFloat(Offset["x"], OffsetX);
+		ParseFloat(Offset["y"], OffsetY);
+	}
+	else if(Offset.type == json_array)
+	{
+		float Values[2];
+		if(ParseFloatArray(Offset, Values, 2))
 		{
-			Image.Free();
-			continue;
+			OffsetX = Values[0];
+			OffsetY = Values[1];
 		}
-		ResolvedImagePath = Candidate;
-		break;
 	}
-	if(ResolvedImagePath.empty())
-	{
-		log_error("input_overlay", "Failed to load OBS overlay image '%s'", pImagePath);
+
+	ParseFloat(Root["offset_x"], OffsetX);
+	ParseFloat(Root["offset_y"], OffsetY);
+}
+
+std::optional<ColorRGBA> CInputOverlay::ParseColor(const json_value &Value) const
+{
+	if(Value.type != json_string)
+		return {};
+
+	const char *pStr = Value.u.string.ptr;
+	if(!pStr || pStr[0] == '\0')
+		return {};
+
+	if(pStr[0] == '#')
+		++pStr;
+	if(pStr[0] == '0' && (pStr[1] == 'x' || pStr[1] == 'X'))
+		pStr += 2;
+
+	return color_parse<ColorRGBA>(pStr);
+}
+
+CInputOverlay::EShape CInputOverlay::ParseShape(const char *pName) const
+{
+	if(pName == nullptr)
+		return EShape::RECT;
+	if(str_comp_nocase(pName, "parallelogram") == 0 || str_comp_nocase(pName, "para") == 0 || str_comp_nocase(pName, "slant") == 0)
+		return EShape::PARALLELOGRAM;
+	return EShape::RECT;
+}
+
+bool CInputOverlay::ParseInputBinding(const json_value &Value, SElement &Out) const
+{
+	if(Value.type != json_string)
 		return false;
-	}
-	const int TextureWidth = Image.m_Width;
-	const int TextureHeight = Image.m_Height;
-	IGraphics::CTextureHandle Texture = Graphics()->LoadTextureRawMove(Image, IGraphics::TEXLOAD_NO_MIPMAPS, ResolvedImagePath.c_str());
-	if(!Texture.IsValid())
+	const char *pName = Value.u.string.ptr;
+	if(pName == nullptr || pName[0] == '\0')
+		return false;
+
+	if(str_comp_nocase(pName, "always") == 0)
 	{
-		log_error("input_overlay", "Failed to create texture for '%s'", ResolvedImagePath.c_str());
+		Out.m_InputKind = EInputKind::ALWAYS;
+		return true;
+	}
+
+	const int MouseButton = ParseMouseButton(pName);
+	if(MouseButton > 0)
+	{
+		Out.m_InputKind = EInputKind::MOUSE;
+		Out.m_MouseButton = MouseButton;
+		return true;
+	}
+
+	const int Key = Input()->FindKeyByName(pName);
+	if(Key != KEY_UNKNOWN)
+	{
+		Out.m_InputKind = EInputKind::KEY;
+		Out.m_Key = Key;
+		return true;
+	}
+
+	return false;
+}
+
+int CInputOverlay::ParseMouseButton(const char *pName) const
+{
+	if(pName == nullptr)
+		return 0;
+	if(str_comp_nocase(pName, "mouse1") == 0 || str_comp_nocase(pName, "lmb") == 0 || str_comp_nocase(pName, "mouse_left") == 0)
+		return 1;
+	if(str_comp_nocase(pName, "mouse2") == 0 || str_comp_nocase(pName, "rmb") == 0 || str_comp_nocase(pName, "mouse_right") == 0)
+		return 3;
+	if(str_comp_nocase(pName, "mouse3") == 0 || str_comp_nocase(pName, "mmb") == 0 || str_comp_nocase(pName, "mouse_middle") == 0)
+		return 2;
+	if(str_comp_nocase(pName, "mouse4") == 0 || str_comp_nocase(pName, "x1") == 0 || str_comp_nocase(pName, "mb4") == 0)
+		return 4;
+	if(str_comp_nocase(pName, "mouse5") == 0 || str_comp_nocase(pName, "x2") == 0 || str_comp_nocase(pName, "mb5") == 0)
+		return 5;
+	if(str_comp_nocase(pName, "mouse") == 0)
+		return 0;
+	if(str_startswith_nocase(pName, "mouse"))
+	{
+		const char *pNum = pName + 5;
+		if(pNum[0] == '_')
+			++pNum;
+		const int Parsed = str_toint(pNum);
+		if(Parsed >= 1 && Parsed <= 8)
+			return Parsed;
+	}
+	return 0;
+}
+
+bool CInputOverlay::ParseObsConfiguration(const json_value &Root, const char *pLayoutPath, const char *pImageOverride, float OffsetX, float OffsetY, SObsLayout &Out)
+{
+	float DefaultW = 0.0f;
+	float DefaultH = 0.0f;
+	float OverlayW = 0.0f;
+	float OverlayH = 0.0f;
+
+	if(const json_value &Value = Root["default_width"]; ParseFloat(Value, DefaultW))
+	{
+	}
+	if(const json_value &Value = Root["default_height"]; ParseFloat(Value, DefaultH))
+	{
+	}
+	if(const json_value &Value = Root["overlay_width"]; ParseFloat(Value, OverlayW))
+	{
+	}
+	if(const json_value &Value = Root["overlay_height"]; ParseFloat(Value, OverlayH))
+	{
+	}
+
+	const json_value &Elements = Root["elements"];
+	if(Elements.type != json_array)
+	{
+		log_error("input_overlay", "Failed to parse OBS layout: attribute 'elements' must specify an array");
 		return false;
 	}
 
-	Out = {};
+	std::vector<SObsElement> ParsedElements;
+	ParsedElements.reserve(Elements.u.array.length);
+	bool HasKeyboardInput = false;
+	bool HasMouseInput = false;
+	for(unsigned i = 0; i < Elements.u.array.length; ++i)
+	{
+		SObsElement Element;
+		if(!ParseObsElement(Elements[i], Element))
+		{
+			log_error("input_overlay", "Failed to parse OBS layout: invalid element at index '%u'", i);
+			return false;
+		}
+		HasKeyboardInput |= Element.m_InputKind == EObsInputKind::KEY;
+		HasMouseInput |= Element.m_InputKind == EObsInputKind::MOUSE ||
+				 Element.m_InputKind == EObsInputKind::WHEEL ||
+				 Element.m_InputKind == EObsInputKind::MOUSE_MOVE;
+		ParsedElements.push_back(std::move(Element));
+	}
+
+	std::string ImagePath;
+	if(pImageOverride != nullptr && pImageOverride[0] != '\0')
+	{
+		ImagePath = pImageOverride;
+	}
+	else if(const json_value &ImageValue = Root["image"]; ImageValue.type == json_string)
+	{
+		ImagePath = ImageValue.u.string.ptr;
+	}
+	else if(pLayoutPath != nullptr && pLayoutPath[0] != '\0')
+	{
+		ImagePath = pLayoutPath;
+		const size_t DotPos = ImagePath.find_last_of('.');
+		if(DotPos == std::string::npos)
+			ImagePath.append(".png");
+		else
+			ImagePath.replace(DotPos, std::string::npos, ".png");
+	}
+
+	if(ImagePath.empty())
+	{
+		log_error("input_overlay", "Failed to parse OBS layout: missing image path");
+		return false;
+	}
+
+	CImageInfo ImageInfo;
+	if(!Graphics()->LoadPng(ImageInfo, ImagePath.c_str(), IStorage::TYPE_ALL))
+	{
+		log_error("input_overlay", "Failed to load OBS overlay image '%s'", ImagePath.c_str());
+		return false;
+	}
+	const int TextureWidth = ImageInfo.m_Width;
+	const int TextureHeight = ImageInfo.m_Height;
+
+	if(OverlayW <= 0.0f || OverlayH <= 0.0f)
+	{
+		float MaxX = 0.0f;
+		float MaxY = 0.0f;
+		for(const SObsElement &Element : ParsedElements)
+		{
+			float MapW = Element.m_MapW > 0.0f ? Element.m_MapW : DefaultW;
+			float MapH = Element.m_MapH > 0.0f ? Element.m_MapH : DefaultH;
+			MaxX = std::max(MaxX, Element.m_PosX + MapW);
+			MaxY = std::max(MaxY, Element.m_PosY + MapH);
+		}
+		if(OverlayW <= 0.0f)
+			OverlayW = MaxX;
+		if(OverlayH <= 0.0f)
+			OverlayH = MaxY;
+	}
+
+	std::stable_sort(ParsedElements.begin(), ParsedElements.end(), [](const SObsElement &A, const SObsElement &B) {
+		return A.m_ZLevel < B.m_ZLevel;
+	});
+
+	int PressedOffsetY = 0;
+	bool HasPressedOffset = false;
+	float PressedOffsetValue = 0.0f;
+	if(const json_value &PressedValue = Root["pressed_offset_y"]; ParseFloat(PressedValue, PressedOffsetValue))
+	{
+		PressedOffsetY = (int)PressedOffsetValue;
+		PressedOffsetY = std::max(0, PressedOffsetY);
+		HasPressedOffset = PressedOffsetY > 0;
+	}
+	if(!HasPressedOffset)
+	{
+		const int Detected = DetectObsPressedOffset(ImageInfo, ParsedElements);
+		if(Detected > 0)
+		{
+			PressedOffsetY = Detected;
+			HasPressedOffset = true;
+		}
+	}
+
+	IGraphics::CTextureHandle Texture = Graphics()->LoadTextureRawMove(ImageInfo, 0, ImagePath.c_str());
+	if(!Texture.IsValid())
+	{
+		log_error("input_overlay", "Failed to create texture for '%s'", ImagePath.c_str());
+		return false;
+	}
+
+	Out.m_vElements = std::move(ParsedElements);
 	Out.m_Texture = Texture;
 	Out.m_TextureWidth = TextureWidth;
 	Out.m_TextureHeight = TextureHeight;
-	Out.m_OverlayWidth = Layout.m_OverlayWidth;
-	Out.m_OverlayHeight = Layout.m_OverlayHeight;
-	Out.m_DefaultWidth = Layout.m_DefaultWidth;
-	Out.m_DefaultHeight = Layout.m_DefaultHeight;
+	Out.m_OverlayWidth = OverlayW;
+	Out.m_OverlayHeight = OverlayH;
+	Out.m_DefaultWidth = DefaultW;
+	Out.m_DefaultHeight = DefaultH;
 	Out.m_OffsetX = OffsetX;
 	Out.m_OffsetY = OffsetY;
-	Out.m_LayoutPath = pLayoutPath != nullptr ? pLayoutPath : QmInputOverlay::CONFIGURATION_PATH;
-	Out.m_ImagePath = ResolvedImagePath;
-	bool HasKeyboard = false;
-	bool HasMouse = false;
-	Out.m_vElements.reserve(Layout.m_vElements.size());
-	for(const QmInputOverlay::SElement &Source : Layout.m_vElements)
+	Out.m_PressedOffsetY = PressedOffsetY;
+	Out.m_HasPressedOffset = HasPressedOffset;
+	Out.m_IsMouseLayout = QmInputOverlay::IsMouseOnlyLayout(HasKeyboardInput, HasMouseInput);
+	Out.m_LayoutPath = pLayoutPath != nullptr ? pLayoutPath : CONFIGURATION_FILENAME;
+	Out.m_ImagePath = ImagePath;
+
+	return true;
+}
+
+bool CInputOverlay::ParseObsElement(const json_value &Object, SObsElement &Out) const
+{
+	if(Object.type != json_object)
+		return false;
+
+	auto ParseIntValue = [&](const json_value &Value, int &OutValue) {
+		if(Value.type == json_integer)
+		{
+			OutValue = (int)Value.u.integer;
+			return true;
+		}
+		if(Value.type == json_double)
+		{
+			OutValue = (int)Value.u.dbl;
+			return true;
+		}
+		return false;
+	};
+
+	if(const json_value &IdValue = Object["id"]; IdValue.type == json_string)
+		Out.m_Id = IdValue.u.string.ptr;
+	if(const json_value &CodeValue = Object["code"]; ParseIntValue(CodeValue, Out.m_Code))
 	{
-		SObsElement Element;
-		Element.m_Id = Source.m_Id;
-		Element.m_Code = Source.m_Code;
-		Element.m_Type = Source.m_Type;
-		Element.m_ZLevel = Source.m_ZLevel;
-		Element.m_MouseType = Source.m_MouseType;
-		Element.m_Side = Source.m_Side;
-		Element.m_StickRadius = Source.m_StickRadius;
-		Element.m_MouseRadius = Source.m_MouseRadius;
-		Element.m_Direction = Source.m_Direction;
-		Element.m_TriggerMode = Source.m_TriggerMode;
-		Element.m_ActiveOnly = Source.m_ActiveOnly;
-		Element.m_HasPressedMapping = Source.m_HasMappingPress;
-		Element.m_MapX = Source.m_Mapping.m_X;
-		Element.m_MapY = Source.m_Mapping.m_Y;
-		Element.m_MapW = Source.m_Mapping.m_W;
-		Element.m_MapH = Source.m_Mapping.m_H;
-		Element.m_PressedMapX = Source.m_MappingPress.m_X;
-		Element.m_PressedMapY = Source.m_MappingPress.m_Y;
-		Element.m_PressedMapW = Source.m_MappingPress.m_W;
-		Element.m_PressedMapH = Source.m_MappingPress.m_H;
-		Element.m_PosX = Source.m_Pos.m_X;
-		Element.m_PosY = Source.m_Pos.m_Y;
-		if(Element.m_Type == QmInputOverlay::ET_KEYBOARD_KEY)
-		{
-			Element.m_Key = QmInputOverlay::KeyboardCodeToEngine(Element.m_Code, Layout.m_Version);
-			HasKeyboard = true;
-		}
-		else if(Element.m_Type == QmInputOverlay::ET_GAMEPAD_BUTTON)
-		{
-			Element.m_GamepadButton = QmInputOverlay::GamepadCodeToButton(Element.m_Code);
-		}
-		else if(Element.m_Type == QmInputOverlay::ET_MOUSE_BUTTON)
-		{
-			Element.m_MouseButton = MouseButtonFromCode(Element.m_Code);
-			if(Element.m_MouseButton == 0)
-				Element.m_MouseButton = MouseButtonFromId(Element.m_Id);
-			HasMouse = true;
-		}
-		else if(Element.m_Type == QmInputOverlay::ET_WHEEL)
-		{
-			Element.m_WheelDir = WheelDirectionFromId(Element.m_Id);
-			HasMouse = true;
-		}
-		else if(Element.m_Type == QmInputOverlay::ET_MOUSE_MOVEMENT)
-		{
-			HasMouse = true;
-		}
-		if(Element.m_Type == QmInputOverlay::ET_GAMEPAD_BUTTON && Element.m_GamepadButton < 0)
-			Element.m_ActiveOnly = true;
-		if(Element.m_Type == QmInputOverlay::ET_ANALOG_STICK || Element.m_Type == QmInputOverlay::ET_TRIGGER || Element.m_Type == QmInputOverlay::ET_GAMEPAD_ID || Element.m_Type == QmInputOverlay::ET_DPAD_STICK)
-			Element.m_ActiveOnly = false;
-		Out.m_vElements.emplace_back(std::move(Element));
 	}
-	Out.m_IsMouseLayout = HasMouse && !HasKeyboard;
-	return !Out.m_vElements.empty();
+	if(const json_value &TypeValue = Object["type"]; ParseIntValue(TypeValue, Out.m_Type))
+	{
+	}
+	if(const json_value &ZValue = Object["z_level"]; ParseIntValue(ZValue, Out.m_ZLevel))
+	{
+	}
+	if(const json_value &MouseTypeValue = Object["mouse_type"]; ParseIntValue(MouseTypeValue, Out.m_MouseType))
+	{
+	}
+	bool HasActiveOnly = false;
+	if(const json_value &ActiveOnlyValue = Object["active_only"]; ActiveOnlyValue.type == json_boolean)
+	{
+		Out.m_ActiveOnly = ActiveOnlyValue.u.boolean != 0;
+		HasActiveOnly = true;
+	}
+
+	float Mapping[4];
+	float Position[2];
+	if(!ParseFloatArray(Object["mapping"], Mapping, 4))
+		return false;
+	if(!ParseFloatArray(Object["pos"], Position, 2))
+		return false;
+
+	Out.m_MapX = Mapping[0];
+	Out.m_MapY = Mapping[1];
+	Out.m_MapW = Mapping[2];
+	Out.m_MapH = Mapping[3];
+	Out.m_PosX = Position[0];
+	Out.m_PosY = Position[1];
+
+	switch(Out.m_Type)
+	{
+	case 1:
+		Out.m_Key = KeyFromObsId(Out.m_Id.c_str(), Out.m_Code);
+		if(Out.m_Key != KEY_UNKNOWN)
+			Out.m_InputKind = EObsInputKind::KEY;
+		break;
+	case 3:
+		Out.m_MouseButton = MouseButtonFromObsId(Out.m_Id.c_str(), Out.m_Code);
+		if(Out.m_MouseButton > 0)
+			Out.m_InputKind = EObsInputKind::MOUSE;
+		break;
+	case 4:
+		Out.m_InputKind = EObsInputKind::WHEEL;
+		Out.m_WheelDir = WheelDirFromObsId(Out.m_Id.c_str());
+		if(Out.m_WheelDir != 0 && !HasActiveOnly)
+			Out.m_ActiveOnly = true;
+		break;
+	case 9:
+		Out.m_InputKind = EObsInputKind::MOUSE_MOVE;
+		break;
+	default:
+		Out.m_InputKind = EObsInputKind::NONE;
+		break;
+	}
+
+	return true;
+}
+
+int CInputOverlay::KeyFromObsId(const char *pId, int Code) const
+{
+	if(pId != nullptr && pId[0] != '\0')
+	{
+		std::string Name = pId;
+		for(char &Ch : Name)
+			Ch = (char)std::tolower((unsigned char)Ch);
+
+		if(Name == "shift")
+			Name = "lshift";
+		else if(Name == "ctrl")
+			Name = "lctrl";
+		else if(Name == "alt")
+			Name = "lalt";
+
+		const int Key = Input()->FindKeyByName(Name.c_str());
+		if(Key != KEY_UNKNOWN)
+			return Key;
+	}
+
+	if(Code > 0)
+	{
+		static const struct
+		{
+			int m_Code;
+			const char *m_Name;
+		} s_aCodeMap[] = {
+			{15, "tab"},
+			{16, "q"},
+			{17, "w"},
+			{18, "e"},
+			{19, "r"},
+			{30, "a"},
+			{31, "s"},
+			{32, "d"},
+			{33, "f"},
+			{42, "lshift"},
+			{29, "lctrl"},
+			{56, "lalt"},
+			{44, "z"},
+			{45, "x"},
+			{46, "c"},
+			{47, "v"},
+			{57, "space"},
+		};
+		for(const auto &Entry : s_aCodeMap)
+		{
+			if(Entry.m_Code == Code)
+			{
+				const int Key = Input()->FindKeyByName(Entry.m_Name);
+				if(Key != KEY_UNKNOWN)
+					return Key;
+				break;
+			}
+		}
+	}
+
+	return KEY_UNKNOWN;
+}
+
+int CInputOverlay::MouseButtonFromObsId(const char *pId, int Code) const
+{
+	if(pId != nullptr && pId[0] != '\0')
+	{
+		if(str_comp_nocase(pId, "lmb") == 0 || str_comp_nocase(pId, "mouse1") == 0 || str_comp_nocase(pId, "mouse_left") == 0)
+			return 1;
+		if(str_comp_nocase(pId, "rmb") == 0 || str_comp_nocase(pId, "mouse2") == 0 || str_comp_nocase(pId, "mouse_right") == 0)
+			return 3;
+		if(str_comp_nocase(pId, "mmb") == 0 || str_comp_nocase(pId, "mouse3") == 0 || str_comp_nocase(pId, "mouse_middle") == 0)
+			return 2;
+		if(str_comp_nocase(pId, "smb1") == 0 || str_comp_nocase(pId, "mb4") == 0 || str_comp_nocase(pId, "mouse4") == 0)
+			return 4;
+		if(str_comp_nocase(pId, "smb2") == 0 || str_comp_nocase(pId, "mb5") == 0 || str_comp_nocase(pId, "mouse5") == 0)
+			return 5;
+	}
+
+	if(Code >= 1 && Code <= 5)
+	{
+		switch(Code)
+		{
+		case 1:
+			return 1;
+		case 2:
+			return 3;
+		case 3:
+			return 2;
+		case 4:
+			return 4;
+		case 5:
+			return 5;
+		default:
+			break;
+		}
+	}
+
+	return 0;
+}
+
+int CInputOverlay::WheelDirFromObsId(const char *pId) const
+{
+	if(pId == nullptr || pId[0] == '\0')
+		return 0;
+	if(str_comp_nocase(pId, "wheel_up") == 0 || str_comp_nocase(pId, "wheelup") == 0 ||
+		str_comp_nocase(pId, "mousewheelup") == 0 || str_comp_nocase(pId, "mwheelup") == 0 ||
+		str_comp_nocase(pId, "scroll_up") == 0 || str_comp_nocase(pId, "scrollup") == 0)
+		return 1;
+	if(str_comp_nocase(pId, "wheel_down") == 0 || str_comp_nocase(pId, "wheeldown") == 0 ||
+		str_comp_nocase(pId, "mousewheeldown") == 0 || str_comp_nocase(pId, "mwheeldown") == 0 ||
+		str_comp_nocase(pId, "scroll_down") == 0 || str_comp_nocase(pId, "scrolldown") == 0)
+		return 2;
+	if(str_comp_nocase(pId, "wheel_left") == 0 || str_comp_nocase(pId, "wheelleft") == 0 ||
+		str_comp_nocase(pId, "mousewheelleft") == 0 || str_comp_nocase(pId, "mwheelleft") == 0 ||
+		str_comp_nocase(pId, "scroll_left") == 0 || str_comp_nocase(pId, "scrollleft") == 0)
+		return 3;
+	if(str_comp_nocase(pId, "wheel_right") == 0 || str_comp_nocase(pId, "wheelright") == 0 ||
+		str_comp_nocase(pId, "mousewheelright") == 0 || str_comp_nocase(pId, "mwheelright") == 0 ||
+		str_comp_nocase(pId, "scroll_right") == 0 || str_comp_nocase(pId, "scrollright") == 0)
+		return 4;
+	return 0;
+}
+
+bool CInputOverlay::IsObsActive(const SObsElement &Element) const
+{
+	const CGameClient::SDemoInputPlaybackState *pDemoInputState = Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->DemoInputPlaybackState() : nullptr;
+	switch(Element.m_InputKind)
+	{
+	case EObsInputKind::NONE:
+		return true;
+	case EObsInputKind::KEY:
+		return Element.m_Key > KEY_UNKNOWN && (pDemoInputState != nullptr ? DemoInputKeyIsPressed(pDemoInputState, Element.m_Key) : Input()->KeyIsPressed(Element.m_Key));
+	case EObsInputKind::MOUSE:
+		return Element.m_MouseButton > 0 && (pDemoInputState != nullptr ? DemoInputKeyIsPressed(pDemoInputState, KEY_MOUSE_1 + Element.m_MouseButton - 1) : Input()->NativeMousePressed(Element.m_MouseButton));
+	case EObsInputKind::WHEEL:
+		switch(Element.m_WheelDir)
+		{
+		case 1:
+			return m_aWheelAlpha[0] > 0.0f;
+		case 2:
+			return m_aWheelAlpha[1] > 0.0f;
+		case 3:
+			return m_aWheelAlpha[2] > 0.0f;
+		case 4:
+			return m_aWheelAlpha[3] > 0.0f;
+		default:
+			return std::max(std::max(m_aWheelAlpha[0], m_aWheelAlpha[1]), std::max(m_aWheelAlpha[2], m_aWheelAlpha[3])) > 0.0f;
+		}
+	case EObsInputKind::MOUSE_MOVE:
+		return std::fabs(m_MouseDeltaX) > 0.01f || std::fabs(m_MouseDeltaY) > 0.01f;
+	default:
+		return false;
+	}
+}
+
+bool CInputOverlay::GetConfigModifiedTime(time_t &OutModified) const
+{
+	bool Found = false;
+	time_t Latest = 0;
+	time_t Created;
+	time_t Modified;
+
+	auto CheckFile = [&](const std::string &Path) {
+		if(Path.empty())
+			return;
+		for(int Type = IStorage::TYPE_SAVE; Type < Storage()->NumPaths(); ++Type)
+		{
+			if(!Storage()->FileExists(Path.c_str(), Type))
+				continue;
+			if(Storage()->RetrieveTimes(Path.c_str(), Type, &Created, &Modified))
+			{
+				if(!Found || Modified > Latest)
+					Latest = Modified;
+				Found = true;
+				break;
+			}
+		}
+	};
+
+	CheckFile(CONFIGURATION_FILENAME);
+	for(const SObsLayout &Layout : m_vObsLayouts)
+	{
+		CheckFile(Layout.m_LayoutPath);
+		CheckFile(Layout.m_ImagePath);
+	}
+
+	if(Found)
+		OutModified = Latest;
+	return Found;
+}
+
+int CInputOverlay::DetectObsPressedOffset(const CImageInfo &Image, const std::vector<SObsElement> &Elements) const
+{
+	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0)
+		return 0;
+
+	constexpr int SampleCols = 6;
+	constexpr int SampleRows = 6;
+	constexpr float AlphaThreshold = 0.1f;
+	constexpr float MinColorDiff = 12.0f / 255.0f;
+
+	auto BuildSamples = [&](const SObsElement &Element, std::vector<vec2> &OutPositions, std::vector<ColorRGBA> &OutColors) {
+		const int BaseX = (int)std::round(Element.m_MapX);
+		const int BaseY = (int)std::round(Element.m_MapY);
+		const int MapW = (int)std::round(Element.m_MapW);
+		const int MapH = (int)std::round(Element.m_MapH);
+		if(MapW <= 0 || MapH <= 0)
+			return;
+		if(BaseX < 0 || BaseY < 0)
+			return;
+		if(BaseX + MapW > (int)Image.m_Width || BaseY + MapH > (int)Image.m_Height)
+			return;
+
+		OutPositions.clear();
+		OutColors.clear();
+		OutPositions.reserve(SampleCols * SampleRows);
+		OutColors.reserve(SampleCols * SampleRows);
+		for(int Sy = 0; Sy < SampleRows; ++Sy)
+		{
+			const int Y = BaseY + (int)((Sy + 0.5f) * MapH / SampleRows);
+			for(int Sx = 0; Sx < SampleCols; ++Sx)
+			{
+				const int X = BaseX + (int)((Sx + 0.5f) * MapW / SampleCols);
+				if(X < 0 || Y < 0 || X >= (int)Image.m_Width || Y >= (int)Image.m_Height)
+					continue;
+				const ColorRGBA Base = Image.PixelColor(X, Y);
+				if(Base.a <= AlphaThreshold)
+					continue;
+				OutPositions.emplace_back(X, Y);
+				OutColors.emplace_back(Base);
+			}
+		}
+	};
+
+	const SObsElement *pSample = nullptr;
+	std::vector<vec2> SamplePositions;
+	std::vector<ColorRGBA> SampleColors;
+	for(const SObsElement &Element : Elements)
+	{
+		if(Element.m_InputKind != EObsInputKind::KEY &&
+			Element.m_InputKind != EObsInputKind::MOUSE &&
+			Element.m_InputKind != EObsInputKind::WHEEL)
+			continue;
+		if(Element.m_MapW <= 1.0f || Element.m_MapH <= 1.0f)
+			continue;
+
+		BuildSamples(Element, SamplePositions, SampleColors);
+		if(SamplePositions.size() >= 4)
+		{
+			pSample = &Element;
+			break;
+		}
+	}
+
+	if(pSample == nullptr)
+		return 0;
+
+	const int BaseY = (int)std::round(pSample->m_MapY);
+	const int MapH = (int)std::round(pSample->m_MapH);
+	if(MapH <= 0)
+		return 0;
+
+	const int MaxOffset = std::min((int)Image.m_Height - (BaseY + MapH), MapH * 3);
+	const int MinOffset = std::max(1, MapH / 2);
+	if(MaxOffset < MinOffset)
+		return 0;
+
+	int BestOffset = 0;
+	float BestScore = 0.0f;
+	float BestMatch = 0.0f;
+	for(int Offset = MinOffset; Offset <= MaxOffset; ++Offset)
+	{
+		int OpaqueCount = 0;
+		float ColorDiffSum = 0.0f;
+		int ColorSamples = 0;
+		for(size_t i = 0; i < SamplePositions.size(); ++i)
+		{
+			const int X = (int)SamplePositions[i].x;
+			const int Y = (int)SamplePositions[i].y + Offset;
+			if(Y < 0 || Y >= (int)Image.m_Height)
+				continue;
+			const ColorRGBA Other = Image.PixelColor(X, Y);
+			if(Other.a <= AlphaThreshold)
+				continue;
+			++OpaqueCount;
+			const ColorRGBA Base = SampleColors[i];
+			const float Diff = (std::fabs(Base.r - Other.r) +
+						   std::fabs(Base.g - Other.g) +
+						   std::fabs(Base.b - Other.b)) /
+					   3.0f;
+			ColorDiffSum += Diff;
+			++ColorSamples;
+		}
+
+		const float MatchRatio = SamplePositions.empty() ? 0.0f : (float)OpaqueCount / SamplePositions.size();
+		const float ColorDiff = ColorSamples > 0 ? ColorDiffSum / ColorSamples : 0.0f;
+		if(ColorDiff < MinColorDiff)
+			continue;
+
+		const float Score = MatchRatio * (0.5f + ColorDiff);
+		if(Score > BestScore)
+		{
+			BestScore = Score;
+			BestOffset = Offset;
+			BestMatch = MatchRatio;
+		}
+	}
+
+	if(BestOffset <= 0 || BestMatch < 0.6f)
+		return 0;
+
+	return BestOffset;
 }
 
 void CInputOverlay::ClearObsLayouts()
@@ -504,467 +1648,18 @@ void CInputOverlay::ClearObsLayouts()
 	m_vObsLayouts.clear();
 }
 
-bool CInputOverlay::IsGamepadButtonPressed(int Button) const
+bool CInputOverlay::IsActiveInput(const SElement &Element) const
 {
-	if(Button < 0 || Button >= NUM_JOYSTICK_BUTTONS)
-		return false;
-	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	const CGameClient::SDemoInputPlaybackState *pDemoInputState = Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->DemoInputPlaybackState() : nullptr;
+	switch(Element.m_InputKind)
 	{
-		// 回放期间只使用 Demo 扩展消息中的手柄状态；旧 Demo 没有该消息时
-		// 一律视为释放，绝不回退读取当前实时手柄。
-		const CGameClient::SDemoInputPlaybackState *pDemo = GameClient()->DemoInputPlaybackState();
-		return pDemo != nullptr && pDemo->m_GamepadValid && (pDemo->m_GamepadButtons & (1U << Button)) != 0;
-	}
-	if(Input()->GetActiveJoystick() == nullptr)
-		return false;
-	return Input()->GamepadButtonIsPressed(Button);
-}
-
-float CInputOverlay::GamepadAxisValue(int Axis) const
-{
-	if(Axis < 0 || Axis >= 6)
-		return 0.0f;
-	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
-	{
-		// 回放期间轴数据只来自 Demo 扩展消息；缺失时一律居中。
-		const CGameClient::SDemoInputPlaybackState *pDemo = GameClient()->DemoInputPlaybackState();
-		if(pDemo == nullptr || !pDemo->m_GamepadValid)
-			return 0.0f;
-		return std::clamp(pDemo->m_aGamepadAxes[Axis], -1.0f, 1.0f);
-	}
-	return std::clamp(Input()->GamepadAxisValue(Axis), -1.0f, 1.0f);
-}
-
-int CInputOverlay::GamepadPlayerIndex() const
-{
-	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
-	{
-		// 回放期间玩家编号只来自 Demo 扩展消息；缺失时按 0 号玩家处理。
-		const CGameClient::SDemoInputPlaybackState *pDemo = GameClient()->DemoInputPlaybackState();
-		if(pDemo == nullptr || !pDemo->m_GamepadValid)
-			return 0;
-		return std::clamp(pDemo->m_GamepadPlayerIndex, 0, 2);
-	}
-	return std::clamp(Input()->GamepadPlayerIndex(), 0, 2);
-}
-
-void CInputOverlay::UpdateInputState()
-{
-	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
-	const CGameClient::SDemoInputPlaybackState *pDemo = DemoPlayback ? GameClient()->DemoInputPlaybackState() : nullptr;
-	const bool UseDemo = DemoPlayback;
-	const vec2 MousePos = UseDemo ? (pDemo != nullptr ? vec2((float)pDemo->m_TargetX, (float)pDemo->m_TargetY) : vec2(0.0f, 0.0f)) : Input()->GlobalMousePos();
-	if(UseDemo != m_UsingDemoInputState || !m_HasMousePositionSample)
-	{
-		m_MouseDeltaX = 0.0f;
-		m_MouseDeltaY = 0.0f;
-	}
-	else
-	{
-		m_MouseDeltaX = MousePos.x - m_LastMouseX;
-		m_MouseDeltaY = MousePos.y - m_LastMouseY;
-	}
-	m_LastMouseX = MousePos.x;
-	m_LastMouseY = MousePos.y;
-	m_HasMousePositionSample = true;
-	if(UseDemo != m_UsingDemoInputState)
-	{
-		std::fill(std::begin(m_aWheelLastTime), std::end(m_aWheelLastTime), -1.0f);
-		std::fill(std::begin(m_aWheelAlpha), std::end(m_aWheelAlpha), 0.0f);
-		m_LastDemoWheelSequence = 0;
-		m_UsingDemoInputState = UseDemo;
-	}
-	if(UseDemo)
-	{
-		if(pDemo != nullptr && pDemo->m_WheelSequence != m_LastDemoWheelSequence)
-		{
-			for(int i = 0; i < 4; ++i)
-				if((pDemo->m_WheelMask & (1U << i)) != 0)
-					m_aWheelLastTime[i] = m_Time;
-			m_LastDemoWheelSequence = pDemo->m_WheelSequence;
-		}
-	}
-	else
-	{
-		m_LastDemoWheelSequence = 0;
-		if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
-			m_aWheelLastTime[0] = m_Time;
-		if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
-			m_aWheelLastTime[1] = m_Time;
-		if(Input()->KeyPress(KEY_MOUSE_WHEEL_LEFT))
-			m_aWheelLastTime[2] = m_Time;
-		if(Input()->KeyPress(KEY_MOUSE_WHEEL_RIGHT))
-			m_aWheelLastTime[3] = m_Time;
-	}
-	for(int i = 0; i < 4; ++i)
-	{
-		if(m_aWheelLastTime[i] < 0.0f)
-		{
-			m_aWheelAlpha[i] = 0.0f;
-			continue;
-		}
-		const float Age = m_Time - m_aWheelLastTime[i];
-		m_aWheelAlpha[i] = Age <= WHEEL_HOLD_TIME ? 1.0f : 0.0f;
-		if(Age > WHEEL_HOLD_TIME)
-			m_aWheelLastTime[i] = -1.0f;
-	}
-}
-
-bool CInputOverlay::IsObsActive(const SObsElement &Element) const
-{
-	const CGameClient::SDemoInputPlaybackState *pDemo = Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->DemoInputPlaybackState() : nullptr;
-	switch(Element.m_Type)
-	{
-	case QmInputOverlay::ET_TEXTURE:
+	case EInputKind::ALWAYS:
 		return true;
-	case QmInputOverlay::ET_KEYBOARD_KEY:
-		return Element.m_Key != KEY_UNKNOWN && (pDemo != nullptr ? DemoInputKeyIsPressed(pDemo, Element.m_Key) : Input()->GlobalKeyIsPressed(Element.m_Key));
-	case QmInputOverlay::ET_GAMEPAD_BUTTON:
-		return IsGamepadButtonPressed(Element.m_GamepadButton);
-	case QmInputOverlay::ET_MOUSE_BUTTON:
-		return Element.m_MouseButton > 0 && (pDemo != nullptr ? DemoInputKeyIsPressed(pDemo, KEY_MOUSE_1 + Element.m_MouseButton - 1) : Input()->GlobalMousePressed(Element.m_MouseButton));
-	case QmInputOverlay::ET_WHEEL:
-		if(Element.m_WheelDir >= 1 && Element.m_WheelDir <= 4)
-			return m_aWheelAlpha[Element.m_WheelDir - 1] > 0.0f;
-		return std::max(std::max(m_aWheelAlpha[0], m_aWheelAlpha[1]), std::max(m_aWheelAlpha[2], m_aWheelAlpha[3])) > 0.0f;
-	case QmInputOverlay::ET_ANALOG_STICK:
-	case QmInputOverlay::ET_TRIGGER:
-	case QmInputOverlay::ET_GAMEPAD_ID:
-	case QmInputOverlay::ET_DPAD_STICK:
-		if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
-		{
-			// 旧 Demo 没有手柄扩展消息时，不把实时手柄连接状态带进回放。
-			const CGameClient::SDemoInputPlaybackState *pDemo = GameClient()->DemoInputPlaybackState();
-			return pDemo != nullptr && pDemo->m_GamepadValid;
-		}
-		return Input()->GetActiveJoystick() != nullptr;
-	case QmInputOverlay::ET_MOUSE_MOVEMENT:
-		return true;
+	case EInputKind::KEY:
+		return Element.m_Key > KEY_UNKNOWN && (pDemoInputState != nullptr ? DemoInputKeyIsPressed(pDemoInputState, Element.m_Key) : Input()->KeyIsPressed(Element.m_Key));
+	case EInputKind::MOUSE:
+		return Element.m_MouseButton > 0 && (pDemoInputState != nullptr ? DemoInputKeyIsPressed(pDemoInputState, KEY_MOUSE_1 + Element.m_MouseButton - 1) : Input()->NativeMousePressed(Element.m_MouseButton));
 	default:
 		return false;
 	}
-}
-
-float CInputOverlay::MouseMoveAngle() const
-{
-	return std::atan2(m_MouseDeltaY, m_MouseDeltaX) + static_cast<float>(pi / 2.0);
-}
-
-void CInputOverlay::DrawObsElement(const SObsLayout &Layout, const SObsElement &Element, float OriginX, float OriginY, float LayoutScale, float Opacity)
-{
-	if(Element.m_MapW <= 0.0f || Element.m_MapH <= 0.0f || !Layout.m_Texture.IsValid())
-		return;
-	const bool Active = IsObsActive(Element);
-	if(Element.m_ActiveOnly && !Active)
-		return;
-	const float X = OriginX + Element.m_PosX * LayoutScale;
-	const float Y = OriginY + Element.m_PosY * LayoutScale;
-	const float W = Element.m_MapW * LayoutScale;
-	const float H = Element.m_MapH * LayoutScale;
-	const float Alpha = std::clamp(Opacity, 0.0f, 1.0f);
-	if(W <= 0.0f || H <= 0.0f || Alpha <= 0.0f)
-		return;
-
-	auto DrawRegion = [&](float MapX, float MapY, float MapW, float MapH, float PosX, float PosY, float DrawW, float DrawH, float Rotation = 0.0f) {
-		if(MapW <= 0.0f || MapH <= 0.0f || MapX < 0.0f || MapY < 0.0f || MapX + MapW > Layout.m_TextureWidth || MapY + MapH > Layout.m_TextureHeight)
-			return;
-		Graphics()->QuadsSetSubset(MapX / Layout.m_TextureWidth, MapY / Layout.m_TextureHeight, (MapX + MapW) / Layout.m_TextureWidth, (MapY + MapH) / Layout.m_TextureHeight);
-		Graphics()->QuadsSetRotation(Rotation);
-		Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha));
-		IGraphics::CQuadItem Quad(PosX + DrawW * 0.5f, PosY + DrawH * 0.5f, DrawW, DrawH);
-		Graphics()->QuadsDraw(&Quad, 1);
-	};
-	auto PressedRect = [&]() {
-		QmInputOverlay::SRect Rect{Element.m_MapX, Element.m_MapY + Element.m_MapH + OBS_INNER_BORDER, Element.m_MapW, Element.m_MapH};
-		if(Layout.m_HasPressedOffset)
-			Rect.m_Y = Element.m_MapY + Layout.m_PressedOffsetY;
-		if(Element.m_HasPressedMapping)
-			Rect = {Element.m_PressedMapX, Element.m_PressedMapY, Element.m_PressedMapW, Element.m_PressedMapH};
-		return Rect;
-	};
-	auto DrawButton = [&]() {
-		const QmInputOverlay::SRect Rect = Active ? PressedRect() : QmInputOverlay::SRect{Element.m_MapX, Element.m_MapY, Element.m_MapW, Element.m_MapH};
-		DrawRegion(Rect.m_X, Rect.m_Y, Rect.m_W, Rect.m_H, X, Y, W, H);
-	};
-
-	switch(Element.m_Type)
-	{
-	case QmInputOverlay::ET_TEXTURE:
-		DrawRegion(Element.m_MapX, Element.m_MapY, Element.m_MapW, Element.m_MapH, X, Y, W, H);
-		break;
-	case QmInputOverlay::ET_KEYBOARD_KEY:
-	case QmInputOverlay::ET_GAMEPAD_BUTTON:
-	case QmInputOverlay::ET_MOUSE_BUTTON:
-		DrawButton();
-		break;
-	case QmInputOverlay::ET_WHEEL:
-	{
-		const CGameClient::SDemoInputPlaybackState *pDemo = Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->DemoInputPlaybackState() : nullptr;
-		const bool MiddlePressed = pDemo != nullptr ? DemoInputKeyIsPressed(pDemo, KEY_MOUSE_3) : Input()->GlobalMousePressed(2);
-		const int BaseIndex = MiddlePressed ? 1 : 0;
-		DrawRegion(Element.m_MapX + BaseIndex * (Element.m_MapW + OBS_INNER_BORDER), Element.m_MapY, Element.m_MapW, Element.m_MapH, X, Y, W, H);
-		int WheelIndex = -1;
-		if(m_aWheelAlpha[0] > 0.0f)
-			WheelIndex = 2;
-		if(m_aWheelAlpha[1] > 0.0f)
-			WheelIndex = 3;
-		if(m_aWheelAlpha[2] > 0.0f)
-			WheelIndex = 4;
-		if(m_aWheelAlpha[3] > 0.0f)
-			WheelIndex = 5;
-		if(WheelIndex >= 0)
-			DrawRegion(Element.m_MapX + WheelIndex * (Element.m_MapW + OBS_INNER_BORDER), Element.m_MapY, Element.m_MapW, Element.m_MapH, X, Y, W, H);
-		break;
-	}
-	case QmInputOverlay::ET_ANALOG_STICK:
-	{
-		const int Axis = Element.m_Side == 1 ? 2 : 0;
-		const float AxisX = GamepadAxisValue(Axis);
-		const float AxisY = GamepadAxisValue(Axis + 1);
-		const float StickX = X + AxisX * Element.m_StickRadius * LayoutScale;
-		const float StickY = Y + AxisY * Element.m_StickRadius * LayoutScale;
-		const bool StickPressed = IsGamepadButtonPressed(Element.m_Side == 1 ? 8 : 7);
-		const QmInputOverlay::SRect Rect = StickPressed ? PressedRect() : QmInputOverlay::SRect{Element.m_MapX, Element.m_MapY, Element.m_MapW, Element.m_MapH};
-		DrawRegion(Rect.m_X, Rect.m_Y, Rect.m_W, Rect.m_H, StickX, StickY, W, H);
-		break;
-	}
-	case QmInputOverlay::ET_TRIGGER:
-	{
-		const float Progress = std::clamp(GamepadAxisValue(Element.m_Side == 1 ? 5 : 4), 0.0f, 1.0f);
-		const QmInputOverlay::SRect Base{Element.m_MapX, Element.m_MapY, Element.m_MapW, Element.m_MapH};
-		const QmInputOverlay::SRect Pressed = PressedRect();
-		if(Element.m_TriggerMode)
-		{
-			const QmInputOverlay::SRect &Rect = Progress >= 0.1f ? Pressed : Base;
-			DrawRegion(Rect.m_X, Rect.m_Y, Rect.m_W, Rect.m_H, X, Y, W, H);
-		}
-		else
-		{
-			DrawRegion(Base.m_X, Base.m_Y, Base.m_W, Base.m_H, X, Y, W, H);
-			QmInputOverlay::SRect Crop = Pressed;
-			float CropX = X;
-			float CropY = Y;
-			float CropW = W;
-			float CropH = H;
-			switch(Element.m_Direction)
-			{
-			case 1:
-				Crop.m_H *= Progress;
-				Crop.m_Y = Pressed.m_Y + Pressed.m_H - Crop.m_H;
-				CropY += H - CropH;
-				break;
-			case 2:
-				Crop.m_H *= Progress;
-				CropH = H * Progress;
-				break;
-			case 3:
-				Crop.m_W *= Progress;
-				Crop.m_X = Pressed.m_X + Pressed.m_W - Crop.m_W;
-				CropX += W - CropW;
-				break;
-			case 4:
-				Crop.m_W *= Progress;
-				CropW = W * Progress;
-				break;
-			default:
-				Crop.m_W = 0.0f;
-				Crop.m_H = 0.0f;
-				break;
-			}
-			if(Crop.m_W > 0.0f && Crop.m_H > 0.0f)
-				DrawRegion(Crop.m_X, Crop.m_Y, Crop.m_W, Crop.m_H, CropX, CropY, CropW, CropH);
-		}
-		break;
-	}
-	case QmInputOverlay::ET_GAMEPAD_ID:
-	{
-		if(IsGamepadButtonPressed(5))
-			DrawRegion(Element.m_MapX + 3 * (Element.m_MapW + OBS_INNER_BORDER), Element.m_MapY, Element.m_MapW, Element.m_MapH, X, Y, W, H);
-		const int Player = std::clamp(GamepadPlayerIndex(), 0, 2);
-		DrawRegion(Element.m_MapX + Player * (Element.m_MapW + OBS_INNER_BORDER), Element.m_MapY, Element.m_MapW, Element.m_MapH, X, Y, W, H);
-		break;
-	}
-	case QmInputOverlay::ET_DPAD_STICK:
-	{
-		const bool Up = IsGamepadButtonPressed(11);
-		const bool Down = IsGamepadButtonPressed(12);
-		const bool Left = IsGamepadButtonPressed(13);
-		const bool Right = IsGamepadButtonPressed(14);
-		int Index = 0;
-		if(Up && Left)
-			Index = 5;
-		else if(Up && Right)
-			Index = 6;
-		else if(Down && Left)
-			Index = 7;
-		else if(Down && Right)
-			Index = 8;
-		else if(Left)
-			Index = 1;
-		else if(Right)
-			Index = 2;
-		else if(Up)
-			Index = 3;
-		else if(Down)
-			Index = 4;
-		DrawRegion(Element.m_MapX + Index * (Element.m_MapW + OBS_INNER_BORDER), Element.m_MapY, Element.m_MapW, Element.m_MapH, X, Y, W, H);
-		break;
-	}
-	case QmInputOverlay::ET_MOUSE_MOVEMENT:
-	{
-		float MoveX = X;
-		float MoveY = Y;
-		if(Element.m_MouseType == 0)
-		{
-			const float Radius = Element.m_MouseRadius * LayoutScale;
-			const float FactorX = std::clamp(m_MouseDeltaX / 32.0f, -1.0f, 1.0f);
-			const float FactorY = std::clamp(m_MouseDeltaY / 32.0f, -1.0f, 1.0f);
-			MoveX += Radius * FactorX;
-			MoveY += Radius * FactorY;
-		}
-		DrawRegion(Element.m_MapX, Element.m_MapY, Element.m_MapW, Element.m_MapH, MoveX, MoveY, W, H, Element.m_MouseType == 1 ? MouseMoveAngle() : 0.0f);
-		break;
-	}
-	default:
-		break;
-	}
-}
-
-bool CInputOverlay::GetConfigModifiedTime(time_t &OutModified) const
-{
-	bool Found = false;
-	time_t Latest = 0;
-	const auto CheckPath = [&](const std::string &Path) {
-		if(Path.empty())
-			return;
-		for(int StorageType = IStorage::TYPE_SAVE; StorageType < Storage()->NumPaths(); ++StorageType)
-		{
-			if(!Storage()->FileExists(Path.c_str(), StorageType))
-				continue;
-			time_t Created = 0;
-			time_t Modified = 0;
-			if(Storage()->RetrieveTimes(Path.c_str(), StorageType, &Created, &Modified))
-			{
-				Latest = std::max(Latest, Modified);
-				Found = true;
-			}
-			break;
-		}
-	};
-	CheckPath(QmInputOverlay::CONFIGURATION_PATH);
-	for(const SObsLayout &Layout : m_vObsLayouts)
-	{
-		for(const std::string &Path : {Layout.m_LayoutPath, Layout.m_ImagePath})
-			CheckPath(Path);
-	}
-	if(Found)
-		OutModified = Latest;
-	return Found;
-}
-
-bool CInputOverlay::OpenEditor() const
-{
-#if defined(CONF_PLATFORM_ANDROID)
-	return false;
-#else
-	char aEditorPath[IO_MAX_PATH_LENGTH];
-	for(int StorageType = IStorage::TYPE_SAVE + 1; StorageType < Storage()->NumPaths(); ++StorageType)
-	{
-		if(!Storage()->FindFile("input_overlay_editor.html", "qmclient", StorageType, aEditorPath, sizeof(aEditorPath)))
-			continue;
-		char aCompletePath[IO_MAX_PATH_LENGTH];
-		Storage()->GetCompletePath(StorageType, aEditorPath, aCompletePath, sizeof(aCompletePath));
-		if(MakeAbsolutePath(aCompletePath, aEditorPath, sizeof(aEditorPath)))
-			return Client()->ViewFile(aEditorPath);
-	}
-	Storage()->GetBinaryPathAbsolute("data/qmclient/input_overlay_editor.html", aEditorPath, sizeof(aEditorPath));
-	return fs_is_file(aEditorPath) && Client()->ViewFile(aEditorPath);
-#endif
-}
-
-void CInputOverlay::ConOpenEditor(IConsole::IResult *pResult, void *pUserData)
-{
-	(void)pResult;
-	static_cast<CInputOverlay *>(pUserData)->OpenEditor();
-}
-
-void CInputOverlay::OnConsoleInit()
-{
-	Console()->Register("qm_input_overlay_editor", "", CFGFLAG_CLIENT, ConOpenEditor, this, "Open the input overlay editor");
-}
-
-void CInputOverlay::OnRender()
-{
-	if(!g_Config.m_QmInputOverlay || (Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK))
-		return;
-	// 计分板或 ESC 菜单打开时隐藏，仅游戏内显示。
-	if(GameClient()->m_Scoreboard.IsActive() || GameClient()->m_Menus.IsActive())
-		return;
-	if(!m_ConfigLoaded)
-		LoadConfiguration(IStorage::TYPE_ALL);
-	m_ConfigCheckTimer += Client()->RenderFrameTime();
-	if(m_ConfigCheckTimer >= 0.5f)
-	{
-		m_ConfigCheckTimer = 0.0f;
-		time_t Modified = 0;
-		if(GetConfigModifiedTime(Modified) && (!m_HasConfigModifiedTime || Modified != m_ConfigModifiedTime))
-		{
-			LoadConfiguration(IStorage::TYPE_ALL);
-			m_ConfigModifiedTime = Modified;
-			m_HasConfigModifiedTime = true;
-		}
-	}
-	if(!m_ConfigValid || m_vObsLayouts.empty())
-		return;
-	m_Time += Client()->RenderFrameTime();
-	UpdateInputState();
-	const CUIRect *pScreen = Ui()->Screen();
-	if(pScreen == nullptr || pScreen->w <= 0.0f || pScreen->h <= 0.0f)
-		return;
-	Graphics()->MapScreen(pScreen->x, pScreen->y, pScreen->x + pScreen->w, pScreen->y + pScreen->h);
-	const float KeyboardScale = g_Config.m_QmInputOverlayScale / 100.0f;
-	const float MouseScale = g_Config.m_QmInputOverlayMouseScale / 100.0f;
-	const float Opacity = g_Config.m_QmInputOverlayOpacity / 100.0f;
-	float MinX = 0.0f;
-	float MinY = 0.0f;
-	float MaxX = 1.0f;
-	float MaxY = 1.0f;
-	for(const SObsLayout &Layout : m_vObsLayouts)
-	{
-		const float Scale = Layout.m_IsMouseLayout ? MouseScale : KeyboardScale;
-		MinX = std::min(MinX, Layout.m_OffsetX * KeyboardScale);
-		MinY = std::min(MinY, Layout.m_OffsetY * KeyboardScale);
-		MaxX = std::max(MaxX, Layout.m_OffsetX * KeyboardScale + Layout.m_OverlayWidth * Scale);
-		MaxY = std::max(MaxY, Layout.m_OffsetY * KeyboardScale + Layout.m_OverlayHeight * Scale);
-	}
-	const float CanvasW = std::max(MaxX - MinX, 1.0f);
-	const float CanvasH = std::max(MaxY - MinY, 1.0f);
-	// 默认屏幕居中；拖拽位置由 HUD 编辑器保存并接管（原水平/垂直位置配置已删除）。
-	const float OriginX = pScreen->x + (pScreen->w - CanvasW) * 0.5f;
-	const float OriginY = pScreen->y + (pScreen->h - CanvasH) * 0.5f;
-	const CUIRect OverlayRect = {OriginX, OriginY, CanvasW, CanvasH};
-	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::InputOverlay, OverlayRect);
-	const CUIRect CanvasClip = HudEditorScope.m_TargetRect.Intersection(*pScreen);
-	if(CanvasClip.w > 0.0f && CanvasClip.h > 0.0f)
-		Ui()->ClipEnable(&CanvasClip);
-	for(const SObsLayout &Layout : m_vObsLayouts)
-	{
-		if(!Layout.m_Texture.IsValid())
-			continue;
-		const float LayoutScale = Layout.m_IsMouseLayout ? MouseScale : KeyboardScale;
-		const float LayoutOriginX = OriginX + Layout.m_OffsetX * KeyboardScale - MinX;
-		const float LayoutOriginY = OriginY + Layout.m_OffsetY * KeyboardScale - MinY;
-		Graphics()->TextureSet(Layout.m_Texture);
-		Graphics()->QuadsBegin();
-		for(const SObsElement &Element : Layout.m_vElements)
-			DrawObsElement(Layout, Element, LayoutOriginX, LayoutOriginY, LayoutScale, Opacity);
-		Graphics()->QuadsSetRotation(0.0f);
-		Graphics()->QuadsEnd();
-	}
-	if(CanvasClip.w > 0.0f && CanvasClip.h > 0.0f)
-		Ui()->ClipDisable();
-	Graphics()->TextureClear();
-	Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::InputOverlay, OverlayRect);
-	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }

@@ -104,6 +104,14 @@ static constexpr const char *QMCLIENT_PLAYTIME_QUERY_URL = "http://42.194.185.21
 static constexpr const char *QMCLIENT_DEVELOPER_PRESENCE_URL = "https://qmclient.icu/api/v1/developers/presence";
 static constexpr const char *QMCLIENT_DEVELOPER_PRESENCES_URL = "https://qmclient.icu/api/v1/developers/presences";
 static constexpr const char *QMCLIENT_DEVELOPER_TOKEN_FILE = "qmclient/developer_token.txt";
+static constexpr const char *QMCLIENT_NEWS_URL = "https://qmclient.icu/api/v1/news/current";
+static constexpr const char *QMCLIENT_NEWS_PUBLISH_URL = "https://qmclient.icu/api/v1/news/publish";
+static constexpr const char *QMCLIENT_NEWS_CACHE_FILE = "qmclient/news_cache.json";
+static constexpr const char *QMCLIENT_NEWS_DRAFT_FILE = "qmclient/news_draft.md";
+static constexpr int QMCLIENT_NEWS_CACHE_VERSION = 1;
+static constexpr int QMCLIENT_NEWS_REFRESH_INTERVAL_SECONDS = 1800;
+static constexpr int QMCLIENT_NEWS_RETRY_INTERVAL_SECONDS = 60;
+static constexpr int QMCLIENT_NEWS_MAX_BYTES = 64 * 1024;
 static constexpr int QMCLIENT_DEVELOPER_SYNC_INTERVAL_SECONDS = 5;
 static constexpr const char *QMCLIENT_LIFECYCLE_MARKER_FILE = "qmclient/lifecycle_pending.marker";
 static constexpr const char *QMCLIENT_PLAYTIME_CLIENT_ID_FILE = "qmclient/playtime_client_id.txt";
@@ -724,6 +732,7 @@ void CQmClient::OnInit()
 	InitQmClientLifecycle();
 	InitQmDeveloperAuthentication();
 	InitTitleAuthentication();
+	InitQmNews();
 }
 
 void CQmClient::OnShutdown()
@@ -755,6 +764,8 @@ void CQmClient::OnShutdown()
 	ResetTitlePresences();
 	AbortTask(m_pQmDeveloperPresenceTask);
 	AbortTask(m_pQmDeveloperPresencesTask);
+	AbortTask(m_pQmNewsTask);
+	AbortTask(m_pQmNewsPublishTask);
 	m_pQmClientUsersParseJob = nullptr;
 	m_pQmDdnetPlayerParseJob = nullptr;
 }
@@ -766,6 +777,12 @@ void CQmClient::OnUpdate()
 	UpdateTitleAuthentication();
 	UpdateQmClientLifecycleAndServerTime();
 	UpdateQmDdnetPlayerStats();
+	// 新功能广播：缓存先渲染，随后按间隔后台刷新，失败保留上一次内容。
+	if(m_pQmNewsTask && m_pQmNewsTask->Done())
+		FinishQmNews();
+	if(m_pQmNewsPublishTask && m_pQmNewsPublishTask->Done())
+		FinishQmNewsPublish();
+	QmNewsRefresh(false);
 }
 
 void CQmClient::OnStateChange(int NewState, int OldState)
@@ -1150,6 +1167,189 @@ void CQmClient::UpdateQmClientLifecycleAndServerTime()
 	m_pQmClientServerTimeTask->IpResolve(IPRESOLVE::V4);
 	m_pQmClientServerTimeTask->LogProgress(HTTPLOG::FAILURE);
 	Http()->Run(m_pQmClientServerTimeTask);
+}
+
+void CQmClient::InitQmNews()
+{
+	m_QmNewsMarkdown.clear();
+	m_QmNewsDraft.clear();
+	m_QmNewsVersion = 0;
+	m_QmNewsLastFetch = 0;
+	m_QmNewsPublishing = false;
+	m_QmNewsStatus = EQmNewsStatus::IDLE;
+	LoadQmNewsCache();
+}
+
+void CQmClient::LoadQmNewsCache()
+{
+	void *pFileData = nullptr;
+	unsigned FileSize = 0;
+	if(!Storage()->ReadFile(QMCLIENT_NEWS_CACHE_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize) || !pFileData || FileSize == 0)
+	{
+		free(pFileData);
+		return;
+	}
+
+	json_value *pRoot = json_parse(static_cast<const char *>(pFileData), FileSize);
+	free(pFileData);
+	if(!pRoot)
+		return;
+	const json_value *pCacheVersion = json_object_get(pRoot, "cache_version");
+	const json_value *pMarkdown = json_object_get(pRoot, "markdown");
+	const json_value *pVersion = json_object_get(pRoot, "version");
+	if(pCacheVersion->type == json_integer && pCacheVersion->u.integer == QMCLIENT_NEWS_CACHE_VERSION &&
+		pMarkdown->type == json_string && pMarkdown->u.string.length <= QMCLIENT_NEWS_MAX_BYTES)
+	{
+		m_QmNewsMarkdown.assign(pMarkdown->u.string.ptr, pMarkdown->u.string.length);
+		m_QmNewsVersion = pVersion->type == json_integer ? (int)pVersion->u.integer : 0;
+		m_QmNewsStatus = m_QmNewsMarkdown.empty() ? EQmNewsStatus::EMPTY : EQmNewsStatus::READY;
+	}
+	json_value_free(pRoot);
+}
+
+void CQmClient::SaveQmNewsCache()
+{
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("cache_version");
+	Writer.WriteIntValue(QMCLIENT_NEWS_CACHE_VERSION);
+	Writer.WriteAttribute("version");
+	Writer.WriteIntValue(m_QmNewsVersion);
+	Writer.WriteAttribute("markdown");
+	Writer.WriteStrValue(m_QmNewsMarkdown.c_str());
+	Writer.EndObject();
+	const std::string Output = Writer.GetOutputString();
+	// IStorage 没有整文件写接口，统一走 OpenFile + io_write；缓存目录与其它 qmclient 凭证一致。
+	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	IOHANDLE File = Storage()->OpenFile(QMCLIENT_NEWS_CACHE_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return;
+	io_write(File, Output.c_str(), Output.size());
+	io_close(File);
+}
+
+void CQmClient::ApplyQmNewsPayload(const char *pBody, size_t BodySize)
+{
+	if(pBody == nullptr || BodySize == 0)
+		return;
+	json_value *pRoot = json_parse(pBody, BodySize);
+	if(!pRoot)
+		return;
+	const json_value *pMarkdown = json_object_get(pRoot, "markdown");
+	const json_value *pVersion = json_object_get(pRoot, "version");
+	if(pMarkdown->type == json_string && pMarkdown->u.string.length <= QMCLIENT_NEWS_MAX_BYTES)
+	{
+		m_QmNewsMarkdown.assign(pMarkdown->u.string.ptr, pMarkdown->u.string.length);
+		m_QmNewsVersion = pVersion->type == json_integer ? (int)pVersion->u.integer : 0;
+		m_QmNewsStatus = m_QmNewsMarkdown.empty() ? EQmNewsStatus::EMPTY : EQmNewsStatus::READY;
+		SaveQmNewsCache();
+	}
+	json_value_free(pRoot);
+	++m_QmNewsRevision;
+}
+
+void CQmClient::QmNewsRefresh(bool Force)
+{
+	if(m_pQmNewsTask && !m_pQmNewsTask->Done())
+		return;
+	const int64_t Now = time_get();
+	const int64_t Interval = m_QmNewsStatus == EQmNewsStatus::FAILED ? QMCLIENT_NEWS_RETRY_INTERVAL_SECONDS : QMCLIENT_NEWS_REFRESH_INTERVAL_SECONDS;
+	if(!Force && m_QmNewsLastFetch != 0 && Now - m_QmNewsLastFetch < Interval * time_freq())
+		return;
+
+	m_QmNewsLastFetch = Now;
+	if(m_QmNewsStatus != EQmNewsStatus::READY)
+		m_QmNewsStatus = EQmNewsStatus::LOADING;
+	m_pQmNewsTask = HttpGet(QMCLIENT_NEWS_URL);
+	m_pQmNewsTask->MaxResponseSize(QMCLIENT_NEWS_MAX_BYTES);
+	m_pQmNewsTask->Timeout(CTimeout{3000, 5000, 500, 5});
+	m_pQmNewsTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmNewsTask);
+	++m_QmNewsRevision;
+}
+
+void CQmClient::FinishQmNews()
+{
+	const bool Ok = m_pQmNewsTask->State() == EHttpState::DONE && m_pQmNewsTask->StatusCode() == 200;
+	if(Ok)
+	{
+		unsigned char *pResult = nullptr;
+		size_t ResultLength = 0;
+		m_pQmNewsTask->Result(&pResult, &ResultLength);
+		ApplyQmNewsPayload(reinterpret_cast<const char *>(pResult), ResultLength);
+	}
+	else if(m_QmNewsStatus != EQmNewsStatus::READY)
+	{
+		m_QmNewsStatus = EQmNewsStatus::FAILED;
+		++m_QmNewsRevision;
+	}
+	m_pQmNewsTask = nullptr;
+}
+
+void CQmClient::QmNewsReloadDraft()
+{
+	m_QmNewsDraft.clear();
+	char *pDraft = Storage()->ReadFileStr(QMCLIENT_NEWS_DRAFT_FILE, IStorage::TYPE_SAVE);
+	if(pDraft)
+	{
+		if(str_length(pDraft) <= QMCLIENT_NEWS_MAX_BYTES)
+			m_QmNewsDraft = pDraft;
+		free(pDraft);
+	}
+	++m_QmNewsRevision;
+}
+
+void CQmClient::QmNewsPublishDraft()
+{
+	if(m_QmNewsPublishing || m_aQmDeveloperToken[0] == '\0')
+		return;
+	if(m_QmNewsDraft.empty())
+		QmNewsReloadDraft();
+	if(m_QmNewsDraft.empty())
+	{
+		m_QmNewsStatus = EQmNewsStatus::PUBLISH_FAILED;
+		++m_QmNewsRevision;
+		return;
+	}
+
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("markdown");
+	Writer.WriteStrValue(m_QmNewsDraft.c_str());
+	Writer.EndObject();
+	const std::string Output = Writer.GetOutputString();
+	m_pQmNewsPublishTask = HttpPostJson(QMCLIENT_NEWS_PUBLISH_URL, Output.c_str());
+	m_pQmNewsPublishTask->MaxResponseSize(8 * 1024);
+	char aAuthorization[80];
+	str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", m_aQmDeveloperToken);
+	m_pQmNewsPublishTask->HeaderString("Authorization", aAuthorization);
+	m_pQmNewsPublishTask->Timeout(CTimeout{3000, 5000, 500, 5});
+	m_pQmNewsPublishTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmNewsPublishTask);
+	m_QmNewsPublishing = true;
+	m_QmNewsStatus = EQmNewsStatus::PUBLISHING;
+	++m_QmNewsRevision;
+}
+
+void CQmClient::FinishQmNewsPublish()
+{
+	m_QmNewsPublishing = false;
+	const int StatusCode = m_pQmNewsPublishTask->State() == EHttpState::DONE ? m_pQmNewsPublishTask->StatusCode() : 0;
+	if(StatusCode == 200)
+	{
+		m_QmNewsMarkdown = m_QmNewsDraft;
+		++m_QmNewsVersion;
+		m_QmNewsStatus = EQmNewsStatus::PUBLISHED;
+		SaveQmNewsCache();
+	}
+	else if(StatusCode == 401 || StatusCode == 403)
+		m_QmNewsStatus = EQmNewsStatus::PUBLISH_DENIED;
+	else if(StatusCode == 413)
+		m_QmNewsStatus = EQmNewsStatus::PUBLISH_TOO_LARGE;
+	else
+		m_QmNewsStatus = EQmNewsStatus::PUBLISH_FAILED;
+	m_pQmNewsPublishTask = nullptr;
+	++m_QmNewsRevision;
 }
 
 void CQmClient::UpdateQmDdnetPlayerStats()

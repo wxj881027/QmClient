@@ -491,9 +491,6 @@ Adds a specific war entry
 Adds default chat binds
 == 添加默認聊天綁定
 
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
-== 在 HUD 上顯示分身的按鍵、錘子、控制與同步狀態，並支援自訂 bind 狀態清單。
-
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
 
@@ -1412,6 +1409,9 @@ Bind Wheel
 Bind Wheel Key
 == 喚出滾輪綁鍵
 
+Binds
+== 綁定
+
 Bit flags for disabling settings tabs
 == 用於禁用設置標籤頁的位標誌
 
@@ -1468,6 +1468,15 @@ Both sides of keyword rules must be filled
 
 Bounce
 == 彈跳
+
+Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
+== 方括號頭銜顏色：0 = 跟隨伺服器，1 = 單色，2 = 彩虹
+
+Bracketed title opacity (0-100)
+== 方括號頭銜不透明度（0-100）
+
+Bracketed title single color
+== 方括號頭銜單色
 
 Brightness shift
 == 明暗切換
@@ -1958,6 +1967,9 @@ Collision Line Opacity
 Color
 == 顏色
 
+Color & opacity
+== 顏色與透明度
+
 Color of authenticated player names on scoreboard
 == 計分板中已認證玩家的名稱顏色
 
@@ -2011,6 +2023,9 @@ Command to run when joining server
 
 Command:
 == 指令：
+
+Commands
+== 指令
 
 Commands run in the console
 == 在控制台中執行的命令
@@ -2351,6 +2366,9 @@ Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
 == 無法從文件加載默認觸控設置。檢查本地控制台以獲取詳情。
 
+Could not load new features
+== 新功能內容載入失敗
+
 Could not load sponsor QR code. Check the Base64 data
 == 無法加載支持二維碼。請檢查 Base64 內容
 
@@ -2467,12 +2485,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == 自定義縱橫比，按 x100 存儲（例如 178=16:9，233=21:9）
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== 自訂 bind 狀態 HUD 條目。為空時使用內建四項（卡鍵/錘子/分控/同步）。格式：變數名|狀態值=文字|狀態值=文字；變數名|文字（非零時顯示）；變數名（僅填變數名時非零顯示變數名本身）。條目用 ';' 分隔，欄位用 '|' 分隔
-
-Custom bind status list
-== 自訂 bind 狀態列表
 
 Custom colors
 == 自定義顏色
@@ -3083,6 +3095,9 @@ Downloading update...
 Downscaled (0.78)
 == 降採樣縮放 (0.78)
 
+Draft file is empty
+== 草稿檔案為空
+
 Drag HUD modules with the left mouse button
 == 按住鼠標左鍵拖動 HUD 模塊
 
@@ -3206,8 +3221,8 @@ Dummy is currently connected.
 Dummy jump
 == 分身跳
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== 卡鍵/錘子/分身控制/分身同步狀態開關，以及自訂 bind 狀態列表
+Dummy key/hammer/control/copy status switches
+== 卡鍵/錘子/分身控制/分身同步狀態開關
 
 Dummy marking color
 == 分身標記顏色
@@ -3394,9 +3409,6 @@ Emoticon shadow
 
 Emoticons
 == 表情
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== 為空時使用內建四項。格式：var|0=Off|1=On；var|Text
 
 enable
 == 開啟
@@ -3674,9 +3686,6 @@ Enable skin queue rotation
 Enable skin switch animation
 == 啟用皮膚切換動畫
 
-Enable skin transition animation, then choose the type, scope, duration and easing.
-== 開啟皮膚切換動畫，再選擇類型、作用範圍、時長與緩動。
-
 Enable smooth cinematic camera while free spectating
 == 自由觀戰時啟用平滑電影鏡頭
 
@@ -3767,9 +3776,6 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 啟用敵對列表
 
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
-== 開啟武器切換動畫或裝填動畫，再調整作用範圍、時長、旋轉角度與緩動。
-
 Enable word filter list
 == 啟用屏蔽詞列表
 
@@ -3815,9 +3821,6 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == 輸入密碼
 
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
-== 填入贊助兌換碼並點「兌換」，寫下稱號後點「儲存」。勾選「僅在指定暱稱下顯示」可把稱號綁定到某一個暱稱。
-
 Enter Username
 == 輸入賬號名稱
 
@@ -3850,9 +3853,6 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
-
-Entry: %s
-== 入口：%s
 
 Erase items on the in game background
 == 擦除遊戲背景中的內容
@@ -4186,6 +4186,9 @@ Folder Link
 
 Follow
 == 跟隨
+
+Follow server
+== 跟隨伺服器
 
 Following
 == 當前
@@ -5210,6 +5213,12 @@ Input overlay mouse scale (percent)
 Input overlay opacity (percent)
 == 輸入疊加不透明度（百分比）
 
+Input overlay X position (percent)
+== 輸入疊加 X 位置（百分比）
+
+Input overlay Y position (percent)
+== 輸入疊加 Y 位置（百分比）
+
 Input smoothing
 == 輸入平滑
 
@@ -5221,9 +5230,6 @@ Insane
 
 Installing update. Please wait...
 == 正在安裝更新，請稍等...
-
-Instant zoom reverse
-== 反向縮放立即生效
 
 Interface
 == 界面
@@ -5780,6 +5786,9 @@ Local
 Local + Dummy
 == 本地 + 分身
 
+Local console log category filter mask (bit flags)
+== 本地控制台日誌分類過濾遮罩（位元標誌）
+
 Local only
 == 僅本地
 
@@ -6142,9 +6151,6 @@ Menu option - selected
 
 Merge consecutive identical player messages within 2 seconds
 == 合併 2 秒內連續出現的相同玩家訊息
-
-Merges chat messages repeated within a short time into a single line.
-== 短時間內重複的聊天訊息會合併成一條。
 
 Message color
 == 留言顏色
@@ -6722,6 +6728,9 @@ No matching assets.
 No matching features found. Try other keywords
 == 未找到匹配的功能模塊。請嘗試其他關鍵詞
 
+No new features yet
+== 暫無新功能內容
+
 No noise reduction
 == 不降噪
 
@@ -7004,11 +7013,11 @@ Open color picker
 Open DDNet Wiki
 == 開啟 DDNet Wiki
 
-Open editor
-== 開啟編輯器
-
 Open emote selector
 == 打開表情選擇器
+
+Open folder
+== 開啟資料夾
 
 Open map editor
 == 打開地圖編輯器
@@ -7051,9 +7060,6 @@ Open the folder containing demo files
 
 Open the folder containing screenshots
 == 打開存放截圖的文件夾
-
-Open the input overlay editor
-== 開啟輸入覆蓋編輯器
 
 Open the saves file
 == 打開存檔密碼文件
@@ -7334,9 +7340,6 @@ Pet Skin:
 Pick result: %s
 == 抽取結果：%s
 
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
-== 選擇與你使用的音樂客戶端相符的來源並保持播放，歌詞會自動跟隨。
-
 Pickup range
 == 拾取物範圍
 
@@ -7531,9 +7534,6 @@ Players can't hook each other on this server
 
 Playing effects
 == 播放效果
-
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
-== 皮膚變化時播放動畫，包括錘子偷來的皮膚。
 
 Please add a valid cut first
 == 請先添加有效裁剪片段
@@ -7820,6 +7820,18 @@ PTT release delay (ms)
 Publicly messages everyone your current time in this current running race
 == 公開發送你當前競速時間給所有人
 
+Publish
+== 發佈
+
+Publish failed
+== 發佈失敗
+
+Published
+== 已發佈
+
+Publishing…
+== 發佈中…
+
 Pulse
 == 脈衝
 
@@ -8077,9 +8089,6 @@ Redeem
 
 Redeem your code and customize your title
 == 領取贊助資格並設定頭銜
-
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
-== 使用贊助兌換碼解鎖自訂稱號，稱號會顯示在聊天與名牌上。
 
 Reduce antiping and player prediction when frozen
 == 凍結時減少 antiping 和玩家預測
@@ -8498,9 +8507,6 @@ Reset mouse position when opening bind wheel
 Reset position of mouse when opening bindwheel
 == 打開快捷綁定輪盤時重置鼠標位置
 
-Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== 將 qm_bind_status_items 重置為內建四項（卡鍵/錘子/分身控制/分身同步）
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == 進入伺服器時重置統計（0=累計統計，1=每次進服重置）
 
@@ -8545,9 +8551,6 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == 正在重試…
-
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
-== 反向按鍵時立即反向縮放（0=保留原有平滑縮放）
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -10061,9 +10064,6 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == 顯示命令 r 的幫助，如果留空則顯示一般幫助
 
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
-== 從網易雲音樂、汽水音樂、酷狗、QQ 音樂取得歌詞，並顯示在靈動島上。
-
 Shows the credits of the DDNet mod
 == 顯示 DDNet mod 的製作人員
 
@@ -10102,6 +10102,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == 簡單降噪強度
+
+Single color
+== 單色
 
 Size
 == 大小
@@ -10675,9 +10678,6 @@ Switch failed
 
 Switch interval
 == 切換間隔
-
-Switch on the status rows you need, then list the binds you want to watch.
-== 開啟需要的狀態開關，再在自訂清單裡填想監控的 bind。
 
 Switch opacity
 == 開關不透明度
@@ -11261,6 +11261,9 @@ Timer isn't displayed.
 Tiny Tee Size
 == 迷你 Tee 大小
 
+Title color
+== 頭銜顏色
+
 Title server unavailable; retry
 == 頭銜服務暫不可用，請重試
 
@@ -11540,9 +11543,6 @@ Tune variable to value
 Tune variable to value or show current value
 == 將變量調到指定值，或顯示當前值
 
-Turn on "Message merging" in Dream Features.
-== 在「夢的小功能」裡開啟「訊息合併」。
-
 Tutorial
 == 教學
 
@@ -11798,9 +11798,6 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == 用於下載皮膚的 URL
 
-Usage: %s
-== 用法：%s
-
 Usage: %s %s
 == 用法：%s %s
 
@@ -11866,9 +11863,6 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == 開啟動態攝像頭時使用鼠標感應
-
-Use MSDF text rendering for nameplates (requires TexturedMsdf)
-== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == 根據詞語長度使用多字符替換
@@ -12751,9 +12745,6 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == 你的逾時保護碼已設置。0.7 客戶端逾時後無法取回自己的 tee，但 0.6 客戶端可以接管你的 tee
-
-Your weapon slides and rotates in when you switch, and flips while reloading.
-== 切換武器時滑入旋轉，裝填時依裝填時間翻轉。
 
 z = Zoom
 == z = 縮放

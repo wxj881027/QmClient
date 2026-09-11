@@ -12,6 +12,10 @@
 namespace
 {
 
+	// 头衔彩虹分色的饱和度与亮度，与名牌原有的开发者标签彩虹保持一致。
+	constexpr float QM_TITLE_RAINBOW_SATURATION = 0.8f;
+	constexpr float QM_TITLE_RAINBOW_LIGHTNESS = 0.65f;
+
 	const json_value *JsonObjectField(const json_value *pObject, const char *pName)
 	{
 		if(!pObject || pObject->type != json_object)
@@ -325,4 +329,33 @@ std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, con
 		Result.push_back({(int)Id, pName->u.string.ptr, pTitle->u.string.ptr, std::min<int64_t>(Expires - Now, 15)});
 	}
 	return Result;
+}
+
+SQmTitleColorStyle ResolveQmTitleColorStyle(const int Mode, const unsigned int PackedColor, const int Opacity, const bool ServerRainbow)
+{
+	SQmTitleColorStyle Style;
+	if(Mode == (int)EQmTitleColorMode::SINGLE)
+		Style.m_Mode = EQmTitleColorMode::SINGLE;
+	else if(Mode == (int)EQmTitleColorMode::RAINBOW)
+		Style.m_Mode = EQmTitleColorMode::RAINBOW;
+	else
+		Style.m_Mode = EQmTitleColorMode::FOLLOW_SERVER;
+
+	if(Style.m_Mode == EQmTitleColorMode::FOLLOW_SERVER)
+	{
+		// 跟随服务器档不读取本地颜色与透明度，调用方继续使用自己解析出的颜色。
+		Style.m_Rainbow = ServerRainbow;
+		return Style;
+	}
+
+	Style.m_Alpha = std::clamp(Opacity, 0, 100) / 100.0f;
+	Style.m_Rainbow = Style.m_Mode == EQmTitleColorMode::RAINBOW;
+	Style.m_Color = color_cast<ColorRGBA>(ColorHSLA(PackedColor).WithAlpha(Style.m_Alpha));
+	return Style;
+}
+
+ColorRGBA QmTitleRainbowColor(const int CharIndex, const int CharCount, const float Alpha)
+{
+	const float Hue = CharCount > 0 ? (float)CharIndex / (float)CharCount : 0.0f;
+	return color_cast<ColorRGBA>(ColorHSLA(Hue, QM_TITLE_RAINBOW_SATURATION, QM_TITLE_RAINBOW_LIGHTNESS).WithAlpha(std::clamp(Alpha, 0.0f, 1.0f)));
 }

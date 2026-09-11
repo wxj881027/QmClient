@@ -4,6 +4,7 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/QmIslandNotice.h>
 #include <game/client/components/hud_frozen_tee_state.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/tclient/pet.h>
@@ -2046,4 +2047,257 @@ TEST(QmHudPresentationSource, MediaIslandAndWeaponHudUseContinuousPresentationSt
 	EXPECT_NE(PlayerStateBody.find("ResolveUiPresentationStateValue(AnimRuntime, WeaponNode"), std::string::npos);
 	EXPECT_EQ(Source.find("m_aHudWeaponSwitchStartTimes"), std::string::npos);
 	EXPECT_EQ(Source.find("HudActiveWeaponSwitchScale"), std::string::npos);
+}
+
+// ==== 灵动岛式通知（启动赞助提醒 / 关闭挽留）====
+
+TEST(QmIslandNotice, TargetsDropThenExpandAndCollapseThenRise)
+{
+	qm_island::SNoticeState State;
+
+	// 从未出现 → 显示：掉落立刻启动；展开置位，真正开始还要等掉落落定（见 ResolveSprings）。
+	const qm_island::SNoticeTargets ShowTargets = qm_island::ResolveTargets(State, true);
+	EXPECT_FLOAT_EQ(ShowTargets.m_Drop, 1.0f);
+	EXPECT_TRUE(ShowTargets.m_Expand);
+
+	// 收起时只要展开通道还没收拢，掉落目标必须保持 1：先收成黑球，不许同时往上飞。
+	State.m_DropProgress = 1.0f;
+	State.m_ExpandProgress = 1.0f;
+	const qm_island::SNoticeTargets Collapsing = qm_island::ResolveTargets(State, false);
+	EXPECT_FLOAT_EQ(Collapsing.m_Drop, 1.0f);
+	EXPECT_FALSE(Collapsing.m_Expand);
+
+	// 已经收成球（展开通道归一）之后，掉落目标才归零 → 黑球上滑离场。
+	State.m_ExpandProgress = 0.0f;
+	const qm_island::SNoticeTargets Rising = qm_island::ResolveTargets(State, false);
+	EXPECT_FLOAT_EQ(Rising.m_Drop, 0.0f);
+	EXPECT_FALSE(Rising.m_Expand);
+
+	// 出场途中重新显示：掉落保持 1，展开重新置位，弹簧速度由运行时继承。
+	State.m_DropProgress = 1.0f;
+	const qm_island::SNoticeTargets Reshow = qm_island::ResolveTargets(State, true);
+	EXPECT_FLOAT_EQ(Reshow.m_Drop, 1.0f);
+	EXPECT_TRUE(Reshow.m_Expand);
+}
+
+TEST(QmIslandNotice, CountdownOnlyRunsAfterFullyExpanded)
+{
+	qm_island::SNoticeState State;
+	State.m_DurationSeconds = 5.0f;
+	State.m_DropProgress = 1.0f;
+	State.m_ExpandProgress = 0.5f;
+
+	// 形变阶段不吞时间：没完全展开就不该开始倒计时。
+	EXPECT_FALSE(qm_island::AdvanceCountdown(State, true, 2.0f));
+	EXPECT_FLOAT_EQ(State.m_ElapsedSeconds, 0.0f);
+	EXPECT_FLOAT_EQ(qm_island::RemainingFraction(State), 1.0f);
+
+	// 完全展开后才推进。
+	State.m_ExpandProgress = 1.0f;
+	EXPECT_FALSE(qm_island::AdvanceCountdown(State, true, 4.0f));
+	EXPECT_FLOAT_EQ(State.m_ElapsedSeconds, 4.0f);
+	EXPECT_FLOAT_EQ(qm_island::RemainingFraction(State), 0.2f);
+	EXPECT_TRUE(qm_island::AdvanceCountdown(State, true, 1.0f));
+	EXPECT_FLOAT_EQ(qm_island::RemainingFraction(State), 0.0f);
+
+	// 到时后业务已收起：出场动画期间不再累加，环也停在「空」，不会闪回满圈。
+	EXPECT_FALSE(qm_island::AdvanceCountdown(State, false, 1.0f));
+	EXPECT_FLOAT_EQ(qm_island::RemainingFraction(State), 0.0f);
+}
+
+TEST(QmIslandNotice, NeedsRenderKeepsDrawingUntilTheExitAnimationSettles)
+{
+	qm_island::SNoticeState State;
+	EXPECT_FALSE(qm_island::NeedsRender(State, false));
+	EXPECT_TRUE(qm_island::NeedsRender(State, true));
+
+	// 业务已经收起，但出场动画还在跑：必须继续画，否则退化成瞬间消失。
+	State.m_ExpandProgress = 0.5f;
+	EXPECT_TRUE(qm_island::NeedsRender(State, false));
+	State.m_ExpandProgress = 0.0f;
+	State.m_DropProgress = 0.4f;
+	EXPECT_TRUE(qm_island::NeedsRender(State, false));
+
+	// 两通道都收完才停手，并允许复位。
+	State.m_DropProgress = 0.0f;
+	EXPECT_FALSE(qm_island::NeedsRender(State, false));
+	State.m_ElapsedSeconds = 3.0f;
+	qm_island::Reset(State);
+	EXPECT_FLOAT_EQ(State.m_ElapsedSeconds, 0.0f);
+	EXPECT_FLOAT_EQ(State.m_DropProgress, 0.0f);
+	EXPECT_FLOAT_EQ(State.m_ExpandProgress, 0.0f);
+	EXPECT_FLOAT_EQ(State.m_DurationSeconds, 5.0f);
+}
+
+TEST(QmIslandNotice, RingColorTurnsFromGreenToRedAsTimeRunsOut)
+{
+	const ColorRGBA Full = qm_island::CountdownRingColor(1.0f);
+	const ColorRGBA Half = qm_island::CountdownRingColor(0.5f);
+	const ColorRGBA Empty = qm_island::CountdownRingColor(0.0f);
+	EXPECT_GT(Full.g, Full.r);
+	EXPECT_GT(Empty.r, Empty.g);
+	EXPECT_GT(Half.r, Full.r);
+	EXPECT_LT(Half.r, Empty.r);
+}
+
+TEST(QmIslandNotice, LayoutCentersTheBodyAndKeepsTheRingOutsideIt)
+{
+	const CUIRect Screen = {0.0f, 0.0f, 1280.0f, 720.0f};
+	const qm_island::SNoticeLayout Layout = qm_island::ResolveLayout(Screen, 300.0f, 26.0f, 10.0f, 2.0f, 1.5f);
+	EXPECT_FLOAT_EQ(Layout.m_Body.w, 300.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Body.h, 26.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Body.x, 490.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Body.y, 10.0f);
+	EXPECT_FLOAT_EQ(Layout.m_RingThickness, 2.0f);
+	// 环中心线 = 半厚 + 间隙：环的内沿离主体正好一个间隙，整条环都在主体外侧。
+	EXPECT_FLOAT_EQ(Layout.m_RingOffset, 2.5f);
+	EXPECT_FLOAT_EQ(Layout.m_RingOffset - Layout.m_RingThickness * 0.5f, 1.5f);
+
+	// 超窄屏时主体被夹住，仍然居中。
+	const CUIRect Narrow = {0.0f, 0.0f, 100.0f, 240.0f};
+	const qm_island::SNoticeLayout NarrowLayout = qm_island::ResolveLayout(Narrow, 300.0f, 26.0f, 10.0f, 2.0f, 1.5f);
+	EXPECT_FLOAT_EQ(NarrowLayout.m_Body.w, 80.0f);
+	EXPECT_FLOAT_EQ(NarrowLayout.m_Body.x, 10.0f);
+
+	// 环厚有下限，避免高 DPI 下细到看不见。
+	const qm_island::SNoticeLayout Thin = qm_island::ResolveLayout(Screen, 300.0f, 26.0f, 10.0f, 0.2f, 0.0f);
+	EXPECT_FLOAT_EQ(Thin.m_RingThickness, 1.0f);
+	EXPECT_FLOAT_EQ(Thin.m_RingOffset, 0.5f);
+}
+
+TEST(QmIslandNotice, PerimeterPointWalksTheCapsuleClockwiseFromTheTop)
+{
+	constexpr float Pi = 3.14159265359f;
+	const CUIRect Capsule = {100.0f, 50.0f, 300.0f, 26.0f};
+	const float Radius = 13.0f;
+	const float Perimeter = qm_island::RoundedRectPerimeterLength(Capsule, Radius);
+	// 胶囊：两条直边各 2*(150-13)，两端各半圆。
+	EXPECT_FLOAT_EQ(Perimeter, 4.0f * 137.0f + 2.0f * Pi * 13.0f);
+
+	// 起点是上边中点；半圈落在下边中点；走满一圈回到起点。
+	const vec2 Top = qm_island::RoundedRectPerimeterPoint(Capsule, Radius, 0.0f);
+	EXPECT_FLOAT_EQ(Top.x, 250.0f);
+	EXPECT_FLOAT_EQ(Top.y, 50.0f);
+	const vec2 Bottom = qm_island::RoundedRectPerimeterPoint(Capsule, Radius, 0.5f);
+	EXPECT_FLOAT_EQ(Bottom.x, 250.0f);
+	EXPECT_FLOAT_EQ(Bottom.y, 76.0f);
+	const vec2 Wrapped = qm_island::RoundedRectPerimeterPoint(Capsule, Radius, 1.0f);
+	EXPECT_FLOAT_EQ(Wrapped.x, Top.x);
+	EXPECT_FLOAT_EQ(Wrapped.y, Top.y);
+
+	// 端部圆弧中点：上边右半段走完 137 后进入右端圆弧，再走半段弧长即最右点。
+	const float CapHalf = (Pi * Radius) / Perimeter;
+	const vec2 Rightmost = qm_island::RoundedRectPerimeterPoint(Capsule, Radius, 137.0f / Perimeter + CapHalf);
+	EXPECT_NEAR(Rightmost.x, 400.0f, 0.001f);
+	EXPECT_NEAR(Rightmost.y, 63.0f, 0.001f);
+
+	// 宽高相等时退化成圆周：0.25 / 0.75 分别是最右 / 最左。
+	const CUIRect Circle = {0.0f, 0.0f, 40.0f, 40.0f};
+	EXPECT_FLOAT_EQ(qm_island::RoundedRectPerimeterLength(Circle, 20.0f), 2.0f * Pi * 20.0f);
+	const vec2 CircleRight = qm_island::RoundedRectPerimeterPoint(Circle, 20.0f, 0.25f);
+	EXPECT_NEAR(CircleRight.x, 40.0f, 0.001f);
+	EXPECT_NEAR(CircleRight.y, 20.0f, 0.001f);
+	const vec2 CircleLeft = qm_island::RoundedRectPerimeterPoint(Circle, 20.0f, 0.75f);
+	EXPECT_NEAR(CircleLeft.x, 0.0f, 0.001f);
+	EXPECT_NEAR(CircleLeft.y, 20.0f, 0.001f);
+}
+
+TEST(QmIslandNotice, OutlineRingFieldsReachTheGpuParamsAndGrowTheQuad)
+{
+	SHudMediaIslandSdfRenderState State;
+	State.m_MainRect = {490.0f, 10.0f, 300.0f, 26.0f};
+	State.m_MainRadius = 13.0f;
+	State.m_MainCorners = IGraphics::CORNER_ALL;
+	State.m_BackgroundColor = ColorRGBA(0.10f, 0.11f, 0.14f, 0.82f);
+	State.m_ScreenPixelSize = 1.0f;
+	State.m_ItemCount = 1;
+	State.m_Items[0].m_Center = vec2(640.0f, 23.0f);
+	State.m_Items[0].m_Radii = vec2(150.0f, 13.0f);
+	State.m_Items[0].m_ContentAlpha = 1.0f;
+	State.m_Items[0].m_CountdownProgress = 0.5f;
+	State.m_Items[0].m_RingColor = ColorRGBA(0.5f, 0.8f, 0.4f, 1.0f);
+
+	const CUIRect WithoutRing = QmHudMediaIslandSdfOuterRect(State);
+	State.m_OutlineRingThickness = 2.0f;
+	State.m_OutlineRingOffset = 2.5f;
+	const CUIRect WithRing = QmHudMediaIslandSdfOuterRect(State);
+
+	// 环外沿 = 中心线外扩 + 半厚，外接矩形必须为此留出余量（再加一圈羽化），否则环被裁掉。
+	EXPECT_FLOAT_EQ(State.m_MainRect.y - WithoutRing.y, 1.5f);
+	EXPECT_FLOAT_EQ(State.m_MainRect.y - WithRing.y, 2.5f + 1.0f + 0.9f);
+	EXPECT_GT(WithRing.w, WithoutRing.w);
+
+	IGraphics::SMediaIslandSdfParams Params;
+	ASSERT_TRUE(QmHudMediaIslandBuildGpuSdfParams(State, Params));
+	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_RESERVED].z, 2.0f);
+	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_RESERVED].w, 2.5f);
+
+	// 关闭轮廓环时回到原来的语义（HUD 卫星环那条路径读到 0 就照旧画圆环）。
+	State.m_OutlineRingThickness = 0.0f;
+	ASSERT_TRUE(QmHudMediaIslandBuildGpuSdfParams(State, Params));
+	EXPECT_FLOAT_EQ(Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_RESERVED].z, 0.0f);
+}
+
+TEST(QmIslandNoticeShader, OutlineRingModeIsOptInAndSharedByBothBackends)
+{
+	for(const char *pShaderPath : {"data/shader/media_island_sdf.frag", "data/shader/vulkan/media_island_sdf.frag"})
+	{
+		const std::string Source = ReadTestSourceFile(pShaderPath);
+		EXPECT_NE(Source.find("float OutlineThickness = max(ShadowParams.z, 0.0);"), std::string::npos) << pShaderPath;
+		EXPECT_NE(Source.find("abs(MainDistance + max(ShadowParams.w, 0.0)) - OutlineThickness * 0.5"), std::string::npos) << pShaderPath;
+		EXPECT_NE(Source.find("float RoundedRectPerimeterLength(vec4 Rect, float Radius)"), std::string::npos) << pShaderPath;
+		EXPECT_NE(Source.find("float RoundedRectPerimeterFraction(vec2 Point, vec4 Rect, float Radius)"), std::string::npos) << pShaderPath;
+		EXPECT_NE(Source.find("RoundedRectPerimeterFraction(Point, Data(1), MainRadius)"), std::string::npos) << pShaderPath;
+		EXPECT_NE(Source.find("1.0 - smoothstep(OutlineProgress - ArcEdge, OutlineProgress + ArcEdge, Along)"), std::string::npos) << pShaderPath;
+		// 整圈底轨与进度弧同一层次：底轨 18%，进度弧吃 ContentAlpha。
+		EXPECT_NE(Source.find("OutlineTrack.a *= 0.18 * OutlineAlpha;"), std::string::npos) << pShaderPath;
+		// 关闭时退回「每个 item 一个圆环」，HUD 卫星倒计时的语义不能被改掉。
+		EXPECT_NE(Source.find("float RingRadius = MainParams.z * ItemParams.z;"), std::string::npos) << pShaderPath;
+	}
+}
+
+TEST(QmIslandNoticeSource, SponsorNudgeSequencesDropExpandCountdownAndRise)
+{
+	const std::string Source = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string Body = FunctionBody(Source, "void CMenus::RenderSponsorNudge(CUIRect Screen)");
+	ASSERT_FALSE(Body.empty());
+
+	const size_t NeedsRender = Body.find("qm_island::NeedsRender(m_QmSponsorNudgeNotice, Visible)");
+	const size_t ResolveSprings = Body.find("qm_island::ResolveSprings(");
+	const size_t Advance = Body.find("qm_island::AdvanceCountdown(");
+	const size_t Dismiss = Body.find("DismissSponsorNudge(false)");
+	const size_t Ring = Body.find("m_OutlineRingThickness");
+	ASSERT_NE(NeedsRender, std::string::npos);
+	ASSERT_NE(ResolveSprings, std::string::npos);
+	ASSERT_NE(Advance, std::string::npos);
+	ASSERT_NE(Dismiss, std::string::npos);
+	ASSERT_NE(Ring, std::string::npos);
+	// 顺序：先判断还要不要继续画 → 推两条弹簧 → 倒计时到时收起（收起后由同一段动画走完出场）。
+	EXPECT_LT(NeedsRender, ResolveSprings);
+	EXPECT_LT(ResolveSprings, Advance);
+	EXPECT_LT(Advance, Dismiss);
+	// 倒计时读数由状态机给出，不再各处硬编码 5 秒。
+	EXPECT_NE(Body.find("qm_island::RemainingFraction(m_QmSponsorNudgeNotice)"), std::string::npos);
+	EXPECT_EQ(Body.find("5.0f"), std::string::npos);
+
+	// 光辉（外圈阴影）从这条路径上彻底移除。
+	EXPECT_EQ(Body.find("ApplyOuterShadow"), std::string::npos);
+	EXPECT_EQ(Source.find("qm_island::ApplyOuterShadow"), std::string::npos);
+	EXPECT_EQ(Source.find("m_QmSponsorNudgeElapsed"), std::string::npos);
+}
+
+TEST(QmIslandNoticeSource, GeometryFallbackDrawsTheOutlineRingWhenSdfIsUnavailable)
+{
+	const std::string Source = ReadTestSourceFile("src/game/client/QmUi/QmIslandSurface.cpp");
+	const std::string Fallback = FunctionBody(Source, "void RenderGeometryFallback(IGraphics *pGraphics, const SHudMediaIslandSdfRenderState &State)");
+	ASSERT_FALSE(Fallback.empty());
+	EXPECT_NE(Fallback.find("DrawOutlineRingFallback"), std::string::npos);
+	// 轮廓环模式下不再画「每个 item 自己的圆环」，否则宽岛中间会多出一个与主体无关的小圆圈。
+	EXPECT_NE(Fallback.find("State.m_OutlineRingThickness <= 0.0f"), std::string::npos);
+
+	const std::string RingBody = FunctionBody(Source, "void DrawOutlineRingFallback(IGraphics *pGraphics, const SHudMediaIslandSdfRenderState &State)");
+	ASSERT_FALSE(RingBody.empty());
+	EXPECT_NE(RingBody.find("RoundedRectPerimeterPoint"), std::string::npos);
+	EXPECT_NE(RingBody.find("0.18f * Item.m_ContentAlpha"), std::string::npos);
+	EXPECT_NE(RingBody.find("Item.m_CountdownProgress"), std::string::npos);
 }

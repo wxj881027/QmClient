@@ -491,9 +491,6 @@ Adds a specific war entry
 Adds default chat binds
 == 기본 채팅 바인드 추가
 
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
-== 더미의 키, 해머, 컨트롤, 복사 상태를 HUD에 표시하고 사용자 지정 bind 상태 목록도 지원합니다.
-
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
 
@@ -1412,6 +1409,9 @@ Bind Wheel
 Bind Wheel Key
 == 바인드 휠 키
 
+Binds
+== 바인드
+
 Bit flags for disabling settings tabs
 == 설정 탭 비활성화를 위한 비트 플래그
 
@@ -1468,6 +1468,15 @@ Both sides of keyword rules must be filled
 
 Bounce
 == 바운스
+
+Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
+== 대괄호 칭호 색상: 0 = 서버 설정 따르기, 1 = 단색, 2 = 무지개
+
+Bracketed title opacity (0-100)
+== 대괄호 칭호 불투명도 (0-100)
+
+Bracketed title single color
+== 대괄호 칭호 단색
 
 Brightness shift
 == 밝기 전환
@@ -1958,6 +1967,9 @@ Collision Line Opacity
 Color
 == 색상
 
+Color & opacity
+== 색상 및 불투명도
+
 Color of authenticated player names on scoreboard
 == 점수판에 인증된 플레이어 이름 색상
 
@@ -2011,6 +2023,9 @@ Command to run when joining server
 
 Command:
 == 명령어:
+
+Commands
+== 명령
 
 Commands run in the console
 == 콘솔에서 실행되는 명령어
@@ -2351,6 +2366,9 @@ Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
 == 파일에서 기본 터치 컨트롤을 불러올 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
 
+Could not load new features
+== 새 기능 내용을 불러오지 못했습니다
+
 Could not load sponsor QR code. Check the Base64 data
 == 스폰서 QR 코드를 불러올 수 없습니다. Base64 데이터를 확인하세요
 
@@ -2467,12 +2485,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == 사용자 정의 화면비, x100 배율로 저장 (예: 178=16:9, 233=21:9)
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== 사용자 지정 bind 상태 HUD 항목입니다. 비어 있으면 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)을 사용합니다. 형식: 변수명|상태값=텍스트|상태값=텍스트; 변수명|텍스트(0이 아닐 때 표시); 변수명(변수명만 입력 시 0이 아닐 때 변수명 표시). 항목은 ';', 필드는 '|'로 구분합니다
-
-Custom bind status list
-== 사용자 지정 bind 상태 목록
 
 Custom colors
 == 사용자 정의 색상
@@ -3083,6 +3095,9 @@ Downloading update...
 Downscaled (0.78)
 == 축소됨 (0.78)
 
+Draft file is empty
+== 초안 파일이 비어 있습니다
+
 Drag HUD modules with the left mouse button
 == 마우스 왼쪽 버튼으로 HUD 모듈 드래그
 
@@ -3206,8 +3221,8 @@ Dummy is currently connected.
 Dummy jump
 == 더미 점프
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== 키 고정/해머/분신 조작/분신 동기화 상태 스위치와 사용자 지정 bind 상태 목록
+Dummy key/hammer/control/copy status switches
+== 키 고정/해머/분신 조작/분신 동기화 상태 스위치
 
 Dummy marking color
 == 더미 마킹 색상
@@ -3394,9 +3409,6 @@ Emoticon shadow
 
 Emoticons
 == 이모티콘
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== 비어 있으면 내장 4개 항목. 형식: var|0=Off|1=On; var|Text
 
 enable
 == 활성화
@@ -3674,9 +3686,6 @@ Enable skin queue rotation
 Enable skin switch animation
 == 스킨 전환 애니메이션 활성화
 
-Enable skin transition animation, then choose the type, scope, duration and easing.
-== 스킨 전환 애니메이션을 켜고 종류, 범위, 시간, 이징을 선택하세요.
-
 Enable smooth cinematic camera while free spectating
 == 자유 관전 중 부드러운 시네마틱 카메라 활성화
 
@@ -3767,9 +3776,6 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 적대 목록 활성화
 
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
-== 무기 교체 애니메이션 또는 재장전 애니메이션을 켜고 범위, 시간, 회전, 이징을 조정하세요.
-
 Enable word filter list
 == 단어 필터 목록 활성화
 
@@ -3815,9 +3821,6 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == 비밀번호 입력
 
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
-== 후원 코드를 입력하고 "등록"을 누른 뒤 칭호를 작성하고 "저장"을 누르세요. "이 닉네임에서만 표시"를 켜면 하나의 닉네임에만 연결됩니다.
-
 Enter Username
 == 사용자 이름 입력
 
@@ -3850,9 +3853,6 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
-
-Entry: %s
-== 위치: %s
 
 Erase items on the in game background
 == 게임 배경 위의 항목 지우기
@@ -4186,6 +4186,9 @@ Folder Link
 
 Follow
 == 따라가기
+
+Follow server
+== 서버 설정 따르기
 
 Following
 == 현재
@@ -5210,6 +5213,12 @@ Input overlay mouse scale (percent)
 Input overlay opacity (percent)
 == 입력 오버레이 불투명도 (백분율)
 
+Input overlay X position (percent)
+== 입력 오버레이 X 위치 (백분율)
+
+Input overlay Y position (percent)
+== 입력 오버레이 Y 위치 (백분율)
+
 Input smoothing
 == 입력 평활화
 
@@ -5221,9 +5230,6 @@ Insane
 
 Installing update. Please wait...
 == 업데이트 설치 중입니다. 잠시 기다려 주세요...
-
-Instant zoom reverse
-== 줌 반전 즉시 적용
 
 Interface
 == 인터페이스
@@ -5780,6 +5786,9 @@ Local
 Local + Dummy
 == 로컬 + 더미
 
+Local console log category filter mask (bit flags)
+== 로컬 콘솔 로그 분류 필터 마스크(비트 플래그)
+
 Local only
 == 로컬 전용
 
@@ -6142,9 +6151,6 @@ Menu option - selected
 
 Merge consecutive identical player messages within 2 seconds
 == 2초 안에 연속으로 표시된 동일 플레이어의 같은 메시지 병합
-
-Merges chat messages repeated within a short time into a single line.
-== 짧은 시간 안에 반복된 채팅 메시지를 한 줄로 합칩니다.
 
 Message color
 == 메시지 색상
@@ -6722,6 +6728,9 @@ No matching assets.
 No matching features found. Try other keywords
 == 일치하는 기능을 찾을 수 없습니다. 다른 키워드를 시도해 보세요.
 
+No new features yet
+== 아직 새 기능 내용이 없습니다
+
 No noise reduction
 == 노이즈 감소 안 함
 
@@ -7004,11 +7013,11 @@ Open color picker
 Open DDNet Wiki
 == DDNet Wiki 열기
 
-Open editor
-== 편집기 열기
-
 Open emote selector
 == 이모트 선택기 열기
+
+Open folder
+== 폴더 열기
 
 Open map editor
 == 맵 에디터 열기
@@ -7051,9 +7060,6 @@ Open the folder containing demo files
 
 Open the folder containing screenshots
 == 스크린샷이 있는 폴더 열기
-
-Open the input overlay editor
-== 입력 오버레이 편집기 열기
 
 Open the saves file
 == 저장 파일 열기
@@ -7334,9 +7340,6 @@ Pet Skin:
 Pick result: %s
 == 추첨 결과: %s
 
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
-== 사용하는 음악 앱에 맞는 소스를 선택하고 재생만 하면 가사가 자동으로 따라옵니다.
-
 Pickup range
 == 획득 범위
 
@@ -7531,9 +7534,6 @@ Players can't hook each other on this server
 
 Playing effects
 == 효과 재생
-
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
-== 해머로 빼앗은 스킨을 포함해 스킨이 바뀔 때 애니메이션을 재생합니다.
 
 Please add a valid cut first
 == 먼저 유효한 잘라내기 구간을 추가하세요
@@ -7820,6 +7820,18 @@ PTT release delay (ms)
 Publicly messages everyone your current time in this current running race
 == 현재 진행 중인 레이스의 당신 시간을 모든 사람에게 공개 메시지로 보냅니다
 
+Publish
+== 게시
+
+Publish failed
+== 게시 실패
+
+Published
+== 게시됨
+
+Publishing…
+== 게시 중…
+
 Pulse
 == 펄스
 
@@ -8077,9 +8089,6 @@ Redeem
 
 Redeem your code and customize your title
 == 코드를 등록하고 칭호를 설정하세요
-
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
-== 후원 코드를 등록하면 사용자 지정 칭호를 사용할 수 있습니다. 칭호는 채팅과 이름표에 표시됩니다.
 
 Reduce antiping and player prediction when frozen
 == 얼었을 때 안티핑 및 플레이어 예측 감소
@@ -8498,9 +8507,6 @@ Reset mouse position when opening bind wheel
 Reset position of mouse when opening bindwheel
 == 바인드휠 열 때 마우스 위치 초기화
 
-Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== qm_bind_status_items를 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)으로 재설정
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == 서버 입장 시 통계 초기화 (0=누적 통계, 1=입장 시마다 초기화)
 
@@ -8545,9 +8551,6 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == 재시도 중…
-
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
-== 반대 줌 키를 누르면 즉시 방향 전환 (0=기존 부드러운 줌 유지)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -10061,9 +10064,6 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == 명령 r 에 대한 도움말 표시, 비워두면 일반 도움말 표시
 
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
-== NetEase Cloud Music, Soda Music, Kugou, QQ Music의 가사를 가져와 다이내믹 아일랜드에 표시합니다.
-
 Shows the credits of the DDNet mod
 == DDNet 모드의 크레딧 표시
 
@@ -10102,6 +10102,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == 간단한 노이즈 감소 강도
+
+Single color
+== 단색
 
 Size
 == 크기
@@ -10675,9 +10678,6 @@ Switch failed
 
 Switch interval
 == 전환 간격
-
-Switch on the status rows you need, then list the binds you want to watch.
-== 필요한 상태 스위치를 켜고, 감시할 bind를 사용자 지정 목록에 입력하세요.
 
 Switch opacity
 == 전환 불투명도
@@ -11261,6 +11261,9 @@ Timer isn't displayed.
 Tiny Tee Size
 == 아주 작은 Tee 크기
 
+Title color
+== 칭호 색상
+
 Title server unavailable; retry
 == 칭호 서버에 연결할 수 없습니다. 다시 시도하세요
 
@@ -11540,9 +11543,6 @@ Tune variable to value
 Tune variable to value or show current value
 == 변수를 값으로 조정하거나 현재 값을 표시합니다.
 
-Turn on "Message merging" in Dream Features.
-== "드림 기능"에서 "Message merging"을 켜세요.
-
 Tutorial
 == 튜토리얼
 
@@ -11798,9 +11798,6 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == 스킨 다운로드 URL
 
-Usage: %s
-== 사용법: %s
-
 Usage: %s %s
 == 사용법: %s %s
 
@@ -11866,9 +11863,6 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == 동적 카메라가 켜져 있을 때 마우스 감도 사용
-
-Use MSDF text rendering for nameplates (requires TexturedMsdf)
-== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == 단어 길이에 따른 다중 문자 대체 사용
@@ -12751,9 +12745,6 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == 타임아웃 코드가 설정되었습니다. 0.7 클라이언트는 타임아웃 시 티를 되찾을 수 없지만, 0.6 클라이언트는 당신의 티를 차지할 수 있습니다
-
-Your weapon slides and rotates in when you switch, and flips while reloading.
-== 무기를 바꿀 때 미끄러지듯 회전하며 등장하고, 재장전 중에는 뒤집힙니다.
 
 z = Zoom
 == z = 확대/축소

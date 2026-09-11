@@ -4,9 +4,14 @@
 #ifndef GAME_CLIENT_QMUI_QMISLANDSURFACE_H
 #define GAME_CLIENT_QMUI_QMISLANDSURFACE_H
 
+#include <base/vmath.h>
+
 #include <engine/graphics.h>
 
 #include <game/client/components/hud_media_island_logic.h>
+
+#include <algorithm>
+#include <cmath>
 
 // 灵动岛表面：把「一份 SDF 渲染状态 → 屏幕上的胶囊岛」这条路径收成一个公共组件。
 //
@@ -16,30 +21,67 @@
 // （QmHudMediaIslandBuildGpuSdfParams），因此观感同源。
 namespace qm_island
 {
-	// 外阴影常量与 HUD 保持一致：状态里的 m_OuterShadowSize / m_OuterShadowOpacity
-	// 需要按同一比例推导，否则菜单岛与 HUD 岛的外沿观感会不一致。
-	inline constexpr float OUTER_SHADOW_PIXELS = 5.0f;
-	inline constexpr float OUTER_SHADOW_OPACITY = 0.35f;
-
-	// 环绕倒计时条：外框描边走向的进度环。整圈底色为 RingColor 的 18% 透明度，
-	// 进度弧按 CountdownProgress 顺时针覆盖，与 HUD 卫星倒计时环同一套参数语义。
-	struct SIslandRing
+	// ==== 圆角矩形轮廓参数化 ====
+	// 倒计时环贴的是「主体外轮廓」，胶囊只是 Radius = 半高的特例。
+	// 参数从正上方中点起、顺时针计一圈，与着色器里的 RoundedRectPerimeterFraction 同语义。
+	inline float ClampRoundedRectRadius(const CUIRect &Rect, float Radius)
 	{
-		float m_Radius = 0.0f;
-		float m_Thickness = 0.0f;
-		float m_Progress = 1.0f;
-		ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-	};
+		return std::clamp(Radius, 0.0f, std::min(std::max(0.0f, Rect.w), std::max(0.0f, Rect.h)) * 0.5f);
+	}
 
-	// 让 State 的外阴影按 State.m_ScreenPixelSize 推导，与 HUD 的取值方式一致。
-	inline void ApplyOuterShadow(SHudMediaIslandSdfRenderState &State)
+	inline float RoundedRectPerimeterLength(const CUIRect &Rect, float Radius)
 	{
-		State.m_OuterShadowSize = State.m_ScreenPixelSize * OUTER_SHADOW_PIXELS;
-		State.m_OuterShadowOpacity = OUTER_SHADOW_OPACITY * State.m_BackgroundColor.a;
+		constexpr float Pi = 3.14159265359f;
+		const float HalfWidth = std::max(0.0f, Rect.w * 0.5f);
+		const float CornerRadius = ClampRoundedRectRadius(Rect, Radius);
+		return 4.0f * std::max(HalfWidth - CornerRadius, 0.0f) + 2.0f * Pi * CornerRadius;
+	}
+
+	// 轮廓上的点：Fraction ∈ [0,1) 从正上方中点起顺时针；超出范围自动环绕。
+	inline vec2 RoundedRectPerimeterPoint(const CUIRect &Rect, float Radius, float Fraction)
+	{
+		constexpr float Pi = 3.14159265359f;
+		const float HalfWidth = std::max(0.0f, Rect.w * 0.5f);
+		const float HalfHeight = std::max(0.0f, Rect.h * 0.5f);
+		const float CornerRadius = ClampRoundedRectRadius(Rect, Radius);
+		const float StraightHalf = std::max(HalfWidth - CornerRadius, 0.0f);
+		const float CapLength = Pi * CornerRadius;
+		const float Perimeter = 4.0f * StraightHalf + 2.0f * CapLength;
+		const float CenterX = Rect.x + HalfWidth;
+		const float CenterY = Rect.y + HalfHeight;
+		if(Perimeter <= 0.0001f)
+			return vec2(CenterX, CenterY);
+
+		float Along = (Fraction - std::floor(Fraction)) * Perimeter;
+		// 上边右半段：直接量 x。
+		if(Along <= StraightHalf)
+			return vec2(CenterX + Along, CenterY - HalfHeight);
+		Along -= StraightHalf;
+		// 右端圆弧：从上（-90°）顺时针转到下（+90°）。
+		if(Along <= CapLength)
+		{
+			const float Angle = Along / CornerRadius;
+			return vec2(CenterX + StraightHalf + std::sin(Angle) * CornerRadius, CenterY - std::cos(Angle) * CornerRadius);
+		}
+		Along -= CapLength;
+		// 下边：从右往左。
+		if(Along <= 2.0f * StraightHalf)
+			return vec2(CenterX + StraightHalf - Along, CenterY + HalfHeight);
+		Along -= 2.0f * StraightHalf;
+		// 左端圆弧：从下顺时针转到上。
+		if(Along <= CapLength)
+		{
+			const float Angle = Along / CornerRadius;
+			return vec2(CenterX - StraightHalf - std::sin(Angle) * CornerRadius, CenterY + std::cos(Angle) * CornerRadius);
+		}
+		Along -= CapLength;
+		// 上边左半段：从左往中间收。
+		return vec2(CenterX - StraightHalf + Along, CenterY - HalfHeight);
 	}
 
 	// 绘制一块灵动岛表面（调用方负责填好 SdfState，含 m_Rect）。
-	// 优先走实时 SDF（含外阴影、液体融合、环绕环）；不支持时退回圆角矩形 + 圆环几何。
+	// 优先走实时 SDF（含液体融合、轮廓环/卫星环、可选外阴影）；
+	// 不支持时退回圆角矩形 + 环几何。
 	// Backdrop 为 HUD 侧的背景模糊目标，菜单调用方传默认值即可（不做背景模糊）。
 	bool Render(IGraphics *pGraphics, const SHudMediaIslandSdfRenderState &SdfState, IGraphics::CRenderTargetHandle Backdrop = IGraphics::CRenderTargetHandle());
 } // namespace qm_island

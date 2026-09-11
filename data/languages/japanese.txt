@@ -491,9 +491,6 @@ Adds a specific war entry
 Adds default chat binds
 == デフォルトのチャットバインドを追加
 
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
-== 分身のキー、ハンマー、コントロール、コピー状態をHUDに表示し、独自のbind状態リストも使えます。
-
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
 
@@ -1412,6 +1409,9 @@ Bind Wheel
 Bind Wheel Key
 == バインドホイールキー
 
+Binds
+== バインド
+
 Bit flags for disabling settings tabs
 == 設定タブを無効化するためのビットフラグ
 
@@ -1468,6 +1468,15 @@ Both sides of keyword rules must be filled
 
 Bounce
 == バウンス
+
+Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
+== 括弧内の称号の色：0 = サーバーに従う、1 = 単色、2 = 虹色
+
+Bracketed title opacity (0-100)
+== 括弧内の称号の不透明度 (0-100)
+
+Bracketed title single color
+== 括弧内の称号の単色
 
 Brightness shift
 == 明るさシフト
@@ -1958,6 +1967,9 @@ Collision Line Opacity
 Color
 == 色
 
+Color & opacity
+== 色と不透明度
+
 Color of authenticated player names on scoreboard
 == スコアボード上の認証済みプレイヤー名の色
 
@@ -2011,6 +2023,9 @@ Command to run when joining server
 
 Command:
 == コマンド：
+
+Commands
+== コマンド
 
 Commands run in the console
 == コンソールで実行されるコマンド
@@ -2351,6 +2366,9 @@ Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
 == ファイルからデフォルトのタッチコントロールを読み込めませんでした。詳細はローカルコンソールを確認してください。
 
+Could not load new features
+== 新機能の内容を読み込めませんでした
+
 Could not load sponsor QR code. Check the Base64 data
 == スポンサー QR コードを読み込めませんでした。Base64 データを確認してください
 
@@ -2467,12 +2485,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == カスタムアスペクト比、x100 で保存（例：178=16:9、233=21:9）
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== カスタム bind 状態 HUD エントリ。空の場合は組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）。形式：変数名|状態値=テキスト|状態値=テキスト；変数名|テキスト（非ゼロ時に表示）；変数名（変数名のみの場合は非ゼロ時に変数名を表示）。エントリは ';' で、フィールドは '|' で区切る
-
-Custom bind status list
-== カスタム bind 状態リスト
 
 Custom colors
 == カスタムカラー
@@ -3083,6 +3095,9 @@ Downloading update...
 Downscaled (0.78)
 == ダウンスケール (0.78)
 
+Draft file is empty
+== 下書きファイルが空です
+
 Drag HUD modules with the left mouse button
 == マウスの左ボタンで HUD モジュールをドラッグ
 
@@ -3206,8 +3221,8 @@ Dummy is currently connected.
 Dummy jump
 == ダミージャンプ
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== キー固定/ハンマー/分身操作/分身同期の状態スイッチとカスタム bind 状態リスト
+Dummy key/hammer/control/copy status switches
+== キー固定/ハンマー/分身操作/分身同期の状態スイッチ
 
 Dummy marking color
 == ダミーマーキング色
@@ -3394,9 +3409,6 @@ Emoticon shadow
 
 Emoticons
 == エモート
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== 空の場合は組み込みの4項目。形式：var|0=Off|1=On；var|Text
 
 enable
 == 有効
@@ -3674,9 +3686,6 @@ Enable skin queue rotation
 Enable skin switch animation
 == スキン切り替えアニメーションを有効化
 
-Enable skin transition animation, then choose the type, scope, duration and easing.
-== スキン切り替えアニメを有効にし、種類・範囲・時間・イージングを選びます。
-
 Enable smooth cinematic camera while free spectating
 == フリー観戦中に滑らかなシネマティックカメラを有効にする
 
@@ -3767,9 +3776,6 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 敵対リストを有効化
 
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
-== 武器切り替えアニメかリロードアニメを有効にし、範囲・時間・回転・イージングを調整します。
-
 Enable word filter list
 == フィルターワードリストを有効にする
 
@@ -3815,9 +3821,6 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == パスワードを入力
 
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
-== スポンサーコードを入力して「引き換える」を押し、称号を書いて「保存」を押します。「このニックネームのみ表示」を有効にすると1つのニックネームに紐付けられます。
-
 Enter Username
 == ユーザー名を入力
 
@@ -3850,9 +3853,6 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
-
-Entry: %s
-== 場所：%s
 
 Erase items on the in game background
 == ゲーム内背景のアイテムを消去
@@ -4186,6 +4186,9 @@ Folder Link
 
 Follow
 == フォロー
+
+Follow server
+== サーバーに従う
 
 Following
 == フォロー中
@@ -5210,6 +5213,12 @@ Input overlay mouse scale (percent)
 Input overlay opacity (percent)
 == 入力オーバーレイの不透明度（パーセント）
 
+Input overlay X position (percent)
+== 入力オーバーレイ X 位置（パーセント）
+
+Input overlay Y position (percent)
+== 入力オーバーレイ Y 位置（パーセント）
+
 Input smoothing
 == 入力スムージング
 
@@ -5221,9 +5230,6 @@ Insane
 
 Installing update. Please wait...
 == アップデートをインストールしています。お待ちください...
-
-Instant zoom reverse
-== ズームの逆方向操作を即時反映
 
 Interface
 == インターフェース
@@ -5780,6 +5786,9 @@ Local
 Local + Dummy
 == ローカル + ダミー
 
+Local console log category filter mask (bit flags)
+== ローカルコンソールのログ分類フィルターマスク（ビットフラグ）
+
 Local only
 == ローカルのみ
 
@@ -6142,9 +6151,6 @@ Menu option - selected
 
 Merge consecutive identical player messages within 2 seconds
 == 2 秒以内に連続した同一プレイヤーの同じメッセージを統合
-
-Merges chat messages repeated within a short time into a single line.
-== 短時間に繰り返されたチャットメッセージを1行にまとめます。
 
 Message color
 == メッセージの色
@@ -6722,6 +6728,9 @@ No matching assets.
 No matching features found. Try other keywords
 == 一致する機能が見つかりませんでした。他のキーワードをお試しください
 
+No new features yet
+== 新機能の内容はまだありません
+
 No noise reduction
 == ノイズリダクションなし
 
@@ -7004,11 +7013,11 @@ Open color picker
 Open DDNet Wiki
 == DDNet Wiki を開く
 
-Open editor
-== エディターを開く
-
 Open emote selector
 == 絵文字セレクターを開く
+
+Open folder
+== フォルダを開く
 
 Open map editor
 == マップエディターを開く
@@ -7051,9 +7060,6 @@ Open the folder containing demo files
 
 Open the folder containing screenshots
 == スクリーンショットが保存されているフォルダを開く
-
-Open the input overlay editor
-== 入力オーバーレイエディターを開く
 
 Open the saves file
 == セーブファイルを開く
@@ -7334,9 +7340,6 @@ Pet Skin:
 Pick result: %s
 == 抽選結果：%s
 
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
-== 使用中の音楽アプリに合うソースを選んで再生しておくだけで、歌詞が自動的に追従します。
-
 Pickup range
 == ピックアップ範囲
 
@@ -7531,9 +7534,6 @@ Players can't hook each other on this server
 
 Playing effects
 == エフェクトの再生
-
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
-== ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。
 
 Please add a valid cut first
 == 有効なカットを先に追加してください
@@ -7820,6 +7820,18 @@ PTT release delay (ms)
 Publicly messages everyone your current time in this current running race
 == 現在のレース中の自分のタイムを全員に公開メッセージで送信
 
+Publish
+== 公開
+
+Publish failed
+== 公開に失敗しました
+
+Published
+== 公開しました
+
+Publishing…
+== 公開中…
+
 Pulse
 == パルス
 
@@ -8077,9 +8089,6 @@ Redeem
 
 Redeem your code and customize your title
 == コードを引き換えて称号を設定
-
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
-== スポンサーコードを引き換えるとカスタム称号を解除できます。称号はチャットとネームプレートに表示されます。
 
 Reduce antiping and player prediction when frozen
 == フリーズ時にアンチピンとプレイヤー予測を軽減
@@ -8498,9 +8507,6 @@ Reset mouse position when opening bind wheel
 Reset position of mouse when opening bindwheel
 == バインドホイールを開くときにマウス位置をリセット
 
-Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== qm_bind_status_items を組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）にリセット
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == サーバー参加時に統計をリセット（0=累積統計、1=参加ごとにリセット）
 
@@ -8545,9 +8551,6 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == 再試行中…
-
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
-== 逆方向キーでズームを即座に反転（0=元の滑らかなズームを維持）
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -10061,9 +10064,6 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == コマンド r のヘルプを表示、空白の場合は一般ヘルプを表示
 
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
-== NetEase Cloud Music、Soda Music、Kugou、QQ Musicの歌詞を取得し、ダイナミックアイランドに表示します。
-
 Shows the credits of the DDNet mod
 == DDNet mod のクレジットを表示
 
@@ -10102,6 +10102,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == 簡易ノイズリダクション強度
+
+Single color
+== 単色
 
 Size
 == サイズ
@@ -10675,9 +10678,6 @@ Switch failed
 
 Switch interval
 == 切り替え間隔
-
-Switch on the status rows you need, then list the binds you want to watch.
-== 必要な状態スイッチをオンにし、監視したいbindをカスタムリストに入力します。
 
 Switch opacity
 == 切り替え不透明度
@@ -11261,6 +11261,9 @@ Timer isn't displayed.
 Tiny Tee Size
 == ミニ Tee のサイズ
 
+Title color
+== 称号の色
+
 Title server unavailable; retry
 == 称号サーバーに接続できません。再試行してください
 
@@ -11540,9 +11543,6 @@ Tune variable to value
 Tune variable to value or show current value
 == チューン変数を値に設定するか、現在の値を表示
 
-Turn on "Message merging" in Dream Features.
-== 「ドリーム機能」で「Message merging」をオンにします。
-
 Tutorial
 == チュートリアル
 
@@ -11798,9 +11798,6 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == スキン用ダウンロード URL
 
-Usage: %s
-== 使い方：%s
-
 Usage: %s %s
 == 使用方法: %s %s
 
@@ -11866,9 +11863,6 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == 動的カメラオン時にマウス感度を使用
-
-Use MSDF text rendering for nameplates (requires TexturedMsdf)
-== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == 単語の長さに基づいて複数文字置換を使用
@@ -12751,9 +12745,6 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == タイムアウトコードが設定されました。0.7 クライアントはタイムアウト時に Tee を取り戻せませんが、0.6 クライアントはあなたの Tee を引き継げます
-
-Your weapon slides and rotates in when you switch, and flips while reloading.
-== 武器切り替え時にスライドしながら回転し、リロード中は回転して裏返ります。
 
 z = Zoom
 == z = ズーム

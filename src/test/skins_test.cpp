@@ -848,6 +848,38 @@ TEST(Skins, DefaultFallbackNeverAppliesTheUntexturedPlaceholder)
 	EXPECT_EQ(RenderTee6Body.find("m_Skins.Find(g_Config.m_TcWhiteFeetSkin)"), std::string::npos);
 }
 
+TEST(Skins, DefaultFallbackUsesSixupDefaultSkinColorsInsteadOfColorlessStandardParts)
+{
+	const std::string Source = ReadTestSourceFile("src/game/client/gameclient.cpp");
+	const std::string SixupDefaultBody = FunctionBody(Source, "void ApplySixupDefaultSkin(");
+	ASSERT_FALSE(SixupDefaultBody.empty());
+	// 0.7 默认外观来自默认皮肤（data/skins7/default.json）：standard 部件 + 自身配色。
+	// 只套用无色 standard 部件会让回退 Tee 渲染成白 Tee，加入服务器与主播模式都会看到。
+	EXPECT_NE(SixupDefaultBody.find("m_Skins7.FindSkin(\"default\", false)"), std::string::npos);
+	EXPECT_NE(SixupDefaultBody.find("pDefaultSkin->m_apParts[Part]"), std::string::npos);
+	EXPECT_NE(SixupDefaultBody.find("pDefaultSkin->m_aUseCustomColors[Part] != 0"), std::string::npos);
+	EXPECT_NE(SixupDefaultBody.find("(int)pDefaultSkin->m_aPartColors[Part]"), std::string::npos);
+	EXPECT_NE(SixupDefaultBody.find("m_Skins7.ApplyColorTo(Info.m_aSixup[Dummy]"), std::string::npos);
+
+	const size_t ApplyDefaultPos = Source.find("bool ApplyDefaultSkin(CGameClient *pGameClient, CTeeRenderInfo &Info)");
+	ASSERT_NE(ApplyDefaultPos, std::string::npos);
+	const size_t CopyColorsPos = Source.find("void CopySkinColorsOnly", ApplyDefaultPos);
+	ASSERT_NE(CopyColorsPos, std::string::npos);
+	const std::string ApplyDefaultBody = Source.substr(ApplyDefaultPos, CopyColorsPos - ApplyDefaultPos);
+	EXPECT_NE(ApplyDefaultBody.find("ApplySixupDefaultSkin(pGameClient, Info);"), std::string::npos);
+}
+
+TEST(Skins, StreamerManagedTeeRenderInfoUsesDefaultSkinInsteadOfWhiteTee)
+{
+	const std::string Source = ReadTestSourceFile("src/game/client/gameclient.cpp");
+	const std::string Body = FunctionBody(Source, "std::shared_ptr<CManagedTeeRenderInfo> CGameClient::CreateManagedTeeRenderInfo(const CClientData &Client)");
+	ASSERT_FALSE(Body.empty());
+	EXPECT_NE(Body.find("if(!ApplyDefaultSkin(this, TeeRenderInfo))"), std::string::npos);
+	EXPECT_NE(Body.find("TeeRenderInfo.Reset();"), std::string::npos);
+	EXPECT_NE(Body.find("TeeRenderInfo.m_Size = Client.m_RenderInfo.m_Size;"), std::string::npos);
+	EXPECT_NE(Body.find("BuildDefaultSkinDescriptor(SkinDescriptor);"), std::string::npos);
+}
+
 TEST(Skins, StreamerFallbackCancelsAnyRealSkinTransition)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/gameclient.cpp");

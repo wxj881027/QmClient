@@ -491,9 +491,6 @@ Adds a specific war entry
 Adds default chat binds
 == Varsayılan sohbet bağlantılarını ekler
 
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
-== HUD'da kukla tuş, çekiç, kontrol ve kopyalama durumunu ve kendi bind durum listesini gösterir.
-
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
 
@@ -1412,6 +1409,9 @@ Bind Wheel
 Bind Wheel Key
 == Bind Tekerleği Tuşu
 
+Binds
+== Bağlamalar
+
 Bit flags for disabling settings tabs
 == Ayarlar sekmelerini devre dışı bırakmak için bit bayrakları
 
@@ -1468,6 +1468,15 @@ Both sides of keyword rules must be filled
 
 Bounce
 == Sekme
+
+Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
+== Köşeli parantezli unvan rengi: 0 = sunucuyu takip et, 1 = tek renk, 2 = gökkuşağı
+
+Bracketed title opacity (0-100)
+== Köşeli parantezli unvan opaklığı (0-100)
+
+Bracketed title single color
+== Köşeli parantezli unvan tek renk
 
 Brightness shift
 == Parlaklık kayması
@@ -1958,6 +1967,9 @@ Collision Line Opacity
 Color
 == Renk
 
+Color & opacity
+== Renk ve opaklık
+
 Color of authenticated player names on scoreboard
 == Skor tablosunda doğrulanmış oyuncu adlarının rengi
 
@@ -2011,6 +2023,9 @@ Command to run when joining server
 
 Command:
 == Komut:
+
+Commands
+== Komutlar
 
 Commands run in the console
 == Konsolda çalıştırılan komutlar
@@ -2351,6 +2366,9 @@ Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
 == Varsayılan dokunmatik kontroller dosyadan yüklenemedi. Ayrıntılar için yerel konsola bakın.
 
+Could not load new features
+== Yeni özellikler yüklenemedi
+
 Could not load sponsor QR code. Check the Base64 data
 == Sponsor QR kodu yüklenemedi. Base64 verilerini kontrol edin
 
@@ -2467,12 +2485,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Özel En Boy Oranı, x100 ile Saklanır (örn. 178=16:9, 233=21:9)
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== Özel bind durumu HUD girdileri. Boş: yerleşik 4 girdi (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu). Biçim: değişken|değer=metin|değer=metin; değişken|metin (sıfır değilken göster); değişken (yalnızca ad: sıfır değilken adı göster). Girdiler ';' ile, alanlar '|' ile ayrılır
-
-Custom bind status list
-== Özel bind durumu listesi
 
 Custom colors
 == Özel renkler
@@ -3083,6 +3095,9 @@ Downloading update...
 Downscaled (0.78)
 == Küçültülmüş (0.78)
 
+Draft file is empty
+== Taslak dosyası boş
+
 Drag HUD modules with the left mouse button
 == HUD modüllerini sol fare tuşuyla sürükleyin
 
@@ -3206,8 +3221,8 @@ Dummy is currently connected.
 Dummy jump
 == Kukla zıplaması
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları ve özel bind durumu listesi
+Dummy key/hammer/control/copy status switches
+== Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları
 
 Dummy marking color
 == Kukla işaret rengi
@@ -3394,9 +3409,6 @@ Emoticon shadow
 
 Emoticons
 == İfadeler
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== Boş: yerleşik 4 girdi. Biçim: var|0=Off|1=On; var|Text
 
 enable
 == etkinleştir
@@ -3674,9 +3686,6 @@ Enable skin queue rotation
 Enable skin switch animation
 == Cilt değiştirme animasyonunu etkinleştir
 
-Enable skin transition animation, then choose the type, scope, duration and easing.
-== Skin geçiş animasyonunu aç, ardından tür, menzil, süre ve yumuşatmayı seç.
-
 Enable smooth cinematic camera while free spectating
 == Serbest izlerken akıcı sinematik kamerayı etkinleştir
 
@@ -3767,9 +3776,6 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Savaş listesini etkinleştir
 
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
-== Silah değiştirme veya şarjör doldurma animasyonunu aç, ardından menzil, süre, dönüş ve yumuşatmayı ayarla.
-
 Enable word filter list
 == Kelime filtresi listesini etkinleştir
 
@@ -3815,9 +3821,6 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == Şifre Gir
 
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
-== Sponsor kodunu gir ve "Kullan" düğmesine bas, ardından unvanı yaz ve "Kaydet"e bas. Tek bir takma ada bağlamak için "Yalnızca bu takma adla göster" seçeneğini işaretle.
-
 Enter Username
 == Kullanıcı Adı Gir
 
@@ -3850,9 +3853,6 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
-
-Entry: %s
-== Konum: %s
 
 Erase items on the in game background
 == Oyun arka planındaki öğeleri sil
@@ -4186,6 +4186,9 @@ Folder Link
 
 Follow
 == Takip et
+
+Follow server
+== Sunucuyu takip et
 
 Following
 == Takip Ediliyor
@@ -5210,6 +5213,12 @@ Input overlay mouse scale (percent)
 Input overlay opacity (percent)
 == Giriş Katmanı Opaklığı (Yüzde)
 
+Input overlay X position (percent)
+== Giriş Katmanı X Konumu (Yüzde)
+
+Input overlay Y position (percent)
+== Giriş Katmanı Y Konumu (Yüzde)
+
 Input smoothing
 == Giriş yumuşatma
 
@@ -5221,9 +5230,6 @@ Insane
 
 Installing update. Please wait...
 == Güncelleme yükleniyor. Lütfen bekleyin...
-
-Instant zoom reverse
-== Zoom yönünü anında çevir
 
 Interface
 == Arayüz
@@ -5780,6 +5786,9 @@ Local
 Local + Dummy
 == Yerel + Dummy
 
+Local console log category filter mask (bit flags)
+== Yerel konsol günlük kategori filtresi maskesi (bit bayrakları)
+
 Local only
 == Yalnızca yerel
 
@@ -6142,9 +6151,6 @@ Menu option - selected
 
 Merge consecutive identical player messages within 2 seconds
 == 2 saniye içindeki art arda gelen aynı oyuncu mesajlarını birleştir
-
-Merges chat messages repeated within a short time into a single line.
-== Kısa sürede tekrarlanan sohbet mesajlarını tek satırda birleştirir.
 
 Message color
 == Mesaj rengi
@@ -6722,6 +6728,9 @@ No matching assets.
 No matching features found. Try other keywords
 == Eşleşen özellik bulunamadı. Diğer anahtar kelimeleri deneyin
 
+No new features yet
+== Henüz yeni özellik yok
+
 No noise reduction
 == Gürültü azaltma yok
 
@@ -7004,11 +7013,11 @@ Open color picker
 Open DDNet Wiki
 == DDNet Wiki'yi aç
 
-Open editor
-== Düzenleyiciyi aç
-
 Open emote selector
 == İfade seçiciyi aç
+
+Open folder
+== Klasörü aç
 
 Open map editor
 == Harita düzenleyiciyi aç
@@ -7051,9 +7060,6 @@ Open the folder containing demo files
 
 Open the folder containing screenshots
 == Ekran görüntülerini içeren klasörü aç
-
-Open the input overlay editor
-== Giriş kaplaması düzenleyicisini aç
 
 Open the saves file
 == Kayıtlı oyun dosyasını aç
@@ -7334,9 +7340,6 @@ Pet Skin:
 Pick result: %s
 == Seçim sonucu: %s
 
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
-== Müzik uygulamanla eşleşen kaynağı seç ve çalmaya devam et; sözler otomatik olarak takip eder.
-
 Pickup range
 == Toplama aralığı
 
@@ -7531,9 +7534,6 @@ Players can't hook each other on this server
 
 Playing effects
 == Oynatma efektleri
-
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
-== Çekiçle çalınanlar dahil, skinin değiştiğinde bir animasyon oynatır.
 
 Please add a valid cut first
 == Lütfen önce geçerli bir kesim ekleyin
@@ -7820,6 +7820,18 @@ PTT release delay (ms)
 Publicly messages everyone your current time in this current running race
 == Bu devam eden yarıştaki geçerli süreni herkese açık olarak mesajla
 
+Publish
+== Yayınla
+
+Publish failed
+== Yayınlama başarısız
+
+Published
+== Yayınlandı
+
+Publishing…
+== Yayınlanıyor…
+
 Pulse
 == Darbe
 
@@ -8077,9 +8089,6 @@ Redeem
 
 Redeem your code and customize your title
 == Kodunu kullan ve unvanını özelleştir
-
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
-== Özel bir unvan açmak için sponsor kodunu kullan. Unvan sohbette ve isim etiketinde görünür.
 
 Reduce antiping and player prediction when frozen
 == Donduğunda antiping ve oyuncu tahminini azalt
@@ -8498,9 +8507,6 @@ Reset mouse position when opening bind wheel
 Reset position of mouse when opening bindwheel
 == Bind tekerleğini açarken farenin konumunu sıfırla
 
-Reset qm_bind_status_items to the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== qm_bind_status_items öğesini yerleşik 4 girdiye sıfırla (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu)
-
 Reset stats on server join (0=persistent, 1=reset on join)
 == Sunucuya girerken istatistikleri sıfırla (0=Kümülatif istatistikler, 1=Her girişte sıfırla)
 
@@ -8545,9 +8551,6 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == Yeniden deneniyor…
-
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
-== Karşı zoom tuşuna basınca yönü anında çevir (0=özgün yumuşak zoom korunur)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -10061,9 +10064,6 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == r komutunun yardımını gösterir, boş bırakılırsa genel yardım
 
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
-== NetEase Cloud Music, Soda Music, Kugou ve QQ Music'ten şarkı sözlerini alıp dinamik adada gösterir.
-
 Shows the credits of the DDNet mod
 == DDNet modunun jeneriklerini gösterir
 
@@ -10102,6 +10102,9 @@ Simple noise reduction
 
 Simple noise reduction strength
 == Basit gürültü azaltma gücü
+
+Single color
+== Tek renk
 
 Size
 == Boyut
@@ -10675,9 +10678,6 @@ Switch failed
 
 Switch interval
 == Geçiş aralığı
-
-Switch on the status rows you need, then list the binds you want to watch.
-== Gereken durum anahtarlarını aç, ardından izlemek istediğin bind'leri listeye ekle.
 
 Switch opacity
 == Değiştirme opaklığı
@@ -11261,6 +11261,9 @@ Timer isn't displayed.
 Tiny Tee Size
 == Minik Tee Boyutu
 
+Title color
+== Unvan rengi
+
 Title server unavailable; retry
 == Unvan sunucusu kullanılamıyor; tekrar dene
 
@@ -11540,9 +11543,6 @@ Tune variable to value
 Tune variable to value or show current value
 == Değişkeni değere ayarla veya geçerli değeri göster
 
-Turn on "Message merging" in Dream Features.
-== "Dream Features" bölümünde "Message merging" seçeneğini aç.
-
 Tutorial
 == Eğitim
 
@@ -11798,9 +11798,6 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == Skin indirmek için URL
 
-Usage: %s
-== Kullanım: %s
-
 Usage: %s %s
 == Kullanım: %s %s
 
@@ -11866,9 +11863,6 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == Dinamik kamera açıkken fare hassasiyetini kullan
-
-Use MSDF text rendering for nameplates (requires TexturedMsdf)
-== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == Kelime uzunluğuna göre çok karakterli değiştirme kullan
@@ -12751,9 +12745,6 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Zaman aşımı kodunuz ayarlandı. 0.7 istemcileri zaman aşımında teelerini geri alamaz; ancak bir 0.6 istemcisi teenizi alabilir
-
-Your weapon slides and rotates in when you switch, and flips while reloading.
-== Silah değiştirirken kayarak dönerek girer, şarjör doldururken takla atar.
 
 z = Zoom
 == z = Yakınlaştırma

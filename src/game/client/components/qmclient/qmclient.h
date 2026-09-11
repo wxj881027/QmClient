@@ -18,6 +18,23 @@ class IJob;
 
 class CQmClient : public CComponent
 {
+public:
+	// 「新功能」弹窗状态：内容来自中心服广播，本地只保留最近一次成功结果。
+	enum class EQmNewsStatus
+	{
+		IDLE = 0,
+		LOADING,
+		READY,
+		EMPTY,
+		FAILED,
+		PUBLISHING,
+		PUBLISHED,
+		PUBLISH_DENIED,
+		PUBLISH_TOO_LARGE,
+		PUBLISH_FAILED,
+	};
+
+private:
 	std::shared_ptr<CHttpRequest> m_pTitleOperation;
 	std::shared_ptr<CHttpRequest> m_pTitleReport;
 	std::shared_ptr<CHttpRequest> m_pTitleList;
@@ -52,6 +69,8 @@ class CQmClient : public CComponent
 	std::shared_ptr<std::mutex> m_pQmClientLifecycleMarkerMutex = std::make_shared<std::mutex>();
 	std::shared_ptr<CHttpRequest> m_pQmDdnetPlayerTask = nullptr;
 	std::shared_ptr<IJob> m_pQmDdnetPlayerParseJob = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmNewsTask = nullptr;
+	std::shared_ptr<CHttpRequest> m_pQmNewsPublishTask = nullptr;
 
 	char m_aQmClientAuthToken[256] = "";
 	char m_aQmClientMachineHash[SHA256_MAXSTRSIZE] = "";
@@ -63,6 +82,21 @@ class CQmClient : public CComponent
 	char m_aQmDeveloperToken[65] = "";
 	char m_aQmDeveloperSessionId[33] = "";
 	char m_aQmDeveloperPendingServerAddress[NETADDR_MAXSTRSIZE] = "";
+
+	// 「新功能」广播：远端 Markdown + 本地缓存 + 开发者草稿。
+	std::string m_QmNewsMarkdown;
+	std::string m_QmNewsDraft;
+	EQmNewsStatus m_QmNewsStatus = EQmNewsStatus::IDLE;
+	int m_QmNewsVersion = 0;
+	int m_QmNewsRevision = 0;
+	int64_t m_QmNewsLastFetch = 0;
+	bool m_QmNewsPublishing = false;
+	void InitQmNews();
+	void LoadQmNewsCache();
+	void SaveQmNewsCache();
+	void ApplyQmNewsPayload(const char *pBody, size_t BodySize);
+	void FinishQmNews();
+	void FinishQmNewsPublish();
 
 	int64_t m_QmClientLastSync = 0;
 	int64_t m_QmDeveloperLastSync = 0;
@@ -153,6 +187,18 @@ public:
 	int QmClientOnlineDummyCount() const { return m_QmClientOnlineDummyCount; }
 	int QmDdnetTotalFinishes() const { return m_QmDdnetTotalFinishes; }
 	const char *QmDdnetFavoritePartner() const { return m_aQmDdnetFavoritePartner; }
+
+	// 「新功能」弹窗：内容全部来自中心服广播，本地只保留最近一次成功结果。
+	bool HasDeveloperCredential() const { return m_aQmDeveloperToken[0] != '\0'; }
+	const char *QmNewsMarkdown() const { return m_QmNewsMarkdown.c_str(); }
+	const char *QmNewsDraft() const { return m_QmNewsDraft.c_str(); }
+	EQmNewsStatus QmNewsStatus() const { return m_QmNewsStatus; }
+	int QmNewsVersion() const { return m_QmNewsVersion; }
+	int QmNewsRevision() const { return m_QmNewsRevision; }
+	bool QmNewsPublishing() const { return m_QmNewsPublishing; }
+	void QmNewsRefresh(bool Force);
+	void QmNewsPublishDraft();
+	void QmNewsReloadDraft();
 };
 
 #endif

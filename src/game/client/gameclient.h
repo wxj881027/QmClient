@@ -83,7 +83,6 @@
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
-#include "components/qmclient/qm_bind_status_hud.h"
 #include "components/qmclient/qmclient.h"
 #include "components/qmclient/scripting.h"
 #include "components/qmclient/stutter_diagnostics.h"
@@ -298,7 +297,6 @@ public:
 	CQmChatEmoji m_QmChatEmoji;
 	CQmMonitoring m_QmMonitoring;
 	CQmHudNotifications m_QmHudNotifications;
-	CQmBindStatusHud m_QmBindStatusHud;
 	CQmWeaponTrajectory m_QmWeaponTrajectory;
 	CTClient m_TClient;
 	CFastPractice m_FastPractice;
@@ -801,8 +799,6 @@ public:
 		CNetObj_Character m_Snapped;
 		CNetObj_Character m_Evolved;
 
-		CNetMsg_Sv_PreInput m_aPreInputs[200];
-
 		// rendered characters
 		CNetObj_Character m_RenderCur;
 		CNetObj_Character m_RenderPrev;
@@ -811,10 +807,16 @@ public:
 		bool m_IsPredictedLocal;
 		int64_t m_aSmoothStart[2];
 		int64_t m_aSmoothLen[2];
-		vec2 m_aPredPos[200];
-		int m_aPredTick[200];
 		bool m_SpecCharPresent;
 		vec2 m_SpecChar;
+
+		// 冷数据必须排在热渲染字段之后：这两个数组成员合计约 11 KB，
+		// 原先夹在 m_RenderCur/m_RenderPos 与 m_SpecChar 之间，会把同一客户端的热字段
+		// 撑到相距十来个 KB，导致每帧按 128 个客户端遍历时几乎每次访问都跨 cache line。
+		// 仅调整声明顺序，无任何语义变化。
+		CNetMsg_Sv_PreInput m_aPreInputs[200];
+		vec2 m_aPredPos[200];
+		int m_aPredTick[200];
 
 		void UpdateSkinInfo();
 		void UpdateSkin7HatSprite(int Dummy);
@@ -998,6 +1000,23 @@ public:
 
 	CTeamsCore m_Teams;
 
+	// 钩子碰撞线模拟会以「每 tick 一次」的频率调用 IntersectCharacter，而它每次都要遍历
+	// MAX_CLIENTS 个客户端并读取 m_aClients[i]（CClientData 步长上万字节，几乎每次迭代都会
+	// cache miss）。这些数据在两次渲染之间不会变化，因此在 CPlayers::OnRender 开头预处理成
+	// 紧凑数组，让热循环变成对连续内存的线性扫描。取值与直接读原始字段逐位一致。
+	// 调用约定：IntersectCharacter 只能由 CPlayers::OnRender 路径调用（当前唯一调用点），
+	// 以保证缓存已在本帧被刷新。
+	struct SHookCollTarget
+	{
+		vec2 m_Pos;
+		bool m_Valid;
+		bool m_Super;
+		bool m_Solo;
+		bool m_HookHitDisabled;
+	};
+	SHookCollTarget m_aHookCollTargets[MAX_CLIENTS] = {};
+	void UpdateHookCollTargets();
+
 	int IntersectCharacter(vec2 HookPos, vec2 NewPos, vec2 &NewPos2, int OwnId, vec2 *pPlayerPosition = nullptr);
 
 	int LastRaceTick() const;
@@ -1045,7 +1064,6 @@ public:
 
 	// TClient
 	CGameWorld m_RegularPredictedWorld;
-	CGameWorld m_PrevRegularPredictedWorld;
 
 	// TClient
 	CGameWorld m_ExtraPredictedWorld;
