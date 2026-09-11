@@ -272,6 +272,9 @@ A vote is currently active.
 Abort
 == 중단
 
+Accumulated client launch count (used by the sponsor reminder)
+== 누적 클라이언트 실행 횟수(후원 알림에 사용)
+
 Activate
 == 활성화
 
@@ -487,6 +490,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == 기본 채팅 바인드 추가
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== 더미의 키, 해머, 컨트롤, 복사 상태를 HUD에 표시하고 사용자 지정 bind 상태 목록도 지원합니다.
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -1190,9 +1196,6 @@ Available resolutions
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 평균 %.*f   ↓ %.*f   ↑ %.*f
 
-Axiom API returned an error
-== Axiom API에서 오류를 반환했습니다
-
 Axiom auto login failed
 == Axiom 자동 로그인 실패
 
@@ -1207,12 +1210,6 @@ Axiom dummy password
 
 Axiom main account password
 == Axiom 메인 계정 비밀번호
-
-Axiom score request failed
-== Axiom 점수 요청에 실패했습니다
-
-Axiom scores
-== Axiom 점수
 
 Axis
 == 축
@@ -2036,9 +2033,6 @@ Compatible with single-player area hints from other servers
 Complete snapshots are arriving late or not arriving
 == 완전한 스냅샷이 늦게 도착하거나 도착하지 않음
 
-Completed maps
-== 완료한 맵
-
 Compressor attack time (ms)
 == 컴프레서 어택 타임 (ms)
 
@@ -2147,9 +2141,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == 플레이어 정보 및 국기 구성
 
-Configure qm_report_app_id and qm_report_secret first
-== 먼저 qm_report_app_id와 qm_report_secret을 설정하세요
-
 Configure QmClient gameplay helpers
 == QmClient 게임 도우미 구성
 
@@ -2206,9 +2197,6 @@ Connect dummy
 
 Connect dummy to enable
 == 더미 연결 후 활성화
-
-Connect to a server first
-== 먼저 서버에 연결하세요
 
 Connect to server first to establish voice network link
 == 먼저 서버에 연결하여 음성 네트워크 링크를 설정해야 합니다
@@ -2269,6 +2257,9 @@ Console command executed after joining server
 
 Console command executed before connecting to server
 == 서버 연결 전 실행되는 콘솔 명령
+
+Contacting title server
+== 칭호 서버에 연결 중
 
 Continue anyway?
 == 그래도 계속하시겠습니까?
@@ -2345,9 +2336,6 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == 더미에 연결할 수 없습니다
 
-Could not create report scan request
-== 신고 스캔 요청을 생성할 수 없습니다
-
 Could not find a Tutorial server. Check your internet connection.
 == 튜토리얼 서버를 찾을 수 없습니다. 인터넷 연결을 확인하세요.
 
@@ -2356,9 +2344,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == 팀을 찾을 수 없습니다
-
-Could not get current server address
-== 현재 서버 주소를 가져올 수 없습니다
 
 Could not get server list from master server
 == 마스터 서버에서 서버 목록을 가져올 수 없습니다
@@ -2383,6 +2368,9 @@ Could not resolve connect address '%s'. See local console for details.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == 다운로드한 맵을 저장할 수 없습니다. 이 파일을 수동으로 삭제해 보세요: %s
+
+Could not save title credential
+== 칭호 인증 정보를 저장할 수 없습니다
 
 Could not save touch controls to file. See local console for details.
 == 터치 컨트롤을 파일에 저장할 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
@@ -2509,6 +2497,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == 사용자 정의 Provider 모델 이름
+
+Custom title
+== 사용자 지정 칭호
 
 Custom translation prompt (overrides built-in)
 == 사용자 정의 번역 프롬프트 (내장 프롬프트 덮어쓰기)
@@ -3683,6 +3674,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == 스킨 전환 애니메이션 활성화
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== 스킨 전환 애니메이션을 켜고 종류, 범위, 시간, 이징을 선택하세요.
+
 Enable smooth cinematic camera while free spectating
 == 자유 관전 중 부드러운 시네마틱 카메라 활성화
 
@@ -3773,6 +3767,9 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 적대 목록 활성화
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== 무기 교체 애니메이션 또는 재장전 애니메이션을 켜고 범위, 시간, 회전, 이징을 조정하세요.
+
 Enable word filter list
 == 단어 필터 목록 활성화
 
@@ -3818,8 +3815,14 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == 비밀번호 입력
 
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== 후원 코드를 입력하고 "등록"을 누른 뒤 칭호를 작성하고 "저장"을 누르세요. "이 닉네임에서만 표시"를 켜면 하나의 닉네임에만 연결됩니다.
+
 Enter Username
 == 사용자 이름 입력
+
+Enter your sponsor code
+== 배포받은 인증 코드를 입력하세요
 
 Entities
 == 엔티티
@@ -3847,6 +3850,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
+
+Entry: %s
+== 위치: %s
 
 Erase items on the in game background
 == 게임 배경 위의 항목 지우기
@@ -3892,6 +3898,9 @@ Evaluate an expression
 
 Event
 == 이벤트
+
+Exact bound nickname
+== 연결할 정확한 닉네임
 
 Example of usage
 == 사용 예시
@@ -4211,6 +4220,9 @@ Forms
 Found %d global cards
 == %d개의 전역 카드를 찾았습니다
 
+Four IP addresses are already online
+== 이미 4개 IP가 접속 중입니다
+
 FPM
 == FPM
 
@@ -4504,9 +4516,6 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 
 Global card ordering old config migration completed flag
 == 전역 카드 정렬 이전 설정 마이그레이션 완료 표시
-
-Global rank
-== 세계 순위
 
 Global toggle key
 == 전역 토글 키
@@ -5213,6 +5222,9 @@ Insane
 Installing update. Please wait...
 == 업데이트 설치 중입니다. 잠시 기다려 주세요...
 
+Instant zoom reverse
+== 줌 반전 즉시 적용
+
 Interface
 == 인터페이스
 
@@ -5252,8 +5264,8 @@ Interpolation
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == 현재 편집기 맵 사본을 "auto" 폴더에 자동 저장하는 간격 (0=끄기)
 
-Invalid Axiom API response
-== 잘못된 Axiom API 응답
+Invalid bound name
+== 연결할 닉네임이 유효하지 않습니다
 
 Invalid client id to kick
 == 추방할 클라이언트 ID 가 잘못됨
@@ -5272,6 +5284,9 @@ Invalid option
 
 Invalid spectator id used
 == 잘못된 관전자 ID 가 사용됨
+
+Invalid sponsor code
+== 유효하지 않은 인증 코드
 
 Invalid translation backend
 == 잘못된 번역 백엔드
@@ -5540,6 +5555,9 @@ Latency compensation
 Latency Jitter
 == 지연 시간 지터
 
+Launch count threshold for the next sponsor reminder
+== 다음 후원 알림까지의 실행 횟수 임계값
+
 Layout
 == 레이아웃
 
@@ -5707,9 +5725,6 @@ Loading
 
 Loading assets...
 == 에셋 로딩 중...
-
-Loading Axiom scores...
-== Axiom 점수 불러오는 중...
 
 Loading commands…
 == 명령 로딩 중…
@@ -5951,9 +5966,6 @@ Map to use on server
 Map type:
 == 맵 유형:
 
-Maps
-== 맵
-
 Margin when notification is docked
 == 알림바가 가장자리에 붙을 때 여백
 
@@ -6131,6 +6143,9 @@ Menu option - selected
 Merge consecutive identical player messages within 2 seconds
 == 2초 안에 연속으로 표시된 동일 플레이어의 같은 메시지 병합
 
+Merges chat messages repeated within a short time into a single line.
+== 짧은 시간 안에 반복된 채팅 메시지를 한 줄로 합칩니다.
+
 Message color
 == 메시지 색상
 
@@ -6163,9 +6178,6 @@ Microphone volume
 
 Microphone volume (percent)
 == 마이크 볼륨 (백분율)
-
-Mileage
-== 주행 거리
 
 Milliseconds
 == 밀리초
@@ -6316,9 +6328,6 @@ Moves to the tile with x/y-number ii
 
 Multi-View
 == 멀티 뷰
-
-Multiple exact Axiom players found
-== 정확히 일치하는 Axiom 플레이어가 여러 명 있습니다
 
 Mute
 == 음소거
@@ -6578,6 +6587,9 @@ New button
 New category name
 == 새 카테고리 이름
 
+New features
+== 새 기능
+
 New IME
 == 새 IME
 
@@ -6821,12 +6833,6 @@ Not open, check input device or mic permission
 Not open, check output device
 == 열려 있지 않음, 출력 장치 확인
 
-Not ranked
-== 순위 없음
-
-Not requested
-== 요청하지 않음
-
 Note
 == 메모
 
@@ -6974,6 +6980,9 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == 다른 Tee 가 화면에 없을 때만 표시
 
+Only show with this nickname
+== 이 닉네임을 사용할 때만 표시
+
 Only what you can't imagine, nothing Dream can't do
 == 상상할 수 없는 것만 있을 뿐, Dream 이 할 수 없는 것은 없습니다
 
@@ -7012,6 +7021,9 @@ Open pie menu
 
 Open rename dialog
 == 이름 바꾸기 대화상자 열기
+
+Open settings
+== 설정 열기
 
 Open spectator mode selector
 == 관전자 모드 선택기 열기
@@ -7286,8 +7298,11 @@ Per-name volume (name=percent)
 Performance debug log threshold (ms)
 == 성능 디버그 로그 임계값 (ms)
 
-Performance points
-== 성과 점수
+Permanent access; up to 4 online IP addresses
+== 영구 자격, 최대 4개 IP 동시 접속
+
+Permanent sponsor verified
+== 영구 후원 자격 인증 완료
 
 Personal best:
 == 개인 최고 기록:
@@ -7318,6 +7333,9 @@ Pet Skin:
 
 Pick result: %s
 == 추첨 결과: %s
+
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== 사용하는 음악 앱에 맞는 소스를 선택하고 재생만 하면 가사가 자동으로 따라옵니다.
 
 Pickup range
 == 획득 범위
@@ -7366,9 +7384,6 @@ Play the current demo
 
 Play the selected demo
 == 선택한 데모 재생
-
-Play time
-== 플레이 시간
 
 Play/Pause
 == 재생/일시정지
@@ -7457,9 +7472,6 @@ Player name:
 Player not found
 == 플레이어를 찾을 수 없습니다
 
-Player not found on Axiom
-== Axiom에서 플레이어를 찾을 수 없습니다
-
 Player preview
 == 플레이어 미리보기
 
@@ -7519,6 +7531,9 @@ Players can't hook each other on this server
 
 Playing effects
 == 효과 재생
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== 해머로 빼앗은 스킨을 포함해 스킨이 바뀔 때 애니메이션을 재생합니다.
 
 Please add a valid cut first
 == 먼저 유효한 잘라내기 구간을 추가하세요
@@ -7615,6 +7630,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == 유탄 궤적 예측 (cl_antiping 1에서만)
+
+Predict ninja path
+== 닌자 경로 예측
 
 Predict weapon projectiles (only with cl_antiping 1)
 == 무기 발사체 예측 (cl_antiping 1에서만)
@@ -7726,6 +7744,9 @@ Preview the composed status bar output
 
 Preview the current chat appearance
 == Preview the current chat appearance
+
+Preview the sponsor reminder without changing the launch count
+== 실행 횟수를 바꾸지 않고 후원 알림 미리보기
 
 Preview visibilities
 == 미리보기 가시성
@@ -8003,8 +8024,8 @@ Ratio
 Ratio threshold for local target language detection
 == 로컬 대상 언어 인식 비율 임계값
 
-Read new feature indicators
-== 읽은 설정 인터페이스 새 기능 표시
+Really? Not even a little?
+== 정말요? 조금도 생각해 보실 생각이 없나요?
 
 Reason
 == 이유
@@ -8050,6 +8071,15 @@ Red team
 
 Red team wins!
 == 레드 팀 승리!
+
+Redeem
+== 등록
+
+Redeem your code and customize your title
+== 코드를 등록하고 칭호를 설정하세요
+
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== 후원 코드를 등록하면 사용자 지정 칭호를 사용할 수 있습니다. 칭호는 채팅과 이름표에 표시됩니다.
 
 Reduce antiping and player prediction when frozen
 == 얼었을 때 안티핑 및 플레이어 예측 감소
@@ -8402,36 +8432,6 @@ Reply to messages from muted players
 Reply with dummy
 == 더미로 답장
 
-Report
-== 신고
-
-Report request canceled
-== 신고 요청이 취소되었습니다
-
-Report request failed due to network error
-== 네트워크 오류로 인해 신고 요청이 실패했습니다
-
-Report request failed with HTTP status: %d
-== HTTP 상태 %d로 인해 신고 요청이 실패했습니다
-
-Report request is already in progress
-== 신고 요청이 이미 진행 중입니다
-
-Report scan request submitted
-== 신고 스캔 요청이 제출되었습니다
-
-Report service App ID
-== 신고 서비스 App ID
-
-Report service signing key
-== 신고 서명 키
-
-Report service URL
-== 신고 서비스 주소
-
-Reports are not available on Axiom servers
-== Axiom 서버에서는 신고 기능을 사용할 수 없습니다
-
 Request to swap your tee with another team member
 == 다른 팀원과 티를 교체하도록 요청
 
@@ -8545,6 +8545,9 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == 재시도 중…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== 반대 줌 키를 누르면 즉시 방향 전환 (0=기존 부드러운 줌 유지)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -8800,12 +8803,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == 핑에 따라 불확실성 지속 시간 조정 (100=1.0배)
-
-Scanning current server
-== 현재 서버 스캔 중
-
-Scanning current server...
-== 현재 서버 스캔 중...
 
 Score
 == 점수
@@ -9953,6 +9950,9 @@ Show the number of frozen tees
 Show the number of tees still alive
 == 아직 살아있는 Tee 수 표시
 
+Show the occasional sponsor reminder in the main menu
+== 메인 메뉴에서 후원 알림을 가끔 표시
+
 Show the pet
 == 펫 표시
 
@@ -10060,6 +10060,9 @@ Shows gameplay information for this server
 
 Shows help to command r, general help if left blank
 == 명령 r 에 대한 도움말 표시, 비워두면 일반 도움말 표시
+
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== NetEase Cloud Music, Soda Music, Kugou, QQ Music의 가사를 가져와 다이내믹 아일랜드에 표시합니다.
 
 Shows the credits of the DDNet mod
 == DDNet 모드의 크레딧 표시
@@ -10445,8 +10448,20 @@ Sphere
 Spin pop
 == 회전 팝
 
+Sponsor code
+== 인증 코드
+
+Sponsor code already claimed
+== 이미 사용된 인증 코드입니다
+
+Sponsor reminder
+== 후원 알림
+
 Sponsor support
 == 스폰서 지원
+
+Sponsor title
+== 후원자 칭호
 
 Sponsors:
 == 스폰서:
@@ -10540,6 +10555,9 @@ Status Scheme:
 
 Steam profile name
 == Steam 프로필 이름
+
+Still free after %d sponsors. Take a look?
+== %d명의 후원자 덕분입니다. 보시겠어요?
 
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == 전환 시 키 입력 중지 (0=끄기, 1=더미, 2=플레이어)
@@ -10657,6 +10675,9 @@ Switch failed
 
 Switch interval
 == 전환 간격
+
+Switch on the status rows you need, then list the binds you want to watch.
+== 필요한 상태 스위치를 켜고, 감시할 bind를 사용자 지정 목록에 입력하세요.
 
 Switch opacity
 == 전환 불투명도
@@ -10834,9 +10855,6 @@ Team mode change disabled
 
 Team mode change is disabled on this server.
 == 이 서버에서는 팀 모드 변경이 비활성화되었습니다
-
-Team rank
-== 팀 순위
 
 Team save already in progress
 == 팀 저장이 이미 진행 중입니다
@@ -11243,6 +11261,12 @@ Timer isn't displayed.
 Tiny Tee Size
 == 아주 작은 Tee 크기
 
+Title server unavailable; retry
+== 칭호 서버에 연결할 수 없습니다. 다시 시도하세요
+
+Title too long or contains unsupported characters
+== 칭호가 너무 길거나 지원하지 않는 문자가 있습니다
+
 To save all players in your team have to be alive and not in '/spec'
 == 팀을 저장하려면 모든 팀원이 살아 있고 '/spec' 상태가 아니어야 합니다
 
@@ -11516,6 +11540,9 @@ Tune variable to value
 Tune variable to value or show current value
 == 변수를 값으로 조정하거나 현재 값을 표시합니다.
 
+Turn on "Message merging" in Dream Features.
+== "드림 기능"에서 "Message merging"을 켜세요.
+
 Tutorial
 == 튜토리얼
 
@@ -11732,6 +11759,9 @@ Unregister protocol and file extensions
 Unsaved changes
 == 저장되지 않은 변경 사항
 
+Up to 6 Chinese or 12 ASCII characters
+== 중국어 6자 또는 ASCII 12자까지
+
 Update
 == 업데이트
 
@@ -11767,6 +11797,9 @@ URL for downloading maps (must start with https://)
 
 URL for downloading skins
 == 스킨 다운로드 URL
+
+Usage: %s
+== 사용법: %s
 
 Usage: %s %s
 == 사용법: %s %s
@@ -11833,6 +11866,9 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == 동적 카메라가 켜져 있을 때 마우스 감도 사용
+
+Use MSDF text rendering for nameplates (requires TexturedMsdf)
+== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == 단어 길이에 따른 다중 문자 대체 사용
@@ -12715,6 +12751,9 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == 타임아웃 코드가 설정되었습니다. 0.7 클라이언트는 타임아웃 시 티를 되찾을 수 없지만, 0.6 클라이언트는 당신의 티를 차지할 수 있습니다
+
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== 무기를 바꿀 때 미끄러지듯 회전하며 등장하고, 재장전 중에는 뒤집힙니다.
 
 z = Zoom
 == z = 확대/축소

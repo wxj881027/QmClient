@@ -1,0 +1,17 @@
+[Unit]
+Description=QmClient sponsor titles
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/qmclient-titles
+Environment=NODE_PATH=/home/ubuntu/Q1menG_Client/tclient_scripts/qmclient_center_server/node_modules
+Environment=TITLE_DATA_DIR=/home/ubuntu/qmclient-titles/data
+Environment=PORT=19092
+ExecStart=/usr/bin/node /home/ubuntu/qmclient-titles/title_server.js
+Restart=on-failure
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

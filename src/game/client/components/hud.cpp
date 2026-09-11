@@ -1139,7 +1139,9 @@ void CHud::OnInit()
 void CHud::DestroyMediaIslandBlurTargets()
 {
 	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurSource);
-	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurTemporary);
+	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsample);
+	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsampleTemporary);
+	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurDownsampleTarget);
 	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurTarget);
 	m_MediaIslandBlurWidth = 0;
 	m_MediaIslandBlurHeight = 0;
@@ -1161,7 +1163,7 @@ bool CHud::PrepareMediaIslandBlur()
 		return false;
 	if(!Graphics()->IsBackbufferCaptureSupported() || !Graphics()->IsRenderTargetGaussianBlurSupported())
 	{
-		if(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurTemporary.IsValid() || m_MediaIslandBlurTarget.IsValid())
+		if(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurDownsample.IsValid() || m_MediaIslandBlurDownsampleTemporary.IsValid() || m_MediaIslandBlurDownsampleTarget.IsValid() || m_MediaIslandBlurTarget.IsValid())
 			DestroyMediaIslandBlurTargets();
 		return false;
 	}
@@ -1177,13 +1179,17 @@ bool CHud::PrepareMediaIslandBlur()
 	}
 
 	const bool SizeChanged = BlurWidth != m_MediaIslandBlurWidth || BlurHeight != m_MediaIslandBlurHeight;
-	if(SizeChanged || !m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurTemporary.IsValid() || !m_MediaIslandBlurTarget.IsValid())
+	const int DualBlurWidth = std::max(1, (BlurWidth + 1) / 2);
+	const int DualBlurHeight = std::max(1, (BlurHeight + 1) / 2);
+	if(SizeChanged || !m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurDownsample.IsValid() || !m_MediaIslandBlurDownsampleTemporary.IsValid() || !m_MediaIslandBlurDownsampleTarget.IsValid() || !m_MediaIslandBlurTarget.IsValid())
 	{
 		DestroyMediaIslandBlurTargets();
 		m_MediaIslandBlurSource = Graphics()->CreateRenderTarget(BlurWidth, BlurHeight);
-		m_MediaIslandBlurTemporary = Graphics()->CreateRenderTarget(BlurWidth, BlurHeight);
+		m_MediaIslandBlurDownsample = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
+		m_MediaIslandBlurDownsampleTemporary = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
+		m_MediaIslandBlurDownsampleTarget = Graphics()->CreateRenderTarget(DualBlurWidth, DualBlurHeight);
 		m_MediaIslandBlurTarget = Graphics()->CreateRenderTarget(BlurWidth, BlurHeight);
-		if(!m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurTemporary.IsValid() || !m_MediaIslandBlurTarget.IsValid())
+		if(!m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurDownsample.IsValid() || !m_MediaIslandBlurDownsampleTemporary.IsValid() || !m_MediaIslandBlurDownsampleTarget.IsValid() || !m_MediaIslandBlurTarget.IsValid())
 		{
 			DestroyMediaIslandBlurTargets();
 			return false;
@@ -1205,11 +1211,13 @@ bool CHud::PrepareMediaIslandBlur()
 	}
 
 	IGraphics::SGaussianBlurParams BlurParams;
-	BlurParams.m_Radius = 4;
-	BlurParams.m_Sigma = 2.0f;
-	m_MediaIslandBlurReady = Graphics()->GaussianBlurRenderTarget(
+	BlurParams.m_Radius = 5;
+	BlurParams.m_Sigma = 2.5f;
+	m_MediaIslandBlurReady = Graphics()->DualBlurRenderTarget(
 		m_MediaIslandBlurSource,
-		m_MediaIslandBlurTemporary,
+		m_MediaIslandBlurDownsample,
+		m_MediaIslandBlurDownsampleTemporary,
+		m_MediaIslandBlurDownsampleTarget,
 		m_MediaIslandBlurTarget,
 		BlurParams);
 	return m_MediaIslandBlurReady;
@@ -3789,7 +3797,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
 	const int SpectatorCount = m_MediaIslandFrameCache.m_SpectatorCount;
 	const bool ShowSpectator = SpectatorCount > 0;
-	const bool ShowSpectatorSatellite = ShowSpectator || m_MediaIslandAnimState.m_SpectatorLiquidProgress > 0.0f;
+	const bool ShowSpectatorSatellite = ShowSpectator || QmHudMediaIslandBlobProgressOf(m_MediaIslandAnimState.m_SpectatorLiquidSpring.m_Progress) > 0.0f;
 	char aTeamBuf[32];
 	const bool ShowTeam = BuildHudTeamText(*GameClient(), aTeamBuf, sizeof(aTeamBuf));
 
@@ -3866,7 +3874,8 @@ float CHud::GetTopIslandAvoidanceRight() const
 	BaseWidth += PaddingX;
 	if(!ShowCover && MetaItemCount == 0)
 		BaseWidth = 0.0f;
-	if(ShowSpectatorSatellite)
+	// 与 RenderMediaIsland 共用同一判定，避免两处保留宽度不同源。
+	if(QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, m_MediaIslandAnimState.HasVisibleCountdownSatellite()))
 		BaseWidth = std::max(BaseWidth, BaseIslandHeight);
 
 	const int64_t Now = time_get();
@@ -4082,7 +4091,7 @@ void CHud::RenderMediaIsland()
 	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
 	const int SpectatorCount = m_MediaIslandFrameCache.m_SpectatorCount;
 	const bool ShowSpectator = SpectatorCount > 0;
-	const float SpectatorLiquidProgressBeforeUpdate = AnimState.m_SpectatorLiquidProgress;
+	const float SpectatorLiquidProgressBeforeUpdate = QmHudMediaIslandBlobProgress(AnimState.m_SpectatorLiquidSpring);
 	const bool AnimateSpectatorEyeOpen = QmHudMediaIslandShouldAnimateSpectatorEyeOpen(ShowSpectator, AnimState.m_SpectatorHadWatchers, SpectatorLiquidProgressBeforeUpdate);
 	if(ShowSpectator)
 		AnimState.m_SpectatorDisplayCount = SpectatorCount;
@@ -4091,16 +4100,17 @@ void CHud::RenderMediaIsland()
 		AnimState.m_SpectatorExitLiquidStart = SpectatorLiquidProgressBeforeUpdate;
 		AnimState.m_SpectatorExitIconStart = AnimState.m_SpectatorIconProgress;
 	}
-	float SpectatorLiquidDeltaSeconds = 0.0f;
-	if(AnimState.m_SpectatorLiquidLastTick > 0 && Now >= AnimState.m_SpectatorLiquidLastTick)
-		SpectatorLiquidDeltaSeconds = std::min((Now - AnimState.m_SpectatorLiquidLastTick) / (float)time_freq(), 0.10f);
-	AnimState.m_SpectatorLiquidLastTick = Now;
-	AnimState.m_SpectatorLiquidProgress = QmHudAdvanceMediaIslandLiquidProgress(AnimState.m_SpectatorLiquidProgress, ShowSpectator, SpectatorLiquidDeltaSeconds, g_Config.m_QmUiMotionLevel > 0);
-	if(!ShowSpectator && AnimState.m_SpectatorLiquidProgress <= 0.0f)
+	QmHudAdvanceMediaIslandLiquidProgress(
+		AnimState.m_SpectatorLiquidSpring,
+		AnimState.m_SpectatorLiquidLastTick,
+		Now,
+		ShowSpectator,
+		g_Config.m_QmUiMotionLevel > 0);
+	if(!ShowSpectator && QmHudMediaIslandBlobProgress(AnimState.m_SpectatorLiquidSpring) <= 0.0f)
 		AnimState.m_SpectatorLiquidLastTick = 0;
 	if(!ShowSpectator)
 	{
-		AnimState.m_SpectatorIconProgress = QmHudMediaIslandSpectatorIconProgressDuringExit(AnimState.m_SpectatorExitIconStart, AnimState.m_SpectatorExitLiquidStart, AnimState.m_SpectatorLiquidProgress);
+		AnimState.m_SpectatorIconProgress = QmHudMediaIslandSpectatorIconProgressDuringExit(AnimState.m_SpectatorExitIconStart, AnimState.m_SpectatorExitLiquidStart, QmHudMediaIslandBlobProgress(AnimState.m_SpectatorLiquidSpring));
 		AnimState.m_SpectatorIconLastTick = 0;
 	}
 	else if(AnimateSpectatorEyeOpen)
@@ -4123,7 +4133,7 @@ void CHud::RenderMediaIsland()
 			AnimState.m_SpectatorIconLastTick = 0;
 	}
 	AnimState.m_SpectatorHadWatchers = ShowSpectator;
-	const bool HasSpectatorSatellitePresentation = ShowSpectator || AnimState.m_SpectatorLiquidProgress > 0.0f;
+	const bool HasSpectatorSatellitePresentation = ShowSpectator || QmHudMediaIslandBlobProgressOf(AnimState.m_SpectatorLiquidSpring.m_Progress) > 0.0f;
 	const bool HasSatellitePresentation = HadSatellitePresentation || HasSpectatorSatellitePresentation;
 	char aTeamBuf[32];
 	const bool ShowTeam = BuildHudTeamText(*GameClient(), aTeamBuf, sizeof(aTeamBuf));
@@ -4319,7 +4329,8 @@ void CHud::RenderMediaIsland()
 	BaseWidth += PaddingX;
 	if(!ShowCover && MetaItemCount == 0)
 		BaseWidth = 0.0f;
-	if(HasSatellitePresentation)
+	// 状态区（时钟/冰冻统计）在计时器右侧，不属于主胶囊内容，不能作为保留依据。
+	if(QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, AnimState.HasVisibleCountdownSatellite()))
 		BaseWidth = std::max(BaseWidth, BaseIslandHeight);
 	if(SwapRows.m_InlineSwapCount > 0)
 	{
@@ -4685,12 +4696,9 @@ void CHud::RenderMediaIsland()
 			}
 		}
 		const bool Active = Item.m_Active && ActiveIndex >= 0;
-		float LiquidDeltaSeconds = 0.0f;
-		if(Item.m_LiquidLastTick > 0 && Now >= Item.m_LiquidLastTick)
-			LiquidDeltaSeconds = std::min((Now - Item.m_LiquidLastTick) / (float)time_freq(), 0.10f);
-		Item.m_LiquidLastTick = Now;
-		Item.m_LiquidProgress = QmHudAdvanceMediaIslandLiquidProgress(Item.m_LiquidProgress, Active, LiquidDeltaSeconds, MotionLevel > 0);
-		if(!Active && Item.m_LiquidProgress <= 0.0f)
+		QmHudAdvanceMediaIslandLiquidProgress(Item.m_LiquidSpring, Item.m_LiquidLastTick, Now, Active, MotionLevel > 0);
+		const SHudMediaIslandBlobPose BlobPose = QmHudMediaIslandBlobPose(Item.m_LiquidSpring);
+		if(!Active && QmHudMediaIslandBlobProgress(Item.m_LiquidSpring) <= 0.0f)
 		{
 			Item.Reset();
 			continue;
@@ -4724,7 +4732,6 @@ void CHud::RenderMediaIsland()
 		if(FinalWidth <= 0.0f)
 			FinalWidth = SatelliteDiameter;
 
-		const SHudMediaIslandBlobPose BlobPose = QmHudMediaIslandBlobPose(Item.m_LiquidProgress);
 		const float SpawnCenterX = IslandX + SatelliteRadius * 0.15f;
 		const float ItemCenterX = mix(SpawnCenterX, FinalCenterX, BlobPose.m_Travel);
 		const float BlobWidth = mix(SatelliteDiameter, FinalWidth, BlobPose.m_ContentAlpha);
@@ -4784,7 +4791,7 @@ void CHud::RenderMediaIsland()
 	const bool RenderStatusSection = StatusWidth > 1.0f && StatusAlpha > 0.01f;
 	const float UnifiedRight = StatusAnchorRight + (RenderStatusSection ? StatusSectionGap + StatusWidth : 0.0f);
 	const float UnifiedWidth = std::max(IslandWidth, UnifiedRight - IslandX);
-	const SHudMediaIslandBlobPose SpectatorBlobPose = QmHudMediaIslandBlobPose(AnimState.m_SpectatorLiquidProgress);
+	const SHudMediaIslandBlobPose SpectatorBlobPose = QmHudMediaIslandBlobPose(AnimState.m_SpectatorLiquidSpring);
 	const SHudMediaIslandSpectatorIconPose SpectatorIconPose = QmHudMediaIslandSpectatorIconPose(AnimState.m_SpectatorIconProgress);
 	const SHudMediaIslandLiquidCapsule SpectatorLiquidCapsule = QmHudMediaIslandRightBlobCapsule(
 		UnifiedRight,
@@ -5948,12 +5955,16 @@ namespace
 	{
 		const char *m_pKeyStatusText;
 		bool m_ShowKey;
+		EQmBindStatusTone m_KeyTone;
 		char m_aHammerLine[64];
 		bool m_ShowHammer;
+		EQmBindStatusTone m_HammerTone;
 		char m_aControlLine[64];
 		bool m_ShowControl;
+		EQmBindStatusTone m_ControlTone;
 		char m_aSyncLine[64];
 		bool m_ShowSync;
+		EQmBindStatusTone m_SyncTone;
 	};
 
 	struct SKeyStatusLayout
@@ -5970,6 +5981,19 @@ namespace
 
 	constexpr float KEY_STATUS_RIGHT_MARGIN = 0.0f;
 
+	// 关闭彩虹色 HUD 时按状态语义着色：开/正常=绿，关/DF=红，警示=黄，未分类沿用默认文字色
+	ColorRGBA KeyStatusToneColor(EQmBindStatusTone Tone, ColorRGBA DefaultColor)
+	{
+		switch(Tone)
+		{
+		case EQmBindStatusTone::OK: return ui_token::color::SUCCESS;
+		case EQmBindStatusTone::WARNING: return ui_token::color::WARNING;
+		case EQmBindStatusTone::DANGER: return ui_token::color::DANGER;
+		case EQmBindStatusTone::NONE: return DefaultColor;
+		}
+		return DefaultColor;
+	}
+
 	SKeyStatusLines GetKeyStatusLines(const CGameClient *pGameClient)
 	{
 		SKeyStatusLines Lines{};
@@ -5985,6 +6009,7 @@ namespace
 
 		if(Lines.m_ShowKey)
 		{
+			Lines.m_KeyTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::KEY_STICKING, DummyResetOnSwitch);
 			Lines.m_pKeyStatusText = Localize("Key Sticking: ?");
 			if(DummyResetOnSwitch == 0)
 				Lines.m_pKeyStatusText = Localize("Key Sticking: On");
@@ -5996,6 +6021,7 @@ namespace
 
 		if(Lines.m_ShowHammer)
 		{
+			Lines.m_HammerTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, DeepflyMode);
 			const char *pHammerState = Localize("Normal");
 			if(DeepflyMode == 1)
 				pHammerState = Localize("DF");
@@ -6008,12 +6034,14 @@ namespace
 
 		if(Lines.m_ShowControl)
 		{
+			Lines.m_ControlTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_CONTROL, DummyControl ? 1 : 0);
 			const char *pControlState = DummyControl ? Localize("On") : Localize("Off");
 			str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), Localize("Dummy Control: %s"), pControlState);
 		}
 
 		if(Lines.m_ShowSync)
 		{
+			Lines.m_SyncTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_COPY, DummyCopyMoves ? 1 : 0);
 			const char *pSyncState = DummyCopyMoves ? Localize("On") : Localize("Off");
 			// 对应 cl_dummy_copy_moves：英文用 Dummy copy，中文术语「分身同步」
 			str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), Localize("Dummy copy: %s"), pSyncState);
@@ -6117,27 +6145,36 @@ void CHud::RenderKeyStatus()
 	ColorHSLA KeyRainbowHsla(KeyHue, 0.75f, 0.6f, 1.0f);
 	ColorRGBA KeyRainbowColor = color_cast<ColorRGBA>(KeyRainbowHsla);
 
-	TextRender()->TextColor(g_Config.m_ClHudRainbowColors ? KeyRainbowColor : TextRender()->DefaultTextColor());
+	const ColorRGBA DefaultKeyStatusColor = TextRender()->DefaultTextColor();
+	// 彩虹色 HUD 开启时四项共用同一彩虹色；关闭时逐行按状态语义着色
+	const auto KeyStatusLineColor = [&](EQmBindStatusTone Tone) {
+		return g_Config.m_ClHudRainbowColors ? KeyRainbowColor : KeyStatusToneColor(Tone, DefaultKeyStatusColor);
+	};
+
 	if(Lines.m_ShowKey)
 	{
+		TextRender()->TextColor(KeyStatusLineColor(Lines.m_KeyTone));
 		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_pKeyStatusText, -1.0f);
 		TextY += Layout.m_LineHeight;
 	}
 	if(Lines.m_ShowHammer)
 	{
+		TextRender()->TextColor(KeyStatusLineColor(Lines.m_HammerTone));
 		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aHammerLine, -1.0f);
 		TextY += Layout.m_LineHeight;
 	}
 	if(Lines.m_ShowControl)
 	{
+		TextRender()->TextColor(KeyStatusLineColor(Lines.m_ControlTone));
 		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aControlLine, -1.0f);
 		TextY += Layout.m_LineHeight;
 	}
 	if(Lines.m_ShowSync)
 	{
+		TextRender()->TextColor(KeyStatusLineColor(Lines.m_SyncTone));
 		TextRender()->Text(TextX, TextY, Layout.m_FontSize, Lines.m_aSyncLine, -1.0f);
 	}
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	TextRender()->TextColor(DefaultKeyStatusColor);
 }
 
 inline int CHud::GetDigitsIndex(int Value, int Max)
@@ -6571,9 +6608,16 @@ void CHud::RenderMovementInformation()
 		ColorHSLA KeyRainbowHsla(KeyHue, 0.75f, 0.6f, 1.0f);
 		ColorRGBA KeyRainbowColor = color_cast<ColorRGBA>(KeyRainbowHsla);
 
-		TextRender()->TextColor(g_Config.m_ClHudRainbowColors ? KeyRainbowColor : TextRender()->DefaultTextColor());
+		const ColorRGBA DefaultKeyStatusColor = TextRender()->DefaultTextColor();
+		// 彩虹色 HUD 开启时四项共用同一彩虹色；关闭时逐行按状态语义着色
+		const auto KeyStatusLineColor = [&](EQmBindStatusTone Tone) {
+			return g_Config.m_ClHudRainbowColors ? KeyRainbowColor : KeyStatusToneColor(Tone, DefaultKeyStatusColor);
+		};
+
 		if(GameClient()->m_QmBindStatusHud.IsCustomListActive())
 		{
+			// 自定义列表条目没有状态语义，关闭彩虹色时沿用默认文字色
+			TextRender()->TextColor(g_Config.m_ClHudRainbowColors ? KeyRainbowColor : DefaultKeyStatusColor);
 			for(const std::string &Line : vCustomKeyStatusLines)
 			{
 				TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, Line.c_str(), -1.0f);
@@ -6582,24 +6626,28 @@ void CHud::RenderMovementInformation()
 		}
 		else if(KeyStatusLines.m_ShowKey)
 		{
+			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_KeyTone));
 			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_pKeyStatusText, -1.0f);
 			KeyTextY += KeyStatusLayout.m_LineHeight;
 		}
 		if(KeyStatusLines.m_ShowHammer)
 		{
+			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_HammerTone));
 			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aHammerLine, -1.0f);
 			KeyTextY += KeyStatusLayout.m_LineHeight;
 		}
 		if(KeyStatusLines.m_ShowControl)
 		{
+			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_ControlTone));
 			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aControlLine, -1.0f);
 			KeyTextY += KeyStatusLayout.m_LineHeight;
 		}
 		if(KeyStatusLines.m_ShowSync)
 		{
+			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_SyncTone));
 			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aSyncLine, -1.0f);
 		}
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
+		TextRender()->TextColor(DefaultKeyStatusColor);
 	}
 
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
@@ -7131,7 +7179,7 @@ void CHud::OnNewSnapshot()
 void CHud::OnRender()
 {
 	if((!QmHudMediaIslandShouldPrepareBackdropBlur(g_Config.m_QmHudIslandBgOpacity, g_Config.m_QmGaussianBlur != 0) || g_Config.m_QmHudIslandUseOriginalStyle || !Graphics()->HasMediaIslandSdf()) &&
-		(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurTemporary.IsValid() || m_MediaIslandBlurTarget.IsValid()))
+		(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurDownsample.IsValid() || m_MediaIslandBlurDownsampleTemporary.IsValid() || m_MediaIslandBlurDownsampleTarget.IsValid() || m_MediaIslandBlurTarget.IsValid()))
 		DestroyMediaIslandBlurTargets();
 
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)

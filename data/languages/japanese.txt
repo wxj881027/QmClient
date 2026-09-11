@@ -272,6 +272,9 @@ A vote is currently active.
 Abort
 == 中止
 
+Accumulated client launch count (used by the sponsor reminder)
+== クライアントの累計起動回数（スポンサー通知に使用）
+
 Activate
 == 有効化
 
@@ -487,6 +490,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == デフォルトのチャットバインドを追加
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== 分身のキー、ハンマー、コントロール、コピー状態をHUDに表示し、独自のbind状態リストも使えます。
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -1190,9 +1196,6 @@ Available resolutions
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 平均 %.*f   ↓ %.*f   ↑ %.*f
 
-Axiom API returned an error
-== Axiom API がエラーを返しました
-
 Axiom auto login failed
 == Axiom 自動ログイン失敗
 
@@ -1207,12 +1210,6 @@ Axiom dummy password
 
 Axiom main account password
 == Axiom メインアカウントパスワード
-
-Axiom score request failed
-== Axiom スコアの取得に失敗しました
-
-Axiom scores
-== Axiom スコア
 
 Axis
 == 軸
@@ -2036,9 +2033,6 @@ Compatible with single-player area hints from other servers
 Complete snapshots are arriving late or not arriving
 == 完全なスナップショットの到着が遅れているか、届いていません
 
-Completed maps
-== クリア済みマップ
-
 Compressor attack time (ms)
 == コンプレッサーのアタックタイム（ミリ秒）
 
@@ -2147,9 +2141,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == プレイヤー情報と国旗を設定
 
-Configure qm_report_app_id and qm_report_secret first
-== 最初に qm_report_app_id と qm_report_secret を設定してください
-
 Configure QmClient gameplay helpers
 == QmClient のゲーム補助機能を設定
 
@@ -2206,9 +2197,6 @@ Connect dummy
 
 Connect dummy to enable
 == ダミーに接続すると有効になります
-
-Connect to a server first
-== 最初にサーバーに接続してください
 
 Connect to server first to establish voice network link
 == まずサーバーに接続して音声ネットワークリンクを確立する
@@ -2269,6 +2257,9 @@ Console command executed after joining server
 
 Console command executed before connecting to server
 == サーバー接続前に実行されるコンソールコマンド
+
+Contacting title server
+== 称号サーバーに接続中
 
 Continue anyway?
 == それでも続行しますか？
@@ -2345,9 +2336,6 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == ダミーに接続できませんでした
 
-Could not create report scan request
-== レポートスキャンリクエストを作成できませんでした
-
 Could not find a Tutorial server. Check your internet connection.
 == チュートリアルサーバーが見つかりませんでした。インターネット接続を確認してください。
 
@@ -2356,9 +2344,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == あなたのチームが見つかりませんでした
-
-Could not get current server address
-== 現在のサーバーアドレスを取得できませんでした
 
 Could not get server list from master server
 == マスターサーバーからサーバーリストを取得できませんでした
@@ -2383,6 +2368,9 @@ Could not resolve connect address '%s'. See local console for details.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == ダウンロードしたマップを保存できませんでした。このファイルを手動で削除してみてください：%s
+
+Could not save title credential
+== 称号の認証情報を保存できません
 
 Could not save touch controls to file. See local console for details.
 == タッチコントロールをファイルに保存できませんでした。詳細はローカルコンソールを確認してください。
@@ -2509,6 +2497,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == カスタム Provider モデル名
+
+Custom title
+== カスタム称号
 
 Custom translation prompt (overrides built-in)
 == カスタム翻訳プロンプト（内蔵プロンプトを上書き）
@@ -3683,6 +3674,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == スキン切り替えアニメーションを有効化
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== スキン切り替えアニメを有効にし、種類・範囲・時間・イージングを選びます。
+
 Enable smooth cinematic camera while free spectating
 == フリー観戦中に滑らかなシネマティックカメラを有効にする
 
@@ -3773,6 +3767,9 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 敵対リストを有効化
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== 武器切り替えアニメかリロードアニメを有効にし、範囲・時間・回転・イージングを調整します。
+
 Enable word filter list
 == フィルターワードリストを有効にする
 
@@ -3818,8 +3815,14 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == パスワードを入力
 
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== スポンサーコードを入力して「引き換える」を押し、称号を書いて「保存」を押します。「このニックネームのみ表示」を有効にすると1つのニックネームに紐付けられます。
+
 Enter Username
 == ユーザー名を入力
+
+Enter your sponsor code
+== 配布された認証コードを入力
 
 Entities
 == エンティティ
@@ -3847,6 +3850,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
+
+Entry: %s
+== 場所：%s
 
 Erase items on the in game background
 == ゲーム内背景のアイテムを消去
@@ -3892,6 +3898,9 @@ Evaluate an expression
 
 Event
 == イベント
+
+Exact bound nickname
+== 紐付ける正確なニックネーム
 
 Example of usage
 == 使用例
@@ -4211,6 +4220,9 @@ Forms
 Found %d global cards
 == %d 枚のグローバルカードが見つかりました
 
+Four IP addresses are already online
+== すでに4つのIPが接続中です
+
 FPM
 == FPM
 
@@ -4504,9 +4516,6 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 
 Global card ordering old config migration completed flag
 == グローバルカードソート旧設定移行完了フラグ
-
-Global rank
-== 世界順位
 
 Global toggle key
 == グローバルトグルキー
@@ -5213,6 +5222,9 @@ Insane
 Installing update. Please wait...
 == アップデートをインストールしています。お待ちください...
 
+Instant zoom reverse
+== ズームの逆方向操作を即時反映
+
 Interface
 == インターフェース
 
@@ -5252,8 +5264,8 @@ Interpolation
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == 現在のエディターマップコピーを「auto」フォルダーに自動保存する間隔（0 = オフ）
 
-Invalid Axiom API response
-== Axiom API の応答が無効です
+Invalid bound name
+== 紐付けるニックネームが無効です
 
 Invalid client id to kick
 == キックするクライアントIDが無効です
@@ -5272,6 +5284,9 @@ Invalid option
 
 Invalid spectator id used
 == 無効な観戦対象IDです
+
+Invalid sponsor code
+== 無効な認証コード
 
 Invalid translation backend
 == 無効な翻訳バックエンド
@@ -5540,6 +5555,9 @@ Latency compensation
 Latency Jitter
 == レイテンシジッター
 
+Launch count threshold for the next sponsor reminder
+== 次のスポンサー通知までの起動回数しきい値
+
 Layout
 == レイアウト
 
@@ -5707,9 +5725,6 @@ Loading
 
 Loading assets...
 == アセットを読み込み中...
-
-Loading Axiom scores...
-== Axiom スコアを読み込み中...
 
 Loading commands…
 == コマンドを読み込み中…
@@ -5951,9 +5966,6 @@ Map to use on server
 Map type:
 == マップタイプ：
 
-Maps
-== マップ
-
 Margin when notification is docked
 == 通知バーが端に寄ったときの余白
 
@@ -6131,6 +6143,9 @@ Menu option - selected
 Merge consecutive identical player messages within 2 seconds
 == 2 秒以内に連続した同一プレイヤーの同じメッセージを統合
 
+Merges chat messages repeated within a short time into a single line.
+== 短時間に繰り返されたチャットメッセージを1行にまとめます。
+
 Message color
 == メッセージの色
 
@@ -6163,9 +6178,6 @@ Microphone volume
 
 Microphone volume (percent)
 == マイク音量（パーセント）
-
-Mileage
-== 走行距離
 
 Milliseconds
 == ミリ秒
@@ -6316,9 +6328,6 @@ Moves to the tile with x/y-number ii
 
 Multi-View
 == マルチビュー
-
-Multiple exact Axiom players found
-== 完全一致する Axiom プレイヤーが複数見つかりました
 
 Mute
 == ミュート
@@ -6578,6 +6587,9 @@ New button
 New category name
 == 新しいカテゴリ名
 
+New features
+== 新機能
+
 New IME
 == 新しいIME
 
@@ -6821,12 +6833,6 @@ Not open, check input device or mic permission
 Not open, check output device
 == 開いていません。出力デバイスを確認してください
 
-Not ranked
-== ランク外
-
-Not requested
-== 未取得
-
 Note
 == メモ
 
@@ -6974,6 +6980,9 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == もう一方のTeeが画面にいない場合のみ表示
 
+Only show with this nickname
+== このニックネーム使用時のみ表示
+
 Only what you can't imagine, nothing Dream can't do
 == 想像できないことだけが、Dreamにできないことです
 
@@ -7012,6 +7021,9 @@ Open pie menu
 
 Open rename dialog
 == 名前変更ダイアログを開く
+
+Open settings
+== 設定を開く
 
 Open spectator mode selector
 == 観戦モードセレクターを開く
@@ -7286,8 +7298,11 @@ Per-name volume (name=percent)
 Performance debug log threshold (ms)
 == パフォーマンスデバッグログのしきい値（ms）
 
-Performance points
-== パフォーマンスポイント
+Permanent access; up to 4 online IP addresses
+== 永久資格・同時接続は4つのIPまで
+
+Permanent sponsor verified
+== 永久支援資格を認証済み
 
 Personal best:
 == 自己ベスト：
@@ -7318,6 +7333,9 @@ Pet Skin:
 
 Pick result: %s
 == 抽選結果：%s
+
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== 使用中の音楽アプリに合うソースを選んで再生しておくだけで、歌詞が自動的に追従します。
 
 Pickup range
 == ピックアップ範囲
@@ -7366,9 +7384,6 @@ Play the current demo
 
 Play the selected demo
 == 選択したデモを再生
-
-Play time
-== プレイ時間
 
 Play/Pause
 == 再生/一時停止
@@ -7457,9 +7472,6 @@ Player name:
 Player not found
 == プレイヤーが見つかりません
 
-Player not found on Axiom
-== Axiom でプレイヤーが見つかりません
-
 Player preview
 == プレイヤープレビュー
 
@@ -7519,6 +7531,9 @@ Players can't hook each other on this server
 
 Playing effects
 == エフェクトの再生
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。
 
 Please add a valid cut first
 == 有効なカットを先に追加してください
@@ -7615,6 +7630,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == グレネードの軌道を予測（cl_antiping 1 の場合のみ）
+
+Predict ninja path
+== 忍者の経路を予測
 
 Predict weapon projectiles (only with cl_antiping 1)
 == 武器の発射物を予測（cl_antiping 1 の場合のみ）
@@ -7726,6 +7744,9 @@ Preview the composed status bar output
 
 Preview the current chat appearance
 == Preview the current chat appearance
+
+Preview the sponsor reminder without changing the launch count
+== 起動回数を変えずにスポンサー通知をプレビュー
 
 Preview visibilities
 == 表示状態をプレビュー
@@ -8003,8 +8024,8 @@ Ratio
 Ratio threshold for local target language detection
 == ローカルターゲット言語認識割合しきい値
 
-Read new feature indicators
-== 既読の設定画面新機能マーク
+Really? Not even a little?
+== 本当に？少しも考えてくれないんですか？
 
 Reason
 == 理由
@@ -8050,6 +8071,15 @@ Red team
 
 Red team wins!
 == レッドチームの勝利！
+
+Redeem
+== 引き換え
+
+Redeem your code and customize your title
+== コードを引き換えて称号を設定
+
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== スポンサーコードを引き換えるとカスタム称号を解除できます。称号はチャットとネームプレートに表示されます。
 
 Reduce antiping and player prediction when frozen
 == フリーズ時にアンチピンとプレイヤー予測を軽減
@@ -8402,36 +8432,6 @@ Reply to messages from muted players
 Reply with dummy
 == ダミーで返信
 
-Report
-== 報告
-
-Report request canceled
-== 報告リクエストがキャンセルされました
-
-Report request failed due to network error
-== ネットワークエラーのため報告リクエストが失敗しました
-
-Report request failed with HTTP status: %d
-== 報告リクエストが HTTP ステータス %d で失敗しました
-
-Report request is already in progress
-== 報告リクエストは既に進行中です
-
-Report scan request submitted
-== 報告スキャンリクエストが送信されました
-
-Report service App ID
-== 通報サービス App ID
-
-Report service signing key
-== 通報サービス署名キー
-
-Report service URL
-== 通報サービスアドレス
-
-Reports are not available on Axiom servers
-== Axiom サーバーではレポート機能は利用できません
-
 Request to swap your tee with another team member
 == 別のチームメンバーと Tee を交換するリクエスト
 
@@ -8545,6 +8545,9 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == 再試行中…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== 逆方向キーでズームを即座に反転（0=元の滑らかなズームを維持）
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -8800,12 +8803,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == 不確実性の持続時間を ping で拡大縮小 (100=1.0 倍)
-
-Scanning current server
-== 現在のサーバーをスキャン中
-
-Scanning current server...
-== 現在のサーバーをスキャン中...
 
 Score
 == スコア
@@ -9953,6 +9950,9 @@ Show the number of frozen tees
 Show the number of tees still alive
 == 生存 Tee の数を表示
 
+Show the occasional sponsor reminder in the main menu
+== メインメニューでスポンサー通知を時々表示する
+
 Show the pet
 == ペットを表示
 
@@ -10060,6 +10060,9 @@ Shows gameplay information for this server
 
 Shows help to command r, general help if left blank
 == コマンド r のヘルプを表示、空白の場合は一般ヘルプを表示
+
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== NetEase Cloud Music、Soda Music、Kugou、QQ Musicの歌詞を取得し、ダイナミックアイランドに表示します。
 
 Shows the credits of the DDNet mod
 == DDNet mod のクレジットを表示
@@ -10445,8 +10448,20 @@ Sphere
 Spin pop
 == スピンポップ
 
+Sponsor code
+== 認証コード
+
+Sponsor code already claimed
+== このコードは使用済みです
+
+Sponsor reminder
+== スポンサー通知
+
 Sponsor support
 == スポンサーサポート
+
+Sponsor title
+== 支援者の称号
 
 Sponsors:
 == スポンサー：
@@ -10540,6 +10555,9 @@ Status Scheme:
 
 Steam profile name
 == Steam プロフィール名
+
+Still free after %d sponsors. Take a look?
+== %d 人のスポンサーに支えられています。見てみますか？
 
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == 切り替え時のキー入力を停止（0 = オフ、1 = ダミー、2 = プレイヤー）
@@ -10657,6 +10675,9 @@ Switch failed
 
 Switch interval
 == 切り替え間隔
+
+Switch on the status rows you need, then list the binds you want to watch.
+== 必要な状態スイッチをオンにし、監視したいbindをカスタムリストに入力します。
 
 Switch opacity
 == 切り替え不透明度
@@ -10834,9 +10855,6 @@ Team mode change disabled
 
 Team mode change is disabled on this server.
 == このサーバーではチームモード変更は無効です。
-
-Team rank
-== チーム順位
 
 Team save already in progress
 == チーム保存は既に進行中です
@@ -11243,6 +11261,12 @@ Timer isn't displayed.
 Tiny Tee Size
 == ミニ Tee のサイズ
 
+Title server unavailable; retry
+== 称号サーバーに接続できません。再試行してください
+
+Title too long or contains unsupported characters
+== 称号が長すぎるか使用できない文字を含んでいます
+
 To save all players in your team have to be alive and not in '/spec'
 == 保存するには、チーム内の全プレイヤーが生存し、'/spec' 状態でない必要があります
 
@@ -11516,6 +11540,9 @@ Tune variable to value
 Tune variable to value or show current value
 == チューン変数を値に設定するか、現在の値を表示
 
+Turn on "Message merging" in Dream Features.
+== 「ドリーム機能」で「Message merging」をオンにします。
+
 Tutorial
 == チュートリアル
 
@@ -11732,6 +11759,9 @@ Unregister protocol and file extensions
 Unsaved changes
 == 未保存の変更
 
+Up to 6 Chinese or 12 ASCII characters
+== 中国語は6文字、ASCIIは12文字まで
+
 Update
 == 更新
 
@@ -11767,6 +11797,9 @@ URL for downloading maps (must start with https://)
 
 URL for downloading skins
 == スキン用ダウンロード URL
+
+Usage: %s
+== 使い方：%s
 
 Usage: %s %s
 == 使用方法: %s %s
@@ -11833,6 +11866,9 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == 動的カメラオン時にマウス感度を使用
+
+Use MSDF text rendering for nameplates (requires TexturedMsdf)
+== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == 単語の長さに基づいて複数文字置換を使用
@@ -12715,6 +12751,9 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == タイムアウトコードが設定されました。0.7 クライアントはタイムアウト時に Tee を取り戻せませんが、0.6 クライアントはあなたの Tee を引き継げます
+
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== 武器切り替え時にスライドしながら回転し、リロード中は回転して裏返ります。
 
 z = Zoom
 == z = ズーム

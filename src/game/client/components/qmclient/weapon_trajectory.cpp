@@ -22,21 +22,49 @@
 #include <cmath>
 #include <vector>
 
+bool CQmWeaponTrajectory::IsVisible() const
+{
+	if(ShouldHideFocusGuideLines(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideGuideLines != 0))
+		return false;
+
+	const int TrajectoryMode = std::clamp(g_Config.m_QmWeaponTrajectory, 0, 2);
+	const bool ManualTrajectoryVisible = GameClient()->m_Controls.m_aShowWeaponTrajectory[g_Config.m_ClDummy] != 0;
+	const bool TrajectoryVisible = TrajectoryMode == 2 || (TrajectoryMode == 1 && ManualTrajectoryVisible);
+	return TrajectoryVisible && !GameClient()->m_TClient.ShouldHideGoresGuides(TrajectoryVisible);
+}
+
+bool CQmWeaponTrajectory::PredictNinjaEndPosition(vec2 Position, vec2 Direction, vec2 &OutPosition) const
+{
+	if(length(Direction) < 0.0001f)
+		return false;
+
+	int TuneZone = 0;
+	if(Client()->State() == IClient::STATE_ONLINE && GameClient()->m_GameWorld.m_WorldConfig.m_UseTuneZones)
+		TuneZone = Collision()->IsTune(Collision()->GetMapIndex(Position));
+	const CTuningParams *pTuning = GameClient()->GetTuning(TuneZone);
+
+	OutPosition = Position;
+	Direction = normalize(Direction);
+	const int NinjaMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * Client()->GameTickSpeed() / 1000;
+	const int MovementTicks = std::max(NinjaMoveTime - 1, 0);
+	for(int i = 0; i < MovementTicks; ++i)
+	{
+		vec2 Velocity = Direction * g_pData->m_Weapons.m_Ninja.m_Velocity;
+		Collision()->MoveBox(&OutPosition, &Velocity, CCharacterCore::PhysicalSizeVec2(), vec2(pTuning->m_GroundElasticityX, pTuning->m_GroundElasticityY));
+		const int MapIndex = Collision()->GetMapIndex(OutPosition);
+		const int Teleport = Collision()->IsTeleport(MapIndex);
+		if(Teleport > 0 && !Collision()->TeleOuts(Teleport - 1).empty())
+			OutPosition = Collision()->TeleOuts(Teleport - 1)[0];
+	}
+	return true;
+}
+
 void CQmWeaponTrajectory::Render(
 	const CNetObj_Character *pPrevChar,
 	const CNetObj_Character *pPlayerChar,
 	int ClientId)
 {
-	if(ShouldHideFocusGuideLines(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideGuideLines != 0))
-		return;
-
-	const int TrajectoryMode = std::clamp(g_Config.m_QmWeaponTrajectory, 0, 2);
-	const bool ManualTrajectoryVisible = GameClient()->m_Controls.m_aShowWeaponTrajectory[g_Config.m_ClDummy] != 0;
-	const bool TrajectoryVisible = TrajectoryMode == 2 || (TrajectoryMode == 1 && ManualTrajectoryVisible);
-	if(GameClient()->m_TClient.ShouldHideGoresGuides(TrajectoryVisible))
-		return;
-
-	if(ClientId < 0 || !TrajectoryVisible)
+	if(ClientId < 0 || !IsVisible())
 		return;
 
 	const int Weapon = pPlayerChar->m_Weapon;

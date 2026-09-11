@@ -272,6 +272,9 @@ A vote is currently active.
 Abort
 == Annuler
 
+Accumulated client launch count (used by the sponsor reminder)
+== Nombre cumulé de lancements du client (pour le rappel)
+
 Activate
 == Activer
 
@@ -487,6 +490,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == Ajoute les touches de discussion par défaut
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== Affiche dans le HUD l'état des touches, du marteau, du contrôle et de la copie du dummy, plus votre liste de binds.
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -1190,9 +1196,6 @@ Available resolutions
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Moy. %.*f   ↓ %.*f   ↑ %.*f
 
-Axiom API returned an error
-== L'API Axiom a renvoyé une erreur
-
 Axiom auto login failed
 == Échec de la connexion automatique Axiom
 
@@ -1207,12 +1210,6 @@ Axiom dummy password
 
 Axiom main account password
 == Mot de passe du compte principal Axiom
-
-Axiom score request failed
-== Échec de la récupération des scores Axiom
-
-Axiom scores
-== Scores Axiom
 
 Axis
 == Axe
@@ -2036,9 +2033,6 @@ Compatible with single-player area hints from other servers
 Complete snapshots are arriving late or not arriving
 == Les snapshots complets arrivent en retard ou n’arrivent pas
 
-Completed maps
-== Cartes terminées
-
 Compressor attack time (ms)
 == Temps d'attaque du compresseur (ms)
 
@@ -2147,9 +2141,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == Configurer l'identité et le pays du joueur
 
-Configure qm_report_app_id and qm_report_secret first
-== Configure d'abord qm_report_app_id et qm_report_secret
-
 Configure QmClient gameplay helpers
 == Configurer les aides de jeu de QmClient
 
@@ -2206,9 +2197,6 @@ Connect dummy
 
 Connect dummy to enable
 == Connecter le double pour activer
-
-Connect to a server first
-== Connecte-toi d'abord à un serveur
 
 Connect to server first to establish voice network link
 == Connectez-vous d'abord au serveur pour établir le lien réseau vocal
@@ -2269,6 +2257,9 @@ Console command executed after joining server
 
 Console command executed before connecting to server
 == Commande console exécutée avant de se connecter au serveur
+
+Contacting title server
+== Connexion au serveur de titres
 
 Continue anyway?
 == Continuer quand même ?
@@ -2345,9 +2336,6 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == Impossible de connecter le double
 
-Could not create report scan request
-== Impossible de créer la demande de scan de signalement
-
 Could not find a Tutorial server. Check your internet connection.
 == Impossible de trouver un serveur Tutorial. Vérifiez votre connexion Internet.
 
@@ -2356,9 +2344,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == Impossible de trouver votre équipe
-
-Could not get current server address
-== Impossible d'obtenir l'adresse du serveur actuel
 
 Could not get server list from master server
 == Impossible d'obtenir la liste des serveurs depuis le serveur maître
@@ -2383,6 +2368,9 @@ Could not resolve connect address '%s'. See local console for details.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == Impossible de sauvegarder la carte téléchargée. Essayez de supprimer manuellement ce fichier : %s
+
+Could not save title credential
+== Impossible de sauvegarder les identifiants du titre
 
 Could not save touch controls to file. See local console for details.
 == Impossible de sauvegarder les commandes tactiles dans le fichier. Consultez la console locale pour plus de détails.
@@ -2509,6 +2497,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Nom du modèle du fournisseur personnalisé
+
+Custom title
+== Titre personnalisé
 
 Custom translation prompt (overrides built-in)
 == Invite de traduction personnalisée (remplace l’invite intégrée)
@@ -3683,6 +3674,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == Activer l'animation de changement de skin
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== Activez l'animation de transition de skin, puis choisissez type, portée, durée et lissage.
+
 Enable smooth cinematic camera while free spectating
 == Activer la caméra cinématique fluide en observation libre
 
@@ -3773,6 +3767,9 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Activer la liste de guerre
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== Activez l'animation de changement ou de rechargement, puis réglez portée, durée, rotation et lissage.
+
 Enable word filter list
 == Activer la liste de filtrage de mots
 
@@ -3818,8 +3815,14 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == Entrer le mot de passe
 
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== Saisissez le code de sponsor et cliquez sur « Échanger », écrivez le titre puis cliquez sur « Enregistrer ». Cochez « Afficher uniquement avec ce pseudo » pour le lier à un seul pseudo.
+
 Enter Username
 == Entrer le nom d'utilisateur
+
+Enter your sponsor code
+== Saisissez votre code de soutien
 
 Entities
 == Entités
@@ -3847,6 +3850,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
+
+Entry: %s
+== Emplacement : %s
 
 Erase items on the in game background
 == Effacer des éléments sur l'arrière-plan du jeu
@@ -3892,6 +3898,9 @@ Evaluate an expression
 
 Event
 == Événement
+
+Exact bound nickname
+== Pseudo exact associé
 
 Example of usage
 == Exemple d'utilisation
@@ -4211,6 +4220,9 @@ Forms
 Found %d global cards
 == %d cartes globales trouvées
 
+Four IP addresses are already online
+== 4 adresses IP sont déjà connectées
+
 FPM
 == FPM
 
@@ -4504,9 +4516,6 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 
 Global card ordering old config migration completed flag
 == Marqueur de migration de l'ancienne configuration d'ordre des cartes globales terminée
-
-Global rank
-== Classement mondial
 
 Global toggle key
 == Touche de bascule globale
@@ -5213,6 +5222,9 @@ Insane
 Installing update. Please wait...
 == Installation de la mise à jour. Veuillez patienter...
 
+Instant zoom reverse
+== Inversion du zoom immédiate
+
 Interface
 == Interface
 
@@ -5252,8 +5264,8 @@ Interpolation
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == Intervalle de sauvegarde automatique de la copie de la carte actuelle dans l'éditeur vers le dossier "auto" (0 = désactivé)
 
-Invalid Axiom API response
-== Réponse invalide de l'API Axiom
+Invalid bound name
+== Pseudo associé invalide
 
 Invalid client id to kick
 == ID client invalide pour exclure
@@ -5272,6 +5284,9 @@ Invalid option
 
 Invalid spectator id used
 == ID de spectateur invalide utilisé
+
+Invalid sponsor code
+== Code de soutien invalide
 
 Invalid translation backend
 == Moteur de traduction invalide
@@ -5540,6 +5555,9 @@ Latency compensation
 Latency Jitter
 == Gigue de latence
 
+Launch count threshold for the next sponsor reminder
+== Seuil de lancements avant le prochain rappel
+
 Layout
 == Disposition
 
@@ -5707,9 +5725,6 @@ Loading
 
 Loading assets...
 == Chargement des éléments...
-
-Loading Axiom scores...
-== Chargement des scores Axiom...
 
 Loading commands…
 == Chargement des commandes…
@@ -5951,9 +5966,6 @@ Map to use on server
 Map type:
 == Type de carte :
 
-Maps
-== Cartes
-
 Margin when notification is docked
 == Marge de réserve lorsque la barre de notifications est alignée sur le bord
 
@@ -6131,6 +6143,9 @@ Menu option - selected
 Merge consecutive identical player messages within 2 seconds
 == Fusionner les messages identiques consécutifs d'un joueur dans un délai de 2 secondes
 
+Merges chat messages repeated within a short time into a single line.
+== Fusionne en une seule ligne les messages de chat répétés en peu de temps.
+
 Message color
 == Couleur du message
 
@@ -6163,9 +6178,6 @@ Microphone volume
 
 Microphone volume (percent)
 == Volume du microphone (pourcentage)
-
-Mileage
-== Distance parcourue
 
 Milliseconds
 == Millisecondes
@@ -6316,9 +6328,6 @@ Moves to the tile with x/y-number ii
 
 Multi-View
 == Multi-vue
-
-Multiple exact Axiom players found
-== Plusieurs joueurs Axiom correspondent exactement
 
 Mute
 == Mute
@@ -6578,6 +6587,9 @@ New button
 New category name
 == Nouveau nom de catégorie
 
+New features
+== Nouveautés
+
 New IME
 == Nouvel IME
 
@@ -6821,12 +6833,6 @@ Not open, check input device or mic permission
 Not open, check output device
 == Non ouvert, vérifiez le périphérique de sortie
 
-Not ranked
-== Non classé
-
-Not requested
-== Non demandé
-
 Note
 == Note
 
@@ -6974,6 +6980,9 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == Afficher uniquement quand l'autre Tee n'est pas à l'écran
 
+Only show with this nickname
+== Afficher uniquement avec ce pseudo
+
 Only what you can't imagine, nothing Dream can't do
 == Seul ce que vous ne pouvez pas imaginer, rien que Dream ne puisse faire
 
@@ -7012,6 +7021,9 @@ Open pie menu
 
 Open rename dialog
 == Ouvrir la boîte de dialogue de renommage
+
+Open settings
+== Ouvrir les paramètres
 
 Open spectator mode selector
 == Ouvrir le sélecteur de mode spectateur
@@ -7286,8 +7298,11 @@ Per-name volume (name=percent)
 Performance debug log threshold (ms)
 == Seuil du journal de débogage des performances (ms)
 
-Performance points
-== Points de performance
+Permanent access; up to 4 online IP addresses
+== Accès permanent ; 4 IP simultanées maximum
+
+Permanent sponsor verified
+== Soutien permanent vérifié
 
 Personal best:
 == Meilleur personnel :
@@ -7318,6 +7333,9 @@ Pet Skin:
 
 Pick result: %s
 == Résultat du tirage : %s
+
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== Choisissez la source correspondant à votre application de musique et laissez-la jouer ; les paroles suivent automatiquement.
 
 Pickup range
 == Portée de ramassage
@@ -7366,9 +7384,6 @@ Play the current demo
 
 Play the selected demo
 == Lire la démo sélectionnée
-
-Play time
-== Temps de jeu
 
 Play/Pause
 == Lecture/Pause
@@ -7457,9 +7472,6 @@ Player name:
 Player not found
 == Joueur introuvable
 
-Player not found on Axiom
-== Joueur introuvable sur Axiom
-
 Player preview
 == Aperçu du joueur
 
@@ -7519,6 +7531,9 @@ Players can't hook each other on this server
 
 Playing effects
 == Effets de lecture
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== Joue une animation à chaque changement de skin, y compris ceux volés au marteau.
 
 Please add a valid cut first
 == Veuillez d'abord ajouter une coupe valide
@@ -7615,6 +7630,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Prédire la trajectoire du lance-grenades (uniquement avec cl_antiping 1)
+
+Predict ninja path
+== Prévoir la trajectoire du ninja
 
 Predict weapon projectiles (only with cl_antiping 1)
 == Prédire les projectiles d'armes (uniquement avec cl_antiping 1)
@@ -7726,6 +7744,9 @@ Preview the composed status bar output
 
 Preview the current chat appearance
 == Preview the current chat appearance
+
+Preview the sponsor reminder without changing the launch count
+== Prévisualiser le rappel sans modifier le compteur
 
 Preview visibilities
 == Aperçu des visibilités
@@ -8003,8 +8024,8 @@ Ratio
 Ratio threshold for local target language detection
 == Seuil de proportion de reconnaissance de la langue cible locale
 
-Read new feature indicators
-== Badges nouveautés lus
+Really? Not even a little?
+== Vraiment ? Même pas un peu ?
 
 Reason
 == Raison
@@ -8050,6 +8071,15 @@ Red team
 
 Red team wins!
 == L'équipe rouge gagne !
+
+Redeem
+== Échanger
+
+Redeem your code and customize your title
+== Échangez votre code et personnalisez votre titre
+
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== Échangez votre code de sponsor pour débloquer un titre personnalisé. Le titre s'affiche dans le chat et sur la plaque de nom.
 
 Reduce antiping and player prediction when frozen
 == Réduire l'antiping et la prédiction du joueur lorsqu'il est gelé
@@ -8402,36 +8432,6 @@ Reply to messages from muted players
 Reply with dummy
 == Répondre avec le dummy
 
-Report
-== Signaler
-
-Report request canceled
-== Demande de signalement annulée
-
-Report request failed due to network error
-== La demande de signalement a échoué à cause du réseau
-
-Report request failed with HTTP status: %d
-== La demande de signalement a échoué avec le statut HTTP : %d
-
-Report request is already in progress
-== La demande de signalement est déjà en cours
-
-Report scan request submitted
-== Demande de scan de signalement envoyée
-
-Report service App ID
-== ID de l'application du service de signalement
-
-Report service signing key
-== Clé de signature du service de signalement
-
-Report service URL
-== Adresse du service de signalement
-
-Reports are not available on Axiom servers
-== Les signalements ne sont pas disponibles sur les serveurs Axiom
-
 Request to swap your tee with another team member
 == Demander à échanger votre tee avec un autre membre de l'équipe
 
@@ -8545,6 +8545,9 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == Nouvelle tentative…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== Inverser le zoom instantanément avec la touche opposée (0=garder le zoom fluide d'origine)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -8800,12 +8803,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == Mettre à l'échelle la durée d'incertitude par ping (100=1.0x)
-
-Scanning current server
-== Scan du serveur actuel
-
-Scanning current server...
-== Scan du serveur actuel...
 
 Score
 == Score | Référence chinois simplifié : 分数
@@ -9953,6 +9950,9 @@ Show the number of frozen tees
 Show the number of tees still alive
 == Afficher le nombre de tees encore en vie
 
+Show the occasional sponsor reminder in the main menu
+== Afficher occasionnellement le rappel dans le menu principal
+
 Show the pet
 == Afficher l'animal
 
@@ -10060,6 +10060,9 @@ Shows gameplay information for this server
 
 Shows help to command r, general help if left blank
 == Affiche l'aide pour la commande r, aide générale si laissé vide
+
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== Récupère les paroles de NetEase Cloud Music, Soda Music, Kugou et QQ Music et les affiche sur l'île dynamique.
 
 Shows the credits of the DDNet mod
 == Affiche les crédits du mod DDNet
@@ -10445,8 +10448,20 @@ Sphere
 Spin pop
 == Popup tournante
 
+Sponsor code
+== Code de soutien
+
+Sponsor code already claimed
+== Ce code a déjà été utilisé
+
+Sponsor reminder
+== Rappel de sponsoring
+
 Sponsor support
 == Soutien des sponsors
+
+Sponsor title
+== Titre de soutien
 
 Sponsors:
 == Sponsors :
@@ -10540,6 +10555,9 @@ Status Scheme:
 
 Steam profile name
 == Nom du profil Steam
+
+Still free after %d sponsors. Take a look?
+== Grâce à %d sponsors. Aller voir ?
 
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == Arrêter la saisie des touches lors du changement (0=désactivé, 1=dummy, 2=joueur)
@@ -10657,6 +10675,9 @@ Switch failed
 
 Switch interval
 == Intervalle de changement
+
+Switch on the status rows you need, then list the binds you want to watch.
+== Activez les interrupteurs d'état nécessaires, puis listez les binds à surveiller.
 
 Switch opacity
 == Opacité du commutateur
@@ -10834,9 +10855,6 @@ Team mode change disabled
 
 Team mode change is disabled on this server.
 == Le changement de mode d'équipe est désactivé sur ce serveur.
-
-Team rank
-== Classement par équipe
 
 Team save already in progress
 == Sauvegarde de l'équipe déjà en cours
@@ -11243,6 +11261,12 @@ Timer isn't displayed.
 Tiny Tee Size
 == Taille du mini tee
 
+Title server unavailable; retry
+== Serveur de titres indisponible ; réessayez
+
+Title too long or contains unsupported characters
+== Titre trop long ou caractères non pris en charge
+
 To save all players in your team have to be alive and not in '/spec'
 == Pour sauvegarder, tous les joueurs de votre équipe doivent être en vie et ne pas être en '/spec'
 
@@ -11516,6 +11540,9 @@ Tune variable to value
 Tune variable to value or show current value
 == Régler la variable de tuning à la valeur ou afficher la valeur actuelle
 
+Turn on "Message merging" in Dream Features.
+== Activez « Message merging » dans « Dream Features ».
+
 Tutorial
 == Tutoriel
 
@@ -11732,6 +11759,9 @@ Unregister protocol and file extensions
 Unsaved changes
 == Modifications non sauvegardées
 
+Up to 6 Chinese or 12 ASCII characters
+== 6 caractères chinois ou 12 ASCII maximum
+
 Update
 == Mise à jour
 
@@ -11767,6 +11797,9 @@ URL for downloading maps (must start with https://)
 
 URL for downloading skins
 == URL pour télécharger les skins
+
+Usage: %s
+== Utilisation : %s
 
 Usage: %s %s
 == Utilisation : %s %s
@@ -11833,6 +11866,9 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == Utiliser la sensibilité de la souris lorsque la caméra dynamique est activée
+
+Use MSDF text rendering for nameplates (requires TexturedMsdf)
+== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == Utiliser le remplacement multi-caractères basé sur la longueur du mot
@@ -12715,6 +12751,9 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Votre code de timeout a été défini. Les clients 0.7 ne peuvent pas récupérer leur tee en cas de timeout ; cependant, un client 0.6 peut réclamer votre tee
+
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== L'arme entre en glissant et en tournant lors du changement, et se retourne pendant le rechargement.
 
 z = Zoom
 == z = Zoom | Référence chinois simplifié : z = 缩放

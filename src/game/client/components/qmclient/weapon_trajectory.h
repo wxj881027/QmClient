@@ -50,6 +50,11 @@ inline bool QmWeaponTrajectoryEnabledForWeapon(int Weapon, bool PistolGuideEnabl
 	return Weapon == WEAPON_GRENADE || Weapon == WEAPON_SHOTGUN || Weapon == WEAPON_LASER;
 }
 
+inline bool QmWeaponTrajectoryNinjaEnabled(int Weapon, bool PredictionEnabled, bool LocalPlayer)
+{
+	return PredictionEnabled && LocalPlayer && Weapon == WEAPON_NINJA;
+}
+
 inline bool QmWeaponTrajectoryCanHitOtherPlayers(
 	int Weapon,
 	bool GrenadeHitDisabled,
@@ -120,6 +125,8 @@ class CQmWeaponTrajectory : public CComponent
 
 public:
 	int Sizeof() const override { return sizeof(*this); }
+	bool IsVisible() const;
+	bool PredictNinjaEndPosition(vec2 Position, vec2 Direction, vec2 &OutPosition) const;
 	void Render(const CNetObj_Character *pPrevChar, const CNetObj_Character *pPlayerChar, int ClientId);
 };
 

@@ -20,8 +20,12 @@ static_assert(ui_token::color::ACCENT_PRIMARY.x > 0.39f && ui_token::color::ACCE
 	"ACCENT_PRIMARY R channel must stay near the Qm accent blue (~0.4)");
 static_assert(ui_token::color::SURFACE_GLASS.a == 0.70f,
 	"SURFACE_GLASS alpha must remain at 0.70 to preserve QmClient glass appearance");
-static_assert(ui_token::radius::CARD == 12.0f,
-	"radius::CARD must match LgCornerRadius in menus_qmclient.cpp");
+static_assert(ui_token::radius::TIGHT == 6.0f,
+	"radius::TIGHT is the shared micro-element corner (badges, dots, swatches)");
+static_assert(ui_token::radius::BASE == 8.0f,
+	"radius::BASE is the shared control corner (buttons, inputs, list rows)");
+static_assert(ui_token::radius::CARD == 14.0f,
+	"radius::CARD is the shared card/panel corner");
 
 // Spacing scale must be strictly monotonic so downstream code can pick a
 // "next size up" without ambiguity.

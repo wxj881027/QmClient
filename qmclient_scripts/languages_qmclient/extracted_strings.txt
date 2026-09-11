@@ -89,6 +89,7 @@ A screenshot with this name already exists
 A Tee
 A vote is currently active.
 Abort
+Accumulated client launch count (used by the sponsor reminder)
 Activate
 Activate all
 Activate tee history writing full game data to disk (warning: uses lots of disk space)
@@ -161,6 +162,7 @@ Address
 Address to bind the external console. Anything other than "localhost" is dangerous.
 Adds a specific war entry
 Adds default chat binds
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
 Adjust DDNet gameplay indicators and assists
 Adjust DDRace-specific HUD indicators
 Adjust game camera and FOV settings
@@ -395,14 +397,11 @@ Automatically take game over screenshot
 Automatically take statboard screenshot
 Available resolutions
 Avg %.*f   ↓ %.*f   ↑ %.*f
-Axiom API returned an error
 Axiom auto login failed
 Axiom auto login failed, retrying
 Axiom auto login succeeded
 Axiom dummy password
 Axiom main account password
-Axiom score request failed
-Axiom scores
 Axis
 Backend to use (e.g. OpenGL or Vulkan)
 Background
@@ -677,7 +676,6 @@ Community
 Compact
 Compatible with single-player area hints from other servers
 Complete snapshots are arriving late or not arriving
-Completed maps
 Compressor attack time (ms)
 Compressor makeup gain (percent)
 Compressor ratio (x10)
@@ -714,7 +712,6 @@ Configure laser shape, glow, and animation
 Configure lyrics sources and display
 Configure nameplate text, badges, and visibility
 Configure player identity and country
-Configure qm_report_app_id and qm_report_secret first
 Configure QmClient gameplay helpers
 Configure QmClient HUD elements
 Configure remaining DDNet client preferences
@@ -734,7 +731,6 @@ Confirm quit after game end (minutes, -1 off, 0 always)
 Connect address error
 Connect dummy
 Connect dummy to enable
-Connect to a server first
 Connect to server first to establish voice network link
 Connect to the specified host/ip
 Connected
@@ -755,6 +751,7 @@ Console
 Console color
 Console command executed after joining server
 Console command executed before connecting to server
+Contacting title server
 Continue anyway?
 Contributors
 Control custom background drawing
@@ -780,11 +777,9 @@ Copy skin
 Copy skin option color
 Could not check for existing player with your name. Check your internet connection.
 Could not connect dummy
-Could not create report scan request
 Could not find a Tutorial server. Check your internet connection.
 Could not find online Tutorial server.\nStarting and connecting to local server…
 Could not find your Team
-Could not get current server address
 Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
 Could not load sponsor QR code. Check the Base64 data
@@ -793,6 +788,7 @@ Could not load touch controls from file. See local console for details.
 Could not preview this image
 Could not resolve connect address '%s'. See local console for details.
 Could not save downloaded map. Try manually deleting this file: %s
+Could not save title credential
 Could not save touch controls to file. See local console for details.
 Count players only
 Countries
@@ -835,6 +831,7 @@ Custom prompt template
 Custom Provider API Key
 Custom Provider endpoint
 Custom Provider model name
+Custom title
 Custom translation prompt (overrides built-in)
 Customize additional nameplate text
 Customize animated rainbow colors
@@ -1226,6 +1223,7 @@ Enable shout when holding fire while in water
 Enable Sixup connection.
 Enable skin queue rotation
 Enable skin switch animation
+Enable skin transition animation, then choose the type, scope, duration and easing.
 Enable smooth cinematic camera while free spectating
 Enable SodaMusic Hook
 Enable SodaMusic hook integration
@@ -1256,6 +1254,7 @@ Enable voice activation (VAD)
 Enable voice chat
 Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
 Enable word filter list
 Enable Zen Mode
 Enable Zen mode
@@ -1271,7 +1270,9 @@ Endpoint
 Endpoint (optional)
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 Enter Password
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 Enter Username
+Enter your sponsor code
 Entities
 Entities background color
 Entity assets
@@ -1281,6 +1282,7 @@ Entity overlay
 Entity Preview
 Entity wall outline opacity
 entity_bg (Workshop)
+Entry: %s
 Erase items on the in game background
 Error
 Error checking player name
@@ -1296,6 +1298,7 @@ ESC replay minutes
 EUR
 Evaluate an expression
 Event
+Exact bound nickname
 Example of usage
 Example: name1|name2|name3
 Exclude
@@ -1402,6 +1405,7 @@ Force vote
 Format player names after a finish
 Forms
 Found %d global cards
+Four IP addresses are already online
 FPM
 FPS
 Fraction of players needed to pass a vote
@@ -1500,7 +1504,6 @@ Glitch
 Global card
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
-Global rank
 Global toggle key
 Global UI size percentage
 Glow
@@ -1736,6 +1739,7 @@ Input smoothing
 Input switch
 Insane
 Installing update. Please wait...
+Instant zoom reverse
 Interface
 Interface accent color
 Interface animations
@@ -1749,13 +1753,14 @@ Internet
 Internet (From online source)
 Interpolation
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
-Invalid Axiom API response
+Invalid bound name
 Invalid client id to kick
 Invalid client id to move to spectators
 Invalid Demo
 Invalid ID
 Invalid option
 Invalid spectator id used
+Invalid sponsor code
 Invalid translation backend
 Invalid X coordinate.
 Invalid Y coordinate.
@@ -1845,6 +1850,7 @@ Last page in console
 Latency
 Latency compensation
 Latency Jitter
+Launch count threshold for the next sponsor reminder
 Layout
 Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
@@ -1901,7 +1907,6 @@ Loaded %d items
 Loaded %d items (discarded %d items)
 Loading
 Loading assets...
-Loading Axiom scores...
 Loading commands…
 Loading DDNet Client
 Loading Demo
@@ -1982,7 +1987,6 @@ Map size
 Map sound volume
 Map to use on server
 Map type:
-Maps
 Margin when notification is docked
 Mark demo
 Mark the beginning of a cut (right click to reset)
@@ -2042,6 +2046,7 @@ Menu opened. Press Esc key again to close menu.
 Menu option - normal
 Menu option - selected
 Merge consecutive identical player messages within 2 seconds
+Merges chat messages repeated within a short time into a single line.
 Message color
 Message displayed to players on join.
 Message merging
@@ -2053,7 +2058,6 @@ Microphone
 Microphone permission denied by system
 Microphone volume
 Microphone volume (percent)
-Mileage
 Milliseconds
 Milliseconds to apply quick input early
 Min size
@@ -2104,7 +2108,6 @@ Movement
 Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
 Multi-View
-Multiple exact Axiom players found
 Mute
 Mute death/respawn sound in Zen Mode
 Mute death/respawn sounds
@@ -2191,6 +2194,7 @@ Network timeout protection
 new
 New button
 New category name
+New features
 New IME
 New name
 New name:
@@ -2272,8 +2276,6 @@ Not enabled
 Not in the current browser list
 Not open, check input device or mic permission
 Not open, check output device
-Not ranked
-Not requested
 Note
 Note:
 Nothing hookable
@@ -2323,6 +2325,7 @@ Only show after joining a team
 Only show outlines in the entities layer
 Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
+Only show with this nickname
 Only what you can't imagine, nothing Dream can't do
 Opacity
 Opacity of freeze bars inside freeze
@@ -2336,6 +2339,7 @@ Open map editor
 Open modal
 Open pie menu
 Open rename dialog
+Open settings
 Open spectator mode selector
 Open TClient community and source links
 Open TClient configuration file locations
@@ -2427,7 +2431,8 @@ Pause/unpause game
 Penalty in seconds for saving or swapping positions
 Per-name volume (name=percent)
 Performance debug log threshold (ms)
-Performance points
+Permanent access; up to 4 online IP addresses
+Permanent sponsor verified
 Personal best:
 Personal Setting of showing time in either broadcast or game/round timer, timer s, where s = broadcast for broadcast, gametimer for game/round timer, cycle for cycle, both for both, none for no timer and nothing to show current status
 Pet
@@ -2438,6 +2443,7 @@ Pet size relative to normal player
 Pet skin
 Pet Skin:
 Pick result: %s
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 Pickup range
 Pie Menu
 Pie menu
@@ -2454,7 +2460,6 @@ Play background music
 Play slide-in rotation animation when switching weapon
 Play the current demo
 Play the selected demo
-Play time
 Play/Pause
 Play/pause the current demo
 Playback volume
@@ -2484,7 +2489,6 @@ Player marker color
 Player name
 Player name:
 Player not found
-Player not found on Axiom
 Player preview
 Player push radius for background 3D particles
 Player push strength for background 3D particles
@@ -2505,6 +2509,7 @@ Players can hook each other on this server
 Players can't collide on this server
 Players can't hook each other on this server
 Playing effects
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
 Please add a valid cut first
 Please balance teams!
 Please enable finished indicator first
@@ -2537,6 +2542,7 @@ Predict events (sounds, particles)
 Predict fire and show predicted weapon physics (requires cl_antiping_grenade 1 and cl_antiping_weapons 1)
 Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when frozen))
 Predict grenade trajectory (only with cl_antiping 1)
+Predict ninja path
 Predict weapon projectiles (only with cl_antiping 1)
 Predicted ghost opacity
 Prediction
@@ -2574,6 +2580,7 @@ Preview selected file
 Preview the bind wheel layout and selection
 Preview the composed status bar output
 Preview the current chat appearance
+Preview the sponsor reminder without changing the launch count
 Preview visibilities
 Previous
 Previous page in console
@@ -2666,7 +2673,7 @@ Random unfinished map
 Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example: 0011 = randomize skin and flag [number is position]
 Ratio
 Ratio threshold for local target language detection
-Read new feature indicators
+Really? Not even a little?
 Reason
 Reason:
 Rebinds the client's listening address and port
@@ -2682,6 +2689,9 @@ Record to a file
 Red
 Red team
 Red team wins!
+Redeem
+Redeem your code and customize your title
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
 Reduce antiping and player prediction when frozen
 Reduce prediction while frozen
 Reduced
@@ -2799,16 +2809,6 @@ Replay feature is disabled!
 Reply
 Reply to messages from muted players
 Reply with dummy
-Report
-Report request canceled
-Report request failed due to network error
-Report request failed with HTTP status: %d
-Report request is already in progress
-Report scan request submitted
-Report service App ID
-Report service signing key
-Report service URL
-Reports are not available on Axiom servers
 Request to swap your tee with another team member
 Requesting to join the game
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
@@ -2847,6 +2847,7 @@ Restart the client
 Restarting. Please wait…
 Restore old single-segment hook collision line behavior
 Retrying…
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 Review and edit custom key bindings
 Review and reset changed configuration values
 Rifle Laser Inner Color
@@ -2932,8 +2933,6 @@ Scale down other Tees as well
 Scale down Tee
 Scale max mouse distance to 1000 for better aim
 Scale uncertainty duration by ping (100=1.0x)
-Scanning current server
-Scanning current server...
 Score
 Score limit
 Scoreboard
@@ -3316,6 +3315,7 @@ Show text entities
 Show the cursor while free spectating
 Show the number of frozen tees
 Show the number of tees still alive
+Show the occasional sponsor reminder in the main menu
 Show the pet
 Show the screen center line
 Show the server rules
@@ -3352,6 +3352,7 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 Shows gameplay information for this server
 Shows help to command r, general help if left blank
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
 Shows the credits of the DDNet mod
 Shows the global points of a player beginning with name r (your rank by default)
 Shows the rank of player with name r (your rank by default)
@@ -3480,7 +3481,11 @@ Speedrun timer seconds
 Speedrun timer time (MM:SS, legacy)
 Sphere
 Spin pop
+Sponsor code
+Sponsor code already claimed
+Sponsor reminder
 Sponsor support
+Sponsor title
 Sponsors:
 Spotify sp_dc cookie (from browser DevTools, long-lived)
 Spree
@@ -3512,6 +3517,7 @@ Status bar text opacity
 Status normal, check details below if still experiencing issues
 Status Scheme:
 Steam profile name
+Still free after %d sponsors. Take a look?
 Stop key input on switch (0=off, 1=dummy, 2=player)
 Stop practice
 Stop record
@@ -3551,6 +3557,7 @@ Switch
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 Switch failed
 Switch interval
+Switch on the status rows you need, then list the binds you want to watch.
 Switch opacity
 Switch skin on hammer
 Switch spectator mode
@@ -3610,7 +3617,6 @@ Team message text gradient color
 Team mode can't be changed while racing
 Team mode change disabled
 Team mode change is disabled on this server.
-Team rank
 Team save already in progress
 Team save disabled for teams in practice mode
 Team save in progress. You'll be able to load with '/load %s'
@@ -3746,6 +3752,8 @@ Timeout seed
 Timer is displayed in %s
 Timer isn't displayed.
 Tiny Tee Size
+Title server unavailable; retry
+Title too long or contains unsupported characters
 To save all players in your team have to be alive and not in '/spec'
 Toast uses UiTokens + QmMotion slide
 Toggle auto camera
@@ -3837,6 +3845,7 @@ Tune in zone a variable to value
 Tune layer opacity
 Tune variable to value
 Tune variable to value or show current value
+Turn on "Message merging" in Dream Features.
 Tutorial
 Twinkle strength
 Type
@@ -3909,6 +3918,7 @@ Unpredictable shadow tee transparency (0 invisible, 100 fully visible)
 Unpredicted ghost opacity
 Unregister protocol and file extensions
 Unsaved changes
+Up to 6 Chinese or 12 ASCII characters
 Update
 Update a rcon key
 Update a rcon key with prehashed data
@@ -3921,6 +3931,7 @@ Uploading map data to GPU
 URL for downloading community skins
 URL for downloading maps (must start with https://)
 URL for downloading skins
+Usage: %s
 Usage: %s %s
 Use 12 hour clock
 Use 12-hour clock for local time
@@ -3943,6 +3954,7 @@ Use enemy list to drive player indicators
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 Use mouse sensitivity when dynamic camera is on
+Use MSDF text rendering for nameplates (requires TexturedMsdf)
 Use multi-char replacement based on word length
 Use native UI for IME (may break IME in fullscreen mode, requires restart)
 Use new smoothing algorithm
@@ -4237,6 +4249,7 @@ Your team is currently saving
 Your team was killed because it couldn't finish anymore and hasn't entered /practice mode
 Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
+Your weapon slides and rotates in when you switch, and flips while reloading.
 z = Zoom
 Zen Mode
 Zen mode key

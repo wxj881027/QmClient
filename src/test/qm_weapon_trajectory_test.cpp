@@ -152,6 +152,25 @@ TEST(QmWeaponTrajectory, PistolGuideToggleOnlyAffectsGun)
 	EXPECT_FALSE(QmWeaponTrajectoryEnabledForWeapon(WEAPON_HAMMER, true));
 }
 
+TEST(QmWeaponTrajectory, NinjaPredictionRequiresEnabledLocalNinja)
+{
+	EXPECT_EQ(DefaultConfig::QmWeaponTrajectoryNinja, 0);
+	EXPECT_TRUE(QmWeaponTrajectoryNinjaEnabled(WEAPON_NINJA, true, true));
+	EXPECT_FALSE(QmWeaponTrajectoryNinjaEnabled(WEAPON_NINJA, false, true));
+	EXPECT_FALSE(QmWeaponTrajectoryNinjaEnabled(WEAPON_NINJA, true, false));
+	EXPECT_FALSE(QmWeaponTrajectoryNinjaEnabled(WEAPON_GUN, true, true));
+}
+
+TEST(QmWeaponTrajectorySource, PredictsNinjaEndpointUsingCharacterCollision)
+{
+	const std::string Source = ReadTestSourceFile("src/game/client/components/qmclient/weapon_trajectory.cpp");
+
+	EXPECT_NE(Source.find("g_pData->m_Weapons.m_Ninja.m_Movetime"), std::string::npos);
+	EXPECT_NE(Source.find("g_pData->m_Weapons.m_Ninja.m_Velocity"), std::string::npos);
+	EXPECT_NE(Source.find("Collision()->MoveBox"), std::string::npos);
+	EXPECT_NE(Source.find("CCharacterCore::PhysicalSizeVec2()"), std::string::npos);
+}
+
 TEST(QmWeaponTrajectory, RespectsWeaponSpecificPlayerHitDisables)
 {
 	EXPECT_FALSE(QmWeaponTrajectoryCanHitOtherPlayers(WEAPON_GUN, true, false, false));

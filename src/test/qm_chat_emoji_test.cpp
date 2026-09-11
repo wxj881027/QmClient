@@ -52,6 +52,71 @@ TEST(QmChatEmoji, MatchesOnlyExactCodes)
 	EXPECT_EQ(QmChatEmojiTexturePath(static_cast<EQmChatEmoji>(999)), nullptr);
 }
 
+TEST(QmChatEmoji, MatchesFullWidthColonCodes)
+{
+	EXPECT_EQ(QmChatEmojiFromText("：ax"), EQmChatEmoji::LOVE);
+	EXPECT_EQ(QmChatEmojiFromText("：sq"), EQmChatEmoji::ANGRY);
+	EXPECT_EQ(QmChatEmojiFromText("：zc"), EQmChatEmoji::SUPPORT);
+	EXPECT_EQ(QmChatEmojiFromText("：SQ"), EQmChatEmoji::NONE);
+	EXPECT_EQ(QmChatEmojiFromText("：unknown"), EQmChatEmoji::NONE);
+	EXPECT_EQ(QmChatEmojiFromText("：sq "), EQmChatEmoji::NONE);
+}
+
+TEST(QmChatEmoji, DetectsHalfAndFullWidthColonPrefix)
+{
+	EXPECT_EQ(QmChatEmojiColonUtf8Length(":ax"), 1);
+	EXPECT_EQ(QmChatEmojiColonUtf8Length(":"), 1);
+	EXPECT_EQ(QmChatEmojiColonUtf8Length("：ax"), 3);
+	EXPECT_EQ(QmChatEmojiColonUtf8Length("："), 3);
+	EXPECT_EQ(QmChatEmojiColonUtf8Length("ax"), 0);
+	EXPECT_EQ(QmChatEmojiColonUtf8Length(""), 0);
+	EXPECT_EQ(QmChatEmojiColonUtf8Length(nullptr), 0);
+	EXPECT_TRUE(QmChatEmojiIsColonPrefixed(":"));
+	EXPECT_TRUE(QmChatEmojiIsColonPrefixed("：z"));
+	EXPECT_FALSE(QmChatEmojiIsColonPrefixed("hello"));
+	EXPECT_FALSE(QmChatEmojiIsColonPrefixed(nullptr));
+}
+
+TEST(QmChatEmoji, CollectsPrefixMatchesInDefinitionOrder)
+{
+	const SQmChatEmojiDefinition *apMatches[QM_CHAT_EMOJI_COUNT];
+
+	EXPECT_EQ(QmChatEmojiCollectByPrefix("", apMatches, (int)QM_CHAT_EMOJI_COUNT), (int)QM_CHAT_EMOJI_COUNT);
+	EXPECT_STREQ(apMatches[0]->m_pText, ":ax");
+	EXPECT_STREQ(apMatches[1]->m_pText, ":bx");
+
+	EXPECT_EQ(QmChatEmojiCollectByPrefix("z", apMatches, (int)QM_CHAT_EMOJI_COUNT), 2);
+	EXPECT_STREQ(apMatches[0]->m_pText, ":zj");
+	EXPECT_STREQ(apMatches[1]->m_pText, ":zc");
+
+	EXPECT_EQ(QmChatEmojiCollectByPrefix("ax", apMatches, (int)QM_CHAT_EMOJI_COUNT), 1);
+	EXPECT_STREQ(apMatches[0]->m_pText, ":ax");
+
+	EXPECT_EQ(QmChatEmojiCollectByPrefix("AX", apMatches, (int)QM_CHAT_EMOJI_COUNT), 1);
+	EXPECT_STREQ(apMatches[0]->m_pText, ":ax");
+
+	EXPECT_EQ(QmChatEmojiCollectByPrefix("unknown", apMatches, (int)QM_CHAT_EMOJI_COUNT), 0);
+}
+
+TEST(QmChatEmoji, FormatsCandidatesWithCommas)
+{
+	const SQmChatEmojiDefinition *apMatches[QM_CHAT_EMOJI_COUNT];
+	char aBuf[128];
+
+	const int NumZ = QmChatEmojiCollectByPrefix("z", apMatches, (int)QM_CHAT_EMOJI_COUNT);
+	ASSERT_EQ(NumZ, 2);
+	EXPECT_TRUE(QmChatEmojiFormatCandidates(apMatches, NumZ, aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "zj,zc");
+
+	const int NumA = QmChatEmojiCollectByPrefix("a", apMatches, (int)QM_CHAT_EMOJI_COUNT);
+	ASSERT_EQ(NumA, 1);
+	EXPECT_TRUE(QmChatEmojiFormatCandidates(apMatches, NumA, aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "ax");
+
+	EXPECT_FALSE(QmChatEmojiFormatCandidates(apMatches, 0, aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "");
+}
+
 TEST(QmChatEmoji, RequiresKnownEmojiAndAvailableTexture)
 {
 	const auto InvalidEmoji = static_cast<EQmChatEmoji>(999);

@@ -28,6 +28,7 @@ public:
 	void Resize(int NewW, int NewH) override;
 	void Shift(EShiftDirection Direction) override;
 	[[nodiscard]] bool IsEmpty() const override;
+	[[nodiscard]] bool HasContentInRect(const CIntRect &Rect) const override;
 	void BrushDraw(CLayer *pBrush, vec2 WorldPos) override;
 	void BrushFlipX() override;
 	void BrushFlipY() override;

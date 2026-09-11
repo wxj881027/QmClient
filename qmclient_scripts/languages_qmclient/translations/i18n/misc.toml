@@ -10956,54 +10956,6 @@ turkish = "Bilinmeyen hata. Yapılandırma dizinindeki qmclient/settings.cfg dos
 polish = "Nieznany błąd. Spróbuj zmienić gfx_backend na OpenGL lub Vulkan w qmclient/settings.cfg w katalogu konfiguracyjnym i spróbuj ponownie."
 
 [[message]]
-key = "Axiom API returned an error"
-[message.translations]
-simplified_chinese = "Axiom API 返回错误"
-traditional_chinese = "Axiom API 傳回錯誤"
-japanese = "Axiom API がエラーを返しました"
-korean = "Axiom API에서 오류를 반환했습니다"
-russian = "API Axiom вернул ошибку"
-german = "Die Axiom-API hat einen Fehler zurückgegeben"
-spanish = "La API de Axiom devolvió un error"
-french = "L'API Axiom a renvoyé une erreur"
-brazilian_portuguese = "A API do Axiom retornou um erro"
-portuguese = "A API do Axiom devolveu um erro"
-turkish = "Axiom API bir hata döndürdü"
-polish = "API Axiom zwróciło błąd"
-
-[[message]]
-key = "Axiom score request failed"
-[message.translations]
-simplified_chinese = "Axiom 分数请求失败"
-traditional_chinese = "Axiom 分數請求失敗"
-japanese = "Axiom スコアの取得に失敗しました"
-korean = "Axiom 점수 요청에 실패했습니다"
-russian = "Не удалось получить очки Axiom"
-german = "Axiom-Punkte konnten nicht abgerufen werden"
-spanish = "Error al solicitar las puntuaciones de Axiom"
-french = "Échec de la récupération des scores Axiom"
-brazilian_portuguese = "Falha ao solicitar as pontuações do Axiom"
-portuguese = "Falha ao pedir as pontuações do Axiom"
-turkish = "Axiom puan isteği başarısız oldu"
-polish = "Nie udało się pobrać punktów Axiom"
-
-[[message]]
-key = "Axiom scores"
-[message.translations]
-simplified_chinese = "Axiom 分数"
-traditional_chinese = "Axiom 分數"
-japanese = "Axiom スコア"
-korean = "Axiom 점수"
-russian = "Очки Axiom"
-german = "Axiom-Punkte"
-spanish = "Puntuaciones de Axiom"
-french = "Scores Axiom"
-brazilian_portuguese = "Pontuações do Axiom"
-portuguese = "Pontuações do Axiom"
-turkish = "Axiom puanları"
-polish = "Punkty Axiom"
-
-[[message]]
 key = "Completed maps"
 [message.translations]
 simplified_chinese = "已完成地图"
@@ -11036,38 +10988,6 @@ turkish = "Dünya sıralaması"
 polish = "Ranking światowy"
 
 [[message]]
-key = "Invalid Axiom API response"
-[message.translations]
-simplified_chinese = "Axiom API 响应无效"
-traditional_chinese = "Axiom API 回應無效"
-japanese = "Axiom API の応答が無効です"
-korean = "잘못된 Axiom API 응답"
-russian = "Некорректный ответ API Axiom"
-german = "Ungültige Antwort der Axiom-API"
-spanish = "Respuesta no válida de la API de Axiom"
-french = "Réponse invalide de l'API Axiom"
-brazilian_portuguese = "Resposta inválida da API do Axiom"
-portuguese = "Resposta inválida da API do Axiom"
-turkish = "Geçersiz Axiom API yanıtı"
-polish = "Nieprawidłowa odpowiedź API Axiom"
-
-[[message]]
-key = "Loading Axiom scores..."
-[message.translations]
-simplified_chinese = "正在加载 Axiom 分数……"
-traditional_chinese = "正在載入 Axiom 分數……"
-japanese = "Axiom スコアを読み込み中..."
-korean = "Axiom 점수 불러오는 중..."
-russian = "Загрузка очков Axiom..."
-german = "Axiom-Punkte werden geladen..."
-spanish = "Cargando puntuaciones de Axiom..."
-french = "Chargement des scores Axiom..."
-brazilian_portuguese = "Carregando pontuações do Axiom..."
-portuguese = "A carregar pontuações do Axiom..."
-turkish = "Axiom puanları yükleniyor..."
-polish = "Wczytywanie punktów Axiom..."
-
-[[message]]
 key = "Maps"
 [message.translations]
 simplified_chinese = "地图"
@@ -11098,22 +11018,6 @@ brazilian_portuguese = "Distância percorrida"
 portuguese = "Distância percorrida"
 turkish = "Kat edilen mesafe"
 polish = "Przebyty dystans"
-
-[[message]]
-key = "Multiple exact Axiom players found"
-[message.translations]
-simplified_chinese = "找到多个完全匹配的 Axiom 玩家"
-traditional_chinese = "找到多個完全相符的 Axiom 玩家"
-japanese = "完全一致する Axiom プレイヤーが複数見つかりました"
-korean = "정확히 일치하는 Axiom 플레이어가 여러 명 있습니다"
-russian = "Найдено несколько игроков Axiom с точным совпадением"
-german = "Mehrere exakt passende Axiom-Spieler gefunden"
-spanish = "Se encontraron varios jugadores de Axiom con coincidencia exacta"
-french = "Plusieurs joueurs Axiom correspondent exactement"
-brazilian_portuguese = "Foram encontrados vários jogadores do Axiom com correspondência exata"
-portuguese = "Foram encontrados vários jogadores do Axiom com correspondência exata"
-turkish = "Tam eşleşen birden fazla Axiom oyuncusu bulundu"
-polish = "Znaleziono wielu graczy Axiom z dokładnym dopasowaniem"
 
 [[message]]
 key = "Not ranked"
@@ -11178,22 +11082,6 @@ brazilian_portuguese = "Tempo de jogo"
 portuguese = "Tempo de jogo"
 turkish = "Oynama süresi"
 polish = "Czas gry"
-
-[[message]]
-key = "Player not found on Axiom"
-[message.translations]
-simplified_chinese = "Axiom 上未找到该玩家"
-traditional_chinese = "Axiom 上找不到該玩家"
-japanese = "Axiom でプレイヤーが見つかりません"
-korean = "Axiom에서 플레이어를 찾을 수 없습니다"
-russian = "Игрок не найден в Axiom"
-german = "Spieler bei Axiom nicht gefunden"
-spanish = "Jugador no encontrado en Axiom"
-french = "Joueur introuvable sur Axiom"
-brazilian_portuguese = "Jogador não encontrado no Axiom"
-portuguese = "Jogador não encontrado no Axiom"
-turkish = "Oyuncu Axiom'da bulunamadı"
-polish = "Nie znaleziono gracza w Axiom"
 
 [[message]]
 key = "Team rank"

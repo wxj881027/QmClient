@@ -4,6 +4,7 @@
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/storage.h>
 
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/components/camera.h>
 #include <game/client/components/controls.h>
@@ -345,13 +346,18 @@ TEST(QmNewUiMenuBranches, MenubarUsesExplicitQmNewUiColorBranch)
 	EXPECT_NE(DoMenuTabV2.find("const float LabelFontSize = UseNewUi ? ui_token::settings::TAB_FONT_SIZE * ContentScale : Label.h * CUi::ms_FontmodHeight;"), std::string::npos);
 	EXPECT_NE(DoMenuTabV2.find("Ui()->DoLabel(&Label, pText, LabelFontSize, TEXTALIGN_MC);"), std::string::npos);
 	EXPECT_NE(Source.find("const bool UseNewUi = g_Config.m_QmNewUi != 0;"), std::string::npos);
-	EXPECT_NE(Source.find("ColorRGBA InactiveColor = MenuTabDefaultColor();"), std::string::npos);
-	EXPECT_NE(Source.find("ColorRGBA ActiveColor = MenuTabActiveColor();"), std::string::npos);
-	EXPECT_NE(Source.find("ColorRGBA HoverColor = MenuMenubarHoverColor();"), std::string::npos);
+	// 新 UI 菜单栏页签的表面色统一由胶囊 Tabbar 样式给出，页签自己不再各自算一套色。
+	EXPECT_NE(Source.find("ui_widget::SCapsuleTabBarStyle MenuCapsuleTabBarStyle()"), std::string::npos);
+	EXPECT_NE(Source.find("Style.m_CapsuleColor = MenuTabDefaultColor();"), std::string::npos);
+	EXPECT_NE(Source.find("Style.m_IndicatorColor = MenuCapsuleTabIndicatorColor();"), std::string::npos);
 	EXPECT_NE(Source.find("ColorRGBA InactiveColor = ms_ColorTabbarInactive;"), std::string::npos);
 	EXPECT_NE(Source.find("ColorRGBA ActiveColor = ms_ColorTabbarActive;"), std::string::npos);
 	EXPECT_NE(Source.find("ColorRGBA HoverColor = ms_ColorTabbarHover;"), std::string::npos);
-	EXPECT_NE(Source.find("const ColorRGBA IndicatorColor = g_Config.m_QmNewUi != 0 ? MenuUiColorAccent(1.0f) : ui_token::color::ACCENT_PRIMARY;"), std::string::npos);
+	// 胶囊 Tabbar：新 UI 的激活位置由滑块胶囊表达，页签下方的下划线小块必须消失。
+	EXPECT_EQ(Source.find("const ColorRGBA IndicatorColor = g_Config.m_QmNewUi != 0 ? MenuUiColorAccent(1.0f) : ui_token::color::ACCENT_PRIMARY;"), std::string::npos);
+	EXPECT_EQ(RenderMenubar.find("if(UseNewUi && MenubarHaveActive && !Ui()->RenderOnly())"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash(\"menubar_capsule_ingame_tabs\")"), std::string::npos);
+	EXPECT_LT(UseNewUiBlock.find("ui_widget::CapsuleTabBarChrome("), UseNewUiBlock.find("DoIngameMenuTab(&s_aOnlineTabButtons[DrawnOnlineTabs]"));
 	EXPECT_NE(RenderMenubar.find("if(!UseNewUi && MenubarHaveActive && !Ui()->RenderOnly())"), std::string::npos);
 	EXPECT_NE(RenderMenubar.find("if(UseNewUi)"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f)"), std::string::npos);
@@ -361,12 +367,16 @@ TEST(QmNewUiMenuBranches, MenubarUsesExplicitQmNewUiColorBranch)
 	EXPECT_NE(UseNewUiBlock.find("const float GameButtonWidth = (CompactOnlineMenuTabs ? 56.0f : 64.0f) * MENU_MENUBAR_CONTENT_SCALE_NEW;"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float ServerInfoButtonWidth = (CompactOnlineMenuTabs ? 94.0f : 104.0f) * MENU_MENUBAR_CONTENT_SCALE_NEW;"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float OnlineTabGap = 4.0f;"), std::string::npos);
-	EXPECT_NE(UseNewUiBlock.find("DoIngameMenuTab(&s_GameButton, PAGE_GAME, \"ingame-tab-game\", Localize(\"Game\"), ActivePage == PAGE_GAME, &Button, IGraphics::CORNER_ALL)"), std::string::npos);
-	EXPECT_EQ(UseNewUiBlock.find("DoIngameMenuTab(&s_GameButton, PAGE_GAME, \"ingame-tab-game\", Localize(\"Game\"), ActivePage == PAGE_GAME, &Button, IGraphics::CORNER_TL)"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("{PAGE_GAME, \"ingame-tab-game\", Localize(\"Game\"), GameButtonWidth, true},"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("DoIngameMenuTab(&s_aOnlineTabButtons[DrawnOnlineTabs], Tab.m_Page, Tab.m_pTextId, Tab.m_pText, ActivePage == Tab.m_Page, &TabRect, IGraphics::CORNER_ALL)"), std::string::npos);
+	EXPECT_EQ(UseNewUiBlock.find("IGraphics::CORNER_TL"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("if(DoMenuTabV2(&s_SettingsButton"), std::string::npos);
-	EXPECT_NE(UseNewUiBlock.find("if(DoMenuTabV2(&s_InternetButton"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash(\"menubar_capsule_start_tabs\")"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("if(DoMenuTabV2(&s_aStartTabButtons[TabIndex], Tab.m_pIcon, TabActive, &aStartTabSlots[TabIndex], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, Tab.m_pCommunityIcon, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))"), std::string::npos);
+	EXPECT_LT(UseNewUiBlock.find("ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash(\"menubar_capsule_start_tabs\")"), UseNewUiBlock.find("if(DoMenuTabV2(&s_aStartTabButtons[TabIndex]"));
 	EXPECT_EQ(UseNewUiBlock.find("DoButton_MenuTab(&s_SettingsButton"), std::string::npos);
-	EXPECT_EQ(UseNewUiBlock.find("DoButton_MenuTab(&s_InternetButton"), std::string::npos);
+	EXPECT_EQ(UseNewUiBlock.find("DoButton_MenuTab(&s_aStartTabButtons"), std::string::npos);
+	EXPECT_EQ(UseNewUiBlock.find("static CButtonContainer s_InternetButton;"), std::string::npos);
 	EXPECT_EQ(OldUiBlock.find("Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f)"), std::string::npos);
 	EXPECT_EQ(OldUiBlock.find("Box.VMargin(MenubarOuterInsetX, &Box);"), std::string::npos);
 	EXPECT_EQ(OldUiBlock.find("Box.HMargin(MenubarOuterInsetY, &Box);"), std::string::npos);
@@ -414,7 +424,11 @@ TEST(QmNewUiMenuBranches, MenubarScalesOnlyNewUiInternalElementsByTenPercent)
 	EXPECT_NE(UseNewUiBlock.find("const float GhostButtonWidth = (CompactOnlineMenuTabs ? 56.0f : 64.0f) * MENU_MENUBAR_CONTENT_SCALE_NEW;"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float CallVoteButtonWidth = (CompactOnlineMenuTabs ? 80.0f : 88.0f) * MENU_MENUBAR_CONTENT_SCALE_NEW;"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float OnlineTabGap = 4.0f;"), std::string::npos);
-	EXPECT_NE(UseNewUiBlock.find("Box.VSplitRight(10.0f, &Box, nullptr);"), std::string::npos);
+	// 右侧图标簇（Quit / Settings / Editor / 进服后的 Demo）必须共用同一个槽位尺寸与间隔，
+	// 否则 Demo 两侧会各多出一段空白，整排图标看上去被隔开。
+	EXPECT_EQ(UseNewUiBlock.find("Box.VSplitRight(10.0f, &Box, nullptr);"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("Box.VSplitRight(MenubarIconGap, &Box, nullptr);"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);"), std::string::npos);
 	EXPECT_NE(DoMenuTabV2.find("pRect->Margin(2.0f * ContentScale, &IconRect);"), std::string::npos);
 	EXPECT_NE(DoMenuTabV2.find("pRect->HMargin(2.0f * ContentScale, &Label);"), std::string::npos);
 	EXPECT_NE(DoMenuTabV2.find("UseNewUi ? 7.0f * ContentScale : 10.0f"), std::string::npos);
@@ -422,8 +436,298 @@ TEST(QmNewUiMenuBranches, MenubarScalesOnlyNewUiInternalElementsByTenPercent)
 	EXPECT_NE(DoIngameMenuTab.find("const float ContentScale = g_Config.m_QmNewUi != 0 ? MENU_MENUBAR_CONTENT_SCALE_NEW : 1.0f;"), std::string::npos);
 	EXPECT_NE(DoIngameMenuTab.find("Text.HMargin(2.0f * ContentScale, &Text);"), std::string::npos);
 	EXPECT_NE(DoIngameMenuTab.find("const float FontSize = g_Config.m_QmNewUi != 0 ? ui_token::settings::TAB_FONT_SIZE * ContentScale : Text.h * CUi::ms_FontmodHeight;"), std::string::npos);
-	EXPECT_NE(DoIngameMenuTab.find("return DoMenuTabV2(pButtonContainer, pText, Checked != 0, pRect, Corners, nullptr, nullptr, nullptr, nullptr, &TextElement, ContentScale);"), std::string::npos);
+	EXPECT_NE(DoIngameMenuTab.find("return DoMenuTabV2(pButtonContainer, pText, Checked != 0, pRect, Corners, nullptr, nullptr, nullptr, nullptr, &TextElement, ContentScale, true);"), std::string::npos);
 	EXPECT_EQ(OldUiBlock.find("MENU_MENUBAR_CONTENT_SCALE_NEW"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, CapsuleTabBarRowRectSpansSlotsAndGaps)
+{
+	// 意图：胶囊容器覆盖整排 Tab（含 Tab 之间的间隙），而不是只包住第一个槽位。
+	const CUIRect aSlots[] = {
+		{10.0f, 4.0f, 60.0f, 20.0f},
+		{74.0f, 4.0f, 60.0f, 20.0f},
+		{138.0f, 4.0f, 100.0f, 20.0f},
+	};
+	const CUIRect Row = ui_widget::CapsuleTabBarRowRect(aSlots, 3);
+	EXPECT_FLOAT_EQ(Row.x, 10.0f);
+	EXPECT_FLOAT_EQ(Row.y, 4.0f);
+	EXPECT_FLOAT_EQ(Row.w, 228.0f);
+	EXPECT_FLOAT_EQ(Row.h, 20.0f);
+
+	EXPECT_FLOAT_EQ(ui_widget::CapsuleTabBarRowRect(aSlots, 1).w, 60.0f);
+	EXPECT_FLOAT_EQ(ui_widget::CapsuleTabBarRowRect(nullptr, 3).w, 0.0f);
+	EXPECT_FLOAT_EQ(ui_widget::CapsuleTabBarRowRect(aSlots, 0).h, 0.0f);
+}
+
+TEST(QmNewUiMenuBranches, CapsuleTabBarChromeDrawsContainerThenSpringIndicatorUnderLabels)
+{
+	// 意图：滑块胶囊必须由容器的同一入口画在文字之前，并且由弹簧驱动、可被打断续接，
+	// 否则切换 Tab 时会瞬移或盖住经过的页签文字。
+	const std::string Source = ReadTextFile("src/game/client/QmUi/UiNavigation.cpp");
+	const std::string Header = ReadTextFile("src/game/client/QmUi/UiNavigation.h");
+	ASSERT_NE(Source.find("void CapsuleTabBarChrome("), std::string::npos);
+
+	// ui_widget::TabBar（UiDogfood 调试页）同样走胶囊，不再保留下划线小块。
+	const std::string DogfoodTabBar = FunctionBody(Source, "int TabBar(");
+	ASSERT_FALSE(DogfoodTabBar.empty());
+	EXPECT_EQ(DogfoodTabBar.find("Underline"), std::string::npos);
+	EXPECT_EQ(DogfoodTabBar.find("Indicator.Draw("), std::string::npos);
+	EXPECT_NE(DogfoodTabBar.find("std::vector<CUIRect> vTabSlots(static_cast<std::size_t>(Count));"), std::string::npos);
+	EXPECT_LT(DogfoodTabBar.find("CapsuleTabBarChrome(Ctx, BuildUiAnimNodeKey(MakeUiScopeHash(\"ui_widget_tabbar_capsule\")"), DogfoodTabBar.find("DoButton_MenuTab(&ButtonPool[i], ppLabels[i], Checked, &vTabSlots[static_cast<std::size_t>(i)]"));
+
+	EXPECT_NE(Source.find("if(Ctx.m_pUi->RenderOnly())\n\t\t\treturn;"), std::string::npos);
+	const size_t CapsuleDraw = Source.find("DrawRoundedSurface(Ctx, Capsule, Style.m_CapsuleColor, ColorRGBA(), ui_token::radius::PILL);");
+	const size_t IndicatorDraw = Source.find("DrawRoundedSurface(Ctx, Indicator, Style.m_IndicatorColor, ColorRGBA(), ui_token::radius::PILL);");
+	ASSERT_NE(CapsuleDraw, std::string::npos);
+	ASSERT_NE(IndicatorDraw, std::string::npos);
+	EXPECT_LT(CapsuleDraw, IndicatorDraw);
+	EXPECT_NE(Source.find("ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, s_IndicatorSpring, 2)"), std::string::npos);
+	EXPECT_NE(Source.find("ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, s_IndicatorSpring, 2)"), std::string::npos);
+	EXPECT_NE(Source.find("static constexpr SUiSpringConfig s_IndicatorSpring{1.0f, 420.0f, 38.0f, 0.05f, 0.4f};"), std::string::npos);
+	EXPECT_NE(Header.find("inline CUIRect CapsuleTabBarRowRect(const CUIRect *pSlots, int Count)"), std::string::npos);
+	// 配色自适应由 QmUi 统一提供，各 Tabbar 只传自己的容器表面色。
+	EXPECT_NE(Header.find("inline bool CapsuleTabBarSurfaceIsLight(const ColorRGBA &SurfaceColor)"), std::string::npos);
+	EXPECT_NE(Header.find("inline ColorRGBA CapsuleTabBarIndicatorColor(const ColorRGBA &SurfaceColor)"), std::string::npos);
+	EXPECT_NE(Header.find("inline ColorRGBA CapsuleTabBarActiveLabelColor(const ColorRGBA &SurfaceColor)"), std::string::npos);
+	EXPECT_NE(Header.find("inline ColorRGBA CapsuleTabBarInactiveLabelColor(const ColorRGBA &SurfaceColor)"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, CapsuleTabKeepsHoverOnlyAndFlipsLabelColor)
+{
+	// 意图：胶囊 Tab 自己不再画分块底色（激活外观由滑块承担），但 hover 反馈与
+	// 激活文字转深色必须保留。
+	const std::string Source = ReadTextFile("src/game/client/components/menus.cpp");
+	const std::string DoMenuTabV2 = FunctionBody(Source, "int CMenus::DoMenuTabV2(");
+	const std::string DoIngameMenuTab = FunctionBody(Source, "int CMenus::DoIngameMenuTab(");
+	ASSERT_FALSE(DoMenuTabV2.empty());
+
+	EXPECT_NE(Source.find("const bool InCapsule = CapsuleTab && UseNewUi;"), std::string::npos);
+	EXPECT_NE(DoMenuTabV2.find("if(InCapsule)\n\t{\n\t\tif(Hover)\n\t\t\tDrawRoundedSurface(Ui(), *pRect, MenuCapsuleTabHoverColor(), ColorRGBA(), ui_token::radius::PILL, 0.0f, Corners);\n\t}\n\telse\n\t\tDrawRoundedSurface(Ui(), *pRect, Resolved, ColorRGBA(), UseNewUi ? 7.0f * ContentScale : 10.0f, 0.0f, Corners);"), std::string::npos);
+	EXPECT_NE(DoMenuTabV2.find("TextRender()->TextColor(Active ? MenuCapsuleTabActiveLabelColor() : MenuCapsuleTabInactiveLabelColor());"), std::string::npos);
+	EXPECT_LT(DoMenuTabV2.find("TextRender()->TextColor(Active ? MenuCapsuleTabActiveLabelColor()"), DoMenuTabV2.find("DoMenuLabelStreamed(MENU_TEXT_SCOPE_INGAME, *pTextUiElement"));
+	EXPECT_NE(DoMenuTabV2.find("TextRender()->TextColor(PreviousLabelColor);"), std::string::npos);
+	EXPECT_NE(DoIngameMenuTab.find("ContentScale, true);"), std::string::npos);
+	EXPECT_NE(Source.find("ColorRGBA MenuCapsuleTabIndicatorColor()"), std::string::npos);
+	EXPECT_NE(Source.find("return ui_widget::CapsuleTabBarIndicatorColor(MenuTabDefaultColor());"), std::string::npos);
+	// DoButton_MenuTab 也要支持胶囊模式：设置页左栏等竖向 Tabbar 走同一条路径。
+	const std::string DoButtonMenuTab = FunctionBody(Source, "int CMenus::DoButton_MenuTab(");
+	ASSERT_FALSE(DoButtonMenuTab.empty());
+	EXPECT_NE(DoButtonMenuTab.find("if(CapsuleTab)\n\t{\n\t\t// 胶囊 Tab 的激活外观由滑块胶囊承担，Tab 自己不再画分块底色，只保留 hover 反馈。\n\t\tif(MouseInside)\n\t\t\tDrawRoundedSurface(Ui(), *pRect, MenuCapsuleTabHoverColor(), ColorRGBA(), ui_token::radius::PILL, 0.0f, Corners);\n\t}\n\telse if(Checked)"), std::string::npos);
+	EXPECT_NE(DoButtonMenuTab.find("TextRender()->TextColor(Checked ? MenuCapsuleTabActiveLabelColor() : MenuCapsuleTabInactiveLabelColor());"), std::string::npos);
+	EXPECT_NE(DoButtonMenuTab.find("TextRender()->TextColor(PreviousLabelColor);"), std::string::npos);
+	EXPECT_NE(ReadTextFile("src/game/client/components/menus.h").find("CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, SettingsSidebarKeepsPerTabFillInsteadOfCapsule)
+{
+	// 意图：设置页左栏是**竖排**页签，保持原来的分块选中/悬停底色，不做胶囊滑块；
+	// 横向子 Tab 行才走胶囊（见 SettingsSubTabRowsUseCapsuleTabBar）。
+	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
+	const std::string RenderSettings = FunctionBody(Source, "void CMenus::RenderSettings(CUIRect MainView)");
+	ASSERT_FALSE(RenderSettings.empty());
+
+	EXPECT_EQ(RenderSettings.find("ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash(\"settings_tabbar_capsule\")"), std::string::npos);
+	EXPECT_EQ(RenderSettings.find("aSettingsTabSlots"), std::string::npos);
+	EXPECT_NE(RenderSettings.find("const ColorRGBA SettingsNavigationSelected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.42f);"), std::string::npos);
+	EXPECT_NE(RenderSettings.find("const ColorRGBA SettingsNavigationHover = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);"), std::string::npos);
+	const size_t TabDrawPos = RenderSettings.find("if(DoButton_MenuTab(&m_aSettingsTabButtons[i], m_apSettingsTabs[i], Active, &Button, IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[i], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[i]))");
+	ASSERT_NE(TabDrawPos, std::string::npos);
+	// 页面切换仍要在卡片组装开始之前发生。
+	EXPECT_LT(TabDrawPos, RenderSettings.find("m_SettingsCardDeck.BeginDisplayCycle("));
+	// 旧 UI 仍走 CORNER_R 的贴边分支。
+	EXPECT_NE(RenderSettings.find("if(DoButton_MenuTab(&m_aSettingsTabButtons[i], m_apSettingsTabs[i], Active, &Button, IGraphics::CORNER_R"), std::string::npos);
+	// 设置页的胶囊配色零件仍供横向子 Tab 使用。
+	EXPECT_NE(Source.find("ui_widget::SCapsuleTabBarStyle CMenus::SettingsCapsuleTabBarStyle() const"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
+{
+	// 意图：设置页各子 Tab 行（外观 / Assets / TClient / QmClient）统一走
+	// 「槽位预布局 → 容器与滑块 → 页签文字」，旧 UI 分支保留原来的分段外观。
+	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
+	const std::string MenusHeader = ReadTextFile("src/game/client/components/menus.h");
+	const std::string Settings = ReadTextFile("src/game/client/components/menus_settings.cpp");
+	const std::string Assets = ReadTextFile("src/game/client/components/menus_settings_assets.cpp");
+	const std::string TClient = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
+	const std::string QmClient = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+
+	// 公共零件：绘制上下文与设置页胶囊配色。
+	EXPECT_NE(MenusHeader.find("IUiContext TabBarUiContext() const;"), std::string::npos);
+	EXPECT_NE(MenusHeader.find("ui_widget::SCapsuleTabBarStyle SettingsCapsuleTabBarStyle() const;"), std::string::npos);
+	EXPECT_NE(MenusSource.find("IUiContext CMenus::TabBarUiContext() const"), std::string::npos);
+	EXPECT_NE(MenusSource.find("ui_widget::SCapsuleTabBarStyle CMenus::SettingsCapsuleTabBarStyle() const"), std::string::npos);
+
+	const std::string RenderAppearance = FunctionBody(Settings, "void CMenus::RenderSettingsAppearance(CUIRect MainView)");
+	ASSERT_FALSE(RenderAppearance.empty());
+	const size_t AppearanceGrid = RenderAppearance.find("AppearanceTabsRemainder.VSplitLeft(TabWidth, &aAppearanceTabSlots[Tab], &AppearanceTabsRemainder);");
+	const size_t AppearanceChrome = RenderAppearance.find("ui_widget::CapsuleTabBarChrome(AppearanceTabBarCtx, MakeUiScopeHash(\"settings_appearance_tabs_capsule\")");
+	const size_t AppearanceDraw = RenderAppearance.find("DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &aAppearanceTabSlots[Tab]");
+	ASSERT_NE(AppearanceGrid, std::string::npos);
+	ASSERT_NE(AppearanceChrome, std::string::npos);
+	ASSERT_NE(AppearanceDraw, std::string::npos);
+	EXPECT_LT(AppearanceGrid, AppearanceChrome);
+	EXPECT_LT(AppearanceChrome, AppearanceDraw);
+	EXPECT_NE(RenderAppearance.find("nullptr, nullptr, -1.0f, true))"), std::string::npos);
+	EXPECT_NE(RenderAppearance.find("IGraphics::CORNER_L"), std::string::npos);
+
+	const std::string RenderAssets = FunctionBody(Assets, "void CMenus::RenderSettingsCustom(CUIRect MainView)");
+	ASSERT_FALSE(RenderAssets.empty());
+	const size_t AssetsGrid = RenderAssets.find("AssetsTabsRemainder.VSplitLeft(TabWidth, &aAssetsTabSlots[Tab], &AssetsTabsRemainder);");
+	const size_t AssetsChrome = RenderAssets.find("ui_widget::CapsuleTabBarChrome(AssetsTabBarCtx, MakeUiScopeHash(\"settings_assets_tabs_capsule\")");
+	const size_t AssetsDraw = RenderAssets.find("DoButton_MenuTab(&s_aPageTabs[Tab], s_apAssetsTabNames[Tab], s_CurCustomTab == Tab, &aAssetsTabSlots[Tab]");
+	ASSERT_NE(AssetsGrid, std::string::npos);
+	ASSERT_NE(AssetsChrome, std::string::npos);
+	ASSERT_NE(AssetsDraw, std::string::npos);
+	EXPECT_LT(AssetsGrid, AssetsChrome);
+	EXPECT_LT(AssetsChrome, AssetsDraw);
+	EXPECT_NE(RenderAssets.find("IGraphics::CORNER_L"), std::string::npos);
+
+	const std::string RenderTClient = FunctionBody(TClient, "void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)");
+	ASSERT_FALSE(RenderTClient.empty());
+	const size_t TClientGrid = RenderTClient.find("TabsRemainder.VSplitLeft(TabWidth, &aTClientTabSlots[NumTClientTabs], &TabsRemainder);");
+	const size_t TClientChrome = RenderTClient.find("ui_widget::CapsuleTabBarChrome(TClientTabBarCtx, MakeUiScopeHash(\"settings_tclient_tabs_capsule\")");
+	const size_t TClientDraw = RenderTClient.find("DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &aTClientTabSlots[TabIndex]");
+	ASSERT_NE(TClientGrid, std::string::npos);
+	ASSERT_NE(TClientChrome, std::string::npos);
+	ASSERT_NE(TClientDraw, std::string::npos);
+	EXPECT_LT(TClientGrid, TClientChrome);
+	EXPECT_LT(TClientChrome, TClientDraw);
+	// 旧 UI 仍按 CORNER_L/R/NONE 的分段外观逐段切分。
+	EXPECT_NE(RenderTClient.find("ActiveTab == Tab, &Button, Corners"), std::string::npos);
+
+	const std::string RenderQmClient = FunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly)");
+	ASSERT_FALSE(RenderQmClient.empty());
+	const size_t QmGrid = RenderQmClient.find("QmTabsRemainder.VSplitLeft(TabWidth, &aQmTabSlots[Tab], &QmTabsRemainder);");
+	const size_t QmChrome = RenderQmClient.find("ui_widget::CapsuleTabBarChrome(QmTabBarCtx, MakeUiScopeHash(\"settings_qmclient_tabs_capsule\")");
+	const size_t QmDraw = RenderQmClient.find("DoButton_MenuTab(&s_aPageTabs[Tab], apQmTabNames[Tab], m_QmClientSettingsTab == Tab, &aQmTabSlots[Tab]");
+	ASSERT_NE(QmGrid, std::string::npos);
+	ASSERT_NE(QmChrome, std::string::npos);
+	ASSERT_NE(QmDraw, std::string::npos);
+	EXPECT_LT(QmGrid, QmChrome);
+	EXPECT_LT(QmChrome, QmDraw);
+	// 页签计时段仍然覆盖两条分支。
+	EXPECT_LT(QmDraw, RenderQmClient.find("LogQmPerfStage(Client(), \"tabbar\", StageTimer.ElapsedMs(), false, aTabExtra);"));
+
+	// 玩家/Dummy 行与皮肤（Player/Dummy/Profiles）行同样先画胶囊再画文字。
+	const std::string RenderPlayer = FunctionBody(Settings, "void CMenus::RenderSettingsPlayer(CUIRect MainView)");
+	const std::string RenderTee = FunctionBody(Settings, "void CMenus::RenderSettingsTee(CUIRect MainView)");
+	ASSERT_FALSE(RenderPlayer.empty());
+	ASSERT_FALSE(RenderTee.empty());
+	const size_t PlayerChrome = RenderPlayer.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_player_dummy_tabs_capsule\"), aPlayerTabSlots, std::size(aPlayerTabSlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());");
+	const size_t PlayerDraw = RenderPlayer.find("if(DoButton_MenuTab(&s_PlayerTabButton, Localize(\"Player\"), !m_Dummy, &PlayerTab, IGraphics::CORNER_ALL");
+	ASSERT_NE(PlayerChrome, std::string::npos);
+	ASSERT_NE(PlayerDraw, std::string::npos);
+	EXPECT_LT(PlayerChrome, PlayerDraw);
+	EXPECT_NE(RenderPlayer.find("&PlayerTab, IGraphics::CORNER_L"), std::string::npos);
+	const size_t TeeChrome = RenderTee.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_tee_sub_tabs_capsule\"), aTeeTabSlots, std::size(aTeeTabSlots), ActiveTeeTab, SettingsCapsuleTabBarStyle());");
+	const size_t TeeDraw = RenderTee.find("if(DoButton_MenuTab(&s_PlayerTabButton, pPlayerTabLabel, s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_ALL");
+	ASSERT_NE(TeeChrome, std::string::npos);
+	ASSERT_NE(TeeDraw, std::string::npos);
+	EXPECT_LT(TeeChrome, TeeDraw);
+	EXPECT_NE(RenderTee.find("SeparateProfilesTab ? IGraphics::CORNER_R : IGraphics::CORNER_NONE"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)
+{
+	// 意图：服务器浏览器工具箱页签（过滤器 / 信息 / 好友 / Qm）在新 UI 下同样是胶囊，
+	// 旧 UI 保留原来的分段底色。
+	const std::string Source = ReadTextFile("src/game/client/components/menus_browser.cpp");
+	const std::string Body = FunctionBody(Source, "void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)");
+	ASSERT_FALSE(Body.empty());
+
+	EXPECT_NE(Source.find("#include <game/client/QmUi/UiNavigation.h>"), std::string::npos);
+	const size_t Chrome = Body.find("ui_widget::CapsuleTabBarChrome(ToolboxTabBarCtx, MakeUiScopeHash(\"browser_toolbox_tabs_capsule\")");
+	const size_t Draw = Body.find("if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))");
+	ASSERT_NE(Chrome, std::string::npos);
+	ASSERT_NE(Draw, std::string::npos);
+	EXPECT_LT(Chrome, Draw);
+	EXPECT_NE(Body.find("CapsuleTabBarStyleFor(BrowserPanelColor(1.0f))"), std::string::npos);
+	EXPECT_NE(Body.find("const ColorRGBA ColorActive = UseNewUi ? BrowserPanelElevatedColor(0.92f) : ms_ColorTabbarActive;"), std::string::npos);
+
+	// 通用配色零件：轨道压暗 + 滑块/文字自适应。
+	EXPECT_NE(ReadTextFile("src/game/client/components/menus.h").find("ui_widget::SCapsuleTabBarStyle CapsuleTabBarStyleFor(const ColorRGBA &SurfaceColor) const;"), std::string::npos);
+	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
+	EXPECT_NE(MenusSource.find("ui_widget::SCapsuleTabBarStyle CMenus::CapsuleTabBarStyleFor(const ColorRGBA &SurfaceColor) const"), std::string::npos);
+	EXPECT_NE(MenusSource.find("return CapsuleTabBarStyleFor(SettingsTabbarColor());"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, ServerControlTabsUseCapsuleTabBarInNewUi)
+{
+	// 意图：游戏中"服务器控制"页的三个页签（改设置 / 踢人 / 移到观察者）在新 UI 下
+	// 同样先画胶囊容器与滑块，再画页签文字；旧 UI 保留贴边的分段外观。
+	const std::string Source = ReadTextFile("src/game/client/components/menus_ingame.cpp");
+	const std::string Body = FunctionBody(Source, "void CMenus::RenderServerControl(CUIRect MainView)");
+	ASSERT_FALSE(Body.empty());
+
+	EXPECT_NE(Source.find("#include <game/client/QmUi/UiNavigation.h>"), std::string::npos);
+	const size_t Chrome = Body.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"ingame_server_control_tabs_capsule\"), aControlTabSlots, 3, ActiveControlTab, CapsuleTabBarStyleFor(ms_ColorTabbarActive));");
+	const size_t Draw = Body.find("if(DoButton_MenuTab(&s_Button0, Localize(\"Change settings\"), s_ControlPage == EServerControlTab::SETTINGS, &aControlTabSlots[0], IGraphics::CORNER_ALL");
+	ASSERT_NE(Chrome, std::string::npos);
+	ASSERT_NE(Draw, std::string::npos);
+	EXPECT_LT(Chrome, Draw);
+	EXPECT_NE(Body.find("ControlTabsRemainder.VSplitLeft(ControlTabsRemainder.w / 3.0f, &aControlTabSlots[0], &ControlTabsRemainder);"), std::string::npos);
+	EXPECT_NE(Body.find("ControlTabsRemainder.VSplitMid(&aControlTabSlots[1], &aControlTabSlots[2]);"), std::string::npos);
+	EXPECT_NE(Body.find("&Button, IGraphics::CORNER_NONE"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, Tee7SubTabsUseCapsuleTabBar)
+{
+	// 意图：Tee7 皮肤的「玩家/Dummy」「Basic/Custom」「皮肤部位」三行子 Tab 同样
+	// 先画胶囊容器与滑块、再画文字；旧 UI 保留贴边分段外观。
+	const std::string Source = ReadTextFile("src/game/client/components/menus_settings7.cpp");
+	const std::string Body = FunctionBody(Source, "void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentMetrics &Metrics)");
+	ASSERT_FALSE(Body.empty());
+
+	// 三个锚点在整份源码里各只出现一次，直接按文件位置比较先后。
+	EXPECT_NE(Source.find("#include <game/client/QmUi/UiNavigation.h>"), std::string::npos);
+	const size_t PlayerDummyChrome = Source.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_tee7_player_dummy_tabs_capsule\"), aPlayerDummySlots, std::size(aPlayerDummySlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());");
+	const size_t PlayerDummyDraw = Source.find("if(DoButton_MenuTab(&s_PlayerTabButton, Localize(\"Player\"), !m_Dummy, &LeftTab, IGraphics::CORNER_ALL");
+	const size_t ModeChrome = Source.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_tee7_mode_tabs_capsule\"), aModeTabSlots, std::size(aModeTabSlots), m_CustomSkinMenu ? 1 : 0, SettingsCapsuleTabBarStyle());");
+	const size_t ModeDraw = Source.find("ClickedBasicTab = DoButton_MenuTab(&s_BasicTabButton");
+	const size_t SkinPartChrome = Source.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_tee7_skin_part_tabs_capsule\"), aSkinPartSlots, protocol7::NUM_SKINPARTS, ActiveSkinPart, SettingsCapsuleTabBarStyle());");
+	const size_t SkinPartDraw = Source.find("if(DoButton_MenuTab(&s_aSkinPartButtons[i], Localize(CSkins7::ms_apSkinPartNamesLocalized[i], \"skins\"), m_TeePartSelected == i, &aSkinPartSlots[i], IGraphics::CORNER_ALL");
+	ASSERT_NE(PlayerDummyChrome, std::string::npos);
+	ASSERT_NE(PlayerDummyDraw, std::string::npos);
+	ASSERT_NE(ModeChrome, std::string::npos);
+	ASSERT_NE(ModeDraw, std::string::npos);
+	ASSERT_NE(SkinPartChrome, std::string::npos);
+	ASSERT_NE(SkinPartDraw, std::string::npos);
+	EXPECT_LT(PlayerDummyChrome, PlayerDummyDraw);
+	EXPECT_LT(ModeChrome, ModeDraw);
+	EXPECT_LT(SkinPartChrome, SkinPartDraw);
+	// 旧 UI 的贴边分段外观与圆角分支仍在。
+	EXPECT_NE(Source.find("!m_Dummy, &LeftTab, IGraphics::CORNER_L"), std::string::npos);
+	EXPECT_NE(Source.find("!m_CustomSkinMenu, &LeftTab, IGraphics::CORNER_L"), std::string::npos);
+	EXPECT_NE(Source.find("Button, Corners, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE"), std::string::npos);
+}
+
+TEST(QmNewUiMenuBranches, SettingsChoiceSegmentsUseCapsuleTabBar)
+{
+	// 意图：设置卡片里的分段选择行（图标颜色 / 图标粗细等共用 DoIconChoiceRow）
+	// 在新 UI 下同样是胶囊滑块；同一函数里多行选择器必须各自带行标识，不能共用轨道。
+	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
+	const size_t LambdaPos = Source.find("const auto DoIconChoiceRow = [this, BodySize](CUIRect Row");
+	ASSERT_NE(LambdaPos, std::string::npos);
+	const size_t ChromePos = Source.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), SegmentGroup, aSegmentSlots, SegmentCount, Current, SettingsCapsuleTabBarStyle());", LambdaPos);
+	const size_t DrawPos = Source.find("if(DoButton_MenuTab(&pButtons[i], ppLabels[i], Current == i, &aSegmentSlots[i], IGraphics::CORNER_ALL", LambdaPos);
+	ASSERT_NE(ChromePos, std::string::npos);
+	ASSERT_NE(DrawPos, std::string::npos);
+	EXPECT_LT(ChromePos, DrawPos);
+	EXPECT_NE(Source.find("const uint64_t SegmentGroup = BuildUiAnimNodeKey(MakeUiScopeHash(\"settings_choice_row_capsule\"), reinterpret_cast<uint64_t>(pButtons));"), std::string::npos);
+	EXPECT_LT(Source.find("const uint64_t SegmentGroup = BuildUiAnimNodeKey"), ChromePos);
+	EXPECT_LT(Source.find("SegmentsRemainder.VSplitLeft(SegmentsRemainder.w / (SegmentCount - i), &aSegmentSlots[i], &SegmentsRemainder);"), ChromePos);
+	// 旧 UI 的贴边分段外观仍在。
+	EXPECT_NE(Source.find("const int Corners = i == 0 ? IGraphics::CORNER_L : (i == Count - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);"), std::string::npos);
+	// 另一处 ProcessChoiceRow（走 DoButtonLogic 的分段行）同样先画胶囊。
+	const size_t ProcessPos = Source.find("const auto ProcessChoiceRow = [this, &Changed](CUIRect Row");
+	ASSERT_NE(ProcessPos, std::string::npos);
+	const size_t ProcessChrome = Source.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), SegmentGroup, aSegmentSlots, SegmentCount, Current, SettingsCapsuleTabBarStyle());", ProcessPos);
+	const size_t ProcessDraw = Source.find("if(Ui()->DoButtonLogic(&pButtons[i], Current == i, &aSegmentSlots[i], BUTTONFLAG_LEFT))", ProcessPos);
+	ASSERT_NE(ProcessChrome, std::string::npos);
+	ASSERT_NE(ProcessDraw, std::string::npos);
+	EXPECT_LT(ProcessChrome, ProcessDraw);
+	EXPECT_LT(Source.find("SegmentsRemainder.VSplitLeft(SegmentsRemainder.w / (SegmentCount - i), &aSegmentSlots[i], &SegmentsRemainder);", ProcessPos), ProcessChrome);
+	EXPECT_NE(Source.find("if(Ui()->DoButtonLogic(&pButtons[i], Current == i, &Segment, BUTTONFLAG_LEFT))"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, IngameGameButtonBarRoundsAllCornersOnlyInNewUi)
@@ -441,6 +745,36 @@ TEST(QmCameraEffects, DynamicFovRemovalKeepsBaseZoomStable)
 	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomWithoutDynamicFov(2.0f, 1.25f), 1.6f);
 	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomWithoutDynamicFov(1.6f, 1.0f), 1.6f);
 	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomWithoutDynamicFov(1.6f, 0.0f), 1.6f);
+}
+
+TEST(QmCameraEffects, ZoomReverseRetargetKeepsStepsButDropsInertiaOnReversal)
+{
+	constexpr float ZoomInFactor = 0.866025f;
+	constexpr float ZoomOutFactor = 1.154700f;
+
+	// 未在缩放动画中：步进基准就是画面当前值
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(1.0f, 0.5f, ZoomInFactor, false, true), 1.0f);
+	// 同向按键：基准仍是旧目标，连点 N 下仍是 N 步
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomInFactor, true, true), 0.866f);
+	// 反向按键：改以画面当前值为基准，本次动画立刻朝新方向运动
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomOutFactor, true, true), 0.95f);
+	// 关闭开关：完全保留上游"以旧目标为基准"的行为
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomOutFactor, true, false), 0.866f);
+
+	// 反向：新目标在速度反方向，继承速度归零
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomDerivativeOnRetarget(0.95f, -0.5f, 1.1f, true), 0.0f);
+	// 同向：保留继承速度，维持 C1 连续
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomDerivativeOnRetarget(0.95f, -0.5f, 0.8f, true), -0.5f);
+	// 关闭开关：保留上游继承速度（先沿旧方向滑行再掉头）
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomDerivativeOnRetarget(0.95f, -0.5f, 1.1f, false), -0.5f);
+
+	// 曲线层面：上游曲线在反向按键后仍朝旧方向走，修复后的曲线第一帧就朝新目标走
+	const float StartZoom = 0.95f;
+	const float ReverseTarget = 1.1f;
+	const CCubicBezier UpstreamCurve = CCubicBezier::With(StartZoom, -0.5f, 0.0f, ReverseTarget);
+	const CCubicBezier RetargetedCurve = CCubicBezier::With(StartZoom, QmCameraEffects::ZoomDerivativeOnRetarget(StartZoom, -0.5f, ReverseTarget, true), 0.0f, ReverseTarget);
+	EXPECT_LT(UpstreamCurve.Evaluate(0.05f), StartZoom);
+	EXPECT_GT(RetargetedCurve.Evaluate(0.05f), StartZoom);
 }
 
 TEST(QmCameraEffects, CinematicFreeviewSmoothingIsFrameRateIndependent)
@@ -474,12 +808,15 @@ TEST(QmCameraEffectsSource, CinematicCameraAndDynamicFovKeepScopedState)
 	const std::string GameClient = ReadTextFile("src/game/client/gameclient.cpp");
 
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmCinematicCamera, qm_cinematic_camera"), std::string::npos);
+	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmZoomInstantReverse, qm_zoom_instant_reverse, 1, 0, 1"), std::string::npos);
 	EXPECT_NE(Header.find("m_CinematicCameraSmoothing"), std::string::npos);
 	EXPECT_NE(OnRender.find("GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_Snap.m_SpecInfo.m_UsePosition"), std::string::npos);
 	EXPECT_NE(OnRender.find("if(g_Config.m_QmCinematicCamera)"), std::string::npos);
 	EXPECT_NE(OnRender.find("m_CinematicCameraSmoothing = false;"), std::string::npos);
 	EXPECT_NE(ScaleZoom.find("RemoveDynamicFovZoom();"), std::string::npos);
 	EXPECT_NE(ChangeZoom.find("RemoveDynamicFovZoom();"), std::string::npos);
+	EXPECT_NE(ScaleZoom.find("QmCameraEffects::ZoomTargetBaseOnRetarget(m_Zoom, m_ZoomSmoothingTarget, Factor, m_Zooming, g_Config.m_QmZoomInstantReverse != 0)"), std::string::npos);
+	EXPECT_NE(ChangeZoom.find("QmCameraEffects::ZoomDerivativeOnRetarget(Current, m_ZoomSmoothing.Derivative(Progress), Target, IsUser && g_Config.m_QmZoomInstantReverse != 0)"), std::string::npos);
 	EXPECT_NE(UpdateCamera.find("RemoveDynamicFovZoom();"), std::string::npos);
 	EXPECT_NE(OnReset.find("m_DynamicFovAppliedFactor = 1.0f;"), std::string::npos);
 	EXPECT_EQ(UpdateCamera.find("m_aDyncamCurrentCameraOffset[g_Config.m_ClDummy] += m_DriftCurrentOffset;"), std::string::npos);
@@ -487,6 +824,18 @@ TEST(QmCameraEffectsSource, CinematicCameraAndDynamicFovKeepScopedState)
 	EXPECT_NE(Header.find("float BaseZoom() const"), std::string::npos);
 	EXPECT_NE(GameClient.find("m_Camera.BaseZoom()"), std::string::npos);
 	EXPECT_EQ(GameClient.find("float ShowDistanceZoom = m_Camera.m_Zoom;"), std::string::npos);
+}
+
+TEST(QmCameraEffectsSource, CameraViewCardCountsInstantZoomReverseRow)
+{
+	const std::string QmMenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string CameraView = FunctionBody(QmMenusSource, "void CMenus::RenderQmVisualCameraViewContent(");
+
+	// 渲染、预布局输入、卡片高度三处必须同时带上新增开关，否则点击热区与卡片高度会错位
+	EXPECT_NE(CameraView.find("RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, \"Instant zoom reverse\", Localize(\"Instant zoom reverse\"), &g_Config.m_QmZoomInstantReverse);"), std::string::npos);
+	EXPECT_NE(QmMenusSource.find("HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, &g_Config.m_QmZoomInstantReverse)"), std::string::npos);
+	// EstimateContentHeight 的基础行数必须随新增一行从 5 变 6
+	EXPECT_NE(QmMenusSource.find("return Rows(6.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;"), std::string::npos);
 }
 
 TEST(QmStoragePath, BuildsCandidatesRelativeToExecutable)
@@ -1456,9 +1805,12 @@ TEST(QmNewUiMenuBranches, WeaponTrajectoryExposesDefaultOnPistolGuideToggle)
 	ASSERT_FALSE(WeaponTrajectoryBody.empty());
 	ASSERT_FALSE(FunctionDeck.empty());
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmWeaponTrajectoryGun, qm_weapon_trajectory_gun, 1, 0, 1"), std::string::npos);
+	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmWeaponTrajectoryNinja, qm_weapon_trajectory_ninja, 0, 0, 1"), std::string::npos);
 	EXPECT_NE(WeaponTrajectoryBody.find("RenderQmFunctionCheckbox(&g_Config.m_QmWeaponTrajectoryGun, \"qmclient-weapon-trajectory-gun\", Localize(\"Pistol guide line\")"), std::string::npos);
-	EXPECT_NE(FunctionDeck.find("case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 5.0f;"), std::string::npos);
+	EXPECT_NE(WeaponTrajectoryBody.find("RenderQmFunctionCheckbox(&g_Config.m_QmWeaponTrajectoryNinja, \"qmclient-weapon-trajectory-ninja\", Localize(\"Predict ninja path\")"), std::string::npos);
+	EXPECT_NE(FunctionDeck.find("case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 6.0f;"), std::string::npos);
 	EXPECT_NE(CardRegistrySource.find("手枪辅助线 shouqiang fuzhuxian pistol guide line"), std::string::npos);
+	EXPECT_NE(CardRegistrySource.find("预测忍者路径 yuce renzhe lujing predict ninja path"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, QmDefaultOffMigrationKeepsExplicitLegacyValues)
@@ -1701,14 +2053,14 @@ TEST(QmNewUiMenuBranches, NameplateOthersModeSuppressesLocalIdentityRows)
 	EXPECT_NE(RenderNamePlateGame.find("Data.m_Local = pPlayerInfo->m_Local;"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, DeveloperBadgePrecedesInlineClientIdAndNameWithoutOverridingIdSettings)
+TEST(QmNewUiMenuBranches, PlayerTitlePrecedesInlineClientIdAndNameWithoutOverridingIdSettings)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
 	const std::string AddNameRow = FunctionBody(Source, "void AddNameRow(");
 	const std::string RenderNamePlateGame = FunctionBody(Source, "void CNamePlates::RenderNamePlateGame");
 
 	const size_t FriendMark = AddNameRow.find("AddPart<CNamePlatePartFriendMark>(This);");
-	const size_t Developer = AddNameRow.find("AddPart<CNamePlatePartDeveloper>(This);");
+	const size_t Developer = AddNameRow.find("AddPart<CNamePlatePartTitle>(This);");
 	const size_t InlineClientId = AddNameRow.find("AddPart<CNamePlatePartClientId>(This, false);");
 	const size_t Name = AddNameRow.find("AddPart<CNamePlatePartName>(This);");
 	ASSERT_NE(FriendMark, std::string::npos);

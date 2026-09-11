@@ -45,6 +45,9 @@ TEST(QmCardRegistry, P6QmClientContributorsCards)
 {
 	const auto *pCommunity = qm_card_registry::FindByStableId("deck:qmclient-contributors-community");
 	const auto *pSponsors = qm_card_registry::FindByStableId("deck:qmclient-contributors-sponsors");
+	const auto *pTitle = qm_card_registry::FindByStableId("deck:qmclient-contributors-title");
+	ASSERT_NE(pTitle, nullptr);
+	EXPECT_STREQ(pTitle->m_pDefaultTab, "qmclient-contributors");
 	ASSERT_NE(pCommunity, nullptr);
 	ASSERT_NE(pSponsors, nullptr);
 	EXPECT_STREQ(pCommunity->m_pDefaultTab, "qmclient-contributors");

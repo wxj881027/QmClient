@@ -2801,22 +2801,6 @@ turkish = "Yapılandırma sürümü. Yeni istemcinin eski yapılandırma hatalar
 polish = "Wersja konfiguracji. Pomaga nowemu klientowi naprawić stare błędy konfiguracji."
 
 [[message]]
-key = "Configure qm_report_app_id and qm_report_secret first"
-[message.translations]
-simplified_chinese = "请先设置 qm_report_app_id 和 qm_report_secret"
-traditional_chinese = "請先設置 qm_report_app_id 和 qm_report_secret"
-japanese = "最初に qm_report_app_id と qm_report_secret を設定してください"
-korean = "먼저 qm_report_app_id와 qm_report_secret을 설정하세요"
-russian = "Сначала настройте qm_report_app_id и qm_report_secret"
-german = "Konfiguriere zuerst qm_report_app_id und qm_report_secret"
-spanish = "Configura primero qm_report_app_id y qm_report_secret"
-french = "Configure d'abord qm_report_app_id et qm_report_secret"
-brazilian_portuguese = "Configure qm_report_app_id e qm_report_secret primeiro"
-portuguese = "Configura primeiro qm_report_app_id e qm_report_secret"
-turkish = "Önce qm_report_app_id ve qm_report_secret ayarla"
-polish = "Najpierw skonfiguruj qm_report_app_id i qm_report_secret"
-
-[[message]]
 key = "Confirm disconnect after game end (minutes, -1 off, 0 always)"
 [message.translations]
 simplified_chinese = "游戏结束后断开连接之前弹出确认窗口（分钟，-1 表示关闭，0 表示始终打开）"
@@ -3135,22 +3119,6 @@ brazilian_portuguese = "Copiado"
 portuguese = "Copiado"
 turkish = "Kopyalandı"
 polish = "Skopiowano"
-
-[[message]]
-key = "Could not create report scan request"
-[message.translations]
-simplified_chinese = "创建举报扫描请求失败"
-traditional_chinese = "創建舉報掃描請求失敗"
-japanese = "レポートスキャンリクエストを作成できませんでした"
-korean = "신고 스캔 요청을 생성할 수 없습니다"
-russian = "Не удалось создать запрос сканирования жалобы"
-german = "Meldungs-Scan-Anfrage konnte nicht erstellt werden"
-spanish = "No se pudo crear la solicitud de escaneo de reporte"
-french = "Impossible de créer la demande de scan de signalement"
-brazilian_portuguese = "Não foi possível criar a solicitação de varredura da denúncia"
-portuguese = "Não foi possível criar o pedido de análise da denúncia"
-turkish = "Rapor tarama isteği oluşturulamadı"
-polish = "Nie można utworzyć żądania skanowania zgłoszenia"
 
 [[message]]
 key = "Could not get current server address"
@@ -12673,118 +12641,6 @@ turkish = "Bu öneke sahip bir skin ile değiştir (ör. kediler, noel baba)"
 polish = "Zastąp skórkę taką z tym prefiksem (np. koty, święty mikołaj)"
 
 [[message]]
-key = "Report"
-[message.translations]
-simplified_chinese = "举报"
-traditional_chinese = "舉報"
-japanese = "報告"
-korean = "신고"
-russian = "Пожаловаться"
-german = "Melden"
-spanish = "Reportar"
-french = "Signaler"
-brazilian_portuguese = "Denunciar"
-portuguese = "Denunciar"
-turkish = "Rapor et"
-polish = "Zgłoś"
-
-[[message]]
-key = "Report request canceled"
-[message.translations]
-simplified_chinese = "举报请求已取消"
-traditional_chinese = "舉報請求已取消"
-japanese = "報告リクエストがキャンセルされました"
-korean = "신고 요청이 취소되었습니다"
-russian = "Запрос жалобы отменен"
-german = "Meldungsanfrage abgebrochen"
-spanish = "Solicitud de reporte cancelada"
-french = "Demande de signalement annulée"
-brazilian_portuguese = "Solicitação de denúncia cancelada"
-portuguese = "Pedido de denúncia cancelado"
-turkish = "Rapor isteği iptal edildi"
-polish = "Zgłoszenie anulowane"
-
-[[message]]
-key = "Report request failed due to network error"
-[message.translations]
-simplified_chinese = "举报请求失败，网络请求异常"
-traditional_chinese = "舉報請求失敗，網絡請求異常"
-japanese = "ネットワークエラーのため報告リクエストが失敗しました"
-korean = "네트워크 오류로 인해 신고 요청이 실패했습니다"
-russian = "Запрос жалобы не удался из-за ошибки сети"
-german = "Meldungsanfrage wegen Netzwerkfehler fehlgeschlagen"
-spanish = "La solicitud de reporte falló por un error de red"
-french = "La demande de signalement a échoué à cause du réseau"
-brazilian_portuguese = "A solicitação de denúncia falhou por erro de rede"
-portuguese = "O pedido de denúncia falhou por erro de rede"
-turkish = "Rapor isteği ağ hatası nedeniyle başarısız oldu"
-polish = "Zgłoszenie nie powiodło się z powodu błędu sieci"
-
-[[message]]
-key = "Report request failed with HTTP status: %d"
-[message.translations]
-simplified_chinese = "举报请求失败，HTTP 状态码：%d"
-traditional_chinese = "舉報請求失敗，HTTP 狀態碼：%d"
-japanese = "報告リクエストが HTTP ステータス %d で失敗しました"
-korean = "HTTP 상태 %d로 인해 신고 요청이 실패했습니다"
-russian = "Запрос жалобы не удался, HTTP-статус: %d"
-german = "Meldungsanfrage fehlgeschlagen, HTTP-Status: %d"
-spanish = "La solicitud de reporte falló con estado HTTP: %d"
-french = "La demande de signalement a échoué avec le statut HTTP : %d"
-brazilian_portuguese = "A solicitação de denúncia falhou com status HTTP: %d"
-portuguese = "O pedido de denúncia falhou com estado HTTP: %d"
-turkish = "Rapor isteği HTTP durumuyla başarısız oldu: %d"
-polish = "Zgłoszenie nie powiodło się, status HTTP: %d"
-
-[[message]]
-key = "Report request is already in progress"
-[message.translations]
-simplified_chinese = "举报请求正在处理中"
-traditional_chinese = "舉報請求正在處理中"
-japanese = "報告リクエストは既に進行中です"
-korean = "신고 요청이 이미 진행 중입니다"
-russian = "Запрос жалобы уже выполняется"
-german = "Meldungsanfrage läuft bereits"
-spanish = "La solicitud de reporte ya está en curso"
-french = "La demande de signalement est déjà en cours"
-brazilian_portuguese = "A solicitação de denúncia já está em andamento"
-portuguese = "O pedido de denúncia já está em curso"
-turkish = "Rapor isteği zaten sürüyor"
-polish = "Zgłoszenie jest już przetwarzane"
-
-[[message]]
-key = "Report scan request submitted"
-[message.translations]
-simplified_chinese = "举报扫描请求已提交"
-traditional_chinese = "舉報掃描請求已提交"
-japanese = "報告スキャンリクエストが送信されました"
-korean = "신고 스캔 요청이 제출되었습니다"
-russian = "Запрос сканирования жалобы отправлен"
-german = "Meldungs-Scan-Anfrage gesendet"
-spanish = "Solicitud de escaneo de reporte enviada"
-french = "Demande de scan de signalement envoyée"
-brazilian_portuguese = "Solicitação de varredura da denúncia enviada"
-portuguese = "Pedido de análise da denúncia enviado"
-turkish = "Rapor tarama isteği gönderildi"
-polish = "Żądanie skanowania zgłoszenia wysłane"
-
-[[message]]
-key = "Reports are not available on Axiom servers"
-[message.translations]
-simplified_chinese = "Axiom 服务器内不可使用举报功能"
-traditional_chinese = "Axiom 伺服器內不可使用舉報功能"
-japanese = "Axiom サーバーではレポート機能は利用できません"
-korean = "Axiom 서버에서는 신고 기능을 사용할 수 없습니다"
-russian = "Жалобы недоступны на серверах Axiom"
-german = "Meldungen sind auf Axiom-Servern nicht verfügbar"
-spanish = "Los reportes no están disponibles en servidores Axiom"
-french = "Les signalements ne sont pas disponibles sur les serveurs Axiom"
-brazilian_portuguese = "Denúncias não estão disponíveis em servidores Axiom"
-portuguese = "As denúncias não estão disponíveis em servidores Axiom"
-turkish = "Axiom sunucularında rapor kullanılamaz"
-polish = "Zgłoszenia nie są dostępne na serwerach Axiom"
-
-[[message]]
 key = "Require KCP-capable client to upgrade session (keep off during grayscale for fallback)"
 [message.translations]
 simplified_chinese = "要求支持 KCP 的客户端升级会话（灰度发布期间保持关闭以支持回退）"
@@ -20846,3 +20702,19 @@ brazilian_portuguese = "Mostrar se você concluiu um mapa do DDNet (envia seu no
 portuguese = "Mostrar se concluíste um mapa do DDNet (envia o teu nome de jogador para info.ddnet.org/info)"
 turkish = "Bir DDNet haritasını bitirip bitirmediğinizi gösterir (oyuncu adınızı info.ddnet.org/info adresine gönderir)"
 polish = "Pokazuj, czy ukończono mapę DDNet (wysyła nazwę gracza do info.ddnet.org/info)"
+
+[[message]]
+key = "Could not create report scan request"
+[message.translations]
+simplified_chinese = "创建举报扫描请求失败"
+traditional_chinese = "創建舉報掃描請求失敗"
+japanese = "レポートスキャンリクエストを作成できませんでした"
+korean = "신고 스캔 요청을 생성할 수 없습니다"
+russian = "Не удалось создать запрос сканирования жалобы"
+german = "Meldungs-Scan-Anfrage konnte nicht erstellt werden"
+spanish = "No se pudo crear la solicitud de escaneo de reporte"
+french = "Impossible de créer la demande de scan de signalement"
+brazilian_portuguese = "Não foi possível criar a solicitação de varredura da denúncia"
+portuguese = "Não foi possível criar o pedido de análise da denúncia"
+turkish = "Rapor tarama isteği oluşturulamadı"
+polish = "Nie można utworzyć żądania skanowania zgłoszenia"

@@ -4,6 +4,7 @@
 #define GAME_CLIENT_UI_H
 
 #include "QmUi/QmDropdown.h"
+#include "QmUi/UiTokens.h"
 #include "lineinput.h"
 #include "ui_rect.h"
 
@@ -374,7 +375,7 @@ struct SMenuButtonProperties
 	bool m_UseIconFont = false;
 	bool m_ShowDropDownIcon = false;
 	int m_Corners = IGraphics::CORNER_ALL;
-	float m_Rounding = 5.0f;
+	float m_Rounding = ui_token::radius::BASE;
 	float m_FontFactor = 0.0f;
 	float m_FontSize = -1.0f;
 	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);

@@ -279,3 +279,50 @@ bool IsQmDeveloperMarkCurrent(bool Active, const char *pMarkedName, const char *
 	       pCurrentName && str_comp(pMarkedName, pCurrentName) == 0 &&
 	       ExpireTick > NowTick;
 }
+
+bool IsValidQmTitle(const char *pTitle)
+{
+	if(!pTitle || !pTitle[0] || !str_utf8_check(pTitle))
+		return false;
+	int Width = 0;
+	while(*pTitle)
+	{
+		const int Code = str_utf8_decode(&pTitle);
+		if(Code < 32 || (Code >= 127 && Code <= 159) || Code == '[' || Code == ']' ||
+			(Code >= 0x200b && Code <= 0x200f) || (Code >= 0x2028 && Code <= 0x202e) ||
+			(Code >= 0x2060 && Code <= 0x206f) || Code == 0xfeff)
+			return false;
+		Width += Code < 128 ? 1 : 2;
+		if(Width > 12)
+			return false;
+	}
+	return true;
+}
+
+std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress)
+{
+	std::vector<SQmTitlePresence> Result;
+	int64_t Now;
+	if(!pServerAddress || !JsonReadInteger(JsonObjectField(pRoot, "server_time"), Now) || Now <= 0)
+		return Result;
+	const json_value *pEntries = JsonObjectField(pRoot, "presences");
+	if(pEntries->type != json_array)
+		return Result;
+	for(unsigned i = 0; i < pEntries->u.array.length; ++i)
+	{
+		const json_value *pEntry = pEntries->u.array.values[i];
+		const json_value *pServer = JsonObjectField(pEntry, "server_address");
+		const json_value *pName = JsonObjectField(pEntry, "player_name");
+		const json_value *pTitle = JsonObjectField(pEntry, "title");
+		int64_t Id, Issued, Expires;
+		if(pServer->type != json_string || str_comp(pServer->u.string.ptr, pServerAddress) != 0 ||
+			pName->type != json_string || !pName->u.string.ptr[0] || pName->u.string.length >= MAX_NAME_LENGTH ||
+			pTitle->type != json_string || !IsValidQmTitle(pTitle->u.string.ptr) ||
+			!JsonReadInteger(JsonObjectField(pEntry, "player_id"), Id) || Id < 0 || Id >= MAX_CLIENTS ||
+			!JsonReadInteger(JsonObjectField(pEntry, "issued_at"), Issued) || Issued > Now ||
+			!JsonReadInteger(JsonObjectField(pEntry, "expires_at"), Expires) || Expires <= Now)
+			continue;
+		Result.push_back({(int)Id, pName->u.string.ptr, pTitle->u.string.ptr, std::min<int64_t>(Expires - Now, 15)});
+	}
+	return Result;
+}

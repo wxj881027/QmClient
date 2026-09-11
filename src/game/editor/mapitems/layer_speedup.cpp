@@ -75,6 +75,12 @@ bool CLayerSpeedup::IsEmpty() const
 	return true;
 }
 
+bool CLayerSpeedup::HasContentInRect(const CIntRect &Rect) const
+{
+	// 速度层把角度/力度单独存放，图块数组为空时也可能有数据
+	return CLayerTiles::HasContentInRect(Rect) || AnyInRect(m_Width, m_Height, Rect.x, Rect.y, Rect.w, Rect.h, [this](int x, int y) { return m_pSpeedupTile[y * m_Width + x].m_Type != 0; });
+}
+
 void CLayerSpeedup::BrushDraw(CLayer *pBrush, vec2 WorldPos)
 {
 	if(m_Readonly)

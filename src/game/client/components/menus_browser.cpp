@@ -17,6 +17,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
@@ -3971,6 +3972,50 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 		g_Config.m_UiToolboxPage = (g_Config.m_UiToolboxPage + NUM_UI_TOOLBOX_PAGES + Direction) % NUM_UI_TOOLBOX_PAGES;
 	}
 
+	if(UseNewUi)
+	{
+		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签图标/文字。
+		const CUIRect aToolboxTabSlots[] = {FilterTabButton, InfoTabButton, FriendsTabButton, QmTabButton};
+		const int aToolboxTabPages[] = {UI_TOOLBOX_PAGE_FILTERS, UI_TOOLBOX_PAGE_INFO, UI_TOOLBOX_PAGE_FRIENDS, UI_TOOLBOX_PAGE_QM};
+		int ActiveToolboxTab = -1;
+		for(size_t Tab = 0; Tab < std::size(aToolboxTabSlots); ++Tab)
+		{
+			if(g_Config.m_UiToolboxPage == aToolboxTabPages[Tab])
+				ActiveToolboxTab = (int)Tab;
+		}
+		const IUiContext ToolboxTabBarCtx = TabBarUiContext();
+		ui_widget::CapsuleTabBarChrome(ToolboxTabBarCtx, MakeUiScopeHash("browser_toolbox_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aToolboxTabSlots, std::size(aToolboxTabSlots)), ActiveToolboxTab >= 0 ? &aToolboxTabSlots[ActiveToolboxTab] : nullptr, CapsuleTabBarStyleFor(BrowserPanelColor(1.0f)));
+
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+
+		static CButtonContainer s_FilterTabButton;
+		if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
+		GameClient()->m_Tooltips.DoToolTip(&s_FilterTabButton, &FilterTabButton, Localize("Server filter"));
+
+		static CButtonContainer s_InfoTabButton;
+		if(DoButton_MenuTab(&s_InfoTabButton, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
+		GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
+
+		static CButtonContainer s_FriendsTabButton;
+		if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
+		GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
+
+		TextRender()->SetRenderFlags(0);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		static CButtonContainer s_QmTabButton;
+		if(DoButton_MenuTab(&s_QmTabButton, Localize("Qm"), g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_QM, &QmTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_QM], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_QM;
+		GameClient()->m_Tooltips.DoToolTip(&s_QmTabButton, &QmTabButton, Localize("QmClient"));
+
+		TextRender()->SetRenderFlags(0);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		return;
+	}
+
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
@@ -4125,7 +4170,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 		View.Margin(6.0f, &View);
 	else
 	{
-		View.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+		View.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, ui_token::radius::CARD);
 		View.Margin(10.0f, &View);
 	}
 
@@ -4143,9 +4188,9 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	ServerListBase.h = maximum(StatusBox.y - ColumnGap - ServerListBase.y, 0.0f);
 	if(UseNewUi)
 	{
-		ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, 10.0f);
-		StatusBox.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, 10.0f);
-		ToolBoxBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, 10.0f);
+		ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+		StatusBox.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+		ToolBoxBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 		ServerListBase.Margin(10.0f, &ServerListBase);
 		StatusBox.Margin(10.0f, &StatusBox);
 		ToolBoxBase.Margin(10.0f, &ToolBoxBase);

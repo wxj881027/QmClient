@@ -272,6 +272,9 @@ A vote is currently active.
 Abort
 == İptal
 
+Accumulated client launch count (used by the sponsor reminder)
+== Toplam istemci başlatma sayısı (destekçi hatırlatması için)
+
 Activate
 == Etkinleştir
 
@@ -487,6 +490,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == Varsayılan sohbet bağlantılarını ekler
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== HUD'da kukla tuş, çekiç, kontrol ve kopyalama durumunu ve kendi bind durum listesini gösterir.
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -1190,9 +1196,6 @@ Available resolutions
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Ort. %.*f   ↓ %.*f   ↑ %.*f
 
-Axiom API returned an error
-== Axiom API bir hata döndürdü
-
 Axiom auto login failed
 == Axiom otomatik girişi başarısız oldu
 
@@ -1207,12 +1210,6 @@ Axiom dummy password
 
 Axiom main account password
 == Axiom ana hesap şifresi
-
-Axiom score request failed
-== Axiom puan isteği başarısız oldu
-
-Axiom scores
-== Axiom puanları
 
 Axis
 == Eksen
@@ -2036,9 +2033,6 @@ Compatible with single-player area hints from other servers
 Complete snapshots are arriving late or not arriving
 == Tam anlık görüntüler geç geliyor veya hiç gelmiyor
 
-Completed maps
-== Tamamlanan haritalar
-
 Compressor attack time (ms)
 == Kompresör Saldırı Süresi (ms)
 
@@ -2147,9 +2141,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == Oyuncu kimliğini ve ülkesini yapılandır
 
-Configure qm_report_app_id and qm_report_secret first
-== Önce qm_report_app_id ve qm_report_secret ayarla
-
 Configure QmClient gameplay helpers
 == QmClient oyun yardımcılarını yapılandır
 
@@ -2206,9 +2197,6 @@ Connect dummy
 
 Connect dummy to enable
 == Etkinleştirmek için dublör bağla
-
-Connect to a server first
-== Önce bir sunucuya bağlan
 
 Connect to server first to establish voice network link
 == Ses ağ bağlantısını kurmak için önce sunucuya bağlanın
@@ -2269,6 +2257,9 @@ Console command executed after joining server
 
 Console command executed before connecting to server
 == Sunucuya bağlanmadan önce yürütülen konsol komutu
+
+Contacting title server
+== Unvan sunucusuna bağlanılıyor
 
 Continue anyway?
 == Yine de devam edilsin mi?
@@ -2345,9 +2336,6 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == Dublör bağlanamadı
 
-Could not create report scan request
-== Rapor tarama isteği oluşturulamadı
-
 Could not find a Tutorial server. Check your internet connection.
 == Bir Eğitim sunucusu bulunamadı. İnternet bağlantınızı kontrol edin.
 
@@ -2356,9 +2344,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == Takımın bulunamadı
-
-Could not get current server address
-== Geçerli sunucu adresi alınamadı
 
 Could not get server list from master server
 == Ana sunucudan sunucu listesi alınamadı
@@ -2383,6 +2368,9 @@ Could not resolve connect address '%s'. See local console for details.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == İndirilen harita kaydedilemedi. Bu dosyayı manuel olarak silmeyi deneyin: %s
+
+Could not save title credential
+== Unvan kimlik bilgileri kaydedilemedi
 
 Could not save touch controls to file. See local console for details.
 == Dokunmatik kontroller dosyaya kaydedilemedi. Ayrıntılar için yerel konsolu kontrol edin.
@@ -2509,6 +2497,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Özel Sağlayıcı Model Adı
+
+Custom title
+== Özel unvan
 
 Custom translation prompt (overrides built-in)
 == Özel Çeviri İstemi (Yerleşik İstemi Geçersiz Kılar)
@@ -3683,6 +3674,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == Cilt değiştirme animasyonunu etkinleştir
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== Skin geçiş animasyonunu aç, ardından tür, menzil, süre ve yumuşatmayı seç.
+
 Enable smooth cinematic camera while free spectating
 == Serbest izlerken akıcı sinematik kamerayı etkinleştir
 
@@ -3773,6 +3767,9 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Savaş listesini etkinleştir
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== Silah değiştirme veya şarjör doldurma animasyonunu aç, ardından menzil, süre, dönüş ve yumuşatmayı ayarla.
+
 Enable word filter list
 == Kelime filtresi listesini etkinleştir
 
@@ -3818,8 +3815,14 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == Şifre Gir
 
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== Sponsor kodunu gir ve "Kullan" düğmesine bas, ardından unvanı yaz ve "Kaydet"e bas. Tek bir takma ada bağlamak için "Yalnızca bu takma adla göster" seçeneğini işaretle.
+
 Enter Username
 == Kullanıcı Adı Gir
+
+Enter your sponsor code
+== Sana verilen destekçi kodunu gir
 
 Entities
 == Varlıklar
@@ -3847,6 +3850,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
+
+Entry: %s
+== Konum: %s
 
 Erase items on the in game background
 == Oyun arka planındaki öğeleri sil
@@ -3892,6 +3898,9 @@ Evaluate an expression
 
 Event
 == Etkinlik
+
+Exact bound nickname
+== Bağlanacak tam takma ad
 
 Example of usage
 == Kullanım örneği
@@ -4211,6 +4220,9 @@ Forms
 Found %d global cards
 == %d küresel kart bulundu
 
+Four IP addresses are already online
+== Zaten 4 IP adresi çevrimiçi
+
 FPM
 == K/D
 
@@ -4504,9 +4516,6 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 
 Global card ordering old config migration completed flag
 == Genel kart sıralama eski yapılandırma geçişi tamamlandı işareti
-
-Global rank
-== Dünya sıralaması
 
 Global toggle key
 == Genel açma/kapama tuşu
@@ -5213,6 +5222,9 @@ Insane
 Installing update. Please wait...
 == Güncelleme yükleniyor. Lütfen bekleyin...
 
+Instant zoom reverse
+== Zoom yönünü anında çevir
+
 Interface
 == Arayüz
 
@@ -5252,8 +5264,8 @@ Interpolation
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == Geçerli düzenleyici harita kopyasını "auto" klasörüne otomatik kaydetme aralığı (0=kapalı)
 
-Invalid Axiom API response
-== Geçersiz Axiom API yanıtı
+Invalid bound name
+== Bağlı takma ad geçersiz
 
 Invalid client id to kick
 == Atılacak istemci kimliği geçersiz
@@ -5272,6 +5284,9 @@ Invalid option
 
 Invalid spectator id used
 == Geçersiz izleyici kimliği kullanıldı
+
+Invalid sponsor code
+== Geçersiz destekçi kodu
 
 Invalid translation backend
 == Geçersiz çeviri arka ucu
@@ -5540,6 +5555,9 @@ Latency compensation
 Latency Jitter
 == Gecikme dalgalanması
 
+Launch count threshold for the next sponsor reminder
+== Sonraki hatırlatma için başlatma eşiği
+
 Layout
 == Düzen
 
@@ -5707,9 +5725,6 @@ Loading
 
 Loading assets...
 == Varlıklar yükleniyor...
-
-Loading Axiom scores...
-== Axiom puanları yükleniyor...
 
 Loading commands…
 == Komutlar yükleniyor…
@@ -5951,9 +5966,6 @@ Map to use on server
 Map type:
 == Harita türü:
 
-Maps
-== Haritalar
-
 Margin when notification is docked
 == Bildirim çubuğu kenara yaslandığında kenar boşluğu bırak
 
@@ -6131,6 +6143,9 @@ Menu option - selected
 Merge consecutive identical player messages within 2 seconds
 == 2 saniye içindeki art arda gelen aynı oyuncu mesajlarını birleştir
 
+Merges chat messages repeated within a short time into a single line.
+== Kısa sürede tekrarlanan sohbet mesajlarını tek satırda birleştirir.
+
 Message color
 == Mesaj rengi
 
@@ -6163,9 +6178,6 @@ Microphone volume
 
 Microphone volume (percent)
 == Mikrofon ses seviyesi (yüzde)
-
-Mileage
-== Kat edilen mesafe
 
 Milliseconds
 == Milisaniye
@@ -6316,9 +6328,6 @@ Moves to the tile with x/y-number ii
 
 Multi-View
 == Çoklu Görünüm
-
-Multiple exact Axiom players found
-== Tam eşleşen birden fazla Axiom oyuncusu bulundu
 
 Mute
 == Sessize al
@@ -6578,6 +6587,9 @@ New button
 New category name
 == Yeni kategori adı
 
+New features
+== Yeni özellikler
+
 New IME
 == Yeni IME
 
@@ -6821,12 +6833,6 @@ Not open, check input device or mic permission
 Not open, check output device
 == Açık değil, çıkış cihazını kontrol edin
 
-Not ranked
-== Sıralamada değil
-
-Not requested
-== İstenmedi
-
 Note
 == Not
 
@@ -6974,6 +6980,9 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == Yalnızca diğer Tee ekranda olmadığında göster
 
+Only show with this nickname
+== Yalnızca bu takma adla göster
+
 Only what you can't imagine, nothing Dream can't do
 == Hayal edemediğin şeyler dışında, Dream'in yapamayacağı hiçbir şey yok
 
@@ -7012,6 +7021,9 @@ Open pie menu
 
 Open rename dialog
 == Yeniden adlandırma iletişim kutusunu aç
+
+Open settings
+== Ayarları aç
 
 Open spectator mode selector
 == İzleyici modu seçiciyi aç
@@ -7286,8 +7298,11 @@ Per-name volume (name=percent)
 Performance debug log threshold (ms)
 == Performans hata ayıklama günlüğü eşiği (ms)
 
-Performance points
-== Performans puanları
+Permanent access; up to 4 online IP addresses
+== Kalıcı erişim; aynı anda en fazla 4 IP
+
+Permanent sponsor verified
+== Kalıcı destekçi durumu doğrulandı
 
 Personal best:
 == Kişisel en iyi:
@@ -7318,6 +7333,9 @@ Pet Skin:
 
 Pick result: %s
 == Seçim sonucu: %s
+
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== Müzik uygulamanla eşleşen kaynağı seç ve çalmaya devam et; sözler otomatik olarak takip eder.
 
 Pickup range
 == Toplama aralığı
@@ -7366,9 +7384,6 @@ Play the current demo
 
 Play the selected demo
 == Seçili demoyu oynat
-
-Play time
-== Oynama süresi
 
 Play/Pause
 == Oynat/Duraklat
@@ -7457,9 +7472,6 @@ Player name:
 Player not found
 == Oyuncu bulunamadı
 
-Player not found on Axiom
-== Oyuncu Axiom'da bulunamadı
-
 Player preview
 == Oyuncu önizlemesi
 
@@ -7519,6 +7531,9 @@ Players can't hook each other on this server
 
 Playing effects
 == Oynatma efektleri
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== Çekiçle çalınanlar dahil, skinin değiştiğinde bir animasyon oynatır.
 
 Please add a valid cut first
 == Lütfen önce geçerli bir kesim ekleyin
@@ -7615,6 +7630,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Bomba yörüngesini tahmin et (yalnızca cl_antiping 1 ile)
+
+Predict ninja path
+== Ninja yolunu tahmin et
 
 Predict weapon projectiles (only with cl_antiping 1)
 == Silah mermilerini tahmin et (yalnızca cl_antiping 1 ile)
@@ -7726,6 +7744,9 @@ Preview the composed status bar output
 
 Preview the current chat appearance
 == Preview the current chat appearance
+
+Preview the sponsor reminder without changing the launch count
+== Başlatma sayısını değiştirmeden hatırlatmayı önizle
 
 Preview visibilities
 == Önizleme görünürlükleri
@@ -8003,8 +8024,8 @@ Ratio
 Ratio threshold for local target language detection
 == Yerel hedef dil tanıma oranı eşiği
 
-Read new feature indicators
-== Okunan ayarlar arayüzü yeni özellik göstergeleri
+Really? Not even a little?
+== Gerçekten mi? Hiç mi düşünmezsin?
 
 Reason
 == Sebep
@@ -8050,6 +8071,15 @@ Red team
 
 Red team wins!
 == Kırmızı takım kazandı!
+
+Redeem
+== Kullan
+
+Redeem your code and customize your title
+== Kodunu kullan ve unvanını özelleştir
+
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== Özel bir unvan açmak için sponsor kodunu kullan. Unvan sohbette ve isim etiketinde görünür.
 
 Reduce antiping and player prediction when frozen
 == Donduğunda antiping ve oyuncu tahminini azalt
@@ -8402,36 +8432,6 @@ Reply to messages from muted players
 Reply with dummy
 == Dummy ile yanıtla
 
-Report
-== Rapor et
-
-Report request canceled
-== Rapor isteği iptal edildi
-
-Report request failed due to network error
-== Rapor isteği ağ hatası nedeniyle başarısız oldu
-
-Report request failed with HTTP status: %d
-== Rapor isteği HTTP durumuyla başarısız oldu: %d
-
-Report request is already in progress
-== Rapor isteği zaten sürüyor
-
-Report scan request submitted
-== Rapor tarama isteği gönderildi
-
-Report service App ID
-== Rapor hizmeti App ID
-
-Report service signing key
-== Rapor hizmeti imza anahtarı
-
-Report service URL
-== Rapor hizmeti adresi
-
-Reports are not available on Axiom servers
-== Axiom sunucularında rapor kullanılamaz
-
 Request to swap your tee with another team member
 == Tee'ni başka bir takım arkadaşıyla takas etmeyi iste
 
@@ -8545,6 +8545,9 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == Yeniden deneniyor…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== Karşı zoom tuşuna basınca yönü anında çevir (0=özgün yumuşak zoom korunur)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -8800,12 +8803,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == Belirsizlik süresini ping'e göre ölçekle (100=1.0x)
-
-Scanning current server
-== Geçerli sunucu taranıyor
-
-Scanning current server...
-== Geçerli sunucu taranıyor...
 
 Score
 == Skor
@@ -9953,6 +9950,9 @@ Show the number of frozen tees
 Show the number of tees still alive
 == Hayatta kalan tee sayısını göster
 
+Show the occasional sponsor reminder in the main menu
+== Ana menüde ara sıra destekçi hatırlatması göster
+
 Show the pet
 == Evcil hayvanı göster
 
@@ -10060,6 +10060,9 @@ Shows gameplay information for this server
 
 Shows help to command r, general help if left blank
 == r komutunun yardımını gösterir, boş bırakılırsa genel yardım
+
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== NetEase Cloud Music, Soda Music, Kugou ve QQ Music'ten şarkı sözlerini alıp dinamik adada gösterir.
 
 Shows the credits of the DDNet mod
 == DDNet modunun jeneriklerini gösterir
@@ -10445,8 +10448,20 @@ Sphere
 Spin pop
 == Döndürerek aç
 
+Sponsor code
+== Destekçi kodu
+
+Sponsor code already claimed
+== Bu kod zaten kullanılmış
+
+Sponsor reminder
+== Destekçi hatırlatması
+
 Sponsor support
 == Sponsor desteği
+
+Sponsor title
+== Destekçi unvanı
 
 Sponsors:
 == Sponsorlar:
@@ -10540,6 +10555,9 @@ Status Scheme:
 
 Steam profile name
 == Steam profil adı
+
+Still free after %d sponsors. Take a look?
+== Bizi %d destekçi ayakta tutuyor. Bakmak ister misin?
 
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == Geçişte tuş girişini durdur (0=kapalı, 1=dummy, 2=oyuncu)
@@ -10657,6 +10675,9 @@ Switch failed
 
 Switch interval
 == Geçiş aralığı
+
+Switch on the status rows you need, then list the binds you want to watch.
+== Gereken durum anahtarlarını aç, ardından izlemek istediğin bind'leri listeye ekle.
 
 Switch opacity
 == Değiştirme opaklığı
@@ -10834,9 +10855,6 @@ Team mode change disabled
 
 Team mode change is disabled on this server.
 == Bu sunucuda takım modu değişikliği devre dışı.
-
-Team rank
-== Takım sıralaması
 
 Team save already in progress
 == Takım kaydetme zaten devam ediyor
@@ -11243,6 +11261,12 @@ Timer isn't displayed.
 Tiny Tee Size
 == Minik Tee Boyutu
 
+Title server unavailable; retry
+== Unvan sunucusu kullanılamıyor; tekrar dene
+
+Title too long or contains unsupported characters
+== Unvan çok uzun veya desteklenmeyen karakterler içeriyor
+
 To save all players in your team have to be alive and not in '/spec'
 == Takımdaki tüm oyuncuları kaydetmek için hayatta olmalı ve '/spec' durumunda olmamalıdır
 
@@ -11516,6 +11540,9 @@ Tune variable to value
 Tune variable to value or show current value
 == Değişkeni değere ayarla veya geçerli değeri göster
 
+Turn on "Message merging" in Dream Features.
+== "Dream Features" bölümünde "Message merging" seçeneğini aç.
+
 Tutorial
 == Eğitim
 
@@ -11732,6 +11759,9 @@ Unregister protocol and file extensions
 Unsaved changes
 == Kaydedilmemiş değişiklikler
 
+Up to 6 Chinese or 12 ASCII characters
+== En fazla 6 Çince veya 12 ASCII karakter
+
 Update
 == Güncelle
 
@@ -11767,6 +11797,9 @@ URL for downloading maps (must start with https://)
 
 URL for downloading skins
 == Skin indirmek için URL
+
+Usage: %s
+== Kullanım: %s
 
 Usage: %s %s
 == Kullanım: %s %s
@@ -11833,6 +11866,9 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == Dinamik kamera açıkken fare hassasiyetini kullan
+
+Use MSDF text rendering for nameplates (requires TexturedMsdf)
+== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == Kelime uzunluğuna göre çok karakterli değiştirme kullan
@@ -12715,6 +12751,9 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Zaman aşımı kodunuz ayarlandı. 0.7 istemcileri zaman aşımında teelerini geri alamaz; ancak bir 0.6 istemcisi teenizi alabilir
+
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== Silah değiştirirken kayarak dönerek girer, şarjör doldururken takla atar.
 
 z = Zoom
 == z = Yakınlaştırma

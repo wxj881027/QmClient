@@ -2381,7 +2381,7 @@ TEST(QmMonitoringHelpers, SettingsStableTextRegistryCoversVisibleWrappers)
 	EXPECT_NE(Menus.find("RenderMenubar(TabBar, IClient::STATE_ONLINE);"), std::string::npos);
 	EXPECT_NE(Menus.find("RenderServerInfo(ContentView);"), std::string::npos);
 	EXPECT_EQ(Menus.find("AddIngameTab("), std::string::npos);
-	EXPECT_NE(Menus.find("return DoMenuTabV2(pButtonContainer, pText, Checked != 0, pRect, Corners, nullptr, nullptr, nullptr, nullptr, &TextElement, ContentScale);"), std::string::npos);
+	EXPECT_NE(Menus.find("return DoMenuTabV2(pButtonContainer, pText, Checked != 0, pRect, Corners, nullptr, nullptr, nullptr, nullptr, &TextElement, ContentScale, true);"), std::string::npos);
 	EXPECT_EQ(Menus.find("DoMenuTabV2(&s_ServerInfoButton, Localize(\"Server info\")"), std::string::npos);
 	EXPECT_NE(Ingame.find("DoIngameMenuTitleLabel(PAGE_SERVER_INFO, \"ingame-server-info-title\""), std::string::npos);
 	EXPECT_NE(Ingame.find("DoIngameMenuTitleLabel(PAGE_SERVER_INFO, \"ingame-game-info-title\""), std::string::npos);
@@ -7597,14 +7597,14 @@ TEST(QmMonitoringHelpers, P6VisualContentOwnersRemainShellFree)
 	EXPECT_NE(Header.find("RenderQmVisualSkinTransitionContent"), std::string::npos);
 	EXPECT_NE(Header.find("RenderQmVisualFocusModeContent"), std::string::npos);
 	EXPECT_NE(Header.find("RenderQmVisualCameraViewContent"), std::string::npos);
-	EXPECT_NE(Header.find("IsQmNewFeatureRead"), std::string::npos);
+	EXPECT_NE(Header.find("RenderQmNewFeaturesPopup"), std::string::npos);
 	EXPECT_NE(StreamerBody.find("RenderQmVisualCheckbox"), std::string::npos);
 	EXPECT_NE(TranslateUiBody.find("NTranslateUiSettings::RenderTranslateUiModule"), std::string::npos);
 	EXPECT_NE(EntityOverlayBody.find("RenderQmSettingsSliderWithValueInput"), std::string::npos);
 	EXPECT_NE(CollisionHitboxBody.find("DoLine_ColorPicker"), std::string::npos);
-	EXPECT_NE(WeaponAnimationBody.find("MarkQmNewFeatureHovered"), std::string::npos);
+	EXPECT_NE(WeaponAnimationBody.find("Animation range"), std::string::npos);
 	EXPECT_NE(ChatBubbleBody.find("DoLine_ColorPicker"), std::string::npos);
-	EXPECT_NE(SkinTransitionBody.find("MarkQmNewFeatureHovered"), std::string::npos);
+	EXPECT_NE(SkinTransitionBody.find("Skin transition animation"), std::string::npos);
 	EXPECT_NE(SkinTransitionBody.find("RenderQmSettingsSliderWithValueInput"), std::string::npos);
 	EXPECT_NE(FocusModeBody.find("toggle qm_focus_mode 0 1"), std::string::npos);
 	EXPECT_NE(FocusModeBody.find("g_CommandBindCache"), std::string::npos);
@@ -9955,24 +9955,18 @@ TEST(QmMonitoringHelpers, QmUiPresenceBacksFavoriteCommunityTabs)
 		}
 		return Count;
 	};
-	const auto ExtractFavoriteCommunityBlock = [](const std::string &Source, size_t Occurrence) {
-		const std::string Anchor = "static CButtonContainer s_aFavoriteCommunityButtons[5];";
-		size_t Pos = 0;
-		for(size_t Index = 0; Index <= Occurrence; ++Index)
-		{
-			Pos = Source.find(Anchor, Pos);
-			if(Pos == std::string::npos)
-				return std::string();
-			if(Index < Occurrence)
-				Pos += Anchor.size();
-		}
+	const auto ExtractFavoriteCommunityBlock = [](const std::string &Source, const char *pAnchor) {
+		const size_t Pos = Source.find(pAnchor);
+		if(Pos == std::string::npos)
+			return std::string();
 		const size_t End = Source.find("TextRender()->SetRenderFlags(0);", Pos);
 		if(End == std::string::npos)
 			return std::string();
 		return Source.substr(Pos, End - Pos);
 	};
-	const std::string NewMenubarCommunityBlock = ExtractFavoriteCommunityBlock(Menus, 0);
-	const std::string LegacyMenubarCommunityBlock = ExtractFavoriteCommunityBlock(Menus, 1);
+	// 新 UI 的收藏社区页签与固定页签共用胶囊 Tabbar 的槽位表，锚点因此是槽位表声明。
+	const std::string NewMenubarCommunityBlock = ExtractFavoriteCommunityBlock(Menus, "static CButtonContainer s_aStartTabButtons[9];");
+	const std::string LegacyMenubarCommunityBlock = ExtractFavoriteCommunityBlock(Menus, "static CButtonContainer s_aFavoriteCommunityButtons[5];");
 	ASSERT_FALSE(NewMenubarCommunityBlock.empty());
 	ASSERT_FALSE(LegacyMenubarCommunityBlock.empty());
 
@@ -9981,10 +9975,20 @@ TEST(QmMonitoringHelpers, QmUiPresenceBacksFavoriteCommunityTabs)
 	EXPECT_NE(LegacyMenubarCommunityBlock.find("CUiV2Tree &Tree = GameClient()->UiRuntimeV2()->Tree();"), std::string::npos);
 	EXPECT_EQ(CountOccurrences(Menus, "const SUiPresenceResult Presence = Tree.ResolvePresence(AnimRuntime, NodeKey, true, AppearTransition);"), 2u);
 	EXPECT_EQ(CountOccurrences(Menus, "const float AppearStrength = std::clamp(Presence.m_Alpha, 0.0f, 1.0f);"), 2u);
-	EXPECT_EQ(CountOccurrences(Menus, "const float RevealWidth = maximum(2.0f, Button.w * AppearStrength);"), 2u);
-	EXPECT_EQ(CountOccurrences(Menus, "InactiveColor.a *= AppearStrength;"), 2u);
-	EXPECT_EQ(CountOccurrences(Menus, "ActiveColor.a *= AppearStrength;"), 2u);
-	EXPECT_EQ(CountOccurrences(Menus, "HoverColor.a *= AppearStrength;"), 2u);
+	EXPECT_EQ(CountOccurrences(Menus, "const float RevealWidth = maximum(2.0f, Slot.w * AppearStrength);"), 1u);
+	EXPECT_EQ(CountOccurrences(Menus, "const float RevealWidth = maximum(2.0f, Button.w * AppearStrength);"), 1u);
+	EXPECT_EQ(CountOccurrences(Menus, "InactiveColor.a *= AppearStrength;"), 1u);
+	EXPECT_EQ(CountOccurrences(Menus, "ActiveColor.a *= AppearStrength;"), 1u);
+	EXPECT_EQ(CountOccurrences(Menus, "HoverColor.a *= AppearStrength;"), 1u);
+	// 新 UI 的展开宽度先算进槽位，再画胶囊容器/滑块，最后才轮到图标。
+	const size_t NewUiRevealWidthPos = NewMenubarCommunityBlock.find("const float RevealWidth = maximum(2.0f, Slot.w * AppearStrength);");
+	const size_t NewUiChromePos = NewMenubarCommunityBlock.find("ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash(\"menubar_capsule_start_tabs\")");
+	const size_t NewUiDrawPos = NewMenubarCommunityBlock.find("if(DoMenuTabV2(&s_aStartTabButtons[TabIndex]");
+	ASSERT_NE(NewUiRevealWidthPos, std::string::npos);
+	ASSERT_NE(NewUiChromePos, std::string::npos);
+	ASSERT_NE(NewUiDrawPos, std::string::npos);
+	EXPECT_LT(NewUiRevealWidthPos, NewUiChromePos);
+	EXPECT_LT(NewUiChromePos, NewUiDrawPos);
 	EXPECT_EQ(NewMenubarCommunityBlock.find("ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA"), std::string::npos);
 	EXPECT_EQ(LegacyMenubarCommunityBlock.find("ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::ALPHA"), std::string::npos);
 	EXPECT_EQ(NewMenubarCommunityBlock.find("WasVisibleLastFrame"), std::string::npos);

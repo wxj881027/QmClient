@@ -10,6 +10,17 @@
 
 typedef struct _json_value json_value;
 
+struct SQmTitlePresence
+{
+	int m_PlayerId = -1;
+	std::string m_PlayerName;
+	std::string m_Title;
+	int64_t m_RemainingSeconds = 0;
+};
+
+std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress);
+bool IsValidQmTitle(const char *pTitle);
+
 struct SQmClientServerDistribution
 {
 	std::string m_ServerAddress;

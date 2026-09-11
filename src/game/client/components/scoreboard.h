@@ -8,6 +8,7 @@
 #include <engine/shared/protocol.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/axiom_scores_data.h>
 #include <game/client/components/qmclient/scoreboard_team_modes.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
@@ -180,9 +181,6 @@ class CScoreboard : public CComponent
 		int m_ClientId;
 		bool m_IsLocal;
 		bool m_IsSpectating;
-		bool m_ShowAxiomScores = false;
-		char m_aAxiomPlayerName[MAX_NAME_LENGTH] = "";
-		CScrollRegion m_AxiomScrollRegion;
 
 		static CUi::EPopupMenuFunctionResult Render(void *pContext, CUIRect View, bool Active);
 	} m_ScoreboardPopupContext;
@@ -205,6 +203,15 @@ class CScoreboard : public CComponent
 		char m_SpectatorSecondLineButtonId;
 	};
 	CPlayerElement m_aPlayers[MAX_CLIENTS];
+
+	// 本帧解析出的 Axiom 积分模式（NONE 表示当前服务器不是 Axiom 积分服）。
+	// 每帧在 OnRender 开头刷新一次，渲染期由 HasQmAxiomScoreMode / QmAxiomScorePoints 复用。
+	EQmAxiomMode m_QmAxiomScoreModeFrame = EQmAxiomMode::NONE;
+	bool m_QmAxiomScoreModeFrameValid = false;
+
+	void UpdateQmAxiomScoreMode();
+	bool HasQmAxiomScoreMode();
+	void QmAxiomScorePoints(const char *pPlayerName, bool Visible, char *pBuffer, int BufferSize) const;
 
 public:
 	CScoreboard();

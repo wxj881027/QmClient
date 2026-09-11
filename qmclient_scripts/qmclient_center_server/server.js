@@ -12,6 +12,8 @@ const {
 	RegisterDeveloperPresenceRoutes
 } = require("./developer_auth");
 
+const { CreateTitleService, RegisterTitleRoutes } = require("./title_auth");
+
 const app = express();
 const DefaultJsonParser = express.json({ limit: "32kb" });
 const EditorCollabJsonParser = express.json({ limit: "32mb" });
@@ -341,6 +343,9 @@ const g_DeveloperPresenceService = CreateDeveloperPresenceService({
 RegisterDeveloperPresenceRoutes(app, g_DeveloperPresenceService, {
 	CheckRateLimit: (req) => CheckRateLimit(ClientIp(req))
 });
+
+const g_TitleService = CreateTitleService({ Directory: process.env.TITLE_DATA_DIR || path.join(__dirname, "title_data") });
+RegisterTitleRoutes(app, g_TitleService, { CheckRateLimit, ClientIp });
 
 function NewToken(Ip)
 {

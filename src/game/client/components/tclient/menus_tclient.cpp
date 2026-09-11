@@ -22,6 +22,7 @@
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
 #include <game/client/components/binds.h>
@@ -1149,20 +1150,58 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 	}
 
 	int VisibleTabIndex = 0;
-	for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
+	if(g_Config.m_QmNewUi != 0)
 	{
-		if(IsFlagSet(g_Config.m_TcTClientSettingsTabs, Tab))
-			continue;
-
-		TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-		const int Corners = VisibleTabIndex == 0 ? IGraphics::CORNER_L : VisibleTabIndex == TabCount - 1 ? IGraphics::CORNER_R :
-														   IGraphics::CORNER_NONE;
-		if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
+		// 胶囊 Tabbar：可见页签槽位先算完，再画容器与滑块，最后画页签文字。
+		CUIRect aTClientTabSlots[NUMBER_OF_TCLIENT_TABS];
+		int aTClientTabPages[NUMBER_OF_TCLIENT_TABS];
+		int NumTClientTabs = 0;
+		int ActiveTClientTab = -1;
 		{
-			m_TClientSettingsTab = Tab;
-			ActiveTab = Tab;
+			CUIRect TabsRemainder = TabBar;
+			for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
+			{
+				if(IsFlagSet(g_Config.m_TcTClientSettingsTabs, Tab))
+					continue;
+				TabsRemainder.VSplitLeft(TabWidth, &aTClientTabSlots[NumTClientTabs], &TabsRemainder);
+				aTClientTabPages[NumTClientTabs] = Tab;
+				if(ActiveTab == Tab)
+					ActiveTClientTab = NumTClientTabs;
+				++NumTClientTabs;
+			}
 		}
-		++VisibleTabIndex;
+		if(NumTClientTabs > 0)
+		{
+			const IUiContext TClientTabBarCtx = TabBarUiContext();
+			ui_widget::CapsuleTabBarChrome(TClientTabBarCtx, MakeUiScopeHash("settings_tclient_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aTClientTabSlots, NumTClientTabs), ActiveTClientTab >= 0 ? &aTClientTabSlots[ActiveTClientTab] : nullptr, SettingsCapsuleTabBarStyle());
+			for(int TabIndex = 0; TabIndex < NumTClientTabs; ++TabIndex)
+			{
+				const int Tab = aTClientTabPages[TabIndex];
+				if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &aTClientTabSlots[TabIndex], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true) && !ReadOnly)
+				{
+					m_TClientSettingsTab = Tab;
+					ActiveTab = Tab;
+				}
+			}
+		}
+	}
+	else
+	{
+		for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
+		{
+			if(IsFlagSet(g_Config.m_TcTClientSettingsTabs, Tab))
+				continue;
+
+			TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
+			const int Corners = VisibleTabIndex == 0 ? IGraphics::CORNER_L : VisibleTabIndex == TabCount - 1 ? IGraphics::CORNER_R :
+															   IGraphics::CORNER_NONE;
+			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
+			{
+				m_TClientSettingsTab = Tab;
+				ActiveTab = Tab;
+			}
+			++VisibleTabIndex;
+		}
 	}
 
 	CUIRect ContentView = MainView;
@@ -5248,7 +5287,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 					TempItemButton.x = mix(TempItemButton.x, s_ItemSwaps[i].m_InitialPosition.x, Progress);
 				}
 			}
-			if(!ReadOnly && DoButtonLineSize_Menu(s_pItemButtons[i], Localize(GetStatusBarEditorLabel(pStatusItem)), 0, &TempItemButton, LineSize, false, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, Color))
+			if(!ReadOnly && DoButtonLineSize_Menu(s_pItemButtons[i], Localize(GetStatusBarEditorLabel(pStatusItem)), 0, &TempItemButton, LineSize, false, 0, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, Color))
 			{
 				if(s_SelectedItem == -2)
 				{
@@ -6641,7 +6680,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 			const bool Modified = !IsEffectiveDefaultVar(pVar);
 			const ColorRGBA BgModified = ColorRGBA(1.0f, 0.8f, 0.0f, 0.15f);
 			const ColorRGBA BgNormal = ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f);
-			RowItem.Draw(Modified ? BgModified : BgNormal, IGraphics::CORNER_ALL, 6.0f);
+			RowItem.Draw(Modified ? BgModified : BgNormal, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 
 			CUIRect RowContent;
 			RowItem.Margin(5.0f, &RowContent);

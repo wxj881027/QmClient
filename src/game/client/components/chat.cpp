@@ -374,6 +374,7 @@ void CChat::CLine::Reset(CChat &This)
 	m_Time = 0;
 	m_aText[0] = '\0';
 	m_aName[0] = '\0';
+	m_aQmTitle[0] = '\0';
 	m_ChatEmoji = EQmChatEmoji::NONE;
 	m_ChatEmojiRect = {};
 	m_aYOffset[0] = -1.0f;
@@ -444,6 +445,9 @@ CChat::CChat()
 		}
 		return pStr;
 	});
+
+	m_EmojiCompletionListLength = 0;
+	m_aEmojiCompletionColon[0] = '\0';
 }
 
 float CChat::CalculateCutOffOffsetX(float Progress)
@@ -610,6 +614,8 @@ void CChat::Reset()
 	m_aCompletionBuffer[0] = 0;
 	m_PlaceholderOffset = 0;
 	m_PlaceholderLength = 0;
+	m_EmojiCompletionListLength = 0;
+	m_aEmojiCompletionColon[0] = '\0';
 	m_pHistoryEntry = nullptr;
 	m_PendingChatCounter = 0;
 	m_LastChatSend = 0;
@@ -957,7 +963,18 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			str_truncate(m_aCompletionBuffer, sizeof(m_aCompletionBuffer), m_Input.GetString() + m_PlaceholderOffset, m_PlaceholderLength);
 		}
 
-		if(!m_CompletionUsed && m_aCompletionBuffer[0] != '/')
+		// 表情补全：半角/全角冒号前缀，行为对齐官方 Tab 循环补全
+		const int EmojiColonLength = QmChatEmojiColonUtf8Length(m_aCompletionBuffer);
+		const bool EmojiCompletionCandidate = EmojiColonLength > 0;
+		if(EmojiCompletionCandidate && !m_CompletionUsed)
+		{
+			const char *pEmojiPrefix = m_aCompletionBuffer + EmojiColonLength;
+			m_EmojiCompletionListLength = QmChatEmojiCollectByPrefix(pEmojiPrefix, m_apEmojiCompletionList, (int)QM_CHAT_EMOJI_COUNT);
+			str_truncate(m_aEmojiCompletionColon, sizeof(m_aEmojiCompletionColon), m_aCompletionBuffer, EmojiColonLength);
+		}
+
+		// 无命令前缀时构建玩家名候选；表情有匹配时优先走表情补全，否则仍可回退到玩家名
+		if(!m_CompletionUsed && m_aCompletionBuffer[0] != '/' && !(EmojiCompletionCandidate && m_EmojiCompletionListLength > 0))
 		{
 			// Create the completion list of player names through which the player can iterate
 			const char *PlayerName, *FoundInput;
@@ -1047,6 +1064,36 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				m_Input.SetCursorOffset(m_PlaceholderOffset + m_PlaceholderLength);
 			}
 		}
+		else if(EmojiCompletionCandidate && m_EmojiCompletionListLength > 0)
+		{
+			const int NumEmojis = m_EmojiCompletionListLength;
+			if(ShiftPressed && m_CompletionUsed)
+				m_CompletionChosen--;
+			else if(!ShiftPressed)
+				m_CompletionChosen++;
+			if(m_CompletionChosen < 0)
+				m_CompletionChosen += NumEmojis;
+			m_CompletionChosen %= NumEmojis;
+			m_CompletionUsed = true;
+
+			const SQmChatEmojiDefinition *pCompletionEmoji = m_apEmojiCompletionList[m_CompletionChosen];
+			if(pCompletionEmoji != nullptr && pCompletionEmoji->m_pText != nullptr)
+			{
+				char aBuf[MAX_LINE_LENGTH];
+				str_truncate(aBuf, sizeof(aBuf), m_Input.GetString(), m_PlaceholderOffset);
+
+				// 保留用户输入的半角/全角冒号类型
+				str_append(aBuf, m_aEmojiCompletionColon);
+				str_append(aBuf, pCompletionEmoji->m_pText + 1);
+
+				str_append(aBuf, m_Input.GetString() + m_PlaceholderOffset + m_PlaceholderLength);
+
+				// m_aEmojiCompletionColon 可能为 3 字节全角冒号，不能用 str_length 假定 1
+				m_PlaceholderLength = str_length(m_aEmojiCompletionColon) + str_length(pCompletionEmoji->m_pText + 1);
+				m_Input.Set(aBuf);
+				m_Input.SetCursorOffset(m_PlaceholderOffset + m_PlaceholderLength);
+			}
+		}
 		else
 		{
 			// find next possible name
@@ -1131,6 +1178,8 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 		{
 			m_CompletionChosen = -1;
 			m_CompletionUsed = false;
+			m_EmojiCompletionListLength = 0;
+			m_aEmojiCompletionColon[0] = '\0';
 		}
 
 		m_Input.ProcessInput(Event);
@@ -1197,6 +1246,8 @@ void CChat::EnableMode(int Team)
 		Input()->Clear();
 		m_CompletionChosen = -1;
 		m_CompletionUsed = false;
+		m_EmojiCompletionListLength = 0;
+		m_aEmojiCompletionColon[0] = '\0';
 		m_Input.Activate(EInputPriority::CHAT);
 	}
 }
@@ -1527,6 +1578,7 @@ void CChat::AddMergedAuthor(CLine &Line, int ClientId)
 	Author.m_ClientId = ClientId;
 	GameClient()->FormatStreamerName(ClientId, Author.m_aName, sizeof(Author.m_aName));
 	str_copy(Author.m_aPlayerName, GameClient()->m_aClients[ClientId].m_aName);
+	str_copy(Author.m_aQmTitle, GameClient()->m_QmClient.PlayerTitle(ClientId));
 
 	int NameColor = -2;
 	const CGameClient::CClientData &LineAuthor = GameClient()->m_aClients[ClientId];
@@ -1843,6 +1895,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	else
 	{
 		const auto &LineAuthor = GameClient()->m_aClients[CurrentLine.m_ClientId];
+		str_copy(CurrentLine.m_aQmTitle, GameClient()->m_QmClient.PlayerTitle(CurrentLine.m_ClientId));
 		char aDisplayName[MAX_NAME_LENGTH];
 		GameClient()->FormatStreamerName(CurrentLine.m_ClientId, aDisplayName, sizeof(aDisplayName));
 
@@ -2028,6 +2081,28 @@ void CChat::OnPrepareLines(float y)
 		}
 
 		const bool RenderChatEmoji = GameClient()->m_QmChatEmoji.CanRender(Line.m_ChatEmoji);
+		// 隐藏身份后清除旧消息的头衔，并重新计算包含头衔的布局缓存。
+		bool TitleHidden = false;
+		if(Line.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
+		{
+			Line.m_aQmTitle[0] = '\0';
+			TitleHidden = true;
+		}
+		for(auto &Author : Line.m_vMergedAuthors)
+		{
+			if(Author.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
+			{
+				Author.m_aQmTitle[0] = '\0';
+				TitleHidden = true;
+			}
+		}
+		if(TitleHidden)
+		{
+			TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+			Line.m_ChatEmojiRect = {};
+			Line.m_aYOffset[0] = -1.0f;
+			Line.m_aYOffset[1] = -1.0f;
+		}
 		const bool LinePrepared = RenderChatEmoji ? Line.m_ChatEmojiRect.w > 0.0f : Line.m_TextContainerIndex.Valid() && Line.m_ChatEmojiRect.w <= 0.0f;
 		if(LinePrepared && !ForceRecreate)
 		{
@@ -2131,11 +2206,13 @@ void CChat::OnPrepareLines(float y)
 				{
 					if(i > 0)
 						TextRender()->TextEx(&MeasureCursor, ",");
+					TextRender()->TextEx(&MeasureCursor, Line.m_vMergedAuthors[i].m_aQmTitle);
 					TextRender()->TextEx(&MeasureCursor, Line.m_vMergedAuthors[i].m_aName);
 				}
 			}
 			else
 			{
+				TextRender()->TextEx(&MeasureCursor, Line.m_aQmTitle);
 				TextRender()->TextEx(&MeasureCursor, Line.m_aName);
 			}
 			if(Line.m_TimesRepeated > 0)
@@ -2243,6 +2320,7 @@ void CChat::OnPrepareLines(float y)
 				TextRender()->TextColor(Line.m_vMergedAuthors[i].m_NameColor);
 				if(i > 0)
 					TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, ",");
+				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_vMergedAuthors[i].m_aQmTitle);
 				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_vMergedAuthors[i].m_aName);
 			}
 			NameColor = Line.m_vMergedAuthors.back().m_NameColor;
@@ -2251,6 +2329,7 @@ void CChat::OnPrepareLines(float y)
 		{
 			TextRender()->TextColor(NameColor);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, aClientId);
+			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_aQmTitle);
 			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, Line.m_aName);
 		}
 
@@ -2551,6 +2630,38 @@ void CChat::OnRender()
 					TextRender()->TextEx(&InputCursor, Command.m_aName + str_length(m_Input.GetString() + 1));
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 					break;
+				}
+			}
+		}
+		else
+		{
+			// 表情补全提示：唯一匹配时显示剩余字符；多候选时以逗号分隔展示所有可能码
+			const int HintColonLength = QmChatEmojiColonUtf8Length(m_Input.GetString());
+			if(HintColonLength > 0)
+			{
+				const SQmChatEmojiDefinition *apHintMatches[QM_CHAT_EMOJI_COUNT];
+				const int NumHintMatches = QmChatEmojiCollectByPrefix(m_Input.GetString() + HintColonLength, apHintMatches, (int)QM_CHAT_EMOJI_COUNT);
+				if(NumHintMatches > 0)
+				{
+					char aHint[128];
+					if(NumHintMatches == 1)
+					{
+						const char *pTyped = m_Input.GetString() + HintColonLength;
+						const char *pMatch = apHintMatches[0]->m_pText + 1;
+						str_copy(aHint, pMatch + str_length(pTyped));
+					}
+					else
+					{
+						QmChatEmojiFormatCandidates(apHintMatches, NumHintMatches, aHint, sizeof(aHint));
+					}
+					if(aHint[0] != '\0')
+					{
+						InputCursor.m_X = InputCursor.m_X + TextRender()->TextWidth(InputCursor.m_FontSize, m_Input.GetString(), -1, InputCursor.m_LineWidth);
+						InputCursor.m_Y = m_Input.GetCaretPosition().y;
+						TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.5f);
+						TextRender()->TextEx(&InputCursor, aHint);
+						TextRender()->TextColor(TextRender()->DefaultTextColor());
+					}
 				}
 			}
 		}

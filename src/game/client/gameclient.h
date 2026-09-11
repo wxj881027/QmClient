@@ -352,6 +352,13 @@ private:
 	std::string m_QmStutterOperation;
 	std::unique_ptr<CQmJelly> m_pJellyTee;
 
+	// 启动赞助提醒：本次启动要展示的启动序号，0 表示不提示。
+	// 只在会话内有效，避免把「还没看」的状态持久化后跨会话重复提示。
+	int m_QmSponsorNudgeLaunchCount = 0;
+	bool m_QmSponsorNudgeVisible = false;
+	// 关闭提醒后的那句问话：同样走灵动岛表现，由 CMenus 读取本标志决定文案。
+	bool m_QmSponsorNudgeFarewell = false;
+
 	CNetObjHandler m_NetObjHandler;
 	protocol7::CNetObjHandler m_NetObjHandler7;
 
@@ -447,6 +454,7 @@ private:
 	static void ConTuneParam(IConsole::IResult *pResult, void *pUserData);
 	static void ConTuneZone(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapbug(IConsole::IResult *pResult, void *pUserData);
+	static void ConQmSponsorNudgePreview(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConchainMenuMap(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
@@ -486,6 +494,21 @@ public:
 	class IStorage *Storage() const { return m_pStorage; }
 	class IConfigManager *ConfigManager() const { return m_pConfigManager; }
 	class CConfig *Config() const { return m_pConfig; }
+
+	// 本次会话是否应展示启动赞助提醒（供主菜单浮层查询）。
+	bool SponsorNudgeVisible() const { return m_QmSponsorNudgeVisible; }
+	int SponsorNudgeLaunchCount() const { return m_QmSponsorNudgeLaunchCount; }
+	// 用户在「梦的小功能」里关掉赞助提醒后，弹一句同样式的问话（仅本会话，不写盘）。
+	bool SponsorNudgeFarewellActive() const { return m_QmSponsorNudgeFarewell; }
+	void ShowSponsorNudgeFarewell();
+	// 用户又把提醒打开时立刻收回那句问话，避免它滞留在屏幕上。
+	void HideSponsorNudgeFarewell() { m_QmSponsorNudgeFarewell = false; }
+	// 调试预览：不计数、不写盘，仅本次会话强制展示一次浮层。
+	void ShowSponsorNudgePreview();
+	// 关闭本次浮层；Permanent 为真时写入 qm_sponsor_nudge=0 永不再提示。
+	void DismissSponsorNudge(bool Permanent);
+	// 赞助页入口：跳转到 QmClient 设置的赞助者页。
+	void OpenSponsorPage();
 	class IConsole *Console() { return m_pConsole; }
 	class ITextRender *TextRender() const { return m_pTextRender; }
 	class IDemoPlayer *DemoPlayer() const { return m_pDemoPlayer; }

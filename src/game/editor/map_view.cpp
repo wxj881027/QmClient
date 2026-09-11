@@ -9,6 +9,57 @@
 #include <game/editor/editor_actions.h>
 #include <game/editor/explanations.h>
 
+// 图层种类：复制区域时用来把画笔层对应到装着同一种数据的图层
+static ELayerKind LayerKindOf(const std::shared_ptr<CLayer> &pLayer)
+{
+	if(pLayer->m_Type == LAYERTYPE_TILES)
+	{
+		const std::shared_ptr<CLayerTiles> pTiles = std::static_pointer_cast<CLayerTiles>(pLayer);
+		return LayerKindFromFlags(pTiles->m_HasGame, pTiles->m_HasFront, pTiles->m_HasTele, pTiles->m_HasSpeedup, pTiles->m_HasSwitch, pTiles->m_HasTune);
+	}
+	if(pLayer->m_Type == LAYERTYPE_QUADS)
+		return ELayerKind::QUADS;
+	if(pLayer->m_Type == LAYERTYPE_SOUNDS)
+		return ELayerKind::SOUNDS;
+	return ELayerKind::INVALID;
+}
+
+/**
+ * 在画笔里找目标图层对应的层：
+ * 1. 先按旧的“层数一致时按顺序对应”取 PreferredIndex 的层，种类一致就用它，保证多层同类选择时行为不变；
+ * 2. 再按图层种类匹配，避免自动补进画笔的实体层（排在末尾）被索引规则取错；
+ * 3. 最后回退到第一个 m_Type 相同的层，保持旧的“同类贴同类”行为。
+ */
+static std::shared_ptr<CLayer> FindBrushLayer(const std::shared_ptr<CLayerGroup> &pBrush, const std::shared_ptr<CLayer> &pTarget, size_t PreferredIndex)
+{
+	const std::vector<std::shared_ptr<CLayer>> &vpLayers = pBrush->m_vpLayers;
+	const ELayerKind TargetKind = LayerKindOf(pTarget);
+	if(PreferredIndex < vpLayers.size() && vpLayers[PreferredIndex] && LayerKindOf(vpLayers[PreferredIndex]) == TargetKind)
+		return vpLayers[PreferredIndex];
+	for(const std::shared_ptr<CLayer> &pBrushLayer : vpLayers)
+	{
+		if(pBrushLayer && LayerKindOf(pBrushLayer) == TargetKind)
+			return pBrushLayer;
+	}
+	for(const std::shared_ptr<CLayer> &pBrushLayer : vpLayers)
+	{
+		if(pBrushLayer && pBrushLayer->m_Type == pTarget->m_Type)
+			return pBrushLayer;
+	}
+	return nullptr;
+}
+
+// 组内索引为 LayerIndex 的图层是否已在本轮编辑图层列表里（即已被选中）
+static bool IsEditLayerSelected(const std::pair<int, std::shared_ptr<CLayer>> *pEditLayers, size_t NumEditLayers, int LayerIndex)
+{
+	for(size_t k = 0; k < NumEditLayers; k++)
+	{
+		if(pEditLayers[k].first == LayerIndex)
+			return true;
+	}
+	return false;
+}
+
 void CMapView::CState::Reset(CEditor *pEditor)
 {
 	m_Zoom = CSmoothValue(200.0f, 10.0f, 2000.0f);
@@ -375,21 +426,21 @@ void CEditor::DoMapEditor(CUIRect View)
 						// draw with brush
 						for(size_t k = 0; k < NumEditLayers; k++)
 						{
-							size_t BrushIndex = k % m_pBrush->m_vpLayers.size();
-							if(apEditLayers[k].second->m_Type == m_pBrush->m_vpLayers[BrushIndex]->m_Type)
-							{
-								if(apEditLayers[k].second->m_Type == LAYERTYPE_TILES)
-								{
-									std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(apEditLayers[k].second);
-									std::shared_ptr<CLayerTiles> pBrushLayer = std::static_pointer_cast<CLayerTiles>(m_pBrush->m_vpLayers[BrushIndex]);
+							std::shared_ptr<CLayer> pBrushLayer = FindBrushLayer(m_pBrush, apEditLayers[k].second, k % m_pBrush->m_vpLayers.size());
+							if(!pBrushLayer || apEditLayers[k].second->m_Type != pBrushLayer->m_Type)
+								continue;
 
-									if((!pLayer->m_HasTele || pBrushLayer->m_HasTele) && (!pLayer->m_HasSpeedup || pBrushLayer->m_HasSpeedup) && (!pLayer->m_HasFront || pBrushLayer->m_HasFront) && (!pLayer->m_HasGame || pBrushLayer->m_HasGame) && (!pLayer->m_HasSwitch || pBrushLayer->m_HasSwitch) && (!pLayer->m_HasTune || pBrushLayer->m_HasTune))
-										pLayer->BrushDraw(pBrushLayer.get(), vec2(wx, wy));
-								}
-								else
-								{
-									apEditLayers[k].second->BrushDraw(m_pBrush->m_vpLayers[BrushIndex].get(), vec2(wx, wy));
-								}
+							if(apEditLayers[k].second->m_Type == LAYERTYPE_TILES)
+							{
+								std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(apEditLayers[k].second);
+								std::shared_ptr<CLayerTiles> pBrushTiles = std::static_pointer_cast<CLayerTiles>(pBrushLayer);
+
+								if((!pLayer->m_HasTele || pBrushTiles->m_HasTele) && (!pLayer->m_HasSpeedup || pBrushTiles->m_HasSpeedup) && (!pLayer->m_HasFront || pBrushTiles->m_HasFront) && (!pLayer->m_HasGame || pBrushTiles->m_HasGame) && (!pLayer->m_HasSwitch || pBrushTiles->m_HasSwitch) && (!pLayer->m_HasTune || pBrushTiles->m_HasTune))
+									pLayer->BrushDraw(pBrushTiles.get(), vec2(wx, wy));
+							}
+							else
+							{
+								apEditLayers[k].second->BrushDraw(pBrushLayer.get(), vec2(wx, wy));
 							}
 						}
 					}
@@ -416,6 +467,31 @@ void CEditor::DoMapEditor(CUIRect View)
 							int Grabs = 0;
 							for(size_t k = 0; k < NumEditLayers; k++)
 								Grabs += apEditLayers[k].second->BrushGrab(m_pBrush.get(), r);
+
+							// 游戏组里的传送/开关/速度/调参层和游戏层属于同一块地图数据，未选中时不会被复制，
+							// 粘贴出来的区块就会缺这些内容，所以把选区内非空、且未选中的实体层一并抓进画笔。
+							const std::shared_ptr<CLayerGroup> pSelectedGroup = Map()->SelectedGroup();
+							if(!m_ShowPicker && NumEditLayers > 0 && apEditLayers[0].second->m_Type == LAYERTYPE_TILES && pSelectedGroup && pSelectedGroup->m_GameGroup)
+							{
+								for(size_t LayerIndex = 0; LayerIndex < pSelectedGroup->m_vpLayers.size(); LayerIndex++)
+								{
+									const std::shared_ptr<CLayer> pLayer = pSelectedGroup->m_vpLayers[LayerIndex];
+									if(pLayer->m_Type != LAYERTYPE_TILES)
+										continue;
+									if(!ShouldAutoGrabEntityLayer(LayerKindOf(pLayer), IsEditLayerSelected(apEditLayers, NumEditLayers, LayerIndex)))
+										continue;
+
+									const std::shared_ptr<CLayerTiles> pLayerTiles = std::static_pointer_cast<CLayerTiles>(pLayer);
+									CIntRect LayerRect;
+									pLayerTiles->Convert(r, &LayerRect);
+									pLayerTiles->Clamp(&LayerRect);
+									if(!pLayerTiles->HasContentInRect(LayerRect))
+										continue;
+
+									Grabs += pLayerTiles->BrushGrab(m_pBrush.get(), r);
+								}
+							}
+
 							if(Grabs == 0)
 								m_pBrush->Clear();
 
@@ -438,10 +514,7 @@ void CEditor::DoMapEditor(CUIRect View)
 					{
 						for(size_t k = 0; k < NumEditLayers; k++)
 						{
-							size_t BrushIndex = k;
-							if(m_pBrush->m_vpLayers.size() != NumEditLayers)
-								BrushIndex = 0;
-							std::shared_ptr<CLayer> pBrush = m_pBrush->IsEmpty() ? nullptr : m_pBrush->m_vpLayers[BrushIndex];
+							std::shared_ptr<CLayer> pBrush = m_pBrush->IsEmpty() ? nullptr : FindBrushLayer(m_pBrush, apEditLayers[k].second, m_pBrush->m_vpLayers.size() != NumEditLayers ? 0 : k);
 							apEditLayers[k].second->FillSelection(m_pBrush->IsEmpty(), pBrush.get(), r);
 						}
 						std::shared_ptr<IEditorAction> Action = std::make_shared<CEditorBrushDrawAction>(Map(), Map()->m_SelectedGroup);
@@ -477,12 +550,11 @@ void CEditor::DoMapEditor(CUIRect View)
 						Map()->m_MapViewState.m_ActiveOp = CMapView::EActiveOp::BRUSH_DRAW;
 						for(size_t k = 0; k < NumEditLayers; k++)
 						{
-							size_t BrushIndex = k;
-							if(m_pBrush->m_vpLayers.size() != NumEditLayers)
-								BrushIndex = 0;
+							std::shared_ptr<CLayer> pBrushLayer = FindBrushLayer(m_pBrush, apEditLayers[k].second, m_pBrush->m_vpLayers.size() != NumEditLayers ? 0 : k);
+							if(!pBrushLayer || apEditLayers[k].second->m_Type != pBrushLayer->m_Type)
+								continue;
 
-							if(apEditLayers[k].second->m_Type == m_pBrush->m_vpLayers[BrushIndex]->m_Type)
-								apEditLayers[k].second->BrushPlace(m_pBrush->m_vpLayers[BrushIndex].get(), vec2(wx, wy));
+							apEditLayers[k].second->BrushPlace(pBrushLayer.get(), vec2(wx, wy));
 						}
 					}
 

@@ -6,10 +6,8 @@
 #include "voting.h"
 
 #include <base/color.h>
-#include <base/hash_ctxt.h>
 #include <base/math.h>
 #include <base/perf_timer.h>
-#include <base/system.h>
 
 #include <engine/console.h>
 #include <engine/demo.h>
@@ -30,6 +28,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
 #include <game/client/components/countryflags.h>
@@ -53,103 +52,9 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	constexpr const char *REPORT_SCAN_PATH = "/v1/scan";
-	constexpr const char *REPORT_CONTENT_TYPE = "application/json; charset=utf-8";
-
 	void LogIngamePerfStage(IClient *pClient, const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
 	{
 		QmPerfLogStage("perf/menu", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
-	}
-
-	void HmacSha256Hex(const char *pSecret, const char *pMessage, char *pBuffer, int BufferSize)
-	{
-		const unsigned char *pSecretBytes = reinterpret_cast<const unsigned char *>(pSecret);
-		size_t SecretLength = str_length(pSecret);
-		unsigned char aKeyBlock[64] = {0};
-
-		if(SecretLength > sizeof(aKeyBlock))
-		{
-			const SHA256_DIGEST SecretDigest = sha256(pSecretBytes, SecretLength);
-			mem_copy(aKeyBlock, SecretDigest.data, sizeof(SecretDigest.data));
-		}
-		else
-		{
-			mem_copy(aKeyBlock, pSecretBytes, SecretLength);
-		}
-
-		unsigned char aOuterPad[64];
-		unsigned char aInnerPad[64];
-		for(size_t KeyIndex = 0; KeyIndex < sizeof(aKeyBlock); ++KeyIndex)
-		{
-			aOuterPad[KeyIndex] = aKeyBlock[KeyIndex] ^ 0x5c;
-			aInnerPad[KeyIndex] = aKeyBlock[KeyIndex] ^ 0x36;
-		}
-
-		SHA256_CTX InnerContext;
-		sha256_init(&InnerContext);
-		sha256_update(&InnerContext, aInnerPad, sizeof(aInnerPad));
-		sha256_update(&InnerContext, pMessage, str_length(pMessage));
-		const SHA256_DIGEST InnerDigest = sha256_finish(&InnerContext);
-
-		SHA256_CTX OuterContext;
-		sha256_init(&OuterContext);
-		sha256_update(&OuterContext, aOuterPad, sizeof(aOuterPad));
-		sha256_update(&OuterContext, InnerDigest.data, sizeof(InnerDigest.data));
-		const SHA256_DIGEST Digest = sha256_finish(&OuterContext);
-		sha256_str(Digest, pBuffer, BufferSize);
-	}
-
-	void BuildReportUrl(const char *pPath, char *pBuffer, int BufferSize)
-	{
-		str_copy(pBuffer, g_Config.m_QmReportEndpoint, BufferSize);
-		while(pBuffer[0] != '\0' && pBuffer[str_length(pBuffer) - 1] == '/')
-			pBuffer[str_length(pBuffer) - 1] = '\0';
-		str_append(pBuffer, pPath, BufferSize);
-	}
-
-	bool AddReportHeaders(CHttpRequest *pRequest, const char *pPath, const char *pBody)
-	{
-		if(g_Config.m_QmReportAppId[0] == '\0' || g_Config.m_QmReportSecret[0] == '\0')
-			return false;
-
-		char aTimestamp[32];
-		str_format(aTimestamp, sizeof(aTimestamp), "%" PRId64, time_timestamp());
-
-		char aNonce[33];
-		secure_random_password(aNonce, sizeof(aNonce), 32);
-
-		const SHA256_DIGEST BodyDigest = sha256(pBody, str_length(pBody));
-		char aBodySha256[SHA256_MAXSTRSIZE];
-		sha256_str(BodyDigest, aBodySha256, sizeof(aBodySha256));
-
-		char aMessage[1024];
-		str_format(aMessage, sizeof(aMessage), "POST\n%s\n%s\n%s\n%s", pPath, aTimestamp, aNonce, aBodySha256);
-
-		char aSignature[SHA256_MAXSTRSIZE];
-		HmacSha256Hex(g_Config.m_QmReportSecret, aMessage, aSignature, sizeof(aSignature));
-
-		pRequest->HeaderString("Content-Type", REPORT_CONTENT_TYPE);
-		pRequest->HeaderString("X-Adrastia-App-Id", g_Config.m_QmReportAppId);
-		pRequest->HeaderString("X-Adrastia-Timestamp", aTimestamp);
-		pRequest->HeaderString("X-Adrastia-Nonce", aNonce);
-		pRequest->HeaderString("X-Adrastia-Signature", aSignature);
-		return true;
-	}
-
-	std::shared_ptr<CHttpRequest> CreateReportRequest(const char *pPath, const char *pBody)
-	{
-		char aUrl[256];
-		BuildReportUrl(pPath, aUrl, sizeof(aUrl));
-
-		auto pRequest = std::make_shared<CHttpRequest>(aUrl);
-		pRequest->AllowInsecureProtocol();
-		pRequest->LogProgress(HTTPLOG::FAILURE);
-		pRequest->FailOnErrorStatus(false);
-		pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
-		if(!AddReportHeaders(pRequest.get(), pPath, pBody))
-			return nullptr;
-		pRequest->Post(reinterpret_cast<const unsigned char *>(pBody), str_length(pBody));
-		return pRequest;
 	}
 
 	struct SUnfinishedMapsQuery
@@ -328,97 +233,8 @@ namespace
 	}
 } // namespace
 
-void CMenus::ResetReportScan()
-{
-	if(m_pReportScanRequest)
-		m_pReportScanRequest->Abort();
-	m_pReportScanRequest.reset();
-	m_ReportScanState = EReportScanState::IDLE;
-	m_aReportScanAddress[0] = '\0';
-}
-
-void CMenus::StartReportScan()
-{
-	if(m_ReportScanState != EReportScanState::IDLE)
-	{
-		GameClient()->Echo(Localize("Report request is already in progress"));
-		return;
-	}
-	if(Client()->State() != IClient::STATE_ONLINE)
-	{
-		GameClient()->Echo(Localize("Connect to a server first"));
-		return;
-	}
-	if(GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity())
-	{
-		GameClient()->Echo(Localize("Reports are not available on Axiom servers"));
-		return;
-	}
-	if(g_Config.m_QmReportAppId[0] == '\0' || g_Config.m_QmReportSecret[0] == '\0')
-	{
-		GameClient()->Echo(Localize("Configure qm_report_app_id and qm_report_secret first"));
-		return;
-	}
-
-	const NETADDR *pServerAddr = Client()->ServerAddress();
-	if(pServerAddr)
-		net_addr_str(pServerAddr, m_aReportScanAddress, sizeof(m_aReportScanAddress), true);
-	if(m_aReportScanAddress[0] == '\0')
-	{
-		GameClient()->Echo(Localize("Could not get current server address"));
-		return;
-	}
-
-	char aEscapedAddress[NETADDR_MAXSTRSIZE * 2];
-	EscapeJson(aEscapedAddress, sizeof(aEscapedAddress), m_aReportScanAddress);
-
-	char aBody[256];
-	str_format(aBody, sizeof(aBody), "{\"address\":\"%s\"}", aEscapedAddress);
-
-	m_pReportScanRequest = CreateReportRequest(REPORT_SCAN_PATH, aBody);
-	if(!m_pReportScanRequest)
-	{
-		ResetReportScan();
-		GameClient()->Echo(Localize("Could not create report scan request"));
-		return;
-	}
-
-	m_ReportScanState = EReportScanState::SCANNING;
-	Http()->Run(m_pReportScanRequest);
-	GameClient()->Echo(Localize("Scanning current server..."));
-}
-
-void CMenus::UpdateReportScan()
-{
-	if(m_ReportScanState == EReportScanState::IDLE || !m_pReportScanRequest || !m_pReportScanRequest->Done())
-		return;
-
-	const EHttpState RequestState = m_pReportScanRequest->State();
-	if(RequestState != EHttpState::DONE)
-	{
-		ResetReportScan();
-		GameClient()->Echo(RequestState == EHttpState::ABORTED ? Localize("Report request canceled") : Localize("Report request failed due to network error"));
-		return;
-	}
-
-	const int StatusCode = m_pReportScanRequest->StatusCode();
-	if(StatusCode < 200 || StatusCode >= 300)
-	{
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), Localize("Report request failed with HTTP status: %d"), StatusCode);
-		ResetReportScan();
-		GameClient()->Echo(aBuf);
-		return;
-	}
-
-	ResetReportScan();
-	GameClient()->Echo(Localize("Report scan request submitted"));
-}
-
 void CMenus::RenderGame(CUIRect MainView)
 {
-	UpdateReportScan();
-
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
 	constexpr float MenuButtonHeight = 25.0f;
 	constexpr float PrimaryButtonSpacing = 5.0f;
@@ -451,7 +267,6 @@ void CMenus::RenderGame(CUIRect MainView)
 	const int LocalTeam = HasLocalInfo ? GameClient()->m_Snap.m_pLocalInfo->m_Team : TEAM_SPECTATORS;
 	const bool Recording = DemoRecorder(RECORDER_MANUAL)->IsRecording();
 	const bool FastPracticeEnabled = GameClient()->m_FastPractice.Enabled();
-	const bool ReportDisabledOnAxiom = GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity();
 
 	const char *pDisconnectButtonLabel = Localize("Disconnect");
 	const char *pDummyButtonLabel = Localize("Connect dummy");
@@ -472,7 +287,6 @@ void CMenus::RenderGame(CUIRect MainView)
 	char aSaveReplayButtonLabel[64];
 	str_format(aSaveReplayButtonLabel, sizeof(aSaveReplayButtonLabel), Localize("Save last %d min"), g_Config.m_ClEscReplayLengthMinutes);
 	const char *pDemoMarkerButtonLabel = Localize("Mark demo");
-	const char *pReportButtonLabel = Localize("Report");
 	const char *pSpectateButtonLabel = Localize("Spectate");
 	const char *pJoinRedButtonLabel = Localize("Join red");
 	const char *pJoinBlueButtonLabel = Localize("Join blue");
@@ -503,8 +317,6 @@ void CMenus::RenderGame(CUIRect MainView)
 	const float SaveReplayButtonWidthCompact = CalcMenuButtonWidth(aSaveReplayButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
 	const float DemoMarkerButtonWidthNormal = CalcMenuButtonWidth(pDemoMarkerButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
 	const float DemoMarkerButtonWidthCompact = CalcMenuButtonWidth(pDemoMarkerButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
-	const float ReportButtonWidthNormal = CalcMenuButtonWidth(pReportButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
-	const float ReportButtonWidthCompact = CalcMenuButtonWidth(pReportButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
 
 	const bool ShowGameplayButtons = HasLocalInfo && HasGameInfo && !Paused && !Spec;
 	const bool ShowSpectateButton = ShowGameplayButtons && LocalTeam != TEAM_SPECTATORS && !FastPracticeEnabled;
@@ -519,9 +331,9 @@ void CMenus::RenderGame(CUIRect MainView)
 	const bool ShowSaveReplayButton = g_Config.m_ClReplays != 0;
 
 	const float UtilityButtonWidthNormal =
-		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + (ShowSaveReplayButton ? SaveReplayButtonWidthNormal : 0.0f) + DemoMarkerButtonWidthNormal + ReportButtonWidthNormal + UtilityButtonSpacingNormal * (ShowSaveReplayButton ? 6.0f : 5.0f);
+		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + (ShowSaveReplayButton ? SaveReplayButtonWidthNormal : 0.0f) + DemoMarkerButtonWidthNormal + UtilityButtonSpacingNormal * (ShowSaveReplayButton ? 5.0f : 4.0f);
 	const float UtilityButtonWidthCompact =
-		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + (ShowSaveReplayButton ? SaveReplayButtonWidthCompact : 0.0f) + DemoMarkerButtonWidthCompact + ReportButtonWidthCompact + UtilityButtonSpacingCompact * (ShowSaveReplayButton ? 6.0f : 5.0f);
+		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + (ShowSaveReplayButton ? SaveReplayButtonWidthCompact : 0.0f) + DemoMarkerButtonWidthCompact + UtilityButtonSpacingCompact * (ShowSaveReplayButton ? 5.0f : 4.0f);
 	const float PrimaryButtonBarWidth = maximum(0.0f, MainView.w - 20.0f);
 
 	auto CalcPrimaryButtonsWidth = [&](bool IncludeTeamplayDDRaceButtons) {
@@ -630,7 +442,6 @@ void CMenus::RenderGame(CUIRect MainView)
 	const float DemoButtonWidth = UseCompactUtilityButtons ? DemoButtonWidthCompact : DemoButtonWidthNormal;
 	const float SaveReplayButtonWidth = UseCompactUtilityButtons ? SaveReplayButtonWidthCompact : SaveReplayButtonWidthNormal;
 	const float DemoMarkerButtonWidth = UseCompactUtilityButtons ? DemoMarkerButtonWidthCompact : DemoMarkerButtonWidthNormal;
-	const float ReportButtonWidth = UseCompactUtilityButtons ? ReportButtonWidthCompact : ReportButtonWidthNormal;
 
 	UtilityButtonBar.VSplitRight(DisconnectButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_DisconnectButton;
@@ -746,24 +557,6 @@ void CMenus::RenderGame(CUIRect MainView)
 			GameClient()->Echo(Localize("Demo marker added"));
 		else
 			GameClient()->Echo(Localize("No demo is being recorded"));
-	}
-
-	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
-	UtilityButtonBar.VSplitRight(ReportButtonWidth, &UtilityButtonBar, &Button);
-	static CButtonContainer s_ReportButton;
-	if(m_ReportScanState != EReportScanState::IDLE)
-	{
-		DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 1, &Button);
-		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, Localize("Scanning current server"));
-	}
-	else if(ReportDisabledOnAxiom)
-	{
-		DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 1, &Button);
-		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, Localize("Reports are not available on Axiom servers"));
-	}
-	else if(DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 0, &Button))
-	{
-		StartReportScan();
 	}
 
 	if(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pGameInfoObj && !Paused && !Spec)
@@ -2289,19 +2082,44 @@ void CMenus::RenderServerControl(CUIRect MainView)
 		MainView.HSplitBottom(90.0f, &MainView, &RconExtension);
 
 	// tab bar
-	TabBar.VSplitLeft(TabBar.w / 3, &Button, &TabBar);
-	static CButtonContainer s_Button0;
-	if(DoButton_MenuTab(&s_Button0, Localize("Change settings"), s_ControlPage == EServerControlTab::SETTINGS, &Button, IGraphics::CORNER_NONE))
-		s_ControlPage = EServerControlTab::SETTINGS;
+	if(g_Config.m_QmNewUi != 0)
+	{
+		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
+		CUIRect aControlTabSlots[3];
+		CUIRect ControlTabsRemainder = TabBar;
+		ControlTabsRemainder.VSplitLeft(ControlTabsRemainder.w / 3.0f, &aControlTabSlots[0], &ControlTabsRemainder);
+		ControlTabsRemainder.VSplitMid(&aControlTabSlots[1], &aControlTabSlots[2]);
+		const int ActiveControlTab = s_ControlPage == EServerControlTab::SETTINGS ? 0 : (s_ControlPage == EServerControlTab::KICKVOTE ? 1 : 2);
+		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("ingame_server_control_tabs_capsule"), aControlTabSlots, 3, ActiveControlTab, CapsuleTabBarStyleFor(ms_ColorTabbarActive));
 
-	TabBar.VSplitMid(&Button, &TabBar);
-	static CButtonContainer s_Button1;
-	if(DoButton_MenuTab(&s_Button1, Localize("Kick player"), s_ControlPage == EServerControlTab::KICKVOTE, &Button, IGraphics::CORNER_NONE))
-		s_ControlPage = EServerControlTab::KICKVOTE;
+		static CButtonContainer s_Button0;
+		if(DoButton_MenuTab(&s_Button0, Localize("Change settings"), s_ControlPage == EServerControlTab::SETTINGS, &aControlTabSlots[0], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+			s_ControlPage = EServerControlTab::SETTINGS;
 
-	static CButtonContainer s_Button2;
-	if(DoButton_MenuTab(&s_Button2, Localize("Move player to spectators"), s_ControlPage == EServerControlTab::SPECVOTE, &TabBar, IGraphics::CORNER_NONE))
-		s_ControlPage = EServerControlTab::SPECVOTE;
+		static CButtonContainer s_Button1;
+		if(DoButton_MenuTab(&s_Button1, Localize("Kick player"), s_ControlPage == EServerControlTab::KICKVOTE, &aControlTabSlots[1], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+			s_ControlPage = EServerControlTab::KICKVOTE;
+
+		static CButtonContainer s_Button2;
+		if(DoButton_MenuTab(&s_Button2, Localize("Move player to spectators"), s_ControlPage == EServerControlTab::SPECVOTE, &aControlTabSlots[2], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+			s_ControlPage = EServerControlTab::SPECVOTE;
+	}
+	else
+	{
+		TabBar.VSplitLeft(TabBar.w / 3, &Button, &TabBar);
+		static CButtonContainer s_Button0;
+		if(DoButton_MenuTab(&s_Button0, Localize("Change settings"), s_ControlPage == EServerControlTab::SETTINGS, &Button, IGraphics::CORNER_NONE))
+			s_ControlPage = EServerControlTab::SETTINGS;
+
+		TabBar.VSplitMid(&Button, &TabBar);
+		static CButtonContainer s_Button1;
+		if(DoButton_MenuTab(&s_Button1, Localize("Kick player"), s_ControlPage == EServerControlTab::KICKVOTE, &Button, IGraphics::CORNER_NONE))
+			s_ControlPage = EServerControlTab::KICKVOTE;
+
+		static CButtonContainer s_Button2;
+		if(DoButton_MenuTab(&s_Button2, Localize("Move player to spectators"), s_ControlPage == EServerControlTab::SPECVOTE, &TabBar, IGraphics::CORNER_NONE))
+			s_ControlPage = EServerControlTab::SPECVOTE;
+	}
 
 	if(!s_ControlPageTransitionInitialized)
 	{

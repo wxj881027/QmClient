@@ -27,6 +27,7 @@
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
@@ -516,7 +517,7 @@ bool CMenus::DoMessageGradientLine(CChat &Chat, CUIRect *pView, int Tab, const c
 	if(pCheckBoxValue == nullptr)
 		DoSettingsMenuLabel(SETTINGS_APPEARANCE, Tab, Tab, pLabelTextId, &Label, pLabel, BodySize, TEXTALIGN_ML);
 
-	if(DoSettingsButton_Menu(SETTINGS_APPEARANCE, Tab, Tab, pResetButton, "appearance-chat-gradient-reset", Localize("Reset"), 0, &TopLayout.m_ResetButtonRect, Metrics, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 4.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), 0.1f))
+	if(DoSettingsButton_Menu(SETTINGS_APPEARANCE, Tab, Tab, pResetButton, "appearance-chat-gradient-reset", Localize("Reset"), 0, &TopLayout.m_ResetButtonRect, Metrics, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), 0.1f))
 	{
 		*pBaseColor = color_cast<ColorHSLA>(DefaultColor).Pack(false);
 		CMessageGradient::Reset(pGradient, GradientSize);
@@ -566,7 +567,7 @@ bool CMenus::DoMessageGradientLine(CChat &Chat, CUIRect *pView, int Tab, const c
 	AddButton.HMargin((AddButton.h - ChangeButtonSize) / 2.0f, &AddButton);
 	const bool CanRemoveColor = NumColors > CMessageGradient::MIN_COLORS;
 	const bool CanAddColor = NumColors < CMessageGradient::MAX_COLORS;
-	if(DoButton_Menu(pRemoveButton, "-", CanRemoveColor ? 0 : -1, &RemoveButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 4.0f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, BodySize) && CanRemoveColor)
+	if(DoButton_Menu(pRemoveButton, "-", CanRemoveColor ? 0 : -1, &RemoveButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, BodySize) && CanRemoveColor)
 	{
 		--NumColors;
 		*pBaseColor = pColorValues[0];
@@ -576,7 +577,7 @@ bool CMenus::DoMessageGradientLine(CChat &Chat, CUIRect *pView, int Tab, const c
 			CMessageGradient::Pack(pColorValues, NumColors, pGradient, GradientSize);
 		Changed = true;
 	}
-	if(DoButton_Menu(pAddButton, "+", CanAddColor ? 0 : -1, &AddButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 4.0f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, BodySize) && CanAddColor)
+	if(DoButton_Menu(pAddButton, "+", CanAddColor ? 0 : -1, &AddButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, BodySize) && CanAddColor)
 	{
 		pColorValues[NumColors] = pColorValues[NumColors - 1];
 		++NumColors;
@@ -903,7 +904,7 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 			Content.HSplitTop(GeneralMetrics.m_SectionGap, nullptr, &Content);
 			static CButtonContainer s_SettingsButtonId, s_SavesButtonId, s_ConfigButtonId, s_ThemesButtonId;
 			const auto DoOpenButton = [this, GeneralMetrics](CButtonContainer &Id, const char *pTextId, const char *pText, const char *pPath, bool CreateDirectory, const char *pTooltip, const CUIRect &ButtonRect) {
-				if(DoSettingsButton_Menu(SETTINGS_GENERAL, -1, -1, &Id, pTextId, pText, 0, &ButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, GeneralMetrics.m_BodySize))
+				if(DoSettingsButton_Menu(SETTINGS_GENERAL, -1, -1, &Id, pTextId, pText, 0, &ButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, GeneralMetrics.m_BodySize))
 				{
 					char aPath[IO_MAX_PATH_LENGTH];
 					Storage()->GetCompletePath(IStorage::TYPE_SAVE, pPath, aPath, sizeof(aPath));
@@ -1183,11 +1184,24 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	TabBar.VSplitMid(&TabBar, &ChangeInfo, 20.0f);
 	TabBar.VSplitMid(&PlayerTab, &DummyTab);
 	static CButtonContainer s_PlayerTabButton;
-	if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
-		m_Dummy = false;
 	static CButtonContainer s_DummyTabButton;
-	if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &DummyTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
-		m_Dummy = true;
+	if(g_Config.m_QmNewUi != 0)
+	{
+		// 胶囊 Tabbar：容器与滑块先画，页签文字随后，滑块压在文字之下。
+		const CUIRect aPlayerTabSlots[] = {PlayerTab, DummyTab};
+		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_player_dummy_tabs_capsule"), aPlayerTabSlots, std::size(aPlayerTabSlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());
+		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &PlayerTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
+			m_Dummy = false;
+		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &DummyTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
+			m_Dummy = true;
+	}
+	else
+	{
+		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
+			m_Dummy = false;
+		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &DummyTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
+			m_Dummy = true;
+	}
 	// 子 Tab 已由设置壳层的 Card Deck 统一处理入场；页面内部不再叠加横向位移动效。
 	const auto DrawAnimatedContent = [](CUIRect Content, auto &&DrawContent) { DrawContent(Content); };
 
@@ -1390,27 +1404,53 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	TabBar.VSplitRight(ProfilesTabWidth, &TabsRemainder, &ProfilesTab);
 
 	static CButtonContainer s_PlayerTabButton;
-	if(DoButton_MenuTab(&s_PlayerTabButton, pPlayerTabLabel, s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
-	{
-		s_TeeSubTab = 0;
-		m_Dummy = false;
-		m_SkinListScrollToSelected = true;
-	}
-
 	static CButtonContainer s_DummyTabButton;
-	if(DoButton_MenuTab(&s_DummyTabButton, pDummyTabLabel, s_TeeSubTab == 1, &DummyTab,
-		   SeparateProfilesTab ? IGraphics::CORNER_R : IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, nullptr, 4.0f))
-	{
-		s_TeeSubTab = 1;
-		m_Dummy = true;
-		m_SkinListScrollToSelected = true;
-	}
-
 	static CButtonContainer s_ProfilesTabButton;
-	if(DoButton_MenuTab(&s_ProfilesTabButton, pProfilesTabLabel, s_TeeSubTab == 2, &ProfilesTab,
-		   SeparateProfilesTab ? IGraphics::CORNER_ALL : IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
+	if(g_Config.m_QmNewUi != 0)
 	{
-		s_TeeSubTab = 2;
+		// 胶囊 Tabbar：容器与滑块先画，页签文字随后，滑块压在文字之下。
+		const CUIRect aTeeTabSlots[] = {PlayerTab, DummyTab, ProfilesTab};
+		const int ActiveTeeTab = std::clamp(s_TeeSubTab, 0, 2);
+		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee_sub_tabs_capsule"), aTeeTabSlots, std::size(aTeeTabSlots), ActiveTeeTab, SettingsCapsuleTabBarStyle());
+		if(DoButton_MenuTab(&s_PlayerTabButton, pPlayerTabLabel, s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
+		{
+			s_TeeSubTab = 0;
+			m_Dummy = false;
+			m_SkinListScrollToSelected = true;
+		}
+		if(DoButton_MenuTab(&s_DummyTabButton, pDummyTabLabel, s_TeeSubTab == 1, &DummyTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
+		{
+			s_TeeSubTab = 1;
+			m_Dummy = true;
+			m_SkinListScrollToSelected = true;
+		}
+		if(DoButton_MenuTab(&s_ProfilesTabButton, pProfilesTabLabel, s_TeeSubTab == 2, &ProfilesTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
+		{
+			s_TeeSubTab = 2;
+		}
+	}
+	else
+	{
+		if(DoButton_MenuTab(&s_PlayerTabButton, pPlayerTabLabel, s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
+		{
+			s_TeeSubTab = 0;
+			m_Dummy = false;
+			m_SkinListScrollToSelected = true;
+		}
+
+		if(DoButton_MenuTab(&s_DummyTabButton, pDummyTabLabel, s_TeeSubTab == 1, &DummyTab,
+			   SeparateProfilesTab ? IGraphics::CORNER_R : IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, nullptr, 4.0f))
+		{
+			s_TeeSubTab = 1;
+			m_Dummy = true;
+			m_SkinListScrollToSelected = true;
+		}
+
+		if(DoButton_MenuTab(&s_ProfilesTabButton, pProfilesTabLabel, s_TeeSubTab == 2, &ProfilesTab,
+			   SeparateProfilesTab ? IGraphics::CORNER_ALL : IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
+		{
+			s_TeeSubTab = 2;
+		}
 	}
 	if(!m_MenuTextPlanCollecting)
 	{
@@ -1625,7 +1665,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				EyesRow.VSplitLeft(EyesRow.w / (NUM_EMOTES - CurrentEyeEmote), &Button, &EyesRow);
 
 				const ColorRGBA EyeButtonColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f + (*pEmote == CurrentEyeEmote ? 0.25f : 0.0f));
-				if(DoButton_Menu(&s_aEyeButtons[CurrentEyeEmote], "", 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, EyeButtonColor))
+				if(DoButton_Menu(&s_aEyeButtons[CurrentEyeEmote], "", 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, EyeButtonColor))
 				{
 					*pEmote = CurrentEyeEmote;
 					if((int)m_Dummy == g_Config.m_ClDummy)
@@ -1669,8 +1709,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					}
 				}
 			};
-			CustomColors.m_BodyGroup.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.035f), IGraphics::CORNER_ALL, 5.0f * UiScale);
-			CustomColors.m_FeetGroup.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.035f), IGraphics::CORNER_ALL, 5.0f * UiScale);
+			CustomColors.m_BodyGroup.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.035f), IGraphics::CORNER_ALL, ui_token::radius::BASE * UiScale);
+			CustomColors.m_FeetGroup.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.035f), IGraphics::CORNER_ALL, ui_token::radius::BASE * UiScale);
 			RenderColorCodeInput(CustomColors.m_BodyTitle, 0);
 			RenderColorCodeInput(CustomColors.m_FeetTitle, 1);
 			CUIRect BodyControls = CustomColors.m_BodyControls;
@@ -1837,7 +1877,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		static int s_CurrentDie = rand() % std::size(s_apDice);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		if(DoButton_Menu(&s_RandomSkinButton, s_apDice[s_CurrentDie], 0, &RandomSkinButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, -0.2f))
+		if(DoButton_Menu(&s_RandomSkinButton, s_apDice[s_CurrentDie], 0, &RandomSkinButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, -0.2f))
 		{
 			GameClient()->m_Skins.RandomizeSkin(m_Dummy);
 			SetNeedSendInfo();
@@ -1852,7 +1892,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		if(*pUseCustomColor)
 		{
 			// RandomColorsButton.VSplitLeft(120.0f, &RandomColorsButton, 0);
-			if(DoSettingsButton_Menu(SETTINGS_TEE, -1, -1, &s_RandomizeColors, "tee-random-colors", Localize("Random Colors"), 0, &RandomColorsButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)))
+			if(DoSettingsButton_Menu(SETTINGS_TEE, -1, -1, &s_RandomizeColors, "tee-random-colors", Localize("Random Colors"), 0, &RandomColorsButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)))
 			{
 				if(m_Dummy)
 				{
@@ -2709,8 +2749,8 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					Swatches.VSplitLeft(8.0f, &FeetSwatch, nullptr);
 					const ColorRGBA BodyColor = EntryUseCustomColor ? color_cast<ColorRGBA>(ColorHSLA(EntryColorBody).UnclampLighting(ColorHSLA::DARKEST_LGT)) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.45f);
 					const ColorRGBA FeetColor = EntryUseCustomColor ? color_cast<ColorRGBA>(ColorHSLA(EntryColorFeet).UnclampLighting(ColorHSLA::DARKEST_LGT)) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.45f);
-					BodySwatch.Draw(BodyColor, IGraphics::CORNER_ALL, 2.0f);
-					FeetSwatch.Draw(FeetColor, IGraphics::CORNER_ALL, 2.0f);
+					BodySwatch.Draw(BodyColor, IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
+					FeetSwatch.Draw(FeetColor, IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
 				}
 				SLabelProperties Props;
 				Props.m_MaxWidth = LabelContent.w - 5.0f;
@@ -4126,13 +4166,33 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				Row.VSplitLeft(std::clamp(Row.w * 0.36f, 96.0f, 150.0f), &Label, &Segments);
 				Segments.VSplitLeft(8.0f, nullptr, &Segments);
 				Ui()->DoLabel(&Label, pLabel, BodySize, TEXTALIGN_ML);
-				for(int i = 0; i < Count; ++i)
+				if(g_Config.m_QmNewUi != 0)
 				{
-					CUIRect Segment;
-					Segments.VSplitLeft(Segments.w / (Count - i), &Segment, &Segments);
-					const int Corners = i == 0 ? IGraphics::CORNER_L : (i == Count - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-					if(DoButton_MenuTab(&pButtons[i], ppLabels[i], Current == i, &Segment, Corners, nullptr, nullptr, nullptr, nullptr, 5.0f))
-						OnChanged(i);
+					// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画分段文字。
+					// 同一函数里有多行选择器，行标识要带上按钮数组地址，避免共用一条滑块轨道。
+					CUIRect aSegmentSlots[8];
+					CUIRect SegmentsRemainder = Segments;
+					const int SegmentCount = std::clamp(Count, 0, (int)std::size(aSegmentSlots));
+					for(int i = 0; i < SegmentCount; ++i)
+						SegmentsRemainder.VSplitLeft(SegmentsRemainder.w / (SegmentCount - i), &aSegmentSlots[i], &SegmentsRemainder);
+					const uint64_t SegmentGroup = BuildUiAnimNodeKey(MakeUiScopeHash("settings_choice_row_capsule"), reinterpret_cast<uint64_t>(pButtons));
+					ui_widget::CapsuleTabBarChrome(TabBarUiContext(), SegmentGroup, aSegmentSlots, SegmentCount, Current, SettingsCapsuleTabBarStyle());
+					for(int i = 0; i < SegmentCount; ++i)
+					{
+						if(DoButton_MenuTab(&pButtons[i], ppLabels[i], Current == i, &aSegmentSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+							OnChanged(i);
+					}
+				}
+				else
+				{
+					for(int i = 0; i < Count; ++i)
+					{
+						CUIRect Segment;
+						Segments.VSplitLeft(Segments.w / (Count - i), &Segment, &Segments);
+						const int Corners = i == 0 ? IGraphics::CORNER_L : (i == Count - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
+						if(DoButton_MenuTab(&pButtons[i], ppLabels[i], Current == i, &Segment, Corners, nullptr, nullptr, nullptr, nullptr, 5.0f))
+							OnChanged(i);
+					}
 				}
 			};
 			const char *apIconColorLabels[] = {Localize("White"), Localize("Black"), Localize("Custom"), Localize("Rainbow")};
@@ -4175,14 +4235,37 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				CUIRect Label, Segments;
 				Row.VSplitLeft(std::clamp(Row.w * 0.36f, 96.0f, 150.0f), &Label, &Segments);
 				Segments.VSplitLeft(8.0f, nullptr, &Segments);
-				for(int i = 0; i < Count; ++i)
+				if(g_Config.m_QmNewUi != 0)
 				{
-					CUIRect Segment;
-					Segments.VSplitLeft(Segments.w / (Count - i), &Segment, &Segments);
-					if(Ui()->DoButtonLogic(&pButtons[i], Current == i, &Segment, BUTTONFLAG_LEFT))
+					// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后接手点击。
+					// 行标识带上按钮数组地址，避免同一函数里的多行选择器共用一条滑块轨道。
+					CUIRect aSegmentSlots[8];
+					CUIRect SegmentsRemainder = Segments;
+					const int SegmentCount = std::clamp(Count, 0, (int)std::size(aSegmentSlots));
+					for(int i = 0; i < SegmentCount; ++i)
+						SegmentsRemainder.VSplitLeft(SegmentsRemainder.w / (SegmentCount - i), &aSegmentSlots[i], &SegmentsRemainder);
+					const uint64_t SegmentGroup = BuildUiAnimNodeKey(MakeUiScopeHash("settings_choice_row_capsule"), reinterpret_cast<uint64_t>(pButtons));
+					ui_widget::CapsuleTabBarChrome(TabBarUiContext(), SegmentGroup, aSegmentSlots, SegmentCount, Current, SettingsCapsuleTabBarStyle());
+					for(int i = 0; i < SegmentCount; ++i)
 					{
-						OnChanged(i);
-						Changed = true;
+						if(Ui()->DoButtonLogic(&pButtons[i], Current == i, &aSegmentSlots[i], BUTTONFLAG_LEFT))
+						{
+							OnChanged(i);
+							Changed = true;
+						}
+					}
+				}
+				else
+				{
+					for(int i = 0; i < Count; ++i)
+					{
+						CUIRect Segment;
+						Segments.VSplitLeft(Segments.w / (Count - i), &Segment, &Segments);
+						if(Ui()->DoButtonLogic(&pButtons[i], Current == i, &Segment, BUTTONFLAG_LEFT))
+						{
+							OnChanged(i);
+							Changed = true;
+						}
 					}
 				}
 			};
@@ -4714,7 +4797,7 @@ void CMenus::RenderAudioPackEditorScreen(CUIRect MainView)
 
 	CUIRect EditorRect = MainView;
 	EditorRect.Margin(8.0f, &EditorRect);
-	EditorRect.Draw(ColorRGBA(0.10f, 0.11f, 0.15f, 1.0f), IGraphics::CORNER_ALL, 8.0f);
+	EditorRect.Draw(ColorRGBA(0.10f, 0.11f, 0.15f, 1.0f), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 
 	CUIRect WorkRect;
 	EditorRect.Margin(8.0f, &WorkRect);
@@ -5483,7 +5566,7 @@ void CMenus::RenderLanguageSettings(CUIRect MainView)
 	PrepareLanguagePageCache(List.w, true);
 	static CButtonContainer s_CreditsButton;
 	static CUi::SMessagePopupContext s_CreditsPopup;
-	if(DoSettingsButton_Menu(SETTINGS_LANGUAGE, -1, -1, &s_CreditsButton, "language-credits", Localize("Credits"), 0, &CreditsButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, Metrics.m_BodySize))
+	if(DoSettingsButton_Menu(SETTINGS_LANGUAGE, -1, -1, &s_CreditsButton, "language-credits", Localize("Credits"), 0, &CreditsButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, Metrics.m_BodySize))
 	{
 		str_copy(s_CreditsPopup.m_aMessage, pCreditsText, sizeof(s_CreditsPopup.m_aMessage));
 		s_CreditsPopup.DefaultColor(TextRender());
@@ -5683,7 +5766,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		const float TabBarWidth = std::clamp(MainView.w * 0.14f, 108.0f, 120.0f);
 		MainView.VSplitRight(TabBarWidth, &MainView, &TabBar);
 		if(!CollectingMenuTextPlan)
-			MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+			MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, ui_token::radius::CARD);
 		MainView.Margin(std::clamp(MainView.w * 0.02f, 12.0f, 20.0f), &MainView);
 		m_SettingsContentMetrics = ResolveSettingsContentMetrics(MainView.w);
 	}
@@ -5705,7 +5788,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 	else
 	{
 		TabBar.HSplitTop(50.0f, &Button, &TabBar);
-		Button.Draw(ms_ColorTabbarActive, IGraphics::CORNER_BR, 10.0f);
+		Button.Draw(ms_ColorTabbarActive, IGraphics::CORNER_BR, ui_token::radius::CARD);
 	}
 	if(SettingsPerfEnabled)
 	{
@@ -5732,8 +5815,6 @@ void CMenus::RenderSettings(CUIRect MainView)
 
 	{
 		CPerfTimer StageTimer;
-		const ColorRGBA SettingsNavigationSelected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.42f);
-		const ColorRGBA SettingsNavigationHover = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);
 		static constexpr int s_aSettingsTabOrder[] = {
 			SETTINGS_GENERAL,
 			SETTINGS_TEE,
@@ -5747,6 +5828,9 @@ void CMenus::RenderSettings(CUIRect MainView)
 			SETTINGS_QMCLIENT,
 			SETTINGS_SEARCH,
 		};
+		// 竖排页签（设置页左栏）保持原来的分块选中/悬停底色，不做胶囊滑块。
+		const ColorRGBA SettingsNavigationSelected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.42f);
+		const ColorRGBA SettingsNavigationHover = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.20f);
 		for(int i : s_aSettingsTabOrder)
 		{
 			if(!SettingsPageVisibleInRightTabBar(i))
@@ -5758,13 +5842,6 @@ void CMenus::RenderSettings(CUIRect MainView)
 				TabBar.HSplitTop(ui_token::settings::TAB_HEIGHT, &Button, &TabBar);
 				if(DoButton_MenuTab(&m_aSettingsTabButtons[i], m_apSettingsTabs[i], Active, &Button, IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[i], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[i]))
 					g_Config.m_UiSettingsPage = i;
-				if(Active)
-				{
-					CUIRect Accent = Button;
-					Accent.VSplitLeft(3.0f, &Accent, nullptr);
-					Accent.HMargin(5.0f, &Accent);
-					Accent.Draw(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor)), IGraphics::CORNER_ALL, 2.0f);
-				}
 			}
 			else
 			{
@@ -6026,7 +6103,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		}
 
 		static CButtonContainer s_RestartButton;
-		if(DoSettingsButton_Menu(g_Config.m_UiSettingsPage, -1, -1, &s_RestartButton, "settings-restart-button", Localize("Restart"), 0, &RestartButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, RestartMetrics.m_BodySize))
+		if(DoSettingsButton_Menu(g_Config.m_UiSettingsPage, -1, -1, &s_RestartButton, "settings-restart-button", Localize("Restart"), 0, &RestartButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, RestartMetrics.m_BodySize))
 		{
 			if(Client()->State() == IClient::STATE_ONLINE || GameClient()->Editor()->HasUnsavedData())
 			{
@@ -6099,9 +6176,9 @@ bool CMenus::RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alp
 	Preview.HSplitTop(OffY / 2.0f, nullptr, &Preview);
 	Preview.HSplitTop(PreviewHeight, &Preview, nullptr);
 
-	Preview.Draw(ColorRGBA(0.15f, 0.15f, 0.15f, 1.0f), IGraphics::CORNER_ALL, 4.0f + PreviewMargin);
+	Preview.Draw(ColorRGBA(0.15f, 0.15f, 0.15f, 1.0f), IGraphics::CORNER_ALL, ui_token::radius::BASE + PreviewMargin);
 	Preview.Margin(PreviewMargin, &Preview);
-	Preview.Draw(color_cast<ColorRGBA>(Color.UnclampLighting(DarkestLight)), IGraphics::CORNER_ALL, 4.0f + PreviewMargin);
+	Preview.Draw(color_cast<ColorRGBA>(Color.UnclampLighting(DarkestLight)), IGraphics::CORNER_ALL, ui_token::radius::BASE + PreviewMargin);
 
 	auto &&RenderHueRect = [&](CUIRect *pColorRect) {
 		float CurXOff = pColorRect->x;
@@ -6282,7 +6359,7 @@ bool CMenus::RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alp
 		Button.VSplitLeft(LabelWidth, &Label, &Button);
 		Label.VMargin(Metrics.m_LineSpacing, &Label);
 
-		Button.Draw(ColorRGBA(0.15f, 0.15f, 0.15f, 1.0f), IGraphics::CORNER_ALL, 1.0f);
+		Button.Draw(ColorRGBA(0.15f, 0.15f, 0.15f, 1.0f), IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
 
 		CUIRect Rail;
 		Button.Margin(2.0f, &Rail);
@@ -6367,13 +6444,35 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		s_apAppearanceTabNames[APPEARANCE_TAB_LASER] = Localize("Laser");
 	}
 
-	for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
+	if(g_Config.m_QmNewUi != 0)
 	{
-		TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-		const int Corners = Tab == APPEARANCE_TAB_HUD ? IGraphics::CORNER_L : (Tab == NUMBER_OF_APPEARANCE_TABS - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-		if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f))
+		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
+		CUIRect aAppearanceTabSlots[NUMBER_OF_APPEARANCE_TABS];
+		CUIRect AppearanceTabsRemainder = TabBar;
+		for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
+			AppearanceTabsRemainder.VSplitLeft(TabWidth, &aAppearanceTabSlots[Tab], &AppearanceTabsRemainder);
+		const int ActiveAppearanceTab = std::clamp(m_AppearanceSettingsTab, (int)APPEARANCE_TAB_HUD, (int)NUMBER_OF_APPEARANCE_TABS - 1);
+		const IUiContext AppearanceTabBarCtx = TabBarUiContext();
+		ui_widget::CapsuleTabBarChrome(AppearanceTabBarCtx, MakeUiScopeHash("settings_appearance_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aAppearanceTabSlots, NUMBER_OF_APPEARANCE_TABS), &aAppearanceTabSlots[ActiveAppearanceTab], SettingsCapsuleTabBarStyle());
+
+		for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
 		{
-			m_AppearanceSettingsTab = Tab;
+			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &aAppearanceTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
+			{
+				m_AppearanceSettingsTab = Tab;
+			}
+		}
+	}
+	else
+	{
+		for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
+		{
+			TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
+			const int Corners = Tab == APPEARANCE_TAB_HUD ? IGraphics::CORNER_L : (Tab == NUMBER_OF_APPEARANCE_TABS - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
+			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f))
+			{
+				m_AppearanceSettingsTab = Tab;
+			}
 		}
 	}
 
@@ -6739,7 +6838,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			char aBuf[128];
 			CUIRect PreviewView = ContentRect;
 			// ***** Chat Preview ***** //
-			PreviewView.Draw(ColorRGBA(1, 1, 1, 0.1f), IGraphics::CORNER_ALL, 5.0f);
+			PreviewView.Draw(ColorRGBA(1, 1, 1, 0.1f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
 			PreviewView.Margin(MarginSmall, &PreviewView);
 
 			ColorRGBA SystemColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageSystemColor));
@@ -7852,27 +7951,27 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				CUIRect LaserPreviewRect;
 				PreviewCardContent.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &PreviewCardContent);
 				PreviewCardContent.HSplitTop(2 * MarginSmall, nullptr, &PreviewCardContent);
-				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 8.0f);
+				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				DoLaserPreview(&LaserPreviewRect, LaserRifleOutlineColor, LaserRifleInnerColor, LASERTYPE_RIFLE);
 
 				PreviewCardContent.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &PreviewCardContent);
 				PreviewCardContent.HSplitTop(2 * MarginSmall, nullptr, &PreviewCardContent);
-				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 8.0f);
+				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				DoLaserPreview(&LaserPreviewRect, LaserShotgunOutlineColor, LaserShotgunInnerColor, LASERTYPE_SHOTGUN);
 
 				PreviewCardContent.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &PreviewCardContent);
 				PreviewCardContent.HSplitTop(2 * MarginSmall, nullptr, &PreviewCardContent);
-				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 8.0f);
+				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				DoLaserPreview(&LaserPreviewRect, LaserDoorOutlineColor, LaserDoorInnerColor, LASERTYPE_DOOR);
 
 				PreviewCardContent.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &PreviewCardContent);
 				PreviewCardContent.HSplitTop(2 * MarginSmall, nullptr, &PreviewCardContent);
-				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 8.0f);
+				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				DoLaserPreview(&LaserPreviewRect, LaserFreezeOutlineColor, LaserFreezeInnerColor, LASERTYPE_FREEZE);
 
 				PreviewCardContent.HSplitTop(LaserPreviewHeight, &LaserPreviewRect, &PreviewCardContent);
 				PreviewCardContent.HSplitTop(2 * MarginSmall, nullptr, &PreviewCardContent);
-				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 8.0f);
+				LaserPreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
 				DoLaserPreview(&LaserPreviewRect, LaserDraggerOutlineColor, LaserDraggerInnerColor, LASERTYPE_DRAGGER);
 			});
 		}

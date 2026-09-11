@@ -69,6 +69,17 @@ namespace ui_token::spacing
 	inline constexpr float XL = 24.0f;
 } // namespace ui_token::spacing
 
+// 圆角标尺：微型 TIGHT / 标准控件 BASE / 卡片容器 CARD。
+// 同一屏内只允许出现这三档加 PILL，禁止再引入字面量半径。
+namespace ui_token::radius
+{
+	inline constexpr float NONE = 0.0f;
+	inline constexpr float TIGHT = 6.0f;
+	inline constexpr float BASE = 8.0f;
+	inline constexpr float CARD = 14.0f;
+	inline constexpr float PILL = 999.0f; // 由绘制层按短边一半裁剪
+} // namespace ui_token::radius
+
 namespace ui_token::settings
 {
 	inline constexpr float MAX_CONTENT_WIDTH = 1000.0f;
@@ -88,17 +99,8 @@ namespace ui_token::settings
 	inline constexpr float CARD_HEADER_SUBTITLE_HEIGHT = 12.0f;
 	inline constexpr float CARD_HEADER_GAP = 6.0f;
 	inline constexpr float CARD_HANDLE_SIZE = 24.0f;
-	inline constexpr float CARD_RADIUS = 12.0f;
+	inline constexpr float CARD_RADIUS = radius::CARD;
 } // namespace ui_token::settings
-
-namespace ui_token::radius
-{
-	inline constexpr float NONE = 0.0f;
-	inline constexpr float TIGHT = 3.0f;
-	inline constexpr float BASE = 5.0f;
-	inline constexpr float CARD = 12.0f;
-	inline constexpr float PILL = 999.0f;
-} // namespace ui_token::radius
 
 namespace ui_token::elevation
 {

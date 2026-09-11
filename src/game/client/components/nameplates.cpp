@@ -14,6 +14,7 @@
 #include <game/client/components/nameplate_text_effects.h>
 #include <game/client/components/qmclient/chat_emoji.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/nameplate_msdf/qm_nameplate_msdf_renderer.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
@@ -324,7 +325,7 @@ public:
 	bool m_UseTextEffects;
 	char m_aName[std::max<size_t>(MAX_NAME_LENGTH, protocol7::MAX_NAME_ARRAY_SIZE)];
 	bool m_ShowFriendMark;
-	bool m_ShowDeveloper;
+	char m_aQmTitle[64] = "";
 	bool m_DeveloperRainbow;
 	bool m_ShowClientId;
 	int m_ClientId;
@@ -398,11 +399,62 @@ protected:
 	vec2 m_RenderSize = vec2(0.0f, 0.0f);
 	// 上次栅格化字形对应的相机缩放档位（0 = 默认缩放），档位变化时重建字形以保持清晰
 	int m_BakedZoomLevel = -1;
+	// MSDF 路径：缓存纯文本，不随缩放档位重建
+	char m_aMsdfText[512] = "";
+	float m_MsdfFontSize = 0.0f;
+	bool m_MsdfTextValid = false;
 	virtual bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) = 0;
 	virtual void UpdateText(CGameClient &This, const CNamePlateData &Data) = 0;
 	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 	bool m_UseTextEffects = false;
 	virtual ColorRGBA GetRenderTextColor() const { return m_Color; }
+
+	static bool NameplateMsdfActive()
+	{
+		return g_Config.m_QmNameplateMsdf != 0 && QmNameplateMsdf().IsReady();
+	}
+
+	// 整名回退：图集覆盖不到任何一个字符就整条交给原 FreeType 路径，
+	// 避免同一个名字混用两种清晰度（混排在缩放时会明显不一致）。
+	bool MsdfCoversText() const
+	{
+		return NameplateMsdfActive() && m_MsdfTextValid && QmNameplateMsdf().SupportsText(m_aMsdfText);
+	}
+
+	void SetMsdfPlainText(const char *pText, float FontSize)
+	{
+		str_copy(m_aMsdfText, pText != nullptr ? pText : "");
+		m_MsdfFontSize = FontSize;
+		m_MsdfTextValid = m_aMsdfText[0] != '\0';
+	}
+
+	SQmNameplateMsdfTextStyle BuildMsdfStyle() const
+	{
+		SQmNameplateMsdfTextStyle Style;
+		Style.m_TextColor = GetRenderTextColor();
+		Style.m_OutlineColor = s_OutlineColor;
+		Style.m_OutlineWidth = 1.0f;
+		if(m_UseTextEffects)
+		{
+			const int Effects = g_Config.m_QmNameplateTextEffects;
+			if((Effects & QM_TEXT_EFFECT_BORDER) != 0)
+			{
+				Style.m_OutlineWidth = (float)std::clamp(g_Config.m_QmNameplateTextBorderRange, 1, 4);
+				Style.m_OutlineColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNameplateTextBorderColor, true));
+			}
+			Style.m_RainbowEnabled = (Effects & QM_TEXT_EFFECT_RAINBOW) != 0;
+		}
+		return Style;
+	}
+
+	// MSDF 路径的尺寸外扩只考虑描边：描边用 8 向偏移实现，不需要像位图光晕那样留大边距。
+	float MsdfEffectPadding() const
+	{
+		if(!m_UseTextEffects || (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_BORDER) == 0)
+			return 0.0f;
+		return (float)std::clamp(g_Config.m_QmNameplateTextBorderRange, 1, 4);
+	}
+
 	CNamePlatePartText(CGameClient &This) :
 		CNamePlatePart(This)
 	{
@@ -412,6 +464,29 @@ protected:
 public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
+		// MSDF：分辨率无关，不按缩放档位重建
+		if(NameplateMsdfActive())
+		{
+			bool NeedsMsdfUpdate = UpdateNeeded(This, Data);
+			if(NeedsMsdfUpdate || !m_MsdfTextValid)
+			{
+				This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
+				m_MsdfTextValid = false;
+				m_aMsdfText[0] = '\0';
+				UpdateText(This, Data);
+			}
+			if(!m_Visible || !m_MsdfTextValid)
+			{
+				m_Size = vec2(0.0f, 0.0f);
+				return;
+			}
+			const vec2 Measured = QmNameplateMsdf().Measure(m_aMsdfText, m_MsdfFontSize);
+			m_RenderSize = Measured;
+			const float EffectPadding = MsdfEffectPadding();
+			m_Size = m_RenderSize + vec2(EffectPadding * 2.0f, EffectPadding * 2.0f);
+			return;
+		}
+
 		// 名牌文字在世界映射下渲染。相机缩放是离散档位（每档 1/ZOOM_STEP 倍），
 		// 字形按档位化的像素密度栅格化：档位变化时才重建文字容器（带每帧预算摊平开销），
 		// 保证缩放稳定后任何档位下所有玩家的名字文字都清晰，同时避免缩放瞬间卡顿。
@@ -488,9 +563,18 @@ public:
 	{
 		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 		m_BakedZoomLevel = -1;
+		m_MsdfTextValid = false;
+		m_aMsdfText[0] = '\0';
 	}
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
+		if(MsdfCoversText())
+		{
+			SQmNameplateMsdfTextStyle Style = BuildMsdfStyle();
+			// 与 FreeType 路径一致：中心对齐
+			QmNameplateMsdf().DrawCentered(m_aMsdfText, Pos.x, Pos.y, m_MsdfFontSize, Style);
+			return;
+		}
 		if(!m_TextContainerIndex.Valid())
 			return;
 
@@ -643,6 +727,11 @@ protected:
 			str_format(m_aText, sizeof(m_aText), "%d", m_ClientId);
 		else
 			str_format(m_aText, sizeof(m_aText), "%d:", m_ClientId);
+		if(NameplateMsdfActive())
+		{
+			SetMsdfPlainText(m_aText, m_FontSize);
+			return;
+		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
@@ -688,10 +777,10 @@ public:
 	}
 };
 
-class CNamePlatePartDeveloper : public CNamePlatePartText
+class CNamePlatePartTitle : public CNamePlatePartText
 {
 private:
-	static constexpr const char *ms_pText = "[开发者]";
+	char m_aText[64] = "";
 	static constexpr float ms_FontSizeScale = 0.8f;
 	float m_FontSize = -INFINITY;
 	float m_Alpha = 1.0f;
@@ -700,35 +789,41 @@ private:
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
-		m_Visible = Data.m_ShowDeveloper;
+		m_Visible = Data.m_aQmTitle[0] != '\0';
 		m_Alpha = Data.m_Color.a;
 		if(!m_Visible)
 			return false;
 		const float FontSize = Data.m_FontSize * ms_FontSizeScale;
-		return m_FontSize != FontSize || m_Rainbow != Data.m_DeveloperRainbow;
+		return m_FontSize != FontSize || m_Rainbow != Data.m_DeveloperRainbow || str_comp(m_aText, Data.m_aQmTitle) != 0;
 	}
 
 	void UpdateText(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_FontSize = Data.m_FontSize * ms_FontSizeScale;
 		m_Rainbow = Data.m_DeveloperRainbow;
+		str_copy(m_aText, Data.m_aQmTitle);
+		if(NameplateMsdfActive())
+		{
+			SetMsdfPlainText(m_aText, m_FontSize);
+			return;
+		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		if(m_Rainbow)
 		{
 			int NumChars = 0;
-			const char *pCurrent = ms_pText;
+			const char *pCurrent = m_aText;
 			while(str_utf8_decode(&pCurrent) > 0)
 				++NumChars;
 			Cursor.m_vColorSplits.reserve(NumChars);
-			pCurrent = ms_pText;
+			pCurrent = m_aText;
 			for(int CharIndex = 0; CharIndex < NumChars; ++CharIndex)
 			{
 				const char *pNext = pCurrent;
 				if(str_utf8_decode(&pNext) <= 0)
 					break;
 				const float Hue = (float)CharIndex / NumChars;
-				Cursor.m_vColorSplits.emplace_back((int)(pCurrent - ms_pText), (int)(pNext - pCurrent), color_cast<ColorRGBA>(ColorHSLA(Hue, 0.8f, 0.65f)));
+				Cursor.m_vColorSplits.emplace_back((int)(pCurrent - m_aText), (int)(pNext - pCurrent), color_cast<ColorRGBA>(ColorHSLA(Hue, 0.8f, 0.65f)));
 				pCurrent = pNext;
 			}
 		}
@@ -736,11 +831,20 @@ protected:
 		{
 			Cursor.m_vColorSplits.emplace_back(0, -1, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 		}
-		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, ms_pText);
+		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
 	}
 
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
+		if(MsdfCoversText())
+		{
+			SQmNameplateMsdfTextStyle Style = BuildMsdfStyle();
+			Style.m_TextColor = m_Rainbow ? ColorRGBA(1.0f, 1.0f, 1.0f, m_Alpha) : ColorRGBA(0.0f, 0.0f, 0.0f, m_Alpha);
+			Style.m_OutlineColor = m_Rainbow ? s_OutlineColor.WithMultipliedAlpha(m_Alpha) : ColorRGBA(0.85f, 0.85f, 0.85f, m_Alpha);
+			Style.m_RainbowEnabled = m_Rainbow;
+			QmNameplateMsdf().DrawCentered(m_aMsdfText, Pos.x, Pos.y, m_MsdfFontSize, Style);
+			return;
+		}
 		if(!m_TextContainerIndex.Valid())
 			return;
 		const ColorRGBA Color = m_Rainbow ? ColorRGBA(1.0f, 1.0f, 1.0f, m_Alpha) : ColorRGBA(0.0f, 0.0f, 0.0f, m_Alpha);
@@ -749,7 +853,7 @@ protected:
 	}
 
 public:
-	CNamePlatePartDeveloper(CGameClient &This) :
+	CNamePlatePartTitle(CGameClient &This) :
 		CNamePlatePartText(This) {}
 };
 
@@ -816,6 +920,11 @@ protected:
 	{
 		m_FontSize = Data.m_FontSize;
 		str_copy(m_aText, Data.m_aName, sizeof(m_aText));
+		if(NameplateMsdfActive())
+		{
+			SetMsdfPlainText(m_aText, m_FontSize);
+			return;
+		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		m_GradientEnabled = m_UseTextEffects && (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_GRADIENT) != 0;
@@ -869,6 +978,11 @@ protected:
 	{
 		m_FontSize = Data.m_FontSizeClan;
 		str_copy(m_aText, Data.m_aClan[0] != '\0' ? Data.m_aClan : " ", sizeof(m_aText));
+		if(NameplateMsdfActive())
+		{
+			SetMsdfPlainText(m_aText, m_FontSize);
+			return;
+		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		m_GradientEnabled = m_UseTextEffects && (g_Config.m_QmNameplateTextEffects & QM_TEXT_EFFECT_GRADIENT) != 0;
@@ -1097,6 +1211,11 @@ protected:
 		m_FontSize = Data.m_FontSizeClan;
 		const char *pSkin = Data.m_InGame ? This.m_aClients[Data.m_ClientId].m_aSkinName : (Data.m_ClientId == 0 ? g_Config.m_ClPlayerSkin : g_Config.m_ClDummySkin);
 		str_copy(m_aText, pSkin, sizeof(m_aText));
+		if(NameplateMsdfActive())
+		{
+			SetMsdfPlainText(m_aText, m_FontSize);
+			return;
+		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
@@ -1141,6 +1260,11 @@ protected:
 		m_Aligned = m_IsX && Data.m_CoordXAligned;
 		m_Coord = RoundCoordToCentitiles(m_IsX ? Data.m_Coords.x : Data.m_Coords.y) / 100.0f;
 		str_format(m_aText, sizeof(m_aText), "%c:%.2f", m_IsX ? 'X' : 'Y', m_Coord);
+		if(NameplateMsdfActive())
+		{
+			SetMsdfPlainText(m_aText, m_FontSize);
+			return;
+		}
 
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
@@ -1178,6 +1302,11 @@ protected:
 		m_FontSize = Data.m_FontSizeClan;
 		const char *pReason = This.m_WarList.GetWarData(Data.m_ClientId).m_aReason;
 		str_copy(m_aText, pReason, sizeof(m_aText));
+		if(NameplateMsdfActive())
+		{
+			SetMsdfPlainText(m_aText, m_FontSize);
+			return;
+		}
 		CTextCursor Cursor;
 		Cursor.m_FontSize = m_FontSize;
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, m_aText);
@@ -1433,7 +1562,7 @@ private:
 		AddPart<CNamePlatePartPing>(This); // TClient
 		AddPart<CNamePlatePartIgnoreMark>(This); // TClient
 		AddPart<CNamePlatePartFriendMark>(This);
-		AddPart<CNamePlatePartDeveloper>(This);
+		AddPart<CNamePlatePartTitle>(This);
 		AddPart<CNamePlatePartClientId>(This, false);
 		AddPart<CNamePlatePartName>(This);
 		AddPart<CNamePlatePartNewLine>(This);
@@ -1799,8 +1928,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 
 	Data.m_ShowName = pPlayerInfo->m_Local ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates;
 	GameClient()->FormatStreamerName(ClientId, Data.m_aName, sizeof(Data.m_aName));
-	Data.m_ShowDeveloper = ShouldShowQmDeveloperBadge(GameClient()->IsQmDeveloperAuthenticated(ClientId), Data.m_ShowName, HideIdentity);
-	Data.m_DeveloperRainbow = Data.m_ShowDeveloper && GameClient()->IsQmDeveloperRainbow(ClientId);
+	str_copy(Data.m_aQmTitle, Data.m_ShowName ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
+	Data.m_DeveloperRainbow = Data.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId);
 	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
 	const bool Spectating = !DemoPlayback && GameClient()->m_Snap.m_SpecInfo.m_Active;
 	const bool SpectateTarget = GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == ClientId;
@@ -1985,8 +2114,8 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		CNamePlateData FrameData = Data;
 		FrameData.m_ShowName = true;
 		FrameData.m_ShowFriendMark = FrameData.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
-		FrameData.m_ShowDeveloper = ShouldShowQmDeveloperBadge(GameClient()->IsQmDeveloperAuthenticated(ClientId), FrameData.m_ShowName, HideIdentity);
-		FrameData.m_DeveloperRainbow = FrameData.m_ShowDeveloper && GameClient()->IsQmDeveloperRainbow(ClientId);
+		str_copy(FrameData.m_aQmTitle, FrameData.m_ShowName ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
+		FrameData.m_DeveloperRainbow = FrameData.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId);
 		FrameData.m_ShowClientId = FrameData.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
 		FrameData.m_ShowClan = FrameData.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
 		const bool FrameShowLocalAlignedCoordX = CoordModuleAllowsCoords && CoordXAlignHintEnabled && LocalCoordXAligned;
@@ -2026,7 +2155,7 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 		const bool CoordModuleAllowsPreview = IsOwnPreview ? g_Config.m_QmNameplateCoordsOwn : g_Config.m_QmNameplateCoords;
 
 		Data.m_ShowName = NameplateScopeAllowsPreview;
-		Data.m_ShowDeveloper = false;
+		Data.m_aQmTitle[0] = '\0';
 		Data.m_DeveloperRainbow = false;
 		// 设置页预览必须展示当前选择的效果，不能受游戏中 Playing/Spectate/Demo scope 限制。
 		Data.m_UseTextEffects = g_Config.m_QmNameplateTextEffects != 0;
@@ -2716,6 +2845,10 @@ void CNamePlates::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
+	// MSDF 名牌渲染：首次可用时懒加载图集（预烤资产，加载后无每帧生成开销）
+	if(g_Config.m_QmNameplateMsdf != 0)
+		QmNameplateMsdf().EnsureInitialized(Storage(), Graphics());
+
 	// 每帧重置名牌文字重建预算，把缩放档位变化带来的重建开销摊平到多帧
 	s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME;
 
@@ -2800,6 +2933,7 @@ void CNamePlates::OnShutdown()
 	ResetNamePlates();
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 		ResetChatBubbleAnimState(i, true);
+	QmNameplateMsdf().Shutdown();
 }
 
 CNamePlates::CNamePlates() :

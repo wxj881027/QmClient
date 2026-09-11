@@ -39,7 +39,7 @@ void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect
 	const float Alpha = std::clamp(DrawAlpha, 0.0f, 1.0f);
 	const float PixelSize = Ctx.m_pUi->PixelSize();
 	const CUIRect ChromeRect = ResolveSettingsCardChromeRect(Rect, PixelSize);
-	const float Radius = AlignSettingsCardValueToPixels(std::min(4.0f * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.25f), PixelSize);
+	const float Radius = AlignSettingsCardValueToPixels(std::min(ui_token::radius::TIGHT * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.25f), PixelSize);
 	const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? 0.28f : 0.18f) * Alpha);
 	DrawRoundedSurface(Ctx, ChromeRect, ChromeColor, ChromeColor, Radius);
 	const float IconSize = std::clamp(ui_token::font::BODY * UiScale, 10.0f, ui_token::font::BODY);

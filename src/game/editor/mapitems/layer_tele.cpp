@@ -78,6 +78,12 @@ bool CLayerTele::IsEmpty() const
 	return true;
 }
 
+bool CLayerTele::HasContentInRect(const CIntRect &Rect) const
+{
+	// 传送层把编号和类型单独存放，图块数组为空时也可能有数据
+	return CLayerTiles::HasContentInRect(Rect) || AnyInRect(m_Width, m_Height, Rect.x, Rect.y, Rect.w, Rect.h, [this](int x, int y) { return m_pTeleTile[y * m_Width + x].m_Type != 0; });
+}
+
 void CLayerTele::BrushDraw(CLayer *pBrush, vec2 WorldPos)
 {
 	if(m_Readonly)

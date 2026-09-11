@@ -23,6 +23,7 @@
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
+#include <engine/shared/localization.h>
 #include <engine/storage.h>
 
 #include <generated/client_data.h>
@@ -722,6 +723,7 @@ void CQmClient::OnInit()
 {
 	InitQmClientLifecycle();
 	InitQmDeveloperAuthentication();
+	InitTitleAuthentication();
 }
 
 void CQmClient::OnShutdown()
@@ -749,6 +751,8 @@ void CQmClient::OnShutdown()
 	AbortTask(m_pQmClientAuthTokenTask);
 	AbortTask(m_pQmClientUsersTask);
 	AbortTask(m_pQmClientUsersSendTask);
+	AbortTask(m_pTitleOperation);
+	ResetTitlePresences();
 	AbortTask(m_pQmDeveloperPresenceTask);
 	AbortTask(m_pQmDeveloperPresencesTask);
 	m_pQmClientUsersParseJob = nullptr;
@@ -759,6 +763,7 @@ void CQmClient::OnUpdate()
 {
 	UpdateQmClientRecognition();
 	UpdateQmDeveloperPresence();
+	UpdateTitleAuthentication();
 	UpdateQmClientLifecycleAndServerTime();
 	UpdateQmDdnetPlayerStats();
 }
@@ -780,6 +785,7 @@ void CQmClient::OnStateChange(int NewState, int OldState)
 	else if(NewState != IClient::STATE_ONLINE && OldState == IClient::STATE_ONLINE)
 	{
 		ResetQmDeveloperPresenceTasks();
+		ResetTitlePresences();
 		m_aQmDeveloperSessionId[0] = '\0';
 	}
 }
@@ -1942,5 +1948,275 @@ void CQmClient::UpdateQmClientRecognition()
 	{
 		SyncQmClientUsers();
 		m_QmClientLastSync = Now;
+	}
+}
+
+static bool IsTitleHex(const char *pText, int Length)
+{
+	if(str_length(pText) != Length)
+		return false;
+	for(int i = 0; i < Length; ++i)
+		if(!((pText[i] >= '0' && pText[i] <= '9') || (pText[i] >= 'a' && pText[i] <= 'f')))
+			return false;
+	return true;
+}
+
+static const char *TitleJsonString(const json_value *pRoot, const char *pKey)
+{
+	if(!pRoot || pRoot->type != json_object)
+		return "";
+	const json_value *pValue = json_object_get(pRoot, pKey);
+	return pValue->type == json_string ? pValue->u.string.ptr : "";
+}
+
+static constexpr const char *TITLE_TOKEN_FILE = "qmclient/title_token.txt";
+
+void CQmClient::InitTitleAuthentication()
+{
+	char *pToken = Storage()->ReadFileStr(TITLE_TOKEN_FILE, IStorage::TYPE_SAVE);
+	if(!pToken)
+		return;
+	str_utf8_trim_right(pToken);
+	if(IsTitleHex(pToken, 64))
+		str_copy(m_aTitleToken, pToken);
+	free(pToken);
+	if(m_aTitleToken[0])
+		RefreshTitleProfile();
+}
+
+void CQmClient::StartTitleRequest(const char *pPath, const char *pBody, std::shared_ptr<CHttpRequest> &pTask)
+{
+	char aUrl[512];
+	str_format(aUrl, sizeof(aUrl), "https://qmclient.icu/api/v1/titles/%s", pPath);
+	pTask = pBody ? HttpPostJson(aUrl, pBody) : HttpGet(aUrl);
+	pTask->MaxResponseSize(128 * 1024);
+	pTask->Timeout(CTimeout{3000, 5000, 500, 5});
+	// 标题接口用 4xx 携带 error JSON，不能让 FAILONERROR 把响应变成 ERROR
+	pTask->FailOnErrorStatus(false);
+	if(m_aTitleToken[0] && (str_comp(pPath, "profile") == 0 || str_comp(pPath, "presence") == 0))
+	{
+		char aAuthorization[80];
+		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", m_aTitleToken);
+		pTask->HeaderString("Authorization", aAuthorization);
+	}
+	Http()->Run(pTask);
+}
+
+void CQmClient::RedeemTitleCode(const char *pCode)
+{
+	if(TitleBusy() || m_TitleAuthenticated)
+		return;
+	if(!IsTitleHex(pCode, 48))
+	{
+		m_pTitleStatus = Localizable("Invalid sponsor code");
+		return;
+	}
+	if(!m_aTitleToken[0])
+	{
+		unsigned char aRandom[32];
+		secure_random_fill(aRandom, sizeof(aRandom));
+		static constexpr const char HEX[] = "0123456789abcdef";
+		for(size_t i = 0; i < sizeof(aRandom); ++i)
+		{
+			m_aTitleToken[i * 2] = HEX[aRandom[i] >> 4];
+			m_aTitleToken[i * 2 + 1] = HEX[aRandom[i] & 15];
+		}
+		m_aTitleToken[64] = '\0';
+		Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+		IOHANDLE File = Storage()->OpenFile(TITLE_TOKEN_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		bool Saved = false;
+		if(File)
+		{
+			const unsigned Written = io_write(File, m_aTitleToken, 64);
+			const int Closed = io_close(File);
+			Saved = Written == 64 && Closed == 0;
+		}
+		if(!Saved)
+		{
+			m_aTitleToken[0] = '\0';
+			m_pTitleStatus = Localizable("Could not save title credential");
+			return;
+		}
+	}
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("code");
+	Writer.WriteStrValue(pCode);
+	Writer.WriteAttribute("token");
+	Writer.WriteStrValue(m_aTitleToken);
+	Writer.EndObject();
+	StartTitleRequest("redeem", Writer.GetOutputString().c_str(), m_pTitleOperation);
+	m_pTitleStatus = Localizable("Contacting title server");
+}
+
+void CQmClient::RefreshTitleProfile()
+{
+	if(TitleBusy() || !m_aTitleToken[0])
+		return;
+	StartTitleRequest("profile", nullptr, m_pTitleOperation);
+	m_pTitleStatus = Localizable("Contacting title server");
+}
+
+void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName)
+{
+	if(TitleBusy() || !m_TitleAuthenticated)
+		return;
+	if(!IsValidQmTitle(pTitle))
+	{
+		m_pTitleStatus = Localizable("Title too long or contains unsupported characters");
+		return;
+	}
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("title");
+	Writer.WriteStrValue(pTitle);
+	Writer.WriteAttribute("bound_name");
+	Writer.WriteStrValue(pBoundName);
+	Writer.EndObject();
+	StartTitleRequest("profile", Writer.GetOutputString().c_str(), m_pTitleOperation);
+	m_pTitleStatus = Localizable("Contacting title server");
+}
+
+void CQmClient::ResetTitlePresences()
+{
+	for(auto *pTask : {&m_pTitleReport, &m_pTitleList})
+	{
+		if(*pTask)
+			(*pTask)->Abort();
+		pTask->reset();
+	}
+	mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
+	m_TitleLastSync = 0;
+}
+
+const char *CQmClient::PlayerTitle(int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))
+		return "";
+	if(GameClient()->IsQmDeveloperAuthenticated(ClientId))
+		return "[开发者]";
+	if(m_aTitleExpires[ClientId] > time_get() && str_comp(m_aaTitleNames[ClientId], GameClient()->m_aClients[ClientId].m_aName) == 0)
+		return m_aaPlayerTitles[ClientId];
+	return "";
+}
+
+void CQmClient::UpdateTitleAuthentication()
+{
+	if(m_pTitleOperation && m_pTitleOperation->Done())
+	{
+		// libcurl failures also make Done() true, but they do not produce a
+		// completed HTTP result.  ResultJson() asserts in that state.
+		if(m_pTitleOperation->State() != EHttpState::DONE)
+		{
+			m_pTitleStatus = Localizable("Title server unavailable; retry");
+			m_pTitleOperation.reset();
+			return;
+		}
+		json_value *pRoot = m_pTitleOperation->ResultJson();
+		const char *pTitle = TitleJsonString(pRoot, "title");
+		const char *pName = TitleJsonString(pRoot, "bound_name");
+		if(m_pTitleOperation->State() == EHttpState::DONE && m_pTitleOperation->StatusCode() == 200 && IsValidQmTitle(pTitle))
+		{
+			m_TitleAuthenticated = true;
+			str_copy(m_aTitleText, pTitle);
+			str_copy(m_aTitleBoundName, pName);
+			++m_TitleRevision;
+			m_pTitleStatus = Localizable("Permanent sponsor verified");
+			ResetTitlePresences();
+		}
+		else
+		{
+			const char *pError = TitleJsonString(pRoot, "error");
+			m_pTitleStatus = Localizable("Title server unavailable; retry");
+			if(str_comp(pError, "code_used") == 0)
+				m_pTitleStatus = Localizable("Sponsor code already claimed");
+			else if(str_comp(pError, "invalid_code") == 0)
+				m_pTitleStatus = Localizable("Invalid sponsor code");
+			else if(str_comp(pError, "invalid_title") == 0)
+				m_pTitleStatus = Localizable("Title too long or contains unsupported characters");
+			else if(str_comp(pError, "invalid_name") == 0)
+				m_pTitleStatus = Localizable("Invalid bound name");
+			else if(m_pTitleOperation->StatusCode() == 401)
+			{
+				m_TitleAuthenticated = false;
+				m_pTitleStatus = Localizable("Enter your sponsor code");
+			}
+		}
+		json_value_free(pRoot);
+		m_pTitleOperation.reset();
+	}
+	if(m_pTitleReport && m_pTitleReport->Done())
+	{
+		if(m_pTitleReport->StatusCode() == 409)
+			m_pTitleStatus = Localizable("Four IP addresses are already online");
+		else if(m_pTitleReport->StatusCode() == 200 && !TitleBusy())
+			m_pTitleStatus = Localizable("Permanent sponsor verified");
+		m_pTitleReport.reset();
+	}
+	if(m_pTitleList && m_pTitleList->Done())
+	{
+		mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
+		char aServer[NETADDR_MAXSTRSIZE] = "";
+		if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
+			net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+		if(m_pTitleList->State() == EHttpState::DONE && m_pTitleList->StatusCode() == 200 && str_comp(aServer, m_aTitlePendingServer) == 0)
+		{
+			json_value *pRoot = m_pTitleList->ResultJson();
+			for(const auto &Presence : ParseQmTitlePresences(pRoot, aServer))
+			{
+				str_copy(m_aaTitleNames[Presence.m_PlayerId], Presence.m_PlayerName.c_str());
+				str_format(m_aaPlayerTitles[Presence.m_PlayerId], sizeof(m_aaPlayerTitles[Presence.m_PlayerId]), "[%s]", Presence.m_Title.c_str());
+				m_aTitleExpires[Presence.m_PlayerId] = time_get() + Presence.m_RemainingSeconds * time_freq();
+			}
+			json_value_free(pRoot);
+		}
+		m_pTitleList.reset();
+	}
+	if(Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
+		return;
+	if(m_TitleLastSync && time_get() - m_TitleLastSync < 5 * time_freq())
+		return;
+	m_TitleLastSync = time_get();
+	char aServer[NETADDR_MAXSTRSIZE];
+	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+	if(m_TitleAuthenticated && !m_pTitleReport)
+	{
+		CJsonStringWriter Writer;
+		Writer.BeginObject();
+		Writer.WriteAttribute("server_address");
+		Writer.WriteStrValue(aServer);
+		Writer.WriteAttribute("session_id");
+		Writer.WriteStrValue(m_aQmDeveloperSessionId);
+		Writer.WriteAttribute("players");
+		Writer.BeginArray();
+		int Count = 0;
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		{
+			const int Id = GameClient()->m_aLocalIds[Dummy];
+			if((Dummy == 1 && !Client()->DummyConnected()) || Id < 0 || Id >= MAX_CLIENTS || !GameClient()->m_aClients[Id].m_Active)
+				continue;
+			Writer.BeginObject();
+			Writer.WriteAttribute("player_id");
+			Writer.WriteIntValue(Id);
+			Writer.WriteAttribute("player_name");
+			Writer.WriteStrValue(GameClient()->m_aClients[Id].m_aName);
+			Writer.WriteAttribute("dummy");
+			Writer.WriteBoolValue(Dummy == 1);
+			Writer.EndObject();
+			++Count;
+		}
+		Writer.EndArray();
+		Writer.EndObject();
+		if(Count)
+			StartTitleRequest("presence", Writer.GetOutputString().c_str(), m_pTitleReport);
+	}
+	if(!m_pTitleList)
+	{
+		char aEscaped[NETADDR_MAXSTRSIZE * 3];
+		EscapeUrl(aEscaped, sizeof(aEscaped), aServer);
+		char aPath[512];
+		str_format(aPath, sizeof(aPath), "presences?server_address=%s", aEscaped);
+		str_copy(m_aTitlePendingServer, aServer);
+		StartTitleRequest(aPath, nullptr, m_pTitleList);
 	}
 }

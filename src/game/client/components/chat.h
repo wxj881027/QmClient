@@ -100,6 +100,7 @@ private:
 		int m_ClientId = -1;
 		char m_aName[MAX_NAME_LENGTH] = "";
 		char m_aPlayerName[MAX_NAME_LENGTH] = "";
+		char m_aQmTitle[64] = "";
 		ColorRGBA m_NameColor;
 	};
 
@@ -118,6 +119,7 @@ private:
 		bool m_Whisper;
 		int m_NameColor;
 		char m_aName[MAX_CLIENTS * (MAX_NAME_LENGTH + 1)];
+		char m_aQmTitle[64] = "";
 		char m_aText[MAX_LINE_LENGTH];
 		EQmChatEmoji m_ChatEmoji = EQmChatEmoji::NONE;
 		CUIRect m_ChatEmojiRect = {};
@@ -194,6 +196,10 @@ private:
 	char m_aCompletionBuffer[MAX_LINE_LENGTH];
 	int m_PlaceholderOffset;
 	int m_PlaceholderLength;
+	// 表情补全：候选列表与用户输入的冒号类型（半角/全角）
+	const SQmChatEmojiDefinition *m_apEmojiCompletionList[QM_CHAT_EMOJI_COUNT];
+	int m_EmojiCompletionListLength;
+	char m_aEmojiCompletionColon[4];
 	static char ms_aDisplayText[MAX_LINE_LENGTH];
 	class CRateablePlayer
 	{

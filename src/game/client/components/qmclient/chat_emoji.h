@@ -61,13 +61,78 @@ inline constexpr std::array<SQmChatEmojiDefinition, QM_CHAT_EMOJI_COUNT> QM_CHAT
 	{":zc", EQmChatEmoji::SUPPORT, "qmclient/chat_emojis/support.png"},
 }};
 
+// 半角 ':' 或全角 '：'（U+FF1A）开头时返回冒号 UTF-8 字节数，否则返回 0。
+inline int QmChatEmojiColonUtf8Length(const char *pText)
+{
+	if(pText == nullptr || pText[0] == '\0')
+		return 0;
+	if(pText[0] == ':')
+		return 1;
+	// U+FF1A FULLWIDTH COLON: EF BC 9A
+	if((unsigned char)pText[0] == 0xEF && (unsigned char)pText[1] == 0xBC && (unsigned char)pText[2] == 0x9A)
+		return 3;
+	return 0;
+}
+
+inline bool QmChatEmojiIsColonPrefixed(const char *pText)
+{
+	return QmChatEmojiColonUtf8Length(pText) > 0;
+}
+
+// pPrefix 为冒号之后的搜索串（可为空）。按官方码序收集所有前缀匹配项。
+inline int QmChatEmojiCollectByPrefix(const char *pPrefix, const SQmChatEmojiDefinition **apMatches, int MaxMatches)
+{
+	if(apMatches == nullptr || MaxMatches <= 0)
+		return 0;
+	if(pPrefix == nullptr)
+		pPrefix = "";
+	int Count = 0;
+	for(const SQmChatEmojiDefinition &Definition : QM_CHAT_EMOJI_DEFINITIONS)
+	{
+		if(str_startswith_nocase(Definition.m_pText + 1, pPrefix))
+		{
+			apMatches[Count++] = &Definition;
+			if(Count >= MaxMatches)
+				break;
+		}
+	}
+	return Count;
+}
+
+// 将候选码（不含冒号）以逗号连接，便于输入框旁展示“可能出现的所有”。
+inline bool QmChatEmojiFormatCandidates(const SQmChatEmojiDefinition *const *apMatches, int NumMatches, char *pOut, size_t OutSize)
+{
+	if(pOut == nullptr || OutSize == 0)
+		return false;
+	pOut[0] = '\0';
+	if(apMatches == nullptr || NumMatches <= 0)
+		return false;
+	for(int i = 0; i < NumMatches; ++i)
+	{
+		if(apMatches[i] == nullptr || apMatches[i]->m_pText == nullptr)
+			continue;
+		const char *pCode = apMatches[i]->m_pText + 1;
+		if(pOut[0] != '\0')
+			str_append(pOut, ",", OutSize);
+		str_append(pOut, pCode, OutSize);
+	}
+	return pOut[0] != '\0';
+}
+
 inline EQmChatEmoji QmChatEmojiFromText(const char *pText)
 {
 	if(pText == nullptr)
 		return EQmChatEmoji::NONE;
+	const int ColonLength = QmChatEmojiColonUtf8Length(pText);
+	if(ColonLength <= 0)
+		return EQmChatEmoji::NONE;
+	// 归一化为半角冒号再比对，使 :ax 与 ：ax 都能识别为表情。
+	char aNormalized[16];
+	aNormalized[0] = ':';
+	str_copy(aNormalized + 1, pText + ColonLength, sizeof(aNormalized) - 1);
 	for(const SQmChatEmojiDefinition &Definition : QM_CHAT_EMOJI_DEFINITIONS)
 	{
-		if(str_comp(pText, Definition.m_pText) == 0)
+		if(str_comp(aNormalized, Definition.m_pText) == 0)
 			return Definition.m_Emoji;
 	}
 	return EQmChatEmoji::NONE;

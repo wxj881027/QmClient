@@ -128,6 +128,8 @@ public:
 	bool IsEntitiesLayer() const override;
 
 	[[nodiscard]] virtual bool IsEmpty() const;
+	// 矩形（本层坐标，需先 Convert 并 Clamp 到本层范围）内是否存在图块数据
+	[[nodiscard]] virtual bool HasContentInRect(const CIntRect &Rect) const;
 	void BrushSelecting(CUIRect Rect) override;
 	int BrushGrab(CLayerGroup *pBrush, CUIRect Rect) override;
 	void FillSelection(bool Empty, CLayer *pBrush, CUIRect Rect) override;

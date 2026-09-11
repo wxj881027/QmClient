@@ -5,6 +5,7 @@
 
 #include "QmAnimResolve.h"
 #include "UiMotion.h"
+#include "UiSurface.h"
 #include "UiTokens.h"
 
 #include <engine/graphics.h>
@@ -13,6 +14,7 @@
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
@@ -35,40 +37,69 @@ namespace ui_widget
 			ButtonPool.resize(Needed);
 
 		const float TabWidth = Rect.w / static_cast<float>(Count);
+		std::vector<CUIRect> vTabSlots(static_cast<std::size_t>(Count));
 		CUIRect Tabs = Rect;
-		CUIRect TabsRow, Underline;
-		Tabs.HSplitBottom(2.0f, &TabsRow, &Underline);
+		CUIRect TabsRow;
+		Tabs.HSplitBottom(2.0f, &TabsRow, nullptr);
 
 		for(int i = 0; i < Count; ++i)
 		{
-			CUIRect TabRect;
+			CUIRect &TabRect = vTabSlots[static_cast<std::size_t>(i)];
 			TabRect.x = Rect.x + TabWidth * static_cast<float>(i);
 			TabRect.y = TabsRow.y;
 			TabRect.w = TabWidth;
 			TabRect.h = TabsRow.h;
+		}
+
+		// 胶囊 Tabbar：容器与滑块先画，页签文字随后 —— 滑块压在文字之下，
+		// 激活位置不再用页签下方的下划线小块表达。
+		SCapsuleTabBarStyle Style;
+		Style.m_IndicatorColor = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
+		CapsuleTabBarChrome(Ctx, BuildUiAnimNodeKey(MakeUiScopeHash("ui_widget_tabbar_capsule"), reinterpret_cast<uint64_t>(pActive)), vTabSlots.data(), Count, *pActive, Style);
+
+		for(int i = 0; i < Count; ++i)
+		{
 			const int Checked = (*pActive == i) ? 1 : 0;
-			const int Result = Ctx.m_pMenus->DoButton_MenuTab(&ButtonPool[i], ppLabels[i], Checked, &TabRect, IGraphics::CORNER_T);
-			if(Result != 0)
+			if(Ctx.m_pMenus->DoButton_MenuTab(&ButtonPool[i], ppLabels[i], Checked, &vTabSlots[static_cast<std::size_t>(i)], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true) != 0)
 				*pActive = i;
 		}
 
-		// Underline — animate POS_X toward the active tab. Uses the v2 runtime so
-		// the slide eases without manual lerp.
-		float SlideX = Rect.x + TabWidth * static_cast<float>(*pActive);
+		return *pActive;
+	}
+
+	void CapsuleTabBarChrome(const IUiContext &Ctx, const uint64_t GroupId, const CUIRect &RowRect, const CUIRect *pActiveSlot, const SCapsuleTabBarStyle &Style)
+	{
+		if(Ctx.m_pUi == nullptr || RowRect.w <= 0.0f || RowRect.h <= 0.0f)
+			return;
+		// 预热 / 文字计划收集帧只跑逻辑不落绘制，也不推进滑块弹簧，否则预热帧会把滑块
+		// 直接推到目标位置，下一帧切换就看不到滑动。
+		if(Ctx.m_pUi->RenderOnly())
+			return;
+
+		CUIRect Capsule;
+		RowRect.Margin(-Style.m_CapsulePadding, &Capsule);
+		DrawRoundedSurface(Ctx, Capsule, Style.m_CapsuleColor, ColorRGBA(), ui_token::radius::PILL);
+
+		if(pActiveSlot == nullptr)
+			return;
+		CUIRect Target;
+		pActiveSlot->Margin(Style.m_IndicatorInset, &Target);
+		if(Target.w <= 0.0f || Target.h <= 0.0f)
+			return;
+
+		CUIRect Indicator = Target;
 		if(Ctx.m_pAnim != nullptr)
 		{
-			const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pActive));
-			SlideX = ResolveUiAnimValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, SlideX, ui_curve::EMPHASIZED.m_DurationSec, ui_curve::EMPHASIZED.m_Easing);
+			// 滑块弹簧：欠阻尼一点点（ζ≈0.93），切换 Tab 时带速度续接地滑过去，
+			// 落到目标附近再收住，不会来回弹。
+			static constexpr SUiSpringConfig s_IndicatorSpring{1.0f, 420.0f, 38.0f, 0.05f, 0.4f};
+			const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
+			Indicator.x = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, s_IndicatorSpring, 2);
+			Indicator.y = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_Y, Target.y, s_IndicatorSpring, 2);
+			Indicator.w = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, s_IndicatorSpring, 2);
+			Indicator.h = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::HEIGHT, Target.h, s_IndicatorSpring, 2);
 		}
-
-		CUIRect Indicator;
-		Indicator.x = SlideX + TabWidth * 0.15f;
-		Indicator.y = Underline.y;
-		Indicator.w = TabWidth * 0.70f;
-		Indicator.h = Underline.h;
-		Indicator.Draw(Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY, IGraphics::CORNER_NONE, 0.0f);
-
-		return *pActive;
+		DrawRoundedSurface(Ctx, Indicator, Style.m_IndicatorColor, ColorRGBA(), ui_token::radius::PILL);
 	}
 
 	bool ListItem(const IUiContext &Ctx, const void *pId, const char *pText, const CUIRect &Rect, const SListItemProps &Props)

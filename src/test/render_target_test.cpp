@@ -17,6 +17,7 @@ namespace
 	using TResolveRenderTargetReadback = bool (IGraphics::*)(IGraphics::CRenderTargetReadbackHandle *, CImageInfo &);
 	using TCancelRenderTargetReadback = void (IGraphics::*)(IGraphics::CRenderTargetReadbackHandle *);
 	using TGaussianBlurRenderTarget = bool (IGraphics::*)(IGraphics::CRenderTargetHandle, IGraphics::CRenderTargetHandle, IGraphics::CRenderTargetHandle, const IGraphics::SGaussianBlurParams &);
+	using TDualBlurRenderTarget = bool (IGraphics::*)(IGraphics::CRenderTargetHandle, IGraphics::CRenderTargetHandle, IGraphics::CRenderTargetHandle, IGraphics::CRenderTargetHandle, IGraphics::CRenderTargetHandle, const IGraphics::SGaussianBlurParams &);
 	using TCaptureBackbufferToRenderTarget = bool (IGraphics::*)(IGraphics::CRenderTargetHandle);
 	using TDrawRenderTarget = void (IGraphics::*)(IGraphics::CRenderTargetHandle, const IGraphics::SRenderTargetDrawParams &);
 
@@ -59,6 +60,7 @@ static_assert(std::is_same_v<decltype(&IGraphics::PollRenderTargetReadback), TPo
 static_assert(std::is_same_v<decltype(&IGraphics::ResolveRenderTargetReadback), TResolveRenderTargetReadback>);
 static_assert(std::is_same_v<decltype(&IGraphics::CancelRenderTargetReadback), TCancelRenderTargetReadback>);
 static_assert(std::is_same_v<decltype(&IGraphics::GaussianBlurRenderTarget), TGaussianBlurRenderTarget>);
+static_assert(std::is_same_v<decltype(&IGraphics::DualBlurRenderTarget), TDualBlurRenderTarget>);
 static_assert(std::is_same_v<decltype(&IGraphics::CaptureBackbufferToRenderTarget), TCaptureBackbufferToRenderTarget>);
 static_assert(std::is_same_v<decltype(&IGraphics::DrawRenderTarget), TDrawRenderTarget>);
 
@@ -433,6 +435,32 @@ TEST(GraphicsRenderTargetGaussianBlur, FrontendRejectsNestedRenderTargets)
 	EXPECT_NE(BeginBody.find("m_RenderTargetActive = true"), std::string::npos);
 	EXPECT_NE(EndBody.find("!m_RenderTargetActive"), std::string::npos);
 	EXPECT_NE(EndBody.find("m_RenderTargetActive = false"), std::string::npos);
+}
+
+TEST(GraphicsRenderTargetDualBlur, FrontendUsesDownsampledBlurAndUpsample)
+{
+	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
+	const std::string Body = ExtractFunctionBody(Source, "bool CGraphics_Threaded::DualBlurRenderTarget");
+	ASSERT_FALSE(Body.empty());
+	EXPECT_NE(Body.find("std::array<CRenderTargetHandle, 5>"), std::string::npos);
+	EXPECT_NE(Body.find("DownsampleSize.x > SourceSize.x"), std::string::npos);
+	EXPECT_NE(Body.find("BeginRenderTarget(Downsample"), std::string::npos);
+	EXPECT_NE(Body.find("DrawRenderTarget(Source"), std::string::npos);
+	EXPECT_NE(Body.find("GaussianBlurRenderTarget(Downsample, DownsampleTemporary, DownsampleBlurred"), std::string::npos);
+	EXPECT_NE(Body.find("BeginRenderTarget(Destination"), std::string::npos);
+	EXPECT_NE(Body.find("DrawRenderTarget(DownsampleBlurred"), std::string::npos);
+}
+
+TEST(GraphicsRenderTargetDualBlur, MediaIslandUsesHalfResolutionIntermediateTargets)
+{
+	const std::string Source = ReadFile("src/game/client/components/hud.cpp");
+	const std::string Body = ExtractFunctionBody(Source, "bool CHud::PrepareMediaIslandBlur");
+	ASSERT_FALSE(Body.empty());
+	EXPECT_NE(Body.find("(BlurWidth + 1) / 2"), std::string::npos);
+	EXPECT_NE(Body.find("(BlurHeight + 1) / 2"), std::string::npos);
+	EXPECT_NE(Body.find("CreateRenderTarget(DualBlurWidth, DualBlurHeight)"), std::string::npos);
+	EXPECT_NE(Body.find("Graphics()->DualBlurRenderTarget"), std::string::npos);
+	EXPECT_EQ(Body.find("Graphics()->GaussianBlurRenderTarget"), std::string::npos);
 }
 
 TEST(GraphicsRenderTargetGaussianBlur, ShadersAccumulateRgbaWithBoundedKernel)

@@ -272,6 +272,9 @@ A vote is currently active.
 Abort
 == 取消
 
+Accumulated client launch count (used by the sponsor reminder)
+== 累計啟動次數（用於贊助提醒）
+
 Activate
 == 啟用
 
@@ -487,6 +490,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == 添加默認聊天綁定
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== 在 HUD 上顯示分身的按鍵、錘子、控制與同步狀態，並支援自訂 bind 狀態清單。
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -1190,9 +1196,6 @@ Available resolutions
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 平均 %.*f ↓ %.*f ↑ %.*f
 
-Axiom API returned an error
-== Axiom API 傳回錯誤
-
 Axiom auto login failed
 == Axiom 自動登錄失敗
 
@@ -1207,12 +1210,6 @@ Axiom dummy password
 
 Axiom main account password
 == Axiom 主號密碼
-
-Axiom score request failed
-== Axiom 分數請求失敗
-
-Axiom scores
-== Axiom 分數
 
 Axis
 == 軸
@@ -2036,9 +2033,6 @@ Compatible with single-player area hints from other servers
 Complete snapshots are arriving late or not arriving
 == 完整快照到達延遲或未到達
 
-Completed maps
-== 已完成地圖
-
 Compressor attack time (ms)
 == 壓縮器攻擊時間（毫秒）
 
@@ -2147,9 +2141,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == 設定玩家身分與國旗
 
-Configure qm_report_app_id and qm_report_secret first
-== 請先設置 qm_report_app_id 和 qm_report_secret
-
 Configure QmClient gameplay helpers
 == 設定 QmClient 遊戲輔助功能
 
@@ -2206,9 +2197,6 @@ Connect dummy
 
 Connect dummy to enable
 == 連接分身後可啟用
-
-Connect to a server first
-== 需要先連接到伺服器
 
 Connect to server first to establish voice network link
 == 需要先進入伺服器，語音網絡鏈路才會建立
@@ -2269,6 +2257,9 @@ Console command executed after joining server
 
 Console command executed before connecting to server
 == 連接伺服器前執行的控制台命令
+
+Contacting title server
+== 正在連接頭銜伺服器
 
 Continue anyway?
 == 仍要退出？
@@ -2345,9 +2336,6 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == 無法連接分身
 
-Could not create report scan request
-== 創建舉報掃描請求失敗
-
 Could not find a Tutorial server. Check your internet connection.
 == 找不到教學伺服器。請檢查你的網路連線。
 
@@ -2356,9 +2344,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == 找不到你的隊伍
-
-Could not get current server address
-== 無法獲取當前伺服器地址
 
 Could not get server list from master server
 == 無法從主伺服器獲取伺服器列表
@@ -2383,6 +2368,9 @@ Could not resolve connect address '%s'. See local console for details.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == 地圖下載失敗，請嘗試手動刪除此文件：%s
+
+Could not save title credential
+== 無法儲存頭銜憑證，請檢查儲存權限
 
 Could not save touch controls to file. See local console for details.
 == 無法將觸控設置保存到文件。檢查本地控制台以獲取詳情。
@@ -2509,6 +2497,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == 自定義 Provider 模型名稱
+
+Custom title
+== 自訂頭銜
 
 Custom translation prompt (overrides built-in)
 == 自定義翻譯提示詞（覆蓋內置提示詞）
@@ -3683,6 +3674,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == 啟用皮膚切換動畫
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== 開啟皮膚切換動畫，再選擇類型、作用範圍、時長與緩動。
+
 Enable smooth cinematic camera while free spectating
 == 自由觀戰時啟用平滑電影鏡頭
 
@@ -3773,6 +3767,9 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 啟用敵對列表
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== 開啟武器切換動畫或裝填動畫，再調整作用範圍、時長、旋轉角度與緩動。
+
 Enable word filter list
 == 啟用屏蔽詞列表
 
@@ -3818,8 +3815,14 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == 輸入密碼
 
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== 填入贊助兌換碼並點「兌換」，寫下稱號後點「儲存」。勾選「僅在指定暱稱下顯示」可把稱號綁定到某一個暱稱。
+
 Enter Username
 == 輸入賬號名稱
+
+Enter your sponsor code
+== 請輸入分發給你的認證碼
 
 Entities
 == 實體
@@ -3847,6 +3850,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
+
+Entry: %s
+== 入口：%s
 
 Erase items on the in game background
 == 擦除遊戲背景中的內容
@@ -3892,6 +3898,9 @@ Evaluate an expression
 
 Event
 == 活動
+
+Exact bound nickname
+== 要綁定的完整暱稱
 
 Example of usage
 == 用途示例
@@ -4211,6 +4220,9 @@ Forms
 Found %d global cards
 == 匹配到 %d 張全局卡片
 
+Four IP addresses are already online
+== 已有 4 個 IP 在線，請等待其他會話離線
+
 FPM
 == 擊殺/分
 
@@ -4504,9 +4516,6 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 
 Global card ordering old config migration completed flag
 == 全局卡片排序舊配置遷移完成標記
-
-Global rank
-== 全球排名
 
 Global toggle key
 == 全局開關鍵
@@ -5213,6 +5222,9 @@ Insane
 Installing update. Please wait...
 == 正在安裝更新，請稍等...
 
+Instant zoom reverse
+== 反向縮放立即生效
+
 Interface
 == 界面
 
@@ -5252,8 +5264,8 @@ Interpolation
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == 當前編輯器地圖副本自動保存到“auto”文件夾的時間間隔（0 表示關閉）
 
-Invalid Axiom API response
-== Axiom API 回應無效
+Invalid bound name
+== 綁定暱稱無效
 
 Invalid client id to kick
 == 用於踢人的客戶端 ID 無效
@@ -5272,6 +5284,9 @@ Invalid option
 
 Invalid spectator id used
 == 無效的旁觀目標 ID
+
+Invalid sponsor code
+== 認證碼無效
 
 Invalid translation backend
 == 無效的翻譯後端
@@ -5540,6 +5555,9 @@ Latency compensation
 Latency Jitter
 == 延遲抖動
 
+Launch count threshold for the next sponsor reminder
+== 下次贊助提醒的啟動次數閾值
+
 Layout
 == 佈局
 
@@ -5707,9 +5725,6 @@ Loading
 
 Loading assets...
 == 正在加載資源……
-
-Loading Axiom scores...
-== 正在載入 Axiom 分數……
 
 Loading commands…
 == 正在加載指令…
@@ -5951,9 +5966,6 @@ Map to use on server
 Map type:
 == 地圖類型：
 
-Maps
-== 地圖
-
 Margin when notification is docked
 == 通知欄貼邊時預留邊距
 
@@ -6131,6 +6143,9 @@ Menu option - selected
 Merge consecutive identical player messages within 2 seconds
 == 合併 2 秒內連續出現的相同玩家訊息
 
+Merges chat messages repeated within a short time into a single line.
+== 短時間內重複的聊天訊息會合併成一條。
+
 Message color
 == 留言顏色
 
@@ -6163,9 +6178,6 @@ Microphone volume
 
 Microphone volume (percent)
 == 麥克風音量（百分比）
-
-Mileage
-== 里程
 
 Milliseconds
 == 毫秒
@@ -6316,9 +6328,6 @@ Moves to the tile with x/y-number ii
 
 Multi-View
 == 多人同框視角
-
-Multiple exact Axiom players found
-== 找到多個完全相符的 Axiom 玩家
 
 Mute
 == 靜音
@@ -6578,6 +6587,9 @@ New button
 New category name
 == 新分類名稱
 
+New features
+== 新功能
+
 New IME
 == 新版 IME
 
@@ -6821,12 +6833,6 @@ Not open, check input device or mic permission
 Not open, check output device
 == 未打開，請檢查輸出設備
 
-Not ranked
-== 未上榜
-
-Not requested
-== 尚未請求
-
 Note
 == 備註
 
@@ -6974,6 +6980,9 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == 僅當另一個 Tee 不在屏幕上時顯示
 
+Only show with this nickname
+== 僅在使用此暱稱時顯示
+
 Only what you can't imagine, nothing Dream can't do
 == 只有你想不到，沒有夢做不到
 
@@ -7012,6 +7021,9 @@ Open pie menu
 
 Open rename dialog
 == 打開重命名彈窗
+
+Open settings
+== 開啟設定
 
 Open spectator mode selector
 == 打開旁觀者模式選擇器
@@ -7286,8 +7298,11 @@ Per-name volume (name=percent)
 Performance debug log threshold (ms)
 == 性能調試日誌閾值（毫秒）
 
-Performance points
-== 表現分
+Permanent access; up to 4 online IP addresses
+== 永久資格，最多 4 個 IP 同時在線
+
+Permanent sponsor verified
+== 已認證：永久贊助資格
 
 Personal best:
 == 個人最佳：
@@ -7318,6 +7333,9 @@ Pet Skin:
 
 Pick result: %s
 == 抽取結果：%s
+
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== 選擇與你使用的音樂客戶端相符的來源並保持播放，歌詞會自動跟隨。
 
 Pickup range
 == 拾取物範圍
@@ -7366,9 +7384,6 @@ Play the current demo
 
 Play the selected demo
 == 播放選中的錄影
-
-Play time
-== 遊玩時間
 
 Play/Pause
 == 播放/暫停
@@ -7457,9 +7472,6 @@ Player name:
 Player not found
 == 未找到該玩家
 
-Player not found on Axiom
-== Axiom 上找不到該玩家
-
 Player preview
 == 玩家預覽
 
@@ -7519,6 +7531,9 @@ Players can't hook each other on this server
 
 Playing effects
 == 播放效果
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== 皮膚變化時播放動畫，包括錘子偷來的皮膚。
 
 Please add a valid cut first
 == 請先添加有效裁剪片段
@@ -7615,6 +7630,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == 預測榴彈軌跡（僅在 cl_antiping 為 1 時）
+
+Predict ninja path
+== 預測忍者路徑
 
 Predict weapon projectiles (only with cl_antiping 1)
 == 預測武器投射物（僅在 cl_antiping 為 1 時生效）
@@ -7726,6 +7744,9 @@ Preview the composed status bar output
 
 Preview the current chat appearance
 == Preview the current chat appearance
+
+Preview the sponsor reminder without changing the launch count
+== 預覽贊助提醒，不影響啟動計數
 
 Preview visibilities
 == 預覽可見性
@@ -8003,8 +8024,8 @@ Ratio
 Ratio threshold for local target language detection
 == 本地目標語言識別佔比閾值
 
-Read new feature indicators
-== 已讀的設置界面新功能標識
+Really? Not even a little?
+== 真的？一點都不考慮一下嗎？
 
 Reason
 == 原因
@@ -8050,6 +8071,15 @@ Red team
 
 Red team wins!
 == 紅隊勝利！
+
+Redeem
+== 領取
+
+Redeem your code and customize your title
+== 領取贊助資格並設定頭銜
+
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== 使用贊助兌換碼解鎖自訂稱號，稱號會顯示在聊天與名牌上。
 
 Reduce antiping and player prediction when frozen
 == 凍結時減少 antiping 和玩家預測
@@ -8402,36 +8432,6 @@ Reply to messages from muted players
 Reply with dummy
 == 使用分身回覆
 
-Report
-== 舉報
-
-Report request canceled
-== 舉報請求已取消
-
-Report request failed due to network error
-== 舉報請求失敗，網絡請求異常
-
-Report request failed with HTTP status: %d
-== 舉報請求失敗，HTTP 狀態碼：%d
-
-Report request is already in progress
-== 舉報請求正在處理中
-
-Report scan request submitted
-== 舉報掃描請求已提交
-
-Report service App ID
-== 舉報服務 App ID
-
-Report service signing key
-== 舉報服務簽名密鑰
-
-Report service URL
-== 舉報服務地址
-
-Reports are not available on Axiom servers
-== Axiom 伺服器內不可使用舉報功能
-
 Request to swap your tee with another team member
 == 請求與另一名隊友交換 Tee
 
@@ -8545,6 +8545,9 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == 正在重試…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== 反向按鍵時立即反向縮放（0=保留原有平滑縮放）
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -8800,12 +8803,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == 按 ping 比例縮放不確定性時長（100=1.0 倍）
-
-Scanning current server
-== 正在掃描當前伺服器
-
-Scanning current server...
-== 正在掃描當前伺服器……
 
 Score
 == 分數
@@ -9953,6 +9950,9 @@ Show the number of frozen tees
 Show the number of tees still alive
 == 顯示剩餘存活 Tee 的數量
 
+Show the occasional sponsor reminder in the main menu
+== 在主選單偶爾顯示贊助提醒
+
 Show the pet
 == 顯示寵物
 
@@ -10060,6 +10060,9 @@ Shows gameplay information for this server
 
 Shows help to command r, general help if left blank
 == 顯示命令 r 的幫助，如果留空則顯示一般幫助
+
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== 從網易雲音樂、汽水音樂、酷狗、QQ 音樂取得歌詞，並顯示在靈動島上。
 
 Shows the credits of the DDNet mod
 == 顯示 DDNet mod 的製作人員
@@ -10445,8 +10448,20 @@ Sphere
 Spin pop
 == 旋轉彈出
 
+Sponsor code
+== 認證碼
+
+Sponsor code already claimed
+== 此認證碼已被領取
+
+Sponsor reminder
+== 贊助提醒
+
 Sponsor support
 == 贊助支持
+
+Sponsor title
+== 贊助頭銜
 
 Sponsors:
 == 贊助者：
@@ -10540,6 +10555,9 @@ Status Scheme:
 
 Steam profile name
 ==  Steam 個人資料名稱
+
+Still free after %d sponsors. Take a look?
+== 已經靠 %d 位贊助者撐到現在，要看看嗎？
 
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == 切換時分身或玩家是否停止按鍵（0 = 關閉，1 = 分身，2 = 玩家）
@@ -10657,6 +10675,9 @@ Switch failed
 
 Switch interval
 == 切換間隔
+
+Switch on the status rows you need, then list the binds you want to watch.
+== 開啟需要的狀態開關，再在自訂清單裡填想監控的 bind。
 
 Switch opacity
 == 開關不透明度
@@ -10834,9 +10855,6 @@ Team mode change disabled
 
 Team mode change is disabled on this server.
 == 本伺服器已禁用隊伍模式切換
-
-Team rank
-== 團隊排名
 
 Team save already in progress
 == 隊伍存檔尚未完成
@@ -11243,6 +11261,12 @@ Timer isn't displayed.
 Tiny Tee Size
 == 迷你 Tee 大小
 
+Title server unavailable; retry
+== 頭銜服務暫不可用，請重試
+
+Title too long or contains unsupported characters
+== 頭銜過長或包含不支援的字符
+
 To save all players in your team have to be alive and not in '/spec'
 == 要保存隊伍，隊內所有玩家都必須存活且不能處於 '/spec'
 
@@ -11516,6 +11540,9 @@ Tune variable to value
 Tune variable to value or show current value
 == 將變量調到指定值，或顯示當前值
 
+Turn on "Message merging" in Dream Features.
+== 在「夢的小功能」裡開啟「訊息合併」。
+
 Tutorial
 == 教學
 
@@ -11732,6 +11759,9 @@ Unregister protocol and file extensions
 Unsaved changes
 == 更改未保存
 
+Up to 6 Chinese or 12 ASCII characters
+== 最多 6 個中文或 12 個英文字符
+
 Update
 == 更新
 
@@ -11767,6 +11797,9 @@ URL for downloading maps (must start with https://)
 
 URL for downloading skins
 == 用於下載皮膚的 URL
+
+Usage: %s
+== 用法：%s
 
 Usage: %s %s
 == 用法：%s %s
@@ -11833,6 +11866,9 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == 開啟動態攝像頭時使用鼠標感應
+
+Use MSDF text rendering for nameplates (requires TexturedMsdf)
+== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == 根據詞語長度使用多字符替換
@@ -12715,6 +12751,9 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == 你的逾時保護碼已設置。0.7 客戶端逾時後無法取回自己的 tee，但 0.6 客戶端可以接管你的 tee
+
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== 切換武器時滑入旋轉，裝填時依裝填時間翻轉。
 
 z = Zoom
 == z = 縮放

@@ -18,6 +18,25 @@ class IJob;
 
 class CQmClient : public CComponent
 {
+	std::shared_ptr<CHttpRequest> m_pTitleOperation;
+	std::shared_ptr<CHttpRequest> m_pTitleReport;
+	std::shared_ptr<CHttpRequest> m_pTitleList;
+	char m_aTitleToken[65] = "";
+	char m_aTitleText[64] = "";
+	char m_aTitleBoundName[64] = "";
+	char m_aTitlePendingServer[NETADDR_MAXSTRSIZE] = "";
+	char m_aaPlayerTitles[MAX_CLIENTS][64] = {};
+	char m_aaTitleNames[MAX_CLIENTS][MAX_NAME_LENGTH] = {};
+	int64_t m_aTitleExpires[MAX_CLIENTS] = {};
+	int64_t m_TitleLastSync = 0;
+	bool m_TitleAuthenticated = false;
+	int m_TitleRevision = 0;
+	const char *m_pTitleStatus = "Enter your sponsor code";
+	void InitTitleAuthentication();
+	void UpdateTitleAuthentication();
+	void ResetTitlePresences();
+	void StartTitleRequest(const char *pPath, const char *pBody, std::shared_ptr<CHttpRequest> &pTask);
+
 	std::shared_ptr<CHttpRequest> m_pQmClientAuthTokenTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientUsersTask = nullptr;
 	std::shared_ptr<CHttpRequest> m_pQmClientUsersSendTask = nullptr;
@@ -107,6 +126,16 @@ class CQmClient : public CComponent
 	void FinishQmDdnetPlayerStats();
 
 public:
+	void RedeemTitleCode(const char *pCode);
+	void SaveTitleProfile(const char *pTitle, const char *pBoundName);
+	void RefreshTitleProfile();
+	bool TitleBusy() const { return m_pTitleOperation != nullptr; }
+	bool TitleAuthenticated() const { return m_TitleAuthenticated; }
+	const char *TitleStatus() const { return m_pTitleStatus; }
+	const char *TitleText() const { return m_aTitleText; }
+	const char *TitleBoundName() const { return m_aTitleBoundName; }
+	int TitleRevision() const { return m_TitleRevision; }
+	const char *PlayerTitle(int ClientId) const;
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
 	void OnShutdown() override;

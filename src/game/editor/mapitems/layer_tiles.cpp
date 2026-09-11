@@ -272,6 +272,11 @@ bool CLayerTiles::IsEmpty() const
 	return true;
 }
 
+bool CLayerTiles::HasContentInRect(const CIntRect &Rect) const
+{
+	return AnyInRect(m_Width, m_Height, Rect.x, Rect.y, Rect.w, Rect.h, [this](int x, int y) { return m_pTiles[y * m_Width + x].m_Index != TILE_AIR; });
+}
+
 void CLayerTiles::BrushSelecting(CUIRect Rect)
 {
 	Snap(&Rect);

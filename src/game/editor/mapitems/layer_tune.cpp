@@ -78,6 +78,12 @@ bool CLayerTune::IsEmpty() const
 	return true;
 }
 
+bool CLayerTune::HasContentInRect(const CIntRect &Rect) const
+{
+	// 调参层把编号单独存放，图块数组为空时也可能有数据
+	return CLayerTiles::HasContentInRect(Rect) || AnyInRect(m_Width, m_Height, Rect.x, Rect.y, Rect.w, Rect.h, [this](int x, int y) { return m_pTuneTile[y * m_Width + x].m_Type != 0; });
+}
+
 void CLayerTune::BrushDraw(CLayer *pBrush, vec2 WorldPos)
 {
 	if(m_Readonly)

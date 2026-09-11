@@ -1743,6 +1743,10 @@ set(EXPECTED_DATA
   qmclient/icons/qm_icons_thin_4x.png
   qmclient/icons/qm_icons_thin_msdf.json
   qmclient/icons/qm_icons_thin_msdf.png
+  qmclient/nameplate_msdf/nameplate_base_msdf.json
+  qmclient/nameplate_msdf/nameplate_base_msdf.png
+  qmclient/nameplate_msdf/nameplate_cjk_msdf.json
+  qmclient/nameplate_msdf/nameplate_cjk_msdf.png
   mapres/basic_freeze.png
   mapres/bg_cloud1.png
   mapres/bg_cloud2.png
@@ -2884,6 +2888,9 @@ if(CLIENT)
     QmUi/QmDropdown.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
+    QmUi/QmIslandSurface.cpp
+    QmUi/QmIslandSurface.h
+    QmUi/QmIslandNotice.h
     QmUi/QmLayout.cpp
     QmUi/QmLayout.h
     QmUi/QmLegacy.cpp
@@ -3060,6 +3067,8 @@ if(CLIENT)
     components/qmclient/menus_qmclient.cpp
     components/qmclient/modes.cpp
     components/qmclient/modes.h
+    components/qmclient/nameplate_msdf/qm_nameplate_msdf_renderer.cpp
+    components/qmclient/nameplate_msdf/qm_nameplate_msdf_renderer.h
     components/qmclient/monitoring/monitoring.cpp
     components/qmclient/monitoring/monitoring_device_perf.cpp
     components/qmclient/monitoring/monitoring.h
@@ -3971,6 +3980,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_spotify_token_test.cpp
     qm_spotify_parser_test.cpp
     qm_modes_test.cpp
+    qm_nameplate_msdf_atlas_test.cpp
     qm_tee_hue_cycle_test.cpp
     qm_weapon_trajectory_test.cpp
     qmclient_update_version_test.cpp

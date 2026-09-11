@@ -272,6 +272,9 @@ A vote is currently active.
 Abort
 == Отмена
 
+Accumulated client launch count (used by the sponsor reminder)
+== Суммарное число запусков клиента (для напоминания о спонсорстве)
+
 Activate
 == Включить
 
@@ -487,6 +490,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == Добавляет стандартные чат-привязки
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== Показывает на HUD состояние клавиш, молота, управления и копирования у дамми, а также свой список bind-статусов.
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -1190,9 +1196,6 @@ Available resolutions
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == Средн. %.*f   ↓ %.*f   ↑ %.*f
 
-Axiom API returned an error
-== API Axiom вернул ошибку
-
 Axiom auto login failed
 == Ошибка автоматического входа в Axiom
 
@@ -1207,12 +1210,6 @@ Axiom dummy password
 
 Axiom main account password
 == Пароль основной учётной записи Axiom
-
-Axiom score request failed
-== Не удалось получить очки Axiom
-
-Axiom scores
-== Очки Axiom
 
 Axis
 == Ось
@@ -2036,9 +2033,6 @@ Compatible with single-player area hints from other servers
 Complete snapshots are arriving late or not arriving
 == Полные снапшоты приходят с задержкой или не приходят
 
-Completed maps
-== Пройденные карты
-
 Compressor attack time (ms)
 == Время атаки компрессора (мс)
 
@@ -2147,9 +2141,6 @@ Configure nameplate text, badges, and visibility
 Configure player identity and country
 == Настроить профиль игрока и флаг
 
-Configure qm_report_app_id and qm_report_secret first
-== Сначала настройте qm_report_app_id и qm_report_secret
-
 Configure QmClient gameplay helpers
 == Настроить игровые помощники QmClient
 
@@ -2206,9 +2197,6 @@ Connect dummy
 
 Connect dummy to enable
 == Подключите дамми, чтобы включить
-
-Connect to a server first
-== Сначала подключитесь к серверу
 
 Connect to server first to establish voice network link
 == Сначала подключитесь к серверу, чтобы установить голосовую сетевую связь.
@@ -2269,6 +2257,9 @@ Console command executed after joining server
 
 Console command executed before connecting to server
 == Команда консоли, выполняемая перед подключением к серверу
+
+Contacting title server
+== Подключение к серверу титулов
 
 Continue anyway?
 == Всё равно продолжить?
@@ -2345,9 +2336,6 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == Не удалось подключить дамми
 
-Could not create report scan request
-== Не удалось создать запрос сканирования жалобы
-
 Could not find a Tutorial server. Check your internet connection.
 == Не удалось найти учебный сервер. Проверьте ваше интернет-соединение.
 
@@ -2356,9 +2344,6 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 
 Could not find your Team
 == Не удалось найти вашу команду
-
-Could not get current server address
-== Не удалось получить адрес текущего сервера
 
 Could not get server list from master server
 == Не удалось получить список серверов от мастер-сервера
@@ -2383,6 +2368,9 @@ Could not resolve connect address '%s'. See local console for details.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == Не удалось сохранить загруженную карту. Попробуйте вручную удалить этот файл: %s
+
+Could not save title credential
+== Не удалось сохранить данные авторизации
 
 Could not save touch controls to file. See local console for details.
 == Не удалось сохранить сенсорное управление в файл. Подробности в локальной консоли.
@@ -2509,6 +2497,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Пользовательское название модели провайдера
+
+Custom title
+== Свой титул
 
 Custom translation prompt (overrides built-in)
 == Пользовательский промпт для перевода (переопределяет встроенный)
@@ -3683,6 +3674,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == Включить анимацию смены скина
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== Включите анимацию смены скина и выберите тип, область, длительность и сглаживание.
+
 Enable smooth cinematic camera while free spectating
 == Включить плавную кинематографическую камеру в свободном наблюдении
 
@@ -3773,6 +3767,9 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Включить список врагов
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== Включите анимацию смены или перезарядки оружия, затем настройте радиус, длительность, поворот и сглаживание.
+
 Enable word filter list
 == Включить список фильтрации слов
 
@@ -3818,8 +3815,14 @@ Enter /practice mode or restart to avoid the entire team being killed in 60 seco
 Enter Password
 == Введите пароль
 
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== Введите спонсорский код и нажмите «Активировать», затем впишите титул и нажмите «Сохранить». Включите «Показывать только с этим ником», чтобы привязать титул к одному нику.
+
 Enter Username
 == Введите имя пользователя
+
+Enter your sponsor code
+== Введите выданный код спонсора
 
 Entities
 == Сущности
@@ -3847,6 +3850,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Мастерская)
+
+Entry: %s
+== Где найти: %s
 
 Erase items on the in game background
 == Стирать элементы на игровом фоне
@@ -3892,6 +3898,9 @@ Evaluate an expression
 
 Event
 == Событие
+
+Exact bound nickname
+== Точный ник для привязки
 
 Example of usage
 == Пример использования
@@ -4211,6 +4220,9 @@ Forms
 Found %d global cards
 == Найдено %d глобальных карточек
 
+Four IP addresses are already online
+== Уже подключены 4 IP-адреса
+
 FPM
 == Убийств/мин
 
@@ -4504,9 +4516,6 @@ Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 
 Global card ordering old config migration completed flag
 == Флаг завершения миграции старой конфигурации глобальной сортировки карточек
-
-Global rank
-== Мировой рейтинг
 
 Global toggle key
 == Глобальная клавиша переключения
@@ -5213,6 +5222,9 @@ Insane
 Installing update. Please wait...
 == Установка обновления. Пожалуйста, подождите...
 
+Instant zoom reverse
+== Мгновенный разворот зума
+
 Interface
 == Интерфейс
 
@@ -5252,8 +5264,8 @@ Interpolation
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == Интервал автосохранения копии текущей карты редактора в папку "auto" (0=выкл)
 
-Invalid Axiom API response
-== Некорректный ответ API Axiom
+Invalid bound name
+== Неверный ник для привязки
 
 Invalid client id to kick
 == Неверный ID клиента для кика
@@ -5272,6 +5284,9 @@ Invalid option
 
 Invalid spectator id used
 == Использован неверный ID зрителя
+
+Invalid sponsor code
+== Неверный код спонсора
 
 Invalid translation backend
 == Неверный бэкенд перевода
@@ -5540,6 +5555,9 @@ Latency compensation
 Latency Jitter
 == Джиттер задержки
 
+Launch count threshold for the next sponsor reminder
+== Порог числа запусков до следующего напоминания
+
 Layout
 == Раскладка
 
@@ -5707,9 +5725,6 @@ Loading
 
 Loading assets...
 == Загрузка ресурсов...
-
-Loading Axiom scores...
-== Загрузка очков Axiom...
 
 Loading commands…
 == Загрузка команд…
@@ -5951,9 +5966,6 @@ Map to use on server
 Map type:
 == Тип карты:
 
-Maps
-== Карты
-
 Margin when notification is docked
 == Отступ при прилегании панели уведомлений к краю
 
@@ -6131,6 +6143,9 @@ Menu option - selected
 Merge consecutive identical player messages within 2 seconds
 == Объединять последовательные одинаковые сообщения игрока в течение 2 секунд
 
+Merges chat messages repeated within a short time into a single line.
+== Объединяет повторяющиеся за короткое время сообщения чата в одну строку.
+
 Message color
 == Цвет сообщения
 
@@ -6163,9 +6178,6 @@ Microphone volume
 
 Microphone volume (percent)
 == Громкость микрофона (в процентах)
-
-Mileage
-== Пробег
 
 Milliseconds
 == Миллисекунды
@@ -6316,9 +6328,6 @@ Moves to the tile with x/y-number ii
 
 Multi-View
 == Мульти-обзор
-
-Multiple exact Axiom players found
-== Найдено несколько игроков Axiom с точным совпадением
 
 Mute
 == Заглушить
@@ -6578,6 +6587,9 @@ New button
 New category name
 == Новое название категории
 
+New features
+== Новые возможности
+
 New IME
 == Новый IME
 
@@ -6821,12 +6833,6 @@ Not open, check input device or mic permission
 Not open, check output device
 == Не открыто, проверьте устройство вывода.
 
-Not ranked
-== Без рейтинга
-
-Not requested
-== Не запрошено
-
 Note
 == Заметка
 
@@ -6974,6 +6980,9 @@ Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
 == Показывать только тогда, когда другой ти не на экране
 
+Only show with this nickname
+== Показывать только с этим ником
+
 Only what you can't imagine, nothing Dream can't do
 == Только то, что вы не можете себе представить, нет ничего, что Dream не может сделать
 
@@ -7012,6 +7021,9 @@ Open pie menu
 
 Open rename dialog
 == Открыть диалог переименования
+
+Open settings
+== Открыть настройки
 
 Open spectator mode selector
 == Открыть выбор режима наблюдателя
@@ -7286,8 +7298,11 @@ Per-name volume (name=percent)
 Performance debug log threshold (ms)
 == Порог журнала отладки производительности (мс)
 
-Performance points
-== Очки эффективности
+Permanent access; up to 4 online IP addresses
+== Навсегда; до 4 IP одновременно
+
+Permanent sponsor verified
+== Постоянный статус спонсора подтверждён
 
 Personal best:
 == Личный рекорд:
@@ -7318,6 +7333,9 @@ Pet Skin:
 
 Pick result: %s
 == Результат выбора: %s
+
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== Выберите источник, соответствующий вашему музыкальному приложению, и просто включите музыку — текст подтянется сам.
 
 Pickup range
 == Диапазон подбора
@@ -7366,9 +7384,6 @@ Play the current demo
 
 Play the selected demo
 == Воспроизвести выбранную демку
-
-Play time
-== Время в игре
 
 Play/Pause
 == Воспроизведение/Пауза
@@ -7457,9 +7472,6 @@ Player name:
 Player not found
 == Игрок не найден
 
-Player not found on Axiom
-== Игрок не найден в Axiom
-
 Player preview
 == Предпросмотр игрока
 
@@ -7519,6 +7531,9 @@ Players can't hook each other on this server
 
 Playing effects
 == Эффекты воспроизведения
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== Проигрывает анимацию при смене скина, в том числе скина, украденного молотом.
 
 Please add a valid cut first
 == Сначала добавьте действительный отрезок обрезки
@@ -7615,6 +7630,9 @@ Predict freeze tiles (0 = off, 1 = on, 2 = partial (allow small movement when fr
 
 Predict grenade trajectory (only with cl_antiping 1)
 == Прогнозировать траекторию гранатомёта (только с cl_antiping 1)
+
+Predict ninja path
+== Предсказывать путь ниндзя
 
 Predict weapon projectiles (only with cl_antiping 1)
 == Прогнозировать снаряды оружия (только с cl_antiping 1)
@@ -7726,6 +7744,9 @@ Preview the composed status bar output
 
 Preview the current chat appearance
 == Preview the current chat appearance
+
+Preview the sponsor reminder without changing the launch count
+== Предпросмотр напоминания без изменения счётчика запусков
 
 Preview visibilities
 == Предпросмотр видимости
@@ -8003,8 +8024,8 @@ Ratio
 Ratio threshold for local target language detection
 == Порог доли распознавания локального целевого языка
 
-Read new feature indicators
-== Прочитанные новинки
+Really? Not even a little?
+== Серьёзно? Даже чуть-чуть?
 
 Reason
 == Причина
@@ -8050,6 +8071,15 @@ Red team
 
 Red team wins!
 == Красная команда побеждает!
+
+Redeem
+== Активировать
+
+Redeem your code and customize your title
+== Активируйте код и настройте титул
+
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== Активируйте спонсорский код, чтобы получить свой титул. Титул отображается в чате и на табличке имени.
 
 Reduce antiping and player prediction when frozen
 == Уменьшить антипинг и предсказание игрока при заморозке
@@ -8402,36 +8432,6 @@ Reply to messages from muted players
 Reply with dummy
 == Ответить дамми
 
-Report
-== Пожаловаться
-
-Report request canceled
-== Запрос жалобы отменен
-
-Report request failed due to network error
-== Запрос жалобы не удался из-за ошибки сети
-
-Report request failed with HTTP status: %d
-== Запрос жалобы не удался, HTTP-статус: %d
-
-Report request is already in progress
-== Запрос жалобы уже выполняется
-
-Report scan request submitted
-== Запрос сканирования жалобы отправлен
-
-Report service App ID
-== App ID службы жалоб
-
-Report service signing key
-== Ключ подписи службы жалоб
-
-Report service URL
-== Адрес службы жалоб
-
-Reports are not available on Axiom servers
-== Жалобы недоступны на серверах Axiom
-
 Request to swap your tee with another team member
 == Запросить обмен вашего ти с другим членом команды
 
@@ -8545,6 +8545,9 @@ Restore old single-segment hook collision line behavior
 
 Retrying…
 == Повторная попытка…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== Мгновенно менять направление зума при нажатии противоположной клавиши (0=оставить прежний плавный зум)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -8800,12 +8803,6 @@ Scale max mouse distance to 1000 for better aim
 
 Scale uncertainty duration by ping (100=1.0x)
 == Масштабировать длительность неопределённости по пингу (100=1.0x)
-
-Scanning current server
-== Сканирование текущего сервера
-
-Scanning current server...
-== Сканирование текущего сервера...
 
 Score
 == Очки
@@ -9953,6 +9950,9 @@ Show the number of frozen tees
 Show the number of tees still alive
 == Показывать количество живых ти
 
+Show the occasional sponsor reminder in the main menu
+== Иногда показывать напоминание о спонсорстве в главном меню
+
 Show the pet
 == Показать питомца
 
@@ -10060,6 +10060,9 @@ Shows gameplay information for this server
 
 Shows help to command r, general help if left blank
 == Показывает справку по команде r, общую справку, если оставить пустым
+
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== Получает текст песен из NetEase Cloud Music, Soda Music, Kugou и QQ Music и показывает его на динамическом острове.
 
 Shows the credits of the DDNet mod
 == Показывает титры мода DDNet
@@ -10445,8 +10448,20 @@ Sphere
 Spin pop
 == Вращающееся появление
 
+Sponsor code
+== Код спонсора
+
+Sponsor code already claimed
+== Этот код уже активирован
+
+Sponsor reminder
+== Напоминание о спонсорстве
+
 Sponsor support
 == Поддержка спонсоров
+
+Sponsor title
+== Титул спонсора
 
 Sponsors:
 == Спонсоры:
@@ -10540,6 +10555,9 @@ Status Scheme:
 
 Steam profile name
 == Имя профиля Steam
+
+Still free after %d sponsors. Take a look?
+== Нас держат %d спонсоров. Посмотрите?
 
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == Остановка ввода клавиш при переключении (0=выкл, 1=дамми, 2=игрок)
@@ -10657,6 +10675,9 @@ Switch failed
 
 Switch interval
 == Интервал переключения
+
+Switch on the status rows you need, then list the binds you want to watch.
+== Включите нужные переключатели состояний и укажите bind-команды для отслеживания в своём списке.
 
 Switch opacity
 == Непрозрачность переключателя
@@ -10834,9 +10855,6 @@ Team mode change disabled
 
 Team mode change is disabled on this server.
 == Изменение режима команды отключено на этом сервере.
-
-Team rank
-== Командный рейтинг
 
 Team save already in progress
 == Сохранение команды уже выполняется
@@ -11243,6 +11261,12 @@ Timer isn't displayed.
 Tiny Tee Size
 == Размер мини-ти
 
+Title server unavailable; retry
+== Сервер титулов недоступен; повторите попытку
+
+Title too long or contains unsupported characters
+== Титул слишком длинный или содержит недопустимые символы
+
 To save all players in your team have to be alive and not in '/spec'
 == Чтобы сохранить команду, все игроки в ней должны быть живы и не в '/spec'
 
@@ -11516,6 +11540,9 @@ Tune variable to value
 Tune variable to value or show current value
 == Установить переменную тюнинга в значение или показать текущее значение
 
+Turn on "Message merging" in Dream Features.
+== Включите «Message merging» в разделе «Dream Features».
+
 Tutorial
 == Обучение
 
@@ -11732,6 +11759,9 @@ Unregister protocol and file extensions
 Unsaved changes
 == Несохраненные изменения
 
+Up to 6 Chinese or 12 ASCII characters
+== До 6 китайских или 12 ASCII-символов
+
 Update
 == Обновить
 
@@ -11767,6 +11797,9 @@ URL for downloading maps (must start with https://)
 
 URL for downloading skins
 == URL для загрузки скинов
+
+Usage: %s
+== Использование: %s
 
 Usage: %s %s
 == Использование: %s %s
@@ -11833,6 +11866,9 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 
 Use mouse sensitivity when dynamic camera is on
 == Использовать чувствительность мыши при включённой динамической камере
+
+Use MSDF text rendering for nameplates (requires TexturedMsdf)
+== Use MSDF text rendering for nameplates (requires TexturedMsdf)
 
 Use multi-char replacement based on word length
 == Использовать замену несколькими символами в зависимости от длины слова
@@ -12715,6 +12751,9 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Ваш код тайм-аута установлен. Клиенты 0.7 не могут вернуть своих ти после тайм-аута; однако клиент 0.6 может завладеть вашим ти
+
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== При смене оружие въезжает с поворотом, а при перезарядке переворачивается.
 
 z = Zoom
 == z = Масштаб

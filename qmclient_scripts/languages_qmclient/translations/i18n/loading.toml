@@ -2562,7 +2562,7 @@ polish = "Witaj w DDNet"
 [[message]]
 key = "Why are you slowmo replaying to read this?"
 [message.translations]
-simplified_chinese = "所以你为什么要慢速回放来看这个？"
+simplified_chinese = "为什么不考虑支持一下栖梦呢"
 traditional_chinese = "所以你為什麼要慢速回放來看這個？"
 japanese = "なぜスローモーションリプレイでこれを読んでいるのですか？"
 korean = "이걸 읽으려고 느린 재생을 하고 계신가요?"

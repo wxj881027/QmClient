@@ -2348,3 +2348,24 @@ TEST(VoiceCore, VadTriggerWithZeroThreshold)
 	VadUpdate(State, Trigger, 1000, 500);
 	EXPECT_TRUE(State.m_Active);
 }
+
+// 意图：服务器头衔有严格的长度上限，并且只接受当前服务器的有效声明。
+TEST(QmClient, CustomTitleLengthAndPresenceValidation)
+{
+	EXPECT_TRUE(IsValidQmTitle("一二三四五六"));
+	EXPECT_TRUE(IsValidQmTitle("abcdefghijkl"));
+	EXPECT_FALSE(IsValidQmTitle("一二三四五六七"));
+	EXPECT_FALSE(IsValidQmTitle("abcdefghijklm"));
+	EXPECT_FALSE(IsValidQmTitle("[开发者]"));
+	EXPECT_FALSE(IsValidQmTitle("a\nb"));
+	EXPECT_FALSE(IsValidQmTitle(""));
+	const char *pJsonText = R"({"server_time":1000,"presences":[{"server_address":"a","player_id":3,"player_name":"Twen","title":"小猫","issued_at":1000,"expires_at":1015},{"server_address":"b","player_id":4,"player_name":"Twen","title":"小猫","issued_at":1000,"expires_at":1015},{"server_address":"a","player_id":5,"player_name":"Twen","title":"小猫","issued_at":900,"expires_at":999}]})";
+	json_value *pJson = json_parse(pJsonText, str_length(pJsonText));
+	ASSERT_NE(pJson, nullptr);
+	const auto Presences = ParseQmTitlePresences(pJson, "a");
+	ASSERT_EQ(Presences.size(), 1u);
+	EXPECT_EQ(Presences[0].m_PlayerId, 3);
+	EXPECT_EQ(Presences[0].m_Title, "小猫");
+	EXPECT_EQ(Presences[0].m_RemainingSeconds, 15);
+	json_value_free(pJson);
+}

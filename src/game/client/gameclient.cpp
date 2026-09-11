@@ -147,6 +147,7 @@ namespace
 #include <generated/protocolglue.h>
 
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/sponsor_nudge.h>
 #include <game/client/frame_scheduler.h>
 #include <game/client/projectile_data.h>
 #include <game/localization.h>
@@ -674,6 +675,8 @@ void CGameClient::OnConsoleInit()
 	pConsole->Register("team", "i[team-id]", CFGFLAG_CLIENT, ConTeam, this, "Switch team");
 	pConsole->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Kill yourself to restart");
 	pConsole->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange7, this, "Change ready state (0.7 only)");
+	// 调试用：不计数、不写盘，直接预览启动赞助提醒浮层。
+	pConsole->Register("qm_sponsor_nudge_preview", "", CFGFLAG_CLIENT, ConQmSponsorNudgePreview, this, "Preview the sponsor reminder without changing the launch count");
 
 	// register game commands to allow the client prediction to load settings from the map
 	pConsole->Register("tune", "s[tuning] ?f[value]", CFGFLAG_GAME, ConTuneParam, this, "Tune variable to value");
@@ -849,6 +852,18 @@ void CGameClient::OnInit()
 	MigrateJumpHintConfig();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
 
+	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
+	{
+		const int NudgeLaunchCount = qm_sponsor_nudge::OnLaunch(
+			&g_Config.m_QmLaunchCount, &g_Config.m_QmSponsorNudgeAt, qm_sponsor_nudge::RandomFirstExtraOffset());
+		if(NudgeLaunchCount > 0)
+		{
+			m_QmSponsorNudgeLaunchCount = NudgeLaunchCount;
+			m_QmSponsorNudgeVisible = true;
+			ConfigManager()->Save();
+		}
+	}
+
 	// Initialize config tags system
 	InitConfigTags();
 
@@ -1010,6 +1025,39 @@ void CGameClient::OnInit()
 
 	m_Menus.FinishLoading();
 	log_trace("gameclient", "initialization finished after %.2fms", (time_get() - OnInitStart) * 1000.0f / (float)time_freq());
+}
+
+void CGameClient::ShowSponsorNudgePreview()
+{
+	// 预览只驱动浮层显示，不动 qm_launch_count / qm_sponsor_nudge_at，
+	// 所以反复预览不会影响真实的提醒节奏。
+	m_QmSponsorNudgeLaunchCount = g_Config.m_QmSponsorNudgeAt;
+	m_QmSponsorNudgeVisible = true;
+}
+
+void CGameClient::ShowSponsorNudgeFarewell()
+{
+	// 只在本会话提示一次；总开关已经落盘，这是「问一句」而不是「拦一次」。
+	m_QmSponsorNudgeFarewell = true;
+}
+
+void CGameClient::DismissSponsorNudge(bool Permanent)
+{
+	m_QmSponsorNudgeVisible = false;
+	m_QmSponsorNudgeLaunchCount = 0;
+	m_QmSponsorNudgeFarewell = false;
+	if(!Permanent)
+		return;
+
+	g_Config.m_QmSponsorNudge = 0;
+	ConfigManager()->Save();
+}
+
+void CGameClient::OpenSponsorPage()
+{
+	g_Config.m_UiSettingsPage = CMenus::SETTINGS_QMCLIENT;
+	m_Menus.m_QmClientSettingsTab = CMenus::QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
+	m_Menus.SetMenuPage(CMenus::PAGE_SETTINGS);
 }
 
 void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoadingCaption, const char *pLoadingMessage)
@@ -6126,6 +6174,11 @@ void CGameClient::ConReadyChange7(IConsole::IResult *pResult, void *pUserData)
 	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
 	if(pClient->Client()->State() == IClient::STATE_ONLINE)
 		pClient->SendReadyChange7();
+}
+
+void CGameClient::ConQmSponsorNudgePreview(IConsole::IResult *pResult, void *pUserData)
+{
+	static_cast<CGameClient *>(pUserData)->ShowSponsorNudgePreview();
 }
 
 void CGameClient::ConchainLanguageUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

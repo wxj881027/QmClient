@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QmClient 灵动岛 · 编排台</title>
+<style>
+:root{
+  --bg:#090b10;
+  --panel:#12161f;
+  --panel2:#171c27;
+  --line:#242b3a;
+  --line2:#303849;
+  --text:#e8ecf5;
+  --muted:#8b94a6;
+  --accent:#66c0f4;
+  --accent2:#8be0ff;
+  --ok:#5fe08a;
+  --warn:#ffcf70;
+  --blurPX:7px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #16202f 0%, transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, #1b1626 0%, transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font:13px/1.5 "Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  overflow:hidden;
+}
+#app{display:grid;grid-template-columns:1fr 336px;gap:14px;height:100vh;padding:14px}
+
+/* ── 舞台 ───────────────────────────────────────────── */
+#stageWrap{display:flex;flex-direction:column;gap:10px;min-width:0}
+.stageTop{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.stageTop h1{font-size:14px;font-weight:600;letter-spacing:.3px}
+.stageTop h1 b{color:var(--accent)}
+.hint{color:var(--muted);font-size:12px}
+#stageBox{
+  flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center;
+}
+#stage{
+  position:relative;width:1280px;height:720px;
+  border-radius:12px;overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 0 1px #202737 inset;
+  background:#0d1119;
+  user-select:none;
+}
+#bg{position:absolute;inset:0;width:100%;height:100%;display:block}
+#islandLayer{position:absolute;left:0;top:0;width:1280px;height:720px;pointer-events:none;transform-origin:top left}
+/* 平滑圆角模糊底——「先模糊」的那一层 */
+#chrome{
+  position:absolute;left:0;top:0;width:0;height:0;
+  background:linear-gradient(180deg,rgba(34,39,52,.97),rgba(18,21,29,.985));
+  opacity:.94;
+  box-shadow:0 14px 38px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06) inset;
+  filter:url(#softBlur);
+  will-change:filter,left,top,width,height,opacity;
+  transition:left .16s ease, top .16s ease, width .16s ease, height .16s ease;
+}
+#chrome.gone{opacity:0;transition:opacity .22s ease}
+#content{position:absolute;left:0;top:0;width:0;height:0;transform:none;pointer-events:none;cursor:default}
+
+/* ── 岛内元素 ───────────────────────────────────────── */
+.el{
+  position:absolute;left:0;top:0;
+  display:flex;align-items:center;
+  border-radius:3px;
+  pointer-events:auto;
+  transition:box-shadow .16s ease;
+  will-change:transform;
+}
+#stage.arranging .el{filter:blur(var(--blurPX))}
+#stage.arranging .guides,#stage.arranging .hintline{opacity:0}
+.el:hover{box-shadow:0 0 0 1px rgba(102,192,244,.45)}
+.el.selected{box-shadow:0 0 0 1.5px var(--accent), 0 0 22px rgba(102,192,244,.35)}
+.el .label{
+  font-size:17px;font-weight:500;color:#f2f5fb;
+  overflow:hidden;white-space:nowrap;flex:1 1 auto;min-width:0;
+}
+.el .sub{font-size:15px;color:#9aa3b4;overflow:hidden;white-space:nowrap}
+.el .meta{font-size:16px;color:#dfe6f2;display:flex;gap:6px;align-items:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+.el .meta .u{opacity:.8;font-size:17px}
+.el .titleMeta{display:flex;flex-direction:column;justify-content:center;gap:2px;flex:1 1 auto;min-width:0}
+.el.cover{
+  width:58px;height:58px;border-radius:50%;overflow:hidden;
+  background:radial-gradient(circle at 30% 25%,#4b6cff,#20143a 68%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.14) inset, 0 6px 16px rgba(0,0,0,.5);
+}
+.el.cover .art{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(60% 60% at 70% 70%, rgba(255,120,180,.85), transparent 70%),
+    radial-gradient(50% 50% at 25% 20%, rgba(120,230,255,.9), transparent 70%),
+    conic-gradient(from 210deg, #2a1b4d, #4b6cff, #ff6fae, #2a1b4d);
+}
+.el.cover .note{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-size:22px;color:rgba(255,255,255,.9);text-shadow:0 2px 8px rgba(0,0,0,.6);
+}
+.el.wave{width:57px;justify-content:space-between}
+.el.wave span{
+  display:block;width:5.5px;border-radius:3px;background:rgba(235,245,255,.9);
+  transition:height .25s ease;
+}
+/* 注意：class 名与 el.type 一致（.timer），不是 .time */
+.el.timer{justify-content:center;padding:0 10px}
+.el.timer .race{font-size:31px;font-weight:600;color:#fbfcff;font-variant-numeric:tabular-nums;letter-spacing:.4px}
+.el.timer.critical .race{color:#ff4040}
+.el.timer .cp{
+  font-size:15px;color:#dbe2ef;margin-left:14px;padding:3px 7px;border-radius:4px;
+  background:rgba(255,255,255,.08);
+}
+.el.stat{width:78px;justify-content:center;gap:9px}
+.el.stat .dot{width:11px;height:11px;border-radius:50%;background:#ff2626;box-shadow:0 0 10px rgba(255,38,38,.8)}
+.el.stat .rec{font-size:15px;color:#f3f6fc;white-space:nowrap;font-variant-numeric:tabular-nums}
+.el.info{flex-direction:column;justify-content:center;gap:3px}
+.el.info .r1{font-size:17px;color:#fbfcff;font-variant-numeric:tabular-nums}
+.el.info .r2{font-size:14px;color:#dce3f0;white-space:nowrap}
+.el.sat{
+  width:58px;height:58px;border-radius:50%;justify-content:center;
+  background:rgba(240,248,255,.07);
+}
+.el.sat svg{position:absolute;inset:0;overflow:visible}
+.el.sat .g{position:relative;font-size:19px;color:#f6f9ff;line-height:1}
+.el.bottom{
+  height:51px;justify-content:center;padding:0 12px;
+  font-size:29px;color:#ffd75e;white-space:nowrap;
+}
+.el.bottom.swapReq{color:#b7e2ff;font-size:30px}
+.el.bottom .marq{display:block;white-space:nowrap}
+
+/* 结构提示线（除模糊后显示） */
+.guides,.hintline{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transition:opacity .22s ease}
+.gl{position:absolute;background:rgba(102,192,244,.30)}
+.gl.baseline{background:rgba(95,224,138,.45)}
+.gl.divider{background:rgba(255,255,255,.20);height:2px}
+.sp{position:absolute;height:14px;border-left:1px solid rgba(95,224,138,.65);border-right:1px solid rgba(95,224,138,.65)}
+.sp::after{
+  content:'';position:absolute;left:0;right:0;top:6px;height:1px;
+  background:linear-gradient(90deg,rgba(95,224,138,.15),rgba(95,224,138,.75),rgba(95,224,138,.15));
+}
+.splabel{
+  position:absolute;transform:translate(-50%,-100%);
+  font-size:13px;color:#bff2d2;background:rgba(9,14,20,.9);
+  padding:1px 6px;border-radius:4px;border:1px solid rgba(95,224,138,.35);white-space:nowrap;
+}
+
+/* 步骤条 */
+.steps{display:flex;gap:8px;flex-wrap:wrap}
+.step{
+  display:flex;align-items:center;gap:7px;
+  padding:6px 11px;border-radius:8px;background:var(--panel);border:1px solid var(--line);
+  font-size:12px;color:var(--muted);
+}
+.step b{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:#222a39;color:#cfd7e6;font-size:11px}
+.step.on{color:var(--text);border-color:rgba(102,192,244,.5);background:rgba(102,192,244,.10)}
+.step.on b{background:var(--accent);color:#08121b}
+.step.done b{background:var(--ok);color:#08121b}
+
+/* 侧栏 */
+#side{display:flex;flex-direction:column;gap:12px;min-height:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto}
+.card h2{font-size:11px;letter-spacing:1.2px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:9px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{
+  font:inherit;font-size:12.5px;color:var(--text);background:var(--panel2);
+  border:1px solid var(--line2);border-radius:8px;padding:7px 11px;cursor:pointer;
+  transition:.14s;display:inline-flex;align-items:center;gap:6px;
+}
+button:hover{background:#1e2532;border-color:#3d4859}
+button.primary{background:linear-gradient(180deg,#3d9fd6,#2c7fb4);border-color:#5cb4e4;color:#04121c;font-weight:600}
+button.primary:hover{background:linear-gradient(180deg,#4fb0e6,#3a8fc4)}
+button.wide{flex:1 1 auto;justify-content:center}
+label.tog{display:flex;align-items:center;gap:8px;padding:5px 0;color:#c9d2e2;font-size:12.5px;cursor:pointer}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;align-items:center;gap:8px;margin:7px 0}
+.row .k{flex:0 0 96px;color:var(--muted);font-size:12px}
+.row .v{flex:0 0 46px;text-align:right;font-variant-numeric:tabular-nums;color:#cfd7e6;font-size:12px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{padding:5px 9px;font-size:12px}
+.seg button.on{border-color:var(--accent);color:var(--accent2);background:rgba(102,192,244,.12)}
+#dbg{
+  position:absolute;left:10px;bottom:10px;z-index:8;
+  font:12px ui-monospace,Consolas,"Courier New",monospace;color:#9fb4cc;
+  background:rgba(6,10,16,.66);border:1px solid rgba(102,192,244,.22);
+  padding:4px 9px;border-radius:7px;pointer-events:none;
+}
+#report{font-size:12px;color:#c3ccdc;white-space:pre-wrap;font-family:ui-monospace,Consolas,"Courier New",monospace;line-height:1.65}
+#report .ok{color:var(--ok)}#report .warn{color:var(--warn)}#report .mut{color:var(--muted)}
+#toast{  position:absolute;left:50%;bottom:20px;transform:translate(-50%,14px);
+  background:rgba(8,12,18,.92);border:1px solid var(--line2);color:var(--text);
+  padding:7px 13px;border-radius:9px;font-size:12.5px;opacity:0;pointer-events:none;
+  transition:.18s;white-space:nowrap;z-index:9;
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.keys{color:var(--muted);font-size:11.5px;line-height:1.7}
+kbd{background:#1e2532;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:0 5px;font:inherit;font-size:11px;color:#d6deee}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ══ 舞台 ══ -->
+  <div id="stageWrap">
+    <div class="stageTop">
+      <h1>QmClient <b>灵动岛</b> 编排台</h1>
+      <span class="hint">先模糊 → 大方向对齐(圆角岛体)→ 除去模糊 = 完全对齐</span>
+    </div>
+
+    <div id="stageBox">
+      <div id="stage">
+        <!-- 背景：模拟游戏画面，让模糊/玻璃感可读 -->
+        <svg id="bg" viewBox="0 0 1280 720" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0b1220"/><stop offset=".55" stop-color="#122036"/><stop offset="1" stop-color="#0a0f18"/>
+            </linearGradient>
+            <radialGradient id="glow" cx=".5" cy=".1" r=".8">
+              <stop offset="0" stop-color="#2f5f8f" stop-opacity=".55"/><stop offset="1" stop-color="#2f5f8f" stop-opacity="0"/>
+            </radialGradient>
+            <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+              <path d="M32 0H0V32" fill="none" stroke="#7fa6d0" stroke-opacity=".07" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <rect width="1280" height="720" fill="url(#sky)"/>
+          <rect width="1280" height="720" fill="url(#glow)"/>
+          <rect y="0" width="1280" height="720" fill="url(#grid)"/>
+          <!-- 远景山体 -->
+          <path d="M0 470 L180 372 L320 452 L470 330 L640 470 L790 392 L950 470 L1120 366 L1280 460 L1280 720 L0 720Z"
+                fill="#0d1726" stroke="#1d2c42" stroke-width="1"/>
+          <path d="M0 560 L210 500 L400 566 L610 486 L820 572 L1040 496 L1280 566 L1280 720 L0 720Z"
+                fill="#0a1119" stroke="#182337" stroke-width="1"/>
+          <!-- 平台 / 出生点 -->
+          <g stroke="#2b3d57" stroke-width="2" fill="#141f2e">
+            <rect x="120" y="628" width="120" height="14" rx="4"/><rect x="300" y="616" width="140" height="14" rx="4"/>
+            <rect x="500" y="640" width="100" height="14" rx="4"/><rect x="680" y="606" width="160" height="14" rx="4"/>
+            <rect x="900" y="630" width="120" height="14" rx="4"/><rect x="1090" y="612" width="130" height="14" rx="4"/>
+          </g>
+          <g fill="#f2f6ff" opacity=".55">
+            <circle cx="180" cy="618" r="3"/><circle cx="370" cy="606" r="3"/><circle cx="550" cy="630" r="3"/>
+            <circle cx="760" cy="596" r="3"/><circle cx="960" cy="620" r="3"/><circle cx="1155" cy="602" r="3"/>
+          </g>
+          <!-- 一个 Tee，做比例参考 -->
+          <g transform="translate(700 560) scale(1.1)">
+            <ellipse cx="0" cy="16" rx="13" ry="4" fill="#000" opacity=".45"/>
+            <circle cx="0" cy="0" r="12" fill="#2a2f38" stroke="#0e1116" stroke-width="2"/>
+            <circle cx="0" cy="-2" r="7" fill="#161a20"/>
+            <circle cx="-3" cy="-3" r="1.6" fill="#eaf4ff"/><circle cx="3" cy="-3" r="1.6" fill="#eaf4ff"/>
+          </g>
+          <!-- 冷色光斑，方便观察玻璃模糊 -->
+          <circle cx="250" cy="180" r="130" fill="#66c0f4" opacity=".10"/>
+          <circle cx="1050" cy="250" r="160" fill="#ff6fae" opacity=".07"/>
+        </svg>
+
+        <!-- 岛层：chrome = 模糊圆角底，content = 岛内元素 -->
+        <div id="islandLayer">
+          <div id="chrome"></div>
+          <div id="content">
+            <div class="hintline" id="hintline"></div>
+            <div class="guides" id="guides"></div>
+          </div>
+        </div>
+
+        <div id="toast"></div>
+        <div id="dbg">—</div>
+      </div>
+    </div>
+
+    <div class="steps" id="steps">
+      <div class="step" data-step="1"><b>1</b> 先模糊</div>
+      <div class="step" data-step="2"><b>2</b> 大方向对齐（圆角）</div>
+      <div class="step" data-step="3"><b>3</b> 除去模糊</div>
+    </div>
+  </div>
+
+  <!-- ══ 侧栏 ══ -->
+  <div id="side">
+    <div class="card">
+      <h2>编排</h2>
+      <div class="btns">
+        <button class="primary wide" id="btnSolve">◆ 一键解算对齐</button>
+      </div>
+      <div class="btns" style="margin-top:8px">
+        <button id="btnBlur" class="wide">◐ 模糊 / 清晰</button>
+        <button id="btnReset" class="wide">↺ 复位</button>
+      </div>
+      <div class="btns" style="margin-top:8px">
+        <button id="btnShot" class="wide">⤓ 存 PNG</button>
+        <button id="btnUndo" class="wide">⌫ 撤销</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <span class="k">视口缩放</span>
+        <input type="range" id="rngZoom" min="40" max="130" step="2" value="100">
+        <span class="v" id="lblZoom">100%</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <span class="k">模糊半径</span>
+        <input type="range" id="rngBlur" min="0" max="18" step="1" value="5">
+        <span class="v" id="lblBlur">5px</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>显示</h2>
+      <label class="tog"><input type="checkbox" id="ckChrome" checked> 岛体圆角底（模糊层）</label>
+      <label class="tog"><input type="checkbox" id="ckGuides" checked> 结构提示线（中线 / 基线 / 分栏）</label>
+      <label class="tog"><input type="checkbox" id="ckHud"> 左侧卫星倒计时</label>
+      <label class="tog"><input type="checkbox" id="ckBottom" checked> 底部行（歌词 / 换人请求）</label>
+      <label class="tog"><input type="checkbox" id="ckScene" checked> 游戏背景</label>
+      <div class="row">
+        <span class="k">岛高</span>
+        <input type="range" id="rngH" min="60" max="110" step="1" value="77">
+        <span class="v" id="lblH">77</span>
+      </div>
+      <div class="row">
+        <span class="k">内边距</span>
+        <input type="range" id="rngPad" min="0" max="40" step="1" value="10">
+        <span class="v" id="lblPad">10</span>
+      </div>
+      <div class="row">
+        <span class="k">波形条数</span>
+        <input type="range" id="rngBars" min="3" max="14" step="1" value="7">
+        <span class="v" id="lblBars">7</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>预设</h2>
+      <div class="seg" id="presets">
+        <button data-p="compact" class="on">紧凑（现状）</button>
+        <button data-p="expanded">展开态</button>
+        <button data-p="stacked">我流·两段式</button>
+      </div>
+      <div class="keys" style="margin-top:9px">
+        <kbd>拖动</kbd> 移动元素 · <kbd>方向键</kbd> 微调 · <kbd>Shift</kbd>+方向键 大步<br>
+        <kbd>单击</kbd> 选中 · <kbd>Ctrl</kbd>+<kbd>Z</kbd> 撤销 · 拖岛体左侧手柄整岛平移
+      </div>
+    </div>
+
+    <div class="card" style="flex:1 1 auto">
+      <h2>对齐报告</h2>
+      <div id="report"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 平滑圆角模糊滤镜：先做一层软化的色块，对齐后再撤掉 -->
+<svg style="position:fixed;left:-999px;top:-999px;width:2px;height:2px;pointer-events:none" aria-hidden="true">
+  <defs>
+    <filter id="softBlur" x="-30%" y="-160%" width="160%" height="420%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="var(--blurPX)"/>
+    </filter>
+  </defs>
+</svg>
+
+<script>
+'use strict';
+/* 启动期错误探针：写进 #dbg 与 title，便于无头自检定位 */
+window.addEventListener('error', ev => {
+  const d = document.getElementById('dbg');
+  const msg = `ERR ${ev.message} @${ev.lineno}:${ev.colno}`;
+  if(d) d.textContent = msg;
+  document.title = msg;
+});
+/* ═══════════════════════════════════════════════════════════
+   设计坐标系 = HUD 逻辑像素（1280×720），舞台上 1:1 显示。
+   C++ 端真实的缩放常量是 QmHudMediaIslandDesignScale = 0.8，
+   所以「HUD 单位 / 0.8 = 源码里的字面值」。报告里两个都给出。
+   ═══════════════════════════════════════════════════════════ */
+const DESIGN_SCALE = 0.8;
+const BASE = 16;          // 基准栅格（源码里大量 QmHudMediaIslandScaled 都是它的倍数）
+const U = BASE * DESIGN_SCALE;   // 12.8 → 与岛高一致
+
+const stage    = document.getElementById('stage');
+const stageBox = document.getElementById('stageBox');
+const islandLayer = document.getElementById('islandLayer');
+const chrome   = document.getElementById('chrome');
+const content  = document.getElementById('content');
+const guidesEl = document.getElementById('guides');
+const hintEl   = document.getElementById('hintline');
+const toastEl  = document.getElementById('toast');
+const reportEl = document.getElementById('report');
+const dbgEl    = document.getElementById('dbg');
+
+const COLORS = {swap:'#1ae6ff', switch:'#ff8c1a', mute:'#ff3340'};
+const ICONS  = {swap:'⇄', switch:'⌖', mute:'静'};
+
+/* ── 状态 ─────────────────────────────────────────────── */
+let state, elMap = new Map(), selected = null, drag = null, undoStack = [];
+let zoom = 1;        // 视口缩放：100% = 1280×720 逻辑像素在舞台上 1:1
+let viewScale = 1;   // 舞台当前实际缩放（HUD → 屏幕像素）
+
+function blankState(){
+  return {
+    island:{ x:60, y:14 },
+    H:77, mainH:77, pad:10, bars:7,
+    show:{chrome:true, guides:true, hud:true, bottom:true, scene:true},
+    step:3, arranging:false, blurValue:5,
+    els:[]
+  };
+}
+function E(o){ return Object.assign({dir:1, kind:'chip', visible:true}, o); }
+
+/* 预设只写 x/w —— y 由自动归行算：主行统一吸到主行带中线上，
+   底部行紧贴主行内容下沿叠起来。岛顶是绝对坐标，内容 y 相对岛顶排版。
+   返回主行带高。 */
+function autoY(els, band, pad, topY){
+  const main = els.filter(e => e.kind !== 'bottom');
+  const cy = topY + pad + band / 2;
+  main.forEach(e => { e.y = round2(cy - e.h / 2); });
+  // 底部行贴紧主行内容下沿 + pad（主行内容通常窄于带高，不看这点会留出假间距）
+  const mainBot = main.length ? Math.max(...main.map(e => e.y + e.h)) : topY + pad + band;
+  const bottoms = els.filter(e => e.kind === 'bottom');
+  bottoms.forEach((e, i) => {
+    e.y = round2((i === 0 ? mainBot : bottoms[i - 1].y + bottoms[i - 1].h) + pad);
+  });
+  return band;
+}
+/* 岛顶默认位置（预设构建期 state 还不存在，故用常量） */
+const ISLAND_TOP = 14;
+
+function makePreset(list, band, pad){
+  const els = list.map(E);
+  fitWidth(els);
+  return {els, mainH: autoY(els, band, pad, ISLAND_TOP)};
+}
+/* 岛体左上角为基准重新排版（岛顶位置变了就重跑一次） */
+function relayout(){
+  autoY(state.els, state.mainH, state.pad, state.island.y);
+}
+/* 预设宽度按舞台收口（HUD 单位） */
+const TARGET_ISLAND_W = 780;
+function fitWidth(els){
+  const vis = els.filter(e => e.visible !== false);
+  if(!vis.length) return;
+  const x0 = Math.min(...vis.map(e => e.x)), x1 = Math.max(...vis.map(e => e.x + e.w));
+  const span = x1 - x0;
+  const k = span > TARGET_ISLAND_W ? TARGET_ISLAND_W / span : 1;
+  if(k >= 1) return;
+  const ox = (x0 + x1) / 2;
+  els.forEach(e => {
+    e.x = round2((e.x - ox) * k + 640);
+    e.w = Math.max(26, round2(e.w * k));
+  });
+  // 底部行改为跟随主行居中（歌词/请求行按内容居中即可）
+  const bottom = els.filter(e => e.kind === 'bottom');
+  if(bottom.length){
+    const bw = Math.max(...bottom.map(e => e.w));
+    bottom.forEach(e => { e.x = round2(640 - e.w / 2); e.w = bw; });
+  }
+}
+
+const PRESETS = {
+  /* 1) 现状：左侧媒体胶囊 + 中央计时 + 右侧状态，底部行挂歌词 */
+  compact(){
+    return makePreset([
+      {id:'cover',   type:'cover',  x:150, w:58,  h:58},
+      {id:'title',   type:'title',  x:218, w:214, h:40, text:'Ocean Eyes', sub:'Billie Eilish'},
+      {id:'team',    type:'team',   x:444, w:84,  h:30},
+      {id:'wave',    type:'wave',   x:540, w:57,  h:44},
+      {id:'timer',   type:'timer',  x:646, w:158, h:46, text:'12:47.32', extra:'CP3'},
+      {id:'status',  type:'status', x:830, w:78,  h:44},
+      {id:'lyrics',  type:'bottom', kind:'bottom', x:262, w:600, h:51, text:'♪ 我把青春都给了你 却忘了问一句 你是否愿意'}
+    ], 77, 10);
+  },
+  /* 2) 展开态：左侧两枚卫星倒计时 + 标题/歌手两行，底部多一条换人请求 */
+  expanded(){
+    return makePreset([
+      {id:'s1',      type:'sat',    x:150, w:58, h:58, color:COLORS.switch, icon:ICONS.switch, prog:0.72},
+      {id:'s2',      type:'sat',    x:216, w:58, h:58, color:COLORS.mute,   icon:ICONS.mute,   prog:0.34},
+      {id:'cover',   type:'cover',  x:300, w:58, h:58},
+      {id:'title',   type:'title',  x:368, w:250, h:40, text:'夜航西飞', sub:'陈粒 - 洄游'},
+      {id:'team',    type:'team',   x:628, w:84, h:30},
+      {id:'wave',    type:'wave',   x:722, w:57, h:44},
+      {id:'timer',   type:'timer',  x:800, w:150, h:46, text:'02:11.08'},
+      {id:'info',    type:'info',   x:966, w:96, h:46},
+      {id:'lyrics',  type:'bottom', kind:'bottom', x:170, w:600, h:51, text:'♪ 于是我继续走 走到灯火通明的地方'},
+      {id:'swap',    type:'bottom', kind:'bottom', x:170, w:600, h:51, cls:'swapReq', text:'/swap 3  →  Q1menG'}
+    ], 77, 10);
+  },
+  /* 3) 我流两段式：上排信息 + 下排歌词，右侧独立状态栏 */
+  stacked(){
+    return makePreset([
+      {id:'cover',   type:'cover',  x:120, w:58, h:58},
+      {id:'title',   type:'title',  x:188, w:236, h:40, text:'Spiral of Ants', sub:'Lemon Demon'},
+      {id:'team',    type:'team',   x:440, w:84,  h:30},
+      {id:'wave',    type:'wave',   x:534, w:57,  h:44},
+      {id:'timer',   type:'timer',  x:600, w:158, h:46, text:'01:04.55'},
+      {id:'status',  type:'status', x:784, w:78,  h:44},
+      {id:'lyrics',  type:'bottom', kind:'bottom', x:120, w:706, h:51, text:'♪ All the ants are marching in a spiral down…'},
+      {id:'hud',     type:'bottom', kind:'bottom', x:120, w:706, h:51, cls:'swapReq', text:'/pause  ·  3 人观战'}
+    ], 77, 10);
+  }
+};
+
+/* ── 小工具 ───────────────────────────────────────────── */
+const round2 = n => Math.round(n * 100) / 100;
+const clamp  = (v,a,b) => Math.min(b, Math.max(a, v));
+function hexA(hex, a){
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>toastEl.classList.remove('on'), 1500);
+}
+function snapshot(){
+  undoStack.push(JSON.stringify({
+    island: state.island, els: state.els, pad: state.pad,
+    bars: state.bars, blurValue: state.blurValue, H: state.mainH
+  }));
+  if(undoStack.length > 80) undoStack.shift();
+}
+function undo(){
+  const s = undoStack.pop();
+  if(!s){ toast('没有可撤销的操作'); return; }
+  const d = JSON.parse(s);
+  state.island = d.island; state.els = d.els;
+  state.pad = d.pad; state.bars = d.bars; state.blurValue = d.blurValue;
+  state.mainH = d.H; state.H = d.H;
+  syncControls();
+  selected = null; render(); toast('已撤销');
+}
+/* 把 state 回灌到控件（撤销 / 复位时用） */
+function syncControls(){
+  document.getElementById('rngH').value = state.mainH;
+  document.getElementById('lblH').textContent = state.mainH;
+  document.getElementById('rngPad').value = state.pad;
+  document.getElementById('lblPad').textContent = state.pad;
+  document.getElementById('rngBars').value = state.bars;
+  document.getElementById('lblBars').textContent = state.bars;
+  document.getElementById('rngBlur').value = state.blurValue;
+  document.getElementById('lblBlur').textContent = state.blurValue + 'px';
+  document.getElementById('rngZoom').value = Math.round(zoom * 100);
+  document.getElementById('lblZoom').textContent = Math.round(zoom * 100) + '%';
+}
+
+/* ── 元素 DOM ─────────────────────────────────────────── */
+function bars(n, seed){
+  let out = '';
+  for(let i = 0; i < n; i++){
+    const h = Math.round(10 + 30 * Math.abs(Math.sin((i + 1) * (seed || 1.7))));
+    out += `<span style="height:${h}px"></span>`;
+  }
+  return out;
+}
+function satSvg(color, prog){
+  const R = 24, C = 2 * Math.PI * R;
+  return `<svg viewBox="0 0 58 58">
+    <circle cx="29" cy="29" r="${R}" fill="none" stroke="${hexA(color,.18)}" stroke-width="4"/>
+    <circle cx="29" cy="29" r="${R}" fill="none" stroke="${color}" stroke-width="4"
+            stroke-linecap="round" stroke-dasharray="${round2(C*prog)} ${round2(C)}"
+            transform="rotate(-90 29 29)"/>
+  </svg>`;
+}
+function buildEl(el){
+  const d = document.createElement('div');
+  d.className = 'el ' + el.type + (el.cls ? ' ' + el.cls : '');
+  d.dataset.id = el.id;
+  switch(el.type){
+    case 'cover':  d.innerHTML = `<div class="art"></div><div class="note">♪</div>`; break;
+    case 'title':  d.innerHTML = `<div class="titleMeta">
+                      <span class="label">${el.text || 'Ocean Eyes'}</span>
+                      ${el.sub ? `<span class="sub">${el.sub}</span>` : ''}</div>`; break;
+    case 'team':   d.innerHTML = `<span class="meta"><span class="u">☻</span>${el.text || '5 / 8'}</span>`; break;
+    case 'wave':   d.innerHTML = bars(state.bars, 1.7); break;
+    case 'timer':  d.innerHTML = `<span class="race">${el.text || '12:47.32'}</span>`
+                               + (el.extra ? `<span class="cp">${el.extra}</span>` : ''); break;
+    case 'status': d.innerHTML = `<span class="dot"></span><span class="rec">02:14</span>`; break;
+    case 'info':   d.innerHTML = `<span class="r1">21:04</span><span class="r2">冻结 3 人</span>`; break;
+    case 'sat':    d.innerHTML = satSvg(el.color, el.prog) + `<span class="g">${el.icon}</span>`; break;
+    case 'bottom': d.innerHTML = `<span class="marq">${el.text || ''}</span>`; break;
+  }
+  return d;
+}
+function ensureDom(){
+  const alive = new Set();
+  state.els.forEach(el => {
+    alive.add(el.id);
+    let d = elMap.get(el.id);
+    if(!d){
+      d = buildEl(el); elMap.set(el.id, d); content.appendChild(d);
+      d.addEventListener('pointerdown', onElDown);
+      d.addEventListener('click', ev => {
+        if(drag && drag.moved) return;
+        ev.stopPropagation(); select(el.id);
+      });
+    } else {
+      d.className = 'el ' + el.type + (el.cls ? ' ' + el.cls : '');
+      if(el.type === 'title'){
+        d.innerHTML = `<div class="titleMeta"><span class="label">${el.text || 'Ocean Eyes'}</span>`
+                    + (el.sub ? `<span class="sub">${el.sub}</span>` : '') + `</div>`;
+      } else if(el.type === 'bottom'){
+        d.innerHTML = `<span class="marq">${el.text || ''}</span>`;
+      } else if(el.type === 'timer'){
+        d.innerHTML = `<span class="race">${el.text || ''}</span>`
+                    + (el.extra ? `<span class="cp">${el.extra}</span>` : '');
+      } else if(el.type === 'wave'){
+        d.innerHTML = bars(state.bars, 1.7);
+      }
+    }
+    d.style.display = el.visible === false ? 'none' : '';
+    d.style.width  = el.w + 'px';
+    d.style.height = el.h + 'px';
+    d.classList.toggle('selected', selected === el.id);
+    d.classList.toggle('critical', !!el.critical);
+  });
+  for(const [id, d] of [...elMap]){
+    if(!alive.has(id)){ d.remove(); elMap.delete(id); }
+  }
+}
+
+/* ── 布局计算 ─────────────────────────────────────────── */
+function visibleEls(){ return state.els.filter(e => e.visible !== false); }
+
+/* 岛体的纵向真相：主行带 = [y+pad, y+pad+mainH]，底部行挂在带之下。
+   岛体总高 = max(主行带下沿, 最下元素下沿) + pad —— 主行中线永远等于岛体中线的充要条件。 */
+function mainBand(){ return state.mainH; }
+function islandTotalH(els){
+  els = els || visibleEls();
+  const band = state.island.y + state.pad + mainBand() + state.pad;
+  const content = els.length ? Math.max(...els.map(e => e.y + e.h)) + state.pad : state.island.y + mainBand();
+  return round2(Math.max(band, content) - state.island.y);
+}
+
+/* 岛体矩形 = 所有元素按内边距收紧后的并集（所以拖动会牵动圆角壳） */
+function islandRect(els){
+  els = els || visibleEls();
+  const H = islandTotalH(els);
+  if(!els.length) return {x:state.island.x, y:state.island.y, w:260, h:H};
+  let x0 = Infinity, x1 = -Infinity;
+  els.forEach(e => {
+    x0 = Math.min(x0, e.x);
+    x1 = Math.max(x1, e.x + e.w);
+  });
+  const pad = state.pad;
+  return {
+    x: round2(x0 - pad), y: round2(state.island.y),
+    w: round2(x1 - x0 + pad * 2), h: H
+  };
+}
+/* 主行：以主行带高为基准的那一条（不含底部行） */
+function mainRow(els){
+  els = els || visibleEls();
+  const r = islandRect(els);
+  const band = mainBand();
+  const main = els.filter(e => e.kind !== 'bottom');
+  const cy = r.y + state.pad + band / 2;
+  if(!main.length) return {x:r.x + state.pad, y:r.y + state.pad, w:0, h:band, cy};
+  const cx0 = Math.min(...main.map(e => e.x)), cx1 = Math.max(...main.map(e => e.x + e.w));
+  return {x:cx0, y:round2(cy - band / 2), w:cx1 - cx0, h:band, cy};
+}
+/* 底部行的顶边（用于分栏线） */
+function bottomTop(els){
+  const b = (els || visibleEls()).filter(e => e.kind === 'bottom');
+  return b.length ? Math.min(...b.map(e => e.y)) : null;
+}
+/* 行对齐规则：顶部留白 == 底部留白；底部行顶 = 主行带下沿 + 留白。
+   把一行元素在垂直方向压到目标中线。 */
+function centerRow(items, cy){
+  items.forEach(e => { e.y = round2(cy - e.h / 2); });
+}
+
+/* ── 吸附 ─────────────────────────────────────────────── */
+const SNAP = 10;      // HUD 单位内的吸附容差
+function snapFor(el, nx, ny, excludeId){
+  const els = visibleEls().filter(e => e.id !== (excludeId || el.id));
+  const r = islandRect();
+  const row = mainRow();
+  const b = {x: nx, y: ny, snapX: null, snapY: null, guides: []};
+  const opts = [];
+
+  // 水平：岛体 / 主行 / 其他元素 / 基准栅格
+  opts.push({v: nx,                 at: r.x,       type:'edge', ref:null,    d: nx - r.x});
+  opts.push({v: nx + el.w / 2,      at: r.x + r.w / 2, type:'center', ref:null, d: (nx + el.w/2) - (r.x + r.w/2)});
+  opts.push({v: nx + el.w,          at: r.x + r.w, type:'edge', ref:null,    d: (nx + el.w) - (r.x + r.w)});
+  opts.push({v: nx + el.w / 2,      at: row.x,     type:'edge', ref:null,    d: (nx + el.w/2) - row.x});
+  opts.push({v: nx + el.w / 2,      at: row.x + row.w, type:'edge', ref:null, d: (nx + el.w/2) - (row.x + row.w)});
+  els.forEach(o => {
+    opts.push({v: nx,            at: o.x,           type:'edge',  ref:o, d: nx - o.x});
+    opts.push({v: nx,            at: o.x + o.w,     type:'gap',   ref:o, d: nx - (o.x + o.w)});
+    opts.push({v: nx + el.w,     at: o.x,           type:'gap',   ref:o, d: (nx + el.w) - o.x});
+    opts.push({v: nx + el.w,     at: o.x + o.w,     type:'edge',  ref:o, d: (nx + el.w) - (o.x + o.w)});
+    opts.push({v: nx + el.w / 2, at: o.x + o.w / 2, type:'center',ref:o, d: (nx + el.w/2) - (o.x + o.w/2)});
+  });
+  const step = BASE / 2;
+  const grid = Math.round(nx / step) * step;
+  opts.push({v: nx, at: grid, type:'grid', ref:null, d: nx - grid});
+
+  let best = null;
+  opts.forEach(o => {
+    if(Math.abs(o.d) > SNAP) return;
+    if(!best || Math.abs(o.d) < Math.abs(best.d)) best = o;
+  });
+  if(best){
+    b.x = round2(nx - best.d);
+    b.snapX = best;
+    const off = round2(nx - b.x);
+    b.guides.push({kind:best.type === 'gap' ? 'gap' : 'x', at: best.at, ref:best.ref, off, dir: el.dir});
+  }
+
+  // 垂直：主行中线（居中）/ 岛体上下内边距
+  const vOpts = [
+    {v: ny,             at: row.cy - el.h / 2,           type:'rowcenter', ref:null, d: ny - (row.cy - el.h/2)},
+    {v: ny + el.h / 2,  at: row.cy,                      type:'rowcenter', ref:null, d: (ny + el.h/2) - row.cy},
+    {v: ny + el.h,      at: row.cy + el.h / 2,           type:'rowcenter', ref:null, d: (ny + el.h) - (row.cy + el.h/2)},
+    {v: ny,             at: r.y + state.pad,             type:'rowpad',   ref:null, d: ny - (r.y + state.pad)},
+    {v: ny + el.h,      at: r.y + r.h - state.pad,       type:'rowpad',   ref:null, d: (ny + el.h) - (r.y + r.h - state.pad)}
+  ];
+  if(el.kind === 'bottom'){
+    const bt = bottomTop();
+    if(bt != null) vOpts.push({v: ny, at: bt, type:'rowtop', ref:null, d: ny - bt});
+  }
+  els.forEach(o => {
+    vOpts.push({v: ny + el.h / 2, at: o.y + o.h / 2, type:'center', ref:o, d: (ny + el.h/2) - (o.y + o.h/2)});
+  });
+  let vbest = null;
+  vOpts.forEach(o => {
+    if(Math.abs(o.d) > SNAP) return;
+    if(!vbest || Math.abs(o.d) < Math.abs(vbest.d)) vbest = o;
+  });
+  if(vbest){
+    b.y = round2(ny - vbest.d);
+    b.snapY = vbest;
+    b.guides.push({kind:'y', at: vbest.at, ref: vbest.ref, off: round2(ny - b.y)});
+  }
+  return b;
+}
+
+/* ── 渲染 ─────────────────────────────────────────────── */
+function render(){
+  ensureDom();
+  const els = visibleEls();
+  const r = islandRect(els);
+  const pad = state.pad;
+  const row = mainRow(els);
+  const bt = bottomTop(els);
+  const radius = Math.min(mainBand() / 2 + pad, r.h / 2, r.w / 2);
+
+  // 岛层与元素同处舞台坐标（islandLayer 现在铺满舞台）
+  content.style.left = r.x + 'px';
+  content.style.top  = r.y + 'px';
+
+  // 模糊底（圆角壳）
+  chrome.style.left   = r.x + 'px';
+  chrome.style.top    = r.y + 'px';
+  chrome.style.width  = r.w + 'px';
+  chrome.style.height = r.h + 'px';
+  chrome.style.borderRadius = radius + 'px';
+  chrome.classList.toggle('gone', !state.show.chrome);
+
+  // 元素
+  state.els.forEach(el => {
+    const d = elMap.get(el.id);
+    if(!d) return;
+    d.style.transform = `translate(${round2(el.x - r.x)}px, ${round2(el.y - r.y)}px)`;
+    d.style.opacity = state.arranging ? .72 : 1;
+  });
+
+  // 结构提示线
+  let g = '';
+  if(state.show.guides && !state.arranging){
+    const H = r.h;
+    g += `<div class="gl baseline" style="left:0;top:${round2(row.cy - r.y)}px;width:100%;height:1px"></div>`;
+    if(bt != null && bt > r.y + 4){
+      g += `<div class="gl divider" style="left:${round2(pad * 1.4)}px;top:${round2(bt - r.y)}px;width:${round2(r.w - pad * 2.8)}px"></div>`;
+    }
+    // 元素两侧的分栏线（视觉节奏参考）
+    els.filter(e => e.kind !== 'bottom').forEach(e => {
+      const cx = round2(e.x + e.w / 2 - r.x);
+      g += `<div class="gl" style="left:${cx}px;top:${round2(row.cy - r.y - 10)}px;width:1px;height:20px;opacity:.5;pointer-events:none"></div>`;
+    });
+    // 元素包围盒虚线框：拖动后一眼看出谁没进壳
+    els.forEach(e => {
+      const l = round2(e.x - r.x), t = round2(e.y - r.y);
+      g += `<div style="position:absolute;left:${l}px;top:${t}px;width:${e.w}px;height:${e.h}px;`
+         + `border:1px dashed rgba(102,192,244,.28);border-radius:3px;pointer-events:none"></div>`;
+    });
+  }
+  guidesEl.innerHTML = g;
+
+  // 拖动中的吸附提示
+  let h = '';
+  if(drag && drag.guides){
+    drag.guides.forEach(s => {
+      if(s.kind === 'y' || s.kind === 'rowcenter' || s.kind === 'rowpad' || s.kind === 'rowtop'){
+        h += `<div class="gl baseline" style="left:0;top:${round2(s.at - r.y)}px;width:100%;height:1px;opacity:.8"></div>`;
+      } else if(s.kind === 'x' || s.kind === 'center' || s.kind === 'edge' || s.kind === 'grid'){
+        h += `<div class="gl" style="left:${round2(s.at - r.x)}px;top:0;width:1px;height:100%;opacity:.85"></div>`;
+      } else if(s.kind === 'gap' && s.ref){
+        const a = Math.min(s.at, s.at + s.off), b = Math.max(s.at, s.at + s.off);
+        h += `<div class="sp" style="left:${round2(a - r.x)}px;top:${round2(s.ref.y + s.ref.h / 2 - r.y)}px;width:${round2(b - a)}px"></div>`;
+        h += `<div class="splabel" style="left:${round2((a + b) / 2 - r.x)}px;top:${round2(s.ref.y + s.ref.h / 2 - r.y - 10)}px">间距 ${round2(b - a)}</div>`;
+      }
+    });
+  }
+  hintEl.innerHTML = h;
+
+  buildReport(r, row);
+  autosizeChips();
+  // 实时数值条：也是 headless 自检用的探针
+  const s = stageBox.clientWidth ? Math.min((stageBox.clientWidth - 4) / 1280, (stageBox.clientHeight - 4) / 720) : 0;  dbgEl.textContent = `els=${els.length} island=${round2(r.w)}×${round2(r.h)} @(${round2(r.x)},${round2(r.y)}) `
+    + `mainH=${mainBand()} pad=${state.pad} bars=${state.bars} scale=${round2(s)} step=${state.step} `
+    + `${state.arranging ? 'BLUR' : 'CRISP'}`;
+}
+
+/* 把元素按垂直中线聚成「行」：同一行内元素中线差通常 <2px，
+   行与行之间至少差半个岛高，所以用固定小容差，不能用元素自身高度。 */
+const ROW_TOL = 16;
+function groupRows(list){
+  const rows = [];
+  [...list].sort((a, b) => (a.y + a.h / 2) - (b.y + b.h / 2)).forEach(e => {
+    const cy = e.y + e.h / 2;
+    const r = rows.find(x => Math.abs(x.cy - cy) < ROW_TOL);
+    if(r){
+      r.items.push(e);
+      r.cy = r.items.reduce((s, v) => s + (v.y + v.h / 2), 0) / r.items.length;
+    } else rows.push({cy, items:[e]});
+  });
+  return rows;
+}
+
+/* 自然文本宽度：用 canvas measureText 量（与布局无关，也不会被 flex / 裁切 / 祖先缩放干扰）。
+   每个 chip 的内容宽 = Σ(文本宽 + 自身左右内边距) + chip 内边距。 */
+const measureCtx = document.createElement('canvas').getContext('2d');
+function textLeafWidth(root){
+  let w = 0;
+  const walk = n => {
+    for(const c of n.children){
+      if(c.tagName.toLowerCase() === 'svg') continue;
+      if(getComputedStyle(c).position === 'absolute') continue;
+      const text = [...c.childNodes].filter(x => x.nodeType === 3).map(x => x.textContent).join('').trim();
+      if(text){
+        const cs = getComputedStyle(c);
+        measureCtx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+        const mar = parseFloat(cs.marginLeft) + parseFloat(cs.marginRight);
+        w += measureCtx.measureText(text).width + pad + mar;
+      }
+      walk(c);
+    }
+  };
+  walk(root);
+  return w;
+}
+/* 按内容自动定尺：默认宽度只是草稿；量到内容更宽就把 chip 放宽。只增不减，避免抖动。 */
+function autosizeChips(){
+  if(state.arranging) return;   // 模糊态下几何被滤镜撑大，量不准
+  let changed = false;
+  visibleEls().forEach(el => {
+    const d = elMap.get(el.id);
+    if(!d) return;
+    const cs = getComputedStyle(d);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const need = Math.ceil(textLeafWidth(d) + padX) + 3;
+    if(need > el.w + 1 && need < 900){
+      el.w = need;
+      d.style.width = need + 'px';
+      changed = true;
+    }
+  });
+  if(changed) render();
+}
+
+/* ── 对齐报告 ─────────────────────────────────────────── */
+function buildReport(r, row){
+  const els = visibleEls();
+  const pad = state.pad;
+  const lines = [];
+  const cy = row.cy;
+
+  const rows = groupRows(els);
+  rows.forEach(r2 => r2.items.sort((a, b) => a.x - b.x));
+
+  const bad = [], soft = [];
+  rows.forEach((r2, ri) => {
+    const isBottom = r2.items[0].kind === 'bottom';
+    const off = round2(r2.cy - cy);
+    // 主行必须压在中线上；底部行本来就挂在带之下，只报告不判定
+    const aligned = Math.abs(off) <= 0.5;
+    if(isBottom){
+      lines.push(`<span class="mut">▲ 底部行${ri} 中线 ${round2(r2.cy)}（在主行带之下，不参与中线对齐）</span>`);
+      return;
+    }
+    lines.push(`<span class="${aligned ? 'ok' : 'warn'}">${aligned ? '✔' : '▲'} 第${ri + 1}行 中线 ${round2(r2.cy)} · 岛体中线 ${round2(cy)} · 偏差 ${off > 0 ? '+' : ''}${off}px${aligned ? ' 已对齐' : ''}</span>`);
+    if(!aligned) bad.push(`第${ri + 1}行中线偏差 ${off}px`);
+  });
+
+  lines.push('');
+  lines.push(`<span class="mut">岛体</span> ${round2(r.w)} × ${round2(r.h)}  ·  圆角 ${round2(Math.min(mainBand()/2 + pad, r.h/2, r.w/2))}(全圆端)`);
+  lines.push(`<span class="mut">内边距</span> ${pad}px  ·  <span class="mut">栅格基准</span> ${BASE}px (源码字面 ${round2(BASE / DESIGN_SCALE)})`);
+  lines.push('');
+
+  // 各行的间距（底部行是整行居中的文字，不按 chip 间距判定）
+  rows.forEach((r2, ri) => {
+    r2.items.sort((a, b) => a.x - b.x);
+    const isBottom = r2.items[0].kind === 'bottom';
+    const parts = [];
+    if(!isBottom){
+      for(let i = 1; i < r2.items.length; i++){
+        const p = r2.items[i - 1];
+        const e = r2.items[i];
+        const gap = round2(e.x - (p.x + p.w));
+        const overlap = gap < -0.5;
+        const flag = overlap ? 'warn' : (Math.abs(gap - BASE / 2) < 1.5 || Math.abs(gap - BASE) < 1.5 ? 'ok' : '');
+        parts.push(`<span class="${flag}">${p.id}→${e.id} ${gap}px${gap >= 0 ? ` /u=${round2(gap / U)}` : ' 重叠!'}</span>`);
+        if(overlap) bad.push(`${p.id} 与 ${e.id} 水平重叠 ${Math.abs(gap)}px`);
+        else if(Math.abs(gap) > BASE * 2) soft.push(`${p.id}→${e.id} 间距 ${gap}px 偏大`);
+      }
+    }
+    lines.push(`<span class="mut">行${ri + 1}</span> [${r2.items.map(e => e.id).join(' ')}]`);
+    if(parts.length) lines.push('   ' + parts.join('  '));
+    lines.push('');
+  });
+
+  // 上下留白：只对主行有意义（主行永远占据 [r.y+pad, r.y+pad+H]）
+  const mainItems = rows[0] ? rows[0].items : [];
+  if(mainItems.length){
+    const rowTop = r.y + pad, rowBot = r.y + pad + mainBand();
+    const t = round2(Math.min(...mainItems.map(e => e.y)) - rowTop);
+    const b = round2(rowBot - Math.max(...mainItems.map(e => e.y + e.h)));
+    const ok = Math.abs(t - b) < 1;
+    lines.push(`<span class="mut">主行上下留白</span> 上 ${t}  下 ${b} ${ok ? '✔ 居中' : (bad.push(`主行上下留白不等 (${t} / ${b})`), '▲ 不等')}`);
+  }
+  if(rows.length > 1){
+    const mainBot = mainItems.length ? Math.max(...mainItems.map(e => e.y + e.h)) : r.y + pad + mainBand();
+    rows.slice(1).forEach((rx, i) => {
+      const top = Math.min(...rx.items.map(e => e.y));
+      const bot = Math.max(...rx.items.map(e => e.y + e.h));
+      const prevBot = i === 0 ? round2(mainBot) : round2(Math.max(...rows[i].items.map(e => e.y + e.h)));
+      lines.push(`<span class="mut">底部行${i + 1}</span> 与上一行间距 ${round2(top - prevBot)}  距岛底 ${round2(r.y + r.h - bot)}`);
+    });
+  }
+
+  if(state.step === 3){
+    lines.push('');
+    if(bad.length) lines.push(`<span class="warn">还有 ${bad.length} 处没完全对齐，再拉一下：</span>\n  · ` + bad.slice(0, 6).join('\n  · '));
+    else lines.push(`<span class="ok">✔ 全部元素已对齐：同一中线、圆角壳包住全部内容、间距落在基准栅格上。</span>`);
+    if(soft.length) lines.push(`<span class="mut">参考：${soft.slice(0, 4).join('；')}</span>`);
+  } else {
+    lines.push('');
+    lines.push(`<span class="mut">对齐解算后这里会列出残留误差。</span>`);
+  }
+  reportEl.innerHTML = lines.join('\n');
+}
+
+/* ── 选择 / 拖动 ──────────────────────────────────────── */
+function select(id){
+  selected = id;
+  state.els.forEach(e => elMap.get(e.id)?.classList.toggle('selected', e.id === id));
+  const el = state.els.find(e => e.id === id);
+  if(el) toast(`选中 ${id} · ${el.w}×${el.h} @ (${round2(el.x)}, ${round2(el.y)})`);
+}
+function onElDown(ev){
+  const id = ev.currentTarget.dataset.id;
+  const el = state.els.find(e => e.id === id);
+  if(!el) return;
+  ev.stopPropagation();
+  select(id);
+  drag = {mode:'el', el, startX:ev.clientX, startY:ev.clientY, ox:el.x, oy:el.y, moved:false, guides:null};
+  ev.currentTarget.setPointerCapture(ev.pointerId);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp, {once:true});
+  snapshot();
+}
+const smooth = (p, k = 3) => 1 - Math.pow(1 - clamp(p, 0, 1), k);
+
+function onMove(ev){
+  if(!drag) return;
+  const dx = ev.clientX - drag.startX, dy = ev.clientY - drag.startY;
+  if(Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
+
+  if(drag.mode === 'el'){
+    const el = drag.el;
+    const s = snapFor(el, drag.ox + dx, drag.oy + dy, el.id);
+    el.x = s.x; el.y = s.y;
+    drag.guides = s.guides;
+  } else if(drag.mode === 'island'){
+    const nx = drag.ox + dx, ny = drag.oy + dy;
+    const ddx = nx - state.island.x, ddy = ny - state.island.y;
+    state.island.x = round2(nx); state.island.y = round2(ny);
+    state.els.forEach(e => { e.x = round2(e.x + ddx); e.y = round2(e.y + ddy); });
+  }
+  render();
+}
+function onUp(){
+  window.removeEventListener('pointermove', onMove);
+  if(drag && drag.mode === 'el' && drag.moved){
+    const el = drag.el;
+    const ref = drag.guides && drag.guides.find(g => g.kind !== 'y');
+    if(ref && ref.ref) toast(`吸附 ${el.id} · 与 ${ref.ref.id} 间距 ${round2(Math.abs(ref.off))}px`);
+  }
+  drag = null;
+  render();
+}
+
+/* 拖岛体：在岛体左侧给一个手柄 */
+function makeHandle(){
+  const h = document.createElement('div');
+  h.style.cssText = 'position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:8px;height:38px;' +
+    'border-radius:4px;background:rgba(102,192,244,.55);cursor:grab;box-shadow:0 0 12px rgba(102,192,244,.4)';
+  h.title = '拖动整岛';
+  h.addEventListener('pointerdown', ev => {
+    ev.stopPropagation();
+    drag = {mode:'island', startX:ev.clientX, startY:ev.clientY, ox:state.island.x, oy:state.island.y, moved:false};
+    h.setPointerCapture(ev.pointerId);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, {once:true});
+    snapshot();
+  });
+  content.appendChild(h);
+}
+
+/* ── 键盘微调 ─────────────────────────────────────────── */
+window.addEventListener('keydown', ev => {
+  if(ev.key === 'Escape'){ selected = null; render(); return; }
+  if((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z'){ ev.preventDefault(); undo(); return; }
+  if(!selected) return;
+  const map = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]};
+  if(!map[ev.key]) return;
+  ev.preventDefault();
+  const el = state.els.find(e => e.id === selected);
+  if(!el) return;
+  const step = ev.shiftKey ? 5 : (ev.altKey ? 0.5 : 1);
+  snapshot();
+  el.x = round2(el.x + map[ev.key][0] * step);
+  el.y = round2(el.y + map[ev.key][1] * step);
+  render();
+});
+
+/* ── 步骤动画：先模糊 → 对齐 → 除模糊 ─────────────────── */
+function setStep(n){
+  state.step = n;
+  document.querySelectorAll('#steps .step').forEach(s => {
+    const k = +s.dataset.step;
+    s.classList.toggle('on', k === n);
+    s.classList.toggle('done', k < n);
+  });
+}
+function setBlur(px){
+  document.documentElement.style.setProperty('--blurPX', px + 'px');
+  document.getElementById('rngBlur').value = px;
+  document.getElementById('lblBlur').textContent = px + 'px';
+}
+/* 编排态：岛体 + 元素一起糊掉；除模糊后回到清晰 */
+function setArranging(on){
+  state.arranging = on;
+  stage.classList.toggle('arranging', on);
+  setBlur(on ? Math.max(2, state.blurValue) : 0);
+  render();
+}
+async function autoSolve(){
+  snapshot();
+  if(!state.show.chrome){ state.show.chrome = true; ck.chrome.checked = true; }
+  setStep(1);
+  setArranging(true);
+  toast('① 先模糊：只剩圆角大方向');
+  await sleep(620);
+
+  setStep(2);
+  toast('② 大方向对齐：中线 + 基准栅格');
+  await sleep(140);
+
+  const from = state.els.map(e => ({e, x:e.x, y:e.y}));
+  const to = state.els.map(e => Object.assign({}, e));
+  solvePreview(to);
+
+  const T = 420, t0 = performance.now();
+  await new Promise(res => {
+    (function tick(now){
+      const k = smooth((now - t0) / T, 3);
+      from.forEach((f, i) => {
+        f.e.x = round2(f.x + (to[i].x - f.x) * k);
+        f.e.y = round2(f.y + (to[i].y - f.y) * k);
+      });
+      render();
+      (now - t0) / T < 1 ? requestAnimationFrame(tick) : res();
+    })(performance.now());
+  });
+
+  await sleep(320);
+  setStep(3);
+  setArranging(false);
+  toast('③ 除去模糊：完全对齐');
+}
+/* 与 solve() 同算法，但作用于副本，便于做过渡动画 */
+function solvePreview(list){
+  const els = list.filter(e => e.visible !== false);
+  const rows = groupRows(els);
+  const row = mainRow();
+  rows.forEach(r => {
+    r.items.sort((a, b) => a.x - b.x);
+    const isBottom = r.items[0].kind === 'bottom';
+    const h = Math.max(...r.items.map(e => e.h));
+    const cy = isBottom ? round2(row.y + row.h + state.pad + h / 2) : row.cy;
+    centerRow(r.items, cy);
+    let cursor = Math.min(...r.items.map(e => e.x));
+    r.items.forEach((e, i) => {
+      if(i > 0) cursor += e.kind === 'bottom' ? 0 : (BASE / 2);
+      e.x = round2(cursor);
+      cursor += e.w;
+    });
+  });
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ── 面板绑定 ─────────────────────────────────────────── */
+const ck = {
+  chrome: document.getElementById('ckChrome'),
+  guides: document.getElementById('ckGuides'),
+  hud:    document.getElementById('ckHud'),
+  bottom: document.getElementById('ckBottom'),
+  scene:  document.getElementById('ckScene')
+};
+Object.entries(ck).forEach(([k, box]) => {
+  box.addEventListener('change', () => {
+    state.show[k] = box.checked;
+    if(k === 'scene') document.getElementById('bg').style.opacity = box.checked ? 1 : 0;
+    if(k === 'hud' || k === 'bottom') applyToggles();
+    render();
+  });
+});
+document.getElementById('rngBlur').addEventListener('input', e => {
+  state.blurValue = +e.target.value;
+  setBlur(state.arranging ? state.blurValue : 0);
+  document.getElementById('lblBlur').textContent = state.blurValue + 'px';
+});
+document.getElementById('rngZoom').addEventListener('input', e => {
+  zoom = +e.target.value / 100;
+  document.getElementById('lblZoom').textContent = e.target.value + '%';
+  fitStage();
+});
+document.getElementById('rngH').addEventListener('input', e => {
+  // 滑块改的是「主行带高」；底部行跟随平移，保持各自的留白
+  const band = +e.target.value;
+  const cy0 = state.island.y + state.pad + state.mainH / 2;
+  const cy1 = state.island.y + state.pad + band / 2;
+  state.els.forEach(el => {
+    const isMain = el.kind !== 'bottom';
+    el.y = round2(el.y + (isMain ? cy1 - cy0 : (band - state.mainH)));
+  });
+  state.mainH = band;
+  state.H = band;
+  document.getElementById('lblH').textContent = band;
+  render();
+});
+document.getElementById('rngPad').addEventListener('input', e => {  state.pad = +e.target.value;
+  document.getElementById('lblPad').textContent = state.pad;
+  render();
+});
+document.getElementById('rngBars').addEventListener('input', e => {
+  state.bars = +e.target.value;
+  document.getElementById('lblBars').textContent = state.bars;
+  const w = elMap.get('wave');
+  if(w) w.innerHTML = bars(state.bars, 1.7);
+  render();
+});
+document.getElementById('btnSolve').addEventListener('click', autoSolve);
+document.getElementById('btnBlur').addEventListener('click', () => {
+  const on = !state.arranging;
+  setArranging(on);
+  setStep(on ? 1 : 3);
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  loadPreset(currentPreset);
+  toast('已复位到预设');
+});
+document.getElementById('btnUndo').addEventListener('click', undo);
+document.getElementById('btnShot').addEventListener('click', shoot);
+
+let currentPreset = 'compact';document.getElementById('presets').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-p]');
+  if(!b) return;
+  currentPreset = b.dataset.p;
+  document.querySelectorAll('#presets button').forEach(x => x.classList.toggle('on', x === b));
+  loadPreset(currentPreset);
+});
+
+function loadPreset(name){
+  const built = PRESETS[name]();
+  state = blankState();
+  state.blurValue = 5;
+  state.mainH = built.mainH;
+  state.H = built.mainH;
+  state.els = built.els;
+  relayout();   // 岛顶位置可能与预设常量不同，按当前岛顶对齐
+  elMap.forEach(d => d.remove());
+  elMap.clear();
+  selected = null;
+  undoStack = [];
+  syncToggles();
+  applyToggles();
+  setStep(3);
+  setArranging(false);
+  fitStage();
+  syncControls();
+  render();
+}
+/* 把 state.show 同步回勾选框（复位预设时用） */
+function syncToggles(){
+  ck.chrome.checked = state.show.chrome;
+  ck.guides.checked = state.show.guides;
+  ck.hud.checked    = state.show.hud;
+  ck.bottom.checked = state.show.bottom;
+  ck.scene.checked  = state.show.scene;
+  document.getElementById('bg').style.opacity = state.show.scene ? 1 : 0;
+}
+function applyToggles(){
+  state.els.forEach(e => {
+    if(e.type === 'sat') e.visible = state.show.hud;
+    if(e.kind === 'bottom') e.visible = state.show.bottom;
+  });
+}
+
+/* ── 舞台自适应 + PNG 导出 ────────────────────────────── */
+/* 视口缩放：100% = 1280×720 逻辑像素在舞台上 1:1 显示 */
+function fitStage(){
+  const s = Math.min((stageBox.clientWidth - 6) / 1280, (stageBox.clientHeight - 6) / 720, zoom);
+  viewScale = s;
+  islandLayer.style.transform = `scale(${s})`;   // 外层只放缩，内层只定位，坐标可精确反推
+  stage.style.transform = 'none';
+  return s;
+}
+async function shoot(){
+  if(typeof html2canvas !== 'function'){
+    toast('截图库没加载上（无网络时不可用）');
+    return;
+  }
+  const wasArranging = state.arranging, wasGuides = state.show.guides;
+  setArranging(false); state.show.guides = false; render();
+  await sleep(120);
+  const s = fitStage();
+  islandLayer.style.transform = 'none';   // 导出按 1:1
+  await sleep(80);
+  try{
+    const shot = await html2canvas(stage, {backgroundColor:'#0d1119', scale:2, useCORS:true});
+    const a = document.createElement('a');
+    a.download = `island-${currentPreset}-${Date.now()}.png`;
+    a.href = shot.toDataURL('image/png');
+    a.click();
+    toast('已保存 PNG');
+  }catch(err){
+    toast('截图失败：' + err.message);
+  }finally{
+    islandLayer.style.transform = `scale(${s})`;
+    state.show.guides = wasGuides;
+    setArranging(wasArranging);
+  }
+}
+
+/* ── 启动 ─────────────────────────────────────────────── */
+loadPreset('compact');
+makeHandle();
+fitStage();
+window.addEventListener('resize', fitStage);
+render();
+
+/* 自检：file:///...index.html#selftest 会自动跑一遍完整三步，
+   并把状态写进 #dbg，便于无头浏览器断言。正常使用可忽略。 */
+window.__island = {
+  state: () => state,
+  rect: () => islandRect(),
+  sel: (id) => select(id),
+  move: (id, x, y) => { const e = state.els.find(v => v.id === id); if(e){ e.x = x; e.y = y; render(); } },
+  solve: autoSolve,
+  /* 自动定尺用了哪些量（排障用） */
+  widthProbe(){
+    const k = viewScale || 1;
+    return [...elMap.keys()].map(id => {
+      const d = elMap.get(id);
+      const el = state.els.find(v => v.id === id) || {w:0};
+      const cs = d ? getComputedStyle(d) : null;
+      const padX = cs ? parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) : 0;
+      const leaf = d ? d.querySelector('.race, .label, .marq') : null;
+      const lcs = leaf ? getComputedStyle(leaf) : null;
+      const kids = d ? [...d.children].map(c => ({
+        cls: c.className, tag: c.tagName,
+        fs: getComputedStyle(c).fontSize,
+        w: round2(c.getBoundingClientRect().width),
+        pos: getComputedStyle(c).position,
+        txt: [...c.childNodes].filter(x => x.nodeType === 3).map(x => x.textContent).join('').slice(0, 14)
+      })) : [];
+      return {
+        id, w: el.w, arranging: state.arranging, padX,
+        need: d ? round2(textLeafWidth(d) + padX) : null,
+        chipClass: d ? d.className : null,
+        leafCls: leaf ? leaf.className : null,
+        leafFontSize: lcs ? lcs.fontSize : null,
+        kids
+      };
+    });
+  },
+  /* 量每个元素真实的屏幕盒子，与设计坐标对账（dx/dy 应为 0） */
+  measure(){
+    const sr = stage.getBoundingClientRect();
+    const k = sr.width / 1280;
+    const ir = islandLayer.getBoundingClientRect();
+    return [...elMap.entries()].map(([id, d]) => {
+      const e = state.els.find(v => v.id === id) || {w:0, h:0, x:0, y:0};
+      const b = d.getBoundingClientRect();
+      return {
+        id, w: e.w, h: e.h, x: e.x, y: e.y,
+        ws: round2(b.width / k), hs: round2(b.height / k),
+        dx: round2((b.left - ir.left) / k - e.x),
+        dy: round2((b.top - ir.top) / k - e.y)
+      };
+    });
+  }
+};
+if(location.hash.startsWith('#selftest')){
+  // 支持 #selftest-blur;preset=expanded 之类的自检参数
+  const PresetArg = (location.hash.match(/preset=(\w+)/) || [])[1];
+  if(PresetArg && PRESETS[PresetArg]){
+    currentPreset = PresetArg;
+    document.querySelectorAll('#presets button').forEach(x => x.classList.toggle('on', x.dataset.p === PresetArg));
+    loadPreset(PresetArg);
+  }
+  setTimeout(() => {
+    const r = islandRect();
+    dbgEl.dataset.measure = JSON.stringify(window.__island.measure());
+    dbgEl.dataset.rect = JSON.stringify({w: round2(r.w), h: round2(r.h), x: round2(r.x), y: round2(r.y)});
+    dbgEl.dataset.widths = JSON.stringify(window.__island.widthProbe());
+    dbgEl.dataset.row = JSON.stringify({      islandY: state.island.y, pad: state.pad, mainH: state.mainH,
+      rowCy: round2(mainRow().cy),
+      els: visibleEls().map(e => ({id: e.id, y: round2(e.y), h: e.h, cy: round2(e.y + e.h / 2)}))
+    });
+    dbgEl.dataset.preset = currentPreset;
+    document.title = `selftest els=${visibleEls().length} w=${round2(r.w)} h=${round2(r.h)}`;
+    if(location.hash === '#selftest-blur'){
+      setStep(1); setArranging(true);
+      const cover = elMap.get('cover');
+      const cs = cover ? getComputedStyle(cover) : null;
+      const filt = document.getElementById('softBlur');
+      const fr = filt ? filt.getBoundingClientRect() : null;
+      dbgEl.dataset.dbg = JSON.stringify({
+        blurVar: getComputedStyle(document.documentElement).getPropertyValue('--blurPX'),
+        elFilter: cs ? cs.filter : 'no-cover',
+        chromeFilter: getComputedStyle(chrome).filter,
+        filterRect: fr ? {x: fr.x, y: fr.y, w: fr.width, h: fr.height} : null,
+        arranging: stage.classList.contains('arranging'),
+        coverRect: cover ? (r => ({x: round2(r.x), y: round2(r.y), w: round2(r.width), h: round2(r.height)}))(cover.getBoundingClientRect()) : null
+      });
+      return;
+    }
+    autoSolve().then(() => {
+      const r2 = islandRect();
+      dbgEl.dataset.rectSolved = JSON.stringify({w: round2(r2.w), h: round2(r2.h)});
+      document.title += ` | solved w=${round2(r2.w)} h=${round2(r2.h)}`;
+    });
+  }, 250);
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" onerror="void 0"></script>
+</body>
+</html>

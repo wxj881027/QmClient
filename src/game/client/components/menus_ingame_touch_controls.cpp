@@ -13,6 +13,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiNavigation.h>
 #include <game/client/components/touch_controls.h>
 #include <game/client/gameclient.h>
 #include <game/client/lineinput.h>
@@ -72,17 +73,38 @@ void CMenusIngameTouchControls::RenderTouchButtonEditor(CUIRect MainView)
 	EditBox.VSplitLeft(EditBox.w / 3.0f, &RightButton, &EditBox);
 	EditBox.VSplitMid(&LeftButton, &MiddleButton);
 
-	if(GameClient()->m_Menus.DoButton_MenuTab(m_aEditElementIds.data(), Localize("Layout"), m_EditElement == EElementType::LAYOUT, &RightButton, IGraphics::CORNER_TL, nullptr, nullptr, nullptr, nullptr, 5.0f))
+	if(g_Config.m_QmNewUi != 0)
 	{
-		m_EditElement = EElementType::LAYOUT;
+		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字。
+		const CUIRect aEditTabSlots[] = {RightButton, LeftButton, MiddleButton};
+		ui_widget::CapsuleTabBarChrome(GameClient()->m_Menus.TabBarUiContext(), MakeUiScopeHash("touch_editor_edit_element_tabs_capsule"), aEditTabSlots, std::size(aEditTabSlots), (int)m_EditElement, GameClient()->m_Menus.SettingsCapsuleTabBarStyle());
+		if(GameClient()->m_Menus.DoButton_MenuTab(m_aEditElementIds.data(), Localize("Layout"), m_EditElement == EElementType::LAYOUT, &RightButton, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+		{
+			m_EditElement = EElementType::LAYOUT;
+		}
+		if(GameClient()->m_Menus.DoButton_MenuTab(&m_aEditElementIds[1], Localize("Visibility"), m_EditElement == EElementType::VISIBILITY, &LeftButton, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+		{
+			m_EditElement = EElementType::VISIBILITY;
+		}
+		if(GameClient()->m_Menus.DoButton_MenuTab(&m_aEditElementIds[2], Localize("Behavior"), m_EditElement == EElementType::BEHAVIOR, &MiddleButton, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+		{
+			m_EditElement = EElementType::BEHAVIOR;
+		}
 	}
-	if(GameClient()->m_Menus.DoButton_MenuTab(&m_aEditElementIds[1], Localize("Visibility"), m_EditElement == EElementType::VISIBILITY, &LeftButton, IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, nullptr, 5.0f))
+	else
 	{
-		m_EditElement = EElementType::VISIBILITY;
-	}
-	if(GameClient()->m_Menus.DoButton_MenuTab(&m_aEditElementIds[2], Localize("Behavior"), m_EditElement == EElementType::BEHAVIOR, &MiddleButton, IGraphics::CORNER_TR, nullptr, nullptr, nullptr, nullptr, 5.0f))
-	{
-		m_EditElement = EElementType::BEHAVIOR;
+		if(GameClient()->m_Menus.DoButton_MenuTab(m_aEditElementIds.data(), Localize("Layout"), m_EditElement == EElementType::LAYOUT, &RightButton, IGraphics::CORNER_TL, nullptr, nullptr, nullptr, nullptr, 5.0f))
+		{
+			m_EditElement = EElementType::LAYOUT;
+		}
+		if(GameClient()->m_Menus.DoButton_MenuTab(&m_aEditElementIds[1], Localize("Visibility"), m_EditElement == EElementType::VISIBILITY, &LeftButton, IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, nullptr, 5.0f))
+		{
+			m_EditElement = EElementType::VISIBILITY;
+		}
+		if(GameClient()->m_Menus.DoButton_MenuTab(&m_aEditElementIds[2], Localize("Behavior"), m_EditElement == EElementType::BEHAVIOR, &MiddleButton, IGraphics::CORNER_TR, nullptr, nullptr, nullptr, nullptr, 5.0f))
+		{
+			m_EditElement = EElementType::BEHAVIOR;
+		}
 	}
 
 	if(!s_EditElementTransitionInitialized)
@@ -955,18 +977,40 @@ void CMenusIngameTouchControls::RenderSelectingTab(CUIRect SelectingTab)
 	CUIRect LeftButton;
 	SelectingTab.VSplitLeft(SelectingTab.w / 4.0f, &LeftButton, &SelectingTab);
 	static CButtonContainer s_FileTab;
+	static CButtonContainer s_ButtonTab;
+	static CButtonContainer s_SettingsMenuTab;
+	static CButtonContainer s_PreviewTab;
+	if(g_Config.m_QmNewUi != 0)
+	{
+		// 胶囊 Tabbar：槽位先按原切分顺序算完，再画容器与滑块，最后画页签文字。
+		CUIRect aMenuTabSlots[4];
+		aMenuTabSlots[0] = LeftButton;
+		CUIRect MenuTabsRemainder = SelectingTab;
+		MenuTabsRemainder.VSplitLeft(MenuTabsRemainder.w / 4.0f, nullptr, &MenuTabsRemainder);
+		MenuTabsRemainder.VSplitLeft(MenuTabsRemainder.w / 3.0f, &aMenuTabSlots[1], &MenuTabsRemainder);
+		MenuTabsRemainder.VSplitLeft(MenuTabsRemainder.w / 2.0f, &aMenuTabSlots[2], &MenuTabsRemainder);
+		MenuTabsRemainder.VSplitLeft(MenuTabsRemainder.w / 1.0f, &aMenuTabSlots[3], &MenuTabsRemainder);
+		ui_widget::CapsuleTabBarChrome(GameClient()->m_Menus.TabBarUiContext(), MakeUiScopeHash("touch_editor_menu_tabs_capsule"), aMenuTabSlots, (int)std::size(aMenuTabSlots), (int)m_CurrentMenu, GameClient()->m_Menus.SettingsCapsuleTabBarStyle());
+		if(GameClient()->m_Menus.DoButton_MenuTab(&s_FileTab, Localize("File"), m_CurrentMenu == EMenuType::MENU_FILE, &aMenuTabSlots[0], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+			m_CurrentMenu = EMenuType::MENU_FILE;
+		if(GameClient()->m_Menus.DoButton_MenuTab(&s_ButtonTab, Localize("Buttons"), m_CurrentMenu == EMenuType::MENU_BUTTONS, &aMenuTabSlots[1], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+			m_CurrentMenu = EMenuType::MENU_BUTTONS;
+		if(GameClient()->m_Menus.DoButton_MenuTab(&s_SettingsMenuTab, Localize("Settings"), m_CurrentMenu == EMenuType::MENU_SETTINGS, &aMenuTabSlots[2], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+			m_CurrentMenu = EMenuType::MENU_SETTINGS;
+		if(GameClient()->m_Menus.DoButton_MenuTab(&s_PreviewTab, Localize("Preview"), m_CurrentMenu == EMenuType::MENU_PREVIEW, &aMenuTabSlots[3], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+			m_CurrentMenu = EMenuType::MENU_PREVIEW;
+		return;
+	}
+
 	if(GameClient()->m_Menus.DoButton_MenuTab(&s_FileTab, Localize("File"), m_CurrentMenu == EMenuType::MENU_FILE, &LeftButton, IGraphics::CORNER_TL))
 		m_CurrentMenu = EMenuType::MENU_FILE;
 	SelectingTab.VSplitLeft(SelectingTab.w / 3.0f, &LeftButton, &SelectingTab);
-	static CButtonContainer s_ButtonTab;
 	if(GameClient()->m_Menus.DoButton_MenuTab(&s_ButtonTab, Localize("Buttons"), m_CurrentMenu == EMenuType::MENU_BUTTONS, &LeftButton, IGraphics::CORNER_NONE))
 		m_CurrentMenu = EMenuType::MENU_BUTTONS;
 	SelectingTab.VSplitLeft(SelectingTab.w / 2.0f, &LeftButton, &SelectingTab);
-	static CButtonContainer s_SettingsMenuTab;
 	if(GameClient()->m_Menus.DoButton_MenuTab(&s_SettingsMenuTab, Localize("Settings"), m_CurrentMenu == EMenuType::MENU_SETTINGS, &LeftButton, IGraphics::CORNER_NONE))
 		m_CurrentMenu = EMenuType::MENU_SETTINGS;
 	SelectingTab.VSplitLeft(SelectingTab.w / 1.0f, &LeftButton, &SelectingTab);
-	static CButtonContainer s_PreviewTab;
 	if(GameClient()->m_Menus.DoButton_MenuTab(&s_PreviewTab, Localize("Preview"), m_CurrentMenu == EMenuType::MENU_PREVIEW, &LeftButton, IGraphics::CORNER_TR))
 		m_CurrentMenu = EMenuType::MENU_PREVIEW;
 }

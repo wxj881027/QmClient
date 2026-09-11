@@ -5,13 +5,20 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <vector>
 
 enum class EQmAxiomMode
 {
+	NONE,
 	GORES,
 	AXRACE,
+};
+
+// 判断当前服务器属于 Axiom 的哪个积分模式所需的最小环境信息。
+struct SQmAxiomServerContext
+{
+	const char *m_pCommunityType;
+	const char *m_pServerName;
 };
 
 enum class EQmAxiomParseResult
@@ -55,18 +62,12 @@ struct SQmAxiomModeScore
 	std::vector<SQmAxiomDifficultyStats> m_vDifficulties;
 };
 
-struct SQmAxiomPopupSize
-{
-	float m_Width = 0.0f;
-	float m_Height = 0.0f;
-};
-
 const char *QmAxiomModeName(EQmAxiomMode Mode);
+EQmAxiomMode QmResolveAxiomModeFromServerContext(const SQmAxiomServerContext &Context);
 std::string QmBuildAxiomSearchUrl(const char *pPlayerName);
 std::string QmBuildAxiomInfoUrl(int64_t UserId, EQmAxiomMode Mode);
 EQmAxiomParseResult QmParseAxiomSearchResponse(const char *pData, size_t DataSize, const char *pPlayerName, SQmAxiomSearchMatch &OutMatch);
 EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize, SQmAxiomModeScore &OutScore);
-bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, std::string_view CurrentPlayerName, std::string_view ResponsePlayerName);
-SQmAxiomPopupSize QmAxiomPopupSize(float ScreenWidth, float ScreenHeight);
+bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, EQmAxiomMode CurrentMode, EQmAxiomMode ResponseMode);
 
 #endif

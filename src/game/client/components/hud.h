@@ -206,9 +206,10 @@ class CHud : public CComponent
 			int m_Id = 0;
 			int64_t m_TriggerTick = 0;
 			int64_t m_ExitStartTick = 0;
-			int64_t m_LiquidLastTick = 0;
 			float m_Progress = 0.0f;
-			float m_LiquidProgress = 0.0f;
+			// 分离弹簧：内部是位移/速度，朝目标（分离 1、收回 0）收敛。
+			SHudMediaIslandBlobSpring m_LiquidSpring;
+			int64_t m_LiquidLastTick = 0;
 			float m_LiquidOriginCenterX = 0.0f;
 			float m_LiquidOriginWidth = 0.0f;
 
@@ -222,7 +223,7 @@ class CHud : public CComponent
 		float m_TargetSatelliteX = 0.0f;
 		float m_TargetSatelliteWidth = 0.0f;
 		float m_TargetSatelliteAlpha = 0.0f;
-		float m_SpectatorLiquidProgress = 0.0f;
+		SHudMediaIslandBlobSpring m_SpectatorLiquidSpring;
 		int64_t m_SpectatorLiquidLastTick = 0;
 		int m_SpectatorDisplayCount = 0;
 		float m_SpectatorIconProgress = 1.0f;
@@ -237,16 +238,21 @@ class CHud : public CComponent
 			m_CapsuleMorphNeedsCapture = true;
 		}
 
-		bool HasVisibleSatellite() const
+		// 换队/开关/禁言倒计时的液滴从主岛左边缘长出，判定主胶囊是否要留出生长空位只认这一种副岛。
+		bool HasVisibleCountdownSatellite() const
 		{
-			if(m_SpectatorLiquidProgress > 0.0f)
-				return true;
 			for(const SSatelliteItem &Item : m_aSatelliteItems)
 			{
 				if(Item.m_Used)
 					return true;
 			}
 			return false;
+		}
+
+		bool HasVisibleSatellite() const
+		{
+			// 观战卫星长在主岛右侧，与左侧倒计时副岛一起算作副岛。
+			return m_SpectatorLiquidSpring.m_Progress > 0.0f || HasVisibleCountdownSatellite();
 		}
 
 		void Reset()
@@ -301,7 +307,7 @@ class CHud : public CComponent
 			m_TargetSatelliteX = 0.0f;
 			m_TargetSatelliteWidth = 0.0f;
 			m_TargetSatelliteAlpha = 0.0f;
-			m_SpectatorLiquidProgress = 0.0f;
+			m_SpectatorLiquidSpring = {};
 			m_SpectatorLiquidLastTick = 0;
 			m_SpectatorDisplayCount = 0;
 			m_SpectatorIconProgress = 1.0f;
@@ -335,7 +341,9 @@ class CHud : public CComponent
 	};
 	mutable SHudMediaIslandFrameCache m_MediaIslandFrameCache;
 	IGraphics::CRenderTargetHandle m_MediaIslandBlurSource;
-	IGraphics::CRenderTargetHandle m_MediaIslandBlurTemporary;
+	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsample;
+	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsampleTemporary;
+	IGraphics::CRenderTargetHandle m_MediaIslandBlurDownsampleTarget;
 	IGraphics::CRenderTargetHandle m_MediaIslandBlurTarget;
 	int m_MediaIslandBlurWidth = 0;
 	int m_MediaIslandBlurHeight = 0;

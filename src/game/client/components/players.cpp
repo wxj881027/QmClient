@@ -900,6 +900,17 @@ void CPlayers::RenderPlayer(
 	if(Player.m_Weapon == WEAPON_NINJA)
 		State.Add(&g_pData->m_aAnimations[ANIM_NINJA_SWING], std::clamp(LastAttackTime * 2.0f, 0.0f, 1.0f), 1.0f);
 
+	if(GameClient()->m_QmWeaponTrajectory.IsVisible() &&
+		QmWeaponTrajectoryNinjaEnabled(Player.m_Weapon, g_Config.m_QmWeaponTrajectoryNinja != 0, Local))
+	{
+		vec2 NinjaEndPosition;
+		if(GameClient()->m_QmWeaponTrajectory.PredictNinjaEndPosition(Position, Direction, NinjaEndPosition))
+		{
+			RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, NinjaEndPosition, 0.5f,
+				JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle); // render ghost
+		}
+	}
+
 	// do skidding
 	if(AllowEffects && !InAir && WantOtherDir && length(Vel * 50) > 500.0f)
 		GameClient()->m_Effects.SkidTrail(Position, Vel, Player.m_Direction, Alpha, Volume);

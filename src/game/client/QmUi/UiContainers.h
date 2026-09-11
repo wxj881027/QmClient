@@ -36,7 +36,7 @@ namespace ui_widget
 	{
 		SCardProps Props;
 		Props.m_Padding = 14.0f * UiScale;
-		Props.m_Radius = 10.0f * UiScale;
+		Props.m_Radius = ui_token::radius::CARD * UiScale;
 		Props.m_DrawBorder = true;
 		if(pTheme != nullptr)
 		{
@@ -59,7 +59,7 @@ namespace ui_widget
 		SQmScrollConfig m_Config;
 		ColorRGBA m_TrackColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.12f);
 		ColorRGBA m_ThumbColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.42f);
-		float m_Radius = 4.0f;
+		float m_Radius = ui_token::radius::PILL; // 滚动条轨/滑块按胶囊绘制
 		bool m_ContentDragAllowed = false;
 	};
 
