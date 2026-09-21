@@ -194,6 +194,11 @@ TEST(QmImePresentationSource, PopupUsesContinuousRedirectablePresentationState)
 	EXPECT_EQ(PopupSource.find("(void)CandidateAlpha;"), std::string::npos);
 	EXPECT_NE(PopupSource.find("IME_CONTENT_TIME_SCALE = 0.40f"), std::string::npos);
 	EXPECT_NE(PopupSource.find("BuildCandidateViewport"), std::string::npos);
+	EXPECT_NE(PopupSource.find("QmImeResolveCandidateWindowStart"), std::string::npos);
+	EXPECT_NE(PopupSource.find("QmImeLayoutMeasureUsesSelectedPadding"), std::string::npos);
+	EXPECT_NE(PopupSource.find("QmImeSelectedLayoutExtraWidth"), std::string::npos);
+	EXPECT_NE(PopupSource.find("m_CandidateStart = CandidateStart"), std::string::npos);
+	EXPECT_EQ(PopupSource.find("(void)CandidateViewport"), std::string::npos);
 	EXPECT_EQ(PopupSource.find("ResolveMotionValue"), std::string::npos);
 	EXPECT_EQ(PopupSource.find("ResolveMotionRect"), std::string::npos);
 	EXPECT_EQ(PopupSource.find("FitCandidates"), std::string::npos);

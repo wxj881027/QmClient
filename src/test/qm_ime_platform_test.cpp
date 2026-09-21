@@ -98,10 +98,39 @@ TEST(QmImePlatform, StaleCandidateReloadAfterCommitIsSuppressed)
 	EXPECT_FALSE(QmImeShouldSuppressStaleCandidateReload(false, false));
 }
 
+TEST(QmImePlatform, LayoutMeasureIgnoresSelectedPadding)
+{
+	EXPECT_FALSE(QmImeLayoutMeasureUsesSelectedPadding());
+	EXPECT_FLOAT_EQ(QmImeSelectedLayoutExtraWidth(6.2f, 5.6f), 1.2f);
+	EXPECT_FLOAT_EQ(QmImeSelectedLayoutExtraWidth(5.6f, 5.6f), 0.0f);
+	EXPECT_FLOAT_EQ(QmImeSelectedLayoutExtraWidth(4.0f, 5.6f), 0.0f);
+}
+
+TEST(QmImePlatform, CandidateWindowStartIsStickyAndKeepsSelectionVisible)
+{
+	// 全部放得下时不滚动
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(5, 5, 4, 0), 0);
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(5, 5, 0, 2), 0);
+	// 窗口 4、选中第 5 个（index=4）：start 应到 1，而不是每帧乱跳
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(5, 4, 4, 0), 1);
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(5, 4, 4, 1), 1);
+	// 选中仍在窗口内时保持上一帧 start
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(12, 7, 5, 2), 2);
+	// 选中移出右侧窗口才滚动
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(12, 7, 9, 2), 3);
+	// 选中移出左侧窗口
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(12, 7, 0, 2), 0);
+	// 越界输入
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(0, 5, 2, 1), 0);
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(5, 0, 2, 1), 0);
+	EXPECT_EQ(QmImeResolveCandidateWindowStart(5, 3, -1, 99), 2);
+}
+
 TEST(QmImePlatform, FlashGuardsAreWiredInInputAndManager)
 {
 	const std::string InputSource = ReadTestSourceFile("src/engine/client/input.cpp");
 	const std::string ManagerSource = ReadTestSourceFile("src/game/client/qm_ime_manager.cpp");
+	const std::string PopupSource = ReadTestSourceFile("src/game/client/qm_ime_candidate_popup.cpp");
 
 	EXPECT_NE(InputSource.find("QmImeEmptyTextEditingShouldClearCandidates"), std::string::npos);
 	EXPECT_NE(InputSource.find("QmImeResolveCandidateReloadAction"), std::string::npos);
@@ -110,4 +139,8 @@ TEST(QmImePlatform, FlashGuardsAreWiredInInputAndManager)
 	EXPECT_NE(InputSource.find("QmImeShouldSuppressStaleCandidateReload"), std::string::npos);
 	EXPECT_NE(ManagerSource.find("State.m_Visible = QmImePopupShouldBeVisible(CandidateCount);"), std::string::npos);
 	EXPECT_EQ(ManagerSource.find("State.m_Visible = HasComposition && CandidateCount > 0;"), std::string::npos);
+	EXPECT_NE(PopupSource.find("QmImeResolveCandidateWindowStart"), std::string::npos);
+	EXPECT_NE(PopupSource.find("QmImeLayoutMeasureUsesSelectedPadding"), std::string::npos);
+	EXPECT_NE(PopupSource.find("m_CandidateStart = CandidateStart"), std::string::npos);
+	EXPECT_EQ(PopupSource.find("(void)CandidateViewport"), std::string::npos);
 }

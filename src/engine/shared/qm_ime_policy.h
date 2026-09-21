@@ -97,4 +97,45 @@ inline bool QmImeShouldSuppressStaleCandidateReload(bool SuppressFlag, bool IsOp
 	return SuppressFlag;
 }
 
+// 布局量测不使用选中 padding：避免选中第 N 个导致可见候选数量变化
+inline bool QmImeLayoutMeasureUsesSelectedPadding()
+{
+	return false;
+}
+
+// sticky 视口起点：优先保持上一帧 start；全部放得下时不滚动
+inline int QmImeResolveCandidateWindowStart(int CandidateCount, int DisplayCount, int SelectedIndex, int PreviousStart)
+{
+	if(CandidateCount <= 0 || DisplayCount <= 0)
+		return 0;
+	const int Count = DisplayCount < CandidateCount ? DisplayCount : CandidateCount;
+	if(Count >= CandidateCount)
+		return 0;
+
+	const int MaxStart = CandidateCount - Count;
+	int Start = PreviousStart;
+	if(Start < 0)
+		Start = 0;
+	if(Start > MaxStart)
+		Start = MaxStart;
+	if(SelectedIndex < 0 || SelectedIndex >= CandidateCount)
+		return Start;
+	if(SelectedIndex < Start)
+		Start = SelectedIndex;
+	else if(SelectedIndex >= Start + Count)
+		Start = SelectedIndex - Count + 1;
+	if(Start < 0)
+		Start = 0;
+	if(Start > MaxStart)
+		Start = MaxStart;
+	return Start;
+}
+
+// 选中态相对未选中的额外水平内边距（用于面板目标宽度，不参与裁切）
+inline float QmImeSelectedLayoutExtraWidth(float SelectedPaddingX, float CandidatePaddingX)
+{
+	const float Extra = 2.0f * (SelectedPaddingX - CandidatePaddingX);
+	return Extra > 0.0f ? Extra : 0.0f;
+}
+
 #endif

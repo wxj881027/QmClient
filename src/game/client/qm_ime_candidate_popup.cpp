@@ -16,6 +16,7 @@
 
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
+#include <engine/shared/qm_ime_policy.h>
 #include <engine/textrender.h>
 
 #include <game/client/ui_rect.h>
@@ -219,8 +220,10 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	}
 
 	const int SelectedIndex = qm_ime_overlay::NormalizeSelectedCandidateIndex(DrawState.m_SelectedIndex, CandidateCount);
-	const qm_ime_overlay::SQmImeCandidateViewport CandidateViewport = qm_ime_overlay::BuildCandidateViewport(CandidateCount, SelectedIndex, m_CandidateStart);
-	(void)CandidateViewport;
+	// 固定视口尺寸仅作上限提示；实际窗口由宽度拟合 + sticky start 决定
+	const qm_ime_overlay::SQmImeCandidateViewport SizeHint = qm_ime_overlay::BuildCandidateViewport(CandidateCount, SelectedIndex, m_CandidateStart);
+	const int ViewportCountCap = CandidateCount > 0 ? minimum(CandidateCount, maximum(1, SizeHint.m_Count)) : 0;
+	const bool MeasureSelectedForLayout = QmImeLayoutMeasureUsesSelectedPadding();
 
 	std::array<SImeCandidateMetrics, MAX_VISIBLE_CANDIDATES> aCandidateMetrics;
 	float CandidateTextHeight = MeasureImeText(pTextRender, Ime.m_FontCandidate, "国g", Ime).m_VisualHeight;
@@ -233,35 +236,36 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 		CandidateTextHeight = maximum(CandidateTextHeight, maximum(aCandidateMetrics[i].m_Num.m_VisualHeight, aCandidateMetrics[i].m_Text.m_VisualHeight));
 	}
 
+	// 容量量测默认不用选中 padding，避免高亮第 N 个导致可见数量回流
+	const auto CandidateCellWidthForLayout = [&](int Index) {
+		return CandidateCellWidth(Ime, aCandidateMetrics[Index], MeasureSelectedForLayout && Index == SelectedIndex);
+	};
 	const auto CandidateNaturalWidthForWindow = [&](int Start, int Count) {
 		float CandidateNaturalWidth = 0.0f;
 		for(int Offset = 0; Offset < Count; ++Offset)
 		{
 			const int Index = Start + Offset;
+			if(Index < 0 || Index >= CandidateCount)
+				break;
 			if(Offset > 0)
 				CandidateNaturalWidth += Ime.m_CandidateGap;
-			CandidateNaturalWidth += CandidateCellWidth(Ime, aCandidateMetrics[Index], Index == SelectedIndex);
+			CandidateNaturalWidth += CandidateCellWidthForLayout(Index);
 		}
 		return CandidateNaturalWidth;
 	};
-	const auto CandidateStartForCount = [&](int Count) {
-		if(Count <= 0 || SelectedIndex < 0)
-			return 0;
-		return std::clamp(SelectedIndex - Count + 1, 0, maximum(0, CandidateCount - Count));
-	};
 	const float CandidatePanelWidthLimit = PreferredMaxPanelWidth;
 	const auto FitVisibleCandidateCells = [&](float FitTrailingWidth, int &CandidateStart, int &CandidateDisplayCount) {
-		CandidateDisplayCount = CandidateCount;
-		CandidateStart = CandidateStartForCount(CandidateDisplayCount);
+		CandidateDisplayCount = ViewportCountCap;
+		CandidateStart = QmImeResolveCandidateWindowStart(CandidateCount, CandidateDisplayCount, SelectedIndex, m_CandidateStart);
 		while(CandidateDisplayCount > 1)
 		{
-			CandidateStart = CandidateStartForCount(CandidateDisplayCount);
+			CandidateStart = QmImeResolveCandidateWindowStart(CandidateCount, CandidateDisplayCount, SelectedIndex, m_CandidateStart);
 			const float NeededWidth = CandidateNaturalWidthForWindow(CandidateStart, CandidateDisplayCount) + FitTrailingWidth + 2.0f * Ime.m_PaddingX;
 			if(NeededWidth <= CandidatePanelWidthLimit)
 				break;
 			CandidateDisplayCount = maximum(1, CandidateDisplayCount - 1);
 		}
-		CandidateStart = CandidateStartForCount(CandidateDisplayCount);
+		CandidateStart = QmImeResolveCandidateWindowStart(CandidateCount, CandidateDisplayCount, SelectedIndex, m_CandidateStart);
 	};
 
 	int CandidateStart = 0;
@@ -275,9 +279,14 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 			FitVisibleCandidateCells(TrailingWidth, CandidateStart, CandidateDisplayCount);
 		}
 	}
+	// sticky：写回视口起点，避免每帧按选中项强行把 start 推到末尾
+	m_CandidateStart = CandidateStart;
 
 	const float CandidateWindowNaturalWidth = HasCandidates ? CandidateNaturalWidthForWindow(CandidateStart, CandidateDisplayCount) : 0.0f;
-	const float CandidateNaturalWidth = CandidateWindowNaturalWidth + TrailingWidth;
+	float SelectedLayoutExtra = 0.0f;
+	if(HasCandidates && SelectedIndex >= CandidateStart && SelectedIndex < CandidateStart + CandidateDisplayCount)
+		SelectedLayoutExtra = QmImeSelectedLayoutExtraWidth(Ime.m_SelectedPaddingX, Ime.m_CandidatePaddingX);
+	const float CandidateNaturalWidth = CandidateWindowNaturalWidth + TrailingWidth + SelectedLayoutExtra;
 	const float ContentWidth = CandidateNaturalWidth;
 	const float NeededPanelWidth = ContentWidth + 2.0f * Ime.m_PaddingX;
 	const float PanelWidth = maximum(NeededPanelWidth, Ime.m_MinWidth);
