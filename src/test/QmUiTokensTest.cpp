@@ -173,7 +173,8 @@ TEST(QmImePresentationSource, PopupUsesContinuousRedirectablePresentationState)
 	const std::string PopupSource = ReadTestSourceFile("src/game/client/qm_ime_candidate_popup.cpp");
 	const std::string PopupHeader = ReadTestSourceFile("src/game/client/qm_ime_candidate_popup.h");
 
-	EXPECT_NE(ManagerSource.find("State.m_Visible = HasComposition && CandidateCount > 0;"), std::string::npos);
+	EXPECT_NE(ManagerSource.find("State.m_Visible = QmImePopupShouldBeVisible(CandidateCount);"), std::string::npos);
+	EXPECT_EQ(ManagerSource.find("State.m_Visible = HasComposition && CandidateCount > 0;"), std::string::npos);
 	EXPECT_NE(PopupHeader.find("SPresentationTargets"), std::string::npos);
 	EXPECT_NE(PopupSource.find("SImePresentationTarget"), std::string::npos);
 	EXPECT_EQ(PopupSource.find("ResolveImePresentationStateValue"), std::string::npos);

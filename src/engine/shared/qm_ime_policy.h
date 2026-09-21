@@ -59,4 +59,42 @@ inline std::optional<size_t> QmImeBoundedUtf16Length(const unsigned char *pBuffe
 	return {};
 }
 
+// 弹窗可见性以候选列表为准：组合串可能被 IME 短暂清空，不能单独作为隐藏条件
+inline bool QmImePopupShouldBeVisible(int CandidateCount)
+{
+	return CandidateCount > 0;
+}
+
+// 空 TEXTEDITING 不应清空候选：搜狗等 IME 在页边界/高亮时会短暂发空串
+inline bool QmImeEmptyTextEditingShouldClearCandidates()
+{
+	return false;
+}
+
+enum class EQmImeCandidateReloadAction
+{
+	KEEP_PREVIOUS = 0,
+	REPLACE,
+	CLEAR,
+};
+
+// CHANGECANDIDATE 读列表失败时保留上一帧，避免弹窗隐现闪烁。
+// SuppressStaleReload：TEXTINPUT 提交后忽略未伴随 OPENCANDIDATE 的过期刷新。
+inline EQmImeCandidateReloadAction QmImeResolveCandidateReloadAction(bool LoadSucceeded, bool IsOpenNotify, bool SuppressStaleReload = false)
+{
+	if(IsOpenNotify)
+		return LoadSucceeded ? EQmImeCandidateReloadAction::REPLACE : EQmImeCandidateReloadAction::CLEAR;
+	if(SuppressStaleReload)
+		return EQmImeCandidateReloadAction::KEEP_PREVIOUS;
+	return LoadSucceeded ? EQmImeCandidateReloadAction::REPLACE : EQmImeCandidateReloadAction::KEEP_PREVIOUS;
+}
+
+// 提交后是否抑制过期 CHANGECANDIDATE（打开新候选页时解除）
+inline bool QmImeShouldSuppressStaleCandidateReload(bool SuppressFlag, bool IsOpenNotify)
+{
+	if(IsOpenNotify)
+		return false;
+	return SuppressFlag;
+}
+
 #endif

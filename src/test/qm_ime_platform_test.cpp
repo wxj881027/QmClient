@@ -68,3 +68,46 @@ TEST(QmImePlatform, BoundedUtf16LengthRejectsMalformedCandidateRanges)
 	EXPECT_FALSE(QmImeBoundedUtf16Length(aBuffer, sizeof(aBuffer), sizeof(aBuffer)).has_value());
 	EXPECT_FALSE(QmImeBoundedUtf16Length(nullptr, sizeof(aBuffer), 0).has_value());
 }
+
+TEST(QmImePlatform, EmptyTextEditingKeepsCandidatesForSogouPageBoundary)
+{
+	EXPECT_FALSE(QmImeEmptyTextEditingShouldClearCandidates());
+}
+
+TEST(QmImePlatform, PopupVisibilityDrivenByCandidateCount)
+{
+	EXPECT_FALSE(QmImePopupShouldBeVisible(0));
+	EXPECT_TRUE(QmImePopupShouldBeVisible(1));
+	EXPECT_TRUE(QmImePopupShouldBeVisible(5));
+}
+
+TEST(QmImePlatform, FailedCandidateReloadKeepsPreviousOnChangeNotify)
+{
+	EXPECT_EQ(QmImeResolveCandidateReloadAction(true, false), EQmImeCandidateReloadAction::REPLACE);
+	EXPECT_EQ(QmImeResolveCandidateReloadAction(true, true), EQmImeCandidateReloadAction::REPLACE);
+	EXPECT_EQ(QmImeResolveCandidateReloadAction(false, true), EQmImeCandidateReloadAction::CLEAR);
+	EXPECT_EQ(QmImeResolveCandidateReloadAction(false, false), EQmImeCandidateReloadAction::KEEP_PREVIOUS);
+}
+
+TEST(QmImePlatform, StaleCandidateReloadAfterCommitIsSuppressed)
+{
+	EXPECT_EQ(QmImeResolveCandidateReloadAction(true, false, true), EQmImeCandidateReloadAction::KEEP_PREVIOUS);
+	EXPECT_EQ(QmImeResolveCandidateReloadAction(true, true, true), EQmImeCandidateReloadAction::REPLACE);
+	EXPECT_FALSE(QmImeShouldSuppressStaleCandidateReload(true, true));
+	EXPECT_TRUE(QmImeShouldSuppressStaleCandidateReload(true, false));
+	EXPECT_FALSE(QmImeShouldSuppressStaleCandidateReload(false, false));
+}
+
+TEST(QmImePlatform, FlashGuardsAreWiredInInputAndManager)
+{
+	const std::string InputSource = ReadTestSourceFile("src/engine/client/input.cpp");
+	const std::string ManagerSource = ReadTestSourceFile("src/game/client/qm_ime_manager.cpp");
+
+	EXPECT_NE(InputSource.find("QmImeEmptyTextEditingShouldClearCandidates"), std::string::npos);
+	EXPECT_NE(InputSource.find("QmImeResolveCandidateReloadAction"), std::string::npos);
+	EXPECT_NE(InputSource.find("EQmImeCandidateReloadAction::KEEP_PREVIOUS"), std::string::npos);
+	EXPECT_NE(InputSource.find("m_ImeSuppressStaleCandidateReload"), std::string::npos);
+	EXPECT_NE(InputSource.find("QmImeShouldSuppressStaleCandidateReload"), std::string::npos);
+	EXPECT_NE(ManagerSource.find("State.m_Visible = QmImePopupShouldBeVisible(CandidateCount);"), std::string::npos);
+	EXPECT_EQ(ManagerSource.find("State.m_Visible = HasComposition && CandidateCount > 0;"), std::string::npos);
+}

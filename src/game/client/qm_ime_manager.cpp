@@ -111,9 +111,9 @@ SQmImePopupState CQmImeManager::BuildPopupState() const
 	if(State.m_Disabled)
 		return State;
 
-	const bool HasComposition = pInput->HasComposition();
 	const int CandidateCount = pInput->GetCandidateCount();
-	State.m_Visible = HasComposition && CandidateCount > 0;
+	// 候选列表驱动可见性：组合串可能被 IME 短暂清空，单独要求会导致弹窗闪烁
+	State.m_Visible = QmImePopupShouldBeVisible(CandidateCount);
 	if(!State.m_Visible)
 		return State;
 

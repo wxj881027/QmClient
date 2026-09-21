@@ -426,6 +426,7 @@ void CInput::StartTextInput()
 	// enable system messages for IME
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 	SDL_StartTextInput();
+	m_ImeSuppressStaleCandidateReload = false;
 }
 
 void CInput::StopTextInput()
@@ -671,11 +672,22 @@ void CInput::HandleTextEditingEvent(const char *pText, int Start, int Length)
 			m_CompositionCursor = str_utf8_forward(m_CompositionString.c_str(), m_CompositionCursor);
 		}
 		// Length is currently unused on Windows and will always be 0, so we don't support selecting composition text
+		m_ImeSuppressStaleCandidateReload = false;
 		AddTextEvent("");
 	}
 	else
 	{
-		ClearImeState();
+		// 搜狗等 IME 在页边界/高亮第 5 个候选时可能短暂发送空 TEXTEDITING；
+		// 仅清组合串，保留候选列表，避免弹窗隐现闪烁
+		if(!QmImeEmptyTextEditingShouldClearCandidates())
+		{
+			m_CompositionString = "";
+			m_CompositionCursor = 0;
+		}
+		else
+		{
+			ClearImeState();
+		}
 	}
 }
 
@@ -887,6 +899,8 @@ int CInput::Update()
 
 		case SDL_TEXTINPUT:
 			ClearImeState();
+			// 提交后忽略未伴随 OPENCANDIDATE 的过期候选刷新，避免选词回闪
+			m_ImeSuppressStaleCandidateReload = true;
 			AddTextEvent(Event.text.text);
 			break;
 
@@ -1141,10 +1155,12 @@ void CInput::ProcessSystemMessage(SDL_SysWMmsg *pMsg)
 			if(pCandidateList == nullptr && CandidateListFlags != 0 && !QmImeNotifyFlagsIncludeCandidateList(CandidateListFlags, 0))
 				LoadCandidateList(0);
 
-			m_vCandidates.clear();
-			m_CandidatePageStart = 0;
-			m_CandidatePageSize = 0;
-			m_CandidateTotalCount = 0;
+			std::vector<std::string> vLoadedCandidates;
+			int LoadedSelectedIndex = -1;
+			int LoadedPageStart = 0;
+			int LoadedPageSize = 0;
+			int LoadedTotalCount = 0;
+			bool LoadSucceeded = false;
 			if(pCandidateList && Size >= offsetof(CANDIDATELIST, dwOffset))
 			{
 				const size_t BufferSize = Size;
@@ -1155,11 +1171,10 @@ void CInput::ProcessSystemMessage(SDL_SysWMmsg *pMsg)
 				const DWORD PageSize = (DWORD)QmImeCandidatePageSizeOrCount(pCandidateList->dwPageSize, CandidateCount);
 				const DWORD PageEnd = PageStart + std::min(PageSize, CandidateCount - PageStart);
 				const auto *pBufferBegin = reinterpret_cast<const unsigned char *>(pCandidateList);
-				const auto *pBufferEnd = pBufferBegin + BufferSize;
-				m_CandidatePageStart = (int)PageStart;
-				m_CandidatePageSize = (int)PageSize;
-				m_CandidateTotalCount = (int)CandidateCount;
-				m_vCandidates.reserve(PageEnd - PageStart);
+				LoadedPageStart = (int)PageStart;
+				LoadedPageSize = (int)PageSize;
+				LoadedTotalCount = (int)CandidateCount;
+				vLoadedCandidates.reserve(PageEnd - PageStart);
 				for(DWORD i = PageStart; i < PageEnd; i++)
 				{
 					const size_t Offset = pCandidateList->dwOffset[i];
@@ -1169,16 +1184,33 @@ void CInput::ProcessSystemMessage(SDL_SysWMmsg *pMsg)
 					const auto *pCandidate = reinterpret_cast<const wchar_t *>(pBufferBegin + Offset);
 					const auto Candidate = windows_wide_to_utf8_bounded(pCandidate, pCandidate + *CandidateLength + 1);
 					if(Candidate.has_value())
-						m_vCandidates.push_back(*Candidate);
+						vLoadedCandidates.push_back(*Candidate);
 				}
 				if(pCandidateList->dwSelection >= PageStart && pCandidateList->dwSelection < PageEnd)
-					m_CandidateSelectedIndex = pCandidateList->dwSelection - PageStart;
-				else
-					m_CandidateSelectedIndex = -1;
+					LoadedSelectedIndex = (int)pCandidateList->dwSelection - (int)PageStart;
+				LoadSucceeded = true;
 			}
-			else
+
+			const bool IsOpenNotify = pMsg->msg.win.wParam == IMN_OPENCANDIDATE;
+			const bool SuppressStaleReload = QmImeShouldSuppressStaleCandidateReload(m_ImeSuppressStaleCandidateReload, IsOpenNotify);
+			if(IsOpenNotify)
+				m_ImeSuppressStaleCandidateReload = false;
+			switch(QmImeResolveCandidateReloadAction(LoadSucceeded, IsOpenNotify, SuppressStaleReload))
 			{
-				m_CandidateSelectedIndex = -1;
+			case EQmImeCandidateReloadAction::REPLACE:
+				m_vCandidates = std::move(vLoadedCandidates);
+				m_CandidateSelectedIndex = LoadedSelectedIndex;
+				m_CandidatePageStart = LoadedPageStart;
+				m_CandidatePageSize = LoadedPageSize;
+				m_CandidateTotalCount = LoadedTotalCount;
+				break;
+			case EQmImeCandidateReloadAction::CLEAR:
+				ClearImeCandidates();
+				break;
+			case EQmImeCandidateReloadAction::KEEP_PREVIOUS:
+			default:
+				// 加载失败/提交后过期刷新：保留上一帧有效候选
+				break;
 			}
 			free(pCandidateList);
 			const int64_t ReleaseContextStartNs = TrackPerf ? time_get_nanoseconds().count() : 0;
