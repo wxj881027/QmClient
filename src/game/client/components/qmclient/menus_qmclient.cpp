@@ -1534,7 +1534,8 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 			const float QrHeight = s_ShowSponsorQrCode ? LineHeight * 0.5f + std::clamp(ContentWidth, LineHeight * 8.0f, LineHeight * 12.0f) : 0.0f;
 			const float SponsorLinesHeight = ResolveSettingsRowsHeight((int)BuildSponsorLines(ContentWidth).get().size(), LineHeight, LineSpacing);
 			const float AuthorTeeSize = std::max(LineHeight * 2.0f, 50.0f * UiScale);
-			const float AuthorsHeight = 3.0f * (AuthorTeeSize + LineSpacing);
+			// 三位作者并排一行：皮肤在上、名字在下。
+			const float AuthorsHeight = AuthorTeeSize + LineHeight + LineSpacing;
 			const float DeveloperHeight = HasSponsorDeveloper ? 2.0f * (LineHeight + LineSpacing) : 0.0f;
 			return ImageHeight + LineHeight + QrHeight + AuthorsHeight + LineSpacing + LineHeight + SponsorLinesHeight + LineSpacing + LineHeight + DeveloperHeight;
 		};
@@ -1605,21 +1606,34 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 				const char *m_pName;
 				const char *m_pSkin;
 			};
-			// 每位作者展示各自的皮肤；皮肤缺失时由 RenderDevSkin 回退到 default，与 TClient 信息页一致。
+			// 三位作者并排展示；每位作者展示各自的皮肤；皮肤缺失时由 RenderDevSkin 回退到 default，与 TClient 信息页一致。
 			static constexpr std::array<SAuthorEntry, 3> s_aAuthors = {{
 				{"qmclient-community-author-xuanmeng", "璇梦", "owocat_mie"},
 				{"qmclient-community-author-dyl", "DYL", "default_v2"},
 				{"qmclient-community-author-xiari", "夏日", "blacktee"},
 			}};
 			const float AuthorTeeSize = std::max(LineHeight * 2.0f, 50.0f * UiScale);
+			CUIRect AuthorRow;
+			Content.HSplitTop(AuthorTeeSize + LineHeight + LineSpacing, &AuthorRow, &Content);
+			const float AuthorGap = LineSpacing;
+			const float AuthorSlotWidth = std::max(0.0f, (AuthorRow.w - AuthorGap * (float)(s_aAuthors.size() - 1)) / (float)s_aAuthors.size());
+			CUIRect Remain = AuthorRow;
 			for(size_t Index = 0; Index < s_aAuthors.size(); ++Index)
 			{
-				CUIRect AuthorRow, TeeRect, Label;
-				Content.HSplitTop(AuthorTeeSize + LineSpacing, &AuthorRow, &Content);
-				AuthorRow.VSplitLeft(AuthorTeeSize + LineSpacing, &TeeRect, &Label);
-				TeeRect.w = AuthorTeeSize;
-				RenderDevSkin(TeeRect.Center(), AuthorTeeSize, s_aAuthors[Index].m_pSkin, "default", false, 0, 0, 0, false, true);
-				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, s_aAuthors[Index].m_pTextId, &Label, s_aAuthors[Index].m_pName, BodySize, TEXTALIGN_ML, {}, (int)Label.w);
+				if(Index > 0)
+					Remain.VSplitLeft(AuthorGap, nullptr, &Remain);
+				CUIRect Slot, TeeRect, Label;
+				if(Index + 1 < s_aAuthors.size())
+					Remain.VSplitLeft(AuthorSlotWidth, &Slot, &Remain);
+				else
+					Slot = Remain;
+				Slot.HSplitTop(AuthorTeeSize, &TeeRect, &Label);
+				Label.h = LineHeight;
+				CUIRect TeeBox = TeeRect;
+				TeeBox.w = std::min(AuthorTeeSize, TeeRect.w);
+				TeeBox.x = TeeRect.x + (TeeRect.w - TeeBox.w) * 0.5f;
+				RenderDevSkin(TeeBox.Center(), AuthorTeeSize, s_aAuthors[Index].m_pSkin, "default", false, 0, 0, 0, false, true);
+				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, s_aAuthors[Index].m_pTextId, &Label, s_aAuthors[Index].m_pName, BodySize, TEXTALIGN_MC, {}, (int)Label.w);
 			}
 			Content.HSplitTop(LineSpacing, nullptr, &Content);
 			Content.HSplitTop(LineHeight, &Row, &Content);

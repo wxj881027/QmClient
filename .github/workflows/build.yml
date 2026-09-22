@@ -492,7 +492,8 @@ jobs:
           rustup target add x86_64-linux-android
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699  # v4.0.1
+        # v4.0.4 起跳过已废弃的 `tools` 包，避免 sdkmanager 直接失败
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd  # v4.0.4
 
       - name: Install Android SDK components
         run: |

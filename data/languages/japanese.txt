@@ -3800,6 +3800,9 @@ Endpoint
 Endpoint (optional)
 == エンドポイント（オプション）
 
+Enhanced rendering
+== 高度なレンダリング
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice モードに入るか再起動してください。そうしないと 60 秒後にチーム全員が処刑されます
 
@@ -4645,6 +4648,9 @@ Has save
 
 Has unread news
 == 未読ニュースがあるかどうか
+
+HD icons (MSDF)
+== 高解像度アイコン (MSDF)
 
 HDF
 == HDF
@@ -6025,6 +6031,9 @@ Menu camera rotation time in seconds
 
 Menu camera speed
 == メニューカメラの速度
+
+Menu Gaussian blur pipeline
+== メニューガウスぼかしパイプライン
 
 Menu main panel background color
 == メニューメインパネルの背景色
@@ -7736,6 +7745,9 @@ Pulse speed
 Pulse strength
 == パルス強度
 
+Pure Vulkan fallback
+== 現在：純粋 Vulkan フォールバック
+
 Push radius
 == プッシュ半径
 
@@ -7771,6 +7783,9 @@ Pyramid
 
 q = Connection quality
 == q = 接続品質
+
+Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
+== Qm 高度なレンダリング: 0=オフ（純粋 Vulkan）、1=自動フォールバック、2=強制オン
 
 Qm UI custom icon color
 == Qm UI アイコンのカスタム色
@@ -7813,6 +7828,9 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi カラーアニメーション補間：0=sRGB 線形 1=OKLAB 知覚均一
+
+QmVulkan active
+== 現在：QmVulkan 有効
 
 QQ group: 1076765929 (click to copy)
 == QQ グループ：1076765929（クリックしてコピー）
@@ -10202,6 +10220,9 @@ Smooth Dynamic Camera
 Smooth fade
 == スムーズフェード
 
+Smooth island (SDF)
+== Dynamic Island スムーズ (SDF)
+
 Smooth other players' predicted movement
 == 他のプレイヤーの予測移動をスムーズにする
 
@@ -11858,6 +11879,9 @@ Use enemy color instead of frozen color
 Use enemy list to drive player indicators
 == 敵リストを使用してプレイヤーインジケーターを駆動
 
+Use Gaussian blur pipeline when enhanced rendering is active
+== 強化レンダリング有効時、ガウスぼかしパイプラインを使用
+
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 高帯域モードを使用（サーバー帯域を 2 倍、LAN のみ）
 
@@ -11869,6 +11893,9 @@ Use large emote
 
 Use mouse sensitivity when dynamic camera is on
 == 動的カメラオン時にマウス感度を使用
+
+Use MSDF icon pipeline when enhanced rendering is active
+== 強化レンダリング有効時、MSDF アイコンパイプラインを使用
 
 Use multi-char replacement based on word length
 == 単語の長さに基づいて複数文字置換を使用
@@ -11902,6 +11929,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == プリ入力を使用して他のプレイヤーを予測し、より正確な入力予測を実現
+
+Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
+== 強化レンダリング有効時、Dynamic Island と角丸に SDF パイプラインを使用
 
 Use skin color for frozen Tee's feet
 == フリーズ Tee の足にもスキン色を使用

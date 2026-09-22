@@ -227,18 +227,19 @@ TEST(QmUiPresentationSource, OverlaysUsePresentationState)
 
 TEST(QmUiTokens, MotionRefsBindToAnimCurves)
 {
+	// 动效 token 统一为「快速起步、平稳收尾」：短时长 + EASE_OUT_QUART，弹簧语义独立于曲线预设。
 	EXPECT_EQ(ui_token::motion::HOVER_FADE.m_Easing, EEasing::EASE_OUT_QUART);
-	EXPECT_EQ(ui_token::motion::PRESS_SCALE.m_Easing, EEasing::EASE_IN);
-	EXPECT_EQ(ui_token::motion::PAGE_SLIDE.m_Easing, EEasing::EASE_IN_OUT_CUBIC);
+	EXPECT_EQ(ui_token::motion::PRESS_SCALE.m_Easing, EEasing::EASE_OUT_QUART);
+	EXPECT_EQ(ui_token::motion::PAGE_SLIDE.m_Easing, EEasing::EASE_OUT_QUART);
 	EXPECT_EQ(ui_token::motion::TAB_SWITCH.m_Easing, EEasing::EASE_OUT_QUART);
 	EXPECT_EQ(ui_token::motion::INPUT_FOCUS_RING.m_Easing, EEasing::EASE_OUT_QUART);
-	EXPECT_EQ(ui_token::motion::TOAST_SLIDE.m_Easing, EEasing::CUBIC_BEZIER);
+	EXPECT_EQ(ui_token::motion::TOAST_SLIDE.m_Easing, EEasing::EASE_OUT_QUART);
 	EXPECT_EQ(ui_token::motion::TOOLTIP_FADE.m_Easing, EEasing::EASE_OUT_QUART);
-	EXPECT_NEAR(ui_token::motion::TOGGLE_SPRING.m_Stiffness, 280.0f, 1e-6f);
+	EXPECT_NEAR(ui_token::motion::TOGGLE_SPRING.m_Stiffness, 620.0f, 1e-6f);
 
 	EXPECT_EQ(ui_token::motion::BTN_HOVER.m_Easing, EEasing::EASE_OUT_QUART);
-	EXPECT_EQ(ui_token::motion::MODAL_IN.m_Easing, EEasing::CUBIC_BEZIER);
-	EXPECT_NEAR(ui_token::motion::TOGGLE.m_Stiffness, 280.0f, 1e-6f);
+	EXPECT_EQ(ui_token::motion::MODAL_IN.m_Easing, EEasing::EASE_OUT_QUART);
+	EXPECT_NEAR(ui_token::motion::TOGGLE.m_Stiffness, 620.0f, 1e-6f);
 }
 
 TEST(QmUiTokens, QmMotionAppliesUserMotionLevel)

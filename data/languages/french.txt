@@ -3800,6 +3800,9 @@ Endpoint
 Endpoint (optional)
 == Point d'accès (optionnel)
 
+Enhanced rendering
+== Rendu amélioré
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == Entrez en mode /practice ou redémarrez, sinon toute l'équipe sera tuée dans 60 secondes
 
@@ -4645,6 +4648,9 @@ Has save
 
 Has unread news
 == A des actualités non lues
+
+HD icons (MSDF)
+== Icônes HD (MSDF)
 
 HDF
 == HDF
@@ -6025,6 +6031,9 @@ Menu camera rotation time in seconds
 
 Menu camera speed
 == Vitesse de la caméra du menu
+
+Menu Gaussian blur pipeline
+== Pipeline de flou gaussien du menu
 
 Menu main panel background color
 == Couleur de fond du panneau principal du menu
@@ -7736,6 +7745,9 @@ Pulse speed
 Pulse strength
 == Force de l'impulsion
 
+Pure Vulkan fallback
+== Actuel : Vulkan pur
+
 Push radius
 == Rayon de poussée
 
@@ -7771,6 +7783,9 @@ Pyramid
 
 q = Connection quality
 == q = Qualité de la connexion
+
+Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
+== Rendu Qm : 0=Inactif (Vulkan pur), 1=Auto, 2=Forcer
 
 Qm UI custom icon color
 == Couleur personnalisée des icônes Qm UI
@@ -7813,6 +7828,9 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == Interpolation d'animation de couleur QmUi : 0=sRGB linéaire 1=OKLAB perceptuellement uniforme
+
+QmVulkan active
+== Actuel : QmVulkan actif
 
 QQ group: 1076765929 (click to copy)
 == Groupe QQ : 1076765929 (cliquez pour copier)
@@ -10202,6 +10220,9 @@ Smooth Dynamic Camera
 Smooth fade
 == Fondu lisse
 
+Smooth island (SDF)
+== Dynamic Island lisse (SDF)
+
 Smooth other players' predicted movement
 == Lisser le mouvement prédit des autres joueurs
 
@@ -11858,6 +11879,9 @@ Use enemy color instead of frozen color
 Use enemy list to drive player indicators
 == Utiliser la liste des ennemis pour piloter les indicateurs de joueur
 
+Use Gaussian blur pipeline when enhanced rendering is active
+== Utiliser le pipeline de flou gaussien avec le rendu amélioré
+
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == Utiliser le mode haute bande passante (double la bande passante du serveur, LAN uniquement)
 
@@ -11869,6 +11893,9 @@ Use large emote
 
 Use mouse sensitivity when dynamic camera is on
 == Utiliser la sensibilité de la souris lorsque la caméra dynamique est activée
+
+Use MSDF icon pipeline when enhanced rendering is active
+== Utiliser le pipeline d’icônes MSDF avec le rendu amélioré
 
 Use multi-char replacement based on word length
 == Utiliser le remplacement multi-caractères basé sur la longueur du mot
@@ -11902,6 +11929,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == Utiliser la pré-saisie pour prédire les autres joueurs afin d'obtenir une prédiction d'entrée plus précise
+
+Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
+== Utiliser les pipelines SDF pour Dynamic Island et les rectangles arrondis
 
 Use skin color for frozen Tee's feet
 == Utiliser la couleur du skin pour les pieds du Tee gelé

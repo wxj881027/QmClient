@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <vector>
 
 namespace qm_island
 {
@@ -19,44 +18,42 @@ namespace qm_island
 		// 轮廓环兜底的采样上限：环宽 2px 左右时 192 段已经看不出折线。
 		constexpr int MAX_OUTLINE_RING_SEGMENTS = 192;
 
-		// 环绕倒计时条的几何兜底：无 SDF 时用粗线段近似圆环。
-		// 与 HUD 的 DrawMediaIslandArcGeometry 同语义（-90° 起顺时针、按进度覆盖），
-		// 但这里按周长离散成线段，因此不需要 HUD 那份圆形专用几何。
+		// 环绕倒计时条的几何兜底：无 SDF 时用内外半径环带近似圆环（使用 Thickness）。
+		// 与 HUD 的 DrawMediaIslandArcGeometry 同语义（-90° 起顺时针、按进度覆盖）。
 		void DrawRingFallback(IGraphics *pGraphics, vec2 Center, float Radius, float Thickness, float Progress, ColorRGBA Color)
 		{
 			if(pGraphics == nullptr || Radius <= 0.0f || Thickness <= 0.0f || Color.a <= 0.0f)
 				return;
 
 			constexpr float Pi = 3.14159265359f;
+			constexpr int MaxSegments = 64;
 			const float SafeProgress = std::clamp(Progress, 0.0f, 1.0f);
 			if(SafeProgress <= 0.0f)
 				return;
 
-			// 段数随半径增长，避免大环上出现可见折线；上限控制顶点开销。
-			const int Segments = std::clamp((int)(Radius * 0.6f), 16, 192);
-			const int DrawnSegments = std::max(1, (int)std::ceil((float)Segments * SafeProgress));
-
-			std::vector<IGraphics::CLineItem> vLines;
-			vLines.reserve((size_t)DrawnSegments);
-			for(int i = 0; i < DrawnSegments; ++i)
+			const float OuterRadius = Radius + Thickness * 0.5f;
+			const float InnerRadius = std::max(0.0f, Radius - Thickness * 0.5f);
+			const int NumSegments = std::max(1, (int)std::ceil((float)MaxSegments * SafeProgress));
+			const float Sweep = 2.0f * Pi * SafeProgress;
+			std::array<IGraphics::CFreeformItem, MaxSegments> aSegments;
+			for(int i = 0; i < NumSegments; ++i)
 			{
-				const float T0 = (float)i / (float)Segments;
-				const float T1 = (float)(i + 1) / (float)Segments;
-				// 从正上方开始顺时针：内部角度以 -90° 为起点。
-				const float A0 = -Pi * 0.5f + T0 * 2.0f * Pi * SafeProgress;
-				const float A1 = -Pi * 0.5f + T1 * 2.0f * Pi * SafeProgress;
-				vLines.emplace_back(
-					Center.x + std::cos(A0) * Radius,
-					Center.y + std::sin(A0) * Radius,
-					Center.x + std::cos(A1) * Radius,
-					Center.y + std::sin(A1) * Radius);
+				const float Angle0 = Sweep * (float)i / (float)NumSegments;
+				const float Angle1 = Sweep * (float)(i + 1) / (float)NumSegments;
+				const vec2 Direction0(std::sin(Angle0), -std::cos(Angle0));
+				const vec2 Direction1(std::sin(Angle1), -std::cos(Angle1));
+				aSegments[i] = IGraphics::CFreeformItem(
+					Center + Direction0 * OuterRadius,
+					Center + Direction1 * OuterRadius,
+					Center + Direction1 * InnerRadius,
+					Center + Direction0 * InnerRadius);
 			}
 
 			pGraphics->TextureClear();
-			pGraphics->LinesBegin();
+			pGraphics->QuadsBegin();
 			pGraphics->SetColor(Color);
-			pGraphics->LinesDraw(vLines.data(), vLines.size());
-			pGraphics->LinesEnd();
+			pGraphics->QuadsDrawFreeform(aSegments.data(), NumSegments);
+			pGraphics->QuadsEnd();
 		}
 
 		// IGraphics 只有一个重载可直调（接受 SRoundedSurfaceParams），

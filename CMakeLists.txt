@@ -174,6 +174,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   set_property(TARGET qm-nmt-hook64 PROPERTY CXX_EXTENSIONS OFF)
   target_include_directories(qm-nmt-hook64 PRIVATE src vendor/minhook/include)
   target_compile_definitions(qm-nmt-hook64 PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-nmt-hook64 PRIVATE /utf-8) # 源文件为 UTF-8 无 BOM，中文注释需要 /utf-8
   target_link_libraries(qm-nmt-hook64 PRIVATE minhook windowsapp bcrypt)
 
   # 网易云启动期 Bootstrap 在 QmClient 目录中使用独立文件名；部署器只在
@@ -190,6 +191,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   set_property(TARGET qm-nmt-bootstrap PROPERTY CXX_EXTENSIONS OFF)
   target_include_directories(qm-nmt-bootstrap PRIVATE src)
   target_compile_definitions(qm-nmt-bootstrap PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-nmt-bootstrap PRIVATE /utf-8)
   target_link_libraries(qm-nmt-bootstrap PRIVATE ws2_32)
 
   add_executable(qm-nmt-helper src/qm-nmt-hook/qm_netease_hook_helper.cpp)
@@ -211,6 +213,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   set_property(TARGET qm-nmt-helper PROPERTY CXX_EXTENSIONS OFF)
   target_include_directories(qm-nmt-helper PRIVATE src)
   target_compile_definitions(qm-nmt-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-nmt-helper PRIVATE /utf-8)
   target_link_libraries(qm-nmt-helper PRIVATE bcrypt winhttp ws2_32)
 
   # 汽水音乐 Hook Helper:发现 SodaMusic.exe 主进程,激活 Node inspector(9229),
@@ -239,6 +242,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   set_property(TARGET qm-soda-helper PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   target_include_directories(qm-soda-helper PRIVATE src)
   target_compile_definitions(qm-soda-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-soda-helper PRIVATE /utf-8)
   target_link_libraries(qm-soda-helper PRIVATE bcrypt winhttp ws2_32)
 
   # 酷狗与 QQ 音乐共用独立采集进程，网络与进程读取不进入游戏主线程。
@@ -272,6 +276,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   )
   target_include_directories(qm-music-helper PRIVATE src)
   target_compile_definitions(qm-music-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-music-helper PRIVATE /utf-8)
   target_link_libraries(qm-music-helper PRIVATE bcrypt winhttp ws2_32 iphlpapi version advapi32 user32)
 endif()
 
@@ -2837,6 +2842,8 @@ if(CLIENT)
     backend/opengles/opengles_sl_program.cpp
     backend/vulkan/backend_vulkan.cpp
     backend/vulkan/backend_vulkan.h
+    backend/vulkan/backend_vulkan_qm_ext.cpp
+    backend/vulkan/backend_vulkan_qm_ext.h
     backend_sdl.cpp
     backend_sdl.h
     blocklist_driver.cpp
@@ -3997,6 +4004,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_console_log_filter_test.cpp
     qm_hammer_hit_detection_test.cpp
     qm_hud_media_island_logic_test.cpp
+    qm_vulkan_enhanced_test.cpp
     qm_hud_notifications_test.cpp
     qm_ime_platform_test.cpp
     qm_markdown_test.cpp
@@ -4008,7 +4016,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     netease_lyric_timeline_test.cpp
     netease_lyric_state_test.cpp
     netease_shared_memory_test.cpp
-    qm_netease_cdp_test.cpp
     qm_netease_hook_protocol_test.cpp
     music_lyrics_krc_test.cpp
     music_lyrics_qrc_test.cpp
@@ -4070,6 +4077,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     voice_core_test.cpp
   )
   set(TESTS_EXTRA
+    src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
     src/game/client/animstate.cpp
     src/game/client/race_parse.cpp
     src/game/client/skin.cpp
@@ -4125,9 +4133,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
     src/game/client/components/qmclient/netease/netease_shared_memory.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
-    src/qm-nmt-hook/qm_netease_bootstrap.cpp
-    src/qm-nmt-hook/qm_netease_cdp.cpp
-    src/qm-nmt-hook/qm_netease_cdp_client.cpp
     src/game/client/components/qmclient/modes.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
@@ -4152,6 +4157,15 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/engine/client/serverbrowser_ping_cache.h
     src/engine/client/sqlite.cpp
   )
+  # Windows 专用：bootstrap 无跨平台实现（winsock2/CreateFileW），仅 Windows 编入 testrunner
+  if(TARGET_OS STREQUAL "windows")
+    list(APPEND TESTS src/test/qm_netease_cdp_test.cpp)
+    list(APPEND TESTS_EXTRA
+      src/qm-nmt-hook/qm_netease_bootstrap.cpp
+      src/qm-nmt-hook/qm_netease_cdp.cpp
+      src/qm-nmt-hook/qm_netease_cdp_client.cpp
+    )
+  endif()
 
   set(TARGET_TESTRUNNER testrunner)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL
@@ -4210,7 +4224,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/netease_lyric_state_test.cpp
       src/test/netease_lyric_timeline_test.cpp
       src/test/netease_shared_memory_test.cpp
-      src/test/qm_netease_cdp_test.cpp
       src/test/qm_netease_hook_protocol_test.cpp
       src/test/qm_spotify_crypto_test.cpp
       src/test/qm_spotify_token_test.cpp
@@ -4231,15 +4244,22 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
       src/game/client/components/qmclient/netease/netease_shared_memory.cpp
       src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
-      src/qm-nmt-hook/qm_netease_bootstrap.cpp
       src/qm-nmt-hook/qm_netease_cdp.cpp
-      src/qm-nmt-hook/qm_netease_cdp_client.cpp
       src/engine/external/json-parser/json.c
     )
     target_include_directories(qm-nmt-tests PRIVATE src)
+    if(MSVC)
+      target_compile_options(qm-nmt-tests PRIVATE /utf-8)
+    endif()
     # 使用 plain 签名，与文件内 target_link_libraries 循环（无 keyword）保持一致
     target_link_libraries(qm-nmt-tests ${QM_NMT_GTEST_MAIN_TARGET})
     if(TARGET_OS STREQUAL "windows")
+      # Windows 专用：bootstrap/cdp_client 依赖 winsock2，测试也使用宽字符路径
+      target_sources(qm-nmt-tests PRIVATE
+        src/test/qm_netease_cdp_test.cpp
+        src/qm-nmt-hook/qm_netease_bootstrap.cpp
+        src/qm-nmt-hook/qm_netease_cdp_client.cpp
+      )
       target_compile_definitions(qm-nmt-tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
       target_link_libraries(qm-nmt-tests bcrypt winhttp ws2_32)
     endif()

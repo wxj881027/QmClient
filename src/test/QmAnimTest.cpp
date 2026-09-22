@@ -760,7 +760,8 @@ namespace
 	{
 		g_Config.m_QmUiMotionLevel = 2;
 		const float Dt = 1.0f / 60.0f;
-		int Steps = static_cast<int>(Seconds / Dt) + 1;
+		// 四舍五入到整帧，避免 +1 多走一帧导致中途采样提前到达终值
+		int Steps = static_cast<int>(Seconds / Dt + 0.5f);
 		for(int i = 0; i < Steps; ++i)
 			Runtime.Advance(Dt);
 	}

@@ -99,10 +99,12 @@ TEST(QmMarkdown, RejectsUnsafeLinksAndKeepsUnknownSyntaxAsText)
 			All += Span.m_Text;
 		}
 	}
-	// 非法链接与图片退回纯文本，不产生可点击目标。
+	// 非法链接退回纯文本；图片只保留 alt 文字、丢弃链接与语法外壳。
 	EXPECT_NE(All.find("[坏链接](javascript:alert(1))"), std::string::npos);
 	EXPECT_NE(All.find("<script>alert(1)</script>"), std::string::npos);
-	EXPECT_NE(All.find("![图片](https://example.com/a.png)"), std::string::npos);
+	EXPECT_NE(All.find("图片"), std::string::npos);
+	EXPECT_EQ(All.find("![图片](https://example.com/a.png)"), std::string::npos);
+	EXPECT_EQ(All.find("https://example.com/a.png"), std::string::npos);
 }
 
 TEST(QmMarkdown, ParsesSettingsDirectiveAsOwnBlock)

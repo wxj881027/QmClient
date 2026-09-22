@@ -166,7 +166,8 @@ TEST(QmHudMediaIslandSource, RecordingDotUsesTheIslandSdfWithGeometryFallback)
 	EXPECT_NE(IslandBody.find("DrawHudRecordingStatusDot("), std::string::npos);
 	EXPECT_EQ(GameTimerBody.find("DrawSmoothCircle("), std::string::npos);
 	EXPECT_EQ(IslandBody.find("DrawSmoothCircle(Graphics(), DotCenter"), std::string::npos);
-	EXPECT_EQ(Source.find("DrawHudRecordingStatusDot("), Source.rfind("DrawHudRecordingStatusDot("));
+	// 几何圆只作为入口内兜底出现一次，两条调用路径不再各自直接画圆。
+	EXPECT_EQ(Source.find("DrawSmoothCircle("), Source.rfind("DrawSmoothCircle("));
 
 	// 羽化比例与岛共用同一份实现，且必须在 HUD 编辑器改写屏幕映射之前取。
 	EXPECT_NE(GameTimerBody.find("CurrentScreenPixelSize(Graphics())"), std::string::npos);
@@ -2188,7 +2189,7 @@ TEST(QmHudMediaIslandSource, BackgroundBlurUsesTheAnimatedCombinedSdfIncludingAt
 	EXPECT_NE(PrepareBlur.find("IsBackbufferCaptureSupported"), std::string::npos);
 	EXPECT_NE(PrepareBlur.find("IsRenderTargetGaussianBlurSupported"), std::string::npos);
 	EXPECT_NE(PrepareBlur.find("CaptureBackbufferToRenderTarget"), std::string::npos);
-	EXPECT_NE(PrepareBlur.find("GaussianBlurRenderTarget"), std::string::npos);
+	EXPECT_NE(PrepareBlur.find("DualBlurRenderTarget"), std::string::npos);
 	EXPECT_NE(PrepareBlur.find("m_QmGaussianBlur"), std::string::npos);
 	EXPECT_NE(PrepareBlur.find("QmHudMediaIslandShouldRefreshBackdropBlur"), std::string::npos);
 	EXPECT_EQ(PrepareBlur.find("m_QmBetterScoreboard"), std::string::npos);
@@ -2570,7 +2571,9 @@ TEST(QmIslandNoticeSource, GeometryFallbackDrawsTheOutlineRingWhenSdfIsUnavailab
 
 	const std::string RingBody = FunctionBody(Source, "void DrawOutlineRingFallback(IGraphics *pGraphics, const SHudMediaIslandSdfRenderState &State)");
 	ASSERT_FALSE(RingBody.empty());
-	EXPECT_NE(RingBody.find("RoundedRectPerimeterPoint"), std::string::npos);
+	// 周长采样抽到 DrawOutlineRingPass；兜底本体仍负责内外沿偏移与两趟绘制。
+	EXPECT_NE(RingBody.find("DrawOutlineRingPass"), std::string::npos);
+	EXPECT_NE(Source.find("RoundedRectPerimeterPoint"), std::string::npos);
 	EXPECT_NE(RingBody.find("0.18f * Item.m_ContentAlpha"), std::string::npos);
 	EXPECT_NE(RingBody.find("Item.m_CountdownProgress"), std::string::npos);
 }

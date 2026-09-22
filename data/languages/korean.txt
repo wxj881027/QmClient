@@ -3800,6 +3800,9 @@ Endpoint
 Endpoint (optional)
 == 엔드포인트 (선택 사항)
 
+Enhanced rendering
+== 향상된 렌더링
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice 모드를 입력하거나 재시작하세요. 그렇지 않으면 60초 후에 팀 전체가 사망합니다
 
@@ -4645,6 +4648,9 @@ Has save
 
 Has unread news
 == 읽지 않은 뉴스 있음
+
+HD icons (MSDF)
+== 고해상도 아이콘 (MSDF)
 
 HDF
 == HDF
@@ -6025,6 +6031,9 @@ Menu camera rotation time in seconds
 
 Menu camera speed
 == 메뉴 카메라 속도
+
+Menu Gaussian blur pipeline
+== 메뉴 가우시안 블러 파이프라인
 
 Menu main panel background color
 == 메뉴 메인 패널 배경색
@@ -7736,6 +7745,9 @@ Pulse speed
 Pulse strength
 == 펄스 강도
 
+Pure Vulkan fallback
+== 현재: 순수 Vulkan 폴백
+
 Push radius
 == 밀기 반경
 
@@ -7771,6 +7783,9 @@ Pyramid
 
 q = Connection quality
 == q = 연결 품질
+
+Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
+== Qm 향상된 렌더링: 0=꺼짐(순수 Vulkan), 1=자동 폴백, 2=강제 켜짐
 
 Qm UI custom icon color
 == Qm UI 아이콘 사용자 지정 색상
@@ -7813,6 +7828,9 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi 색상 애니메이션 보간：0=sRGB 선형 1=OKLAB 지각 균일
+
+QmVulkan active
+== 현재: QmVulkan 활성
 
 QQ group: 1076765929 (click to copy)
 == QQ 그룹: 1076765929 (클릭하여 복사)
@@ -10202,6 +10220,9 @@ Smooth Dynamic Camera
 Smooth fade
 == 부드러운 페이드
 
+Smooth island (SDF)
+== Dynamic Island 부드럽게 (SDF)
+
 Smooth other players' predicted movement
 == 다른 플레이어의 예측 이동을 부드럽게 처리
 
@@ -11858,6 +11879,9 @@ Use enemy color instead of frozen color
 Use enemy list to drive player indicators
 == 적 목록을 사용하여 플레이어 표시기 구동
 
+Use Gaussian blur pipeline when enhanced rendering is active
+== 향상된 렌더링 활성 시 가우시안 블러 파이프라인 사용
+
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 높은 대역폭 모드 사용 (서버 대역폭 두 배, LAN 전용)
 
@@ -11869,6 +11893,9 @@ Use large emote
 
 Use mouse sensitivity when dynamic camera is on
 == 동적 카메라가 켜져 있을 때 마우스 감도 사용
+
+Use MSDF icon pipeline when enhanced rendering is active
+== 향상된 렌더링 활성 시 MSDF 아이콘 파이프라인 사용
 
 Use multi-char replacement based on word length
 == 단어 길이에 따른 다중 문자 대체 사용
@@ -11902,6 +11929,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == 사전 입력을 사용하여 다른 플레이어를 예측해 더 정확한 입력 예측
+
+Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
+== 향상된 렌더링 활성 시 Dynamic Island/둥근 사각형에 SDF 파이프라인 사용
 
 Use skin color for frozen Tee's feet
 == 얼어붙은 Tee의 발에도 스킨 색상 사용

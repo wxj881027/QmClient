@@ -3800,6 +3800,9 @@ Endpoint
 Endpoint (optional)
 == 端点（可选）
 
+Enhanced rendering
+== 增强渲染
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == 请输入 /practice 或重新开始，否则整队将在 60 秒后被处死
 
@@ -4645,6 +4648,9 @@ Has save
 
 Has unread news
 == 是否有未读新闻
+
+HD icons (MSDF)
+== 高清图标 (MSDF)
 
 HDF
 == HDF
@@ -6025,6 +6031,9 @@ Menu camera rotation time in seconds
 
 Menu camera speed
 == 菜单相机速度
+
+Menu Gaussian blur pipeline
+== 菜单高斯模糊管线
 
 Menu main panel background color
 == 菜单主面板底色
@@ -7736,6 +7745,9 @@ Pulse speed
 Pulse strength
 == 脉冲强度
 
+Pure Vulkan fallback
+== 当前：纯净 Vulkan 回退
+
 Push radius
 == 推动半径
 
@@ -7771,6 +7783,9 @@ Pyramid
 
 q = Connection quality
 == q = 连接质量
+
+Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
+== Qm 增强渲染：0=关（纯净 Vulkan），1=自动回退，2=强制开启
 
 Qm UI custom icon color
 == Qm 界面图标自定义颜色
@@ -7813,6 +7828,9 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi 颜色动画插值：0=sRGB 线性，1=OKLAB 感知均匀
+
+QmVulkan active
+== 当前：QmVulkan 已启用
 
 QQ group: 1076765929 (click to copy)
 == QQ 群：1076765929（点击复制）
@@ -10202,6 +10220,9 @@ Smooth Dynamic Camera
 Smooth fade
 == 柔和淡变
 
+Smooth island (SDF)
+== 灵动岛平滑 (SDF)
+
 Smooth other players' predicted movement
 == 平滑其他玩家的预测移动
 
@@ -11858,6 +11879,9 @@ Use enemy color instead of frozen color
 Use enemy list to drive player indicators
 == 用敌对列表驱动玩家指示器
 
+Use Gaussian blur pipeline when enhanced rendering is active
+== 增强渲染启用时，使用高斯模糊管线
+
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 使用高带宽模式。服务器所需的带宽加倍。仅限局域网使用
 
@@ -11869,6 +11893,9 @@ Use large emote
 
 Use mouse sensitivity when dynamic camera is on
 == 启用动态摄像机时使用鼠标灵敏度
+
+Use MSDF icon pipeline when enhanced rendering is active
+== 增强渲染启用时，使用 MSDF 图标管线
 
 Use multi-char replacement based on word length
 == 根据词语长度使用多字符替换
@@ -11902,6 +11929,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == 使用预输入预测其他玩家以获得更精确的输入预测
+
+Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
+== 增强渲染启用时，用 SDF 管线绘制灵动岛与圆角矩形
 
 Use skin color for frozen Tee's feet
 == 冻结 Tee 的脚部也使用皮肤颜色

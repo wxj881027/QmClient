@@ -157,13 +157,15 @@ TEST(QmChatMessageMerge, SettingIsDefaultOnLocalizedInDreamFeaturesAndVersioned)
 {
 	const std::string Config = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string Menus = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string Metrics = ReadTestSourceFile("src/game/client/QmUi/cards/QmCardCatalogFunctionMetrics.h");
 	const std::string Translations = ReadTestSourceFile("qmclient_scripts/languages_qmclient/translations/i18n/qmclient.toml");
 	const std::string Version = ReadTestSourceFile("src/game/version.h");
 	const size_t MiniFeatures = Menus.find("void CMenus::RenderQmFunctionMiniFeaturesContent(");
 
 	ASSERT_NE(MiniFeatures, std::string::npos);
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE"), std::string::npos);
-	EXPECT_NE(Menus.find("{&g_Config.m_QmMessageMerge, \"Message merging\", &g_Config.m_QmMessageMerge},", MiniFeatures), std::string::npos);
+	// 卡片目录已迁到 QmCardCatalogFunctionMetrics.h，标签走 Localizable 包装。
+	EXPECT_NE(Metrics.find("{&g_Config.m_QmMessageMerge, Localizable(\"Message merging\"), &g_Config.m_QmMessageMerge},"), std::string::npos);
 	EXPECT_NE(Translations.find("key = \"Message merging\""), std::string::npos);
 	EXPECT_NE(Translations.find("simplified_chinese = \"消息合并\""), std::string::npos);
 	EXPECT_NE(Version.find("#define QMCLIENT_VERSION \""), std::string::npos);
@@ -186,10 +188,11 @@ TEST(QmEchoMessageMerge, MergeIsIndependentFromPlayerMessageMergeAndAlwaysOn)
 	// 独立的窗口配置，默认 2000ms，不受 qm_message_merge 影响。
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmEchoMergeWindowMs, qm_echo_merge_window_ms, 2000, 0, 60000"), std::string::npos);
 
-	// 闸门必须在「通知栏 / 控制台聊天栏」两条分支之前：被抑制的重复连 Console()->Print 都走不到。
+	// 闸门必须在「通知栏 / 控制台聊天栏」两条分支之前：被抑制的重复连控制台打印都走不到。
+	// 注释里也会提到 Console()->Print，find 目标取真实调用签名，避免命中注释。
 	const size_t GateCall = Echo1.find("if(GateEchoRepeat(pString))");
 	const size_t QueueEchoCall = Echo1.find("QueueEcho(pString, EchoColor)");
-	const size_t ConsolePrint = Echo1.find("Console()->Print");
+	const size_t ConsolePrint = Echo1.find("Console()->Print(IConsole::");
 	ASSERT_NE(GateCall, std::string::npos);
 	ASSERT_NE(QueueEchoCall, std::string::npos);
 	ASSERT_NE(ConsolePrint, std::string::npos);
@@ -598,7 +601,8 @@ TEST(QmChatCommandCompletion, KeepsDdnetTabCompletionWithoutQmExtensions)
 	const std::string OnInput = SourceFunctionBody(Chat, "bool CChat::OnInput(");
 	const std::string RegisterCommand = SourceFunctionBody(Chat, "void CChat::RegisterCommand(");
 	const size_t CompletionBufferGuard = OnInput.find("if(!m_CompletionUsed)");
-	const size_t PlayerCompletionGuard = OnInput.find("if(!m_CompletionUsed && m_aCompletionBuffer[0] != '/')");
+	// 玩家名补全守卫后面还跟了 emoji 补全排除条件，find 目标只取到 != '/' 为止。
+	const size_t PlayerCompletionGuard = OnInput.find("if(!m_CompletionUsed && m_aCompletionBuffer[0] != '/'");
 
 	EXPECT_EQ(ChatHeader.find("SSlashCommandSuggestion"), std::string::npos);
 	EXPECT_EQ(ChatHeader.find("BuildCommandUsagePreview"), std::string::npos);

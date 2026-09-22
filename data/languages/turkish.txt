@@ -3800,6 +3800,9 @@ Endpoint
 Endpoint (optional)
 == Uç nokta (isteğe bağlı)
 
+Enhanced rendering
+== Gelişmiş işleme
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice yazın veya yeniden başlatın, aksi takdirde tüm takım 60 saniye içinde öldürülecek
 
@@ -4645,6 +4648,9 @@ Has save
 
 Has unread news
 == Okunmamış haber var
+
+HD icons (MSDF)
+== HD simgeler (MSDF)
 
 HDF
 == HDF
@@ -6025,6 +6031,9 @@ Menu camera rotation time in seconds
 
 Menu camera speed
 == Menü kamera hızı
+
+Menu Gaussian blur pipeline
+== Menü gauss bulanıklık hattı
 
 Menu main panel background color
 == Menü ana panel arka plan rengi
@@ -7736,6 +7745,9 @@ Pulse speed
 Pulse strength
 == Atım gücü
 
+Pure Vulkan fallback
+== Şu an: sade Vulkan
+
 Push radius
 == İtme yarıçapı
 
@@ -7771,6 +7783,9 @@ Pyramid
 
 q = Connection quality
 == q = Bağlantı kalitesi
+
+Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
+== Qm işleme: 0=Kapalı (sade Vulkan), 1=Otomatik, 2=Zorla
 
 Qm UI custom icon color
 == Qm arayüzü simgesi özel rengi
@@ -7813,6 +7828,9 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi Renk animasyonu interpolasyonu: 0=sRGB doğrusal 1=OKLAB algısal düzgün
+
+QmVulkan active
+== Şu an: QmVulkan etkin
 
 QQ group: 1076765929 (click to copy)
 == QQ grubu: 1076765929 (kopyalamak için tıklayın)
@@ -10202,6 +10220,9 @@ Smooth Dynamic Camera
 Smooth fade
 == Yumuşak geçiş
 
+Smooth island (SDF)
+== Dynamic Island pürüzsüz (SDF)
+
 Smooth other players' predicted movement
 == Diğer oyuncuların tahmini hareketini yumuşat
 
@@ -11858,6 +11879,9 @@ Use enemy color instead of frozen color
 Use enemy list to drive player indicators
 == Oyuncu göstergelerini yönlendirmek için düşman listesini kullan
 
+Use Gaussian blur pipeline when enhanced rendering is active
+== Gelişmiş işlemde gauss bulanıklık hattı kullan
+
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == Yüksek bant genişliği modunu kullan (sunucu bant genişliğini iki katına çıkarır, yalnızca LAN)
 
@@ -11869,6 +11893,9 @@ Use large emote
 
 Use mouse sensitivity when dynamic camera is on
 == Dinamik kamera açıkken fare hassasiyetini kullan
+
+Use MSDF icon pipeline when enhanced rendering is active
+== Gelişmiş işlemde MSDF simge hattı kullan
 
 Use multi-char replacement based on word length
 == Kelime uzunluğuna göre çok karakterli değiştirme kullan
@@ -11902,6 +11929,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == Daha doğru girdi tahmini için diğer oyuncuları tahmin etmek üzere ön girdi kullan
+
+Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
+== Dynamic Island ve yuvarlatılmış dikdörtgenler için SDF hattı kullan
 
 Use skin color for frozen Tee's feet
 == Donmuş Tee'nin ayakları için skin rengi kullan

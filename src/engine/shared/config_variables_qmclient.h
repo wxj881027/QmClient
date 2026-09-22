@@ -63,6 +63,12 @@ MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLI
 // UI / 界面
 MACRO_CONFIG_INT(QmGaussianBlur, qm_gaussian_blur, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Gaussian blur for translucent interface and selected HUD backgrounds")
 
+// QmVulkan 扩展总开关：0=关（纯净 Vulkan + 几何/CPU 兜底），1=自动（失败/设备丢失回退），2=强制开
+MACRO_CONFIG_INT(QmEnhancedRendering, qm_enhanced_rendering, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on")
+MACRO_CONFIG_INT(QmEnhancedSdf, qm_enhanced_sdf, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active")
+MACRO_CONFIG_INT(QmEnhancedBlur, qm_enhanced_blur, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use Gaussian blur pipeline when enhanced rendering is active")
+MACRO_CONFIG_INT(QmEnhancedMsdf, qm_enhanced_msdf, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use MSDF icon pipeline when enhanced rendering is active")
+
 // Sponsor nudge / 赞助提醒
 MACRO_CONFIG_INT(QmLaunchCount, qm_launch_count, 0, 0, 1000000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Accumulated client launch count (used by the sponsor reminder)")
 MACRO_CONFIG_INT(QmSponsorNudgeAt, qm_sponsor_nudge_at, 14, 1, 100000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Launch count threshold for the next sponsor reminder")

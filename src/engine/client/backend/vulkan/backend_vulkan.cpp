@@ -6,6 +6,7 @@
 
 #include <engine/client/backend/backend_base.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
+#include <engine/client/backend/vulkan/backend_vulkan_qm_ext.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_threaded.h>
 #include <engine/gfx/image_manipulation.h>
@@ -1236,6 +1237,9 @@ private:
 	SPipelineContainer m_SpriteMultiPushPipeline;
 	SPipelineContainer m_QuadPipeline;
 	SPipelineContainer m_QuadGroupedPipeline;
+
+	// ==== QmVulkan 扩展（可关闭）：SDF / MSDF / GaussianBlur 自定义管线 ====
+	// 关闭时不创建、不暴露能力；Core 原生管线保持独立可跑。
 	SPipelineContainer m_MediaIslandSdfPipeline;
 	SPipelineContainer m_RoundedRectSdfPipeline;
 	SPipelineContainer m_TexturedMsdfPipeline;
@@ -1243,6 +1247,38 @@ private:
 	bool m_TexturedMsdfPipelineRequired = false;
 	SPipelineContainer m_GaussianBlurPipeline;
 	bool m_GaussianBlurPipelineValid = false;
+	bool m_QmMediaIslandSdfPipelineValid = false;
+	bool m_QmRoundedRectSdfPipelineValid = false;
+	bool m_QmEnhancedSessionDisabled = false;
+	qm_vulkan_ext::EDisableReason m_QmEnhancedDisableReason = qm_vulkan_ext::EDisableReason::NONE;
+
+	[[nodiscard]] qm_vulkan_ext::EEnhancedMode QmEnhancedMode() const
+	{
+		return qm_vulkan_ext::ModeFromConfig(g_Config.m_QmEnhancedRendering);
+	}
+
+	[[nodiscard]] bool QmEnhancedShouldLoad() const
+	{
+		return qm_vulkan_ext::ShouldLoadEnhancedPipelines(QmEnhancedMode(), m_QmEnhancedSessionDisabled);
+	}
+
+	void QmEnhancedMarkDisabled(const qm_vulkan_ext::EDisableReason Reason)
+	{
+		m_QmEnhancedSessionDisabled = true;
+		m_QmEnhancedDisableReason = Reason;
+		m_QmMediaIslandSdfPipelineValid = false;
+		m_QmRoundedRectSdfPipelineValid = false;
+		m_TexturedMsdfPipelineValid = false;
+		m_GaussianBlurPipelineValid = false;
+		SyncTexturedMsdfCapability();
+		if(m_pBackendCapabilities != nullptr)
+		{
+			m_pBackendCapabilities->m_MediaIslandSdf = false;
+			m_pBackendCapabilities->m_RoundedRectSdf = false;
+			m_pBackendCapabilities->m_RenderTargetGaussianBlur = false;
+		}
+		log_info("vulkan", "Qm enhanced rendering disabled: %s", qm_vulkan_ext::DisableReasonLabel(Reason));
+	}
 
 	void SyncTexturedMsdfCapability()
 	{
@@ -2902,6 +2938,8 @@ protected:
 				(int)QueueSubmitRes, m_CurImageIndex, m_SwapChainImageCount, SubmitInfo.commandBufferCount, SubmitInfo.waitSemaphoreCount, SubmitInfo.signalSemaphoreCount,
 				m_FrameProfileStats.m_RenderCommands, m_FrameProfileStats.m_EstimatedRenderCallCount, m_FrameProfileStats.m_CommandCount);
 			const char *pCritErrorMsg = CheckVulkanCriticalError(QueueSubmitRes);
+			if(QueueSubmitRes == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
+				QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
 			if(pCritErrorMsg != nullptr)
 			{
 				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Submitting to graphics queue failed.", pCritErrorMsg);
@@ -7514,29 +7552,65 @@ public:
 		if(!CreateQuadGraphicsPipeline<false>("shader/vulkan/quad.vert.spv", "shader/vulkan/quad.frag.spv"))
 			return -1;
 
-		if(!CreateMediaIslandSdfGraphicsPipeline("shader/vulkan/media_island_sdf.vert.spv", "shader/vulkan/media_island_sdf.frag.spv"))
-			return -1;
-		if(!CreateRoundedRectSdfGraphicsPipeline("shader/vulkan/rounded_rect_sdf.vert.spv", "shader/vulkan/rounded_rect_sdf.frag.spv"))
-			return -1;
-		m_TexturedMsdfPipelineValid = CreateTexturedMsdfGraphicsPipeline("shader/vulkan/textured_msdf.vert.spv", "shader/vulkan/textured_msdf.frag.spv");
-		SyncTexturedMsdfCapability();
-		if(!m_TexturedMsdfPipelineValid)
+		// ==== QmVulkan 扩展管线：仅在增强渲染启用时创建 ====
+		m_QmMediaIslandSdfPipelineValid = false;
+		m_QmRoundedRectSdfPipelineValid = false;
+		m_TexturedMsdfPipelineValid = false;
+		m_GaussianBlurPipelineValid = false;
+		if(QmEnhancedShouldLoad())
 		{
-			m_TexturedMsdfPipeline.Destroy(m_VKDevice);
-			if(m_TexturedMsdfPipelineRequired)
+			if(g_Config.m_QmEnhancedSdf)
 			{
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Recreating the textured MSDF pipeline failed.");
-				return -1;
+				m_QmMediaIslandSdfPipelineValid = CreateMediaIslandSdfGraphicsPipeline("shader/vulkan/media_island_sdf.vert.spv", "shader/vulkan/media_island_sdf.frag.spv");
+				m_QmRoundedRectSdfPipelineValid = CreateRoundedRectSdfGraphicsPipeline("shader/vulkan/rounded_rect_sdf.vert.spv", "shader/vulkan/rounded_rect_sdf.frag.spv");
+				if(!m_QmMediaIslandSdfPipelineValid || !m_QmRoundedRectSdfPipelineValid)
+				{
+					m_MediaIslandSdfPipeline.Destroy(m_VKDevice);
+					m_RoundedRectSdfPipeline.Destroy(m_VKDevice);
+					m_QmMediaIslandSdfPipelineValid = false;
+					m_QmRoundedRectSdfPipelineValid = false;
+					if(QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON)
+					{
+						SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating Qm SDF pipelines failed.");
+						return -1;
+					}
+					QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::PIPELINE_CREATE_FAILED);
+				}
 			}
-			SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, "Textured MSDF pipeline unavailable, falling back to alpha icon atlas.");
+			if(!m_QmEnhancedSessionDisabled && g_Config.m_QmEnhancedMsdf)
+			{
+				m_TexturedMsdfPipelineValid = CreateTexturedMsdfGraphicsPipeline("shader/vulkan/textured_msdf.vert.spv", "shader/vulkan/textured_msdf.frag.spv");
+				SyncTexturedMsdfCapability();
+				if(!m_TexturedMsdfPipelineValid)
+				{
+					m_TexturedMsdfPipeline.Destroy(m_VKDevice);
+					if(m_TexturedMsdfPipelineRequired)
+					{
+						SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Recreating the textured MSDF pipeline failed.");
+						return -1;
+					}
+					SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, "Textured MSDF pipeline unavailable, falling back to alpha icon atlas.");
+				}
+				else
+				{
+					m_TexturedMsdfPipelineRequired = true;
+				}
+			}
+			else
+			{
+				SyncTexturedMsdfCapability();
+			}
+			if(!m_QmEnhancedSessionDisabled && g_Config.m_QmEnhancedBlur)
+			{
+				m_GaussianBlurPipelineValid = CreateGaussianBlurGraphicsPipeline("shader/vulkan/gaussian_blur.vert.spv", "shader/vulkan/gaussian_blur.frag.spv");
+				if(!m_GaussianBlurPipelineValid && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON)
+					return -1;
+			}
 		}
 		else
 		{
-			m_TexturedMsdfPipelineRequired = true;
+			SyncTexturedMsdfCapability();
 		}
-		m_GaussianBlurPipelineValid = CreateGaussianBlurGraphicsPipeline("shader/vulkan/gaussian_blur.vert.spv", "shader/vulkan/gaussian_blur.frag.spv");
-		if(!m_GaussianBlurPipelineValid)
-			return -1;
 
 		if(!CreateQuadGraphicsPipeline<true>("shader/vulkan/quad_textured.vert.spv", "shader/vulkan/quad_textured.frag.spv"))
 			return -1;
@@ -8443,8 +8517,9 @@ public:
 		pCommand->m_pCapabilities->m_DetectedContextMajor = pCommand->m_pCapabilities->m_ContextMajor;
 		pCommand->m_pCapabilities->m_DetectedContextMinor = pCommand->m_pCapabilities->m_ContextMinor;
 		pCommand->m_pCapabilities->m_DetectedContextPatch = pCommand->m_pCapabilities->m_ContextPatch;
-		pCommand->m_pCapabilities->m_MediaIslandSdf = true;
-		pCommand->m_pCapabilities->m_RoundedRectSdf = true;
+		// QmVulkan 扩展能力仅在对应管线真实可用时暴露；关闭扩展时保持纯净化。
+		pCommand->m_pCapabilities->m_MediaIslandSdf = m_QmMediaIslandSdfPipelineValid;
+		pCommand->m_pCapabilities->m_RoundedRectSdf = m_QmRoundedRectSdfPipelineValid;
 		SyncTexturedMsdfCapability();
 		pCommand->m_pCapabilities->m_RenderTargets = SupportsRenderTargetReadback();
 		pCommand->m_pCapabilities->m_RenderTargetGaussianBlur = SupportsRenderTargetGaussianBlur();
@@ -9170,6 +9245,8 @@ public:
 
 	[[nodiscard]] bool Cmd_RenderMediaIslandSdf(const CCommandBuffer::SCommand_RenderMediaIslandSdf *pCommand, SRenderCommandExecuteBuffer &ExecBuffer)
 	{
+		if(!m_QmMediaIslandSdfPipelineValid)
+			return true;
 		static_assert(sizeof(IGraphics::SMediaIslandSdfParams) <= 512 * sizeof(IGraphics::SRenderSpriteInfo));
 
 		std::array<float, (size_t)4 * 2> m;
@@ -9212,6 +9289,8 @@ public:
 
 	[[nodiscard]] bool Cmd_RenderRoundedRectSdf(const CCommandBuffer::SCommand_RenderRoundedRectSdf *pCommand, SRenderCommandExecuteBuffer &ExecBuffer)
 	{
+		if(!m_QmRoundedRectSdfPipelineValid)
+			return true;
 		std::array<float, (size_t)4 * 2> m;
 		GetStateMatrix(pCommand->m_State, m);
 

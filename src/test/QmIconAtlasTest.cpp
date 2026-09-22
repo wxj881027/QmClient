@@ -489,7 +489,7 @@ TEST(QmIconAtlas, DiagnosticsKeepAtlasAndRendererCountersSeparated)
 	EXPECT_NE(Graphics.find("cl_refresh_rate_inactive=%d"), std::string::npos);
 	EXPECT_NE(Graphics.find("dbg_graphs=%d"), std::string::npos);
 	EXPECT_NE(Graphics.find("async_render_old=%d"), std::string::npos);
-	EXPECT_NE(GameClient.find("QmPerfLogPayload(\"perf/icons\""), std::string::npos);
+	EXPECT_NE(GameClient.find("QmPerfLogPayloadForce(\"perf/icons\""), std::string::npos);
 	EXPECT_NE(GameClient.find("if(QmPerfEnabled())\n\t\tLogQmIconDiagnostics(m_QmIconManager.TakeDiagnostics(), Client());"), std::string::npos);
 	EXPECT_NE(GameClient.find("LogQmIconDiagnostics(m_QmIconManager.TakeDiagnostics(), Client());"), std::string::npos);
 	EXPECT_NE(GameClient.find("msdf_manager_call_run_max"), std::string::npos);

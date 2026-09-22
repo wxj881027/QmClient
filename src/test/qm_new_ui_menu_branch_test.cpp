@@ -557,7 +557,7 @@ TEST(QmNewUiMenuBranches, MenubarScalesOnlyNewUiInternalElementsByTenPercent)
 
 	EXPECT_NE(Source.find("constexpr float MENU_MENUBAR_HEIGHT_NEW = 24.0f;"), std::string::npos);
 	EXPECT_NE(Source.find("constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;"), std::string::npos);
-	EXPECT_NE(Header.find("float ContentScale = 1.0f);"), std::string::npos);
+	EXPECT_NE(Header.find("float ContentScale = 1.0f"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float MenubarOuterInsetX = 6.0f;"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float MenubarBaseOuterInsetY = 2.5f;"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float MenubarOuterInsetY = (Box.h - (Box.h - 2.0f * MenubarBaseOuterInsetY) * MENU_MENUBAR_CONTENT_SCALE_NEW) * 0.5f;"), std::string::npos);
@@ -797,8 +797,9 @@ TEST(QmNewUiMenuBranches, SegmentedRowCapsuleFitsTwoColumnCardWidth)
 	// 会让「显示昵称」白白退回旧分段行，与同页「钩索强度范围」的胶囊外观对不上。
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(1000.0f);
 	const CUIRect CardContent{0.0f, 0.0f, 464.0f, Metrics.m_LineHeight};
-	const float ShowScopeOptionWidth = 52.0f; // 小字号下「本地+他人」的量级
-	const float HookScopeOptionWidth = 28.0f; // 小字号下「强钩」的量级
+	// 与调用方一致：MinOptionWidth 含每档 8px 间隙（ShowNameOptionMinWidth / Widest + 8.0f）。
+	const float ShowScopeOptionWidth = 52.0f + 8.0f; // 小字号下「本地+他人」+ 间隙
+	const float HookScopeOptionWidth = 28.0f + 8.0f; // 小字号下「强钩」+ 间隙
 
 	const SSettingsSegmentedRowLayout ShowScope = ResolveSettingsSegmentedRowLayout(CardContent, 6, Metrics, ShowScopeOptionWidth);
 	EXPECT_TRUE(ShowScope.m_Capsule);
@@ -864,9 +865,11 @@ TEST(QmNewUiMenuBranches, CapsuleTabBarChromeDrawsContainerThenSpringIndicatorUn
 	ASSERT_NE(CapsuleDraw, std::string::npos);
 	ASSERT_NE(IndicatorDraw, std::string::npos);
 	EXPECT_LT(CapsuleDraw, IndicatorDraw);
-	EXPECT_NE(Source.find("ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, s_IndicatorSpring, 2)"), std::string::npos);
-	EXPECT_NE(Source.find("ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, s_IndicatorSpring, 2)"), std::string::npos);
-	EXPECT_NE(Source.find("static constexpr SUiSpringConfig s_IndicatorSpring{1.0f, 420.0f, 38.0f, 0.05f, 0.4f};"), std::string::npos);
+	// 导航滑块统一走 NAVIGATION_SPRING，四轴（x/y/w/h）同弹簧、可续接打断。
+	EXPECT_NE(Source.find("ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, ui_token::motion::NAVIGATION_SPRING, 2)"), std::string::npos);
+	EXPECT_NE(Source.find("ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, ui_token::motion::NAVIGATION_SPRING, 2)"), std::string::npos);
+	EXPECT_NE(Source.find("ui_token::motion::NAVIGATION_SPRING"), std::string::npos);
+	EXPECT_EQ(Source.find("s_IndicatorSpring"), std::string::npos);
 	EXPECT_NE(Header.find("inline CUIRect CapsuleTabBarRowRect(const CUIRect *pSlots, int Count)"), std::string::npos);
 	// 配色自适应由 QmUi 统一提供，各 Tabbar 只传自己的容器表面色。
 	EXPECT_NE(Header.find("inline bool CapsuleTabBarSurfaceIsLight(const ColorRGBA &SurfaceColor)"), std::string::npos);
@@ -895,7 +898,7 @@ TEST(QmNewUiMenuBranches, CapsuleTabKeepsHoverOnlyAndFlipsLabelColor)
 	// DoButton_MenuTab 也要支持胶囊模式：设置页左栏等竖向 Tabbar 走同一条路径。
 	const std::string DoButtonMenuTab = FunctionBody(Source, "int CMenus::DoButton_MenuTab(");
 	ASSERT_FALSE(DoButtonMenuTab.empty());
-	EXPECT_NE(DoButtonMenuTab.find("if(CapsuleTab)\n\t{\n\t\t// 胶囊 Tab 的激活外观由滑块胶囊承担，Tab 自己不再画分块底色，只保留 hover 反馈。\n\t\tif(MouseInside)\n\t\t\tDrawRoundedSurface(Ui(), *pRect, MenuCapsuleTabHoverColor(), ColorRGBA(), ui_token::radius::PILL, 0.0f, Corners);\n\t}\n\telse if(Checked)"), std::string::npos);
+	EXPECT_NE(DoButtonMenuTab.find("if(CapsuleTab)\n\t{\n\t\t// 胶囊 Tab 的激活外观由滑块胶囊承担，Tab 自己不再画分块底色，只保留 hover 反馈。\n\t\tif(AnimValue > MENU_TAB_ANIM_EPSILON)\n\t\t{\n\t\t\tColorRGBA HoverColor = MenuCapsuleTabHoverColor();\n\t\t\tHoverColor.a *= AnimValue;\n\t\t\tDrawRoundedSurface(Ui(), *pRect, HoverColor, ColorRGBA(), ui_token::radius::PILL, 0.0f, Corners);\n\t\t}\n\t}\n\telse if(Checked)"), std::string::npos);
 	EXPECT_NE(DoButtonMenuTab.find("TextRender()->TextColor(Checked ? MenuCapsuleTabActiveLabelColor() : MenuCapsuleTabInactiveLabelColor());"), std::string::npos);
 	EXPECT_NE(DoButtonMenuTab.find("TextRender()->TextColor(PreviousLabelColor);"), std::string::npos);
 	EXPECT_NE(ReadTextFile("src/game/client/components/menus.h").find("CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);"), std::string::npos);
@@ -1825,8 +1828,11 @@ TEST(QmNewUiMenuBranches, QmClientUpdateFlowUsesQmClientNamingAndComparisonHelpe
 	EXPECT_NE(TClientSource.find("Force && m_UpdateShutdownRequested"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmAutoUpdate, qm_auto_update, 0"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("QmShowOutdatedVersionWarning"), std::string::npos);
-	EXPECT_NE(QmMenusSource.find("{&g_Config.m_QmAutoUpdate, \"Automatic updates\", &g_Config.m_QmAutoUpdate},"), std::string::npos);
 	EXPECT_NE(QmMenusSource.find("Show outdated version warning"), std::string::npos);
+	const std::string FunctionMetrics = ReadTextFile("src/game/client/QmUi/cards/QmCardCatalogFunctionMetrics.h");
+	EXPECT_NE(FunctionMetrics.find("Localizable(\"Automatic updates\")"), std::string::npos);
+	EXPECT_NE(FunctionMetrics.find("Localizable(\"Show outdated version warning\")"), std::string::npos);
+	EXPECT_NE(FunctionMetrics.find("{&g_Config.m_QmAutoUpdate,"), std::string::npos);
 
 	EXPECT_NE(TClientHeader.find("m_pQmClientUpdateInfoTask"), std::string::npos);
 	EXPECT_NE(TClientHeader.find("m_FetchedQmClientUpdateInfo"), std::string::npos);
@@ -1974,12 +1980,13 @@ TEST(QmNewUiMenuBranches, GaussianBlurSettingReplacesBetterScoreboardAndIsVersio
 	// 卡片高度必须等于真实渲染行数，否则会在卡片末尾留下空白行。
 	// 普通行是一张 16 行的表（渲染侧 s_aQmMiniFeatureRows 与卡片目录 QmMiniFeatureRows() 各一份，
 	// 两份必须同长，否则高度又会对不上），另加「新版 IME」与「赞助提醒」两个特殊行 = 18 行。
+	// 卡片高度必须等于真实渲染行数。行表只保留 FunctionMetrics 一份（16 行），
+	// 另加「新版 IME」与「赞助提醒」两个特殊行 = 18 行。
 	const size_t MiniFeatureTableRows = CountOccurrences(FunctionMetrics, "{&g_Config.m_Qm");
-	const size_t MiniFeatureRenderTableRows = CountOccurrences(MenusSource, "{&g_Config.m_Qm");
 	EXPECT_EQ(MiniFeatureTableRows, 16u);
-	EXPECT_EQ(MiniFeatureRenderTableRows, 16u);
 	EXPECT_EQ(MiniFeatureTableRows + 2u, 18u);
-	EXPECT_NE(MiniFeaturesContent.find("for(const SQmMiniFeatureRow &Feature : s_aQmMiniFeatureRows)"), std::string::npos);
+	EXPECT_NE(MiniFeaturesContent.find("for(const qm_card_catalog::SQmMiniFeatureRow &Feature : qm_card_catalog::QmMiniFeatureRows())"), std::string::npos);
+	EXPECT_NE(MiniFeaturesContent.find("RenderQmFunctionCheckbox(Feature.m_pId, Feature.m_pTextId, Localize(Feature.m_pTextId), Feature.m_pValue, &Row, PrewarmOnly);"), std::string::npos);
 	EXPECT_NE(MiniFeaturesContent.find("RenderQmFunctionCheckbox(&g_Config.m_QmNewIme, \"New IME\""), std::string::npos);
 	EXPECT_NE(MiniFeaturesContent.find("RenderQmFunctionCheckbox(&g_Config.m_QmSponsorNudge, \"Sponsor reminder\""), std::string::npos);
 	EXPECT_NE(FunctionCatalog.find("case EQmModuleId::MiniFeatures: return Rows(static_cast<float>(QmMiniFeatureRows().size() + QmMiniFeatureSpecialRowCount));"), std::string::npos);
@@ -2644,9 +2651,10 @@ TEST(QmNewUiMenuBranches, ProcessPriorityAndImeHaveVisibleSettings)
 	EXPECT_NE(ClientSource.find("m_pConsole->Chain(\"qm_process_high_priority\", ConchainProcessHighPriority, this);"), std::string::npos);
 	const std::string MiniFeaturesBody = FunctionBody(MenusSource, "void CMenus::RenderQmFunctionMiniFeaturesContent(");
 	ASSERT_FALSE(MiniFeaturesBody.empty());
-	// 普通开关行集中在 s_aQmMiniFeatureRows，渲染函数只负责遍历与两个特殊行。
-	EXPECT_NE(MenusSource.find("{&g_Config.m_QmProcessHighPriority, \"High process priority\", &g_Config.m_QmProcessHighPriority},"), std::string::npos);
-	EXPECT_NE(MenusSource.find("{&g_Config.m_QmImeAutoManage, \"Auto manage IME while typing\", &g_Config.m_QmImeAutoManage},"), std::string::npos);
+	// 普通开关行表在卡片目录 FunctionMetrics；渲染函数只负责遍历与两个特殊行。
+	const std::string FunctionMetrics = ReadTextFile("src/game/client/QmUi/cards/QmCardCatalogFunctionMetrics.h");
+	EXPECT_NE(FunctionMetrics.find("{&g_Config.m_QmProcessHighPriority, Localizable(\"High process priority\"), &g_Config.m_QmProcessHighPriority},"), std::string::npos);
+	EXPECT_NE(FunctionMetrics.find("{&g_Config.m_QmImeAutoManage, Localizable(\"Auto manage IME while typing\"), &g_Config.m_QmImeAutoManage},"), std::string::npos);
 	EXPECT_NE(MiniFeaturesBody.find("&g_Config.m_QmNewIme"), std::string::npos);
 }
 
@@ -2963,13 +2971,16 @@ TEST(QmNewUiMenuBranches, SpectatorSpecTeeDoesNotFallbackToMissingSkin)
 	EXPECT_NE(Refresh.find("LoadSpecialSkinDirect(\"x_ninja\");"), std::string::npos);
 	EXPECT_NE(Refresh.find("LoadSpecialSkinDirect(\"x_spec\");"), std::string::npos);
 	EXPECT_NE(Refresh.find("GameClient()->OnSkinUpdate(pName);"), std::string::npos);
-	EXPECT_NE(Render.find("GameClient()->m_Skins.FindOrNullptr(\"x_spec\") == nullptr"), std::string::npos);
-	EXPECT_NE(Render.find("!SpectatorTeeRenderInfo() || !SpectatorTeeRenderInfo()->TeeRenderInfo().Valid()"), std::string::npos);
+	// 仅在 x_spec 与 TeeRenderInfo 均可用时绘制观战 Tee，不回落到缺失皮肤。
+	EXPECT_NE(Render.find("const bool SpectatorTeeRenderable ="), std::string::npos);
+	EXPECT_NE(Render.find("GameClient()->m_Skins.FindOrNullptr(\"x_spec\") != nullptr &&"), std::string::npos);
+	EXPECT_NE(Render.find("SpectatorTeeRenderInfo() != nullptr &&"), std::string::npos);
+	EXPECT_NE(Render.find("SpectatorTeeRenderInfo()->TeeRenderInfo().Valid();"), std::string::npos);
 	EXPECT_NE(Source.find("SpectatorTeeRenderInfo.m_TeeRenderFlags = TEE_PREVIEW_LAYER_BODY_OUTLINE;"), std::string::npos);
 	EXPECT_NE(Render.find("const bool LocalSpecChar = GameClient()->IsLocalClientId(ClientId);"), std::string::npos);
 	EXPECT_NE(Render.find("const bool OtherSpecChar = !LocalSpecChar && (GameClient()->IsOtherTeam(ClientId) || ClientId < 0);"), std::string::npos);
 	EXPECT_NE(Render.find("Alpha = OtherSpecChar ? g_Config.m_ClShowOthersAlpha / 100.f : 1.f;"), std::string::npos);
-	EXPECT_NE(Render.find("continue;\n\t\tRenderTools()->RenderTee(CAnimState::GetIdle(), &SpectatorTeeRenderInfo()->TeeRenderInfo()"), std::string::npos);
+	EXPECT_NE(Render.find("RenderTools()->RenderTee(CAnimState::GetIdle(), &SpectatorTeeRenderInfo()->TeeRenderInfo()"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, WeaponImpactEventsUseInferredOwnerAlpha)

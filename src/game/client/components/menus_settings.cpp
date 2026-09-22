@@ -3793,7 +3793,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	const float GraphicsDisplayContentHeight = ResolveSettingsRowsHeight(GraphicsDisplayRowCount, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineSpacing);
 	const float GraphicsDisplayMinCardHeight = DisplayChromeHeight + GraphicsDisplayContentHeight;
 	const uint64_t GraphicsDisplayMeasureRevision = (static_cast<uint64_t>(std::max(0, GraphicsDisplayRowCount)) << 32) ^ static_cast<uint64_t>(std::max(0, OldWindowMode));
-	const float GraphicsVisualContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight});
+	const float GraphicsVisualContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight});
 	const float GraphicsVisualMinCardHeight = VisualChromeHeight + GraphicsVisualContentHeight;
 	const float GraphicsIconsContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight});
 	const float GraphicsIconsMinCardHeight = IconsChromeHeight + GraphicsIconsContentHeight;
@@ -4159,6 +4159,56 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmGaussianBlur, "enable-gaussian-blur", Localize("Enable Gaussian blur"), g_Config.m_QmGaussianBlur, &Button))
 				g_Config.m_QmGaussianBlur ^= 1;
 
+			// 增强渲染：0=关 1=自动 2=开。Qm 管线在启动时创建，切换需重启客户端。
+			static CButtonContainer s_aEnhancedModeButtons[3];
+			const char *apEnhancedModeLabels[] = {Localize("Off"), Localize("Auto"), Localize("On")};
+			const int EnhancedMode = std::clamp(g_Config.m_QmEnhancedRendering, 0, 2);
+			{
+				const auto DoEnhancedModeRow = [this, GraphicsMetrics](CUIRect Row, const char *const *ppLabels, int Count, int Current, CButtonContainer *pButtons, auto &&OnChanged) {
+					CUIRect Label, Segments;
+					Row.VSplitLeft(std::clamp(Row.w * 0.36f, 96.0f, 150.0f), &Label, &Segments);
+					Segments.VSplitLeft(8.0f, nullptr, &Segments);
+					Ui()->DoLabel(&Label, Localize("Enhanced rendering"), GraphicsMetrics.m_BodySize, TEXTALIGN_ML);
+					CUIRect aSegmentSlots[8];
+					CUIRect SegmentsRemainder = Segments;
+					const int SegmentCount = std::clamp(Count, 0, (int)std::size(aSegmentSlots));
+					for(int i = 0; i < SegmentCount; ++i)
+						SegmentsRemainder.VSplitLeft(SegmentsRemainder.w / (SegmentCount - i), &aSegmentSlots[i], &SegmentsRemainder);
+					if(g_Config.m_QmNewUi != 0)
+					{
+						const uint64_t SegmentGroup = BuildUiAnimNodeKey(MakeUiScopeHash("settings_choice_row_capsule"), reinterpret_cast<uint64_t>(pButtons));
+						ui_widget::CapsuleTabBarChrome(TabBarUiContext(), SegmentGroup, aSegmentSlots, SegmentCount, Current, SettingsCapsuleTabBarStyle());
+						for(int i = 0; i < SegmentCount; ++i)
+						{
+							if(DoButton_MenuTab(&pButtons[i], ppLabels[i], Current == i, &aSegmentSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+								OnChanged(i);
+						}
+					}
+					else
+					{
+						for(int i = 0; i < SegmentCount; ++i)
+						{
+							const int Corners = i == 0 ? IGraphics::CORNER_L : (i == SegmentCount - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
+							if(DoButton_MenuTab(&pButtons[i], ppLabels[i], Current == i, &aSegmentSlots[i], Corners, nullptr, nullptr, nullptr, nullptr, 5.0f))
+								OnChanged(i);
+						}
+					}
+				};
+				DoEnhancedModeRow(Rows.NextLine(), apEnhancedModeLabels, 3, EnhancedMode, s_aEnhancedModeButtons, [](int NewValue) {
+					if(g_Config.m_QmEnhancedRendering == NewValue)
+						return;
+					g_Config.m_QmEnhancedRendering = NewValue;
+					// 管线在启动时创建/销毁，切换模式必须重启才完整生效。
+					CheckSettings = true;
+				});
+			}
+
+			CUIRect EnhanceNote = Rows.NextLine();
+			const bool SdfReady = Graphics() != nullptr && Graphics()->HasMediaIslandSdf();
+			DoSettingsMenuLabel(SETTINGS_GRAPHICS, -1, -1, "graphics-enhanced-rendering-status", &EnhanceNote,
+				SdfReady ? Localize("QmVulkan active") : Localize("Pure Vulkan fallback"),
+				GraphicsMetrics.m_SmallSize, TEXTALIGN_ML);
+
 			Button = Rows.NextLine();
 			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
 				g_Config.m_QmUiCardBorders ^= 1;
@@ -4173,7 +4223,39 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			Button = Rows.NextLine();
 			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardRainbowTitles, "rainbow-card-titles", Localize("Rainbow card titles"), g_Config.m_QmUiCardRainbowTitles, &Button))
 				g_Config.m_QmUiCardRainbowTitles ^= 1;
+
+			if(g_Config.m_QmEnhancedRendering != 0)
+			{
+				Button = Rows.NextLine();
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmEnhancedSdf, "graphics-enhanced-sdf", Localize("Smooth island (SDF)"), g_Config.m_QmEnhancedSdf, &Button))
+				{
+					g_Config.m_QmEnhancedSdf ^= 1;
+					CheckSettings = true;
+				}
+				Button = Rows.NextLine();
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmEnhancedBlur, "graphics-enhanced-blur", Localize("Menu Gaussian blur pipeline"), g_Config.m_QmEnhancedBlur, &Button))
+				{
+					g_Config.m_QmEnhancedBlur ^= 1;
+					CheckSettings = true;
+				}
+				Button = Rows.NextLine();
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmEnhancedMsdf, "graphics-enhanced-msdf", Localize("HD icons (MSDF)"), g_Config.m_QmEnhancedMsdf, &Button))
+				{
+					g_Config.m_QmEnhancedMsdf ^= 1;
+					CheckSettings = true;
+				}
+			}
 		});
+		// 视觉卡高度随增强渲染展开行数变化，避免文字溢出。
+		vCards.back().m_Measure = [GraphicsMetrics](float) {
+			const auto &M = GraphicsMetrics;
+			if(g_Config.m_QmEnhancedRendering != 0)
+			{
+				return ResolveSettingsContentFlowHeight(M, {M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_ButtonHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight});
+			}
+			return ResolveSettingsContentFlowHeight(M, {M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_ButtonHeight, M.m_LineHeight});
+		};
+		vCards.back().m_MeasureRevision = static_cast<uint64_t>(g_Config.m_QmEnhancedRendering);
 		AddCard(IconsSpec, GraphicsIconsMinCardHeight, IconsChromeHeight, [this, GraphicsMetrics, BodySize](CUIRect ContentRect) {
 			CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);
 			const bool CustomColor = g_Config.m_QmUiIconColor == 3;

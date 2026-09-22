@@ -1265,6 +1265,7 @@ Endless hook has been activated
 Endless hook has been deactivated
 Endpoint
 Endpoint (optional)
+Enhanced rendering
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 Enter a CP number from 1 to 255.
 Enter Password
@@ -1547,6 +1548,7 @@ Hammer: %s
 Has people playing
 Has save
 Has unread news
+HD icons (MSDF)
 HDF
 Heart
 Height
@@ -2007,6 +2009,7 @@ Menu background
 Menu camera rotation radius
 Menu camera rotation time in seconds
 Menu camera speed
+Menu Gaussian blur pipeline
 Menu main panel background color
 Menu main panel opacity
 Menu opacity (0-100)
@@ -2577,6 +2580,7 @@ Pulse Amplitude (0-100)
 Pulse animation speed (percentage, 100=normal)
 Pulse speed
 Pulse strength
+Pure Vulkan fallback
 Push radius
 Push strength
 Push-to-talk for voice chat
@@ -2589,6 +2593,7 @@ Puts you out of live freeze
 Puts you out of solo part
 Pyramid
 q = Connection quality
+Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 Qm UI icon weight: 0=Regular, 1=Bold, 2=Thin, 3=Fill
@@ -2603,6 +2608,7 @@ QmClient sidebar module collapse state
 QmClient sidebar module order
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
+QmVulkan active
 QQ group: 1076765929 (click to copy)
 QQ Music hook heartbeat timeout (milliseconds)
 QQ Music hook helper path (empty=beside QmClient)
@@ -3399,6 +3405,7 @@ Smart
 Smooth camera switch animation time when spectating (in ms, 0=off)
 Smooth Dynamic Camera
 Smooth fade
+Smooth island (SDF)
 Smooth other players' predicted movement
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 Smooth scroll animation duration in menu/editor (ms, 0=off)
@@ -3951,10 +3958,12 @@ Use embedded HUD progress bar
 Use emote
 Use enemy color instead of frozen color
 Use enemy list to drive player indicators
+Use Gaussian blur pipeline when enhanced rendering is active
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 Use large emote
 Use mouse sensitivity when dynamic camera is on
+Use MSDF icon pipeline when enhanced rendering is active
 Use multi-char replacement based on word length
 Use native UI for IME (may break IME in fullscreen mode, requires restart)
 Use new smoothing algorithm
@@ -3966,6 +3975,7 @@ Use old rainbow team colors (restores old behavior)
 Use original style
 Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
+Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 Use skin color for frozen Tee's feet
 Use skin color when Tee is frozen
 Use sounds
