@@ -957,7 +957,7 @@ void IStorage::StripPathAndExtension(const char *pFilename, char *pBuffer, int B
 
 const char *IStorage::FormatTmpPath(char *aBuf, unsigned BufSize, const char *pPath)
 {
-	str_format(aBuf, BufSize, "%s.%d.tmp", pPath, pid());
+	str_format(aBuf, BufSize, "%s.%d.tmp", pPath, process_id());
 	return aBuf;
 }
 

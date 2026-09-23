@@ -2445,7 +2445,7 @@ void CGameConsole::OnRender()
 #if defined(CONF_PLATFORM_ANDROID)
 						Opened = Client()->ViewLink(aNormalized);
 #else
-						Opened = open_link(aNormalized) != 0;
+						Opened = os_open_link(aNormalized) != 0;
 #endif
 					}
 					else if(str_startswith_nocase(aLink, "www."))

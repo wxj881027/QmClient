@@ -19,7 +19,7 @@ namespace
 
 	TEST(Net, Ipv6SocketUsesIpv6TrafficClassOutsideWindows)
 	{
-		const std::string Source = ReadTestSourceFile("src/base/system.cpp");
+		const std::string Source = ReadTestSourceFile("src/base/net.cpp");
 		const size_t Ipv6Start = Source.find("if(bindaddr.type & NETTYPE_IPV6)");
 		ASSERT_NE(Ipv6Start, std::string::npos);
 		const size_t Ipv6End = Source.find("#if defined(CONF_WEBSOCKETS)", Ipv6Start);

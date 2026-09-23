@@ -736,9 +736,9 @@ private:
 		if(!File)
 			return false;
 
-		io_seek(File, 0, IOSEEK_END);
+		io_seek(File, 0, EIoSeekOrigin::END);
 		const int64_t Size = io_tell(File);
-		io_seek(File, 0, IOSEEK_START);
+		io_seek(File, 0, EIoSeekOrigin::START);
 
 		if(Size <= 0 || Size > LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE)
 		{
@@ -1185,9 +1185,9 @@ static bool LoadFileToBuffer(IStorage *pStorage, const char *pFilename, int Stor
 	if(!File)
 		return false;
 
-	io_seek(File, 0, IOSEEK_END);
+	io_seek(File, 0, EIoSeekOrigin::END);
 	const int64_t Size = io_tell(File);
-	io_seek(File, 0, IOSEEK_START);
+	io_seek(File, 0, EIoSeekOrigin::START);
 
 	if(Size <= 0 || Size > LOCAL_ASSET_PREVIEW_MAX_FILE_SIZE)
 	{

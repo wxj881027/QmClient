@@ -5667,7 +5667,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 	char aReportFilename[IO_MAX_PATH_LENGTH];
 	str_format(aReportFilename, sizeof(aReportFilename),
 		GAME_NAME "_%s_hang_report_%s_%d_%s.txt",
-		CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		CONF_PLATFORM_STRING, aDate, process_id(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 	char aReportPath[IO_MAX_PATH_LENGTH];
 	str_format(aReportPath, sizeof(aReportPath), "%s/%s", m_aHangDumpDir, aReportFilename);
 	fs_makedir_rec_for(aReportPath);
@@ -5692,7 +5692,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 		str_format(aBuf, sizeof(aBuf), "Timestamp: %s\n", aDate);
 		io_write(File, aBuf, str_length(aBuf));
 
-		str_format(aBuf, sizeof(aBuf), "Process ID: %d\n", pid());
+		str_format(aBuf, sizeof(aBuf), "Process ID: %d\n", process_id());
 		io_write(File, aBuf, str_length(aBuf));
 
 		str_format(aBuf, sizeof(aBuf), "Hang timeout threshold: %lld seconds\n", (long long)gs_HangTimeoutSeconds);
@@ -5730,7 +5730,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 	char aDumpFilename[IO_MAX_PATH_LENGTH];
 	str_format(aDumpFilename, sizeof(aDumpFilename),
 		GAME_NAME "_%s_hang_dump_%s_%d_%s.dmp",
-		CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		CONF_PLATFORM_STRING, aDate, process_id(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 	char aDumpPath[IO_MAX_PATH_LENGTH];
 	str_format(aDumpPath, sizeof(aDumpPath), "%s/%s", m_aHangDumpDir, aDumpFilename);
 	fs_makedir_rec_for(aDumpPath);
@@ -5765,7 +5765,7 @@ bool CClient::HandleQmGraphicsFatalError()
 	// 文件名必须与 echndl 的崩溃报告一致，才能在下次启动时被
 	// RecoverQmGraphicsSettingsAfterDriverCrash 识别并做安全图形恢复。
 	str_format(aFilename, sizeof(aFilename), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s_fatal_report.txt",
-		gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, process_id(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 
 	char aPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, aFilename, aPath, sizeof(aPath));
@@ -5789,7 +5789,7 @@ bool CClient::HandleQmGraphicsFatalError()
 			"Graphics error:\n%s\n"
 			"\n"
 			"%s\n",
-			aDate, pid(), aBackend, ClientStateToString(m_State), m_State,
+			aDate, process_id(), aBackend, ClientStateToString(m_State), m_State,
 			m_aCurrentMap[0] != '\0' ? m_aCurrentMap : "(none)",
 			aServerAddr,
 			GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "",
@@ -5933,7 +5933,7 @@ int CClient::HandleChecksum(int Conn, CUuid Uuid, CUnpacker *pUnpacker)
 	if(End > (int)sizeof(m_Checksum.m_aBytes))
 	{
 		unsigned char aBuf[2048];
-		if(io_seek(m_OwnExecutable, FileStart - sizeof(m_Checksum.m_aBytes), IOSEEK_START))
+		if(io_seek(m_OwnExecutable, FileStart - sizeof(m_Checksum.m_aBytes), EIoSeekOrigin::START))
 		{
 			return 5;
 		}
@@ -6590,7 +6590,7 @@ int main(int argc, const char **argv)
 		char aBufName[IO_MAX_PATH_LENGTH];
 		char aDate[64];
 		str_timestamp(aDate, sizeof(aDate));
-		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, process_id(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aBufName, aBufPath, sizeof(aBufPath));
 		fs_makedir_rec_for(aBufPath);
 		crashdump_init_if_available(aBufPath);
@@ -6854,7 +6854,7 @@ int main(int argc, const char **argv)
 #if defined(CONF_PLATFORM_ANDROID)
 		RestartAndroidApp();
 #else
-		shell_execute(aRestartBinaryPath, EShellExecuteWindowState::FOREGROUND);
+		process_execute(aRestartBinaryPath, EShellExecuteWindowState::FOREGROUND);
 #endif
 	}
 
@@ -7150,7 +7150,7 @@ static bool ViewLinkImpl(const char *pLink)
 	log_error("client", "Failed to open link '%s' (%s)", pLink, SDL_GetError());
 	return false;
 #else
-	if(open_link(pLink))
+	if(os_open_link(pLink))
 	{
 		return true;
 	}

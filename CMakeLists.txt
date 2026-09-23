@@ -2449,6 +2449,10 @@ endif()
 
 # Sources
 set_src(BASE GLOB_RECURSE src/base
+aio.cpp
+aio.h
+bytes.cpp
+bytes.h
   bezier.cpp
   bezier.h
   color.cpp
@@ -2467,6 +2471,8 @@ set_src(BASE GLOB_RECURSE src/base
   hash_ctxt.h
   hash_libtomcrypt.cpp
   hash_openssl.cpp
+io.cpp
+io.h
   lock.h
   log.cpp
   log.h
@@ -2475,15 +2481,20 @@ set_src(BASE GLOB_RECURSE src/base
   mem.cpp
   mem.h
   perf_timer.h
+net.cpp
+net.h
+os.cpp
+os.h
   rust.h
+process.cpp
+process.h
   secure.cpp
   secure.h
   sphore.cpp
   sphore.h
   str.cpp
   str.h
-  system.cpp
-  system.h
+    system.h
   thread.cpp
   thread.h
   time.cpp

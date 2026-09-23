@@ -3041,7 +3041,7 @@ void CTClient::FinishUpdateDownloads()
 	char aPackagePath[IO_MAX_PATH_LENGTH] = "";
 	char aInstallerPath[IO_MAX_PATH_LENGTH] = "";
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aPackagePath, sizeof(aPackagePath));
-	str_format(m_aUpdateInstallerTmp, sizeof(m_aUpdateInstallerTmp), "qmclient/QmClient-Updater-%d.exe", pid());
+	str_format(m_aUpdateInstallerTmp, sizeof(m_aUpdateInstallerTmp), "qmclient/QmClient-Updater-%d.exe", process_id());
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateInstallerTmp, aInstallerPath, sizeof(aInstallerPath));
 	str_copy(m_aUpdateInstallerTmp, aInstallerPath, sizeof(m_aUpdateInstallerTmp));
 	Storage()->RemoveFile(aInstallerPath, IStorage::TYPE_ABSOLUTE);
@@ -3088,7 +3088,7 @@ bool CTClient::LaunchUpdateInstaller()
 	}
 
 	char aPid[32];
-	str_format(aPid, sizeof(aPid), "%d", pid());
+	str_format(aPid, sizeof(aPid), "%d", process_id());
 	const char *apArguments[] = {
 		"--parent-pid",
 		aPid,
@@ -3103,7 +3103,7 @@ bool CTClient::LaunchUpdateInstaller()
 		"--install",
 		aInstallPath,
 	};
-	const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
+	const PROCESS Process = process_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
 	if(Process == INVALID_PROCESS)
 	{
 		RemoveUpdateTempFiles();
