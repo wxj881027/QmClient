@@ -15,6 +15,7 @@
 | 回退自审 | 61 条 `-x` 溯源，**0 条**把「上游已回退的改动」留在链上 |
 | 工具行为验证 | S11 的「工具只有编译级证据」已补：`qmclient_scripts/tests/test_map_tools_smoke.py` 跑通 `dummy_map`（CRC32/SHA256 自校验）→ `map_convert_07` 全链路（2026-09-24 关闭） |
 | 工作流工具 | `qmclient_scripts/support/`：`upstream_status.py`（基线/冲突干跑）、`upstream_commit_check.py`（内容判定 + 回退检查）、`upstream_coverage.py`（量化差距）、`upstream_revert_audit.py`（整链回退自审） |
+| 交接 | `upstream-sync-handoff.md`（一页式：状态、待办、常用命令、踩坑记录）
 | 文档 | 计划（本文）、`upstream-sync-log.md`（逐切片判定与证据）、`upstream-sync-verification.md`（待实机验证 + 门禁豁免登记）、`upstream-sync-pr-drafts.md`（PR 标题/正文/推送命令）、`upstream-inventory/`（四簇对照表）、`platform-feature-gaps.md`（平台功能差异） |
 | 待维护者拍板 | ① 推 PR 的方式（三段 stacked 还是合一）② 四项曾挂起的语义已确认"采用官方"并在切片 23 落地 ③ §5 平台缺口是否要按平台隐藏无效设置项 |
 | 待实机验证 | 渲染与 quad 裁剪、ghost 裁剪、PNG（含已按上游回退的 libpng 项）、7 项客户端行为自查；切片 23 的 windowed fullscreen 外观变化 |
