@@ -8066,6 +8066,8 @@ TEST(QmMonitoringHelpers, QmClientContentOwnersPreserveInteractiveContracts)
 	EXPECT_NE(FriendNotify.find("m_QmFriendOnlineAutoRefresh"), std::string::npos);
 	EXPECT_NE(FriendNotify.find("m_QmFriendEnterAutoGreet"), std::string::npos);
 	EXPECT_NE(FriendNotify.find("m_QmFriendEnterBroadcast"), std::string::npos);
+	// 地图上传路径必须自带缓冲区；默认构造的 CLineInput 在 Render 中没有可显示字符串。
+	EXPECT_NE(FavoriteMaps.find("static CLineInputBuffered<IO_MAX_PATH_LENGTH> s_MapUploadPath;"), std::string::npos);
 	EXPECT_NE(FavoriteMaps.find("UpdateMapCategoryCache"), std::string::npos);
 	EXPECT_NE(FavoriteMaps.find("RemoveFavoriteMap"), std::string::npos);
 	EXPECT_NE(PieMenu.find("ShowPopupColorPicker"), std::string::npos);

@@ -3498,7 +3498,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 void CMenus::RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
 {
 	static CLineInput s_MapUploadEndpoint(g_Config.m_QmMapUploadEndpoint, sizeof(g_Config.m_QmMapUploadEndpoint));
-	static CLineInput s_MapUploadPath;
+	static CLineInputBuffered<IO_MAX_PATH_LENGTH> s_MapUploadPath;
 	static CLineInputBuffered<128> s_MapUploadSearch;
 	static QmMapUpload::CSearchIndex s_MapUploadSearchIndex;
 	static CButtonContainer s_aMapUploadSearchResultButtons[8];

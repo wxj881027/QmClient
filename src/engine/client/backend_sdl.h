@@ -112,12 +112,11 @@ private:
 
 public:
 	const char *GetFatalError() const override;
-	// 非破坏性查询：图形后端是否已记录致命错误。致命错误一旦被提交处理
-	// （ProcessError）就会断言退出，所以主循环需要提前轮询这个状态，
-	// 才能在设备丢失这类可恢复故障上做恢复，而不是卡在弹出的错误框里。
+	// 非破坏性查询：图形后端是否已记录致命错误。运行时错误会停止后续提交，
+	// 由主循环消费并进入恢复流程；初始化错误仍由 ProcessError 直接报告。
 	bool HasFatalError() const override;
-	// 原子地「检查并清除」致命错误标记：返回 true 表示刚刚消费掉一个致命错误。
-	// 收尾流程仍会向后端提交清理命令，清掉标记可以让这些提交不再重复断言。
+	// 「检查并清除」致命错误标记：返回 true 表示刚刚消费掉一个致命错误。
+	// 收尾流程仍可能向后端提交清理命令，停止标志保证这些提交不会再次执行。
 	bool TakeFatalError();
 	bool GetWarning(std::vector<std::string> &WarningStrings) override;
 };

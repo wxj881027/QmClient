@@ -438,6 +438,9 @@ IGraphics::CTextureHandle CGraphics_Threaded::FindFreeTextureIndex()
 void CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
 {
 	++m_TextureHandleEpoch;
+	// 设备重建会丢失引擎自己持有的占位纹理，通知流程负责重新创建。
+	m_NullTexture.Invalidate();
+	m_BlankTexture.Invalidate();
 	m_vTextureIndices.resize(CCommandBuffer::MAX_TEXTURES);
 	m_vTextureGenerations.resize(CCommandBuffer::MAX_TEXTURES);
 	// 已经空闲过的槽位也必须再进一次代数，避免「槽位 + 代数」组合和旧句柄撞车。
@@ -4088,6 +4091,8 @@ int CGraphics_Threaded::InitWindow()
 
 int CGraphics_Threaded::Init()
 {
+	const bool WasInitialized = m_pBackend != nullptr;
+
 	// fetch pointers
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
@@ -4138,6 +4143,8 @@ int CGraphics_Threaded::Init()
 	m_pCommandBuffer = m_apCommandBuffers[0];
 
 	CreateNullTexture();
+	if(WasInitialized)
+		NotifyGraphicsResourcesReset();
 
 	static constexpr LOG_COLOR GPU_INFO_LOG_COLOR = LOG_COLOR{153, 127, 255};
 	log_info_color(GPU_INFO_LOG_COLOR, "gfx", "GPU vendor: %s", GetVendorString());
@@ -4492,7 +4499,8 @@ void CGraphics_Threaded::NotifyGraphicsResourcesReset()
 {
 	// 引擎自己持有的 GPU 资源（空纹理）已经随设备一起丢失，先重建，
 	// 否则监听者在重建期间拿到的空纹理句柄也是失效的。
-	CreateNullTexture();
+	if(!m_NullTexture.IsValid() || !m_BlankTexture.IsValid())
+		CreateNullTexture();
 
 	++m_GraphicsResourcesResetVersion;
 	for(const GRAPHICS_RESOURCES_RESET_FUNC &Listener : m_vGraphicsResourcesResetListeners)

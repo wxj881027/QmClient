@@ -74,6 +74,7 @@ CGraphicsBackend_Threaded::CGraphicsBackend_Threaded(TTranslateFunc &&TranslateF
 void CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor)
 {
 	dbg_assert(m_Shutdown, "Processor was already not shut down.");
+	ResetSubmissionStopForCleanup();
 	m_Shutdown = false;
 	m_pProcessor = pProcessor;
 #if !defined(CONF_PLATFORM_EMSCRIPTEN)
@@ -102,6 +103,9 @@ void CGraphicsBackend_Threaded::StopProcessor()
 
 void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
 {
+	if(m_SubmissionStopped.load(std::memory_order_acquire))
+		return;
+
 	SGfxErrorContainer Error;
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 	Error = m_pProcessor->GetError();
@@ -180,7 +184,12 @@ void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error)
 			m_FatalError.append(ErrStr.m_Err);
 	}
 	std::string LogMessage = "Graphics Error:\n" + m_FatalError;
-	dbg_assert_failed("%s", LogMessage.c_str());
+	m_SubmissionStopped.store(true, std::memory_order_release);
+	if(Error.m_ErrorType == GFX_ERROR_TYPE_INIT)
+	{
+		dbg_assert_failed("%s", LogMessage.c_str());
+	}
+	log_error("gfx", "%s", LogMessage.c_str());
 }
 
 const char *CGraphicsBackend_Threaded::GetFatalError() const
@@ -192,6 +201,7 @@ bool CGraphicsBackend_Threaded::HasFatalError() const
 {
 	if(m_pProcessor == nullptr)
 		return false;
+	const_cast<CGraphicsBackend_Threaded *>(this)->WaitForIdle();
 	return m_pProcessor->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE;
 }
 
@@ -199,6 +209,7 @@ bool CGraphicsBackend_Threaded::TakeFatalError()
 {
 	if(m_pProcessor == nullptr)
 		return false;
+	WaitForIdle();
 	if(m_pProcessor->GetError().m_ErrorType == GFX_ERROR_TYPE_NONE)
 		return false;
 	m_pProcessor->ClearFatalError();
