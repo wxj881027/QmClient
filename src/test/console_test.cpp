@@ -57,6 +57,10 @@ TEST(Console, QuotedVictimArgumentsAreValidated)
 	Results.m_vVictims.clear();
 	pConsole->ExecuteLine("victim \"\"", 42);
 	EXPECT_TRUE(Results.m_vVictims.empty());
+
+	Results.m_vVictims.clear();
+	pConsole->ExecuteLine("victim \"invalid\"", 42);
+	EXPECT_TRUE(Results.m_vVictims.empty());
 }
 
 TEST(Console, MultipleVictimSlotsResolveIndependently)
