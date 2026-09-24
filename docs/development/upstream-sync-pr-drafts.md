@@ -3,15 +3,23 @@
 本文件给出可直接使用的 PR 标题/正文与推送命令。分支都是**线性堆叠**、基线为 `6b9a41fd21`
 （`origin/master`，2026-09-24 从 `aea1453cc7` 前移），因此「推哪个分支 = 提哪一段」。
 
+已推送并创建（2026-09-24）：
+
+| PR | 分支 | 基线 | 链接 |
+|----|------|------|------|
+| PR-1 | `sync/slice-1-base-engine`（`0956e8bebb`） | `master` | [#259](https://github.com/wxj881027/QmClient/pull/259) |
+| PR-2 | `sync/slice-9-ghost-cull`（`6e1072062a`） | PR-1 分支 | [#260](https://github.com/wxj881027/QmClient/pull/260) |
+| PR-3 | `sync/slice-23-official-semantics`（`3b3d3265af`） | PR-2 分支 | [#261](https://github.com/wxj881027/QmClient/pull/261) |
+
 统一验证口径（链尾 2026-09-24 在新基线上实测；PR-1/2 边界为旧基线数据，尚待在 `6b9a41fd21` 上复测）：
 
 | 状态 | 运行用例 | 通过 | 失败 | 基线外新增 |
 |------|----------|------|------|------------|
 | 新基线 `6b9a41fd21`（`origin/master`） | — | — | 0 | — |
 | 旧基线 `aea1453cc7`（已弃用） | 3329 | — | 2 | — |
-| PR-1 边界 `5695b6fdeb` | 待复测（旧基线 `8258823b45`：3329 / 2 失败） | — | — | — |
-| PR-2 边界 `8755169bf0` | 待复测（旧基线 `cb1305025b`：3330 / 2 失败） | — | — | — |
-| PR-3 边界 `1539bda58f`（`sync/slice-23-official-semantics`，链尾） | **3348** | **3347** | **0** | 无 |
+| PR-1 边界 `0956e8bebb` | 待复测（旧基线 `8258823b45`：3329 / 2 失败） | — | — | — |
+| PR-2 边界 `6e1072062a` | 待复测（旧基线 `cb1305025b`：3330 / 2 失败） | — | — | — |
+| PR-3 边界 `3b3d3265af`（`sync/slice-23-official-semantics`，链尾） | **3348** | **3347** | **0** | 无 |
 
 链尾 1 例未计入通过的是环境跳过的 `QmWebSocketLive.ConnectsAndEchoesWhenServerConfigured`（未配置测试服务器）。
 **0 失败**：旧基线上那 2 例（`BaseSettingsStableTextCandidateAuditIsEmptyExceptAllowlist`、
@@ -22,7 +30,7 @@
 
 ## PR-1 地基：`src/base` 布局对齐
 
-- 分支：`sync/slice-1-base-engine`（`5695b6fdeb`）
+- 分支：`sync/slice-1-base-engine`（`0956e8bebb`）
 - 规模：4 个提交 / 36 个文件 / +3184 −2834
 - 标题：`refactor(sync): 对齐 DDNet 上游 src/base 布局并保留自有 QoS/统计行为`
 - 正文要点：
@@ -38,7 +46,7 @@
 
 ## PR-2 客户端与引擎修复批次（切片 2–9）
 
-- 分支：`sync/slice-9-ghost-cull`（`8755169bf0`）
+- 分支：`sync/slice-9-ghost-cull`（`6e1072062a`）
 - 规模：35 个提交（含 PR-1）/ 60 个文件 / 累计 +3492 −2945
 - 标题：`fix(sync): 客户端与引擎修复批次（demo/预测/裁剪/健壮性/nightly/PNG）`
 - 正文要点：
@@ -54,7 +62,7 @@
 
 ## PR-3 服务器、工具、数据、验证补强与四项官方语义（切片 10–23，链尾）
 
-- 分支：`sync/slice-23-official-semantics`（`1539bda58f`）
+- 分支：`sync/slice-23-official-semantics`（`3b3d3265af`）
 - 规模：约 85+ 个提交（含 PR-1/2）/ 累计 +3900 −3200 量级
 - 标题：`fix(sync): 服务器、地图工具、Unicode 数据与小修批次（含 use-after-free/double free 修复）`
 - 正文要点：

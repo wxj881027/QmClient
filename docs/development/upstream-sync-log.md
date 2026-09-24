@@ -158,6 +158,70 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S30：推 PR 后的 CI 首轮反馈（clang-format 20 vs 22 冲突）与修复
+
+三段 stacked PR 已推送并创建：
+
+| PR | 分支 | 基线 | 链接 |
+|----|------|------|------|
+| PR-1 | `sync/slice-1-base-engine`（`0956e8bebb`） | `master` | https://github.com/wxj881027/QmClient/pull/259 |
+| PR-2 | `sync/slice-9-ghost-cull`（`6e1072062a`） | PR-1 分支 | https://github.com/wxj881027/QmClient/pull/260 |
+| PR-3 | `sync/slice-23-official-semantics`（`3b3d3265af`） | PR-2 分支 | https://github.com/wxj881027/QmClient/pull/261 |
+
+### CI 首轮：`check-style` 失败，但**不是**本地门禁能抓到的原因
+
+CI（`style.yml` → `check_gate.py --mode quick --ci-mode`）报：
+
+```
+src/engine/client/client.cpp:5540:42: error: code should be clang-formatted [-Wclang-format-violations]
+CDemoRecorder (&CClient::DemoRecorders())[RECORDER_MAX]
+```
+
+定位过程与结论：
+
+1. 这行是**上游原样声明**（`ddnet/master` 里逐字相同），且**不是**本次改动新增的行 ——
+   只是 PR-1 改了 `client.cpp`（base 模块 include/符号改名 9 行），整文件因此进入格式检查，
+   把一个潜在冲突暴露出来；
+2. 本地门禁用的是 **clang-format 20.1.8**（CI 用 **22**）。为取得权威结果，把 clang-format 22
+   的 wheel 解到 `tmp/cf22`（**只解包、未安装进环境**）后实测：**两个版本的要求互斥** ——
+   - clang-format 20：`CDemoRecorder (&CClient::DemoRecorders())[RECORDER_MAX]` + 大括号另起一行
+   - clang-format 22：`CDemoRecorder (&CClient::DemoRecorders()) [RECORDER_MAX] {`
+3. 因此「按某一版重排」必然让另一侧报错。**上游代码不改写**，改为给该函数加
+   `// clang-format off` / `// clang-format on`（两个版本都通过；用探针文件分别验证 rc=0）；
+4. 顺手用 clang-format 22 扫了整条链改动过的 **101 个源文件**：**只有这一处**冲突（2 条 violation），
+   所以这一步只需改一处、不需要逐 PR 试错。
+
+### 顺带的工具坑：带 submodule junction 的 worktree 不能直接切分支
+
+对 `tmp/sync-slice-1` 执行 `git switch` 时，git 会去读 `ddnet-libs/../.git/modules/ddnet-libs`
+（junction 指向主仓库子模块，相对路径在 worktree 下失效）→ `fatal`，并且**留下半切换状态**
+（HEAD 没动、工作区内容已变成目标分支），`--no-recurse-submodules`、`-c submodule.recurse=false`
+都拦不住。
+
+可靠做法（本轮采用，建议后续沿用）：
+
+1. 用**临时干净 worktree** 做改写：`git worktree add --detach tmp/rebase-wt <branch>`
+   （新 worktree 里 `ddnet-libs` 是空目录，不是 junction，切分支正常）；
+2. 先把「占用了目标分支」的另一侧 worktree 脱离分支（`git -C <worktree> switch --detach`）；
+3. 在临时 worktree 里改 + `git rebase --update-refs`，推完分支后 `git worktree remove`；
+4. 若确实要在 junction worktree 内切分支：**先把 junction 改名挪走**，切完再挪回来；
+   注意 git 会在原位建一个真目录，直接 `Move-Item` 回去会变成「目录套 junction」——
+   正确顺序是「junction 挪出 → 空目录改名 → junction 就位 → 删除空目录」，且删之前先断言目录为空
+   （避免递归删除穿透 junction 删到主仓库内容）。
+
+### 证据（2026-09-24）
+
+| 检查 | 结果 |
+|------|------|
+| CI `check-style`（PR-1，修复后） | **PASS**（2m49s；修复前同一 job FAIL） |
+| `run_cxx_tests`（新链尾 `3b3d3265af`） | **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**，退出码 0 |
+| clang-format 22 全链扫描（101 个改动源文件） | **0 条 violation** |
+| 本地 clang-format 20 门禁（同一文件） | 通过（修复前后都通过，故本地无法发现该冲突） |
+| 三段分支强制推送 | `0956e8bebb` / `6e1072062a` / `3b3d3265af`，PR 已随更新重跑 CI |
+
+**待观察**：PR-1 上的 Linux / Windows / macOS / Android / `check-clang-tidy` / `check-clang-san`
+仍在跑（这几项耗时最长，Android job 上限 180 分钟）。
+
 ## 2026-09-24 · S29：四项语义改用官方实现 + 基线前移 + `/analyze` 豁免收口（已执行）
 
 本切片（`sync/slice-23-official-semantics`）三件事：落地维护者新决策、把同步链基线前移到
@@ -221,9 +285,12 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
   并用 git 2.54 的 `--update-refs` 一次性把 23 个切片分支全部搬到新基线；那 3 个提交只碰
   `menus_settings.cpp` / `tee_skin_apply.h` / `skins.h` / `QmLayoutTest.cpp`，整条链都没改过
   这四个文件，**rebase 零冲突**；
-- 新哈希：`slice-1` `5695b6fdeb`、`slice-9` `8755169bf0`、`slice-22` `602d7c94ef`、
-  链尾 `sync/slice-23-official-semantics` `1539bda58f`；
-- 主仓库分支 `fix/qm-test-contract-alignment` 同步前移到 `b1fb2e32b8`（文档/工具提交落在新基线上）。
+- 哈希（S30 加 clang-format 保护提交后的最终值）：`slice-1` `0956e8bebb`、`slice-9` `6e1072062a`、
+  `slice-22` `662cbb192e`、链尾 `sync/slice-23-official-semantics` `3b3d3265af`；
+- 主仓库分支 `fix/qm-test-contract-alignment` 同步前移到新基线上（文档/工具提交）。
+
+> 注：S29 执行时的中间哈希（`5695b6fdeb` / `8755169bf0` / `1539bda58f`）已被 S30 取代，
+> 上表给的是当前有效值。
 
 **证据（2026-09-24）**
 
