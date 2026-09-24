@@ -936,7 +936,7 @@ def open_editor(test_env):
 
 @test
 def smoke_test(test_env):
-	client1 = test_env.client(["logfile client1.log", "player_name client1"])
+	client1 = test_env.client(["logfile client1.log", "player_name client1", "qm_chat_hide_system_prefix 0"])
 	server = test_env.server([
 		"logfile server.log",
 		"sv_demo_chat 1",
@@ -958,6 +958,7 @@ def smoke_test(test_env):
 	client2 = test_env.client([
 		"logfile client2.log",
 		"player_name client2",
+		"qm_chat_hide_system_prefix 0",
 		f"connect localhost:{server.port}",
 	])
 	wait_for_startup([client2])
