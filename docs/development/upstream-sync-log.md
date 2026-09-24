@@ -158,6 +158,58 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S37：master 并行前进 5 个提交（已自带同类修复）→ 撤销 PR-0、链 rebase 到新 master
+
+### 事实：`origin/master` 从 `6b9a41fd21` 前进到 `7cf432eacb`（PR #256）
+
+| 新提交 | 内容 | 与我的关系 |
+|--------|------|------------|
+| `dd5824b283` | `fix(str): str_toint 正确处理超出 int 范围的 long 值` | **与我 S32 的修法同类**，且直接修 base 层 `str_toint`（更根本） |
+| `a7072d8f50` | 浮点位级相等断言改为 `EXPECT_FLOAT_EQ` | 与我 S34 的容差改动同类 |
+| `2391aeecf4` | 组合式断言改用随半径缩放的绝对容差 | 同上 |
+| `90170d96d7` | `run_rust_tests` 在 linux 下 `--as-needed` 导致失败的修复 | 新的 CI 修复 |
+| `7cf432eacb` | Merge PR #256（linux-build） | 新基线 |
+
+也就是说：**我 S32/S34 修的两个问题，维护者/贡献者在同一时间用另一套改法在 master 上修掉了**。
+PR-0（#262）因此失去意义。
+
+### 处置
+
+1. **关闭 PR-0 #262 并删除分支**（`sync/slice-0-preexisting-fixes`）；
+2. 整条链 rebase 到新 master：`git rebase --onto 7cf432eacb d34f421f95 sync/slice-23-official-semantics`
+   —— 即**丢弃 slice-0 的两条提交**、把 23 个切片搬过去；**零冲突**；
+3. 链尾**重新补回**那条官方语义（master 尚未包含）：`821d5ae4b4` 的 cherry-pick +
+   本地 `qm_modes_test.cpp` 的 emote 期望更新（`"\"invalid\""` 不再派发）。
+   现在溢出用例由 master 的 `str_toint` 修法负责，不需要我在 console 层再改一次。
+
+新哈希与 PR 栈：
+
+| PR | 分支 | 基线 | 哈希 |
+|----|------|------|------|
+| [#263](https://github.com/wxj881027/QmClient/pull/263) | `sync/slice-1-base-engine` | `master` | `3c362185d6` |
+| [#260](https://github.com/wxj881027/QmClient/pull/260) | `sync/slice-9-ghost-cull` | slice-1 | `81f76d1e58` |
+| [#261](https://github.com/wxj881027/QmClient/pull/261) | `sync/slice-23-official-semantics` | slice-9 | `3f6b1fe9cc` |
+
+### 一次事故与恢复（值得记）
+
+删掉 `sync/slice-0-preexisting-fixes` 分支后，**以它为基线的 PR-1（#259）被 GitHub 自动关闭**，
+而且无论 `gh pr reopen` 还是 REST `PATCH state=open` 都拒绝（“Cannot change the base branch of a
+closed pull request”；临时把基线分支建回来也仍然不让重开）。
+
+恢复办法：为同一分支**新建 PR**（#263，基线 `master`），并在 #259 留言指向新编号。
+
+**教训**：改 PR 基线 / 删分支前先想清楚连带效果 —— GitHub 会连带关闭「以被删分支为基线」的 PR，
+且这种关闭不可逆；stacked PR 里删除中间基线风险最大。
+
+### 另一条教训：动手修「既有失败」之前先 `git fetch`
+
+S35 我刚判定「这两处红是 master 既有失败」并做 PR-0，同一时间维护者那边已经在 PR #256 里修掉了
+同类问题 —— 如果先 fetch 一次就能看到（`origin/master` 当时已前进），可以省掉 PR-0 整轮工作与
+一次 PR 关闭/重建。以后凡是「要改公共代码去修既有红」的动作，**先 fetch + 看 origin/master 最新提交**。
+
+**证据**：新链尾本地 `run_cxx_tests` = **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败（退出码 0）**；
+CI 结果待本轮推送后的运行。
+
 ## 2026-09-24 · S36：新增 `sync/slice-0-preexisting-fixes`（PR #262），把两处既有红修到链底
 
 维护者拍板「做 PR-0，三段全绿」后执行。

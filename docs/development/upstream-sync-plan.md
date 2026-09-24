@@ -7,9 +7,9 @@
 
 | 项 | 状态 |
 |----|------|
-| 同步基线 | `6b9a41fd21`（`origin/master`，含已合并的 PR #257/#258；本链此前基于 `aea1453cc7`，2026-09-24 前移） |
+| 同步基线 | `7cf432eacb`（`origin/master`，含 PR #256 的 str_toint/浮点断言/linux 构建修复；本链先前基于 `6b9a41fd21`，2026-09-24 再次前移） |
 | 切片链 | `sync/slice-1-base-engine` … `sync/slice-23-official-semantics`（末端 `883a2a7d30`，约 78 条上游派生改动 + Unicode 17 数据表 + 四组自动化测试：PNG 往返 / 实体裁剪 / 钩子提示线可见性 / DB 浮点语义） |
-| PR 状态 | 三段 stacked 均已推送并开 PR：PR-1 [#259](https://github.com/wxj881027/QmClient/pull/259)、PR-2 [#260](https://github.com/wxj881027/QmClient/pull/260)、PR-3 [#261](https://github.com/wxj881027/QmClient/pull/261) |
+| PR 状态 | 三段 stacked 均已推送并开 PR：PR-1 [#263](https://github.com/wxj881027/QmClient/pull/263)（原 #259 因基线分支被删被 GitHub 关闭）、PR-2 [#260](https://github.com/wxj881027/QmClient/pull/260)、PR-3 [#261](https://github.com/wxj881027/QmClient/pull/261) |
 | 可选项分支 | `sync/opt-console-strict-args`（控制台引号参数严格化；该语义已并入链尾切片 23） |
 | 验证口径 | 链尾 `run_cxx_tests` **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**，三个 PR 边界（3329 / 3330 / 3348）**逐段零失败**：基线前移后，原先 2 例维护者新 UI 源码断言随 `origin/master` 的源侧实现一起消失 → 既零回归也零失败 |
 | 回退自审 | 61 条 `-x` 溯源，**0 条**把「上游已回退的改动」留在链上 |
