@@ -64,6 +64,11 @@
 
 与门禁主链无直接关系，按各自职责独立存在：
 
+- `qmclient_scripts/support/upstream_status.py`：DDNet 上游跟进基线快照（只读）；输出上次同步点、领先/落后提交数、双方都改过的文件数、零重叠可直接摘的提交，`--conflicts` 用 `git merge-tree` 干跑合并列冲突路径。切片流程与判定记录见 `docs/development/upstream-sync-plan.md`
+- `qmclient_scripts/support/upstream_commit_check.py`：判断某个上游提交在本地是否**已存在**（只读，按新增行命中率给出 ALREADY-PRESENT / PARTIAL / ABSENT）；用于避免「cherry-pick 无冲突但把同一段代码插第二遍」的事故，判定口径见 `docs/development/upstream-sync-verification.md` 与 `upstream-sync-log.md`
+- `qmclient_scripts/support/upstream_coverage.py`：量化「与上游的内容差距」（只读）；对窗口内每条上游非 merge 提交，比较两个引用的逐行覆盖率并给出判定分布、缺口最大的区域与「本轮实际追上的条数」。例：`py -3 qmclient_scripts/support/upstream_coverage.py --repo tmp/sync-slice-1 --start <同步前> --tip <链尾>`
+- `qmclient_scripts/support/upstream_revert_audit.py`：自审（只读）；解析同步链里每个 cherry-pick 的 `-x` 溯源，检查其上游原始提交**是否已被上游回退**（并区分「链上已包含回退」与「回退又被回退」）。例：`py -3 qmclient_scripts/support/upstream_revert_audit.py --repo tmp/sync-slice-1 --base <同步前> --tip <链尾>`
+- `qmclient_scripts/tests/`：上面这些工具的**自测**（`unittest`，不进 `check_gate.py`，手动跑）。运行：`py -3 -m unittest discover -s qmclient_scripts/tests -v`。含 `test_upstream_commit_check.py`、`test_upstream_revert_audit.py`，以及工具行为冒烟 `test_map_tools_smoke.py`（跑 `dummy_map` 产物做 CRC32/SHA256 自校验 + 喂给 `map_convert_07`；工具二进制默认在 `cmake-build-release`，可用 `QM_MAP_TOOLS_BUILD_DIR=<dir>` 指向别的构建目录，例如 worktree）
 - `qmclient_scripts/languages_qmclient/`
 - `qmclient_scripts/qmclient_center_server/`
 - `qmclient_scripts/diff_update.py`
