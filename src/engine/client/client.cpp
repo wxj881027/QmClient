@@ -5537,6 +5537,10 @@ bool CClient::DemoRecorder_AddDemoMarker(int Recorder)
 	return DemoRecorders()[Recorder].AddDemoMarker();
 }
 
+// clang-format off
+// 上游原样声明：clang-format 20（本地门禁）要求 `)[RECORDER_MAX]` 后换行写大括号，
+// clang-format 22（CI）要求 `) [RECORDER_MAX] {`，两者要求相反且互不兼容，
+// 因此显式关闭该函数的格式化；判定记录见 docs/development/upstream-sync-log.md S30。
 CDemoRecorder (&CClient::DemoRecorders())[RECORDER_MAX]
 {
 	if(IsSixup())
@@ -5545,6 +5549,7 @@ CDemoRecorder (&CClient::DemoRecorders())[RECORDER_MAX]
 	}
 	return m_aDemoRecorders;
 }
+// clang-format on
 
 IDemoRecorder *CClient::DemoRecorder(int Recorder)
 {
