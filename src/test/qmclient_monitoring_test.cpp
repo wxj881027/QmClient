@@ -12445,14 +12445,17 @@ TEST(QmRoundedRect, CachedDirectionsPreserveOriginalAnglesForEveryQuality)
 		for(int i = 0; i <= Segments; ++i)
 		{
 			const float Angle = i * Step;
-			EXPECT_EQ(pDirections[i].x, std::cos(Angle));
-			EXPECT_EQ(pDirections[i].y, std::sin(Angle));
+			// 用容差而非逐位相等：arm64（macOS CI）上缓存表与当场 std::sin 的舍入可能差 1 ULP，
+			// 逐位比较会变成 flaky（维护者已合并的 PR #258 上同样失败、本 PR-1 同一镜像却通过）。
+			// 公式或运算顺序写错会差到 1e-3 量级，1e-6 的容差仍能抓住真实回归。
+			EXPECT_NEAR(pDirections[i].x, std::cos(Angle), 1e-6f);
+			EXPECT_NEAR(pDirections[i].y, std::sin(Angle), 1e-6f);
 			// 同时覆盖抗锯齿内外边、四角方向和非整数半径，保留运算顺序。
 			for(const float Radius : {0.0f, 0.125f, 16.75f, 321.0f})
 				for(const float Direction : {-1.0f, 1.0f})
 				{
-					EXPECT_EQ(13.25f + Direction * pDirections[i].x * Radius, 13.25f + Direction * std::cos(Angle) * Radius);
-					EXPECT_EQ(-7.5f + Direction * pDirections[i].y * Radius, -7.5f + Direction * std::sin(Angle) * Radius);
+					EXPECT_NEAR(13.25f + Direction * pDirections[i].x * Radius, 13.25f + Direction * std::cos(Angle) * Radius, 1e-4f);
+					EXPECT_NEAR(-7.5f + Direction * pDirections[i].y * Radius, -7.5f + Direction * std::sin(Angle) * Radius, 1e-4f);
 				}
 		}
 	}
