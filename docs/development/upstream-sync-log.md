@@ -158,6 +158,33 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S46：三段 PR 全部合入 master（合并结果已校验）
+
+维护者授权后合入（`gh pr merge --merge`，按 stacked 顺序，每步先把下一段基线改到 `master`
+—— 否则会合进分支而不是 master）：
+
+| PR | 内容 | 合并提交 |
+|----|------|----------|
+| [#263](https://github.com/wxj881027/QmClient/pull/263) | PR-1 `src/base` 布局对齐 | `9213b8ae5d` |
+| [#260](https://github.com/wxj881027/QmClient/pull/260) | PR-2 客户端与引擎修复批次 | `c553f118f9` |
+| [#261](https://github.com/wxj881027/QmClient/pull/261) | PR-3 服务器/工具/Unicode/验证补强 + 三项官方语义 | `1364e1707a` |
+
+**master 现在：`1364e1707a`**（合并链 91 个提交）。
+
+### 合并结果校验
+
+| 校验 | 结果 |
+|------|------|
+| `origin/master^{tree}` vs 我验证过的链尾 `3f6b1fe9cc^{tree}` | **`1546828434b4…` 逐字节相同** → S36–S43 的本地验证（3348 运行 / 0 失败、`--target everything` 全量编译、`--mode full` 门禁）**直接适用于 master** |
+| `-x` 溯源条目 | master 上 **65 条**（与链上一致，未被合并破坏） |
+| 关键提交是否为 master 祖先 | `3c362185d6`（slice-1）、`81f76d1e58`（slice-9）、`3f6b1fe9cc`（链尾）、`51f7e825dc`（控制台语义）**全部是** |
+
+分支未删除（仓库 `delete_branch_on_merge=false`），四段分支名仍可查。
+
+**仍未合入**：贡献者 PR [#264](https://github.com/wxj881027/QmClient/pull/264)（修 `.clang-tidy` 的
+`misc-use-internal-linkage` 与集成测试超时）—— 那两处既有红要等它合入 master 才会消失；
+以及本轮记录线 `sync/docs-and-tooling`（文档 + 5 个流程工具 + 84 例单测）尚未进 master。
+
 ## 2026-09-24 · S45：交接说明成文（本轮为预算内最后一轮）
 
 新增 `docs/development/upstream-sync-handoff.md`，一页式交接：当前基线/链/PR/CI 与量化数字、

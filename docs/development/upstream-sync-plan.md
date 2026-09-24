@@ -7,9 +7,9 @@
 
 | 项 | 状态 |
 |----|------|
-| 同步基线 | `7cf432eacb`（`origin/master`，含 PR #256 的 str_toint/浮点断言/linux 构建修复；本链先前基于 `6b9a41fd21`，2026-09-24 再次前移） |
+| 同步基线 | `1364e1707a`（`origin/master`，2026-09-24 已合入本链三段 PR #263/#260/#261） |
 | 切片链 | `sync/slice-1-base-engine` … `sync/slice-23-official-semantics`（末端 `883a2a7d30`，约 78 条上游派生改动 + Unicode 17 数据表 + 四组自动化测试：PNG 往返 / 实体裁剪 / 钩子提示线可见性 / DB 浮点语义） |
-| PR 状态 | 三段 stacked 均已推送并开 PR：PR-1 [#263](https://github.com/wxj881027/QmClient/pull/263)（原 #259 因基线分支被删被 GitHub 关闭）、PR-2 [#260](https://github.com/wxj881027/QmClient/pull/260)、PR-3 [#261](https://github.com/wxj881027/QmClient/pull/261) |
+| PR 状态 | **三段全部已合入**（#263 `9213b8ae5d`、#260 `c553f118f9`、#261 `1364e1707a`）；待合：贡献者 #264（修既有红）、记录线 `sync/docs-and-tooling`（文档+工具） |
 | 可选项分支 | `sync/opt-console-strict-args`（控制台引号参数严格化；该语义已并入链尾切片 23） |
 | 验证口径 | 链尾 `run_cxx_tests` **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**；CI 上三段 PR 的 `check-style` / Linux / macOS 与 PR-3 的 Windows 均已 PASS（上一轮 PR-2 那两处红随 master 的 PR #256 修复转绿）；`check-clang-tidy` / `check-clang-san` 仍是 master 级别的既有红（PR #256 合并后 master 两次 push 运行同样 failure） |
 | 回退自审 | 61 条 `-x` 溯源，**0 条**把「上游已回退的改动」留在链上 |
