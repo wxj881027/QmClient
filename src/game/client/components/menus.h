@@ -1038,6 +1038,32 @@ public:
 			return "活动图";
 		return pType;
 	}
+	static const char *AxiomShortTypeDisplayName(const char *pType)
+	{
+		if(pType == nullptr || pType[0] == '\0')
+			return nullptr;
+		if(str_comp_nocase(pType, "Novice") == 0)
+			return "简单";
+		if(str_comp_nocase(pType, "Moderate") == 0)
+			return "普通";
+		if(str_comp_nocase(pType, "Brutal") == 0)
+			return "困难";
+		if(str_comp_nocase(pType, "Insane") == 0)
+			return "疯狂";
+		if(str_comp_nocase(pType, "Solo") == 0)
+			return "单人";
+		if(str_comp_nocase(pType, "Dummy") == 0)
+			return "分身";
+		if(str_comp_nocase(pType, "活动") == 0)
+			return "活动";
+		if(str_comp_nocase(pType, "极限") == 0)
+			return "极限";
+		if(str_comp_nocase(pType, "训练") == 0)
+			return "训练";
+		if(str_comp_nocase(pType, "娱乐") == 0)
+			return "娱乐";
+		return pType;
+	}
 	struct SFriendAutoFollowState
 	{
 		bool m_Active = false;
@@ -1230,6 +1256,11 @@ public:
 
 		if(str_find_nocase(pName, "Axiom"))
 		{
+			const char *pAxiomDifficulty = pDifficulty;
+			// Axiom 的「普通」对应 DDRace 的 Moderate；旧的通用解析为
+			// 兼容历史数据仍把它归为 Novice，因此在 Axiom 分支单独修正。
+			if(str_find(pName, "普通") && !str_find_nocase(pName, "Novice") && !str_find(pName, "简单"))
+				pAxiomDifficulty = "Moderate";
 			// 尾部只保留区段标记(如 CHN7)：钩累死/AXRace 是 Axiom 的玩法模式，不进短名。
 			// 地区优先取「⌬ 上海 ✦」里的城市，没有 ✦ 的写法取 Axiom 后直接跟的城市。
 			const auto IsCjkStart = [](const char *p) {
@@ -1270,9 +1301,9 @@ public:
 
 				char aLocation[32];
 				if(ExtractAxiomLocation(aLocation, (int)sizeof(aLocation)))
-					str_format(pBuffer, BufferSize, "%s - %s %s", ServerbrowserShortTypeDisplayName(pDifficulty), aTail, aLocation);
+					str_format(pBuffer, BufferSize, "%s - %s %s", AxiomShortTypeDisplayName(pAxiomDifficulty), aTail, aLocation);
 				else
-					str_format(pBuffer, BufferSize, "%s - %s", ServerbrowserShortTypeDisplayName(pDifficulty), aTail);
+					str_format(pBuffer, BufferSize, "%s - %s", AxiomShortTypeDisplayName(pAxiomDifficulty), aTail);
 				return pBuffer;
 			}
 		}
@@ -2257,7 +2288,6 @@ protected:
 	void RenderServerbrowserInfo(CUIRect View);
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
-	void RenderServerbrowserQm(CUIRect View);
 	CQmMapVoteDifficulty m_MapVoteDifficulty;
 	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
@@ -2488,7 +2518,6 @@ public:
 		SMALL_TAB_BROWSER_FILTER,
 		SMALL_TAB_BROWSER_INFO,
 		SMALL_TAB_BROWSER_FRIENDS,
-		SMALL_TAB_BROWSER_QM,
 
 		SMALL_TAB_LENGTH,
 	};

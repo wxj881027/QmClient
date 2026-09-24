@@ -19,12 +19,6 @@
 %c Team %d
 == %c 队伍 %d
 
-%d dummies
-== %d 个分身
-
-%d dummy
-== %d 个分身
-
 %d items selected
 == 已选择 %d 项
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == 已删除 %d 个选中项，但有 %d 项无法删除。第一个失败项是“%s”。
 
-%d servers, %d users
-== %d 个服务器，%d 个用户
-
-%d servers, %d users, %d dummies
-== %d 个服务器，%d 个用户，%d 个分身
-
 %d teams
 == %d 个队伍
-
-%d user
-== %d 个用户
-
-%d users
-== %d 个用户
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | 本体：%s | 分身：%s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == 否
 
-No active QmClient reports yet
-== 暂无活跃的栖梦客户端上报
-
 No animation
 == 无动画
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == 未启用
-
-Not in the current browser list
-== 不在当前浏览器列表中
 
 Not open, check input device or mic permission
 == 未打开，请检查输入设备或麦克风权限
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = 连接质量
 
-Qm
-== 栖梦
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm 增强渲染：0=关闭（纯 Vulkan），1=自动回退，2=强制开启
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient 信息和项目链接
-
-QmClient online distribution
-== 栖梦客户端在线分布
 
 QmClient Settings
 == QmClient 设置
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == 所选部件：%d
 
-Selected server
-== 已选中服务器
-
 Selected timertype is not supported by your client
 == 你当前客户端不支持所选计时器类型
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == 服务器分配风格
-
-Set a voice server to enable QmClient distribution
-== 需要先配置语音服务器，才能启用栖梦客户端在线分布
 
 Set all to Rifle
 == 统一为激光枪颜色

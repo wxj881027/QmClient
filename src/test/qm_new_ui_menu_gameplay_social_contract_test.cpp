@@ -171,7 +171,7 @@ TEST(QmNewUiMenuGameplaySocialContract, ShortServerNamesCoverKnownFamilies)
 
 	str_copy(Info.m_aName, "Axiom 北京 普通 - CHN1O 钩累死");
 	str_copy(Info.m_aGameType, "DDraceNetwork");
-	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "简单图 - CHN1O 北京");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "普通 - CHN1O 北京");
 
 	str_copy(Info.m_aName, "DDNet CHN7 西安 - Moderate 中阶");
 	str_copy(Info.m_aGameType, "DDraceNetwork");
@@ -184,27 +184,27 @@ TEST(QmNewUiMenuGameplaySocialContract, ShortServerNamesCoverKnownFamilies)
 	// Axiom 尾部用地区而不是玩法模式(钩累死/AXRace)；名字里没有地区时只留区段标记。
 	str_copy(Info.m_aName, "Axiom Novice - CHN12 钩累死");
 	str_copy(Info.m_aGameType, "Gores");
-	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "简单图 - CHN12");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "简单 - CHN12");
 
 	str_copy(Info.m_aName, "Axiom Insane - CHN7 钩累死");
 	str_copy(Info.m_aGameType, "Gores");
-	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "疯狂图 - CHN7");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "疯狂 - CHN7");
 
 	str_copy(Info.m_aName, "Axiom ⌬ 上海 ✦ 单人 - CHN1 钩累死");
 	str_copy(Info.m_aGameType, "Gores");
-	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "单人图 - CHN1 上海");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "单人 - CHN1 上海");
 
 	str_copy(Info.m_aName, "Axiom Axiom ◇ 广州 ✦ 困难 - CHN9 钩累死");
 	str_copy(Info.m_aGameType, "Gores");
-	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "高阶图 - CHN9 广州");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "困难 - CHN9 广州");
 
 	str_copy(Info.m_aName, "Axiom Axiom ◇ 北京 ✦ 困难 - CHN10 钩累死");
 	str_copy(Info.m_aGameType, "Gores");
-	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "高阶图 - CHN10 北京");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "困难 - CHN10 北京");
 
 	str_copy(Info.m_aName, "Axiom ◇ 广州 ✦ 活动 - CHN9 AXRace");
 	str_copy(Info.m_aGameType, "Gores");
-	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "活动图 - CHN9 广州");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "活动 - CHN9 广州");
 
 	// 官方简中 Event 译作「活动」，英文写法也要认出来。
 	str_copy(Info.m_aName, "DDNet CHN2 上海 - Event 活动");

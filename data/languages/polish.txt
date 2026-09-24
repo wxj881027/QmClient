@@ -19,12 +19,6 @@
 %c Team %d
 == %c Drużyna %d
 
-%d dummies
-== %d kukieł
-
-%d dummy
-== %d kukła
-
 %d items selected
 == Wybrano %d elementów
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == Usunięto %d wybranych elementów, ale %d elementów nie można było usunąć. Pierwszym nieudanym elementem był „%s”.
 
-%d servers, %d users
-== %d serwerów, %d użytkowników
-
-%d servers, %d users, %d dummies
-== %d serwerów, %d użytkowników, %d kukieł
-
 %d teams
 == %d drużyn
-
-%d user
-== %d użytkownik
-
-%d users
-== %d użytkowników
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | główny: %s | dummy: %s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == Nie
 
-No active QmClient reports yet
-== Brak aktywnych raportów QmClient
-
 No animation
 == Brak animacji
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == Nie włączono
-
-Not in the current browser list
-== Nie ma na obecnej liście przeglądarki
 
 Not open, check input device or mic permission
 == Nie otwarto, sprawdź urządzenie wejściowe lub uprawnienia mikrofonu
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = Jakość połączenia
 
-Qm
-== Qm
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Ulepszone renderowanie Qm: 0=wyłączone (czysty Vulkan), 1=automatyczny powrót, 2=wymuszone
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== Dystrybucja online QmClient
 
 QmClient Settings
 == Ustawienia QmClient
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == Wybrana część: %d
 
-Selected server
-== Wybrany serwer
-
 Selected timertype is not supported by your client
 == Wybrany typ timera nie jest obsługiwany przez twój klient
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == Styl przypisany przez serwer
-
-Set a voice server to enable QmClient distribution
-== Ustaw serwer głosowy, aby włączyć dystrybucję QmClient
 
 Set all to Rifle
 == Ustaw wszystkie na karabin

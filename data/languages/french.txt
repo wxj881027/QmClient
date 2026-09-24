@@ -19,12 +19,6 @@
 %c Team %d
 == %c Équipe %d
 
-%d dummies
-== %d dummies
-
-%d dummy
-== %d dummy
-
 %d items selected
 == %d éléments sélectionnés
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d éléments sélectionnés ont été supprimés, mais %d éléments n'ont pas pu être supprimés. Le premier élément en échec était '%s'.
 
-%d servers, %d users
-== %d serveurs, %d utilisateurs
-
-%d servers, %d users, %d dummies
-== %d serveurs, %d utilisateurs, %d dummies
-
 %d teams
 == %d équipes
-
-%d user
-== %d utilisateur
-
-%d users
-== %d utilisateurs
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | principal : %s | dummy : %s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == Non
 
-No active QmClient reports yet
-== Aucun rapport QmClient actif pour le moment
-
 No animation
 == Aucune animation
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == Non activé
-
-Not in the current browser list
-== Pas dans la liste actuelle du navigateur
 
 Not open, check input device or mic permission
 == Non ouvert, vérifiez le périphérique d'entrée ou l'autorisation du micro
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = Qualité de la connexion
 
-Qm
-== Qm
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Rendu amélioré Qm : 0=désactivé (Vulkan pur), 1=retour automatique, 2=forcé
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== Distribution en ligne de QmClient
 
 QmClient Settings
 == Paramètres QmClient
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == Partie sélectionnée : %d
 
-Selected server
-== Serveur sélectionné
-
 Selected timertype is not supported by your client
 == Le type de chronomètre sélectionné n'est pas pris en charge par votre client
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == Style attribué par le serveur
-
-Set a voice server to enable QmClient distribution
-== Définissez un serveur vocal pour activer la distribution de QmClient
 
 Set all to Rifle
 == Tout mettre au fusil

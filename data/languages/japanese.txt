@@ -19,12 +19,6 @@
 %c Team %d
 == %c チーム %d
 
-%d dummies
-== %d ダミー
-
-%d dummy
-== %d ダミー
-
 %d items selected
 == %d 個のアイテムが選択されました
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == 選択された %d 個のアイテムは削除されましたが、%d 個のアイテムは削除できませんでした。最初に失敗したアイテムは「%s」です。
 
-%d servers, %d users
-== %d サーバー、%d ユーザー
-
-%d servers, %d users, %d dummies
-== %d サーバー、%d ユーザー、%d ダミー
-
 %d teams
 == %d チーム
-
-%d user
-== %d ユーザー
-
-%d users
-== %d ユーザー
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | メイン：%s | ダミー：%s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == いいえ
 
-No active QmClient reports yet
-== アクティブな QmClient レポートはまだありません
-
 No animation
 == アニメーションなし
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == 有効ではありません
-
-Not in the current browser list
-== 現在のブラウザリストにありません
 
 Not open, check input device or mic permission
 == 開いていません。入力デバイスまたはマイクの許可を確認してください
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = 接続品質
 
-Qm
-== Qm
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm 拡張レンダリング：0=オフ（純粋な Vulkan）、1=自動フォールバック、2=強制オン
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== QmClient オンライン分布
 
 QmClient Settings
 == QmClient 設定
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == 選択中のパーツ：%d
 
-Selected server
-== 選択したサーバー
-
 Selected timertype is not supported by your client
 == 選択したタイマータイプはお使いのクライアントでサポートされていません
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == サーバー指定のスタイル
-
-Set a voice server to enable QmClient distribution
-== ボイスサーバーを設定して QmClient オンライン分布を有効にする
 
 Set all to Rifle
 == すべてをライフルに設定

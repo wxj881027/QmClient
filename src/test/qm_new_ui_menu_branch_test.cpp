@@ -295,7 +295,7 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 
 TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)
 {
-	// 意图：服务器浏览器工具箱页签（过滤器 / 信息 / 好友 / Qm）在新 UI 下同样是胶囊，
+	// 意图：服务器浏览器工具箱页签（过滤器 / 信息 / 好友）在新 UI 下同样是胶囊，
 	// 旧 UI 保留原来的分段底色。
 	const std::string Source = ReadTextFile("src/game/client/components/menus_browser.cpp");
 	const std::string Body = FunctionBody(Source, "void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)");
@@ -309,6 +309,8 @@ TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)
 	EXPECT_LT(Chrome, Draw);
 	EXPECT_NE(Body.find("CapsuleTabBarStyleFor(BrowserPanelColor(1.0f))"), std::string::npos);
 	EXPECT_NE(Body.find("const ColorRGBA ColorActive = UseNewUi ? BrowserPanelElevatedColor(0.92f) : ms_ColorTabbarActive;"), std::string::npos);
+	EXPECT_EQ(Source.find("UI_TOOLBOX_PAGE_QM"), std::string::npos);
+	EXPECT_EQ(Source.find("RenderServerbrowserQm"), std::string::npos);
 
 	// 通用配色零件：轨道压暗 + 滑块/文字自适应。
 	EXPECT_NE(ReadTextFile("src/game/client/components/menus.h").find("ui_widget::SCapsuleTabBarStyle CapsuleTabBarStyleFor(const ColorRGBA &SurfaceColor) const;"), std::string::npos);

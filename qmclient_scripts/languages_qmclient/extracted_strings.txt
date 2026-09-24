@@ -5,8 +5,6 @@
 %.2f KiB
 %.2f MiB
 %c Team %d
-%d dummies
-%d dummy
 %d items selected
 %d more cut segments
 %d of %d server
@@ -14,11 +12,7 @@
 %d player
 %d players
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
-%d servers, %d users
-%d servers, %d users, %d dummies
 %d teams
-%d user
-%d users
 %d. %s | main: %s | dummy: %s
 %d/%d KiB (%.1f KiB/s)
 %ds left
@@ -2357,7 +2351,6 @@ Next page in console
 Next weapon
 Nickname
 No
-No active QmClient reports yet
 No animation
 No answer from server yet.
 No assets
@@ -2434,7 +2427,6 @@ Not connected to a game server
 Not connected to server
 Not downloaded
 Not enabled
-Not in the current browser list
 Not open, check input device or mic permission
 Not open, check output device
 Not requested
@@ -2810,7 +2802,6 @@ Puts you out of live freeze
 Puts you out of solo part
 Pyramid
 q = Connection quality
-Qm
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 Qm UI duotone secondary icon color
@@ -2822,7 +2813,6 @@ QmClient chat log
 QmClient Community
 QmClient community and project information
 QmClient information and project links
-QmClient online distribution
 QmClient Settings
 QmClient sidebar module collapse state
 QmClient sidebar module order
@@ -3243,7 +3233,6 @@ Selected candidate
 Selected candidate %d/%d under cursor.
 Selected item color
 Selected part: %d
-Selected server
 Selected timertype is not supported by your client
 Selection
 Self
@@ -3297,7 +3286,6 @@ Server stress (debug builds only).
 Server type (novice, moderate, etc.)
 Server URL
 Server-assigned style
-Set a voice server to enable QmClient distribution
 Set all to Rifle
 Set camera position relative to current view in the map
 Set camera position to x and y in the map

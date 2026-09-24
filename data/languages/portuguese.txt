@@ -19,12 +19,6 @@
 %c Team %d
 == %c Equipa %d
 
-%d dummies
-== %d dummies
-
-%d dummy
-== %d dummy
-
 %d items selected
 == %d itens selecionados
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d itens selecionados foram eliminados, mas %d itens não puderam ser eliminados. O primeiro item com falha foi '%s'.
 
-%d servers, %d users
-== %d servidores, %d utilizadores
-
-%d servers, %d users, %d dummies
-== %d servidores, %d utilizadores, %d dummies
-
 %d teams
 == %d equipas
-
-%d user
-== %d utilizador
-
-%d users
-== %d utilizadores
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | principal: %s | dummy: %s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == Não
 
-No active QmClient reports yet
-== Ainda sem relatórios ativos do QmClient
-
 No animation
 == Sem animação
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == Não ativado
-
-Not in the current browser list
-== Não está na lista atual do navegador
 
 Not open, check input device or mic permission
 == Não aberto, verifique o dispositivo de entrada ou permissão do microfone
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = Qualidade da conexão
 
-Qm
-== Qm
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Renderização melhorada do Qm: 0=desativada (Vulkan puro), 1=recuo automático, 2=forçada
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== Distribuição online do QmClient
 
 QmClient Settings
 == Definições do QmClient
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == Parte selecionada: %d
 
-Selected server
-== Servidor selecionado
-
 Selected timertype is not supported by your client
 == O tipo de temporizador selecionado não é suportado pelo seu cliente
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == Estilo atribuído pelo servidor
-
-Set a voice server to enable QmClient distribution
-== Defina um servidor de voz para ativar a distribuição do QmClient
 
 Set all to Rifle
 == Definir tudo para Rifle

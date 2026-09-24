@@ -19,12 +19,6 @@
 %c Team %d
 == %c Takım %d
 
-%d dummies
-== %d Dummy
-
-%d dummy
-== %d Dummy
-
 %d items selected
 == %d öğe seçildi
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d seçili öğe silindi, ancak %d öğe silinemedi. İlk başarısız öğe '%s'.
 
-%d servers, %d users
-== %d sunucu, %d kullanıcı
-
-%d servers, %d users, %d dummies
-== %d sunucu, %d kullanıcı, %d Dummy
-
 %d teams
 == %d takım
-
-%d user
-== %d kullanıcı
-
-%d users
-== %d kullanıcı
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | ana oyuncu: %s | kukla: %s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == Hayır
 
-No active QmClient reports yet
-== Henüz aktif QmClient raporu yok
-
 No animation
 == Animasyon yok
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == Etkin değil
-
-Not in the current browser list
-== Mevcut tarayıcı listesinde değil
 
 Not open, check input device or mic permission
 == Açık değil, giriş cihazını veya mikrofon iznini kontrol edin
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = Bağlantı kalitesi
 
-Qm
-== Qm
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm gelişmiş işleme: 0=kapalı (saf Vulkan), 1=otomatik geri dönüş, 2=zorla açık
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== QmClient çevrimiçi dağılımı
 
 QmClient Settings
 == QmClient Ayarları
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == Seçili parça: %d
 
-Selected server
-== Seçili sunucu
-
 Selected timertype is not supported by your client
 == Seçilen zamanlayıcı türü istemciniz tarafından desteklenmiyor
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == Sunucunun atadığı stil
-
-Set a voice server to enable QmClient distribution
-== QmClient dağılımını etkinleştirmek için bir ses sunucusu ayarlayın
 
 Set all to Rifle
 == Tümünü Tüfek olarak ayarla

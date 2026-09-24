@@ -19,12 +19,6 @@
 %c Team %d
 == %c 팀 %d
 
-%d dummies
-== %d 개의 더미
-
-%d dummy
-== %d 개의 더미
-
 %d items selected
 == %d개 항목 선택됨
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d개의 선택된 항목이 삭제되었지만, %d개 항목은 삭제할 수 없습니다. 첫 번째 실패 항목은 '%s'입니다.
 
-%d servers, %d users
-== %d 개 서버, %d 명 사용자
-
-%d servers, %d users, %d dummies
-== %d 개 서버, %d 명 사용자, %d 개 더미
-
 %d teams
 == %d개 팀
-
-%d user
-== %d 명의 사용자
-
-%d users
-== %d 명의 사용자
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | 본체: %s | 더미: %s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == 아니요
 
-No active QmClient reports yet
-== 아직 활성 QmClient 보고 없음
-
 No animation
 == 애니메이션 없음
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == 활성화되지 않음
-
-Not in the current browser list
-== 현재 브라우저 목록에 없음
 
 Not open, check input device or mic permission
 == 열려 있지 않음, 입력 장치 또는 마이크 권한 확인
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = 연결 품질
 
-Qm
-== Qm
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm 향상된 렌더링: 0=끄기(순수 Vulkan), 1=자동 폴백, 2=강제 켜기
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== QmClient 온라인 배포
 
 QmClient Settings
 == QmClient 설정
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == 선택한 부품: %d
 
-Selected server
-== 선택한 서버
-
 Selected timertype is not supported by your client
 == 선택한 타이머 유형을 클라이언트에서 지원하지 않습니다
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == 서버 지정 스타일
-
-Set a voice server to enable QmClient distribution
-== 음성 서버를 설정해야 QmClient 온라인 배포를 활성화할 수 있습니다
 
 Set all to Rifle
 == 모두 라이플로 설정

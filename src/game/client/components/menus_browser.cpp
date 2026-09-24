@@ -3283,125 +3283,6 @@ void CMenus::PopupCancelRemoveFriend()
 	m_RemoveFriendState = IFriends::FRIEND_NO;
 }
 
-void CMenus::RenderServerbrowserQm(CUIRect View)
-{
-	const float RowHeight = 18.0f;
-	const float FontSize = (RowHeight - 4.0f) * CUi::ms_FontmodHeight;
-	const auto &vQmServers = GameClient()->m_QmClient.QmClientServerDistribution();
-	const int QmUsers = GameClient()->m_QmClient.QmClientOnlineUserCount();
-	const int QmDummies = GameClient()->m_QmClient.QmClientOnlineDummyCount();
-
-	View.Margin(5.0f, &View);
-
-	CUIRect Header, Summary, List, Row;
-	View.HSplitTop(15.0f, &Header, &View);
-	Ui()->DoLabel(&Header, Localize("QmClient online distribution"), FontSize, TEXTALIGN_ML);
-	View.HSplitTop(5.0f, nullptr, &View);
-	View.HSplitTop(28.0f, &Summary, &View);
-
-	if(!GameClient()->m_QmClient.HasQmClientRecognitionService())
-	{
-		Ui()->DoLabel(&Summary, Localize("Set a voice server to enable QmClient distribution"), 9.0f, TEXTALIGN_ML);
-		return;
-	}
-
-	char aSummary[128];
-	if(QmDummies > 0)
-		str_format(aSummary, sizeof(aSummary), Localize("%d servers, %d users, %d dummies"), (int)vQmServers.size(), QmUsers, QmDummies);
-	else
-		str_format(aSummary, sizeof(aSummary), Localize("%d servers, %d users"), (int)vQmServers.size(), QmUsers);
-	Ui()->DoLabel(&Summary, aSummary, 9.0f, TEXTALIGN_ML);
-
-	if(vQmServers.empty())
-	{
-		View.HSplitTop(2.0f, nullptr, &View);
-		View.HSplitTop(RowHeight, &Row, &View);
-		Ui()->DoLabel(&Row, Localize("No active QmClient reports yet"), FontSize, TEXTALIGN_ML);
-		return;
-	}
-
-	View.HSplitTop(2.0f, nullptr, &View);
-	List = View;
-
-	int SelectedQmIndex = -1;
-	for(size_t i = 0; i < vQmServers.size(); ++i)
-	{
-		if(str_comp(vQmServers[i].m_ServerAddress.c_str(), g_Config.m_UiServerAddress) == 0)
-		{
-			SelectedQmIndex = (int)i;
-			break;
-		}
-	}
-
-	static CListBox s_QmServerListBox;
-	static std::vector<int> s_vQmServerItemIds;
-	s_vQmServerItemIds.resize(vQmServers.size());
-	s_QmServerListBox.DoAutoSpacing(2.0f);
-	s_QmServerListBox.DoStart(40.0f, vQmServers.size(), 1, 3, SelectedQmIndex, &List, false, IGraphics::CORNER_NONE);
-
-	for(size_t i = 0; i < vQmServers.size(); ++i)
-	{
-		const SQmClientServerDistribution &Entry = vQmServers[i];
-		int SortedServerIndex = -1;
-		const CServerInfo *pSortedServer = FindSortedServerByAddress(ServerBrowser(), Entry.m_ServerAddress.c_str(), &SortedServerIndex);
-		const CServerInfo *pKnownServer = pSortedServer != nullptr ? pSortedServer : FindServerByAddress(ServerBrowser(), Entry.m_ServerAddress.c_str());
-
-		const CListboxItem Item = s_QmServerListBox.DoNextItem(&s_vQmServerItemIds[i], SelectedQmIndex == (int)i);
-		if(!Item.m_Visible)
-			continue;
-		auto GaussianBlurSuppression = Item.SuppressGaussianBlur();
-
-		CUIRect ItemRect, TextRect, CountRect, TitleRect, DetailRect, UsersRect, DummiesRect;
-		Item.m_Rect.Margin(4.0f, &ItemRect);
-		if(Item.m_Selected)
-			ItemRect.Draw(BrowserOpacityColor(ColorRGBA(0.23f, 0.51f, 0.82f, 0.12f)), IGraphics::CORNER_ALL, 6.0f);
-
-		ItemRect.VSplitRight(100.0f, &TextRect, &CountRect);
-		TextRect.HSplitTop(18.0f, &TitleRect, &DetailRect);
-		CountRect.HSplitTop(18.0f, &UsersRect, &DummiesRect);
-
-		const char *pTitle = pKnownServer != nullptr && pKnownServer->m_aName[0] != '\0' ? pKnownServer->m_aName : Entry.m_ServerAddress.c_str();
-		Ui()->DoLabel(&TitleRect, pTitle, FontSize, TEXTALIGN_ML);
-
-		char aDetail[128];
-		if(pSortedServer != nullptr && Item.m_Selected)
-			str_format(aDetail, sizeof(aDetail), "%s | %s", Localize("Selected server"), pSortedServer->m_aAddress);
-		else if(pSortedServer != nullptr)
-			str_copy(aDetail, pSortedServer->m_aAddress, sizeof(aDetail));
-		else if(pKnownServer != nullptr)
-			str_format(aDetail, sizeof(aDetail), "%s | %s", Localize("Not in the current browser list"), pKnownServer->m_aAddress);
-		else
-			str_copy(aDetail, Localize("Not in the current browser list"), sizeof(aDetail));
-		Ui()->DoLabel(&DetailRect, aDetail, 8.0f, TEXTALIGN_ML);
-
-		char aUsers[48];
-		str_format(aUsers, sizeof(aUsers), Localize(Entry.m_UserCount == 1 ? "%d user" : "%d users"), Entry.m_UserCount);
-		Ui()->DoLabel(&UsersRect, aUsers, 9.0f, TEXTALIGN_MR);
-
-		if(Entry.m_DummyCount > 0)
-		{
-			char aDummies[48];
-			str_format(aDummies, sizeof(aDummies), Localize(Entry.m_DummyCount == 1 ? "%d dummy" : "%d dummies"), Entry.m_DummyCount);
-			Ui()->DoLabel(&DummiesRect, aDummies, 8.0f, TEXTALIGN_MR);
-		}
-	}
-
-	const int NewSelected = s_QmServerListBox.DoEnd();
-	if((s_QmServerListBox.WasItemSelected() || s_QmServerListBox.WasItemActivated()) &&
-		NewSelected >= 0 &&
-		NewSelected < (int)vQmServers.size())
-	{
-		int SortedServerIndex = -1;
-		const CServerInfo *pServerInfo = FindSortedServerByAddress(ServerBrowser(), vQmServers[NewSelected].m_ServerAddress.c_str(), &SortedServerIndex);
-		if(pServerInfo != nullptr && SortedServerIndex >= 0)
-		{
-			m_SelectedIndex = SortedServerIndex;
-			str_copy(g_Config.m_UiServerAddress, pServerInfo->m_aAddress);
-			m_ServerBrowserShouldRevealSelection = true;
-		}
-	}
-}
-
 void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 {
 	const QmMapHistoryUi::SWorkspaceMetrics Layout = QmMapHistoryUi::WorkspaceMetrics(View.h);
@@ -3884,23 +3765,28 @@ enum
 	UI_TOOLBOX_PAGE_FILTERS = 0,
 	UI_TOOLBOX_PAGE_INFO,
 	UI_TOOLBOX_PAGE_FRIENDS,
-	UI_TOOLBOX_PAGE_QM,
 	NUM_UI_TOOLBOX_PAGES,
 };
 
+static void NormalizeServerbrowserToolboxPage()
+{
+	// 旧版本把栖梦页签保存为 3；加载旧配置时回到好友页，不进入无效分支。
+	if(g_Config.m_UiToolboxPage >= NUM_UI_TOOLBOX_PAGES)
+		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
+}
+
 void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 {
-	CUIRect FilterTabButton, InfoTabButton, FriendsTabButton, QmTabButton;
+	NormalizeServerbrowserToolboxPage();
+	CUIRect FilterTabButton, InfoTabButton, FriendsTabButton;
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
-	TabBar.VSplitLeft(TabBar.w / 4.0f, &FilterTabButton, &TabBar);
-	TabBar.VSplitLeft(TabBar.w / 3.0f, &InfoTabButton, &TabBar);
-	TabBar.VSplitLeft(TabBar.w / 2.0f, &FriendsTabButton, &QmTabButton);
+	TabBar.VSplitLeft(TabBar.w / 3.0f, &FilterTabButton, &TabBar);
+	TabBar.VSplitLeft(TabBar.w / 2.0f, &InfoTabButton, &FriendsTabButton);
 	FilterTabButton.VSplitRight(3.0f, &FilterTabButton, nullptr);
 	InfoTabButton.VSplitLeft(3.0f, nullptr, &InfoTabButton);
 	InfoTabButton.VSplitRight(3.0f, &InfoTabButton, nullptr);
 	FriendsTabButton.VSplitLeft(3.0f, nullptr, &FriendsTabButton);
 	FriendsTabButton.VSplitRight(3.0f, &FriendsTabButton, nullptr);
-	QmTabButton.VSplitLeft(3.0f, nullptr, &QmTabButton);
 
 	const ColorRGBA ColorActive = UseNewUi ? BrowserPanelElevatedColor(0.92f) : ms_ColorTabbarActive;
 	const ColorRGBA ColorInactive = UseNewUi ? BrowserPanelColor(0.70f) : ms_ColorTabbarInactive;
@@ -3915,8 +3801,8 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 	if(UseNewUi)
 	{
 		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签图标/文字。
-		const CUIRect aToolboxTabSlots[] = {FilterTabButton, InfoTabButton, FriendsTabButton, QmTabButton};
-		const int aToolboxTabPages[] = {UI_TOOLBOX_PAGE_FILTERS, UI_TOOLBOX_PAGE_INFO, UI_TOOLBOX_PAGE_FRIENDS, UI_TOOLBOX_PAGE_QM};
+		const CUIRect aToolboxTabSlots[] = {FilterTabButton, InfoTabButton, FriendsTabButton};
+		const int aToolboxTabPages[] = {UI_TOOLBOX_PAGE_FILTERS, UI_TOOLBOX_PAGE_INFO, UI_TOOLBOX_PAGE_FRIENDS};
 		int ActiveToolboxTab = -1;
 		for(size_t Tab = 0; Tab < std::size(aToolboxTabSlots); ++Tab)
 		{
@@ -3943,13 +3829,6 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 		if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
 			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
 		GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
-
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		static CButtonContainer s_QmTabButton;
-		if(DoButton_MenuTab(&s_QmTabButton, Localize("Qm"), g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_QM, &QmTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_QM], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
-			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_QM;
-		GameClient()->m_Tooltips.DoToolTip(&s_QmTabButton, &QmTabButton, Localize("QmClient"));
 
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -3982,19 +3861,11 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-	static CButtonContainer s_QmTabButton;
-	if(DoButton_MenuTab(&s_QmTabButton, Localize("Qm"), g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_QM, &QmTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_QM], &ColorInactive, &ColorActive, &ColorHover))
-	{
-		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_QM;
-	}
-	GameClient()->m_Tooltips.DoToolTip(&s_QmTabButton, &QmTabButton, Localize("QmClient"));
-
-	TextRender()->SetRenderFlags(0);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 }
 
 void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 {
+	NormalizeServerbrowserToolboxPage();
 	static int s_PrevToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
 	static float s_ToolboxDirection = 0.0f;
 	if(g_Config.m_UiToolboxPage != s_PrevToolboxPage)
@@ -4025,11 +3896,8 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 	case UI_TOOLBOX_PAGE_FRIENDS:
 		RenderServerbrowserFriends(ToolBox);
 		break;
-	case UI_TOOLBOX_PAGE_QM:
-		RenderServerbrowserQm(ToolBox);
-		break;
 	default:
-		dbg_assert_failed("ui_toolbox_page invalid");
+		RenderServerbrowserFilters(ToolBox);
 		break;
 	}
 

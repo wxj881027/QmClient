@@ -19,12 +19,6 @@
 %c Team %d
 == %c Команда %d
 
-%d dummies
-== %d дамми
-
-%d dummy
-== %d дамми
-
 %d items selected
 == Выбрано %d элементов
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d выбранных элементов удалено, но %d элементов не удалось удалить. Первый неудачный элемент: «%s».
 
-%d servers, %d users
-== %d серверов, %d пользователей
-
-%d servers, %d users, %d dummies
-== %d серверов, %d пользователей, %d дамми
-
 %d teams
 == %d команд
-
-%d user
-== %d пользователь
-
-%d users
-== %d пользователей
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | основной: %s | дамми: %s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == Нет
 
-No active QmClient reports yet
-== Пока нет активных отчётов QmClient
-
 No animation
 == Без анимации
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == Не включено
-
-Not in the current browser list
-== Нет в текущем списке браузера
 
 Not open, check input device or mic permission
 == Не открыто, проверьте устройство ввода или разрешение микрофона.
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = Качество соединения
 
-Qm
-== Qm
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Расширенный рендеринг Qm: 0=выкл. (чистый Vulkan), 1=автооткат, 2=вкл. принудительно
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== Онлайн-распределение QmClient
 
 QmClient Settings
 == Настройки QmClient
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == Выбранная часть: %d
 
-Selected server
-== Выбранный сервер
-
 Selected timertype is not supported by your client
 == Только себе
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == Стиль, назначенный сервером
-
-Set a voice server to enable QmClient distribution
-== Установите голосовой сервер, чтобы включить распределение QmClient
 
 Set all to Rifle
 == Установить все на винтовку

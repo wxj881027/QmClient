@@ -1376,22 +1376,6 @@ turkish = "Yeni kategori adı"
 polish = "Nowa nazwa kategorii"
 
 [[message]]
-key = "No active QmClient reports yet"
-[message.translations]
-simplified_chinese = "暂无活跃的栖梦客户端上报"
-traditional_chinese = "暫無活躍的棲夢客戶端上報"
-japanese = "アクティブな QmClient レポートはまだありません"
-korean = "아직 활성 QmClient 보고 없음"
-russian = "Пока нет активных отчётов QmClient"
-german = "Noch keine aktiven QmClient-Meldungen"
-spanish = "Aún no hay informes activos de QmClient"
-french = "Aucun rapport QmClient actif pour le moment"
-brazilian_portuguese = "Nenhum relatório do QmClient ativo ainda"
-portuguese = "Ainda sem relatórios ativos do QmClient"
-turkish = "Henüz aktif QmClient raporu yok"
-polish = "Brak aktywnych raportów QmClient"
-
-[[message]]
 key = "No favorite maps yet"
 [message.translations]
 simplified_chinese = "暂无收藏地图"
@@ -1648,38 +1632,6 @@ turkish = "Oyuncu ülkesi:"
 polish = "Kraj gracza:"
 
 [[message]]
-key = "Qm"
-[message.translations]
-simplified_chinese = "栖梦"
-traditional_chinese = "棲夢"
-japanese = "Qm"
-korean = "Qm"
-russian = "Qm"
-german = "Qm"
-spanish = "Qm"
-french = "Qm"
-brazilian_portuguese = "Qm"
-portuguese = "Qm"
-turkish = "Qm"
-polish = "Qm"
-
-[[message]]
-key = "QmClient online distribution"
-[message.translations]
-simplified_chinese = "栖梦客户端在线分布"
-traditional_chinese = "棲夢客戶端在線分佈"
-japanese = "QmClient オンライン分布"
-korean = "QmClient 온라인 배포"
-russian = "Онлайн-распределение QmClient"
-german = "QmClient Online-Verteilung"
-spanish = "Distribución en línea de QmClient"
-french = "Distribution en ligne de QmClient"
-brazilian_portuguese = "Distribuição online do QmClient"
-portuguese = "Distribuição online do QmClient"
-turkish = "QmClient çevrimiçi dağılımı"
-polish = "Dystrybucja online QmClient"
-
-[[message]]
 key = "Recent"
 [message.translations]
 simplified_chinese = "最近"
@@ -1870,22 +1822,6 @@ brazilian_portuguese = "Servidor não cheio"
 portuguese = "Servidor não cheio"
 turkish = "Sunucu dolu değil"
 polish = "Serwer nie jest pełny"
-
-[[message]]
-key = "Set a voice server to enable QmClient distribution"
-[message.translations]
-simplified_chinese = "需要先配置语音服务器，才能启用栖梦客户端在线分布"
-traditional_chinese = "需要先配置語音伺服器，才能啟用棲夢客戶端在線分佈"
-japanese = "ボイスサーバーを設定して QmClient オンライン分布を有効にする"
-korean = "음성 서버를 설정해야 QmClient 온라인 배포를 활성화할 수 있습니다"
-russian = "Установите голосовой сервер, чтобы включить распределение QmClient"
-german = "Setze einen Sprachserver, um die QmClient-Verteilung zu aktivieren"
-spanish = "Configura un servidor de voz para habilitar la distribución de QmClient"
-french = "Définissez un serveur vocal pour activer la distribution de QmClient"
-brazilian_portuguese = "Configure um servidor de voz para habilitar a distribuição do QmClient"
-portuguese = "Defina um servidor de voz para ativar a distribuição do QmClient"
-turkish = "QmClient dağılımını etkinleştirmek için bir ses sunucusu ayarlayın"
-polish = "Ustaw serwer głosowy, aby włączyć dystrybucję QmClient"
 
 [[message]]
 key = "Show friends only"

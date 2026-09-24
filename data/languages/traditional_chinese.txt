@@ -19,12 +19,6 @@
 %c Team %d
 == %c 隊伍 %d
 
-%d dummies
-== %d 個分身
-
-%d dummy
-== %d 個分身
-
 %d items selected
 == 已選擇 %d 項
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == 已刪除 %d 個選中項，但有 %d 項無法刪除。第一個失敗項是“%s”。
 
-%d servers, %d users
-== %d 個伺服器，%d 個用戶
-
-%d servers, %d users, %d dummies
-== %d 個伺服器，%d 個用戶，%d 個分身
-
 %d teams
 == %d 個隊伍
-
-%d user
-== %d 個用戶
-
-%d users
-== %d 個用戶
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | 本體：%s | 分身：%s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == 否
 
-No active QmClient reports yet
-== 暫無活躍的棲夢客戶端上報
-
 No animation
 == 無動畫
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == 未啟用
-
-Not in the current browser list
-== 不在當前瀏覽器列表中
 
 Not open, check input device or mic permission
 == 未打開，請檢查輸入設備或麥克風權限
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = 連接質量
 
-Qm
-== 棲夢
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm 增強渲染：0=關閉（純 Vulkan），1=自動回退，2=強制開啟
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== 棲夢客戶端在線分佈
 
 QmClient Settings
 == QmClient 設置
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == 所選部件：%d
 
-Selected server
-== 已選中伺服器
-
 Selected timertype is not supported by your client
 == 你當前客戶端不支持所選計時器類型
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == 伺服器分配風格
-
-Set a voice server to enable QmClient distribution
-== 需要先配置語音伺服器，才能啟用棲夢客戶端在線分佈
 
 Set all to Rifle
 == 統一為激光槍顏色

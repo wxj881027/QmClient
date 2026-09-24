@@ -19,12 +19,6 @@
 %c Team %d
 == %c Team %d
 
-%d dummies
-== %d Dummys
-
-%d dummy
-== %d Dummy
-
 %d items selected
 == %d Elemente ausgewählt
 
@@ -46,20 +40,8 @@
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d ausgewählte Elemente wurden gelöscht, aber %d Elemente konnten nicht gelöscht werden. Das erste fehlgeschlagene Element war '%s'.
 
-%d servers, %d users
-== %d Server, %d Benutzer
-
-%d servers, %d users, %d dummies
-== %d Server, %d Benutzer, %d Dummys
-
 %d teams
 == %d Teams
-
-%d user
-== %d Benutzer
-
-%d users
-== %d Benutzer
 
 %d. %s | main: %s | dummy: %s
 == %d. %s | Hauptspieler: %s | Dummy: %s
@@ -7076,9 +7058,6 @@ Nickname
 No
 == Nein
 
-No active QmClient reports yet
-== Noch keine aktiven QmClient-Meldungen
-
 No animation
 == Keine Animation
 
@@ -7306,9 +7285,6 @@ Not downloaded
 
 Not enabled
 == Nicht aktiviert
-
-Not in the current browser list
-== Nicht in der aktuellen Browserliste
 
 Not open, check input device or mic permission
 == Nicht geöffnet, überprüfe Eingabegerät oder Mikrofonberechtigung
@@ -8435,9 +8411,6 @@ Pyramid
 q = Connection quality
 == q = Verbindungsqualität
 
-Qm
-== Qm
-
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm-erweitertes Rendering: 0=aus (reines Vulkan), 1=automatischer Fallback, 2=erzwingen
 
@@ -8470,9 +8443,6 @@ QmClient community and project information
 
 QmClient information and project links
 == QmClient information and project links
-
-QmClient online distribution
-== QmClient Online-Verteilung
 
 QmClient Settings
 == QmClient-Einstellungen
@@ -9734,9 +9704,6 @@ Selected item color
 Selected part: %d
 == Ausgewählter Teil: %d
 
-Selected server
-== Ausgewählter Server
-
 Selected timertype is not supported by your client
 == Ausgewählter Timer-Typ wird von deinem Client nicht unterstützt
 
@@ -9895,9 +9862,6 @@ Server URL
 
 Server-assigned style
 == Vom Server zugewiesener Stil
-
-Set a voice server to enable QmClient distribution
-== Setze einen Sprachserver, um die QmClient-Verteilung zu aktivieren
 
 Set all to Rifle
 == Alle auf Gewehr setzen
