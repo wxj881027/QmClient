@@ -158,6 +158,24 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S44：贡献者 PR #264 正在修那两个既有红（合入后三段 PR 应全绿）
+
+新出现的 PR [#264 `feat/acqua/fix-ci`](https://github.com/wxj881027/QmClient/pull/264)（+14/−7，4 个文件）
+正好覆盖我们一直标为「既有红」的两个 job：
+
+| 文件 | 改动 | 对应 |
+|------|------|------|
+| `.clang-tidy` | 把 `misc-use-internal-linkage` 加进禁用列表，并**修掉一个静默失效**：该 `#` 注释行原本写在折叠块 `Checks:` 内部，会与下一条目合并，导致检查实际仍启用 | `Check clang-tidy` 红（含我链里 `src/base/aio.cpp:14` 那条同类诊断） |
+| `scripts/integration_test.py` | `wait_for_log_exact` 超时放宽到 30s；smoke 测试客户端补 `qm_chat_hide_system_prefix 0` | `Check ASan & UBSan` 的 mastersrv/smoke 集成超时 |
+| `src/base/log.cpp`、`src/engine/shared/config_variables_tclient.h` | 小修 | — |
+
+**含义**：这两个红本来就不是我的链引入的（master 在 PR #256 合并后同样红），现在由贡献者的 PR 统一收掉。
+**#264 合入 master 后**，我的三段 PR 重新 rebase 到新 master，预期 `check-clang-tidy` 与
+`check-clang-san` 都会转绿 —— 届时 CI 层面就没有任何红项了。
+
+**待办（下一轮）**：轮询 #264 是否合入；合入则 `rebase --onto <新 master>` 并复跑 CI 确认全绿，
+否则把这一点写进交接说明，等合入后再做。
+
 ## 2026-09-24 · S43：融合成本改用「逐文件冲突块数」，并修正 S42 的推荐顺序
 
 S42 的排序依据是「双方提交数 + 改动行数」，本轮实测发现它会**误判**：
