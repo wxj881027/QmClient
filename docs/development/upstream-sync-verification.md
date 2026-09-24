@@ -3,9 +3,10 @@
 本文件列出「已落地但本环境无法验证」的改动。每条给出：改了什么、怎么验、看什么、判定标准、相关提交。
 配套记录见 `docs/development/upstream-sync-log.md`，流程见 `docs/development/upstream-sync-plan.md`。
 
-> 门禁口径（2026-09-23 更新）：维护者提交在途改动后，既有失败从 45 例降到 **2 例**，且这 2 例在纯基线
-> `aea1453cc7` 上同样失败（都是维护者新 UI 的源码断言）。因此现在可以直接比较「链上失败集合」与
-> 「纯基线失败集合」来判定回归 —— 两者一致即为零回归。`--mode default` 已接近可用作验收口径。
+> 门禁口径（2026-09-24 更新）：同步链基线已前移到 `origin/master`（`6b9a41fd21`），链尾
+> `run_cxx_tests` 为 **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**。因此验收口径从
+> 「链上失败集合 = 纯基线失败集合」升级为「**链上零失败**」；若出现失败，先确认本地基线
+> 是否已是 `origin/master` 最新状态（本次就差点把维护者已修好的 2 例记成既有失败）。
 
 ## 1. 渲染裁剪（视觉）
 
@@ -39,17 +40,43 @@
 | 绑定列表顺序 | 控制设置里查看绑定列表 | 无修饰键的绑定排在带修饰键之前 | `4a7009145e` |
 | demo 标记 | 停止录制后再触发 `add_demomarker` | 不再触发断言（debug 构建尤其） | `c6a396331a`、`b3d7652627` |
 
-## 4. 需要决策后才能验的（尚未落地）
+## 4. 已拍板并落地：四项官方语义（2026-09-24）
+
+维护者拍板「改用官方实现」，四条已并入链尾切片 `sync/slice-23-official-semantics`（`1539bda58f`）：
+
+| 上游提交 | 落地内容 | 自动化证据 | 仍需人工 |
+|----------|----------|------------|----------|
+| `821d5ae4b4` | 控制台引号参数也参与校验（非法值一律不派发） | `QmEmoteCommandsTest.PreservesExistingIntegerParsing`（`"invalid"` 期望改为不派发） | 无（纯解析语义） |
+| `478781ad65` | windowed fullscreen 改回**有边框**；启动不再标记 `INITFLAG_BORDERLESS` | `QmWindowModes.WindowedFullscreenIsBorderedAndNonResizable`、`QmWindowModes.StartupDoesNotMarkWindowedFullscreenAsBorderless` | **实机确认外观**：切「窗口化全屏」应有边框；顺带验证 Windows 截图工具可用；确认纯窗口模式的 `qm` 无边框开关仍生效 |
+| `b9c39900a9` | rescue 不再覆盖 `m_DDRaceState` | 无新增测试（服务端行为，本地无锁定旧行为的测试） | **服务端实机**：/rescue 后 DDrace 状态（是否算完成/计时）与上游一致 |
+| `ed2b08f5d9` | 超时恢复旧连接时重置 snapshot | 无新增测试（需要双连接时序） | **服务端实机**：断线重连（timeout protection）后不出现 delta 基线错乱 |
+
+## 5. 门禁豁免登记：MSVC `/analyze` 的上游 `src/base` 告警
+
+`strict_build.py` 的 `_ANALYZE_UPSTREAM_BASE_ALLOWLIST` 按「文件 + 警告码」豁免下列告警，
+只在 `/analyze` 阶段生效（自有代码、`src/base/unicode/*` 等不受影响，有 gate 单测锁定）。
+这些文件都是 S1' 采纳的上游实现，改它们等于偏离上游，故选择「精确豁免 + 留理由」：
+
+| 文件 | 警告码 | 行 | 理由 |
+|------|--------|----|------|
+| `src/base/aio.cpp` | C6262 | 78 | `aio_thread` 的 64KB 栈缓冲，上游原样实现 |
+| `src/base/io.cpp` | C6308 ×4 | 106/120/134/137 | 上游 `realloc` 惯用写法（先赋值、后判空），语义与上游一致 |
+| `src/base/io.cpp` | C28182 | 139 | 同一处 `realloc` 路径的连带告警 |
+| `src/base/os.cpp` | C6011 | 51 | 上游 argv 构造路径，analyzer 未覆盖其前置保证 |
+| `src/base/os.cpp` | C6388 / C6387 ×2 | 160/167 | `GetFileVersionInfoW` / `VerQueryValueW` 返回值静态分析误报 |
+| `src/base/net.cpp` | C6011 ×3 | 922/1309/1389 | 上游 `net.cpp` 的 socket 生命周期分析误报 |
+
+复现方式（重要）：`/analyze` 是**增量**检查 —— 源码没改动时 ninja 会跳过编译，检查报 PASS 并不代表
+跑过。要复核就先 touch 分析范围内的文件，再跑 `--mode full`，并核对报告里
+`MSVC /analyze 触发范围` 与 `MSVC /analyze 上游豁免` 两条的规模。
+
+## 6. 仍需要决策后才能验的（尚未落地）
 
 | 项 | 现状 | 需要什么 |
 |----|------|----------|
-| `aio.cpp` C6262（64KB 栈帧） | `--mode full` 下 MSVC /analyze 报 `src/base/aio.cpp(78)`（上游 19.9 原样代码，运行在 `aio_thread` 独立线程） | 你拍板：加白名单（`refresh_allowlist.py`，保持与上游一致）或本地改为不占栈（门禁干净但偏离上游） |
-| 控制台「引号参数也校验」 | 已做成**可选分支** `sync/opt-console-strict-args`（2 提交，构建与测试均通过）；未并入同步链 | 你拍板：采用上游严格语义，或保持 fork 现状 |
-| windowed fullscreen 边框（`478781ad65`） | **未落地**：上游把 windowed fullscreen 改成有边框，而本地 `QmWindowModes` 两条测试锁定无边框；落地会让测试变红 | 你拍板：要「snippet 工具可用」还是「保持无边框外观」 |
-| rescue 覆盖 `m_DDRaceState`（`b9c39900a9`） | 未落地：触及服务端玩法语义 | 你定夺（属既有玩法语义改动） |
-| server 超时重置 snapshot（`ed2b08f5d9`） | 未落地：属 snapshot/时序语义 | 按仓库约束需单独批准 |
 | 低刷新率/更新率时序（`9ed3b24d9d`） | 未落地：本地是自有 `WaitWithNetwork` 实现，需整体融合 | 实机看帧率与输入延迟后再决定 |
 | 动态 antiping 玩家预测（`4af8164f26`+`b2dc98ca29`） | 未落地：`cl_antiping_players` 0..3，且 `AntiPingPlayers()` 由 bool 改 int，需与 `FastPractice.ForcePredict*` 重排 | 手感验证 + 配置语义确认 |
 | 激光门预测解耦（`ac566d06f5`+`9d8a20bd0d`） | 未落地 | 碰撞语义验证（关武器预测时不应穿门） |
 | MySQL SSL 支持（`9f59dcb1f6`+`78d8f82c52`） | 未落地：本地 `mysql.cpp` 完全没有 SSL 支持，属新增功能 | 是否需要该功能 + 第三方库/CI 影响评估 |
 | rejoin 客户端状态（`4e4536bdae`+`4e25f792ea`） | 未落地：本地没有 `m_Rejoining`/`m_IngameBeforeRejoin`，属新增功能 | 是否需要该特性 |
+| 平台缺口（`platform-feature-gaps.md` §4） | 非 Windows 上一批设置项「看得见、点了没用」 | 是否按平台隐藏/标注这些卡片 |

@@ -7,16 +7,16 @@
 
 | 项 | 状态 |
 |----|------|
-| 同步基线 | `aea1453cc7`（维护者分支 `fix/qm-test-contract-alignment`，已含其测试合同修复） |
-| 切片链 | `sync/slice-1-base-engine` … `sync/slice-22-db-test`（末端 `7ccc5e86f0`，约 72 条上游派生改动 + Unicode 17 数据表 + 四组自动化测试：PNG 往返 / 实体裁剪 / 钩子提示线可见性 / DB 浮点语义） |
-| 可选项分支 | `sync/opt-console-strict-args`（控制台引号参数严格化，已验绿，等拍板） |
-| 验证口径 | 每段边界与**纯基线**的失败集合逐条一致（当前均为 2 例，属维护者新 UI 的源码断言）→ 逐段零回归 |
+| 同步基线 | `6b9a41fd21`（`origin/master`，含已合并的 PR #257/#258；本链此前基于 `aea1453cc7`，2026-09-24 前移） |
+| 切片链 | `sync/slice-1-base-engine` … `sync/slice-23-official-semantics`（末端 `1539bda58f`，约 78 条上游派生改动 + Unicode 17 数据表 + 四组自动化测试：PNG 往返 / 实体裁剪 / 钩子提示线可见性 / DB 浮点语义） |
+| 可选项分支 | `sync/opt-console-strict-args`（控制台引号参数严格化；该语义已并入链尾切片 23） |
+| 验证口径 | 链尾 `run_cxx_tests` **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**：基线前移后，原先 2 例维护者新 UI 源码断言随 `origin/master` 的源侧实现一起消失 → 既零回归也零失败 |
 | 回退自审 | 61 条 `-x` 溯源，**0 条**把「上游已回退的改动」留在链上 |
 | 工具行为验证 | S11 的「工具只有编译级证据」已补：`qmclient_scripts/tests/test_map_tools_smoke.py` 跑通 `dummy_map`（CRC32/SHA256 自校验）→ `map_convert_07` 全链路（2026-09-24 关闭） |
 | 工作流工具 | `qmclient_scripts/support/`：`upstream_status.py`（基线/冲突干跑）、`upstream_commit_check.py`（内容判定 + 回退检查）、`upstream_coverage.py`（量化差距）、`upstream_revert_audit.py`（整链回退自审） |
-| 文档 | 计划（本文）、`upstream-sync-log.md`（逐切片判定与证据）、`upstream-sync-verification.md`（待实机验证）、`upstream-sync-pr-drafts.md`（PR 标题/正文/推送命令）、`upstream-inventory/`（四簇对照表） |
-| 待维护者拍板 | ① 控制台引号参数语义 ② windowed fullscreen 边框 ③ rescue `m_DDRaceState` ④ snapshot 超时重置 ⑤ 推 PR 的方式（三段 stacked 还是合一） |
-| 待实机验证 | 渲染与 quad 裁剪、ghost 裁剪、PNG（含已按上游回退的 libpng 项）、7 项客户端行为自查 |
+| 文档 | 计划（本文）、`upstream-sync-log.md`（逐切片判定与证据）、`upstream-sync-verification.md`（待实机验证 + 门禁豁免登记）、`upstream-sync-pr-drafts.md`（PR 标题/正文/推送命令）、`upstream-inventory/`（四簇对照表）、`platform-feature-gaps.md`（平台功能差异） |
+| 待维护者拍板 | ① 推 PR 的方式（三段 stacked 还是合一）② 四项曾挂起的语义已确认"采用官方"并在切片 23 落地 ③ §5 平台缺口是否要按平台隐藏无效设置项 |
+| 待实机验证 | 渲染与 quad 裁剪、ghost 裁剪、PNG（含已按上游回退的 libpng 项）、7 项客户端行为自查；切片 23 的 windowed fullscreen 外观变化 |
 
 **收益递减提示**：低风险可摘项基本吃完。剩余差距集中在三类，都需要维护者参与 ——
 本地重写文件（`src/game/client` 的 scoreboard/chat/hud/menus/QmUi、`players.cpp`）、

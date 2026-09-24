@@ -1,26 +1,28 @@
 # DDNet 上游同步：PR 草案
 
-本文件给出可直接使用的 PR 标题/正文与推送命令。分支都是**线性堆叠**、基线为 `aea1453cc7`
-（维护者 `fix/qm-test-contract-alignment` 分支），因此「推哪个分支 = 提哪一段」。
+本文件给出可直接使用的 PR 标题/正文与推送命令。分支都是**线性堆叠**、基线为 `6b9a41fd21`
+（`origin/master`，2026-09-24 从 `aea1453cc7` 前移），因此「推哪个分支 = 提哪一段」。
 
-统一验证口径（PR-1/2 为 2026-09-23 实测，PR-3 为 2026-09-24 在链尾复测）：
+统一验证口径（链尾 2026-09-24 在新基线上实测；PR-1/2 边界为旧基线数据，尚待在 `6b9a41fd21` 上复测）：
 
 | 状态 | 运行用例 | 通过 | 失败 | 基线外新增 |
 |------|----------|------|------|------------|
-| 纯基线 `aea1453cc7` | 3329 | — | 2 | — |
-| PR-1 边界 `8258823b45` | 3329 | — | 2 | 无 |
-| PR-2 边界 `cb1305025b` | 3330 | — | 2 | 无 |
-| PR-3 边界 `7ccc5e86f0`（`sync/slice-22-db-test`，链尾） | 3348 | 3345 | 2 | 无 |
+| 新基线 `6b9a41fd21`（`origin/master`） | — | — | 0 | — |
+| 旧基线 `aea1453cc7`（已弃用） | 3329 | — | 2 | — |
+| PR-1 边界 `5695b6fdeb` | 待复测（旧基线 `8258823b45`：3329 / 2 失败） | — | — | — |
+| PR-2 边界 `8755169bf0` | 待复测（旧基线 `cb1305025b`：3330 / 2 失败） | — | — | — |
+| PR-3 边界 `1539bda58f`（`sync/slice-23-official-semantics`，链尾） | **3348** | **3347** | **0** | 无 |
 
-链尾那 1 例未通过统计的是环境跳过的 `QmWebSocketLive.ConnectsAndEchoesWhenServerConfigured`（未配置测试服务器）。
-下面 2 例失败在**纯基线上同样失败**（`BaseSettingsStableTextCandidateAuditIsEmptyExceptAllowlist`、
-`TeeRestoresCardContentsAndKeepsDoubleClickActions`，均为维护者新 UI 的源码断言），与同步无关。
+链尾 1 例未计入通过的是环境跳过的 `QmWebSocketLive.ConnectsAndEchoesWhenServerConfigured`（未配置测试服务器）。
+**0 失败**：旧基线上那 2 例（`BaseSettingsStableTextCandidateAuditIsEmptyExceptAllowlist`、
+`TeeRestoresCardContentsAndKeepsDoubleClickActions`）随基线前移一起消失 —— 它们期待的源侧实现
+（`8b286754a2`，PR #258）此前不在本地基线里，属本地落后，不是同步引入的回归。
 
 ---
 
 ## PR-1 地基：`src/base` 布局对齐
 
-- 分支：`sync/slice-1-base-engine`（`8258823b45`）
+- 分支：`sync/slice-1-base-engine`（`5695b6fdeb`）
 - 规模：4 个提交 / 36 个文件 / +3184 −2834
 - 标题：`refactor(sync): 对齐 DDNet 上游 src/base 布局并保留自有 QoS/统计行为`
 - 正文要点：
@@ -36,7 +38,7 @@
 
 ## PR-2 客户端与引擎修复批次（切片 2–9）
 
-- 分支：`sync/slice-9-ghost-cull`（`cb1305025b`）
+- 分支：`sync/slice-9-ghost-cull`（`8755169bf0`）
 - 规模：35 个提交（含 PR-1）/ 60 个文件 / 累计 +3492 −2945
 - 标题：`fix(sync): 客户端与引擎修复批次（demo/预测/裁剪/健壮性/nightly/PNG）`
 - 正文要点：
@@ -50,9 +52,9 @@
   需按 `docs/development/upstream-sync-verification.md` 实机确认。
 - 推送：`git push -u origin sync/slice-9-ghost-cull`（PR-1 合并后 rebase 到 master）
 
-## PR-3 服务器、工具、数据与验证补强（切片 10–22，链尾）
+## PR-3 服务器、工具、数据、验证补强与四项官方语义（切片 10–23，链尾）
 
-- 分支：`sync/slice-22-db-test`（`7ccc5e86f0`）
+- 分支：`sync/slice-23-official-semantics`（`1539bda58f`）
 - 规模：约 85+ 个提交（含 PR-1/2）/ 累计 +3900 −3200 量级
 - 标题：`fix(sync): 服务器、地图工具、Unicode 数据与小修批次（含 use-after-free/double free 修复）`
 - 正文要点：
@@ -67,8 +69,15 @@
     DB 浮点语义 2 例（`db_connection_test.cpp`，且做过「改回旧实现 → 测试必失败」的反向验证）；
   - **自审与门禁**：61 条 `-x` 溯源逐条核对上游是否回退过（`upstream_revert_audit.py`，0 条待处理）；
     整链跑过准发布门禁 `--mode full`，非零项逐条归属到「上游代码 / 本地既有问题 / 环境缺失」。
-- 评审要点：本 PR 已**移出**三处与本地行为冲突的上游改动（见下），请确认取舍。
-- 推送：`git push -u origin sync/slice-22-db-test`
+  - **四项官方语义（2026-09-24 维护者拍板「改用官方」）**：
+    `821d5ae4b4` 控制台引号参数参与校验（同步本地 `qm_modes_test.cpp` 断言）、
+    `478781ad65` windowed fullscreen 改回有边框（改写本地 `QmWindowModes` 两条断言）、
+    `b9c39900a9` rescue 不覆盖 `m_DDRaceState`、`ed2b08f5d9` 超时恢复连接时重置 snapshot；
+    其中 windowed fullscreen 会**改变外观**（有边框、换取 Windows 截图工具可用），需实机确认。
+  - **门禁**：`src/base` 采纳文件上的 13 条 MSVC `/analyze` 告警按「文件+警告码」精确豁免，
+    理由随报告列出（`strict_build.py` 的 `_ANALYZE_UPSTREAM_BASE_ALLOWLIST`）。
+- 评审要点：本 PR 已按维护者拍板**采用**上述四项官方语义（此前曾按「保留 fork 行为」挂起）。
+- 推送：`git push -u origin sync/slice-23-official-semantics`
 
 ---
 
@@ -76,13 +85,12 @@
 
 | 上游改动 | 冲突点 | 取舍 |
 |----------|--------|------|
-| `821d5ae4b4` 控制台引号参数也校验 | 本地 `qm_modes_test.cpp:1012` 明确要求 `emote "invalid"` 被接受 | 已有现成分支 `sync/opt-console-strict-args`（`018cced509`），合则采用上游严格语义 |
-| `478781ad65` windowed fullscreen 改有边框 | 本地 `QmWindowModes` 两条测试锁定无边框 | 修好 snippet 工具 vs 保持外观 |
-| `b9c39900a9` rescue 覆盖 `m_DDRaceState` | 服务端玩法语义 | 需明确批准 |
-| `ed2b08f5d9` server 超时重置 snapshot | snapshot/时序语义 | 需明确批准 |
 | MySQL SSL（`9f59dcb1f6`+`78d8f82c52`）、rejoin 状态（`4e4536bdae`+`4e25f792ea`） | 本地完全没有对应特性 | 属**新增功能**，先讨论再加 |
+
+已拍板并入 PR-3 的四项（控制台引号参数、windowed fullscreen 边框、rescue `m_DDRaceState`、
+snapshot 超时重置）不再列在此表。
 
 ## 一次合完的替代做法
 
-若不想分三段：在 `sync/slice-22-db-test`（链尾）上把提交按「地基 / 客户端 / 服务器与工具」压成 3 个提交，
+若不想分三段：在 `sync/slice-23-official-semantics`（链尾）上把提交按「地基 / 客户端 / 服务器与工具」压成 3 个提交，
 再从该分支提一个 PR（历史更干净，但会丢失逐条上游提交的 `-x` 溯源信息）。

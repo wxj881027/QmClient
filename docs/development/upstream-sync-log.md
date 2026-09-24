@@ -158,6 +158,96 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S29：四项语义改用官方实现 + 基线前移 + `/analyze` 豁免收口（已执行）
+
+本切片（`sync/slice-23-official-semantics`）三件事：落地维护者新决策、把同步链基线前移到
+`origin/master`、以及解决准发布门禁里 `/analyze` 的真实告警。
+
+### 1. 维护者决策：四条挂起项全部「改用官方实现」
+
+此前按「默认保留 fork 行为」把四条与本地冲突的上游改动挂起等拍板。本轮维护者明确选择
+**采用官方实现**，逐条落地：
+
+| 上游提交 | 内容 | 落地方式 |
+|----------|------|----------|
+| `821d5ae4b4` | 控制台引号参数也参与校验 | cherry-pick（干净）＋同步本地断言：`qm_modes_test.cpp` 的 `"invalid"` 由「接受」改为「不派发」 |
+| `478781ad65` | windowed fullscreen 改回**有边框**（修 Windows 截图工具失效） | cherry-pick（干净）＋改写本地两条 `QmWindowModes` 源码断言 |
+| `b9c39900a9` | rescue 不再覆盖 `m_DDRaceState` | cherry-pick（干净；本地无锁定旧行为的测试，只有 HUD 文案测试，不受影响） |
+| `ed2b08f5d9` | 超时恢复连接时重置 snapshot | cherry-pick，**唯一冲突**：本地在 `SetTimedOut` 里多了 `OrigClientBrand` 与 `DelClientCallback` 两行 → 两边都保留 |
+
+`478781ad65` 落地时被本地测试抓了一次：第一版断言写成「`IssueInit` 里不得出现
+`INITFLAG_BORDERLESS`」，但纯窗口模式的 `qm` 无边框开关（`if(g_Config.m_GfxBorderless)`）
+本来就该留着 —— 断言过宽，改为「不得再出现 `else // Windowed fullscreen` 分支」＋
+「纯窗口无边框分支仍在」，才是这次语义变化的准确表述。
+
+内容判定工具在这条上报了 **PARTIAL（18/21 行命中）**：该提交主要是把校验块从引号分支里搬出来
+（缩进搬移），指纹法会把旧代码的行算成「已存在」——**PARTIAL 也可能是假阳性**，行为层面仍是缺失。
+这是 `upstream_commit_check.py` 已知口径的又一例，已在工具文档里说明。
+
+### 2. 门禁教训：`/analyze` 的 PASS 可能是「Ninja 没重编」造成的空心通过
+
+第一次 full 门禁报 `MSVC /analyze 构建` **PASS**。但该检查自述「实际分析范围由 game-client
+构建目标和 Ninja 增量状态决定」——`src/base/*` 自上轮跑过后没改动，ninja 直接跳过编译，
+于是没有告警可报。把分析范围内的 80 个文件 touch 一遍重跑，暴露出 **13 条真实告警**：
+
+| 文件 | 告警 |
+|------|------|
+| `src/base/aio.cpp(78)` | C6262（`aio_thread` 的 64KB 栈缓冲） |
+| `src/base/io.cpp(106/120/134/137)` | C6308 `realloc` 可能返回 null |
+| `src/base/io.cpp(139)` | C28182 同一路径的连带告警 |
+| `src/base/os.cpp(51/160/167)` | C6011、C6388、C6387×2 |
+| `src/base/net.cpp(922/1309/1389)` | C6011 |
+
+全部落在 S1' 采纳的上游 `src/base` 模块里，属「上游本来就有、与本次同步无关」。
+处理方式是**精确豁免 + 留理由**，而不是忽略整个检查：
+
+- `strict_build.py` 新增 `_ANALYZE_UPSTREAM_BASE_ALLOWLIST`：按「文件 + 警告码」匹配，
+  **只在 `/analyze` 阶段生效**，自有代码与其它文件仍会阻断（同警告码出现在 `hud.cpp` 或
+  `src/base/unicode/*` 上不会被豁免，有单测锁定）；
+- 命中的告警以 `INFO` 形式连同理由列进报告（不静默丢弃），本轮报出 13 条；
+- 新增 gate 单测 5 例：命中 / 同码自有文件不豁免 / 同文件其它码不豁免 / 非 analyze 行不匹配 /
+  条目必须带理由。
+
+顺带记一条**可复现流程**：`/analyze` 是增量检查，只信它的 PASS 会误判；要么 touch 分析范围内的
+文件强制重编，要么在报告里核对「触发范围」那一条的规模。
+
+### 3. 基线前移：`aea1453cc7` → `6b9a41fd21`（`origin/master`）
+
+之前一直记着「纯基线也失败 2 例，属维护者新 UI 的源码断言」。本轮查证发现：这 2 例**不是无解的
+既有缺陷**，而是本地基线落后 `origin/master` 三个提交 —— 其中 `8b286754a2`（PR #258
+「修复皮肤搜索网格的队列/收藏点击与双击应用」）正是那两个测试期待的源侧实现。
+
+- 做法：`git rebase --onto 6b9a41fd21 aea1453cc7 sync/slice-23-official-semantics`，
+  并用 git 2.54 的 `--update-refs` 一次性把 23 个切片分支全部搬到新基线；那 3 个提交只碰
+  `menus_settings.cpp` / `tee_skin_apply.h` / `skins.h` / `QmLayoutTest.cpp`，整条链都没改过
+  这四个文件，**rebase 零冲突**；
+- 新哈希：`slice-1` `5695b6fdeb`、`slice-9` `8755169bf0`、`slice-22` `602d7c94ef`、
+  链尾 `sync/slice-23-official-semantics` `1539bda58f`；
+- 主仓库分支 `fix/qm-test-contract-alignment` 同步前移到 `b1fb2e32b8`（文档/工具提交落在新基线上）。
+
+**证据（2026-09-24）**
+
+| 检查 | 结果 |
+|------|------|
+| `run_cxx_tests`（链尾 `1539bda58f`） | **3348 运行 / 3347 通过 / 1 环境跳过（`QmWebSocketLive`）/ 0 失败**，退出码 0 |
+| `--mode full`（全量门禁） | **18 通过 / 3 警告 / 3 失败**；`CMake run_cxx_tests` 已 **PASS**；`/analyze` 的 13 条上游告警按豁免表放行并单列理由 |
+| `--target everything`（Release 全量编译） | **通过**（`cmake-windows.cmd --build cmake-build-release --target everything -j 12`，316/316，退出码 0；`DDNet.exe` 16.7MB、`DDNet-Server.exe` 6.6MB、`testrunner.exe` 24.1MB、地图工具均重新产出） |
+| gate 单测 | `qmclient_scripts/gate/tests/test_strict_build_analyze_allowlist.py` 5 例通过 |
+| 平台审计 | 三条只读审计产出 `docs/development/platform-feature-gaps.md`（含抽检标注与 10 条不确定项） |
+
+**剩余非零项（全部已定性，非本次改动引入）**
+
+1. `Git 子模块前置检查`：worktree 的 `ddnet-libs` 是指向主仓库子模块的 junction，
+   `.git/modules` 相对路径失效 —— 只在 worktree 复现，正常 checkout 不受影响；
+2. `clang-tidy 前置检查`：本机 PATH 无 clang-tidy（CI 的 `clang-tidy.yml` 用 clang-tidy-22 跑，本地无法替代）；
+3. `Check dilated images`：`data/input overlay-Zac/*.png`、`data/qmclient/chat_emojis/*.png` 未 dilate；
+   整条链**没有改过 `data/`**（`git diff --stat <base>..<tip> -- data/` 为空）→ 既有问题；
+4. `标识符命名检查解析失败`（WARN）：`extract_identifiers.py` 依赖的 clang python 绑定缺失，该检查设计上降级为 WARN。
+
+**流程改进（写进判定口径）**：以后遇到「纯基线也失败的测试」，先确认本地基线是否已是
+`origin/master` 的最新状态，再判断它是不是既有缺陷 —— 这次两者差 3 个提交，差点把维护者
+已经修好的东西记成「已知失败」。
+
 ## 2026-09-24 · S28：地图工具的「行为未实测」gap 收口（`src/tools` 功能冒烟）
 
 S11 留的 gap 原文是「工具只做到编译链接级验证，行为没实测」。本轮补上功能冒烟：
