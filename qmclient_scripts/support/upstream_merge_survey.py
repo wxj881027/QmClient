@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import subprocess
+from pathlib import Path
 
 
 def git(repo: str, *args: str) -> list[str]:
@@ -65,6 +66,48 @@ def sort_rows(rows: list[tuple[str, int, int, int, int]]) -> list[tuple[str, int
     return sorted(rows, key=lambda row: (row[1] + row[2], row[4]), reverse=True)
 
 
+def count_conflict_hunks(merged_text: str) -> int:
+    """数三方合并结果里的冲突块数量（纯函数，便于测试）。"""
+    return sum(1 for line in merged_text.splitlines() if line.startswith("<<<<<<<"))
+
+
+def show_blob(repo: str, ref: str, path: str) -> str | None:
+    lines = git(repo, "show", f"{ref}:{path}")
+    return None if not lines else "\n".join(lines) + "\n"
+
+
+def file_conflict_hunks(repo: str, base: str, ours: str, theirs: str, path: str) -> int | None:
+    """对单个文件做三方合并（base / 本地 / 上游），返回冲突块数。
+
+    比「双方改动行数」可靠得多：行数看不出双方是否重写了**同一批函数**。
+    文件在任一侧不存在时返回 None（例如上游新增文件，本地没有）。
+    """
+    import tempfile
+
+    base_text = show_blob(repo, base, path)
+    ours_text = show_blob(repo, ours, path)
+    theirs_text = show_blob(repo, theirs, path)
+    if base_text is None or ours_text is None or theirs_text is None:
+        return None
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base_file = Path(tmp) / "base"
+        ours_file = Path(tmp) / "ours"
+        theirs_file = Path(tmp) / "theirs"
+        base_file.write_text(base_text, encoding="utf-8")
+        ours_file.write_text(ours_text, encoding="utf-8")
+        theirs_file.write_text(theirs_text, encoding="utf-8")
+        proc = subprocess.run(
+            ["git", "merge-file", "-p", str(ours_file), str(base_file), str(theirs_file)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    return count_conflict_hunks(proc.stdout)
+
+
 def format_table(rows: list[tuple[str, int, int, int, int]]) -> list[str]:
     header = f"{'文件':<52}{'上游提交':>8}{'本地提交':>8}{'上游改动':>8}{'本地改动':>8}"
     out = [header]
@@ -81,6 +124,11 @@ def main() -> int:
     parser.add_argument("--head", default="HEAD")
     parser.add_argument("--path", dest="pathspec", default="src/game/client")
     parser.add_argument("--top", type=int, default=20)
+    parser.add_argument(
+        "--file-conflicts",
+        action="store_true",
+        help="额外对每个候选文件做三方合并，给出冲突块数（更可靠的融合成本信号，较慢）",
+    )
     args = parser.parse_args()
 
     base = args.base
@@ -119,7 +167,21 @@ def main() -> int:
             )
         )
 
-    for line in format_table(sort_rows(rows)[: args.top]):
+    table_rows = sort_rows(rows)[: args.top]
+    if args.file_conflicts:
+        # 有冲突块数时按它升序重排：冲突少 = 融合便宜
+        scored = []
+        for row in table_rows:
+            hunks = file_conflict_hunks(args.repo, base, args.head, args.upstream, row[0])
+            scored.append((row, hunks))
+        scored.sort(key=lambda item: (item[1] is None, item[1] if item[1] is not None else 0))
+        print(f"{'文件':<52}{'冲突块':>7}{'上游提交':>8}{'本地提交':>8}{'上游改动':>8}{'本地改动':>8}")
+        for row, hunks in scored:
+            shown = "n/a" if hunks is None else str(hunks)
+            print(f"{row[0]:<52}{shown:>7}{row[1]:>8}{row[2]:>8}{row[3]:>8}{row[4]:>8}")
+        return 0
+
+    for line in format_table(table_rows):
         print(line)
     return 0
 

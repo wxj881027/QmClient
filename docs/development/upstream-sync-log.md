@@ -158,6 +158,35 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S43：融合成本改用「逐文件冲突块数」，并修正 S42 的推荐顺序
+
+S42 的排序依据是「双方提交数 + 改动行数」，本轮实测发现它会**误判**：
+按它排在性价比区的 `scoreboard.cpp`（上游 683 行 / 本地 1944 行）做三方合并后有 **50 个冲突块**，
+是全区域最贵的一档；而 `ui_scrollregion.cpp`（上游 421 / 本地 478）只有 **6 个**。
+原因很直白：行数看不出双方是否重写了**同一批函数**。
+
+改法：给 `upstream_merge_survey.py` 加 `--file-conflicts` —— 对每个候选文件做
+base/ours/theirs 三方合并（`git merge-file -p`），数 `<<<<<<<` 冲突块，按它升序排。
+新增 3 例单测（`count_conflict_hunks` 的计数与空输入），`qmclient_scripts/tests` 全套 **84 例通过**。
+
+**修正后的顺序**（`docs/development/upstream-manual-merge-plan.md` §4 已同步）：
+
+| 顺序 | 文件 | 冲突块 | 上游改动 |
+|------|------|-------:|---------:|
+| 1 | `ui_scrollregion.cpp` | 6 | 421 |
+| 2 | `ui.cpp` | 17 | 842 |
+| 3 | `controls.cpp` / `ui.h` / `components/console.cpp` | 2 / 4 / 8 | 69 / 70 / 144 |
+| 4 | `prediction/entities/character.cpp` | 15 | 281（预测，需实机） |
+| ✗ | `scoreboard.cpp`（**从推荐中移除**） | 50 | 683 |
+| ✗ | `gameclient.cpp` / `menus_demo.cpp` / `menus_browser.cpp` / `menus.cpp` | 36 / 31 / 28 / 26 | 大 |
+
+对 `ui_scrollregion.cpp` 还做了一次逐条核验：它的 22 条上游提交其实是一串**重构链**
+（横向滚动特性 + 多次改名 `m_ClipRect→m_ContentAreaRect` 等 + API 增补），
+那条真 bugfix（`be7fcccd5d` 弹窗遮挡时滚动条仍可点）在链尾、依赖前面的改名；
+内容判定为 PARTIAL/PARTIAL/ABSENT 混杂，**不能只摘最后那条修**。
+本地该文件仍有旧命名（`m_ClipRect` 19 处），但 `Begin`/`End` 被本地整体替换过
+—— 融合时要把自有滚动策略重新实现到上游新结构上，属**真实改造**而非简单合并。
+
 ## 2026-09-24 · S42：手工融合方案成文（决策稿，未动代码）
 
 S41 的结论是「零重叠可摘基本吃完」，本轮把下一步的**按区域手工融合**做成可决策的方案：

@@ -11,7 +11,33 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
 	sys.path.insert(0, str(REPO_ROOT))
 
-from qmclient_scripts.support.upstream_merge_survey import format_table, sort_rows  # noqa: E402
+from qmclient_scripts.support.upstream_merge_survey import (  # noqa: E402
+	count_conflict_hunks,
+	format_table,
+	sort_rows,
+)
+
+
+class ConflictHunkCountTest(unittest.TestCase):
+	def test_counts_only_hunk_start_markers(self) -> None:
+		merged = (
+			"line a\n"
+			"<<<<<<< ours\n"
+			"our side\n"
+			"=======\n"
+			"their side\n"
+			">>>>>>> theirs\n"
+			"line b\n"
+		)
+		self.assertEqual(count_conflict_hunks(merged), 1)
+
+	def test_clean_merge_has_no_conflicts(self) -> None:
+		self.assertEqual(count_conflict_hunks("a\nb\nc\n"), 0)
+		self.assertEqual(count_conflict_hunks(""), 0)
+
+	def test_counts_multiple_hunks(self) -> None:
+		merged = "<<<<<<< ours\nx\n=======\ny\n>>>>>>> theirs\n<<<<<<< ours\nz\n=======\nw\n>>>>>>> theirs\n"
+		self.assertEqual(count_conflict_hunks(merged), 2)
 
 
 class MergeSurveySortTest(unittest.TestCase):
