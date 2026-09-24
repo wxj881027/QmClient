@@ -167,7 +167,7 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 | `check-style` | PASS（3m29s） | PASS（2m52s） | PASS（2m44s） | 同步链 |
 | Linux（构建+`run_tests`+打包） | **PASS**（12m26s） | **PASS**（9m52s） | **PASS**（7m46s） | 同步链 |
 | macOS（构建+`run_tests`+dmg） | **PASS**（17m29s） | **PASS**（7m39s） | **PASS**（7m28s） | 同步链 |
-| Windows（构建+`run_tests`+更新包校验） | 待跑 | 待跑 | **PASS**（14m53s） | 同步链 |
+| Windows（构建+`run_tests`+更新包校验） | 待跑 | **PASS**（20m18s） | **PASS**（14m53s） | 同步链 |
 | Android（APK/AAB） | 待跑 | 待跑 | 待跑 | — |
 | Analyze (python) | PASS | — | — | — |
 | Analyze (cpp) | 待跑 | — | — | — |
