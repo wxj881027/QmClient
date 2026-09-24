@@ -98,14 +98,14 @@ int main()
 		else
 			std::printf("PASS %s\n", pName);
 	};
-	Check("long second line", "first\n" + std::string(4096, 'a') + "\nlast", "", {"first ", std::string(15, 'a')}, "last");
-	Check("first line appends", "cmd\nsecond\nlast", "pre:", {"pre:cmd ", "second "}, "last");
-	Check("empty lines and CRLF", "\nfirst\r\n\nsecond\r\ntail", "", {"first  ", "second  "}, "tail");
-	Check("trailing newline", "first\nsecond\n", "", {"first ", "second "}, "");
-	Check("UTF8 truncation", "first\n" + std::string("中文中文中文中文中文中文") + "\n尾", "", {"first ", "中文中文中"}, "尾");
-	Check("UTF8 partial character", "first\nx中文中文中文中文\n尾", "", {"first ", "x中文中文"}, "尾");
-	Check("UTF8 four byte character", "first\n😀😀😀😀😀\n末😀😀😀😀", "", {"first ", "😀😀😀"}, "末😀😀😀");
-	Check("replace selected text", "X\nsecond\ntail", "abcd", {"aX d", "second "}, "tail", true);
+	Check("long second line", "first\n" + std::string(4096, 'a') + "\nlast", "", {"first", std::string(15, 'a')}, "last");
+	Check("first line appends", "cmd\nsecond\nlast", "pre:", {"pre:cmd", "second"}, "last");
+	Check("empty lines and CRLF", "\nfirst\r\n\nsecond\r\ntail", "", {"", "first", "", "second"}, "tail");
+	Check("trailing newline", "first\nsecond\n", "", {"first", "second"}, "");
+	Check("UTF8 truncation", "first\n" + std::string("中文中文中文中文中文中文") + "\n尾", "", {"first", "中文中文中"}, "尾");
+	Check("UTF8 partial character", "first\nx中文中文中文中文\n尾", "", {"first", "x中文中文"}, "尾");
+	Check("UTF8 four byte character", "first\n😀😀😀😀😀\n末😀😀😀😀", "", {"first", "😀😀😀"}, "末😀😀😀");
+	Check("replace selected text", "X\nsecond\ntail", "abcd", {"aXd", "second"}, "tail", true);
 	Check("no callback", "a\nb\nc", "pre:", {}, "pre:a b c", false, false);
 	CLineInput::Init(nullptr, nullptr, nullptr, nullptr);
 	return Failures ? 1 : 0;
