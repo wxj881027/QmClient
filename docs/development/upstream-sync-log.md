@@ -158,6 +158,27 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S42：手工融合方案成文（决策稿，未动代码）
+
+S41 的结论是「零重叠可摘基本吃完」，本轮把下一步的**按区域手工融合**做成可决策的方案：
+`docs/development/upstream-manual-merge-plan.md`，配套采集工具
+`qmclient_scripts/support/upstream_merge_survey.py`（只读，新增 3 例单测，全套 81 例通过）。
+
+方案要点：
+
+- 三个区域的「双方都改过」规模：`src/game/client` **98** 个文件、`src/engine/shared` 55 个、
+  `src/game/editor` 52 个；
+- 融合性价比排序（上游改动实质 × 本地改动不大）给出**建议先做的三个文件**：
+  `ui_scrollregion.cpp`（上游 421 行 vs 本地 478 行，含「滚动条被弹窗遮挡仍可点」真 bugfix 与触摸横向滚动）、
+  `nameplates.cpp`（上游仅 43 行，含「显示自己名牌」修复，可逐条摘）、
+  `scoreboard.cpp`（上游 683 行，含高亮遮挡修复与光标提示，但**须剔除 128 人协议项**）；
+- 明确**不做**：`gameclient.cpp` / `menus_settings.cpp` / `menus.cpp` / `hud.cpp` /
+  `menus_settings_assets.cpp`（本地重写量是上游数倍），以及 128 人记分板/server info 尺寸（协议，需批准）；
+- 风险：行数不等于语义重要度（`chat.cpp` 上游仅 49 行但可能是关键修复），逐文件开工前仍要读真实 diff；
+  预测/手感类（`character.cpp`、`controls.cpp`）必须实机验证并先记基线。
+
+**本轮没有动任何代码**；三个 PR（#263/#260/#261）仍在评审，建议先合并再开手工融合。
+
 ## 2026-09-24 · S41：修正「零重叠可摘」的口径 —— 48 条里真正独立可摘只有 **12** 条
 
 ### 起因：试摘第一条就 `DU` 失败
