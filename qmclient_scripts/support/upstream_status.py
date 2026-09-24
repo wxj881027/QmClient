@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 
 DEFAULT_UPSTREAM = "ddnet/master"
+DEFAULT_ORIGIN_REF = "origin/master"
 CHUNK_SIZE = 200
 PATH_RE = re.compile(r"^[A-Za-z0-9_.@+\-/ ]+$")
 HEX_RE = re.compile(r"^[0-9a-f]{40,64}$")
@@ -63,6 +64,39 @@ def area_of(path: str, depth: int = 3) -> str:
 
 def merge_base(upstream: str) -> str:
     return git("merge-base", "HEAD", upstream).strip()
+
+
+def collect_baseline_freshness(origin_ref: str = DEFAULT_ORIGIN_REF) -> dict:
+    """本地基线相对 origin/master 是否落后。
+
+    教训来源：upstream-sync-log.md S37 —— 维护者同一时间修掉了本地记为「既有失败」的问题，
+    动手前先 fetch + 看 origin/master 能省掉一整轮重复劳动。
+    """
+    probe = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", origin_ref],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if probe.returncode != 0:
+        return {"origin_ref": origin_ref, "exists": False, "behind": 0, "tip": ""}
+    behind = int(git("rev-list", "--count", f"HEAD..{origin_ref}").strip() or "0")
+    tip = git("log", "-1", "--format=%h %ad %s", "--date=short", origin_ref).strip()
+    return {"origin_ref": origin_ref, "exists": True, "behind": behind, "tip": tip}
+
+
+def format_baseline_freshness(info: dict) -> str:
+    """把基线新鲜度格式化成一行；落后时给出动作提示。"""
+    label = "基线新鲜度        :"
+    origin_ref = info.get("origin_ref", DEFAULT_ORIGIN_REF)
+    if not info.get("exists"):
+        return f"{label} 未找到 {origin_ref}（先 git fetch origin）"
+    if info["behind"] <= 0:
+        return f"{label} 已跟上 {origin_ref}（{info['tip']}）"
+    return (
+        f"{label} ⚠ 落后 {origin_ref} {info['behind']} 个提交（{info['tip']}）"
+        " —— 动手前先前移基线，避免重复劳动（见 upstream-sync-log.md S37）"
+    )
 
 
 def collect_status(upstream: str) -> dict:
@@ -153,6 +187,12 @@ def main() -> int:
     parser.add_argument("--clean-list", action="store_true", help="打印零重叠提交及其标题")
     parser.add_argument("--conflicts", action="store_true", help="干跑合并并列出冲突路径（较慢）")
     parser.add_argument("--json", metavar="PATH", help="把结果写入 JSON 文件")
+    parser.add_argument(
+        "--origin-ref",
+        default=DEFAULT_ORIGIN_REF,
+        help=f"用哪个引用判断本地基线是否落后，默认 {DEFAULT_ORIGIN_REF}",
+    )
+    parser.add_argument("--skip-freshness", action="store_true", help="不检查基线新鲜度")
     args = parser.parse_args()
 
     try:
@@ -162,6 +202,15 @@ def main() -> int:
         return 1
 
     print_summary(status)
+
+    if not args.skip_freshness:
+        try:
+            freshness = collect_baseline_freshness(args.origin_ref)
+        except RuntimeError as exc:
+            print(f"基线新鲜度        : 检查失败（{exc}）")
+        else:
+            status["baseline_freshness"] = freshness
+            print(format_baseline_freshness(freshness))
 
     if args.clean_list:
         print("\n零重叠提交：")
