@@ -158,6 +158,49 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S40：CI 终态收口 + 把「基线新鲜度」做成工具检查
+
+### 1. CI 终态（三个 PR，新 master `7cf432eacb` 之上）
+
+| job | PR-1 #263 | PR-2 #260 | PR-3 #261 | 归属 |
+|-----|-----------|-----------|-----------|------|
+| `check-style` | ✅ 3m29s | ✅ 2m52s | ✅ 2m44s | 同步链 |
+| Linux | ✅ 12m26s | ✅ 9m52s | ✅ 7m46s | 同步链 |
+| macOS | ✅ 17m29s | ✅ 7m39s | ✅ 7m28s | 同步链 |
+| Windows | ✅ 26m56s | ✅ 20m18s | ✅ 14m53s | 同步链 |
+| **Android** | ✅ 38m33s | ✅ 36m29s | ✅ 36m52s | 同步链 |
+| Analyze (python) | ✅ 5s | — | — | — |
+| Analyze (cpp) | 仍在跑（CodeQL，约 41 分钟） | — | — | — |
+| `check-clang-tidy` | ❌ 33m25s | 待跑（预期同） | 待跑（预期同） | **既有**：master 在 PR #256 合并后两次 push 同为 failure |
+| `check-clang-san` | ❌ 19m17s | ❌ 20m44s | ❌ 19m1s | **既有**：同上 |
+
+**结论**：master 上为绿的每一个 job，三段 PR 现在都是绿的（含 Android 与 Windows 的打包/校验步骤）；
+剩下的两个红 job 在 master 上同样红，按维护者决定保持原样（不动采纳的上游 `aio.cpp`）。
+
+### 2. 把 S37 的教训固化成工具：基线新鲜度检查
+
+`upstream_status.py` 增加一行**基线新鲜度**（本地 `HEAD` 是否落后 `origin/master`）：
+
+```
+基线新鲜度        : 已跟上 origin/master（7cf432eacb 2026-09-24 Merge pull request #256 …）
+基线新鲜度        : ⚠ 落后 origin/master 5 个提交（<tip>）—— 动手前先前移基线，避免重复劳动（见 upstream-sync-log.md S37）
+基线新鲜度        : 未找到 origin/master（先 git fetch origin）
+```
+
+新增 `--origin-ref`（默认 `origin/master`）与 `--skip-freshness`，结果一并进 `--json`。
+动机就是 S37：当时本地把两处 CI 红记成 master 既有失败并做了一轮 PR-0，
+而维护者同一时间已在 `origin/master` 上修掉同类问题 —— 先 fetch、先看这一行就能避免。
+
+测试：`qmclient_scripts/tests/test_upstream_status_freshness.py` 4 例；提交 `8e216b8470`
+（分支 `sync/docs-and-tooling`）。
+
+### 3. 顺带修好文档 worktree 的测试环境
+
+`qmclient_scripts/tests` 在 `tmp/docs-wt` 里首跑是 9 例失败 —— 全是 `ddnet-libs` / `vendor`
+子模块内容缺失导致（Android BoringSSL 资产、CMake 配置类测试）。给该 worktree 接上
+`ddnet-libs`、`vendor/minhook`、`vendor/msdfgen` 三个 junction 后：**75 例通过（1 例环境跳过）**。
+记录一下：**新 worktree 跑仓库自带 Python 测试前，先按同样方式接 submodule junction**。
+
 ## 2026-09-24 · S39：重排后的链自审 + 新基线快照（0 条待处理，可摘余量剩 48）
 
 链经过 S36/S37 两次重排（slice-0 插入又撤销、master 前移），按既有规矩重跑两项自审。
