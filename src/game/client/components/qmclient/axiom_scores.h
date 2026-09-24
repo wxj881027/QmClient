@@ -91,6 +91,8 @@ class CQmAxiomScores : public CComponent
 		int64_t m_LastDdStatsSuccessTick = 0;
 		int64_t m_LastDdStatsFailureTick = 0;
 		int64_t m_LastAccessTick = 0;
+		// 同一帧内 Tick 相同，LRU 用单调访问序号打破平局。
+		uint64_t m_LastAccessOrder = 0;
 	};
 
 	struct SRequestSlot
@@ -102,6 +104,7 @@ class CQmAxiomScores : public CComponent
 	};
 
 	std::map<std::string, SCacheEntry> m_Cache;
+	uint64_t m_AccessOrderClock = 0;
 	SRequestSlot m_SearchRequest;
 	std::array<SRequestSlot, 2> m_aModeRequests;
 	SRequestSlot m_DdStatsRequest;

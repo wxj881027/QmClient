@@ -466,6 +466,7 @@ void CQmAxiomScores::StartSearchRequest(const char *pPlayerName, SCacheEntry &En
 	}
 	m_SearchRequest.m_Generation = m_Generation;
 	m_SearchRequest.m_PlayerName = pPlayerName;
+	m_SearchRequest.m_Mode = m_Mode;
 }
 
 void CQmAxiomScores::StartModeRequest(const char *pPlayerName, SCacheEntry &Entry, EQmAxiomMode Mode)
@@ -507,6 +508,7 @@ void CQmAxiomScores::StartModeRequest(const char *pPlayerName, SCacheEntry &Entr
 	}
 	Slot.m_Generation = m_Generation;
 	Slot.m_PlayerName = pPlayerName;
+	Slot.m_Mode = Mode;
 }
 
 void CQmAxiomScores::AbortActiveRequests(bool ResetFetchingStates)
@@ -587,7 +589,7 @@ void CQmAxiomScores::EvictCacheEntryIfNeeded()
 	{
 		if(It->first == m_ActivePlayerName || m_SearchRequests.contains(It->first) || m_ModeRequests.contains(It->first))
 			continue;
-		if(Oldest == m_Cache.end() || It->second.m_LastAccessTick < Oldest->second.m_LastAccessTick)
+		if(Oldest == m_Cache.end() || It->second.m_LastAccessOrder < Oldest->second.m_LastAccessOrder)
 			Oldest = It;
 	}
 	if(Oldest != m_Cache.end())
@@ -610,6 +612,7 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 	}
 	SCacheEntry &Entry = It->second;
 	Entry.m_LastAccessTick = Now;
+	Entry.m_LastAccessOrder = ++m_AccessOrderClock;
 	if(m_ActivePlayerName == Name)
 		return;
 
@@ -634,6 +637,7 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 		}
 		if(!HasVisibleMatch)
 			Entry.m_Result.m_SearchStatus = EQmAxiomScoreStatus::FETCHING;
+		Slot.m_Generation = m_Generation;
 		Slot.m_PlayerName = Name;
 		Slot.m_Mode = m_Mode;
 		m_SearchRequests.emplace(Name, std::move(Slot));
@@ -659,6 +663,7 @@ void CQmAxiomScores::EnsureScoreboardQueried(const char *pPlayerName)
 	}
 	if(!Result.m_HasData)
 		Result.m_Status = EQmAxiomScoreStatus::FETCHING;
+	Slot.m_Generation = m_Generation;
 	Slot.m_PlayerName = Name;
 	Slot.m_Mode = m_Mode;
 	m_ModeRequests.emplace(Name, std::move(Slot));
@@ -674,8 +679,12 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 			continue;
 		}
 		const std::string Name = It->first;
+		const uint64_t ResponseGeneration = It->second.m_Generation;
+		const EQmAxiomMode ResponseMode = It->second.m_Mode;
 		auto pRequest = std::move(It->second.m_pRequest);
 		It = m_SearchRequests.erase(It);
+		if(!QmAxiomResponseIsCurrent(m_Generation, ResponseGeneration, m_Mode, ResponseMode))
+			continue;
 		auto CacheIt = m_Cache.find(Name);
 		if(CacheIt == m_Cache.end())
 			continue;
@@ -736,9 +745,10 @@ void CQmAxiomScores::ProcessScoreboardRequests()
 		}
 		const std::string Name = It->first;
 		const EQmAxiomMode Mode = It->second.m_Mode;
+		const uint64_t ResponseGeneration = It->second.m_Generation;
 		auto pRequest = std::move(It->second.m_pRequest);
 		It = m_ModeRequests.erase(It);
-		if(Mode != m_Mode)
+		if(!QmAxiomResponseIsCurrent(m_Generation, ResponseGeneration, m_Mode, Mode))
 			continue;
 		auto CacheIt = m_Cache.find(Name);
 		if(CacheIt == m_Cache.end())
@@ -999,6 +1009,8 @@ SQmAxiomLookupResult CQmAxiomScores::GetLookup(const char *pPlayerName) const
 	const SQmAxiomModeResult &ModeResult = pPlayer->Mode(m_Mode);
 	Result.m_Status = ModeResult.m_Status;
 	Result.m_Points = ModeResult.m_Score.m_Points;
+	if(Result.m_Status == EQmAxiomScoreStatus::FETCHING)
+		Result.m_Status = EQmAxiomScoreStatus::NOT_REQUESTED;
 	return Result;
 }
 
@@ -1104,6 +1116,8 @@ void CQmAxiomScores::EnsureQueried(const char *pPlayerName)
 	if(CacheIt == m_Cache.end())
 		CacheIt = m_Cache.emplace(pPlayerName, SCacheEntry{}).first;
 	SCacheEntry &Entry = CacheIt->second;
+	Entry.m_LastAccessTick = Now;
+	Entry.m_LastAccessOrder = ++m_AccessOrderClock;
 	const bool SearchFresh = Entry.m_Result.m_SearchStatus == EQmAxiomScoreStatus::READY && IsWithinWindow(Entry.m_LastSearchSuccessTick, Now, AXIOM_SEARCH_CACHE_TTL_MS);
 	if(!SearchFresh)
 	{

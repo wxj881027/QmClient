@@ -81,7 +81,7 @@ TEST(QmLocalSaveJoinHint, UsesExpiringEchoMessages)
 	EXPECT_EQ(Body.find("GameClient()->Echo(CodesLine.c_str(), true);"), std::string::npos);
 }
 
-TEST(QmWindowModesContract, WindowedFullscreenRemainsABorderlessNonResizableWindow)
+TEST(QmWindowModesContract, WindowedFullscreenIsBorderedAndNonResizable)
 {
 	const std::string Backend = ReadTestSourceFile("src/engine/client/backend_sdl.cpp");
 	const std::string SetWindowParams = SourceFunctionBody(Backend, "void CGraphicsBackend_SDL_GL::SetWindowParams(");
@@ -92,7 +92,7 @@ TEST(QmWindowModesContract, WindowedFullscreenRemainsABorderlessNonResizableWind
 	const std::string WindowedFullscreen = SetWindowParams.substr(WindowedFullscreenStart, WindowedStart - WindowedFullscreenStart);
 
 	EXPECT_NE(WindowedFullscreen.find("SDL_SetWindowFullscreen(m_pWindow, 0);"), std::string::npos);
-	EXPECT_NE(WindowedFullscreen.find("SDL_SetWindowBordered(m_pWindow, SDL_FALSE);"), std::string::npos);
+	EXPECT_NE(WindowedFullscreen.find("SDL_SetWindowBordered(m_pWindow, SDL_TRUE);"), std::string::npos);
 	EXPECT_NE(WindowedFullscreen.find("SDL_SetWindowResizable(m_pWindow, SDL_FALSE);"), std::string::npos);
 }
 

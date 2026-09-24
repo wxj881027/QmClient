@@ -360,6 +360,11 @@ bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGener
 	return CurrentGeneration == ResponseGeneration && CurrentPlayerName == ResponsePlayerName;
 }
 
+bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, EQmAxiomMode CurrentMode, EQmAxiomMode ResponseMode)
+{
+	return CurrentGeneration == ResponseGeneration && CurrentMode == ResponseMode;
+}
+
 SQmAxiomPopupSize QmAxiomPopupSize(float ScreenWidth, float ScreenHeight)
 {
 	const float MaxWidth = maximum(0.0f, ScreenWidth - AXIOM_POPUP_SCREEN_MARGIN * 2.0f);
