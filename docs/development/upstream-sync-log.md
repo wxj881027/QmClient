@@ -158,6 +158,47 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S33：macOS 上 `QmRoundedRect` 是**既有 flaky**（非同步引入），改由维护者定夺
+
+S32 的控制台修复在 CI 上得到验证：**Linux 已 PASS（14m36s）**、macOS 也不再失败于该用例。
+但 macOS 换成了另一个失败：
+
+```
+[  FAILED  ] QmRoundedRect.CachedDirectionsPreserveOriginalAnglesForEveryQuality
+src/test/qmclient_monitoring_test.cpp:12449: Expected equality of these values:
+  pDirections[i].y       Which is: 0.290284663
+  std::sin(Angle)        Which is: 0.290284693      // 相差 ~1 ULP
+```
+
+### 归属：不是本次同步引入，而是既有的 macOS flaky
+
+| 证据 | 结果 |
+|------|------|
+| 被检验的实现 `src/engine/client/rounded_rect_directions.h` | 同步链**未改动**（`git diff slice-9..slice-23` 为空） |
+| 测试文件 `src/test/qmclient_monitoring_test.cpp` | 同步链**未改动**（同上） |
+| 该测试 TU 的 51 个直接包含头 | PR-3 **没有**改任何一处 |
+| 两次 macOS runner 镜像 | 完全相同（`macos-26-arm64/20260907.0351`） |
+| **维护者已合并的 PR #258** macOS（run `35875817945`，2026-09-23） | **同样 FAILED**（3309 例 / 3306 通过 / 1 失败） |
+| 本 PR-1 的 macOS（run `36005640588`） | 同一用例 **OK**（3309 例 / 3308 通过） |
+
+同样内容、同样镜像，三次运行两红一绿 → **该用例在 macOS arm64 上是 flaky 的**，
+根因是它用 `EXPECT_EQ` 对「缓存表里的 float」与「当场算的 `std::sin`」做**逐位相等**比较，
+在 arm64 上两者的舍入可能差 1 ULP（x86-64 上恰好一致，所以 Windows/Linux 从不暴露）。
+
+### 待维护者拍板（两项）
+
+1. **这个 flaky 用例怎么处理**：
+   - 方案 A（推荐）：把 `qmclient_monitoring_test.cpp` 里那 4 处 `EXPECT_EQ` 换成带容差的比较
+     （例如 `EXPECT_NEAR(..., 1e-6f)`）。测试意图（角度公式与运算顺序）仍被覆盖 ——
+     公式写错会差到 1e-3 量级，容差 1e-6 抓得住真回归，只是不再要求逐位相等；
+   - 方案 B：保持「逐位相等」的严格意图，改为在断言前把两侧都用同一个标量表达式算出来
+     （例如缓存侧统一走 `sinf`），代价是要动 QmClient 生产头 `rounded_rect_directions.h`；
+   - 方案 C：接受 macOS job 长期红（等同维护者此前合并 PR #258 时的状态）。
+2. 若选 A/B，我可以直接改并推 PR-3（这是维护者的测试合同，故先问）。
+
+**CI 现状（2026-09-24，PR-3 修复后）**：`check-style` PASS、**Linux PASS**、Windows / Android /
+Analyze(cpp) / check-clang-tidy 待跑、`check-clang-san` 既有失败（同 master）、macOS 因上述 flaky 失败。
+
 ## 2026-09-24 · S32：PR-3 在 Linux/macOS 的整数校验跨平台不一致（已修）
 
 ### 现象
