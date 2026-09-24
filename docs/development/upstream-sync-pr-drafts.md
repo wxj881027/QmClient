@@ -7,9 +7,10 @@
 
 | PR | 分支 | 基线 | 链接 |
 |----|------|------|------|
-| PR-1 | `sync/slice-1-base-engine`（`0956e8bebb`） | `master` | [#259](https://github.com/wxj881027/QmClient/pull/259) |
-| PR-2 | `sync/slice-9-ghost-cull`（`6e1072062a`） | PR-1 分支 | [#260](https://github.com/wxj881027/QmClient/pull/260) |
-| PR-3 | `sync/slice-23-official-semantics`（`883a2a7d30`） | PR-2 分支 | [#261](https://github.com/wxj881027/QmClient/pull/261) |
+| PR-0 | `sync/slice-0-preexisting-fixes`（`d34f421f95`） | `master` | [#262](https://github.com/wxj881027/QmClient/pull/262) |
+| PR-1 | `sync/slice-1-base-engine`（`2f360e929e`） | PR-0 | [#259](https://github.com/wxj881027/QmClient/pull/259) |
+| PR-2 | `sync/slice-9-ghost-cull`（`28a5bab422`） | PR-1 分支 | [#260](https://github.com/wxj881027/QmClient/pull/260) |
+| PR-3 | `sync/slice-23-official-semantics`（`1f9b2eb41b`） | PR-2 分支 | [#261](https://github.com/wxj881027/QmClient/pull/261) |
 
 统一验证口径（2026-09-24 在新基线上逐段实测，全部零失败）：
 
@@ -17,8 +18,8 @@
 |------|----------|------|------|------|------------|
 | 新基线 `6b9a41fd21`（`origin/master`） | — | — | — | 0 | — |
 | 旧基线 `aea1453cc7`（已弃用） | 3329 | — | — | 2 | — |
-| PR-1 边界 `0956e8bebb` | 3329 | 3328 | 1 | **0** | 无 |
-| PR-2 边界 `6e1072062a` | 3330 | 3329 | 1 | **0** | 无 |
+| PR-1 边界 `2f360e929e` | 3329 | 3328 | 1 | **0** | 无 |
+| PR-2 边界 `28a5bab422` | 3330 | 3329 | 1 | **0** | 无 |
 | PR-3 边界 `883a2a7d30`（`sync/slice-23-official-semantics`，链尾） | 3348 | 3347 | 1 | **0** | 无 |
 
 1 例跳过是环境相关的 `QmWebSocketLive.ConnectsAndEchoesWhenServerConfigured`（未配置测试服务器）。
@@ -30,7 +31,7 @@
 
 ## PR-1 地基：`src/base` 布局对齐
 
-- 分支：`sync/slice-1-base-engine`（`0956e8bebb`）
+- 分支：`sync/slice-1-base-engine`（`2f360e929e`）
 - 规模：4 个提交 / 36 个文件 / +3184 −2834
 - 标题：`refactor(sync): 对齐 DDNet 上游 src/base 布局并保留自有 QoS/统计行为`
 - 正文要点：
@@ -46,7 +47,7 @@
 
 ## PR-2 客户端与引擎修复批次（切片 2–9）
 
-- 分支：`sync/slice-9-ghost-cull`（`6e1072062a`）
+- 分支：`sync/slice-9-ghost-cull`（`28a5bab422`）
 - 规模：35 个提交（含 PR-1）/ 60 个文件 / 累计 +3492 −2945
 - 标题：`fix(sync): 客户端与引擎修复批次（demo/预测/裁剪/健壮性/nightly/PNG）`
 - 正文要点：
@@ -62,7 +63,7 @@
 
 ## PR-3 服务器、工具、数据、验证补强与四项官方语义（切片 10–23，链尾）
 
-- 分支：`sync/slice-23-official-semantics`（`883a2a7d30`）
+- 分支：`sync/slice-23-official-semantics`（`1f9b2eb41b`）
 - 规模：约 85+ 个提交（含 PR-1/2）/ 累计 +3900 −3200 量级
 - 标题：`fix(sync): 服务器、地图工具、Unicode 数据与小修批次（含 use-after-free/double free 修复）`
 - 正文要点：

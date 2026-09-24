@@ -158,6 +158,53 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S36：新增 `sync/slice-0-preexisting-fixes`（PR #262），把两处既有红修到链底
+
+维护者拍板「做 PR-0，三段全绿」后执行。
+
+### 做了什么
+
+新建分支 `sync/slice-0-preexisting-fixes`（相对 `master` 只动 3 个文件）：
+
+| 提交 | 内容 | 涉及文件 |
+|------|------|----------|
+| `dcc753c0f6` | `fix(console): 引号参数也参与校验，并让整数溢出在所有平台一致被拒绝`——把「上游 `821d5ae4b4` 的语义 + S32 的 `strtoll` 修法 + 本地 emote 期望更新」**合成一条** | `console.cpp`、`qm_modes_test.cpp` |
+| `d34f421f95` | `test(client): QmRoundedRect 角度断言改用容差，消除 macOS arm64 flaky` | `qmclient_monitoring_test.cpp` |
+
+然后把 23 个切片整条 rebase 到它上面：`git rebase --onto sync/slice-0-preexisting-fixes 6b9a41fd21
+sync/slice-23-official-semantics`（`--update-refs` 同步更新全部切片分支）。
+
+rebase 过程中的唯一冲突是链尾那条**重复的**上游 cherry-pick（`32032b54e3 console: Fix validating
+quoted victim arguments`）—— slice-0 已经包含它的内容（还带了修正），按计划 `git rebase --skip` 丢弃；
+链尾的其余重复提交（本地 emote 期望更新、`958d0ce85b` 的溢出修正、`883a2a7d30` 的容差修复）
+被 git 自动识别为「已应用」并跳过。
+
+### 关键校验：rebase 只重排、不改内容
+
+```
+新链尾 sync/slice-23-official-semantics 的 tree = b18f0eeb9367f4bafb51e3665321f1285fcbf9c0
+旧链尾 883a2a7d30                        的 tree = b18f0eeb9367f4bafb51e3665321f1285fcbf9c0   ← 完全相同
+```
+
+因此 **S29–S34 里在旧链尾做过的构建/测试结论依然成立**（3348 运行 / 0 失败、`--target everything`
+全量编译、`--mode full` 门禁结果都不需要重跑）。此外核对：`slice-0` 是 `slice-1` 的祖先；
+`slice-1` 相对 `slice-0` = 36 个文件（原 base 布局切片）；链内 console 语义提交与容差提交各只出现 1 次。
+
+### 新哈希与 PR 栈
+
+| PR | 分支 | 基线 | 哈希 |
+|----|------|------|------|
+| [#262](https://github.com/wxj881027/QmClient/pull/262) | `sync/slice-0-preexisting-fixes` | `master` | `d34f421f95` |
+| [#259](https://github.com/wxj881027/QmClient/pull/259) | `sync/slice-1-base-engine` | slice-0 | `2f360e929e` |
+| [#260](https://github.com/wxj881027/QmClient/pull/260) | `sync/slice-9-ghost-cull` | slice-1 | `28a5bab422` |
+| [#261](https://github.com/wxj881027/QmClient/pull/261) | `sync/slice-23-official-semantics` | slice-9 | `1f9b2eb41b` |
+
+PR-3 正文的口径随之调整：「四项官方语义」改为「三项在 PR-3 + 控制台引号参数校验已提前到 PR-0」。
+
+**预期效果**：PR-0 让那两处既有红在链的最底部消失，因此 PR-1/PR-2/PR-3 的 Linux 与 macOS
+应当全部转绿（仍需等 CI 结果确认）；`check-clang-tidy` / `check-clang-san` 两处 master 级别的
+既有红不受影响（按决定保持原样）。
+
 ## 2026-09-24 · S35：PR-2 的两处红都是**既有失败**（master 上同样红）+ PR-0 提案
 
 S34 之后 PR-3 的 Linux/macOS/style 已转绿，但 **PR-2（切片 2–9）仍是红**，逐条核对如下：
