@@ -9,7 +9,7 @@
 |----|------|------|------|
 | PR-1 | `sync/slice-1-base-engine`（`0956e8bebb`） | `master` | [#259](https://github.com/wxj881027/QmClient/pull/259) |
 | PR-2 | `sync/slice-9-ghost-cull`（`6e1072062a`） | PR-1 分支 | [#260](https://github.com/wxj881027/QmClient/pull/260) |
-| PR-3 | `sync/slice-23-official-semantics`（`3b3d3265af`） | PR-2 分支 | [#261](https://github.com/wxj881027/QmClient/pull/261) |
+| PR-3 | `sync/slice-23-official-semantics`（`883a2a7d30`） | PR-2 分支 | [#261](https://github.com/wxj881027/QmClient/pull/261) |
 
 统一验证口径（2026-09-24 在新基线上逐段实测，全部零失败）：
 
@@ -19,7 +19,7 @@
 | 旧基线 `aea1453cc7`（已弃用） | 3329 | — | — | 2 | — |
 | PR-1 边界 `0956e8bebb` | 3329 | 3328 | 1 | **0** | 无 |
 | PR-2 边界 `6e1072062a` | 3330 | 3329 | 1 | **0** | 无 |
-| PR-3 边界 `3b3d3265af`（`sync/slice-23-official-semantics`，链尾） | 3348 | 3347 | 1 | **0** | 无 |
+| PR-3 边界 `883a2a7d30`（`sync/slice-23-official-semantics`，链尾） | 3348 | 3347 | 1 | **0** | 无 |
 
 1 例跳过是环境相关的 `QmWebSocketLive.ConnectsAndEchoesWhenServerConfigured`（未配置测试服务器）。
 旧基线上那 2 例（`BaseSettingsStableTextCandidateAuditIsEmptyExceptAllowlist`、
@@ -62,7 +62,7 @@
 
 ## PR-3 服务器、工具、数据、验证补强与四项官方语义（切片 10–23，链尾）
 
-- 分支：`sync/slice-23-official-semantics`（`3b3d3265af`）
+- 分支：`sync/slice-23-official-semantics`（`883a2a7d30`）
 - 规模：约 85+ 个提交（含 PR-1/2）/ 累计 +3900 −3200 量级
 - 标题：`fix(sync): 服务器、地图工具、Unicode 数据与小修批次（含 use-after-free/double free 修复）`
 - 正文要点：

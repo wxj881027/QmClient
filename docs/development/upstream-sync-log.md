@@ -158,6 +158,55 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S34：macOS flaky 测试按决定改为容差比较 + CI 收口全景
+
+### 维护者决定（2026-09-24）
+
+| 项 | 决定 |
+|----|------|
+| macOS `QmRoundedRect` flaky | **改成带容差比较**（另外两个候选是「改生产代码统一走 `sinf`」与「接受 macOS 长期红」） |
+| `check-clang-tidy` 既有红 + 我链新增 1 条同类诊断 | **保持原样**（与上游 `src/base/aio.cpp` 逐字一致，等维护者自己那批 `misc-use-internal-linkage` 一起收） |
+
+**改动**：`src/test/qmclient_monitoring_test.cpp` 的 4 处 `EXPECT_EQ` → `EXPECT_NEAR`：
+
+- 方向分量（`cos`/`sin`）用 **1e-6**：值域 [-1,1]，1 ULP≈6e-8，留约 16 ULP 余量；
+- 乘半径后的坐标用 **1e-4**：半径最大 321，该量级 1 ULP≈3e-5，留约 3 ULP 余量；
+- 公式或运算顺序写错会差到 1e-3 量级 → 容差仍能抓住真实回归，只是不再要求逐位相等。
+
+提交 `883a2a7d30 test(client): QmRoundedRect 角度断言改用容差，消除 macOS arm64 flaky`（链尾，PR-3）。
+
+**证据**：本地 `QmRoundedRect.*` 2 例通过；clang-format 20 与 22 对该文件均无格式问题。
+
+### CI 收口全景（2026-09-24，PR-1 已跑完全部 job）
+
+| job | PR-1 | 归属 |
+|-----|------|------|
+| `check-style` | **PASS**（2m49s） | 同步链 |
+| Linux（构建 + `run_tests` + 打包） | **PASS**（9m39s） | 同步链 |
+| Windows（构建 + `run_tests` + 更新包内容校验） | **PASS**（22m10s） | 同步链 |
+| macOS（构建 + `run_tests` + dmg 校验） | **PASS**（8m35s） | 同步链（该次恰好没触发那个 flaky） |
+| Android（APK/AAB） | **PASS**（35m29s） | 同步链 |
+| Analyze (cpp) / Analyze (python) | **PASS**（41m14s / 5s） | 同步链 |
+| `check-clang-tidy` | FAIL（33m59s） | **既有**：master 同 job 同样在 `Build Optional Features` 步骤红，诊断同为 `misc-use-internal-linkage` |
+| `check-clang-san` | FAIL（18m26s） | **既有**：master 同 job 三份状态逐条相同（`client-server: passed` / `tests: passed` / `integration: failed`，后者是 mastersrv 集成超时） |
+
+**我链新增的 clang-tidy 诊断只有 1 条**：`src/base/aio.cpp:14` 的 enum `EAsyncIoFinishState`
+未放进匿名命名空间（上游原样文件）——按决定保持与上游一致。
+
+含义：**在 master 本来是绿的每个 job 上，同步链现在都是绿的**；剩下两个红 job 在 master 上同样红。
+若要让 CI 完全无红，需要维护者先把自己那批 clang-tidy 诊断与 mastersrv 集成超时收掉。
+
+### 流程改进：文档/工具线改用独立分支 + 独立 worktree
+
+期间主仓库 checkout 被切到维护者的 `New_Shader`（advanced text FX 工作），我的文档提交一度落在
+该分支顶端。现在改为：
+
+- 文档/工具线：分支 **`sync/docs-and-tooling`** + worktree **`tmp/docs-wt`**（本轮起所有文档提交都在这里）；
+- 同步链：分支 `sync/slice-*` + worktree `tmp/sync-slice-1`（代码改动）；
+- **主仓库 checkout 不再被我使用**，维护者的分支与未提交工作不受影响。
+
+`New_Shader` 顶上那一条 S33 文档提交（`293c52db13`）可由维护者决定是否 rebase 掉。
+
 ## 2026-09-24 · S33：macOS 上 `QmRoundedRect` 是**既有 flaky**（非同步引入），改由维护者定夺
 
 S32 的控制台修复在 CI 上得到验证：**Linux 已 PASS（14m36s）**、macOS 也不再失败于该用例。
