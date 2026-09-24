@@ -114,6 +114,9 @@ def collect_status(upstream: str) -> dict:
             git_lines("log", "--no-merges", "--format=%H", f"{base}..{upstream}", "--", *chunk)
         )
     clean = [commit for commit in all_commits if commit not in risky]
+    prereq = {commit: missing_files_for_commit(commit) for commit in clean}
+    clean_pickable = [commit for commit in clean if not prereq[commit]]
+    clean_with_prereq = [commit for commit in clean if prereq[commit]]
 
     return {
         "upstream": upstream,
@@ -127,7 +130,37 @@ def collect_status(upstream: str) -> dict:
         "upstream_commits": len(all_commits),
         "upstream_commits_touching_overlap": len(risky),
         "clean_commits": clean,
+        "clean_commits_pickable": clean_pickable,
+        "clean_commits_with_prereq": clean_with_prereq,
+        "clean_commit_prereq_files": prereq,
     }
+
+
+def missing_files_for_commit(commit: str) -> list[str]:
+    """返回「该提交会改动、但本地 HEAD 里不存在」的文件。
+
+    这类提交不是独立可摘的：它们改的是同步点之后上游**新建**的文件（例如上游把
+    `menus_settings.cpp` 拆成 `menus_settings_ddnet.cpp`、新增 `font_icons.h` 等），
+    cherry-pick 会直接 `DU`（本地已删/不存在、上游修改）失败 —— 见 upstream-sync-log.md S41。
+    提交自己**新增**（A）的文件不算缺前置。
+    """
+    missing: list[str] = []
+    for line in git_lines("diff-tree", "--no-commit-id", "--name-status", "-r", commit):
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        status = parts[0][:1]
+        path = parts[-1]
+        if status == "A":
+            continue
+        probe = subprocess.run(
+            ["git", "cat-file", "-e", f"HEAD:{path}"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if probe.returncode != 0:
+            missing.append(path)
+    return missing
 
 
 def collect_conflicts(upstream: str) -> dict:
@@ -179,6 +212,21 @@ def print_summary(status: dict) -> None:
     print(f"上游非合并提交    : {status['upstream_commits']}")
     print(f"  其中与 fork 重叠: {status['upstream_commits_touching_overlap']}")
     print(f"  零重叠(可直接摘): {len(status['clean_commits'])}")
+    print(f"    其中独立可摘  : {len(status['clean_commits_pickable'])}")
+    print(
+        f"    需前置(改上游新文件): {len(status['clean_commits_with_prereq'])}"
+        " —— 这些提交改的文件本地不存在，cherry-pick 会 DU 失败"
+    )
+
+
+def format_clean_entry(commit: str, subject: str, missing_files: list[str]) -> str:
+    """零重叠清单的一行；缺前置时标出来并列出文件。"""
+    head = f"  {commit[:9]}  {subject}"
+    if not missing_files:
+        return head
+    return head + "\n      ⚠ 需前置（本地不存在）: " + "、".join(missing_files[:3]) + (
+        " 等" if len(missing_files) > 3 else ""
+    )
 
 
 def main() -> int:
@@ -213,10 +261,18 @@ def main() -> int:
             print(format_baseline_freshness(freshness))
 
     if args.clean_list:
-        print("\n零重叠提交：")
-        for commit in status["clean_commits"]:
+        prereq = status.get("clean_commit_prereq_files", {})
+        pickable = status.get("clean_commits_pickable", status["clean_commits"])
+        print(f"\n零重叠且独立可摘（{len(pickable)} 条）：")
+        for commit in pickable:
             subject = git("log", "-1", "--format=%s", commit).strip()
-            print(f"  {commit[:9]}  {subject}")
+            print(format_clean_entry(commit, subject, []))
+        with_prereq = status.get("clean_commits_with_prereq", [])
+        if with_prereq:
+            print(f"\n零重叠但需前置提交（{len(with_prereq)} 条，现在摘会 DU 失败）：")
+            for commit in with_prereq:
+                subject = git("log", "-1", "--format=%s", commit).strip()
+                print(format_clean_entry(commit, subject, prereq.get(commit, [])))
 
     if args.conflicts:
         try:

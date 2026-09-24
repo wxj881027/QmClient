@@ -158,6 +158,63 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S41：修正「零重叠可摘」的口径 —— 48 条里真正独立可摘只有 **12** 条
+
+### 起因：试摘第一条就 `DU` 失败
+
+按 S39.4 的 A 组清单在 scratch 分支上试摘 `6f941a85f`（图形错误本地化上下文），直接失败：
+
+```
+DU src/engine/client/backend_threaded.cpp   ← 本地不存在该文件，上游却是「修改」它
+```
+
+查证：该文件是**同步点之后上游新建的**（`8ebc6713bc add standalone map renderer with headless backend`
+创建，`6f941a85f` 再改它）。本地从没有过这个文件，所以：
+
+- `upstream_status.py` 的 overlap 计算（`diff base..HEAD` 里有没有这个文件）**看不出问题** ——
+  文件在本地压根不存在，自然不在「双方都改过」里 → 这条提交被算成「零重叠、可直接摘」；
+- 但 cherry-pick 它时，git 看到「我们删了/没有、对方改了」→ `DU` 冲突。
+
+把 A 组其余 5 条一并检查，**全部**只改本地不存在的新文件：
+`assets.cpp`（3600493b9）、`menus_settings_ddnet.cpp`（c32720d3d）、`playermapping.{cpp,h}`（ebbe3225b）、
+`menus_settings_credits.cpp`（0d2d717c8）、`font_icons.h`（9fcd88046）——
+都是上游把大文件拆开/新增后的产物。
+
+### 修工具：把「独立可摘」与「需前置」分开
+
+`upstream_status.py` 新增判据 `missing_files_for_commit()`：提交改了、但本地 `HEAD` 里不存在的文件
+（提交自己新增 `A` 的不算）。输出随之拆成两档：
+
+```
+  零重叠(可直接摘): 48
+    其中独立可摘  : 12
+    需前置(改上游新文件): 36 —— 这些提交改的文件本地不存在，cherry-pick 会 DU 失败
+```
+
+`--clean-list` 也分成两段打印，需前置的每条标出缺失文件。新增 3 例单测
+（`test_upstream_status_clean_entry.py`），`qmclient_scripts/tests` 全套 **78 例通过**（1 例环境跳过）。
+
+### 修正后的结论：真正「免费」的同步工作基本吃完了
+
+那 12 条独立可摘的构成：
+
+| 类别 | 提交 |
+|------|------|
+| 需批准（根 CMakeLists） | `a23094c69` libpng 头/库同安装 |
+| 需批准（协议/格式） | `d98e1e4ea` server info 尺寸支持 128 人 0.7 皮肤、`2ecaaf638` sixup snapshot ID 去重 workaround |
+| 需批准（第三方 vendoring） | `2d670ac55` Vendor libtw2、`944cf0c2a` Revert "Vendor libtw2" |
+| editor（按约定需批准） | `7e7e9367c` `EHistoryType` 改 `enum class` |
+| 内容判定已存在/部分存在 | `5b147f6ac`（ALREADY-PRESENT）、`ca698e390`（PARTIAL，需手工融合） |
+| **低风险且相关** | `6dcc46307` 爱沙尼亚语语言代码、`301eb091f` 删重复无用成员 |
+| 纯元数据/文档 | `3138cc24f` .mailmap 排序、`e5f5bbec8` CONTRIBUTING 本地化说明 |
+
+也就是说：**不需要额外批准、又确实相关的只剩 2–4 条**（语言代码、删无用成员，加两条文档/元数据）。
+这比 S39.4 报的「A 组约 12 条」更保守，也更接近事实。
+
+**对计划的修正**：`零重叠` 这个指标本身会系统性高估剩余可摘量（改上游新文件的提交也算进来），
+后续引用一律用「独立可摘」这一档；同步的主战场确定是**按区域手工融合 + 实机验证**，
+而不是继续扫提交。
+
 ## 2026-09-24 · S40：CI 终态收口 + 把「基线新鲜度」做成工具检查
 
 ### 1. CI 终态（三个 PR，新 master `7cf432eacb` 之上）
