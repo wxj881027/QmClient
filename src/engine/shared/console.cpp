@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <iterator> // std::size
 #include <new>
 
@@ -275,42 +276,54 @@ int CConsole::ParseArgs(CResult *pResult, const char *pFormat)
 				pStr[0] = '\0';
 				pStr++;
 			}
-
-			// validate arguments
-			if(Command == 'v')
-			{
-				pResult->SetVictim(pResult->GetString(pResult->NumArguments() - 1));
-			}
-			else if(Command == 'i')
-			{
-				int Value;
-				if(!str_toint(pResult->GetString(pResult->NumArguments() - 1), &Value) ||
-					Value == std::numeric_limits<int>::max() ||
-					Value == std::numeric_limits<int>::min())
-				{
-					return PARSEARGS_INVALID_INTEGER;
-				}
-			}
-			else if(Command == 'c')
-			{
-				auto Color = ColorParse(pResult->GetString(pResult->NumArguments() - 1), 0.0f);
-				if(!Color.has_value())
-				{
-					return PARSEARGS_INVALID_COLOR;
-				}
-			}
-			else if(Command == 'f')
-			{
-				float Value;
-				if(!str_tofloat(pResult->GetString(pResult->NumArguments() - 1), &Value) ||
-					Value == std::numeric_limits<float>::max() ||
-					Value == std::numeric_limits<float>::min())
-				{
-					return PARSEARGS_INVALID_FLOAT;
-				}
-			}
-			// 's' and unknown commands are handled as strings
 		}
+
+		// validate arguments
+		if(Command == 'v')
+		{
+			const char *pVictim = pResult->GetString(pResult->NumArguments() - 1);
+			if(pVictim[0] == '\0')
+			{
+				return PARSEARGS_MISSING_VALUE;
+			}
+			pResult->SetVictim(pVictim);
+		}
+		else if(Command == 'i')
+		{
+			// 上游 821d5ae4b4 的校验用 str_toint（内部把 strtol 的返回值截断成 int），
+			// 溢出行为因此依赖 long 的宽度：Windows（long=32）恰好得到 INT_MAX 而被哨兵值拦下，
+			// Linux/macOS（long=64）会截断成 -1 之类的合法值放行。这里改为按 long long 解析后
+			// 判 int 范围，让溢出在所有平台一致地被拒绝；INT_MAX/INT_MIN 仍作为无效哨兵保留。
+			// 判定记录见 docs/development/upstream-sync-log.md S32。
+			const char *pValue = pResult->GetString(pResult->NumArguments() - 1);
+			char *pEnd = nullptr;
+			const long long Value = strtoll(pValue, &pEnd, 10);
+			if(pEnd == pValue || *pEnd != '\0' ||
+				Value < std::numeric_limits<int>::min() || Value > std::numeric_limits<int>::max() ||
+				Value == std::numeric_limits<int>::max() || Value == std::numeric_limits<int>::min())
+			{
+				return PARSEARGS_INVALID_INTEGER;
+			}
+		}
+		else if(Command == 'c')
+		{
+			auto Color = ColorParse(pResult->GetString(pResult->NumArguments() - 1), 0.0f);
+			if(!Color.has_value())
+			{
+				return PARSEARGS_INVALID_COLOR;
+			}
+		}
+		else if(Command == 'f')
+		{
+			float Value;
+			if(!str_tofloat(pResult->GetString(pResult->NumArguments() - 1), &Value) ||
+				Value == std::numeric_limits<float>::max() ||
+				Value == std::numeric_limits<float>::min())
+			{
+				return PARSEARGS_INVALID_FLOAT;
+			}
+		}
+		// 's' and unknown commands are handled as strings
 	}
 
 	return PARSEARGS_OK;

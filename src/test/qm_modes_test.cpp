@@ -1008,8 +1008,8 @@ TEST_F(CQmEmoteCommandsTest, PreservesExistingIntegerParsing)
 		{"+7", true, 7},
 		{"\"7\"", true, 7},
 		{"7 extra", true, 7},
-		// 引号参数沿用现有控制台语义，无法转为整数时 GetInteger 返回 0。
-		{"\"invalid\"", true, 0},
+		// 采用上游 821d5ae4b4 后：引号参数同样参与校验，非法整数一律不派发。
+		{"\"invalid\"", false, 0},
 	};
 	for(const auto &Case : aCases)
 	{
