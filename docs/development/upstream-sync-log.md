@@ -200,6 +200,45 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 - **Android 三个 PR 都还在跑**（本轮比平时久：分支内容变化导致 NDK/Rust 缓存未命中）；
 - `Analyze (cpp)`（PR-1）与 `check-clang-tidy` 待跑；`check-clang-san` 既有红（master 在 PR #256 合并后同样红）。
 
+### 4. 下一段切片候选：48 条零重叠的初步分类（**未动手，等批准**）
+
+按「是否能直接搬 / 是否需要单独批准」粗分（标题即可判断，未逐条读 diff）：
+
+**A. Qm 相关且看起来低风险（建议下一段切片优先试摘，约 12 条）**
+
+| 提交 | 内容 |
+|------|------|
+| `6f941a85f` | 图形错误用了错误的本地化上下文 |
+| `3600493b9` | gameclient 素材多处改用 `std::fill` |
+| `c32720d3d` | 背景地图选择器的键盘导航修复 |
+| `ebbe3225b` | 「看其他人」投票速率限制修复 |
+| `0d2d717c8` | 制作人员设置页文本对齐 |
+| `301eb091f` | 删除 `CLayerGroup::m_pMap` 重复无用成员 |
+| `6dcc46307` | 爱沙尼亚语 RFC 3066 语言代码修正 |
+| `ca698e390` | `CComponent::LocalTime/time` 去重复代码 |
+| `9fcd88046` | 字体图标改用 `\u` Unicode 字面量 |
+| `5b147f6ac` | Rust 侧安全数组访问，避免越界 panic |
+| `a23094c69` | CMake：libpng 头与库须同一安装（**根 CMakeLists 类，按约定需批准**） |
+| `2ecaaf638` | sixup snapshot 翻译里 ID 重复的 workaround（**协议相关，需批准**） |
+
+**B. editor 相关（约 12 条）**：`c2cea3f30`、`ea3797c21`、`146bedace`、`5f3f631e0`、`9adf9a4a2`、
+`7e7e9367c`、`8d006c2f5`、`348f17752`、`febc07e97`、`021270e13`、`698190011`、`4ea252ff6`
+—— 大多是 envelope editor 的 UI/交互修复；按仓库约束编辑器改动需逐项批准。
+
+**C. 非目标平台（约 13 条）**：iOS 图标（`1fe2e62d1`）、Emscripten HTTP/构建/文档
+（`021dfd5c0`、`b611680ed`、`b53c14c05`、`a073f12ab`、`98ca8c95f`、`8e57ffcb4`、`7c47712d5`、
+`ef5278e0b`、`fef0d2bda`、`f3ac2c06f`）、Android/Emscripten 构建文档（`bc7839e9d`、`a814577a1`）
+—— QmClient 不发布这些目标，**不建议摘**（只会增加维护面）。
+
+**D. 纯文档/元数据（约 5 条）**：`191d99392`（macOS ASan 文档）、`3138cc24f`（.mailmap 排序）、
+`fc793d903`（构建 readme 链接）、`ae69fe474`（崩溃转储符号化说明）、`e5f5bbec8`（CONTRIBUTING 本地化）—— 可选。
+
+**E. 需协议/格式或第三方批准**：`d98e1e4ea`（server info 尺寸支持 128 人 0.7 皮肤）、
+`944cf0c2a`（Revert "Vendor libtw2"）、`2d670ac55`（Vendor libtw2）、`76700d05e`（浏览器式 Ctrl+F5/F11/F12）。
+
+**结论**：真正「又安全又相关」的只剩 A 组十来条，且其中两条还落在需批准范围内。
+这条清单同样印证 S22/S31/S39.2 的判断 —— **零重叠余量已经很薄**，主战场是按区域手工融合。
+
 ## 2026-09-24 · S38：rebase 到新 master 后的 CI 结果（PR-2 的两处红已随 master 修复转绿）
 
 ### CI（2026-09-24，新 master `7cf432eacb` 之上）
