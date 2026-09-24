@@ -11,7 +11,7 @@
 | 切片链 | `sync/slice-1-base-engine` … `sync/slice-23-official-semantics`（末端 `883a2a7d30`，约 78 条上游派生改动 + Unicode 17 数据表 + 四组自动化测试：PNG 往返 / 实体裁剪 / 钩子提示线可见性 / DB 浮点语义） |
 | PR 状态 | 三段 stacked 均已推送并开 PR：PR-1 [#263](https://github.com/wxj881027/QmClient/pull/263)（原 #259 因基线分支被删被 GitHub 关闭）、PR-2 [#260](https://github.com/wxj881027/QmClient/pull/260)、PR-3 [#261](https://github.com/wxj881027/QmClient/pull/261) |
 | 可选项分支 | `sync/opt-console-strict-args`（控制台引号参数严格化；该语义已并入链尾切片 23） |
-| 验证口径 | 链尾 `run_cxx_tests` **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**，三个 PR 边界（3329 / 3330 / 3348）**逐段零失败**：基线前移后，原先 2 例维护者新 UI 源码断言随 `origin/master` 的源侧实现一起消失 → 既零回归也零失败 |
+| 验证口径 | 链尾 `run_cxx_tests` **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**；CI 上三段 PR 的 `check-style` / Linux / macOS 与 PR-3 的 Windows 均已 PASS（上一轮 PR-2 那两处红随 master 的 PR #256 修复转绿）；`check-clang-tidy` / `check-clang-san` 仍是 master 级别的既有红（PR #256 合并后 master 两次 push 运行同样 failure） |
 | 回退自审 | 61 条 `-x` 溯源，**0 条**把「上游已回退的改动」留在链上 |
 | 工具行为验证 | S11 的「工具只有编译级证据」已补：`qmclient_scripts/tests/test_map_tools_smoke.py` 跑通 `dummy_map`（CRC32/SHA256 自校验）→ `map_convert_07` 全链路（2026-09-24 关闭） |
 | 工作流工具 | `qmclient_scripts/support/`：`upstream_status.py`（基线/冲突干跑）、`upstream_commit_check.py`（内容判定 + 回退检查）、`upstream_coverage.py`（量化差距）、`upstream_revert_audit.py`（整链回退自审） |
