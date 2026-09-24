@@ -158,6 +158,89 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S32：PR-3 在 Linux/macOS 的整数校验跨平台不一致（已修）
+
+### 现象
+
+三段 PR 的 CI 结果（首轮）：
+
+| 平台/job | PR-1 | PR-3 | 说明 |
+|----------|------|------|------|
+| `check-style` | PASS | PASS | S30 修好后两侧都过 |
+| Windows（build + run_tests + 打包校验） | PASS | PASS | |
+| Linux（build + run_tests + 打包） | PASS | **FAIL：`Run tests`** | |
+| macOS（build + run_tests + dmg 校验） | PASS | **FAIL：`Run tests`** | |
+| Android / Analyze (cpp) / check-clang-tidy | 待跑 | 待跑 | |
+| `check-clang-san` | FAIL | FAIL | **与 master 上同样的既有失败**（见下） |
+
+PR-3 的失败用例是 **`CQmEmoteCommandsTest.PreservesExistingIntegerParsing`**，失败在
+`emote 99999999999999999999`（20 位、超出 int 的整数）这一条：期望「不派发 / `LineIsValid` 为假」，
+但在 Linux/macOS 上 `LineIsValid` 为真且**实际被派发了一次**。
+
+### 根因：`str_toint` 的溢出行为依赖 `long` 的宽度
+
+采纳上游 `821d5ae4b4` 后，整数参数的校验代码是：
+
+```cpp
+int Value;
+if(!str_toint(pResult->GetString(pResult->NumArguments() - 1), &Value) ||
+	Value == std::numeric_limits<int>::max() || Value == std::numeric_limits<int>::min())
+	return PARSEARGS_INVALID_INTEGER;
+```
+
+而 `src/base/str.cpp` 的 `str_toint`（**与上游 ddnet/master 逐字相同**）是：
+
+```cpp
+int value = strtol(str, &end, 10);   // 注意：long -> int 的截断
+```
+
+于是同一个字符串在不同平台走向不同结局：
+
+| 平台 | `long` 宽度 | `strtol("99999999999999999999")` | 截断成 `int` | 校验结果 |
+|------|-------------|----------------------------------|--------------|----------|
+| Windows | 32 位 | `LONG_MAX` = 2147483647 | 2147483647 = `INT_MAX` | **拒绝**（被哨兵值拦下） |
+| Linux / macOS | 64 位 | `LONG_MAX` = 9223372036854775807 | **-1** | **放行** → 被当成 `emote -1` 派发 |
+
+用算术复核过这条推断（`trunc32(9223372036854775807) = -1`，且 -1 不等于 `INT_MAX`/`INT_MIN`）。
+交叉证据也吻合：PR-1 分支（同一份测试文件、未含这条校验改动）在 Linux 上该用例 **OK**（3309 例全过），
+只有带 `821d5ae4b4` 的 PR-3 在 Linux/macOS 上失败。
+
+### 修法
+
+`console.cpp` 的 `'i'` 校验改为**先按 64 位解析、再判 int 范围**（`INT_MAX`/`INT_MIN` 继续作为无效哨兵）：
+
+```cpp
+const char *pValue = pResult->GetString(pResult->NumArguments() - 1);
+char *pEnd = nullptr;
+const long long Value = strtoll(pValue, &pEnd, 10);
+if(pEnd == pValue || *pEnd != '\0' ||
+	Value < std::numeric_limits<int>::min() || Value > std::numeric_limits<int>::max() ||
+	Value == std::numeric_limits<int>::max() || Value == std::numeric_limits<int>::min())
+	return PARSEARGS_INVALID_INTEGER;
+```
+
+为什么不改 `str_toint`：它与上游 ddnet/master 逐字相同，改它等于在 base 层偏离上游、
+影响所有调用方；按仓库约定引擎核心/base 改动还需单独批准。这里把修复限制在
+**本次新引入的那段校验**里，Windows 行为完全不变，溢出在三个平台一致被拒绝。
+
+提交：`958d0ce85b fix(console): 整数参数校验改为按 64 位解析后判 int 范围`（分支 `sync/slice-23-official-semantics`）。
+
+**证据**
+
+| 检查 | 结果 |
+|------|------|
+| 本地 `run_cxx_tests`（Windows，修复后） | **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**（行为与修复前一致，无回归） |
+| 算术复核 | `trunc32(9223372036854775807) = -1`，旧实现放行；新实现范围检查拒绝 |
+| CI PR-3（修复后） | 本轮推送后重跑，Linux/macOS 结果待观察（见 S33） |
+
+**顺带说明 `check-clang-san` 不是本次引入**：该 job 在 `master` 的 push 运行（`36004270426`）上同样失败，
+且三份状态文件完全一致 —— `client-server: passed`、`tests: passed`、`integration: failed`
+（integration 是 mastersrv 集成测试，日志里是 `smoke_test` 等日志行超时 `TimeoutError: test timeout`）。
+本 PR 的三份状态与之逐条相同，属既有失败。
+
+**同类残留（记录，不扩大本次范围）**：`'f'`（浮点）校验用 `str_tofloat`，同样存在
+「截断/依赖 libc 行为」的味道，只是当前没有测试覆盖到溢出用例。
+
 ## 2026-09-24 · S31：三段边界在新基线上复测（全部零失败）+ 差距量化复测
 
 ### 1. PR 边界复测：三个边界都是 0 失败
