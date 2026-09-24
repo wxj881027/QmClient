@@ -158,6 +158,47 @@ base 相关提交现在**内容都已在树中**（本次直接采用 master 版
 
 
 
+## 2026-09-24 · S35：PR-2 的两处红都是**既有失败**（master 上同样红）+ PR-0 提案
+
+S34 之后 PR-3 的 Linux/macOS/style 已转绿，但 **PR-2（切片 2–9）仍是红**，逐条核对如下：
+
+| job | PR-2 | 与 master 的比对 |
+|-----|------|------------------|
+| `check-style` | PASS（2m50s） | — |
+| Windows | PASS（24m40s） | — |
+| Android | PASS（38m30s） | — |
+| Linux | **FAIL（8m48s）**：`CQmEmoteCommandsTest.PreservesExistingIntegerParsing`，失败用例 `99999999999999999999`（`LineIsValid`=true、被派发 1 次） | **master 同样红**：维护者已合并的 PR #258 Linux job（run `35875817945`）同一用例 FAILED（3309 例 / 3307 通过） |
+| macOS | **FAIL（8m33s）**：`QmRoundedRect.CachedDirectionsPreserveOriginalAnglesForEveryQuality`（1 ULP） | **master 同样红**：同一 PR #258 的 macOS job 也是这个用例 FAILED |
+| `check-clang-tidy` / `check-clang-san` | FAIL | S34 已核：master 上同 job 同步骤同样红 |
+
+也就是说：**PR-2 红的两处，都是「master 本来就红」，而修它们的两条提交目前只在链尾（PR-3）里**，
+PR-2 作为链的前缀自然拿不到。
+
+**一个说不通的点（如实记录）**：PR-1 的 Linux job 上这个溢出用例是 **OK**（3309 例 / 3308 通过），
+但 PR-1 与 PR-2 之间 `console.cpp` 只差 2 行（`Chain` 断言，与整数解析无关），
+`str_toint` 在 master / slice-1 / slice-9 / slice-23 四个引用上**逐字相同**，
+`emoticon_commands.h` 也未被改动 —— 从源码差异上解释不了 PR-1 为什么通过。
+因此把「master 上本来就红」作为结论依据（PR-258 的 job 是硬的），PR-1 那次通过按**未解释的环境差异**记录，
+不再据此推断行为。
+
+### 提案：`sync/slice-0-preexisting-fixes`（等维护者拍板）
+
+要让**三段 PR 都绿**，只能把这两条修复放到链的**最底部**（master 之后、slice-1 之前）：
+
+| 提交 | 内容 |
+|------|------|
+| 1 | `fix(console): 引号参数校验 + 整数溢出跨平台一致拒绝`（即上游 `821d5ae4b4` 的语义 + S32 的 `strtoll` 修法，合成一条） |
+| 2 | `test(client): QmRoundedRect 角度断言改用容差`（消除 macOS arm64 flaky） |
+
+代价与注意事项：
+
+- 三段 PR 的分支哈希会**再变一次**（第四次 force-push）；
+- 链尾那份 `821d5ae4b4` 的 cherry-pick 会与 slice-0 的第一条重复 → rebase 时需要丢弃该提交；
+- PR-3 的正文里「四项官方语义」需要同步改成「三项 + 一条已在 PR-0」。
+
+替代方案（不做 PR-0）：保持现状 —— PR-1 与 PR-3 绿、PR-2 带着两处既有红，
+按 1→2→3 顺序合并后 master 依然是绿的。
+
 ## 2026-09-24 · S34：macOS flaky 测试按决定改为容差比较 + CI 收口全景
 
 ### 维护者决定（2026-09-24）
