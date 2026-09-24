@@ -11,7 +11,7 @@
 | 切片链 | `sync/slice-1-base-engine` … `sync/slice-23-official-semantics`（末端 `3b3d3265af`，约 78 条上游派生改动 + Unicode 17 数据表 + 四组自动化测试：PNG 往返 / 实体裁剪 / 钩子提示线可见性 / DB 浮点语义） |
 | PR 状态 | 三段 stacked 均已推送并开 PR：PR-1 [#259](https://github.com/wxj881027/QmClient/pull/259)、PR-2 [#260](https://github.com/wxj881027/QmClient/pull/260)、PR-3 [#261](https://github.com/wxj881027/QmClient/pull/261) |
 | 可选项分支 | `sync/opt-console-strict-args`（控制台引号参数严格化；该语义已并入链尾切片 23） |
-| 验证口径 | 链尾 `run_cxx_tests` **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**：基线前移后，原先 2 例维护者新 UI 源码断言随 `origin/master` 的源侧实现一起消失 → 既零回归也零失败 |
+| 验证口径 | 链尾 `run_cxx_tests` **3348 运行 / 3347 通过 / 1 环境跳过 / 0 失败**，三个 PR 边界（3329 / 3330 / 3348）**逐段零失败**：基线前移后，原先 2 例维护者新 UI 源码断言随 `origin/master` 的源侧实现一起消失 → 既零回归也零失败 |
 | 回退自审 | 61 条 `-x` 溯源，**0 条**把「上游已回退的改动」留在链上 |
 | 工具行为验证 | S11 的「工具只有编译级证据」已补：`qmclient_scripts/tests/test_map_tools_smoke.py` 跑通 `dummy_map`（CRC32/SHA256 自校验）→ `map_convert_07` 全链路（2026-09-24 关闭） |
 | 工作流工具 | `qmclient_scripts/support/`：`upstream_status.py`（基线/冲突干跑）、`upstream_commit_check.py`（内容判定 + 回退检查）、`upstream_coverage.py`（量化差距）、`upstream_revert_audit.py`（整链回退自审） |
@@ -103,7 +103,7 @@ upstream        : ddnet/master (a9ddb8eda5, 2026-09-22)
 | 增量窗口 | 内容 | 风险 | 状态 |
 |----------|------|------|------|
 | N（20.0 之后的 nightly） | master 上 20.0 之后的 250 个非 merge 提交，按「小、可编译验证、不依赖本地缺失特性」筛选 | 低-中 | **部分完成**：已落 7 条（服务器保存/传送/限流/崩溃修复、`str_length` 循环、clang 构建、demo marker 防护）；其余按区域归入上表 |
-| 量化差距（2026-09-23） | 窗口内 1258 条非 merge 提交的逐行覆盖率：同步前 42.1% → 链尾 44.4%，**实际追上 78 条** | — | 见 `upstream-sync-log.md` S18；缺口热点：editor（未纳入）、`src/game/client`（本地重写）、`src/base/unicode`（**已在 S19 同步**） |
+| 量化差距（2026-09-24 复测） | 窗口内 1258 条非 merge 提交的逐行覆盖率：新基线 `origin/master` 42.0% → 链尾 44.6%，**本轮实际追上 88 条**（ABSENT 522 → 434） | — | 见 `upstream-sync-log.md` S31；缺口热点：`src/game/editor` 5036/8089、`src/game/client` 5020/6971（两者合计占未命中大头，都是本地重写/未纳入区域）、`src/base/unicode`（relocation 低估，已在 S19 同步） |
 | Unicode 数据 | **已完成（slice-16）**：Unicode 15.0.0 → 17.0.0，5 个文件与上游逐字节一致，生成链补全；`Str.Utf8CompConfusables` 与 name_ban 测试通过 | 低 | 完成，见 `upstream-sync-log.md` S19 |
 
 ### 结构差异地图（2026-09-23 实测）

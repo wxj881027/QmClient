@@ -11,18 +11,18 @@
 | PR-2 | `sync/slice-9-ghost-cull`（`6e1072062a`） | PR-1 分支 | [#260](https://github.com/wxj881027/QmClient/pull/260) |
 | PR-3 | `sync/slice-23-official-semantics`（`3b3d3265af`） | PR-2 分支 | [#261](https://github.com/wxj881027/QmClient/pull/261) |
 
-统一验证口径（链尾 2026-09-24 在新基线上实测；PR-1/2 边界为旧基线数据，尚待在 `6b9a41fd21` 上复测）：
+统一验证口径（2026-09-24 在新基线上逐段实测，全部零失败）：
 
-| 状态 | 运行用例 | 通过 | 失败 | 基线外新增 |
-|------|----------|------|------|------------|
-| 新基线 `6b9a41fd21`（`origin/master`） | — | — | 0 | — |
-| 旧基线 `aea1453cc7`（已弃用） | 3329 | — | 2 | — |
-| PR-1 边界 `0956e8bebb` | 待复测（旧基线 `8258823b45`：3329 / 2 失败） | — | — | — |
-| PR-2 边界 `6e1072062a` | 待复测（旧基线 `cb1305025b`：3330 / 2 失败） | — | — | — |
-| PR-3 边界 `3b3d3265af`（`sync/slice-23-official-semantics`，链尾） | **3348** | **3347** | **0** | 无 |
+| 状态 | 运行用例 | 通过 | 跳过 | 失败 | 基线外新增 |
+|------|----------|------|------|------|------------|
+| 新基线 `6b9a41fd21`（`origin/master`） | — | — | — | 0 | — |
+| 旧基线 `aea1453cc7`（已弃用） | 3329 | — | — | 2 | — |
+| PR-1 边界 `0956e8bebb` | 3329 | 3328 | 1 | **0** | 无 |
+| PR-2 边界 `6e1072062a` | 3330 | 3329 | 1 | **0** | 无 |
+| PR-3 边界 `3b3d3265af`（`sync/slice-23-official-semantics`，链尾） | 3348 | 3347 | 1 | **0** | 无 |
 
-链尾 1 例未计入通过的是环境跳过的 `QmWebSocketLive.ConnectsAndEchoesWhenServerConfigured`（未配置测试服务器）。
-**0 失败**：旧基线上那 2 例（`BaseSettingsStableTextCandidateAuditIsEmptyExceptAllowlist`、
+1 例跳过是环境相关的 `QmWebSocketLive.ConnectsAndEchoesWhenServerConfigured`（未配置测试服务器）。
+旧基线上那 2 例（`BaseSettingsStableTextCandidateAuditIsEmptyExceptAllowlist`、
 `TeeRestoresCardContentsAndKeepsDoubleClickActions`）随基线前移一起消失 —— 它们期待的源侧实现
 （`8b286754a2`，PR #258）此前不在本地基线里，属本地落后，不是同步引入的回归。
 
