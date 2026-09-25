@@ -1101,9 +1101,15 @@ void CQmAxiomScores::EnsureQueried(const char *pPlayerName)
 	if(!pPlayerName || pPlayerName[0] == '\0' || static_cast<size_t>(str_length(pPlayerName)) > AXIOM_MAX_QUERY_NAME_BYTES || !str_utf8_check(pPlayerName))
 		return;
 	// 统计页与记分板调用同一接口；选中的统计玩家继续获取双模式及 DDStats。
-	const char *pStatisticsPlayer = GameClient() ? GameClient()->m_QmClient.QmDdnetPlayerName() : nullptr;
+	const char *pStatisticsPlayer = nullptr;
+#if defined(CONF_HEADLESS_CLIENT)
+	// 无头测试不链接完整 CGameClient 对象图，此处只能使用保存的玩家名。
+	pStatisticsPlayer = g_Config.m_PlayerName;
+#else
+	pStatisticsPlayer = GameClient() ? GameClient()->m_QmClient.QmDdnetPlayerName() : nullptr;
 	if(GameClient() && (!pStatisticsPlayer || pStatisticsPlayer[0] == '\0'))
 		pStatisticsPlayer = g_Config.m_PlayerName;
+#endif
 	if(m_Mode != EQmAxiomMode::NONE && (!pStatisticsPlayer || pStatisticsPlayer[0] == '\0' || str_comp(pPlayerName, pStatisticsPlayer) != 0))
 	{
 		EnsureScoreboardQueried(pPlayerName);
