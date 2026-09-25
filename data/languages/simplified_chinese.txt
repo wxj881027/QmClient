@@ -64,6 +64,9 @@
 %i seconds left
 == 还剩下 %i 秒钟
 
+%s (/%s %s)
+== %s（/%s %s）
+
 %s and %s have swapped
 == %s 与 %s 已完成交换
 
@@ -280,6 +283,9 @@ A demo with this name already exists
 
 A folder with this name already exists
 == 已有同名文件夹
+
+a player
+== 一名玩家
 
 A player name is required.
 == 玩家名不能为空。
@@ -1442,6 +1448,9 @@ Bit flags for disabling settings tabs
 Black
 == 黑色
 
+Blank asset auto fallback
+== 空白资源自动回退
+
 Blank material
 == 空白材质
 
@@ -1927,9 +1936,6 @@ Clear local console
 
 Clear note
 == 移除备注
-
-Clear qm_bind_status_items and use the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== 清空 qm_bind_status_items，使用内置四项（卡键/锤子/分身控制/分身同步）
 
 Clear remote console
 == 清空远程控制台
@@ -2569,12 +2575,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == 自定义纵横比，按 x100 存储（例如 178=16:9，233=21:9）
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== 自定义 bind 状态 HUD 条目。为空时使用内置四项（卡键/锤子/分身控制/分身同步）。格式：变量名|状态值=文本|状态值=文本；变量名|文本（非零时显示）；变量名（仅填变量名时非零显示变量名本身）。条目用 ';' 分隔，字段用 '|' 分隔
-
-Custom bind status list
-== 自定义 bind 状态列表
 
 Custom color
 == 自定义颜色
@@ -3365,8 +3365,8 @@ Dummy is currently connected.
 Dummy jump
 == 分身跳
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== 卡键/锤子/分身控制/分身同步状态开关，以及自定义 bind 状态列表
+Dummy key/hammer/control/copy status switches
+== 卡键/锤子/分身控制/分身同步状态开关
 
 Dummy marking color
 == 分身标记颜色
@@ -3562,9 +3562,6 @@ Emoticon shadow
 
 Emoticons
 == 表情
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== 为空时使用内置四项。格式：var|0=Off|1=On；var|Text
 
 enable
 == 开启
@@ -5129,6 +5126,12 @@ Highlight ping value
 Highlight selected players in the game world
 == 高亮游戏世界中的选定玩家
 
+Highlight teammates hammering in death or freeze areas
+== 高亮在死亡或冻结区域卡锤的队友
+
+Highlight teammates holding hammer in death or freeze areas
+== 高亮在死亡或冻结区域按住锤子的队友
+
 Highlighted message
 == 被提及消息
 
@@ -5573,6 +5576,9 @@ Invalid Y coordinate.
 Invert camera drift direction
 == 反转相机漂移方向
 
+Invite %s to the locked team
+== 邀请 %s 加入锁定队伍
+
 Invite a person to a locked team
 == 邀请某人加入锁定的队伍
 
@@ -5620,6 +5626,9 @@ Join QQ group
 
 Join red
 == 加入红队
+
+Join team %s
+== 加入队伍 %s
 
 Join the team of the specified player
 == 加入指定玩家的队伍
@@ -6023,6 +6032,9 @@ Load as ghost
 Load drawings from a given csv file (defaults to map name)
 == 从指定 CSV 文件加载绘图（默认使用地图名）
 
+Load save %s
+== 载入存档 %s
+
 Load sound files in thread
 == 加载声音文件线程
 
@@ -6148,6 +6160,9 @@ Lock delay
 
 Lock team
 == 锁定队伍
+
+Lock the team so other players cannot join directly
+== 锁定队伍，其他玩家不能直接加入
 
 Locked
 == 锁定
@@ -7451,9 +7466,6 @@ Opacity
 Opacity of freeze bars inside freeze
 == 解冻进度条不透明度
 
-Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)
-== 旁观者虚拟 Tee 的不透明度（0 为完全透明）
-
 Open a matching settings card directly
 == 直接打开匹配的设置卡片
 
@@ -8471,6 +8483,24 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 显示用作背景装饰的贴图
 
+Query current map info
+== 查询当前地图信息
+
+Query map info for %s
+== 查询地图 %s 的信息
+
+Query points for %s
+== 查询玩家 %s 的分数
+
+Query rank for %s
+== 查询玩家 %s 的排名
+
+Query server setting: %s
+== 查询服务器设置：%s
+
+Query team rank for %s
+== 查询玩家 %s 所在队伍的排名
+
 Queue is empty
 == 队列为空
 
@@ -9107,6 +9137,12 @@ Reply
 Reply to messages from muted players
 == 回复静音玩家的消息
 
+Reply to the last whisper target
+== 回复上一个私聊对象
+
+Reply to the last whisper target: %s
+== 对上一个私聊对象说：%s
+
 Reply with dummy
 == 使用分身回复
 
@@ -9140,6 +9176,12 @@ Report service URL
 Reports are not available on Axiom servers
 == Axiom 服务器内不可使用举报功能
 
+Request a position swap
+== 请求交换位置
+
+Request to swap positions with %s
+== 请求和 %s 交换位置
+
 Request to swap your tee with another team member
 == 请求与另一名队友交换 Tee
 
@@ -9166,6 +9208,9 @@ Rescue to a nearby air tile
 
 Rescue/Freeze: %d/%d
 == 救援/冻结：%d/%d
+
+Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
+== 救援：自动模式下传送出冻结；手动模式下落地记录救援点，冻结时传送出去
 
 Reset
 == 重置
@@ -9481,6 +9526,12 @@ Save team with code r.
 
 Save the best demo of each race
 == 保存每场游戏最佳记录的回放
+
+Save the current team
+== 保存当前队伍
+
+Save the team as %s
+== 将队伍保存为 %s
 
 Save unsent chat draft
 == 保存未发送的聊天草稿
@@ -10196,6 +10247,9 @@ Show enemy reason
 Show entities
 == 实体层显示开关
 
+Show existing saves
+== 查看已有存档
+
 Show eye wheel and expressions
 == 显示眼轮和表情
 
@@ -10655,9 +10709,6 @@ Show scoreboard after death
 Show seconds on clock
 == 在时间处显示秒数
 
-Show semi-transparent ghost tees for other players who are spectating
-== 为正在旁观的其他玩家渲染半透明虚拟 Tee（官方行为）
-
 Show server chat messages
 == 显示来自服务器的聊天消息
 
@@ -10666,6 +10717,9 @@ Show server help and usage messages
 
 Show server prompts and Echo messages as popups
 == 将服务器提示和 Echo 消息显示为弹窗
+
+Show server settings
+== 查看服务器设置列表
 
 Show settings card borders
 == 显示设置卡片边框
@@ -10690,9 +10744,6 @@ Show song info in top-left corner
 
 Show spectator cursor
 == 显示旁观者光标
-
-Show spectator ghost tees
-== 显示旁观者的半透明 Tee
 
 Show speedometer when changing
 == 显示变化时的速度计
@@ -10772,6 +10823,9 @@ Show tiles layers from BG map
 Show toast
 == 显示提示消息
 
+Show tune zone colors
+== 显示 Tune Zone 颜色
+
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 显示影响自身玩家的调整参数信息（0 = 关闭，1 = 显示已改变的，2 = 显示全部）
 
@@ -10819,6 +10873,9 @@ Show X
 
 Show Y
 == 显示 Y
+
+Show your current team
+== 查看自己所在队伍
 
 Show zzz emoji next to afk players
 == 在挂机玩家旁显示 zzz 表情
@@ -11245,15 +11302,6 @@ Spectated player
 
 Spectated player and friends
 == 被观战的玩家与好友
-
-Spectator ghost opacity
-== 旁观者虚化程度
-
-Spectator ghost tee scope
-== 旁观者虚化 Tee 范围
-
-Spectator ghost tee scope: 0=other players including dummy, 1=all players
-== 旁观者虚化 Tee 范围：0=仅他人（包括分身），1=所有玩家
 
 Spectators
 == 旁观者
@@ -12722,6 +12770,9 @@ Unload the rank ghost
 Unlock a team
 == 解锁队伍
 
+Unlock the team
+== 解锁队伍
+
 Unmute
 == 取消静音
 
@@ -12797,11 +12848,17 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == 用于下载皮肤的 URL
 
+Usage
+== 用法
+
 Usage: %s
 == 用法：%s
 
 Usage: %s %s
 == 用法：%s %s
+
+Usage: /%s %s
+== 用法：/%s %s
 
 Use /pause first then you can kill
 == 请先使用 /pause，然后才能自杀
@@ -13268,6 +13325,9 @@ Warn about team balance
 Warning
 == 警告
 
+Water hammer highlight
+== 水域卡锤高亮
+
 Wave amount
 == 波浪幅度
 
@@ -13453,6 +13513,15 @@ Whisper option color
 
 Whisper something to someone (private message)
 == 向某人发送私聊消息
+
+Whisper to %s
+== 对 %s 说悄悄话
+
+Whisper to %s: %s
+== 对 %s 说悄悄话：%s
+
+Whisper: /w player message
+== 发送私聊：/w 玩家名 内容
 
 White
 == 白色
@@ -13843,6 +13912,9 @@ Your timeout code has been set. 0.7 clients can not reclaim their tees on timeou
 
 Your weapon slides and rotates in when you switch, and flips while reloading.
 == 切换武器时滑入旋转，装填时按装填时间翻转。
+
+yourself
+== 自己
 
 z = Zoom
 == z = 缩放

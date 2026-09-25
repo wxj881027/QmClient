@@ -20,6 +20,7 @@
 %i minutes left
 %i second left
 %i seconds left
+%s (/%s %s)
 %s and %s have swapped
 %s canceled the swap with %s
 %s canceled the swap with you
@@ -92,6 +93,7 @@ _ or ' ' = blank spacer
 a = View angle
 A demo with this name already exists
 A folder with this name already exists
+a player
 A player name is required.
 A save is already being restored. Please wait.
 A screenshot with this name already exists
@@ -479,6 +481,7 @@ Bind Wheel Key
 Binds
 Bit flags for disabling settings tabs
 Black
+Blank asset auto fallback
 Blank material
 Blank: hides this asset
 Blend mode
@@ -641,7 +644,6 @@ Clear finished
 Clear friend note
 Clear local console
 Clear note
-Clear qm_bind_status_items and use the built-in four entries (key stuck/hammer/dummy control/dummy copy)
 Clear remote console
 Clearable text...
 Clears the voting options
@@ -855,8 +857,6 @@ custom
 Custom API key
 Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-Custom bind status list
 Custom color
 Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
@@ -1120,7 +1120,7 @@ Dummy hook
 Dummy is allowed on this server.
 Dummy is currently connected.
 Dummy jump
-Dummy key/hammer/control/copy status switches and custom bind status list
+Dummy key/hammer/control/copy status switches
 Dummy marking color
 Dummy mini view
 Dummy mini view size (percent)
@@ -1186,7 +1186,6 @@ Emoticon
 Emoticon ID
 Emoticon shadow
 Emoticons
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
 enable
 Enable /swap
 Enable /team0 mode
@@ -1708,6 +1707,8 @@ Highlight game type
 Highlight message text gradient color
 Highlight ping value
 Highlight selected players in the game world
+Highlight teammates hammering in death or freeze areas
+Highlight teammates holding hammer in death or freeze areas
 Highlighted message
 Highlighted message color
 Hitbox Mode Freeze Border Color
@@ -1856,6 +1857,7 @@ Invalid translation backend
 Invalid X coordinate.
 Invalid Y coordinate.
 Invert camera drift direction
+Invite %s to the locked team
 Invite a person to a locked team
 Invites are disabled
 It's recommended that you check the settings to adjust them to your liking before joining a server.
@@ -1872,6 +1874,7 @@ Join blue
 Join game
 Join QQ group
 Join red
+Join team %s
 Join the team of the specified player
 Join Tutorial Server
 Join, version, rules, and help messages stay in chat instead of popups
@@ -2006,6 +2009,7 @@ LLM translation default concurrency (smart adjustment)
 Load
 Load as ghost
 Load drawings from a given csv file (defaults to map name)
+Load save %s
 Load sound files in thread
 Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
@@ -2048,6 +2052,7 @@ Local-only
 Locate
 Lock delay
 Lock team
+Lock the team so other players cannot join directly
 Locked
 Log output filename
 Log predicted event creation/playback and snapshot confirmation to debug double sounds.
@@ -2482,7 +2487,6 @@ Only show when the other Tee is not on screen
 Only show with this nickname
 Opacity
 Opacity of freeze bars inside freeze
-Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)
 Open a matching settings card directly
 Open bindwheel selector
 Open color picker
@@ -2822,6 +2826,12 @@ QQ group: 1076765929 (click to copy)
 QQ Music hook heartbeat timeout (milliseconds)
 QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
+Query current map info
+Query map info for %s
+Query points for %s
+Query rank for %s
+Query server setting: %s
+Query team rank for %s
 Queue is empty
 Queue preset: %s
 Quick action menu for players
@@ -3034,6 +3044,8 @@ Replay list: up to date
 Replays directory
 Reply
 Reply to messages from muted players
+Reply to the last whisper target
+Reply to the last whisper target: %s
 Reply with dummy
 Report
 Report request canceled
@@ -3045,6 +3057,8 @@ Report service App ID
 Report service signing key
 Report service URL
 Reports are not available on Axiom servers
+Request a position swap
+Request to swap positions with %s
 Request to swap your tee with another team member
 Requesting to join the game
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
@@ -3054,6 +3068,7 @@ Rescue mode changed to manual.
 Rescue mode switched to %s
 Rescue to a nearby air tile
 Rescue/Freeze: %d/%d
+Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
 Reset
 Reset a config to its default value
 Reset All
@@ -3159,6 +3174,8 @@ Save settings file on exit
 Save skin
 Save team with code r.
 Save the best demo of each race
+Save the current team
+Save the team as %s
 Save unsent chat draft
 Save-function is disabled on this server
 Save/Load Clan
@@ -3397,6 +3414,7 @@ Show enemy color in spectator menu
 Show enemy group players
 Show enemy reason
 Show entities
+Show existing saves
 Show eye wheel and expressions
 Show feat-003 shared UI primitives dogfood page (takes over QmClient settings page, for visual verification of 11 primitives + spring/easing animations)
 Show filtered words in console
@@ -3550,10 +3568,10 @@ Show score
 Show scoreboard
 Show scoreboard after death
 Show seconds on clock
-Show semi-transparent ghost tees for other players who are spectating
 Show server chat messages
 Show server help and usage messages
 Show server prompts and Echo messages as popups
+Show server settings
 Show settings card borders
 Show short server names in browser
 Show skin date and author
@@ -3562,7 +3580,6 @@ Show skin names in nameplate
 Show skin release date and author
 Show song info in top-left corner
 Show spectator cursor
-Show spectator ghost tees
 Show speedometer when changing
 Show sponsor QR code
 Show start menu image
@@ -3589,6 +3606,7 @@ Show the screen center line
 Show the server rules
 Show tiles layers from BG map
 Show toast
+Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 Show unfreeze/deep unfreeze tile outlines
 Show unknown server messages
@@ -3605,6 +3623,7 @@ Show whether you have finished a DDNet map (transmits your player name to info.d
 Show Workshop Assets
 Show X
 Show Y
+Show your current team
 Show zzz emoji next to afk players
 Showing players from other teams is disabled
 Showing the checkpoint times for '%s' with a race time of %s
@@ -3747,9 +3766,6 @@ Spectate the next player
 Spectate the previous player
 Spectated player
 Spectated player and friends
-Spectator ghost opacity
-Spectator ghost tee scope
-Spectator ghost tee scope: 0=other players including dummy, 1=all players
 Spectators
 Speech trigger threshold
 Speed
@@ -4239,6 +4255,7 @@ Unknown status
 Unknown title style
 Unload the rank ghost
 Unlock a team
+Unlock the team
 Unmute
 Unmute emoticons
 Unmute player with client ID
@@ -4264,8 +4281,10 @@ Upload map
 URL for downloading community skins
 URL for downloading maps (must start with https://)
 URL for downloading skins
+Usage
 Usage: %s
 Usage: %s %s
+Usage: /%s %s
 Use /pause first then you can kill
 Use /qm Yes [number] to restore a save, or /qm No to dismiss.
 Use 12 hour clock
@@ -4421,6 +4440,7 @@ Warmup
 Warmup time before round (in seconds)
 Warn about team balance
 Warning
+Water hammer highlight
 Wave amount
 Wave speed (0.01 rad/s)
 Wave wavelength
@@ -4483,6 +4503,9 @@ Which message to display on zone leave; use 0 for normal area
 Whisper
 Whisper option color
 Whisper something to someone (private message)
+Whisper to %s
+Whisper to %s: %s
+Whisper: /w player message
 White
 Why are you slowmo replaying to read this?
 Width
@@ -4613,6 +4636,7 @@ Your team was killed because it couldn't finish anymore and hasn't entered /prac
 Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 Your weapon slides and rotates in when you switch, and flips while reloading.
+yourself
 z = Zoom
 Zen Mode
 Zen mode key

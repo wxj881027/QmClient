@@ -3363,70 +3363,16 @@ key = "Blank asset auto fallback"
 [message.translations]
 simplified_chinese = "空白资源自动回退"
 traditional_chinese = "空白資源自動回退"
-
-[[message]]
-key = "Show spectator ghost tees"
-[message.translations]
-simplified_chinese = "显示旁观者的半透明 Tee"
-traditional_chinese = "顯示旁觀者的半透明 Tee"
-japanese = "観戦ゴースト Tee を表示"
-korean = "관전자 유령 Tee 표시"
-russian = "Показывать призрачные Tee наблюдателей"
-german = "Geister-Tees von Zuschauern anzeigen"
-spanish = "Mostrar tees fantasma de espectadores"
-french = "Afficher les tees fantômes des spectateurs"
-brazilian_portuguese = "Mostrar tees fantasma dos espectadores"
-portuguese = "Mostrar tees fantasma dos espectadores"
-turkish = "İzleyici hayalet Tee'lerini göster"
-polish = "Pokaż duchy Tee obserwatorów"
-
-[[message]]
-key = "Spectator ghost tee scope"
-[message.translations]
-simplified_chinese = "旁观者虚化 Tee 范围"
-traditional_chinese = "旁觀者虛化 Tee 範圍"
-japanese = "観戦ゴースト Tee の範囲"
-korean = "관전자 유령 Tee 범위"
-russian = "Область призрачных Tee наблюдателей"
-german = "Bereich der Zuschauer-Geister-Tees"
-spanish = "Alcance de los tees fantasma de espectadores"
-french = "Portée des tees fantômes des spectateurs"
-brazilian_portuguese = "Escopo dos tees fantasma dos espectadores"
-portuguese = "Âmbito dos tees fantasma dos espectadores"
-turkish = "İzleyici hayalet Tee kapsamı"
-polish = "Zakres duchów Tee obserwatorów"
-
-[[message]]
-key = "Spectator ghost tee scope: 0=other players including dummy, 1=all players"
-[message.translations]
-simplified_chinese = "旁观者虚化 Tee 范围：0=仅他人（包括分身），1=所有玩家"
-traditional_chinese = "旁觀者虛化 Tee 範圍：0=僅他人（包括分身），1=所有玩家"
-japanese = "観戦ゴースト Tee の範囲：0=他人のみ（ダミーを含む）、1=全プレイヤー"
-korean = "관전자 유령 Tee 범위: 0=다른 플레이어만(더미 포함), 1=모든 플레이어"
-russian = "Область призрачных Tee: 0=только другие игроки (включая dummy), 1=все игроки"
-german = "Bereich der Geister-Tees: 0=nur andere (einschließlich Dummy), 1=alle Spieler"
-spanish = "Alcance de los tees fantasma: 0=solo otros (incluido el dummy), 1=todos los jugadores"
-french = "Portée des tees fantômes : 0=autres uniquement (dummy compris), 1=tous les joueurs"
-brazilian_portuguese = "Escopo dos tees fantasma: 0=apenas outros (incluindo dummy), 1=todos os jogadores"
-portuguese = "Âmbito dos tees fantasma: 0=apenas outros (incluindo dummy), 1=todos os jogadores"
-turkish = "Hayalet Tee kapsamı: 0=sadece diğerleri (dummy dahil), 1=tüm oyuncular"
-polish = "Zakres duchów Tee: 0=tylko inni (w tym dummy), 1=wszyscy gracze"
-
-[[message]]
-key = "Show semi-transparent ghost tees for other players who are spectating"
-[message.translations]
-simplified_chinese = "为正在旁观的其他玩家渲染半透明虚拟 Tee（官方行为）"
-traditional_chinese = "為正在旁觀的其他玩家渲染半透明虛擬 Tee（官方行為）"
-japanese = "観戦中の他プレイヤーに半透明のゴースト Tee を表示"
-korean = "관전 중인 다른 플레이어의 반투명 유령 Tee 표시"
-russian = "Показывать полупрозрачных призраков Tee для игроков, находящихся в режиме наблюдения"
-german = "Halbtransparente Geister-Tees für andere Spieler anzeigen, die zuschauen"
-spanish = "Mostrar tees fantasma semitransparentes para otros jugadores que están espectando"
-french = "Afficher des tees fantômes semi-transparents pour les autres joueurs en spectateur"
-brazilian_portuguese = "Mostrar tees fantasma semitransparentes para outros jogadores que estão espectando"
-portuguese = "Mostrar tees fantasma semitransparentes para outros jogadores que estão a assistir"
-turkish = "İzleyen diğer oyuncular için yarı saydam hayalet Tee göster"
-polish = "Pokaż półprzezroczyste duchy Tee dla innych graczy w trybie obserwatora"
+japanese = "空白アセットの自動フォールバック"
+korean = "빈 자산 자동 대체"
+russian = "Автоматический откат пустого ресурса"
+german = "Automatischer Fallback für leere Assets"
+spanish = "Fallback automático de recursos vacíos"
+french = "Retour automatique pour les ressources vides"
+brazilian_portuguese = "Fallback automático de recurso vazio"
+portuguese = "Fallback automático de recurso vazio"
+turkish = "Boş varlık için otomatik geri dönüş"
+polish = "Automatyczny powrót pustego zasobu"
 
 [[message]]
 key = "Automatically launch Steam when the client is started externally"
@@ -3492,37 +3438,6 @@ portuguese = "Integração com o Steam"
 turkish = "Steam entegrasyonu"
 polish = "Integracja ze Steam"
 
-[[message]]
-key = "Spectator ghost opacity"
-[message.translations]
-simplified_chinese = "旁观者虚化程度"
-traditional_chinese = "旁觀者虛化程度"
-japanese = "観戦ゴーストの不透明度"
-korean = "관전자 고스트 불투명도"
-russian = "Непрозрачность призраков наблюдателей"
-german = "Deckkraft der Zuschauer-Geister"
-spanish = "Opacidad del fantasma del espectador"
-french = "Opacité du fantôme du spectateur"
-brazilian_portuguese = "Opacidade do fantasma do espectador"
-portuguese = "Opacidade do fantasma do espectador"
-turkish = "İzleyici hayaleti opaklığı"
-polish = "Krycie ducha obserwatora"
-
-[[message]]
-key = "Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)"
-[message.translations]
-simplified_chinese = "旁观者虚拟 Tee 的不透明度（0 为完全透明）"
-traditional_chinese = "旁觀者虛擬 Tee 的不透明度（0 為完全透明）"
-japanese = "観戦中のプレイヤーに表示されるゴースト Tee の不透明度（0 = 完全に透明）"
-korean = "관전 중인 플레이어에게 표시되는 유령 Tee의 불투명도 (0 = 완전 투명)"
-russian = "Непрозрачность призраков Tee, отображаемых для игроков в режиме наблюдения (0 = полностью прозрачный)"
-german = "Deckkraft der Geister-Tees, die für zuschauende Spieler angezeigt werden (0 = vollständig transparent)"
-spanish = "Opacidad de los tees fantasma mostrados para jugadores que están espectando (0 = totalmente transparente)"
-french = "Opacité des tees fantômes affichés pour les joueurs en spectateur (0 = entièrement transparent)"
-brazilian_portuguese = "Opacidade dos tees fantasma exibidos para jogadores que estão espectando (0 = totalmente transparente)"
-portuguese = "Opacidade dos tees fantasma mostrados para jogadores que estão a assistir (0 = totalmente transparente)"
-turkish = "İzleyen oyuncular için gösterilen hayalet Tee'lerin opaklığı (0 = tamamen saydam)"
-polish = "Krycie duchów Tee pokazywanych graczom w trybie obserwatora (0 = całkowicie przezroczyste)"
 
 [[message]]
 key = "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"
@@ -27130,38 +27045,6 @@ turkish = "Dummy senkronizasyon durumunu göster"
 polish = "Pokaż status synchronizacji kukły"
 
 [[message]]
-key = "Custom bind status list"
-[message.translations]
-simplified_chinese = "自定义 bind 状态列表"
-traditional_chinese = "自訂 bind 狀態列表"
-japanese = "カスタム bind 状態リスト"
-korean = "사용자 지정 bind 상태 목록"
-russian = "Список пользовательских bind-статусов"
-german = "Benutzerdefinierte Bind-Status-Liste"
-spanish = "Lista de estado de bind personalizada"
-french = "Liste des états de bind personnalisés"
-brazilian_portuguese = "Lista de estado de bind personalizada"
-portuguese = "Lista de estado de bind personalizada"
-turkish = "Özel bind durumu listesi"
-polish = "Lista niestandardowych stanów bind"
-
-[[message]]
-key = "Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text"
-[message.translations]
-simplified_chinese = "为空时使用内置四项。格式：var|0=Off|1=On；var|Text"
-traditional_chinese = "為空時使用內建四項。格式：var|0=Off|1=On；var|Text"
-japanese = "空の場合は組み込みの4項目。形式：var|0=Off|1=On；var|Text"
-korean = "비어 있으면 내장 4개 항목. 형식: var|0=Off|1=On; var|Text"
-russian = "Пусто — встроенные 4 элемента. Формат: var|0=Off|1=On; var|Text"
-german = "Leer: die 4 integrierten Einträge. Format: var|0=Off|1=On; var|Text"
-spanish = "Vacío: las 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
-french = "Vide : les 4 entrées intégrées. Format : var|0=Off|1=On ; var|Text"
-brazilian_portuguese = "Vazio: as 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
-portuguese = "Vazio: as 4 entradas integradas. Formato: var|0=Off|1=On; var|Text"
-turkish = "Boş: yerleşik 4 girdi. Biçim: var|0=Off|1=On; var|Text"
-polish = "Puste: 4 wbudowane wpisy. Format: var|0=Off|1=On; var|Text"
-
-[[message]]
 key = "DDRace HUD Pro"
 [message.translations]
 simplified_chinese = 'DDRace HUD Pro'
@@ -27178,20 +27061,68 @@ turkish = 'DDRace HUD Pro（dummy durumu）'
 polish = 'DDRace HUD Pro（status dummy）'
 
 [[message]]
-key = "Dummy key/hammer/control/copy status switches and custom bind status list"
+key = "Dummy key/hammer/control/copy status switches"
 [message.translations]
-simplified_chinese = '卡键/锤子/分身控制/分身同步状态开关，以及自定义 bind 状态列表'
-traditional_chinese = '卡鍵/錘子/分身控制/分身同步狀態開關，以及自訂 bind 狀態列表'
-japanese = 'キー固定/ハンマー/分身操作/分身同期の状態スイッチとカスタム bind 状態リスト'
-korean = '키 고정/해머/분신 조작/분신 동기화 상태 스위치와 사용자 지정 bind 상태 목록'
-russian = 'Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми и пользовательский список состояния bind'
-german = 'Status-Schalter für Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation und benutzerdefinierte Bind-Status-Liste'
-spanish = 'Interruptores de estado de fijación de teclas/martillo/control de dummy/sincronización de dummy y lista de estado de bind personalizada'
-french = "Interrupteurs d'état de blocage des touches/marteau/contrôle du dummy/synchronisation du dummy et liste d'états de bind personnalisés"
-brazilian_portuguese = 'Interruptores de estado de fixação de teclas/martelo/controle do dummy/sincronização do dummy e lista de estado de bind personalizada'
-portuguese = 'Interruptores de estado de fixação de teclas/martelo/controlo do dummy/sincronização do dummy e lista de estado de bind personalizada'
-turkish = 'Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları ve özel bind durumu listesi'
-polish = 'Przełączniki stanu blokady klawiszy/młota/sterowania dummy/synchronizacji dummy oraz lista niestandardowych stanów bind'
+simplified_chinese = "卡键/锤子/分身控制/分身同步状态开关"
+traditional_chinese = "卡鍵/錘子/分身控制/分身同步狀態開關"
+japanese = "キー固定/ハンマー/分身操作/分身同期の状態スイッチ"
+korean = "키 고정/해머/분신 조작/분신 동기화 상태 스위치"
+russian = "Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми"
+german = "Status-Schalter für Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation"
+spanish = "Interruptores de estado de fijación de teclas/martillo/control de dummy/sincronización de dummy"
+french = "Interrupteurs d'état de blocage des touches/marteau/contrôle du dummy/synchronisation du dummy"
+brazilian_portuguese = "Interruptores de estado de fixação de teclas/martelo/controle do dummy/sincronização do dummy"
+portuguese = "Interruptores de estado de fixação de teclas/martelo/controlo do dummy/sincronização do dummy"
+turkish = "Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları"
+polish = "Przełączniki stanu blokady klawiszy/młota/sterowania dummy/synchronizacji dummy"
+
+[[message]]
+key = "Water hammer highlight"
+[message.translations]
+simplified_chinese = "水域卡锤高亮"
+traditional_chinese = "水域卡錘高亮"
+japanese = "水中ハンマーのハイライト"
+korean = "수중 해머 하이라이트"
+russian = "Подсветка молота в воде"
+german = "Wasser-Hammer-Hervorhebung"
+spanish = "Resaltado del martillo en agua"
+french = "Surlignage du marteau dans l'eau"
+brazilian_portuguese = "Destaque do martelo na água"
+portuguese = "Destaque do martelo na água"
+turkish = "Suda çekiç vurgusu"
+polish = "Podświetlenie młota w wodzie"
+
+[[message]]
+key = "Highlight teammates holding hammer in death or freeze areas"
+[message.translations]
+simplified_chinese = "高亮在死亡或冻结区域按住锤子的队友"
+traditional_chinese = "高亮在死亡或凍結區域按住錘子的隊友"
+japanese = "死亡または凍結エリアでハンマーを押し続けているチームメイトを強調表示"
+korean = "죽음 또는 동결 구역에서 해머를 누르고 있는 팀원 강조"
+russian = "Подсвечивать союзников, удерживающих молот в зонах смерти или заморозки"
+german = "Teammitglieder hervorheben, die in Todes- oder Frostbereichen den Hammer halten"
+spanish = "Resaltar a los compañeros que mantienen el martillo en zonas de muerte o congelación"
+french = "Surligner les coéquipiers qui maintiennent le marteau dans les zones de mort ou de gel"
+brazilian_portuguese = "Destacar companheiros que seguram o martelo em áreas de morte ou congelamento"
+portuguese = "Destacar companheiros que seguram o martelo em áreas de morte ou congelamento"
+turkish = "Ölüm veya donma alanlarında çekici basılı tutan takım arkadaşlarını vurgula"
+polish = "Podświetlaj sojuszników trzymających młot w strefach śmierci lub zamrożenia"
+
+[[message]]
+key = "Highlight teammates hammering in death or freeze areas"
+[message.translations]
+simplified_chinese = "高亮在死亡或冻结区域卡锤的队友"
+traditional_chinese = "高亮在死亡或凍結區域卡錘的隊友"
+japanese = "死亡または凍結エリアでハンマーを振っているチームメイトを強調表示"
+korean = "죽음 또는 동결 구역에서 해머를 휘두르는 팀원 강조"
+russian = "Подсвечивать союзников, работающих молотом в зонах смерти или заморозки"
+german = "Teammitglieder hervorheben, die in Todes- oder Frostbereichen hämmern"
+spanish = "Resaltar a los compañeros que martillean en zonas de muerte o congelación"
+french = "Surligner les coéquipiers qui martèlent dans les zones de mort ou de gel"
+brazilian_portuguese = "Destacar companheiros martelando em áreas de morte ou congelamento"
+portuguese = "Destacar companheiros a martelar em áreas de morte ou congelamento"
+turkish = "Ölüm veya donma alanlarında çekiç sallayan takım arkadaşlarını vurgula"
+polish = "Podświetlaj sojuszników uderzających młotem w strefach śmierci lub zamrożenia"
 
 [[message]]
 key = "Sponsor title"

@@ -64,6 +64,9 @@
 %i seconds left
 == Осталось %i секунд
 
+%s (/%s %s)
+== %s (/%s %s)
+
 %s and %s have swapped
 == %s и %s обменялись
 
@@ -280,6 +283,9 @@ A demo with this name already exists
 
 A folder with this name already exists
 == Папка с таким именем уже существует
+
+a player
+== игрок
 
 A player name is required.
 == Требуется имя игрока.
@@ -1442,6 +1448,9 @@ Bit flags for disabling settings tabs
 Black
 == Чёрный
 
+Blank asset auto fallback
+== Автоматический откат пустого ресурса
+
 Blank material
 == Пустой материал
 
@@ -1927,9 +1936,6 @@ Clear local console
 
 Clear note
 == Удалить заметку
-
-Clear qm_bind_status_items and use the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== Очистить qm_bind_status_items и использовать встроенные 4 элемента (фиксация клавиш/молот/управление дамми/синхронизация дамми)
 
 Clear remote console
 == Очистить удалённую консоль
@@ -2569,12 +2575,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Пользовательское соотношение сторон, хранится как x100 (например, 178=16:9, 233=21:9)
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== Пользовательские элементы HUD состояния bind. Пусто — встроенные 4 элемента (фиксация клавиш/молот/управление дамми/синхронизация дамми). Формат: переменная|значение=текст|значение=текст; переменная|текст (показывать при ненулевом значении); переменная (только имя переменной — показывать имя при ненулевом значении). Элементы разделяются ';', поля — '|'
-
-Custom bind status list
-== Список пользовательских bind-статусов
 
 Custom color
 == Пользовательский цвет
@@ -3365,8 +3365,8 @@ Dummy is currently connected.
 Dummy jump
 == Прыжок дамми
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми и пользовательский список состояния bind
+Dummy key/hammer/control/copy status switches
+== Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми
 
 Dummy marking color
 == Цвет метки дамми
@@ -3562,9 +3562,6 @@ Emoticon shadow
 
 Emoticons
 == Эмотиконы
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== Пусто — встроенные 4 элемента. Формат: var|0=Off|1=On; var|Text
 
 enable
 == включить
@@ -5129,6 +5126,12 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
+Highlight teammates hammering in death or freeze areas
+== Подсвечивать союзников, работающих молотом в зонах смерти или заморозки
+
+Highlight teammates holding hammer in death or freeze areas
+== Подсвечивать союзников, удерживающих молот в зонах смерти или заморозки
+
 Highlighted message
 == Выделенное сообщение
 
@@ -5573,6 +5576,9 @@ Invalid Y coordinate.
 Invert camera drift direction
 == Инвертировать направление дрейфа камеры
 
+Invite %s to the locked team
+== Пригласить %s в закрытую команду
+
 Invite a person to a locked team
 == Пригласить человека в заблокированную команду
 
@@ -5620,6 +5626,9 @@ Join QQ group
 
 Join red
 == Присоединиться к красным
+
+Join team %s
+== Вступить в команду %s
 
 Join the team of the specified player
 == Присоединиться к команде указанного игрока
@@ -6023,6 +6032,9 @@ Load as ghost
 Load drawings from a given csv file (defaults to map name)
 == Загрузить рисунки из указанного CSV-файла (по умолчанию имя карты)
 
+Load save %s
+== Загрузить сохранение %s
+
 Load sound files in thread
 == Загружать звуковые файлы в потоке
 
@@ -6148,6 +6160,9 @@ Lock delay
 
 Lock team
 == Заблокировать команду
+
+Lock the team so other players cannot join directly
+== Закрыть команду, чтобы другие игроки не могли войти напрямую
 
 Locked
 == Заблокировано
@@ -7451,9 +7466,6 @@ Opacity
 Opacity of freeze bars inside freeze
 == Прозрачность полос разморозки внутри заморозки
 
-Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)
-== Непрозрачность призраков Tee, отображаемых для игроков в режиме наблюдения (0 = полностью прозрачный)
-
 Open a matching settings card directly
 == Open a matching settings card directly
 
@@ -8471,6 +8483,24 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Квады используются для фонового декора
 
+Query current map info
+== Запросить информацию о текущей карте
+
+Query map info for %s
+== Запросить информацию о карте %s
+
+Query points for %s
+== Запросить очки игрока %s
+
+Query rank for %s
+== Запросить ранг игрока %s
+
+Query server setting: %s
+== Запросить настройку сервера: %s
+
+Query team rank for %s
+== Запросить ранг команды игрока %s
+
 Queue is empty
 == Очередь пуста
 
@@ -9107,6 +9137,12 @@ Reply
 Reply to messages from muted players
 == Отвечать на сообщения от заглушённых игроков
 
+Reply to the last whisper target
+== Ответить последнему адресату шёпота
+
+Reply to the last whisper target: %s
+== Ответить последнему адресату шепота: %s
+
 Reply with dummy
 == Ответить дамми
 
@@ -9140,6 +9176,12 @@ Report service URL
 Reports are not available on Axiom servers
 == Жалобы недоступны на серверах Axiom
 
+Request a position swap
+== Запросить обмен позициями
+
+Request to swap positions with %s
+== Запросить обмен позициями с %s
+
 Request to swap your tee with another team member
 == Запросить обмен вашего ти с другим членом команды
 
@@ -9166,6 +9208,9 @@ Rescue to a nearby air tile
 
 Rescue/Freeze: %d/%d
 == Спасение/Заморозка: %d/%d
+
+Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
+== Спасение: автоматический режим телепортирует из заморозки; ручной режим записывает точку спасения при приземлении и телепортирует при заморозке
 
 Reset
 == Сбросить
@@ -9481,6 +9526,12 @@ Save team with code r.
 
 Save the best demo of each race
 == Сохранять лучшую демку каждого забега
+
+Save the current team
+== Сохранить текущую команду
+
+Save the team as %s
+== Сохранить команду как %s
 
 Save unsent chat draft
 == Сохранять черновик неотправленного сообщения чата
@@ -10196,6 +10247,9 @@ Show enemy reason
 Show entities
 == Показать сущности
 
+Show existing saves
+== Показать существующие сохранения
+
 Show eye wheel and expressions
 == Показывать колесо глаза и выражения
 
@@ -10655,9 +10709,6 @@ Show scoreboard after death
 Show seconds on clock
 == Показывать секунды на часах
 
-Show semi-transparent ghost tees for other players who are spectating
-== Показывать полупрозрачных призраков Tee для игроков, находящихся в режиме наблюдения
-
 Show server chat messages
 == Показывать серверные сообщения чата
 
@@ -10666,6 +10717,9 @@ Show server help and usage messages
 
 Show server prompts and Echo messages as popups
 == Show server prompts and Echo messages as popups
+
+Show server settings
+== Показать настройки сервера
 
 Show settings card borders
 == Показывать границы карточек настроек
@@ -10690,9 +10744,6 @@ Show song info in top-left corner
 
 Show spectator cursor
 == Показывать курсор наблюдателя
-
-Show spectator ghost tees
-== Показывать призрачные Tee наблюдателей
 
 Show speedometer when changing
 == Показывать спидометр при изменении
@@ -10772,6 +10823,9 @@ Show tiles layers from BG map
 Show toast
 == Показать toast
 
+Show tune zone colors
+== Показывать цвета tune-зон
+
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Показывать параметры настройки, влияющие на своего игрока (0 = Выкл, 1 = Показывать изменённые, 2 = Показывать все)
 
@@ -10819,6 +10873,9 @@ Show X
 
 Show Y
 == Показывать Y
+
+Show your current team
+== Показать свою текущую команду
 
 Show zzz emoji next to afk players
 == Показывать эмодзи zzz рядом с AFK-игроками
@@ -11245,15 +11302,6 @@ Spectated player
 
 Spectated player and friends
 == Наблюдаемый игрок и друзья
-
-Spectator ghost opacity
-== Непрозрачность призраков наблюдателей
-
-Spectator ghost tee scope
-== Область призрачных Tee наблюдателей
-
-Spectator ghost tee scope: 0=other players including dummy, 1=all players
-== Область призрачных Tee: 0=только другие игроки (включая dummy), 1=все игроки
 
 Spectators
 == Наблюдатели
@@ -12722,6 +12770,9 @@ Unload the rank ghost
 Unlock a team
 == Разблокировать команду
 
+Unlock the team
+== Разблокировать команду
+
 Unmute
 == Снять заглушение
 
@@ -12797,11 +12848,17 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == URL для загрузки скинов
 
+Usage
+== Использование
+
 Usage: %s
 == Использование: %s
 
 Usage: %s %s
 == Использование: %s %s
+
+Usage: /%s %s
+== Использование: /%s %s
 
 Use /pause first then you can kill
 == Сначала используйте /pause, потом сможете умереть
@@ -13268,6 +13325,9 @@ Warn about team balance
 Warning
 == Предупреждение
 
+Water hammer highlight
+== Подсветка молота в воде
+
 Wave amount
 == Амплитуда волны
 
@@ -13453,6 +13513,15 @@ Whisper option color
 
 Whisper something to someone (private message)
 == Шепнуть что-то кому-то (личное сообщение)
+
+Whisper to %s
+== Шепнуть %s
+
+Whisper to %s: %s
+== Шепнуть %s: %s
+
+Whisper: /w player message
+== Шёпот: /w игрок сообщение
 
 White
 == Белый
@@ -13843,6 +13912,9 @@ Your timeout code has been set. 0.7 clients can not reclaim their tees on timeou
 
 Your weapon slides and rotates in when you switch, and flips while reloading.
 == При смене оружие въезжает с поворотом, а при перезарядке переворачивается.
+
+yourself
+== себя
 
 z = Zoom
 == z = Масштаб

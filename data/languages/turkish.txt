@@ -64,6 +64,9 @@
 %i seconds left
 == %i saniye kaldı
 
+%s (/%s %s)
+== %s (/%s %s)
+
 %s and %s have swapped
 == %s ve %s yer değiştirdi
 
@@ -280,6 +283,9 @@ A demo with this name already exists
 
 A folder with this name already exists
 == Bu isimde bir klasör zaten mevcut
+
+a player
+== bir oyuncu
 
 A player name is required.
 == Oyuncu adı gereklidir.
@@ -1442,6 +1448,9 @@ Bit flags for disabling settings tabs
 Black
 == Siyah
 
+Blank asset auto fallback
+== Boş varlık için otomatik geri dönüş
+
 Blank material
 == Boş materyal
 
@@ -1927,9 +1936,6 @@ Clear local console
 
 Clear note
 == Notu temizle
-
-Clear qm_bind_status_items and use the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== Yerleşik 4 öğeyi kullanmak için qm_bind_status_items öğesini temizle (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu)
 
 Clear remote console
 == Uzak konsolu temizle
@@ -2569,12 +2575,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Özel En Boy Oranı, x100 ile Saklanır (örn. 178=16:9, 233=21:9)
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== Özel bind durumu HUD girdileri. Boş: yerleşik 4 girdi (tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu). Biçim: değişken|değer=metin|değer=metin; değişken|metin (sıfır değilken göster); değişken (yalnızca ad: sıfır değilken adı göster). Girdiler ';' ile, alanlar '|' ile ayrılır
-
-Custom bind status list
-== Özel bind durumu listesi
 
 Custom color
 == Özel renk
@@ -3365,8 +3365,8 @@ Dummy is currently connected.
 Dummy jump
 == Kukla zıplaması
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları ve özel bind durumu listesi
+Dummy key/hammer/control/copy status switches
+== Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları
 
 Dummy marking color
 == Kukla işaret rengi
@@ -3562,9 +3562,6 @@ Emoticon shadow
 
 Emoticons
 == İfadeler
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== Boş: yerleşik 4 girdi. Biçim: var|0=Off|1=On; var|Text
 
 enable
 == etkinleştir
@@ -5129,6 +5126,12 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
+Highlight teammates hammering in death or freeze areas
+== Ölüm veya donma alanlarında çekiç sallayan takım arkadaşlarını vurgula
+
+Highlight teammates holding hammer in death or freeze areas
+== Ölüm veya donma alanlarında çekici basılı tutan takım arkadaşlarını vurgula
+
 Highlighted message
 == Vurgulanan mesaj
 
@@ -5573,6 +5576,9 @@ Invalid Y coordinate.
 Invert camera drift direction
 == Kamera Sürüklenme Yönünü Ters Çevir
 
+Invite %s to the locked team
+== %s oyuncusunu kilitli takıma davet et
+
 Invite a person to a locked team
 == Bir kişiyi kilitli bir takıma davet et
 
@@ -5620,6 +5626,9 @@ Join QQ group
 
 Join red
 == Kırmızıya katıl
+
+Join team %s
+== %s takımına katıl
 
 Join the team of the specified player
 == Belirtilen oyuncunun takımına katıl
@@ -6023,6 +6032,9 @@ Load as ghost
 Load drawings from a given csv file (defaults to map name)
 == Verilen bir csv dosyasından çizimleri yükle (varsayılan harita adı)
 
+Load save %s
+== %s kaydını yükle
+
 Load sound files in thread
 == Ses dosyalarını iş parçacığında yükle
 
@@ -6148,6 +6160,9 @@ Lock delay
 
 Lock team
 == Takımı kilitle
+
+Lock the team so other players cannot join directly
+== Diğer oyuncular doğrudan katılamasın diye takımı kilitle
 
 Locked
 == Kilitli
@@ -7451,9 +7466,6 @@ Opacity
 Opacity of freeze bars inside freeze
 == Dondurucu içindeki çözülme çubuklarının opaklığı
 
-Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)
-== İzleyen oyuncular için gösterilen hayalet Tee'lerin opaklığı (0 = tamamen saydam)
-
 Open a matching settings card directly
 == Open a matching settings card directly
 
@@ -8471,6 +8483,24 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Dörtgenler arka plan dekorasyonu için kullanılır
 
+Query current map info
+== Geçerli harita bilgisini sorgula
+
+Query map info for %s
+== %s haritasının bilgisini sorgula
+
+Query points for %s
+== %s oyuncusunun puanını sorgula
+
+Query rank for %s
+== %s oyuncusunun sıralamasını sorgula
+
+Query server setting: %s
+== Sunucu ayarını sorgula: %s
+
+Query team rank for %s
+== %s oyuncusunun takım sıralamasını sorgula
+
 Queue is empty
 == Sıra boş
 
@@ -9107,6 +9137,12 @@ Reply
 Reply to messages from muted players
 == Sessize alınmış oyunculardan gelen mesajlara yanıt ver
 
+Reply to the last whisper target
+== Son fısıltı hedefine yanıt ver
+
+Reply to the last whisper target: %s
+== Son fısıltı hedefine yanıt ver: %s
+
 Reply with dummy
 == Dummy ile yanıtla
 
@@ -9140,6 +9176,12 @@ Report service URL
 Reports are not available on Axiom servers
 == Axiom sunucularında rapor kullanılamaz
 
+Request a position swap
+== Konum takası iste
+
+Request to swap positions with %s
+== %s ile konum takası iste
+
 Request to swap your tee with another team member
 == Tee'ni başka bir takım arkadaşıyla takas etmeyi iste
 
@@ -9166,6 +9208,9 @@ Rescue to a nearby air tile
 
 Rescue/Freeze: %d/%d
 == Kurtarma/Donma: %d/%d
+
+Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
+== Kurtarma: otomatik mod donmadan çıkarır; manuel mod inişte bir kurtarma noktası kaydeder ve donduğunda ışınlar
 
 Reset
 == Sıfırla
@@ -9481,6 +9526,12 @@ Save team with code r.
 
 Save the best demo of each race
 == Her yarışın en iyi demosunu kaydet
+
+Save the current team
+== Geçerli takımı kaydet
+
+Save the team as %s
+== Takımı %s olarak kaydet
 
 Save unsent chat draft
 == Gönderilmemiş sohbet taslağını kaydet
@@ -10196,6 +10247,9 @@ Show enemy reason
 Show entities
 == Varlıkları göster
 
+Show existing saves
+== Mevcut kayıtları göster
+
 Show eye wheel and expressions
 == Göz tekerleği ve ifadeleri göster
 
@@ -10655,9 +10709,6 @@ Show scoreboard after death
 Show seconds on clock
 == Saatte saniyeleri göster
 
-Show semi-transparent ghost tees for other players who are spectating
-== İzleyen diğer oyuncular için yarı saydam hayalet Tee göster
-
 Show server chat messages
 == Sunucu sohbet mesajlarını göster
 
@@ -10666,6 +10717,9 @@ Show server help and usage messages
 
 Show server prompts and Echo messages as popups
 == Show server prompts and Echo messages as popups
+
+Show server settings
+== Sunucu ayarlarını göster
 
 Show settings card borders
 == Ayar kartı kenarlıklarını göster
@@ -10690,9 +10744,6 @@ Show song info in top-left corner
 
 Show spectator cursor
 == İzleyici imlecini göster
-
-Show spectator ghost tees
-== İzleyici hayalet Tee'lerini göster
 
 Show speedometer when changing
 == Değişiklik sırasında hız göstergesini göster
@@ -10772,6 +10823,9 @@ Show tiles layers from BG map
 Show toast
 == Toast'ı göster
 
+Show tune zone colors
+== Tune bölge renklerini göster
+
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Kendi oyuncunu etkileyen ayar parametrelerini göster (0=Kapalı, 1=Değişenleri göster, 2=Tümünü göster)
 
@@ -10819,6 +10873,9 @@ Show X
 
 Show Y
 == Y'yi göster
+
+Show your current team
+== Geçerli takımını göster
 
 Show zzz emoji next to afk players
 == AFK oyuncuların yanında zzz emojisini göster
@@ -11245,15 +11302,6 @@ Spectated player
 
 Spectated player and friends
 == İzlenen oyuncu ve arkadaşlar
-
-Spectator ghost opacity
-== İzleyici hayaleti opaklığı
-
-Spectator ghost tee scope
-== İzleyici hayalet Tee kapsamı
-
-Spectator ghost tee scope: 0=other players including dummy, 1=all players
-== Hayalet Tee kapsamı: 0=sadece diğerleri (dummy dahil), 1=tüm oyuncular
 
 Spectators
 == İzleyiciler
@@ -12722,6 +12770,9 @@ Unload the rank ghost
 Unlock a team
 == Bir takımın kilidini aç
 
+Unlock the team
+== Takımın kilidini aç
+
 Unmute
 == Sessize almayı kaldır
 
@@ -12797,11 +12848,17 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == Skin indirmek için URL
 
+Usage
+== Kullanım
+
 Usage: %s
 == Kullanım: %s
 
 Usage: %s %s
 == Kullanım: %s %s
+
+Usage: /%s %s
+== Kullanım: /%s %s
 
 Use /pause first then you can kill
 == Önce /pause kullanın, sonra ölebilirsiniz
@@ -13268,6 +13325,9 @@ Warn about team balance
 Warning
 == Uyarı
 
+Water hammer highlight
+== Suda çekiç vurgusu
+
 Wave amount
 == Dalga miktarı
 
@@ -13453,6 +13513,15 @@ Whisper option color
 
 Whisper something to someone (private message)
 == Birine bir şey fısılda (özel mesaj)
+
+Whisper to %s
+== %s kişisine fısılda
+
+Whisper to %s: %s
+== %s kişisine fısılda: %s
+
+Whisper: /w player message
+== Fısıltı: /w oyuncu mesaj
 
 White
 == Beyaz
@@ -13843,6 +13912,9 @@ Your timeout code has been set. 0.7 clients can not reclaim their tees on timeou
 
 Your weapon slides and rotates in when you switch, and flips while reloading.
 == Silah değiştirirken kayarak dönerek girer, şarjör doldururken takla atar.
+
+yourself
+== kendiniz
 
 z = Zoom
 == z = Yakınlaştırma

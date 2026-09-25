@@ -441,7 +441,7 @@ def extract_known_indirect_records(path: Path, content: str) -> list[SourceKeyRe
 
     if normalized.endswith("src/game/client/components/qmclient/menus_qmclient.cpp"):
         localized_wrapper_re = re.compile(
-            r"\b(?:RenderCheckbox|RenderDropDown|RenderIntOption|RenderLabel|RenderLyricsSlider|"
+            r"\b(?:RenderCheckbox|RenderCheckboxTipped|RenderDropDown|RenderIntOption|RenderLabel|RenderLyricsSlider|"
             r"RenderLyricSlider|RenderPassword|RenderSection|RenderSlider|RenderText|RenderValue)\s*\("
         )
         for match in localized_wrapper_re.finditer(content):

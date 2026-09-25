@@ -64,6 +64,9 @@
 %i seconds left
 == Il reste %i secondes
 
+%s (/%s %s)
+== %s (/%s %s)
+
 %s and %s have swapped
 == %s et %s ont échangé leurs places
 
@@ -280,6 +283,9 @@ A demo with this name already exists
 
 A folder with this name already exists
 == Un dossier avec ce nom existe déjà
+
+a player
+== un joueur
 
 A player name is required.
 == Un nom de joueur est requis.
@@ -1442,6 +1448,9 @@ Bit flags for disabling settings tabs
 Black
 == Noir
 
+Blank asset auto fallback
+== Retour automatique pour les ressources vides
+
 Blank material
 == Matériau vide
 
@@ -1927,9 +1936,6 @@ Clear local console
 
 Clear note
 == Effacer la note
-
-Clear qm_bind_status_items and use the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== Effacer qm_bind_status_items et utiliser les 4 entrées intégrées (blocage des touches/marteau/contrôle du dummy/synchronisation du dummy)
 
 Clear remote console
 == Effacer la console distante
@@ -2569,12 +2575,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == Rapport hauteur/largeur personnalisé, stocké multiplié par 100 (ex. 178=16:9, 233=21:9)
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== Entrées HUD d'état de bind personnalisées. Vide : les 4 entrées intégrées (blocage des touches/marteau/contrôle du dummy/synchronisation du dummy). Format : variable|valeur=texte|valeur=texte ; variable|texte (affiché si non nul) ; variable (nom seul : affiché si non nul). Entrées séparées par ';', champs par '|'
-
-Custom bind status list
-== Liste des états de bind personnalisés
 
 Custom color
 == Couleur personnalisée
@@ -3365,8 +3365,8 @@ Dummy is currently connected.
 Dummy jump
 == Saut du Dummy
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== Interrupteurs d'état de blocage des touches/marteau/contrôle du dummy/synchronisation du dummy et liste d'états de bind personnalisés
+Dummy key/hammer/control/copy status switches
+== Interrupteurs d'état de blocage des touches/marteau/contrôle du dummy/synchronisation du dummy
 
 Dummy marking color
 == Couleur de marquage du Dummy
@@ -3562,9 +3562,6 @@ Emoticon shadow
 
 Emoticons
 == Émoticônes
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== Vide : les 4 entrées intégrées. Format : var|0=Off|1=On ; var|Text
 
 enable
 == activer
@@ -5129,6 +5126,12 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
+Highlight teammates hammering in death or freeze areas
+== Surligner les coéquipiers qui martèlent dans les zones de mort ou de gel
+
+Highlight teammates holding hammer in death or freeze areas
+== Surligner les coéquipiers qui maintiennent le marteau dans les zones de mort ou de gel
+
 Highlighted message
 == Message surligné
 
@@ -5573,6 +5576,9 @@ Invalid Y coordinate.
 Invert camera drift direction
 == Inverser la direction de dérive de la caméra
 
+Invite %s to the locked team
+== Inviter %s dans l’équipe verrouillée
+
 Invite a person to a locked team
 == Inviter une personne dans une équipe verrouillée
 
@@ -5620,6 +5626,9 @@ Join QQ group
 
 Join red
 == Rejoindre rouge
+
+Join team %s
+== Rejoindre l’équipe %s
 
 Join the team of the specified player
 == Rejoindre l'équipe du joueur spécifié
@@ -6023,6 +6032,9 @@ Load as ghost
 Load drawings from a given csv file (defaults to map name)
 == Charger les dessins depuis un fichier csv donné (par défaut le nom de la carte)
 
+Load save %s
+== Charger la sauvegarde %s
+
 Load sound files in thread
 == Charger les fichiers sonores dans un thread
 
@@ -6148,6 +6160,9 @@ Lock delay
 
 Lock team
 == Verrouiller l'équipe
+
+Lock the team so other players cannot join directly
+== Verrouiller l’équipe pour empêcher les autres joueurs de la rejoindre directement
 
 Locked
 == Verrouillé
@@ -7451,9 +7466,6 @@ Opacity
 Opacity of freeze bars inside freeze
 == Opacité des barres de dégel dans le freeze
 
-Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)
-== Opacité des tees fantômes affichés pour les joueurs en spectateur (0 = entièrement transparent)
-
 Open a matching settings card directly
 == Open a matching settings card directly
 
@@ -8471,6 +8483,24 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Les quads sont utilisés pour la décoration de fond
 
+Query current map info
+== Consulter les informations de la carte actuelle
+
+Query map info for %s
+== Consulter les informations de la carte %s
+
+Query points for %s
+== Consulter les points de %s
+
+Query rank for %s
+== Consulter le rang de %s
+
+Query server setting: %s
+== Consulter le réglage serveur : %s
+
+Query team rank for %s
+== Consulter le rang de l’équipe de %s
+
 Queue is empty
 == La file est vide
 
@@ -9107,6 +9137,12 @@ Reply
 Reply to messages from muted players
 == Répondre aux messages des joueurs muets
 
+Reply to the last whisper target
+== Répondre au dernier destinataire de chuchotement
+
+Reply to the last whisper target: %s
+== Répondre au dernier destinataire du chuchotement : %s
+
 Reply with dummy
 == Répondre avec le dummy
 
@@ -9140,6 +9176,12 @@ Report service URL
 Reports are not available on Axiom servers
 == Les signalements ne sont pas disponibles sur les serveurs Axiom
 
+Request a position swap
+== Demander un échange de position
+
+Request to swap positions with %s
+== Demander un échange de position avec %s
+
 Request to swap your tee with another team member
 == Demander à échanger votre tee avec un autre membre de l'équipe
 
@@ -9166,6 +9208,9 @@ Rescue to a nearby air tile
 
 Rescue/Freeze: %d/%d
 == Sauvetage/Gel : %d/%d
+
+Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
+== Sauvetage : le mode automatique téléporte hors du gel ; le mode manuel enregistre un point de sauvetage à l'atterrissage et téléporte en cas de gel
 
 Reset
 == Réinitialiser
@@ -9481,6 +9526,12 @@ Save team with code r.
 
 Save the best demo of each race
 == Sauvegarder la meilleure démo de chaque course
+
+Save the current team
+== Sauvegarder l’équipe actuelle
+
+Save the team as %s
+== Sauvegarder l’équipe sous %s
 
 Save unsent chat draft
 == Sauvegarder le brouillon de chat non envoyé
@@ -10196,6 +10247,9 @@ Show enemy reason
 Show entities
 == Afficher les entités
 
+Show existing saves
+== Afficher les sauvegardes existantes
+
 Show eye wheel and expressions
 == Afficher la roue des yeux et les expressions
 
@@ -10655,9 +10709,6 @@ Show scoreboard after death
 Show seconds on clock
 == Afficher les secondes sur l'horloge
 
-Show semi-transparent ghost tees for other players who are spectating
-== Afficher des tees fantômes semi-transparents pour les autres joueurs en spectateur
-
 Show server chat messages
 == Afficher les messages de discussion du serveur
 
@@ -10666,6 +10717,9 @@ Show server help and usage messages
 
 Show server prompts and Echo messages as popups
 == Show server prompts and Echo messages as popups
+
+Show server settings
+== Afficher les paramètres du serveur
 
 Show settings card borders
 == Afficher les bordures des cartes de paramètres
@@ -10690,9 +10744,6 @@ Show song info in top-left corner
 
 Show spectator cursor
 == Afficher le curseur du spectateur
-
-Show spectator ghost tees
-== Afficher les tees fantômes des spectateurs
 
 Show speedometer when changing
 == Afficher le compteur de vitesse lors du changement
@@ -10772,6 +10823,9 @@ Show tiles layers from BG map
 Show toast
 == Afficher le toast
 
+Show tune zone colors
+== Afficher les couleurs des zones de tune
+
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == Afficher les paramètres de réglage affectant son propre joueur (0 = Désactivé, 1 = Afficher modifiés, 2 = Afficher tout)
 
@@ -10819,6 +10873,9 @@ Show X
 
 Show Y
 == Afficher Y
+
+Show your current team
+== Afficher votre équipe actuelle
 
 Show zzz emoji next to afk players
 == Afficher l'emoji zzz à côté des joueurs AFK
@@ -11245,15 +11302,6 @@ Spectated player
 
 Spectated player and friends
 == Joueur observé et amis
-
-Spectator ghost opacity
-== Opacité du fantôme du spectateur
-
-Spectator ghost tee scope
-== Portée des tees fantômes des spectateurs
-
-Spectator ghost tee scope: 0=other players including dummy, 1=all players
-== Portée des tees fantômes : 0=autres uniquement (dummy compris), 1=tous les joueurs
 
 Spectators
 == Spectateurs
@@ -12722,6 +12770,9 @@ Unload the rank ghost
 Unlock a team
 == Déverrouiller une équipe
 
+Unlock the team
+== Déverrouiller l’équipe
+
 Unmute
 == Démuter
 
@@ -12797,11 +12848,17 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == URL pour télécharger les skins
 
+Usage
+== Utilisation
+
 Usage: %s
 == Utilisation : %s
 
 Usage: %s %s
 == Utilisation : %s %s
+
+Usage: /%s %s
+== Utilisation : /%s %s
 
 Use /pause first then you can kill
 == Utilisez d'abord /pause, ensuite vous pourrez mourir
@@ -13268,6 +13325,9 @@ Warn about team balance
 Warning
 == Avertissement
 
+Water hammer highlight
+== Surlignage du marteau dans l'eau
+
 Wave amount
 == Amplitude de l'onde
 
@@ -13453,6 +13513,15 @@ Whisper option color
 
 Whisper something to someone (private message)
 == Chuchoter quelque chose à quelqu'un (message privé)
+
+Whisper to %s
+== Chuchoter à %s
+
+Whisper to %s: %s
+== Chuchoter à %s : %s
+
+Whisper: /w player message
+== Chuchotement : /w joueur message
 
 White
 == Blanc
@@ -13843,6 +13912,9 @@ Your timeout code has been set. 0.7 clients can not reclaim their tees on timeou
 
 Your weapon slides and rotates in when you switch, and flips while reloading.
 == L'arme entre en glissant et en tournant lors du changement, et se retourne pendant le rechargement.
+
+yourself
+== vous-même
 
 z = Zoom
 == z = Zoom | Référence chinois simplifié : z = 缩放

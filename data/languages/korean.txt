@@ -64,6 +64,9 @@
 %i seconds left
 == %i 초 남음
 
+%s (/%s %s)
+== %s (/%s %s)
+
 %s and %s have swapped
 == %s와 %s가 교환했습니다
 
@@ -280,6 +283,9 @@ A demo with this name already exists
 
 A folder with this name already exists
 == 이 이름의 폴더가 이미 존재합니다.
+
+a player
+== 한 명의 플레이어
 
 A player name is required.
 == 플레이어 이름이 필요합니다.
@@ -1442,6 +1448,9 @@ Bit flags for disabling settings tabs
 Black
 == 검정
 
+Blank asset auto fallback
+== 빈 자산 자동 대체
+
 Blank material
 == 빈 소재
 
@@ -1927,9 +1936,6 @@ Clear local console
 
 Clear note
 == 메모 지우기
-
-Clear qm_bind_status_items and use the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== qm_bind_status_items를 비우고 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)을 사용
 
 Clear remote console
 == 원격 콘솔 지우기
@@ -2569,12 +2575,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == 사용자 정의 화면비, x100 배율로 저장 (예: 178=16:9, 233=21:9)
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== 사용자 지정 bind 상태 HUD 항목입니다. 비어 있으면 내장 4개 항목(키 고정/해머/분신 조작/분신 동기화)을 사용합니다. 형식: 변수명|상태값=텍스트|상태값=텍스트; 변수명|텍스트(0이 아닐 때 표시); 변수명(변수명만 입력 시 0이 아닐 때 변수명 표시). 항목은 ';', 필드는 '|'로 구분합니다
-
-Custom bind status list
-== 사용자 지정 bind 상태 목록
 
 Custom color
 == 사용자 정의 색상
@@ -3365,8 +3365,8 @@ Dummy is currently connected.
 Dummy jump
 == 더미 점프
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== 키 고정/해머/분신 조작/분신 동기화 상태 스위치와 사용자 지정 bind 상태 목록
+Dummy key/hammer/control/copy status switches
+== 키 고정/해머/분신 조작/분신 동기화 상태 스위치
 
 Dummy marking color
 == 더미 마킹 색상
@@ -3562,9 +3562,6 @@ Emoticon shadow
 
 Emoticons
 == 이모티콘
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== 비어 있으면 내장 4개 항목. 형식: var|0=Off|1=On; var|Text
 
 enable
 == 활성화
@@ -5129,6 +5126,12 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
+Highlight teammates hammering in death or freeze areas
+== 죽음 또는 동결 구역에서 해머를 휘두르는 팀원 강조
+
+Highlight teammates holding hammer in death or freeze areas
+== 죽음 또는 동결 구역에서 해머를 누르고 있는 팀원 강조
+
 Highlighted message
 == 강조된 메시지
 
@@ -5573,6 +5576,9 @@ Invalid Y coordinate.
 Invert camera drift direction
 == 카메라 드리프트 방향 반전
 
+Invite %s to the locked team
+== 잠긴 팀에 %s 초대
+
 Invite a person to a locked team
 == 잠긴 팀에 사람 초대
 
@@ -5620,6 +5626,9 @@ Join QQ group
 
 Join red
 == 레드팀 참가
+
+Join team %s
+== 팀 %s에 가입
 
 Join the team of the specified player
 == 지정된 플레이어의 팀에 가입
@@ -6023,6 +6032,9 @@ Load as ghost
 Load drawings from a given csv file (defaults to map name)
 == 지정된 CSV 파일에서 그림 불러오기 (기본값은 맵 이름)
 
+Load save %s
+== 저장 %s 불러오기
+
 Load sound files in thread
 == 스레드에서 사운드 파일 로드
 
@@ -6148,6 +6160,9 @@ Lock delay
 
 Lock team
 == 팀 잠금
+
+Lock the team so other players cannot join directly
+== 다른 플레이어가 직접 가입할 수 없도록 팀 잠그기
 
 Locked
 == 잠김
@@ -7451,9 +7466,6 @@ Opacity
 Opacity of freeze bars inside freeze
 == 얼음 안에서의 해동 게이지 불투명도
 
-Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)
-== 관전 중인 플레이어에게 표시되는 유령 Tee의 불투명도 (0 = 완전 투명)
-
 Open a matching settings card directly
 == Open a matching settings card directly
 
@@ -8471,6 +8483,24 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 배경 장식에 사용되는 쿼드 표시
 
+Query current map info
+== 현재 맵 정보 조회
+
+Query map info for %s
+== %s 맵 정보 조회
+
+Query points for %s
+== %s의 점수 조회
+
+Query rank for %s
+== %s의 순위 조회
+
+Query server setting: %s
+== 서버 설정 조회: %s
+
+Query team rank for %s
+== %s의 팀 순위 조회
+
 Queue is empty
 == 대기열이 비어 있습니다
 
@@ -9107,6 +9137,12 @@ Reply
 Reply to messages from muted players
 == 음소거된 플레이어의 메시지에 답장
 
+Reply to the last whisper target
+== 마지막 귓속말 대상에게 답장
+
+Reply to the last whisper target: %s
+== 마지막 귓속말 대상에게 답장: %s
+
 Reply with dummy
 == 더미로 답장
 
@@ -9140,6 +9176,12 @@ Report service URL
 Reports are not available on Axiom servers
 == Axiom 서버에서는 신고 기능을 사용할 수 없습니다
 
+Request a position swap
+== 위치 교환 요청
+
+Request to swap positions with %s
+== %s 님과 위치 교환 요청
+
 Request to swap your tee with another team member
 == 다른 팀원과 티를 교체하도록 요청
 
@@ -9166,6 +9208,9 @@ Rescue to a nearby air tile
 
 Rescue/Freeze: %d/%d
 == 구조/얼음: %d/%d
+
+Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
+== 구조: 자동 모드는 프리즈에서 텔레포트; 수동 모드는 착지 시 구조 지점을 기록하고 프리즈 시 텔레포트
 
 Reset
 == 초기화
@@ -9481,6 +9526,12 @@ Save team with code r.
 
 Save the best demo of each race
 == 각 레이스의 최고 데모 저장
+
+Save the current team
+== 현재 팀 저장
+
+Save the team as %s
+== 팀을 %s(으)로 저장
 
 Save unsent chat draft
 == 전송되지 않은 채팅 초안 저장
@@ -10196,6 +10247,9 @@ Show enemy reason
 Show entities
 == 엔티티 표시
 
+Show existing saves
+== 저장된 팀 목록 보기
+
 Show eye wheel and expressions
 == 눈 휠과 표정 표시
 
@@ -10655,9 +10709,6 @@ Show scoreboard after death
 Show seconds on clock
 == 시계에 초 표시
 
-Show semi-transparent ghost tees for other players who are spectating
-== 관전 중인 다른 플레이어의 반투명 유령 Tee 표시
-
 Show server chat messages
 == 서버 채팅 메시지 표시
 
@@ -10666,6 +10717,9 @@ Show server help and usage messages
 
 Show server prompts and Echo messages as popups
 == Show server prompts and Echo messages as popups
+
+Show server settings
+== 서버 설정 보기
 
 Show settings card borders
 == 설정 카드 테두리 표시
@@ -10690,9 +10744,6 @@ Show song info in top-left corner
 
 Show spectator cursor
 == 관전자 커서 표시
-
-Show spectator ghost tees
-== 관전자 유령 Tee 표시
 
 Show speedometer when changing
 == 변경 시 속도계 표시
@@ -10772,6 +10823,9 @@ Show tiles layers from BG map
 Show toast
 == 토스트 메시지 표시
 
+Show tune zone colors
+== tune zone 영역 색상 표시
+
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 자신의 플레이어에 영향을 미치는 튜닝 파라미터 표시 (0 = 끄기, 1 = 변경된 것만 표시, 2 = 모두 표시)
 
@@ -10819,6 +10873,9 @@ Show X
 
 Show Y
 == Y 표시
+
+Show your current team
+== 현재 팀 보기
 
 Show zzz emoji next to afk players
 == 자리 비움 플레이어 옆에 zzz 이모지 표시
@@ -11245,15 +11302,6 @@ Spectated player
 
 Spectated player and friends
 == 관전 중인 플레이어와 친구
-
-Spectator ghost opacity
-== 관전자 고스트 불투명도
-
-Spectator ghost tee scope
-== 관전자 유령 Tee 범위
-
-Spectator ghost tee scope: 0=other players including dummy, 1=all players
-== 관전자 유령 Tee 범위: 0=다른 플레이어만(더미 포함), 1=모든 플레이어
 
 Spectators
 == 관전자
@@ -12722,6 +12770,9 @@ Unload the rank ghost
 Unlock a team
 == 팀 잠금 해제
 
+Unlock the team
+== 팀 잠금 해제
+
 Unmute
 == 음소거 해제
 
@@ -12797,11 +12848,17 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == 스킨 다운로드 URL
 
+Usage
+== 사용법
+
 Usage: %s
 == 사용법: %s
 
 Usage: %s %s
 == 사용법: %s %s
+
+Usage: /%s %s
+== 사용법: /%s %s
 
 Use /pause first then you can kill
 == 먼저 /pause 를 사용한 다음 자살할 수 있습니다
@@ -13268,6 +13325,9 @@ Warn about team balance
 Warning
 == 경고
 
+Water hammer highlight
+== 수중 해머 하이라이트
+
 Wave amount
 == 파도 크기
 
@@ -13453,6 +13513,15 @@ Whisper option color
 
 Whisper something to someone (private message)
 == 누군가에게 귓속말 보내기 (개인 메시지)
+
+Whisper to %s
+== %s 님에게 귓속말
+
+Whisper to %s: %s
+== %s 님에게 귓속말: %s
+
+Whisper: /w player message
+== 귓속말: /w 플레이어 메시지
 
 White
 == 흰색
@@ -13843,6 +13912,9 @@ Your timeout code has been set. 0.7 clients can not reclaim their tees on timeou
 
 Your weapon slides and rotates in when you switch, and flips while reloading.
 == 무기를 바꿀 때 미끄러지듯 회전하며 등장하고, 재장전 중에는 뒤집힙니다.
+
+yourself
+== 자신
 
 z = Zoom
 == z = 확대/축소

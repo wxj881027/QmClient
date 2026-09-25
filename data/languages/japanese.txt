@@ -64,6 +64,9 @@
 %i seconds left
 == 残り %i 秒
 
+%s (/%s %s)
+== %s（/%s %s）
+
 %s and %s have swapped
 == %s と %s が交換しました
 
@@ -280,6 +283,9 @@ A demo with this name already exists
 
 A folder with this name already exists
 == この名前のフォルダーは既に存在します
+
+a player
+== プレイヤー
 
 A player name is required.
 == プレイヤー名が必要です。
@@ -1442,6 +1448,9 @@ Bit flags for disabling settings tabs
 Black
 == 黒
 
+Blank asset auto fallback
+== 空白アセットの自動フォールバック
+
 Blank material
 == 空白素材
 
@@ -1927,9 +1936,6 @@ Clear local console
 
 Clear note
 == メモをクリア
-
-Clear qm_bind_status_items and use the built-in four entries (key stuck/hammer/dummy control/dummy copy)
-== qm_bind_status_items をクリアして組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）を使用
 
 Clear remote console
 == リモートコンソールをクリア
@@ -2569,12 +2575,6 @@ Custom aspect ratio
 
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == カスタムアスペクト比、x100 で保存（例：178=16:9、233=21:9）
-
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-== カスタム bind 状態 HUD エントリ。空の場合は組み込みの4項目（キー固定/ハンマー/分身操作/分身同期）。形式：変数名|状態値=テキスト|状態値=テキスト；変数名|テキスト（非ゼロ時に表示）；変数名（変数名のみの場合は非ゼロ時に変数名を表示）。エントリは ';' で、フィールドは '|' で区切る
-
-Custom bind status list
-== カスタム bind 状態リスト
 
 Custom color
 == カスタムカラー
@@ -3365,8 +3365,8 @@ Dummy is currently connected.
 Dummy jump
 == ダミージャンプ
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== キー固定/ハンマー/分身操作/分身同期の状態スイッチとカスタム bind 状態リスト
+Dummy key/hammer/control/copy status switches
+== キー固定/ハンマー/分身操作/分身同期の状態スイッチ
 
 Dummy marking color
 == ダミーマーキング色
@@ -3562,9 +3562,6 @@ Emoticon shadow
 
 Emoticons
 == エモート
-
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== 空の場合は組み込みの4項目。形式：var|0=Off|1=On；var|Text
 
 enable
 == 有効
@@ -5129,6 +5126,12 @@ Highlight ping value
 Highlight selected players in the game world
 == Highlight selected players in the game world
 
+Highlight teammates hammering in death or freeze areas
+== 死亡または凍結エリアでハンマーを振っているチームメイトを強調表示
+
+Highlight teammates holding hammer in death or freeze areas
+== 死亡または凍結エリアでハンマーを押し続けているチームメイトを強調表示
+
 Highlighted message
 == ハイライトメッセージ
 
@@ -5573,6 +5576,9 @@ Invalid Y coordinate.
 Invert camera drift direction
 == カメラドリフト方向を反転
 
+Invite %s to the locked team
+== %s をロックされたチームに招待
+
 Invite a person to a locked team
 == ロックされたチームにプレイヤーを招待
 
@@ -5620,6 +5626,9 @@ Join QQ group
 
 Join red
 == 赤チームに参加
+
+Join team %s
+== チーム %s に参加
 
 Join the team of the specified player
 == 指定されたプレイヤーのチームに参加
@@ -6023,6 +6032,9 @@ Load as ghost
 Load drawings from a given csv file (defaults to map name)
 == 指定された CSV ファイルから描画を読み込み（デフォルトはマップ名）
 
+Load save %s
+== セーブ %s をロード
+
 Load sound files in thread
 == スレッドでサウンドファイルを読み込む
 
@@ -6148,6 +6160,9 @@ Lock delay
 
 Lock team
 == チームをロック
+
+Lock the team so other players cannot join directly
+== チームをロックして他のプレイヤーが直接参加できないようにする
 
 Locked
 == ロック済み
@@ -7451,9 +7466,6 @@ Opacity
 Opacity of freeze bars inside freeze
 == フリーズ内のフリーズバーの不透明度
 
-Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)
-== 観戦中のプレイヤーに表示されるゴースト Tee の不透明度（0 = 完全に透明）
-
 Open a matching settings card directly
 == Open a matching settings card directly
 
@@ -8471,6 +8483,24 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 背景装飾に使用されるクアッド
 
+Query current map info
+== 現在のマップ情報を照会
+
+Query map info for %s
+== %s のマップ情報を照会
+
+Query points for %s
+== %s のポイントを照会
+
+Query rank for %s
+== %s のランクを照会
+
+Query server setting: %s
+== サーバー設定を照会：%s
+
+Query team rank for %s
+== %s のチームランクを照会
+
 Queue is empty
 == キューが空です
 
@@ -9107,6 +9137,12 @@ Reply
 Reply to messages from muted players
 == ミュートされたプレイヤーからのメッセージに返信
 
+Reply to the last whisper target
+== 最後の whisper 相手に返信
+
+Reply to the last whisper target: %s
+== 最後の whisper 相手に送信：%s
+
 Reply with dummy
 == ダミーで返信
 
@@ -9140,6 +9176,12 @@ Report service URL
 Reports are not available on Axiom servers
 == Axiom サーバーではレポート機能は利用できません
 
+Request a position swap
+== 位置交換をリクエスト
+
+Request to swap positions with %s
+== %s との位置交換をリクエスト
+
 Request to swap your tee with another team member
 == 別のチームメンバーと Tee を交換するリクエスト
 
@@ -9166,6 +9208,9 @@ Rescue to a nearby air tile
 
 Rescue/Freeze: %d/%d
 == 救助/フリーズ：%d/%d
+
+Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
+== レスキュー：自動モードはフリーズからテレポート；手動モードは着地時にレスキューポイントを記録し、フリーズ時にテレポート
 
 Reset
 == リセット
@@ -9481,6 +9526,12 @@ Save team with code r.
 
 Save the best demo of each race
 == 各レースのベストデモを保存
+
+Save the current team
+== 現在のチームを保存
+
+Save the team as %s
+== チームを %s として保存
 
 Save unsent chat draft
 == 未送信のチャット下書きを保存
@@ -10196,6 +10247,9 @@ Show enemy reason
 Show entities
 == エンティティ表示
 
+Show existing saves
+== 既存のセーブを表示
+
 Show eye wheel and expressions
 == 目のホイールと表情を表示
 
@@ -10655,9 +10709,6 @@ Show scoreboard after death
 Show seconds on clock
 == 時計に秒を表示
 
-Show semi-transparent ghost tees for other players who are spectating
-== 観戦中の他プレイヤーに半透明のゴースト Tee を表示
-
 Show server chat messages
 == サーバーのチャットメッセージを表示
 
@@ -10666,6 +10717,9 @@ Show server help and usage messages
 
 Show server prompts and Echo messages as popups
 == Show server prompts and Echo messages as popups
+
+Show server settings
+== サーバー設定を表示
 
 Show settings card borders
 == 設定カードの枠線を表示
@@ -10690,9 +10744,6 @@ Show song info in top-left corner
 
 Show spectator cursor
 == 観戦者カーソルを表示
-
-Show spectator ghost tees
-== 観戦ゴースト Tee を表示
 
 Show speedometer when changing
 == 変更時にスピードメーターを表示
@@ -10772,6 +10823,9 @@ Show tiles layers from BG map
 Show toast
 == トーストを表示
 
+Show tune zone colors
+== tune zone の領域色を表示
+
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 自身のプレイヤーに影響するチューニングパラメーターを表示（0 = オフ、1 = 変更のみ表示、2 = すべて表示）
 
@@ -10819,6 +10873,9 @@ Show X
 
 Show Y
 == Y を表示
+
+Show your current team
+== 現在のチームを表示
 
 Show zzz emoji next to afk players
 == AFK プレイヤーの横に zzz 絵文字を表示
@@ -11245,15 +11302,6 @@ Spectated player
 
 Spectated player and friends
 == 観戦中のプレイヤーとフレンド
-
-Spectator ghost opacity
-== 観戦ゴーストの不透明度
-
-Spectator ghost tee scope
-== 観戦ゴースト Tee の範囲
-
-Spectator ghost tee scope: 0=other players including dummy, 1=all players
-== 観戦ゴースト Tee の範囲：0=他人のみ（ダミーを含む）、1=全プレイヤー
 
 Spectators
 == 観戦者
@@ -12722,6 +12770,9 @@ Unload the rank ghost
 Unlock a team
 == チームのロックを解除
 
+Unlock the team
+== チームをアンロック
+
 Unmute
 == ミュート解除
 
@@ -12797,11 +12848,17 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == スキン用ダウンロード URL
 
+Usage
+== 使い方
+
 Usage: %s
 == 使い方：%s
 
 Usage: %s %s
 == 使用方法: %s %s
+
+Usage: /%s %s
+== 使い方：/%s %s
 
 Use /pause first then you can kill
 == 先に /pause を使ってから自殺してください
@@ -13268,6 +13325,9 @@ Warn about team balance
 Warning
 == 警告
 
+Water hammer highlight
+== 水中ハンマーのハイライト
+
 Wave amount
 == 波の振幅
 
@@ -13453,6 +13513,15 @@ Whisper option color
 
 Whisper something to someone (private message)
 == 誰かにささやく（プライベートメッセージ）
+
+Whisper to %s
+== %s にささやく
+
+Whisper to %s: %s
+== %s にささやく: %s
+
+Whisper: /w player message
+== ウィスパー：/w プレイヤー名 メッセージ
 
 White
 == 白
@@ -13843,6 +13912,9 @@ Your timeout code has been set. 0.7 clients can not reclaim their tees on timeou
 
 Your weapon slides and rotates in when you switch, and flips while reloading.
 == 武器切り替え時にスライドしながら回転し、リロード中は回転して裏返ります。
+
+yourself
+== 自分自身
 
 z = Zoom
 == z = ズーム
