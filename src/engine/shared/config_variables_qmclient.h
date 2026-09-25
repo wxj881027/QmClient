@@ -38,7 +38,8 @@ MACRO_CONFIG_COL(QmUiCardColor, qm_ui_card_color, 0x000000, CFGFLAG_CLIENT | CFG
 MACRO_CONFIG_INT(QmUiCardOpacity, qm_ui_card_opacity, 30, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card background transparency")
 MACRO_CONFIG_INT(QmUiIconColor, qm_ui_icon_color, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow")
 MACRO_CONFIG_COL(QmUiIconCustomColor, qm_ui_icon_custom_color, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI custom icon color")
-MACRO_CONFIG_COL(QmUiIconDuotoneSecondaryColor, qm_ui_icon_duotone_secondary_color, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI duotone secondary icon color")
+MACRO_CONFIG_COL(QmUiIconDuotoneSecondaryColor, qm_ui_icon_duotone_secondary_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Qm UI duotone secondary icon color")
+MACRO_CONFIG_INT(QmUiIconDuotoneSecondaryColorMigrated, qm_ui_icon_duotone_secondary_color_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Duotone icon secondary color alpha migration completed flag")
 MACRO_CONFIG_INT(QmUiIconWeight, qm_ui_icon_weight, 1, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone")
 MACRO_CONFIG_INT(QmUiColorInterpolation, qm_ui_color_interpolation, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform")
 MACRO_CONFIG_INT(QmRectCornerSegments, qm_rect_corner_segments, 16, 8, 48, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI rounded corner segments (even numbers recommended)")
@@ -523,6 +524,7 @@ MACRO_CONFIG_INT(QmShowTuneZoneColors, qm_show_tune_zone_colors, 0, 0, 1, CFGFLA
 MACRO_CONFIG_INT(QmBlankAssetFallback, qm_blank_asset_fallback, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)")
 MACRO_CONFIG_INT(QmShowSpectatorGhosts, qm_show_spectator_ghosts, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show semi-transparent ghost tees for other players who are spectating")
 MACRO_CONFIG_INT(QmSpectatorGhostAlpha, qm_spectator_ghost_alpha, 50, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)")
+MACRO_CONFIG_INT(QmSpectatorGhostScope, qm_spectator_ghost_scope, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spectator ghost tee scope: 0=other players including dummy, 1=all players")
 
 // Skin queue - 皮肤队列
 MACRO_CONFIG_INT(QmSkinQueueEnabled, qm_skin_queue_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable skin queue rotation")
