@@ -624,7 +624,7 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 
 	const auto &ResetToStartPosition = [&](EScanFileResult Result) -> EScanFileResult {
 		// Cannot play or seek without at least one keyframe, also when the scan stopped early
-		if(io_seek(m_File, StartPos, IOSEEK_START) != 0 || m_vKeyFrames.empty())
+		if(io_seek(m_File, StartPos, EIoSeekOrigin::START) != 0 || m_vKeyFrames.empty())
 		{
 			m_vKeyFrames.clear();
 			return EScanFileResult::ERROR_UNRECOVERABLE;
