@@ -471,7 +471,8 @@ namespace
 			str_copy(s_aLastPlanStatus, pSafePlanStatus, sizeof(s_aLastPlanStatus));
 			s_SamplesThisBucket = 0;
 		}
-		constexpr int MaxGapSamplesPerFrameBucket = 4;
+		// 每个页面/原因组合每帧只保留一个样本，避免缺口遥测本身成为热路径。
+		constexpr int MaxGapSamplesPerFrameBucket = 1;
 		if(s_SamplesThisBucket >= MaxGapSamplesPerFrameBucket)
 			return;
 		++s_SamplesThisBucket;
