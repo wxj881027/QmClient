@@ -202,7 +202,7 @@ option(QM_DISABLE_PARALLEL_COMPILE "Disable /MP for compiler warnings-sensitive 
 option(QM_MSVC_USE_EMBEDDED_DEBUG_INFO "Use embedded MSVC debug information instead of per-target PDB files" OFF)
 option(QM_MSVC_ANALYZE "Enable MSVC /analyze static analysis (Windows only)" OFF)
 option(QM_STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
-option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bundled fonts" ON)
+option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bundled fonts" OFF)
 
 if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   add_subdirectory(vendor/minhook EXCLUDE_FROM_ALL)
