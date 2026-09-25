@@ -106,6 +106,20 @@ def scenario_qm_lifecycle_persistence(env: ProcessEnvironment) -> None:
 		raise AssertionError(f"statistics JSON is invalid: {statistics_path}") from exc
 
 
+def scenario_startup_saved_favorites(env: ProcessEnvironment) -> None:
+	"""验证启动时重放已保存收藏配置不会访问未初始化的接口。"""
+	settings_path = env.path("qmclient", "settings.cfg")
+	settings_path.parent.mkdir(parents=True, exist_ok=True)
+	settings_path.write_text(
+		'qm_steam_auto_launch 0\nadd_favorite "127.0.0.1:8303"\n',
+		encoding="utf-8",
+	)
+
+	env.start_client([], connect=False)
+	env.client.wait_for(lambda line: "adding 127.0.0.1:8303 to favorites" in line, "saved favorite load", 15)
+	_quit_client(env)
+
+
 def scenario_invalid_statistics_preserved(env: ProcessEnvironment) -> None:
 	"""验证损坏的 statistics 文件会被拒绝覆盖并保留原始字节。"""
 	invalid_bytes = b'{"local": [broken\n'
@@ -234,6 +248,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"perf_log_persistence": scenario_perf_log_persistence,
 	"qm_lifecycle_persistence": scenario_qm_lifecycle_persistence,
 	"recording_without_connection": scenario_recording_without_connection,
+	"startup_saved_favorites": scenario_startup_saved_favorites,
 	"vector_font_and_icon_resources": scenario_vector_font_and_icon_resources,
 }
 

@@ -21,7 +21,7 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir>
 python qmclient_scripts/integration/e2e_qmclient.py <build-dir> demo_recording
 ```
 
-可用的 E2E 场景包括 `assert_dialog_no_false_hang`、`hang_watchdog_reports_stall`、`demo_recording`、`qm_lifecycle_persistence`、`invalid_statistics_preserved`、`perf_log_persistence`、`connection_failure_recovery` 和 `recording_without_connection`。每个场景使用独立临时目录，并验证真实进程产生的日志、退出状态和文件产物。gate 中使用 `--run-qm-smoke` 时会先运行 4 个 smoke，再运行 8 个 E2E。
+可用的 E2E 场景包括 `assert_dialog_no_false_hang`、`hang_watchdog_reports_stall`、`demo_recording`、`qm_lifecycle_persistence`、`invalid_statistics_preserved`、`perf_log_persistence`、`connection_failure_recovery`、`recording_without_connection` 和 `startup_saved_favorites`。每个场景使用独立临时目录，并验证真实进程产生的日志、退出状态和文件产物。gate 中使用 `--run-qm-smoke` 时会先运行 4 个 smoke，再运行 9 个 E2E。
 
 `assert_dialog_no_false_hang` 依赖客户端测试专用参数 `--qm-test-main-thread-assert`：它在主循环之前触发一次真实断言，等价于启动阶段的错误弹窗，用于验证进程内弹窗阻塞主线程期间 hang 看门狗不会误报、退出兜底看门狗不会强杀正在阅读的弹窗。场景同时通过环境变量 `QMCLIENT_TEST_HIDE_DIALOG` 隐藏弹窗窗口并抑制报告进程拉起，避免桌面点击提前关闭弹窗、测试遗留后台进程干扰断言；弹窗的创建和消息循环行为不变。
 

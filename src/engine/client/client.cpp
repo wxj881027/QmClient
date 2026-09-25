@@ -6498,6 +6498,7 @@ void CClient::ConchainStdoutOutputLevel(IConsole::IResult *pResult, void *pUserD
 void CClient::RegisterCommands()
 {
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
+	m_pFavorites = Kernel()->RequestInterface<IFavorites>();
 
 	m_pConsole->Register("dummy_connect", "", CFGFLAG_CLIENT, Con_DummyConnect, this, "Connect dummy");
 	m_pConsole->Register("dummy_disconnect", "", CFGFLAG_CLIENT, Con_DummyDisconnect, this, "Disconnect dummy");
