@@ -3048,7 +3048,7 @@ void CTClient::FinishQmClientUpdateInfo()
 	m_pQmClientUpdateInfoTask->Result(&pResult, &ResultSize);
 	char aError[256];
 	SQmClientUpdateRelease Release;
-	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_VERSION, Release, aError, sizeof(aError)))
+	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_STABLE_VERSION, Release, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD))
 	{
 		m_FetchedQmClientUpdateInfo = true;
 		m_aQmClientLatestVersionStr[0] = '0';
@@ -3151,7 +3151,7 @@ void CTClient::FinishUpdateDownloads()
 	}
 
 	SQmClientUpdateManifest Manifest;
-	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_VERSION, Manifest, aError, sizeof(aError)) ||
+	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_STABLE_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD) ||
 		str_comp(Manifest.m_aVersion, m_UpdateRelease.m_aVersion) != 0 ||
 		Manifest.m_PackageSize != SignedPackageSize || mem_comp(Manifest.m_PackageSha256.data, aSignedPackageDigest, sizeof(aSignedPackageDigest)) != 0)
 	{
