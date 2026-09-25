@@ -150,7 +150,8 @@ if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
   set(AUTO_METAL_BACKEND ON)
 endif()
 
-option(WEBSOCKETS "Enable websockets support" OFF)
+# QmClient 的 WSS 通道由 Rust 提供，不受服务端 libwebsockets 开关影响。
+option(WEBSOCKETS "Enable websockets support for server" OFF)
 option(MYSQL "Enable mysql support" OFF)
 option(TEST_MYSQL "Test mysql support in unit tests (also sets -DMYSQL=ON)" OFF)
 if(WIN32)
@@ -202,6 +203,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
     target_compile_options(qm-nmt-hook64 PRIVATE /utf-8)
   target_include_directories(qm-nmt-hook64 PRIVATE src vendor/minhook/include)
   target_compile_definitions(qm-nmt-hook64 PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-nmt-hook64 PRIVATE /utf-8) # 源文件为 UTF-8 无 BOM，中文注释需要 /utf-8
   target_link_libraries(qm-nmt-hook64 PRIVATE minhook windowsapp bcrypt)
 
   # 网易云启动期 Bootstrap 在 QmClient 目录中使用独立文件名；部署器只在
@@ -219,6 +221,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
     target_compile_options(qm-nmt-bootstrap PRIVATE /utf-8)
   target_include_directories(qm-nmt-bootstrap PRIVATE src)
   target_compile_definitions(qm-nmt-bootstrap PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-nmt-bootstrap PRIVATE /utf-8)
   target_link_libraries(qm-nmt-bootstrap PRIVATE ws2_32)
 
   add_executable(qm-nmt-helper src/qm-nmt-hook/qm_netease_hook_helper.cpp)
@@ -244,6 +247,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
     target_compile_options(qm-nmt-helper PRIVATE /utf-8)
   target_include_directories(qm-nmt-helper PRIVATE src)
   target_compile_definitions(qm-nmt-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-nmt-helper PRIVATE /utf-8)
   target_link_libraries(qm-nmt-helper PRIVATE bcrypt winhttp ws2_32)
 
   # 汽水音乐 Hook Helper:发现 SodaMusic.exe 主进程,激活 Node inspector(9229),
@@ -276,6 +280,7 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   set_property(TARGET qm-soda-helper PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   target_include_directories(qm-soda-helper PRIVATE src)
   target_compile_definitions(qm-soda-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+  target_compile_options(qm-soda-helper PRIVATE /utf-8)
   target_link_libraries(qm-soda-helper PRIVATE bcrypt winhttp ws2_32)
 
   # 酷狗与 QQ 音乐共用独立采集进程，网络与进程读取不进入游戏主线程。
@@ -748,13 +753,15 @@ if(TARGET_OS STREQUAL "android")
   find_package(Android)
 endif()
 find_package(ZLIB)
-# 汽水 Helper 与网易云 Helper 都在 find_package 之前定义,这里补链接 zlib。
-if(TARGET qm-soda-helper)
-  if(ZLIB_DEP)
-    target_sources(qm-soda-helper PRIVATE ${ZLIB_DEP})
-    target_include_directories(qm-soda-helper PRIVATE ${ZLIB_INCLUDE_DIRS})
-  elseif(ZLIB_LIBRARIES)
-    target_link_libraries(qm-soda-helper PRIVATE ${ZLIB_LIBRARIES})
+# 歌词 Helper 在 find_package 之前定义，这里补链接 zlib。
+foreach(qm_lyrics_helper qm-soda-helper qm-music-helper)
+  if(TARGET ${qm_lyrics_helper})
+    if(ZLIB_DEP)
+      target_sources(${qm_lyrics_helper} PRIVATE ${ZLIB_DEP})
+      target_include_directories(${qm_lyrics_helper} PRIVATE ${ZLIB_INCLUDE_DIRS})
+    elseif(ZLIB_LIBRARIES)
+      target_link_libraries(${qm_lyrics_helper} PRIVATE ${ZLIB_LIBRARIES})
+    endif()
   endif()
 endif()
 # 音乐 Helper 同样在 find_package 之前定义（酷狗/QQ 音乐采集），这里补链接 zlib。
@@ -2055,6 +2062,7 @@ set(EXPECTED_DATA
   menuimages/play_game.png
   menuimages/settings.png
   particles.png
+  qmclient/LICENSE.txt
   qmclient/builtinscripts/sayemoticon.chai
   qmclient/chat_emojis/agree.png
   qmclient/chat_emojis/angry.png
@@ -2585,6 +2593,10 @@ endif()
 
 # Sources
 set_src(BASE GLOB_RECURSE src/base
+aio.cpp
+aio.h
+bytes.cpp
+bytes.h
   bezier.cpp
   bezier.h
   color.cpp
@@ -2603,6 +2615,8 @@ set_src(BASE GLOB_RECURSE src/base
   hash_ctxt.h
   hash_libtomcrypt.cpp
   hash_openssl.cpp
+io.cpp
+io.h
   lock.h
   log.cpp
   log.h
@@ -2612,15 +2626,20 @@ set_src(BASE GLOB_RECURSE src/base
   mem.cpp
   mem.h
   perf_timer.h
+net.cpp
+net.h
+os.cpp
+os.h
   rust.h
+process.cpp
+process.h
   secure.cpp
   secure.h
   sphore.cpp
   sphore.h
   str.cpp
   str.h
-  system.cpp
-  system.h
+    system.h
   thread.cpp
   thread.h
   time.cpp
@@ -3128,6 +3147,19 @@ if(CLIENT)
     QmUi/QmModuleLayoutAdapter.cpp
     QmUi/QmModuleLayoutAdapter.h
     QmUi/QmModuleTypes.h
+    QmUi/cards/QmCardCatalog.cpp
+    QmUi/cards/QmCardCatalog.h
+    QmUi/cards/QmCardCatalogIds.cpp
+    QmUi/cards/QmCardCatalogFunction.cpp
+    QmUi/cards/QmCardCatalogFunctionMetrics.h
+    QmUi/cards/QmCardCatalogHud.cpp
+    QmUi/cards/QmCardCatalogInternal.h
+    QmUi/cards/QmCardCatalogSkin.cpp
+    QmUi/cards/QmCardCatalogSkinMetrics.h
+    QmUi/cards/QmCardCatalogVisual.cpp
+    QmUi/cards/QmCardRenderBridge.cpp
+    QmUi/cards/QmMapUpload.cpp
+    QmUi/cards/QmMapUploadSearch.h
     animstate.cpp
     animstate.h
     component.cpp
@@ -3306,6 +3338,8 @@ if(CLIENT)
     components/qmclient/netease_hook/qm_netease_hook_provider.h
     components/qmclient/qm_bind_status_hud.cpp
     components/qmclient/qm_bind_status_hud.h
+    components/qmclient/qm_markdown.cpp
+    components/qmclient/qm_markdown.h
     components/qmclient/qm_music_hook_registry.h
     components/qmclient/qm_sponsor_authors.cpp
     components/qmclient/qm_sponsor_authors.h
@@ -3412,6 +3446,8 @@ if(CLIENT)
     components/tclient/pet.h
     components/tclient/player_indicator.cpp
     components/tclient/player_indicator.h
+    components/tclient/qm_tee_trail.cpp
+    components/tclient/qm_tee_trail.h
     components/tclient/rainbow.cpp
     components/tclient/rainbow.h
     components/tclient/skinprofiles.cpp
@@ -3470,8 +3506,6 @@ if(CLIENT)
     projectile_data.h
     qm_icon_manager.cpp
     qm_icon_manager.h
-    qm_icon_morph.cpp
-    qm_icon_morph.h
     qm_ime_candidate_popup.cpp
     qm_ime_candidate_popup.h
     qm_ime_manager.cpp
@@ -4263,6 +4297,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_card_order_model_test.cpp
     qm_card_order_model_contract_test.cpp
     qm_card_registry_test.cpp
+qm_hook_coll_visibility_test.cpp
+qm_item_culling_logic_test.cpp
     qm_module_layout_adapter_test.cpp
     aio_test.cpp
     assets_editor_layout_test.cpp
@@ -4280,7 +4316,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     compression_test.cpp
     console_test.cpp
     csv_test.cpp
-    datafile_test.cpp
+    db_connection_test.cpp
+datafile_test.cpp
     dbg_test.cpp
     ddnet_19_9_sync_contract_test.cpp
     demo_player_test.cpp
@@ -4351,6 +4388,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_hud_notifications_legacy_contract_test.cpp
     qm_hud_editor_contract_test.cpp
     qm_ime_platform_test.cpp
+    qm_markdown_test.cpp
     qm_new_ui_menu_branch_test.cpp
     qm_new_ui_menu_tooltips_contract_test.cpp
     qm_camera_effects_contract_test.cpp
@@ -4400,6 +4438,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_new_ui_menu_shell_settings_contract_test.cpp
     ddnet_19_9_sync_test.cpp
     qm_update_arguments_test.cpp
+    websocket_client_test.cpp
     netease_lyric_parser_test.cpp
     netease_lyric_timeline_test.cpp
     netease_lyric_state_test.cpp
@@ -4413,6 +4452,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_music_registry_test.cpp
     music_lyrics_krc_test.cpp
     music_lyrics_qrc_test.cpp
+    qm_music_registry_test.cpp
+    qm_music_transport_test.cpp
+    qm_kugou_protocol_test.cpp
+    qm_kugou_patch_test.cpp
+    qm_qqmusic_protocol_test.cpp
     qm_spotify_crypto_test.cpp
     qm_spotify_token_test.cpp
     qm_spotify_parser_test.cpp
@@ -4566,11 +4610,14 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/race_parse.cpp
     src/game/client/skin.cpp
     src/game/client/components/tclient/map_history.cpp
+    src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/test/render_tee_offset_helpers.cpp
     src/game/client/components/section_loader.cpp
+    src/game/client/components/qmclient/qm_markdown.cpp
+    src/game/client/components/qmclient/qm_realtime.cpp
     src/game/client/components/settings_runtime_cache.cpp
     src/game/client/components/settings_resource_jobs.cpp
     src/game/client/components/settings_warmup.cpp
@@ -4638,6 +4685,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/voice/voice_utils.cpp
     src/game/client/components/qmclient/qm_bind_status_hud.cpp
     src/game/client/frame_scheduler.cpp
+    src/engine/client/friends.cpp
+    src/engine/client/friends.h
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
     src/engine/client/favorites.cpp
@@ -4719,6 +4768,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/music_lyrics_krc_test.cpp
       src/test/music_lyrics_qrc_test.cpp
       src/test/qm_soda_lyric_file_test.cpp
+      src/test/qm_music_transport_test.cpp
+      src/test/qm_kugou_protocol_test.cpp
+      src/test/qm_kugou_patch_test.cpp
+      src/test/qm_qqmusic_protocol_test.cpp
       src/test/qm_soda_probe_test.cpp
       src/test/qm_soda_protocol_test.cpp
       src/test/netease_lyric_parser_test.cpp
@@ -4974,6 +5027,7 @@ set(CPACK_ARCHIVE_PORTABLE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-src)
 set(CPACK_SOURCE_FILES
   CMakeLists.txt
+  LICENSE-QMCLIENT.md
   README.md
   cmake/
   data/
@@ -5053,6 +5107,7 @@ set(CPACK_DIRS
   ${COPY_DIRS}
 )
 set(CPACK_FILES
+  LICENSE-QMCLIENT.md
   license.txt
   storage.cfg
   steam_appid.txt
@@ -5421,7 +5476,7 @@ source_group_tree(src)
 
 if(ANTIBOT)
   # Allow the antibot library to use functions from the server binary.
-  add_cxx_compiler_flag_if_supported(OUR_FLAGS_LINK -rdynamic)
+  add_linker_flag_if_supported(OUR_FLAGS_LINK -rdynamic)
   set_own_rpath(game-server)
 endif()
 

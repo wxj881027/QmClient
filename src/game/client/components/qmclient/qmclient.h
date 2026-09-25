@@ -20,8 +20,11 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
 
 class IJob;
+typedef struct _json_value json_value;
 
 struct SQmClientLocalModeStats
 {

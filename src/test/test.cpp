@@ -52,7 +52,7 @@ CTestInfo::CTestInfo()
 	// Replace the string after the first slash with the name of the typed test and use hyphen instead of slash.
 	char aTestCaseName[128];
 	str_copy(aTestCaseName, pTestInfo->test_case_name());
-	for(int i = 0; i < str_length(aTestCaseName); i++)
+	for(int i = 0; aTestCaseName[i] != '\0'; i++)
 	{
 		if(aTestCaseName[i] == '/')
 		{
@@ -63,7 +63,7 @@ CTestInfo::CTestInfo()
 		}
 	}
 	str_format(m_aFilenamePrefix, sizeof(m_aFilenamePrefix), "%s.%s-%d",
-		aTestCaseName, pTestInfo->name(), pid());
+		aTestCaseName, pTestInfo->name(), process_id());
 	Filename(m_aFilename, sizeof(m_aFilename), ".tmp");
 	str_format(m_aStoragePath, sizeof(m_aStoragePath), "tmp/tests/%s", m_aFilename);
 }

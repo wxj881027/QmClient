@@ -302,7 +302,6 @@ public:
 	CQmChatEmoji m_QmChatEmoji;
 	CQmMonitoring m_QmMonitoring;
 	CQmHudNotifications m_QmHudNotifications;
-	CQmBindStatusHud m_QmBindStatusHud;
 	CQmWeaponTrajectory m_QmWeaponTrajectory;
 	CRankGhost m_RankGhost;
 	CTClient m_TClient;
@@ -332,7 +331,7 @@ private:
 		CQmStutterSampleSeries m_Render;
 	};
 
-	void ProcessQmStutterFrame();
+	void ProcessQmStutterFrame(double FrameMs);
 	void RecordComponentUpdate(size_t ComponentIndex, double DurationMs);
 	void RecordComponentRender(size_t ComponentIndex, double DurationMs);
 	void CaptureQmStutterFeatureSnapshot();
@@ -823,8 +822,6 @@ public:
 		CNetObj_Character m_Snapped;
 		CNetObj_Character m_Evolved;
 
-		CNetMsg_Sv_PreInput m_aPreInputs[200];
-
 		// rendered characters
 		CNetObj_Character m_RenderCur;
 		CNetObj_Character m_RenderPrev;
@@ -833,10 +830,16 @@ public:
 		bool m_IsPredictedLocal;
 		int64_t m_aSmoothStart[2];
 		int64_t m_aSmoothLen[2];
-		vec2 m_aPredPos[200];
-		int m_aPredTick[200];
 		bool m_SpecCharPresent;
 		vec2 m_SpecChar;
+
+		// 冷数据必须排在热渲染字段之后：这两个数组成员合计约 11 KB，
+		// 原先夹在 m_RenderCur/m_RenderPos 与 m_SpecChar 之间，会把同一客户端的热字段
+		// 撑到相距十来个 KB，导致每帧按 128 个客户端遍历时几乎每次访问都跨 cache line。
+		// 仅调整声明顺序，无任何语义变化。
+		CNetMsg_Sv_PreInput m_aPreInputs[200];
+		vec2 m_aPredPos[200];
+		int m_aPredTick[200];
 
 		void UpdateSkinInfo();
 		void UpdateSkin7HatSprite(int Dummy);
@@ -944,6 +947,8 @@ public:
 	int OnSnapInput(int *pData, bool Dummy, bool Force) override;
 	void PrepareInputForSend(int *pData, int Size, bool Dummy) override;
 	void OnShutdown() override;
+	void OnQmPerfFrame(double FrameMs) override;
+	void OnQmPerfStop(bool Shutdown) override;
 	void OnEnterGame() override;
 	void OnRconType(bool UsernameReq) override;
 	void OnRconLine(const char *pLine) override;
@@ -1095,7 +1100,6 @@ public:
 
 	// TClient
 	CGameWorld m_RegularPredictedWorld;
-	CGameWorld m_PrevRegularPredictedWorld;
 
 	// TClient
 	CGameWorld m_ExtraPredictedWorld;
@@ -1237,7 +1241,6 @@ public:
 	bool m_ParticlesSkinLoaded = false;
 	int m_SpawnEventsProcessed = 0;
 	int m_SpawnEffectsDispatched = 0;
-	int m_SpawnEffectsFiltered = 0;
 	int m_SpawnParticleAddFailures = 0;
 
 	struct SClientEmoticonsSkin
@@ -1318,10 +1321,9 @@ public:
 
 	// Q1menG Client Recognition
 	void ClearQ1menGSyncMarks();
-	void MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, bool FootParticlesEnabled, bool RemoteParticlesEnabled, const char *pQid = nullptr, EClientBrand ClientBrand = EClientBrand::QM);
+	void MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, const char *pQid = nullptr, EClientBrand ClientBrand = EClientBrand::QM);
 	bool IsQ1menGClientRecognized(int ClientId) const;
 	const char *GetQ1menGClientQid(int ClientId) const;
-	bool ShouldRenderQ1menGRemoteFootParticles(int ClientId) const;
 	void ClearQmVoiceSyncMarks();
 	void MarkQmVoiceSupportedClient(int ClientId, int64_t ExpireTick);
 	bool IsQmVoiceSupportedClient(int ClientId) const;
@@ -1381,8 +1383,6 @@ private:
 	int64_t m_aAutoTeamLockDeadlineTick[NUM_DUMMIES] = {0, 0};
 	bool m_aAutoTeamLockPending[NUM_DUMMIES] = {false, false};
 	int64_t m_aQ1menGSyncMarkUntil[MAX_CLIENTS] = {0};
-	bool m_aQ1menGSyncFootParticlesEnabled[MAX_CLIENTS] = {false};
-	bool m_aQ1menGSyncRemoteParticlesEnabled[MAX_CLIENTS] = {false};
 	EClientBrand m_aQ1menGSyncClientBrands[MAX_CLIENTS] = {};
 	char m_aaQ1menGSyncQid[MAX_CLIENTS][33] = {{0}};
 	int64_t m_aQmVoiceSyncMarkUntil[MAX_CLIENTS] = {0};

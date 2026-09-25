@@ -27,6 +27,7 @@ fn main() {
     }
     if env::var_os("CARGO_FEATURE_LINK_TEST_LIBRARIES").is_some() {
         let libraries = if let Some(path) = env::var_os("DDNET_TEST_LIBRARIES_FILE") {
+            println!("cargo:rerun-if-changed={}", Path::new(&path).display());
             fs::read_to_string(&path).expect("failed to read DDNET_TEST_LIBRARIES_FILE")
         } else {
             env::var("DDNET_TEST_LIBRARIES")

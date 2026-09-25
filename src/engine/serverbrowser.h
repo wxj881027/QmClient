@@ -366,6 +366,8 @@ public:
 	virtual int LoadingProgression() const = 0;
 	virtual uint64_t FriendListRevision() const = 0;
 
+	// 好友行复制的数据变化或条目地址失效时递增；延迟等字段由行持有的条目直接读取。
+	virtual uint64_t FriendListRevision() const = 0;
 	virtual int NumServers() const = 0;
 	virtual const CServerInfo *Get(int Index) const = 0;
 	virtual int NumHttpServers() const = 0;
@@ -378,6 +380,10 @@ public:
 	virtual int NumSortedPlayers() const = 0;
 	virtual const CServerInfo *SortedGet(int Index) const = 0;
 	// 中心服下发的在线分布（"ip:port" → 人数），游戏层在分布更新时推送。
+	virtual void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) = 0;
+
+	// 中心服下发的在线梦客户端分布（"ip:port" → 人数），游戏层在分布更新时推送。
+	// 引擎保存最近一次推送，并在按 SORT_QM_CLIENTS 排序前物化到 CServerInfo::m_QmClientCount。
 	virtual void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) = 0;
 
 	virtual const std::vector<CCommunity> &Communities() const = 0;

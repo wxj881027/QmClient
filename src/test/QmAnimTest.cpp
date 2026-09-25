@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cmath>
+#include <limits>
 
 namespace
 {
@@ -800,6 +801,46 @@ TEST(InputField, TrailingTextStaysInsideSingleShell)
 	EXPECT_GE(Layout.m_ContentRect.w, 52.0f);
 }
 
+TEST(UiV2AnimSpring, LongFramesAndRefreshRatesPreserveDelayedSpringProgress)
+{
+	for(const float Damping : {10.0f, 20.0f, 40.0f})
+	{
+		SCOPED_TRACE(Damping);
+		const auto Start = [Damping](CUiV2AnimationRuntime &Runtime) {
+			Runtime.SetValue(907, EUiAnimProperty::POS_X, 0.0f);
+			SUiAnimRequest Request = MakeSpringRequest(907, EUiAnimProperty::POS_X, 100.0f, 907);
+			Request.m_Transition.m_DelaySec = 0.12f;
+			Request.m_Transition.m_Spring.m_Stiffness = 100.0f;
+			Request.m_Transition.m_Spring.m_Damping = Damping;
+			EXPECT_TRUE(Runtime.RequestAnimation(Request));
+		};
+		CUiV2AnimationRuntime SingleFrame;
+		Start(SingleFrame);
+		SingleFrame.Advance(0.5f);
+		const float Expected = SingleFrame.GetValue(907, EUiAnimProperty::POS_X);
+		for(const int RefreshRate : {60, 144, 240, 360})
+		{
+			SCOPED_TRACE(RefreshRate);
+			CUiV2AnimationRuntime Runtime;
+			Start(Runtime);
+			for(int Frame = 0; Frame < RefreshRate / 2; ++Frame)
+				Runtime.Advance(1.0f / RefreshRate);
+			EXPECT_NEAR(Runtime.GetValue(907, EUiAnimProperty::POS_X), Expected, 0.005f);
+		}
+		CUiV2AnimationRuntime UnevenFrames;
+		Start(UnevenFrames);
+		for(const float Dt : {0.07f, 0.18f, 0.25f})
+			UnevenFrames.Advance(Dt);
+		EXPECT_NEAR(UnevenFrames.GetValue(907, EUiAnimProperty::POS_X), Expected, 0.005f);
+		UnevenFrames.Advance(60.0f);
+		EXPECT_FLOAT_EQ(UnevenFrames.GetValue(907, EUiAnimProperty::POS_X), 100.0f);
+		EXPECT_FALSE(UnevenFrames.HasActiveAnimation(907, EUiAnimProperty::POS_X));
+		SUiAnimCompleteEvent Event;
+		ASSERT_TRUE(UnevenFrames.PollCompletedEvent(Event));
+		EXPECT_EQ(Event.m_TrackId, 907u);
+	}
+}
+
 TEST(UiV2AnimSpring, ReplaceInheritsVelocity)
 {
 	g_Config.m_QmUiMotionLevel = 2;
@@ -1055,7 +1096,7 @@ TEST(UiV2WidgetPresence, FreshEnterIsReportedOnlyAfterFullRemoval)
 	Tree.EndFrame(Runtime);
 }
 
-TEST(UiV2WidgetPresence, ModalScaleCanResetOnFreshEnterAfterExit)
+TEST(UiV2WidgetPresence, ModalScaleOnlyRestartsAfterFullRemoval)
 {
 	g_Config.m_QmUiMotionLevel = 2;
 	CUiV2Tree Tree;
@@ -1069,15 +1110,41 @@ TEST(UiV2WidgetPresence, ModalScaleCanResetOnFreshEnterAfterExit)
 	Tree.BeginFrame();
 	ui_widget::SAnimatePresenceResult Presence = ui_widget::AnimatePresence(Ctx, pId, true, ui_token::motion::MODAL_IN);
 	ASSERT_TRUE(Presence.m_FreshEnter);
-	Runtime.SetValue(Presence.m_NodeKey, EUiAnimProperty::SCALE, 0.92f);
-	ResolveUiAnimValue(Runtime, Presence.m_NodeKey, EUiAnimProperty::SCALE, 1.0f, ui_token::motion::MODAL_IN.m_DurationSec, ui_token::motion::MODAL_IN.m_Easing);
+	EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Presence, true), 0.98f);
 	Tree.EndFrame(Runtime);
 	AdvanceFor(Runtime, 1.0f);
+
+	// 弹窗稳定后持续绘制，不能再次缩小或重建已经结束的轨道。
+	for(int Frame = 0; Frame < 3; ++Frame)
+	{
+		Tree.BeginFrame();
+		Presence = ui_widget::AnimatePresence(Ctx, pId, true, ui_token::motion::MODAL_IN);
+		EXPECT_FALSE(Presence.m_FreshEnter);
+		EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Presence, true), 1.0f);
+		EXPECT_FALSE(Runtime.HasActiveAnimation(Presence.m_NodeKey, EUiAnimProperty::SCALE));
+		Tree.EndFrame(Runtime);
+	}
 
 	Tree.BeginFrame();
 	Presence = ui_widget::AnimatePresence(Ctx, pId, false, ui_token::motion::MODAL_IN);
 	EXPECT_FALSE(Presence.m_FreshEnter);
-	ResolveUiAnimValue(Runtime, Presence.m_NodeKey, EUiAnimProperty::SCALE, 0.96f, ui_token::motion::MODAL_IN.m_DurationSec, ui_token::motion::MODAL_IN.m_Easing);
+	ui_widget::ResolveModalScale(Ctx, Presence, false);
+	Tree.EndFrame(Runtime);
+	Runtime.Advance(0.04f);
+	const float BeforeReopen = Runtime.GetValue(Presence.m_NodeKey, EUiAnimProperty::SCALE);
+	EXPECT_GT(BeforeReopen, 0.98f);
+	EXPECT_LT(BeforeReopen, 1.0f);
+
+	Tree.BeginFrame();
+	Presence = ui_widget::AnimatePresence(Ctx, pId, true, ui_token::motion::MODAL_IN);
+	EXPECT_FALSE(Presence.m_FreshEnter);
+	EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Presence, true), BeforeReopen);
+	EXPECT_EQ(Runtime.QueuedTrackCount(), 0);
+	Tree.EndFrame(Runtime);
+
+	Tree.BeginFrame();
+	Presence = ui_widget::AnimatePresence(Ctx, pId, false, ui_token::motion::MODAL_IN);
+	ui_widget::ResolveModalScale(Ctx, Presence, false);
 	Tree.EndFrame(Runtime);
 	AdvanceFor(Runtime, 1.0f);
 
@@ -1089,10 +1156,311 @@ TEST(UiV2WidgetPresence, ModalScaleCanResetOnFreshEnterAfterExit)
 	Tree.BeginFrame();
 	Presence = ui_widget::AnimatePresence(Ctx, pId, true, ui_token::motion::MODAL_IN);
 	ASSERT_TRUE(Presence.m_FreshEnter);
-	Runtime.SetValue(Presence.m_NodeKey, EUiAnimProperty::SCALE, 0.92f);
-	const float ReopenedScale = ResolveUiAnimValue(Runtime, Presence.m_NodeKey, EUiAnimProperty::SCALE, 1.0f, ui_token::motion::MODAL_IN.m_DurationSec, ui_token::motion::MODAL_IN.m_Easing);
-	EXPECT_NEAR(ReopenedScale, 0.92f, 1e-6f);
+	EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Presence, true), 0.98f);
 	Tree.EndFrame(Runtime);
+}
+
+TEST(UiV2WidgetPresence, ModalScaleReducedMotionAndMissingContextStayAtFullSize)
+{
+	CUiV2Tree Tree;
+	CUiV2AnimationRuntime Runtime;
+	IUiContext Ctx;
+	Ctx.m_pTree = &Tree;
+	Ctx.m_pAnim = &Runtime;
+	const ui_widget::SAnimatePresenceResult Fresh{true, 0.0f, 0x7657, true};
+	const ui_widget::SAnimatePresenceResult Present{true, 1.0f, Fresh.m_NodeKey, false};
+	for(const int MotionLevel : {0, 1})
+	{
+		SCOPED_TRACE(MotionLevel);
+		Runtime.Reset();
+		g_Config.m_QmUiMotionLevel = MotionLevel;
+		EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Fresh, true), 1.0f);
+		EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Present, false), 1.0f);
+		EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+
+		g_Config.m_QmUiMotionLevel = 2;
+		ui_widget::ResolveModalScale(Ctx, Fresh, true);
+		Runtime.Advance(0.04f);
+		ASSERT_TRUE(Runtime.HasActiveAnimation(Fresh.m_NodeKey, EUiAnimProperty::SCALE));
+		g_Config.m_QmUiMotionLevel = MotionLevel;
+		EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Present, true), 1.0f);
+		EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+	}
+	g_Config.m_QmUiMotionLevel = 2;
+	Ctx.m_pTree = nullptr;
+	EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Fresh, true), 1.0f);
+	EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+	Ctx.m_pTree = &Tree;
+	Ctx.m_pAnim = nullptr;
+	EXPECT_FLOAT_EQ(ui_widget::ResolveModalScale(Ctx, Fresh, true), 1.0f);
+}
+
+TEST(UiV2MenuMotion, RepeatedPageSwitchKeepsCurrentPresentationAndOneTrack)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
+	const uint64_t NodeKey = 0x7658;
+	BeginUiSwitchAnimation(Runtime, NodeKey, ui_token::motion::PAGE_SLIDE.m_DurationSec);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), 1.0f);
+	for(int Switch = 0; Switch < 6; ++Switch)
+	{
+		Runtime.Advance(1.0f / 120.0f);
+		const float BeforeSwitch = Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X);
+		EXPECT_GT(BeforeSwitch, 0.0f);
+		EXPECT_LT(BeforeSwitch, 1.0f);
+		BeginUiSwitchAnimation(Runtime, NodeKey, ui_token::motion::PAGE_SLIDE.m_DurationSec);
+		EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), BeforeSwitch);
+		EXPECT_EQ(Runtime.ActiveTrackCount(), 1);
+		EXPECT_EQ(Runtime.QueuedTrackCount(), 0);
+	}
+	AdvanceFor(Runtime, 1.0f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), 0.0f);
+	EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+	BeginUiSwitchAnimation(Runtime, NodeKey, ui_token::motion::PAGE_SLIDE.m_DurationSec);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), 1.0f);
+	EXPECT_EQ(Runtime.ActiveTrackCount(), 1);
+}
+
+TEST(UiV2MenuMotion, ReversingPageSwitchKeepsSignedOffsetUntilTransitionSettles)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
+	const uint64_t NodeKey = 0x765E;
+	float Direction = ResolveUiSwitchDirection(Runtime, NodeKey, 0.0f, 1.0f);
+	EXPECT_FLOAT_EQ(Direction, 1.0f);
+	BeginUiSwitchAnimation(Runtime, NodeKey, ui_token::motion::PAGE_SLIDE.m_DurationSec);
+	Runtime.Advance(0.04f);
+	const float BeforeReverse = Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X) * Direction;
+	EXPECT_GT(BeforeReverse, 0.0f);
+	EXPECT_LT(BeforeReverse, 1.0f);
+
+	Direction = ResolveUiSwitchDirection(Runtime, NodeKey, Direction, -1.0f);
+	BeginUiSwitchAnimation(Runtime, NodeKey, ui_token::motion::PAGE_SLIDE.m_DurationSec);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X) * Direction, BeforeReverse);
+	EXPECT_EQ(Runtime.QueuedTrackCount(), 0);
+	EXPECT_FLOAT_EQ(ResolveUiSwitchDirection(Runtime, NodeKey, 0.0f, -1.0f), -1.0f);
+
+	AdvanceFor(Runtime, 1.0f);
+	EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+	Direction = ResolveUiSwitchDirection(Runtime, NodeKey, Direction, -1.0f);
+	EXPECT_FLOAT_EQ(Direction, -1.0f);
+	BeginUiSwitchAnimation(Runtime, NodeKey, ui_token::motion::PAGE_SLIDE.m_DurationSec);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X) * Direction, -1.0f);
+}
+
+TEST(UiV2MenuMotion, PageSwitchHonorsReducedMotionOffAndExplicitDuration)
+{
+	CUiV2AnimationRuntime Runtime;
+	const uint64_t NodeKey = 0x7659;
+	g_Config.m_QmUiMotionLevel = 2;
+	BeginUiSwitchAnimation(Runtime, NodeKey, 0.10f);
+	Runtime.Advance(0.05f);
+	EXPECT_GT(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), 0.0f);
+	Runtime.Advance(0.06f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), 0.0f);
+
+	g_Config.m_QmUiMotionLevel = 1;
+	BeginUiSwitchAnimation(Runtime, NodeKey, 0.20f);
+	Runtime.Advance(0.05f);
+	Runtime.Advance(0.05f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), 0.0f);
+	EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+
+	g_Config.m_QmUiMotionLevel = 2;
+	BeginUiSwitchAnimation(Runtime, NodeKey, 0.20f);
+	Runtime.Advance(0.02f);
+	g_Config.m_QmUiMotionLevel = 0;
+	BeginUiSwitchAnimation(Runtime, NodeKey, 0.20f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), 0.0f);
+	EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+	EXPECT_EQ(Runtime.QueuedTrackCount(), 0);
+	BeginUiSwitchAnimation(Runtime, NodeKey, 0.20f);
+	EXPECT_FLOAT_EQ(Runtime.GetValue(NodeKey, EUiAnimProperty::POS_X), 0.0f);
+	g_Config.m_QmUiMotionLevel = 2;
+}
+
+TEST(UiV2MenuMotion, ToggleProgressInitializesFromValueAndLeavesIdleFramesWithoutWork)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	for(const bool InitiallyOn : {false, true})
+	{
+		SCOPED_TRACE(InitiallyOn);
+		CUiV2AnimationRuntime Runtime;
+		const uint64_t KnobKey = 0x765A;
+		const float InitialTarget = InitiallyOn ? 1.0f : 0.0f;
+		EXPECT_FLOAT_EQ(ResolveUiAnimSpringValue(Runtime, KnobKey, EUiAnimProperty::COLOR_MIX, InitialTarget, ui_token::motion::TOGGLE), InitialTarget);
+		EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+		SUiAnimCompleteEvent Event;
+		while(Runtime.PollCompletedEvent(Event))
+		{
+		}
+		for(int Frame = 0; Frame < 12; ++Frame)
+		{
+			Runtime.Advance(1.0f / 120.0f);
+			EXPECT_FLOAT_EQ(ResolveUiAnimSpringValue(Runtime, KnobKey, EUiAnimProperty::COLOR_MIX, InitialTarget, ui_token::motion::TOGGLE), InitialTarget);
+			EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+			EXPECT_FALSE(Runtime.PollCompletedEvent(Event));
+		}
+
+		const float OppositeTarget = 1.0f - InitialTarget;
+		ResolveUiAnimSpringValue(Runtime, KnobKey, EUiAnimProperty::COLOR_MIX, OppositeTarget, ui_token::motion::TOGGLE);
+		Runtime.Advance(0.04f);
+		const float BeforeReverse = Runtime.GetValue(KnobKey, EUiAnimProperty::COLOR_MIX);
+		EXPECT_GT(BeforeReverse, 0.0f);
+		EXPECT_LT(BeforeReverse, 1.0f);
+		EXPECT_FLOAT_EQ(ResolveUiAnimSpringValue(Runtime, KnobKey, EUiAnimProperty::COLOR_MIX, InitialTarget, ui_token::motion::TOGGLE), BeforeReverse);
+		EXPECT_EQ(Runtime.QueuedTrackCount(), 0);
+		AdvanceFor(Runtime, 1.0f);
+		EXPECT_FLOAT_EQ(Runtime.GetValue(KnobKey, EUiAnimProperty::COLOR_MIX), InitialTarget);
+		EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+	}
+
+	// 控件只把归一化状态交给运行时，页面滚动不能变成开关的动画目标。
+	const std::string Source = ReadTestSourceFile("src/game/client/QmUi/UiForms.cpp");
+	const size_t ToggleStart = Source.find("bool Toggle(");
+	ASSERT_NE(ToggleStart, std::string::npos);
+	const size_t ToggleEnd = Source.find("bool Slider(", ToggleStart);
+	ASSERT_NE(ToggleEnd, std::string::npos);
+	const std::string Toggle = Source.substr(ToggleStart, ToggleEnd - ToggleStart);
+	EXPECT_NE(Toggle.find("ResolveUiAnimSpringValue"), std::string::npos);
+	EXPECT_NE(Toggle.find("EUiAnimProperty::COLOR_MIX"), std::string::npos);
+	EXPECT_EQ(Toggle.find("EUiAnimProperty::POS_X"), std::string::npos);
+}
+
+TEST(UiV2MenuMotion, DisablingMotionSettlesSpringWithoutWaitingForTargetChange)
+{
+	g_Config.m_QmUiMotionLevel = 2;
+	CUiV2AnimationRuntime Runtime;
+	const uint64_t NodeKey = 0x765D;
+	ResolveUiAnimSpringValue(Runtime, NodeKey, EUiAnimProperty::COLOR_MIX, 0.0f, ui_token::motion::TOGGLE);
+	ResolveUiAnimSpringValue(Runtime, NodeKey, EUiAnimProperty::COLOR_MIX, 1.0f, ui_token::motion::TOGGLE);
+	Runtime.Advance(0.04f);
+	ASSERT_TRUE(Runtime.HasActiveAnimation(NodeKey, EUiAnimProperty::COLOR_MIX));
+	EXPECT_LT(Runtime.GetValue(NodeKey, EUiAnimProperty::COLOR_MIX), 1.0f);
+
+	g_Config.m_QmUiMotionLevel = 0;
+	EXPECT_FLOAT_EQ(ResolveUiAnimSpringValue(Runtime, NodeKey, EUiAnimProperty::COLOR_MIX, 1.0f, ui_token::motion::TOGGLE), 1.0f);
+	EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+	EXPECT_EQ(Runtime.QueuedTrackCount(), 0);
+	SUiAnimCompleteEvent Event;
+	while(Runtime.PollCompletedEvent(Event))
+	{
+	}
+
+	g_Config.m_QmUiMotionLevel = 2;
+	EXPECT_FLOAT_EQ(ResolveUiAnimSpringValue(Runtime, NodeKey, EUiAnimProperty::COLOR_MIX, 1.0f, ui_token::motion::TOGGLE), 1.0f);
+	Runtime.Advance(1.0f / 60.0f);
+	EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+	EXPECT_FALSE(Runtime.PollCompletedEvent(Event));
+}
+
+TEST(UiV2MenuMotion, SemanticTweensFinishWithinInteractionBudgetsAtCommonRefreshRates)
+{
+	struct SCase
+	{
+		const char *m_pName;
+		const SUiAnimTransition &m_Transition;
+		float m_BudgetSec;
+	};
+	const SCase aCases[] = {
+		{"hover", ui_token::motion::HOVER_FADE, 0.14f},
+		{"press", ui_token::motion::PRESS_SCALE, 0.10f},
+		{"modal", ui_token::motion::MODAL_FADE_SCALE, 0.22f},
+		{"page", ui_token::motion::PAGE_SLIDE, 0.24f},
+		{"tab", ui_token::motion::TAB_SWITCH, 0.18f},
+		{"focus", ui_token::motion::INPUT_FOCUS_RING, 0.14f},
+		{"toast", ui_token::motion::TOAST_SLIDE, 0.24f},
+		{"tooltip", ui_token::motion::TOOLTIP_FADE, 0.14f},
+	};
+	for(const SCase &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pName);
+		for(const int MotionLevel : {0, 1, 2})
+		{
+			SCOPED_TRACE(MotionLevel);
+			g_Config.m_QmUiMotionLevel = MotionLevel;
+			for(const int RefreshRate : {60, 120, 240})
+			{
+				SCOPED_TRACE(RefreshRate);
+				CUiV2AnimationRuntime Runtime;
+				Runtime.SetValue(0x765B, EUiAnimProperty::ALPHA, 0.0f);
+				Runtime.ResolveTargetValue(0x765B, EUiAnimProperty::ALPHA, 1.0f, Case.m_Transition);
+				if(MotionLevel == 0)
+				{
+					EXPECT_FLOAT_EQ(Runtime.GetValue(0x765B, EUiAnimProperty::ALPHA), 1.0f);
+					EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+					continue;
+				}
+				const float BudgetSec = Case.m_BudgetSec * (MotionLevel == 1 ? 0.5f : 1.0f);
+				const int Frames = static_cast<int>(std::ceil(BudgetSec * RefreshRate));
+				float Previous = 0.0f;
+				for(int Frame = 0; Frame < Frames; ++Frame)
+				{
+					Runtime.Advance(1.0f / RefreshRate);
+					const float Value = Runtime.ResolveTargetValue(0x765B, EUiAnimProperty::ALPHA, 1.0f, Case.m_Transition);
+					EXPECT_TRUE(std::isfinite(Value));
+					EXPECT_GE(Value, Previous);
+					EXPECT_LE(Value, 1.0f);
+					Previous = Value;
+				}
+				EXPECT_FLOAT_EQ(Previous, 1.0f);
+				EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+				EXPECT_EQ(Runtime.QueuedTrackCount(), 0);
+			}
+		}
+	}
+	g_Config.m_QmUiMotionLevel = 2;
+}
+
+TEST(UiV2MenuMotion, SemanticSpringsSettleWithRestrainedOvershootAtCommonRefreshRates)
+{
+	struct SCase
+	{
+		const char *m_pName;
+		const SUiSpringConfig &m_Spring;
+		float m_From;
+		float m_To;
+	};
+	const SCase aCases[] = {
+		{"navigation", ui_token::motion::NAVIGATION_SPRING, 0.0f, 100.0f},
+		{"toggle", ui_token::motion::TOGGLE_SPRING, 0.0f, 1.0f},
+		{"modal", ui_token::motion::MODAL_FADE_SCALE.m_Spring, 0.98f, 1.0f},
+	};
+	for(const SCase &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pName);
+		for(const int MotionLevel : {0, 1, 2})
+		{
+			SCOPED_TRACE(MotionLevel);
+			g_Config.m_QmUiMotionLevel = MotionLevel;
+			for(const int RefreshRate : {60, 120, 240})
+			{
+				SCOPED_TRACE(RefreshRate);
+				CUiV2AnimationRuntime Runtime;
+				Runtime.SetValue(0x765C, EUiAnimProperty::POS_X, Case.m_From);
+				ResolveUiAnimSpringValue(Runtime, 0x765C, EUiAnimProperty::POS_X, Case.m_To, Case.m_Spring);
+				if(MotionLevel == 0)
+				{
+					EXPECT_FLOAT_EQ(Runtime.GetValue(0x765C, EUiAnimProperty::POS_X), Case.m_To);
+					EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+					continue;
+				}
+				const int Frames = static_cast<int>(std::ceil(0.8f * RefreshRate));
+				for(int Frame = 0; Frame < Frames; ++Frame)
+				{
+					Runtime.Advance(1.0f / RefreshRate);
+					const float Value = ResolveUiAnimSpringValue(Runtime, 0x765C, EUiAnimProperty::POS_X, Case.m_To, Case.m_Spring);
+					EXPECT_TRUE(std::isfinite(Value));
+					EXPECT_GE(Value, Case.m_From);
+					EXPECT_LE(Value, Case.m_To + (Case.m_To - Case.m_From) * 0.02f);
+				}
+				EXPECT_FLOAT_EQ(Runtime.GetValue(0x765C, EUiAnimProperty::POS_X), Case.m_To);
+				EXPECT_EQ(Runtime.ActiveTrackCount(), 0);
+				EXPECT_EQ(Runtime.QueuedTrackCount(), 0);
+			}
+		}
+	}
+	g_Config.m_QmUiMotionLevel = 2;
 }
 
 TEST(UiV2WidgetStateAnimation, MissingRuntimeReturnsTarget)

@@ -37,7 +37,6 @@
 #include <game/client/components/message_gradient.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
-#include <game/client/components/qmclient/qm_bind_status_hud.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/components/qmclient/tee_color_code.h>
 #include <game/client/components/qmclient/tee_hue_cycle.h>
@@ -430,7 +429,7 @@ namespace
 	{
 		if(!gs_TeeListDrainPerfSession.m_Active)
 			return;
-		if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+		if(g_Config.m_QmPerfDebug == 0)
 		{
 			if(FullListReady)
 				gs_TeeListDrainPerfSession.m_Active = false;
@@ -810,7 +809,7 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 	};
 
 	const bool RenderOnly = Ui()->RenderOnly();
-	const auto BuildDefinitions = [this, pGameDefault, pLanguageDefault, pClientDefault, pRecordingDefault, GeneralMetrics, BodySize, GeneralGameContentHeight, GeneralLanguageListHeight, GeneralThemeListHeight, DoNumericField, IsGeneralDynamicCameraEnabled](std::vector<SSettingsCardDefinition> &vCards) {
+	const auto BuildDefinitions = [this, pGameDefault, pLanguageDefault, pClientDefault, pRecordingDefault, GeneralMetrics, GeneralGameContentHeight, GeneralLanguageListHeight, GeneralThemeListHeight, DoNumericField, IsGeneralDynamicCameraEnabled](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(4);
 		const SSettingsCardSpec GameSpec{pGameDefault->m_pStableId, Localize(pGameDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pGameDefault)};
 		const SSettingsCardSpec LanguageSpec{pLanguageDefault->m_pStableId, Localize(pLanguageDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pLanguageDefault)};
@@ -824,7 +823,7 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 			vCards.push_back(Definition);
 		};
 
-		AddCard(GameSpec, GeneralGameContentHeight, [this, GeneralMetrics, BodySize](CUIRect Content) {
+		AddCard(GameSpec, GeneralGameContentHeight, [this, GeneralMetrics](CUIRect Content) {
 			CUIRect Button;
 			Content.HSplitTop(GeneralMetrics.m_LineHeight, &Button, &Content);
 			const bool IsDyncam = g_Config.m_ClDyncam || g_Config.m_ClMouseFollowfactor > 0;
@@ -2182,6 +2181,33 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		int DoubleClickIndex = -1;
 		ETeeSkinApplyTarget DoubleClickTarget = ETeeSkinApplyTarget::MAIN;
 		const bool ShowSkinMetadata = g_Config.m_QmSkinShowMetadata != 0;
+		// 单击与双击共用同一份「应用皮肤」赋值路径：先写当前子标签的编辑对象，再按目标角色决定是否改写另一侧。
+		const auto ApplySkinListEntry = [&](const CSkins::CSkinListEntry &Entry, const ETeeSkinApplyTarget Target, const bool ScrollToSelected) {
+			if(Entry.SkinContainer() == nullptr)
+				return;
+			const bool HasColorKey = Entry.ColorKey().has_value();
+			const bool EntryUseCustomColor = HasColorKey ? Entry.ColorKey()->m_UseCustomColor : *pUseCustomColor != 0;
+			const int EntryColorBody = HasColorKey ? Entry.ColorKey()->m_ColorBody : (int)*pColorBody;
+			const int EntryColorFeet = HasColorKey ? Entry.ColorKey()->m_ColorFeet : (int)*pColorFeet;
+			// 复用单击路径：当前子标签的字段直接用指针写入。
+			str_copy(pSkinName, Entry.SkinContainer()->Name(), SkinNameSize);
+			if(HasColorKey)
+			{
+				*pUseCustomColor = EntryUseCustomColor ? 1 : 0;
+				if(EntryUseCustomColor)
+				{
+					*pColorBody = EntryColorBody;
+					*pColorFeet = EntryColorFeet;
+				}
+			}
+			// 双击指定另一侧时，用同一套语义把该皮肤写到目标角色。
+			if(QmTeeSkinApplyTargetDummy(Target) != (m_Dummy ? 1 : 0))
+				QmApplyTeeSkinToTarget(g_Config, Target, Entry.SkinContainer()->Name(), HasColorKey, EntryUseCustomColor, EntryColorBody, EntryColorFeet);
+			SkinList.ForceRefresh();
+			SetNeedSendInfo();
+			if(ScrollToSelected)
+				m_SkinListScrollToSelected = true;
+		};
 		auto DoButtonSkinQueue = [&](const void *pButtonId, const void *pParentId, bool InQueue, bool Disabled, const CUIRect *pRect) {
 			if(InQueue || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId)
 			{
@@ -2385,6 +2411,20 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				Graphics()->QuadsDrawTL(&QuadItem, 1);
 				Graphics()->QuadsEnd();
 			}
+
+			// 双击应用的右键分支：列表框只把左键交给它自己的双击检测（见循环后的
+			// WasItemActivated 消费），右键必须由页面判定。命中条件＝鼠标悬停本项 +
+			// 右键在本帧释放；双击状态用每项独立的 id，不会与列表框左键双击的状态互相污染。
+			// 命中只记录索引，实际赋值留到循环后统一落地，避免渲染本帧其它条目时改写配置。
+			// 这里刻意不再对 Item.m_Rect 注册整项 DoButtonLogic：它覆盖右上角的队列/收藏
+			// 图标，会成为本帧最后一次 SetHotItem，让微型图标永远拿不到 HotItem 而点不动。
+			if(!Ui()->RenderOnly() && Ui()->MouseHovered(&Item.m_Rect) && Ui()->LastMouseButton(1) && !Ui()->MouseButton(1) &&
+				Ui()->DoDoubleClickLogic(SkinListEntry.RightDoubleClickId()))
+			{
+				RightDoubleClickIndex = (int)i;
+			}
+			if(Ui()->MouseHovered(&Item.m_Rect))
+				GameClient()->m_Tooltips.DoToolTip(SkinListEntry.ListItemId(), &Item.m_Rect, Localize("Double-click: left applies to main, right applies to dummy"));
 
 			// render skin favorite icon + queue icon
 			{
@@ -2818,21 +2858,9 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		{
 			if(NewSelected >= 0 && NewSelected < (int)vSkinList.size())
 			{
-				const CSkins::CSkinListEntry &SelectedSkinEntry = vSkinList[NewSelected];
 				gs_TeeSettingsPageState.m_SelectedIndex = NewSelected;
-				str_copy(pSkinName, SelectedSkinEntry.SkinContainer()->Name(), SkinNameSize);
-				if(SelectedSkinEntry.ColorKey().has_value())
-				{
-					const auto &SelectedColorKey = SelectedSkinEntry.ColorKey().value();
-					*pUseCustomColor = SelectedColorKey.m_UseCustomColor ? 1 : 0;
-					if(SelectedColorKey.m_UseCustomColor)
-					{
-						*pColorBody = SelectedColorKey.m_ColorBody;
-						*pColorFeet = SelectedColorKey.m_ColorFeet;
-					}
-				}
-				SkinList.ForceRefresh();
-				SetNeedSendInfo();
+				// 单击语义不变：只改当前 Player/Dummy 子标签的编辑对象。
+				ApplySkinListEntry(vSkinList[NewSelected], m_Dummy ? ETeeSkinApplyTarget::DUMMY : ETeeSkinApplyTarget::MAIN, false);
 			}
 		}
 		if(DoubleClickIndex >= 0 && DoubleClickIndex < (int)vSkinList.size())
@@ -4315,7 +4343,39 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			Button = Rows.NextLine();
 			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardRainbowTitles, "rainbow-card-titles", Localize("Rainbow card titles"), g_Config.m_QmUiCardRainbowTitles, &Button))
 				g_Config.m_QmUiCardRainbowTitles ^= 1;
+
+			if(g_Config.m_QmEnhancedRendering != 0)
+			{
+				Button = Rows.NextLine();
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmEnhancedSdf, "graphics-enhanced-sdf", Localize("Smooth island (SDF)"), g_Config.m_QmEnhancedSdf, &Button))
+				{
+					g_Config.m_QmEnhancedSdf ^= 1;
+					CheckSettings = true;
+				}
+				Button = Rows.NextLine();
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmEnhancedBlur, "graphics-enhanced-blur", Localize("Menu Gaussian blur pipeline"), g_Config.m_QmEnhancedBlur, &Button))
+				{
+					g_Config.m_QmEnhancedBlur ^= 1;
+					CheckSettings = true;
+				}
+				Button = Rows.NextLine();
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmEnhancedMsdf, "graphics-enhanced-msdf", Localize("HD icons (MSDF)"), g_Config.m_QmEnhancedMsdf, &Button))
+				{
+					g_Config.m_QmEnhancedMsdf ^= 1;
+					CheckSettings = true;
+				}
+			}
 		});
+		// 视觉卡高度随增强渲染展开行数变化，避免文字溢出。
+		vCards.back().m_Measure = [GraphicsMetrics](float) {
+			const auto &M = GraphicsMetrics;
+			if(g_Config.m_QmEnhancedRendering != 0)
+			{
+				return ResolveSettingsContentFlowHeight(M, {M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_ButtonHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight});
+			}
+			return ResolveSettingsContentFlowHeight(M, {M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_ButtonHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_LineHeight, M.m_ButtonHeight, M.m_LineHeight});
+		};
+		vCards.back().m_MeasureRevision = static_cast<uint64_t>(g_Config.m_QmEnhancedRendering);
 		AddCard(IconsSpec, GraphicsIconsMinCardHeight, IconsChromeHeight, [this, GraphicsMetrics, BodySize](CUIRect ContentRect) {
 			CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);
 			const bool CustomColor = g_Config.m_QmUiIconColor == 3;
@@ -6652,6 +6712,8 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	const float HeadlineHeight = AppearanceMetrics.m_LineHeight + AppearanceMetrics.m_LineSpacing * 2.0f;
 	const float MarginSmall = AppearanceMetrics.m_LineSpacing;
 	const float MarginBetweenViews = AppearanceMetrics.m_SectionGap * 2.0f;
+	// 胶囊两级分段行的槽位内缩：容器胶囊与槽位之间留出这圈边距，滑块才像浮在轨道里。
+	const float CapsuleSegmentInset = std::clamp(2.0f * AppearanceMetrics.m_UiScale, 1.0f, 2.0f);
 
 	CUIRect ContentView = MainView;
 	auto DoAppearanceHeading = [this](CUIRect &View, const char *pTextId, const char *pText, float FontSize, float LineHeight) {
@@ -7319,25 +7381,109 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			// Nameplate text 区域：仅保留文字效果控件；矢量字体开关位于字体卡片。
 			const float NamePlateTextContentHeight = NamePlateSectionHeaderHeight + ResolveSettingsRowsHeight(10, LineSize, MarginSmall) + MarginSmall + NamePlateColorPickerHeight * 3.0f;
 			static int s_NamePlatesStrong = 0;
+			// 昵称显示范围：六档互斥，覆盖「当前操控角色 / 本机其他角色（分身）/ 其他玩家」三类
+			// 的可见组合。宽够时新 UI 用单行六段胶囊，旧 UI 与窄窗口用同一份选项走可换行分段行。
+			// 表是静态的：这两个 lambda 会被预布局回调按值拷走，指向栈上数组会变悬垂引用。
+			static const char *const apShowScopeLabels[] = {
+				Localize("None", "Show name plates"),
+				Localize("Current", "Show name plates"),
+				Localize("Current + Local", "Show name plates"),
+				Localize("Others", "Show name plates"),
+				Localize("Local + Others", "Show name plates"),
+				Localize("All", "Show name plates"),
+			};
+			const char *apShowScopeTextIds[] = {
+				"appearance-show-name-plates-none",
+				"appearance-show-name-plates-current",
+				"appearance-show-name-plates-current-local",
+				"appearance-show-name-plates-others",
+				"appearance-show-name-plates-local-others",
+				"appearance-show-name-plates-all",
+			};
+			const int aShowScopeValues[] = {
+				QM_NAMEPLATE_SHOW_SCOPE_OFF,
+				QM_NAMEPLATE_SHOW_SCOPE_CURRENT,
+				QM_NAMEPLATE_SHOW_SCOPE_LOCAL,
+				QM_NAMEPLATE_SHOW_SCOPE_OTHERS,
+				QM_NAMEPLATE_SHOW_SCOPE_OTHERS_LOCAL,
+				QM_NAMEPLATE_SHOW_SCOPE_ALL,
+			};
+			const int ShowScopeCount = (int)std::size(aShowScopeValues);
+			// 分段是否放得下按最长档位标签的真实宽度算：胶囊分段没有分段行那种 72px 内边距，
+			// 用分段行的下限会把阈值抬到正常窗口宽度之上，胶囊分段永远触发不了。
+			const auto ShowNameOptionMinWidth = [this, AppearanceMetrics]() {
+				ITextRender *pTextRender = TextRender();
+				if(pTextRender == nullptr)
+					return 0.0f;
+				float Widest = 0.0f;
+				for(const char *pLabel : apShowScopeLabels)
+					Widest = maximum(Widest, pTextRender->TextWidth(AppearanceMetrics.m_SmallSize, pLabel, -1));
+				return Widest + 8.0f;
+			};
+			const auto ResolveShowNameRowLayout = [=](const CUIRect &View) {
+				return ResolveSettingsSegmentedRowLayout(View, ShowScopeCount, AppearanceMetrics, ShowNameOptionMinWidth());
+			};
+			const std::vector<const char *> vHookScopeLabels = {Localize("Self"), Localize("Others"), Localize("Strong hook"), Localize("Weak hook"), Localize("All")};
+			const std::vector<const char *> vKeyPressLabels = {Localize("None", "Show players' key presses"), Localize("Own", "Show players' key presses"), Localize("Others", "Show players' key presses"), Localize("All", "Show players' key presses")};
+			// 两组范围选择沿用昵称的胶囊样式，测量、绘制和预布局共用同一份落位。
+			const auto ResolveNamePlateScopeRowLayout = [this, AppearanceMetrics](const CUIRect &View, const std::vector<const char *> &vLabels) {
+				const int OptionCount = (int)vLabels.size();
+				if(g_Config.m_QmNewUi != 0)
+				{
+					float Widest = 0.0f;
+					for(const char *pLabel : vLabels)
+						Widest = maximum(Widest, TextRender()->TextWidth(AppearanceMetrics.m_SmallSize, pLabel, -1));
+					return ResolveSettingsSegmentedRowLayout(View, OptionCount, AppearanceMetrics, Widest + 8.0f);
+				}
+				const SSettingsRadioRowLayout Radio = ResolveSettingsRadioRowLayout(View, OptionCount, AppearanceMetrics);
+				return SSettingsSegmentedRowLayout{false, Radio.m_LabelRect, Radio.m_ButtonsRect, Radio.m_Height};
+			};
 			const auto ResolveNamePlateContentHeight = [=](float ContentWidth) {
-				const auto RadioHeight = [&](const int OptionCount) {
-					return ResolveSettingsRadioRowLayout({0.0f, 0.0f, ContentWidth, LineSize * 2.0f + MarginSmall}, OptionCount, AppearanceMetrics).m_Height;
+				const auto ScopeHeight = [&](const std::vector<const char *> &vLabels) {
+					return ResolveNamePlateScopeRowLayout({0.0f, 0.0f, ContentWidth, LineSize * 2.0f + MarginSmall}, vLabels).m_Height;
 				};
 				const bool ClanEnabled = g_Config.m_ClNamePlatesClan != 0;
 				const bool IdsEnabled = g_Config.m_ClNamePlatesIds != 0;
 				const bool SeparateIds = IdsEnabled && g_Config.m_ClNamePlatesIdsSeparateLine != 0;
 				const int GeneralRows = 7 + (ClanEnabled ? 1 : 0) + (IdsEnabled ? 1 : 0) + (SeparateIds ? 1 : 0);
-				const float GeneralContentHeight = RadioHeight(4) + MarginSmall + GeneralRows * (LineSize + MarginSmall);
+				// 「显示昵称」够宽是固定两行的胶囊分段（标签一行 + 控件一行），窄窗口退回可换行
+				// 分段行（行高变大）；测量、预布局与绘制三个阶段必须共用同一个解析结果。
+				const float GeneralContentHeight = ResolveShowNameRowLayout({0.0f, 0.0f, ContentWidth, LineSize * 2.0f + MarginSmall}).m_Height + MarginSmall + GeneralRows * (LineSize + MarginSmall);
 				float HookContentHeight = NamePlateSectionHeaderHeight + LineSize + MarginSmall;
 				if(NamePlateStrongEnabled())
 				{
-					HookContentHeight += LineSize + MarginSmall + RadioHeight(5) + MarginSmall + NamePlateColorPickerHeight * 2.0f + LineSize + MarginSmall;
+					HookContentHeight += LineSize + MarginSmall + ScopeHeight(vHookScopeLabels) + MarginSmall + NamePlateColorPickerHeight * 2.0f + LineSize + MarginSmall;
 				}
-				const float KeysContentHeight = NamePlateSectionHeaderHeight + RadioHeight(4) + MarginSmall + (g_Config.m_ClShowDirection > 0 ? LineSize : 0.0f);
+				const float KeysContentHeight = NamePlateSectionHeaderHeight + ScopeHeight(vKeyPressLabels) + MarginSmall + (g_Config.m_ClShowDirection > 0 ? LineSize : 0.0f);
 				return GeneralContentHeight + NamePlateTextContentHeight + HookContentHeight + KeysContentHeight;
 			};
 			AddMeasuredCard(5, ResolveNamePlateContentHeight, [=, this](CUIRect ContentRect) mutable {
 				CUIRect LeftView = ContentRect;
+				const auto DoNamePlateScopeMenu = [&](const char *pLabelTextId, const char *pLabel, std::vector<CButtonContainer> &vButtonContainers, const std::vector<const char *> &vTextIds, const std::vector<const char *> &vLabels, const std::vector<int> &vValues, int &Value) {
+					const SSettingsSegmentedRowLayout ScopeRow = ResolveNamePlateScopeRowLayout(LeftView, vLabels);
+					if(!ScopeRow.m_Capsule)
+					{
+						DoSettingsLine_RadioMenu(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, APPEARANCE_TAB_NAME_PLATE, LeftView, pLabelTextId, pLabel, vButtonContainers, vTextIds, vLabels, vValues, Value, AppearanceMetrics);
+						return;
+					}
+					LeftView.HSplitTop(ScopeRow.m_Height, nullptr, &LeftView);
+					DoSettingsLabel(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, pLabelTextId, &ScopeRow.m_LabelRect, pLabel, AppearanceBodySize, TEXTALIGN_ML);
+					const int OptionCount = (int)vValues.size();
+					const SSettingsNestedRadioSlots Slots = ResolveSettingsNestedRadioSlots(ScopeRow.m_ContainerRect, OptionCount, -1, 0, CapsuleSegmentInset);
+					const CUIRect *pActiveSlot = nullptr;
+					for(int i = 0; i < OptionCount; ++i)
+					{
+						if(vValues[i] == Value)
+							pActiveSlot = &Slots.m_aMain[i];
+					}
+					const uint64_t Group = BuildUiAnimNodeKey(MakeUiScopeHash(pLabelTextId), reinterpret_cast<uint64_t>(vButtonContainers.data()));
+					ui_widget::NestedSegmentChrome(TabBarUiContext(), Group, ScopeRow.m_ContainerRect, pActiveSlot, nullptr, SettingsNestedSegmentStyle());
+					for(int i = 0; i < OptionCount; ++i)
+					{
+						if(DoSettingsButton_CapsuleSegment(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, APPEARANCE_TAB_NAME_PLATE, &vButtonContainers[i], vTextIds[i], vLabels[i], vValues[i] == Value, &Slots.m_aMain[i], AppearanceMetrics.m_SmallSize))
+							Value = vValues[i];
+					}
+				};
 				const auto NextNamePlateRow = [&](CUIRect &Row) {
 					LeftView.HSplitTop(LineSize, &Row, &LeftView);
 					LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
@@ -7542,13 +7688,12 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 						NextNamePlateRow(Button);
 						if(DoSettingsButton_CheckBox(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, &s_NamePlatesStrong, "appearance-show-hook-strength-number", Localize("Show hook strength number indicator"), g_Config.m_ClNamePlatesStrong == 2, &Button))
 							g_Config.m_ClNamePlatesStrong = g_Config.m_ClNamePlatesStrong != 2 ? 2 : 1;
-						DoSettingsLine_RadioMenu(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, APPEARANCE_TAB_NAME_PLATE, LeftView, "appearance-hook-strength-scope-label", Localize("Hook strength scope"),
+						DoNamePlateScopeMenu("appearance-hook-strength-scope-label", Localize("Hook strength scope"),
 						m_vButtonContainersNamePlateHookStrongWeakScope,
 						{"appearance-hook-strength-scope-self", "appearance-hook-strength-scope-others", "appearance-hook-strength-scope-strong", "appearance-hook-strength-scope-weak", "appearance-hook-strength-scope-all"},
-						{Localize("Self"), Localize("Others"), Localize("Strong hook"), Localize("Weak hook"), Localize("All")},
+						vHookScopeLabels,
 							{QM_HOOK_STRONG_WEAK_SCOPE_SELF, QM_HOOK_STRONG_WEAK_SCOPE_OTHERS, QM_HOOK_STRONG_WEAK_SCOPE_STRONG, QM_HOOK_STRONG_WEAK_SCOPE_WEAK, QM_HOOK_STRONG_WEAK_SCOPE_ALL},
-							g_Config.m_QmNameplateHookStrongWeakScope,
-							AppearanceMetrics);
+							g_Config.m_QmNameplateHookStrongWeakScope);
 						LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
 						static CButtonContainer s_StrongHookColorResetId;
 					static CButtonContainer s_WeakHookColorResetId;
@@ -7563,10 +7708,10 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				DoAppearanceHeading(LeftView, "appearance-key-presses-title", Localize("Key Presses"), HeadlineFontSize, HeadlineHeight);
 				LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
 
-				DoSettingsLine_RadioMenu(SETTINGS_APPEARANCE, APPEARANCE_TAB_NAME_PLATE, APPEARANCE_TAB_NAME_PLATE, LeftView, "appearance-show-key-presses-label", Localize("Show players' key presses"),
+				DoNamePlateScopeMenu("appearance-show-key-presses-label", Localize("Show players' key presses"),
 					m_vButtonContainersNamePlateKeyPresses,
 					{"appearance-show-key-presses-none", "appearance-show-key-presses-own", "appearance-show-key-presses-others", "appearance-show-key-presses-all"},
-					{Localize("None", "Show players' key presses"), Localize("Own", "Show players' key presses"), Localize("Others", "Show players' key presses"), Localize("All", "Show players' key presses")},
+					vKeyPressLabels,
 						{0, 3, 1, 2},
 						g_Config.m_ClShowDirection,
 						AppearanceMetrics,
@@ -7584,8 +7729,10 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				(static_cast<uint64_t>(g_Config.m_ClNamePlatesIds != 0) << 1) |
 				(static_cast<uint64_t>(g_Config.m_ClNamePlatesIdsSeparateLine != 0) << 2) |
 				(static_cast<uint64_t>(g_Config.m_ClNamePlatesStrong != 0) << 3) |
-				(static_cast<uint64_t>(g_Config.m_ClShowDirection > 0) << 4);
-			vCards.back().m_PreLayoutInput = [this, LineSize, MarginSmall, AppearanceMetrics, NamePlateSectionHeaderHeight, NamePlateColorPickerHeight, NamePlateStrongEnabled](CUIRect Content) {
+				(static_cast<uint64_t>(g_Config.m_ClShowDirection > 0) << 4) |
+				// 「显示昵称」在旧 UI / 新 UI 下是两种行高不同的控件，UI 模式换了必须重量。
+				(static_cast<uint64_t>(g_Config.m_QmNewUi != 0) << 5);
+			vCards.back().m_PreLayoutInput = [this, LineSize, MarginSmall, NamePlateSectionHeaderHeight, NamePlateColorPickerHeight, NamePlateStrongEnabled, ResolveShowNameRowLayout, ResolveNamePlateScopeRowLayout, vHookScopeLabels, vKeyPressLabels, CapsuleSegmentInset](CUIRect Content) {
 				if(m_MenuTextPlanCollecting)
 					return false;
 				CUIRect LeftView = Content;
@@ -7595,17 +7742,15 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
 					return Row;
 				};
-				const auto ConsumeRadio = [&](int OptionCount) {
-					const float Height = ResolveSettingsRadioRowLayout(LeftView, OptionCount, AppearanceMetrics).m_Height;
-					LeftView.HSplitTop(Height, nullptr, &LeftView);
-				};
 				const auto ProcessToggle = [this](CUIRect ToggleRow, int *pValue) {
 					if(!Ui()->DoButtonLogic(pValue, 0, &ToggleRow, BUTTONFLAG_LEFT))
 						return false;
 					*pValue ^= 1;
 					return true;
 				};
-				ConsumeRadio(4);
+				// 「显示昵称」：胶囊分段与可换行分段行都由 ResolveShowNameRowLayout 定高，
+				// 这里必须用同一个解析结果，否则预布局与绘制会错行。
+				LeftView.HSplitTop(ResolveShowNameRowLayout(LeftView).m_Height, nullptr, &LeftView);
 				LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
 				ConsumeRow();
 				ConsumeRow();
@@ -7642,15 +7787,15 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 						g_Config.m_ClNamePlatesStrong = g_Config.m_ClNamePlatesStrong != 2 ? 2 : 1;
 						Changed = true;
 					}
-					ConsumeRadio(5);
+					LeftView.HSplitTop(ResolveNamePlateScopeRowLayout(LeftView, vHookScopeLabels).m_Height, nullptr, &LeftView);
 					LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
 					for(int RowIndex = 0; RowIndex < 2; ++RowIndex)
 						LeftView.HSplitTop(NamePlateColorPickerHeight, nullptr, &LeftView);
 					ConsumeRow();
 				}
 				LeftView.HSplitTop(NamePlateSectionHeaderHeight, nullptr, &LeftView);
-				const SSettingsRadioRowLayout KeyPressLayout = ResolveSettingsRadioRowLayout(LeftView, 4, AppearanceMetrics);
-				CUIRect KeyButtons = KeyPressLayout.m_ButtonsRect;
+				const SSettingsSegmentedRowLayout KeyPressLayout = ResolveNamePlateScopeRowLayout(LeftView, vKeyPressLabels);
+				const SSettingsNestedRadioSlots KeySlots = ResolveSettingsNestedRadioSlots(KeyPressLayout.m_ContainerRect, 4, -1, 0, KeyPressLayout.m_Capsule ? CapsuleSegmentInset : 0.0f);
 				const int KeyPressValues[] = {0, 3, 1, 2};
 				const float KeyButtonWidth = KeyButtons.w / 4.0f;
 				// 禅模式接管按键指示时：图标仍显示当前值，但不接受用户改写，并提示接管来源。

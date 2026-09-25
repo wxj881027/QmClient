@@ -14,6 +14,8 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <string>
+#include <unordered_map>
 
 typedef struct _json_value json_value;
 class CNetClient;
@@ -291,6 +293,7 @@ public:
 	uint64_t FriendListRevision() const override { return m_FriendListRevision; }
 	void RequestResort() { m_NeedResort = true; }
 
+	uint64_t FriendListRevision() const override { return m_FriendListRevision; }
 	int NumServers() const override { return m_vpServerlist.size(); }
 	const CServerInfo *Get(int Index) const override;
 	int NumHttpServers() const override;
@@ -414,6 +417,11 @@ private:
 	int GenerateToken(const NETADDR &Addr) const;
 	static int GetBasicToken(int Token);
 	static int GetExtraToken(int Token);
+	int QmClientCountForServer(const CServerInfo &Info) const;
+	void UpdateQmClientServerCounts();
+
+	// 最近一次由游戏层推送的在线梦客户端分布，排序前物化到 CServerInfo。
+	std::unordered_map<std::string, int> m_QmClientServerCounts;
 	int QmClientCountForServer(const CServerInfo &Info) const;
 	void UpdateQmClientServerCounts();
 

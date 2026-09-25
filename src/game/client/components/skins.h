@@ -190,6 +190,10 @@ public:
 			bool m_ShouldTouch = false;
 			bool m_ShouldErase = false;
 		};
+		static bool ShouldDiscardPendingUpload(EState OldState, EState NewState)
+		{
+			return OldState == EState::LOADING && NewState != EState::LOADING && NewState != EState::LOADED;
+		}
 		static bool TracksUsage(EState State, bool AlwaysLoaded)
 		{
 			return !AlwaysLoaded &&
@@ -397,6 +401,21 @@ public:
 		bool m_NeedsUpdate = true;
 	};
 
+	class CUnresolvedSkinScanState
+	{
+	public:
+		void OnStateChange(CSkinContainer::EState OldState, CSkinContainer::EState NewState)
+		{
+			if(OldState != NewState && CSkinContainer::IsUnresolved(NewState))
+				m_Pending = true;
+		}
+
+		bool Consume() { return std::exchange(m_Pending, false); }
+
+	private:
+		bool m_Pending = false;
+	};
+
 	class CSkinLoadingStats
 	{
 	public:
@@ -548,6 +567,11 @@ public:
 	bool PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady = false);
 
 	const CSkinContainer *FindContainerOrNullptr(const char *pName);
+	/**
+	 * 只读查找皮肤容器：未登记的皮肤名返回 nullptr，不会新建容器、不会发起加载请求。
+	 * 用于判断“皮肤名已知但资源解析失败”，因为 FindContainerOrNullptr 会重新请求加载。
+	 */
+	const CSkinContainer *LookupContainerOrNullptr(const char *pName) const;
 	const CSkin *FindOrNullptr(const char *pName);
 	const CSkin *Find(const char *pName);
 
@@ -661,6 +685,17 @@ public:
 	const char *SkinPrefix() const;
 
 	static bool IsSpecialSkin(const char *pName);
+
+	/**
+	 * 旧 Tee 渲染信息只有在它引用的 6.x 皮肤贴图仍然驻留时才能继续复用。
+	 * 皮肤贴图被资源预算卸载（或目录扫描重建）后，句柄依旧 IsValid()，但纹理已经释放；
+	 * 继续复用会把这些句柄画到屏幕上，表现为一只没有贴图的纯白块 Tee。
+	 */
+	static bool CanReusePreviousSixSkin(bool SixFlagSet, bool SkinNameValid, bool SkinResident)
+	{
+		return !SixFlagSet || !SkinNameValid || SkinResident;
+	}
+
 	static int ParseOfficialSkinReleaseDateKey(const char *pDate)
 	{
 		if(pDate == nullptr)
@@ -994,7 +1029,7 @@ private:
 	/**
 	 * Maximum number of skins to process per frame in UpdateFinishLoading.
 	 * This limit prevents frame stuttering caused by uploading too many textures at once.
-	 * Each skin requires approximately 14 texture uploads (7 original + 7 colorable).
+	 * Each skin requires approximately 24 texture uploads (12 original + 12 colorable).
 	 */
 	static constexpr int MAX_SKINS_PER_FRAME = 12;
 

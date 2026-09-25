@@ -22,9 +22,6 @@
 %d items selected
 == 已选择 %d 项
 
-%d more cut segments
-== 还有 %d 个裁剪片段
-
 %d of %d server
 == %d/%d 个服务器
 
@@ -520,9 +517,6 @@ Adds a specific war entry
 
 Adds default chat binds
 == 添加默认聊天绑定
-
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
-== 在 HUD 上显示分身的按键、锤子、控制与同步状态，并支持自定义 bind 状态列表。
 
 Adjust DDNet gameplay indicators and assists
 == 调整 DDNet 游戏指示器和辅助功能
@@ -2309,6 +2303,9 @@ Connecting dummy
 Connecting to
 == 正在连接到
 
+Connecting to voice server
+== 正在连接语音服务器
+
 Connection disconnected
 == 连接已断开
 
@@ -2452,6 +2449,9 @@ Could not get server list from master server
 
 Could not load default touch controls from file. See local console for details.
 == 无法从文件加载默认触控设置。检查本地控制台以获取详情。
+
+Could not load new features
+== 新功能内容加载失败
 
 Could not load sponsor QR code. Check the Base64 data
 == 无法加载支持二维码。请检查 Base64 内容
@@ -2639,6 +2639,9 @@ Customize translate button and menu colors
 Customize vote display and interaction
 == 自定义投票显示和交互
 
+Cut end: %s
+== 终点：%s
+
 Cut interval
 == 裁剪区间
 
@@ -2647,6 +2650,9 @@ Cut length
 
 Cut segments
 == 裁剪片段
+
+Cut start: %s
+== 起点：%s
 
 Cute:
 == 可爱：
@@ -3200,6 +3206,9 @@ Door Laser Outline Color
 Door laser outline color
 == 门的激光轮廓颜色
 
+Double-click: left applies to main, right applies to dummy
+== 双击：左键应用到本体，右键应用到分身
+
 Download community skins
 == 下载社区皮肤
 
@@ -3371,8 +3380,8 @@ Dummy is currently connected.
 Dummy jump
 == 分身跳
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== 卡键/锤子/分身控制/分身同步状态开关，以及自定义 bind 状态列表
+Dummy key/hammer/control/copy status switches
+== 卡键/锤子/分身控制/分身同步状态开关
 
 Dummy marking color
 == 分身标记颜色
@@ -3566,9 +3575,6 @@ Emoticon shadow
 Emoticons
 == 表情
 
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== 为空时使用内置四项。格式：var|0=Off|1=On；var|Text
-
 enable
 == 开启
 
@@ -3631,9 +3637,6 @@ Enable chat with all/team mode
 
 Enable cheats for your current team's run, but you can't earn a rank
 == 为你当前队伍启用作弊，但将无法获得排名
-
-Enable client stutter diagnostics at startup
-== 启动时启用客户端卡顿诊断
 
 Enable colored console output
 == 启用控制台彩色输出
@@ -3863,9 +3866,6 @@ Enable skin queue rotation
 Enable skin switch animation
 == 启用皮肤切换动画
 
-Enable skin transition animation, then choose the type, scope, duration and easing.
-== 打开皮肤切换动画，再选择类型、作用范围、时长与缓动。
-
 Enable smooth cinematic camera while free spectating
 == 自由观战时启用平滑电影镜头
 
@@ -3953,14 +3953,11 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 启用敌对列表
 
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
-== 打开武器切换动画或装填动画，再调整作用范围、时长、旋转角度与缓动。
-
 Enable word filter list
 == 启用屏蔽词列表
 
 Enable Zen Mode
-== 启用禅模式（Zen Mode）
+== 启用禅模式
 
 Enable Zen mode
 == 启用禅模式
@@ -3995,6 +3992,9 @@ Endpoint
 Endpoint (optional)
 == 端点（可选）
 
+Enhanced rendering
+== 增强渲染
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == 请输入 /practice 或重新开始，否则整队将在 60 秒后被处死
 
@@ -4003,9 +4003,6 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == 输入密码
-
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
-== 填入赞助兑换码并点「兑换」，写下称号后点「保存」。勾选「仅在指定昵称下显示」可把称号绑定到某一个昵称。
 
 Enter Username
 == 输入账号名称
@@ -4036,9 +4033,6 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
-
-Entry: %s
-== 入口：%s
 
 Erase items on the in game background
 == 擦除游戏背景中的内容
@@ -4778,9 +4772,6 @@ Gives you infinite jump
 Glitch
 == 故障
 
-Global card
-== 全局卡片
-
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 == 全局卡片排序（格式 stableId|tab|col|order; 分号分隔）
 
@@ -4931,6 +4922,9 @@ Has save
 Has unread news
 == 是否有未读新闻
 
+HD icons (MSDF)
+== 高清图标 (MSDF)
+
 HDF
 == HDF
 
@@ -4953,7 +4947,7 @@ Hi!
 == 你好啊！
 
 Hide basic system info (join, version, rules) in Zen mode
-== 禅模式下隐藏入场、版本和规则等基础系统信息
+== 在禅模式中隐藏基础系统信息（进服、版本、规则）
 
 Hide chat messages from players marked as enemies
 == 隐藏被标记为敌人的玩家的聊天消息
@@ -4962,28 +4956,28 @@ Hide death/respawn effects
 == 隐藏死亡/重生特效
 
 Hide death/respawn effects in Zen Mode
-== 禅模式下隐藏死亡/重生特效
+== 在禅模式中隐藏死亡/重生特效
 
 Hide direction in Zen mode
-== 禅模式下隐藏方向
+== 在禅模式中隐藏方向指示
 
 Hide direction indicators
-== 隐藏方向
+== 隐藏方向指示
 
 Hide Echo messages
 == 隐藏 Echo 消息
 
 Hide Echo messages in Zen mode
-== 禅模式下隐藏 Echo 消息
+== 在禅模式中隐藏 Echo 消息
 
 Hide explosion effects
-== 隐藏炮击特效
+== 隐藏爆炸特效
 
 Hide freeze effects
 == 隐藏冻结特效
 
 Hide freeze effects in Zen Mode
-== 禅模式下隐藏冻结特效
+== 在禅模式中隐藏冻结特效
 
 Hide ghosts of frozen players
 == 隐藏冻结玩家的影子
@@ -4992,22 +4986,22 @@ Hide guide lines
 == 隐藏辅助线
 
 Hide hammer effects
-== 隐藏锤击特效
+== 隐藏锤子特效
 
 Hide hammer effects in Zen Mode
-== 禅模式下隐藏锤击特效
+== 在禅模式中隐藏锤子特效
 
 Hide helper lines in Gores mode
 == Gores 模式下隐藏辅助线
 
 Hide helper lines in Zen mode
-== 禅模式下隐藏辅助线
+== 在禅模式中隐藏辅助线
 
 Hide HUD
 == 隐藏 HUD
 
 Hide HUD in Zen mode
-== 禅模式下隐藏 HUD
+== 在禅模式中隐藏 HUD
 
 Hide indicator for tees on your screen
 == 其他玩家在屏幕内时隐藏指示器
@@ -5016,28 +5010,28 @@ Hide input emoticon
 == 隐藏输入表情
 
 Hide join/version prompts
-== 隐藏入场/版本提示
+== 隐藏进服/版本提示
 
 Hide jump effects
 == 隐藏跳跃特效
 
 Hide jump effects in Zen Mode
-== 禅模式下隐藏跳跃特效
+== 在禅模式中隐藏跳跃特效
 
 Hide kill and finish messages in Zen mode
-== 禅模式下隐藏击杀和完成消息
+== 在禅模式中隐藏击杀与完成信息
 
 Hide kill/finish messages
-== 隐藏死亡/完成消息
+== 隐藏击杀/完成信息
 
 Hide map progress
 == 隐藏地图进度
 
 Hide map progress bar in Zen mode
-== 禅模式下隐藏地图进度条
+== 在禅模式中隐藏地图进度条
 
 Hide nameplates
-== 隐藏名字板
+== 隐藏名牌
 
 Hide names
 == 隐藏名字
@@ -5055,22 +5049,22 @@ Hide player messages
 == 隐藏玩家消息
 
 Hide player messages in Zen mode
-== 禅模式下隐藏玩家消息
+== 在禅模式中隐藏玩家消息
 
 Hide player name plates in Zen Mode
-== 禅模式下隐藏玩家名字板
+== 在禅模式中隐藏玩家名牌
 
 Hide player names in Zen Mode
-== 禅模式下隐藏玩家名字
+== 在禅模式中隐藏玩家名字
 
 Hide projectile effects in Zen Mode
-== 禅模式下隐藏投射物特效
+== 在禅模式中隐藏弹道特效
 
 Hide scoreboard
 == 隐藏计分板
 
 Hide scoreboard in Zen mode
-== 禅模式下隐藏计分板
+== 在禅模式中隐藏计分板
 
 Hide sensitive info like /save password
 == 隐藏敏感信息，如 /save 密码
@@ -5082,7 +5076,7 @@ Hide server prompt notifications
 == 隐藏服务器提示通知
 
 Hide server tip notifications (including notification bar) in Zen mode
-== 禅模式下隐藏服务器提示通知（包括通知栏）
+== 在禅模式中隐藏服务器提示通知（含通知栏）
 
 Hide Settings Tabs
 == 隐藏设置选项卡
@@ -5103,13 +5097,13 @@ Hide typing emoji during input
 == 输入时不显示打字表情
 
 Hide UI for focused gameplay
-== 隐去 UI 专注游戏
+== 隐藏界面，专注游戏
 
 Hide weapon fire effects in Zen Mode
-== 禅模式下隐藏武器开火特效
+== 在禅模式中隐藏武器开火特效
 
 Hide weapon muzzle flashes
-== 隐藏武器火焰
+== 隐藏武器枪口闪光
 
 High Detail
 == 显示地图细节
@@ -5417,6 +5411,9 @@ Indicator size
 Indicator transparency
 == 指示器透明度
 
+Inferno
+== 冥火
+
 Infinite hook for super players on/off.
 == 超级玩家无限钩索开/关
 
@@ -5491,9 +5488,6 @@ Insane
 
 Installing update. Please wait...
 == 正在安装更新，请稍等……
-
-Instant zoom reverse
-== 反向缩放立即生效
 
 Interface
 == 界面
@@ -6116,12 +6110,6 @@ Local game mode statistics
 Local only
 == 仅本地
 
-Local particle effects
-== 本地粒子效果
-
-Local particles: show particles behind own Tee (e.g. freeze snow)
-== 本地粒子：显示自己 Tee 身后的粒子（例如冻结雪花）
-
 Local saves
 == 本地存档
 
@@ -6368,14 +6356,8 @@ Margin when notification is docked
 Mark demo
 == 标记回放
 
-Mark the beginning of a cut (right click to reset)
-== 标记裁剪起点 (右键重置)
-
 Mark the beginning of a demo cut
 == 标记回放剪辑起点
-
-Mark the end of a cut (right click to reset)
-== 标记裁剪终点 (右键重置)
 
 Mark the end of a demo cut
 == 标记回放剪辑终点
@@ -6539,6 +6521,9 @@ Menu camera rotation time in seconds
 Menu camera speed
 == 菜单相机速度
 
+Menu Gaussian blur pipeline
+== 菜单高斯模糊管线
+
 Menu main panel background color
 == 菜单主面板底色
 
@@ -6562,9 +6547,6 @@ Merge consecutive identical echo messages within this window in milliseconds (0 
 
 Merge consecutive identical player messages within 2 seconds
 == 合并 2 秒内连续出现的相同玩家消息
-
-Merges chat messages repeated within a short time into a single line.
-== 短时间内重复的聊天消息会合并成一条。
 
 Message color
 == 留言颜色
@@ -6753,10 +6735,10 @@ Mute
 == 静音
 
 Mute death/respawn sound in Zen Mode
-== 禅模式下静音死亡/重生音效
+== 在禅模式中静音死亡/重生音效
 
 Mute death/respawn sounds
-== 静音死亡/重生
+== 静音死亡/重生音效
 
 Mute emoticons
 == 屏蔽表情
@@ -6765,19 +6747,19 @@ Mute flag sounds
 == 静音旗帜音效
 
 Mute hammer sound in Zen mode
-== 禅模式下静音锤击音效
+== 在禅模式中静音锤子音效
 
 Mute hammer sounds
-== 静音锤击
+== 静音锤子音效
 
 Mute hook sound
 == 静音钩索音效
 
 Mute jump sound in Zen Mode
-== 禅模式下静音跳跃音效
+== 在禅模式中静音跳跃音效
 
 Mute jump sounds
-== 静音跳跃
+== 静音跳跃音效
 
 Mute map sounds
 == 静音地图音效
@@ -7820,9 +7802,6 @@ Pet Skin:
 Pick result: %s
 == 抽取结果：%s
 
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
-== 选择与你使用的音乐客户端匹配的来源并保持播放，歌词会自动跟随。
-
 Pickup range
 == 拾取物范围
 
@@ -8044,9 +8023,6 @@ Players weapons has no affect on others
 
 Playing effects
 == 播放效果
-
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
-== 皮肤变化时播放动画，包括锤子偷来的皮肤。
 
 Please add a valid cut first
 == 请先添加有效裁剪片段
@@ -8375,6 +8351,9 @@ Pulse speed
 Pulse strength
 == 脉冲强度
 
+Pure Vulkan fallback
+== 当前：纯净 Vulkan 回退
+
 Push radius
 == 推动半径
 
@@ -8458,6 +8437,9 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi 颜色动画插值：0=sRGB 线性，1=OKLAB 感知均匀
+
+QmVulkan active
+== 当前：QmVulkan 已启用
 
 QQ group: 1076765929 (click to copy)
 == QQ 群：1076765929（点击复制）
@@ -8732,9 +8714,6 @@ Redeem
 Redeem your code and customize your title
 == 领取赞助资格并设置头衔
 
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
-== 使用赞助兑换码解锁自定义称号，称号会显示在聊天与名牌上。
-
 Reduce antiping and player prediction when frozen
 == 冻结时减少 antiping 和玩家预测
 
@@ -8827,12 +8806,6 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == 主持人的远程控制台密码（有限访问）
-
-Remote particle effects
-== 远程粒子效果
-
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
-== 远程粒子：通过中心服同步并渲染其他玩家（需对方开启本地+远程）
 
 Remove
 == 删除
@@ -9265,9 +9238,6 @@ Retry remote stats
 
 Retrying…
 == 正在重试…
-
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
-== 反向按键时立即反向缩放（0=保留原有平滑缩放）
 
 Review and edit custom key bindings
 == 查看并编辑自定义按键绑定
@@ -9877,6 +9847,12 @@ Set color
 
 Set current demo speed
 == 设置当前回放速度
+
+Set cut end at current position (O, right click to reset)
+== 将当前位置设为剪辑终点（O，右键重置）
+
+Set cut start at current position (I, right click to reset)
+== 将当前位置设为剪辑起点（I，右键重置）
 
 Set ddrace team for a player
 == 为玩家设置 DDRace 队伍
@@ -10862,9 +10838,6 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == 显示命令 r 的帮助，如果留空则显示一般帮助
 
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
-== 从网易云音乐、汽水音乐、酷狗、QQ 音乐获取歌词，并显示在灵动岛上。
-
 Shows the credits of the DDNet mod
 == 显示 DDNet mod 的制作人员
 
@@ -11003,9 +10976,6 @@ Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
 == 皮肤切换动画类型（0=残影弹出 1=柔和淡变 2=向左滑切 3=旋转弹出 4=明暗切换 5=故障抖动 6=弹性缩放）
 
-Skin transition
-== 皮肤切换
-
 Skin transition animation
 == 皮肤切换动画
 
@@ -11074,6 +11044,9 @@ Smooth Dynamic Camera
 
 Smooth fade
 == 柔和淡变
+
+Smooth island (SDF)
+== 灵动岛平滑 (SDF)
 
 Smooth other players' predicted movement
 == 平滑其他玩家的预测移动
@@ -11518,9 +11491,6 @@ Switch failed
 
 Switch interval
 == 切换间隔
-
-Switch on the status rows you need, then list the binds you want to watch.
-== 打开需要的状态开关，再在自定义列表里填想监控的 bind。
 
 Switch opacity
 == 开关不透明度
@@ -12497,9 +12467,6 @@ Tune variable to value
 Tune variable to value or show current value
 == 将变量调到指定值，或显示当前值
 
-Turn on "Message merging" in Dream Features.
-== 在「梦的小功能」里打开「消息合并」。
-
 Tutorial
 == 教学
 
@@ -12526,9 +12493,6 @@ UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or netwo
 
 UDP seems to be filtered.
 == UDP 疑似被过滤。
-
-UDP socket not open
-== UDP 套接字未打开
 
 UI color
 == 用户界面颜色
@@ -12782,9 +12746,6 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == 用于下载皮肤的 URL
 
-Usage: %s
-== 用法：%s
-
 Usage: %s %s
 == 用法：%s %s
 
@@ -12841,6 +12802,9 @@ Use default voice input device
 
 Use default voice output device
 == 使用默认语音输出设备
+
+Use each Tee trail style's own palette instead of the trail color mode
+== 使用各 Tee 拖尾样式自带的配色，而不是拖尾颜色模式
 
 Use embedded HUD progress bar
 == 使用 HUD 内嵌进度条
@@ -13322,9 +13286,6 @@ Weapon switch easing
 Weapon switch rotation
 == 武器切换旋转
 
-Weapon Trajectory
-== 武器辅助线
-
 Weapon trajectory
 == 武器弹道辅助线
 
@@ -13457,9 +13418,6 @@ Width of friends column in server browser
 Width of latency column in server browser
 == 服务器浏览器中延迟列的宽度
 
-Width of map column in server browser
-== 服务器浏览器中地图列的宽度
-
 Width of others' hook collision line
 == 其他玩家的钩子辅助线线宽度
 
@@ -13495,9 +13453,6 @@ Word filter action: 0=replace matching words, 1=hide entire message
 
 Write local console contents to a text file
 == 将本地控制台内容写入文本文件
-
-Write performance debug logs to dedicated file
-== 将性能调试日志写入专用文件
 
 Write remote console contents to a text file
 == 将远程控制台内容写入文本文件
@@ -13826,9 +13781,6 @@ Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == 你的超时保护码已设置。0.7 客户端超时后无法取回自己的 tee，但 0.6 客户端可以接管你的 tee
 
-Your weapon slides and rotates in when you switch, and flips while reloading.
-== 切换武器时滑入旋转，装填时按装填时间翻转。
-
 z = Zoom
 == z = 缩放
 
@@ -13836,7 +13788,7 @@ Zen Mode
 == 禅模式
 
 Zen mode key
-== 禅模式按键
+== 禅模式快捷键
 
 Zhipu AI
 == 智谱清言

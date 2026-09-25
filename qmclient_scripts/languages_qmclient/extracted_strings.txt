@@ -6,7 +6,6 @@
 %.2f MiB
 %c Team %d
 %d items selected
-%d more cut segments
 %d of %d server
 %d of %d servers
 %d player
@@ -172,7 +171,6 @@ Address
 Address to bind the external console. Anything other than "localhost" is dangerous.
 Adds a specific war entry
 Adds default chat binds
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
 Adjust DDNet gameplay indicators and assists
 Adjust DDRace-specific HUD indicators
 Adjust game camera and FOV settings
@@ -768,6 +766,7 @@ Connected, no one is speaking
 Connected, waiting for first ping
 Connecting dummy
 Connecting to
+Connecting to voice server
 Connection disconnected
 Connection elevated
 Connection normal
@@ -816,6 +815,7 @@ Could not find your Team
 Could not get current server address
 Could not get server list from master server
 Could not load default touch controls from file. See local console for details.
+Could not load new features
 Could not load sponsor QR code. Check the Base64 data
 Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
@@ -878,9 +878,11 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 Customize translate button and menu colors
 Customize vote display and interaction
+Cut end: %s
 Cut interval
 Cut length
 Cut segments
+Cut start: %s
 Cute:
 Cycle custom Tee hue
 Cycle custom Tee hue for dummy simultaneously
@@ -1065,6 +1067,7 @@ Door Laser Inner Color
 Door laser inner color
 Door Laser Outline Color
 Door laser outline color
+Double-click: left applies to main, right applies to dummy
 Download community skins
 Download failed
 Download replay
@@ -1122,7 +1125,7 @@ Dummy hook
 Dummy is allowed on this server.
 Dummy is currently connected.
 Dummy jump
-Dummy key/hammer/control/copy status switches and custom bind status list
+Dummy key/hammer/control/copy status switches
 Dummy marking color
 Dummy mini view
 Dummy mini view size (percent)
@@ -1187,7 +1190,6 @@ Emoticon
 Emoticon ID
 Emoticon shadow
 Emoticons
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
 enable
 Enable /swap
 Enable /team0 mode
@@ -1209,7 +1211,6 @@ Enable chat mention sound
 Enable chat message sound
 Enable chat with all/team mode
 Enable cheats for your current team's run, but you can't earn a rank
-Enable client stutter diagnostics at startup
 Enable colored console output
 Enable coloring and hearts for friends
 Enable connections from vanilla 0.6 clients
@@ -1286,7 +1287,6 @@ Enable shout when holding fire while in water
 Enable Sixup connection.
 Enable skin queue rotation
 Enable skin switch animation
-Enable skin transition animation, then choose the type, scope, duration and easing.
 Enable smooth cinematic camera while free spectating
 Enable SodaMusic Hook
 Enable SodaMusic hook integration
@@ -1316,7 +1316,6 @@ Enable voice activation (VAD)
 Enable voice chat
 Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
 Enable word filter list
 Enable Zen Mode
 Enable Zen mode
@@ -1330,10 +1329,10 @@ Endless hook has been activated
 Endless hook has been deactivated
 Endpoint
 Endpoint (optional)
+Enhanced rendering
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 Enter a CP number from 1 to 255.
 Enter Password
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 Enter Username
 Enter your sponsor code
 Entities
@@ -1344,7 +1343,6 @@ Entity overlay
 Entity Preview
 Entity wall outline opacity
 entity_bg (Workshop)
-Entry: %s
 Erase items on the in game background
 Error
 Error checking player name
@@ -1591,7 +1589,6 @@ Gives you as many jumps as you specify
 Gives you endless hook
 Gives you infinite jump
 Glitch
-Global card
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
 Global toggle key
@@ -1642,6 +1639,7 @@ Hammer: %s
 Has people playing
 Has save
 Has unread news
+HD icons (MSDF)
 HDF
 Heart
 Height
@@ -1804,6 +1802,7 @@ Indicator radius
 Indicator safe color
 Indicator size
 Indicator transparency
+Inferno
 Infinite hook for super players on/off.
 Info
 Info Messages
@@ -1829,7 +1828,6 @@ Input overlay Y position (percent)
 Input switch
 Insane
 Installing update. Please wait...
-Instant zoom reverse
 Interface
 Interface accent color
 Interface animations
@@ -2037,8 +2035,6 @@ Local + Dummy
 Local console log category filter mask (bit flags)
 Local game mode statistics
 Local only
-Local particle effects
-Local particles: show particles behind own Tee (e.g. freeze snow)
 Local saves
 Local statistics file is invalid, saving paused
 Local test mode
@@ -2121,9 +2117,7 @@ Maps finished
 maps/example.map
 Margin when notification is docked
 Mark demo
-Mark the beginning of a cut (right click to reset)
 Mark the beginning of a demo cut
-Mark the end of a cut (right click to reset)
 Mark the end of a demo cut
 Markers
 Master server URL to register
@@ -2178,6 +2172,7 @@ Menu background
 Menu camera rotation radius
 Menu camera rotation time in seconds
 Menu camera speed
+Menu Gaussian blur pipeline
 Menu main panel background color
 Menu main panel opacity
 Menu opacity (0-100)
@@ -2186,7 +2181,6 @@ Menu option - normal
 Menu option - selected
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 Merge consecutive identical player messages within 2 seconds
-Merges chat messages repeated within a short time into a single line.
 Message color
 Message displayed to players on join.
 Message merging
@@ -2605,7 +2599,6 @@ Pet size relative to normal player
 Pet skin
 Pet Skin:
 Pick result: %s
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 Pickup range
 Pie menu
 Pie menu rename list (separate with |, e.g., name1|name2)
@@ -2680,7 +2673,6 @@ Players hook time is unlimited
 Players weapons affect others
 Players weapons has no affect on others
 Playing effects
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
 Please add a valid cut first
 Please balance teams!
 Please enable finished indicator first
@@ -2790,6 +2782,7 @@ Pulse Amplitude (0-100)
 Pulse animation speed (percentage, 100=normal)
 Pulse speed
 Pulse strength
+Pure Vulkan fallback
 Push radius
 Push strength
 Push-to-talk for voice chat
@@ -2818,6 +2811,7 @@ QmClient sidebar module collapse state
 QmClient sidebar module order
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
+QmVulkan active
 QQ group: 1076765929 (click to copy)
 QQ Music hook heartbeat timeout (milliseconds)
 QQ Music hook helper path (empty=beside QmClient)
@@ -2909,7 +2903,6 @@ Red team
 Red team wins!
 Redeem
 Redeem your code and customize your title
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
 Reduce antiping and player prediction when frozen
 Reduce prediction while frozen
 Reduced
@@ -2941,8 +2934,6 @@ Remote console
 Remote console password (full access)
 Remote console password for helper (limited access)
 Remote console password for moderator (limited access)
-Remote particle effects
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
 Remove
 Remove [group] [clan]:
 Remove [group] [name]:
@@ -3087,7 +3078,6 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 Retry remote stats
 Retrying…
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 Review and edit custom key bindings
 Review and reset changed configuration values
 Rifle Laser Inner Color
@@ -3291,6 +3281,8 @@ Set camera position relative to current view in the map
 Set camera position to x and y in the map
 Set color
 Set current demo speed
+Set cut end at current position (O, right click to reset)
+Set cut start at current position (I, right click to reset)
 Set ddrace team for a player
 Set default replay length
 Set force-pause timer of i to 0.
@@ -3619,7 +3611,6 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 Shows gameplay information for this server
 Shows help to command r, general help if left blank
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
 Shows the credits of the DDNet mod
 Shows the global points of a player beginning with name r (your rank by default)
 Shows the rank of player with name r (your rank by default)
@@ -3666,7 +3657,6 @@ Skin switch animation easing mode
 Skin switch animation intensity percentage
 Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
-Skin transition
 Skin transition animation
 Skin transition duration
 Skin transition easing
@@ -3690,6 +3680,7 @@ Smooth and accurate blur with the highest GPU cost.
 Smooth camera switch animation time when spectating (in ms, 0=off)
 Smooth Dynamic Camera
 Smooth fade
+Smooth island (SDF)
 Smooth other players' predicted movement
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 Smooth scroll animation duration in menu/editor (ms, 0=off)
@@ -3838,7 +3829,6 @@ Switch
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 Switch failed
 Switch interval
-Switch on the status rows you need, then list the binds you want to watch.
 Switch opacity
 Switch skin on hammer
 Switch spectator mode
@@ -4164,7 +4154,6 @@ Tune in zone a variable to value
 Tune layer opacity
 Tune variable to value
 Tune variable to value or show current value
-Turn on "Message merging" in Dream Features.
 Tutorial
 Twinkle strength
 Type
@@ -4174,7 +4163,6 @@ Types
 u = Snapshot latency
 UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
 UDP seems to be filtered.
-UDP socket not open
 UI color
 UI controller sens.
 UI icon color
@@ -4259,7 +4247,6 @@ Upload map
 URL for downloading community skins
 URL for downloading maps (must start with https://)
 URL for downloading skins
-Usage: %s
 Usage: %s %s
 Use /pause first then you can kill
 Use /qm Yes [number] to restore a save, or /qm No to dismiss.
@@ -4279,6 +4266,7 @@ Use default input
 Use default output
 Use default voice input device
 Use default voice output device
+Use each Tee trail style's own palette instead of the trail color mode
 Use embedded HUD progress bar
 Use emote
 Use enemy color instead of frozen color
@@ -4439,7 +4427,6 @@ Weapon switch distance
 Weapon switch duration
 Weapon switch easing
 Weapon switch rotation
-Weapon Trajectory
 Weapon trajectory
 Weapon trajectory helper alpha
 Weapon trajectory helper color
@@ -4484,7 +4471,6 @@ Width
 Width and height are required to be within the range from %d to %d.
 Width of friends column in server browser
 Width of latency column in server browser
-Width of map column in server browser
 Width of others' hook collision line
 Width of players column in server browser
 Width of Qm clients column in server browser
@@ -4497,7 +4483,6 @@ Windowed fullscreen
 Word Filter
 Word filter action: 0=replace matching words, 1=hide entire message
 Write local console contents to a text file
-Write performance debug logs to dedicated file
 Write remote console contents to a text file
 Writing item %d failed
 Written %d items
@@ -4607,7 +4592,6 @@ Your team is currently saving
 Your team was killed because it couldn't finish anymore and hasn't entered /practice mode
 Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
-Your weapon slides and rotates in when you switch, and flips while reloading.
 z = Zoom
 Zen Mode
 Zen mode key

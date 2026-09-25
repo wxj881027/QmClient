@@ -948,7 +948,8 @@ def smoke_test(test_env):
 	client1.command("debug 1")
 	client1.command("stdout_output_level 2; loglevel 2")
 	client1.command(f"connect localhost:{server.port}")
-	server.wait_for_log_prefix("server: player has entered the game", timeout=10)
+	# ASan/UBSan 构建下进服明显变慢，放宽进服与 LOADING→ONLINE 等待。
+	server.wait_for_log_prefix("server: player has entered the game", timeout=30)
 	server.command("record server")
 	client1.wait_for_log_exact("client: state change. last=2 current=3", timeout=30)
 	client1.command("stdout_output_level 0; loglevel 0")

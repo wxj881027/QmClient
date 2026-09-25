@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include <base/crashdump.h>
 #include <base/detect.h>
 #include <base/log.h>
 #include <base/math.h>
@@ -13,6 +14,7 @@
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
+#include <engine/gfx/sprite_image.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
@@ -3854,6 +3856,14 @@ void CGraphics_Threaded::AddBackEndWarningIfExists()
 		str_copy(NewWarning.m_aWarningMsg, Localize(pErrStr));
 		AddWarning(NewWarning);
 	}
+}
+
+// 崩溃报告里要写「实际跑起来」的后端，而不是配置里写的那个：
+// Vulkan 初始化失败后 InitWindow 会把配置改成 OpenGL 再重试，
+// 只看配置会把崩溃归因到根本没跑起来的后端上。
+void CGraphics_Threaded::SetGraphicsBackendForCrashReport(const char *pBackendName)
+{
+	crashdump_set_graphics_backend(pBackendName);
 }
 
 int CGraphics_Threaded::InitWindow()

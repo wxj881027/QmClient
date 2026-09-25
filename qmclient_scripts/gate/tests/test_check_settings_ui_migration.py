@@ -198,6 +198,14 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	def test_warlist_single_card_contract_passes(self):
 		self.assertEqual(audit_page(self.make_warlist_repo(), "tclient_warlist"), [])
 
+	def test_card_catalog_counts_as_producer_source(self):
+		"""卡片构造迁到全局卡片目录后，stableId 登记在卡片模块里也算页面生产者契约成立。"""
+		root = self.make_warlist_repo(drop='Card.m_Spec = {"deck:tclient-warlist", "War List", nullptr};')
+		catalog_path = root / "src/game/client/QmUi/cards/QmCardCatalogHud.cpp"
+		catalog_path.parent.mkdir(parents=True, exist_ok=True)
+		catalog_path.write_text('SSettingsCardDefinition Card;\nCard.m_Spec = {"deck:tclient-warlist", "War List", nullptr};\n', encoding="utf-8")
+		self.assertEqual(audit_page(root, "tclient_warlist"), [])
+
 	def test_warlist_missing_producer_card_fails(self):
 		errors = audit_page(
 			self.make_warlist_repo(

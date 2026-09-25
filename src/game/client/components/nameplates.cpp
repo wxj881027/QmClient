@@ -66,9 +66,16 @@ static constexpr std::array<ENameplateCoreRow, kNameplateCoreRowCount> s_aDefaul
 	ENameplateCoreRow::CLAN,
 	ENameplateCoreRow::NAME};
 
+// 禅模式：Hide player messages 时聊天气泡整块不渲染。
 static bool FocusModeHidesChat()
 {
 	return GetQmFocusModeDecisions().m_HidePlayerMessages;
+}
+
+// 禅模式：Hide names 时玩家昵称文本隐藏（名牌其余行仍可显示）。
+static bool FocusModeHidesNames()
+{
+	return g_Config.m_QmFocusMode != 0 && g_Config.m_QmFocusModeHideNames != 0;
 }
 
 struct SChatBubbleAnimState
@@ -376,7 +383,9 @@ public:
 	char m_aName[std::max<size_t>(MAX_NAME_LENGTH, protocol7::MAX_NAME_ARRAY_SIZE)];
 	bool m_ShowFriendMark;
 	char m_aQmTitle[64] = "";
-	bool m_DeveloperRainbow;
+	SQmTitleColorStyle m_TitleColorStyle;
+	// QmClient：动态风格（逐字符颜色与浮动），未启用时 m_pStyle 为 nullptr。
+	SQmTitleRenderStyle m_TitleRenderStyle;
 	bool m_ShowClientId;
 	int m_ClientId;
 	float m_FontSizeClientId;
@@ -410,10 +419,6 @@ public:
 // Part Types
 
 static constexpr float DEFAULT_PADDING = 5.0f;
-// 名牌文字按“整数相机缩放档位”的像素密度栅格化：档位变化时才重建文字容器。
-// 每帧最多重建的文本部件数量用于摊平重建（字形栅格化/上传）开销，避免缩放瞬间卡顿。
-static constexpr int NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME = 16;
-static int s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME;
 
 // 铭牌文字烘焙密度按相机离散缩放档位量化。文字位图按烘焙时所在映射的密度栅格化并被 1:1 使用，
 // 缩放动画期间保持旧容器，动画结束后再按预算切换到新档位，避免细小 zoom 漂移触发连续重建。
@@ -570,6 +575,7 @@ public:
 	}
 	void Reset(CGameClient &This) override
 	{
+		m_TextCache.Reset();
 		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 		m_TextCache.Reset();
 		m_BakedDensityRatio = 0.0f;
@@ -795,7 +801,6 @@ protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = Data.m_aQmTitle[0] != '\0';
-		m_Alpha = Data.m_Color.a;
 		if(!m_Visible)
 		{
 			m_ReuseTextContainer = false;
@@ -1507,6 +1512,13 @@ private:
 		}
 		return CoreRowSize(CoreRow);
 	}
+	std::array<float, kNameplateCoreRowCount> LayoutCoreRowHeights(const CNamePlate *pLayoutReference) const
+	{
+		std::array<float, kNameplateCoreRowCount> aHeights{};
+		for(const SCoreRowParts &CoreRow : m_vCoreRows)
+			aHeights[static_cast<size_t>(CoreRow.m_Row)] = LayoutCoreRowSize(CoreRow, pLayoutReference).y;
+		return aHeights;
+	}
 	float RangeTopY(vec2 PositionBottomMiddle, size_t StartIndex, size_t EndIndex) const
 	{
 		vec2 Position = PositionBottomMiddle;
@@ -1585,11 +1597,11 @@ public:
 	{
 		HasFrame = false;
 		HasTargetRow = false;
-		vec2 Position = PositionBottomMiddle;
+		const auto aBaselines = QmNameplateCoreRowBaselines(LayoutCoreRowHeights(pLayoutReference));
 		for(const SCoreRowParts &CoreRow : m_vCoreRows)
 		{
+			const vec2 Position = PositionBottomMiddle + vec2(0.0f, aBaselines[static_cast<size_t>(CoreRow.m_Row)]);
 			const vec2 Size = CoreRowSize(CoreRow);
-			const vec2 LayoutSize = LayoutCoreRowSize(CoreRow, pLayoutReference);
 			if(Size.x > 0.0f && Size.y > 0.0f)
 			{
 				// Baseline rect (no offset).
@@ -1615,7 +1627,6 @@ public:
 					HasTargetRow = true;
 				}
 			}
-			Position.y -= LayoutSize.y;
 		}
 	}
 	// Returns the baseline frame only.
@@ -1757,24 +1768,17 @@ public:
 	void Render(CGameClient &This, const vec2 &PositionBottomMiddle, const CNamePlate *pLayoutReference = nullptr)
 	{
 		dbg_assert(m_Inited, "Tried to render uninited nameplate");
-		if(NameplateFreeMoveEnabled())
+		// 普通显示与自由移动使用同一组基线，偏移只作用于对应行。
+		const auto aBaselines = QmNameplateCoreRowBaselines(LayoutCoreRowHeights(pLayoutReference));
+		for(const SCoreRowParts &CoreRow : m_vCoreRows)
 		{
-			// Each row is positioned independently from PositionBottomMiddle:
-			// row top = baseline top (stack default) + Offset(row). This
-			// guarantees moving one row never shifts another.
-			vec2 BaselinePos = PositionBottomMiddle;
-			for(const SCoreRowParts &CoreRow : m_vCoreRows)
+			const vec2 Size = CoreRowSize(CoreRow);
+			if(Size.x > 0.0f && Size.y > 0.0f)
 			{
-				const vec2 Size = CoreRowSize(CoreRow);
-				const vec2 LayoutSize = LayoutCoreRowSize(CoreRow, pLayoutReference);
-				if(Size.x > 0.0f && Size.y > 0.0f)
-					RenderRange(This, BaselinePos + NameplateCoreRowOffset(CoreRow.m_Row), CoreRow.m_Start, CoreRow.m_End);
-				BaselinePos.y -= LayoutSize.y;
+				const vec2 Position = PositionBottomMiddle + vec2(0.0f, aBaselines[static_cast<size_t>(CoreRow.m_Row)]);
+				RenderRange(This, Position + NameplateCoreRowOffset(CoreRow.m_Row), CoreRow.m_Start, CoreRow.m_End);
 			}
-			This.Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-			return;
 		}
-		RenderRange(This, PositionBottomMiddle, 0, m_vpParts.size());
 		This.Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 	bool IsInitialized() const
@@ -1795,12 +1799,9 @@ public:
 			return HasFrame ? FrameMin.y : PositionBottomMiddle.y;
 		}
 
-		return RangeTopY(PositionBottomMiddle, 0, m_vpParts.size());
-	}
-	vec2 Size() const
-	{
-		dbg_assert(m_Inited, "Tried to get size of uninited nameplate");
-		if(NameplateFreeMoveEnabled())
+		const auto aBaselines = QmNameplateCoreRowBaselines(LayoutCoreRowHeights(nullptr));
+		float Top = PositionBottomMiddle.y;
+		for(const SCoreRowParts &CoreRow : m_vCoreRows)
 		{
 			// Reported size stays at the baseline stack bbox so layout code
 			// (chat bubbles, preview-page tee placement) hugs the actual content.
@@ -1810,28 +1811,26 @@ public:
 			ComputeBaselineFrame(vec2(0.0f, 0.0f), HasFrame, FrameMin, FrameMax);
 			return HasFrame ? FrameMax - FrameMin : vec2(0.0f, 0.0f);
 		}
-		return RangeSize(0, m_vpParts.size());
+		return Top;
 	}
 	void CollectCoreRowRects(vec2 PositionBottomMiddle, std::array<SNameplateCoreRowRect, kNameplateCoreRowCount> &aRects, const CNamePlate *pLayoutReference = nullptr) const
 	{
 		for(SNameplateCoreRowRect &Rect : aRects)
 			Rect = SNameplateCoreRowRect();
 
-		vec2 BaselinePos = PositionBottomMiddle;
+		const auto aBaselines = QmNameplateCoreRowBaselines(LayoutCoreRowHeights(pLayoutReference));
 		for(const SCoreRowParts &CoreRow : m_vCoreRows)
 		{
 			const vec2 Size = CoreRowSize(CoreRow);
-			const vec2 LayoutSize = LayoutCoreRowSize(CoreRow, pLayoutReference);
 			if(Size.x > 0.0f && Size.y > 0.0f)
 			{
 				SNameplateCoreRowRect &Rect = aRects[static_cast<int>(CoreRow.m_Row)];
-				const vec2 RowPosition = BaselinePos + NameplateCoreRowOffset(CoreRow.m_Row);
+				const vec2 RowPosition = PositionBottomMiddle + vec2(0.0f, aBaselines[static_cast<size_t>(CoreRow.m_Row)]) + NameplateCoreRowOffset(CoreRow.m_Row);
 				Rect.m_Row = CoreRow.m_Row;
 				Rect.m_Min = vec2(RowPosition.x - Size.x / 2.0f, RowPosition.y - Size.y);
 				Rect.m_Max = vec2(RowPosition.x + Size.x / 2.0f, RowPosition.y);
 				Rect.m_Visible = true;
 			}
-			BaselinePos.y -= LayoutSize.y;
 		}
 	}
 };
@@ -2013,7 +2012,12 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	Data.m_ShowName = ShouldShowQmNameplateName(NameplateScope, pPlayerInfo->m_Local, GameClient()->IsLocalClientId(ClientId));
 	GameClient()->FormatStreamerName(ClientId, Data.m_aName, sizeof(Data.m_aName));
 	str_copy(Data.m_aQmTitle, Data.m_ShowName ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
-	Data.m_DeveloperRainbow = Data.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId);
+	Data.m_TitleColorStyle = ResolveQmTitleColorStyle(
+		g_Config.m_QmTitleColorMode,
+		g_Config.m_QmTitleColor,
+		g_Config.m_QmTitleOpacity,
+		Data.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId));
+	Data.m_TitleRenderStyle = QmTitleResolveRenderStyle(GameClient()->m_QmClient.PlayerTitleStyle(ClientId));
 	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
 	const bool Spectating = !DemoPlayback && GameClient()->m_Snap.m_SpecInfo.m_Active;
 	const bool SpectateTarget = GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == ClientId;
@@ -2108,8 +2112,9 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	// 回放中按键显示改读回放专用选项；其余情况沿用本地原逻辑（录视频时读 cl_video_show_direction）。
 	int ShowDirectionConfig = g_Config.m_ClShowDirection;
 #if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current())
-		ShowDirectionConfig = g_Config.m_ClVideoShowDirection;
+	const bool VideoRendering = IVideo::Current() != nullptr;
+#else
+	const bool VideoRendering = false;
 #endif
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		ShowDirectionConfig = qm_demo_display::Resolve(g_Config, true, false).m_Direction;
@@ -2158,7 +2163,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 
 	Data.m_ShowHookStrongWeak = false;
-	Data.m_ReserveHookStrongWeakRow = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong > 0;
+	Data.m_ReserveHookStrongWeakRow = (g_Config.m_Debug && !DemoPlayback) || DisplaySettings.m_StrongWeak > 0;
 	Data.m_HookStrongWeakState = EHookStrongWeakState::NEUTRAL;
 	Data.m_ShowHookStrongWeakId = false;
 	Data.m_HookStrongWeakId = 0;
@@ -2176,15 +2181,21 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 			{
 				int SelectedStrongWeakId = Selected.m_HasExtendedData ? Selected.m_ExtendedData.m_StrongWeakId : 0;
 				Data.m_HookStrongWeakId = Other.m_ExtendedData.m_StrongWeakId;
-				Data.m_ShowHookStrongWeakId = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong == 2;
+				Data.m_ShowHookStrongWeakId = (g_Config.m_Debug && !DemoPlayback) || DisplaySettings.m_StrongWeak == 2;
 				if(SelectedId == ClientId)
-					Data.m_ShowHookStrongWeak = Data.m_ShowHookStrongWeakId || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, true, false, false));
+					Data.m_ShowHookStrongWeak = Data.m_ShowHookStrongWeakId || (DisplaySettings.m_StrongWeak > 0 && ShouldShowQmHookStrongWeakScope(DisplaySettings.m_StrongWeakScope, true, false, false));
 				else
 				{
 					Data.m_HookStrongWeakState = SelectedStrongWeakId > Other.m_ExtendedData.m_StrongWeakId ? EHookStrongWeakState::STRONG : EHookStrongWeakState::WEAK;
 					const bool Strong = Data.m_HookStrongWeakState == EHookStrongWeakState::STRONG;
 					const bool Weak = Data.m_HookStrongWeakState == EHookStrongWeakState::WEAK;
-					Data.m_ShowHookStrongWeak = g_Config.m_Debug || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, false, Strong, Weak));
+					Data.m_ShowHookStrongWeak = (g_Config.m_Debug && !DemoPlayback) || (DisplaySettings.m_StrongWeak > 0 && ShouldShowQmHookStrongWeakScope(DisplaySettings.m_StrongWeakScope, false, Strong, Weak));
+				}
+				// Demo 的数字与图标遵循同一范围，避免关闭某组图标后数字仍残留。
+				if(DemoPlayback && !ShouldShowQmHookStrongWeakScope(DisplaySettings.m_StrongWeakScope, SelectedId == ClientId, Data.m_HookStrongWeakState == EHookStrongWeakState::STRONG, Data.m_HookStrongWeakState == EHookStrongWeakState::WEAK))
+				{
+					Data.m_ShowHookStrongWeak = false;
+					Data.m_ShowHookStrongWeakId = false;
 				}
 			}
 		}
@@ -2204,7 +2215,12 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		FrameData.m_ShowName = true;
 		FrameData.m_ShowFriendMark = FrameData.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
 		str_copy(FrameData.m_aQmTitle, FrameData.m_ShowName ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
-		FrameData.m_DeveloperRainbow = FrameData.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId);
+		FrameData.m_TitleColorStyle = ResolveQmTitleColorStyle(
+			g_Config.m_QmTitleColorMode,
+			g_Config.m_QmTitleColor,
+			g_Config.m_QmTitleOpacity,
+			FrameData.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId));
+		FrameData.m_TitleRenderStyle = QmTitleResolveRenderStyle(GameClient()->m_QmClient.PlayerTitleStyle(ClientId));
 		FrameData.m_ShowClientId = FrameData.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
 		FrameData.m_ShowClan = FrameData.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
 		const bool FrameShowLocalAlignedCoordX = CoordModuleAllowsCoords && CoordXAlignHintEnabled && LocalCoordXAligned;
@@ -2236,7 +2252,6 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 	const float FontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
 	const float FontSizeClan = 18.0f + 20.0f * g_Config.m_ClNamePlatesClanSize / 100.0f;
 	const float FontSizeCoords = 18.0f + 20.0f * g_Config.m_ClNamePlatesCoordsSize / 100.0f;
-
 	const float FontSizeDirection = 18.0f + 20.0f * g_Config.m_ClDirectionSize / 100.0f;
 	const float FontSizeHookStrongWeak = 18.0f + 20.0f * g_Config.m_ClNamePlatesStrongSize / 100.0f;
 
@@ -2943,6 +2958,9 @@ void CNamePlates::OnRender()
 	else if(VideoRendering)
 		ShowDirection = g_Config.m_ClVideoShowDirection;
 #endif
+	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
+	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, DemoPlayback, VideoRendering);
+	const int ShowDirection = DisplaySettings.m_Direction;
 	const bool ShowCoordXAlignHint = g_Config.m_QmNameplateCoordXAlignHint || g_Config.m_QmNameplateCoordXAlignHintStrict;
 	const bool ShowCoords = (NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateCoords) || NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateCoordsOwn)) &&
 				(NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateCoordX) || NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateCoordY));
@@ -2967,6 +2985,9 @@ void CNamePlates::OnRender()
 	{
 		if(RenderNameplates)
 			UpdateCoordXAlignFrameState();
+
+		// QmClient：本帧的特效档位在这里定一次，同一帧内所有名牌共用同一档位。
+		QmNameplateEffectLodBeginFrame();
 
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
@@ -3006,6 +3027,8 @@ void CNamePlates::OnRender()
 					RenderChatBubble(RenderPos, i, 1.0f);
 			}
 		}
+
+		QmNameplateEffectLodEndFrame();
 	}
 
 	if(RenderFreezeWakeupPopups)

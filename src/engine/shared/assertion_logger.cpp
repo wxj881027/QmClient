@@ -57,7 +57,7 @@ void CAssertionLogger::Dump()
 	char aAssertLogFile[IO_MAX_PATH_LENGTH];
 	char aDate[64];
 	str_timestamp(aDate, sizeof(aDate));
-	str_format(aAssertLogFile, std::size(aAssertLogFile), "%s%s_assert_log_%s_%d.txt", m_aAssertLogPath, m_aGameName, aDate, pid());
+	str_format(aAssertLogFile, std::size(aAssertLogFile), "%s%s_assert_log_%s_%d.txt", m_aAssertLogPath, m_aGameName, aDate, process_id());
 	fs_makedir_rec_for(aAssertLogFile);
 	const CLockScope LockScope(m_DbgMessageMutex);
 	IOHANDLE FileHandle = io_open(aAssertLogFile, IOFLAG_WRITE);
@@ -75,7 +75,7 @@ void CAssertionLogger::Dump()
 			"OS version: %s\n"
 			"Log path: %s\n\n"
 			"Recent log lines before the assertion:\n",
-			aDate, pid(), m_aGameName, aOsVersion, m_aAssertLogPath);
+			aDate, process_id(), m_aGameName, aOsVersion, m_aAssertLogPath);
 		io_write(FileHandle, aHeader, str_length(aHeader));
 
 		auto *pIt = m_DbgMessages.First();

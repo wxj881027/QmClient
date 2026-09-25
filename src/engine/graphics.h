@@ -448,7 +448,7 @@ public:
 		static constexpr int DATA_MAIN_PARAMS = 4; // radius, disabled radius, ring radius, ring thickness
 		static constexpr int DATA_METADATA = 5; // item count, corners, has capsule, screen pixel size
 		static constexpr int DATA_CAPSULE_PARAMS = 6; // radius, smooth union, unused, unused
-		static constexpr int DATA_RESERVED = 7; // outer shadow size, opacity, unused, unused
+		static constexpr int DATA_RESERVED = 7; // outer shadow size, opacity, outline ring thickness, outline ring offset
 		static constexpr int DATA_ITEM_BASE = 8;
 		static constexpr int DATA_ITEM_STRIDE = 3;
 		static constexpr int DATA_BACKDROP_UV = DATA_ITEM_BASE + MEDIA_ISLAND_SDF_MAX_ITEMS * DATA_ITEM_STRIDE;
@@ -676,6 +676,14 @@ public:
 	void MapScreenToSize(float Width, float Height);
 
 	virtual void GetScreen(float *pTopLeftX, float *pTopLeftY, float *pBottomRightX, float *pBottomRightY) const = 0;
+	CScreenRect GetScreen() const
+	{
+		float TopLeftX, TopLeftY, BottomRightX, BottomRightY;
+		GetScreen(&TopLeftX, &TopLeftY, &BottomRightX, &BottomRightY);
+		return CScreenRect(vec2(TopLeftX, TopLeftY), vec2(BottomRightX, BottomRightY));
+	}
+
+	// QmClient: 对齐上游 CScreenRect（569edee60b）。原四浮点接口保留，后端无需改动。
 	CScreenRect GetScreen() const
 	{
 		float TopLeftX, TopLeftY, BottomRightX, BottomRightY;

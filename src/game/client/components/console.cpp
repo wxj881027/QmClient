@@ -16,6 +16,7 @@
 #include <engine/image.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
+#include <engine/shared/jobs.h>
 #include <engine/shared/ringbuffer.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -506,6 +507,7 @@ void CConsoleLogger::ClearPendingColorSpans()
 	const CLockScope LockScope(m_PendingColorSpansLock);
 	m_PendingColorSpansSystem.clear();
 	m_PendingColorSpansMessage.clear();
+	m_pPendingChatMetadata.reset();
 	m_vPendingColorSpans.clear();
 	m_pPendingChatMetadata.reset();
 }
@@ -1248,6 +1250,8 @@ void CGameConsole::CInstance::PrintLine(const char *pLine, int Len, ColorRGBA Pr
 	pEntry->m_LogCategory = QmClassifyConsoleLogLine(pLine, (size_t)Len);
 	pEntry->m_ExportId = m_NextExportId++;
 	pEntry->m_ExportSelected = false;
+	if(pChatMetadata)
+		m_PendingChatMetadataByExportId[pEntry->m_ExportId] = std::move(pChatMetadata);
 	if(NumColorSpans > 0)
 		m_PendingColorSpansByExportId[pEntry->m_ExportId].assign(pColorSpans, pColorSpans + NumColorSpans);
 	if(pChatMetadata)
@@ -1358,7 +1362,7 @@ int CGameConsole::CInstance::SelectedChatExportCount()
 
 void CGameConsole::CInstance::ToggleChatExportEntry(CBacklogEntry *pEntry, bool RangeSelect)
 {
-	if(!IsChatExportableEntry(pEntry))
+	if(m_pChatExportJob || !IsChatExportableEntry(pEntry))
 		return;
 
 	const bool Select = !pEntry->m_ExportSelected;
@@ -1676,7 +1680,6 @@ bool CGameConsole::CInstance::ExportSelectedChat()
 		}
 		vLines.push_back(std::move(Line));
 	}
-
 	if(vLines.empty())
 	{
 		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", Localize("No chat log selected"));
@@ -2497,7 +2500,7 @@ void CGameConsole::OnRender()
 #if defined(CONF_PLATFORM_ANDROID)
 						Opened = Client()->ViewLink(aNormalized);
 #else
-						Opened = open_link(aNormalized) != 0;
+						Opened = os_open_link(aNormalized) != 0;
 #endif
 					}
 					else if(str_startswith_nocase(aLink, "www."))

@@ -52,7 +52,6 @@ namespace
 	class CUserErrorStruct
 	{
 	public:
-		CByteBufferReader *m_pReader;
 		const char *m_pContextName;
 		std::jmp_buf m_JmpBuf;
 	};
@@ -168,7 +167,7 @@ static int PngliteIncompatibility(png_structp pPngStruct, png_infop pPngInfo)
 
 bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible)
 {
-	CUserErrorStruct UserErrorStruct = {&Reader, pContextName, {}};
+	CUserErrorStruct UserErrorStruct = {pContextName, {}};
 
 	if(setjmp(UserErrorStruct.m_JmpBuf))
 	{
@@ -182,29 +181,26 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 		return false;
 	}
 
-	png_infop pPngInfo = nullptr;
-	png_bytepp pRowPointers = nullptr;
-	int Height = 0; // ensure this is not undefined for the Cleanup function
+	png_infop pPngInfo = png_create_info_struct(pPngStruct);
+	if(pPngInfo == nullptr)
+	{
+		png_destroy_read_struct(&pPngStruct, nullptr, nullptr);
+		log_error("png", "libpng internal failure: png_create_info_struct failed.");
+		return false;
+	}
+
+	// Written after setjmp and read by Cleanup after longjmp, which is only defined for volatile locals
+	volatile png_bytepp pRowPointers = nullptr;
+	volatile int Height = 0;
 	const auto &&Cleanup = [&]() {
-		delete[] pRowPointers;
-		if(pPngInfo != nullptr)
-		{
-			png_destroy_info_struct(pPngStruct, &pPngInfo);
-		}
+		delete[](png_bytepp)pRowPointers;
+		png_destroy_info_struct(pPngStruct, &pPngInfo);
 		png_destroy_read_struct(&pPngStruct, nullptr, nullptr);
 	};
 	if(setjmp(UserErrorStruct.m_JmpBuf))
 	{
 		Image.Free();
 		Cleanup();
-		return false;
-	}
-
-	pPngInfo = png_create_info_struct(pPngStruct);
-	if(pPngInfo == nullptr)
-	{
-		Cleanup();
-		log_error("png", "libpng internal failure: png_create_info_struct failed.");
 		return false;
 	}
 
@@ -290,7 +286,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 		Cleanup();
 		return false;
 	}
-	pRowPointers = new(std::nothrow) png_bytep[Height];
+	pRowPointers = new(std::nothrow) png_bytep[(size_t)Height];
 	if(pRowPointers == nullptr)
 	{
 		Image.Free();
@@ -301,7 +297,7 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	for(int y = 0; y < Height; ++y)
 		pRowPointers[y] = &Image.m_pData[(size_t)y * BytesInRow];
 
-	png_read_image(pPngStruct, pRowPointers);
+	png_read_image(pPngStruct, (png_bytepp)pRowPointers);
 	if(Reader.Error())
 		Image.Free();
 	else
@@ -410,18 +406,9 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image)
 	ptrdiff_t BufferOffset = 0;
 	for(size_t y = 0; y < Image.m_Height; ++y)
 	{
-		pRowPointers[y] = new png_byte[WidthBytes];
-		mem_copy(pRowPointers[y], Image.m_pData + BufferOffset, WidthBytes);
-		BufferOffset += (ptrdiff_t)WidthBytes;
+		png_write_row(pPngStruct, Image.m_pData + y * WidthBytes);
 	}
-	png_write_image(pPngStruct, pRowPointers);
 	png_write_end(pPngStruct, pPngInfo);
-
-	for(size_t y = 0; y < Image.m_Height; ++y)
-	{
-		delete[] pRowPointers[y];
-	}
-	delete[] pRowPointers;
 
 	png_destroy_info_struct(pPngStruct, &pPngInfo);
 	png_destroy_write_struct(&pPngStruct, nullptr);

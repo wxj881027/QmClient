@@ -168,7 +168,7 @@ namespace qm_card_registry
 			{"tclient:tile-outlines", "tclient", ECardColumn::Right, 6, "Tile outlines", "tile outlines tclient", "Show configurable outlines around map tiles"},
 			{"tclient:ghost-tools", "tclient", ECardColumn::Left, 7, "Ghost tools", "ghost tools tclient", "Configure ghost recording and playback tools"},
 			{"tclient:rainbow", "tclient", ECardColumn::Right, 7, "Rainbow", "rainbow tclient", "Customize animated rainbow colors"},
-			{"tclient:tee-trails", "tclient", ECardColumn::Left, 8, "Tee trails", "tee trails tclient", "Adjust trails rendered behind Tees"},
+			{"tclient:tee-trails", "tclient", ECardColumn::Left, 8, "Tee trails", "tee trails tclient trail style effect black flash exo spirit void inferno", "Adjust trails rendered behind Tees"},
 			{"tclient:background-draw", "tclient", ECardColumn::Right, 8, "Background draw", "background draw tclient", "Control custom background drawing"},
 			{"tclient:finish-name", "tclient", ECardColumn::Left, 9, "Finish name", "finish name tclient", "Format player names after a finish"},
 			// 拆分后的字体与光标卡片；保留旧 stable id 作为迁移兼容项。

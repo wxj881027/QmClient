@@ -359,6 +359,8 @@ class CHud : public CComponent
 	bool m_MediaIslandBlurReady = false;
 	uint64_t m_MediaIslandBlurLastAttemptFrame = 0;
 	bool m_MediaIslandBlurAttemptInitialized = false;
+	// 背板模糊诊断只打一次（见 RenderMediaIsland）。
+	bool m_QmMediaIslandBlurProbeDone = false;
 	IGraphics::CRenderTargetHandle m_DummyMiniViewRenderTarget;
 	int m_DummyMiniViewRenderTargetWidth = 0;
 	int m_DummyMiniViewRenderTargetHeight = 0;
@@ -454,25 +456,31 @@ class CHud : public CComponent
 		}
 	};
 	std::array<SHudSwitchCountdownRingState, SWITCH_COUNTDOWN_MAX_LINES> m_aSwitchCountdownRings{};
-	struct SHudSwitchCountdownTracker
+	SHudSwitchCountdownTracker m_SwitchCountdownTracker;
+	struct SHudHookCountdownRingState
 	{
-		int m_aaEndTick[NUM_DDRACE_TEAMS][256] = {};
-		int m_aaTouchTick[NUM_DDRACE_TEAMS][256] = {};
-		int m_aaClientId[NUM_DDRACE_TEAMS][256] = {};
-		int m_aaConnection[NUM_DDRACE_TEAMS][256] = {};
+		int m_ClientId = -1;
+		int m_Connection = 0;
+		int m_GrabTick = 0;
+		// 上一次咬住的玩家 id：用来识别 rehook（目标变了就重新计时，而不是让环淡出重来）。
+		// 松钩时不更新，才能把它留到下一次咬住时做比较。
+		int m_HookedPlayer = -1;
+		// 起钩那一刻记下的地图 tuning（hook_duration），用来算这一轮钩子动作的寿命。
+		float m_HookDurationSeconds = 1.25f;
+		float m_Progress = 1.0f;
+		vec2 m_Position{};
+		vec2 m_Velocity{};
+		float m_Alpha = 0.0f;
+		bool m_Tracking = false;
+		bool m_Seen = false;
+		bool m_Initialized = false;
 
 		void Reset()
 		{
-			for(int t = 0; t < NUM_DDRACE_TEAMS; ++t)
-			{
-				for(int i = 0; i < 256; ++i)
-				{
-					m_aaEndTick[t][i] = 0;
-					m_aaTouchTick[t][i] = 0;
-					m_aaClientId[t][i] = -1;
-					m_aaConnection[t][i] = -1;
-				}
-			}
+			*this = {};
+			m_ClientId = -1;
+			m_HookDurationSeconds = 1.25f;
+			m_Progress = 1.0f;
 		}
 	};
 	SHudSwitchCountdownTracker m_SwitchCountdownTracker;

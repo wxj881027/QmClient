@@ -18,6 +18,10 @@ namespace
 	constexpr float QM_TITLE_RAINBOW_SATURATION = 0.8f;
 	constexpr float QM_TITLE_RAINBOW_LIGHTNESS = 0.65f;
 
+	// 头衔彩虹分色的饱和度与亮度，与名牌原有的开发者标签彩虹保持一致。
+	constexpr float QM_TITLE_RAINBOW_SATURATION = 0.8f;
+	constexpr float QM_TITLE_RAINBOW_LIGHTNESS = 0.65f;
+
 	const json_value *JsonObjectField(const json_value *pObject, const char *pName)
 	{
 		if(!pObject || pObject->type != json_object)
@@ -219,12 +223,6 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 		if(pQidField != &json_value_none && pQidField->type == json_string)
 			Mark.m_Qid = pQidField->u.string.ptr;
 
-		const json_value *pFootParticlesEnabled = JsonObjectField(pEntry, "foot_particles_enabled");
-		JsonReadBoolean(pFootParticlesEnabled, Mark.m_FootParticlesEnabled);
-
-		const json_value *pRemoteParticlesEnabled = JsonObjectField(pEntry, "remote_particles_enabled");
-		JsonReadBoolean(pRemoteParticlesEnabled, Mark.m_RemoteParticlesEnabled);
-
 		Mark.m_VoiceSupported = true;
 		const json_value *pVoiceSupported = JsonObjectField(pEntry, "voice_supported");
 		if(pVoiceSupported != &json_value_none)
@@ -380,6 +378,8 @@ std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, con
 	int64_t Now;
 	if(!pServerAddress || !JsonReadInteger(JsonObjectField(pRoot, "server_time"), Now) || Now <= 0)
 		return Result;
+	if(pOutServerTime != nullptr)
+		*pOutServerTime = Now;
 	const json_value *pEntries = JsonObjectField(pRoot, "presences");
 	if(pEntries->type != json_array)
 		return Result;

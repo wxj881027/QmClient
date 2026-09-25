@@ -3,6 +3,7 @@
 
 #include <base/system.h>
 
+#include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/image.h>
 
@@ -145,4 +146,109 @@ TEST(Image, ColorizeWithHueRectPreservesAlphaAndAppliesHue)
 	EXPECT_GT(aRgba[0], aRgba[1]);
 	EXPECT_EQ(aRgba[1], aRgba[2]);
 	EXPECT_EQ(aRgba[3], 77);
+}
+
+static CImageInfo MakePngTestImage(size_t Width, size_t Height, CImageInfo::EImageFormat Format)
+{
+	CImageInfo Image;
+	Image.m_Width = Width;
+	Image.m_Height = Height;
+	Image.m_Format = Format;
+	Image.m_pData = static_cast<uint8_t *>(calloc(Image.DataSize(), 1));
+	return Image;
+}
+
+static void SetPngTestPixel(CImageInfo &Image, size_t x, size_t y, uint8_t Red, uint8_t Green, uint8_t Blue, uint8_t Alpha)
+{
+	const size_t Offset = (y * Image.m_Width + x) * Image.PixelSize();
+	Image.m_pData[Offset] = Red;
+	Image.m_pData[Offset + 1] = Green;
+	Image.m_pData[Offset + 2] = Blue;
+	if(Image.m_Format == CImageInfo::FORMAT_RGBA)
+		Image.m_pData[Offset + 3] = Alpha;
+}
+
+// PNG 往返：SavePng -> LoadPng 应保持尺寸、格式与像素完全一致（含奇数高度）
+TEST(Image, PngSaveLoadRoundTripPreservesPixels)
+{
+	constexpr size_t Width = 5;
+	constexpr size_t Height = 7;
+	CImageInfo Image = MakePngTestImage(Width, Height, CImageInfo::FORMAT_RGBA);
+	ASSERT_NE(Image.m_pData, nullptr);
+
+	for(size_t y = 0; y < Height; y++)
+	{
+		for(size_t x = 0; x < Width; x++)
+		{
+			SetPngTestPixel(Image, x, y, (uint8_t)(x * 40 + 1), (uint8_t)(y * 30 + 2), (uint8_t)(x * y * 7 + 3), (uint8_t)(x + y + 4));
+		}
+	}
+
+	CByteBufferWriter Writer;
+	ASSERT_TRUE(CImageLoader::SavePng(Writer, Image));
+	ASSERT_GT(Writer.Size(), 0u);
+
+	CImageInfo Reloaded;
+	ASSERT_TRUE(CImageLoader::LoadPng(Writer.Data(), Writer.Size(), "image-test-png", Reloaded));
+	ASSERT_NE(Reloaded.m_pData, nullptr);
+	EXPECT_EQ(Reloaded.m_Width, Width);
+	EXPECT_EQ(Reloaded.m_Height, Height);
+	EXPECT_EQ(Reloaded.m_Format, CImageInfo::FORMAT_RGBA);
+	EXPECT_EQ(mem_comp(Reloaded.m_pData, Image.m_pData, (size_t)(Width * Height * 4)), 0);
+
+	Reloaded.Free();
+	Image.Free();
+}
+
+// PNG 往返（RGB，无 alpha 通道）
+TEST(Image, PngSaveLoadRoundTripPreservesRgbPixels)
+{
+	constexpr size_t Width = 3;
+	constexpr size_t Height = 2;
+	CImageInfo Image = MakePngTestImage(Width, Height, CImageInfo::FORMAT_RGB);
+	ASSERT_NE(Image.m_pData, nullptr);
+
+	for(size_t y = 0; y < Height; y++)
+	{
+		for(size_t x = 0; x < Width; x++)
+		{
+			SetPngTestPixel(Image, x, y, (uint8_t)(x * 11 + 5), (uint8_t)(y * 13 + 6), (uint8_t)(x + y + 7), 255);
+		}
+	}
+
+	CByteBufferWriter Writer;
+	ASSERT_TRUE(CImageLoader::SavePng(Writer, Image));
+
+	CImageInfo Reloaded;
+	ASSERT_TRUE(CImageLoader::LoadPng(Writer.Data(), Writer.Size(), "image-test-png-rgb", Reloaded));
+	ASSERT_NE(Reloaded.m_pData, nullptr);
+	EXPECT_EQ(Reloaded.m_Width, Width);
+	EXPECT_EQ(Reloaded.m_Height, Height);
+	EXPECT_EQ(Reloaded.m_Format, CImageInfo::FORMAT_RGB);
+	EXPECT_EQ(mem_comp(Reloaded.m_pData, Image.m_pData, (size_t)(Width * Height * 3)), 0);
+
+	Reloaded.Free();
+	Image.Free();
+}
+
+// 截断/损坏的 PNG 不应崩溃，只返回 false（覆盖 longjmp -> Cleanup 路径）
+TEST(Image, PngLoadRejectsTruncatedAndCorruptData)
+{
+	CImageInfo Image = MakePngTestImage(4, 4, CImageInfo::FORMAT_RGBA);
+	ASSERT_NE(Image.m_pData, nullptr);
+	SetPngTestPixel(Image, 0, 0, 1, 2, 3, 4);
+
+	CByteBufferWriter Writer;
+	ASSERT_TRUE(CImageLoader::SavePng(Writer, Image));
+
+	CImageInfo Truncated;
+	EXPECT_FALSE(CImageLoader::LoadPng(Writer.Data(), Writer.Size() / 3, "image-test-png-truncated", Truncated));
+	Truncated.Free();
+
+	const uint8_t aNotPng[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09};
+	CImageInfo Corrupt;
+	EXPECT_FALSE(CImageLoader::LoadPng(aNotPng, sizeof(aNotPng), "image-test-png-corrupt", Corrupt));
+	Corrupt.Free();
+
+	Image.Free();
 }

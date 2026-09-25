@@ -1406,6 +1406,7 @@ void CServerBrowser::UpdateFromHttp()
 
 void CServerBrowser::CleanUp()
 {
+	++m_FriendListRevision;
 	// clear out everything
 	m_vSortedServerlist.clear();
 	m_vpServerlist.clear();

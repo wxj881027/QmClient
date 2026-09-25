@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 
 int str_copy(char *dst, const char *src, int dst_size)
 {
@@ -868,11 +869,12 @@ bool str_toint(const char *str, int *out)
 {
 	// returns true if conversion was successful
 	char *end;
-	int value = strtol(str, &end, 10);
-	if(*end != '\0')
+	const long value = strtol(str, &end, 10);
+	// 超出 int 范围时显式失败。
+	if(*end != '\0' || value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max())
 		return false;
 	if(out != nullptr)
-		*out = value;
+		*out = (int)value;
 	return true;
 }
 

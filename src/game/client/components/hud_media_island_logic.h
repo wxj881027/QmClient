@@ -67,6 +67,22 @@ constexpr float QmHudMediaIslandScaled(float Value)
 	return Value * QmHudMediaIslandDesignScale;
 }
 
+// SDF 抗锯齿羽化宽度用的「屏幕映射单位 → 物理像素」比例：取 x/y 两个方向里较大的那个，
+// 保证非等比拉伸时羽化在较细的方向上也够宽。灵动岛与录制红点共用同一口径。
+inline float QmHudMediaIslandScreenPixelSize(float ScreenX0, float ScreenY0, float ScreenX1, float ScreenY1, int ScreenWidth, int ScreenHeight)
+{
+	return std::max(
+		(ScreenX1 - ScreenX0) / (float)std::max(1, ScreenWidth),
+		(ScreenY1 - ScreenY0) / (float)std::max(1, ScreenHeight));
+}
+
+// 两处录制红点共用 2.4 秒呼吸周期，透明度保持在 65%～95%，不影响布局和显隐条件。
+inline float QmHudRecordingDotAlpha(double Seconds)
+{
+	const double Phase = std::fmod(Seconds, 2.4) / 2.4;
+	return static_cast<float>(0.80 + 0.15 * std::cos(Phase * 2.0 * pi));
+}
+
 struct SHudMediaIslandExpansionState
 {
 	bool m_Expanded = false;

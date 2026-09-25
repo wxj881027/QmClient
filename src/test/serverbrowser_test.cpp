@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 #include <sqlite3.h>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>

@@ -28,6 +28,7 @@ class CCollisionHitbox : public CComponent
 private:
 	ivec2 m_MapDataSize;
 	std::vector<int> m_vMapData;
+	CQmHitboxCircleDirections m_CircleDirections;
 
 	// 单位圆方向按分段数预计算并复用，避免每次绘制重复三角运算。
 	CQmHitboxCircleDirections m_CircleDirections;

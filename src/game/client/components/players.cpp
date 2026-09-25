@@ -736,11 +736,6 @@ void CPlayers::RenderHook(
 	else
 		Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), Intra);
 
-	// draw hook
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-	if(ClientId < 0)
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
-
 	vec2 Pos = Position;
 	vec2 HookPos;
 
@@ -1369,6 +1364,14 @@ void CPlayers::RenderPlayer(
 		pPreviousSkinInfo = &PreviousSkinInfoOutline;
 	}
 
+	ConfigureSkinOutline(GameClient(), ClientId, RenderInfo);
+	CTeeRenderInfo PreviousSkinInfoOutline;
+	if(pPreviousSkinInfo != nullptr && RenderInfo.m_QmSkinOutlineWidth > 0)
+	{
+		PreviousSkinInfoOutline = *pPreviousSkinInfo;
+		ConfigureSkinOutline(GameClient(), ClientId, PreviousSkinInfoOutline);
+		pPreviousSkinInfo = &PreviousSkinInfoOutline;
+	}
 	RenderTools()->RenderTeeWithSkinChangeTransition(&State, pPreviousSkinInfo, &RenderInfo, Player.m_Emote, Direction, Position, SkinTransitionProgress, Alpha, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle);
 
 	float TeeAnimScale, TeeBaseSize;
@@ -2177,6 +2180,12 @@ void CPlayers::CreateSpectatorTeeRenderInfo()
 	SpectatorSkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
 	str_copy(SpectatorSkinDescriptor.m_aSkinName, "x_spec");
 	m_pSpectatorTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(SpectatorTeeRenderInfo, SpectatorSkinDescriptor);
+}
+
+void CPlayers::OnMapLoad()
+{
+	// 传送层在地图加载后保持不变；两种钩子传送规则分别记录，支持运行时切换设置。
+	m_HookCollVisibility.OnMapLoad(Collision()->TeleLayer(), (size_t)Collision()->GetWidth() * Collision()->GetHeight());
 }
 
 void CPlayers::OnReset()
