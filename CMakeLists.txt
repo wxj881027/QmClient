@@ -5548,7 +5548,7 @@ if(PRECOMPILE_HEADERS AND NOT CMAKE_VERSION VERSION_LESS 3.16)
     endif()
   endforeach()
   if(TARGET testrunner)
-    target_precompile_headers(testrunner PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:<gtest/gtest.h>>")
+    target_precompile_headers(testrunner PRIVATE <gtest/gtest.h>)
   endif()
 endif()
 
