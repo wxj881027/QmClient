@@ -3323,8 +3323,6 @@ if(CLIENT)
     components/qmclient/netease_hook/qm_netease_hook_v5_writer.h
     components/qmclient/netease_hook/qm_netease_hook_provider.cpp
     components/qmclient/netease_hook/qm_netease_hook_provider.h
-    components/qmclient/qm_bind_status_hud.cpp
-    components/qmclient/qm_bind_status_hud.h
     components/qmclient/qm_music_hook_registry.h
     components/qmclient/qm_sponsor_authors.cpp
     components/qmclient/qm_sponsor_authors.h
@@ -4344,7 +4342,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_background_particles_test.cpp
     qm_axiom_scores_test.cpp
     qm_axiom_scores_contract_test.cpp
-    qm_bind_status_hud_test.cpp
     qm_chat_emoji_test.cpp
     qm_chat_interactions_test.cpp
     qm_console_log_filter_test.cpp
@@ -4655,7 +4652,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/translate/translate_parse.cpp
     src/game/client/components/qmclient/voice/voice_capture_pipeline.cpp
     src/game/client/components/qmclient/voice/voice_utils.cpp
-    src/game/client/components/qmclient/qm_bind_status_hud.cpp
     src/game/client/frame_scheduler.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h

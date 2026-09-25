@@ -688,7 +688,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_InfoMessages, "info_messages");
 	AddComponent(&m_Chat, "chat");
 	AddComponent(&m_QmHudNotifications, "hud_notifications");
-	AddComponent(&m_QmBindStatusHud, "qm_bind_status_hud");
 	AddComponent(&m_Broadcast, "broadcast");
 	AddComponent(&m_ImportantAlert, "important_alert");
 	AddComponent(&m_DebugHud, "debug_hud");

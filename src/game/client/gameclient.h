@@ -84,7 +84,6 @@
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
-#include "components/qmclient/qm_bind_status_hud.h"
 #include "components/qmclient/qm_hook_coll_candidates.h"
 #include "components/qmclient/qm_hook_coll_spatial_index.h"
 #include "components/qmclient/qmclient.h"
@@ -302,7 +301,6 @@ public:
 	CQmChatEmoji m_QmChatEmoji;
 	CQmMonitoring m_QmMonitoring;
 	CQmHudNotifications m_QmHudNotifications;
-	CQmBindStatusHud m_QmBindStatusHud;
 	CQmWeaponTrajectory m_QmWeaponTrajectory;
 	CRankGhost m_RankGhost;
 	CTClient m_TClient;

@@ -37,7 +37,6 @@
 #include <game/client/components/message_gradient.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
-#include <game/client/components/qmclient/qm_bind_status_hud.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/components/qmclient/tee_color_code.h>
 #include <game/client/components/qmclient/tee_hue_cycle.h>

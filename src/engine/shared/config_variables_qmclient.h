@@ -453,13 +453,6 @@ MACRO_CONFIG_INT(QmPlayerStatsMapProgressPosY, qm_player_stats_map_progress_pos_
 MACRO_CONFIG_INT(QmPlayerStatsMapProgressDbgRoute, qm_player_stats_map_progress_dbg_route, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show map progress test point route")
 MACRO_CONFIG_INT(QmPlayerStatsResetOnJoin, qm_player_stats_reset_on_join, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reset stats on server join (0=persistent, 1=reset on join)")
 
-// Custom bind status HUD - 自定义 bind 状态显示
-// 非空时完全替换右侧信息框里的内置四项状态（卡键/锤子/分控/同步）。
-// 条目格式：变量名|状态值=文本|状态值=文本; 变量名|文本（非零时显示）;
-// 变量名（仅填变量名时非零显示变量名本身）。条目用 ';' 分隔，字段用 '|' 分隔。
-// 示例: "cl_dummy_hammer|0=Hammer: Off|1=Hammer: On; qm_deepfly_mode|DF"
-MACRO_CONFIG_STR(QmBindStatusItems, qm_bind_status_items, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'")
-
 // Switch Countdown - 开关倒计时
 MACRO_CONFIG_INT(QmSwitchCountdown, qm_switch_countdown, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable switch countdown")
 MACRO_CONFIG_INT(QmSwitchCountdownMode, qm_switch_countdown_mode, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)")

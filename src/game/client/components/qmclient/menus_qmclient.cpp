@@ -3907,28 +3907,6 @@ void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, fl
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusHammer, "appearance-show-hammer-status", Localize("Show hammer status"), &g_Config.m_ClShowhudKeyStatusHammer);
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusControl, "appearance-show-dummy-control-status", Localize("Show dummy control status"), &g_Config.m_ClShowhudKeyStatusControl);
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusSync, "appearance-show-dummy-copy-status", Localize("Show dummy copy status"), &g_Config.m_ClShowhudKeyStatusSync);
-
-	// 自定义 bind 状态列表（非空时替换上面四项内置状态显示）
-	CUIRect Row, LabelColumn, ControlColumn;
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	RenderQmHudLabel("qmclient-bind-status-label", &LabelColumn, Localize("Custom bind status list"), BodySize);
-	static CButtonContainer s_BindStatusResetButton;
-	CUIRect BindStatusEdit, BindStatusResetButtonRect;
-	ControlColumn.VSplitRight(LineHeight + 5.0f, &BindStatusEdit, &BindStatusResetButtonRect);
-	if(Ui()->DoButton_FontIcon(&s_BindStatusResetButton, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &BindStatusResetButtonRect, BUTTONFLAG_LEFT))
-	{
-		Console()->ExecuteLine("qm_bind_status_reset");
-	}
-	static CLineInput s_BindStatusItemsInput(g_Config.m_QmBindStatusItems, sizeof(g_Config.m_QmBindStatusItems));
-	IUiContext BindStatusItemsInputCtx = SettingsUiContext("settings_qmclient_bind_status_items_input", BodySize / ui_token::font::BODY);
-	ui_widget::InputField(BindStatusItemsInputCtx, &s_BindStatusItemsInput, BindStatusEdit, nullptr, BodySize);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	// 格式提示
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	RenderQmHudLabel("qmclient-bind-status-hint", &Row, Localize("Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text"), BodySize);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
 
 void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -5207,7 +5185,7 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 		case EQmModuleId::DynamicIsland: return ResolveQmHudDynamicIslandHeight(Metrics, DynamicIslandOriginalStyle, g_Config.m_QmSwitchCountdown != 0, ContentWidth);
 		case EQmModuleId::SystemMediaControls: return g_Config.m_QmSmtcEnable ? Rows(7.0f) : Rows(1.0f);
 		case EQmModuleId::Background3D: return ResolveQmHudBackground3DHeight(Metrics, ContentWidth, g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
-		case EQmModuleId::BindStatusHud: return Rows(6.0f); // 4 个状态开关 + 自定义列表编辑行 + 格式提示行
+		case EQmModuleId::BindStatusHud: return Rows(4.0f); // 4 个内置状态开关
 		default: return Rows(1.0f);
 		}
 	};
@@ -5378,13 +5356,11 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 				return Changed;
 			};
 		case EQmModuleId::BindStatusHud:
-			return [this, LineHeight, LineSpacing, ConsumeQmHudRow](CUIRect Content) {
+			return [this, LineHeight, LineSpacing](CUIRect Content) {
 				bool Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusReset, &g_Config.m_ClShowhudKeyStatusReset);
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusHammer, &g_Config.m_ClShowhudKeyStatusHammer) || Changed;
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusControl, &g_Config.m_ClShowhudKeyStatusControl) || Changed;
 				Changed = HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusSync, &g_Config.m_ClShowhudKeyStatusSync) || Changed;
-				ConsumeQmHudRow(Content); // 自定义列表编辑行
-				ConsumeQmHudRow(Content); // 格式提示行
 				return Changed;
 			};
 		default:

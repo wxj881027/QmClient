@@ -6123,6 +6123,52 @@ void CHud::RenderDummyActions()
 
 namespace
 {
+	// 内置状态行的语义配色档位。
+	enum class EQmBindStatusTone
+	{
+		NONE = 0,
+		OK,
+		WARNING,
+		DANGER,
+	};
+
+	// 内置状态行标识。
+	enum class EQmBindStatusLine
+	{
+		KEY_STICKING = 0,
+		HAMMER,
+		DUMMY_CONTROL,
+		DUMMY_COPY,
+	};
+
+	EQmBindStatusTone ResolveBuiltinBindStatusTone(EQmBindStatusLine Line, int Value)
+	{
+		switch(Line)
+		{
+		case EQmBindStatusLine::KEY_STICKING:
+			switch(Value)
+			{
+			case 0: return EQmBindStatusTone::OK;
+			case 1: return EQmBindStatusTone::DANGER;
+			case 2: return EQmBindStatusTone::WARNING;
+			default: return EQmBindStatusTone::NONE;
+			}
+		case EQmBindStatusLine::HAMMER:
+			switch(Value)
+			{
+			case 0: return EQmBindStatusTone::OK;
+			case 1: return EQmBindStatusTone::DANGER;
+			case 2:
+			case 3: return EQmBindStatusTone::WARNING;
+			default: return EQmBindStatusTone::NONE;
+			}
+		case EQmBindStatusLine::DUMMY_CONTROL:
+		case EQmBindStatusLine::DUMMY_COPY:
+			return Value != 0 ? EQmBindStatusTone::OK : EQmBindStatusTone::DANGER;
+		}
+		return EQmBindStatusTone::NONE;
+	}
+
 	struct SKeyStatusLines
 	{
 		const char *m_pKeyStatusText;
@@ -6181,7 +6227,7 @@ namespace
 
 		if(Lines.m_ShowKey)
 		{
-			Lines.m_KeyTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::KEY_STICKING, DummyResetOnSwitch);
+			Lines.m_KeyTone = ResolveBuiltinBindStatusTone(EQmBindStatusLine::KEY_STICKING, DummyResetOnSwitch);
 			Lines.m_pKeyStatusText = Localize("Key Sticking: ?");
 			if(DummyResetOnSwitch == 0)
 				Lines.m_pKeyStatusText = Localize("Key Sticking: On");
@@ -6193,7 +6239,7 @@ namespace
 
 		if(Lines.m_ShowHammer)
 		{
-			Lines.m_HammerTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, DeepflyMode);
+			Lines.m_HammerTone = ResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, DeepflyMode);
 			const char *pHammerState = Localize("Normal");
 			if(DeepflyMode == 1)
 				pHammerState = Localize("DF");
@@ -6206,14 +6252,14 @@ namespace
 
 		if(Lines.m_ShowControl)
 		{
-			Lines.m_ControlTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_CONTROL, DummyControl ? 1 : 0);
+			Lines.m_ControlTone = ResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_CONTROL, DummyControl ? 1 : 0);
 			const char *pControlState = DummyControl ? Localize("On") : Localize("Off");
 			str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), Localize("Dummy Control: %s"), pControlState);
 		}
 
 		if(Lines.m_ShowSync)
 		{
-			Lines.m_SyncTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_COPY, DummyCopyMoves ? 1 : 0);
+			Lines.m_SyncTone = ResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_COPY, DummyCopyMoves ? 1 : 0);
 			const char *pSyncState = DummyCopyMoves ? Localize("On") : Localize("Off");
 			// 对应 cl_dummy_copy_moves：英文用 Dummy copy，中文术语「分身同步」
 			str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), Localize("Dummy copy: %s"), pSyncState);
@@ -6261,37 +6307,8 @@ namespace
 			return Layout;
 		}
 
-		// 面板尺寸与行数同源：内置四项与自定义列表共用同一套“背景包住每一行”的推导
-		const SQmBindStatusPanelSize PanelSize = QmComputeBindStatusPanelSize(LineCount, MaxWidth, Layout.m_LineHeight, Layout.m_PaddingX, Layout.m_PaddingY);
-		Layout.m_W = PanelSize.m_W;
-		Layout.m_H = PanelSize.m_H;
-		const float MaxX = maximum(HudWidth - Layout.m_W, 0.0f);
-		Layout.m_X = std::clamp(HudWidth - Layout.m_W - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxX);
-		return Layout;
-	}
-
-	SKeyStatusLayout GetKeyStatusLayout(ITextRender *pTextRender, const std::vector<std::string> &vLines, float HudWidth)
-	{
-		SKeyStatusLayout Layout{};
-		Layout.m_FontSize = 7.0f;
-		Layout.m_LineHeight = 9.0f;
-		Layout.m_PaddingX = 4.0f;
-		Layout.m_PaddingY = 3.0f;
-		Layout.m_Y = 38.0f;
-
-		float MaxWidth = 0.0f;
-		for(const std::string &Line : vLines)
-		{
-			MaxWidth = maximum(MaxWidth, pTextRender->TextWidth(Layout.m_FontSize, Line.c_str(), -1, -1.0f));
-		}
-
-		// 行数来自实际要绘制的自定义条目数：条目增减时面板高度同步变化，不会残留固定高度
-		const SQmBindStatusPanelSize PanelSize = QmComputeBindStatusPanelSize((int)vLines.size(), MaxWidth, Layout.m_LineHeight, Layout.m_PaddingX, Layout.m_PaddingY);
-		Layout.m_W = PanelSize.m_W;
-		Layout.m_H = PanelSize.m_H;
-		if(Layout.m_H <= 0.0f)
-			return Layout; // 无可见行：不绘制面板
-
+		Layout.m_W = MaxWidth + Layout.m_PaddingX * 2.0f;
+		Layout.m_H = Layout.m_LineHeight * (float)LineCount + Layout.m_PaddingY * 2.0f;
 		const float MaxX = maximum(HudWidth - Layout.m_W, 0.0f);
 		Layout.m_X = std::clamp(HudWidth - Layout.m_W - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxX);
 		return Layout;
@@ -6478,31 +6495,7 @@ void CHud::RenderMovementInformation()
 
 	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines(GameClient());
 
-	// 内置四项里当前可见的行，按绘制顺序
-	std::vector<SQmBindStatusBuiltinLine> vBuiltinKeyStatusLines;
-	if(KeyStatusLines.m_ShowKey)
-		vBuiltinKeyStatusLines.push_back({true, KeyStatusLines.m_pKeyStatusText, KeyStatusLines.m_KeyTone});
-	if(KeyStatusLines.m_ShowHammer)
-		vBuiltinKeyStatusLines.push_back({true, KeyStatusLines.m_aHammerLine, KeyStatusLines.m_HammerTone});
-	if(KeyStatusLines.m_ShowControl)
-		vBuiltinKeyStatusLines.push_back({true, KeyStatusLines.m_aControlLine, KeyStatusLines.m_ControlTone});
-	if(KeyStatusLines.m_ShowSync)
-		vBuiltinKeyStatusLines.push_back({true, KeyStatusLines.m_aSyncLine, KeyStatusLines.m_SyncTone});
-
-	// 自定义 bind 状态列表非空时完全替换内置四项。实际绘制的行与面板尺寸同源：
-	// 两者都由同一个行数推导，条目增减时背景同步变化，不会残留固定高度或漏包某一行
-	const bool CustomKeyStatusActive = GameClient()->m_QmBindStatusHud.IsCustomListActive();
-	std::vector<std::string> vCustomKeyStatusLines;
-	if(CustomKeyStatusActive)
-		vCustomKeyStatusLines = GameClient()->m_QmBindStatusHud.GetVisibleLines();
-
-	const std::vector<SQmBindStatusRenderLine> vKeyStatusRenderLines = QmBuildBindStatusRenderLines(CustomKeyStatusActive, vCustomKeyStatusLines, vBuiltinKeyStatusLines);
-	std::vector<std::string> vKeyStatusTexts;
-	vKeyStatusTexts.reserve(vKeyStatusRenderLines.size());
-	for(const SQmBindStatusRenderLine &Line : vKeyStatusRenderLines)
-		vKeyStatusTexts.push_back(Line.m_Text);
-
-	const SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), vKeyStatusTexts, m_Width);
+	const SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines, m_Width);
 	const bool ShowKeyStatus = KeyStatusLayout.m_H > 0.0f;
 
 	float MovementBoxHeight = ShowMovementInfo ? GetMovementInformationBoxHeight() : 0.0f;
@@ -6798,18 +6791,33 @@ void CHud::RenderMovementInformation()
 		ColorRGBA KeyRainbowColor = color_cast<ColorRGBA>(KeyRainbowHsla);
 
 		const ColorRGBA DefaultKeyStatusColor = TextRender()->DefaultTextColor();
-		// 彩虹色 HUD 开启时所有行共用同一彩虹色；关闭时内置行按状态语义着色，
-		// 自定义行没有状态语义（色调 NONE）沿用默认文字色
+		// 彩虹色 HUD 开启时所有行共用同一彩虹色；关闭时内置行按状态语义着色。
 		const auto KeyStatusLineColor = [&](EQmBindStatusTone Tone) {
 			return g_Config.m_ClHudRainbowColors ? KeyRainbowColor : KeyStatusToneColor(Tone, DefaultKeyStatusColor);
 		};
 
-		// 只画 QmBuildBindStatusRenderLines 给出的行：自定义列表生效时内置四项不在此列
-		for(const SQmBindStatusRenderLine &Line : vKeyStatusRenderLines)
+		if(KeyStatusLines.m_ShowKey)
 		{
-			TextRender()->TextColor(KeyStatusLineColor(Line.m_Tone));
-			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, Line.m_Text.c_str(), -1.0f);
+			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_KeyTone));
+			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_pKeyStatusText, -1.0f);
 			KeyTextY += KeyStatusLayout.m_LineHeight;
+		}
+		if(KeyStatusLines.m_ShowHammer)
+		{
+			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_HammerTone));
+			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aHammerLine, -1.0f);
+			KeyTextY += KeyStatusLayout.m_LineHeight;
+		}
+		if(KeyStatusLines.m_ShowControl)
+		{
+			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_ControlTone));
+			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aControlLine, -1.0f);
+			KeyTextY += KeyStatusLayout.m_LineHeight;
+		}
+		if(KeyStatusLines.m_ShowSync)
+		{
+			TextRender()->TextColor(KeyStatusLineColor(KeyStatusLines.m_SyncTone));
+			TextRender()->Text(KeyTextX, KeyTextY, KeyStatusLayout.m_FontSize, KeyStatusLines.m_aSyncLine, -1.0f);
 		}
 		TextRender()->TextColor(DefaultKeyStatusColor);
 	}
