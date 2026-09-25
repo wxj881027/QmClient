@@ -448,7 +448,7 @@ public:
 	virtual bool LoadFonts() = 0;
 	virtual void SetFontPreset(EFontPreset FontPreset) = 0;
 	virtual EFontPreset GetFontPreset() const = 0;
-	virtual void SetIconFontWeight(bool Bold) = 0;
+	virtual void SetIconFontWeight(int Weight) = 0;
 	virtual void SetFontLanguageVariant(const char *pLanguageFile) = 0;
 
 	virtual void SetRenderFlags(unsigned Flags) = 0;

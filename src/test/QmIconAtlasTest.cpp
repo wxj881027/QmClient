@@ -78,10 +78,6 @@ TEST(QmIconAtlas, MsdfSelectionAndReloadPolicyKeepsAlphaFallbackUsable)
 	EXPECT_EQ(NormalizeQmIconWeight(2), 2);
 	EXPECT_EQ(NormalizeQmIconWeight(3), 3);
 	EXPECT_EQ(NormalizeQmIconWeight(4), 1);
-	EXPECT_FALSE(QmIconWeightUsesBoldFontFallback(0));
-	EXPECT_TRUE(QmIconWeightUsesBoldFontFallback(1));
-	EXPECT_FALSE(QmIconWeightUsesBoldFontFallback(2));
-	EXPECT_FALSE(QmIconWeightUsesBoldFontFallback(3));
 
 	EXPECT_EQ(SelectQmIconAtlasType(false, false), EQmIconAtlasType::ALPHA);
 	EXPECT_EQ(SelectQmIconAtlasType(false, true), EQmIconAtlasType::ALPHA);
@@ -235,6 +231,25 @@ TEST(QmIconAtlas, UiTintKeepsAlphaAndDoesNotDefineSemanticDirectColor)
 	const std::string Buttons = ReadTextFile("src/game/client/QmUi/UiButtons.cpp");
 	EXPECT_NE(Buttons.find("IconStyle.m_Normal = ConfiguredQmUiIconColor"), std::string::npos);
 	EXPECT_NE(Buttons.find("IconRect, IconState, IconStyle"), std::string::npos);
+}
+
+TEST(QmIconAtlas, LegacyDuotoneColorAlphaMigrationPreservesExplicitAlpha)
+{
+	unsigned LegacyRgb = 0x005A6B7Cu;
+	EXPECT_TRUE(MigrateLegacyQmUiIconDuotoneSecondaryColor(LegacyRgb, 0xFFFFFFFFu));
+	EXPECT_EQ(LegacyRgb, 0xFF5A6B7Cu);
+
+	unsigned ExplicitAlpha = 0x005A6B7Cu;
+	EXPECT_FALSE(MigrateLegacyQmUiIconDuotoneSecondaryColor(ExplicitAlpha, 0xFFFFFFFFu, EColorInputAlphaMode::EXPLICIT));
+	EXPECT_EQ(ExplicitAlpha, 0x005A6B7Cu);
+
+	unsigned PackedAlpha = 0x805A6B7Cu;
+	EXPECT_FALSE(MigrateLegacyQmUiIconDuotoneSecondaryColor(PackedAlpha, 0xFFFFFFFFu));
+	EXPECT_EQ(PackedAlpha, 0x805A6B7Cu);
+
+	unsigned SignedPacked = 0xFFFFFFFFu;
+	EXPECT_TRUE(MigrateLegacyQmUiIconDuotoneSecondaryColor(SignedPacked, 0xFFFFFFFFu, EColorInputAlphaMode::SIGNED_PACKED));
+	EXPECT_EQ(SignedPacked, 0xFFFFFFFFu);
 }
 
 TEST(QmIconAtlas, PhosphorWeightSourcesRemainSeparated)
@@ -519,7 +534,7 @@ TEST(QmIconAtlas, ConfiguredIconWeightUsesTheExistingContainerInvalidationPath)
 	ASSERT_NE(PrivacyRefresh, std::string::npos);
 	const std::string SyncBody = GameClient.substr(Sync, PrivacyRefresh - Sync);
 	EXPECT_NE(SyncBody.find("TextRender()->SetIconFontWeight"), std::string::npos);
-	EXPECT_NE(SyncBody.find("QmIconWeightUsesBoldFontFallback"), std::string::npos);
+	EXPECT_NE(SyncBody.find("SetIconFontWeight(Weight)"), std::string::npos);
 	EXPECT_NE(SyncBody.find("m_QmIconManager.RefreshForCurrentDpi();"), std::string::npos);
 	EXPECT_NE(SyncBody.find("OnWindowResize();"), std::string::npos);
 	EXPECT_NE(Settings.find("GameClient()->SyncQmUiIconWeight();"), std::string::npos);

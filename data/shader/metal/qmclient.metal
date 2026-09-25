@@ -145,7 +145,8 @@ fragment float4 qmclient_textured_msdf_fragment(SMetalVertexOut Input [[stage_in
 		// 因此复用 ScreenPxRange 解码 secondary 覆盖，缩放到任意尺寸都保持锐利边缘。
 		const float SecondaryCoverage = clamp((Sample.a - 0.5) * ScreenPxRange + 0.5, 0.0, 1.0);
 		const float3 SecondaryColor = Msdf.m_SecondaryColor.rgb;
-		const float Alpha = max(Opacity, SecondaryCoverage);
+		const float SecondaryAlpha = SecondaryCoverage * Msdf.m_SecondaryColor.a;
+		const float Alpha = max(Opacity, SecondaryAlpha);
 		const float3 Color = mix(SecondaryColor, Input.m_Color.rgb, Opacity);
 		return float4(Color, Input.m_Color.a * Alpha);
 	}

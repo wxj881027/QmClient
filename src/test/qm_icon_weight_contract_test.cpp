@@ -15,7 +15,7 @@ TEST(QmIconWeightContract, UsesTheExistingContainerInvalidationPath)
 	ASSERT_NE(PrivacyRefresh, std::string::npos);
 	const std::string SyncBody = GameClient.substr(Sync, PrivacyRefresh - Sync);
 	EXPECT_NE(SyncBody.find("TextRender()->SetIconFontWeight"), std::string::npos);
-	EXPECT_NE(SyncBody.find("QmIconWeightUsesBoldFontFallback"), std::string::npos);
+	EXPECT_NE(SyncBody.find("SetIconFontWeight(Weight)"), std::string::npos);
 	EXPECT_NE(SyncBody.find("m_QmIconManager.RefreshForCurrentDpi();"), std::string::npos);
 	EXPECT_NE(SyncBody.find("OnWindowResize();"), std::string::npos);
 	EXPECT_NE(Settings.find("GameClient()->SyncQmUiIconWeight();"), std::string::npos);

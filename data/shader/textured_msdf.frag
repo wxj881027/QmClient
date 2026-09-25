@@ -75,7 +75,8 @@ void main()
 		// 因此复用 ScreenPxRange 解码 secondary 覆盖，缩放到任意尺寸都保持锐利边缘。
 		const float SecondaryCoverage = clamp((Sample.a - 0.5) * ScreenPxRange + 0.5, 0.0, 1.0);
 		const vec3 SecondaryColor = gMsdfSecondaryColor.rgb;
-		const float Alpha = max(Opacity, SecondaryCoverage);
+		const float SecondaryAlpha = SecondaryCoverage * gMsdfSecondaryColor.a;
+		const float Alpha = max(Opacity, SecondaryAlpha);
 		const vec3 Color = mix(SecondaryColor, Tint.rgb, Opacity);
 		FragClr = vec4(Color, Tint.a * Alpha);
 	}

@@ -274,11 +274,6 @@ inline float QmIconPixelScale(const int DrawableExtent, const float LogicalExten
 	return DrawableExtent > 0 && LogicalExtent > 0.0f ? DrawableExtent / LogicalExtent : 0.0f;
 }
 
-inline bool QmIconWeightUsesBoldFontFallback(const int Weight)
-{
-	return NormalizeQmIconWeight(Weight) == 1;
-}
-
 // 眼睛 morph 关键帧插值：把弹簧进度映射到相邻两帧与各自的 alpha。
 // 端点（进度 0 / 1）精确落在首末帧上，因此与静态图标之间没有尺寸/形状跳变。
 struct SQmIconMorphFrameBlend
@@ -338,9 +333,19 @@ inline ColorRGBA ConfiguredQmUiIconColor(const ColorRGBA &Color)
 
 inline ColorRGBA ConfiguredQmUiIconSecondaryColor(const ColorRGBA &Color)
 {
-	ColorRGBA Result = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiIconDuotoneSecondaryColor));
-	Result.a = Color.a;
+	ColorRGBA Result = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiIconDuotoneSecondaryColor, true));
+	Result.a *= Color.a;
 	return Result;
+}
+
+// CFGFLAG_COLALPHA 将旧的六位 RGB 图标颜色扩展为带 Alpha 的 packed 颜色。
+// 显式 Alpha 和已有非零 packed Alpha 保留，避免覆盖用户选择的透明度。
+constexpr bool MigrateLegacyQmUiIconDuotoneSecondaryColor(unsigned &Color, const unsigned DefaultColor, const EColorInputAlphaMode InputAlphaMode = EColorInputAlphaMode::PACKED)
+{
+	if(InputAlphaMode == EColorInputAlphaMode::EXPLICIT || (InputAlphaMode == EColorInputAlphaMode::PACKED && (Color & 0xFF000000u) != 0))
+		return false;
+	Color = (Color & 0x00FFFFFFu) | (DefaultColor & 0xFF000000u);
+	return true;
 }
 
 struct SQmIconStyle

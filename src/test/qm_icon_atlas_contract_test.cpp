@@ -106,12 +106,6 @@ TEST(QmIconAtlas, MsdfOnlyReloadPolicy)
 	EXPECT_EQ(NormalizeQmIconWeight(4), 4);
 	EXPECT_EQ(NormalizeQmIconWeight(5), 5);
 	EXPECT_EQ(NormalizeQmIconWeight(6), 1);
-	EXPECT_FALSE(QmIconWeightUsesBoldFontFallback(0));
-	EXPECT_TRUE(QmIconWeightUsesBoldFontFallback(1));
-	EXPECT_FALSE(QmIconWeightUsesBoldFontFallback(2));
-	EXPECT_FALSE(QmIconWeightUsesBoldFontFallback(3));
-	EXPECT_FALSE(QmIconWeightUsesBoldFontFallback(4));
-	EXPECT_FALSE(QmIconWeightUsesBoldFontFallback(5));
 
 	// 位图 alpha 图集已移除：图集不可用即字体兜底，仅剩 MSDF 单一路径。
 	EXPECT_TRUE(QmIconAtlasNeedsReload(false, 1, 1));
@@ -250,7 +244,10 @@ TEST(QmIconAtlas, UiTintKeepsAlphaAndDoesNotDefineSemanticDirectColor)
 	EXPECT_FLOAT_EQ(Rainbow.g, ExpectedRainbow.g);
 	EXPECT_FLOAT_EQ(Rainbow.b, ExpectedRainbow.b);
 	EXPECT_FLOAT_EQ(Rainbow.a, SemanticColor.a);
+	const unsigned OriginalSecondaryColor = g_Config.m_QmUiIconDuotoneSecondaryColor;
+	g_Config.m_QmUiIconDuotoneSecondaryColor = 0xFFFFFFFF;
 	const ColorRGBA Secondary = ConfiguredQmUiIconSecondaryColor(SemanticColor);
+	g_Config.m_QmUiIconDuotoneSecondaryColor = OriginalSecondaryColor;
 	EXPECT_FLOAT_EQ(Secondary.a, SemanticColor.a);
 
 	const std::string Source = ReadTextFile("src/game/client/qm_icon_manager.cpp");

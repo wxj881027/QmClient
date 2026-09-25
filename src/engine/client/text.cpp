@@ -389,6 +389,9 @@ private:
 	FT_Face m_IconFace = nullptr;
 	FT_Face m_IconRegularFace = nullptr;
 	FT_Face m_IconBoldFace = nullptr;
+	FT_Face m_IconLightFace = nullptr;
+	FT_Face m_IconFillFace = nullptr;
+	FT_Face m_IconDuotoneFace = nullptr;
 	FT_Face m_VariantFace = nullptr;
 	FT_Face m_SelectedFace = nullptr;
 	int m_CustomFontWeight = 400;
@@ -883,9 +886,41 @@ public:
 		}
 	}
 
-	void SetIconFontWeight(const bool Bold)
+	bool TrySetIconStyleFaceByName(const char *pFamilyName, FT_Face &Face)
 	{
-		m_IconFace = Bold && m_IconBoldFace != nullptr ? m_IconBoldFace : m_IconRegularFace;
+		Face = GetFaceByName(pFamilyName);
+		return Face != nullptr;
+	}
+
+	void SetIconStyleFacesByName()
+	{
+		TrySetIconStyleFaceByName("Phosphor-Light", m_IconLightFace);
+		TrySetIconStyleFaceByName("Phosphor-Fill", m_IconFillFace);
+		TrySetIconStyleFaceByName("Phosphor-Duotone", m_IconDuotoneFace);
+	}
+
+	void SetIconFontWeight(const int Weight)
+	{
+		// 与图集侧保持相同的旧配置归一化：非法值按 Bold 处理，避免
+		// MTSDF 已切到 Bold 而字体回退仍落到 Regular。
+		const int NormalizedWeight = Weight >= 0 && Weight <= 5 ? Weight : 1;
+		FT_Face Face = m_IconRegularFace;
+		switch(NormalizedWeight)
+		{
+		case 1: Face = m_IconBoldFace; break;
+		case 2:
+		case 4: Face = m_IconLightFace; break;
+		case 3: Face = m_IconFillFace; break;
+		case 5: Face = m_IconDuotoneFace; break;
+		default: break;
+		}
+		if(Face == nullptr)
+			Face = m_IconRegularFace;
+		if(m_IconFace != Face)
+		{
+			m_IconFace = Face;
+			m_GlyphLookupCache.Reset();
+		}
 	}
 
 	void SetCustomFontWeight(const int Weight)
@@ -1845,7 +1880,7 @@ public:
 	// 随包图标字体首次使用时复制到用户目录，让 qmclient/fonts 自包含，用户无需手工放置。
 	void InstallBundledIconFonts()
 	{
-		for(const char *pName : {"Phosphor/Phosphor-Regular.ttf", "Phosphor/Phosphor-Bold.ttf"})
+		for(const char *pName : {"Phosphor/Phosphor-Regular.ttf", "Phosphor/Phosphor-Bold.ttf", "Phosphor/Phosphor-Light.ttf", "Phosphor/Phosphor-Fill.ttf", "Phosphor/Phosphor-Duotone.ttf"})
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
 			str_format(aPath, sizeof(aPath), "qmclient/fonts/%s", pName);
@@ -2091,6 +2126,7 @@ public:
 			if(!m_pGlyphMap->TrySetIconBoldFaceByName("Phosphor"))
 				m_pGlyphMap->UseRegularFaceForIconBold();
 		}
+		m_pGlyphMap->SetIconStyleFacesByName();
 
 		if(const FT_Face IconFace = m_pGlyphMap->IconFace())
 		{
@@ -2099,7 +2135,7 @@ public:
 			log_info("textrender", "Icon font face: '%s'", IconFace->family_name != nullptr ? IconFace->family_name : "(unknown)");
 		}
 
-		m_pGlyphMap->SetIconFontWeight(g_Config.m_QmUiIconWeight == 1);
+		m_pGlyphMap->SetIconFontWeight(g_Config.m_QmUiIconWeight);
 
 		json_value_free(pJsonData);
 		return Success;
@@ -2117,9 +2153,9 @@ public:
 		return m_FontPreset;
 	}
 
-	void SetIconFontWeight(bool Bold) override
+	void SetIconFontWeight(int Weight) override
 	{
-		m_pGlyphMap->SetIconFontWeight(Bold);
+		m_pGlyphMap->SetIconFontWeight(Weight);
 		if(m_FontPreset == EFontPreset::ICON_FONT)
 			m_pGlyphMap->SetFontPreset(EFontPreset::ICON_FONT);
 	}
