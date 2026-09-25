@@ -7338,7 +7338,7 @@ int main(int argc, const char **argv)
 	pConsole->ParseArguments(argc - 1, &argv[1]);
 	pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 
-	// 仅打开 Steam 主窗口，客户端仍由当前进程继续启动。
+	// 静默在后台启动 Steam，客户端仍由当前进程继续启动。
 	if(g_Config.m_QmSteamAutoLaunch)
 		SteamOpenClient();
 
