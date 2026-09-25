@@ -88,10 +88,8 @@ class CPlayers : public CComponent
 	SQmWeaponReloadAnimationState m_aWeaponReloadAnimationStates[MAX_CLIENTS];
 
 	void CreateNinjaTeeRenderInfo();
-	void CreateSpectatorTeeRenderInfo();
 
 	std::shared_ptr<CManagedTeeRenderInfo> m_pNinjaTeeRenderInfo;
-	std::shared_ptr<CManagedTeeRenderInfo> m_pSpectatorTeeRenderInfo;
 
 	// 钩子辅助线在拥挤服务器上对每个可见玩家各绘制一次；复用暂存缓冲
 	// 避免每名玩家每帧重新分配线段与四边形。
@@ -110,7 +108,6 @@ public:
 	void OnRender() override;
 
 	const std::shared_ptr<CManagedTeeRenderInfo> &NinjaTeeRenderInfo() const { return m_pNinjaTeeRenderInfo; }
-	const std::shared_ptr<CManagedTeeRenderInfo> &SpectatorTeeRenderInfo() const { return m_pSpectatorTeeRenderInfo; }
 };
 
 #endif

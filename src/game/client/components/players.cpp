@@ -2073,43 +2073,6 @@ void CPlayers::OnRender()
 	const bool FollowingPlayer = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW && GameClient()->m_Snap.m_SpecInfo.m_Active;
 	const int RenderLastId = FollowingPlayer ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : LocalClientId;
 
-	// 观战幽灵的皮肤和渲染信息在本帧内不变。
-	const bool SpectatorTeeRenderable =
-		GameClient()->m_Skins.FindOrNullptr("x_spec") != nullptr &&
-		SpectatorTeeRenderInfo() != nullptr &&
-		SpectatorTeeRenderInfo()->TeeRenderInfo().Valid();
-	if(SpectatorTeeRenderable)
-	{
-		// render spectating players
-		for(const auto &Client : GameClient()->m_aClients)
-		{
-			if(!Client.m_SpecCharPresent)
-				continue;
-
-			const int ClientId = Client.ClientId();
-			if(FollowingPlayer && ClientId == RenderLastId && IsPlayerInfoAvailable(ClientId))
-				continue;
-
-			// 屏幕外的观战幽灵无需提交绘制命令。
-			if(!in_range(Client.m_SpecChar.x, ScreenX0, ScreenX1) || !in_range(Client.m_SpecChar.y, ScreenY0, ScreenY1))
-				continue;
-			if(g_Config.m_QmShowSpectatorGhosts == 0)
-				continue;
-			// 默认只隐藏当前操作的 Tee；本地分身也属于“他人”，应继续显示。
-			if(g_Config.m_QmSpectatorGhostScope == 0 && ClientId >= 0 && ClientId == GameClient()->m_Snap.m_LocalClientId)
-				continue;
-
-			float Alpha = g_Config.m_QmSpectatorGhostAlpha / 100.0f;
-			const bool LocalSpecChar = GameClient()->IsLocalClientId(ClientId);
-			const bool OtherSpecChar = !LocalSpecChar && (GameClient()->IsOtherTeam(ClientId) || ClientId < 0);
-			if(OtherSpecChar)
-				Alpha = minimum(Alpha, g_Config.m_ClShowOthersAlpha / 100.f);
-			if(ClientId == -2) // ghost
-				Alpha = g_Config.m_ClRaceGhostAlpha / 100.f;
-			RenderTools()->RenderTee(CAnimState::GetIdle(), &SpectatorTeeRenderInfo()->TeeRenderInfo(), EMOTE_BLINK, vec2(1, 0), Client.m_SpecChar, Alpha);
-		}
-	}
-
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
 		if(ClientId == RenderLastId || !IsPlayerInfoAvailable(ClientId))
@@ -2168,17 +2131,6 @@ void CPlayers::OnMapLoad()
 {
 	// 传送层在地图加载后保持不变；两种钩子传送规则分别记录，支持运行时切换设置。
 	m_HookCollVisibility.OnMapLoad(Collision()->TeleLayer(), (size_t)Collision()->GetWidth() * Collision()->GetHeight());
-}
-
-void CPlayers::CreateSpectatorTeeRenderInfo()
-{
-	CTeeRenderInfo SpectatorTeeRenderInfo;
-	SpectatorTeeRenderInfo.m_Size = 64.0f;
-	SpectatorTeeRenderInfo.m_TeeRenderFlags = TEE_PREVIEW_LAYER_BODY_OUTLINE;
-	CSkinDescriptor SpectatorSkinDescriptor;
-	SpectatorSkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
-	str_copy(SpectatorSkinDescriptor.m_aSkinName, "x_spec");
-	m_pSpectatorTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(SpectatorTeeRenderInfo, SpectatorSkinDescriptor);
 }
 
 void CPlayers::OnReset()
@@ -2264,5 +2216,4 @@ void CPlayers::OnInit()
 	Graphics()->QuadsSetRotation(0.f);
 
 	CreateNinjaTeeRenderInfo();
-	CreateSpectatorTeeRenderInfo();
 }

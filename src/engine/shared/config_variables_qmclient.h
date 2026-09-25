@@ -515,9 +515,6 @@ MACRO_CONFIG_INT(Qm3DParticlesTwinkle, qm_3d_particles_twinkle, 0, 0, 1, CFGFLAG
 MACRO_CONFIG_INT(Qm3DParticlesTwinkleStrength, qm_3d_particles_twinkle_strength, 35, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Background 3D particle flicker intensity")
 MACRO_CONFIG_INT(QmShowTuneZoneColors, qm_show_tune_zone_colors, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Color map tune zones by their tune zone number")
 MACRO_CONFIG_INT(QmBlankAssetFallback, qm_blank_asset_fallback, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)")
-MACRO_CONFIG_INT(QmShowSpectatorGhosts, qm_show_spectator_ghosts, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show semi-transparent ghost tees for other players who are spectating")
-MACRO_CONFIG_INT(QmSpectatorGhostAlpha, qm_spectator_ghost_alpha, 50, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Opacity of the ghost tees shown for players who are spectating (0 = fully transparent)")
-MACRO_CONFIG_INT(QmSpectatorGhostScope, qm_spectator_ghost_scope, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spectator ghost tee scope: 0=other players including dummy, 1=all players")
 
 // Skin queue - 皮肤队列
 MACRO_CONFIG_INT(QmSkinQueueEnabled, qm_skin_queue_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable skin queue rotation")
