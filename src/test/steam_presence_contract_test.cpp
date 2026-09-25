@@ -56,3 +56,9 @@ TEST(SteamPresence, OpensSteamInBackground)
 	EXPECT_EQ(FunctionBody.find("steam://open/main"), std::string::npos);
 	EXPECT_EQ(FunctionBody.find("open_link("), std::string::npos);
 }
+
+TEST(SteamPresence, AutoLaunchDefaultsToDisabled)
+{
+	const std::string Source = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
+	EXPECT_NE(Source.find("MACRO_CONFIG_INT(QmSteamAutoLaunch, qm_steam_auto_launch, 0, 0, 1"), std::string::npos);
+}
