@@ -32,9 +32,8 @@ namespace qm_card_catalog
 			Content.HSplitTop(std::max(0.0f, Height), nullptr, &Content);
 		}
 
-		float MeasureHudCardHeight(const SQmCardBuildContext &Ctx, const EQmModuleId Id, const float ContentWidth)
+		float MeasureHudCardHeight(const SSettingsContentMetrics &Metrics, const EQmModuleId Id, const float ContentWidth)
 		{
-			const SSettingsContentMetrics &Metrics = Ctx.m_Metrics;
 			const auto Rows = [&Metrics](const float Count) { return CardRows(Metrics, Count); };
 			const bool DummyMiniViewExpanded = g_Config.m_QmDummyMiniView != 0;
 			const bool DynamicIslandOriginalStyle = g_Config.m_QmHudIslandUseOriginalStyle != 0;
@@ -324,9 +323,10 @@ namespace qm_card_catalog
 		const bool ReadOnly = Ctx.m_ReadOnly;
 
 		const auto Add = [&](const EQmModuleId ModuleId, const char *pStableId, const char *pTitle, const char *pSubtitle, const FSettingsCardRenderMeasured &Render) {
+			const SSettingsContentMetrics MeasureMetrics = Metrics;
 			MakeModuleCard(
 				Ctx, ModuleId, pStableId, pTitle, pSubtitle, Render,
-				[&Ctx, ModuleId](float ContentWidth) { return MeasureHudCardHeight(Ctx, ModuleId, ContentWidth); },
+				[MeasureMetrics, ModuleId](float ContentWidth) { return MeasureHudCardHeight(MeasureMetrics, ModuleId, ContentWidth); },
 				MeasureHudCardRevision(ModuleId),
 				BuildHudPreLayoutInput(Ctx, ModuleId),
 				Out);

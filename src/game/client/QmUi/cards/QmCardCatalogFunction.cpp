@@ -18,15 +18,12 @@ namespace qm_card_catalog
 	{
 		using qm_module::EQmModuleId;
 
-		float MeasureFunctionCardHeight(const SQmCardBuildContext &Ctx, const EQmModuleId Id, const float ContentWidth)
+		float MeasureFunctionCardHeight(const SSettingsContentMetrics &Metrics, CMenus *pMenus, const float LabelWidth, const SQmFunctionCardLayoutState Layout, const EQmModuleId Id, const float ContentWidth)
 		{
-			const SSettingsContentMetrics &Metrics = Ctx.m_Metrics;
 			const float LineHeight = Metrics.m_LineHeight;
 			const float BodySize = Metrics.m_BodySize;
 			const float LineSpacing = Metrics.m_LineSpacing;
-			const float LabelWidth = Ctx.m_LabelWidth;
 			const float UiScale = Metrics.m_UiScale;
-			const SQmFunctionCardLayoutState Layout = Ctx.m_pFunctionLayout != nullptr ? *Ctx.m_pFunctionLayout : SQmFunctionCardLayoutState{};
 			const auto Rows = [&Metrics](const float Count) { return CardRows(Metrics, Count); };
 			const auto Row = [&Metrics](const float Spacing = 1.0f) { return CardRow(Metrics, Spacing); };
 			switch(Id)
@@ -43,7 +40,7 @@ namespace qm_card_catalog
 			case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 6.0f;
 			case EQmModuleId::FriendNotify:
 				return Row() * (5.0f + (g_Config.m_QmFriendOnlineAutoRefresh ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterBroadcast ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterAutoGreet ? 1.0f : 0.0f));
-			case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(QmCardRenderHook::TextRenderer(Ctx.m_pMenus), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
+			case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(QmCardRenderHook::TextRenderer(pMenus), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
 			case EQmModuleId::Translate:
 			{
 				const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
@@ -74,14 +71,14 @@ namespace qm_card_catalog
 				return Row() * 5.0f + BodySize + LineSpacing * 3.0f + std::min(ContentWidth, std::clamp(ContentWidth * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f)) * 0.8f;
 			case EQmModuleId::FavoriteMaps:
 			{
-				const size_t FavoriteCount = QmCardRenderHook::FavoriteMapCount(Ctx.m_pMenus);
+				const size_t FavoriteCount = QmCardRenderHook::FavoriteMapCount(pMenus);
 				return Rows(5.0f + (float)Layout.m_FavoriteMapSearchRows + (float)std::max<size_t>(1, std::min<size_t>(FavoriteCount, 64)));
 			}
 			case EQmModuleId::MapUpload:
 			{
 				float Height = LineHeight * 8.0f + LineSpacing * 6.0f;
 				for(const char *pText : QmMapUploadInstructions())
-					Height += QmMapUploadHelpLineHeight(QmCardRenderHook::TextRenderer(Ctx.m_pMenus), pText, ContentWidth, BodySize, LineHeight) + LineSpacing;
+					Height += QmMapUploadHelpLineHeight(QmCardRenderHook::TextRenderer(pMenus), pText, ContentWidth, BodySize, LineHeight) + LineSpacing;
 				return Height;
 			}
 			case EQmModuleId::HJAssist: return Row() * (g_Config.m_QmAutoTeamLock ? 9.0f : 8.0f);
@@ -143,9 +140,10 @@ namespace qm_card_catalog
 		const bool ReadOnly = Ctx.m_ReadOnly;
 
 		const auto Add = [&](const EQmModuleId ModuleId, const char *pStableId, const char *pTitle, const char *pSubtitle, const FSettingsCardRenderMeasured &Render) {
+			const SQmFunctionCardLayoutState MeasureLayout = Ctx.m_pFunctionLayout != nullptr ? *Ctx.m_pFunctionLayout : SQmFunctionCardLayoutState{};
 			MakeModuleCard(
 				Ctx, ModuleId, pStableId, pTitle, pSubtitle, Render,
-				[&Ctx, ModuleId](float ContentWidth) { return MeasureFunctionCardHeight(Ctx, ModuleId, ContentWidth); },
+				[Metrics, pMenus, LabelWidth, MeasureLayout, ModuleId](float ContentWidth) { return MeasureFunctionCardHeight(Metrics, pMenus, LabelWidth, MeasureLayout, ModuleId, ContentWidth); },
 				MeasureFunctionCardRevision(Ctx, ModuleId),
 				{},
 				Out);
