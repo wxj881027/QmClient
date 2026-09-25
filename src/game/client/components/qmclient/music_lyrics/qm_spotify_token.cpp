@@ -17,19 +17,6 @@ namespace QmSpotifyToken
 	{
 		constexpr const char *TOKEN_BASE_URL = "https://open.spotify.com/api/token";
 
-		const json_value *Field(const json_value *pObject, const char *pName)
-		{
-			if(pObject == nullptr || pObject->type != json_object || pName == nullptr)
-				return nullptr;
-			for(unsigned int Index = 0; Index < pObject->u.object.length; ++Index)
-			{
-				const auto &Entry = pObject->u.object.values[Index];
-				if(Entry.name != nullptr && std::string_view(Entry.name, Entry.name_length) == pName)
-					return Entry.value;
-			}
-			return nullptr;
-		}
-
 		// 还原单个字节值:value[i] ^ ((i % 33) + 9),再转为十进制字符串。
 		std::string TransformValue(int Value, size_t Index)
 		{

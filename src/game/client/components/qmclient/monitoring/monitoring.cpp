@@ -274,26 +274,6 @@ namespace
 		str_format(pBuf, BufSize, "%d/%d", GameTick, PredictedTick);
 	}
 
-	static void FormatTrafficStatsValue(char *pBuf, int BufSize, const SQmNetworkMetrics::STrafficStats &Stats)
-	{
-		char aRateBuf[32];
-		if(Stats.m_RateKibPerSec >= 0.0f)
-			str_format(aRateBuf, sizeof(aRateBuf), "%.1fKiB/s", Stats.m_RateKibPerSec);
-		else
-			str_copy(aRateBuf, "--", sizeof(aRateBuf));
-
-		str_format(
-			pBuf,
-			BufSize,
-			"%" PRIu64 "p %" PRIu64 "+%" PRIu64 "=%" PRIu64 " %s avg %" PRIu64 "B",
-			Stats.m_Packets,
-			Stats.m_PayloadBytes,
-			Stats.m_OverheadBytes,
-			Stats.m_TotalBytes,
-			aRateBuf,
-			Stats.m_AveragePayloadBytes);
-	}
-
 	static bool RectsOverlap(const CUIRect &A, const CUIRect &B)
 	{
 		return A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y;

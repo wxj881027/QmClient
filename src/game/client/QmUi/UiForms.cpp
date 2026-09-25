@@ -61,21 +61,6 @@ namespace ui_widget
 			return str_comp(aTrimmed, "∞") == 0 || str_comp_nocase(aTrimmed, "inf") == 0 || str_comp_nocase(aTrimmed, "infinite") == 0;
 		}
 
-		void DrawTextFieldPlate(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, const STextFieldOptions &Options)
-		{
-			const SUiTheme &Theme = ThemeFor(Ctx);
-			const bool Active = pInput->IsActive();
-			const bool Hovered = Ctx.m_pUi->HotItem() == pInput;
-			const ColorRGBA PlateColor = Hovered && !Active ? Theme.m_SurfaceHovered : Theme.m_InputSurface;
-			DrawTextFieldShell(Ctx, Rect, PlateColor, Options.m_Corners, Options.m_CornerRadius);
-			if(Ctx.m_pAnim == nullptr)
-				return;
-
-			const float TargetAlpha = pInput->IsActive() ? 1.0f : 0.0f;
-			const float Alpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, TargetAlpha, ui_curve::DECELERATE);
-			DrawTextFieldFocusBorder(Ctx, Rect, Alpha);
-		}
-
 		void DrawTextFieldFocusBorder(const IUiContext &Ctx, const CUIRect &Rect, float Alpha)
 		{
 			if(Alpha <= 0.01f)
