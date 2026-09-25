@@ -162,7 +162,11 @@ namespace
 
 bool SteamOpenClient()
 {
+#if defined(CONF_PLATFORM_ANDROID)
+	return false;
+#else
 	return open_link(STEAM_MAIN_URI);
+#endif
 }
 
 ISteam *CreateSteam()
