@@ -23,6 +23,7 @@
 #include "components/hud.h"
 #include "components/infomessages.h"
 #include "components/items.h"
+#include "components/jump_hint_utils.h"
 #include "components/mapimages.h"
 #include "components/maplayers.h"
 #include "components/mapsounds.h"
@@ -35,6 +36,7 @@
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
+#include "components/qmclient/qm_hook_coll_intersection.h"
 #include "components/qmclient/qmclient_utils.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
 #include "components/race_demo.h"
@@ -100,7 +102,7 @@ namespace
 
 	void LogSettingsLoadingPrewarmEvent(const IClient *pClient, const char *pEvent, int CompletedSteps, int MaxAttempts, int TeeWarmupEntries, int ConsecutiveNoProgressSteps, uint64_t UploadsCompleted, uint64_t LoadsCompleted)
 	{
-		if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
+		if(g_Config.m_QmPerfDebug == 0)
 			return;
 		char aPayload[256];
 		str_format(aPayload, sizeof(aPayload), "event=%s steps=%d max_attempts=%d tee_entries=%d stall_steps=%d uploads_completed=%" PRIu64 " loads_completed=%" PRIu64,
@@ -114,9 +116,9 @@ namespace
 		QmPerfLogPayload("perf/settings-warmup", aPayload, pClient, "settings:tee");
 	}
 
-	void LogQmIconDiagnostics(const SQmIconDiagnostics &Diagnostics, const IClient *pClient)
+	void LogQmIconDiagnostics(const SQmIconDiagnostics &Frame, const IClient *pClient, bool Force = false)
 	{
-		if(!QmPerfEnabled())
+		if(!Force && !QmPerfEnabled())
 			return;
 		static SQmIconDiagnosticsWindow s_Window;
 		const int64_t Now = time_get();
@@ -371,7 +373,26 @@ namespace
 		Sample.m_Super = Super;
 	}
 
-	SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick)
+	// 把快照中 NETOBJTYPE_CHARACTER 项按 Id 收集到 [0, MAX_CLIENTS) 槽位。
+	// CClient::SnapFindItem 内部走 CSnapshot::GetItemIndex 的线性查找（源码自带
+	// "TODO: OPT: this should not be a linear search. very bad"），逐个客户端调用会让
+	// 每个 hammer hit 事件付出上百次全表比较；这里每个快照只遍历一次。
+	// 取值语义与逐个查找一致：SnapFindItem/FindItem 返回键匹配的第一个项，这里同样保留首个匹配。
+	void QmCollectCharactersById(CGameClient *pGameClient, int SnapId, const CNetObj_Character *apOut[MAX_CLIENTS])
+	{
+		const int NumItems = pGameClient->Client()->SnapNumItems(SnapId);
+		for(int Index = 0; Index < NumItems; ++Index)
+		{
+			const IClient::CSnapItem Item = pGameClient->Client()->SnapGetItem(SnapId, Index);
+			if(Item.m_Type != NETOBJTYPE_CHARACTER || Item.m_Id >= MAX_CLIENTS)
+				continue;
+			if(apOut[Item.m_Id] == nullptr)
+				apOut[Item.m_Id] = static_cast<const CNetObj_Character *>(Item.m_pData);
+		}
+	}
+
+	SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick,
+		const CNetObj_Character *const apCurrent[MAX_CLIENTS], const CNetObj_Character *const apPrevious[MAX_CLIENTS])
 	{
 		SQmHammerAttackSample aAttackSamples[MAX_CLIENTS];
 		SQmHammerTargetSample aTargetSamples[MAX_CLIENTS];
@@ -379,8 +400,8 @@ namespace
 		int NumTargetSamples = 0;
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 		{
-			const auto *pCurrent = static_cast<const CNetObj_Character *>(pGameClient->Client()->SnapFindItem(IClient::SNAP_CURRENT, NETOBJTYPE_CHARACTER, ClientId));
-			const auto *pPrevious = static_cast<const CNetObj_Character *>(pGameClient->Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, ClientId));
+			const CNetObj_Character *pCurrent = apCurrent[ClientId];
+			const CNetObj_Character *pPrevious = apPrevious[ClientId];
 			const CGameClient::CSnapState::CCharacterInfo &Character = pGameClient->m_Snap.m_aCharacters[ClientId];
 			const int CharacterFlags = Character.m_HasExtendedData ? Character.m_ExtendedData.m_Flags : 0;
 			const bool HammerHitEnabled = (CharacterFlags & CHARACTERFLAG_HAMMER_HIT_DISABLED) == 0;
@@ -688,7 +709,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_InfoMessages, "info_messages");
 	AddComponent(&m_Chat, "chat");
 	AddComponent(&m_QmHudNotifications, "hud_notifications");
-	AddComponent(&m_QmBindStatusHud, "qm_bind_status_hud");
 	AddComponent(&m_Broadcast, "broadcast");
 	AddComponent(&m_ImportantAlert, "important_alert");
 	AddComponent(&m_DebugHud, "debug_hud");
@@ -1088,7 +1108,6 @@ void CGameClient::OnInit()
 	m_ParticlesSkinLoaded = false;
 	m_SpawnEventsProcessed = 0;
 	m_SpawnEffectsDispatched = 0;
-	m_SpawnEffectsFiltered = 0;
 	m_SpawnParticleAddFailures = 0;
 	m_EmoticonsSkinLoaded = false;
 	m_HudSkinLoaded = false;
@@ -1259,7 +1278,7 @@ void CGameClient::OnUpdate()
 		m_Binds.m_MouseOnAction = false;
 	}
 
-	if(g_Config.m_QmPerfStutterDiagnostics)
+	if(g_Config.m_QmPerfDebug)
 	{
 		for(size_t i = 0; i < m_vpAll.size(); ++i)
 		{
@@ -1711,7 +1730,6 @@ void CGameClient::OnReset()
 	m_SuppressEvents = false;
 	m_SpawnEventsProcessed = 0;
 	m_SpawnEffectsDispatched = 0;
-	m_SpawnEffectsFiltered = 0;
 	m_SpawnParticleAddFailures = 0;
 	m_NewTick = false;
 	m_NewPredictedTick = false;
@@ -1763,7 +1781,6 @@ void CGameClient::OnReset()
 	m_PredictedWorld.CopyWorld(&m_GameWorld);
 	m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
 	m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
-	m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
 
 	m_vSnapEntities.clear();
 
@@ -1772,8 +1789,6 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aEnableSpectatorCount), std::end(m_aEnableSpectatorCount), -1);
 	std::fill(std::begin(m_aLastUpdateTick), std::end(m_aLastUpdateTick), 0);
 	std::fill(std::begin(m_aQ1menGSyncMarkUntil), std::end(m_aQ1menGSyncMarkUntil), 0);
-	std::fill(std::begin(m_aQ1menGSyncFootParticlesEnabled), std::end(m_aQ1menGSyncFootParticlesEnabled), false);
-	std::fill(std::begin(m_aQ1menGSyncRemoteParticlesEnabled), std::end(m_aQ1menGSyncRemoteParticlesEnabled), false);
 	std::fill(std::begin(m_aQmVoiceSyncMarkUntil), std::end(m_aQmVoiceSyncMarkUntil), 0);
 	std::fill(std::begin(m_aQmDeveloperMarkUntil), std::end(m_aQmDeveloperMarkUntil), 0);
 	std::fill(std::begin(m_aQmDeveloperRainbow), std::end(m_aQmDeveloperRainbow), false);
@@ -2027,7 +2042,7 @@ void CGameClient::OnRender()
 			pComponent->OnRender();
 		}
 	};
-	if(g_Config.m_QmPerfStutterDiagnostics)
+	if(g_Config.m_QmPerfDebug)
 	{
 		for(size_t i = 0; i < m_vpAll.size(); ++i)
 		{
@@ -2294,9 +2309,25 @@ void CGameClient::FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, 
 	}
 }
 
-void CGameClient::ProcessQmStutterFrame()
+void CGameClient::OnQmPerfFrame(double FrameMs)
 {
-	const bool Enabled = g_Config.m_QmPerfStutterDiagnostics != 0;
+	ProcessQmStutterFrame(FrameMs);
+}
+
+void CGameClient::OnQmPerfStop(bool Shutdown)
+{
+	const SQmStutterFrameDecision Decision = m_QmStutterEpisodeTracker.Flush(Shutdown ? EQmStutterFlushReason::SHUTDOWN : EQmStutterFlushReason::DISABLED);
+	FlushQmStutterWindow(Decision, true);
+	ResetQmStutterWindowSamples();
+	m_QmStutterDiagnosticsWasEnabled = false;
+	std::fill(m_vQmStutterPendingUpdateMs.begin(), m_vQmStutterPendingUpdateMs.end(), 0.0);
+	std::fill(m_vQmStutterPendingRenderMs.begin(), m_vQmStutterPendingRenderMs.end(), 0.0);
+	LogQmIconDiagnostics({}, Client(), true);
+}
+
+void CGameClient::ProcessQmStutterFrame(double FrameMs)
+{
+	const bool Enabled = g_Config.m_QmPerfDebug != 0;
 	if(!Enabled)
 	{
 		if(m_QmStutterDiagnosticsWasEnabled)
@@ -2319,7 +2350,6 @@ void CGameClient::ProcessQmStutterFrame()
 	}
 
 	const uint64_t FrameId = Client()->PerfFrame();
-	const double FrameMs = Client()->RenderFrameTime() * 1000.0;
 	const SQmStutterFrameDecision Decision = m_QmStutterEpisodeTracker.RecordFrame(FrameId, FrameMs);
 	if(Decision.m_Started)
 	{
@@ -3472,7 +3502,7 @@ void CGameClient::FinalizeHammerHitEvents()
 
 	for(const SPendingHammerHitEvent &Event : m_vPendingHammerHitEvents)
 	{
-		const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick);
+		const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick, apCurrent, apPrevious);
 		bool TargetWoke = false;
 		if(Match.m_TargetId >= 0 && Match.m_TargetId < MAX_CLIENTS)
 		{
@@ -5041,9 +5071,14 @@ void CGameClient::OnPredict()
 	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
 		return;
 
-	vec2 aBeforeRender[MAX_CLIENTS];
-	for(int i = 0; i < MAX_CLIENTS; i++)
-		aBeforeRender[i] = GetSmoothPos(i);
+	// 这份「预测前位置」快照只被下面的反 ping 平滑块消费（其门控以 m_ClAntiPingSmooth 开头），
+	// 关闭该选项时无需为全部 128 个客户端各算一次 GetSmoothPos。
+	vec2 aBeforeRender[MAX_CLIENTS] = {};
+	if(g_Config.m_ClAntiPingSmooth)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+			aBeforeRender[i] = GetSmoothPos(i);
+	}
 
 	// init
 	bool Dummy = g_Config.m_ClDummy ^ m_IsDummySwapping;
@@ -5115,9 +5150,6 @@ void CGameClient::OnPredict()
 			if(pDummyChar)
 				m_aClients[m_aLocalIds[!g_Config.m_ClDummy]].m_PrevPredicted = pDummyChar->GetCore();
 		}
-
-		if(Tick == FinalTickRegular)
-			m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
 
 		// optionally allow some movement in freeze by not predicting freeze the last one to two ticks
 		if(g_Config.m_ClPredictFreeze == 2 && Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Client()->PredGameTick(g_Config.m_ClDummy) % 2 <= Tick)
@@ -8522,7 +8554,6 @@ std::shared_ptr<CManagedTeeRenderInfo> CGameClient::CreateManagedTeeRenderInfo(c
 	if(ShouldHideStreamerSkin(Client.ClientId()))
 	{
 		CTeeRenderInfo TeeRenderInfo;
-		TeeRenderInfo.m_Size = Client.m_RenderInfo.m_Size;
 		CSkinDescriptor SkinDescriptor;
 		const unsigned ClientSkinDescriptorFlags = Client.ToSkinDescriptor().m_Flags;
 		BuildDefaultSkinDescriptor(SkinDescriptor, ClientSkinDescriptorFlags != 0 ? ClientSkinDescriptorFlags : CSkinDescriptor::FLAG_SIX);
@@ -8534,16 +8565,51 @@ std::shared_ptr<CManagedTeeRenderInfo> CGameClient::CreateManagedTeeRenderInfo(c
 
 void CGameClient::UpdateManagedTeeRenderInfos()
 {
-	while(!m_vpManagedTeeRenderInfos.empty())
-	{
-		auto UnusedInfo = std::find_if(m_vpManagedTeeRenderInfos.begin(), m_vpManagedTeeRenderInfos.end(), [&](const auto &pItem) {
-			return pItem.use_count() <= 1;
-		});
-		if(UnusedInfo == m_vpManagedTeeRenderInfos.end())
+	// 一次稳定压缩保留仍被引用的条目，避免逐个删除反复扫描和移动整个尾部。
+	std::erase_if(m_vpManagedTeeRenderInfos, [](const auto &pItem) {
+		return pItem.use_count() <= 1;
+	});
+}
+
+void CGameClient::RepairStaleTeeRenderInfos()
+{
+	// 皮肤贴图被卸载、皮肤容器重建、图形设备重建这些路径只要漏掉一次通知，
+	// 引用旧句柄的渲染信息就会一直把 Tee 画成没有贴图的实心块（表现就是纯白块，且一直不恢复）。
+	// 这里每帧校验句柄是否还活着，失效就按当前皮肤重新解析；解析不到会走既有的 default 皮肤回退。
+	// 绘制期还有一层兜底（CRenderTools 只画存活句柄），因此白块最多存在一帧。
+	IGraphics *pGraphics = Graphics();
+	const auto RepairManagedInfo = [this, pGraphics](const std::shared_ptr<CManagedTeeRenderInfo> &pManagedTeeRenderInfo) {
+		if(!pManagedTeeRenderInfo->TeeRenderInfo().HasStaleTexture(pGraphics))
+			return;
+		if(pManagedTeeRenderInfo->m_StaleRepairAttempts < 3)
 		{
-			break;
+			++pManagedTeeRenderInfo->m_StaleRepairAttempts;
+			log_info("skins", "stale tee render info repaired: skin='%s' flags=%u attempt=%d",
+				pManagedTeeRenderInfo->m_SkinDescriptor.m_aSkinName, pManagedTeeRenderInfo->m_SkinDescriptor.m_Flags,
+				pManagedTeeRenderInfo->m_StaleRepairAttempts);
 		}
-		m_vpManagedTeeRenderInfos.erase(UnusedInfo);
+		RefreshSkin(pManagedTeeRenderInfo);
+	};
+	for(const std::shared_ptr<CManagedTeeRenderInfo> &pManagedTeeRenderInfo : m_vpManagedTeeRenderInfos)
+	{
+		RepairManagedInfo(pManagedTeeRenderInfo);
+	}
+	// 客户端渲染信息是托管信息的副本：托管信息已经刷新、副本还留着旧句柄时，副本要自己重解析
+	// （UpdateRenderInfo 会把失效的上一份判为不可复用，转而走 default 皮肤回退）。
+	for(CClientData &ClientData : m_aClients)
+	{
+		if(!ClientData.m_Active || ClientData.m_pSkinInfo == nullptr)
+			continue;
+		if(!ClientData.m_RenderInfo.HasStaleTexture(pGraphics))
+			continue;
+		if(ClientData.m_pSkinInfo->m_StaleRepairAttempts < 3)
+		{
+			++ClientData.m_pSkinInfo->m_StaleRepairAttempts;
+			log_info("skins", "stale client tee render info repaired: skin='%s' flags=%u attempt=%d",
+				ClientData.m_pSkinInfo->m_SkinDescriptor.m_aSkinName, ClientData.m_pSkinInfo->m_SkinDescriptor.m_Flags,
+				ClientData.m_pSkinInfo->m_StaleRepairAttempts);
+		}
+		ClientData.UpdateRenderInfo();
 	}
 }
 
@@ -9266,22 +9332,18 @@ void CGameClient::SetConnectInfo(const NETADDR *pAddress)
 void CGameClient::ClearQ1menGSyncMarks()
 {
 	std::fill(std::begin(m_aQ1menGSyncMarkUntil), std::end(m_aQ1menGSyncMarkUntil), 0);
-	std::fill(std::begin(m_aQ1menGSyncFootParticlesEnabled), std::end(m_aQ1menGSyncFootParticlesEnabled), false);
-	std::fill(std::begin(m_aQ1menGSyncRemoteParticlesEnabled), std::end(m_aQ1menGSyncRemoteParticlesEnabled), false);
 	std::fill(std::begin(m_aQ1menGSyncClientBrands), std::end(m_aQ1menGSyncClientBrands), EClientBrand::NONE);
 	for(auto &aQid : m_aaQ1menGSyncQid)
 		aQid[0] = '\0';
 }
 
-void CGameClient::MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, bool FootParticlesEnabled, bool RemoteParticlesEnabled, const char *pQid, EClientBrand ClientBrand)
+void CGameClient::MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, const char *pQid, EClientBrand ClientBrand)
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 	if(ExpireTick <= 0)
 		return;
 	m_aQ1menGSyncMarkUntil[ClientId] = maximum(m_aQ1menGSyncMarkUntil[ClientId], ExpireTick);
-	m_aQ1menGSyncFootParticlesEnabled[ClientId] = FootParticlesEnabled;
-	m_aQ1menGSyncRemoteParticlesEnabled[ClientId] = RemoteParticlesEnabled;
 	m_aQ1menGSyncClientBrands[ClientId] = ClientBrand == EClientBrand::NONE ? EClientBrand::QM : ClientBrand;
 	if(pQid && pQid[0] != '\0')
 		str_copy(m_aaQ1menGSyncQid[ClientId], pQid, sizeof(m_aaQ1menGSyncQid[ClientId]));
@@ -9303,14 +9365,6 @@ const char *CGameClient::GetQ1menGClientQid(int ClientId) const
 	if(!IsQ1menGClientRecognized(ClientId))
 		return "";
 	return m_aaQ1menGSyncQid[ClientId];
-}
-
-bool CGameClient::ShouldRenderQ1menGRemoteFootParticles(int ClientId) const
-{
-	if(!IsQ1menGClientRecognized(ClientId))
-		return false;
-
-	return m_aQ1menGSyncRemoteParticlesEnabled[ClientId] && m_aQ1menGSyncFootParticlesEnabled[ClientId];
 }
 
 void CGameClient::ClearQmVoiceSyncMarks()

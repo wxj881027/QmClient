@@ -209,7 +209,6 @@ int CEffects::PlayerSpawn(vec2 Pos, float Alpha, float Volume)
 	const bool PlaySound = Focus.m_PlayDeathOrSpawnSound;
 	if(Focus.m_HideKillEffects)
 	{
-		++GameClient()->m_SpawnEffectsFiltered;
 		if(PlaySound)
 			GameClient()->m_Sounds.PlayAt(CSounds::CHN_WORLD, SOUND_PLAYER_SPAWN, Volume, Pos);
 		return 0;

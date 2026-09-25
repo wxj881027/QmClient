@@ -9,6 +9,7 @@
 #include "voting.h"
 
 #include <base/color.h>
+#include <base/log.h>
 #include <base/str.h>
 
 #include <engine/graphics.h>
@@ -877,6 +878,38 @@ namespace
 			DrawMediaIslandGeometryFallback(pGraphics, State);
 	}
 
+	// 录制红点：走灵动岛同一条 SDF 绘制链路，只画一个「宽高 = 直径、圆角 = 半径」的圆，
+	// 因此轮廓是逐像素抗锯齿出来的，不再有几何多边形的硬边。呼吸透明度仍由调用方传入的
+	// Alpha 决定，大小、颜色、显示条件都不变。灵动岛与独立计时胶囊共用本函数。
+	// 不支持 SDF 的后端（HasMediaIslandSdf 为假）退回原来的几何圆。
+	void DrawHudRecordingStatusDot(IGraphics *pGraphics, vec2 Center, float DotSize, float Alpha, float ScreenPixelSize)
+	{
+		if(pGraphics == nullptr || DotSize <= 0.0f || Alpha <= 0.0f)
+			return;
+
+		const float Radius = DotSize * 0.5f;
+		if(!pGraphics->HasMediaIslandSdf())
+		{
+			DrawSmoothCircle(pGraphics, Center, Radius, ColorRGBA(1.0f, 0.15f, 0.15f, Alpha));
+			return;
+		}
+
+		SHudMediaIslandSdfRenderState State;
+		State.m_BackgroundColor = ColorRGBA(1.0f, 0.15f, 0.15f, Alpha);
+		State.m_MainRect = {Center.x - Radius, Center.y - Radius, DotSize, DotSize};
+		// 圆角取半径：在正方形里就是正圆；不设 item/capsule/轮廓环，避免 SDF 去画岛的其他部分。
+		State.m_MainRadius = Radius;
+		State.m_MainCorners = IGraphics::CORNER_ALL;
+		State.m_ScreenPixelSize = std::max(ScreenPixelSize, 0.0001f);
+		// 不加外阴影，也不取模糊底图：红点要的是纯色圆点，任何一层都会让它发灰。
+		State.m_Rect = QmHudMediaIslandSdfOuterRect(State);
+
+		IGraphics::SMediaIslandSdfParams GpuSdfParams;
+		if(!QmHudMediaIslandBuildGpuSdfParams(State, GpuSdfParams))
+			return;
+		pGraphics->RenderMediaIslandSdf(GpuSdfParams);
+	}
+
 	EQmIcon MediaIslandCountdownIcon(EHudMediaIslandCountdownType Type, bool Completed = false, bool SwapOutgoing = false)
 	{
 		if(Completed)
@@ -1314,6 +1347,9 @@ void CHud::RenderGameTimer()
 		TimerInfo.m_Alpha = 1.0f;
 		TimerInfo.m_IsCritical = false;
 	}
+
+	// 录制红点羽化比例与岛共用同一份实现，必须在 HUD 编辑器改写屏幕映射之前取值。
+	const float RecordingDotScreenPixelSize = CurrentScreenPixelSize(Graphics());
 
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 	{
@@ -2932,10 +2968,7 @@ void CHud::UpdateSwitchCountdownTracker()
 
 		const int CurTick = Client()->GameTick(Connection);
 		const int Delay = Collision()->GetSwitchDelay(MapIndex);
-		m_SwitchCountdownTracker.m_aaEndTick[Team][SwitchNumber] = CurTick + 1 + Delay * TickSpeed;
-		m_SwitchCountdownTracker.m_aaTouchTick[Team][SwitchNumber] = CurTick;
-		m_SwitchCountdownTracker.m_aaClientId[Team][SwitchNumber] = ClientId;
-		m_SwitchCountdownTracker.m_aaConnection[Team][SwitchNumber] = Connection;
+		m_SwitchCountdownTracker.Track(Team, SwitchNumber, CurTick + 1 + Delay * TickSpeed, CurTick, ClientId, Connection);
 	};
 
 	UpdateSwitchCountdownFromClient(GameClient()->m_aLocalIds[0], 0, GameClient()->Predict());
@@ -2944,6 +2977,9 @@ void CHud::UpdateSwitchCountdownTracker()
 
 	for(int Team = 0; Team < NUM_DDRACE_TEAMS; ++Team)
 	{
+		// 未写入过的队伍没有可过期的倒计时，跳过整行空槽。
+		if(!m_SwitchCountdownTracker.m_aTouchedTeams[Team])
+			continue;
 		for(int SwitchNumber = 1; SwitchNumber < 256; ++SwitchNumber)
 		{
 			if(m_SwitchCountdownTracker.m_aaEndTick[Team][SwitchNumber] <= 0)
@@ -5027,9 +5063,7 @@ void CHud::RenderMediaIsland()
 		SdfItem.m_RingColor = MediaIslandCountdownColor(Item.m_Type);
 	}
 
-	const float ScreenPixelSize = std::max(
-		(TransformedScreenX1 - TransformedScreenX0) / std::max(1, Graphics()->ScreenWidth()),
-		(TransformedScreenY1 - TransformedScreenY0) / std::max(1, Graphics()->ScreenHeight()));
+	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(TransformedScreenX0, TransformedScreenY0, TransformedScreenX1, TransformedScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
 	CurrentSdfState.m_MainRect = MainIslandSdfRect;
 	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius;
 	CurrentSdfState.m_MainCorners = HudEditorScope.m_Corners;
@@ -7482,7 +7516,9 @@ void CHud::OnRender()
 		if(g_Config.m_ClShowRecord)
 			RenderRecord();
 	}
-	else if(FocusSpectatorHudVisible)
+	// 禅模式隐藏主 HUD 时，仍可在围观状态下保留围观 HUD（ShouldRenderFocusSpectatorHud）。
+	if(!MainHudVisible && GameClient()->m_Snap.m_SpecInfo.m_Active &&
+		ShouldRenderFocusSpectatorHud(true, g_Config.m_ClShowhudSpectator != 0, false, g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideHud != 0))
 	{
 		RenderSpectatorHud();
 	}

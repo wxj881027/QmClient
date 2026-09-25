@@ -21,7 +21,7 @@ static bool QmTextEqualsNoCase(const char *pText, const char *pExpected)
 	return pText && pExpected && str_comp_nocase(pText, pExpected) == 0;
 }
 
-int ApplyQmFocusConfigOverride(SQmFocusConfigOverrideState &State, bool HideActive, int CurrentValue, int HiddenValue, bool &Changed)
+int ApplyQmConfigOverride(SQmConfigOverrideState &State, bool HideActive, int CurrentValue, int HiddenValue, bool &Changed)
 {
 	Changed = false;
 	if(HideActive)

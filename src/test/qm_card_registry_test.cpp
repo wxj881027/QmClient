@@ -7,6 +7,7 @@
 
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmModuleLayoutAdapter.h>
+#include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/localization.h>
 
 #include <gtest/gtest.h>
@@ -38,6 +39,60 @@ TEST(QmCardRegistry, CoversAllCardsNoDuplicates)
 		EXPECT_TRUE(Ids.insert(E.m_pStableId).second) << "重复 stableId: " << E.m_pStableId;
 		EXPECT_NE(E.m_pTitle, nullptr) << E.m_pStableId;
 		EXPECT_NE(E.m_pTitle != nullptr ? E.m_pTitle[0] : '\0', '\0') << E.m_pStableId;
+	}
+}
+
+// 意图：测图上传入口能从功能页与全局搜索找到，旧布局加载后仍保留独立卡片。
+TEST(QmCardRegistry, MapUploadHasFunctionPlacementAndSearchKeywords)
+{
+	const auto *pCard = qm_card_registry::FindByStableId("qm:map_upload");
+	ASSERT_NE(pCard, nullptr);
+	EXPECT_STREQ(pCard->m_pDefaultTab, "function");
+	EXPECT_EQ(pCard->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	EXPECT_EQ(pCard->m_DefaultOrder, 8);
+	const auto Model = RegistryModelAfterRoundTrip();
+	for(const char *pQuery : {"上传地图", "测图", "map upload"})
+	{
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+			return str_comp(Result.m_pStableId, "qm:map_upload") == 0;
+		});
+		ASSERT_NE(It, Results.end()) << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pTab, "function");
+	}
+}
+
+// 意图：恢复后的禅模式卡片能从默认布局与全局搜索找到。
+TEST(QmCardRegistry, RestoredZenModeIsPresentInRegistryAndSearch)
+{
+	const auto *pCard = qm_card_registry::FindByStableId("qm:focus_mode");
+	ASSERT_NE(pCard, nullptr);
+	EXPECT_STREQ(pCard->m_pDefaultTab, "visual");
+	EXPECT_EQ(pCard->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
+	EXPECT_EQ(pCard->m_DefaultOrder, 2);
+	EXPECT_TRUE(qm_card_catalog::HasCardModule("qm:focus_mode"));
+	const auto Model = RegistryModelAfterRoundTrip();
+	EXPECT_GE(Model.FindByStableId("qm:focus_mode"), 0);
+	for(const char *pQuery : {"禅模式", "Zen Mode", "focus mode"})
+	{
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+			return str_comp(Result.m_pStableId, "qm:focus_mode") == 0;
+		});
+		ASSERT_NE(It, Results.end()) << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pTab, "visual");
+	}
+}
+
+TEST(QmCardRegistry, TimeoutDisconnectSearchPointsToControls)
+{
+	qm_card_order::CModel Model;
+	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"qm_timeout_disconnect", "Active disconnect", "主动断开", "异常断开", "timeout disconnect"})
+	{
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		ASSERT_EQ(Results.size(), 1u) << pQuery;
+		EXPECT_STREQ(Results.front().m_pStableId, "deck:controls-miscellaneous") << pQuery;
 	}
 }
 
@@ -1000,7 +1055,6 @@ TEST(QmCardRegistry, QmCardsPreserveLegacyModuleSearchKeywords)
 		const char *m_pKeyword;
 	};
 	const SExpectedKeyword aExpected[] = {
-		{"qm:mini_features", "粒子拖尾"},
 		{"qm:mini_features", "候选栏"},
 		{"qm:friend_notify", "自动刷新"},
 		{"qm:block_words", "屏蔽词"},
@@ -1151,10 +1205,11 @@ TEST(QmCardRegistry, MigratesLegacyKeyToNamespaced)
 {
 	EXPECT_EQ(std::string(qm_card_registry::MigrateLegacyKey("chat_bubble")), "qm:chat_bubble");
 	EXPECT_EQ(std::string(qm_card_registry::MigrateLegacyKey("qiafen")), "qm:qiafen");
+	EXPECT_EQ(std::string(qm_card_registry::MigrateLegacyKey("focus_mode")), "qm:focus_mode");
 	EXPECT_EQ(qm_card_registry::MigrateLegacyKey("keyword_reply"), nullptr); // UI 名不映射
 }
 
-// 意图：栖梦 38 个 m_pKey 必须全部可映射（迁移兜底全覆盖，无遗漏）。
+// 意图：栖梦 37 个 m_pKey 必须全部可映射（迁移兜底全覆盖，无遗漏）。
 TEST(QmCardRegistry, AllQimengLegacyKeysMigratable)
 {
 	for(const auto &E : qm_card_registry::Defaults())

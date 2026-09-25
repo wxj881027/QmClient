@@ -1,0 +1,49 @@
+name: README Charts
+
+on:
+  schedule:
+    # 每天 03:17 UTC 刷新一次,避开整点高峰。
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: readme-charts
+  cancel-in-progress: false
+
+jobs:
+  charts:
+    name: Refresh activity charts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+        with:
+          # 提交活动图需要完整历史:仓库由 DDNet fork 而来,浅克隆会丢时间线。
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Generate charts
+        env:
+          # star 时间戳端点要求认证,匿名访问固定返回 401。
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python qmclient_scripts/support/generate_readme_charts.py
+
+      - name: Commit refreshed charts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/assets
+          if git diff --quiet --cached; then
+            echo "图表无变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "docs(readme): 刷新活动图表 [skip ci]"
+          git push

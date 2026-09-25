@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="280"
+ viewBox="0 0 840 280" role="img" aria-label="QmClient monthly commits">
+<title>QmClient monthly commits</title>
+<text x="56" y="18" fill="#8b949e" font-size="13" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">Commits per month</text>
+<line x1="56" y1="242.0" x2="820" y2="242.0" stroke="#8b949e" stroke-opacity="0.18" stroke-width="1"/>
+<text x="46" y="246.0" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="end">0</text>
+<line x1="56" y1="188.5" x2="820" y2="188.5" stroke="#8b949e" stroke-opacity="0.18" stroke-width="1"/>
+<text x="46" y="192.5" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="end">145</text>
+<line x1="56" y1="135.0" x2="820" y2="135.0" stroke="#8b949e" stroke-opacity="0.18" stroke-width="1"/>
+<text x="46" y="139.0" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="end">290</text>
+<line x1="56" y1="81.5" x2="820" y2="81.5" stroke="#8b949e" stroke-opacity="0.18" stroke-width="1"/>
+<text x="46" y="85.5" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="end">435</text>
+<line x1="56" y1="28.0" x2="820" y2="28.0" stroke="#8b949e" stroke-opacity="0.18" stroke-width="1"/>
+<text x="46" y="32.0" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="end">580</text>
+<rect x="70.5" y="232.0" width="47.4" height="10.0" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="146.9" y="228.7" width="47.4" height="13.3" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="223.3" y="233.1" width="47.4" height="8.9" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="299.7" y="232.0" width="47.4" height="10.0" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="376.1" y="156.0" width="47.4" height="86.0" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="452.5" y="185.5" width="47.4" height="56.5" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="528.9" y="145.7" width="47.4" height="96.3" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="605.3" y="28.0" width="47.4" height="214.0" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="681.7" y="217.6" width="47.4" height="24.4" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<rect x="758.1" y="232.0" width="47.4" height="10.0" rx="2" fill="#3fb950" fill-opacity="0.85"/>
+<text x="94.2" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2025-12</text>
+<text x="170.6" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-01</text>
+<text x="247.0" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-02</text>
+<text x="323.4" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-03</text>
+<text x="399.8" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-04</text>
+<text x="476.2" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-05</text>
+<text x="552.6" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-06</text>
+<text x="629.0" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-07</text>
+<text x="705.4" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-08</text>
+<text x="781.8" y="264" fill="#8b949e" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">2026-09</text>
+<text x="629.0" y="20.0" fill="#3fb950" font-size="12" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" text-anchor="middle">580</text>
+</svg>

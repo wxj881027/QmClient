@@ -27,6 +27,8 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiTheme.h>
+#include <game/client/QmUi/cards/QmCardCatalog.h>
+#include <game/client/QmUi/cards/QmMapUploadSearch.h>
 #include <game/client/component.h>
 #include <game/client/components/assets_resource_registry.h>
 #include <game/client/components/community_icons.h>
@@ -50,6 +52,7 @@
 #include <game/client/ui_listbox.h>
 #include <game/voting.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <deque>
@@ -2055,6 +2058,8 @@ protected:
 
 	// found in menus_demo.cpp
 	vec2 m_DemoControlsPositionOffset = vec2(0.0f, 0.0f);
+	bool m_DemoDisplayExpanded = false;
+	bool m_DemoExportDisplayExpanded = false;
 	bool m_PausedBeforeSeeking;
 	float m_PrevSeekAmount;
 	float m_LastPauseChange = -1.0f;
@@ -2066,6 +2071,9 @@ protected:
 	void FetchAllHeaders();
 	void HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek = -1);
 	void RenderDemoPlayer(CUIRect MainView);
+	void RenderDemoCard(const CUIRect &Rect);
+	void RenderDemoExportDisplayToggle(const CUIRect &Rect);
+	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true);
 	void RenderDemoPlayerSliceSavePopup(CUIRect MainView);
 	// 回放/导出共用的显示选项面板与其折叠开关。
 	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true);
@@ -2182,9 +2190,11 @@ protected:
 		int m_Align = 0;
 		SLabelProperties m_LabelProps;
 		int m_StrLen = -1;
-		int m_ReadCursorGlyphCount = -1;
+		std::optional<CTextCursor> m_ReadCursor;
+		EFontPreset m_FontPreset = EFontPreset::DEFAULT_FONT;
+		unsigned m_RenderFlags = 0;
 	};
-	std::vector<SMenuTextContainerBuildRequest> m_vMenuTextContainerBuildRequests;
+	std::deque<SMenuTextContainerBuildRequest> m_vMenuTextContainerBuildRequests;
 	SIngameServerInfoTextSnapshot m_IngameServerInfoTextSnapshot;
 	SIngameMotdParagraphCache m_IngameMotdParagraphCache;
 	enum class EReportScanState
@@ -2359,6 +2369,29 @@ protected:
 		CButtonContainer m_ConfirmButton;
 		CButtonContainer m_CancelButton;
 	} m_SkinQueuePresetRenamePopupContext;
+
+	using SQmMapUploadFile = qm_map_upload::SMapFile;
+	class CQmMapUploadPicker : public SPopupMenuId
+	{
+	public:
+		CMenus *m_pMenus = nullptr;
+		char m_aFolder[IO_MAX_PATH_LENGTH] = "";
+		int m_StorageType = IStorage::TYPE_ALL;
+		int m_Selected = -1;
+		std::vector<SQmMapUploadFile> m_vFiles;
+		CLineInputBuffered<IO_MAX_PATH_LENGTH> m_SearchInput;
+		qm_map_upload::CSearchIndex m_SearchIndex;
+		CListBox m_ListBox;
+		CButtonContainer m_CancelButton;
+	} m_QmMapUploadPicker;
+	qm_map_upload::CUpload m_QmMapUpload;
+	char m_aQmMapUploadPath[IO_MAX_PATH_LENGTH] = "";
+	char m_aQmMapUploadPlayer[MAX_NAME_LENGTH] = "";
+	int m_QmMapUploadStorageType = IStorage::TYPE_ALL;
+	void PopulateQmMapUploadPicker();
+	static int QmMapUploadScan(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
+	static CUi::EPopupMenuFunctionResult PopupQmMapUploadPicker(void *pContext, CUIRect View, bool Active);
+	const char *QmMapUploadPlayerName() const;
 
 	class CMapListItem
 	{
@@ -2559,6 +2592,7 @@ public:
 	int m_AppearanceSettingsTab = APPEARANCE_TAB_HUD;
 	CLineInputBuffered<128> m_GlobalCardSearchInput;
 	void ClearQmClientSettingsSearchInputs();
+	void ClearQmTitlePreviewContainers();
 
 	// DDRace
 	int DoButton_CheckBox_Tristate(const void *pId, const char *pText, TRISTATE Checked, const CUIRect *pRect);
@@ -2737,6 +2771,7 @@ public:
 	void DoSettingsLabelStreamed(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	void DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, bool Render = true);
 	void DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1);
+	void DoSettingsCardLabel(const char *pStableId, bool Subtitle, const CUIRect *pRect, const char *pText, float Size, const SLabelProperties &Props);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f);
 	int DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor = nullptr, const ColorRGBA *pHoverColor = nullptr);
@@ -2791,6 +2826,7 @@ public:
 		const SSettingsResourceFrameContext FrameContext = SettingsResourceFrameContext();
 		m_SettingsFrameBudget = SSettingsWarmupFrameBudget{};
 		m_CurrentSettingsUiFrameBudget = SSettingsAdaptiveBudgetOutput{};
+		m_SettingsUiFrameBudgetInitialized = false;
 		SettingsApplyActiveTeeSkinFrameBudget(m_SettingsFrameBudget, TeeSettingsActive);
 		if(TeeSettingsActive)
 			m_SettingsFrameBudget.m_MaxGpuUploads = TeeSkinGpuUploadsPerFrame >= 0 ? TeeSkinGpuUploadsPerFrame : SettingsSkinGpuUploadFrameUnits(FrameContext, TeeSettingsActive);
@@ -2962,6 +2998,7 @@ private:
 	SSettingsRuntimeMetadata m_SettingsRuntimeMetadata;
 	SSettingsWarmupFrameBudget m_SettingsFrameBudget;
 	SSettingsAdaptiveBudgetOutput m_CurrentSettingsUiFrameBudget;
+	bool m_SettingsUiFrameBudgetInitialized = false;
 	SSettingsAdaptiveBudgetOutput m_IngameTextFrameBudget;
 	float m_TextContainerCreateMsEwma = 0.0f;
 	float m_TextContainerUploadMsEwma = 0.0f;
@@ -3102,6 +3139,12 @@ private:
 	void RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage = false, bool PrewarmOnly = false);
 	void RenderSettingsGlobalSearch(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnly = false);
+	// 搜索页结果卡片的"定位"入口：跳回该卡所属分类页并高亮它。
+	void NavigateToGlobalSearchCard(const qm_card_catalog::SQmSearchResultEntry &Card);
+	FSettingsCardHeaderAction BuildGlobalSearchLocateHeaderAction(const qm_card_catalog::SQmSearchResultEntry &Card, bool ReadOnly, float SmallSize);
+	// 卡片目录（QmUi/cards）的受控访问口：卡片模块是独立文件，不能直接调用这里的私有内容函数，
+	// 通过本桥接结构显式暴露"卡片可以调用哪些内容渲染/输入助手"，避免把整类成员公开。
+	friend struct qm_card_catalog::QmCardRenderHook;
 	void RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly);
 	void RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly);
@@ -3111,20 +3154,24 @@ private:
 	bool RenderQmVisualCheckbox(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue);
 	void RenderQmVisualLabel(const char *pTextId, CUIRect *pRect, const char *pText, float FontSize, int TextAlign = TEXTALIGN_ML, const SLabelProperties &LabelProps = {});
 	void RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, float LineSpacing);
+	void RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float ColumnGap, float LabelWidth);
 	void RenderQmVisualTranslateUiContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing);
 	void RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ContentGap, bool PrewarmOnly);
 	void RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	void RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float ColumnGap, float LabelWidth);
 	void RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	bool RenderQmHudCheckbox(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue);
 	bool HandleQmHudCheckboxInput(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
+	bool ToggleQmHudCountdownLocation(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
 	void RenderQmHudLabel(const char *pTextId, CUIRect *pRect, const char *pText, float FontSize, int TextAlign = TEXTALIGN_ML, const SLabelProperties &LabelProps = {});
 	void RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pLabel, const char *pCommand, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
 	void RenderQmFunctionKeyBindsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
+	void RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
 	void RenderQmFunctionGoresActorContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
@@ -3144,6 +3191,7 @@ private:
 	void RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CornerRadius, bool PrewarmOnly);
+	void RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 	void RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 	void RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);

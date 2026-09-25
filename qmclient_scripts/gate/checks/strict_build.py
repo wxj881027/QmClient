@@ -38,6 +38,34 @@ def _is_ignorable_tool_warning(line: str) -> bool:
     return line.startswith("CMake Warning (dev)")
 
 
+# 采纳上游 `src/base` 模块（io/aio/os/net）时保留其原始实现，MSVC /analyze 会在这些文件上
+# 报出「上游本来就存在、且与本次同步无关」的代码分析建议。这里按「文件 + 警告码」精确豁免，
+# 只在 /analyze 阶段生效：我方自有代码与其它文件仍会被拦截。
+# 逐条理由与被豁免文件的来源见 docs/development/upstream-sync-verification.md。
+_ANALYZE_UPSTREAM_BASE_ALLOWLIST: dict[tuple[str, str], str] = {
+    ("src/base/aio.cpp", "C6262"): "上游 aio_thread 的 64KB 栈缓冲；改动它等于偏离上游实现",
+    ("src/base/io.cpp", "C6308"): "上游 realloc 惯用写法（先赋值、后判空），语义与上游一致",
+    ("src/base/io.cpp", "C28182"): "同上，同一处 realloc 路径的连带告警",
+    ("src/base/os.cpp", "C6011"): "上游 os.cpp 的 argv 构造路径，analyzer 未覆盖其前置保证",
+    ("src/base/os.cpp", "C6388"): "GetFileVersionInfoW 返回值的静态分析误报",
+    ("src/base/os.cpp", "C6387"): "同上，VerQueryValueW 的连带告警",
+    ("src/base/net.cpp", "C6011"): "上游 net.cpp 的 socket 生命周期分析误报",
+}
+
+
+def _analyze_allowlist_reason(line: str) -> str | None:
+    """命中「上游 src/base 豁免表」时返回理由，否则返回 None。"""
+    match = re.match(r"^(.+?)\((\d+)\)\s*:\s*warning\s+(C\d+):", line)
+    if not match:
+        return None
+    path = scope.normalize_path(match.group(1)).replace("\\", "/").lower()
+    code = match.group(3).upper()
+    for (allowed_path, allowed_code), reason in _ANALYZE_UPSTREAM_BASE_ALLOWLIST.items():
+        if code == allowed_code and path.endswith(allowed_path):
+            return reason
+    return None
+
+
 def _repo_command(
     results: ResultCollector,
     title: str,
@@ -126,6 +154,18 @@ def _repo_command(
                 for line in warns
                 if _warning_line_matches_changed_ranges(line, warning_line_filters)
             ]
+            # 仅 /analyze 阶段：把「上游 src/base 豁免表」命中的告警摘出来单列，
+            # 既不阻断门禁，也不静默丢弃（豁免了哪些、为什么，都写在报告里）。
+            exempted = [(line, _analyze_allowlist_reason(line)) for line in warns]
+            exempted = [(line, reason) for line, reason in exempted if reason]
+            if exempted:
+                warns = [line for line in warns if _analyze_allowlist_reason(line) is None]
+                results.add(
+                    "INFO",
+                    "MSVC /analyze 上游豁免",
+                    f"以下 {len(exempted)} 条告警命中上游 src/base 豁免表，不计入阻断：\n"
+                    + "\n".join(f"{line}\n    理由：{reason}" for line, reason in exempted),
+                )
         if warns:
             level = "FAIL" if fail_on_filtered_warnings else "WARN"
             results.add(

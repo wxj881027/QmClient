@@ -35,6 +35,11 @@ public:
 		// 旧消息不依赖纹理句柄或皮肤缓存存活。
 		std::shared_ptr<const QmChatAvatar::SSource> m_QmChatAvatar;
 
+		std::shared_ptr<const QmChatAvatar::SSource> m_pChatAvatar;
+
+		std::shared_ptr<CQmSkinOutline> m_pBodyOutline;
+		std::shared_ptr<CQmSkinOutline> m_pFeetOutline;
+
 		IGraphics::CTextureHandle m_Hands;
 		IGraphics::CTextureHandle m_HandsOutline;
 

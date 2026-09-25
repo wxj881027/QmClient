@@ -1113,6 +1113,10 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	}
 	log_info("gfx", "Created %s %d.%d context", pBackendName, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor);
 
+	// 崩溃报告要写实际生效的后端：Vulkan 失败后 InitWindow 会改配置再按 OpenGL 重试，
+	// 只看 g_Config.m_GfxBackend 会把崩溃归因到根本没跑起来的后端上。
+	CGraphics_Threaded::SetGraphicsBackendForCrashReport(pBackendName);
+
 	if(m_BackendType == BACKEND_TYPE_OPENGL)
 	{
 		if(g_Config.m_GfxGLMajor == 3 && g_Config.m_GfxGLMinor == 0)

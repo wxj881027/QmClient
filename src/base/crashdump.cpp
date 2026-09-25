@@ -333,57 +333,70 @@ static void WriteExecutablePath(HANDLE FileHandle)
 	WriteRaw(FileHandle, aLine);
 }
 
-static void WriteExceptionModule(HANDLE FileHandle, const void *pAddress)
+// 栈帧归因放在异常处理器里做是行不通的：出异常的那条线程往往已经没剩多少栈
+// （栈溢出时是彻底没有），处理器里任何稍大的栈对象都会二次打穿栈，
+// 结果连「原始崩在哪」都留不下来。所以这里只做两件纯循环、零额外结构的事：
+//   1. 从异常时的 RSP 起，把每个字当作返回地址候选原样写进报告；
+//   2. 把那块栈的原始字节倒进报告。
+// 归因（哪个模块、哪个函数）交给事后用符号解析，那时不缺栈。
+static void WriteStackTraceWords(HANDLE FileHandle, const CONTEXT *pContext)
 {
-	if(pAddress == nullptr)
+	if(pContext == nullptr)
 		return;
 
-	const HANDLE SnapshotHandle = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetCurrentProcessId());
-	if(SnapshotHandle == INVALID_HANDLE_VALUE)
+	const uintptr_t StackPointer = (uintptr_t)pContext->Rsp;
+	if(StackPointer < 0x10000)
 		return;
 
-	MODULEENTRY32W ModuleEntry{};
-	ModuleEntry.dwSize = sizeof(ModuleEntry);
+	WriteSection(FileHandle, "Stack words from RSP (每行一个返回地址候选):");
 
-	const uintptr_t Address = reinterpret_cast<uintptr_t>(pAddress);
-	bool Found = false;
-	if(Module32FirstW(SnapshotHandle, &ModuleEntry))
+	char aLine[64];
+	// 只读 16 个字（128 字节）：调用帧的返回地址必在栈顶附近，多读没有意义。
+	for(int Index = 0; Index < 16; ++Index)
 	{
-		do
-		{
-			const uintptr_t ModuleBase = reinterpret_cast<uintptr_t>(ModuleEntry.modBaseAddr);
-			const uintptr_t ModuleEnd = ModuleBase + ModuleEntry.modBaseSize;
-			if(Address < ModuleBase || Address >= ModuleEnd)
-				continue;
-
-			char aModuleName[512] = "";
-			char aModulePath[IO_MAX_PATH_LENGTH * 3] = "";
-			WideToUtf8(ModuleEntry.szModule, aModuleName, sizeof(aModuleName));
-			WideToUtf8(ModuleEntry.szExePath, aModulePath, sizeof(aModulePath));
-
-			char aLine[1024];
-			str_format(aLine, sizeof(aLine), "Exception module: %s + 0x%llX\r\n",
-				aModuleName[0] != '\0' ? aModuleName : "(unknown-module)",
-				(unsigned long long)(Address - ModuleBase));
-			WriteRaw(FileHandle, aLine);
-			str_format(aLine, sizeof(aLine), "Exception module range: 0x%016llX-0x%016llX\r\n",
-				(unsigned long long)ModuleBase,
-				(unsigned long long)ModuleEnd);
-			WriteRaw(FileHandle, aLine);
-			if(aModulePath[0] != '\0')
-			{
-				str_format(aLine, sizeof(aLine), "Exception module path: %s\r\n", aModulePath);
-				WriteRaw(FileHandle, aLine);
-			}
-			Found = true;
+		uintptr_t Word = 0;
+		if(ReadMemoryWindow(reinterpret_cast<const void *>(StackPointer + (uintptr_t)Index * sizeof(uintptr_t)), reinterpret_cast<unsigned char *>(&Word), sizeof(Word)) != sizeof(Word))
 			break;
-		} while(Module32NextW(SnapshotHandle, &ModuleEntry));
+
+		str_format(aLine, sizeof(aLine), "  0x%016llX\r\n", (unsigned long long)Word);
+		WriteRaw(FileHandle, aLine);
+	}
+}
+
+// 把异常时的栈原样抄进报告：即使处理器完全不知道那些字节是什么，
+// 事后也能用模块基址把它们还原成调用链。栈占用固定 256 字节。
+static void WriteRawStackBytes(HANDLE FileHandle, const CONTEXT *pContext)
+{
+	if(pContext == nullptr)
+		return;
+
+	const uintptr_t StackPointer = (uintptr_t)pContext->Rsp;
+	if(StackPointer < 0x10000)
+		return;
+
+	unsigned char aBuffer[256];
+	const size_t BytesRead = ReadMemoryWindow(reinterpret_cast<const void *>(StackPointer), aBuffer, sizeof(aBuffer));
+	if(BytesRead == 0)
+	{
+		WriteSection(FileHandle, "Raw stack bytes: unavailable");
+		return;
 	}
 
-	if(!Found)
-		WriteRaw(FileHandle, "Exception module: unresolved\r\n");
+	WriteSection(FileHandle, "Raw stack bytes from RSP (可事后用模块基址还原调用链):");
 
-	CloseHandle(SnapshotHandle);
+	char aLine[128];
+	for(size_t Offset = 0; Offset < BytesRead; Offset += 16)
+	{
+		str_format(aLine, sizeof(aLine), "  0x%016llX :", (unsigned long long)(StackPointer + Offset));
+		for(size_t Index = 0; Index < 16 && Offset + Index < BytesRead; ++Index)
+		{
+			char aByte[8];
+			str_format(aByte, sizeof(aByte), " %02X", aBuffer[Offset + Index]);
+			str_append(aLine, aByte, sizeof(aLine));
+		}
+		str_append(aLine, "\r\n", sizeof(aLine));
+		WriteRaw(FileHandle, aLine);
+	}
 }
 
 static void WriteLoadedModules(HANDLE FileHandle)
@@ -528,7 +541,8 @@ static void WriteExceptionDetails(HANDLE FileHandle, EXCEPTION_POINTERS *pExcept
 	WriteRaw(FileHandle, aLine);
 	str_format(aLine, sizeof(aLine), "Exception address: 0x%p\r\n", pRecord->ExceptionAddress);
 	WriteRaw(FileHandle, aLine);
-	WriteExceptionModule(FileHandle, pRecord->ExceptionAddress);
+	// 这里刻意不做模块归因：处理器跑在只剩极少栈的线程上，任何模块枚举/缓存都会二次打穿栈。
+	// 崩点靠「Stack words from RSP」+「Raw stack bytes」+ 报告末尾的模块列表事后还原。
 	str_format(aLine, sizeof(aLine), "Exception parameters: %lu\r\n", (unsigned long)pRecord->NumberParameters);
 	WriteRaw(FileHandle, aLine);
 
@@ -577,6 +591,10 @@ static void WriteExceptionDetails(HANDLE FileHandle, EXCEPTION_POINTERS *pExcept
 		str_format(aLine, sizeof(aLine), "Nested exception address: 0x%p\r\n", pRecord->ExceptionRecord->ExceptionAddress);
 		WriteRaw(FileHandle, aLine);
 	}
+
+	const CONTEXT *pContext = pExceptionPointers != nullptr ? pExceptionPointers->ContextRecord : nullptr;
+	WriteStackTraceWords(FileHandle, pContext);
+	WriteRawStackBytes(FileHandle, pContext);
 }
 
 static const char *ExceptionCodeToString(DWORD ExceptionCode)

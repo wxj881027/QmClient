@@ -1,5 +1,7 @@
 #include "outlines.h"
 
+#include "qm_outline_neighbors.h"
+
 #include <base/log.h>
 
 #include <engine/graphics.h>

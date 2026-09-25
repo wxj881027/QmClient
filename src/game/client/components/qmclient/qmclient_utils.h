@@ -21,6 +21,8 @@ struct SQmTitlePresence
 	std::string m_Title;
 	std::string m_Style;
 	int64_t m_RemainingSeconds = 0;
+	// 服务端分配的头衔动态风格 id；为空表示服务端未分配（回退到本地配置）。
+	std::string m_Style;
 };
 
 std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime = nullptr);
@@ -36,8 +38,6 @@ struct SQmClientServerDistribution
 struct SQmClientRecognitionMark
 {
 	std::string m_Name;
-	bool m_FootParticlesEnabled = false;
-	bool m_RemoteParticlesEnabled = false;
 	bool m_VoiceSupported = false;
 	EClientBrand m_ClientBrand = EClientBrand::QM;
 	std::string m_Qid;

@@ -22,9 +22,6 @@
 %d items selected
 == %d Elemente ausgewählt
 
-%d more cut segments
-== %d weitere Schnittsegmente
-
 %d of %d server
 == %d von %d Server
 
@@ -520,9 +517,6 @@ Adds a specific war entry
 
 Adds default chat binds
 == Fügt Standard-Chat-Binds hinzu
-
-Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
-== Zeigt Tasten-, Hammer-, Steuer- und Kopierstatus des Dummys im HUD, plus eine eigene Bind-Status-Liste.
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -2184,7 +2178,7 @@ Configure display and rendering
 == Anzeige und Rendering konfigurieren
 
 Configure Dream-only convenience features
-== Configure Dream-only convenience features
+== Qm-eigene Komfortfunktionen konfigurieren
 
 Configure game and client preferences
 == Spiel- und Client-Einstellungen konfigurieren
@@ -2311,6 +2305,9 @@ Connecting dummy
 
 Connecting to
 == Verbinde zu
+
+Connecting to voice server
+== Verbindung zum Sprachserver wird hergestellt
 
 Connection disconnected
 == Verbindung getrennt
@@ -2458,6 +2455,9 @@ Could not get server list from master server
 
 Could not load default touch controls from file. See local console for details.
 == Standard-Touch-Steuerung konnte nicht aus Datei geladen werden. Siehe lokale Konsole für Details.
+
+Could not load new features
+== Neuerungen konnten nicht geladen werden
 
 Could not load sponsor QR code. Check the Base64 data
 == Sponsor-QR-Code konnte nicht geladen werden. Überprüfe die Base64-Daten
@@ -2645,6 +2645,9 @@ Customize translate button and menu colors
 Customize vote display and interaction
 == Customize vote display and interaction
 
+Cut end: %s
+== Ende: %s
+
 Cut interval
 == Schnittintervall
 
@@ -2653,6 +2656,9 @@ Cut length
 
 Cut segments
 == Schnittsegmente
+
+Cut start: %s
+== Anfang: %s
 
 Cute:
 == Süß:
@@ -3206,6 +3212,9 @@ Door Laser Outline Color
 Door laser outline color
 == Tür-Laser-Konturfarbe
 
+Double-click: left applies to main, right applies to dummy
+== Doppelklick: links auf Spieler, rechts auf Dummy anwenden
+
 Download community skins
 == Community-Skins herunterladen
 
@@ -3377,8 +3386,8 @@ Dummy is currently connected.
 Dummy jump
 == Dummy-Sprung
 
-Dummy key/hammer/control/copy status switches and custom bind status list
-== Status-Schalter für Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation und benutzerdefinierte Bind-Status-Liste
+Dummy key/hammer/control/copy status switches
+== Status-Schalter für Tastenfixierung/Hammer/Dummy-Steuerung/Dummy-Synchronisation
 
 Dummy marking color
 == Dummy-Markierungsfarbe
@@ -3575,9 +3584,6 @@ Emoticon shadow
 Emoticons
 == Emoticons
 
-Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
-== Leer: die 4 integrierten Einträge. Format: var|0=Off|1=On; var|Text
-
 enable
 == aktivieren
 
@@ -3640,9 +3646,6 @@ Enable chat with all/team mode
 
 Enable cheats for your current team's run, but you can't earn a rank
 == Cheats für den Lauf deines aktuellen Teams aktivieren, aber du kannst keinen Rang erhalten
-
-Enable client stutter diagnostics at startup
-== Client-Ruckeldiagnose beim Start aktivieren
 
 Enable colored console output
 == Farbige Konsolenausgabe aktivieren
@@ -3872,9 +3875,6 @@ Enable skin queue rotation
 Enable skin switch animation
 == Skin-Wechselanimation aktivieren
 
-Enable skin transition animation, then choose the type, scope, duration and easing.
-== Aktiviere die Skin-Übergangsanimation und wähle Typ, Reichweite, Dauer und Easing.
-
 Enable smooth cinematic camera while free spectating
 == Sanfte Kinokamera beim freien Zuschauen aktivieren
 
@@ -3962,9 +3962,6 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Kriegsliste aktivieren
 
-Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
-== Aktiviere die Waffenwechsel- oder Nachladeanimation und stelle dann Reichweite, Dauer, Drehung und Easing ein.
-
 Enable word filter list
 == Wortfilterliste aktivieren
 
@@ -4004,6 +4001,9 @@ Endpoint
 Endpoint (optional)
 == Endpunkt (optional)
 
+Enhanced rendering
+== Erweiterte Darstellung
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == Gib /practice ein oder starte neu, sonst wird das gesamte Team in 60 Sekunden getötet
 
@@ -4012,9 +4012,6 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == Passwort eingeben
-
-Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
-== Gib den Sponsor-Code ein und drücke „Einlösen“, schreibe dann den Titel und drücke „Speichern“. Aktiviere „Nur mit diesem Nicknamen anzeigen“, um den Titel an einen Nicknamen zu binden.
 
 Enter Username
 == Benutzernamen eingeben
@@ -4045,9 +4042,6 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
-
-Entry: %s
-== Fundort: %s
 
 Erase items on the in game background
 == Elemente auf dem Spielhintergrund löschen
@@ -4787,9 +4781,6 @@ Gives you infinite jump
 Glitch
 == Glitch
 
-Global card
-== Globale Karte
-
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 == Globale Kartenreihenfolge (Format stableId|tab|col|order; durch Semikolon getrennt)
 
@@ -4940,6 +4931,9 @@ Has save
 Has unread news
 == Hat ungelesene Neuigkeiten
 
+HD icons (MSDF)
+== HD-Symbole (MSDF)
+
 HDF
 == HDF
 
@@ -4962,28 +4956,28 @@ Hi!
 == Hi!
 
 Hide basic system info (join, version, rules) in Zen mode
-== Grundlegende Systeminformationen (Beitritt, Version, Regeln usw.) im Zen-Modus ausblenden
+== Basis-Systeminfo im Zen-Modus ausblenden
 
 Hide chat messages from players marked as enemies
 == Chatnachrichten von als Feinde markierten Spielern ausblenden
 
 Hide death/respawn effects
-== Todes-/Wiederbelebungseffekte ausblenden
+== Todes-/Respawn-Effekte ausblenden
 
 Hide death/respawn effects in Zen Mode
-== Todes-/Wiederbelebungseffekte im Zen-Modus ausblenden
+== Todes-/Respawneffekte im Zen-Modus ausblenden
 
 Hide direction in Zen mode
-== Richtung im Zen-Modus ausblenden
+== Richtungsanzeige im Zen-Modus ausblenden
 
 Hide direction indicators
-== Richtungsanzeiger ausblenden
+== Richtungsanzeigen ausblenden
 
 Hide Echo messages
-== Echo-Nachrichten ausblenden
+== Echo-Meldungen ausblenden
 
 Hide Echo messages in Zen mode
-== Echo-Nachrichten im Zen-Modus ausblenden
+== Echo-Meldungen im Zen-Modus ausblenden
 
 Hide explosion effects
 == Explosionseffekte ausblenden
@@ -5001,10 +4995,10 @@ Hide guide lines
 == Führungslinien ausblenden
 
 Hide hammer effects
-== Hammereffekte ausblenden
+== Hammer-Effekte ausblenden
 
 Hide hammer effects in Zen Mode
-== Hammereffekte im Zen-Modus ausblenden
+== Hammer-Effekte im Zen-Modus ausblenden
 
 Hide helper lines in Gores mode
 == Hilfslinien im Gores-Modus ausblenden
@@ -5034,10 +5028,10 @@ Hide jump effects in Zen Mode
 == Sprungeffekte im Zen-Modus ausblenden
 
 Hide kill and finish messages in Zen mode
-== Tötungs- und Abschlussnachrichten im Zen-Modus ausblenden
+== Kill-/Finish-Meldungen im Zen-Modus ausblenden
 
 Hide kill/finish messages
-== Todes-/Ziel-Nachrichten ausblenden
+== Kill-/Ziel-Meldungen ausblenden
 
 Hide map progress
 == Kartenfortschritt ausblenden
@@ -5064,22 +5058,22 @@ Hide player messages
 == Spielernachrichten ausblenden
 
 Hide player messages in Zen mode
-== Spielernachrichten im Zen-Modus ausblenden
+== Spielermeldungen im Zen-Modus ausblenden
 
 Hide player name plates in Zen Mode
-== Spieler-Namensschild im Zen-Modus ausblenden
+== Namensplaketten im Zen-Modus ausblenden
 
 Hide player names in Zen Mode
 == Spielernamen im Zen-Modus ausblenden
 
 Hide projectile effects in Zen Mode
-== Einschlagseffekte im Zen-Modus ausblenden
+== Projektileffekte im Zen-Modus ausblenden
 
 Hide scoreboard
-== Anzeigetafel ausblenden
+== Scoreboard ausblenden
 
 Hide scoreboard in Zen mode
-== Punkteanzeige im Zen-Modus ausblenden
+== Scoreboard im Zen-Modus ausblenden
 
 Hide sensitive info like /save password
 == Vertrauliche Informationen wie /save-Passwort ausblenden
@@ -5088,10 +5082,10 @@ Hide server information on join
 == Serverinformationen beim Beitreten ausblenden
 
 Hide server prompt notifications
-== Server-Prompt-Benachrichtigungen ausblenden
+== Serverhinweise ausblenden
 
 Hide server tip notifications (including notification bar) in Zen mode
-== Server-Hinweisbenachrichtigungen (einschließlich Benachrichtigungsleiste) im Zen-Modus ausblenden
+== Serverhinweise im Zen-Modus ausblenden
 
 Hide Settings Tabs
 == Einstellungs-Tabs ausblenden
@@ -5112,13 +5106,13 @@ Hide typing emoji during input
 == Tipp-Emoticons während der Eingabe nicht anzeigen
 
 Hide UI for focused gameplay
-== UI für fokussiertes Gameplay ausblenden
+== UI für konzentriertes Gameplay ausblenden
 
 Hide weapon fire effects in Zen Mode
-== Waffenflammeneffekte im Zen-Modus ausblenden
+== Waffenfeuer-Effekte im Zen-Modus ausblenden
 
 Hide weapon muzzle flashes
-== Waffenmündungsblitze ausblenden
+== Mündungsblitze ausblenden
 
 High Detail
 == Hohe Details
@@ -5426,6 +5420,9 @@ Indicator size
 Indicator transparency
 == Transparenz des Indikators
 
+Inferno
+== Höllenfeuer
+
 Infinite hook for super players on/off.
 == Unendlicher Haken für Super-Spieler ein/aus.
 
@@ -5500,9 +5497,6 @@ Insane
 
 Installing update. Please wait...
 == Update wird installiert. Bitte warten...
-
-Instant zoom reverse
-== Zoomrichtung sofort umkehren
 
 Interface
 == Oberfläche
@@ -6128,12 +6122,6 @@ Local game mode statistics
 Local only
 == Nur lokal
 
-Local particle effects
-== Lokale Partikeleffekte
-
-Local particles: show particles behind own Tee (e.g. freeze snow)
-== Lokale Partikel: Zeige Partikel, die hinter deinem eigenen Tee fallen (z.B. Frostschnee)
-
 Local saves
 == Lokale Speicherstände
 
@@ -6380,14 +6368,8 @@ Margin when notification is docked
 Mark demo
 == Demo markieren
 
-Mark the beginning of a cut (right click to reset)
-== Anfang eines Schnitts markieren (Rechtsklick zum Zurücksetzen)
-
 Mark the beginning of a demo cut
 == Markiere den Beginn eines Demo-Schnitts
-
-Mark the end of a cut (right click to reset)
-== Ende eines Schnitts markieren (Rechtsklick zum Zurücksetzen)
 
 Mark the end of a demo cut
 == Markiere das Ende eines Demo-Schnitts
@@ -6551,6 +6533,9 @@ Menu camera rotation time in seconds
 Menu camera speed
 == Menü-Kamera-Geschwindigkeit
 
+Menu Gaussian blur pipeline
+== Gauß-Unschärfe-Pipeline für Menüs
+
 Menu main panel background color
 == Hintergrundfarbe des Hauptpanels im Menü
 
@@ -6574,9 +6559,6 @@ Merge consecutive identical echo messages within this window in milliseconds (0 
 
 Merge consecutive identical player messages within 2 seconds
 == Aufeinanderfolgende identische Spielernachrichten innerhalb von 2 Sekunden zusammenführen
-
-Merges chat messages repeated within a short time into a single line.
-== Fasst innerhalb kurzer Zeit wiederholte Chatnachrichten zu einer Zeile zusammen.
 
 Message color
 == Nachrichtenfarbe
@@ -6765,10 +6747,10 @@ Mute
 == Stumm
 
 Mute death/respawn sound in Zen Mode
-== Todes-/Wiederbelebungsgeräusche im Zen-Modus stummschalten
+== Todes-/Respawnsound im Zen-Modus stummschalten
 
 Mute death/respawn sounds
-== Todes-/Wiederbelebungsgeräusche stummschalten
+== Todes-/Respawn-Geräusche stumm schalten
 
 Mute emoticons
 == Emoticons stummschalten
@@ -6777,19 +6759,19 @@ Mute flag sounds
 == Flaggen-Sounds stummschalten
 
 Mute hammer sound in Zen mode
-== Hammerschlaggeräusche im Zen-Modus stummschalten
+== Hammersound im Zen-Modus stummschalten
 
 Mute hammer sounds
-== Hammerschläge stummschalten
+== Hammergeräusche stumm schalten
 
 Mute hook sound
 == Haken-Sound stummschalten
 
 Mute jump sound in Zen Mode
-== Sprunggeräusche im Zen-Modus stummschalten
+== Sprungsound im Zen-Modus stummschalten
 
 Mute jump sounds
-== Sprunggeräusche stummschalten
+== Sprunggeräusche stumm schalten
 
 Mute map sounds
 == Karten-Sounds stummschalten
@@ -7832,9 +7814,6 @@ Pet Skin:
 Pick result: %s
 == Ziehungsergebnis: %s
 
-Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
-== Wähle die zu deiner Musik-App passende Quelle und lass sie laufen; der Text folgt automatisch.
-
 Pickup range
 == Aufnahmebereich
 
@@ -8056,9 +8035,6 @@ Players weapons has no affect on others
 
 Playing effects
 == Spieleffekte
-
-Plays an animation whenever your skin changes, including skins stolen with the hammer.
-== Spielt eine Animation ab, wenn sich dein Skin ändert, auch bei mit dem Hammer gestohlenen Skins.
 
 Please add a valid cut first
 == Bitte fügen Sie zuerst einen gültigen Schnitt hinzu
@@ -8387,6 +8363,9 @@ Pulse speed
 Pulse strength
 == Pulsstärke
 
+Pure Vulkan fallback
+== Aktuell: reines Vulkan
+
 Push radius
 == Schubradius
 
@@ -8470,6 +8449,9 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi-Farbanimationsinterpolation: 0=sRGB linear 1=OKLAB wahrnehmungsgleichmäßig
+
+QmVulkan active
+== Aktuell: QmVulkan aktiv
 
 QQ group: 1076765929 (click to copy)
 == QQ-Gruppe: 1076765929 (klicken zum Kopieren)
@@ -8744,9 +8726,6 @@ Redeem
 Redeem your code and customize your title
 == Code einlösen und Titel anpassen
 
-Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
-== Löse deinen Sponsor-Code ein, um einen eigenen Titel freizuschalten. Der Titel erscheint im Chat und am Namensschild.
-
 Reduce antiping and player prediction when frozen
 == Antiping und Spielervorhersage bei eingefrorenem Zustand reduzieren
 
@@ -8839,12 +8818,6 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == Remote-Konsolen-Passwort für Moderator (eingeschränkter Zugriff)
-
-Remote particle effects
-== Remote-Partikeleffekte
-
-Remote particles: sync and render other players via central server (requires both local+remote enabled)
-== Remote-Partikel: Synchronisiere und rendere andere Spieler über den Zentralserver (erfordert, dass der andere lokale + Remote-Partikel aktiviert hat)
 
 Remove
 == Entfernen
@@ -9277,9 +9250,6 @@ Retry remote stats
 
 Retrying…
 == Erneuter Versuch…
-
-Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
-== Zoomrichtung beim Drücken der Gegentaste sofort umkehren (0=ursprüngliches weiches Zoomen beibehalten)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -9889,6 +9859,12 @@ Set color
 
 Set current demo speed
 == Aktuelle Demo-Geschwindigkeit einstellen
+
+Set cut end at current position (O, right click to reset)
+== Schnittende an aktueller Position setzen (O, Rechtsklick zum Zurücksetzen)
+
+Set cut start at current position (I, right click to reset)
+== Schnittanfang an aktueller Position setzen (I, Rechtsklick zum Zurücksetzen)
 
 Set ddrace team for a player
 == DDRace-Team für einen Spieler setzen
@@ -10877,9 +10853,6 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == Zeigt Hilfe zu Befehl r, allgemeine Hilfe, wenn leer gelassen
 
-Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
-== Holt Songtexte aus NetEase Cloud Music, Soda Music, Kugou und QQ Music und zeigt sie auf der Dynamic Island.
-
 Shows the credits of the DDNet mod
 == Zeigt die Credits des DDNet-Mods an
 
@@ -11018,9 +10991,6 @@ Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
 == Skin-Wechsel-Animationstyp (0=Nachbild-Popout, 1=Sanfter Überblendung, 2=Nach links schieben, 3=Rotations-Popout, 4=Hell-Dunkel-Wechsel, 5=Glitch-Zittern, 6=Elastisches Skalieren)
 
-Skin transition
-== Skin-Übergang
-
 Skin transition animation
 == Skin-Übergangsanimation
 
@@ -11089,6 +11059,9 @@ Smooth Dynamic Camera
 
 Smooth fade
 == Sanfter Übergang
+
+Smooth island (SDF)
+== Dynamic Island glätten (SDF)
 
 Smooth other players' predicted movement
 == Sanfte vorhergesagte Bewegung anderer Spieler
@@ -11542,9 +11515,6 @@ Switch failed
 
 Switch interval
 == Wechselintervall
-
-Switch on the status rows you need, then list the binds you want to watch.
-== Schalte die benötigten Status-Schalter ein und trage die zu überwachenden Binds in die eigene Liste ein.
 
 Switch opacity
 == Deckkraft des Schalters
@@ -12521,9 +12491,6 @@ Tune variable to value
 Tune variable to value or show current value
 == Variable auf Wert tunen oder aktuellen Wert anzeigen
 
-Turn on "Message merging" in Dream Features.
-== Aktiviere „Message merging“ in den „Dream Features“.
-
 Tutorial
 == Tutorial
 
@@ -12550,9 +12517,6 @@ UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or netwo
 
 UDP seems to be filtered.
 == UDP scheint gefiltert zu sein.
-
-UDP socket not open
-== UDP-Socket nicht geöffnet
 
 UI color
 == UI-Farbe
@@ -12806,9 +12770,6 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == URL zum Herunterladen von Skins
 
-Usage: %s
-== Verwendung: %s
-
 Usage: %s %s
 == Verwendung: %s %s
 
@@ -12865,6 +12826,9 @@ Use default voice input device
 
 Use default voice output device
 == Standard-Sprachausgabegerät verwenden
+
+Use each Tee trail style's own palette instead of the trail color mode
+== Die eigene Farbpalette des Tee-Spur-Stils statt des Spur-Farbmodus verwenden
 
 Use embedded HUD progress bar
 == Eingebettete HUD-Fortschrittsleiste verwenden
@@ -13346,9 +13310,6 @@ Weapon switch easing
 Weapon switch rotation
 == Waffenwechsel-Rotation
 
-Weapon Trajectory
-== Waffentrajektorie
-
 Weapon trajectory
 == Waffenflugbahn
 
@@ -13481,9 +13442,6 @@ Width of friends column in server browser
 Width of latency column in server browser
 == Breite der Latenzspalte im Server-Browser
 
-Width of map column in server browser
-== Breite der Kartenspalte im Server-Browser
-
 Width of others' hook collision line
 == Breite der Hakenkollisionslinie anderer
 
@@ -13519,9 +13477,6 @@ Word filter action: 0=replace matching words, 1=hide entire message
 
 Write local console contents to a text file
 == Lokale Konsoleninhalte in eine Textdatei schreiben
-
-Write performance debug logs to dedicated file
-== Leistungsdebug-Logs in eine separate Datei schreiben
 
 Write remote console contents to a text file
 == Remote-Konsoleninhalte in eine Textdatei schreiben
@@ -13849,9 +13804,6 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Dein Timeout-Code wurde gesetzt. 0.7-Clients können ihre Tees bei Timeout nicht zurückfordern; ein 0.6-Client kann jedoch deinen Tee übernehmen
-
-Your weapon slides and rotates in when you switch, and flips while reloading.
-== Beim Waffenwechsel fährt die Waffe mit Drehung ein, beim Nachladen dreht sie sich um.
 
 z = Zoom
 == z = Zoom

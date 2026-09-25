@@ -104,8 +104,6 @@ float CDebugHud::RenderParticleDiagnostics(float StartY)
 	RenderRow("Spawn received:", aBuf);
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnEffectsDispatched);
 	RenderRow("Spawn particles:", aBuf);
-	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnEffectsFiltered);
-	RenderRow("Spawn filtered:", aBuf);
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnParticleAddFailures);
 	RenderRow("Spawn add failed:", aBuf);
 	RenderRow("Particles skin:", GameClient()->m_ParticlesSkinLoaded ? "valid" : "invalid");

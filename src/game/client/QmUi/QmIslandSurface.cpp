@@ -26,6 +26,7 @@ namespace qm_island
 				return;
 
 			constexpr float Pi = 3.14159265359f;
+			constexpr int MaxSegments = 64;
 			const float SafeProgress = std::clamp(Progress, 0.0f, 1.0f);
 			if(SafeProgress <= 0.0f)
 				return;

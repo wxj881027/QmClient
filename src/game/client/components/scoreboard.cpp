@@ -20,6 +20,7 @@
 #include <game/client/components/motd.h>
 #include <game/client/components/player_points.h>
 #include <game/client/components/qmclient/axiom_scores.h>
+#include <game/client/components/qmclient/friend_heart_icon.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/scoreboard_footer.h>
 #include <game/client/components/qmclient/scoreboard_skin.h>
@@ -178,37 +179,6 @@ namespace
 		return ScoreboardUiColorSurface(AlphaScale);
 	}
 
-	int DoScoreboardMediaIconButton(CUi *pUi, ITextRender *pTextRender, CButtonContainer *pButtonContainer, const char *pIcon, const CUIRect *pRect, bool Enabled, ColorRGBA ButtonColor, float ContentAlpha)
-	{
-		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		const float IconAlpha = std::clamp(ContentAlpha, 0.0f, 1.0f);
-		pRect->Draw(pUi->ScaleBackgroundAlpha(ButtonColor), IGraphics::CORNER_ALL, 5.0f);
-
-		const ColorRGBA PreviousTextColor = pTextRender->GetTextColor();
-		const ColorRGBA PreviousOutlineColor = pTextRender->GetTextOutlineColor();
-		pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
-		pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-		pTextRender->TextOutlineColor(pTextRender->DefaultTextOutlineColor().WithMultipliedAlpha(IconAlpha));
-		pTextRender->TextColor(pTextRender->DefaultTextColor().WithMultipliedAlpha(IconAlpha));
-
-		CUIRect Label;
-		pRect->HMargin(2.0f, &Label);
-		pUi->DoLabel(&Label, pIcon, Label.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
-
-		if(!Enabled)
-		{
-			pTextRender->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, IconAlpha));
-			pTextRender->TextOutlineColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
-			pUi->DoLabel(&Label, FontIcons::FONT_ICON_SLASH, Label.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
-		}
-
-		pTextRender->SetRenderFlags(0);
-		pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		pTextRender->TextOutlineColor(PreviousOutlineColor);
-		pTextRender->TextColor(PreviousTextColor);
-
-		return Enabled ? pUi->DoButtonLogic(pButtonContainer, 0, pRect, BUTTONFLAG_LEFT) : 0;
-	}
 }
 
 CScoreboard::CScoreboard()
@@ -598,7 +568,7 @@ void CScoreboard::RenderGoals(CUIRect Goals)
 	}
 }
 
-void CScoreboard::RenderSpectators(CUIRect Spectators)
+void CScoreboard::RenderFooter(CUIRect Footer)
 {
 	const float ContentAlpha = m_AnimContentAlpha;
 	const ColorRGBA BaseTextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha);
@@ -650,9 +620,8 @@ void CScoreboard::RenderSpectators(CUIRect Spectators)
 	int RemainingSpectators = 0;
 	for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByName)
 	{
-		if(!pInfo || QmScoreboardEffectivePlayerTeam(pInfo->m_Team, GameClient()->m_aClients[pInfo->m_ClientId].m_Spec, IsTeamPlay) != TEAM_SPECTATORS)
-			continue;
-		++RemainingSpectators;
+		if(pInfo && QmScoreboardEffectivePlayerTeam(pInfo->m_Team, GameClient()->m_aClients[pInfo->m_ClientId].m_Spec, IsTeamPlay) == TEAM_SPECTATORS)
+			++NumSpectators;
 	}
 
 	auto RenderList = [&](CTextCursor &ListCursor) {
@@ -831,6 +800,8 @@ void CScoreboard::RenderGhostPlaybackControls(CUIRect Controls)
 		const float Fraction = (Ui()->MouseX() - BarRect.x) / maximum(1.0f, BarRect.w);
 		GameClient()->m_RankGhost.ViewSeek(std::clamp(Fraction, 0.0f, 1.0f));
 	}
+	if(NumSpectators > 0)
+		RenderSpectators(Layout.m_Spectators, NumSpectators);
 
 	// 底部：播放/暂停 + 时间显示
 	CUIRect RowRect;
@@ -2303,7 +2274,7 @@ void CScoreboard::OnRender()
 	if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
 	{
 		CUIRect Goals;
-		CUIRect SpectatorRest;
+		CUIRect FooterRest;
 		CUiV2LayoutEngine LayoutEngine;
 		SUiStyle ColumnStyle;
 		ColumnStyle.m_Axis = EUiAxis::COLUMN;
@@ -2315,10 +2286,10 @@ void CScoreboard::OnRender()
 		vChildren.assign(2, SUiLayoutChild{});
 		vChildren[0].m_Style.m_Height = SUiLength::Px(25.0f);
 		vChildren[1].m_Style.m_Height = SUiLength::Flex(1.0f);
-		LayoutEngine.ComputeChildren(ColumnStyle, CUiV2LegacyAdapter::FromCUIRect(Spectators), vChildren);
+		LayoutEngine.ComputeChildren(ColumnStyle, CUiV2LegacyAdapter::FromCUIRect(Footer), vChildren);
 		Goals = CUiV2LegacyAdapter::ToCUIRect(vChildren[0].m_Box);
-		SpectatorRest = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
-		Spectators = SpectatorRest;
+		FooterRest = CUiV2LegacyAdapter::ToCUIRect(vChildren[1].m_Box);
+		Footer = FooterRest;
 		RenderGoals(Goals);
 	}
 	RenderFooter(Spectators);
@@ -2480,7 +2451,8 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 
 		ColorRGBA FriendActionColor = Client.m_Friend ? ColorRGBA(0.95f, 0.3f, 0.3f, 0.85f * pUi->ButtonColorMul(&pPopupContext->m_FriendAction)) :
 								ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * pUi->ButtonColorMul(&pPopupContext->m_FriendAction));
-		const char *pFriendActionIcon = pUi->HotItem() == &pPopupContext->m_FriendAction && Client.m_Friend ? FontIcons::FONT_ICON_HEART_CRACK : FontIcons::FONT_ICON_HEART;
+		// 未加好友态用默认字体的实体爱心（U+2665）；已是好友悬停仍是图标字体的空心裂心。
+		const char *pFriendActionIcon = pUi->HotItem() == &pPopupContext->m_FriendAction && Client.m_Friend ? FontIcons::FONT_ICON_HEART_CRACK : QM_FRIEND_HEART_ICON;
 		if(pUi->DoButton_FontIcon(&pPopupContext->m_FriendAction, pFriendActionIcon, Client.m_Friend, &Action, BUTTONFLAG_LEFT, ActionCorners, true, FriendActionColor))
 		{
 			if(Client.m_Friend)

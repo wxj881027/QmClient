@@ -358,7 +358,11 @@ namespace
 		if(str_comp(pStableCardId, "tclient:finish-name") == 0)
 			return HashValueFnv1a64(Hash, g_Config.m_TcChangeNameNearFinish != 0);
 		if(str_comp(pStableCardId, "tclient:tee-trails") == 0)
+		{
+			Hash = HashValueFnv1a64(Hash, g_Config.m_TcTeeTrailStyle);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_TcTeeTrailStyle != qm_tee_trail::STYLE_ORIGINAL);
 			return HashValueFnv1a64(Hash, g_Config.m_TcTeeTrailColorMode == CTrails::COLORMODE_SOLID);
+		}
 		return Hash;
 	}
 
@@ -3256,6 +3260,27 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailStyleColors, "tclient-tee-trail-style-colors", Localize("Use style colors"), &g_Config.m_TcTeeTrailStyleColors, &TrailStyleColorsRow, LineSize);
 				LogSettingsStage("tclient_settings_right_tee_trails_base", BaseTimer);
 			}
+			// 样式下拉：0 = 原版拖尾，1..5 共用采样与带状网格，取值与配置一一对应。
+			static std::vector<const char *> s_TrailStyleDropDownNames;
+			s_TrailStyleDropDownNames = {Localize("Original"), Localize("Black Flash"), Localize("Exo"), Localize("Spirit"), Localize("Void"), Localize("Inferno")};
+			s_TrailStyleDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TrailStyleDropDownScrollRegion;
+			const int TrailStyleOld = qm_tee_trail::ResolveStyle(g_Config.m_TcTeeTrailStyle);
+			CUIRect TrailStyleRow = Rows.Next();
+			if(Render)
+			{
+				CPerfTimer StyleDropDownTimer;
+				const int TrailStyleNew = DoSettingsDropDown(&TrailStyleRow, TrailStyleOld, s_TrailStyleDropDownNames.data(), s_TrailStyleDropDownNames.size(), s_TrailStyleDropDownState);
+				if(TrailStyleNew != TrailStyleOld && TrailStyleNew >= 0 && TrailStyleNew < (int)qm_tee_trail::STYLE_COUNT)
+					g_Config.m_TcTeeTrailStyle = TrailStyleNew;
+				LogSettingsStage("tclient_settings_right_tee_trails_style_dropdown", StyleDropDownTimer);
+			}
+			// 新样式默认使用各自的标志性配色；关掉后改用上面的颜色模式着色。
+			if(g_Config.m_TcTeeTrailStyle != qm_tee_trail::STYLE_ORIGINAL)
+			{
+				CUIRect StyleColorsRow = Rows.Next();
+				if(Render)
+					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailStyleColors, "tclient-tee-trail-style-colors", Localize("Use style colors"), &g_Config.m_TcTeeTrailStyleColors, &StyleColorsRow, LineSize);
+			}
 			static std::vector<const char *> s_TrailDropDownNames;
 			s_TrailDropDownNames = {Localize("Solid"), Localize("Tee"), Localize("Rainbow"), Localize("Speed")};
 			s_TrailDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TrailDropDownScrollRegion;
@@ -3763,14 +3788,25 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return [](CUIRect) {
 					// 下拉弹层先于卡片内容绘制写入选择项；这里仅提前提交选择，
 					// 正式 DoSettingsDropDown 仍负责清理状态和绘制弹层。
+					bool Changed = false;
 					const int Selected = s_TrailDropDownState.m_SelectionPopupContext.m_SelectionIndex;
-					if(Selected < 0 || Selected >= 4)
-						return false;
-					const int NewColorMode = Selected + 1;
-					if(g_Config.m_TcTeeTrailColorMode == NewColorMode)
-						return false;
-					g_Config.m_TcTeeTrailColorMode = NewColorMode;
-					return true;
+					if(Selected >= 0 && Selected < 4)
+					{
+						const int NewColorMode = Selected + 1;
+						if(g_Config.m_TcTeeTrailColorMode != NewColorMode)
+						{
+							g_Config.m_TcTeeTrailColorMode = NewColorMode;
+							Changed = true;
+						}
+					}
+					// 样式决定卡片里多不多一行「样式配色」开关，所以同样要提前提交。
+					const int SelectedStyle = s_TrailStyleDropDownState.m_SelectionPopupContext.m_SelectionIndex;
+					if(HasPendingTrailStyleSelection() && g_Config.m_TcTeeTrailStyle != SelectedStyle)
+					{
+						g_Config.m_TcTeeTrailStyle = SelectedStyle;
+						Changed = true;
+					}
+					return Changed;
 				};
 			}
 			return {};
@@ -3789,8 +3825,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				if(str_comp(s_aDeckCardSpecs[Index].first, "tclient:tee-trails") == 0)
 				{
 					Definition.m_HasPendingPreLayoutInput = [] {
-						const int Selected = s_TrailDropDownState.m_SelectionPopupContext.m_SelectionIndex;
-						return Selected >= 0 && Selected < 4;
+						return HasPendingTrailColorModeSelection() || HasPendingTrailStyleSelection();
 					};
 				}
 				vCards.push_back(std::move(Definition));

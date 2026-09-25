@@ -7,6 +7,7 @@
 #include <base/log_color.h>
 
 #include <engine/editor.h>
+#include <engine/engine.h>
 #include <engine/external/regex.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
@@ -1354,7 +1355,7 @@ void CChat::DisableMode()
 	}
 }
 
-void CChat::OnMessage(int MsgType, void *pRawMsg)
+void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)
 {
 	OnMessage(MsgType, pRawMsg, -1);
 }
@@ -1463,6 +1464,11 @@ static constexpr const char *SAVES_HEADER[] = {
 	"Map",
 	"Code",
 };
+
+void CChat::OnMessage(int MsgType, void *pRawMsg)
+{
+	OnMessage(MsgType, pRawMsg, g_Config.m_ClDummy);
+}
 
 // TODO: remove this in a few releases (in 2027 or later)
 //       it got deprecated by CGameClient::StoreSave

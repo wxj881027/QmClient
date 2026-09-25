@@ -474,6 +474,28 @@ static bool ReadQmGraphicsRecoveryState(IStorage *pStorage, SQmGraphicsRecoveryS
 static bool WriteQmGraphicsRecoveryState(IStorage *pStorage, const SQmGraphicsRecoveryState &State)
 {
 	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+
+	// 先把旧的计数读出来，否则每崩一次都会把「已经崩过的后端」丢掉，乒乓又回来了。
+	char *pPrevious = pStorage->ReadFileStr(gs_pQmGraphicsRecoveryStateFile, IStorage::TYPE_SAVE);
+	int OpenGLCrashes = ParseQmGraphicsRecoveryFailedBackendCount(pPrevious, "OpenGL");
+	int GlesCrashes = ParseQmGraphicsRecoveryFailedBackendCount(pPrevious, "GLES");
+	int VulkanCrashes = ParseQmGraphicsRecoveryFailedBackendCount(pPrevious, "Vulkan");
+	if(pPrevious != nullptr)
+		free(pPrevious);
+
+	if(str_comp_nocase(pCrashedBackend, "OpenGL") == 0)
+		++OpenGLCrashes;
+	else if(str_comp_nocase(pCrashedBackend, "GLES") == 0)
+		++GlesCrashes;
+	else if(str_comp_nocase(pCrashedBackend, "Vulkan") == 0)
+		++VulkanCrashes;
+
+	char aFingerprint[IO_MAX_PATH_LENGTH + 64];
+	FormatQmGraphicsCrashReportFingerprint(Report, pCrashedBackend, aFingerprint, sizeof(aFingerprint));
+
+	char aState[IO_MAX_PATH_LENGTH + 256];
+	str_format(aState, sizeof(aState), "%s\nOpenGL %d\nGLES %d\nVulkan %d", aFingerprint, OpenGLCrashes, GlesCrashes, VulkanCrashes);
+
 	IOHANDLE File = pStorage->OpenFile(gs_pQmGraphicsRecoveryStateFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 		return false;
@@ -490,6 +512,108 @@ static bool WriteQmGraphicsRecoveryState(IStorage *pStorage, const SQmGraphicsRe
 	const bool Success = io_write(File, aBuf, str_length(aBuf)) == str_length(aBuf);
 	io_close(File);
 	return Success;
+}
+
+// 取出报告里记录的实际生效后端（crashdump 在初始化成功时写入）。
+// 老报告可能没有这一行，此时返回 false，由调用方退回读当前配置。
+static bool ParseQmCrashReportGraphicsBackend(const char *pCrashReport, char *pBackend, size_t BackendSize)
+{
+	pBackend[0] = '\0';
+	if(pCrashReport == nullptr)
+		return false;
+
+	const char *pLine = str_find(pCrashReport, gs_pQmCrashReportBackendPrefix);
+	if(pLine == nullptr)
+		return false;
+
+	pLine += str_length(gs_pQmCrashReportBackendPrefix);
+	str_copy(pBackend, pLine, BackendSize);
+	char *pEnd = const_cast<char *>(str_find(pBackend, "\r\n"));
+	if(pEnd == nullptr)
+		pEnd = const_cast<char *>(str_find(pBackend, "\n"));
+	if(pEnd != nullptr)
+		*pEnd = '\0';
+	str_utf8_trim_right(pBackend);
+	return pBackend[0] != '\0';
+}
+
+static bool QmGraphicsDriverModuleNameIsKnown(const char *pName)
+{
+	static constexpr const char *s_apGraphicsDriverModuleNames[] = {
+		"nvoglv64.dll",
+		"nvd3dumx.dll",
+		"nvwgf2umx.dll",
+		"amdvlk64.dll",
+		"atio6axx.dll",
+		"ig9icd64.dll",
+		"igvk64.dll",
+		"opengl32.dll",
+		"vulkan-1.dll",
+		"D3D12Core.dll",
+		"d3d12.dll",
+		"dxgi.dll",
+	};
+	for(const char *pModuleName : s_apGraphicsDriverModuleNames)
+	{
+		if(str_comp_nocase(pName, pModuleName) == 0)
+			return true;
+	}
+	return false;
+}
+
+// 取「Exception module:」后面的模块名与偏移。栈帧归因写的是
+// 「Exception module: nvoglv64.dll + 0x...」，符号化后的报告写的是「模块名!符号」。
+// 只看这一行、不看整份报告，避免把「Loaded modules」清单里恰好列到的驱动 DLL 当成崩溃模块。
+static bool QmCrashTextExceptionModuleIsGraphicsDriver(const char *pText)
+{
+	char aLine[512];
+	const char *pCursor = pText;
+	while((pCursor = str_next_token(pCursor, "\r\n", aLine, sizeof(aLine))) != nullptr)
+	{
+		const char *pModule = str_startswith(aLine, gs_pQmCrashReportModulePrefix);
+		if(pModule == nullptr)
+			continue;
+
+		while(*pModule == ' ')
+			++pModule;
+		if(str_comp_nocase_num(pModule, "(unknown-module)", str_length("(unknown-module)")) == 0 ||
+			str_comp_nocase_num(pModule, "unresolved", str_length("unresolved")) == 0)
+		{
+			return false;
+		}
+
+		// 偏移为 0 表示落在模块首地址上，不是「这一帧调用了驱动」的证据。
+		const char *pSeparator = str_find(pModule, " + 0x");
+		if(pSeparator != nullptr)
+		{
+			const char *pOffset = pSeparator + str_length(" + 0x");
+			if(str_toint_base(pOffset, 16) == 0)
+				return false;
+
+			char aName[128];
+			const size_t NameLength = (size_t)(pSeparator - pModule);
+			if(NameLength >= sizeof(aName))
+				return false;
+			for(size_t Index = 0; Index < NameLength; ++Index)
+				aName[Index] = pModule[Index];
+			aName[NameLength] = '\0';
+			return QmGraphicsDriverModuleNameIsKnown(aName);
+		}
+
+		// 符号化形式：模块名后紧跟 '!'。
+		const char *pBang = str_find(pModule, "!");
+		if(pBang == nullptr)
+			return false;
+		char aName[128];
+		const size_t NameLength = (size_t)(pBang - pModule);
+		if(NameLength >= sizeof(aName))
+			return false;
+		for(size_t Index = 0; Index < NameLength; ++Index)
+			aName[Index] = pModule[Index];
+		aName[NameLength] = '\0';
+		return QmGraphicsDriverModuleNameIsKnown(aName);
+	}
+	return false;
 }
 
 static bool QmCrashTextHasGraphicsDriverFault(const char *pText)
@@ -530,7 +654,11 @@ static bool QmCrashTextHasGraphicsDriverFault(const char *pText)
 		if(str_find_nocase(pText, pNeedle) != nullptr)
 			return true;
 	}
-	return false;
+
+	// 「Exception module:」只在异常地址落在模块内时才写。跳 NULL 这类崩溃（本次 nvoglv64
+	// 就是 call 0x0）拿不到那一行，栈帧归因改成写「Exception module: nvoglv64.dll + 0x...」，
+	// 上面那批前缀匹配不到，这里按行单独解析一次。
+	return QmCrashTextExceptionModuleIsGraphicsDriver(pText);
 }
 
 static bool ApplyQmSafeGraphicsRecovery(EBackendType RecoveryBackend)
@@ -4650,6 +4778,15 @@ void CClient::Run()
 	Graphics()->Clear(0, 0, 0);
 	Graphics()->Swap();
 
+	// 启动时打一次图形能力自检：亚克力 / 灵动岛背景模糊全靠这几项能力，缺任何一项都会
+	// 静默降级成「不模糊的半透明板」，玩家在游戏里完全看不出来，只能靠这一行定位。
+	if(m_pConsole != nullptr)
+	{
+		char aGpuCapabilities[256];
+		QmGpuCapabilityString(m_pGraphics, aGpuCapabilities, sizeof(aGpuCapabilities));
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "graphics", aGpuCapabilities);
+	}
+
 	// init localization first, making sure all errors during init can be localized
 	GameClient()->InitializeLanguage();
 
@@ -5946,7 +6083,12 @@ void CClient::DemoRecorder_UpdateReplayRecorder()
 
 bool CClient::DemoRecorder_AddDemoMarker(int Recorder)
 {
-	return DemoRecorders()[Recorder].AddDemoMarker();
+	auto &DemoRecorder = DemoRecorders()[Recorder];
+	if(!DemoRecorder.IsRecording())
+	{
+		return false;
+	}
+	return DemoRecorder.AddDemoMarker();
 }
 
 CDemoRecorder (&CClient::DemoRecorders()) [RECORDER_MAX] {
@@ -5956,6 +6098,7 @@ CDemoRecorder (&CClient::DemoRecorders()) [RECORDER_MAX] {
 	}
 	return m_aDemoRecorders;
 }
+// clang-format on
 
 IDemoRecorder *CClient::DemoRecorder(int Recorder)
 {
@@ -6083,7 +6226,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 	char aReportFilename[IO_MAX_PATH_LENGTH];
 	str_format(aReportFilename, sizeof(aReportFilename),
 		GAME_NAME "_%s_hang_report_%s_%d_%s.txt",
-		CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		CONF_PLATFORM_STRING, aDate, process_id(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 	char aReportPath[IO_MAX_PATH_LENGTH];
 	str_format(aReportPath, sizeof(aReportPath), "%s/%s", m_aHangDumpDir, aReportFilename);
 	fs_makedir_rec_for(aReportPath);
@@ -6108,7 +6251,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 		str_format(aBuf, sizeof(aBuf), "Timestamp: %s\n", aDate);
 		io_write(File, aBuf, str_length(aBuf));
 
-		str_format(aBuf, sizeof(aBuf), "Process ID: %d\n", pid());
+		str_format(aBuf, sizeof(aBuf), "Process ID: %d\n", process_id());
 		io_write(File, aBuf, str_length(aBuf));
 
 		str_format(aBuf, sizeof(aBuf), "Hang timeout threshold: %lld seconds\n", (long long)gs_HangTimeoutSeconds);
@@ -6146,7 +6289,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 	char aDumpFilename[IO_MAX_PATH_LENGTH];
 	str_format(aDumpFilename, sizeof(aDumpFilename),
 		GAME_NAME "_%s_hang_dump_%s_%d_%s.dmp",
-		CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		CONF_PLATFORM_STRING, aDate, process_id(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 	char aDumpPath[IO_MAX_PATH_LENGTH];
 	str_format(aDumpPath, sizeof(aDumpPath), "%s/%s", m_aHangDumpDir, aDumpFilename);
 	fs_makedir_rec_for(aDumpPath);
@@ -6168,7 +6311,7 @@ bool CClient::HandleQmGraphicsFatalError()
 	m_QmGraphicsRecoveryAttempted = true;
 
 	const char *pFatalError = Graphics()->GetFatalError();
-	char aGpuInfo[512];
+	char aGpuInfo[1024];
 	GetGpuInfoString(aGpuInfo);
 	char aDate[64];
 	str_timestamp(aDate, sizeof(aDate));
@@ -6187,7 +6330,7 @@ bool CClient::HandleQmGraphicsFatalError()
 	// 文件名必须与 echndl 的崩溃报告一致，才能在下次启动时被
 	// RecoverQmGraphicsSettingsAfterDriverCrash 识别并做安全图形恢复。
 	str_format(aFilename, sizeof(aFilename), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s_fatal_report.txt",
-		gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, process_id(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 
 	char aPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, aFilename, aPath, sizeof(aPath));
@@ -6391,7 +6534,7 @@ int CClient::HandleChecksum(int Conn, CUuid Uuid, CUnpacker *pUnpacker)
 	if(End > (int)sizeof(m_Checksum.m_aBytes))
 	{
 		unsigned char aBuf[2048];
-		if(io_seek(m_OwnExecutable, FileStart - sizeof(m_Checksum.m_aBytes), IOSEEK_START))
+		if(io_seek(m_OwnExecutable, FileStart - sizeof(m_Checksum.m_aBytes), EIoSeekOrigin::START))
 		{
 			return 5;
 		}
@@ -6733,7 +6876,9 @@ struct SSaveUnknownCommandContext
 static bool SaveUnknownDomainCommandCallback(const char *pCommand, void *pUser)
 {
 	SSaveUnknownCommandContext *pContext = static_cast<SSaveUnknownCommandContext *>(pUser);
-	pContext->m_pConfigManager->StoreUnknownCommand(pCommand, pContext->m_ConfigDomain);
+	// 回调原文还包含分号后的命令，只消费当前旧配置，后续命令由控制台继续执行。
+	if(!QmRemovedConfig::IsFocusCommand(pCommand))
+		pContext->m_pConfigManager->StoreUnknownCommand(pCommand, pContext->m_ConfigDomain);
 	return true;
 }
 
@@ -7053,7 +7198,7 @@ int main(int argc, const char **argv)
 			str_copy(aOsVersionString, "unknown");
 		}
 
-		char aGpuInfo[512];
+		char aGpuInfo[1024];
 		pClient->GetGpuInfoString(aGpuInfo);
 
 		char aMessage[2048];
@@ -7164,7 +7309,7 @@ int main(int argc, const char **argv)
 		char aBufName[IO_MAX_PATH_LENGTH];
 		char aDate[64];
 		str_timestamp(aDate, sizeof(aDate));
-		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+		str_format(aBufName, sizeof(aBufName), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s.RTP", gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, process_id(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, aBufName, aBufPath, sizeof(aBufPath));
 		fs_makedir_rec_for(aBufPath);
 		crashdump_init_if_available(aBufPath);
@@ -7345,7 +7490,6 @@ int main(int argc, const char **argv)
 	ISteam *pSteam = CreateSteam();
 	pKernel->RegisterInterface(pSteam);
 	pClient->InitInterfaces();
-
 	if(pSteam->GetConnectAddress())
 	{
 		pClient->HandleConnectAddress(pSteam->GetConnectAddress());
@@ -7374,7 +7518,7 @@ int main(int argc, const char **argv)
 	}
 
 	// 性能日志文件：CFutureLogger 只能 Set 一次，启动时固定到可切换包装；
-	// 游戏内 qm_perf_debug / qm_perf_logfile / qm_perf_stutter_diagnostics 任一
+	// 游戏内 qm_perf_debug 的
 	// 变化由 CClient::UpdateQmPerfFileLogger 按帧检测，立即打开/关闭文件。
 	std::shared_ptr<CQmPerfFileSwitchLogger> pQmPerfFileSwitchLogger = std::make_shared<CQmPerfFileSwitchLogger>();
 	pFuturePerfFileLogger->Set(pQmPerfFileSwitchLogger);
@@ -7474,7 +7618,7 @@ int main(int argc, const char **argv)
 #if defined(CONF_PLATFORM_ANDROID)
 		RestartAndroidApp();
 #else
-		shell_execute(aRestartBinaryPath, EShellExecuteWindowState::FOREGROUND);
+		process_execute(aRestartBinaryPath, EShellExecuteWindowState::FOREGROUND);
 #endif
 	}
 
@@ -7768,7 +7912,7 @@ static bool ViewLinkImpl(const char *pLink)
 	log_error("client", "Failed to open link '%s' (%s)", pLink, SDL_GetError());
 	return false;
 #else
-	if(open_link(pLink))
+	if(os_open_link(pLink))
 	{
 		return true;
 	}
@@ -7885,7 +8029,7 @@ std::optional<int> CClient::ShowMessageBox(const IGraphics::CMessageBox &Message
 	return Result;
 }
 
-void CClient::GetGpuInfoString(char (&aGpuInfo)[512])
+void CClient::GetGpuInfoString(char (&aGpuInfo)[1024])
 {
 #if defined(CONF_HEADLESS_CLIENT)
 	if(m_pGraphics == nullptr || !m_pGraphics->IsBackendInitialized())
@@ -7919,6 +8063,10 @@ void CClient::GetGpuInfoString(char (&aGpuInfo)[512])
 	}
 	else
 	{
+		// 这几项能力是「亚克力 / 灵动岛背景模糊」的硬前提，任何一项缺失都会静默降级成
+		// 不模糊的半透明板 —— 玩家侧看不出来，所以必须能在这里一眼看到。
+		char aCapabilities[256];
+		QmGpuCapabilityString(m_pGraphics, aCapabilities, sizeof(aCapabilities));
 		str_format(aGpuInfo, std::size(aGpuInfo),
 			"Configured graphics backend: %s\n"
 			"GPU: %s - %s - %s\n"
@@ -7931,7 +8079,8 @@ void CClient::GetGpuInfoString(char (&aGpuInfo)[512])
 			m_pGraphics->TextureMemoryUsage() / 1024.0 / 1024.0,
 			m_pGraphics->BufferMemoryUsage() / 1024.0 / 1024.0,
 			m_pGraphics->StreamedMemoryUsage() / 1024.0 / 1024.0,
-			m_pGraphics->StagingMemoryUsage() / 1024.0 / 1024.0);
+			m_pGraphics->StagingMemoryUsage() / 1024.0 / 1024.0,
+			aCapabilities);
 	}
 #endif
 }
@@ -7949,8 +8098,8 @@ void CClient::SetQmPerfFileSwitch(std::shared_ptr<CQmPerfFileSwitchLogger> pSwit
 	m_pQmPerfFileSwitch = static_cast<CQmPerfFileSwitchLogger *>(m_pQmPerfFileSwitchLogger.get());
 }
 
-// 按配置开/关性能日志文件：任一性能开关开启即打开专用文件并立即落盘，
-// 全部关闭则关闭文件。启动时调用一次建立初始状态，主循环按帧调用处理游戏内切换。
+// 按总开关创建独立诊断会话，关闭前补齐配置、帧批次和卡顿摘要。
+// 启动时调用一次建立初始状态，主循环按帧调用处理游戏内切换。
 void CClient::UpdateQmPerfFileLogger()
 {
 	const bool Wanted = QmPerfEnabled();

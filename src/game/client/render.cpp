@@ -206,8 +206,8 @@ void CRenderTools::RenderTextContainerWithEffects(STextContainerIndex TextContai
 	{
 		for(int Pass = 0; Pass < Passes.m_GlowPasses; ++Pass)
 		{
-			const float Radius = Style.m_GlowRange * (float)(Pass + 1) / (float)GlowPasses;
-			const float PassAlpha = Style.m_GlowColor.a * Alpha * (1.0f - (float)Pass / (float)(GlowPasses + 1));
+			const float Radius = Style.m_GlowRange * (float)(Pass + 1) / (float)MaxGlowPasses;
+			const float PassAlpha = Style.m_GlowColor.a * Alpha * (1.0f - (float)Pass / (float)(MaxGlowPasses + 1));
 			const ColorRGBA Glow = Style.m_GlowColor.WithAlpha(PassAlpha);
 			for(const vec2 &Dir : s_aGlowDirections)
 				RenderOutlineOnly(Glow, Dir.x * Radius, Dir.y * Radius);
@@ -217,12 +217,12 @@ void CRenderTools::RenderTextContainerWithEffects(STextContainerIndex TextContai
 	ColorRGBA OutlineColor = Style.m_OutlineColor.WithMultipliedAlpha(Alpha);
 	if(BorderEnabled)
 		OutlineColor = Style.m_BorderColor.WithMultipliedAlpha(Alpha);
-	if(BorderEnabled && Style.m_BorderRange > 1.0f)
+	if(BorderPassesEnabled)
 	{
 		for(int Pass = 0; Pass < Passes.m_BorderPasses; ++Pass)
 		{
 			const float Radius = (float)(Pass + 1);
-			const float PassAlpha = OutlineColor.a * (1.0f - (float)Pass / (float)(BorderPasses + 1));
+			const float PassAlpha = OutlineColor.a * (1.0f - (float)Pass / (float)(MaxBorderPasses + 1));
 			const ColorRGBA Border = OutlineColor.WithAlpha(PassAlpha);
 			for(const vec2 &Dir : s_aBorderDirections)
 				RenderOutlineOnly(Border, Dir.x * Radius, Dir.y * Radius);

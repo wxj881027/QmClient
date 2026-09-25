@@ -1,0 +1,89 @@
+QmClient 自制素材许可 / QmClient original asset licence
+======================================================
+
+本目录(data/qmclient)下的内容分属三类。本文件只界定素材层;
+代码层的完整分层声明见仓库根目录的 LICENSE-QMCLIENT.md。
+
+This directory (data/qmclient) contains content of three kinds. This file covers
+the asset layer only; the complete layered statement for code lives in
+LICENSE-QMCLIENT.md at the repository root.
+
+--------------------------------------------------------------------------
+
+1. 作者原创素材 —— CC BY-NC-ND 4.0
+   Author-created assets — CC BY-NC-ND 4.0
+
+以下素材由 QmClient 作者原创绘制:
+
+  chat_emojis/*.png   16 张聊天表情
+  gui_logo.png        QmClient 标志
+
+适用「署名 — 非商业性使用 — 禁止演绎 4.0 国际」许可:
+https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+即:允许在署名、非商业、不作任何改动的前提下原样转载;
+禁止修改、二次创作、商业使用,亦不得以其他项目名义重新分发。
+
+The following were created by the QmClient author:
+
+  chat_emojis/*.png   16 chat emoji images
+  gui_logo.png        the QmClient logo
+
+Licensed under Attribution-NonCommercial-NoDerivatives 4.0 International:
+https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+Verbatim redistribution is permitted with attribution, for non-commercial
+purposes, without modification. Alteration, derivative works, commercial use and
+redistribution under another project's name are not permitted.
+
+--------------------------------------------------------------------------
+
+2. 第三方字体 —— 保留各自原始许可
+   Third-party fonts — original licences retained
+
+fonts/ 目录下的字体版权归各自作者所有,不适用本项目的任何条款:
+
+  Inter_24pt-Regular.ttf      SIL Open Font License 1.1
+  Inter_24pt-SemiBold.ttf     SIL Open Font License 1.1
+  Montserrat-Regular.ttf      SIL Open Font License 1.1
+  Nunito-Black.ttf            SIL Open Font License 1.1
+  Rubik-Regular.ttf           SIL Open Font License 1.1
+  Cabin-Regular.ttf           SIL Open Font License 1.1
+  FreeSansBold.ttf            GNU FreeFont(GPLv3+ 含字体嵌入例外)
+  GoogleSans-Regular.ttf      SIL Open Font License 1.1
+  minecraft_font.ttf          Creative Commons Attribution-ShareAlike 3.0
+
+The fonts under fonts/ remain the property of their respective authors and are
+not covered by any QmClient term.
+
+GoogleSans-Regular.ttf is distributed under the SIL Open Font License 1.1; the
+full text of that licence is in license.txt at the repository root.
+
+minecraft_font.ttf is distributed under Creative Commons
+Attribution-ShareAlike 3.0 (CC BY-SA 3.0). Its ShareAlike condition applies to
+adaptations of the font file itself.
+https://creativecommons.org/licenses/by-sa/3.0/
+
+--------------------------------------------------------------------------
+
+3. 图标图集 —— MIT(Phosphor Icons)
+   Icon atlases — MIT (Phosphor Icons)
+
+icons/*.png 与 icons/*.json 由 datasrc/qm_icons/ 下的 Phosphor SVG 源生成,
+派生自 Phosphor Icons(© 2020 Phosphor Icons,MIT 许可)。
+许可全文:datasrc/qm_icons/LICENSE_PHOSPHOR.txt
+
+icons/*.png and icons/*.json are generated from the Phosphor SVG sources in
+datasrc/qm_icons/ and are derived from Phosphor Icons (© 2020 Phosphor Icons,
+MIT). Full licence text: datasrc/qm_icons/LICENSE_PHOSPHOR.txt
+
+--------------------------------------------------------------------------
+
+4. 脚本
+   Scripts
+
+builtinscripts/*.chai 属 QmClient 自有代码,适用 LICENSE-QMCLIENT.md 第 2 节
+(保留所有权利)。
+
+builtinscripts/*.chai is QmClient original code, covered by section 2 of
+LICENSE-QMCLIENT.md (all rights reserved).

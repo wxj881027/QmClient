@@ -1196,6 +1196,11 @@ class CGraphics_Threaded : public IEngineGraphics
 public:
 	CGraphics_Threaded();
 
+	// 记录实际生效的图形后端名（Vulkan / OpenGL / GLES）供崩溃报告归因使用。
+	// 由 SDL 后端在确定后端类型后调用：DetectBackend 是它私有的，且只有它知道
+	// DDNET_DRIVER 覆盖的结果。传 nullptr 清除。
+	static void SetGraphicsBackendForCrashReport(const char *pBackendName);
+
 	void ClipEnable(int x, int y, int w, int h) override;
 	void ClipDisable() override;
 

@@ -277,26 +277,26 @@ namespace
 		{
 			IOHANDLE File = static_cast<IOHANDLE>(pOpaque);
 			const int64_t CurrentPosition = io_tell(File);
-			if(CurrentPosition < 0 || io_seek(File, 0, IOSEEK_END) != 0)
+			if(CurrentPosition < 0 || io_seek(File, 0, EIoSeekOrigin::END) != 0)
 				return AVERROR(EIO);
 			const int64_t Length = io_tell(File);
-			if(io_seek(File, CurrentPosition, IOSEEK_START) != 0)
+			if(io_seek(File, CurrentPosition, EIoSeekOrigin::START) != 0)
 				return AVERROR(EIO);
 			return Length >= 0 ? Length : AVERROR(EIO);
 		}
 
 		Whence &= ~AVSEEK_FORCE;
-		ESeekOrigin Origin;
+		EIoSeekOrigin Origin;
 		switch(Whence)
 		{
 		case SEEK_SET:
-			Origin = IOSEEK_START;
+			Origin = EIoSeekOrigin::START;
 			break;
 		case SEEK_CUR:
-			Origin = IOSEEK_CUR;
+			Origin = EIoSeekOrigin::CURRENT;
 			break;
 		case SEEK_END:
-			Origin = IOSEEK_END;
+			Origin = EIoSeekOrigin::END;
 			break;
 		default:
 			return AVERROR(EINVAL);

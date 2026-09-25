@@ -8177,6 +8177,159 @@ turkish = "Tee izi renk modu (1=Düz, 2=Geçerli Tee rengi, 3=Gökkuşağı, 4=T
 polish = "Tryb koloru śladu Tee (1=Jednolity, 2=Bieżący kolor Tee, 3=Tęcza, 4=Prędkość Tee, 5=Losowy)"
 
 [[message]]
+key = "Black Flash"
+[message.translations]
+simplified_chinese = "黑闪"
+traditional_chinese = "黑閃"
+japanese = "黒閃"
+korean = "흑섬"
+russian = "Чёрная вспышка"
+german = "Schwarzer Blitz"
+spanish = "Destello negro"
+french = "Éclair noir"
+brazilian_portuguese = "Clarão negro"
+portuguese = "Clarão negro"
+turkish = "Kara parıltı"
+polish = "Czarny błysk"
+
+
+[[message]]
+key = "Inferno"
+[message.translations]
+simplified_chinese = "冥火"
+traditional_chinese = "冥火"
+japanese = "冥炎"
+korean = "지옥불"
+russian = "Адское пламя"
+german = "Höllenfeuer"
+spanish = "Fuego infernal"
+french = "Feu infernal"
+brazilian_portuguese = "Fogo infernal"
+portuguese = "Fogo infernal"
+turkish = "Cehennem ateşi"
+polish = "Piekielny ogień"
+
+
+[[message]]
+key = "Original"
+[message.translations]
+simplified_chinese = "原版"
+traditional_chinese = "原版"
+japanese = "オリジナル"
+korean = "기본"
+russian = "Оригинал"
+german = "Original"
+spanish = "Original"
+french = "Original"
+brazilian_portuguese = "Original"
+portuguese = "Original"
+turkish = "Özgün"
+polish = "Oryginalny"
+
+
+[[message]]
+key = "Spirit"
+[message.translations]
+simplified_chinese = "灵光"
+traditional_chinese = "靈光"
+japanese = "霊光"
+korean = "영혼의 빛"
+russian = "Свет духа"
+german = "Geistlicht"
+spanish = "Luz espiritual"
+french = "Lumière spirituelle"
+brazilian_portuguese = "Luz espiritual"
+portuguese = "Luz espiritual"
+turkish = "Ruh ışığı"
+polish = "Światło ducha"
+
+
+[[message]]
+key = "Tee trail style (0=Original, 1=Black Flash, 2=Exo, 3=Spirit, 4=Void, 5=Inferno)"
+[message.translations]
+simplified_chinese = "Tee 拖尾样式 (0=原版，1=黑闪，2=高能科技，3=灵光，4=虚空，5=冥火)"
+traditional_chinese = "Tee 拖尾樣式 (0=原版, 1=黑閃, 2=高能科技, 3=靈光, 4=虛空, 5=冥火)"
+japanese = "Tee トレイルのスタイル (0=オリジナル, 1=黒閃, 2=Exo エネルギー, 3=霊光, 4=虚無, 5=冥炎)"
+korean = "Tee 궤적 스타일  (0=기본, 1=흑섬, 2=Exo 에너지, 3=영혼의 빛, 4=공허, 5=지옥불)"
+russian = "Стиль следа Tee  (0=Оригинал, 1=Чёрная вспышка, 2=Экзоэнергия, 3=Свет духа, 4=Пустота, 5=Адское пламя)"
+german = "Tee-Spur-Stil  (0=Original, 1=Schwarzer Blitz, 2=Exo-Energie, 3=Geistlicht, 4=Leere, 5=Höllenfeuer)"
+spanish = "Estilo del rastro de Tee  (0=Original, 1=Destello negro, 2=Energía Exo, 3=Luz espiritual, 4=Vacío, 5=Fuego infernal)"
+french = "Style de traînée de Tee  (0=Original, 1=Éclair noir, 2=Énergie Exo, 3=Lumière spirituelle, 4=Vide, 5=Feu infernal)"
+brazilian_portuguese = "Estilo do rastro do Tee  (0=Original, 1=Clarão negro, 2=Energia Exo, 3=Luz espiritual, 4=Vazio, 5=Fogo infernal)"
+portuguese = "Estilo do rasto do Tee  (0=Original, 1=Clarão negro, 2=Energia Exo, 3=Luz espiritual, 4=Vazio, 5=Fogo infernal)"
+turkish = "Tee izi stili  (0=Özgün, 1=Kara parıltı, 2=Exo enerjisi, 3=Ruh ışığı, 4=Boşluk, 5=Cehennem ateşi)"
+polish = "Styl śladu Tee  (0=Oryginalny, 1=Czarny błysk, 2=Energia Exo, 3=Światło ducha, 4=Pustka, 5=Piekielny ogień)"
+
+
+[[message]]
+key = "Use each Tee trail style's own palette instead of the trail color mode"
+[message.translations]
+simplified_chinese = "使用各 Tee 拖尾样式自带的配色，而不是拖尾颜色模式"
+traditional_chinese = "使用各 Tee 拖尾樣式自帶的配色，而不是拖尾顏色模式"
+japanese = "トレイルの色モードではなく、各スタイル固有の配色を使う"
+korean = "Tee 궤적 색상 모드 대신 각 스타일 고유의 색상을 사용"
+russian = "Использовать собственную палитру стиля следа Tee вместо режима цвета"
+german = "Die eigene Farbpalette des Tee-Spur-Stils statt des Spur-Farbmodus verwenden"
+spanish = "Usar la paleta propia de cada estilo de estela de Tee en lugar del modo de color"
+french = "Utiliser la palette propre au style de traînée de Tee au lieu du mode de couleur"
+brazilian_portuguese = "Usar a paleta própria de cada estilo de rastro do Tee em vez do modo de cor"
+portuguese = "Usar a paleta própria de cada estilo de rasto do Tee em vez do modo de cor"
+turkish = "Tee izi renk modu yerine her stilin kendi paletini kullan"
+polish = "Użyj własnej palety stylu śladu Tee zamiast trybu koloru"
+
+
+[[message]]
+key = "Use style colors"
+[message.translations]
+simplified_chinese = "使用样式专属配色"
+traditional_chinese = "使用樣式專屬配色"
+japanese = "スタイル固有の配色を使う"
+korean = "스타일 고유 색상 사용"
+russian = "Использовать цвета стиля"
+german = "Stilfarben verwenden"
+spanish = "Usar colores del estilo"
+french = "Utiliser les couleurs du style"
+brazilian_portuguese = "Usar cores do estilo"
+portuguese = "Usar cores do estilo"
+turkish = "Stil renklerini kullan"
+polish = "Użyj kolorów stylu"
+
+
+[[message]]
+key = "Exo"
+[message.translations]
+simplified_chinese = "高能科技"
+traditional_chinese = "高能科技"
+japanese = "Exo エネルギー"
+korean = "Exo 에너지"
+russian = "Экзоэнергия"
+german = "Exo-Energie"
+spanish = "Energía Exo"
+french = "Énergie Exo"
+brazilian_portuguese = "Energia Exo"
+portuguese = "Energia Exo"
+turkish = "Exo enerjisi"
+polish = "Energia Exo"
+
+
+[[message]]
+key = "Void"
+[message.translations]
+simplified_chinese = "虚空"
+traditional_chinese = "虛空"
+japanese = "虚無"
+korean = "공허"
+russian = "Пустота"
+german = "Leere"
+spanish = "Vacío"
+french = "Vide"
+brazilian_portuguese = "Vazio"
+portuguese = "Vazio"
+turkish = "Boşluk"
+polish = "Pustka"
+
+
+[[message]]
 key = "Tee Trails"
 [message.translations]
 simplified_chinese = "Tee 拖尾"

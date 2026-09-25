@@ -10,6 +10,13 @@
 #include <base/math.h>
 #include <base/system.h>
 
+#include <engine/client/font_size_cache.h>
+#include <engine/client/glyph_atlas.h>
+#include <engine/client/glyph_atlas_image.h>
+#include <engine/client/glyph_lookup_cache.h>
+#include <engine/client/glyph_outline.h>
+#include <engine/client/text_layout_string.h>
+#include <engine/client/text_word_cursor.h>
 #include <engine/console.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -399,6 +406,7 @@ private:
 	std::vector<FT_Face> m_vFtFaces;
 	int m_QmPerfGlyphNew = 0;
 	int m_QmPerfGlyphUploads = 0;
+	mutable CQmFontSizeCache m_FacePixelSizeCache;
 	double m_QmPerfGlyphRasterizeMs = 0.0;
 	double m_QmPerfGlyphUploadMs = 0.0;
 
@@ -978,6 +986,8 @@ public:
 
 	void Clear()
 	{
+		m_GlyphLookupCache.Reset();
+		InvalidateFacePixelSizeCache();
 		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
 		{
 			mem_zero(m_apTextureData[TextureIndex], m_TextureDimension * m_TextureDimension * sizeof(uint8_t));
@@ -1034,6 +1044,12 @@ public:
 	const SGlyph *GetGlyph(int Chr, int FontSize)
 	{
 		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
+		if(const SGlyph *pCached = m_GlyphLookupCache.Find(m_SelectedFace, Chr, FontSize))
+			return pCached;
+		const auto RememberGlyph = [&](const SGlyph *pGlyph) {
+			m_GlyphLookupCache.Store(m_SelectedFace, Chr, FontSize, pGlyph);
+			return pGlyph;
+		};
 
 		// 命中近期索引时直接返回，省掉一次哈希查找；索引与字形表同生共死。
 		if(const SGlyph *pCached = m_GlyphLookupCache.Find(m_SelectedFace, Chr, FontSize))
@@ -1085,6 +1101,11 @@ public:
 		// but set its state to ERROR so we don't return it to the text render.
 		Glyph.m_State = SGlyph::EState::ERROR;
 		return nullptr;
+	}
+
+	void InvalidateFacePixelSizeCache()
+	{
+		m_FacePixelSizeCache.Reset();
 	}
 
 	vec2 Kerning(const SGlyph *pLeft, const SGlyph *pRight) const

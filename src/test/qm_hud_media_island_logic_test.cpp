@@ -4,6 +4,7 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/QmIslandNotice.h>
 #include <game/client/components/hud_frozen_tee_state.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/tclient/pet.h>
@@ -66,9 +67,22 @@ namespace
 			Runtime.Advance(Dt);
 	}
 
+	// 入场两阶段的「展开等掉落落定」门控在 Resolve 内部按本帧掉落值评估，
+	// 所以推进时必须逐帧 Resolve；只批量 Advance 的话展开弹簧根本不会被请求。
+	void AdvanceIslandRuntimeResolving(CUiV2AnimationRuntime &Runtime, uint64_t DropNode, uint64_t ExpandNode, float Seconds)
+	{
+		const float Dt = 1.0f / 60.0f;
+		const int Steps = static_cast<int>(Seconds / Dt + 0.5f);
+		for(int i = 0; i < Steps; ++i)
+		{
+			QmHudMediaIslandResolveEntranceSprings(Runtime, DropNode, ExpandNode, true);
+			Runtime.Advance(Dt);
+		}
+	}
+
 	// 以固定帧步推进分离弹簧；FrameSeconds 可用来验证帧率无关性。
 	// 步数向上取整，保证请求的时长一定被走完（否则会差一帧、落在窗口之前）；
-	// Seconds == 0 时一步都不走——那是"只切目标、不推进时间"的用法。
+	// Seconds == 0 时只切换目标，不推进时间。
 	const int StepCount(float Seconds, float FrameSeconds)
 	{
 		if(Seconds <= 0.0f)
@@ -80,6 +94,8 @@ namespace
 	{
 		const float Period = QmHudMediaIslandBlobSpringWindowSeconds();
 		const int Steps = StepCount(Seconds, FrameSeconds);
+		if(Steps == 0)
+			QmHudMediaIslandBlobSpringAdvance(Spring, 0.0f, Period, TargetVisible);
 		for(int i = 0; i < Steps; ++i)
 			QmHudMediaIslandBlobSpringAdvance(Spring, FrameSeconds, Period, TargetVisible);
 		return QmHudMediaIslandBlobProgress(Spring);
@@ -97,6 +113,79 @@ namespace
 		}
 		return Peak;
 	}
+}
+
+TEST(QmHudMediaIslandRecording, BreathCompletesOneGentleCycleInTwoPointFourSeconds)
+{
+	EXPECT_NEAR(QmHudRecordingDotAlpha(0.0), 0.95f, 0.00001f);
+	EXPECT_NEAR(QmHudRecordingDotAlpha(0.6), 0.80f, 0.00001f);
+	EXPECT_NEAR(QmHudRecordingDotAlpha(1.2), 0.65f, 0.00001f);
+	EXPECT_NEAR(QmHudRecordingDotAlpha(1.8), 0.80f, 0.00001f);
+	EXPECT_NEAR(QmHudRecordingDotAlpha(2.4), 0.95f, 0.00001f);
+}
+
+TEST(QmHudMediaIslandRecording, BreathStaysVisibleAndSmoothAcrossCycleBoundary)
+{
+	float PreviousAlpha = QmHudRecordingDotAlpha(0.0);
+	for(int Step = 1; Step <= 480; ++Step)
+	{
+		const double Seconds = Step * 0.01;
+		const float Alpha = QmHudRecordingDotAlpha(Seconds);
+		EXPECT_GE(Alpha, 0.65f);
+		EXPECT_LE(Alpha, 0.95f);
+		EXPECT_LT(std::abs(Alpha - PreviousAlpha), 0.004f);
+		EXPECT_NEAR(Alpha, QmHudRecordingDotAlpha(Seconds + 2.4), 0.00001f);
+		PreviousAlpha = Alpha;
+	}
+}
+
+TEST(QmHudMediaIslandRecording, ScreenPixelSizeTakesTheLargerAxisScale)
+{
+	// 非等比映射：x 方向 2 倍、y 方向 1 倍，羽化必须按较细的方向取够宽。
+	EXPECT_FLOAT_EQ(QmHudMediaIslandScreenPixelSize(0.0f, 0.0f, 200.0f, 100.0f, 100, 100), 2.0f);
+	EXPECT_FLOAT_EQ(QmHudMediaIslandScreenPixelSize(0.0f, 0.0f, 100.0f, 300.0f, 100, 100), 3.0f);
+	// 屏幕尺寸退化时按 1 像素处理，不产生除零。
+	EXPECT_FLOAT_EQ(QmHudMediaIslandScreenPixelSize(0.0f, 0.0f, 100.0f, 100.0f, 0, 0), 100.0f);
+	EXPECT_FLOAT_EQ(QmHudMediaIslandScreenPixelSize(0.0f, 0.0f, 400.0f, 300.0f, 800, 600), 0.5f);
+}
+
+// 意图：录制红点从几何圆改为灵动岛同款 SDF 逐像素抗锯齿圆（宽高 = 直径、圆角 = 半径），
+// 两条绘制路径（灵动岛状态区、独立计时胶囊状态区）都必须走同一个入口，且不支持 SDF 时
+// 仍退回几何圆；红点不得顺带打开外阴影或模糊底图。
+TEST(QmHudMediaIslandSource, RecordingDotUsesTheIslandSdfWithGeometryFallback)
+{
+	const std::string Source = ReadTestSourceFile("src/game/client/components/hud.cpp");
+	const std::string DotBody = FunctionBody(Source, "void DrawHudRecordingStatusDot(");
+	const std::string GameTimerBody = FunctionBody(Source, "void CHud::RenderGameTimer()");
+	const std::string IslandBody = FunctionBody(Source, "void CHud::RenderMediaIsland()");
+	ASSERT_FALSE(DotBody.empty());
+	ASSERT_FALSE(GameTimerBody.empty());
+	ASSERT_FALSE(IslandBody.empty());
+
+	// SDF 分支：正方形主体 + 半径圆角 = 正圆，只走 SDF 命令，不额外画 item/胶囊/轮廓环。
+	EXPECT_NE(DotBody.find("State.m_MainRect = {Center.x - Radius, Center.y - Radius, DotSize, DotSize}"), std::string::npos);
+	EXPECT_NE(DotBody.find("State.m_MainRadius = Radius"), std::string::npos);
+	EXPECT_NE(DotBody.find("RenderMediaIslandSdf(GpuSdfParams)"), std::string::npos);
+
+	// 几何兜底与「不加层」：无 SDF 时退回原来的圆，且红点不带外阴影/模糊底图。
+	EXPECT_NE(DotBody.find("HasMediaIslandSdf()"), std::string::npos);
+	EXPECT_NE(DotBody.find("DrawSmoothCircle(pGraphics, Center, Radius"), std::string::npos);
+	EXPECT_EQ(DotBody.find("m_BackdropUv"), std::string::npos);
+	EXPECT_EQ(DotBody.find("m_OuterShadow"), std::string::npos);
+	EXPECT_EQ(DotBody.find("m_ItemCount"), std::string::npos);
+
+	// 两条录制红点路径共用本入口：几何圆不再被直接调用（兜底在入口内部）。
+	EXPECT_NE(GameTimerBody.find("DrawHudRecordingStatusDot("), std::string::npos);
+	EXPECT_NE(IslandBody.find("DrawHudRecordingStatusDot("), std::string::npos);
+	EXPECT_EQ(GameTimerBody.find("DrawSmoothCircle("), std::string::npos);
+	EXPECT_EQ(IslandBody.find("DrawSmoothCircle(Graphics(), DotCenter"), std::string::npos);
+	// 几何圆只作为入口内兜底出现一次：两条录制红点调用路径不再各自直接画圆。
+	// HUD 其它部位（媒体岛占位图标、封面占位、进度条 Tee 底衬）仍可用几何圆，与红点无关。
+	EXPECT_EQ(DotBody.find("DrawSmoothCircle("), DotBody.rfind("DrawSmoothCircle("));
+
+	// 羽化比例与岛共用同一份实现，且必须在 HUD 编辑器改写屏幕映射之前取。
+	EXPECT_NE(GameTimerBody.find("CurrentScreenPixelSize(Graphics())"), std::string::npos);
+	EXPECT_LT(GameTimerBody.find("CurrentScreenPixelSize(Graphics())"), GameTimerBody.find("BeginTransform"));
 }
 
 TEST(QmHudFrozenTeeState, ConfirmedDeathSuppressesStaleTimedAndDeepFreeze)
@@ -676,8 +765,8 @@ TEST(QmHudMediaIslandBlob, UnderdampedTravelOvershootsThenPullsBackToRest)
 	const float Peak = PeakBlobTravel(Spring, true, SettleSeconds);
 	EXPECT_GT(Peak, 1.05f) << "过冲必须明显可见";
 	EXPECT_LT(Peak, 1.15f) << "过冲仍需克制";
-	// zeta=0.60 的理论过冲 +9.48%；数值积分实测 +9.28%。
-	EXPECT_NEAR(Peak, 1.0928f, 0.005f);
+	// zeta=0.60 的理论过冲为 +9.48%，连续求值保留这份轻回弹。
+	EXPECT_NEAR(Peak, 1.0948f, 0.001f);
 
 	// 峰值之后要回落并稳定在 1.0（精确落位）。
 	StepBlobSpring(Spring, true, SettleSeconds);
@@ -740,16 +829,76 @@ TEST(QmHudMediaIslandBlob, OvershootPeaksAfterTheRushAndNotDuringTheBridgePhase)
 
 TEST(QmHudMediaIslandBlob, TravelIsFrameRateIndependent)
 {
-	// 解析式求值：串行小步与一次性大步必须给出相同结果。
-	SHudMediaIslandBlobSpring Sixty;
-	SHudMediaIslandBlobSpring TwoForty;
-	float SixtyTravel = 0.0f;
-	float TwoFortyTravel = 0.0f;
-	for(int i = 0; i < 30; ++i)
-		SixtyTravel = StepBlobSpring(Sixty, true, 1.0f / 60.0f, 1.0f / 60.0f);
-	for(int i = 0; i < 120; ++i)
-		TwoFortyTravel = StepBlobSpring(TwoForty, true, 1.0f / 240.0f, 1.0f / 240.0f);
-	EXPECT_FLOAT_EQ(SixtyTravel, TwoFortyTravel);
+	// 不同刷新率的每一帧都应落在同一条连续轨迹上。
+	const float Period = QmHudMediaIslandBlobSpringWindowSeconds();
+	for(const int FrameRate : {60, 144, 165, 240, 1000})
+	{
+		SHudMediaIslandBlobSpring Spring;
+		const float FrameSeconds = 1.0f / FrameRate;
+		for(int Frame = 1; Frame <= FrameRate / 2; ++Frame)
+		{
+			QmHudMediaIslandBlobSpringAdvance(Spring, FrameSeconds, Period, true);
+			SHudMediaIslandBlobSpring SingleStep;
+			QmHudMediaIslandBlobSpringAdvance(SingleStep, Frame * FrameSeconds, Period, true);
+			EXPECT_NEAR(Spring.m_Value, SingleStep.m_Value, 0.00001f) << FrameRate << " Hz, frame " << Frame;
+			EXPECT_NEAR(Spring.m_Velocity, SingleStep.m_Velocity, 0.00002f) << FrameRate << " Hz, frame " << Frame;
+		}
+	}
+}
+
+TEST(QmHudMediaIslandBlob, EveryHighRefreshFrameAdvancesWithoutRepeatedPoses)
+{
+	SHudMediaIslandBlobSpring Spring;
+	const float Period = QmHudMediaIslandBlobSpringWindowSeconds();
+	for(int Frame = 0; Frame < 120; ++Frame)
+	{
+		const float Previous = Spring.m_Value;
+		QmHudMediaIslandBlobSpringAdvance(Spring, 0.001f, Period, true);
+		EXPECT_GT(Spring.m_Value, Previous) << "1000 Hz frame " << Frame;
+	}
+}
+
+TEST(QmHudMediaIslandBlob, IrregularFramePartitionsPreservePositionAndVelocity)
+{
+	const float Period = QmHudMediaIslandBlobSpringWindowSeconds();
+	const std::array<float, 8> aFrameSeconds = {0.001f, 0.0035f, 0.011f, 0.0075f, 0.043f, 0.029f, 0.092f, 0.187f};
+	SHudMediaIslandBlobSpring Partitioned;
+	float ElapsedSeconds = 0.0f;
+	for(const float DeltaSeconds : aFrameSeconds)
+	{
+		ElapsedSeconds += DeltaSeconds;
+		QmHudMediaIslandBlobSpringAdvance(Partitioned, DeltaSeconds, Period, true);
+	}
+	SHudMediaIslandBlobSpring SingleStep;
+	QmHudMediaIslandBlobSpringAdvance(SingleStep, ElapsedSeconds, Period, true);
+	EXPECT_NEAR(Partitioned.m_Value, SingleStep.m_Value, 0.00001f);
+	EXPECT_NEAR(Partitioned.m_Velocity, SingleStep.m_Velocity, 0.00002f);
+
+	// 连续反向后仍按同一真实时长推进，不能丢掉原有速度。
+	QmHudMediaIslandBlobSpringAdvance(Partitioned, 0.0f, Period, false);
+	QmHudMediaIslandBlobSpringAdvance(SingleStep, 0.0f, Period, false);
+	for(const float DeltaSeconds : aFrameSeconds)
+		QmHudMediaIslandBlobSpringAdvance(Partitioned, DeltaSeconds, Period, false);
+	QmHudMediaIslandBlobSpringAdvance(SingleStep, ElapsedSeconds, Period, false);
+	EXPECT_NEAR(Partitioned.m_Value, SingleStep.m_Value, 0.00001f);
+	EXPECT_NEAR(Partitioned.m_Velocity, SingleStep.m_Velocity, 0.00002f);
+}
+
+TEST(QmHudMediaIslandBlob, LongFrameCompletesExpiredMotionAndStaysAtRest)
+{
+	SHudMediaIslandBlobSpring Spring;
+	const float Period = QmHudMediaIslandBlobSpringWindowSeconds();
+	QmHudMediaIslandBlobSpringAdvance(Spring, 0.1f, Period, true);
+	QmHudMediaIslandBlobSpringAdvance(Spring, 5.0f, Period, true);
+	EXPECT_FLOAT_EQ(Spring.m_Value, 1.0f);
+	EXPECT_FLOAT_EQ(Spring.m_Velocity, 0.0f);
+	QmHudMediaIslandBlobSpringAdvance(Spring, 0.001f, Period, true);
+	EXPECT_FLOAT_EQ(Spring.m_Value, 1.0f);
+	EXPECT_FLOAT_EQ(Spring.m_Velocity, 0.0f);
+	QmHudMediaIslandBlobSpringAdvance(Spring, 5.0f, Period, false);
+	EXPECT_FLOAT_EQ(Spring.m_Value, 0.0f);
+	EXPECT_FLOAT_EQ(Spring.m_Velocity, 0.0f);
+	EXPECT_FLOAT_EQ(QmHudMediaIslandBlobProgress(Spring), 0.0f);
 }
 
 TEST(QmHudMediaIslandBlob, ReverseKeepsVelocityContinuousAndPoseHasNoJump)
@@ -764,6 +913,7 @@ TEST(QmHudMediaIslandBlob, ReverseKeepsVelocityContinuousAndPoseHasNoJump)
 	const float ValueBefore = Spring.m_Value;
 	const float VelocityBefore = Spring.m_Velocity;
 	StepBlobSpring(Spring, false, 0.0f);
+	EXPECT_FALSE(Spring.m_TargetVisible);
 	EXPECT_FLOAT_EQ(Spring.m_Value, ValueBefore);
 	EXPECT_FLOAT_EQ(Spring.m_Velocity, VelocityBefore);
 	EXPECT_FLOAT_EQ(QmHudMediaIslandBlobPose(Spring).m_Travel, BeforeReverse.m_Travel);
@@ -776,6 +926,7 @@ TEST(QmHudMediaIslandBlob, ReverseKeepsVelocityContinuousAndPoseHasNoJump)
 
 	// 反向途中再切回，位姿仍然连续（不允许折角/跳变）。
 	StepBlobSpring(Spring, true, 0.0f);
+	EXPECT_TRUE(Spring.m_TargetVisible);
 	const SHudMediaIslandBlobPose AfterReverse = QmHudMediaIslandBlobPose(Spring);
 	EXPECT_FLOAT_EQ(AfterReverse.m_Travel, MidReverse.m_Travel);
 	EXPECT_FLOAT_EQ(AfterReverse.m_Velocity, MidReverse.m_Velocity);
@@ -873,6 +1024,40 @@ TEST(QmHudMediaIslandSatellite, AdvanceIsIdempotentWithinTheSameTick)
 	const SHudMediaIslandBlobPose Second = QmHudMediaIslandBlobPose(Spring);
 	EXPECT_FLOAT_EQ(First.m_Travel, Second.m_Travel);
 	EXPECT_EQ(LastTick, 100);
+}
+
+TEST(QmHudMediaIslandSatellite, ClockAdvanceConsumesTheWholeElapsedInterval)
+{
+	SHudMediaIslandBlobSpring Spring;
+	int64_t LastTick = 0;
+	const int64_t StartTick = time_freq();
+	QmHudAdvanceMediaIslandLiquidProgress(Spring, LastTick, StartTick, true, true);
+	const int64_t HalfSecondTicks = time_freq() / 2;
+	QmHudAdvanceMediaIslandLiquidProgress(Spring, LastTick, StartTick + HalfSecondTicks, true, true);
+	SHudMediaIslandBlobSpring Expected;
+	QmHudMediaIslandBlobSpringAdvance(Expected, HalfSecondTicks / static_cast<float>(time_freq()), QmHudMediaIslandBlobSpringWindowSeconds(), true);
+	EXPECT_NEAR(Spring.m_Value, Expected.m_Value, 0.00001f);
+	EXPECT_NEAR(Spring.m_Velocity, Expected.m_Velocity, 0.00002f);
+
+	QmHudAdvanceMediaIslandLiquidProgress(Spring, LastTick, StartTick + 5 * time_freq(), true, true);
+	EXPECT_FLOAT_EQ(Spring.m_Value, 1.0f);
+	EXPECT_FLOAT_EQ(Spring.m_Velocity, 0.0f);
+	QmHudAdvanceMediaIslandLiquidProgress(Spring, LastTick, StartTick + 10 * time_freq(), false, true);
+	EXPECT_FLOAT_EQ(Spring.m_Value, 0.0f);
+	EXPECT_FLOAT_EQ(Spring.m_Velocity, 0.0f);
+}
+
+TEST(QmHudMediaIslandSatellite, DisablingMotionDuringTravelSnapsToTheRequestedTarget)
+{
+	SHudMediaIslandBlobSpring Spring;
+	int64_t LastTick = time_freq();
+	QmHudMediaIslandBlobSpringAdvance(Spring, 0.1f, QmHudMediaIslandBlobSpringWindowSeconds(), true);
+	QmHudAdvanceMediaIslandLiquidProgress(Spring, LastTick, LastTick + 1, false, false);
+	EXPECT_FLOAT_EQ(Spring.m_Value, 0.0f);
+	EXPECT_FLOAT_EQ(Spring.m_Velocity, 0.0f);
+	QmHudAdvanceMediaIslandLiquidProgress(Spring, LastTick, LastTick + 1, true, false);
+	EXPECT_FLOAT_EQ(Spring.m_Value, 1.0f);
+	EXPECT_FLOAT_EQ(Spring.m_Velocity, 0.0f);
 }
 
 TEST(QmHudMediaIslandSpectatorEye, OpeningTransitionHonorsMotionLevel)

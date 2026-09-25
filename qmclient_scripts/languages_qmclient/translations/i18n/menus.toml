@@ -7231,22 +7231,6 @@ turkish = "GUI imleç varlıkları"
 polish = "Zasoby kursora GUI"
 
 [[message]]
-key = "Gun"
-[message.translations]
-simplified_chinese = "手枪"
-traditional_chinese = "手槍"
-japanese = "ピストル"
-korean = "권총"
-russian = "Пистолет"
-german = "Pistole"
-spanish = "Pistola"
-french = "Pistolet"
-brazilian_portuguese = "Pistola"
-portuguese = "Pistola"
-turkish = "Tabanca"
-polish = "Pistolet"
-
-[[message]]
 key = "Hammer"
 [message.translations]
 simplified_chinese = "锤子"
