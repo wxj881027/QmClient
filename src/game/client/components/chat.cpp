@@ -23,6 +23,7 @@
 #include <game/client/components/censor.h>
 #include <game/client/components/console.h>
 #include <game/client/components/message_gradient.h>
+#include <game/client/components/qmclient/chat_command_preview.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/modes.h>
@@ -494,6 +495,35 @@ void CChat::RegisterCommand(const char *pName, const char *pParams, const char *
 void CChat::UnregisterCommand(const char *pName)
 {
 	m_vServerCommands.erase(std::remove_if(m_vServerCommands.begin(), m_vServerCommands.end(), [pName](const CCommand &Command) { return str_comp(Command.m_aName, pName) == 0; }), m_vServerCommands.end());
+}
+
+const CChat::CCommand *CChat::FindServerCommand(const char *pName) const
+{
+	for(const CCommand &Command : m_vServerCommands)
+	{
+		if(str_comp_nocase(Command.m_aName, pName) == 0)
+			return &Command;
+	}
+	return nullptr;
+}
+
+bool CChat::BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufSize) const
+{
+	// 先按命令名查服务端下发的指令说明，再交给纯格式化模块生成提示文本
+	char aCommand[QmChatCommandPreview::TOKEN_LENGTH];
+	const QmChatCommandPreview::SCommandInfo *pCommandInfo = nullptr;
+	QmChatCommandPreview::SCommandInfo CommandInfo;
+	if(QmChatCommandPreview::ReadCommandName(pInput, aCommand, sizeof(aCommand)))
+	{
+		if(const CCommand *pCommand = FindServerCommand(aCommand))
+		{
+			CommandInfo.m_pName = pCommand->m_aName;
+			CommandInfo.m_pParams = pCommand->m_aParams;
+			CommandInfo.m_pHelpText = pCommand->m_aHelpText;
+			pCommandInfo = &CommandInfo;
+		}
+	}
+	return QmChatCommandPreview::Build(pInput, pCommandInfo, pBuf, BufSize);
 }
 
 void CChat::RebuildChat()
@@ -2831,12 +2861,23 @@ void CChat::OnRender()
 	// float y = 300.0f - 20.0f * FontSize() / 6.0f;
 
 	float ScaledFontSize = FontSize() * (8.0f / 6.0f);
+	const float CommandPreviewFontSize = ScaledFontSize * 0.5f;
 	const float TranslateButtonSize = maximum(16.0f, ScaledFontSize * 1.35f);
 	const float TranslateButtonGap = 4.0f;
 	const float InputLineWidth = std::max(Width - 190.0f, 190.0f);
 	const char *pInputModeLabel = m_Mode == MODE_ALL ? Localize("All") : (m_Mode == MODE_TEAM ? Localize("Team") : Localize("Chat"));
+	const float InputPrefixWidth = TextRender()->TextWidth(ScaledFontSize, pInputModeLabel) + TextRender()->TextWidth(ScaledFontSize, ": ");
+	const float CommandPreviewMaxWidth = maximum(1.0f, InputLineWidth - InputPrefixWidth - TranslateButtonSize - TranslateButtonGap);
+	char aCommandPreview[MAX_LINE_LENGTH];
+	const bool HasCommandPreview = m_Mode != MODE_NONE && BuildCommandUsagePreview(m_Input.GetString(), aCommandPreview, sizeof(aCommandPreview));
 	CUIRect InputBlockRect = {};
 	bool InputBlockRectValid = false;
+	if(HasCommandPreview)
+	{
+		// 提示显示在输入行下方，先把输入行整体上移，避免与底部历史消息重叠
+		const STextBoundingBox PreviewBoundingBox = TextRender()->TextBoundingBox(CommandPreviewFontSize, aCommandPreview, -1, CommandPreviewMaxWidth);
+		y -= PreviewBoundingBox.m_H + 4.0f;
+	}
 
 	if(InputActive)
 	{
@@ -2858,8 +2899,9 @@ void CChat::OnRender()
 		const float InputContentHeight = 2.25f * InputCursor.m_FontSize;
 		const float InputClipPaddingTop = maximum(1.0f, InputCursor.m_FontSize * 0.18f);
 		const float InputClipPaddingBottom = maximum(1.0f, InputCursor.m_FontSize * 0.10f);
+		const float InputClipPaddingX = maximum(1.0f, InputCursor.m_FontSize * 0.18f);
 		const CUIRect InputContentRect = {InputCursor.m_X, InputCursor.m_Y, MessageMaxWidth, InputContentHeight};
-		const CUIRect InputClippingRect = {InputContentRect.x, InputContentRect.y - InputClipPaddingTop, InputContentRect.w, InputContentRect.h + InputClipPaddingTop + InputClipPaddingBottom};
+		const CUIRect InputClippingRect = {InputContentRect.x - InputClipPaddingX, InputContentRect.y - InputClipPaddingTop, InputContentRect.w + 2.0f * InputClipPaddingX, InputContentRect.h + InputClipPaddingTop + InputClipPaddingBottom};
 		InputBlockRect = {x, InputContentRect.y, ChatRect.w - x, InputContentRect.h};
 		InputBlockRectValid = true;
 		ExtendBounds(x, InputContentRect.y, ChatRect.w - x, InputContentRect.h);
@@ -2938,6 +2980,21 @@ void CChat::OnRender()
 					}
 				}
 			}
+		}
+
+		// 斜杠指令用法提示：在输入行下方显示一行小字说明当前指令的作用
+		if(HasCommandPreview)
+		{
+			CTextCursor PreviewCursor;
+			const float PreviewY = InputContentRect.y + minimum(BoundingBox.m_H, InputContentRect.h) + 2.0f;
+			PreviewCursor.SetPosition(vec2(InputContentRect.x, PreviewY));
+			PreviewCursor.m_FontSize = CommandPreviewFontSize;
+			PreviewCursor.m_LineWidth = MessageMaxWidth;
+			PreviewCursor.m_Flags = TEXTFLAG_RENDER;
+			TextRender()->TextColor(0.72f, 0.88f, 1.0f, 0.78f);
+			TextRender()->TextEx(&PreviewCursor, aCommandPreview);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			ExtendBounds(PreviewCursor.m_StartX, PreviewCursor.m_StartY, MessageMaxWidth, PreviewCursor.Height());
 		}
 
 		// 渲染翻译按钮

@@ -3255,6 +3255,7 @@ if(CLIENT)
     components/qmclient/axiom_scores.h
     components/qmclient/axiom_scores_data.cpp
     components/qmclient/axiom_scores_data.h
+    components/qmclient/chat_command_preview.h
     components/qmclient/chat_emoji.cpp
     components/qmclient/chat_emoji.h
     components/qmclient/collision_hitbox.cpp

@@ -180,6 +180,9 @@ TEST(QmChatInteractions, ChatInputClipPaddingDoesNotExpandContentScrollArea)
 	EXPECT_NE(Body.find("const float InputContentHeight = 2.25f * InputCursor.m_FontSize;"), std::string::npos);
 	EXPECT_NE(Body.find("const float InputClipPaddingTop = maximum(1.0f, InputCursor.m_FontSize * 0.18f);"), std::string::npos);
 	EXPECT_NE(Body.find("const float InputClipPaddingBottom = maximum(1.0f, InputCursor.m_FontSize * 0.10f);"), std::string::npos);
+	EXPECT_NE(Body.find("const float InputClipPaddingX = maximum(1.0f, InputCursor.m_FontSize * 0.18f);"), std::string::npos);
+	EXPECT_NE(Body.find("InputContentRect.x - InputClipPaddingX"), std::string::npos);
+	EXPECT_NE(Body.find("InputContentRect.w + 2.0f * InputClipPaddingX"), std::string::npos);
 	EXPECT_NE(Body.find("const CUIRect InputContentRect"), std::string::npos);
 	EXPECT_NE(Body.find("const CUIRect InputClippingRect"), std::string::npos);
 	EXPECT_NE(Body.find("InputContentRect.y + InputClipPaddingTop - ScrollOffset"), std::string::npos);

@@ -302,6 +302,9 @@ private:
 	void StoreSave(const char *pText);
 	void SaveChatLogLine(int ClientId, int Team, const char *pLine);
 	void PrintBlockedMessageToConsole(int ClientId, int Team, const char *pLine, int SourceConnection);
+	const CCommand *FindServerCommand(const char *pName) const;
+	// 斜杠指令用法提示：/xxx 下方显示的一行小字说明
+	bool BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufSize) const;
 	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
 	int CountInitializedLines() const;
 	int CountVisibleLinesFrom(int BacklogLine) const;

@@ -4,6 +4,7 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
 #include <game/client/components/qmclient/axiom_auto_login.h>
+#include <game/client/components/qmclient/chat_command_preview.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
 #include <game/client/components/tclient/fast_practice.h>
 #include <game/client/components/tclient/warlist.h>
@@ -471,6 +472,80 @@ TEST(QmChatInteractions, BuildsEscapedSpectateCommand)
 
 	EXPECT_TRUE(CChat::BuildSpectateCommand(aCommand, sizeof(aCommand), "Name \"A\""));
 	EXPECT_STREQ(aCommand, "say /spec \"Name \\\"A\\\"\"");
+}
+
+TEST(QmChatCommandPreview, BuildsWhisperPreviewFromTypedArguments)
+{
+	char aPreview[256];
+	const QmChatCommandPreview::SCommandInfo *pNoCommand = nullptr;
+
+	ASSERT_TRUE(QmChatCommandPreview::Build("/w Alice hello there", pNoCommand, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "Whisper to Alice: hello there");
+
+	ASSERT_TRUE(QmChatCommandPreview::Build("/whisper Alice", pNoCommand, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "Whisper to Alice");
+
+	ASSERT_TRUE(QmChatCommandPreview::Build("/w", pNoCommand, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "Whisper: /w player message");
+}
+
+TEST(QmChatCommandPreview, UsesServerCommandHelpTextWithParameterFormat)
+{
+	char aPreview[256];
+	const QmChatCommandPreview::SCommandInfo Command = {"timeout", "<player> <seconds>", "Set the timeout of a player"};
+
+	ASSERT_TRUE(QmChatCommandPreview::Build("/timeout Nameless 60", &Command, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "Set the timeout of a player (/timeout <player> <seconds>)");
+}
+
+TEST(QmChatCommandPreview, FallsBackToUsageWhenServerHelpTextIsMissing)
+{
+	char aPreview[256];
+
+	const QmChatCommandPreview::SCommandInfo CommandWithParams = {"teleport", "<x> <y>", ""};
+	ASSERT_TRUE(QmChatCommandPreview::Build("/teleport", &CommandWithParams, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "Usage: /teleport <x> <y>");
+
+	const QmChatCommandPreview::SCommandInfo CommandWithoutParams = {"pause", "", ""};
+	EXPECT_FALSE(QmChatCommandPreview::Build("/pause", &CommandWithoutParams, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "");
+}
+
+TEST(QmChatCommandPreview, IgnoresInputThatIsNotASlashCommand)
+{
+	char aPreview[256];
+	const QmChatCommandPreview::SCommandInfo *pNoCommand = nullptr;
+
+	EXPECT_FALSE(QmChatCommandPreview::Build("hello everyone", pNoCommand, aPreview, sizeof(aPreview)));
+	EXPECT_FALSE(QmChatCommandPreview::Build("/", pNoCommand, aPreview, sizeof(aPreview)));
+	EXPECT_FALSE(QmChatCommandPreview::Build(nullptr, pNoCommand, aPreview, sizeof(aPreview)));
+}
+
+TEST(QmChatCommandPreview, UnquotesWholeQuotedArgument)
+{
+	char aPreview[256];
+	const QmChatCommandPreview::SCommandInfo *pNoCommand = nullptr;
+
+	ASSERT_TRUE(QmChatCommandPreview::Build("/save \"My Save\"", pNoCommand, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "Save the team as My Save");
+
+	ASSERT_TRUE(QmChatCommandPreview::Build("/lock 0", pNoCommand, aPreview, sizeof(aPreview)));
+	EXPECT_STREQ(aPreview, "Unlock the team");
+}
+
+TEST(QmChatCommandPreview, ReadsCommandNameForServerCommandLookup)
+{
+	char aName[QmChatCommandPreview::TOKEN_LENGTH];
+
+	ASSERT_TRUE(QmChatCommandPreview::ReadCommandName("/pause", aName, sizeof(aName)));
+	EXPECT_STREQ(aName, "pause");
+
+	ASSERT_TRUE(QmChatCommandPreview::ReadCommandName("/say \"hi there\"", aName, sizeof(aName)));
+	EXPECT_STREQ(aName, "say");
+
+	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName("pause", aName, sizeof(aName)));
+	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName("/", aName, sizeof(aName)));
+	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName(nullptr, aName, sizeof(aName)));
 }
 
 TEST(QmChatInteractions, ReusesKnownServerMessageClassWithoutReanalysis)
