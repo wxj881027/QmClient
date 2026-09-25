@@ -7013,7 +7013,7 @@ TEST(QmMonitoringHelpers, GlobalSearchUsesDedicatedSettingsPage)
 	EXPECT_NE(SearchContentBody.find("DoSettingsMenuLabel(SETTINGS_SEARCH, -1, -1, \"qmclient-search-no-matching-features\""), std::string::npos);
 	EXPECT_EQ(SearchContentBody.find("DoSettingsMenuLabel(SETTINGS_QMCLIENT"), std::string::npos);
 	// 命中的卡片直接按 stableId 从卡片目录构造本体（就地渲染，不再是跳转链接）。
-	EXPECT_NE(SearchContentBody.find("if(!qm_card_catalog::BuildCard(SearchCardBuild, MatchedCard.m_pStableId, Definition))"), std::string::npos);
+	EXPECT_NE(SearchContentBody.find("if(!qm_card_catalog::BuildCard(s_GlobalSearchCardBuild, MatchedCard.m_pStableId, Definition))"), std::string::npos);
 	EXPECT_NE(SearchContentBody.find("Definition.m_HeaderAction = BuildGlobalSearchLocateHeaderAction(MatchedCard, ReadOnly, SmallSize);"), std::string::npos);
 	EXPECT_NE(SearchContentBody.find("s_GlobalSearchCache.m_vResults = qm_card_catalog::SearchResultEntries(pModuleSearch, CardOrderModel);"), std::string::npos);
 	EXPECT_NE(SearchContentBody.find("s_GlobalSearchCache.m_vModelEntries = WithGlobalSearchBaseEntries(qm_card_catalog::BuildSearchModelEntries(s_GlobalSearchCache.m_vResults));"), std::string::npos);
