@@ -1185,7 +1185,7 @@ Automatically fall back to the default asset when a custom asset sprite is fully
 == Revenir automatiquement à l'élément par défaut lorsqu'un sprite d'un élément personnalisé est entièrement transparent ; désactivez pour garder les sprites vides invisibles (par exemple pour masquer des effets)
 
 Automatically launch Steam when the client is started externally
-== Lancer automatiquement Steam lors du démarrage externe du client
+== Lancer automatiquement Steam lorsque le client est démarré de l'extérieur
 
 Automatically re-join team 0 after finish (only if unlocked).
 == Rejoindre automatiquement l'équipe 0 après l'arrivée (seulement si déverrouillé)
@@ -2368,9 +2368,6 @@ Control latency compensation tools
 
 Control player (0) or dummy (1)
 == Contrôler le joueur (0) ou le dummy (1)
-
-Control whether external launches are handed over to Steam
-== Contrôler si les démarrages externes sont transmis à Steam
 
 Controlled by Gores mode
 == Contrôlé par le mode Gores
@@ -5868,7 +5865,7 @@ Launch emote key
 == Touche de lancer d’émoticône
 
 Launch Steam automatically when starting externally
-== Lancer automatiquement Steam lors d’un démarrage externe
+== Lancer automatiquement Steam lors d'un démarrage externe
 
 Layout
 == Disposition

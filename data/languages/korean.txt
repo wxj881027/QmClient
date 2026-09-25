@@ -1185,7 +1185,7 @@ Automatically fall back to the default asset when a custom asset sprite is fully
 == 사용자 지정 에셋 스프라이트가 완전히 투명하면 자동으로 기본 에셋으로 대체합니다. 끄면 빈 스프라이트가 보이지 않는 상태로 유지됩니다 (효과 숨기기 등)
 
 Automatically launch Steam when the client is started externally
-== 외부에서 클라이언트를 시작할 때 Steam 자동 실행
+== 클라이언트를 외부에서 시작할 때 Steam 자동 실행
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 완주 후 자동으로 0팀 재가입 (잠금 해제된 경우에만)
@@ -2368,9 +2368,6 @@ Control latency compensation tools
 
 Control player (0) or dummy (1)
 == 플레이어(0) 또는 더미(1) 제어
-
-Control whether external launches are handed over to Steam
-== 외부 실행을 Steam에 넘길지 제어
 
 Controlled by Gores mode
 == Gores 모드가 제어 중

@@ -788,7 +788,6 @@ Contributors
 Control custom background drawing
 Control latency compensation tools
 Control player (0) or dummy (1)
-Control whether external launches are handed over to Steam
 Controlled by Gores mode
 Controlled by Zen mode
 Controller

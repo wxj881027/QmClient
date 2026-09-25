@@ -41,3 +41,15 @@ TEST(SteamPresence, KeepsBrandPresenceWhenGameInfoClears)
 	const std::string ClearGameInfoBody = Source.substr(ClearGameInfoPos, SetGameInfoPos - ClearGameInfoPos);
 	EXPECT_NE(ClearGameInfoBody.find("ResetClientPresence();"), std::string::npos);
 }
+
+TEST(SteamPresence, OpensSteamInBackground)
+{
+	const std::string Source = ReadTestSourceFile("src/engine/client/steam.cpp");
+	const size_t FunctionPos = Source.find("bool SteamOpenClient()");
+	ASSERT_NE(FunctionPos, std::string::npos);
+	const size_t FunctionEnd = Source.find("\n}\n\nISteam *CreateSteam", FunctionPos);
+	ASSERT_NE(FunctionEnd, std::string::npos);
+	const std::string FunctionBody = Source.substr(FunctionPos, FunctionEnd - FunctionPos);
+	EXPECT_NE(FunctionBody.find("EShellExecuteWindowState::BACKGROUND"), std::string::npos);
+	EXPECT_EQ(FunctionBody.find("open_link("), std::string::npos);
+}

@@ -2369,9 +2369,6 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == Spieler (0) oder Dummy (1) steuern
 
-Control whether external launches are handed over to Steam
-== Steuern, ob externe Starts an Steam übergeben werden
-
 Controlled by Gores mode
 == Wird vom Gores-Modus gesteuert
 

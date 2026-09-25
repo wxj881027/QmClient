@@ -1185,7 +1185,7 @@ Automatically fall back to the default asset when a custom asset sprite is fully
 == 自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）
 
 Automatically launch Steam when the client is started externally
-== 从外部启动客户端时自动启动 Steam
+== 客户端从外部启动时自动启动 Steam
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 完赛后自动回到 0 队（仅未锁定时）
@@ -2368,9 +2368,6 @@ Control latency compensation tools
 
 Control player (0) or dummy (1)
 == 控制玩家（0）还是分身（1）
-
-Control whether external launches are handed over to Steam
-== 控制从外部启动时是否交由 Steam 接管
 
 Controlled by Gores mode
 == 由 Gores 模式接管

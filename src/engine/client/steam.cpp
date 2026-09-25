@@ -165,7 +165,8 @@ bool SteamOpenClient()
 #if defined(CONF_PLATFORM_ANDROID)
 	return false;
 #else
-	return open_link(STEAM_MAIN_URI);
+	const char *apArguments[] = {STEAM_MAIN_URI};
+	return shell_execute("steam", EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
 #endif
 }
 

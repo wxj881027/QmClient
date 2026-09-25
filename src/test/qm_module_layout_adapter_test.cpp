@@ -99,6 +99,7 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		// 否则 MakeAllDefaults().size() 会少于 QmModuleCount（本测试与 roundtrip 均依赖此不变量）。
 		{EQmModuleId::Emoticons, EQmModuleColumn::Left, 18, "emoticons"},
 		{EQmModuleId::MapUpload, EQmModuleColumn::Right, 21, "map_upload"},
+		{EQmModuleId::Steam, EQmModuleColumn::Right, 22, "steam"},
 	};
 }
 

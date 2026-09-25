@@ -1185,7 +1185,7 @@ Automatically fall back to the default asset when a custom asset sprite is fully
 == Özel bir varlığın sprite'ı tamamen saydamsa otomatik olarak varsayılan varlığa geri dön; boş sprite'ları görünmez tutmak için kapat (örneğin efektleri gizlemek için)
 
 Automatically launch Steam when the client is started externally
-== İstemci harici olarak başlatıldığında Steam'i otomatik başlat
+== İstemci harici olarak başlatıldığında Steam'i otomatik aç
 
 Automatically re-join team 0 after finish (only if unlocked).
 == Bitişten sonra otomatik olarak 0 takımına yeniden katıl (yalnızca kilitli değilse)
@@ -2368,9 +2368,6 @@ Control latency compensation tools
 
 Control player (0) or dummy (1)
 == Oyuncuyu (0) veya yapayı (1) kontrol et
-
-Control whether external launches are handed over to Steam
-== Harici başlatmaların Steam'e devredilip devredilmeyeceğini denetle
 
 Controlled by Gores mode
 == Gores modu tarafından yönetiliyor
@@ -5868,7 +5865,7 @@ Launch emote key
 == Emoticon fırlatma tuşu
 
 Launch Steam automatically when starting externally
-== Harici olarak başlatıldığında Steam'i otomatik başlat
+== Harici başlatmada Steam'i otomatik aç
 
 Layout
 == Düzen

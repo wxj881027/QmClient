@@ -1185,7 +1185,7 @@ Automatically fall back to the default asset when a custom asset sprite is fully
 == カスタムアセットのスプライトが完全に透明な場合は自動的に既定のアセットへ戻します。オフにすると空白スプライトは非表示のままになります（エフェクトを隠す用途など）
 
 Automatically launch Steam when the client is started externally
-== 外部からクライアントを起動したときに Steam を自動起動
+== クライアントを外部から起動したとき Steam を自動起動
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 完走後に自動でチーム 0 に再参加（ロック解除時のみ）
@@ -2368,9 +2368,6 @@ Control latency compensation tools
 
 Control player (0) or dummy (1)
 == プレイヤー (0) またはダミー (1) を操作
-
-Control whether external launches are handed over to Steam
-== 外部起動を Steam に引き渡すかどうかを制御
 
 Controlled by Gores mode
 == Goresモードが管理中

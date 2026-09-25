@@ -2369,9 +2369,6 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == Управление игроком (0) или дамми (1)
 
-Control whether external launches are handed over to Steam
-== Определяет, передавать ли внешние запуски Steam
-
 Controlled by Gores mode
 == Управляется режимом Gores
 
