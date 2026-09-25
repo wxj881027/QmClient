@@ -1519,7 +1519,7 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 			const float SponsorLinesHeight = ResolveSettingsRowsHeight((int)BuildSponsorLines(ContentWidth).get().size(), LineHeight, LineSpacing);
 			const float AuthorTeeSize = std::max(LineHeight * 2.0f, 50.0f * UiScale);
 			const float DeveloperHeight = HasSponsorDeveloper ? 2.0f * (LineHeight + LineSpacing) : 0.0f;
-			return ImageHeight + LineHeight + QrHeight + QmSponsorAuthors::RowsHeight(AuthorTeeSize, LineSpacing) + LineSpacing + LineHeight + SponsorLinesHeight + LineSpacing + LineHeight + DeveloperHeight;
+			return ImageHeight + LineHeight + QrHeight + QmSponsorAuthors::RowsHeight(AuthorTeeSize, LineSpacing, LineHeight) + LineSpacing + LineHeight + SponsorLinesHeight + LineSpacing + LineHeight + DeveloperHeight;
 		};
 		Sponsors.m_MeasureRevision = ((uint64_t)SponsorsRevision << 3) | (FindMenuImage("sponsor") != nullptr ? 1u : 0u) | (s_ShowSponsorQrCode ? 2u : 0u) | (HasSponsorDeveloper ? 4u : 0u);
 		Sponsors.m_Render = [this, UiScale, BodySize, LineHeight, LineSpacing, TipSize, ReadOnly, BuildSponsorLines, HasSponsorDeveloper](CUIRect Content) {
@@ -1583,14 +1583,21 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 			}
 
 			const float AuthorTeeSize = std::max(LineHeight * 2.0f, 50.0f * UiScale);
-			for(const QmSponsorAuthors::SAuthor &Author : QmSponsorAuthors::Authors())
+			CUIRect AuthorsRow;
+			Content.HSplitTop(QmSponsorAuthors::RowsHeight(AuthorTeeSize, LineSpacing, LineHeight), &AuthorsRow, &Content);
+			const auto &Authors = QmSponsorAuthors::Authors();
+			const float AuthorGap = LineSpacing;
+			const float AuthorWidth = std::max(0.0f, (AuthorsRow.w - AuthorGap * (Authors.size() - 1)) / Authors.size());
+			for(size_t AuthorIndex = 0; AuthorIndex < Authors.size(); ++AuthorIndex)
 			{
-				CUIRect AuthorRow, TeeRect, Label;
-				Content.HSplitTop(AuthorTeeSize + LineSpacing, &AuthorRow, &Content);
-				AuthorRow.VSplitLeft(AuthorTeeSize + LineSpacing, &TeeRect, &Label);
-				TeeRect.w = AuthorTeeSize;
-				RenderDevSkin(TeeRect.Center(), AuthorTeeSize, "default", "default", false, 0, 0, 0, false, true);
-				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, Author.m_pTextId, &Label, Author.m_pName, BodySize, TEXTALIGN_ML, {}, (int)Label.w);
+				const QmSponsorAuthors::SAuthor &Author = Authors[AuthorIndex];
+				CUIRect AuthorColumn{AuthorsRow.x + AuthorIndex * (AuthorWidth + AuthorGap), AuthorsRow.y, AuthorWidth, AuthorsRow.h};
+				CUIRect TeeRect, Label;
+				AuthorColumn.HSplitTop(AuthorTeeSize, &TeeRect, &Label);
+				RenderDevSkin(TeeRect.Center(), AuthorTeeSize, Author.m_pSkin, "default", false, 0, 0, 0, false, true);
+				Label.HSplitTop(LineSpacing, nullptr, &Label);
+				Label.HSplitTop(LineHeight, &Label, nullptr);
+				DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, Author.m_pTextId, &Label, Author.m_pName, BodySize, TEXTALIGN_MC, {}, (int)Label.w);
 			}
 			Content.HSplitTop(LineSpacing, nullptr, &Content);
 			Content.HSplitTop(LineHeight, &Row, &Content);
