@@ -347,7 +347,7 @@ constexpr float STYLE_ITEM_SPACING = 2.0f;
 constexpr float STYLE_ITEM_INSET = 3.0f;
 
 // 展开面板高度：与设置页行流的「行高 + 行距」对齐，末尾只留内边距、不留间距。
-inline constexpr float ResolveQmTitleStylePanelHeight(const int VisibleItemCount)
+constexpr float ResolveQmTitleStylePanelHeight(const int VisibleItemCount)
 {
 	if(VisibleItemCount <= 0)
 		return 0.0f;

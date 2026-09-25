@@ -14,7 +14,7 @@ inline constexpr double QM_STUTTER_TARGET_FPS = 300.0;
 inline constexpr double QM_STUTTER_RECOVERY_MS = 1000.0;
 inline constexpr double QM_STUTTER_PERIODIC_FLUSH_MS = 10000.0;
 
-inline constexpr double QmStutterFrameBudgetMs()
+constexpr double QmStutterFrameBudgetMs()
 {
 	return 1000.0 / QM_STUTTER_TARGET_FPS;
 }
