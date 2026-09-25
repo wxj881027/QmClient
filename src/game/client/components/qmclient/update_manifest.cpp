@@ -59,7 +59,7 @@ namespace
 			str_comp(json_string_get(pName), pExpectedName) != 0)
 			return false;
 		const char *pValue = json_string_get(pDownloadUrl);
-		if(!str_startswith(pValue, UPDATE_ASSET_URL_PREFIX) || str_length(pValue) >= UrlSize)
+		if(!str_startswith(pValue, UPDATE_ASSET_URL_PREFIX) || (size_t)str_length(pValue) >= UrlSize)
 			return false;
 		str_copy(pUrl, pValue, UrlSize);
 		return true;

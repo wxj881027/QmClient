@@ -78,7 +78,7 @@ namespace
 		if(pValue->type != json_string)
 			return false;
 		const char *pText = json_string_get(pValue);
-		if(!pText || (!AllowEmpty && pText[0] == '\0') || str_length(pText) > MaxBytes || !str_utf8_check(pText))
+		if(!pText || (!AllowEmpty && pText[0] == '\0') || (size_t)str_length(pText) > MaxBytes || !str_utf8_check(pText))
 			return false;
 		Out = pText;
 		return true;
@@ -181,7 +181,7 @@ namespace
 		{
 			const char *pName = pDifficultyData->u.object.values[i].name;
 			const json_value *pDifficulty = pDifficultyData->u.object.values[i].value;
-			if(!pName || pName[0] == '\0' || str_length(pName) > MAX_AXIOM_DIFFICULTY_NAME_BYTES || !str_utf8_check(pName) || !pDifficulty || pDifficulty->type != json_object)
+			if(!pName || pName[0] == '\0' || (size_t)str_length(pName) > MAX_AXIOM_DIFFICULTY_NAME_BYTES || !str_utf8_check(pName) || !pDifficulty || pDifficulty->type != json_object)
 				return EQmAxiomParseResult::INVALID_RESPONSE;
 
 			const json_value *pStats = JsonField(pDifficulty, "stats");
