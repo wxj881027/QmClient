@@ -3,6 +3,8 @@
 
 #ifndef CONF_BACKEND_OPENGL_ES
 #include <GL/glew.h>
+#else
+#include <GLES3/gl3.h>
 #endif
 
 #include <base/log.h>
