@@ -130,6 +130,7 @@ namespace qm_module
 		// 并使 MakeAllDefaults() 少两条默认项（Defaults.size() 与 QmModuleCount 不等）。
 		case EQmModuleId::Emoticons: return "qm:emoticons";
 		case EQmModuleId::MapUpload: return "qm:map_upload";
+		case EQmModuleId::Steam: return "qm:steam";
 		}
 		return nullptr;
 	}

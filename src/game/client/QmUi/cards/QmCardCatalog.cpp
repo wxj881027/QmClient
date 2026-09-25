@@ -81,6 +81,8 @@ namespace qm_card_catalog
 		qm_module::EQmModuleId Id = qm_module::EQmModuleId::Info;
 		if(!qm_module::QmModuleIdFromStableId(pStableId, &Id))
 			return false;
+		if(str_comp(pStableId, "qm:steam") == 0)
+			return BuildSteamCard(Ctx, Id, Out);
 		if(ContainsStableId(VisualCardStableIds(), pStableId))
 			return BuildVisualCard(Ctx, Id, Out);
 		if(ContainsStableId(FunctionCardStableIds(), pStableId))

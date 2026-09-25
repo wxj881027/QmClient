@@ -11,6 +11,7 @@
 // QmClient specific variables - 栖梦客户端配置项
 
 // Log / 日志
+MACRO_CONFIG_INT(QmSteamAutoLaunch, qm_steam_auto_launch, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically launch Steam when the client is started externally")
 MACRO_CONFIG_INT(QmConsoleFilterMask, qm_console_filter_mask, 15, 0, 15, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Local console log category filter mask (bit flags)")
 MACRO_CONFIG_INT(QmPerfDebug, qm_perf_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable main thread and render stage performance debug logging")
 MACRO_CONFIG_INT(QmPerfLogfile, qm_perf_logfile, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Write performance debug logs to dedicated file")

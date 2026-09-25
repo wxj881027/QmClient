@@ -55,6 +55,7 @@ namespace qm_module
 		// 以 (int)Id 为下标的既有表被整体位移。持久化走 m_pKey 字符串，与枚举序无关。
 		Emoticons,
 		MapUpload,
+		Steam,
 	};
 
 	enum class EQmModuleColumn
@@ -72,7 +73,7 @@ namespace qm_module
 		const char *m_pKey;
 	};
 
-	constexpr size_t QmModuleCount = 41;
+	constexpr size_t QmModuleCount = 42;
 } // namespace qm_module
 
 #endif // GAME_CLIENT_QMUI_QMMODULETYPES_H
