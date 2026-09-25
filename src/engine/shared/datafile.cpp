@@ -317,7 +317,7 @@ public:
 		return m_ppDataPtrs[Index];
 	}
 
-	void AddDataProcessor(int Index, FDataProcessor DataProcessor)
+	void AddDataProcessor(int Index, FDataProcessor DataProcessor) const
 	{
 		dbg_assert(Index >= 0 && Index < m_Header.m_NumRawData, "Index invalid: %d", Index);
 		dbg_assert(m_ppDataProcessors[Index] == nullptr, "Data already intercepted: %d", Index);
@@ -359,7 +359,7 @@ public:
 		return static_cast<CDatafileItem *>(static_cast<void *>(m_Info.m_pItemStart + m_Info.m_pItemOffsets[Index]));
 	}
 
-	bool OverrideItemData(int Index, const void *pData, size_t Size)
+	bool OverrideItemData(int Index, const void *pData, size_t Size) const
 	{
 		const CDatafileItem *pCurrentItem = GetItem(Index);
 		dbg_assert(m_ppOverriddenItems[Index] == nullptr, "Item already overridden: %d", Index);

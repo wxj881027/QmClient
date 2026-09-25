@@ -630,6 +630,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bo
 							else if(str_comp(pSpecialVictim, "all") == 0)
 							{
 								std::vector<int> vAllIds;
+								vAllIds.reserve(MAX_CLIENTS);
 								for(int i = 0; i < MAX_CLIENTS; i++)
 									vAllIds.push_back(i);
 								Victims = std::move(vAllIds);

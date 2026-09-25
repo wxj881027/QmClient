@@ -208,7 +208,7 @@ CNetBan::CBan<T> *CNetBan::CBanPool<T, HashCount>::Get(int Index) const
 }
 
 template<class T>
-int CNetBan::Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason)
+int CNetBan::Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason) // NOLINT(readability-redundant-typename)
 {
 	// do not ban localhost
 	if(NetMatch(pData, &m_LocalhostIpV4) || NetMatch(pData, &m_LocalhostIpV6))
@@ -227,7 +227,7 @@ int CNetBan::Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, c
 
 	// check if it already exists
 	CNetHash NetHash(pData);
-	CBan<typename T::CDataType> *pBan = pBanPool->Find(pData, &NetHash);
+	CBan<typename T::CDataType> *pBan = pBanPool->Find(pData, &NetHash); // NOLINT(readability-redundant-typename)
 	if(pBan)
 	{
 		// adjust the ban
@@ -255,10 +255,10 @@ int CNetBan::Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, c
 }
 
 template<class T>
-int CNetBan::Unban(T *pBanPool, const typename T::CDataType *pData)
+int CNetBan::Unban(T *pBanPool, const typename T::CDataType *pData) // NOLINT(readability-redundant-typename)
 {
 	CNetHash NetHash(pData);
-	CBan<typename T::CDataType> *pBan = pBanPool->Find(pData, &NetHash);
+	CBan<typename T::CDataType> *pBan = pBanPool->Find(pData, &NetHash); // NOLINT(readability-redundant-typename)
 	if(pBan)
 	{
 		char aBuf[256];

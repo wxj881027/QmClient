@@ -403,7 +403,7 @@ int CNetBase::UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct
 	}
 
 	// set the response token (a bit hacky because this function shouldn't know about control packets)
-	if(pPacket->m_Flags & NET_PACKETFLAG_CONTROL)
+	if((pPacket->m_Flags & NET_PACKETFLAG_CONTROL) && pResponseToken != nullptr)
 	{
 		if(pPacket->m_DataSize >= 1 + (int)sizeof(SECURITY_TOKEN)) // control byte + token
 		{
