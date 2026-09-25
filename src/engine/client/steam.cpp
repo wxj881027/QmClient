@@ -10,7 +10,7 @@
 namespace
 {
 
-	constexpr const char *STEAM_MAIN_URI = "steam://open/main";
+	constexpr const char *STEAM_SILENT_ARGUMENT = "-silent";
 
 	class CSteam : public ISteam
 	{
@@ -165,8 +165,8 @@ bool SteamOpenClient()
 #if defined(CONF_PLATFORM_ANDROID)
 	return false;
 #else
-	const char *apArguments[] = {STEAM_MAIN_URI};
-	return shell_execute("steam", EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
+	const char *apArguments[] = {STEAM_SILENT_ARGUMENT};
+	return shell_execute("steam.exe", EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
 #endif
 }
 
