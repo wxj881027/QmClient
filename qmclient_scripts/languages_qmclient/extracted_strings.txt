@@ -780,8 +780,6 @@ Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 Console
 Console color
-Console command executed after joining server
-Console command executed before connecting to server
 Contacting title server
 Continue anyway?
 Contributors
@@ -957,7 +955,6 @@ Default zoom
 Default zoom level
 Define automatic chat reply rules
 Delay
-Delay before executing tc_execute_on_join (milliseconds)
 Delay before new players can start votes or participate in kick/spectate votes (seconds)
 Delay before reduction
 Delay between rescues (seconds)
@@ -4035,6 +4032,7 @@ This team is locked using /lock. Only members of the team can unlock it using /l
 This team started already
 This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
+Tick delay before executing tc_execute_on_join
 Ticks after freeze before applying max prediction reduction
 tile
 Tile outlines

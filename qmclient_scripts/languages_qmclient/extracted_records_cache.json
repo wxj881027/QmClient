@@ -915,7 +915,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1158
+      "line": 1138
     },
     {
       "key": "128 player id <-> 64 player id map update rate",
@@ -8716,20 +8716,6 @@
       "line": 2542
     },
     {
-      "key": "Console command executed after joining server",
-      "category": "indirect",
-      "source": "src/engine/shared/config_variables_tclient.h",
-      "context": "",
-      "line": 283
-    },
-    {
-      "key": "Console command executed before connecting to server",
-      "category": "indirect",
-      "source": "src/engine/shared/config_variables_tclient.h",
-      "context": "",
-      "line": 282
-    },
-    {
       "key": "Construct '%s' game tiles (x%d)",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/layer_tiles.cpp",
@@ -10351,7 +10337,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1049
+      "line": 1029
     },
     {
       "key": "DDRace HUD",
@@ -10954,13 +10940,6 @@
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
       "line": 3064
-    },
-    {
-      "key": "Delay before executing tc_execute_on_join (milliseconds)",
-      "category": "indirect",
-      "source": "src/engine/shared/config_variables_tclient.h",
-      "context": "",
-      "line": 284
     },
     {
       "key": "Delay before new players can start votes or participate in kick/spectate votes (seconds)",
@@ -17673,35 +17652,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1010
+      "line": 990
     },
     {
       "key": "Frame rate",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1047
+      "line": 1027
     },
     {
       "key": "Frame time",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1048
+      "line": 1028
     },
     {
       "key": "Frame time p95",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1156
+      "line": 1136
     },
     {
       "key": "Frame time p99",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1157
+      "line": 1137
     },
     {
       "key": "Framebuffer color bits (only fullscreen)",
@@ -18450,7 +18429,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1020
+      "line": 1000
     },
     {
       "key": "Game type",
@@ -18499,7 +18478,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1148
+      "line": 1128
     },
     {
       "key": "Gamemode. When enabled, players join as spectators",
@@ -21943,7 +21922,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 898
+      "line": 878
     },
     {
       "key": "Join a team to enable practice mode, which means you can use /r, but can't earn a rank.",
@@ -24218,7 +24197,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1159
+      "line": 1139
     },
     {
       "key": "Loop",
@@ -25338,7 +25317,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1050
+      "line": 1030
     },
     {
       "key": "Mention",
@@ -32016,7 +31995,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 896
+      "line": 876
     },
     {
       "key": "Prediction boundary (ms, increases latency but reduces ping jitter)",
@@ -32044,7 +32023,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1152
+      "line": 1132
     },
     {
       "key": "Prediction jitter is obvious, prediction timing is changing",
@@ -32072,7 +32051,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1151
+      "line": 1131
     },
     {
       "key": "Prediction lead is high, check prediction settings and server timing",
@@ -32492,7 +32471,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1051
+      "line": 1031
     },
     {
       "key": "Process UDP TX (est.)",
@@ -32506,7 +32485,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1052
+      "line": 1032
     },
     {
       "key": "Profile Options",
@@ -36349,14 +36328,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 895
+      "line": 875
     },
     {
       "key": "RTT",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1149
+      "line": 1129
     },
     {
       "key": "Rule line 1.",
@@ -37476,14 +37455,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/UiForms.cpp",
       "context": "",
-      "line": 219
+      "line": 204
     },
     {
       "key": "Search",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/UiForms.cpp",
       "context": "",
-      "line": 235
+      "line": 220
     },
     {
       "key": "Search",
@@ -42264,14 +42243,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 897
+      "line": 877
     },
     {
       "key": "Snapshot age",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1150
+      "line": 1130
     },
     {
       "key": "Snapshot Latency",
@@ -42285,21 +42264,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1053
+      "line": 1033
     },
     {
       "key": "Snapshot rate",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1054
+      "line": 1034
     },
     {
       "key": "Snapshot tick gap",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1155
+      "line": 1135
     },
     {
       "key": "SNOWFLAKE: Works like a FREEZE tile. Freezes tees for 3 seconds by default.",
@@ -46488,6 +46467,13 @@
       "line": 185
     },
     {
+      "key": "Tick delay before executing tc_execute_on_join",
+      "category": "indirect",
+      "source": "src/engine/shared/config_variables_tclient.h",
+      "context": "",
+      "line": 284
+    },
+    {
       "key": "Ticks after freeze before applying max prediction reduction",
       "category": "indirect",
       "source": "src/engine/shared/config_variables_tclient.h",
@@ -50027,7 +50013,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/monitoring/monitoring.cpp",
       "context": "",
-      "line": 1160
+      "line": 1140
     },
     {
       "key": "Voice",
