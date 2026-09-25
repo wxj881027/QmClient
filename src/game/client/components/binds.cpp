@@ -10,7 +10,6 @@
 #include <engine/config.h>
 #include <engine/console.h>
 #include <engine/shared/config.h>
-#include <engine/shared/qm_removed_config.h>
 
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
@@ -110,9 +109,6 @@ void CBinds::Bind(int KeyId, const char *pStr, bool FreeOnly, int ModifierCombin
 
 	if(FreeOnly && Get(KeyId, ModifierCombination)[0])
 		return;
-
-	const std::string CleanedCommand = QmRemovedConfig::CleanFocusCommands(pStr);
-	pStr = CleanedCommand.c_str();
 
 	free(m_aapKeyBindings[ModifierCombination][KeyId]);
 	m_aapKeyBindings[ModifierCombination][KeyId] = nullptr;

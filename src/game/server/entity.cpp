@@ -11,7 +11,7 @@
 //////////////////////////////////////////////////
 // Entity
 //////////////////////////////////////////////////
-CEntity::CEntity(CGameWorld *pGameWorld, int ObjType, bool RequestSnapId, vec2 Pos, int ProximityRadius)
+CEntity::CEntity(CGameWorld *pGameWorld, int ObjType, bool SnapFreeId, vec2 Pos, int ProximityRadius)
 {
 	m_pGameWorld = pGameWorld;
 	m_pCCollision = GameServer()->Collision();
@@ -21,7 +21,7 @@ CEntity::CEntity(CGameWorld *pGameWorld, int ObjType, bool RequestSnapId, vec2 P
 	m_ProximityRadius = ProximityRadius;
 
 	m_MarkedForDestroy = false;
-	if(RequestSnapId)
+	if(SnapFreeId)
 		m_Id = Server()->SnapNewId();
 
 	m_pPrevTypeEntity = nullptr;

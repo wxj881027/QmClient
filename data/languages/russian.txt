@@ -22,6 +22,9 @@
 %d items selected
 == Выбрано %d элементов
 
+%d more cut segments
+== Ещё %d отрезков обрезки
+
 %d of %d server
 == %d из %d сервера
 
@@ -517,6 +520,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == Добавляет стандартные чат-привязки
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== Показывает на HUD состояние клавиш, молота, управления и копирования у дамми, а также свой список bind-статусов.
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -2178,7 +2184,7 @@ Configure display and rendering
 == Настроить экран и рендеринг
 
 Configure Dream-only convenience features
-== Настроить удобные функции Qm
+== Configure Dream-only convenience features
 
 Configure game and client preferences
 == Настроить параметры игры и клиента
@@ -2305,9 +2311,6 @@ Connecting dummy
 
 Connecting to
 == Подключение к
-
-Connecting to voice server
-== Подключение к голосовому серверу
 
 Connection disconnected
 == Соединение разорвано
@@ -2455,9 +2458,6 @@ Could not get server list from master server
 
 Could not load default touch controls from file. See local console for details.
 == Не удалось загрузить стандартное сенсорное управление из файла. Подробности в локальной консоли.
-
-Could not load new features
-== Не удалось загрузить новости
 
 Could not load sponsor QR code. Check the Base64 data
 == Не удалось загрузить QR-код спонсора. Проверьте данные Base64.
@@ -2645,9 +2645,6 @@ Customize translate button and menu colors
 Customize vote display and interaction
 == Customize vote display and interaction
 
-Cut end: %s
-== Конец: %s
-
 Cut interval
 == Интервал обрезки
 
@@ -2656,9 +2653,6 @@ Cut length
 
 Cut segments
 == Отрезки обрезки
-
-Cut start: %s
-== Начало: %s
 
 Cute:
 == Мило:
@@ -3212,9 +3206,6 @@ Door Laser Outline Color
 Door laser outline color
 == Цвет контура лазера двери.
 
-Double-click: left applies to main, right applies to dummy
-== Двойной щелчок: левая кнопка — игрок, правая — дубликат
-
 Download community skins
 == Скачать скины сообщества
 
@@ -3386,8 +3377,8 @@ Dummy is currently connected.
 Dummy jump
 == Прыжок дамми
 
-Dummy key/hammer/control/copy status switches
-== Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми
+Dummy key/hammer/control/copy status switches and custom bind status list
+== Переключатели состояния фиксации клавиш/молота/управления дамми/синхронизации дамми и пользовательский список состояния bind
 
 Dummy marking color
 == Цвет метки дамми
@@ -3584,6 +3575,9 @@ Emoticon shadow
 Emoticons
 == Эмотиконы
 
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== Пусто — встроенные 4 элемента. Формат: var|0=Off|1=On; var|Text
+
 enable
 == включить
 
@@ -3646,6 +3640,9 @@ Enable chat with all/team mode
 
 Enable cheats for your current team's run, but you can't earn a rank
 == Включить читы для текущего забега вашей команды, но вы не сможете получить ранг
+
+Enable client stutter diagnostics at startup
+== Включить диагностику рывков клиента при запуске
 
 Enable colored console output
 == Включить цветной вывод консоли
@@ -3875,6 +3872,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == Включить анимацию смены скина
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== Включите анимацию смены скина и выберите тип, область, длительность и сглаживание.
+
 Enable smooth cinematic camera while free spectating
 == Включить плавную кинематографическую камеру в свободном наблюдении
 
@@ -3962,14 +3962,17 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Включить список врагов
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== Включите анимацию смены или перезарядки оружия, затем настройте радиус, длительность, поворот и сглаживание.
+
 Enable word filter list
 == Включить список фильтрации слов
 
 Enable Zen Mode
-== Включить дзен-режим
+== Включить режим дзен (Zen Mode)
 
 Enable Zen mode
-== Включить дзен-режим
+== Включить Zen-режим
 
 Enable/disable infinite hook.
 == Включить/отключить бесконечный крюк
@@ -4001,9 +4004,6 @@ Endpoint
 Endpoint (optional)
 == Конечная точка (опционально)
 
-Enhanced rendering
-== Улучшенный рендеринг
-
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == Войдите в режим /practice или перезапуститесь, чтобы избежать убийства всей команды через 60 секунд.
 
@@ -4012,6 +4012,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == Введите пароль
+
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== Введите спонсорский код и нажмите «Активировать», затем впишите титул и нажмите «Сохранить». Включите «Показывать только с этим ником», чтобы привязать титул к одному нику.
 
 Enter Username
 == Введите имя пользователя
@@ -4042,6 +4045,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Мастерская)
+
+Entry: %s
+== Где найти: %s
 
 Erase items on the in game background
 == Стирать элементы на игровом фоне
@@ -4781,6 +4787,9 @@ Gives you infinite jump
 Glitch
 == Глитч
 
+Global card
+== Глобальная карточка
+
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 == Глобальная сортировка карточек (формат stableId|tab|col|order; разделитель точка с запятой)
 
@@ -4931,9 +4940,6 @@ Has save
 Has unread news
 == Есть непрочитанные новости
 
-HD icons (MSDF)
-== Иконки высокой четкости (MSDF)
-
 HDF
 == HDF
 
@@ -4956,7 +4962,7 @@ Hi!
 == Привет!
 
 Hide basic system info (join, version, rules) in Zen mode
-== Скрывать базовую системную информацию в дзен-режиме
+== Скрывать базовые системные сообщения (вход, версия, правила и т.д.) в режиме дзен
 
 Hide chat messages from players marked as enemies
 == Скрывать сообщения чата от игроков, отмеченных как враги
@@ -4965,10 +4971,10 @@ Hide death/respawn effects
 == Скрыть эффекты смерти/возрождения
 
 Hide death/respawn effects in Zen Mode
-== Скрывать эффекты смерти/возрождения в дзен-режиме
+== Скрыть эффекты смерти/возрождения в режиме дзен
 
 Hide direction in Zen mode
-== Скрывать индикатор направления в дзен-режиме
+== Скрыть направление в режиме дзен
 
 Hide direction indicators
 == Скрыть индикаторы направления
@@ -4977,7 +4983,7 @@ Hide Echo messages
 == Скрыть сообщения Echo
 
 Hide Echo messages in Zen mode
-== Скрывать Echo-сообщения в дзен-режиме
+== Скрывать сообщения Echo в режиме дзен
 
 Hide explosion effects
 == Скрыть эффекты взрывов
@@ -4986,7 +4992,7 @@ Hide freeze effects
 == Скрыть эффекты заморозки
 
 Hide freeze effects in Zen Mode
-== Скрывать эффекты заморозки в дзен-режиме
+== Скрывать эффект заморозки в режиме дзен
 
 Hide ghosts of frozen players
 == Скрывать призраков замороженных игроков
@@ -4998,19 +5004,19 @@ Hide hammer effects
 == Скрыть эффекты молота
 
 Hide hammer effects in Zen Mode
-== Скрывать эффекты молота в дзен-режиме
+== Скрыть эффекты удара молотом в режиме дзен
 
 Hide helper lines in Gores mode
 == Скрыть вспомогательные линии в режиме Gores
 
 Hide helper lines in Zen mode
-== Скрывать вспомогательные линии в дзен-режиме
+== Скрыть вспомогательные линии в режиме дзен
 
 Hide HUD
 == Скрыть HUD
 
 Hide HUD in Zen mode
-== Скрывать HUD в дзен-режиме
+== Скрывать HUD в режиме дзен
 
 Hide indicator for tees on your screen
 == Скрывать индикатор для ти на вашем экране
@@ -5019,16 +5025,16 @@ Hide input emoticon
 == Скрыть вводимую эмоцию
 
 Hide join/version prompts
-== Скрыть уведомления входа/версии
+== Скрыть подсказки о входе/версии
 
 Hide jump effects
 == Скрыть эффекты прыжка
 
 Hide jump effects in Zen Mode
-== Скрывать эффекты прыжка в дзен-режиме
+== Скрыть эффекты прыжка в режиме дзен
 
 Hide kill and finish messages in Zen mode
-== Скрывать сообщения об убийствах и финишах в дзен-режиме
+== Скрыть сообщения об убийствах и завершении в режиме дзен
 
 Hide kill/finish messages
 == Скрыть сообщения об убийстве/финише
@@ -5037,10 +5043,10 @@ Hide map progress
 == Скрыть прогресс карты
 
 Hide map progress bar in Zen mode
-== Скрывать индикатор прогресса карты в дзен-режиме
+== Скрыть индикатор прогресса карты в режиме дзен
 
 Hide nameplates
-== Скрыть таблички имён
+== Скрыть таблички с именами
 
 Hide names
 == Скрыть имена
@@ -5058,22 +5064,22 @@ Hide player messages
 == Скрыть сообщения игроков
 
 Hide player messages in Zen mode
-== Скрывать сообщения игроков в дзен-режиме
+== Скрыть сообщения игроков в режиме дзен
 
 Hide player name plates in Zen Mode
-== Скрывать никнеймы в дзен-режиме
+== Скрыть таблички с именами игроков в режиме дзен
 
 Hide player names in Zen Mode
-== Скрывать имена игроков в дзен-режиме
+== Скрыть имена игроков в режиме дзен
 
 Hide projectile effects in Zen Mode
-== Скрывать эффекты снарядов в дзен-режиме
+== Скрыть эффекты обстрела в режиме дзен
 
 Hide scoreboard
-== Скрыть таблицу счёта
+== Скрыть таблицу очков
 
 Hide scoreboard in Zen mode
-== Скрывать таблицу счёта в дзен-режиме
+== Скрыть таблицу счёта в режиме дзен
 
 Hide sensitive info like /save password
 == Скрывать конфиденциальную информацию, например пароль /save
@@ -5082,10 +5088,10 @@ Hide server information on join
 == Скрывать информацию сервера при входе
 
 Hide server prompt notifications
-== Скрыть уведомления сервера
+== Скрыть уведомления-подсказки сервера
 
 Hide server tip notifications (including notification bar) in Zen mode
-== Скрывать уведомления сервера в дзен-режиме
+== Скрыть уведомления сервера (включая панель уведомлений) в режиме дзен
 
 Hide Settings Tabs
 == Скрыть вкладки настроек
@@ -5106,13 +5112,13 @@ Hide typing emoji during input
 == Не показывать смайлики при вводе текста
 
 Hide UI for focused gameplay
-== Скрыть интерфейс для фокуса
+== Скрыть UI для сосредоточенной игры
 
 Hide weapon fire effects in Zen Mode
-== Скрывать эффекты выстрелов в дзен-режиме
+== Скрыть эффекты пламени оружия в режиме дзен
 
 Hide weapon muzzle flashes
-== Скрыть вспышки выстрелов
+== Скрыть вспышки оружия
 
 High Detail
 == Высокая детализация
@@ -5420,9 +5426,6 @@ Indicator size
 Indicator transparency
 == Прозрачность индикатора
 
-Inferno
-== Адское пламя
-
 Infinite hook for super players on/off.
 == Бесконечный крюк для супер-игроков вкл/выкл.
 
@@ -5497,6 +5500,9 @@ Insane
 
 Installing update. Please wait...
 == Установка обновления. Пожалуйста, подождите...
+
+Instant zoom reverse
+== Мгновенный разворот зума
 
 Interface
 == Интерфейс
@@ -6122,6 +6128,12 @@ Local game mode statistics
 Local only
 == Только локальный
 
+Local particle effects
+== Локальные эффекты частиц
+
+Local particles: show particles behind own Tee (e.g. freeze snow)
+== Локальные частицы: показывать частицы, падающие за вашим Tee (например, снежинки заморозки)
+
 Local saves
 == Локальные сохранения
 
@@ -6368,8 +6380,14 @@ Margin when notification is docked
 Mark demo
 == Отметить демку
 
+Mark the beginning of a cut (right click to reset)
+== Отметить начало обрезки (правый клик — сбросить)
+
 Mark the beginning of a demo cut
 == Отметить начало обрезки демо
+
+Mark the end of a cut (right click to reset)
+== Отметить конец обрезки (правый клик — сбросить)
 
 Mark the end of a demo cut
 == Отметить конец обрезки демо
@@ -6533,9 +6551,6 @@ Menu camera rotation time in seconds
 Menu camera speed
 == Скорость камеры в меню
 
-Menu Gaussian blur pipeline
-== Конвейер размытия меню
-
 Menu main panel background color
 == Цвет фона главной панели меню
 
@@ -6559,6 +6574,9 @@ Merge consecutive identical echo messages within this window in milliseconds (0 
 
 Merge consecutive identical player messages within 2 seconds
 == Объединять последовательные одинаковые сообщения игрока в течение 2 секунд
+
+Merges chat messages repeated within a short time into a single line.
+== Объединяет повторяющиеся за короткое время сообщения чата в одну строку.
 
 Message color
 == Цвет сообщения
@@ -6747,10 +6765,10 @@ Mute
 == Заглушить
 
 Mute death/respawn sound in Zen Mode
-== Заглушать звук смерти/возрождения в дзен-режиме
+== Отключить звуки смерти/возрождения в режиме дзен
 
 Mute death/respawn sounds
-== Заглушить звук смерти/возрождения
+== Отключить звуки смерти/возрождения
 
 Mute emoticons
 == Заглушить эмоции
@@ -6759,19 +6777,19 @@ Mute flag sounds
 == Отключить звуки флага
 
 Mute hammer sound in Zen mode
-== Заглушать звук молота в дзен-режиме
+== Отключить звуки удара молотом в режиме дзен
 
 Mute hammer sounds
-== Заглушить звук молота
+== Отключить звуки молота
 
 Mute hook sound
 == Отключить звук крюка
 
 Mute jump sound in Zen Mode
-== Заглушать звук прыжка в дзен-режиме
+== Отключить звуки прыжка в режиме дзен
 
 Mute jump sounds
-== Заглушить звук прыжка
+== Отключить звуки прыжка
 
 Mute map sounds
 == Отключить звуки карты
@@ -7814,6 +7832,9 @@ Pet Skin:
 Pick result: %s
 == Результат выбора: %s
 
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== Выберите источник, соответствующий вашему музыкальному приложению, и просто включите музыку — текст подтянется сам.
+
 Pickup range
 == Диапазон подбора
 
@@ -8035,6 +8056,9 @@ Players weapons has no affect on others
 
 Playing effects
 == Эффекты воспроизведения
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== Проигрывает анимацию при смене скина, в том числе скина, украденного молотом.
 
 Please add a valid cut first
 == Сначала добавьте действительный отрезок обрезки
@@ -8363,9 +8387,6 @@ Pulse speed
 Pulse strength
 == Сила пульсации
 
-Pure Vulkan fallback
-== Сейчас: чистый Vulkan
-
 Push radius
 == Радиус толчка
 
@@ -8449,9 +8470,6 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi Интерполяция цвета анимации: 0=sRGB линейная 1=OKLAB перцептивно равномерная
-
-QmVulkan active
-== Сейчас: QmVulkan включён
 
 QQ group: 1076765929 (click to copy)
 == QQ-группа: 1076765929 (нажмите, чтобы скопировать)
@@ -8726,6 +8744,9 @@ Redeem
 Redeem your code and customize your title
 == Активируйте код и настройте титул
 
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== Активируйте спонсорский код, чтобы получить свой титул. Титул отображается в чате и на табличке имени.
+
 Reduce antiping and player prediction when frozen
 == Уменьшить антипинг и предсказание игрока при заморозке
 
@@ -8818,6 +8839,12 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == Пароль удалённой консоли для модератора (ограниченный доступ)
+
+Remote particle effects
+== Удалить из избранного
+
+Remote particles: sync and render other players via central server (requires both local+remote enabled)
+== Удалённые частицы: синхронизация и отображение других игроков через центральный сервер (требуется включение локального + удалённого у собеседника)
 
 Remove
 == Удалить
@@ -9250,6 +9277,9 @@ Retry remote stats
 
 Retrying…
 == Повторная попытка…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== Мгновенно менять направление зума при нажатии противоположной клавиши (0=оставить прежний плавный зум)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -9859,12 +9889,6 @@ Set color
 
 Set current demo speed
 == Установить скорость текущего демо
-
-Set cut end at current position (O, right click to reset)
-== Конец отрезка в текущей позиции (O, ПКМ для сброса)
-
-Set cut start at current position (I, right click to reset)
-== Начало отрезка в текущей позиции (I, ПКМ для сброса)
 
 Set ddrace team for a player
 == Установить команду DDRace для игрока
@@ -10853,6 +10877,9 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == Показывает справку по команде r, общую справку, если оставить пустым
 
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== Получает текст песен из NetEase Cloud Music, Soda Music, Kugou и QQ Music и показывает его на динамическом острове.
+
 Shows the credits of the DDNet mod
 == Показывает титры мода DDNet
 
@@ -10991,6 +11018,9 @@ Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
 == Тип анимации смены скина (0=вылет с остаточным следом, 1=мягкое затухание, 2=сдвиг влево, 3=вращательный вылет, 4=смена яркости, 5=глитч-дрожание, 6=упругое масштабирование)
 
+Skin transition
+== Смена скина
+
 Skin transition animation
 == Анимация смены скина
 
@@ -11059,9 +11089,6 @@ Smooth Dynamic Camera
 
 Smooth fade
 == Плавное затухание
-
-Smooth island (SDF)
-== Сглаженный Dynamic Island (SDF)
 
 Smooth other players' predicted movement
 == Плавное предсказанное движение других игроков
@@ -11515,6 +11542,9 @@ Switch failed
 
 Switch interval
 == Интервал переключения
+
+Switch on the status rows you need, then list the binds you want to watch.
+== Включите нужные переключатели состояний и укажите bind-команды для отслеживания в своём списке.
 
 Switch opacity
 == Непрозрачность переключателя
@@ -12491,6 +12521,9 @@ Tune variable to value
 Tune variable to value or show current value
 == Установить переменную тюнинга в значение или показать текущее значение
 
+Turn on "Message merging" in Dream Features.
+== Включите «Message merging» в разделе «Dream Features».
+
 Tutorial
 == Обучение
 
@@ -12517,6 +12550,9 @@ UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or netwo
 
 UDP seems to be filtered.
 == UDP, похоже, фильтруется.
+
+UDP socket not open
+== UDP-сокет не открыт
 
 UI color
 == Цвет интерфейса
@@ -12770,6 +12806,9 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == URL для загрузки скинов
 
+Usage: %s
+== Использование: %s
+
 Usage: %s %s
 == Использование: %s %s
 
@@ -12826,9 +12865,6 @@ Use default voice input device
 
 Use default voice output device
 == Использовать устройство вывода голоса по умолчанию
-
-Use each Tee trail style's own palette instead of the trail color mode
-== Использовать собственную палитру стиля следа Tee вместо режима цвета
 
 Use embedded HUD progress bar
 == Использовать встроенную шкалу прогресса HUD
@@ -13310,6 +13346,9 @@ Weapon switch easing
 Weapon switch rotation
 == Вращение при переключении оружия
 
+Weapon Trajectory
+== Траектория оружия
+
 Weapon trajectory
 == Траектория оружия
 
@@ -13442,6 +13481,9 @@ Width of friends column in server browser
 Width of latency column in server browser
 == Ширина столбца задержки в браузере серверов
 
+Width of map column in server browser
+== Ширина столбца карты в списке серверов
+
 Width of others' hook collision line
 == Ширина линии столкновения крюка других
 
@@ -13477,6 +13519,9 @@ Word filter action: 0=replace matching words, 1=hide entire message
 
 Write local console contents to a text file
 == Записать содержимое локальной консоли в текстовый файл
+
+Write performance debug logs to dedicated file
+== Записывать отладочные логи производительности в отдельный файл
 
 Write remote console contents to a text file
 == Записать содержимое удалённой консоли в текстовый файл
@@ -13805,14 +13850,17 @@ Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Ваш код тайм-аута установлен. Клиенты 0.7 не могут вернуть своих ти после тайм-аута; однако клиент 0.6 может завладеть вашим ти
 
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== При смене оружие въезжает с поворотом, а при перезарядке переворачивается.
+
 z = Zoom
 == z = Масштаб
 
 Zen Mode
-== Дзен-режим
+== Режим Дзен
 
 Zen mode key
-== Клавиша дзен-режима
+== Клавиша режима Дзен
 
 Zhipu AI
 == Zhipu AI

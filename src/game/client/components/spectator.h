@@ -99,7 +99,6 @@ public:
 	bool IsEditingTeleNumber() const { return m_Active && m_TeleNumberInput.IsActive(); }
 
 	bool IsActive() const { return m_Active; }
-	bool IsEditingTeleNumber() const { return m_Active && m_TeleNumberInput.IsActive(); }
 };
 
 #endif

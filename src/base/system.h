@@ -1,29 +1,19 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+
+/*
+	Title: OS Abstraction
+*/
+
 #ifndef BASE_SYSTEM_H
 #define BASE_SYSTEM_H
 
-// QmClient 兼容聚合头。
-//
-// 上游自 19.8 起把 base/system.h 拆成了 aio/bytes/io/net/os/process 等独立头文件。
-// 本仓库仍有 270+ 处 include <base/system.h>，为了不在同一切片里改动这些调用方，
-// 这里保留 system.h 作为聚合入口。新代码请直接 include 具体头文件；
-// 调用方的 include 清理留到后续切片，不阻塞上游同步。
-#include "aio.h"
-#include "bytes.h"
 #include "dbg.h"
 #include "detect.h"
 #include "fs.h"
-#include "io.h"
-#include "log.h"
 #include "mem.h"
-#include "net.h"
-#include "os.h"
-#include "process.h"
 #include "secure.h"
-#include "sphore.h"
 #include "str.h"
-#include "thread.h"
 #include "time.h"
 #include "types.h"
 
@@ -35,8 +25,641 @@
 #include <optional>
 #include <string>
 
-// QmClient 自有：Windows qWave 网络优先级（QoS）接口。
-// 实现位于 src/base/net.cpp 末尾（需要 NETSOCKET 内部结构），调用方见 engine/shared/network_client.cpp。
+#ifdef CONF_FAMILY_UNIX
+#include <sys/un.h>
+#endif
+
+#ifdef CONF_PLATFORM_LINUX
+#include <netinet/in.h>
+#include <sys/socket.h>
+#endif
+
+/**
+ * File I/O related operations.
+ *
+ * @defgroup File-IO File I/O
+ */
+
+/**
+ * @ingroup File-IO
+ */
+enum
+{
+	/**
+	 * Open file for reading.
+	 *
+	 * @see io_open
+	 */
+	IOFLAG_READ = 1,
+	/**
+	 * Open file for writing.
+	 *
+	 * @see io_open
+	 */
+	IOFLAG_WRITE = 2,
+	/**
+	 * Open file for appending at the end.
+	 *
+	 * @see io_open
+	 */
+	IOFLAG_APPEND = 4,
+};
+
+/**
+ * @ingroup File-IO
+ */
+enum ESeekOrigin
+{
+	/**
+	 * Start seeking from the beginning of the file.
+	 *
+	 * @see io_seek
+	 */
+	IOSEEK_START = 0,
+	/**
+	 * Start seeking from the current position.
+	 *
+	 * @see io_seek
+	 */
+	IOSEEK_CUR = 1,
+	/**
+	 * Start seeking from the end of the file.
+	 *
+	 * @see io_seek
+	 */
+	IOSEEK_END = 2,
+};
+
+/**
+ * Opens a file.
+ *
+ * @ingroup File-IO
+ *
+ * @param filename File to open.
+ * @param flags A set of IOFLAG flags.
+ *
+ * @see IOFLAG_READ, IOFLAG_WRITE, IOFLAG_APPEND.
+ *
+ * @return A handle to the file on success, or `nullptr` on failure.
+ */
+IOHANDLE io_open(const char *filename, int flags);
+
+/**
+ * Reads data into a buffer from a file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file to read data from.
+ * @param buffer Pointer to the buffer that will receive the data.
+ * @param size Number of bytes to read from the file.
+ *
+ * @return Number of bytes read.
+ */
+unsigned io_read(IOHANDLE io, void *buffer, unsigned size);
+
+/**
+ * Reads the rest of the file into a buffer.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file to read data from.
+ * @param result Receives the file's remaining contents.
+ * @param result_len Receives the file's remaining length.
+ *
+ * @return `true` on success, `false` on failure.
+ *
+ * @remark Does NOT guarantee that there are no internal null bytes.
+ * @remark The result must be freed after it has been used.
+ * @remark The function will fail if more than 1 GiB of memory would
+ *         have to be allocated. Large files should not be loaded into memory.
+ */
+bool io_read_all(IOHANDLE io, void **result, unsigned *result_len);
+
+/**
+ * Reads the rest of the file into a null-terminated buffer with
+ * no internal null bytes.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file to read data from.
+ *
+ * @return The file's remaining contents, or `nullptr` on failure.
+ *
+ * @remark Guarantees that there are no internal null bytes.
+ * @remark Guarantees that result will contain null-termination.
+ * @remark The result must be freed after it has been used.
+ * @remark The function will fail if more than 1 GiB of memory would
+ *         have to be allocated. Large files should not be loaded into memory.
+ */
+char *io_read_all_str(IOHANDLE io);
+
+/**
+ * Skips data in a file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ * @param size Number of bytes to skip.
+ *
+ * @return `0` on success.
+ */
+int io_skip(IOHANDLE io, int64_t size);
+
+/**
+ * Seeks to a specified offset in the file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ * @param offset Offset from position to search.
+ * @param origin Position to start searching from.
+ *
+ * @return `0` on success.
+ */
+int io_seek(IOHANDLE io, int64_t offset, ESeekOrigin origin);
+
+/**
+ * Gets the current position in the file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return The current position, or `-1` on failure.
+ */
+int64_t io_tell(IOHANDLE io);
+
+/**
+ * Gets the total length of the file. Resets cursor to the beginning.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return The total size, or `-1` on failure.
+ */
+int64_t io_length(IOHANDLE io);
+
+/**
+ * Writes data from a buffer to a file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ * @param buffer Pointer to the data that should be written.
+ * @param size Number of bytes to write.
+ *
+ * @return Number of bytes written.
+ */
+unsigned io_write(IOHANDLE io, const void *buffer, unsigned size);
+
+/**
+ * Writes a platform dependent newline to a file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return `true` on success, `false` on failure.
+ */
+bool io_write_newline(IOHANDLE io);
+
+/**
+ * Closes a file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return `0` on success.
+ */
+int io_close(IOHANDLE io);
+
+/**
+ * Empties all buffers and writes all pending data.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return `0` on success.
+ */
+int io_flush(IOHANDLE io);
+
+/**
+ * Synchronize file changes to disk.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return `0` on success.
+ */
+int io_sync(IOHANDLE io);
+
+/**
+ * Checks whether an error occurred during I/O with the file.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return `0` on success, or non-`0` on error.
+ */
+int io_error(IOHANDLE io);
+
+/**
+ * Returns a handle for the standard input.
+ *
+ * @ingroup File-IO
+ *
+ * @return An @link IOHANDLE @endlink for the standard input.
+ *
+ * @remark The handle must not be closed.
+ */
+IOHANDLE io_stdin();
+
+/**
+ * Returns a handle for the standard output.
+ *
+ * @ingroup File-IO
+ *
+ * @return An @link IOHANDLE @endlink for the standard output.
+ *
+ * @remark The handle must not be closed.
+ */
+IOHANDLE io_stdout();
+
+/**
+ * Returns a handle for the standard error.
+ *
+ * @ingroup File-IO
+ *
+ * @return An @link IOHANDLE @endlink for the standard error.
+ *
+ * @remark The handle must not be closed.
+ */
+IOHANDLE io_stderr();
+
+/**
+ * Returns a handle for the current executable.
+ *
+ * @ingroup File-IO
+ *
+ * @return An @link IOHANDLE @endlink for the current executable.
+ */
+IOHANDLE io_current_exe();
+
+/**
+ * Wrapper for asynchronously writing to an @link IOHANDLE @endlink.
+ *
+ * @ingroup File-IO
+ */
+typedef struct ASYNCIO ASYNCIO;
+
+/**
+ * Wraps a @link IOHANDLE @endlink for asynchronous writing.
+ *
+ * @ingroup File-IO
+ *
+ * @param io Handle to the file.
+ *
+ * @return The handle for asynchronous writing.
+ */
+ASYNCIO *aio_new(IOHANDLE io);
+
+/**
+ * Locks the `ASYNCIO` structure so it can't be written into by
+ * other threads.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ */
+void aio_lock(ASYNCIO *aio);
+
+/**
+ * Unlocks the `ASYNCIO` structure after finishing the contiguous
+ * write.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ */
+void aio_unlock(ASYNCIO *aio);
+
+/**
+ * Queues a chunk of data for writing.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ * @param buffer Pointer to the data that should be written.
+ * @param size Number of bytes to write.
+ */
+void aio_write(ASYNCIO *aio, const void *buffer, unsigned size);
+
+/**
+ * Queues a newline for writing.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ */
+void aio_write_newline(ASYNCIO *aio);
+
+/**
+ * Queues a chunk of data for writing. The `ASYNCIO` struct must be
+ * locked using @link aio_lock @endlink first.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ * @param buffer Pointer to the data that should be written.
+ * @param size Number of bytes to write.
+ */
+void aio_write_unlocked(ASYNCIO *aio, const void *buffer, unsigned size);
+
+/**
+ * Queues a newline for writing. The `ASYNCIO` struct must be locked
+ * using @link aio_lock @endlink first.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ */
+void aio_write_newline_unlocked(ASYNCIO *aio);
+
+/**
+ * Checks whether errors have occurred during the asynchronous writing.
+ *
+ * Call this function regularly to see if there are errors. Call this
+ * function after @link aio_wait @endlink to see if the process of writing
+ * to the file succeeded.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ *
+ * @return `0` on success, or non-`0` on error.
+ */
+int aio_error(ASYNCIO *aio);
+
+/**
+ * Queues file closing.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ */
+void aio_close(ASYNCIO *aio);
+
+/**
+ * Wait for the asynchronous operations to complete.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ */
+void aio_wait(ASYNCIO *aio);
+
+/**
+ * Frees the resources associated with the asynchronous file handle.
+ *
+ * @ingroup File-IO
+ *
+ * @param aio Handle to the file.
+ */
+void aio_free(ASYNCIO *aio);
+
+/**
+ * @defgroup Network Networking
+ */
+
+/**
+ * @defgroup Network-General General networking
+ *
+ * @ingroup Network
+ */
+
+/**
+ * @ingroup Network-General
+ */
+extern const NETADDR NETADDR_ZEROED;
+
+#ifdef CONF_FAMILY_UNIX
+/**
+ * @ingroup Network-General
+ */
+typedef int UNIXSOCKET;
+/**
+ * @ingroup Network-General
+ */
+typedef struct sockaddr_un UNIXSOCKETADDR;
+#endif
+
+/**
+ * Initiates network functionality.
+ *
+ * @ingroup Network-General
+ *
+ * @remark You must call this function before using any other network functions.
+ */
+void net_init();
+
+/**
+ * Looks up the ip of a hostname.
+ *
+ * @ingroup Network-General
+ *
+ * @param hostname Host name to look up.
+ * @param addr The output address to write to.
+ * @param types The type of IP that should be returned.
+ *
+ * @return `0` on success.
+ */
+int net_host_lookup(const char *hostname, NETADDR *addr, int types);
+
+/**
+ * Compares two network addresses.
+ *
+ * @ingroup Network-General
+ *
+ * @param a Address to compare.
+ * @param b Address to compare to.
+ *
+ * @return `< 0` if address a is less than address b.
+ * @return `0` if address a is equal to address b.
+ * @return `> 0` if address a is greater than address b.
+ */
+int net_addr_comp(const NETADDR *a, const NETADDR *b);
+
+/**
+ * Compares two network addresses ignoring port.
+ *
+ * @ingroup Network-General
+ *
+ * @param a Address to compare.
+ * @param b Address to compare to.
+ *
+ * @return `< 0` if address a is less than address b.
+ * @return `0` if address a is equal to address b.
+ * @return `> 0` if address a is greater than address b.
+ */
+int net_addr_comp_noport(const NETADDR *a, const NETADDR *b);
+
+/**
+ * Turns a network address into a representative string.
+ *
+ * @ingroup Network-General
+ *
+ * @param addr Address to turn into a string.
+ * @param string Buffer to fill with the string.
+ * @param max_length Maximum size of the string.
+ * @param add_port Whether to add the port to the string.
+ *
+ * @remark The string will always be null-terminated.
+ */
+void net_addr_str(const NETADDR *addr, char *string, int max_length, bool add_port);
+
+/**
+ * Turns url string into a network address struct.
+ * The url format is tw-0.6+udp://{ipaddr}[:{port}]
+ * ipaddr: can be ipv4 or ipv6
+ * port: is a optional internet protocol port
+ *
+ * This format is used for parsing the master server, be careful before changing it.
+ *
+ * Examples:
+ *   tw-0.6+udp://127.0.0.1
+ *   tw-0.6+udp://127.0.0.1:8303
+ *
+ * @ingroup Network-General
+ *
+ * @param addr Address to fill in.
+ * @param string String to parse.
+ * @param host_buf Pointer to a buffer to write the host to
+ *                 It will include the port if one is included in the url
+ *                 It can also be set to `nullptr` then it will be ignored.
+ * @param host_buf_size Size of the host buffer or 0 if no host_buf pointer is given.
+ *
+ * @return `0` on success.
+ * @return `> 0` if the input wasn't a valid DDNet URL,
+ * @return `< 0` if the input is a valid DDNet URL but the host part was not a valid IPv4/IPv6 address
+ */
+int net_addr_from_url(NETADDR *addr, const char *string, char *host_buf, size_t host_buf_size);
+
+/**
+ * Checks if an address is local.
+ *
+ * @ingroup Network-General
+ *
+ * @param addr Address to check.
+ *
+ * @return `true` if the address is local, `false` otherwise.
+ */
+bool net_addr_is_local(const NETADDR *addr);
+
+/**
+ * Turns string into a network address.
+ *
+ * @ingroup Network-General
+ *
+ * @param addr Address to fill in.
+ * @param string String to parse.
+ *
+ * @return `0` on success.
+ */
+int net_addr_from_str(NETADDR *addr, const char *string);
+
+/**
+ * Make a socket not block on operations
+ *
+ * @ingroup Network-General
+ *
+ * @param sock The socket to set the mode on.
+ *
+ * @returns `0` on success.
+ */
+int net_set_non_blocking(NETSOCKET sock);
+
+/**
+ * Make a socket block on operations.
+ *
+ * @param sock The socket to set the mode on.
+ *
+ * @returns `0` on success.
+ */
+int net_set_blocking(NETSOCKET sock);
+
+/**
+ * If a network operation failed, the error code.
+ *
+ * @ingroup Network-General
+ *
+ * @returns The error code.
+ */
+int net_errno();
+
+/**
+ * If a network operation failed, the platform-specific error code and string.
+ *
+ * @ingroup Network-General
+ *
+ * @returns The error code and string combined into one string.
+ */
+std::string net_error_message();
+
+/**
+ * Determines whether a network operation would block.
+ *
+ * @ingroup Network-General
+ *
+ * @returns `0` if wouldn't block, `1` if would block.
+ */
+int net_would_block();
+
+/**
+ * Waits for a socket to have data available to receive up the specified timeout duration.
+ *
+ * @ingroup Network-General
+ *
+ * @param sock Socket to wait on.
+ * @param nanoseconds Timeout duration to wait.
+ *
+ * @return `1` if data was received within the timeout duration, `0` otherwise.
+ */
+int net_socket_read_wait(NETSOCKET sock, std::chrono::nanoseconds nanoseconds);
+
+/**
+ * @defgroup Network-UDP UDP Networking
+ *
+ * @ingroup Network
+ */
+
+/**
+ * Determine a socket's type.
+ *
+ * @ingroup Network-General
+ *
+ * @param sock Socket whose type should be determined.
+ *
+ * @return The socket type, a bitset of `NETTYPE_IPV4`, `NETTYPE_IPV6`, `NETTYPE_WEBSOCKET_IPV4`
+ *         and `NETTYPE_WEBSOCKET_IPV6`, or `NETTYPE_INVALID` if the socket is invalid.
+ */
+int net_socket_type(NETSOCKET sock);
+
+/**
+ * Creates a UDP socket and binds it to a port.
+ *
+ * @ingroup Network-UDP
+ *
+ * @param bindaddr Address to bind the socket to.
+ *
+ * @return On success it returns an handle to the socket. On failure it returns `nullptr`.
+ */
+NETSOCKET net_udp_create(NETADDR bindaddr);
+
 // 尽力为指定 UDP 目标创建客户端 QoS flow，失败时返回 nullptr。
 NETQOS net_qos_add_socket(NETSOCKET sock, const NETADDR *addr, ENetQosStatus *pStatus);
 void net_qos_remove_socket(NETQOS qos);
@@ -328,6 +951,19 @@ void cmdline_free(int argc, const char **argv);
  *
  * @remark Currently only supported on Windows.
  */
+enum class EShellExecuteWindowState
+{
+	/**
+	 * The process window is opened in the foreground and activated.
+	 */
+	FOREGROUND,
+
+	/**
+	 * The process window is opened in the background without focus.
+	 */
+	BACKGROUND,
+};
+
 /**
  * Executes a given file.
  *
@@ -428,4 +1064,23 @@ void os_locale_str(char *locale, size_t length);
  *
  * @ingroup Shell
  */
+class CCmdlineFix
+{
+	int m_Argc;
+	const char **m_ppArgv;
+
+public:
+	CCmdlineFix(int *pArgc, const char ***pppArgv)
+	{
+		cmdline_fix(pArgc, pppArgv);
+		m_Argc = *pArgc;
+		m_ppArgv = *pppArgv;
+	}
+	~CCmdlineFix()
+	{
+		cmdline_free(m_Argc, m_ppArgv);
+	}
+	CCmdlineFix(const CCmdlineFix &) = delete;
+};
+
 #endif

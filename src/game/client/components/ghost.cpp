@@ -13,7 +13,6 @@
 
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
-#include <game/client/components/qmclient/qm_item_culling_logic.h>
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
@@ -143,7 +142,7 @@ void CGhost::GetPath(char *pBuf, int Size, const char *pPlayerName, int Time) co
 	str_timestamp_format(aTimestamp, sizeof(aTimestamp), FORMAT_NOSPACE);
 
 	if(Time < 0)
-		str_format(pBuf, Size, "%s/%s_%s_%s_tmp_%d.gho", ms_pGhostDir, pMap, aPlayerName, aSha256, process_id());
+		str_format(pBuf, Size, "%s/%s_%s_%s_tmp_%d.gho", ms_pGhostDir, pMap, aPlayerName, aSha256, pid());
 	else
 		str_format(pBuf, Size, "%s/%s_%s_%d.%03d_%s_%s.gho", ms_pGhostDir, pMap, aPlayerName, Time / 1000, Time % 1000, aTimestamp, aSha256);
 }

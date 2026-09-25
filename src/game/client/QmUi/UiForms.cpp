@@ -14,6 +14,7 @@
 
 #include <game/client/lineinput.h>
 #include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon_morph.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
 #include <game/localization.h>
@@ -116,7 +117,7 @@ namespace ui_widget
 			return Active;
 		}
 
-		void DrawInputFieldIcon(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const ColorRGBA &Color, const int QmIcon = -1)
+		void DrawInputFieldIcon(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const ColorRGBA &Color, const int QmIcon = -1, const void *pAnimationId = nullptr)
 		{
 			const bool HasQmIcon = QmIcon >= 0 && QmIcon < static_cast<int>(EQmIcon::COUNT);
 			if((pIcon == nullptr && !HasQmIcon) || Rect.w <= 0.0f || Rect.h <= 0.0f)

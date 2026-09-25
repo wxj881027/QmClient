@@ -409,3 +409,29 @@ TEST(QmBindStatusHud, BuiltInTonesClassifyDummySwitches)
 	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_COPY, 0), EQmBindStatusTone::DANGER);
 	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_COPY, 1), EQmBindStatusTone::OK);
 }
+
+// 配色必须与默认四项文本同源：同一取值下的文本状态与语义色一一对应
+TEST(QmBindStatusHud, BuiltInTonesStayConsistentWithDefaultEntryTexts)
+{
+	const std::vector<SQmBindStatusEntry> &vDefaults = Defaults();
+	const SQmBindStatusEntry *pKey = FindEntry(vDefaults, "cl_dummy_resetonswitch");
+	const SQmBindStatusEntry *pHammer = FindEntry(vDefaults, "qm_deepfly_mode");
+	ASSERT_NE(pKey, nullptr);
+	ASSERT_NE(pHammer, nullptr);
+
+	EXPECT_EQ(ResolveOrEmpty(*pKey, 0), "Key Sticking: On");
+	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::KEY_STICKING, 0), EQmBindStatusTone::OK);
+	EXPECT_EQ(ResolveOrEmpty(*pKey, 1), "Key Sticking: Off");
+	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::KEY_STICKING, 1), EQmBindStatusTone::DANGER);
+	EXPECT_EQ(ResolveOrEmpty(*pKey, 2), "Key Sticking: Reset Self");
+	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::KEY_STICKING, 2), EQmBindStatusTone::WARNING);
+
+	EXPECT_EQ(ResolveOrEmpty(*pHammer, 0), "Hammer: Normal");
+	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, 0), EQmBindStatusTone::OK);
+	EXPECT_EQ(ResolveOrEmpty(*pHammer, 1), "Hammer: DF");
+	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, 1), EQmBindStatusTone::DANGER);
+	EXPECT_EQ(ResolveOrEmpty(*pHammer, 2), "Hammer: HDF");
+	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, 2), EQmBindStatusTone::WARNING);
+	EXPECT_EQ(ResolveOrEmpty(*pHammer, 3), "Hammer: Custom");
+	EXPECT_EQ(QmResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, 3), EQmBindStatusTone::WARNING);
+}

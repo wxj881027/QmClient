@@ -1055,22 +1055,6 @@ turkish = "En iyi"
 polish = "Najlepszy"
 
 [[message]]
-key = "Binds"
-[message.translations]
-simplified_chinese = "绑定"
-traditional_chinese = "綁定"
-japanese = "バインド"
-korean = "바인드"
-russian = "Привязки"
-german = "Tastenbelegungen"
-spanish = "Vinculaciones"
-french = "Touches liées"
-brazilian_portuguese = "Atalhos"
-portuguese = "Atalhos"
-turkish = "Bağlamalar"
-polish = "Przypisania"
-
-[[message]]
 key = "Bind key to execute a command or view keybindings"
 [message.translations]
 simplified_chinese = "绑定按键以执行命令或查看按键绑定"
@@ -1149,22 +1133,6 @@ brazilian_portuguese = "Mensagem de transmissão"
 portuguese = "Mensagem de transmissão"
 turkish = "Duyuru mesajı"
 polish = "Wiadomość ogólna"
-
-[[message]]
-key = "Commands"
-[message.translations]
-simplified_chinese = "指令"
-traditional_chinese = "指令"
-japanese = "コマンド"
-korean = "명령"
-russian = "Команды"
-german = "Befehle"
-spanish = "Comandos"
-french = "Commandes"
-brazilian_portuguese = "Comandos"
-portuguese = "Comandos"
-turkish = "Komutlar"
-polish = "Polecenia"
 
 [[message]]
 key = "c = Player position"
@@ -2591,6 +2559,22 @@ brazilian_portuguese = "Primeira página no console"
 portuguese = "Primeira página na consola"
 turkish = "Konsolda ilk sayfa"
 polish = "Pierwsza strona w konsoli"
+
+[[message]]
+key = "Focus mode"
+[message.translations]
+simplified_chinese = "专注模式"
+traditional_chinese = "專注模式"
+japanese = "フォーカスモード"
+korean = "집중 모드"
+russian = "Режим фокуса"
+german = "Fokusmodus"
+spanish = "Modo enfoque"
+french = "Mode focus"
+brazilian_portuguese = "Modo foco"
+portuguese = "Modo foco"
+turkish = "Odak modu"
+polish = "Tryb skupienia"
 
 [[message]]
 key = "Follow"
@@ -4703,22 +4687,6 @@ brazilian_portuguese = "Mouse"
 portuguese = "Rato"
 turkish = "Fare"
 polish = "Mysz"
-
-[[message]]
-key = "Move a friend category to a position"
-[message.translations]
-simplified_chinese = "将好友分类移动到指定位置"
-traditional_chinese = "將好友分類移動到指定位置"
-japanese = "フレンドカテゴリを指定した位置に移動"
-korean = "친구 카테고리를 지정한 위치로 이동"
-russian = "Переместить категорию друзей на указанную позицию"
-german = "Freundeskategorie an eine bestimmte Position verschieben"
-spanish = "Mover una categoría de amigos a una posición"
-french = "Déplacer une catégorie d'amis vers une position"
-brazilian_portuguese = "Mover uma categoria de amigos para uma posição"
-portuguese = "Mover uma categoria de amigos para uma posição"
-turkish = "Bir arkadaş kategorisini belirli bir konuma taşı"
-polish = "Przenieś kategorię znajomych na wskazaną pozycję"
 
 [[message]]
 key = "Move dummy left"

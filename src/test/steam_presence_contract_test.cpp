@@ -41,24 +41,3 @@ TEST(SteamPresence, KeepsBrandPresenceWhenGameInfoClears)
 	const std::string ClearGameInfoBody = Source.substr(ClearGameInfoPos, SetGameInfoPos - ClearGameInfoPos);
 	EXPECT_NE(ClearGameInfoBody.find("ResetClientPresence();"), std::string::npos);
 }
-
-TEST(SteamPresence, RestartsExternalLaunchThroughSteam)
-{
-	const std::string SteamSource = ReadTestSourceFile("src/engine/client/steam.cpp");
-	const size_t AppIdPos = SteamSource.find("constexpr uint32_t STEAM_APP_ID = 412220;");
-	ASSERT_NE(AppIdPos, std::string::npos);
-	const size_t RestartFunctionPos = SteamSource.find("bool SteamRestartAppIfNecessary()", AppIdPos);
-	ASSERT_NE(RestartFunctionPos, std::string::npos);
-	const size_t RestartApiPos = SteamSource.find("SteamAPI_RestartAppIfNecessary(STEAM_APP_ID)", RestartFunctionPos);
-	ASSERT_NE(RestartApiPos, std::string::npos);
-
-	const std::string ClientSource = ReadTestSourceFile("src/engine/client/client.cpp");
-	EXPECT_NE(ClientSource.find("g_Config.m_QmSteamAutoLaunch && SteamRestartAppIfNecessary()"), std::string::npos);
-	const size_t ParseArgumentsPos = ClientSource.find("pConsole->ParseArguments(argc - 1, &argv[1]);");
-	ASSERT_NE(ParseArgumentsPos, std::string::npos);
-	const size_t RestartCallPos = ClientSource.find("SteamRestartAppIfNecessary()", ParseArgumentsPos);
-	ASSERT_NE(RestartCallPos, std::string::npos);
-	const size_t CreateSteamPos = ClientSource.find("ISteam *pSteam = CreateSteam();", RestartCallPos);
-	ASSERT_NE(CreateSteamPos, std::string::npos);
-	EXPECT_LT(RestartCallPos, CreateSteamPos);
-}

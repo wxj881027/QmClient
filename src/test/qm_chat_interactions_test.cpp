@@ -11,11 +11,8 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
-#include <array>
-#include <atomic>
 #include <iterator>
 #include <string>
-#include <vector>
 
 namespace
 {

@@ -315,11 +315,11 @@ void CSpotifyIntegration::OnUpdate()
 		const std::string &SpDc = m_pImpl->m_LastSpDc;
 		if(Enabled && !SpDc.empty() && SpDc != m_pImpl->m_SpDc)
 		{
-			m_pImpl->m_SpDc = m_pImpl->m_LastSpDc;
+			m_pImpl->m_SpDc = SpDc;
 			m_pImpl->ResetTokenState();
 			m_pImpl->ResetSongData();
 		}
-		else if(!Enabled || m_pImpl->m_LastSpDc.empty())
+		else if(!Enabled || SpDc.empty())
 		{
 			m_pImpl->m_SpDc.clear();
 			m_pImpl->ResetTokenState();

@@ -88,6 +88,7 @@ cmake --build cmake-build-release --target run_tests
 - [qq-music-api](https://github.com/Rain120/qq-music-api)
 - [QQMusicApi](https://github.com/jsososo/QQMusicApi)
 - [LyricCapture](https://github.com/ElliottSilence/LyricCapture)
+- [QRCD](https://github.com/xmcp/QRCD)
 - [ntextcat](https://github.com/ivanakcheurov/ntextcat)
 - [LyricParser](https://github.com/HyPlayer/LyricParser)
 

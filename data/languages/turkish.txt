@@ -22,6 +22,9 @@
 %d items selected
 == %d öğe seçildi
 
+%d more cut segments
+== %d tane daha kesilmiş bölüm
+
 %d of %d server
 == %d / %d sunucu
 
@@ -517,6 +520,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == Varsayılan sohbet bağlantılarını ekler
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== HUD'da kukla tuş, çekiç, kontrol ve kopyalama durumunu ve kendi bind durum listesini gösterir.
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -2178,7 +2184,7 @@ Configure display and rendering
 == Görüntü ve işlemeyi yapılandır
 
 Configure Dream-only convenience features
-== Qm’e özel kolaylık özelliklerini yapılandır
+== Configure Dream-only convenience features
 
 Configure game and client preferences
 == Oyun ve istemci tercihlerini yapılandır
@@ -2305,9 +2311,6 @@ Connecting dummy
 
 Connecting to
 == Bağlanılıyor
-
-Connecting to voice server
-== Ses sunucusuna bağlanılıyor
 
 Connection disconnected
 == Bağlantı kesildi
@@ -2455,9 +2458,6 @@ Could not get server list from master server
 
 Could not load default touch controls from file. See local console for details.
 == Varsayılan dokunmatik kontroller dosyadan yüklenemedi. Ayrıntılar için yerel konsola bakın.
-
-Could not load new features
-== Yeni özellikler yüklenemedi
 
 Could not load sponsor QR code. Check the Base64 data
 == Sponsor QR kodu yüklenemedi. Base64 verilerini kontrol edin
@@ -2645,9 +2645,6 @@ Customize translate button and menu colors
 Customize vote display and interaction
 == Customize vote display and interaction
 
-Cut end: %s
-== Bitiş: %s
-
 Cut interval
 == Kesim aralığı
 
@@ -2656,9 +2653,6 @@ Cut length
 
 Cut segments
 == Kesim bölümleri
-
-Cut start: %s
-== Başlangıç: %s
 
 Cute:
 == Sevimli:
@@ -3212,9 +3206,6 @@ Door Laser Outline Color
 Door laser outline color
 == Kapı lazer dış çizgi rengi
 
-Double-click: left applies to main, right applies to dummy
-== Çift tıklama: sol oyuncuya, sağ dummy'ye uygular
-
 Download community skins
 == Topluluk görünümlerini indir
 
@@ -3386,8 +3377,8 @@ Dummy is currently connected.
 Dummy jump
 == Kukla zıplaması
 
-Dummy key/hammer/control/copy status switches
-== Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları
+Dummy key/hammer/control/copy status switches and custom bind status list
+== Tuş kilidi/çekiç/dummy kontrolü/dummy senkronizasyonu durum anahtarları ve özel bind durumu listesi
 
 Dummy marking color
 == Kukla işaret rengi
@@ -3584,6 +3575,9 @@ Emoticon shadow
 Emoticons
 == İfadeler
 
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== Boş: yerleşik 4 girdi. Biçim: var|0=Off|1=On; var|Text
+
 enable
 == etkinleştir
 
@@ -3646,6 +3640,9 @@ Enable chat with all/team mode
 
 Enable cheats for your current team's run, but you can't earn a rank
 == Mevcut takımının koşusu için hileleri etkinleştir, ancak sıralama kazanamazsın
+
+Enable client stutter diagnostics at startup
+== Başlangıçta istemci takılma tanılamasını etkinleştir
 
 Enable colored console output
 == Renkli konsol çıktısını etkinleştir
@@ -3875,6 +3872,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == Cilt değiştirme animasyonunu etkinleştir
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== Skin geçiş animasyonunu aç, ardından tür, menzil, süre ve yumuşatmayı seç.
+
 Enable smooth cinematic camera while free spectating
 == Serbest izlerken akıcı sinematik kamerayı etkinleştir
 
@@ -3962,14 +3962,17 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == Savaş listesini etkinleştir
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== Silah değiştirme veya şarjör doldurma animasyonunu aç, ardından menzil, süre, dönüş ve yumuşatmayı ayarla.
+
 Enable word filter list
 == Kelime filtresi listesini etkinleştir
 
 Enable Zen Mode
-== Zen Modunu etkinleştir
+== Zen Modu’nu etkinleştir
 
 Enable Zen mode
-== Zen Modunu etkinleştir
+== Zen modunu etkinleştir
 
 Enable/disable infinite hook.
 == Sınırsız kancayı etkinleştir/kapat
@@ -4001,9 +4004,6 @@ Endpoint
 Endpoint (optional)
 == Uç nokta (isteğe bağlı)
 
-Enhanced rendering
-== Gelişmiş işleme
-
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice yazın veya yeniden başlatın, aksi takdirde tüm takım 60 saniye içinde öldürülecek
 
@@ -4012,6 +4012,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == Şifre Gir
+
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== Sponsor kodunu gir ve "Kullan" düğmesine bas, ardından unvanı yaz ve "Kaydet"e bas. Tek bir takma ada bağlamak için "Yalnızca bu takma adla göster" seçeneğini işaretle.
 
 Enter Username
 == Kullanıcı Adı Gir
@@ -4042,6 +4045,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
+
+Entry: %s
+== Konum: %s
 
 Erase items on the in game background
 == Oyun arka planındaki öğeleri sil
@@ -4781,6 +4787,9 @@ Gives you infinite jump
 Glitch
 == Hata
 
+Global card
+== Küresel kart
+
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 == Genel kart sıralama (biçim stableId|tab|col|order; noktalı virgülle ayrılmış)
 
@@ -4931,9 +4940,6 @@ Has save
 Has unread news
 == Okunmamış haber var
 
-HD icons (MSDF)
-== HD simgeler (MSDF)
-
 HDF
 == HDF
 
@@ -4956,19 +4962,19 @@ Hi!
 == Merhaba!
 
 Hide basic system info (join, version, rules) in Zen mode
-== Zen Modunda temel sistem bilgisini gizle
+== Zen modunda giriş, sürüm ve kurallar gibi temel sistem mesajlarını gizle
 
 Hide chat messages from players marked as enemies
 == Düşman olarak işaretlenen oyuncuların sohbet mesajlarını gizle
 
 Hide death/respawn effects
-== Ölüm/yeniden doğuş efektlerini gizle
+== Ölüm/yeniden doğma efektlerini gizle
 
 Hide death/respawn effects in Zen Mode
-== Zen Modunda ölüm/yeniden doğuş efektlerini gizle
+== Zen modunda ölüm/doğma efektlerini gizle
 
 Hide direction in Zen mode
-== Zen Modunda yön göstergesini gizle
+== Zen modunda yönü gizle
 
 Hide direction indicators
 == Yön göstergelerini gizle
@@ -4977,16 +4983,16 @@ Hide Echo messages
 == Echo mesajlarını gizle
 
 Hide Echo messages in Zen mode
-== Zen Modunda Echo mesajlarını gizle
+== Zen modunda Echo mesajlarını gizle
 
 Hide explosion effects
 == Patlama efektlerini gizle
 
 Hide freeze effects
-== Dondurma efektlerini gizle
+== Donma efektlerini gizle
 
 Hide freeze effects in Zen Mode
-== Zen Modunda donma efektlerini gizle
+== Zen modunda donma efektlerini gizle
 
 Hide ghosts of frozen players
 == Donmuş oyuncuların hayaletlerini gizle
@@ -4998,19 +5004,19 @@ Hide hammer effects
 == Çekiç efektlerini gizle
 
 Hide hammer effects in Zen Mode
-== Zen Modunda çekiç efektlerini gizle
+== Zen modunda çekiç efektlerini gizle
 
 Hide helper lines in Gores mode
 == Gores modunda yardımcı çizgileri gizle
 
 Hide helper lines in Zen mode
-== Zen Modunda yardım çizgilerini gizle
+== Zen modunda yardımcı çizgileri gizle
 
 Hide HUD
 == HUD'u gizle
 
 Hide HUD in Zen mode
-== Zen Modunda HUD'u gizle
+== Zen modunda HUD'u gizle
 
 Hide indicator for tees on your screen
 == Ekranındaki teeler için göstergeyi gizle
@@ -5019,28 +5025,28 @@ Hide input emoticon
 == Giriş ifadesini gizle
 
 Hide join/version prompts
-== Katılım/sürüm bildirimlerini gizle
+== Katılma/sürüm uyarılarını gizle
 
 Hide jump effects
 == Zıplama efektlerini gizle
 
 Hide jump effects in Zen Mode
-== Zen Modunda zıplama efektlerini gizle
+== Zen modunda zıplama efektlerini gizle
 
 Hide kill and finish messages in Zen mode
-== Zen Modunda bitiş/öldürme mesajlarını gizle
+== Zen modunda öldürme ve bitirme mesajlarını gizle
 
 Hide kill/finish messages
-== Ölüm/bitiriş mesajlarını gizle
+== Öldürme/bitirme mesajlarını gizle
 
 Hide map progress
 == Harita ilerlemesini gizle
 
 Hide map progress bar in Zen mode
-== Zen Modunda harita ilerleme çubuğunu gizle
+== Zen modunda harita ilerleme çubuğunu gizle
 
 Hide nameplates
-== İsim plakalarını gizle
+== İsim levhalarını gizle
 
 Hide names
 == İsimleri gizle
@@ -5058,22 +5064,22 @@ Hide player messages
 == Oyuncu mesajlarını gizle
 
 Hide player messages in Zen mode
-== Zen Modunda oyuncu mesajlarını gizle
+== Zen modunda oyuncu mesajlarını gizle
 
 Hide player name plates in Zen Mode
-== Zen Modunda isim plakalarını gizle
+== Zen modunda oyuncu isim tabelalarını gizle
 
 Hide player names in Zen Mode
-== Zen Modunda oyuncu adlarını gizle
+== Zen modunda oyuncu isimlerini gizle
 
 Hide projectile effects in Zen Mode
-== Zen Modunda mermi efektlerini gizle
+== Zen modunda topçu efektlerini gizle
 
 Hide scoreboard
 == Skor tablosunu gizle
 
 Hide scoreboard in Zen mode
-== Zen Modunda skor tablosunu gizle
+== Zen modunda skor tablosunu gizle
 
 Hide sensitive info like /save password
 == /save şifresi gibi hassas bilgileri gizle
@@ -5082,10 +5088,10 @@ Hide server information on join
 == Girerken sunucu bilgisini gizle
 
 Hide server prompt notifications
-== Sunucu bildirimlerini gizle
+== Sunucu uyarı bildirimlerini gizle
 
 Hide server tip notifications (including notification bar) in Zen mode
-== Zen Modunda sunucu ipucu bildirimlerini gizle
+== Zen modunda sunucu ipucu bildirimlerini (bildirim çubuğu dahil) gizle
 
 Hide Settings Tabs
 == Ayarlar Sekmelerini Gizle
@@ -5106,13 +5112,13 @@ Hide typing emoji during input
 == Yazarken Yazma İfadesini Gösterme
 
 Hide UI for focused gameplay
-== Odaklı oyun için arayüzü gizle
+== Odaklanmış oyun için arayüzü gizle
 
 Hide weapon fire effects in Zen Mode
-== Zen Modunda silah ateşleme efektlerini gizle
+== Zen modunda silah alev efektlerini gizle
 
 Hide weapon muzzle flashes
-== Silah namlu parlamalarını gizle
+== Silah namlu flaşlarını gizle
 
 High Detail
 == Yüksek Detay
@@ -5420,9 +5426,6 @@ Indicator size
 Indicator transparency
 == Gösterge şeffaflığı
 
-Inferno
-== Cehennem ateşi
-
 Infinite hook for super players on/off.
 == Süper oyuncular için sonsuz kanca açık/kapalı.
 
@@ -5497,6 +5500,9 @@ Insane
 
 Installing update. Please wait...
 == Güncelleme yükleniyor. Lütfen bekleyin...
+
+Instant zoom reverse
+== Zoom yönünü anında çevir
 
 Interface
 == Arayüz
@@ -6122,6 +6128,12 @@ Local game mode statistics
 Local only
 == Yalnızca yerel
 
+Local particle effects
+== Yerel parçacık efektleri
+
+Local particles: show particles behind own Tee (e.g. freeze snow)
+== Yerel parçacıklar: Kendi Tee'nizin arkasına düşen parçacıkları göster (donma kar taneleri gibi)
+
 Local saves
 == Yerel kayıtlar
 
@@ -6368,8 +6380,14 @@ Margin when notification is docked
 Mark demo
 == Demoyu işaretle
 
+Mark the beginning of a cut (right click to reset)
+== Bir kesimin başlangıcını işaretle (sağ tık sıfırlar)
+
 Mark the beginning of a demo cut
 == Bir demo kesintisinin başlangıcını işaretle
+
+Mark the end of a cut (right click to reset)
+== Bir kesimin sonunu işaretle (sağ tık sıfırlar)
 
 Mark the end of a demo cut
 == Bir demo kesintisinin sonunu işaretle
@@ -6533,9 +6551,6 @@ Menu camera rotation time in seconds
 Menu camera speed
 == Menü kamera hızı
 
-Menu Gaussian blur pipeline
-== Menü gauss bulanıklık hattı
-
 Menu main panel background color
 == Menü ana panel arka plan rengi
 
@@ -6559,6 +6574,9 @@ Merge consecutive identical echo messages within this window in milliseconds (0 
 
 Merge consecutive identical player messages within 2 seconds
 == 2 saniye içindeki art arda gelen aynı oyuncu mesajlarını birleştir
+
+Merges chat messages repeated within a short time into a single line.
+== Kısa sürede tekrarlanan sohbet mesajlarını tek satırda birleştirir.
 
 Message color
 == Mesaj rengi
@@ -6747,10 +6765,10 @@ Mute
 == Sessize al
 
 Mute death/respawn sound in Zen Mode
-== Zen Modunda ölüm/yeniden doğuş sesini kapat
+== Zen modunda ölüm/doğma seslerini sustur
 
 Mute death/respawn sounds
-== Ölüm/yeniden doğuş seslerini sustur
+== Ölüm/yeniden doğma seslerini sessize al
 
 Mute emoticons
 == İfadeleri sessize al
@@ -6759,19 +6777,19 @@ Mute flag sounds
 == Bayrak seslerini sustur
 
 Mute hammer sound in Zen mode
-== Zen Modunda çekiç sesini kapat
+== Zen modunda çekiç seslerini sustur
 
 Mute hammer sounds
-== Çekiç seslerini sustur
+== Çekiç seslerini sessize al
 
 Mute hook sound
 == Kanca sesini sustur
 
 Mute jump sound in Zen Mode
-== Zen Modunda zıplama sesini kapat
+== Zen modunda zıplama seslerini sustur
 
 Mute jump sounds
-== Zıplama seslerini sustur
+== Zıplama seslerini sessize al
 
 Mute map sounds
 == Harita seslerini sustur
@@ -7814,6 +7832,9 @@ Pet Skin:
 Pick result: %s
 == Seçim sonucu: %s
 
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== Müzik uygulamanla eşleşen kaynağı seç ve çalmaya devam et; sözler otomatik olarak takip eder.
+
 Pickup range
 == Toplama aralığı
 
@@ -8035,6 +8056,9 @@ Players weapons has no affect on others
 
 Playing effects
 == Oynatma efektleri
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== Çekiçle çalınanlar dahil, skinin değiştiğinde bir animasyon oynatır.
 
 Please add a valid cut first
 == Lütfen önce geçerli bir kesim ekleyin
@@ -8363,9 +8387,6 @@ Pulse speed
 Pulse strength
 == Atım gücü
 
-Pure Vulkan fallback
-== Şu an: sade Vulkan
-
 Push radius
 == İtme yarıçapı
 
@@ -8449,9 +8470,6 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi Renk animasyonu interpolasyonu: 0=sRGB doğrusal 1=OKLAB algısal düzgün
-
-QmVulkan active
-== Şu an: QmVulkan etkin
 
 QQ group: 1076765929 (click to copy)
 == QQ grubu: 1076765929 (kopyalamak için tıklayın)
@@ -8726,6 +8744,9 @@ Redeem
 Redeem your code and customize your title
 == Kodunu kullan ve unvanını özelleştir
 
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== Özel bir unvan açmak için sponsor kodunu kullan. Unvan sohbette ve isim etiketinde görünür.
+
 Reduce antiping and player prediction when frozen
 == Donduğunda antiping ve oyuncu tahminini azalt
 
@@ -8818,6 +8839,12 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == Moderatör için uzak konsol şifresi (sınırlı erişim)
+
+Remote particle effects
+== Uzak parçacık efektleri
+
+Remote particles: sync and render other players via central server (requires both local+remote enabled)
+== Uzaktaki parçacıklar: Merkez sunucu aracılığıyla diğer oyuncuları senkronize et ve işle (karşı tarafın yerel+uzak seçeneğini açması gerekir)
 
 Remove
 == Kaldır
@@ -9250,6 +9277,9 @@ Retry remote stats
 
 Retrying…
 == Yeniden deneniyor…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== Karşı zoom tuşuna basınca yönü anında çevir (0=özgün yumuşak zoom korunur)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -9859,12 +9889,6 @@ Set color
 
 Set current demo speed
 == Geçerli demo hızını ayarla
-
-Set cut end at current position (O, right click to reset)
-== Kesit bitişini geçerli konuma ayarla (O, sıfırlamak için sağ tık)
-
-Set cut start at current position (I, right click to reset)
-== Kesit başlangıcını geçerli konuma ayarla (I, sıfırlamak için sağ tık)
 
 Set ddrace team for a player
 == Bir oyuncu için ddrace takımı ayarla
@@ -10853,6 +10877,9 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == r komutunun yardımını gösterir, boş bırakılırsa genel yardım
 
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== NetEase Cloud Music, Soda Music, Kugou ve QQ Music'ten şarkı sözlerini alıp dinamik adada gösterir.
+
 Shows the credits of the DDNet mod
 == DDNet modunun jeneriklerini gösterir
 
@@ -10991,6 +11018,9 @@ Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
 == Skin geçiş animasyonu türü (0=Gölge patlaması 1=Yumuşak geçiş 2=Sola kaydırma 3=Döndürme patlaması 4=Aydınlık-karanlık geçişi 5=Hata titremesi 6=Esnek ölçekleme)
 
+Skin transition
+== Görünüm geçişi
+
 Skin transition animation
 == Görünüm geçiş animasyonu
 
@@ -11059,9 +11089,6 @@ Smooth Dynamic Camera
 
 Smooth fade
 == Yumuşak geçiş
-
-Smooth island (SDF)
-== Dynamic Island pürüzsüz (SDF)
 
 Smooth other players' predicted movement
 == Diğer oyuncuların tahmini hareketini yumuşat
@@ -11515,6 +11542,9 @@ Switch failed
 
 Switch interval
 == Geçiş aralığı
+
+Switch on the status rows you need, then list the binds you want to watch.
+== Gereken durum anahtarlarını aç, ardından izlemek istediğin bind'leri listeye ekle.
 
 Switch opacity
 == Değiştirme opaklığı
@@ -12491,6 +12521,9 @@ Tune variable to value
 Tune variable to value or show current value
 == Değişkeni değere ayarla veya geçerli değeri göster
 
+Turn on "Message merging" in Dream Features.
+== "Dream Features" bölümünde "Message merging" seçeneğini aç.
+
 Tutorial
 == Eğitim
 
@@ -12517,6 +12550,9 @@ UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or netwo
 
 UDP seems to be filtered.
 == UDP filtrelenmiş görünüyor.
+
+UDP socket not open
+== UDP soketi açık değil
 
 UI color
 == Arayüz rengi
@@ -12770,6 +12806,9 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == Skin indirmek için URL
 
+Usage: %s
+== Kullanım: %s
+
 Usage: %s %s
 == Kullanım: %s %s
 
@@ -12826,9 +12865,6 @@ Use default voice input device
 
 Use default voice output device
 == Varsayılan ses çıkış cihazını kullan
-
-Use each Tee trail style's own palette instead of the trail color mode
-== Tee izi renk modu yerine her stilin kendi paletini kullan
 
 Use embedded HUD progress bar
 == Gömülü HUD ilerleme çubuğunu kullan
@@ -13310,6 +13346,9 @@ Weapon switch easing
 Weapon switch rotation
 == Silah değiştirme dönüşü
 
+Weapon Trajectory
+== Silah Yörüngesi
+
 Weapon trajectory
 == Silah yörüngesi
 
@@ -13442,6 +13481,9 @@ Width of friends column in server browser
 Width of latency column in server browser
 == Sunucu tarayıcısında gecikme sütununun genişliği
 
+Width of map column in server browser
+== Sunucu tarayıcısında harita sütununun genişliği
+
 Width of others' hook collision line
 == Başkalarının kanca çarpışma çizgisi genişliği
 
@@ -13477,6 +13519,9 @@ Word filter action: 0=replace matching words, 1=hide entire message
 
 Write local console contents to a text file
 == Yerel konsol içeriğini bir metin dosyasına yaz
+
+Write performance debug logs to dedicated file
+== Performans hata ayıklama günlüklerini özel bir dosyaya yaz
 
 Write remote console contents to a text file
 == Uzak konsol içeriğini bir metin dosyasına yaz
@@ -13804,6 +13849,9 @@ Your team was unlocked by an unlock team tile
 
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == Zaman aşımı kodunuz ayarlandı. 0.7 istemcileri zaman aşımında teelerini geri alamaz; ancak bir 0.6 istemcisi teenizi alabilir
+
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== Silah değiştirirken kayarak dönerek girer, şarjör doldururken takla atar.
 
 z = Zoom
 == z = Yakınlaştırma

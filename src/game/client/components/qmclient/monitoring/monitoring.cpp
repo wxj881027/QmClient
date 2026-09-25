@@ -18,7 +18,33 @@
 #include <chrono>
 #include <cinttypes>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cwchar>
 #include <vector>
+
+#if defined(CONF_FAMILY_UNIX)
+#include <sys/resource.h>
+#endif
+
+#if defined(CONF_PLATFORM_MACOS)
+#include <mach/mach.h>
+#endif
+
+#if defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+
+#define IStorage IStorageCOM
+#include <dxgi1_4.h>
+#include <pdh.h>
+#include <pdhmsg.h>
+#include <psapi.h>
+#undef IStorage
+
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "pdh.lib")
+#pragma comment(lib, "psapi.lib")
+#endif
 
 namespace
 {

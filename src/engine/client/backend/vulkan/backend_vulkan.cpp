@@ -1211,9 +1211,6 @@ private:
 	std::vector<uint64_t> m_vImageLastFrameCheck;
 	bool m_CaptureBackbufferProbeDone = false;
 
-	// 背板捕获诊断只打一次（见 Cmd_RenderTarget_CaptureBackbuffer）。
-	bool m_CaptureBackbufferProbeDone = false;
-
 	uint32_t m_LastPresentedSwapChainImageIndex;
 
 	std::vector<SBufferObjectFrame> m_vBufferObjects;
@@ -7569,22 +7566,6 @@ public:
 		return SupportsRenderTargetReadback() && m_GaussianBlurPipelineValid;
 	}
 
-	[[nodiscard]] static bool IsEightBitRgbaFormat(VkFormat Format)
-	{
-		return Format == VK_FORMAT_R8G8B8A8_UNORM || Format == VK_FORMAT_R8G8B8A8_SRGB ||
-		       Format == VK_FORMAT_B8G8R8A8_UNORM || Format == VK_FORMAT_B8G8R8A8_SRGB;
-	}
-
-	// 背板捕获（灵动岛 / 亚克力背景模糊）的交换链格式判据。
-	// 与截图取回路径的区别：那边只认 UNORM，因为要走「RGBA 线性镜像」中转；
-	// 这里只是把交换链图像当作 blit 源，SRGB 变体同样合法（vkCmdBlitImage 在
-	// SRGB 源与 UNORM 目标之间做颜色空间转换），所以不能再把它排除在外，
-	// 否则 SRGB 交换链的机器上整个背景模糊都会静默失效。
-	[[nodiscard]] static bool IsBackbufferCaptureFormatSupported(VkFormat Format)
-	{
-		return IsEightBitRgbaFormat(Format);
-	}
-
 	[[nodiscard]] bool SupportsBackbufferCapture() const
 	{
 		// 截图路径只验证过单采样交换链；多采样附件虽可恢复，但读取流程仍保持保守限制。
@@ -10453,6 +10434,7 @@ public:
 	void StartCommands(size_t CommandCount, size_t EstimatedRenderCallCount) override
 	{
 		m_CommandsInPipe = CommandCount;
+		m_RenderCallsInPipe = EstimatedRenderCallCount;
 		m_CurCommandInPipe = 0;
 		m_RenderScheduler.StartCommands(m_ThreadCount, EstimatedRenderCallCount);
 		m_FrameProfileStats.m_CommandCount += CommandCount;
@@ -10463,6 +10445,7 @@ public:
 	{
 		FinishRenderThreads();
 		m_CommandsInPipe = 0;
+		m_RenderCallsInPipe = 0;
 	}
 
 	/****************

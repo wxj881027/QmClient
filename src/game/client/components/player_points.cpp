@@ -10,7 +10,7 @@
 
 #include <game/client/gameclient.h>
 
-#include <utility>
+#include <cstring>
 
 namespace
 {
@@ -145,7 +145,6 @@ void CPlayerPoints::StartRequest(const char *pPlayerName)
 	pRequest->MaxResponseSize(1024 * 1000);
 	pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
 	pRequest->LogProgress(HTTPLOG::FAILURE);
-	pRequest->MaxResponseSize(MAX_RESPONSE_BYTES);
 
 	// 先把缓存状态标记为请求中。
 	std::string Name(pPlayerName);

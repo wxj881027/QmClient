@@ -133,7 +133,7 @@ namespace qm_card_registry
 			{"qm:pie_menu", "function", ECardColumn::Left, 16, "Pie menu", "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan function", "Quick action menu for players"},
 			{"qm:emoticons", "function", ECardColumn::Left, 18, "Emoticons", "表情 biaoqing 大表情 dabiaoqing 发射表情 fashe biaoqing 表情发射 launcher launch super emote 按键绑定 anjian bangding 他人显示 taren xianshi function", "Large emoticons and launched emoticons"},
 			{"qm:map_upload", "function", ECardColumn::Right, 21, "Map upload", "上传地图 shangchuan ditu 测图 cetu map upload test server function", "Upload a saved map to the public test server"},
-			{"qm:steam", "function", ECardColumn::Right, 22, "Steam integration", "Steam 启动 qidong 自动启动 zidong qidong 主窗口 zhuchuangkou 不启动游戏 buqidong youxi 外部接管 waibu jieguan 时长 shichang 记录 jilu appid function", "Automatically launch Steam and hand over external launches when enabled"},
+			{"qm:steam", "function", ECardColumn::Right, 22, "Steam integration", "Steam 启动 qidong 自动启动 zidong qidong 主窗口 zhuchuangkou 不启动游戏 buqidong youxi function", "Automatically launch Steam when the client is started externally"},
 			{"qm:favorite_maps", "function", ECardColumn::Right, 6, "Favorite maps", "收藏地图 shoucang ditu favorite maps 地图管理 ditu guanli 收藏 shoucang 取消收藏 quxiao shoucang function", "Your favorite map manager"},
 			{"qm:hj_assist", "function", ECardColumn::Right, 7, "HJ assist", "hj辅助 hj fuzhu 解冻辅助 jiedong fuzhu 自动取消旁观 quxiao pangguan 自动切换 qiehuan tee 自动关闭聊天 guanbi liaotian function", "Configure HJ unfreeze assistance"},
 			{"qm:player_stats", "hud", ECardColumn::Right, 4, "Player stats", "玩家统计 wanjia tongji player stats gores hud 显示统计 xianshi tongji 进服重置 jinfu chongzhi", "Player stats and info display"},
@@ -169,7 +169,7 @@ namespace qm_card_registry
 			{"tclient:tile-outlines", "tclient", ECardColumn::Right, 6, "Tile outlines", "tile outlines tclient", "Show configurable outlines around map tiles"},
 			{"tclient:ghost-tools", "tclient", ECardColumn::Left, 7, "Ghost tools", "ghost tools tclient", "Configure ghost recording and playback tools"},
 			{"tclient:rainbow", "tclient", ECardColumn::Right, 7, "Rainbow", "rainbow tclient", "Customize animated rainbow colors"},
-			{"tclient:tee-trails", "tclient", ECardColumn::Left, 8, "Tee trails", "tee trails tclient trail style effect black flash exo spirit void inferno", "Adjust trails rendered behind Tees"},
+			{"tclient:tee-trails", "tclient", ECardColumn::Left, 8, "Tee trails", "tee trails tclient", "Adjust trails rendered behind Tees"},
 			{"tclient:background-draw", "tclient", ECardColumn::Right, 8, "Background draw", "background draw tclient", "Control custom background drawing"},
 			{"tclient:finish-name", "tclient", ECardColumn::Left, 9, "Finish name", "finish name tclient", "Format player names after a finish"},
 			// 拆分后的字体与光标卡片；保留旧 stable id 作为迁移兼容项。

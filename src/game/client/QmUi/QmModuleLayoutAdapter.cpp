@@ -88,7 +88,6 @@ namespace qm_module
 		{
 		case EQmModuleId::Info: return "qm:info";
 		case EQmModuleId::ChatBubble: return "qm:chat_bubble";
-		case EQmModuleId::FocusMode: return "qm:focus_mode";
 		case EQmModuleId::GoresActor: return "qm:gores_actor";
 		case EQmModuleId::Gores: return "qm:gores";
 		case EQmModuleId::SoloSplit: return "qm:solo_split";
@@ -96,7 +95,6 @@ namespace qm_module
 		case EQmModuleId::KeyBinds: return "qm:key_binds";
 		case EQmModuleId::MiniFeatures: return "qm:mini_features";
 		case EQmModuleId::JumpHint: return "qm:jump_hint";
-		case EQmModuleId::SkinAppearance: return "qm:skin_appearance";
 		case EQmModuleId::SkinTransition: return "qm:skin_transition";
 		case EQmModuleId::SkinAppearance: return "qm:skin_appearance";
 		case EQmModuleId::CameraView: return "qm:camera_view";
@@ -109,7 +107,6 @@ namespace qm_module
 		case EQmModuleId::TranslateUi: return "qm:translate_ui";
 		case EQmModuleId::QiaFen: return "qm:qiafen"; // 持久化 key，非 UI 名 keyword_reply
 		case EQmModuleId::PieMenu: return "qm:pie_menu";
-		case EQmModuleId::Emoticons: return "qm:emoticons";
 		case EQmModuleId::EntityOverlay: return "qm:entity_overlay";
 		case EQmModuleId::Laser: return "qm:laser";
 		case EQmModuleId::PlayerStats: return "qm:player_stats";
@@ -637,11 +634,6 @@ namespace qm_module
 			str_append(pOut, ";", OutSize);
 		}
 		return true;
-	}
-
-	void RemoveLegacyZenModeLayoutConfig()
-	{
-		// 禅模式已恢复：布局中的 focus_mode / qm:focus_mode 条目合法保留，不再强制清除。
 	}
 
 	bool MigrateQmLayoutToGlobalCardOrder(const std::vector<SQmModuleEntry> &vDefaults)

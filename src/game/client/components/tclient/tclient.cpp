@@ -2091,8 +2091,8 @@ void CTClient::OnUpdate()
 	UpdateMapHistorySession();
 	MaybeSaveMapCategoryCache();
 	MaybeSaveMapNotes();
-	ApplyGoresFastInputLink();
 	ApplyFocusModeEffects();
+	ApplyGoresFastInputLink();
 }
 
 void CTClient::OnRender()
@@ -2654,7 +2654,7 @@ void CTClient::CheckFriendOnline()
 		m_FriendAutoRefreshNext = 0.0f;
 	}
 
-	if(!Enabled || GameClient()->Friends()->NumFriends() <= 0)
+	if(!Enabled)
 		return;
 
 	IServerBrowser *pServerBrowser = ServerBrowser();
@@ -2670,58 +2670,7 @@ void CTClient::CheckFriendOnline()
 		m_FriendAutoRefreshNext = 0.0f;
 	}
 
-	if(m_FriendOnlineRefreshPending && !pServerBrowser->IsGettingServerlist())
-	{
-		m_FriendOnlineRefreshPending = false;
-		if(!pServerBrowser->IsServerlistError())
-		{
-			// 一次刷新只提交一次观测；同帧收集，避免分帧索引混入下一代名单。
-			const bool IgnoreClan = IgnoreClanSetting != 0;
-			std::unordered_set<std::string> FriendKeys;
-			std::unordered_set<std::string> FriendNames;
-			std::string Key;
-			for(int Index = 0; Index < GameClient()->Friends()->NumFriends(); ++Index)
-			{
-				const CFriendInfo *pFriend = GameClient()->Friends()->GetFriend(Index);
-				if(pFriend->m_aName[0] == '\0')
-					continue;
-				BuildFriendNotifyKey(pFriend->m_aName, pFriend->m_aClan, IgnoreClan, Key);
-				FriendKeys.insert(Key);
-				FriendNames.insert(pFriend->m_aName);
-			}
-
-			std::vector<qm_friend_notify::CFriend> vCurrentFriends;
-			std::unordered_set<std::string> AvailableServers;
-			for(int Index = 0; Index < pServerBrowser->NumHttpServers(); ++Index)
-			{
-				const CServerInfo *pEntry = pServerBrowser->HttpGet(Index);
-				if(!pEntry || pEntry->m_NumAddresses <= 0)
-					continue;
-				char aAddress[NETADDR_MAXSTRSIZE];
-				net_addr_str(&pEntry->m_aAddresses[0], aAddress, sizeof(aAddress), true);
-				if(pEntry->m_NumReceivedClients == pEntry->m_NumClients)
-					AvailableServers.insert(aAddress);
-				for(int ClientIndex = 0; ClientIndex < pEntry->m_NumReceivedClients; ++ClientIndex)
-				{
-					const auto &Client = pEntry->m_aClients[ClientIndex];
-					if(Client.m_aName[0] == '\0' || FriendNames.find(Client.m_aName) == FriendNames.end())
-						continue;
-					BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
-					// 同名玩家改战队时继续跟踪在服状态，避免改回后被误判为上线。
-					vCurrentFriends.push_back({Key, Client.m_aName, pEntry->m_aMap, aAddress, FriendKeys.find(Key) != FriendKeys.end()});
-				}
-			}
-
-			for(const auto &Friend : m_FriendOnlineTracker.Update(vCurrentFriends, AvailableServers))
-			{
-				char aBuf[256];
-				const char *pMap = Friend.m_Map.empty() ? Localize("Unknown") : Friend.m_Map.c_str();
-				str_format(aBuf, sizeof(aBuf), Localize("Your friend %s is online and currently on map %s!"), Friend.m_Name.c_str(), pMap);
-				GameClient()->m_Chat.Echo(aBuf);
-			}
-		}
-	}
-
+	const float RefreshInterval = maximum(5.0f, (float)g_Config.m_QmFriendOnlineRefreshSeconds);
 	if(Now >= m_FriendAutoRefreshNext && !pServerBrowser->IsGettingServerlist())
 	{
 		const int CurrentType = pServerBrowser->GetCurrentType();
@@ -2923,6 +2872,7 @@ void CTClient::CheckFriendEnterGreet()
 	const int LocalMain = GameClient()->m_aLocalIds[0];
 	const int LocalDummy = GameClient()->m_aLocalIds[1];
 	const bool HasDummy = Client()->DummyConnected();
+
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
 		const auto &Client = GameClient()->m_aClients[ClientId];
@@ -3232,7 +3182,7 @@ void CTClient::FinishUpdateDownloads()
 	char aPackagePath[IO_MAX_PATH_LENGTH] = "";
 	char aInstallerPath[IO_MAX_PATH_LENGTH] = "";
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aPackagePath, sizeof(aPackagePath));
-	str_format(m_aUpdateInstallerTmp, sizeof(m_aUpdateInstallerTmp), "qmclient/QmClient-Updater-%d.exe", process_id());
+	str_format(m_aUpdateInstallerTmp, sizeof(m_aUpdateInstallerTmp), "qmclient/QmClient-Updater-%d.exe", pid());
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateInstallerTmp, aInstallerPath, sizeof(aInstallerPath));
 	str_copy(m_aUpdateInstallerTmp, aInstallerPath, sizeof(m_aUpdateInstallerTmp));
 	Storage()->RemoveFile(aInstallerPath, IStorage::TYPE_ABSOLUTE);
@@ -3279,7 +3229,7 @@ bool CTClient::LaunchUpdateInstaller()
 	}
 
 	char aPid[32];
-	str_format(aPid, sizeof(aPid), "%d", process_id());
+	str_format(aPid, sizeof(aPid), "%d", pid());
 	const char *apArguments[] = {
 		"--parent-pid",
 		aPid,
@@ -3294,7 +3244,7 @@ bool CTClient::LaunchUpdateInstaller()
 		"--install",
 		aInstallPath,
 	};
-	const PROCESS Process = process_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
+	const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
 	if(Process == INVALID_PROCESS)
 	{
 		RemoveUpdateTempFiles();
@@ -4721,58 +4671,6 @@ void CTClient::ResetGoresConfigOverrides()
 	ConfigManager()->SetSaveValueOverride("cl_dummy_hammer", false);
 	m_GoresGameModeStateKnown = false;
 	m_PrevGoresGameMode = false;
-}
-
-void CTClient::ApplyFocusModeEffects()
-{
-	const bool FocusActive = g_Config.m_QmFocusMode != 0;
-	const auto ApplyFocusOverride = [](SQmConfigOverrideState &State, bool HideActive, int &ConfigValue, int HiddenValue) {
-		bool Changed = false;
-		const int NextValue = ApplyQmConfigOverride(State, HideActive, ConfigValue, HiddenValue, Changed);
-		if(Changed)
-			ConfigValue = NextValue;
-	};
-	const bool StateWasKnown = m_FocusModeStateKnown;
-	const bool HideFocusHud = ShouldHideFocusHud(FocusActive, g_Config.m_QmFocusModeHideHud != 0);
-	const bool HideFocusNameplates = ShouldHideFocusNameplates(FocusActive, g_Config.m_QmFocusModeHideNameplates != 0);
-	const bool HideFocusDirectionIndicators = ShouldHideFocusDirectionIndicators(FocusActive, g_Config.m_QmFocusModeHideDirectionIndicators != 0);
-	if(!m_FocusModeStateKnown)
-	{
-		m_FocusModeStateKnown = true;
-		if(!FocusActive)
-		{
-			m_PrevFocusModeActive = false;
-			return;
-		}
-		m_PrevFocusModeActive = false;
-	}
-
-	if(StateWasKnown && FocusActive != m_PrevFocusModeActive)
-	{
-		char aFocusMsg[128];
-		str_format(aFocusMsg, sizeof(aFocusMsg), "%s%s: %s",
-			FocusActive ? "[[$FF7F7F]]" : "[[$A5FFA5]]",
-			Localize("Zen Mode"),
-			Localize(FocusActive ? "On" : "Off"));
-		GameClient()->Echo(aFocusMsg);
-	}
-
-	ApplyFocusOverride(m_FocusHudOverrideState, HideFocusHud, g_Config.m_ClShowhud, 0);
-	// 昵称由六档范围 qm_nameplate_show_scope 统一决定，「无」即隐藏全部昵称。
-	{
-		int NamePlateShowScope = g_Config.m_QmNameplateShowScope;
-		ApplyFocusOverride(m_FocusNamePlatesOverrideState, HideFocusNameplates, NamePlateShowScope, QM_NAMEPLATE_SHOW_SCOPE_OFF);
-		ApplyFocusOverride(m_FocusNamePlatesOwnOverrideState, HideFocusNameplates, NamePlateShowScope, QM_NAMEPLATE_SHOW_SCOPE_OFF);
-		g_Config.m_QmNameplateShowScope = NamePlateShowScope;
-	}
-	ApplyFocusOverride(m_FocusNameplateCoordsOverrideState, HideFocusNameplates, g_Config.m_QmNameplateCoords, 0);
-	ApplyFocusOverride(m_FocusNameplateCoordsOwnOverrideState, HideFocusNameplates, g_Config.m_QmNameplateCoordsOwn, 0);
-	ApplyFocusOverride(m_FocusNameplateCoordXOverrideState, HideFocusNameplates, g_Config.m_QmNameplateCoordX, 0);
-	ApplyFocusOverride(m_FocusNameplateCoordYOverrideState, HideFocusNameplates, g_Config.m_QmNameplateCoordY, 0);
-	ApplyFocusOverride(m_FocusDirectionOverrideState, HideFocusDirectionIndicators, g_Config.m_ClShowDirection, 0);
-	ApplyFocusOverride(m_FocusVideoHudOverrideState, HideFocusHud, g_Config.m_ClVideoShowhud, 0);
-	ApplyFocusOverride(m_FocusVideoDirectionOverrideState, HideFocusDirectionIndicators, g_Config.m_ClVideoShowDirection, 0);
-	m_PrevFocusModeActive = FocusActive;
 }
 
 bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) const

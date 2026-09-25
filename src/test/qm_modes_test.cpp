@@ -16,7 +16,6 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/route_start_index.h>
 #include <game/client/components/qmclient/translate/translate_ui_settings.h>
-#include <game/gamecore.h>
 
 #include <gtest/gtest.h>
 
@@ -423,31 +422,31 @@ TEST(QmNameplateTextEffects, DemoModesOverridePlayingAndSpectateScopes)
 
 TEST(QmFocusMode, ConfigOverrideRestoresOnlyAutoHiddenValues)
 {
-	SQmConfigOverrideState State;
+	SQmFocusConfigOverrideState State;
 	bool Changed = false;
 
-	int Value = ApplyQmConfigOverride(State, true, 1, 0, Changed);
+	int Value = ApplyQmFocusConfigOverride(State, true, 1, 0, Changed);
 	EXPECT_TRUE(Changed);
 	EXPECT_EQ(Value, 0);
 	EXPECT_TRUE(State.m_WasActive);
 	EXPECT_EQ(State.m_SavedValue, 1);
 
-	Value = ApplyQmConfigOverride(State, false, 0, 0, Changed);
+	Value = ApplyQmFocusConfigOverride(State, false, 0, 0, Changed);
 	EXPECT_TRUE(Changed);
 	EXPECT_EQ(Value, 1);
 	EXPECT_FALSE(State.m_WasActive);
 }
 
-TEST(QmConfigOverride, ConfigOverrideKeepsUserChangesMadeWhileActive)
+TEST(QmFocusMode, ConfigOverrideKeepsUserChangesMadeWhileActive)
 {
-	SQmConfigOverrideState State;
+	SQmFocusConfigOverrideState State;
 	bool Changed = false;
 
-	EXPECT_EQ(ApplyQmConfigOverride(State, true, 1, 0, Changed), 0);
+	EXPECT_EQ(ApplyQmFocusConfigOverride(State, true, 1, 0, Changed), 0);
 	EXPECT_TRUE(Changed);
 
 	const int UserChangedValue = 2;
-	EXPECT_EQ(ApplyQmConfigOverride(State, false, UserChangedValue, 0, Changed), UserChangedValue);
+	EXPECT_EQ(ApplyQmFocusConfigOverride(State, false, UserChangedValue, 0, Changed), UserChangedValue);
 	EXPECT_FALSE(Changed);
 	EXPECT_FALSE(State.m_WasActive);
 }

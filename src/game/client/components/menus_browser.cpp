@@ -35,6 +35,7 @@
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
+#include <game/voting.h>
 
 #include <algorithm>
 #include <chrono>
@@ -338,7 +339,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		UI_ELEM_MAP_3,
 		UI_ELEM_FINISH_ICON,
 		UI_ELEM_PLAYERS,
-		UI_ELEM_QM_CLIENTS,
 		UI_ELEM_FRIEND_ICON,
 		UI_ELEM_QM_CLIENTS,
 		UI_ELEM_PING,
@@ -346,15 +346,13 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		NUM_UI_ELEMS,
 	};
 
-	// 服务器列表按「所有列都常显」排布：不隐藏任何列，靠小字号（SERVER_LIST_TEXT_SIZE）、
-	// 紧凑行高（ms_ListheaderHeight）和贴内容定宽把宽度让回给名称与地图。
 	constexpr float ClickableIconSpace = 20.0f;
 
 	static SColumn s_aCols[] = {
 		{-1, -1, "", -1, 2.0f, {0}},
 		{COL_FLAG_LOCK, -1, "", -1, 14.0f, {0}},
 		{COL_FLAG_FAV, IServerBrowser::SORT_FAVORITES, "", -1, ClickableIconSpace, {0}},
-		{COL_COMMUNITY, -1, "", -1, 24.0f, {0}},
+		{COL_COMMUNITY, -1, "", -1, 28.0f, {0}},
 		{COL_NAME, IServerBrowser::SORT_NAME, Localizable("Name"), 0, 50.0f, {0}},
 		{COL_GAMETYPE, IServerBrowser::SORT_GAMETYPE, Localizable("Type"), 1, 50.0f, {0}},
 		{COL_MAP, IServerBrowser::SORT_MAP, Localizable("Map"), 0, 90.0f, {0}},
@@ -409,6 +407,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		switch(ColId)
 		{
 		case COL_GAMETYPE: return 300.0f;
+		case COL_MAP: return 800.0f;
 		case COL_FRIENDS: return 120.0f;
 		case COL_PLAYERS: return 240.0f;
 		case COL_QM_CLIENTS: return 120.0f;
@@ -429,9 +428,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		float m_MinWidth;
 		float m_MaxWidth;
 	};
-
-	// 列间空白。所有列都常显，所以这里从 2px 起步，宽度全部让给内容。
-	constexpr float ColumnGapWidth = 2.0f;
 
 	static std::vector<SResizeHandle> s_vResizeHandles;
 	s_vResizeHandles.clear();
@@ -531,8 +527,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 		if(Col.m_Id == COL_FRIENDS)
 		{
-			// 好友爱心用默认字体的实体心形：图标字体 Phosphor 只有中空心形。
-			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 			Ui()->DoLabel_QmIcon(&Col.m_Rect, EQmIcon::HEART, FONT_ICON_HEART, 14.0f, TEXTALIGN_MC);
 			TextRender()->SetRenderFlags(0);
@@ -551,6 +546,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	static int s_ResizeDragColIndex = -1;
 	static float s_ResizeDragStartMouseX = 0.0f;
 	static float s_ResizeDragStartWidth = 0.0f;
+	static float s_ResizeDragStartFlexWidth = 0.0f;
 	static float s_ResizeDragCurrentWidth = 0.0f;
 
 	int HoveredHandle = -1;
@@ -792,7 +788,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const CServerInfo *pItem = ServerBrowser()->SortedGet(i);
 		RowsIterated += PerfListFrameEnabled ? 1 : 0;
 
-		const CListboxItem ListItem = s_ListBox.DoNextItem(pItem, i == SelectedServerIndex);
+		const CListboxItem ListItem = s_ListBox.DoNextItem(pItem, str_comp(pItem->m_aAddress, g_Config.m_UiServerAddress) == 0);
+		if(ListItem.m_Selected)
+			m_SelectedIndex = i;
 
 		if(!ListItem.m_Visible)
 		{
@@ -866,8 +864,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_NAME)
 			{
-				// 左侧留 3px：列间距被压到 2px 后，文字会贴上前一列的图标/分隔线。
-				Button.VSplitLeft(3.0f, nullptr, &Button);
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
@@ -888,8 +884,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_GAMETYPE)
 			{
-				// 与名称列同样留 3px，避免高亮色文字贴住左侧分隔线。
-				Button.VSplitLeft(3.0f, nullptr, &Button);
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
@@ -967,7 +961,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_PLAYERS)
 			{
-				Button.VMargin(2.0f, &Button);
 				str_format(aTemp, sizeof(aTemp), "%i/%i", pItem->m_NumFilteredPlayers, ServerBrowser()->Max(*pItem));
 				if(g_Config.m_BrFilterString[0] && (pItem->m_QuickSearchHit & IServerBrowser::QUICK_PLAYER))
 				{
@@ -990,7 +983,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_PING)
 			{
-				Button.VMargin(2.0f, &Button);
+				Button.VMargin(4.0f, &Button);
 				FormatServerbrowserPing(aTemp, pItem);
 				if(g_Config.m_UiColorizePing)
 				{
@@ -1041,8 +1034,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		constexpr float FadeHeight = 44.0f;
 		Fade.y += maximum(Fade.h - FadeHeight, 0.0f);
 		Fade.h = minimum(Fade.h, FadeHeight);
-		// 底部渐隐只是提示还能继续滚动。它是直角矩形，铺到卡片底边上会切出一条横向暗带，
-		// 所以压到刚好能看出来即可。
 		Fade.Draw4(
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)),
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)),
@@ -2103,6 +2094,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	int TotalFriendItems = 0;
 	for(const auto &vFriends : vvFriends)
 		TotalFriendItems += (int)vFriends.size();
+	m_vFriendTooltipText.clear();
 	m_vFriendTooltipText.resize(TotalFriendItems);
 	int VisibleFriendItems = 0;
 
@@ -3833,10 +3825,8 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
 		GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
 
-		// 好友页签画实体爱心，临时切到默认字体所在的心形。
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		static CButtonContainer s_FriendsTabButton;
-		if(DoButton_MenuTab(&s_FriendsTabButton, QM_FRIEND_HEART_ICON, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+		if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
 			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
 		GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
 
@@ -3862,8 +3852,6 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
 
-	// 好友页签画实体爱心，临时切到默认字体所在的心形。
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	static CButtonContainer s_FriendsTabButton;
 	if(DoButton_MenuTab_QmIcon(&s_FriendsTabButton, EQmIcon::HEART, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], &ColorInactive, &ColorActive, &ColorHover))
 	{
@@ -4011,6 +3999,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	ServerListBase.h = maximum(StatusBox.y - ColumnGap - ServerListBase.y, 0.0f);
 	if(UseNewUi)
 	{
+		ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 		StatusBox.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 		ToolBoxBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 		ServerListBase.Margin(2.0f, &ServerListBase);
@@ -4030,8 +4019,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(DoClip)
 	{
-		CUIRect TransitionView = View;
-		TransitionOffset = ApplyUiSwitchOffset(TransitionView, TransitionStrength, m_BrowserTabTransitionDirection, false, 0.08f, 24.0f, 120.0f);
+		TransitionOffset = TransitionStrength * std::clamp(View.w * 0.08f, 24.0f, 120.0f) * m_BrowserTabTransitionDirection;
 	}
 
 	bool WasListboxItemActivated = false;

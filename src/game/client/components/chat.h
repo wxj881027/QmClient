@@ -156,7 +156,6 @@ private:
 		std::vector<CQmTitleTextMetrics> m_vTitleTextMetrics;
 
 		std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;
-		std::shared_ptr<const QmChatExport::SMetadata> m_pExportMetadata;
 
 		// 聊天导出的身份与头像快照：在收到消息时固化，导出时不再按当前名字反查皮肤。
 		std::shared_ptr<const QmChatExport::SMetadata> m_pExportMetadata;

@@ -80,6 +80,38 @@ turkish = "%d oyuncu"
 polish = "%d gracz"
 
 [[message]]
+key = "%d servers, %d users"
+[message.translations]
+simplified_chinese = "%d 个服务器，%d 个用户"
+traditional_chinese = "%d 個伺服器，%d 個用戶"
+japanese = "%d サーバー、%d ユーザー"
+korean = "%d 개 서버, %d 명 사용자"
+russian = "%d серверов, %d пользователей"
+german = "%d Server, %d Benutzer"
+spanish = "%d servidores, %d usuarios"
+french = "%d serveurs, %d utilisateurs"
+brazilian_portuguese = "%d servidores, %d usuários"
+portuguese = "%d servidores, %d utilizadores"
+turkish = "%d sunucu, %d kullanıcı"
+polish = "%d serwerów, %d użytkowników"
+
+[[message]]
+key = "%d servers, %d users, %d dummies"
+[message.translations]
+simplified_chinese = "%d 个服务器，%d 个用户，%d 个分身"
+traditional_chinese = "%d 個伺服器，%d 個用戶，%d 個分身"
+japanese = "%d サーバー、%d ユーザー、%d ダミー"
+korean = "%d 개 서버, %d 명 사용자, %d 개 더미"
+russian = "%d серверов, %d пользователей, %d дамми"
+german = "%d Server, %d Benutzer, %d Dummys"
+spanish = "%d servidores, %d usuarios, %d dummies"
+french = "%d serveurs, %d utilisateurs, %d dummies"
+brazilian_portuguese = "%d servidores, %d usuários, %d dummies"
+portuguese = "%d servidores, %d utilizadores, %d dummies"
+turkish = "%d sunucu, %d kullanıcı, %d Dummy"
+polish = "%d serwerów, %d użytkowników, %d kukieł"
+
+[[message]]
 key = "%d user"
 [message.translations]
 simplified_chinese = "%d 个用户"
@@ -864,38 +896,6 @@ turkish = "Bağlantıyı kes"
 polish = "Rozłącz"
 
 [[message]]
-key = "Drag to another category to move this friend."
-[message.translations]
-simplified_chinese = "拖动到其他分类以移动此好友。"
-traditional_chinese = "拖曳到其他分類以移動此好友。"
-japanese = "別のカテゴリにドラッグして、このフレンドを移動します。"
-korean = "이 친구를 다른 카테고리로 드래그하여 이동합니다."
-russian = "Перетащите этого друга в другую категорию, чтобы переместить его."
-german = "Ziehe diesen Freund in eine andere Kategorie, um ihn zu verschieben."
-spanish = "Arrastra a este amigo a otra categoría para moverlo."
-french = "Faites glisser cet ami vers une autre catégorie pour le déplacer."
-brazilian_portuguese = "Arraste este amigo para outra categoria para movê-lo."
-portuguese = "Arraste este amigo para outra categoria para o mover."
-turkish = "Bu arkadaşı taşımak için başka bir kategoriye sürükleyin."
-polish = "Przeciągnij tego znajomego do innej kategorii, aby go przenieść."
-
-[[message]]
-key = "Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories"
-[message.translations]
-simplified_chinese = "拖动调整顺序，点击展开或收起。右键或使用齿轮管理分类"
-traditional_chinese = "拖曳調整順序，點擊展開或收起。右鍵或使用齒輪管理分類"
-japanese = "ドラッグで並べ替え、クリックで展開・折りたたみ。右クリックまたは歯車アイコンでカテゴリを管理"
-korean = "드래그하여 순서를 바꾸고 클릭하여 펼치거나 접습니다. 마우스 오른쪽 버튼을 클릭하거나 톱니바퀴를 사용하여 카테고리를 관리합니다"
-russian = "Перетащите, чтобы изменить порядок; нажмите, чтобы развернуть или свернуть. Щелкните правой кнопкой мыши или используйте шестеренку для управления категориями"
-german = "Zum Umsortieren ziehen; zum Auf- oder Zuklappen klicken. Rechtsklick oder Zahnrad zum Verwalten von Kategorien"
-spanish = "Arrastra para reordenar; haz clic para expandir o contraer. Haz clic derecho o usa el engranaje para gestionar categorías"
-french = "Faites glisser pour réorganiser ; cliquez pour développer ou réduire. Faites un clic droit ou utilisez l'engrenage pour gérer les catégories"
-brazilian_portuguese = "Arraste para reordenar; clique para expandir ou recolher. Clique com o botão direito ou use a engrenagem para gerenciar categorias"
-portuguese = "Arraste para reordenar; clique para expandir ou recolher. Clique com o botão direito ou use a engrenagem para gerir categorias"
-turkish = "Sıralamayı değiştirmek için sürükleyin; genişletmek veya daraltmak için tıklayın. Kategorileri yönetmek için sağ tıklayın veya dişli simgesini kullanın"
-polish = "Przeciągnij, aby zmienić kolejność; kliknij, aby rozwinąć lub zwinąć. Kliknij prawym przyciskiem lub użyj koła zębatego, aby zarządzać kategoriami"
-
-[[message]]
 key = "Dummy"
 [message.translations]
 simplified_chinese = "分身"
@@ -1520,6 +1520,22 @@ turkish = "Yok"
 polish = "Brak"
 
 [[message]]
+key = "Not in the current browser list"
+[message.translations]
+simplified_chinese = "不在当前浏览器列表中"
+traditional_chinese = "不在當前瀏覽器列表中"
+japanese = "現在のブラウザリストにありません"
+korean = "현재 브라우저 목록에 없음"
+russian = "Нет в текущем списке браузера"
+german = "Nicht in der aktuellen Browserliste"
+spanish = "No está en la lista actual del navegador"
+french = "Pas dans la liste actuelle du navigateur"
+brazilian_portuguese = "Não está na lista atual do navegador"
+portuguese = "Não está na lista atual do navegador"
+turkish = "Mevcut tarayıcı listesinde değil"
+polish = "Nie ma na obecnej liście przeglądarki"
+
+[[message]]
 key = "Note"
 [message.translations]
 simplified_chinese = "备注"
@@ -1710,6 +1726,22 @@ brazilian_portuguese = "Redefinir filtro"
 portuguese = "Repor filtro"
 turkish = "Filtreyi sıfırla"
 polish = "Resetuj filtr"
+
+[[message]]
+key = "Right-click or use the gear to manage categories"
+[message.translations]
+simplified_chinese = "右键或使用齿轮管理分类"
+traditional_chinese = "右鍵或使用齒輪管理分類"
+japanese = "右クリックまたは歯車アイコンでカテゴリを管理"
+korean = "마우스 오른쪽 버튼을 클릭하거나 톱니바퀴를 사용하여 카테고리 관리"
+russian = "Щелкните правой кнопкой мыши или используйте шестеренку для управления категориями"
+german = "Rechtsklick oder Zahnrad zum Verwalten von Kategorien"
+spanish = "Haz clic derecho o usa el engranaje para gestionar categorías"
+french = "Clic droit ou utilisez l'engrenage pour gérer les catégories"
+brazilian_portuguese = "Clique com o botão direito ou use a engrenagem para gerenciar categorias"
+portuguese = "Clique com o botão direito ou use a engrenagem para gerir categorias"
+turkish = "Kategorileri yönetmek için sağ tıklayın veya dişli simgesini kullanın"
+polish = "Kliknij prawym przyciskiem lub użyj koła zębatego, aby zarządzać kategoriami"
 
 [[message]]
 key = "SA"

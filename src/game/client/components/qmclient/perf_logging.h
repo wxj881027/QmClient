@@ -2,8 +2,6 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_PERF_LOGGING_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_PERF_LOGGING_H
 
-#include "stutter_diagnostics.h"
-
 #include <base/log.h>
 #include <base/system.h>
 
@@ -18,7 +16,7 @@
 
 inline bool QmPerfEnabled()
 {
-	return g_Config.m_QmPerfDebug != 0;
+	return g_Config.m_QmPerfDebug != 0 || g_Config.m_QmPerfLogfile != 0 || g_Config.m_QmPerfStutterDiagnostics != 0;
 }
 
 inline int QmGraphicsTraceLevel()
@@ -39,7 +37,9 @@ inline bool QmMacosGraphicsDiagnosticsEnabled()
 
 inline double QmPerfThresholdMs()
 {
-	return QmStutterFrameBudgetMs();
+	const double Configured = g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
+	const double StutterBudget = 1000.0 / 300.0;
+	return g_Config.m_QmPerfStutterDiagnostics != 0 && Configured > StutterBudget ? StutterBudget : Configured;
 }
 
 inline bool QmPerfShouldLogDuration(double DurationMs, bool Force = false)

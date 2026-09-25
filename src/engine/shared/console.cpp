@@ -896,7 +896,7 @@ void CConsole::ConCommandStatus(IResult *pResult, void *pUser)
 	pConsole->PrintCommandList(AccessLevel.value(), 0);
 }
 
-void CConsole::ConCmdlistChat(IResult *pResult, void *pUser)
+void CConsole::ConUserCommandStatus(IResult *pResult, void *pUser)
 {
 	CConsole *pConsole = static_cast<CConsole *>(pUser);
 	pConsole->Print(OUTPUT_LEVEL_STANDARD, "chatresp", "可用聊天命令列表：");
@@ -936,7 +936,7 @@ CConsole::CConsole(int FlagMask)
 
 	Register("access_level", "s[command] ?s['admin'|'moderator'|'helper'|'all']", CFGFLAG_SERVER, ConCommandAccess, this, "Specify command accessibility for given access level");
 	Register("access_status", "s['admin'|'moderator'|'helper'|'all']", CFGFLAG_SERVER, ConCommandStatus, this, "List all commands which are accessible for given access level");
-	Register("cmdlist", "", CFGFLAG_SERVER | CFGFLAG_CHAT, ConCmdlistChat, this, "List all commands which are accessible for users");
+	Register("cmdlist", "", CFGFLAG_SERVER | CFGFLAG_CHAT, ConUserCommandStatus, this, "List all commands which are accessible for users");
 	//List all commands which are accessible for users
 
 	// DDRace

@@ -22,6 +22,9 @@
 %d items selected
 == 已選擇 %d 項
 
+%d more cut segments
+== 還有 %d 個裁剪片段
+
 %d of %d server
 == %d/%d 個伺服器
 
@@ -517,6 +520,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == 添加默認聊天綁定
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== 在 HUD 上顯示分身的按鍵、錘子、控制與同步狀態，並支援自訂 bind 狀態清單。
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -2178,7 +2184,7 @@ Configure display and rendering
 == 設定顯示與渲染選項
 
 Configure Dream-only convenience features
-== 設定棲夢專屬便利功能
+== Configure Dream-only convenience features
 
 Configure game and client preferences
 == 設定遊戲與客戶端偏好
@@ -2305,9 +2311,6 @@ Connecting dummy
 
 Connecting to
 == 正在連接到
-
-Connecting to voice server
-== 正在連線至語音伺服器
 
 Connection disconnected
 == 連接已斷開
@@ -2455,9 +2458,6 @@ Could not get server list from master server
 
 Could not load default touch controls from file. See local console for details.
 == 無法從文件加載默認觸控設置。檢查本地控制台以獲取詳情。
-
-Could not load new features
-== 新功能內容載入失敗
 
 Could not load sponsor QR code. Check the Base64 data
 == 無法加載支持二維碼。請檢查 Base64 內容
@@ -2645,9 +2645,6 @@ Customize translate button and menu colors
 Customize vote display and interaction
 == Customize vote display and interaction
 
-Cut end: %s
-== 終點：%s
-
 Cut interval
 == 裁剪區間
 
@@ -2656,9 +2653,6 @@ Cut length
 
 Cut segments
 == 裁剪片段
-
-Cut start: %s
-== 起點：%s
 
 Cute:
 == 可愛：
@@ -3212,9 +3206,6 @@ Door Laser Outline Color
 Door laser outline color
 == 門的激光輪廓顏色
 
-Double-click: left applies to main, right applies to dummy
-== 雙擊：左鍵套用到本體，右鍵套用到分身
-
 Download community skins
 == 下載社群皮膚
 
@@ -3386,8 +3377,8 @@ Dummy is currently connected.
 Dummy jump
 == 分身跳
 
-Dummy key/hammer/control/copy status switches
-== 卡鍵/錘子/分身控制/分身同步狀態開關
+Dummy key/hammer/control/copy status switches and custom bind status list
+== 卡鍵/錘子/分身控制/分身同步狀態開關，以及自訂 bind 狀態列表
 
 Dummy marking color
 == 分身標記顏色
@@ -3584,6 +3575,9 @@ Emoticon shadow
 Emoticons
 == 表情
 
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== 為空時使用內建四項。格式：var|0=Off|1=On；var|Text
+
 enable
 == 開啟
 
@@ -3646,6 +3640,9 @@ Enable chat with all/team mode
 
 Enable cheats for your current team's run, but you can't earn a rank
 == 為你當前隊伍啟用作弊，但將無法獲得排名
+
+Enable client stutter diagnostics at startup
+== 啟動時啟用用戶端卡頓診斷
 
 Enable colored console output
 == 啟用控制台彩色輸出
@@ -3875,6 +3872,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == 啟用皮膚切換動畫
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== 開啟皮膚切換動畫，再選擇類型、作用範圍、時長與緩動。
+
 Enable smooth cinematic camera while free spectating
 == 自由觀戰時啟用平滑電影鏡頭
 
@@ -3962,11 +3962,14 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 啟用敵對列表
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== 開啟武器切換動畫或裝填動畫，再調整作用範圍、時長、旋轉角度與緩動。
+
 Enable word filter list
 == 啟用屏蔽詞列表
 
 Enable Zen Mode
-== 啟用禪模式
+== 啟用禪模式（Zen Mode）
 
 Enable Zen mode
 == 啟用禪模式
@@ -4001,9 +4004,6 @@ Endpoint
 Endpoint (optional)
 == 端點（可選）
 
-Enhanced rendering
-== 增強渲染
-
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == 請輸入 /practice 或重新開始，否則整隊將在 60 秒後被處死
 
@@ -4012,6 +4012,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == 輸入密碼
+
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== 填入贊助兌換碼並點「兌換」，寫下稱號後點「儲存」。勾選「僅在指定暱稱下顯示」可把稱號綁定到某一個暱稱。
 
 Enter Username
 == 輸入賬號名稱
@@ -4042,6 +4045,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
+
+Entry: %s
+== 入口：%s
 
 Erase items on the in game background
 == 擦除遊戲背景中的內容
@@ -4781,6 +4787,9 @@ Gives you infinite jump
 Glitch
 == 故障
 
+Global card
+== 全局卡片
+
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 == 全局卡片排序（格式 stableId|tab|col|order; 分號分隔）
 
@@ -4931,9 +4940,6 @@ Has save
 Has unread news
 == 是否有未讀新聞
 
-HD icons (MSDF)
-== 高清圖示 (MSDF)
-
 HDF
 == HDF
 
@@ -4956,7 +4962,7 @@ Hi!
 == 你好啊!
 
 Hide basic system info (join, version, rules) in Zen mode
-== 在禪模式中隱藏基礎系統資訊（進服、版本、規則）
+== 禪模式下隱藏入場、版本和規則等基礎系統信息
 
 Hide chat messages from players marked as enemies
 == 隱藏被標記為敵人的玩家聊天訊息
@@ -4965,28 +4971,28 @@ Hide death/respawn effects
 == 隱藏死亡/重生特效
 
 Hide death/respawn effects in Zen Mode
-== 在禪模式中隱藏死亡/重生特效
+== 禪模式下隱藏死亡/重生特效
 
 Hide direction in Zen mode
-== 在禪模式中隱藏方向指示
+== 禪模式下隱藏方向
 
 Hide direction indicators
-== 隱藏方向指示
+== 隱藏方向
 
 Hide Echo messages
-== 隱藏 Echo 訊息
+== 隱藏 Echo 消息
 
 Hide Echo messages in Zen mode
-== 在禪模式中隱藏 Echo 訊息
+== 禪模式下隱藏 Echo 消息
 
 Hide explosion effects
-== 隱藏爆炸特效
+== 隱藏炮擊特效
 
 Hide freeze effects
 == 隱藏凍結特效
 
 Hide freeze effects in Zen Mode
-== 在禪模式中隱藏凍結特效
+== 禪模式下隱藏凍結特效
 
 Hide ghosts of frozen players
 == 隱藏凍結玩家的影子
@@ -4995,22 +5001,22 @@ Hide guide lines
 == 隱藏輔助線
 
 Hide hammer effects
-== 隱藏錘子特效
+== 隱藏錘擊特效
 
 Hide hammer effects in Zen Mode
-== 在禪模式中隱藏槌子特效
+== 禪模式下隱藏錘擊特效
 
 Hide helper lines in Gores mode
 == Gores 模式下隱藏輔助線
 
 Hide helper lines in Zen mode
-== 在禪模式中隱藏輔助線
+== 禪模式下隱藏輔助線
 
 Hide HUD
 == 隱藏 HUD
 
 Hide HUD in Zen mode
-== 在禪模式中隱藏 HUD
+== 禪模式下隱藏 HUD
 
 Hide indicator for tees on your screen
 == 其他玩家在屏幕內時隱藏指示器
@@ -5019,28 +5025,28 @@ Hide input emoticon
 == 隱藏輸入表情
 
 Hide join/version prompts
-== 隱藏進服/版本提示
+== 隱藏入場/版本提示
 
 Hide jump effects
 == 隱藏跳躍特效
 
 Hide jump effects in Zen Mode
-== 在禪模式中隱藏跳躍特效
+== 禪模式下隱藏跳躍特效
 
 Hide kill and finish messages in Zen mode
-== 在禪模式中隱藏擊殺與完成資訊
+== 禪模式下隱藏擊殺和完成消息
 
 Hide kill/finish messages
-== 隱藏擊殺/完成訊息
+== 隱藏死亡/完成消息
 
 Hide map progress
 == 隱藏地圖進度
 
 Hide map progress bar in Zen mode
-== 在禪模式中隱藏地圖進度條
+== 禪模式下隱藏地圖進度條
 
 Hide nameplates
-== 隱藏名牌
+== 隱藏名字板
 
 Hide names
 == 隱藏名字
@@ -5058,22 +5064,22 @@ Hide player messages
 == 隱藏玩家消息
 
 Hide player messages in Zen mode
-== 在禪模式中隱藏玩家訊息
+== 禪模式下隱藏玩家消息
 
 Hide player name plates in Zen Mode
-== 在禪模式中隱藏玩家名牌
+== 禪模式下隱藏玩家名字板
 
 Hide player names in Zen Mode
-== 在禪模式中隱藏玩家名字
+== 禪模式下隱藏玩家名字
 
 Hide projectile effects in Zen Mode
-== 在禪模式中隱藏彈道特效
+== 禪模式下隱藏炮擊特效
 
 Hide scoreboard
 == 隱藏計分板
 
 Hide scoreboard in Zen mode
-== 在禪模式中隱藏計分板
+== 禪模式下隱藏計分板
 
 Hide sensitive info like /save password
 == 隱藏敏感信息，如 /save 密碼
@@ -5085,7 +5091,7 @@ Hide server prompt notifications
 == 隱藏伺服器提示通知
 
 Hide server tip notifications (including notification bar) in Zen mode
-== 在禪模式中隱藏伺服器提示通知（含通知列）
+== 禪模式下隱藏伺服器提示通知（包括通知欄）
 
 Hide Settings Tabs
 == 隱藏設置選項卡
@@ -5106,13 +5112,13 @@ Hide typing emoji during input
 == 輸入時不顯示打字表情
 
 Hide UI for focused gameplay
-== 隱藏介面，專注遊戲
+== 隱去 UI 專注遊戲
 
 Hide weapon fire effects in Zen Mode
-== 在禪模式中隱藏武器開火特效
+== 禪模式下隱藏武器火焰特效
 
 Hide weapon muzzle flashes
-== 隱藏武器槍口閃光
+== 隱藏武器火焰
 
 High Detail
 == 顯示地圖細節
@@ -5420,9 +5426,6 @@ Indicator size
 Indicator transparency
 == 指示器透明度
 
-Inferno
-== 冥火
-
 Infinite hook for super players on/off.
 == 超級玩家開/關的無盡鉤子
 
@@ -5497,6 +5500,9 @@ Insane
 
 Installing update. Please wait...
 == 正在安裝更新，請稍等...
+
+Instant zoom reverse
+== 反向縮放立即生效
 
 Interface
 == 界面
@@ -6122,6 +6128,12 @@ Local game mode statistics
 Local only
 == 僅本地
 
+Local particle effects
+== 本地粒子效果
+
+Local particles: show particles behind own Tee (e.g. freeze snow)
+== 本地粒子：顯示自己 Tee 身後掉落的粒子（如凍結雪花）
+
 Local saves
 == 本地存檔
 
@@ -6368,8 +6380,14 @@ Margin when notification is docked
 Mark demo
 == 標記回放
 
+Mark the beginning of a cut (right click to reset)
+== 標記裁剪起點 (右鍵重置)
+
 Mark the beginning of a demo cut
 == 標記回放剪輯起點
+
+Mark the end of a cut (right click to reset)
+== 標記裁剪終點 (右鍵重置)
 
 Mark the end of a demo cut
 == 標記回放剪輯終點
@@ -6533,9 +6551,6 @@ Menu camera rotation time in seconds
 Menu camera speed
 == 菜單相機速度
 
-Menu Gaussian blur pipeline
-== 選單高斯模糊管線
-
 Menu main panel background color
 == 菜單主面板底色
 
@@ -6559,6 +6574,9 @@ Merge consecutive identical echo messages within this window in milliseconds (0 
 
 Merge consecutive identical player messages within 2 seconds
 == 合併 2 秒內連續出現的相同玩家訊息
+
+Merges chat messages repeated within a short time into a single line.
+== 短時間內重複的聊天訊息會合併成一條。
 
 Message color
 == 留言顏色
@@ -6747,10 +6765,10 @@ Mute
 == 靜音
 
 Mute death/respawn sound in Zen Mode
-== 在禪模式中靜音死亡/重生音效
+== 禪模式下靜音死亡/重生音效
 
 Mute death/respawn sounds
-== 靜音死亡/重生音效
+== 靜音死亡/重生
 
 Mute emoticons
 == 屏蔽表情
@@ -6759,19 +6777,19 @@ Mute flag sounds
 == 使旗幟聲音靜音
 
 Mute hammer sound in Zen mode
-== 在禪模式中靜音槌子音效
+== 禪模式下靜音錘擊音效
 
 Mute hammer sounds
-== 靜音錘子音效
+== 靜音錘擊
 
 Mute hook sound
 == 靜音掛鉤聲音
 
 Mute jump sound in Zen Mode
-== 在禪模式中靜音跳躍音效
+== 禪模式下靜音跳躍音效
 
 Mute jump sounds
-== 靜音跳躍音效
+== 靜音跳躍
 
 Mute map sounds
 == 靜音地圖聲音
@@ -7814,6 +7832,9 @@ Pet Skin:
 Pick result: %s
 == 抽取結果：%s
 
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== 選擇與你使用的音樂客戶端相符的來源並保持播放，歌詞會自動跟隨。
+
 Pickup range
 == 拾取物範圍
 
@@ -8035,6 +8056,9 @@ Players weapons has no affect on others
 
 Playing effects
 == 播放效果
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== 皮膚變化時播放動畫，包括錘子偷來的皮膚。
 
 Please add a valid cut first
 == 請先添加有效裁剪片段
@@ -8363,9 +8387,6 @@ Pulse speed
 Pulse strength
 == 脈衝強度
 
-Pure Vulkan fallback
-== 目前：純淨 Vulkan 回退
-
 Push radius
 == 推動半徑
 
@@ -8449,9 +8470,6 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi 顏色動畫插值：0=sRGB 線性 1=OKLAB 感知均勻
-
-QmVulkan active
-== 目前：QmVulkan 已啟用
 
 QQ group: 1076765929 (click to copy)
 == QQ 群：1076765929（點擊複製）
@@ -8726,6 +8744,9 @@ Redeem
 Redeem your code and customize your title
 == 領取贊助資格並設定頭銜
 
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== 使用贊助兌換碼解鎖自訂稱號，稱號會顯示在聊天與名牌上。
+
 Reduce antiping and player prediction when frozen
 == 凍結時減少 antiping 和玩家預測
 
@@ -8818,6 +8839,12 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == 主持人的遠程控制台密碼（有限訪問）
+
+Remote particle effects
+== 遠程粒子效果
+
+Remote particles: sync and render other players via central server (requires both local+remote enabled)
+== 遠程粒子：通過中心服同步並渲染其他玩家（需對方開啟本地+遠程）
 
 Remove
 == 刪除
@@ -9250,6 +9277,9 @@ Retry remote stats
 
 Retrying…
 == 正在重試…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== 反向按鍵時立即反向縮放（0=保留原有平滑縮放）
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -9859,12 +9889,6 @@ Set color
 
 Set current demo speed
 == 設置當前回放速度
-
-Set cut end at current position (O, right click to reset)
-== 將目前位置設為剪輯終點（O，右鍵重設）
-
-Set cut start at current position (I, right click to reset)
-== 將目前位置設為剪輯起點（I，右鍵重設）
 
 Set ddrace team for a player
 == 為玩家設置 DDRace 隊伍
@@ -10853,6 +10877,9 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == 顯示命令 r 的幫助，如果留空則顯示一般幫助
 
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== 從網易雲音樂、汽水音樂、酷狗、QQ 音樂取得歌詞，並顯示在靈動島上。
+
 Shows the credits of the DDNet mod
 == 顯示 DDNet mod 的製作人員
 
@@ -10991,6 +11018,9 @@ Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
 == 皮膚切換動畫類型（0=殘影彈出 1=柔和淡變 2=向左滑切 3=旋轉彈出 4=明暗切換 5=故障抖動 6=彈性縮放）
 
+Skin transition
+== 皮膚切換
+
 Skin transition animation
 == 皮膚切換動畫
 
@@ -11059,9 +11089,6 @@ Smooth Dynamic Camera
 
 Smooth fade
 == 柔和淡變
-
-Smooth island (SDF)
-== 靈動島平滑 (SDF)
 
 Smooth other players' predicted movement
 == 平滑其他玩家的預測移動
@@ -11515,6 +11542,9 @@ Switch failed
 
 Switch interval
 == 切換間隔
+
+Switch on the status rows you need, then list the binds you want to watch.
+== 開啟需要的狀態開關，再在自訂清單裡填想監控的 bind。
 
 Switch opacity
 == 開關不透明度
@@ -12491,6 +12521,9 @@ Tune variable to value
 Tune variable to value or show current value
 == 將變量調到指定值，或顯示當前值
 
+Turn on "Message merging" in Dream Features.
+== 在「夢的小功能」裡開啟「訊息合併」。
+
 Tutorial
 == 教學
 
@@ -12517,6 +12550,9 @@ UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or netwo
 
 UDP seems to be filtered.
 == UDP 疑似被過濾。
+
+UDP socket not open
+== UDP 套接字未打開
 
 UI color
 == 用戶界面顏色
@@ -12770,6 +12806,9 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == 用於下載皮膚的 URL
 
+Usage: %s
+== 用法：%s
+
 Usage: %s %s
 == 用法：%s %s
 
@@ -12826,9 +12865,6 @@ Use default voice input device
 
 Use default voice output device
 == 使用默認語音輸出設備
-
-Use each Tee trail style's own palette instead of the trail color mode
-== 使用各 Tee 拖尾樣式自帶的配色，而不是拖尾顏色模式
 
 Use embedded HUD progress bar
 == 使用 HUD 內嵌進度條
@@ -13310,6 +13346,9 @@ Weapon switch easing
 Weapon switch rotation
 == 武器切換旋轉
 
+Weapon Trajectory
+== 武器輔助線
+
 Weapon trajectory
 == 武器彈道輔助線
 
@@ -13442,6 +13481,9 @@ Width of friends column in server browser
 Width of latency column in server browser
 == 伺服器瀏覽器中延遲列的寬度
 
+Width of map column in server browser
+== 伺服器瀏覽器中地圖列的寬度
+
 Width of others' hook collision line
 == 其他玩家的鉤子輔助線線寬度
 
@@ -13477,6 +13519,9 @@ Word filter action: 0=replace matching words, 1=hide entire message
 
 Write local console contents to a text file
 == 將本地控制台內容寫入文本文件
+
+Write performance debug logs to dedicated file
+== 將性能調試日誌寫入專用文件
 
 Write remote console contents to a text file
 == 將遠程控制台內容寫入文本文件
@@ -13805,6 +13850,9 @@ Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == 你的逾時保護碼已設置。0.7 客戶端逾時後無法取回自己的 tee，但 0.6 客戶端可以接管你的 tee
 
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== 切換武器時滑入旋轉，裝填時依裝填時間翻轉。
+
 z = Zoom
 == z = 縮放
 
@@ -13812,7 +13860,7 @@ Zen Mode
 == 禪模式
 
 Zen mode key
-== 禪模式快捷鍵
+== 禪模式按鍵
 
 Zhipu AI
 == 智譜清言

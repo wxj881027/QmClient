@@ -22,6 +22,9 @@
 %d items selected
 == %d 個のアイテムが選択されました
 
+%d more cut segments
+== さらに %d 個のカットセグメント
+
 %d of %d server
 == %d/%d サーバー
 
@@ -517,6 +520,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == デフォルトのチャットバインドを追加
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== 分身のキー、ハンマー、コントロール、コピー状態をHUDに表示し、独自のbind状態リストも使えます。
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -2178,7 +2184,7 @@ Configure display and rendering
 == 表示とレンダリングを設定
 
 Configure Dream-only convenience features
-== Qm 専用の便利機能を設定
+== Configure Dream-only convenience features
 
 Configure game and client preferences
 == ゲームとクライアントの設定を構成
@@ -2305,9 +2311,6 @@ Connecting dummy
 
 Connecting to
 == 接続中
-
-Connecting to voice server
-== ボイスサーバーに接続中
 
 Connection disconnected
 == 接続が切断されました
@@ -2455,9 +2458,6 @@ Could not get server list from master server
 
 Could not load default touch controls from file. See local console for details.
 == ファイルからデフォルトのタッチコントロールを読み込めませんでした。詳細はローカルコンソールを確認してください。
-
-Could not load new features
-== 新機能の内容を読み込めませんでした
 
 Could not load sponsor QR code. Check the Base64 data
 == スポンサー QR コードを読み込めませんでした。Base64 データを確認してください
@@ -2645,9 +2645,6 @@ Customize translate button and menu colors
 Customize vote display and interaction
 == Customize vote display and interaction
 
-Cut end: %s
-== 終了: %s
-
 Cut interval
 == カット間隔
 
@@ -2656,9 +2653,6 @@ Cut length
 
 Cut segments
 == カットセグメント
-
-Cut start: %s
-== 開始: %s
 
 Cute:
 == かわいい：
@@ -3212,9 +3206,6 @@ Door Laser Outline Color
 Door laser outline color
 == ドアレーザーアウトライン色
 
-Double-click: left applies to main, right applies to dummy
-== ダブルクリック：左で本体、右でダミーに適用
-
 Download community skins
 == コミュニティスキンをダウンロード
 
@@ -3386,8 +3377,8 @@ Dummy is currently connected.
 Dummy jump
 == ダミージャンプ
 
-Dummy key/hammer/control/copy status switches
-== キー固定/ハンマー/分身操作/分身同期の状態スイッチ
+Dummy key/hammer/control/copy status switches and custom bind status list
+== キー固定/ハンマー/分身操作/分身同期の状態スイッチとカスタム bind 状態リスト
 
 Dummy marking color
 == ダミーマーキング色
@@ -3584,6 +3575,9 @@ Emoticon shadow
 Emoticons
 == エモート
 
+Empty: built-in 4 entries. Format: var|0=Off|1=On; var|Text
+== 空の場合は組み込みの4項目。形式：var|0=Off|1=On；var|Text
+
 enable
 == 有効
 
@@ -3646,6 +3640,9 @@ Enable chat with all/team mode
 
 Enable cheats for your current team's run, but you can't earn a rank
 == 現在のチームのランでチートを有効にしますが、ランクは獲得できません
+
+Enable client stutter diagnostics at startup
+== 起動時にクライアントのスタッター診断を有効にする
 
 Enable colored console output
 == コンソールのカラー出力を有効にする
@@ -3875,6 +3872,9 @@ Enable skin queue rotation
 Enable skin switch animation
 == スキン切り替えアニメーションを有効化
 
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== スキン切り替えアニメを有効にし、種類・範囲・時間・イージングを選びます。
+
 Enable smooth cinematic camera while free spectating
 == フリー観戦中に滑らかなシネマティックカメラを有効にする
 
@@ -3962,14 +3962,17 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 敵対リストを有効化
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== 武器切り替えアニメかリロードアニメを有効にし、範囲・時間・回転・イージングを調整します。
+
 Enable word filter list
 == フィルターワードリストを有効にする
 
 Enable Zen Mode
-== Zen モードを有効化
+== 禅モード（Zen Mode）を有効化
 
 Enable Zen mode
-== Zen モードを有効化
+== Zen モードを有効にする
 
 Enable/disable infinite hook.
 == 無限フックの有効/無効
@@ -4001,9 +4004,6 @@ Endpoint
 Endpoint (optional)
 == エンドポイント（オプション）
 
-Enhanced rendering
-== 高度なレンダリング
-
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice モードに入るか再起動してください。そうしないと 60 秒後にチーム全員が処刑されます
 
@@ -4012,6 +4012,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == パスワードを入力
+
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== スポンサーコードを入力して「引き換える」を押し、称号を書いて「保存」を押します。「このニックネームのみ表示」を有効にすると1つのニックネームに紐付けられます。
 
 Enter Username
 == ユーザー名を入力
@@ -4042,6 +4045,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg（Workshop）
+
+Entry: %s
+== 場所：%s
 
 Erase items on the in game background
 == ゲーム内背景のアイテムを消去
@@ -4781,6 +4787,9 @@ Gives you infinite jump
 Glitch
 == グリッチ
 
+Global card
+== グローバルカード
+
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 == グローバルカードソート（形式 stableId|tab|col|order; セミコロン区切り）
 
@@ -4931,9 +4940,6 @@ Has save
 Has unread news
 == 未読ニュースがあるかどうか
 
-HD icons (MSDF)
-== 高解像度アイコン (MSDF)
-
 HDF
 == HDF
 
@@ -4956,37 +4962,37 @@ Hi!
 == やあ!
 
 Hide basic system info (join, version, rules) in Zen mode
-== Zen モードで基本システム情報（入室・バージョン・ルール）を隠す
+== 禅モードで入場、バージョン、ルールなどの基本システム情報を非表示
 
 Hide chat messages from players marked as enemies
 == 敵としてマークしたプレイヤーのチャットメッセージを隠す
 
 Hide death/respawn effects
-== 死亡/リスポーンエフェクトを隠す
+== 死亡/復活エフェクトを非表示
 
 Hide death/respawn effects in Zen Mode
-== Zen モードで死亡/リスポーン演出を隠す
+== 禅モードで死亡/復活エフェクトを非表示
 
 Hide direction in Zen mode
-== Zen モードで方向インジケータを隠す
+== 禅モードで方向を非表示
 
 Hide direction indicators
-== 方向インジケータを隠す
+== 方向インジケーターを非表示
 
 Hide Echo messages
-== Echo メッセージを隠す
+== Echo メッセージを非表示
 
 Hide Echo messages in Zen mode
-== Zen モードで Echo メッセージを隠す
+== 禅モードで Echo メッセージを非表示
 
 Hide explosion effects
-== 爆発エフェクトを隠す
+== 爆発エフェクトを非表示
 
 Hide freeze effects
-== 凍結エフェクトを隠す
+== フリーズエフェクトを非表示
 
 Hide freeze effects in Zen Mode
-== Zen モードで凍結演出を隠す
+== 禅モードでフリーズエフェクトを非表示
 
 Hide ghosts of frozen players
 == 凍結プレイヤーのゴーストを非表示
@@ -4995,22 +5001,22 @@ Hide guide lines
 == ガイドラインを非表示
 
 Hide hammer effects
-== ハンマーエフェクトを隠す
+== ハンマーエフェクトを非表示
 
 Hide hammer effects in Zen Mode
-== Zen モードでハンマー演出を隠す
+== 禅モードでハンマーエフェクトを非表示
 
 Hide helper lines in Gores mode
 == Gores モードでガイドラインを非表示
 
 Hide helper lines in Zen mode
-== Zen モードで補助線を隠す
+== 禅モードで補助線を非表示
 
 Hide HUD
-== HUD を隠す
+== HUD を非表示
 
 Hide HUD in Zen mode
-== Zen モードで HUD を隠す
+== 禅モードで HUD を非表示
 
 Hide indicator for tees on your screen
 == 画面内の Tee のインジケーターを非表示
@@ -5019,31 +5025,31 @@ Hide input emoticon
 == 入力絵文字を非表示
 
 Hide join/version prompts
-== 参加/バージョン通知を隠す
+== 参加/バージョンプロンプトを非表示
 
 Hide jump effects
-== ジャンプエフェクトを隠す
+== ジャンプエフェクトを非表示
 
 Hide jump effects in Zen Mode
-== Zen モードでジャンプ演出を隠す
+== 禅モードでジャンプエフェクトを非表示
 
 Hide kill and finish messages in Zen mode
-== Zen モードでキル/完走メッセージを隠す
+== 禅モードでキルと完了メッセージを非表示
 
 Hide kill/finish messages
-== キル/フィニッシュメッセージを隠す
+== キル/フィニッシュメッセージを非表示
 
 Hide map progress
-== マップ進捗を隠す
+== マップ進行度を非表示
 
 Hide map progress bar in Zen mode
-== Zen モードでマップ進捗バーを隠す
+== 禅モードでマップ進行バーを非表示
 
 Hide nameplates
-== 名札を隠す
+== ネームプレートを非表示
 
 Hide names
-== 名前を隠す
+== 名前を非表示
 
 Hide non-friend names/clans and show client ID
 == フレンド以外の名前/クランを非表示にしてクライアント ID を表示
@@ -5058,22 +5064,22 @@ Hide player messages
 == プレイヤーメッセージを非表示
 
 Hide player messages in Zen mode
-== Zen モードでプレイヤーメッセージを隠す
+== 禅モードでプレイヤーメッセージを非表示
 
 Hide player name plates in Zen Mode
-== Zen モードでプレートを隠す
+== 禅モードでプレイヤー名板を非表示
 
 Hide player names in Zen Mode
-== Zen モードでプレイヤー名を隠す
+== 禅モードでプレイヤー名を非表示
 
 Hide projectile effects in Zen Mode
-== Zen モードで弾道演出を隠す
+== 禅モードで砲撃エフェクトを非表示
 
 Hide scoreboard
-== スコアボードを隠す
+== スコアボードを非表示
 
 Hide scoreboard in Zen mode
-== Zen モードでスコアボードを隠す
+== 禅モードでスコアボードを非表示
 
 Hide sensitive info like /save password
 == /save パスワードなどの機密情報を非表示
@@ -5082,10 +5088,10 @@ Hide server information on join
 == 参加時にサーバー情報を非表示
 
 Hide server prompt notifications
-== サーバー通知を隠す
+== サーバープロンプト通知を非表示
 
 Hide server tip notifications (including notification bar) in Zen mode
-== Zen モードでサーバー通知（通知バー含む）を隠す
+== 禅モードでサーバー通知（通知バーを含む）を非表示
 
 Hide Settings Tabs
 == 設定タブを非表示
@@ -5106,13 +5112,13 @@ Hide typing emoji during input
 == 入力中はタイピング表情を表示しない
 
 Hide UI for focused gameplay
-== 集中プレイのために UI を隠す
+== 集中プレイのためにUIを非表示
 
 Hide weapon fire effects in Zen Mode
-== Zen モードで武器発射演出を隠す
+== 禅モードで武器炎エフェクトを非表示
 
 Hide weapon muzzle flashes
-== 武器のマズルフラッシュを隠す
+== 武器の発射炎を非表示
 
 High Detail
 == 高精細
@@ -5420,9 +5426,6 @@ Indicator size
 Indicator transparency
 == インジケーターの透明度
 
-Inferno
-== 冥炎
-
 Infinite hook for super players on/off.
 == スーパープレイヤーの無限フックのオン/オフ。
 
@@ -5497,6 +5500,9 @@ Insane
 
 Installing update. Please wait...
 == アップデートをインストールしています。お待ちください...
+
+Instant zoom reverse
+== ズームの逆方向操作を即時反映
 
 Interface
 == インターフェース
@@ -6122,6 +6128,12 @@ Local game mode statistics
 Local only
 == ローカルのみ
 
+Local particle effects
+== ローカルパーティクルエフェクト
+
+Local particles: show particles behind own Tee (e.g. freeze snow)
+== ローカルパーティクル：自分の Tee の後ろに落ちるパーティクル（凍結雪など）を表示
+
 Local saves
 == ローカルセーブ
 
@@ -6368,8 +6380,14 @@ Margin when notification is docked
 Mark demo
 == デモをマーク
 
+Mark the beginning of a cut (right click to reset)
+== カットの開始をマーク（右クリックでリセット）
+
 Mark the beginning of a demo cut
 == デモカットの開始をマーク
+
+Mark the end of a cut (right click to reset)
+== カットの終了をマーク（右クリックでリセット）
 
 Mark the end of a demo cut
 == デモカットの終了をマーク
@@ -6533,9 +6551,6 @@ Menu camera rotation time in seconds
 Menu camera speed
 == メニューカメラの速度
 
-Menu Gaussian blur pipeline
-== メニューガウスぼかしパイプライン
-
 Menu main panel background color
 == メニューメインパネルの背景色
 
@@ -6559,6 +6574,9 @@ Merge consecutive identical echo messages within this window in milliseconds (0 
 
 Merge consecutive identical player messages within 2 seconds
 == 2 秒以内に連続した同一プレイヤーの同じメッセージを統合
+
+Merges chat messages repeated within a short time into a single line.
+== 短時間に繰り返されたチャットメッセージを1行にまとめます。
 
 Message color
 == メッセージの色
@@ -6747,10 +6765,10 @@ Mute
 == ミュート
 
 Mute death/respawn sound in Zen Mode
-== Zen モードで死亡/リスポーン音を消音
+== 禅モードで死亡/復活サウンドをミュート
 
 Mute death/respawn sounds
-== 死亡/リスポーン音を消音
+== 死亡/復活音をミュート
 
 Mute emoticons
 == 絵文字をミュート
@@ -6759,19 +6777,19 @@ Mute flag sounds
 == フラグサウンドをミュート
 
 Mute hammer sound in Zen mode
-== Zen モードでハンマー音を消音
+== 禅モードでハンマーサウンドをミュート
 
 Mute hammer sounds
-== ハンマー音を消音
+== ハンマーサウンドをミュート
 
 Mute hook sound
 == フックサウンドをミュート
 
 Mute jump sound in Zen Mode
-== Zen モードでジャンプ音を消音
+== 禅モードでジャンプサウンドをミュート
 
 Mute jump sounds
-== ジャンプ音を消音
+== ジャンプサウンドをミュート
 
 Mute map sounds
 == マップサウンドをミュート
@@ -7814,6 +7832,9 @@ Pet Skin:
 Pick result: %s
 == 抽選結果：%s
 
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== 使用中の音楽アプリに合うソースを選んで再生しておくだけで、歌詞が自動的に追従します。
+
 Pickup range
 == ピックアップ範囲
 
@@ -8035,6 +8056,9 @@ Players weapons has no affect on others
 
 Playing effects
 == エフェクトの再生
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== ハンマーで奪ったスキンも含め、スキンが変わるときにアニメーションを再生します。
 
 Please add a valid cut first
 == 有効なカットを先に追加してください
@@ -8363,9 +8387,6 @@ Pulse speed
 Pulse strength
 == パルス強度
 
-Pure Vulkan fallback
-== 現在：純粋 Vulkan フォールバック
-
 Push radius
 == プッシュ半径
 
@@ -8449,9 +8470,6 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi カラーアニメーション補間：0=sRGB 線形 1=OKLAB 知覚均一
-
-QmVulkan active
-== 現在：QmVulkan 有効
 
 QQ group: 1076765929 (click to copy)
 == QQ グループ：1076765929（クリックしてコピー）
@@ -8726,6 +8744,9 @@ Redeem
 Redeem your code and customize your title
 == コードを引き換えて称号を設定
 
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== スポンサーコードを引き換えるとカスタム称号を解除できます。称号はチャットとネームプレートに表示されます。
+
 Reduce antiping and player prediction when frozen
 == フリーズ時にアンチピンとプレイヤー予測を軽減
 
@@ -8818,6 +8839,12 @@ Remote console password for helper (limited access)
 
 Remote console password for moderator (limited access)
 == モデレーター用リモートコンソールパスワード（制限付きアクセス）
+
+Remote particle effects
+== リモートパーティクルエフェクト
+
+Remote particles: sync and render other players via central server (requires both local+remote enabled)
+== リモートパーティクル：中央サーバー経由で他のプレイヤーを同期・レンダリング（相手がローカル＋リモートを有効にする必要あり）
 
 Remove
 == 削除
@@ -9250,6 +9277,9 @@ Retry remote stats
 
 Retrying…
 == 再試行中…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== 逆方向キーでズームを即座に反転（0=元の滑らかなズームを維持）
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -9859,12 +9889,6 @@ Set color
 
 Set current demo speed
 == 現在のデモ速度を設定
-
-Set cut end at current position (O, right click to reset)
-== 現在位置をカットの終了点に設定（O、右クリックでリセット）
-
-Set cut start at current position (I, right click to reset)
-== 現在位置をカットの開始点に設定（I、右クリックでリセット）
 
 Set ddrace team for a player
 == プレイヤーの DDRace チームを設定
@@ -10853,6 +10877,9 @@ Shows gameplay information for this server
 Shows help to command r, general help if left blank
 == コマンド r のヘルプを表示、空白の場合は一般ヘルプを表示
 
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== NetEase Cloud Music、Soda Music、Kugou、QQ Musicの歌詞を取得し、ダイナミックアイランドに表示します。
+
 Shows the credits of the DDNet mod
 == DDNet mod のクレジットを表示
 
@@ -10991,6 +11018,9 @@ Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
 == スキン切り替えアニメーションタイプ (0=残像ポップ, 1=ソフトフェード, 2=左スライド, 3=回転ポップ, 4=明暗切り替え, 5=グリッチシェイク, 6=弾性スケール)
 
+Skin transition
+== スキン遷移
+
 Skin transition animation
 == スキン切り替えアニメーション
 
@@ -11059,9 +11089,6 @@ Smooth Dynamic Camera
 
 Smooth fade
 == スムーズフェード
-
-Smooth island (SDF)
-== Dynamic Island スムーズ (SDF)
 
 Smooth other players' predicted movement
 == 他のプレイヤーの予測移動をスムーズにする
@@ -11515,6 +11542,9 @@ Switch failed
 
 Switch interval
 == 切り替え間隔
+
+Switch on the status rows you need, then list the binds you want to watch.
+== 必要な状態スイッチをオンにし、監視したいbindをカスタムリストに入力します。
 
 Switch opacity
 == 切り替え不透明度
@@ -12491,6 +12521,9 @@ Tune variable to value
 Tune variable to value or show current value
 == チューン変数を値に設定するか、現在の値を表示
 
+Turn on "Message merging" in Dream Features.
+== 「ドリーム機能」で「Message merging」をオンにします。
+
 Tutorial
 == チュートリアル
 
@@ -12517,6 +12550,9 @@ UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or netwo
 
 UDP seems to be filtered.
 == UDP がフィルタリングされているようです。
+
+UDP socket not open
+== UDP ソケットが開いていません
 
 UI color
 == UI カラー
@@ -12770,6 +12806,9 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == スキン用ダウンロード URL
 
+Usage: %s
+== 使い方：%s
+
 Usage: %s %s
 == 使用方法: %s %s
 
@@ -12826,9 +12865,6 @@ Use default voice input device
 
 Use default voice output device
 == デフォルトの音声出力デバイスを使用
-
-Use each Tee trail style's own palette instead of the trail color mode
-== トレイルの色モードではなく、各スタイル固有の配色を使う
 
 Use embedded HUD progress bar
 == HUD 埋め込みプログレスバーを使用
@@ -13310,6 +13346,9 @@ Weapon switch easing
 Weapon switch rotation
 == 武器切り替え回転
 
+Weapon Trajectory
+== 武器軌道
+
 Weapon trajectory
 == 武器軌跡
 
@@ -13442,6 +13481,9 @@ Width of friends column in server browser
 Width of latency column in server browser
 == サーバーブラウザのレイテンシ列の幅
 
+Width of map column in server browser
+== サーバーブラウザのマップ列の幅
+
 Width of others' hook collision line
 == 他のプレイヤーのフック衝突線の幅
 
@@ -13477,6 +13519,9 @@ Word filter action: 0=replace matching words, 1=hide entire message
 
 Write local console contents to a text file
 == ローカルコンソールの内容をテキストファイルに書き出す
+
+Write performance debug logs to dedicated file
+== パフォーマンスデバッグログを専用ファイルに書き込む
 
 Write remote console contents to a text file
 == リモートコンソールの内容をテキストファイルに書き出す
@@ -13805,14 +13850,17 @@ Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == タイムアウトコードが設定されました。0.7 クライアントはタイムアウト時に Tee を取り戻せませんが、0.6 クライアントはあなたの Tee を引き継げます
 
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== 武器切り替え時にスライドしながら回転し、リロード中は回転して裏返ります。
+
 z = Zoom
 == z = ズーム
 
 Zen Mode
-== Zen モード
+== 禅モード
 
 Zen mode key
-== Zen モードのキー
+== 禅モードキー
 
 Zhipu AI
 == Zhipu AI

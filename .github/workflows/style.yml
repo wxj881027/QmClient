@@ -47,7 +47,7 @@ jobs:
     - name: Check maps (map_test)
       run: |
         set +e
-        python3 scripts/map_test.py data/maps map_test release/map_test
+        scripts/map_test.py data/maps map_test release/map_test
         map_test_result=$?
         set -e
         if [ $map_test_result -ne 0 ]; then

@@ -43,7 +43,6 @@ static constexpr int VOICE_MAX_CAPTURE_FRAMES_PER_UPDATE = 3;
 static constexpr int VOICE_CONFIG_SNAPSHOT_INTERVAL_MS = 50;
 static constexpr int VOICE_OVERLAY_VISIBLE_MS = 180;
 static constexpr int VOICE_OVERLAY_MAX_SPEAKERS = 5;
-static constexpr int VOICE_MAX_CAPTURE_FRAMES_PER_UPDATE = 3;
 static constexpr const char *s_pVoiceOverlayMicIcon = "\xEF\x84\xB0";
 
 void CVoiceOverlayState::Reset()
@@ -1662,6 +1661,7 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		}
 		const uint16_t PayloadSize = Header.m_PayloadSize;
 		const uint32_t TokenHash = Header.m_TokenHash;
+		const uint8_t Flags = Header.m_Flags;
 		const uint16_t SenderId = Header.m_SenderId;
 		const uint16_t Sequence = Header.m_Sequence;
 		const float PosX = VoiceUtils::SanitizeFloat(Header.m_PosX);
@@ -1734,6 +1734,7 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		vec2 LocalPos = vec2(0.0f, 0.0f);
 		bool SpecActive = false;
 		vec2 SpecPos = vec2(0.0f, 0.0f);
+		char aSenderName[MAX_NAME_LENGTH];
 		bool SenderOtherTeam = false;
 		bool SenderActive = false;
 		bool SenderSpec = false;
@@ -1747,6 +1748,7 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 			LocalPos = m_aClientPosSnap[LocalId];
 			SpecActive = m_SpecActiveSnap;
 			SpecPos = m_SpecPosSnap;
+			str_copy(aSenderName, m_aClientNameSnap[SenderId].data(), sizeof(aSenderName));
 			SenderOtherTeam = m_aClientOtherTeamSnap[SenderId] != 0;
 			SenderActive = m_aClientActiveSnap[SenderId] != 0;
 			SenderSpec = m_aClientSpecSnap[SenderId] != 0;
@@ -1756,6 +1758,7 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 
 		const bool IsSelf = SenderId == LocalId;
 		const bool IgnoreDistance = VoiceUtils::VoiceShouldIgnoreDistance(Config.m_QmVoiceIgnoreDistance != 0, Config.m_QmVoiceGroupGlobal != 0, LocalToken, TokenHash);
+		const char *pSenderName = aSenderName;
 		VoiceUtils::SVoiceReceiveAudibilityContext AudibilityContext;
 		AudibilityContext.m_IsSelf = IsSelf;
 		AudibilityContext.m_TestServer = TestServer;
@@ -1765,16 +1768,14 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		AudibilityContext.m_SenderOtherTeam = SenderOtherTeam;
 		AudibilityContext.m_SenderActive = SenderActive;
 		AudibilityContext.m_SenderSpec = SenderSpec;
-		// 接收端只按连接上下文、队伍/观战状态和空间距离过滤；旧的名单、按名音量
-		// 与 VAD 白名单不再参与实时路径，配置字段仅为旧配置文件保留。
-		AudibilityContext.m_ListMode = 0;
-		AudibilityContext.m_HearVad = true;
-		AudibilityContext.m_SenderUsesVad = false;
-		AudibilityContext.m_pMuteList = "";
-		AudibilityContext.m_pWhitelist = "";
-		AudibilityContext.m_pBlacklist = "";
-		AudibilityContext.m_pVadAllow = "";
-		if(VoiceUtils::EvaluateVoiceReceiveAudibility(AudibilityContext, nullptr) != VoiceUtils::EVoiceReceiveAudibility::ALLOW)
+		AudibilityContext.m_ListMode = Config.m_QmVoiceListMode;
+		AudibilityContext.m_HearVad = Config.m_QmVoiceHearVad != 0;
+		AudibilityContext.m_SenderUsesVad = (Flags & VOICE_FLAG_VAD) != 0;
+		AudibilityContext.m_pMuteList = Config.m_aQmVoiceMute;
+		AudibilityContext.m_pWhitelist = Config.m_aQmVoiceWhitelist;
+		AudibilityContext.m_pBlacklist = Config.m_aQmVoiceBlacklist;
+		AudibilityContext.m_pVadAllow = Config.m_aQmVoiceVadAllow;
+		if(VoiceUtils::EvaluateVoiceReceiveAudibility(AudibilityContext, pSenderName) != VoiceUtils::EVoiceReceiveAudibility::ALLOW)
 			continue;
 		m_aLastHeard[SenderId].store(PacketNow);
 
@@ -1783,7 +1784,7 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 			m_RxDropPayload++;
 			continue;
 		}
-		if((size_t)VOICE_PACKET_HEADER_SIZE + PayloadSize != (size_t)Bytes)
+		if((size_t)VOICE_PACKET_HEADER_SIZE + PayloadSize > (size_t)Bytes)
 		{
 			m_RxDropPayload++;
 			continue;
@@ -1807,6 +1808,14 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 		float Volume = std::clamp(RadiusFactor * (Config.m_QmVoiceVolume / 100.0f), 0.0f, 4.0f);
 		if(Volume <= 0.0f)
 			continue;
+
+		int NameVolume = 100;
+		if(VoiceUtils::VoiceNameVolume(Config.m_aQmVoiceNameVolumes, pSenderName, NameVolume))
+		{
+			Volume *= (NameVolume / 100.0f);
+			if(Volume <= 0.0f)
+				continue;
+		}
 
 		const bool StereoEnabled = Config.m_QmVoiceStereo != 0;
 		const float StereoWidth = std::clamp(Config.m_QmVoiceStereoWidth / 100.0f, 0.0f, 2.0f);
