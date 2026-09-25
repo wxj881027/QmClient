@@ -1009,8 +1009,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	CCommandBuffer::SVertexTex3DStream m_aVerticesTex3D[CCommandBuffer::MAX_VERTICES];
 	int m_NumVertices;
 
-	CQmRoundedRectDirections m_RoundedRectDirections;
-
 	CCommandBuffer::SColor m_aColor[4];
 	CCommandBuffer::STexCoord m_aTexture[4];
 
