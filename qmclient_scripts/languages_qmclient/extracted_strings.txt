@@ -171,6 +171,7 @@ Address
 Address to bind the external console. Anything other than "localhost" is dangerous.
 Adds a specific war entry
 Adds default chat binds
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
 Adjust DDNet gameplay indicators and assists
 Adjust DDRace-specific HUD indicators
 Adjust game camera and FOV settings
@@ -391,6 +392,7 @@ Automatically close the current chat after waking from freeze
 Automatically create statboard csv
 Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
+Automatically launch Steam and hand over external launches when enabled
 Automatically launch Steam when the client is started externally
 Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
@@ -477,6 +479,7 @@ Bind Wheel Key
 Binds
 Bit flags for disabling settings tabs
 Black
+Black Flash
 Blank material
 Blank: hides this asset
 Blend mode
@@ -787,7 +790,6 @@ Contributors
 Control custom background drawing
 Control latency compensation tools
 Control player (0) or dummy (1)
-Control whether external launches are handed over to Steam
 Controlled by Gores mode
 Controlled by Zen mode
 Controller
@@ -858,8 +860,6 @@ custom
 Custom API key
 Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
-Custom bind status HUD entries. Empty: built-in 4 entries (key stuck/hammer/dummy control/dummy copy). Format: var|value=text|value=text;var|text (shown when non-zero);var (shown as var name when non-zero). Entries separated by ';', fields by '|'
-Custom bind status list
 Custom color
 Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
@@ -880,11 +880,9 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 Customize translate button and menu colors
 Customize vote display and interaction
-Cut end: %s
 Cut interval
 Cut length
 Cut segments
-Cut start: %s
 Cute:
 Cycle custom Tee hue
 Cycle custom Tee hue for dummy simultaneously
@@ -1127,7 +1125,7 @@ Dummy hook
 Dummy is allowed on this server.
 Dummy is currently connected.
 Dummy jump
-Dummy key/hammer/control/copy status switches
+Dummy key/hammer/control/copy status switches and custom bind status list
 Dummy marking color
 Dummy mini view
 Dummy mini view size (percent)
@@ -1214,6 +1212,7 @@ Enable chat mention sound
 Enable chat message sound
 Enable chat with all/team mode
 Enable cheats for your current team's run, but you can't earn a rank
+Enable client stutter diagnostics at startup
 Enable colored console output
 Enable coloring and hearts for friends
 Enable connections from vanilla 0.6 clients
@@ -1290,6 +1289,7 @@ Enable shout when holding fire while in water
 Enable Sixup connection.
 Enable skin queue rotation
 Enable skin switch animation
+Enable skin transition animation, then choose the type, scope, duration and easing.
 Enable smooth cinematic camera while free spectating
 Enable SodaMusic Hook
 Enable SodaMusic hook integration
@@ -1319,6 +1319,7 @@ Enable voice activation (VAD)
 Enable voice chat
 Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
 Enable word filter list
 Enable Zen Mode
 Enable Zen mode
@@ -1332,10 +1333,10 @@ Endless hook has been activated
 Endless hook has been deactivated
 Endpoint
 Endpoint (optional)
-Enhanced rendering
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 Enter a CP number from 1 to 255.
 Enter Password
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 Enter Username
 Enter your sponsor code
 Entities
@@ -1376,6 +1377,7 @@ Execute on join
 Execute the specified file
 Existing Player
 Exit replay view
+Exo
 Export
 Export cut as a separate demo
 Export demo cut
@@ -1592,6 +1594,7 @@ Gives you as many jumps as you specify
 Gives you endless hook
 Gives you infinite jump
 Glitch
+Global card
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
 Global toggle key
@@ -2039,6 +2042,7 @@ Local + Dummy
 Local console log category filter mask (bit flags)
 Local game mode statistics
 Local only
+Local particle effects
 Local saves
 Local statistics file is invalid, saving paused
 Local test mode
@@ -2121,7 +2125,9 @@ Maps finished
 maps/example.map
 Margin when notification is docked
 Mark demo
+Mark the beginning of a cut (right click to reset)
 Mark the beginning of a demo cut
+Mark the end of a cut (right click to reset)
 Mark the end of a demo cut
 Markers
 Master server URL to register
@@ -2185,6 +2191,7 @@ Menu option - normal
 Menu option - selected
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 Merge consecutive identical player messages within 2 seconds
+Merges chat messages repeated within a short time into a single line.
 Message color
 Message displayed to players on join.
 Message merging
@@ -2384,6 +2391,7 @@ No matching assets.
 No matching features found. Try other keywords
 No matching Rank 1 replay
 no matching settings found, type /settings to view them
+No new features yet
 No noise reduction
 No obvious anomaly
 No output device available
@@ -2603,6 +2611,7 @@ Pet size relative to normal player
 Pet skin
 Pet Skin:
 Pick result: %s
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 Pickup range
 Pie menu
 Pie menu rename list (separate with |, e.g., name1|name2)
@@ -2677,6 +2686,7 @@ Players hook time is unlimited
 Players weapons affect others
 Players weapons has no affect on others
 Playing effects
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
 Please add a valid cut first
 Please balance teams!
 Please enable finished indicator first
@@ -2786,7 +2796,6 @@ Pulse Amplitude (0-100)
 Pulse animation speed (percentage, 100=normal)
 Pulse speed
 Pulse strength
-Pure Vulkan fallback
 Push radius
 Push strength
 Push-to-talk for voice chat
@@ -2815,7 +2824,6 @@ QmClient sidebar module collapse state
 QmClient sidebar module order
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
-QmVulkan active
 QQ group: 1076765929 (click to copy)
 QQ Music hook heartbeat timeout (milliseconds)
 QQ Music hook helper path (empty=beside QmClient)
@@ -2907,6 +2915,7 @@ Red team
 Red team wins!
 Redeem
 Redeem your code and customize your title
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
 Reduce antiping and player prediction when frozen
 Reduce prediction while frozen
 Reduced
@@ -2938,6 +2947,7 @@ Remote console
 Remote console password (full access)
 Remote console password for helper (limited access)
 Remote console password for moderator (limited access)
+Remote particle effects
 Remove
 Remove [group] [clan]:
 Remove [group] [name]:
@@ -3082,6 +3092,7 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 Retry remote stats
 Retrying…
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 Review and edit custom key bindings
 Review and reset changed configuration values
 Rifle Laser Inner Color
@@ -3285,8 +3296,6 @@ Set camera position relative to current view in the map
 Set camera position to x and y in the map
 Set color
 Set current demo speed
-Set cut end at current position (O, right click to reset)
-Set cut start at current position (I, right click to reset)
 Set ddrace team for a player
 Set default replay length
 Set force-pause timer of i to 0.
@@ -3616,6 +3625,7 @@ Shows five points of the global point ladder beginning with rank i (1 by default
 Shows five team ranks of the ladder or of a player beginning with rank i (1 by default, -1 for worst)
 Shows gameplay information for this server
 Shows help to command r, general help if left blank
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
 Shows the credits of the DDNet mod
 Shows the global points of a player beginning with name r (your rank by default)
 Shows the rank of player with name r (your rank by default)
@@ -3662,6 +3672,7 @@ Skin switch animation easing mode
 Skin switch animation intensity percentage
 Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
+Skin transition
 Skin transition animation
 Skin transition duration
 Skin transition easing
@@ -3753,6 +3764,7 @@ Speed up the demo
 Speed:
 Sphere
 Spin pop
+Spirit
 Spirit Light
 Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
@@ -3837,6 +3849,7 @@ Switch
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 Switch failed
 Switch interval
+Switch on the status rows you need, then list the binds you want to watch.
 Switch opacity
 Switch skin on hammer
 Switch spectator mode
@@ -4162,6 +4175,7 @@ Tune in zone a variable to value
 Tune layer opacity
 Tune variable to value
 Tune variable to value or show current value
+Turn on "Message merging" in Dream Features.
 Tutorial
 Twinkle strength
 Type
@@ -4274,7 +4288,6 @@ Use default input
 Use default output
 Use default voice input device
 Use default voice output device
-Use each Tee trail style's own palette instead of the trail color mode
 Use embedded HUD progress bar
 Use emote
 Use enemy color instead of frozen color
@@ -4374,6 +4387,7 @@ Voice stereo output
 Voice stereo width (percent)
 Voice test mode (0=Off 1=Local 2=Server Loopback)
 Voice whitelist (comma-separated)
+Void
 Void Shadow
 Volume
 Vote a map by name
@@ -4479,6 +4493,7 @@ Width
 Width and height are required to be within the range from %d to %d.
 Width of friends column in server browser
 Width of latency column in server browser
+Width of map column in server browser
 Width of others' hook collision line
 Width of players column in server browser
 Width of Qm clients column in server browser
@@ -4491,6 +4506,7 @@ Windowed fullscreen
 Word Filter
 Word filter action: 0=replace matching words, 1=hide entire message
 Write local console contents to a text file
+Write performance debug logs to dedicated file
 Write remote console contents to a text file
 Writing item %d failed
 Written %d items
@@ -4600,6 +4616,7 @@ Your team is currently saving
 Your team was killed because it couldn't finish anymore and hasn't entered /practice mode
 Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
+Your weapon slides and rotates in when you switch, and flips while reloading.
 z = Zoom
 Zen Mode
 Zen mode key
@@ -5677,6 +5694,8 @@ Zoom to current mouse target
 [Rank 1 replay]	Direction
 [Show name plates]	All
 [Show name plates]	Current
+[Show name plates]	Current + Local
+[Show name plates]	Local + Others
 [Show name plates]	None
 [Show name plates]	Others
 [Show name plates]	Others and own
