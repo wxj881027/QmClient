@@ -7,11 +7,17 @@
 
 #include <engine/graphics.h>
 #include <engine/shared/jobs.h>
+#include <engine/shared/protocol.h>
 
 #include <game/client/component.h>
 
 #include <deque>
 #include <vector>
+
+constexpr int QmNormalizeCountryCode(int CountryCodeValue)
+{
+	return CountryCodeValue >= ::CountryCode::MINIMUM && CountryCodeValue <= ::CountryCode::MAXIMUM ? CountryCodeValue : ::CountryCode::DEFAULT;
+}
 
 class CCountryFlags : public CComponent
 {
