@@ -2516,25 +2516,6 @@ add_custom_target(generate_content_types
     src/generated/data_types.h
 )
 
-# 眼睛 morph 的采样几何数据：从随包 Phosphor-Bold.ttf 提取字形轮廓生成，
-# 被 src/game/client/qm_icon_morph.cpp 直接包含（见 qm_build_icon_morph.py）。
-set(QM_ICON_MORPH_GENERATED ${PROJECT_BINARY_DIR}/src/generated/qm_icon_morph_generated.inc)
-add_custom_command(OUTPUT ${QM_ICON_MORPH_GENERATED}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/src/generated
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_morph.py
-    --fonts-dir data/qmclient/fonts/Phosphor
-    --codepoints datasrc/qm_icons/phosphor.codepoints
-    --output ${QM_ICON_MORPH_GENERATED}
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS
-    qmclient_scripts/qm_build_icon_morph.py
-    datasrc/qm_icons/phosphor.codepoints
-    data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
-  COMMENT "Building QmClient eye path morph data"
-)
-add_custom_target(qm-icon-morph DEPENDS ${QM_ICON_MORPH_GENERATED})
-
 generate_source7("src/generated/protocol7.cpp" "network_source")
 generate_source7("src/generated/protocol7.h" "network_header")
 generate_source7("src/generated/client_data7.cpp" "client_content_source")
@@ -2939,7 +2920,6 @@ add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_EXTERNAL} ${ENGINE_IN
 add_library(game-shared EXCLUDE_FROM_ALL OBJECT ${GAME_SHARED} ${GAME_GENERATED_SHARED})
 add_dependencies(engine-shared generate_protocol)
 add_dependencies(game-shared generate_protocol)
-add_dependencies(game-shared qm-icon-morph)
 if(TARGET_OS STREQUAL "ios")
   add_dependencies(game-shared generate_content_types)
 endif()
@@ -3802,9 +3782,6 @@ if(CLIENT)
     )
   endif()
   add_dependencies(game-client generate_content_types)
-# qm_icon_morph.cpp（game-client）直接包含生成的 morph 数据，必须等生成目标完成：
-# 只挂在 game-shared 上无法保证干净构建时对象先于 .inc 编译。
-add_dependencies(game-client qm-icon-morph)
   if(TARGET qm-nmt-hook64)
     add_dependencies(game-client qm-nmt-hook64 qm-nmt-helper qm-nmt-bootstrap)
     add_custom_command(TARGET game-client POST_BUILD

@@ -2736,7 +2736,6 @@ void CTClient::CheckFriendOnline()
 		}
 		m_FriendAutoRefreshNext = Now + RefreshInterval;
 	}
-}
 
 	if(GameClient()->Friends()->NumFriends() <= 0)
 	{

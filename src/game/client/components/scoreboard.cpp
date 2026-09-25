@@ -802,7 +802,6 @@ void CScoreboard::RenderGhostPlaybackControls(CUIRect Controls)
 	}
 	if(NumSpectators > 0)
 		RenderSpectators(Layout.m_Spectators, NumSpectators);
-}
 
 	// 底部：播放/暂停 + 时间显示
 	CUIRect RowRect;
