@@ -43,6 +43,7 @@ namespace qm_card_catalog
 			"qm:favorite_maps",
 			"qm:hj_assist",
 			"qm:solo_split",
+			"qm:steam",
 		};
 
 		const std::vector<const char *> s_vHudCards = {

@@ -10,6 +10,8 @@
 namespace
 {
 
+	constexpr uint32_t STEAM_APP_ID = 412220;
+
 	class CSteam : public ISteam
 	{
 		HSteamPipe m_SteamPipe;
@@ -157,6 +159,11 @@ namespace
 	};
 
 } // namespace
+
+bool SteamRestartAppIfNecessary()
+{
+	return SteamAPI_RestartAppIfNecessary(STEAM_APP_ID);
+}
 
 ISteam *CreateSteam()
 {

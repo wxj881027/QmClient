@@ -46,6 +46,7 @@ struct ISteamApps;
 struct ISteamFriends;
 
 STEAMAPI bool SteamAPI_Init(); // Returns true on success.
+STEAMAPI bool SteamAPI_RestartAppIfNecessary(uint32_t unOwnAppID);
 STEAMAPI HSteamPipe SteamAPI_GetHSteamPipe();
 STEAMAPI void SteamAPI_Shutdown();
 
