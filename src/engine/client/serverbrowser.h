@@ -414,6 +414,8 @@ private:
 	int GenerateToken(const NETADDR &Addr) const;
 	static int GetBasicToken(int Token);
 	static int GetExtraToken(int Token);
+	int QmClientCountForServer(const CServerInfo &Info) const;
+	void UpdateQmClientServerCounts();
 
 	// sorting criteria
 	bool SortCompareName(int Index1, int Index2) const;
