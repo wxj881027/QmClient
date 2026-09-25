@@ -7264,16 +7264,14 @@ int main(int argc, const char **argv)
 	pConsole->ParseArguments(argc - 1, &argv[1]);
 	pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 
-	// 配置加载后、SteamAPI_Init 前决定是否让 Steam 接管外部启动。
-	if(g_Config.m_QmSteamAutoLaunch && SteamRestartAppIfNecessary())
-	{
-		PerformAllCleanup();
-		return 0;
-	}
+	// 仅打开 Steam 主窗口，客户端仍由当前进程继续启动。
+	if(g_Config.m_QmSteamAutoLaunch)
+		SteamOpenClient();
 
 	ISteam *pSteam = CreateSteam();
 	pKernel->RegisterInterface(pSteam);
 	pClient->InitInterfaces();
+
 	if(pSteam->GetConnectAddress())
 	{
 		pClient->HandleConnectAddress(pSteam->GetConnectAddress());

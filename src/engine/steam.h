@@ -23,8 +23,8 @@ public:
 	virtual void SetGameInfo(const NETADDR &ServerAddr, const char *pMapName, bool AnnounceAddr) = 0;
 };
 
-// 在 Steam 启动外部打开客户端时，请求 Steam 接管并重新启动当前 App。
-bool SteamRestartAppIfNecessary();
+// 打开 Steam 主窗口，不启动任何游戏。
+bool SteamOpenClient();
 
 ISteam *CreateSteam();
 

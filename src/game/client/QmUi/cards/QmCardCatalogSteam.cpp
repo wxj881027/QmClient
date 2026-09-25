@@ -36,7 +36,7 @@ namespace qm_card_catalog
 			Id,
 			"qm:steam",
 			"Steam integration",
-			"Control whether external launches are handed over to Steam",
+			"Automatically launch Steam when the client is started externally",
 			[Ctx](CUIRect &Content) { RenderSteamContent(Ctx, Content); },
 			[Metrics = Ctx.m_Metrics](const float ContentWidth) {
 				SQmCardBuildContext MeasureContext;

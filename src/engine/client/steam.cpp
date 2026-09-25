@@ -10,7 +10,7 @@
 namespace
 {
 
-	constexpr uint32_t STEAM_APP_ID = 412220;
+	constexpr const char *STEAM_MAIN_URI = "steam://open/main";
 
 	class CSteam : public ISteam
 	{
@@ -160,9 +160,9 @@ namespace
 
 } // namespace
 
-bool SteamRestartAppIfNecessary()
+bool SteamOpenClient()
 {
-	return SteamAPI_RestartAppIfNecessary(STEAM_APP_ID);
+	return open_link(STEAM_MAIN_URI);
 }
 
 ISteam *CreateSteam()
