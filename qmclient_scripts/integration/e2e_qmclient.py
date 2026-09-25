@@ -107,17 +107,31 @@ def scenario_qm_lifecycle_persistence(env: ProcessEnvironment) -> None:
 
 
 def scenario_startup_saved_favorites(env: ProcessEnvironment) -> None:
-	"""验证启动时重放已保存收藏配置不会访问未初始化的接口。"""
+	"""验证启动时好友和社区收藏配置被应用，而不是作为未知命令原样保留。"""
 	settings_path = env.path("qmclient", "settings.cfg")
 	settings_path.parent.mkdir(parents=True, exist_ok=True)
 	settings_path.write_text(
-		'qm_steam_auto_launch 0\nadd_favorite "127.0.0.1:8303"\n',
+		'qm_steam_auto_launch 0\n'
+		'add_favorite "127.0.0.1:8303"\n'
+		'add_favorite_community "ddnet"\n'
+		'add_friend "Startup Friend" "Clan" "Friends"\n',
 		encoding="utf-8",
 	)
 
 	env.start_client([], connect=False)
 	env.client.wait_for(lambda line: "adding 127.0.0.1:8303 to favorites" in line, "saved favorite load", 15)
+	env.client.command("friends")
+	env.client.wait_for(lambda line: "Name: Startup Friend, Clan: Clan" in line, "saved friend load", 15)
+	env.client.command('remove_friend "Startup Friend" "Clan"')
+	env.client.command('remove_favorite_community "ddnet"')
+	env.client.command("cl_save_settings 1")
 	_quit_client(env)
+
+	saved_config = settings_path.read_text(encoding="utf-8")
+	if 'add_favorite_community "ddnet"' in saved_config:
+		raise AssertionError("removed community favorite was not applied before config save")
+	if 'add_friend "Startup Friend"' in saved_config:
+		raise AssertionError("removed friend was not applied before config save")
 
 
 def scenario_invalid_statistics_preserved(env: ProcessEnvironment) -> None:

@@ -19,6 +19,7 @@ class QmClientE2ERunnerTest(unittest.TestCase):
 				"perf_log_persistence",
 				"qm_lifecycle_persistence",
 				"recording_without_connection",
+				"startup_saved_favorites",
 				"vector_font_and_icon_resources",
 			},
 		)

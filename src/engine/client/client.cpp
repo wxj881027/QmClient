@@ -4474,18 +4474,22 @@ void CClient::InitInterfaces()
 
 	m_DemoEditor.Init(&*m_pSnapshotDelta, &*m_pSnapshotDeltaSixup, m_pConsole, m_pStorage);
 
-	m_ServerBrowser.SetBaseInfo(&m_aNetClient[CONN_CONTACT], m_pGameClient->NetVersion());
-
 #if defined(CONF_AUTOUPDATE)
 	m_Updater.Init(m_pHttp);
 #endif
 
 	m_pConfigManager->RegisterCallback(IFavorites::ConfigSaveCallback, m_pFavorites);
-	m_Friends.Init();
-	m_Foes.Init(true);
 
 	m_GhostRecorder.Init();
 	m_GhostLoader.Init();
+}
+
+void CClient::InitConfigCommands()
+{
+	IGameClient *pGameClient = Kernel()->RequestInterface<IGameClient>();
+	m_ServerBrowser.SetBaseInfo(&m_aNetClient[CONN_CONTACT], pGameClient->NetVersion());
+	m_Friends.Init();
+	m_Foes.Init(true);
 }
 
 void CClient::Run()
@@ -7150,6 +7154,7 @@ int main(int argc, const char **argv)
 	pClient->RegisterCommands();
 
 	pKernel->RequestInterface<IGameClient>()->OnConsoleInit();
+	pClient->InitConfigCommands();
 
 	// execute config file
 	bool LoadedClientConfig = false;

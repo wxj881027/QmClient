@@ -528,6 +528,7 @@ public:
 	void Update();
 
 	void RegisterInterfaces();
+	void InitConfigCommands();
 	void InitInterfaces();
 
 	void Run();
