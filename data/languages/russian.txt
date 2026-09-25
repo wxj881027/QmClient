@@ -1184,6 +1184,9 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Автоматически возвращаться к ресурсу по умолчанию, когда спрайт пользовательского ресурса полностью прозрачен; отключите, чтобы пустые спрайты оставались невидимыми (например, для скрытия эффектов)
 
+Automatically launch Steam when the client is started externally
+== Автоматически запускать Steam при внешнем запуске клиента
+
 Automatically re-join team 0 after finish (only if unlocked).
 == Автоматически возвращаться в команду 0 после финиша (только если не заблокировано)
 
@@ -2366,6 +2369,9 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == Управление игроком (0) или дамми (1)
 
+Control whether external launches are handed over to Steam
+== Определяет, передавать ли внешние запуски Steam
+
 Controlled by Gores mode
 == Управляется режимом Gores
 
@@ -3433,6 +3439,9 @@ Dumps the antibot status
 
 Duotone
 == Дуотон
+
+Duotone icon secondary color alpha migration completed flag
+== Флаг завершения переноса альфа-канала вторичного цвета двухцветных значков
 
 Duplicate
 == Дублировать
@@ -5857,6 +5866,9 @@ Launch emote
 
 Launch emote key
 == Клавиша запуска эмоции
+
+Launch Steam automatically when starting externally
+== Автоматически запускать Steam при внешнем запуске
 
 Layout
 == Раскладка
@@ -10691,6 +10703,9 @@ Show song info in top-left corner
 Show spectator cursor
 == Показывать курсор наблюдателя
 
+Show spectator ghost tees
+== Показывать призрачные Tee наблюдателей
+
 Show speedometer when changing
 == Показывать спидометр при изменении
 
@@ -11246,6 +11261,12 @@ Spectated player and friends
 Spectator ghost opacity
 == Непрозрачность призраков наблюдателей
 
+Spectator ghost tee scope
+== Область призрачных Tee наблюдателей
+
+Spectator ghost tee scope: 0=other players including dummy, 1=all players
+== Область призрачных Tee: 0=только другие игроки (включая dummy), 1=все игроки
+
 Spectators
 == Наблюдатели
 
@@ -11392,6 +11413,9 @@ Status normal, check details below if still experiencing issues
 
 Status Scheme:
 == Схема состояния:
+
+Steam integration
+== Интеграция со Steam
 
 Steam profile name
 == Имя профиля Steam

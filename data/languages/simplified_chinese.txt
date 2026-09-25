@@ -1184,6 +1184,9 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == 自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）
 
+Automatically launch Steam when the client is started externally
+== 从外部启动客户端时自动启动 Steam
+
 Automatically re-join team 0 after finish (only if unlocked).
 == 完赛后自动回到 0 队（仅未锁定时）
 
@@ -2366,6 +2369,9 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == 控制玩家（0）还是分身（1）
 
+Control whether external launches are handed over to Steam
+== 控制从外部启动时是否交由 Steam 接管
+
 Controlled by Gores mode
 == 由 Gores 模式接管
 
@@ -3433,6 +3439,9 @@ Dumps the antibot status
 
 Duotone
 == 双色调
+
+Duotone icon secondary color alpha migration completed flag
+== 双色调图标次要颜色 Alpha 迁移完成标记
 
 Duplicate
 == 复制
@@ -5857,6 +5866,9 @@ Launch emote
 
 Launch emote key
 == 发射表情按键
+
+Launch Steam automatically when starting externally
+== 从外部启动时自动启动 Steam
 
 Layout
 == 布局
@@ -10691,6 +10703,9 @@ Show song info in top-left corner
 Show spectator cursor
 == 显示旁观者光标
 
+Show spectator ghost tees
+== 显示旁观者的半透明 Tee
+
 Show speedometer when changing
 == 显示变化时的速度计
 
@@ -11246,6 +11261,12 @@ Spectated player and friends
 Spectator ghost opacity
 == 旁观者虚化程度
 
+Spectator ghost tee scope
+== 旁观者虚化 Tee 范围
+
+Spectator ghost tee scope: 0=other players including dummy, 1=all players
+== 旁观者虚化 Tee 范围：0=仅他人（包括分身），1=所有玩家
+
 Spectators
 == 旁观者
 
@@ -11392,6 +11413,9 @@ Status normal, check details below if still experiencing issues
 
 Status Scheme:
 == 状态方案：
+
+Steam integration
+== Steam 集成
 
 Steam profile name
 ==  Steam 个人资料名称

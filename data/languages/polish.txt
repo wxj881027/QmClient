@@ -1184,6 +1184,9 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Automatycznie wracaj do domyślnego zasobu, gdy sprite zasobu niestandardowego jest całkowicie przezroczysty; wyłącz, aby puste sprite'y pozostały niewidoczne (np. do ukrywania efektów)
 
+Automatically launch Steam when the client is started externally
+== Automatycznie uruchamiaj Steam przy zewnętrznym uruchomieniu klienta
+
 Automatically re-join team 0 after finish (only if unlocked).
 == Automatycznie dołącz ponownie do drużyny 0 po ukończeniu (tylko jeśli odblokowane)
 
@@ -2366,6 +2369,9 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == Kontroluj gracza (0) lub dummy (1)
 
+Control whether external launches are handed over to Steam
+== Określ, czy zewnętrzne uruchomienia są przekazywane do Steam
+
 Controlled by Gores mode
 == Kontrolowane przez tryb Gores
 
@@ -3433,6 +3439,9 @@ Dumps the antibot status
 
 Duotone
 == Dwuton
+
+Duotone icon secondary color alpha migration completed flag
+== Flaga ukończenia migracji alfa drugiego koloru ikon duotone
 
 Duplicate
 == Duplikuj
@@ -5857,6 +5866,9 @@ Launch emote
 
 Launch emote key
 == Klawisz wystrzelenia emotikony
+
+Launch Steam automatically when starting externally
+== Automatycznie uruchamiaj Steam przy uruchomieniu zewnętrznym
 
 Layout
 == Układ
@@ -10691,6 +10703,9 @@ Show song info in top-left corner
 Show spectator cursor
 == Pokaż kursor widza
 
+Show spectator ghost tees
+== Pokaż duchy Tee obserwatorów
+
 Show speedometer when changing
 == Pokaż prędkościomierz podczas zmiany
 
@@ -11246,6 +11261,12 @@ Spectated player and friends
 Spectator ghost opacity
 == Krycie ducha obserwatora
 
+Spectator ghost tee scope
+== Zakres duchów Tee obserwatorów
+
+Spectator ghost tee scope: 0=other players including dummy, 1=all players
+== Zakres duchów Tee: 0=tylko inni (w tym dummy), 1=wszyscy gracze
+
 Spectators
 == Obserwatorzy
 
@@ -11392,6 +11413,9 @@ Status normal, check details below if still experiencing issues
 
 Status Scheme:
 == Schemat statusu:
+
+Steam integration
+== Integracja ze Steam
 
 Steam profile name
 == Nazwa profilu Steam

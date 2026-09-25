@@ -1184,6 +1184,9 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Automatisch auf das Standard-Asset zurückfallen, wenn ein Sprite eines eigenen Assets vollständig transparent ist; deaktivieren, um leere Sprites unsichtbar zu lassen (z. B. zum Ausblenden von Effekten)
 
+Automatically launch Steam when the client is started externally
+== Steam automatisch starten, wenn der Client extern gestartet wird
+
 Automatically re-join team 0 after finish (only if unlocked).
 == Nach Zielankunft automatisch wieder Team 0 beitreten (nur wenn freigeschaltet)
 
@@ -2366,6 +2369,9 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == Spieler (0) oder Dummy (1) steuern
 
+Control whether external launches are handed over to Steam
+== Steuern, ob externe Starts an Steam übergeben werden
+
 Controlled by Gores mode
 == Wird vom Gores-Modus gesteuert
 
@@ -3433,6 +3439,9 @@ Dumps the antibot status
 
 Duotone
 == Duoton
+
+Duotone icon secondary color alpha migration completed flag
+== Flag für abgeschlossene Alpha-Migration der sekundären Duotone-Symbolfarbe
 
 Duplicate
 == Duplizieren
@@ -5857,6 +5866,9 @@ Launch emote
 
 Launch emote key
 == Emoticon-Abschuss-Taste
+
+Launch Steam automatically when starting externally
+== Steam beim externen Start automatisch starten
 
 Layout
 == Layout
@@ -10691,6 +10703,9 @@ Show song info in top-left corner
 Show spectator cursor
 == Zuschauer-Cursor anzeigen
 
+Show spectator ghost tees
+== Geister-Tees von Zuschauern anzeigen
+
 Show speedometer when changing
 == Zeige Tachometer bei Änderung
 
@@ -11246,6 +11261,12 @@ Spectated player and friends
 Spectator ghost opacity
 == Deckkraft der Zuschauer-Geister
 
+Spectator ghost tee scope
+== Bereich der Zuschauer-Geister-Tees
+
+Spectator ghost tee scope: 0=other players including dummy, 1=all players
+== Bereich der Geister-Tees: 0=nur andere (einschließlich Dummy), 1=alle Spieler
+
 Spectators
 == Zuschauer
 
@@ -11392,6 +11413,9 @@ Status normal, check details below if still experiencing issues
 
 Status Scheme:
 == Status-Schema:
+
+Steam integration
+== Steam-Integration
 
 Steam profile name
 == Steam-Profilname

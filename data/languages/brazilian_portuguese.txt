@@ -1184,6 +1184,9 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Voltar automaticamente ao asset padrão quando um sprite de um asset personalizado estiver totalmente transparente; desative para manter sprites em branco invisíveis (por exemplo, para ocultar efeitos)
 
+Automatically launch Steam when the client is started externally
+== Iniciar o Steam automaticamente ao iniciar o cliente externamente
+
 Automatically re-join team 0 after finish (only if unlocked).
 == Reentrar automaticamente no time 0 após terminar (apenas se desbloqueado)
 
@@ -2366,6 +2369,9 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == Controlar jogador (0) ou dummy (1)
 
+Control whether external launches are handed over to Steam
+== Controlar se inicializações externas serão encaminhadas ao Steam
+
 Controlled by Gores mode
 == Controlado pelo modo Gores
 
@@ -3433,6 +3439,9 @@ Dumps the antibot status
 
 Duotone
 == Tom duplo
+
+Duotone icon secondary color alpha migration completed flag
+== Indicador de migração de alpha da cor secundária dos ícones Duotone concluída
 
 Duplicate
 == Duplicar
@@ -5857,6 +5866,9 @@ Launch emote
 
 Launch emote key
 == Tecla de lançar emoticon
+
+Launch Steam automatically when starting externally
+== Iniciar o Steam automaticamente ao iniciar externamente
 
 Layout
 == Layout
@@ -10691,6 +10703,9 @@ Show song info in top-left corner
 Show spectator cursor
 == Mostrar cursor do espectador
 
+Show spectator ghost tees
+== Mostrar tees fantasma dos espectadores
+
 Show speedometer when changing
 == Mostrar velocímetro ao alterar
 
@@ -11246,6 +11261,12 @@ Spectated player and friends
 Spectator ghost opacity
 == Opacidade do fantasma do espectador
 
+Spectator ghost tee scope
+== Escopo dos tees fantasma dos espectadores
+
+Spectator ghost tee scope: 0=other players including dummy, 1=all players
+== Escopo dos tees fantasma: 0=apenas outros (incluindo dummy), 1=todos os jogadores
+
 Spectators
 == Espectadores
 
@@ -11392,6 +11413,9 @@ Status normal, check details below if still experiencing issues
 
 Status Scheme:
 == Esquema de Status:
+
+Steam integration
+== Integração com o Steam
 
 Steam profile name
 == Nome do perfil Steam

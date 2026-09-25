@@ -3369,6 +3369,48 @@ key = "Show spectator ghost tees"
 [message.translations]
 simplified_chinese = "显示旁观者的半透明 Tee"
 traditional_chinese = "顯示旁觀者的半透明 Tee"
+japanese = "観戦ゴースト Tee を表示"
+korean = "관전자 유령 Tee 표시"
+russian = "Показывать призрачные Tee наблюдателей"
+german = "Geister-Tees von Zuschauern anzeigen"
+spanish = "Mostrar tees fantasma de espectadores"
+french = "Afficher les tees fantômes des spectateurs"
+brazilian_portuguese = "Mostrar tees fantasma dos espectadores"
+portuguese = "Mostrar tees fantasma dos espectadores"
+turkish = "İzleyici hayalet Tee'lerini göster"
+polish = "Pokaż duchy Tee obserwatorów"
+
+[[message]]
+key = "Spectator ghost tee scope"
+[message.translations]
+simplified_chinese = "旁观者虚化 Tee 范围"
+traditional_chinese = "旁觀者虛化 Tee 範圍"
+japanese = "観戦ゴースト Tee の範囲"
+korean = "관전자 유령 Tee 범위"
+russian = "Область призрачных Tee наблюдателей"
+german = "Bereich der Zuschauer-Geister-Tees"
+spanish = "Alcance de los tees fantasma de espectadores"
+french = "Portée des tees fantômes des spectateurs"
+brazilian_portuguese = "Escopo dos tees fantasma dos espectadores"
+portuguese = "Âmbito dos tees fantasma dos espectadores"
+turkish = "İzleyici hayalet Tee kapsamı"
+polish = "Zakres duchów Tee obserwatorów"
+
+[[message]]
+key = "Spectator ghost tee scope: 0=other players including dummy, 1=all players"
+[message.translations]
+simplified_chinese = "旁观者虚化 Tee 范围：0=仅他人（包括分身），1=所有玩家"
+traditional_chinese = "旁觀者虛化 Tee 範圍：0=僅他人（包括分身），1=所有玩家"
+japanese = "観戦ゴースト Tee の範囲：0=他人のみ（ダミーを含む）、1=全プレイヤー"
+korean = "관전자 유령 Tee 범위: 0=다른 플레이어만(더미 포함), 1=모든 플레이어"
+russian = "Область призрачных Tee: 0=только другие игроки (включая dummy), 1=все игроки"
+german = "Bereich der Geister-Tees: 0=nur andere (einschließlich Dummy), 1=alle Spieler"
+spanish = "Alcance de los tees fantasma: 0=solo otros (incluido el dummy), 1=todos los jugadores"
+french = "Portée des tees fantômes : 0=autres uniquement (dummy compris), 1=tous les joueurs"
+brazilian_portuguese = "Escopo dos tees fantasma: 0=apenas outros (incluindo dummy), 1=todos os jogadores"
+portuguese = "Âmbito dos tees fantasma: 0=apenas outros (incluindo dummy), 1=todos os jogadores"
+turkish = "Hayalet Tee kapsamı: 0=sadece diğerleri (dummy dahil), 1=tüm oyuncular"
+polish = "Zakres duchów Tee: 0=tylko inni (w tym dummy), 1=wszyscy gracze"
 
 [[message]]
 key = "Show semi-transparent ghost tees for other players who are spectating"
@@ -3385,6 +3427,70 @@ brazilian_portuguese = "Mostrar tees fantasma semitransparentes para outros joga
 portuguese = "Mostrar tees fantasma semitransparentes para outros jogadores que estão a assistir"
 turkish = "İzleyen diğer oyuncular için yarı saydam hayalet Tee göster"
 polish = "Pokaż półprzezroczyste duchy Tee dla innych graczy w trybie obserwatora"
+
+[[message]]
+key = "Automatically launch Steam when the client is started externally"
+[message.translations]
+simplified_chinese = "客户端从外部启动时自动启动 Steam"
+traditional_chinese = "用外部方式啟動客戶端時自動啟動 Steam"
+japanese = "クライアントを外部から起動したとき Steam を自動起動"
+korean = "클라이언트를 외부에서 시작할 때 Steam 자동 실행"
+russian = "Автоматически запускать Steam при внешнем запуске клиента"
+german = "Steam automatisch starten, wenn der Client extern gestartet wird"
+spanish = "Iniciar Steam automáticamente al iniciar el cliente externamente"
+french = "Lancer automatiquement Steam lorsque le client est démarré de l'extérieur"
+brazilian_portuguese = "Iniciar o Steam automaticamente quando o cliente for iniciado externamente"
+portuguese = "Iniciar o Steam automaticamente quando o cliente for iniciado externamente"
+turkish = "İstemci harici olarak başlatıldığında Steam'i otomatik aç"
+polish = "Uruchamiaj Steam automatycznie przy zewnętrznym uruchomieniu klienta"
+
+[[message]]
+key = "Duotone icon secondary color alpha migration completed flag"
+[message.translations]
+simplified_chinese = "双色调图标次要颜色 Alpha 迁移完成标记"
+traditional_chinese = "雙色調圖示次要顏色 Alpha 遷移完成標記"
+japanese = "デュオトーン アイコン第 2 色の Alpha 移行完了フラグ"
+korean = "듀오톤 아이콘 보조 색상 알파 마이그레이션 완료 플래그"
+russian = "Флаг завершения переноса альфа-канала вторичного цвета двухцветных значков"
+german = "Flag für abgeschlossene Alpha-Migration der sekundären Duotone-Symbolfarbe"
+spanish = "Indicador de migración de alfa del color secundario de iconos duotono completada"
+french = "Indicateur de migration alpha terminée pour la couleur secondaire des icônes Duotone"
+brazilian_portuguese = "Indicador de migração de alpha da cor secundária dos ícones Duotone concluída"
+portuguese = "Indicador de migração de alpha da cor secundária dos ícones Duotone concluída"
+turkish = "Duotone simge ikincil renk alfa geçişi tamamlandı işareti"
+polish = "Flaga ukończenia migracji alfa drugiego koloru ikon duotone"
+
+[[message]]
+key = "Launch Steam automatically when starting externally"
+[message.translations]
+simplified_chinese = "从外部启动时自动启动 Steam"
+traditional_chinese = "從外部啟動時自動啟動 Steam"
+japanese = "外部起動時に Steam を自動起動"
+korean = "외부에서 시작할 때 Steam 자동 실행"
+russian = "Автоматически запускать Steam при внешнем запуске"
+german = "Steam beim externen Start automatisch starten"
+spanish = "Iniciar Steam automáticamente al iniciar externamente"
+french = "Lancer automatiquement Steam lors d'un démarrage externe"
+brazilian_portuguese = "Iniciar o Steam automaticamente ao iniciar externamente"
+portuguese = "Iniciar o Steam automaticamente ao iniciar externamente"
+turkish = "Harici başlatmada Steam'i otomatik aç"
+polish = "Uruchamiaj Steam automatycznie przy starcie zewnętrznym"
+
+[[message]]
+key = "Steam integration"
+[message.translations]
+simplified_chinese = "Steam 集成"
+traditional_chinese = "Steam 整合"
+japanese = "Steam 連携"
+korean = "Steam 통합"
+russian = "Интеграция со Steam"
+german = "Steam-Integration"
+spanish = "Integración con Steam"
+french = "Intégration Steam"
+brazilian_portuguese = "Integração com o Steam"
+portuguese = "Integração com o Steam"
+turkish = "Steam entegrasyonu"
+polish = "Integracja ze Steam"
 
 [[message]]
 key = "Spectator ghost opacity"

@@ -1184,6 +1184,9 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == 사용자 지정 에셋 스프라이트가 완전히 투명하면 자동으로 기본 에셋으로 대체합니다. 끄면 빈 스프라이트가 보이지 않는 상태로 유지됩니다 (효과 숨기기 등)
 
+Automatically launch Steam when the client is started externally
+== 외부에서 클라이언트를 시작할 때 Steam 자동 실행
+
 Automatically re-join team 0 after finish (only if unlocked).
 == 완주 후 자동으로 0팀 재가입 (잠금 해제된 경우에만)
 
@@ -2366,6 +2369,9 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == 플레이어(0) 또는 더미(1) 제어
 
+Control whether external launches are handed over to Steam
+== 외부 실행을 Steam에 넘길지 제어
+
 Controlled by Gores mode
 == Gores 모드가 제어 중
 
@@ -3433,6 +3439,9 @@ Dumps the antibot status
 
 Duotone
 == 듀오톤
+
+Duotone icon secondary color alpha migration completed flag
+== 듀오톤 아이콘 보조 색상 알파 마이그레이션 완료 플래그
 
 Duplicate
 == 복제
@@ -5857,6 +5866,9 @@ Launch emote
 
 Launch emote key
 == 이모티콘 발사 키
+
+Launch Steam automatically when starting externally
+== 외부에서 시작할 때 Steam 자동 실행
 
 Layout
 == 레이아웃
@@ -10691,6 +10703,9 @@ Show song info in top-left corner
 Show spectator cursor
 == 관전자 커서 표시
 
+Show spectator ghost tees
+== 관전자 유령 Tee 표시
+
 Show speedometer when changing
 == 변경 시 속도계 표시
 
@@ -11246,6 +11261,12 @@ Spectated player and friends
 Spectator ghost opacity
 == 관전자 고스트 불투명도
 
+Spectator ghost tee scope
+== 관전자 유령 Tee 범위
+
+Spectator ghost tee scope: 0=other players including dummy, 1=all players
+== 관전자 유령 Tee 범위: 0=다른 플레이어만(더미 포함), 1=모든 플레이어
+
 Spectators
 == 관전자
 
@@ -11392,6 +11413,9 @@ Status normal, check details below if still experiencing issues
 
 Status Scheme:
 == 상태 구성：
+
+Steam integration
+== Steam 통합
 
 Steam profile name
 == Steam 프로필 이름

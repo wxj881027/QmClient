@@ -393,6 +393,7 @@ Automatically close the current chat after waking from freeze
 Automatically create statboard csv
 Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
+Automatically launch Steam when the client is started externally
 Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
 Automatically record replays
@@ -787,6 +788,7 @@ Contributors
 Control custom background drawing
 Control latency compensation tools
 Control player (0) or dummy (1)
+Control whether external launches are handed over to Steam
 Controlled by Gores mode
 Controlled by Zen mode
 Controller
@@ -1143,6 +1145,7 @@ Dump zone tuning in zone x
 dumps all sqlservers readservers = r, writeservers = w
 Dumps the antibot status
 Duotone
+Duotone icon secondary color alpha migration completed flag
 Duplicate
 Duration
 Duration in seconds to mute a player for spam triggering. 0 = off
@@ -1951,6 +1954,7 @@ Latency Jitter
 Launch count threshold for the next sponsor reminder
 Launch emote
 Launch emote key
+Launch Steam automatically when starting externally
 Layout
 Leak IP
 Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process
@@ -3562,6 +3566,7 @@ Show skin names in nameplate
 Show skin release date and author
 Show song info in top-left corner
 Show spectator cursor
+Show spectator ghost tees
 Show speedometer when changing
 Show sponsor QR code
 Show start menu image
@@ -3747,6 +3752,8 @@ Spectate the previous player
 Spectated player
 Spectated player and friends
 Spectator ghost opacity
+Spectator ghost tee scope
+Spectator ghost tee scope: 0=other players including dummy, 1=all players
 Spectators
 Speech trigger threshold
 Speed
@@ -3796,6 +3803,7 @@ Status bar text color
 Status bar text opacity
 Status normal, check details below if still experiencing issues
 Status Scheme:
+Steam integration
 Steam profile name
 Still free after %d sponsors. Take a look?
 Stop key input on switch (0=off, 1=dummy, 2=player)

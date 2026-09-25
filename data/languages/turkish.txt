@@ -1184,6 +1184,9 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Özel bir varlığın sprite'ı tamamen saydamsa otomatik olarak varsayılan varlığa geri dön; boş sprite'ları görünmez tutmak için kapat (örneğin efektleri gizlemek için)
 
+Automatically launch Steam when the client is started externally
+== İstemci harici olarak başlatıldığında Steam'i otomatik başlat
+
 Automatically re-join team 0 after finish (only if unlocked).
 == Bitişten sonra otomatik olarak 0 takımına yeniden katıl (yalnızca kilitli değilse)
 
@@ -2366,6 +2369,9 @@ Control latency compensation tools
 Control player (0) or dummy (1)
 == Oyuncuyu (0) veya yapayı (1) kontrol et
 
+Control whether external launches are handed over to Steam
+== Harici başlatmaların Steam'e devredilip devredilmeyeceğini denetle
+
 Controlled by Gores mode
 == Gores modu tarafından yönetiliyor
 
@@ -3433,6 +3439,9 @@ Dumps the antibot status
 
 Duotone
 == Çift ton
+
+Duotone icon secondary color alpha migration completed flag
+== Duotone simge ikincil renk alfa geçişi tamamlandı işareti
 
 Duplicate
 == Çoğalt
@@ -5857,6 +5866,9 @@ Launch emote
 
 Launch emote key
 == Emoticon fırlatma tuşu
+
+Launch Steam automatically when starting externally
+== Harici olarak başlatıldığında Steam'i otomatik başlat
 
 Layout
 == Düzen
@@ -10691,6 +10703,9 @@ Show song info in top-left corner
 Show spectator cursor
 == İzleyici imlecini göster
 
+Show spectator ghost tees
+== İzleyici hayalet Tee'lerini göster
+
 Show speedometer when changing
 == Değişiklik sırasında hız göstergesini göster
 
@@ -11246,6 +11261,12 @@ Spectated player and friends
 Spectator ghost opacity
 == İzleyici hayaleti opaklığı
 
+Spectator ghost tee scope
+== İzleyici hayalet Tee kapsamı
+
+Spectator ghost tee scope: 0=other players including dummy, 1=all players
+== Hayalet Tee kapsamı: 0=sadece diğerleri (dummy dahil), 1=tüm oyuncular
+
 Spectators
 == İzleyiciler
 
@@ -11392,6 +11413,9 @@ Status normal, check details below if still experiencing issues
 
 Status Scheme:
 == Durum Şeması:
+
+Steam integration
+== Steam entegrasyonu
 
 Steam profile name
 == Steam profil adı
