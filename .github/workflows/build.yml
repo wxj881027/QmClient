@@ -443,7 +443,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            cmake ninja-build pkg-config curl python3 python3-pip python3-pil \
+            cmake ninja-build pkg-config curl python3 python3-pip python3-pil python3-fonttools \
             glslang-tools spirv-tools ccache
           if [ ! -f ~/.cargo/bin/cargo-ndk ]; then
             cargo install cargo-ndk --version "${CARGO_NDK_VERSION}" --locked
