@@ -650,6 +650,7 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_QmAxiomScores, "axiom_scores");
 	AddComponent(&m_QmChatEmoji, "chat_emoji");
 	AddComponent(&m_QmMonitoring, "monitoring");
+	AddComponent(&m_QmWaterHammerIndicator, "water_hammer_indicator");
 	AddComponent(&m_QmWeaponTrajectory, "weapon_trajectory");
 	AddComponent(&m_RankGhost, "rank_ghost");
 	AddComponent(&m_TClient, "tclient");
@@ -3006,7 +3007,11 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 	else if(MsgId == NETMSGTYPE_SV_PREINPUT)
 	{
 		CNetMsg_Sv_PreInput *pMsg = (CNetMsg_Sv_PreInput *)pRawMsg;
-		m_aClients[pMsg->m_Owner].m_aPreInputs[pMsg->m_IntendedTick % 200] = *pMsg;
+		if(pMsg->m_Owner >= 0 && pMsg->m_Owner < MAX_CLIENTS && pMsg->m_IntendedTick >= 0)
+		{
+			m_aClients[pMsg->m_Owner].m_aPreInputs[pMsg->m_IntendedTick % 200] = *pMsg;
+			m_QmWaterHammerIndicator.OnPreInput(*pMsg);
+		}
 	}
 	else if(MsgId == NETMSGTYPE_SV_SAVECODE)
 	{

@@ -15,6 +15,7 @@
 #include <generated/client_data.h>
 #include <generated/client_data7.h>
 #include <generated/protocol.h>
+#include <generated/protocol7.h>
 
 #include <game/client/animstate.h>
 #include <game/client/components/controls.h>
@@ -2039,6 +2040,20 @@ void CPlayers::OnRender()
 					aRenderInfo[i].m_ColorBody = ColorRGBA(aRenderInfo[i].m_ColorBody.r * Darken, aRenderInfo[i].m_ColorBody.g * Darken, aRenderInfo[i].m_ColorBody.b * Darken, 1.0);
 				}
 			}
+		}
+
+		// 仅对可见渲染路径中的同队玩家变色，提示其在死亡/冻结区域持续按锤。
+		if(GameClient()->QmWaterHammerIndicator().IsMarked(i))
+		{
+			const ColorRGBA BodyColor(1.0f, 0.25f, 0.08f, 1.0f);
+			const ColorRGBA FeetColor(1.0f, 0.55f, 0.12f, 1.0f);
+			aRenderInfo[i].m_CustomColoredSkin = true;
+			aRenderInfo[i].m_ColorBody = BodyColor;
+			aRenderInfo[i].m_ColorFeet = FeetColor;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aUseCustomColors[protocol7::SKINPART_BODY] = true;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aUseCustomColors[protocol7::SKINPART_FEET] = true;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_BODY] = BodyColor;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_FEET] = FeetColor;
 		}
 	}
 

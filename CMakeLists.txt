@@ -3138,6 +3138,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogSkin.cpp
     QmUi/cards/QmCardCatalogSkinMetrics.h
     QmUi/cards/QmCardCatalogVisual.cpp
+    QmUi/cards/QmCardCatalogWaterHammer.cpp
     QmUi/cards/QmCardRenderBridge.cpp
     QmUi/cards/QmMapUpload.cpp
     QmUi/SettingsCardDeckLogic.cpp
@@ -3374,6 +3375,8 @@ if(CLIENT)
     components/qmclient/voice/voice_core.h
     components/qmclient/voice/voice_utils.cpp
     components/qmclient/voice/voice_utils.h
+    components/qmclient/water_hammer_indicator.cpp
+    components/qmclient/water_hammer_indicator.h
     components/qmclient/weapon_trajectory.cpp
     components/qmclient/weapon_trajectory.h
     components/qmclient/friend_heart_icon.h
@@ -4351,6 +4354,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_chat_message_merge_contract_test.cpp
     qm_gores_mode_test.cpp
     qm_hammer_hit_detection_test.cpp
+    qm_water_hammer_indicator_test.cpp
     qm_demo_display_test.cpp
     qm_demo_ui_test.cpp
     qm_jump_hint_utils_test.cpp

@@ -23,6 +23,7 @@ namespace qm_card_catalog
 			"qm:streamer",
 			"qm:entity_overlay",
 			"qm:collision_hitbox",
+			"qm:water_hammer",
 		};
 
 		const std::vector<const char *> s_vFunctionCards = {

@@ -27,6 +27,7 @@ namespace qm_card_catalog
 
 	// 皮肤外观与切换动画的独立全局卡片构造入口。
 	bool BuildSkinCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
+	bool BuildWaterHammerCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 
 	// 卡片模块共享的行高/行距推导（LineHeight + LineSpacing 的整数倍）。
 	inline float CardRows(const SSettingsContentMetrics &Metrics, const float Count)

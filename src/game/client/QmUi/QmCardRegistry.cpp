@@ -106,12 +106,13 @@ namespace qm_card_registry
 	{
 		// clang-format off
 		static const std::vector<SCardDefault> s_aDefaults = {
-			// === 栖梦侧栏模块（41）· qm:<key>（显式默认值齐全，来源 s_aQmModuleDefaults + 数据债补录）===
+			// === 栖梦侧栏模块（42）· qm:<key>（显式默认值齐全，来源 s_aQmModuleDefaults + 数据债补录）===
 			{"qm:info", "visual", ECardColumn::Full, 0, "QmClient", "qmclient info", "QmClient information and project links", "qmclient-contributors", "deck:qmclient-contributors-ddnet"},
 			{"qm:chat_bubble", "visual", ECardColumn::Left, 0, "Chat bubble", "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao visual", "Show chat messages above players"},
 			{"qm:focus_mode", "visual", ECardColumn::Left, 2, "Zen Mode", "禅模式 zhuanzhi moshi focus mode zen mode 隐藏 yincang hud 名字 mingzi 特效 texiao 计分板 jifenban 沉浸 chenjing 无干扰 wuganrao 聊天 liaotian chat 非必要UI visual", "Hide UI for focused gameplay"},
 			{"qm:camera_view", "visual", ECardColumn::Right, 0, "Camera view", "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao visual", "Adjust game camera and FOV settings"},
 			{"qm:skin_appearance", "visual", ECardColumn::Left, 1, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow visual", "Configure Tee appearance and skins"},
+			{"qm:water_hammer", "visual", ECardColumn::Right, 4, "Water hammer highlight", "水域 shuiyu 死亡 death 冻结 freeze 卡锤 kachui 锤子 chuizi hammer held preinput teammate 同队 tongdui 高亮 gaoliang 变色 bianse visual", "Highlight teammates holding hammer in death or freeze areas"},
 			{"qm:skin_transition", "visual", ECardColumn::Left, 2, "Skin transition animation", "皮肤切换 pifu qiehuan skin transition animation 换皮 huanpi 动画 donghua 开关 kaiguan 类型 leixing 时长 shichang 强度 qiangdu easing 缓动 huandong 锤中偷皮 chuizhong toupi hammer skin steal 故障 guzhang glitch 抖动 doudong 弹性 tanxing elastic 范围 fanwei scope 分身 fenshen dummy visual", "Configure hammer skin steal and skin transition animations"},
 			{"qm:weapon_animation", "visual", ECardColumn::Right, 1, "Weapon animation", "武器动画 wuqi donghua weapon animation 切换武器动画 qiehuan wuqi donghua weapon switch animation 装填动画 zhuangtian donghua reload animation 概率 gailv probability 滑入 huaru 旋转 xuanzhuan visual", "Play a slide-in rotation animation when switching weapons"},
 			{"qm:entity_overlay", "visual", ECardColumn::Right, 2, "Entity overlay", "实体层颜色 shiti ceng yanse 实体层 shiti entity overlay 死亡透明度 siwang 冻结透明度 dongjie 解冻透明度 jiedong 深度冻结 shendu dongjie 深度解冻 shendu jiedong 传送透明度 chuansong cp点透明度 cp checkpoint 开关透明度 kaiguan 叠层透明度 dieceng visual", "Adjust opacity of entity layers"},

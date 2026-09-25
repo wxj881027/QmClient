@@ -125,12 +125,13 @@ namespace qm_module
 		case EQmModuleId::WeaponAnimation: return "qm:weapon_animation";
 		case EQmModuleId::DebugMode: return "qm:debug_mode";
 		case EQmModuleId::BindStatusHud: return "qm:bind_status_hud";
-		// 本轮新增的两张卡（本地专属/新卡）：枚举已扩展，映射必须同步，
+		// 本轮新增的三张卡（本地专属/新卡）：枚举已扩展，映射必须同步，
 		// 否则 QmModuleStableId 返回 nullptr——会打断「全部模块有唯一可逆 stableId」，
-		// 并使 MakeAllDefaults() 少两条默认项（Defaults.size() 与 QmModuleCount 不等）。
+		// 并使 MakeAllDefaults() 与 QmModuleCount 不一致。
 		case EQmModuleId::Emoticons: return "qm:emoticons";
 		case EQmModuleId::MapUpload: return "qm:map_upload";
 		case EQmModuleId::Steam: return "qm:steam";
+		case EQmModuleId::WaterHammerHighlight: return "qm:water_hammer";
 		}
 		return nullptr;
 	}

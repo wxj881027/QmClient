@@ -92,6 +92,7 @@
 #include "components/qmclient/stutter_diagnostics.h"
 #include "components/qmclient/translate/translate.h"
 #include "components/qmclient/voice/voice_component.h"
+#include "components/qmclient/water_hammer_indicator.h"
 #include "components/qmclient/weapon_trajectory.h"
 #include "components/race_demo.h"
 #include "components/scoreboard.h"
@@ -301,6 +302,7 @@ public:
 	CQmChatEmoji m_QmChatEmoji;
 	CQmMonitoring m_QmMonitoring;
 	CQmHudNotifications m_QmHudNotifications;
+	CQmWaterHammerIndicator m_QmWaterHammerIndicator;
 	CQmWeaponTrajectory m_QmWeaponTrajectory;
 	CRankGhost m_RankGhost;
 	CTClient m_TClient;
@@ -561,6 +563,8 @@ public:
 	}
 	CTClient &TClientComponent() { return m_TClient; }
 	const CTClient &TClientComponent() const { return m_TClient; }
+	CQmWaterHammerIndicator &QmWaterHammerIndicator() { return m_QmWaterHammerIndicator; }
+	const CQmWaterHammerIndicator &QmWaterHammerIndicator() const { return m_QmWaterHammerIndicator; }
 	bool HasFreezeWakeupPopups() const { return m_TClient.HasFreezeWakeupPopups(); }
 	void RenderFreezeWakeupPopups() { m_TClient.RenderFreezeWakeupPopups(); }
 

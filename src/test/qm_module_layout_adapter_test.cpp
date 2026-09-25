@@ -95,11 +95,12 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::Background3D, EQmModuleColumn::Right, 17, "background_3d"},
 		{EQmModuleId::DebugMode, EQmModuleColumn::Right, 19, "debug_mode"},
 		{EQmModuleId::BindStatusHud, EQmModuleColumn::Right, 20, "bind_status_hud"},
-		// 本轮新增的两张卡：模块集合必须覆盖全部 QmModuleCount 项，
+		// 本轮新增的三张卡：模块集合必须覆盖全部 QmModuleCount 项，
 		// 否则 MakeAllDefaults().size() 会少于 QmModuleCount（本测试与 roundtrip 均依赖此不变量）。
 		{EQmModuleId::Emoticons, EQmModuleColumn::Left, 18, "emoticons"},
 		{EQmModuleId::MapUpload, EQmModuleColumn::Right, 21, "map_upload"},
 		{EQmModuleId::Steam, EQmModuleColumn::Right, 22, "steam"},
+		{EQmModuleId::WaterHammerHighlight, EQmModuleColumn::Right, 4, "water_hammer"},
 	};
 }
 
@@ -271,7 +272,7 @@ TEST(QmModuleLayoutAdapter, StableIdReverseLookup)
 	EXPECT_FALSE(QmModuleIdFromStableId(nullptr, &Id));
 }
 
-// 意图：37 枚举的 stableId 必须唯一且双向可反查（迁移兜底全覆盖）。
+// 意图：全部枚举的 stableId 必须唯一且双向可反查（迁移兜底全覆盖）。
 TEST(QmModuleLayoutAdapter, AllModulesHaveUniqueReversibleStableId)
 {
 	std::set<std::string> Ids;

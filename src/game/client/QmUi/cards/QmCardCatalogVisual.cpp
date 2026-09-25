@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-// 视觉分类卡片入口（9 张，含恢复的禅模式）：皮肤卡委托独立模块，其他卡在此提供测量、输入和渲染。
+// 视觉分类卡片入口（10 张，含恢复的禅模式与卡锤高亮）：皮肤卡与卡锤卡委托独立模块，其他卡在此提供测量、输入和渲染。
 // 页面（栖梦「视觉」页、搜索页）只声明"这一页有这些卡"。
 namespace qm_card_catalog
 {
@@ -169,6 +169,8 @@ namespace qm_card_catalog
 		case EQmModuleId::CollisionHitbox:
 			Add(Id, "qm:collision_hitbox", "Hitbox mode", "Show collision and weapon interaction", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualCollisionHitboxContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
+		case EQmModuleId::WaterHammerHighlight:
+			return BuildWaterHammerCard(Ctx, Id, Out);
 		default:
 			return false;
 		}

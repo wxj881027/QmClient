@@ -11,6 +11,11 @@ bool qm_card_catalog::QmCardRenderHook::RenderQmFunctionCheckbox(CMenus *pMenus,
 	return pMenus->RenderQmFunctionCheckbox(pId, pTextId, pText, pValue, pRect, PrewarmOnly);
 }
 
+bool qm_card_catalog::QmCardRenderHook::RenderQmVisualCheckbox(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue)
+{
+	return pMenus->RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, pId, pTextId, pText, pValue);
+}
+
 void qm_card_catalog::QmCardRenderHook::RenderQmVisualTranslateUiContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing)
 {
 	pMenus->RenderQmVisualTranslateUiContent(Content, LineHeight, BodySize, LineSpacing);

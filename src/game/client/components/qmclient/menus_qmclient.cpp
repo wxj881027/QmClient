@@ -159,7 +159,8 @@ namespace
 		// 不改动既有卡片的既有顺序。
 		{qm_module::EQmModuleId::Emoticons, qm_module::EQmModuleColumn::Left, 18, "emoticons"},
 		{qm_module::EQmModuleId::MapUpload, qm_module::EQmModuleColumn::Right, 21, "map_upload"},
-		{qm_module::EQmModuleId::Steam, qm_module::EQmModuleColumn::Right, 22, "steam"}}};
+		{qm_module::EQmModuleId::Steam, qm_module::EQmModuleColumn::Right, 22, "steam"},
+		{qm_module::EQmModuleId::WaterHammerHighlight, qm_module::EQmModuleColumn::Right, 4, "water_hammer"}}};
 }
 
 using SQmGlobalSearchCard = qm_card_registry::SCardSearchResult;
