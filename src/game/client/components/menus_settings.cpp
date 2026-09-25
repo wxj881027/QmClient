@@ -7316,7 +7316,12 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			const float NamePlateSectionHeaderHeight = MarginBetweenViews + HeadlineHeight + MarginSmall;
 			const float NamePlateColorPickerHeight = ColorPickerRowHeight;
 			// Nameplate text 区域：仅保留文字效果控件；矢量字体开关位于字体卡片。
-			const float NamePlateTextContentHeight = NamePlateSectionHeaderHeight + ResolveSettingsRowsHeight(10, LineSize, MarginSmall) + MarginSmall + NamePlateColorPickerHeight * 3.0f;
+			const auto ResolveNamePlateTextContentHeight = [LineSize, MarginSmall, NamePlateSectionHeaderHeight, NamePlateColorPickerHeight]() {
+				// 四个效果开关、四个作用范围、两个范围数值，以及自动 LOD
+				// 和其阈值（阈值只在自动 LOD 开启时显示）。
+				const int TextRows = 11 + (g_Config.m_QmNameplateEffectAutoLod ? 1 : 0);
+				return NamePlateSectionHeaderHeight + ResolveSettingsRowsHeight(TextRows, LineSize, MarginSmall) + MarginSmall + NamePlateColorPickerHeight * 3.0f;
+			};
 			static int s_NamePlatesStrong = 0;
 			const auto ResolveNamePlateContentHeight = [=](float ContentWidth) {
 				const auto RadioHeight = [&](const int OptionCount) {
@@ -7325,7 +7330,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				const bool ClanEnabled = g_Config.m_ClNamePlatesClan != 0;
 				const bool IdsEnabled = g_Config.m_ClNamePlatesIds != 0;
 				const bool SeparateIds = IdsEnabled && g_Config.m_ClNamePlatesIdsSeparateLine != 0;
-				const int GeneralRows = 7 + (ClanEnabled ? 1 : 0) + (IdsEnabled ? 1 : 0) + (SeparateIds ? 1 : 0);
+				const int GeneralRows = 7 + (ClanEnabled ? 1 : 0) + (IdsEnabled ? 1 : 0) + (SeparateIds ? 2 : 0);
 				const float GeneralContentHeight = RadioHeight(4) + MarginSmall + GeneralRows * (LineSize + MarginSmall);
 				float HookContentHeight = NamePlateSectionHeaderHeight + LineSize + MarginSmall;
 				if(NamePlateStrongEnabled())
@@ -7333,8 +7338,15 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					HookContentHeight += LineSize + MarginSmall + RadioHeight(5) + MarginSmall + NamePlateColorPickerHeight * 2.0f + LineSize + MarginSmall;
 				}
 				const float KeysContentHeight = NamePlateSectionHeaderHeight + RadioHeight(4) + MarginSmall + (g_Config.m_ClShowDirection > 0 ? LineSize : 0.0f);
-				return GeneralContentHeight + NamePlateTextContentHeight + HookContentHeight + KeysContentHeight;
+				return GeneralContentHeight + ResolveNamePlateTextContentHeight() + HookContentHeight + KeysContentHeight;
 			};
+			const uint64_t NamePlateMeasureRevision =
+				(static_cast<uint64_t>(g_Config.m_ClNamePlatesClan != 0) << 0) |
+				(static_cast<uint64_t>(g_Config.m_ClNamePlatesIds != 0) << 1) |
+				(static_cast<uint64_t>(g_Config.m_ClNamePlatesIdsSeparateLine != 0) << 2) |
+				(static_cast<uint64_t>(g_Config.m_ClNamePlatesStrong > 0) << 3) |
+				(static_cast<uint64_t>(g_Config.m_ClShowDirection > 0) << 4) |
+				(static_cast<uint64_t>(g_Config.m_QmNameplateEffectAutoLod != 0) << 5);
 			AddMeasuredCard(5, ResolveNamePlateContentHeight, [=, this](CUIRect ContentRect) mutable {
 				CUIRect LeftView = ContentRect;
 				const auto NextNamePlateRow = [&](CUIRect &Row) {
@@ -7578,12 +7590,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 						DoAppearanceNumericField(APPEARANCE_TAB_NAME_PLATE, "appearance-key-press-icons-size", &g_Config.m_ClDirectionSize, &g_Config.m_ClDirectionSize, Button, Localize("Size of key press icons"), -50, 100);
 					} }, 0);
 			vCards.back().m_Measure = [ResolveNamePlateContentHeight](float ContentWidth) { return ResolveNamePlateContentHeight(ContentWidth); };
-			vCards.back().m_MeasureRevision =
-				static_cast<uint64_t>(g_Config.m_ClNamePlatesClan != 0) |
-				(static_cast<uint64_t>(g_Config.m_ClNamePlatesIds != 0) << 1) |
-				(static_cast<uint64_t>(g_Config.m_ClNamePlatesIdsSeparateLine != 0) << 2) |
-				(static_cast<uint64_t>(g_Config.m_ClNamePlatesStrong != 0) << 3) |
-				(static_cast<uint64_t>(g_Config.m_ClShowDirection > 0) << 4);
+			vCards.back().m_MeasureRevision = NamePlateMeasureRevision;
 			vCards.back().m_PreLayoutInput = [this, LineSize, MarginSmall, AppearanceMetrics, NamePlateSectionHeaderHeight, NamePlateColorPickerHeight, NamePlateStrongEnabled](CUIRect Content) {
 				if(m_MenuTextPlanCollecting)
 					return false;
@@ -7619,10 +7626,21 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				{
 					Changed = ProcessToggle(ConsumeRow(), &g_Config.m_ClNamePlatesIdsSeparateLine) || Changed;
 					if(g_Config.m_ClNamePlatesIdsSeparateLine)
+					{
 						ConsumeRow();
+						ConsumeRow();
+					}
 				}
 				LeftView.HSplitTop(NamePlateSectionHeaderHeight, nullptr, &LeftView);
 				for(int RowIndex = 0; RowIndex < 10; ++RowIndex)
+					ConsumeRow();
+				CUIRect AutoLodRow = ConsumeRow();
+				if(Ui()->DoButtonLogic(&g_Config.m_QmNameplateEffectAutoLod, 0, &AutoLodRow, BUTTONFLAG_LEFT))
+				{
+					g_Config.m_QmNameplateEffectAutoLod = g_Config.m_QmNameplateEffectAutoLod ? 0 : 1;
+					Changed = true;
+				}
+				if(g_Config.m_QmNameplateEffectAutoLod)
 					ConsumeRow();
 				for(int RowIndex = 0; RowIndex < 3; ++RowIndex)
 					LeftView.HSplitTop(NamePlateColorPickerHeight, nullptr, &LeftView);

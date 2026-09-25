@@ -762,7 +762,14 @@ public:
 		if(!Face)
 			return false;
 		if(m_DefaultFace != Face)
+		{
 			m_GlyphLookupCache.Reset();
+			m_DefaultFace = Face;
+			// 字重数值未变化时 SetCustomFontWeight 会直接返回；切换字体面后仍需
+			// 把当前字重轴重新写入新字体，并重建受影响的字形图集。
+			ApplyCustomFontWeight();
+			return true;
+		}
 		m_DefaultFace = Face;
 		return true;
 	}
@@ -923,12 +930,8 @@ public:
 		}
 	}
 
-	void SetCustomFontWeight(const int Weight)
+	void ApplyCustomFontWeight()
 	{
-		const int ClampedWeight = std::clamp(Weight, 100, 900);
-		if(m_CustomFontWeight == ClampedWeight)
-			return;
-		m_CustomFontWeight = ClampedWeight;
 		bool HasVariableWeightAxis = false;
 		for(FT_Face Face : m_vFtFaces)
 		{
@@ -957,6 +960,15 @@ public:
 		}
 		if(HasVariableWeightAxis)
 			Clear();
+	}
+
+	void SetCustomFontWeight(const int Weight)
+	{
+		const int ClampedWeight = std::clamp(Weight, 100, 900);
+		if(m_CustomFontWeight == ClampedWeight)
+			return;
+		m_CustomFontWeight = ClampedWeight;
+		ApplyCustomFontWeight();
 	}
 
 	bool CustomFontHasVariableWeight(const char *pFace) const

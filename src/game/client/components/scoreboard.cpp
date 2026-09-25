@@ -178,6 +178,8 @@ namespace
 		return ScoreboardUiColorSurface(AlphaScale);
 	}
 
+	constexpr float SCOREBOARD_PANEL_RADIUS = ui_token::radius::CARD;
+
 	int DoScoreboardMediaIconButton(CUi *pUi, ITextRender *pTextRender, CButtonContainer *pButtonContainer, const char *pIcon, const CUIRect *pRect, bool Enabled, ColorRGBA ButtonColor, float ContentAlpha)
 	{
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
@@ -572,7 +574,7 @@ void CScoreboard::RenderServerPlayerCount(CUIRect Rect, const char *pText)
 void CScoreboard::RenderGoals(CUIRect Goals)
 {
 	const float ContentAlpha = m_AnimContentAlpha;
-	Goals.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, 7.5f);
+	Goals.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
 	Goals.VMargin(5.0f, &Goals);
 
 	const float FontSize = 10.0f;
@@ -629,7 +631,7 @@ void CScoreboard::RenderSpectators(CUIRect Spectators)
 		GhostPanel = CUiV2LegacyAdapter::ToCUIRect(vPanels[1].m_Box);
 	}
 
-	const float CornerRadius = 7.5f;
+	const float CornerRadius = SCOREBOARD_PANEL_RADIUS;
 	CUIRect SpectatorList = SpectatorPanel;
 	SpectatorList.Margin(5.0f, &SpectatorList);
 
@@ -779,7 +781,7 @@ void CScoreboard::RenderFooter(CUIRect Footer)
 	const SQmScoreboardFooterLayout Layout = QmScoreboardFooterLayout(Footer, aMediaBuf[0] != '\0', HasSpectators);
 	if(Layout.m_Media.h > 0.0f)
 	{
-		Layout.m_Media.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, 7.5f);
+		Layout.m_Media.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_ALL, SCOREBOARD_PANEL_RADIUS);
 		CUIRect Label;
 		Layout.m_Media.Margin(5.0f, &Label);
 		TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ContentAlpha));
@@ -1446,7 +1448,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			}
 			if(NextDDTeam != DDTeam || IsPanelLastRow)
 				TeamRectCorners |= IGraphics::CORNER_B;
-			RowAndSpacing.Draw(Color, TeamRectCorners, IsPanelLastRow ? (float)ui_token::radius::CARD : RoundRadius);
+			RowAndSpacing.Draw(Color, TeamRectCorners, IsPanelLastRow ? SCOREBOARD_PANEL_RADIUS : RoundRadius);
 
 			CurrentDDTeamSize++;
 
@@ -1772,7 +1774,7 @@ void CScoreboard::RenderRecordingNotification(float x)
 	const float FontSize = 10.0f;
 
 	CUIRect Rect = {x, 0.0f, TextRender()->TextWidth(FontSize, aBuf) + 30.0f, 25.0f};
-	Rect.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_B, 7.5f);
+	Rect.Draw(ScoreboardUiColorSurface(ContentAlpha), IGraphics::CORNER_B, SCOREBOARD_PANEL_RADIUS);
 	CUIRect Circle;
 	CUIRect TextRect;
 	{

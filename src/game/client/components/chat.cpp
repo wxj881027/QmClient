@@ -85,6 +85,9 @@ static SQmChatEmojiCursorLayout LayoutQmChatEmoji(CTextCursor &Cursor, float Siz
 	}
 
 	const float AlignedFontSize = Cursor.m_AlignedFontSize > 0.0f ? Cursor.m_AlignedFontSize : Cursor.m_FontSize;
+	// 表情按文字基线对齐时会向光标顶部伸出；把光标的图片位置下移同样的
+	// 伸出量，使图片完整落在本行的垂直预算内，而不侵入上一行。
+	Cursor.m_Y += maximum(0.0f, EmojiSize - AlignedFontSize);
 	const CUIRect Rect = {Cursor.m_X, Cursor.m_Y + QmChatEmojiBaselineOffset(AlignedFontSize, EmojiSize), EmojiSize, EmojiSize};
 	Cursor.m_X += EmojiSize;
 	Cursor.m_LongestLineWidth = maximum(Cursor.m_LongestLineWidth, Cursor.m_X - Cursor.m_StartX);
