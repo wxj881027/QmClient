@@ -167,10 +167,11 @@ struct CEmoticonProjectile
 	{
 		if(!Mask.Overlaps(m_Pos, Size(), m_Angle, Solid))
 			return true;
-		for(float Radius = 2.0f; Radius <= Size() + 32.0f; Radius += 2.0f)
+		const int MaxRadius = (int)(Size() + 32);
+		for(int Radius = 2; Radius <= MaxRadius; Radius += 2)
 			for(int Index = 0; Index < 16; ++Index)
 			{
-				const vec2 Candidate = m_Pos + direction(-pi / 2 + Index * pi / 8) * Radius;
+				const vec2 Candidate = m_Pos + direction(-pi / 2 + Index * pi / 8) * (float)Radius;
 				if(!Mask.Overlaps(Candidate, Size(), m_Angle, Solid))
 				{
 					m_Pos = m_PreviousPos = Candidate;

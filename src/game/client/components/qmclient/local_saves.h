@@ -52,6 +52,8 @@ namespace QmLocalSaves
 	inline SReply ParseReply(std::string_view Text)
 	{
 		Text = Trim(Text);
+		// str_comp_nocase_num 只读取前 3 字节；Text.size() < 3 的短串已由左侧条件短接，data() 不会越界。
+		// NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
 		if(Text.size() < 3 || str_comp_nocase_num(Text.data(), "/qm", 3) != 0 || (Text.size() > 3 && !str_isspace(Text[3])))
 			return {};
 		Text = Trim(Text.substr(3));
@@ -207,6 +209,8 @@ namespace QmLocalSaves
 	inline std::string LoadCode(std::string_view Text)
 	{
 		Text = Trim(Text);
+		// str_comp_nocase_num 只读取前 5 字节；Text.size() < 6 的短串已由左侧条件短接，data() 不会越界。
+		// NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
 		if(Text.size() < 6 || str_comp_nocase_num(Text.data(), "/load", 5) != 0 || !str_isspace(Text[5]))
 			return {};
 		Text = Trim(Text.substr(5));
