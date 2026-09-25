@@ -2345,12 +2345,6 @@ Console
 Console color
 == 콘솔 색상
 
-Console command executed after joining server
-== 서버 접속 후 실행되는 콘솔 명령
-
-Console command executed before connecting to server
-== 서버 연결 전 실행되는 콘솔 명령
-
 Contacting title server
 == 칭호 서버에 연결 중
 
@@ -2875,9 +2869,6 @@ Define automatic chat reply rules
 
 Delay
 == 지연
-
-Delay before executing tc_execute_on_join (milliseconds)
-== tc_execute_on_join 실행 전 지연 시간 (밀리초)
 
 Delay before new players can start votes or participate in kick/spectate votes (seconds)
 == 새 플레이어가 투표를 시작하거나 추방/관전 투표에 참여하기 전 지연 시간 (초)
@@ -12109,6 +12100,9 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 이 툴팁은 ui_widget::Tooltip — CTooltips 위의 얇은 레이어에 의해 제공됩니다.
+
+Tick delay before executing tc_execute_on_join
+== tc_execute_on_join 실행 전 지연 시간 (tick)
 
 Ticks after freeze before applying max prediction reduction
 == 최대 예측 감소를 적용하기 전 얼어붙은 후 틱 수

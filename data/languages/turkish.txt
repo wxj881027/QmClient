@@ -2345,12 +2345,6 @@ Console
 Console color
 == Konsol rengi
 
-Console command executed after joining server
-== Sunucuya katıldıktan sonra yürütülen konsol komutu
-
-Console command executed before connecting to server
-== Sunucuya bağlanmadan önce yürütülen konsol komutu
-
 Contacting title server
 == Unvan sunucusuna bağlanılıyor
 
@@ -2875,9 +2869,6 @@ Define automatic chat reply rules
 
 Delay
 == Gecikme
-
-Delay before executing tc_execute_on_join (milliseconds)
-== tc_execute_on_join'i yürütmeden önceki gecikme (milisaniye)
 
 Delay before new players can start votes or participate in kick/spectate votes (seconds)
 == Yeni oyuncuların oylama başlatması veya tekmeleme/izleme oylamalarına katılması için gecikme (saniye)
@@ -12109,6 +12100,9 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Bu ipucu ui_widget::Tooltip tarafından sağlanır; CTooltips üzerinde ince bir sarmalayıcıdır.
+
+Tick delay before executing tc_execute_on_join
+== tc_execute_on_join yürütülmeden önceki tick gecikmesi
 
 Ticks after freeze before applying max prediction reduction
 == Maksimum tahmin azaltması uygulanmadan önce donma sonrası tick sayısı

@@ -2345,12 +2345,6 @@ Console
 Console color
 == コンソールの色
 
-Console command executed after joining server
-== サーバー参加後に実行されるコンソールコマンド
-
-Console command executed before connecting to server
-== サーバー接続前に実行されるコンソールコマンド
-
 Contacting title server
 == 称号サーバーに接続中
 
@@ -2875,9 +2869,6 @@ Define automatic chat reply rules
 
 Delay
 == 遅延
-
-Delay before executing tc_execute_on_join (milliseconds)
-== tc_execute_on_join 実行前の遅延（ミリ秒）
 
 Delay before new players can start votes or participate in kick/spectate votes (seconds)
 == 新規プレイヤーが投票を開始したり、キック/観戦投票に参加できるようになるまでの遅延（秒）
@@ -12109,6 +12100,9 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == このツールチップは ui_widget::Tooltip が提供しています。CTooltips の薄いラッパーです。
+
+Tick delay before executing tc_execute_on_join
+== tc_execute_on_join 実行前の遅延（tick）
 
 Ticks after freeze before applying max prediction reduction
 == フリーズ後、最大予測減少を適用するまでの tick 数

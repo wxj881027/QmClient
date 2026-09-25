@@ -2345,12 +2345,6 @@ Console
 Console color
 == Cor da consola
 
-Console command executed after joining server
-== Comando de consola executado após entrar no servidor
-
-Console command executed before connecting to server
-== Comando de consola executado antes de conectar ao servidor
-
 Contacting title server
 == A ligar ao servidor de títulos
 
@@ -2875,9 +2869,6 @@ Define automatic chat reply rules
 
 Delay
 == Atraso
-
-Delay before executing tc_execute_on_join (milliseconds)
-== Atraso antes de executar tc_execute_on_join (milissegundos)
 
 Delay before new players can start votes or participate in kick/spectate votes (seconds)
 == Atraso antes de novos jogadores poderem iniciar votações ou participar em votações de kick/spectate (segundos)
@@ -12109,6 +12100,9 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Esta dica é fornecida por ui_widget::Tooltip, uma camada fina sobre CTooltips.
+
+Tick delay before executing tc_execute_on_join
+== Atraso em ticks antes de executar tc_execute_on_join
 
 Ticks after freeze before applying max prediction reduction
 == Ticks após congelamento antes de aplicar redução máxima de previsão

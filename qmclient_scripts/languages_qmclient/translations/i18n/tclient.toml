@@ -1937,6 +1937,22 @@ turkish = "tc_execute_on_join'i yürütmeden önceki gecikme (milisaniye)"
 polish = "Opóźnienie przed wykonaniem tc_execute_on_join (milisekundy)"
 
 [[message]]
+key = "Tick delay before executing tc_execute_on_join"
+[message.translations]
+simplified_chinese = "执行 tc_execute_on_join 前的延迟（tick）"
+traditional_chinese = "執行 tc_execute_on_join 前的延遲（tick）"
+japanese = "tc_execute_on_join 実行前の遅延（tick）"
+korean = "tc_execute_on_join 실행 전 지연 시간 (tick)"
+russian = "Задержка в тиках перед выполнением tc_execute_on_join"
+german = "Tick-Verzögerung vor Ausführung von tc_execute_on_join"
+spanish = "Retraso en ticks antes de ejecutar tc_execute_on_join"
+french = "Délai en ticks avant l'exécution de tc_execute_on_join"
+brazilian_portuguese = "Atraso em ticks antes de executar tc_execute_on_join"
+portuguese = "Atraso em ticks antes de executar tc_execute_on_join"
+turkish = "tc_execute_on_join yürütülmeden önceki tick gecikmesi"
+polish = "Opóźnienie w tickach przed wykonaniem tc_execute_on_join"
+
+[[message]]
 key = "Deprecated: jump hint color, migrated to qm_jump_hint_color on startup"
 [message.translations]
 simplified_chinese = "已废弃：跳跃提示颜色，启动时迁移到 qm_jump_hint_color"

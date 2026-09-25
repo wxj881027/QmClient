@@ -2345,12 +2345,6 @@ Console
 Console color
 == 控制台顏色
 
-Console command executed after joining server
-== 進入伺服器後執行的控制台命令
-
-Console command executed before connecting to server
-== 連接伺服器前執行的控制台命令
-
 Contacting title server
 == 正在連接頭銜伺服器
 
@@ -2875,9 +2869,6 @@ Define automatic chat reply rules
 
 Delay
 == 延遲
-
-Delay before executing tc_execute_on_join (milliseconds)
-== 執行 tc_execute_on_join 前的延遲（毫秒）
 
 Delay before new players can start votes or participate in kick/spectate votes (seconds)
 == 新加入玩家發起投票或參與踢人/觀戰投票前的延遲（單位：秒）
@@ -12109,6 +12100,9 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 這個提示由 ui_widget::Tooltip 提供，它是 CTooltips 上的一層薄封裝。
+
+Tick delay before executing tc_execute_on_join
+== 執行 tc_execute_on_join 前的延遲（tick）
 
 Ticks after freeze before applying max prediction reduction
 == 凍結後經過多少 tick 才應用最大預測減少
