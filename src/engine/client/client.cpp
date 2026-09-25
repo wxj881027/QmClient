@@ -3927,6 +3927,13 @@ void CClient::PumpNetwork()
 	SECURITY_TOKEN ResponseToken;
 	const std::chrono::nanoseconds NetworkPumpStart = time_get_nanoseconds();
 	const std::chrono::nanoseconds NetworkPumpBudget = State() == IClient::STATE_ONLINE ? gs_NetworkPumpOnlineBudget : gs_NetworkPumpLoadingBudget;
+	const bool PerfEnabled = QmPerfEnabled();
+	double aNetworkRecvMs[NUM_CONNS] = {};
+	double aNetworkProcessMs[NUM_CONNS] = {};
+	int aNetworkChunks[NUM_CONNS] = {};
+	double MaxNetworkProcessMs = 0.0;
+	int MaxNetworkProcessConn = -1;
+	int MaxNetworkPacketBytes = 0;
 	int NetworkChunksProcessed = 0;
 	const int FirstConn = m_NetworkPumpFirstConn;
 	m_NetworkPumpFirstConn = (FirstConn + 1) % NUM_CONNS;
@@ -3934,22 +3941,83 @@ void CClient::PumpNetwork()
 	{
 		const int Conn = (FirstConn + ConnIndex) % NUM_CONNS;
 		while(NetworkChunksProcessed < gs_NetworkPumpMaxChunksPerFrame &&
-			(NetworkChunksProcessed == 0 || time_get_nanoseconds() - NetworkPumpStart < NetworkPumpBudget) &&
-			m_aNetClient[Conn].Recv(&Packet, &ResponseToken, IsSixup()))
+			(NetworkChunksProcessed == 0 || time_get_nanoseconds() - NetworkPumpStart < NetworkPumpBudget))
 		{
+			int HasPacket;
+			if(PerfEnabled)
+			{
+				CPerfTimer RecvTimer;
+				HasPacket = m_aNetClient[Conn].Recv(&Packet, &ResponseToken, IsSixup());
+				aNetworkRecvMs[Conn] += RecvTimer.ElapsedMs();
+			}
+			else
+			{
+				HasPacket = m_aNetClient[Conn].Recv(&Packet, &ResponseToken, IsSixup());
+			}
+			if(!HasPacket)
+				break;
+
 			++NetworkChunksProcessed;
+			++aNetworkChunks[Conn];
+			MaxNetworkPacketBytes = maximum(MaxNetworkPacketBytes, Packet.m_DataSize);
 			if(Packet.m_ClientId == -1)
 			{
 				if(ResponseToken != NET_SECURITY_TOKEN_UNKNOWN && !PreprocessConnlessPacket7(&Packet))
 					continue;
 
-				ProcessConnlessPacket(&Packet);
+				if(PerfEnabled)
+				{
+					CPerfTimer ProcessTimer;
+					ProcessConnlessPacket(&Packet);
+					const double ProcessMs = ProcessTimer.ElapsedMs();
+					aNetworkProcessMs[Conn] += ProcessMs;
+					if(ProcessMs > MaxNetworkProcessMs)
+					{
+						MaxNetworkProcessMs = ProcessMs;
+						MaxNetworkProcessConn = Conn;
+					}
+				}
+				else
+				{
+					ProcessConnlessPacket(&Packet);
+				}
 				continue;
 			}
 			if(Conn == CONN_MAIN || Conn == CONN_DUMMY)
 			{
-				ProcessServerPacket(&Packet, Conn, g_Config.m_ClDummy ^ Conn);
+				if(PerfEnabled)
+				{
+					CPerfTimer ProcessTimer;
+					ProcessServerPacket(&Packet, Conn, g_Config.m_ClDummy ^ Conn);
+					const double ProcessMs = ProcessTimer.ElapsedMs();
+					aNetworkProcessMs[Conn] += ProcessMs;
+					if(ProcessMs > MaxNetworkProcessMs)
+					{
+						MaxNetworkProcessMs = ProcessMs;
+						MaxNetworkProcessConn = Conn;
+					}
+				}
+				else
+				{
+					ProcessServerPacket(&Packet, Conn, g_Config.m_ClDummy ^ Conn);
+				}
 			}
+		}
+	}
+
+	if(PerfEnabled)
+	{
+		const double NetworkPumpMs = (time_get_nanoseconds() - NetworkPumpStart).count() / 1000000.0;
+		if(NetworkPumpMs >= maximum(QmPerfThresholdMs(), 8.0))
+		{
+			char aPayload[768];
+			str_format(aPayload, sizeof(aPayload),
+				"event=network_pump_detail state=%d chunks=%d conn0_chunks=%d conn0_recv_ms=%.3f conn0_process_ms=%.3f conn1_chunks=%d conn1_recv_ms=%.3f conn1_process_ms=%.3f max_process_ms=%.3f max_process_conn=%d max_packet_bytes=%d",
+				State(), NetworkChunksProcessed,
+				aNetworkChunks[0], aNetworkRecvMs[0], aNetworkProcessMs[0],
+				aNetworkChunks[1], aNetworkRecvMs[1], aNetworkProcessMs[1],
+				MaxNetworkProcessMs, MaxNetworkProcessConn, MaxNetworkPacketBytes);
+			QmPerfLogPayloadForce("perf/main_thread", aPayload, this);
 		}
 	}
 }
@@ -4955,7 +5023,7 @@ void CClient::Run()
 						QmPerfLogFields("perf/frame", m_QmPerfFrameBatch.TakeFields(), this);
 				}
 				// 只在连接/加载阶段记录，避免菜单和游戏内每帧刷屏
-				if(g_Config.m_QmGraphicsTrace >= 1 &&
+				if(g_Config.m_QmGraphicsTrace >= 3 &&
 					(State() == IClient::STATE_CONNECTING || State() == IClient::STATE_LOADING))
 					dbg_msg("gfx/swap", "swap source=mainloop state=%d", State());
 			}
@@ -6203,7 +6271,7 @@ void CClient::UpdateAndSwap()
 	// 这里曾是 cl_background_color（默认 128 → #808080），加载期间任何
 	// "还没绘制就被呈现"的空帧都会露出整屏中灰。
 	Graphics()->Clear(0, 0, 0);
-	if(g_Config.m_QmGraphicsTrace >= 1)
+	if(g_Config.m_QmGraphicsTrace >= 3)
 		dbg_msg("gfx/swap", "swap source=loading state=%d", State());
 	m_GlobalTime = (time_get() - m_GlobalStartTime) / (float)time_freq();
 }
@@ -6658,14 +6726,14 @@ static bool UnknownArgumentCallback(const char *pCommand, void *pUser)
 
 struct SSaveUnknownCommandContext
 {
-	CClient *m_pClient;
+	IConfigManager *m_pConfigManager;
 	ConfigDomain m_ConfigDomain;
 };
 
 static bool SaveUnknownDomainCommandCallback(const char *pCommand, void *pUser)
 {
 	SSaveUnknownCommandContext *pContext = static_cast<SSaveUnknownCommandContext *>(pUser);
-	pContext->m_pClient->ConfigManager()->StoreUnknownCommand(pCommand, pContext->m_ConfigDomain);
+	pContext->m_pConfigManager->StoreUnknownCommand(pCommand, pContext->m_ConfigDomain);
 	return true;
 }
 
@@ -7176,7 +7244,7 @@ int main(int argc, const char **argv)
 			if(s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath != nullptr && str_comp(pConfigPath, s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath) == 0)
 				gs_aLoadedPreviousConfigPath[ConfigDomain] = true;
 
-			SSaveUnknownCommandContext UnknownCommandContext{pClient, ConfigDomain};
+			SSaveUnknownCommandContext UnknownCommandContext{pConfigManager, ConfigDomain};
 			pConsole->SetUnknownCommandCallback(SaveUnknownDomainCommandCallback, &UnknownCommandContext);
 			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED))
 			{
