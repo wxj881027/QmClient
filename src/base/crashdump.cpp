@@ -153,11 +153,6 @@ void crashdump_init_if_available(const char *log_file_path)
 	(void)log_file_path;
 }
 
-void crashdump_set_graphics_backend(const char *pBackendName)
-{
-	(void)pBackendName;
-}
-
 #else
 
 #include "log.h"
@@ -179,14 +174,6 @@ using MiniDumpWriteDumpFunc = BOOL(WINAPI *)(HANDLE, DWORD, HANDLE, MINIDUMP_TYP
 static char gs_aCrashLogPath[IO_MAX_PATH_LENGTH] = "";
 static char gs_aFallbackReportPath[IO_MAX_PATH_LENGTH] = "";
 static char gs_aFallbackDumpPath[IO_MAX_PATH_LENGTH] = "";
-
-// 本次会话实际生效的图形后端，用于把崩溃归因到真正跑着的后端。
-static char gs_aGraphicsBackend[64] = "";
-
-void crashdump_set_graphics_backend(const char *pBackendName)
-{
-	str_copy(gs_aGraphicsBackend, pBackendName != nullptr ? pBackendName : "", sizeof(gs_aGraphicsBackend));
-}
 
 static HMODULE gs_pDbgHelpLib = nullptr;
 static MiniDumpWriteDumpFunc gs_pMiniDumpWriteDump = nullptr;
@@ -1099,10 +1086,5 @@ void crashdump_init_if_available(const char *log_file_path)
 void crashdump_init_if_available(const char *log_file_path)
 {
 	(void)log_file_path;
-}
-
-void crashdump_set_graphics_backend(const char *pBackendName)
-{
-	(void)pBackendName;
 }
 #endif
