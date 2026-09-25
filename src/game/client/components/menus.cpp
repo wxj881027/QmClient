@@ -3026,9 +3026,8 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 		Box.HSplitBottom(30.0f, &Box, nullptr);
 		Box.HSplitBottom(25.0f, &Box, &ProgressBar);
 		ProgressBar.VMargin(20.0f, &ProgressBar);
-		// 加载页进度条与普通菜单按钮共用默认的白色半透明表面，不显示跑动 tee。
-		const ColorRGBA LoadingFillColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);
-		GameClient()->m_Hud.RenderProgressBar(ProgressBar, std::clamp(Progress.value(), 0.0f, 1.0f), LoadingFillColor);
+		// 加载条保持原版绘制：不带跑图进度条的圆形光晕与 Tee。
+		Ui()->RenderProgressBar(ProgressBar, std::clamp(Progress.value(), 0.0f, 1.0f));
 	}
 
 	Graphics()->SetColor(1.0, 1.0, 1.0, 1.0);
