@@ -72,12 +72,6 @@ MACRO_CONFIG_COL(QmSkinOutlineColor, qm_skin_outline_color, 0xFFFFFFFF, CFGFLAG_
 MACRO_CONFIG_INT(QmSkinOutlineWidth, qm_skin_outline_width, 2, 1, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Generated skin outline width")
 MACRO_CONFIG_INT(QmSkinOutlineAlpha, qm_skin_outline_alpha, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Generated skin outline opacity")
 
-// QmVulkan 扩展总开关：0=关（纯净 Vulkan + 几何/CPU 兜底），1=自动（失败/设备丢失回退），2=强制开
-MACRO_CONFIG_INT(QmEnhancedRendering, qm_enhanced_rendering, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on")
-MACRO_CONFIG_INT(QmEnhancedSdf, qm_enhanced_sdf, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active")
-MACRO_CONFIG_INT(QmEnhancedBlur, qm_enhanced_blur, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use Gaussian blur pipeline when enhanced rendering is active")
-MACRO_CONFIG_INT(QmEnhancedMsdf, qm_enhanced_msdf, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use MSDF icon pipeline when enhanced rendering is active")
-
 // Report / 举报
 MACRO_CONFIG_STR(QmReportEndpoint, qm_report_endpoint, 128, "http://124.222.146.111:8790", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Report service URL")
 MACRO_CONFIG_STR(QmReportAppId, qm_report_app_id, 128, "desktop", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Report service App ID")
@@ -173,20 +167,6 @@ MACRO_CONFIG_INT(QmEntityOverlaySwitchAlpha, qm_entity_overlay_switch_alpha, 100
 MACRO_CONFIG_INT(QmClientShowBadge, qm_client_show_badge, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Qm badge: identify via central server and mark QmClient users on nameplate/scoreboard")
 
 // Sponsor title appearance / 赞助头衔外观
-MACRO_CONFIG_INT(QmTitleAdvanced, qm_title_advanced, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show advanced title settings (collapsing keeps configured effects)")
-MACRO_CONFIG_INT(QmTitleColorMode, qm_title_color_mode, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow")
-MACRO_CONFIG_COL(QmTitleColor, qm_title_color, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title single color")
-MACRO_CONFIG_INT(QmTitleOpacity, qm_title_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bracketed title opacity (0-100)")
-MACRO_CONFIG_INT(QmTitleStyleEnabled, qm_title_style_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use animated title style (overrides qm_title_color_mode)")
-MACRO_CONFIG_STR(QmTitleStyle, qm_title_style, 32, "exotic_rainbow", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animated title style id")
-MACRO_CONFIG_INT(QmTitleBobAmplitude, qm_title_bob_amplitude, 4, 0, 12, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title per-character vertical bob amplitude in pixels (0 = off)")
-MACRO_CONFIG_INT(QmTitlePhase, qm_title_phase, 20, 0, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)")
-MACRO_CONFIG_INT(QmTitleBloom, qm_title_bloom, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)")
-MACRO_CONFIG_INT(QmTitleEffect, qm_title_effect, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off")
-MACRO_CONFIG_INT(QmTitleShimmerSpeed, qm_title_shimmer_speed, 60, 0, 400, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title light sweep speed in 1/100 row per second (0 = off)")
-MACRO_CONFIG_INT(QmTitleBobWavelength, qm_title_bob_wavelength, 320, 16, 1024, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title bob wavelength in pixels")
-MACRO_CONFIG_INT(QmTitleBobSpeed, qm_title_bob_speed, 150, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title bob angular speed in 1/100 rad/s")
-MACRO_CONFIG_INT(QmTitleBobPixelSnap, qm_title_bob_pixel_snap, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Snap title bob offset to whole pixels (sharper glyphs, choppier motion)")
 
 // Fast Input / 快速输入
 MACRO_CONFIG_INT(QmAutoMargin, qm_auto_margin, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto adjust prediction margin (fixed base margin when off)")
@@ -433,9 +413,6 @@ MACRO_CONFIG_INT(QmGoresFastInputOthers, qm_gores_fast_input_others, 0, 0, 1, CF
 MACRO_CONFIG_INT(QmGoresHideGuides, qm_gores_hide_guides, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide helper lines in Gores mode")
 MACRO_CONFIG_INT(QmGoresDisableDummyHammer, qm_gores_disable_dummy_hammer, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Temporarily disable dummy hammering in Gores mode")
 MACRO_CONFIG_INT(QmGoresSuppressSwitchAnim, qm_gores_suppress_switch_anim, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skip the weapon switch animation for hammer switches in Gores mode")
-MACRO_CONFIG_INT(QmAxiomAutoLogin, qm_axiom_auto_login, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-login after entering Axiom community server")
-MACRO_CONFIG_STR(QmAxiomLoginPassword, qm_axiom_login_password, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Password for Axiom main account auto-login")
-MACRO_CONFIG_STR(QmAxiomDummyLoginPassword, qm_axiom_dummy_login_password, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Password for Axiom alt account auto-login")
 
 // Zen Mode - 禅模式
 MACRO_CONFIG_INT(QmFocusMode, qm_focus_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable Zen Mode")
@@ -692,13 +669,3 @@ MACRO_CONFIG_INT(QmJumpHintSize, qm_jump_hint_size, 10, 0, 50, CFGFLAG_CLIENT | 
 
 // Friends - 好友
 MACRO_CONFIG_INT(QmFriendAutoFollowDelay, qm_friend_auto_follow_delay, 3, 0, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-follow friend server switch delay (seconds)")
-
-// 自有服务实时通道（WebSocket）始终启用，使用服务端推送同步状态。
-// 断线后自动重连，不回退 HTTP 轮询。
-MACRO_CONFIG_STR(QmWebSocketUrl, qm_websocket_url, 256, "wss://qmclient.icu/ws", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)")
-MACRO_CONFIG_STR(QmWebSocketProtocol, qm_websocket_protocol, 64, "qmclient-json", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sec-WebSocket-Protocol sent during the realtime handshake")
-MACRO_CONFIG_INT(QmWebSocketHeartbeat, qm_websocket_heartbeat, 15, 0, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Realtime channel heartbeat interval (seconds, 0 uses default)")
-MACRO_CONFIG_INT(QmWebSocketBackoffBaseMs, qm_websocket_backoff_base_ms, 1000, 100, 60000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Realtime channel reconnect backoff base (ms)")
-MACRO_CONFIG_INT(QmWebSocketBackoffMaxMs, qm_websocket_backoff_max_ms, 60000, 1000, 600000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Realtime channel reconnect backoff cap (ms)")
-MACRO_CONFIG_INT(QmWebSocketLog, qm_websocket_log, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Log realtime WebSocket channel events")
-MACRO_CONFIG_INT(QmWebSocketAllowInsecureTls, qm_websocket_allow_insecure_tls, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Legacy option: connections that skip TLS verification are rejected")

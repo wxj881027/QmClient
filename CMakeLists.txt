@@ -185,7 +185,7 @@ option(QM_DISABLE_PARALLEL_COMPILE "Disable /MP for compiler warnings-sensitive 
 option(QM_MSVC_USE_EMBEDDED_DEBUG_INFO "Use embedded MSVC debug information instead of per-target PDB files" OFF)
 option(QM_MSVC_ANALYZE "Enable MSVC /analyze static analysis (Windows only)" OFF)
 option(QM_STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
-option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bundled fonts" ON)
+option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bundled fonts" OFF)
 
 if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   add_subdirectory(vendor/minhook EXCLUDE_FROM_ALL)
@@ -2541,28 +2541,27 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
 # 图标源是随包 Phosphor TTF（全量字形）+ 官方码点映射；精选 SVG 子集已移除。
 # msdfgen / msdf-atlas-gen 只用于资源制作。生成产物已提交，普通构建不依赖本机安装。
 set(QM_ICON_MSDF_STYLES duotone light regular bold fill)
-add_custom_target(qm-icon-msdf-atlas
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_msdf_font.py
-    --tool cmake-build-official/bin/Release/msdf-atlas-gen.exe
-    --fonts-dir data/qmclient/fonts/Phosphor
-    --codepoints datasrc/qm_icons/phosphor.codepoints
-    --output data/qmclient/icons
-    --styles ${QM_ICON_MSDF_STYLES}
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS
-    qmclient_scripts/qm_build_icon_msdf_font.py
-    qmclient_scripts/qm_icon_msdf_official.py
-    datasrc/qm_icons/phosphor.codepoints
-    data/qmclient/fonts/Phosphor/Phosphor-Regular.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Light.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Fill.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Duotone.ttf
-  COMMENT "Building QmClient Phosphor MSDF icon atlases from bundled fonts"
-)
-
 if(QM_BUILD_ICON_ATLAS)
+  add_custom_target(qm-icon-msdf-atlas
+    COMMAND ${Python3_EXECUTABLE}
+      qmclient_scripts/qm_build_icon_msdf_font.py
+      --tool cmake-build-official/bin/Release/msdf-atlas-gen.exe
+      --fonts-dir data/qmclient/fonts/Phosphor
+      --codepoints datasrc/qm_icons/phosphor.codepoints
+      --output data/qmclient/icons
+      --styles ${QM_ICON_MSDF_STYLES}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    DEPENDS
+      qmclient_scripts/qm_build_icon_msdf_font.py
+      qmclient_scripts/qm_icon_msdf_official.py
+      datasrc/qm_icons/phosphor.codepoints
+      data/qmclient/fonts/Phosphor/Phosphor-Regular.ttf
+      data/qmclient/fonts/Phosphor/Phosphor-Light.ttf
+      data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
+      data/qmclient/fonts/Phosphor/Phosphor-Fill.ttf
+      data/qmclient/fonts/Phosphor/Phosphor-Duotone.ttf
+    COMMENT "Building QmClient Phosphor MSDF icon atlases from bundled fonts"
+  )
   if(TARGET sync_runtime_data)
     add_dependencies(sync_runtime_data qm-icon-msdf-atlas)
   endif()

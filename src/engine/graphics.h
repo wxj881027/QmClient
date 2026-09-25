@@ -683,14 +683,6 @@ public:
 		return CScreenRect(vec2(TopLeftX, TopLeftY), vec2(BottomRightX, BottomRightY));
 	}
 
-	// QmClient: 对齐上游 CScreenRect（569edee60b）。原四浮点接口保留，后端无需改动。
-	CScreenRect GetScreen() const
-	{
-		float TopLeftX, TopLeftY, BottomRightX, BottomRightY;
-		GetScreen(&TopLeftX, &TopLeftY, &BottomRightX, &BottomRightY);
-		return CScreenRect(vec2(TopLeftX, TopLeftY), vec2(BottomRightX, BottomRightY));
-	}
-
 	// TODO: These should perhaps not be virtuals
 	virtual void BlendNone() = 0;
 	virtual void BlendNormal() = 0;

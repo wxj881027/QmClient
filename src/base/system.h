@@ -328,19 +328,6 @@ void cmdline_free(int argc, const char **argv);
  *
  * @remark Currently only supported on Windows.
  */
-enum class EShellExecuteWindowState
-{
-	/**
-	 * The process window is opened in the foreground and activated.
-	 */
-	FOREGROUND,
-
-	/**
-	 * The process window is opened in the background without focus.
-	 */
-	BACKGROUND,
-};
-
 /**
  * Executes a given file.
  *
@@ -441,23 +428,4 @@ void os_locale_str(char *locale, size_t length);
  *
  * @ingroup Shell
  */
-class CCmdlineFix
-{
-	int m_Argc;
-	const char **m_ppArgv;
-
-public:
-	CCmdlineFix(int *pArgc, const char ***pppArgv)
-	{
-		cmdline_fix(pArgc, pppArgv);
-		m_Argc = *pArgc;
-		m_ppArgv = *pppArgv;
-	}
-	~CCmdlineFix()
-	{
-		cmdline_free(m_Argc, m_ppArgv);
-	}
-	CCmdlineFix(const CCmdlineFix &) = delete;
-};
-
 #endif
