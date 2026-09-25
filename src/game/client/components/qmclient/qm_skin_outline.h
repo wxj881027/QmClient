@@ -32,8 +32,8 @@ public:
 	{
 		if(Source.m_Format != CImageInfo::FORMAT_RGBA || Source.m_pData == nullptr || Size.x <= 0 || Size.y <= 0 ||
 			FillPos.x < 0 || FillPos.y < 0 || OutlinePos.x < 0 || OutlinePos.y < 0 ||
-			(size_t)(std::max(FillPos.x, OutlinePos.x) + Size.x) > Source.m_Width ||
-			(size_t)(std::max(FillPos.y, OutlinePos.y) + Size.y) > Source.m_Height || RenderSize.x <= 0 || RenderSize.y <= 0)
+			(size_t)std::max(FillPos.x, OutlinePos.x) + (size_t)Size.x > Source.m_Width ||
+			(size_t)std::max(FillPos.y, OutlinePos.y) + (size_t)Size.y > Source.m_Height || RenderSize.x <= 0 || RenderSize.y <= 0)
 			return;
 
 		m_Mask.m_Width = Size.x;

@@ -67,7 +67,7 @@ namespace QmChatAvatar
 		const int X = Sprite.m_X * UnitX, Y = Sprite.m_Y * UnitY;
 		const int Width = Sprite.m_W * UnitX, Height = Sprite.m_H * UnitY;
 		if(Width <= 0 || Height <= 0 || X < 0 || Y < 0 ||
-			(size_t)(X + Width) > Image.m_Width || (size_t)(Y + Height) > Image.m_Height)
+			(size_t)X + (size_t)Width > Image.m_Width || (size_t)Y + (size_t)Height > Image.m_Height)
 			return Result;
 		const float Scale = std::min(1.0f, 64.0f / std::max(Width, Height));
 		Result.m_Width = std::max(1, (int)std::round(Width * Scale));
