@@ -290,7 +290,6 @@ public:
 	bool IsGettingServerlist() const override;
 	bool IsServerlistError() const override;
 	int LoadingProgression() const override;
-	uint64_t FriendListRevision() const override { return m_FriendListRevision; }
 	void RequestResort() { m_NeedResort = true; }
 
 	uint64_t FriendListRevision() const override { return m_FriendListRevision; }
