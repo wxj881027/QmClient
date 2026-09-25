@@ -122,13 +122,15 @@ class SignUpdateReleaseTest(unittest.TestCase):
     def test_rejects_unstable_or_oversized_version(self) -> None:
         for version in (
             "2.80.0-rc1",
-            "2",
             "2.2147483648",
             "2." + "1" * 32,
         ):
             with self.subTest(version=version):
                 with self.assertRaises(ValueError):
                     SIGN_UPDATE_RELEASE._normalize_version(version)
+
+    def test_accepts_major_only_stable_version(self) -> None:
+        self.assertEqual(SIGN_UPDATE_RELEASE._normalize_version("v3"), "3")
 
     def test_rejects_unsafe_or_case_insensitive_duplicate_paths(self) -> None:
         for entries in (

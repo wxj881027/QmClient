@@ -74,7 +74,7 @@ def _normalize_version(version: str) -> str:
     if normalized[:1] in {"v", "V"}:
         normalized = normalized[1:]
     parts = normalized.split(".")
-    if len(parts) not in {2, 3, 4} or any(
+    if len(parts) not in {1, 2, 3, 4} or any(
         not part.isascii() or not part.isdigit() for part in parts
     ):
         raise ValueError(f"invalid stable version: {version}")

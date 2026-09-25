@@ -101,7 +101,7 @@ QmClient 真实进程 smoke/E2E（需要已构建的 `DDNet` 与 `DDNet-Server`�
 
 ```text
 python qmclient_scripts/integration/qmclient_smoke.py <build-dir> [plain_connection|focus_configuration|gores_configuration|connection_shutdown]
-python qmclient_scripts/integration/e2e_qmclient.py <build-dir> [connection_failure_recovery|demo_recording|invalid_statistics_preserved|perf_log_persistence|qm_lifecycle_persistence|recording_without_connection]
+python qmclient_scripts/integration/e2e_qmclient.py <build-dir> [connection_failure_recovery|demo_recording|invalid_statistics_preserved|perf_log_persistence|qm_lifecycle_persistence|recording_without_connection|startup_saved_favorites]
 ```
 
 gate 使用 `--run-qm-smoke` 时会在同一进程测试 check 中顺序执行 smoke 与 E2E。
@@ -157,14 +157,15 @@ python3 qmclient_scripts/gate/check_settings_ui_migration.py --all
 ### GitHub Release 说明
 
 ```bash
-python3 qmclient_scripts/generate_release_notes.py --version vX.Y.Z --current-tag vX.Y.Z --output tmp/release-notes.md
+python3 qmclient_scripts/generate_release_notes.py --version vX --current-tag vX --output tmp/release-notes.md
 ```
 
 ### 版本号收口
 
 ```bash
-python3 qmclient_scripts/bump_version.py --version X.Y.Z
-python3 qmclient_scripts/bump_version.py --tag vX.Y.Z
+python3 qmclient_scripts/bump_version.py --version X[.Y[.Z]]
+python3 qmclient_scripts/bump_version.py --dev-version X.Y.Z
+python3 qmclient_scripts/bump_version.py --tag vX[.Y[.Z]]
 ```
 
 ### baseline allowlist

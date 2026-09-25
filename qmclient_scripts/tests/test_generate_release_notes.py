@@ -38,6 +38,8 @@ def _note(
 
 class DetectChannelTests(unittest.TestCase):
     def test_stable_tags(self) -> None:
+        self.assertEqual(detect_channel("v3"), "stable")
+        self.assertEqual(detect_channel("v3.1"), "stable")
         self.assertEqual(detect_channel("v2.74.9"), "stable")
         self.assertEqual(detect_channel("2.74.9"), "stable")
 
