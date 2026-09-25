@@ -4,6 +4,7 @@
 
 #include <generated/protocol7.h>
 
+#include <game/client/components/countryflags.h>
 #include <game/client/gameclient.h>
 #include <game/gamecore.h>
 #include <game/localization.h>
@@ -554,7 +555,7 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		Client.m_Team = pMsg7->m_Team;
 		str_copy(Client.m_aName, pMsg7->m_pName);
 		str_copy(Client.m_aClan, pMsg7->m_pClan);
-		Client.m_Country = pMsg7->m_Country;
+		Client.m_Country = QmNormalizeCountryCode(pMsg7->m_Country);
 		ApplySkin7InfoFromGameMsg(pMsg7, pMsg7->m_ClientId, Conn);
 		if(m_pClient->m_TranslationContext.m_aLocalClientId[Conn] == -1)
 			return nullptr;

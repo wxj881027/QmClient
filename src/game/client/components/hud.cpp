@@ -6853,7 +6853,7 @@ void CHud::RenderJumpHint()
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
-void CHud::RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, bool AnimateTee, int Corners)
+void CHud::RenderProgressBar(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, int Corners)
 {
 	Progress = std::clamp(Progress, 0.0f, 1.0f);
 	const float BarRadius = BarRect.h * 0.5f;
@@ -6862,6 +6862,11 @@ void CHud::RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, cons
 	const float FillWidth = BarRect.w * Progress;
 	if(FillWidth > 0.0f)
 		DrawSmoothRoundedRect(Graphics(), BarRect.x, BarRect.y, FillWidth, BarRect.h, BarRadius, FillColor, Corners);
+}
+
+void CHud::RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, bool AnimateTee, int Corners)
+{
+	RenderProgressBar(BarRect, Progress, FillColor, Corners);
 
 	int TeeClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy ? 1 : 0];
 	if(TeeClientId < 0 || TeeClientId >= MAX_CLIENTS)

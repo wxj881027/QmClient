@@ -899,6 +899,15 @@ static void MigrateTranslateUiColorAlphaConfig(const IConfigManager *pConfigMana
 	g_Config.m_QmTranslateColorAlphaMigrated = Migrated ? 1 : 0;
 }
 
+static void MigrateQmUiIconDuotoneSecondaryColor(const IConfigManager *pConfigManager)
+{
+	if(g_Config.m_QmUiIconDuotoneSecondaryColorMigrated)
+		return;
+	const EColorInputAlphaMode InputAlphaMode = pConfigManager != nullptr ? pConfigManager->ColorValueInputAlphaMode("qm_ui_icon_duotone_secondary_color") : EColorInputAlphaMode::PACKED;
+	MigrateLegacyQmUiIconDuotoneSecondaryColor(g_Config.m_QmUiIconDuotoneSecondaryColor, DefaultConfig::QmUiIconDuotoneSecondaryColor, InputAlphaMode);
+	g_Config.m_QmUiIconDuotoneSecondaryColorMigrated = 1;
+}
+
 static void GenerateTimeoutCode(char *pTimeoutCode)
 {
 	if(pTimeoutCode[0] == '\0' || str_comp(pTimeoutCode, "hGuEYnfxicsXGwFq") == 0)
@@ -936,6 +945,7 @@ void CGameClient::OnInit()
 	MigrateJumpHintConfig();
 	MigrateNameplateShowScopeConfig();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
+	MigrateQmUiIconDuotoneSecondaryColor(ConfigManager());
 
 	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
 	{
@@ -1282,7 +1292,7 @@ void CGameClient::SyncQmUiIconWeight()
 		return;
 
 	m_AppliedQmUiIconWeight = Weight;
-	TextRender()->SetIconFontWeight(QmIconWeightUsesBoldFontFallback(Weight));
+	TextRender()->SetIconFontWeight(Weight);
 	m_QmIconManager.RefreshForCurrentDpi();
 	OnWindowResize();
 }
@@ -3828,7 +3838,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 						str_copy(pClient->m_aName, "nameless tee");
 					}
 					IntsToStr(pInfo->m_aClan, std::size(pInfo->m_aClan), pClient->m_aClan, std::size(pClient->m_aClan));
-					pClient->m_Country = pInfo->m_Country;
+					pClient->m_Country = QmNormalizeCountryCode(pInfo->m_Country);
 
 					IntsToStr(pInfo->m_aSkin, std::size(pInfo->m_aSkin), pClient->m_aSkinName, std::size(pClient->m_aSkinName));
 					if(!CSkin::IsValidName(pClient->m_aSkinName) ||

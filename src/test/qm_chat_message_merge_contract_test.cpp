@@ -40,5 +40,5 @@ TEST(QmChatMessageMergeContract, SettingIsDefaultLocalizedAndVersioned)
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE"), std::string::npos);
 	EXPECT_NE(Menus.find("RenderCheckbox(&g_Config.m_QmMessageMerge, \"Message merging\", &g_Config.m_QmMessageMerge);", MiniFeatures), std::string::npos);
 	EXPECT_TRUE(ContainsAll(Translations, {"key = \"Message merging\"", "simplified_chinese = \"消息合并\""}));
-	EXPECT_NE(Version.find("#define QMCLIENT_VERSION \""), std::string::npos);
+	EXPECT_TRUE(ContainsAll(Version, {"#define QMCLIENT_STABLE_VERSION \"", "#define QMCLIENT_DEV_VERSION \""}));
 }

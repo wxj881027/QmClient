@@ -2,6 +2,7 @@
 #include "test.h"
 
 #include <game/client/QmUi/QmLayout.h>
+#include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/afk_presentation.h>
 #include <game/client/components/qmclient/input_overlay.h>
 #include <game/client/components/qmclient/score_hud_layout.h>
@@ -22,6 +23,14 @@ TEST(QmTuneColorMapper, NonArrayBackendsKeepTheOriginalTuneTileIndex)
 	EXPECT_EQ(Mapper.TileTextureIndex(TILE_TUNE, 7, false), TILE_TUNE);
 	EXPECT_EQ(Mapper.TileTextureIndex(TILE_TUNE, 0, true), TILE_TUNE);
 	EXPECT_EQ(Mapper.TileTextureIndex(TILE_TUNE, 7, true), 1);
+}
+
+TEST(QmCountryFlags, InvalidNetworkCountryCodesUseTheDefaultFlag)
+{
+	EXPECT_EQ(QmNormalizeCountryCode(0x74736554), CountryCode::DEFAULT);
+	EXPECT_EQ(QmNormalizeCountryCode(-2), CountryCode::DEFAULT);
+	EXPECT_EQ(QmNormalizeCountryCode(CountryCode::DEFAULT), CountryCode::DEFAULT);
+	EXPECT_EQ(QmNormalizeCountryCode(156), 156);
 }
 
 TEST(QmAfkPresentation, ServerAndEscMenuStatesRemainAvailableForNonOpacityIndicators)

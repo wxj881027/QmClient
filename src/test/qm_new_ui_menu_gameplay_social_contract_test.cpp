@@ -202,8 +202,20 @@ TEST(QmNewUiMenuGameplaySocialContract, ShortServerNamesCoverKnownFamilies)
 	str_copy(Info.m_aGameType, "Gores");
 	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "困难 - CHN10 北京");
 
+	str_copy(Info.m_aName, "Axiom ◇ 广州 ✦ DDmaX - CHN7 AXRace");
+	str_copy(Info.m_aGameType, "AXRace");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "古典 - CHN7 广州");
+
+	str_copy(Info.m_aName, "Axiom ◇ 广州 ✦ DDmaX.Pro 古典 - CHN7 AXRace");
+	str_copy(Info.m_aGameType, "AXRace");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "古典 Pro - CHN7 广州");
+
+	str_copy(Info.m_aName, "Axiom ◇ 广州 ✦ 困难 - CHN7 AXRace");
+	str_copy(Info.m_aGameType, "AXRace");
+	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "困难 - CHN7 广州");
+
 	str_copy(Info.m_aName, "Axiom ◇ 广州 ✦ 活动 - CHN9 AXRace");
-	str_copy(Info.m_aGameType, "Gores");
+	str_copy(Info.m_aGameType, "AXRace");
 	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "活动 - CHN9 广州");
 
 	// 官方简中 Event 译作「活动」，英文写法也要认出来。
@@ -243,7 +255,7 @@ TEST(QmNewUiMenuGameplaySocialContract, ShortServerNamesCoverKnownFamilies)
 	str_copy(Info.m_aGameType, "DDraceNetwork");
 	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "古典图 Nut - CHN4 成都");
 
-	// 官方简中把 Classic 译作「古典」，只带中文写作的古典服同样不应落到「传统图」。
+	// 只带中文写作的古典服同样不应落到「传统图」。
 	str_copy(Info.m_aName, "DDNet CHN2 上海 - 古典 next");
 	str_copy(Info.m_aGameType, "DDraceNetwork");
 	EXPECT_STREQ(CMenus::GetServerbrowserDisplayName(&Info, aBuf, sizeof(aBuf)), "古典图 Next - CHN2 上海");

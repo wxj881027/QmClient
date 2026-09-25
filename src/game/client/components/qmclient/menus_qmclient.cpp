@@ -2505,9 +2505,6 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	// 回退语义在加载期读取：开关变化由 CGameClient::OnRender 的兜底轮询统一触发热重载，
 	// 这里只负责渲染复选框，不在渲染遍里做加载副作用。
 	RenderCheckboxTipped(&g_Config.m_QmBlankAssetFallback, "Blank asset auto fallback", Localize("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"), &g_Config.m_QmBlankAssetFallback);
-	RenderCheckboxTipped(&g_Config.m_QmShowSpectatorGhosts, "Show spectator ghost tees", Localize("Show semi-transparent ghost tees for other players who are spectating"), &g_Config.m_QmShowSpectatorGhosts);
-	static int s_QmSpectatorGhostAlphaInputId;
-	RenderValue("qmclient-spectator-ghost-alpha", "Spectator ghost opacity", &s_QmSpectatorGhostAlphaInputId, &g_Config.m_QmSpectatorGhostAlpha, 0, 100, "%");
 	RenderCheckbox(&g_Config.m_QmMessageMerge, "Message merging", &g_Config.m_QmMessageMerge);
 	RenderCheckbox(&g_Config.m_QmNewUi, "New UI", &g_Config.m_QmNewUi);
 	RenderCheckbox(&g_Config.m_QmShortServerNames, "Short server names", &g_Config.m_QmShortServerNames);
@@ -3865,6 +3862,33 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 	RenderCheckbox(&g_Config.m_QmAutoSwitchOnUnfreeze, "Auto switch to the tee that got unfrozen", &g_Config.m_QmAutoSwitchOnUnfreeze);
 	RenderCheckbox(&g_Config.m_QmAutoCloseChatOnUnfreeze, "Automatically close the current chat after waking from freeze", &g_Config.m_QmAutoCloseChatOnUnfreeze);
 	RenderCheckbox(&g_Config.m_QmFreezeWakeupPopup, "Show wake-up popup on the other tee", &g_Config.m_QmFreezeWakeupPopup);
+	RenderCheckbox(&g_Config.m_QmShowSpectatorGhosts, "Show spectator ghost tees", &g_Config.m_QmShowSpectatorGhosts);
+
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-spectator-ghost-scope", &LabelColumn, Localize("Spectator ghost tee scope"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+	const char *apScopeLabels[] = {Localize("Others only"), Localize("All players")};
+	static CButtonContainer s_aSpectatorGhostScopeButtons[2];
+	CUIRect aScopeSlots[2];
+	CUIRect ScopeRemainder = ControlColumn;
+	for(int i = 0; i < 2; ++i)
+		ScopeRemainder.VSplitLeft(ScopeRemainder.w / (2 - i), &aScopeSlots[i], &ScopeRemainder);
+	if(g_Config.m_QmNewUi)
+		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("qmclient_spectator_ghost_scope"), aScopeSlots, 2, std::clamp(g_Config.m_QmSpectatorGhostScope, 0, 1), SettingsCapsuleTabBarStyle());
+	for(int i = 0; i < 2; ++i)
+	{
+		const int Corners = g_Config.m_QmNewUi ? IGraphics::CORNER_ALL : (i == 0 ? IGraphics::CORNER_L : IGraphics::CORNER_R);
+		const bool ClickedScope = DoButton_MenuTab(&s_aSpectatorGhostScopeButtons[i], apScopeLabels[i], g_Config.m_QmSpectatorGhostScope == i, &aScopeSlots[i], Corners, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, g_Config.m_QmNewUi);
+		if(!PrewarmOnly && !Ui()->RenderOnly() && ClickedScope)
+			g_Config.m_QmSpectatorGhostScope = i;
+	}
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+	static int s_QmSpectatorGhostAlphaInputId;
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-spectator-ghost-alpha", &LabelColumn, Localize("Spectator ghost opacity"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+	RenderQmSettingsSliderWithValueInput(&s_QmSpectatorGhostAlphaInputId, ControlColumn, &g_Config.m_QmSpectatorGhostAlpha, 0, 100, "%", PrewarmOnly);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
 	RenderCheckbox(&g_Config.m_QmAutoTeamLock, "Auto team lock", &g_Config.m_QmAutoTeamLock);
 	if(!g_Config.m_QmAutoTeamLock)
 		return;

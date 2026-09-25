@@ -2262,7 +2262,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 
 		const unsigned OldFlags = TextRender()->GetRenderFlags();
 		const EFontPreset OldPreset = TextRender()->GetFontPreset();
-		TextRender()->SetFontPreset(QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? EFontPreset::ICON_FONT_BOLD : EFontPreset::ICON_FONT);
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		Ui()->DoLabel_QmIcon(&Tab, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, IconSide, TEXTALIGN_MC);
 		TextRender()->SetRenderFlags(OldFlags);
@@ -2990,7 +2990,7 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 		// 就是启动时看到的灰屏 / None 背景。上游在此直接 return，这里多一步推进——
 		// 本地菜单背景图层是分帧初始化的，只跳过不推进会让加载永远走不完。
 		GameClient()->m_MenuBackground.AdvanceLoading();
-		if(g_Config.m_QmGraphicsTrace >= 1)
+		if(g_Config.m_QmGraphicsTrace >= 3)
 			dbg_msg("ui/loading", "frame skip: menu background still loading");
 		return;
 	}
@@ -2998,7 +2998,7 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 	const CUIRect Screen = *Ui()->Screen();
 	if(!GameClient()->m_MenuBackground.Render())
 	{
-		if(g_Config.m_QmGraphicsTrace >= 1)
+		if(g_Config.m_QmGraphicsTrace >= 3)
 			dbg_msg("ui/loading", "frame fallback: menu background unavailable, drawing procedural background");
 		RenderBackground();
 	}
@@ -3026,14 +3026,14 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 		Box.HSplitBottom(30.0f, &Box, nullptr);
 		Box.HSplitBottom(25.0f, &Box, &ProgressBar);
 		ProgressBar.VMargin(20.0f, &ProgressBar);
-		// 启动加载条使用显式 Qm UI 强调色；旧 ui_color 的默认值是黑色，不能作为进度填充色。
-		const ColorRGBA LoadingFillColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiAccentColor)).WithAlpha(1.0f);
-		GameClient()->m_Hud.RenderProgressBarWithTee(ProgressBar, std::clamp(Progress.value(), 0.0f, 1.0f), LoadingFillColor);
+		// 加载页进度条与普通菜单按钮共用默认的白色半透明表面，不显示跑动 tee。
+		const ColorRGBA LoadingFillColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);
+		GameClient()->m_Hud.RenderProgressBar(ProgressBar, std::clamp(Progress.value(), 0.0f, 1.0f), LoadingFillColor);
 	}
 
 	Graphics()->SetColor(1.0, 1.0, 1.0, 1.0);
 
-	if(g_Config.m_QmGraphicsTrace >= 1)
+	if(g_Config.m_QmGraphicsTrace >= 3)
 		dbg_msg("ui/loading", "loading frame presented: progress=%.2f", Progress.has_value() ? Progress.value() : -1.0f);
 
 	GameClient()->UpdateAndSwapClient();

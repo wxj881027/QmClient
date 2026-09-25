@@ -84,7 +84,7 @@ namespace qm_card_catalog
 					Height += QmMapUploadHelpLineHeight(QmCardRenderHook::TextRenderer(Ctx.m_pMenus), pText, ContentWidth, BodySize, LineHeight) + LineSpacing;
 				return Height;
 			}
-			case EQmModuleId::HJAssist: return Row() * (g_Config.m_QmAutoTeamLock ? 6.0f : 5.0f);
+			case EQmModuleId::HJAssist: return Row() * (g_Config.m_QmAutoTeamLock ? 9.0f : 8.0f);
 			default: return Rows(1.0f);
 			}
 		}

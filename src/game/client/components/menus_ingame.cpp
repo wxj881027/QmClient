@@ -2876,7 +2876,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		const EFontPreset OldPreset = TextRender()->GetFontPreset();
 		const ColorRGBA OldTextColor = TextRender()->GetTextColor();
 		TextRender()->TextColor(FavoriteMapsIconColor);
-		TextRender()->SetFontPreset(QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? EFontPreset::ICON_FONT_BOLD : EFontPreset::ICON_FONT);
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		Ui()->DoLabel_QmIcon(&FavoriteMapsIconRect, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, FavoriteMapsIconSide, TEXTALIGN_MC);
 		TextRender()->SetRenderFlags(OldFlags);

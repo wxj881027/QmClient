@@ -2093,8 +2093,10 @@ void CPlayers::OnRender()
 			// 屏幕外的观战幽灵无需提交绘制命令。
 			if(!in_range(Client.m_SpecChar.x, ScreenX0, ScreenX1) || !in_range(Client.m_SpecChar.y, ScreenY0, ScreenY1))
 				continue;
-			// qm_show_spectator_ghosts 关闭时仍保留自己的位置反馈。
-			if(g_Config.m_QmShowSpectatorGhosts == 0 && ClientId >= 0 && !GameClient()->IsLocalClientId(ClientId))
+			if(g_Config.m_QmShowSpectatorGhosts == 0)
+				continue;
+			// 默认只隐藏当前操作的 Tee；本地分身也属于“他人”，应继续显示。
+			if(g_Config.m_QmSpectatorGhostScope == 0 && ClientId >= 0 && ClientId == GameClient()->m_Snap.m_LocalClientId)
 				continue;
 
 			float Alpha = g_Config.m_QmSpectatorGhostAlpha / 100.0f;

@@ -4374,7 +4374,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 				ColorMetrics.m_LineSpacing = 0.0f;
 				CUIRect SecondaryColorRow = Rows.NextButton();
-				DoLine_ColorPicker(&s_GraphicsIconDuotoneSecondaryColorResetId, ColorMetrics, &SecondaryColorRow, Localize("UI icon duotone secondary color"), &g_Config.m_QmUiIconDuotoneSecondaryColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, false, false);
+				DoLine_ColorPicker(&s_GraphicsIconDuotoneSecondaryColorResetId, ColorMetrics, &SecondaryColorRow, Localize("UI icon duotone secondary color"), &g_Config.m_QmUiIconDuotoneSecondaryColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, true, false);
 			}
 			DoIconChoiceRow(Rows.NextLine(), Localize("UI icon style"), apIconWeightLabels, std::size(apIconWeightLabels), IconWeightIndex, s_aGraphicsIconWeightButtons, [this](int NewValue) {
 				const int NewWeight = s_aIconWeightValues[NewValue];
@@ -4451,7 +4451,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 				ColorMetrics.m_LineSpacing = 0.0f;
 				CUIRect SecondaryColorRow = Rows.NextButton();
-				DoLine_ColorPicker(&s_GraphicsIconDuotoneSecondaryColorResetId, ColorMetrics, &SecondaryColorRow, Localize("UI icon duotone secondary color"), &g_Config.m_QmUiIconDuotoneSecondaryColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, false, false);
+				DoLine_ColorPicker(&s_GraphicsIconDuotoneSecondaryColorResetId, ColorMetrics, &SecondaryColorRow, Localize("UI icon duotone secondary color"), &g_Config.m_QmUiIconDuotoneSecondaryColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, true, false);
 				Changed = Changed || OldSecondaryColor != g_Config.m_QmUiIconDuotoneSecondaryColor;
 			}
 			const int IconWeightIndex = QmIconWeightSegmentIndex(g_Config.m_QmUiIconWeight);

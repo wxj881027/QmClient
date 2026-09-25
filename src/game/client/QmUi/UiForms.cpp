@@ -174,7 +174,7 @@ namespace ui_widget
 			const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 			const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
 			pTextRender->TextColor(Color);
-			pTextRender->SetFontPreset(QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? EFontPreset::ICON_FONT_BOLD : EFontPreset::ICON_FONT);
+			pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 			pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 			const float FallbackFontSize = HasQmIcon ? IconSide * 0.8f : std::min(Rect.w, Rect.h) * 0.65f;
 			Ctx.m_pUi->DoLabel(&Rect, pIcon, FallbackFontSize, TEXTALIGN_MC);

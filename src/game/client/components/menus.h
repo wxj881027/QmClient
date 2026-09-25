@@ -998,7 +998,7 @@ public:
 	{
 		if(pType == nullptr || pType[0] == '\0')
 			return nullptr;
-		// 官方简中里 Classic(含 DDmaX 系列)是「古典」、Oldschool 是「传统」，两者不能混用。
+		// 官方简中里 DDmaX 系列是「古典」、Oldschool 是「传统」，两者不能混用。
 		// 难度/类型显示名统一带「图」后缀，避免浏览器列表里有的带、有的不带。
 		if(str_comp_nocase(pType, "DDmaX Easy") == 0 || str_comp_nocase(pType, "DDmaX.Easy") == 0)
 			return "古典图 Easy";
@@ -1009,16 +1009,6 @@ public:
 		if(str_comp_nocase(pType, "DDmaX Nut") == 0 || str_comp_nocase(pType, "DDmaX.Nut") == 0)
 			return "古典图 Nut";
 		if(str_comp_nocase(pType, "DDmaX") == 0)
-			return "古典图";
-		if(str_comp_nocase(pType, "Classic Easy") == 0)
-			return "古典图 Easy";
-		if(str_comp_nocase(pType, "Classic Next") == 0)
-			return "古典图 Next";
-		if(str_comp_nocase(pType, "Classic Pro") == 0)
-			return "古典图 Pro";
-		if(str_comp_nocase(pType, "Classic Nut") == 0)
-			return "古典图 Nut";
-		if(str_comp_nocase(pType, "Classic") == 0)
 			return "古典图";
 		if(str_comp_nocase(pType, "Oldschool") == 0)
 			return "传统图";
@@ -1063,6 +1053,26 @@ public:
 		if(str_comp_nocase(pType, "娱乐") == 0)
 			return "娱乐";
 		return pType;
+	}
+	static const char *AxiomAxraceShortTypeDisplayName(const char *pType)
+	{
+		if(pType == nullptr || pType[0] == '\0')
+			return nullptr;
+		// AXRace follows the DDRace difficulty tokens, but its compact name has no
+		// map suffix.
+		if(str_comp_nocase(pType, "DDmaX Easy") == 0 || str_comp_nocase(pType, "DDmaX.Easy") == 0)
+			return "古典 Easy";
+		if(str_comp_nocase(pType, "DDmaX Next") == 0 || str_comp_nocase(pType, "DDmaX.Next") == 0)
+			return "古典 Next";
+		if(str_comp_nocase(pType, "DDmaX Pro") == 0 || str_comp_nocase(pType, "DDmaX.Pro") == 0)
+			return "古典 Pro";
+		if(str_comp_nocase(pType, "DDmaX Nut") == 0 || str_comp_nocase(pType, "DDmaX.Nut") == 0)
+			return "古典 Nut";
+		if(str_comp_nocase(pType, "DDmaX") == 0)
+			return "古典";
+		if(str_comp_nocase(pType, "Oldschool") == 0)
+			return "传统";
+		return AxiomShortTypeDisplayName(pType);
 	}
 	struct SFriendAutoFollowState
 	{
@@ -1154,17 +1164,17 @@ public:
 					return "DDmaX Nut";
 				return "DDmaX";
 			}
-			if(str_find_nocase(pText, "Classic") || str_find(pText, "古典"))
+			if(str_find_nocase(pText, "DDmaX") || str_find(pText, "古典"))
 			{
 				if(str_find_nocase(pText, "Easy"))
-					return "Classic Easy";
+					return "DDmaX Easy";
 				if(str_find_nocase(pText, "Next"))
-					return "Classic Next";
+					return "DDmaX Next";
 				if(str_find_nocase(pText, "Pro"))
-					return "Classic Pro";
+					return "DDmaX Pro";
 				if(str_find_nocase(pText, "Nut"))
-					return "Classic Nut";
-				return "Classic";
+					return "DDmaX Nut";
+				return "DDmaX";
 			}
 			if(str_find_nocase(pText, "Oldschool") || str_find(pText, "传统"))
 				return "Oldschool";
@@ -1257,6 +1267,7 @@ public:
 		if(str_find_nocase(pName, "Axiom"))
 		{
 			const char *pAxiomDifficulty = pDifficulty;
+			const bool IsAxiomAxrace = str_find_nocase(pInfo->m_aGameType, "axrace") != nullptr;
 			// Axiom 的「普通」对应 DDRace 的 Moderate；旧的通用解析为
 			// 兼容历史数据仍把它归为 Novice，因此在 Axiom 分支单独修正。
 			if(str_find(pName, "普通") && !str_find_nocase(pName, "Novice") && !str_find(pName, "简单"))
@@ -1300,10 +1311,11 @@ public:
 				str_copy(aTail, pTail, pTailEnd != nullptr ? minimum((int)(pTailEnd - pTail) + 1, (int)sizeof(aTail)) : (int)sizeof(aTail));
 
 				char aLocation[32];
+				const char *pShortDifficulty = IsAxiomAxrace ? AxiomAxraceShortTypeDisplayName(pAxiomDifficulty) : AxiomShortTypeDisplayName(pAxiomDifficulty);
 				if(ExtractAxiomLocation(aLocation, (int)sizeof(aLocation)))
-					str_format(pBuffer, BufferSize, "%s - %s %s", AxiomShortTypeDisplayName(pAxiomDifficulty), aTail, aLocation);
+					str_format(pBuffer, BufferSize, "%s - %s %s", pShortDifficulty, aTail, aLocation);
 				else
-					str_format(pBuffer, BufferSize, "%s - %s", AxiomShortTypeDisplayName(pAxiomDifficulty), aTail);
+					str_format(pBuffer, BufferSize, "%s - %s", pShortDifficulty, aTail);
 				return pBuffer;
 			}
 		}
@@ -1333,11 +1345,11 @@ public:
 				{
 					char aSuffix[64];
 					str_copy(aSuffix, pSuffix, sizeof(aSuffix));
-					if(char *pClassic = const_cast<char *>(str_find(aSuffix, "古典")))
+					if(char *pOldType = const_cast<char *>(str_find(aSuffix, "古典")))
 					{
-						while(pClassic > aSuffix && pClassic[-1] == ' ')
-							--pClassic;
-						*pClassic = '\0';
+						while(pOldType > aSuffix && pOldType[-1] == ' ')
+							--pOldType;
+						*pOldType = '\0';
 					}
 					str_format(pBuffer, BufferSize, "%s - %s", ServerbrowserShortTypeDisplayName(aSuffix[0] != '\0' ? aSuffix : pDifficulty), pRegion);
 					return pBuffer;

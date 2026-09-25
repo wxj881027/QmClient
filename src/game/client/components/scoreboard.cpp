@@ -1935,23 +1935,6 @@ void CScoreboard::OnRender()
 	const bool ScrollMode = !Teams && g_Config.m_QmScoreboardScroll && NumPlayers > 16;
 	const int ScrollVisibleRows = 16;
 	const int ScrollMaxStart = ScrollMode ? maximum(0, RedPlayerRows.m_Count - ScrollVisibleRows) : 0;
-	if(ScrollMode)
-	{
-		// 只在计分板光标模式（toggle_scoreboard_cursor）下响应滚轮，
-		// 避免与武器切换等滚轮绑定冲突。
-		if(m_MouseUnlocked && IsActive())
-		{
-			if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
-				m_ScrollTarget -= 4;
-			if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
-				m_ScrollTarget += 4;
-		}
-		m_ScrollTarget = std::clamp(m_ScrollTarget, 0, ScrollMaxStart);
-		// 平滑滚动：当前偏移逐帧向目标行缓动（帧时长与 UI 动画同源）。
-		m_ScrollOffset += (m_ScrollTarget - m_ScrollOffset) * minimum(1.0f, Client()->RenderFrameTime() * 18.0f);
-		if(std::abs(m_ScrollTarget - m_ScrollOffset) < 0.01f)
-			m_ScrollOffset = (float)m_ScrollTarget;
-	}
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
 
 	// Scoreboard width: clamp to screen width for narrow aspect ratios
@@ -1983,10 +1966,13 @@ void CScoreboard::OnRender()
 		pSortLabel = TimeScore ? Localize("Current: Time") : Localize("Current: Score");
 	const float SortButtonWidth = TextRender()->TextWidth(SortButtonFontSize, pSortLabel) + 18.0f;
 	const ColorRGBA SortButtonColor = g_Config.m_QmScoreboardSortMode ? ScoreboardWithUiAlpha(ColorRGBA(0.25f, 0.55f, 0.8f, 0.6f), m_AnimContentAlpha) : ScoreboardUiColorSurface(m_AnimContentAlpha, 0.18f);
-	auto &&DoSortButton = [&](CUIRect Rect) {
+	auto &&DoHeaderButton = [&](CButtonContainer *pButton, const char *pLabel, CUIRect Rect, const ColorRGBA &Color) {
 		Rect.VMargin(4.0f, &Rect);
 		Rect.HMargin(6.0f, &Rect);
-		if(Ui()->DoButton_PopupMenu(&s_ScoreboardSortButton, pSortLabel, &Rect, SortButtonFontSize, TEXTALIGN_MC, 0.0f, false, m_RenderInteractions, SortButtonColor))
+		return Ui()->DoButton_PopupMenu(pButton, pLabel, &Rect, SortButtonFontSize, TEXTALIGN_MC, 0.0f, false, m_RenderInteractions, Color);
+	};
+	auto &&DoSortButton = [&](CUIRect Rect) {
+		if(DoHeaderButton(&s_ScoreboardSortButton, pSortLabel, Rect, SortButtonColor))
 			g_Config.m_QmScoreboardSortMode ^= 1;
 	};
 
@@ -2191,11 +2177,7 @@ void CScoreboard::OnRender()
 		{
 			static CButtonContainer s_ScoreboardScrollButton;
 			const ColorRGBA ScrollButtonColor = g_Config.m_QmScoreboardScroll ? ScoreboardWithUiAlpha(ColorRGBA(0.25f, 0.55f, 0.8f, 0.6f), m_AnimContentAlpha) : ScoreboardUiColorSurface(m_AnimContentAlpha, 0.18f);
-			// 与排序按钮同款内边距，保证两颗按钮尺寸一致。
-			CUIRect ScrollButtonInner = ScrollButton;
-			ScrollButtonInner.VMargin(4.0f, &ScrollButtonInner);
-			ScrollButtonInner.HMargin(6.0f, &ScrollButtonInner);
-			if(Ui()->DoButton_PopupMenu(&s_ScoreboardScrollButton, pScrollLabel, &ScrollButtonInner, SortButtonFontSize, TEXTALIGN_MC, 0.0f, false, m_RenderInteractions, ScrollButtonColor))
+			if(DoHeaderButton(&s_ScoreboardScrollButton, pScrollLabel, ScrollButton, ScrollButtonColor))
 			{
 				g_Config.m_QmScoreboardScroll ^= 1;
 				m_ScrollOffset = 0.0f;
@@ -2206,14 +2188,43 @@ void CScoreboard::OnRender()
 
 		if(ScrollMode)
 		{
+			static int s_ScoreboardWheelOwner = 0;
+			CUIRect ScoreboardPlayerArea = ScoreboardContentBody;
+			CUIRect ScrollBarArea;
+			if(ScrollMaxStart > 0)
+			{
+				// 延迟列固定占用右侧 27.5px + 10px，滚动条再放到它的右侧保留区。
+				ScoreboardPlayerArea.VSplitRight(27.5f + 10.0f, &ScoreboardPlayerArea, &ScrollBarArea);
+			}
+			Ui()->RegisterWheelOwner(&s_ScoreboardWheelOwner, EUiWheelOwnerPriority::PAGE, ScoreboardContentBody, m_MouseUnlocked && IsActive() && !Ui()->UnderlyingScrollBlocked());
+			float WheelDelta = 0.0f;
+			if(Ui()->TryConsumeWheel(&s_ScoreboardWheelOwner, &WheelDelta))
+			{
+				const int WheelSteps = maximum(1, (int)std::round(std::abs(WheelDelta) / 120.0f));
+				const int RowStep = 2 * WheelSteps;
+				m_ScrollTarget += WheelDelta < 0.0f ? RowStep : -RowStep;
+			}
+			m_ScrollTarget = std::clamp(m_ScrollTarget, 0, ScrollMaxStart);
+			const float SmoothScrollTime = g_Config.m_UiSmoothScrollTime / 1000.0f;
+			if(SmoothScrollTime <= 0.0f)
+				m_ScrollOffset = (float)m_ScrollTarget;
+			else
+			{
+				const float FrameProgress = std::min(1.0f, Client()->RenderFrameTime() / SmoothScrollTime);
+				const float Blend = 1.0f - std::pow(1.0f - FrameProgress, 3.0f);
+				m_ScrollOffset += (m_ScrollTarget - m_ScrollOffset) * Blend;
+			}
+			if(std::abs(m_ScrollTarget - m_ScrollOffset) < 0.01f)
+				m_ScrollOffset = (float)m_ScrollTarget;
+
 			const int ScrollStart = std::clamp((int)std::round(m_ScrollOffset), 0, ScrollMaxStart);
-			RenderScoreboard(ScoreboardContentBody, TEAM_GAME, ScrollStart, ScrollStart + ScrollVisibleRows, RedPlayerRows, RenderState);
+			RenderScoreboard(ScoreboardPlayerArea, TEAM_GAME, ScrollStart, ScrollStart + ScrollVisibleRows, RedPlayerRows, RenderState);
 			if(ScrollMaxStart > 0)
 			{
 				// 复用全局竖向滚动条组件：可拖拽，样式与其它界面一致。
 				// 注意组件内部会 pRect->Margin(5)，轨道必须留足宽度（>= 10px + 想要的轨道宽）。
 				static int s_ScoreboardScrollBarId = 0;
-				CUIRect ScrollBarTrack = ScoreboardContentBody;
+				CUIRect ScrollBarTrack = ScrollBarArea;
 				ScrollBarTrack.VSplitRight(18.0f, nullptr, &ScrollBarTrack);
 				const float ScrollCurrent = (float)m_ScrollTarget / (float)ScrollMaxStart;
 				const float ScrollNew = Ui()->DoScrollbarV(&s_ScoreboardScrollBarId, &ScrollBarTrack, ScrollCurrent);

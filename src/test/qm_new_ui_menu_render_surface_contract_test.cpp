@@ -90,7 +90,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, AudioPackRefreshUsesPhosphorFontIconButto
 	const std::string UiSource = ReadTextFile("src/game/client/ui.cpp");
 	const std::string FontIconButton = FunctionBody(UiSource, "void CUi::DrawButton_FontIcon");
 	EXPECT_NE(FontIconButton.find("ConfiguredQmUiIconColor(TextRender()->DefaultTextColor())"), std::string::npos);
-	EXPECT_NE(FontIconButton.find("QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight)"), std::string::npos);
+	EXPECT_NE(FontIconButton.find("SetFontPreset(EFontPreset::ICON_FONT)"), std::string::npos);
 	EXPECT_NE(FontIconButton.find("SetRenderFlags(PreviousFlags)"), std::string::npos);
 	EXPECT_NE(FontIconButton.find("TextColor(PreviousColor)"), std::string::npos);
 	const std::string TextSource = ReadTextFile("src/engine/client/text.cpp");

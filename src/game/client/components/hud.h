@@ -604,6 +604,7 @@ public:
 	void HandleSpamProtectionMessage(const char *pMessage);
 	void RenderNinjaBarPos(float x, float y, float Width, float Height, float Progress, float Alpha = 1.0f);
 	void RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, bool AnimateTee = true, int Corners = IGraphics::CORNER_ALL);
+	void RenderProgressBar(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, int Corners = IGraphics::CORNER_ALL);
 
 private:
 	void RenderRecord();

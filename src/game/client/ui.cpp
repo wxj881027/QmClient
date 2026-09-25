@@ -1880,7 +1880,7 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
 	const unsigned PreviousFlags = TextRender()->GetRenderFlags();
 	const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
-	TextRender()->SetFontPreset(QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? EFontPreset::ICON_FONT_BOLD : EFontPreset::ICON_FONT);
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
 	TextRender()->TextColor(ConfiguredQmUiIconColor(TextRender()->DefaultTextColor()));
@@ -1926,7 +1926,7 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
 	pTextRender->TextColor(Color);
-	pTextRender->SetFontPreset(QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? EFontPreset::ICON_FONT_BOLD : EFontPreset::ICON_FONT);
+	pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	DoLabel(&Rect, pFallbackIcon, QmIconFallbackFontSize(Rect), TEXTALIGN_MC);
 	pTextRender->SetRenderFlags(PreviousFlags);
