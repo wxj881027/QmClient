@@ -763,7 +763,7 @@ foreach(qm_lyrics_helper qm-soda-helper qm-music-helper)
       target_link_libraries(${qm_lyrics_helper} PRIVATE ${ZLIB_LIBRARIES})
     endif()
   endif()
-endif()
+endforeach()
 # 音乐 Helper 同样在 find_package 之前定义（酷狗/QQ 音乐采集），这里补链接 zlib。
 if(TARGET qm-music-helper)
   if(ZLIB_DEP)
