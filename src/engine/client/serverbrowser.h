@@ -416,8 +416,6 @@ private:
 	int GenerateToken(const NETADDR &Addr) const;
 	static int GetBasicToken(int Token);
 	static int GetExtraToken(int Token);
-	int QmClientCountForServer(const CServerInfo &Info) const;
-	void UpdateQmClientServerCounts();
 
 	// 最近一次由游戏层推送的在线梦客户端分布，排序前物化到 CServerInfo。
 	std::unordered_map<std::string, int> m_QmClientServerCounts;
