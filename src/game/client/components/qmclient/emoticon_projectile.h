@@ -41,8 +41,14 @@ namespace QmEmoticon
 				return;
 			if(Stride == 0)
 				Stride = Width * 4;
+			// 按上一行的全部区间合并，避免分离轮廓退化成每个像素行一个矩形。
+			// 两行的区间都按横坐标排列，游标单向推进，不扫描历史矩形。
+			std::vector<std::size_t> vPreviousRow;
+			std::vector<std::size_t> vCurrentRow;
 			for(int Y = 0; Y < Height; ++Y)
 			{
+				vCurrentRow.clear();
+				std::size_t PreviousIndex = 0;
 				for(int X = 0; X < Width;)
 				{
 					if(pRgba[Y * Stride + X * 4 + 3] == 0)
@@ -53,13 +59,27 @@ namespace QmEmoticon
 					const int Left = X++;
 					while(X < Width && pRgba[Y * Stride + X * 4 + 3] != 0)
 						++X;
-					if(!m_vRects.empty() && m_vRects.back().m_Bottom == Y && m_vRects.back().m_Left == Left && m_vRects.back().m_Right == X)
-						m_vRects.back().m_Bottom = Y + 1;
-					else
-						m_vRects.push_back({Left, Y, X, Y + 1});
+					while(PreviousIndex < vPreviousRow.size() && m_vRects[vPreviousRow[PreviousIndex]].m_Left < Left)
+						++PreviousIndex;
+					if(PreviousIndex < vPreviousRow.size())
+					{
+						const std::size_t RectIndex = vPreviousRow[PreviousIndex];
+						SRect &Rect = m_vRects[RectIndex];
+						if(Rect.m_Left == Left && Rect.m_Right == X)
+						{
+							Rect.m_Bottom = Y + 1;
+							vCurrentRow.push_back(RectIndex);
+							continue;
+						}
+					}
+					vCurrentRow.push_back(m_vRects.size());
+					m_vRects.push_back({Left, Y, X, Y + 1});
 				}
+				vPreviousRow.swap(vCurrentRow);
 			}
 		}
+
+		std::size_t NumRects() const { return m_vRects.size(); }
 
 		template<typename TSolid>
 		bool Overlaps(vec2 Pos, float Size, float Angle, const TSolid &Solid) const
@@ -117,11 +137,23 @@ namespace QmEmoticon
 		}
 	};
 
-	inline bool OverlapsPlayerBoxes(const CAlphaMask &Mask, vec2 Pos, float Size, float Angle, int OwnerClientId, const SPlayerBox *pBoxes, int NumBoxes)
+	template<typename TMask>
+	bool OverlapsPlayerBoxes(const TMask &Mask, vec2 Pos, float Size, float Angle, int OwnerClientId, const SPlayerBox *pBoxes, int NumBoxes)
 	{
-		for(int Index = 0; pBoxes != nullptr && Index < NumBoxes; ++Index)
+		if(pBoxes == nullptr)
+			return false;
+		// 两个外接圆不相交时跳过精细轮廓，旋转与超大表情仍保守包含在圆内。
+		const float MaskRadius = Size * 0.707107f;
+		for(int Index = 0; Index < NumBoxes; ++Index)
 		{
-			if(pBoxes[Index].m_ClientId != OwnerClientId && Mask.OverlapsBox(Pos, Size, Angle, pBoxes[Index].m_Pos, vec2(pBoxes[Index].m_Half, pBoxes[Index].m_Half)))
+			const SPlayerBox &Box = pBoxes[Index];
+			if(Box.m_ClientId == OwnerClientId)
+				continue;
+			const vec2 Delta = Pos - Box.m_Pos;
+			const float Radius = MaskRadius + Box.m_Half * 1.414214f;
+			if(dot(Delta, Delta) > Radius * Radius)
+				continue;
+			if(Mask.OverlapsBox(Pos, Size, Angle, Box.m_Pos, vec2(Box.m_Half, Box.m_Half)))
 				return true;
 		}
 		return false;
