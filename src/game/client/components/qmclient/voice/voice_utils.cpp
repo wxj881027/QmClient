@@ -975,7 +975,7 @@ namespace VoiceUtils
 		double Sum = 0.0;
 		for(int i = 0; i < Count; i++)
 		{
-			const float X = pSamples[i] / 32768.0f;
+			const double X = static_cast<double>(pSamples[i]) / 32768.0;
 			Sum += X * X;
 		}
 		return (float)std::sqrt(Sum / (double)Count);

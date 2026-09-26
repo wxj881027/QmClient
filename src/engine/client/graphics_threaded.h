@@ -804,7 +804,7 @@ public:
 
 		// 只延长当前命令缓冲中连续的尾批次，不改变图元顺序。
 		const auto *pPreviousEnd = reinterpret_cast<const unsigned char *>(pPrevious->m_pVertices) +
-					   pPrevious->m_PrimCount * VerticesPerPrimitive * sizeof(SVertex);
+					   static_cast<size_t>(pPrevious->m_PrimCount) * VerticesPerPrimitive * sizeof(SVertex);
 		if(pPreviousEnd != reinterpret_cast<const unsigned char *>(Command.m_pVertices))
 			return false;
 		pPrevious->m_PrimCount += Command.m_PrimCount;

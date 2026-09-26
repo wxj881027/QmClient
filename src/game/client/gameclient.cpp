@@ -7980,7 +7980,7 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 			m_EmoticonsSkin.m_aSpriteEmoticons[i] = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, pSprite);
 			const int CellWidth = ImgInfo.m_Width / pSprite->m_pSet->m_Gridx;
 			const int CellHeight = ImgInfo.m_Height / pSprite->m_pSet->m_Gridy;
-			m_Emoticon.SetCollisionMask(i, ImgInfo.m_pData + pSprite->m_Y * CellHeight * ImgInfo.m_Width * 4 + pSprite->m_X * CellWidth * 4,
+			m_Emoticon.SetCollisionMask(i, ImgInfo.m_pData + static_cast<size_t>(pSprite->m_Y) * CellHeight * ImgInfo.m_Width * 4 + static_cast<size_t>(pSprite->m_X) * CellWidth * 4,
 				pSprite->m_W * CellWidth, pSprite->m_H * CellHeight, ImgInfo.m_Width * 4);
 		}
 

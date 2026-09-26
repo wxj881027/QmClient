@@ -72,7 +72,7 @@ namespace QmChatAvatar
 		const float Scale = std::min(1.0f, 64.0f / std::max(Width, Height));
 		Result.m_Width = std::max(1, (int)std::round(Width * Scale));
 		Result.m_Height = std::max(1, (int)std::round(Height * Scale));
-		Result.m_vRgba.resize(Result.m_Width * Result.m_Height * 4);
+		Result.m_vRgba.resize(static_cast<size_t>(Result.m_Width) * Result.m_Height * 4);
 		for(int y = 0; y < Result.m_Height; ++y)
 		{
 			for(int x = 0; x < Result.m_Width; ++x)
