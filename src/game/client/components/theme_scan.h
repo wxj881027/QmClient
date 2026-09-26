@@ -13,6 +13,11 @@ inline bool IsThemeFileCandidate(const char *pName)
 	return str_endswith_nocase(pName, ".map") || IsBackgroundImageExtension(pName) || IsBackgroundVideoExtension(pName);
 }
 
+inline std::string BuildThemeCandidatePath(const char *pBasePath, const char *pExtension)
+{
+	return std::string(pBasePath) + pExtension;
+}
+
 inline std::string ThemeIconPathFromName(const char *pName)
 {
 	const char *pThemeName = pName != nullptr && pName[0] != '\0' ? pName : "none";

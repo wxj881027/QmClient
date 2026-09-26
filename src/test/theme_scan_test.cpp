@@ -33,6 +33,12 @@ TEST(ThemeScan, FileCandidateDetection)
 	EXPECT_FALSE(IsThemeFileCandidate("themes"));
 }
 
+TEST(ThemeScan, CandidatePathBuilding)
+{
+	EXPECT_EQ(BuildThemeCandidatePath("themes/autumn_night", ".map"), "themes/autumn_night.map");
+	EXPECT_EQ(BuildThemeCandidatePath("themes/jungle_day", ".png"), "themes/jungle_day.png");
+}
+
 TEST(ThemeScan, IconPathMapping)
 {
 	EXPECT_EQ(ThemeIconPathFromName(""), "themes/none.png");
