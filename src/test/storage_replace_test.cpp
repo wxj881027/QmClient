@@ -238,6 +238,9 @@ TEST(ConfigMigrationV3, FinalizeKeepsOfficialDdnetAndCleansEverythingElse)
 
 	// v1 目录清理
 	EXPECT_FALSE(pStorage->FileExists("QmClient", IStorage::TYPE_SAVE));
+#if !defined(CONF_FAMILY_WINDOWS) && !defined(CONF_PLATFORM_MACOS)
+	EXPECT_FALSE(pStorage->FolderExists("QmClient", IStorage::TYPE_SAVE));
+#endif
 
 	// v0 根目录 qm 专属文件清理
 	EXPECT_FALSE(pStorage->FileExists("settings_qmclient.cfg", IStorage::TYPE_SAVE));

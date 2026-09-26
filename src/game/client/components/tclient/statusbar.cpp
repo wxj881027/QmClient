@@ -13,6 +13,8 @@
 
 namespace
 {
+	static_assert(STATUSBAR_MAX_SIZE < sizeof(g_Config.m_TcStatusBarScheme));
+
 	const char *ConnectionGradeLabel(EQmConnectionGrade Grade)
 	{
 		switch(Grade)
@@ -80,7 +82,6 @@ float CStatusBar::CachedTextWidth(const char *pText)
 	m_TextWidths.emplace(pText, Width);
 	return Width;
 }
-
 float CStatusBar::GetDurationWidth(int Duration)
 {
 	return CachedTextWidth(Duration >= 3600 * 24 * 100 ? "000d 00:00:00" : Duration >= 3600 * 24 * 10 ? "00d 00:00:00" :
@@ -91,7 +92,7 @@ float CStatusBar::GetDurationWidth(int Duration)
 
 float CStatusBar::AngleWidth()
 {
-	if(GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
+	if(!tclient_statusbar::IsValidPlayerId(m_PlayerId))
 		return 0.0f;
 
 	return CachedTextWidth("000.00");
@@ -118,7 +119,7 @@ void CStatusBar::AngleRender()
 
 float CStatusBar::PingWidth()
 {
-	if(!GameClient()->m_Snap.m_apPlayerInfos[m_PlayerId])
+	if(!tclient_statusbar::IsValidPlayerId(m_PlayerId) || !GameClient()->m_Snap.m_apPlayerInfos[m_PlayerId])
 		return 0.0f;
 
 	return CachedTextWidth("0000");
@@ -161,7 +162,7 @@ float CStatusBar::RaceTimeWidth()
 {
 	return GetDurationWidth(m_CurrentRaceTime);
 }
-void CStatusBar::RaceTimeRender()
+int CStatusBar::CalculateRaceTime()
 {
 	int RaceTime = 0;
 	if(GameClient()->m_Snap.m_pGameInfoObj->m_TimeLimit && (GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer <= 0))
@@ -179,7 +180,11 @@ void CStatusBar::RaceTimeRender()
 	{
 		RaceTime = (Client()->GameTick(g_Config.m_ClDummy) - GameClient()->m_Snap.m_pGameInfoObj->m_RoundStartTick) / Client()->GameTickSpeed();
 	}
-	m_CurrentRaceTime = RaceTime;
+	return RaceTime;
+}
+void CStatusBar::RaceTimeRender()
+{
+	const int RaceTime = m_CurrentRaceTime;
 	char aTimeBuf[64];
 	str_time((int64_t)RaceTime * 100, TIME_DAYS, aTimeBuf, sizeof(aTimeBuf));
 
@@ -207,7 +212,7 @@ void CStatusBar::FPSRender()
 
 float CStatusBar::PositionWidth()
 {
-	if(!GameClient()->m_Snap.m_apPlayerInfos[m_PlayerId])
+	if(!tclient_statusbar::IsValidPlayerId(m_PlayerId) || !GameClient()->m_Snap.m_apPlayerInfos[m_PlayerId])
 		return 0.0f;
 
 	return CachedTextWidth("-0000.00, -0000.00");
@@ -226,7 +231,7 @@ void CStatusBar::PositionRender()
 
 float CStatusBar::VelocityWidth()
 {
-	if(!GameClient()->m_Snap.m_apPlayerInfos[m_PlayerId])
+	if(!tclient_statusbar::IsValidPlayerId(m_PlayerId) || !GameClient()->m_Snap.m_apPlayerInfos[m_PlayerId])
 		return 0.0f;
 
 	return CachedTextWidth("+00.00, +00.00");
@@ -309,8 +314,7 @@ float CStatusBar::DownstreamWidth()
 
 void CStatusBar::DownstreamRender()
 {
-	CServerInfo CurrentServerInfo;
-	Client()->GetServerInfo(&CurrentServerInfo);
+	const CServerInfo &CurrentServerInfo = Client()->ServerInfo();
 	char aBuf[32];
 	FormatMetricValue(aBuf, sizeof(aBuf), "ms", (float)CurrentServerInfo.m_Latency);
 	TextRender()->Text(m_CursorX, m_CursorY, m_FontSize, aBuf);
@@ -404,7 +408,7 @@ void CStatusBar::UpRateRender()
 
 float CStatusBar::ConnectionGradeWidth()
 {
-	return CachedTextWidth(Localize("Severe"));
+	return CachedTextWidth(Localize(ConnectionGradeLabel(GameClient()->m_QmMonitoring.Snapshot().m_Verdict.m_Grade)));
 }
 
 void CStatusBar::ConnectionGradeRender()
@@ -450,6 +454,7 @@ void CStatusBar::UpdateStatusBarSize()
 	m_FontSize = m_BarHeight - (m_Margin * 2);
 	m_Margin *= 1.5f;
 }
+
 void CStatusBar::OnInit()
 {
 	UpdateStatusBarSize();
@@ -487,6 +492,7 @@ void CStatusBar::ApplyStatusBarScheme(const char *pScheme)
 			}
 		}
 	}
+	str_copy(m_aAppliedStatusBarScheme, pScheme, sizeof(m_aAppliedStatusBarScheme));
 }
 
 void CStatusBar::UpdateStatusBarScheme(char *pScheme)
@@ -499,6 +505,7 @@ void CStatusBar::UpdateStatusBarScheme(char *pScheme)
 		pScheme[Index++] = pItem->m_aLetters[0];
 	}
 	pScheme[Index] = '\0';
+	str_copy(m_aAppliedStatusBarScheme, pScheme, sizeof(m_aAppliedStatusBarScheme));
 }
 
 void CStatusBar::OnRender()
@@ -511,6 +518,15 @@ void CStatusBar::OnRender()
 	if(!g_Config.m_TcStatusBar || !GameClient()->m_Snap.m_pGameInfoObj)
 		return;
 
+#if defined(CONF_VIDEORECORDER)
+	// 渲染（录制）demo 视频时跟随 cl_video_showhud，避免状态栏被一起录进视频
+	if(IVideo::Current() && !g_Config.m_ClVideoShowhud)
+		return;
+#endif
+
+	if(str_comp(m_aAppliedStatusBarScheme, g_Config.m_TcStatusBarScheme) != 0)
+		ApplyStatusBarScheme(g_Config.m_TcStatusBarScheme);
+
 	m_PlayerId = GameClient()->m_Snap.m_LocalClientId;
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active)
 		m_PlayerId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
@@ -519,9 +535,12 @@ void CStatusBar::OnRender()
 		UpdateFormattedPoints();
 
 	UpdateStatusBarSize();
+	m_CurrentRaceTime = CalculateRaceTime();
 
+	const float BackgroundAlpha = g_Config.m_TcStatusBarAlpha / 100.0f;
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
-	Graphics()->DrawRect(m_BarX, m_BarY, m_Width, m_BarHeight, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcStatusBarColor)).WithAlpha(g_Config.m_TcStatusBarAlpha / 100.0f), 0, 0);
+	Ui()->RenderGaussianBlur({m_BarX, m_BarY, m_Width, m_BarHeight}, BackgroundAlpha, IGraphics::CORNER_NONE, 0.0f);
+	Graphics()->DrawRect(m_BarX, m_BarY, m_Width, m_BarHeight, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcStatusBarColor)).WithAlpha(BackgroundAlpha), 0, 0);
 	TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcStatusBarTextColor)).WithAlpha(g_Config.m_TcStatusBarTextAlpha / 100.0f));
 
 	struct SStatusLayoutItem

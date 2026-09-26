@@ -37,9 +37,9 @@ namespace ui_widget
 			const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 			const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
 			pTextRender->TextColor(Color);
-			pTextRender->SetFontPreset(QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? EFontPreset::ICON_FONT_BOLD : EFontPreset::ICON_FONT);
+			pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 			pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-			Ctx.m_pUi->DoLabel(&Rect, pIcon, Rect.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+			Ctx.m_pUi->DoLabel(&Rect, pIcon, QmIconFallbackFontSize(Rect), TEXTALIGN_MC);
 			pTextRender->SetRenderFlags(PreviousFlags);
 			pTextRender->SetFontPreset(PreviousPreset);
 			pTextRender->TextColor(PreviousColor);
@@ -64,7 +64,7 @@ namespace ui_widget
 				return false;
 			}
 
-			// 悬浮、按下和松开共用颜色轨道，强度并入目标以避免按下时透明度跳变。
+			// 强度并入动画目标，按下时使用较短的过渡。
 			const bool HoverPrev = Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 			const bool Pressed = Ctx.m_pUi->CheckActiveItem(pBtn);
 			ColorRGBA Target = HoverPrev || Pressed ? Hover : Idle;
@@ -160,7 +160,7 @@ namespace ui_widget
 		const EQmIconState IconState = Disabled ? EQmIconState::DISABLED : (Pressed ? EQmIconState::ACTIVE : HoverPrev ? EQmIconState::HOVER :
 																 EQmIconState::NORMAL);
 		const SQmIconStyle IconStyle = ConfiguredIconStyle();
-		if(Ctx.m_pIconManager == nullptr || !Ctx.m_pIconManager->RenderIcon(Icon, IconRect, IconState, IconStyle))
+		if(Ctx.m_pIconManager == nullptr || (Ctx.m_pIconManager->PreferFontFallback() && pFallbackIcon != nullptr && pFallbackIcon[0] != '\0') || !Ctx.m_pIconManager->RenderIcon(Icon, IconRect, IconState, IconStyle))
 		{
 			RenderQmGlyphIcon(Ctx, IconRect, pFallbackIcon, IconStyle.Color(IconState));
 		}

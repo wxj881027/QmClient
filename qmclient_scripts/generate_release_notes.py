@@ -4,7 +4,7 @@
 根据 tag / ref 区间内的 commit 生成 GitHub Release 说明。
 
 通道：
-- stable（正式版）：tag 形如 vX.Y.Z，对应 GitHub 正式 Release
+- stable（正式版）：tag 形如 vX、vX.Y 或 vX.Y.Z，对应 GitHub 正式 Release
 - pre-release（预发布）：nightly / rc / beta 等，对应 GitHub Pre-release
 
 输出按「功能领域」分组、中文优先，并对条目做确定性自动润色：
@@ -44,8 +44,8 @@ SUBJECT_RE = re.compile(
     r"^(?P<type>[A-Za-z]+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?[:：]\s*(?P<desc>.+)$"
 )
 TRAILER_RE = re.compile(r"^Release-ZH:\s*(?P<text>.+)$")
-# 正式版 tag：v2.74.9 / 2.74.9（不含 rc/beta/nightly 后缀）
-STABLE_TAG_RE = re.compile(r"^v?(?P<ver>\d+\.\d+(?:\.\d+)?)$")
+# 正式版 tag：v3 / v3.1 / v3.1.1（不含 rc/beta/nightly 后缀）
+STABLE_TAG_RE = re.compile(r"^v?(?P<ver>\d+(?:\.\d+){0,2})$")
 PRE_RELEASE_HINT_RE = re.compile(
     r"(?i)(nightly|rc\d*|alpha|beta|pre|preview|snapshot|dev)"
 )
@@ -544,7 +544,7 @@ def main() -> int:
         "--channel",
         choices=("auto", "stable", "pre-release"),
         default="auto",
-        help="发布通道；auto 根据 tag 名推断（vX.Y.Z=stable，nightly/rc=pre-release）",
+        help="发布通道；auto 根据 tag 名推断（vX[.Y[.Z]]=stable，nightly/rc=pre-release）",
     )
     parser.add_argument("--commit", default=None, help="预发布展示用完整 commit SHA")
     parser.add_argument("--branch", default=None, help="预发布展示用分支名")

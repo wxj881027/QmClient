@@ -53,7 +53,6 @@ namespace qm_friend_notify
 				});
 				if(!Tracked.m_Missing && !SlotPresent)
 				{
-					// 从实际观察到缺席时计时，轮询卡顿不能当作离服。
 					Tracked.m_Missing = true;
 					Tracked.m_MissingSince = Now;
 				}

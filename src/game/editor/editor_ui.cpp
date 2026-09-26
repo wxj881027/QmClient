@@ -130,6 +130,16 @@ int CEditor::DoButton_FontIcon(const void *pId, const char *pText, int Checked, 
 	return DoButtonLogic(pId, Checked, pRect, Flags, pToolTip);
 }
 
+int CEditor::DoButton_QmIcon(const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners, float FontSize)
+{
+	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), 3.0f, 0.0f, Corners);
+
+	// 图集优先；图集未就绪时 DoLabel_QmIcon 内部回退到 pFallbackIcon 字形。
+	Ui()->DoLabel_QmIcon(pRect, Icon, pFallbackIcon, FontSize, TEXTALIGN_MC);
+
+	return DoButtonLogic(pId, Checked, pRect, Flags, pToolTip);
+}
+
 int CEditor::DoButton_MenuItem(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip)
 {
 	if((Ui()->HotItem() == pId && Checked == 0) || Checked > 0)

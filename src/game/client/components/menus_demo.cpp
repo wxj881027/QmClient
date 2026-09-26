@@ -5,6 +5,7 @@
 #include "menus.h"
 #include "qmclient/demo_ui.h"
 #include "qmclient/perf_logging.h"
+#include "qmclient/rank_demo_manifest.h"
 
 #include <base/hash.h>
 #include <base/math.h>
@@ -16,7 +17,9 @@
 #include <engine/gfx/image_loader.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
+#include <engine/shared/json.h>
 #include <engine/shared/localization.h>
+#include <engine/shared/snapshot.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -26,19 +29,158 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/console.h>
 #include <game/client/gameclient.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 
+#include <zlib.h>
+
 #include <algorithm>
 #include <chrono>
+#include <cstring>
+#include <limits>
+#include <vector>
 
 using namespace FontIcons;
 using namespace std::chrono_literals;
 
 namespace
 {
-	const ColorRGBA DEMO_ACCENT(0.04f, 0.48f, 1.0f, 0.95f);
+	constexpr const char *RANK_DEMO_MANIFEST_URL = "https://ddnet.org/watch/watchable.jsonl";
+	constexpr const char *RANK_DEMO_URL_PREFIX = "https://ddnet.org/watch/demos";
+	constexpr size_t RANK_DEMO_MAX_MANIFEST_BYTES = 16 * 1024 * 1024;
+	constexpr size_t RANK_DEMO_MAX_DOWNLOAD_BYTES = 128 * 1024 * 1024;
+	constexpr size_t RANK_DEMO_MAX_UNPACKED_BYTES = 256 * 1024 * 1024;
+
+	bool FindRankOneDemo(const unsigned char *pData, size_t DataSize, const char *pMapName, std::string &DemoName, int64_t &DemoTs)
+	{
+		std::vector<qmclient::rank_demo::SEntry> Entries;
+		if(!qmclient::rank_demo::ParseManifest(pData, DataSize, Entries))
+			return false;
+		const qmclient::rank_demo::SEntry *pEntry = qmclient::rank_demo::FindLatest(Entries, pMapName, 1);
+		if(pEntry == nullptr)
+			return false;
+		DemoName = pEntry->m_Demo;
+		DemoTs = pEntry->m_Ts == std::numeric_limits<int64_t>::min() ? 0 : pEntry->m_Ts;
+		return true;
+	}
+
+	bool IsGzipData(const unsigned char *pData, size_t DataSize)
+	{
+		return DataSize >= 2 && pData[0] == 0x1f && pData[1] == 0x8b;
+	}
+
+	bool HasDemoMagic(const unsigned char *pData, size_t DataSize)
+	{
+		return DataSize >= 7 && mem_comp(pData, "TWDEMO\0", 7) == 0;
+	}
+
+	bool IsStoredDemoValid(IStorage *pStorage, const char *pPath)
+	{
+		if(pStorage == nullptr || pPath == nullptr || pPath[0] == '\0')
+			return false;
+		rust::Box<CSnapshotDelta> pDelta = CSnapshotDelta::New();
+		rust::Box<CSnapshotDelta> pDeltaSixup = CSnapshotDelta::New();
+		CDemoPlayer DemoPlayer(&*pDelta, &*pDeltaSixup, false);
+		const int Result = DemoPlayer.Load(pStorage, nullptr, pPath, IStorage::TYPE_SAVE);
+		// CDemoPlayer 析构要求文件已关闭，否则 dbg_assert 在 Release 下也会 abort
+		DemoPlayer.Stop();
+		return Result == 0;
+	}
+
+	bool UnpackRankDemo(IStorage *pStorage, const char *pSourcePath, const char *pDestinationPath)
+	{
+		if(pStorage == nullptr || pSourcePath == nullptr || pSourcePath[0] == '\0' || pDestinationPath == nullptr || pDestinationPath[0] == '\0')
+			return false;
+
+		char aTempPath[IO_MAX_PATH_LENGTH];
+		if(str_format(aTempPath, sizeof(aTempPath), "%s.tmp", pDestinationPath) >= (int)sizeof(aTempPath))
+			return false;
+		pStorage->RemoveFile(aTempPath, IStorage::TYPE_SAVE);
+		const auto RemoveTemp = [&]() { pStorage->RemoveFile(aTempPath, IStorage::TYPE_SAVE); };
+
+		void *pData = nullptr;
+		unsigned DataSize = 0;
+		if(!pStorage->ReadFile(pSourcePath, IStorage::TYPE_SAVE, &pData, &DataSize) || pData == nullptr || DataSize == 0)
+		{
+			free(pData);
+			return false;
+		}
+
+		if(!IsGzipData(static_cast<const unsigned char *>(pData), DataSize))
+		{
+			const bool Valid = HasDemoMagic(static_cast<const unsigned char *>(pData), DataSize);
+			if(Valid)
+			{
+				IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+				if(File == nullptr)
+				{
+					free(pData);
+					return false;
+				}
+				const bool Written = io_write(File, pData, DataSize) == DataSize;
+				io_close(File);
+				free(pData);
+				if(!Written || !pStorage->RenameFile(aTempPath, pDestinationPath, IStorage::TYPE_SAVE))
+				{
+					RemoveTemp();
+					return false;
+				}
+				return true;
+			}
+			free(pData);
+			return false;
+		}
+
+		z_stream Stream = {};
+		Stream.next_in = static_cast<Bytef *>(pData);
+		Stream.avail_in = DataSize;
+		if(inflateInit2(&Stream, 15 + 32) != Z_OK)
+		{
+			free(pData);
+			return false;
+		}
+
+		std::vector<unsigned char> Output;
+		Output.resize(std::min<size_t>(std::max<size_t>(static_cast<size_t>(DataSize) * 4, 1024 * 1024), RANK_DEMO_MAX_UNPACKED_BYTES));
+		size_t OutputLength = 0;
+		int Result = Z_OK;
+		while(Result == Z_OK)
+		{
+			if(OutputLength == Output.size())
+			{
+				if(Output.size() >= RANK_DEMO_MAX_UNPACKED_BYTES)
+				{
+					inflateEnd(&Stream);
+					free(pData);
+					return false;
+				}
+				Output.resize(std::min(Output.size() * 2, RANK_DEMO_MAX_UNPACKED_BYTES));
+			}
+			Stream.next_out = Output.data() + OutputLength;
+			Stream.avail_out = static_cast<uInt>(std::min<size_t>(Output.size() - OutputLength, 0x40000000));
+			Result = inflate(&Stream, Z_NO_FLUSH);
+			OutputLength = Output.size() - Stream.avail_out;
+		}
+		inflateEnd(&Stream);
+		free(pData);
+
+		if(Result != Z_STREAM_END || OutputLength > RANK_DEMO_MAX_UNPACKED_BYTES || !HasDemoMagic(Output.data(), OutputLength))
+			return false;
+
+		IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		if(File == nullptr)
+			return false;
+		const bool Written = io_write(File, Output.data(), OutputLength) == OutputLength;
+		io_close(File);
+		if(!Written || !pStorage->RenameFile(aTempPath, pDestinationPath, IStorage::TYPE_SAVE))
+		{
+			RemoveTemp();
+			return false;
+		}
+		return true;
+	}
 
 	bool IsScreenshotBrowserFile(const char *pName)
 	{
@@ -64,26 +206,12 @@ namespace
 
 }
 
-void CMenus::RenderDemoCard(const CUIRect &Rect)
-{
-	// 先采样回放背景；降低覆色遮挡，让模糊可见，控件另行保持清晰。
-	Ui()->RenderGaussianBlur(Rect, 1.0f, IGraphics::CORNER_ALL, 12.0f);
-	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
-	CUIRect Shadow = Rect;
-	Shadow.y += 2.0f;
-	Shadow.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f), IGraphics::CORNER_ALL, 12.0f);
-	Rect.Draw(ColorRGBA(0.65f, 0.69f, 0.77f, 0.12f), IGraphics::CORNER_ALL, 12.0f);
-	CUIRect Inner;
-	Rect.Margin(0.6f, &Inner);
-	const bool BlurSupported = g_Config.m_QmGaussianBlur && Graphics()->IsBackbufferCaptureSupported() && Graphics()->IsRenderTargetGaussianBlurSupported();
-	Inner.Draw(ColorRGBA(0.07f, 0.08f, 0.11f, BlurSupported ? 0.56f : 0.92f), IGraphics::CORNER_ALL, 11.4f);
-}
-
 void CMenus::RenderDemoExportDisplayToggle(const CUIRect &Rect)
 {
 	static CButtonContainer s_DisplayButton;
-	if(DoButton_Menu(&s_DisplayButton, Localize("Demo display"), Ui()->IsPopupOpen() ? -1 : 0, &Rect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, m_DemoExportDisplayExpanded ? DEMO_ACCENT.WithAlpha(0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f) && !Ui()->IsPopupOpen())
-		m_DemoExportDisplayExpanded = !m_DemoExportDisplayExpanded;
+	const bool Expanded = m_DemoExportDisplayExpanded;
+	if(DoButton_Menu(&s_DisplayButton, Localize("Demo display"), Ui()->IsPopupOpen() ? -1 : 0, &Rect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, Expanded ? ui_token::color::ACCENT_PRIMARY_DIM.WithAlpha(0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f) && !Ui()->IsPopupOpen())
+		m_DemoExportDisplayExpanded = !Expanded;
 	CUIRect Arrow;
 	Rect.VSplitRight(22.0f, nullptr, &Arrow);
 	Ui()->DoLabel(&Arrow, m_DemoExportDisplayExpanded ? "-" : "+", 12.0f, TEXTALIGN_MC);
@@ -99,6 +227,7 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 	Ui()->DoLabel(&Row, Localize("Demo display"), 11.0f, TEXTALIGN_ML);
 	View.HSplitTop(2.0f, nullptr, &View);
 
+	// 三组段选：值就是配置项本身的下标，点哪档写哪档。
 	const auto Segments = [&](const char *pLabel, int *pValue, const char *const *ppLabels, int Count, CButtonContainer *pButtons) {
 		CUIRect Label, Options;
 		View.HSplitTop(20.0f, &Row, &View);
@@ -111,7 +240,7 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 		{
 			CUIRect Option{Options.x + Width * i, Options.y, Width, Options.h};
 			Option.Margin(2.0f, &Option);
-			const ColorRGBA Fill = *pValue == i ? DEMO_ACCENT : ColorRGBA(1.0f, 1.0f, 1.0f, 0.02f);
+			const ColorRGBA Fill = *pValue == i ? ui_token::color::ACCENT_PRIMARY_DIM : ColorRGBA(1.0f, 1.0f, 1.0f, 0.02f);
 			if(DoButton_Menu(&pButtons[i], nullptr, Enabled ? 0 : -1, &Option, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 4.0f, 0.0f, Fill) && Enabled)
 				*pValue = i;
 			Ui()->DoLabel(&Option, ppLabels[i], 10.0f, TEXTALIGN_MC, {.m_MaxWidth = Option.w - 4.0f, .m_EllipsisAtEnd = true});
@@ -126,6 +255,7 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 	const char *apScope[] = {Localize("Self"), Localize("Others"), Localize("Strong hook"), Localize("Weak hook"), Localize("All")};
 	Segments(Localize("Hook strength scope"), &g_Config.m_QmDemoStrongWeakScope, apScope, std::size(apScope), s_aScopeButtons);
 
+	// 两个开关并排：回放里是否画主 HUD 与聊天。
 	IUiContext Context;
 	Context.m_pUi = Ui();
 	Context.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
@@ -314,20 +444,8 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		qm_demo_cut::ResolveRange(g_Config.m_ClDemoSliceBegin, g_Config.m_ClDemoSliceEnd, pInfo->m_FirstTick, pInfo->m_LastTick, Range);
 		return Range;
 	};
-	const auto SetCutStart = [&]() {
-		m_DemoCutPreview.Reset();
-		Client()->DemoSliceBegin();
-		if(g_Config.m_ClDemoSliceEnd < g_Config.m_ClDemoSliceBegin)
-			g_Config.m_ClDemoSliceEnd = -1;
-	};
-	const auto SetCutEnd = [&]() {
-		m_DemoCutPreview.Reset();
-		Client()->DemoSliceEnd();
-		if(g_Config.m_ClDemoSliceBegin > g_Config.m_ClDemoSliceEnd)
-			g_Config.m_ClDemoSliceBegin = -1;
-	};
 	const auto PreviewCut = [&]() {
-		if(VideoRendering)
+		if(VideoRendering || m_DemoPlayerState != DEMOPLAYER_NONE || Ui()->IsPopupOpen())
 			return;
 		if(m_DemoCutPreview.IsActive())
 		{
@@ -346,7 +464,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		if(g_Config.m_ClDemoSliceBegin == -1 && g_Config.m_ClDemoSliceEnd == -1)
 			return false;
 		SDemoCutSegment Segment = NormalizePendingSlice();
-		if(Segment.m_StartTick >= Segment.m_EndTick)
+		if(Segment.m_StartTick < 0 || Segment.m_StartTick >= Segment.m_EndTick)
 			return false;
 		for(const auto &ExistingSegment : m_vDemoCutSegments)
 		{
@@ -363,21 +481,13 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// handle keyboard shortcuts independent of active menu
 	float PositionToSeek = -1.0f;
 	float TimeToSeek = 0.0f;
-	// 旁观 HUD 输入编号和回车查找时，不触发 Demo 的跳转或暂停快捷键。
 	if(!GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Spectator.IsEditingTeleNumber() && m_DemoPlayerState == DEMOPLAYER_NONE && g_Config.m_ClDemoKeyboardShortcuts && !Ui()->IsPopupOpen())
 	{
-		if(!VideoRendering && !Input()->ModifierIsPressed() && !Input()->ShiftIsPressed() && !Input()->AltIsPressed())
-		{
-			if(Input()->KeyPress(KEY_I))
-				SetCutStart();
-			if(Input()->KeyPress(KEY_O))
-				SetCutEnd();
-			if(Input()->KeyPress(KEY_P))
-				PreviewCut();
-		}
 		// increase/decrease speed
 		if(!Input()->ModifierIsPressed() && !Input()->ShiftIsPressed() && !Input()->AltIsPressed())
 		{
+			if(Input()->KeyPress(KEY_P))
+				PreviewCut();
 			if(Input()->KeyPress(KEY_UP) || (m_MenuActive && Input()->KeyPress(KEY_MOUSE_WHEEL_UP)))
 			{
 				DemoPlayer()->AdjustSpeedIndex(+1);
@@ -393,7 +503,6 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		// pause/unpause
 		if(Input()->KeyPress(KEY_SPACE) || Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || Input()->KeyPress(KEY_K))
 		{
-			m_DemoCutPreview.Reset();
 			if(pInfo->m_Paused)
 			{
 				DemoPlayer()->Unpause();
@@ -411,7 +520,12 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			if(Input()->ModifierIsPressed())
 				PositionToSeek = FindPreviousMarkerPosition();
 			else if(Input()->ShiftIsPressed())
-				m_SkipDurationIndex = maximum(m_SkipDurationIndex - 1, 0);
+			{
+				if(m_SkipDurationIndex > 0)
+				{
+					--m_SkipDurationIndex;
+				}
+			}
 			else
 				TimeToSeek = -SKIP_DURATIONS_SECONDS[m_SkipDurationIndex];
 		}
@@ -420,7 +534,12 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			if(Input()->ModifierIsPressed())
 				PositionToSeek = FindNextMarkerPosition();
 			else if(Input()->ShiftIsPressed())
-				m_SkipDurationIndex = minimum(m_SkipDurationIndex + 1, NumDurationLabels - 1);
+			{
+				if(m_SkipDurationIndex < NumDurationLabels - 1)
+				{
+					++m_SkipDurationIndex;
+				}
+			}
 			else
 				TimeToSeek = SKIP_DURATIONS_SECONDS[m_SkipDurationIndex];
 		}
@@ -457,14 +576,11 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		}
 	}
 
-	const CUIRect PlayerRect = qm_demo_ui::PlayerRect(MainView, m_DemoDisplayExpanded);
-	const float SeekBarHeight = 12.0f;
-	const float ButtonbarHeight = qm_demo_ui::TransportButtonSize(PlayerRect.w);
+	const float SeekBarHeight = 15.0f;
+	const float ButtonbarHeight = 20.0f;
 	const float NameBarHeight = 20.0f;
-	const float CutBarHeight = 24.0f;
-	const float Margins = 3.0f;
-	const float DisplayHeight = m_DemoDisplayExpanded ? qm_demo_ui::DISPLAY_HEIGHT : 0.0f;
-	const float TotalHeight = PlayerRect.h;
+	const float Margins = 5.0f;
+	const float TotalHeight = SeekBarHeight + ButtonbarHeight + NameBarHeight + Margins * 3;
 
 	if(!m_MenuActive)
 	{
@@ -479,7 +595,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 				TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(Alpha));
 				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 				TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-				Ui()->DoLabel(Ui()->Screen(), pInfo->m_Paused ? FONT_ICON_PAUSE : FONT_ICON_PLAY, 36.0f + Time * 12.0f, TEXTALIGN_MC);
+				Ui()->DoLabel_QmIcon(Ui()->Screen(), pInfo->m_Paused ? EQmIcon::PAUSE : EQmIcon::PLAY, pInfo->m_Paused ? FONT_ICON_PAUSE : FONT_ICON_PLAY, 36.0f + Time * 12.0f, TEXTALIGN_MC);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 				TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
 				TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -505,7 +621,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			m_LastSpeedChange = 0.0f;
 	}
 
-	if(pInfo->m_CurrentTick == pInfo->m_LastTick && !m_DemoCutPreview.IsFinished())
+	if(CurrentTick == TotalTicks && !m_DemoCutPreview.IsFinished())
 	{
 		DemoPlayer()->Pause();
 		PositionToSeek = 0.0f;
@@ -518,28 +634,27 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		return;
 	}
 
-	// 固定底部留白，居中悬浮；展开显示面板后仍将整张卡片限制在屏幕内。
-	CUIRect DemoControls = PlayerRect;
-	const CUIRect DemoControlsOriginal = DemoControls;
-	DemoControls.x = std::clamp(DemoControls.x + m_DemoControlsPositionOffset.x, MainView.x, MainView.x + MainView.w - DemoControls.w);
-	DemoControls.y = std::clamp(DemoControls.y + m_DemoControlsPositionOffset.y, MainView.y, MainView.y + MainView.h - DemoControls.h);
-	RenderDemoCard(DemoControls);
-	CUiScopedGaussianBlurSuppression DemoControlsBlurSuppression(Ui());
+	CUIRect DemoControls;
+	const CUIRect DemoControlsOriginal = qm_demo_ui::PlayerRect(MainView, TotalHeight);
+	DemoControls = qm_demo_ui::DraggedPlayerRect(MainView, DemoControlsOriginal, m_DemoControlsPositionOffset.x, m_DemoControlsPositionOffset.y);
+	int Corners = IGraphics::CORNER_NONE;
+	if(DemoControls.x > 0.0f && DemoControls.y > 0.0f)
+		Corners |= IGraphics::CORNER_TL;
+	if(DemoControls.x < MainView.w - DemoControls.w && DemoControls.y > 0.0f)
+		Corners |= IGraphics::CORNER_TR;
+	if(DemoControls.x > 0.0f && DemoControls.y < MainView.h - DemoControls.h)
+		Corners |= IGraphics::CORNER_BL;
+	if(DemoControls.x < MainView.w - DemoControls.w && DemoControls.y < MainView.h - DemoControls.h)
+		Corners |= IGraphics::CORNER_BR;
+	DemoControls.Draw(ui_token::color::SURFACE_ELEVATED, Corners, ui_token::radius::CARD);
 	const CUIRect DemoControlsDragRect = DemoControls;
 
-	CUIRect SeekBar, TimeBar, ButtonBar, NameBar, SpeedBar, CutBar, DisplayBar;
-	DemoControls.Margin(8.0f, &DemoControls);
-	DemoControls.HSplitTop(NameBarHeight, &NameBar, &DemoControls);
-	DemoControls.HSplitTop(4.0f, nullptr, &DemoControls);
-	DemoControls.HSplitTop(SeekBarHeight, &SeekBar, &DemoControls);
-	DemoControls.HSplitTop(14.0f, &TimeBar, &DemoControls);
-	DemoControls.HSplitTop(22.0f, &ButtonBar, &DemoControls);
-	DemoControls.HSplitTop(8.0f, nullptr, &DemoControls);
-	DemoControls.HSplitTop(CutBarHeight, &CutBar, &DemoControls);
-	DemoControls.HSplitTop(6.0f, nullptr, &DisplayBar);
-	ButtonBar.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.045f), IGraphics::CORNER_ALL, 6.0f);
-	ButtonBar.VMargin(std::max(0.0f, (ButtonBar.w - qm_demo_ui::TransportWidth(ButtonbarHeight)) * 0.5f), &ButtonBar);
-	ButtonBar.HMargin((ButtonBar.h - ButtonbarHeight) * 0.5f, &ButtonBar);
+	CUIRect SeekBar, ButtonBar, NameBar, SpeedBar;
+	DemoControls.Margin(5.0f, &DemoControls);
+	DemoControls.HSplitTop(SeekBarHeight, &SeekBar, &ButtonBar);
+	ButtonBar.HSplitTop(Margins, nullptr, &ButtonBar);
+	ButtonBar.HSplitBottom(NameBarHeight, &ButtonBar, &NameBar);
+	NameBar.HSplitTop(4.0f, nullptr, &NameBar);
 
 	// handle draggable demo controls
 	{
@@ -574,8 +689,8 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			if(s_Operation == OP_DRAGGING)
 			{
 				m_DemoControlsPositionOffset = Ui()->MousePos() - s_InitialMouse;
-				m_DemoControlsPositionOffset.x = std::clamp(m_DemoControlsPositionOffset.x, -DemoControlsOriginal.x, MainView.w - DemoControlsDragRect.w - DemoControlsOriginal.x);
-				m_DemoControlsPositionOffset.y = std::clamp(m_DemoControlsPositionOffset.y, -DemoControlsOriginal.y, MainView.h - DemoControlsDragRect.h - DemoControlsOriginal.y);
+				const CUIRect Dragged = qm_demo_ui::DraggedPlayerRect(MainView, DemoControlsOriginal, m_DemoControlsPositionOffset.x, m_DemoControlsPositionOffset.y);
+				m_DemoControlsPositionOffset = vec2(Dragged.x - DemoControlsOriginal.x, Dragged.y - DemoControlsOriginal.y);
 			}
 		}
 	}
@@ -590,7 +705,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		TextRender()->TextColor(pInfo->m_LivePlayback ? ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f) : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
-		Ui()->DoLabel(&LiveButton, FONT_ICON_CIRCLE, 24.0f, TEXTALIGN_MC);
+		Ui()->DoLabel_QmIcon(&LiveButton, EQmIcon::CIRCLE, FONT_ICON_CIRCLE, 24.0f, TEXTALIGN_MC);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		TextRender()->SetRenderFlags(0);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -613,13 +728,13 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	{
 		// draw seek bar
 		const float Rounding = 5.0f;
-		SeekBar.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.28f), IGraphics::CORNER_ALL, Rounding);
+		SeekBar.Draw(ui_token::color::SURFACE_OVERLAY.WithMultipliedAlpha(1.15f), IGraphics::CORNER_ALL, Rounding);
 
 		// draw filled bar
 		float Amount = CurrentTick / (float)TotalTicks;
 		CUIRect FilledBar = SeekBar;
 		FilledBar.w = 2 * Rounding + (FilledBar.w - 2 * Rounding) * Amount;
-		FilledBar.Draw(DEMO_ACCENT.WithAlpha(0.40f), IGraphics::CORNER_ALL, Rounding);
+		FilledBar.Draw(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(1.9f), IGraphics::CORNER_ALL, Rounding);
 
 		// draw highlighting
 		for(const auto &Segment : m_vDemoCutSegments)
@@ -632,7 +747,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
 			Graphics()->SetColor(ui_token::color::ACCENT_PRIMARY_DIM);
-			IGraphics::CQuadItem QuadItem(Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * RatioBegin, SeekBar.y, Span, SeekBar.h);
+			IGraphics::CQuadItem QuadItem(2 * Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * RatioBegin, SeekBar.y, Span, SeekBar.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 		}
@@ -644,8 +759,8 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			float Span = ((SeekBar.w - 2 * Rounding) * RatioEnd) - ((SeekBar.w - 2 * Rounding) * RatioBegin);
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
-			Graphics()->SetColor(DEMO_ACCENT.WithAlpha(0.36f));
-			IGraphics::CQuadItem QuadItem(Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * RatioBegin, SeekBar.y, Span, SeekBar.h);
+			Graphics()->SetColor(ui_token::color::DANGER.WithMultipliedAlpha(0.28f));
+			IGraphics::CQuadItem QuadItem(2 * Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * RatioBegin, SeekBar.y, Span, SeekBar.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 		}
@@ -654,7 +769,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		for(int i = 0; i < pInfo->m_NumTimelineMarkers; i++)
 		{
 			const float Ratio = (pInfo->m_aTimelineMarkers[i] - pInfo->m_FirstTick) / (float)TotalTicks;
-			const float MarkerX = Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * Ratio;
+			const float MarkerX = 2 * Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * Ratio;
 			const float MarkerWidth = maximum(2.0f, Ui()->PixelSize() * 2.0f);
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
@@ -676,8 +791,8 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			float Ratio = (g_Config.m_ClDemoSliceBegin - pInfo->m_FirstTick) / (float)TotalTicks;
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
-			Graphics()->SetColor(DEMO_ACCENT);
-			IGraphics::CQuadItem QuadItem(Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * Ratio, SeekBar.y - 2.0f, 3.0f, SeekBar.h + 4.0f);
+			Graphics()->SetColor(ui_token::color::DANGER);
+			IGraphics::CQuadItem QuadItem(2 * Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * Ratio, SeekBar.y, Ui()->PixelSize(), SeekBar.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 		}
@@ -688,22 +803,20 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			float Ratio = (g_Config.m_ClDemoSliceEnd - pInfo->m_FirstTick) / (float)TotalTicks;
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
-			Graphics()->SetColor(DEMO_ACCENT);
-			IGraphics::CQuadItem QuadItem(Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * Ratio, SeekBar.y - 2.0f, 3.0f, SeekBar.h + 4.0f);
+			Graphics()->SetColor(ui_token::color::DANGER);
+			IGraphics::CQuadItem QuadItem(2 * Rounding + SeekBar.x + (SeekBar.w - 2 * Rounding) * Ratio, SeekBar.y, Ui()->PixelSize(), SeekBar.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 		}
 
 		// draw time
 		char aCurrentTime[32];
-		str_time(qm_demo_cut::ToCentiseconds((int64_t)CurrentTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aCurrentTime, sizeof(aCurrentTime));
+		str_time(qm_demo_cut::ToCentiseconds(CurrentTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aCurrentTime, sizeof(aCurrentTime));
 		char aTotalTime[32];
-		str_time(qm_demo_cut::ToCentiseconds((int64_t)TotalTicks, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aTotalTime, sizeof(aTotalTime));
+		str_time(qm_demo_cut::ToCentiseconds(TotalTicks, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aTotalTime, sizeof(aTotalTime));
 		char aSeekBarLabel[128];
 		str_format(aSeekBarLabel, sizeof(aSeekBarLabel), "%s / %s", aCurrentTime, aTotalTime);
-		Ui()->DoLabel(&TimeBar, aSeekBarLabel, 10.0f, TEXTALIGN_MC);
-		CUIRect Playhead{SeekBar.x + Rounding + (SeekBar.w - 2.0f * Rounding) * Amount - 2.0f, SeekBar.y - 2.0f, 4.0f, SeekBar.h + 4.0f};
-		Playhead.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.95f), IGraphics::CORNER_ALL, 2.0f);
+		Ui()->DoLabel(&SeekBar, aSeekBarLabel, SeekBar.h * 0.70f, TEXTALIGN_MC);
 
 		// do the logic
 		const auto &&SnapToTimelineMarker = [&](float AmountSeek) {
@@ -773,7 +886,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			const float HoveredAmount = SnapToTimelineMarker(std::clamp((Ui()->MouseX() - SeekBar.x - Rounding) / (SeekBar.w - 2 * Rounding), 0.0f, 1.0f));
 			const int HoveredTick = (int)(HoveredAmount * TotalTicks);
 			static char s_aHoveredTime[32];
-			str_time(qm_demo_cut::ToCentiseconds((int64_t)HoveredTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, s_aHoveredTime, sizeof(s_aHoveredTime));
+			str_time(qm_demo_cut::ToCentiseconds(HoveredTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, s_aHoveredTime, sizeof(s_aHoveredTime));
 			GameClient()->m_Tooltips.DoToolTip(&s_SeekBarId, &SeekBar, s_aHoveredTime);
 		}
 	}
@@ -786,9 +899,8 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// combined play and pause button
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_PlayPauseButton;
-	if(Ui()->DoButton_FontIcon(&s_PlayPauseButton, pInfo->m_Paused ? FONT_ICON_PLAY : FONT_ICON_PAUSE, false, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, DEMO_ACCENT))
+	if(Ui()->DoButton_QmIcon(&s_PlayPauseButton, pInfo->m_Paused ? EQmIcon::PLAY : EQmIcon::PAUSE, pInfo->m_Paused ? FONT_ICON_PLAY : FONT_ICON_PAUSE, false, &Button, BUTTONFLAG_LEFT))
 	{
-		m_DemoCutPreview.Reset();
 		if(pInfo->m_Paused)
 		{
 			DemoPlayer()->Unpause();
@@ -805,7 +917,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_ResetButton;
-	if(Ui()->DoButton_FontIcon(&s_ResetButton, FONT_ICON_STOP, false, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_ResetButton, EQmIcon::STOP, FONT_ICON_STOP, false, &Button, BUTTONFLAG_LEFT))
 	{
 		DemoPlayer()->Pause();
 		PositionToSeek = 0.0f;
@@ -813,10 +925,10 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	GameClient()->m_Tooltips.DoToolTip(&s_ResetButton, &Button, Localize("Stop the current demo"));
 
 	// skip time back
-	ButtonBar.VSplitLeft(Margins + 3.0f, nullptr, &ButtonBar);
+	ButtonBar.VSplitLeft(Margins + 10.0f, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_TimeBackButton;
-	if(Ui()->DoButton_FontIcon(&s_TimeBackButton, FONT_ICON_BACKWARD, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_TimeBackButton, EQmIcon::BACKWARD, FONT_ICON_BACKWARD, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		TimeToSeek = -SKIP_DURATIONS_SECONDS[m_SkipDurationIndex];
 	}
@@ -826,7 +938,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	if(NumDurationLabels >= 2)
 	{
 		ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
-		ButtonBar.VSplitLeft(56.0f, &Button, &ButtonBar);
+		ButtonBar.VSplitLeft(4 * ButtonbarHeight, &Button, &ButtonBar);
 
 		static std::vector<std::string> s_vDurationNames;
 		static std::vector<const char *> s_vpDurationNames;
@@ -855,17 +967,17 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_TimeForwardButton;
-	if(Ui()->DoButton_FontIcon(&s_TimeForwardButton, FONT_ICON_FORWARD, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_TimeForwardButton, EQmIcon::FORWARD, FONT_ICON_FORWARD, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		TimeToSeek = SKIP_DURATIONS_SECONDS[m_SkipDurationIndex];
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_TimeForwardButton, &Button, Localize("Go forward the specified duration"));
 
 	// one tick back
-	ButtonBar.VSplitLeft(Margins + 3.0f, nullptr, &ButtonBar);
+	ButtonBar.VSplitLeft(Margins + 10.0f, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_OneTickBackButton;
-	if(Ui()->DoButton_FontIcon(&s_OneTickBackButton, FONT_ICON_BACKWARD_STEP, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_OneTickBackButton, EQmIcon::BACKWARD_STEP, FONT_ICON_BACKWARD_STEP, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		DemoSeekTick(IDemoPlayer::TICK_PREVIOUS);
 	}
@@ -875,17 +987,17 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_OneTickForwardButton;
-	if(Ui()->DoButton_FontIcon(&s_OneTickForwardButton, FONT_ICON_FORWARD_STEP, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_OneTickForwardButton, EQmIcon::FORWARD_STEP, FONT_ICON_FORWARD_STEP, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		DemoSeekTick(IDemoPlayer::TICK_NEXT);
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_OneTickForwardButton, &Button, Localize("Go forward one tick"));
 
 	// one marker back
-	ButtonBar.VSplitLeft(Margins + 3.0f, nullptr, &ButtonBar);
+	ButtonBar.VSplitLeft(Margins + 10.0f, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_OneMarkerBackButton;
-	if(Ui()->DoButton_FontIcon(&s_OneMarkerBackButton, FONT_ICON_BACKWARD_FAST, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_OneMarkerBackButton, EQmIcon::BACKWARD_FAST, FONT_ICON_BACKWARD_FAST, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		PositionToSeek = FindPreviousMarkerPosition();
 	}
@@ -895,17 +1007,17 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_OneMarkerForwardButton;
-	if(Ui()->DoButton_FontIcon(&s_OneMarkerForwardButton, FONT_ICON_FORWARD_FAST, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_OneMarkerForwardButton, EQmIcon::FORWARD_FAST, FONT_ICON_FORWARD_FAST, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		PositionToSeek = FindNextMarkerPosition();
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_OneMarkerForwardButton, &Button, Localize("Go forward one marker"));
 
 	// slowdown
-	ButtonBar.VSplitLeft(Margins + 3.0f, nullptr, &ButtonBar);
+	ButtonBar.VSplitLeft(Margins + 10.0f, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_SlowDownButton;
-	if(Ui()->DoButton_FontIcon(&s_SlowDownButton, FONT_ICON_CHEVRON_DOWN, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_SlowDownButton, EQmIcon::CHEVRON_DOWN, FONT_ICON_CHEVRON_DOWN, 0, &Button, BUTTONFLAG_LEFT))
 		DecreaseDemoSpeed = true;
 	GameClient()->m_Tooltips.DoToolTip(&s_SlowDownButton, &Button, Localize("Slow down the demo"));
 
@@ -913,34 +1025,59 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
 	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_SpeedUpButton;
-	if(Ui()->DoButton_FontIcon(&s_SpeedUpButton, FONT_ICON_CHEVRON_UP, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_SpeedUpButton, EQmIcon::CHEVRON_UP, FONT_ICON_CHEVRON_UP, 0, &Button, BUTTONFLAG_LEFT))
 		IncreaseDemoSpeed = true;
 	GameClient()->m_Tooltips.DoToolTip(&s_SpeedUpButton, &Button, Localize("Speed up the demo"));
 
 	// speed meter
-	ButtonBar.VSplitLeft(36.0f, &SpeedBar, &ButtonBar);
+	ButtonBar.VSplitLeft(Margins * 12, &SpeedBar, &ButtonBar);
 	char aBuffer[64];
 	str_format(aBuffer, sizeof(aBuffer), "×%g", pInfo->m_Speed);
 	Ui()->DoLabel(&SpeedBar, aBuffer, Button.h * 0.7f, TEXTALIGN_MC);
 
-	// 剪辑按起止标记、列表操作、预览、导出的顺序排列。
-	const bool CompactCutLabels = CutBar.w < 480.0f;
-	CUIRect CutStartButton, CutEndButton, CutPreviewButton, CutExportButton, CutAddButton, CutClearButton;
-	CutBar.VSplitRight(CompactCutLabels ? CutBarHeight : 72.0f, &CutBar, &CutExportButton);
-	CutBar.VSplitRight(Margins, &CutBar, nullptr);
-	CutBar.VSplitRight(CompactCutLabels ? CutBarHeight : 110.0f, &CutBar, &CutPreviewButton);
-	CutBar.VSplitRight(8.0f, &CutBar, nullptr);
-	CutBar.VSplitRight(ButtonbarHeight, &CutBar, &CutClearButton);
-	CutBar.VSplitRight(Margins, &CutBar, nullptr);
-	CutBar.VSplitRight(ButtonbarHeight, &CutBar, &CutAddButton);
-	CutBar.VSplitRight(8.0f, &CutBar, nullptr);
-	CutBar.VSplitMid(&CutStartButton, &CutEndButton, Margins);
+	// slice begin button
+	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
+	static CButtonContainer s_SliceBeginButton;
+	const int SliceBeginButtonResult = Ui()->DoButton_QmIcon(&s_SliceBeginButton, EQmIcon::RIGHT_FROM_BRACKET, FONT_ICON_RIGHT_FROM_BRACKET, 0, &Button, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
+	if(SliceBeginButtonResult == 1)
+	{
+		m_DemoCutPreview.Reset();
+		Client()->DemoSliceBegin();
+		if(CurrentTick > (g_Config.m_ClDemoSliceEnd - pInfo->m_FirstTick))
+			g_Config.m_ClDemoSliceEnd = -1;
+	}
+	else if(SliceBeginButtonResult == 2)
+	{
+		m_DemoCutPreview.Reset();
+		g_Config.m_ClDemoSliceBegin = -1;
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_SliceBeginButton, &Button, Localize("Mark the beginning of a cut (right click to reset)"));
 
-	// 添加当前片段。
-	Button = CutAddButton;
+	// slice end button
+	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
+	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
+	static CButtonContainer s_SliceEndButton;
+	const int SliceEndButtonResult = Ui()->DoButton_QmIcon(&s_SliceEndButton, EQmIcon::RIGHT_TO_BRACKET, FONT_ICON_RIGHT_TO_BRACKET, 0, &Button, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
+	if(SliceEndButtonResult == 1)
+	{
+		m_DemoCutPreview.Reset();
+		Client()->DemoSliceEnd();
+		if(CurrentTick < (g_Config.m_ClDemoSliceBegin - pInfo->m_FirstTick))
+			g_Config.m_ClDemoSliceBegin = -1;
+	}
+	else if(SliceEndButtonResult == 2)
+	{
+		m_DemoCutPreview.Reset();
+		g_Config.m_ClDemoSliceEnd = -1;
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_SliceEndButton, &Button, Localize("Mark the end of a cut (right click to reset)"));
+
+	// add slice button
+	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
+	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_SliceAddButton;
 	static CUi::SMessagePopupContext s_SliceAddMessagePopupContext;
-	if(Ui()->DoButton_FontIcon(&s_SliceAddButton, FONT_ICON_PLUS, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_SliceAddButton, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		if(!AddPendingSlice())
 		{
@@ -951,10 +1088,11 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_SliceAddButton, &Button, Localize("Add current cut to the export list"));
 
-	// 清除选区与列表。
-	Button = CutClearButton;
+	// clear slices button
+	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
+	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
 	static CButtonContainer s_SliceClearButton;
-	const int SliceClearButtonResult = Ui()->DoButton_FontIcon(&s_SliceClearButton, FONT_ICON_TRASH, 0, &Button, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
+	const int SliceClearButtonResult = Ui()->DoButton_QmIcon(&s_SliceClearButton, EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Button, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 	if(SliceClearButtonResult == 1)
 	{
 		m_DemoCutPreview.Reset();
@@ -975,74 +1113,30 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_SliceClearButton, &Button, Localize("Clear current cut (right click to clear all cuts)"));
 
-	const bool CutControlsEnabled = !VideoRendering && m_DemoPlayerState == DEMOPLAYER_NONE && !Ui()->IsPopupOpen();
-	char aCutTime[32], aCutLabel[128];
-	if(g_Config.m_ClDemoSliceBegin >= 0)
-		str_time(qm_demo_cut::ToCentiseconds((int64_t)g_Config.m_ClDemoSliceBegin - pInfo->m_FirstTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aCutTime, sizeof(aCutTime));
-	else
-		str_copy(aCutTime, "--:--.--");
-	str_format(aCutLabel, sizeof(aCutLabel), Localize("Cut start: %s"), aCutTime);
-	if(CompactCutLabels)
-		str_format(aCutLabel, sizeof(aCutLabel), "I  %s", aCutTime);
-	static CButtonContainer s_CutStartButton;
-	const int CutStartResult = DoButton_Menu(&s_CutStartButton, aCutLabel, CutControlsEnabled ? 0 : -1, &CutStartButton, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f);
-	if(CutControlsEnabled && CutStartResult == 1)
-		SetCutStart();
-	else if(CutControlsEnabled && CutStartResult == 2)
+	// slice save button
+#if defined(CONF_VIDEORECORDER)
+	const bool SliceEnabled = IVideo::Current() == nullptr;
+#else
+	const bool SliceEnabled = true;
+#endif
+	ButtonBar.VSplitLeft(Margins, nullptr, &ButtonBar);
+	ButtonBar.VSplitLeft(ButtonbarHeight, &Button, &ButtonBar);
+	static CButtonContainer s_SliceSaveButton;
+	if(Ui()->DoButton_QmIcon(&s_SliceSaveButton, EQmIcon::ARROW_UP_RIGHT_FROM_SQUARE, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, SliceEnabled) && SliceEnabled)
 	{
 		m_DemoCutPreview.Reset();
-		g_Config.m_ClDemoSliceBegin = -1;
-	}
-	GameClient()->m_Tooltips.DoToolTip(&s_CutStartButton, &CutStartButton, Localize("Set cut start at current position (I, right click to reset)"));
-
-	if(g_Config.m_ClDemoSliceEnd >= 0)
-		str_time(qm_demo_cut::ToCentiseconds((int64_t)g_Config.m_ClDemoSliceEnd - pInfo->m_FirstTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aCutTime, sizeof(aCutTime));
-	else
-		str_copy(aCutTime, "--:--.--");
-	str_format(aCutLabel, sizeof(aCutLabel), Localize("Cut end: %s"), aCutTime);
-	if(CompactCutLabels)
-		str_format(aCutLabel, sizeof(aCutLabel), "O  %s", aCutTime);
-	static CButtonContainer s_CutEndButton;
-	const int CutEndResult = DoButton_Menu(&s_CutEndButton, aCutLabel, CutControlsEnabled ? 0 : -1, &CutEndButton, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f);
-	if(CutControlsEnabled && CutEndResult == 1)
-		SetCutEnd();
-	else if(CutControlsEnabled && CutEndResult == 2)
-	{
-		m_DemoCutPreview.Reset();
-		g_Config.m_ClDemoSliceEnd = -1;
-	}
-	GameClient()->m_Tooltips.DoToolTip(&s_CutEndButton, &CutEndButton, Localize("Set cut end at current position (O, right click to reset)"));
-
-	const SDemoCutSegment PendingCut = NormalizePendingSlice();
-	const bool PreviewEnabled = CutControlsEnabled && PendingCut.m_StartTick >= 0 && PendingCut.m_StartTick < PendingCut.m_EndTick;
-	static CButtonContainer s_CutPreviewButton;
-	const char *pPreviewLabel = m_DemoCutPreview.IsActive() ? Localize("Stop preview (P)") : Localize("Preview cut (P)");
-	const bool PreviewClicked = CompactCutLabels ? Ui()->DoButton_FontIcon(&s_CutPreviewButton, m_DemoCutPreview.IsActive() ? FONT_ICON_STOP : FONT_ICON_PLAY, 0, &CutPreviewButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, PreviewEnabled) : DoButton_Menu(&s_CutPreviewButton, pPreviewLabel, PreviewEnabled ? 0 : -1, &CutPreviewButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f);
-	if(PreviewClicked && PreviewEnabled)
-		PreviewCut();
-	GameClient()->m_Tooltips.DoToolTip(&s_CutPreviewButton, &CutPreviewButton, pPreviewLabel);
-
-	static CButtonContainer s_CutExportButton;
-	const bool ExportEnabled = CutControlsEnabled && (PreviewEnabled || !m_vDemoCutSegments.empty());
-	const bool ExportClicked = CompactCutLabels ? Ui()->DoButton_FontIcon(&s_CutExportButton, FONT_ICON_CIRCLE_CHEVRON_DOWN, 0, &CutExportButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ExportEnabled, DEMO_ACCENT) : DoButton_Menu(&s_CutExportButton, Localize("Export"), ExportEnabled ? 0 : -1, &CutExportButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, DEMO_ACCENT, nullptr, 11.0f);
-	if(ExportClicked && ExportEnabled)
-	{
-		m_DemoCutPreview.Reset();
-		DemoPlayer()->Pause();
-		char aDemoName[IO_MAX_PATH_LENGTH], aCutName[IO_MAX_PATH_LENGTH];
+		char aDemoName[IO_MAX_PATH_LENGTH];
 		DemoPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
-		str_format(aCutName, sizeof(aCutName), "%s_cut", aDemoName);
-		m_DemoSliceInput.Set(aCutName);
+		m_DemoSliceInput.Set(aDemoName);
 		Ui()->SetActiveItem(&m_DemoSliceInput);
 		m_DemoPlayerState = DEMOPLAYER_SLICE_SAVE;
-		m_DemoExportDisplayExpanded = false;
 	}
-	GameClient()->m_Tooltips.DoToolTip(&s_CutExportButton, &CutExportButton, Localize("Export cut as a separate demo"));
+	GameClient()->m_Tooltips.DoToolTip(&s_SliceSaveButton, &Button, Localize("Export cut as a separate demo"));
 
 	// close button
-	NameBar.VSplitRight(ButtonbarHeight, &NameBar, &Button);
+	ButtonBar.VSplitRight(ButtonbarHeight, &ButtonBar, &Button);
 	static CButtonContainer s_ExitButton;
-	if(Ui()->DoButton_FontIcon(&s_ExitButton, FONT_ICON_XMARK, 0, &Button, BUTTONFLAG_LEFT) || (Input()->KeyPress(KEY_C) && !GameClient()->m_GameConsole.IsActive() && m_DemoPlayerState == DEMOPLAYER_NONE))
+	if(Ui()->DoButton_QmIcon(&s_ExitButton, EQmIcon::CLOSE, FONT_ICON_XMARK, 0, &Button, BUTTONFLAG_LEFT) || (Input()->KeyPress(KEY_C) && !GameClient()->m_GameConsole.IsActive() && m_DemoPlayerState == DEMOPLAYER_NONE))
 	{
 		Client()->Disconnect();
 		SetMenuPage(PAGE_DEMOS);
@@ -1051,10 +1145,10 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	GameClient()->m_Tooltips.DoToolTip(&s_ExitButton, &Button, Localize("Close the demo player"));
 
 	// toggle keyboard shortcuts button
-	NameBar.VSplitRight(Margins, &NameBar, nullptr);
-	NameBar.VSplitRight(ButtonbarHeight, &NameBar, &Button);
+	ButtonBar.VSplitRight(Margins, &ButtonBar, nullptr);
+	ButtonBar.VSplitRight(ButtonbarHeight, &ButtonBar, &Button);
 	static CButtonContainer s_KeyboardShortcutsButton;
-	if(Ui()->DoButton_FontIcon(&s_KeyboardShortcutsButton, FONT_ICON_KEYBOARD, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, g_Config.m_ClDemoKeyboardShortcuts != 0))
+	if(Ui()->DoButton_QmIcon(&s_KeyboardShortcutsButton, EQmIcon::KEYBOARD, FONT_ICON_KEYBOARD, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, g_Config.m_ClDemoKeyboardShortcuts != 0))
 	{
 		g_Config.m_ClDemoKeyboardShortcuts ^= 1;
 	}
@@ -1063,26 +1157,28 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// auto camera button (only available when it is possible to use)
 	if(GameClient()->m_Camera.CanUseAutoSpecCamera())
 	{
-		NameBar.VSplitRight(Margins, &NameBar, nullptr);
-		NameBar.VSplitRight(ButtonbarHeight, &NameBar, &Button);
+		ButtonBar.VSplitRight(Margins, &ButtonBar, nullptr);
+		ButtonBar.VSplitRight(ButtonbarHeight, &ButtonBar, &Button);
 		static CButtonContainer s_AutoCameraButton;
-		if(Ui()->DoButton_FontIcon(&s_AutoCameraButton, FONT_ICON_CAMERA, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, GameClient()->m_Camera.m_AutoSpecCamera))
+		if(Ui()->DoButton_QmIcon(&s_AutoCameraButton, EQmIcon::CAMERA, FONT_ICON_CAMERA, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, GameClient()->m_Camera.m_AutoSpecCamera))
 		{
 			GameClient()->m_Camera.m_AutoSpecCamera = !GameClient()->m_Camera.m_AutoSpecCamera;
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_AutoCameraButton, &Button, Localize("Toggle auto camera"));
 	}
 
-	NameBar.VSplitRight(Margins, &NameBar, nullptr);
-	NameBar.VSplitRight(80.0f, &NameBar, &Button);
-	static CButtonContainer s_DisplayButton;
-	if(DoButton_Menu(&s_DisplayButton, Localize("Demo display"), CutControlsEnabled ? 0 : -1, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, m_DemoDisplayExpanded ? DEMO_ACCENT : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f) && CutControlsEnabled)
-		m_DemoDisplayExpanded = !m_DemoDisplayExpanded;
-	NameBar.VSplitRight(8.0f, &NameBar, nullptr);
-	if(DisplayHeight > 0.0f && m_DemoPlayerState == DEMOPLAYER_NONE && m_Popup == POPUP_NONE)
-		RenderDemoDisplaySettings(DisplayBar, CutControlsEnabled);
-
 	// demo name
+	CUIRect PreviewButton;
+	NameBar.VSplitRight(ButtonbarHeight, &NameBar, &PreviewButton);
+	const SDemoCutSegment PendingCut = NormalizePendingSlice();
+	const bool PreviewEnabled = !VideoRendering && m_DemoPlayerState == DEMOPLAYER_NONE && !Ui()->IsPopupOpen() &&
+				    ((PendingCut.m_StartTick >= 0 && PendingCut.m_StartTick < PendingCut.m_EndTick) || m_DemoCutPreview.IsActive());
+	static CButtonContainer s_CutPreviewButton;
+	if(Ui()->DoButton_QmIcon(&s_CutPreviewButton, m_DemoCutPreview.IsActive() ? EQmIcon::STOP : EQmIcon::PLAY,
+		   m_DemoCutPreview.IsActive() ? FONT_ICON_STOP : FONT_ICON_PLAY, 0, &PreviewButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, PreviewEnabled) &&
+		PreviewEnabled)
+		PreviewCut();
+	GameClient()->m_Tooltips.DoToolTip(&s_CutPreviewButton, &PreviewButton, m_DemoCutPreview.IsActive() ? Localize("Stop preview (P)") : Localize("Preview cut (P)"));
 	char aDemoName[IO_MAX_PATH_LENGTH];
 	DemoPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
 	char aBuf[IO_MAX_PATH_LENGTH + 128];
@@ -1091,7 +1187,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	Props.m_MaxWidth = NameBar.w;
 	Props.m_EllipsisAtEnd = true;
 	Props.m_EnableWidthCheck = false;
-	Ui()->DoLabel(&NameBar, aBuf, 12.0f, TEXTALIGN_ML, Props);
+	Ui()->DoLabel(&NameBar, aBuf, Button.h * 0.5f, TEXTALIGN_ML, Props);
 
 	if(IncreaseDemoSpeed)
 	{
@@ -1112,6 +1208,10 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		// prevent element under the active popup from being activated
 		Ui()->SetHotItem(nullptr);
 	}
+	if(m_DemoPlayerState == DEMOPLAYER_SLICE_SAVE)
+	{
+		RenderDemoPlayerSliceSavePopup(MainView);
+	}
 }
 
 void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
@@ -1119,22 +1219,22 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
 
 	const bool DisplayExpanded = m_DemoExportDisplayExpanded;
+	const float DisplayPanelHeight = DisplayExpanded ? qm_demo_ui::DISPLAY_HEIGHT + 4.0f : 0.0f;
 	const float ContentHeight = qm_demo_ui::SliceContentHeight((int)m_vDemoCutSegments.size(), DisplayExpanded);
-	CUIRect Box = qm_demo_ui::PopupRect(MainView, ContentHeight + 86.0f);
-	RenderDemoCard(Box);
-	CUiScopedGaussianBlurSuppression BlurSuppression(Ui());
-	Box.Margin(12.0f, &Box);
+	CUIRect Box = qm_demo_ui::PopupRect(MainView, ContentHeight + 116.0f);
+
+	// background
+	Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 15.0f);
+	Box.Margin(24.0f, &Box);
 
 	// title
 	CUIRect Title;
-	Box.HSplitTop(22.0f, &Title, &Box);
-	Box.HSplitTop(6.0f, nullptr, &Box);
-	Ui()->DoLabel(&Title, Localize("Export demo cut"), 16.0f, TEXTALIGN_ML);
+	Box.HSplitTop(24.0f, &Title, &Box);
+	Box.HSplitTop(20.0f, nullptr, &Box);
+	Ui()->DoLabel(&Title, Localize("Export demo cut"), 24.0f, TEXTALIGN_MC);
 
-	// 标题和确认按钮固定；缩放后的窗口通过正文滚动容纳完整选项。
 	CUIRect ButtonBar, AbortButton, OkButton;
-	Box.HSplitBottom(26.0f, &Box, &ButtonBar);
-	Box.HSplitBottom(8.0f, &Box, nullptr);
+	Box.HSplitBottom(24.0f, &Box, &ButtonBar);
 	static CScrollRegion s_ContentScroll;
 	vec2 ScrollOffset;
 	s_ContentScroll.Begin(&Box, &ScrollOffset);
@@ -1144,9 +1244,9 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 
 	// slice times
 	CUIRect SliceTimesBar, SliceInterval, SliceLength;
-	Box.HSplitTop(20.0f, &SliceTimesBar, &Box);
-	SliceTimesBar.VSplitMid(&SliceInterval, &SliceLength, 12.0f);
-	Box.HSplitTop(6.0f, nullptr, &Box);
+	Box.HSplitTop(24.0f, &SliceTimesBar, &Box);
+	SliceTimesBar.VSplitMid(&SliceInterval, &SliceLength, 40.0f);
+	Box.HSplitTop(20.0f, nullptr, &Box);
 
 	std::vector<SDemoCutSegment> vExportSegments = m_vDemoCutSegments;
 	if(vExportSegments.empty() && (g_Config.m_ClDemoSliceBegin != -1 || g_Config.m_ClDemoSliceEnd != -1))
@@ -1163,7 +1263,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	int64_t TotalCutTicks = 0;
 	for(const auto &Segment : vExportSegments)
 	{
-		TotalCutTicks += maximum<int64_t>(0, (int64_t)Segment.m_EndTick - Segment.m_StartTick + 1);
+		TotalCutTicks += maximum(0, Segment.m_EndTick - Segment.m_StartTick + 1);
 	}
 	char aSliceLength[32];
 	str_time(qm_demo_cut::ToCentiseconds(maximum<int64_t>(0, TotalCutTicks - 1), Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aSliceLength, sizeof(aSliceLength));
@@ -1182,19 +1282,21 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		str_time(qm_demo_cut::ToCentiseconds(RealSliceEnd, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aSliceEnd, sizeof(aSliceEnd));
 		str_format(aBuf, sizeof(aBuf), "%s: %s – %s", Localize("Cut interval"), aSliceBegin, aSliceEnd);
 	}
-	Ui()->DoLabel(&SliceInterval, aBuf, 11.0f, TEXTALIGN_ML, {.m_MaxWidth = SliceInterval.w});
+	Ui()->DoLabel(&SliceInterval, aBuf, 18.0f, TEXTALIGN_ML);
 	str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Cut length"), aSliceLength);
-	Ui()->DoLabel(&SliceLength, aBuf, 11.0f, TEXTALIGN_MR, {.m_MaxWidth = SliceLength.w});
+	Ui()->DoLabel(&SliceLength, aBuf, 18.0f, TEXTALIGN_ML);
 
 	if(!m_vDemoCutSegments.empty())
 	{
 		CUIRect SegmentsHeader, SegmentsList;
-		const float RemainingControlsHeight = 80.0f + (DisplayExpanded ? qm_demo_ui::DISPLAY_HEIGHT + 4.0f : 0.0f);
+		const float RemainingControlsHeight = 110.0f + DisplayPanelHeight;
 		constexpr float SegmentsHeaderHeight = 20.0f;
-		constexpr float SegmentRowHeight = 22.0f;
-		constexpr float SegmentSpacing = 6.0f;
+		constexpr float SegmentRowHeight = 20.0f;
+		constexpr float MoreSegmentsHeight = 16.0f;
+		constexpr float SegmentSpacing = 10.0f;
 		const int DesiredVisibleSegments = minimum<int>((int)m_vDemoCutSegments.size(), 4);
-		const float DesiredSegmentsHeight = SegmentsHeaderHeight + DesiredVisibleSegments * SegmentRowHeight + SegmentSpacing;
+		const float DesiredSegmentsHeight = SegmentsHeaderHeight + DesiredVisibleSegments * SegmentRowHeight +
+						    ((int)m_vDemoCutSegments.size() > DesiredVisibleSegments ? MoreSegmentsHeight : 0.0f) + SegmentSpacing;
 		const float SegmentsAreaHeight = std::clamp(Box.h - RemainingControlsHeight, 0.0f, DesiredSegmentsHeight);
 		CUIRect SegmentsArea;
 		Box.HSplitTop(SegmentsAreaHeight, &SegmentsArea, &Box);
@@ -1228,15 +1330,14 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 				str_time(qm_demo_cut::ToCentiseconds((int64_t)Segment.m_StartTick - pInfo->m_FirstTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aSliceBegin, sizeof(aSliceBegin));
 				str_time(qm_demo_cut::ToCentiseconds((int64_t)Segment.m_EndTick - pInfo->m_FirstTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, aSliceEnd, sizeof(aSliceEnd));
 				str_format(aBuf, sizeof(aBuf), "#%d  %s – %s", (int)SegmentIndex + 1, aSliceBegin, aSliceEnd);
-				Ui()->DoLabel(&SegmentLabel, aBuf, 11.0f, TEXTALIGN_ML, {.m_MaxWidth = SegmentLabel.w});
-				if(Ui()->DoButton_FontIcon(&s_vDeleteButtons[SegmentIndex], FONT_ICON_XMARK, 0, &DeleteButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Ui()->IsPopupOpen()))
+				Ui()->DoLabel(&SegmentLabel, aBuf, 12.0f, TEXTALIGN_ML, {.m_MaxWidth = SegmentLabel.w});
+				if(Ui()->DoButton_QmIcon(&s_vDeleteButtons[SegmentIndex], EQmIcon::CLOSE, FONT_ICON_XMARK, 0, &DeleteButton, BUTTONFLAG_LEFT))
 					DeleteIndex = (int)SegmentIndex;
-				if(Ui()->DoButton_FontIcon(&s_vPreviewButtons[SegmentIndex], FONT_ICON_PLAY, 0, &PreviewButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Ui()->IsPopupOpen()))
+				if(Ui()->DoButton_QmIcon(&s_vPreviewButtons[SegmentIndex], EQmIcon::PLAY, FONT_ICON_PLAY, 0, &PreviewButton, BUTTONFLAG_LEFT))
 					PreviewIndex = (int)SegmentIndex;
 				GameClient()->m_Tooltips.DoToolTip(&s_vPreviewButtons[SegmentIndex], &PreviewButton, Localize("Preview"));
 			}
 			s_CutSegmentsList.DoEnd();
-			// 结束列表裁剪后再变更容器，避免悬空的行和按钮状态。
 			if(DeleteIndex >= 0)
 			{
 				m_vDemoCutSegments.erase(m_vDemoCutSegments.begin() + DeleteIndex);
@@ -1258,6 +1359,14 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 				return;
 			}
 		}
+
+		if((int)m_vDemoCutSegments.size() > NumVisibleSegments && SegmentsArea.h >= MoreSegmentsHeight)
+		{
+			CUIRect MoreSegments;
+			SegmentsArea.HSplitTop(MoreSegmentsHeight, &MoreSegments, &SegmentsArea);
+			str_format(aBuf, sizeof(aBuf), Localize("%d more cut segments"), (int)m_vDemoCutSegments.size() - NumVisibleSegments);
+			Ui()->DoLabel(&MoreSegments, aBuf, 12.0f, TEXTALIGN_ML);
+		}
 	}
 
 	IUiContext DemoSliceTextInputCtx;
@@ -1270,10 +1379,10 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	// file name
 	CUIRect NameLabel, NameBox;
 	Box.HSplitTop(24.0f, &NameLabel, &Box);
-	Box.HSplitTop(6.0f, nullptr, &Box);
-	NameLabel.VSplitLeft(88.0f, &NameLabel, &NameBox);
-	NameBox.VSplitLeft(8.0f, nullptr, &NameBox);
-	Ui()->DoLabel(&NameLabel, Localize("New name:"), 12.0f, TEXTALIGN_ML, {.m_MaxWidth = NameLabel.w});
+	Box.HSplitTop(20.0f, nullptr, &Box);
+	NameLabel.VSplitLeft(150.0f, &NameLabel, &NameBox);
+	NameBox.VSplitLeft(20.0f, nullptr, &NameBox);
+	Ui()->DoLabel(&NameLabel, Localize("New name:"), 18.0f, TEXTALIGN_ML);
 	ui_widget::SInputFieldOptions SliceNameInputOptions;
 	SliceNameInputOptions.m_pPlaceholder = Localize("New name");
 	SliceNameInputOptions.m_FontSize = 12.0f;
@@ -1283,9 +1392,9 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	static int s_RemoveChat = 0;
 
 	CUIRect CheckBoxBar, RemoveChatCheckBox, RenderCutCheckBox;
-	Box.HSplitTop(22.0f, &CheckBoxBar, &Box);
-	Box.HSplitTop(6.0f, nullptr, &Box);
-	CheckBoxBar.VSplitMid(&RemoveChatCheckBox, &RenderCutCheckBox, 12.0f);
+	Box.HSplitTop(24.0f, &CheckBoxBar, &Box);
+	Box.HSplitTop(20.0f, nullptr, &Box);
+	CheckBoxBar.VSplitMid(&RemoveChatCheckBox, &RenderCutCheckBox, 40.0f);
 	if(DoButton_CheckBox(&s_RemoveChat, Localize("Remove chat"), s_RemoveChat, &RemoveChatCheckBox))
 	{
 		s_RemoveChat ^= 1;
@@ -1298,10 +1407,11 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	}
 #endif
 
+	// 回放/导出显示选项：折叠开关常驻，展开后显示三组段选与两个开关。
 	CUIRect DisplayOptions;
 	Box.HSplitTop(22.0f, &DisplayOptions, &Box);
 	RenderDemoExportDisplayToggle(DisplayOptions);
-	if(DisplayExpanded)
+	if(m_DemoExportDisplayExpanded)
 	{
 		Box.HSplitTop(4.0f, nullptr, &Box);
 		Box.HSplitTop(qm_demo_ui::DISPLAY_HEIGHT, &DisplayOptions, &Box);
@@ -1310,22 +1420,15 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	s_ContentScroll.End();
 
 	// buttons
-	ButtonBar.VSplitRight(96.0f, &ButtonBar, &OkButton);
-	ButtonBar.VSplitRight(8.0f, &ButtonBar, nullptr);
-	ButtonBar.VSplitRight(96.0f, &ButtonBar, &AbortButton);
+	ButtonBar.VSplitMid(&AbortButton, &OkButton, 40.0f);
+
+	static CButtonContainer s_ButtonAbort;
+	if(DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &AbortButton) || (!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)))
+		m_DemoPlayerState = DEMOPLAYER_NONE;
 
 	static CUi::SConfirmPopupContext s_ConfirmPopupContext;
-	static CButtonContainer s_ButtonAbort;
-	if(DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &AbortButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 12.0f) || (!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)))
-	{
-		s_ConfirmPopupContext.Reset();
-		m_DemoPlayerState = DEMOPLAYER_NONE;
-		Ui()->SetActiveItem(nullptr);
-		return;
-	}
-
 	static CButtonContainer s_ButtonOk;
-	if(DoButton_Menu(&s_ButtonOk, Localize("Export"), 0, &OkButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, DEMO_ACCENT, nullptr, 12.0f) || (!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
+	if(DoButton_Menu(&s_ButtonOk, Localize("Ok"), 0, &OkButton) || (!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER)))
 	{
 		if(str_endswith_nocase(m_DemoSliceInput.GetString(), ".demo"))
 		{
@@ -1375,10 +1478,10 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 
 	if(s_ConfirmPopupContext.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
 	{
-		// 先消费确认，失败后由用户重试，避免每帧再次写入。
 		s_ConfirmPopupContext.Reset();
 		char aPath[IO_MAX_PATH_LENGTH];
 		str_format(aPath, sizeof(aPath), "%s/%s.demo", m_aCurrentDemoFolder, m_DemoSliceInput.GetString());
+		str_format(m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName), "%s.demo", m_DemoSliceInput.GetString());
 
 		std::vector<SDemoSliceSegment> vDemoSliceSegments;
 		vDemoSliceSegments.reserve(vExportSegments.size());
@@ -1392,12 +1495,9 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 			Ui()->ShowPopupMessage(Ui()->MouseX(), ButtonBar.y - 5.0f, &s_MessagePopupContext);
 			return;
 		}
-		str_format(m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName), "%s.demo", m_DemoSliceInput.GetString());
 		DemolistPopulate();
 		DemolistOnUpdate(false);
 		m_vDemoCutSegments.clear();
-		g_Config.m_ClDemoSliceBegin = -1;
-		g_Config.m_ClDemoSliceEnd = -1;
 		m_DemoCutPreview.Reset();
 		m_DemoPlayerState = DEMOPLAYER_NONE;
 #if defined(CONF_VIDEORECORDER)
@@ -1407,7 +1507,6 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder, sizeof(m_aPendingDemoRenderFolder));
 			str_format(m_aPendingDemoRenderSelectionName, sizeof(m_aPendingDemoRenderSelectionName), "%s.demo", m_DemoSliceInput.GetString());
 			m_PendingDemoRenderStorageType = IStorage::TYPE_SAVE;
-			m_DemoExportDisplayExpanded = false;
 			m_Popup = POPUP_RENDER_DEMO;
 			m_StartPaused = false;
 			m_DemoRenderInput.Set(m_DemoSliceInput.GetString());
@@ -1439,7 +1538,11 @@ int CMenus::DemolistFetchCallback(const char *pName, int IsDir, int StorageType,
 	str_copy(Item.m_aFilename, pName);
 	if(IsDir)
 	{
-		str_format(Item.m_aName, sizeof(Item.m_aName), "%s/", pName);
+		// QmClient：上级目录显示可读文案，代替技术风格的 "../"
+		if(str_comp(pName, "..") == 0)
+			str_copy(Item.m_aName, Localize("Parent Folder"));
+		else
+			str_format(Item.m_aName, sizeof(Item.m_aName), "%s/", pName);
 		Item.m_Date = 0;
 		Item.m_DateLoaded = true;
 		Item.m_DateValid = false;
@@ -1739,12 +1842,31 @@ void CMenus::DemolistPopulate()
 		m_DemoPopulateStartTime = time_get_nanoseconds();
 		Storage()->ListDirectory(m_DemolistStorageType, m_aCurrentDemoFolder, DemolistFetchCallback, this);
 
+		// QmClient: 顶层追加 Rank 1 回放缓存入口（文件存放在 qmclient/rank1/demos，不在 demos/ 下建目录）
+		if(str_comp(m_aCurrentDemoFolder, pBaseFolder) == 0 && Storage()->FolderExists(CRankGhost::DEMO_CACHE_DIR, IStorage::TYPE_SAVE))
+		{
+			CDemoItem Item;
+			str_copy(Item.m_aFilename, CRankGhost::DEMO_CACHE_DIR);
+			str_copy(Item.m_aName, Localize("Rank 1 replays"));
+			Item.m_Date = 0;
+			Item.m_DateLoaded = true;
+			Item.m_DateValid = false;
+			Item.m_Size = 0;
+			Item.m_SizeLoaded = true;
+			Item.m_InfosLoaded = false;
+			Item.m_Valid = false;
+			Item.m_IsDir = true;
+			Item.m_IsLink = true;
+			Item.m_StorageType = IStorage::TYPE_SAVE;
+			m_vDemos.push_back(Item);
+		}
+
 		// Make sure there is a demo item to navigate back to the parent folder, if the folder contents could not be enumerated.
 		if(m_vDemos.empty())
 		{
 			CDemoItem Item;
 			str_copy(Item.m_aFilename, "..");
-			str_copy(Item.m_aName, "../");
+			str_copy(Item.m_aName, Localize("Parent Folder"));
 			Item.m_Date = 0;
 			Item.m_DateLoaded = true;
 			Item.m_DateValid = false;
@@ -2228,8 +2350,155 @@ void CMenus::FetchAllHeaders()
 	AdvanceDemoBrowserMetadata(2, g_Config.m_BrDemoSort == SORT_DATE ? 4 : 0, "fetch_info");
 }
 
+void CMenus::FinishRankDemoDownload(bool Success, const char *pMessage)
+{
+	if(m_aRankDemoManifestPath[0] != '\0')
+		Storage()->RemoveFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE);
+	if(m_aRankDemoTempPath[0] != '\0')
+		Storage()->RemoveFile(m_aRankDemoTempPath, IStorage::TYPE_SAVE);
+	m_pRankDemoManifestRequest = nullptr;
+	m_pRankDemoRequest = nullptr;
+	m_RankDemoDownloadStage = ERankDemoDownloadStage::IDLE;
+
+	if(Success)
+	{
+		DemolistPopulate();
+		DemolistOnUpdate(false);
+	}
+	PopupMessage(Localize("Rank 1 demo"), pMessage, Localize("Ok"));
+}
+
+void CMenus::StartRankDemoDownload(const char *pMapName)
+{
+	if(m_RankDemoDownloadStage != ERankDemoDownloadStage::IDLE || pMapName == nullptr || pMapName[0] == '\0')
+		return;
+	if(Http() == nullptr)
+	{
+		PopupMessage(Localize("Rank 1 demo"), Localize("HTTP is not available"), Localize("Ok"));
+		return;
+	}
+
+	// QmClient：Rank 1 页缓存已有该图回放时不再重复下载，直接提示缓存位置
+	char aCachedRankDemo[IO_MAX_PATH_LENGTH];
+	if(GameClient()->m_RankGhost.FindCachedRankDemo(pMapName, 1, aCachedRankDemo, sizeof(aCachedRankDemo)))
+	{
+		char aMessage[IO_MAX_PATH_LENGTH + 128];
+		str_format(aMessage, sizeof(aMessage), Localize("Rank 1 demo already cached under 'Rank 1 replays': %s"), aCachedRankDemo);
+		FinishRankDemoDownload(true, aMessage);
+		return;
+	}
+
+	Storage()->CreateFolder("demos", IStorage::TYPE_SAVE);
+	m_RankDemoMap = pMapName;
+	str_copy(m_aRankDemoManifestPath, "demos/.qm_rank_watchable.jsonl");
+	str_copy(m_aRankDemoTempPath, "demos/.qm_rank1_download.demo.gz");
+	m_aRankDemoDestinationPath[0] = '\0';
+
+	m_pRankDemoManifestRequest = HttpGetFile(RANK_DEMO_MANIFEST_URL, Storage(), m_aRankDemoManifestPath, IStorage::TYPE_SAVE);
+	m_pRankDemoManifestRequest->MaxResponseSize(RANK_DEMO_MAX_MANIFEST_BYTES);
+	m_pRankDemoManifestRequest->Timeout(CTimeout{5000, 120000, 200, 10});
+	m_pRankDemoManifestRequest->LogProgress(HTTPLOG::FAILURE);
+	m_pRankDemoManifestRequest->FailOnErrorStatus(false);
+	m_pRankDemoManifestRequest->SkipByFileTime(false);
+	m_pRankDemoManifestRequest->HeaderString("User-Agent", "QmClient demo browser");
+	Http()->Run(m_pRankDemoManifestRequest);
+	m_RankDemoDownloadStage = ERankDemoDownloadStage::FETCH_MANIFEST;
+}
+
+void CMenus::UpdateRankDemoDownload()
+{
+	if(m_RankDemoDownloadStage == ERankDemoDownloadStage::IDLE)
+		return;
+
+	if(m_RankDemoDownloadStage == ERankDemoDownloadStage::FETCH_MANIFEST)
+	{
+		if(!m_pRankDemoManifestRequest || !m_pRankDemoManifestRequest->Done())
+			return;
+		if(m_pRankDemoManifestRequest->State() != EHttpState::DONE || m_pRankDemoManifestRequest->StatusCode() != 200)
+		{
+			FinishRankDemoDownload(false, Localize("Failed to fetch the replay list"));
+			return;
+		}
+
+		void *pData = nullptr;
+		unsigned DataSize = 0;
+		const bool ReadOk = Storage()->ReadFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE, &pData, &DataSize);
+		m_pRankDemoManifestRequest = nullptr;
+		if(!ReadOk || pData == nullptr || DataSize == 0)
+		{
+			free(pData);
+			FinishRankDemoDownload(false, Localize("The replay list is empty or malformed"));
+			return;
+		}
+
+		std::string DemoName;
+		int64_t DemoTs = 0;
+		const bool Found = FindRankOneDemo(static_cast<const unsigned char *>(pData), DataSize, m_RankDemoMap.c_str(), DemoName, DemoTs);
+		free(pData);
+		Storage()->RemoveFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE);
+		if(!Found)
+		{
+			FinishRankDemoDownload(false, Localize("No rank 1 replay was found for this map"));
+			return;
+		}
+
+		char aSafeMap[128];
+		char aSafeDemo[256];
+		str_copy(aSafeMap, m_RankDemoMap.c_str(), sizeof(aSafeMap));
+		str_sanitize_filename(aSafeMap);
+		str_copy(aSafeDemo, DemoName.c_str(), sizeof(aSafeDemo));
+		if(str_endswith_nocase(aSafeDemo, ".gz") != nullptr)
+			aSafeDemo[str_length(aSafeDemo) - 3] = '\0';
+		if(str_endswith_nocase(aSafeDemo, ".demo") != nullptr)
+			aSafeDemo[str_length(aSafeDemo) - 5] = '\0';
+		str_sanitize_filename(aSafeDemo);
+		str_format(m_aRankDemoDestinationPath, sizeof(m_aRankDemoDestinationPath), "demos/%s_rank1_%lld_%s.demo", aSafeMap, (long long)DemoTs, aSafeDemo);
+		if(Storage()->FileExists(m_aRankDemoDestinationPath, IStorage::TYPE_SAVE))
+		{
+			if(IsStoredDemoValid(Storage(), m_aRankDemoDestinationPath))
+			{
+				FinishRankDemoDownload(true, Localize("The rank 1 demo is already downloaded"));
+				return;
+			}
+			Storage()->RemoveFile(m_aRankDemoDestinationPath, IStorage::TYPE_SAVE);
+		}
+
+		char aUrl[1024];
+		str_format(aUrl, sizeof(aUrl), "%s/%s", RANK_DEMO_URL_PREFIX, DemoName.c_str());
+		m_pRankDemoRequest = HttpGetFile(aUrl, Storage(), m_aRankDemoTempPath, IStorage::TYPE_SAVE);
+		m_pRankDemoRequest->MaxResponseSize(RANK_DEMO_MAX_DOWNLOAD_BYTES);
+		m_pRankDemoRequest->Timeout(CTimeout{5000, 120000, 200, 10});
+		m_pRankDemoRequest->LogProgress(HTTPLOG::FAILURE);
+		m_pRankDemoRequest->FailOnErrorStatus(false);
+		m_pRankDemoRequest->SkipByFileTime(false);
+		m_pRankDemoRequest->HeaderString("User-Agent", "QmClient demo browser");
+		Http()->Run(m_pRankDemoRequest);
+		m_RankDemoDownloadStage = ERankDemoDownloadStage::FETCH_DEMO;
+		return;
+	}
+
+	if(!m_pRankDemoRequest || !m_pRankDemoRequest->Done())
+		return;
+	if(m_pRankDemoRequest->State() != EHttpState::DONE || m_pRankDemoRequest->StatusCode() != 200)
+	{
+		FinishRankDemoDownload(false, Localize("Failed to download the rank 1 demo"));
+		return;
+	}
+	if(!UnpackRankDemo(Storage(), m_aRankDemoTempPath, m_aRankDemoDestinationPath) || !IsStoredDemoValid(Storage(), m_aRankDemoDestinationPath))
+	{
+		Storage()->RemoveFile(m_aRankDemoDestinationPath, IStorage::TYPE_SAVE);
+		FinishRankDemoDownload(false, Localize("The downloaded file is not a valid demo"));
+		return;
+	}
+
+	char aMessage[IO_MAX_PATH_LENGTH + 64];
+	str_format(aMessage, sizeof(aMessage), Localize("Rank 1 demo downloaded to '%s'"), m_aRankDemoDestinationPath);
+	FinishRankDemoDownload(true, aMessage);
+}
+
 void CMenus::RenderDemoBrowser(CUIRect MainView)
 {
+	UpdateRankDemoDownload();
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 
@@ -2492,15 +2761,28 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 				{
 					Button.Margin(1.0f, &Button);
 
+					EQmIcon IconType;
 					const char *pIconType;
 					if(pItem->m_IsLink || str_comp(pItem->m_aFilename, "..") == 0)
+					{
+						IconType = EQmIcon::FOLDER_TREE;
 						pIconType = FONT_ICON_FOLDER_TREE;
+					}
 					else if(pItem->m_IsDir)
+					{
+						IconType = EQmIcon::FOLDER;
 						pIconType = FONT_ICON_FOLDER;
+					}
 					else if(BrowsingScreenshots)
+					{
+						IconType = EQmIcon::IMAGE;
 						pIconType = FONT_ICON_IMAGE;
+					}
 					else
+					{
+						IconType = EQmIcon::FILM;
 						pIconType = FONT_ICON_FILM;
+					}
 
 					ColorRGBA IconColor;
 					if(!pItem->m_IsDir && pItem->IsDemoFile() && (!pItem->m_InfosLoaded || !pItem->m_Valid))
@@ -2508,13 +2790,9 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 					else
 						IconColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 
-					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 					TextRender()->TextColor(IconColor);
-					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-					Ui()->DoLabel(&Button, pIconType, 12.0f, TEXTALIGN_ML);
-					TextRender()->SetRenderFlags(0);
+					Ui()->DoLabel_QmIcon(&Button, IconType, pIconType, 12.0f, TEXTALIGN_ML);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
-					TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 				}
 				else if(Col.m_Id == COL_DEMONAME)
 				{
@@ -2559,6 +2837,24 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 			const CListboxItem PreviewItem = s_ListBox.DoCustomRow(PreviewHeight, Focused);
 			if(PreviewItem.m_Visible)
 				RenderDemoScreenshotPreview(PreviewItem.m_Rect, *pItem);
+		}
+	}
+
+	// QmClient：Rank 1 缓存目录里没有任何回放时给出引导，避免空列表只有上级目录项让人困惑
+	{
+		const size_t RankCacheDirLen = str_length(CRankGhost::DEMO_CACHE_DIR);
+		const bool InRankCacheFolder = str_startswith(m_aCurrentDemoFolder, CRankGhost::DEMO_CACHE_DIR) &&
+					       (m_aCurrentDemoFolder[RankCacheDirLen] == '\0' || m_aCurrentDemoFolder[RankCacheDirLen] == '/');
+		const bool AnyDemoFile = std::any_of(m_vpFilteredDemos.begin(), m_vpFilteredDemos.end(), [](const CDemoItem *pItem) { return !pItem->m_IsDir; });
+		if(InRankCacheFolder && !AnyDemoFile)
+		{
+			const CListboxItem HintItem = s_ListBox.DoCustomRow(UseNewUi ? RowHeight : ms_ListheaderHeight, false);
+			if(HintItem.m_Visible)
+			{
+				TextRender()->TextColor(0.55f, 0.55f, 0.55f, 1.0f);
+				Ui()->DoLabel(&HintItem.m_Rect, Localize("No Rank 1 replays cached yet. Search and download from the Rank 1 page."), 12.0f, TEXTALIGN_ML);
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
+			}
 		}
 	}
 
@@ -2874,6 +3170,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
 			IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
 		CDemoItem *pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
+		if(!BrowsingScreenshots && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && !pSelectedItem->m_InfosLoaded)
+			FetchHeader(*pSelectedItem);
 		int NumSelectedDeletable = NumSelectedDeletableDemos();
 		CUIRect LeftGroup = MainRow;
 		CUIRect RightGroup;
@@ -2883,6 +3181,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 #else
 			false;
 #endif
+		const bool CanDownloadRankDemo = !BrowsingScreenshots && HasSingleSelection && pSelectedItem->IsDemoFile() && pSelectedItem->m_InfosLoaded && pSelectedItem->m_Valid && pSelectedItem->m_Info.m_aMapName[0] != '\0';
 		int NumRightButtons = 0;
 		if(NumSelectedDeletable > 0)
 			NumRightButtons++;
@@ -2891,6 +3190,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		if(HasSingleSelection)
 			NumRightButtons++;
 		if(CanRenderDemo)
+			NumRightButtons++;
+		if(CanDownloadRankDemo)
 			NumRightButtons++;
 
 		if(NumRightButtons > 0)
@@ -2933,7 +3234,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
 			SetIconMode(true);
 			static CButtonContainer s_RefreshButton;
-			if(DoButton_Menu(&s_RefreshButton, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
+			if(DoButton_Menu_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 			{
 				SetIconMode(false);
 				DemolistPopulate();
@@ -2983,8 +3284,9 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 			SetIconMode(true);
 			static CButtonContainer s_PlayButton;
+			const EQmIcon OpenIcon = pSelectedItem->m_IsDir ? EQmIcon::FOLDER_OPEN : (BrowsingScreenshots ? EQmIcon::IMAGE : EQmIcon::PLAY);
 			const char *pOpenIcon = pSelectedItem->m_IsDir ? FONT_ICON_FOLDER_OPEN : (BrowsingScreenshots ? FONT_ICON_IMAGE : FONT_ICON_PLAY);
-			if(DoButton_Menu(&s_PlayButton, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (!BrowsingScreenshots && Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
+			if(DoButton_Menu_QmIcon(&s_PlayButton, OpenIcon, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (!BrowsingScreenshots && Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 			{
 				SetIconMode(false);
 				if(pSelectedItem->m_IsDir) // folder
@@ -2993,29 +3295,52 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 					const bool ParentFolder = str_comp(pSelectedItem->m_aFilename, "..") == 0;
 					if(ParentFolder) // parent folder
 					{
-						str_copy(m_aCurrentDemoSelectionName, fs_filename(m_aCurrentDemoFolder));
-						str_append(m_aCurrentDemoSelectionName, "/");
-						if(fs_parent_dir(m_aCurrentDemoFolder))
+						// QmClient: Rank 1 缓存目录（含其子目录）是挂在顶层的链接入口，
+						// .. 直接回到 demos 根目录，不逐级穿过 qmclient/ 等内部目录
+						const size_t RankCacheDirLen = str_length(CRankGhost::DEMO_CACHE_DIR);
+						const bool InRankCacheFolder = str_startswith(m_aCurrentDemoFolder, CRankGhost::DEMO_CACHE_DIR) &&
+									       (m_aCurrentDemoFolder[RankCacheDirLen] == '\0' || m_aCurrentDemoFolder[RankCacheDirLen] == '/');
+						if(InRankCacheFolder)
 						{
-							m_aCurrentDemoFolder[0] = '\0';
-							if(m_DemolistStorageType == IStorage::TYPE_ALL)
+							str_copy(m_aCurrentDemoFolder, pBaseFolder);
+							m_DemolistStorageType = IStorage::TYPE_ALL;
+							str_copy(m_aCurrentDemoSelectionName, Localize("Rank 1 replays"));
+						}
+						else
+						{
+							str_copy(m_aCurrentDemoSelectionName, fs_filename(m_aCurrentDemoFolder));
+							str_append(m_aCurrentDemoSelectionName, "/");
+							if(fs_parent_dir(m_aCurrentDemoFolder))
 							{
-								m_aCurrentDemoSelectionName[0] = '\0'; // will select first list item
-							}
-							else
-							{
-								Storage()->GetCompletePath(m_DemolistStorageType, pBaseFolder, m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
-								str_append(m_aCurrentDemoSelectionName, "/");
+								m_aCurrentDemoFolder[0] = '\0';
+								if(m_DemolistStorageType == IStorage::TYPE_ALL)
+								{
+									m_aCurrentDemoSelectionName[0] = '\0'; // will select first list item
+								}
+								else
+								{
+									Storage()->GetCompletePath(m_DemolistStorageType, pBaseFolder, m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
+									str_append(m_aCurrentDemoSelectionName, "/");
+								}
 							}
 						}
 					}
 					else // sub folder
 					{
-						if(m_aCurrentDemoFolder[0] != '\0')
-							str_append(m_aCurrentDemoFolder, "/");
-						else
+						// QmClient: 链接项携带完整存储路径（如 Rank 1 回放缓存目录），直接跳转
+						if(str_find(pSelectedItem->m_aFilename, "/") != nullptr)
+						{
+							str_copy(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
 							m_DemolistStorageType = pSelectedItem->m_StorageType;
-						str_append(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
+						}
+						else
+						{
+							if(m_aCurrentDemoFolder[0] != '\0')
+								str_append(m_aCurrentDemoFolder, "/");
+							else
+								m_DemolistStorageType = pSelectedItem->m_StorageType;
+							str_append(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
+						}
 					}
 					DemolistPopulate();
 					DemolistOnUpdate(!ParentFolder);
@@ -3053,10 +3378,25 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
 		NumSelectedDeletable = NumSelectedDeletableDemos();
 #if defined(CONF_VIDEORECORDER)
-		CanRenderDemo = !BrowsingScreenshots && HasSingleSelection && !pSelectedItem->m_IsDir && pSelectedItem->IsDemoFile();
+		CanRenderDemo = !BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir && pSelectedItem->IsDemoFile();
 #else
 		CanRenderDemo = false;
 #endif
+		const bool CanDownloadRankDemoNow = !BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && pSelectedItem->m_InfosLoaded && pSelectedItem->m_Valid && pSelectedItem->m_Info.m_aMapName[0] != '\0';
+		if(CanDownloadRankDemoNow)
+		{
+			CUIRect DownloadButton;
+			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &DownloadButton);
+			if(RightGroup.w > TightSpacing)
+				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
+			SetIconMode(true);
+			static CButtonContainer s_RankDemoDownloadButton;
+			const bool DownloadActive = m_RankDemoDownloadStage != ERankDemoDownloadStage::IDLE;
+			if(DoButton_Menu_QmIcon(&s_RankDemoDownloadButton, EQmIcon::FILE, FONT_ICON_FILE, DownloadActive ? -1 : 0, &DownloadButton))
+				StartRankDemoDownload(pSelectedItem->m_Info.m_aMapName);
+			GameClient()->m_Tooltips.DoToolTip(&s_RankDemoDownloadButton, &DownloadButton, DownloadActive ? Localize("Downloading rank 1 demo") : Localize("Download the rank 1 demo for this map"));
+			SetIconMode(false);
+		}
 
 		if(m_aCurrentDemoFolder[0] != '\0')
 		{
@@ -3069,7 +3409,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 					RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 				SetIconMode(true);
 				static CButtonContainer s_RenameButton;
-				if(DoButton_Menu(&s_RenameButton, FONT_ICON_PENCIL, 0, &RenameButton))
+				if(DoButton_Menu_QmIcon(&s_RenameButton, EQmIcon::PENCIL, FONT_ICON_PENCIL, 0, &RenameButton))
 				{
 					SetIconMode(false);
 					m_Popup = POPUP_RENAME_DEMO;
@@ -3097,7 +3437,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				if(RightGroup.w > TightSpacing)
 					RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 				SetIconMode(true);
-				if(DoButton_Menu(&s_DeleteButton, FONT_ICON_TRASH, 0, &DeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE) || (Input()->KeyPress(KEY_D) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
+				if(DoButton_Menu_QmIcon(&s_DeleteButton, EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE) || (Input()->KeyPress(KEY_D) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 				{
 					SetIconMode(false);
 					PrepareDemoDeleteTargetsFromSelection();
@@ -3131,11 +3471,10 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 					RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 				SetIconMode(true);
 				static CButtonContainer s_RenderButton;
-				if(DoButton_Menu(&s_RenderButton, FONT_ICON_VIDEO, 0, &RenderButton) || (Input()->KeyPress(KEY_R) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
+				if(DoButton_Menu_QmIcon(&s_RenderButton, EQmIcon::VIDEO, FONT_ICON_VIDEO, 0, &RenderButton) || (Input()->KeyPress(KEY_R) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 				{
 					SetIconMode(false);
 					m_HasPendingDemoRenderSource = false;
-					m_DemoExportDisplayExpanded = false;
 					m_Popup = POPUP_RENDER_DEMO;
 					m_StartPaused = false;
 					char aNameWithoutExt[IO_MAX_PATH_LENGTH];
@@ -3183,6 +3522,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
 		IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
 	CDemoItem *pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
+	if(!BrowsingScreenshots && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && !pSelectedItem->m_InfosLoaded)
+		FetchHeader(*pSelectedItem);
 	int NumSelectedDeletable = NumSelectedDeletableDemos();
 
 	// refresh button
@@ -3192,7 +3533,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h / 2.0f, nullptr, &ButtonBarBottom);
 		SetIconMode(true);
 		static CButtonContainer s_RefreshButton;
-		if(DoButton_Menu(&s_RefreshButton, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
+		if(DoButton_Menu_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 		{
 			SetIconMode(false);
 			DemolistPopulate();
@@ -3240,8 +3581,9 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		ButtonBarBottom.VSplitRight(ButtonBarBottom.h, &ButtonBarBottom, nullptr);
 		SetIconMode(true);
 		static CButtonContainer s_PlayButton;
+		const EQmIcon OpenIcon = pSelectedItem->m_IsDir ? EQmIcon::FOLDER_OPEN : (BrowsingScreenshots ? EQmIcon::IMAGE : EQmIcon::PLAY);
 		const char *pOpenIcon = pSelectedItem->m_IsDir ? FONT_ICON_FOLDER_OPEN : (BrowsingScreenshots ? FONT_ICON_IMAGE : FONT_ICON_PLAY);
-		const bool ActivateSelectedItem = DoButton_Menu(&s_PlayButton, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated ||
+		const bool ActivateSelectedItem = DoButton_Menu_QmIcon(&s_PlayButton, OpenIcon, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated ||
 						  Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) ||
 						  (!BrowsingScreenshots && Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive());
 		SetIconMode(false);
@@ -3254,29 +3596,52 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				const bool ParentFolder = str_comp(pSelectedItem->m_aFilename, "..") == 0;
 				if(ParentFolder) // parent folder
 				{
-					str_copy(m_aCurrentDemoSelectionName, fs_filename(m_aCurrentDemoFolder));
-					str_append(m_aCurrentDemoSelectionName, "/");
-					if(fs_parent_dir(m_aCurrentDemoFolder))
+					// QmClient: Rank 1 缓存目录（含其子目录）是挂在顶层的链接入口，
+					// .. 直接回到 demos 根目录，不逐级穿过 qmclient/ 等内部目录
+					const size_t RankCacheDirLen = str_length(CRankGhost::DEMO_CACHE_DIR);
+					const bool InRankCacheFolder = str_startswith(m_aCurrentDemoFolder, CRankGhost::DEMO_CACHE_DIR) &&
+								       (m_aCurrentDemoFolder[RankCacheDirLen] == '\0' || m_aCurrentDemoFolder[RankCacheDirLen] == '/');
+					if(InRankCacheFolder)
 					{
-						m_aCurrentDemoFolder[0] = '\0';
-						if(m_DemolistStorageType == IStorage::TYPE_ALL)
+						str_copy(m_aCurrentDemoFolder, pBaseFolder);
+						m_DemolistStorageType = IStorage::TYPE_ALL;
+						str_copy(m_aCurrentDemoSelectionName, Localize("Rank 1 replays"));
+					}
+					else
+					{
+						str_copy(m_aCurrentDemoSelectionName, fs_filename(m_aCurrentDemoFolder));
+						str_append(m_aCurrentDemoSelectionName, "/");
+						if(fs_parent_dir(m_aCurrentDemoFolder))
 						{
-							m_aCurrentDemoSelectionName[0] = '\0'; // will select first list item
-						}
-						else
-						{
-							Storage()->GetCompletePath(m_DemolistStorageType, pBaseFolder, m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
-							str_append(m_aCurrentDemoSelectionName, "/");
+							m_aCurrentDemoFolder[0] = '\0';
+							if(m_DemolistStorageType == IStorage::TYPE_ALL)
+							{
+								m_aCurrentDemoSelectionName[0] = '\0'; // will select first list item
+							}
+							else
+							{
+								Storage()->GetCompletePath(m_DemolistStorageType, pBaseFolder, m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
+								str_append(m_aCurrentDemoSelectionName, "/");
+							}
 						}
 					}
 				}
 				else // sub folder
 				{
-					if(m_aCurrentDemoFolder[0] != '\0')
-						str_append(m_aCurrentDemoFolder, "/");
-					else
+					// QmClient: 链接项携带完整存储路径（如 Rank 1 回放缓存目录），直接跳转
+					if(str_find(pSelectedItem->m_aFilename, "/") != nullptr)
+					{
+						str_copy(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
 						m_DemolistStorageType = pSelectedItem->m_StorageType;
-					str_append(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
+					}
+					else
+					{
+						if(m_aCurrentDemoFolder[0] != '\0')
+							str_append(m_aCurrentDemoFolder, "/");
+						else
+							m_DemolistStorageType = pSelectedItem->m_StorageType;
+						str_append(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
+					}
 				}
 				DemolistPopulate();
 				DemolistOnUpdate(!ParentFolder);
@@ -3316,7 +3681,23 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
 		IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
 	pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
+	if(!BrowsingScreenshots && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && !pSelectedItem->m_InfosLoaded)
+		FetchHeader(*pSelectedItem);
 	NumSelectedDeletable = NumSelectedDeletableDemos();
+	const bool CanDownloadRankDemo = !BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && pSelectedItem->m_InfosLoaded && pSelectedItem->m_Valid && pSelectedItem->m_Info.m_aMapName[0] != '\0';
+	if(CanDownloadRankDemo)
+	{
+		CUIRect DownloadButton;
+		ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &DownloadButton);
+		ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
+		SetIconMode(true);
+		static CButtonContainer s_RankDemoDownloadButton;
+		const bool DownloadActive = m_RankDemoDownloadStage != ERankDemoDownloadStage::IDLE;
+		if(DoButton_Menu_QmIcon(&s_RankDemoDownloadButton, EQmIcon::FILE, FONT_ICON_FILE, DownloadActive ? -1 : 0, &DownloadButton))
+			StartRankDemoDownload(pSelectedItem->m_Info.m_aMapName);
+		GameClient()->m_Tooltips.DoToolTip(&s_RankDemoDownloadButton, &DownloadButton, DownloadActive ? Localize("Downloading rank 1 demo") : Localize("Download the rank 1 demo for this map"));
+		SetIconMode(false);
+	}
 
 	if(m_aCurrentDemoFolder[0] != '\0')
 	{
@@ -3328,7 +3709,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
 			SetIconMode(true);
 			static CButtonContainer s_RenameButton;
-			if(DoButton_Menu(&s_RenameButton, FONT_ICON_PENCIL, 0, &RenameButton))
+			if(DoButton_Menu_QmIcon(&s_RenameButton, EQmIcon::PENCIL, FONT_ICON_PENCIL, 0, &RenameButton))
 			{
 				SetIconMode(false);
 				m_Popup = POPUP_RENAME_DEMO;
@@ -3357,7 +3738,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &DeleteButton);
 			ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
 			SetIconMode(true);
-			if(DoButton_Menu(&s_DeleteButton, FONT_ICON_TRASH, 0, &DeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE) || (Input()->KeyPress(KEY_D) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
+			if(DoButton_Menu_QmIcon(&s_DeleteButton, EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE) || (Input()->KeyPress(KEY_D) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 			{
 				SetIconMode(false);
 				PrepareDemoDeleteTargetsFromSelection();
@@ -3392,11 +3773,10 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			ButtonBarTop.VSplitRight(ButtonBarBottom.h, &ButtonBarTop, nullptr);
 			SetIconMode(true);
 			static CButtonContainer s_RenderButton;
-			if(DoButton_Menu(&s_RenderButton, FONT_ICON_VIDEO, 0, &RenderButton) || (Input()->KeyPress(KEY_R) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
+			if(DoButton_Menu_QmIcon(&s_RenderButton, EQmIcon::VIDEO, FONT_ICON_VIDEO, 0, &RenderButton) || (Input()->KeyPress(KEY_R) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 			{
 				SetIconMode(false);
 				m_HasPendingDemoRenderSource = false;
-				m_DemoExportDisplayExpanded = false;
 				m_Popup = POPUP_RENDER_DEMO;
 				m_StartPaused = false;
 				char aNameWithoutExt[IO_MAX_PATH_LENGTH];
@@ -3423,8 +3803,8 @@ void CMenus::PopupConfirmPlayDemo()
 	char aBuf[IO_MAX_PATH_LENGTH];
 	str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, pSelectedDemo->m_aFilename);
 	const char *pError = Client()->DemoPlayer_Play(aBuf, pSelectedDemo->m_StorageType);
-	m_DemoCutPreview.Reset();
 	m_vDemoCutSegments.clear();
+	m_DemoCutPreview.Reset();
 	g_Config.m_ClDemoSliceBegin = -1;
 	g_Config.m_ClDemoSliceEnd = -1;
 	m_LastPauseChange = -1.0f;
@@ -3444,6 +3824,7 @@ void CMenus::PopupConfirmDeleteSelectedDemos()
 {
 	if(m_vDemoDeleteTargets.empty())
 		return;
+	const bool SelectNeighbor = m_vDemoDeleteTargets.size() == 1 && m_DemolistSelectedIndex >= 0 && m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size();
 
 	int NumDeleted = 0;
 	int NumFailed = 0;
@@ -3474,6 +3855,8 @@ void CMenus::PopupConfirmDeleteSelectedDemos()
 
 	if(NumDeleted > 0)
 	{
+		if(SelectNeighbor)
+			DemolistSelectNeighbor();
 		DemolistPopulate();
 		DemolistOnUpdate(false);
 	}
@@ -3495,6 +3878,12 @@ void CMenus::PopupConfirmDeleteSelectedDemos()
 		str_format(aError, sizeof(aError), Localize("%d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'."), NumDeleted, NumFailed, aFirstFailedName);
 	}
 	PopupMessage(Localize("Error"), aError, Localize("Ok"));
+}
+
+void CMenus::DemolistSelectNeighbor()
+{
+	const int NeighborIndex = m_DemolistSelectedIndex + 1 < (int)m_vpFilteredDemos.size() ? m_DemolistSelectedIndex + 1 : m_DemolistSelectedIndex - 1;
+	str_copy(m_aCurrentDemoSelectionName, NeighborIndex >= 0 ? m_vpFilteredDemos[NeighborIndex]->m_aName : "");
 }
 
 void CMenus::PopupConfirmDeleteDemo()

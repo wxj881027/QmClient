@@ -45,6 +45,40 @@ TEST(QmSodaLyricFile, AlignsTranslationLrcByTimestamp)
 	EXPECT_TRUE(Data.HasTranslation());
 }
 
+TEST(QmSodaLyricFile, ParsesQrcRlrcLyricJson)
+{
+	// 已是抽出后的 rlrc 文本：不应落到 LRC 分支而解析失败。
+	const char *Json = R"({"title":"Q","lyricType":"qrc","lyricContent":"[1000,2000]第一句\n[3000,2000]第二句\n","translationLrc":""})";
+	QmMusicLyrics::SLyricsData Data;
+	std::string Error;
+	ASSERT_TRUE(ParseLyricFileJson(Json, &Data, &Error)) << Error;
+	ASSERT_EQ(Data.m_Timeline.m_vLines.size(), 2u);
+	EXPECT_EQ(Data.m_Timeline.m_vLines[0].m_StartMs, 1000);
+	EXPECT_EQ(Data.m_Timeline.m_vLines[1].m_Text, "第二句");
+}
+
+TEST(QmSodaLyricFile, ParsesQrcXmlLyricJson)
+{
+	// 完整 QrcInfos XML：先抽出 LyricContent 属性，再按 rlrc 解析。
+	const char *Json = R"({"title":"Q","lyricType":"qrc","lyricContent":"<QrcInfos><LyricInfo LyricContent=\"[1000,2000]天空\n\"/></QrcInfos>","translationLrc":""})";
+	QmMusicLyrics::SLyricsData Data;
+	std::string Error;
+	ASSERT_TRUE(ParseLyricFileJson(Json, &Data, &Error)) << Error;
+	ASSERT_EQ(Data.m_Timeline.m_vLines.size(), 1u);
+	EXPECT_EQ(Data.m_Timeline.m_vLines[0].m_StartMs, 1000);
+	EXPECT_EQ(Data.m_Timeline.m_vLines[0].m_Text, "天空");
+}
+
+TEST(QmSodaLyricFile, RejectsQrcXmlWithoutLyricContentEvenWithTimedLine)
+{
+	const char *Json = R"({"title":"Q","lyricType":"qrc","lyricContent":"<QrcInfos><LyricInfo/>\n[1000,2000]天空\n</QrcInfos>","translationLrc":""})";
+	QmMusicLyrics::SLyricsData Data;
+	std::string Error;
+	EXPECT_FALSE(ParseLyricFileJson(Json, &Data, &Error));
+	EXPECT_EQ(Error, "LyricContent not found");
+	EXPECT_TRUE(Data.m_Timeline.m_vLines.empty());
+}
+
 TEST(QmSodaLyricFile, RejectsMalformedJson)
 {
 	QmMusicLyrics::SLyricsData Data;

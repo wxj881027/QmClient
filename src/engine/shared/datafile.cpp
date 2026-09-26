@@ -130,6 +130,12 @@ namespace
 
 } // namespace
 
+class CDataProcessorWrapper
+{
+public:
+	FDataProcessor m_DataProcessor;
+};
+
 class CDatafile
 {
 public:
@@ -141,6 +147,8 @@ public:
 	CDatafileHeader m_Header;
 	int m_DataStartOffset;
 	void **m_ppDataPtrs;
+	CDataProcessorWrapper **m_ppDataProcessors;
+	CDatafileItem **m_ppOverriddenItems;
 	int *m_pDataSizes;
 	char *m_pData;
 
@@ -228,7 +236,7 @@ public:
 				return nullptr;
 			}
 			unsigned ActualDataSize = 0;
-			if(io_seek(m_File, m_DataStartOffset + m_Info.m_pDataOffsets[Index], EIoSeekOrigin::START) == 0)
+			if(io_seek(m_File, m_DataStartOffset + m_Info.m_pDataOffsets[Index], IOSEEK_START) == 0)
 			{
 				ActualDataSize = io_read(m_File, pCompressedData, DataSize);
 			}
@@ -274,7 +282,7 @@ public:
 				return nullptr;
 			}
 			unsigned ActualDataSize = 0;
-			if(io_seek(m_File, m_DataStartOffset + m_Info.m_pDataOffsets[Index], EIoSeekOrigin::START) == 0)
+			if(io_seek(m_File, m_DataStartOffset + m_Info.m_pDataOffsets[Index], IOSEEK_START) == 0)
 			{
 				ActualDataSize = io_read(m_File, m_ppDataPtrs[Index], DataSize);
 			}
@@ -292,12 +300,40 @@ public:
 		{
 			SwapEndianInPlace(m_ppDataPtrs[Index], m_pDataSizes[Index]);
 		}
+
+		if(m_ppDataProcessors[Index] != nullptr)
+		{
+			const auto [pNewData, NewSize] = m_ppDataProcessors[Index]->m_DataProcessor(m_ppDataPtrs[Index], m_pDataSizes[Index]);
+			if(pNewData == nullptr)
+			{
+				m_ppDataPtrs[Index] = nullptr;
+				m_pDataSizes[Index] = -1;
+				return nullptr;
+			}
+			m_ppDataPtrs[Index] = pNewData;
+			m_pDataSizes[Index] = NewSize;
+		}
+
 		return m_ppDataPtrs[Index];
+	}
+
+	void AddDataProcessor(int Index, FDataProcessor DataProcessor) const
+	{
+		dbg_assert(Index >= 0 && Index < m_Header.m_NumRawData, "Index invalid: %d", Index);
+		dbg_assert(m_ppDataProcessors[Index] == nullptr, "Data already intercepted: %d", Index);
+
+		m_ppDataProcessors[Index] = new CDataProcessorWrapper;
+		m_ppDataProcessors[Index]->m_DataProcessor = std::move(DataProcessor);
 	}
 
 	int GetFileItemSize(int Index) const
 	{
 		dbg_assert(Index >= 0 && Index < m_Header.m_NumItems, "Invalid Index: %d", Index);
+
+		if(m_ppOverriddenItems[Index] != nullptr)
+		{
+			return m_ppOverriddenItems[Index]->m_Size + sizeof(CDatafileItem);
+		}
 
 		if(Index == m_Header.m_NumItems - 1)
 		{
@@ -316,7 +352,33 @@ public:
 	{
 		dbg_assert(Index >= 0 && Index < m_Header.m_NumItems, "Invalid Index: %d", Index);
 
+		if(m_ppOverriddenItems[Index] != nullptr)
+		{
+			return m_ppOverriddenItems[Index];
+		}
 		return static_cast<CDatafileItem *>(static_cast<void *>(m_Info.m_pItemStart + m_Info.m_pItemOffsets[Index]));
+	}
+
+	bool OverrideItemData(int Index, const void *pData, size_t Size) const
+	{
+		const CDatafileItem *pCurrentItem = GetItem(Index);
+		dbg_assert(m_ppOverriddenItems[Index] == nullptr, "Item already overridden: %d", Index);
+		dbg_assert(Size == 0 || pData != nullptr, "Data missing"); // 无数据的条目允许
+		dbg_assert(Size <= (size_t)std::numeric_limits<int>::max(), "Data too large");
+		dbg_assert(Size % sizeof(int) == 0, "Invalid data boundary");
+		m_ppOverriddenItems[Index] = static_cast<CDatafileItem *>(malloc(sizeof(CDatafileItem) + Size));
+		if(m_ppOverriddenItems[Index] == nullptr)
+		{
+			log_error("datafile", "out of memory. could not allocate memory for overridden item data. index=%d size=%" PRIzu, Index, Size);
+			return false;
+		}
+		m_ppOverriddenItems[Index]->m_TypeAndId = pCurrentItem->m_TypeAndId;
+		m_ppOverriddenItems[Index]->m_Size = Size;
+		if(pData)
+		{
+			mem_copy(static_cast<void *>(m_ppOverriddenItems[Index] + 1), pData, Size);
+		}
+		return true;
 	}
 
 	bool Validate() const
@@ -478,7 +540,7 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 			sha256_update(&Sha256Ctxt, aBuffer, Bytes);
 		}
 		Sha256 = sha256_finish(&Sha256Ctxt);
-		if(io_seek(File, 0, EIoSeekOrigin::START) != 0)
+		if(io_seek(File, 0, IOSEEK_START) != 0)
 		{
 			io_close(File);
 			log_error("datafile", "could not seek to start after calculating hashes");
@@ -591,6 +653,8 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	int64_t AllocSize = Size;
 	AllocSize += sizeof(CDatafile); // add space for info structure
 	AllocSize += (int64_t)Header.m_NumRawData * sizeof(void *); // add space for data pointers
+	AllocSize += (int64_t)Header.m_NumRawData * sizeof(CDataProcessorWrapper *); // add space for data interceptors
+	AllocSize += (int64_t)Header.m_NumItems * sizeof(CDatafileItem *); // add space for item overrides
 	AllocSize += (int64_t)Header.m_NumRawData * sizeof(int); // add space for data sizes
 	if(AllocSize > MaxAllocSize)
 	{
@@ -609,7 +673,9 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 	pTmpDataFile->m_Header = Header;
 	pTmpDataFile->m_DataStartOffset = sizeof(CDatafileHeader) + Size;
 	pTmpDataFile->m_ppDataPtrs = (void **)(pTmpDataFile + 1);
-	pTmpDataFile->m_pDataSizes = (int *)(pTmpDataFile->m_ppDataPtrs + Header.m_NumRawData);
+	pTmpDataFile->m_ppDataProcessors = (CDataProcessorWrapper **)(pTmpDataFile->m_ppDataPtrs + Header.m_NumRawData);
+	pTmpDataFile->m_ppOverriddenItems = (CDatafileItem **)(pTmpDataFile->m_ppDataProcessors + Header.m_NumRawData);
+	pTmpDataFile->m_pDataSizes = (int *)(pTmpDataFile->m_ppOverriddenItems + Header.m_NumItems);
 	pTmpDataFile->m_pData = (char *)(pTmpDataFile->m_pDataSizes + Header.m_NumRawData);
 	pTmpDataFile->m_File = File;
 	pTmpDataFile->m_FileSize = FileSize;
@@ -618,6 +684,8 @@ bool CDataFileReader::Open(class IStorage *pStorage, const char *pFilename, int 
 
 	// clear the data pointers and sizes
 	mem_zero(pTmpDataFile->m_ppDataPtrs, Header.m_NumRawData * sizeof(void *));
+	mem_zero(pTmpDataFile->m_ppDataProcessors, Header.m_NumRawData * sizeof(CDataProcessorWrapper *));
+	mem_zero(pTmpDataFile->m_ppOverriddenItems, Header.m_NumItems * sizeof(CDatafileItem *));
 	mem_zero(pTmpDataFile->m_pDataSizes, Header.m_NumRawData * sizeof(int));
 
 	// read types, offsets, sizes and item data
@@ -673,6 +741,12 @@ void CDataFileReader::Close()
 	for(int i = 0; i < m_pDataFile->m_Header.m_NumRawData; i++)
 	{
 		free(m_pDataFile->m_ppDataPtrs[i]);
+		delete m_pDataFile->m_ppDataProcessors[i];
+	}
+
+	for(int i = 0; i < m_pDataFile->m_Header.m_NumItems; i++)
+	{
+		free(m_pDataFile->m_ppOverriddenItems[i]);
 	}
 
 	io_close(m_pDataFile->m_File);
@@ -736,14 +810,11 @@ const char *CDataFileReader::GetDataString(int Index)
 	return pData;
 }
 
-void CDataFileReader::ReplaceData(int Index, char *pData, size_t Size)
+void CDataFileReader::AddDataProcessor(int Index, FDataProcessor DataProcessor)
 {
 	dbg_assert(m_pDataFile != nullptr, "File not open");
-	dbg_assert(Index >= 0 && Index < m_pDataFile->m_Header.m_NumRawData, "Index invalid: %d", Index);
 
-	free(m_pDataFile->m_ppDataPtrs[Index]);
-	m_pDataFile->m_ppDataPtrs[Index] = pData;
-	m_pDataFile->m_pDataSizes[Index] = Size;
+	m_pDataFile->AddDataProcessor(Index, std::move(DataProcessor));
 }
 
 void CDataFileReader::UnloadData(int Index)
@@ -894,6 +965,13 @@ void *CDataFileReader::FindItem(int Type, int Id)
 		return nullptr;
 	}
 	return GetItem(Index);
+}
+
+bool CDataFileReader::OverrideItemData(int Index, const void *pData, size_t Size)
+{
+	dbg_assert(m_pDataFile != nullptr, "File not open");
+
+	return m_pDataFile->OverrideItemData(Index, pData, Size);
 }
 
 int CDataFileReader::NumItems() const

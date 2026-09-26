@@ -17,6 +17,14 @@ REGISTER_QUICK_ACTION(
 	DEFAULT_BTN,
 	"[F1] Open the DDNet Wiki page for the map editor in a web browser.")
 REGISTER_QUICK_ACTION(
+	GotoPosition,
+	"Goto position",
+	[&]() { GotoPosition(); },
+	ALWAYS_FALSE,
+	ALWAYS_FALSE,
+	DEFAULT_BTN,
+	"Go to a specified coordinate point on the map.")
+REGISTER_QUICK_ACTION(
 	ToggleGrid,
 	Localizable("Toggle grid", "Editor"),
 	[&]() { MapView()->MapGrid()->Toggle(); },
@@ -223,11 +231,22 @@ REGISTER_QUICK_ACTION(
 REGISTER_QUICK_ACTION(
 	AddSoundLayer, Localizable("Add sound", "Editor"), [&]() { AddSoundLayer(); }, ALWAYS_FALSE, ALWAYS_FALSE, DEFAULT_BTN, Localizable("Create a new sound layer.", "Editor"))
 REGISTER_QUICK_ACTION(
+	NewMap,
+	Localizable("New map", "Editor"),
+	[&]() {
+		AddDefaultMap();
+		Reset(false);
+	},
+	ALWAYS_FALSE,
+	ALWAYS_FALSE,
+	DEFAULT_BTN,
+	Localizable("[Ctrl+N] Create a new map.", "Editor"))
+REGISTER_QUICK_ACTION(
 	SaveAs,
 	Localizable("Save as", "Editor"),
 	[&]() {
 		char aDefaultName[IO_MAX_PATH_LENGTH];
-		fs_split_file_extension(fs_filename(m_Map.m_aFilename), aDefaultName, sizeof(aDefaultName));
+		fs_split_file_extension(fs_filename(Map()->m_aFilename), aDefaultName, sizeof(aDefaultName));
 		m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, Localize("Save map", "Editor"), Localize("Save as", "Editor"), "maps", aDefaultName, CallbackSaveMap, this);
 	},
 	ALWAYS_FALSE,
@@ -255,6 +274,14 @@ REGISTER_QUICK_ACTION(
 	ALWAYS_FALSE,
 	DEFAULT_BTN,
 	Localizable("[Ctrl+Shift+L] Open the current ingame map for editing.", "Editor"))
+REGISTER_QUICK_ACTION(
+	CloseMap,
+	Localizable("Close map", "Editor"),
+	[&]() { CloseMap(m_SelectedMap, true); },
+	ALWAYS_FALSE,
+	ALWAYS_FALSE,
+	DEFAULT_BTN,
+	Localizable("[Ctrl+F4] Close the current map.", "Editor"))
 REGISTER_QUICK_ACTION(
 	Envelopes,
 	Localizable("Envelope", "Editor"),

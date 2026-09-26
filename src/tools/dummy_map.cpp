@@ -34,13 +34,7 @@ static void CreateEmptyMap(IStorage *pStorage)
 	constexpr int LayerWidth = 2;
 	constexpr int LayerHeight = 2;
 	CTile aTiles[LayerWidth * LayerHeight];
-	for(auto &Tile : aTiles)
-	{
-		Tile.m_Index = 1;
-		Tile.m_Flags = 0;
-		Tile.m_Skip = 0;
-		Tile.m_Reserved = 0;
-	}
+	std::fill(std::begin(aTiles), std::end(aTiles), CTile{.m_Index = TILE_SOLID, .m_Flags = 0, .m_Skip = 0, .m_MustBe0 = 0});
 
 	CMapItemLayerTilemap GameLayer;
 	GameLayer.m_Layer.m_Version = 0; // Not set by the official client.

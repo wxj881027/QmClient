@@ -44,7 +44,7 @@ void CLayerGroup::Convert(CUIRect *pRect) const
 void CLayerGroup::Mapping(float *pPoints) const
 {
 	float NormalParallaxZoom = std::clamp((double)(maximum(m_ParallaxX, m_ParallaxY)), 0., 100.);
-	float ParallaxZoom = Editor()->m_PreviewZoom ? NormalParallaxZoom : 100.0f;
+	float ParallaxZoom = Editor()->Map()->m_PreviewZoom ? NormalParallaxZoom : 100.0f;
 
 	Graphics()->MapScreenToWorld(
 		Editor()->MapView()->GetWorldOffset().x, Editor()->MapView()->GetWorldOffset().y,
@@ -64,7 +64,7 @@ void CLayerGroup::MapScreen()
 	Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
 }
 
-void CLayerGroup::Render()
+void CLayerGroup::Render(const CEditorMap *pRenderMap)
 {
 	MapScreen();
 
@@ -109,8 +109,8 @@ void CLayerGroup::Render()
 				if(pTiles->m_HasGame || pTiles->m_HasFront || pTiles->m_HasTele || pTiles->m_HasSpeedup || pTiles->m_HasTune || pTiles->m_HasSwitch)
 					continue;
 			}
-			if(Editor()->m_ShowDetail || !(pLayer->m_Flags & LAYERFLAG_DETAIL))
-				pLayer->Render();
+			if(Editor()->Map()->m_ShowDetail || !(pLayer->m_Flags & LAYERFLAG_DETAIL))
+				pLayer->Render(pRenderMap);
 		}
 	}
 
@@ -121,7 +121,7 @@ void CLayerGroup::Render()
 			std::shared_ptr<CLayerTiles> pTiles = std::static_pointer_cast<CLayerTiles>(pLayer);
 			if(pTiles->m_HasGame || pTiles->m_HasFront || pTiles->m_HasTele || pTiles->m_HasSpeedup || pTiles->m_HasTune || pTiles->m_HasSwitch)
 			{
-				pLayer->Render();
+				pLayer->Render(pRenderMap);
 			}
 		}
 	}

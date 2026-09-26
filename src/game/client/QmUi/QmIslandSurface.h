@@ -33,8 +33,9 @@ namespace qm_island
 	{
 		constexpr float Pi = 3.14159265359f;
 		const float HalfWidth = std::max(0.0f, Rect.w * 0.5f);
+		const float HalfHeight = std::max(0.0f, Rect.h * 0.5f);
 		const float CornerRadius = ClampRoundedRectRadius(Rect, Radius);
-		return 4.0f * std::max(HalfWidth - CornerRadius, 0.0f) + 2.0f * Pi * CornerRadius;
+		return 4.0f * (HalfWidth + HalfHeight - 2.0f * CornerRadius) + 2.0f * Pi * CornerRadius;
 	}
 
 	// 轮廓上的点：Fraction ∈ [0,1) 从正上方中点起顺时针；超出范围自动环绕。
@@ -44,9 +45,10 @@ namespace qm_island
 		const float HalfWidth = std::max(0.0f, Rect.w * 0.5f);
 		const float HalfHeight = std::max(0.0f, Rect.h * 0.5f);
 		const float CornerRadius = ClampRoundedRectRadius(Rect, Radius);
-		const float StraightHalf = std::max(HalfWidth - CornerRadius, 0.0f);
-		const float CapLength = Pi * CornerRadius;
-		const float Perimeter = 4.0f * StraightHalf + 2.0f * CapLength;
+		const float HorizontalHalf = HalfWidth - CornerRadius;
+		const float VerticalHalf = HalfHeight - CornerRadius;
+		const float QuarterArc = Pi * CornerRadius * 0.5f;
+		const float Perimeter = 4.0f * (HorizontalHalf + VerticalHalf + QuarterArc);
 		const float CenterX = Rect.x + HalfWidth;
 		const float CenterY = Rect.y + HalfHeight;
 		if(Perimeter <= 0.0001f)
@@ -54,29 +56,47 @@ namespace qm_island
 
 		float Along = (Fraction - std::floor(Fraction)) * Perimeter;
 		// 上边右半段：直接量 x。
-		if(Along <= StraightHalf)
+		if(Along <= HorizontalHalf)
 			return vec2(CenterX + Along, CenterY - HalfHeight);
-		Along -= StraightHalf;
-		// 右端圆弧：从上（-90°）顺时针转到下（+90°）。
-		if(Along <= CapLength)
+		Along -= HorizontalHalf;
+		// 右上圆弧 → 右直边 → 右下圆弧。
+		if(Along <= QuarterArc)
 		{
 			const float Angle = Along / CornerRadius;
-			return vec2(CenterX + StraightHalf + std::sin(Angle) * CornerRadius, CenterY - std::cos(Angle) * CornerRadius);
+			return vec2(CenterX + HorizontalHalf + std::sin(Angle) * CornerRadius, CenterY - VerticalHalf - std::cos(Angle) * CornerRadius);
 		}
-		Along -= CapLength;
+		Along -= QuarterArc;
+		if(Along <= 2.0f * VerticalHalf)
+			return vec2(CenterX + HalfWidth, CenterY - VerticalHalf + Along);
+		Along -= 2.0f * VerticalHalf;
+		if(Along <= QuarterArc)
+		{
+			const float Angle = Along / CornerRadius;
+			return vec2(CenterX + HorizontalHalf + std::cos(Angle) * CornerRadius, CenterY + VerticalHalf + std::sin(Angle) * CornerRadius);
+		}
+		Along -= QuarterArc;
 		// 下边：从右往左。
-		if(Along <= 2.0f * StraightHalf)
-			return vec2(CenterX + StraightHalf - Along, CenterY + HalfHeight);
-		Along -= 2.0f * StraightHalf;
-		// 左端圆弧：从下顺时针转到上。
-		if(Along <= CapLength)
+		if(Along <= 2.0f * HorizontalHalf)
+			return vec2(CenterX + HorizontalHalf - Along, CenterY + HalfHeight);
+		Along -= 2.0f * HorizontalHalf;
+		// 左下圆弧 → 左直边 → 左上圆弧。
+		if(Along <= QuarterArc)
 		{
 			const float Angle = Along / CornerRadius;
-			return vec2(CenterX - StraightHalf - std::sin(Angle) * CornerRadius, CenterY + std::cos(Angle) * CornerRadius);
+			return vec2(CenterX - HorizontalHalf - std::sin(Angle) * CornerRadius, CenterY + VerticalHalf + std::cos(Angle) * CornerRadius);
 		}
-		Along -= CapLength;
+		Along -= QuarterArc;
+		if(Along <= 2.0f * VerticalHalf)
+			return vec2(CenterX - HalfWidth, CenterY + VerticalHalf - Along);
+		Along -= 2.0f * VerticalHalf;
+		if(Along <= QuarterArc)
+		{
+			const float Angle = Along / CornerRadius;
+			return vec2(CenterX - HorizontalHalf - std::cos(Angle) * CornerRadius, CenterY - VerticalHalf - std::sin(Angle) * CornerRadius);
+		}
+		Along -= QuarterArc;
 		// 上边左半段：从左往中间收。
-		return vec2(CenterX - StraightHalf + Along, CenterY - HalfHeight);
+		return vec2(CenterX - HorizontalHalf + Along, CenterY - HalfHeight);
 	}
 
 	// 绘制一块灵动岛表面（调用方负责填好 SdfState，含 m_Rect）。

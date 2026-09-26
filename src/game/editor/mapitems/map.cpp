@@ -14,6 +14,28 @@
 #include <game/editor/mapitems/sound.h>
 #include <game/editor/references.h>
 
+CEditorMap::CEditorMap(CEditor *pEditor) :
+	m_EditorHistory(this),
+	m_ServerSettingsHistory(this),
+	m_EnvelopeEditorHistory(this),
+	m_QuadTracker(this),
+	m_EnvOpTracker(this),
+	m_LayerGroupPropTracker(this),
+	m_LayerPropTracker(this),
+	m_LayerTilesCommonPropTracker(this),
+	m_LayerTilesPropTracker(this),
+	m_LayerQuadPropTracker(this),
+	m_LayerSoundsPropTracker(this),
+	m_SoundSourceOperationTracker(this),
+	m_SoundSourcePropTracker(this),
+	m_SoundSourceRectShapePropTracker(this),
+	m_SoundSourceCircleShapePropTracker(this),
+	m_EnvelopeEvaluator(this),
+	m_MapSettingsCommandContext(pEditor->MapSettingsBackend().NewContextWithInput()),
+	m_pEditor(pEditor)
+{
+}
+
 void CEditorMap::CMapInfo::Reset()
 {
 	m_aAuthor[0] = '\0';
@@ -35,6 +57,8 @@ void CEditorMap::OnModify()
 	m_Modified = true;
 	m_ModifiedAuto = true;
 	m_LastModifiedTime = Editor()->Client()->GlobalTime();
+	// 修改后取消保存完成自动关闭，避免保存期间继续编辑导致地图被意外关闭。
+	m_CloseOnSave = false;
 }
 
 void CEditorMap::ResetModifiedState()
@@ -71,7 +95,10 @@ void CEditorMap::PlaceBorderTiles()
 void CEditorMap::Clean()
 {
 	m_aFilename[0] = '\0';
+	str_copy(m_aDisplayName, "Unnamed");
+	str_copy(m_aAutosaveName, "unnamed");
 	m_ValidSaveFilename = false;
+	m_CloseOnSave = false;
 	ResetModifiedState();
 
 	m_vpGroups.clear();
@@ -112,11 +139,16 @@ void CEditorMap::Clean()
 	m_SelectedSoundSource = -1;
 
 	m_ShiftBy = 1;
+	m_ShowDetail = true;
+	m_PreviewZoom = false;
+	m_FontTyperState.Reset();
+	m_EnvelopeEditorState.Reset(Editor());
 
 	m_MapViewState.Reset(Editor());
 	m_MapGridState.Reset();
 	m_ProofModeState.Reset();
 	m_QuadKnifeState.Reset();
+	m_MapSettingsCommandContext.Reset();
 }
 
 void CEditorMap::CreateDefault()
@@ -547,27 +579,10 @@ void CEditorMap::DeselectQuadPoints()
 void CEditorMap::DeleteSelectedQuads()
 {
 	std::shared_ptr<CLayerQuads> pLayer = std::static_pointer_cast<CLayerQuads>(SelectedLayerType(0, LAYERTYPE_QUADS));
-	if(!pLayer)
+	if(!pLayer || m_vSelectedQuads.empty() || m_vSelectedLayers.size() != 1)
 		return;
 
-	std::vector<int> vSelectedQuads(m_vSelectedQuads);
-	std::vector<CQuad> vDeletedQuads;
-	vDeletedQuads.reserve(m_vSelectedQuads.size());
-	for(int i = 0; i < (int)m_vSelectedQuads.size(); ++i)
-	{
-		auto const &Quad = pLayer->m_vQuads[m_vSelectedQuads[i]];
-		vDeletedQuads.push_back(Quad);
-
-		pLayer->m_vQuads.erase(pLayer->m_vQuads.begin() + m_vSelectedQuads[i]);
-		for(int j = i + 1; j < (int)m_vSelectedQuads.size(); ++j)
-			if(m_vSelectedQuads[j] > m_vSelectedQuads[i])
-				m_vSelectedQuads[j]--;
-
-		m_vSelectedQuads.erase(m_vSelectedQuads.begin() + i);
-		i--;
-	}
-
-	m_EditorHistory.RecordAction(std::make_shared<CEditorActionDeleteQuad>(this, m_SelectedGroup, m_vSelectedLayers[0], vSelectedQuads, vDeletedQuads));
+	m_EditorHistory.Execute(std::make_shared<CEditorActionDeleteQuad>(this, m_SelectedGroup, m_vSelectedLayers[0]));
 }
 
 std::shared_ptr<CEnvelope> CEditorMap::NewEnvelope(CEnvelope::EType Type)

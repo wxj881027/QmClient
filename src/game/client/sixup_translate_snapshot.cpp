@@ -4,6 +4,7 @@
 
 #include <generated/protocol7.h>
 
+#include <game/client/components/countryflags.h>
 #include <game/client/gameclient.h>
 
 int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrcSeven, int Conn, bool Dummy)
@@ -408,7 +409,7 @@ int CGameClient::TranslateSnap(CSnapshotBuffer *pSnapDstSix, CSnapshot *pSnapSrc
 			Client.m_Team = pInfo->m_Team;
 			IntsToStr(pInfo->m_aName, std::size(pInfo->m_aName), Client.m_aName, std::size(Client.m_aName));
 			IntsToStr(pInfo->m_aClan, std::size(pInfo->m_aClan), Client.m_aClan, std::size(Client.m_aClan));
-			Client.m_Country = pInfo->m_Country;
+			Client.m_Country = QmNormalizeCountryCode(pInfo->m_Country);
 
 			ApplySkin7InfoFromSnapObj(pInfo, ClientId);
 		}

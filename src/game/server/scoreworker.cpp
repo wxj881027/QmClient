@@ -55,7 +55,8 @@ void CScorePlayerResult::SetVariant(Variant v)
 }
 
 CTeamrank::CTeamrank() :
-	m_NumNames(0)
+	m_NumNames(0),
+	m_TotalNames(0)
 {
 	for(auto &aName : m_aaNames)
 		aName[0] = '\0';
@@ -67,6 +68,7 @@ bool CTeamrank::NextSqlResult(IDbConnection *pSqlServer, bool *pEnd, char *pErro
 	pSqlServer->GetBlob(1, m_TeamId.m_aData, sizeof(m_TeamId.m_aData));
 	pSqlServer->GetString(2, m_aaNames[0], sizeof(m_aaNames[0]));
 	m_NumNames = 1;
+	m_TotalNames = 1;
 	bool End = false;
 	while(pSqlServer->Step(&End, pError, ErrorSize) && !End)
 	{
@@ -77,8 +79,12 @@ bool CTeamrank::NextSqlResult(IDbConnection *pSqlServer, bool *pEnd, char *pErro
 			*pEnd = false;
 			return true;
 		}
-		pSqlServer->GetString(2, m_aaNames[m_NumNames], sizeof(m_aaNames[m_NumNames]));
-		m_NumNames++;
+		m_TotalNames++;
+		if(m_NumNames < MAX_CLIENTS)
+		{
+			pSqlServer->GetString(2, m_aaNames[m_NumNames], sizeof(m_aaNames[m_NumNames]));
+			m_NumNames++;
+		}
 	}
 	if(!End)
 	{
@@ -90,7 +96,7 @@ bool CTeamrank::NextSqlResult(IDbConnection *pSqlServer, bool *pEnd, char *pErro
 
 bool CTeamrank::SamePlayers(const std::vector<std::string> *pvSortedNames)
 {
-	if(pvSortedNames->size() != m_NumNames)
+	if(pvSortedNames->size() != m_TotalNames)
 		return false;
 	for(unsigned int i = 0; i < m_NumNames; i++)
 	{
@@ -98,6 +104,50 @@ bool CTeamrank::SamePlayers(const std::vector<std::string> *pvSortedNames)
 			return false;
 	}
 	return true;
+}
+
+void CTeamrank::FormatNames(char *pBuf, int BufSize) const
+{
+	if(BufSize <= 0)
+		return;
+
+	char aMore[32];
+	str_format(aMore, sizeof(aMore), "，还有 %d 人", (int)m_TotalNames);
+	const int NamesSize = BufSize - str_length(aMore);
+
+	pBuf[0] = '\0';
+	if(NamesSize <= 0)
+	{
+		str_append(pBuf, aMore, BufSize);
+		return;
+	}
+
+	int Length = 0;
+	unsigned int Name = 0;
+	for(; Name < m_NumNames; Name++)
+	{
+		char aName[8 + MAX_NAME_LENGTH];
+		str_format(aName, sizeof(aName), "%s%s",
+			Length == 0 ? "" : (Name == m_NumNames - 1 ? " & " : ", "),
+			m_aaNames[Name]);
+		if(Length + str_length(aName) >= NamesSize)
+			break;
+		str_append(pBuf, aName, NamesSize);
+		Length += str_length(aName);
+	}
+	if(Name < m_TotalNames)
+	{
+		str_format(aMore, sizeof(aMore), "，还有 %d 人", (int)(m_TotalNames - Name));
+		str_append(pBuf, aMore, BufSize);
+	}
+}
+
+void CTeamrank::FormatTeamTopLine(char *pMessage, int MessageSize, int Rank, const char *pTime) const
+{
+	const int EmptyLength = str_format(pMessage, MessageSize, "%d. %s 队伍时间：%s", Rank, "", pTime);
+	char aFormattedNames[MAX_TEAM_NAMES_LENGTH];
+	FormatNames(aFormattedNames, MAX_CHAT_LENGTH - EmptyLength);
+	str_format(pMessage, MessageSize, "%d. %s 队伍时间：%s", Rank, aFormattedNames, pTime);
 }
 
 bool CTeamrank::GetSqlTop5Team(IDbConnection *pSqlServer, bool *pEnd, char *pError, int ErrorSize, char (*paMessages)[512], int *Line, int Count)
@@ -112,16 +162,15 @@ bool CTeamrank::GetSqlTop5Team(IDbConnection *pSqlServer, bool *pEnd, char *pErr
 		int Rank = pSqlServer->GetInt(3);
 		int TeamSize = pSqlServer->GetInt(4);
 
-		char aNames[2300] = {0};
+		CTeamrank Teamrank;
+		Teamrank.m_TotalNames = TeamSize;
 		for(int i = 0; i < TeamSize; i++)
 		{
-			char aName[MAX_NAME_LENGTH];
-			pSqlServer->GetString(1, aName, sizeof(aName));
-			str_append(aNames, aName);
-			if(i < TeamSize - 2)
-				str_append(aNames, ", ");
-			else if(i == TeamSize - 2)
-				str_append(aNames, " & ");
+			if(Teamrank.m_NumNames < MAX_CLIENTS)
+			{
+				pSqlServer->GetString(1, Teamrank.m_aaNames[Teamrank.m_NumNames], sizeof(Teamrank.m_aaNames[0]));
+				Teamrank.m_NumNames++;
+			}
 			if(!pSqlServer->Step(&Last, pError, ErrorSize))
 			{
 				return false;
@@ -131,8 +180,7 @@ bool CTeamrank::GetSqlTop5Team(IDbConnection *pSqlServer, bool *pEnd, char *pErr
 				break;
 			}
 		}
-		str_format(paMessages[*Line], sizeof(paMessages[*Line]), "%d. %s 队伍时间：%s",
-			Rank, aNames, aTime);
+		Teamrank.FormatTeamTopLine(paMessages[*Line], sizeof(paMessages[*Line]), Rank, aTime);
 		if(Last)
 		{
 			(*Line)++;
@@ -847,20 +895,22 @@ bool CScoreWorker::ShowRank(IDbConnection *pSqlServer, const ISqlData *pGameData
 	char aServerLike[16];
 	str_format(aServerLike, sizeof(aServerLike), "%%%s%%", pData->m_aServer);
 
-	// check sort method
-	char aBuf[600];
+	// Counting how many players are faster than the requesting player is cheaper
+	// than ranking every player with a window function. Best holds the best time
+	// of every player, Own the best time of the requesting player.
+	char aBuf[1024];
 	str_format(aBuf, sizeof(aBuf),
-		"SELECT Ranking, Time, PercentRank "
+		"SELECT SUM(Best.Time < Own.Time) + 1 AS Ranking, Own.Time AS Time, "
+		"  CASE WHEN COUNT(*) > 1 THEN SUM(Best.Time < Own.Time) * 1.0 / (COUNT(*) - 1) ELSE 0 END AS PercentRank "
 		"FROM ("
-		"  SELECT RANK() OVER w AS Ranking, PERCENT_RANK() OVER w as PercentRank, MIN(Time) AS Time, Name "
-		"  FROM %s_race "
-		"  WHERE Map = ? "
-		"  AND Server LIKE ? "
-		"  GROUP BY Name "
-		"  WINDOW w AS (ORDER BY MIN(Time))"
-		") as a "
-		"WHERE Name = ?",
-		pSqlServer->GetPrefix());
+		"  SELECT MIN(Time) AS Time FROM %s_race WHERE Map = ? AND Server LIKE ? GROUP BY Name"
+		") AS Best "
+		"CROSS JOIN ("
+		"  SELECT MIN(Time) AS Time FROM %s_race WHERE Map = ? AND Server LIKE ? AND Name = ?"
+		") AS Own "
+		"WHERE Own.Time IS NOT NULL "
+		"GROUP BY Own.Time",
+		pSqlServer->GetPrefix(), pSqlServer->GetPrefix());
 
 	if(!pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
 	{
@@ -868,7 +918,9 @@ bool CScoreWorker::ShowRank(IDbConnection *pSqlServer, const ISqlData *pGameData
 	}
 	pSqlServer->BindString(1, pData->m_aMap);
 	pSqlServer->BindString(2, aServerLike);
-	pSqlServer->BindString(3, pData->m_aName);
+	pSqlServer->BindString(3, pData->m_aMap);
+	pSqlServer->BindString(4, aServerLike);
+	pSqlServer->BindString(5, pData->m_aName);
 
 	bool End;
 	if(!pSqlServer->Step(&End, pError, ErrorSize))
@@ -894,7 +946,9 @@ bool CScoreWorker::ShowRank(IDbConnection *pSqlServer, const ISqlData *pGameData
 	}
 	pSqlServer->BindString(1, pData->m_aMap);
 	pSqlServer->BindString(2, pAny);
-	pSqlServer->BindString(3, pData->m_aName);
+	pSqlServer->BindString(3, pData->m_aMap);
+	pSqlServer->BindString(4, pAny);
+	pSqlServer->BindString(5, pData->m_aName);
 
 	if(!pSqlServer->Step(&End, pError, ErrorSize))
 	{
@@ -1003,17 +1057,6 @@ bool CScoreWorker::ShowTeamRank(IDbConnection *pSqlServer, const ISqlData *pGame
 			return false;
 		}
 
-		char aFormattedNames[512] = "";
-		for(unsigned int Name = 0; Name < Teamrank.m_NumNames; Name++)
-		{
-			str_append(aFormattedNames, Teamrank.m_aaNames[Name]);
-
-			if(Name < Teamrank.m_NumNames - 2)
-				str_append(aFormattedNames, ", ");
-			else if(Name < Teamrank.m_NumNames - 1)
-				str_append(aFormattedNames, " & ");
-		}
-
 		if(g_Config.m_SvHideScore)
 		{
 			str_format(pResult->m_Data.m_aaMessages[0], sizeof(pResult->m_Data.m_aaMessages[0]),
@@ -1022,6 +1065,11 @@ bool CScoreWorker::ShowTeamRank(IDbConnection *pSqlServer, const ISqlData *pGame
 		else
 		{
 			pResult->m_MessageKind = CScorePlayerResult::ALL;
+			const int EmptyLength = str_format(pResult->m_Data.m_aaMessages[0], sizeof(pResult->m_Data.m_aaMessages[0]),
+				"%d. %s 队伍时间：%s，超过 %d%% 的队伍，由 %s 查询",
+				Rank, "", aBuf, BetterThanPercent, pData->m_aRequestingPlayer);
+			char aFormattedNames[MAX_TEAM_NAMES_LENGTH];
+			Teamrank.FormatNames(aFormattedNames, MAX_CHAT_LENGTH - EmptyLength);
 			str_format(pResult->m_Data.m_aaMessages[0], sizeof(pResult->m_Data.m_aaMessages[0]),
 				"%d. %s 队伍时间：%s，超过 %d%% 的队伍，由 %s 查询",
 				Rank, aFormattedNames, aBuf, BetterThanPercent, pData->m_aRequestingPlayer);
@@ -1041,26 +1089,45 @@ bool CScoreWorker::ShowTop(IDbConnection *pSqlServer, const ISqlData *pGameData,
 	auto *pResult = dynamic_cast<CScorePlayerResult *>(pGameData->m_pResult.get());
 
 	int LimitStart = maximum(absolute(pData->m_Offset) - 1, 0);
-	const char *pOrder = pData->m_Offset >= 0 ? "ASC" : "DESC";
 	const char *pAny = "%";
 
-	// check sort method
-	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf),
-		"SELECT Name, Time, Ranking "
-		"FROM ("
-		"  SELECT RANK() OVER w AS Ranking, MIN(Time) AS Time, Name "
-		"  FROM %s_race "
-		"  WHERE Map = ? "
-		"  AND Server LIKE ? "
-		"  GROUP BY Name "
-		"  WINDOW w AS (ORDER BY MIN(Time))"
-		") as a "
-		"ORDER BY Ranking %s "
-		"LIMIT %d, ?",
-		pSqlServer->GetPrefix(),
-		pOrder,
-		LimitStart);
+	const bool Ascending = pData->m_Offset >= 0;
+	char aBuf[1024];
+	if(Ascending)
+	{
+		str_format(aBuf, sizeof(aBuf),
+			"SELECT a.Name, a.Time, "
+			"  (SELECT COUNT(DISTINCT r3.Name) FROM %s_race r3 "
+			"   WHERE r3.Map = ? AND r3.Server LIKE ? AND r3.Time < a.Time) + 1 AS Ranking "
+			"FROM ("
+			"  SELECT r1.Name, r1.Time, r1.Timestamp, r1.Server "
+			"  FROM %s_race AS r1 "
+			"  WHERE r1.Map = ? AND r1.Server LIKE ? AND NOT EXISTS ("
+			"    SELECT 1 FROM %s_race AS r2 "
+			"    WHERE r2.Map = r1.Map AND r2.Name = r1.Name AND r2.Server LIKE ? "
+			"      AND (r2.Time, r2.Timestamp, r2.Server) < (r1.Time, r1.Timestamp, r1.Server)) "
+			"  ORDER BY r1.Time, r1.Timestamp, r1.Server, r1.Name LIMIT %d, ?"
+			") AS a "
+			"ORDER BY a.Time, a.Timestamp, a.Server, a.Name",
+			pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), pSqlServer->GetPrefix(), LimitStart);
+	}
+	else
+	{
+		str_format(aBuf, sizeof(aBuf),
+			"SELECT Name, Time, Ranking "
+			"FROM ("
+			"  SELECT RANK() OVER w AS Ranking, MIN(Time) AS Time, Name "
+			"  FROM %s_race "
+			"  WHERE Map = ? "
+			"  AND Server LIKE ? "
+			"  GROUP BY Name "
+			"  WINDOW w AS (ORDER BY MIN(Time))"
+			") as a "
+			"ORDER BY Ranking DESC "
+			"LIMIT %d, ?",
+			pSqlServer->GetPrefix(),
+			LimitStart);
+	}
 
 	if(!pSqlServer->PrepareStatement(aBuf, pError, ErrorSize))
 	{
@@ -1068,7 +1135,17 @@ bool CScoreWorker::ShowTop(IDbConnection *pSqlServer, const ISqlData *pGameData,
 	}
 	pSqlServer->BindString(1, pData->m_aMap);
 	pSqlServer->BindString(2, pAny);
-	pSqlServer->BindInt(3, 5);
+	if(Ascending)
+	{
+		pSqlServer->BindString(3, pData->m_aMap);
+		pSqlServer->BindString(4, pAny);
+		pSqlServer->BindString(5, pAny);
+		pSqlServer->BindInt(6, 5);
+	}
+	else
+	{
+		pSqlServer->BindInt(3, 5);
+	}
 
 	// show top
 	int Line = 0;
@@ -1106,7 +1183,17 @@ bool CScoreWorker::ShowTop(IDbConnection *pSqlServer, const ISqlData *pGameData,
 	}
 	pSqlServer->BindString(1, pData->m_aMap);
 	pSqlServer->BindString(2, aServerLike);
-	pSqlServer->BindInt(3, 3);
+	if(Ascending)
+	{
+		pSqlServer->BindString(3, pData->m_aMap);
+		pSqlServer->BindString(4, aServerLike);
+		pSqlServer->BindString(5, aServerLike);
+		pSqlServer->BindInt(6, 3);
+	}
+	else
+	{
+		pSqlServer->BindInt(3, 3);
+	}
 
 	str_format(pResult->m_Data.m_aaMessages[Line], sizeof(pResult->m_Data.m_aaMessages[Line]),
 		"------------ %s 排行 ------------", pData->m_aServer);
@@ -1286,19 +1373,7 @@ bool CScoreWorker::ShowPlayerTeamTop5(IDbConnection *pSqlServer, const ISqlData 
 				return false;
 			}
 
-			char aFormattedNames[512] = "";
-			for(unsigned int Name = 0; Name < Teamrank.m_NumNames; Name++)
-			{
-				str_append(aFormattedNames, Teamrank.m_aaNames[Name]);
-
-				if(Name < Teamrank.m_NumNames - 2)
-					str_append(aFormattedNames, ", ");
-				else if(Name < Teamrank.m_NumNames - 1)
-					str_append(aFormattedNames, " & ");
-			}
-
-			str_format(paMessages[Line], sizeof(paMessages[Line]), "%d. %s 队伍时间：%s",
-				Rank, aFormattedNames, aBuf);
+			Teamrank.FormatTeamTopLine(paMessages[Line], sizeof(paMessages[Line]), Rank, aBuf);
 			if(Last)
 			{
 				Line++;
@@ -1696,8 +1771,14 @@ bool CScoreWorker::SaveTeam(IDbConnection *pSqlServer, const ISqlData *pGameData
 	char aSaveId[UUID_MAXSTRSIZE];
 	FormatUuid(pResult->m_SaveId, aSaveId, UUID_MAXSTRSIZE);
 
-	char *pSaveState = pResult->m_SavedTeam.GetString();
-	char aBuf[65536];
+	const char *pSaveState = pResult->m_SavedTeam.GetString();
+	if(!pSaveState)
+	{
+		pResult->m_Status = CScoreSaveResult::SAVE_FAILED;
+		str_copy(pResult->m_aMessage, "你的队伍太大，无法保存", sizeof(pResult->m_aMessage));
+		return true;
+	}
+	char aBuf[MAX_SAVE_STRING_LENGTH];
 
 	dbg_msg("score/dbg", "code=%s failure=%d", pData->m_aCode, (int)w);
 	bool UseGeneratedCode = pData->m_aCode[0] == '\0' || w != Write::NORMAL;
@@ -1821,7 +1902,7 @@ bool CScoreWorker::LoadTeam(IDbConnection *pSqlServer, const ISqlData *pGameData
 		}
 	}
 
-	char aSaveString[65536];
+	char aSaveString[MAX_SAVE_STRING_LENGTH];
 	pSqlServer->GetString(1, aSaveString, sizeof(aSaveString));
 	int Num = pResult->m_SavedTeam.FromString(aSaveString);
 

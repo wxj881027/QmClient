@@ -18,15 +18,12 @@ namespace qm_card_catalog
 	{
 		using qm_module::EQmModuleId;
 
-		float MeasureFunctionCardHeight(const SQmCardBuildContext &Ctx, const EQmModuleId Id, const float ContentWidth)
+		float MeasureFunctionCardHeight(const SSettingsContentMetrics &Metrics, CMenus *pMenus, const float LabelWidth, const SQmFunctionCardLayoutState Layout, const EQmModuleId Id, const float ContentWidth)
 		{
-			const SSettingsContentMetrics &Metrics = Ctx.m_Metrics;
 			const float LineHeight = Metrics.m_LineHeight;
 			const float BodySize = Metrics.m_BodySize;
 			const float LineSpacing = Metrics.m_LineSpacing;
-			const float LabelWidth = Ctx.m_LabelWidth;
 			const float UiScale = Metrics.m_UiScale;
-			const SQmFunctionCardLayoutState Layout = Ctx.m_pFunctionLayout != nullptr ? *Ctx.m_pFunctionLayout : SQmFunctionCardLayoutState{};
 			const auto Rows = [&Metrics](const float Count) { return CardRows(Metrics, Count); };
 			const auto Row = [&Metrics](const float Spacing = 1.0f) { return CardRow(Metrics, Spacing); };
 			switch(Id)
@@ -34,15 +31,16 @@ namespace qm_card_catalog
 			case EQmModuleId::GoresActor:
 				return !g_Config.m_TcFreezeChatEnabled ? Row() : Row() * (g_Config.m_TcFreezeChatEmoticon ? 5.0f : 4.0f);
 			case EQmModuleId::Gores:
-				return Row() * (3.0f + (g_Config.m_QmAxiomAutoLogin ? 2.0f : 0.0f) + ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 6.0f : 0.0f)) + LineHeight;
-			case EQmModuleId::KeyBinds: return Rows(6.0f);
+				return Row() * (3.0f + (g_Config.m_QmAxiomAutoLogin ? 2.0f : 0.0f) + ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 7.0f : 0.0f)) + LineHeight;
+			case EQmModuleId::KeyBinds: return Rows(8.0f);
 			case EQmModuleId::Emoticons: return Rows(3.0f);
-			case EQmModuleId::MiniFeatures: return Rows(static_cast<float>(QmMiniFeatureRows().size() + QmMiniFeatureSpecialRowCount));
+			// 本地渲染有 21 个常规开关及滑条、过滤输入、新版 IME、赞助提醒各一行。
+			case EQmModuleId::MiniFeatures: return Rows(25.0f);
 			case EQmModuleId::JumpHint: return Row() * 5.0f;
 			case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 6.0f;
 			case EQmModuleId::FriendNotify:
 				return Row() * (5.0f + (g_Config.m_QmFriendOnlineAutoRefresh ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterBroadcast ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterAutoGreet ? 1.0f : 0.0f));
-			case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(QmCardRenderHook::TextRenderer(Ctx.m_pMenus), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
+			case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(QmCardRenderHook::TextRenderer(pMenus), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
 			case EQmModuleId::Translate:
 			{
 				const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
@@ -73,17 +71,17 @@ namespace qm_card_catalog
 				return Row() * 5.0f + BodySize + LineSpacing * 3.0f + std::min(ContentWidth, std::clamp(ContentWidth * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f)) * 0.8f;
 			case EQmModuleId::FavoriteMaps:
 			{
-				const size_t FavoriteCount = QmCardRenderHook::FavoriteMapCount(Ctx.m_pMenus);
-				return Rows((float)std::max<size_t>(1, std::min<size_t>(FavoriteCount, 64)));
+				const size_t FavoriteCount = QmCardRenderHook::FavoriteMapCount(pMenus);
+				return Rows(5.0f + (float)Layout.m_FavoriteMapSearchRows + (float)std::max<size_t>(1, std::min<size_t>(FavoriteCount, 64)));
 			}
 			case EQmModuleId::MapUpload:
 			{
 				float Height = LineHeight * 8.0f + LineSpacing * 6.0f;
 				for(const char *pText : QmMapUploadInstructions())
-					Height += QmMapUploadHelpLineHeight(QmCardRenderHook::TextRenderer(Ctx.m_pMenus), pText, ContentWidth, BodySize, LineHeight) + LineSpacing;
+					Height += QmMapUploadHelpLineHeight(QmCardRenderHook::TextRenderer(pMenus), pText, ContentWidth, BodySize, LineHeight) + LineSpacing;
 				return Height;
 			}
-			case EQmModuleId::HJAssist: return Row() * (g_Config.m_QmAutoTeamLock ? 6.0f : 5.0f);
+			case EQmModuleId::HJAssist: return Row() * (g_Config.m_QmAutoTeamLock ? 9.0f : 8.0f);
 			default: return Rows(1.0f);
 			}
 		}
@@ -142,9 +140,10 @@ namespace qm_card_catalog
 		const bool ReadOnly = Ctx.m_ReadOnly;
 
 		const auto Add = [&](const EQmModuleId ModuleId, const char *pStableId, const char *pTitle, const char *pSubtitle, const FSettingsCardRenderMeasured &Render) {
+			const SQmFunctionCardLayoutState MeasureLayout = Ctx.m_pFunctionLayout != nullptr ? *Ctx.m_pFunctionLayout : SQmFunctionCardLayoutState{};
 			MakeModuleCard(
 				Ctx, ModuleId, pStableId, pTitle, pSubtitle, Render,
-				[&Ctx, ModuleId](float ContentWidth) { return MeasureFunctionCardHeight(Ctx, ModuleId, ContentWidth); },
+				[Metrics, pMenus, LabelWidth, MeasureLayout, ModuleId](float ContentWidth) { return MeasureFunctionCardHeight(Metrics, pMenus, LabelWidth, MeasureLayout, ModuleId, ContentWidth); },
 				MeasureFunctionCardRevision(Ctx, ModuleId),
 				{},
 				Out);
@@ -165,7 +164,7 @@ namespace qm_card_catalog
 			Add(Id, "qm:emoticons", "Emoticons", "Large emoticons and launch mode", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionEmoticonsContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth); });
 			return true;
 		case EQmModuleId::MiniFeatures:
-			Add(Id, "qm:mini_features", "Dream Features", "Only what you can't imagine, nothing Dream can't do", [pMenus, LineHeight, LineSpacing, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(pMenus, Content, LineHeight, LineSpacing, ReadOnly); });
+			Add(Id, "qm:mini_features", "Dream Features", "Only what you can't imagine, nothing Dream can't do", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		case EQmModuleId::JumpHint:
 			Add(Id, "qm:jump_hint", "Position jump hint", "Jump hint text", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionJumpHintContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
@@ -200,6 +199,25 @@ namespace qm_card_catalog
 		case EQmModuleId::HJAssist:
 			Add(Id, "qm:hj_assist", "HJ Assist", "What's done is done, no use saying more", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionHJAssistContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
+		// 本地专属卡（远程目录无此项）。本地页面用 PrewarmOnly 探针测量真实渲染高度：
+		// menus_qmclient.cpp:5244 把探针渲染作为 AddCard 的第 6 参传入，:5225-5229 以
+		// CUIRect{0,0,ContentWidth,9999} 渲染后取 9999 - Probe.h 作为高度。
+		// 目录的静态行数公式（MeasureFunctionCardHeight）没有该卡分支，若沿用会落回默认高度，
+		// 故此处必须自行传入探针式 Measure。
+		case EQmModuleId::SoloSplit:
+		{
+			const auto RenderSoloSplit = [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content, const bool PrewarmOnly) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionSoloSplitContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly); };
+			MakeModuleCard(
+				Ctx, Id, "qm:solo_split", "Solo Split", "Split main and dummy into different teams for solo-play",
+				[RenderSoloSplit, ReadOnly](CUIRect &Content) { RenderSoloSplit(Content, ReadOnly); },
+				[RenderSoloSplit](float ContentWidth) {
+					CUIRect Probe{0.0f, 0.0f, ContentWidth, 9999.0f};
+					RenderSoloSplit(Probe, true);
+					return 9999.0f - Probe.h;
+				},
+				MeasureFunctionCardRevision(Ctx, Id), {}, Out);
+			return true;
+		}
 		default:
 			return false;
 		}

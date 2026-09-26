@@ -391,7 +391,11 @@ namespace
 		OutLayer.m_Width = pTilemapItem->m_Width;
 		OutLayer.m_Height = pTilemapItem->m_Height;
 		OutLayer.m_vTiles.assign((size_t)OutLayer.m_Width * OutLayer.m_Height, MakeTile(TILE_AIR));
-		CMap::ExtractTiles(OutLayer.m_vTiles.data(), OutLayer.m_vTiles.size(), static_cast<const CTile *>(pData), (size_t)DataSize / sizeof(CTile));
+		if(!CMap::ExtractTiles(OutLayer.m_vTiles.data(), OutLayer.m_vTiles.size(), static_cast<const CTile *>(pData), (size_t)DataSize / sizeof(CTile)))
+		{
+			log_error("map_generator", "Failed to extract tile layer data");
+			return false;
+		}
 
 		char aName[16] = "";
 		if(pTilemapItem->m_Version >= 3)
@@ -789,7 +793,7 @@ namespace
 		return Tile.m_Index |
 		       (static_cast<int>(Tile.m_Flags) << 8) |
 		       (static_cast<int>(Tile.m_Skip) << 16) |
-		       (static_cast<int>(Tile.m_Reserved) << 24);
+		       (static_cast<int>(Tile.m_MustBe0) << 24);
 	}
 
 	CTile DecodeTile(int Encoded)
@@ -798,7 +802,7 @@ namespace
 		Tile.m_Index = Encoded & 0xff;
 		Tile.m_Flags = (Encoded >> 8) & 0xff;
 		Tile.m_Skip = (Encoded >> 16) & 0xff;
-		Tile.m_Reserved = (Encoded >> 24) & 0xff;
+		Tile.m_MustBe0 = (Encoded >> 24) & 0xff;
 		return Tile;
 	}
 

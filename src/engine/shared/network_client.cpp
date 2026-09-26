@@ -182,7 +182,11 @@ int CNetClient::Recv(CNetChunk *pChunk, SECURITY_TOKEN *pResponseToken, bool Six
 	{
 		// Unpack next chunk from stored packet if available
 		if(m_PacketChunkUnpacker.UnpackNextChunk(pChunk))
-			return 1;
+		{
+			if(m_Connection.State() != CNetConnection::EState::OFFLINE)
+				return 1;
+			m_PacketChunkUnpacker.Reset();
+		}
 		if(FetchKcpChunk(pChunk, pResponseToken, Sixup))
 			return 1;
 		if(NumDatagrams >= CNET_MAX_DATAGRAMS_PER_RECV)
@@ -224,8 +228,7 @@ int CNetClient::Recv(CNetChunk *pChunk, SECURITY_TOKEN *pResponseToken, bool Six
 		}
 
 		SECURITY_TOKEN Token;
-		*pResponseToken = NET_SECURITY_TOKEN_UNKNOWN;
-		if(CNetBase::UnpackPacket(pData, Bytes, &m_RecvBuffer, Sixup, &Token, pResponseToken) == 0)
+		if(CNetBase::UnpackPacket(pData, Bytes, &m_RecvBuffer, Sixup, true, &Token, pResponseToken) == 0)
 		{
 			if(Sixup)
 			{
@@ -291,7 +294,7 @@ bool CNetClient::FetchKcpChunk(CNetChunk *pChunk, SECURITY_TOKEN *pResponseToken
 
 	SECURITY_TOKEN Token;
 	*pResponseToken = NET_SECURITY_TOKEN_UNKNOWN;
-	if(CNetBase::UnpackPacket(aBuffer, Bytes, &m_RecvBuffer, Sixup, &Token, pResponseToken) != 0)
+	if(CNetBase::UnpackPacket(aBuffer, Bytes, &m_RecvBuffer, Sixup, true, &Token, pResponseToken) != 0)
 		return false;
 
 	NETADDR Addr = *m_Connection.PeerAddress();
@@ -328,11 +331,7 @@ bool CNetClient::FetchKcpChunk(CNetChunk *pChunk, SECURITY_TOKEN *pResponseToken
 
 int CNetClient::Send(CNetChunk *pChunk)
 {
-	if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)
-	{
-		dbg_msg("netclient", "chunk payload too big. %d. dropping chunk", pChunk->m_DataSize);
-		return -1;
-	}
+	pChunk->AssertSizeSanity();
 
 	if(pChunk->m_Flags & NETSENDFLAG_CONNLESS)
 	{
@@ -359,7 +358,7 @@ int CNetClient::Send(CNetChunk *pChunk)
 		{
 			if((pChunk->m_Flags & NETSENDFLAG_FLUSH) == 0 || !m_Connection.HasPendingPacketData())
 				return SendLegacyBypass(pChunk);
-			if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)
+			if(pChunk->m_DataSize > NET_MAX_CHUNK_SIZE)
 				return SendLegacyBypass(pChunk);
 			if(m_Kcp.PendingSegments() >= NET_KCP_MAX_PENDING_SEGMENTS)
 				return -1;
@@ -400,7 +399,7 @@ int CNetClient::Send(CNetChunk *pChunk)
 int CNetClient::SendLegacyBypass(CNetChunk *pChunk)
 {
 	dbg_assert(pChunk->m_ClientId == 0, "erroneous client id");
-	if(pChunk->m_DataSize >= NET_MAX_PAYLOAD)
+	if(pChunk->m_DataSize > NET_MAX_CHUNK_SIZE)
 	{
 		dbg_msg("netclient", "chunk payload too big. %d. dropping chunk", pChunk->m_DataSize);
 		return -1;

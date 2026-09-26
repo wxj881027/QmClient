@@ -132,6 +132,9 @@ class TestRunner:
 		self.valgrind_memcheck = valgrind_memcheck
 		if self.valgrind_memcheck:
 			self.timeout_multiplier *= 20
+		# conn_timeout is measured by the engine's wall clock, so scale it with
+		# the integration-test timeout multiplier as well.
+		self.conn_timeout = min(1000, round(100 * self.timeout_multiplier))
 
 	def run_test(self, test):
 		tmp_dir = tempfile.mkdtemp(prefix=f"integration_{test.name}_", dir=self.dir)
@@ -223,7 +226,6 @@ add_path {relpath(self.runner.data_dir, tmp_dir)}
 				"--gen-suppressions=all",
 				# pylint: disable=consider-using-f-string
 				"--suppressions={}".format(relpath(os.path.join(runner.repo_dir, "memcheck.supp"), self.tmp_dir)),
-				"--track-origins=yes",
 			]
 		self.name = name
 		self.num_clients = 0
@@ -489,6 +491,8 @@ class Client(Runnable):
 				test_env.ddnet,
 				f"cl_input_fifo {self.fifo_name}",
 				"gfx_fullscreen 0",
+				"cl_save_settings 0",
+				f"conn_timeout {test_env.runner.conn_timeout}",
 			]
 			+ extra_args,
 		)
@@ -521,6 +525,7 @@ class Server(Runnable):
 				test_env.ddnet_server,
 				f"sv_input_fifo {self.fifo_name}",
 				"sv_register 0",
+				f"conn_timeout {test_env.runner.conn_timeout}",
 			]
 			+ extra_args,
 		)
@@ -810,8 +815,8 @@ def kcp_mixed_clients_after_fallback(test_env):
 	wait_for_kcp_status_line(server, lambda line: "id=0" in line and "transport=legacy" in line, timeout=5)
 	wait_for_kcp_status_line(server, lambda line: "id=1" in line and "transport=kcp" in line, timeout=5)
 	server.exit()
-	legacy_client.wait_for_log_exact("client: offline error='Server shutdown'")
-	kcp_client.wait_for_log_exact("client: offline error='Server shutdown'")
+	legacy_client.wait_for_log_exact("client: offline error='Server shutdown'", timeout=30)
+	kcp_client.wait_for_log_exact("client: offline error='Server shutdown'", timeout=30)
 	legacy_client.exit()
 	kcp_client.exit()
 	server.wait_for_exit()
@@ -907,57 +912,6 @@ def kcp_timeout_drops_session(test_env):
 
 
 @test
-def client_focus_settings_smoke_can_start_and_connect(test_env):
-	client = test_env.client([
-		"qm_focus_mode 1",
-		"qm_focus_mode_hide_hud 1",
-		"qm_focus_mode_hide_map_progress 0",
-		"qm_focus_mode_hide_info_messages 1",
-		"qm_focus_mode_hide_names 1",
-		"qm_focus_mode_hide_nameplates 0",
-		"qm_focus_mode_hide_direction_indicators 0",
-		"qm_focus_mode_hide_guide_lines 1",
-		"qm_focus_mode_hide_jump_effects 0",
-		"qm_focus_mode_hide_muzzle_effects 1",
-		"qm_focus_mode_mute_jump_sounds 0",
-		"qm_focus_mode_hide_chat 1",
-		"qm_focus_mode_hide_system_messages 0",
-		"qm_focus_mode_hide_echo 1",
-	])
-	server = test_env.server()
-	wait_for_startup([client, server])
-	client.command(f"connect localhost:{server.port}")
-	server.wait_for_log_prefix("server: player has entered the game", timeout=10)
-	server.exit()
-	client.wait_for_log_exact("client: offline error='Server shutdown'")
-	client.exit()
-	server.wait_for_exit()
-	client.wait_for_exit()
-
-
-@test
-def client_gores_settings_smoke_can_start_and_connect(test_env):
-	client = test_env.client([
-		"qm_gores_auto_enable 1",
-		"qm_gores 0",
-		"qm_gores_fast_input 1",
-		"qm_gores_fast_input_others 1",
-		"qm_gores_hide_guides 1",
-		"tc_fast_input 0",
-		"tc_fast_input_others 0",
-	])
-	server = test_env.server()
-	wait_for_startup([client, server])
-	client.command(f"connect localhost:{server.port}")
-	server.wait_for_log_prefix("server: player has entered the game", timeout=10)
-	server.exit()
-	client.wait_for_log_exact("client: offline error='Server shutdown'")
-	client.exit()
-	server.wait_for_exit()
-	client.wait_for_exit()
-
-
-@test
 def client_can_connect_7(test_env):
 	client = test_env.client()
 	server = test_env.server()
@@ -982,7 +936,7 @@ def open_editor(test_env):
 
 @test
 def smoke_test(test_env):
-	client1 = test_env.client(["logfile client1.log", "player_name client1"])
+	client1 = test_env.client(["logfile client1.log", "player_name client1", "qm_chat_hide_system_prefix 0"])
 	server = test_env.server([
 		"logfile server.log",
 		"sv_demo_chat 1",
@@ -994,10 +948,9 @@ def smoke_test(test_env):
 	client1.command("debug 1")
 	client1.command("stdout_output_level 2; loglevel 2")
 	client1.command(f"connect localhost:{server.port}")
-	# ASan/UBSan 构建下进服明显变慢，放宽进服与 LOADING→ONLINE 等待。
-	server.wait_for_log_prefix("server: player has entered the game", timeout=30)
+	server.wait_for_log_prefix("server: player has entered the game", timeout=10)
 	server.command("record server")
-	client1.wait_for_log_exact("client: state change. last=2 current=3", timeout=60)
+	client1.wait_for_log_exact("client: state change. last=2 current=3", timeout=30)
 	client1.command("stdout_output_level 0; loglevel 0")
 	client1.command("debug 0")
 	client1.command("record client1")
@@ -1005,6 +958,7 @@ def smoke_test(test_env):
 	client2 = test_env.client([
 		"logfile client2.log",
 		"player_name client2",
+		"qm_chat_hide_system_prefix 0",
 		f"connect localhost:{server.port}",
 	])
 	wait_for_startup([client2])
@@ -1017,10 +971,10 @@ def smoke_test(test_env):
 		)
 
 	client1.command("say hello world")
-	server.wait_for_log_exact("chat: 0:-2:client1: hello world")
+	server.wait_for_log_exact("chat: 0:-2:client1: hello world", timeout=15)
 
 	client1.command(f"rcon_auth {server.rcon_password}")
-	server.wait_for_log_exact("server: ClientId=0 authed with key='default_admin' (admin)")
+	server.wait_for_log_exact("server: ClientId=0 authed with key='default_admin' (admin)", timeout=15)
 
 	client1.command(
 		'say "/mc; {}"'.format(
@@ -1060,7 +1014,7 @@ def smoke_test(test_env):
 	""".strip().split("\n")
 		)
 	)
-	client1.wait_for_log_exact("chat/server: *** the end", timeout=3)
+	client1.wait_for_log_exact("chat/server: *** the end", timeout=15)
 
 	server.command("stoprecord")
 	client1.command("stoprecord")

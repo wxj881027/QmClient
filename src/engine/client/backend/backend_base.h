@@ -4,7 +4,11 @@
 #include <engine/client/graphics_threaded.h>
 #include <engine/graphics.h>
 
+#ifndef BACKEND_NO_SDL
 #include <SDL_video.h>
+#else
+struct SDL_Window;
+#endif
 
 #include <atomic>
 #include <cstddef>
@@ -122,6 +126,10 @@ public:
 		char *m_pRendererString;
 
 		TTwGraphicsGpuList *m_pGpuList;
+		bool m_VSync = true;
+
+		int *m_pInitError = nullptr;
+		const char **m_pErrStringPtr = nullptr;
 	};
 
 	struct SCommand_Init : public CCommandBuffer::SCommand

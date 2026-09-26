@@ -14,10 +14,39 @@
 #include <game/client/components/tclient/bindwheel.h>
 #include <game/client/ui.h>
 
-#include <string>
+#include <algorithm>
+#include <array>
+#include <cstdint>
 
 namespace QmEmoticon
 {
+	struct SSelectorCharge
+	{
+		static constexpr float REQUIRED_SECONDS = 1.5f;
+
+		void Reset()
+		{
+			m_TrackedEmote = -1;
+			m_Started = 0;
+		}
+
+		float Update(int SelectedEmote, int64_t Now, int64_t Frequency)
+		{
+			if(m_TrackedEmote != SelectedEmote)
+			{
+				m_TrackedEmote = SelectedEmote;
+				m_Started = Now;
+			}
+			if(SelectedEmote < 0 || Frequency <= 0)
+				return 0.0f;
+			return std::clamp(static_cast<float>((Now - m_Started) / static_cast<double>(Frequency) / REQUIRED_SECONDS), 0.0f, 1.0f);
+		}
+
+	private:
+		int m_TrackedEmote = -1;
+		int64_t m_Started = 0;
+	};
+
 	enum class EEffect
 	{
 		INVALID,
@@ -43,6 +72,8 @@ namespace QmEmoticon
 		return ResolveEffect(Emoticon, LaunchMode || ForceLaunch, SuperLaunch);
 	}
 
+	// 远端表情事件（实时通道收到别人的表情）该产生什么效果：先看表情总开关与忽略名单，
+	// 再由两个开关分别拦下「他人的超大表情（头顶大表情）」与「他人的发射表情（投射物）」。
 	inline EEffect ResolveRemoteEffect(int Emoticon, bool LaunchMode, bool SuperLaunch, bool ShowEmotes, bool EmoticonIgnored, bool ShowSuper, bool ShowLaunch)
 	{
 		if(!ShowEmotes || EmoticonIgnored)
@@ -91,15 +122,11 @@ class CEmoticon : public CComponent
 
 	CUi::CTouchState m_TouchState;
 	bool m_TouchPressedOutside;
+	std::array<CEmoticonProjectile, 64> m_aProjectiles;
+	std::array<QmEmoticon::CAlphaMask, NUM_EMOTICONS> m_aCollisionMasks;
 	bool m_LaunchModeActive = false;
-	enum
-	{
-		MAX_PROJECTILES = 64
-	};
-	CEmoticonProjectile m_aProjectiles[MAX_PROJECTILES];
-	int64_t m_SuperChargeStarted = 0;
+	QmEmoticon::SSelectorCharge m_SuperCharge;
 	float m_SuperChargeProgress = 0.0f;
-	int m_SuperChargeTrackedEmote = -1;
 	int m_SuperChargeRingEmote = -1;
 	float m_SuperChargeRingPhase = 0.0f;
 	float m_SuperChargeRingCharge = 0.0f;
@@ -107,21 +134,21 @@ class CEmoticon : public CComponent
 	float m_SuperChargeRingExitPhase = 0.0f;
 	float m_SuperChargeRingExitCharge = 0.0f;
 	bool m_SuperLaunchPending = false;
-	int m_LocalSuperHeadEmoticon = -1;
-	int m_LocalSuperHeadExpireTick = -1;
-	int m_aRemoteSuperHeadEmoticons[MAX_CLIENTS] = {};
-	int m_aRemoteSuperHeadExpireTicks[MAX_CLIENTS] = {};
 
 	static void ConKeyEmoticon(IConsole::IResult *pResult, void *pUserData);
-	static void ConLocalBlink(IConsole::IResult *pResult, void *pUserData);
 	static void ConSuperEmote(IConsole::IResult *pResult, void *pUserData);
+	static void ConLocalBlink(IConsole::IResult *pResult, void *pUserData);
 	static void ConToggleLaunchMode(IConsole::IResult *pResult, void *pUserData);
 	void ToggleLaunchMode();
 	void UpdateSelection();
 	void SetActive(bool Active);
 	void RenderProjectiles();
-	void SpawnProjectile(vec2 Pos, vec2 Dir, int Emoticon, bool Super, int OwnerClientId);
-	QmEmoticon::CAlphaMask m_aCollisionMasks[NUM_EMOTICONS];
+	void SpawnProjectile(vec2 Position, vec2 Direction, int Emoticon, bool Super, int OwnerClientId);
+	// 本机自己的头顶大表情；远端玩家的按 ClientId 各存一份（-1 表示没有）。
+	int m_LocalSuperHeadEmoticon = -1;
+	int m_LocalSuperHeadExpireTick = -1;
+	int m_aRemoteSuperHeadEmoticons[MAX_CLIENTS] = {};
+	int m_aRemoteSuperHeadExpireTicks[MAX_CLIENTS] = {};
 
 public:
 	CEmoticon();
@@ -134,7 +161,8 @@ public:
 	} m_RenderProjectiles;
 	void SetCollisionMask(int Emoticon, const unsigned char *pPixels, int Width, int Height, int Stride)
 	{
-		m_aCollisionMasks[Emoticon].Build(pPixels, Width, Height, Stride);
+		if(Emoticon >= 0 && Emoticon < NUM_EMOTICONS)
+			m_aCollisionMasks[Emoticon].Build(pPixels, Width, Height, Stride);
 	}
 	int Sizeof() const override { return sizeof(*this); }
 
@@ -150,6 +178,7 @@ public:
 	void EyeEmote(int EyeEmote);
 	void TriggerLocalBlink();
 	bool ShouldRenderLocalBlink(int ClientId) const;
+	// 头顶大表情（super emote）：本机自己与远端玩家的超大表情各记一份，带过期 tick。
 	bool IsLocalSuperHeadEmoticon(int ClientId, int Emoticon) const;
 	bool IsLaunchModeActive() const { return m_LaunchModeActive; }
 

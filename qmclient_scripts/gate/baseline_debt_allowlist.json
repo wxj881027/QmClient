@@ -3,21 +3,12 @@
   "entries": [
     {
       "title": "代码格式干跑检查",
-      "detail_hash": "5c2f1b05a4693a486e07d0c50b03d7ff1cb45f7ade936e620d49a40d721bb958",
+      "detail_hash": "d9ae7f84fc42c2333daae3e62ff35350e7c75b8fa42bb3962d710690f82a3de0",
       "reason": "known_baseline_debt",
       "base_ref": "",
-      "added_at": "2026-05-26T21:59:33Z",
-      "source_report": "E:/Coding/DDNet/QmClient/tmp/check-gate-report.json",
-      "source_generated_at": "2026-05-26T21:59:14Z"
-    },
-    {
-      "title": "未使用头文件检查",
-      "detail_hash": "6ac4b5169abf50d50366cbbf7afdb27490bcf2ebdb62acfdc6d03ca9b7056199",
-      "reason": "known_baseline_debt",
-      "base_ref": "",
-      "added_at": "2026-05-26T21:59:33Z",
-      "source_report": "E:/Coding/DDNet/QmClient/tmp/check-gate-report.json",
-      "source_generated_at": "2026-05-26T21:59:14Z"
+      "added_at": "2026-09-18T19:48:50Z",
+      "source_report": "E:/Coding/DDNet/QmClient/tmp/check-gate.json",
+      "source_generated_at": "2026-09-18T19:48:08Z"
     }
   ]
 }

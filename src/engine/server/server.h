@@ -11,12 +11,12 @@
 #include <base/hash.h>
 
 #include <engine/console.h>
+#include <engine/http.h>
 #include <engine/server.h>
 #include <engine/shared/client_brand.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/econ.h>
 #include <engine/shared/fifo.h>
-#include <engine/shared/http.h>
 #include <engine/shared/netban.h>
 #include <engine/shared/network.h>
 #include <engine/shared/protocol.h>
@@ -38,6 +38,7 @@ class CMsgPacker;
 class CPacker;
 class IEngine;
 class IEngineMap;
+class IEngineHttp;
 class ILogger;
 
 class CServerBan : public CNetBan
@@ -169,6 +170,9 @@ public:
 		int m_AuthTries;
 		bool m_AuthHidden;
 		int m_NextMapChunk;
+		int m_NumMapChunks;
+		int m_PreInputsTick;
+		int m_NumPreInputs;
 		int m_Flags;
 		bool m_ShowIps;
 		bool m_DebugDummy;
@@ -199,12 +203,17 @@ public:
 		char m_aDDNetVersionStr[64];
 		CUuid m_ConnectionId;
 		int64_t m_RedirectDropTime;
+		// 官方 7131ad28b：正在重连、暂不改变槽位状态
+		bool m_Rejoining;
 		bool m_KcpCapable;
 		bool m_KcpNegotiated;
 		int m_KcpConv;
 		int64_t m_KcpNegotiatedTime;
 		bool m_CapabilitiesSent;
 		EClientBrand m_ClientBrand;
+
+		int m_aIdMap[LEGACY_MAX_CLIENTS];
+		int m_aReverseIdMap[MAX_CLIENTS];
 
 		// DNSBL
 		EDnsblState m_DnsblState;
@@ -221,7 +230,6 @@ public:
 	IConsole::EAccessLevel ConsoleAccessLevel(int ClientId) const;
 
 	CClient m_aClients[MAX_CLIENTS];
-	int m_aIdMap[MAX_CLIENTS * VANILLA_MAX_CLIENTS];
 
 	rust::Box<CSnapshotDelta> m_pSnapshotDelta;
 	rust::Box<CSnapshotDelta> m_pSnapshotDeltaSixup;
@@ -231,7 +239,7 @@ public:
 	CEcon m_Econ;
 	CFifo m_Fifo;
 	CServerBan m_ServerBan;
-	CHttp m_Http;
+	IEngineHttp *m_pHttp = nullptr;
 
 	IEngineMap *m_pMap;
 
@@ -351,7 +359,7 @@ public:
 	static int NewClientNoAuthCallback(int ClientId, void *pUser);
 	static int DelClientCallback(int ClientId, const char *pReason, void *pUser);
 
-	static int ClientRejoinCallback(int ClientId, void *pUser);
+	static int ClientRejoinCallback(int ClientId, void *pUser, bool Sixup, bool VanillaAuth);
 
 	void SendRconType(int ClientId, bool UsernameReq);
 	void SendCapabilities(int ClientId);
@@ -391,6 +399,7 @@ public:
 	void UpdateClientMaplistEntries(int ClientId);
 
 	bool CheckReservedSlotAuth(int ClientId, const char *pPassword);
+	bool TakePreInputBudget(int ClientId);
 	void ProcessClientPacket(CNetChunk *pPacket);
 
 	class CCache
@@ -427,12 +436,11 @@ public:
 	void CacheServerInfoSixup(CCache *pCache, bool SendClients, int MaxConsideredClients);
 	void SendServerInfo(const NETADDR *pAddr, int Token, int Type, bool SendClients);
 	void GetServerInfoSixup(CPacker *pPacker, bool SendClients);
-	bool RateLimitServerInfoConnless();
-	void SendServerInfoConnless(const NETADDR *pAddr, int Token, int Type);
+	std::optional<bool> RateLimitServerInfoConnless();
 	void UpdateRegisterServerInfo();
 	void UpdateServerInfo(bool Resend);
 
-	void PumpNetwork(bool PacketWaiting);
+	void PumpNetwork();
 
 	void ChangeMap(const char *pMap) override;
 	const char *GetMapName() const override;
@@ -514,6 +522,7 @@ public:
 	void InitMaplist();
 
 	int *GetIdMap(int ClientId) override;
+	int *GetReverseIdMap(int ClientId) override;
 
 	void InitDnsbl(int ClientId);
 	bool DnsblWhite(int ClientId) override
@@ -545,6 +554,8 @@ public:
 	void SetErrorShutdown(const char *pReason) override;
 
 	bool IsSixup(int ClientId) const override { return ClientId != SERVER_DEMO_CLIENT && m_aClients[ClientId].m_Sixup; }
+	int GetMaxClients(int ClientId) const override;
+	bool ClientSupportsServerMaxClients(int ClientId) const override;
 
 	void SetLoggers(std::shared_ptr<ILogger> &&pFileLogger, std::shared_ptr<ILogger> &&pStdoutLogger);
 

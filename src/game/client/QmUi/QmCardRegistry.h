@@ -55,6 +55,11 @@ namespace qm_card_registry
 		const char *m_pTitle; // 面向用户的默认标题（Localize key）
 		const char *m_pSearchKeywords; // 搜索补充词，英文小写为主，空格分隔
 		const char *m_pDescription = nullptr; // 面向用户的描述（Localize key）
+		// 仅影响搜索与导航，不参与 deck 布局和持久化。用于"注册表里有条目、
+		// 功能由别的卡或旧设置页承载"的卡片：它们没有自己的 deck 渲染器，
+		// 若按 m_pDefaultTab 跳转会落在空 tab 上。设置后搜索按此目标跳转。
+		const char *m_pNavigationTab = nullptr; // 覆盖导航 tab（可为旧设置页 key）
+		const char *m_pNavigationStableId = nullptr; // 实际承载该功能的卡（可为 nullptr）
 	};
 
 	struct SCardNavigationTarget

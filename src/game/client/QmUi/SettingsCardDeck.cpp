@@ -364,6 +364,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 	// 先用当前 active snapshot 的几何处理控制器输入，再为最终 active snapshot 重新计算布局。
 	m_vPreviousActiveStateIndices = m_vActiveStateIndices;
 	bool PreLayoutGeometryChanged = false;
+	std::vector<int> vPreLayoutGeometryChangedStates;
 	const bool HasPointerInput = Input.m_MousePressed || Input.m_MouseDown || Input.m_MouseReleased;
 	// Header buttons必须每帧运行以先建立 HotItem；否则鼠标首次按下时
 	// DoButtonLogic 无法进入 active，释放时也就不会提交点击。
@@ -412,6 +413,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			if(CardGeometryChanged)
 			{
 				m_vContentHeights[Card.m_StateIndex] = -1.0f;
+				vPreLayoutGeometryChangedStates.push_back(Card.m_StateIndex);
 				PreLayoutGeometryChanged = true;
 			}
 		}
@@ -424,10 +426,13 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 		GeometryStateChanged = true;
 		if(PreLayoutGeometryChanged)
 		{
-			// 一个卡片的开关可能同时影响同一层的对齐卡片（例如 Tee
-			// 页面自定义颜色区域）。统一清除内容高度，保证第二次布局
-			// 使用同一份配置状态，而不是让相邻卡片保留旧高度。
-			std::fill(m_vContentHeights.begin(), m_vContentHeights.end(), -1.0f);
+			// 只失效实际处理了输入的卡片。后续卡片的 Y 会由列布局自然
+			// 推进，但它们的内容高度和测量缓存不能因邻卡折叠而被重算。
+			for(const int StateIndex : vPreLayoutGeometryChangedStates)
+			{
+				if(StateIndex >= 0 && StateIndex < (int)m_vContentHeights.size())
+					m_vContentHeights[StateIndex] = -1.0f;
+			}
 		}
 		pColumns = &m_ProjectionCache.Resolve(Model, pTab, m_vActiveStateIndices);
 		BuildPreparedCards(*pColumns);

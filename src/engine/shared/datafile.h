@@ -11,6 +11,7 @@
 #include <engine/storage.h>
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <vector>
 
@@ -18,6 +19,14 @@ enum
 {
 	ITEMTYPE_EX = 0xFFFF,
 };
+
+/**
+ * 数据处理器函数在某数据项首次成功解压后被调用。
+ * 函数可以校验数据，出错时返回 `std::make_pair(nullptr, 0)`，成功时返回原始数据。
+ * 函数也可以替换数据并返回新的数据指针与大小；新数据必须用 `malloc` 分配。
+ * 返回不同数据或出错时，函数必须用 `free` 释放原始数据。
+ */
+typedef std::function<std::pair<void *, size_t>(void *pData, size_t Size)> FDataProcessor;
 
 // raw datafile access
 class CDataFileReader
@@ -40,7 +49,7 @@ public:
 	void *GetData(int Index);
 	void *GetDataSwapped(int Index); // makes sure that the data is 32bit LE ints when saved
 	const char *GetDataString(int Index);
-	void ReplaceData(int Index, char *pData, size_t Size); // memory for data must have been allocated with malloc
+	void AddDataProcessor(int Index, FDataProcessor DataProcessor);
 	void UnloadData(int Index);
 	int NumData() const;
 
@@ -49,6 +58,7 @@ public:
 	void GetType(int Type, int *pStart, int *pNum);
 	int FindItemIndex(int Type, int Id);
 	void *FindItem(int Type, int Id);
+	bool OverrideItemData(int Index, const void *pData, size_t Size);
 	int NumItems() const;
 
 	SHA256_DIGEST Sha256() const;

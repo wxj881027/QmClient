@@ -31,9 +31,7 @@ BUILD_EXACT_PATHS = (
     "Cargo.toml",
     "Dockerfile",
     "deny.toml",
-    "lsan.supp",
     "memcheck.supp",
-    "ubsan.supp",
     "valgrind.supp",
 )
 BUILD_FILE_RE = re.compile(r".*\.(c|cc|cpp|cxx|h|hh|hpp|hxx|rs|cmake)$")

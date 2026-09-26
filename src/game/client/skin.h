@@ -9,6 +9,7 @@
 #include <memory>
 
 class CQmSkinOutline;
+
 namespace QmChatAvatar
 {
 	struct SSource;
@@ -28,11 +29,11 @@ public:
 
 		IGraphics::CTextureHandle m_Feet;
 		IGraphics::CTextureHandle m_FeetOutline;
-
-		std::shared_ptr<const QmChatAvatar::SSource> m_pChatAvatar;
-
-		std::shared_ptr<CQmSkinOutline> m_pBodyOutline;
-		std::shared_ptr<CQmSkinOutline> m_pFeetOutline;
+		std::shared_ptr<CQmSkinOutline> m_QmBodyOutline;
+		std::shared_ptr<CQmSkinOutline> m_QmFeetOutline;
+		// 聊天导出的头像素材：加载时从皮肤图缩好的 CPU 副本，
+		// 旧消息不依赖纹理句柄或皮肤缓存存活。
+		std::shared_ptr<const QmChatAvatar::SSource> m_QmChatAvatar;
 
 		IGraphics::CTextureHandle m_Hands;
 		IGraphics::CTextureHandle m_HandsOutline;

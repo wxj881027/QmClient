@@ -48,6 +48,8 @@ def find_unused_header_files(directory):
 			if header in header_files:
 				used_files.add(header)
 
+	used_files.add("pch.h")
+
 	return header_files - used_files
 
 

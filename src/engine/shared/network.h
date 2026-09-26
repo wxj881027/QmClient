@@ -87,7 +87,7 @@ struct SNetTransportStats
 enum
 {
 	NET_MAX_PACKETSIZE = 1400,
-	NET_MAX_PAYLOAD = NET_MAX_PACKETSIZE - 6,
+	NET_MAX_CONNLESS_PAYLOAD = NET_MAX_PACKETSIZE - 6,
 	/**
 	 * The maximum size of a chunk within a connection-oriented packet.
 	 *
@@ -97,7 +97,7 @@ enum
 	NET_MAX_CHUNKHEADERSIZE = 3,
 	NET_PACKETHEADERSIZE = 3,
 	NET_CONNLESS_EXTRA_SIZE = 4,
-	NET_MAX_CLIENTS = 64,
+	NET_MAX_CLIENTS = 128,
 	NET_MAX_CONSOLE_CLIENTS = 4,
 	NET_MAX_SEQUENCE = 1 << 10,
 	NET_MAX_PACKET_CHUNKS = 0xFF,
@@ -122,7 +122,8 @@ enum
 
 	NET_CONN_BUFFERSIZE = 1024 * 32,
 
-	NET_CONNLIMIT_IPS = 16,
+	// `sv_connlimit` 跟踪的地址，按最近最少使用策略淘汰。
+	NET_CONNLIMIT_IPS = 256,
 	NET_FAKE_MAX_DELAYED_PACKETS = 1024,
 	NET_KCP_HEADER_SIZE = 9,
 	NET_KCP_MTU = NET_MAX_PACKETSIZE - NET_KCP_HEADER_SIZE,
@@ -161,7 +162,7 @@ typedef int (*NETFUNC_DELCLIENT)(int ClientId, const char *pReason, void *pUser)
 typedef int (*NETFUNC_NEWCLIENT_CON)(int ClientId, void *pUser);
 typedef int (*NETFUNC_NEWCLIENT)(int ClientId, void *pUser, bool Sixup);
 typedef int (*NETFUNC_NEWCLIENT_NOAUTH)(int ClientId, void *pUser);
-typedef int (*NETFUNC_CLIENTREJOIN)(int ClientId, void *pUser);
+typedef int (*NETFUNC_CLIENTREJOIN)(int ClientId, void *pUser, bool Sixup, bool VanillaAuth);
 
 struct CNetChunk
 {
@@ -174,6 +175,8 @@ struct CNetChunk
 	const void *m_pData;
 	// only used if the flags contain NETSENDFLAG_EXTENDED and NETSENDFLAG_CONNLESS
 	unsigned char m_aExtraData[NET_CONNLESS_EXTRA_SIZE];
+
+	void AssertSizeSanity() const;
 };
 
 class CNetChunkHeader
@@ -206,7 +209,7 @@ public:
 	int m_Ack;
 	int m_NumChunks;
 	int m_DataSize;
-	unsigned char m_aChunkData[NET_MAX_PAYLOAD];
+	unsigned char m_aChunkData[NET_MAX_PACKETSIZE - NET_PACKETHEADERSIZE];
 	unsigned char m_aExtraData[NET_CONNLESS_EXTRA_SIZE];
 };
 
@@ -347,6 +350,8 @@ private:
 	int64_t m_LastUpdateTime;
 	int64_t m_LastRecvTime;
 	int64_t m_LastSendTime;
+	int64_t m_LastResendTime;
+	bool m_ResendRequested;
 	int m_LastRttMs = -1;
 
 	char m_aErrorString[256];
@@ -372,6 +377,7 @@ private:
 	bool IsSixup() const { return m_Sixup; }
 
 	//
+	bool IsPeerAddress(const NETADDR &Addr) const;
 	void SetPeerAddr(const NETADDR *pAddr);
 	void ClearPeerAddr();
 	void ResetStats();
@@ -384,6 +390,7 @@ private:
 	void SendControlWithToken7(int ControlMsg, SECURITY_TOKEN ResponseToken);
 	void ResendChunk(CNetChunkResend *pResend);
 	void Resend();
+	void AnswerResendRequest(int64_t Now);
 
 public:
 	bool m_TimeoutProtected;
@@ -391,7 +398,7 @@ public:
 
 	void SetToken7(TOKEN Token);
 
-	void Reset(bool Rejoin = false);
+	void Reset();
 	void Init(NETSOCKET Socket, bool BlockCloseMsg);
 	int Connect(const NETADDR *pAddr, int NumAddrs);
 	int Connect7(const NETADDR *pAddr, int NumAddrs);
@@ -503,12 +510,15 @@ class CPacketChunkUnpacker
 public:
 	void FeedPacket(const NETADDR &Addr, const CNetPacketConstruct &Packet, CNetConnection *pConnection, int ClientId);
 	bool UnpackNextChunk(CNetChunk *pChunk);
+	void Reset();
 
 private:
 	bool m_Valid = false;
 	NETADDR m_Addr;
 	CNetConnection *m_pConnection;
 	int m_CurrentChunk;
+	// offset of the next chunk header in m_Data.m_aChunkData
+	int m_CurrentOffset;
 	int m_ClientId;
 	CNetPacketConstruct m_Data;
 };
@@ -530,6 +540,7 @@ class CNetServer
 	{
 		NETADDR m_Addr;
 		int64_t m_Time;
+		int64_t m_LastSeen;
 		int m_Conns;
 	};
 
@@ -539,6 +550,9 @@ class CNetServer
 	CSlot m_aSlots[NET_MAX_CLIENTS];
 	int m_MaxClients = NET_MAX_CLIENTS;
 	int m_MaxClientsPerIp;
+
+	bool m_FlushBatch = false;
+	bool m_aFlushPending[NET_MAX_CLIENTS] = {};
 
 	NETFUNC_NEWCLIENT m_pfnNewClient;
 	NETFUNC_NEWCLIENT_NOAUTH m_pfnNewClientNoAuth;
@@ -552,7 +566,14 @@ class CNetServer
 	int64_t m_VConnFirst;
 	int m_VConnNum;
 
-	CSpamConn m_aSpamConns[NET_CONNLIMIT_IPS];
+	// 未认证来源的接收预算；每批接收包预算在 Recv 中重置，其余按秒重置。
+	int m_NumRecvPackets = 0;
+	int64_t m_BudgetStart = 0;
+	int m_NumPreConnDecompress = 0;
+	int m_NumBanReplies = 0;
+	int m_NumVanConnReplies = 0;
+
+	CSpamConn m_aSpamConns[NET_CONNLIMIT_IPS] = {};
 
 	CPacketChunkUnpacker m_PacketChunkUnpacker;
 	CNetPacketConstruct m_RecvBuffer;
@@ -570,10 +591,9 @@ class CNetServer
 	uint64_t m_FakeNetDropped = 0;
 	uint64_t m_FakeNetDelayed = 0;
 
-	void OnTokenCtrlMsg(NETADDR &Addr, int ControlMsg, const CNetPacketConstruct &Packet);
-	int OnSixupCtrlMsg(NETADDR &Addr, CNetChunk *pChunk, int ControlMsg, const CNetPacketConstruct &Packet, SECURITY_TOKEN &ResponseToken, SECURITY_TOKEN Token);
-	void OnPreConnMsg(NETADDR &Addr, CNetPacketConstruct &Packet);
-	void OnConnCtrlMsg(NETADDR &Addr, int ClientId, int ControlMsg, const CNetPacketConstruct &Packet);
+	void OnTokenCtrlMsg(NETADDR &Addr, int ControlMsg, const CNetPacketConstruct &Packet, int Slot);
+	int OnSixupCtrlMsg(NETADDR &Addr, CNetChunk *pChunk, int ControlMsg, const CNetPacketConstruct &Packet, SECURITY_TOKEN &ResponseToken, SECURITY_TOKEN Token, int Slot);
+	void OnPreConnMsg(NETADDR &Addr, CNetPacketConstruct &Packet, int Slot);
 	bool ClientExists(const NETADDR &Addr) { return GetClientSlot(Addr) != -1; }
 	int GetClientSlot(const NETADDR &Addr);
 	void SendControl(NETADDR &Addr, int ControlMsg, const void *pExtra, int ExtraSize, SECURITY_TOKEN SecurityToken);
@@ -592,7 +612,7 @@ class CNetServer
 	bool FakeNetQueuePacket(const NETADDR &Addr, const unsigned char *pData, int Bytes, int64_t DeliverTime);
 	bool FakeNetFilterPacket(const NETADDR &Addr, const unsigned char *pData, int Bytes);
 
-	int TryAcceptClient(NETADDR &Addr, SECURITY_TOKEN SecurityToken, bool VanillaAuth = false, bool Sixup = false, SECURITY_TOKEN Token = 0);
+	int TryAcceptClient(NETADDR &Addr, SECURITY_TOKEN SecurityToken, int Slot, bool VanillaAuth = false, bool Sixup = false, SECURITY_TOKEN Token = 0);
 	int NumClientsWithAddr(NETADDR Addr);
 	bool Connlimit(NETADDR Addr);
 	void SendMsgs(NETADDR &Addr, const CPacker **ppMsgs, int Num);
@@ -610,6 +630,8 @@ public:
 	int Send(CNetChunk *pChunk);
 	int SendLegacyBypass(CNetChunk *pChunk);
 	void Update();
+	void BeginFlushBatch() { m_FlushBatch = true; }
+	void EndFlushBatch();
 
 	//
 	void Drop(int ClientId, const char *pReason);
@@ -708,7 +730,7 @@ private:
 	public:
 		NETADDR m_Addr;
 		int m_DataSize;
-		unsigned char m_aData[NET_MAX_PAYLOAD];
+		unsigned char m_aData[NET_MAX_CONNLESS_PAYLOAD];
 		int64_t m_Expiry;
 	};
 
@@ -783,6 +805,7 @@ public:
 
 	// error and state
 	int NetType() const { return net_socket_type(m_Socket); }
+	bool SocketIsBroken() const { return m_Socket != nullptr && net_udp_is_broken(m_Socket); }
 	int State() const;
 	const NETADDR *ServerAddress() const { return m_Connection.PeerAddress(); }
 	void ConnectAddresses(const NETADDR **ppAddrs, int *pNumAddrs) const { m_Connection.ConnectAddresses(ppAddrs, pNumAddrs); }
@@ -821,7 +844,7 @@ public:
 	static void SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket, SECURITY_TOKEN SecurityToken, bool Sixup = false);
 
 	static std::optional<int> UnpackPacketFlags(unsigned char *pBuffer, int Size);
-	static int UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct *pPacket, bool &Sixup, SECURITY_TOKEN *pSecurityToken = nullptr, SECURITY_TOKEN *pResponseToken = nullptr);
+	static int UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct *pPacket, bool &Sixup, bool AllowDecompression = true, SECURITY_TOKEN *pSecurityToken = nullptr, SECURITY_TOKEN *pResponseToken = nullptr, bool *pDecompressed = nullptr);
 
 	// The backroom is ack-NET_MAX_SEQUENCE/2. Used for knowing if we acked a packet or not
 	static bool IsSeqInBackroom(int Seq, int Ack);

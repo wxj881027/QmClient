@@ -32,19 +32,21 @@ public:
 	}
 
 	// vAllowed 由 CQmHookCollCandidates 生成，按客户端编号递增；返回值只使用到下次查询。
+	// 快路径原样返回入参引用，调用方不会传入临时量：返回地址合同由 ddnet_19_9_sync_test.cpp 固定
+	// （GetCandidates 的返回值必须与 vAllowed 同地址），因此这里保留返回常量引用。
 	template<typename P, typename V>
 	const std::vector<int> &GetCandidates(const SQmHookCollSegment &Segment, const std::vector<int> &vAllowed, P &&PositionOf, V &&Valid)
 	{
 		// 少量候选直接扫描，避免为每段的二分查找与名单过滤付出更多成本。
 		if(vAllowed.size() < 16)
-			return vAllowed;
+			return vAllowed; // NOLINT(bugprone-return-const-ref-from-parameter)
 
 		if(!m_Ready)
 		{
 			// 单条短提示线沿用直接粗筛；本帧查询足够多时才摊销两轴排序成本。
 			m_PendingCandidates += vAllowed.size();
 			if(m_PendingCandidates <= MAX_CLIENTS * 8)
-				return vAllowed;
+				return vAllowed; // NOLINT(bugprone-return-const-ref-from-parameter)
 			m_Count = 0;
 			for(int Id = 0; Id < MAX_CLIENTS; ++Id)
 			{
@@ -64,7 +66,7 @@ public:
 		if(m_Count > 0 &&
 			Segment.m_Min.x <= m_aaSorted[0][0].m_Coordinate && Segment.m_Max.x >= m_aaSorted[0][m_Count - 1].m_Coordinate &&
 			Segment.m_Min.y <= m_aaSorted[1][0].m_Coordinate && Segment.m_Max.y >= m_aaSorted[1][m_Count - 1].m_Coordinate)
-			return vAllowed;
+			return vAllowed; // NOLINT(bugprone-return-const-ref-from-parameter)
 
 		int aBegin[2], aEnd[2];
 		for(int Axis = 0; Axis < 2; ++Axis)
@@ -79,7 +81,7 @@ public:
 		const int Axis = aEnd[0] - aBegin[0] <= aEnd[1] - aBegin[1] ? 0 : 1;
 		// 两轴都很密集时直接使用已有名单，不再做名单排序或逐项资格查找。
 		if(aEnd[Axis] - aBegin[Axis] >= (int)vAllowed.size() / 2)
-			return vAllowed;
+			return vAllowed; // NOLINT(bugprone-return-const-ref-from-parameter)
 
 		m_vNearby.clear();
 		for(int Index = aBegin[Axis]; Index < aEnd[Axis]; ++Index)

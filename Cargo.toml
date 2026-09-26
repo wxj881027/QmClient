@@ -15,3 +15,11 @@ panic = "abort"
 [profile.release]
 lto = "thin"
 panic = "abort"
+
+[profile.relwithdebinfo]
+inherits = "release"
+debug = true
+
+[profile.minsizerel]
+inherits = "release"
+opt-level = "z"

@@ -46,12 +46,15 @@ PAGE_STABLE_IDS = {
 		"qm:coords",
 		"qm:player_stats",
 		"qm:debug_graph",
+		"qm:debug_mode",
 		"qm:input_overlay",
 		"qm:hud_notifications",
 		"qm:voice",
 		"qm:dummy_miniview",
 		"qm:dynamic_island",
 		"qm:system_media_controls",
+		"qm:lyrics",
+		"qm:bind_status_hud",
 		"qm:background_3d",
 	),
 	"qmclient_function": (
@@ -59,6 +62,7 @@ PAGE_STABLE_IDS = {
 		"qm:gores_actor",
 		"qm:gores",
 		"qm:key_binds",
+		"qm:emoticons",
 		"qm:mini_features",
 		"qm:jump_hint",
 		"qm:weapon_trajectory",
@@ -67,14 +71,17 @@ PAGE_STABLE_IDS = {
 		"qm:qiafen",
 		"qm:translate",
 		"qm:pie_menu",
+		"qm:map_upload",
 		"qm:favorite_maps",
 		"qm:hj_assist",
+		"qm:solo_split",
 	),
 	"qmclient_visual": (
 		"qm:chat_bubble",
 		"qm:camera_view",
 		"qm:skin_appearance",
 		"qm:skin_transition",
+		"qm:focus_mode",
 		"qm:weapon_animation",
 		"qm:entity_overlay",
 		"qm:collision_hitbox",
@@ -186,7 +193,6 @@ COMMON_REQUIRED = (
 	"SettingsPageLayout(",
 	"SSettingsPageLayoutFrame",
 	"SSettingsCardDefinition",
-	"SSettingsCardDeckResult",
 	"QmResolveScrollPolicy(",
 	"EQmScrollProfile::SETTINGS_OUTER",
 )
@@ -304,16 +310,41 @@ _PAGE_SOURCE = {
 	"assets": Path("src/game/client/components/menus_settings_assets.cpp"),
 }
 _DEFAULT_SOURCE = Path("src/game/client/components/menus_settings.cpp")
-# 全局卡片目录：栖梦三个分类的卡片 stableId/构造入口登记在这里（页面只声明"这一页有哪些卡"）。
-_CARD_CATALOG_SOURCES = (
-	Path("src/game/client/QmUi/cards/QmCardCatalog.cpp"),
-	Path("src/game/client/QmUi/cards/QmCardCatalogVisual.cpp"),
-	Path("src/game/client/QmUi/cards/QmCardCatalogSkin.cpp"),
-	Path("src/game/client/QmUi/cards/QmCardCatalogFunction.cpp"),
-	Path("src/game/client/QmUi/cards/QmCardCatalogHud.cpp"),
-)
 _REGISTRY_SOURCE = Path("src/game/client/QmUi/QmCardRegistry.cpp")
 _NAVIGATION_SOURCE = Path("src/game/client/components/menus.cpp")
+# 卡片生产的归属：页面声明「这一页有哪些卡片」，具体生产在全局卡片目录的分类模块里（N3）。
+_CATALOGUE_SOURCE = Path("src/game/client/QmUi/cards/QmCardCatalogIds.cpp")
+PAGE_CATALOGUE_LIST = {
+	"qmclient_hud": "HudCardStableIds",
+	"qmclient_function": "FunctionCardStableIds",
+	"qmclient_visual": "VisualCardStableIds",
+}
+_CATALOGUE_LIST_STATICS = {
+	"HudCardStableIds": "s_vHudCards",
+	"FunctionCardStableIds": "s_vFunctionCards",
+	"VisualCardStableIds": "s_vVisualCards",
+}
+
+
+def _catalogue_list_contains(root: Path, list_name: str, stable_id: str) -> bool:
+	"""该 stableId 是否出现在目录源码对应分类清单的字面量中。
+
+	N3 之后卡片不再由页面逐个 AddCard 生产，「每张期望卡片都真的被本页生产」这一不变量
+	改由「页面调用对应分类清单 + 该 stableId 确在该清单字面量内」两段共同保证。
+	"""
+	static_name = _CATALOGUE_LIST_STATICS.get(list_name)
+	if static_name is None:
+		return False
+	source = _read(root, _CATALOGUE_SOURCE)
+	marker = f"{static_name} = {{"
+	start = source.find(marker)
+	if start == -1:
+		return False
+	end = source.find("};", start)
+	if end == -1:
+		return False
+	return f'"{stable_id}"' in source[start:end]
+
 _TYPOGRAPHY_SOURCES = (
 	Path("src/game/client/components/menus_settings.cpp"),
 	Path("src/game/client/components/menus_settings7.cpp"),
@@ -326,6 +357,7 @@ _FONT_ASSIGNMENT_SOURCES = _TYPOGRAPHY_SOURCES + (_NAVIGATION_SOURCE,)
 # 颜色拾取器和地图 popup。新增例外必须在这里集中说明，禁止在业务页静默散落裸字号。
 _RAW_FONT_ALLOWLIST = (
 	"Entry.m_aCountryCodeString",
+	"Entry.m_pFlag->m_aCountryCodeString",
 	"pEntry->m_aCountryCodeString",
 	"&ChangeInfo, aStats",
 	"FONT_ICON_QUESTION",
@@ -610,6 +642,9 @@ def audit_page(repo_root: Path, page: str) -> list[str]:
 			page_source += "\n" + helper
 
 	required = PAGE_REQUIRED[page] if page == "assets" else COMMON_REQUIRED + PAGE_REQUIRED[page]
+	# 全局搜索只用 Deck 的绘制副作用，结果由搜索缓存持有；其他卡片页仍消费返回值。
+	if page not in ("assets", "global_search"):
+		required += ("SSettingsCardDeckResult",)
 	metrics_required = PAGE_METRICS_REQUIRED.get(page, "ResolveSettingsContentMetrics(")
 	required += (metrics_required,)
 	for token in required:
@@ -627,17 +662,24 @@ def audit_page(repo_root: Path, page: str) -> list[str]:
 
 	registry = _read(repo_root, _REGISTRY_SOURCE)
 	navigation = _read(repo_root, _NAVIGATION_SOURCE)
-	# 卡片构造已迁入全局卡片目录：生产者条目既可能写在页面文件里，也可能登记在卡片目录模块里。
-	producer_source = page_source
-	for catalog_path in _CARD_CATALOG_SOURCES:
-		producer_source += "\n" + _read(repo_root, catalog_path)
 	for stable_id in PAGE_STABLE_IDS[page]:
 		if stable_id not in registry:
 			errors.append(f"{page}: {stable_id}: registry/navigation entry missing")
-		if page in PRODUCER_COMPLETE_PAGES and stable_id not in producer_source and page not in PAGE_PRODUCER_REQUIRED:
-			errors.append(f"{page}: {stable_id}: page producer entry missing")
+		if page in PRODUCER_COMPLETE_PAGES and page not in PAGE_PRODUCER_REQUIRED:
+			# 卡片生产已迁入全局卡片目录（N3）：页面只声明本页含有哪些分类。
+			# 仍校验「该页每张期望卡片都真的被生产」，但拆成两段：页面调用对应分类清单，
+			# 且该 stableId 确实在该清单字面量内——不是取消检查。
+			catalogue_list = PAGE_CATALOGUE_LIST.get(page)
+			if catalogue_list is None:
+				if stable_id not in page_source:
+					errors.append(f"{page}: {stable_id}: page producer entry missing")
+			else:
+				if f"qm_card_catalog::{catalogue_list}()" not in page_source:
+					errors.append(f"{page}: qm_card_catalog::{catalogue_list}(): page producer entry missing")
+				elif not _catalogue_list_contains(repo_root, catalogue_list, stable_id):
+					errors.append(f"{page}: {stable_id}: catalogue category entry missing")
 	for token in PAGE_PRODUCER_REQUIRED.get(page, ()):
-		if token not in producer_source:
+		if token not in page_source:
 			errors.append(f"{page}: {token}: page producer entry missing")
 	for token in REGISTRY_FORBIDDEN.get(page, ()):
 		if token in registry:
@@ -653,7 +695,14 @@ def audit_shared_contracts(repo_root: Path) -> list[str]:
 	menu_source = _read(repo_root, _NAVIGATION_SOURCE)
 	settings_shell_source = _read(repo_root, _DEFAULT_SOURCE)
 	tclient_source = _read(repo_root, Path("src/game/client/components/tclient/menus_tclient.cpp"))
-	ui_source = _read(repo_root, Path("src/game/client/ui.cpp"))
+	# Dropdown trigger/popup rendering lives in ui_popups.cpp after the UI split.
+	ui_source = "\n".join(
+		_read(repo_root, relative)
+		for relative in (
+			Path("src/game/client/ui.cpp"),
+			Path("src/game/client/ui_popups.cpp"),
+		)
+	)
 	if "ResolveSettingsRadioRowLayout(" not in menu_source:
 		errors.append("shared: responsive settings radio resolver missing")
 	if "SettingsPageUiScale(pRect->w)" in menu_source:

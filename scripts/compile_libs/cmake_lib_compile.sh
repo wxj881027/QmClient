@@ -15,6 +15,7 @@ function make_cmake() {
 	local cmake_arguments=()
 	local cmake_wrapper=""
 	local cmake_targets=""
+	local ios_sdk_path=""
 
 	# Target platform settings
 	if [[ "${TARGET_PLATFORM}" == "android" ]]; then
@@ -31,6 +32,16 @@ function make_cmake() {
 		cmake_arguments+=("-DCMAKE_ANDROID_ARCH_ABI=${build_android_abi}")
 		# Most required C and LD flags for Android are already specified by the toolchain file
 		build_extra_cflags="${ANDROID_EXTRA_RELEASE_CFLAGS}"
+	elif [[ "${TARGET_PLATFORM}" == "ios" ]]; then
+		local build_ios_sysroot="${3}"
+		local build_ios_arch="${4}"
+		ios_sdk_path="$(xcrun --sdk "${build_ios_sysroot}${IOS_SDK_VERSION}" --show-sdk-path)"
+		cmake_arguments+=("-DCMAKE_SYSTEM_NAME=iOS")
+		cmake_arguments+=("-DCMAKE_OSX_SYSROOT=${ios_sdk_path}")
+		cmake_arguments+=("-DCMAKE_OSX_ARCHITECTURES=${build_ios_arch}")
+		cmake_arguments+=("-DCMAKE_OSX_DEPLOYMENT_TARGET=${IOS_DEPLOYMENT_TARGET}")
+		cmake_arguments+=("-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY")
+		build_extra_cflags="${IOS_COMMON_CFLAGS}"
 	elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
 		cmake_wrapper="emcmake"
 		build_extra_cflags="${EMSCRIPTEN_WASM_CFLAGS} ${EMSCRIPTEN_EXTRA_RELEASE_CFLAGS}"
@@ -42,6 +53,8 @@ function make_cmake() {
 	build_extra_cflags="${build_extra_cflags} -fno-ident"
 	if [[ "${TARGET_PLATFORM}" == "android" ]]; then
 		build_extra_cflags="${build_extra_cflags} -ffile-prefix-map=${ANDROID_TOOLCHAIN_ROOT}=ANDROID_TOOLCHAIN_ROOT"
+	elif [[ "${TARGET_PLATFORM}" == "ios" ]]; then
+		build_extra_cflags="${build_extra_cflags} -ffile-prefix-map=${ios_sdk_path}=IOS_SDK_ROOT"
 	elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
 		build_extra_cflags="${build_extra_cflags} -ffile-prefix-map=${EMSDK}=EMSDK"
 	fi
@@ -67,10 +80,14 @@ function make_cmake() {
 			cmake_arguments+=("-DOPENSSL_CRYPTO_LIBRARY=${ssl_path}/${build_folder}/libcrypto.a")
 			cmake_arguments+=("-DOPENSSL_SSL_LIBRARY=${ssl_path}/${build_folder}/libssl.a")
 			cmake_arguments+=("-DOPENSSL_INCLUDE_DIR=${ssl_path}/include")
-		elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
-			# Compile without crypto because curl does not work with Emscripten at all,
-			# but we currently need curl to compile server and client.
+		elif [[ "${TARGET_PLATFORM}" == "ios" ]]; then
+			cmake_arguments+=("-DCURL_ENABLE_SSL=ON")
+			# The pinned curl 8.8.0 spells this option CURL_USE_SECTRANSP.
+			cmake_arguments+=("-DCURL_USE_SECTRANSP=ON")
 			cmake_arguments+=("-DCURL_USE_OPENSSL=OFF")
+		elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
+			log_error "ERROR: Compiling ${TARGET_LIBRARY} for ${TARGET_PLATFORM} is unnecessary."
+			exit 1
 		fi
 	elif [[ "${TARGET_LIBRARY}" == "freetype" ]]; then
 		local png_path="${PWD}/../png"
@@ -82,7 +99,9 @@ function make_cmake() {
 		cmake_arguments+=("-DFT_REQUIRE_ZLIB=ON")
 		cmake_arguments+=("-DPNG_LIBRARY=${png_path}/${build_folder}/libpng.a")
 		cmake_arguments+=("-DPNG_PNG_INCLUDE_DIR=${png_path}${PATH_SEPARATOR}${png_path}/${build_folder}")
+		cmake_arguments+=("-DCMAKE_POLICY_VERSION_MINIMUM=3.5")
 	elif [[ "${TARGET_LIBRARY}" == "ogg" ]]; then
+		cmake_arguments+=("-DCMAKE_POLICY_VERSION_MINIMUM=3.5")
 		cmake_targets="--target ogg"
 	elif [[ "${TARGET_LIBRARY}" == "opus" ]]; then
 		cmake_targets="--target opus"
@@ -100,6 +119,14 @@ function make_cmake() {
 			cmake_arguments+=("-DSDL_PTHREADS=ON")
 			cmake_arguments+=("-DSDL_THREADS=ON")
 		fi
+	elif [[ "${TARGET_LIBRARY}" == "wavpack" ]]; then
+		cmake_targets="--target wavpack"
+		cmake_arguments+=("-DWAVPACK_BUILD_PROGRAMS=OFF")
+		cmake_arguments+=("-DWAVPACK_ENABLE_THREADS=OFF")
+		cmake_arguments+=("-DWAVPACK_INSTALL_CMAKE_MODULE=OFF")
+		cmake_arguments+=("-DWAVPACK_INSTALL_DOCS=OFF")
+		cmake_arguments+=("-DWAVPACK_INSTALL_PKGCONFIG_MODULE=OFF")
+		cmake_arguments+=("-DCMAKE_POLICY_VERSION_MINIMUM=3.5")
 	elif [[ "${TARGET_LIBRARY}" == "zlib" ]]; then
 		cmake_targets="--target zlibstatic"
 		cmake_arguments+=("-DZLIB_BUILD_SHARED=OFF")
@@ -145,6 +172,10 @@ function make_all_cmake() {
 		make_cmake "${ANDROID_ARM64_BUILD_FOLDER}" "${ANDROID_ARM64_ABI}"
 		make_cmake "${ANDROID_X86_BUILD_FOLDER}" "${ANDROID_X86_ABI}"
 		make_cmake "${ANDROID_X64_BUILD_FOLDER}" "${ANDROID_X64_ABI}"
+	elif [[ "${TARGET_PLATFORM}" == "ios" ]]; then
+		make_cmake "${IOS_DEVICE_BUILD_FOLDER}" "" "iphoneos" "${IOS_DEVICE_ARCH}"
+		make_cmake "${IOS_SIM_ARM64_BUILD_FOLDER}" "" "iphonesimulator" "${IOS_SIM_ARM64_ARCH}"
+		make_cmake "${IOS_SIM_X64_BUILD_FOLDER}" "" "iphonesimulator" "${IOS_SIM_X64_ARCH}"
 	elif [[ "${TARGET_PLATFORM}" == "webasm" ]]; then
 		make_cmake "${EMSCRIPTEN_WASM_BUILD_FOLDER}" ""
 	else

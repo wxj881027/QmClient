@@ -83,6 +83,18 @@ public:
 	static std::unique_ptr<CSnapshotBuffer> New();
 };
 
+class alignas(int32_t) CSnapshotDeltaBuffer
+{
+	// 官方 be3e5e6a3：快照对象数量多时 delta 可能比快照本身还大，
+	// 官方按两倍快照上限给 delta 缓冲留空间。
+	static constexpr int MAX_SIZE = 2 * CSnapshot::MAX_SIZE;
+
+public:
+	unsigned char m_aData[MAX_SIZE];
+
+	rust::Slice<int32_t> AsMutSlice() { return rust::Slice((int32_t *)m_aData, sizeof(m_aData) / sizeof(int32_t)); }
+};
+
 // CSnapshotStorage
 
 class CSnapshotStorage

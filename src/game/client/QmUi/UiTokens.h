@@ -183,40 +183,24 @@ namespace ui_token::ime
 
 namespace ui_token::motion
 {
-	// 菜单反馈快速起步、平稳收尾；语义参数独立于通用曲线预设。
-	// 时长不得超过交互预算 0.14s（见 UiV2MenuMotion.SemanticTweens...），
-	// 同时要在约 0.12s 中点采样时仍可见过渡（EnterStartsFromTransparent...）。
-	inline constexpr SUiAnimTransition HOVER_FADE = {
-		.m_DurationSec = 0.14f,
-		.m_Easing = EEasing::EASE_OUT_QUART,
-	};
-	inline constexpr SUiAnimTransition PRESS_SCALE = {
-		.m_DurationSec = 0.08f,
-		.m_Easing = EEasing::EASE_OUT_QUART,
-	};
-	inline constexpr SUiAnimTransition MODAL_FADE_SCALE = {
+	// 菜单反馈使用独立的语义时长，避免通用预设改变交互节奏。
+	inline constexpr SUiAnimTransition HOVER_FADE{.m_DurationSec = 0.12f, .m_Easing = EEasing::EASE_OUT_QUART};
+	inline constexpr SUiAnimTransition PRESS_SCALE{.m_DurationSec = 0.08f, .m_Easing = EEasing::EASE_OUT_QUART};
+	inline constexpr SUiAnimTransition MODAL_FADE_SCALE{
 		.m_DurationSec = 0.20f,
 		.m_Easing = EEasing::EASE_OUT_QUART,
 		.m_Spring = {1.0f, 400.0f, 40.0f, 0.001f, 0.01f},
 	};
-	inline constexpr SUiAnimTransition PAGE_SLIDE = {
-		.m_DurationSec = 0.22f,
-		.m_Easing = EEasing::EASE_OUT_QUART,
-	};
-	inline constexpr SUiAnimTransition TAB_SWITCH = {
-		.m_DurationSec = 0.16f,
-		.m_Easing = EEasing::EASE_OUT_QUART,
-	};
+	inline constexpr SUiAnimTransition PAGE_SLIDE{.m_DurationSec = 0.22f, .m_Easing = EEasing::EASE_OUT_QUART};
+	inline constexpr SUiAnimTransition TAB_SWITCH{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART};
 	inline constexpr const SUiAnimTransition &INPUT_FOCUS_RING = HOVER_FADE;
-	inline constexpr SUiAnimTransition TOAST_SLIDE = {
+	inline constexpr SUiAnimTransition TOAST_SLIDE{
 		.m_DurationSec = 0.22f,
 		.m_Easing = EEasing::EASE_OUT_QUART,
 		.m_Spring = MODAL_FADE_SCALE.m_Spring,
 	};
-	inline constexpr SUiAnimTransition TOOLTIP_FADE = {
-		.m_DurationSec = 0.12f,
-		.m_Easing = EEasing::EASE_OUT_QUART,
-	};
+	inline constexpr SUiAnimTransition TOOLTIP_FADE{.m_DurationSec = 0.12f, .m_Easing = EEasing::EASE_OUT_QUART};
+	// 导航滑块专用：切换 Tab / 分段时带速度续接地滑过去（ζ≈0.93）。
 	inline constexpr SUiSpringConfig NAVIGATION_SPRING{1.0f, 500.0f, 42.0f, 0.05f, 0.4f};
 	inline constexpr SUiSpringConfig TOGGLE_SPRING{1.0f, 620.0f, 44.0f, 0.01f, 0.05f};
 	inline constexpr SUiSpringConfig CARD_REORDER{1.0f, 900.0f, 48.0f, 0.01f, 0.05f};

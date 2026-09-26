@@ -86,8 +86,7 @@ bool CMovingTiles::ShouldRenderMovingWater() const
 	if(Client()->State() != IClient::STATE_ONLINE)
 		return false;
 
-	CServerInfo ServerInfo = {};
-	Client()->GetServerInfo(&ServerInfo);
+	const CServerInfo &ServerInfo = Client()->ServerInfo();
 
 	const char *pServerInfoGameType = ServerInfo.m_aGameType;
 	const char *pCommunityId = ServerInfo.m_aCommunityId;
@@ -315,10 +314,11 @@ void CMovingTiles::OnRender()
 				const float Rotation = PositionEval.b / 180.0f * pi + QuadData.m_Angle;
 
 				IGraphics::CColorVertex aColors[4] = {
-					IGraphics::CColorVertex(0, pQuad->m_aColors[0].r * ColorConv * Color.r, pQuad->m_aColors[0].g * ColorConv * Color.g, pQuad->m_aColors[0].b * ColorConv * Color.b, pQuad->m_aColors[0].a * ColorConv * Color.a),
-					IGraphics::CColorVertex(1, pQuad->m_aColors[1].r * ColorConv * Color.r, pQuad->m_aColors[1].g * ColorConv * Color.g, pQuad->m_aColors[1].b * ColorConv * Color.b, pQuad->m_aColors[1].a * ColorConv * Color.a),
-					IGraphics::CColorVertex(2, pQuad->m_aColors[2].r * ColorConv * Color.r, pQuad->m_aColors[2].g * ColorConv * Color.g, pQuad->m_aColors[2].b * ColorConv * Color.b, pQuad->m_aColors[2].a * ColorConv * Color.a),
-					IGraphics::CColorVertex(3, pQuad->m_aColors[3].r * ColorConv * Color.r, pQuad->m_aColors[3].g * ColorConv * Color.g, pQuad->m_aColors[3].b * ColorConv * Color.b, pQuad->m_aColors[3].a * ColorConv * Color.a)};
+					IGraphics::CColorVertex(0, ColorRGBA(pQuad->m_aColors[0].r, pQuad->m_aColors[0].g, pQuad->m_aColors[0].b, pQuad->m_aColors[0].a).Multiply(Color).Multiply(ColorConv)),
+					IGraphics::CColorVertex(1, ColorRGBA(pQuad->m_aColors[1].r, pQuad->m_aColors[1].g, pQuad->m_aColors[1].b, pQuad->m_aColors[1].a).Multiply(Color).Multiply(ColorConv)),
+					IGraphics::CColorVertex(2, ColorRGBA(pQuad->m_aColors[2].r, pQuad->m_aColors[2].g, pQuad->m_aColors[2].b, pQuad->m_aColors[2].a).Multiply(Color).Multiply(ColorConv)),
+					IGraphics::CColorVertex(3, ColorRGBA(pQuad->m_aColors[3].r, pQuad->m_aColors[3].g, pQuad->m_aColors[3].b, pQuad->m_aColors[3].a).Multiply(Color).Multiply(ColorConv)),
+				};
 				Graphics()->SetColorVertex(aColors, std::size(aColors));
 
 				vec2 aPoints[4] = {
@@ -345,7 +345,7 @@ void CMovingTiles::OnRender()
 		}
 	};
 
-	// 移动方块全部走透明通道，避免再遍历一次不会提交任何绘制的通道。
+	// 移动方块统一走透明通道，避免空的不透明遍历。
 	RenderPass();
 	Graphics()->ClipDisable();
 	Graphics()->MapScreen(SavedScreenX0, SavedScreenY0, SavedScreenX1, SavedScreenY1);

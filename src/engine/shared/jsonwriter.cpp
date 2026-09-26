@@ -213,14 +213,28 @@ CJsonFileWriter::CJsonFileWriter(IOHANDLE IO)
 
 CJsonFileWriter::~CJsonFileWriter()
 {
+	Finish();
+}
+
+bool CJsonFileWriter::Finish()
+{
+	if(m_Closed)
+		return m_Success;
 	// Ensure newline at the end
 	WriteInternal("\n");
-	io_close(m_IO);
+	if(io_sync(m_IO) != 0)
+		m_Success = false;
+	if(io_close(m_IO) != 0)
+		m_Success = false;
+	m_Closed = true;
+	return m_Success;
 }
 
 void CJsonFileWriter::WriteInternal(const char *pStr, int Length)
 {
-	io_write(m_IO, pStr, Length < 0 ? str_length(pStr) : Length);
+	const unsigned WriteLength = Length < 0 ? str_length(pStr) : (unsigned)Length;
+	if(io_write(m_IO, pStr, WriteLength) != WriteLength)
+		m_Success = false;
 }
 
 void CJsonStringWriter::WriteInternal(const char *pStr, int Length)

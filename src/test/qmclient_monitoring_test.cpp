@@ -7013,7 +7013,7 @@ TEST(QmMonitoringHelpers, GlobalSearchUsesDedicatedSettingsPage)
 	EXPECT_NE(SearchContentBody.find("DoSettingsMenuLabel(SETTINGS_SEARCH, -1, -1, \"qmclient-search-no-matching-features\""), std::string::npos);
 	EXPECT_EQ(SearchContentBody.find("DoSettingsMenuLabel(SETTINGS_QMCLIENT"), std::string::npos);
 	// 命中的卡片直接按 stableId 从卡片目录构造本体（就地渲染，不再是跳转链接）。
-	EXPECT_NE(SearchContentBody.find("if(!qm_card_catalog::BuildCard(SearchCardBuild, MatchedCard.m_pStableId, Definition))"), std::string::npos);
+	EXPECT_NE(SearchContentBody.find("if(!qm_card_catalog::BuildCard(s_GlobalSearchCardBuild, MatchedCard.m_pStableId, Definition))"), std::string::npos);
 	EXPECT_NE(SearchContentBody.find("Definition.m_HeaderAction = BuildGlobalSearchLocateHeaderAction(MatchedCard, ReadOnly, SmallSize);"), std::string::npos);
 	EXPECT_NE(SearchContentBody.find("s_GlobalSearchCache.m_vResults = qm_card_catalog::SearchResultEntries(pModuleSearch, CardOrderModel);"), std::string::npos);
 	EXPECT_NE(SearchContentBody.find("s_GlobalSearchCache.m_vModelEntries = WithGlobalSearchBaseEntries(qm_card_catalog::BuildSearchModelEntries(s_GlobalSearchCache.m_vResults));"), std::string::npos);
@@ -8066,6 +8066,8 @@ TEST(QmMonitoringHelpers, QmClientContentOwnersPreserveInteractiveContracts)
 	EXPECT_NE(FriendNotify.find("m_QmFriendOnlineAutoRefresh"), std::string::npos);
 	EXPECT_NE(FriendNotify.find("m_QmFriendEnterAutoGreet"), std::string::npos);
 	EXPECT_NE(FriendNotify.find("m_QmFriendEnterBroadcast"), std::string::npos);
+	// 地图上传路径必须自带缓冲区；默认构造的 CLineInput 在 Render 中没有可显示字符串。
+	EXPECT_NE(FavoriteMaps.find("static CLineInputBuffered<IO_MAX_PATH_LENGTH> s_MapUploadPath;"), std::string::npos);
 	EXPECT_NE(FavoriteMaps.find("UpdateMapCategoryCache"), std::string::npos);
 	EXPECT_NE(FavoriteMaps.find("RemoveFavoriteMap"), std::string::npos);
 	EXPECT_NE(PieMenu.find("ShowPopupColorPicker"), std::string::npos);
@@ -12445,18 +12447,14 @@ TEST(QmRoundedRect, CachedDirectionsPreserveOriginalAnglesForEveryQuality)
 		for(int i = 0; i <= Segments; ++i)
 		{
 			const float Angle = i * Step;
-			EXPECT_FLOAT_EQ(pDirections[i].x, std::cos(Angle));
-			EXPECT_FLOAT_EQ(pDirections[i].y, std::sin(Angle));
+			EXPECT_EQ(pDirections[i].x, std::cos(Angle));
+			EXPECT_EQ(pDirections[i].y, std::sin(Angle));
 			// 同时覆盖抗锯齿内外边、四角方向和非整数半径，保留运算顺序。
 			for(const float Radius : {0.0f, 0.125f, 16.75f, 321.0f})
 				for(const float Direction : {-1.0f, 1.0f})
 				{
-					// 三角函数 1 ULP 的平台差异会被 Radius 放大（321 倍时约 3e-5），
-					// 而组合结果又与 ±13.25/-7.5 的大项相消，ULP 距离被放大到 5~8 ULP，
-					// 因此这里按随半径线性放大的绝对误差比较。
-					const float ComposeEpsilon = Radius * 1e-6f + 1e-6f;
-					EXPECT_NEAR(13.25f + Direction * pDirections[i].x * Radius, 13.25f + Direction * std::cos(Angle) * Radius, ComposeEpsilon);
-					EXPECT_NEAR(-7.5f + Direction * pDirections[i].y * Radius, -7.5f + Direction * std::sin(Angle) * Radius, ComposeEpsilon);
+					EXPECT_EQ(13.25f + Direction * pDirections[i].x * Radius, 13.25f + Direction * std::cos(Angle) * Radius);
+					EXPECT_EQ(-7.5f + Direction * pDirections[i].y * Radius, -7.5f + Direction * std::sin(Angle) * Radius);
 				}
 		}
 	}

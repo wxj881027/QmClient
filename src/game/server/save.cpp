@@ -3,6 +3,8 @@
 #include "player.h"
 #include "teams.h"
 
+#include <base/log.h>
+
 #include <engine/server.h>
 #include <engine/shared/config.h>
 #include <engine/shared/protocol.h>
@@ -360,11 +362,11 @@ char *CSaveTee::GetString(const CSaveTeam *pTeam)
 	return m_aString;
 }
 
-int CSaveTee::FromString(const char *pString)
+bool CSaveTee::FromString(const char *pString, int MembersCount)
 {
 	int Num;
 	Num = sscanf(pString,
-		"%[^\t]\t%d\t%d\t%d\t%d\t%d\t"
+		"%15[^\t]\t%d\t%d\t%d\t%d\t%d\t"
 		// weapons
 		"%d\t%d\t%d\t%d\t"
 		"%d\t%d\t%d\t%d\t"
@@ -475,12 +477,48 @@ int CSaveTee::FromString(const char *pString)
 		m_Ninja.m_OldVelAmount = 0;
 		[[fallthrough]];
 	case 115:
-		return 0;
+		break;
 	default:
 		dbg_msg("load", "failed to load tee-string");
 		dbg_msg("load", "loaded %d vars", Num);
-		return Num + 1; // never 0 here
+		return false;
 	}
+
+	if(m_LastWeapon < 0 || m_LastWeapon >= NUM_WEAPONS)
+	{
+		log_error("load", "savegame: tee has an invalid last weapon: %d", m_LastWeapon);
+		return false;
+	}
+	// -1 is valid, it means that no weapon is queued
+	if(m_QueuedWeapon < -1 || m_QueuedWeapon >= NUM_WEAPONS)
+	{
+		log_error("load", "savegame: tee has an invalid queued weapon: %d", m_QueuedWeapon);
+		return false;
+	}
+	if(m_ActiveWeapon < 0 || m_ActiveWeapon >= NUM_WEAPONS)
+	{
+		log_error("load", "savegame: tee has an invalid active weapon: %d", m_ActiveWeapon);
+		return false;
+	}
+	if(m_TuneZone < 0 || m_TuneZone >= TuneZone::NUM)
+	{
+		log_error("load", "savegame: tee has an invalid tune zone: %d", m_TuneZone);
+		return false;
+	}
+	// TuneZone::OVERRIDE_NONE is valid, it means that no zone leave message is shown
+	if(m_TuneZoneOld < TuneZone::OVERRIDE_NONE || m_TuneZoneOld >= TuneZone::NUM)
+	{
+		log_error("load", "savegame: tee has an invalid old tune zone: %d", m_TuneZoneOld);
+		return false;
+	}
+	// -1 is valid, it means that no player is hooked
+	if(m_HookedPlayer < -1 || m_HookedPlayer >= MembersCount)
+	{
+		log_error("load", "savegame: tee has an invalid hooked player: %d", m_HookedPlayer);
+		return false;
+	}
+
+	return true;
 }
 
 void CSaveTee::LoadHookedPlayer(const CSaveTeam *pTeam)
@@ -515,11 +553,6 @@ bool CSaveHotReloadTee::Load(CCharacter *pChr, int Team)
 	return Result;
 }
 
-CSaveTeam::CSaveTeam()
-{
-	m_aString[0] = '\0';
-}
-
 CSaveTeam::~CSaveTeam()
 {
 	delete[] m_pSwitchers;
@@ -539,12 +572,11 @@ ESaveResult CSaveTeam::Save(CGameContext *pGameServer, int Team, bool Dry, bool 
 		return ESaveResult::TEAM_0_MODE;
 	}
 
-	const int MembersCount = pTeams->TeamSize(Team);
-	if(MembersCount <= 0)
+	m_MembersCount = pTeams->TeamSize(Team);
+	if(m_MembersCount <= 0)
 	{
 		return ESaveResult::TEAM_NOT_FOUND;
 	}
-	m_MembersCount = MembersCount;
 
 	m_TeamState = pTeams->GetTeamState(Team);
 
@@ -557,7 +589,7 @@ ESaveResult CSaveTeam::Save(CGameContext *pGameServer, int Team, bool Dry, bool 
 	m_TeamLocked = pTeams->TeamLocked(Team);
 	m_Practice = pTeams->IsPractice(Team);
 
-	m_pSavedTees = new CSaveTee[MembersCount];
+	m_pSavedTees = new CSaveTee[m_MembersCount];
 	int aPlayerCids[MAX_CLIENTS];
 	int j = 0;
 	CCharacter *p = (CCharacter *)pGameServer->m_World.FindFirst(CGameWorld::ENTTYPE_CHARACTER);
@@ -577,12 +609,11 @@ ESaveResult CSaveTeam::Save(CGameContext *pGameServer, int Team, bool Dry, bool 
 	if(m_MembersCount != j && !Force)
 		return ESaveResult::CHAR_NOT_FOUND;
 
-	const int HighestSwitchNumber = pGameServer->Collision()->m_HighestSwitchNumber;
-	if(HighestSwitchNumber > 0)
+	if(pGameServer->Collision()->m_HighestSwitchNumber)
 	{
-		m_pSwitchers = new SSimpleSwitchers[HighestSwitchNumber + 1];
+		m_pSwitchers = new SSimpleSwitchers[pGameServer->Collision()->m_HighestSwitchNumber + 1];
 
-		for(int i = 1; i < HighestSwitchNumber + 1; i++)
+		for(int i = 1; i < pGameServer->Collision()->m_HighestSwitchNumber + 1; i++)
 		{
 			m_pSwitchers[i].m_Status = pGameServer->Switchers()[i].m_aStatus[Team];
 			if(pGameServer->Switchers()[i].m_aEndTick[Team])
@@ -606,22 +637,22 @@ bool CSaveTeam::HandleSaveError(ESaveResult Result, int ClientId, CGameContext *
 	case ESaveResult::SUCCESS:
 		return false;
 	case ESaveResult::TEAM_FLOCK:
-		pGameContext->SendChatTarget(ClientId, "You have to be in a team (from 1-63)");
+		pGameContext->SendChatTarget(ClientId, "必须处于 1–127 号队伍中");
 		break;
 	case ESaveResult::TEAM_NOT_FOUND:
-		pGameContext->SendChatTarget(ClientId, "Could not find your Team");
+		pGameContext->SendChatTarget(ClientId, "找不到你的队伍");
 		break;
 	case ESaveResult::CHAR_NOT_FOUND:
-		pGameContext->SendChatTarget(ClientId, "To save all players in your team have to be alive and not in '/spec'");
+		pGameContext->SendChatTarget(ClientId, "要保存队伍，队内所有玩家都必须存活且不能处于 '/spec'");
 		break;
 	case ESaveResult::NOT_STARTED:
-		pGameContext->SendChatTarget(ClientId, "Your team has not started yet");
+		pGameContext->SendChatTarget(ClientId, "你的队伍还没有开始");
 		break;
 	case ESaveResult::TEAM_0_MODE:
-		pGameContext->SendChatTarget(ClientId, "Team can't be saved while in team 0 mode");
+		pGameContext->SendChatTarget(ClientId, "处于 0 队模式时不能保存队伍存档");
 		break;
 	case ESaveResult::DRAGGER_ACTIVE:
-		pGameContext->SendChatTarget(ClientId, "Team can't be saved while a dragger is active");
+		pGameContext->SendChatTarget(ClientId, "有拖拽器生效时不能保存队伍存档");
 		break;
 	}
 	return true;
@@ -681,15 +712,18 @@ CCharacter *CSaveTeam::MatchCharacter(CGameContext *pGameServer, int ClientId, i
 	return pGameServer->m_apPlayers[ClientId]->ForceSpawn(m_pSavedTees[SaveId].GetPos());
 }
 
-char *CSaveTeam::GetString()
+const char *CSaveTeam::GetString()
 {
-	str_format(m_aString, sizeof(m_aString), "%d\t%d\t%d\t%d\t%d", static_cast<int>(m_TeamState), m_MembersCount, m_HighestSwitchNumber, m_TeamLocked, m_Practice);
+	int Length = str_format(m_aString, sizeof(m_aString), "%d\t%d\t%d\t%d\t%d", static_cast<int>(m_TeamState), m_MembersCount, m_HighestSwitchNumber, m_TeamLocked, m_Practice);
 
 	for(int i = 0; i < m_MembersCount; i++)
 	{
-		char aBuf[1024];
+		char aBuf[1 + MAX_SAVE_TEE_STRING_LENGTH];
 		str_format(aBuf, sizeof(aBuf), "\n%s", m_pSavedTees[i].GetString(this));
+		if(Length + str_length(aBuf) >= (int)sizeof(m_aString))
+			return nullptr;
 		str_append(m_aString, aBuf);
+		Length += str_length(aBuf);
 	}
 
 	if(m_pSwitchers && m_HighestSwitchNumber)
@@ -698,7 +732,10 @@ char *CSaveTeam::GetString()
 		{
 			char aBuf[64];
 			str_format(aBuf, sizeof(aBuf), "\n%d\t%d\t%d", m_pSwitchers[i].m_Status, m_pSwitchers[i].m_EndTime, m_pSwitchers[i].m_Type);
+			if(Length + str_length(aBuf) >= (int)sizeof(m_aString))
+				return nullptr;
 			str_append(m_aString, aBuf);
+			Length += str_length(aBuf);
 		}
 	}
 
@@ -709,9 +746,9 @@ int CSaveTeam::FromString(const char *pString)
 {
 	char aTeamStats[MAX_CLIENTS];
 	char aSwitcher[64];
-	char aSaveTee[1024];
+	char aSaveTee[MAX_SAVE_TEE_STRING_LENGTH];
 
-	char *pCopyPos;
+	const char *pCopyPos;
 	unsigned int Pos = 0;
 	unsigned int LastPos = 0;
 	unsigned int StrSize;
@@ -766,9 +803,9 @@ int CSaveTeam::FromString(const char *pString)
 		m_pSavedTees = nullptr;
 	}
 
-	if(m_MembersCount > 64)
+	if(m_MembersCount < 0 || m_MembersCount > SERVER_MAX_CLIENTS)
 	{
-		dbg_msg("load", "savegame: team has too many players");
+		dbg_msg("load", "savegame: team has an invalid number of players: %d", m_MembersCount);
 		return 1;
 	}
 	else if(m_MembersCount)
@@ -798,11 +835,9 @@ int CSaveTeam::FromString(const char *pString)
 		if(StrSize < sizeof(aSaveTee))
 		{
 			str_copy(aSaveTee, pCopyPos, StrSize);
-			int Num = m_pSavedTees[n].FromString(aSaveTee);
-			if(Num)
+			if(!m_pSavedTees[n].FromString(aSaveTee, m_MembersCount))
 			{
 				dbg_msg("load", "failed to load tee");
-				dbg_msg("load", "loaded %d vars", Num - 1);
 				return 1;
 			}
 		}
@@ -817,6 +852,12 @@ int CSaveTeam::FromString(const char *pString)
 	{
 		delete[] m_pSwitchers;
 		m_pSwitchers = nullptr;
+	}
+
+	if(m_HighestSwitchNumber < 0 || m_HighestSwitchNumber > 255)
+	{
+		dbg_msg("load", "savegame: team has an invalid highest switch number: %d", m_HighestSwitchNumber);
+		return 1;
 	}
 
 	if(m_HighestSwitchNumber)
@@ -865,7 +906,7 @@ bool CSaveTeam::MatchPlayers(const char (*paNames)[MAX_NAME_LENGTH], const int *
 {
 	if(NumPlayer > m_MembersCount)
 	{
-		str_format(pMessage, MessageLen, "Too many players in this team, should be %d", m_MembersCount);
+		str_format(pMessage, MessageLen, "队伍人数过多，应为 %d 人", m_MembersCount);
 		return false;
 	}
 	// check for wrong players
@@ -881,7 +922,7 @@ bool CSaveTeam::MatchPlayers(const char (*paNames)[MAX_NAME_LENGTH], const int *
 		}
 		if(!Found)
 		{
-			str_format(pMessage, MessageLen, "'%s' doesn't belong to this team", paNames[i]);
+			str_format(pMessage, MessageLen, "'%s' 不属于这个队伍", paNames[i]);
 			return false;
 		}
 	}
@@ -900,7 +941,7 @@ bool CSaveTeam::MatchPlayers(const char (*paNames)[MAX_NAME_LENGTH], const int *
 		}
 		if(!Found)
 		{
-			str_format(pMessage, MessageLen, "'%s' has to be in this team", m_pSavedTees[i].GetName());
+			str_format(pMessage, MessageLen, "'%s' 必须在这个队伍中", m_pSavedTees[i].GetName());
 			return false;
 		}
 	}

@@ -203,7 +203,7 @@ void CGameControllerDDNet::OnPlayerConnect(CPlayer *pPlayer)
 		char aBuf[512];
 		str_format(aBuf, sizeof(aBuf), "'%s' 已进入并加入了 %s", Server()->ClientName(ClientId), GetTeamName(pPlayer->GetTeam()));
 		//'%s' entered and joined the %s
-		GameServer()->SendChat(-1, TEAM_ALL, aBuf, -1, CGameContext::FLAG_SIX);
+		GameServer()->SendChat(-1, TEAM_ALL, aBuf, -1);
 
 		GameServer()->SendChatTarget(ClientId, "DDraceNetwork 版本: " GAME_VERSION);
 		//DDraceNetwork Mod. Version:

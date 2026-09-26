@@ -1,10 +1,13 @@
 #include "image_manipulation.h"
 
 #include <base/color.h>
+#include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
 
+#include <cstdlib>
 #include <limits>
+#include <utility>
 
 static bool CalculateImageBufferSize(size_t Width, size_t Height, size_t PixelSize, size_t &Size)
 {
@@ -433,4 +436,161 @@ int HighestBit(int OfVar)
 		RetV <<= 1;
 
 	return RetV;
+}
+
+bool ResolveSpritePixelRect(size_t ImageWidth, size_t ImageHeight, int GridX, int GridY,
+	int SpriteX, int SpriteY, int SpriteW, int SpriteH,
+	size_t &OutX, size_t &OutY, size_t &OutW, size_t &OutH, bool *pOutOfBounds)
+{
+	if(pOutOfBounds != nullptr)
+		*pOutOfBounds = false;
+	if(GridX <= 0 || GridY <= 0 || SpriteX < 0 || SpriteY < 0 || SpriteW <= 0 || SpriteH <= 0)
+		return false;
+
+	const size_t GridCountX = (size_t)GridX;
+	const size_t GridCountY = (size_t)GridY;
+	if(ImageWidth == 0 || ImageHeight == 0 || ImageWidth % GridCountX != 0 || ImageHeight % GridCountY != 0)
+		return false;
+
+	const size_t CellWidth = ImageWidth / GridCountX;
+	const size_t CellHeight = ImageHeight / GridCountY;
+	const size_t SpriteXU = (size_t)SpriteX;
+	const size_t SpriteYU = (size_t)SpriteY;
+	const size_t SpriteWU = (size_t)SpriteW;
+	const size_t SpriteHU = (size_t)SpriteH;
+	const size_t MaxSize = std::numeric_limits<size_t>::max();
+	if(SpriteXU > MaxSize / CellWidth || SpriteYU > MaxSize / CellHeight ||
+		SpriteWU > MaxSize / CellWidth || SpriteHU > MaxSize / CellHeight)
+	{
+		return false;
+	}
+
+	OutX = SpriteXU * CellWidth;
+	OutY = SpriteYU * CellHeight;
+	OutW = SpriteWU * CellWidth;
+	OutH = SpriteHU * CellHeight;
+	if(OutW == 0 || OutH == 0 || OutX > ImageWidth || OutY > ImageHeight ||
+		OutW > ImageWidth - OutX || OutH > ImageHeight - OutY)
+	{
+		// 图集网格整除但 sprite 矩形超出图集：视为「图集比默认布局小」，
+		// 与真正的坏包（不可整除/无数据）区分开。
+		if(pOutOfBounds != nullptr)
+			*pOutOfBounds = true;
+		return false;
+	}
+	return true;
+}
+
+bool ExtractSpriteImage(const CImageInfo &FromImageInfo, const CDataSprite *pSprite, CImageInfo &Result)
+{
+	const char *pSpriteName = pSprite && pSprite->m_pName ? pSprite->m_pName : "(no name)";
+	size_t x = 0;
+	size_t y = 0;
+	size_t w = 0;
+	size_t h = 0;
+	const bool RectValid = pSprite != nullptr && pSprite->m_pSet != nullptr &&
+			       ResolveSpritePixelRect(FromImageInfo.m_Width, FromImageInfo.m_Height,
+				       pSprite->m_pSet->m_Gridx, pSprite->m_pSet->m_Gridy,
+				       pSprite->m_X, pSprite->m_Y, pSprite->m_W, pSprite->m_H,
+				       x, y, w, h);
+	if(FromImageInfo.m_pData == nullptr || !RectValid)
+	{
+		log_error("graphics/texture", "Ignoring invalid sprite texture '%s'.", pSpriteName);
+		return false;
+	}
+
+	CImageInfo SpriteInfo;
+	SpriteInfo.m_Width = w;
+	SpriteInfo.m_Height = h;
+	SpriteInfo.m_Format = FromImageInfo.m_Format;
+	size_t SpriteDataSize = 0;
+	if(!SpriteInfo.DataSize(SpriteDataSize))
+	{
+		log_error("graphics/texture", "Ignoring sprite texture '%s' with invalid data size.", pSpriteName);
+		return false;
+	}
+	SpriteInfo.m_pData = static_cast<uint8_t *>(malloc(SpriteDataSize));
+	if(SpriteInfo.m_pData == nullptr)
+	{
+		log_error("graphics/texture", "Failed to allocate sprite texture '%s'.", pSpriteName);
+		SpriteInfo.Free();
+		return false;
+	}
+	SpriteInfo.CopyRectFrom(FromImageInfo, x, y, w, h, 0, 0);
+	Result = std::move(SpriteInfo);
+	return true;
+}
+
+bool IsImageRectFullyTransparent(const CImageInfo &Image, size_t X, size_t Y, size_t Width, size_t Height)
+{
+	if(Image.m_Format != CImageInfo::FORMAT_R && Image.m_Format != CImageInfo::FORMAT_RA && Image.m_Format != CImageInfo::FORMAT_RGBA)
+		return false;
+	if(Image.m_pData == nullptr || Width == 0 || Height == 0)
+		return false;
+	if(X > Image.m_Width || Y > Image.m_Height || Width > Image.m_Width - X || Height > Image.m_Height - Y)
+		return false;
+
+	size_t ImageDataSize = 0;
+	if(!Image.DataSize(ImageDataSize))
+		return false;
+
+	// 与引擎原有判定保持一致：PixelSize - 1 处为 alpha（FORMAT_R 时即唯一通道），
+	// 该字节为 0 视为像素完全透明。
+	const size_t PixelSize = Image.PixelSize();
+	for(size_t iy = 0; iy < Height; ++iy)
+	{
+		for(size_t ix = 0; ix < Width; ++ix)
+		{
+			const size_t Offset = ((Y + iy) * Image.m_Width + (X + ix)) * PixelSize;
+			if(Offset >= ImageDataSize || PixelSize - 1 >= ImageDataSize - Offset)
+				return false;
+			if(Image.m_pData[Offset + (PixelSize - 1)] > 0)
+				return false;
+		}
+	}
+	return true;
+}
+
+void ClearImageToTransparent(CImageInfo &Image)
+{
+	size_t DataSize = 0;
+	if(Image.m_pData == nullptr || !Image.DataSize(DataSize))
+		return;
+	mem_zero(Image.m_pData, DataSize);
+}
+
+bool CopyFallbackOverBlankRect(CImageInfo &Image, const CImageInfo &FallbackImage,
+	size_t X, size_t Y, size_t Width, size_t Height,
+	size_t FallbackX, size_t FallbackY, size_t FallbackWidth, size_t FallbackHeight)
+{
+	if(Image.m_Format != FallbackImage.m_Format || Image.m_pData == nullptr || FallbackImage.m_pData == nullptr)
+		return false;
+	if(!IsImageRectFullyTransparent(Image, X, Y, Width, Height))
+		return false;
+	if(FallbackWidth == 0 || FallbackHeight == 0 ||
+		FallbackX > FallbackImage.m_Width || FallbackY > FallbackImage.m_Height ||
+		FallbackWidth > FallbackImage.m_Width - FallbackX || FallbackHeight > FallbackImage.m_Height - FallbackY)
+	{
+		return false;
+	}
+
+	const size_t PixelSize = Image.PixelSize();
+	if(PixelSize == 0 || PixelSize != FallbackImage.PixelSize())
+		return false;
+
+	uint8_t *pDstData = static_cast<uint8_t *>(Image.m_pData);
+	const uint8_t *pSrcData = static_cast<const uint8_t *>(FallbackImage.m_pData);
+	for(size_t Row = 0; Row < Height; ++Row)
+	{
+		// 分辨率不同的画布上，同一格位按比例取最近邻样本。
+		const size_t SampleY = FallbackY + static_cast<size_t>((static_cast<int64_t>(Row) * static_cast<int64_t>(FallbackHeight)) / static_cast<int64_t>(Height));
+		for(size_t Column = 0; Column < Width; ++Column)
+		{
+			const size_t SampleX = FallbackX + static_cast<size_t>((static_cast<int64_t>(Column) * static_cast<int64_t>(FallbackWidth)) / static_cast<int64_t>(Width));
+			const size_t DstOffset = ((Y + Row) * Image.m_Width + (X + Column)) * PixelSize;
+			const size_t SrcOffset = (SampleY * FallbackImage.m_Width + SampleX) * PixelSize;
+			mem_copy(&pDstData[DstOffset], &pSrcData[SrcOffset], PixelSize);
+		}
+	}
+	return true;
 }

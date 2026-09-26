@@ -8,7 +8,7 @@
 #include <engine/client.h>
 #include <engine/engine.h>
 #include <engine/external/json-parser/json.h>
-#include <engine/shared/http.h>
+#include <engine/http.h>
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 
@@ -22,10 +22,11 @@
 #include <unistd.h>
 #endif
 
-class CUpdaterFetchTask : public CHttpRequest
+class CUpdaterFetchTask : public IHttpRequest::IProgressCallback
 {
 	char m_aBuf[256];
 	CUpdater *m_pUpdater;
+	std::shared_ptr<IHttpRequest> m_pHttpRequest;
 
 protected:
 	void OnProgress() override;
@@ -34,6 +35,7 @@ protected:
 
 public:
 	CUpdaterFetchTask(CUpdater *pUpdater, const char *pFile, const char *pDestPath);
+	std::shared_ptr<IHttpRequest> HttpRequest() { return m_pHttpRequest; }
 };
 
 // addition of '/' to keep paths intact, because EscapeUrl() (using curl_easy_escape) doesn't do this
@@ -156,26 +158,27 @@ static bool SetExecutableBit(const char *pPath)
 #endif
 
 CUpdaterFetchTask::CUpdaterFetchTask(CUpdater *pUpdater, const char *pFile, const char *pDestPath) :
-	CHttpRequest(GetUpdaterUrl(m_aBuf, sizeof(m_aBuf), pFile)),
 	m_pUpdater(pUpdater)
 {
 	char aDestination[IO_MAX_PATH_LENGTH];
 	FormatUpdaterDestPath(aDestination, sizeof(aDestination), pFile, pDestPath);
-	WriteToFile(pUpdater->m_pStorage, aDestination, -2);
+	m_pHttpRequest = std::shared_ptr<IHttpRequest>(CreateHttpRequest(GetUpdaterUrl(m_aBuf, sizeof(m_aBuf), pFile)));
+	m_pHttpRequest->WriteToFile(pUpdater->m_pStorage, aDestination, -2);
+	m_pHttpRequest->SetProgressCallback(this);
 	// Large binary downloads should fail fast enough on broken links, while
 	// still allowing slower connections to complete.
-	Timeout(CTimeout{10000, 10 * 60 * 1000, 8192, 20});
+	m_pHttpRequest->Timeout(CTimeout{10000, 10 * 60 * 1000, 8192, 20});
 }
 
 void CUpdaterFetchTask::OnProgress()
 {
 	const CLockScope LockScope(m_pUpdater->m_Lock);
-	m_pUpdater->m_Percent = Progress();
+	m_pUpdater->m_Percent = m_pHttpRequest->Progress();
 }
 
 void CUpdaterFetchTask::OnCompletion(EHttpState State)
 {
-	if(!str_comp(fs_filename(Dest()), "update.json"))
+	if(!str_comp(fs_filename(m_pHttpRequest->Dest()), "update.json"))
 	{
 		if(State == EHttpState::DONE)
 			m_pUpdater->SetCurrentState(IUpdater::GOT_MANIFEST);
@@ -200,7 +203,7 @@ CUpdater::CUpdater()
 	IStorage::FormatTmpPath(m_aServerExecTmp, sizeof(m_aServerExecTmp), SERVER_EXEC);
 }
 
-void CUpdater::Init(CHttp *pHttp)
+void CUpdater::Init(IHttp *pHttp)
 {
 	m_pClient = Kernel()->RequestInterface<IClient>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
@@ -236,8 +239,8 @@ void CUpdater::FetchFile(const char *pFile, const char *pDestPath)
 {
 	const CLockScope LockScope(m_Lock);
 	m_pCurrentTask = std::make_shared<CUpdaterFetchTask>(this, pFile, pDestPath);
-	str_copy(m_aStatus, m_pCurrentTask->Dest());
-	m_pHttp->Run(m_pCurrentTask);
+	str_copy(m_aStatus, m_pCurrentTask->HttpRequest()->Dest());
+	m_pHttp->Run(m_pCurrentTask->HttpRequest());
 }
 
 bool CUpdater::MoveFile(const char *pFile)
@@ -440,11 +443,11 @@ void CUpdater::RunningUpdate()
 {
 	if(m_pCurrentTask)
 	{
-		if(!m_pCurrentTask->Done())
+		if(!m_pCurrentTask->HttpRequest()->Done())
 		{
 			return;
 		}
-		else if(m_pCurrentTask->State() == EHttpState::ERROR || m_pCurrentTask->State() == EHttpState::ABORTED)
+		else if(m_pCurrentTask->HttpRequest()->State() == EHttpState::ERROR || m_pCurrentTask->HttpRequest()->State() == EHttpState::ABORTED)
 		{
 			SetCurrentState(IUpdater::FAIL);
 		}

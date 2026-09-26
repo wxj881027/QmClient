@@ -5,6 +5,7 @@
 
 #include <base/time.h>
 
+#include <engine/client/client.h>
 // SyncNeteaseHookConfiguration / OnUpdate 在非 WINRT 平台也会编译
 #include <engine/client.h>
 #include <engine/shared/config.h>
@@ -130,6 +131,7 @@ static void ClearState(CSystemMediaControls::SWinrt *pWinrt, IGraphics *pGraphic
 
 static void ClearSharedAlbumArt(CSystemMediaControls::SShared *pShared)
 {
+	// 旧封面在离开锁后析构：上传线程只做一次指针移交，不再复制整块像素。
 	std::unique_ptr<CQmPreparedMediaArt> pDiscarded;
 	{
 		std::scoped_lock Lock(pShared->m_Mutex);
@@ -142,7 +144,7 @@ static void ClearSharedAlbumArt(CSystemMediaControls::SShared *pShared)
 
 static void SetSharedAlbumArt(CSystemMediaControls::SShared *pShared, const std::vector<uint8_t> &Pixels, const std::vector<uint8_t> &CircularPixels, int Width, int Height)
 {
-	// 分配与像素复制在后台、锁外完成；旧封面也在离开锁后析构。
+	// 分配与像素复制在后台、锁外完成；旧封面同样在离开锁后析构。
 	auto pPrepared = std::make_unique<CQmPreparedMediaArt>(Pixels, CircularPixels, Width, Height);
 	{
 		std::scoped_lock Lock(pShared->m_Mutex);
@@ -408,6 +410,8 @@ static void ApplyCircularFeatherMask(std::vector<uint8_t> &Pixels, int Width, in
 	}
 }
 
+// 像素在后台线程已备好：这里直接把 CImageInfo 交给 LoadTextureRawMove，
+// 主线程不再为上传复制一份 RGBA 缓冲。
 static IGraphics::CTextureHandle LoadAlbumArtTexture(IGraphics *pGraphics, CImageInfo &Image, const char *pName)
 {
 	if(pGraphics == nullptr || Image.m_pData == nullptr)

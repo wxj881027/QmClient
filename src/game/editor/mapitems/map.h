@@ -11,9 +11,13 @@
 #include <game/editor/editor_history.h>
 #include <game/editor/editor_server_settings.h>
 #include <game/editor/editor_trackers.h>
+#include <game/editor/editor_ui.h>
+#include <game/editor/envelope_editor.h>
+#include <game/editor/font_typer.h>
 #include <game/editor/map_grid.h>
 #include <game/editor/map_view.h>
 #include <game/editor/mapitems/envelope.h>
+#include <game/editor/mapitems/envelope_evaluator.h>
 #include <game/editor/mapitems/layer.h>
 #include <game/editor/proof_mode.h>
 #include <game/editor/quad_knife.h>
@@ -25,6 +29,7 @@
 #include <vector>
 
 class CEditor;
+class CEditorMap;
 class CEditorImage;
 class CEditorSound;
 class IStorage;
@@ -43,6 +48,7 @@ class IEditorEnvelopeReference;
 class CDataFileWriterFinishJob : public IJob
 {
 	IStorage *m_pStorage;
+	CEditorMap *m_pMap;
 	char m_aRealFilename[IO_MAX_PATH_LENGTH];
 	char m_aTempFilename[IO_MAX_PATH_LENGTH];
 	char m_aErrorMessage[2 * IO_MAX_PATH_LENGTH + 128];
@@ -51,7 +57,8 @@ class CDataFileWriterFinishJob : public IJob
 	void Run() override;
 
 public:
-	CDataFileWriterFinishJob(IStorage *pStorage, const char *pRealFilename, const char *pTempFilename, CDataFileWriter &&Writer);
+	CDataFileWriterFinishJob(IStorage *pStorage, CEditorMap *pMap, const char *pRealFilename, const char *pTempFilename, CDataFileWriter &&Writer);
+	CEditorMap *Map() const { return m_pMap; }
 	const char *RealFilename() const { return m_aRealFilename; }
 	const char *ErrorMessage() const { return m_aErrorMessage; }
 };
@@ -61,31 +68,16 @@ using FErrorHandler = std::function<void(const char *pErrorMessage)>;
 class CEditorMap
 {
 public:
-	explicit CEditorMap(CEditor *pEditor) :
-		m_EditorHistory(this),
-		m_ServerSettingsHistory(this),
-		m_EnvelopeEditorHistory(this),
-		m_QuadTracker(this),
-		m_EnvOpTracker(this),
-		m_LayerGroupPropTracker(this),
-		m_LayerPropTracker(this),
-		m_LayerTilesCommonPropTracker(this),
-		m_LayerTilesPropTracker(this),
-		m_LayerQuadPropTracker(this),
-		m_LayerSoundsPropTracker(this),
-		m_SoundSourceOperationTracker(this),
-		m_SoundSourcePropTracker(this),
-		m_SoundSourceRectShapePropTracker(this),
-		m_SoundSourceCircleShapePropTracker(this),
-		m_pEditor(pEditor)
-	{
-	}
+	explicit CEditorMap(CEditor *pEditor);
 
 	const CEditor *Editor() const { return m_pEditor; }
 	CEditor *Editor() { return m_pEditor; }
 
 	char m_aFilename[IO_MAX_PATH_LENGTH];
+	char m_aDisplayName[IO_MAX_PATH_LENGTH];
+	char m_aAutosaveName[IO_MAX_PATH_LENGTH];
 	bool m_ValidSaveFilename;
+	bool m_CloseOnSave = false;
 	/**
 	 * Map has unsaved changes for manual save.
 	 */
@@ -98,6 +90,9 @@ public:
 	float m_LastSaveTime;
 	void OnModify();
 	void ResetModifiedState();
+
+	char m_TabSelectButtonId = 0;
+	char m_TabCloseButtonId = 0;
 
 	std::vector<std::shared_ptr<CLayerGroup>> m_vpGroups;
 	std::vector<std::shared_ptr<CEditorImage>> m_vpImages;
@@ -161,12 +156,20 @@ public:
 	int m_SelectedSoundSource;
 
 	int m_ShiftBy;
+	bool m_ShowDetail;
+	bool m_PreviewZoom;
 
 	// Component states
 	CMapView::CState m_MapViewState;
+	CMapEnvelopeEvaluator m_EnvelopeEvaluator;
+	CFontTyper::CState m_FontTyperState;
+	CEnvelopeEditor::CState m_EnvelopeEditorState;
+	CEditorUiElements m_EditorUiElements;
+	CEditorHistoryUiState m_EditorHistoryUiState;
 	CMapGrid::CState m_MapGridState;
 	CProofMode::CState m_ProofModeState;
 	CQuadKnife::CState m_QuadKnifeState;
+	CMapSettingsBackend::CContextWithInput m_MapSettingsCommandContext;
 
 	// Housekeeping
 	void Clean();

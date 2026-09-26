@@ -32,9 +32,8 @@ namespace qm_card_catalog
 			Content.HSplitTop(std::max(0.0f, Height), nullptr, &Content);
 		}
 
-		float MeasureHudCardHeight(const SQmCardBuildContext &Ctx, const EQmModuleId Id, const float ContentWidth)
+		float MeasureHudCardHeight(const SSettingsContentMetrics &Metrics, const EQmModuleId Id, const float ContentWidth)
 		{
-			const SSettingsContentMetrics &Metrics = Ctx.m_Metrics;
 			const auto Rows = [&Metrics](const float Count) { return CardRows(Metrics, Count); };
 			const bool DummyMiniViewExpanded = g_Config.m_QmDummyMiniView != 0;
 			const bool DynamicIslandOriginalStyle = g_Config.m_QmHudIslandUseOriginalStyle != 0;
@@ -44,8 +43,7 @@ namespace qm_card_catalog
 			case EQmModuleId::Coords: return ResolveQmHudCoordsHeight(Metrics);
 			case EQmModuleId::PlayerStats: return ResolveQmHudPlayerStatsHeight(Metrics, g_Config.m_QmPlayerStatsMapProgress != 0, g_Config.m_QmPlayerStatsMapProgressStyle != 0);
 			case EQmModuleId::DebugGraph: return Rows(2.0f);
-			// 内容只有一个调试模式开关（一行 + 尾间距），此前按 5 行预留，卡片底部会留下约 4 行空白。
-			case EQmModuleId::DebugMode: return Rows(1.0f);
+			case EQmModuleId::DebugMode: return Rows(5.0f);
 			case EQmModuleId::InputOverlay: return ResolveQmHudInputOverlayHeight(Metrics, g_Config.m_QmInputOverlay != 0);
 			case EQmModuleId::HudNotifications: return ResolveQmHudNotificationsHeight(Metrics, g_Config.m_QmHudNotificationsShowAdvanced != 0, g_Config.m_QmHudNotificationsUseCategoryFilters != 0);
 			case EQmModuleId::Voice: return ResolveQmHudVoiceHeight(Metrics, g_Config.m_QmVoiceEnable != 0, g_Config.m_QmVoiceShowAdvanced != 0, g_Config.m_QmVoiceShowConnectionStatus != 0, g_Config.m_QmVoiceNoiseSuppressEnable, g_Config.m_QmVoiceVadEnable != 0, g_Config.m_QmVoiceStereo != 0);
@@ -59,7 +57,8 @@ namespace qm_card_catalog
 				return Rows((float)HookCount + 2.0f + (g_Config.m_QmSpotifyEnable != 0 ? 1.0f : 0.0f) + (g_Config.m_QmKugouHookEnable != 0 ? 1.0f : 0.0f) + (g_Config.m_QmKugouHookEnable != 0 || g_Config.m_QmQQMusicHookEnable != 0 ? 1.0f : 0.0f));
 			}
 			case EQmModuleId::Background3D: return ResolveQmHudBackground3DHeight(Metrics, ContentWidth, g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
-			case EQmModuleId::BindStatusHud: return Rows(4.0f); // 4 个状态开关
+			case EQmModuleId::BindStatusHud:
+				return Rows(6.0f); // 4 个状态开关 + 自定义列表编辑行 + 格式提示行
 			default: return Rows(1.0f);
 			}
 		}
@@ -324,9 +323,10 @@ namespace qm_card_catalog
 		const bool ReadOnly = Ctx.m_ReadOnly;
 
 		const auto Add = [&](const EQmModuleId ModuleId, const char *pStableId, const char *pTitle, const char *pSubtitle, const FSettingsCardRenderMeasured &Render) {
+			const SSettingsContentMetrics MeasureMetrics = Metrics;
 			MakeModuleCard(
 				Ctx, ModuleId, pStableId, pTitle, pSubtitle, Render,
-				[&Ctx, ModuleId](float ContentWidth) { return MeasureHudCardHeight(Ctx, ModuleId, ContentWidth); },
+				[MeasureMetrics, ModuleId](float ContentWidth) { return MeasureHudCardHeight(MeasureMetrics, ModuleId, ContentWidth); },
 				MeasureHudCardRevision(ModuleId),
 				BuildHudPreLayoutInput(Ctx, ModuleId),
 				Out);
@@ -375,7 +375,7 @@ namespace qm_card_catalog
 			Add(Id, "qm:background_3d", "3D Background", "Configure background 3D particle effects", [pMenus, Metrics, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudBackground3DContent(pMenus, Content, Metrics, LabelWidth, ReadOnly); });
 			return true;
 		case EQmModuleId::BindStatusHud:
-			Add(Id, "qm:bind_status_hud", "DDRace HUD Pro", "Dummy key/hammer/control/copy status switches", [pMenus, LineHeight, LineSpacing](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudBindStatusContent(pMenus, Content, LineHeight, LineSpacing); });
+			Add(Id, "qm:bind_status_hud", "DDRace HUD Pro", "Dummy key/hammer/control/copy status switches", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudBindStatusContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		default:
 			return false;

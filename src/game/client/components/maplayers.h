@@ -32,9 +32,15 @@ public:
 	void OnInit() override;
 	void OnRender() override;
 	void OnMapLoad() override;
+	bool AdvanceMapLoad();
 	void RenderCustom(const vec2 &Center, float Zoom);
+	void RenderCustomWithCamera(const vec2 &Center, float Zoom);
+	void SwapState(CMapLayers &Other);
 
 	virtual CCamera *GetCurCamera();
+
+	// QmClient: 供菜单背景等调用方判断图层是否已经可以渲染，避免加载期间误报渲染成功。
+	bool IsMapLoaded() const { return m_MapLoaded; }
 
 	CEnvelopeState &EnvEvaluator() { return m_EnvEvaluator; }
 
@@ -43,6 +49,7 @@ private:
 	CMapRenderer m_MapRenderer;
 	CEnvelopeState m_EnvEvaluator;
 	bool m_MapLoaded = false;
+	bool m_MapLoadInProgress = false;
 };
 
 #endif

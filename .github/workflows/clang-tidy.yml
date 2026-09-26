@@ -64,6 +64,7 @@ jobs:
           libx264-dev \
           ninja-build \
           pkg-config \
+          python3-fonttools \
           python3-pil \
           spirv-tools \
           glslang-tools \

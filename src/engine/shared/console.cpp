@@ -8,6 +8,7 @@
 
 #include <base/color.h>
 #include <base/log.h>
+#include <base/log_color.h>
 #include <base/math.h>
 #include <base/system.h>
 
@@ -33,7 +34,8 @@ CConsole::CResult::CResult(int ClientId) :
 }
 
 CConsole::CResult::CResult(const CResult &Other) :
-	IResult(Other)
+	IResult(Other),
+	m_vVictims(Other.m_vVictims)
 {
 	mem_copy(m_aStringStorage, Other.m_aStringStorage, sizeof(m_aStringStorage));
 	m_pArgsStart = const_cast<char *>(CopyArgumentPointer(Other.m_pArgsStart, Other));
@@ -98,6 +100,17 @@ ColorHSLA CConsole::CResult::GetColor(unsigned Index, float DarkestLighting) con
 	if(Index >= m_NumArgs)
 		return ColorHSLA(0, 0, 0);
 	return ColorParse(m_apArgs[Index], DarkestLighting).value_or(ColorHSLA(0, 0, 0));
+}
+
+bool CConsole::CCommand::TakesClientId() const
+{
+	const char *pFormat = m_pParams;
+	for(char Param = *pFormat; Param != '\0'; Param = NextParam(pFormat))
+	{
+		if(Param == 'v')
+			return true;
+	}
+	return false;
 }
 
 void CConsole::CCommand::SetAccessLevel(EAccessLevel AccessLevel)
@@ -223,7 +236,7 @@ int CConsole::ParseArgs(CResult *pResult, const char *pFormat)
 			{
 				if(Command == 'v')
 				{
-					pResult->SetVictim(CResult::VICTIM_ME);
+					pResult->AddVictim("me");
 					break;
 				}
 				Command = NextParam(pFormat);
@@ -285,7 +298,7 @@ int CConsole::ParseArgs(CResult *pResult, const char *pFormat)
 			{
 				return PARSEARGS_MISSING_VALUE;
 			}
-			pResult->SetVictim(pVictim);
+			pResult->AddVictim(pVictim);
 		}
 		else if(Command == 'i')
 		{
@@ -372,21 +385,13 @@ int IConsole::ToLogLevelFilter(int Level)
 	return Level + 2;
 }
 
-static LOG_COLOR ColorToLogColor(ColorRGBA Color)
-{
-	return LOG_COLOR{
-		(uint8_t)(Color.r * 255.0),
-		(uint8_t)(Color.g * 255.0),
-		(uint8_t)(Color.b * 255.0)};
-}
-
 void CConsole::Print(int Level, const char *pFrom, const char *pStr, ColorRGBA PrintColor) const
 {
 	LEVEL LogLevel = IConsole::ToLogLevel(Level);
 	// if console colors are not enabled or if the color is pure white, use default terminal color
 	if(g_Config.m_ConsoleEnableColors && PrintColor != gs_ConsoleDefaultColor)
 	{
-		log_log_color(LogLevel, ColorToLogColor(PrintColor), pFrom, "%s", pStr);
+		log_log_color(LogLevel, color_cast<LOG_COLOR>(PrintColor), pFrom, "%s", pStr);
 	}
 	else
 	{
@@ -607,20 +612,59 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bo
 							m_pfnTeeHistorianCommandCallback(ClientId, m_FlagMask, pCommand->m_pName, &Result, m_pTeeHistorianCommandUserdata);
 						}
 
-						if(Result.GetVictim() == CResult::VICTIM_ME)
-							Result.SetVictim(ClientId);
-
-						if(Result.HasVictim() && Result.GetVictim() == CResult::VICTIM_ALL)
+						// 官方 f586be3e0：victim 按槽位解析，只允许一个槽位展开成多个客户端
+						int FanOutSlot = -1;
+						std::vector<int> vFanOutIds;
+						for(unsigned Slot = 0; Slot < Result.m_vVictims.size(); Slot++)
 						{
-							for(int i = 0; i < MAX_CLIENTS; i++)
+							const char *pSpecialVictim = Result.m_vVictims[Slot].m_aSpecialVictim;
+							if(!pSpecialVictim[0])
+								continue;
+							std::optional<std::vector<int>> Victims;
+							if(str_comp(pSpecialVictim, "me") == 0)
 							{
-								Result.SetVictim(i);
-								pCommand->m_pfnCallback(&Result, pCommand->m_pUserData);
+								// 控制台等伪客户端没有自己的 id，不能解析成 me
+								if(ClientId >= 0)
+									Victims = std::vector<int>{ClientId};
 							}
+							else if(str_comp(pSpecialVictim, "all") == 0)
+							{
+								std::vector<int> vAllIds;
+								vAllIds.reserve(MAX_CLIENTS);
+								for(int i = 0; i < MAX_CLIENTS; i++)
+									vAllIds.push_back(i);
+								Victims = std::move(vAllIds);
+							}
+							if(!Victims.has_value())
+							{
+								log_error("console", "Invalid victim '%s'", pSpecialVictim);
+								return;
+							}
+							if(Victims->size() != 1 && FanOutSlot >= 0)
+							{
+								log_error("console", "Only one parameter may target multiple clients");
+								return;
+							}
+							if(Victims->size() == 1)
+								Result.SetVictim(Slot, Victims->front());
+							else
+							{
+								FanOutSlot = Slot;
+								vFanOutIds = std::move(Victims.value());
+							}
+						}
+
+						if(FanOutSlot < 0)
+						{
+							pCommand->m_pfnCallback(&Result, pCommand->m_pUserData);
 						}
 						else
 						{
-							pCommand->m_pfnCallback(&Result, pCommand->m_pUserData);
+							for(const int VictimId : vFanOutIds)
+							{
+								Result.SetVictim(FanOutSlot, VictimId);
+								pCommand->m_pfnCallback(&Result, pCommand->m_pUserData);
+							}
 						}
 
 						if(pCommand->m_Flags & CMDFLAG_TEST)
@@ -731,11 +775,9 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 	// exec the file
 	CLineReader LineReader;
 	bool Success = false;
-	char aBuf[32 + IO_MAX_PATH_LENGTH];
 	if(LineReader.OpenFile(m_pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType)))
 	{
-		str_format(aBuf, sizeof(aBuf), "executing '%s'", pFilename);
-		Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", aBuf);
+		log_info("console", "executing '%s'", pFilename);
 
 		while(const char *pLine = LineReader.Get())
 		{
@@ -746,8 +788,7 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 	}
 	else if(LogFailure)
 	{
-		str_format(aBuf, sizeof(aBuf), "failed to open '%s'", pFilename);
-		Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", aBuf);
+		log_error("console", "failed to open '%s'", pFilename);
 	}
 
 	m_pFirstExec = pPrev;
@@ -756,7 +797,7 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 
 void CConsole::Con_Echo(IResult *pResult, void *pUserData)
 {
-	((CConsole *)pUserData)->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", pResult->GetString(0));
+	log_info("console", "%s", pResult->GetString(0));
 }
 
 void CConsole::Con_Exec(IResult *pResult, void *pUserData)
@@ -856,7 +897,7 @@ void CConsole::ConCommandStatus(IResult *pResult, void *pUser)
 	pConsole->PrintCommandList(AccessLevel.value(), 0);
 }
 
-void CConsole::ConCmdlistChat(IResult *pResult, void *pUser)
+void CConsole::ConUserCommandStatus(IResult *pResult, void *pUser)
 {
 	CConsole *pConsole = static_cast<CConsole *>(pUser);
 	pConsole->Print(OUTPUT_LEVEL_STANDARD, "chatresp", "可用聊天命令列表：");
@@ -896,7 +937,7 @@ CConsole::CConsole(int FlagMask)
 
 	Register("access_level", "s[command] ?s['admin'|'moderator'|'helper'|'all']", CFGFLAG_SERVER, ConCommandAccess, this, "Specify command accessibility for given access level");
 	Register("access_status", "s['admin'|'moderator'|'helper'|'all']", CFGFLAG_SERVER, ConCommandStatus, this, "List all commands which are accessible for given access level");
-	Register("cmdlist", "", CFGFLAG_SERVER | CFGFLAG_CHAT, ConCmdlistChat, this, "List all commands which are accessible for users");
+	Register("cmdlist", "", CFGFLAG_SERVER | CFGFLAG_CHAT, ConUserCommandStatus, this, "List all commands which are accessible for users");
 	//List all commands which are accessible for users
 
 	// DDRace
@@ -1149,34 +1190,39 @@ const IConsole::ICommandInfo *CConsole::GetCommandInfo(const char *pName, int Fl
 
 std::unique_ptr<IConsole> CreateConsole(int FlagMask) { return std::make_unique<CConsole>(FlagMask); }
 
-int CConsole::CResult::GetVictim() const
+int CConsole::CResult::GetVictim(unsigned Slot) const
 {
-	return m_Victim;
+	dbg_assert(Slot < m_vVictims.size(), "victim slot %u out of range", Slot);
+	dbg_assert(m_vVictims[Slot].m_Id.has_value(), "victim %u has no value", Slot);
+	return m_vVictims[Slot].m_Id.value();
 }
 
 void CConsole::CResult::ResetVictim()
 {
-	m_Victim = VICTIM_NONE;
+	m_vVictims.clear();
 }
 
 bool CConsole::CResult::HasVictim() const
 {
-	return m_Victim != VICTIM_NONE;
+	return !m_vVictims.empty();
 }
 
-void CConsole::CResult::SetVictim(int Victim)
+void CConsole::CResult::AddVictim(const char *pVictim)
 {
-	m_Victim = std::clamp<int>(Victim, VICTIM_NONE, MAX_CLIENTS - 1);
-}
-
-void CConsole::CResult::SetVictim(const char *pVictim)
-{
-	if(!str_comp(pVictim, "me"))
-		m_Victim = VICTIM_ME;
-	else if(!str_comp(pVictim, "all"))
-		m_Victim = VICTIM_ALL;
+	CVictim Victim;
+	int Value;
+	if(str_toint(pVictim, &Value) && in_range(Value, 0, MAX_CLIENTS - 1))
+		Victim.m_Id = Value;
 	else
-		m_Victim = std::clamp<int>(str_toint(pVictim), 0, MAX_CLIENTS - 1);
+		str_copy(Victim.m_aSpecialVictim, pVictim);
+	m_vVictims.push_back(Victim);
+}
+
+void CConsole::CResult::SetVictim(unsigned Slot, int Victim)
+{
+	dbg_assert(Slot < m_vVictims.size(), "victim slot %u out of range", Slot);
+	dbg_assert(in_range(Victim, 0, MAX_CLIENTS - 1), "Victim ID %d out of range [0, %d]", Victim, MAX_CLIENTS - 1);
+	m_vVictims[Slot].m_Id = Victim;
 }
 
 std::optional<ColorHSLA> CConsole::ColorParse(const char *pStr, float DarkestLighting)

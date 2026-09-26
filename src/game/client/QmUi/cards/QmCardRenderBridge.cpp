@@ -11,6 +11,11 @@ bool qm_card_catalog::QmCardRenderHook::RenderQmFunctionCheckbox(CMenus *pMenus,
 	return pMenus->RenderQmFunctionCheckbox(pId, pTextId, pText, pValue, pRect, PrewarmOnly);
 }
 
+bool qm_card_catalog::QmCardRenderHook::RenderQmVisualCheckbox(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue)
+{
+	return pMenus->RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, pId, pTextId, pText, pValue);
+}
+
 void qm_card_catalog::QmCardRenderHook::RenderQmVisualTranslateUiContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing)
 {
 	pMenus->RenderQmVisualTranslateUiContent(Content, LineHeight, BodySize, LineSpacing);
@@ -19,11 +24,6 @@ void qm_card_catalog::QmCardRenderHook::RenderQmVisualTranslateUiContent(CMenus 
 void qm_card_catalog::QmCardRenderHook::RenderQmVisualStreamerContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing)
 {
 	pMenus->RenderQmVisualStreamerContent(Content, LineHeight, LineSpacing);
-}
-
-void qm_card_catalog::QmCardRenderHook::RenderQmVisualFocusModeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float ColumnGap, float LabelWidth)
-{
-	pMenus->RenderQmVisualFocusModeContent(Content, LineHeight, BodySize, LineSpacing, ColumnGap, LabelWidth);
 }
 
 void qm_card_catalog::QmCardRenderHook::RenderQmVisualEntityOverlayContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -71,6 +71,16 @@ void qm_card_catalog::QmCardRenderHook::RenderQmFunctionGoresContent(CMenus *pMe
 	pMenus->RenderQmFunctionGoresContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 }
 
+void qm_card_catalog::QmCardRenderHook::RenderQmVisualFocusModeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float ColumnGap, float LabelWidth)
+{
+	pMenus->RenderQmVisualFocusModeContent(Content, LineHeight, BodySize, LineSpacing, ColumnGap, LabelWidth);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmFunctionSoloSplitContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmFunctionSoloSplitContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+}
+
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionKeyBindsContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth)
 {
 	pMenus->RenderQmFunctionKeyBindsContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth);
@@ -81,9 +91,9 @@ void qm_card_catalog::QmCardRenderHook::RenderQmFunctionEmoticonsContent(CMenus 
 	pMenus->RenderQmFunctionEmoticonsContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth);
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly)
+void qm_card_catalog::QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
-	pMenus->RenderQmFunctionMiniFeaturesContent(Content, LineHeight, LineSpacing, PrewarmOnly);
+	pMenus->RenderQmFunctionMiniFeaturesContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 }
 
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionJumpHintContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -201,9 +211,9 @@ void qm_card_catalog::QmCardRenderHook::RenderQmHudBackground3DContent(CMenus *p
 	pMenus->RenderQmHudBackground3DContent(Content, Metrics, LabelWidth, PrewarmOnly);
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmHudBindStatusContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing)
+void qm_card_catalog::QmCardRenderHook::RenderQmHudBindStatusContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
-	pMenus->RenderQmHudBindStatusContent(Content, LineHeight, LineSpacing);
+	pMenus->RenderQmHudBindStatusContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 }
 
 bool qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue)

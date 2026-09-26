@@ -13,15 +13,15 @@ void CSkin::CSkinTextures::Reset()
 	m_BodyOutline = IGraphics::CTextureHandle();
 	m_Feet = IGraphics::CTextureHandle();
 	m_FeetOutline = IGraphics::CTextureHandle();
-	m_pChatAvatar.reset();
-	m_pBodyOutline.reset();
-	m_pFeetOutline.reset();
 	m_Hands = IGraphics::CTextureHandle();
 	m_HandsOutline = IGraphics::CTextureHandle();
 	for(auto &Eye : m_aEyes)
 	{
 		Eye = IGraphics::CTextureHandle();
 	}
+	m_QmBodyOutline.reset();
+	m_QmFeetOutline.reset();
+	m_QmChatAvatar.reset();
 }
 
 void CSkin::CSkinTextures::Unload(IGraphics *pGraphics)
@@ -30,19 +30,17 @@ void CSkin::CSkinTextures::Unload(IGraphics *pGraphics)
 	pGraphics->UnloadTexture(&m_BodyOutline);
 	pGraphics->UnloadTexture(&m_Feet);
 	pGraphics->UnloadTexture(&m_FeetOutline);
-	if(m_pBodyOutline)
-		m_pBodyOutline->Unload(pGraphics);
-	if(m_pFeetOutline)
-		m_pFeetOutline->Unload(pGraphics);
-	m_pChatAvatar.reset();
-	m_pBodyOutline.reset();
-	m_pFeetOutline.reset();
 	pGraphics->UnloadTexture(&m_Hands);
 	pGraphics->UnloadTexture(&m_HandsOutline);
 	for(auto &Eye : m_aEyes)
 	{
 		pGraphics->UnloadTexture(&Eye);
 	}
+	if(m_QmBodyOutline)
+		m_QmBodyOutline->Unload(pGraphics);
+	if(m_QmFeetOutline)
+		m_QmFeetOutline->Unload(pGraphics);
+	m_QmChatAvatar.reset();
 }
 
 CSkin::CSkinMetricVariableInt::operator int() const

@@ -629,28 +629,20 @@ void CGameContext::ConTimeout(IConsole::IResult *pResult, void *pUserData)
 
 	const char *pTimeout = pResult->NumArguments() > 0 ? pResult->GetString(0) : pPlayer->m_aTimeoutCode;
 
-	if(!pSelf->Server()->IsSixup(pResult->m_ClientId))
+	for(int i = 0; i < pSelf->Server()->MaxClients(); i++)
 	{
-		for(int i = 0; i < pSelf->Server()->MaxClients(); i++)
+		if(i == pResult->m_ClientId)
+			continue;
+		if(!pSelf->m_apPlayers[i])
+			continue;
+		if(str_comp(pSelf->m_apPlayers[i]->m_aTimeoutCode, pTimeout))
+			continue;
+		if(pSelf->Server()->SetTimedOut(i, pResult->m_ClientId))
 		{
-			if(i == pResult->m_ClientId)
-				continue;
-			if(!pSelf->m_apPlayers[i])
-				continue;
-			if(str_comp(pSelf->m_apPlayers[i]->m_aTimeoutCode, pTimeout))
-				continue;
-			if(pSelf->Server()->SetTimedOut(i, pResult->m_ClientId))
-			{
-				if(pSelf->m_apPlayers[i]->GetCharacter())
-					pSelf->SendTuningParams(i, pSelf->m_apPlayers[i]->GetCharacter()->m_TuneZone);
-				return;
-			}
+			if(pSelf->m_apPlayers[i]->GetCharacter())
+				pSelf->SendTuningParams(i, pSelf->m_apPlayers[i]->GetCharacter()->m_TuneZone);
+			return;
 		}
-	}
-	else
-	{
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-			"你的超时保护码已设置。0.7 客户端在超时后无法重新认领自己的 tee；不过 0.6 客户端可以认领你的 tee ");
 	}
 
 	pSelf->Server()->SetTimeoutProtected(pResult->m_ClientId);
@@ -877,6 +869,15 @@ void CGameContext::ConSwap(IConsole::IResult *pResult, void *pUserData)
 
 	int Team = Teams.m_Core.Team(pResult->m_ClientId);
 
+	if(Team == Teams.m_Core.TeamSuper())
+	{
+		pSelf->Console()->Print(
+			IConsole::OUTPUT_LEVEL_STANDARD,
+			"chatresp",
+			"关闭 super 后才能使用交换功能，也就是和队友互换位置");
+		return;
+	}
+
 	if(!Teams.IsValidTeamNumber(Team))
 	{
 		pSelf->Console()->Print(
@@ -992,15 +993,6 @@ void CGameContext::ConCancelSwap(IConsole::IResult *pResult, void *pUserData)
 	CGameTeams &Teams = pSelf->m_pController->Teams();
 
 	int Team = Teams.m_Core.Team(pResult->m_ClientId);
-
-	if(!pSelf->m_pController->Teams().IsValidTeamNumber(Team))
-	{
-		pSelf->Console()->Print(
-			IConsole::OUTPUT_LEVEL_STANDARD,
-			"chatresp",
-			"先加入队伍后才能使用交换功能，也就是和队友互换位置");
-		return;
-	}
 
 	bool SwapPending = pPlayer->m_SwapTargetsClientId != -1 && !pSelf->Server()->ClientSlotEmpty(pPlayer->m_SwapTargetsClientId);
 
@@ -1837,8 +1829,8 @@ void CGameContext::ConRescue(IConsole::IResult *pResult, void *pUserData)
 
 	if(GoRescue)
 	{
-		pChr->Rescue();
-		pChr->Unfreeze();
+		if(pChr->Rescue())
+			pChr->Unfreeze();
 	}
 }
 
@@ -1911,8 +1903,8 @@ void CGameContext::ConBack(IConsole::IResult *pResult, void *pUserData)
 			return;
 		}
 		pChr->GetLastRescueTeeRef(pPlayer->m_RescueMode) = pPlayer->m_LastDeath.value();
-		pChr->Rescue();
-		pChr->Unfreeze();
+		if(pChr->Rescue())
+			pChr->Unfreeze();
 	}
 }
 

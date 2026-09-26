@@ -18,10 +18,10 @@
 #include <engine/client/updater.h>
 #include <engine/editor.h>
 #include <engine/graphics.h>
+#include <engine/http.h>
 #include <engine/shared/config.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/fifo.h>
-#include <engine/shared/http.h>
 #include <engine/shared/network.h>
 #include <engine/textrender.h>
 #include <engine/warning.h>
@@ -88,7 +88,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	IStorage *m_pStorage = nullptr;
 	IEngineTextRender *m_pTextRender = nullptr;
 	IUpdater *m_pUpdater = nullptr;
-	CHttp m_Http;
+	IEngineHttp *m_pHttp = nullptr;
 
 	rust::Box<CSnapshotDelta> m_pSnapshotDelta;
 	rust::Box<CSnapshotDelta> m_pSnapshotDeltaSixup;
@@ -125,13 +125,16 @@ class CClient : public IClient, public CDemoPlayer::IListener
 		char m_aServerAddr[NETADDR_MAXSTRSIZE] = "";
 	};
 
+	// 单调时钟纳秒（time_get_nanoseconds），与主循环 tick 缓存无关。
 	std::atomic<int64_t> m_HangLastHeartbeat{0};
+	int64_t m_QmGraphicsLastPumpNetworkNs = 0;
 	std::atomic<bool> m_HangWatchdogStop{false};
 	std::atomic<bool> m_HangReportWritten{false};
 	std::atomic<int> m_HangInfoIndex{0};
 	SHangInfo m_aHangInfo[2];
 	std::thread m_HangWatchdogThread;
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
+	int m_NetworkPumpFirstConn = 0;
 
 	// 本进程内是否已经尝试过图形致命错误恢复：只尝试一次，避免
 	// 「图形故障 -> 重启 -> 又故障」形成无限重启循环。
@@ -140,6 +143,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	IGraphics::CTextureHandle m_DebugFont;
 
 	int64_t m_LastRenderTime;
+
+	// 窗口是隐藏创建的（backend_sdl.cpp 的 SDL_WINDOW_HIDDEN），第一帧真正
+	// present 之后再显示它，启动就不会先闪一帧纯黑。只显示一次，见 UpdateAndSwap()。
+	bool m_WindowShown = false;
 
 	int m_SnapCrcErrors = 0;
 	bool m_AutoScreenshotRecycle = false;
@@ -184,7 +191,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	// map download
 	char m_aMapDownloadUrl[256] = "";
-	std::shared_ptr<CHttpRequest> m_pMapdownloadTask = nullptr;
+	std::shared_ptr<IHttpRequest> m_pMapdownloadTask = nullptr;
 	char m_aMapdownloadFilename[256] = "";
 	char m_aMapdownloadFilenameTemp[256] = "";
 	char m_aMapdownloadName[256] = "";
@@ -207,7 +214,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	std::optional<CMapDetails> m_MapDetails;
 
 	EInfoState m_InfoState = EInfoState::ERROR;
-	std::shared_ptr<CHttpRequest> m_pDDNetInfoTask = nullptr;
+	std::shared_ptr<IHttpRequest> m_pDDNetInfoTask = nullptr;
 
 	// time
 	CSmoothTime m_aGameTime[NUM_DUMMIES];
@@ -232,6 +239,9 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	float m_LastDummyConnectTime = 0.0f;
 	bool m_DummyReconnectOnReload = false;
 	bool m_DummyDeactivateOnReconnect = false;
+#if defined(CONF_PLATFORM_IOS)
+	bool m_DummyReconnectOnResume = false;
+#endif
 
 	// graphs
 	CGraph m_InputtimeMarginGraph;
@@ -334,12 +344,13 @@ private:
 	// 通过 CQmPerfFileSwitchLogger 包装切换内部 logger（文件 ↔ noop）实现。
 	std::shared_ptr<ILogger> m_pQmPerfFileSwitchLogger = nullptr; // 持有包装（基类引用，跨线程安全）
 	CQmPerfFileSwitchLogger *m_pQmPerfFileSwitch = nullptr; // 具体类型指针，仅 client.cpp 使用
-	bool m_QmPerfFileLoggerWanted = false;
+	bool m_QmPerfFileLoggerWanted = false; // 配置要求开启；打开失败时不置 active，等下次开关变化再试
 	bool m_QmPerfFileLoggerActive = false; // 当前是否已打开性能日志文件
+	// QmClient：生效配置快照（脱敏后写入性能日志），见 perf_diagnostics.h。
 	CQmPerfConfigSnapshot m_QmPerfConfigSnapshot;
-	CQmPerfFrameBatch m_QmPerfFrameBatch;
-	int64_t m_QmPerfLastConfigCheck = 0;
-	int64_t m_QmPerfLastFrameEnd = 0;
+	CQmPerfFrameBatch m_QmPerfFrameBatch; // 逐帧阶段日志攒批：容量或耗时到阈值即落盘
+	int64_t m_QmPerfLastConfigCheck = 0; // 上次写入配置增量快照的时间
+	int64_t m_QmPerfLastFrameEnd = 0; // 上一渲染帧结束时间；0 表示会话刚开始
 	void FinishQmPerfSession(bool Shutdown);
 	int m_QmPerfLogReopenCounter = 0; // 本进程内第几次开启性能日志（文件名序号，避免覆盖旧日志）
 
@@ -373,7 +384,7 @@ public:
 	IStorage *Storage() { return m_pStorage; }
 	IEngineTextRender *TextRender() { return m_pTextRender; }
 	IUpdater *Updater() { return m_pUpdater; }
-	IHttp *Http() { return &m_Http; }
+	IHttp *Http() { return m_pHttp; }
 
 	CClient();
 
@@ -438,6 +449,7 @@ public:
 	bool DummyConnectingDelayed() const override;
 	bool DummyAllowed() const override;
 
+	const CServerInfo &ServerInfo() const override;
 	void GetServerInfo(CServerInfo *pServerInfo) const override;
 	void ServerInfoRequest();
 	void SetCurrentServerInfo(const CServerInfo &ServerInfo);
@@ -470,7 +482,10 @@ public:
 
 	void Restart() override;
 	void Quit() override;
-	void ResetSocket();
+	bool ResetSocket();
+#if defined(CONF_PLATFORM_IOS)
+	void RecreateBrokenSockets();
+#endif
 
 	const char *PlayerName() const override;
 	const char *DummyName() override;
@@ -481,7 +496,7 @@ public:
 
 	int TranslateSysMsg(int *pMsgId, bool System, CUnpacker *pUnpacker, CPacker *pPacker, CNetChunk *pPacket, bool *pIsExMsg);
 
-	void PreprocessConnlessPacket7(CNetChunk *pPacket);
+	bool PreprocessConnlessPacket7(CNetChunk *pPacket);
 	void ProcessConnlessPacket(CNetChunk *pPacket);
 	void ProcessServerInfo(int Type, NETADDR *pFrom, const void *pData, int DataSize);
 	void ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy);
@@ -513,6 +528,7 @@ public:
 	void Update();
 
 	void RegisterInterfaces();
+	void InitConfigCommands();
 	void InitInterfaces();
 
 	void Run();
@@ -571,7 +587,6 @@ public:
 	static void ConchainNetReset(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainLoglevel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainStdoutOutputLevel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
-	static void ConchainProcessHighPriority(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	static void Con_DemoSlice(IConsole::IResult *pResult, void *pUserData);
 	static void Con_DemoSliceBegin(IConsole::IResult *pResult, void *pUserData);
@@ -655,7 +670,7 @@ public:
 #endif
 
 	std::optional<int> ShowMessageBox(const IGraphics::CMessageBox &MessageBox) override;
-	void GetGpuInfoString(char (&aGpuInfo)[1024]) override;
+	void GetGpuInfoString(char (&aGpuInfo)[512]) override;
 	void SetLoggers(std::shared_ptr<ILogger> &&pFileLogger, std::shared_ptr<ILogger> &&pStdoutLogger, std::shared_ptr<ILogger> &&pPerfFileLogger);
 };
 

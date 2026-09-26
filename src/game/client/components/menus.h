@@ -27,8 +27,6 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiTheme.h>
-#include <game/client/QmUi/cards/QmCardCatalog.h>
-#include <game/client/QmUi/cards/QmMapUploadSearch.h>
 #include <game/client/component.h>
 #include <game/client/components/assets_resource_registry.h>
 #include <game/client/components/community_icons.h>
@@ -52,7 +50,6 @@
 #include <game/client/ui_listbox.h>
 #include <game/voting.h>
 
-#include <algorithm>
 #include <array>
 #include <chrono>
 #include <deque>
@@ -62,13 +59,21 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 struct CDataSprite;
 
+class IHttpRequest;
 class CChat;
 namespace qm_card_registry
 {
 	struct SCardNavigationTarget;
+}
+// 卡片目录的受控渲染入口：卡片模块是独立文件，不能触达 CMenus 私有内容函数，
+// 故在此前向声明并授予友元，只开放 QmCardRenderHook 显式列出的那组助手。
+namespace qm_card_catalog
+{
+	struct QmCardRenderHook;
 }
 
 inline bool QmTextMatchesIncludeExcludeFilter(const char *pText, const char *pInclude, const char *pExclude)
@@ -97,6 +102,7 @@ enum
 };
 
 class CUIRect;
+enum class EQmIcon;
 struct IUiContext;
 struct SCardMotionSpec;
 struct SSettingsCardDeckVisualOptions;
@@ -124,10 +130,11 @@ class CMenus : public CComponent
 public:
 	int DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, unsigned Flags = BUTTONFLAG_LEFT);
 	int DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f);
+	int DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = 5.0f, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f);
 	int DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);
-	// feat-004: modern menu tab. No lift / height-grow; default hover/active
-	// states are tinted by ui_color via the v2 anim runtime.
+	int DoButton_MenuTab_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);
 	int DoMenuTabV2(CButtonContainer *pButtonContainer, const char *pText, bool Active, const CUIRect *pRect, int Corners = IGraphics::CORNER_T, const ColorRGBA *pCustomDefault = nullptr, const ColorRGBA *pCustomActive = nullptr, const ColorRGBA *pCustomHover = nullptr, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float ContentScale = 1.0f, bool CapsuleTab = false);
+	int DoMenuTabV2_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, bool Active, const CUIRect *pRect, int Corners = IGraphics::CORNER_T, const ColorRGBA *pCustomDefault = nullptr, const ColorRGBA *pCustomActive = nullptr, const ColorRGBA *pCustomHover = nullptr, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float ContentScale = 1.0f, bool CapsuleTab = false);
 	// 胶囊 Tabbar 的公共零件：绘制上下文（只要 Ui 与动画运行时）与配色。
 	// 页面调用点用 TabBarUiContext + ui_widget::CapsuleTabBarChrome 画容器与滑块。
 	IUiContext TabBarUiContext() const;
@@ -152,6 +159,11 @@ public:
 	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand);
 
 private:
+	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize);
+	int DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, bool Active, const CUIRect *pRect, int Corners, const ColorRGBA *pCustomDefault, const ColorRGBA *pCustomActive, const ColorRGBA *pCustomHover, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float ContentScale, bool CapsuleTab = false);
+
+	int DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float FontSize, bool CapsuleTab = false);
+
 	IUiContext SettingsUiContext(const char *pScope, float UiScale = 1.0f);
 	int DoSettingsDropDown(CUIRect *pRect, int CurSelection, const char *const *ppStrs, int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties = {});
 	SCardMotionSpec SettingsCardMotionSpec() const;
@@ -175,6 +187,7 @@ private:
 	void SplitSettingsScrollbarRects(const CUIRect &Rect, unsigned Flags, CUIRect *pLabelRect, CUIRect *pValueRect, CUIRect *pScrollBarRect) const;
 	int DoButton_CheckBox_Common_WithLabelElement(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, CUIElement *pLabelElement, bool ProcessInput = true, float LabelFontSize = -1.0f);
 	int DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
+	const char *TemporaryOverrideTooltip(const int *pValue) const;
 	int DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float RowHeight, float RowSpacing, float BodySize);
 
 	CUi::SColorPickerPopupContext m_ColorPickerPopupContext;
@@ -985,39 +998,81 @@ public:
 	{
 		if(pType == nullptr || pType[0] == '\0')
 			return nullptr;
-		if(str_comp_nocase(pType, "DDmaX Easy") == 0)
-			return "DDmaX.Easy 古典";
-		if(str_comp_nocase(pType, "DDmaX.Easy") == 0)
-			return "DDmaX.Easy 古典";
-		if(str_comp_nocase(pType, "DDmaX Next") == 0)
-			return "DDmaX.Next 古典";
-		if(str_comp_nocase(pType, "DDmaX.Next") == 0)
-			return "DDmaX.Next 古典";
-		if(str_comp_nocase(pType, "DDmaX Pro") == 0)
-			return "DDmaX.Pro 古典";
-		if(str_comp_nocase(pType, "DDmaX.Pro") == 0)
-			return "DDmaX.Pro 古典";
-		if(str_comp_nocase(pType, "DDmaX Nut") == 0)
-			return "DDmaX.Nut 古典";
-		if(str_comp_nocase(pType, "DDmaX.Nut") == 0)
-			return "DDmaX.Nut 古典";
+		// 官方简中里 DDmaX 系列是「古典」、Oldschool 是「传统」，两者不能混用。
+		// 难度/类型显示名统一带「图」后缀，避免浏览器列表里有的带、有的不带。
+		if(str_comp_nocase(pType, "DDmaX Easy") == 0 || str_comp_nocase(pType, "DDmaX.Easy") == 0)
+			return "古典图 Easy";
+		if(str_comp_nocase(pType, "DDmaX Next") == 0 || str_comp_nocase(pType, "DDmaX.Next") == 0)
+			return "古典图 Next";
+		if(str_comp_nocase(pType, "DDmaX Pro") == 0 || str_comp_nocase(pType, "DDmaX.Pro") == 0)
+			return "古典图 Pro";
+		if(str_comp_nocase(pType, "DDmaX Nut") == 0 || str_comp_nocase(pType, "DDmaX.Nut") == 0)
+			return "古典图 Nut";
 		if(str_comp_nocase(pType, "DDmaX") == 0)
-			return "DDmaX 古典";
-		if(str_comp_nocase(pType, "Oldschool") == 0)
 			return "古典图";
+		if(str_comp_nocase(pType, "Oldschool") == 0)
+			return "传统图";
 		if(str_comp_nocase(pType, "Novice") == 0)
 			return "简单图";
 		if(str_comp_nocase(pType, "Moderate") == 0)
 			return "中阶图";
 		if(str_comp_nocase(pType, "Brutal") == 0)
-			return "高阶";
+			return "高阶图";
+		if(str_comp_nocase(pType, "Insane") == 0)
+			return "疯狂图";
+		if(str_comp_nocase(pType, "Dummy") == 0)
+			return "分身图";
+		if(str_comp_nocase(pType, "Solo") == 0)
+			return "单人图";
+		if(str_comp_nocase(pType, "活动") == 0)
+			return "活动图";
+		return pType;
+	}
+	static const char *AxiomShortTypeDisplayName(const char *pType)
+	{
+		if(pType == nullptr || pType[0] == '\0')
+			return nullptr;
+		if(str_comp_nocase(pType, "Novice") == 0)
+			return "简单";
+		if(str_comp_nocase(pType, "Moderate") == 0)
+			return "普通";
+		if(str_comp_nocase(pType, "Brutal") == 0)
+			return "困难";
 		if(str_comp_nocase(pType, "Insane") == 0)
 			return "疯狂";
-		if(str_comp_nocase(pType, "Dummy") == 0)
-			return "分身";
 		if(str_comp_nocase(pType, "Solo") == 0)
 			return "单人";
+		if(str_comp_nocase(pType, "Dummy") == 0)
+			return "分身";
+		if(str_comp_nocase(pType, "活动") == 0)
+			return "活动";
+		if(str_comp_nocase(pType, "极限") == 0)
+			return "极限";
+		if(str_comp_nocase(pType, "训练") == 0)
+			return "训练";
+		if(str_comp_nocase(pType, "娱乐") == 0)
+			return "娱乐";
 		return pType;
+	}
+	static const char *AxiomAxraceShortTypeDisplayName(const char *pType)
+	{
+		if(pType == nullptr || pType[0] == '\0')
+			return nullptr;
+		// AXRace follows the DDRace difficulty tokens, but its compact name has no
+		// map suffix.
+		if(str_comp_nocase(pType, "DDmaX Easy") == 0 || str_comp_nocase(pType, "DDmaX.Easy") == 0)
+			return "古典 Easy";
+		if(str_comp_nocase(pType, "DDmaX Next") == 0 || str_comp_nocase(pType, "DDmaX.Next") == 0)
+			return "古典 Next";
+		if(str_comp_nocase(pType, "DDmaX Pro") == 0 || str_comp_nocase(pType, "DDmaX.Pro") == 0)
+			return "古典 Pro";
+		if(str_comp_nocase(pType, "DDmaX Nut") == 0 || str_comp_nocase(pType, "DDmaX.Nut") == 0)
+			return "古典 Nut";
+		if(str_comp_nocase(pType, "DDmaX") == 0)
+			return "古典";
+		if(str_comp_nocase(pType, "Oldschool") == 0)
+			return "传统";
+		return AxiomShortTypeDisplayName(pType);
 	}
 	struct SFriendAutoFollowState
 	{
@@ -1109,7 +1164,19 @@ public:
 					return "DDmaX Nut";
 				return "DDmaX";
 			}
-			if(str_find_nocase(pText, "Oldschool") || str_find(pText, "古典") || str_find(pText, "传统"))
+			if(str_find_nocase(pText, "DDmaX") || str_find(pText, "古典"))
+			{
+				if(str_find_nocase(pText, "Easy"))
+					return "DDmaX Easy";
+				if(str_find_nocase(pText, "Next"))
+					return "DDmaX Next";
+				if(str_find_nocase(pText, "Pro"))
+					return "DDmaX Pro";
+				if(str_find_nocase(pText, "Nut"))
+					return "DDmaX Nut";
+				return "DDmaX";
+			}
+			if(str_find_nocase(pText, "Oldschool") || str_find(pText, "传统"))
 				return "Oldschool";
 			if(str_find_nocase(pText, "Novice") || str_find(pText, "普通") || str_find(pText, "简单"))
 				return "Novice";
@@ -1123,7 +1190,8 @@ public:
 				return "Dummy";
 			if(str_find_nocase(pText, "Solo") || str_find(pText, "单人"))
 				return "Solo";
-			if(str_find(pText, "活动"))
+			// 官方简中 Event 译作「活动」，英文与中文写法都要认。
+			if(str_find_nocase(pText, "Event") || str_find(pText, "活动"))
 				return "活动";
 			if(str_find(pText, "极限"))
 				return "极限";
@@ -1198,11 +1266,56 @@ public:
 
 		if(str_find_nocase(pName, "Axiom"))
 		{
+			const char *pAxiomDifficulty = pDifficulty;
+			const bool IsAxiomAxrace = str_find_nocase(pInfo->m_aGameType, "axrace") != nullptr;
+			// Axiom 的「普通」对应 DDRace 的 Moderate；旧的通用解析为
+			// 兼容历史数据仍把它归为 Novice，因此在 Axiom 分支单独修正。
+			if(str_find(pName, "普通") && !str_find_nocase(pName, "Novice") && !str_find(pName, "简单"))
+				pAxiomDifficulty = "Moderate";
+			// 尾部只保留区段标记(如 CHN7)：钩累死/AXRace 是 Axiom 的玩法模式，不进短名。
+			// 地区优先取「⌬ 上海 ✦」里的城市，没有 ✦ 的写法取 Axiom 后直接跟的城市。
+			const auto IsCjkStart = [](const char *p) {
+				const unsigned char Lead = (unsigned char)*p;
+				return Lead >= 0xE4 && Lead <= 0xE9;
+			};
+			const auto ExtractAxiomLocation = [&](char *pOut, int OutSize) -> bool {
+				pOut[0] = '\0';
+				if(const char *pStar = str_find(pName, "✦"))
+				{
+					const char *pEnd = pStar;
+					while(pEnd > pName && pEnd[-1] == ' ')
+						--pEnd;
+					const char *pStart = pEnd;
+					while(pStart > pName && pStart[-1] != ' ')
+						--pStart;
+					if(!IsCjkStart(pStart))
+						return false;
+					str_copy(pOut, pStart, minimum((int)(pEnd - pStart) + 1, OutSize));
+					return pOut[0] != '\0';
+				}
+				const char *pAfterBrand = str_find_nocase(pName, "Axiom");
+				const char *pCandidate = pAfterBrand != nullptr ? str_skip_whitespaces_const(pAfterBrand + 5) : nullptr;
+				if(pCandidate == nullptr || !IsCjkStart(pCandidate))
+					return false;
+				const char *pEnd = str_find(pCandidate, " ");
+				str_copy(pOut, pCandidate, pEnd != nullptr ? minimum((int)(pEnd - pCandidate) + 1, OutSize) : OutSize);
+				return pOut[0] != '\0';
+			};
+
 			const char *pDash = str_find(pName, " - ");
-			const char *pMapName = pDash != nullptr ? str_skip_whitespaces_const(pDash + 3) : nullptr;
-			if(pMapName != nullptr && pMapName[0] != '\0')
+			const char *pTail = pDash != nullptr ? str_skip_whitespaces_const(pDash + 3) : nullptr;
+			if(pTail != nullptr && pTail[0] != '\0')
 			{
-				str_format(pBuffer, BufferSize, "%s - %s", ServerbrowserShortTypeDisplayName(pDifficulty), pMapName);
+				char aTail[64];
+				const char *pTailEnd = str_find(pTail, " ");
+				str_copy(aTail, pTail, pTailEnd != nullptr ? minimum((int)(pTailEnd - pTail) + 1, (int)sizeof(aTail)) : (int)sizeof(aTail));
+
+				char aLocation[32];
+				const char *pShortDifficulty = IsAxiomAxrace ? AxiomAxraceShortTypeDisplayName(pAxiomDifficulty) : AxiomShortTypeDisplayName(pAxiomDifficulty);
+				if(ExtractAxiomLocation(aLocation, (int)sizeof(aLocation)))
+					str_format(pBuffer, BufferSize, "%s - %s %s", pShortDifficulty, aTail, aLocation);
+				else
+					str_format(pBuffer, BufferSize, "%s - %s", pShortDifficulty, aTail);
 				return pBuffer;
 			}
 		}
@@ -1232,11 +1345,11 @@ public:
 				{
 					char aSuffix[64];
 					str_copy(aSuffix, pSuffix, sizeof(aSuffix));
-					if(char *pClassic = const_cast<char *>(str_find(aSuffix, "古典")))
+					if(char *pOldType = const_cast<char *>(str_find(aSuffix, "古典")))
 					{
-						while(pClassic > aSuffix && pClassic[-1] == ' ')
-							--pClassic;
-						*pClassic = '\0';
+						while(pOldType > aSuffix && pOldType[-1] == ' ')
+							--pOldType;
+						*pOldType = '\0';
 					}
 					str_format(pBuffer, BufferSize, "%s - %s", ServerbrowserShortTypeDisplayName(aSuffix[0] != '\0' ? aSuffix : pDifficulty), pRegion);
 					return pBuffer;
@@ -1410,6 +1523,9 @@ protected:
 	int m_Popup;
 	bool m_ShowStart;
 	bool m_MenuActive;
+	int m_MenuOpenFrame = 0;
+	bool m_BrowserRefreshPending = false;
+	bool m_BrowserRefreshPendingForce = false;
 
 	bool m_DummyNamePlatePreview = false;
 
@@ -1520,12 +1636,13 @@ protected:
 	char m_aSettingsTabLanguageFile[IO_MAX_PATH_LENGTH] = "";
 	bool m_NeedSendinfo;
 	bool m_NeedSendDummyinfo;
-	int m_SettingPlayerPage;
 
 	// 0.7 skins
 	bool m_CustomSkinMenu = false;
 	int m_TeePartSelected = protocol7::SKINPART_BODY;
 	std::string m_SelectedSkin7Name;
+	int m_SelectedSkinIndex7 = -1;
+	int m_DeletedSkinIndex7 = -1;
 	CLineInputBuffered<protocol7::MAX_SKIN_ARRAY_SIZE, protocol7::MAX_SKIN_LENGTH> m_SkinNameInput;
 	bool m_SkinPartListNeedsUpdate = false;
 	void PopupConfirmDeleteSkin7();
@@ -1675,6 +1792,8 @@ protected:
 	char m_aCurrentDemoSelectionName[IO_MAX_PATH_LENGTH];
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenameInput;
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSliceInput;
+	// 导出/预览弹窗里的「Demo display」折叠状态：展开后显示回放专用显示选项。
+	bool m_DemoExportDisplayExpanded = false;
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSearchInput;
 #if defined(CONF_VIDEORECORDER)
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenderInput;
@@ -1710,6 +1829,24 @@ protected:
 
 	std::chrono::nanoseconds m_DemoPopulateStartTime{0};
 
+	enum class ERankDemoDownloadStage
+	{
+		IDLE,
+		FETCH_MANIFEST,
+		FETCH_DEMO,
+	};
+	ERankDemoDownloadStage m_RankDemoDownloadStage = ERankDemoDownloadStage::IDLE;
+	std::shared_ptr<IHttpRequest> m_pRankDemoManifestRequest;
+	std::shared_ptr<IHttpRequest> m_pRankDemoRequest;
+	std::string m_RankDemoMap;
+	char m_aRankDemoManifestPath[IO_MAX_PATH_LENGTH] = "";
+	char m_aRankDemoTempPath[IO_MAX_PATH_LENGTH] = "";
+	char m_aRankDemoDestinationPath[IO_MAX_PATH_LENGTH] = "";
+	// Rank 1 页面：待播放的官方回放缓存路径（断线确认后播放）
+	char m_aPendingRankDemoPlayPath[IO_MAX_PATH_LENGTH] = "";
+	// Rank 1 页面：地图搜索（跨全清单查找指定名次的官方回放）
+	CLineInputBuffered<64> m_RankSearchInput;
+
 	SDemoSelectionEntry DemoSelectionEntryFromItem(const CDemoItem &Item) const;
 	bool IsDemoItemSelected(const CDemoItem &Item) const;
 	bool IsDemoItemDeletable(const CDemoItem &Item) const;
@@ -1730,6 +1867,7 @@ protected:
 	bool LoadDemoScreenshotPreviewTexture(const CDemoItem &Item);
 	void RenderDemoScreenshotPreview(CUIRect PreviewRect, const CDemoItem &Item);
 	void DemolistOnUpdate(bool Reset);
+	void DemolistSelectNeighbor();
 	static int DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 	bool EnsureDemoDate(CDemoItem &Item);
 	bool EnsureDemoSize(CDemoItem &Item);
@@ -1742,7 +1880,95 @@ protected:
 	void ResetDemoBrowserFolder();
 
 	// friends
-	using CFriendItem = CQmBrowserFriendList::CItem;
+	class CFriendItem
+	{
+		char m_aName[MAX_NAME_LENGTH];
+		char m_aClan[MAX_CLAN_LENGTH];
+		char m_aCategory[IFriends::MAX_FRIEND_CATEGORY_LENGTH];
+		const CServerInfo *m_pServerInfo;
+		int m_FriendState;
+		bool m_IsPlayer;
+		bool m_IsAfk;
+		// skin info 0.6
+		char m_aSkin[MAX_SKIN_LENGTH];
+		bool m_CustomSkinColors;
+		int m_CustomSkinColorBody;
+		int m_CustomSkinColorFeet;
+		// skin info 0.7
+		char m_aaSkin7[protocol7::NUM_SKINPARTS][protocol7::MAX_SKIN_LENGTH];
+		bool m_aUseCustomSkinColor7[protocol7::NUM_SKINPARTS];
+		int m_aCustomSkinColor7[protocol7::NUM_SKINPARTS];
+
+	public:
+		CFriendItem(const CFriendInfo *pFriendInfo) :
+			m_pServerInfo(nullptr),
+			m_IsPlayer(false),
+			m_IsAfk(false),
+			m_CustomSkinColors(false),
+			m_CustomSkinColorBody(0),
+			m_CustomSkinColorFeet(0)
+		{
+			str_copy(m_aName, pFriendInfo->m_aName);
+			str_copy(m_aClan, pFriendInfo->m_aClan);
+			str_copy(m_aCategory, pFriendInfo->m_aCategory[0] != '\0' ? pFriendInfo->m_aCategory : IFriends::DEFAULT_CATEGORY);
+			m_FriendState = m_aName[0] == '\0' ? IFriends::FRIEND_CLAN : IFriends::FRIEND_PLAYER;
+			m_aSkin[0] = '\0';
+			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
+			{
+				m_aaSkin7[Part][0] = '\0';
+				m_aUseCustomSkinColor7[Part] = false;
+				m_aCustomSkinColor7[Part] = 0;
+			}
+		}
+		CFriendItem(const CServerInfo::CClient &CurrentClient, const CServerInfo *pServerInfo, const char *pCategory) :
+			m_pServerInfo(pServerInfo),
+			m_FriendState(CurrentClient.m_FriendState),
+			m_IsPlayer(CurrentClient.m_Player),
+			m_IsAfk(CurrentClient.m_Afk),
+			m_CustomSkinColors(CurrentClient.m_CustomSkinColors),
+			m_CustomSkinColorBody(CurrentClient.m_CustomSkinColorBody),
+			m_CustomSkinColorFeet(CurrentClient.m_CustomSkinColorFeet)
+		{
+			str_copy(m_aName, CurrentClient.m_aName);
+			str_copy(m_aClan, CurrentClient.m_aClan);
+			str_copy(m_aCategory, pCategory != nullptr && pCategory[0] != '\0' ? pCategory : IFriends::DEFAULT_CATEGORY);
+			str_copy(m_aSkin, CurrentClient.m_aSkin);
+			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
+			{
+				str_copy(m_aaSkin7[Part], CurrentClient.m_aaSkin7[Part]);
+				m_aUseCustomSkinColor7[Part] = CurrentClient.m_aUseCustomSkinColor7[Part];
+				m_aCustomSkinColor7[Part] = CurrentClient.m_aCustomSkinColor7[Part];
+			}
+		}
+
+		const char *Name() const { return m_aName; }
+		const char *Clan() const { return m_aClan; }
+		const char *Category() const { return m_aCategory; }
+		const CServerInfo *ServerInfo() const { return m_pServerInfo; }
+		int FriendState() const { return m_FriendState; }
+		bool IsPlayer() const { return m_IsPlayer; }
+		bool IsAfk() const { return m_IsAfk; }
+		// 0.6 skin
+		const char *Skin() const { return m_aSkin; }
+		bool CustomSkinColors() const { return m_CustomSkinColors; }
+		int CustomSkinColorBody() const { return m_CustomSkinColorBody; }
+		int CustomSkinColorFeet() const { return m_CustomSkinColorFeet; }
+		// 0.7 skin
+		const char *Skin7(int Part) const { return m_aaSkin7[Part]; }
+		bool UseCustomSkinColor7(int Part) const { return m_aUseCustomSkinColor7[Part]; }
+		int CustomSkinColor7(int Part) const { return m_aCustomSkinColor7[Part]; }
+
+		const void *ListItemId() const { return &m_aName; }
+		const void *RemoveButtonId() const { return &m_FriendState; }
+		const void *CommunityTooltipId() const { return &m_IsPlayer; }
+		const void *SkinTooltipId() const { return &m_aSkin; }
+
+		bool operator<(const CFriendItem &Other) const
+		{
+			const int Result = str_comp_nocase(m_aName, Other.m_aName);
+			return Result < 0 || (Result == 0 && str_comp_nocase(m_aClan, Other.m_aClan) < 0);
+		}
+	};
 	CQmBrowserFriendList m_BrowserFriendList;
 
 	std::vector<unsigned char> m_vFriendsCategoryExpanded;
@@ -1829,8 +2055,6 @@ protected:
 
 	// found in menus_demo.cpp
 	vec2 m_DemoControlsPositionOffset = vec2(0.0f, 0.0f);
-	bool m_DemoDisplayExpanded = false;
-	bool m_DemoExportDisplayExpanded = false;
 	bool m_PausedBeforeSeeking;
 	float m_PrevSeekAmount;
 	float m_LastPauseChange = -1.0f;
@@ -1842,15 +2066,18 @@ protected:
 	void FetchAllHeaders();
 	void HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek = -1);
 	void RenderDemoPlayer(CUIRect MainView);
-	void RenderDemoCard(const CUIRect &Rect);
-	void RenderDemoExportDisplayToggle(const CUIRect &Rect);
-	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true);
 	void RenderDemoPlayerSliceSavePopup(CUIRect MainView);
+	// 回放/导出共用的显示选项面板与其折叠开关。
+	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true);
+	void RenderDemoExportDisplayToggle(const CUIRect &Rect);
 	bool m_DemoBrowserListInitialized = false;
 	void RenderDemoBrowser(CUIRect MainView);
 	void RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivated);
 	void RenderDemoBrowserDetails(CUIRect DetailsView);
 	void RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemActivated);
+	void StartRankDemoDownload(const char *pMapName);
+	void UpdateRankDemoDownload();
+	void FinishRankDemoDownload(bool Success, const char *pMessage);
 	void PopupConfirmPlayDemo();
 	void PopupConfirmDeleteDemo();
 	void PopupConfirmDeleteFolder();
@@ -1947,6 +2174,7 @@ protected:
 	std::vector<SMenuSnapshotTextKey> m_SnapshotTextPending;
 	struct SMenuTextContainerBuildRequest
 	{
+		bool m_IngameScope = false;
 		CUIElement *m_pElement = nullptr;
 		std::string m_Text;
 		CUIRect m_Rect;
@@ -1954,13 +2182,48 @@ protected:
 		int m_Align = 0;
 		SLabelProperties m_LabelProps;
 		int m_StrLen = -1;
-		std::optional<CTextCursor> m_ReadCursor;
-		EFontPreset m_FontPreset = EFontPreset::DEFAULT_FONT;
-		unsigned m_RenderFlags = 0;
+		int m_ReadCursorGlyphCount = -1;
 	};
-	std::deque<SMenuTextContainerBuildRequest> m_vMenuTextContainerBuildRequests;
+	std::vector<SMenuTextContainerBuildRequest> m_vMenuTextContainerBuildRequests;
 	SIngameServerInfoTextSnapshot m_IngameServerInfoTextSnapshot;
 	SIngameMotdParagraphCache m_IngameMotdParagraphCache;
+	enum class EReportScanState
+	{
+		IDLE,
+		SCANNING,
+	};
+
+	std::shared_ptr<IHttpRequest> m_pReportScanRequest;
+	QmMapUpload::CUpload m_QmMapUpload;
+	// 地图上传选择器（卡片目录的 qm:map_upload 卡使用）：带搜索的文件列表弹窗。
+	// 本地差异：远程命名空间为小写 qm_map_upload，本地既有为 QmMapUpload（全树 23 处引用），
+	// 此处按本地命名空间书写；m_QmMapUpload 本地已存在，不重复声明。
+	using SQmMapUploadFile = QmMapUpload::SMapFile;
+	class CQmMapUploadPicker : public SPopupMenuId
+	{
+	public:
+		CMenus *m_pMenus = nullptr;
+		char m_aFolder[IO_MAX_PATH_LENGTH] = "";
+		int m_StorageType = IStorage::TYPE_ALL;
+		int m_Selected = -1;
+		std::vector<SQmMapUploadFile> m_vFiles;
+		CLineInputBuffered<IO_MAX_PATH_LENGTH> m_SearchInput;
+		QmMapUpload::CSearchIndex m_SearchIndex;
+		CListBox m_ListBox;
+		CButtonContainer m_CancelButton;
+	} m_QmMapUploadPicker;
+	char m_aQmMapUploadPath[IO_MAX_PATH_LENGTH] = "";
+	char m_aQmMapUploadPlayer[MAX_NAME_LENGTH] = "";
+	int m_QmMapUploadStorageType = IStorage::TYPE_ALL;
+	void PopulateQmMapUploadPicker();
+	static int QmMapUploadScan(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
+	static CUi::EPopupMenuFunctionResult PopupQmMapUploadPicker(void *pContext, CUIRect View, bool Active);
+	const char *QmMapUploadPlayerName() const;
+	EReportScanState m_ReportScanState = EReportScanState::IDLE;
+	char m_aReportScanAddress[NETADDR_MAXSTRSIZE] = "";
+	void ResetReportScan();
+	void StartReportScan();
+	void UpdateReportScan();
 	void RenderGame(CUIRect MainView);
 	void PopupConfirmDisconnect();
 	void PopupConfirmDisconnectDummy();
@@ -1986,7 +2249,6 @@ protected:
 	bool IngameMotdParagraphCacheMatches(CUIRect Motd, float FontSize) const;
 	void DrainIngameMotdParagraphCache(CUIRect Motd, float FontSize, bool AllowCurrentFrame = false);
 	bool RenderIngameMotdStableParagraphCache(CUIRect Motd, float FontSize, CUIRect MotdTextArea);
-	void RenderIngameMotdFallbackText(CUIRect MotdTextArea, float FontSize);
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
@@ -2038,8 +2300,8 @@ protected:
 	void RenderServerbrowserInfo(CUIRect View);
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
-	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
 	CQmMapVoteDifficulty m_MapVoteDifficulty;
+	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
@@ -2098,29 +2360,6 @@ protected:
 		CButtonContainer m_CancelButton;
 	} m_SkinQueuePresetRenamePopupContext;
 
-	using SQmMapUploadFile = qm_map_upload::SMapFile;
-	class CQmMapUploadPicker : public SPopupMenuId
-	{
-	public:
-		CMenus *m_pMenus = nullptr;
-		char m_aFolder[IO_MAX_PATH_LENGTH] = "";
-		int m_StorageType = IStorage::TYPE_ALL;
-		int m_Selected = -1;
-		std::vector<SQmMapUploadFile> m_vFiles;
-		CLineInputBuffered<IO_MAX_PATH_LENGTH> m_SearchInput;
-		qm_map_upload::CSearchIndex m_SearchIndex;
-		CListBox m_ListBox;
-		CButtonContainer m_CancelButton;
-	} m_QmMapUploadPicker;
-	qm_map_upload::CUpload m_QmMapUpload;
-	char m_aQmMapUploadPath[IO_MAX_PATH_LENGTH] = "";
-	char m_aQmMapUploadPlayer[MAX_NAME_LENGTH] = "";
-	int m_QmMapUploadStorageType = IStorage::TYPE_ALL;
-	void PopulateQmMapUploadPicker();
-	static int QmMapUploadScan(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
-	static CUi::EPopupMenuFunctionResult PopupQmMapUploadPicker(void *pContext, CUIRect View, bool Active);
-	const char *QmMapUploadPlayerName() const;
-
 	class CMapListItem
 	{
 	public:
@@ -2173,6 +2412,7 @@ public:
 	int Sizeof() const override { return sizeof(*this); }
 
 	void StartLoading(int Total);
+	void RenderLoadingDirect(const char *pCaption, const char *pContent, std::optional<float> Progress);
 	void RenderLoading(const char *pCaption, const char *pContent, int IncreaseCounter);
 	void FinishLoading();
 	void PrewarmSettingsPages();
@@ -2195,6 +2435,7 @@ public:
 	void OnStateChange(int NewState, int OldState) override;
 	void OnWindowResize() override;
 	void OnReset() override;
+	void OnUpdate() override;
 	void OnRender() override;
 	bool OnInput(const IInput::CEvent &Event) override;
 	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
@@ -2220,6 +2461,7 @@ public:
 		PAGE_SETTINGS,
 		PAGE_NETWORK,
 		PAGE_GHOST,
+		PAGE_RANK_DEMO,
 		PAGE_UNFINISHED_MAPS,
 		PAGE_STATS,
 
@@ -2310,14 +2552,13 @@ public:
 	std::array<CUIElement, SETTINGS_LENGTH> m_aSettingsTabLabelElements;
 	std::array<const char *, SETTINGS_LENGTH> m_apSettingsTabs{};
 	int m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
-	// 启动赞助提醒（灵动岛）的生命周期：入场 → 完全展开后倒计时 → 收缩成黑球再上滑。
+	// 启动赞助提醒（灵动岛）的两段式状态（掉落/展开进度 + 停留倒计时）。
 	qm_island::SNoticeState m_QmSponsorNudgeNotice;
 	bool m_QmNewFeaturesScrollReset = true;
 	int m_TClientSettingsTab = 0;
 	int m_AppearanceSettingsTab = APPEARANCE_TAB_HUD;
 	CLineInputBuffered<128> m_GlobalCardSearchInput;
 	void ClearQmClientSettingsSearchInputs();
-	void ClearQmTitlePreviewContainers();
 
 	// DDRace
 	int DoButton_CheckBox_Tristate(const void *pId, const char *pText, TRISTATE Checked, const CUIRect *pRect);
@@ -2340,10 +2581,11 @@ public:
 		int m_Time;
 		int m_Slot;
 		bool m_Own;
+		bool m_RankGhost;
 		time_t m_Date;
 
 		CGhostItem() :
-			m_Slot(-1), m_Own(false) { m_aFilename[0] = 0; }
+			m_Slot(-1), m_Own(false), m_RankGhost(false) { m_aFilename[0] = 0; }
 
 		bool operator<(const CGhostItem &Other) const { return m_Time < Other.m_Time; }
 
@@ -2362,6 +2604,10 @@ public:
 	std::vector<CGhostItem> m_vGhosts;
 
 	std::chrono::nanoseconds m_GhostPopulateStartTime{0};
+
+	// QmClient: 当前正在扫描的影子目录（ghosts 根目录或其 rank_ghost 子目录）
+	char m_aGhostScanDir[IO_MAX_PATH_LENGTH] = "";
+	bool m_GhostScanIsRankDir = false;
 
 	void GhostlistPopulate();
 	CGhostItem *GetOwnGhost();
@@ -2482,7 +2728,7 @@ public:
 	SMenuTextPlanItem AddStableTextButton(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect &Rect, const char *pSourceTag = nullptr) const;
 	void DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	int DoIngameMenuTab(CButtonContainer *pButtonContainer, int Page, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Corners);
-	int DoIngameMenuButton(int Page, const char *pTextId, CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE);
+	int DoIngameMenuButton(int Page, const char *pTextId, CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, bool Disabled = false);
 	int DoIngameMenuCheckBox(int Page, const char *pTextId, const void *pId, const char *pText, int Checked, const CUIRect *pRect);
 	void DoIngameMenuLabel(int Page, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
 	void DoIngameMenuTitleLabel(int Page, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {});
@@ -2491,9 +2737,9 @@ public:
 	void DoSettingsLabelStreamed(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	void DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, bool Render = true);
 	void DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1);
-	void DoSettingsCardLabel(const char *pStableId, bool Subtitle, const CUIRect *pRect, const char *pText, float Size, const SLabelProperties &Props);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f);
+	int DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor = nullptr, const ColorRGBA *pHoverColor = nullptr);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, bool ProcessInput, float RequestedFontSize = -1.0f);
@@ -2502,12 +2748,7 @@ public:
 
 	bool PrepareSettingsNumericFieldLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect &Rect, const char *pLabel, unsigned Flags, ui_widget::SNumericFieldOptions &Options);
 	ui_widget::SNumericFieldState *GetSettingsNumericFieldState(const void *pId);
-	bool DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &View, const char *pLabelTextId, const char *pLabel, std::vector<CButtonContainer> &vButtonContainers, const std::vector<const char *> &vButtonTextIds, const std::vector<const char *> &vLabels, const std::vector<int> &vValues, int &Value, const SSettingsContentMetrics &Metrics);
-	// 胶囊分段行里的单个分段：容器与滑块由 ui_widget::NestedSegmentChrome 统一绘制，
-	// 这里只负责 hover 反馈与分段文字，文字仍走设置页文本缓存（与 DoSettingsButton_Menu 同一条链）。
-	// pLabelColor 非空表示这段压在主滑块上（子级菜单），字色与 hover 色由调用方给实色。
-	int DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor = nullptr, const ColorRGBA *pHoverColor = nullptr);
-	ui_widget::SNestedSegmentStyle SettingsNestedSegmentStyle() const;
+	bool DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &View, const char *pLabelTextId, const char *pLabel, std::vector<CButtonContainer> &vButtonContainers, const std::vector<const char *> &vButtonTextIds, const std::vector<const char *> &vLabels, const std::vector<int> &vValues, int &Value, const SSettingsContentMetrics &Metrics, const int *pOverrideSource = nullptr);
 	void BuildBaseSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems);
@@ -2550,7 +2791,6 @@ public:
 		const SSettingsResourceFrameContext FrameContext = SettingsResourceFrameContext();
 		m_SettingsFrameBudget = SSettingsWarmupFrameBudget{};
 		m_CurrentSettingsUiFrameBudget = SSettingsAdaptiveBudgetOutput{};
-		m_SettingsUiFrameBudgetInitialized = false;
 		SettingsApplyActiveTeeSkinFrameBudget(m_SettingsFrameBudget, TeeSettingsActive);
 		if(TeeSettingsActive)
 			m_SettingsFrameBudget.m_MaxGpuUploads = TeeSkinGpuUploadsPerFrame >= 0 ? TeeSkinGpuUploadsPerFrame : SettingsSkinGpuUploadFrameUnits(FrameContext, TeeSettingsActive);
@@ -2601,6 +2841,7 @@ private:
 	int m_SettingsPerfLastQmClientTab = -1;
 	uint64_t m_IngameEscOpenFrame = 0;
 	bool m_IngameServerInfoBackgroundPrepareRequested = false;
+	bool m_IngameServerInfoRenderActive = false;
 
 	class CScopedSettingsTextPerfStats
 	{
@@ -2707,7 +2948,7 @@ private:
 	SSettingsAdaptiveBudgetOutput BeginSettingsUiFrameScheduler(EFrameSchedulerConsumer Consumer, const char *pSource, SSettingsAdaptiveBudgetInput Input);
 	bool MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, int StrLen, const CTextCursor *pReadCursor);
 	bool RequestMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, int StrLen, const CTextCursor *pReadCursor);
-	void QueueMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
+	void QueueMenuTextContainerBuild(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor);
 	void DrainMenuTextContainerBuildRequests();
 	void RemoveMenuTextContainerBuildRequest(const CUIElement &Element);
 	int TrimMenuTextPoolForInsert(uint64_t CurrentFrame);
@@ -2721,7 +2962,6 @@ private:
 	SSettingsRuntimeMetadata m_SettingsRuntimeMetadata;
 	SSettingsWarmupFrameBudget m_SettingsFrameBudget;
 	SSettingsAdaptiveBudgetOutput m_CurrentSettingsUiFrameBudget;
-	bool m_SettingsUiFrameBudgetInitialized = false;
 	SSettingsAdaptiveBudgetOutput m_IngameTextFrameBudget;
 	float m_TextContainerCreateMsEwma = 0.0f;
 	float m_TextContainerUploadMsEwma = 0.0f;
@@ -2777,6 +3017,10 @@ private:
 	std::unordered_set<std::string> m_SettingsMenuTextPlannedKeys;
 	size_t m_SettingsMenuTextPlanCursor = 0;
 	size_t m_SettingsMenuTextPlanCollectionCursor = 0;
+	// 字形预热：构建文本容器前，先把当前 plan item 的字符分帧预热（每帧限量）
+	std::vector<std::pair<int, int>> m_vMenuTextGlyphPrewarmQueue;
+	size_t m_MenuTextGlyphPrewarmCursor = 0;
+	size_t m_MenuTextGlyphPrewarmPlanCursor = static_cast<size_t>(-1);
 	uint64_t m_SettingsMenuTextPlanGeneration = 0;
 	uint64_t m_SettingsMenuTextPlanCollectionGeneration = 0;
 	std::string m_SettingsMenuTextPlanCollectionOperation;
@@ -2804,6 +3048,8 @@ private:
 	friend CMenusIngameTouchControls;
 	CMenusSettingsControls m_MenusSettingsControls;
 	friend CMenusSettingsControls;
+	// 卡片目录分类模块经该桥接取用下面的私有内容渲染/输入助手（见 QmCardCatalog.h）。
+	friend struct qm_card_catalog::QmCardRenderHook;
 	CMenusStart m_MenusStart;
 
 	static int GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
@@ -2811,6 +3057,9 @@ private:
 	// found in menus_ingame.cpp
 	void RenderInGameNetwork(CUIRect MainView);
 	void RenderGhost(CUIRect MainView);
+	void RenderRankDemo(CUIRect MainView);
+	void PopupConfirmRankDemoPlay();
+	void PopupConfirmDeleteRankDemoCache();
 
 	// found in menus_settings.cpp
 	void RenderSettingsDDNet(CUIRect MainView);
@@ -2820,6 +3069,7 @@ private:
 	void RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly = false);
 	SSettingsSection BuildTClientThemeCacheSection();
+	SSettingsSection BuildTClientCursorCacheSection();
 	SSettingsSection BuildTClientAutoReplyCacheSection();
 	SSettingsSection BuildTClientPetCacheSection();
 	SSettingsSection BuildTClientHudCacheSection();
@@ -2852,58 +3102,57 @@ private:
 	void RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage = false, bool PrewarmOnly = false);
 	void RenderSettingsGlobalSearch(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnly = false);
-	// 搜索页结果卡片的"定位"入口：跳回该卡所属分类页并高亮它。
-	void NavigateToGlobalSearchCard(const qm_card_catalog::SQmSearchResultEntry &Card);
-	FSettingsCardHeaderAction BuildGlobalSearchLocateHeaderAction(const qm_card_catalog::SQmSearchResultEntry &Card, bool ReadOnly, float SmallSize);
-	// 卡片目录（QmUi/cards）的受控访问口：卡片模块是独立文件，不能直接调用这里的私有内容函数，
-	// 通过本桥接结构显式暴露"卡片可以调用哪些内容渲染/输入助手"，避免把整类成员公开。
-	friend struct qm_card_catalog::QmCardRenderHook;
 	void RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly);
 	void RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderQmSettingsSliderWithValueInput(const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix, bool PrewarmOnly, unsigned Flags = 0u);
-	bool RenderQmFunctionCheckbox(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly);
+	bool RenderQmFunctionCheckbox(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly, const char *pTooltip = nullptr);
 	bool RenderQmVisualCheckbox(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue);
 	void RenderQmVisualLabel(const char *pTextId, CUIRect *pRect, const char *pText, float FontSize, int TextAlign = TEXTALIGN_ML, const SLabelProperties &LabelProps = {});
 	void RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, float LineSpacing);
-	void RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float ColumnGap, float LabelWidth);
 	void RenderQmVisualTranslateUiContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing);
 	void RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ContentGap, bool PrewarmOnly);
 	void RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-	void RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	void RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	void RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float ColumnGap, float LabelWidth);
 	void RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	bool RenderQmHudCheckbox(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue);
 	bool HandleQmHudCheckboxInput(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
-	bool ToggleQmHudCountdownLocation(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
 	void RenderQmHudLabel(const char *pTextId, CUIRect *pRect, const char *pText, float FontSize, int TextAlign = TEXTALIGN_ML, const SLabelProperties &LabelProps = {});
 	void RenderQmHudKeyBindRow(CUIRect &Content, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pLabel, const char *pCommand, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
 	void RenderQmFunctionKeyBindsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
-	void RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
 	void RenderQmFunctionGoresActorContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	void RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	// 地图上传卡的内容渲染：实现在 QmUi/cards/QmMapUpload.cpp（卡片目录模块负责自己的渲染）。
+	void RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
+	// 表情卡的内容渲染（R3：自 MiniFeatures 列表迁出，独立成 qm:emoticons 卡）。
+	void RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
+	// 灵动岛倒计时位置开关（卡片目录的桥接入口按本地签名调用）。
+	bool ToggleQmHudCountdownLocation(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
+	// 歌词卡的内容渲染（音乐 Hook 开关 + 歌词开关；Hook 开关改为遍历 QmMusicHookRegistry）。
+	void RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly);
 	void RenderQmFunctionJumpHintContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-	void RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly);
+	void RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CornerRadius, bool PrewarmOnly);
-	void RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 	void RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 	void RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-	void RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float LineSpacing);
+	void RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool Expanded, bool PrewarmOnly);
 	void RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight, float LineSpacing, bool OriginalStyle);
 	void RenderQmHudSystemMediaControlsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
-	void RenderQmHudLyricsContent(CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly);
 	void RenderQmHudNotificationsBasicContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
@@ -2911,6 +3160,7 @@ private:
 	void RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly = false);
+	void ClearQmTitlePreviewContainers();
 	void RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha = 1.0f);
 
 	const CWarType *m_pRemoveWarType = nullptr;
@@ -2918,7 +3168,10 @@ private:
 	void RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, const char *pBackupSkin, bool CustomColors, int FeetColor, int BodyColor, int Emote, bool Rainbow, bool Cute,
 		ColorRGBA ColorFeet = ColorRGBA(0, 0, 0, 0), ColorRGBA ColorBody = ColorRGBA(0, 0, 0, 0));
 	void RenderFontIcon(CUIRect Rect, const char *pText, float Size, int Align);
+	// 图集优先、字形回退（pFallbackIcon 为 FontIcons::FONT_ICON_* 字形）。
+	void RenderFontIcon_QmIcon(CUIRect Rect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align);
 	int DoButtonNoRect_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners = IGraphics::CORNER_ALL);
+	int DoButtonNoRect_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners = IGraphics::CORNER_ALL);
 
 	ColorHSLA RenderHSLColorPicker(const CUIRect *pRect, unsigned int *pColor, bool Alpha);
 	bool RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alpha, float DarkestLight, const SSettingsContentMetrics &Metrics);

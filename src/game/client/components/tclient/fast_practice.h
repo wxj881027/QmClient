@@ -58,18 +58,6 @@ public:
 		Decision.m_PlayDeathFeedback = Decision.m_RecordDeath;
 		return Decision;
 	}
-	static vec2 PracticeTeleCursorTarget(vec2 CharacterPos, vec2 Target, float Zoom, int Deadzone, int FollowFactor)
-	{
-		vec2 TargetCameraOffset(0.0f, 0.0f);
-		const float TargetLength = length(Target);
-		if(TargetLength > 0.0001f)
-		{
-			const float OffsetAmount = maximum(TargetLength - (float)Deadzone, 0.0f) * ((float)FollowFactor / 100.0f);
-			TargetCameraOffset = normalize_pre_length(Target, TargetLength) * OffsetAmount;
-		}
-		return CharacterPos + (Target - TargetCameraOffset) * Zoom + TargetCameraOffset;
-	}
-
 	void OnReset() override;
 	void OnMapLoad() override;
 	void OnStateChange(int NewState, int OldState) override;
@@ -168,14 +156,12 @@ private:
 	void UpdateGhostForClientId(int ClientId, SGhostData &Ghost);
 	int ApplyVisualFastInputPrediction(int FinalTickRegular, int LocalClientId, int DummyClientId, int LocalInputConn, int DummyInputConn);
 	void CaptureAnchorsFromSnapshot();
+	void CaptureAnchorFromSnapshot(int ClientId, SAnchorData &Anchor);
 	bool ApplyAnchorToCharacter(CGameWorld &World, const SAnchorData &Anchor) const;
 	bool InitPracticeWorld();
 	void PrunePracticeWorld(CGameWorld &World) const;
 	bool AdvanceBaseWorldToTick(int TargetTick, int LocalClientId, int DummyClientId);
 	void ResetAttackTickHistory();
-	void TrackFireSound(int ClientId, CCharacter *pChar);
-	static int WeaponFireSound(int Weapon);
-	void MaybePlayHammerHitEffect(CCharacter *pChar);
 	void TrackPracticeTileFeedback(int ClientId, CCharacter *pChar, const vec2 &BeforePos);
 	void StandbyCharacter(CCharacter *pChar) const;
 	void RenderGhost(const SGhostData &Ghost, float Alpha) const;

@@ -8,11 +8,18 @@ docs/dyl/BestClient/
 .ruff_cache
 
 # Agent 本地缓存
-/.agents/
+# 版本化项目规则与参考，继续忽略其他本地产物。
+/.agents/**
+!/.agents/**/
+!/.agents/**/*.md
+!/.agents/**/agents/openai.yaml
 .codex/
 .codegraph/
 .env
 !.env.example
+.workbuddy-ai
+.zcode/
+.workbuddy
 
 # Local perf tooling artifacts
 qmclient_scripts/perf/node_modules/
@@ -54,6 +61,8 @@ CPackSourceConfig.cmake
 CTestTestfile.cmake
 Debug
 Makefile
+MinSizeRel
+RelWithDebInfo
 Release
 SAN.*
 _CPack_Packages/
@@ -70,9 +79,11 @@ googletest-src/
 gtest.pc
 gtest_main.pc
 install_manifest*.txt
+minsizerel
 ninja_package
 pack_*/
 release
+relwithdebinfo
 rules.ninja
 testrunner\[1\]_include.cmake
 
@@ -101,6 +112,7 @@ map_diff
 map_extract
 map_find_env
 map_optimize
+map_render
 map_replace_area
 map_replace_image
 map_resave
@@ -152,6 +164,7 @@ tags
 *.cmd
 !scripts/cmake-windows.cmd
 !qmclient_scripts/cmake-windows.cmd
+!qmclient_scripts/preview-crash-dialog.cmd
 *.csv
 *.dll
 *.dmg

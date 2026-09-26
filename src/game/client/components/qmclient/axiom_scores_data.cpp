@@ -3,18 +3,23 @@
 #include <base/math.h>
 #include <base/str.h>
 
-#include <engine/shared/http.h>
+#include <engine/http.h>
 #include <engine/shared/json.h>
 
+#include <algorithm>
 #include <limits>
 
 namespace
 {
+	constexpr float AXIOM_POPUP_HEIGHT = 390.0f;
+	constexpr float AXIOM_POPUP_WIDTH = 360.0f;
+	constexpr float AXIOM_POPUP_SCREEN_MARGIN = 5.0f;
 	constexpr size_t MAX_AXIOM_JSON_BYTES = 8 * 1024 * 1024;
 	constexpr unsigned MAX_AXIOM_SEARCH_RESULTS = 64;
 	constexpr unsigned MAX_AXIOM_DIFFICULTIES = 128;
 	constexpr size_t MAX_AXIOM_PLAYER_NAME_BYTES = 256;
 	constexpr size_t MAX_AXIOM_DIFFICULTY_NAME_BYTES = 192;
+	constexpr size_t MAX_DDSTATS_GAMETYPE_NAME_BYTES = 256;
 
 	// DDNet 社区信息里 Axiom 的服务器分类名，正好对应两个积分模式。
 	constexpr const char *AXIOM_COMMUNITY_TYPE_GORES = "Gores";
@@ -73,7 +78,7 @@ namespace
 		if(pValue->type != json_string)
 			return false;
 		const char *pText = json_string_get(pValue);
-		if(!pText || (!AllowEmpty && pText[0] == '\0') || str_length(pText) > MaxBytes || !str_utf8_check(pText))
+		if(!pText || (!AllowEmpty && pText[0] == '\0') || (size_t)str_length(pText) > MaxBytes || !str_utf8_check(pText))
 			return false;
 		Out = pText;
 		return true;
@@ -176,7 +181,7 @@ namespace
 		{
 			const char *pName = pDifficultyData->u.object.values[i].name;
 			const json_value *pDifficulty = pDifficultyData->u.object.values[i].value;
-			if(!pName || pName[0] == '\0' || str_length(pName) > MAX_AXIOM_DIFFICULTY_NAME_BYTES || !str_utf8_check(pName) || !pDifficulty || pDifficulty->type != json_object)
+			if(!pName || pName[0] == '\0' || (size_t)str_length(pName) > MAX_AXIOM_DIFFICULTY_NAME_BYTES || !str_utf8_check(pName) || !pDifficulty || pDifficulty->type != json_object)
 				return EQmAxiomParseResult::INVALID_RESPONSE;
 
 			const json_value *pStats = JsonField(pDifficulty, "stats");
@@ -197,6 +202,44 @@ namespace
 		}
 
 		OutScore = std::move(Score);
+		return EQmAxiomParseResult::SUCCESS;
+	}
+
+	EQmAxiomParseResult ParseDdStatsRoot(const json_value *pRoot, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes)
+	{
+		if(!pRoot || pRoot->type != json_object || !pPlayerName || pPlayerName[0] == '\0' || !str_utf8_check(pPlayerName))
+			return EQmAxiomParseResult::INVALID_RESPONSE;
+
+		const json_value *pProfile = JsonField(pRoot, "profile");
+		std::string ProfileName;
+		if(!ReadString(pProfile, "name", ProfileName, MAX_AXIOM_PLAYER_NAME_BYTES) || str_comp_nocase(ProfileName.c_str(), pPlayerName) != 0)
+			return EQmAxiomParseResult::INVALID_RESPONSE;
+
+		const json_value *pGameTypes = JsonField(pRoot, "most_played_gametypes");
+		if(pGameTypes->type != json_array)
+			return EQmAxiomParseResult::INVALID_RESPONSE;
+
+		OutGameTypes.clear();
+		OutGameTypes.reserve(pGameTypes->u.array.length);
+		for(unsigned Index = 0; Index < pGameTypes->u.array.length; ++Index)
+		{
+			const json_value *pGameType = pGameTypes->u.array.values[Index];
+			std::string Name;
+			int64_t Seconds = 0;
+			if(!ReadString(pGameType, "key", Name, MAX_DDSTATS_GAMETYPE_NAME_BYTES) || !ReadNonNegativeInteger(pGameType, "seconds_played", Seconds))
+				return EQmAxiomParseResult::INVALID_RESPONSE;
+			SQmDdStatsGameType GameType;
+			GameType.m_Name = std::move(Name);
+			GameType.m_PlayTimeSeconds = Seconds;
+			const auto Existing = std::find_if(OutGameTypes.begin(), OutGameTypes.end(), [&GameType](const SQmDdStatsGameType &Candidate) {
+				return str_comp_nocase(Candidate.m_Name.c_str(), GameType.m_Name.c_str()) == 0;
+			});
+			if(Existing == OutGameTypes.end())
+				OutGameTypes.push_back(std::move(GameType));
+			else
+				Existing->m_PlayTimeSeconds = Seconds;
+		}
+
 		return EQmAxiomParseResult::SUCCESS;
 	}
 }
@@ -233,6 +276,24 @@ EQmAxiomMode QmResolveAxiomModeFromServerContext(const SQmAxiomServerContext &Co
 	return EQmAxiomMode::GORES;
 }
 
+const char *QmAxiomParseResultLabel(EQmAxiomParseResult Result)
+{
+	switch(Result)
+	{
+	case EQmAxiomParseResult::SUCCESS:
+		return "";
+	case EQmAxiomParseResult::NOT_FOUND:
+		return "player not found";
+	case EQmAxiomParseResult::AMBIGUOUS:
+		return "ambiguous player name";
+	case EQmAxiomParseResult::API_ERROR:
+		return "api error";
+	case EQmAxiomParseResult::INVALID_RESPONSE:
+		return "invalid response";
+	}
+	return "";
+}
+
 std::string QmBuildAxiomSearchUrl(const char *pPlayerName)
 {
 	char aEncodedName[1024];
@@ -246,6 +307,15 @@ std::string QmBuildAxiomInfoUrl(int64_t UserId, EQmAxiomMode Mode)
 {
 	char aUrl[256];
 	str_format(aUrl, sizeof(aUrl), "https://api.axiom.teeworlds.cn/v1/query/user/info?user_id=%lld&mode=%s", (long long)UserId, QmAxiomModeName(Mode));
+	return aUrl;
+}
+
+std::string QmBuildDdStatsPlayerUrl(const char *pPlayerName)
+{
+	char aEncodedName[1024];
+	EscapeUrl(aEncodedName, sizeof(aEncodedName), pPlayerName ? pPlayerName : "");
+	char aUrl[1400];
+	str_format(aUrl, sizeof(aUrl), "https://ddstats.tw/player/json?player=%s", aEncodedName);
 	return aUrl;
 }
 
@@ -273,7 +343,31 @@ EQmAxiomParseResult QmParseAxiomInfoResponse(const char *pData, size_t DataSize,
 	return Result;
 }
 
+EQmAxiomParseResult QmParseDdStatsPlayerResponse(const char *pData, size_t DataSize, const char *pPlayerName, std::vector<SQmDdStatsGameType> &OutGameTypes)
+{
+	if(!pData || DataSize == 0 || DataSize > MAX_AXIOM_JSON_BYTES)
+		return EQmAxiomParseResult::INVALID_RESPONSE;
+	json_value *pRoot = JsonParse(pData, DataSize);
+	if(!pRoot)
+		return EQmAxiomParseResult::INVALID_RESPONSE;
+	const EQmAxiomParseResult Result = ParseDdStatsRoot(pRoot, pPlayerName, OutGameTypes);
+	json_value_free(pRoot);
+	return Result;
+}
+
+bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, std::string_view CurrentPlayerName, std::string_view ResponsePlayerName)
+{
+	return CurrentGeneration == ResponseGeneration && CurrentPlayerName == ResponsePlayerName;
+}
+
 bool QmAxiomResponseIsCurrent(uint64_t CurrentGeneration, uint64_t ResponseGeneration, EQmAxiomMode CurrentMode, EQmAxiomMode ResponseMode)
 {
 	return CurrentGeneration == ResponseGeneration && CurrentMode == ResponseMode;
+}
+
+SQmAxiomPopupSize QmAxiomPopupSize(float ScreenWidth, float ScreenHeight)
+{
+	const float MaxWidth = maximum(0.0f, ScreenWidth - AXIOM_POPUP_SCREEN_MARGIN * 2.0f);
+	const float MaxHeight = maximum(0.0f, ScreenHeight - AXIOM_POPUP_SCREEN_MARGIN * 2.0f);
+	return {minimum(AXIOM_POPUP_WIDTH, MaxWidth), minimum(AXIOM_POPUP_HEIGHT, MaxHeight)};
 }

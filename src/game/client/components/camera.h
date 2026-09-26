@@ -28,6 +28,26 @@ namespace QmCameraEffects
 		const float Step = 1.0f - std::exp2(-FrameTime / HalfLife);
 		return Current + (Target - Current) * Step;
 	}
+
+	// 反向按键时的步进基准：与当前动画方向相反时改用画面当前值
+	// 否则旧目标可能仍停在旧方向那一侧，整段动画会继续朝旧方向跑，按键在视觉上等于没反应
+	inline float ZoomTargetBaseOnRetarget(float Value, float Target, float Factor, bool Zooming, bool InstantReverse)
+	{
+		if(!Zooming)
+			return Value;
+		if(InstantReverse && (Factor - 1.0f) * (Target - Value) < 0.0f)
+			return Value;
+		return Target;
+	}
+
+	// 反向按键继承的速度：新目标在速度反方向时归零
+	// 否则新曲线会带着旧方向的速度先减速滑行再掉头，观感上就是"顿一下"
+	inline float ZoomDerivativeOnRetarget(float Current, float Derivative, float Target, bool InstantReverse)
+	{
+		if(InstantReverse && (Target - Current) * Derivative < 0.0f)
+			return 0.0f;
+		return Derivative;
+	}
 }
 
 class CCamera : public CComponent
@@ -71,6 +91,10 @@ private:
 
 	float MinZoomLevel();
 	float MaxZoomLevel();
+
+	// QmClient：影子查看模式的"多人同框"由自动取景接管缩放，
+	// zoom+/- 改为调整用户倍率（与 DDNet multiview 的 personal zoom 同语义）
+	bool GhostMultiViewZoomActive() const;
 
 	vec2 m_LastTargetPos;
 	float m_DyncamSmoothingSpeedBias;

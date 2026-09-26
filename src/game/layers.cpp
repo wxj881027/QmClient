@@ -58,50 +58,30 @@ void CLayers::Init(IMap *pMap, bool GameOnly)
 			{
 				if(pTilemap->m_Flags & TILESLAYERFLAG_TELE)
 				{
-					if(pTilemap->m_Version <= 2)
-					{
-						pTilemap->m_Tele = *((int *)pTilemap + 15);
-					}
 					m_pTeleLayer = pTilemap;
 					IsEntities = true;
 				}
 
 				if(pTilemap->m_Flags & TILESLAYERFLAG_SPEEDUP)
 				{
-					if(pTilemap->m_Version <= 2)
-					{
-						pTilemap->m_Speedup = *((int *)pTilemap + 16);
-					}
 					m_pSpeedupLayer = pTilemap;
 					IsEntities = true;
 				}
 
 				if(pTilemap->m_Flags & TILESLAYERFLAG_FRONT)
 				{
-					if(pTilemap->m_Version <= 2)
-					{
-						pTilemap->m_Front = *((int *)pTilemap + 17);
-					}
 					m_pFrontLayer = pTilemap;
 					IsEntities = true;
 				}
 
 				if(pTilemap->m_Flags & TILESLAYERFLAG_SWITCH)
 				{
-					if(pTilemap->m_Version <= 2)
-					{
-						pTilemap->m_Switch = *((int *)pTilemap + 18);
-					}
 					m_pSwitchLayer = pTilemap;
 					IsEntities = true;
 				}
 
 				if(pTilemap->m_Flags & TILESLAYERFLAG_TUNE)
 				{
-					if(pTilemap->m_Version <= 2)
-					{
-						pTilemap->m_Tune = *((int *)pTilemap + 19);
-					}
 					m_pTuneLayer = pTilemap;
 					IsEntities = true;
 				}
@@ -148,6 +128,10 @@ void CLayers::InitTilemapSkip()
 				continue;
 
 			const CMapItemLayerTilemap *pTilemap = reinterpret_cast<const CMapItemLayerTilemap *>(pLayer);
+			// 除 game 层外的物理层把 tile 存在各自的数据索引里，其 m_Data 既不使用也不在地图加载时校验。
+			if((pTilemap->m_Flags & (TILESLAYERFLAG_TELE | TILESLAYERFLAG_SPEEDUP | TILESLAYERFLAG_FRONT | TILESLAYERFLAG_SWITCH | TILESLAYERFLAG_TUNE)) != 0)
+				continue;
+
 			CTile *pTiles = static_cast<CTile *>(m_pMap->GetData(pTilemap->m_Data));
 			if(pTiles == nullptr || pTilemap->m_Width < 0 || pTilemap->m_Height < 0 ||
 				(int64_t)pTilemap->m_Width * pTilemap->m_Height > m_pMap->GetDataSize(pTilemap->m_Data) / (int)sizeof(CTile))

@@ -36,7 +36,11 @@ std::string ReadTestSourceFile(const char *pRelativePath)
 	EXPECT_TRUE(File.good()) << Path;
 	std::ostringstream Buffer;
 	Buffer << File.rdbuf();
-	return Buffer.str();
+	std::string Contents = Buffer.str();
+	// Source-contract tests use '\n' literals; normalize checked-in CRLF files
+	// so assertions are independent of the checkout's line-ending policy.
+	Contents.erase(std::remove(Contents.begin(), Contents.end(), '\r'), Contents.end());
+	return Contents;
 }
 
 CTestInfo::CTestInfo()
@@ -48,7 +52,7 @@ CTestInfo::CTestInfo()
 	// Replace the string after the first slash with the name of the typed test and use hyphen instead of slash.
 	char aTestCaseName[128];
 	str_copy(aTestCaseName, pTestInfo->test_case_name());
-	for(int i = 0; aTestCaseName[i] != '\0'; i++)
+	for(int i = 0; i < str_length(aTestCaseName); i++)
 	{
 		if(aTestCaseName[i] == '/')
 		{
@@ -59,7 +63,7 @@ CTestInfo::CTestInfo()
 		}
 	}
 	str_format(m_aFilenamePrefix, sizeof(m_aFilenamePrefix), "%s.%s-%d",
-		aTestCaseName, pTestInfo->name(), process_id());
+		aTestCaseName, pTestInfo->name(), pid());
 	Filename(m_aFilename, sizeof(m_aFilename), ".tmp");
 	str_format(m_aStoragePath, sizeof(m_aStoragePath), "tmp/tests/%s", m_aFilename);
 }

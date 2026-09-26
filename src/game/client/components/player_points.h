@@ -3,7 +3,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_PLAYER_POINTS_H
 #define GAME_CLIENT_COMPONENTS_PLAYER_POINTS_H
 
-#include <engine/shared/http.h>
+#include <engine/http.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
 
@@ -58,7 +58,6 @@ inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
 	}
 	return Result;
 }
-
 class CPlayerPoints : public CComponent
 {
 private:
@@ -66,7 +65,7 @@ private:
 	std::map<std::string, SPlayerPointsEntry> m_Cache;
 
 	// Active HTTP requests: player name -> request
-	std::map<std::string, std::shared_ptr<CHttpRequest>> m_ActiveRequests;
+	std::map<std::string, std::shared_ptr<IHttpRequest>> m_ActiveRequests;
 	// 已完成的 HTTP 响应每个玩家最多交给一个后台任务解析。
 	std::map<std::string, std::shared_ptr<IJob>> m_ParseJobs;
 

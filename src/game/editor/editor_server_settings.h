@@ -4,6 +4,9 @@
 #include "component.h"
 #include "editor_ui.h"
 
+#include <game/client/lineinput.h>
+#include <game/client/ui_listbox.h>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -233,6 +236,7 @@ public:
 		friend class CMapSettingsBackend;
 
 	public:
+		virtual ~CContext() = default;
 		bool CommandIsValid() const { return m_pCurrentSetting != nullptr; }
 		int CurrentArg() const { return m_CursorArgIndex; }
 		const char *CurrentArgName() const { return (!m_pCurrentSetting || m_CursorArgIndex < 0 || m_CursorArgIndex >= (int)m_pBackend->m_ParsedCommandArgs.at(m_pCurrentSetting).size()) ? nullptr : m_pBackend->m_ParsedCommandArgs.at(m_pCurrentSetting).at(m_CursorArgIndex).m_aName; }
@@ -257,7 +261,7 @@ public:
 		void Update();
 		void UpdateFromString(const char *pStr);
 		bool UpdateCursor(bool Force = false);
-		void Reset();
+		virtual void Reset();
 		void GetCommandHelpText(char *pStr, int Length) const;
 		bool Valid() const;
 		void ColorArguments(std::vector<STextColorSplit> &vColorSplits) const;
@@ -266,7 +270,7 @@ public:
 		SEditBoxDropdownContext m_DropdownContext;
 		int m_CurrentCompletionIndex;
 
-	private:
+	protected:
 		// Methods
 		CContext(CMapSettingsBackend *pMaster, CLineInput *pLineinput) :
 			m_DropdownContext(), m_pLineInput(pLineinput), m_pBackend(pMaster)
@@ -275,6 +279,7 @@ public:
 			Reset();
 		}
 
+	private:
 		void ClearError();
 		EValidationResult ValidateArg(int Index, const char *pArg);
 		void UpdatePossibleMatches();
@@ -304,6 +309,26 @@ public:
 	CContext NewContext(CLineInput *pLineInput)
 	{
 		return CContext(this, pLineInput);
+	}
+
+	class CContextWithInput : public CContext
+	{
+	public:
+		explicit CContextWithInput(CMapSettingsBackend *pBackend) :
+			CContext(pBackend, &m_CommandInput)
+		{
+		}
+
+		void Reset() override;
+
+		int m_CommandSelectedIndex = -1;
+		CLineInputBuffered<256> m_CommandInput;
+		CListBox m_ListBox;
+	};
+
+	CContextWithInput NewContextWithInput()
+	{
+		return CContextWithInput(this);
 	}
 
 private:

@@ -2,6 +2,10 @@ if(NOT DEFINED ENV{EMSDK})
   message(FATAL_ERROR "EMSDK environment variable must specify path of Emscripten SDK")
 endif()
 
+# CMake's compiler probe is an empty executable and cannot provide the
+# application-specific exported callbacks below. Avoid linking that probe.
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
 set(WASM_CXX_FLAGS "")
 set(WASM_LINKER_FLAGS "")
 
@@ -25,6 +29,9 @@ set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s FILESYSTEM=1 -s FORCE_FILESYSTEM=
 # TODO: Networking not supported. Full socket proxying is also blocked by PROXY_TO_PTHREAD not being supported.
 #set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -lwebsocket.js -s PROXY_POSIX_SOCKETS=1")
 
+# Enable Fetch API for HTTP requests
+set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s FETCH=1")
+
 # Use Web Assembly & a WebGL2 compatible GLES3 implementation.
 set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s WASM=1")
 set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s USE_WEBGL2=1")
@@ -32,21 +39,25 @@ set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s FULL_ES3=1")
 
 # Make sure C callback functions are available to JS.
 set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=[\\$autoResumeAudioContext,\\$dynCall]")
-set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s EXPORTED_FUNCTIONS=_main,_EmscriptenCallbackDropFile,_EmscriptenCallbackQuit")
+set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s EXPORTED_FUNCTIONS=_main")
 set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s EXPORTED_RUNTIME_METHODS=ccall")
 
-# Very important: use same stack size that other platforms have, as the default of 64 KiB that Emscripten uses is too small for our code and causes stack overflows.
-set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s STACK_SIZE=1MB")
+# Very important: use the same stack size that other platforms have. The
+# linker spelling works with both the distro Emscripten toolchain and newer
+# SDK releases; `-s STACK_SIZE` is not recognized by older releases.
+set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -Wl,-z,stack-size=1048576")
 # Even if slower, memory growth has the advantage of using less resources, keep it on for now (instead of a static memory pool).
 set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
 # Maximum of ~2 GiB with WASM32. Using more with WASM64 isn't well supported yet.
 set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s MAXIMUM_MEMORY=2000MB")
 # TODO: Without `--no-check-features` compilation fails with `--shared-memory is disallowed by "cxx.o" because it was not compiled with 'atomics' or 'bulk-memory' features.`
-set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s SHARED_MEMORY=1 -Wl,--no-check-features")
+# USE_PTHREADS enables shared memory on supported Emscripten releases. The
+# explicit SHARED_MEMORY setting was removed from older distro toolchains.
+set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -Wl,--no-check-features")
 
 # Very important: allow SDL2 and our code to call Emscripten functions to yield control to the browser main thread.
 set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s ASYNCIFY=1")
-set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s ASYNCIFY_STACK_SIZE=1MB")
+set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s ASYNCIFY_STACK_SIZE=1048576")
 
 set(WASM_CXX_FLAGS "${WASM_CXX_FLAGS} -D_REENTRANT")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -62,12 +73,16 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -s MALLOC=emmalloc-debug")
 else()
 	# Will drastically reduce code size but also increases compile and link time significantly.
-	set(WASM_CXX_FLAGS "${WASM_CXX_FLAGS} -O3")
+	# The bundled wasm-opt lacks the bulk-memory-opt pass used by -O3.
+	set(WASM_CXX_FLAGS "${WASM_CXX_FLAGS} -O2")
 	set(WASM_CXX_FLAGS "${WASM_CXX_FLAGS} -ffile-prefix-map=$ENV{EMSDK}=EMSDK")
-	set(WASM_LINKER_FLAGS "${WASM_LINKER_FLAGS} -flto")
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WASM_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WASM_CXX_FLAGS}")
+# Override CMake's Release default (-O3), which would still select the
+# unsupported wasm-opt bulk-memory-opt pass at final link.
+set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "Emscripten release C flags" FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "Emscripten release CXX flags" FORCE)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${WASM_LINKER_FLAGS}")
 set(CMAKE_RUST_COMPILER_TARGET wasm32-unknown-emscripten)

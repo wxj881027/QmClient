@@ -23,7 +23,7 @@ namespace qm_demo_cut
 
 	inline int64_t ToCentiseconds(int64_t Ticks, int TickSpeed)
 	{
-		// 先乘后除，避免短片段的时间被截断为整秒。
+		// 保留短于一秒的裁剪片段；调用方须提供有效的回放 tick 频率。
 		return Ticks * 100 / TickSpeed;
 	}
 
@@ -59,4 +59,4 @@ namespace qm_demo_cut
 	};
 }
 
-#endif // GAME_CLIENT_COMPONENTS_QMCLIENT_DEMO_CUT_H
+#endif

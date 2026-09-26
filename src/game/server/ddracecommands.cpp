@@ -4,7 +4,10 @@
 #include <base/log.h>
 
 #include <engine/antibot.h>
+#include <engine/server/authmanager.h>
 #include <engine/shared/config.h>
+
+#include <generated/protocol.h>
 
 #include <game/mapitems.h>
 #include <game/server/entities/character.h>
@@ -88,18 +91,18 @@ void CGameContext::ConKillPlayer(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(!CheckClientId(pResult->m_ClientId))
 		return;
-	int Victim = pResult->GetVictim();
+	int Victim = pResult->GetVictim(0);
 
 	if(pSelf->m_apPlayers[Victim])
 	{
 		pSelf->m_apPlayers[Victim]->KillCharacter(WEAPON_GAME);
 		char aBuf[512];
 		if(pResult->NumArguments() == 2)
-			str_format(aBuf, sizeof(aBuf), "%s was killed by authorized player (%s)",
+			str_format(aBuf, sizeof(aBuf), "%s 被授权玩家处死（%s）",
 				pSelf->Server()->ClientName(Victim),
 				pResult->GetString(1));
 		else
-			str_format(aBuf, sizeof(aBuf), "%s was killed by authorized player",
+			str_format(aBuf, sizeof(aBuf), "%s 被授权玩家处死",
 				pSelf->Server()->ClientName(Victim));
 		pSelf->SendChat(-1, TEAM_ALL, aBuf);
 	}
@@ -460,11 +463,26 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(!CheckClientId(pResult->m_ClientId))
 		return;
-	int Tele = pResult->NumArguments() == 2 ? pResult->GetInteger(0) : pResult->m_ClientId;
-	int TeleTo = pResult->NumArguments() ? pResult->GetInteger(pResult->NumArguments() - 1) : pResult->m_ClientId;
+	// 官方 f586be3e0：tele 的两个可选参数都改成 victim 参数，按槽位取值
+	const bool HasSource = pResult->NumArguments() == 2;
+	int Tele = HasSource ? pResult->GetVictim(0) : pResult->m_ClientId;
+	int TeleTo = pResult->NumArguments() ? pResult->GetVictim(HasSource ? 1 : 0) : pResult->m_ClientId;
 	int AuthLevel = pSelf->Server()->GetAuthedState(pResult->m_ClientId);
 
-	if(Tele != pResult->m_ClientId && AuthLevel < g_Config.m_SvTeleOthersAuthLevel)
+	auto MinTeleLevel = CAuthManager::RoleNameToAuthLevel(g_Config.m_SvTeleOthersAuthLevel);
+	if(!MinTeleLevel.has_value())
+	{
+		// 兼容旧版数字配置。
+		if(str_comp(g_Config.m_SvTeleOthersAuthLevel, "1") == 0)
+			MinTeleLevel = AUTHED_HELPER;
+		else if(str_comp(g_Config.m_SvTeleOthersAuthLevel, "2") == 0)
+			MinTeleLevel = AUTHED_MOD;
+		else if(str_comp(g_Config.m_SvTeleOthersAuthLevel, "3") == 0)
+			MinTeleLevel = AUTHED_ADMIN;
+	}
+	dbg_assert(MinTeleLevel.has_value(), "sv_tele_others_auth_level got unexpected value '%s'", g_Config.m_SvTeleOthersAuthLevel);
+
+	if(Tele != pResult->m_ClientId && AuthLevel < MinTeleLevel.value())
 	{
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tele", "you aren't allowed to tele others");
 		return;
@@ -476,7 +494,7 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 	if(pChr && pPlayer && pSelf->GetPlayerChar(TeleTo))
 	{
 		// default to view pos when character is not available
-		vec2 Pos = pSelf->m_apPlayers[TeleTo]->m_ViewPos;
+		vec2 Pos = pPlayer->m_ViewPos;
 		if(pResult->NumArguments() == 0 && !pPlayer->IsPaused() && pChr->IsAlive())
 		{
 			vec2 Target = vec2(pChr->Core()->m_Input.m_TargetX, pChr->Core()->m_Input.m_TargetY);
@@ -506,7 +524,7 @@ void CGameContext::ConKill(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConForcePause(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	int Victim = pResult->GetVictim();
+	int Victim = pResult->GetVictim(0);
 	int Seconds = 0;
 	if(pResult->NumArguments() > 1)
 		Seconds = std::clamp(pResult->GetInteger(1), 0, 360);
@@ -530,15 +548,15 @@ void CGameContext::ConModerate(IConsole::IResult *pResult, void *pUserData)
 	pPlayer->m_Moderating = !pPlayer->m_Moderating;
 
 	if(!HadModerator && pPlayer->m_Moderating)
-		pSelf->SendChat(-1, TEAM_ALL, "Server kick/spec votes will now be actively moderated.", 0);
+		pSelf->SendChat(-1, TEAM_ALL, "服务器的踢人/旁观投票现在会被主动管理员模式接管", 0);
 
 	if(!pSelf->PlayerModerating())
-		pSelf->SendChat(-1, TEAM_ALL, "Server kick/spec votes are no longer actively moderated.", 0);
+		pSelf->SendChat(-1, TEAM_ALL, "服务器的踢人/旁观投票已不再由主动管理员模式接管", 0);
 
 	if(pPlayer->m_Moderating)
-		pSelf->SendChatTarget(pResult->m_ClientId, "Active moderator mode enabled for you.");
+		pSelf->SendChatTarget(pResult->m_ClientId, "已为你开启主动管理员模式");
 	else
-		pSelf->SendChatTarget(pResult->m_ClientId, "Active moderator mode disabled for you.");
+		pSelf->SendChatTarget(pResult->m_ClientId, "已为你关闭主动管理员模式");
 }
 
 void CGameContext::ConSetDDRTeam(IConsole::IResult *pResult, void *pUserData)
@@ -553,7 +571,7 @@ void CGameContext::ConSetDDRTeam(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
-	const int Target = pResult->GetVictim();
+	const int Target = pResult->GetVictim(0);
 	CPlayer *pPlayer = pSelf->m_apPlayers[Target];
 	if(!pPlayer)
 		return;
@@ -576,7 +594,7 @@ void CGameContext::ConUninvite(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	auto *pController = pSelf->m_pController;
 
-	const int Target = pResult->GetVictim();
+	const int Target = pResult->GetVictim(0);
 	if(!pSelf->m_apPlayers[Target])
 		return;
 
@@ -604,6 +622,12 @@ void CGameContext::ConDrySave(IConsole::IResult *pResult, void *pUserData)
 	ESaveResult Result = SavedTeam.Save(pSelf, Team, true);
 	if(CSaveTeam::HandleSaveError(Result, pResult->m_ClientId, pSelf))
 		return;
+	const char *pSaveState = SavedTeam.GetString();
+	if(!pSaveState)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "你的队伍太大，无法保存");
+		return;
+	}
 
 	char aTimestamp[32];
 	str_timestamp(aTimestamp, sizeof(aTimestamp));
@@ -613,8 +637,7 @@ void CGameContext::ConDrySave(IConsole::IResult *pResult, void *pUserData)
 	if(!File)
 		return;
 
-	int Len = str_length(SavedTeam.GetString());
-	io_write(File, SavedTeam.GetString(), Len);
+	io_write(File, pSaveState, str_length(pSaveState));
 	io_close(File);
 }
 

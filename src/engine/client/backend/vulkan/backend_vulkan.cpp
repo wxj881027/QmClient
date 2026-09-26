@@ -81,9 +81,9 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	[[nodiscard]] bool FrameProfilingEnabled()
 	{
 #if defined(CONF_PLATFORM_MACOS)
-		return IsVerbose() || g_Config.m_QmMacosGraphicsDiagnostics != 0;
+		return IsVerbose() || g_Config.m_QmMacosGraphicsDiagnostics != 0 || g_Config.m_QmGraphicsTrace != 0;
 #else
-		return IsVerbose();
+		return IsVerbose() || g_Config.m_QmGraphicsTrace != 0;
 #endif
 	}
 
@@ -758,9 +758,9 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	{
 		vec2 m_TexelOffset;
 		int32_t m_Radius;
-		int32_t m_Padding;
+		int32_t m_Mode;
 		std::array<float, IGraphics::GAUSSIAN_BLUR_MAX_RADIUS + 1> m_aWeights;
-		float m_EndPadding;
+		int32_t m_Pass;
 	};
 	static_assert(sizeof(SUniformGaussianBlur) == 64);
 
@@ -946,7 +946,9 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 
 	bool m_RecreateSwapChain = false;
 	bool m_SwapchainCreated = false;
+	bool m_VulkanInitializationComplete = false;
 	bool m_RenderingPaused = false;
+	bool m_FramePrepared = false;
 	bool m_HasDynamicViewport = false;
 	bool m_ForceSingleThreadedRender = false;
 	SBackendCapabilities *m_pBackendCapabilities = nullptr;
@@ -959,10 +961,10 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	bool m_OptimalRGBAImageBlitting = false;
 	bool m_LinearRGBAImageBlitting = false;
 
-	VkBuffer m_IndexBuffer;
+	VkBuffer m_IndexBuffer = VK_NULL_HANDLE;
 	SDeviceMemoryBlock m_IndexBufferMemory;
 
-	VkBuffer m_RenderIndexBuffer;
+	VkBuffer m_RenderIndexBuffer = VK_NULL_HANDLE;
 	SDeviceMemoryBlock m_RenderIndexBufferMemory;
 	size_t m_CurRenderIndexPrimitiveCount;
 
@@ -986,7 +988,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	uint32_t m_GetPresentedImgDataHelperHeight = 0;
 	VkFence m_GetPresentedImgDataHelperFence = VK_NULL_HANDLE;
 
-	std::array<VkSampler, SUPPORTED_SAMPLER_TYPE_COUNT> m_aSamplers;
+	std::array<VkSampler, SUPPORTED_SAMPLER_TYPE_COUNT> m_aSamplers{};
 
 	class IStorage *m_pStorage;
 
@@ -1044,12 +1046,21 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 		uint64_t m_FenceWaits = 0;
 		uint64_t m_QueueWaits = 0;
 		uint64_t m_DeviceWaits = 0;
+		uint64_t m_TextRenderPrepares = 0;
+		uint64_t m_TextRenderInvalidContainer = 0;
+		uint64_t m_TextRenderInvalidBufferObject = 0;
+		uint64_t m_TextRenderMissingBuffer = 0;
+		uint64_t m_TextRenderInvalidTexture = 0;
+		uint64_t m_TextRenderMissingDescriptor = 0;
+		uint64_t m_TextRenderZeroDraw = 0;
 		std::chrono::nanoseconds m_CPUFrameTime = 0ns;
 		std::chrono::nanoseconds m_GPUFrameTime = 0ns;
 		std::chrono::nanoseconds m_CPUCommandPrepareTime = 0ns;
 		std::chrono::nanoseconds m_CPUMainCommandRecordTime = 0ns;
 		std::chrono::nanoseconds m_CPUThreadCommandRecordTime = 0ns;
 		std::chrono::nanoseconds m_CPUFenceWaitTime = 0ns;
+		std::chrono::nanoseconds m_CPUAcquireTime = 0ns;
+		std::chrono::nanoseconds m_CPUPresentTime = 0ns;
 		std::chrono::nanoseconds m_CPUQueueSubmitTime = 0ns;
 		std::chrono::nanoseconds m_CPUQueueWaitTime = 0ns;
 		std::chrono::nanoseconds m_CPUDeviceWaitTime = 0ns;
@@ -1099,6 +1110,13 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 			m_FenceWaits += Other.m_FenceWaits;
 			m_QueueWaits += Other.m_QueueWaits;
 			m_DeviceWaits += Other.m_DeviceWaits;
+			m_TextRenderPrepares += Other.m_TextRenderPrepares;
+			m_TextRenderInvalidContainer += Other.m_TextRenderInvalidContainer;
+			m_TextRenderInvalidBufferObject += Other.m_TextRenderInvalidBufferObject;
+			m_TextRenderMissingBuffer += Other.m_TextRenderMissingBuffer;
+			m_TextRenderInvalidTexture += Other.m_TextRenderInvalidTexture;
+			m_TextRenderMissingDescriptor += Other.m_TextRenderMissingDescriptor;
+			m_TextRenderZeroDraw += Other.m_TextRenderZeroDraw;
 			m_CPUFrameTime += Other.m_CPUFrameTime;
 			m_CPUCommandPrepareTime += Other.m_CPUCommandPrepareTime;
 			m_CPUMainCommandRecordTime += Other.m_CPUMainCommandRecordTime;
@@ -1112,6 +1130,8 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 				m_HasGPUFrameTime = true;
 			}
 			m_CPUFenceWaitTime += Other.m_CPUFenceWaitTime;
+			m_CPUAcquireTime += Other.m_CPUAcquireTime;
+			m_CPUPresentTime += Other.m_CPUPresentTime;
 			m_CPUQueueSubmitTime += Other.m_CPUQueueSubmitTime;
 		}
 	};
@@ -1145,6 +1165,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	bool m_FrameProfilingActive = false;
 	uint32_t m_RequestedApiVersion = VK_API_VERSION_1_1;
 	uint32_t m_EffectiveApiVersion = VK_API_VERSION_1_1;
+	VkPresentModeKHR m_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 	VkResult m_LastVulkanInstanceCreateResult = VK_SUCCESS;
 	bool m_RequiredVulkanVersionUnavailable = false;
 
@@ -1152,6 +1173,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	static constexpr size_t MAIN_THREAD_INDEX = 0;
 	size_t m_CurCommandInPipe = 0;
 	size_t m_CommandsInPipe = 0;
+	size_t m_RenderCallsInPipe = 0;
 	CQmVulkanRenderScheduler m_RenderScheduler;
 
 	struct SRenderThread
@@ -1187,8 +1209,6 @@ private:
 
 	uint64_t m_CurFrame = 0;
 	std::vector<uint64_t> m_vImageLastFrameCheck;
-
-	// 背板捕获诊断只打一次（见 Cmd_RenderTarget_CaptureBackbuffer）。
 	bool m_CaptureBackbufferProbeDone = false;
 
 	uint32_t m_LastPresentedSwapChainImageIndex;
@@ -1200,9 +1220,10 @@ private:
 	VkInstance m_VKInstance = VK_NULL_HANDLE;
 	VkPhysicalDevice m_VKGPU;
 	uint32_t m_VKGraphicsQueueIndex = std::numeric_limits<uint32_t>::max();
-	VkDevice m_VKDevice;
-	VkQueue m_VKGraphicsQueue, m_VKPresentQueue;
-	VkSurfaceKHR m_VKPresentSurface;
+	VkDevice m_VKDevice = VK_NULL_HANDLE;
+	VkQueue m_VKGraphicsQueue = VK_NULL_HANDLE;
+	VkQueue m_VKPresentQueue = VK_NULL_HANDLE;
+	VkSurfaceKHR m_VKPresentSurface = VK_NULL_HANDLE;
 	SSwapImgViewportExtent m_VKSwapImgAndViewportExtent;
 
 #ifdef VK_EXT_debug_utils
@@ -1217,13 +1238,13 @@ private:
 	PFN_vkGetDeviceFaultInfoEXT m_pfnGetDeviceFaultInfoEXT = nullptr;
 #endif
 
-	VkDescriptorSetLayout m_StandardTexturedDescriptorSetLayout;
-	VkDescriptorSetLayout m_Standard3DTexturedDescriptorSetLayout;
+	VkDescriptorSetLayout m_StandardTexturedDescriptorSetLayout = VK_NULL_HANDLE;
+	VkDescriptorSetLayout m_Standard3DTexturedDescriptorSetLayout = VK_NULL_HANDLE;
 
-	VkDescriptorSetLayout m_TextDescriptorSetLayout;
+	VkDescriptorSetLayout m_TextDescriptorSetLayout = VK_NULL_HANDLE;
 
-	VkDescriptorSetLayout m_SpriteMultiUniformDescriptorSetLayout;
-	VkDescriptorSetLayout m_QuadUniformDescriptorSetLayout;
+	VkDescriptorSetLayout m_SpriteMultiUniformDescriptorSetLayout = VK_NULL_HANDLE;
+	VkDescriptorSetLayout m_QuadUniformDescriptorSetLayout = VK_NULL_HANDLE;
 
 	SPipelineContainer m_StandardPipeline;
 	SPipelineContainer m_StandardLinePipeline;
@@ -1290,7 +1311,7 @@ private:
 
 	std::vector<VkCommandPool> m_vCommandPools;
 
-	VkRenderPass m_VKRenderPass;
+	VkRenderPass m_VKRenderPass = VK_NULL_HANDLE;
 	VkRenderPass m_VKRenderPassLoad = VK_NULL_HANDLE;
 	VkRenderPass m_VKRenderTargetRenderPass = VK_NULL_HANDLE;
 
@@ -1348,6 +1369,7 @@ private:
 
 		VkBuffer m_IndexBuffer = VK_NULL_HANDLE;
 		bool m_ClearColorInRenderThread = false;
+		bool m_SkipRender = false;
 
 		bool m_HasDynamicState = false;
 		VkViewport m_Viewport;
@@ -1572,8 +1594,45 @@ protected:
 		return pCriticalError;
 	}
 
+	void CleanupVulkanInitialization()
+	{
+		if(m_VKDevice == VK_NULL_HANDLE)
+			return;
+
+		DestroyIndexBuffer(m_IndexBuffer, m_IndexBufferMemory);
+		DestroyIndexBuffer(m_RenderIndexBuffer, m_RenderIndexBufferMemory);
+		if(m_VulkanInitializationComplete)
+		{
+			CleanupVulkan<true>(m_SwapChainImageCount);
+			m_VulkanInitializationComplete = false;
+		}
+		else
+		{
+			DestroySyncObjects();
+			DestroyFrameTimestampQueries();
+			if(m_VKSwapChain != VK_NULL_HANDLE)
+				CleanupVulkanSwapChain(true, true);
+			DestroyTextureSamplers();
+			DestroyDescriptorPools();
+			DestroyCommandPool();
+			m_vvThreadDrawCommandBuffers.clear();
+			m_vHelperThreadDrawCommandBuffers.clear();
+			m_vvUsedThreadDrawCommandBuffer.clear();
+			m_vMainDrawCommandBuffers.clear();
+			m_vMemoryCommandBuffers.clear();
+			m_vUsedMemoryCommandBuffer.clear();
+			DestroyUniformDescriptorSetLayouts();
+			DestroyTextDescriptorSetLayout();
+			DestroyDescriptorSetLayouts();
+		}
+		SyncTexturedMsdfCapability();
+		m_pBackendCapabilities = nullptr;
+	}
+
 	void ErroneousCleanup() override
 	{
+		if(!m_CanAssert)
+			CleanupVulkanInitialization();
 		CleanupVulkanSDL();
 	}
 
@@ -2337,6 +2396,17 @@ protected:
 
 	void FreeImageMemBlock(SMemoryImageBlock<IMAGE_BUFFER_CACHE_ID> &Block)
 	{
+		if(!m_VulkanInitializationComplete)
+		{
+			if(!Block.m_IsCached && Block.m_BufferMem.m_Mem != VK_NULL_HANDLE)
+			{
+				vkFreeMemory(m_VKDevice, Block.m_BufferMem.m_Mem, nullptr);
+				m_pTextureMemoryUsage->store(m_pTextureMemoryUsage->load(std::memory_order_relaxed) - Block.m_BufferMem.m_Size, std::memory_order_relaxed);
+			}
+			Block = {};
+			return;
+		}
+
 		if(!Block.m_IsCached)
 		{
 			m_vvFrameDelayedBufferCleanup[m_CurImageIndex].push_back({Block.m_Buffer, Block.m_BufferMem, nullptr});
@@ -2807,6 +2877,11 @@ protected:
 		if(vkBeginCommandBuffer(CommandBuffer, &BeginInfo) != VK_SUCCESS)
 			return false;
 		BeginSwapRenderPass(m_VKRenderPassLoad);
+		// 命令缓冲已被重置，其中记录过的 index buffer、descriptor 与动态状态绑定
+		// 全部不存在了；必须同步清空 CPU 侧缓存，否则后续绘制会因缓存命中而
+		// 跳过重新绑定，产生无效绘制（Vulkan 校验层报未绑定资源，部分驱动
+		// 表现为 device lost）。BeginSwapRenderPass 只清了管线缓存。
+		ResetDrawCommandState(0);
 		return true;
 	}
 
@@ -2964,8 +3039,23 @@ protected:
 
 		m_LastPresentedSwapChainImageIndex = m_CurImageIndex;
 
+		// 黑帧探测：呈现时没有任何绘制调用的帧在屏幕上只会显示清屏色，
+		// 玩家看到的就是“闪黑”。用 trace 开关暴露这类帧的命令构成，
+		// 用于定位加载界面背景闪烁的来源。
+		if(g_Config.m_QmGraphicsTrace >= 1 && m_FrameProfileStats.m_EstimatedRenderCallCount == 0)
+		{
+			dbg_msg("vulkan", "black frame candidate: presented image=%u/%u render_commands=%" PRIu64 " command_count=%" PRIu64 " swap_pass_active=%d render_target_active=%d rendering_paused=%d",
+				m_CurImageIndex, m_SwapChainImageCount, m_FrameProfileStats.m_RenderCommands, m_FrameProfileStats.m_CommandCount,
+				m_SwapRenderPassActive ? 1 : 0, m_RenderTargetActive ? 1 : 0, m_RenderingPaused ? 1 : 0);
+		}
+
+		auto PresentStart = m_FrameProfilingActive ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 		VkResult QueuePresentRes = m_pfnQueuePresentKHR(m_VKPresentQueue, &PresentInfo);
-		if(QueuePresentRes != VK_SUCCESS && QueuePresentRes != VK_SUBOPTIMAL_KHR)
+		if(m_FrameProfilingActive)
+			m_FrameProfileStats.m_CPUPresentTime += time_get_nanoseconds() - PresentStart;
+		// VK_SUBOPTIMAL_KHR 表示本次呈现成功但交换链已过时，交给
+		// CheckVulkanCriticalError 排队在下一帧重建。
+		if(QueuePresentRes != VK_SUCCESS)
 		{
 			const char *pCritErrorMsg = CheckVulkanCriticalError(QueuePresentRes);
 			if(pCritErrorMsg != nullptr)
@@ -3001,7 +3091,10 @@ protected:
 				return false;
 		}
 
+		auto AcquireStart = m_FrameProfilingActive ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 		auto AcqResult = m_pfnAcquireNextImageKHR(m_VKDevice, m_VKSwapChain, std::numeric_limits<uint64_t>::max(), m_AcquireImageSemaphore, VK_NULL_HANDLE, &m_CurImageIndex);
+		if(m_FrameProfilingActive)
+			m_FrameProfileStats.m_CPUAcquireTime += time_get_nanoseconds() - AcquireStart;
 		if(AcqResult != VK_SUCCESS)
 		{
 			if(AcqResult == VK_ERROR_OUT_OF_DATE_KHR || m_RecreateSwapChain)
@@ -3108,6 +3201,7 @@ protected:
 		for(size_t RenderThreadIndex = 0; RenderThreadIndex < m_vDrawCommandStates.size(); ++RenderThreadIndex)
 			ResetDrawCommandState(RenderThreadIndex);
 
+		m_FramePrepared = true;
 		return true;
 	}
 
@@ -3153,8 +3247,10 @@ protected:
 		{
 			if(!WaitFrame())
 				return false;
-			if(!PrepareFrame())
-				return false;
+			// 下一帧的 swapchain 获取与 fence 等待延后到下一份命令缓冲
+			// 真正开始录制时执行，避免在交换命令尾部阻塞图形线程，
+			// 让主线程可以先把下一帧命令缓冲交进来。
+			m_FramePrepared = false;
 		}
 		// else only execute the memory command buffer
 		else
@@ -3556,9 +3652,12 @@ protected:
 
 	void DestroyTextureSamplers()
 	{
-		vkDestroySampler(m_VKDevice, m_aSamplers[SUPPORTED_SAMPLER_TYPE_REPEAT], nullptr);
-		vkDestroySampler(m_VKDevice, m_aSamplers[SUPPORTED_SAMPLER_TYPE_CLAMP_TO_EDGE], nullptr);
-		vkDestroySampler(m_VKDevice, m_aSamplers[SUPPORTED_SAMPLER_TYPE_2D_TEXTURE_ARRAY], nullptr);
+		for(auto &Sampler : m_aSamplers)
+		{
+			if(Sampler != VK_NULL_HANDLE)
+				vkDestroySampler(m_VKDevice, Sampler, nullptr);
+			Sampler = VK_NULL_HANDLE;
+		}
 	}
 
 	VkSampler GetTextureSampler(ESupportedSamplerTypes SamplerType)
@@ -4143,21 +4242,31 @@ protected:
 		}
 
 		size_t DynamicStateIndex = GetDynamicModeIndexFromExecBuffer(ExecBuffer);
-		if(DynamicStateIndex == VULKAN_BACKEND_CLIP_MODE_DYNAMIC_SCISSOR_AND_VIEWPORT)
+		if(RenderThreadIndex < m_vDrawCommandStates.size())
 		{
-			if(RenderThreadIndex < m_vDrawCommandStates.size())
+			auto &DrawState = m_vDrawCommandStates[RenderThreadIndex];
+			if(DynamicStateIndex != VULKAN_BACKEND_CLIP_MODE_DYNAMIC_SCISSOR_AND_VIEWPORT)
 			{
-				auto &DrawState = m_vDrawCommandStates[RenderThreadIndex];
-				if(DrawState.m_HasDynamicViewportScissor && DynamicStatesEqual(DrawState.m_Viewport, ExecBuffer.m_Viewport, DrawState.m_Scissor, ExecBuffer.m_Scissor))
-				{
-					Stats.m_DynamicStateSetSkips++;
-					return;
-				}
+				// 绑定不声明动态 viewport/scissor 的管线后，先前用 vkCmdSetViewport/
+				// vkCmdSetScissor 设置的值按规范变为未定义；缓存必须失效，
+				// 否则再次绑定动态管线时会错误地跳过设置（扫描报告第 5 项）。
+				DrawState.m_HasDynamicViewportScissor = false;
+			}
+			else if(DrawState.m_HasDynamicViewportScissor && DynamicStatesEqual(DrawState.m_Viewport, ExecBuffer.m_Viewport, DrawState.m_Scissor, ExecBuffer.m_Scissor))
+			{
+				Stats.m_DynamicStateSetSkips++;
+				return;
+			}
+			else
+			{
 				DrawState.m_HasDynamicViewportScissor = true;
 				DrawState.m_Viewport = ExecBuffer.m_Viewport;
 				DrawState.m_Scissor = ExecBuffer.m_Scissor;
 			}
+		}
 
+		if(DynamicStateIndex == VULKAN_BACKEND_CLIP_MODE_DYNAMIC_SCISSOR_AND_VIEWPORT)
+		{
 			vkCmdSetViewport(CommandBuffer, 0, 1, &ExecBuffer.m_Viewport);
 			vkCmdSetScissor(CommandBuffer, 0, 1, &ExecBuffer.m_Scissor);
 			Stats.m_DynamicStateSets++;
@@ -4425,18 +4534,18 @@ public:
 			return false;
 		}
 
-		if(g_Config.m_QmVulkanApiVersion != 11 && g_Config.m_QmVulkanApiVersion != 14)
+		if(g_Config.m_QmVulkanApiVersion != 11 && g_Config.m_QmVulkanApiVersion != 13 && g_Config.m_QmVulkanApiVersion != 14)
 		{
-			log_warn("gfx/vulkan", "Unsupported Vulkan API selection %d; falling back to Vulkan 1.1.", g_Config.m_QmVulkanApiVersion);
-			g_Config.m_QmVulkanApiVersion = 11;
+			log_warn("gfx/vulkan", "Unsupported Vulkan API selection %d; falling back to automatic Vulkan version selection.", g_Config.m_QmVulkanApiVersion);
+			g_Config.m_QmVulkanApiVersion = 14;
 		}
 
 		SVulkanVersion RequestedVersion = ResolveConfiguredVulkanApiVersion(g_Config.m_QmVulkanApiVersion);
 		if(!IsVulkanVersionAtLeast(LoaderVersion, RequestedVersion))
 		{
-			log_warn("gfx/vulkan", "Vulkan API %d.%d was selected, but the installed loader only supports %d.%d.%d; falling back to Vulkan 1.1.", RequestedVersion.m_Major, RequestedVersion.m_Minor, LoaderVersion.m_Major, LoaderVersion.m_Minor, LoaderVersion.m_Patch);
-			g_Config.m_QmVulkanApiVersion = 11;
-			RequestedVersion = gs_BackendVulkanMinimumVersion;
+			const SVulkanVersion ResolvedVersion = ResolveVulkanVersionForLoader(RequestedVersion, LoaderVersion);
+			log_warn("gfx/vulkan", "Vulkan API %d.%d was selected, but the installed loader only supports %d.%d.%d; using Vulkan %d.%d.", RequestedVersion.m_Major, RequestedVersion.m_Minor, LoaderVersion.m_Major, LoaderVersion.m_Minor, LoaderVersion.m_Patch, ResolvedVersion.m_Major, ResolvedVersion.m_Minor);
+			RequestedVersion = ResolvedVersion;
 		}
 		m_RequestedApiVersion = VK_MAKE_API_VERSION(0, RequestedVersion.m_Major, RequestedVersion.m_Minor, RequestedVersion.m_Patch);
 		log_info("gfx/vulkan", "requesting Vulkan API %d.%d.%d, loader supports %d.%d.%d", RequestedVersion.m_Major, RequestedVersion.m_Minor, RequestedVersion.m_Patch, LoaderVersion.m_Major, LoaderVersion.m_Minor, LoaderVersion.m_Patch);
@@ -4825,7 +4934,10 @@ public:
 
 			char aBuff[256];
 			str_copy(pVendorName, pVendorNameStr, gs_GpuInfoStringSize);
-			str_format(pVersionName, gs_GpuInfoStringSize, "Vulkan %d.%d.%d (driver: %s)", DevApiMajor, DevApiMinor, DevApiPatch, GetDriverVersion(aBuff, DeviceProp.driverVersion, DeviceProp.vendorID));
+			const char *pDriverVersion = GetDriverVersion(aBuff, DeviceProp.driverVersion, DeviceProp.vendorID);
+			str_format(pVersionName, gs_GpuInfoStringSize, "Vulkan %d.%d.%d (driver: %s)", DevApiMajor, DevApiMinor, DevApiPatch, pDriverVersion);
+			if(g_Config.m_QmGraphicsTrace != 0)
+				dbg_msg("perf/graphics/vulkan", "event=device vendor=%s vendor_id=%u device=%s driver=%s api=%d.%d.%d", pVendorNameStr, DeviceProp.vendorID, DeviceProp.deviceName, pDriverVersion, DevApiMajor, DevApiMinor, DevApiPatch);
 			log_info("gfx/vulkan", "effective Vulkan API %d.%d.%d (instance %u.%u.%u, device %d.%d.%d)", EffectiveVersion.m_Major, EffectiveVersion.m_Minor, EffectiveVersion.m_Patch, VK_API_VERSION_MAJOR(m_RequestedApiVersion), VK_API_VERSION_MINOR(m_RequestedApiVersion), VK_API_VERSION_PATCH(m_RequestedApiVersion), DevApiMajor, DevApiMinor, DevApiPatch);
 
 			// get important device limits
@@ -5047,7 +5159,11 @@ public:
 
 	void DestroySurface()
 	{
-		vkDestroySurfaceKHR(m_VKInstance, m_VKPresentSurface, nullptr);
+		if(m_VKInstance != VK_NULL_HANDLE && m_VKPresentSurface != VK_NULL_HANDLE)
+		{
+			vkDestroySurfaceKHR(m_VKInstance, m_VKPresentSurface, nullptr);
+		}
+		m_VKPresentSurface = VK_NULL_HANDLE;
 	}
 
 	[[nodiscard]] bool GetPresentationMode(VkPresentModeKHR &VKIOMode)
@@ -5072,9 +5188,17 @@ public:
 				VK_PRESENT_MODE_FIFO_KHR,
 				VK_PRESENT_MODE_FIFO_RELAXED_KHR};
 		else
+#if defined(CONF_PLATFORM_MACOS)
+			// MoltenVK 通常不提供 MAILBOX；FIFO 会让 vsync=0 的输入轮询
+			// 被压到刷新率，表现为“输入慢一拍”。没有 MAILBOX 时退回 IMMEDIATE。
+			aPreferredModes = {
+				VK_PRESENT_MODE_MAILBOX_KHR,
+				VK_PRESENT_MODE_IMMEDIATE_KHR};
+#else
 			aPreferredModes = {
 				VK_PRESENT_MODE_IMMEDIATE_KHR,
 				VK_PRESENT_MODE_MAILBOX_KHR};
+#endif
 		for(const VkPresentModeKHR PreferredMode : aPreferredModes)
 		{
 			for(const VkPresentModeKHR AvailableMode : vPresentModeList)
@@ -5242,13 +5366,14 @@ public:
 		VkPresentModeKHR PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 		if(!GetPresentationMode(PresentMode))
 			return false;
+		m_PresentMode = PresentMode;
 
 		uint32_t SwapImgCount = GetNumberOfSwapImages(VKSurfCap);
 
 #if defined(CONF_PLATFORM_MACOS)
 		if(g_Config.m_QmMacosGraphicsDiagnostics != 0)
 		{
-			log_info("gfx/vulkan", "swapchain present: vsync=%d mode=%d images=%u refresh=%d screen_refresh=%d", g_Config.m_GfxVsync, (int)PresentMode, SwapImgCount, g_Config.m_GfxRefreshRate, g_Config.m_GfxScreenRefreshRate);
+			dbg_msg("perf/autodiag_vulkan", "swapchain present: vsync=%d mode=%d images=%u refresh=%d screen_refresh=%d", g_Config.m_GfxVsync, (int)PresentMode, SwapImgCount, g_Config.m_GfxRefreshRate, g_Config.m_GfxScreenRefreshRate);
 		}
 #endif
 
@@ -5301,11 +5426,12 @@ public:
 
 	void DestroySwapChain(bool ForceDestroy)
 	{
-		if(ForceDestroy)
+		if(ForceDestroy && m_VKSwapChain != VK_NULL_HANDLE && m_pfnDestroySwapchainKHR != nullptr)
 		{
 			m_pfnDestroySwapchainKHR(m_VKDevice, m_VKSwapChain, nullptr);
-			m_VKSwapChain = VK_NULL_HANDLE;
 		}
+		if(ForceDestroy)
+			m_VKSwapChain = VK_NULL_HANDLE;
 	}
 
 	[[nodiscard]] bool GetSwapChainImageHandles()
@@ -5467,19 +5593,27 @@ public:
 		return true;
 	}
 
-	void DestroyMultiSamplerImageAttachments()
+	void DestroyMultiSamplerImageAttachments(bool InitializationFailure = false)
 	{
 		if(HasMultiSampling())
 		{
-			m_vSwapChainMultiSamplingImages.resize(m_SwapChainImageCount);
-			for(size_t i = 0; i < m_SwapChainImageCount; ++i)
+			for(auto &MultiSampleImage : m_vSwapChainMultiSamplingImages)
 			{
-				vkDestroyImage(m_VKDevice, m_vSwapChainMultiSamplingImages[i].m_Image, nullptr);
-				vkDestroyImageView(m_VKDevice, m_vSwapChainMultiSamplingImages[i].m_ImgView, nullptr);
-				FreeImageMemBlock(m_vSwapChainMultiSamplingImages[i].m_ImgMem);
+				if(MultiSampleImage.m_ImgView != VK_NULL_HANDLE)
+					vkDestroyImageView(m_VKDevice, MultiSampleImage.m_ImgView, nullptr);
+				if(MultiSampleImage.m_Image != VK_NULL_HANDLE)
+					vkDestroyImage(m_VKDevice, MultiSampleImage.m_Image, nullptr);
+				FreeImageMemBlock(MultiSampleImage.m_ImgMem);
+				MultiSampleImage = {};
 			}
 		}
 		m_vSwapChainMultiSamplingImages.clear();
+		if(InitializationFailure)
+		{
+			for(auto &ImageBufferCache : m_ImageBufferCaches)
+				ImageBufferCache.second.Destroy(m_VKDevice);
+			m_ImageBufferCaches.clear();
+		}
 	}
 
 	[[nodiscard]] VkFormat RenderTargetReadbackFormat() const
@@ -5671,8 +5805,12 @@ public:
 
 	void DestroyDescriptorSetLayouts()
 	{
-		vkDestroyDescriptorSetLayout(m_VKDevice, m_StandardTexturedDescriptorSetLayout, nullptr);
-		vkDestroyDescriptorSetLayout(m_VKDevice, m_Standard3DTexturedDescriptorSetLayout, nullptr);
+		if(m_StandardTexturedDescriptorSetLayout != VK_NULL_HANDLE)
+			vkDestroyDescriptorSetLayout(m_VKDevice, m_StandardTexturedDescriptorSetLayout, nullptr);
+		if(m_Standard3DTexturedDescriptorSetLayout != VK_NULL_HANDLE)
+			vkDestroyDescriptorSetLayout(m_VKDevice, m_Standard3DTexturedDescriptorSetLayout, nullptr);
+		m_StandardTexturedDescriptorSetLayout = VK_NULL_HANDLE;
+		m_Standard3DTexturedDescriptorSetLayout = VK_NULL_HANDLE;
 	}
 
 	[[nodiscard]] bool LoadShader(const char *pFilename, std::vector<uint8_t> *&pvShaderData)
@@ -5997,7 +6135,9 @@ public:
 
 	void DestroyTextDescriptorSetLayout()
 	{
-		vkDestroyDescriptorSetLayout(m_VKDevice, m_TextDescriptorSetLayout, nullptr);
+		if(m_TextDescriptorSetLayout != VK_NULL_HANDLE)
+			vkDestroyDescriptorSetLayout(m_VKDevice, m_TextDescriptorSetLayout, nullptr);
+		m_TextDescriptorSetLayout = VK_NULL_HANDLE;
 	}
 
 	[[nodiscard]] bool CreateTextGraphicsPipelineImpl(const char *pVertName, const char *pFragName, SPipelineContainer &PipeContainer, EVulkanBackendTextureModes TexMode, EVulkanBackendBlendModes BlendMode, EVulkanBackendClipModes DynamicMode)
@@ -6149,8 +6289,12 @@ public:
 
 	void DestroyUniformDescriptorSetLayouts()
 	{
-		vkDestroyDescriptorSetLayout(m_VKDevice, m_QuadUniformDescriptorSetLayout, nullptr);
-		vkDestroyDescriptorSetLayout(m_VKDevice, m_SpriteMultiUniformDescriptorSetLayout, nullptr);
+		if(m_QuadUniformDescriptorSetLayout != VK_NULL_HANDLE)
+			vkDestroyDescriptorSetLayout(m_VKDevice, m_QuadUniformDescriptorSetLayout, nullptr);
+		if(m_SpriteMultiUniformDescriptorSetLayout != VK_NULL_HANDLE)
+			vkDestroyDescriptorSetLayout(m_VKDevice, m_SpriteMultiUniformDescriptorSetLayout, nullptr);
+		m_QuadUniformDescriptorSetLayout = VK_NULL_HANDLE;
+		m_SpriteMultiUniformDescriptorSetLayout = VK_NULL_HANDLE;
 	}
 
 	[[nodiscard]] bool CreateUniformDescriptorSets(size_t RenderThreadIndex, VkDescriptorSetLayout &SetLayout, SDeviceDescriptorSet *pSets, size_t SetCount, VkBuffer BindBuffer, size_t SingleBufferInstanceSize, VkDeviceSize MemoryOffset)
@@ -6460,10 +6604,12 @@ public:
 
 	void DestroyCommandPool()
 	{
-		for(size_t i = 0; i < m_ThreadCount; ++i)
+		for(auto &CommandPool : m_vCommandPools)
 		{
-			vkDestroyCommandPool(m_VKDevice, m_vCommandPools[i], nullptr);
+			if(CommandPool != VK_NULL_HANDLE)
+				vkDestroyCommandPool(m_VKDevice, CommandPool, nullptr);
 		}
+		m_vCommandPools.clear();
 	}
 
 	[[nodiscard]] bool CreateCommandBuffers()
@@ -6666,7 +6812,7 @@ public:
 	 * SWAP CHAIN
 	 **************/
 
-	void CleanupVulkanSwapChain(bool ForceSwapChainDestruct)
+	void CleanupVulkanSwapChain(bool ForceSwapChainDestruct, bool InitializationFailure = false)
 	{
 		m_StandardPipeline.Destroy(m_VKDevice);
 		m_StandardLinePipeline.Destroy(m_VKDevice);
@@ -6692,7 +6838,7 @@ public:
 
 		DestroyRenderPass();
 
-		DestroyMultiSamplerImageAttachments();
+		DestroyMultiSamplerImageAttachments(InitializationFailure);
 
 		DestroyImageViews();
 		ClearSwapChainImageHandles();
@@ -6796,23 +6942,40 @@ public:
 
 	void CleanupVulkanSDL()
 	{
+		// 幂等保险：正常路径由 Cmd_Shutdown 排空队列并销毁 swapchain；这里再兜底一次，
+		// 防止任何非标准退出路径带着未排空的队列或残留 swapchain 进入驱动销毁流程
+		// （NVIDIA ICD 在退出期 vkDestroyDevice 上出现过访问违例，见 dumps 里的
+		// 退出期驱动故障记录）。
+		if(m_VKDevice != VK_NULL_HANDLE)
+		{
+			DeviceWaitIdle();
+			DestroySwapChain(true);
+		}
+
+		DestroySurface();
+		if(m_VKDevice != VK_NULL_HANDLE)
+		{
+			vkDestroyDevice(m_VKDevice, nullptr);
+			m_VKDevice = VK_NULL_HANDLE;
+		}
+
+		m_pfnCreateSwapchainKHR = nullptr;
+		m_pfnDestroySwapchainKHR = nullptr;
+		m_pfnGetSwapchainImagesKHR = nullptr;
+		m_pfnAcquireNextImageKHR = nullptr;
+		m_pfnQueuePresentKHR = nullptr;
+
+		UnregisterDebugCallback();
 		if(m_VKInstance != VK_NULL_HANDLE)
 		{
-			DestroySurface();
-			vkDestroyDevice(m_VKDevice, nullptr);
-			m_pfnCreateSwapchainKHR = nullptr;
-			m_pfnDestroySwapchainKHR = nullptr;
-			m_pfnGetSwapchainImagesKHR = nullptr;
-			m_pfnAcquireNextImageKHR = nullptr;
-			m_pfnQueuePresentKHR = nullptr;
-
-			if(g_Config.m_DbgGfx == DEBUG_GFX_MODE_MINIMUM || g_Config.m_DbgGfx == DEBUG_GFX_MODE_ALL)
-			{
-				UnregisterDebugCallback();
-			}
 			vkDestroyInstance(m_VKInstance, nullptr);
 			m_VKInstance = VK_NULL_HANDLE;
 		}
+
+		m_VKGPU = VK_NULL_HANDLE;
+		m_VKGraphicsQueueIndex = std::numeric_limits<uint32_t>::max();
+		m_VKGraphicsQueue = VK_NULL_HANDLE;
+		m_VKPresentQueue = VK_NULL_HANDLE;
 	}
 
 	int RecreateSwapChain()
@@ -6902,40 +7065,40 @@ public:
 			return true;
 		};
 
-		const auto FallbackToVulkan11 = [&](const char *pReason) {
-			log_warn("gfx/vulkan", "%s Falling back to Vulkan 1.1.", pReason);
-			g_Config.m_QmVulkanApiVersion = 11;
-			DestroyVulkanInstance();
-			m_RequestedApiVersion = VK_API_VERSION_1_1;
-			m_EffectiveApiVersion = VK_API_VERSION_1_1;
-			m_RequiredVulkanVersionUnavailable = false;
-			ResetInitializationDiagnostics();
-			*m_pGpuList = {};
+		const SVulkanVersion aVersionChain[] = {{1, 4, 0}, {1, 3, 0}, {1, 1, 0}};
+		const int FirstVersion = VK_API_VERSION_MINOR(m_RequestedApiVersion) >= 4 ? 0 : (VK_API_VERSION_MINOR(m_RequestedApiVersion) >= 3 ? 1 : 2);
+		bool VulkanReady = false;
+		for(int VersionIndex = FirstVersion; VersionIndex < (int)std::size(aVersionChain); ++VersionIndex)
+		{
+			const SVulkanVersion Version = aVersionChain[VersionIndex];
+			if(VersionIndex != FirstVersion)
+			{
+				log_warn("gfx/vulkan", "Falling back to Vulkan %d.%d.", Version.m_Major, Version.m_Minor);
+				g_Config.m_QmVulkanApiVersion = Version.m_Minor == 3 ? 13 : 11;
+				DestroyVulkanInstance();
+				m_RequestedApiVersion = VK_MAKE_API_VERSION(0, Version.m_Major, Version.m_Minor, Version.m_Patch);
+				m_EffectiveApiVersion = m_RequestedApiVersion;
+				m_RequiredVulkanVersionUnavailable = false;
+				ResetInitializationDiagnostics();
+				*m_pGpuList = {};
+			}
 			if(!CreateConfiguredVulkanInstance())
 			{
 				DestroyVulkanInstance();
-				return false;
+				continue;
 			}
-			if(!SelectGpu(pRendererString, pVendorString, pVersionString))
+			if(SelectGpu(pRendererString, pVendorString, pVersionString))
 			{
-				DestroyVulkanInstance();
-				return false;
+				if(CreateLogicalDevice(vVKLayers))
+				{
+					VulkanReady = true;
+					break;
+				}
+				CleanupVulkanSDL();
 			}
-			return true;
-		};
-
-		if(!CreateConfiguredVulkanInstance())
-		{
-			if(m_RequestedApiVersion != VK_API_VERSION_1_4 || !FallbackToVulkan11("The selected Vulkan 1.4 instance could not be created."))
-				return -1;
+			DestroyVulkanInstance();
 		}
-		else if(!SelectGpu(pRendererString, pVendorString, pVersionString))
-		{
-			if(m_RequestedApiVersion != VK_API_VERSION_1_4 || !m_RequiredVulkanVersionUnavailable || !FallbackToVulkan11("No physical device supports the selected Vulkan 1.4 API."))
-				return -1;
-		}
-
-		if(!CreateLogicalDevice(vVKLayers))
+		if(!VulkanReady)
 			return -1;
 
 		GetDeviceQueue();
@@ -7403,26 +7566,13 @@ public:
 		return SupportsRenderTargetReadback() && m_GaussianBlurPipelineValid;
 	}
 
-	[[nodiscard]] static bool IsEightBitRgbaFormat(VkFormat Format)
-	{
-		return Format == VK_FORMAT_R8G8B8A8_UNORM || Format == VK_FORMAT_R8G8B8A8_SRGB ||
-		       Format == VK_FORMAT_B8G8R8A8_UNORM || Format == VK_FORMAT_B8G8R8A8_SRGB;
-	}
-
-	// 背板捕获（灵动岛 / 亚克力背景模糊）的交换链格式判据。
-	// 与截图取回路径的区别：那边只认 UNORM，因为要走「RGBA 线性镜像」中转；
-	// 这里只是把交换链图像当作 blit 源，SRGB 变体同样合法（vkCmdBlitImage 在
-	// SRGB 源与 UNORM 目标之间做颜色空间转换），所以不能再把它排除在外，
-	// 否则 SRGB 交换链的机器上整个背景模糊都会静默失效。
-	[[nodiscard]] static bool IsBackbufferCaptureFormatSupported(VkFormat Format)
-	{
-		return IsEightBitRgbaFormat(Format);
-	}
-
 	[[nodiscard]] bool SupportsBackbufferCapture() const
 	{
 		// 截图路径只验证过单采样交换链；多采样附件虽可恢复，但读取流程仍保持保守限制。
-		return SupportsRenderTargetReadback() && IsBackbufferCaptureFormatSupported(m_VKSurfFormat.format) && m_OptimalSwapChainImageBlitting && m_OptimalRGBAImageBlitting;
+		// 背板仅作为 blit 源，sRGB 格式也可由下方的格式能力检查准入。
+		const bool CompatibleFormat = m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_UNORM || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_UNORM ||
+					      m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_SRGB || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_SRGB;
+		return SupportsRenderTargetReadback() && CompatibleFormat && m_OptimalSwapChainImageBlitting && m_OptimalRGBAImageBlitting;
 	}
 
 	[[nodiscard]] const char *RenderTargetReadbackSupportReason() const
@@ -7723,6 +7873,9 @@ public:
 			}
 		}
 
+		if(IsFirstInitialization)
+			m_VulkanInitializationComplete = true;
+
 		return 0;
 	}
 
@@ -8019,19 +8172,28 @@ public:
 
 	void LogFrameProfileStats()
 	{
-		if(!FrameProfilingEnabled() || m_CurFrame - m_LastFrameProfileLogFrame < 120)
+		if(!FrameProfilingEnabled())
+			return;
+		SFrameProfileStats Stats = CurrentFrameProfileStats();
+		const bool PeriodicSummary = m_CurFrame - m_LastFrameProfileLogFrame >= 120;
+		const bool SlowFrame = g_Config.m_QmGraphicsTrace >= 2 && Stats.m_CPUFrameTime >= std::chrono::milliseconds(8);
+		const bool TraceAllFrames = g_Config.m_QmGraphicsTrace >= 3;
+		if(!TraceAllFrames && !PeriodicSummary && !SlowFrame)
 			return;
 
-		m_LastFrameProfileLogFrame = m_CurFrame;
-		SFrameProfileStats Stats = CurrentFrameProfileStats();
-		dbg_msg("vulkan",
-			"profile frame=%" PRIu64 " cmds=%" PRIu64 " render_cmds=%" PRIu64 " prepare=%" PRIu64 " main_record=%" PRIu64 " thread_record=%" PRIu64 " estimated_draws=%" PRIu64 " draws=%" PRIu64 " "
+		if(PeriodicSummary)
+			m_LastFrameProfileLogFrame = m_CurFrame;
+		const char *pProfileLogSystem = g_Config.m_QmMacosGraphicsDiagnostics != 0 ? "perf/autodiag_vulkan" : "perf/graphics/vulkan";
+		dbg_msg(pProfileLogSystem,
+			"profile kind=%s trace=%d frame=%" PRIu64 " api=%u.%u.%u present_mode=%d swap_images=%u cmds=%" PRIu64 " render_cmds=%" PRIu64 " prepare=%" PRIu64 " main_record=%" PRIu64 " thread_record=%" PRIu64 " estimated_draws=%" PRIu64 " draws=%" PRIu64 " "
 			"pipeline=%" PRIu64 "/%" PRIu64 " vb=%" PRIu64 "/%" PRIu64 " ib=%" PRIu64 "/%" PRIu64 " dynamic=%" PRIu64 "/%" PRIu64 " descriptors=%" PRIu64 "/%" PRIu64 " "
 			"desc_pool=%" PRIu64 " desc_alloc=%" PRIu64 " desc_update=%" PRIu64 " stream=%" PRIu64 "(%" PRIu64 " KiB) stream_alloc=%" PRIu64 "(%" PRIu64 " KiB) staging=%" PRIu64 "(%" PRIu64 " KiB) staging_alloc=%" PRIu64 "(%" PRIu64 " KiB) "
 			"flush=%" PRIu64 "/%" PRIu64 " invalidate=%" PRIu64 "/%" PRIu64 " readback=%" PRIu64 "(%" PRIu64 " KiB) "
 			"barriers=%" PRIu64 "/%" PRIu64 " submits=%" PRIu64 "/%" PRIu64 " waits=%" PRIu64 " queue_waits=%" PRIu64 " device_waits=%" PRIu64 " "
-			"cpu=%" PRId64 "us gpu_last=%" PRId64 "us gpu_valid=%d prepare=%" PRId64 "us main_record=%" PRId64 "us thread_record=%" PRId64 "us wait=%" PRId64 "us submit=%" PRId64 "us queue_wait=%" PRId64 "us device_wait=%" PRId64 "us invalidate=%" PRId64 "us",
-			m_CurFrame,
+			"text_prepare=%" PRIu64 " text_bad_container=%" PRIu64 " text_bad_buffer_object=%" PRIu64 " text_missing_buffer=%" PRIu64 " text_bad_texture=%" PRIu64 " text_missing_descriptor=%" PRIu64 " text_zero_draw=%" PRIu64 " "
+			"cpu=%" PRId64 "us gpu_last=%" PRId64 "us gpu_valid=%d prepare=%" PRId64 "us main_record=%" PRId64 "us thread_record=%" PRId64 "us acquire=%" PRId64 "us fence_wait=%" PRId64 "us submit=%" PRId64 "us present=%" PRId64 "us queue_wait=%" PRId64 "us device_wait=%" PRId64 "us invalidate=%" PRId64 "us",
+			PeriodicSummary ? "summary" : "slow_frame", g_Config.m_QmGraphicsTrace, m_CurFrame,
+			VK_API_VERSION_MAJOR(m_EffectiveApiVersion), VK_API_VERSION_MINOR(m_EffectiveApiVersion), VK_API_VERSION_PATCH(m_EffectiveApiVersion), (int)m_PresentMode, m_SwapChainImageCount,
 			Stats.m_CommandCount, Stats.m_RenderCommands,
 			Stats.m_CommandPrepares, Stats.m_MainCommandRecords, Stats.m_ThreadCommandRecords,
 			Stats.m_EstimatedRenderCallCount, Stats.m_DrawCalls,
@@ -8052,14 +8214,17 @@ public:
 			Stats.m_BarrierCalls, Stats.m_Barriers,
 			Stats.m_QueueSubmits, Stats.m_QueueSubmitCommandBuffers,
 			Stats.m_FenceWaits, Stats.m_QueueWaits, Stats.m_DeviceWaits,
+			Stats.m_TextRenderPrepares, Stats.m_TextRenderInvalidContainer, Stats.m_TextRenderInvalidBufferObject, Stats.m_TextRenderMissingBuffer, Stats.m_TextRenderInvalidTexture, Stats.m_TextRenderMissingDescriptor, Stats.m_TextRenderZeroDraw,
 			Stats.m_CPUFrameTime.count() / 1000,
 			Stats.m_HasGPUFrameTime ? Stats.m_GPUFrameTime.count() / 1000 : 0,
 			Stats.m_HasGPUFrameTime ? 1 : 0,
 			Stats.m_CPUCommandPrepareTime.count() / 1000,
 			Stats.m_CPUMainCommandRecordTime.count() / 1000,
 			Stats.m_CPUThreadCommandRecordTime.count() / 1000,
+			Stats.m_CPUAcquireTime.count() / 1000,
 			Stats.m_CPUFenceWaitTime.count() / 1000,
 			Stats.m_CPUQueueSubmitTime.count() / 1000,
+			Stats.m_CPUPresentTime.count() / 1000,
 			Stats.m_CPUQueueWaitTime.count() / 1000,
 			Stats.m_CPUDeviceWaitTime.count() / 1000,
 			Stats.m_CPUInvalidateTime.count() / 1000);
@@ -8347,6 +8512,21 @@ public:
 			return ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR;
 		}
 
+		if(m_VulkanInitializationComplete && !m_RenderingPaused && !m_FramePrepared)
+		{
+			// StartCommands 已经把本命令缓冲的统计计入当前帧；
+			// PrepareFrame 会重置帧画像，这里在成功准备后补回，避免丢计数。
+			const size_t CommandCount = m_CommandsInPipe;
+			const size_t EstimatedRenderCallCount = m_RenderCallsInPipe;
+			if(!PrepareFrame())
+				return ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR;
+			if(m_FrameProfilingActive)
+			{
+				m_FrameProfileStats.m_CommandCount += CommandCount;
+				m_FrameProfileStats.m_EstimatedRenderCallCount += EstimatedRenderCallCount;
+			}
+		}
+
 		if(IsInCommandRange<decltype(pBaseCommand->m_Cmd)>(pBaseCommand->m_Cmd, CCommandBuffer::CMD_FIRST, CCommandBuffer::CMD_COUNT))
 		{
 			auto &CallbackObj = m_aCommandCallbacks[CommandBufferCMDOff(CCommandBuffer::ECommandBufferCMD(pBaseCommand->m_Cmd))];
@@ -8400,7 +8580,6 @@ public:
 			{
 				if(ThreadToStart > 0)
 				{
-					// 单条重命令可能跨过多个工作段，唤醒实际持有前段命令的线程。
 					StartRenderThread(ThreadToStart - 1);
 				}
 				m_vvThreadCommandLists[Buffer.m_ThreadIndex - 1].push_back(Buffer);
@@ -8956,31 +9135,33 @@ public:
 
 	[[nodiscard]] bool Cmd_RenderTarget_CaptureBackbuffer(const CCommandBuffer::SCommand_RenderTarget_CaptureBackbuffer *pCommand)
 	{
-		// 背板捕获是「静默降级」型特性：被跳过后灵动岛/亚克力就只剩半透明板，玩家在
-		// 游戏里看不出来。所以第一次调用时把每个门槛的实测值记下来，失败时无论如何
-		// 打一行（dbg_graphs 关掉时也会打），成功时只在 dbg_graphs 下打。
 		if(!m_CaptureBackbufferProbeDone)
 		{
 			m_CaptureBackbufferProbeDone = true;
-			const bool FormatOk = IsBackbufferCaptureFormatSupported(m_VKSurfFormat.format);
+			const bool FormatOk = m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_UNORM || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_UNORM ||
+					      m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_SRGB || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_SRGB;
 			const bool Supported = SupportsBackbufferCapture();
-			const bool Multisa = HasMultiSampling();
-			const bool CanCapture = !m_RenderingPaused && Supported && !Multisa && !m_RenderTargetActive && m_SwapRenderPassActive &&
+			const bool Multisampled = HasMultiSampling();
+			const bool CanCapture = !m_RenderingPaused && Supported && !Multisampled && !m_RenderTargetActive && m_SwapRenderPassActive &&
 						pCommand->m_TargetId >= 0 && (size_t)pCommand->m_TargetId < m_vRenderTargets.size() && m_CurImageIndex < m_vSwapChainImages.size();
-			if(!CanCapture || g_Config.m_DbgGraphs != 0)
-			{
-				// 必须走 log_info：dbg_msg 在 Windows GUI 客户端里既进不了控制台也进不了
-				// 日志文件，而这条诊断的意义正是「事后能从日志里翻出来」。
+			if(!CanCapture || g_Config.m_QmGraphicsTrace >= 1)
 				log_info("gfx/vulkan", "backbuffer capture probe: %s (paused=%d supported=%d format=%d format_ok=%d swap_blit=%d rgba_blit=%d multisample=%d target_active=%d swap_pass=%d)",
 					CanCapture ? "active" : "skipped",
 					(int)m_RenderingPaused, (int)Supported, (int)m_VKSurfFormat.format, (int)FormatOk,
 					(int)m_OptimalSwapChainImageBlitting, (int)m_OptimalRGBAImageBlitting,
-					(int)Multisa, (int)m_RenderTargetActive, (int)m_SwapRenderPassActive);
-			}
+					(int)Multisampled, (int)m_RenderTargetActive, (int)m_SwapRenderPassActive);
 		}
 		if(m_RenderingPaused || !SupportsBackbufferCapture() || HasMultiSampling() || m_RenderTargetActive || !m_SwapRenderPassActive || pCommand->m_TargetId < 0 ||
 			(size_t)pCommand->m_TargetId >= m_vRenderTargets.size() || m_CurImageIndex >= m_vSwapChainImages.size())
+		{
+			// 静默跳过会让模糊目标保留上一帧的旧内容，是画面闪烁的候选来源之一；
+			// 用 trace 开关暴露具体是哪个条件命中
+			if(g_Config.m_QmGraphicsTrace >= 1)
+				dbg_msg("vulkan", "backbuffer capture skipped: paused=%d capture_supported=%d msaa=%d target_active=%d swap_pass_active=%d",
+					m_RenderingPaused ? 1 : 0, SupportsBackbufferCapture() ? 1 : 0, HasMultiSampling() ? 1 : 0,
+					m_RenderTargetActive ? 1 : 0, m_SwapRenderPassActive ? 1 : 0);
 			return true;
+		}
 		SRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
 		if(Target.m_Image == VK_NULL_HANDLE || Target.m_Width == 0 || Target.m_Height == 0 ||
 			(Target.m_Layout != VK_IMAGE_LAYOUT_UNDEFINED && Target.m_Layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
@@ -9031,8 +9212,10 @@ public:
 			return true;
 		SRenderTarget &Source = m_vRenderTargets[pCommand->m_SourceTargetId];
 		const SRenderTarget &Destination = m_vRenderTargets[m_ActiveRenderTargetId];
+		const bool DualKawase = pCommand->m_Mode == IGraphics::EBlurMode::DUAL;
 		if(Source.m_Image == VK_NULL_HANDLE || Source.m_Layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
-			Source.m_Width != Destination.m_Width || Source.m_Height != Destination.m_Height ||
+			(!DualKawase && (Source.m_Width != Destination.m_Width || Source.m_Height != Destination.m_Height)) ||
+			(DualKawase && (pCommand->m_Upsample ? (Source.m_Width >= Destination.m_Width || Source.m_Height >= Destination.m_Height) : (Source.m_Width <= Destination.m_Width || Source.m_Height <= Destination.m_Height))) ||
 			Source.m_aVKStandardTexturedDescrSets[VULKAN_BACKEND_ADDRESS_MODE_CLAMP_EDGES].m_Descriptor == VK_NULL_HANDLE)
 			return true;
 
@@ -9074,11 +9257,14 @@ public:
 			&Source.m_aVKStandardTexturedDescrSets[VULKAN_BACKEND_ADDRESS_MODE_CLAMP_EDGES].m_Descriptor, 0, nullptr);
 
 		SUniformGaussianBlur PushConstants{};
+		const bool Gaussian = pCommand->m_Mode == IGraphics::EBlurMode::GAUSSIAN;
 		PushConstants.m_TexelOffset = vec2(
-			pCommand->m_Horizontal ? 1.0f / Source.m_Width : 0.0f,
-			pCommand->m_Horizontal ? 0.0f : 1.0f / Source.m_Height);
+			Gaussian && !pCommand->m_Horizontal ? 0.0f : 1.0f / Source.m_Width,
+			Gaussian && pCommand->m_Horizontal ? 0.0f : 1.0f / Source.m_Height);
 		PushConstants.m_Radius = pCommand->m_Radius;
+		PushConstants.m_Mode = static_cast<int32_t>(pCommand->m_Mode);
 		PushConstants.m_aWeights = pCommand->m_aWeights;
+		PushConstants.m_Pass = pCommand->m_Pass;
 		vkCmdPushConstants(CommandBuffer, PipeLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &PushConstants);
 		vkCmdDrawIndexed(CommandBuffer, 6, 1, 0, 0, 0);
 		ResetDrawCommandState(0);
@@ -9465,13 +9651,11 @@ public:
 				m_ForceSingleThreadedRender = true;
 				m_HasDynamicViewport = true;
 
-				// convert viewport from OGL to vulkan
+				// viewport 与 Vulkan 都以 drawable 左上角为原点。
 				const int32_t ViewportWidth = std::max<int32_t>(1, pCommand->m_Width);
 				const int32_t ViewportHeight = std::max<int32_t>(1, pCommand->m_Height);
-				int32_t ViewportY = (int32_t)Viewport.height - ((int32_t)pCommand->m_Y + ViewportHeight);
-				uint32_t ViewportH = (uint32_t)ViewportHeight;
-				m_DynamicViewportOffset = {(int32_t)pCommand->m_X, ViewportY};
-				m_DynamicViewportSize = {(uint32_t)ViewportWidth, ViewportH};
+				m_DynamicViewportOffset = {(int32_t)pCommand->m_X, (int32_t)pCommand->m_Y};
+				m_DynamicViewportSize = {(uint32_t)ViewportWidth, (uint32_t)ViewportHeight};
 			}
 			else
 			{
@@ -9699,7 +9883,7 @@ public:
 
 		ExecBuffer.m_IndexBuffer = m_RenderIndexBuffer;
 
-		ExecBuffer.m_EstimatedRenderCallCount = pCommand->m_Cmd == CCommandBuffer::CMD_RENDER_QUAD_LAYER_GROUPED ? 1 : ((pCommand->m_QuadNum - 1) / gs_GraphicsMaxQuadsRenderCount) + 1;
+		ExecBuffer.m_EstimatedRenderCallCount = ExecBuffer.m_Command == CCommandBuffer::CMD_RENDER_QUAD_LAYER_GROUPED ? 1 : ((pCommand->m_QuadNum - 1) / gs_GraphicsMaxQuadsRenderCount) + 1;
 
 		ExecBufferFillDynamicStates(pCommand->m_State, ExecBuffer);
 	}
@@ -9785,9 +9969,62 @@ public:
 
 	void Cmd_RenderText_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_RenderText *pCommand)
 	{
-		size_t BufferContainerIndex = (size_t)pCommand->m_BufferContainerIndex;
-		size_t BufferObjectIndex = (size_t)m_vBufferContainers[BufferContainerIndex].m_BufferObjectIndex;
+		// Command preparation always runs on the main thread. Do not write a helper
+		// thread's profile state here while it can record the previous command batch.
+		auto &Stats = m_FrameProfileStats;
+		const bool RecordProfile = m_FrameProfilingActive;
+		if(RecordProfile)
+			Stats.m_TextRenderPrepares++;
+		ExecBuffer.m_SkipRender = false;
+		ExecBuffer.m_EstimatedRenderCallCount = 0;
+
+		if(pCommand->m_DrawNum <= 0)
+		{
+			if(RecordProfile)
+				Stats.m_TextRenderZeroDraw++;
+			ExecBuffer.m_SkipRender = true;
+			return;
+		}
+		if(pCommand->m_BufferContainerIndex < 0 || (size_t)pCommand->m_BufferContainerIndex >= m_vBufferContainers.size())
+		{
+			if(RecordProfile)
+				Stats.m_TextRenderInvalidContainer++;
+			ExecBuffer.m_SkipRender = true;
+			return;
+		}
+
+		const size_t BufferContainerIndex = (size_t)pCommand->m_BufferContainerIndex;
+		const int BufferObjectIndex = m_vBufferContainers[BufferContainerIndex].m_BufferObjectIndex;
+		if(BufferObjectIndex < 0 || (size_t)BufferObjectIndex >= m_vBufferObjects.size())
+		{
+			if(RecordProfile)
+				Stats.m_TextRenderInvalidBufferObject++;
+			ExecBuffer.m_SkipRender = true;
+			return;
+		}
+
 		const auto &BufferObject = m_vBufferObjects[BufferObjectIndex];
+		if(BufferObject.m_CurBuffer == VK_NULL_HANDLE || m_RenderIndexBuffer == VK_NULL_HANDLE)
+		{
+			if(RecordProfile)
+				Stats.m_TextRenderMissingBuffer++;
+			ExecBuffer.m_SkipRender = true;
+			return;
+		}
+		if(pCommand->m_TextTextureIndex < 0 || (size_t)pCommand->m_TextTextureIndex >= m_vTextures.size())
+		{
+			if(RecordProfile)
+				Stats.m_TextRenderInvalidTexture++;
+			ExecBuffer.m_SkipRender = true;
+			return;
+		}
+		if(m_vTextures[pCommand->m_TextTextureIndex].m_VKTextDescrSet.m_Descriptor == VK_NULL_HANDLE)
+		{
+			if(RecordProfile)
+				Stats.m_TextRenderMissingDescriptor++;
+			ExecBuffer.m_SkipRender = true;
+			return;
+		}
 
 		ExecBuffer.m_Buffer = BufferObject.m_CurBuffer;
 		ExecBuffer.m_BufferOff = BufferObject.m_CurBufferOffset;
@@ -9803,6 +10040,8 @@ public:
 
 	[[nodiscard]] bool Cmd_RenderText(const CCommandBuffer::SCommand_RenderText *pCommand, SRenderCommandExecuteBuffer &ExecBuffer)
 	{
+		if(ExecBuffer.m_SkipRender)
+			return true;
 		std::array<float, (size_t)4 * 2> m;
 		GetStateMatrix(pCommand->m_State, m);
 
@@ -10092,6 +10331,7 @@ public:
 			if(!WaitFrame())
 				return false;
 			m_RenderingPaused = true;
+			m_FramePrepared = false;
 			VkResult WaitIdleResult = DeviceWaitIdle();
 			if(WaitIdleResult != VK_SUCCESS)
 			{
@@ -10113,7 +10353,8 @@ public:
 		m_pGpuList = pCommand->m_pGpuList;
 		if(InitVulkanSDL(pCommand->m_pWindow, pCommand->m_Width, pCommand->m_Height, pCommand->m_pRendererString, pCommand->m_pVendorString, pCommand->m_pVersionString) != 0)
 		{
-			m_VKInstance = VK_NULL_HANDLE;
+			CleanupVulkanSDL();
+			return false;
 		}
 
 		RegisterCommands();
@@ -10128,6 +10369,13 @@ public:
 		if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "AMD") != nullptr && m_ThreadCount > 1)
 		{
 			dbg_msg("vulkan", "forcing single-threaded rendering on AMD to avoid driver crashes with dynamic viewport usage");
+			m_ThreadCount = 1;
+		}
+		if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "Apple") != nullptr && m_ThreadCount > 1)
+		{
+			// MoltenVK/Metal 对 secondary command buffer 的编码开销较高，
+			// 界面命令量大的场景下三线程录制反而更容易造成帧时间抖动。
+			dbg_msg("vulkan", "forcing single-threaded rendering on Apple/MoltenVK to avoid secondary command buffer overhead");
 			m_ThreadCount = 1;
 		}
 
@@ -10173,6 +10421,9 @@ public:
 		m_vvThreadCommandLists.clear();
 		m_vThreadHelperHadCommands.clear();
 
+		if(!m_CanAssert)
+			CleanupVulkanInitialization();
+
 		m_ThreadCount = 1;
 
 		CleanupVulkanSDL();
@@ -10183,6 +10434,7 @@ public:
 	void StartCommands(size_t CommandCount, size_t EstimatedRenderCallCount) override
 	{
 		m_CommandsInPipe = CommandCount;
+		m_RenderCallsInPipe = EstimatedRenderCallCount;
 		m_CurCommandInPipe = 0;
 		m_RenderScheduler.StartCommands(m_ThreadCount, EstimatedRenderCallCount);
 		m_FrameProfileStats.m_CommandCount += CommandCount;
@@ -10193,6 +10445,7 @@ public:
 	{
 		FinishRenderThreads();
 		m_CommandsInPipe = 0;
+		m_RenderCallsInPipe = 0;
 	}
 
 	/****************

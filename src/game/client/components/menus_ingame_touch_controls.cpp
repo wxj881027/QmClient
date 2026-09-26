@@ -17,6 +17,7 @@
 #include <game/client/components/touch_controls.h>
 #include <game/client/gameclient.h>
 #include <game/client/lineinput.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_rect.h>
@@ -43,6 +44,7 @@ const CMenusIngameTouchControls::CBehaviorFactoryEditor CMenusIngameTouchControl
 	{CTouchControls::CUseActionTouchButtonBehavior::BEHAVIOR_ID, []() { return std::make_unique<CTouchControls::CUseActionTouchButtonBehavior>(); }},
 	{CTouchControls::CJoystickActionTouchButtonBehavior::BEHAVIOR_ID, []() { return std::make_unique<CTouchControls::CJoystickActionTouchButtonBehavior>(); }},
 	{CTouchControls::CJoystickAimTouchButtonBehavior::BEHAVIOR_ID, []() { return std::make_unique<CTouchControls::CJoystickAimTouchButtonBehavior>(); }},
+	{CTouchControls::CJoystickAimRelativeTouchButtonBehavior::BEHAVIOR_ID, []() { return std::make_unique<CTouchControls::CJoystickAimRelativeTouchButtonBehavior>(); }},
 	{CTouchControls::CJoystickFireTouchButtonBehavior::BEHAVIOR_ID, []() { return std::make_unique<CTouchControls::CJoystickFireTouchButtonBehavior>(); }},
 	{CTouchControls::CJoystickHookTouchButtonBehavior::BEHAVIOR_ID, []() { return std::make_unique<CTouchControls::CJoystickHookTouchButtonBehavior>(); }}};
 
@@ -374,7 +376,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 		Changed = true;
 	}
 	static CButtonContainer s_OpenBehaviorHelpButton;
-	if(Ui()->DoButton_FontIcon(&s_OpenBehaviorHelpButton, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_OpenBehaviorHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
 	{
 		const char *pHelpMessage = HelpMessageForBehaviorType(m_EditBehaviorType);
 		GameClient()->m_Menus.PopupMessage(Localize("Info"), pHelpMessage, Localize("Ok"));
@@ -450,7 +452,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			Changed = true;
 		}
 		static CButtonContainer s_OpenPredefinedBehaviorHelpButton;
-		if(Ui()->DoButton_FontIcon(&s_OpenPredefinedBehaviorHelpButton, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
+		if(Ui()->DoButton_QmIcon(&s_OpenPredefinedBehaviorHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
 		{
 			const char *pHelpMessage = HelpMessageForPredefinedType(m_PredefinedBehaviorType);
 			GameClient()->m_Menus.PopupMessage(Localize("Info"), pHelpMessage, Localize("Ok"));
@@ -464,7 +466,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 		EditBox.VSplitMid(&LeftButton, &MiddleButton);
 		EditBox.VSplitLeft(ROWSIZE, &LeftButton, &MiddleButton);
 		static CButtonContainer s_ExtraMenuDecreaseButton;
-		if(Ui()->DoButton_FontIcon(&s_ExtraMenuDecreaseButton, FontIcons::FONT_ICON_MINUS, 0, &LeftButton, BUTTONFLAG_LEFT))
+		if(Ui()->DoButton_QmIcon(&s_ExtraMenuDecreaseButton, EQmIcon::MINUS, FontIcons::FONT_ICON_MINUS, 0, &LeftButton, BUTTONFLAG_LEFT))
 		{
 			if(m_CachedExtraMenuNumber > 0)
 			{
@@ -478,7 +480,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 		MiddleButton.VSplitRight(ROWSIZE, &LeftButton, &MiddleButton);
 		Ui()->DoLabel(&LeftButton, std::to_string(m_CachedExtraMenuNumber + 1).c_str(), FONTSIZE, TEXTALIGN_MC);
 		static CButtonContainer s_ExtraMenuIncreaseButton;
-		if(Ui()->DoButton_FontIcon(&s_ExtraMenuIncreaseButton, FontIcons::FONT_ICON_PLUS, 0, &MiddleButton, BUTTONFLAG_LEFT))
+		if(Ui()->DoButton_QmIcon(&s_ExtraMenuIncreaseButton, EQmIcon::PLUS, FontIcons::FONT_ICON_PLUS, 0, &MiddleButton, BUTTONFLAG_LEFT))
 		{
 			if(m_CachedExtraMenuNumber < CTouchControls::MAX_EXTRA_MENU_NUMBER - 1)
 			{
@@ -508,7 +510,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 				EditBox.VSplitLeft(ROWSIZE, &MiddleButton, &EditBox);
 				EditBox.VSplitLeft(SUBMARGIN, nullptr, &LeftButton);
 				Ui()->DoLabel(&LeftButton, Localize("Add command"), FONTSIZE, TEXTALIGN_ML);
-				if(Ui()->DoButton_FontIcon(&m_vBehaviorElements[CommandIndex]->m_BindToggleAddButtons, FontIcons::FONT_ICON_PLUS, 0, &MiddleButton, BUTTONFLAG_LEFT))
+				if(Ui()->DoButton_QmIcon(&m_vBehaviorElements[CommandIndex]->m_BindToggleAddButtons, EQmIcon::PLUS, FontIcons::FONT_ICON_PLUS, 0, &MiddleButton, BUTTONFLAG_LEFT))
 				{
 					m_vBehaviorElements.emplace(m_vBehaviorElements.begin() + CommandIndex, std::make_unique<CBehaviorElements>());
 					m_vBehaviorElements[CommandIndex]->UpdateInputs();
@@ -518,7 +520,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 				RightButton.VSplitLeft(ROWSIZE, &MiddleButton, &RightButton);
 				RightButton.VSplitLeft(SUBMARGIN, nullptr, &LeftButton);
 				Ui()->DoLabel(&LeftButton, Localize("Delete command"), FONTSIZE, TEXTALIGN_ML);
-				if(Ui()->DoButton_FontIcon(&m_vBehaviorElements[CommandIndex]->m_BindToggleDeleteButtons, FontIcons::FONT_ICON_TRASH, 0, &MiddleButton, BUTTONFLAG_LEFT))
+				if(Ui()->DoButton_QmIcon(&m_vBehaviorElements[CommandIndex]->m_BindToggleDeleteButtons, EQmIcon::TRASH, FontIcons::FONT_ICON_TRASH, 0, &MiddleButton, BUTTONFLAG_LEFT))
 				{
 					if(m_vBehaviorElements.size() > 2)
 					{
@@ -613,7 +615,7 @@ bool CMenusIngameTouchControls::RenderBehaviorSettingBlock(CUIRect Block)
 			EditBox.VSplitLeft(SUBMARGIN, nullptr, &LeftButton);
 			Ui()->DoLabel(&LeftButton, Localize("Add command"), FONTSIZE, TEXTALIGN_ML);
 			static CButtonContainer s_FinalAddButton;
-			if(Ui()->DoButton_FontIcon(&s_FinalAddButton, FontIcons::FONT_ICON_PLUS, 0, &MiddleButton, BUTTONFLAG_LEFT))
+			if(Ui()->DoButton_QmIcon(&s_FinalAddButton, EQmIcon::PLUS, FontIcons::FONT_ICON_PLUS, 0, &MiddleButton, BUTTONFLAG_LEFT))
 			{
 				m_vBehaviorElements.emplace_back(std::make_unique<CBehaviorElements>());
 				Changed = true;
@@ -664,7 +666,7 @@ bool CMenusIngameTouchControls::RenderVisibilitySettingBlock(CUIRect Block)
 			if(Current <= (unsigned)CTouchControls::EButtonVisibility::EXTRA_MENU_1)
 			{
 				const char *pHelpMessage = HelpMessageForVisibilityType((CTouchControls::EButtonVisibility)Current);
-				if(Ui()->DoButton_FontIcon(&s_aHelpButtons[Current], FontIcons::FONT_ICON_QUESTION, 0, &HelpButton, BUTTONFLAG_LEFT))
+				if(Ui()->DoButton_QmIcon(&s_aHelpButtons[Current], EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &HelpButton, BUTTONFLAG_LEFT))
 				{
 					GameClient()->m_Menus.PopupMessage(Localize("Info"), pHelpMessage, Localize("Ok"));
 				}
@@ -726,7 +728,7 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 	Row.VMargin(5.0f, &Row);
 	Ui()->DoLabel(&Row, Localize("Button browser"), TITLESIZE, TEXTALIGN_MC);
 	static CButtonContainer s_OpenHelpButton;
-	if(Ui()->DoButton_FontIcon(&s_OpenHelpButton, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_OpenHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &RightButton, BUTTONFLAG_LEFT))
 	{
 		GameClient()->m_Menus.PopupMessage(Localize("Info"),
 			Localize("You can select buttons directly in the list below, or long press on a touch button on the screen to select it. You can also move and resize buttons by touch."),
@@ -888,7 +890,7 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 				EditBox.VSplitLeft(ROWSIZE, &LeftButton, &EditBox);
 				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 				TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-				Ui()->DoLabel(&LeftButton, m_vpMutableButtons[ButtonIndex]->m_VisibilityCached ? FontIcons::FONT_ICON_EYE : FontIcons::FONT_ICON_EYE_SLASH, FONTSIZE, TEXTALIGN_ML);
+				Ui()->DoLabel_QmIcon(&LeftButton, m_vpMutableButtons[ButtonIndex]->m_VisibilityCached ? EQmIcon::EYE : EQmIcon::EYE_OFF, m_vpMutableButtons[ButtonIndex]->m_VisibilityCached ? FontIcons::FONT_ICON_EYE : FontIcons::FONT_ICON_EYE_SLASH, FONTSIZE, TEXTALIGN_ML);
 				TextRender()->SetRenderFlags(0);
 				TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 				EditBox.VSplitLeft(LabelRect.w, &LeftButton, &EditBox);
@@ -1042,7 +1044,7 @@ void CMenusIngameTouchControls::RenderConfigSettings(CUIRect MainView)
 	Row.VSplitMid(&Label, &Button);
 	Ui()->DoLabel(&Label, Localize("Direct touch input while ingame"), FONTSIZE, TEXTALIGN_ML);
 
-	const char *apIngameTouchModes[(int)CTouchControls::EDirectTouchIngameMode::NUM_STATES] = {Localize("Disabled", "Direct touch input"), Localize("Active action", "Direct touch input"), Localize("Aim", "Direct touch input"), Localize("Fire", "Direct touch input"), Localize("Hook", "Direct touch input")};
+	const char *apIngameTouchModes[(int)CTouchControls::EDirectTouchIngameMode::NUM_STATES] = {Localize("Disabled", "Direct touch input"), Localize("Active action", "Direct touch input"), Localize("Aim", "Direct touch input"), Localize("Relative aim", "Direct touch input"), Localize("Fire", "Direct touch input"), Localize("Hook", "Direct touch input")};
 	const CTouchControls::EDirectTouchIngameMode OldDirectTouchIngame = GameClient()->m_TouchControls.DirectTouchIngame();
 	static CUi::SDropDownState s_DirectTouchIngameDropDownState;
 	static CScrollRegion s_DirectTouchIngameDropDownScrollRegion;
@@ -1082,7 +1084,7 @@ void CMenusIngameTouchControls::RenderPreviewSettings(CUIRect MainView)
 	EditBox.VMargin(5.0f, &EditBox);
 	Ui()->DoLabel(&EditBox, Localize("Preview visibilities"), TITLESIZE, TEXTALIGN_MC);
 	static CButtonContainer s_OpenHelpButton;
-	if(Ui()->DoButton_FontIcon(&s_OpenHelpButton, FontIcons::FONT_ICON_QUESTION, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_OpenHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		GameClient()->m_Menus.PopupMessage(Localize("Info"), Localize("Preview button visibility while the editor is active."), Localize("Ok"));
 	}
@@ -1146,7 +1148,7 @@ void CMenusIngameTouchControls::RenderTouchControlsEditor(CUIRect MainView)
 	Ui()->DoLabel(&Label, Localize("Edit touch controls"), TITLESIZE, TEXTALIGN_MC);
 
 	static CButtonContainer s_OpenHelpButton;
-	if(Ui()->DoButton_FontIcon(&s_OpenHelpButton, FontIcons::FONT_ICON_QUESTION, 0, &Button, BUTTONFLAG_LEFT))
+	if(Ui()->DoButton_QmIcon(&s_OpenHelpButton, EQmIcon::QUESTION, FontIcons::FONT_ICON_QUESTION, 0, &Button, BUTTONFLAG_LEFT))
 	{
 		GameClient()->m_Menus.PopupConfirm(Localize("Info"),
 			Localize("You can manage your touch controls settings on this page. Only changes that are saved will be available after restarting the client. You can share your touch controls with others by exporting them to the clipboard.\n\nYou can find more detailed information about the touch controls on the DDNet Wiki."),
@@ -1639,7 +1641,7 @@ const char **CMenusIngameTouchControls::VisibilityNames() const
 
 const char **CMenusIngameTouchControls::PredefinedNames() const
 {
-	static const char *s_apPredefined[10];
+	static const char *s_apPredefined[11];
 	s_apPredefined[0] = Localize("Ingame Menu", "Predefined touch button behaviors");
 	s_apPredefined[1] = Localize("Extra Menu", "Predefined touch button behaviors");
 	s_apPredefined[2] = Localize("Emoticon", "Predefined touch button behaviors");
@@ -1648,8 +1650,9 @@ const char **CMenusIngameTouchControls::PredefinedNames() const
 	s_apPredefined[5] = Localize("Use Action", "Predefined touch button behaviors");
 	s_apPredefined[6] = Localize("Joystick Action", "Predefined touch button behaviors");
 	s_apPredefined[7] = Localize("Joystick Aim", "Predefined touch button behaviors");
-	s_apPredefined[8] = Localize("Joystick Fire", "Predefined touch button behaviors");
-	s_apPredefined[9] = Localize("Joystick Hook", "Predefined touch button behaviors");
+	s_apPredefined[8] = Localize("Joystick Relative Aim", "Predefined touch button behaviors");
+	s_apPredefined[9] = Localize("Joystick Fire", "Predefined touch button behaviors");
+	s_apPredefined[10] = Localize("Joystick Hook", "Predefined touch button behaviors");
 	static_assert(std::size(s_apPredefined) == std::size(BEHAVIOR_FACTORIES_EDITOR), "Insufficient predefined names");
 	return s_apPredefined;
 }
@@ -1678,11 +1681,12 @@ const char *CMenusIngameTouchControls::HelpMessageForPredefinedType(EPredefinedT
 	case EPredefinedType::USE_ACTION: return Localize("Uses the active action with the current aiming position."); break;
 	case EPredefinedType::JOYSTICK_ACTION: return Localize("Virtual joystick which uses the active action."); break;
 	case EPredefinedType::JOYSTICK_AIM: return Localize("Virtual joystick which only aims without using an action."); break;
+	case EPredefinedType::JOYSTICK_AIM_RELATIVE: return Localize("Virtual joystick which only aims and moves the mouse pointer relatively."); break;
 	case EPredefinedType::JOYSTICK_FIRE: return Localize("Virtual joystick which always uses fire."); break;
 	case EPredefinedType::JOYSTICK_HOOK: return Localize("Virtual joystick which always uses hook."); break;
 	default: dbg_assert_failed("Unknown behavior %d", (int)m_PredefinedBehaviorType);
 	}
-	static_assert((int)EPredefinedType::NUM_PREDEFINEDTYPES == 10, "Insufficient help messages");
+	static_assert((int)EPredefinedType::NUM_PREDEFINEDTYPES == 11, "Insufficient help messages");
 }
 
 const char *CMenusIngameTouchControls::HelpMessageForVisibilityType(CTouchControls::EButtonVisibility Type) const

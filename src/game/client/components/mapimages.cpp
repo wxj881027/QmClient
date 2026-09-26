@@ -13,6 +13,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/components/assets_resource_registry.h>
 #include <game/client/gameclient.h>
 #include <game/layers.h>
 #include <game/localization.h>
@@ -158,6 +159,13 @@ void CMapImages::OnMapLoadImpl(class CLayers *pLayers, IMap *pMap)
 		}
 		else
 		{
+			if(pImg->m_Width <= 0 || pImg->m_Height <= 0)
+			{
+				log_error("mapimages", "Failed to load map image %d '%s': invalid image dimensions.", i, pName);
+				ShowWarning = true;
+				continue;
+			}
+
 			CImageInfo ImageInfo;
 			ImageInfo.m_Width = pImg->m_Width;
 			ImageInfo.m_Height = pImg->m_Height;
@@ -294,6 +302,11 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 			str_format(aPath, sizeof(aPath), "editor/entities_clear/%s.png", gs_apModEntitiesNames[EntitiesModType]);
 			Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
 		}
+
+		// 选中内置空白材质 "blank"：按默认实体图的尺寸与格式解码后整张清空，
+		// 下方按格切块得到的各实体层就是全透明（显式留空，不参与 qm_blank_asset_fallback）。
+		if(m_EntitiesIsBlank && ImgInfo.m_pData != nullptr)
+			ClearImageToTransparent(ImgInfo);
 
 		if(ImgInfo.m_pData != nullptr)
 		{
@@ -437,6 +450,7 @@ IGraphics::CTextureHandle CMapImages::GetOverlayCenter()
 
 void CMapImages::ChangeEntitiesPath(const char *pPath)
 {
+	m_EntitiesIsBlank = IsBlankAssetName(pPath);
 	if(str_comp(pPath, "default") == 0)
 	{
 		str_copy(m_aEntitiesPath, "editor/entities_clear");

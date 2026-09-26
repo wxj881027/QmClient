@@ -93,16 +93,18 @@ class CScoreboard : public CComponent
 	{
 		std::array<CScoreboardPlayerRow, MAX_CLIENTS> m_aRows{};
 		std::array<SQmScoreboardTeamModeState, NUM_DDRACE_TEAMS> m_aTeamModes{};
-		std::array<bool, NUM_DDRACE_TEAMS> m_aTeamHasSpecPlayer{};
+		std::array<bool, NUM_DDRACE_TEAMS> m_aTeamHasPlayer{};
 		int m_Count = 0;
 	};
 
 	void RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFontSize);
 	void RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, float TitleFontSize);
 	void RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle);
+	void RenderServerPlayerCount(CUIRect Rect, const char *pText);
 	void RenderGoals(CUIRect Goals);
 	void RenderFooter(CUIRect Footer);
-	void RenderSpectators(CUIRect Spectators, int NumSpectators);
+	void RenderSpectators(CUIRect Spectators);
+	void RenderGhostPlaybackControls(CUIRect Controls);
 	void RenderSoundMuteBar(CUIRect ScoreboardRect);
 	void RenderTeamModeIcons(float x, float y, float IconSize, const SQmScoreboardTeamModeState &State, float Alpha);
 	void UpdateTeamModeCache();
@@ -126,6 +128,10 @@ class CScoreboard : public CComponent
 
 	IGraphics::CTextureHandle m_DeadTeeTexture;
 	std::array<SQmScoreboardTeamModeState, NUM_DDRACE_TEAMS> m_aCachedTeamModes{};
+
+	// 滚动模式下的行偏移（单位：行，可有小数以获得平滑滚动）与其目标行。
+	float m_ScrollOffset = 0.0f;
+	int m_ScrollTarget = 0;
 
 	std::optional<vec2> m_LastMousePos;
 	bool m_MouseUnlocked = false;

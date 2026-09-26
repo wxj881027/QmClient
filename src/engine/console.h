@@ -83,7 +83,8 @@ public:
 
 		// DDRace
 
-		virtual int GetVictim() const = 0;
+		// 官方 f586be3e0：victim 参数按槽位取，一个命令可以有多个 v 参数。
+		virtual int GetVictim(unsigned Slot) const = 0;
 	};
 
 	class ICommandInfo
@@ -93,6 +94,8 @@ public:
 		virtual const char *Name() const = 0;
 		virtual const char *Help() const = 0;
 		virtual const char *Params() const = 0;
+		// 参数里是否含客户端 id 参数（v），用于限制看不到真实 id 的旧客户端
+		virtual bool TakesClientId() const = 0;
 		virtual int Flags() const = 0;
 		virtual EAccessLevel GetAccessLevel() const = 0;
 	};

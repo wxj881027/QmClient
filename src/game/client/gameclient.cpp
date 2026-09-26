@@ -23,7 +23,6 @@
 #include "components/hud.h"
 #include "components/infomessages.h"
 #include "components/items.h"
-#include "components/jump_hint_utils.h"
 #include "components/mapimages.h"
 #include "components/maplayers.h"
 #include "components/mapsounds.h"
@@ -36,7 +35,6 @@
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
-#include "components/qmclient/qm_hook_coll_intersection.h"
 #include "components/qmclient/qmclient_utils.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
 #include "components/race_demo.h"
@@ -70,6 +68,7 @@
 #include <engine/engine.h>
 #include <engine/favorites.h>
 #include <engine/friends.h>
+#include <engine/gfx/image_manipulation.h>
 #include <engine/graphics.h>
 #include <engine/map.h>
 #include <engine/serverbrowser.h>
@@ -101,7 +100,7 @@ namespace
 
 	void LogSettingsLoadingPrewarmEvent(const IClient *pClient, const char *pEvent, int CompletedSteps, int MaxAttempts, int TeeWarmupEntries, int ConsecutiveNoProgressSteps, uint64_t UploadsCompleted, uint64_t LoadsCompleted)
 	{
-		if(g_Config.m_QmPerfDebug == 0)
+		if(g_Config.m_QmPerfDebug == 0 && g_Config.m_QmPerfLogfile == 0)
 			return;
 		char aPayload[256];
 		str_format(aPayload, sizeof(aPayload), "event=%s steps=%d max_attempts=%d tee_entries=%d stall_steps=%d uploads_completed=%" PRIu64 " loads_completed=%" PRIu64,
@@ -115,44 +114,37 @@ namespace
 		QmPerfLogPayload("perf/settings-warmup", aPayload, pClient, "settings:tee");
 	}
 
-	void LogQmIconDiagnostics(const SQmIconDiagnostics &Frame, const IClient *pClient, bool Force = false)
+	void LogQmIconDiagnostics(const SQmIconDiagnostics &Diagnostics, const IClient *pClient)
 	{
-		if(!Force && !QmPerfEnabled())
+		if(!QmPerfEnabled())
 			return;
 		static SQmIconDiagnosticsWindow s_Window;
-		static int64_t s_LastLog = 0;
-		const bool ResourceEvent = !Force && s_Window.Add(Frame);
 		const int64_t Now = time_get();
-		if((!Force && !ResourceEvent && Now - s_LastLog < time_freq()) || s_Window.m_Frames == 0)
+		if(!s_Window.Add(Diagnostics, Now, time_freq()))
 			return;
-		const SQmIconDiagnostics &Diagnostics = s_Window.m_Total;
+		const SQmIconDiagnostics &Total = s_Window.m_Total;
 		char aPayload[1024];
-		str_format(aPayload, sizeof(aPayload), "event=icon_summary sample_frames=%" PRIu64 " alpha_draws_max=%" PRIu64 " msdf_draws_max=%" PRIu64 " alpha_draws=%" PRIu64 " msdf_draws=%" PRIu64 " msdf_manager_call_run_max=%" PRIu64 " msdf_manager_call_run_1=%" PRIu64 " msdf_manager_call_run_2=%" PRIu64 " msdf_manager_call_run_3_4=%" PRIu64 " msdf_manager_call_run_5_8=%" PRIu64 " msdf_manager_call_run_9_16=%" PRIu64 " msdf_manager_call_run_17_32=%" PRIu64 " msdf_manager_call_run_33_64=%" PRIu64 " msdf_manager_call_run_65_plus=%" PRIu64 " reload_attempts=%" PRIu64 " reload_successes=%" PRIu64 " msdf_probe_attempts=%" PRIu64 " msdf_probe_successes=%" PRIu64 " atlas_swaps=%" PRIu64 " texture_load_successes=%" PRIu64 " texture_load_failures=%" PRIu64 " texture_unloads=%" PRIu64,
+		str_format(aPayload, sizeof(aPayload), "event=icon_summary sample_frames=%" PRIu64 " msdf_draws_max=%" PRIu64 " msdf_draws=%" PRIu64 " msdf_manager_call_run_max=%" PRIu64 " msdf_manager_call_run_1=%" PRIu64 " msdf_manager_call_run_2=%" PRIu64 " msdf_manager_call_run_3_4=%" PRIu64 " msdf_manager_call_run_5_8=%" PRIu64 " msdf_manager_call_run_9_16=%" PRIu64 " msdf_manager_call_run_17_32=%" PRIu64 " msdf_manager_call_run_33_64=%" PRIu64 " msdf_manager_call_run_65_plus=%" PRIu64 " reload_attempts=%" PRIu64 " reload_successes=%" PRIu64 " atlas_swaps=%" PRIu64 " texture_load_successes=%" PRIu64 " texture_load_failures=%" PRIu64 " texture_unloads=%" PRIu64,
 			s_Window.m_Frames,
-			s_Window.m_MaxAlphaDraws,
 			s_Window.m_MaxMsdfDraws,
-			Diagnostics.m_AlphaIconDraws,
-			Diagnostics.m_MsdfIconDraws,
-			Diagnostics.m_MaxMsdfManagerCallRun,
-			Diagnostics.m_MsdfManagerCallRunBuckets[0],
-			Diagnostics.m_MsdfManagerCallRunBuckets[1],
-			Diagnostics.m_MsdfManagerCallRunBuckets[2],
-			Diagnostics.m_MsdfManagerCallRunBuckets[3],
-			Diagnostics.m_MsdfManagerCallRunBuckets[4],
-			Diagnostics.m_MsdfManagerCallRunBuckets[5],
-			Diagnostics.m_MsdfManagerCallRunBuckets[6],
-			Diagnostics.m_MsdfManagerCallRunBuckets[7],
-			Diagnostics.m_ReloadAttempts,
-			Diagnostics.m_ReloadSuccesses,
-			Diagnostics.m_MsdfProbes,
-			Diagnostics.m_MsdfProbeSuccesses,
-			Diagnostics.m_AtlasSwaps,
-			Diagnostics.m_TextureLoads,
-			Diagnostics.m_TextureLoadFailures,
-			Diagnostics.m_TextureUnloads);
+			Total.m_MsdfIconDraws,
+			Total.m_MaxMsdfManagerCallRun,
+			Total.m_MsdfManagerCallRunBuckets[0],
+			Total.m_MsdfManagerCallRunBuckets[1],
+			Total.m_MsdfManagerCallRunBuckets[2],
+			Total.m_MsdfManagerCallRunBuckets[3],
+			Total.m_MsdfManagerCallRunBuckets[4],
+			Total.m_MsdfManagerCallRunBuckets[5],
+			Total.m_MsdfManagerCallRunBuckets[6],
+			Total.m_MsdfManagerCallRunBuckets[7],
+			Total.m_ReloadAttempts,
+			Total.m_ReloadSuccesses,
+			Total.m_AtlasSwaps,
+			Total.m_TextureLoads,
+			Total.m_TextureLoadFailures,
+			Total.m_TextureUnloads);
 		QmPerfLogPayloadForce("perf/icons", aPayload, pClient);
-		s_Window = {};
-		s_LastLog = Now;
+		s_Window.Clear(Now);
 	}
 
 } // namespace
@@ -160,6 +152,7 @@ namespace
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
+#include <game/client/components/jump_hint_utils.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/sponsor_nudge.h>
 #include <game/client/frame_scheduler.h>
@@ -217,17 +210,23 @@ namespace
 		const int LocalId = QmLocalReferenceClientId(pGameClient);
 		if(LocalId < 0 || LocalId >= MAX_CLIENTS)
 			return false;
-		if(pGameClient->m_aClients[LocalId].m_Team == TEAM_SPECTATORS)
+
+		// 与 IsOtherTeam 保持一致：跟随视角以被旁观者为参照，沿用其 solo 语义；
+		// 自由视角/纯旁观不参照任何玩家，所有玩家按原样显示。
+		const int SpecTargetId = pGameClient->m_Snap.m_SpecInfo.m_Active ? pGameClient->m_Snap.m_SpecInfo.m_SpectatorId : -1;
+		const bool Following = SpecTargetId >= 0 && SpecTargetId < MAX_CLIENTS;
+		const int ReferenceId = Following ? SpecTargetId : LocalId;
+		if(!Following && pGameClient->m_aClients[ReferenceId].m_Team == TEAM_SPECTATORS)
 			return false;
 
-		const bool Local = LocalId == ClientId;
-		if((pGameClient->m_aClients[LocalId].m_Solo || pGameClient->m_aClients[ClientId].m_Solo) && !Local)
+		const bool Local = ReferenceId == ClientId;
+		if((pGameClient->m_aClients[ReferenceId].m_Solo || pGameClient->m_aClients[ClientId].m_Solo) && !Local)
 			return true;
 
-		if(pGameClient->m_Teams.Team(ClientId) == TEAM_SUPER || pGameClient->m_Teams.Team(LocalId) == TEAM_SUPER)
+		if(pGameClient->m_Teams.Team(ClientId) == TEAM_SUPER || pGameClient->m_Teams.Team(ReferenceId) == TEAM_SUPER)
 			return false;
 
-		return pGameClient->m_Teams.Team(ClientId) != pGameClient->m_Teams.Team(LocalId);
+		return pGameClient->m_Teams.Team(ClientId) != pGameClient->m_Teams.Team(ReferenceId);
 	}
 
 	float QmKnownOwnerEventAlpha(CGameClient *pGameClient, int Owner)
@@ -361,6 +360,7 @@ namespace
 		Sample.m_ClientId = ClientId;
 		Sample.m_AttackTick = pCurrent->m_AttackTick;
 		Sample.m_Weapon = pCurrent->m_Weapon;
+		Sample.m_PrevWeapon = pPrevious != nullptr ? pPrevious->m_Weapon : pCurrent->m_Weapon;
 		Sample.m_HammerHitEnabled = HammerHitEnabled;
 		Sample.m_PrevPos = pPrevious != nullptr ? vec2(pPrevious->m_X, pPrevious->m_Y) : vec2(pCurrent->m_X, pCurrent->m_Y);
 		Sample.m_CurPos = vec2(pCurrent->m_X, pCurrent->m_Y);
@@ -371,26 +371,7 @@ namespace
 		Sample.m_Super = Super;
 	}
 
-	// 把快照中 NETOBJTYPE_CHARACTER 项按 Id 收集到 [0, MAX_CLIENTS) 槽位。
-	// CClient::SnapFindItem 内部走 CSnapshot::GetItemIndex 的线性查找（源码自带
-	// "TODO: OPT: this should not be a linear search. very bad"），逐个客户端调用会让
-	// 每个 hammer hit 事件付出上百次全表比较；这里每个快照只遍历一次。
-	// 取值语义与逐个查找一致：SnapFindItem/FindItem 返回键匹配的第一个项，这里同样保留首个匹配。
-	void QmCollectCharactersById(CGameClient *pGameClient, int SnapId, const CNetObj_Character *apOut[MAX_CLIENTS])
-	{
-		const int NumItems = pGameClient->Client()->SnapNumItems(SnapId);
-		for(int Index = 0; Index < NumItems; ++Index)
-		{
-			const IClient::CSnapItem Item = pGameClient->Client()->SnapGetItem(SnapId, Index);
-			if(Item.m_Type != NETOBJTYPE_CHARACTER || Item.m_Id >= MAX_CLIENTS)
-				continue;
-			if(apOut[Item.m_Id] == nullptr)
-				apOut[Item.m_Id] = static_cast<const CNetObj_Character *>(Item.m_pData);
-		}
-	}
-
-	SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick,
-		const CNetObj_Character *const apCurrent[MAX_CLIENTS], const CNetObj_Character *const apPrevious[MAX_CLIENTS])
+	SQmHammerHitMatch QmInferHammerHit(CGameClient *pGameClient, vec2 Pos, int EventTick)
 	{
 		SQmHammerAttackSample aAttackSamples[MAX_CLIENTS];
 		SQmHammerTargetSample aTargetSamples[MAX_CLIENTS];
@@ -398,14 +379,14 @@ namespace
 		int NumTargetSamples = 0;
 		for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 		{
-			const CNetObj_Character *pCurrent = apCurrent[ClientId];
-			const CNetObj_Character *pPrevious = apPrevious[ClientId];
+			const auto *pCurrent = static_cast<const CNetObj_Character *>(pGameClient->Client()->SnapFindItem(IClient::SNAP_CURRENT, NETOBJTYPE_CHARACTER, ClientId));
+			const auto *pPrevious = static_cast<const CNetObj_Character *>(pGameClient->Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, ClientId));
 			const CGameClient::CSnapState::CCharacterInfo &Character = pGameClient->m_Snap.m_aCharacters[ClientId];
 			const int CharacterFlags = Character.m_HasExtendedData ? Character.m_ExtendedData.m_Flags : 0;
 			const bool HammerHitEnabled = (CharacterFlags & CHARACTERFLAG_HAMMER_HIT_DISABLED) == 0;
 			const int DDTeam = pGameClient->m_Teams.Team(ClientId);
 			const bool Solo = (CharacterFlags & CHARACTERFLAG_SOLO) != 0;
-			const bool Super = (CharacterFlags & CHARACTERFLAG_SUPER) != 0 || QmIsHammerSuperTeam(DDTeam, pGameClient->m_Teams.m_IsDDRace16);
+			const bool Super = (CharacterFlags & CHARACTERFLAG_SUPER) != 0 || QmIsHammerSuperTeam(DDTeam, pGameClient->m_Teams.m_NumDDRaceTeams);
 			QmAddHammerAttackSample(aAttackSamples, NumAttackSamples, std::size(aAttackSamples), ClientId, pCurrent, pPrevious, HammerHitEnabled, DDTeam, Solo, Super);
 			if((pCurrent == nullptr && pPrevious == nullptr) || NumTargetSamples >= MAX_CLIENTS)
 				continue;
@@ -432,10 +413,80 @@ namespace
 			pKeyStates[Key >> 3] &= ~Mask;
 	}
 
+	// 自定义单图资源（gui_cursor / arrow / strong_weak）以整张纹理 + sprite 子区域绘制，
+	// 没法像 sprite 纹理那样逐个回退。这里按 qm_blank_asset_fallback 的语义，先把自定义图里
+	// 全透明的 sprite 区域用内置默认图补齐，再整张上传，效果与 LoadSpriteTexture 一致。
+	// 两张图的像素尺寸允许不同：sprite 位置按各自画布的格比例换算（格数量相同），
+	// 因此换成别的分辨率的材质仍然能取到对应格，而不是要求像素尺寸一致。
+	void FillBlankNamedAssetSprites(CGameClient *pGameClient, int ImageId, CImageInfo &ImgInfo)
+	{
+		if(g_Config.m_QmBlankAssetFallback == 0)
+			return;
+		const char *pDefaultPath = g_pData->m_aImages[ImageId].m_pFilename;
+		if(pDefaultPath[0] == '\0')
+			return;
+
+		CImageInfo DefaultImgInfo;
+		if(!pGameClient->Graphics()->LoadPng(DefaultImgInfo, pDefaultPath, IStorage::TYPE_ALL))
+			return;
+		// 回退图必须是同一图集的默认文件：格坐标按各自网格换算，换别的图集（列数不同）会取到错误区域。
+		// 格式必须一致（含 alpha），否则连空白判定都不成立。
+		if(DefaultImgInfo.m_Format != ImgInfo.m_Format)
+		{
+			DefaultImgInfo.Free();
+			return;
+		}
+
+		bool AnySprite = false;
+		for(int SpriteId = 0; SpriteId < NUM_SPRITES; ++SpriteId)
+		{
+			const CDataSprite &Sprite = g_pData->m_aSprites[SpriteId];
+			if(Sprite.m_pSet == nullptr || Sprite.m_pSet->m_pImage != &g_pData->m_aImages[ImageId])
+				continue;
+			AnySprite = true;
+
+			const int GridX = Sprite.m_pSet->m_Gridx;
+			const int GridY = Sprite.m_pSet->m_Gridy;
+			size_t x = 0, y = 0, w = 0, h = 0;
+			size_t FallbackX = 0, FallbackY = 0, FallbackW = 0, FallbackH = 0;
+			if(!ResolveSpritePixelRect(ImgInfo.m_Width, ImgInfo.m_Height, GridX, GridY, Sprite.m_X, Sprite.m_Y, Sprite.m_W, Sprite.m_H, x, y, w, h))
+				continue;
+			if(!ResolveSpritePixelRect(DefaultImgInfo.m_Width, DefaultImgInfo.m_Height, GridX, GridY, Sprite.m_X, Sprite.m_Y, Sprite.m_W, Sprite.m_H, FallbackX, FallbackY, FallbackW, FallbackH))
+				continue;
+			if(CopyFallbackOverBlankRect(ImgInfo, DefaultImgInfo, x, y, w, h, FallbackX, FallbackY, FallbackW, FallbackH))
+				log_warn("graphics", "Asset sprite '%s' is empty, falling back to the default sprite", Sprite.m_pName);
+		}
+		if(!AnySprite && CopyFallbackOverBlankRect(ImgInfo, DefaultImgInfo, 0, 0, ImgInfo.m_Width, ImgInfo.m_Height, 0, 0, DefaultImgInfo.m_Width, DefaultImgInfo.m_Height))
+		{
+			// 没有任何 sprite 引用该图（例如光标），整张空白时按整图回退；分辨率不同则按比例缩放。
+			log_warn("graphics", "Asset '%s' is empty, falling back to the default asset", pDefaultPath);
+		}
+		DefaultImgInfo.Free();
+	}
+
 	void LoadNamedSingleFileImage(CGameClient *pGameClient, int ImageId, const char *pCategoryId, const char *pActiveName)
 	{
 		if(ImageId < 0 || ImageId >= g_pData->m_NumImages || pCategoryId == nullptr || pActiveName == nullptr)
 			return;
+
+		if(IsBlankAssetName(pActiveName))
+		{
+			// 客户端自带空白材质：按内置默认图的尺寸与格式造一张全透明图。
+			// 开关关闭（默认）时显式留空优先；开关打开则按官方行为直接采用内置默认图。
+			CImageInfo BlankImgInfo;
+			if(pGameClient->Graphics()->LoadPng(BlankImgInfo, g_pData->m_aImages[ImageId].m_pFilename, IStorage::TYPE_ALL))
+			{
+				if(g_Config.m_QmBlankAssetFallback == 0)
+					ClearImageToTransparent(BlankImgInfo);
+				IGraphics::CTextureHandle BlankTexture = pGameClient->Graphics()->LoadTextureRawMove(BlankImgInfo, 0, QM_BLANK_ASSET_NAME);
+				if(BlankTexture.IsValid() && !BlankTexture.IsNullTexture())
+				{
+					pGameClient->Graphics()->UnloadTexture(&g_pData->m_aImages[ImageId].m_Id);
+					g_pData->m_aImages[ImageId].m_Id = BlankTexture;
+				}
+			}
+			return;
+		}
 
 		IGraphics::CTextureHandle NewTexture;
 
@@ -444,7 +495,18 @@ namespace
 			if(Candidate.empty())
 				continue;
 
-			NewTexture = pGameClient->Graphics()->LoadTexture(Candidate.c_str(), IStorage::TYPE_ALL);
+			// 只有开关打开且文件可按 PNG 解码时才需要像素级判定；其余情况（开关关闭、
+			// WebP 等非 PNG 文件）都走原来的整文件加载路径，行为与以前完全一致。
+			CImageInfo ImgInfo;
+			if(g_Config.m_QmBlankAssetFallback != 0 && pGameClient->Graphics()->LoadPng(ImgInfo, Candidate.c_str(), IStorage::TYPE_ALL))
+			{
+				FillBlankNamedAssetSprites(pGameClient, ImageId, ImgInfo);
+				NewTexture = pGameClient->Graphics()->LoadTextureRawMove(ImgInfo, 0, Candidate.c_str());
+			}
+			else
+			{
+				NewTexture = pGameClient->Graphics()->LoadTexture(Candidate.c_str(), IStorage::TYPE_ALL);
+			}
 			if(NewTexture.IsValid() && !NewTexture.IsNullTexture())
 				break;
 			NewTexture = IGraphics::CTextureHandle();
@@ -476,20 +538,18 @@ namespace
 	{
 		SQmFastInputSettings Settings;
 		Settings.m_Enabled = pGameClient->TClientComponent().IsFastInputActive();
-		Settings.m_Mode = g_Config.m_QmFastInputMode;
 		Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
-		Settings.m_SaikoPlusAmount = g_Config.m_QmSaikoPlusAmount;
 		return QmEffectiveFastInputOffsetTicks(Settings);
 	}
 
 	int FastInputPredictionTicks(float OffsetTicks)
 	{
-		return QmFastInputPredictionTicks(OffsetTicks, g_Config.m_QmFastInputMode);
+		return QmFastInputPredictionTicks(OffsetTicks);
 	}
 
 	bool EffectiveFastInputOthers(const CGameClient *pGameClient)
 	{
-		return QmEffectiveFastInputOthers(pGameClient->TClientComponent().IsFastInputActive(), g_Config.m_QmFastInputMode, g_Config.m_TcFastInputOthers != 0, g_Config.m_QmSaikoPlusOthers != 0);
+		return QmEffectiveFastInputOthers(pGameClient->TClientComponent().IsFastInputActive(), g_Config.m_TcFastInputOthers != 0);
 	}
 
 } // namespace
@@ -590,7 +650,9 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_QmAxiomScores, "axiom_scores");
 	AddComponent(&m_QmChatEmoji, "chat_emoji");
 	AddComponent(&m_QmMonitoring, "monitoring");
+	AddComponent(&m_QmWaterHammerIndicator, "water_hammer_indicator");
 	AddComponent(&m_QmWeaponTrajectory, "weapon_trajectory");
+	AddComponent(&m_RankGhost, "rank_ghost");
 	AddComponent(&m_TClient, "tclient");
 	AddComponent(&m_FastPractice, "fast_practice");
 	AddComponent(&m_Voice, "voice");
@@ -794,7 +856,20 @@ static void MigrateJumpHintConfig()
 	MigrateInt(g_Config.m_QmJumpHintY, g_Config.m_TcJumpHintYLegacy, DefaultConfig::QmJumpHintY, DefaultConfig::TcJumpHintYLegacy);
 	MigrateInt(g_Config.m_QmJumpHintSize, g_Config.m_TcJumpHintSizeLegacy, DefaultConfig::QmJumpHintSize, DefaultConfig::TcJumpHintSizeLegacy);
 
+	// 默认文案中文化后只替换「原封不动的英文默认」并关掉三跳提示一次；
+	// 上面 MigrateStr 可能刚把旧的 tc_ 值搬进来，所以这步必须排在它之后。
 	MigrateJumpHintDefaults(g_Config.m_QmJumpHintDefaultsMigrated, g_Config.m_QmJumpHint, g_Config.m_QmJumpHintText, sizeof(g_Config.m_QmJumpHintText));
+}
+
+// 昵称显示从 cl_nameplates / cl_nameplates_own 两开关改成 qm_nameplate_show_scope 六档。
+// 远程直接换档、不做迁移，原本关掉名牌的玩家升级后会突然看到所有人；这里把旧意图
+// 一次性映射到对应档位，之后用户在新分段控件里的选择不再被覆盖。
+static void MigrateNameplateShowScopeConfig()
+{
+	if(g_Config.m_QmNameplateShowScopeMigrated)
+		return;
+	g_Config.m_QmNameplateShowScope = QmNameplateShowScopeFromLegacyFlags(g_Config.m_ClNamePlates != 0, g_Config.m_ClNamePlatesOwn != 0);
+	g_Config.m_QmNameplateShowScopeMigrated = 1;
 }
 
 // CFGFLAG_COLALPHA 将这组设置从六位 RGB 改为八位 ARGB。
@@ -822,6 +897,15 @@ static void MigrateTranslateUiColorAlphaConfig(const IConfigManager *pConfigMana
 		InputAlphaMode("qm_translate_menu_option_selected"),
 		InputAlphaMode("qm_translate_menu_option_normal"));
 	g_Config.m_QmTranslateColorAlphaMigrated = Migrated ? 1 : 0;
+}
+
+static void MigrateQmUiIconDuotoneSecondaryColor(const IConfigManager *pConfigManager)
+{
+	if(g_Config.m_QmUiIconDuotoneSecondaryColorMigrated)
+		return;
+	const EColorInputAlphaMode InputAlphaMode = pConfigManager != nullptr ? pConfigManager->ColorValueInputAlphaMode("qm_ui_icon_duotone_secondary_color") : EColorInputAlphaMode::PACKED;
+	MigrateLegacyQmUiIconDuotoneSecondaryColor(g_Config.m_QmUiIconDuotoneSecondaryColor, DefaultConfig::QmUiIconDuotoneSecondaryColor, InputAlphaMode);
+	g_Config.m_QmUiIconDuotoneSecondaryColorMigrated = 1;
 }
 
 static void GenerateTimeoutCode(char *pTimeoutCode)
@@ -859,7 +943,9 @@ void CGameClient::OnInit()
 
 	// Migrate legacy tc_jump_hint_text into qm_jump_hint_text before any HUD use.
 	MigrateJumpHintConfig();
+	MigrateNameplateShowScopeConfig();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
+	MigrateQmUiIconDuotoneSecondaryColor(ConfigManager());
 
 	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
 	{
@@ -927,6 +1013,8 @@ void CGameClient::OnInit()
 	m_RenderTools.Init(Graphics(), TextRender(), this); // TClient
 	m_RenderMap.Init(Graphics(), TextRender());
 	m_QmIconManager.Init(Graphics(), Storage(), Console());
+	// 遗留 UI（CUi）的图标绘制走图集优先、字形回退。
+	m_UI.SetQmIconManager(&m_QmIconManager);
 	m_AppliedQmUiIconWeight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
 
 	if(GIT_SHORTREV_HASH)
@@ -954,8 +1042,8 @@ void CGameClient::OnInit()
 	}
 	TextRender()->SetFontLanguageVariant(g_Config.m_ClLanguagefile);
 
-	// update and swap after font loading, they are quite huge
-	pClient->UpdateAndSwap();
+	// 不在主题背景初始化前呈现中间帧。字体加载后的这次 Swap 会把清屏色
+	// 直接显示出来，随后主题地图加载完成又切回主题，启动时就会看到灰屏。
 
 	const char *pLoadingDDNetCaption = Localize("Loading DDNet Client");
 	const char *pLoadingMessageComponents = Localize("Initializing components");
@@ -966,6 +1054,14 @@ void CGameClient::OnInit()
 	if(!g_Config.m_ClThreadsoundloading)
 		LoadingTotal += g_pData->m_NumSounds;
 	m_Menus.StartLoading(LoadingTotal);
+
+	// QmClient: 组件 OnInit 按添加顺序逆序执行，m_MenuBackground 排在列表后段，
+	// 主题背景要等若干个组件初始化后才就绪——最前面的加载帧只能用占位背景，
+	// 与主题就绪后的帧交替就是启动阶段的背景闪动。这里提前同步加载主题背景
+	//（本地小地图，耗时很小），让第一个加载帧就能使用主题背景。
+	// OnInit 已做幂等保护，组件循环里的再次调用不会重复初始化。
+	m_MenuBackground.OnInit();
+	// 主题背景已经就绪，后续组件加载帧可以安全呈现。
 
 	// init all components
 	int SkippedComps = 1;
@@ -992,6 +1088,7 @@ void CGameClient::OnInit()
 	m_ParticlesSkinLoaded = false;
 	m_SpawnEventsProcessed = 0;
 	m_SpawnEffectsDispatched = 0;
+	m_SpawnEffectsFiltered = 0;
 	m_SpawnParticleAddFailures = 0;
 	m_EmoticonsSkinLoaded = false;
 	m_HudSkinLoaded = false;
@@ -999,6 +1096,7 @@ void CGameClient::OnInit()
 	// setup load amount, load textures
 	const char *pLoadingMessageAssets = Localize("Initializing assets");
 	LoadInitialGraphicsAssets();
+	m_LastBlankAssetFallback = g_Config.m_QmBlankAssetFallback;
 	m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 1);
 
 	m_GameWorld.Init(Collision(), m_aTuningList, &m_MapBugs);
@@ -1070,11 +1168,6 @@ void CGameClient::OpenSponsorPage()
 
 void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoadingCaption, const char *pLoadingMessage)
 {
-	if(g_Config.m_QmSettingsPrewarm == 0)
-		return;
-
-	m_Menus.PrewarmSettingsPages();
-
 	constexpr int TEXT_PREWARM_BUDGET_PER_STEP = 8;
 	// loading 是可阻塞阶段（有 loading 画面），循环 prebuild 直到 plan collection complete
 	// + prebuild remaining=0。原实现只调一次 budget=8，导致运行时 (ESC 打开/切 tab) 首帧
@@ -1082,6 +1175,11 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 	// 用 WarmupReady (plan items + units 都 <= 0) 或连续无进展检测退出，避免死循环。
 	constexpr int MAX_TEXT_PREWARM_STEPS = 96;
 	constexpr int MAX_NO_PROGRESS_STEPS = 6;
+
+	if(g_Config.m_QmSettingsPrewarm == 0)
+		return;
+
+	m_Menus.PrewarmSettingsPages();
 
 	SSettingsLoadingPrewarmState State;
 	State.m_LastBuiltTextContainers = m_Menus.SettingsTextContainerCount();
@@ -1101,6 +1199,10 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 	}
 
 	LogSettingsLoadingPrewarmEvent(Client(), "startup_text_prewarm_end", State.m_CompletedSteps, 1, 0, State.m_ConsecutiveNoProgressSteps, 0, 0);
+
+	// ESC 菜单的文本 plan/容器依赖打开后的菜单生命周期，不能在加载阶段预热
+	// （详见 docs/superpowers/plans/2026-09-09-Windows图形掉帧撕裂与连接中断调查.md §14/§16）。
+	// ESC 的字形与 plan 现在改由菜单关闭时的空闲帧预热（CMenus::OnUpdate / OnRender）。
 }
 
 void CGameClient::OnUpdate()
@@ -1108,6 +1210,7 @@ void CGameClient::OnUpdate()
 	// Vulkan swapchain 重建在渲染线程执行，能力状态可能晚于窗口 resize 回调变化。
 	// 这里仅在 DPI、图标配置或 MSDF capability 变化时重载 atlas。
 	SyncQmUiIconWeight();
+	SyncQmCustomFontWeight();
 	m_QmIconManager.RefreshForCurrentDpi();
 
 	const bool TeeSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_TEE;
@@ -1136,19 +1239,12 @@ void CGameClient::OnUpdate()
 	}
 
 	// handle touch events
-	const std::vector<IInput::CTouchFingerState> &vTouchFingerStates = Input()->TouchFingerStates();
-	bool TouchHandled = false;
+	std::vector<IInput::CTouchFingerState> vTouchFingerStates = Input()->TouchFingerStates();
 	for(auto &pComponent : m_vpInput)
 	{
-		if(TouchHandled)
-		{
-			// Also update inactive components so they can handle touch fingers being released.
-			pComponent->OnTouchState({});
-		}
-		else if(pComponent->OnTouchState(vTouchFingerStates))
+		if(pComponent->OnTouchState(vTouchFingerStates))
 		{
 			Input()->ClearTouchDeltas();
-			TouchHandled = true;
 		}
 	}
 
@@ -1163,7 +1259,7 @@ void CGameClient::OnUpdate()
 		m_Binds.m_MouseOnAction = false;
 	}
 
-	if(g_Config.m_QmPerfDebug)
+	if(g_Config.m_QmPerfStutterDiagnostics)
 	{
 		for(size_t i = 0; i < m_vpAll.size(); ++i)
 		{
@@ -1178,7 +1274,7 @@ void CGameClient::OnUpdate()
 			pComponent->OnUpdate();
 	}
 
-	// 皮肤组件的 OnUpdate 已经处理完卸载/加载通知，这里再统一兜一次失效句柄。
+	// 皮肤组件的 OnUpdate 已处理卸载/加载通知，绘制前再修复失效句柄。
 	RepairStaleTeeRenderInfos();
 
 	RefreshPredictionAfterConfigChange();
@@ -1196,8 +1292,18 @@ void CGameClient::SyncQmUiIconWeight()
 		return;
 
 	m_AppliedQmUiIconWeight = Weight;
-	TextRender()->SetIconFontWeight(QmIconWeightUsesBoldFontFallback(Weight));
+	TextRender()->SetIconFontWeight(Weight);
 	m_QmIconManager.RefreshForCurrentDpi();
+	OnWindowResize();
+}
+
+void CGameClient::SyncQmCustomFontWeight()
+{
+	const int Weight = std::clamp(g_Config.m_TcCustomFontWeight, 100, 900);
+	if(m_AppliedQmCustomFontWeight == Weight)
+		return;
+	m_AppliedQmCustomFontWeight = Weight;
+	TextRender()->SetCustomFontWeight(Weight);
 	OnWindowResize();
 }
 
@@ -1226,6 +1332,10 @@ void CGameClient::RefreshStreamerSkinPrivacyAfterStateChange()
 
 int CGameClient::RenderThrottleRefreshRate() const
 {
+	// 空闲刷新率只用于菜单；游戏场景在关闭垂直同步且未配置 gfx_refresh_rate
+	// 时必须保持真正的无限制渲染。
+	if(!m_Menus.IsActive())
+		return 0;
 	return m_Menus.IdleRenderFrameRate();
 }
 
@@ -1601,6 +1711,7 @@ void CGameClient::OnReset()
 	m_SuppressEvents = false;
 	m_SpawnEventsProcessed = 0;
 	m_SpawnEffectsDispatched = 0;
+	m_SpawnEffectsFiltered = 0;
 	m_SpawnParticleAddFailures = 0;
 	m_NewTick = false;
 	m_NewPredictedTick = false;
@@ -1652,6 +1763,7 @@ void CGameClient::OnReset()
 	m_PredictedWorld.CopyWorld(&m_GameWorld);
 	m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
 	m_RegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+	m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
 
 	m_vSnapEntities.clear();
 
@@ -1660,6 +1772,8 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aEnableSpectatorCount), std::end(m_aEnableSpectatorCount), -1);
 	std::fill(std::begin(m_aLastUpdateTick), std::end(m_aLastUpdateTick), 0);
 	std::fill(std::begin(m_aQ1menGSyncMarkUntil), std::end(m_aQ1menGSyncMarkUntil), 0);
+	std::fill(std::begin(m_aQ1menGSyncFootParticlesEnabled), std::end(m_aQ1menGSyncFootParticlesEnabled), false);
+	std::fill(std::begin(m_aQ1menGSyncRemoteParticlesEnabled), std::end(m_aQ1menGSyncRemoteParticlesEnabled), false);
 	std::fill(std::begin(m_aQmVoiceSyncMarkUntil), std::end(m_aQmVoiceSyncMarkUntil), 0);
 	std::fill(std::begin(m_aQmDeveloperMarkUntil), std::end(m_aQmDeveloperMarkUntil), 0);
 	std::fill(std::begin(m_aQmDeveloperRainbow), std::end(m_aQmDeveloperRainbow), false);
@@ -1667,6 +1781,7 @@ void CGameClient::OnReset()
 
 	m_PredictedDummyId = -1;
 	m_IsDummySwapping = false;
+	std::fill(std::begin(m_aLastProcessedEventTick), std::end(m_aLastProcessedEventTick), -1);
 	m_CharOrder.Reset();
 	std::fill(std::begin(m_aSwitchStateTeam), std::end(m_aSwitchStateTeam), -1);
 
@@ -1792,6 +1907,15 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	// qm_blank_asset_fallback 兜底轮询：设置页直改 g_Config、控制台命令等任何来源改值后，
+	// 下一帧在这里触发自定义素材热重载（-1 表示初始素材尚未加载）。
+	if(m_LastBlankAssetFallback >= 0 && g_Config.m_QmBlankAssetFallback != m_LastBlankAssetFallback)
+	{
+		m_LastBlankAssetFallback = g_Config.m_QmBlankAssetFallback;
+		ReloadCustomAssetImagery();
+	}
+	ProcessPendingCustomAssetImageryReload();
+
 	const bool PerfEnabled = QmPerfEnabled();
 	CPerfTimer FrameTimer(PerfEnabled);
 
@@ -1844,7 +1968,6 @@ void CGameClient::OnRender()
 
 		if(!InitMultiView(TeamId))
 		{
-			dbg_msg("MultiView", "No players found to spectate");
 			ResetMultiView();
 		}
 	}
@@ -1904,7 +2027,7 @@ void CGameClient::OnRender()
 			pComponent->OnRender();
 		}
 	};
-	if(g_Config.m_QmPerfDebug)
+	if(g_Config.m_QmPerfStutterDiagnostics)
 	{
 		for(size_t i = 0; i < m_vpAll.size(); ++i)
 		{
@@ -1940,6 +2063,11 @@ void CGameClient::OnRender()
 		g_Config.m_ClDummy = 0;
 
 	LogPerfStage(this, "gameclient_onrender_total", FrameTimer.ElapsedMs());
+
+	// QmClient: 结算本帧的 stutter 诊断窗口（组件级 on_update/on_render 采样）。
+	// 该函数此前只有声明和定义、没有调用点，导致 qm_perf_stutter_diagnostics
+	// 开启后永远不会产生 perf/stutter 报告；这里在渲染帧末尾统一消费。
+	ProcessQmStutterFrame();
 
 	m_pFrameScheduler->EndFrame();
 	if(QmPerfEnabled())
@@ -2166,25 +2294,9 @@ void CGameClient::FlushQmStutterWindow(const SQmStutterFrameDecision &Decision, 
 	}
 }
 
-void CGameClient::OnQmPerfFrame(double FrameMs)
+void CGameClient::ProcessQmStutterFrame()
 {
-	ProcessQmStutterFrame(FrameMs);
-}
-
-void CGameClient::OnQmPerfStop(bool Shutdown)
-{
-	const SQmStutterFrameDecision Decision = m_QmStutterEpisodeTracker.Flush(Shutdown ? EQmStutterFlushReason::SHUTDOWN : EQmStutterFlushReason::DISABLED);
-	FlushQmStutterWindow(Decision, true);
-	ResetQmStutterWindowSamples();
-	m_QmStutterDiagnosticsWasEnabled = false;
-	std::fill(m_vQmStutterPendingUpdateMs.begin(), m_vQmStutterPendingUpdateMs.end(), 0.0);
-	std::fill(m_vQmStutterPendingRenderMs.begin(), m_vQmStutterPendingRenderMs.end(), 0.0);
-	LogQmIconDiagnostics({}, Client(), true);
-}
-
-void CGameClient::ProcessQmStutterFrame(double FrameMs)
-{
-	const bool Enabled = g_Config.m_QmPerfDebug != 0;
+	const bool Enabled = g_Config.m_QmPerfStutterDiagnostics != 0;
 	if(!Enabled)
 	{
 		if(m_QmStutterDiagnosticsWasEnabled)
@@ -2207,6 +2319,7 @@ void CGameClient::ProcessQmStutterFrame(double FrameMs)
 	}
 
 	const uint64_t FrameId = Client()->PerfFrame();
+	const double FrameMs = Client()->RenderFrameTime() * 1000.0;
 	const SQmStutterFrameDecision Decision = m_QmStutterEpisodeTracker.RecordFrame(FrameId, FrameMs);
 	if(Decision.m_Started)
 	{
@@ -2279,6 +2392,18 @@ bool CGameClient::IsTeamPlay() const
 {
 	return m_Snap.m_pGameInfoObj &&
 	       (m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_TEAMS) != 0;
+}
+
+int CGameClient::MinTeamSize() const
+{
+	// 旧服务器只有在地图设置包含该值时才会广播。
+	return m_GameInfo.m_MinTeamSize != 0 ? m_GameInfo.m_MinTeamSize : Config()->m_SvMinTeamSize;
+}
+
+int CGameClient::MaxTeamSize() const
+{
+	// 旧服务器只有在地图设置包含该值时才会广播。
+	return m_GameInfo.m_MaxTeamSize != 0 ? m_GameInfo.m_MaxTeamSize : Config()->m_SvMaxTeamSize;
 }
 
 bool CGameClient::IsWorldPaused() const
@@ -2690,9 +2815,8 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		// in sixup/translate_game.cpp
 		if(!Client()->IsSixup())
 		{
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "dropped weird message '%s' (%d), failed on '%s'", m_NetObjHandler.GetMsgName(MsgId), MsgId, m_NetObjHandler.FailedMsgOn());
-			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", aBuf);
+			log_debug("client", "dropped weird message '%s' (%d), failed on '%s'",
+				m_NetObjHandler.GetMsgName(MsgId), MsgId, m_NetObjHandler.FailedMsgOn());
 		}
 		return;
 	}
@@ -2717,7 +2841,12 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 
 	if(Dummy)
 	{
-		if(MsgId == NETMSGTYPE_SV_CHAT && m_aLocalIds[0] >= 0 && m_aLocalIds[1] >= 0)
+		if(MsgId == NETMSGTYPE_SV_READYTOENTER)
+		{
+			// reload 后分身连接也必须完成进入游戏握手。
+			Client()->EnterGame(Conn);
+		}
+		else if(MsgId == NETMSGTYPE_SV_CHAT && m_aLocalIds[0] >= 0 && m_aLocalIds[1] >= 0)
 		{
 			CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
 
@@ -2784,8 +2913,11 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 			}
 		}
 
-		if(i <= 16)
+		if(i <= VANILLA_MAX_CLIENTS)
+		{
 			m_Teams.m_IsDDRace16 = true;
+			m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+		}
 
 		m_Ghost.m_AllowRestart = true;
 		m_RaceDemo.m_AllowRestart = true;
@@ -2875,7 +3007,11 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 	else if(MsgId == NETMSGTYPE_SV_PREINPUT)
 	{
 		CNetMsg_Sv_PreInput *pMsg = (CNetMsg_Sv_PreInput *)pRawMsg;
-		m_aClients[pMsg->m_Owner].m_aPreInputs[pMsg->m_IntendedTick % 200] = *pMsg;
+		if(pMsg->m_Owner >= 0 && pMsg->m_Owner < MAX_CLIENTS && pMsg->m_IntendedTick >= 0)
+		{
+			m_aClients[pMsg->m_Owner].m_aPreInputs[pMsg->m_IntendedTick % 200] = *pMsg;
+			m_QmWaterHammerIndicator.OnPreInput(*pMsg);
+		}
 	}
 	else if(MsgId == NETMSGTYPE_SV_SAVECODE)
 	{
@@ -3033,6 +3169,13 @@ void CGameClient::OnScreenshotTaken(CImageInfo &&Image)
 
 void CGameClient::OnShutdown()
 {
+	// 退出前结算进行中的 stutter 窗口，避免最后的诊断数据丢失
+	if(m_QmStutterEpisodeTracker.Active())
+	{
+		const SQmStutterFrameDecision Decision = m_QmStutterEpisodeTracker.Flush(EQmStutterFlushReason::SHUTDOWN);
+		FlushQmStutterWindow(Decision, true);
+	}
+
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnShutdown();
 
@@ -3047,6 +3190,9 @@ void CGameClient::OnEnterGame()
 
 void CGameClient::OnGameOver()
 {
+	// 本地完成计数已迁移到 CQmClient::OnMessage：DDNet 系服务端不产生
+	// GAMEOVER，旧挂点在标准赛道服上永远不会触发；现在由 RaceFinish
+	// 事件（0.7）与「finished in」聊天广播（0.6）检测完成。
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK && g_Config.m_ClEditor == 0)
 		Client()->AutoScreenshot_Start();
 }
@@ -3177,6 +3323,20 @@ void CGameClient::ProcessEvents()
 	if(m_SuppressEvents)
 		return;
 
+	// Dummy 切换会重新载入当前快照。相同连接、相同 tick 的事件已经消费过，
+	// 不能因为重新载入快照再次播放声音或创建粒子。
+	const int EventDummy = g_Config.m_ClDummy;
+	const int EventTick = Client()->GameTick(EventDummy);
+	if(m_aLastProcessedEventTick[EventDummy] == EventTick)
+		return;
+	m_aLastProcessedEventTick[EventDummy] = EventTick;
+	auto RememberConfirmedEvent = [this, EventTick](int EventId, vec2 Pos, int ExtraInfo = -1) {
+		CGameWorld::CPredictedEvent Event(EventId, Pos, -1, EventTick, ExtraInfo);
+		Event.m_Handled = true;
+		Event.m_ServerConfirmed = true;
+		m_PredictedWorld.m_PredictedEvents.push_back(Event);
+	};
+
 	int SnapType = IClient::SNAP_CURRENT;
 	int Num = Client()->SnapNumItems(SnapType);
 	for(int Index = 0; Index < Num; Index++)
@@ -3192,8 +3352,16 @@ void CGameClient::ProcessEvents()
 			const CNetEvent_DamageInd *pEvent = (const CNetEvent_DamageInd *)Item.m_pData;
 
 			vec2 DamageIndPos = vec2(pEvent->m_X, pEvent->m_Y);
-			if(!m_PredictedWorld.CheckPredictedEventHandled(CGameWorld::CPredictedEvent(Item.m_Type, DamageIndPos, -1, Client()->GameTick(g_Config.m_ClDummy), pEvent->m_Angle)))
+			bool UnplayedMatch = false;
+			const bool PredictedHandled = m_PredictedWorld.CheckPredictedEventHandled(CGameWorld::CPredictedEvent(Item.m_Type, DamageIndPos, -1, Client()->GameTick(g_Config.m_ClDummy), pEvent->m_Angle), &UnplayedMatch);
+			if(!PredictedHandled)
 			{
+				m_Effects.DamageIndicator(vec2(pEvent->m_X, pEvent->m_Y), direction(pEvent->m_Angle / 256.0f), Alpha);
+				RememberConfirmedEvent(Item.m_Type, DamageIndPos, pEvent->m_Angle);
+			}
+			else if(UnplayedMatch)
+			{
+				// 确认先于预测播放到达：预测事件被标记但还没真正显示，快照路径代播一次。
 				m_Effects.DamageIndicator(vec2(pEvent->m_X, pEvent->m_Y), direction(pEvent->m_Angle / 256.0f), Alpha);
 			}
 		}
@@ -3202,8 +3370,17 @@ void CGameClient::ProcessEvents()
 			const CNetEvent_Explosion *pEvent = (const CNetEvent_Explosion *)Item.m_pData;
 
 			vec2 ExplosionPos = vec2(pEvent->m_X, pEvent->m_Y);
-			if(!m_PredictedWorld.CheckPredictedEventHandled(CGameWorld::CPredictedEvent(Item.m_Type, ExplosionPos, -1, Client()->GameTick(g_Config.m_ClDummy))))
+			bool UnplayedMatch = false;
+			const bool PredictedHandled = m_PredictedWorld.CheckPredictedEventHandled(CGameWorld::CPredictedEvent(Item.m_Type, ExplosionPos, -1, Client()->GameTick(g_Config.m_ClDummy)), &UnplayedMatch);
+			if(!PredictedHandled)
 			{
+				const float ExplosionAlpha = QmKnownOwnerEventAlpha(this, QmInferExplosionOwner(this, ExplosionPos));
+				m_Effects.Explosion(ExplosionPos, ExplosionAlpha);
+				RememberConfirmedEvent(Item.m_Type, ExplosionPos);
+			}
+			else if(UnplayedMatch)
+			{
+				// 确认先于预测播放到达：代播一次，防止爆炸特效/声音丢失。
 				const float ExplosionAlpha = QmKnownOwnerEventAlpha(this, QmInferExplosionOwner(this, ExplosionPos));
 				m_Effects.Explosion(ExplosionPos, ExplosionAlpha);
 			}
@@ -3252,21 +3429,28 @@ void CGameClient::ProcessEvents()
 			if(!Config()->m_SndGame)
 				continue;
 
-			// 禅模式：按子开关静音跳跃/死亡音效
-			{
-				const bool FocusMode = g_Config.m_QmFocusMode != 0;
-				if(pEvent->m_SoundId == SOUND_PLAYER_JUMP && !ShouldPlayFocusJumpSound(FocusMode, g_Config.m_QmFocusModeMuteJumpSounds != 0, Config()->m_SndGame))
-					continue;
-				if(pEvent->m_SoundId == SOUND_PLAYER_DIE && !ShouldPlayFocusDeathOrSpawnSound(FocusMode, g_Config.m_QmFocusModeMuteDeathSounds != 0, Config()->m_SndGame))
-					continue;
-			}
+			const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
+			if(pEvent->m_SoundId == SOUND_PLAYER_JUMP && !Focus.m_AirJump.m_PlaySound)
+				continue;
+			if(pEvent->m_SoundId == SOUND_PLAYER_DIE && !Focus.m_PlayDeathOrSpawnSound)
+				continue;
 
 			if(m_GameInfo.m_RaceSounds && ((pEvent->m_SoundId == SOUND_GUN_FIRE && !g_Config.m_SndGun) || (pEvent->m_SoundId == SOUND_PLAYER_PAIN_LONG && !g_Config.m_SndLongPain)))
 				continue;
 
 			vec2 SoundPos = vec2(pEvent->m_X, pEvent->m_Y);
-			if(!m_PredictedWorld.CheckPredictedEventHandled(CGameWorld::CPredictedEvent(Item.m_Type, SoundPos, -1, Client()->GameTick(g_Config.m_ClDummy), pEvent->m_SoundId)))
+			bool UnplayedMatch = false;
+			const bool PredictedHandled = m_PredictedWorld.CheckPredictedEventHandled(CGameWorld::CPredictedEvent(Item.m_Type, SoundPos, -1, Client()->GameTick(g_Config.m_ClDummy), pEvent->m_SoundId), &UnplayedMatch);
+			if(g_Config.m_DbgPredictEvents)
+				dbg_msg("pred_event", "snapshot sound=%d snaptick=%d pos=%.1f,%.1f predicted_handled=%d unplayed=%d", pEvent->m_SoundId, EventTick, SoundPos.x, SoundPos.y, PredictedHandled, UnplayedMatch);
+			if(!PredictedHandled)
 			{
+				m_Sounds.PlayAt(CSounds::CHN_WORLD, pEvent->m_SoundId, 1.0f, SoundPos);
+				RememberConfirmedEvent(Item.m_Type, SoundPos, pEvent->m_SoundId);
+			}
+			else if(UnplayedMatch)
+			{
+				// 确认先于预测播放到达：预测事件被标记但从未发声，快照路径代播一次。
 				m_Sounds.PlayAt(CSounds::CHN_WORLD, pEvent->m_SoundId, 1.0f, SoundPos);
 			}
 		}
@@ -3283,20 +3467,16 @@ void CGameClient::ProcessEvents()
 
 void CGameClient::FinalizeHammerHitEvents()
 {
-	if(m_vPendingHammerHitEvents.empty())
-		return;
-
-	// 每个快照只收集一次角色项，供本快照的所有 hammer hit 事件共用；
-	// 循环体内不会修改快照（HandleConfirmedHammerHit 只动本地状态与配置），
-	// 因此指针在整个循环期间保持有效。
-	const CNetObj_Character *apCurrent[MAX_CLIENTS] = {};
-	const CNetObj_Character *apPrevious[MAX_CLIENTS] = {};
-	QmCollectCharactersById(this, IClient::SNAP_CURRENT, apCurrent);
-	QmCollectCharactersById(this, IClient::SNAP_PREV, apPrevious);
+	auto RememberConfirmedEvent = [this](vec2 Pos, int AttackerId, int TargetId, int SnapshotTick) {
+		CGameWorld::CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, AttackerId, SnapshotTick, TargetId);
+		Event.m_Handled = true;
+		Event.m_ServerConfirmed = true;
+		m_PredictedWorld.m_PredictedEvents.push_back(Event);
+	};
 
 	for(const SPendingHammerHitEvent &Event : m_vPendingHammerHitEvents)
 	{
-		const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick, apCurrent, apPrevious);
+		const SQmHammerHitMatch Match = QmInferHammerHit(this, Event.m_Pos, Event.m_SnapshotTick);
 		bool TargetWoke = false;
 		if(Match.m_TargetId >= 0 && Match.m_TargetId < MAX_CLIENTS)
 		{
@@ -3316,11 +3496,42 @@ void CGameClient::FinalizeHammerHitEvents()
 		if((IsLocalClientId(Hit.m_AttackerId) || IsLocalClientId(Hit.m_TargetId)) && m_HammerHitTracker.Record(Hit))
 			HandleConfirmedHammerHit(Hit);
 
-		const bool PredictedHandled = Match.m_AttackerId >= 0 && Match.m_TargetId >= 0 && m_PredictedWorld.CheckPredictedHammerHitHandled(CGameWorld::CPredictedEvent(NETEVENTTYPE_HAMMERHIT, Event.m_Pos, Match.m_AttackerId, Event.m_SnapshotTick, Match.m_TargetId));
-		if(Event.m_RenderEffect && !PredictedHandled)
+		// QmClient: 严格匹配需要完整推断出 attacker+target；target 归属推断
+		// 失败时（多目标歧义/目标已飞走/快照样本不足），特效去重退化为
+		// "本地攻击者 + 位置窗口"匹配——预测事件只可能由本地角色产生，
+		// 因此只对本地攻击者做兜底，避免吞掉别人锤击的合法特效。
+		bool PredictedHandled = false;
+		bool UnplayedMatch = false;
+		if(Match.m_AttackerId >= 0 && Match.m_TargetId >= 0)
+			PredictedHandled = m_PredictedWorld.CheckPredictedHammerHitHandled(CGameWorld::CPredictedEvent(NETEVENTTYPE_HAMMERHIT, Event.m_Pos, Match.m_AttackerId, Event.m_SnapshotTick, Match.m_TargetId), &UnplayedMatch);
+		if(!PredictedHandled && Match.m_AttackerId >= 0 && IsLocalClientId(Match.m_AttackerId))
+			PredictedHandled = m_PredictedWorld.CheckPredictedHammerHitHandledLoose(Match.m_AttackerId, Event.m_Pos, Event.m_SnapshotTick);
+		// UnplayedMatch：确认命中"预测已创建但尚未播放"的事件 → 快照路径代播，
+		// 防止特效（含声音）因确认先于预测播放而整体丢失。
+		const int64_t Now = time_get_nanoseconds().count();
+		constexpr int64_t DuplicateDeliveryWindowNs = 100 * 1000 * 1000; // 100ms
+		const bool DuplicateDelivery = (Now - m_LastHammerEffectTime) < DuplicateDeliveryWindowNs &&
+					       Event.m_SnapshotTick >= m_LastHammerEffectTick && Event.m_SnapshotTick - m_LastHammerEffectTick <= 3 &&
+					       distance_squared(m_LastHammerEffectPos, Event.m_Pos) < 32.0f * 32.0f;
+		if(Event.m_RenderEffect && (!PredictedHandled || UnplayedMatch))
 		{
-			const float HammerHitAlpha = QmKnownOwnerEventAlpha(this, Match.m_AttackerId);
-			m_Effects.HammerHit(Event.m_Pos, HammerHitAlpha, 1.0f);
+			if(DuplicateDelivery)
+			{
+				if(g_Config.m_DbgPredictEvents)
+					dbg_msg("pred_event", "hammerhit-effect duplicate-delivery suppressed snaptick=%d pos=%.1f,%.1f", Event.m_SnapshotTick, Event.m_Pos.x, Event.m_Pos.y);
+			}
+			else
+			{
+				m_LastHammerEffectPos = Event.m_Pos;
+				m_LastHammerEffectTick = Event.m_SnapshotTick;
+				m_LastHammerEffectTime = Now;
+				if(g_Config.m_DbgPredictEvents)
+					dbg_msg("pred_event", "hammerhit-effect source=snapshot snaptick=%d pos=%.1f,%.1f attacker=%d target=%d", Event.m_SnapshotTick, Event.m_Pos.x, Event.m_Pos.y, Match.m_AttackerId, Match.m_TargetId);
+				const float HammerHitAlpha = QmKnownOwnerEventAlpha(this, Match.m_AttackerId);
+				m_Effects.HammerHit(Event.m_Pos, HammerHitAlpha, 1.0f);
+				if(Match.m_AttackerId >= 0 && Match.m_TargetId >= 0)
+					RememberConfirmedEvent(Event.m_Pos, Match.m_AttackerId, Match.m_TargetId, Event.m_SnapshotTick);
+			}
 		}
 	}
 	m_vPendingHammerHitEvents.clear();
@@ -3432,6 +3643,10 @@ static CGameInfo GetGameInfo(const CNetObj_GameInfoEx *pInfoEx, int InfoExSize, 
 	Info.m_NoSkinChangeForFrozen = false;
 	Info.m_DDRaceTeam = false;
 	Info.m_PredictEvents = Vanilla;
+	Info.m_OldLaser = false;
+	Info.m_MinTeamSize = 0;
+	Info.m_MaxTeamSize = 0;
+	Info.m_NumDDRaceTeams = LEGACY_MAX_CLIENTS + 1;
 
 	if(Version >= 0)
 	{
@@ -3499,6 +3714,28 @@ static CGameInfo GetGameInfo(const CNetObj_GameInfoEx *pInfoEx, int InfoExSize, 
 	{
 		Info.m_PredictEvents = Flags2 & GAMEINFOFLAG2_PREDICT_EVENTS;
 	}
+	// 官方 79184e826：OLD_LASER 追加在 Flags2 末尾，服务器不升版本号也会置位，
+	// 所以不按版本门控；老服务器不发送该位时保持客户端配置回退值 false。
+	Info.m_OldLaser = Flags2 & GAMEINFOFLAG2_OLD_LASER;
+	if(Version >= 12)
+	{
+		// SecureUnpackObj 通常会用默认值填充旧对象；这里仍按实际收到的大小读取，
+		// 以保护直接调用方和畸形快照。
+		if(InfoExSize >= (int)(4 * sizeof(int)))
+			Info.m_MinTeamSize = pInfoEx->m_MinTeamSize;
+		if(InfoExSize >= (int)(5 * sizeof(int)))
+			Info.m_MaxTeamSize = pInfoEx->m_MaxTeamSize;
+		if(InfoExSize >= (int)(6 * sizeof(int)))
+			Info.m_NumDDRaceTeams = pInfoEx->m_NumDDRaceTeams;
+
+		// 版本 12 被最终 schema 复用；旧版 12 和过渡版 13 未提供队伍数时为零。
+		if(Info.m_NumDDRaceTeams == 0)
+		{
+			constexpr int LEGACY_SUPPORTS_128_TEAMS = 1 << 11;
+			Info.m_NumDDRaceTeams = (Flags2 & LEGACY_SUPPORTS_128_TEAMS) ? NUM_DDRACE_TEAMS : LEGACY_MAX_CLIENTS + 1;
+		}
+	}
+	Info.m_NumDDRaceTeams = QmNormalizeNumDDRaceTeams(Info.m_NumDDRaceTeams);
 	// TClient
 	str_copy(Info.m_aGameType, pFallbackServerInfo->m_aGameType);
 
@@ -3516,7 +3753,7 @@ void CGameClient::InvalidateSnapshot()
 		SnapCollectEntities();
 }
 
-void CGameClient::OnNewSnapshot()
+void CGameClient::OnNewSnapshot(bool DummySwapped)
 {
 	auto &&Evolve = [this](CNetObj_Character *pCharacter, int Tick) {
 		CWorldCore TempWorld;
@@ -3569,13 +3806,13 @@ void CGameClient::OnNewSnapshot()
 		}
 	}
 
-	CServerInfo ServerInfo;
-	Client()->GetServerInfo(&ServerInfo);
+	const CServerInfo &ServerInfo = Client()->ServerInfo();
 
 	bool FoundGameInfoEx = false;
 	bool GotSwitchStateTeam = false;
 	bool HasUnsetDDNetFinishTimes = false;
 	bool HasTrueMillisecondFinishTimes = false;
+	bool GameOverStarted = false;
 	m_aSwitchStateTeam[g_Config.m_ClDummy] = -1;
 
 	for(auto &Client : m_aClients)
@@ -3605,7 +3842,7 @@ void CGameClient::OnNewSnapshot()
 						str_copy(pClient->m_aName, "nameless tee");
 					}
 					IntsToStr(pInfo->m_aClan, std::size(pInfo->m_aClan), pClient->m_aClan, std::size(pClient->m_aClan));
-					pClient->m_Country = pInfo->m_Country;
+					pClient->m_Country = QmNormalizeCountryCode(pInfo->m_Country);
 
 					IntsToStr(pInfo->m_aSkin, std::size(pInfo->m_aSkin), pClient->m_aSkinName, std::size(pClient->m_aSkinName));
 					if(!CSkin::IsValidName(pClient->m_aSkinName) ||
@@ -3808,7 +4045,7 @@ void CGameClient::OnNewSnapshot()
 				const bool CurrentTickGameOver = (m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER) != 0;
 				const bool CurrentTickGamePaused = (m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED) != 0;
 				if(!m_GameOver && CurrentTickGameOver)
-					OnGameOver();
+					GameOverStarted = true;
 				else if(m_GameOver && !CurrentTickGameOver)
 					OnStartGame();
 				// Handle case that a new round is started (RoundStartTick changed)
@@ -3876,9 +4113,7 @@ void CGameClient::OnNewSnapshot()
 					continue;
 				}
 				const CNetObj_SwitchState *pSwitchStateData = (const CNetObj_SwitchState *)Item.m_pData;
-				// TODO: use NUM_DDRACE_TEAMS-1 instead of hardcoding 63
-				//       once https://github.com/ddnet/ddnet/pull/11232 is resolved
-				int Team = std::clamp(Item.m_Id, (int)TEAM_FLOCK, 63);
+				int Team = std::clamp(Item.m_Id, (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
 
 				int HighestSwitchNumber = std::clamp(std::max(pSwitchStateData->m_HighestSwitchNumber, Collision()->m_HighestSwitchNumber), 0, 255);
 				if(HighestSwitchNumber != maximum(0, (int)Switchers().size() - 1))
@@ -3929,12 +4164,24 @@ void CGameClient::OnNewSnapshot()
 			}
 		}
 	}
+	if(GameOverStarted)
+		OnGameOver();
 
 	if(!FoundGameInfoEx)
 	{
 		m_GameInfo = GetGameInfo(nullptr, 0, &ServerInfo);
 	}
 
+	// Sv_TeamsState can arrive before the first snapshot, so derive this here instead of in the message handler
+	if(m_Teams.m_IsDDRace16)
+		m_Teams.m_NumDDRaceTeams = VANILLA_MAX_CLIENTS + 1;
+	else if(m_GameInfo.m_NumDDRaceTeams > 0)
+		m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
+
+	for(CClientData &Client : m_aClients)
+	{
+		Client.UpdateSkinInfo();
+	}
 	// setup local pointers
 	if(m_Snap.m_LocalClientId >= 0)
 	{
@@ -4192,6 +4439,9 @@ void CGameClient::OnNewSnapshot()
 			m_aEnableSpectatorCount[1] = g_Config.m_ClShowhudSpectatorCount;
 		}
 
+		if(DummySwapped)
+			m_Camera.UpdateCamera();
+
 		const float BaseZoom = m_Camera.BaseZoom();
 		float ShowDistanceZoom = BaseZoom;
 		float Zoom = BaseZoom;
@@ -4334,6 +4584,8 @@ void CGameClient::OnNewSnapshot()
 				else
 				{
 					const int LastPredictedAirJumpTick = m_aLastPredictedAirJumpTick[PredictedLocalDummy];
+					// 这里只保存最近一次预测 tick；若它已经越过当前服务端快照，
+					// 无法证明该快照中的空跳已被预测覆盖，保留快照兜底。
 					UseSnapshotAirJump = LastPredictedAirJumpTick <= PrevGameTick || LastPredictedAirJumpTick > CurGameTick;
 				}
 			}
@@ -4580,11 +4832,52 @@ void CGameClient::HandleHammerSkinSwap(const SQmHammerHitRecord &Hit)
 	m_aLastHammerSkinSwapHitTick[TeeIndex] = Hit.m_SnapshotTick;
 
 	bool Changed = false;
+	if(Client()->IsSixup())
+	{
+		const int SourceConnection = std::clamp(Hit.m_Connection, 0, NUM_DUMMIES - 1);
+		const CClientData::CSixup &TargetSkin = TargetClient.m_aSixup[SourceConnection];
+		if(TargetSkin.m_aaSkinPartNames[protocol7::SKINPART_BODY][0] == '\0')
+			return;
+
+		for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
+		{
+			if(str_comp(CSkins7::ms_apSkinVariables[TeeIndex][Part], TargetSkin.m_aaSkinPartNames[Part]) != 0)
+			{
+				str_copy(CSkins7::ms_apSkinVariables[TeeIndex][Part], TargetSkin.m_aaSkinPartNames[Part], protocol7::MAX_SKIN_ARRAY_SIZE);
+				Changed = true;
+			}
+			if(*CSkins7::ms_apUCCVariables[TeeIndex][Part] != TargetSkin.m_aUseCustomColors[Part])
+			{
+				*CSkins7::ms_apUCCVariables[TeeIndex][Part] = TargetSkin.m_aUseCustomColors[Part];
+				Changed = true;
+			}
+			if(static_cast<int>(*CSkins7::ms_apColorVariables[TeeIndex][Part]) != TargetSkin.m_aSkinPartColors[Part])
+			{
+				*CSkins7::ms_apColorVariables[TeeIndex][Part] = TargetSkin.m_aSkinPartColors[Part];
+				Changed = true;
+			}
+		}
+
+		if(Changed)
+		{
+			if(TeeIndex == 1)
+				SendDummyInfo(false);
+			else
+				SendInfo(false);
+		}
+		return;
+	}
+
+	const CSkins::CSkinContainer *pTargetSkin = m_Skins.FindContainerOrNullptr(TargetClient.m_aSkinName);
+	if(pTargetSkin == nullptr)
+		return;
+	const char *pTargetSkinName = pTargetSkin->Name();
+
 	if(TeeIndex == 1)
 	{
-		if(str_comp(g_Config.m_ClDummySkin, TargetClient.m_aSkinName) != 0)
+		if(str_comp(g_Config.m_ClDummySkin, pTargetSkinName) != 0)
 		{
-			str_copy(g_Config.m_ClDummySkin, TargetClient.m_aSkinName, sizeof(g_Config.m_ClDummySkin));
+			str_copy(g_Config.m_ClDummySkin, pTargetSkinName, sizeof(g_Config.m_ClDummySkin));
 			Changed = true;
 		}
 		if(TargetClient.m_UseCustomColor)
@@ -4616,9 +4909,9 @@ void CGameClient::HandleHammerSkinSwap(const SQmHammerHitRecord &Hit)
 	}
 	else
 	{
-		if(str_comp(g_Config.m_ClPlayerSkin, TargetClient.m_aSkinName) != 0)
+		if(str_comp(g_Config.m_ClPlayerSkin, pTargetSkinName) != 0)
 		{
-			str_copy(g_Config.m_ClPlayerSkin, TargetClient.m_aSkinName, sizeof(g_Config.m_ClPlayerSkin));
+			str_copy(g_Config.m_ClPlayerSkin, pTargetSkinName, sizeof(g_Config.m_ClPlayerSkin));
 			Changed = true;
 		}
 		if(TargetClient.m_UseCustomColor)
@@ -4752,14 +5045,9 @@ void CGameClient::OnPredict()
 	if(m_FastPractice.Enabled() && m_FastPractice.OverridePredict())
 		return;
 
-	// 这份「预测前位置」快照只被下面的反 ping 平滑块消费（其门控以 m_ClAntiPingSmooth 开头），
-	// 关闭该选项时无需为全部 128 个客户端各算一次 GetSmoothPos。
-	vec2 aBeforeRender[MAX_CLIENTS] = {};
-	if(g_Config.m_ClAntiPingSmooth)
-	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
-			aBeforeRender[i] = GetSmoothPos(i);
-	}
+	vec2 aBeforeRender[MAX_CLIENTS];
+	for(int i = 0; i < MAX_CLIENTS; i++)
+		aBeforeRender[i] = GetSmoothPos(i);
 
 	// init
 	bool Dummy = g_Config.m_ClDummy ^ m_IsDummySwapping;
@@ -4798,7 +5086,7 @@ void CGameClient::OnPredict()
 	const float FastInputOffsetTicks = EffectiveFastInputOffsetTicks(this);
 	const int FastInputTicks = FastInputPredictionTicks(FastInputOffsetTicks);
 	const bool FastInputOthers = EffectiveFastInputOthers(this);
-	const int FastInputTicksOthers = FastInputOthers ? QmFastInputPredictionTicksOthers(FastInputOffsetTicks, g_Config.m_QmFastInputMode) : 0;
+	const int FastInputTicksOthers = FastInputOthers ? FastInputTicks : 0;
 
 	int FinalTickRegular = Client()->PredGameTick(g_Config.m_ClDummy); // The vanilla final tick disregarding fast input
 	int FinalTickSelf = FinalTickRegular + FastInputTicks; // the final tick for just our local tee
@@ -4831,6 +5119,9 @@ void CGameClient::OnPredict()
 			if(pDummyChar)
 				m_aClients[m_aLocalIds[!g_Config.m_ClDummy]].m_PrevPredicted = pDummyChar->GetCore();
 		}
+
+		if(Tick == FinalTickRegular)
+			m_PrevRegularPredictedWorld.CopyWorldClean(&m_PredictedWorld);
 
 		// optionally allow some movement in freeze by not predicting freeze the last one to two ticks
 		if(g_Config.m_ClPredictFreeze == 2 && Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Client()->PredGameTick(g_Config.m_ClDummy) % 2 <= Tick)
@@ -4924,7 +5215,7 @@ void CGameClient::OnPredict()
 			vec2 Pos = pLocalChar->Core()->m_Pos;
 			int Events = pLocalChar->Core()->m_TriggeredEvents;
 
-			if(g_Config.m_ClPredict && m_PredictedWorld.m_WorldConfig.m_PredictEvents && !m_SuppressEvents)
+			if(g_Config.m_ClPredict && m_PredictedWorld.m_WorldConfig.m_PredictEvents && !m_SuppressEvents && !Client()->IsSixup())
 				if(Events & COREEVENT_AIR_JUMP)
 				{
 					m_aLastPredictedAirJumpTick[Dummy] = Tick;
@@ -4932,13 +5223,27 @@ void CGameClient::OnPredict()
 				}
 			if(g_Config.m_SndGame && !m_SuppressEvents)
 			{
+				// QmClient: 这些本地角色核心事件声音在预测侧立即播放，
+				// 必须同时登记已处理屏障事件，否则快照确认路径会因为
+				// 找不到匹配记录而把同一服务端声音再播一次（双重声音）。
 				if(Events & COREEVENT_GROUND_JUMP)
-					if(ShouldPlayFocusJumpSound(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeMuteJumpSounds != 0, g_Config.m_SndGame))
+				{
+					if(GetQmFocusModeDecisions().m_AirJump.m_PlaySound)
+					{
 						m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_PLAYER_JUMP, 1.0f, Pos);
+						m_PredictedWorld.CreateHandledPredictedSound(Pos, SOUND_PLAYER_JUMP, pLocalChar->GetCid());
+					}
+				}
 				if(Events & COREEVENT_HOOK_ATTACH_GROUND)
+				{
 					m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_ATTACH_GROUND, 1.0f, Pos);
+					m_PredictedWorld.CreateHandledPredictedSound(Pos, SOUND_HOOK_ATTACH_GROUND, pLocalChar->GetCid());
+				}
 				if(Events & COREEVENT_HOOK_HIT_NOHOOK)
+				{
 					m_Sounds.PlayAndRecord(CSounds::CHN_WORLD, SOUND_HOOK_NOATTACH, 1.0f, Pos);
+					m_PredictedWorld.CreateHandledPredictedSound(Pos, SOUND_HOOK_NOATTACH, pLocalChar->GetCid());
+				}
 				if(Events & COREEVENT_HOOK_ATTACH_PLAYER)
 				{
 					m_PredictedWorld.CreatePredictedSound(Pos, SOUND_HOOK_ATTACH_PLAYER, pLocalChar->GetCid());
@@ -4952,7 +5257,7 @@ void CGameClient::OnPredict()
 			m_aLastNewPredictedTick[!Dummy] = Tick;
 			vec2 Pos = pDummyChar->Core()->m_Pos;
 			int Events = pDummyChar->Core()->m_TriggeredEvents;
-			if(g_Config.m_ClPredict && m_PredictedWorld.m_WorldConfig.m_PredictEvents && !m_SuppressEvents)
+			if(g_Config.m_ClPredict && m_PredictedWorld.m_WorldConfig.m_PredictEvents && !m_SuppressEvents && !Client()->IsSixup())
 				if(Events & COREEVENT_AIR_JUMP)
 				{
 					m_aLastPredictedAirJumpTick[!Dummy] = Tick;
@@ -4960,7 +5265,8 @@ void CGameClient::OnPredict()
 				}
 		}
 
-		HandlePredictedEvents(Tick);
+		if(Tick <= FinalTickRegular)
+			HandlePredictedEvents(Tick);
 	}
 
 	if(FastInputTicks > 0)
@@ -5005,7 +5311,9 @@ void CGameClient::OnPredict()
 			}
 		}
 
-		HandlePredictedEvents(m_ExtraPredictedWorld.m_GameTick);
+		// Extra 世界只用于反卡位置校正，不应再次消费正式预测世界的可见事件。
+		// 正式预测循环已经按真实 tick 处理过事件；额外推进产生的事件直接丢弃。
+		m_ExtraPredictedWorld.m_PredictedEvents.clear();
 	}
 
 	// detect mispredictions of other players and make corrections smoother when possible
@@ -5313,14 +5621,14 @@ void CGameClient::OnPredict()
 
 		if(mem_comp(&Before, &Now, sizeof(CNetObj_CharacterCore)) != 0)
 		{
-			Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "client", "prediction error");
+			log_trace("client", "prediction error");
 			for(unsigned i = 0; i < sizeof(CNetObj_CharacterCore) / sizeof(int); i++)
+			{
 				if(((int *)&Before)[i] != ((int *)&Now)[i])
 				{
-					char aBuf[256];
-					str_format(aBuf, sizeof(aBuf), "	%d %d %d (%d %d)", i, ((int *)&Before)[i], ((int *)&Now)[i], ((int *)&BeforePrev)[i], ((int *)&NowPrev)[i]);
-					Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "client", aBuf);
+					log_trace("client", "	%d %d %d (%d %d)", i, ((int *)&Before)[i], ((int *)&Now)[i], ((int *)&BeforePrev)[i], ((int *)&NowPrev)[i]);
 				}
+			}
 		}
 	}
 
@@ -5342,8 +5650,10 @@ CGameClient::CClientStats::CClientStats()
 
 bool CGameClient::ShouldUseServerControlledLocalSkin() const
 {
-	CServerInfo ServerInfo = {};
-	Client()->GetServerInfo(&ServerInfo);
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return false;
+
+	const CServerInfo &ServerInfo = Client()->ServerInfo();
 
 	const char *pServerInfoGameType = ServerInfo.m_aGameType;
 	const char *pCommunityId = ServerInfo.m_aCommunityId;
@@ -5413,24 +5723,29 @@ void CGameClient::CClientData::BuildLocalSkinDescriptor(CSkinDescriptor &SkinDes
 	}
 
 	CTranslationContext::CClientData &TranslatedClient = m_pGameClient->m_pClient->m_TranslationContext.m_aClients[ClientId()];
-	if(m_Active && !TranslatedClient.m_Active)
-	{
-		SkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
-		str_copy(SkinDescriptor.m_aSkinName, Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin);
-		NormalizeSixupSkinName(SkinDescriptor.m_aSkinName, sizeof(SkinDescriptor.m_aSkinName));
-	}
-	else if(TranslatedClient.m_Active)
+	const bool UseServerControlledSkin =
+		m_pGameClient->m_pClient->State() == IClient::STATE_ONLINE && m_pGameClient->ShouldUseServerControlledLocalSkin();
+	// 0.7 皮肤部件只有在 0.7 连接且服务器实际下发了部件时才可用；否则退回六部位皮肤。
+	const EServerSkinProtocol Protocol = ResolveServerSkinProtocol(
+		m_pGameClient->m_pClient->IsSixup(), UseServerControlledSkin, TranslatedClient.m_Active);
+	if(Protocol == EServerSkinProtocol::SEVEN)
 	{
 		SkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SEVEN;
 		for(int SkinDummy = 0; SkinDummy < NUM_DUMMIES; ++SkinDummy)
 		{
 			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
 			{
-				str_copy(SkinDescriptor.m_aSixup[SkinDummy].m_aaSkinPartNames[Part], CSkins7::ms_apSkinVariables[Dummy][Part]);
+				str_copy(SkinDescriptor.m_aSixup[SkinDummy].m_aaSkinPartNames[Part], m_aSixup[Dummy].m_aaSkinPartNames[Part]);
 			}
 			SkinDescriptor.m_aSixup[SkinDummy].m_XmasHat = time_season() == ETimeSeason::XMAS;
 			SkinDescriptor.m_aSixup[SkinDummy].m_BotDecoration = (TranslatedClient.m_PlayerFlags7 & protocol7::PLAYERFLAG_BOT) != 0;
 		}
+	}
+	else if(Protocol == EServerSkinProtocol::SIX && m_Active)
+	{
+		SkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
+		str_copy(SkinDescriptor.m_aSkinName, UseServerControlledSkin ? m_aSkinName : (Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin));
+		NormalizeSixupSkinName(SkinDescriptor.m_aSkinName, sizeof(SkinDescriptor.m_aSkinName));
 	}
 }
 
@@ -5515,57 +5830,64 @@ void CGameClient::CClientData::UpdateSkinInfo()
 
 namespace
 {
-	void BuildDefaultSkinDescriptor(CSkinDescriptor &Out)
+	void BuildDefaultSkinDescriptor(CSkinDescriptor &Out, unsigned SkinDescriptorFlags)
 	{
 		Out.Reset();
-		Out.m_Flags = CSkinDescriptor::FLAG_SIX | CSkinDescriptor::FLAG_SEVEN;
-		str_copy(Out.m_aSkinName, "default");
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		Out.m_Flags = SkinDescriptorFlags;
+		if(SkinDescriptorFlags & CSkinDescriptor::FLAG_SIX)
+			str_copy(Out.m_aSkinName, "default");
+		if(SkinDescriptorFlags & CSkinDescriptor::FLAG_SEVEN)
 		{
-			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
+			for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
 			{
-				const char *pPartName = (Part == protocol7::SKINPART_MARKING || Part == protocol7::SKINPART_DECORATION) ? "" : "standard";
-				str_copy(Out.m_aSixup[Dummy].m_aaSkinPartNames[Part], pPartName);
+				for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
+				{
+					const char *pPartName = (Part == protocol7::SKINPART_MARKING || Part == protocol7::SKINPART_DECORATION) ? "" : "standard";
+					str_copy(Out.m_aSixup[Dummy].m_aaSkinPartNames[Part], pPartName);
+				}
+				Out.m_aSixup[Dummy].m_BotDecoration = false;
+				Out.m_aSixup[Dummy].m_XmasHat = false;
 			}
-			Out.m_aSixup[Dummy].m_BotDecoration = false;
-			Out.m_aSixup[Dummy].m_XmasHat = false;
 		}
 	}
 
-	// 0.7 侧的默认外观来自默认皮肤（data/skins7/default.json）：standard 部件 + 自身配色。
-	// 只套用无色的 standard 部件会让回退 Tee 渲染成白色，因此这里同步套用默认皮肤的部件与颜色。
-	void ApplySixupDefaultSkin(CGameClient *pGameClient, CTeeRenderInfo &Info)
-	{
-		const CSkins7::CSkin *pDefaultSkin = pGameClient->m_Skins7.FindSkin("default", false);
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-		{
-			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
-			{
-				const CSkins7::CSkinPart *pPart = pDefaultSkin != nullptr ? pDefaultSkin->m_apParts[Part] : pGameClient->m_Skins7.FindDefaultSkinPart(Part);
-				if(pPart)
-					pPart->ApplyTo(Info.m_aSixup[Dummy]);
-				if(pDefaultSkin != nullptr)
-					pGameClient->m_Skins7.ApplyColorTo(Info.m_aSixup[Dummy], pDefaultSkin->m_aUseCustomColors[Part] != 0, (int)pDefaultSkin->m_aPartColors[Part], Part);
-				else
-					pGameClient->m_Skins7.ApplyColorTo(Info.m_aSixup[Dummy], false, 0, Part);
-			}
-			Info.m_aSixup[Dummy].m_HatTexture.Invalidate();
-			Info.m_aSixup[Dummy].m_BotTexture.Invalidate();
-		}
-	}
-
-	bool ApplyDefaultSkin(CGameClient *pGameClient, CTeeRenderInfo &Info)
+	// 兜底皮肤：优先 "default"，其次沿用上游的占位皮肤（其贴图为空，会由渲染层的
+	// IsDrawableTexture 守卫跳过绘制），绝不留下一份「已 Reset 但被当作有效」的渲染信息。
+	bool ApplyDefaultSkin(CGameClient *pGameClient, CTeeRenderInfo &Info, unsigned SkinDescriptorFlags)
 	{
 		if(!pGameClient)
 			return false;
 
 		Info.Reset();
-		if(const CSkin *pSkin = pGameClient->m_Skins.FindOrNullptr("default"))
+		bool Ready = false;
+		if(SkinDescriptorFlags & CSkinDescriptor::FLAG_SIX)
 		{
-			Info.Apply(pSkin);
+			// 用 Find 而非 FindOrNullptr：Find 在 "default" 不可用时还有占位皮肤这一级兜底。
+			const CSkin *pSkin = pGameClient->m_Skins.Find("default");
+			if(pSkin != nullptr)
+			{
+				Info.Apply(pSkin);
+				Ready = Info.SixDescriptorReady();
+			}
 		}
-		ApplySixupDefaultSkin(pGameClient, Info);
-		return Info.SixDescriptorReady() || Info.SevenDescriptorReady();
+
+		if(SkinDescriptorFlags & CSkinDescriptor::FLAG_SEVEN)
+		{
+			for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+			{
+				for(int Part = 0; Part < protocol7::NUM_SKINPARTS; ++Part)
+				{
+					const CSkins7::CSkinPart *pPart = pGameClient->m_Skins7.FindDefaultSkinPart(Part);
+					if(pPart)
+						pPart->ApplyTo(Info.m_aSixup[Dummy]);
+					pGameClient->m_Skins7.ApplyColorTo(Info.m_aSixup[Dummy], false, 0, Part);
+				}
+				Info.m_aSixup[Dummy].m_HatTexture.Invalidate();
+				Info.m_aSixup[Dummy].m_BotTexture.Invalidate();
+			}
+			Ready = Info.SevenDescriptorReady();
+		}
+		return Ready;
 	}
 
 	void CopySkinColorsOnly(CTeeRenderInfo &Target, const CTeeRenderInfo &Source)
@@ -5582,6 +5904,13 @@ namespace
 			}
 		}
 	}
+
+	bool HasDrawableSevenSkin(const CTeeRenderInfo &Info)
+	{
+		return std::any_of(std::begin(Info.m_aSixup), std::end(Info.m_aSixup), [](const CTeeRenderInfo::CSixup &Sixup) {
+			return CTeeRenderInfo::IsDrawableTexture(Sixup.PartTexture(protocol7::SKINPART_BODY));
+		});
+	}
 }
 
 void CGameClient::CClientData::UpdateRenderInfo()
@@ -5592,17 +5921,13 @@ void CGameClient::CClientData::UpdateRenderInfo()
 	const bool DescriptorRenderInfoReady = m_pSkinInfo->DescriptorRenderInfoReady();
 	if(m_RenderInfoSkinDescriptor != SkinDescriptor && m_RenderInfoFallbackResidencyDescriptor != SkinDescriptor)
 		m_RenderInfoFallbackResidencyRequested = false;
-	// 皮肤贴图可能已被资源预算或目录扫描卸载：旧渲染信息里的句柄依旧 IsValid()，但纹理已释放。
-	// 这种渲染信息不能继续复用，否则 Tee 会绑定到失效纹理，画出没有贴图的纯白块；
-	// 让它走下面的 default 皮肤回退，皮肤加载完成后 OnSkinUpdate 会再刷新回真实皮肤。
-	const bool PreviousSixSkinResident = CSkins::CanReusePreviousSixSkin(
-		(m_RenderInfoSkinDescriptor.m_Flags & CSkinDescriptor::FLAG_SIX) != 0,
-		CSkin::IsValidName(m_RenderInfoSkinDescriptor.m_aSkinName),
-		m_pGameClient != nullptr && m_pGameClient->m_Skins.FindOrNullptr(m_RenderInfoSkinDescriptor.m_aSkinName) != nullptr);
+	const bool TargetUsesSevenSkin = (SkinDescriptor.m_Flags & CSkinDescriptor::FLAG_SEVEN) != 0;
+	const bool PreviousRenderInfoUsesSevenSkin = HasDrawableSevenSkin(m_RenderInfo);
+	const bool MayReusePreviousRenderInfo = TargetUsesSevenSkin || !PreviousRenderInfoUsesSevenSkin;
 	// 句柄「看起来有效」不等于纹理还在：设备重建、槽位释放、皮肤贴图被卸载之后，
 	// 继续复用旧渲染信息就会把 Tee 画成没有贴图的实心白块。失效时改走下面的 default 皮肤回退。
 	const bool PreviousRenderInfoAlive = !m_RenderInfo.HasStaleTexture(m_pGameClient != nullptr ? m_pGameClient->Graphics() : nullptr);
-	if(!DescriptorRenderInfoReady && m_RenderInfo.Valid() && PreviousRenderInfoAlive && PreviousSixSkinResident)
+	if(!DescriptorRenderInfoReady && MayReusePreviousRenderInfo && PreviousRenderInfoAlive && m_RenderInfo.Valid())
 	{
 		if(!m_RenderInfoFallbackResidencyRequested && m_RenderInfoSkinDescriptor.m_aSkinName[0] != '\0')
 		{
@@ -5617,9 +5942,24 @@ void CGameClient::CClientData::UpdateRenderInfo()
 	else if(!DescriptorRenderInfoReady)
 	{
 		const float OriginalSize = NewRenderInfo.m_Size;
-		BuildDefaultSkinDescriptor(RenderSkinDescriptor);
-		if(!ApplyDefaultSkin(m_pGameClient, NewRenderInfo))
-			NewRenderInfo.Reset();
+		const CTeeRenderInfo PreviousRenderInfo = m_RenderInfo;
+		BuildDefaultSkinDescriptor(RenderSkinDescriptor, SkinDescriptor.m_Flags);
+		if(!ApplyDefaultSkin(m_pGameClient, NewRenderInfo, SkinDescriptor.m_Flags))
+		{
+			// 默认皮肤也不可绘制（贴图被卸载或异步任务尚未提交）。此时不能保留一份
+			// 无有效贴图的渲染信息，否则渲染层会把无效句柄当作纹理绘制成白色方块。
+			// 优先沿用上一帧可绘制且句柄仍存活的渲染信息；否则彻底清空，让渲染层跳过绘制。
+			if(PreviousRenderInfo.Valid() && PreviousRenderInfoAlive)
+			{
+				const CTeeRenderInfo SkinProperties = NewRenderInfo;
+				NewRenderInfo = PreviousRenderInfo;
+				CopySkinColorsOnly(NewRenderInfo, SkinProperties);
+			}
+			else
+			{
+				NewRenderInfo.Reset();
+			}
+		}
 		NewRenderInfo.m_Size = OriginalSize;
 	}
 
@@ -5678,8 +6018,20 @@ void CGameClient::CClientData::UpdateRenderInfo()
 		const float OriginalSize = NewRenderInfo.m_Size;
 		const bool KeepTeamColors = m_pGameClient->IsTeamPlay();
 
-		if(!ApplyDefaultSkin(m_pGameClient, NewRenderInfo))
-			NewRenderInfo.Reset();
+		if(!ApplyDefaultSkin(m_pGameClient, NewRenderInfo, SkinDescriptor.m_Flags))
+		{
+			// 默认皮肤不可绘制时沿用原渲染信息，避免留下无贴图的白色方块。
+			if(OriginalInfo.Valid())
+			{
+				const CTeeRenderInfo SkinProperties = NewRenderInfo;
+				NewRenderInfo = OriginalInfo;
+				CopySkinColorsOnly(NewRenderInfo, SkinProperties);
+			}
+			else
+			{
+				NewRenderInfo.Reset();
+			}
+		}
 		NewRenderInfo.m_Size = OriginalSize;
 
 		if(KeepTeamColors)
@@ -5699,6 +6051,11 @@ void CGameClient::CClientData::UpdateRenderInfo()
 	}
 
 	// 异步资源尚未提交时，继续使用上一份资源身份；否则会在空白窗口期间提前播放切换动画。
+	if(!DescriptorRenderInfoReady && !TargetUsesSevenSkin && PreviousRenderInfoUsesSevenSkin)
+	{
+		m_SkinTransitionPreviousRenderInfo.Reset();
+		m_SkinTransitionStart.reset();
+	}
 	if(!DescriptorRenderInfoReady)
 		RenderSkinDescriptor = m_RenderInfoSkinDescriptor;
 	const auto SameTexture = [](const IGraphics::CTextureHandle &Left, const IGraphics::CTextureHandle &Right) {
@@ -5766,6 +6123,17 @@ void CGameClient::CClientData::UpdateSkinChangeTransition(const CTeeRenderInfo &
 		}
 	}
 	if(m_pGameClient != nullptr && m_pGameClient->ShouldHideStreamerSkin(m_ClientId))
+	{
+		m_LastSkinTransitionKey = Key;
+		m_HasSkinTransitionKey = true;
+		m_SkinTransitionPreviousRenderInfo.Reset();
+		m_SkinTransitionStart.reset();
+		return;
+	}
+
+	const bool HidesPreviousSevenSkin =
+		(SkinDescriptor.m_Flags & CSkinDescriptor::FLAG_SEVEN) == 0 && HasDrawableSevenSkin(m_RenderInfo);
+	if(HidesPreviousSevenSkin)
 	{
 		m_LastSkinTransitionKey = Key;
 		m_HasSkinTransitionKey = true;
@@ -5959,13 +6327,12 @@ CSkinDescriptor CGameClient::CClientData::ToSkinDescriptor() const
 		return SkinDescriptor;
 	}
 
-	if(m_Active && !TranslatedClient.m_Active)
-	{
-		SkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
-		str_copy(SkinDescriptor.m_aSkinName, m_aSkinName);
-		NormalizeSixupSkinName(SkinDescriptor.m_aSkinName, sizeof(SkinDescriptor.m_aSkinName));
-	}
-	else if(TranslatedClient.m_Active)
+	const bool UseServerControlledSkin =
+		m_pGameClient->m_pClient->State() == IClient::STATE_ONLINE && m_pGameClient->ShouldUseServerControlledLocalSkin();
+	// 与 BuildLocalSkinDescriptor 同源：协议版本决定可用皮肤部件族，白名单只决定是否采用服务器皮肤。
+	const EServerSkinProtocol Protocol = ResolveServerSkinProtocol(
+		m_pGameClient->m_pClient->IsSixup(), UseServerControlledSkin, TranslatedClient.m_Active);
+	if(Protocol == EServerSkinProtocol::SEVEN)
 	{
 		SkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SEVEN;
 		for(int Dummy = 0; Dummy < NUM_DUMMIES; Dummy++)
@@ -5977,6 +6344,12 @@ CSkinDescriptor CGameClient::CClientData::ToSkinDescriptor() const
 			SkinDescriptor.m_aSixup[Dummy].m_XmasHat = time_season() == ETimeSeason::XMAS;
 			SkinDescriptor.m_aSixup[Dummy].m_BotDecoration = (TranslatedClient.m_PlayerFlags7 & protocol7::PLAYERFLAG_BOT) != 0;
 		}
+	}
+	else if(Protocol == EServerSkinProtocol::SIX && m_Active)
+	{
+		SkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
+		str_copy(SkinDescriptor.m_aSkinName, m_aSkinName);
+		NormalizeSixupSkinName(SkinDescriptor.m_aSkinName, sizeof(SkinDescriptor.m_aSkinName));
 	}
 
 	return SkinDescriptor;
@@ -6215,7 +6588,7 @@ void CGameClient::SendReadyChange7()
 {
 	if(!Client()->IsSixup())
 	{
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", "Error you have to be connected to a 0.7 server to use ready_change");
+		log_error("client", "You have to be connected to a 0.7 server to use 'ready_change'");
 		return;
 	}
 	protocol7::CNetMsg_Cl_ReadyChange Msg;
@@ -6425,6 +6798,7 @@ void CGameClient::UpdatePrediction()
 	m_GameWorld.m_WorldConfig.m_PredictFreeze = g_Config.m_ClPredictFreeze;
 	m_GameWorld.m_WorldConfig.m_PredictWeapons = AntiPingWeapons();
 	m_GameWorld.m_WorldConfig.m_PredictEvents = g_Config.m_ClPredictEvents && m_GameInfo.m_PredictEvents;
+	m_GameWorld.m_WorldConfig.m_OldLaser = m_GameInfo.m_OldLaser;
 	m_GameWorld.m_WorldConfig.m_PredictTeleport = false;
 	m_GameWorld.m_WorldConfig.m_BugDDRaceInput = m_GameInfo.m_BugDDRaceInput;
 	m_GameWorld.m_WorldConfig.m_NoWeakHookAndBounce = m_GameInfo.m_NoWeakHookAndBounce;
@@ -6716,7 +7090,9 @@ void CGameClient::UpdateRenderedCharacters()
 			Client()->m_IsLocalFrozen = pChar && pChar->m_FreezeTime > 0;
 
 		const bool IsPracticeParticipant = m_FastPractice.Enabled() && m_FastPractice.IsPracticeParticipant(i);
-		if(Predict() && (i == m_Snap.m_LocalClientId || IsPracticeParticipant || (AntiPingPlayers() && !IsOtherTeam(i))) && pChar)
+		const bool IsDummy = PredictDummy() && i == m_aLocalIds[!g_Config.m_ClDummy];
+		bool AntiPingPlayer = AntiPingPlayers() == 1 || (AntiPingPlayers() >= 2 && (IsDummy || (pChar && pChar->IsInterfering())));
+		if(Predict() && (i == m_Snap.m_LocalClientId || IsPracticeParticipant || (AntiPingPlayer && !IsOtherTeam(i))) && pChar)
 		{
 			m_aClients[i].m_Predicted.Write(&m_aClients[i].m_RenderCur);
 			m_aClients[i].m_PrevPredicted.Write(&m_aClients[i].m_RenderPrev);
@@ -6785,7 +7161,6 @@ void CGameClient::UpdateRenderedCharacters()
 void CGameClient::HandlePredictedEvents(const int Tick)
 {
 	const float Alpha = 1.0f;
-	const float Volume = 1.0f;
 
 	auto EventsIterator = m_PredictedWorld.m_PredictedEvents.begin();
 	while(EventsIterator != m_PredictedWorld.m_PredictedEvents.end())
@@ -6799,6 +7174,8 @@ void CGameClient::HandlePredictedEvents(const int Tick)
 					EventsIterator = m_PredictedWorld.m_PredictedEvents.erase(EventsIterator);
 					continue;
 				}
+				if(g_Config.m_DbgPredictEvents)
+					dbg_msg("pred_event", "predict-play sound=%d tick=%d pos=%.1f,%.1f", EventsIterator->m_ExtraInfo, EventsIterator->m_Tick, EventsIterator->m_Pos.x, EventsIterator->m_Pos.y);
 				m_Sounds.PlayAt(CSounds::CHN_WORLD, EventsIterator->m_ExtraInfo, 1.0f, EventsIterator->m_Pos);
 			}
 			else if(EventsIterator->m_EventId == NETEVENTTYPE_EXPLOSION)
@@ -6807,7 +7184,9 @@ void CGameClient::HandlePredictedEvents(const int Tick)
 			}
 			else if(EventsIterator->m_EventId == NETEVENTTYPE_HAMMERHIT)
 			{
-				m_Effects.HammerHit(EventsIterator->m_Pos, Alpha, Volume);
+				if(g_Config.m_DbgPredictEvents)
+					dbg_msg("pred_event", "hammerhit-effect source=predict tick=%d pos=%.1f,%.1f", EventsIterator->m_Tick, EventsIterator->m_Pos.x, EventsIterator->m_Pos.y);
+				m_Effects.HammerHit(EventsIterator->m_Pos, Alpha, 1.0f);
 			}
 			else if(EventsIterator->m_EventId == NETEVENTTYPE_DAMAGEIND)
 			{
@@ -6918,14 +7297,12 @@ vec2 CGameClient::GetSmoothPos(int ClientId)
 {
 	SQmFastInputSettings Settings;
 	Settings.m_Enabled = m_TClient.IsFastInputActive();
-	Settings.m_Mode = g_Config.m_QmFastInputMode;
 	Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
-	Settings.m_SaikoPlusAmount = g_Config.m_QmSaikoPlusAmount;
 	const float FastInputOffsetTicks = QmEffectiveFastInputOffsetTicks(Settings);
-	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks, g_Config.m_QmFastInputMode);
+	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks);
 	const bool FastInputOthers = EffectiveFastInputOthers(this);
 	const bool IsLocal = ClientId == m_Snap.m_LocalClientId || (PredictDummy() && ClientId == m_aLocalIds[!g_Config.m_ClDummy]);
-	const int FastInputTicksClient = IsLocal ? FastInputTicks : (FastInputOthers ? QmFastInputPredictionTicksOthers(FastInputOffsetTicks, g_Config.m_QmFastInputMode) : 0);
+	const int FastInputTicksClient = IsLocal || FastInputOthers ? FastInputTicks : 0;
 	vec2 Pos = mix(m_aClients[ClientId].m_PrevPredicted.m_Pos, m_aClients[ClientId].m_Predicted.m_Pos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
 	int64_t Now = time_get();
 	for(int i = 0; i < 2; i++)
@@ -6955,9 +7332,6 @@ int CGameClient::GetFastInputPredictionAmountMs()
 {
 	if(!m_TClient.IsFastInputActive())
 		return 0;
-	const int Mode = QmFastInputNormalizedMode(g_Config.m_QmFastInputMode);
-	if(Mode == 4)
-		return std::max(0, g_Config.m_QmSaikoPlusAmount / 5);
 	return std::max(0, g_Config.m_TcFastInputAmount);
 }
 
@@ -6980,13 +7354,11 @@ vec2 CGameClient::GetFastInputPos(int ClientId)
 
 	SQmFastInputSettings Settings;
 	Settings.m_Enabled = m_TClient.IsFastInputActive();
-	Settings.m_Mode = g_Config.m_QmFastInputMode;
 	Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
-	Settings.m_SaikoPlusAmount = g_Config.m_QmSaikoPlusAmount;
 	const float FastInputOffsetTicks = QmEffectiveFastInputOffsetTicks(Settings);
-	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks, g_Config.m_QmFastInputMode);
+	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks);
 	const bool FastInputOthers = EffectiveFastInputOthers(this);
-	const int FastInputTicksClient = ClientId == m_Snap.m_LocalClientId ? FastInputTicks : (FastInputOthers ? QmFastInputPredictionTicksOthers(FastInputOffsetTicks, g_Config.m_QmFastInputMode) : 0);
+	const int FastInputTicksClient = ClientId == m_Snap.m_LocalClientId || FastInputOthers ? FastInputTicks : 0;
 	QmApplyFastInputOffset(FastInputOffsetTicks, PredTick, PredIntraTick);
 
 	if(PredTick > 0 &&
@@ -7040,13 +7412,11 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 
 	SQmFastInputSettings Settings;
 	Settings.m_Enabled = m_TClient.IsFastInputActive();
-	Settings.m_Mode = g_Config.m_QmFastInputMode;
 	Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
-	Settings.m_SaikoPlusAmount = g_Config.m_QmSaikoPlusAmount;
 	const float FastInputOffsetTicks = QmEffectiveFastInputOffsetTicks(Settings);
-	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks, g_Config.m_QmFastInputMode);
+	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks);
 	const bool FastInputOthers = EffectiveFastInputOthers(this);
-	const int FastInputTicksOthers = FastInputOthers ? QmFastInputPredictionTicksOthers(FastInputOffsetTicks, g_Config.m_QmFastInputMode) : 0;
+	const int FastInputTicksOthers = FastInputOthers ? FastInputTicks : 0;
 
 	const bool IsLocal = ClientId == m_Snap.m_LocalClientId || (PredictDummy() && ClientId == m_aLocalIds[!g_Config.m_ClDummy]);
 	if(IsLocal && m_TClient.IsFastInputActive())
@@ -7092,16 +7462,22 @@ bool CGameClient::IsOtherTeam(int ClientId) const
 	}
 	else if(m_Snap.m_SpecInfo.m_Active && m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW)
 	{
-		if(m_Teams.Team(ClientId) == TEAM_SUPER || m_Teams.Team(m_Snap.m_SpecInfo.m_SpectatorId) == TEAM_SUPER)
+		const int SpectatorId = m_Snap.m_SpecInfo.m_SpectatorId;
+		// 跟随视角沿用被旁观者的 solo 语义：任一方处于 solo 即视为其他队伍
+		//（冻结条、碰撞显示等据此隐藏/减淡）；自由视角由外层分支返回 false，仍能看到所有玩家。
+		if(SpectatorId >= 0 && SpectatorId < MAX_CLIENTS && ClientId != SpectatorId &&
+			(m_aClients[SpectatorId].m_Solo || m_aClients[ClientId].m_Solo))
+			return true;
+		if(m_Teams.Team(ClientId) == m_Teams.TeamSuper() || m_Teams.Team(SpectatorId) == m_Teams.TeamSuper())
 			return false;
-		return m_Teams.Team(ClientId) != m_Teams.Team(m_Snap.m_SpecInfo.m_SpectatorId);
+		return m_Teams.Team(ClientId) != m_Teams.Team(SpectatorId);
 	}
 	else if((m_aClients[m_Snap.m_LocalClientId].m_Solo || m_aClients[ClientId].m_Solo) && !Local)
 	{
 		return true;
 	}
 
-	if(m_Teams.Team(ClientId) == TEAM_SUPER || m_Teams.Team(m_Snap.m_LocalClientId) == TEAM_SUPER)
+	if(m_Teams.Team(ClientId) == m_Teams.TeamSuper() || m_Teams.Team(m_Snap.m_LocalClientId) == m_Teams.TeamSuper())
 		return false;
 
 	return m_Teams.Team(ClientId) != m_Teams.Team(m_Snap.m_LocalClientId);
@@ -7159,6 +7535,62 @@ void CGameClient::LoadInitialGraphicsAssets()
 		else
 			g_pData->m_aImages[i].m_Id = Graphics()->LoadTexture(g_pData->m_aImages[i].m_pFilename, IStorage::TYPE_ALL);
 	}
+}
+
+void CGameClient::ReloadCustomAssetImagery()
+{
+	// 回退语义等在加载期读取开关，所以开关一变就要重载自定义素材图片本身；
+	// 这里只排队：单帧解码全部图集会卡死渲染线程（表现为鼠标卡顿），
+	// 实际重载由 ProcessPendingCustomAssetImageryReload 每帧分摊一个类别。
+	// 正在按同一开关值重载时忽略重复触发；进行中开关又变了才从头重跑，保证各类别一致。
+	if(m_PendingCustomAssetReloadStep >= 0 && m_PendingCustomAssetReloadFallback == g_Config.m_QmBlankAssetFallback)
+		return;
+	m_PendingCustomAssetReloadStep = 0;
+	m_PendingCustomAssetReloadFallback = g_Config.m_QmBlankAssetFallback;
+}
+
+void CGameClient::ProcessPendingCustomAssetImageryReload()
+{
+	if(m_PendingCustomAssetReloadStep < 0)
+		return;
+
+	// default 选择与开关无关，跳过重载避免无谓的整包解码与 GPU 上传（blank 除外）。
+	switch(m_PendingCustomAssetReloadStep)
+	{
+	case 0:
+		if(str_comp(g_Config.m_ClAssetGame, "default") != 0)
+			LoadGameSkin(g_Config.m_ClAssetGame);
+		break;
+	case 1:
+		if(str_comp(g_Config.m_ClAssetEmoticons, "default") != 0)
+			LoadEmoticonsSkin(g_Config.m_ClAssetEmoticons);
+		break;
+	case 2:
+		if(str_comp(g_Config.m_ClAssetParticles, "default") != 0)
+			LoadParticlesSkin(g_Config.m_ClAssetParticles);
+		break;
+	case 3:
+		if(str_comp(g_Config.m_ClAssetHud, "default") != 0)
+			LoadHudSkin(g_Config.m_ClAssetHud);
+		break;
+	case 4:
+		if(str_comp(g_Config.m_ClAssetExtras, "default") != 0)
+			LoadExtrasSkin(g_Config.m_ClAssetExtras);
+		break;
+	case 5:
+		if(str_comp(g_Config.m_ClAssetGuiCursor, "default") != 0)
+			ReloadNamedSingleFileAssetImage(IMAGE_CURSOR, "gui_cursor", g_Config.m_ClAssetGuiCursor);
+		break;
+	case 6:
+		if(str_comp(g_Config.m_ClAssetArrow, "default") != 0)
+			ReloadNamedSingleFileAssetImage(IMAGE_ARROW, "arrow", g_Config.m_ClAssetArrow);
+		break;
+	case 7:
+		if(str_comp(g_Config.m_ClAssetStrongWeak, "default") != 0)
+			ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
+		break;
+	}
+	m_PendingCustomAssetReloadStep = m_PendingCustomAssetReloadStep >= 7 ? -1 : m_PendingCustomAssetReloadStep + 1;
 }
 
 void CGameClient::OnGraphicsResourcesReset()
@@ -7258,6 +7690,7 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 		}
 
 		Graphics()->UnloadTexture(&m_GameSkin.m_SpritePickupHealth);
+		Graphics()->UnloadTexture(&m_GameSkin.m_SpritePickupFreeze);
 		Graphics()->UnloadTexture(&m_GameSkin.m_SpritePickupArmor);
 		Graphics()->UnloadTexture(&m_GameSkin.m_SpritePickupArmorShotgun);
 		Graphics()->UnloadTexture(&m_GameSkin.m_SpritePickupArmorGrenade);
@@ -7296,7 +7729,10 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
-	if(str_comp(pPath, "default") == 0)
+	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
+	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	const bool IsBlankAsset = IsBlankAssetName(pPath);
+	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
 		str_copy(aPath, g_pData->m_aImages[IMAGE_GAME].m_pFilename);
 		IsDefault = true;
@@ -7311,6 +7747,20 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 
 	CImageInfo ImgInfo;
 	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
+	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
+		ClearImageToTransparent(ImgInfo);
+
+	// 为不可见资源准备默认图回退
+	std::optional<CImageInfo> FallbackImgInfo;
+	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
+	if(g_Config.m_QmBlankAssetFallback != 0 && PngLoaded && !IsDefault)
+	{
+		CImageInfo ImgDefaultInfo;
+		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_GAME].m_pFilename, IStorage::TYPE_ALL))
+			FallbackImgInfo = std::move(ImgDefaultInfo);
+	}
+
 	const bool ImageValid = PngLoaded &&
 				Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HEALTH_FULL].m_pSet->m_Gridy, true) &&
 				Graphics()->IsImageFormatRgba(aPath, ImgInfo);
@@ -7328,17 +7778,17 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 	}
 	else if(ImageValid)
 	{
-		m_GameSkin.m_SpriteHealthFull = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HEALTH_FULL]);
-		m_GameSkin.m_SpriteHealthEmpty = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HEALTH_EMPTY]);
-		m_GameSkin.m_SpriteArmorFull = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_ARMOR_FULL]);
-		m_GameSkin.m_SpriteArmorEmpty = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_ARMOR_EMPTY]);
+		m_GameSkin.m_SpriteHealthFull = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HEALTH_FULL]);
+		m_GameSkin.m_SpriteHealthEmpty = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HEALTH_EMPTY]);
+		m_GameSkin.m_SpriteArmorFull = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_ARMOR_FULL]);
+		m_GameSkin.m_SpriteArmorEmpty = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_ARMOR_EMPTY]);
 
-		m_GameSkin.m_SpriteWeaponHammerCursor = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_HAMMER_CURSOR]);
-		m_GameSkin.m_SpriteWeaponGunCursor = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GUN_CURSOR]);
-		m_GameSkin.m_SpriteWeaponShotgunCursor = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_SHOTGUN_CURSOR]);
-		m_GameSkin.m_SpriteWeaponGrenadeCursor = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GRENADE_CURSOR]);
-		m_GameSkin.m_SpriteWeaponNinjaCursor = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_NINJA_CURSOR]);
-		m_GameSkin.m_SpriteWeaponLaserCursor = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_LASER_CURSOR]);
+		m_GameSkin.m_SpriteWeaponHammerCursor = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_HAMMER_CURSOR]);
+		m_GameSkin.m_SpriteWeaponGunCursor = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GUN_CURSOR]);
+		m_GameSkin.m_SpriteWeaponShotgunCursor = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_SHOTGUN_CURSOR]);
+		m_GameSkin.m_SpriteWeaponGrenadeCursor = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GRENADE_CURSOR]);
+		m_GameSkin.m_SpriteWeaponNinjaCursor = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_NINJA_CURSOR]);
+		m_GameSkin.m_SpriteWeaponLaserCursor = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_LASER_CURSOR]);
 
 		m_GameSkin.m_aSpriteWeaponCursors[0] = m_GameSkin.m_SpriteWeaponHammerCursor;
 		m_GameSkin.m_aSpriteWeaponCursors[1] = m_GameSkin.m_SpriteWeaponGunCursor;
@@ -7348,14 +7798,14 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 		m_GameSkin.m_aSpriteWeaponCursors[5] = m_GameSkin.m_SpriteWeaponNinjaCursor;
 
 		// weapons and hook
-		m_GameSkin.m_SpriteHookChain = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HOOK_CHAIN]);
-		m_GameSkin.m_SpriteHookHead = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HOOK_HEAD]);
-		m_GameSkin.m_SpriteWeaponHammer = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_HAMMER_BODY]);
-		m_GameSkin.m_SpriteWeaponGun = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GUN_BODY]);
-		m_GameSkin.m_SpriteWeaponShotgun = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_SHOTGUN_BODY]);
-		m_GameSkin.m_SpriteWeaponGrenade = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GRENADE_BODY]);
-		m_GameSkin.m_SpriteWeaponNinja = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_NINJA_BODY]);
-		m_GameSkin.m_SpriteWeaponLaser = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_LASER_BODY]);
+		m_GameSkin.m_SpriteHookChain = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HOOK_CHAIN]);
+		m_GameSkin.m_SpriteHookHead = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HOOK_HEAD]);
+		m_GameSkin.m_SpriteWeaponHammer = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_HAMMER_BODY]);
+		m_GameSkin.m_SpriteWeaponGun = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GUN_BODY]);
+		m_GameSkin.m_SpriteWeaponShotgun = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_SHOTGUN_BODY]);
+		m_GameSkin.m_SpriteWeaponGrenade = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GRENADE_BODY]);
+		m_GameSkin.m_SpriteWeaponNinja = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_NINJA_BODY]);
+		m_GameSkin.m_SpriteWeaponLaser = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_LASER_BODY]);
 
 		m_GameSkin.m_aSpriteWeapons[0] = m_GameSkin.m_SpriteWeaponHammer;
 		m_GameSkin.m_aSpriteWeapons[1] = m_GameSkin.m_SpriteWeaponGun;
@@ -7367,25 +7817,25 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 		// particles
 		for(int i = 0; i < 9; ++i)
 		{
-			m_GameSkin.m_aSpriteParticles[i] = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART1 + i]);
+			m_GameSkin.m_aSpriteParticles[i] = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART1 + i]);
 		}
 
 		// stars
 		for(int i = 0; i < 3; ++i)
 		{
-			m_GameSkin.m_aSpriteStars[i] = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_STAR1 + i]);
+			m_GameSkin.m_aSpriteStars[i] = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_STAR1 + i]);
 		}
 
 		// projectiles
-		m_GameSkin.m_SpriteWeaponGunProjectile = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GUN_PROJ]);
-		m_GameSkin.m_SpriteWeaponShotgunProjectile = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_SHOTGUN_PROJ]);
-		m_GameSkin.m_SpriteWeaponGrenadeProjectile = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GRENADE_PROJ]);
+		m_GameSkin.m_SpriteWeaponGunProjectile = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GUN_PROJ]);
+		m_GameSkin.m_SpriteWeaponShotgunProjectile = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_SHOTGUN_PROJ]);
+		m_GameSkin.m_SpriteWeaponGrenadeProjectile = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GRENADE_PROJ]);
 
 		// these weapons have no projectiles
 		m_GameSkin.m_SpriteWeaponHammerProjectile = IGraphics::CTextureHandle();
 		m_GameSkin.m_SpriteWeaponNinjaProjectile = IGraphics::CTextureHandle();
 
-		m_GameSkin.m_SpriteWeaponLaserProjectile = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_LASER_PROJ]);
+		m_GameSkin.m_SpriteWeaponLaserProjectile = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_LASER_PROJ]);
 
 		m_GameSkin.m_aSpriteWeaponProjectiles[0] = m_GameSkin.m_SpriteWeaponHammerProjectile;
 		m_GameSkin.m_aSpriteWeaponProjectiles[1] = m_GameSkin.m_SpriteWeaponGunProjectile;
@@ -7397,9 +7847,9 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 		// muzzles
 		for(int i = 0; i < 3; ++i)
 		{
-			m_GameSkin.m_aSpriteWeaponGunMuzzles[i] = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GUN_MUZZLE1 + i]);
-			m_GameSkin.m_aSpriteWeaponShotgunMuzzles[i] = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_SHOTGUN_MUZZLE1 + i]);
-			m_GameSkin.m_aaSpriteWeaponNinjaMuzzles[i] = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_NINJA_MUZZLE1 + i]);
+			m_GameSkin.m_aSpriteWeaponGunMuzzles[i] = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_GUN_MUZZLE1 + i]);
+			m_GameSkin.m_aSpriteWeaponShotgunMuzzles[i] = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_SHOTGUN_MUZZLE1 + i]);
+			m_GameSkin.m_aaSpriteWeaponNinjaMuzzles[i] = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_WEAPON_NINJA_MUZZLE1 + i]);
 
 			m_GameSkin.m_aaSpriteWeaponsMuzzles[1][i] = m_GameSkin.m_aSpriteWeaponGunMuzzles[i];
 			m_GameSkin.m_aaSpriteWeaponsMuzzles[2][i] = m_GameSkin.m_aSpriteWeaponShotgunMuzzles[i];
@@ -7407,18 +7857,19 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 		}
 
 		// pickups
-		m_GameSkin.m_SpritePickupHealth = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_HEALTH]);
-		m_GameSkin.m_SpritePickupArmor = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR]);
-		m_GameSkin.m_SpritePickupHammer = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_HAMMER]);
-		m_GameSkin.m_SpritePickupGun = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_GUN]);
-		m_GameSkin.m_SpritePickupShotgun = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_SHOTGUN]);
-		m_GameSkin.m_SpritePickupGrenade = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_GRENADE]);
-		m_GameSkin.m_SpritePickupLaser = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_LASER]);
-		m_GameSkin.m_SpritePickupNinja = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_NINJA]);
-		m_GameSkin.m_SpritePickupArmorShotgun = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR_SHOTGUN]);
-		m_GameSkin.m_SpritePickupArmorGrenade = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR_GRENADE]);
-		m_GameSkin.m_SpritePickupArmorNinja = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR_NINJA]);
-		m_GameSkin.m_SpritePickupArmorLaser = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR_LASER]);
+		m_GameSkin.m_SpritePickupHealth = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_HEALTH]);
+		m_GameSkin.m_SpritePickupFreeze = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_FREEZE]);
+		m_GameSkin.m_SpritePickupArmor = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR]);
+		m_GameSkin.m_SpritePickupHammer = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_HAMMER]);
+		m_GameSkin.m_SpritePickupGun = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_GUN]);
+		m_GameSkin.m_SpritePickupShotgun = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_SHOTGUN]);
+		m_GameSkin.m_SpritePickupGrenade = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_GRENADE]);
+		m_GameSkin.m_SpritePickupLaser = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_LASER]);
+		m_GameSkin.m_SpritePickupNinja = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_NINJA]);
+		m_GameSkin.m_SpritePickupArmorShotgun = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR_SHOTGUN]);
+		m_GameSkin.m_SpritePickupArmorGrenade = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR_GRENADE]);
+		m_GameSkin.m_SpritePickupArmorNinja = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR_NINJA]);
+		m_GameSkin.m_SpritePickupArmorLaser = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PICKUP_ARMOR_LASER]);
 
 		m_GameSkin.m_aSpritePickupWeapons[0] = m_GameSkin.m_SpritePickupHammer;
 		m_GameSkin.m_aSpritePickupWeapons[1] = m_GameSkin.m_SpritePickupGun;
@@ -7433,8 +7884,8 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 		m_GameSkin.m_aSpritePickupWeaponArmor[3] = m_GameSkin.m_SpritePickupArmorLaser;
 
 		// flags
-		m_GameSkin.m_SpriteFlagBlue = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_FLAG_BLUE]);
-		m_GameSkin.m_SpriteFlagRed = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_FLAG_RED]);
+		m_GameSkin.m_SpriteFlagBlue = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_FLAG_BLUE]);
+		m_GameSkin.m_SpriteFlagRed = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_FLAG_RED]);
 
 		// ninja bar (0.7)
 		if(!Graphics()->IsSpriteTextureFullyTransparent(ImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_FULL_LEFT]) ||
@@ -7442,15 +7893,17 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 			!Graphics()->IsSpriteTextureFullyTransparent(ImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_EMPTY]) ||
 			!Graphics()->IsSpriteTextureFullyTransparent(ImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_EMPTY_RIGHT]))
 		{
-			m_GameSkin.m_SpriteNinjaBarFullLeft = Graphics()->LoadSpriteTexture(ImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_FULL_LEFT]);
-			m_GameSkin.m_SpriteNinjaBarFull = Graphics()->LoadSpriteTexture(ImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_FULL]);
-			m_GameSkin.m_SpriteNinjaBarEmpty = Graphics()->LoadSpriteTexture(ImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_EMPTY]);
-			m_GameSkin.m_SpriteNinjaBarEmptyRight = Graphics()->LoadSpriteTexture(ImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_EMPTY_RIGHT]);
+			m_GameSkin.m_SpriteNinjaBarFullLeft = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_FULL_LEFT]);
+			m_GameSkin.m_SpriteNinjaBarFull = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_FULL]);
+			m_GameSkin.m_SpriteNinjaBarEmpty = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_EMPTY]);
+			m_GameSkin.m_SpriteNinjaBarEmptyRight = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &client_data7::g_pData->m_aSprites[client_data7::SPRITE_NINJA_BAR_EMPTY_RIGHT]);
 		}
 
 		m_GameSkinLoaded = true;
 	}
 	ImgInfo.Free();
+	if(FallbackImgInfo.has_value())
+		FallbackImgInfo.value().Free();
 }
 
 void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
@@ -7465,7 +7918,10 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
-	if(str_comp(pPath, "default") == 0)
+	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
+	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	const bool IsBlankAsset = IsBlankAssetName(pPath);
+	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
 		str_copy(aPath, g_pData->m_aImages[IMAGE_EMOTICONS].m_pFilename);
 		IsDefault = true;
@@ -7480,36 +7936,72 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 
 	CImageInfo ImgInfo;
 	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
+	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
+		ClearImageToTransparent(ImgInfo);
+
+	// 为不可见资源准备默认图回退。回退图必须是**同一图集**的默认文件：
+	// sprite 的格坐标按各自 set 的网格换算，换成别的图集（列数不同）会取到完全不相干的区域。
+	std::optional<CImageInfo> FallbackImgInfo;
+	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
+	if(g_Config.m_QmBlankAssetFallback != 0 && PngLoaded && !IsDefault)
+	{
+		CImageInfo ImgDefaultInfo;
+		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_EMOTICONS].m_pFilename, IStorage::TYPE_ALL))
+			FallbackImgInfo = std::move(ImgDefaultInfo);
+	}
+	// 回退图是手动管理的 CImageInfo（没有析构函数），而本函数有多条提前返回路径，
+	// 统一用这个幂等的 lambda 释放，避免漏掉某条路径造成整张解码图集泄漏。
+	auto &&FreeFallback = [&FallbackImgInfo]() {
+		if(FallbackImgInfo.has_value())
+		{
+			FallbackImgInfo.value().Free();
+			FallbackImgInfo.reset();
+		}
+	};
+
 	if(!PngLoaded && !IsDefault)
 	{
+		ImgInfo.Free();
+		FreeFallback();
 		if(AsDir)
 			LoadEmoticonsSkin("default");
 		else
 			LoadEmoticonsSkin(pPath, true);
+		return;
 	}
 	else if(PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_OOP].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo))
 	{
-		for(int i = 0; i < NUM_EMOTICONS; ++i)
+		// 表情属装饰性资源：默认（qm_blank_asset_fallback 关闭）时皮肤作者有意留空的格子保持空白；
+		// 打开开关才按官方行为用同图集默认图的同位置贴图补齐。回退成功的那条日志由引擎打印。
+		for(int i = 0; i < 16; ++i)
 		{
 			const auto *pSprite = &g_pData->m_aSprites[SPRITE_OOP + i];
-			m_EmoticonsSkin.m_aSpriteEmoticons[i] = Graphics()->LoadSpriteTexture(ImgInfo, pSprite);
+			// 空白材质整张留空是用户显式选择的结果，不必逐格告警。
+			if(!IsBlankAsset && Graphics()->IsSpriteTextureFullyTransparent(ImgInfo, pSprite) &&
+				(g_Config.m_QmBlankAssetFallback == 0 || !FallbackImgInfo.has_value()))
+				log_warn("graphics", "Emoticon asset '%s' is empty and stays blank", pSprite->m_pName);
+			m_EmoticonsSkin.m_aSpriteEmoticons[i] = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, pSprite);
 			const int CellWidth = ImgInfo.m_Width / pSprite->m_pSet->m_Gridx;
 			const int CellHeight = ImgInfo.m_Height / pSprite->m_pSet->m_Gridy;
-			const int Stride = ImgInfo.m_Width * 4;
-			m_Emoticon.SetCollisionMask(i, ImgInfo.m_pData + pSprite->m_Y * CellHeight * Stride + pSprite->m_X * CellWidth * 4,
-				pSprite->m_W * CellWidth, pSprite->m_H * CellHeight, Stride);
+			m_Emoticon.SetCollisionMask(i, ImgInfo.m_pData + static_cast<size_t>(pSprite->m_Y) * CellHeight * ImgInfo.m_Width * 4 + static_cast<size_t>(pSprite->m_X) * CellWidth * 4,
+				pSprite->m_W * CellWidth, pSprite->m_H * CellHeight, ImgInfo.m_Width * 4);
 		}
 
 		m_EmoticonsSkinLoaded = true;
 	}
 	ImgInfo.Free();
+	FreeFallback();
 }
 
 void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
 {
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
-	if(str_comp(pPath, "default") == 0)
+	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
+	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	const bool IsBlankAsset = IsBlankAssetName(pPath);
+	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
 		str_copy(aPath, g_pData->m_aImages[IMAGE_PARTICLES].m_pFilename);
 		IsDefault = true;
@@ -7524,6 +8016,20 @@ void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
 
 	CImageInfo ImgInfo;
 	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
+	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
+		ClearImageToTransparent(ImgInfo);
+
+	// 为不可见资源准备默认图回退。回退图必须是**同一图集**的默认文件：
+	// sprite 的格坐标按各自 set 的网格换算，换成别的图集（列数不同）会取到完全不相干的区域。
+	std::optional<CImageInfo> FallbackImgInfo;
+	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
+	if(g_Config.m_QmBlankAssetFallback != 0 && PngLoaded && !IsDefault)
+	{
+		CImageInfo ImgDefaultInfo;
+		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_PARTICLES].m_pFilename, IStorage::TYPE_ALL))
+			FallbackImgInfo = std::move(ImgDefaultInfo);
+	}
 	const bool ValidImage = PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_PART_SLICE].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_PART_SLICE].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo);
 	if(!ValidImage && !IsDefault)
 	{
@@ -7547,15 +8053,15 @@ void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
 			Graphics()->UnloadTexture(&Skin.m_SpriteParticleHit);
 		};
 		SClientParticlesSkin Candidate;
-		Candidate.m_SpriteParticleSlice = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_SLICE]);
-		Candidate.m_SpriteParticleBall = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_BALL]);
+		Candidate.m_SpriteParticleSlice = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_SLICE]);
+		Candidate.m_SpriteParticleBall = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_BALL]);
 		for(int i = 0; i < 3; ++i)
-			Candidate.m_aSpriteParticleSplat[i] = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_SPLAT01 + i]);
-		Candidate.m_SpriteParticleSmoke = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_SMOKE]);
-		Candidate.m_SpriteParticleShell = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_SHELL]);
-		Candidate.m_SpriteParticleExpl = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_EXPL01]);
-		Candidate.m_SpriteParticleAirJump = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_AIRJUMP]);
-		Candidate.m_SpriteParticleHit = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_HIT01]);
+			Candidate.m_aSpriteParticleSplat[i] = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_SPLAT01 + i]);
+		Candidate.m_SpriteParticleSmoke = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_SMOKE]);
+		Candidate.m_SpriteParticleShell = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_SHELL]);
+		Candidate.m_SpriteParticleExpl = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_EXPL01]);
+		Candidate.m_SpriteParticleAirJump = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_AIRJUMP]);
+		Candidate.m_SpriteParticleHit = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_HIT01]);
 
 		Candidate.m_aSpriteParticles[0] = Candidate.m_SpriteParticleSlice;
 		Candidate.m_aSpriteParticles[1] = Candidate.m_SpriteParticleBall;
@@ -7585,6 +8091,8 @@ void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
 		}
 	}
 	ImgInfo.Free();
+	if(FallbackImgInfo.has_value())
+		FallbackImgInfo.value().Free();
 }
 
 void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
@@ -7627,7 +8135,10 @@ void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
 
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
-	if(str_comp(pPath, "default") == 0)
+	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
+	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	const bool IsBlankAsset = IsBlankAssetName(pPath);
+	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
 		str_copy(aPath, g_pData->m_aImages[IMAGE_HUD].m_pFilename);
 		IsDefault = true;
@@ -7642,50 +8153,94 @@ void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
 
 	CImageInfo ImgInfo;
 	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
+	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
+		ClearImageToTransparent(ImgInfo);
+
+	// 为不可见资源准备默认图回退。回退图必须是**同一图集**的默认文件：
+	// sprite 的格坐标按各自 set 的网格换算，换成别的图集（列数不同）会取到完全不相干的区域。
+	std::optional<CImageInfo> FallbackImgInfo;
+	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
+	if(g_Config.m_QmBlankAssetFallback != 0 && PngLoaded && !IsDefault)
+	{
+		CImageInfo ImgDefaultInfo;
+		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_HUD].m_pFilename, IStorage::TYPE_ALL))
+			FallbackImgInfo = std::move(ImgDefaultInfo);
+	}
+	// 回退图是手动管理的 CImageInfo（没有析构函数），而本函数有多条提前返回路径，
+	// 统一用这个幂等的 lambda 释放，避免漏掉某条路径造成整张解码图集泄漏。
+	auto &&FreeFallback = [&FallbackImgInfo]() {
+		if(FallbackImgInfo.has_value())
+		{
+			FallbackImgInfo.value().Free();
+			FallbackImgInfo.reset();
+		}
+	};
+
 	if(!PngLoaded && !IsDefault)
 	{
+		ImgInfo.Free();
+		FreeFallback();
 		if(AsDir)
 			LoadHudSkin("default");
 		else
 			LoadHudSkin(pPath, true);
+		return;
 	}
 	else if(PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_HUD_AIRJUMP].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo))
 	{
-		m_HudSkin.m_SpriteHudAirjump = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_AIRJUMP]);
-		m_HudSkin.m_SpriteHudAirjumpEmpty = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_AIRJUMP_EMPTY]);
-		m_HudSkin.m_SpriteHudSolo = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_SOLO]);
-		m_HudSkin.m_SpriteHudCollisionDisabled = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_COLLISION_DISABLED]);
-		m_HudSkin.m_SpriteHudEndlessJump = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_ENDLESS_JUMP]);
-		m_HudSkin.m_SpriteHudEndlessHook = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_ENDLESS_HOOK]);
-		m_HudSkin.m_SpriteHudJetpack = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_JETPACK]);
-		m_HudSkin.m_SpriteHudFreezeBarFullLeft = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_FREEZE_BAR_FULL_LEFT]);
-		m_HudSkin.m_SpriteHudFreezeBarFull = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_FREEZE_BAR_FULL]);
-		m_HudSkin.m_SpriteHudFreezeBarEmpty = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_FREEZE_BAR_EMPTY]);
-		m_HudSkin.m_SpriteHudFreezeBarEmptyRight = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_FREEZE_BAR_EMPTY_RIGHT]);
-		m_HudSkin.m_SpriteHudNinjaBarFullLeft = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_NINJA_BAR_FULL_LEFT]);
-		m_HudSkin.m_SpriteHudNinjaBarFull = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_NINJA_BAR_FULL]);
-		m_HudSkin.m_SpriteHudNinjaBarEmpty = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_NINJA_BAR_EMPTY]);
-		m_HudSkin.m_SpriteHudNinjaBarEmptyRight = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_NINJA_BAR_EMPTY_RIGHT]);
-		m_HudSkin.m_SpriteHudHookHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_HOOK_HIT_DISABLED]);
-		m_HudSkin.m_SpriteHudHammerHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_HAMMER_HIT_DISABLED]);
-		m_HudSkin.m_SpriteHudShotgunHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_SHOTGUN_HIT_DISABLED]);
-		m_HudSkin.m_SpriteHudGrenadeHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_GRENADE_HIT_DISABLED]);
-		m_HudSkin.m_SpriteHudLaserHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_LASER_HIT_DISABLED]);
-		m_HudSkin.m_SpriteHudGunHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_GUN_HIT_DISABLED]);
-		m_HudSkin.m_SpriteHudDeepFrozen = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_DEEP_FROZEN]);
-		m_HudSkin.m_SpriteHudLiveFrozen = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_LIVE_FROZEN]);
-		m_HudSkin.m_SpriteHudTeleportGrenade = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_TELEPORT_GRENADE]);
-		m_HudSkin.m_SpriteHudTeleportGun = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_TELEPORT_GUN]);
-		m_HudSkin.m_SpriteHudTeleportLaser = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_TELEPORT_LASER]);
-		m_HudSkin.m_SpriteHudPracticeMode = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_PRACTICE_MODE]);
-		m_HudSkin.m_SpriteHudLockMode = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_LOCK_MODE]);
-		m_HudSkin.m_SpriteHudTeam0Mode = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_TEAM0_MODE]);
-		m_HudSkin.m_SpriteHudDummyHammer = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_DUMMY_HAMMER]);
-		m_HudSkin.m_SpriteHudDummyCopy = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_HUD_DUMMY_COPY]);
+		// HUD 图标是装饰性状态提示，且 set_hud 一直在新增 sprite（lock / team0 / practice /
+		// dummy 等都是后加的），旧皮肤这些格子空白属常态，不是资源损坏。皮肤是"完整替换"
+		// 语义：回退默认图会让作者有意留空（想隐藏某图标）的格子又冒出来，还会混入默认皮肤
+		// 的风格。因此这里有意偏离上游（上游会把全透明区域换成同图集默认图）——保持空白，
+		// 只在日志中提示，便于排查真正损坏的资源。
+		// 是否回退由 qm_blank_asset_fallback 决定：默认关闭时保持上面的「留空即隐藏某图标」语义，
+		// 打开时按官方行为用同图集默认图同位置的贴图补齐空白格（回退成功的日志由引擎打印）。
+		for(int SpriteId = SPRITE_HUD_AIRJUMP; SpriteId <= SPRITE_HUD_TEAM0_MODE; SpriteId++)
+		{
+			const auto *pSprite = &g_pData->m_aSprites[SpriteId];
+			// 空白材质整张留空是用户显式选择的结果，不必逐格告警。
+			if(!IsBlankAsset && Graphics()->IsSpriteTextureFullyTransparent(ImgInfo, pSprite) &&
+				(g_Config.m_QmBlankAssetFallback == 0 || !FallbackImgInfo.has_value()))
+				log_warn("graphics", "HUD asset '%s' is empty and stays blank", pSprite->m_pName);
+		}
+
+		m_HudSkin.m_SpriteHudAirjump = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_AIRJUMP]);
+		m_HudSkin.m_SpriteHudAirjumpEmpty = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_AIRJUMP_EMPTY]);
+		m_HudSkin.m_SpriteHudSolo = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_SOLO]);
+		m_HudSkin.m_SpriteHudCollisionDisabled = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_COLLISION_DISABLED]);
+		m_HudSkin.m_SpriteHudEndlessJump = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_ENDLESS_JUMP]);
+		m_HudSkin.m_SpriteHudEndlessHook = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_ENDLESS_HOOK]);
+		m_HudSkin.m_SpriteHudJetpack = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_JETPACK]);
+		m_HudSkin.m_SpriteHudFreezeBarFullLeft = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_FREEZE_BAR_FULL_LEFT]);
+		m_HudSkin.m_SpriteHudFreezeBarFull = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_FREEZE_BAR_FULL]);
+		m_HudSkin.m_SpriteHudFreezeBarEmpty = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_FREEZE_BAR_EMPTY]);
+		m_HudSkin.m_SpriteHudFreezeBarEmptyRight = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_FREEZE_BAR_EMPTY_RIGHT]);
+		m_HudSkin.m_SpriteHudNinjaBarFullLeft = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_NINJA_BAR_FULL_LEFT]);
+		m_HudSkin.m_SpriteHudNinjaBarFull = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_NINJA_BAR_FULL]);
+		m_HudSkin.m_SpriteHudNinjaBarEmpty = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_NINJA_BAR_EMPTY]);
+		m_HudSkin.m_SpriteHudNinjaBarEmptyRight = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_NINJA_BAR_EMPTY_RIGHT]);
+		m_HudSkin.m_SpriteHudHookHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_HOOK_HIT_DISABLED]);
+		m_HudSkin.m_SpriteHudHammerHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_HAMMER_HIT_DISABLED]);
+		m_HudSkin.m_SpriteHudShotgunHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_SHOTGUN_HIT_DISABLED]);
+		m_HudSkin.m_SpriteHudGrenadeHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_GRENADE_HIT_DISABLED]);
+		m_HudSkin.m_SpriteHudLaserHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_LASER_HIT_DISABLED]);
+		m_HudSkin.m_SpriteHudGunHitDisabled = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_GUN_HIT_DISABLED]);
+		m_HudSkin.m_SpriteHudDeepFrozen = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_DEEP_FROZEN]);
+		m_HudSkin.m_SpriteHudLiveFrozen = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_LIVE_FROZEN]);
+		m_HudSkin.m_SpriteHudTeleportGrenade = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_TELEPORT_GRENADE]);
+		m_HudSkin.m_SpriteHudTeleportGun = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_TELEPORT_GUN]);
+		m_HudSkin.m_SpriteHudTeleportLaser = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_TELEPORT_LASER]);
+		m_HudSkin.m_SpriteHudPracticeMode = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_PRACTICE_MODE]);
+		m_HudSkin.m_SpriteHudLockMode = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_LOCK_MODE]);
+		m_HudSkin.m_SpriteHudTeam0Mode = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_TEAM0_MODE]);
+		m_HudSkin.m_SpriteHudDummyHammer = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_DUMMY_HAMMER]);
+		m_HudSkin.m_SpriteHudDummyCopy = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_HUD_DUMMY_COPY]);
 
 		m_HudSkinLoaded = true;
 	}
 	ImgInfo.Free();
+	FreeFallback();
 }
 
 void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
@@ -7699,7 +8254,10 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
-	if(str_comp(pPath, "default") == 0)
+	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
+	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	const bool IsBlankAsset = IsBlankAssetName(pPath);
+	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
 		str_copy(aPath, g_pData->m_aImages[IMAGE_EXTRAS].m_pFilename);
 		IsDefault = true;
@@ -7714,10 +8272,34 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 
 	CImageInfo ImgInfo;
 	bool PngLoaded = Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+	// 开关打开时 blank 直接按默认图加载（不清空、不再另解码一份回退源），结果等价且省一半解码。
+	if(IsBlankAsset && PngLoaded && g_Config.m_QmBlankAssetFallback == 0)
+		ClearImageToTransparent(ImgInfo);
+
+	// 为不可见资源准备默认图回退。回退图必须是**同一图集**的默认文件：
+	// sprite 的格坐标按各自 set 的网格换算，换成别的图集（列数不同）会取到完全不相干的区域。
+	std::optional<CImageInfo> FallbackImgInfo;
+	// 只有开关打开时才需要回退来源；关闭时（默认）不解码这张默认图集，省下它的内存与解码时间。
+	if(g_Config.m_QmBlankAssetFallback != 0 && PngLoaded && !IsDefault)
+	{
+		CImageInfo ImgDefaultInfo;
+		if(Graphics()->LoadPng(ImgDefaultInfo, g_pData->m_aImages[IMAGE_EXTRAS].m_pFilename, IStorage::TYPE_ALL))
+			FallbackImgInfo = std::move(ImgDefaultInfo);
+	}
 	const bool ValidImage = PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo);
+	// 回退图是手动管理的 CImageInfo（没有析构函数），而本函数有多条提前返回路径，
+	// 统一用这个幂等的 lambda 释放，避免漏掉某条路径造成整张解码图集泄漏。
+	auto &&FreeFallback = [&FallbackImgInfo]() {
+		if(FallbackImgInfo.has_value())
+		{
+			FallbackImgInfo.value().Free();
+			FallbackImgInfo.reset();
+		}
+	};
 	if(!ValidImage && !IsDefault)
 	{
 		ImgInfo.Free();
+		FreeFallback();
 		if(AsDir)
 			LoadExtrasSkin("default");
 		else
@@ -7727,10 +8309,10 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 	else if(ValidImage)
 	{
 		SClientExtrasSkin Candidate;
-		Candidate.m_SpriteParticleSnowflake = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE]);
-		Candidate.m_SpriteParticleSparkle = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_SPARKLE]);
-		Candidate.m_SpritePulley = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_PULLEY]);
-		Candidate.m_SpriteHectagon = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_HECTAGON]);
+		Candidate.m_SpriteParticleSnowflake = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE]);
+		Candidate.m_SpriteParticleSparkle = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_SPARKLE]);
+		Candidate.m_SpritePulley = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_PULLEY]);
+		Candidate.m_SpriteHectagon = Graphics()->LoadSpriteTexture(ImgInfo, FallbackImgInfo, &g_pData->m_aSprites[SPRITE_PART_HECTAGON]);
 		Candidate.m_aSpriteParticles[0] = Candidate.m_SpriteParticleSnowflake;
 		Candidate.m_aSpriteParticles[1] = Candidate.m_SpriteParticleSparkle;
 		Candidate.m_aSpriteParticles[2] = Candidate.m_SpritePulley;
@@ -7758,6 +8340,7 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 			else
 			{
 				ImgInfo.Free();
+				FreeFallback();
 				if(AsDir)
 					LoadExtrasSkin("default");
 				else
@@ -7769,6 +8352,7 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 	else if(!IsDefault)
 	{
 		ImgInfo.Free();
+		FreeFallback();
 		if(AsDir)
 			LoadExtrasSkin("default");
 		else
@@ -7783,6 +8367,7 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 		m_ExtrasSkinLoaded = false;
 	}
 	ImgInfo.Free();
+	FreeFallback();
 }
 
 void CGameClient::RefreshSkin(const std::shared_ptr<CManagedTeeRenderInfo> &pManagedTeeRenderInfo)
@@ -7797,17 +8382,10 @@ void CGameClient::RefreshSkin(const std::shared_ptr<CManagedTeeRenderInfo> &pMan
 	if(SkinDescriptor.m_Flags & CSkinDescriptor::FLAG_SIX)
 	{
 		const CSkin *pSkin = m_Skins.FindOrNullptr(CSkin::IsValidName(SkinDescriptor.m_aSkinName) ? SkinDescriptor.m_aSkinName : "default");
-		if(pSkin == nullptr && CSkin::IsValidName(SkinDescriptor.m_aSkinName))
+		if(pSkin == nullptr || !CTeeRenderInfo::IsDrawableTexture(pSkin->m_OriginalSkin.m_Body))
 		{
-			// 皮肤名解析不到时要区分两种情况：仍在排队/下载中（保持现状，等它加载完），
-			// 以及已确定找不到或加载失败（回退到 default 皮肤）。
-			// 回退是必需的：6.x 侧留空后，0.7 分支仍会画出 standard 部件，呈现为白 Tee。
-			// 这里用不走 RequestLoad 的只读查找，否则每帧回退都会重新请求已经失败的皮肤下载。
-			const CSkins::CSkinContainer *pSkinContainer = m_Skins.LookupContainerOrNullptr(SkinDescriptor.m_aSkinName);
-			if(pSkinContainer != nullptr && CSkins::CSkinContainer::IsUnresolved(pSkinContainer->State()))
-			{
-				pSkin = m_Skins.FindOrNullptr("default");
-			}
+			// 目标皮肤尚未加载完成或被卸载，先退回 "default"，避免把空贴图提交为可绘制皮肤。
+			pSkin = m_Skins.Find("default");
 		}
 		if(pSkin != nullptr)
 		{
@@ -7948,12 +8526,10 @@ std::shared_ptr<CManagedTeeRenderInfo> CGameClient::CreateManagedTeeRenderInfo(c
 	if(ShouldHideStreamerSkin(Client.ClientId()))
 	{
 		CTeeRenderInfo TeeRenderInfo;
-		CSkinDescriptor SkinDescriptor;
-		BuildDefaultSkinDescriptor(SkinDescriptor);
-		// 主播模式下击杀提示、聊天栏等处的 Tee 也必须是默认皮肤（黄色），而不是空皮肤的白 Tee。
-		if(!ApplyDefaultSkin(this, TeeRenderInfo))
-			TeeRenderInfo.Reset();
 		TeeRenderInfo.m_Size = Client.m_RenderInfo.m_Size;
+		CSkinDescriptor SkinDescriptor;
+		const unsigned ClientSkinDescriptorFlags = Client.ToSkinDescriptor().m_Flags;
+		BuildDefaultSkinDescriptor(SkinDescriptor, ClientSkinDescriptorFlags != 0 ? ClientSkinDescriptorFlags : CSkinDescriptor::FLAG_SIX);
 		return CreateManagedTeeRenderInfo(TeeRenderInfo, SkinDescriptor);
 	}
 
@@ -7962,10 +8538,17 @@ std::shared_ptr<CManagedTeeRenderInfo> CGameClient::CreateManagedTeeRenderInfo(c
 
 void CGameClient::UpdateManagedTeeRenderInfos()
 {
-	// 一次稳定压缩保留仍被引用的条目，避免逐个删除反复扫描和移动整个尾部。
-	std::erase_if(m_vpManagedTeeRenderInfos, [](const auto &pItem) {
-		return pItem.use_count() <= 1;
-	});
+	while(!m_vpManagedTeeRenderInfos.empty())
+	{
+		auto UnusedInfo = std::find_if(m_vpManagedTeeRenderInfos.begin(), m_vpManagedTeeRenderInfos.end(), [&](const auto &pItem) {
+			return pItem.use_count() <= 1;
+		});
+		if(UnusedInfo == m_vpManagedTeeRenderInfos.end())
+		{
+			break;
+		}
+		m_vpManagedTeeRenderInfos.erase(UnusedInfo);
+	}
 }
 
 void CGameClient::RepairStaleTeeRenderInfos()
@@ -8202,6 +8785,8 @@ void CGameClient::SnapCollectEntities()
 {
 	int NumSnapItems = Client()->SnapNumItems(IClient::SNAP_CURRENT);
 
+	// 两个容器都只 clear 不销毁：容量跨帧复用，排序与关联均在原地完成，
+	// 避免每帧为实体列表与扩展信息重新分配。
 	m_vSnapEntities.clear();
 	m_vSnapEntityExtensionsScratch.clear();
 
@@ -8685,18 +9270,22 @@ void CGameClient::SetConnectInfo(const NETADDR *pAddress)
 void CGameClient::ClearQ1menGSyncMarks()
 {
 	std::fill(std::begin(m_aQ1menGSyncMarkUntil), std::end(m_aQ1menGSyncMarkUntil), 0);
+	std::fill(std::begin(m_aQ1menGSyncFootParticlesEnabled), std::end(m_aQ1menGSyncFootParticlesEnabled), false);
+	std::fill(std::begin(m_aQ1menGSyncRemoteParticlesEnabled), std::end(m_aQ1menGSyncRemoteParticlesEnabled), false);
 	std::fill(std::begin(m_aQ1menGSyncClientBrands), std::end(m_aQ1menGSyncClientBrands), EClientBrand::NONE);
 	for(auto &aQid : m_aaQ1menGSyncQid)
 		aQid[0] = '\0';
 }
 
-void CGameClient::MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, const char *pQid, EClientBrand ClientBrand)
+void CGameClient::MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, bool FootParticlesEnabled, bool RemoteParticlesEnabled, const char *pQid, EClientBrand ClientBrand)
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 		return;
 	if(ExpireTick <= 0)
 		return;
 	m_aQ1menGSyncMarkUntil[ClientId] = maximum(m_aQ1menGSyncMarkUntil[ClientId], ExpireTick);
+	m_aQ1menGSyncFootParticlesEnabled[ClientId] = FootParticlesEnabled;
+	m_aQ1menGSyncRemoteParticlesEnabled[ClientId] = RemoteParticlesEnabled;
 	m_aQ1menGSyncClientBrands[ClientId] = ClientBrand == EClientBrand::NONE ? EClientBrand::QM : ClientBrand;
 	if(pQid && pQid[0] != '\0')
 		str_copy(m_aaQ1menGSyncQid[ClientId], pQid, sizeof(m_aaQ1menGSyncQid[ClientId]));
@@ -8718,6 +9307,14 @@ const char *CGameClient::GetQ1menGClientQid(int ClientId) const
 	if(!IsQ1menGClientRecognized(ClientId))
 		return "";
 	return m_aaQ1menGSyncQid[ClientId];
+}
+
+bool CGameClient::ShouldRenderQ1menGRemoteFootParticles(int ClientId) const
+{
+	if(!IsQ1menGClientRecognized(ClientId))
+		return false;
+
+	return m_aQ1menGSyncRemoteParticlesEnabled[ClientId] && m_aQ1menGSyncFootParticlesEnabled[ClientId];
 }
 
 void CGameClient::ClearQmVoiceSyncMarks()

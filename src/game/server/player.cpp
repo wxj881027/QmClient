@@ -12,9 +12,12 @@
 #include <engine/antibot.h>
 #include <engine/server.h>
 #include <engine/shared/config.h>
+#include <engine/shared/protocol.h>
 
 #include <game/gamecore.h>
 #include <game/teamscore.h>
+
+#include <algorithm>
 
 MACRO_ALLOC_POOL_ID_IMPL(CPlayer, MAX_CLIENTS)
 
@@ -45,6 +48,7 @@ void CPlayer::Reset()
 	m_DieTick = Server()->Tick();
 	m_PreviousDieTick = m_DieTick;
 	m_JoinTick = Server()->Tick();
+	m_DDNetVersionKickTick = Server()->Tick() + 3 * Server()->TickSpeed();
 	delete m_pCharacter;
 	m_pCharacter = nullptr;
 	SetSpectatorId(SPEC_FREEVIEW);
@@ -53,13 +57,6 @@ void CPlayer::Reset()
 	m_LastSetTeam = 0;
 	m_LastInvited = 0;
 	m_WeakHookSpawn = false;
-
-	int *pIdMap = Server()->GetIdMap(m_ClientId);
-	for(int i = 1; i < VANILLA_MAX_CLIENTS; i++)
-	{
-		pIdMap[i] = -1;
-	}
-	pIdMap[0] = m_ClientId;
 
 	// DDRace
 
@@ -87,6 +84,7 @@ void CPlayer::Reset()
 	m_FirstPacket = true;
 
 	m_SendVoteIndex = -1;
+	m_pLastSentVoteOption = nullptr;
 
 	if(g_Config.m_Events)
 	{
@@ -149,6 +147,9 @@ void CPlayer::Reset()
 	m_RescueMode = RESCUEMODE_AUTO;
 
 	m_CameraInfo.Reset();
+	UpdateNetworkClipRadius();
+	std::fill(std::begin(m_aStrongWeakId), std::end(m_aStrongWeakId), 0);
+	InvalidateClientInfo();
 }
 
 static int PlayerFlags_SixToSeven(int Flags)
@@ -184,10 +185,10 @@ void CPlayer::Tick()
 	if(m_Moderating && m_Afk)
 	{
 		m_Moderating = false;
-		GameServer()->SendChatTarget(m_ClientId, "Active moderator mode disabled because you are afk.");
+		GameServer()->SendChatTarget(m_ClientId, "由于你已挂机，主动管理员模式已关闭");
 
 		if(!GameServer()->PlayerModerating())
-			GameServer()->SendChat(-1, TEAM_ALL, "Server kick/spec votes are no longer actively moderated.");
+			GameServer()->SendChat(-1, TEAM_ALL, "服务器的踢人/旁观投票已不再由主动管理员模式接管");
 	}
 
 	// do latency stuff
@@ -216,7 +217,7 @@ void CPlayer::Tick()
 		SetInitialAfk(true);
 
 		char aBuf[512];
-		str_format(aBuf, sizeof(aBuf), "'%s' would have timed out, but can use timeout protection now", Server()->ClientName(m_ClientId));
+		str_format(aBuf, sizeof(aBuf), "'%s' 原本会超时掉线，但现在可以使用超时保护", Server()->ClientName(m_ClientId));
 		GameServer()->SendChat(-1, TEAM_ALL, aBuf);
 		Server()->ResetNetErrorString(m_ClientId);
 	}
@@ -295,6 +296,8 @@ void CPlayer::PostTick()
 	// update view pos for spectators
 	if((m_Team == TEAM_SPECTATORS || m_Paused) && m_SpectatorId != SPEC_FREEVIEW && GameServer()->m_apPlayers[m_SpectatorId] && GameServer()->m_apPlayers[m_SpectatorId]->GetCharacter())
 		m_ViewPos = GameServer()->m_apPlayers[m_SpectatorId]->GetCharacter()->m_Pos;
+
+	UpdateNetworkClipRadius();
 }
 
 void CPlayer::PostPostTick()
@@ -315,15 +318,18 @@ void CPlayer::Snap(int SnappingClient)
 	if(!Server()->Translate(TranslatedId, SnappingClient))
 		return;
 
-	CNetObj_ClientInfo ClientInfo = {};
-	StrToInts(ClientInfo.m_aName, std::size(ClientInfo.m_aName), Server()->ClientName(m_ClientId));
-	StrToInts(ClientInfo.m_aClan, std::size(ClientInfo.m_aClan), Server()->ClientClan(m_ClientId));
-	ClientInfo.m_Country = Server()->ClientCountry(m_ClientId);
-	StrToInts(ClientInfo.m_aSkin, std::size(ClientInfo.m_aSkin), m_TeeInfos.m_aSkinName);
-	ClientInfo.m_UseCustomColor = m_TeeInfos.m_UseCustomColor;
-	ClientInfo.m_ColorBody = m_TeeInfos.m_ColorBody;
-	ClientInfo.m_ColorFeet = m_TeeInfos.m_ColorFeet;
-	Server()->SnapNewItem(TranslatedId, ClientInfo);
+	if(!m_ClientInfoValid)
+	{
+		m_ClientInfoValid = true;
+		StrToInts(m_ClientInfo.m_aName, std::size(m_ClientInfo.m_aName), Server()->ClientName(m_ClientId));
+		StrToInts(m_ClientInfo.m_aClan, std::size(m_ClientInfo.m_aClan), Server()->ClientClan(m_ClientId));
+		m_ClientInfo.m_Country = Server()->ClientCountry(m_ClientId);
+		StrToInts(m_ClientInfo.m_aSkin, std::size(m_ClientInfo.m_aSkin), m_TeeInfos.m_aSkinName);
+		m_ClientInfo.m_UseCustomColor = m_TeeInfos.m_UseCustomColor;
+		m_ClientInfo.m_ColorBody = m_TeeInfos.m_ColorBody;
+		m_ClientInfo.m_ColorFeet = m_TeeInfos.m_ColorFeet;
+	}
+	Server()->SnapNewItem(TranslatedId, m_ClientInfo);
 
 	int SnappingClientVersion = GameServer()->GetClientVersion(SnappingClient);
 	int Latency = SnappingClient == SERVER_DEMO_CLIENT ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aCurLatency[m_ClientId];
@@ -360,10 +366,16 @@ void CPlayer::Snap(int SnappingClient)
 
 	if(m_ClientId == SnappingClient && (m_Team == TEAM_SPECTATORS || m_Paused))
 	{
+		int SpectatorId = m_SpectatorId;
+		if(SpectatorId >= 0 && !Server()->Translate(SpectatorId, m_ClientId))
+		{
+			SpectatorId = TranslatedId;
+		}
+
 		if(!Server()->IsSixup(SnappingClient))
 		{
 			CNetObj_SpectatorInfo SpectatorInfo = {};
-			SpectatorInfo.m_SpectatorId = m_SpectatorId;
+			SpectatorInfo.m_SpectatorId = SpectatorId;
 			SpectatorInfo.m_X = m_ViewPos.x;
 			SpectatorInfo.m_Y = m_ViewPos.y;
 			Server()->SnapNewItem(m_ClientId, SpectatorInfo);
@@ -372,7 +384,7 @@ void CPlayer::Snap(int SnappingClient)
 		{
 			protocol7::CNetObj_SpectatorInfo SpectatorInfo = {};
 			SpectatorInfo.m_SpecMode = m_SpectatorId == SPEC_FREEVIEW ? protocol7::SPEC_FREEVIEW : protocol7::SPEC_PLAYER;
-			SpectatorInfo.m_SpectatorId = m_SpectatorId;
+			SpectatorInfo.m_SpectatorId = SpectatorId;
 			SpectatorInfo.m_X = m_ViewPos.x;
 			SpectatorInfo.m_Y = m_ViewPos.y;
 			Server()->SnapNewItem(m_ClientId, SpectatorInfo);
@@ -382,7 +394,7 @@ void CPlayer::Snap(int SnappingClient)
 	if(m_ClientId == SnappingClient)
 	{
 		// send extended spectator info even when playing, this allows demo to record camera settings for local player
-		const int SpectatingClient = ((m_Team != TEAM_SPECTATORS && !m_Paused) || m_SpectatorId < 0 || m_SpectatorId >= MAX_CLIENTS) ? TranslatedId : m_SpectatorId;
+		const int SpectatingClient = ((m_Team != TEAM_SPECTATORS && !m_Paused) || m_SpectatorId < 0 || m_SpectatorId >= MAX_CLIENTS) ? m_ClientId : m_SpectatorId;
 		const CPlayer *pSpecPlayer = GameServer()->m_apPlayers[SpectatingClient];
 
 		if(pSpecPlayer)
@@ -393,26 +405,26 @@ void CPlayer::Snap(int SnappingClient)
 			DDNetSpectatorInfo.m_Deadzone = pSpecPlayer->m_CameraInfo.m_Deadzone;
 			DDNetSpectatorInfo.m_FollowFactor = pSpecPlayer->m_CameraInfo.m_FollowFactor;
 
-			if(pSpecPlayer->m_EnableSpectatorCount && SpectatingClient == TranslatedId && SnappingClient != SERVER_DEMO_CLIENT && m_Team != TEAM_SPECTATORS && !m_Paused)
+			if(pSpecPlayer->m_EnableSpectatorCount && SpectatingClient == m_ClientId && SnappingClient != SERVER_DEMO_CLIENT && m_Team != TEAM_SPECTATORS && !m_Paused)
 			{
 				CNetObj_SpectatorCount SpectatorCountObj = {};
 				int SpectatorCount = 0;
 				for(auto &pPlayer : GameServer()->m_apPlayers)
 				{
-					if(!pPlayer || !pPlayer->m_EnableSpectatorCount || pPlayer->m_ClientId == TranslatedId || pPlayer->m_Afk ||
+					if(!pPlayer || !pPlayer->m_EnableSpectatorCount || pPlayer->m_ClientId == m_ClientId || pPlayer->m_Afk ||
 						(Server()->IsRconAuthed(pPlayer->m_ClientId) && Server()->HasAuthHidden(pPlayer->m_ClientId)) ||
 						!(pPlayer->m_Paused || pPlayer->m_Team == TEAM_SPECTATORS))
 					{
 						continue;
 					}
 
-					if(pPlayer->m_SpectatorId == TranslatedId)
+					if(pPlayer->m_SpectatorId == m_ClientId)
 					{
 						SpectatorCount++;
 					}
-					else if(GameServer()->m_apPlayers[TranslatedId]->GetCharacter())
+					else if(GameServer()->m_apPlayers[m_ClientId]->GetCharacter())
 					{
-						vec2 CheckPos = GameServer()->m_apPlayers[TranslatedId]->GetCharacter()->GetPos();
+						vec2 CheckPos = GameServer()->m_apPlayers[m_ClientId]->GetCharacter()->GetPos();
 						float dx = pPlayer->m_ViewPos.x - CheckPos.x;
 						float dy = pPlayer->m_ViewPos.y - CheckPos.y;
 						if(absolute(dx) < (pPlayer->m_ShowDistance.x / 2.5f) && absolute(dy) < (pPlayer->m_ShowDistance.y / 2.3f))
@@ -423,7 +435,7 @@ void CPlayer::Snap(int SnappingClient)
 				SpectatorCountObj.m_NumSpectators = SpectatorCount;
 				Server()->SnapNewItem(0, SpectatorCountObj);
 			}
-			Server()->SnapNewItem(TranslatedId, DDNetSpectatorInfo);
+			Server()->SnapNewItem(m_ClientId, DDNetSpectatorInfo);
 		}
 	}
 
@@ -474,21 +486,60 @@ void CPlayer::Snap(int SnappingClient)
 void CPlayer::FakeSnap()
 {
 	m_SentSnaps++;
-	if(GetClientVersion() >= VERSION_DDNET_OLD)
+	if(Server()->ClientSupportsServerMaxClients(m_ClientId))
 		return;
+
+	// see others in spec
+	int SeeOthersId = GameServer()->m_PlayerMapping.SeeOthersId(m_ClientId);
 
 	if(Server()->IsSixup(m_ClientId))
+	{
+		if(GameServer()->m_PlayerMapping.TotalOverhang(m_ClientId))
+		{
+			protocol7::CNetObj_PlayerInfo PlayerInfo = {};
+			PlayerInfo.m_PlayerFlags = 0;
+			PlayerInfo.m_Score = FinishTime::NOT_FINISHED_TIMESCORE;
+			PlayerInfo.m_Latency = 0;
+			Server()->SnapNewItem(SeeOthersId, PlayerInfo);
+		}
+
+		// nothing more to process in fake snap for 0.7
 		return;
+	}
 
-	int FakeId = VANILLA_MAX_CLIENTS - 1;
+	// See Others。为了更好的 0.6 mod 兼容性：队伍玩法下玩家不可用时，
+	// 连 TEAM_BLUE 记分板上的假玩家也隐藏。
+	const bool SeeOthersAvailable = (m_Paused != PAUSE_NONE || m_Team == TEAM_SPECTATORS || (m_PlayerFlags & PLAYERFLAG_IN_MENU));
+	const bool ShowSeeOthersPlayer = !GameServer()->m_pController->IsTeamPlay() || SeeOthersAvailable;
+	if(GameServer()->m_PlayerMapping.TotalOverhang(m_ClientId) && ShowSeeOthersPlayer)
+	{
+		CNetObj_ClientInfo ClientInfo = {};
+		StrToInts(ClientInfo.m_aName, std::size(ClientInfo.m_aName), GameServer()->m_PlayerMapping.SeeOthersName(m_ClientId));
+		StrToInts(ClientInfo.m_aClan, std::size(ClientInfo.m_aClan), "");
+		StrToInts(ClientInfo.m_aSkin, std::size(ClientInfo.m_aSkin), "default");
+		ClientInfo.m_UseCustomColor = 1;
+		ClientInfo.m_ColorBody = ClientInfo.m_ColorFeet = 6618880;
+		Server()->SnapNewItem(SeeOthersId, ClientInfo);
 
+		CNetObj_PlayerInfo PlayerInfo = {};
+		PlayerInfo.m_Latency = 0;
+		PlayerInfo.m_Local = 0;
+		PlayerInfo.m_ClientId = SeeOthersId;
+		PlayerInfo.m_Score = FinishTime::NOT_FINISHED_TIMESCORE;
+		PlayerInfo.m_Team = TEAM_BLUE; // TEAM_BLUE 用来从 ddrace 记分板隐藏
+		Server()->SnapNewItem(SeeOthersId, PlayerInfo);
+	}
+
+	// 空名假玩家，用于未翻译客户端的聊天消息
+	int FakeId = Server()->GetMaxClients(m_ClientId) - 1;
 	CNetObj_ClientInfo ClientInfo = {};
 	StrToInts(ClientInfo.m_aName, std::size(ClientInfo.m_aName), " ");
 	StrToInts(ClientInfo.m_aClan, std::size(ClientInfo.m_aClan), "");
 	StrToInts(ClientInfo.m_aSkin, std::size(ClientInfo.m_aSkin), "default");
 	Server()->SnapNewItem(FakeId, ClientInfo);
 
-	if(m_Paused != PAUSE_PAUSED)
+	// 官方 60d9886cf/31a6120f4：旧 0.6 客户端需要本地对象才能进入暂停视图
+	if(GetClientVersion() >= VERSION_DDNET_OLD || m_Paused != PAUSE_PAUSED)
 		return;
 
 	CNetObj_PlayerInfo PlayerInfo = {};
@@ -499,11 +550,58 @@ void CPlayer::FakeSnap()
 	PlayerInfo.m_Team = TEAM_SPECTATORS;
 	Server()->SnapNewItem(FakeId, PlayerInfo);
 
+	int SpectatorId = m_SpectatorId;
+	if(SpectatorId >= 0 && !Server()->Translate(SpectatorId, m_ClientId))
+	{
+		SpectatorId = FakeId;
+	}
+
 	CNetObj_SpectatorInfo SpectatorInfo = {};
-	SpectatorInfo.m_SpectatorId = m_SpectatorId;
+	SpectatorInfo.m_SpectatorId = SpectatorId;
 	SpectatorInfo.m_X = m_ViewPos.x;
 	SpectatorInfo.m_Y = m_ViewPos.y;
 	Server()->SnapNewItem(FakeId, SpectatorInfo);
+}
+
+void CPlayer::SendConnect(int FakeId, int ClientId)
+{
+	if(!Server()->IsSixup(m_ClientId))
+		return;
+
+	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
+	if(!pPlayer)
+		return;
+
+	protocol7::CNetMsg_Sv_ClientInfo NewClientInfoMsg;
+	NewClientInfoMsg.m_ClientId = FakeId;
+	NewClientInfoMsg.m_Local = ClientId == m_ClientId;
+	NewClientInfoMsg.m_Team = pPlayer->GetTeam();
+	NewClientInfoMsg.m_pName = Server()->ClientName(ClientId);
+	NewClientInfoMsg.m_pClan = Server()->ClientClan(ClientId);
+	NewClientInfoMsg.m_Country = Server()->ClientCountry(ClientId);
+	NewClientInfoMsg.m_Silent = 1;
+
+	for(int p = 0; p < protocol7::NUM_SKINPARTS; p++)
+	{
+		NewClientInfoMsg.m_apSkinPartNames[p] = pPlayer->m_TeeInfos.m_aaSkinPartNames[p];
+		NewClientInfoMsg.m_aUseCustomColors[p] = pPlayer->m_TeeInfos.m_aUseCustomColors[p];
+		NewClientInfoMsg.m_aSkinPartColors[p] = pPlayer->m_TeeInfos.m_aSkinPartColors[p];
+	}
+
+	Server()->SendPackMsg(&NewClientInfoMsg, MSGFLAG_VITAL | MSGFLAG_NORECORD | MSGFLAG_NOTRANSLATE, m_ClientId);
+}
+
+void CPlayer::SendDisconnect(int FakeId)
+{
+	if(!Server()->IsSixup(m_ClientId))
+		return;
+
+	protocol7::CNetMsg_Sv_ClientDrop ClientDropMsg;
+	ClientDropMsg.m_ClientId = FakeId;
+	ClientDropMsg.m_pReason = "";
+	ClientDropMsg.m_Silent = 1;
+
+	Server()->SendPackMsg(&ClientDropMsg, MSGFLAG_VITAL | MSGFLAG_NORECORD | MSGFLAG_NOTRANSLATE, m_ClientId);
 }
 
 void CPlayer::OnDisconnect()
@@ -779,7 +877,7 @@ void CPlayer::ProcessPause()
 	if(m_ForcePauseTime && m_ForcePauseTime < Server()->Tick())
 	{
 		m_ForcePauseTime = 0;
-		GameServer()->SendChatTarget(m_ClientId, "The force pause timer is now over, you can exit with /spec");
+		GameServer()->SendChatTarget(m_ClientId, "强制暂停计时已结束，你现在可以用 /spec 退出");
 	}
 
 	if(m_Paused == PAUSE_SPEC && !m_pCharacter->IsPaused() && CanSpec())
@@ -810,7 +908,7 @@ int CPlayer::Pause(int State, bool Force)
 			{
 				if(!Force && m_LastPause && m_LastPause + (int64_t)g_Config.m_SvSpecFrequency * Server()->TickSpeed() > Server()->Tick())
 				{
-					GameServer()->SendChatTarget(m_ClientId, "Can't /spec that quickly.");
+					GameServer()->SendChatTarget(m_ClientId, "你不能这么快再次 /spec。");
 					return m_Paused; // Do not update state. Do not collect $200
 				}
 				m_pCharacter->Pause(false);
@@ -821,7 +919,7 @@ int CPlayer::Pause(int State, bool Force)
 		case PAUSE_SPEC:
 			if(g_Config.m_SvPauseMessages)
 			{
-				str_format(aBuf, sizeof(aBuf), (State > PAUSE_NONE) ? "'%s' speced" : "'%s' resumed", Server()->ClientName(m_ClientId));
+				str_format(aBuf, sizeof(aBuf), (State > PAUSE_NONE) ? "'%s' 已旁观" : "'%s' 已恢复", Server()->ClientName(m_ClientId));
 				GameServer()->SendChat(-1, TEAM_ALL, aBuf);
 			}
 			break;
@@ -839,6 +937,11 @@ int CPlayer::Pause(int State, bool Force)
 		Msg.m_Team = m_Paused ? protocol7::TEAM_SPECTATORS : m_Team;
 
 		GameServer()->Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, m_ClientId);
+
+		if(m_Paused == PAUSE_NONE)
+		{
+			GameServer()->m_PlayerMapping.ResetSeeOthers(m_ClientId);
+		}
 	}
 
 	return m_Paused;
@@ -851,7 +954,7 @@ int CPlayer::ForcePause(int Time)
 	if(g_Config.m_SvPauseMessages)
 	{
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "'%s' was force-paused for %ds", Server()->ClientName(m_ClientId), Time);
+		str_format(aBuf, sizeof(aBuf), "'%s' 被强制暂停 %d 秒", Server()->ClientName(m_ClientId), Time);
 		GameServer()->SendChat(-1, TEAM_ALL, aBuf);
 	}
 
@@ -880,6 +983,7 @@ void CPlayer::SpectatePlayerName(const char *pName)
 void CPlayer::SetSpectatorId(int Id)
 {
 	m_SpectatorId = Id;
+	GameServer()->m_PlayerMapping.ResetSeeOthers(m_ClientId);
 }
 
 void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
@@ -904,7 +1008,7 @@ void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
 				if(aMessage[0] == 0)
 					break;
 
-				if(GameServer()->ProcessSpamProtection(m_ClientId) && PrimaryMessage)
+				if(PrimaryMessage && GameServer()->ProcessSpamProtection(m_ClientId))
 					break;
 
 				GameServer()->SendChat(-1, TEAM_ALL, aMessage, -1);
@@ -926,7 +1030,7 @@ void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
 				Result.m_Data.m_MapVote.m_aServer, Result.m_Data.m_MapVote.m_aMap);
 
 			char aChatmsg[512];
-			str_format(aChatmsg, sizeof(aChatmsg), "'%s' called vote to change server option '%s' (%s)",
+			str_format(aChatmsg, sizeof(aChatmsg), "'%s' 发起了修改服务器选项 '%s' 的投票（%s）",
 				Server()->ClientName(m_ClientId), Result.m_Data.m_MapVote.m_aMap, "/map");
 
 			GameServer()->CallVote(m_ClientId, Result.m_Data.m_MapVote.m_aMap, aCmd, "/map", aChatmsg);
@@ -950,12 +1054,12 @@ void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
 			{
 				char aBuf[512];
 				str_format(aBuf, sizeof(aBuf),
-					"Happy DDNet birthday to %s for finishing their first map %d year%s ago!",
-					Server()->ClientName(m_ClientId), Birthday, Birthday > 1 ? "s" : "");
+					"祝 %s 在 DDNet 生日快乐！%d 年前你完成了第一张地图！",
+					Server()->ClientName(m_ClientId), Birthday);
 				GameServer()->SendChat(-1, TEAM_ALL, aBuf, m_ClientId);
 				str_format(aBuf, sizeof(aBuf),
-					"Happy DDNet birthday, %s!\nYou have finished your first map exactly %d year%s ago!",
-					Server()->ClientName(m_ClientId), Birthday, Birthday > 1 ? "s" : "");
+					"祝 %s 在 DDNet 生日快乐！\n你正好在 %d 年前完成了第一张地图！",
+					Server()->ClientName(m_ClientId), Birthday);
 				GameServer()->SendBroadcast(aBuf, m_ClientId);
 				m_BirthdayAnnounced = true;
 
@@ -968,7 +1072,7 @@ void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
 			GameServer()->Score()->PlayerData(m_ClientId)->SetBestTimeCp(Result.m_Data.m_Info.m_aTimeCp);
 			char aBuf[128], aTime[32];
 			str_time_float(Result.m_Data.m_Info.m_Time.value(), TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
-			str_format(aBuf, sizeof(aBuf), "Showing the checkpoint times for '%s' with a race time of %s", Result.m_Data.m_Info.m_aRequestedPlayer, aTime);
+			str_format(aBuf, sizeof(aBuf), "正在显示 '%s' 的检查点用时，当前成绩为 %s", Result.m_Data.m_Info.m_aRequestedPlayer, aTime);
 			GameServer()->SendChatTarget(m_ClientId, aBuf);
 			break;
 		}
@@ -989,12 +1093,38 @@ vec2 CPlayer::CCameraInfo::ConvertTargetToWorld(vec2 Position, vec2 Target) cons
 	return Position + (Target - TargetCameraOffset) * m_Zoom + TargetCameraOffset;
 }
 
+void CPlayer::UpdateNetworkClipRadius()
+{
+	// Keep the full show distance as radius while not viewing the own character, it covers the camera
+	// offset the client applies when spectating and must not depend on the spectated client's values
+	const CCharacter *pChr = GetCharacter();
+	if(!m_CameraInfo.m_HasCameraInfo || !pChr || m_Paused)
+	{
+		m_NetworkClipRadius = m_ShowDistance;
+		return;
+	}
+
+	// With the dynamic camera the client camera is offset from the view position towards the cursor,
+	// this mirrors the offset computation of the client, see CCamera::UpdateCamera.
+	// The aim target is not validated, so it's limited to the maximum distance a client can aim at.
+	const float TargetDistance = std::min(length(vec2(pChr->Core()->m_Input.m_TargetX, pChr->Core()->m_Input.m_TargetY)), 2000.0f); // cl_dyncam_max_distance
+	const float DyncamOffset = std::max(TargetDistance - m_CameraInfo.m_Deadzone, 0.0f) * (m_CameraInfo.m_FollowFactor / 100.0f);
+
+	// Border of 10 blocks outside of view range so that no entities randomly appear even with high latency.
+	// ShowDistance / 2 because it's the radius. This heavily decreases bandwidth on some maps and was likely a bug
+	// or misunderstanding introduced by whoever added showdistance. Now it's like this since forever and was noticed because
+	// the playermapping algorithm depends on the NetworkClipped function to determine when to add a new tee.
+	const float Border = 32.f * 10.f;
+	m_NetworkClipRadius = m_ShowDistance / 2.f + vec2(Border + DyncamOffset, Border + DyncamOffset);
+}
+
 void CPlayer::CCameraInfo::Write(const CNetMsg_Cl_CameraInfo *Msg)
 {
+	// Clamp to the ranges a client can configure, these values also affect other clients spectating this player
 	m_HasCameraInfo = true;
 	m_Zoom = Msg->m_Zoom / 1000.0f;
-	m_Deadzone = Msg->m_Deadzone;
-	m_FollowFactor = Msg->m_FollowFactor;
+	m_Deadzone = std::clamp(Msg->m_Deadzone, 0, 3000); // cl_mouse_deadzone, cl_dyncam_deadzone
+	m_FollowFactor = std::clamp(Msg->m_FollowFactor, 0, 200); // cl_mouse_followfactor, cl_dyncam_follow_factor
 }
 
 void CPlayer::CCameraInfo::Reset()

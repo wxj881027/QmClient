@@ -5,6 +5,7 @@
 #include <base/types.h>
 
 #include <engine/engine.h>
+#include <engine/http.h>
 #include <engine/kernel.h>
 #include <engine/server/databases/connection.h>
 #include <engine/server/databases/connection_pool.h>
@@ -25,8 +26,10 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <memory>
 #include <thread>
+#include <vector>
 
 bool IsInterrupted()
 {
@@ -47,6 +50,7 @@ public:
 	std::unique_ptr<IKernel> m_pKernel;
 	CTestInfo m_TestInfo;
 	std::unique_ptr<IStorage> m_pStorage;
+	IEngineHttp *m_pEngineHttp = nullptr;
 
 	CGameContext *GameServer()
 	{
@@ -60,6 +64,9 @@ public:
 
 		m_pKernel = std::unique_ptr<IKernel>(IKernel::Create());
 		m_pKernel->RegisterInterface(m_pServer);
+		m_pEngineHttp = CreateEngineHttp();
+		m_pKernel->RegisterInterface(m_pEngineHttp);
+		m_pKernel->RegisterInterface(static_cast<IHttp *>(m_pEngineHttp), false);
 
 		IEngine *pEngine = CreateTestEngine(GAME_NAME);
 		m_pKernel->RegisterInterface(pEngine);
@@ -109,7 +116,7 @@ public:
 		m_pServer->m_pPersistentData = malloc(GameServer()->PersistentDataSize());
 		EXPECT_NE(m_pServer->LoadMap("coverage"), 0);
 
-		EXPECT_TRUE(pServer->m_Http.Init(std::chrono::seconds{2})) << "Failed to initialize the HTTP client";
+		EXPECT_TRUE(m_pEngineHttp->Init(std::chrono::seconds{2})) << "Failed to initialize the HTTP client";
 
 		pServer->m_NetServer.SetCallbacks(
 			CServer::NewClientCallback,
@@ -130,6 +137,7 @@ public:
 	{
 		m_pServer->m_Econ.Shutdown();
 		m_pServer->m_Fifo.Shutdown();
+		m_pEngineHttp->Shutdown();
 		m_pGameServer->OnShutdown(nullptr);
 		m_pServer->m_pMap->Unload();
 		m_pServer->DbPool()->OnShutdown();
@@ -306,4 +314,31 @@ TEST_F(CTestGameWorld, CharacterEmote)
 	// /emote angry 3 chat command and frozen
 	pChr->Freeze(10);
 	ASSERT_EQ(pChr->DetermineEyeEmote(), EMOTE_ANGRY);
+}
+
+TEST_F(CTestGameWorld, CharacterHandlesEmptySnapshotIdPool)
+{
+	std::vector<int> vIds;
+	while(const std::optional<int> Id = m_pServer->SnapNewId())
+	{
+		vIds.push_back(*Id);
+	}
+
+	CNetObj_PlayerInput Input = {};
+	CCharacter Character(&GameServer()->m_World, Input);
+
+	for(const int Id : vIds)
+	{
+		m_pServer->SnapFreeId(Id);
+	}
+}
+
+TEST(Tunings, OutOfRangeBecomesIntMin)
+{
+	const float IntMin = std::numeric_limits<int>::min() / 100.0f;
+	CTuneParam Param;
+	EXPECT_EQ((float)(Param = 555555555555555.0f), IntMin);
+	EXPECT_EQ((float)(Param = -555555555555555.0f), IntMin);
+	EXPECT_EQ((float)(Param = std::numeric_limits<float>::quiet_NaN()), IntMin);
+	EXPECT_EQ((float)(Param = 0.5f), 0.5f);
 }

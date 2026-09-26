@@ -76,6 +76,21 @@ public:
 	static void UpdateLinePresentation(SPresentationState &Presentation, int64_t LineTime, int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ForceVisible, int64_t LargeAreaOpenTick, float RecallDelaySeconds, bool ExtraAnimations = true);
 	static float SmoothPresentationY(float CurrentY, float TargetY, float DeltaSeconds);
 	static bool CanMergePlayerMessages(int PreviousClientId, int PreviousTeam, const char *pPreviousText, int64_t PreviousTime, int ClientId, int Team, const char *pText, int64_t Now);
+	// echo 合并的窗口判定：上一次同文本 echo 发生在 LastTime，当前时间为 Now，
+	// 窗口为 WindowMs 毫秒（0 表示关闭合并）。时间倒流或超出窗口都返回 false。
+	static bool EchoRepeatWithinWindow(int64_t Now, int64_t LastTime, int WindowMs);
+	static bool IsSensitiveChatCommand(const char *pLine)
+	{
+		if(pLine == nullptr)
+			return false;
+
+		const char *pCommand = str_utf8_skip_whitespaces(pLine);
+		const char *pArguments = str_startswith_nocase(pCommand, "/login");
+		if(pArguments == nullptr || pArguments == str_utf8_skip_whitespaces(pArguments))
+			return false;
+
+		return *str_utf8_skip_whitespaces(pArguments) != '\0';
+	}
 
 private:
 	static constexpr float CHAT_HEIGHT_FULL = 200.0f;
@@ -141,15 +156,19 @@ private:
 		std::vector<CQmTitleTextMetrics> m_vTitleTextMetrics;
 
 		std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;
+
+		// 聊天导出的身份与头像快照：在收到消息时固化，导出时不再按当前名字反查皮肤。
 		std::shared_ptr<const QmChatExport::SMetadata> m_pExportMetadata;
 
 		float m_TextYOffset;
-		// 记录用于当前高度缓存的头衔浮动留白，配置变化后重新测量。
 		float m_QmTitleBobPadding = 0.0f;
 		// 当前消息实际占用的水平宽度，用于鼠标命中和选中高亮。
 		float m_ContentWidth;
 		float m_CutOffProgress;
 		SPresentationState m_Presentation;
+		int m_DiagnosticPresentationState;
+		bool m_DiagnosticCollapsedSkipLogged;
+		bool m_DiagnosticInvalidTextLogged;
 
 		int m_TimesRepeated;
 
@@ -283,6 +302,9 @@ private:
 	void StoreSave(const char *pText);
 	void SaveChatLogLine(int ClientId, int Team, const char *pLine);
 	void PrintBlockedMessageToConsole(int ClientId, int Team, const char *pLine, int SourceConnection);
+	const CCommand *FindServerCommand(const char *pName) const;
+	// 斜杠指令用法提示：/xxx 下方显示的一行小字说明
+	bool BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufSize) const;
 	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
 	int CountInitializedLines() const;
 	int CountVisibleLinesFrom(int BacklogLine) const;
@@ -298,13 +320,11 @@ private:
 	{
 		bool m_IsPressed = false;
 		bool m_RectValid = false;
-		bool m_IconUiElementInit = false;
 		float m_X = 0.0f;
 		float m_Y = 0.0f;
 		float m_W = 0.0f;
 		float m_H = 0.0f;
 		bool m_AutoTranslateEnabled = false;
-		CUIElement m_IconUiElement;
 	};
 	STranslateButtonState m_TranslateButton;
 
@@ -650,11 +670,23 @@ inline bool CChat::CanMergePlayerMessages(int PreviousClientId, int PreviousTeam
 {
 	if(PreviousClientId < 0 || ClientId < 0 || PreviousTeam >= TEAM_WHISPER_SEND || Team >= TEAM_WHISPER_SEND)
 		return false;
+	if(PreviousTeam != Team)
+		return false;
 	if(pPreviousText == nullptr || pText == nullptr || str_comp(pPreviousText, pText) != 0)
 		return false;
 	if(Now < PreviousTime)
 		return false;
 	return Now - PreviousTime <= time_freq() * 2;
+}
+
+inline bool CChat::EchoRepeatWithinWindow(int64_t Now, int64_t LastTime, int WindowMs)
+{
+	if(WindowMs <= 0)
+		return false;
+	if(Now < LastTime)
+		return false;
+	// 时间戳单位是 time_freq() 计数，比较前先把毫秒窗口换算成同一单位。
+	return Now - LastTime <= time_freq() * WindowMs / 1000;
 }
 
 inline void CChat::ResetPresentationState(SPresentationState &Presentation)

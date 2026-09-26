@@ -190,10 +190,12 @@ void CGraph::RenderDataLines(IGraphics *pGraphics, float x, float y, float w, fl
 		{
 			pGraphics->LinesBatchEnd(&LineItemBatch);
 			pGraphics->LinesBatchBegin(&LineItemBatch);
-
+			// 与远程一致：改用逐角点提交。语义与 SetColor2(entry0, entry1) 相同
+			// （槽 0 = entry0、槽 1 = entry1），只是不再依赖 SetColor2 的 LINES 专用断言。
 			const IGraphics::CColorVertex aColorVertices[] = {
-				IGraphics::CColorVertex(0, pEntry0->m_Color.r, pEntry0->m_Color.g, pEntry0->m_Color.b, pEntry0->m_Color.a),
-				IGraphics::CColorVertex(1, pEntry1->m_Color.r, pEntry1->m_Color.g, pEntry1->m_Color.b, pEntry1->m_Color.a)};
+				IGraphics::CColorVertex(0, pEntry0->m_Color),
+				IGraphics::CColorVertex(1, pEntry1->m_Color),
+			};
 			pGraphics->SetColorVertex(aColorVertices, std::size(aColorVertices));
 		}
 		const IGraphics::CLineItem Item = IGraphics::CLineItem(

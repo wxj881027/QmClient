@@ -81,6 +81,15 @@ class SourceKeysTest(unittest.TestCase):
             },
         )
 
+    def test_extracts_tipped_checkbox_labels_for_runtime_generation(self):
+        path = Path("src/game/client/components/qmclient/menus_qmclient.cpp")
+        labels = ("Show tune zone colors", "Blank asset auto fallback")
+        for label in labels:
+            with self.subTest(label=label):
+                content = f'RenderCheckboxTipped(&Config, "{label}", Localize("Help text"), &Config);'
+                records = source_keys.extract_known_indirect_records(path, content)
+                self.assertEqual({record.key for record in records}, {label})
+
     def test_extracts_tclient_dynamic_card_titles(self):
         path = Path("src/game/client/components/tclient/menus_tclient.cpp")
         content = "\n".join(

@@ -20,6 +20,7 @@ class NeteasePackageContractTest(unittest.TestCase):
             "qm-nmt-hook64",
             "qm-nmt-bootstrap",
             "qm-soda-helper",
+            "qm-music-helper",
         ):
             with self.subTest(target=target):
                 self.assertIn(target, package_targets)

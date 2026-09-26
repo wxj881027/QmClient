@@ -15,10 +15,10 @@
 #include <engine/friends.h>
 #include <engine/ghost.h>
 #include <engine/graphics.h>
+#include <engine/http.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
-#include <engine/shared/http.h>
 #include <engine/shared/json.h>
 #include <engine/shared/localization.h>
 #include <engine/storage.h>
@@ -52,9 +52,103 @@ using namespace std::chrono_literals;
 
 namespace
 {
+	constexpr const char *REPORT_SCAN_PATH = "/v1/scan";
+	constexpr const char *REPORT_CONTENT_TYPE = "application/json; charset=utf-8";
+
 	void LogIngamePerfStage(IClient *pClient, const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
 	{
 		QmPerfLogStage("perf/menu", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
+	}
+
+	void HmacSha256Hex(const char *pSecret, const char *pMessage, char *pBuffer, int BufferSize)
+	{
+		const unsigned char *pSecretBytes = reinterpret_cast<const unsigned char *>(pSecret);
+		size_t SecretLength = str_length(pSecret);
+		unsigned char aKeyBlock[64] = {0};
+
+		if(SecretLength > sizeof(aKeyBlock))
+		{
+			const SHA256_DIGEST SecretDigest = sha256(pSecretBytes, SecretLength);
+			mem_copy(aKeyBlock, SecretDigest.data, sizeof(SecretDigest.data));
+		}
+		else
+		{
+			mem_copy(aKeyBlock, pSecretBytes, SecretLength);
+		}
+
+		unsigned char aOuterPad[64];
+		unsigned char aInnerPad[64];
+		for(size_t KeyIndex = 0; KeyIndex < sizeof(aKeyBlock); ++KeyIndex)
+		{
+			aOuterPad[KeyIndex] = aKeyBlock[KeyIndex] ^ 0x5c;
+			aInnerPad[KeyIndex] = aKeyBlock[KeyIndex] ^ 0x36;
+		}
+
+		SHA256_CTX InnerContext;
+		sha256_init(&InnerContext);
+		sha256_update(&InnerContext, aInnerPad, sizeof(aInnerPad));
+		sha256_update(&InnerContext, pMessage, str_length(pMessage));
+		const SHA256_DIGEST InnerDigest = sha256_finish(&InnerContext);
+
+		SHA256_CTX OuterContext;
+		sha256_init(&OuterContext);
+		sha256_update(&OuterContext, aOuterPad, sizeof(aOuterPad));
+		sha256_update(&OuterContext, InnerDigest.data, sizeof(InnerDigest.data));
+		const SHA256_DIGEST Digest = sha256_finish(&OuterContext);
+		sha256_str(Digest, pBuffer, BufferSize);
+	}
+
+	void BuildReportUrl(const char *pPath, char *pBuffer, int BufferSize)
+	{
+		str_copy(pBuffer, g_Config.m_QmReportEndpoint, BufferSize);
+		while(pBuffer[0] != '\0' && pBuffer[str_length(pBuffer) - 1] == '/')
+			pBuffer[str_length(pBuffer) - 1] = '\0';
+		str_append(pBuffer, pPath, BufferSize);
+	}
+
+	bool AddReportHeaders(IHttpRequest *pRequest, const char *pPath, const char *pBody)
+	{
+		if(g_Config.m_QmReportAppId[0] == '\0' || g_Config.m_QmReportSecret[0] == '\0')
+			return false;
+
+		char aTimestamp[32];
+		str_format(aTimestamp, sizeof(aTimestamp), "%" PRId64, time_timestamp());
+
+		char aNonce[33];
+		secure_random_password(aNonce, sizeof(aNonce), 32);
+
+		const SHA256_DIGEST BodyDigest = sha256(pBody, str_length(pBody));
+		char aBodySha256[SHA256_MAXSTRSIZE];
+		sha256_str(BodyDigest, aBodySha256, sizeof(aBodySha256));
+
+		char aMessage[1024];
+		str_format(aMessage, sizeof(aMessage), "POST\n%s\n%s\n%s\n%s", pPath, aTimestamp, aNonce, aBodySha256);
+
+		char aSignature[SHA256_MAXSTRSIZE];
+		HmacSha256Hex(g_Config.m_QmReportSecret, aMessage, aSignature, sizeof(aSignature));
+
+		pRequest->HeaderString("Content-Type", REPORT_CONTENT_TYPE);
+		pRequest->HeaderString("X-Adrastia-App-Id", g_Config.m_QmReportAppId);
+		pRequest->HeaderString("X-Adrastia-Timestamp", aTimestamp);
+		pRequest->HeaderString("X-Adrastia-Nonce", aNonce);
+		pRequest->HeaderString("X-Adrastia-Signature", aSignature);
+		return true;
+	}
+
+	std::shared_ptr<IHttpRequest> CreateReportRequest(const char *pPath, const char *pBody)
+	{
+		char aUrl[256];
+		BuildReportUrl(pPath, aUrl, sizeof(aUrl));
+
+		std::shared_ptr<IHttpRequest> pRequest = HttpGet(aUrl);
+		pRequest->AllowInsecureProtocol();
+		pRequest->LogProgress(HTTPLOG::FAILURE);
+		pRequest->FailOnErrorStatus(false);
+		pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
+		if(!AddReportHeaders(pRequest.get(), pPath, pBody))
+			return nullptr;
+		pRequest->Post(reinterpret_cast<const unsigned char *>(pBody), str_length(pBody));
+		return pRequest;
 	}
 
 	struct SUnfinishedMapsQuery
@@ -67,7 +161,7 @@ namespace
 			FAILED,
 		};
 
-		std::shared_ptr<CHttpRequest> m_pRequest;
+		std::shared_ptr<IHttpRequest> m_pRequest;
 		std::unordered_map<std::string, std::vector<std::string>> m_UnfinishedByType;
 		EState m_State = EState::IDLE;
 
@@ -98,7 +192,7 @@ namespace
 			char aUrl[512];
 			str_format(aUrl, sizeof(aUrl), "https://ddnet.org/players/?json2=%s", aEncodedName);
 
-			auto pRequest = std::make_shared<CHttpRequest>(aUrl);
+			std::shared_ptr<IHttpRequest> pRequest = HttpGet(aUrl);
 			pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
 			pRequest->LogProgress(HTTPLOG::FAILURE);
 			pRequest->FailOnErrorStatus(false);
@@ -233,8 +327,96 @@ namespace
 	}
 } // namespace
 
+void CMenus::ResetReportScan()
+{
+	if(m_pReportScanRequest)
+		m_pReportScanRequest->Abort();
+	m_pReportScanRequest.reset();
+	m_ReportScanState = EReportScanState::IDLE;
+	m_aReportScanAddress[0] = '\0';
+}
+
+void CMenus::StartReportScan()
+{
+	if(m_ReportScanState != EReportScanState::IDLE)
+	{
+		GameClient()->Echo(Localize("Report request is already in progress"));
+		return;
+	}
+	if(Client()->State() != IClient::STATE_ONLINE)
+	{
+		GameClient()->Echo(Localize("Connect to a server first"));
+		return;
+	}
+	if(GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity())
+	{
+		GameClient()->Echo(Localize("Reports are not available on Axiom servers"));
+		return;
+	}
+	if(g_Config.m_QmReportAppId[0] == '\0' || g_Config.m_QmReportSecret[0] == '\0')
+	{
+		GameClient()->Echo(Localize("Configure qm_report_app_id and qm_report_secret first"));
+		return;
+	}
+
+	const NETADDR *pServerAddr = Client()->ServerAddress();
+	if(pServerAddr)
+		net_addr_str(pServerAddr, m_aReportScanAddress, sizeof(m_aReportScanAddress), true);
+	if(m_aReportScanAddress[0] == '\0')
+	{
+		GameClient()->Echo(Localize("Could not get current server address"));
+		return;
+	}
+
+	char aEscapedAddress[NETADDR_MAXSTRSIZE * 2];
+	EscapeJson(aEscapedAddress, sizeof(aEscapedAddress), m_aReportScanAddress);
+
+	char aBody[256];
+	str_format(aBody, sizeof(aBody), "{\"address\":\"%s\"}", aEscapedAddress);
+
+	m_pReportScanRequest = CreateReportRequest(REPORT_SCAN_PATH, aBody);
+	if(!m_pReportScanRequest)
+	{
+		ResetReportScan();
+		GameClient()->Echo(Localize("Could not create report scan request"));
+		return;
+	}
+
+	m_ReportScanState = EReportScanState::SCANNING;
+	Http()->Run(m_pReportScanRequest);
+	GameClient()->Echo(Localize("Scanning current server..."));
+}
+
+void CMenus::UpdateReportScan()
+{
+	if(m_ReportScanState == EReportScanState::IDLE || !m_pReportScanRequest || !m_pReportScanRequest->Done())
+		return;
+
+	const EHttpState RequestState = m_pReportScanRequest->State();
+	if(RequestState != EHttpState::DONE)
+	{
+		ResetReportScan();
+		GameClient()->Echo(RequestState == EHttpState::ABORTED ? Localize("Report request canceled") : Localize("Report request failed due to network error"));
+		return;
+	}
+
+	const int StatusCode = m_pReportScanRequest->StatusCode();
+	if(StatusCode < 200 || StatusCode >= 300)
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), Localize("Report request failed with HTTP status: %d"), StatusCode);
+		ResetReportScan();
+		GameClient()->Echo(aBuf);
+		return;
+	}
+
+	ResetReportScan();
+	GameClient()->Echo(Localize("Report scan request submitted"));
+}
+
 void CMenus::RenderGame(CUIRect MainView)
 {
+	UpdateReportScan();
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
 	constexpr float MenuButtonHeight = 25.0f;
 	constexpr float PrimaryButtonSpacing = 5.0f;
@@ -267,6 +449,7 @@ void CMenus::RenderGame(CUIRect MainView)
 	const int LocalTeam = HasLocalInfo ? GameClient()->m_Snap.m_pLocalInfo->m_Team : TEAM_SPECTATORS;
 	const bool Recording = DemoRecorder(RECORDER_MANUAL)->IsRecording();
 	const bool FastPracticeEnabled = GameClient()->m_FastPractice.Enabled();
+	const bool ReportDisabledOnAxiom = GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity();
 
 	const char *pDisconnectButtonLabel = Localize("Disconnect");
 	const char *pDummyButtonLabel = Localize("Connect dummy");
@@ -287,6 +470,7 @@ void CMenus::RenderGame(CUIRect MainView)
 	char aSaveReplayButtonLabel[64];
 	str_format(aSaveReplayButtonLabel, sizeof(aSaveReplayButtonLabel), Localize("Save last %d min"), g_Config.m_ClEscReplayLengthMinutes);
 	const char *pDemoMarkerButtonLabel = Localize("Mark demo");
+	const char *pReportButtonLabel = Localize("Report");
 	const char *pSpectateButtonLabel = Localize("Spectate");
 	const char *pJoinRedButtonLabel = Localize("Join red");
 	const char *pJoinBlueButtonLabel = Localize("Join blue");
@@ -317,6 +501,8 @@ void CMenus::RenderGame(CUIRect MainView)
 	const float SaveReplayButtonWidthCompact = CalcMenuButtonWidth(aSaveReplayButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
 	const float DemoMarkerButtonWidthNormal = CalcMenuButtonWidth(pDemoMarkerButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
 	const float DemoMarkerButtonWidthCompact = CalcMenuButtonWidth(pDemoMarkerButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
+	const float ReportButtonWidthNormal = CalcMenuButtonWidth(pReportButtonLabel, MenuButtonPaddingNormal, DynamicButtonMinWidth);
+	const float ReportButtonWidthCompact = CalcMenuButtonWidth(pReportButtonLabel, MenuButtonPaddingCompact, DynamicButtonMinWidth);
 
 	const bool ShowGameplayButtons = HasLocalInfo && HasGameInfo && !Paused && !Spec;
 	const bool ShowSpectateButton = ShowGameplayButtons && LocalTeam != TEAM_SPECTATORS && !FastPracticeEnabled;
@@ -331,9 +517,9 @@ void CMenus::RenderGame(CUIRect MainView)
 	const bool ShowSaveReplayButton = g_Config.m_ClReplays != 0;
 
 	const float UtilityButtonWidthNormal =
-		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + (ShowSaveReplayButton ? SaveReplayButtonWidthNormal : 0.0f) + DemoMarkerButtonWidthNormal + UtilityButtonSpacingNormal * (ShowSaveReplayButton ? 5.0f : 4.0f);
+		DisconnectButtonWidthNormal + DummyButtonWidthNormal + EditHudButtonWidthNormal + DemoButtonWidthNormal + (ShowSaveReplayButton ? SaveReplayButtonWidthNormal : 0.0f) + DemoMarkerButtonWidthNormal + ReportButtonWidthNormal + UtilityButtonSpacingNormal * (ShowSaveReplayButton ? 6.0f : 5.0f);
 	const float UtilityButtonWidthCompact =
-		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + (ShowSaveReplayButton ? SaveReplayButtonWidthCompact : 0.0f) + DemoMarkerButtonWidthCompact + UtilityButtonSpacingCompact * (ShowSaveReplayButton ? 5.0f : 4.0f);
+		DisconnectButtonWidthCompact + DummyButtonWidthCompact + EditHudButtonWidthCompact + DemoButtonWidthCompact + (ShowSaveReplayButton ? SaveReplayButtonWidthCompact : 0.0f) + DemoMarkerButtonWidthCompact + ReportButtonWidthCompact + UtilityButtonSpacingCompact * (ShowSaveReplayButton ? 6.0f : 5.0f);
 	const float PrimaryButtonBarWidth = maximum(0.0f, MainView.w - 20.0f);
 
 	auto CalcPrimaryButtonsWidth = [&](bool IncludeTeamplayDDRaceButtons) {
@@ -442,7 +628,10 @@ void CMenus::RenderGame(CUIRect MainView)
 	const float DemoButtonWidth = UseCompactUtilityButtons ? DemoButtonWidthCompact : DemoButtonWidthNormal;
 	const float SaveReplayButtonWidth = UseCompactUtilityButtons ? SaveReplayButtonWidthCompact : SaveReplayButtonWidthNormal;
 	const float DemoMarkerButtonWidth = UseCompactUtilityButtons ? DemoMarkerButtonWidthCompact : DemoMarkerButtonWidthNormal;
+	const float ReportButtonWidth = UseCompactUtilityButtons ? ReportButtonWidthCompact : ReportButtonWidthNormal;
 
+	// QmClient: 分段计时，定位首次打开 ESC 时按钮列 17ms 尖峰的来源
+	CPerfTimer UtilityButtonsTimer;
 	UtilityButtonBar.VSplitRight(DisconnectButtonWidth, &UtilityButtonBar, &Button);
 	static CButtonContainer s_DisconnectButton;
 	if(DoIngameMenuButton(PAGE_GAME, "ingame-game-disconnect", &s_DisconnectButton, pDisconnectButtonLabel, 0, &Button))
@@ -558,6 +747,27 @@ void CMenus::RenderGame(CUIRect MainView)
 		else
 			GameClient()->Echo(Localize("No demo is being recorded"));
 	}
+
+	UtilityButtonBar.VSplitRight(UtilityButtonSpacing, &UtilityButtonBar, nullptr);
+	UtilityButtonBar.VSplitRight(ReportButtonWidth, &UtilityButtonBar, &Button);
+	static CButtonContainer s_ReportButton;
+	if(m_ReportScanState != EReportScanState::IDLE)
+	{
+		DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 1, &Button);
+		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, Localize("Scanning current server"));
+	}
+	else if(ReportDisabledOnAxiom)
+	{
+		DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 1, &Button);
+		GameClient()->m_Tooltips.DoToolTip(&s_ReportButton, &Button, Localize("Reports are not available on Axiom servers"));
+	}
+	else if(DoIngameMenuButton(PAGE_GAME, "ingame-game-report", &s_ReportButton, pReportButtonLabel, 0, &Button))
+	{
+		StartReportScan();
+	}
+
+	LogIngamePerfStage(Client(), "ingame_esc_buttons_utility", UtilityButtonsTimer.ElapsedMs(), false, aButtonColumnPerfExtra);
+	CPerfTimer PrimaryButtonsTimer;
 
 	if(GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pGameInfoObj && !Paused && !Spec)
 	{
@@ -688,7 +898,7 @@ void CMenus::RenderGame(CUIRect MainView)
 
 		bool Active = GameClient()->m_Camera.m_AutoSpecCamera && GameClient()->m_Camera.SpectatingPlayer() && GameClient()->m_Camera.CanUseAutoSpecCamera();
 		bool Enabled = g_Config.m_ClSpecAutoSync;
-		if(Ui()->DoButton_FontIcon(&s_AutoCameraButton, FONT_ICON_CAMERA, !Active, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Enabled))
+		if(Ui()->DoButton_QmIcon(&s_AutoCameraButton, EQmIcon::CAMERA, FONT_ICON_CAMERA, !Active, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Enabled))
 		{
 			GameClient()->m_Camera.ToggleAutoSpecCamera();
 		}
@@ -752,6 +962,7 @@ void CMenus::RenderGame(CUIRect MainView)
 		if(!GameClient()->m_TouchControls.IsEditingActive() || m_MenusIngameTouchControls.m_CurrentMenu != CMenusIngameTouchControls::EMenuType::MENU_PREVIEW)
 			GameClient()->m_TouchControls.SetPreviewAllButtons(false);
 	}
+	LogIngamePerfStage(Client(), "ingame_esc_buttons_primary", PrimaryButtonsTimer.ElapsedMs(), false, aButtonColumnPerfExtra);
 	LogButtonColumnPerf();
 	if(GameClient()->m_TouchControls.IsEditingActive())
 	{
@@ -1222,6 +1433,13 @@ void CMenus::DrainSnapshotTextContainers()
 
 void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 {
+	// QmClient: 细分计时定位 prepare 的 20ms 尖峰（plan 收集 vs 同步预建）
+	CPerfTimer PlanEnsureTimer;
+	EnsureSettingsMenuTextPlanReadyForVisible();
+	LogIngamePerfStage(Client(), "ingame_server_info_plan_ensure", PlanEnsureTimer.ElapsedMs(), false, nullptr);
+	CPerfTimer PrebuildTimer;
+	PrebuildIngameEscTextPoolBeforeOpen(16);
+	LogIngamePerfStage(Client(), "ingame_server_info_prebuild", PrebuildTimer.ElapsedMs(), false, nullptr);
 	CUIRect MainView;
 	if(pMainView != nullptr)
 	{
@@ -1258,8 +1476,7 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	LogSettingsAdaptiveBudget("ingame_server_info_snapshot_text", TextBudgetInput, m_IngameTextFrameBudget);
 	m_IngameTextFrameBudget.m_TextContainerTokens = maximum(1, m_IngameTextFrameBudget.m_TextContainerTokens);
 
-	CServerInfo CurrentServerInfo;
-	Client()->GetServerInfo(&CurrentServerInfo);
+	const CServerInfo &CurrentServerInfo = Client()->ServerInfo();
 
 	CUIRect ServerInfo, GameInfo, Motd;
 	MainView.Margin(10.0f, &MainView);
@@ -1509,15 +1726,6 @@ bool CMenus::RenderIngameMotdStableParagraphCache(CUIRect Motd, float FontSize, 
 	return false;
 }
 
-void CMenus::RenderIngameMotdFallbackText(CUIRect MotdTextArea, float FontSize)
-{
-	CTextCursor Cursor;
-	Cursor.SetPosition(vec2(MotdTextArea.x, MotdTextArea.y));
-	Cursor.m_FontSize = FontSize;
-	Cursor.m_LineWidth = MotdTextArea.w;
-	TextRender()->TextEx(&Cursor, GameClient()->m_Motd.ServerMotd(), -1);
-}
-
 void CMenus::DrainIngameUiSnapshotTextRuntime()
 {
 	DrainSnapshotTextContainers();
@@ -1534,12 +1742,13 @@ void CMenus::DrainIngameUiTextRuntime(bool AllowCurrentFrame)
 
 void CMenus::RenderServerInfo(CUIRect MainView)
 {
+	const bool PreviousServerInfoRenderActive = m_IngameServerInfoRenderActive;
+	m_IngameServerInfoRenderActive = true;
 	const float FontSizeTitle = 32.0f;
 	const float FontSizeBody = 20.0f;
 	const float ServerInfoLabelWidth = 132.0f;
 
-	CServerInfo CurrentServerInfo;
-	Client()->GetServerInfo(&CurrentServerInfo);
+	const CServerInfo &CurrentServerInfo = Client()->ServerInfo();
 	SSettingsAdaptiveBudgetInput TextBudgetInput;
 	TextBudgetInput.m_FrameId = Client()->PerfFrame();
 	str_copy(TextBudgetInput.m_aOperation, "ingame_server_info", sizeof(TextBudgetInput.m_aOperation));
@@ -1733,14 +1942,16 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		default:
 			dbg_assert_failed("unknown team mode");
 		}
-		if((Config()->m_SvTeam == SV_TEAM_ALLOWED || Config()->m_SvTeam == SV_TEAM_MANDATORY) && (Config()->m_SvMinTeamSize != DefaultConfig::SvMinTeamSize || Config()->m_SvMaxTeamSize != DefaultConfig::SvMaxTeamSize))
+		const int MinTeamSize = GameClient()->MinTeamSize();
+		const int MaxTeamSize = GameClient()->MaxTeamSize();
+		if((Config()->m_SvTeam == SV_TEAM_ALLOWED || Config()->m_SvTeam == SV_TEAM_MANDATORY) && (MinTeamSize != DefaultConfig::SvMinTeamSize || MaxTeamSize != DefaultConfig::SvMaxTeamSize))
 		{
-			if(Config()->m_SvMinTeamSize != DefaultConfig::SvMinTeamSize && Config()->m_SvMaxTeamSize != DefaultConfig::SvMaxTeamSize)
-				str_format(aBuf, sizeof(aBuf), "%s (%s %d, %s %d)", pTeamMode, Localize("minimum", "Team size"), Config()->m_SvMinTeamSize, Localize("maximum", "Team size"), Config()->m_SvMaxTeamSize);
-			else if(Config()->m_SvMinTeamSize != DefaultConfig::SvMinTeamSize)
-				str_format(aBuf, sizeof(aBuf), "%s (%s %d)", pTeamMode, Localize("minimum", "Team size"), Config()->m_SvMinTeamSize);
+			if(MinTeamSize != DefaultConfig::SvMinTeamSize && MaxTeamSize != DefaultConfig::SvMaxTeamSize)
+				str_format(aBuf, sizeof(aBuf), "%s (%s %d, %s %d)", pTeamMode, Localize("minimum", "Team size"), MinTeamSize, Localize("maximum", "Team size"), MaxTeamSize);
+			else if(MinTeamSize != DefaultConfig::SvMinTeamSize)
+				str_format(aBuf, sizeof(aBuf), "%s (%s %d)", pTeamMode, Localize("minimum", "Team size"), MinTeamSize);
 			else
-				str_format(aBuf, sizeof(aBuf), "%s (%s %d)", pTeamMode, Localize("maximum", "Team size"), Config()->m_SvMaxTeamSize);
+				str_format(aBuf, sizeof(aBuf), "%s (%s %d)", pTeamMode, Localize("maximum", "Team size"), MaxTeamSize);
 		}
 		else
 		{
@@ -1786,6 +1997,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	}
 
 	RenderServerInfoMotd(Motd);
+	m_IngameServerInfoRenderActive = PreviousServerInfoRenderActive;
 }
 
 void CMenus::RenderServerInfoMotd(CUIRect Motd)
@@ -1827,8 +2039,8 @@ void CMenus::RenderServerInfoMotd(CUIRect Motd)
 	else
 	{
 		const bool RenderedMotdParagraph = RenderIngameMotdStableParagraphCache(Motd, MotdFontSize, MotdTextArea);
-		if(!RenderedMotdParagraph)
-			RenderIngameMotdFallbackText(MotdTextArea, MotdFontSize);
+		// MOTD 是可延迟通知：未完成时保持旧的完整容器，首次加载则留空，
+		// 不额外光栅化占位文本，也不回退到整段同步 TextEx。
 		if(!RenderedMotdParagraph && QmPerfEnabled())
 		{
 			char aPayload[160];
@@ -1945,8 +2157,7 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 	static CListBox s_ListBox;
 	s_ListBox.DoStart(19.0f, NumVoteOptions, 1, 3, Selected, &List);
 
-	CServerInfo CurrentServerInfo;
-	Client()->GetServerInfo(&CurrentServerInfo);
+	const CServerInfo &CurrentServerInfo = Client()->ServerInfo();
 	const CCommunity *pCurrentCommunity = ServerBrowser()->Community(CurrentServerInfo.m_aCommunityId);
 
 	for(int OptionIndex = 0; OptionIndex < NumVoteOptions; ++OptionIndex)
@@ -1975,7 +2186,7 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 			CUIRect Icon;
 			Label.VSplitLeft(Label.h, &Icon, &Label);
 			Icon.Margin(2.0f, &Icon);
-			RenderFontIcon(Icon, FONT_ICON_FLAG_CHECKERED, 13.0f, TEXTALIGN_MC);
+			RenderFontIcon_QmIcon(Icon, EQmIcon::FLAG_CHECKERED, FONT_ICON_FLAG_CHECKERED, 13.0f, TEXTALIGN_MC);
 		}
 
 		if(IsFavorite)
@@ -2626,7 +2837,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_InternetButton;
-	if(DoMenuTabV2(&s_InternetButton, FONT_ICON_EARTH_AMERICAS, g_Config.m_UiPage == PAGE_INTERNET, &Button, IGraphics::CORNER_NONE))
+	if(DoMenuTabV2_QmIcon(&s_InternetButton, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, g_Config.m_UiPage == PAGE_INTERNET, &Button, IGraphics::CORNER_NONE))
 	{
 		NewPage = PAGE_INTERNET;
 	}
@@ -2634,7 +2845,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_LanButton;
-	if(DoMenuTabV2(&s_LanButton, FONT_ICON_NETWORK_WIRED, g_Config.m_UiPage == PAGE_LAN, &Button, IGraphics::CORNER_NONE))
+	if(DoMenuTabV2_QmIcon(&s_LanButton, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, g_Config.m_UiPage == PAGE_LAN, &Button, IGraphics::CORNER_NONE))
 	{
 		NewPage = PAGE_LAN;
 	}
@@ -2642,7 +2853,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_FavoritesButton;
-	if(DoMenuTabV2(&s_FavoritesButton, FONT_ICON_STAR, g_Config.m_UiPage == PAGE_FAVORITES, &Button, IGraphics::CORNER_NONE))
+	if(DoMenuTabV2_QmIcon(&s_FavoritesButton, EQmIcon::STAR, FONT_ICON_STAR, g_Config.m_UiPage == PAGE_FAVORITES, &Button, IGraphics::CORNER_NONE))
 	{
 		NewPage = PAGE_FAVORITES;
 	}
@@ -2659,15 +2870,15 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	const float FavoriteMapsIconSide = minimum(Button.w, Button.h) * 0.56f;
 	const CUIRect FavoriteMapsIconRect{Button.x + (Button.w - FavoriteMapsIconSide) * 0.5f, Button.y + (Button.h - FavoriteMapsIconSide) * 0.5f, FavoriteMapsIconSide, FavoriteMapsIconSide};
 	const ColorRGBA FavoriteMapsIconColor = ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-	if(!GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, FavoriteMapsIconRect, FavoriteMapsIconColor))
+	if(GameClient()->QmIconManager()->PreferFontFallback() || !GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, FavoriteMapsIconRect, FavoriteMapsIconColor))
 	{
 		const unsigned OldFlags = TextRender()->GetRenderFlags();
 		const EFontPreset OldPreset = TextRender()->GetFontPreset();
 		const ColorRGBA OldTextColor = TextRender()->GetTextColor();
 		TextRender()->TextColor(FavoriteMapsIconColor);
-		TextRender()->SetFontPreset(QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? EFontPreset::ICON_FONT_BOLD : EFontPreset::ICON_FONT);
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		Ui()->DoLabel(&FavoriteMapsIconRect, FONT_ICON_BOOKMARK, FavoriteMapsIconSide, TEXTALIGN_MC);
+		Ui()->DoLabel_QmIcon(&FavoriteMapsIconRect, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, FavoriteMapsIconSide, TEXTALIGN_MC);
 		TextRender()->SetRenderFlags(OldFlags);
 		TextRender()->SetFontPreset(OldPreset);
 		TextRender()->TextColor(OldTextColor);
@@ -2727,7 +2938,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	{
 		TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 		const int Page = PAGE_FAVORITE_COMMUNITY_1 + FavoriteCommunityIndex;
-		if(DoMenuTabV2(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], FONT_ICON_ELLIPSIS, g_Config.m_UiPage == Page, &Button, IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, m_CommunityIcons.Find(pCommunity->Id())))
+		if(DoMenuTabV2_QmIcon(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, g_Config.m_UiPage == Page, &Button, IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, m_CommunityIcons.Find(pCommunity->Id())))
 		{
 			NewPage = Page;
 		}
@@ -2755,11 +2966,15 @@ int CMenus::GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int Stor
 {
 	CMenus *pSelf = (CMenus *)pUser;
 	const char *pMap = pSelf->Client()->GetCurrentMap();
-	if(IsDir || !str_endswith(pInfo->m_pName, ".gho") || !str_startswith(pInfo->m_pName, pMap))
+	// QmClient: rank 影子位于独立子目录，文件名不要求以地图名开头
+	// （地图匹配由下面的 GetGhostInfo 完成）；普通影子维持原有前缀规则。
+	if(IsDir || !str_endswith(pInfo->m_pName, ".gho"))
+		return 0;
+	if(!pSelf->m_GhostScanIsRankDir && !str_startswith(pInfo->m_pName, pMap))
 		return 0;
 
 	char aFilename[IO_MAX_PATH_LENGTH];
-	str_format(aFilename, sizeof(aFilename), "%s/%s", pSelf->GameClient()->m_Ghost.GetGhostDir(), pInfo->m_pName);
+	str_format(aFilename, sizeof(aFilename), "%s/%s", pSelf->m_aGhostScanDir, pInfo->m_pName);
 
 	CGhostInfo Info;
 	if(!pSelf->GameClient()->m_Ghost.GhostLoader()->GetGhostInfo(aFilename, &Info, pMap, pSelf->GameClient()->Map()->Sha256(), pSelf->GameClient()->Map()->Crc()))
@@ -2768,6 +2983,7 @@ int CMenus::GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int Stor
 	CGhostItem Item;
 	str_copy(Item.m_aFilename, aFilename);
 	str_copy(Item.m_aPlayer, Info.m_aOwner);
+	Item.m_RankGhost = pSelf->m_GhostScanIsRankDir;
 	Item.m_Date = pInfo->m_TimeModified;
 	Item.m_Time = Info.m_Time;
 	if(Item.m_Time > 0)
@@ -2783,15 +2999,43 @@ int CMenus::GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int Stor
 
 void CMenus::GhostlistPopulate()
 {
+	struct SActiveGhost
+	{
+		char m_aFilename[IO_MAX_PATH_LENGTH];
+		int m_Slot;
+	};
+	std::vector<SActiveGhost> vActiveGhosts;
+	for(const CGhostItem &Ghost : m_vGhosts)
+	{
+		if(Ghost.m_Slot < 0 || !Ghost.HasFile())
+			continue;
+		SActiveGhost Active;
+		str_copy(Active.m_aFilename, Ghost.m_aFilename);
+		Active.m_Slot = Ghost.m_Slot;
+		vActiveGhosts.push_back(Active);
+	}
+
 	m_vGhosts.clear();
 	m_GhostPopulateStartTime = time_get_nanoseconds();
-	Storage()->ListDirectoryInfo(IStorage::TYPE_ALL, GameClient()->m_Ghost.GetGhostDir(), GhostlistFetchCallback, this);
+	const char *pGhostDir = GameClient()->m_Ghost.GetGhostDir();
+	str_copy(m_aGhostScanDir, pGhostDir);
+	m_GhostScanIsRankDir = false;
+	Storage()->ListDirectoryInfo(IStorage::TYPE_ALL, pGhostDir, GhostlistFetchCallback, this);
+	// QmClient: rank 回放数据已迁至 qmclient/rank1 专属目录，与影子页完全分离
 	SortGhostlist();
 
 	CGhostItem *pOwnGhost = nullptr;
 	for(auto &Ghost : m_vGhosts)
 	{
 		Ghost.m_Failed = false;
+		for(const SActiveGhost &Active : vActiveGhosts)
+		{
+			if(str_comp(Ghost.m_aFilename, Active.m_aFilename) == 0)
+			{
+				Ghost.m_Slot = Active.m_Slot;
+				break;
+			}
+		}
 		if(str_comp(Ghost.m_aPlayer, Client()->PlayerName()) == 0 && (!pOwnGhost || Ghost < *pOwnGhost))
 			pOwnGhost = &Ghost;
 	}
@@ -2799,7 +3043,8 @@ void CMenus::GhostlistPopulate()
 	if(pOwnGhost)
 	{
 		pOwnGhost->m_Own = true;
-		pOwnGhost->m_Slot = GameClient()->m_Ghost.Load(pOwnGhost->m_aFilename);
+		if(pOwnGhost->m_Slot < 0)
+			pOwnGhost->m_Slot = GameClient()->m_Ghost.Load(pOwnGhost->m_aFilename);
 	}
 }
 
@@ -2968,6 +3213,8 @@ void CMenus::RenderGhost(CUIRect MainView)
 		ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f);
 		if(pGhost->m_Own)
 			Color = color_cast<ColorRGBA>(ColorHSLA(0.33f, 1.0f, 0.75f));
+		else if(pGhost->m_RankGhost)
+			Color = color_cast<ColorRGBA>(ColorHSLA(0.12f, 1.0f, 0.7f)); // 官方 rank 影子用金色区分
 
 		if(pGhost->m_Failed)
 			Color = ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f);
@@ -3000,7 +3247,15 @@ void CMenus::RenderGhost(CUIRect MainView)
 			}
 			else if(Id == COL_NAME)
 			{
-				Ui()->DoLabel(&Button, pGhost->m_aPlayer, 12.0f, TEXTALIGN_ML);
+				// QmClient: 官方 rank 影子加 [Rank] 标签，便于和玩家自己的影子区分
+				if(pGhost->m_RankGhost)
+				{
+					char aNameBuf[MAX_NAME_LENGTH + 16];
+					str_format(aNameBuf, sizeof(aNameBuf), "[Rank] %s", pGhost->m_aPlayer);
+					Ui()->DoLabel(&Button, aNameBuf, 12.0f, TEXTALIGN_ML);
+				}
+				else
+					Ui()->DoLabel(&Button, pGhost->m_aPlayer, 12.0f, TEXTALIGN_ML);
 			}
 			else if(Id == COL_TIME)
 			{
@@ -3031,9 +3286,12 @@ void CMenus::RenderGhost(CUIRect MainView)
 	static CButtonContainer s_DirectoryButton;
 	static CButtonContainer s_ActivateAll;
 
-	if(Ui()->DoButton_FontIcon(&s_ReloadButton, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Button, BUTTONFLAG_LEFT) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
+	if(Ui()->DoButton_QmIcon(&s_ReloadButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &Button, BUTTONFLAG_LEFT) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 	{
 		GameClient()->m_Ghost.UnloadAll();
+		GameClient()->m_RankGhost.OnGhostsUnloaded();
+		for(CGhostItem &Ghost : m_vGhosts)
+			Ghost.m_Slot = -1;
 		GhostlistPopulate();
 	}
 
@@ -3047,6 +3305,8 @@ void CMenus::RenderGhost(CUIRect MainView)
 		Client()->ViewFile(aBuf);
 	}
 
+	// QmClient: rank 回放功能统一收敛到 Rank 1 页，影子页只管理玩家自己的影子
+
 	Status.VSplitLeft(5.0f, &Button, &Status);
 	if(NumGhosts - NumFailed > 0)
 	{
@@ -3056,25 +3316,28 @@ void CMenus::RenderGhost(CUIRect MainView)
 		const char *pActionText = ActivateAll ? Localize("Activate all") : Localize("Deactivate all");
 		if(DoIngameMenuButton(PAGE_GHOST, ActivateAll ? "ingame-ghost-activate-all" : "ingame-ghost-deactivate-all", &s_ActivateAll, pActionText, 0, &Button))
 		{
-			for(int i = 0; i < NumGhosts; i++)
+			if(!ActivateAll)
 			{
-				CGhostItem *pGhost = &m_vGhosts[i];
-				if(pGhost->m_Failed || (ActivateAll && pGhost->m_Slot != -1))
-					continue;
-
-				if(ActivateAll)
+				GameClient()->m_Ghost.UnloadAll();
+				GameClient()->m_RankGhost.OnGhostsUnloaded();
+				for(CGhostItem &Ghost : m_vGhosts)
+					Ghost.m_Slot = -1;
+			}
+			else
+			{
+				for(int i = 0; i < NumGhosts; i++)
 				{
+					CGhostItem *pGhost = &m_vGhosts[i];
+					if(pGhost->m_Failed || pGhost->m_Slot != -1)
+						continue;
 					if(!GameClient()->m_Ghost.FreeSlots())
 						break;
 
 					pGhost->m_Slot = GameClient()->m_Ghost.Load(pGhost->m_aFilename);
 					if(pGhost->m_Slot == -1)
 						pGhost->m_Failed = true;
-				}
-				else
-				{
-					GameClient()->m_Ghost.UnloadAll();
-					pGhost->m_Slot = -1;
+					else
+						GameClient()->m_RankGhost.OnGhostLoaded(pGhost->m_aFilename, pGhost->m_Slot);
 				}
 			}
 		}
@@ -3098,6 +3361,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 			if(pGhost->Active())
 			{
 				GameClient()->m_Ghost.Unload(pGhost->m_Slot);
+				GameClient()->m_RankGhost.OnGhostUnloaded(pGhost->m_Slot);
 				pGhost->m_Slot = -1;
 			}
 			else
@@ -3105,6 +3369,8 @@ void CMenus::RenderGhost(CUIRect MainView)
 				pGhost->m_Slot = GameClient()->m_Ghost.Load(pGhost->m_aFilename);
 				if(pGhost->m_Slot == -1)
 					pGhost->m_Failed = true;
+				else
+					GameClient()->m_RankGhost.OnGhostLoaded(pGhost->m_aFilename, pGhost->m_Slot);
 			}
 		}
 		Status.VSplitRight(5.0f, &Status, nullptr);
@@ -3116,8 +3382,13 @@ void CMenus::RenderGhost(CUIRect MainView)
 	if(DoIngameMenuButton(PAGE_GHOST, "ingame-ghost-delete", &s_DeleteButton, Localize("Delete"), 0, &Button))
 	{
 		if(pGhost->Active())
+		{
 			GameClient()->m_Ghost.Unload(pGhost->m_Slot);
+			GameClient()->m_RankGhost.OnGhostUnloaded(pGhost->m_Slot);
+		}
 		DeleteGhostItem(s_SelectedIndex);
+		s_SelectedIndex = std::min(s_SelectedIndex, (int)m_vGhosts.size() - 1);
+		return;
 	}
 
 	Status.VSplitRight(5.0f, &Status, nullptr);
@@ -3130,6 +3401,341 @@ void CMenus::RenderGhost(CUIRect MainView)
 		if(DoIngameMenuButton(PAGE_GHOST, "ingame-ghost-save", &s_SaveButton, Localize("Save"), 0, &Button))
 			GameClient()->m_Ghost.SaveGhost(pGhost);
 	}
+}
+
+// 成绩按 时/分/秒 展示：33m36s / 1h02m03s
+static void FormatRankTimeHms(float Seconds, char *pBuf, size_t BufSize)
+{
+	if(Seconds < 0.0f)
+		Seconds = 0.0f;
+	const int Total = (int)(Seconds + 0.5f);
+	const int Hours = Total / 3600;
+	const int Minutes = (Total % 3600) / 60;
+	const int Secs = Total % 60;
+	if(Hours > 0)
+		str_format(pBuf, BufSize, "%dh%02dm%02ds", Hours, Minutes, Secs);
+	else
+		str_format(pBuf, BufSize, "%dm%02ds", Minutes, Secs);
+}
+
+// Rank 1 页面：列出当前地图的官方预生成回放（solo / team rank 1），
+// 每条可下载回放、一键转影子对照跑图，或在确认断线后播放回放。
+void CMenus::RenderRankDemo(CUIRect MainView)
+{
+	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+
+	MainView.HSplitTop(10.0f, nullptr, &MainView);
+	MainView.HSplitBottom(5.0f, &MainView, nullptr);
+	MainView.VSplitLeft(5.0f, nullptr, &MainView);
+	MainView.VSplitRight(5.0f, &MainView, nullptr);
+
+	auto &RankGhost = GameClient()->m_RankGhost;
+	RankGhost.EnsureManifest();
+
+	CUIRect Headers, Status;
+	CUIRect View = MainView;
+
+	// 搜索行：跨全清单按地图名查找
+	static int s_SelectedIndex = 0;
+	CUIRect SearchRow;
+	View.HSplitTop(22.0f, &SearchRow, &View);
+	View.HSplitTop(4.0f, nullptr, &View);
+	{
+		CUIRect SearchBox;
+		SearchRow.VSplitLeft(280.0f, &SearchBox, &SearchRow);
+		if(Ui()->DoEditBox(&m_RankSearchInput, &SearchBox, 12.0f))
+			s_SelectedIndex = -1;
+		if(m_RankSearchInput.GetString()[0] == '\0')
+		{
+			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.5f);
+			TextRender()->Text(SearchBox.x + 8.0f, SearchBox.y + (SearchBox.h - 12.0f) / 2.0f, 12.0f, Localize("Search maps for Rank 1 replays ..."), -1.0f);
+			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+		}
+	}
+
+	View.HSplitTop(17.0f, &Headers, &View);
+	View.HSplitBottom(28.0f, &View, &Status);
+
+	// 与影子列表一致的列定义与表头样式
+	Headers.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_T, 5.0f);
+	Headers.VSplitRight(20.0f, &Headers, nullptr);
+
+	enum
+	{
+		COL_ACTIVE = 0,
+		COL_MODE,
+		COL_NAME,
+		COL_TIME,
+		COL_DATE,
+		COL_STATE,
+		NUM_COLS,
+	};
+
+	class CColumn
+	{
+	public:
+		const char *m_pCaption;
+		int m_Id;
+		float m_Width;
+		CUIRect m_Rect;
+	};
+
+	static CColumn s_aCols[] = {
+		{"", COL_ACTIVE, 30.0f, {0}},
+		{Localizable("Mode"), COL_MODE, 52.0f, {0}},
+		{Localizable("Players"), COL_NAME, 200.0f, {0}},
+		{Localizable("Time"), COL_TIME, 90.0f, {0}},
+		{Localizable("Date"), COL_DATE, 150.0f, {0}},
+		{Localizable("Status"), COL_STATE, 130.0f, {0}},
+	};
+
+	for(int i = 0; i < NUM_COLS; i++)
+	{
+		Headers.VSplitLeft(s_aCols[i].m_Width, &s_aCols[i].m_Rect, &Headers);
+		if(i + 1 < NUM_COLS)
+			Headers.VSplitLeft(2, nullptr, &Headers);
+	}
+	for(int i = 0; i < NUM_COLS; i++)
+	{
+		if(s_aCols[i].m_pCaption[0] != '\0')
+			DoButton_GridHeader(&s_aCols[i].m_Id, Localize(s_aCols[i].m_pCaption), false, &s_aCols[i].m_Rect);
+	}
+
+	View.Draw(ColorRGBA(0, 0, 0, 0.15f), 0, 0);
+
+	const char *pMapName = Client()->GetCurrentMap();
+	const bool Searching = m_RankSearchInput.GetString()[0] != '\0';
+	std::vector<qmclient::rank_demo::SEntry> vEntries = Searching ? RankGhost.CollectSearchEntries(m_RankSearchInput.GetString(), 1, 100) : RankGhost.CollectRankEntries(pMapName, 1);
+	const int NumEntries = vEntries.size();
+	if(s_SelectedIndex >= NumEntries)
+		s_SelectedIndex = NumEntries - 1;
+	if(s_SelectedIndex < 0)
+		s_SelectedIndex = 0;
+	static CListBox s_ListBox;
+	s_ListBox.DoStart(17.0f, NumEntries, 1, 3, s_SelectedIndex, &View, false);
+
+	char aBuf[256];
+	for(int i = 0; i < NumEntries; i++)
+	{
+		const qmclient::rank_demo::SEntry *pEntry = &vEntries[i];
+		// 行 ID 必须逐帧稳定：vEntries 每帧重建、元素地址会漂移，用指针作 ID
+		// 会让悬停高亮闪烁，这里改用序号。
+		const CListboxItem Item = s_ListBox.DoNextItem((const void *)(size_t)(i + 1));
+		if(!Item.m_Visible)
+			continue;
+
+		const bool Active = RankGhost.IsEntryGhostActive(*pEntry);
+		const bool TeamEntry = qmclient::rank_demo::IsTeamEntry(*pEntry);
+
+		// 行配色与影子列表统一：激活金色、队伍浅蓝、单人默认白
+		if(Active)
+			TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(0.12f, 1.0f, 0.7f)));
+		else if(TeamEntry)
+			TextRender()->TextColor(ColorRGBA(0.7f, 0.8f, 1.0f, 1.0f));
+
+		for(int c = 0; c < NUM_COLS; c++)
+		{
+			CUIRect Cell;
+			Cell.x = s_aCols[c].m_Rect.x;
+			Cell.y = Item.m_Rect.y;
+			Cell.w = s_aCols[c].m_Rect.w;
+			Cell.h = Item.m_Rect.h;
+
+			const int Id = s_aCols[c].m_Id;
+			if(Id == COL_ACTIVE)
+			{
+				if(Active)
+				{
+					Graphics()->WrapClamp();
+					Graphics()->TextureSet(GameClient()->m_EmoticonsSkin.m_aSpriteEmoticons[(SPRITE_OOP + 7) - SPRITE_OOP]);
+					Graphics()->QuadsBegin();
+					IGraphics::CQuadItem QuadItem(Cell.x + Cell.w / 2, Cell.y + Cell.h / 2, 20.0f, 20.0f);
+					Graphics()->QuadsDraw(&QuadItem, 1);
+					Graphics()->QuadsEnd();
+					Graphics()->WrapNormal();
+				}
+			}
+			else if(Id == COL_MODE)
+			{
+				Ui()->DoLabel(&Cell, TeamEntry ? Localize("Team") : Localize("Solo"), 12.0f, TEXTALIGN_ML);
+			}
+			else if(Id == COL_NAME)
+			{
+				// 搜索模式：结果来自不同地图，前置地图名便于区分
+				if(Searching)
+				{
+					str_format(aBuf, sizeof(aBuf), "[%s] %s", pEntry->m_Map.c_str(), pEntry->m_Names.c_str());
+					Ui()->DoLabel(&Cell, aBuf, 12.0f, TEXTALIGN_ML);
+				}
+				else
+					Ui()->DoLabel(&Cell, pEntry->m_Names.c_str(), 12.0f, TEXTALIGN_ML);
+			}
+			else if(Id == COL_TIME)
+			{
+				FormatRankTimeHms(str_tofloat(pEntry->m_Time.c_str()), aBuf, sizeof(aBuf));
+				Ui()->DoLabel(&Cell, aBuf, 12.0f, TEXTALIGN_ML);
+			}
+			else if(Id == COL_DATE)
+			{
+				if(pEntry->m_Ts > 0)
+					str_timestamp_ex((time_t)pEntry->m_Ts, aBuf, sizeof(aBuf), FORMAT_SPACE);
+				else
+					str_copy(aBuf, "-");
+				Ui()->DoLabel(&Cell, aBuf, 12.0f, TEXTALIGN_ML);
+			}
+			else if(Id == COL_STATE)
+			{
+				const char *pState = Localize("Not downloaded");
+				if(Active)
+				{
+					const int Count = RankGhost.LoadedGhostCountForEntry(*pEntry);
+					if(Count > 1)
+					{
+						str_format(aBuf, sizeof(aBuf), Localize("Ghost active (%d)"), Count);
+						pState = aBuf;
+					}
+					else
+						pState = Localize("Ghost active");
+				}
+				else if(RankGhost.IsEntryGhostCached(*pEntry, aBuf, sizeof(aBuf)))
+					pState = Localize("Ghost ready");
+				else if(RankGhost.IsEntryDemoCached(*pEntry, aBuf, sizeof(aBuf)))
+					pState = Localize("Replay downloaded");
+				Ui()->DoLabel(&Cell, pState, 12.0f, TEXTALIGN_ML);
+			}
+		}
+
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+	}
+
+	// 必须关闭列表的滚动/裁剪区域：否则裁剪会泄漏到本帧后续绘制与下一帧，
+	// 导致底部按钮与顶部菜单 tab 栏被裁掉、高亮随热项状态闪烁。
+	s_SelectedIndex = s_ListBox.DoEnd();
+
+	const bool Busy = RankGhost.IsBusy();
+	const CRankGhost::EManifestState ManifestState = RankGhost.ManifestState();
+
+	// 空状态提示（列表裁剪区域关闭后绘制，避免被裁；清单未就绪时交给状态条文案）
+	if(NumEntries == 0 && ManifestState == CRankGhost::EManifestState::READY && !Busy)
+	{
+		const char *pEmptyText = Searching ? Localize("No matching Rank 1 replay") : Localize("No Rank 1 replay for the current map (not generated by the official service yet)");
+		const float EmptyFontSize = 14.0f;
+		const float EmptyWidth = TextRender()->TextWidth(EmptyFontSize, pEmptyText, -1);
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.6f);
+		TextRender()->Text(View.x + (View.w - EmptyWidth) / 2.0f, View.y + View.h / 2.0f - EmptyFontSize, EmptyFontSize, pEmptyText, -1.0f);
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+
+	// 底部状态条：清单状态 + 刷新 + 打开缓存目录 + 右侧动作按钮
+	Status.Draw(ColorRGBA(0, 0, 0, 0.15f), IGraphics::CORNER_B, 5.0f);
+	Status.HMargin(4.0f, &Status);
+	Status.VSplitLeft(5.0f, nullptr, &Status);
+	CUIRect Button;
+	Status.VSplitLeft(110.0f, &Button, &Status);
+	static CButtonContainer s_RefreshButton;
+	if(DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-refresh", &s_RefreshButton, Localize("Refresh"), 0, &Button) || Input()->KeyPress(KEY_F5))
+		RankGhost.RefreshManifest();
+
+	Status.VSplitLeft(5.0f, nullptr, &Status);
+	Status.VSplitLeft(175.0f, &Button, &Status);
+	static CButtonContainer s_DirectoryButton;
+	if(DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-directory", &s_DirectoryButton, Localize("Replays directory"), 0, &Button))
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		CRankGhost::EnsureFolders(Storage());
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, CRankGhost::DEMO_CACHE_DIR, aPath, sizeof(aPath));
+		Client()->ViewFile(aPath);
+	}
+
+	const char *pManifestText = Localize("Replay list: not loaded yet");
+	if(ManifestState == CRankGhost::EManifestState::LOADING)
+		pManifestText = Localize("Replay list: loading ...");
+	else if(ManifestState == CRankGhost::EManifestState::READY)
+		pManifestText = Busy ? Localize("Task running ...") : Localize("Replay list: up to date");
+	else if(ManifestState == CRankGhost::EManifestState::FAILED)
+		pManifestText = Localize("Replay list: failed to load, press Refresh to retry");
+	// 任务进行中时优先显示具体进度（下载/转换百分比）
+	char aTaskBuf[128];
+	if(RankGhost.DescribeTask(aTaskBuf, sizeof(aTaskBuf)))
+		pManifestText = aTaskBuf;
+	Ui()->DoLabel(&Status, pManifestText, 12.0f, TEXTALIGN_ML);
+
+	if(s_SelectedIndex >= 0 && s_SelectedIndex < NumEntries)
+	{
+		const qmclient::rank_demo::SEntry &Entry = vEntries[s_SelectedIndex];
+
+		char aDemoPath[IO_MAX_PATH_LENGTH];
+		char aGhostPath[IO_MAX_PATH_LENGTH];
+		const bool DemoCached = RankGhost.IsEntryDemoCached(Entry, aDemoPath, sizeof(aDemoPath));
+		const bool GhostCached = RankGhost.IsEntryGhostCached(Entry, aGhostPath, sizeof(aGhostPath));
+		const bool GhostActive = RankGhost.IsEntryGhostActive(Entry);
+		// 任务进行中统一禁用条目动作，避免下载/转换中途删改缓存
+		const bool TaskBusy = RankGhost.IsBusy();
+
+		// 右侧动作（全部常驻，不可用/进行中置灰）：删除 | 播放回放 | 下载回放 | 画面内回放 | 影子加载
+		Status.VSplitRight(5.0f, &Status, nullptr);
+		Status.VSplitRight(80.0f, &Status, &Button);
+		static CButtonContainer s_DeleteButton;
+		if(DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-delete", &s_DeleteButton, Localize("Delete"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, TaskBusy))
+			RankGhost.DeleteEntryCache(Entry);
+
+		Status.VSplitRight(5.0f, &Status, nullptr);
+		Status.VSplitRight(110.0f, &Status, &Button);
+		static CButtonContainer s_PlayButton;
+		if(DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-play", &s_PlayButton, Localize("Play replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, TaskBusy || !DemoCached))
+		{
+			str_copy(m_aPendingRankDemoPlayPath, aDemoPath, sizeof(m_aPendingRankDemoPlayPath));
+			// 播放回放必然断开服务器：除显式禁用确认（负值）外一律弹窗，防止误触退服
+			if(g_Config.m_ClConfirmDisconnectTime >= 0)
+			{
+				PopupConfirm(Localize("Disconnect"), Localize("Are you sure that you want to disconnect and play this demo?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmRankDemoPlay);
+			}
+			else
+			{
+				PopupConfirmRankDemoPlay();
+			}
+		}
+
+		Status.VSplitRight(5.0f, &Status, nullptr);
+		Status.VSplitRight(120.0f, &Status, &Button);
+		static CButtonContainer s_DownloadButton;
+		if(DoIngameMenuButton(PAGE_RANK_DEMO, "ingame-rank-demo-download", &s_DownloadButton, Localize("Download replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, TaskBusy || DemoCached))
+			RankGhost.RequestDemoDownload(Entry.m_Demo.c_str());
+
+		Status.VSplitRight(5.0f, &Status, nullptr);
+		Status.VSplitRight(120.0f, &Status, &Button);
+		static CButtonContainer s_ViewButton;
+		const bool ViewActiveHere = GhostActive && RankGhost.IsViewModeActive();
+		if(DoIngameMenuButton(PAGE_RANK_DEMO, ViewActiveHere ? "ingame-rank-demo-view-off" : "ingame-rank-demo-view-on", &s_ViewButton,
+			   ViewActiveHere ? Localize("Exit replay view") : Localize("View replay"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, TaskBusy && !ViewActiveHere))
+		{
+			if(ViewActiveHere)
+				RankGhost.ViewStop();
+			else
+				RankGhost.RequestGhostViewForDemo(Entry.m_Demo.c_str());
+		}
+
+		Status.VSplitRight(5.0f, &Status, nullptr);
+		Status.VSplitRight(120.0f, &Status, &Button);
+		static CButtonContainer s_GhostButton;
+		if(DoIngameMenuButton(PAGE_RANK_DEMO, GhostActive ? "ingame-rank-demo-ghost-off" : "ingame-rank-demo-ghost-on", &s_GhostButton,
+			   GhostActive ? Localize("Deactivate ghost") : Localize("Load as ghost"), 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, 5.0f, TaskBusy) ||
+			(s_ListBox.WasItemActivated() && !GhostActive && !TaskBusy))
+		{
+			if(GhostActive)
+				RankGhost.RequestGhostOff();
+			else
+				RankGhost.RequestGhostForDemo(Entry.m_Demo.c_str());
+		}
+	}
+}
+
+void CMenus::PopupConfirmRankDemoPlay()
+{
+	const char *pError = Client()->DemoPlayer_Play(m_aPendingRankDemoPlayPath, IStorage::TYPE_SAVE);
+	m_aPendingRankDemoPlayPath[0] = '\0';
+	if(pError)
+		PopupMessage(Localize("Error loading demo"), pError, Localize("Ok"));
 }
 
 void CMenus::RenderIngameHint()

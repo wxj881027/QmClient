@@ -4,6 +4,7 @@
 
 #include <generated/protocol7.h>
 
+#include <game/client/components/countryflags.h>
 #include <game/client/gameclient.h>
 #include <game/gamecore.h>
 #include <game/localization.h>
@@ -224,6 +225,11 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 	else if(*pMsgId == protocol7::NETMSGTYPE_SV_TEAM)
 	{
 		protocol7::CNetMsg_Sv_Team *pMsg7 = (protocol7::CNetMsg_Sv_Team *)pRawMsg;
+		if(pMsg7->m_ClientId < 0 || pMsg7->m_ClientId >= MAX_CLIENTS)
+		{
+			dbg_msg("sixup", "Sv_Team got invalid ClientId: %d", pMsg7->m_ClientId);
+			return nullptr;
+		}
 
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		{
@@ -549,7 +555,7 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		Client.m_Team = pMsg7->m_Team;
 		str_copy(Client.m_aName, pMsg7->m_pName);
 		str_copy(Client.m_aClan, pMsg7->m_pClan);
-		Client.m_Country = pMsg7->m_Country;
+		Client.m_Country = QmNormalizeCountryCode(pMsg7->m_Country);
 		ApplySkin7InfoFromGameMsg(pMsg7, pMsg7->m_ClientId, Conn);
 		if(m_pClient->m_TranslationContext.m_aLocalClientId[Conn] == -1)
 			return nullptr;
@@ -596,7 +602,8 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 		protocol7::CNetMsg_Sv_KillMsg *pMsg7 = (protocol7::CNetMsg_Sv_KillMsg *)pRawMsg;
 		::CNetMsg_Sv_KillMsg *pMsg = (::CNetMsg_Sv_KillMsg *)s_aRawMsg;
 
-		pMsg->m_Killer = pMsg7->m_Killer;
+		// 0.7 用 -1 和 -2 表示无击杀者，0.6 则使用受害者 id。
+		pMsg->m_Killer = pMsg7->m_Killer < 0 ? pMsg7->m_Victim : pMsg7->m_Killer;
 		pMsg->m_Victim = pMsg7->m_Victim;
 		pMsg->m_Weapon = pMsg7->m_Weapon;
 		pMsg->m_ModeSpecial = pMsg7->m_ModeSpecial;

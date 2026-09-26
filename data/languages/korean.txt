@@ -22,6 +22,9 @@
 %d items selected
 == %d개 항목 선택됨
 
+%d more cut segments
+== 추가로 %d개의 잘라낸 구간
+
 %d of %d server
 == %d/%d 서버
 
@@ -60,6 +63,9 @@
 
 %i seconds left
 == %i 초 남음
+
+%s (/%s %s)
+== %s (/%s %s)
 
 %s and %s have swapped
 == %s와 %s가 교환했습니다
@@ -187,17 +193,56 @@
 - You have %d saves on this map!
 == - 이 맵에 %d 개의 저장이 있습니다!
 
+------- Team Top 5 -------
+== ------- 팀 상위 5명 -------
+
+-------- Top Points --------
+== -------- 포인트 순위 --------
+
+------------ Global Top ------------
+== ------------ 글로벌 순위 ------------
+
+------------- Last Times -------------
+== ------------- 최근 기록 -------------
+
+/cmdlist will show a list of all chat commands
+== /cmdlist 는 모든 채팅 명령어 목록을 표시합니다
+
+/help + any command will show you the help for this command
+== /help + 임의의 명령어 를 입력하면 해당 명령어의 도움말이 표시됩니다
+
 /map is disabled
 == /map이 비활성화되었습니다
+
+/spec will pause you and your tee will vanish
+== /spec 를 입력하면 일시 정지되고 tee 도 사라집니다
+
+/spec will pause you but your tee will not vanish
+== /spec 를 입력하면 일시 정지되지만 tee 는 사라지지 않습니다
 
 /times ?s?i shows last 5 times of the server or of a player beginning with name s starting with time i (i = 1 by default, -1 for first)
 == /times ?s?i 는 서버의 최근 5회 기록 또는 이름이 s 로 시작하는 플레이어의 i 번째부터의 기록을 표시합니다 (i 기본값 1, -1은 첫 번째)
 
+/times needs 0, 1 or 2 parameter. 1. = name, 2. = start number
+== /times 는 0, 1 또는 2 개의 인수가 필요합니다. 첫 번째는 이름, 두 번째는 시작 순위입니다
+
+/top5team needs 0, 1 or 2 parameter. 1. = name, 2. = start number
+== /top5team 은 0, 1 또는 2 개의 인수가 필요합니다. 첫 번째는 이름, 두 번째는 시작 순위입니다
+
 0 - Disabled, 1-9999 minutes
 == 0 - 비활성화, 1-9999 분
 
+0 disables timed rotation; skins only switch on random start events
+== 0이면 시간 순환을 비활성화하고 무작위 시작 이벤트 때만 스킨을 전환합니다
+
 1 star
 == 1성
+
+1% low
+== 1% 최저 프레임
+
+128 player id <-> 64 player id map update rate
+== 128 플레이어 ID와 64 플레이어 ID 맵 업데이트 속도
 
 2 stars
 == 2성
@@ -238,6 +283,9 @@ A demo with this name already exists
 
 A folder with this name already exists
 == 이 이름의 폴더가 이미 존재합니다.
+
+a player
+== 한 명의 플레이어
 
 A player name is required.
 == 플레이어 이름이 필요합니다.
@@ -325,6 +373,9 @@ Add a community as a favorite
 
 Add a community to the exclusion filter
 == 커뮤니티를 제외 필터에 추가
+
+Add a country to the allowed filter list for a specific community (kept visible while its country filter is active)
+== 특정 커뮤니티의 허용 필터 목록에 국가 추가 (해당 국가 필터가 활성화되어 있는 동안 계속 표시됨)
 
 Add a country to the exclusion filter for a specific community (ISO 3166-1 numeric)
 == 특정 커뮤니티의 제외 필터에 국가 추가 (ISO 3166-1 숫자 코드)
@@ -475,6 +526,9 @@ Adds a specific war entry
 
 Adds default chat binds
 == 기본 채팅 바인드 추가
+
+Adds dummy key, hammer, control and copy status to the HUD, plus your own bind status list.
+== 더미의 키, 해머, 컨트롤, 복사 상태를 HUD에 표시하고 사용자 지정 bind 상태 목록도 지원합니다.
 
 Adjust DDNet gameplay indicators and assists
 == Adjust DDNet gameplay indicators and assists
@@ -740,6 +794,12 @@ Apply
 Apply a preset first
 == 먼저 프리셋을 적용하세요
 
+Apply a random skin from the dummy queue
+== 더미 큐에서 무작위 스킨 적용
+
+Apply a random skin from the queue
+== 큐에서 무작위 스킨 적용
+
 Apply a saved profile by 1-based index to the current tee
 == 1부터 시작하는 인덱스로 저장된 프로필을 현재 티에 적용
 
@@ -754,9 +814,6 @@ Apply input early before next tick for prediction
 
 Apply quick input to other Tees as well
 == 다른 Tee에도 빠른 입력 적용
-
-Apply Saiko+ to other Tees
-== Saiko+를 다른 Tee에 적용
 
 Apply squishy Tee deformation to other players
 == Q弹 Tee 변형을 다른 플레이어에 적용
@@ -892,9 +949,6 @@ Audio slots
 
 AUS
 == 호주
-
-Auth level required to send phone to others.
-== 다른 사람에게 전화를 보내는 데 필요한 인증 수준.
 
 Authed name color in scoreboard
 == 점수판에서 인증된 이름 색상
@@ -1103,6 +1157,9 @@ Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
+Automatic effect LOD when crowded
+== 혼잡할 때 효과 자동 경량화
+
 Automatic gain control (0=off 1=on)
 == 자동 이득 제어 (0=끄기, 1=켜기)
 
@@ -1130,6 +1187,12 @@ Automatically create statboard csv
 Automatically enable Gores auto-switch in Gores game mode
 == Gores 게임 모드에서 Gores 자동 전환 자동 활성화
 
+Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
+== 사용자 지정 에셋 스프라이트가 완전히 투명하면 자동으로 기본 에셋으로 대체합니다. 끄면 빈 스프라이트가 보이지 않는 상태로 유지됩니다 (효과 숨기기 등)
+
+Automatically launch Steam when the client is started externally
+== 클라이언트를 외부에서 시작할 때 Steam 자동 실행
+
 Automatically re-join team 0 after finish (only if unlocked).
 == 완주 후 자동으로 0팀 재가입 (잠금 해제된 경우에만)
 
@@ -1154,11 +1217,20 @@ Automatically take game over screenshot
 Automatically take statboard screenshot
 == 통계판 스크린샷 자동 촬영
 
+Available practice commands: 
+== 사용 가능한 연습 명령어: 
+
+Available rescue modes: auto, manual
+== 사용 가능한 구조 모드: auto, manual
+
 Available resolutions
 == 사용 가능한 해상도
 
 Avg %.*f   ↓ %.*f   ↑ %.*f
 == 평균 %.*f   ↓ %.*f   ↑ %.*f
+
+Axiom API returned an error
+== Axiom API에서 오류를 반환했습니다
 
 Axiom auto login failed
 == Axiom 자동 로그인 실패
@@ -1175,8 +1247,14 @@ Axiom dummy password
 Axiom main account password
 == Axiom 메인 계정 비밀번호
 
+Axiom score request failed
+== Axiom 점수 요청에 실패했습니다
+
 Axis
 == 축
+
+Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
+== 배경 흐림 알고리즘: 0=가우시안, 1=Kawase, 2=Dual Kawase
 
 Backend to use (e.g. OpenGL or Vulkan)
 == 사용할 백엔드 (예: OpenGL 또는 Vulkan)
@@ -1307,6 +1385,9 @@ Base prediction margin
 Basic
 == 기본
 
+Be nice.
+== 서로 예의를 지켜 주세요.
+
 Before I die
 == 내가 죽기 전에
 
@@ -1367,8 +1448,14 @@ Bit flags for disabling settings tabs
 Black
 == 검정
 
-Black Flash
-== 흑섬
+Blank asset auto fallback
+== 빈 자산 자동 대체
+
+Blank material
+== 빈 소재
+
+Blank: hides this asset
+== 빈 값: 이 에셋을 숨깁니다
 
 Blend mode
 == 혼합 모드
@@ -1396,6 +1483,9 @@ Blue team
 
 Blue team wins!
 == 파란 팀 승리!
+
+Blur mode
+== 흐림 모드
 
 Body
 == 몸통
@@ -1556,6 +1646,9 @@ Can't swap with yourself
 Cancel
 == 취소
 
+Cancel upload
+== 업로드 취소
+
 Cancel your swap request
 == 스왑 요청 취소
 
@@ -1694,6 +1787,15 @@ Chat width
 Chat word filtering
 == 채팅 단어 필터링
 
+Cheats are disabled on this server
+== 이 서버에서는 치트가 비활성화되어 있습니다
+
+Cheats are enabled on this server
+== 이 서버에서는 치트가 활성화되어 있습니다
+
+check ddnet-saves.txt in config_directory.
+== config_directory 의 ddnet-saves.txt 를 확인하세요.
+
 Check if voice server address is reachable
 == 음성 서버 주소에 연결 가능한지 확인
 
@@ -1726,6 +1828,9 @@ Choose the language used by the client
 
 Choose the menu font and cursor appearance
 == Choose the menu font and cursor appearance
+
+Choose the menu font and font weight
+== 메뉴 글꼴과 굵기 선택
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
@@ -1931,6 +2036,9 @@ Collision Line Opacity
 Color
 == 색상
 
+Color map tune zones by their tune zone number
+== tune zone 번호로 맵의 tune 영역에 색상 적용
+
 Color of authenticated player names on scoreboard
 == 점수판에 인증된 플레이어 이름 색상
 
@@ -1945,6 +2053,9 @@ Color of hook line hitting tee
 
 Color of hook line not hitting anything
 == 아무것도 맞지 않은 갈고리 선 색상
+
+Color tee outlines by team for spectating
+== 관전 구분을 위해 팀별로 티 외곽선 색상 지정
 
 Colorize ping on scoreboard
 == 점수판에서 핑 색상화
@@ -1986,7 +2097,7 @@ Command:
 == 명령어:
 
 Commands
-== 명령
+== 명령어
 
 Commands run in the console
 == 콘솔에서 실행되는 명령어
@@ -2002,6 +2113,9 @@ Community
 
 Compact
 == 간결하게
+
+Compatibility mode
+== 호환 모드
 
 Compatible with single-player area hints from other servers
 == 다른 서버의 유사한 싱글 플레이어 영역 알림과 호환
@@ -2076,7 +2190,7 @@ Configure display and rendering
 == 디스플레이 및 렌더링 구성
 
 Configure Dream-only convenience features
-== Qm 전용 편의 기능 설정
+== Configure Dream-only convenience features
 
 Configure game and client preferences
 == 게임 및 클라이언트 환경 설정 구성
@@ -2108,14 +2222,14 @@ Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 == Configure laser shape, glow, and animation
 
-Configure lyrics sources and display
-== 가사 소스 및 표시 구성
-
 Configure nameplate text, badges, and visibility
 == Configure nameplate text, badges, and visibility
 
 Configure player identity and country
 == 플레이어 정보 및 국기 구성
+
+Configure qm_report_app_id and qm_report_secret first
+== 먼저 qm_report_app_id와 qm_report_secret을 설정하세요
 
 Configure QmClient gameplay helpers
 == QmClient 게임 도우미 구성
@@ -2141,8 +2255,14 @@ Configure Tee appearance and skins
 Configure the companion appearance and movement
 == Configure the companion appearance and movement
 
+Configure the ingame cursor scale
+== 게임 내 커서 크기 설정
+
 Configure the input overlay display
 == Configure the input overlay display
+
+Configure the lyrics display
+== 가사 표시 설정
 
 Configure these settings
 == 이 설정 구성
@@ -2174,6 +2294,9 @@ Connect dummy
 Connect dummy to enable
 == 더미 연결 후 활성화
 
+Connect to a server first
+== 먼저 서버에 연결하세요
+
 Connect to server first to establish voice network link
 == 먼저 서버에 연결하여 음성 네트워크 링크를 설정해야 합니다
 
@@ -2194,9 +2317,6 @@ Connecting dummy
 
 Connecting to
 == 연결 중
-
-Connecting to voice server
-== 음성 서버에 연결 중
 
 Connection disconnected
 == 연결이 끊어졌습니다
@@ -2231,12 +2351,6 @@ Console
 Console color
 == 콘솔 색상
 
-Console command executed after joining server
-== 서버 접속 후 실행되는 콘솔 명령
-
-Console command executed before connecting to server
-== 서버 연결 전 실행되는 콘솔 명령
-
 Contacting title server
 == 칭호 서버에 연결 중
 
@@ -2254,6 +2368,12 @@ Control latency compensation tools
 
 Control player (0) or dummy (1)
 == 플레이어(0) 또는 더미(1) 제어
+
+Controlled by Gores mode
+== Gores 모드가 제어 중
+
+Controlled by Zen mode
+== 선 모드가 제어 중
 
 Controller
 == 컨트롤러
@@ -2315,6 +2435,9 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == 더미에 연결할 수 없습니다
 
+Could not create report scan request
+== 신고 스캔 요청을 생성할 수 없습니다
+
 Could not find a Tutorial server. Check your internet connection.
 == 튜토리얼 서버를 찾을 수 없습니다. 인터넷 연결을 확인하세요.
 
@@ -2324,14 +2447,14 @@ Could not find online Tutorial server.\nStarting and connecting to local server�
 Could not find your Team
 == 팀을 찾을 수 없습니다
 
+Could not get current server address
+== 현재 서버 주소를 가져올 수 없습니다
+
 Could not get server list from master server
 == 마스터 서버에서 서버 목록을 가져올 수 없습니다
 
 Could not load default touch controls from file. See local console for details.
 == 파일에서 기본 터치 컨트롤을 불러올 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
-
-Could not load new features
-== 새 기능 내용을 불러오지 못했습니다
 
 Could not load sponsor QR code. Check the Base64 data
 == 스폰서 QR 코드를 불러올 수 없습니다. Base64 데이터를 확인하세요
@@ -2426,9 +2549,6 @@ Current rescue mode: %s
 Current status
 == 현재 상태
 
-Current time: %s\n- Uptime and playtime are calculated from official JSON data\n- Same as above\n- Same as above above\n
-== 현재 시간: %s\n- 가동 시간과 플레이 시간은 공식 JSON 데이터를 기반으로 계산됩니다\n- 위와 동일\n- 위와 동일\n
-
 Current: Ranks
 == 현재: 순위
 
@@ -2437,6 +2557,9 @@ Current: Score
 
 Current: Time
 == 현재: 시간
+
+Cursed Flame
+== 저주받은 불꽃
 
 Custom
 == 사용자 정의
@@ -2453,6 +2576,9 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 == 사용자 정의 화면비, x100 배율로 저장 (예: 178=16:9, 233=21:9)
 
+Custom color
+== 사용자 정의 색상
+
 Custom colors
 == 사용자 정의 색상
 
@@ -2461,6 +2587,9 @@ Custom community list fetch URL (must be https, leave empty to disable)
 
 Custom font
 == 사용자 정의 글꼴
+
+Custom font weight (variable fonts)
+== 사용자 지정 글꼴 굵기(가변 글꼴)
 
 Custom Font:
 == 사용자 정의 글꼴:
@@ -2507,9 +2636,6 @@ Customize translate button and menu colors
 Customize vote display and interaction
 == Customize vote display and interaction
 
-Cut end: %s
-== 끝: %s
-
 Cut interval
 == 잘라낸 구간
 
@@ -2518,9 +2644,6 @@ Cut length
 
 Cut segments
 == 잘라낸 구간들
-
-Cut start: %s
-== 시작: %s
 
 Cute:
 == 귀여움:
@@ -2548,6 +2671,9 @@ Darken Tee color when frozen (0-100)
 
 Data
 == 데이터
+
+Data source
+== 데이터 출처
 
 Date
 == 날짜
@@ -2594,6 +2720,9 @@ ddnet-saves.txt is empty
 ddnet-saves.txt not found
 == ddnet-saves.txt 를 찾을 수 없습니다
 
+DDNet.org map stats
+== DDNet.org 맵 통계
+
 DDNet/total CPU
 == DDNet / 전체 CPU
 
@@ -2606,11 +2735,20 @@ DDRace HUD Pro
 DDraceNetwork is a cooperative online game where the goal is for you and your group of tees to reach the finish line of the map. As a newcomer you should start on Novice servers, which host the easiest maps. Consider the ping to choose a server close to you.
 == DDraceNetwork는 협동 온라인 게임으로, 당신과 당신의 티 그룹이 맵의 결승선에 도달하는 것이 목표입니다. 초보자라면 가장 쉬운 맵을 제공하는 Novice 서버에서 시작해야 합니다. 핑을 고려하여 가까운 서버를 선택하세요.
 
+DDRaceNetwork · DDNet
+== DDRaceNetwork · DDNet
+
+ddstats.tw ID stats
+== ddstats.tw ID 통계
+
 Deactivate
 == 비활성화
 
 Deactivate all
 == 모두 비활성화
+
+Deactivate ghost
+== 고스트 비활성화
 
 Death opacity
 == 사망 불투명도
@@ -2624,9 +2762,6 @@ Death tile outline width
 Deaths
 == 사망 횟수
 
-Debug Curl.
-== Curl 디버그
-
 Debug graph
 == 디버그 그래프
 
@@ -2635,6 +2770,9 @@ Debug graph panel opacity (percent)
 
 Debug group clipping.
 == 그룹 클리핑 디버그
+
+Debug HTTP
+== HTTP 디버그
 
 Debug mode
 == 디버그 모드
@@ -2732,9 +2870,6 @@ Define automatic chat reply rules
 Delay
 == 지연
 
-Delay before executing tc_execute_on_join (milliseconds)
-== tc_execute_on_join 실행 전 지연 시간 (밀리초)
-
 Delay before new players can start votes or participate in kick/spectate votes (seconds)
 == 새 플레이어가 투표를 시작하거나 추방/관전 투표에 참여하기 전 지연 시간 (초)
 
@@ -2790,13 +2925,13 @@ Demo effects
 == 데모 효과
 
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
-== 데모 훅 강도 (0=끔 1=아이콘 2=아이콘과 번호)
+== 데모 훅 강도(0=끔 1=아이콘 2=아이콘과 숫자)
 
 Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)
-== 데모 훅 강도 표시 범위 (0=자신 1=다른 플레이어 2=강함 3=약함 4=모두)
+== 데모 훅 강도 범위(0=나 1=다른 사람 2=강한 훅 3=약한 훅 4=전체)
 
 Demo key presses (0=Off 1=Others 2=All 3=Own)
-== 데모 키 입력 (0=끔 1=다른 플레이어 2=모두 3=자신)
+== 데모 키 입력 표시(0=끔 1=다른 사람 2=전체 3=나)
 
 Demo marker added
 == 데모 마커 추가됨
@@ -2818,6 +2953,9 @@ Demos directory
 
 Depending on the number of supplied arguments, teleport yourself to; (0.) where you are spectating or aiming; (1.) the specified player name
 == 제공된 인수 개수에 따라 자신을 (0) 관전 중이거나 조준 중인 위치로, (1) 지정된 플레이어 이름으로 순간이동합니다
+
+Deprecated compatibility alias for qm_graphics_trace (macOS signposts)
+== qm_graphics_trace의 사용 중단된 호환 별칭(macOS 사인포스트)
 
 Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <seconds> <reason>'
 == 사용 중단됨. 'muteid <client_id> <seconds> <reason>' 또는 'muteip <ip> <seconds> <reason>' 를 사용하세요
@@ -2917,6 +3055,9 @@ Disallow chat from blacklisted addresses
 
 Discard
 == 취소
+
+Discard cached server pings older than this many hours (0 = never expire)
+== 이 시간보다 오래된 캐시된 서버 핑을 삭제 (0 = 만료되지 않음)
 
 Discard changes
 == 변경 사항 취소
@@ -3053,20 +3194,23 @@ Door Laser Outline Color
 Door laser outline color
 == 문 레이저 외곽선 색상
 
-Double-click: left applies to main, right applies to dummy
-== 더블 클릭: 왼쪽은 본체, 오른쪽은 더미에 적용
-
 Download community skins
 == 커뮤니티 스킨 다운로드
 
 Download failed
 == 다운로드 실패
 
+Download replay
+== リプレイ ダウンロード
+
 Download skins
 == 스킨 다운로드
 
 Download skins immediately from cl_skin_download_url
 == cl_skin_download_url에서 스킨을 즉시 다운로드
+
+Download the rank 1 demo for this map
+== 이 맵의 랭크 1 데모 다운로드
 
 Download this asset?
 == 이 에셋을 다운로드하시겠습니까?
@@ -3076,6 +3220,9 @@ Downloaded
 
 Downloading map
 == 맵 다운로드 중
+
+Downloading rank 1 demo
+== 랭크 1 데모 다운로드 중
 
 Downloading update...
 == 업데이트 다운로드 중...
@@ -3107,6 +3254,9 @@ Dragger laser outline color
 Dragger Outline Color
 == 드래거 외곽선 색상
 
+Draw a glow around tees colored by their race team
+== 레이스 팀 색상으로 티 외곽 발광 그리기
+
 Draw lines showing screen/clickbox center
 == 화면/클릭박스 중심을 보여주는 선 그리기
 
@@ -3136,6 +3286,9 @@ Drift smoothness
 
 Drop on right canvas to replace one part.
 == 오른쪽 캔버스에 드롭하여 한 부품을 교체합니다.
+
+Dual Kawase
+== 듀얼 Kawase
 
 Dummies are not allowed on this server
 == 이 서버에서는 더미가 허용되지 않습니다
@@ -3230,6 +3383,9 @@ Dummy mini view zoom (percent)
 Dummy name
 == 더미 이름
 
+Dummy not connected
+== 분신 미연결
+
 Dummy skin
 == 더미 스킨
 
@@ -3248,8 +3404,8 @@ Dummy skin queue current position
 Dummy skin queue max length
 == 더미 스킨 큐 최대 길이
 
-Dummy skin queue switch interval (ms)
-== 더미 스킨 큐 전환 간격 (ms)
+Dummy skin queue switch interval (ms, 0=no timed rotation, random start only)
+== 더미 스킨 큐 전환 간격(밀리초, 0=시간 순환 없음)
 
 Dummy window size
 == 더미 창 크기
@@ -3268,6 +3424,12 @@ dumps all sqlservers readservers = r, writeservers = w
 
 Dumps the antibot status
 == 안티봇 상태 덤프
+
+Duotone
+== 듀오톤
+
+Duotone icon secondary color alpha migration completed flag
+== 듀오톤 아이콘 보조 색상 알파 마이그레이션 완료 플래그
 
 Duplicate
 == 복제
@@ -3310,6 +3472,9 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == 다이나믹 아일랜드 배경 색상
+
+Each joins a separate team so solo runs start in sync (useful on maps where team-0 start is unreliable)
+== 각자 다른 팀에 들어가 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
 
 Ease in out quad
 == 이즈 인 아웃 쿼드
@@ -3377,6 +3542,9 @@ Emote and binding wheel animation duration (ms, 0=No animation, 1000=1 sec)
 Emote assets
 == 이모트 에셋
 
+Emote commands are: /emote surprise /emote blink /emote close /emote angry /emote happy /emote pain /emote normal
+== 이모트 명령어: /emote surprise /emote blink /emote close /emote angry /emote happy /emote pain /emote normal
+
 Emote ID to send when entering freeze (0-15)
 == 프리즈 진입 시 전송할 이모트 ID (0-15)
 
@@ -3416,8 +3584,17 @@ Enable and calibrate controller input
 Enable antiping (more aggressive prediction)
 == 안티핑 활성화 (더 공격적인 예측)
 
+Enable antispoof for vanilla 0.6 clients
+== 바닐라 0.6 클라이언트의 스푸핑 방지 활성화
+
 Enable audio output and choose a device
 == Enable audio output and choose a device
+
+Enable backdrop blur
+== 배경 흐림 효과 사용
+
+Enable backdrop blur for translucent interface and selected HUD backgrounds
+== 반투명 인터페이스와 선택한 HUD 배경에 배경 흐림 효과 사용
 
 Enable background 3D particle flicker
 == 배경 3D 파티클 깜빡임 활성화
@@ -3430,9 +3607,6 @@ Enable background 3D particle pulse scaling
 
 Enable background 3D particle trail
 == 배경 3D 파티클 트레일 활성화
-
-Enable basic anti-spoof
-== 기본 안티 스푸핑 활성화
 
 Enable camera drift
 == 카메라 드리프트 활성화
@@ -3452,11 +3626,17 @@ Enable chat with all/team mode
 Enable cheats for your current team's run, but you can't earn a rank
 == 현재 팀의 실행에 치트를 활성화하지만, 순위를 획득할 수 없습니다
 
+Enable client stutter diagnostics at startup
+== 시작 시 클라이언트 끊김 진단 활성화
+
 Enable colored console output
 == 콘솔 컬러 출력 활성화
 
 Enable coloring and hearts for friends
 == 친구에게 색상 및 하트 표시 활성화
+
+Enable connections from vanilla 0.6 clients
+== 바닐라 0.6 클라이언트의 연결 허용
 
 Enable controller
 == 컨트롤러 사용
@@ -3521,12 +3701,6 @@ Enable FTAPI auto-translate (may overload the service)
 Enable game sounds
 == 게임 사운드 활성화
 
-Enable Gaussian blur
-== 가우시안 블러 사용
-
-Enable Gaussian blur for translucent interface and selected HUD backgrounds
-== 반투명 인터페이스와 선택한 HUD 배경에 가우시안 흐림 효과 사용
-
 Enable ghost
 == 고스트 활성화
 
@@ -3543,7 +3717,7 @@ Enable highlighted chat sound
 == 강조 표시된 채팅 사운드 활성화
 
 Enable hook countdown
-== 훅 카운트다운 활성화
+== 훅 카운트다운 사용
 
 Enable HUD animations
 == HUD 애니메이션 활성화
@@ -3581,8 +3755,8 @@ Enable LLM thinking mode (may increase response time)
 Enable lyrics
 == 가사 활성화
 
-Enable macOS graphics diagnostics and Instruments signposts
-== macOS 그래픽 진단 및 Instruments 표지 활성화
+Enable main thread and render stage performance debug logging
+== 메인 스레드 및 렌더링 단계 성능 디버그 로그 활성화
 
 Enable map compatibility mode using the specified bug (example: grenade-doubleexplosion@ddnet.tw)
 == 지정된 버그를 사용하여 맵 호환 모드 활성화 (예: grenade-doubleexplosion@ddnet.tw)
@@ -3662,6 +3836,9 @@ Enable repeat function
 Enable replays
 == 리플레이 활성화
 
+Enable rotation
+== 순환 활성화
+
 Enable saving games (/save and /load)
 == 게임 저장 활성화 (/save 및 /load)
 
@@ -3679,6 +3856,9 @@ Enable skin queue rotation
 
 Enable skin switch animation
 == 스킨 전환 애니메이션 활성화
+
+Enable skin transition animation, then choose the type, scope, duration and easing.
+== 스킨 전환 애니메이션을 켜고 종류, 범위, 시간, 이징을 선택하세요.
 
 Enable smooth cinematic camera while free spectating
 == 자유 관전 중 부드러운 시네마틱 카메라 활성화
@@ -3767,14 +3947,17 @@ Enable voice filtering (highpass/compressor/limiter)
 Enable warlist
 == 적대 목록 활성화
 
+Enable weapon switch animation or reload animation, then tune range, duration, rotation and easing.
+== 무기 교체 애니메이션 또는 재장전 애니메이션을 켜고 범위, 시간, 회전, 이징을 조정하세요.
+
 Enable word filter list
 == 단어 필터 목록 활성화
 
 Enable Zen Mode
-== 젠 모드 사용
+== 젠 모드(Zen Mode) 활성화
 
 Enable Zen mode
-== 젠 모드 사용
+== Zen 모드 활성화
 
 Enable/disable infinite hook.
 == 무한 갈고리 활성화/비활성화
@@ -3806,9 +3989,6 @@ Endpoint
 Endpoint (optional)
 == 엔드포인트 (선택 사항)
 
-Enhanced rendering
-== 향상된 렌더링
-
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice 모드를 입력하거나 재시작하세요. 그렇지 않으면 60초 후에 팀 전체가 사망합니다
 
@@ -3817,6 +3997,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == 비밀번호 입력
+
+Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+== 후원 코드를 입력하고 "등록"을 누른 뒤 칭호를 작성하고 "저장"을 누르세요. "이 닉네임에서만 표시"를 켜면 하나의 닉네임에만 연결됩니다.
 
 Enter Username
 == 사용자 이름 입력
@@ -3847,6 +4030,9 @@ Entity wall outline opacity
 
 entity_bg (Workshop)
 == entity_bg (Workshop)
+
+Entry: %s
+== 위치: %s
 
 Erase items on the in game background
 == 게임 배경 위의 항목 지우기
@@ -3896,8 +4082,17 @@ Event
 Exact bound nickname
 == 연결할 정확한 닉네임
 
+Example /help settings will display the help about /settings
+== 예: /help settings 를 입력하면 /settings 의 도움말이 표시됩니다
+
 Example of usage
 == 사용 예시
+
+Example: /emote surprise 10 for 10 seconds or /emote surprise (default 1 second)
+== 예: /emote surprise 10 은 10초 동안, /emote surprise 는 기본 1초입니다
+
+Example: /map adr3 to call vote for Adrenaline 3. This means that the map name must start with 'a' and contain the characters 'd', 'r' and '3' in that order
+== 예: /map adr3 로 Adrenaline 3 투표를 시작할 수 있습니다. 맵 이름이 'a' 로 시작하고 'd', 'r', '3' 을 순서대로 포함해야 합니다
 
 Example: name1|name2|name3
 == 예시: 이름1|이름2|이름3
@@ -3926,8 +4121,8 @@ Execute the specified file
 Existing Player
 == 기존 플레이어
 
-Exo
-== Exo 에너지
+Exit replay view
+== 리플레이 보기 종료
 
 Export
 == 내보내기
@@ -3989,6 +4184,9 @@ Fade out
 Fade trail alpha
 == 꼬리 알파 페이드
 
+Failed
+== 실패
+
 Failed saving the replay!
 == 리플레이 저장 실패!
 
@@ -4001,6 +4199,9 @@ Failed to copy main asset image.
 Failed to create bgdraw folder
 == bgdraw 폴더 생성 실패
 
+Failed to download the rank 1 demo
+== 랭크 1 데모 다운로드 실패
+
 Failed to export audio pack file.
 == 오디오 팩 파일 내보내기 실패
 
@@ -4009,6 +4210,9 @@ Failed to export demo cut
 
 Failed to export skin files.
 == 스킨 파일 내보내기 실패
+
+Failed to fetch the replay list
+== 리플레이 목록 가져오기 실패
 
 Failed to load
 == 로드 실패
@@ -4037,9 +4241,6 @@ Fake CTF flags
 Fallback simple noise reduction strength
 == 대체 단순 노이즈 감소 강도
 
-Fast input
-== 빠른 입력
-
 Fast input (reduce visual latency)
 == 빠른 입력 (시각적 지연 감소)
 
@@ -4048,6 +4249,9 @@ Fast input others
 
 Fast practice
 == 빠른 연습
+
+Fast, lightweight blur with a softer approximation.
+== 빠르고 가벼운 블러로, 더 부드러운 근사 효과를 제공합니다.
 
 Fat skins (DDFat)
 == 통통한 스킨 (DDFat)
@@ -4184,6 +4388,9 @@ Fire
 First page in console
 == 콘솔 첫 페이지
 
+Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
+== 많은 인원의 서버에서는 행 높이를 고정하고 마우스 휠로 스크롤하여 표시합니다
+
 Flip:
 == 뒤집기:
 
@@ -4202,11 +4409,20 @@ Follow Tee
 Following
 == 현재
 
+Font
+== 글꼴
+
 Font cursor
 == 폰트 커서
 
 Font size
 == 글꼴 크기
+
+Font style:
+== 글꼴 스타일:
+
+For more info: /cmdlist
+== 더 많은 정보: /cmdlist
 
 Force a vote to yes/no
 == 투표를 찬성/반대로 강제
@@ -4255,6 +4471,9 @@ Frame time
 
 Frame time p95
 == 프레임 시간 P95
+
+Frame time p99
+== 프레임 시간 p99
 
 Framebuffer color bits (only fullscreen)
 == 프레임버퍼 색상 비트 (전체 화면만)
@@ -4382,6 +4601,9 @@ Full
 Full map listen in same room
 == 같은 방에서 전체 맵 듣기
 
+Full quality nameplate count
+== 전체 품질을 유지할 네임플레이트 수
+
 Full: each enabled animation category uses its complete transition
 == 전체: 활성화된 각 애니메이션 범주에 전체 전환을 사용합니다
 
@@ -4405,6 +4627,9 @@ Game graphics assets not from Teeworlds
 
 Game info
 == 게임 정보
+
+Game mode
+== 게임 모드
 
 Game over
 == 게임 오버
@@ -4454,8 +4679,20 @@ Gap between statusbar items
 Gap between tee and nametag
 == 티와 이름표 사이 간격
 
+Gaussian
+== 가우시안
+
 General
 == 일반
+
+Generated skin outline color
+== 생성된 외곽선 색상
+
+Generated skin outline opacity
+== 생성된 외곽선 불투명도
+
+Generated skin outline width
+== 생성된 외곽선 두께
 
 Getting game info
 == 게임 정보를 가져오는 중
@@ -4466,8 +4703,26 @@ Getting server list from master server
 Ghost
 == 고스트
 
+Ghost active
+== 고스트 활성화됨
+
+Ghost active (%d)
+== 고스트 활성화됨 (%d)
+
+Ghost ready
+== 고스트 준비됨
+
+Ghost replay
+== 고스트 리플레이
+
 Ghost tools
 == 유령 도구
+
+Ghost view mode off. The ghost follows your runs again.
+== 고스트 보기 모드가 해제되었습니다. 고스트가 다시 주행을 따라갑니다.
+
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
+== 고스트 보기 모드: ESC로 제어 패널을 전환합니다. ESC를 두 번 누르면 게임 메뉴가 열립니다(리플레이 종료). 관전 키를 누르면 멤버 목록이 표시됩니다.
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == 유령 가시성 (알파, 0=투명, 100=보임)
@@ -4517,6 +4772,9 @@ Gives you infinite jump
 Glitch
 == 글리치
 
+Global card
+== 전역 카드
+
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 == 전역 카드 정렬（형식 stableId|tab|col|order; 세미콜론 구분）
 
@@ -4565,6 +4823,9 @@ Go forward one tick
 Go forward the specified duration
 == 지정된 시간만큼 앞으로 가기
 
+Golden Grace
+== 황금의 은총
+
 Gores
 == 고어스
 
@@ -4580,6 +4841,9 @@ Gores Mode
 Gores mode key
 == Gores 모드 키
 
+Gores · Axiom
+== Gores · Axiom
+
 GPU name, chosen by backend (if supported)
 == GPU 이름, 백엔드에서 선택 (지원 시)
 
@@ -4594,9 +4858,6 @@ Gradient color
 
 Graphics
 == 그래픽
-
-Graphics backend
-== 그래픽 백엔드
 
 Graphics card
 == 그래픽 카드
@@ -4615,6 +4876,15 @@ Graphics library patch version
 
 Graphics library texture sampling lod bias multiplied by 1000
 == 그래픽 라이브러리 텍스처 샘플링 lod 바이어스 x1000
+
+Graphics mode
+== 그래픽 모드
+
+Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
+== 그래픽 모드: -1 = 백엔드 설정 사용, 0 = 호환성, 1 = 성능(기본값)
+
+Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
+== 그래픽 추적 수준: 0 = 끄기, 1 = 주기적 요약, 2 = 요약 및 느린 프레임, 3 = 상세 백엔드 추적
 
 Greeting text
 == 인사말 텍스트
@@ -4655,9 +4925,6 @@ Has save
 Has unread news
 == 읽지 않은 뉴스 있음
 
-HD icons (MSDF)
-== 고해상도 아이콘 (MSDF)
-
 HDF
 == HDF
 
@@ -4680,37 +4947,37 @@ Hi!
 == 안녕!
 
 Hide basic system info (join, version, rules) in Zen mode
-== 젠 모드에서 기본 시스템 정보(입장·버전·규칙) 숨기기
+== 선 모드에서 입장, 버전, 규칙 등 기본 시스템 정보 숨기기
 
 Hide chat messages from players marked as enemies
 == 적으로 표시한 플레이어의 채팅 메시지 숨기기
 
 Hide death/respawn effects
-== 사망/리스폰 이펙트 숨기기
+== 사망/부활 효과 숨기기
 
 Hide death/respawn effects in Zen Mode
-== 젠 모드에서 사망/리스폰 이펙트 숨기기
+== 선 모드에서 사망/부활 효과 숨기기
 
 Hide direction in Zen mode
-== 젠 모드에서 방향 표시 숨기기
+== 선 모드에서 방향 숨기기
 
 Hide direction indicators
-== 방향 표시 숨기기
+== 방향 표시기 숨기기
 
 Hide Echo messages
 == Echo 메시지 숨기기
 
 Hide Echo messages in Zen mode
-== 젠 모드에서 Echo 메시지 숨기기
+== 선 모드에서 Echo 메시지 숨기기
 
 Hide explosion effects
-== 폭발 이펙트 숨기기
+== 폭발 효과 숨기기
 
 Hide freeze effects
-== 프리즈 이펙트 숨기기
+== 얼음 효과 숨기기
 
 Hide freeze effects in Zen Mode
-== 젠 모드에서 동결 이펙트 숨기기
+== 선 모드에서 빙결 효과 숨기기
 
 Hide ghosts of frozen players
 == 얼어있는 플레이어의 유령 숨기기
@@ -4719,22 +4986,22 @@ Hide guide lines
 == 가이드 라인 숨기기
 
 Hide hammer effects
-== 해머 이펙트 숨기기
+== 망치 효과 숨기기
 
 Hide hammer effects in Zen Mode
-== 젠 모드에서 망치 이펙트 숨기기
+== 선 모드에서 망치 효과 숨기기
 
 Hide helper lines in Gores mode
 == Gores 모드에서 보조선 숨기기
 
 Hide helper lines in Zen mode
-== 젠 모드에서 보조선 숨기기
+== 선 모드에서 안내선 숨기기
 
 Hide HUD
 == HUD 숨기기
 
 Hide HUD in Zen mode
-== 젠 모드에서 HUD 숨기기
+== 선 모드에서 HUD 숨기기
 
 Hide indicator for tees on your screen
 == 화면 내 티 표시기 숨기기
@@ -4746,25 +5013,25 @@ Hide join/version prompts
 == 입장/버전 알림 숨기기
 
 Hide jump effects
-== 점프 이펙트 숨기기
+== 점프 효과 숨기기
 
 Hide jump effects in Zen Mode
-== 젠 모드에서 점프 이펙트 숨기기
+== 선 모드에서 점프 효과 숨기기
 
 Hide kill and finish messages in Zen mode
-== 젠 모드에서 킬/완주 메시지 숨기기
+== 선 모드에서 처치 및 완료 메시지 숨기기
 
 Hide kill/finish messages
-== 킬/완주 메시지 숨기기
+== 사망/완료 메시지 숨기기
 
 Hide map progress
-== 지도 진행 숨기기
+== 맵 진행도 숨기기
 
 Hide map progress bar in Zen mode
-== 젠 모드에서 맵 진행 표시줄 숨기기
+== 선 모드에서 맵 진행률 표시줄 숨기기
 
 Hide nameplates
-== 명찰 숨기기
+== 이름표 숨기기
 
 Hide names
 == 이름 숨기기
@@ -4782,22 +5049,22 @@ Hide player messages
 == 플레이어 메시지 숨기기
 
 Hide player messages in Zen mode
-== 젠 모드에서 플레이어 메시지 숨기기
+== 선 모드에서 플레이어 메시지 숨기기
 
 Hide player name plates in Zen Mode
-== 젠 모드에서 네임플레이트 숨기기
+== 선 모드에서 플레이어 이름표 숨기기
 
 Hide player names in Zen Mode
-== 젠 모드에서 플레이어 이름 숨기기
+== 선 모드에서 플레이어 이름 숨기기
 
 Hide projectile effects in Zen Mode
-== 젠 모드에서 발사체 이펙트 숨기기
+== 선 모드에서 포격 효과 숨기기
 
 Hide scoreboard
-== 스코어보드 숨기기
+== 점수판 숨기기
 
 Hide scoreboard in Zen mode
-== 젠 모드에서 점수판 숨기기
+== 선 모드에서 점수판 숨기기
 
 Hide sensitive info like /save password
 == /save 비밀번호 등 민감 정보 숨기기
@@ -4809,7 +5076,7 @@ Hide server prompt notifications
 == 서버 알림 숨기기
 
 Hide server tip notifications (including notification bar) in Zen mode
-== 젠 모드에서 서버 팁 알림(알림 표시줄 포함) 숨기기
+== 선 모드에서 서버 알림 숨기기 (알림 표시줄 포함)
 
 Hide Settings Tabs
 == 설정 탭 숨기기
@@ -4833,16 +5100,13 @@ Hide UI for focused gameplay
 == 집중 플레이를 위해 UI 숨기기
 
 Hide weapon fire effects in Zen Mode
-== 젠 모드에서 무기 발사 이펙트 숨기기
+== 선 모드에서 무기 불꽃 효과 숨기기
 
 Hide weapon muzzle flashes
 == 무기 총구 섬광 숨기기
 
 High Detail
 == 높은 상세도
-
-High process priority
-== 높은 프로세스 우선순위
 
 High to low
 == 높음에서 낮음으로
@@ -4861,6 +5125,12 @@ Highlight ping value
 
 Highlight selected players in the game world
 == Highlight selected players in the game world
+
+Highlight teammates hammering in death or freeze areas
+== 죽음 또는 동결 구역에서 해머를 휘두르는 팀원 강조
+
+Highlight teammates holding hammer in death or freeze areas
+== 죽음 또는 동결 구역에서 해머를 누르고 있는 팀원 강조
 
 Highlighted message
 == 강조된 메시지
@@ -4970,6 +5240,9 @@ How often the broadcast time updates
 How to handle inactive players (0 = move to spectators, 1 = move to free spec slot/kick, 2 = kick)
 == 비활성 플레이어 처리 방법 (0 = 관전자로 이동, 1 = 빈 관전 슬롯/추방, 2 = 추방)
 
+HTTP is not available
+== HTTP를 사용할 수 없습니다
+
 HTTP map download: connection phase timeout (in ms, 0=disabled)
 == HTTP 맵 다운로드: 연결 단계 타임아웃 (ms, 0=비활성화)
 
@@ -4978,6 +5251,9 @@ HTTP map download: low speed limit (in bytes/s, 0=disabled)
 
 HTTP map download: low speed limit period (0=disabled)
 == HTTP 맵 다운로드: 저속 제한 기간 (0=비활성화)
+
+HTTPS endpoint
+== HTTPS 엔드포인트
 
 https://ddnet.org/discord
 == https://ddnet.org/discord
@@ -5025,7 +5301,7 @@ I muted you
 == 내가 당신을 음소거했습니다
 
 Icon and number
-== 아이콘과 번호
+== 아이콘과 숫자
 
 Icons
 == 아이콘
@@ -5141,9 +5417,6 @@ Indicator size
 Indicator transparency
 == 표시기 투명도
 
-Inferno
-== 지옥불
-
 Infinite hook for super players on/off.
 == 슈퍼 플레이어용 무한 갈고리 켜기/끄기
 
@@ -5170,6 +5443,9 @@ Initializing assets
 
 Initializing components
 == 구성 요소 초기화 중
+
+Initializing layers
+== 레이어 초기화 중
 
 Initializing map logic
 == 맵 로직 초기화 중
@@ -5216,6 +5492,9 @@ Insane
 Installing update. Please wait...
 == 업데이트 설치 중입니다. 잠시 기다려 주세요...
 
+Instant zoom reverse
+== 줌 반전 즉시 적용
+
 Interface
 == 인터페이스
 
@@ -5251,6 +5530,9 @@ Internet (From online source)
 
 Interval for auto-saving current editor map copy to "auto" folder (0=off)
 == 현재 편집기 맵 사본을 "auto" 폴더에 자동 저장하는 간격 (0=끄기)
+
+Invalid Axiom API response
+== 잘못된 Axiom API 응답
 
 Invalid bound name
 == 연결할 닉네임이 유효하지 않습니다
@@ -5293,6 +5575,9 @@ Invalid Y coordinate.
 
 Invert camera drift direction
 == 카메라 드리프트 방향 반전
+
+Invite %s to the locked team
+== 잠긴 팀에 %s 초대
 
 Invite a person to a locked team
 == 잠긴 팀에 사람 초대
@@ -5342,6 +5627,9 @@ Join QQ group
 Join red
 == 레드팀 참가
 
+Join team %s
+== 팀 %s에 가입
+
 Join the team of the specified player
 == 지정된 플레이어의 팀에 가입
 
@@ -5364,7 +5652,7 @@ Jump hint color
 == 점프 힌트 색상
 
 Jump hint defaults migration completed flag
-== 점프 힌트 기본 설정 마이그레이션 완료 플래그
+== 점프 힌트 기본 문구 마이그레이션 완료 플래그
 
 Jump hint font size
 == 점프 힌트 글꼴 크기
@@ -5386,6 +5674,9 @@ k = Resend loss
 
 Kaomoji
 == 카오모지
+
+Kawase
+== Kawase
 
 Keep hook when teleporting
 == 순간이동 시 갈고리 유지
@@ -5456,6 +5747,9 @@ Kill message normal color
 Kill Protection enabled. If you really want to join the spectators, first type /kill
 == 자살 방지 보호가 활성화되었습니다. 정말 관전자로 전환하려면 먼저 /kill 을 입력하세요
 
+Kill Protection enabled. If you really want to kill, type /kill
+== 킬 보호가 활성화되었습니다. 정말 자살하려면 /kill 을 입력하세요
+
 Kill yourself to restart
 == 자살하여 다시 시작
 
@@ -5499,7 +5793,7 @@ Language file to use
 == 사용할 언어 파일
 
 Large emoticons and launched emoticons
-== 대형 이모티콘 및 발사 이모티콘
+== 큰 이모티콘과 발사 이모티콘
 
 Large text announcement for friend joining
 == 친구 입장 시 큰 글자 알림
@@ -5540,11 +5834,20 @@ Laser size
 Laser Size/Thickness (percentage, 100=default)
 == 레이저 크기/굵기 (백분율, 100=기본값)
 
+Lasers can hit you if you shot them and they pull you towards the bounce origin (Like DDRace Beta)
+== 자신이 쏜 레이저도 자신에게 명중하며 반사 지점 쪽으로 끌어당깁니다 (DDRace Beta 와 유사)
+
+Lasers can't hit you if you shot them, and they pull others towards the shooter
+== 자신이 쏜 레이저는 자신에게 명중하지 않으며, 다른 플레이어를 발사한 쪽으로 끌어당깁니다
+
 Last entered
 == 마지막 입력
 
 Last page in console
 == 콘솔의 마지막 페이지
+
+Last successful sync: %s
+== 마지막 동기화 성공: %s
 
 Latency
 == 지연 시간
@@ -5556,10 +5859,13 @@ Launch count threshold for the next sponsor reminder
 == 다음 후원 알림까지의 실행 횟수 임계값
 
 Launch emote
-== 이모티콘 발사
+== 이모트 발사
 
 Launch emote key
 == 이모티콘 발사 키
+
+Launch Steam automatically when starting externally
+== 외부에서 시작할 때 Steam 자동 실행
 
 Layout
 == 레이아웃
@@ -5579,6 +5885,9 @@ Leave empty to disable
 Leave empty to join public room
 == 공개 방에 입장하려면 비워 두세요
 
+Leave empty to show everyone
+== 비우면 모든 플레이어 표시
+
 Leave empty to use default prompt
 == 기본 프롬프트를 사용하려면 비워 두세요
 
@@ -5593,6 +5902,9 @@ Left/right channel width
 
 Legacy option: connections that skip TLS verification are rejected
 == 레거시 옵션: TLS 검증을 건너뛰는 연결은 거부됩니다
+
+Legacy realtime WebSocket URL (migrated to qm_websocket_url)
+== 기존 실시간 WebSocket URL (qm_websocket_url로 이전됨)
 
 Length
 == 길이
@@ -5620,6 +5932,9 @@ LibreTranslate API Key
 
 LibreTranslate endpoint
 == LibreTranslate 엔드포인트
+
+Light
+== 라이트
 
 Light band (0 = style default)
 == 색상 위상 (0 = 스타일 기본값)
@@ -5711,11 +6026,20 @@ LLM translation default concurrency (smart adjustment)
 Load
 == 불러오기
 
+Load as ghost
+== 고스트로 불러오기
+
 Load drawings from a given csv file (defaults to map name)
 == 지정된 CSV 파일에서 그림 불러오기 (기본값은 맵 이름)
 
+Load save %s
+== 저장 %s 불러오기
+
 Load sound files in thread
 == 스레드에서 사운드 파일 로드
+
+Load the official rank replay of a map as a ghost (default: current map, rank 1)
+== 맵의 공식 랭크 리플레이를 고스트로 불러오기 (기본: 현재 맵, Rank 1)
 
 Load with code r. /load to check your existing saves
 == 코드 r로 불러오기; /load를 사용하여 기존 저장 데이터를 확인할 수 있습니다
@@ -5734,6 +6058,9 @@ Loading
 
 Loading assets...
 == 에셋 로딩 중...
+
+Loading Axiom scores...
+== Axiom 점수 불러오는 중...
 
 Loading commands…
 == 명령 로딩 중…
@@ -5780,6 +6107,9 @@ Loading skin files
 Loading sound files
 == 사운드 파일 로딩 중
 
+Loading successfully done
+== 불러오기가 완료되었습니다
+
 Loading…
 == 로딩 중…
 
@@ -5792,11 +6122,23 @@ Local + Dummy
 Local console log category filter mask (bit flags)
 == 로컬 콘솔 로그 분류 필터 마스크(비트 플래그)
 
+Local game mode statistics
+== 로컬 게임 모드 통계
+
 Local only
 == 로컬 전용
 
+Local particle effects
+== 로컬 파티클 효과
+
+Local particles: show particles behind own Tee (e.g. freeze snow)
+== 로컬 파티클: 자신의 Tee 뒤에 떨어지는 파티클 표시 (예: 얼음 결정)
+
 Local saves
 == 로컬 저장
+
+Local statistics file is invalid, saving paused
+== 로컬 통계 파일이 손상되어 저장이 일시 중지되었습니다
 
 Local test mode
 == 로컬 테스트 모드
@@ -5811,7 +6153,7 @@ Local-only
 == 로컬 전용
 
 Locate
-== 위치로 이동
+== 위치 찾기
 
 Lock delay
 == 잠금 지연
@@ -5819,11 +6161,17 @@ Lock delay
 Lock team
 == 팀 잠금
 
+Lock the team so other players cannot join directly
+== 다른 플레이어가 직접 가입할 수 없도록 팀 잠그기
+
 Locked
 == 잠김
 
 Log output filename
 == 로그 출력 파일 이름
+
+Log predicted event creation/playback and snapshot confirmation to debug double sounds.
+== 중복 사운드를 디버깅하기 위해 예측 이벤트 생성/재생과 스냅샷 확인을 기록합니다.
 
 Log realtime WebSocket channel events
 == 실시간 WebSocket 채널 이벤트 기록
@@ -5836,6 +6184,9 @@ Logout of econ
 
 Logout of rcon
 == rcon 로그아웃
+
+Long frames
+== 긴 프레임
 
 Lose weapons when teleporting (useful for race maps)
 == 순간이동 시 무기 손실 (레이스 맵에 유용)
@@ -5852,11 +6203,17 @@ Main Asset
 Main menu
 == 메인 메뉴
 
+Main team %d / Dummy team %d
+== 본체 팀 %d / 분신 팀 %d
+
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 얼은 플레이어를 배구공처럼 보이게 만들기 (0=비활성화, 1=배구 맵만, 2=항상)
 
 Make sure the backend supports OpenAI-compatible thinking parameters
 == 백엔드가 OpenAI 호환 사고 매개변수를 지원하는지 확인하세요
+
+Make sure you use the same name as you had when saving. 
+== 저장할 때와 같은 이름을 사용하고 있는지 확인하세요.
 
 Makes you a ninja
 == 당신을 닌자로 만듭니다
@@ -5897,6 +6254,9 @@ Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
 
+Manage the skin rotation queue
+== 스킨 순환 큐 관리
+
 Manual
 == 수동
 
@@ -5935,6 +6295,12 @@ Map exceeds the client limit of 64 MiB.
 
 Map folders
 == 맵 폴더
+
+Map name
+== 맵 이름
+
+Map path in save folder
+== 저장 폴더의 맵 경로
 
 Map play history
 == 맵 플레이 기록
@@ -5987,6 +6353,15 @@ Map upload
 Map upload cancelled.
 == 맵 업로드를 취소했습니다.
 
+Map upload endpoint
+== 맵 업로드 엔드포인트
+
+Map upload endpoint (empty disables map upload)
+== 맵 업로드 엔드포인트(비워 두면 맵 업로드 사용 안 함)
+
+Map upload endpoint must use HTTP or HTTPS
+== 맵 업로드 엔드포인트는 HTTP 또는 HTTPS를 사용해야 합니다
+
 Map upload in progress...
 == 맵 업로드 중...
 
@@ -5996,14 +6371,26 @@ Map upload network error.
 Map uploaded successfully.
 == 맵을 업로드했습니다.
 
+Maps finished
+== 완료한 맵
+
+maps/example.map
+== maps/example.map
+
 Margin when notification is docked
 == 알림바가 가장자리에 붙을 때 여백
 
 Mark demo
 == 데모 표시
 
+Mark the beginning of a cut (right click to reset)
+== 잘라내기 시작 지점 표시 (우클릭 시 초기화)
+
 Mark the beginning of a demo cut
 == 데모 컷의 시작을 표시합니다
+
+Mark the end of a cut (right click to reset)
+== 잘라내기 끝 지점 표시 (우클릭 시 초기화)
 
 Mark the end of a demo cut
 == 데모 컷의 끝을 표시합니다
@@ -6068,8 +6455,14 @@ maximum
 Maximum auto-saves retained per map name (0=unlimited)
 == 맵 이름당 유지되는 최대 자동 저장 수 (0=무제한)
 
+Maximum banned addresses sent their ban message per second (0 = unlimited).
+== 초당 차단 메시지를 전송할 수 있는 차단 주소의 최대 수(0 = 제한 없음).
+
 Maximum clients per IP
 == IP당 최대 클라이언트 수
+
+Maximum compressed packets from unconnected addresses decompressed per second (0 = unlimited).
+== 연결되지 않은 주소에서 초당 압축 해제할 수 있는 최대 압축 패킷 수(0 = 제한 없음).
 
 Maximum cursor distance
 == 최대 커서 거리
@@ -6101,8 +6494,23 @@ Maximum number of automatic scoreboard screenshots (0 = unlimited)
 Maximum number of clients on server
 == 서버의 최대 클라이언트 수
 
+Maximum number of packets received in one batch before returning to the main loop (0 = unlimited).
+== 메인 루프로 돌아가기 전에 한 번에 수신할 수 있는 최대 패킷 수(0 = 제한 없음).
+
+Maximum number of pre-inputs per tick and client sent to other clients (0 for no limit)
+== 틱 및 클라이언트당 다른 클라이언트에 전송할 사전 입력의 최대 수(0 = 제한 없음)
+
+Maximum number of resend requests answered per second (0 for no limit)
+== 초당 응답할 재전송 요청의 최대 수(0 = 제한 없음)
+
+Maximum number of server info responses of any size sent per second (0 = unlimited).
+== 크기와 관계없이 초당 전송할 수 있는 서버 정보 응답의 최대 수(0 = 제한 없음).
+
 Maximum number of skins loaded simultaneously
 == 동시에 로드되는 최대 스킨 수
+
+Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
+== 초당 응답할 수 있는 바닐라 스푸핑 방지 핸드셰이크의 최대 수(0 = 제한 없음).
 
 Maximum players participating in a vote (0 = unlimited)
 == 투표에 참여할 수 있는 최대 플레이어 수 (0 = 무제한)
@@ -6146,9 +6554,6 @@ Menu camera rotation time in seconds
 Menu camera speed
 == 메뉴 카메라 속도
 
-Menu Gaussian blur pipeline
-== 메뉴 가우시안 블러 파이프라인
-
 Menu main panel background color
 == 메뉴 메인 패널 배경색
 
@@ -6168,10 +6573,13 @@ Menu option - selected
 == 메뉴 옵션 - 선택됨
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
-== 이 시간 창(밀리초) 내 연속된 동일 Echo 메시지 병합 (0=병합 안 함)
+== 이 시간(밀리초) 내에 연속으로 동일한 echo 메시지를 병합합니다(0이면 병합하지 않음)
 
 Merge consecutive identical player messages within 2 seconds
 == 2초 안에 연속으로 표시된 동일 플레이어의 같은 메시지 병합
+
+Merges chat messages repeated within a short time into a single line.
+== 짧은 시간 안에 반복된 채팅 메시지를 한 줄로 합칩니다.
 
 Message color
 == 메시지 색상
@@ -6302,9 +6710,6 @@ Modified
 Modules snap to screen edges, center lines and other HUD modules while dragging
 == 모듈을 드래그하면 화면 가장자리, 중심선 및 기타 HUD 모듈에 스냅됩니다
 
-More aggressive prediction of other players' movement (only with cl_antiping 1)
-== 다른 플레이어 움직임의 더 공격적인 예측 (cl_antiping 1에서만)
-
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee의 안정적인 방향을 따라 더 낙관적인 예측, 안정화 지연 감소
 
@@ -6327,7 +6732,7 @@ Mouse size
 == 마우스 크기
 
 Move a friend category to a position
-== 친구 카테고리를 지정한 위치로 이동
+== 친구 분류를 지정 위치로 이동
 
 Move left
 == 왼쪽으로 이동
@@ -6350,17 +6755,23 @@ Moves to the point with x/y-coordinates ii
 Moves to the tile with x/y-number ii
 == x/y 번호 ii 의 타일로 이동
 
+Multi-resolution blur with a stronger result and balanced GPU cost.
+== 더 강한 효과와 균형 잡힌 GPU 부하를 제공하는 다중 해상도 블러입니다.
+
 Multi-View
 == 멀티 뷰
+
+Multiple exact Axiom players found
+== 정확히 일치하는 Axiom 플레이어가 여러 명 있습니다
 
 Mute
 == 음소거
 
 Mute death/respawn sound in Zen Mode
-== 젠 모드에서 사망/리스폰 소리 음소거
+== 선 모드에서 사망/부활 소리 음소거
 
 Mute death/respawn sounds
-== 사망/리스폰 소리 음소거
+== 사망/부활 소리 음소거
 
 Mute emoticons
 == 이모티콘 음소거
@@ -6369,16 +6780,16 @@ Mute flag sounds
 == 깃발 소리 음소거
 
 Mute hammer sound in Zen mode
-== 젠 모드에서 망치 소리 음소거
+== 선 모드에서 망치 소리 음소거
 
 Mute hammer sounds
-== 해머 소리 음소거
+== 망치 소리 음소거
 
 Mute hook sound
 == 갈고리 소리 음소거
 
 Mute jump sound in Zen Mode
-== 젠 모드에서 점프 소리 음소거
+== 선 모드에서 점프 소리 음소거
 
 Mute jump sounds
 == 점프 소리 음소거
@@ -6507,7 +6918,10 @@ Nameplate hook strength icon scope (0=Own 1=Others 2=Strong hook 3=Weak hook 4=A
 == 이름표 갈고리 강도 아이콘 범위 (0=자신 1=타인 2=강한 갈고리 3=약한 갈고리 4=모든 플레이어)
 
 Nameplate nickname scope (0=None 1=Current character 2=Own characters 3=Other players 4=Other players and own non-current characters 5=All)
-== 이름표 닉네임 범위 (0=없음 1=현재 캐릭터 2=자신의 캐릭터 3=다른 플레이어 4=다른 플레이어와 자신의 비활성 캐릭터 5=모두)
+== 닉네임 표시 범위(0=없음 1=현재 캐릭터 2=내 캐릭터 3=다른 플레이어 4=다른 플레이어와 내 비조작 캐릭터 5=전체)
+
+Nameplate nickname scope migration completed flag
+== 닉네임 표시 범위 마이그레이션 완료 플래그
 
 Nameplate position X
 == 네임플레이트에 좌표 X 표시
@@ -6749,14 +7163,20 @@ No map play history yet
 No map selected
 == 선택한 맵 없음
 
+No maps found on this server!
+== 이 서버에서 조건에 맞는 맵을 찾지 못했습니다!
+
 No matching assets.
 == 일치하는 에셋이 없습니다.
 
 No matching features found. Try other keywords
 == 일치하는 기능을 찾을 수 없습니다. 다른 키워드를 시도해 보세요.
 
-No new features yet
-== 아직 새 기능 내용이 없습니다
+No matching Rank 1 replay
+== 일치하는 Rank 1 리플레이가 없습니다
+
+no matching settings found, type /settings to view them
+== 해당하는 설정을 찾지 못했습니다. /settings 를 입력하면 확인할 수 있습니다
 
 No noise reduction
 == 노이즈 감소 안 함
@@ -6785,8 +7205,20 @@ No presets yet
 No preview
 == 미리보기 없음
 
+No Rank 1 replay for the current map (not generated by the official service yet)
+== 현재 맵의 Rank 1 리플레이가 아직 없습니다(공식 서비스에서 아직 생성되지 않음)
+
+No rank 1 replay was found for this map
+== 이 맵의 랭크 1 리플레이를 찾을 수 없습니다
+
+No Rank 1 replays cached yet. Search and download from the Rank 1 page.
+== 캐시된 Rank 1 리플레이가 아직 없습니다. Rank 1 페이지에서 검색하여 다운로드할 수 있습니다.
+
 No results
 == 결과 없음
+
+No Rules Defined, Kill em all!!
+== 규칙이 설정되지 않았습니다. 관리자에게 문의하세요.
 
 No safe position found
 == 안전 위치를 찾을 수 없음
@@ -6796,6 +7228,9 @@ No saved maps found
 
 No saved profiles available yet. Save one first.
 == 저장된 프로필이 없습니다. 먼저 하나를 저장하세요.
+
+No saves found on this map
+== 이 맵에서 저장 기록을 찾지 못했습니다
 
 No screenshot selected
 == 선택된 스크린샷 없음
@@ -6817,6 +7252,9 @@ No space for button
 
 No status bar items
 == 상태 표시줄 항목 없음
+
+No such savegame for this map
+== 이 맵에 해당하는 저장 기록이 없습니다
 
 No unfinished maps available
 == 사용 가능한 미완성 맵이 없습니다
@@ -6868,6 +7306,9 @@ Not open, check input device or mic permission
 
 Not open, check output device
 == 열려 있지 않음, 출력 장치 확인
+
+Not requested
+== 요청하지 않음
 
 Note
 == 메모
@@ -6964,6 +7405,9 @@ Official
 
 Official community links
 == 공식 커뮤니티 링크
+
+Official site: DDNet.org
+== 공식 사이트: DDNet.org
 
 Offline
 == 오프라인
@@ -7133,11 +7577,17 @@ Option color
 Optional authentication key for the DNSBL provider
 == DNSBL 제공자의 선택적 인증 키
 
+Or visit DDNet.org
+== 또는 DDNet.org 를 방문하세요
+
 Original
 == 기본
 
 Other
 == 기타
+
+Other modes
+== 기타 모드
 
 Other players' hook line width
 == 다른 플레이어의 갈고리 선 너비
@@ -7301,8 +7751,20 @@ Password incorrect
 Password required to use reserved slots.
 == 예약된 슬롯을 사용하는 데 필요한 비밀번호
 
+Past year
+== 지난 1년
+
 Paste sp_dc from Spotify web cookies
 == 브라우저의 sp_dc 쿠키 붙여넣기
+
+Path to CA certificate for verifying the MySQL/MariaDB server certificate
+== MySQL/MariaDB 서버 인증서 확인에 사용할 CA 인증서 경로
+
+Path to client certificate for the MySQL/MariaDB SSL connection
+== MySQL/MariaDB SSL 연결의 클라이언트 인증서 경로
+
+Path to client key for the MySQL/MariaDB SSL connection
+== MySQL/MariaDB SSL 연결의 클라이언트 키 경로
 
 Pause
 == 일시정지
@@ -7324,6 +7786,15 @@ Penalty in seconds for saving or swapping positions
 
 Per-name volume (name=percent)
 == 이름별 개별 볼륨 (name=percent)
+
+Performance debug log threshold (ms)
+== 성능 디버그 로그 임계값 (ms)
+
+Performance mode
+== 성능 모드
+
+Performance points
+== 성과 점수
 
 Permanent access; up to 4 online IP addresses
 == 영구 자격, 최대 4개 IP 동시 접속
@@ -7361,6 +7832,9 @@ Pet Skin:
 Pick result: %s
 == 추첨 결과: %s
 
+Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
+== 사용하는 음악 앱에 맞는 소스를 선택하고 재생만 하면 가사가 자동으로 따라옵니다.
+
 Pickup range
 == 획득 범위
 
@@ -7397,6 +7871,9 @@ Play back a demo
 Play background music
 == 배경 음악 재생
 
+Play replay
+== 리플레이 재생
+
 Play slide-in rotation animation when switching weapon
 == 무기 전환 시 슬라이드인 회전 애니메이션 재생
 
@@ -7405,6 +7882,9 @@ Play the current demo
 
 Play the selected demo
 == 선택한 데모 재생
+
+Play time
+== 플레이 시간
 
 Play/Pause
 == 재생/일시정지
@@ -7490,6 +7970,9 @@ Player name:
 Player not found
 == 플레이어를 찾을 수 없습니다
 
+Player not found on Axiom
+== Axiom에서 플레이어를 찾을 수 없습니다
+
 Player preview
 == 플레이어 미리보기
 
@@ -7535,6 +8018,9 @@ Player: %s
 Players
 == 플레이어
 
+Players are just kicked and not banned if they get voted off
+== 투표로 추방된 플레이어는 강퇴될 뿐 차단되지 않습니다
+
 Players are not allowed to chat from VPNs at this time
 == 현재 VPN 사용 플레이어는 채팅할 수 없습니다
 
@@ -7544,14 +8030,35 @@ Players can collide on this server
 Players can hook each other on this server
 == 이 서버에서는 플레이어가 서로를 훅할 수 있습니다
 
+Players can use Callvote menu tab to kick offenders
+== 플레이어는 Callvote 메뉴 탭으로 위반자를 강퇴할 수 있습니다
+
 Players can't collide on this server
 == 이 서버에서는 플레이어 간 충돌이 불가능합니다
 
 Players can't hook each other on this server
 == 이 서버에서는 플레이어가 서로를 훅할 수 없습니다
 
+Players can't use the Callvote menu tab to kick offenders
+== 플레이어는 Callvote 메뉴 탭으로 위반자를 강퇴할 수 없습니다
+
+Players hook time is limited
+== 이 서버에서는 훅 지속 시간이 제한됩니다
+
+Players hook time is unlimited
+== 이 서버에서는 훅 지속 시간이 무제한입니다
+
+Players weapons affect others
+== 이 서버에서는 무기가 다른 플레이어에게 영향을 줍니다
+
+Players weapons has no affect on others
+== 이 서버에서는 무기가 다른 플레이어에게 영향을 주지 않습니다
+
 Playing effects
 == 효과 재생
+
+Plays an animation whenever your skin changes, including skins stolen with the hammer.
+== 해머로 빼앗은 스킨을 포함해 스킨이 바뀔 때 애니메이션을 재생합니다.
 
 Please add a valid cut first
 == 먼저 유효한 잘라내기 구간을 추가하세요
@@ -7654,6 +8161,9 @@ Predict grenade trajectory (only with cl_antiping 1)
 
 Predict ninja path
 == 닌자 경로 예측
+
+Predict other player's movement (only enabled if cl_antiping is set to 1) (1 = always on, 2 = interaction only, 3 = 2 and frozen tees always)
+== 다른 플레이어의 움직임 예측(cl_antiping이 1일 때만 활성화)(1 = 항상 켜기, 2 = 상호작용 중에만, 3 = 2 및 얼어 있는 Tee는 항상 예측)
 
 Predict weapon projectiles (only with cl_antiping 1)
 == 무기 발사체 예측 (cl_antiping 1에서만)
@@ -7877,9 +8387,6 @@ Pulse speed
 Pulse strength
 == 펄스 강도
 
-Pure Vulkan fallback
-== 현재: 순수 Vulkan 폴백
-
 Push radius
 == 밀기 반경
 
@@ -7917,16 +8424,19 @@ q = Connection quality
 == q = 연결 품질
 
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
-== Qm 향상된 렌더링: 0=꺼짐(순수 Vulkan), 1=자동 폴백, 2=강제 켜짐
+== Qm 향상된 렌더링: 0=끄기(순수 Vulkan), 1=자동 폴백, 2=강제 켜기
 
 Qm UI custom icon color
 == Qm UI 아이콘 사용자 지정 색상
 
+Qm UI duotone secondary icon color
+== Qm UI 듀오톤 아이콘 보조 색상
+
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm UI 아이콘 색상: 1=흰색, 2=검정, 3=사용자 지정, 4=무지개
 
-Qm UI icon weight: 0=Regular, 1=Bold, 2=Thin, 3=Fill
-== Qm UI 아이콘 굵기: 0=보통, 1=굵게, 2=얇게, 3=채우기
+Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
+== Qm UI 아이콘 스타일: 0=보통, 1=굵게, 2=얇게, 3=채우기, 4=라이트, 5=듀오톤
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue: 인덱스는 1에서 %d 사이여야 합니다.
@@ -7961,9 +8471,6 @@ QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 == QmUi 색상 애니메이션 보간：0=sRGB 선형 1=OKLAB 지각 균일
 
-QmVulkan active
-== 현재: QmVulkan 활성
-
 QQ group: 1076765929 (click to copy)
 == QQ 그룹: 1076765929 (클릭하여 복사)
 
@@ -7976,6 +8483,24 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 배경 장식에 사용되는 쿼드 표시
 
+Query current map info
+== 현재 맵 정보 조회
+
+Query map info for %s
+== %s 맵 정보 조회
+
+Query points for %s
+== %s의 점수 조회
+
+Query rank for %s
+== %s의 순위 조회
+
+Query server setting: %s
+== 서버 설정 조회: %s
+
+Query team rank for %s
+== %s의 팀 순위 조회
+
 Queue is empty
 == 대기열이 비어 있습니다
 
@@ -7984,9 +8509,6 @@ Queue preset: %s
 
 Quick action menu for players
 == 플레이어 빠른 작업 메뉴
-
-Quick input mode (0=Fast 4=Saiko+; legacy values fall back to Fast)
-== 빠른 입력 모드 (0=Fast 4=Saiko+; 이전 값은 Fast로 폴백)
 
 Quit
 == 종료
@@ -8051,17 +8573,131 @@ Random map
 Random pick
 == 무작위 추첨
 
+Random skin on map join
+== 맵 입장 시 무작위 스킨
+
 Random unfinished map
 == 무작위 미완료 맵
 
 Randomize player color (0 = all, 1 = body, 2 = feet, 3 = skin, 4 = flag) example: 0011 = randomize skin and flag [number is position]
 == 플레이어 색상 무작위화 (0 = 전체, 1 = 몸, 2 = 발, 3 = 스킨, 4 = 깃발) 예: 0011 = 스킨과 깃발 무작위화 [숫자는 위치]
 
+Rank 1
+== 랭크 1
+
+Rank 1 demo
+== 랭크 1 데모
+
+Rank 1 demo already cached under 'Rank 1 replays': %s
+== Rank 1 리플레이가 'Rank 1 replays'에 이미 캐시됨: %s
+
+Rank 1 demo downloaded to '%s'
+== 랭크 1 데모가 '%s'에 다운로드되었습니다
+
+Rank 1 members
+== Rank 1 멤버
+
+Rank 1 replay
+== 랭크 1 리플레이
+
+Rank 1 replays
+== Rank 1 리플레이
+
+Rank demo already available in the demo browser: %s
+== 해당 리플레이는 이미 데모 브라우저에 있습니다: %s
+
+Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
+== 랭크 데모 다운로드됨: %s. 랭크 1 목록 또는 데모 브라우저에서 재생하세요.
+
+Rank ghost loaded: %s, %s s. It follows your current run.
+== Rank 고스트를 불러왔습니다: %s, %s초. 현재 주행을 따라갑니다.
+
+Rank ghost loaded: %s, %s s. It plays when you cross the start line.
+== Rank 고스트를 불러왔습니다: %s, %s초. 시작선을 넘으면 재생됩니다.
+
+Rank ghost unloaded
+== Rank 고스트를 해제했습니다
+
+Rank ghost: %d tees could not be loaded
+== Rank 고스트: %d개의 Tee를 불러올 수 없습니다
+
+Rank ghost: another task is already running
+== Rank 고스트: 다른 작업이 이미 실행 중입니다
+
+Rank ghost: converting the replay (%d%%)
+== Rank 고스트: 리플레이 변환 중(%d%%)
+
+Rank ghost: converting the replay ...
+== Rank 고스트: 리플레이 변환 중…
+
+Rank ghost: could not extract the runner's path from the replay
+== Rank 고스트: 리플레이에서 주자의 경로를 추출할 수 없습니다
+
+Rank ghost: downloading the replay (%d%%)
+== Rank 고스트: 리플레이 다운로드 중(%d%%)
+
+Rank ghost: downloading the replay ...
+== Rank 고스트: 리플레이 다운로드 중…
+
+Rank ghost: failed to download the replay
+== Rank 고스트: 리플레이 다운로드 실패
+
+Rank ghost: failed to fetch the replay list
+== Rank 고스트: 리플레이 목록을 가져오지 못했습니다
+
+Rank ghost: failed to load the generated ghost (join the map first)
+== Rank 고스트: 생성된 고스트를 불러오지 못했습니다 (먼저 맵에 입장하세요)
+
+Rank ghost: failed to load the replay: %s
+== Rank 고스트: 리플레이 불러오기 실패: %s
+
+Rank ghost: failed to write the ghost file
+== Rank 고스트: 고스트 파일 쓰기 실패
+
+Rank ghost: fetching the replay list ...
+== Rank 고스트: 리플레이 목록 가져오는 중…
+
+Rank ghost: HTTP is not available
+== Rank 고스트: HTTP를 사용할 수 없습니다
+
+Rank ghost: load a ghost first (Rank 1 page or qm_rank_ghost)
+== Rank 고스트: 먼저 고스트를 불러오세요(Rank 1 페이지 또는 qm_rank_ghost)
+
+Rank ghost: no official replay for '%s' rank %d
+== Rank 고스트: '%s'의 Rank %d 공식 리플레이가 없습니다
+
+Rank ghost: no official replay found for '%s'
+== Rank 고스트: '%s'의 공식 리플레이를 찾을 수 없습니다
+
+Rank ghost: replay converted, waiting for the map to load ...
+== Rank 고스트: 리플레이 변환 완료, 맵 로드를 기다리는 중…
+
+Rank ghost: some tees were not loaded (not enough ghost slots)
+== Rank 고스트: 일부 Tee를 불러오지 못했습니다(고스트 슬롯 부족)
+
+Rank ghost: specify a map name when not in a game
+== Rank 고스트: 게임 중이 아닐 때는 맵 이름을 지정하세요
+
+Rank ghost: the downloaded replay is not a valid demo
+== Rank 고스트: 다운로드한 리플레이가 유효한 데모가 아닙니다
+
+Rank ghost: the replay has an invalid run range
+== Rank 고스트: 리플레이의 주행 구간이 유효하지 않습니다
+
+Rank ghost: the replay list is empty or malformed
+== Rank 고스트: 리플레이 목록이 비어 있거나 손상되었습니다
+
+Rank ghost: timed out waiting for the map to load
+== Rank 고스트: 맵 로드 대기 시간 초과
+
 Ratio
 == 비율
 
 Ratio threshold for local target language detection
 == 로컬 대상 언어 인식 비율 임계값
+
+Ready
+== 준비됨
 
 Really? Not even a little?
 == 정말요? 조금도 생각해 보실 생각이 없나요?
@@ -8126,6 +8762,9 @@ Redeem
 Redeem your code and customize your title
 == 코드를 등록하고 칭호를 설정하세요
 
+Redeem your sponsor code to unlock a custom title, shown in chat and on your nameplate.
+== 후원 코드를 등록하면 사용자 지정 칭호를 사용할 수 있습니다. 칭호는 채팅과 이름표에 표시됩니다.
+
 Reduce antiping and player prediction when frozen
 == 얼었을 때 안티핑 및 플레이어 예측 감소
 
@@ -8137,6 +8776,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == 간소화: 더 짧은 전환을 사용하고 연출 애니메이션을 비활성화합니다
+
+Refine the search to see more maps
+== 검색어를 좁히면 더 많은 맵을 볼 수 있습니다
 
 Refresh
 == 새로고침
@@ -8216,6 +8858,12 @@ Remote console password for helper (limited access)
 Remote console password for moderator (limited access)
 == 중재자용 원격 콘솔 비밀번호 (제한된 접근)
 
+Remote particle effects
+== 원격 파티클 효과
+
+Remote particles: sync and render other players via central server (requires both local+remote enabled)
+== 원격 파티클: 중앙 서버를 통해 다른 플레이어 동기화 및 렌더링 (상대방이 로컬+원격을 켜야 함)
+
 Remove
 == 제거
 
@@ -8239,6 +8887,9 @@ Remove a community from the exclusion filter
 
 Remove a community from the favorites
 == 즐겨찾기에서 커뮤니티 제거
+
+Remove a country from the allowed filter list for a specific community
+== 특정 커뮤니티의 허용 필터 목록에서 국가 제거
 
 Remove a country from the exclusion filter for a specific community (ISO 3166-1 numeric)
 == 특정 커뮤니티의 제외 필터에서 국가 제거 (ISO 3166-1 숫자 코드)
@@ -8459,8 +9110,26 @@ Replacement chars
 Replay
 == 리플레이
 
+Replay downloaded
+== 리플레이 다운로드됨
+
 Replay feature is disabled!
 == 리플레이 기능이 비활성화되었습니다!
+
+Replay list: failed to load, press Refresh to retry
+== 리플레이 목록: 불러오기 실패, 새로 고침으로 재시도
+
+Replay list: loading ...
+== 리플레이 목록: 불러오는 중…
+
+Replay list: not loaded yet
+== 리플레이 목록: 아직 불러오지 않음
+
+Replay list: up to date
+== 리플레이 목록: 최신 상태
+
+Replays directory
+== 리플레이 디렉터리
 
 Reply
 == 답장
@@ -8468,8 +9137,50 @@ Reply
 Reply to messages from muted players
 == 음소거된 플레이어의 메시지에 답장
 
+Reply to the last whisper target
+== 마지막 귓속말 대상에게 답장
+
+Reply to the last whisper target: %s
+== 마지막 귓속말 대상에게 답장: %s
+
 Reply with dummy
 == 더미로 답장
+
+Report
+== 신고
+
+Report request canceled
+== 신고 요청이 취소되었습니다
+
+Report request failed due to network error
+== 네트워크 오류로 인해 신고 요청이 실패했습니다
+
+Report request failed with HTTP status: %d
+== HTTP 상태 %d로 인해 신고 요청이 실패했습니다
+
+Report request is already in progress
+== 신고 요청이 이미 진행 중입니다
+
+Report scan request submitted
+== 신고 스캔 요청이 제출되었습니다
+
+Report service App ID
+== 신고 서비스 앱 ID
+
+Report service signing key
+== 신고 서비스 서명 키
+
+Report service URL
+== 신고 서비스 URL
+
+Reports are not available on Axiom servers
+== Axiom 서버에서는 신고 기능을 사용할 수 없습니다
+
+Request a position swap
+== 위치 교환 요청
+
+Request to swap positions with %s
+== %s 님과 위치 교환 요청
 
 Request to swap your tee with another team member
 == 다른 팀원과 티를 교체하도록 요청
@@ -8483,6 +9194,12 @@ Require KCP-capable client to upgrade session (keep off during grayscale for fal
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 이 서버에서 Rescue 가 활성화되어 있지 않으며 /practice 가 켜진 팀에도 속해 있지 않습니다. 연습 모드에서는 순위를 얻을 수 없습니다.
 
+Rescue mode changed to auto.
+== 구조 모드가 auto 로 변경되었습니다.
+
+Rescue mode changed to manual.
+== 구조 모드가 manual 로 변경되었습니다.
+
 Rescue mode switched to %s
 == Rescue 모드가 %s(으)로 전환되었습니다
 
@@ -8491,6 +9208,9 @@ Rescue to a nearby air tile
 
 Rescue/Freeze: %d/%d
 == 구조/얼음: %d/%d
+
+Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen
+== 구조: 자동 모드는 프리즈에서 텔레포트; 수동 모드는 착지 시 구조 지점을 기록하고 프리즈 시 텔레포트
 
 Reset
 == 초기화
@@ -8585,8 +9305,14 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 == 저장 데이터 %d 복원 중: 본체 '%s', 더미 '%s'.
 
+Retry remote stats
+== 원격 통계 재시도
+
 Retrying…
 == 재시도 중…
+
+Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
+== 반대 줌 키를 누르면 즉시 방향 전환 (0=기존 부드러운 줌 유지)
 
 Review and edit custom key bindings
 == Review and edit custom key bindings
@@ -8711,12 +9437,6 @@ Run server
 SA
 == 남미
 
-Saiko+ input amount (0.01 tick)
-== Saiko+ 입력량（0.01 tick）
-
-Saiko+ others
-== Saiko+ 기타
-
 Same as "vote no"
 == "투표 반대"와 동일
 
@@ -8807,6 +9527,12 @@ Save team with code r.
 Save the best demo of each race
 == 각 레이스의 최고 데모 저장
 
+Save the current team
+== 현재 팀 저장
+
+Save the team as %s
+== 팀을 %s(으)로 저장
+
 Save unsent chat draft
 == 전송되지 않은 채팅 초안 저장
 
@@ -8855,8 +9581,17 @@ Scale max mouse distance to 1000 for better aim
 Scale uncertainty duration by ping (100=1.0x)
 == 핑에 따라 불확실성 지속 시간 조정 (100=1.0배)
 
+Scanning current server
+== 현재 서버 스캔 중
+
+Scanning current server...
+== 현재 서버 스캔 중...
+
 Score
 == 점수
+
+Score earned
+== 획득 점수
 
 Score limit
 == 점수 제한
@@ -8866,6 +9601,9 @@ Scoreboard
 
 Scoreboard cursor
 == 점수판 커서
+
+Scoreboard filter: only show players whose name or clan contains this text
+== 스코어보드 필터: 이름 또는 클랜에 이 텍스트가 포함된 플레이어만 표시합니다
 
 Scoreboard point check
 == 점수판 포인트 확인
@@ -8918,6 +9656,12 @@ Screenshots
 Screenshots directory
 == 스크린샷 디렉터리
 
+Scroll mode: Off
+== 스크롤 모드: 끄기
+
+Scroll mode: On
+== 스크롤 모드: 켜기
+
 Search
 == 검색
 
@@ -8927,17 +9671,23 @@ Search and navigate settings
 Search donor asset
 == 기증자 에셋 검색
 
+Search local maps
+== 로컬 맵 검색
+
 Search main asset
 == 메인 에셋 검색
 
 Search maps and downloadedmaps, including subfolders
 == maps 및 downloadedmaps 검색 (하위 폴더 포함)
 
+Search maps for Rank 1 replays ...
+== Rank 1 리플레이가 있는 맵 검색 ...
+
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
 
-Search skins and manage the skin queue
-== Search skins and manage the skin queue
+Search, filter, and manage skins
+== 스킨 검색, 필터 및 관리
 
 Searching
 == 검색 중
@@ -8962,6 +9712,9 @@ SecretId
 
 SecretKey
 == SecretKey
+
+See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
+== /practicecmdlist 로 사용 가능한 모든 연습 명령어 목록을 볼 수 있습니다. 가장 많이 쓰이는 것은 /telecursor, /lasttp, /rescue 입니다
 
 Select a saved .map file (client limit: 64 MiB).
 == 저장된 .map 파일을 선택하세요(클라이언트 제한: 64 MiB).
@@ -9176,12 +9929,6 @@ Set color
 Set current demo speed
 == 현재 데모 속도 설정
 
-Set cut end at current position (O, right click to reset)
-== 현재 위치를 구간 끝으로 설정 (O, 우클릭으로 초기화)
-
-Set cut start at current position (I, right click to reset)
-== 현재 위치를 구간 시작으로 설정 (I, 우클릭으로 초기화)
-
 Set ddrace team for a player
 == 플레이어의 DDRace 팀 설정
 
@@ -9208,9 +9955,6 @@ Set server to singleplayer mode (no player interaction, must be set before loadi
 
 Set team for a player (spectators = -1, game = 0)
 == 플레이어의 팀 설정 (관전자 = -1, 게임 = 0)
-
-Set team for all players (spectators = -1, game = 0)
-== 모든 플레이어의 팀 설정 (관전자 = -1, 게임 = 0)
 
 Set timeout protection code s
 == 타임아웃 보호 코드 s 설정
@@ -9267,7 +10011,7 @@ Shape
 == 모양
 
 Share of the server browser name/map split given to the name column (per mille)
-== 서버 브라우저 이름/맵 분할에서 이름 열에 할당할 비율 (천분율)
+== 서버 브라우저 이름/맵 분할에서 이름 열에 할당할 비율(천분율)
 
 Shimmer speed (polished)
 == 빛 이동 속도 (광택)
@@ -9357,7 +10101,7 @@ Show chat bubbles above players
 == 플레이어 위에 채팅 풍선 표시
 
 Show chat in demo preview and video
-== 데모 미리 보기와 영상에 채팅 표시
+== 데모 미리보기와 영상에서 채팅 표시
 
 Show chat messages above players
 == 플레이어 위에 채팅 메시지 표시
@@ -9449,6 +10193,9 @@ Show default flag in scoreboard
 Show default mod rules.
 == 기본 모드 규칙 표시
 
+Show direction key indicators above rank ghost members in view mode
+== 보기 모드에서 랭크 고스트 멤버 위에 방향 키 표시를 표시
+
 Show dotted map route debug
 == 맵 점선 경로 디버그 표시
 
@@ -9500,6 +10247,9 @@ Show enemy reason
 Show entities
 == 엔티티 표시
 
+Show existing saves
+== 저장된 팀 목록 보기
+
 Show eye wheel and expressions
 == 눈 휠과 표정 표시
 
@@ -9548,6 +10298,12 @@ Show frozen Tee HUD only in team
 Show frozen tee particles
 == 얼어붙은 티 파티클 표시
 
+Show generated skin outline for local tees
+== 내 Tee에 생성된 외곽선 표시
+
+Show generated skin outline for other tees
+== 다른 Tee에 생성된 외곽선 표시
+
 Show ghost
 == 고스트 표시
 
@@ -9587,8 +10343,8 @@ Show hook strength number indicator
 Show hookable/unhookable tile outlines
 == 갈고리 가능/불가능 타일 윤곽선 표시
 
-Show how weapons, shields, hearts, and flags appear in game
-== 무기, 방패, 하트, 깃발이 게임에서 어떻게 나타나는지 표시
+Show how weapons, shields, snowflakes, and flags appear in game
+== 무기, 방패, 눈송이, 깃발이 게임에서 어떻게 보이는지 표시
 
 Show HUD
 == HUD 표시
@@ -9660,7 +10416,7 @@ Show in-game HUD (timer)
 == 게임 내 HUD 표시 (타이머)
 
 Show in-game HUD in demo preview and video
-== 데모 미리 보기와 영상에 게임 HUD 표시
+== 데모 미리보기와 영상에서 게임 내 HUD 표시
 
 Show in-game HUD when rendering video
 == 비디오 렌더링 시 게임 내 HUD 표시
@@ -9822,10 +10578,10 @@ Show other players' hook collision lines when rendering video
 == 비디오 렌더링 시 다른 플레이어의 갈고리 충돌선 표시
 
 Show other players' large emoticons
-== 다른 플레이어의 대형 이모티콘 표시
+== 다른 플레이어의 큰 이모티콘 표시
 
 Show other players' launched emoticons
-== 다른 플레이어가 발사한 이모티콘 표시
+== 다른 플레이어의 발사 이모티콘 표시
 
 Show other team players (2=own team only)
 == 다른 팀 플레이어 표시 (2 = 자신의 팀만)
@@ -9871,6 +10627,9 @@ Show own player's hook collision line
 
 Show pause/play indicator when changing
 == 변경 시 일시정지/재생 표시기 표시
+
+Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)
+== 시작 시 창으로 미처리 크래시 리포트를 표시합니다(0 = 리포트 파일만 남기고 로그에 기록)
 
 Show performance graphs.
 == 성능 그래프 표시
@@ -9958,6 +10717,9 @@ Show server help and usage messages
 
 Show server prompts and Echo messages as popups
 == Show server prompts and Echo messages as popups
+
+Show server settings
+== 서버 설정 보기
 
 Show settings card borders
 == 설정 카드 테두리 표시
@@ -10061,6 +10823,9 @@ Show tiles layers from BG map
 Show toast
 == 토스트 메시지 표시
 
+Show tune zone colors
+== tune zone 영역 색상 표시
+
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
 == 자신의 플레이어에 영향을 미치는 튜닝 파라미터 표시 (0 = 끄기, 1 = 변경된 것만 표시, 2 = 모두 표시)
 
@@ -10109,6 +10874,9 @@ Show X
 Show Y
 == Y 표시
 
+Show your current team
+== 현재 팀 보기
+
 Show zzz emoji next to afk players
 == 자리 비움 플레이어 옆에 zzz 이모지 표시
 
@@ -10153,6 +10921,9 @@ Shows gameplay information for this server
 
 Shows help to command r, general help if left blank
 == 명령 r 에 대한 도움말 표시, 비워두면 일반 도움말 표시
+
+Shows lyrics from NetEase Cloud Music, Soda Music, Kugou and QQ Music on the dynamic island.
+== NetEase Cloud Music, Soda Music, Kugou, QQ Music의 가사를 가져와 다이내믹 아일랜드에 표시합니다.
 
 Shows the credits of the DDNet mod
 == DDNet 모드의 크레딧 표시
@@ -10242,7 +11013,7 @@ Skin options
 == 스킨 옵션
 
 Skin outline color
-== 스킨 윤곽선 색상
+== 스킨 외곽선 색상
 
 Skin outline for other players
 == 다른 플레이어의 스킨 윤곽선
@@ -10251,10 +11022,10 @@ Skin outline for self and dummy
 == 자신과 더미의 스킨 윤곽선
 
 Skin outline opacity
-== 스킨 윤곽선 불투명도
+== 스킨 외곽선 불투명도
 
 Skin outline width
-== 스킨 윤곽선 두께
+== 스킨 외곽선 두께
 
 Skin prefix
 == 스킨 접두사
@@ -10268,8 +11039,8 @@ Skin queue current position
 Skin queue max length
 == 스킨 큐 최대 길이
 
-Skin queue switch interval (ms)
-== 스킨 큐 전환 간격 (밀리초)
+Skin queue switch interval (ms, 0=no timed rotation, random start only)
+== 스킨 큐 전환 간격(밀리초, 0=시간 순환 없음)
 
 Skin search
 == 스킨 검색
@@ -10291,6 +11062,9 @@ Skin switch animation range: 0=Self, 1=Local+Dummy, 2=All players
 
 Skin switch animation type (0=Ghost pop, 1=Soft fade, 2=Slide left, 3=Rotate pop, 4=Light dark switch, 5=Glitch shake, 6=Elastic scale)
 == 스킨 전환 애니메이션 유형 (0=잔상 팝업 1=부드러운 페이드 2=왼쪽 슬라이드 3=회전 팝업 4=명암 전환 5=글리치 떨림 6=탄력적 확대/축소)
+
+Skin transition
+== 스킨 전환
 
 Skin transition animation
 == 스킨 전환 애니메이션
@@ -10322,8 +11096,14 @@ Skip render frames if waiting for previous frame during update cycle
 Skip start menu
 == 시작 메뉴 건너뛰기
 
+Skip switch animation when hammering
+== 해머 사용 시 무기 전환 애니메이션을 재생하지 않음
+
 Skip the main menu
 == 메인 메뉴 건너뛰기
+
+Skip the weapon switch animation for hammer switches in Gores mode
+== Gores 모드에서 해머로 전환할 때 무기 전환 애니메이션을 재생하지 않음
 
 Skip Tutorial
 == 튜토리얼 건너뛰기
@@ -10343,6 +11123,9 @@ Smaller tees
 Smart
 == 스마트
 
+Smooth and accurate blur with the highest GPU cost.
+== 부드럽고 정확한 블러이지만 GPU 부하가 가장 높습니다.
+
 Smooth camera switch animation time when spectating (in ms, 0=off)
 == 관전 시 부드러운 카메라 전환 애니메이션 시간 (ms, 0 = 끄기)
 
@@ -10351,9 +11134,6 @@ Smooth Dynamic Camera
 
 Smooth fade
 == 부드러운 페이드
-
-Smooth island (SDF)
-== Dynamic Island 부드럽게 (SDF)
 
 Smooth other players' predicted movement
 == 다른 플레이어의 예측 이동을 부드럽게 처리
@@ -10391,9 +11171,6 @@ Snapshot payload
 Snapshot rate
 == 스냅샷 속도
 
-Snapshot rate / parts
-== 스냅샷 속도 / 조각
-
 Snapshot tick gap
 == 스냅샷 tick 간격
 
@@ -10414,6 +11191,12 @@ Solid tile outline opacity
 
 Solo
 == 솔로
+
+Solo split
+== 솔로 스플릿
+
+Solo split key
+== 솔로 스플릿 키
 
 Some fonts could not be loaded. Check the local console for details.
 == 일부 글꼴을 불러올 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
@@ -10544,8 +11327,14 @@ Sphere
 Spin pop
 == 회전 팝
 
-Spirit
+Spirit Light
 == 영혼의 빛
+
+Split main and dummy into different teams for solo-run sync
+== 본체와 분신을 서로 다른 팀에 넣어 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
+
+Split main/dummy into two free teams; press again to return to team 0
+== 본체/분신을 두 개의 빈 팀에 나누고, 다시 누르면 팀 0으로 돌아감
 
 Sponsor code
 == 인증 코드
@@ -10586,6 +11375,12 @@ Star
 Start and connect to local server
 == 로컬 서버를 시작하고 연결
 
+Start dummy skin queue from a random position when entering a map
+== 맵 입장 시 더미 스킨 큐를 무작위 위치에서 시작
+
+Start from a random queue position on every map join (also on dummy connect or re-enabling the queue). Set the switch interval to 0 to disable timed rotation and only switch on map join.
+== 맵에 들어갈 때마다(더미 연결, 큐 재활성화 시에도) 큐의 무작위 위치부터 순환을 시작합니다. 전환 간격을 0으로 하면 시간 순환이 비활성화되고 맵 입장 때만 전환됩니다
+
 Start here to quickly diagnose if the issue is with device, server, or room
 == 여기서 시작하여 문제가 장치, 서버 또는 방 중 어디에 있는지 빠르게 진단하세요
 
@@ -10603,6 +11398,9 @@ Start recording a demo
 
 Start recording a video
 == 비디오 녹화 시작
+
+Start skin queue from a random position when entering a map
+== 맵 입장 시 스킨 큐를 무작위 위치에서 시작
 
 Statboard
 == 통계판
@@ -10651,6 +11449,9 @@ Status normal, check details below if still experiencing issues
 
 Status Scheme:
 == 상태 구성：
+
+Steam integration
+== Steam 통합
 
 Steam profile name
 == Steam 프로필 이름
@@ -10778,6 +11579,9 @@ Switch failed
 Switch interval
 == 전환 간격
 
+Switch on the status rows you need, then list the binds you want to watch.
+== 필요한 상태 스위치를 켜고, 감시할 bind를 사용자 지정 목록에 입력하세요.
+
 Switch opacity
 == 전환 불투명도
 
@@ -10832,8 +11636,17 @@ Switching back to default input
 Switching back to default output
 == 기본 출력으로 전환 중
 
+Sync remote stats
+== 원격 통계 동기화
+
 Sync Workshop Assets
 == 워크샵 자산 동기화
+
+Syncing
+== 동기화 중
+
+Syncing remote stats
+== 원격 통계 동기화 중
 
 System
 == 시스템
@@ -10880,6 +11693,9 @@ Target language ratio
 Target server: %s
 == 대상 서버: %s
 
+Task running ...
+== 작업 실행 중…
+
 TClient
 == TClient
 
@@ -10900,6 +11716,21 @@ Team %d
 
 Team %d (%d/%d)
 == 팀 %d (%d/%d)
+
+Team 0 (unteamed) tee glow mode: 0=Off, 1=Tee color, 2=Custom color, 3=Rainbow
+== 팀 0(무팀) 티 발광 모드: 0=끄기, 1=티 색상, 2=사용자 정의 색상, 3=무지개
+
+Team 0 glow
+== 팀 0 발광
+
+Team 0 glow color
+== 팀 0 발광 색상
+
+Team 0 mode enabled for your team. This will make your team behave like team 0.
+== 팀에서 team 0 모드가 활성화되었습니다. 팀이 team 0 처럼 동작합니다.
+
+Team 0 tee glow custom color
+== 팀 0 티 발광 사용자 정의 색상
 
 Team can't be loaded while in team 0 mode
 == 팀 0 모드에서는 팀을 불러올 수 없습니다
@@ -10967,14 +11798,23 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' to continue
 == %s 님이 팀을 성공적으로 저장했습니다. 데이터베이스 연결에 실패하여 충돌을 피하기 위해 생성된 저장 코드를 대신 사용합니다. '/load %s' 를 사용하여 계속하세요
 
+Team tee glow
+== 팀 티 외부 발광
+
 Teams
 == 팀
+
+Teams are available on this server
+== 이 서버에서는 팀을 만들 수 있습니다
 
 Teams are available on this server; if the team is locked, any team member dying will kill the whole team
 == 이 서버에서 팀을 사용할 수 있습니다; 팀이 잠겨 있으면 팀원이 죽을 때 전체 팀이 사망합니다
 
 Teams are disabled
 == 팀이 비활성화되었습니다
+
+Teams are not available on this server
+== 이 서버에서는 팀을 만들 수 없습니다
 
 Teams are not available on this server; if the team is locked, any team member dying will kill the whole team
 == 이 서버에서는 팀을 사용할 수 없습니다; 팀이 잠겨 있으면 팀원이 죽을 때 전체 팀이 사망합니다
@@ -10990,6 +11830,9 @@ Tee appearance
 
 Tee collision (Tee to Tee)
 == Tee 충돌(Tee 대 Tee)
+
+Tee color
+== 티 색상
 
 Tee death probe
 == Tee 데스 탐지
@@ -11015,8 +11858,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee 궤적 색상 모드 (1=단색, 2=현재 Tee 색상, 3=무지개, 4=Tee 속도, 5=무작위)
 
-Tee trail style (0=Original, 1=Black Flash, 2=Exo, 3=Spirit, 4=Void, 5=Inferno)
-== Tee 궤적 스타일  (0=기본, 1=흑섬, 2=Exo 에너지, 3=영혼의 빛, 4=공허, 5=지옥불)
+Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
+== Tee 트레일 스타일(0=기본, 1=저주받은 불꽃, 2=보라 번개, 3=영혼의 빛, 4=공허의 그림자, 5=황금의 은총)
 
 Tee Trails
 == Tee 궤적
@@ -11090,6 +11933,9 @@ Teleports you to teleporter i
 Teletile overlay alpha (0-100)
 == 텔레타일 오버레이 엔티티 알파 (0-100)
 
+Temporarily controlled by a mode toggle
+== 현재 모드 설정에 의해 일시적으로 제어됩니다
+
 Temporarily disable dummy hammering
 == 더미 해머링을 일시적으로 비활성화
 
@@ -11141,6 +11987,12 @@ Thanks for supporting QmClient
 The audio device couldn't be initialised.
 == 오디오 장치를 초기화할 수 없습니다.
 
+The auth level you need to tele others
+== 다른 플레이어를 순간이동시키는 데 필요한 권한 레벨
+
+The downloaded file is not a valid demo
+== 다운로드한 파일은 유효한 데모가 아닙니다
+
 The extra menu button which toggles visibility of buttons with "Extra Menu" visibilities. Also opens the ingame menu on long press.
 == "추가 메뉴" 가시성이 있는 버튼의 표시를 전환하는 추가 메뉴 버튼입니다. 길게 누르면 인게임 메뉴도 엽니다.
 
@@ -11158,6 +12010,15 @@ The FPS at which the recorder should record replay.
 
 The name "default" is reserved.
 == "default" 이름은 예약되어 있습니다.
+
+The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
+== 귓속말 상대가 아직 재접속하지 않았거나 게임을 떠났습니다. 잠시 기다리거나 다른 사람에게 귓속말하세요
+
+The rank 1 demo is already downloaded
+== 랭크 1 데모가 이미 다운로드되어 있습니다
+
+The replay list is empty or malformed
+== 리플레이 목록이 비어 있거나 형식이 잘못되었습니다
 
 The selected button is not visible. Do you want to deselect it or edit its visibility?
 == 선택한 버튼이 보이지 않습니다. 선택을 해제하거나 가시성을 편집하시겠습니까?
@@ -11185,6 +12046,9 @@ Theme
 
 Themes directory
 == 테마 디렉터리
+
+There are no times in the specified range
+== 지정한 범위에 기록이 없습니다
 
 There are no Tutorial servers available
 == 사용 가능한 튜토리얼 서버가 없습니다.
@@ -11222,9 +12086,6 @@ There's an unsaved change in the touch controls editor, you might want to save i
 There's an unsaved map in the editor, you might want to save it.
 == 편집기에 저장되지 않은 맵이 있습니다. 저장하는 것이 좋습니다.
 
-Thin
-== 얇게
-
 Thinking mode requires a reasoning model
 == 사고 모드를 사용하려면 추론 모델이 필요합니다
 
@@ -11240,8 +12101,17 @@ This is the master switch for all interface animation categories
 This name cannot be used for files and folders
 == 이 이름은 파일 및 폴더에 사용할 수 없습니다
 
+This person has disabled receiving whispers
+== 이 플레이어는 귓속말 수신을 비활성화했습니다
+
+This save exists, but you are not part of it. 
+== 이 저장 기록은 존재하지만 당신은 포함되어 있지 않습니다.
+
 This save is no longer in the local save file.
 == 이 저장 데이터는 로컬 저장 파일에 더 이상 없습니다.
+
+This save-code already exists
+== 이 저장 코드는 이미 존재합니다
 
 This server has an initial chat delay, you will be able to talk in %s seconds.
 == 이 서버에는 초기 채팅 지연이 있습니다. %s초 후에 말할 수 있습니다
@@ -11278,6 +12148,9 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 이 툴팁은 ui_widget::Tooltip — CTooltips 위의 얇은 레이어에 의해 제공됩니다.
+
+Tick delay before executing tc_execute_on_join
+== tc_execute_on_join 실행 전 지연 시간 (tick)
 
 Ticks after freeze before applying max prediction reduction
 == 최대 예측 감소를 적용하기 전 얼어붙은 후 틱 수
@@ -11405,6 +12278,9 @@ Title style
 Title too long or contains unsupported characters
 == 칭호가 너무 길거나 지원하지 않는 문자가 있습니다
 
+to check a server setting say /settings and setting's name, setting names are:
+== 서버 설정을 확인하려면 /settings 와 설정 이름을 입력하세요. 설정 이름은 다음과 같습니다:
+
 To save all players in your team have to be alive and not in '/spec'
 == 팀을 저장하려면 모든 팀원이 살아 있고 '/spec' 상태가 아니어야 합니다
 
@@ -11416,9 +12292,6 @@ Toggle auto camera
 
 Toggle between game scene preview and raw texture
 == 게임 장면 미리보기와 원본 텍스처 간 전환
-
-Toggle client process normal/high priority on Windows
-== Windows에서 클라이언트 프로세스 우선순위를 일반/높음으로 전환
 
 Toggle config value
 == 설정 값 전환
@@ -11439,7 +12312,7 @@ Toggle dyncam
 == 동적 카메라 전환
 
 Toggle emote launcher
-== 이모티콘 발사기 전환
+== 이모트 발사기 전환
 
 Toggle fast practice mode
 == 빠른 연습 모드 전환
@@ -11449,6 +12322,9 @@ Toggle ghost
 
 Toggle ghost key
 == 고스트 키 전환
+
+Toggle ghost view mode: play the ghost on an independent timeline (in-game demo player)
+== 고스트 보기 모드 전환: 고스트를 독립 타임라인으로 재생(게임 내 데모 플레이어)
 
 Toggle keyboard shortcuts
 == 키보드 단축키 전환
@@ -11545,6 +12421,12 @@ Total
 
 Total friends
 == 전체 친구 수
+
+Total hours
+== 시간 단위로 표시
+
+Total play time
+== 총 플레이 시간
 
 Total: %d save(s)
 == 총계：%d 개 저장됨
@@ -11678,6 +12560,9 @@ Tune variable to value
 Tune variable to value or show current value
 == 변수를 값으로 조정하거나 현재 값을 표시합니다.
 
+Turn on "Message merging" in Dream Features.
+== "드림 기능"에서 "Message merging"을 켜세요.
+
 Tutorial
 == 튜토리얼
 
@@ -11705,6 +12590,9 @@ UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or netwo
 UDP seems to be filtered.
 == UDP가 필터링된 것 같습니다.
 
+UDP socket not open
+== UDP 소켓이 열려 있지 않습니다
+
 UI color
 == UI 색상
 
@@ -11717,8 +12605,11 @@ UI icon color
 UI icon custom color
 == UI 아이콘 사용자 지정 색상
 
-UI icon weight
-== UI 아이콘 굵기
+UI icon duotone secondary color
+== UI 듀오톤 아이콘 보조 색상
+
+UI icon style
+== UI 아이콘 스타일
 
 UI motion level
 == UI 애니메이션 강도
@@ -11753,6 +12644,15 @@ Unable to delete the folder '%s'. Make sure it's empty first.
 Unable to delete the screenshot '%s'
 == 스크린샷 '%s'을(를) 삭제할 수 없습니다
 
+Unable to load savegame: data corrupted
+== 저장 기록을 불러올 수 없습니다: 데이터 손상
+
+Unable to load savegame: loaded on a different server
+== 저장 기록을 불러올 수 없습니다: 다른 서버에서 불러왔습니다
+
+Unable to load savegame: SaveId corrupted
+== 저장 기록을 불러올 수 없습니다: SaveId 손상
+
 Unable to open the screenshot file
 == 스크린샷 파일을 열 수 없습니다
 
@@ -11770,6 +12670,9 @@ Unable to save the skin
 
 Unable to save the skin with a reserved name
 == 예약된 이름으로 스킨을 저장할 수 없습니다
+
+Unavailable
+== 사용할 수 없음
 
 Unban a certain nickname
 == 특정 닉네임 차단 해제
@@ -11861,7 +12764,13 @@ Unknown status
 Unknown title style
 == 알 수 없는 칭호 스타일
 
+Unload the rank ghost
+== Rank 고스트 해제
+
 Unlock a team
+== 팀 잠금 해제
+
+Unlock the team
 == 팀 잠금 해제
 
 Unmute
@@ -11921,9 +12830,6 @@ Update or add a specific war group
 Update Rate
 == 업데이트 속도
 
-Update rate for mapping 64 player IDs to vanilla IDs
-== 64명 플레이어 ID를 바닐라 ID로 매핑하는 업데이트 속도
-
 Upload .map files. Server and admin passwords: s.
 == .map 파일을 업로드합니다. 서버 및 관리자 비밀번호는 s입니다.
 
@@ -11932,9 +12838,6 @@ Upload a saved map to the public test server
 
 Upload map
 == 맵 업로드
-
-Uploading map data to GPU
-== 맵 데이터를 GPU 에 업로드 중
 
 URL for downloading community skins
 == 커뮤니티 스킨 다운로드 URL
@@ -11945,8 +12848,20 @@ URL for downloading maps (must start with https://)
 URL for downloading skins
 == 스킨 다운로드 URL
 
+Usage
+== 사용법
+
+Usage: %s
+== 사용법: %s
+
 Usage: %s %s
 == 사용법: %s %s
+
+Usage: /%s %s
+== 사용법: /%s %s
+
+Use /pause first then you can kill
+== 먼저 /pause 를 사용한 다음 자살할 수 있습니다
 
 Use /qm Yes [number] to restore a save, or /qm No to dismiss.
 == /qm Yes [번호]로 복원하거나 /qm No로 알림을 닫으세요.
@@ -11978,6 +12893,9 @@ Use compact list view for config variables
 Use current map as background
 == 현재 맵을 배경으로 사용
 
+Use current name
+== 현재 이름 사용
+
 Use custom skins instead of the ninja tee
 == 닌자 티 대신 사용자 정의 스킨 사용
 
@@ -11996,9 +12914,6 @@ Use default voice input device
 Use default voice output device
 == 기본 음성 출력 장치 사용
 
-Use each Tee trail style's own palette instead of the trail color mode
-== Tee 궤적 색상 모드 대신 각 스타일 고유의 색상을 사용
-
 Use embedded HUD progress bar
 == 내장 HUD 진행 표시줄 사용
 
@@ -12012,7 +12927,7 @@ Use enemy list to drive player indicators
 == 적 목록을 사용하여 플레이어 표시기 구동
 
 Use Gaussian blur pipeline when enhanced rendering is active
-== 향상된 렌더링 활성 시 가우시안 블러 파이프라인 사용
+== 향상된 렌더링이 활성화되면 가우시안 블러 파이프라인 사용
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 높은 대역폭 모드 사용 (서버 대역폭 두 배, LAN 전용)
@@ -12021,13 +12936,13 @@ Use k key to kill (restart), q to pause and watch other players. See settings fo
 == K 키를 사용하여 죽기(재시작), Q 키를 사용하여 일시 중지 및 다른 플레이어 관전. 다른 키 바인딩은 설정에서 확인하세요.
 
 Use large emote
-== 대형 이모티콘 사용
+== 큰 이모트 사용
 
 Use mouse sensitivity when dynamic camera is on
 == 동적 카메라가 켜져 있을 때 마우스 감도 사용
 
 Use MSDF icon pipeline when enhanced rendering is active
-== 향상된 렌더링 활성 시 MSDF 아이콘 파이프라인 사용
+== 향상된 렌더링이 활성화되면 MSDF 아이콘 파이프라인 사용
 
 Use multi-char replacement based on word length
 == 단어 길이에 따른 다중 문자 대체 사용
@@ -12063,7 +12978,7 @@ Use pre-input to predict other players for more accurate input prediction
 == 사전 입력을 사용하여 다른 플레이어를 예측해 더 정확한 입력 예측
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
-== 향상된 렌더링 활성 시 Dynamic Island/둥근 사각형에 SDF 파이프라인 사용
+== 향상된 렌더링이 활성화되면 Dynamic Island 및 둥근 사각형에 SDF 파이프라인 사용
 
 Use skin color for frozen Tee's feet
 == 얼어붙은 Tee의 발에도 스킨 색상 사용
@@ -12075,7 +12990,7 @@ Use sounds
 == 사운드 사용
 
 Use style colors
-== 스타일 고유 색상 사용
+== 스타일 색상 사용
 
 Use team colors for name plates
 == 이름표에 팀 색상 사용
@@ -12085,6 +13000,12 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 마우스를 모듈 위에 올리고 휠을 굴리면 5% 씩 크기 조정
+
+Use the scoreboard cursor mode to scroll the list
+== 목록을 스크롤하려면 스코어보드 커서 모드를 사용하세요
+
+Use the selected tee trail style palette
+== 선택한 Tee 트레일 스타일 팔레트 사용
 
 Use this after `add_favorite` to group favorites. Start with `begin_favorite_group`
 == 즐겨찾기를 그룹화하려면 `add_favorite` 뒤에 사용하세요. `begin_favorite_group` 으로 시작
@@ -12122,6 +13043,9 @@ VAD threshold (percent)
 Vanilla skins only
 == 바닐라 스킨만 표시
 
+Variable custom font weight
+== 가변 글꼴의 사용자 지정 굵기
+
 Velocity
 == 속도
 
@@ -12158,6 +13082,9 @@ View latest updates
 View margin
 == 보기 여백
 
+View replay
+== 리플레이 보기
+
 View switch found (at offset) with given number
 == 주어진 번호로 찾은 스위치 보기 (오프셋 위치)
 
@@ -12170,11 +13097,17 @@ View the developers and contributors
 View the people supporting QmClient development
 == View the people supporting QmClient development
 
+Violet Bolt
+== 보라 번개
+
 Virtual joystick which always uses fire.
 == 항상 발사를 사용하는 가상 조이스틱입니다.
 
 Virtual joystick which always uses hook.
 == 항상 훅을 사용하는 가상 조이스틱입니다.
+
+Virtual joystick which only aims and moves the mouse pointer relatively.
+== 조준과 마우스 포인터의 상대적 이동만 수행하는 가상 조이스틱입니다.
 
 Virtual joystick which only aims without using an action.
 == 작업을 사용하지 않고 조준만 하는 가상 조이스틱입니다.
@@ -12194,11 +13127,11 @@ Visual
 Visual effects
 == 시각 효과
 
+Visual: Cursor
+== 시각: 커서
+
 Visual: Effects
 == 시각: 효과
-
-Visual: Font & Cursor
-== 시각: 글꼴 및 커서
 
 Visual: Nameplates
 == 시각: 이름표
@@ -12278,14 +13211,17 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 Voice whitelist (comma-separated)
 == 음성 화이트리스트 (쉼표로 구분)
 
-Void
-== 공허
+Void Shadow
+== 공허의 그림자
 
 Volume
 == 볼륨
 
 Vote a map by name
 == 이름으로 맵 투표
+
+Vote aborted
+== 투표가 중단되었습니다
 
 Vote command
 == 투표 명령
@@ -12302,8 +13238,23 @@ Vote description:
 Vote duration (in seconds)
 == 투표 지속 시간 (초)
 
+Vote failed
+== 투표가 실패했습니다
+
+Vote failed because of veto. Find an empty server instead
+== 거부권으로 투표가 실패했습니다. 대신 비어 있는 서버를 찾으세요
+
+Vote failed enforced by authorized player
+== 권한 있는 플레이어가 투표를 강제로 부결시켰습니다
+
 Vote no
 == 반대
+
+Vote passed
+== 투표가 통과되었습니다
+
+Vote passed enforced by authorized player
+== 권한 있는 플레이어가 투표를 강제로 통과시켰습니다
 
 Vote started automatically
 == 자동으로 투표가 시작되었습니다
@@ -12317,11 +13268,8 @@ Vote yes/no
 Voting
 == 투표
 
-Vulkan API
-== Vulkan API 버전
-
-Vulkan API version: 11=1.1 compatibility, 14=1.4 strict
-== Vulkan API 버전: 11=1.1 호환 모드, 14=1.4 엄격 모드
+Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1
+== Vulkan API 버전: 14 = 1.4, 1.3, 1.1 순으로 우선, 13 = 1.3, 1.1 순으로 우선, 11 = 1.1 강제
 
 Wait for current vote to end before calling a new one.
 == 새 투표를 요청하기 전에 현재 투표가 끝날 때까지 기다리세요.
@@ -12340,6 +13288,9 @@ Waiting for local server to stop…
 
 Waiting for snapshot
 == 스냅샷 대기 중
+
+Waiting for the voice WebSocket connection
+== 음성 WebSocket 연결 대기 중
 
 Waiting to open
 == 열기 대기 중
@@ -12373,6 +13324,9 @@ Warn about team balance
 
 Warning
 == 경고
+
+Water hammer highlight
+== 수중 해머 하이라이트
 
 Wave amount
 == 파도 크기
@@ -12443,6 +13397,9 @@ Weapon switch easing
 Weapon switch rotation
 == 무기 전환 회전
 
+Weapon Trajectory
+== 무기 궤적
+
 Weapon trajectory
 == 무기 궤적
 
@@ -12470,9 +13427,6 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 바인딩이 설정된 레벨 (자동이며 사용할 필요 없음)
 
-Wheel animate
-== 휠 애니메이션
-
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.
 
@@ -12494,8 +13448,8 @@ Whether dummy hooks (requires cl_dummy_control 1)
 Whether dummy jumps (requires cl_dummy_control 1)
 == 더미가 점프하는지 여부 (cl_dummy_control 1 필요)
 
-Whether non-voting players count as 'no' (0) or ignored (1)
-== 투표하지 않는 플레이어를 '아니오'(0)로 계산할지 무시(1)할지 여부
+Whether non-voting players are ignored (0) or are considered as votes for "no" (1)
+== 투표하지 않는 플레이어를 무시할지(0), 아니면 '아니요' 표로 간주할지(1)
 
 Whether players can hammer/grenade/laser each other.
 == 플레이어가 서로 망치/유탄/레이저를 사용할 수 있는지 여부
@@ -12560,6 +13514,15 @@ Whisper option color
 Whisper something to someone (private message)
 == 누군가에게 귓속말 보내기 (개인 메시지)
 
+Whisper to %s
+== %s 님에게 귓속말
+
+Whisper to %s: %s
+== %s 님에게 귓속말: %s
+
+Whisper: /w player message
+== 귓속말: /w 플레이어 메시지
+
 White
 == 흰색
 
@@ -12577,6 +13540,9 @@ Width of friends column in server browser
 
 Width of latency column in server browser
 == 서버 브라우저에서 지연 시간 열 너비
+
+Width of map column in server browser
+== 서버 브라우저에서 맵 열의 너비
 
 Width of others' hook collision line
 == 다른 플레이어의 갈고리 충돌선 너비
@@ -12613,6 +13579,9 @@ Word filter action: 0=replace matching words, 1=hide entire message
 
 Write local console contents to a text file
 == 로컬 콘솔 내용을 텍스트 파일로 저장
+
+Write performance debug logs to dedicated file
+== 성능 디버그 로그를 전용 파일에 기록
 
 Write remote console contents to a text file
 == 원격 콘솔 내용을 텍스트 파일로 저장
@@ -12773,8 +13742,14 @@ You can't shoot others with laser
 You can't shoot others with shotgun
 == 다른 플레이어를 산탄총으로 공격할 수 없습니다
 
+You can't start while loading/saving of team is in progress
+== 팀 불러오기/저장 중에는 시작할 수 없습니다
+
 You canceled the swap with %s
 == %s와의 교환을 취소했습니다
+
+You died of old age
+== 노화로 사망했습니다
 
 You died, but will stay in practice until you use kill.
 == 죽었지만, kill을 입력할 때까지 연습 모드가 유지됩니다.
@@ -12782,11 +13757,17 @@ You died, but will stay in practice until you use kill.
 You do not have a pending swap request.
 == 대기 중인 교환 요청이 없습니다.
 
+You do not have an ongoing conversation. Whisper to someone to start one
+== 진행 중인 귓속말 대화가 없습니다. 누군가에게 귓속말을 보내 시작하세요
+
 You don't have any eye emotes, remember to bind some.
 == 사용 가능한 눈동자 표정이 없습니다. 먼저 바인딩하세요.
 
 You don't have unlimited air jumps
 == 무한 공중 점프가 더 이상 없습니다
+
+You finished with your best time.
+== 자신의 최고 기록으로 완주했습니다.
 
 You have a jetpack gun
 == 제트팩 총을 가지고 있습니다
@@ -12803,8 +13784,14 @@ You have started racing already
 You have to be in a team (from 1-63)
 == 팀에 속해 있어야 합니다 (1-63)
 
+You have to be in a team to play on this server
+== 이 서버에서 플레이하려면 팀에 속해야 합니다
+
 You have to be in a team to play on this server; if the team is locked, any team member dying will kill the whole team
 == 이 서버에서 플레이하려면 팀에 있어야 하며, 팀이 잠긴 상태에서는 팀원 중 한 명이 죽으면 모두 죽습니다
+
+You have to be in a team with other tees to start
+== 시작하려면 다른 Tee 와 팀을 이뤄야 합니다
 
 You have to wait %s seconds until you can swap
 == 교환하려면 %s초를 기다려야 합니다
@@ -12835,6 +13822,9 @@ You must wait %s seconds before making another vote.
 
 You must wait %s seconds before making your first vote.
 == 첫 번째 투표를 하려면 %s 초를 기다려야 합니다
+
+You only have your ground jump now
+== 이제 지상 점프만 할 수 있습니다
 
 You will be disconnected from the server.
 == 서버에서 연결이 끊어집니다.
@@ -12920,14 +13910,20 @@ Your team was unlocked by an unlock team tile
 Your timeout code has been set. 0.7 clients can not reclaim their tees on timeout; however, a 0.6 client can claim your tee
 == 타임아웃 코드가 설정되었습니다. 0.7 클라이언트는 타임아웃 시 티를 되찾을 수 없지만, 0.6 클라이언트는 당신의 티를 차지할 수 있습니다
 
+Your weapon slides and rotates in when you switch, and flips while reloading.
+== 무기를 바꿀 때 미끄러지듯 회전하며 등장하고, 재장전 중에는 뒤집힙니다.
+
+yourself
+== 자신
+
 z = Zoom
 == z = 확대/축소
 
 Zen Mode
-== 젠 모드
+== 선 모드
 
 Zen mode key
-== 젠 모드 단축키
+== 선 모드 키
 
 Zhipu AI
 == 지푸 AI
@@ -13129,6 +14125,34 @@ Fire
 Hook
 == 훅
 
+[Direct touch input]
+Relative aim
+== 상대 조준
+
+[Editor curve type abbreviation]
+B
+== B
+
+[Editor curve type abbreviation]
+F
+== F
+
+[Editor curve type abbreviation]
+L
+== L
+
+[Editor curve type abbreviation]
+M
+== M
+
+[Editor curve type abbreviation]
+N
+== N
+
+[Editor curve type abbreviation]
+S
+== S
+
 [Friend auto follow]
 Follow this friend across servers
 == 서버 간 친구 따라가기
@@ -13246,6 +14270,10 @@ Joystick Hook
 == 조이스틱: 훅
 
 [Predefined touch button behaviors]
+Joystick Relative Aim
+== 조이스틱 상대 조준
+
+[Predefined touch button behaviors]
 Spectate
 == 관전자 메뉴
 
@@ -13257,21 +14285,17 @@ Swap Action
 Use Action
 == 사용 작업
 
+[Rank 1 replay]
+Direction
+== 방향
+
 [Show name plates]
 All
 == 모두
 
 [Show name plates]
 Current
-== 현재
-
-[Show name plates]
-Current + Local
-== 현재+로컬
-
-[Show name plates]
-Local + Others
-== 로컬+다른 사람
+== 현재 캐릭터
 
 [Show name plates]
 None
@@ -13280,6 +14304,14 @@ None
 [Show name plates]
 Others
 == 다른 사람
+
+[Show name plates]
+Others and own
+== 다른 사람과 내 다른 캐릭터
+
+[Show name plates]
+Own characters
+== 내 캐릭터
 
 [Show players' key presses]
 All

@@ -277,6 +277,7 @@ public:
 			SCommand(CMD_RENDER_TEXTURED_MSDF) {}
 		SState m_State;
 		vec4 m_MsdfParams{};
+		vec4 m_MsdfSecondaryColor{1.0f, 1.0f, 1.0f, 1.0f};
 		EPrimitiveType m_PrimType = EPrimitiveType::QUADS;
 		unsigned m_PrimCount = 1;
 		SVertex *m_pVertices = nullptr;
@@ -353,6 +354,9 @@ public:
 		int m_SourceTargetId = -1;
 		int m_Radius = 0;
 		bool m_Horizontal = false;
+		IGraphics::EBlurMode m_Mode = IGraphics::EBlurMode::GAUSSIAN;
+		int m_Pass = 0;
+		bool m_Upsample = false;
 		std::array<float, IGraphics::GAUSSIAN_BLUR_MAX_RADIUS + 1> m_aWeights{};
 	};
 
@@ -623,11 +627,15 @@ public:
 		SCommand_Update_Viewport() :
 			SCommand(CMD_UPDATE_VIEWPORT) {}
 
-		int m_X;
-		int m_Y;
-		int m_Width;
-		int m_Height;
-		bool m_ByResize; // resized by an resize event.. a hint to make clear that the viewport update can be deferred if wanted
+		// viewport 矩形以 drawable 左上角为原点。
+		int m_X = 0;
+		int m_Y = 0;
+		int m_Width = 0;
+		int m_Height = 0;
+		// viewport 可能小于整张 drawable，需要保留 drawable 尺寸给后端。
+		int m_DrawableWidth = 0;
+		int m_DrawableHeight = 0;
+		bool m_ByResize = false; // resized by an resize event.. a hint to make clear that the viewport update can be deferred if wanted
 	};
 
 	struct SCommand_Texture_Create : public SCommand
@@ -794,9 +802,9 @@ public:
 			PreviousState.m_ClipW != State.m_ClipW || PreviousState.m_ClipH != State.m_ClipH)
 			return false;
 
-		// 只延长同一缓冲中连续存储的尾批次，保留图元顺序和既有顶点上限。
+		// 只延长当前命令缓冲中连续的尾批次，不改变图元顺序。
 		const auto *pPreviousEnd = reinterpret_cast<const unsigned char *>(pPrevious->m_pVertices) +
-					   pPrevious->m_PrimCount * VerticesPerPrimitive * sizeof(SVertex);
+					   static_cast<size_t>(pPrevious->m_PrimCount) * VerticesPerPrimitive * sizeof(SVertex);
 		if(pPreviousEnd != reinterpret_cast<const unsigned char *>(Command.m_pVertices))
 			return false;
 		pPrevious->m_PrimCount += Command.m_PrimCount;
@@ -834,7 +842,18 @@ enum EGraphicsBackendErrorCodes
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_INFO_REQUEST_FAILED,
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_RESOLUTION_REQUEST_FAILED,
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_WINDOW_CREATE_FAILED,
+	GRAPHICS_BACKEND_ERROR_CODE_METAL_INIT_FAILED,
 };
+
+constexpr bool IsGraphicsBackendOpenGLRetryableError(int ErrorCode)
+{
+	return ErrorCode == GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED || ErrorCode == GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED;
+}
+
+constexpr bool IsGraphicsBackendMetalInitError(int ErrorCode)
+{
+	return ErrorCode == GRAPHICS_BACKEND_ERROR_CODE_METAL_INIT_FAILED;
+}
 
 // interface for the graphics backend
 // all these functions are called on the main thread
@@ -869,6 +888,8 @@ public:
 	virtual const char *GetScreenName(int Screen) const = 0;
 
 	virtual void Minimize() = 0;
+	virtual void HideWindow() = 0;
+	virtual void ShowWindow() = 0;
 	virtual void SetWindowParams(int FullscreenMode, bool IsBorderless) = 0;
 	virtual bool SetWindowScreen(int Index, bool MoveToCenter, ivec2 *pDesktopSize) = 0;
 	virtual bool UpdateDisplayMode(int Index, ivec2 *pDesktopSize) = 0;
@@ -879,6 +900,9 @@ public:
 	// returns true, if the video mode changed
 	virtual bool ResizeWindow(int w, int h, int RefreshRate) = 0;
 	virtual void GetViewportSize(int &w, int &h) = 0;
+	// Insets of the drawable area which are covered by the cutout of the display,
+	// in pixels. Only determined on iOS, zero on all other platforms.
+	virtual void GetDisplayCutoutInsets(int &Left, int &Right) = 0;
 	virtual void NotifyWindow() = 0;
 	virtual bool IsScreenKeyboardShown() = 0;
 
@@ -929,6 +953,8 @@ public:
 	// 检查并清除致命错误标记：返回 true 表示刚刚消费掉一个致命错误。
 	// @see CGraphicsBackend_Threaded::TakeFatalError
 	virtual bool TakeFatalError() { return false; }
+	virtual void SetBackendOverride(EBackendType BackendType) { (void)BackendType; }
+	virtual EBackendType GetBackendType() const = 0;
 
 	// be aware that this function should only be called from the graphics thread, and even then you should really know what you are doing
 	virtual TGLBackendReadPresentedImageData &GetReadPresentedImageDataFuncUnsafe() = 0;
@@ -983,8 +1009,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	CCommandBuffer::SVertexTex3DStream m_aVerticesTex3D[CCommandBuffer::MAX_VERTICES];
 	int m_NumVertices;
 
-	CQmRoundedRectDirections m_RoundedRectDirections;
-
 	CCommandBuffer::SColor m_aColor[4];
 	CCommandBuffer::STexCoord m_aTexture[4];
 
@@ -993,6 +1017,8 @@ class CGraphics_Threaded : public IEngineGraphics
 
 	float m_Rotation;
 	CQmQuadRotationCache m_QuadRotationCache;
+	// QmClient：圆角每段方向按档位预计算并复用，避免每个圆角逐段重算 cos/sin。
+	CQmRoundedRectDirections m_RoundedRectDirections;
 	EDrawing m_Drawing;
 	bool m_DoScreenshot;
 	char m_aScreenshotName[IO_MAX_PATH_LENGTH];
@@ -1001,15 +1027,20 @@ class CGraphics_Threaded : public IEngineGraphics
 	bool m_MacosGraphicsDiagnosticsEnabled = false;
 	uint32_t m_MacosGraphicsDiagnosticFrameCount = 0;
 	double m_MacosGraphicsDiagnosticSubmitMsSum = 0.0;
-	double m_MacosMetalWaitForIdleMsSum = 0.0;
-	uint64_t m_MacosMetalWaitForIdleCount = 0;
+	double m_MacosFrameSerializationWaitMsSum = 0.0;
+	uint64_t m_MacosFrameSerializationWaitCount = 0;
 	uint64_t m_MsdfCommandCount = 0;
 	uint64_t m_MsdfFlushCount = 0;
 	uint64_t m_RoundedRectSdfCommandCount = 0;
 	uint64_t m_RoundedRectSdfFlushCount = 0;
+	uint64_t m_BufferedTextCommandCount = 0;
+	uint64_t m_BufferedTextNoContainerCount = 0;
+	uint64_t m_BufferedTextZeroQuadCount = 0;
 #endif
 
 	CTextureHandle m_NullTexture;
+	// 全透明占位纹理：sprite 超出自定义图集范围时按「未提供 = 不可见」处理用。
+	CTextureHandle m_BlankTexture;
 
 	std::vector<int> m_vTextureIndices;
 	// Tracks slot generations so copied handles become stale once a slot is freed and reused.
@@ -1165,11 +1196,6 @@ class CGraphics_Threaded : public IEngineGraphics
 public:
 	CGraphics_Threaded();
 
-	// 记录实际生效的图形后端名（Vulkan / OpenGL / GLES）供崩溃报告归因使用。
-	// 由 SDL 后端在确定后端类型后调用：DetectBackend 是它私有的，且只有它知道
-	// DDNET_DRIVER 覆盖的结果。传 nullptr 清除。
-	static void SetGraphicsBackendForCrashReport(const char *pBackendName);
-
 	void ClipEnable(int x, int y, int w, int h) override;
 	void ClipDisable() override;
 
@@ -1200,7 +1226,7 @@ public:
 
 	IGraphics::CTextureHandle FindFreeTextureIndex();
 	void BumpTextureHandleEpochAndResetSlots();
-	bool IsTextureHandleAllocated(CTextureHandle TextureId) const override;
+	bool IsTextureHandleAllocated(IGraphics::CTextureHandle TextureId) const override;
 	void FreeTextureIndex(CTextureHandle *pIndex);
 	// 显卡设备重建会清空 m_vQuadContainers，旧索引随之失效；
 	// 所有按索引取用容器的入口都必须先过这一层校验。
@@ -1220,7 +1246,7 @@ public:
 	void EndRenderTarget() override;
 	void DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &Params) override;
 	bool CaptureBackbufferToRenderTarget(CRenderTargetHandle Target) override;
-	bool GaussianBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Temporary, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) override;
+	bool GaussianBlurRenderTarget(CRenderTargetHandle Source, const std::array<CRenderTargetHandle, DUAL_KAWASE_PYRAMID_LEVELS> &aTemporary, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) override;
 	bool DualBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Downsample, CRenderTargetHandle DownsampleTemporary, CRenderTargetHandle DownsampleBlurred, CRenderTargetHandle Destination, const SGaussianBlurParams &Params) override;
 	CRenderTargetReadbackHandle BeginRenderTargetReadback(CRenderTargetHandle Target) override;
 	ERenderTargetReadbackState PollRenderTargetReadback(CRenderTargetReadbackHandle Handle) override;
@@ -1233,7 +1259,7 @@ public:
 	bool UpdateTextTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer) override;
 	bool UpdateTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer) override;
 
-	CTextureHandle LoadSpriteTexture(const CImageInfo &FromImageInfo, const struct CDataSprite *pSprite) override;
+	CTextureHandle LoadSpriteTexture(const CImageInfo &FromImageInfo, const std::optional<CImageInfo> &FallbackImageInfo, const struct CDataSprite *pSprite) override;
 
 	bool IsImageSubFullyTransparent(const CImageInfo &FromImageInfo, int x, int y, int w, int h) override;
 	bool IsSpriteTextureFullyTransparent(const CImageInfo &FromImageInfo, const struct CDataSprite *pSprite) override;
@@ -1262,20 +1288,12 @@ public:
 	void QuadsDrawCurrentVertices(bool KeepVertices = true) override;
 	void QuadsSetRotation(float Angle) override;
 
-	template<typename TName>
-	void SetColor(TName *pVertex, int ColorIndex)
-	{
-		TName *pVert = pVertex;
-		pVert->m_Color = m_aColor[ColorIndex];
-	}
-
 	void SetColorVertex(const CColorVertex *pArray, size_t Num) override;
 	void SetColor(float r, float g, float b, float a) override;
 	void SetColor(ColorRGBA Color) override;
+	void SetColor2(ColorRGBA First, ColorRGBA Second) override;
 	void SetColor4(ColorRGBA TopLeft, ColorRGBA TopRight, ColorRGBA BottomLeft, ColorRGBA BottomRight) override;
 
-	// go through all vertices and change their color (only works for quads)
-	void ChangeColorOfCurrentQuadVertices(float r, float g, float b, float a) override;
 	void ChangeColorOfQuadVertices(size_t QuadOffset, unsigned char r, unsigned char g, unsigned char b, unsigned char a) override;
 
 	void QuadsSetSubset(float TlU, float TlV, float BrU, float BrV) override;
@@ -1300,33 +1318,33 @@ public:
 				pVertices[m_NumVertices + 6 * i].m_Pos.x = pArray[i].m_X;
 				pVertices[m_NumVertices + 6 * i].m_Pos.y = pArray[i].m_Y;
 				pVertices[m_NumVertices + 6 * i].m_Tex = m_aTexture[0];
-				SetColor(&pVertices[m_NumVertices + 6 * i], 0);
+				pVertices[m_NumVertices + 6 * i].m_Color = m_aColor[0];
 
 				pVertices[m_NumVertices + 6 * i + 1].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
 				pVertices[m_NumVertices + 6 * i + 1].m_Pos.y = pArray[i].m_Y;
 				pVertices[m_NumVertices + 6 * i + 1].m_Tex = m_aTexture[1];
-				SetColor(&pVertices[m_NumVertices + 6 * i + 1], 1);
+				pVertices[m_NumVertices + 6 * i + 1].m_Color = m_aColor[1];
 
 				pVertices[m_NumVertices + 6 * i + 2].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
 				pVertices[m_NumVertices + 6 * i + 2].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
 				pVertices[m_NumVertices + 6 * i + 2].m_Tex = m_aTexture[2];
-				SetColor(&pVertices[m_NumVertices + 6 * i + 2], 2);
+				pVertices[m_NumVertices + 6 * i + 2].m_Color = m_aColor[2];
 
 				// second triangle
 				pVertices[m_NumVertices + 6 * i + 3].m_Pos.x = pArray[i].m_X;
 				pVertices[m_NumVertices + 6 * i + 3].m_Pos.y = pArray[i].m_Y;
 				pVertices[m_NumVertices + 6 * i + 3].m_Tex = m_aTexture[0];
-				SetColor(&pVertices[m_NumVertices + 6 * i + 3], 0);
+				pVertices[m_NumVertices + 6 * i + 3].m_Color = m_aColor[0];
 
 				pVertices[m_NumVertices + 6 * i + 4].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
 				pVertices[m_NumVertices + 6 * i + 4].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
 				pVertices[m_NumVertices + 6 * i + 4].m_Tex = m_aTexture[2];
-				SetColor(&pVertices[m_NumVertices + 6 * i + 4], 2);
+				pVertices[m_NumVertices + 6 * i + 4].m_Color = m_aColor[2];
 
 				pVertices[m_NumVertices + 6 * i + 5].m_Pos.x = pArray[i].m_X;
 				pVertices[m_NumVertices + 6 * i + 5].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
 				pVertices[m_NumVertices + 6 * i + 5].m_Tex = m_aTexture[3];
-				SetColor(&pVertices[m_NumVertices + 6 * i + 5], 3);
+				pVertices[m_NumVertices + 6 * i + 5].m_Color = m_aColor[3];
 
 				if(m_Rotation != 0)
 				{
@@ -1346,22 +1364,22 @@ public:
 				pVertices[m_NumVertices + 4 * i].m_Pos.x = pArray[i].m_X;
 				pVertices[m_NumVertices + 4 * i].m_Pos.y = pArray[i].m_Y;
 				pVertices[m_NumVertices + 4 * i].m_Tex = m_aTexture[0];
-				SetColor(&pVertices[m_NumVertices + 4 * i], 0);
+				pVertices[m_NumVertices + 4 * i].m_Color = m_aColor[0];
 
 				pVertices[m_NumVertices + 4 * i + 1].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
 				pVertices[m_NumVertices + 4 * i + 1].m_Pos.y = pArray[i].m_Y;
 				pVertices[m_NumVertices + 4 * i + 1].m_Tex = m_aTexture[1];
-				SetColor(&pVertices[m_NumVertices + 4 * i + 1], 1);
+				pVertices[m_NumVertices + 4 * i + 1].m_Color = m_aColor[1];
 
 				pVertices[m_NumVertices + 4 * i + 2].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
 				pVertices[m_NumVertices + 4 * i + 2].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
 				pVertices[m_NumVertices + 4 * i + 2].m_Tex = m_aTexture[2];
-				SetColor(&pVertices[m_NumVertices + 4 * i + 2], 2);
+				pVertices[m_NumVertices + 4 * i + 2].m_Color = m_aColor[2];
 
 				pVertices[m_NumVertices + 4 * i + 3].m_Pos.x = pArray[i].m_X;
 				pVertices[m_NumVertices + 4 * i + 3].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
 				pVertices[m_NumVertices + 4 * i + 3].m_Tex = m_aTexture[3];
-				SetColor(&pVertices[m_NumVertices + 4 * i + 3], 3);
+				pVertices[m_NumVertices + 4 * i + 3].m_Color = m_aColor[3];
 
 				if(m_Rotation != 0)
 				{
@@ -1521,6 +1539,8 @@ public:
 	const char *GetScreenName(int Screen) const override;
 
 	void Minimize() override;
+	void HideWindow() override;
+	void ShowWindow() override;
 	void WarnPngliteIncompatibleImages(bool Warn) override;
 	void SetWindowParams(int FullscreenMode, bool IsBorderless) override;
 	bool SetWindowScreen(int Index, bool MoveToCenter) override;
@@ -1559,6 +1579,8 @@ public:
 	void TakeScreenshot(const char *pFilename) override;
 	void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback) override;
 	void TakeCustomScreenshot(const char *pFilename) override;
+	void ReadFramebuffer(CImageInfo &Image);
+	void SetScreenSize(int Width, int Height);
 	void Swap() override;
 	bool SetVSync(bool State) override;
 	bool SetMultiSampling(uint32_t ReqMultiSamplingCount, uint32_t &MultiSamplingCountBackend) override;

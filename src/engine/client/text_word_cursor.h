@@ -24,4 +24,4 @@ inline CTextCursor QmTextWordMeasureCursor(const CTextCursor &Source, float X, f
 	return Result;
 }
 
-#endif
+#endif // ENGINE_CLIENT_TEXT_WORD_CURSOR_H

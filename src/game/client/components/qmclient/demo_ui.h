@@ -9,35 +9,38 @@ namespace qm_demo_ui
 {
 	constexpr float DISPLAY_HEIGHT = 116.0f;
 
-	inline CUIRect PlayerRect(const CUIRect &Screen, bool DisplayExpanded)
+	inline CUIRect PlayerRect(const CUIRect &Screen, float Height)
 	{
-		const float Width = std::min(640.0f, Screen.w - 24.0f);
-		const float Height = 120.0f + (DisplayExpanded ? DISPLAY_HEIGHT + 6.0f : 0.0f);
+		const float Width = std::min(760.0f, std::max(0.0f, Screen.w - 24.0f));
 		return {Screen.x + (Screen.w - Width) * 0.5f, Screen.y + Screen.h - Height - 12.0f, Width, Height};
 	}
 
-	constexpr float TransportWidth(float ButtonSize)
+	inline CUIRect DraggedPlayerRect(const CUIRect &Screen, const CUIRect &Base, float OffsetX, float OffsetY)
 	{
-		// 十个图标、时长选择、倍速文字，以及组内和组间间距。
-		return 10.0f * ButtonSize + 56.0f + 36.0f + 42.0f;
-	}
-
-	inline float TransportButtonSize(float PanelWidth)
-	{
-		return std::min(22.0f, (PanelWidth - 16.0f - TransportWidth(0.0f)) / 10.0f);
+		return {
+			std::clamp(Base.x + OffsetX, Screen.x, Screen.x + Screen.w - Base.w),
+			std::clamp(Base.y + OffsetY, Screen.y, std::max(Screen.y, Screen.y + Screen.h - Base.h)),
+			Base.w,
+			Base.h};
 	}
 
 	inline float SliceContentHeight(int SegmentCount, bool DisplayExpanded)
 	{
-		const float SegmentsHeight = SegmentCount > 0 ? 26.0f + std::min(SegmentCount, 4) * 22.0f : 0.0f;
-		return 106.0f + SegmentsHeight + (DisplayExpanded ? DISPLAY_HEIGHT + 4.0f : 0.0f);
+		const int VisibleSegments = std::min(std::max(SegmentCount, 0), 4);
+		const float SegmentsHeight = SegmentCount > 0 ? 20.0f + VisibleSegments * 20.0f + (SegmentCount > 4 ? 16.0f : 0.0f) + 10.0f : 0.0f;
+		return 154.0f + SegmentsHeight + (DisplayExpanded ? DISPLAY_HEIGHT + 4.0f : 0.0f);
 	}
 
-	inline CUIRect PopupRect(const CUIRect &Screen, float ContentHeight)
+	inline float RenderContentHeight(bool DisplayExpanded, bool Online)
 	{
-		const float Width = std::min(560.0f, Screen.w - 24.0f);
-		const float Height = std::min(ContentHeight, Screen.h - 24.0f);
-		return {Screen.x + (Screen.w - Width) * 0.5f, Screen.y + (Screen.h - Height) * 0.5f, Width, Height};
+		return 120.0f + (DisplayExpanded ? DISPLAY_HEIGHT + 4.0f : 0.0f) + (Online ? 30.0f : 0.0f);
+	}
+
+	inline CUIRect PopupRect(const CUIRect &Screen, float ContentHeight, float Width = 560.0f)
+	{
+		const float PopupWidth = std::min(Width, std::max(0.0f, Screen.w - 24.0f));
+		const float PopupHeight = std::min(ContentHeight, std::max(0.0f, Screen.h - 24.0f));
+		return {Screen.x + (Screen.w - PopupWidth) * 0.5f, Screen.y + (Screen.h - PopupHeight) * 0.5f, PopupWidth, PopupHeight};
 	}
 }
 

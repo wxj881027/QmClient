@@ -166,10 +166,7 @@ def _run_sanitizer_build(results: ResultCollector, dry_run: bool) -> None:
     env["CXX"] = clangxx
     env["CXXFLAGS"] = san_flags
     env["CFLAGS"] = san_flags
-    env["UBSAN_OPTIONS"] = (
-        f"suppressions={REPO_ROOT / 'ubsan.supp'}:"
-        "log_path=SAN:print_stacktrace=1:halt_on_error=0"
-    )
+    env["UBSAN_OPTIONS"] = "log_path=SAN:print_stacktrace=1:halt_on_error=0"
     env["ASAN_OPTIONS"] = (
         "log_path=SAN:strict_string_checks=1:"
         "detect_stack_use_after_return=1:"
@@ -178,7 +175,6 @@ def _run_sanitizer_build(results: ResultCollector, dry_run: bool) -> None:
         "detect_leaks=0:"
         "halt_on_error=0"
     )
-    env["LSAN_OPTIONS"] = f"suppressions={REPO_ROOT / 'lsan.supp'}"
 
     # 配置
     returncode, output = _run_command(

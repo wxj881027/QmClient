@@ -82,7 +82,7 @@ TEST(QmConsoleLogFilter, ExtractConsoleLogSystem)
 	ASSERT_TRUE(QmExtractConsoleLogSystem(pPlayerLine, str_length(pPlayerLine), aBuf, sizeof(aBuf)));
 	EXPECT_STREQ(aBuf, "chat/whisper");
 
-	// 长度截断到 system 名尚未写完时，取最后一段作不完整 system 名
+	// 长度截断到 system 名尚未写完时，取最后一段作不完整 system 名。
 	ASSERT_TRUE(QmExtractConsoleLogSystem(pLine, 24, aBuf, sizeof(aBuf)));
 	EXPECT_STREQ(aBuf, "bi");
 

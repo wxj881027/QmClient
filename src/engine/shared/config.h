@@ -92,27 +92,14 @@ namespace DefaultConfig
 struct SQmFastInputSettings
 {
 	bool m_Enabled = false;
-	int m_Mode = 0;
 	int m_FastAmountMs = 0;
-	int m_SaikoPlusAmount = 0;
 	int m_BasePredictionMarginMs = 10;
 };
-
-// 快速输入只保留 Fast(0) 与 Saiko+(4)；历史 Best 模式(1/2/3)统一回落到 Fast。
-constexpr int QmFastInputNormalizedMode(int Mode)
-{
-	if(Mode == 1 || Mode == 2 || Mode == 3)
-		return 0;
-	return Mode;
-}
 
 constexpr float QmEffectiveFastInputOffsetTicks(const SQmFastInputSettings &Settings)
 {
 	if(!Settings.m_Enabled)
 		return 0.0f;
-
-	if(QmFastInputNormalizedMode(Settings.m_Mode) == 4)
-		return Settings.m_SaikoPlusAmount > 0 ? Settings.m_SaikoPlusAmount / 100.0f : 0.0f;
 	return Settings.m_FastAmountMs > 0 ? Settings.m_FastAmountMs / 20.0f : 0.0f;
 }
 
@@ -121,22 +108,9 @@ constexpr int QmCeilPositiveFastInputTicks(float OffsetTicks)
 	return OffsetTicks <= 0.0f ? 0 : (int)OffsetTicks + ((float)(int)OffsetTicks < OffsetTicks ? 1 : 0);
 }
 
-constexpr int QmFastInputPredictionTicks(float OffsetTicks, int Mode)
+constexpr int QmFastInputPredictionTicks(float OffsetTicks)
 {
-	if(OffsetTicks <= 0.0f)
-		return 0;
-	if(QmFastInputNormalizedMode(Mode) == 4)
-		return QmCeilPositiveFastInputTicks(OffsetTicks + 1.0f);
 	return QmCeilPositiveFastInputTicks(OffsetTicks);
-}
-
-constexpr int QmFastInputPredictionTicksOthers(float OffsetTicks, int Mode)
-{
-	if(OffsetTicks <= 0.0f)
-		return 0;
-	if(QmFastInputNormalizedMode(Mode) == 4)
-		return QmCeilPositiveFastInputTicks(OffsetTicks);
-	return QmFastInputPredictionTicks(OffsetTicks, Mode);
 }
 
 constexpr void QmApplyFastInputOffset(float OffsetTicks, int &Tick, float &Intra)
@@ -153,26 +127,14 @@ constexpr void QmApplyFastInputOffset(float OffsetTicks, int &Tick, float &Intra
 	Intra = CombinedIntra - (float)CarryOverTicks;
 }
 
-constexpr bool QmEffectiveFastInputOthers(bool FastInputEnabled, int Mode, bool FastOthers, bool SaikoOthers)
+constexpr bool QmEffectiveFastInputOthers(bool FastInputEnabled, bool FastOthers)
 {
-	if(!FastInputEnabled)
-		return false;
-	if(QmFastInputNormalizedMode(Mode) == 4)
-		return SaikoOthers;
-	return FastOthers;
+	return FastInputEnabled && FastOthers;
 }
 
 constexpr int QmFastInputBasePredictionMarginMs(const SQmFastInputSettings &Settings)
 {
-	int FastInputMargin = 0;
-	const int Mode = QmFastInputNormalizedMode(Settings.m_Mode);
-	if(Settings.m_Enabled)
-	{
-		if(Mode == 4)
-			FastInputMargin = Settings.m_SaikoPlusAmount > 0 ? (Settings.m_SaikoPlusAmount + 2) / 5 : 0;
-		else
-			FastInputMargin = Settings.m_FastAmountMs > 0 ? Settings.m_FastAmountMs : 0;
-	}
+	const int FastInputMargin = Settings.m_Enabled && Settings.m_FastAmountMs > 0 ? Settings.m_FastAmountMs : 0;
 	return Settings.m_BasePredictionMarginMs > FastInputMargin ? Settings.m_BasePredictionMarginMs : FastInputMargin;
 }
 
@@ -236,6 +198,19 @@ struct SConfigVariable
 	// Note that this only applies to the console command and the SetValue function,
 	// but the underlying config variable can still be modified programmatically.
 	bool m_ReadOnly = false;
+	// 临时写盘覆盖：运行时值被程序临时改写时，Save() 改写出这里保存的用户真实值，
+	// 避免把临时状态写进配置文件。目前只有整数变量读取这两个字段。
+	bool m_HasSaveValueOverride = false;
+	int m_SaveValueOverride = 0;
+	// 接管来源标识（例如 "qm_zen_mode"），仅用于设置页提示，空表示未登记来源。
+	const char *m_pSaveValueOverrideOwner = nullptr;
+
+	void SetSaveValueOverride(bool Active, int Value, const char *pOwnerId = nullptr)
+	{
+		m_HasSaveValueOverride = Active;
+		m_SaveValueOverride = Value;
+		m_pSaveValueOverrideOwner = Active ? pOwnerId : nullptr;
+	}
 
 	SConfigVariable(IConsole *pConsole, const char *pScriptName, EVariableType Type, int Flags, const char *pHelp, const char *pHelpLocalizeKey) :
 		m_pConsole(pConsole),
@@ -398,6 +373,9 @@ public:
 	void ResetGameSettings() override;
 	void SetReadOnly(const char *pScriptName, bool ReadOnly) override;
 	void SetGameSettingsReadOnly(bool ReadOnly) override;
+	void SetSaveValueOverride(const char *pScriptName, bool Active, int Value = 0, const char *pOwnerId = nullptr) override;
+	const char *SaveValueOverrideOwner(const int *pValue) const override;
+	int RealValue(const int *pValue) const override;
 	bool Save(bool Force = false) override;
 
 	CConfig *Values() override { return &g_Config; }

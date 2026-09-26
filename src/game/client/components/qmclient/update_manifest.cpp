@@ -43,7 +43,7 @@ namespace
 			++Parts;
 			HasDigit = false;
 		}
-		if(!HasDigit || Parts < 2)
+		if(!HasDigit)
 			return false;
 		str_copy(pBuffer, pVersion, BufferSize);
 		return true;
@@ -59,14 +59,14 @@ namespace
 			str_comp(json_string_get(pName), pExpectedName) != 0)
 			return false;
 		const char *pValue = json_string_get(pDownloadUrl);
-		if(!str_startswith(pValue, UPDATE_ASSET_URL_PREFIX) || str_length(pValue) >= UrlSize)
+		if(!str_startswith(pValue, UPDATE_ASSET_URL_PREFIX) || (size_t)str_length(pValue) >= UrlSize)
 			return false;
 		str_copy(pUrl, pValue, UrlSize);
 		return true;
 	}
 }
 
-bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateRelease &Release, char *pError, size_t ErrorSize)
+bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateRelease &Release, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild)
 {
 	Release = {};
 	SetError(pError, ErrorSize, "Invalid GitHub release metadata");
@@ -94,7 +94,7 @@ bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *
 		FreeRoot();
 		return false;
 	}
-	if(!IsQmClientRemoteVersionNewer(Release.m_aVersion, pCurrentVersion))
+	if(!IsQmClientRemoteVersionNewer(Release.m_aVersion, pCurrentVersion, LocalIsDevelopmentBuild))
 	{
 		SetError(pError, ErrorSize, "GitHub release version is not newer");
 		FreeRoot();
@@ -147,7 +147,7 @@ bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *
 	return true;
 }
 
-bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateManifest &Manifest, char *pError, size_t ErrorSize)
+bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateManifest &Manifest, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild)
 {
 	Manifest = {};
 	SetError(pError, ErrorSize, "Invalid update manifest");
@@ -176,7 +176,7 @@ bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char 
 	}
 
 	const char *pRemoteVersion = json_string_get(pVersion);
-	if(!IsQmClientRemoteVersionNewer(pRemoteVersion, pCurrentVersion))
+	if(!IsQmClientRemoteVersionNewer(pRemoteVersion, pCurrentVersion, LocalIsDevelopmentBuild))
 	{
 		SetError(pError, ErrorSize, "Update manifest version is not newer");
 		FreeRoot();

@@ -61,7 +61,11 @@ inline void BuildHitboxCapsuleOutline(vec2 From, vec2 To, float Radius, int ArcS
 		return;
 
 	ArcSegments = std::clamp(ArcSegments, 2, COLLISION_HITBOX_CAPSULE_MAX_ARC_SEGMENTS);
+	// Subtracting two finite float coordinates can still overflow. Reject the
+	// resulting vector before length/normalization rather than drawing garbage.
 	const vec2 Delta = To - From;
+	if(!std::isfinite(Delta.x) || !std::isfinite(Delta.y))
+		return;
 	const float SegmentLength = length(Delta);
 	if(!std::isfinite(SegmentLength))
 		return;

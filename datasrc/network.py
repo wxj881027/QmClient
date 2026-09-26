@@ -21,6 +21,7 @@ from datatypes import (
 	NetStringHalfStrict,
 	NetStringStrict,
 	NetTick,
+	NetTickStrict,
 )
 
 Emotes = ["NORMAL", "PAIN", "HAPPY", "SURPRISE", "ANGRY", "BLINK"]
@@ -111,6 +112,7 @@ GameInfoFlags2 = [
 	"NO_SKIN_CHANGE_FOR_FROZEN",
 	"DDRACE_TEAM",
 	"PREDICT_EVENTS",
+	"OLD_LASER",
 ]
 ExPlayerFlags = ["AFK", "PAUSED", "SPEC"]
 LegacyProjectileFlags = [f"CLIENTID_BIT{i}" for i in range(8)] + [
@@ -172,6 +174,7 @@ Powerups = [
 	"ARMOR_GRENADE",
 	"ARMOR_NINJA",
 	"ARMOR_LASER",
+	"FREEZE",
 ]
 Authed = ["NO", "HELPER", "MOD", "ADMIN"]
 EntityClasses = [
@@ -212,7 +215,7 @@ enum
 
 enum
 {
-	GAMEINFO_CURVERSION=11,
+	GAMEINFO_CURVERSION=12,
 };
 """
 
@@ -428,6 +431,9 @@ Objects = [
 			NetIntAny("m_Flags", default=0),
 			NetIntAny("m_Version", default=0),
 			NetIntAny("m_Flags2", default=0),
+			NetIntRange("m_MinTeamSize", 0, "MAX_CLIENTS", default=0),
+			NetIntRange("m_MaxTeamSize", 0, "MAX_CLIENTS", default=0),
+			NetIntAny("m_NumDDRaceTeams", default=0),
 		],
 		validate_size=False,
 	),
@@ -473,7 +479,7 @@ Objects = [
 			NetTick("m_StartTick"),
 			NetIntRange("m_Owner", -1, "MAX_CLIENTS-1"),
 			NetIntAny("m_SwitchNumber"),
-			NetIntAny("m_TuneZone"),
+			NetIntRange("m_TuneZone", 0, "TuneZone::NUM-1"),
 			NetIntAny("m_Flags"),
 		],
 	),
@@ -895,7 +901,7 @@ Messages = [
 	NetMessageEx(
 		"Sv_ChangeInfoCooldown",
 		"change-info-cooldown@netmsg.ddnet.org",
-		[NetTick("m_WaitUntil")],
+		[NetTickStrict("m_WaitUntil")],
 	),
 	NetMessageEx(
 		"Sv_MapSoundGlobal",
@@ -918,7 +924,7 @@ Messages = [
 			NetIntAny("m_NextWeapon"),
 			NetIntAny("m_PrevWeapon"),
 			NetIntRange("m_Owner", 0, "MAX_CLIENTS-1"),
-			NetTick("m_IntendedTick"),
+			NetTickStrict("m_IntendedTick"),
 		],
 	),
 	NetMessageEx(

@@ -56,10 +56,9 @@ static int TestMap(const char *pMapPath, bool CalcHashes, IStorage *pStorage)
 	{
 		log_info(TOOL_NAME, "Data %d:", Index);
 
+		const void *pData = Reader.GetData(Index);
 		const int Size = Reader.GetDataSize(Index);
 		log_info(TOOL_NAME, "  Size: %d bytes", Size);
-
-		const void *pData = Reader.GetData(Index);
 		if(pData == nullptr)
 		{
 			log_info(TOOL_NAME, "  Data erroneous");

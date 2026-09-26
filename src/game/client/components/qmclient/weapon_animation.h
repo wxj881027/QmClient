@@ -105,4 +105,11 @@ inline float QmResolveWeaponAnimationRotation(float WeaponSwitchRotation, const 
 	return FireOverridesSwitchRotation ? 0.0f : WeaponSwitchRotation;
 }
 
+// Gores 模式自动切锤会让武器在锤子与原武器之间来回切换，每次都播放切换动画会很吵。
+// 只有选项开启、Gores 武器循环确实接管了武器、且这次切换涉及锤子时才跳过动画。
+inline bool QmShouldSkipGoresHammerSwitchAnimation(bool SuppressEnabled, bool GoresWeaponCycleActive, int PreviousWeapon, int CurrentWeapon)
+{
+	return SuppressEnabled && GoresWeaponCycleActive && (PreviousWeapon == WEAPON_HAMMER || CurrentWeapon == WEAPON_HAMMER);
+}
+
 #endif

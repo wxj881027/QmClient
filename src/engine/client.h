@@ -268,6 +268,7 @@ public:
 	virtual const std::vector<std::string> &MaplistEntries() const = 0;
 
 	// server info
+	virtual const class CServerInfo &ServerInfo() const = 0;
 	virtual void GetServerInfo(class CServerInfo *pServerInfo) const = 0;
 	virtual bool ServerCapAnyPlayerFlag() const = 0;
 
@@ -413,7 +414,7 @@ public:
 #endif
 
 	virtual std::optional<int> ShowMessageBox(const IGraphics::CMessageBox &MessageBox) = 0;
-	virtual void GetGpuInfoString(char (&aGpuInfo)[1024]) = 0;
+	virtual void GetGpuInfoString(char (&aGpuInfo)[512]) = 0;
 
 	// TClient
 	bool m_IsLocalFrozen = false;
@@ -435,12 +436,9 @@ public:
 	virtual void OnRconLine(const char *pLine) = 0;
 	virtual void OnInit() = 0;
 	virtual void InvalidateSnapshot() = 0;
-	virtual void OnNewSnapshot() = 0;
+	virtual void OnNewSnapshot(bool DummySwapped) = 0;
 	virtual void OnEnterGame() = 0;
 	virtual void OnShutdown() = 0;
-	// 仅用于诊断：渲染帧完成和关闭采集前的收尾，不影响游戏时序。
-	virtual void OnQmPerfFrame(double) {}
-	virtual void OnQmPerfStop(bool) {}
 	virtual void OnRender() = 0;
 	virtual void OnUpdate() = 0;
 	// Render-only idle throttle requested by the game UI; 0 keeps the configured rate.

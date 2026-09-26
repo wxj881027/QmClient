@@ -4,6 +4,7 @@
 
 #include <base/log.h>
 #include <base/str.h>
+#include <base/time.h>
 
 #include <engine/keys.h>
 
@@ -12,6 +13,20 @@
 #include <algorithm>
 
 using namespace std::chrono_literals;
+
+void CFontTyper::CState::Reset()
+{
+	m_Active = false;
+	m_TextIndex = ivec2(0, 0);
+	m_LineStart = std::nullopt;
+	m_pLastLayer = nullptr;
+	m_TilesPlacedSinceActivate = 0;
+}
+
+bool CFontTyper::IsActive() const
+{
+	return Map()->m_FontTyperState.m_Active;
+}
 
 void CFontTyper::OnInit(CEditor *pEditor)
 {
@@ -22,6 +37,7 @@ void CFontTyper::OnInit(CEditor *pEditor)
 
 void CFontTyper::SetTile(ivec2 Pos, unsigned char Index, const std::shared_ptr<CLayerTiles> &pLayer)
 {
+	CFontTyper::CState &State = Map()->m_FontTyperState;
 	CTile Tile = {
 		Index, // index
 		0, // flags
@@ -29,11 +45,39 @@ void CFontTyper::SetTile(ivec2 Pos, unsigned char Index, const std::shared_ptr<C
 		0, // reserved
 	};
 	pLayer->SetTile(Pos.x, Pos.y, Tile);
-	m_TilesPlacedSinceActivate++;
+	State.m_TilesPlacedSinceActivate++;
+}
+
+void CFontTyper::PlaceTile(unsigned char Index, const std::shared_ptr<CLayerTiles> &pLayer)
+{
+	CFontTyper::CState &State = Map()->m_FontTyperState;
+	// 光标位于右边界列时换行
+	if(State.m_TextIndex.x == pLayer->m_Width)
+	{
+		if(Index == 0)
+			return;
+		State.m_TextIndex.x = State.m_LineStart.value_or(0);
+		State.m_TextIndex.y++;
+
+		// 角落情况：已到图层底部，把光标停在最后一行末尾
+		if(State.m_TextIndex.y >= pLayer->m_Height)
+		{
+			State.m_TextIndex.x = pLayer->m_Width;
+			State.m_TextIndex.y = pLayer->m_Height - 1;
+			return;
+		}
+	}
+
+	// 处理在行首左侧输入，同时记录尚未确定的行首
+	if(Index != 0 && (!State.m_LineStart.has_value() || State.m_TextIndex.x < State.m_LineStart.value()))
+		State.m_LineStart = State.m_TextIndex.x;
+	SetTile(State.m_TextIndex, Index, pLayer);
+	State.m_TextIndex.x++;
 }
 
 bool CFontTyper::OnInput(const IInput::CEvent &Event)
 {
+	CFontTyper::CState &State = Map()->m_FontTyperState;
 	std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(Map()->SelectedLayerType(0, LAYERTYPE_TILES));
 	if(!pLayer)
 	{
@@ -67,93 +111,164 @@ bool CFontTyper::OnInput(const IInput::CEvent &Event)
 	if(!(Event.m_Flags & IInput::FLAG_PRESS))
 		return false;
 
-	// letters
-	if(Event.m_Key >= KEY_A && Event.m_Key <= KEY_Z)
+	if(State.m_LineStart.has_value())
+		State.m_LineStart = std::clamp(State.m_LineStart.value(), 0, pLayer->m_Width - 1);
+
+	// 官方 39c675977：Ctrl+S 交给编辑器保存，不要写成字母 S
+	if(Input()->ModifierIsPressed() && Input()->KeyIsPressed(KEY_S))
 	{
-		SetTile(m_TextIndex, Event.m_Key - KEY_A + LETTER_OFFSET, pLayer);
-		m_TextIndex.x++;
-		m_TextLineLen++;
-	}
-	// numbers
-	if(Event.m_Key >= KEY_1 && Event.m_Key <= KEY_0)
-	{
-		SetTile(m_TextIndex, Event.m_Key - KEY_1 + NUMBER_OFFSET, pLayer);
-		m_TextIndex.x++;
-		m_TextLineLen++;
-	}
-	if(Event.m_Key >= KEY_KP_1 && Event.m_Key <= KEY_KP_0)
-	{
-		SetTile(m_TextIndex, Event.m_Key - KEY_KP_1 + NUMBER_OFFSET, pLayer);
-		m_TextIndex.x++;
-		m_TextLineLen++;
+		TextModeOff();
+		return false;
 	}
 
-	// deletion
-	if(Event.m_Key == KEY_BACKSPACE)
+	// 官方 39c675977：Ctrl+V 粘贴剪贴板文本，超长内容改为提示而不是卡死
+	if(Input()->ModifierIsPressed() && Input()->KeyIsPressed(KEY_V))
 	{
-		m_TextIndex.x--;
-		m_TextLineLen--;
-		SetTile(m_TextIndex, 0, pLayer);
+		std::string Clipboard = Input()->GetClipboardText();
+		if(!Clipboard.empty())
+		{
+			if(Clipboard.size() > 10000)
+			{
+				Editor()->ShowFileDialogError("The clipboard contains %" PRIzu " characters, please post it in chunks", Clipboard.size());
+				return false;
+			}
+			str_sanitize(Clipboard.data());
+			for(auto &Char : Clipboard)
+			{
+				if(Char == '\r')
+					continue;
+				if(Char == '\t')
+					Char = ' ';
+
+				// 空格
+				if(Char == ' ')
+				{
+					PlaceTile(0, pLayer);
+				}
+				// 换行
+				else if(Char == '\n')
+				{
+					if(State.m_TextIndex.y < pLayer->m_Height - 1)
+					{
+						State.m_TextIndex.y++;
+						if(State.m_LineStart.has_value())
+							State.m_TextIndex.x = State.m_LineStart.value();
+					}
+				}
+				// 数字
+				else if(str_isnum(Char))
+				{
+					if(Char == '0')
+						PlaceTile(KEY_0 - KEY_1 + NUMBER_OFFSET, pLayer);
+					else
+						PlaceTile(Char - '1' + NUMBER_OFFSET, pLayer);
+				}
+				else
+				{
+					Char = str_uppercase(Char);
+					if(Char >= 'A' && Char <= 'Z')
+					{
+						PlaceTile(Char - 'A' + LETTER_OFFSET, pLayer);
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	// letters
+	if(Event.m_Key >= KEY_A && Event.m_Key <= KEY_Z)
+		PlaceTile(Event.m_Key - KEY_A + LETTER_OFFSET, pLayer);
+	// numbers
+	if(Event.m_Key >= KEY_1 && Event.m_Key <= KEY_0)
+		PlaceTile(Event.m_Key - KEY_1 + NUMBER_OFFSET, pLayer);
+	if(Event.m_Key >= KEY_KP_1 && Event.m_Key <= KEY_KP_0)
+		PlaceTile(Event.m_Key - KEY_KP_1 + NUMBER_OFFSET, pLayer);
+
+	// deletion
+	if(Event.m_Key == KEY_BACKSPACE && State.m_TextIndex.x > 0)
+	{
+		State.m_TextIndex.x--;
+		SetTile(State.m_TextIndex, 0, pLayer);
+	}
+	// 官方 39c675977：Delete 清除光标所在格的字符
+	else if(Event.m_Key == KEY_DELETE)
+	{
+		if(State.m_TextIndex.x < pLayer->m_Width)
+			SetTile(State.m_TextIndex, 0, pLayer);
 	}
 	// space
 	if(Event.m_Key == KEY_SPACE)
-	{
-		SetTile(m_TextIndex, 0, pLayer);
-		m_TextIndex.x++;
-		m_TextLineLen++;
-	}
+		PlaceTile(0, pLayer);
 	// newline
 	if(Event.m_Key == KEY_RETURN)
 	{
-		m_TextIndex.y++;
-		m_TextIndex.x -= m_TextLineLen;
-		m_TextLineLen = 0;
+		State.m_TextIndex.y++;
+		if(State.m_LineStart.has_value())
+			State.m_TextIndex.x = State.m_LineStart.value();
 	}
+
+	// 官方 39c675977：Home/End 在行首行尾之间跳转
+	if(Event.m_Key == KEY_HOME)
+	{
+		for(int StartIndex = State.m_LineStart.value_or(0); StartIndex < pLayer->m_Width; ++StartIndex)
+		{
+			State.m_TextIndex.x = StartIndex;
+			if(pLayer->GetTile(StartIndex, State.m_TextIndex.y).m_Index != 0)
+				break;
+		}
+		// 行内没有字符时回到行首
+		if(pLayer->GetTile(State.m_TextIndex.x, State.m_TextIndex.y).m_Index == 0)
+			State.m_TextIndex.x = State.m_LineStart.value_or(0);
+	}
+	else if(Event.m_Key == KEY_END)
+	{
+		int LastIndex = -1;
+		for(int EndIndex = State.m_LineStart.value_or(0); EndIndex < pLayer->m_Width; ++EndIndex)
+		{
+			if(pLayer->GetTile(EndIndex, State.m_TextIndex.y).m_Index)
+				LastIndex = EndIndex;
+		}
+		State.m_TextIndex.x = LastIndex >= 0 ? LastIndex + 1 : State.m_LineStart.value_or(0);
+	}
+
 	// arrow key navigation
 	if(Event.m_Key == KEY_LEFT)
 	{
-		m_TextIndex.x--;
-		m_TextLineLen--;
-		if(Input()->KeyIsPressed(KEY_LCTRL))
+		State.m_TextIndex.x--;
+		if(Input()->ModifierIsPressed())
 		{
-			while(pLayer->GetTile(m_TextIndex.x, m_TextIndex.y).m_Index)
+			while(State.m_TextIndex.x >= 1 && State.m_TextIndex.x <= pLayer->m_Width - 2 && pLayer->GetTile(State.m_TextIndex.x, State.m_TextIndex.y).m_Index)
 			{
-				if(m_TextIndex.x < 1 || m_TextIndex.x > pLayer->m_Width - 2)
-					break;
-				m_TextIndex.x--;
-				m_TextLineLen--;
+				State.m_TextIndex.x--;
 			}
 		}
 	}
 	if(Event.m_Key == KEY_RIGHT)
 	{
-		m_TextIndex.x++;
-		m_TextLineLen++;
-		if(Input()->KeyIsPressed(KEY_LCTRL))
+		State.m_TextIndex.x++;
+		if(Input()->ModifierIsPressed())
 		{
-			while(pLayer->GetTile(m_TextIndex.x, m_TextIndex.y).m_Index)
+			while(State.m_TextIndex.x >= 1 && State.m_TextIndex.x <= pLayer->m_Width - 2 && pLayer->GetTile(State.m_TextIndex.x, State.m_TextIndex.y).m_Index)
 			{
-				if(m_TextIndex.x < 1 || m_TextIndex.x > pLayer->m_Width - 2)
-					break;
-				m_TextIndex.x++;
-				m_TextLineLen++;
+				State.m_TextIndex.x++;
 			}
 		}
 	}
 	if(Event.m_Key == KEY_UP)
-		m_TextIndex.y--;
+		State.m_TextIndex.y--;
 	if(Event.m_Key == KEY_DOWN)
-		m_TextIndex.y++;
-	m_TextIndex.x = std::clamp(m_TextIndex.x, 0, pLayer->m_Width - 1);
-	m_TextIndex.y = std::clamp(m_TextIndex.y, 0, pLayer->m_Height - 1);
+		State.m_TextIndex.y++;
+	State.m_TextIndex.x = std::clamp(State.m_TextIndex.x, 0, pLayer->m_Width);
+	State.m_TextIndex.y = std::clamp(State.m_TextIndex.y, 0, pLayer->m_Height - 1);
 	m_CursorRenderTime = time_get_nanoseconds() - 501ms;
 	float Dist = distance(
-		vec2(m_TextIndex.x, m_TextIndex.y),
+		vec2(State.m_TextIndex.x, State.m_TextIndex.y),
 		(Editor()->MapView()->GetWorldOffset() + Editor()->MapView()->GetEditorOffset()) / 32);
 	Dist /= Editor()->MapView()->GetWorldZoom();
 	if(Dist > 10.0f)
 	{
-		Editor()->MapView()->SetWorldOffset(vec2(m_TextIndex.x, m_TextIndex.y) * 32 - Editor()->MapView()->GetEditorOffset());
+		Editor()->MapView()->SetWorldOffset(vec2(State.m_TextIndex.x, State.m_TextIndex.y) * 32 - Editor()->MapView()->GetEditorOffset());
 	}
 
 	return false;
@@ -161,6 +276,7 @@ bool CFontTyper::OnInput(const IInput::CEvent &Event)
 
 void CFontTyper::TextModeOn()
 {
+	CFontTyper::CState &State = Map()->m_FontTyperState;
 	std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(Map()->SelectedLayerType(0, LAYERTYPE_TILES));
 	if(!pLayer)
 		return;
@@ -168,8 +284,8 @@ void CFontTyper::TextModeOn()
 		return;
 
 	SetCursor();
-	m_TilesPlacedSinceActivate = 0;
-	m_Active = true;
+	State.m_TilesPlacedSinceActivate = 0;
+	State.m_Active = true;
 	pLayer->m_KnownTextModeLayer = true;
 
 	// hack to not show picker when pressing space
@@ -178,25 +294,25 @@ void CFontTyper::TextModeOn()
 
 void CFontTyper::TextModeOff()
 {
+	CFontTyper::CState &State = Map()->m_FontTyperState;
 	if(Editor()->m_Dialog == DIALOG_PSEUDO_FONT_TYPER)
 		Editor()->m_Dialog = DIALOG_NONE;
-	if(m_TilesPlacedSinceActivate)
+	if(State.m_TilesPlacedSinceActivate)
 		Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorBrushDrawAction>(Map(), Map()->m_SelectedGroup), Localize("Font typer", "Editor"));
-	m_TilesPlacedSinceActivate = 0;
-	m_Active = false;
-	m_pLastLayer = nullptr;
+	Map()->m_FontTyperState.Reset();
 }
 
 void CFontTyper::SetCursor()
 {
-	m_TextIndex.x = (int)(Editor()->MapView()->MouseWorldPos().x / 32);
-	m_TextIndex.y = (int)(Editor()->MapView()->MouseWorldPos().y / 32);
-	m_TextLineLen = 0;
+	CFontTyper::CState &State = Map()->m_FontTyperState;
+	State.m_TextIndex.x = (int)(Editor()->MapView()->MouseWorldPos().x / 32);
+	State.m_TextIndex.y = (int)(Editor()->MapView()->MouseWorldPos().y / 32);
 	m_CursorRenderTime = time_get_nanoseconds() - 501ms;
 }
 
 void CFontTyper::OnRender(CUIRect View)
 {
+	CFontTyper::CState &State = Map()->m_FontTyperState;
 	if(m_ConfirmActivatePopupContext.m_Result == CUi::SConfirmPopupContext::CONFIRMED)
 	{
 		TextModeOn();
@@ -217,10 +333,10 @@ void CFontTyper::OnRender(CUIRect View)
 		return;
 
 	// exit if selected layer changes
-	if(m_pLastLayer && m_pLastLayer != pLayer)
+	if(State.m_pLastLayer && State.m_pLastLayer != pLayer)
 	{
 		TextModeOff();
-		m_pLastLayer = pLayer;
+		State.m_pLastLayer = pLayer;
 		return;
 	}
 	// exit if dialog or edit box pops up
@@ -229,9 +345,9 @@ void CFontTyper::OnRender(CUIRect View)
 		TextModeOff();
 		return;
 	}
-	m_pLastLayer = pLayer;
-	m_TextIndex.x = std::clamp(m_TextIndex.x, 0, pLayer->m_Width - 1);
-	m_TextIndex.y = std::clamp(m_TextIndex.y, 0, pLayer->m_Height - 1);
+	State.m_pLastLayer = pLayer;
+	State.m_TextIndex.x = std::clamp(State.m_TextIndex.x, 0, pLayer->m_Width);
+	State.m_TextIndex.y = std::clamp(State.m_TextIndex.y, 0, pLayer->m_Height - 1);
 
 	const auto CurTime = time_get_nanoseconds();
 	if((CurTime - m_CursorRenderTime) > 1s)
@@ -244,7 +360,7 @@ void CFontTyper::OnRender(CUIRect View)
 		Graphics()->TextureSet(m_CursorTextTexture);
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor(1, 1, 1, 1);
-		IGraphics::CQuadItem QuadItem(m_TextIndex.x * 32, m_TextIndex.y * 32, 32.0f, 32.0f);
+		IGraphics::CQuadItem QuadItem(State.m_TextIndex.x * 32, State.m_TextIndex.y * 32, 32.0f, 32.0f);
 		Graphics()->QuadsDrawTL(&QuadItem, 1);
 		Graphics()->QuadsEnd();
 		Graphics()->WrapNormal();

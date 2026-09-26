@@ -23,7 +23,11 @@ public:
 		int Number = 0);
 
 	vec2 GetPos(float Time);
-	void FillInfo(CNetObj_Projectile *pProj);
+
+	CNetObj_Projectile NetInfoVanilla() const;
+	bool NetIsInfoLegacyCompatible() const;
+	CNetObj_DDRaceProjectile NetInfoLegacy(int SnappingClient);
+	CNetObj_DDNetProjectile NetInfo(int SnappingClient);
 
 	void Reset() override;
 	void Tick() override;
@@ -49,11 +53,10 @@ private:
 	int m_DDRaceTeam;
 	bool m_IsSolo;
 	vec2 m_InitDir;
+	CClientMask m_TeamMask;
 
 public:
 	void SetBouncing(int Value);
-	bool FillExtraInfoLegacy(CNetObj_DDRaceProjectile *pProj);
-	void FillExtraInfo(CNetObj_DDNetProjectile *pProj);
 
 	bool CanCollide(int ClientId) override;
 	int GetOwnerId() const override { return m_Owner; }

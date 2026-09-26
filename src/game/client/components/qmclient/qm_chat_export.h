@@ -1,13 +1,13 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QM_CHAT_EXPORT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QM_CHAT_EXPORT_H
 
-#include "qm_chat_avatar.h"
-
 #include <base/str.h>
 #include <base/system.h>
 
 #include <engine/gfx/image_loader.h>
 #include <engine/storage.h>
+
+#include <game/client/components/qmclient/qm_chat_avatar.h>
 
 #include <algorithm>
 #include <array>
@@ -19,6 +19,8 @@
 #include <utility>
 #include <vector>
 
+// 聊天导出：字形由主线程用 ITextRender 分帧光栅化成纯 alpha 位图，
+// 之后的排版、合成与 PNG 编码全部在后台任务里做，不碰渲染线程。
 namespace QmChatExport
 {
 	constexpr int FONT_MESSAGE = 30;
@@ -206,6 +208,22 @@ namespace QmChatExport
 		}
 	}
 
+	// 导出仍保留纯文本副本：只有日志原文，不依赖任何图片或渲染结果。
+	inline std::string BuildTxt(const std::vector<SLine> &vLines)
+	{
+		std::string Txt;
+		for(const SLine &Line : vLines)
+		{
+			Txt += Line.m_Raw;
+#if defined(CONF_FAMILY_WINDOWS)
+			Txt += "\r\n";
+#else
+			Txt += '\n';
+#endif
+		}
+		return Txt;
+	}
+
 	inline bool AvatarDataUri(const SLine &Line, std::string &Uri)
 	{
 		auto Pixels = QmChatAvatar::Render(Line.m_pAvatar.get(), Line.m_Sender);
@@ -390,6 +408,7 @@ namespace QmChatExport
 		return Written && Closed;
 	}
 
+	// 成功时返回 true 并留下 .txt/.html/分页 .png；任何一步失败或取消都会删掉本次写出的全部文件。
 	inline bool Export(IStorage *pStorage, const std::string &BaseFilename, const std::vector<SLine> &vLines, const TGlyphs &Glyphs, const SLabels &Labels, const std::atomic<bool> &Cancelled, std::atomic<int> &CompletedPages)
 	{
 		CompletedPages.store(0, std::memory_order_relaxed);
@@ -405,32 +424,16 @@ namespace QmChatExport
 		const auto Fail = [&]() {
 			for(const std::string &Filename : vWrittenFiles)
 				pStorage->RemoveFile(Filename.c_str(), IStorage::TYPE_SAVE);
+			CompletedPages.store(0, std::memory_order_relaxed);
 			return false;
 		};
+		const std::string Txt = BuildTxt(vLines);
+		if(!WriteFile(pStorage, BaseFilename + ".txt", Txt.data(), Txt.size(), &Cancelled))
+			return Fail();
+		vWrittenFiles.push_back(BaseFilename + ".txt");
 		if(!WriteFile(pStorage, BaseFilename + ".html", Html.data(), Html.size(), &Cancelled))
-			return false;
+			return Fail();
 		vWrittenFiles.push_back(BaseFilename + ".html");
-		// TXT 保留原始日志及平台换行，与已有导出格式一致。
-		const std::string TxtFilename = BaseFilename + ".txt";
-		IOHANDLE TxtFile = pStorage->OpenFile(TxtFilename.c_str(), IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(!TxtFile)
-			return Fail();
-		bool Written = true;
-		for(const SLine &Line : vLines)
-		{
-			if(Cancelled.load(std::memory_order_relaxed) || io_write(TxtFile, Line.m_Raw.data(), Line.m_Raw.size()) != Line.m_Raw.size() || !io_write_newline(TxtFile))
-			{
-				Written = false;
-				break;
-			}
-		}
-		const bool Closed = io_close(TxtFile) == 0;
-		if(!Written || !Closed)
-		{
-			pStorage->RemoveFile(TxtFilename.c_str(), IStorage::TYPE_SAVE);
-			return Fail();
-		}
-		vWrittenFiles.push_back(TxtFilename);
 		for(size_t PageIndex = 0; PageIndex < vPages.size(); ++PageIndex)
 		{
 			auto Pixels = RenderPage(vPages[PageIndex], vLines, Glyphs, Cancelled);

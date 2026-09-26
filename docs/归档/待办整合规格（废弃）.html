@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="dcterms.date" content="2026-06-20" />
+  <meta name="qm.status" content="partially-superseded" />
+  <meta name="qm.note" content="2026-06-20 的待办条目多数已完成或已删除；在研任务的现行索引见 ../计划/在研任务.md" />
+  <meta name="updated" content="2026-06-27" />
+  <meta name="status" content="active" />
+  <meta name="source-md" content="2026-06-20-backlog-consolidation-spec.md (deleted 2026-06-27, content merged into this HTML)" />
+  <title>[部分停用] QmClient 待办整合规格（2026-06-20 历史存档）</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --paper: #fffdfa;
+      --paper-2: #f7f2ea;
+      --ink: #2d2924;
+      --muted: #6f675f;
+      --line: #ded4c6;
+      --accent: #4f6f73;
+      --accent-2: #b8795b;
+      --ok: #5f7f55;
+      --warn: #a57536;
+      --bad: #a94d45;
+      --shadow: 0 18px 45px rgba(62, 50, 39, 0.12);
+      --code-bg: #ede6dc;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(184, 121, 91, 0.16), transparent 30rem),
+        radial-gradient(circle at 88% 8%, rgba(79, 111, 115, 0.14), transparent 28rem),
+        linear-gradient(180deg, #f7f3ec 0%, var(--bg) 100%);
+      font-family: "Noto Sans SC", "Segoe UI", "Microsoft YaHei", sans-serif;
+      line-height: 1.72;
+    }
+    .page { max-width: 1180px; margin: 0 auto; padding: 28px 20px 56px; }
+    .hero, .card {
+      background: var(--paper);
+      border: 1px solid rgba(222, 212, 198, 0.95);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+    }
+    .hero { padding: 28px 28px 24px; margin-bottom: 18px; }
+    .card { padding: 22px 24px; margin-top: 18px; }
+    h1, h2, h3 { margin: 0 0 12px; line-height: 1.2; }
+    h1 { font-size: 28px; letter-spacing: -0.02em; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 17px; margin-top: 18px; }
+    h4 { font-size: 15px; margin: 14px 0 6px; color: #4a4038; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 0 22px; padding: 0; }
+    li { margin: 4px 0; }
+    code {
+      padding: 0.12em 0.36em;
+      border-radius: 6px;
+      background: var(--code-bg);
+      color: #613c2e;
+      font-size: 0.94em;
+    }
+    pre {
+      margin: 12px 0;
+      padding: 14px 16px;
+      background: #29251f;
+      color: #f7efe2;
+      border-radius: 14px;
+      overflow-x: auto;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    pre code { padding: 0; background: transparent; color: inherit; font-size: inherit; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+      display: block;
+      overflow-x: auto;
+    }
+    th, td {
+      border-top: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #faf5ed; color: #4f463d; font-weight: 700; white-space: nowrap; }
+    tr:hover td { background: rgba(184, 121, 91, 0.03); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(79, 111, 115, 0.10); color: var(--accent);
+      font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+    }
+    .pill.secondary { background: rgba(184, 121, 91, 0.10); color: var(--accent-2); }
+    .pill.warn { background: rgba(165, 117, 54, 0.12); color: var(--warn); }
+    .pill.bad { background: rgba(169, 77, 69, 0.12); color: var(--bad); }
+    .pill.ok { background: rgba(95, 127, 85, 0.12); color: var(--ok); }
+    .muted { color: var(--muted); }
+    .note {
+      border-left: 4px solid var(--accent);
+      padding: 10px 12px;
+      background: rgba(79, 111, 115, 0.06);
+      border-radius: 0 10px 10px 0;
+      color: #4c4238;
+      margin: 12px 0;
+    }
+    .note.warn { border-left-color: var(--warn); background: rgba(165, 117, 54, 0.08); }
+    .note.bad { border-left-color: var(--bad); background: rgba(169, 77, 69, 0.08); }
+    .note.ok { border-left-color: var(--ok); background: rgba(95, 127, 85, 0.08); }
+    .toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 14px; }
+    .toc a {
+      display: block; padding: 10px 12px;
+      border: 1px solid var(--line); border-radius: 12px;
+      color: var(--ink); text-decoration: none;
+      background: rgba(255,255,255,0.72);
+    }
+    .toc a:hover { border-color: rgba(184, 121, 91, 0.45); }
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap;
+    }
+    .badge.ok { background: rgba(95, 127, 85, 0.12); color: var(--ok); }
+    .badge.warn { background: rgba(165, 117, 54, 0.12); color: var(--warn); }
+    .badge.bad { background: rgba(169, 77, 69, 0.12); color: var(--bad); }
+    .badge.secondary { background: rgba(184, 121, 91, 0.10); color: var(--accent-2); }
+    .small { font-size: 13px; color: var(--muted); }
+    details {
+      margin-top: 10px; border: 1px solid var(--line);
+      border-radius: 12px; background: rgba(255,255,255,0.65); padding: 10px 12px;
+    }
+    summary { cursor: pointer; font-weight: 700; color: #423b33; }
+    .footer { margin-top: 18px; color: var(--muted); font-size: 13px; }
+    .task-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .task-header h3 { margin: 0; }
+    .evidence { font-size: 13px; color: var(--muted); margin: 8px 0; }
+    .evidence code { font-size: 12px; }
+    @media (max-width: 920px) {
+      .hero, .card { padding-left: 18px; padding-right: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="meta">
+        <span class="pill ok">active</span>
+        <span class="pill secondary">2026-06-20 创建 · 2026-06-22 重写 · 2026-06-27 合并 + 调研收口</span>
+        <span class="pill warn">HTML 重写版</span>
+      </div>
+      <h1>QmClient 待办整合规格（半 plan 式）</h1>
+      <p class="muted">本规格整合 2026-06-20 用户提交的主任务（编号沿用用户原始编号 #8 ~ #20）和第二批补充 TODO（B1 ~ B9），覆盖 BUG 修复、UI/UX 增强、动画改进、平台系统能力和 BestClient 功能移植。本次产出是<strong>单文档 PRD + 详细规格 + 代码证据 + 后续 TODO</strong>，不改任何代码。每个任务给出：现状（引用具体文件:行号）、根因/缺口、设计方向、影响范围、风险与依赖、验收标准。所有引用的文件:行号均来自 <code>codegraph</code> / <code>read</code> / <code>search</code> 实际看到的内容，未定位的会标注「未定位」。</p>
+      <div class="toc">
+        <a href="#prd">① PRD 总览（权威口径）</a>
+        <a href="#priority">② 优先级分组与执行顺序</a>
+        <a href="#t8">#8 滚动抖动根治</a>
+        <a href="#t9">#9 皮肤列表排序 + 按钮压缩</a>
+        <a href="#t10">#10 通知栏贴边 + HUD 一致性</a>
+        <a href="#t11">#11 混合颜色模式</a>
+        <a href="#t12">#12 切枪动画高级配置</a>
+        <a href="#t13">#13 皮肤切换过渡动画</a>
+        <a href="#t14">#14 聊天框改进（5 子项）</a>
+        <a href="#t15">#15 旁观者卡片禅模式回归</a>
+        <a href="#t16">#16 进程高优先级</a>
+        <a href="#t17">#17 通知栏文本语义化</a>
+        <a href="#t18">#18 IME 样式可视化</a>
+        <a href="#t19">#19 表情按键防误触</a>
+        <a href="#t20">#20 BestClient 功能移植</a>
+        <a href="#helpers">共用贴边 Helpers 设计</a>
+        <a href="#animation">动画硬编码审计</a>
+        <a href="#b-batch">第二批待办（B1~B9）</a>
+        <a href="#research">第二轮深度调研结论</a>
+      </div>
+    </header>
+
+    <!-- ============= 背景 / 目标 / 非目标 ============= -->
+    <section class="card">
+      <h2>背景、目标与非目标</h2>
+      <h3>背景</h3>
+      <p>本轮 codegraph 核验基线：</p>
+      <ul>
+        <li><code>codegraph status .</code>：索引 up to date，3173 files / 128274 nodes / 217146 edges。</li>
+        <li>QmClient 当前核验提交：<code>312383072</code>（后续实现推进至 <code>7dd0b6ec09</code>）。</li>
+        <li>BestClient 公共仓库 HEAD：<code>d8f4700434550884690a5779dc3814a7a5a05800</code>。</li>
+        <li>本地 BestClient 参考源码：<code>docs/dyl/BestClient/</code>。</li>
+      </ul>
+      <h3>目标</h3>
+      <ol>
+        <li>为 #8 ~ #20 和 B1 ~ B9 建立可执行的规格基线，后续每个任务可独立拆出小 plan/spec 实现。</li>
+        <li>明确任务间的耦合（尤其 #10 通知栏贴边 与 #14.2 聊天框贴边的共用 Helpers）。</li>
+        <li>给出优先级分组和执行顺序建议，遵循「一次一个功能」原则。</li>
+        <li>为 #20 BestClient 移植提供分步实现计划（4 个子功能顺序）。</li>
+        <li>收口第二轮调研修正，避免同一任务前后出现两个互相冲突的实现口径。</li>
+      </ol>
+      <h3>非目标</h3>
+      <ol>
+        <li>不在本轮实现任何代码。</li>
+        <li>不修改协议、物理、预测、demo 格式等上游保护区域（除非任务明确要求且获批准）。</li>
+        <li>不逐条修改通知文案（#17 只定方向，具体文案改动留给后续小规格）。</li>
+        <li>不做 PS blend mode 的完整数学推导（#11 只列推荐实现项和接入点）。</li>
+      </ol>
+    </section>
+
+    <!-- ============= ① PRD 总览 ============= -->
+    <section class="card" id="prd">
+      <h2>① PRD 总览（权威口径）</h2>
+      <p class="muted">这一节是本文件的入口。后文保留每个任务的详细调研、设计方向和验收标准；如后文历史描述与本节冲突，以本节和各任务内的「当前权威口径」段落为准。</p>
+
+      <h3>范围与分层</h3>
+      <ul>
+        <li><span class="badge ok">已实现</span> <strong>#19、#15、#14.4、#8、#9、#20.1、#20.2、#10+#14.2、B5、B7、B9、#12、#13、#17</strong>：改动局部、依赖较少，已在 commit <code>7dd0b6ec09</code> / <code>e54bb209ac</code> / <code>dff7a87fa9</code> 及后续收口中落地并通过 quick gate。</li>
+        <li><span class="badge warn">先写小 spec</span> <strong>#12 + #13、B6</strong>：游戏内动画配置 spec（控制配置数量，默认行为必须完全兼容）；B6 拆成「公告马甲服务端契约/客户端降级」和「私人标注客户端功能」两个 spec。</li>
+        <li><span class="badge bad">先调研或审批</span> <strong>#11、#16、#18、#20.3、B1、B2 Flexbox、B3 命中判定</strong>：涉及上游保护区域、跨平台能力或物理敏感判定。</li>
+        <li><span class="badge secondary">不得直接按旧口径实现</span> #8 不再停留在「确认根因」；#20.1 不再阻塞于「等更多样本」；B7 不再写「已完整实现」；#20.4 不再直接新增 BestClient <code>C3DParticles</code> 组件；B6 类型 A 不可在服务端未就绪时宣称完整验收。</li>
+      </ul>
+
+      <h3>关键修正</h3>
+      <table>
+        <thead><tr><th>项目</th><th>旧口径问题</th><th>当前权威口径</th><th>代码证据</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>#8 滚动抖动</td>
+            <td>前文写「top-2 假设/先确认根因」，后文又确认预算阶梯</td>
+            <td>已实现连续预算过渡（<code>SettingsRecoveryBudget</code> 线性插值取代阶梯跳变）</td>
+            <td><code>settings_resource_jobs.cpp:417-424</code></td>
+          </tr>
+          <tr>
+            <td>#19 表情防误触</td>
+            <td>设计方向写「在 <code>ConKeyEmoticon</code> 检查修饰键」</td>
+            <td>实际实现走 binds 层：<code>AllowsUnmodifiedFallback</code> / <code>ShouldReleaseUnmodifiedModifierBindOnModifierPress</code> 扩展 ALT 修饰键，让 Win+Shift+S 不再误触发 +emote</td>
+            <td><code>binds.h:84-103</code></td>
+          </tr>
+          <tr>
+            <td>#20.1 短服务器名</td>
+            <td>主体写 Axiom/CHN DDR 需更多样本，后文写不再需要</td>
+            <td>已实现统一 <code>GetServerbrowserDisplayName</code> + <code>QmShortServerNames</code>，覆盖 KoG/Axiom/CHN DDR + 中文难度别名</td>
+            <td><code>menus_browser.cpp:86-93</code>、<code>:937</code></td>
+          </tr>
+          <tr>
+            <td>B6 马甲注册</td>
+            <td>类型 A 服务端依赖和客户端实现混在一个验收里</td>
+            <td>拆为类型 A（中心服务端契约 + 客户端降级）和类型 B（纯客户端私人标注）</td>
+            <td><code>qmclient.cpp:64</code>、<code>qmclient_utils.cpp:126</code></td>
+          </tr>
+          <tr>
+            <td>B7 好友分类</td>
+            <td>写「已完整实现」，但用户痛点是入口不可发现</td>
+            <td>已实现齿轮管理按钮 + tooltip + 右键弹窗；后端完整、UI 入口已显式化</td>
+            <td><code>menus_browser.cpp:2370-2380</code></td>
+          </tr>
+          <tr>
+            <td>#20.4 3D particles</td>
+            <td>写「新增 QmClient C3DParticles」</td>
+            <td>QmClient 已有 <code>CBackgroundParticles</code>，不直接重复移植；只做差异审计和补强</td>
+            <td><code>background_particles.h:12</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>代码证据索引</h3>
+      <p>本节列出已核验的关键入口，后续实现或小 spec 应优先从这些位置继续展开：</p>
+      <ul>
+        <li><strong>#8</strong>：<code>settings_resource_jobs.cpp:392</code>、<code>:417-424</code>（<code>SettingsRecoveryBudget</code> 连续插值）；调用点 <code>menus_settings.cpp:2495</code>；测试 <code>src/test/settings_warmup_test.cpp</code>。</li>
+        <li><strong>#9</strong>：<code>skins.cpp:745-748</code>（<code>operator&lt;</code> 按mtime 排序）；<code>skins.h:167-168</code>、<code>:243</code>（<code>m_LastModified</code> 字段）；扫描 <code>skins.cpp:852-853</code>。</li>
+        <li><strong>#10 + #14.2</strong>：<code>hud_editor.h:90-106</code>（<code>InsetAnchoredRect</code> / <code>ChatEdgeBaseRect</code> / <code>ApplyEdgeMargin</code>）；commit <code>e54bb209ac</code>。</li>
+        <li><strong>#15</strong>：<code>qmclient/modes.cpp:85-88</code>（<code>ShouldRenderFocusSpectatorHud</code> 禅模式始终保留旁观卡片）。</li>
+        <li><strong>#19</strong>：<code>binds.h:84-103</code>（<code>AllowsUnmodifiedFallback</code> / <code>ShouldReleaseUnmodifiedModifierBindOnModifierPress</code> 扩展 ALT）。</li>
+        <li><strong>#20.1</strong>：<code>menus_browser.cpp:937</code>（<code>GetServerbrowserDisplayName</code> + <code>QmShortServerNames</code>）。</li>
+        <li><strong>#20.2</strong>：<code>players.cpp:1166-1168</code>（<code>EmoticonShadowOpacity/Offset</code>）；配置 <code>config_variables_qmclient.h:133</code> <code>QmEmoticonShadow</code>。</li>
+        <li><strong>B5</strong>：<code>menus.h:803-826</code>（<code>SFriendAutoFollowState</code> / <code>FriendAutoFollowStep</code>）；<code>menus_browser.cpp:2167-2190</code>。</li>
+        <li><strong>B7</strong>：<code>menus_browser.cpp:2292</code>、<code>:2370-2380</code>（<code>m_vFriendsCategoryManageButtons</code> + 齿轮 + tooltip）。</li>
+        <li><strong>B9</strong>：<code>menus_ingame.cpp:2169-2178</code>（<code>IsFinished</code> + <code>FONT_ICON_FLAG_CHECKERED</code>）。</li>
+      </ul>
+
+      <h3>实现 TODO（当前状态）</h3>
+      <h4><span class="badge ok">已实现</span>（11 项）</h4>
+      <ul>
+        <li><span class="badge ok">done</span> <strong>#8</strong>：滚动预算连续过渡实现（<code>SettingsRecoveryBudget</code> 线性插值），更新 warmup 测试；视觉验证仍需人工补充。</li>
+        <li><span class="badge ok">done</span> <strong>#9</strong>：皮肤列表按 <code>m_LastModified</code> 排序并压缩按钮布局。</li>
+        <li><span class="badge ok">done</span> <strong>#10 + #14.2</strong>：共享 HUD edge semantics helper（<code>SEdgeMargin</code> / <code>ApplyEdgeMargin</code> / <code>EHorizontalFlow</code> / <code>ResolveHorizontalFlow</code>），通知栏和聊天框共用贴边逻辑。</li>
+        <li><span class="badge ok">done</span> <strong>#14.4</strong>：聊天/控制台系统消息去掉用户可见 <code>***</code> 前缀（team save 数据占位符保留）。</li>
+        <li><span class="badge ok">done</span> <strong>#15</strong>：修复禅模式 + 旁观组合下旁观者 ID 卡片消失（<code>ShouldRenderFocusSpectatorHud</code> 逻辑修正）。</li>
+        <li><span class="badge ok">done</span> <strong>#19</strong>：表情按键修饰键防误触（通过 binds 层 <code>AllowsUnmodifiedFallback</code> 扩展 ALT 实现，非 emoticon.cpp）。</li>
+        <li><span class="badge ok">done</span> <strong>#20.1</strong>：短服务器名规则覆盖 KoG/Axiom/CHN DDR、中文难度别名、搜索高亮一致性。</li>
+        <li><span class="badge ok">done</span> <strong>#20.2</strong>：增加 QmClient 表情阴影配置 <code>QmEmoticonShadow</code> 和渲染 pass，默认关闭。</li>
+        <li><span class="badge ok">done</span> <strong>B5</strong>：自动跟随好友状态机（<code>SFriendAutoFollowState</code> / <code>FriendAutoFollowStep</code>），覆盖延迟、最多跳转 2 次、取消条件和 UI 文案。</li>
+        <li><span class="badge ok">done</span> <strong>B7</strong>：好友分类标题增加可见齿轮管理入口 + tooltip「Manage categories」/「Right-click or use the gear to manage categories」，添加好友弹窗强化分类选择。</li>
+        <li><span class="badge ok">done</span> <strong>B9</strong>：投票换图已完成地图图标补回归验证（<code>IsFinished</code> + <code>FONT_ICON_FLAG_CHECKERED</code>）。</li>
+      </ul>
+
+      <h4><span class="badge warn">下一批：先写小 spec</span></h4>
+      <ul>
+        <li><span class="badge ok">done</span> <strong>#12 + #13</strong>：游戏内动画配置已实现（#12 完整；#13 参数化 + Glitch/Elastic 新类型），收口规格 <code>2026-06-22-backlog-anim-notif-closure-spec.md</code>。</li>
+        <li><span class="badge warn">todo</span> <strong>B6</strong>：拆成「公告马甲服务端契约/客户端降级」和「私人标注客户端功能」两个 spec。</li>
+      </ul>
+
+      <h4><span class="badge bad">第三批：先调研或审批</span></h4>
+      <ul>
+        <li><span class="badge bad">todo</span> <strong>#20.3</strong>：相机核心改动审批；补 demo、观战、freeview clamp、existing smoothing 回归清单。</li>
+        <li><span class="badge bad">todo</span> <strong>#16</strong>：进程优先级平台能力矩阵（Windows/Linux/macOS/Android）。</li>
+        <li><span class="badge warn">已调研</span> <strong>#11</strong>：Multiply 零成本可做；Frankenstein 已有 4 模式仅缺 SoftLight/HardLight；Screen/Overlay 卡 shader 命门（详见 #11 章节）。</li>
+        <li><span class="badge warn">已调研</span> <strong>B8</strong>：复用 map_notes.json 范例，新建 CQmStatHistory 只读 m_aStats，可行（详见 B8 章节）。</li>
+        <li><span class="badge bad">todo</span> <strong>#20.4</strong>：3D Particles 差异审计——不直接移植 BC <code>C3DParticles</code>，对照已有 <code>CBackgroundParticles</code> 的 focus/optimizer guard、淡入淡出、push/collide、glow 参数，只补强缺失能力。</li>
+        <li><span class="badge bad">todo</span> <strong>#14.1 / #14.3 / #14.5</strong>：聊天翻译按钮位置、滚动条跟随、动画弹性化（依赖 #14.2 已完成的贴边 helpers）。</li>
+        <li><span class="badge ok">done</span> <strong>#17</strong>：通知栏文本语义化已完成（159 条 audit，6 条口语化重写，见 #17 章节与收口 spec）。原误标 todo，已修正。</li>
+        <li><span class="badge bad">todo</span> <strong>#18</strong>：IME 样式可视化（暴露 <code>QmNewIme</code> 到栖梦-视觉页）。</li>
+        <li><span class="badge warn">已调研</span> <strong>B1 / B3</strong>：钩子进度条（推翻广播假设、不碰物理）、武器命中反馈（不碰物理，复用 jelly 模式）——均可行，见各自章节。</li>
+        <li><span class="badge warn">已调研</span> <strong>B2（红绿虚线）/ B4</strong>：B2 红绿虚线已完成 80% 可立即做（Flexbox 另立）；B4 聊天气泡样式仍待做。</li>
+      </ul>
+      <div class="note ok"><strong>2026-06-27 调研收口</strong>：本轮对 #11 / B1 / B2 / B3 / B8 五项派 research 子会话做 codegraph 级可行性核验，结论已写入各任务章节的「2026-06-27 调研结论」note 框，并同步更新下方优先级分组表。关键修正：B1 推翻「m_HookTick 不广播」、B1/B3「物理敏感」可降级、#11 的 Screen/Overlay 卡 shader 命门。完整 5 份报告另存于工作区 <code>workspace-files/.context/note.md</code> 顶部条目。</div>
+
+      <div class="note ok">
+        <strong>实现收口说明（2026-06-22 核验）</strong>：commit <code>7dd0b6ec09</code>「feat(backlog): 增加好友跟随、HUD 贴边与皮肤排序」一次性落地了 #8/#9/#10/#14.2/#14.4/#15/#19/#20.1/#20.2/B5/B7/B9 共 12 项。commit <code>e54bb209ac</code>「refactor(hud-editor): 提升共用贴边 helpers」补齐了 <code>SEdgeMargin</code> 通用设施。已通过 quick gate（10 passed, 0 warnings, 0 failures）和 run_cxx_tests（1455/1455）。
+      </div>
+    </section>
+
+    <!-- ============= ② 优先级分组 ============= -->
+    <section class="card" id="priority">
+      <h2>② 优先级分组与执行顺序</h2>
+      <p class="muted">按风险/耦合/独立性分成五批，<strong>每批内部任务可并行，批次间串行</strong>。标 <span class="badge ok">已实现</span> 的项目已在第一轮收口。</p>
+
+      <h3>第一批 — 低风险快速收口（已全部实现）</h3>
+      <table>
+        <thead><tr><th>任务</th><th>类型</th><th>状态</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>#19</td><td>BUG 修复</td><td><span class="badge ok">已实现</span></td><td>表情按键修饰键防误触（binds 层 ALT 扩展）</td></tr>
+          <tr><td>#15</td><td>BUG 修复</td><td><span class="badge ok">已实现</span></td><td>旁观者 ID 卡片禅模式回归</td></tr>
+          <tr><td>#14.4</td><td>文案</td><td><span class="badge ok">已实现</span></td><td>聊天系统消息去掉 <code>***</code> 前缀</td></tr>
+          <tr><td>#17</td><td>增强</td><td><span class="badge ok">已实现</span></td><td>通知栏文本语义化（159 条 audit，6 条口语化重写）</td></tr>
+        </tbody>
+      </table>
+
+      <h3>第二批 — 中等独立功能（部分已实现）</h3>
+      <table>
+        <thead><tr><th>任务</th><th>类型</th><th>状态</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>#9</td><td>增强</td><td><span class="badge ok">已实现</span></td><td>皮肤列表按更新时间排序 + 按钮压缩</td></tr>
+          <tr><td>#20.1</td><td>移植</td><td><span class="badge ok">已实现</span></td><td>短服务器名（KoG/Axiom/CHN DDR + 中文难度别名）</td></tr>
+          <tr><td>#20.2</td><td>移植</td><td><span class="badge ok">已实现</span></td><td>3D 表情阴影</td></tr>
+          <tr><td>#14.1</td><td>BUG + UI</td><td><span class="badge warn">待做</span></td><td>翻译按钮位置 + 二级面板关闭 BUG</td></tr>
+          <tr><td>#14.3</td><td>UI</td><td><span class="badge warn">待做</span></td><td>聊天框滚动条（左/右跟随、变窄、新组件）</td></tr>
+          <tr><td>#13</td><td>增强</td><td><span class="badge ok">已实现</span></td><td>皮肤切换过渡动画多样化（5+Glitch+Elastic，Intensity/Easing 参数化）</td></tr>
+          <tr><td>#12</td><td>增强</td><td><span class="badge ok">已实现</span></td><td>切枪动画高级配置（duration/distance/rotation/easing）</td></tr>
+        </tbody>
+      </table>
+
+      <h3>第三批 — 结构性改动（#10 + #14.2 已实现）</h3>
+      <table>
+        <thead><tr><th>任务</th><th>类型</th><th>状态</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>#10</td><td>BUG + 架构</td><td><span class="badge ok">已实现</span></td><td>通知栏贴边回归 + HUD 编辑器/渲染一致性</td></tr>
+          <tr><td>#14.2</td><td>增强</td><td><span class="badge ok">已实现</span></td><td>聊天框贴边适配（复用 #10 的 Helpers）</td></tr>
+          <tr><td>#14.5</td><td>增强</td><td><span class="badge warn">待做</span></td><td>聊天框弹性动画 + 批次淡出 + 可配置</td></tr>
+        </tbody>
+      </table>
+      <div class="note ok"><strong>#10 和 #14.2 已一起完成</strong>，共用一套贴边 Helpers（<code>SEdgeMargin</code> / <code>ApplyEdgeMargin</code> / <code>EHorizontalFlow</code> / <code>ResolveHorizontalFlow</code>），见下方「共用贴边 Helpers 设计」。</div>
+
+      <h3>第四批 — 需要调研先行</h3>
+      <table>
+        <thead><tr><th>任务</th><th>类型</th><th>状态</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>#11</td><td>增强</td><td><span class="badge warn">已调研</span></td><td>Multiply 零成本可做；Frankenstein 已有 4 模式；Screen/Overlay 卡 shader 命门</td></tr>
+          <tr><td>#8</td><td>BUG 修复</td><td><span class="badge ok">已实现</span></td><td>滚动抖动根治（预算连续过渡已落地）</td></tr>
+          <tr><td>#20</td><td>移植</td><td><span class="badge warn">部分</span></td><td>BestClient 4 子功能（#20.1/#20.2 已做，#20.3/#20.4 待调研）</td></tr>
+          <tr><td>B5</td><td>增强</td><td><span class="badge ok">已实现</span></td><td>自动跟随好友服务器</td></tr>
+          <tr><td>B6</td><td>增强</td><td><span class="badge warn">待做</span></td><td>马甲注册与识别（拆双类型）</td></tr>
+          <tr><td>B8</td><td>增强</td><td><span class="badge warn">已调研</span></td><td>复用 map_notes.json 范例，CQmStatHistory 只读 m_aStats，可行（不含完赛时间）</td></tr>
+          <tr><td>B9</td><td>增强</td><td><span class="badge ok">已实现</span></td><td>投票换图已完成地图图标</td></tr>
+        </tbody>
+      </table>
+
+      <h3>第五批 — 需要批准/平台能力调研</h3>
+      <table>
+        <thead><tr><th>任务</th><th>类型</th><th>状态</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>#18</td><td>增强</td><td><span class="badge bad">审批</span></td><td>IME 样式可视化选择（IME 管线敏感）</td></tr>
+          <tr><td>#16</td><td>增强</td><td><span class="badge bad">审批</span></td><td>进程高优先级（跨平台 spike）</td></tr>
+          <tr><td>#20.3</td><td>移植</td><td><span class="badge bad">审批</span></td><td>电影级摄像机（上游核心 camera.cpp）</td></tr>
+          <tr><td>#20.4</td><td>移植</td><td><span class="badge bad">审计</span></td><td>3D Particles（与已有 CBackgroundParticles 差异审计）</td></tr>
+          <tr><td>B1</td><td>增强</td><td><span class="badge warn">已调研</span></td><td>名字板钩子进度条（推翻广播假设，m_HookTick 可读，不碰物理）</td></tr>
+          <tr><td>B2</td><td>增强</td><td><span class="badge warn">虚线可做</span></td><td>红绿虚线已完成 80% 可立即做；Flexbox 仍待设计（2-3 周）</td></tr>
+          <tr><td>B3</td><td>增强</td><td><span class="badge warn">已调研</span></td><td>武器命中反馈（只读信号+粒子，不碰物理，复用 jelly 模式）</td></tr>
+          <tr><td>B4</td><td>增强</td><td><span class="badge warn">待做</span></td><td>聊天气泡漫画样式</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============= #8 ============= -->
+    <section class="card" id="t8">
+      <div class="task-header">
+        <h2>#8 滚动抖动根治</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+
+      <h3>现状</h3>
+      <p>QmClient 设置页（<code>qmclient/menus_qmclient.cpp</code>）和 TClient 设置页（<code>tclient/menus_tclient.cpp</code>）在滚动时出现抖动。滚动状态管理集中在 <code>settings_resource_jobs.cpp</code>：<code>SettingsBuildFrameContext</code>（:392）构建每帧资源上下文，含 <code>m_ScrollActive</code>、<code>m_JumpScrollActive</code>、<code>m_PostScrollRecoveryFrames</code>。</p>
+
+      <h3>根因（已确认）</h3>
+      <div class="note"><strong>主因：资源加载预算阶梯跳变</strong>。滚动期间资源加载预算被压到最低（finalize 16 / gpu upload 4），滚动结束后的 2 帧恢复期跳到 48/192，再跳回正常。这种<strong>预算阶梯式跳变</strong>导致每帧加载/上传的资源数突变 → 可见项目逐批出现 → 视觉抖动。</div>
+      <p>次要风险：布局重算与滚动不同步。<code>m_PostScrollRecoveryFrames &gt; 0</code> 期间，<code>SettingsResourceSharedHeavyBudget</code>（:1269）返回 RecoveryBudget 而非 NormalBudget，导致恢复期有额外重算。</p>
+
+      <h3>已实现方案</h3>
+      <p>把离散跳变（16→48→64）改为<strong>连续线性插值</strong>。新增 <code>SettingsRecoveryBudget</code> 函数（<code>settings_resource_jobs.cpp:417-424</code>）：</p>
+      <pre><code>int SettingsRecoveryBudget(const SSettingsResourceFrameContext &Context, int ScrollBudget, int IdleBudget)
+{
+    const int RemainingFrames = maximum(Context.m_PostScrollRecoveryFrames, 0);
+    if(RemainingFrames &lt;= 0)
+        return IdleBudget;
+    const int RecoveryFrames = maximum(2, RemainingFrames);
+    const int CompletedFrames = std::clamp(RecoveryFrames - RemainingFrames + 1, 1, RecoveryFrames);
+    return ScrollBudget + (IdleBudget - ScrollBudget) * CompletedFrames / (RecoveryFrames + 1);
+}</code></pre>
+      <p>所有 finalize/gpu upload/source load 预算函数（:426-435、:437-447、:449-458、:564-566、:577-579）在 <code>m_PostScrollRecoveryFrames &gt; 0</code> 时统一调用 <code>SettingsRecoveryBudget</code>，实现从 ScrollBudget 到 IdleBudget 的平滑过渡。</p>
+
+      <h3>影响范围</h3>
+      <ul>
+        <li><code>settings_resource_jobs.cpp</code>（预算函数 + 新增 <code>SettingsRecoveryBudget</code>）</li>
+        <li><code>src/test/settings_warmup_test.cpp</code>（回归测试已更新）</li>
+      </ul>
+
+      <h3>验收标准</h3>
+      <ul>
+        <li>QmClient 和 TClient 设置页滚动时无可见抖动。</li>
+        <li><code>settings_warmup_test.cpp</code> 全绿。</li>
+        <li><span class="badge warn">gap</span> 视觉验证仍需人工补充（quick gate 已过，但人工肉眼确认抖动消失未做）。</li>
+      </ul>
+    </section>
+
+    <!-- ============= #9 ============= -->
+    <section class="card" id="t9">
+      <div class="task-header">
+        <h2>#9 皮肤列表按更新时间排序 + 按钮压缩</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+
+      <h3>现状</h3>
+      <p>排序比较器 <code>CSkins::CSkinListEntry::operator&lt;</code>（<code>skins.cpp:734-762</code>）已加入 mtime 字段。<code>CSkinContainer</code>（<code>skins.h:167-168</code>、<code>:243</code>）和 <code>CSkinListEntry</code>（<code>skins.h:751</code>）都有 <code>m_LastModified</code> 字段。</p>
+
+      <h3>已实现方案</h3>
+      <ol>
+        <li><strong>mtime 字段</strong>：<code>CSkinContainer</code> 加 <code>m_LastModified</code>（<code>time_t</code>），扫描时通过 <code>Storage()-&gt;RetrieveTimes()</code> 获取（<code>skins.cpp:852-853</code>）。</li>
+        <li><strong>排序逻辑</strong>：<code>operator&lt;</code> 在收藏优先后，按 <code>LastModified()</code> 降序（新的在前），最后按名字（<code>skins.cpp:745-749</code>）。</li>
+        <li><strong>按钮压缩</strong>：皮肤列表卡片布局已压缩（commit <code>7dd0b6ec09</code>）。</li>
+      </ol>
+
+      <h3>影响范围</h3>
+      <ul>
+        <li><code>skins.h</code>（CSkinContainer / CSkinListEntry 加 <code>m_LastModified</code> 字段 + getter/setter）</li>
+        <li><code>skins.cpp</code>（扫描时获取 mtime、排序比较器、目录重扫同步 mtime）</li>
+        <li><code>menus_settings.cpp</code>（卡片布局压缩）</li>
+      </ul>
+
+      <h3>验收标准</h3>
+      <ul>
+        <li>收藏皮肤始终在最前。</li>
+        <li>非收藏皮肤按文件修改时间降序排列（新的在前）。</li>
+        <li>皮肤列表卡片按钮布局更紧凑，用户反馈「太挤」问题缓解。</li>
+      </ul>
+    </section>
+
+    <!-- ============= #10 ============= -->
+    <section class="card" id="t10">
+      <div class="task-header">
+        <h2>#10 通知栏贴边回归 + HUD 编辑器/实际渲染一致性</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+      <div class="note"><strong>本任务与 #14.2 强耦合</strong>，已一起完成，共用一套贴边 Helpers（commit <code>e54bb209ac</code> + <code>7dd0b6ec09</code>）。</div>
+
+      <h3>原问题</h3>
+      <p><code>qm_hud_notifications_edge_margin</code>（默认 8）通过私有 <code>InsetAnchoredRect</code> 在变换前空间施加边距，但 <code>BeginTransform</code> 用未含边距的 <code>AnchorRect</code> 做变换，导致<strong>编辑器拖到屏幕边时「预览框贴边了但实际渲染贴不到」</strong>。</p>
+
+      <h3>已实现方案</h3>
+      <p>在 <code>hud_editor.h</code> 的 <code>QmHudEditor</code> 命名空间新增通用贴边设施：</p>
+      <pre><code>namespace QmHudEditor {
+    struct SEdgeMargin { float Left, Right, Top, Bottom; };
+    CUIRect ApplyEdgeMargin(const CUIRect &Rect, const SEdgeMargin &Margin,
+                            bool AnchoredLeft, bool AnchoredRight,
+                            bool AnchoredTop, bool AnchoredBottom);
+    enum class EHorizontalFlow { LeftAnchored, RightAnchored };
+    EHorizontalFlow ResolveHorizontalFlow(const CUIRect &VisibleRect, float ScreenWidth);
+    // 旧 helpers 保留：
+    CUIRect InsetAnchoredRect(...);      // 委托 ApplyEdgeMargin
+    CUIRect ChatEdgeBaseRect(...);       // 聊天框专用
+}</code></pre>
+      <p><code>ComputeTransformPlacement</code> / <code>ClampStateToScreen</code> 接收 <code>SEdgeMargin</code>，让 anchor 判定与拖拽吸附都基于含边距的有效屏幕范围。通知栏 <code>OnRender</code> 两轮 <code>PreviewTransform</code> 与最终 <code>BeginTransform</code> 传入 Margin，Editor State 含边距 → 预览框与实际渲染位置一致。</p>
+      <p><strong>向后兼容</strong>：<code>BeginTransform</code> / <code>PreviewTransform</code> 新增带 <code>SEdgeMargin</code> 的重载，旧重载委托新签名传 <code>SEdgeMargin{}</code>，25+ 个调用点零改动。</p>
+
+      <h3>影响范围</h3>
+      <ul>
+        <li><code>hud_editor.cpp</code> / <code>hud_editor.h</code>（核心 Helpers，+58 行）</li>
+        <li><code>hud_notifications.cpp</code> / <code>.h</code>（改用 <code>ApplyEdgeMargin</code>）</li>
+        <li><code>src/test/qm_hud_notifications_test.cpp</code>（新增 5 个测试 +72 行）</li>
+      </ul>
+
+      <h3>验收标准</h3>
+      <ul>
+        <li>通知栏在编辑器里拖到边缘时，预览框和实际渲染位置一致（都贴边或都有边距）。</li>
+        <li>现有 <code>EdgeMarginInsetsOnlyAnchoredPreviewEdges</code> / <code>ResolvesHorizontalFlow</code> 测试全绿。</li>
+        <li>新增 5 个 <code>QmHudEditorGeometry</code> 测试全绿（<code>ApplyEdgeMargin</code> 各 anchor 组合 + <code>ResolveHorizontalFlow</code>）。</li>
+      </ul>
+    </section>
+
+    <!-- ============= #11 ============= -->
+    <section class="card" id="t11">
+      <div class="task-header">
+        <h2>#11 资源编辑器混合颜色模式、叠加模式增强</h2>
+        <span class="badge warn">已调研·部分可行</span>
+      </div>
+
+      <div class="note ok">
+        <strong>2026-06-27 调研结论（research 子会话 codegraph 核验）</strong>：<strong>部分可行，分两层</strong>。
+        <ul>
+          <li><strong>Frankenstein 编辑器侧已完整实现 MULTIPLY/NORMAL/SCREEN/OVERLAY 四种 per-pixel CPU blend</strong>（<code>menus.h:701-728</code> <code>AssetsEditorBlendColor</code> + <code>menus.h:748-781</code> 烘焙），已有测试 <code>assets_editor_layout_test.cpp</code>；只缺 SoftLight/HardLight（加 2 个 case 即可，低成本）。下方「现状」段「只有染色/替换一种模式」的描述已被推翻，以本结论为准。</li>
+          <li><strong>游戏内皮肤染色的 Multiply = GPU 固定管线天然行为</strong>（<code>SetColor</code> 顶点色 × 纹理 modulate，<code>render.cpp:645/733</code>、<code>graphics_threaded.cpp:1531</code>），加 <code>qm_skin_blend_mode</code> 枚举语义即可，<strong>零渲染改动、不触及上游</strong>。配置项放 <code>config_variables_qmclient.h</code>，不污染上游 <code>render.h</code>。</li>
+          <li><strong>Screen/Overlay/SoftLight/HardLight 实时染色：当前架构不可行</strong>——需暴露自定义 sprite shader，而 <code>UseProgram</code> 后端私有、<code>IGraphics</code> 未暴露（与 UI 重构规格第 9 章「shader 命门」、工作区 note.md 画质调研一致）。<strong>必须捆绑「shader 通道」做</strong>，不应单独为皮肤 blend 开。</li>
+        </ul>
+        <strong>推荐路径</strong>：Multiply 立即可做；Frankenstein 补 SoftLight/HardLight；Screen/Overlay 等 shader 通道就绪再做。性能：Multiply 零开销，shader 模式 fragment 多 2-4 条 ALU（DDNet 是 CPU/draw-call 瓶颈非 GPU）。<strong>待确认</strong>：<code>AssetsEditorBlendColor</code> 归属（上游 assets browser vs QmClient 自有，影响补 SoftLight 是否撞上游）。
+      </div>
+
+      <h3>现状</h3>
+      <p>皮肤染色当前是<strong>替换式</strong>：<code>CTeeRenderInfo::ApplyColors(useCustomColor, colorBody, colorFeet)</code> 直接把皮肤纹理颜色替换成自定义颜色（见 <code>skins.cpp</code>、<code>ghost.cpp:381</code>、<code>nameplates.cpp:1744</code> 等调用点）。Frankenstein 编辑器（<code>menus_assets_editor.cpp:2027</code>）用 tint 方式给部件上色，只有「染色/替换」一种模式，没有 PS blend mode。</p>
+
+      <h3>根因 / 缺口</h3>
+      <p>没有任何 Multiply / Screen / Overlay / SoftLight / HardLight 等混合模式。染色数学是 <code>color_cast&lt;ColorRGBA&gt;(ColorHSLA(colorValue))</code>（HSL→RGB 替换），不是 per-pixel blend。</p>
+
+      <h3>设计方向</h3>
+      <p><strong>先调研 PS blend modes，再挑选对皮肤染色有意义的子集实现。</strong> 推荐实现 Multiply / Screen / Overlay 三种。接入点：在 <code>ApplyColors</code> 或渲染管线层（<code>players.cpp</code> 的皮肤渲染）加入 blend 运算。新增配置 <code>qm_skin_blend_mode</code>（枚举），在 Frankenstein 编辑器和设置页暴露。</p>
+      <table>
+        <thead><tr><th>模式</th><th>公式（C_result = f(C_base, C_blend)）</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>Normal（替换）</td><td>C_blend</td><td>当前已有</td></tr>
+          <tr><td>Multiply</td><td>C_base × C_blend</td><td>加深、阴影</td></tr>
+          <tr><td>Screen</td><td>1 - (1-C_base)(1-C_blend)</td><td>提亮</td></tr>
+          <tr><td>Overlay</td><td>C_base&lt;0.5 ? 2×base×blend : 1-2(1-base)(1-blend)</td><td>增强对比</td></tr>
+          <tr><td>SoftLight</td><td>基于 Pegtop/Penoline 公式</td><td>柔和叠加</td></tr>
+          <tr><td>HardLight</td><td>Overlay 的 blend/base 互换</td><td>强烈叠加</td></tr>
+        </tbody>
+      </table>
+      <p class="small">验收：至少实现 Multiply / Screen / Overlay 三种；默认（Normal）与当前染色完全一致无回归；每个模式有边界值单元测试；Frankenstein 编辑器可实时预览。</p>
+
+      <h3>风险与依赖</h3>
+      <ul>
+        <li>blend mode 数学必须准确，建议先写单元测试验证每个模式的边界值。</li>
+        <li>渲染性能 spike：per-pixel blend 可能增加 shader 复杂度。</li>
+      </ul>
+    </section>
+
+    <!-- ============= #12 ============= -->
+    <section class="card" id="t12">
+      <div class="task-header">
+        <h2>#12 切枪动画可调整高级配置（视觉效果）</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+
+      <h3>现状（已完整精读）</h3>
+      <p><strong>切枪动画</strong> ≠ 弹道辅助线，是两个不同的东西：</p>
+      <ul>
+        <li><strong>切枪动画</strong>（<code>players.cpp:894-918</code>，<code>RenderHand</code>/武器渲染段）：配置 <code>QmWeaponSwitchAnim</code>（开关）+ <code>QmWeaponSwitchAnimScope</code>（范围 0=自己/1=本地+分身/2=所有玩家）。</li>
+        <li><strong>弹道辅助线</strong>（<code>weapon_trajectory.cpp</code>，grenade/shotgun/laser 轨迹预测）：配置 <code>QmWeaponTrajectory</code>（模式 0/1/2）+ Color/Width/Alpha。</li>
+      </ul>
+      <p>设置页 UI：<code>menus_qmclient.cpp:5443-5468</code>，已有开关 + 范围下拉，但<strong>没有时长/位移/旋转/easing 的高级配置</strong>。</p>
+
+      <h3>根因 / 缺口</h3>
+      <p>切枪动画的 4 个视觉参数全部硬编码（时长 0.3s、位移 40px、旋转 2π、easeOutCubic），用户要「可调整高级配置」。</p>
+
+      <h3>设计方向</h3>
+      <ol>
+        <li>新增配置变量：<code>qm_weapon_switch_anim_duration</code>（0.05-2.0s，默认 0.3）、<code>_offset</code>、<code>_rotation</code>、<code>_easing</code>。</li>
+        <li><code>players.cpp:907-915</code> 的硬编码常量替换为配置读取。</li>
+        <li>设置页栖梦-视觉页加高级配置区。</li>
+      </ol>
+
+      <h3>风险与依赖</h3>
+      <p>低风险，纯视觉参数化，不影响游戏逻辑。与 #13 合并写「游戏内动画配置 spec」，控制配置数量，默认行为必须完全兼容。</p>
+    </section>
+
+    <!-- ============= #13 ============= -->
+    <section class="card" id="t13">
+      <div class="task-header">
+        <h2>#13 皮肤切换的过渡动画效果多样化</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+
+      <h3>现状（已完整精读）</h3>
+      <p>皮肤切换动画<strong>已有 5 种类型</strong>，不是单一的——用户反馈「大差不差」可能是因为参数都偏保守（缩放幅度 0.02-0.06，位移 8-18px，差异确实不明显）。</p>
+      <p>已有 5 种类型（<code>render.h</code> <code>ComputeSkinChangeTransitionBlend</code>，<code>render.cpp</code> 渲染）。配置：<code>QmSkinChangeTransitionType</code> + <code>QmSkinChangeTransitionMs</code>（时长 0-2000ms）+ <code>QmSkinChangeTransitionEasing</code> + <code>QmSkinChangeTransitionIntensity</code>。设置页 UI：<code>menus_qmclient.cpp</code>。</p>
+
+      <h3>根因 / 缺口</h3>
+      <ol>
+        <li><strong>视觉参数全硬编码</strong>：每种类型的缩放幅度、位移距离、旋转角度、alpha 曲线都是魔法数字。</li>
+        <li><strong>缺少视觉差异大的类型</strong>：建议新增 Glitch（故障）、Elastic（弹性）、Particle（粒子消散）。</li>
+      </ol>
+
+      <h3>已实现方案（2026-06-22 收口）</h3>
+      <ol>
+        <li><strong>参数化现有类型</strong>：5 种类型均接入 <code>SkinChangeTransitionIntensityScale(Intensity)</code>，统一 <code>QmSkinChangeTransitionIntensity</code>（0-300%，默认 100 = 原始行为）控制幅度；<code>QmSkinChangeTransitionEasing</code>（0-3）控制缓动曲线。</li>
+        <li><strong>新增 Glitch 与 Elastic 两种视觉差异明显的类型</strong>（<code>SKIN_CHANGE_TRANSITION_GLITCH=5</code> 高频横向抖动；<code>SKIN_CHANGE_TRANSITION_ELASTIC=6</code> Y 轴压扁 + 弹性回弹）。Particle 粒子消散因需要额外资源/emit 路径，留作后续小 spec，不在本批纯过渡数学范围。</li>
+        <li>下拉选项、config max、测试（<code>skin_transition_test.cpp</code> 新增 <code>GlitchTypeAppliesJitterAndStaysDrawable</code> / <code>ElasticTypeSquashesVerticallyAndStaysDrawable</code>）均已同步。</li>
+      </ol>
+      <p>详细收口规格见 <code>docs/superpowers/specs/archive/2026-06-22-backlog-anim-notif-closure-spec.md</code>。</p>
+    </section>
+
+    <!-- ============= #14 ============= -->
+    <section class="card" id="t14">
+      <h2>#14 聊天框改进（5 个子项）</h2>
+
+      <h3>14.1 翻译按钮位置 + 二级面板关闭 BUG <span class="badge warn">待做</span></h3>
+      <h4>现状</h4>
+      <p>翻译按钮位置：<code>chat.cpp:2513</code>，按钮在 <code>ClippingRect.w</code> <strong>右侧</strong>。用户要移到左边（ALL:/chat: 左边）。</p>
+      <p>翻译面板关闭 BUG 根因：<code>PopupLanguageMenu</code>（<code>chat.cpp:3397-3534</code>）<strong>永远返回 <code>POPUP_KEEP_OPEN</code></strong>，没有任何分支返回 <code>POPUP_CLOSE_CURRENT</code>。面板<strong>没有关闭按钮、没有点标题关闭、没有点击面板外区域的可靠关闭</strong>。</p>
+      <h4>设计方向</h4>
+      <ol>
+        <li>翻译按钮移到输入框前缀（ALL:/Chat:）左侧。</li>
+        <li>二级面板增加关闭按钮、点击面板外关闭、点击标题关闭等多路径。</li>
+      </ol>
+
+      <h3>14.2 聊天框贴边适配（共用 Helpers，见 #10） <span class="badge ok">已实现</span></h3>
+      <h4>已实现</h4>
+      <p>聊天框接入 HUD 编辑器的贴边体系（<code>ChatEdgeBaseRect</code> + <code>EHorizontalFlow</code>），支持贴左/贴右。复用 #10 的 <code>SEdgeMargin</code> / <code>ApplyEdgeMargin</code> / <code>ResolveHorizontalFlow</code> 通用 helpers。</p>
+
+      <h3>14.3 聊天框滚动条（左/右跟随、变窄、新组件） <span class="badge warn">待做</span></h3>
+      <h4>现状</h4>
+      <p>滚动条（<code>chat.cpp:2561</code>）：位置<strong>右侧</strong>（<code>ChatRect.w - width</code>）。用户要：学习 Best Client 放左边（贴右时放右边）；变窄；考虑用栖梦页面滚动条或新建组件。</p>
+      <h4>设计方向</h4>
+      <p>滚动条位置跟随 #14.2 的贴边方向：贴左→滚动条在左，贴右→滚动条在右。宽度变窄。</p>
+
+      <h3>14.4 聊天框系统信息去掉 <code>***</code> <span class="badge ok">已实现</span></h3>
+      <h4>已实现</h4>
+      <p>聊天/控制台系统消息的 <code>***</code> <strong>可见前缀已去掉</strong>。<code>chat.cpp:2059/2063/2067</code> 中保留的 <code>***</code> 是 team save 消息里的<strong>数据占位符</strong>（save code 本身），不是前缀装饰——这些必须保留因为它们是服务端 save/load code 的实际内容。</p>
+
+      <h3>14.5 聊天框动画（弹性、批次淡出、可配置） <span class="badge warn">待做</span></h3>
+      <h4>现状</h4>
+      <p>消失动画根因已定位：<code>CalculateCutOffOffsetX</code>（<code>chat.cpp:450-453</code>）：<code>-60 * EaseInQuad</code> 左滑。常量 <code>CHAT_ANIM_SLIDE_OUT_OFFSET = 60.0f</code>（<code>chat.h:39</code>）全部硬编码。</p>
+      <h4>设计方向</h4>
+      <ol>
+        <li>去掉 <code>CalculateCutOffOffsetX</code> 的左滑，或改为可配置（默认关闭左滑）。</li>
+        <li>消失动画默认是淡出（不左滑），可配置开启左滑。</li>
+      </ol>
+    </section>
+
+    <!-- ============= #15 ============= -->
+    <section class="card" id="t15">
+      <div class="task-header">
+        <h2>#15 旁观者 ID 卡片消失（禅模式回归，issue #161）</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+
+      <h3>现状</h3>
+      <p>GitHub #161 标 CLOSED，但<strong>回归确实存在</strong>。旁观卡片渲染：<code>CHud::RenderSpectatorHud</code>（<code>hud.cpp:5270-5338</code>），显示 <code>Following %d: %s</code>。</p>
+
+      <h3>根因</h3>
+      <p>禅模式 + 旁观 + <code>m_QmFocusModeHideHud</code> 开启时，<code>ShouldRenderFocusSpectatorHud</code> 的条件组合没有覆盖「禅模式想保留旁观卡片」的合理场景。旁观卡片属于「即使隐藏 HUD 也应保留」的关键信息。</p>
+
+      <h3>已实现方案</h3>
+      <p>修正 <code>ShouldRenderFocusSpectatorHud</code>（<code>qmclient/modes.cpp:85-88</code>）：</p>
+      <pre><code>bool ShouldRenderFocusSpectatorHud(bool SpectatorActive, bool SpectatorHudEnabled,
+                                   bool MainHudVisible, bool FocusActive, bool HideHud)
+{
+    return SpectatorActive && SpectatorHudEnabled && ShouldHideFocusHud(FocusActive, HideHud);
+}</code></pre>
+      <p>禅模式下旁观卡片<strong>始终可见</strong>（只要 <code>SpectatorActive && SpectatorHudEnabled</code>），不再被 <code>FocusActive</code> 隐藏。</p>
+
+      <h3>验收标准</h3>
+      <ul>
+        <li>禅模式 + 旁观时，被旁观者 ID 卡片始终可见。</li>
+        <li><code>src/test/qm_modes_test.cpp</code> 回归测试已更新并全绿。</li>
+      </ul>
+    </section>
+
+    <!-- ============= #16 ============= -->
+    <section class="card" id="t16">
+      <div class="task-header">
+        <h2>#16 DDNet 客户端进程高优先级（issue #164）</h2>
+        <span class="badge bad">需审批</span>
+      </div>
+
+      <h3>现状（Windows 已实现，缺其他平台 + 热重载 + UI）</h3>
+      <p><strong>配置项已存在</strong>：<code>QmProcessHighPriority</code> / <code>qm_process_high_priority</code>（<code>config_variables_qmclient.h:16</code>，默认 0）。</p>
+      <p><strong>Windows 实现已存在</strong>：<code>client.cpp:5931-5939</code>，仅在<strong>启动时</strong>应用一次，无热重载，用 <code>HIGH_PRIORITY_CLASS</code>。没有设置页 UI 开关。</p>
+
+      <h3>根因 / 缺口</h3>
+      <p>issue #164 要求 4 项，当前只满足第 1 项的一半：UI 配置项（配置变量有，但无设置页开关）、热重载、其他平台支持、<code>ABOVE_NORMAL</code> 选项。</p>
+
+      <h3>设计方向</h3>
+      <ol>
+        <li><strong>设置页 UI</strong>：在栖梦或系统工具页加 <code>QmProcessHighPriority</code> 开关。</li>
+        <li><strong>热重载</strong>：把 <code>client.cpp:5931-5939</code> 抽出为可热重载的函数，加 <code>Console()-&gt;Chain</code> callback，配置变更时重新调用 <code>SetPriorityClass</code>。</li>
+        <li><strong>跨平台能力矩阵</strong>：Linux/macOS 用 <code>setpriority(PRIO_PROCESS, 0, nice_value)</code>——非 root 只能降低不能提高，需降级处理；Android 用 <code>Process.setThreadPriority</code>（JNI）——后台限制严格，可能只对前台有效。</li>
+        <li><strong>优先级档位</strong>：考虑用 <code>ABOVE_NORMAL_PRIORITY_CLASS</code> 替代 <code>HIGH_PRIORITY_CLASS</code>（更安全，避免游戏死循环锁死系统）。</li>
+        <li><strong>网络优先级</strong>：确认 <code>m_Tos</code>（DDNet 网络层 TOS/QoS）和进程优先级独立、互不影响。</li>
+      </ol>
+
+      <h3>风险与依赖</h3>
+      <p>触及平台系统层，属于需批准区域，但 Windows 部分已实现降低了风险。</p>
+    </section>
+
+    <!-- ============= #17 ============= -->
+    <section class="card" id="t17">
+      <div class="task-header">
+        <h2>#17 通知栏提示文本语义化增强（说人话）</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+
+      <h3>现状</h3>
+      <p>通知本地化引擎完善：<code>hud_notification_rules.cpp</code> + 4 个静态规则宏表（<code>hud_notification_static_rules.h</code> 等）覆盖约 120 条 DDNet 原始消息→本地化映射。</p>
+
+      <h3>根因 / 缺口（4 类不自然翻译）</h3>
+      <ol>
+        <li><strong>英文直译 + 术语堆砌</strong>：如 <code>"Team can't be saved while a dragger is active"</code>。</li>
+        <li><strong>机器翻译腔</strong>（如「被处死」）。</li>
+        <li><strong>主语缺失/混乱</strong>。</li>
+        <li><strong>标点/全半角不一致</strong>。</li>
+      </ol>
+
+      <h3>已实现方案（2026-06-22 收口）</h3>
+      <p>对 159 条 display_key 做了只读 audit：153 条 OK（96.2%）、6 条 AWKWARD、0 条 MISSING。重写了 6 条简中译文（集中在「被处死」机器翻译腔 4 处 + 整句操作说明丢失 2 处），改 <code>qmclient.toml</code> 真相源后跑通 extract→generate→validate→review_duplicate 链。</p>
+      <ul>
+        <li><code>Your team was killed because it couldn't finish anymore...</code> → 「队伍已无法完赛，又没开 /practice，已被强制死亡」</li>
+        <li><code>Your team has been killed because it contains an invalid tee state</code> → 「队伍中检测到不合法的 tee 状态，已被强制死亡」</li>
+        <li><code>Your team was unlocked by an unlock team tile</code> → 「你的队伍已被地图上的解锁图块解开锁定」</li>
+        <li><code>Enter /practice mode or restart to avoid the entire team being killed in 60 seconds</code> → 「请输入 /practice 或重新开始，否则 60 秒后整队会被强制死亡」</li>
+        <li><code>Unknown argument. Check '/rescuemode list'</code> → 「未知参数，输入 /rescuemode list 查看帮助」</li>
+        <li><code>You can see other players. To disable this use DDNet client and type /showothers</code> → 「你现在能看到其他玩家。想关掉的话，在 DDNet 客户端里输入 /showothers」</li>
+      </ul>
+      <p>详细收口规格见 <code>docs/superpowers/specs/archive/2026-06-22-backlog-anim-notif-closure-spec.md</code>。</p>
+    </section>
+
+    <!-- ============= #18 ============= -->
+    <section class="card" id="t18">
+      <div class="task-header">
+        <h2>#18 IME 样式可视化选择（栖梦-视觉页面）</h2>
+        <span class="badge bad">需审批</span>
+      </div>
+
+      <h3>现状（IME 三模式体系已实现，缺可视化配置入口）</h3>
+      <p><strong>QmClient 已有完整的三模式 IME 体系</strong>：</p>
+      <ul>
+        <li>配置：<code>QmImeAutoManage</code>（默认 1）、<code>QmNewIme</code>。</li>
+        <li>三状态机 <code>QmImeComputeCandidateRenderAction</code>（<code>qm_ime_manager.h:17-23</code>）：VALIDATE_ONLY / POPUP / LEGACY。</li>
+        <li>平台策略（<code>qm_ime_policy.h</code>）：Windows 强制自绘候选词。</li>
+        <li>候选弹窗实现：<code>qm_ime_candidate_popup.cpp</code>（完整自绘，含主题）。</li>
+        <li>测试：<code>src/test/qm_ime_platform_test.cpp</code>。</li>
+      </ul>
+
+      <h3>根因 / 缺口</h3>
+      <p>用户要的三种模式<strong>实际都已存在</strong>。真正的 gap 只有两个：<code>QmNewIme</code> 配置<strong>没有在栖梦-视觉页面可视化</strong>（用户核心诉求）。</p>
+
+      <h3>设计方向</h3>
+      <ol>
+        <li>在栖梦-视觉页面暴露 <code>QmNewIme</code> 开关（旧版 vs 新版候选栏），这是最小改动，满足核心诉求。</li>
+        <li><strong>（可选）Windows 支持系统原生 IME</strong>：把 <code>QmImeShouldUseSystemCandidateUi()</code> 从硬编码 false 改为可配置（新增 <code>qm_ime_use_system_ui</code>），让 Windows 用户也能用微信输入法等原生 UI；切换时正确设置 <code>SDL_HINT_IME_SHOW_UI</code>，避免自绘候选词 + 原生窗口叠加。</li>
+        <li><strong>（可选）统一为三选一枚举</strong>：<code>qm_ime_style</code>（0=旧版自绘, 1=新版弹窗, 2=系统原生），替代 <code>QmNewIme</code> + 平台硬编码的组合，逻辑更清晰。</li>
+      </ol>
+      <p class="small">低风险：暴露已有配置项到设置页，几乎无代码风险。中风险：Windows 开放系统原生 IME 需正确处理 <code>SDL_HINT_IME_SHOW_UI</code>。<code>qm_ime_platform_test.cpp</code> 改动后需全绿。</p>
+    </section>
+
+    <!-- ============= #19 ============= -->
+    <section class="card" id="t19">
+      <div class="task-header">
+        <h2>#19 表情按键修正（Win/Command/Meta 防误触）</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+
+      <h3>原问题</h3>
+      <p><code>+emote</code> 按下时没有检查修饰键（Win/Command/Meta/Control），导致 <code>Win+Shift+S</code> 截图等快捷键误触发表情菜单。</p>
+
+      <h3>已实现方案（关键修正：走 binds 层而非 emoticon.cpp）</h3>
+      <div class="note warn"><strong>设计方向修正</strong>：原 spec 写「在 <code>ConKeyEmoticon</code> 的按下边沿检查修饰键」。实际实现没有改 <code>emoticon.cpp</code>，而是在 <strong>binds 层</strong>解决——扩展 <code>AllowsUnmodifiedFallback</code> 和 <code>ShouldReleaseUnmodifiedModifierBindOnModifierPress</code> 的修饰键覆盖范围。</div>
+      <p>具体改动（<code>binds.h:84-103</code>，commit <code>7dd0b6ec09</code>）：</p>
+      <pre><code>// AllowsUnmodifiedFallback: 新增 ALT|SHIFT 组合不回退到无修饰绑定
+if(ModifierMask == ((1 &lt;&lt; KeyModifier::CTRL) | (1 &lt;&lt; KeyModifier::SHIFT)) ||
+   ModifierMask == ((1 &lt;&lt; KeyModifier::ALT) | (1 &lt;&lt; KeyModifier::SHIFT)) ||   // 新增
+   ModifierMask == ((1 &lt;&lt; KeyModifier::GUI) | (1 &lt;&lt; KeyModifier::SHIFT)))
+    return false;
+
+// Shift 单键 + CTRL/ALT/GUI 组合不回退
+if((Key == KEY_LSHIFT || Key == KEY_RSHIFT) &&
+   (ModifierMask & ((1 &lt;&lt; KeyModifier::CTRL) | (1 &lt;&lt; KeyModifier::ALT) | (1 &lt;&lt; KeyModifier::GUI))) != 0)
+    return false;
+
+// ShouldReleaseUnmodifiedModifierBindOnModifierPress: 新增 ALT 触发释放
+return ActiveBind.m_ModifierMask == KeyModifier::NONE &&
+       (ActiveBind.m_Key == KEY_LSHIFT || ActiveBind.m_Key == KEY_RSHIFT) &&
+       (PressedKeyModifierMask == (1 &lt;&lt; KeyModifier::CTRL) ||
+        PressedKeyModifierMask == (1 &lt;&lt; KeyModifier::ALT) ||    // 新增
+        PressedKeyModifierMask == (1 &lt;&lt; KeyModifier::GUI));</code></pre>
+      <p>这样 <code>Win+Shift+S</code>（GUI+SHIFT）不再回退到无修饰的 <code>+emote</code> 绑定，从根源上消除误触。</p>
+
+      <h3>验收标准</h3>
+      <ul>
+        <li>按 Win/Command/Meta/Control + 表情键时，表情菜单不弹出。</li>
+        <li><code>src/test/binds_test.cpp</code> 回归测试已更新（+6 行）。</li>
+      </ul>
+    </section>
+
+    <!-- ============= #20 ============= -->
+    <section class="card" id="t20">
+      <h2>#20 BestClient 功能移植（4 子功能，分步实现）</h2>
+      <p class="muted">BestClient 源码：<code>docs/dyl/BestClient/</code>。BC 配置变量：<code>docs/dyl/BestClient/src/shared/config_variables_bestclient.h</code>。<strong>#20 应先写分步 spec，再按子功能顺序逐个实现，一次一个 commit，不要混在一起。</strong></p>
+
+      <h3>20.1 简短服务器名（KoG gores + Axiom + CHN DDR） <span class="badge ok">已实现</span></h3>
+      <h4>已实现</h4>
+      <p>统一抽象为「服务器显示名简短化」框架，支持 KoG / Axiom / CHN DDR 三个服务器族。配置项 <code>QmShortServerNames</code>（开关）。实现入口 <code>CMenus::GetServerbrowserDisplayName</code>（<code>menus_browser.cpp:937</code>），在服务器列表渲染时根据 community 和难度词截取简短显示名。</p>
+      <p>难度词检测已扩展支持中文别名（<code>menus_browser.cpp:86-93</code>）：Novice=普通、Moderate=中阶、Brutal=野蛮、Insane=疯狂。搜索高亮也保持一致性（<code>menus_browser.cpp:939-942</code>）。</p>
+
+      <h3>20.2 3D 表情（加阴影） <span class="badge ok">已实现</span></h3>
+      <h4>已实现</h4>
+      <p>移植 BC 的阴影 pass 到 QmClient <code>players.cpp</code> 表情渲染段（:1164-1219）。配置 <code>QmEmoticonShadow</code>（<code>config_variables_qmclient.h:133</code>，默认关闭）。在表情精灵绘制前，用黑色 + 偏移 (2.0, 2.0) + 半透明 0.75 再画一遍。三处表情渲染路径（聊天省略号、断线表情、主动表情）都加了阴影 pass。</p>
+
+      <h3>20.3 电影级摄像机（Demo、观战增强） <span class="badge bad">需审批</span></h3>
+      <h4>现状</h4>
+      <p>BC 实现：<code>docs/dyl/BestClient/src/game/client/components/camera.cpp:468-478</code>，<code>m_CinematicCameraSmoothing</code> + <code>m_CinematicCameraPosition</code>，<code>FollowSpeed = 8.0f</code> lerp 平滑跟随，仅在 spectator freeview 生效。BC 配置 <code>bc_cinematic_camera</code>。</p>
+      <p>QmClient 现状：<code>camera.cpp</code> 是<strong>上游核心</strong>，含大量 Qm 扩展（drift、dynamic FOV、zoom、smoothing），<strong>没有 cinematic camera</strong>。</p>
+      <h4>风险</h4>
+      <div class="note bad"><strong>高风险</strong>：<code>camera.cpp</code> 是上游保护区域，QmClient 已有大量扩展。合并 BC 改动必须：不破坏现有 drift/FOV/smoothing；补 demo、观战、freeview clamp、existing smoothing 回归清单。</div>
+
+      <h3>20.4 3D Particles（线框渲染 + 简单透视投影） <span class="badge bad">差异审计</span></h3>
+      <h4>现状（关键澄清）</h4>
+      <p>BC 的 3D Particles 和 QmClient 已有的背景 3D 粒子实现不同。QmClient 已有 <code>CBackgroundParticles</code> 和 <code>qm_3d_particles*</code> 配置，且类型比 BC 更丰富。</p>
+      <h4>当前权威口径</h4>
+      <p>#20.4 <strong>不应直接复制 <code>C3DParticles</code></strong> / 新增 <code>qm_weapon_3d_particles*</code>，避免重复组件和重复 UI。下一步应做<strong>差异审计小 spec</strong>：对照 BC <code>C3DParticles</code> 的 focus/optimizer guard、淡入淡出、push/collide、glow 参数，只补强 QmClient <code>CBackgroundParticles</code> 缺失的能力。</p>
+
+      <h3>BC 移植分步实现计划（按风险从低到高）</h3>
+      <p class="muted">合并自原 Markdown 规格的分步顺序。每个子功能独立 commit，不混合。</p>
+      <ol>
+        <li><strong>#20.2 3D 表情阴影</strong>（低风险，~30 行单文件）— <span class="badge ok">已实现</span>，先做。</li>
+        <li><strong>#20.4 3D Particles</strong>（中风险，新组件不破坏现有，但需与 <code>CBackgroundParticles</code> 差异审计后只补强缺失能力）— <span class="badge bad">待审计</span>，其次。</li>
+        <li><strong>#20.1 简短服务器名</strong>（KoG 已有 BC 实现可移植；Axiom/CHN DDR 难度词枚举已补全中文别名）— <span class="badge ok">已实现</span>，可与 20.2 并行准备。</li>
+        <li><strong>#20.3 电影摄像机</strong>（高风险，上游核心 <code>camera.cpp</code>）— <span class="badge bad">待审批</span>，<strong>最后做</strong>，单独 commit + 充分回归测试（demo 回放 / 观战 / freeview clamp / existing drift·FOV·smoothing 不回归）。</li>
+      </ol>
+    </section>
+
+    <!-- ============= 共用贴边 Helpers 设计 ============= -->
+    <section class="card" id="helpers">
+      <div class="task-header">
+        <h2>共用贴边 Helpers 设计（#10 + #14.2）</h2>
+        <span class="badge ok">已实现</span>
+      </div>
+      <div class="note"><strong>此节是 #10 和 #14.2 的共享设计基础</strong>，已在 commit <code>e54bb209ac</code> 落地，可供后续歌词 HUD (<code>CQmLyrics</code>) 等新组件复用。</div>
+
+      <h3>目标</h3>
+      <p>提供一套 HUD 编辑器通用的贴边设施，让所有可编辑 HUD 元素（通知栏、聊天框、未来更多）共享一致的贴边语义，消除「编辑器贴边了但实际渲染贴不到」的根因。</p>
+
+      <h3>已实现设计（hud_editor.h QmHudEditor 命名空间）</h3>
+      <pre><code>namespace QmHudEditor {
+    // 通用贴边设施（新增）
+    struct SEdgeMargin {
+        float Left = 0.0f, Right = 0.0f, Top = 0.0f, Bottom = 0.0f;
+    };
+    CUIRect ApplyEdgeMargin(const CUIRect &Rect, const SEdgeMargin &Margin,
+                            bool AnchoredLeft, bool AnchoredRight,
+                            bool AnchoredTop, bool AnchoredBottom);
+    enum class EHorizontalFlow { LeftAnchored, RightAnchored };
+    EHorizontalFlow ResolveHorizontalFlow(const CUIRect &VisibleRect, float ScreenWidth);
+
+    // 旧 helpers（保留，委托新设施）
+    inline CUIRect InsetAnchoredRect(const CUIRect &Rect, float Margin,
+                                     bool AnchoredLeft, bool AnchoredRight,
+                                     bool AnchoredTop, bool AnchoredBottom);
+    inline CUIRect ChatEdgeBaseRect(float ScreenWidth, float ChatWidth,
+                                    float EdgeMargin, bool AnchoredRight);
+
+    // 编辑器交互吸附（已有）
+    float SnapAxisToScreenEdges(...);
+    float SnapAxisToGuides(...);
+    float SnapAxisToScreenGuides(...);
+}</code></pre>
+
+      <h3>集成点</h3>
+      <ul>
+        <li><code>ComputeTransformPlacement</code> / <code>ClampStateToScreen</code> 接收 <code>SEdgeMargin</code>，让 anchor 判定与拖拽吸附都基于含边距的有效屏幕范围。</li>
+        <li><code>BeginTransform</code> / <code>PreviewTransform</code> 新增带 <code>SEdgeMargin</code> 的重载，旧重载委托新签名传 <code>SEdgeMargin{}</code>，25+ 个调用点零改动。</li>
+        <li><code>STransformScope</code> / <code>SVisibleElement</code> 加 <code>m_EdgeMargin</code> 字段。</li>
+        <li>通知栏 <code>InsetAnchoredRect</code> 改为委托 <code>ApplyEdgeMargin</code>，行为完全一致。</li>
+      </ul>
+
+      <h3>测试</h3>
+      <p>新增 5 个 <code>QmHudEditorGeometry</code> 测试（<code>qm_hud_notifications_test.cpp</code> +72 行）：<code>ApplyEdgeMarginMatchesInsetAnchoredRectAcrossAnchors</code>、<code>ApplyEdgeMarginHandlesNonUniformMargins</code>、<code>ApplyEdgeMarginZeroIsIdentity</code>、<code>ApplyEdgeMarginIsZeroPredicate</code>、<code>ResolveHorizontalFlowFromVisibleRect</code>。现有 <code>EdgeMarginInsetsOnlyAnchoredPreviewEdges</code> / <code>ResolvesHorizontalFlow</code> 全绿。</p>
+    </section>
+
+    <!-- ============= 动画硬编码审计 ============= -->
+    <section class="card" id="animation">
+      <h2>全客户端动画硬编码审计与可配置化（frontend design 视角）</h2>
+      <p class="muted">本节是对 #12、#13 动画任务的延伸：盘点全客户端的动画硬编码，建议可配置化项，并从 frontend design 角度提出新动画机会。</p>
+
+      <h3>现有动画基础设施（已成熟，可复用）</h3>
+      <ul>
+        <li><strong>QmUi 动画运行时</strong>（<code>src/game/client/QmUi/</code>）：<code>QmAnim.h</code> / <code>QmAnim.cpp</code>：<code>EUiAnimDriver</code>（TWEEN/SPRING）、<code>SUiSpringConfig</code>、<code>EEasing</code> 枚举。</li>
+        <li><strong>弹性 Tee 动画</strong>（<code>jelly_tee.cpp</code>）：<code>CQmJelly</code>，已有配置 <code>QmJellyTee</code>/<code>QmJellyTeeStrength</code>/<code>QmJellyTeeDuration</code>/<code>QmJellyTeeOthers</code>。</li>
+        <li><strong>现有可配置动画</strong>：<code>QmUiMotionLevel</code>（全局动效强度）等。</li>
+      </ul>
+
+      <h3>硬编码动画参数盘点（按子系统）</h3>
+      <table>
+        <thead><tr><th>子系统</th><th>位置</th><th>硬编码参数</th><th>建议</th></tr></thead>
+        <tbody>
+          <tr><td>HUD 当前武器</td><td><code>hud.cpp:40-43</code></td><td>切换时长 0.14f、峰值进度 0.45f、峰值缩放 1.32f、静止缩放 1.2f</td><td><code>qm_hud_weapon_switch_*</code></td></tr>
+          <tr><td>聊天 CutOff</td><td><code>chat.h:39-40</code></td><td>左滑偏移 60.0f、时长 0.3f</td><td><code>qm_chat_anim_slide_offset</code> / <code>_duration</code> / <code>_easing</code></td></tr>
+          <tr><td>切枪动画 #12</td><td><code>players.cpp:907-915</code></td><td>时长 0.3f、位移 40.0f、旋转 2π、easeOutCubic</td><td>详见 #12 章节</td></tr>
+          <tr><td>皮肤切换 blend #13</td><td><code>render.h:246-319</code></td><td>~20 个魔法数字（缩放/位移/旋转/alpha 系数）</td><td>详见 #13 章节</td></tr>
+          <tr><td>通知栏动画</td><td><code>hud_notifications.cpp:16-318</code></td><td>滑入偏移 32.0f（:317）</td><td>偏移可配</td></tr>
+          <tr><td>Pie 菜单</td><td><code>pie_menu.h:61-64</code></td><td>时长 0.08f、最小缩放 0.85f、高亮缩放 1.25f</td><td><code>qm_pie_menu_anim_*</code></td></tr>
+          <tr><td>菜单页面切换</td><td><code>menus.cpp:104-106</code></td><td>时长 0.18f、alpha 最大 0.12f、tab hover 0.10f</td><td>统一到 MotionLevel</td></tr>
+          <tr><td>名字板聊天气泡</td><td><code>nameplates.cpp:2075-2124</code></td><td>alpha/transform 时长 0.16-0.20f、填充速度 0.035f/字符</td><td><code>qm_chat_bubble_*</code></td></tr>
+          <tr><td>BindWheel</td><td><code>bindwheel.cpp:161-291</code></td><td><code>QuadEaseInOut</code> 自定义曲线、动画相位</td><td><code>qm_bindwheel_*</code></td></tr>
+          <tr><td>Console 状态变化</td><td><code>console.cpp:2005</code></td><td><code>m_StateChangeDuration = 0.1f</code></td><td>低优先级</td></tr>
+        </tbody>
+      </table>
+      <p class="small"><strong>统计</strong>：约 60+ 个硬编码动画参数散布在 12+ 个文件，大多时长集中在 0.08-0.30s，easing 以 EASE_OUT 为主。</p>
+
+      <h3>可配置化建议（分优先级）</h3>
+      <h4>第一优先（用户直接感知，高价值）</h4>
+      <ol>
+        <li>切枪动画（#12）：4 个参数（时长/位移/旋转/easing）</li>
+        <li>皮肤切换（#13）：每种类型的强度系数 + 新类型</li>
+        <li>聊天消失动画（#14.5）：左滑偏移 + 时长 + easing</li>
+        <li>HUD 武器切换：<code>qm_hud_weapon_switch_*</code></li>
+      </ol>
+      <h4>第二优先（体验优化）</h4>
+      <ol>
+        <li>通知栏滑入偏移（32.0f → 可配）</li>
+        <li>Pie 菜单动画参数</li>
+        <li>聊天气泡填充速度</li>
+        <li>BindWheel 动画曲线</li>
+      </ol>
+      <h4>第三优先（系统性，建议统一治理而非逐个配）</h4>
+      <p>菜单/HUD 布局动画 → 已有 <code>QmUiMotionLevel</code> 全局缩放，建议不逐个暴露，而是让 MotionLevel 更细粒度（如分「页面切换/微交互/HUD布局」三个子档）。</p>
+
+      <h3>Frontend Design 视角：还可以加的动画</h3>
+      <p>当前缺失的动画机会（参考现代 UI/UX 设计语言）：</p>
+      <ul>
+        <li><strong>高价值</strong>：死亡/复活动画（当前直接消失/出现，可加淡出+缩小/淡入+弹出）。</li>
+        <li><strong>中价值</strong>：设置项展开/折叠（height 动画）。</li>
+        <li><strong>低价值</strong>：皮肤预览旋转。</li>
+      </ul>
+    </section>
+
+    <!-- ============= B 批 ============= -->
+    <section class="card" id="b-batch">
+      <h2>第二批待办整合（用户补充 TODO，B1 ~ B9）</h2>
+      <p class="muted">本节整合用户在动画审计后补充的一批 TODO。每项标注现状（已实现/部分/全新）、是否触及上游保护区域、优先级。与 <code>docs/dyl/QmClient_docs/</code> 现状页交叉引用，避免重复规划。</p>
+
+      <h3>B1. 名字板钩子进度条 <span class="badge warn">已调研·可做</span></h3>
+      <p><strong>现状</strong>：无尽钩图标已实现（<code>hud.cpp:4062-4068</code>）。<strong>约束</strong>：触及上游物理区域（HookDuration 调谐）。<strong>限制</strong>：<code>m_HookTick</code>（剩余钩 ticks）<strong>不在 <code>CNetObj_Character</code> snapshot 里广播</strong>，是 core 内部状态。进度条只能<strong>估算</strong>——记录 <code>HookedPlayer</code> 从 -1 变为有效 id 的那一 tick 作为起点，用 <code>1.25f - HookDuration</code> 作为总时长倒计时。</p>
+      <p><strong>UI 实现方案</strong>：复用 <code>CUi::RenderProgressSpinner</code>（<code>ui.cpp:1848-1886</code>）——现成圆形弧形进度条。相关现状页：<code>docs/dyl/QmClient_docs/规划/钩子进度状态.html</code>。</p>
+      <div class="note ok">
+        <strong>2026-06-27 调研结论</strong>：<strong>推翻原「m_HookTick 不广播」假设——它是 <code>CNetObj_Character</code> 的广播字段</strong>（<code>generated/protocol.h:508-510</code>），服务器 <code>character.cpp:1143/1176</code> 写入广播，客户端 <code>m_Snap.m_aCharacters[i].m_Cur.m_HookTick</code> 直接可读，<strong>tick 级精度（20ms），无需本地计时</strong>。进度 = <code>m_HookTick / 60</code>（GRABBED 每 tick +1，<code>gamecore.cpp:447</code>，到 60 强制释放；钩墙 <code>HookedPlayer==-1</code> 不显示）。集成点 <code>nameplates.cpp:1623 RenderNamePlateGame</code>。<strong>不触及物理</strong>（HookDuration 全程只读），原「物理敏感」定性可降级。<strong>待决策</strong>：画「钩人者」（O(1)，推荐）还是「被钩者」（O(MAX_CLIENTS)）；是否精确读 tune zone 的 HookDuration（短钩地图起点会偏）。
+      </div>
+
+      <h3>B2. HUD 编辑器增强 <span class="badge warn">已调研·虚线可做</span></h3>
+      <p><strong>现状</strong>：吸附已有（<code>SnapAxisToScreenEdges</code>、<code>SnapAxisToGuides</code>、边缘锚定）。<strong>子项</strong>：红绿虚线参考线、拖拽排列 Flexbox。<strong>风险</strong>：Flexbox 是大改动，影响所有 HUD 元素布局。建议先做红绿虚线（小改动），Flexbox 另行调研。相关现状页：<code>docs/dyl/QmClient_docs/规划/HUD视觉辅助状态.html</code>。</p>
+      <div class="note ok">
+        <strong>2026-06-27 调研结论</strong>：<strong>红绿虚线已完成 80%，可立即做（半天-1 天，零上游）；Flexbox 是范式重构（2-3 周，高风险），需单独立项</strong>。
+        <ul>
+          <li><strong>红绿虚线</strong>：<code>hud_editor.cpp:865-872</code> 已在画参考线（当前是<strong>单色黄实线</strong>），改动 = 换色（X 红 / Y 绿）+ 实线→虚线。图形层 <code>LinesBegin/LinesDraw</code> 原语齐备（<code>graphics.h:435-447</code>），自写 <code>DrawDashedLine</code> 约 15-20 行。另外 <code>m_GuideKind</code>（6 类，<code>hud_editor.h:28-37</code>）已产出但未被消费，可零成本用来按「屏幕参考 vs 元素参考」分色。改动 100% 局限 <code>hud_editor.cpp</code>。</li>
+          <li><strong>Flexbox</strong>：当前是纯绝对定位 permille（<code>SElementState</code>，<code>hud_editor.h:294-300</code>），<code>SEdgeMargin/ApplyEdgeMargin</code> 等只是贴边辅助<strong>不是容器布局</strong>。改 Flexbox 影响数据模型/布局核心/序列化/拖拽，跨 8 文件 24 元素。若保持 <code>BeginTransform</code> API 不变可不碰 <code>hud.cpp</code> 上游。</li>
+        </ul>
+        二者<strong>解耦为独立 PR</strong>，先做红绿虚线。
+      </div>
+
+      <h3>B3. 武器命中反馈 <span class="badge warn">已调研·可做</span></h3>
+      <p><strong>现状</strong>：钩子/手枪命中时无特定粒子反馈。<strong>影响范围</strong>：<code>weapon_trajectory.cpp</code>、<code>effects.cpp</code>（粒子）。⚠️ 物理敏感（钩子命中判定）。与第一批 frontend design 建议的「钩中反馈」一致，可合并实现。</p>
+      <div class="note ok">
+        <strong>2026-06-27 调研结论</strong>：<strong>可行，低风险，不碰物理</strong>——复用 QmClient 已验证的 jelly 锤子命中反馈模式（<code>players.cpp:77-130</code>），所有命中信号客户端均<strong>只读</strong>消费，不改判定逻辑。三档：
+        <ul>
+          <li><strong>锤子命中（现成）</strong>：<code>NETEVENTTYPE_HAMMERHIT</code> 已触发 <code>m_Effects.HammerHit()</code>（<code>gameclient.cpp:3113</code>、<code>effects.cpp:420-442</code>），仅增强。</li>
+          <li><strong>钩子命中（推荐 MVP）</strong>：<code>m_HookState</code> 跃变 + <code>m_HookedPlayer</code> 广播字段推断（<code>protocol.h:508-514</code>）；本地玩家用 <code>COREEVENT_HOOK_ATTACH_PLAYER/GROUND</code> 位事件（<code>gamecore.h:120-126</code>）。新增 <code>CEffects::HookHit()</code> 与 <code>HammerHit</code> 同构，挂载点 <code>ProcessEvents</code>（<code>gameclient.cpp:3082</code>）。</li>
+          <li><strong>手枪命中 tee（信号最弱，建议非 MVP）</strong>：<code>TakeDamage</code> 只设 <code>EMOTE_PAIN</code> + 改速度、无专门网络事件（<code>character.cpp:1034-1044</code>），只能从表情/速度推断，会被冻结干扰。</li>
+        </ul>
+        <strong>不触及</strong>：<code>gamecore.cpp</code>/<code>character.cpp</code> 判定、协议、预测、demo、camera；粒子是本地渲染不上行，demo 可正常重放。原「物理敏感」定性可降级。
+      </div>
+
+      <h3>B4. 聊天气泡漫画样式 <span class="badge warn">待做</span></h3>
+      <p><strong>现状</strong>：聊天气泡配置有 <code>QmChatBubbleTextColor</code> 等，有消失动画，但<strong>没有</strong>样式枚举（漫画气泡/圆角矩形/无背景等）。相关现状页：<code>docs/dyl/QmClient_docs/规划/聊天UI状态.html</code>。</p>
+
+      <h3>B5. 自动跟随好友服务器 <span class="badge ok">已实现</span></h3>
+      <p><strong>已实现</strong>：<code>SFriendAutoFollowState</code> 状态机（<code>menus.h:803-826</code>）。轮询目标好友的 <code>ServerInfo()-&gt;m_aAddress</code> 检测变化 → 用户设定延迟计时器（<code>QmFriendAutoFollowDelay</code>）→ <code>Connect(addr)</code> → 跳转计数上限 2 次 → UI 提示。手动连接（<code>EConnectIntent::Manual</code>）会取消自动跟随（<code>menus_browser.cpp:1297-1298</code>）。好友列表每项有跟随按钮（播放/停止图标，<code>menus_browser.cpp:2545-2564</code>）。</p>
+
+      <h3>B6. 马甲注册与识别 <span class="badge warn">拆双类型</span></h3>
+      <p><strong>需求重述</strong>（用户三轮澄清后定稿）：马甲分两种类型，UI 和数据流完全不同。类型 A 保持完整功能（不退化），客户端代码先行，服务端接口由远程仓库主（中心服务 <code>42.194.185.210</code> 维护者）实现。</p>
+      <div class="note warn"><strong>当前权威口径</strong>：B6 必须拆成两个任务验收。类型 A 是「中心服务端契约 + 客户端预埋/降级」，服务端未就绪时不能宣称端到端完成；类型 B 是纯客户端私人标注，可独立推进。当前代码已有 qid 身份链，但没有 <code>alt_of</code> / <code>alt_name</code> 字段解析或上报。</div>
+
+      <h4>类型 A：公告马甲（alt_account）——主动注册，所有 QmClient 用户可见</h4>
+      <p>玩家自己声明「我是 XXX 的马甲」，注册后所有 QmClient 用户都能看到标注。UI 极简（填主号名 + 马甲名，无发码/无验证码）。客户端在 <code>/qm/users.json</code> 在线名单里按名字查到主号的 <code>qid</code>，走 <code>POST /qm/alt/register</code>。</p>
+      <p><strong>服务端需新增接口（由远程仓库主实现）</strong>：<code>POST /qm/alt/register</code>、<code>/qm/users.json</code> 下发 <code>alt_of</code>、<code>/qm/report</code> 接收 <code>alt_of</code>、<code>GET /qm/alt/lookup</code>。</p>
+      <p><strong>客户端实现范围（本开发者做）</strong>：马甲管理 UI、注册调用 + report 字段、users.json 解析扩展、渲染、配置。具体 7 点：① 「马甲管理」设置区 UI（<code>menus_qmclient.cpp</code>，极简两输入框）；② 名字→qid 转换（复用 <code>/qm/users.json</code> 查询，<code>qmclient_utils.cpp</code>）；③ <code>/qm/alt/register</code> 调用封装（HTTP POST，带 auth_token）；④ <code>/qm/users.json</code> 解析扩展（读 <code>alt_of</code> / <code>alt_name</code>）；⑤ 缓存 + 渲染（名字板/计分板标注「[主号名]的马甲」，复用 warlist 标注布局）；⑥ 配置项 <code>QmAltEnabled</code>/<code>QmAltMainName</code>/<code>QmAltName</code>；⑦ 服务端未就绪时的优雅降级。</p>
+      <p><strong>注册流程（名字 → qid 转换）</strong>：① 用户填主号名 → 客户端在 <code>/qm/users.json</code> 在线名单按名字查主号 <code>qid</code>（<code>m_vLocalServerMarks</code>，<code>qmclient_utils.cpp:126-132</code>）；② 调 <code>POST /qm/alt/register</code>（携带 auth_token + 主号 qid + 马甲名）→ 服务端记录 <code>{alt_qid, main_qid, alt_name}</code>；③ 主号不在线时无法立即注册 → 提示「主号当前不在线，请稍后重试」。</p>
+      <p><strong>数据流（复用现有 <code>/qm/*</code> 服务）</strong>：上报 <code>/qm/report</code> 每个 player 对象增加可选 <code>alt_of</code> 字段（主号 qid，服务端不识别则忽略）；下发 <code>/qm/users.json</code> 每个条目增加可选 <code>alt_of</code> + <code>alt_name</code>；客户端渲染时 <code>GetQ1menGClientQid(ClientId)</code> → 查缓存 → 标注主号名。识别链已闭合：名字 → qid → ClientId（改名不影响绑定）。</p>
+      <p><strong>优雅降级</strong>：服务端未就绪时（HTTP 404/超时）注册按钮提示「服务暂不可用」，不报错、不影响其他功能。基于 qid 而非名字，主号/马甲改名后关系不丢失。</p>
+
+      <h4>类型 B：私人标注（private_tag）——你标注别人，仅自己可见（类似 warlist）</h4>
+      <p>复用 TClient warlist 机制（<code>CWarList</code>，本地存储 <code>qmclient_warlist.cfg</code>）。推荐新建 <code>CPrivateTag</code> 组件（避免污染「敌对」语义）。UI：右键玩家名添加「标注为 XXX 的马甲」。</p>
+
+      <h4>验收标准</h4>
+      <ol>
+        <li><strong>类型 A（服务端就绪后）</strong>：填主号名 + 马甲名 → 注册成功 → 所有 QmClient 用户在名字板/计分板看到「[主号名]的马甲」。</li>
+        <li><strong>类型 A（服务端未就绪）</strong>：注册按钮提示「服务暂不可用」，不报错，UI 正常显示，不影响其他功能。</li>
+        <li><strong>改名稳定</strong>：主号或马甲改名后，因绑定基于 qid 而非名字，关系不丢失。</li>
+        <li><strong>类型 B</strong>：能给任意玩家打私人标签、仅自己可见、名字板/计分板显示。</li>
+        <li>两类标注可共存（同一玩家既有公告马甲标注又有私人标注）。</li>
+      </ol>
+      <h4>风险</h4>
+      <ul>
+        <li>类型 A 依赖远程仓库主实现服务端——客户端按契约先行，服务端未就绪则优雅降级（设计取舍，非缺陷）。</li>
+        <li>主号不在线时无法注册（查不到 qid）——可接受限制。</li>
+        <li>私人标注用名字匹配，改名会失效（类型 A 用 qid 不受影响）。</li>
+        <li>任何人都能声明是某人的马甲（无主号审批）——用户接受此简化优先于防冒认；如后续需防冒认再加服务端白名单。</li>
+      </ul>
+
+      <h3>B7. 好友分类 <span class="badge ok">已实现</span></h3>
+      <p><strong>已实现</strong>：后端分类命令已注册（<code>friends.cpp:145-148</code>）。UI 入口已显式化——分类标题旁加齿轮管理按钮（<code>m_vFriendsCategoryManageButtons</code>，<code>menus_browser.cpp:2370</code>）+ tooltip「Manage categories」/「Right-click or use the gear to manage categories」（:2374-2375）。右键分类标题仍可触发管理弹窗（:2378-2380）。添加好友对话框里有分类下拉 + 「+ 新建分类」选项（:3012）。</p>
+
+      <h3>B8. 持久化统计数据（Ranks） <span class="badge warn">已调研·可做</span></h3>
+      <p><strong>现状</strong>：当前每局重置，玩家统计仅会话内有效。搜索 <code>PersistStat</code>/<code>StatRank</code> 无本地持久化命中。<strong>子项</strong>：本地 JSON/Toml 持久化、Kog 死亡榜。<strong>影响范围</strong>：新增持久化文件、<code>statboard</code> 组件、<code>qmclient/</code> 工具。相关现状页：<code>docs/dyl/QmClient_docs/规划/持久统计状态.html</code>、<code>本地比赛历史.html</code>。</p>
+      <div class="note ok">
+        <strong>2026-06-27 调研结论</strong>：<strong>可行，风险低</strong>——QmClient 已有成熟 JSON 持久化范例 <code>qmclient/map_notes.json</code>（<code>tclient.cpp:67</code>，<code>JsonParseEx</code> + <code>CJsonFileWriter</code> + 脏标记延迟落盘 <code>tclient.cpp:4687-4781</code>）。statboard 数据在 <code>GameClient()-&gt;m_aStats</code>（<code>CClientStats</code>，<code>gameclient.h:793-828</code>），纯内存、每局清零（<code>OnReset</code> <code>statboard.cpp:23-30</code>）；全仓库搜索 <code>PersistStat/StatRank</code> <strong>0 命中</strong>确认无持久化。推荐：新建独立组件 <code>CQmStatHistory</code>，<strong>只读</strong> <code>m_aStats</code>，局结束（<code>GAMESTATEFLAG_GAMEOVER</code> <code>statboard.cpp:135</code>）/断线时快照写入 <code>qmclient/stat_history.json</code>，<strong>不改上游 CClientStats</strong>。JSON 是项目主流（无 Toml）；清理走 LRU/时间/手动命令（参照 <code>ConSaveList</code> <code>tclient.cpp:5080</code>）。<strong>不触及</strong>协议/物理/预测/demo/camera。<strong>边界</strong>：statboard 是 PvP 对战统计（frags/deaths/旗帜/spree），<strong>不含完赛时间</strong>（server 权威 score，需另立调研）。
+      </div>
+
+      <h3>B9. 投票换图功能增强 <span class="badge ok">已实现</span></h3>
+      <p><strong>已实现</strong>：投票换图面板（<code>menus_ingame.cpp</code> PAGE_CALLVOTE）显示已完成地图图标（<code>FONT_ICON_FLAG_CHECKERED</code>，:2172-2178）。复用 <code>g_Config.m_BrIndicateFinished</code> + community <code>HasRank()</code> 判断（:2169）。已完成地图在投票列表中显示勾选图标，与服务器列表一致。</p>
+
+      <h3>B 批优先级建议</h3>
+      <table>
+        <thead><tr><th>优先级</th><th>项目</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge ok">已完成</span></td><td>B5、B7、B9</td><td>数据源/UI 入口/图标已落地</td></tr>
+          <tr><td><span class="badge warn">中</span></td><td>B6</td><td>拆双类型，类型 B 可独立推进</td></tr>
+          <tr><td><span class="badge warn">低</span></td><td>B4</td><td>聊天气泡样式枚举</td></tr>
+          <tr><td><span class="badge warn">已调研·可做</span></td><td>B1、B2(虚线)、B3、B8</td><td>06-27 codegraph 核验：B1/B3 不碰物理、B8 复用 JSON 范例、B2 红绿虚线已完成 80%。仅 B2 Flexbox 仍待设计</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============= 第二轮深度调研结论 ============= -->
+    <section class="card" id="research">
+      <h2>第二轮深度调研结论（2026-06-20）</h2>
+      <div class="note"><strong>针对用户反馈「标了调研先行的就该去调研」</strong>，本轮对 B1/B5/B6/#8/#20.1/B7 做了代码级可行性确认，并修正了 B6 的误判。后续在 commit <code>7dd0b6ec09</code> 中一次性落地了可行性已确认的任务。</div>
+
+      <h3>B5 自动跟随好友服务器 — <span class="badge ok">可行，已实现</span></h3>
+      <p><strong>第二轮纠错</strong>：之前写「用 <code>/qm/users.json</code> presence 服务」是<strong>错误的</strong>。用户正确指出——好友列表本来就显示好友在哪个服务器，双击就能加入，这是 serverbrowser 现有功能，根本不需要 presence 服务。</p>
+      <p><strong>正确的数据源</strong>：<code>CFriendItem::ServerInfo()</code> 持有好友当前 <code>CServerInfo</code>，serverbrowser 每次刷新维护。所有依赖已就绪，无需协议改动。</p>
+      <p><strong>教训</strong>：调研时应先看现有功能（好友列表点击加入）是怎么实现的，而不是去找额外的服务。</p>
+
+      <h3>B6 马甲注册与识别 — <span class="badge ok">可行（修正：不触及 DDNet 协议）</span></h3>
+      <p><strong>之前误判</strong>：标注「触及服务器协议，需批准」。<strong>错误。</strong> 不需要 DDNet 服务器协议支持。Axiom 已有「主号/分身」概念（<code>QmAxiomLoginPassword</code>=主号、<code>QmAxiomDummyLoginPassword</code>=分身），说明 QmClient 用户体系已区分主号与分身。马甲关系可走 QmClient 自有中心服务。</p>
+
+      <h3>B1 名字板钩子进度条 — <span class="badge ok">可行（有近似限制）</span></h3>
+      <p>钩子时长和钩住状态客户端可读，进度条可显示（近似值）。<strong>关键代码证据</strong>：<code>gamecore.cpp:268</code> 钩住瞬间 <code>m_HookTick = SERVER_TICK_SPEED * (1.25f - m_Tuning.m_HookDuration)</code>。<strong>限制</strong>：<code>m_HookTick</code> 不在 snapshot 里广播，只能估算。</p>
+
+      <h3>#8 滚动抖动根治 — <span class="badge ok">假设 A 确认为主因，已实现</span></h3>
+      <p>通过精读 <code>settings_resource_jobs.cpp:416-451</code>，确认<strong>假设 A（预算阶梯跳变）是主因</strong>。已实现连续插值（<code>SettingsRecoveryBudget</code>）取代阶梯值。</p>
+
+      <h3>#20.1 简短服务器名 — <span class="badge ok">难度词枚举已存在，已实现</span></h3>
+      <p>难度词检测逻辑已存在于 DDNet 和 QmClient（<code>menus_browser.cpp:85-91</code>）。现有检测<strong>只识别英文难度词</strong>。已补全中文别名（普通=Novice，中阶=Moderate，野蛮=Brutal，疯狂=Insane）。用户提供的两个样本（<code>Axiom 北京 普通 - CHN1O 钩累死</code>、<code>DDNet CHN7 西安 - Moderate 中阶</code>）已足够确定模式。</p>
+
+      <h3>B7 好友分类 — <span class="badge ok">修正：功能完整但入口隐蔽，已补齐</span></h3>
+      <p><strong>之前误判</strong>：标「已完整实现」。<strong>不够准确。</strong> 精确现状：后端完整，但分类标题渲染<strong>没有任何视觉提示「右键管理」</strong>——这正是用户原始 TODO「添加好友时分类选择更显眼」的真实痛点。已通过齿轮管理按钮 + tooltip 补齐可发现性。</p>
+    </section>
+
+    <!-- ============= 调研方法说明 ============= -->
+    <section class="card">
+      <h2>附：本轮调研方法说明</h2>
+      <ul>
+        <li>并行派发 8 个只读 explore subagent，因 token 并发限流（group mix 仅允许 3 并发）导致大部分立即失败（exit 1，duration ~50s）。后续改为自己串行调研 + 主代理直接 search/read。</li>
+        <li>codegraph CLI 可用：<code>codegraph status</code> / <code>codegraph search</code> / <code>codegraph callers</code> / <code>codegraph callees</code> / <code>codegraph impact</code>。</li>
+        <li>所有文件:行号引用均来自 2026-06-21/22 的 <code>codegraph</code> / <code>read</code> / <code>search</code> 实际核验。</li>
+        <li>实现状态以 commit <code>7dd0b6ec09</code> + <code>e54bb209ac</code> 为准（2026-06-22 核验）。</li>
+      </ul>
+    </section>
+
+    <p class="footer">本规格是 backlog 整合 PRD，不是实施计划。实施前仍需读取当前源码和对应工作流文档。已实现项的代码事实以当前源码和 commit <code>7dd0b6ec09</code>/<code>e54bb209ac</code> 为准。本文档由原 Markdown 版本（<code>2026-06-20-backlog-consolidation-spec.md</code>）于 2026-06-22 重写为 HTML 并按当前现状更新；<strong>2026-06-27 合并</strong>：原 MD 中未实现任务（#11 blend 公式表、#16 平台细节、#18 三选一枚举、B6 类型 A 详细设计/验收/风险、BC 移植分步计划）的设计细节已回填本文档，原 MD 已删除，本文档为唯一权威源。<strong>2026-06-27 调研收口</strong>：对 #11/B1/B2/B3/B8 派 research 子会话做 codegraph 级可行性核验，结论已写入各任务章节「2026-06-27 调研结论」note 框并同步优先级分组；完整 5 份报告见 <code>workspace-files/.context/note.md</code>。</p>
+  </div>
+</body>
+</html>

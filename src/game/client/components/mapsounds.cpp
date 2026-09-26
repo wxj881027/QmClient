@@ -20,7 +20,7 @@ CMapSounds::CMapSounds()
 
 void CMapSounds::Play(int Channel, int SoundId)
 {
-	if(g_Config.m_ClSndMuteMapSound)
+	if(!SoundEnabled())
 		return;
 	if(SoundId < 0 || SoundId >= m_Count)
 		return;
@@ -30,12 +30,24 @@ void CMapSounds::Play(int Channel, int SoundId)
 
 void CMapSounds::PlayAt(int Channel, int SoundId, vec2 Position)
 {
-	if(g_Config.m_ClSndMuteMapSound)
+	if(!SoundEnabled())
 		return;
 	if(SoundId < 0 || SoundId >= m_Count)
 		return;
 
 	GameClient()->m_Sounds.PlaySampleAt(Channel, m_aSounds[SoundId], 0, 1.0f, Position);
+}
+
+void CMapSounds::StopAll()
+{
+	for(auto &Source : m_vSourceQueue)
+	{
+		if(Source.m_Voice.IsValid())
+		{
+			Sound()->StopVoice(Source.m_Voice);
+			Source.m_Voice = ISound::CVoiceHandle();
+		}
+	}
 }
 
 void CMapSounds::OnMapLoad()
@@ -65,6 +77,7 @@ void CMapSounds::OnMapLoad()
 			{
 				log_error("mapsounds", "Failed to load map sound %d: failed to load name.", i);
 				ShowWarning = true;
+				m_aSounds[i] = -1;
 				continue;
 			}
 			pName = "(error)";
@@ -84,6 +97,7 @@ void CMapSounds::OnMapLoad()
 			{
 				log_error("mapsounds", "Failed to load map sound %d: failed to load data.", i);
 				ShowWarning = true;
+				m_aSounds[i] = -1;
 				continue;
 			}
 			const int SoundDataSize = pMap->GetDataSize(pSound->m_SoundData);
@@ -142,7 +156,7 @@ void CMapSounds::OnRender()
 		return;
 
 	bool DemoPlayerPaused = Client()->State() == IClient::STATE_DEMOPLAYBACK && DemoPlayer()->BaseInfo()->m_Paused;
-	if(g_Config.m_ClSndMuteMapSound)
+	if(!SoundEnabled())
 	{
 		for(auto &Source : m_vSourceQueue)
 		{
@@ -166,7 +180,7 @@ void CMapSounds::OnRender()
 				Client()->IntraGameTick(g_Config.m_ClDummy));
 		}
 		float Offset = s_Time - Source.m_pSource->m_TimeDelay;
-		if(!DemoPlayerPaused && Offset >= 0.0f && g_Config.m_SndEnable && (g_Config.m_GfxHighDetail || !Source.m_HighDetail))
+		if(!DemoPlayerPaused && Offset >= 0.0f && SoundEnabled() && (g_Config.m_GfxHighDetail || !Source.m_HighDetail))
 		{
 			if(Source.m_Voice.IsValid())
 			{
@@ -247,6 +261,11 @@ void CMapSounds::Clear()
 		m_aSounds[i] = -1;
 	}
 	m_Count = 0;
+}
+
+bool CMapSounds::SoundEnabled() const
+{
+	return g_Config.m_SndEnable && g_Config.m_SndGame && !g_Config.m_ClSndMuteMapSound;
 }
 
 void CMapSounds::OnStateChange(int NewState, int OldState)

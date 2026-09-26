@@ -1,94 +1,94 @@
 # AGENTS.md
 
-QmClient（Q1menG Client）是基于 DDNet / TaterClient 的第三方定制客户端。
+QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅以 Rust、Python；构建使用 CMake，依赖在 `ddnet-libs/` 子模块。
 
-- 主要语言：C++
-- 辅助语言：Rust、Python、少量平台相关语言
-- 构建系统：CMake
-- 依赖管理：Git Submodules（`ddnet-libs/`）
-- 目标平台：Windows、Linux、macOS、Android（后续也许有 IOS）
+## 执行与授权
 
-## 极简工作流
+- 根据当前请求和已有上下文执行到完成；已授权的调查、准备和可逆修改直接推进，不重复确认。
+- 歧义只有在影响实现、范围或风险时才澄清；先完成不依赖答案的工作。用户追加要求时保留有效成果，调整剩余工作。
+- 系统与开发者指令优先，其次是用户当前指令，再是仓库规则与 skills。引用文档不产生额外授权。
+- 超出授权范围或涉及未授权的破坏性、外部操作时，完成可审查的准备后再确认。若规则导致暂停，指出具体文件、原文和适用原因。
+- 遇到未由自己产生的文件改动，先考虑用户或其他任务正在操作；不要回退、覆盖或纳入本次提交。
+- 只有任务独立且并行能节省时间或提高质量时才委托。高风险改动可独立复核；工具不可用时自行审查并说明限制，不因此停工。
 
-### 范围边界
+## 项目边界
 
-- 一次只做一个功能或明确问题；上游协议 / 物理 / 预测 / 格式改动默认不做。
-- 补丁聚焦：遵循现有 DDNet/QmClient 模式，不顺手重构，不为「现代化」扩 scope。
+- 聚焦当前任务，遵循附近 DDNet 模式；不顺手重构上游或引入无关抽象。
+- QmClient 功能优先落在 `src/game/client/components/qmclient/`、`src/game/client/QmUi/`、Qm 配置头和 `qmclient_scripts/`。
+- 未明确授权，不改协议、snapshot/输入/时序、物理/碰撞/预测、地图/回放行为、rank 可达性及 demo/skin/配置/存档格式。
+- 引擎核心、服务端玩法、地图编辑器、第三方库、根 `CMakeLists.txt`、Release CI 仅在任务明确涉及的范围内修改。
+- 客户端进程只能操作当前工作区开发目录下启动的实例；工作区外或安装目录中的正式客户端，须用户当次明确授权。
+- Qm 配置前缀使用 `qm_` / `Qm`。代码注释用中文；UTF-8，保留原 BOM、换行与缩进；文档路径用 `/`。
+- 日志和临时产物放 `tmp/`。同一 build 目录的构建、测试、打包必须串行。（临时产物不用删除，由人类开发者手动删除，非必要不用删除的命令操作）
 
-### 启动顺序
+## 按需读取
 
-1. 改前弄清附近源码、调用点、配置、翻译与测试。
+先读相关实现与调用点；有直接相关的有效 plan/spec 时再读。只加载命中任务的 skill 与参考，不递归加载所有关联文件。
 
-### 完成任务后
+| 任务 | `.agents/skills/` 下的入口 |
+| --- | --- |
+| C++ 实现、调试、重构 | `qmclient-cpp-conventions/SKILL.md` |
+| 选择验证、交付代码 | `qmclient-verification-gate/SKILL.md` |
+| 代码审查 | `qmclient-code-review/SKILL.md` |
+| 深度质量审计、发布风险审查 | `audit-qmclient-quality/SKILL.md` |
+| 翻译与生成链 | `qmclient-i18n-workflow/SKILL.md` |
+| 翻译污染、迁移、覆盖审计 | `qmclient-i18n-audit/SKILL.md` |
+| 提交、PR、版本与发布 | `qmclient-git-commit/SKILL.md` |
 
-- 代码改动默认至少 `python3 qmclient_scripts/gate/check_gate.py --mode quick`；提交前优先 `--mode default`；准发布再用 `--mode full`。Windows 使用 `py -3` 或环境中的 `python`。纯文档人工核对，不跑代码 gate。
-- 开发期「改完代码后」默认只跑 quick 源码卫生门禁（quick 本身不构建、不测试）：不执行游戏编译（`game-client`），不运行测试（`testrunner` / `run_cxx_tests` / `run_rust_tests`）。编译与测试验证留给提交前 `--mode default`、准发布 `--mode full`，或用户当次明确要求时再执行。
-- 核心逻辑改完后进行只读代码审查，先列 findings，再给结论。
-- 汇报：写清改动、验证命令与结果、gaps。没跑的不说通过。
+维护规则时读 `.agents/README.md`；使用脚本时按需读 `qmclient_scripts/scripts_overview.md`。
 
-### 提交 commit / PR 前（用户要求提交时）
+## 测试代码规范
 
-- 标题使用 `<type>(<scope>): <中文简述>`。
-- 工作树可脏（多任务并行）；默认一次提交，仅用户要求或边界清晰时再拆。
-- review findings 与 gate 证据先收口；受保护分支默认走 PR，勿直推。
+### 测试层级
 
-### 发版（用户要求发新版本时）
+- 单元测试验证一个可独立调用的函数、状态机或小型类；通过生产接口输入并断言输出或状态变化，不启动完整客户端、服务端或真实外部服务。
+- 集成测试验证两个及以上生产模块的协作边界，例如组件与存储、解析器与缓存、调度器与消费者。允许使用 fake、内存实现或工作区临时目录，但不得用源码字符串代替模块协作。
+- 端到端测试构建并启动真实客户端、服务端或辅助进程，从外部命令、网络连接、日志和退出状态验证完整玩家路径。根 `scripts/` 属于 DDNet 上游同步区；QmClient 专属端到端与冒烟测试统一放在 `qmclient_scripts/integration/`，由 QmClient gate 编排。需要复用上游 runner 时复制到 QmClient 目录后独立适配，不向上游脚本加入 QmClient 特化行为。
+- 冒烟测试是端到端或集成测试的最小关键子集，只证明程序能启动、连接并完成基本操作；不能替代功能回归、异常路径或完整端到端覆盖。
+- 静态合同测试只验证无法通过稳定运行时接口观察的构建、平台、生成链、注册表、迁移终态和资源清单约束；文件使用 `*_contract_test.cpp` 或对应脚本合同测试名称，不得混入运行时测试文件。
 
-1. `python3 qmclient_scripts/bump_version.py --tag vX.Y.Z`（Windows 使用 `py -3` 或 `python`）
-2. 提交：`chore: bump version to X.Y.Z`
-3. `git tag vX.Y.Z && git push origin vX.Y.Z`
-4. CI 构建并调用 `generate_release_notes.py`（**自动汇总并润色**，不调外部 AI）发布 GitHub Release
-5. **Nightly 以脚本输出为终稿，无需人工润色**；Stable 可选手动再改。细则见 `docs/RELEASE_NOTE_TEMPLATE.md` §0。
+### 编写与保留
 
-## 全局硬约束
+- 优先验证真实行为和可观察结果。测试应调用生产实现，不复制算法、重写状态机或按当前实现逐行构造预期结果。
+- 可复现缺陷优先先写能在修复前失败的回归测试；至少覆盖触发条件、修复后的状态转换，以及本次缺陷相关的恢复、重复调用或用户覆盖路径。
+- 每项测试表达一个因果行为，名称说明条件和结果。共享准备代码放最小 fixture 或测试辅助模块，不把多个迁移阶段、多个功能域和数百个断言塞入一个 `TEST`。
+- 同一文件只承载一个功能域和一个主要验证层级。超过 1500 行、80 项测试、单个 suite 超过 50 项，或单个 `TEST` 超过 100 行时必须检查拆分；除非共享 fixture 或参数矩阵能证明拆分会明显降低可读性，否则应按状态机、组件或场景拆文件。
+- 参数矩阵仅用于同一行为的输入组合；不同失败原因、生命周期阶段或用户路径使用独立测试。表驱动测试失败时必须能定位具体输入。
+- 测试不得依赖执行顺序、真实用户目录、已安装客户端、互联网、固定端口或无界等待。并发和异步测试使用可观察条件与明确超时，不用任意长 `sleep` 掩盖竞态；临时数据放测试提供的隔离目录。
+- 删除过时或无效测试时，同时删除只为它存在的 helper、fixture、测试数据和构建注册。不要把已失效的实现镜像迁移到新文件继续保留。
 
-- 仓库即记录系统：决策、计划、状态、证据、交接写入版本化文件。
-- 一次一个功能；范围 = 用户请求 + 有效 plan/spec。歧义先问清。
-- 客户端进程只能操作当前工作区开发目录下启动的实例。除非用户在当次明确授权，不得启动、关闭、重启或杀死工作区外的客户端进程；尤其不得把 `/Applications` 或其他安装目录中的正式客户端当作开发实例。
-- 改行为前读真实代码；优先本地模式与 DDNet 兼容，不套泛化「现代 C++」。
-- 有 codegraph 类图谱工具时优先用其取上下文。
-- 无明确批准：不改协议、demo/skin 格式、物理、预测、碰撞、地图行为、rank 可达性、既有玩法语义。
-- 补丁聚焦；不重写无关上游；小改不动大抽象。
-- QmClient 特有工作优先落在 `src/game/client/components/qmclient/`、`src/game/client/QmUi/`、Qm 配置头、翻译、文档、metadata、`qmclient_scripts/`。
-- 设置卡片一律走全局卡片目录（`src/game/client/QmUi/cards/`）：
-  - 新功能的 UI 配置项做成卡片模块，落在 `QmCardCatalog{Visual,Function,Hud}.cpp` 或新增模块文件里，登记 stableId + 标题/测量/重测版本/预布局输入/内容渲染；
-  - 页面（`menus_qmclient.cpp` 的分类页、搜索页）只声明「这一页有哪些卡片」（`qm_card_catalog::BuildCards(..., XxxCardStableIds(), ...)`），不写卡片实现；
-  - 禁止把新的卡片构造/渲染代码继续堆进 `menus_qmclient.cpp`；该文件只保留页面骨架与卡片内容渲染函数（`CMenus::RenderQm*Content`）。
-  - 新增卡片源文件要同步登记到根 `CMakeLists.txt` 的 `GAME_CLIENT` 列表（`QmUi/cards/...`）。
-  - 卡片模块不能直接调用 `CMenus` 的私有内容函数，统一走 `qm_card_catalog::QmCardRenderHook` 桥接。
-- 超出范围需批准：引擎核心、服务端玩法、地图编辑器、第三方库、CI release、协议字段、snapshot/输入/时序/回放语义等。
-- 默认不改根 `CMakeLists.txt`、协议字段、序列化布局、文件格式定义（任务明确要求除外）。
-- 配置项前缀 `qm_` / `Qm`，不用 `cl_`。
-- 完整功能/改进后按 MMP 更新版本（纯调查/纯文本输出除外）。
-- 新功能与较大行为改动默认先讨论。
-- 不交付空模块、空文档、stub、「以后再决定」。
-- 默认 TDD：失败测试 → 最小实现 → 整理。
-- UTF-8；保留原 BOM；保持原换行（CRLF/LF）与缩进。
-- commit/PR 标题使用 `<type>(<scope>): <中文简述>`；`FEAT`/`FIX`/`DEL` 可用于 body 与汇报分组。
-- 文档路径统一前斜杠 `/`。
-- 代码注释用中文。
+### 源码合同边界
 
-## 构建与命令（摘要）
+- 禁止用 `ReadTestSourceFile`、`ReadRepoFile`、函数体截取或字符串查找证明运行时行为、调用顺序、局部变量名、具体分支写法或 UI 玩家体验。
+- 只有缺少稳定运行时观察点，并且约束本身属于构建或架构边界时才保留源码合同。测试中应说明该约束为何不能由行为测试覆盖，并尽量检查单一稳定事实。
+- include、函数名、局部符号、代码片段存在或不存在通常不是独立合同。确需约束注册、平台宏、生成文件、公开 API 删除或迁移终态时，优先解析结构化清单或调用专用校验器，最后才使用源码字符串。
+- 同一行为已有单元或集成测试后，删除重复的源码合同；静态接线合同不能替代对应状态机的成功、失败、取消、重试和恢复测试。
 
-- 脚本分层与推荐入口见 `qmclient_scripts/scripts_overview.md`。
-- i18n：`extract_strings` → `generate_all` → `validate` → `review_duplicate_entries`；维护源 `translations/i18n/*.toml`，`data/languages/*.txt` 为产物。
-- Windows 构建入口：`qmclient_scripts/cmake-windows.cmd`；目录 `cmake-build-debug` / `cmake-build-release`。例：`cmd /c qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 14`。
-- 同 build 目录内 `game-client` / `testrunner` / `run_cxx_tests` / `run_rust_tests` / `package_default` **串行**。
-- 日志与临时文件放 `tmp/`，勿堆仓库根。
+### 覆盖与验证
 
-## 十二原则：软件工程
+- “测试数量”“测试通过”和“代码覆盖率”是不同证据。没有生成 line、function、branch coverage 报告时，不得声称达到某个代码覆盖百分比。
+- 测试层级库存统一由 `python qmclient_scripts/test_inventory.py` 生成；其中 `process_smoke_runners`、`process_smoke_scenarios` 和 `e2e_scenarios` 必须分别报告，不能用 smoke 场景数量冒充端到端覆盖。
+- 评估覆盖时至少区分正常路径、边界输入、失败回退、取消或重入、持久化兼容、并发或生命周期，以及适用的平台分支；按实际功能风险说明已覆盖和缺漏。
+- 局部修改运行直接相关的单元或集成测试并构建受影响目标。跨进程、连接、启动、地图或编辑器路径变化时补对应端到端或冒烟场景；准发布验证按 verification skill 选择 gate。
+- 最终回复记录实际运行的测试层级、过滤范围和未覆盖场景。源码合同通过只能称静态合同通过，构建成功不能称运行时、端到端、视觉或跨平台行为通过。
 
-非简单任务宁可慢一点、更谨慎；简单任务勿过度流程化。
+## 构建入口
 
-1. **写前想清楚** — 说假设；歧义先问；有更简做法主动指出。
-2. **简单优先** — 最少代码；不为一次性用法加抽象。
-3. **精准修改** — 只改必须改的；不顺手「优化」邻域。
-4. **目标导向** — 先定义完成标准再迭代。
-5. **模型做判断** — 分类/起草/总结；确定性转换交给代码。
-6. **Token 预算** — 单任务约 4k、会话约 30k 为警戒；将超限时先总结。
-7. **暴露冲突** — 二选一并说明，不折中混用。
-8. **写前先读** — 导出、调用方、共享工具。
-9. **测试验意图** — 业务变了测试应失败。
-10. **检查点** — 重要步骤后总结做了/验了/还剩什么。
-11. **遵循仓库约定** — 一致性优先；反对约定要明说。
-12. **失败说清楚** — 跳过项不得称完成；默认暴露不确定性。
+- Windows 构建必须使用 `qmclient_scripts/cmake-windows.cmd`，不要直接调用 `cmake --build`；封装脚本会加载 VS/MSVC 环境，并调用 `repair_ninja_msvc_prefix.py` 修复 Ninja 依赖前缀。
+- 常用命令：`cmd /c qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 14`；C++ 测试使用目标 `run_cxx_tests`，Rust 测试使用目标 `run_rust_tests`。
+- 同一 build 目录内的构建、测试、打包必须串行；首次配置使用 `qmclient_scripts/cmake-windows.cmd -G Ninja -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release`。
+
+## 验证与交付
+
+- 代码改动按验证 skill 选择风险匹配的测试与 gate；低风险修改允许相关过滤测试，常规代码至少 quick gate。已覆盖的检查不重复执行。
+- 修复可复现行为时优先先写失败测试；小改动不为满足 TDD 写实现镜像或无意义测试。
+- 纯文档人工核对内容、链接和状态，不跑代码 gate。未经验证的运行时或跨平台行为不称通过。
+- 默认用自然段说明结果、验证和真实剩余问题；必要时才列项，普通回复不套 commit/PR 模板。
+- 功能交付按项目 MMP 约定更新版本；纯调查、文档、规则维护不升客户端版本，开发中间步骤不反复升版。版本操作见 Git skill。
+
+## 文档权威
+
+- 本文件负责全局边界，skills 负责专项操作，`references/` 仅放按需资料；`docs/superpowers/` 放规格、计划和证据，不再维护另一套通用 agent 规则。
+- 采用与当前任务相符且仍有效的文档；`draft` 仅在用户采纳后作为实现依据，无状态文档须核对现状，不能仅凭日期认定有效。
+- 归档、过时或被替代的文档仅作历史线索。保留历史记录，以状态或 supersedes 标记替代关系。
+- 重要决策、长任务进度和交接证据写入版本化文档；小任务可直接在最终回复交付，不强制新建计划或报告。

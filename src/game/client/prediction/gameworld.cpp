@@ -17,6 +17,7 @@
 #include <game/client/laser_data.h>
 #include <game/client/pickup_data.h>
 #include <game/client/projectile_data.h>
+#include <game/collision.h>
 #include <game/mapbugs.h>
 #include <game/mapitems.h>
 
@@ -369,21 +370,26 @@ void CGameWorld::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamage,
 			ForceDir = normalize(Diff);
 		l = 1 - std::clamp((l - InnerRadius) / (Radius - InnerRadius), 0.0f, 1.0f);
 		float Strength;
-		if(Owner == -1 || !GetCharacterById(Owner))
+		CCharacter *pOwnerChar = GetCharacterById(Owner);
+		if(Owner == -1 || !pOwnerChar)
 			Strength = GlobalTuning()->m_ExplosionStrength;
 		else
-			Strength = GetCharacterById(Owner)->GetTuning(GetCharacterById(Owner)->GetOverriddenTuneZone())->m_ExplosionStrength;
+			Strength = pOwnerChar->GetTuning(pOwnerChar->GetOverriddenTuneZone())->m_ExplosionStrength;
 
 		float Dmg = Strength * l;
 		if((int)Dmg)
-			if((GetCharacterById(Owner) ? !GetCharacterById(Owner)->GrenadeHitDisabled() : g_Config.m_SvHit || NoDamage) || Owner == pChar->GetCid())
+			if((pOwnerChar ? !pOwnerChar->GrenadeHitDisabled() : g_Config.m_SvHit || NoDamage) || Owner == pChar->GetCid())
 			{
 				if(Owner != -1 && !pChar->CanCollide(Owner))
 					continue;
 				if(Owner == -1 && ActivatedTeam != -1 && pChar->Team() != ActivatedTeam)
 					continue;
 				pChar->TakeDamage(ForceDir * Dmg * 2, (int)Dmg, Owner, Weapon);
-				if(GetCharacterById(Owner) ? GetCharacterById(Owner)->GrenadeHitDisabled() : !g_Config.m_SvHit || NoDamage)
+				if(pOwnerChar)
+				{
+					pOwnerChar->AntiPingInterference(pChar->GetCid());
+				}
+				if(pOwnerChar ? pOwnerChar->GrenadeHitDisabled() : !g_Config.m_SvHit || NoDamage)
 					break;
 			}
 	}
@@ -510,13 +516,15 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 		CEntity *pEnt = new CPickup(NetPickup);
 		InsertEntity(pEnt, true);
 	}
-	else if((ObjType == NETOBJTYPE_LASER || ObjType == NETOBJTYPE_DDNETLASER) && m_WorldConfig.m_PredictWeapons)
+	else if(ObjType == NETOBJTYPE_LASER || ObjType == NETOBJTYPE_DDNETLASER)
 	{
 		CLaserData Data = ExtractLaserInfo(ObjType, pObjData, this, pDataEx);
 		if(!IsLocalTeam(Data.m_Owner) || !Data.m_Predict)
 		{
 			return;
 		}
+		if(!(Data.m_Type == LASERTYPE_DOOR ? m_WorldConfig.m_PredictTiles : m_WorldConfig.m_PredictWeapons))
+			return;
 
 		if(Data.m_Type == LASERTYPE_RIFLE || Data.m_Type == LASERTYPE_SHOTGUN || Data.m_Type < 0)
 		{
@@ -576,7 +584,6 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 				return;
 			}
 			CDoor *pEnt = new CDoor(NetDoor);
-			pEnt->ResetCollision();
 			InsertEntity(pEnt);
 		}
 		else if(Data.m_Type == LASERTYPE_PLASMA)
@@ -593,6 +600,23 @@ void CGameWorld::NetObjAdd(int ObjId, int ObjType, const void *pObjData, const C
 			InsertEntity(pEnt);
 		}
 	}
+}
+
+void CGameWorld::ResetDoorCollision()
+{
+	// 移除旧实体后重建门碰撞，使重叠门按服务端地图实体的创建顺序生效。
+	std::vector<CDoor *> vpDoors;
+	for(CEntity *pEnt = FindFirst(ENTTYPE_DOOR); pEnt; pEnt = pEnt->TypeNext())
+		vpDoors.push_back(static_cast<CDoor *>(pEnt));
+	std::stable_sort(vpDoors.begin(), vpDoors.end(), [this](const CDoor *pLeft, const CDoor *pRight) {
+		const int LeftIndex = Collision()->GetPureMapIndex(pLeft->m_Pos);
+		const int RightIndex = Collision()->GetPureMapIndex(pRight->m_Pos);
+		if(LeftIndex != RightIndex)
+			return LeftIndex < RightIndex;
+		return (pLeft->m_Number > 0) < (pRight->m_Number > 0);
+	});
+	for(CDoor *pDoor : vpDoors)
+		pDoor->ResetCollision();
 }
 
 void CGameWorld::NetObjEnd()
@@ -612,6 +636,7 @@ void CGameWorld::NetObjEnd()
 						pHookedChar->m_MarkedForDestroy = false;
 					}
 	RemoveEntities();
+	ResetDoorCollision();
 
 	// Update character IDs and pointers
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -643,6 +668,7 @@ void CGameWorld::CopyWorldClean(CGameWorld *pFrom)
 	m_pMapBugs = pFrom->m_pMapBugs;
 	m_Teams = pFrom->m_Teams;
 	m_Core.m_vSwitchers = pFrom->m_Core.m_vSwitchers;
+	m_PredictedEvents = pFrom->m_PredictedEvents;
 	// delete the previous entities
 	Clear();
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -844,42 +870,34 @@ void CGameWorld::CreatePredictedEvent(const CPredictedEvent &NewEvent)
 	const auto It = std::find_if(
 		m_PredictedEvents.begin(),
 		m_PredictedEvents.end(),
-		[NewEvent](const CPredictedEvent &Event) {
-			return Event.m_EventId == NewEvent.m_EventId && Event.m_ExtraInfo == NewEvent.m_ExtraInfo &&
-			       Event.m_Pos == NewEvent.m_Pos && Event.m_Id == NewEvent.m_Id && Event.m_Tick == NewEvent.m_Tick;
-		});
+		[NewEvent](const CPredictedEvent &Event) { return QmPredictedEventMatchesForCreation(Event, NewEvent); });
 
 	if(It == m_PredictedEvents.end())
 	{
 		m_PredictedEvents.push_back(NewEvent);
 	}
-}
-
-bool CGameWorld::CheckPredictedEventHandled(const CPredictedEvent &CheckEvent)
-{
-	// events could be delayed by ping, so don't check for exact tick match
-	// also received events don't have Id
-	auto It = std::find_if(
-		m_PredictedEvents.begin(),
-		m_PredictedEvents.end(),
-		[CheckEvent](const CPredictedEvent &Event) {
-			return Event.m_Handled == true && Event.m_EventId == CheckEvent.m_EventId &&
-			       Event.m_Pos == CheckEvent.m_Pos && Event.m_Tick <= CheckEvent.m_Tick && Event.m_ExtraInfo == CheckEvent.m_ExtraInfo;
-		});
-
-	if(It == m_PredictedEvents.end())
+	else if(NewEvent.m_EventId == NETEVENTTYPE_SOUNDWORLD && !It->m_Handled)
 	{
-		return false;
+		// 预测校正位置时保留同一声音身份，同时更新尚未播放事件的
+		// 空间化位置。已播放事件保留原位置，确保服务器确认仍能匹配。
+		It->m_Pos = NewEvent.m_Pos;
 	}
-
-	// remove the event after it has been confirmed played
-	m_PredictedEvents.erase(It);
-	return true;
 }
 
-bool CGameWorld::CheckPredictedHammerHitHandled(const CPredictedEvent &CheckEvent)
+bool CGameWorld::CheckPredictedEventHandled(const CPredictedEvent &CheckEvent, bool *pUnplayedMatch)
 {
-	return QmCheckPredictedHammerHitHandled(m_PredictedEvents, CheckEvent);
+	// 网络确认事件没有实体 Id，只能在有限 tick 窗口内按类型、附加信息和位置匹配。
+	return QmCheckPredictedEventHandled(m_PredictedEvents, CheckEvent, pUnplayedMatch);
+}
+
+bool CGameWorld::CheckPredictedHammerHitHandled(const CPredictedEvent &CheckEvent, bool *pUnplayedMatch)
+{
+	return QmCheckPredictedHammerHitHandled(m_PredictedEvents, CheckEvent, pUnplayedMatch);
+}
+
+bool CGameWorld::CheckPredictedHammerHitHandledLoose(int AttackerId, vec2 Pos, int Tick)
+{
+	return QmCheckPredictedHammerHitHandledLoose(m_PredictedEvents, AttackerId, Pos, Tick);
 }
 
 void CGameWorld::CreatePredictedSound(vec2 Pos, int SoundId, int Id)
@@ -887,8 +905,30 @@ void CGameWorld::CreatePredictedSound(vec2 Pos, int SoundId, int Id)
 	if(!g_Config.m_SndEnable)
 		return;
 
+	if(g_Config.m_DbgPredictEvents)
+		dbg_msg("pred_event", "create sound=%d id=%d tick=%d pos=%.1f,%.1f", SoundId, Id, GameTick(), Pos.x, Pos.y);
+
 	CPredictedEvent Event(NETEVENTTYPE_SOUNDWORLD, Pos, Id, GameTick(), SoundId);
 	CreatePredictedEvent(Event);
+}
+
+// QmClient: 见 gameworld.h 声明处注释。屏障事件带实体 Id（本地角色），
+// 因此在 QmCheckPredictedEventHandled 中不受"无 Id 事件只屏蔽 1 tick"的
+// 限制，能覆盖服务端确认晚到数 tick 的情况；同位置 3 秒内的同声快照
+// 事件至多被吞一次，属可接受的权衡（与预测钩子声音的既有行为一致）。
+void CGameWorld::CreateHandledPredictedSound(vec2 Pos, int SoundId, int Id)
+{
+	if(!g_Config.m_SndEnable)
+		return;
+
+	CPredictedEvent Event(NETEVENTTYPE_SOUNDWORLD, Pos, Id, GameTick(), SoundId);
+	Event.m_Handled = true;
+	const auto It = std::find_if(
+		m_PredictedEvents.begin(),
+		m_PredictedEvents.end(),
+		[Event](const CPredictedEvent &Existing) { return QmPredictedEventMatchesForCreation(Existing, Event); });
+	if(It == m_PredictedEvents.end())
+		m_PredictedEvents.push_back(Event);
 }
 
 void CGameWorld::CreatePredictedExplosionEvent(vec2 Pos, int Id)
@@ -899,7 +939,29 @@ void CGameWorld::CreatePredictedExplosionEvent(vec2 Pos, int Id)
 
 void CGameWorld::CreatePredictedHammerHitEvent(vec2 Pos, int Id, int TargetId)
 {
+	if(!g_Config.m_ClPredictEvents || !m_WorldConfig.m_PredictEvents)
+		return;
+
 	CPredictedEvent Event(NETEVENTTYPE_HAMMERHIT, Pos, Id, GameTick(), TargetId);
+	// 预测在同一 tick 内可能重复运行，位置修正不应把同一次命中拆成多个粒子事件。
+	const auto It = std::find_if(
+		m_PredictedEvents.begin(),
+		m_PredictedEvents.end(),
+		[Event](const CPredictedEvent &Existing) {
+			return (Existing.m_EventId == Event.m_EventId && Existing.m_Id == Event.m_Id &&
+				       Existing.m_Tick == Event.m_Tick && Existing.m_ExtraInfo == Event.m_ExtraInfo) ||
+			       (Existing.m_EventId == Event.m_EventId && Existing.m_Handled && Existing.m_Id == Event.m_Id &&
+				       Existing.m_ExtraInfo == Event.m_ExtraInfo && Event.m_Tick >= Existing.m_Tick &&
+				       Event.m_Tick - Existing.m_Tick <= 1 && QmPredictedEventPositionsMatch(Event.m_EventId, Existing.m_Pos, Event.m_Pos));
+		});
+	if(It != m_PredictedEvents.end())
+	{
+		// 命中身份由攻击者、目标和 tick 决定；仅在粒子尚未播放时
+		// 更新预测校正位置，已播放事件保留原位置以便服务器确认匹配。
+		if(!It->m_Handled)
+			It->m_Pos = Event.m_Pos;
+		return;
+	}
 	CreatePredictedEvent(Event);
 }
 

@@ -24,8 +24,6 @@
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
-#include <game/client/components/qmclient/qm_hook_coll_candidates.h>
-#include <game/client/components/qmclient/qm_hook_coll_spatial_index.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/client/race.h>
@@ -86,11 +84,15 @@
 #include "components/qmclient/music_lyrics/music_lyrics_integration.h"
 #include "components/qmclient/music_lyrics/qm_spotify_integration.h"
 #include "components/qmclient/netease/netease_integration.h"
+#include "components/qmclient/qm_hook_coll_candidates.h"
+#include "components/qmclient/qm_hook_coll_spatial_index.h"
 #include "components/qmclient/qmclient.h"
+#include "components/qmclient/rank_ghost.h"
 #include "components/qmclient/scripting.h"
 #include "components/qmclient/stutter_diagnostics.h"
 #include "components/qmclient/translate/translate.h"
 #include "components/qmclient/voice/voice_component.h"
+#include "components/qmclient/water_hammer_indicator.h"
 #include "components/qmclient/weapon_trajectory.h"
 #include "components/race_demo.h"
 #include "components/scoreboard.h"
@@ -182,9 +184,16 @@ public:
 
 	bool m_DDRaceTeam;
 	bool m_PredictEvents;
+	bool m_OldLaser;
 	char m_aGameType[16];
+
+	// 服务器未广播时为零。
+	int m_MinTeamSize;
+	int m_MaxTeamSize;
+	int m_NumDDRaceTeams;
 };
 
+// CSnapEntities 及其关联逻辑已提取到 qmclient/snapshot_entities.h（本次吸收）。
 enum class EClientIdFormat
 {
 	NO_INDENT,
@@ -293,7 +302,9 @@ public:
 	CQmChatEmoji m_QmChatEmoji;
 	CQmMonitoring m_QmMonitoring;
 	CQmHudNotifications m_QmHudNotifications;
+	CQmWaterHammerIndicator m_QmWaterHammerIndicator;
 	CQmWeaponTrajectory m_QmWeaponTrajectory;
+	CRankGhost m_RankGhost;
 	CTClient m_TClient;
 	CFastPractice m_FastPractice;
 	CVoiceComponent m_Voice;
@@ -321,7 +332,7 @@ private:
 		CQmStutterSampleSeries m_Render;
 	};
 
-	void ProcessQmStutterFrame(double FrameMs);
+	void ProcessQmStutterFrame();
 	void RecordComponentUpdate(size_t ComponentIndex, double DurationMs);
 	void RecordComponentRender(size_t ComponentIndex, double DurationMs);
 	void CaptureQmStutterFeatureSnapshot();
@@ -388,6 +399,7 @@ private:
 	CUiRuntimeV2 m_UiRuntimeV2;
 	CQmIconManager m_QmIconManager;
 	int m_AppliedQmUiIconWeight = -1;
+	int m_AppliedQmCustomFontWeight = -1;
 	CQmImeManager m_QmImeManager;
 	CRaceHelper m_RaceHelper;
 	CQmHammerHitTracker m_HammerHitTracker;
@@ -400,6 +412,14 @@ private:
 		bool m_RenderEffect;
 	};
 	std::vector<SPendingHammerHitEvent> m_vPendingHammerHitEvents;
+
+	// QmClient: 最近一次锤击特效播放记录。挂 dummy 时同一服务端事件会经主/
+	// 分身两条连接各送达一次，第二次确认会绕过预测事件的 confirmed 屏障
+	// （tick 差可到 2-3，契约只允许 1）；在特效播放处按时间+位置+tick 识别
+	// 跨连接的重复送达，防止粒子偶发双播。
+	vec2 m_LastHammerEffectPos = vec2(0.0f, 0.0f);
+	int m_LastHammerEffectTick = -1;
+	int64_t m_LastHammerEffectTime = 0;
 
 	void ProcessEvents();
 	void FinalizeHammerHitEvents();
@@ -483,6 +503,7 @@ public:
 	class CQmIconManager *QmIconManager() { return &m_QmIconManager; }
 	const class CQmIconManager *QmIconManager() const { return &m_QmIconManager; }
 	void SyncQmUiIconWeight();
+	void SyncQmCustomFontWeight();
 	class ISound *Sound() const { return m_pSound; }
 	class IInput *Input() const { return m_pInput; }
 	class IStorage *Storage() const { return m_pStorage; }
@@ -542,6 +563,8 @@ public:
 	}
 	CTClient &TClientComponent() { return m_TClient; }
 	const CTClient &TClientComponent() const { return m_TClient; }
+	CQmWaterHammerIndicator &QmWaterHammerIndicator() { return m_QmWaterHammerIndicator; }
+	const CQmWaterHammerIndicator &QmWaterHammerIndicator() const { return m_QmWaterHammerIndicator; }
 	bool HasFreezeWakeupPopups() const { return m_TClient.HasFreezeWakeupPopups(); }
 	void RenderFreezeWakeupPopups() { m_TClient.RenderFreezeWakeupPopups(); }
 
@@ -577,8 +600,15 @@ public:
 
 	vec2 m_LocalCharacterPos;
 
-	// predicted players
+	/**
+	 * Our prediction for the local character at tick
+	 * `IClient::PredGameTick() - 1`.
+	 */
 	CCharacterCore m_PredictedPrevChar;
+	/**
+	 * Our prediction for the local character at tick
+	 * `IClient::PredGameTick()`.
+	 */
 	CCharacterCore m_PredictedChar;
 
 	// snap pointers
@@ -795,6 +825,8 @@ public:
 		CNetObj_Character m_Snapped;
 		CNetObj_Character m_Evolved;
 
+		CNetMsg_Sv_PreInput m_aPreInputs[200];
+
 		// rendered characters
 		CNetObj_Character m_RenderCur;
 		CNetObj_Character m_RenderPrev;
@@ -803,16 +835,10 @@ public:
 		bool m_IsPredictedLocal;
 		int64_t m_aSmoothStart[2];
 		int64_t m_aSmoothLen[2];
-		bool m_SpecCharPresent;
-		vec2 m_SpecChar;
-
-		// 冷数据必须排在热渲染字段之后：这两个数组成员合计约 11 KB，
-		// 原先夹在 m_RenderCur/m_RenderPos 与 m_SpecChar 之间，会把同一客户端的热字段
-		// 撑到相距十来个 KB，导致每帧按 128 个客户端遍历时几乎每次访问都跨 cache line。
-		// 仅调整声明顺序，无任何语义变化。
-		CNetMsg_Sv_PreInput m_aPreInputs[200];
 		vec2 m_aPredPos[200];
 		int m_aPredTick[200];
+		bool m_SpecCharPresent;
+		vec2 m_SpecChar;
 
 		void UpdateSkinInfo();
 		void UpdateSkin7HatSprite(int Dummy);
@@ -913,15 +939,13 @@ public:
 	bool OnDemoPlaybackMessage(int MsgId, CUnpacker *pUnpacker) override;
 	void ResetDemoPlaybackState() override;
 	void InvalidateSnapshot() override;
-	void OnNewSnapshot() override;
+	void OnNewSnapshot(bool DummySwapped) override;
 	void OnPredict() override;
 	void OnActivateEditor() override;
 	void OnDummySwap() override;
 	int OnSnapInput(int *pData, bool Dummy, bool Force) override;
 	void PrepareInputForSend(int *pData, int Size, bool Dummy) override;
 	void OnShutdown() override;
-	void OnQmPerfFrame(double FrameMs) override;
-	void OnQmPerfStop(bool Shutdown) override;
 	void OnEnterGame() override;
 	void OnRconType(bool UsernameReq) override;
 	void OnRconLine(const char *pLine) override;
@@ -1023,11 +1047,20 @@ public:
 	int CurrentRaceTime() const;
 
 	bool IsTeamPlay() const;
+	int MinTeamSize() const;
+	int MaxTeamSize() const;
 	bool IsWorldPaused() const;
 	bool IsDemoPlaybackPaused() const;
 	float GetAnimationPlaybackSpeed() const;
 
-	bool AntiPingPlayers() const { return m_FastPractice.ForcePredictPlayers() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingPlayers && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
+	int AntiPingPlayers() const
+	{
+		if(m_FastPractice.ForcePredictPlayers())
+			return 1;
+		if(g_Config.m_ClAntiPing && g_Config.m_ClAntiPingPlayers && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+			return g_Config.m_ClAntiPingPlayers;
+		return 0;
+	}
 	bool AntiPingGrenade() const { return m_FastPractice.ForcePredictGrenade() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingGrenade && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
 	bool AntiPingWeapons() const { return m_FastPractice.ForcePredictWeapons() || (g_Config.m_ClAntiPing && g_Config.m_ClAntiPingWeapons && !m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK); }
 	bool AntiPingGunfire() const { return m_FastPractice.ForcePredictGunfire() || (AntiPingGrenade() && AntiPingWeapons() && g_Config.m_ClAntiPingGunfire); }
@@ -1064,6 +1097,7 @@ public:
 
 	// TClient
 	CGameWorld m_RegularPredictedWorld;
+	CGameWorld m_PrevRegularPredictedWorld;
 
 	// TClient
 	CGameWorld m_ExtraPredictedWorld;
@@ -1088,6 +1122,15 @@ public:
 	void LoadHudSkin(const char *pPath, bool AsDir = false);
 	void LoadExtrasSkin(const char *pPath, bool AsDir = false);
 	void ReloadNamedSingleFileAssetImage(int ImageId, const char *pCategoryId, const char *pActiveName);
+	// 影响加载结果的开关（例如 qm_blank_asset_fallback）变化后重载全部自定义素材图片。
+	// 只把任务排队，实际重载由 ProcessPendingCustomAssetImageryReload 每帧一个类别分摊执行。
+	void ReloadCustomAssetImagery();
+	void ProcessPendingCustomAssetImageryReload();
+	// 上次完成素材加载时的 qm_blank_asset_fallback 值（-1 = 初始素材未加载），用于每帧兜底轮询。
+	int m_LastBlankAssetFallback = -1;
+	// 待处理的热重载步骤（-1 = 空闲，0..7 = 逐帧执行对应类别的重载）及其对应的开关值。
+	int m_PendingCustomAssetReloadStep = -1;
+	int m_PendingCustomAssetReloadFallback = -1;
 
 	struct SClientGameSkin
 	{
@@ -1144,6 +1187,7 @@ public:
 
 		// pickups
 		IGraphics::CTextureHandle m_SpritePickupHealth;
+		IGraphics::CTextureHandle m_SpritePickupFreeze;
 		IGraphics::CTextureHandle m_SpritePickupArmor;
 		IGraphics::CTextureHandle m_SpritePickupArmorShotgun;
 		IGraphics::CTextureHandle m_SpritePickupArmorGrenade;
@@ -1195,6 +1239,7 @@ public:
 	bool m_ParticlesSkinLoaded = false;
 	int m_SpawnEventsProcessed = 0;
 	int m_SpawnEffectsDispatched = 0;
+	int m_SpawnEffectsFiltered = 0;
 	int m_SpawnParticleAddFailures = 0;
 
 	struct SClientEmoticonsSkin
@@ -1275,9 +1320,10 @@ public:
 
 	// Q1menG Client Recognition
 	void ClearQ1menGSyncMarks();
-	void MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, const char *pQid = nullptr, EClientBrand ClientBrand = EClientBrand::QM);
+	void MarkQ1menGSyncClient(int ClientId, int64_t ExpireTick, bool FootParticlesEnabled, bool RemoteParticlesEnabled, const char *pQid = nullptr, EClientBrand ClientBrand = EClientBrand::QM);
 	bool IsQ1menGClientRecognized(int ClientId) const;
 	const char *GetQ1menGClientQid(int ClientId) const;
+	bool ShouldRenderQ1menGRemoteFootParticles(int ClientId) const;
 	void ClearQmVoiceSyncMarks();
 	void MarkQmVoiceSupportedClient(int ClientId, int64_t ExpireTick);
 	bool IsQmVoiceSupportedClient(int ClientId) const;
@@ -1290,6 +1336,7 @@ public:
 
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
+	// 扩展信息暂存区：保留容量跨帧复用，只在构建快照时原地清空。
 	std::vector<CSnapEntities> m_vSnapEntityExtensionsScratch;
 	void SnapCollectEntities();
 	int GetFastInputPredictionAmountMs();
@@ -1302,7 +1349,8 @@ private:
 
 	std::vector<std::shared_ptr<CManagedTeeRenderInfo>> m_vpManagedTeeRenderInfos;
 	void UpdateManagedTeeRenderInfos();
-	// 每帧校验托管/客户端渲染信息里的皮肤句柄是否还存活，失效就重新解析（绘制期兜底之外的兜底）。
+	// 皮肤贴图被卸载 / 皮肤容器重建 / 图形设备重建这些路径只要漏掉一次通知，
+	// 引用旧句柄的渲染信息就会一直把 Tee 画成没有贴图的实心块且不会自行恢复。
 	void RepairStaleTeeRenderInfos();
 
 	void UpdateAutoTeamLock();
@@ -1323,6 +1371,7 @@ private:
 	int m_PredictedDummyId;
 
 	int m_IsDummySwapping;
+	int m_aLastProcessedEventTick[NUM_DUMMIES] = {-1, -1};
 	bool m_RequestPredictionRefreshAfterConfigChange = false;
 	int m_LastStreamerHideSkins = -1;
 	int m_LastStreamerFriendsIgnoreClan = -1;
@@ -1334,6 +1383,8 @@ private:
 	int64_t m_aAutoTeamLockDeadlineTick[NUM_DUMMIES] = {0, 0};
 	bool m_aAutoTeamLockPending[NUM_DUMMIES] = {false, false};
 	int64_t m_aQ1menGSyncMarkUntil[MAX_CLIENTS] = {0};
+	bool m_aQ1menGSyncFootParticlesEnabled[MAX_CLIENTS] = {false};
+	bool m_aQ1menGSyncRemoteParticlesEnabled[MAX_CLIENTS] = {false};
 	EClientBrand m_aQ1menGSyncClientBrands[MAX_CLIENTS] = {};
 	char m_aaQ1menGSyncQid[MAX_CLIENTS][33] = {{0}};
 	int64_t m_aQmVoiceSyncMarkUntil[MAX_CLIENTS] = {0};

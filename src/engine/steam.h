@@ -23,6 +23,9 @@ public:
 	virtual void SetGameInfo(const NETADDR &ServerAddr, const char *pMapName, bool AnnounceAddr) = 0;
 };
 
+// 打开 Steam 主窗口，不启动任何游戏。
+bool SteamOpenClient();
+
 ISteam *CreateSteam();
 
 #endif // ENGINE_STEAM_H

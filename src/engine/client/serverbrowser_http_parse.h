@@ -6,90 +6,55 @@
 #include <engine/shared/json.h>
 #include <engine/shared/serverinfo.h>
 
-#include <utility>
 #include <vector>
 
-// 先构建完整结果，失败时保留调用方的旧列表；解析函数不访问客户端或配置。
+// 纯解析层：先构建完整的新列表，输入无效时保留调用方旧列表。
 inline bool ServerBrowserParseHttpList(json_value *pJson, std::vector<CServerInfo> *pvServers)
 {
 	if(pJson == nullptr)
 		return true;
-	std::vector<CServerInfo> vServers;
-
-	const json_value &Json = *pJson;
-	const json_value &Servers = Json["servers"];
+	const json_value &Servers = (*pJson)["servers"];
 	if(Servers.type != json_array)
-	{
 		return true;
-	}
-	for(unsigned int i = 0; i < Servers.u.array.length; i++)
+	std::vector<CServerInfo> vServers;
+	for(unsigned i = 0; i < Servers.u.array.length; ++i)
 	{
 		const json_value &Server = Servers[i];
 		const json_value &Addresses = Server["addresses"];
 		const json_value &Info = Server["info"];
 		const json_value &Location = Server["location"];
-		int ParsedLocation = CServerInfo::LOC_UNKNOWN;
-		CServerInfo2 ParsedInfo;
 		if(Addresses.type != json_array || (Location.type != json_string && Location.type != json_none))
-		{
 			return true;
-		}
-		if(Location.type == json_string)
-		{
-			if(CServerInfo::ParseLocation(&ParsedLocation, Location))
-			{
-				return true;
-			}
-		}
+		int ParsedLocation = CServerInfo::LOC_UNKNOWN;
+		if(Location.type == json_string && CServerInfo::ParseLocation(&ParsedLocation, Location))
+			return true;
+		CServerInfo2 ParsedInfo;
 		if(CServerInfo2::FromJson(&ParsedInfo, &Info))
-		{
-			// 单个服务器字段无效只跳过本项，保持主列表的现有解析规则。
 			continue;
-		}
-		CServerInfo SetInfo = ParsedInfo;
-		SetInfo.m_Location = ParsedLocation;
-		SetInfo.m_NumAddresses = 0;
-		bool GotVersion6 = false;
-		for(unsigned int a = 0; a < Addresses.u.array.length; a++)
+		CServerInfo Parsed = ParsedInfo;
+		Parsed.m_Location = ParsedLocation;
+		Parsed.m_NumAddresses = 0;
+		bool HasSix = false;
+		for(unsigned AddressIndex = 0; AddressIndex < Addresses.u.array.length; ++AddressIndex)
 		{
-			const json_value &Address = Addresses[a];
-			if(Address.type != json_string)
-			{
+			if(Addresses[AddressIndex].type != json_string)
 				return true;
-			}
-			if(str_startswith(Addresses[a], "tw-0.6+udp://"))
-			{
-				GotVersion6 = true;
-				break;
-			}
+			if(str_startswith(Addresses[AddressIndex], "tw-0.6+udp://"))
+				HasSix = true;
 		}
-		for(unsigned int a = 0; a < Addresses.u.array.length; a++)
+		for(unsigned AddressIndex = 0; AddressIndex < Addresses.u.array.length; ++AddressIndex)
 		{
-			const json_value &Address = Addresses[a];
-			if(Address.type != json_string)
-			{
-				return true;
-			}
-			if(GotVersion6 && str_startswith(Addresses[a], "tw-0.7+udp://"))
-			{
+			const char *pAddress = Addresses[AddressIndex].u.string.ptr;
+			if(HasSix && str_startswith(pAddress, "tw-0.7+udp://"))
 				continue;
-			}
-			NETADDR ParsedAddr;
-			if(net_addr_from_url(&ParsedAddr, Addresses[a], nullptr, 0) || ParsedAddr.port == 0)
-			{
-				// 跳过未知地址。
+			NETADDR ParsedAddress;
+			if(net_addr_from_url(&ParsedAddress, pAddress, nullptr, 0) || ParsedAddress.port == 0)
 				continue;
-			}
-			if(SetInfo.m_NumAddresses < (int)std::size(SetInfo.m_aAddresses))
-			{
-				SetInfo.m_aAddresses[SetInfo.m_NumAddresses] = ParsedAddr;
-				SetInfo.m_NumAddresses += 1;
-			}
+			if(Parsed.m_NumAddresses < (int)std::size(Parsed.m_aAddresses))
+				Parsed.m_aAddresses[Parsed.m_NumAddresses++] = ParsedAddress;
 		}
-		if(SetInfo.m_NumAddresses > 0)
-		{
-			vServers.push_back(SetInfo);
-		}
+		if(Parsed.m_NumAddresses > 0)
+			vServers.push_back(Parsed);
 	}
 	*pvServers = std::move(vServers);
 	return false;

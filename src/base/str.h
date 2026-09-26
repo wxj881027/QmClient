@@ -4,6 +4,7 @@
 #ifndef BASE_STR_H
 #define BASE_STR_H
 
+#include <array>
 #include <cinttypes>
 #include <cstdarg>
 #include <cstddef>
@@ -40,6 +41,7 @@
  * @return Length of written string, even if it has been truncated
  *
  * @remark The strings are treated as null-terminated strings.
+ * @remark At most dst_size bytes are read from src.
  * @remark Guarantees that dst string will contain null-termination.
  */
 int str_copy(char *dst, const char *src, int dst_size);
@@ -59,6 +61,23 @@ template<int N>
 void str_copy(char (&dst)[N], const char *src)
 {
 	str_copy(dst, src, N);
+}
+
+/**
+ * Copies a string to a fixed-size std::array of chars.
+ *
+ * @ingroup Strings
+ *
+ * @param dst Array that shall receive the string.
+ * @param src String to be copied.
+ *
+ * @remark The strings are treated as null-terminated strings.
+ * @remark Guarantees that dst string will contain null-termination.
+ */
+template<size_t N>
+void str_copy(std::array<char, N> &dst, const char *src)
+{
+	str_copy(dst.data(), src, static_cast<int>(N));
 }
 
 /**
@@ -516,7 +535,7 @@ const char *str_find(const char *haystack, const char *needle);
  *
  * @remark The token is always null-terminated.
  */
-const char *str_next_token(const char *str, const char *delim, char *buffer, int buffer_size);
+const char *str_next_token(const char *str, const char *delim, char *buffer, size_t buffer_size);
 
 /**
  * Checks if needle is in list delimited by delim.

@@ -5,10 +5,21 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+#include <string>
+
 static void TestParseValidation(const char *pJson, bool ExpectedSuccess)
 {
 	json_value *pParsed = JsonParse(pJson, str_length(pJson));
 	EXPECT_EQ(pParsed != nullptr, ExpectedSuccess) << "Expected parsing to " << (ExpectedSuccess ? "succeed" : "fail") << " for '" << pJson << "'";
+	json_value_free(pParsed);
+
+	json_settings Settings{};
+	char aError[json_error_max] = {};
+	pParsed = JsonParseEx(&Settings, pJson, str_length(pJson), aError);
+	EXPECT_EQ(pParsed != nullptr, ExpectedSuccess);
+	if(!ExpectedSuccess)
+		EXPECT_STREQ(aError, "invalid utf-8 in string literal");
 	json_value_free(pParsed);
 }
 
@@ -57,4 +68,35 @@ TEST(Json, Escape)
 	EXPECT_STREQ(EscapeJson(aBuf, 5, "aaaaaa"), "aaaa");
 	EXPECT_STREQ(EscapeJson(aBuf, 6, "aaaaaa"), "aaaaa");
 	EXPECT_STREQ(EscapeJson(aBuf, 7, "aaaaaa"), "aaaaaa");
+}
+
+TEST(JsonDeathTest, DeepNestingDoesNotOverflowValidationStack)
+{
+	// 子进程隔离旧实现的栈溢出，避免终止整套测试。
+	EXPECT_EXIT(
+		{
+			constexpr size_t Depth = 100000;
+			const std::string Json = std::string(Depth, '[') + "\"valid\"" + std::string(Depth, ']');
+			json_value *pParsed = JsonParse(Json.c_str(), Json.size());
+			const bool Parsed = pParsed != nullptr;
+			json_value_free(pParsed);
+			std::exit(Parsed ? 0 : 1);
+		},
+		::testing::ExitedWithCode(0), "");
+}
+
+TEST(JsonDeathTest, DeepInvalidUtf8IsRejectedWithoutStackOverflow)
+{
+	EXPECT_EXIT(
+		{
+			constexpr size_t Depth = 100000;
+			const std::string Json = std::string(Depth, '[') + "{\"value\":\"\xff\"}" + std::string(Depth, ']');
+			json_settings Settings{};
+			char aError[json_error_max] = {};
+			json_value *pParsed = JsonParseEx(&Settings, Json.c_str(), Json.size(), aError);
+			const bool Rejected = pParsed == nullptr && str_comp(aError, "invalid utf-8 in string literal") == 0;
+			json_value_free(pParsed);
+			std::exit(Rejected ? 0 : 1);
+		},
+		::testing::ExitedWithCode(0), "");
 }

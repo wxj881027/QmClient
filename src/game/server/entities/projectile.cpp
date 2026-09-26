@@ -43,6 +43,7 @@ CProjectile::CProjectile(
 
 	m_InitDir = InitDir;
 	m_TuneZone = GameServer()->Collision()->IsTune(GameServer()->Collision()->GetMapIndex(m_Pos));
+	m_TeamMask = CClientMask().set();
 
 	CCharacter *pOwnerChar = GameServer()->GetPlayerChar(m_Owner);
 	m_BelongsToPracticeTeam = pOwnerChar && pOwnerChar->Teams()->IsPractice(pOwnerChar->Team());
@@ -106,7 +107,7 @@ void CProjectile::Tick()
 	if(m_LifeSpan > -1)
 		m_LifeSpan--;
 
-	CClientMask TeamMask = CClientMask().set();
+	m_TeamMask = CClientMask().set();
 	bool IsWeaponCollide = false;
 	if(
 		pOwnerChar &&
@@ -119,7 +120,7 @@ void CProjectile::Tick()
 	}
 	if(pOwnerChar && pOwnerChar->IsAlive())
 	{
-		TeamMask = pOwnerChar->TeamMask();
+		m_TeamMask = pOwnerChar->TeamMask();
 	}
 	else if(m_Owner >= 0 && (m_Type != WEAPON_GRENADE || g_Config.m_SvDestroyBulletsOnDeath || m_BelongsToPracticeTeam))
 	{
@@ -139,9 +140,9 @@ void CProjectile::Tick()
 			for(int i = 0; i < Number; i++)
 			{
 				GameServer()->CreateExplosion(ColPos, m_Owner, m_Type, m_Owner == -1, (!pTargetChr ? -1 : pTargetChr->Team()),
-					(m_Owner != -1) ? TeamMask : CClientMask().set());
+					m_TeamMask);
 				GameServer()->CreateSound(ColPos, m_SoundImpact,
-					(m_Owner != -1) ? TeamMask : CClientMask().set());
+					m_TeamMask);
 			}
 		}
 		else if(m_Freeze)
@@ -215,7 +216,7 @@ void CProjectile::Tick()
 		}
 		else if(m_Type == WEAPON_GUN)
 		{
-			GameServer()->CreateDamageInd(CurPos, -std::atan2(m_Direction.x, m_Direction.y), 10, (m_Owner != -1) ? TeamMask : CClientMask().set());
+			GameServer()->CreateDamageInd(CurPos, -std::atan2(m_Direction.x, m_Direction.y), 10, m_TeamMask);
 			m_MarkedForDestroy = true;
 			return;
 		}
@@ -232,19 +233,10 @@ void CProjectile::Tick()
 	{
 		if(m_Explosive)
 		{
-			if(m_Owner >= 0)
-				pOwnerChar = GameServer()->GetPlayerChar(m_Owner);
-
-			TeamMask = CClientMask().set();
-			if(pOwnerChar && pOwnerChar->IsAlive())
-			{
-				TeamMask = pOwnerChar->TeamMask();
-			}
-
 			GameServer()->CreateExplosion(ColPos, m_Owner, m_Type, m_Owner == -1, (!pOwnerChar ? -1 : pOwnerChar->Team()),
-				(m_Owner != -1) ? TeamMask : CClientMask().set());
+				m_TeamMask);
 			GameServer()->CreateSound(ColPos, m_SoundImpact,
-				(m_Owner != -1) ? TeamMask : CClientMask().set());
+				m_TeamMask);
 		}
 		m_MarkedForDestroy = true;
 		return;
@@ -269,14 +261,110 @@ void CProjectile::TickPaused()
 	++m_StartTick;
 }
 
-void CProjectile::FillInfo(CNetObj_Projectile *pProj)
+CNetObj_Projectile CProjectile::NetInfoVanilla() const
 {
-	pProj->m_X = (int)m_Pos.x;
-	pProj->m_Y = (int)m_Pos.y;
-	pProj->m_VelX = (int)(m_Direction.x * 100.0f);
-	pProj->m_VelY = (int)(m_Direction.y * 100.0f);
-	pProj->m_StartTick = m_StartTick;
-	pProj->m_Type = m_Type;
+	CNetObj_Projectile Result = {};
+	Result.m_X = (int)m_Pos.x;
+	Result.m_Y = (int)m_Pos.y;
+	Result.m_VelX = (int)(m_Direction.x * 100.0f);
+	Result.m_VelY = (int)(m_Direction.y * 100.0f);
+	Result.m_StartTick = m_StartTick;
+	Result.m_Type = m_Type;
+	return Result;
+}
+
+bool CProjectile::NetIsInfoLegacyCompatible() const
+{
+	const int MaxPos = 0x7fffffff / 100;
+	if(absolute((int)m_Pos.y) + 1 >= MaxPos || absolute((int)m_Pos.x) + 1 >= MaxPos)
+	{
+		//If the modified data would be too large to fit in an integer, send normal data instead
+		return false;
+	}
+	return true;
+}
+
+CNetObj_DDRaceProjectile CProjectile::NetInfoLegacy(int SnappingClient)
+{
+	dbg_assert(NetIsInfoLegacyCompatible(), "can't send incompatible projectile");
+
+	//Send additional/modified info, by modifying the fields of the netobj
+	float Angle = -std::atan2(m_Direction.x, m_Direction.y);
+
+	int Owner = m_Owner;
+	if(!Server()->Translate(Owner, SnappingClient))
+		Owner = -1;
+
+	int Data = 0;
+	Data |= (absolute(Owner) & 255) << 0;
+	if(Owner < 0)
+		Data |= LEGACYPROJECTILEFLAG_NO_OWNER;
+	//This bit tells the client to use the extra info
+	Data |= LEGACYPROJECTILEFLAG_IS_DDNET;
+	// LEGACYPROJECTILEFLAG_BOUNCE_HORIZONTAL, LEGACYPROJECTILEFLAG_BOUNCE_VERTICAL
+	Data |= (m_Bouncing & 3) << 10;
+	if(m_Explosive)
+		Data |= LEGACYPROJECTILEFLAG_EXPLOSIVE;
+	if(m_Freeze)
+		Data |= LEGACYPROJECTILEFLAG_FREEZE;
+
+	CNetObj_DDRaceProjectile Result = {};
+	Result.m_X = (int)(m_Pos.x * 100.0f);
+	Result.m_Y = (int)(m_Pos.y * 100.0f);
+	Result.m_Angle = (int)(Angle * 1000000.0f);
+	Result.m_Data = Data;
+	Result.m_StartTick = m_StartTick;
+	Result.m_Type = m_Type;
+	return Result;
+}
+
+CNetObj_DDNetProjectile CProjectile::NetInfo(int SnappingClient)
+{
+	CNetObj_DDNetProjectile Result = {};
+
+	int Flags = 0;
+	if(m_Bouncing & 1)
+	{
+		Flags |= PROJECTILEFLAG_BOUNCE_HORIZONTAL;
+	}
+	if(m_Bouncing & 2)
+	{
+		Flags |= PROJECTILEFLAG_BOUNCE_VERTICAL;
+	}
+	if(m_Explosive)
+	{
+		Flags |= PROJECTILEFLAG_EXPLOSIVE;
+	}
+	if(m_Freeze)
+	{
+		Flags |= PROJECTILEFLAG_FREEZE;
+	}
+
+	int Owner = m_Owner;
+	if(!Server()->Translate(Owner, SnappingClient))
+		Owner = -1;
+
+	if(Owner < 0)
+	{
+		Result.m_VelX = round_to_int(m_Direction.x * 1e6f);
+		Result.m_VelY = round_to_int(m_Direction.y * 1e6f);
+	}
+	else
+	{
+		Result.m_VelX = round_to_int(m_InitDir.x);
+		Result.m_VelY = round_to_int(m_InitDir.y);
+		Flags |= PROJECTILEFLAG_NORMALIZE_VEL;
+	}
+
+	Result.m_X = round_to_int(m_Pos.x * 100.0f);
+	Result.m_Y = round_to_int(m_Pos.y * 100.0f);
+	Result.m_Type = m_Type;
+	Result.m_StartTick = m_StartTick;
+	Result.m_Owner = Owner;
+	Result.m_SwitchNumber = m_Number;
+	Result.m_TuneZone = m_TuneZone;
+	Result.m_Flags = Flags;
+	return Result;
 }
 
 void CProjectile::Snap(int SnappingClient)
@@ -295,34 +383,22 @@ void CProjectile::Snap(int SnappingClient)
 			return;
 	}
 
-	CCharacter *pOwnerChar = nullptr;
-	CClientMask TeamMask = CClientMask().set();
-
-	if(m_Owner >= 0)
-		pOwnerChar = GameServer()->GetPlayerChar(m_Owner);
-
-	if(pOwnerChar && pOwnerChar->IsAlive())
-		TeamMask = pOwnerChar->TeamMask();
-
-	if(SnappingClient != SERVER_DEMO_CLIENT && m_Owner != -1 && !TeamMask.test(SnappingClient))
+	if(SnappingClient != SERVER_DEMO_CLIENT && !m_TeamMask.test(SnappingClient))
 		return;
-
-	CNetObj_DDRaceProjectile DDRaceProjectile;
 
 	if(SnappingClientVersion >= VERSION_DDNET_ENTITY_NETOBJS)
 	{
-		CNetObj_DDNetProjectile DDNetProjectile;
-		FillExtraInfo(&DDNetProjectile);
-		Server()->SnapNewItem(GetId().value(), DDNetProjectile);
+		Server()->SnapNewItem(GetId().value(), NetInfo(SnappingClient));
 	}
-	else if(SnappingClientVersion >= VERSION_DDNET_ANTIPING_PROJECTILE && FillExtraInfoLegacy(&DDRaceProjectile))
+	else if(SnappingClientVersion >= VERSION_DDNET_ANTIPING_PROJECTILE && NetIsInfoLegacyCompatible())
 	{
 		if(SnappingClientVersion >= VERSION_DDNET_MSG_LEGACY)
 		{
-			Server()->SnapNewItem(GetId().value(), DDRaceProjectile);
+			Server()->SnapNewItem(GetId().value(), NetInfoLegacy(SnappingClient));
 		}
 		else
 		{
+			CNetObj_DDRaceProjectile DDRaceProjectile = NetInfoLegacy(SnappingClient);
 			CNetObj_Projectile Projectile = {};
 			static_assert(sizeof(DDRaceProjectile) == sizeof(Projectile));
 			mem_copy(&Projectile, &DDRaceProjectile, sizeof(Projectile));
@@ -331,9 +407,7 @@ void CProjectile::Snap(int SnappingClient)
 	}
 	else
 	{
-		CNetObj_Projectile Projectile;
-		FillInfo(&Projectile);
-		Server()->SnapNewItem(GetId().value(), Projectile);
+		Server()->SnapNewItem(GetId().value(), NetInfoVanilla());
 	}
 }
 
@@ -356,79 +430,4 @@ bool CProjectile::CanCollide(int ClientId)
 void CProjectile::SetBouncing(int Value)
 {
 	m_Bouncing = Value;
-}
-
-bool CProjectile::FillExtraInfoLegacy(CNetObj_DDRaceProjectile *pProj)
-{
-	const int MaxPos = 0x7fffffff / 100;
-	if(absolute((int)m_Pos.y) + 1 >= MaxPos || absolute((int)m_Pos.x) + 1 >= MaxPos)
-	{
-		//If the modified data would be too large to fit in an integer, send normal data instead
-		return false;
-	}
-	//Send additional/modified info, by modifying the fields of the netobj
-	float Angle = -std::atan2(m_Direction.x, m_Direction.y);
-
-	int Data = 0;
-	Data |= (absolute(m_Owner) & 255) << 0;
-	if(m_Owner < 0)
-		Data |= LEGACYPROJECTILEFLAG_NO_OWNER;
-	//This bit tells the client to use the extra info
-	Data |= LEGACYPROJECTILEFLAG_IS_DDNET;
-	// LEGACYPROJECTILEFLAG_BOUNCE_HORIZONTAL, LEGACYPROJECTILEFLAG_BOUNCE_VERTICAL
-	Data |= (m_Bouncing & 3) << 10;
-	if(m_Explosive)
-		Data |= LEGACYPROJECTILEFLAG_EXPLOSIVE;
-	if(m_Freeze)
-		Data |= LEGACYPROJECTILEFLAG_FREEZE;
-
-	pProj->m_X = (int)(m_Pos.x * 100.0f);
-	pProj->m_Y = (int)(m_Pos.y * 100.0f);
-	pProj->m_Angle = (int)(Angle * 1000000.0f);
-	pProj->m_Data = Data;
-	pProj->m_StartTick = m_StartTick;
-	pProj->m_Type = m_Type;
-	return true;
-}
-
-void CProjectile::FillExtraInfo(CNetObj_DDNetProjectile *pProj)
-{
-	int Flags = 0;
-	if(m_Bouncing & 1)
-	{
-		Flags |= PROJECTILEFLAG_BOUNCE_HORIZONTAL;
-	}
-	if(m_Bouncing & 2)
-	{
-		Flags |= PROJECTILEFLAG_BOUNCE_VERTICAL;
-	}
-	if(m_Explosive)
-	{
-		Flags |= PROJECTILEFLAG_EXPLOSIVE;
-	}
-	if(m_Freeze)
-	{
-		Flags |= PROJECTILEFLAG_FREEZE;
-	}
-
-	if(m_Owner < 0)
-	{
-		pProj->m_VelX = round_to_int(m_Direction.x * 1e6f);
-		pProj->m_VelY = round_to_int(m_Direction.y * 1e6f);
-	}
-	else
-	{
-		pProj->m_VelX = round_to_int(m_InitDir.x);
-		pProj->m_VelY = round_to_int(m_InitDir.y);
-		Flags |= PROJECTILEFLAG_NORMALIZE_VEL;
-	}
-
-	pProj->m_X = round_to_int(m_Pos.x * 100.0f);
-	pProj->m_Y = round_to_int(m_Pos.y * 100.0f);
-	pProj->m_Type = m_Type;
-	pProj->m_StartTick = m_StartTick;
-	pProj->m_Owner = m_Owner;
-	pProj->m_Flags = Flags;
-	pProj->m_SwitchNumber = m_Number;
-	pProj->m_TuneZone = m_TuneZone;
 }

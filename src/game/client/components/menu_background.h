@@ -85,6 +85,14 @@ public:
 	};
 
 private:
+	struct SPreviousBackground
+	{
+		std::unique_ptr<CMenuMap> m_pMap;
+		std::unique_ptr<CLayers> m_pLayers;
+		std::unique_ptr<CMapImages> m_pImages;
+		std::unique_ptr<CMapLayers> m_pRenderer;
+	};
+
 	CCamera m_Camera;
 
 protected:
@@ -98,9 +106,14 @@ private:
 	vec2 m_AnimationStartPos;
 	bool m_ChangedPosition;
 	float m_MoveTime;
+	// 菜单相机上一次推进的时间戳。相机动画不能直接依赖 Client()->RenderFrameTime()：
+	// 启动阶段（CClient::Run() 主循环之前的 GameClient()->OnInit()）里那个值恒为
+	// client.h 的初值 0.0001f，会让旋转量小到看不见。详见 Render()。
+	std::chrono::nanoseconds m_LastCameraFrameTime{0};
 
 	bool m_IsInit;
 	bool m_Loading;
+	std::unique_ptr<SPreviousBackground> m_pPreviousBackground;
 
 	void ResetPositions();
 
@@ -112,6 +125,9 @@ private:
 	void ProcessThemeIconJobs();
 	void UpdateThemeLoading();
 	void InvalidateCurrentPosition();
+	void PreserveCurrentBackground();
+	void ReleasePreviousBackground();
+	void InitializeLoadedMap();
 
 	std::vector<CTheme> m_vThemes;
 	std::shared_ptr<CThemeListLoadJob> m_pThemeListLoadJob;
@@ -131,6 +147,9 @@ public:
 
 	bool Render();
 	bool IsLoading() const { return m_Loading; }
+	// 推进分帧的图层初始化。加载完成时自行清除 m_Loading。
+	// 调用方在 IsLoading() 期间跳过呈现前必须先调用它，否则加载永远走不完。
+	void AdvanceLoading();
 
 	class CCamera *GetCurCamera() override;
 

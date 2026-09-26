@@ -3,6 +3,7 @@
 #include "important_alert.h"
 
 #include <base/log.h>
+#include <base/time.h>
 
 #include <engine/client.h>
 #include <engine/graphics.h>
@@ -15,12 +16,15 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
+#include <algorithm>
+
 inline constexpr LOG_COLOR IMPORTANT_ALERT_COLOR{255, 0, 0};
 inline constexpr float MINIMUM_ACTIVE_SECONDS = 5.0f;
 
 void CImportantAlert::OnReset()
 {
 	m_Active = false;
+	m_DismissTouchRect.reset();
 	DeleteTextContainers();
 }
 
@@ -122,6 +126,29 @@ void CImportantAlert::RenderImportantAlert()
 				TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(Alpha * CloseHintAlpha),
 				Width / 2.0f - TextRender()->GetBoundingBoxTextContainer(m_CloseHintTextContainerIndex).m_W / 2.0f, 40.0f - CloseHintFontSize - 2.0f);
 		}
+		if(g_Config.m_ClTouchControls)
+		{
+			const float TouchPadding = 10.0f;
+			float TextWidth = 0.0f;
+			float TextBottom = 40.0f;
+			if(m_TitleTextContainerIndex.Valid())
+			{
+				const STextBoundingBox BoundingBox = TextRender()->GetBoundingBoxTextContainer(m_TitleTextContainerIndex);
+				TextWidth = BoundingBox.m_W;
+				TextBottom = 40.0f + BoundingBox.m_H;
+			}
+			if(m_MessageTextContainerIndex.Valid())
+			{
+				const STextBoundingBox BoundingBox = TextRender()->GetBoundingBoxTextContainer(m_MessageTextContainerIndex);
+				TextWidth = std::max(TextWidth, BoundingBox.m_W);
+				TextBottom = 40.0f + TitleFontSize + 10.0f + BoundingBox.m_H;
+			}
+			m_DismissTouchRect = CUIRect{
+				(Width / 2.0f - TextWidth / 2.0f - TouchPadding) / Width,
+				(40.0f - CloseHintFontSize - 2.0f - TouchPadding) / Height,
+				(TextWidth + 2.0f * TouchPadding) / Width,
+				(TextBottom - (40.0f - CloseHintFontSize - 2.0f) + 2.0f * TouchPadding) / Height};
+		}
 	}
 }
 
@@ -131,7 +158,9 @@ void CImportantAlert::DoImportantAlert(const char *pTitle, const char *pLogGroup
 	str_copy(m_aMessageText, pMessage);
 	m_Active = true;
 	m_ActiveSince = Client()->GlobalTime();
+	m_ActiveSinceNanos = time_get_nanoseconds();
 	m_FadeOutSince = -1.0f;
+	m_DismissTouchRect.reset();
 	DeleteTextContainers();
 
 	char aLine[sizeof(m_aMessageText)];
@@ -181,6 +210,45 @@ bool CImportantAlert::OnInput(const IInput::CEvent &Event)
 		m_FadeOutSince = Client()->GlobalTime();
 		return true;
 	}
+	return false;
+}
+
+bool CImportantAlert::OnTouchState(std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
+{
+	if(m_DismissTouchFinger.has_value())
+	{
+		const auto DismissFingerState = std::find_if(vTouchFingerStates.begin(), vTouchFingerStates.end(), [&](const IInput::CTouchFingerState &State) {
+			return State.m_Finger == *m_DismissTouchFinger;
+		});
+		if(DismissFingerState == vTouchFingerStates.end())
+			m_DismissTouchFinger.reset();
+		else
+			vTouchFingerStates.erase(DismissFingerState);
+	}
+
+	if(!g_Config.m_ClTouchControls ||
+		!IsActive() ||
+		SecondsActive() < MINIMUM_ACTIVE_SECONDS ||
+		m_FadeOutSince >= 0.0f ||
+		GameClient()->m_Chat.IsActive() ||
+		GameClient()->m_GameConsole.IsActive() ||
+		GameClient()->m_Menus.IsActive() ||
+		GameClient()->m_Emoticon.IsActive() ||
+		GameClient()->m_Spectator.IsActive() ||
+		!m_DismissTouchRect.has_value())
+	{
+		return false;
+	}
+
+	const auto DismissFinger = std::find_if(vTouchFingerStates.begin(), vTouchFingerStates.end(), [&](const IInput::CTouchFingerState &State) {
+		return State.m_PressTime > m_ActiveSinceNanos && m_DismissTouchRect->Inside(State.m_Position);
+	});
+	if(DismissFinger == vTouchFingerStates.end())
+		return false;
+
+	m_FadeOutSince = Client()->GlobalTime();
+	m_DismissTouchFinger = DismissFinger->m_Finger;
+	vTouchFingerStates.erase(DismissFinger);
 	return false;
 }
 

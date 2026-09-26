@@ -338,6 +338,8 @@ void CSounds::PlayAndRecord(int Channel, int SetId, float Volume, vec2 Position)
 
 void CSounds::Play(int Channel, int SetId, float Volume)
 {
+	if(g_Config.m_DbgPredictEvents)
+		dbg_msg("pred_event", "snd-out play ch=%d sound=%d", Channel, SetId);
 	if(IsSoundMuted(SetId))
 		return;
 	PlaySample(Channel, GetSampleId(SetId), 0, Volume);
@@ -345,6 +347,8 @@ void CSounds::Play(int Channel, int SetId, float Volume)
 
 void CSounds::PlayAt(int Channel, int SetId, float Volume, vec2 Position)
 {
+	if(g_Config.m_DbgPredictEvents)
+		dbg_msg("pred_event", "snd-out playat ch=%d sound=%d pos=%.1f,%.1f", Channel, SetId, Position.x, Position.y);
 	if(IsSoundMuted(SetId))
 		return;
 	PlaySampleAt(Channel, GetSampleId(SetId), 0, Volume, Position);

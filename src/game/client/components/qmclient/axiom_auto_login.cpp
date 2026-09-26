@@ -16,6 +16,14 @@
 
 const char *CQmAxiomAutoLogin::CurrentCommunityId() const
 {
+	// 直连服务器可能不在服务器列表中；在线后的 ServerInfo 是当前连接的权威来源。
+	if(Client()->State() == IClient::STATE_ONLINE)
+	{
+		const char *pCurrentCommunityId = Client()->ServerInfo().m_aCommunityId;
+		if(pCurrentCommunityId[0] != '\0')
+			return pCurrentCommunityId;
+	}
+
 	IServerBrowser *pServerBrowser = ServerBrowser();
 	if(!pServerBrowser)
 		return nullptr;

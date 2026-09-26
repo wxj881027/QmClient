@@ -635,7 +635,7 @@ bool ITranslateBackend::CompareTargets(const char *pA, const char *pB) const
 class ITranslateBackendHttp : public ITranslateBackend
 {
 protected:
-	std::shared_ptr<CHttpRequest> m_pHttpRequest = nullptr;
+	std::shared_ptr<IHttpRequest> m_pHttpRequest = nullptr;
 	char m_aInitError[256] = "";
 	virtual bool ParseResponse(CTranslateResponse &Out) = 0;
 	virtual bool ParseHttpError() const { return false; }
@@ -646,7 +646,7 @@ protected:
 
 	void CreateHttpRequest(IHttp &Http, const char *pUrl)
 	{
-		auto pGet = std::make_shared<CHttpRequest>(pUrl);
+		std::shared_ptr<IHttpRequest> pGet = HttpGet(pUrl);
 		pGet->LogProgress(HTTPLOG::FAILURE);
 		pGet->FailOnErrorStatus(false);
 		pGet->Timeout(CTimeout{10000, 0, 500, 10});
@@ -975,7 +975,7 @@ public:
 			", SignedHeaders=" + SignedHeaders +
 			", Signature=" + Signature;
 
-		m_pHttpRequest = std::make_shared<CHttpRequest>(RequestUrl.c_str());
+		m_pHttpRequest = HttpGet(RequestUrl.c_str());
 		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
 		m_pHttpRequest->FailOnErrorStatus(false);
 		m_pHttpRequest->Timeout(CTimeout{10000, 0, 500, 10});
@@ -1458,7 +1458,7 @@ public:
 		char aAuthorization[512];
 		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", pApiKey);
 
-		m_pHttpRequest = std::make_shared<CHttpRequest>(pEndpoint);
+		m_pHttpRequest = HttpGet(pEndpoint);
 		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
 		m_pHttpRequest->FailOnErrorStatus(false);
 		// LLM API 响应可能较慢（特别是智谱AI），增加超时时间到30秒

@@ -6,6 +6,24 @@
 #include <base/log.h>
 #include <base/system.h>
 
+bool CNetConnection::IsPeerAddress(const NETADDR &Addr) const
+{
+	// While connecting, the peer address is not determined yet, so any of the
+	// addresses that the connection was initiated to is accepted.
+	if(m_State != EState::CONNECT)
+	{
+		return m_PeerAddr == Addr;
+	}
+	for(int i = 0; i < m_NumConnectAddrs; i++)
+	{
+		if(m_aConnectAddrs[i] == Addr)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void CNetConnection::SetPeerAddr(const NETADDR *pAddr)
 {
 	m_PeerAddr = *pAddr;
@@ -30,26 +48,25 @@ void CNetConnection::ResetStats()
 	m_LastUpdateTime = 0;
 }
 
-void CNetConnection::Reset(bool Rejoin)
+void CNetConnection::Reset()
 {
 	m_Sequence = 0;
 	m_Ack = 0;
 	m_PeerAck = 0;
 	m_RemoteClosed = 0;
 
-	if(!Rejoin)
-	{
-		m_TimeoutProtected = false;
-		m_TimeoutSituation = false;
+	m_TimeoutProtected = false;
+	m_TimeoutSituation = false;
 
-		m_State = EState::OFFLINE;
-		m_Token = -1;
-		m_SecurityToken = NET_SECURITY_TOKEN_UNKNOWN;
-		m_Sixup = false;
-	}
+	m_State = EState::OFFLINE;
+	m_Token = -1;
+	m_SecurityToken = NET_SECURITY_TOKEN_UNKNOWN;
+	m_Sixup = false;
 
 	m_LastSendTime = 0;
 	m_LastRecvTime = 0;
+	m_LastResendTime = 0;
+	m_ResendRequested = false;
 	m_LastRttMs = -1;
 
 	mem_zero(&m_aConnectAddrs, sizeof(m_aConnectAddrs));
@@ -243,7 +260,7 @@ void CNetConnection::SendConnect()
 
 void CNetConnection::SendControl(int ControlMsg, const void *pExtra, int ExtraSize)
 {
-	if(ExtraSize < 0 || ExtraSize > NET_MAX_PAYLOAD - 1)
+	if(ExtraSize < 0 || ExtraSize > NET_MAX_CONNLESS_PAYLOAD - 1)
 	{
 		return;
 	}
@@ -278,6 +295,19 @@ void CNetConnection::Resend()
 {
 	for(CNetChunkResend *pResend = m_Buffer.First(); pResend; pResend = m_Buffer.Next(pResend))
 		ResendChunk(pResend);
+}
+
+void CNetConnection::AnswerResendRequest(int64_t Now)
+{
+	if(!m_ResendRequested)
+		return;
+	if(g_Config.m_ConnResendRequestsPerSecond != 0 &&
+		Now - m_LastResendTime < time_freq() / g_Config.m_ConnResendRequestsPerSecond)
+		return;
+
+	m_ResendRequested = false;
+	m_LastResendTime = Now;
+	Resend();
 }
 
 int CNetConnection::Connect(const NETADDR *pAddr, int NumAddrs)
@@ -424,8 +454,8 @@ bool CNetConnection::UpdatePeerAddressForRebind(const NETADDR &Addr)
 
 int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_TOKEN SecurityToken, SECURITY_TOKEN ResponseToken)
 {
-	// Disregard packets from the wrong address, unless we don't know our peer yet.
-	if(State() != EState::OFFLINE && State() != EState::CONNECT && *pAddr != m_PeerAddr)
+	// Disregard packets from the wrong address, unless this is a server-side connection slot.
+	if(State() != EState::OFFLINE && !IsPeerAddress(*pAddr))
 	{
 		return 0;
 	}
@@ -462,9 +492,9 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 
 	int64_t Now = time_get();
 
-	// check if resend is requested
 	if(pPacket->m_Flags & NET_PACKETFLAG_RESEND)
-		Resend();
+		m_ResendRequested = true;
+	AnswerResendRequest(Now);
 
 	//
 	if(pPacket->m_Flags & NET_PACKETFLAG_CONTROL)
@@ -473,24 +503,7 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 
 		if(CtrlMsg == NET_CTRLMSG_CLOSE)
 		{
-			bool IsPeer;
-			if(m_State != EState::CONNECT)
-			{
-				IsPeer = m_PeerAddr == *pAddr;
-			}
-			else
-			{
-				IsPeer = false;
-				for(int i = 0; i < m_NumConnectAddrs; i++)
-				{
-					if(m_aConnectAddrs[i] == *pAddr)
-					{
-						IsPeer = true;
-						break;
-					}
-				}
-			}
-			if(IsPeer)
+			if(IsPeerAddress(*pAddr))
 			{
 				m_State = EState::ERROR;
 				m_RemoteClosed = 1;
@@ -577,6 +590,10 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 					// connection made
 					if(CtrlMsg == NET_CTRLMSG_CONNECTACCEPT)
 					{
+						if(!IsPeerAddress(*pAddr))
+						{
+							return 0;
+						}
 						SetPeerAddr(pAddr);
 						if(m_SecurityToken == NET_SECURITY_TOKEN_UNKNOWN && pPacket->m_DataSize >= (int)(1 + sizeof(SECURITY_TOKEN_MAGIC) + sizeof(m_SecurityToken)) && !mem_comp(&pPacket->m_aChunkData[1], SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC)))
 						{
@@ -635,6 +652,7 @@ int CNetConnection::Update()
 		return 0;
 
 	m_TimeoutSituation = false;
+	AnswerResendRequest(Now);
 
 	// check for timeout
 	if(State() != EState::OFFLINE &&
@@ -716,6 +734,7 @@ void CNetConnection::ResumeConnection(const NETADDR *pAddr, int Sequence, int Ac
 
 		CNetChunkResend *pResend = m_Buffer.Allocate(sizeof(CNetChunkResend) + pFirst->m_DataSize);
 		mem_copy(pResend, pFirst, sizeof(CNetChunkResend) + pFirst->m_DataSize);
+		pResend->m_pData = (unsigned char *)(pResend + 1);
 
 		pResendBuffer->PopFirst();
 	}

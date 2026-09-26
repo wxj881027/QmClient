@@ -295,7 +295,7 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(GameClient()->m_Menus.m_SettingsCardDeckDisplayCycle, GameClient()->m_Menus.m_MenuTextPoolGeneration, MainView.w, CardLayoutRevision);
 	const auto BuildDefinitions = [this, HasCustomBinds, ReadOnly, ControllerMeasureRevision, CardCtx](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(9);
-		const auto AddCard = [this](std::vector<SSettingsCardDefinition> &Cards, const char *pId, float MinHeight, FSettingsCardMeasure Measure, FSettingsCardRender Render, std::function<bool()> IsVisible = {}, bool RenderWhenClipped = false, std::function<bool()> IsCollapsed = {}, FSettingsCardPreLayoutHeaderInput PreLayoutHeaderInput = {}, FSettingsCardHeaderAction HeaderAction = {}, bool MeasureEachFrame = false, uint64_t MeasureRevision = 0) {
+		const auto AddCard = [](std::vector<SSettingsCardDefinition> &Cards, const char *pId, float MinHeight, FSettingsCardMeasure Measure, FSettingsCardRender Render, std::function<bool()> IsVisible = {}, bool RenderWhenClipped = false, std::function<bool()> IsCollapsed = {}, FSettingsCardPreLayoutHeaderInput PreLayoutHeaderInput = {}, FSettingsCardHeaderAction HeaderAction = {}, bool MeasureEachFrame = false, uint64_t MeasureRevision = 0) {
 			const qm_card_registry::SCardDefault *pDefault = qm_card_registry::FindByStableId(pId);
 			if(pDefault == nullptr)
 				return;
@@ -373,6 +373,7 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 		{
 			const bool IsCustom = Group == EBindOptionGroup::CUSTOM;
 			const auto IsCollapsed = [this, Group] { return !m_aBindGroupExpanded[(int)Group]; };
+			// 展开状态由卡片自己的预布局输入翻转，公共折叠按钮只负责画，不写状态。
 			const auto PreLayoutHeaderInput = [this, Group](const SSettingsCardFrame &Frame, bool Collapsed) {
 				const int GroupIndex = (int)Group;
 				if(!Ui()->DoButtonLogic(&m_aBindGroupExpandButtons[GroupIndex], Collapsed, &Frame.m_HandleRect, BUTTONFLAG_LEFT))

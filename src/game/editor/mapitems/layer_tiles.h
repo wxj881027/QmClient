@@ -117,7 +117,7 @@ public:
 	virtual void Shift(EShiftDirection Direction);
 
 	void MakePalette() const;
-	void Render(bool Tileset = false) override;
+	void Render(const CEditorMap *pRenderMap) override;
 
 	int ConvertX(float x) const;
 	int ConvertY(float y) const;
@@ -167,7 +167,6 @@ public:
 	void ModifyEnvelopeIndex(const FIndexModifyFunction &IndexModifyFunction) override;
 
 	void PrepareForSave();
-	void ExtractTiles(int TilemapItemVersion, const CTile *pSavedTiles, size_t SavedTilesSize) const;
 
 	void GetSize(float *pWidth, float *pHeight) override
 	{
@@ -201,6 +200,7 @@ public:
 	bool m_HasTune;
 	char m_aFilename[IO_MAX_PATH_LENGTH];
 	bool m_KnownTextModeLayer = false;
+	bool m_RenderOverlays = true;
 
 	EditorTileStateChangeHistory<STileStateChange> m_TilesHistory;
 	virtual void ClearHistory() { m_TilesHistory.clear(); }

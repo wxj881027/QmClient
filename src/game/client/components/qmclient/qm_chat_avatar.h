@@ -67,12 +67,12 @@ namespace QmChatAvatar
 		const int X = Sprite.m_X * UnitX, Y = Sprite.m_Y * UnitY;
 		const int Width = Sprite.m_W * UnitX, Height = Sprite.m_H * UnitY;
 		if(Width <= 0 || Height <= 0 || X < 0 || Y < 0 ||
-			(size_t)(X + Width) > Image.m_Width || (size_t)(Y + Height) > Image.m_Height)
+			(size_t)X + (size_t)Width > Image.m_Width || (size_t)Y + (size_t)Height > Image.m_Height)
 			return Result;
 		const float Scale = std::min(1.0f, 64.0f / std::max(Width, Height));
 		Result.m_Width = std::max(1, (int)std::round(Width * Scale));
 		Result.m_Height = std::max(1, (int)std::round(Height * Scale));
-		Result.m_vRgba.resize(Result.m_Width * Result.m_Height * 4);
+		Result.m_vRgba.resize(static_cast<size_t>(Result.m_Width) * Result.m_Height * 4);
 		for(int y = 0; y < Result.m_Height; ++y)
 		{
 			for(int x = 0; x < Result.m_Width; ++x)
@@ -107,7 +107,7 @@ namespace QmChatAvatar
 		const auto &pSixupBody = (Sixup.m_aUseCustomColors[protocol7::SKINPART_BODY] ?
 						  Sixup.m_apChatAvatarColorable :
 						  Sixup.m_apChatAvatarOriginal)[protocol7::SKINPART_BODY];
-		const auto &pSix = (Info.m_CustomColoredSkin ? Info.m_ColorableRenderSkin : Info.m_OriginalRenderSkin).m_pChatAvatar;
+		const auto &pSix = (Info.m_CustomColoredSkin ? Info.m_ColorableRenderSkin : Info.m_OriginalRenderSkin).m_QmChatAvatar;
 		if(!pSixupBody && !pSix)
 			return nullptr;
 		auto pSnapshot = std::make_shared<SSnapshot>();

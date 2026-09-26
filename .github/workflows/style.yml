@@ -26,7 +26,7 @@ jobs:
     - name: Prepare Linux
       run: |
         sudo apt-get update -y
-        sudo apt-get install ddnet-tools shellcheck tidy pkg-config cmake graphviz ninja-build python3-clang python3-pil wget gnupg ca-certificates -y
+        sudo apt-get install ddnet-tools shellcheck tidy pkg-config cmake graphviz ninja-build python3-clang python3-fonttools python3-pil wget gnupg ca-certificates -y
         wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor | sudo tee /usr/share/keyrings/apt.llvm.org.gpg >/dev/null
         echo "deb [signed-by=/usr/share/keyrings/apt.llvm.org.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm-toolchain-noble-22.list >/dev/null
         sudo apt-get update -y
@@ -36,6 +36,25 @@ jobs:
     - name: Run gate check (quick)
       run: |
         python3 qmclient_scripts/gate/check_gate.py --mode quick --ci-mode --report-json-path tmp/check-gate-report.json
+
+    - name: Build map_test tool
+      run: |
+        mkdir release
+        cd release
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCLIENT=OFF -DDOWNLOAD_GTEST=OFF ..
+        cmake --build . --config Release --target map_test
+
+    - name: Check maps (map_test)
+      run: |
+        set +e
+        python3 scripts/map_test.py data/maps map_test release/map_test
+        map_test_result=$?
+        set -e
+        if [ $map_test_result -ne 0 ]; then
+          echo -e "\033[31mFAILED: Map test exit code $map_test_result\033[m"
+          cat map_test/**.log
+          exit 1
+        fi
 
     - name: Write CI summary
       if: always()

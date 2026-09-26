@@ -14,6 +14,7 @@
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -66,6 +67,7 @@ private:
 		CStaticRingBuffer<CBacklogEntry, 1024 * 1024, CRingBufferBase::FLAG_RECYCLE> m_BacklogPending GUARDED_BY(m_BacklogPendingLock);
 		std::unordered_map<int, std::vector<SColorSpan>> m_ColorSpansByExportId;
 		std::unordered_map<int, std::vector<SColorSpan>> m_PendingColorSpansByExportId GUARDED_BY(m_BacklogPendingLock);
+		// 聊天导出的身份与头像快照：随日志条目一起保存，导出时不再按当前名字反查皮肤。
 		std::unordered_map<int, std::shared_ptr<const QmChatExport::SMetadata>> m_ChatMetadataByExportId;
 		std::unordered_map<int, std::shared_ptr<const QmChatExport::SMetadata>> m_PendingChatMetadataByExportId GUARDED_BY(m_BacklogPendingLock);
 		CStaticRingBuffer<char, 64 * 1024, CRingBufferBase::FLAG_RECYCLE> m_History;
@@ -194,7 +196,6 @@ private:
 	private:
 		void SetLogFilterMask(int Mask);
 		bool MatchesLogFilter(const CBacklogEntry *pEntry) const;
-		static int ClassifyLogCategory(const char *pLine, size_t Length);
 		void SetSearching(bool Searching);
 		void ClearSearch();
 		void UpdateSearch();
@@ -220,6 +221,10 @@ private:
 
 	bool m_WantsSelectionCopy = false;
 	CUi::CTouchState m_TouchState;
+	vec2 m_ButtonPressPosition = vec2(0.0f, 0.0f);
+	bool m_ButtonPressed = false;
+
+	bool DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released);
 	CButtonContainer m_aFilterButtons[CInstance::LOG_FILTER_BUTTON_COUNT];
 	CButtonContainer m_ChatExportButton;
 	CButtonContainer m_ChatExportSelectAllButton;

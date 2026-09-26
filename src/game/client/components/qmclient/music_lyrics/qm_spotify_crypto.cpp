@@ -140,7 +140,7 @@ namespace QmSpotifyCrypto
 		if(KeyLen > sizeof(aKey))
 		{
 			const std::string Hashed = Sha1(pKey, KeyLen);
-			memcpy(aKey, Hashed.data(), Hashed.size());
+			std::copy(Hashed.begin(), Hashed.end(), aKey);
 		}
 		else
 		{

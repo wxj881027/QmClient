@@ -94,7 +94,7 @@ namespace MapPreview
 	{
 	public:
 		void Init(IMap *pMap, std::chrono::nanoseconds TimeNanos = std::chrono::nanoseconds(0));
-		void EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, ColorRGBA &Result, size_t Channels) override;
+		void EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, ColorRGBA &Result, size_t Channels) const override;
 
 	private:
 		std::shared_ptr<CMapBasedEnvelopePointAccess> m_pEnvelopePoints;

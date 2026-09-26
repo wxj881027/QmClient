@@ -20,10 +20,10 @@ CDebugHud::CDebugHud() :
 {
 }
 
-void CDebugHud::RenderNetCorrections()
+float CDebugHud::RenderNetCorrections(float StartY)
 {
 	if(!g_Config.m_Debug || g_Config.m_DbgGraphs || !GameClient()->m_Snap.m_pLocalCharacter || !GameClient()->m_Snap.m_pLocalPrevCharacter)
-		return;
+		return StartY;
 
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
@@ -38,7 +38,7 @@ void CDebugHud::RenderNetCorrections()
 	const float FontSize = 5.0f;
 	const float LineHeight = FontSize + 1.0f;
 
-	float y = 50.0f;
+	float y = StartY;
 	char aBuf[128];
 	const auto &&RenderRow = [&](const char *pLabel, const char *pValue) {
 		TextRender()->Text(Width - 100.0f, y, FontSize, pLabel);
@@ -78,19 +78,21 @@ void CDebugHud::RenderNetCorrections()
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->NetobjNumCorrections());
 	RenderRow("Netobj corrections", aBuf);
 	RenderRow(" on:", GameClient()->NetobjCorrectedOn());
+
+	return y;
 }
 
-void CDebugHud::RenderParticleDiagnostics()
+float CDebugHud::RenderParticleDiagnostics(float StartY)
 {
 	if(!g_Config.m_Debug || g_Config.m_DbgGraphs)
-		return;
+		return StartY;
 
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
 	const float FontSize = 5.0f;
-	float y = 80.0f;
+	float y = StartY;
 	char aBuf[128];
 	const auto &&RenderRow = [&](const char *pLabel, const char *pValue) {
 		TextRender()->Text(Width - 100.0f, y, FontSize, pLabel);
@@ -102,9 +104,13 @@ void CDebugHud::RenderParticleDiagnostics()
 	RenderRow("Spawn received:", aBuf);
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnEffectsDispatched);
 	RenderRow("Spawn particles:", aBuf);
+	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnEffectsFiltered);
+	RenderRow("Spawn filtered:", aBuf);
 	str_format(aBuf, sizeof(aBuf), "%d", GameClient()->m_SpawnParticleAddFailures);
 	RenderRow("Spawn add failed:", aBuf);
 	RenderRow("Particles skin:", GameClient()->m_ParticlesSkinLoaded ? "valid" : "invalid");
+
+	return y;
 }
 
 void CDebugHud::RenderTuning()
@@ -281,9 +287,11 @@ void CDebugHud::RenderHint()
 
 	const float FontSize = 5.0f;
 	const float Spacing = 5.0f;
+	// TClient：状态栏渲染在屏幕最底部，底部提示文本需要向上避让
+	const float StatusBarHeight = g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f;
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	TextRender()->Text(Spacing, Height - FontSize - Spacing, FontSize, Localize("Debug mode enabled. Press Ctrl+Shift+D to disable debug mode."));
+	TextRender()->Text(Spacing, Height - FontSize - Spacing - StatusBarHeight, FontSize, Localize("Debug mode enabled. Press Ctrl+Shift+D to disable debug mode."));
 }
 
 void CDebugHud::RenderSwitchTileInfo()
@@ -321,7 +329,9 @@ void CDebugHud::RenderSwitchTileInfo()
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	const float TextWidth = TextRender()->TextWidth(FontSize, aBuf);
 	const float X = std::max(Spacing, WidthScreen - Spacing - TextWidth);
-	const float Y = Height - FontSize - Spacing;
+	// TClient：状态栏渲染在屏幕最底部，底部文本需要向上避让
+	const float StatusBarHeight = g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f;
+	const float Y = Height - FontSize - Spacing - StatusBarHeight;
 	TextRender()->Text(X, Y, FontSize, aBuf);
 }
 
@@ -331,8 +341,10 @@ void CDebugHud::OnRender()
 		return;
 
 	RenderTuning();
-	RenderNetCorrections();
-	RenderParticleDiagnostics();
+	// 右侧诊断文本按段落依次向下排列，避免各行互相覆盖
+	float DebugTextY = 50.0f;
+	DebugTextY = RenderNetCorrections(DebugTextY);
+	RenderParticleDiagnostics(DebugTextY);
 	RenderHint();
 	RenderSwitchTileInfo();
 }

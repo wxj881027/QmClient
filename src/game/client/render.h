@@ -228,12 +228,6 @@ public:
 			{
 				Texture.Invalidate();
 			}
-			for(auto &pSource : m_apChatAvatarOriginal)
-				pSource.reset();
-			for(auto &pSource : m_apChatAvatarColorable)
-				pSource.reset();
-			for(auto &pOutline : m_apQmSkinOutlines)
-				pOutline.reset();
 			std::fill(std::begin(m_aUseCustomColors), std::end(m_aUseCustomColors), false);
 			std::fill(std::begin(m_aColors), std::end(m_aColors), ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 			m_BloodColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
@@ -241,13 +235,16 @@ public:
 			m_BotTexture.Invalidate();
 			m_HatSpriteIndex = 0;
 			m_BotColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f);
+			for(auto &pSource : m_apChatAvatarOriginal)
+				pSource.reset();
+			for(auto &pSource : m_apChatAvatarColorable)
+				pSource.reset();
+			for(auto &pOutline : m_apQmSkinOutlines)
+				pOutline.reset();
 		}
 
 		IGraphics::CTextureHandle m_aOriginalTextures[protocol7::NUM_SKINPARTS];
 		IGraphics::CTextureHandle m_aColorableTextures[protocol7::NUM_SKINPARTS];
-		std::shared_ptr<CQmSkinOutline> m_apQmSkinOutlines[protocol7::NUM_SKINPARTS];
-		std::shared_ptr<const QmChatAvatar::SSource> m_apChatAvatarOriginal[protocol7::NUM_SKINPARTS];
-		std::shared_ptr<const QmChatAvatar::SSource> m_apChatAvatarColorable[protocol7::NUM_SKINPARTS];
 		bool m_aUseCustomColors[protocol7::NUM_SKINPARTS];
 		ColorRGBA m_aColors[protocol7::NUM_SKINPARTS];
 		ColorRGBA m_BloodColor;
@@ -255,6 +252,10 @@ public:
 		IGraphics::CTextureHandle m_BotTexture;
 		int m_HatSpriteIndex;
 		ColorRGBA m_BotColor;
+		// 聊天导出的六人皮肤头像素材，按部件与原始/可着色两套分别持有；皮肤描边同样按部件持有。
+		std::shared_ptr<CQmSkinOutline> m_apQmSkinOutlines[protocol7::NUM_SKINPARTS];
+		std::shared_ptr<const QmChatAvatar::SSource> m_apChatAvatarOriginal[protocol7::NUM_SKINPARTS];
+		std::shared_ptr<const QmChatAvatar::SSource> m_apChatAvatarColorable[protocol7::NUM_SKINPARTS];
 
 		const IGraphics::CTextureHandle &PartTexture(int Part) const
 		{

@@ -10,6 +10,7 @@
 #include <base/system.h>
 #include <base/vmath.h>
 
+#include <engine/graphics.h>
 #include <engine/shared/config.h>
 
 #include <game/client/gameclient.h>
@@ -127,7 +128,7 @@ float CCamera::ZoomProgress(float CurrentTime) const
 void CCamera::ScaleZoom(float Factor)
 {
 	RemoveDynamicFovZoom();
-	float CurrentTarget = m_Zooming ? m_ZoomSmoothingTarget : m_Zoom;
+	float CurrentTarget = QmCameraEffects::ZoomTargetBaseOnRetarget(m_Zoom, m_ZoomSmoothingTarget, Factor, m_Zooming, g_Config.m_QmZoomInstantReverse != 0);
 	ChangeZoom(CurrentTarget * Factor, GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_MultiViewActivated ? g_Config.m_ClMultiViewZoomSmoothness : g_Config.m_ClSmoothZoomTime, true);
 
 	m_AutoSpecCamera = false;
@@ -141,6 +142,12 @@ float CCamera::MaxZoomLevel()
 float CCamera::MinZoomLevel()
 {
 	return 0.01f;
+}
+
+bool CCamera::GhostMultiViewZoomActive() const
+{
+	return GameClient()->m_RankGhost.IsViewModeActive() &&
+	       GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::ALL_MEMBERS;
 }
 
 void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser)
@@ -158,7 +165,8 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser)
 	{
 		float Progress = ZoomProgress(Now);
 		Current = m_ZoomSmoothing.Evaluate(Progress);
-		Derivative = m_ZoomSmoothing.Derivative(Progress);
+		// 丢速度只作用于玩家按键路径：多分屏与自动旁观每帧重设目标，丢速度会让平滑反复从静止起步
+		Derivative = QmCameraEffects::ZoomDerivativeOnRetarget(Current, m_ZoomSmoothing.Derivative(Progress), Target, IsUser && g_Config.m_QmZoomInstantReverse != 0);
 	}
 
 	m_ZoomSmoothingTarget = Target;
@@ -548,6 +556,34 @@ void CCamera::OnRender()
 	if(m_CameraSmoothing)
 		m_Center = m_CameraSmoothingCenter;
 
+	// QmClient: 影子查看模式——跟随选中成员 / 多人同框（按成员包围盒自动缩放）/ 自由视角不接管
+	vec2 GhostFocus;
+	if(GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::ALL_MEMBERS)
+	{
+		vec2 GhostCenter, GhostSize;
+		if(GameClient()->m_RankGhost.ViewFocusAllMembers(&GhostCenter, &GhostSize))
+		{
+			m_Center = GhostCenter;
+			vec2 DefaultWorldSize;
+			Graphics()->CalcScreenParams(Graphics()->GameScreenAspect(), 1.0f, &DefaultWorldSize.x, &DefaultWorldSize.y);
+			const float NeedWidth = GhostSize.x + 400.0f;
+			const float NeedHeight = GhostSize.y + 400.0f;
+			const float FitZoom = maximum(NeedWidth / maximum(1.0f, DefaultWorldSize.x), NeedHeight / maximum(1.0f, DefaultWorldSize.y));
+			// 自动取景之上叠加用户倍率（zoom+/- 调整）：取景保证框住全部成员，倍率让玩家自己拉近拉远。
+			// 目标通过原生 ChangeZoom 重定向，保留阻尼、重定目标和速度连续性。
+			const float UserZoom = ZoomStepsToValue(GameClient()->m_RankGhost.ViewZoomPersonal());
+			const float TargetZoom = std::clamp(FitZoom * UserZoom, MinZoomLevel(), MaxZoomLevel());
+			const float CurrentTarget = m_Zooming ? m_ZoomSmoothingTarget : m_Zoom;
+			if(CurrentTarget != TargetZoom)
+				ChangeZoom(TargetZoom, g_Config.m_ClMultiViewZoomSmoothness, false);
+			m_AutoSpecCameraZooming = false;
+		}
+	}
+	else if(GameClient()->m_RankGhost.ViewFreeCameraCenter(&GhostFocus))
+		m_Center = GhostFocus;
+	else if(GameClient()->m_RankGhost.ViewFocus(&GhostFocus))
+		m_Center = GhostFocus;
+
 	m_PrevCenter = m_Center;
 	m_PrevSpecId = SpecId;
 
@@ -586,10 +622,19 @@ void CCamera::OnReset()
 void CCamera::ConZoomPlus(IConsole::IResult *pResult, void *pUserData)
 {
 	CCamera *pSelf = (CCamera *)pUserData;
-	if(!pSelf->ZoomAllowed())
-		return;
 
 	float ZoomAmount = pResult->NumArguments() ? pResult->GetFloat(0) : 1.0f;
+
+	// 影子多人同框：m_Zoom 每帧由包围盒自动取景覆写（且取景本身不受服务器 zoom 策略约束），
+	// 所以倍率走独立状态并放在 ZoomAllowed 之前——服务器禁止缩放时自动取景仍在，倍率却收不到
+	if(pSelf->GhostMultiViewZoomActive())
+	{
+		pSelf->GameClient()->m_RankGhost.ViewAdjustZoomPersonal(ZoomAmount);
+		return;
+	}
+
+	if(!pSelf->ZoomAllowed())
+		return;
 
 	pSelf->ScaleZoom(CCamera::ZoomStepsToValue(ZoomAmount));
 
@@ -599,11 +644,19 @@ void CCamera::ConZoomPlus(IConsole::IResult *pResult, void *pUserData)
 void CCamera::ConZoomMinus(IConsole::IResult *pResult, void *pUserData)
 {
 	CCamera *pSelf = (CCamera *)pUserData;
-	if(!pSelf->ZoomAllowed())
-		return;
 
 	float ZoomAmount = pResult->NumArguments() ? pResult->GetFloat(0) : 1.0f;
 	ZoomAmount *= -1.0f;
+
+	// 影子多人同框：与 ConZoomPlus 同理，倍率不受服务器 zoom 策略约束
+	if(pSelf->GhostMultiViewZoomActive())
+	{
+		pSelf->GameClient()->m_RankGhost.ViewAdjustZoomPersonal(ZoomAmount);
+		return;
+	}
+
+	if(!pSelf->ZoomAllowed())
+		return;
 
 	pSelf->ScaleZoom(CCamera::ZoomStepsToValue(ZoomAmount));
 
@@ -613,12 +666,20 @@ void CCamera::ConZoomMinus(IConsole::IResult *pResult, void *pUserData)
 void CCamera::ConZoom(IConsole::IResult *pResult, void *pUserData)
 {
 	CCamera *pSelf = (CCamera *)pUserData;
-	if(!pSelf->ZoomAllowed())
-		return;
 
 	bool IsReset = !pResult->NumArguments();
 
 	float TargetLevel = !IsReset ? pResult->GetFloat(0) : g_Config.m_ClDefaultZoom;
+
+	// 影子多人同框：绝对档位换算成用户倍率，默认档 = 回到纯自动取景
+	if(pSelf->GhostMultiViewZoomActive())
+	{
+		pSelf->GameClient()->m_RankGhost.ViewSetZoomPersonal(TargetLevel - 10.0f);
+		return;
+	}
+
+	if(!pSelf->ZoomAllowed())
+		return;
 
 	if(!pSelf->CanUseAutoSpecCamera() || !pSelf->m_CanUseCameraInfo)
 		pSelf->ChangeZoom(CCamera::ZoomStepsToValue(TargetLevel - 10.0f), pSelf->GameClient()->m_Snap.m_SpecInfo.m_Active && pSelf->GameClient()->m_MultiViewActivated ? g_Config.m_ClMultiViewZoomSmoothness : g_Config.m_ClSmoothZoomTime, true);
@@ -843,7 +904,8 @@ void CCamera::SetZoom(float Target, int Smoothness, bool IsUser)
 
 bool CCamera::ZoomAllowed() const
 {
-	return GameClient()->m_Snap.m_SpecInfo.m_Active ||
+	return GhostMultiViewZoomActive() ||
+	       GameClient()->m_Snap.m_SpecInfo.m_Active ||
 	       GameClient()->m_GameInfo.m_AllowZoom ||
 	       Client()->State() == IClient::STATE_DEMOPLAYBACK;
 }

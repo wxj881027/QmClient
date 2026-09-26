@@ -28,8 +28,6 @@ class CMapItemLayerQuads;
 class IMap;
 class CMapImages;
 
-typedef std::function<void(const char *pCaption, const char *pContent, int IncreaseCounter)> FRenderUploadCallback;
-
 constexpr int BorderRenderDistance = 201;
 
 class CClipRegion
@@ -66,7 +64,7 @@ class CRenderLayer : public CRenderComponent
 {
 public:
 	CRenderLayer(int GroupId, int LayerId, int Flags);
-	virtual void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, std::optional<FRenderUploadCallback> &FRenderUploadCallbackOptional);
+	virtual void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages);
 
 	virtual void Init() = 0;
 	virtual void Render(const CRenderLayerParams &Params) = 0;
@@ -85,12 +83,10 @@ protected:
 
 	void UseTexture(IGraphics::CTextureHandle TextureHandle);
 	virtual IGraphics::CTextureHandle GetTexture() const = 0;
-	void RenderLoading() const;
 
 	class IMap *m_pMap = nullptr;
 	IMapImages *m_pMapImages = nullptr;
 	std::shared_ptr<CEnvelopeManager> m_pEnvelopeManager;
-	std::optional<FRenderUploadCallback> m_RenderUploadCallback;
 	std::optional<CClipRegion> m_LayerClip;
 };
 
@@ -99,7 +95,7 @@ class CRenderLayerGroup : public CRenderLayer
 public:
 	CRenderLayerGroup(int GroupId, CMapItemGroup *pGroup);
 	~CRenderLayerGroup() override = default;
-	void Init() override {}
+	void Init() override;
 	void Render(const CRenderLayerParams &Params) override;
 	bool DoRender(const CRenderLayerParams &Params) override;
 	bool IsValid() const override { return m_pGroup != nullptr; }
@@ -120,9 +116,9 @@ public:
 	void Render(const CRenderLayerParams &Params) override;
 	bool DoRender(const CRenderLayerParams &Params) override;
 	void Init() override;
-	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, std::optional<FRenderUploadCallback> &FRenderUploadCallbackOptional) override;
+	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages) override;
 
-	virtual int GetDataIndex(unsigned int &TileSize) const;
+	virtual int GetDataIndex() const;
 	bool IsValid() const override { return GetRawData() != nullptr; }
 	void Unload() override;
 
@@ -233,7 +229,7 @@ class CRenderLayerQuads : public CRenderLayer
 {
 public:
 	CRenderLayerQuads(int GroupId, int LayerId, int Flags, CMapItemLayerQuads *pLayerQuads);
-	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, std::optional<FRenderUploadCallback> &FRenderUploadCallbackOptional) override;
+	void OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages) override;
 	void Init() override;
 	bool IsValid() const override { return m_pLayerQuads->m_NumQuads > 0 && m_pQuads; }
 	void Render(const CRenderLayerParams &Params) override;
@@ -320,7 +316,7 @@ class CRenderLayerEntityFront final : public CRenderLayerEntityBase
 {
 public:
 	CRenderLayerEntityFront(int GroupId, int LayerId, int Flags, CMapItemLayerTilemap *pLayerTilemap);
-	int GetDataIndex(unsigned int &TileSize) const override;
+	int GetDataIndex() const override;
 	void Init() override;
 	void Unload() override;
 
@@ -340,7 +336,7 @@ class CRenderLayerEntityTele final : public CRenderLayerEntityBase
 {
 public:
 	CRenderLayerEntityTele(int GroupId, int LayerId, int Flags, CMapItemLayerTilemap *pLayerTilemap);
-	int GetDataIndex(unsigned int &TileSize) const override;
+	int GetDataIndex() const override;
 	void Init() override;
 	void Unload() override;
 
@@ -361,7 +357,7 @@ class CRenderLayerEntitySpeedup final : public CRenderLayerEntityBase
 {
 public:
 	CRenderLayerEntitySpeedup(int GroupId, int LayerId, int Flags, CMapItemLayerTilemap *pLayerTilemap);
-	int GetDataIndex(unsigned int &TileSize) const override;
+	int GetDataIndex() const override;
 	void Init() override;
 	void Unload() override;
 
@@ -382,7 +378,7 @@ class CRenderLayerEntitySwitch final : public CRenderLayerEntityBase
 {
 public:
 	CRenderLayerEntitySwitch(int GroupId, int LayerId, int Flags, CMapItemLayerTilemap *pLayerTilemap);
-	int GetDataIndex(unsigned int &TileSize) const override;
+	int GetDataIndex() const override;
 	void Init() override;
 	void Unload() override;
 
@@ -407,7 +403,7 @@ class CRenderLayerEntityTune final : public CRenderLayerEntityBase
 {
 public:
 	CRenderLayerEntityTune(int GroupId, int LayerId, int Flags, CMapItemLayerTilemap *pLayerTilemap);
-	int GetDataIndex(unsigned int &TileSize) const override;
+	int GetDataIndex() const override;
 	void Init() override;
 
 protected:

@@ -26,11 +26,11 @@ namespace qm_island
 				return;
 
 			constexpr float Pi = 3.14159265359f;
-			constexpr int MaxSegments = 64;
 			const float SafeProgress = std::clamp(Progress, 0.0f, 1.0f);
 			if(SafeProgress <= 0.0f)
 				return;
 
+			constexpr int MaxSegments = 64;
 			const float OuterRadius = Radius + Thickness * 0.5f;
 			const float InnerRadius = std::max(0.0f, Radius - Thickness * 0.5f);
 			const int NumSegments = std::max(1, (int)std::ceil((float)MaxSegments * SafeProgress));

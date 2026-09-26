@@ -829,6 +829,12 @@ void CCollisionHitbox::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
+#if defined(CONF_VIDEORECORDER)
+	// 渲染（录制）视频时跟随 cl_video_showhud，避免碰撞箱被一起录进视频
+	if(IVideo::Current() && !g_Config.m_ClVideoShowhud)
+		return;
+#endif
+
 	const bool HitboxMode = HitboxModeEnabled();
 	const bool LegacyMode = LegacyModeEnabled();
 	if(!HitboxMode && !LegacyMode)

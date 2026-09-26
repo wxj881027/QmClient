@@ -36,7 +36,7 @@ void CCharacter::SetSuper(bool Super)
 {
 	m_Core.m_Super = Super;
 	if(m_Core.m_Super)
-		TeamsCore()->Team(GetCid(), TeamsCore()->m_IsDDRace16 ? VANILLA_TEAM_SUPER : TEAM_SUPER);
+		TeamsCore()->Team(GetCid(), TeamsCore()->TeamSuper());
 }
 
 bool CCharacter::IsGrounded()
@@ -372,6 +372,8 @@ void CCharacter::FireWeapon()
 			pTarget->Unfreeze();
 
 			Hits++;
+
+			AntiPingInterference(pTarget->GetCid());
 		}
 
 		// if we Hit anything, we have to wait for the reload
@@ -629,6 +631,16 @@ void CCharacter::Tick()
 
 	DDRacePostCoreTick();
 
+	// antiping
+	if(IsInterfering())
+	{
+		// 玩家移动或钩住墙壁时关闭基于交互的动态 antiping
+		if((!m_FreezeTime || g_Config.m_ClAntiPingPlayers != 3) && (m_Input.m_Direction != m_PrevInput.m_Direction || m_Input.m_Jump != m_PrevInput.m_Jump || m_Core.m_TriggeredEvents & COREEVENT_HOOK_ATTACH_GROUND))
+		{
+			m_Interfering = false;
+		}
+	}
+
 	// Previnput
 	m_PrevInput = m_Input;
 
@@ -764,7 +776,7 @@ bool CCharacter::IsSwitchActiveCb(unsigned char Number, void *pUser)
 {
 	CCharacter *pThis = (CCharacter *)pUser;
 	auto &aSwitchers = pThis->Switchers();
-	return !aSwitchers.empty() && pThis->Team() != TEAM_SUPER && aSwitchers[Number].m_aStatus[pThis->Team()];
+	return !aSwitchers.empty() && pThis->Team() != pThis->TeamsCore()->TeamSuper() && aSwitchers[Number].m_aStatus[pThis->Team()];
 }
 
 void CCharacter::HandleTiles(int Index)
@@ -956,59 +968,59 @@ void CCharacter::HandleTiles(int Index)
 	const int SwitchType = Collision()->GetSwitchType(MapIndex);
 	const int SwitchNumber = Collision()->GetSwitchNumber(MapIndex);
 	const int SwitchDelay = Collision()->GetSwitchDelay(MapIndex);
-	if(SwitchType == TILE_SWITCHOPEN && Team() != TEAM_SUPER && SwitchNumber > 0)
+	if(SwitchType == TILE_SWITCHOPEN && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
 	{
 		Switchers()[SwitchNumber].m_aStatus[Team()] = true;
 		Switchers()[SwitchNumber].m_aEndTick[Team()] = 0;
 		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHOPEN;
 		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
 	}
-	else if(SwitchType == TILE_SWITCHTIMEDOPEN && Team() != TEAM_SUPER && SwitchNumber > 0)
+	else if(SwitchType == TILE_SWITCHTIMEDOPEN && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
 	{
 		Switchers()[SwitchNumber].m_aStatus[Team()] = true;
 		Switchers()[SwitchNumber].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + SwitchDelay * GameWorld()->GameTickSpeed();
 		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHTIMEDOPEN;
 		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
 	}
-	else if(SwitchType == TILE_SWITCHTIMEDCLOSE && Team() != TEAM_SUPER && SwitchNumber > 0)
+	else if(SwitchType == TILE_SWITCHTIMEDCLOSE && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
 	{
 		Switchers()[SwitchNumber].m_aStatus[Team()] = false;
 		Switchers()[SwitchNumber].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + SwitchDelay * GameWorld()->GameTickSpeed();
 		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHTIMEDCLOSE;
 		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
 	}
-	else if(SwitchType == TILE_SWITCHCLOSE && Team() != TEAM_SUPER && SwitchNumber > 0)
+	else if(SwitchType == TILE_SWITCHCLOSE && Team() != TeamsCore()->TeamSuper() && SwitchNumber > 0)
 	{
 		Switchers()[SwitchNumber].m_aStatus[Team()] = false;
 		Switchers()[SwitchNumber].m_aEndTick[Team()] = 0;
 		Switchers()[SwitchNumber].m_aType[Team()] = TILE_SWITCHCLOSE;
 		Switchers()[SwitchNumber].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
 	}
-	else if(SwitchType == TILE_FREEZE && Team() != TEAM_SUPER && !m_Core.m_Invincible)
+	else if(SwitchType == TILE_FREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
 		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
 		{
 			Freeze(SwitchDelay);
 		}
 	}
-	else if(SwitchType == TILE_DFREEZE && Team() != TEAM_SUPER && !m_Core.m_Invincible)
+	else if(SwitchType == TILE_DFREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
 		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
 			m_Core.m_DeepFrozen = true;
 	}
-	else if(SwitchType == TILE_DUNFREEZE && Team() != TEAM_SUPER && !m_Core.m_Invincible)
+	else if(SwitchType == TILE_DUNFREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
 		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
 			m_Core.m_DeepFrozen = false;
 	}
-	else if(SwitchType == TILE_LFREEZE && Team() != TEAM_SUPER && !m_Core.m_Invincible)
+	else if(SwitchType == TILE_LFREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
 		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
 		{
 			m_Core.m_LiveFrozen = true;
 		}
 	}
-	else if(SwitchType == TILE_LUNFREEZE && Team() != TEAM_SUPER && !m_Core.m_Invincible)
+	else if(SwitchType == TILE_LUNFREEZE && Team() != TeamsCore()->TeamSuper() && !m_Core.m_Invincible)
 	{
 		if(SwitchNumber == 0 || Switchers()[SwitchNumber].m_aStatus[Team()])
 		{
@@ -1419,6 +1431,9 @@ CCharacter::CCharacter(CGameWorld *pGameWorld, int Id, CNetObj_Character *pChar,
 	m_Core.Reset();
 	m_Core.Init(&GameWorld()->m_Core, GameWorld()->Collision(), GameWorld()->Teams());
 	m_Core.m_Id = Id;
+	m_Core.SetAntiPingInterfereCallback([this](int ClientId, bool DisallowReset) {
+		AntiPingInterference(ClientId, DisallowReset, true);
+	});
 	m_Core.m_ActiveWeapon = -1; // set by the first Read below
 	mem_zero(&m_Core.m_Ninja, sizeof(m_Core.m_Ninja));
 	m_Core.m_LeftWall = true;
@@ -1443,6 +1458,34 @@ CCharacter::CCharacter(CGameWorld *pGameWorld, int Id, CNetObj_Character *pChar,
 
 	ResetPrediction();
 	Read(pChar, pExtended, false);
+}
+
+void CCharacter::AntiPingInterference(int ClientId, bool DisallowReset, bool HasToBeUnfrozen)
+{
+	// 非冻结时为我们钩住或撞到的玩家启用 antiping；被救援时非冻结检查有帮助
+	// 若干扰的玩家本身弹开或钩住别人，则级联预测：被干扰者也可为他人启用 antiping
+	if(HasToBeUnfrozen && m_FreezeTime)
+		return;
+
+	// QmClient: 目标角色可能不在预测世界中（尚未预测或已被移除），
+	// GetCharacterById 会返回 nullptr，直接解引用会崩溃（写 m_Interfering 空指针）。
+	CCharacter *pInterferingChar = GameWorld()->GetCharacterById(ClientId);
+	if(pInterferingChar == nullptr)
+		return;
+
+	bool AllowEnablePrediction = m_IsLocal || m_Interfering;
+	if(!AllowEnablePrediction && !DisallowReset)
+	{
+		// 非预测玩家与目标交互时关闭 antiping（此处不含玩家弹跳）
+		if(!pInterferingChar->m_FreezeTime || g_Config.m_ClAntiPingPlayers != 3)
+		{
+			pInterferingChar->m_Interfering = false;
+		}
+	}
+	else if(AllowEnablePrediction)
+	{
+		pInterferingChar->m_Interfering = true;
+	}
 }
 
 void CCharacter::ResetPrediction()
@@ -1479,6 +1522,7 @@ void CCharacter::ResetPrediction()
 	}
 	m_LastWeaponSwitchTick = 0;
 	m_LastTuneZoneTick = 0;
+	m_Interfering = false;
 	m_LastDamageTick = -1;
 	m_LastDamageFrom = -1;
 	m_LastDamageWeapon = -1;
@@ -1520,6 +1564,13 @@ void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtende
 		else
 		{
 			Unfreeze();
+		}
+
+		// 等待服务器告知冻结状态而非用预测的 Freeze()，因为后者可能误判导致 antiping 抖动
+		if(pExtended->m_FreezeEnd != 0 && g_Config.m_ClAntiPingPlayers == 3)
+		{
+			// 若开启，冻结玩家始终预测以便救援
+			m_Interfering = true;
 		}
 
 		m_Core.ReadDDNet(pExtended);

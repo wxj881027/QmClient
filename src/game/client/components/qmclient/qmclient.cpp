@@ -1,6 +1,10 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "qmclient.h"
 
+#include "qm_title_style.h"
+#include "statistics_file.h"
+#include "voice/voice_utils.h"
+
 #include <base/hash.h>
 #include <base/lock.h>
 #include <base/log.h>
@@ -30,10 +34,8 @@
 
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
-#include <game/client/components/qmclient/qm_sponsors.h>
-#include <game/client/components/qmclient/qm_title_style.h>
-#include <game/client/components/qmclient/voice/voice_utils.h>
 #include <game/client/gameclient.h>
+#include <game/client/race.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
 #include <game/layers.h>
@@ -44,6 +46,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cinttypes>
 #include <cmath>
 #include <limits>
 #include <mutex>
@@ -58,9 +61,20 @@
 #include <windows.h>
 #endif
 
+[[maybe_unused]] static constexpr const char *TCLIENT_INFO_URL = "http://42.194.185.210:8080/client/version";
 [[maybe_unused]] static constexpr const char *TCLIENT_UPDATE_EXE_URL = "https://github.com/wxj881027/QmClient/releases/latest/download/DDNet.exe";
 [[maybe_unused]] static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
 [[maybe_unused]] static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
+// 本地统计文件的条目上限：异常服务器可能用任意 gametype 制造新条目，
+// 限制文件与内存的增长；达到上限后只更新已有条目，不再新建。
+static constexpr int QMCLIENT_MAX_LOCAL_MODE_STATS = 256;
+static constexpr int QMCLIENT_REALTIME_PROTOCOL_VERSION = 2;
+
+static void LogQmWebSocketEvent(const char *pChannel, const char *pStage)
+{
+	if(g_Config.m_QmWebSocketLog)
+		log_info("qmclient", "%s websocket %s", pChannel, pStage);
+}
 
 static void LogQmClientDistributionEvent(const char *pStage, int Users, int Dummies, int LocalMarks)
 {
@@ -72,27 +86,46 @@ static void LogQmClientDistributionFailureEvent(const char *pStage, const char *
 	log_warn("qmclient", "distribution %s: %s", pStage, pDetail ? pDetail : "");
 }
 
-// 广播发布为用户主动 HTTPS 操作，后台状态只走 WS。
 static constexpr const char *QMCLIENT_DEVELOPER_TOKEN_FILE = "qmclient/developer_token.txt";
-static constexpr const char *QMCLIENT_NEWS_PUBLISH_URL = "https://qmclient.icu/api/v1/news/publish";
-static constexpr const char *QMCLIENT_NEWS_CACHE_FILE = "qmclient/news_cache.json";
-static constexpr const char *QMCLIENT_NEWS_DRAFT_FILE = "qmclient/news_draft.md";
-static constexpr int QMCLIENT_NEWS_CACHE_VERSION = 1;
-static constexpr int QMCLIENT_NEWS_MAX_BYTES = 64 * 1024;
-static constexpr const char *QMCLIENT_SPONSORS_PUBLISH_URL = "https://qmclient.icu/api/v1/sponsors/publish";
-static constexpr const char *QMCLIENT_SPONSORS_CACHE_FILE = "qmclient/sponsors_cache.json";
-static constexpr const char *QMCLIENT_SPONSORS_DRAFT_FILE = "qmclient/sponsors_draft.md";
 static constexpr int QMCLIENT_DEVELOPER_SYNC_INTERVAL_SECONDS = 5;
 static constexpr const char *QMCLIENT_LIFECYCLE_MARKER_FILE = "qmclient/lifecycle_pending.marker";
 static constexpr const char *QMCLIENT_PLAYTIME_CLIENT_ID_FILE = "qmclient/playtime_client_id.txt";
 static constexpr const char *QMCLIENT_MACHINE_ID_FALLBACK_FILE = "qmclient/voice_machine_id.txt";
+// 广播 markdown 的磁盘缓存：界面立即生效，落盘只保留最新完整快照（交给作业完成）。
+static constexpr const char *QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE = "qmclient/markdown_broadcast.json";
+static constexpr int QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION = 1;
+static constexpr const char *QMCLIENT_NEWS_PUBLISH_URL = "https://qmclient.icu/api/v1/news/publish";
+static constexpr const char *QMCLIENT_NEWS_DRAFT_FILE = "qmclient/news_draft.md";
+static constexpr size_t QMCLIENT_NEWS_MAX_BYTES = 64 * 1024;
+static constexpr const char *QMCLIENT_SPONSORS_PUBLISH_URL = "https://qmclient.icu/api/v1/sponsors/publish";
+static constexpr const char *QMCLIENT_SPONSORS_CACHE_FILE = "qmclient/sponsors_cache.json";
+static constexpr const char *QMCLIENT_SPONSORS_DRAFT_FILE = "qmclient/sponsors_draft.md";
+static constexpr int QMCLIENT_SPONSORS_MAX_BYTES = 64 * 1024;
 static constexpr int QMCLIENT_MARKER_FLUSH_INTERVAL_SECONDS = 5;
 static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players/?json2=";
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
 static constexpr int QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS = 10;
 static constexpr const char *QMCLIENT_FREEZE_WAKEUP_TEXT = "快醒醒!";
-// 实时通道订阅协议版本，服务端可据此兼容老客户端。
-static constexpr int QMCLIENT_REALTIME_PROTOCOL_VERSION = 2;
+static constexpr const char *QMCLIENT_LOCAL_MODE_STATS_FILE = "qmclient/statistics.json";
+
+static bool ParseStrictInt64(const char *pText, int64_t &Out)
+{
+	if(!pText || pText[0] == '\0')
+		return false;
+	Out = str_toint64_base(pText);
+	char aCanonical[64];
+	str_format(aCanonical, sizeof(aCanonical), "%" PRId64, Out);
+	return str_comp(aCanonical, pText) == 0;
+}
+
+static int64_t SaturatingAddInt64(int64_t Base, int64_t Add)
+{
+	if(Add > 0 && Base > std::numeric_limits<int64_t>::max() - Add)
+		return std::numeric_limits<int64_t>::max();
+	if(Add < 0 && Base < std::numeric_limits<int64_t>::min() - Add)
+		return std::numeric_limits<int64_t>::min();
+	return Base + Add;
+}
 
 [[maybe_unused]] static bool TextContainsAny(const char *pText, const std::initializer_list<const char *> &Tokens)
 {
@@ -139,6 +172,7 @@ static constexpr const char *s_pFriendEnterBroadcastDefaultText = "%s joined thi
 [[maybe_unused]] static bool AppendAutoReplyRuleBlock(char *pOutRules, size_t OutRulesSize, const char *pRules);
 static const json_value *JsonObjectField(const json_value *pObject, const char *pName);
 static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue);
+static const char *TitleJsonString(const json_value *pRoot, const char *pKey);
 
 namespace
 {
@@ -166,6 +200,7 @@ namespace
 		std::shared_ptr<const json_value> m_pPayload;
 		char m_aServerAddress[NETADDR_MAXSTRSIZE] = "";
 		int64_t m_ExpireTick = 0;
+		int64_t m_ConnectionTick = 0;
 		CLock m_Lock;
 		SResult m_Result;
 
@@ -184,9 +219,10 @@ namespace
 		}
 
 	public:
-		CQmClientUsersParseJob(std::shared_ptr<const json_value> pPayload, const char *pServerAddress, int64_t ExpireTick) :
+		CQmClientUsersParseJob(std::shared_ptr<const json_value> pPayload, const char *pServerAddress, int64_t ExpireTick, int64_t ConnectionTick) :
 			m_pPayload(std::move(pPayload)),
-			m_ExpireTick(ExpireTick)
+			m_ExpireTick(ExpireTick),
+			m_ConnectionTick(ConnectionTick)
 		{
 			str_copy(m_aServerAddress, pServerAddress, sizeof(m_aServerAddress));
 		}
@@ -199,8 +235,9 @@ namespace
 			return Result;
 		}
 
-		const char *ServerAddress() const { return m_aServerAddress; }
 		int64_t ExpireTick() const { return m_ExpireTick; }
+		int64_t ConnectionTick() const { return m_ConnectionTick; }
+		const char *ServerAddress() const { return m_aServerAddress; }
 	};
 
 	class CQmDdnetPlayerStatsParseJob : public IJob
@@ -211,10 +248,14 @@ namespace
 			bool m_Parsed = false;
 			std::string m_FavoritePartner;
 			int m_TotalFinishes = -1;
+			int64_t m_Points = -1;
+			int64_t m_PointsTotal = -1;
+			int64_t m_PlaytimeHours = -1;
+			int64_t m_PlaytimeHoursPastYear = -1;
 		};
 
 	private:
-		std::shared_ptr<CHttpRequest> m_pTask;
+		std::shared_ptr<IHttpRequest> m_pTask;
 		CLock m_Lock;
 		SResult m_Result;
 
@@ -227,6 +268,19 @@ namespace
 				json_value *pRoot = m_pTask->ResultJson();
 				if(pRoot && pRoot->type == json_object)
 				{
+					const json_value *pPoints = JsonObjectField(pRoot, "points");
+					bool ValidPoints = false;
+					if(pPoints != &json_value_none && pPoints->type == json_object)
+					{
+						const json_value *pCurrent = JsonObjectField(pPoints, "points");
+						const json_value *pTotal = JsonObjectField(pPoints, "total");
+						if(pCurrent != &json_value_none && pCurrent->type == json_integer && pCurrent->u.integer >= 0)
+							Result.m_Points = pCurrent->u.integer;
+						if(pTotal != &json_value_none && pTotal->type == json_integer && pTotal->u.integer >= 0)
+							Result.m_PointsTotal = pTotal->u.integer;
+						ValidPoints = Result.m_Points >= 0 && Result.m_PointsTotal >= 0;
+					}
+
 					const json_value *pFavoritePartners = JsonObjectField(pRoot, "favorite_partners");
 					if(pFavoritePartners->type == json_array)
 					{
@@ -270,7 +324,7 @@ namespace
 					}
 
 					const json_value *pTypes = JsonObjectField(pRoot, "types");
-					if(pTypes->type == json_object)
+					if(ValidPoints && pTypes->type == json_object)
 					{
 						Result.m_Parsed = true;
 						int64_t TotalFinishes = 0;
@@ -307,6 +361,40 @@ namespace
 						}
 						Result.m_TotalFinishes = (int)TotalFinishes;
 					}
+
+					// 官方 json2 直接提供两种口径的游玩小时数：
+					//   activity[] 逐日 hours_played 求和 = 生涯累计；
+					//   hours_played_past_365_days        = 最近一年。
+					// 两者都只作为显示用的可选数据，缺失时不置 m_Parsed，避免影响既有解析成功判定。
+					const json_value *pActivity = JsonObjectField(pRoot, "activity");
+					if(pActivity->type == json_array)
+					{
+						int64_t TotalHours = 0;
+						bool AnyEntry = false;
+						bool Overflow = false;
+						for(unsigned i = 0; i < pActivity->u.array.length; ++i)
+						{
+							const json_value &Entry = (*pActivity)[i];
+							if(Entry.type != json_object)
+								continue;
+							const json_value *pHours = JsonObjectField(&Entry, "hours_played");
+							if(pHours->type != json_integer || pHours->u.integer < 0)
+								continue;
+							AnyEntry = true;
+							if(TotalHours > std::numeric_limits<int64_t>::max() - pHours->u.integer)
+							{
+								Overflow = true;
+								break;
+							}
+							TotalHours += pHours->u.integer;
+						}
+						if(AnyEntry && !Overflow)
+							Result.m_PlaytimeHours = TotalHours;
+					}
+					const json_value *pPastYearHours = JsonObjectField(pRoot, "hours_played_past_365_days");
+					if(pPastYearHours->type == json_integer && pPastYearHours->u.integer >= 0)
+						Result.m_PlaytimeHoursPastYear = pPastYearHours->u.integer;
+
 					json_value_free(pRoot);
 				}
 			}
@@ -319,7 +407,7 @@ namespace
 		}
 
 	public:
-		explicit CQmDdnetPlayerStatsParseJob(std::shared_ptr<CHttpRequest> pTask) :
+		explicit CQmDdnetPlayerStatsParseJob(std::shared_ptr<IHttpRequest> pTask) :
 			m_pTask(std::move(pTask))
 		{
 		}
@@ -642,7 +730,8 @@ static bool JsonReadNonNegativeInt64(const json_value *pValue, int64_t &OutValue
 	}
 	if(pValue->type == json_double)
 	{
-		if(pValue->u.dbl < 0.0)
+		// `double(INT64_MAX)` rounds to 2^63, which is already outside int64_t.
+		if(!std::isfinite(pValue->u.dbl) || pValue->u.dbl < 0.0 || pValue->u.dbl >= static_cast<double>(std::numeric_limits<int64_t>::max()))
 			return false;
 		OutValue = (int64_t)pValue->u.dbl;
 		return true;
@@ -671,14 +760,538 @@ static bool IsValidQmClientPlaytimeId(const char *pClientId)
 
 void CQmClient::OnInit()
 {
+	if(g_Config.m_QmWebSocketUrl[0] == '\0' && g_Config.m_QmRealtimeWebsocketUrl[0] != '\0')
+		str_copy(g_Config.m_QmWebSocketUrl, g_Config.m_QmRealtimeWebsocketUrl);
 	InitQmClientLifecycle();
+	LoadQmClientLocalModeStats();
+	// 先把上次会话缓存的广播内容读回来，界面不必等下一次服务端推送。
+	LoadQmMarkdownBroadcastCache();
+	LoadQmSponsorsCache();
+	if(!m_QmStatisticsFileExists)
+		SaveQmClientStatistics();
 	InitQmDeveloperAuthentication();
 	InitTitleAuthentication();
-	InitQmNews();
-	InitQmSponsors();
-	// 实时通道：worker 线程在 StartQmRealtime 里起，真正连接由 OnUpdate 驱动。
-	StartQmRealtime();
-	StartQmAnonymousEmotes();
+}
+
+void CQmClient::LoadQmClientLocalModeStats()
+{
+	m_vQmClientLocalModeStats.clear();
+	m_vQmClientDdnetPlayerStats.clear();
+	m_QmDdnetPrimaryPlayerName.clear();
+	m_aQmDdnetPlayerName[0] = '\0';
+	m_aQmDdnetFavoritePartner[0] = '\0';
+	m_QmDdnetTotalFinishes = -1;
+	m_QmDdnetPoints = -1;
+	m_QmDdnetPointsTotal = -1;
+	m_QmClientServerPlaytimeSeconds = -1;
+	m_QmStatisticsFileExists = false;
+	m_QmStatisticsFileInvalid = false;
+	m_QmStatisticsNextSaveRetryTick = 0;
+	json_value *pRoot = nullptr;
+	const EQmStatisticsFileLoadResult LoadResult = QmLoadStatisticsFile(Storage(), QMCLIENT_LOCAL_MODE_STATS_FILE, &pRoot);
+	if(LoadResult == EQmStatisticsFileLoadResult::NOT_FOUND)
+		return;
+	m_QmStatisticsFileExists = true;
+	if(LoadResult != EQmStatisticsFileLoadResult::VALID)
+	{
+		m_QmStatisticsFileInvalid = true;
+		log_warn("qmclient", "statistics file is invalid and will be preserved: %s", QMCLIENT_LOCAL_MODE_STATS_FILE);
+		return;
+	}
+	const json_value *pLocal = JsonObjectField(pRoot, "local");
+	const json_value *pRemote = JsonObjectField(pRoot, "remote");
+	const json_value *pModes = JsonObjectField(pLocal, "modes");
+	if(pModes && pModes->type == json_array)
+	{
+		for(int Index = 0; Index < json_array_length(pModes); ++Index)
+		{
+			const json_value *pMode = json_array_get(pModes, Index);
+			if(!pMode || pMode->type != json_object)
+				continue;
+			const json_value *pName = JsonObjectField(pMode, "mode");
+			const json_value *pCommunity = JsonObjectField(pMode, "community_id");
+			const json_value *pAxiom = JsonObjectField(pMode, "axiom");
+			const json_value *pMaps = JsonObjectField(pMode, "maps");
+			const json_value *pScore = JsonObjectField(pMode, "score");
+			const json_value *pPlaytime = JsonObjectField(pMode, "playtime_seconds");
+			if(!pName || pName->type != json_string || !pMaps || pMaps->type != json_integer || !pScore)
+				continue;
+			const char *pModeName = json_string_get(pName);
+			int64_t Maps = pMaps->u.integer;
+			int64_t Score = 0;
+			if(!pModeName || pModeName[0] == '\0' || static_cast<size_t>(str_length(pModeName)) > 128 || !str_utf8_check(pModeName) || Maps < 0 || Maps > std::numeric_limits<int>::max())
+				continue;
+			if(pScore->type == json_integer)
+				Score = pScore->u.integer;
+			else if(pScore->type == json_string)
+			{
+				const char *pScoreText = json_string_get(pScore);
+				if(!ParseStrictInt64(pScoreText, Score))
+					continue;
+			}
+			else
+				continue;
+			SQmClientLocalModeStats Stats;
+			Stats.m_GameMode = pModeName;
+			if(pCommunity != &json_value_none && pCommunity->type == json_string && json_string_get(pCommunity) && static_cast<size_t>(str_length(json_string_get(pCommunity))) <= 128 && str_utf8_check(json_string_get(pCommunity)))
+				Stats.m_CommunityId = json_string_get(pCommunity);
+			Stats.m_IsAxiom = pAxiom->type == json_boolean && json_boolean_get(pAxiom);
+			Stats.m_Maps = (int)Maps;
+			Stats.m_Score = Score;
+			if(pPlaytime)
+			{
+				if(pPlaytime->type == json_integer && pPlaytime->u.integer >= 0)
+					Stats.m_PlaytimeSeconds = pPlaytime->u.integer;
+				else if(pPlaytime->type == json_string)
+				{
+					const char *pPlaytimeText = json_string_get(pPlaytime);
+					int64_t ParsedPlaytime = 0;
+					if(ParseStrictInt64(pPlaytimeText, ParsedPlaytime) && ParsedPlaytime >= 0)
+						Stats.m_PlaytimeSeconds = ParsedPlaytime;
+				}
+			}
+			auto Existing = std::find_if(m_vQmClientLocalModeStats.begin(), m_vQmClientLocalModeStats.end(), [&Stats](const SQmClientLocalModeStats &Entry) {
+				return str_comp_nocase(Entry.m_GameMode.c_str(), Stats.m_GameMode.c_str()) == 0 && Entry.m_CommunityId == Stats.m_CommunityId && Entry.m_IsAxiom == Stats.m_IsAxiom;
+			});
+			if(Existing == m_vQmClientLocalModeStats.end())
+			{
+				// 文件被手工改成超量条目时截断，保证内存与后续保存有界。
+				if((int)m_vQmClientLocalModeStats.size() >= QMCLIENT_MAX_LOCAL_MODE_STATS)
+					continue;
+				m_vQmClientLocalModeStats.push_back(std::move(Stats));
+				continue;
+			}
+			Existing->m_Maps = (int)std::min<int64_t>(std::numeric_limits<int>::max(), SaturatingAddInt64(Existing->m_Maps, Stats.m_Maps));
+			Existing->m_Score = SaturatingAddInt64(Existing->m_Score, Stats.m_Score);
+			Existing->m_PlaytimeSeconds = SaturatingAddInt64(Existing->m_PlaytimeSeconds, Stats.m_PlaytimeSeconds);
+		}
+	}
+	const json_value *pQmClient = JsonObjectField(pRemote, "qmclient");
+	const json_value *pPrimaryPlayerName = JsonObjectField(pRemote, "primary_player_name");
+	if(pPrimaryPlayerName->type == json_string && json_string_get(pPrimaryPlayerName) && json_string_get(pPrimaryPlayerName)[0] != '\0' && static_cast<size_t>(str_length(json_string_get(pPrimaryPlayerName))) < MAX_NAME_LENGTH && str_utf8_check(json_string_get(pPrimaryPlayerName)))
+		m_QmDdnetPrimaryPlayerName = json_string_get(pPrimaryPlayerName);
+	const json_value *pOpenSeconds = JsonObjectField(pQmClient, "open_seconds");
+	if(pOpenSeconds->type == json_integer && pOpenSeconds->u.integer >= 0)
+		m_QmClientServerPlaytimeSeconds = pOpenSeconds->u.integer;
+	else if(pOpenSeconds->type == json_string)
+	{
+		int64_t OpenSeconds = 0;
+		if(ParseStrictInt64(json_string_get(pOpenSeconds), OpenSeconds) && OpenSeconds >= 0)
+			m_QmClientServerPlaytimeSeconds = OpenSeconds;
+	}
+	const json_value *pDdnet = JsonObjectField(pRemote, "ddnet");
+	const json_value *pPlayers = JsonObjectField(pDdnet, "players");
+	if(pPlayers->type == json_array)
+	{
+		for(unsigned Index = 0; Index < pPlayers->u.array.length; ++Index)
+		{
+			const json_value *pPlayer = pPlayers->u.array.values[Index];
+			const json_value *pName = JsonObjectField(pPlayer, "name");
+			if(pName->type != json_string || !json_string_get(pName) || json_string_get(pName)[0] == '\0' || static_cast<size_t>(str_length(json_string_get(pName))) >= MAX_NAME_LENGTH || !str_utf8_check(json_string_get(pName)))
+				continue;
+			if(FindQmDdnetPlayerStats(json_string_get(pName)) != nullptr)
+				continue;
+			SQmClientDdnetPlayerStats Stats;
+			Stats.m_PlayerName = json_string_get(pName);
+			const json_value *pFavoritePartner = JsonObjectField(pPlayer, "favorite_partner");
+			if(pFavoritePartner->type == json_string && json_string_get(pFavoritePartner) && static_cast<size_t>(str_length(json_string_get(pFavoritePartner))) < MAX_NAME_LENGTH && str_utf8_check(json_string_get(pFavoritePartner)))
+				Stats.m_FavoritePartner = json_string_get(pFavoritePartner);
+			const json_value *pPoints = JsonObjectField(pPlayer, "points");
+			const json_value *pPointsTotal = JsonObjectField(pPlayer, "points_total");
+			const json_value *pFinishes = JsonObjectField(pPlayer, "finishes");
+			if(!JsonReadNonNegativeInt64(pPoints, Stats.m_Points) || !JsonReadNonNegativeInt64(pPointsTotal, Stats.m_PointsTotal))
+				continue;
+			int64_t Finishes = 0;
+			if(!JsonReadNonNegativeInt64(pFinishes, Finishes) || Finishes > std::numeric_limits<int>::max())
+				continue;
+			Stats.m_TotalFinishes = (int)Finishes;
+			const json_value *pPlaytimeHours = JsonObjectField(pPlayer, "playtime_hours");
+			int64_t PlaytimeHours = 0;
+			if(JsonReadNonNegativeInt64(pPlaytimeHours, PlaytimeHours))
+				Stats.m_PlaytimeHours = PlaytimeHours;
+			const json_value *pPlaytimeHoursPastYear = JsonObjectField(pPlayer, "playtime_hours_past_year");
+			int64_t PlaytimeHoursPastYear = 0;
+			if(JsonReadNonNegativeInt64(pPlaytimeHoursPastYear, PlaytimeHoursPastYear))
+				Stats.m_PlaytimeHoursPastYear = PlaytimeHoursPastYear;
+			m_vQmClientDdnetPlayerStats.push_back(std::move(Stats));
+		}
+	}
+	SelectQmDdnetPlayerStats();
+	if(GameClient() != nullptr)
+		GameClient()->m_QmAxiomScores.LoadPersistentCache(pRoot);
+	json_value_free(pRoot);
+}
+
+int64_t CQmClient::QmStatisticsLastSuccessfulSyncTimestamp() const
+{
+	const int64_t DdnetTimestamp = m_QmDdnetPlayerState.LastSuccessfulSyncTimestamp();
+	const int64_t AxiomTimestamp = GameClient() != nullptr ? GameClient()->m_QmAxiomScores.LastSuccessfulSyncTimestamp() : 0;
+	return std::max(DdnetTimestamp, std::max(m_QmClientPlaytimeLastSuccessfulSyncTimestamp, AxiomTimestamp));
+}
+
+bool CQmClient::SaveQmClientStatistics() const
+{
+	if(m_QmStatisticsFileInvalid)
+	{
+		log_warn("qmclient", "refusing to overwrite invalid statistics file: %s", QMCLIENT_LOCAL_MODE_STATS_FILE);
+		return false;
+	}
+	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	char aTempFilename[IO_MAX_PATH_LENGTH];
+	IStorage::FormatTmpPath(aTempFilename, sizeof(aTempFilename), QMCLIENT_LOCAL_MODE_STATS_FILE);
+	IOHANDLE File = Storage()->OpenFile(aTempFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+	{
+		CJsonFileWriter Writer(File);
+		Writer.BeginObject();
+		Writer.WriteAttribute("local");
+		Writer.BeginObject();
+		Writer.WriteAttribute("modes");
+		Writer.BeginArray();
+		for(const SQmClientLocalModeStats &Stats : m_vQmClientLocalModeStats)
+		{
+			Writer.BeginObject();
+			Writer.WriteAttribute("mode");
+			Writer.WriteStrValue(Stats.m_GameMode.c_str());
+			if(!Stats.m_CommunityId.empty())
+			{
+				Writer.WriteAttribute("community_id");
+				Writer.WriteStrValue(Stats.m_CommunityId.c_str());
+			}
+			if(Stats.m_IsAxiom)
+			{
+				Writer.WriteAttribute("axiom");
+				Writer.WriteBoolValue(true);
+			}
+			Writer.WriteAttribute("maps");
+			Writer.WriteIntValue(Stats.m_Maps);
+			Writer.WriteAttribute("score");
+			char aScore[64];
+			str_format(aScore, sizeof(aScore), "%" PRId64, Stats.m_Score);
+			Writer.WriteStrValue(aScore);
+			Writer.WriteAttribute("playtime_seconds");
+			char aPlaytime[64];
+			str_format(aPlaytime, sizeof(aPlaytime), "%" PRId64, std::max<int64_t>(0, Stats.m_PlaytimeSeconds));
+			Writer.WriteStrValue(aPlaytime);
+			Writer.EndObject();
+		}
+		Writer.EndArray();
+		Writer.EndObject();
+		Writer.WriteAttribute("remote");
+		Writer.BeginObject();
+		if(!m_QmDdnetPrimaryPlayerName.empty())
+		{
+			Writer.WriteAttribute("primary_player_name");
+			Writer.WriteStrValue(m_QmDdnetPrimaryPlayerName.c_str());
+		}
+		Writer.WriteAttribute("qmclient");
+		Writer.BeginObject();
+		if(m_QmClientServerPlaytimeSeconds >= 0)
+		{
+			Writer.WriteAttribute("open_seconds");
+			char aOpenSeconds[64];
+			str_format(aOpenSeconds, sizeof(aOpenSeconds), "%" PRId64, m_QmClientServerPlaytimeSeconds);
+			Writer.WriteStrValue(aOpenSeconds);
+		}
+		Writer.EndObject();
+		Writer.WriteAttribute("ddnet");
+		Writer.BeginObject();
+		Writer.WriteAttribute("players");
+		Writer.BeginArray();
+		for(const SQmClientDdnetPlayerStats &Stats : m_vQmClientDdnetPlayerStats)
+		{
+			if(Stats.m_PlayerName.empty() || Stats.m_Points < 0 || Stats.m_PointsTotal < 0 || Stats.m_TotalFinishes < 0)
+				continue;
+			Writer.BeginObject();
+			Writer.WriteAttribute("name");
+			Writer.WriteStrValue(Stats.m_PlayerName.c_str());
+			Writer.WriteAttribute("favorite_partner");
+			Writer.WriteStrValue(Stats.m_FavoritePartner.c_str());
+			Writer.WriteAttribute("points");
+			char aPoints[64];
+			str_format(aPoints, sizeof(aPoints), "%" PRId64, Stats.m_Points);
+			Writer.WriteStrValue(aPoints);
+			Writer.WriteAttribute("points_total");
+			char aPointsTotal[64];
+			str_format(aPointsTotal, sizeof(aPointsTotal), "%" PRId64, Stats.m_PointsTotal);
+			Writer.WriteStrValue(aPointsTotal);
+			Writer.WriteAttribute("finishes");
+			Writer.WriteIntValue(Stats.m_TotalFinishes);
+			if(Stats.m_PlaytimeHours >= 0)
+			{
+				Writer.WriteAttribute("playtime_hours");
+				char aPlaytimeHours[64];
+				str_format(aPlaytimeHours, sizeof(aPlaytimeHours), "%" PRId64, Stats.m_PlaytimeHours);
+				Writer.WriteStrValue(aPlaytimeHours);
+			}
+			if(Stats.m_PlaytimeHoursPastYear >= 0)
+			{
+				Writer.WriteAttribute("playtime_hours_past_year");
+				char aPlaytimeHoursPastYear[64];
+				str_format(aPlaytimeHoursPastYear, sizeof(aPlaytimeHoursPastYear), "%" PRId64, Stats.m_PlaytimeHoursPastYear);
+				Writer.WriteStrValue(aPlaytimeHoursPastYear);
+			}
+			Writer.EndObject();
+		}
+		Writer.EndArray();
+		Writer.EndObject();
+		if(GameClient() != nullptr)
+			GameClient()->m_QmAxiomScores.WritePersistentCache(Writer);
+		else
+		{
+			Writer.WriteAttribute("axiom");
+			Writer.BeginObject();
+			Writer.WriteAttribute("players");
+			Writer.BeginArray();
+			Writer.EndArray();
+			Writer.EndObject();
+		}
+		Writer.EndObject();
+		Writer.EndObject();
+		if(!Writer.Finish())
+		{
+			Storage()->RemoveFile(aTempFilename, IStorage::TYPE_SAVE);
+			return false;
+		}
+	}
+	char aBackupFilename[2 * IO_MAX_PATH_LENGTH];
+	const bool Saved = IStorage::ReplaceFileSafely(Storage(), aTempFilename, QMCLIENT_LOCAL_MODE_STATS_FILE, aBackupFilename, sizeof(aBackupFilename));
+	if(!Saved)
+		Storage()->RemoveFile(aTempFilename, IStorage::TYPE_SAVE);
+	else
+	{
+		m_QmStatisticsFileExists = true;
+		m_QmStatisticsNextSaveRetryTick = 0;
+	}
+	return Saved;
+}
+
+const SQmClientDdnetPlayerStats *CQmClient::FindQmDdnetPlayerStats(const char *pPlayerName) const
+{
+	if(!pPlayerName || pPlayerName[0] == '\0')
+		return nullptr;
+	for(const SQmClientDdnetPlayerStats &Stats : m_vQmClientDdnetPlayerStats)
+	{
+		if(str_comp_nocase(Stats.m_PlayerName.c_str(), pPlayerName) == 0)
+			return &Stats;
+	}
+	return nullptr;
+}
+
+void CQmClient::StoreQmDdnetPlayerStats(const char *pPlayerName, const std::string &FavoritePartner, int TotalFinishes, int64_t Points, int64_t PointsTotal, int64_t PlaytimeHours, int64_t PlaytimeHoursPastYear)
+{
+	if(!pPlayerName || pPlayerName[0] == '\0' || TotalFinishes < 0 || Points < 0 || PointsTotal < 0)
+		return;
+	for(SQmClientDdnetPlayerStats &Stats : m_vQmClientDdnetPlayerStats)
+	{
+		if(str_comp_nocase(Stats.m_PlayerName.c_str(), pPlayerName) != 0)
+			continue;
+		Stats.m_FavoritePartner = FavoritePartner;
+		Stats.m_TotalFinishes = TotalFinishes;
+		Stats.m_Points = Points;
+		Stats.m_PointsTotal = PointsTotal;
+		Stats.m_PlaytimeHours = PlaytimeHours;
+		Stats.m_PlaytimeHoursPastYear = PlaytimeHoursPastYear;
+		return;
+	}
+	SQmClientDdnetPlayerStats Stats;
+	Stats.m_PlayerName = pPlayerName;
+	Stats.m_FavoritePartner = FavoritePartner;
+	Stats.m_TotalFinishes = TotalFinishes;
+	Stats.m_Points = Points;
+	Stats.m_PointsTotal = PointsTotal;
+	Stats.m_PlaytimeHours = PlaytimeHours;
+	Stats.m_PlaytimeHoursPastYear = PlaytimeHoursPastYear;
+	m_vQmClientDdnetPlayerStats.push_back(std::move(Stats));
+}
+
+void CQmClient::SelectQmDdnetPlayerStats(const char *pFallbackPlayerName)
+{
+	const char *pSelectedPlayerName = nullptr;
+	if(!m_QmDdnetPrimaryPlayerName.empty())
+		pSelectedPlayerName = m_QmDdnetPrimaryPlayerName.c_str();
+	else if(pFallbackPlayerName && pFallbackPlayerName[0] != '\0')
+		pSelectedPlayerName = pFallbackPlayerName;
+	if(!pSelectedPlayerName)
+	{
+		m_aQmDdnetPlayerName[0] = '\0';
+		m_aQmDdnetFavoritePartner[0] = '\0';
+		m_QmDdnetTotalFinishes = -1;
+		m_QmDdnetPoints = -1;
+		m_QmDdnetPointsTotal = -1;
+		m_QmDdnetPlaytimeHours = -1;
+		m_QmDdnetPlaytimeHoursPastYear = -1;
+		return;
+	}
+
+	str_copy(m_aQmDdnetPlayerName, pSelectedPlayerName, sizeof(m_aQmDdnetPlayerName));
+	const SQmClientDdnetPlayerStats *pStats = FindQmDdnetPlayerStats(pSelectedPlayerName);
+	if(!pStats)
+	{
+		m_aQmDdnetFavoritePartner[0] = '\0';
+		m_QmDdnetTotalFinishes = -1;
+		m_QmDdnetPoints = -1;
+		m_QmDdnetPointsTotal = -1;
+		m_QmDdnetPlaytimeHours = -1;
+		m_QmDdnetPlaytimeHoursPastYear = -1;
+		return;
+	}
+	str_copy(m_aQmDdnetFavoritePartner, pStats->m_FavoritePartner.c_str(), sizeof(m_aQmDdnetFavoritePartner));
+	m_QmDdnetTotalFinishes = pStats->m_TotalFinishes;
+	m_QmDdnetPoints = pStats->m_Points;
+	m_QmDdnetPointsTotal = pStats->m_PointsTotal;
+	m_QmDdnetPlaytimeHours = pStats->m_PlaytimeHours;
+	m_QmDdnetPlaytimeHoursPastYear = pStats->m_PlaytimeHoursPastYear;
+}
+
+void CQmClient::RecordQmClientLocalMapFinish(const char *pGameMode, int Score)
+{
+	if(!pGameMode || pGameMode[0] == '\0' || static_cast<size_t>(str_length(pGameMode)) > 128 || !str_utf8_check(pGameMode))
+		return;
+	const bool IsAxiom = Client()->State() == IClient::STATE_ONLINE && GameClient() != nullptr && GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity();
+	const std::string CommunityId = Client()->State() == IClient::STATE_ONLINE ? Client()->ServerInfo().m_aCommunityId : "";
+	if(CommunityId.size() > 128 || !str_utf8_check(CommunityId.c_str()))
+		return;
+	AccumulateQmClientLocalModePlaytime(time_get());
+	for(SQmClientLocalModeStats &Stats : m_vQmClientLocalModeStats)
+	{
+		if(str_comp_nocase(Stats.m_GameMode.c_str(), pGameMode) == 0 && Stats.m_CommunityId == CommunityId && Stats.m_IsAxiom == IsAxiom)
+		{
+			if(Stats.m_Maps < std::numeric_limits<int>::max())
+				++Stats.m_Maps;
+			Stats.m_Score = SaturatingAddInt64(Stats.m_Score, Score);
+			m_QmStatisticsLocalStatsDirty = true;
+			return;
+		}
+	}
+	if((int)m_vQmClientLocalModeStats.size() >= QMCLIENT_MAX_LOCAL_MODE_STATS)
+		return;
+	SQmClientLocalModeStats Stats;
+	Stats.m_GameMode = pGameMode;
+	Stats.m_CommunityId = CommunityId;
+	Stats.m_IsAxiom = IsAxiom;
+	Stats.m_Maps = 1;
+	Stats.m_Score = Score;
+	m_vQmClientLocalModeStats.push_back(std::move(Stats));
+	m_QmStatisticsLocalStatsDirty = true;
+}
+
+void CQmClient::OnMessage(int MsgType, void *pRawMsg)
+{
+	// 本地完成计数：DDNet 系服务端不会产生 GAMEOVER，完成通过两条互斥
+	// 通道播报——0.6 是「finished in」聊天广播（含中文格式），0.7 是
+	// RaceFinish 事件。demo 回放与离线状态不计数。
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return;
+
+	if(MsgType == NETMSGTYPE_SV_RACEFINISH)
+	{
+		const CNetMsg_Sv_RaceFinish *pMsg = (CNetMsg_Sv_RaceFinish *)pRawMsg;
+		if(pMsg->m_ClientId >= 0 && pMsg->m_ClientId == GameClient()->m_Snap.m_LocalClientId && pMsg->m_Time > 0)
+			RecordQmClientLocalRaceFinish(pMsg->m_Time);
+	}
+	else if(MsgType == NETMSGTYPE_SV_CHAT)
+	{
+		const CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
+		const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
+		// m_pMessage 解包失败时可能为 null，必须先判空再交给解析器。
+		if(pMsg->m_ClientId != -1 || LocalClientId < 0 || pMsg->m_pMessage == nullptr)
+			return;
+		char aName[MAX_NAME_LENGTH];
+		const int Time = CRaceHelper::TimeFromFinishMessage(pMsg->m_pMessage, aName, sizeof(aName));
+		if(Time > 0 && str_comp(aName, GameClient()->m_aClients[LocalClientId].m_aName) == 0)
+			RecordQmClientLocalRaceFinish(Time);
+	}
+}
+
+void CQmClient::RecordQmClientLocalRaceFinish(int TimeMs)
+{
+	// 双通道兜底去重：同一完成事件在 1 秒内只记一次。
+	const int64_t Now = time_get();
+	if(m_QmLastLocalFinishRecordTime >= 0 && Now - m_QmLastLocalFinishRecordTime < time_freq())
+		return;
+	const char *pGameType = Client()->ServerInfo().m_aGameType;
+	if(!pGameType || pGameType[0] == '\0')
+		return;
+	m_QmLastLocalFinishRecordTime = Now;
+	// 两条通道的时间都是毫秒；score 字段按正的完成秒数累计，
+	// 不再沿用旧 GAMEOVER 路径的负值语义。
+	RecordQmClientLocalMapFinish(pGameType, maximum<int>(1, TimeMs / 1000));
+}
+
+void CQmClient::AccumulateQmClientLocalModePlaytime(int64_t Now)
+{
+	if(m_QmClientActiveLocalMode.empty())
+		return;
+	if(m_QmClientLocalModeLastTick <= 0)
+	{
+		m_QmClientLocalModeLastTick = Now;
+		return;
+	}
+	const int64_t Delta = Now - m_QmClientLocalModeLastTick;
+	m_QmClientLocalModeLastTick = Now;
+	if(Delta <= 0 || Delta > 24 * 60 * 60 * time_freq())
+	{
+		m_QmClientLocalModeTickRemainder = 0;
+		return;
+	}
+	m_QmClientLocalModeTickRemainder += Delta;
+	const int64_t Seconds = m_QmClientLocalModeTickRemainder / time_freq();
+	m_QmClientLocalModeTickRemainder %= time_freq();
+	if(Seconds <= 0)
+		return;
+	for(SQmClientLocalModeStats &Stats : m_vQmClientLocalModeStats)
+	{
+		if(str_comp_nocase(Stats.m_GameMode.c_str(), m_QmClientActiveLocalMode.c_str()) == 0 && Stats.m_CommunityId == m_QmClientActiveLocalCommunityId && Stats.m_IsAxiom == m_QmClientActiveLocalIsAxiom)
+		{
+			Stats.m_PlaytimeSeconds = SaturatingAddInt64(Stats.m_PlaytimeSeconds, Seconds);
+			m_QmStatisticsLocalStatsDirty = true;
+			return;
+		}
+	}
+	if((int)m_vQmClientLocalModeStats.size() >= QMCLIENT_MAX_LOCAL_MODE_STATS)
+		return;
+	SQmClientLocalModeStats Stats;
+	Stats.m_GameMode = m_QmClientActiveLocalMode;
+	Stats.m_CommunityId = m_QmClientActiveLocalCommunityId;
+	Stats.m_IsAxiom = m_QmClientActiveLocalIsAxiom;
+	Stats.m_PlaytimeSeconds = Seconds;
+	m_vQmClientLocalModeStats.push_back(std::move(Stats));
+	m_QmStatisticsLocalStatsDirty = true;
+}
+
+void CQmClient::UpdateQmClientLocalModePlaytime()
+{
+	const int64_t Now = time_get();
+	const bool Online = Client()->State() == IClient::STATE_ONLINE;
+	const char *pMode = Online ? Client()->ServerInfo().m_aGameType : "";
+	const std::string CommunityId = Online ? Client()->ServerInfo().m_aCommunityId : "";
+	const bool IsAxiom = Online && GameClient() != nullptr && GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity();
+	if(m_QmClientActiveLocalMode != pMode || m_QmClientActiveLocalCommunityId != CommunityId || m_QmClientActiveLocalIsAxiom != IsAxiom)
+	{
+		AccumulateQmClientLocalModePlaytime(Now);
+		m_QmClientActiveLocalMode = pMode;
+		m_QmClientActiveLocalCommunityId = CommunityId;
+		m_QmClientActiveLocalIsAxiom = IsAxiom;
+		m_QmClientLocalModeLastTick = pMode[0] != '\0' ? Now : 0;
+		m_QmClientLocalModeTickRemainder = 0;
+		return;
+	}
+	AccumulateQmClientLocalModePlaytime(Now);
+}
+
+void CQmClient::EndQmClientLocalModePlaytime()
+{
+	if(!m_QmClientActiveLocalMode.empty())
+	{
+		AccumulateQmClientLocalModePlaytime(time_get());
+		m_QmClientActiveLocalMode.clear();
+		m_QmClientActiveLocalCommunityId.clear();
+		m_QmClientActiveLocalIsAxiom = false;
+		m_QmClientLocalModeLastTick = 0;
+		m_QmClientLocalModeTickRemainder = 0;
+	}
 }
 
 void CQmClient::OnShutdown()
@@ -689,25 +1302,38 @@ void CQmClient::OnShutdown()
 		TouchQmClientLifecycleMarker(true);
 		SendQmRealtimeStop();
 	}
+	if(m_pQmRealtimeTransport)
+		m_pQmRealtimeTransport->Disconnect();
 	StopQmAnonymousEmotes();
-	StopQmRealtime();
-	for(auto *pTask : {&m_pQmDdnetPlayerTask, &m_pTitleOperation, &m_pQmNewsPublishTask, &m_pQmSponsorsPublishTask})
-	{
-		if(*pTask)
-			(*pTask)->Abort();
-		pTask->reset();
-	}
-	ResetTitlePresences();
-	m_pQmClientUsersParseJob.reset();
+	m_QmRealtimeEvents.clear();
+	m_QmRealtimeEmoticonEvents.clear();
 	m_pQmRealtimeUsersPayload.reset();
-	m_pQmDdnetPlayerParseJob.reset();
-	m_QmRemoteEmoticonEvents.clear();
+	EndQmClientLocalModePlaytime();
+	SaveQmClientStatistics();
+
+	auto AbortTask = [](auto &pTask) {
+		if(pTask)
+		{
+			pTask->Abort();
+			pTask = nullptr;
+		}
+	};
+
+	AbortTask(m_pQmDdnetPlayerTask);
+	AbortTask(m_pTitleOperation);
+	AbortTask(m_pQmNewsPublishTask);
+	AbortTask(m_pQmSponsorsPublishTask);
+	ResetTitlePresences();
+	m_pQmClientUsersParseJob = nullptr;
+	m_pQmDdnetPlayerParseJob = nullptr;
+	m_QmDdnetPlayerState.Reset();
 }
 
 void CQmClient::OnUpdate()
 {
 	UpdateQmRealtime();
 	UpdateQmAnonymousEmotes();
+	UpdateQmClientLocalModePlaytime();
 	UpdateQmClientRecognition();
 	UpdateTitleAuthentication();
 	UpdateQmClientLifecycleAndServerTime();
@@ -716,28 +1342,1041 @@ void CQmClient::OnUpdate()
 		FinishQmNewsPublish();
 	if(m_pQmSponsorsPublishTask && m_pQmSponsorsPublishTask->Done())
 		FinishQmSponsorsPublish();
+	// 远程请求在 Axiom 组件中异步完成；下一帧统一落盘，避免每帧写文件。
+	// 本地统计脏标记按 30 秒节流落盘：游玩时长逐秒累计，不能逐秒写文件，
+	// 但也不能只在关机时保存——崩溃会把整段会话的本地统计全部丢失。
+	const int64_t StatisticsNow = time_get();
+	if(GameClient() != nullptr && !m_QmStatisticsFileInvalid &&
+		(GameClient()->m_QmAxiomScores.PersistentCacheDirty() ||
+			(m_QmStatisticsLocalStatsDirty && StatisticsNow >= m_QmStatisticsLocalSaveDueTick)) &&
+		(m_QmStatisticsNextSaveRetryTick == 0 || StatisticsNow >= m_QmStatisticsNextSaveRetryTick))
+	{
+		if(SaveQmClientStatistics())
+		{
+			GameClient()->m_QmAxiomScores.ClearPersistentCacheDirty();
+			m_QmStatisticsLocalStatsDirty = false;
+			m_QmStatisticsLocalSaveDueTick = StatisticsNow + 30 * time_freq();
+			m_QmStatisticsNextSaveRetryTick = 0;
+		}
+		else
+			m_QmStatisticsNextSaveRetryTick = StatisticsNow + 5 * time_freq();
+	}
+
+	// Axiom 分数在后台按缓存 TTL 查询，统计页面只负责展示，不应成为唯一触发点。
+	bool HasAxiomGoresStats = false;
+	for(const SQmClientLocalModeStats &Stats : m_vQmClientLocalModeStats)
+	{
+		if(Stats.m_IsAxiom && str_find_nocase(Stats.m_GameMode.c_str(), "gores") != nullptr)
+		{
+			HasAxiomGoresStats = true;
+			break;
+		}
+	}
+	if((HasAxiomGoresStats || (GameClient() != nullptr && GameClient()->m_QmAxiomAutoLogin.IsAxiomCommunity())) && m_aQmDdnetPlayerName[0] != '\0')
+		GameClient()->m_QmAxiomScores.EnsureQueried(m_aQmDdnetPlayerName);
+}
+
+void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
+{
+	const json_value *pPayload = Message.m_pPayload.get();
+	if(!pPayload)
+		return;
+	int64_t Value = 0;
+	if((Message.m_Event == EQmRealtimeEvent::TIME || Message.m_Event == EQmRealtimeEvent::PLAYTIME) &&
+		JsonReadNonNegativeInt64(JsonObjectField(pPayload, "ts"), Value) && Value > 0)
+	{
+		m_QmClientServerNow = Value;
+		m_QmClientServerTimeLastSync = time_get();
+		const double Measured = static_cast<double>(Value) - Client()->GlobalTime();
+		m_TitleServerTimeOffset = m_TitleServerTimeOffsetValid ? (m_TitleServerTimeOffset * 0.75 + Measured * 0.25) : Measured;
+		m_TitleServerTimeOffsetValid = true;
+	}
+	if(Message.m_Event == EQmRealtimeEvent::PLAYTIME)
+	{
+		if(JsonReadNonNegativeInt64(JsonObjectField(pPayload, "total_seconds"), Value))
+			m_QmClientServerPlaytimeSeconds = Value;
+		if(JsonReadNonNegativeInt64(JsonObjectField(pPayload, "last_start_at"), Value) && Value > 0)
+			m_QmClientServerSessionStart = Value;
+		m_QmClientPlaytimeLastSync = time_get();
+		m_QmClientPlaytimeLastSuccessfulSyncTimestamp = time_timestamp();
+		m_QmClientPlaytimeManualRefreshActive = false;
+		m_QmClientPlaytimeManualRefreshFailed = false;
+		if(str_comp(TitleJsonString(pPayload, "action"), "start") == 0 && !m_QmClientStartupSent)
+		{
+			m_QmClientMarkerStartedAt = time_timestamp();
+			m_QmClientMarkerLastSeenAt = m_QmClientMarkerStartedAt;
+			m_QmClientStartupSent = true;
+			m_QmClientAwaitingRecoveryStop = false;
+			WriteQmClientLifecycleMarker();
+		}
+		else if(str_comp(TitleJsonString(pPayload, "action"), "stop") == 0)
+			ClearQmClientLifecycleMarker();
+	}
+	if(Message.m_Event == EQmRealtimeEvent::TITLE_PROFILE && !TitleBusy())
+	{
+		const char *pTitle = TitleJsonString(pPayload, "title");
+		const char *pName = TitleJsonString(pPayload, "bound_name");
+		const char *pStyle = TitleJsonString(pPayload, "style");
+		const json_value *pStatus = JsonObjectField(pPayload, "status");
+		const bool Authenticated = pStatus->type == json_integer && pStatus->u.integer == 200 && IsValidQmTitle(pTitle);
+		const bool Changed = m_TitleAuthenticated != Authenticated ||
+				     str_comp(m_aTitleText, pTitle) || str_comp(m_aTitleBoundName, pName) || str_comp(m_aTitleProfileStyle, pStyle);
+		m_TitleAuthenticated = Authenticated;
+		str_copy(m_aTitleText, pTitle);
+		str_copy(m_aTitleBoundName, pName);
+		str_copy(m_aTitleProfileStyle, pStyle);
+		m_pTitleStatus = Authenticated ? Localizable("Permanent sponsor verified") : Localizable("Enter your sponsor code");
+		if(Changed)
+			++m_TitleRevision;
+	}
+	if(Message.m_Event == EQmRealtimeEvent::TITLE_STATUS)
+	{
+		const json_value *pStatus = JsonObjectField(pPayload, "status");
+		if(pStatus->type == json_integer && pStatus->u.integer == 409)
+		{
+			m_pTitleStatus = Localizable("Four IP addresses are already online");
+		}
+	}
+}
+
+void CQmClient::ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message)
+{
+	if(!Message.m_pPayload || Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
+		return;
+	char aServer[NETADDR_MAXSTRSIZE] = "";
+	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+	const json_value *pPayload = Message.m_pPayload.get();
+	const json_value *pAddress = JsonObjectField(pPayload, "server_address");
+	if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0 ||
+		JsonObjectField(pPayload, "users")->type != json_array)
+		return;
+	m_pQmRealtimeUsersPayload = Message.m_pPayload;
+	str_copy(m_aQmRealtimeUsersServer, aServer);
+	m_QmRealtimeUsersExpireTick = time_get() + 20 * time_freq();
+}
+
+void CQmClient::ApplyQmRealtimeDevelopers(const SQmRealtimeMessage &Message)
+{
+	if(!Message.m_pPayload || Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
+		return;
+	char aServer[NETADDR_MAXSTRSIZE] = "";
+	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+	const json_value *pPayload = Message.m_pPayload.get();
+	const json_value *pAddress = JsonObjectField(pPayload, "server_address");
+	if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0)
+		return;
+	SQmDeveloperPresenceParseResult Result;
+	if(!ParseQmDeveloperPresencesJson(pPayload, aServer, Result))
+		return;
+	GameClient()->ClearQmDeveloperMarks();
+	const int64_t NowTick = time_get();
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	{
+		if(!GameClient()->m_aClients[ClientId].m_Active)
+			continue;
+		const SQmDeveloperPresence *pPresence = FindQmDeveloperPresence(
+			Result.m_vPresences, aServer, ClientId, GameClient()->m_aClients[ClientId].m_aName, Result.m_ServerTime);
+		if(!pPresence)
+			continue;
+		const int64_t RemainingSeconds = std::min<int64_t>(
+			pPresence->m_ExpiresAt - Result.m_ServerTime, QMCLIENT_DEVELOPER_SYNC_INTERVAL_SECONDS * 2);
+		if(RemainingSeconds <= 0)
+			continue;
+		GameClient()->MarkQmDeveloperClient(ClientId, pPresence->m_PlayerName.c_str(),
+			NowTick + RemainingSeconds * time_freq(),
+			QmDeveloperBadgeStyleFromBucket(pPresence->m_StyleBucket) == EQmDeveloperBadgeStyle::RAINBOW);
+	}
+}
+
+void CQmClient::ApplyQmRealtimeBroadcast(const SQmRealtimeMessage &Message)
+{
+	// 只有内容真的变化时才落盘（Apply 内部已做版本单调与去重判断）。
+	if(Message.m_HasBroadcast && m_QmMarkdownBroadcast.Apply(Message.m_BroadcastMarkdown, Message.m_BroadcastVersion))
+		SaveQmMarkdownBroadcastCache();
+}
+
+void CQmClient::ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message)
+{
+	if(!Message.m_HasTitles || !Message.m_pTitlePayload ||
+		Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
+		return;
+
+	char aServer[NETADDR_MAXSTRSIZE] = "";
+	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+	const json_value *pAddress = JsonObjectField(Message.m_pTitlePayload.get(), "server_address");
+	if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0)
+		return;
+
+	int64_t ServerTime = 0;
+	const auto vPresences = ParseQmTitlePresences(Message.m_pTitlePayload.get(), aServer, &ServerTime);
+	if(ServerTime <= 0)
+		return;
+	mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
+	for(const auto &Presence : vPresences)
+	{
+		str_copy(m_aaTitleNames[Presence.m_PlayerId], Presence.m_PlayerName.c_str());
+		str_format(m_aaPlayerTitles[Presence.m_PlayerId], sizeof(m_aaPlayerTitles[Presence.m_PlayerId]), "[%s]", Presence.m_Title.c_str());
+		str_copy(m_aaPlayerTitleStyles[Presence.m_PlayerId], Presence.m_Style.c_str());
+		m_aTitleExpires[Presence.m_PlayerId] = time_get() + Presence.m_RemainingSeconds * time_freq();
+	}
+	const double Measured = static_cast<double>(ServerTime) - Client()->GlobalTime();
+	m_TitleServerTimeOffset = m_TitleServerTimeOffsetValid ? (m_TitleServerTimeOffset * 0.75 + Measured * 0.25) : Measured;
+	m_TitleServerTimeOffsetValid = true;
+}
+
+std::string CQmClient::BuildQmRealtimePresence(bool Hello) const
+{
+	char aServer[NETADDR_MAXSTRSIZE] = "";
+	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
+		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("type");
+	Writer.WriteStrValue(Hello ? "hello" : "presence");
+	if(Hello)
+	{
+		Writer.WriteAttribute("v");
+		Writer.WriteIntValue(QMCLIENT_REALTIME_PROTOCOL_VERSION);
+		Writer.WriteAttribute("client_version");
+		Writer.WriteStrValue(QMCLIENT_VERSION);
+		Writer.WriteAttribute("machine_hash");
+		Writer.WriteStrValue(m_aQmClientMachineHash);
+		Writer.WriteAttribute("client_id");
+		Writer.WriteStrValue(m_aQmClientPlaytimeClientId);
+		Writer.WriteAttribute("player_name");
+		Writer.WriteStrValue(g_Config.m_PlayerName);
+		if(m_QmClientAwaitingRecoveryStop)
+		{
+			Writer.WriteAttribute("recovery_stop_at");
+			Writer.WriteIntValue((int)std::clamp<int64_t>(m_QmClientRecoveryStopAt, 0, std::numeric_limits<int>::max()));
+		}
+	}
+	Writer.WriteAttribute("server_address");
+	Writer.WriteStrValue(aServer);
+	Writer.WriteAttribute("session_id");
+	Writer.WriteStrValue(m_aQmDeveloperSessionId);
+	if(QmRealtimeAllowsCredentials(m_aQmRealtimeUrl))
+	{
+		Writer.WriteAttribute("title_token");
+		Writer.WriteStrValue(m_aTitleToken);
+		Writer.WriteAttribute("developer_token");
+		Writer.WriteStrValue(m_aQmDeveloperToken);
+	}
+	Writer.WriteAttribute("players");
+	Writer.BeginArray();
+	if(aServer[0] && m_aQmDeveloperSessionId[0])
+	{
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		{
+			const int Id = GameClient()->m_aLocalIds[Dummy];
+			if((Dummy == 1 && !Client()->DummyConnected()) || Id < 0 || Id >= MAX_CLIENTS ||
+				!GameClient()->m_aClients[Id].m_Active)
+				continue;
+			Writer.BeginObject();
+			Writer.WriteAttribute("player_id");
+			Writer.WriteIntValue(Id);
+			Writer.WriteAttribute("player_name");
+			Writer.WriteStrValue(GameClient()->m_aClients[Id].m_aName);
+			Writer.WriteAttribute("dummy");
+			Writer.WriteBoolValue(Dummy == 1);
+			Writer.WriteAttribute("voice_supported");
+			Writer.WriteBoolValue(true);
+			Writer.EndObject();
+		}
+	}
+	Writer.EndArray();
+	Writer.EndObject();
+	return Writer.GetOutputString();
+}
+
+bool CQmClient::RequestQmRealtimeTitleRefresh()
+{
+	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
+		return false;
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("type");
+	Writer.WriteStrValue("subscribe_titles");
+	if(QmRealtimeAllowsCredentials(m_aQmRealtimeUrl))
+	{
+		Writer.WriteAttribute("title_token");
+		Writer.WriteStrValue(m_aTitleToken);
+	}
+	Writer.EndObject();
+	const std::string Body = Writer.GetOutputString();
+	if(!m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size()))
+		return false;
+	m_QmRealtimeTitleRevision = m_TitleRevision;
+	m_QmRealtimePresenceBody.clear();
+	m_QmRealtimeNextPresenceCheck = 0;
+	return true;
+}
+
+void CQmClient::SendQmRealtimeStop()
+{
+	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
+		return;
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("type");
+	Writer.WriteStrValue("stop");
+	Writer.WriteAttribute("stop_at");
+	Writer.WriteIntValue((int)std::clamp<int64_t>(time_timestamp(), 0, std::numeric_limits<int>::max()));
+	Writer.EndObject();
+	const std::string Body = Writer.GetOutputString();
+	m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size());
+}
+
+void CQmClient::SaveQmMarkdownBroadcastCache()
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE, aPath, sizeof(aPath));
+	// 序列化与文件操作在作业里完成，不占用主线程，也不访问组件与配置。
+	if(auto pJob = m_QmMarkdownBroadcastCacheWriter.Enqueue(aPath, QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION, m_QmMarkdownBroadcast.Version(), m_QmMarkdownBroadcast.Markdown()))
+		Engine()->AddJob(pJob);
+}
+
+void CQmClient::QmNewsReloadDraft()
+{
+	if(QmNewsPublishing())
+		return;
+	m_QmNewsDraft.clear();
+	char *pDraft = Storage()->ReadFileStr(QMCLIENT_NEWS_DRAFT_FILE, IStorage::TYPE_SAVE);
+	if(pDraft)
+	{
+		if(str_length(pDraft) <= QMCLIENT_NEWS_MAX_BYTES && str_utf8_check(pDraft))
+			m_QmNewsDraft = pDraft;
+		free(pDraft);
+	}
+	m_QmNewsStatus = EQmNewsStatus::IDLE;
+}
+
+void CQmClient::QmNewsPublishDraft()
+{
+	if(QmNewsPublishing() || !HasDeveloperCredential())
+		return;
+	if(m_QmNewsDraft.empty())
+		QmNewsReloadDraft();
+	if(m_QmNewsDraft.empty() || m_QmNewsDraft.size() > QMCLIENT_NEWS_MAX_BYTES || !str_utf8_check(m_QmNewsDraft.c_str()))
+	{
+		m_QmNewsStatus = EQmNewsStatus::PUBLISH_FAILED;
+		return;
+	}
+
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("markdown");
+	Writer.WriteStrValue(m_QmNewsDraft.c_str());
+	Writer.EndObject();
+	const std::string Output = Writer.GetOutputString();
+	m_pQmNewsPublishTask = HttpPostJson(QMCLIENT_NEWS_PUBLISH_URL, Output.c_str());
+	m_pQmNewsPublishTask->MaxResponseSize(8 * 1024);
+	m_pQmNewsPublishTask->FailOnErrorStatus(false);
+	char aAuthorization[80];
+	str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", m_aQmDeveloperToken);
+	m_pQmNewsPublishTask->HeaderString("Authorization", aAuthorization);
+	m_pQmNewsPublishTask->Timeout(CTimeout{3000, 5000, 500, 5});
+	m_pQmNewsPublishTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmNewsPublishTask);
+	m_QmNewsStatus = EQmNewsStatus::PUBLISHING;
+}
+
+void CQmClient::FinishQmNewsPublish()
+{
+	const int StatusCode = m_pQmNewsPublishTask->State() == EHttpState::DONE ? m_pQmNewsPublishTask->StatusCode() : 0;
+	if(StatusCode == 200)
+	{
+		json_value *pRoot = m_pQmNewsPublishTask->ResultJson();
+		if(pRoot && pRoot->type == json_object)
+		{
+			const json_value *pMarkdown = json_object_get(pRoot, "markdown");
+			const json_value *pVersion = json_object_get(pRoot, "version");
+			if(pMarkdown && pMarkdown->type == json_string && pMarkdown->u.string.length <= QMCLIENT_NEWS_MAX_BYTES &&
+				pVersion && pVersion->type == json_integer && pVersion->u.integer >= 0 && pVersion->u.integer <= std::numeric_limits<int>::max() &&
+				m_QmMarkdownBroadcast.Apply(std::string(pMarkdown->u.string.ptr, pMarkdown->u.string.length), (int)pVersion->u.integer))
+				SaveQmMarkdownBroadcastCache();
+		}
+		json_value_free(pRoot);
+		if(m_pQmRealtimeTransport && m_pQmRealtimeTransport->State() == EQmWebSocketState::CONNECTED)
+		{
+			static constexpr const char *pRefresh = "{\"type\":\"news\"}";
+			m_pQmRealtimeTransport->SendText(pRefresh, str_length(pRefresh));
+		}
+		m_QmNewsStatus = EQmNewsStatus::PUBLISHED;
+	}
+	else if(StatusCode == 401 || StatusCode == 403)
+		m_QmNewsStatus = EQmNewsStatus::PUBLISH_DENIED;
+	else if(StatusCode == 413)
+		m_QmNewsStatus = EQmNewsStatus::PUBLISH_TOO_LARGE;
+	else
+		m_QmNewsStatus = EQmNewsStatus::PUBLISH_FAILED;
+	m_pQmNewsPublishTask = nullptr;
+}
+
+void CQmClient::LoadQmSponsorsCache()
+{
+	void *pData = nullptr;
+	unsigned Size = 0;
+	if(!Storage()->ReadFile(QMCLIENT_SPONSORS_CACHE_FILE, IStorage::TYPE_SAVE, &pData, &Size) || !pData)
+	{
+		free(pData);
+		return;
+	}
+	json_value *pRoot = Size <= 6 * QMCLIENT_SPONSORS_MAX_BYTES + 1024 ? json_parse(static_cast<const char *>(pData), Size) : nullptr;
+	free(pData);
+	if(!pRoot)
+		return;
+	const json_value *pCacheVersion = json_object_get(pRoot, "cache_version");
+	if(pCacheVersion && pCacheVersion->type == json_integer && pCacheVersion->u.integer == QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION)
+		ApplyQmSponsorsPayload(pRoot, false);
+	json_value_free(pRoot);
+}
+
+void CQmClient::SaveQmSponsorsCache()
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, QMCLIENT_SPONSORS_CACHE_FILE, aPath, sizeof(aPath));
+	if(auto pJob = m_QmSponsorsCacheWriter.Enqueue(aPath, QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION, m_QmSponsors.Version(), m_QmSponsors.Markdown()))
+		Engine()->AddJob(pJob);
+}
+
+bool CQmClient::ApplyQmSponsorsPayload(const json_value *pPayload, bool SaveCache)
+{
+	bool Changed = false;
+	if(!m_QmSponsors.Apply(pPayload, Changed))
+		return false;
+	if(Changed)
+	{
+		if(!QmSponsorsPublishing())
+		{
+			m_QmSponsorsStatus = m_QmSponsors.Names().empty() ? ESponsorsStatus::EMPTY : ESponsorsStatus::READY;
+			++m_QmSponsorsStatusRevision;
+		}
+		if(SaveCache)
+			SaveQmSponsorsCache();
+	}
+	return true;
+}
+
+void CQmClient::QmSponsorsRefresh()
+{
+	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
+		return;
+	static constexpr const char *pMessage = "{\"type\":\"sponsors\"}";
+	m_pQmRealtimeTransport->SendText(pMessage, str_length(pMessage));
+}
+
+void CQmClient::QmSponsorsReloadDraft()
+{
+	if(QmSponsorsPublishing())
+		return;
+	m_QmSponsorsDraft.clear();
+	char *pDraft = Storage()->ReadFileStr(QMCLIENT_SPONSORS_DRAFT_FILE, IStorage::TYPE_SAVE);
+	if(pDraft)
+	{
+		if(str_length(pDraft) <= QMCLIENT_SPONSORS_MAX_BYTES)
+			m_QmSponsorsDraft = pDraft;
+		free(pDraft);
+	}
+	++m_QmSponsorsStatusRevision;
+}
+
+void CQmClient::QmSponsorsPublishDraft()
+{
+	if(QmSponsorsPublishing() || !HasDeveloperCredential())
+		return;
+	if(m_QmSponsorsDraft.empty())
+		QmSponsorsReloadDraft();
+	if(m_QmSponsorsDraft.empty() || m_QmSponsorsDraft.size() > QMCLIENT_SPONSORS_MAX_BYTES || !str_utf8_check(m_QmSponsorsDraft.c_str()))
+	{
+		m_QmSponsorsStatus = ESponsorsStatus::PUBLISH_FAILED;
+		++m_QmSponsorsStatusRevision;
+		return;
+	}
+
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("markdown");
+	Writer.WriteStrValue(m_QmSponsorsDraft.c_str());
+	Writer.EndObject();
+	const std::string Output = Writer.GetOutputString();
+	m_pQmSponsorsPublishTask = HttpPostJson(QMCLIENT_SPONSORS_PUBLISH_URL, Output.c_str());
+	m_pQmSponsorsPublishTask->MaxResponseSize(6 * QMCLIENT_SPONSORS_MAX_BYTES + 1024);
+	m_pQmSponsorsPublishTask->FailOnErrorStatus(false);
+	char aAuthorization[80];
+	str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", m_aQmDeveloperToken);
+	m_pQmSponsorsPublishTask->HeaderString("Authorization", aAuthorization);
+	m_pQmSponsorsPublishTask->Timeout(CTimeout{3000, 5000, 500, 5});
+	m_pQmSponsorsPublishTask->LogProgress(HTTPLOG::FAILURE);
+	Http()->Run(m_pQmSponsorsPublishTask);
+	m_QmSponsorsStatus = ESponsorsStatus::PUBLISHING;
+	++m_QmSponsorsStatusRevision;
+}
+
+void CQmClient::FinishQmSponsorsPublish()
+{
+	const int StatusCode = m_pQmSponsorsPublishTask->State() == EHttpState::DONE ? m_pQmSponsorsPublishTask->StatusCode() : 0;
+	if(StatusCode == 200)
+	{
+		json_value *pRoot = m_pQmSponsorsPublishTask->ResultJson();
+		const bool Applied = ApplyQmSponsorsPayload(pRoot, true);
+		json_value_free(pRoot);
+		m_QmSponsorsStatus = Applied ? ESponsorsStatus::PUBLISHED : ESponsorsStatus::PUBLISH_FAILED;
+	}
+	else if(StatusCode == 401 || StatusCode == 403)
+		m_QmSponsorsStatus = ESponsorsStatus::PUBLISH_DENIED;
+	else if(StatusCode == 413)
+		m_QmSponsorsStatus = ESponsorsStatus::PUBLISH_TOO_LARGE;
+	else
+		m_QmSponsorsStatus = ESponsorsStatus::PUBLISH_FAILED;
+	m_pQmSponsorsPublishTask = nullptr;
+	++m_QmSponsorsStatusRevision;
+}
+
+void CQmClient::LoadQmMarkdownBroadcastCache()
+{
+	char aPath[IO_MAX_PATH_LENGTH];
+	Storage()->GetCompletePath(IStorage::TYPE_SAVE, QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE, aPath, sizeof(aPath));
+	IOHANDLE File = io_open(aPath, IOFLAG_READ);
+	if(!File)
+		return;
+	const unsigned Length = (unsigned)io_length(File);
+	if(Length == 0)
+	{
+		io_close(File);
+		return;
+	}
+	std::vector<char> vBuffer(Length);
+	const bool ReadOk = io_read(File, vBuffer.data(), Length) == Length;
+	io_close(File);
+	if(!ReadOk)
+		return;
+
+	json_value *pRoot = json_parse(vBuffer.data(), Length);
+	if(pRoot == nullptr)
+		return;
+	const json_value *pCacheVersion = json_object_get(pRoot, "cache_version");
+	const json_value *pVersion = json_object_get(pRoot, "version");
+	const json_value *pMarkdown = json_object_get(pRoot, "markdown");
+	// 缓存格式版本不符时直接丢弃：宁可本次会话没有内容，也不用旧格式喂给解析器。
+	if(pCacheVersion != nullptr && pCacheVersion->type == json_integer &&
+		pCacheVersion->u.integer == QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION &&
+		pVersion != nullptr && pVersion->type == json_integer &&
+		pMarkdown != nullptr && pMarkdown->type == json_string)
+	{
+		m_QmMarkdownBroadcast.Apply(std::string(pMarkdown->u.string.ptr, pMarkdown->u.string.length), (int)pVersion->u.integer);
+	}
+	json_value_free(pRoot);
+}
+
+void CQmClient::UpdateQmRealtime()
+{
+	if(m_QmClientShutdownReported)
+		return;
+	if(!m_pQmRealtimeTransport)
+	{
+		m_pQmRealtimeTransport = CreateQmWebSocketClient({});
+		if(m_pQmRealtimeTransport && m_pQmRealtimeTransport->Available())
+		{
+			IQmWebSocketClient::STuning Tuning;
+			Tuning.m_HeartbeatMs = g_Config.m_QmWebSocketHeartbeat * 1000;
+			Tuning.m_BackoffBaseMs = g_Config.m_QmWebSocketBackoffBaseMs;
+			Tuning.m_BackoffMaxMs = g_Config.m_QmWebSocketBackoffMaxMs;
+			m_pQmRealtimeTransport->SetTuning(Tuning);
+		}
+	}
+	if(!m_pQmRealtimeTransport)
+		return;
+	const char *pConfiguredUrl = QmRealtimeEffectiveUrl(g_Config.m_QmWebSocketUrl);
+	if(str_comp(m_aQmRealtimeUrl, pConfiguredUrl) != 0)
+	{
+		if(m_pQmRealtimeTransport->Desired())
+			m_pQmRealtimeTransport->Disconnect();
+		LogQmWebSocketEvent("realtime", "endpoint_changed");
+		str_copy(m_aQmRealtimeUrl, pConfiguredUrl);
+		m_QmRealtimeFailureLogged = false;
+		m_QmRealtimeEvents.clear();
+		m_pQmRealtimeUsersPayload.reset();
+		m_QmRealtimeHelloSent = false;
+		m_QmRealtimeTitleRevision = -1;
+		m_QmRealtimeConnectedTick = 0;
+		m_QmRealtimePresenceBody.clear();
+	}
+
+	if(!m_pQmRealtimeTransport->Available())
+		return;
+
+	SQmWebSocketConnectConfig ConnectConfig;
+	const std::string ParseError = ParseQmWebSocketUrl(m_aQmRealtimeUrl, ConnectConfig);
+	if(!ParseError.empty())
+	{
+		if(!m_QmRealtimeFailureLogged)
+		{
+			m_QmRealtimeFailureLogged = true;
+			log_warn("qmclient", "realtime WebSocket URL is invalid: %s", ParseError.c_str());
+		}
+		return;
+	}
+
+	ConnectConfig.m_Protocol = g_Config.m_QmWebSocketProtocol;
+	ConnectConfig.m_MaxMessageSize = 8 * 1024 * 1024;
+	ConnectConfig.m_AllowInsecureTls = g_Config.m_QmWebSocketAllowInsecureTls != 0;
+	if(!m_pQmRealtimeTransport->Desired())
+	{
+		std::string Error;
+		if(!m_pQmRealtimeTransport->Connect(ConnectConfig, Error))
+		{
+			if(!m_QmRealtimeFailureLogged)
+			{
+				m_QmRealtimeFailureLogged = true;
+				log_warn("qmclient", "realtime WebSocket connection rejected: %s", Error.c_str());
+			}
+		}
+		else
+		{
+			m_QmRealtimeFailureLogged = false;
+			LogQmWebSocketEvent("realtime", "connecting");
+		}
+	}
+
+	if(m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED)
+	{
+		if(m_QmRealtimeConnectedTick != 0)
+			LogQmWebSocketEvent("realtime", "disconnected");
+		m_QmRealtimeHelloSent = false;
+		m_QmRealtimeTitleRevision = -1;
+		m_QmRealtimeConnectedTick = 0;
+		if(m_QmClientPlaytimeManualRefreshActive)
+		{
+			m_QmClientPlaytimeManualRefreshActive = false;
+			m_QmClientPlaytimeManualRefreshFailed = true;
+		}
+		return;
+	}
+
+	const int64_t ConnectedTick = m_pQmRealtimeTransport->LastConnectedTick();
+	if(m_QmRealtimeConnectedTick != ConnectedTick)
+	{
+		LogQmWebSocketEvent("realtime", "connected");
+		m_QmRealtimeConnectedTick = ConnectedTick;
+		m_QmRealtimeHelloSent = false;
+		m_QmRealtimeTitleRevision = -1;
+		m_QmRealtimePresenceBody.clear();
+		m_QmRealtimeNextPresenceCheck = 0;
+		m_QmRealtimeEvents.clear();
+		m_pQmRealtimeUsersPayload.reset();
+	}
+	if(!m_QmRealtimeHelloSent && EnsureQmClientMachineHash())
+	{
+		EnsureQmClientPlaytimeClientId();
+		const std::string Body = BuildQmRealtimePresence(true);
+		m_QmRealtimeHelloSent = m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size());
+		if(m_QmRealtimeHelloSent)
+		{
+			m_QmRealtimePresenceBody = BuildQmRealtimePresence(false);
+			m_QmRealtimeLastPresence = time_get();
+		}
+	}
+
+	SQmWebSocketMessage Incoming;
+	for(int Count = 0; Count < 8 && m_pQmRealtimeTransport->PollMessage(Incoming); ++Count)
+	{
+		if(Incoming.m_Type == EQmWebSocketMessageType::TEXT)
+			EnqueueQmRealtimeMessage(Incoming.m_Data.data(), Incoming.m_Data.size());
+	}
+	if(m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED ||
+		m_pQmRealtimeTransport->LastConnectedTick() != ConnectedTick)
+	{
+		m_QmRealtimeEvents.clear();
+		m_pQmRealtimeUsersPayload.reset();
+		m_QmRealtimeHelloSent = false;
+		return;
+	}
+
+	SQmRealtimeMessage RealtimeMessage;
+	while(PopQmRealtimeMessage(RealtimeMessage))
+	{
+		if(RealtimeMessage.m_Event == EQmRealtimeEvent::BROADCAST)
+			ApplyQmRealtimeBroadcast(RealtimeMessage);
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::SPONSORS && RealtimeMessage.m_HasRealtimeData)
+			ApplyQmSponsorsPayload(RealtimeMessage.m_pPayload.get(), true);
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::TITLES)
+			ApplyQmRealtimeTitles(RealtimeMessage);
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::USERS)
+			ApplyQmRealtimeUsers(RealtimeMessage);
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::DEVELOPERS)
+			ApplyQmRealtimeDevelopers(RealtimeMessage);
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::TIME || RealtimeMessage.m_Event == EQmRealtimeEvent::PLAYTIME ||
+			RealtimeMessage.m_Event == EQmRealtimeEvent::TITLE_PROFILE || RealtimeMessage.m_Event == EQmRealtimeEvent::TITLE_STATUS)
+			ApplyQmRealtimeServiceData(RealtimeMessage);
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::STATE && RealtimeMessage.m_StatePayloadValid)
+		{
+			if(RealtimeMessage.m_HasOnlineUsers)
+				m_QmClientDistribution.m_OnlineUserCount = RealtimeMessage.m_OnlineUsers;
+			if(RealtimeMessage.m_HasOnlineDummies)
+				m_QmClientDistribution.m_OnlineDummyCount = RealtimeMessage.m_OnlineDummies;
+		}
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::PING)
+		{
+			static constexpr const char *pPong = "{\"type\":\"pong\"}";
+			m_pQmRealtimeTransport->SendText(pPong, str_length(pPong));
+		}
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::ERROR)
+		{
+			// 服务端错误字段可能含有用户数据；只记录稳定类别，不输出完整帧。
+			LogQmWebSocketEvent("realtime", "service_error");
+		}
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::UNKNOWN)
+		{
+			LogQmWebSocketEvent("realtime", "unknown_event");
+		}
+	}
+
+	const int64_t Tick = time_get();
+	if(m_QmClientPlaytimeManualRefreshActive && Tick - m_QmClientPlaytimeManualRefreshTick >= 10 * time_freq())
+	{
+		m_QmClientPlaytimeManualRefreshActive = false;
+		m_QmClientPlaytimeManualRefreshFailed = true;
+	}
+	if(m_QmRealtimeHelloSent && Tick >= m_QmRealtimeNextPresenceCheck)
+	{
+		m_QmRealtimeNextPresenceCheck = Tick + time_freq() / 4;
+		const std::string Body = BuildQmRealtimePresence(false);
+		if(Body != m_QmRealtimePresenceBody || Tick - m_QmRealtimeLastPresence >= 5 * time_freq())
+		{
+			if(m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size()))
+			{
+				m_QmRealtimePresenceBody = Body;
+				m_QmRealtimeLastPresence = Tick;
+			}
+		}
+	}
+	if(m_QmRealtimeHelloSent && m_QmRealtimeTitleRevision != m_TitleRevision)
+		RequestQmRealtimeTitleRefresh();
+}
+
+void CQmClient::StopQmAnonymousEmotes()
+{
+	if(m_pQmAnonymousEmote)
+	{
+		m_pQmAnonymousEmote->Disconnect();
+		m_pQmAnonymousEmote.reset();
+	}
+	if(m_QmAnonymousConnectedTick != 0)
+		LogQmWebSocketEvent("anonymous_emote", "disconnected");
+	m_aQmAnonymousClientId[0] = '\0';
+	m_aQmAnonymousSessionId[0] = '\0';
+	m_QmAnonymousConnectedTick = 0;
+	m_QmAnonymousNextHelloCheck = 0;
+	m_QmAnonymousHelloBody.clear();
+	m_QmRealtimeEmoticonEvents.clear();
+}
+
+std::string CQmClient::BuildQmAnonymousEmoteHello() const
+{
+	char aServer[NETADDR_MAXSTRSIZE] = "";
+	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
+		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("type");
+	Writer.WriteStrValue("hello");
+	Writer.WriteAttribute("v");
+	Writer.WriteIntValue(QMCLIENT_REALTIME_PROTOCOL_VERSION);
+	Writer.WriteAttribute("client_id");
+	Writer.WriteStrValue(m_aQmAnonymousClientId);
+	Writer.WriteAttribute("player_name");
+	Writer.WriteStrValue(g_Config.m_PlayerName);
+	Writer.WriteAttribute("server_address");
+	Writer.WriteStrValue(NormalizeQmServerAddress(aServer).c_str());
+	Writer.WriteAttribute("session_id");
+	Writer.WriteStrValue(m_aQmAnonymousSessionId);
+	Writer.WriteAttribute("players");
+	Writer.BeginArray();
+	if(aServer[0])
+	{
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		{
+			const int Id = GameClient()->m_aLocalIds[Dummy];
+			if((Dummy == 1 && !Client()->DummyConnected()) || Id < 0 || Id >= MAX_CLIENTS || !GameClient()->m_aClients[Id].m_Active)
+				continue;
+			Writer.BeginObject();
+			Writer.WriteAttribute("player_id");
+			Writer.WriteIntValue(Id);
+			Writer.WriteAttribute("player_name");
+			Writer.WriteStrValue(GameClient()->m_aClients[Id].m_aName);
+			Writer.WriteAttribute("dummy");
+			Writer.WriteBoolValue(Dummy == 1);
+			Writer.EndObject();
+		}
+	}
+	Writer.EndArray();
+	Writer.EndObject();
+	return Writer.GetOutputString();
+}
+
+void CQmClient::SendQmAnonymousEmoteHello()
+{
+	if(!m_pQmAnonymousEmote || m_pQmAnonymousEmote->State() != EQmWebSocketState::CONNECTED ||
+		Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
+		return;
+	const std::string Body = BuildQmAnonymousEmoteHello();
+	if(m_pQmAnonymousEmote->SendText(Body.c_str(), Body.size()))
+	{
+		m_QmAnonymousHelloBody = Body;
+		LogQmWebSocketEvent("anonymous_emote", "hello_sent");
+	}
+	else
+		LogQmWebSocketEvent("anonymous_emote", "hello_send_failed");
+}
+
+void CQmClient::UpdateQmAnonymousEmotes()
+{
+	if(m_QmClientShutdownReported)
+		return;
+	if(Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
+	{
+		if(m_pQmAnonymousEmote)
+			StopQmAnonymousEmotes();
+		return;
+	}
+
+	if(!m_pQmAnonymousEmote)
+	{
+		m_pQmAnonymousEmote = CreateQmWebSocketClient({});
+		if(m_pQmAnonymousEmote && m_pQmAnonymousEmote->Available())
+		{
+			IQmWebSocketClient::STuning Tuning;
+			Tuning.m_HeartbeatMs = g_Config.m_QmWebSocketHeartbeat * 1000;
+			Tuning.m_BackoffBaseMs = g_Config.m_QmWebSocketBackoffBaseMs;
+			Tuning.m_BackoffMaxMs = g_Config.m_QmWebSocketBackoffMaxMs;
+			Tuning.m_OutgoingQueueCapacity = 16;
+			m_pQmAnonymousEmote->SetTuning(Tuning);
+		}
+	}
+	if(!m_pQmAnonymousEmote || !m_pQmAnonymousEmote->Available())
+		return;
+	if(!m_pQmAnonymousEmote->Desired())
+	{
+		SQmWebSocketConnectConfig Config;
+		const std::string ParseError = ParseQmWebSocketUrl("wss://arghena.site/api/sync/anonymous/ws", Config);
+		if(!ParseError.empty())
+		{
+			LogQmWebSocketEvent("anonymous_emote", "invalid_url");
+			return;
+		}
+		Config.m_Protocol = "qmclient-json";
+		Config.m_MaxMessageSize = 128 * 1024;
+		std::string Error;
+		if(!m_pQmAnonymousEmote->Connect(Config, Error))
+		{
+			LogQmWebSocketEvent("anonymous_emote", "connect_rejected");
+			return;
+		}
+		LogQmWebSocketEvent("anonymous_emote", "connecting");
+	}
+	if(m_pQmAnonymousEmote->State() != EQmWebSocketState::CONNECTED)
+	{
+		if(m_QmAnonymousConnectedTick != 0)
+			LogQmWebSocketEvent("anonymous_emote", "disconnected");
+		m_QmAnonymousConnectedTick = 0;
+		m_QmAnonymousHelloBody.clear();
+		m_QmRealtimeEmoticonEvents.clear();
+		return;
+	}
+
+	const int64_t ConnectedTick = m_pQmAnonymousEmote->LastConnectedTick();
+	if(m_QmAnonymousConnectedTick != ConnectedTick)
+	{
+		LogQmWebSocketEvent("anonymous_emote", "connected");
+		m_QmAnonymousConnectedTick = ConnectedTick;
+		m_QmAnonymousHelloBody.clear();
+		m_QmRealtimeEmoticonEvents.clear();
+		secure_random_password(m_aQmAnonymousClientId, sizeof(m_aQmAnonymousClientId), sizeof(m_aQmAnonymousClientId) - 1);
+		secure_random_password(m_aQmAnonymousSessionId, sizeof(m_aQmAnonymousSessionId), sizeof(m_aQmAnonymousSessionId) - 1);
+		SendQmAnonymousEmoteHello();
+	}
+	SQmWebSocketMessage Incoming;
+	for(int Count = 0; Count < 8 && m_pQmAnonymousEmote->PollMessage(Incoming); ++Count)
+	{
+		if(Incoming.m_Type != EQmWebSocketMessageType::TEXT)
+			continue;
+		SQmRealtimeMessage Message;
+		if(!ParseQmRealtimeMessage(Incoming.m_Data.c_str(), Incoming.m_Data.size(), Message))
+		{
+			LogQmWebSocketEvent("anonymous_emote", "event_dropped: invalid_message");
+			continue;
+		}
+		if(Message.m_Type == "hello_ack")
+			LogQmWebSocketEvent("anonymous_emote", "hello_ack");
+		else if(Message.m_Event == EQmRealtimeEvent::ERROR)
+			LogQmWebSocketEvent("anonymous_emote", "server_error");
+		else if(Message.m_Event == EQmRealtimeEvent::PING)
+			m_pQmAnonymousEmote->SendText("{\"type\":\"pong\"}", 15);
+		else if(Message.m_Event == EQmRealtimeEvent::EMOTICON)
+			QueueQmAnonymousEmoticonEvent(std::move(Message));
+	}
+	if(m_pQmAnonymousEmote->State() != EQmWebSocketState::CONNECTED ||
+		m_pQmAnonymousEmote->LastConnectedTick() != ConnectedTick)
+	{
+		m_QmRealtimeEmoticonEvents.clear();
+		m_QmAnonymousHelloBody.clear();
+		return;
+	}
+	const int64_t Now = time_get();
+	if(Now >= m_QmAnonymousNextHelloCheck)
+	{
+		m_QmAnonymousNextHelloCheck = Now + time_freq() / 4;
+		if(BuildQmAnonymousEmoteHello() != m_QmAnonymousHelloBody)
+		{
+			m_QmRealtimeEmoticonEvents.clear();
+			SendQmAnonymousEmoteHello();
+		}
+	}
+}
+
+void CQmClient::EnqueueQmRealtimeMessage(const char *pData, size_t Size)
+{
+	SQmRealtimeMessage Message;
+	if(!ParseQmRealtimeMessage(pData, Size, Message))
+		return;
+	// 账号通道不承载匿名表情；两条连接的消息不可互相代送。
+	if(Message.m_Event == EQmRealtimeEvent::EMOTICON)
+		return;
+	if(m_QmRealtimeEvents.size() >= 128)
+		m_QmRealtimeEvents.pop_front();
+	m_QmRealtimeEvents.push_back(std::move(Message));
+}
+
+void CQmClient::QueueQmAnonymousEmoticonEvent(SQmRealtimeMessage Message)
+{
+	if(!Message.m_HasEmoticon || Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress() ||
+		Message.m_EmoticonClientId.empty() || Message.m_EmoticonClientId.size() > 64 ||
+		Message.m_EmoticonPlayerName.empty() || Message.m_EmoticonPlayerName.size() >= MAX_NAME_LENGTH)
+	{
+		LogQmWebSocketEvent("anonymous_emote", "event_dropped: invalid_state_or_payload");
+		return;
+	}
+	if(Message.m_EmoticonClientId == m_aQmAnonymousClientId)
+	{
+		LogQmWebSocketEvent("anonymous_emote", "event_dropped: self");
+		return;
+	}
+	char aServer[NETADDR_MAXSTRSIZE] = "";
+	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+	const std::string EventServer = NormalizeQmServerAddress(Message.m_EmoticonServerAddress.c_str());
+	if(EventServer.empty() || NormalizeQmServerAddress(aServer) != EventServer)
+	{
+		LogQmWebSocketEvent("anonymous_emote", "event_dropped: server_mismatch");
+		return;
+	}
+
+	int PlayerId = Message.m_PlayerId;
+	if(PlayerId < 0 || PlayerId >= MAX_CLIENTS ||
+		!GameClient()->m_aClients[PlayerId].m_Active ||
+		str_comp(GameClient()->m_aClients[PlayerId].m_aName, Message.m_EmoticonPlayerName.c_str()) != 0)
+	{
+		const int OriginalPlayerId = PlayerId;
+		PlayerId = -1;
+		for(int Candidate = 0; Candidate < MAX_CLIENTS; ++Candidate)
+			if(GameClient()->m_aClients[Candidate].m_Active &&
+				str_comp(GameClient()->m_aClients[Candidate].m_aName, Message.m_EmoticonPlayerName.c_str()) == 0)
+			{
+				PlayerId = Candidate;
+				break;
+			}
+		if(PlayerId >= 0 && g_Config.m_QmWebSocketLog)
+			log_info("qmclient", "anonymous_emote player_id_remapped: %d -> %d", OriginalPlayerId, PlayerId);
+	}
+	if(PlayerId < 0)
+	{
+		LogQmWebSocketEvent("anonymous_emote", "event_dropped: player_not_found");
+		return;
+	}
+	Message.m_PlayerId = PlayerId;
+	Message.m_EmoticonPlayerId = PlayerId;
+	if(m_QmRealtimeEmoticonEvents.size() >= 64)
+	{
+		LogQmWebSocketEvent("anonymous_emote", "event_dropped: queue_full");
+		m_QmRealtimeEmoticonEvents.pop_front();
+	}
+	m_QmRealtimeEmoticonEvents.push_back(std::move(Message));
+	LogQmWebSocketEvent("anonymous_emote", "emoticon_received");
+}
+
+bool CQmClient::PopQmRealtimeMessage(SQmRealtimeMessage &Message)
+{
+	if(m_QmRealtimeEvents.empty())
+		return false;
+	Message = std::move(m_QmRealtimeEvents.front());
+	m_QmRealtimeEvents.pop_front();
+	return true;
+}
+
+bool CQmClient::PopQmRealtimeEmoticon(SQmRealtimeMessage &Message)
+{
+	if(m_QmRealtimeEmoticonEvents.empty())
+		return false;
+	Message = std::move(m_QmRealtimeEmoticonEvents.front());
+	m_QmRealtimeEmoticonEvents.pop_front();
+	return true;
+}
+
+void CQmClient::SendQmAnonymousEmoticon(int Emoticon, int PlayerId, bool LaunchMode, bool SuperLaunch)
+{
+	if(!m_pQmAnonymousEmote || m_pQmAnonymousEmote->State() != EQmWebSocketState::CONNECTED ||
+		m_QmAnonymousHelloBody.empty() || m_aQmAnonymousClientId[0] == '\0' ||
+		Emoticon < 0 || Emoticon >= NUM_EMOTICONS ||
+		PlayerId < 0 || PlayerId >= MAX_CLIENTS || (!LaunchMode && !SuperLaunch))
+		return;
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("type");
+	Writer.WriteStrValue("emoticon");
+	Writer.WriteAttribute("emoticon");
+	Writer.WriteIntValue(Emoticon);
+	Writer.WriteAttribute("player_id");
+	Writer.WriteIntValue(PlayerId);
+	Writer.WriteAttribute("launch_mode");
+	Writer.WriteBoolValue(LaunchMode);
+	Writer.WriteAttribute("super_launch");
+	Writer.WriteBoolValue(SuperLaunch);
+	Writer.EndObject();
+	const std::string Body = Writer.GetOutputString();
+	if(m_pQmAnonymousEmote->SendText(Body.c_str(), Body.size()))
+		LogQmWebSocketEvent("anonymous_emote", "emoticon_sent");
+	else
+		LogQmWebSocketEvent("anonymous_emote", "emoticon_send_failed");
 }
 
 void CQmClient::OnStateChange(int NewState, int OldState)
 {
+	if(NewState != IClient::STATE_ONLINE && OldState == IClient::STATE_ONLINE)
+		EndQmClientLocalModePlaytime();
+
 	if((NewState == IClient::STATE_QUITTING || NewState == IClient::STATE_RESTARTING) && !m_QmClientShutdownReported)
 	{
 		m_QmClientShutdownReported = true;
 		TouchQmClientLifecycleMarker(true);
 		SendQmRealtimeStop();
 	}
-	if(NewState != IClient::STATE_ONLINE && OldState == IClient::STATE_ONLINE)
-		StopQmAnonymousEmotes();
+
 	if(NewState == IClient::STATE_ONLINE && OldState != IClient::STATE_ONLINE)
+	{
 		secure_random_password(m_aQmDeveloperSessionId, sizeof(m_aQmDeveloperSessionId), sizeof(m_aQmDeveloperSessionId) - 1);
+	}
 	else if(NewState != IClient::STATE_ONLINE && OldState == IClient::STATE_ONLINE)
 	{
-		GameClient()->ClearQmDeveloperMarks();
+		StopQmAnonymousEmotes();
+		ResetQmDeveloperPresenceTasks();
+		ResetTitlePresences();
+		m_pQmRealtimeUsersPayload.reset();
+		m_QmRealtimeEvents.clear();
+		m_QmRealtimeEmoticonEvents.clear();
 		GameClient()->ClearQ1menGSyncMarks();
 		GameClient()->ClearQmVoiceSyncMarks();
-		ResetTitlePresences();
 		m_aQmDeveloperSessionId[0] = '\0';
-		m_QmRemoteEmoticonEvents.clear();
 	}
 	m_QmRealtimePresenceBody.clear();
 	m_QmRealtimeNextPresenceCheck = 0;
@@ -892,284 +2531,6 @@ void CQmClient::UpdateQmClientLifecycleAndServerTime()
 		TouchQmClientLifecycleMarker(false);
 }
 
-void CQmClient::InitQmNews()
-{
-	m_QmNewsMarkdown.clear();
-	m_QmNewsDraft.clear();
-	m_QmNewsVersion = 0;
-	m_QmNewsPublishing = false;
-	m_QmNewsStatus = EQmNewsStatus::IDLE;
-	LoadQmNewsCache();
-}
-
-void CQmClient::LoadQmNewsCache()
-{
-	void *pFileData = nullptr;
-	unsigned FileSize = 0;
-	if(!Storage()->ReadFile(QMCLIENT_NEWS_CACHE_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize) || !pFileData || FileSize == 0)
-	{
-		free(pFileData);
-		return;
-	}
-
-	json_value *pRoot = json_parse(static_cast<const char *>(pFileData), FileSize);
-	free(pFileData);
-	if(!pRoot)
-		return;
-	const json_value *pCacheVersion = json_object_get(pRoot, "cache_version");
-	const json_value *pMarkdown = json_object_get(pRoot, "markdown");
-	const json_value *pVersion = json_object_get(pRoot, "version");
-	if(pCacheVersion->type == json_integer && pCacheVersion->u.integer == QMCLIENT_NEWS_CACHE_VERSION &&
-		pMarkdown->type == json_string && pMarkdown->u.string.length <= QMCLIENT_NEWS_MAX_BYTES)
-	{
-		m_QmNewsMarkdown.assign(pMarkdown->u.string.ptr, pMarkdown->u.string.length);
-		m_QmNewsVersion = pVersion->type == json_integer ? (int)pVersion->u.integer : 0;
-		m_QmNewsStatus = m_QmNewsMarkdown.empty() ? EQmNewsStatus::EMPTY : EQmNewsStatus::READY;
-	}
-	json_value_free(pRoot);
-}
-
-void CQmClient::SaveQmNewsCache()
-{
-	char aPath[IO_MAX_PATH_LENGTH];
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, QMCLIENT_NEWS_CACHE_FILE, aPath, sizeof(aPath));
-	if(auto pJob = m_QmNewsCacheWriter.Enqueue(aPath, QMCLIENT_NEWS_CACHE_VERSION, m_QmNewsVersion, m_QmNewsMarkdown))
-		Engine()->AddJob(pJob);
-}
-
-void CQmClient::ApplyQmNewsPayload(const char *pBody, size_t BodySize)
-{
-	if(pBody == nullptr || BodySize == 0)
-		return;
-	json_value *pRoot = json_parse(pBody, BodySize);
-	if(!pRoot)
-		return;
-	const json_value *pMarkdown = json_object_get(pRoot, "markdown");
-	const json_value *pVersion = json_object_get(pRoot, "version");
-	if(pMarkdown->type == json_string && pMarkdown->u.string.length <= QMCLIENT_NEWS_MAX_BYTES)
-	{
-		m_QmNewsMarkdown.assign(pMarkdown->u.string.ptr, pMarkdown->u.string.length);
-		m_QmNewsVersion = pVersion->type == json_integer ? (int)pVersion->u.integer : 0;
-		m_QmNewsStatus = m_QmNewsMarkdown.empty() ? EQmNewsStatus::EMPTY : EQmNewsStatus::READY;
-		SaveQmNewsCache();
-	}
-	json_value_free(pRoot);
-	++m_QmNewsRevision;
-}
-
-void CQmClient::QmNewsRefresh(bool Force)
-{
-	if(!Force || !QmRealtimeConnected())
-		return;
-	const char *pMessage = "{\"type\":\"news\"}";
-	m_pQmRealtime->SendText(pMessage, str_length(pMessage));
-}
-
-void CQmClient::QmNewsReloadDraft()
-{
-	m_QmNewsDraft.clear();
-	char *pDraft = Storage()->ReadFileStr(QMCLIENT_NEWS_DRAFT_FILE, IStorage::TYPE_SAVE);
-	if(pDraft)
-	{
-		if(str_length(pDraft) <= QMCLIENT_NEWS_MAX_BYTES)
-			m_QmNewsDraft = pDraft;
-		free(pDraft);
-	}
-	++m_QmNewsRevision;
-}
-
-void CQmClient::QmNewsPublishDraft()
-{
-	if(m_QmNewsPublishing || m_aQmDeveloperToken[0] == '\0')
-		return;
-	if(m_QmNewsDraft.empty())
-		QmNewsReloadDraft();
-	if(m_QmNewsDraft.empty())
-	{
-		m_QmNewsStatus = EQmNewsStatus::PUBLISH_FAILED;
-		++m_QmNewsRevision;
-		return;
-	}
-
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("markdown");
-	Writer.WriteStrValue(m_QmNewsDraft.c_str());
-	Writer.EndObject();
-	const std::string Output = Writer.GetOutputString();
-	m_pQmNewsPublishTask = HttpPostJson(QMCLIENT_NEWS_PUBLISH_URL, Output.c_str());
-	m_pQmNewsPublishTask->MaxResponseSize(8 * 1024);
-	// 401/403/413 由发布结果处理，保留 HTTP 错误响应以区分权限和内容大小问题。
-	m_pQmNewsPublishTask->FailOnErrorStatus(false);
-	char aAuthorization[80];
-	str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", m_aQmDeveloperToken);
-	m_pQmNewsPublishTask->HeaderString("Authorization", aAuthorization);
-	m_pQmNewsPublishTask->Timeout(CTimeout{3000, 5000, 500, 5});
-	m_pQmNewsPublishTask->LogProgress(HTTPLOG::FAILURE);
-	Http()->Run(m_pQmNewsPublishTask);
-	m_QmNewsPublishing = true;
-	m_QmNewsStatus = EQmNewsStatus::PUBLISHING;
-	++m_QmNewsRevision;
-}
-
-void CQmClient::FinishQmNewsPublish()
-{
-	m_QmNewsPublishing = false;
-	const int StatusCode = m_pQmNewsPublishTask->State() == EHttpState::DONE ? m_pQmNewsPublishTask->StatusCode() : 0;
-	if(StatusCode == 200)
-	{
-		m_QmNewsMarkdown = m_QmNewsDraft;
-		++m_QmNewsVersion;
-		m_QmNewsStatus = EQmNewsStatus::PUBLISHED;
-		SaveQmNewsCache();
-	}
-	else if(StatusCode == 401 || StatusCode == 403)
-		m_QmNewsStatus = EQmNewsStatus::PUBLISH_DENIED;
-	else if(StatusCode == 413)
-		m_QmNewsStatus = EQmNewsStatus::PUBLISH_TOO_LARGE;
-	else
-		m_QmNewsStatus = EQmNewsStatus::PUBLISH_FAILED;
-	m_pQmNewsPublishTask = nullptr;
-	++m_QmNewsRevision;
-}
-
-void CQmClient::InitQmSponsors()
-{
-	m_QmSponsorsMarkdown.clear();
-	m_QmSponsorsDraft.clear();
-	m_vQmSponsorNames.clear();
-	m_QmSponsorsVersion = -1;
-	m_QmSponsorsStatus = EQmNewsStatus::IDLE;
-	void *pFileData = nullptr;
-	unsigned FileSize = 0;
-	if(!Storage()->ReadFile(QMCLIENT_SPONSORS_CACHE_FILE, IStorage::TYPE_SAVE, &pFileData, &FileSize) || !pFileData)
-	{
-		free(pFileData);
-		return;
-	}
-	json_value *pRoot = json_parse(static_cast<const char *>(pFileData), FileSize);
-	free(pFileData);
-	if(!pRoot)
-		return;
-	const json_value *pCacheVersion = json_object_get(pRoot, "cache_version");
-	if(pCacheVersion->type == json_integer && pCacheVersion->u.integer == QMCLIENT_NEWS_CACHE_VERSION)
-		ApplyQmSponsorsPayload(pRoot, false);
-	json_value_free(pRoot);
-}
-
-void CQmClient::SaveQmSponsorsCache()
-{
-	char aPath[IO_MAX_PATH_LENGTH];
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, QMCLIENT_SPONSORS_CACHE_FILE, aPath, sizeof(aPath));
-	if(auto pJob = m_QmSponsorsCacheWriter.Enqueue(aPath, QMCLIENT_NEWS_CACHE_VERSION, m_QmSponsorsVersion, m_QmSponsorsMarkdown))
-		Engine()->AddJob(pJob);
-}
-
-bool CQmClient::ApplyQmSponsorsPayload(const json_value *pPayload, bool SaveCache)
-{
-	if(!pPayload || pPayload->type != json_object)
-		return false;
-	const json_value *pMarkdown = json_object_get(pPayload, "markdown");
-	const json_value *pVersion = json_object_get(pPayload, "version");
-	if(pMarkdown->type != json_string || pMarkdown->u.string.length > QMCLIENT_NEWS_MAX_BYTES ||
-		pVersion->type != json_integer || pVersion->u.integer < 0 || pVersion->u.integer > std::numeric_limits<int>::max() ||
-		(size_t)str_length(pMarkdown->u.string.ptr) != pMarkdown->u.string.length || !str_utf8_check(pMarkdown->u.string.ptr))
-		return false;
-
-	// HTTP 发布结果可能晚于新一轮推送抵达；不让较旧版本覆盖当前名单。
-	const int Version = (int)pVersion->u.integer;
-	if(Version < m_QmSponsorsVersion)
-		return true;
-	const std::string Markdown(pMarkdown->u.string.ptr, pMarkdown->u.string.length);
-	if(Version == m_QmSponsorsVersion && Markdown == m_QmSponsorsMarkdown)
-		return true;
-	m_QmSponsorsMarkdown = Markdown;
-	m_vQmSponsorNames = qm_sponsors::ParseNames(m_QmSponsorsMarkdown.c_str());
-	m_QmSponsorsVersion = Version;
-	if(!QmSponsorsPublishing())
-		m_QmSponsorsStatus = m_vQmSponsorNames.empty() ? EQmNewsStatus::EMPTY : EQmNewsStatus::READY;
-	++m_QmSponsorsRevision;
-	if(SaveCache)
-		SaveQmSponsorsCache();
-	return true;
-}
-
-void CQmClient::QmSponsorsRefresh()
-{
-	if(!QmRealtimeConnected())
-		return;
-	const char *pMessage = "{\"type\":\"sponsors\"}";
-	m_pQmRealtime->SendText(pMessage, str_length(pMessage));
-}
-
-void CQmClient::QmSponsorsReloadDraft()
-{
-	if(QmSponsorsPublishing())
-		return;
-	m_QmSponsorsDraft.clear();
-	char *pDraft = Storage()->ReadFileStr(QMCLIENT_SPONSORS_DRAFT_FILE, IStorage::TYPE_SAVE);
-	if(pDraft)
-	{
-		if(str_length(pDraft) <= QMCLIENT_NEWS_MAX_BYTES)
-			m_QmSponsorsDraft = pDraft;
-		free(pDraft);
-	}
-	++m_QmSponsorsRevision;
-}
-
-void CQmClient::QmSponsorsPublishDraft()
-{
-	if(QmSponsorsPublishing() || !HasDeveloperCredential())
-		return;
-	if(m_QmSponsorsDraft.empty())
-		QmSponsorsReloadDraft();
-	if(m_QmSponsorsDraft.empty())
-	{
-		m_QmSponsorsStatus = EQmNewsStatus::PUBLISH_FAILED;
-		++m_QmSponsorsRevision;
-		return;
-	}
-
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("markdown");
-	Writer.WriteStrValue(m_QmSponsorsDraft.c_str());
-	Writer.EndObject();
-	const std::string Output = Writer.GetOutputString();
-	m_pQmSponsorsPublishTask = HttpPostJson(QMCLIENT_SPONSORS_PUBLISH_URL, Output.c_str());
-	// 成功响应带回服务端确认的正文和版本，允许 JSON 转义后的长度。
-	m_pQmSponsorsPublishTask->MaxResponseSize(6 * QMCLIENT_NEWS_MAX_BYTES + 1024);
-	m_pQmSponsorsPublishTask->FailOnErrorStatus(false);
-	char aAuthorization[80];
-	str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", m_aQmDeveloperToken);
-	m_pQmSponsorsPublishTask->HeaderString("Authorization", aAuthorization);
-	m_pQmSponsorsPublishTask->Timeout(CTimeout{3000, 5000, 500, 5});
-	m_pQmSponsorsPublishTask->LogProgress(HTTPLOG::FAILURE);
-	Http()->Run(m_pQmSponsorsPublishTask);
-	m_QmSponsorsStatus = EQmNewsStatus::PUBLISHING;
-	++m_QmSponsorsRevision;
-}
-
-void CQmClient::FinishQmSponsorsPublish()
-{
-	const int StatusCode = m_pQmSponsorsPublishTask->State() == EHttpState::DONE ? m_pQmSponsorsPublishTask->StatusCode() : 0;
-	if(StatusCode == 200)
-	{
-		json_value *pRoot = m_pQmSponsorsPublishTask->ResultJson();
-		const bool Applied = ApplyQmSponsorsPayload(pRoot, true);
-		json_value_free(pRoot);
-		m_QmSponsorsStatus = Applied ? EQmNewsStatus::PUBLISHED : EQmNewsStatus::PUBLISH_FAILED;
-	}
-	else if(StatusCode == 401 || StatusCode == 403)
-		m_QmSponsorsStatus = EQmNewsStatus::PUBLISH_DENIED;
-	else if(StatusCode == 413)
-		m_QmSponsorsStatus = EQmNewsStatus::PUBLISH_TOO_LARGE;
-	else
-		m_QmSponsorsStatus = EQmNewsStatus::PUBLISH_FAILED;
-	m_pQmSponsorsPublishTask = nullptr;
-	++m_QmSponsorsRevision;
-}
-
 void CQmClient::UpdateQmDdnetPlayerStats()
 {
 	if(m_pQmDdnetPlayerParseJob && m_pQmDdnetPlayerParseJob->Done())
@@ -1177,40 +2538,26 @@ void CQmClient::UpdateQmDdnetPlayerStats()
 	if(m_pQmDdnetPlayerTask && m_pQmDdnetPlayerTask->Done())
 		FinishQmDdnetPlayerStats();
 
-	const char *pConfiguredName = g_Config.m_PlayerName;
-	if(!pConfiguredName || pConfiguredName[0] == '\0')
+	SelectQmDdnetPlayerStats(g_Config.m_PlayerName);
+	const char *pSelectedPlayerName = m_aQmDdnetPlayerName;
+	if(pSelectedPlayerName[0] == '\0')
 	{
+		m_QmDdnetPlayerState.SetPlayer("");
 		if(m_pQmDdnetPlayerTask)
 		{
 			m_pQmDdnetPlayerTask->Abort();
 			m_pQmDdnetPlayerTask = nullptr;
-		}
-		m_pQmDdnetPlayerParseJob = nullptr;
-		if(m_aQmDdnetPlayerName[0] != '\0')
-		{
-			m_aQmDdnetPlayerName[0] = '\0';
-			m_aQmDdnetFavoritePartner[0] = '\0';
-			m_QmDdnetTotalFinishes = -1;
-			m_QmDdnetPlayerLastSync = 0;
-			m_QmDdnetPlayerNextRetry = 0;
 		}
 		return;
 	}
-
-	if(str_comp(m_aQmDdnetPlayerName, pConfiguredName) != 0)
+	if(m_QmDdnetPlayerState.PlayerName() != pSelectedPlayerName)
 	{
 		if(m_pQmDdnetPlayerTask)
 		{
 			m_pQmDdnetPlayerTask->Abort();
 			m_pQmDdnetPlayerTask = nullptr;
 		}
-		m_pQmDdnetPlayerParseJob = nullptr;
-
-		str_copy(m_aQmDdnetPlayerName, pConfiguredName, sizeof(m_aQmDdnetPlayerName));
-		m_aQmDdnetFavoritePartner[0] = '\0';
-		m_QmDdnetTotalFinishes = -1;
-		m_QmDdnetPlayerLastSync = 0;
-		m_QmDdnetPlayerNextRetry = 0;
+		m_QmDdnetPlayerState.SetPlayer(pSelectedPlayerName);
 	}
 
 	if(m_pQmDdnetPlayerParseJob)
@@ -1219,17 +2566,11 @@ void CQmClient::UpdateQmDdnetPlayerStats()
 		return;
 
 	const int64_t Now = time_get();
-	if(m_QmDdnetPlayerNextRetry != 0 && Now < m_QmDdnetPlayerNextRetry)
+	const int64_t SyncIntervalTicks = (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq();
+	if(!m_QmDdnetPlayerState.ShouldFetch(Now, SyncIntervalTicks))
 		return;
 
-	if(m_QmDdnetPlayerNextRetry == 0)
-	{
-		const int64_t SyncIntervalTicks = (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq();
-		if(m_QmDdnetPlayerLastSync != 0 && Now - m_QmDdnetPlayerLastSync < SyncIntervalTicks)
-			return;
-	}
-
-	FetchQmDdnetPlayerStats(m_aQmDdnetPlayerName);
+	FetchQmDdnetPlayerStats(m_QmDdnetPlayerState.PlayerName().c_str());
 }
 
 void CQmClient::FetchQmDdnetPlayerStats(const char *pPlayerName)
@@ -1248,6 +2589,13 @@ void CQmClient::FetchQmDdnetPlayerStats(const char *pPlayerName)
 	str_format(aUrl, sizeof(aUrl), "%s%s", DDNET_PLAYER_STATS_URL, aEncodedName);
 
 	m_pQmDdnetPlayerTask = HttpGet(aUrl);
+	if(!m_pQmDdnetPlayerTask)
+	{
+		m_QmDdnetPlayerState.BeginHttp(pPlayerName);
+		m_QmDdnetPlayerState.CompleteHttp(false, time_get(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq());
+		return;
+	}
+	m_QmDdnetPlayerState.BeginHttp(pPlayerName);
 	m_pQmDdnetPlayerTask->Timeout(CTimeout{10000, 30000, 100, 10});
 	m_pQmDdnetPlayerTask->LogProgress(HTTPLOG::FAILURE);
 	Http()->Run(m_pQmDdnetPlayerTask);
@@ -1261,39 +2609,113 @@ void CQmClient::FinishQmDdnetPlayerStats()
 			return;
 
 		auto pParseJob = std::static_pointer_cast<CQmDdnetPlayerStatsParseJob>(m_pQmDdnetPlayerParseJob);
+		const std::string ParsePlayerName = m_QmDdnetPlayerState.RequestPlayerName();
 		CQmDdnetPlayerStatsParseJob::SResult Result = pParseJob->TakeResult();
 		m_pQmDdnetPlayerParseJob = nullptr;
+		bool StartRefresh = false;
+		if(!m_QmDdnetPlayerState.CompleteParse(ParsePlayerName, Result.m_Parsed, time_get(), time_timestamp(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq(), StartRefresh))
+			return;
 
-		const int64_t Now = time_get();
 		if(Result.m_Parsed)
 		{
-			m_QmDdnetPlayerLastSync = Now;
-			m_QmDdnetPlayerNextRetry = 0;
-			str_copy(m_aQmDdnetFavoritePartner, Result.m_FavoritePartner.c_str(), sizeof(m_aQmDdnetFavoritePartner));
-			m_QmDdnetTotalFinishes = Result.m_TotalFinishes;
+			m_QmDdnetStatsSucceededOnce = true;
+			StoreQmDdnetPlayerStats(ParsePlayerName.c_str(), Result.m_FavoritePartner, Result.m_TotalFinishes, Result.m_Points, Result.m_PointsTotal, Result.m_PlaytimeHours, Result.m_PlaytimeHoursPastYear);
+			SelectQmDdnetPlayerStats(g_Config.m_PlayerName);
+			if(SaveQmClientStatistics() && GameClient() != nullptr)
+				GameClient()->m_QmAxiomScores.ClearPersistentCacheDirty();
 		}
 		else
-		{
-			m_QmDdnetPlayerLastSync = 0;
-			m_QmDdnetPlayerNextRetry = Now + (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq();
-		}
+			log_warn("qmclient", "DDNet statistics response could not be parsed for '%s'", ParsePlayerName.c_str());
+		if(StartRefresh && !m_QmDdnetPlayerState.PlayerName().empty())
+			FetchQmDdnetPlayerStats(m_QmDdnetPlayerState.PlayerName().c_str());
 		return;
 	}
 
 	if(!m_pQmDdnetPlayerTask)
 		return;
 
-	if(m_pQmDdnetPlayerTask->State() != EHttpState::DONE || m_pQmDdnetPlayerTask->StatusCode() != 200)
+	// libcurl 失败同样会让请求进入终态（Done() 为真但状态非 DONE），
+	// 此时调用 StatusCode() 会触发 http.cpp 的断言并弹出崩溃报告
+	const EHttpState State = m_pQmDdnetPlayerTask->State();
+	const int StatusCode = State == EHttpState::DONE ? m_pQmDdnetPlayerTask->StatusCode() : -1;
+	if(State != EHttpState::DONE || StatusCode != 200)
 	{
-		m_QmDdnetPlayerLastSync = 0;
-		m_QmDdnetPlayerNextRetry = time_get() + (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq();
+		log_warn("qmclient", "DDNet statistics request failed for '%s': state=%d status=%d",
+			m_QmDdnetPlayerState.RequestPlayerName().c_str(), (int)State, StatusCode);
+		m_QmDdnetPlayerState.CompleteHttp(false, time_get(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq());
 		m_pQmDdnetPlayerTask = nullptr;
 		return;
 	}
 
 	m_pQmDdnetPlayerParseJob = std::make_shared<CQmDdnetPlayerStatsParseJob>(m_pQmDdnetPlayerTask);
+	m_QmDdnetPlayerState.CompleteHttp(true, time_get(), 0);
 	Engine()->AddJob(m_pQmDdnetPlayerParseJob);
 	m_pQmDdnetPlayerTask = nullptr;
+}
+
+void CQmClient::RefreshQmDdnetPlayerStats()
+{
+	if(m_QmDdnetPlayerState.RequestRefresh() == EQmDdnetPlayerStatsRefreshAction::WAIT_FOR_PARSE)
+		return;
+	if(m_pQmDdnetPlayerParseJob)
+	{
+		if(!m_pQmDdnetPlayerParseJob->Done())
+			return;
+		FinishQmDdnetPlayerStats();
+	}
+	if(m_pQmDdnetPlayerTask)
+	{
+		m_pQmDdnetPlayerTask->Abort();
+		m_pQmDdnetPlayerTask = nullptr;
+		m_QmDdnetPlayerState.AbortHttp();
+	}
+	if(!m_QmDdnetPlayerState.PlayerName().empty())
+		FetchQmDdnetPlayerStats(m_QmDdnetPlayerState.PlayerName().c_str());
+}
+
+void CQmClient::RefreshQmClientPlaytime()
+{
+	if(!m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED || !m_QmRealtimeHelloSent)
+	{
+		m_QmClientPlaytimeManualRefreshActive = false;
+		m_QmClientPlaytimeManualRefreshFailed = true;
+		return;
+	}
+	m_QmClientPlaytimeManualRefreshActive = true;
+	m_QmClientPlaytimeManualRefreshFailed = false;
+	const std::string Body = BuildQmRealtimePresence(false);
+	if(!m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size()))
+	{
+		m_QmClientPlaytimeManualRefreshActive = false;
+		m_QmClientPlaytimeManualRefreshFailed = true;
+	}
+	else
+	{
+		m_QmClientPlaytimeManualRefreshTick = time_get();
+		m_QmRealtimePresenceBody = Body;
+		m_QmRealtimeLastPresence = m_QmClientPlaytimeManualRefreshTick;
+	}
+}
+
+void CQmClient::UseCurrentQmDdnetPlayerName()
+{
+	const char *pPlayerName = g_Config.m_PlayerName;
+	if(!pPlayerName || pPlayerName[0] == '\0' || static_cast<size_t>(str_length(pPlayerName)) >= MAX_NAME_LENGTH || !str_utf8_check(pPlayerName))
+		return;
+	m_QmDdnetPrimaryPlayerName = pPlayerName;
+	SelectQmDdnetPlayerStats(pPlayerName);
+	m_QmDdnetPlayerState.SetPlayer(m_aQmDdnetPlayerName);
+	RefreshQmClientStatistics();
+}
+
+void CQmClient::RefreshQmClientStatistics()
+{
+	RefreshQmClientPlaytime();
+	RefreshQmDdnetPlayerStats();
+	if(GameClient() != nullptr && m_aQmDdnetPlayerName[0] != '\0')
+		GameClient()->m_QmAxiomScores.Refresh(m_aQmDdnetPlayerName);
+	if(SaveQmClientStatistics() && GameClient() != nullptr)
+		GameClient()->m_QmAxiomScores.ClearPersistentCacheDirty();
 }
 
 void CQmClient::InitQmClientLifecycle()
@@ -1321,6 +2743,9 @@ void CQmClient::InitQmClientLifecycle()
 	m_QmClientServerTimeLastSync = 0;
 	m_QmClientServerPlaytimeSeconds = -1;
 	m_QmClientPlaytimeLastSync = 0;
+	m_QmClientPlaytimeLastSuccessfulSyncTimestamp = 0;
+	m_QmClientPlaytimeManualRefreshActive = false;
+	m_QmClientPlaytimeManualRefreshFailed = false;
 }
 
 void CQmClient::InitQmDeveloperAuthentication()
@@ -1347,52 +2772,35 @@ void CQmClient::InitQmDeveloperAuthentication()
 	free(pTokenText);
 }
 
-void CQmClient::ApplyQmRealtimeDevelopers(const json_value *pPayload)
+void CQmClient::ResetQmDeveloperPresenceTasks()
 {
-	char aServer[NETADDR_MAXSTRSIZE] = "";
-	if(Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
-		return;
-	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
-	const json_value *pAddress = JsonObjectField(pPayload, "server_address");
-	if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0)
-		return;
-	SQmDeveloperPresenceParseResult Result;
-	if(!ParseQmDeveloperPresencesJson(pPayload, aServer, Result))
-		return;
 	GameClient()->ClearQmDeveloperMarks();
-	const char *pServerAddress = aServer;
-	const int64_t NowTick = time_get();
-	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
-	{
-		if(!GameClient()->m_aClients[ClientId].m_Active)
-			continue;
-		const SQmDeveloperPresence *pPresence = FindQmDeveloperPresence(
-			Result.m_vPresences,
-			pServerAddress,
-			ClientId,
-			GameClient()->m_aClients[ClientId].m_aName,
-			Result.m_ServerTime);
-		if(!pPresence)
-			continue;
-		const int64_t RemainingSeconds = std::min<int64_t>(pPresence->m_ExpiresAt - Result.m_ServerTime, QMCLIENT_DEVELOPER_SYNC_INTERVAL_SECONDS * 2);
-		if(RemainingSeconds <= 0)
-			continue;
-		GameClient()->MarkQmDeveloperClient(
-			ClientId,
-			pPresence->m_PlayerName.c_str(),
-			NowTick + RemainingSeconds * time_freq(),
-			QmDeveloperBadgeStyleFromBucket(pPresence->m_StyleBucket) == EQmDeveloperBadgeStyle::RAINBOW);
-	}
 }
 
 bool CQmClient::HasQmClientRecognitionService() const
 {
-	return QmRealtimeAvailable();
+	return m_pQmRealtimeTransport && m_pQmRealtimeTransport->Available();
 }
 
 bool CQmClient::QmClientDistributionSyncing() const
 {
 	return m_QmClientDistribution.IsStale(time_get_impl());
+}
+
+void CQmClient::PushQmClientServerCounts()
+{
+	IServerBrowser *pServerBrowser = ServerBrowser();
+	if(pServerBrowser == nullptr)
+		return;
+	std::unordered_map<std::string, int> Counts;
+	Counts.reserve(m_QmClientDistribution.m_vServers.size());
+	for(const SQmClientServerDistribution &Distribution : m_QmClientDistribution.m_vServers)
+	{
+		const int Count = Distribution.m_UserCount + Distribution.m_DummyCount;
+		if(Count > 0 && !Distribution.m_ServerAddress.empty())
+			Counts.emplace(Distribution.m_ServerAddress, Count);
+	}
+	pServerBrowser->SetQmClientServerCounts(Counts);
 }
 
 bool CQmClient::EnsureQmClientMachineHash()
@@ -1461,16 +2869,17 @@ void CQmClient::FinishQmClientUsers()
 
 		auto pParseJob = std::static_pointer_cast<CQmClientUsersParseJob>(m_pQmClientUsersParseJob);
 		const int64_t ExpireTick = pParseJob->ExpireTick();
+		CQmClientUsersParseJob::SResult Result = pParseJob->TakeResult();
 		char aCurrentServer[NETADDR_MAXSTRSIZE] = "";
 		if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
 			net_addr_str(Client()->ServerAddress(), aCurrentServer, sizeof(aCurrentServer), true);
-		if(str_comp(aCurrentServer, pParseJob->ServerAddress()) != 0)
-		{
-			m_pQmClientUsersParseJob.reset();
-			return;
-		}
-		CQmClientUsersParseJob::SResult Result = pParseJob->TakeResult();
+		const bool StaleServer = str_comp(pParseJob->ServerAddress(), aCurrentServer) != 0 ||
+					 pParseJob->ConnectionTick() != m_QmRealtimeConnectedTick ||
+					 !m_pQmRealtimeTransport || m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED ||
+					 m_pQmRealtimeTransport->LastConnectedTick() != m_QmRealtimeConnectedTick;
 		m_pQmClientUsersParseJob = nullptr;
+		if(StaleServer)
+			return;
 
 		if(!m_QmClientDistribution.Apply(Result, ExpireTick))
 		{
@@ -1481,10 +2890,10 @@ void CQmClient::FinishQmClientUsers()
 
 		GameClient()->ClearQ1menGSyncMarks();
 		GameClient()->ClearQmVoiceSyncMarks();
+		PushQmClientServerCounts();
 		if(!m_QmClientDistributionSuccessLatched)
 			LogQmClientDistributionEvent("parse_ok", Result.m_OnlineUserCount, Result.m_OnlineDummyCount, (int)Result.m_vLocalServerMarks.size());
 		m_QmClientDistributionSuccessLatched = true;
-		PushQmClientServerCounts();
 		for(const auto &Mark : Result.m_vLocalServerMarks)
 		{
 			for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
@@ -1492,7 +2901,7 @@ void CQmClient::FinishQmClientUsers()
 				if(!GameClient()->m_aClients[ClientId].m_Active || str_comp(GameClient()->m_aClients[ClientId].m_aName, Mark.m_Name.c_str()) != 0)
 					continue;
 
-				GameClient()->MarkQ1menGSyncClient(ClientId, ExpireTick, Mark.m_Qid.c_str(), Mark.m_ClientBrand);
+				GameClient()->MarkQ1menGSyncClient(ClientId, ExpireTick, Mark.m_FootParticlesEnabled, Mark.m_RemoteParticlesEnabled, Mark.m_Qid.c_str(), Mark.m_ClientBrand);
 				if(Mark.m_VoiceSupported)
 					GameClient()->MarkQmVoiceSupportedClient(ClientId, ExpireTick);
 				break;
@@ -1502,613 +2911,15 @@ void CQmClient::FinishQmClientUsers()
 	}
 }
 
-void CQmClient::PushQmClientServerCounts()
-{
-	IServerBrowser *pServerBrowser = ServerBrowser();
-	if(pServerBrowser == nullptr)
-		return;
-	// 与「梦」列显示同一份快照：只推有梦客户端的服务器，其余按 0 处理。
-	std::unordered_map<std::string, int> Counts;
-	Counts.reserve(m_QmClientDistribution.m_vServers.size());
-	for(const SQmClientServerDistribution &Distribution : m_QmClientDistribution.m_vServers)
-	{
-		const int Count = Distribution.m_UserCount + Distribution.m_DummyCount;
-		if(Count > 0 && !Distribution.m_ServerAddress.empty())
-			Counts.emplace(Distribution.m_ServerAddress, Count);
-	}
-	pServerBrowser->SetQmClientServerCounts(Counts);
-}
-
 void CQmClient::UpdateQmClientRecognition()
 {
 	if(m_pQmClientUsersParseJob && m_pQmClientUsersParseJob->Done())
 		FinishQmClientUsers();
 	if(!m_pQmClientUsersParseJob && m_pQmRealtimeUsersPayload)
 	{
-		m_pQmClientUsersParseJob = std::make_shared<CQmClientUsersParseJob>(std::move(m_pQmRealtimeUsersPayload), m_aQmRealtimeUsersServer, m_QmRealtimeUsersExpireTick);
+		m_pQmClientUsersParseJob = std::make_shared<CQmClientUsersParseJob>(
+			std::move(m_pQmRealtimeUsersPayload), m_aQmRealtimeUsersServer, m_QmRealtimeUsersExpireTick, m_QmRealtimeConnectedTick);
 		Engine()->AddJob(m_pQmClientUsersParseJob);
-	}
-}
-
-void CQmClient::ApplyQmTitlePresences(const json_value *pRoot, const char *pServerAddress)
-{
-	if(pRoot == nullptr)
-		return;
-	int64_t ServerTime = 0;
-	const std::vector<SQmTitlePresence> vPresences = ParseQmTitlePresences(pRoot, pServerAddress, &ServerTime);
-	// 这一份是权威结果：缺席者视为已下线，因此在这里才丢弃旧名单。
-	mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
-	for(const auto &Presence : vPresences)
-	{
-		str_copy(m_aaTitleNames[Presence.m_PlayerId], Presence.m_PlayerName.c_str());
-		str_format(m_aaPlayerTitles[Presence.m_PlayerId], sizeof(m_aaPlayerTitles[Presence.m_PlayerId]), "[%s]", Presence.m_Title.c_str());
-		str_copy(m_aaPlayerStyles[Presence.m_PlayerId], Presence.m_Style.c_str());
-		m_aTitleExpires[Presence.m_PlayerId] = time_get_impl() + Presence.m_RemainingSeconds * time_freq();
-	}
-	// 用服务端时间对齐动画相位：各客户端据此得到一致的时间基准，
-	// 否则同一时刻不同人看到的颜色相位会因本机时钟偏差而错开。
-	if(ServerTime > 0)
-	{
-		const double Measured = (double)ServerTime - (double)Client()->GlobalTime();
-		m_ServerTimeOffset = QmTitleUpdateServerTimeOffset(m_ServerTimeOffset, m_ServerTimeOffsetValid, Measured);
-		m_ServerTimeOffsetValid = true;
-	}
-	m_TitleLastSync = time_get_impl();
-}
-
-void CQmClient::QmRealtimeRequestTitleRefresh()
-{
-	if(!QmRealtimeConnected())
-		return;
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("type");
-	Writer.WriteStrValue("subscribe_titles");
-	if(QmRealtimeAllowsCredentials(m_aQmRealtimeUrl))
-	{
-		Writer.WriteAttribute("title_token");
-		Writer.WriteStrValue(m_aTitleToken);
-	}
-	Writer.EndObject();
-	const std::string Body = Writer.GetOutputString();
-	m_pQmRealtime->SendText(Body.c_str(), Body.size());
-	m_QmRealtimePresenceBody.clear();
-	m_QmRealtimeNextPresenceCheck = 0;
-}
-
-void CQmClient::SendQmAnonymousEmoticon(int Emoticon, int PlayerId, bool LaunchMode, bool SuperLaunch)
-{
-	if(m_pQmAnonymousEmote == nullptr || m_pQmAnonymousEmote->State() != EQmWebSocketState::CONNECTED ||
-		m_aQmAnonymousClientId[0] == '\0' || Emoticon < 0 || Emoticon >= NUM_EMOTICONS ||
-		PlayerId < 0 || PlayerId >= MAX_CLIENTS || (!LaunchMode && !SuperLaunch))
-		return;
-
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("type");
-	Writer.WriteStrValue("emoticon");
-	Writer.WriteAttribute("emoticon");
-	Writer.WriteIntValue(Emoticon);
-	Writer.WriteAttribute("player_id");
-	Writer.WriteIntValue(PlayerId);
-	Writer.WriteAttribute("launch_mode");
-	Writer.WriteBoolValue(LaunchMode);
-	Writer.WriteAttribute("super_launch");
-	Writer.WriteBoolValue(SuperLaunch);
-	Writer.EndObject();
-	const std::string Body = Writer.GetOutputString();
-	if(m_pQmAnonymousEmote->SendText(Body.c_str(), Body.size()))
-		LogQmAnonymousEmoteEvent("emoticon_sent", Body.c_str());
-	else
-		LogQmAnonymousEmoteEvent("emoticon_send_failed", nullptr);
-}
-
-bool CQmClient::PollQmRemoteEmoticonEvent(SQmRemoteEmoticonEvent &OutEvent)
-{
-	if(m_QmRemoteEmoticonEvents.empty())
-		return false;
-	OutEvent = std::move(m_QmRemoteEmoticonEvents.front());
-	m_QmRemoteEmoticonEvents.pop_front();
-	return true;
-}
-
-void CQmClient::LogQmRealtimeEvent(const char *pStage, const char *pDetail) const
-{
-	if(!g_Config.m_QmWebSocketLog)
-		return;
-	log_info("qmclient", "realtime %s: %s", pStage, pDetail != nullptr ? pDetail : "");
-}
-
-void CQmClient::QueueQmRemoteEmoticonEvent(const SQmRealtimeMessage &Message)
-{
-	if(!Message.m_HasEmoticon || Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
-	{
-		LogQmAnonymousEmoteEvent("event_dropped", "invalid state or payload");
-		return;
-	}
-
-	char aServer[NETADDR_MAXSTRSIZE] = "";
-	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
-	const std::string CurrentServer = NormalizeQmServerAddress(aServer);
-	const std::string EventServer = NormalizeQmServerAddress(Message.m_EmoticonServerAddress.c_str());
-	if(EventServer.empty() || CurrentServer != EventServer)
-	{
-		LogQmAnonymousEmoteEvent("event_dropped", "server address mismatch");
-		return;
-	}
-	if(Message.m_EmoticonPlayerName.size() > MAX_NAME_LENGTH || Message.m_EmoticonClientId.size() > 64)
-	{
-		LogQmAnonymousEmoteEvent("event_dropped", "identity field too long");
-		return;
-	}
-
-	int PlayerId = Message.m_PlayerId;
-	if(!GameClient()->m_aClients[PlayerId].m_Active)
-	{
-		PlayerId = -1;
-		for(int Candidate = 0; Candidate < MAX_CLIENTS; ++Candidate)
-		{
-			if(GameClient()->m_aClients[Candidate].m_Active &&
-				str_comp(GameClient()->m_aClients[Candidate].m_aName, Message.m_EmoticonPlayerName.c_str()) == 0)
-			{
-				PlayerId = Candidate;
-				break;
-			}
-		}
-		if(PlayerId < 0)
-		{
-			LogQmAnonymousEmoteEvent("event_dropped", "player not found");
-			return;
-		}
-		LogQmAnonymousEmoteEvent("player_id_remapped", Message.m_EmoticonPlayerName.c_str());
-	}
-
-	SQmRemoteEmoticonEvent Event;
-	Event.m_PlayerId = PlayerId;
-	Event.m_Emoticon = Message.m_Emoticon;
-	Event.m_LaunchMode = Message.m_LaunchMode;
-	Event.m_SuperLaunch = Message.m_SuperLaunch;
-	Event.m_Sequence = Message.m_EmoticonSequence;
-	Event.m_ClientId = Message.m_EmoticonClientId;
-	Event.m_PlayerName = Message.m_EmoticonPlayerName;
-	Event.m_ServerAddress = Message.m_EmoticonServerAddress;
-	if(m_QmRemoteEmoticonEvents.size() >= 128)
-		m_QmRemoteEmoticonEvents.pop_front();
-	m_QmRemoteEmoticonEvents.push_back(std::move(Event));
-	LogQmAnonymousEmoteEvent("emoticon_received", Message.m_EmoticonPlayerName.c_str());
-}
-
-void CQmClient::QueueQmAnonymousEmoticonEvent(const SQmRealtimeMessage &Message)
-{
-	QueueQmRemoteEmoticonEvent(Message);
-}
-
-void CQmClient::StartQmRealtime()
-{
-	StopQmRealtime();
-	// worker 不访问游戏状态；握手变化统一由主线程消费。
-	m_pQmRealtime = CreateQmWebSocketClient({});
-	if(m_pQmRealtime && m_pQmRealtime->Available())
-	{
-		IQmWebSocketClient::STuning Tuning;
-		Tuning.m_HeartbeatMs = g_Config.m_QmWebSocketHeartbeat * 1000;
-		Tuning.m_BackoffBaseMs = g_Config.m_QmWebSocketBackoffBaseMs;
-		Tuning.m_BackoffMaxMs = g_Config.m_QmWebSocketBackoffMaxMs;
-		m_pQmRealtime->SetTuning(Tuning);
-	}
-}
-
-void CQmClient::StopQmRealtime()
-{
-	if(m_pQmRealtime)
-	{
-		m_pQmRealtime->Disconnect();
-		m_pQmRealtime.reset();
-	}
-	m_QmRealtimeConnectedTick = 0;
-	m_QmRealtimePresenceBody.clear();
-	m_QmRealtimeNextPresenceCheck = 0;
-}
-
-void CQmClient::QmRealtimeRestart()
-{
-	StopQmRealtime();
-	m_QmRealtimeFailureLogged = false;
-	EnsureQmRealtimeConnection();
-}
-
-void CQmClient::EnsureQmRealtimeConnection()
-{
-	if(str_comp(m_aQmRealtimeUrl, QmRealtimeEffectiveUrl(g_Config.m_QmWebSocketUrl)) != 0)
-	{
-		// 地址变了：断开旧连接并记录新地址。
-		StopQmRealtime();
-		str_copy(m_aQmRealtimeUrl, QmRealtimeEffectiveUrl(g_Config.m_QmWebSocketUrl));
-		m_QmRealtimeFailureLogged = false;
-	}
-
-	if(m_pQmRealtime == nullptr)
-		StartQmRealtime();
-	if(m_pQmRealtime == nullptr || !m_pQmRealtime->Available())
-		return;
-	if(m_pQmRealtime->Desired())
-		return;
-
-	SQmWebSocketConnectConfig Config;
-	const std::string ParseError = ParseQmWebSocketUrl(m_aQmRealtimeUrl, Config);
-	if(!ParseError.empty())
-	{
-		if(!m_QmRealtimeFailureLogged)
-		{
-			m_QmRealtimeFailureLogged = true;
-			LogQmRealtimeEvent("invalid_url", ParseError.c_str());
-		}
-		return;
-	}
-	Config.m_Protocol = g_Config.m_QmWebSocketProtocol;
-	Config.m_MaxMessageSize = 8 * 1024 * 1024;
-	Config.m_AllowInsecureTls = g_Config.m_QmWebSocketAllowInsecureTls != 0;
-
-	std::string Error;
-	if(!m_pQmRealtime->Connect(Config, Error))
-	{
-		if(!m_QmRealtimeFailureLogged)
-		{
-			m_QmRealtimeFailureLogged = true;
-			LogQmRealtimeEvent("connect_rejected", Error.c_str());
-		}
-		return;
-	}
-	m_QmRealtimeFailureLogged = false;
-	LogQmRealtimeEvent("connecting", m_aQmRealtimeUrl);
-}
-
-void CQmClient::SendQmRealtimeHello()
-{
-	if(!QmRealtimeConnected() || !EnsureQmClientMachineHash())
-		return;
-	EnsureQmClientPlaytimeClientId();
-	const std::string Body = BuildQmRealtimePresence(true);
-	if(m_pQmRealtime->SendText(Body.c_str(), Body.size()))
-	{
-		m_QmRealtimePresenceBody = BuildQmRealtimePresence(false);
-		m_QmRealtimeLastPresence = time_get_impl();
-	}
-}
-
-void CQmClient::HandleQmRealtimeMessage(const SQmRealtimeMessage &Message)
-{
-	switch(Message.m_Event)
-	{
-	case EQmRealtimeEvent::PING:
-		if(m_pQmRealtime != nullptr)
-			m_pQmRealtime->SendText("{\"type\":\"pong\"}", 15);
-		break;
-	case EQmRealtimeEvent::PONG:
-		// 往返时延由传输层用 RECEIVE_PONG 统计，这里无需处理。
-		break;
-	case EQmRealtimeEvent::STATE:
-		ApplyQmRealtimeState(Message);
-		break;
-	case EQmRealtimeEvent::BROADCAST:
-		ApplyQmRealtimeBroadcast(Message);
-		break;
-	case EQmRealtimeEvent::SPONSORS:
-		if(Message.m_HasRealtimeData)
-			ApplyQmSponsorsPayload(Message.m_pPayload.get(), true);
-		break;
-	case EQmRealtimeEvent::TITLES:
-		ApplyQmRealtimeTitles(Message);
-		break;
-	case EQmRealtimeEvent::EMOTICON:
-		// 表情已经迁移到匿名专用通道，账号/头衔通道不再承载该事件。
-		break;
-	case EQmRealtimeEvent::USERS:
-	case EQmRealtimeEvent::DEVELOPERS:
-	case EQmRealtimeEvent::PLAYTIME:
-	case EQmRealtimeEvent::TIME:
-	case EQmRealtimeEvent::TITLE_PROFILE:
-	case EQmRealtimeEvent::TITLE_STATUS:
-	case EQmRealtimeEvent::ERROR:
-		ApplyQmRealtimeServices(Message);
-		break;
-	case EQmRealtimeEvent::UNKNOWN:
-		LogQmRealtimeEvent("unknown_event", Message.m_Type.c_str());
-		break;
-	case EQmRealtimeEvent::INVALID:
-		break;
-	}
-}
-
-void CQmClient::ApplyQmRealtimeState(const SQmRealtimeMessage &Message)
-{
-	// state 是增量：只覆盖确实下发的字段，缺失字段保留上一次的值。
-	if(!Message.m_StatePayloadValid)
-		return;
-	if(Message.m_HasOnlineUsers)
-		m_QmClientDistribution.m_OnlineUserCount = Message.m_OnlineUsers;
-	if(Message.m_HasOnlineDummies)
-		m_QmClientDistribution.m_OnlineDummyCount = Message.m_OnlineDummies;
-}
-
-void CQmClient::ApplyQmRealtimeBroadcast(const SQmRealtimeMessage &Message)
-{
-	if(!Message.m_HasBroadcast)
-		return;
-	if(Message.m_BroadcastMarkdown.size() > (size_t)QMCLIENT_NEWS_MAX_BYTES)
-	{
-		LogQmRealtimeEvent("broadcast_too_large", Message.m_Type.c_str());
-		return;
-	}
-	// 版本号不回退，避免旧推送覆盖新内容。
-	if(Message.m_BroadcastVersion > 0 && Message.m_BroadcastVersion < m_QmNewsVersion)
-		return;
-
-	m_QmNewsMarkdown = Message.m_BroadcastMarkdown;
-	if(Message.m_BroadcastVersion > 0)
-		m_QmNewsVersion = Message.m_BroadcastVersion;
-	m_QmNewsStatus = m_QmNewsMarkdown.empty() ? EQmNewsStatus::EMPTY : EQmNewsStatus::READY;
-	++m_QmNewsRevision;
-	SaveQmNewsCache();
-	LogQmRealtimeEvent("broadcast", "已应用服务端推送");
-}
-
-void CQmClient::ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message)
-{
-	if(!Message.m_HasTitles || !Message.m_pTitlePayload)
-		return;
-	if(Client()->State() != IClient::STATE_ONLINE || Client()->ServerAddress() == nullptr)
-		return;
-
-	char aServer[NETADDR_MAXSTRSIZE] = "";
-	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
-
-	// 直接复用消息首次解析的负载，应用规则仍与 HTTP 名单共用。
-	const json_value *pAddress = JsonObjectField(Message.m_pTitlePayload.get(), "server_address");
-	if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0)
-		return;
-	ApplyQmTitlePresences(Message.m_pTitlePayload.get(), aServer);
-}
-
-void CQmClient::UpdateQmRealtime()
-{
-	if(m_QmClientShutdownReported)
-		return;
-	EnsureQmRealtimeConnection();
-	if(!m_pQmRealtime || !m_pQmRealtime->Available())
-		return;
-	if(!QmRealtimeConnected())
-	{
-		m_QmRealtimeConnectedTick = 0;
-		return;
-	}
-	const int64_t ConnectedTick = m_pQmRealtime->LastConnectedTick();
-	if(m_QmRealtimeConnectedTick != ConnectedTick)
-	{
-		m_QmRealtimeConnectedTick = ConnectedTick;
-		m_QmRealtimePresenceBody.clear();
-		SendQmRealtimeHello();
-		LogQmRealtimeEvent("connected", m_aQmRealtimeUrl);
-	}
-	SQmWebSocketMessage Message;
-	// 限制单帧派发数量，剩余消息留到后续帧。
-	for(int Count = 0; Count < 8 && m_pQmRealtime->PollMessage(Message); ++Count)
-	{
-		if(Message.m_Type != EQmWebSocketMessageType::TEXT)
-			continue;
-		SQmRealtimeMessage Parsed;
-		if(ParseQmRealtimeMessage(Message.m_Data.c_str(), Message.m_Data.size(), Parsed))
-			HandleQmRealtimeMessage(Parsed);
-	}
-	const int64_t Now = time_get_impl();
-	if(Now >= m_QmRealtimeNextPresenceCheck)
-	{
-		m_QmRealtimeNextPresenceCheck = Now + time_freq() / 4;
-		const std::string Body = BuildQmRealtimePresence(false);
-		if(Body != m_QmRealtimePresenceBody || Now - m_QmRealtimeLastPresence >= 5 * time_freq())
-		{
-			if(m_pQmRealtime->SendText(Body.c_str(), Body.size()))
-			{
-				m_QmRealtimePresenceBody = Body;
-				m_QmRealtimeLastPresence = Now;
-			}
-		}
-	}
-	if(m_QmRealtimeTitleRevision != m_TitleRevision)
-	{
-		m_QmRealtimeTitleRevision = m_TitleRevision;
-		QmRealtimeRequestTitleRefresh();
-	}
-}
-
-void CQmClient::LogQmAnonymousEmoteEvent(const char *pStage, const char *pDetail) const
-{
-	if(!g_Config.m_QmWebSocketLog)
-		return;
-	log_info("qmclient", "anonymous_emote %s: %s", pStage, pDetail != nullptr ? pDetail : "");
-}
-
-void CQmClient::StartQmAnonymousEmotes()
-{
-	StopQmAnonymousEmotes();
-	str_copy(m_aQmAnonymousEmoteUrl, "wss://arghena.site/api/sync/anonymous/ws", sizeof(m_aQmAnonymousEmoteUrl));
-	m_pQmAnonymousEmote = CreateQmWebSocketClient({});
-	if(m_pQmAnonymousEmote && m_pQmAnonymousEmote->Available())
-	{
-		IQmWebSocketClient::STuning Tuning;
-		Tuning.m_HeartbeatMs = g_Config.m_QmWebSocketHeartbeat * 1000;
-		Tuning.m_BackoffBaseMs = g_Config.m_QmWebSocketBackoffBaseMs;
-		Tuning.m_BackoffMaxMs = g_Config.m_QmWebSocketBackoffMaxMs;
-		Tuning.m_OutgoingQueueCapacity = 16;
-		m_pQmAnonymousEmote->SetTuning(Tuning);
-	}
-}
-
-void CQmClient::StopQmAnonymousEmotes()
-{
-	if(m_pQmAnonymousEmote)
-	{
-		m_pQmAnonymousEmote->Disconnect();
-		m_pQmAnonymousEmote.reset();
-	}
-	m_aQmAnonymousClientId[0] = '\0';
-	m_aQmAnonymousSessionId[0] = '\0';
-	m_QmAnonymousEmoteConnectedTick = 0;
-	m_QmAnonymousEmoteNextHelloCheck = 0;
-	m_QmAnonymousEmoteHelloBody.clear();
-}
-
-void CQmClient::EnsureQmAnonymousEmoteConnection()
-{
-	if(m_pQmAnonymousEmote == nullptr)
-		StartQmAnonymousEmotes();
-	if(m_pQmAnonymousEmote == nullptr || !m_pQmAnonymousEmote->Available() || m_pQmAnonymousEmote->Desired())
-		return;
-
-	SQmWebSocketConnectConfig Config;
-	const std::string ParseError = ParseQmWebSocketUrl(m_aQmAnonymousEmoteUrl, Config);
-	if(!ParseError.empty())
-	{
-		if(!m_QmAnonymousEmoteFailureLogged)
-		{
-			m_QmAnonymousEmoteFailureLogged = true;
-			LogQmAnonymousEmoteEvent("invalid_url", ParseError.c_str());
-		}
-		return;
-	}
-	Config.m_Protocol = "qmclient-json";
-	Config.m_MaxMessageSize = 128 * 1024;
-	Config.m_AllowInsecureTls = false;
-
-	std::string Error;
-	if(!m_pQmAnonymousEmote->Connect(Config, Error))
-	{
-		if(!m_QmAnonymousEmoteFailureLogged)
-		{
-			m_QmAnonymousEmoteFailureLogged = true;
-			LogQmAnonymousEmoteEvent("connect_rejected", Error.c_str());
-		}
-		return;
-	}
-	m_QmAnonymousEmoteFailureLogged = false;
-	LogQmAnonymousEmoteEvent("connecting", m_aQmAnonymousEmoteUrl);
-}
-
-std::string CQmClient::BuildQmAnonymousEmoteHello() const
-{
-	char aServer[NETADDR_MAXSTRSIZE] = "";
-	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
-		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
-
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("type");
-	Writer.WriteStrValue("hello");
-	Writer.WriteAttribute("v");
-	Writer.WriteIntValue(2);
-	Writer.WriteAttribute("client_id");
-	Writer.WriteStrValue(m_aQmAnonymousClientId);
-	Writer.WriteAttribute("player_name");
-	Writer.WriteStrValue(g_Config.m_PlayerName);
-	Writer.WriteAttribute("server_address");
-	Writer.WriteStrValue(NormalizeQmServerAddress(aServer).c_str());
-	Writer.WriteAttribute("session_id");
-	Writer.WriteStrValue(m_aQmAnonymousSessionId);
-	Writer.WriteAttribute("players");
-	Writer.BeginArray();
-	if(aServer[0])
-	{
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-		{
-			const int Id = GameClient()->m_aLocalIds[Dummy];
-			if((Dummy == 1 && !Client()->DummyConnected()) || Id < 0 || Id >= MAX_CLIENTS || !GameClient()->m_aClients[Id].m_Active)
-				continue;
-			Writer.BeginObject();
-			Writer.WriteAttribute("player_id");
-			Writer.WriteIntValue(Id);
-			Writer.WriteAttribute("player_name");
-			Writer.WriteStrValue(GameClient()->m_aClients[Id].m_aName);
-			Writer.WriteAttribute("dummy");
-			Writer.WriteBoolValue(Dummy == 1);
-			Writer.EndObject();
-		}
-	}
-	Writer.EndArray();
-	Writer.EndObject();
-	return Writer.GetOutputString();
-}
-
-void CQmClient::SendQmAnonymousEmoteHello()
-{
-	if(m_pQmAnonymousEmote == nullptr || m_pQmAnonymousEmote->State() != EQmWebSocketState::CONNECTED ||
-		Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
-		return;
-	const std::string Body = BuildQmAnonymousEmoteHello();
-	if(m_pQmAnonymousEmote->SendText(Body.c_str(), Body.size()))
-	{
-		m_QmAnonymousEmoteHelloBody = Body;
-		LogQmAnonymousEmoteEvent("hello_sent", Body.c_str());
-	}
-	else
-		LogQmAnonymousEmoteEvent("hello_send_failed", nullptr);
-}
-
-void CQmClient::UpdateQmAnonymousEmotes()
-{
-	if(m_QmClientShutdownReported)
-		return;
-	if(Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
-	{
-		if(m_pQmAnonymousEmote && m_pQmAnonymousEmote->Desired())
-			StopQmAnonymousEmotes();
-		return;
-	}
-
-	EnsureQmAnonymousEmoteConnection();
-	if(!m_pQmAnonymousEmote || !m_pQmAnonymousEmote->Available())
-		return;
-	if(m_pQmAnonymousEmote->State() != EQmWebSocketState::CONNECTED)
-	{
-		m_QmAnonymousEmoteConnectedTick = 0;
-		return;
-	}
-
-	const int64_t ConnectedTick = m_pQmAnonymousEmote->LastConnectedTick();
-	if(m_QmAnonymousEmoteConnectedTick != ConnectedTick)
-	{
-		m_QmAnonymousEmoteConnectedTick = ConnectedTick;
-		m_QmAnonymousEmoteHelloBody.clear();
-		secure_random_password(m_aQmAnonymousClientId, sizeof(m_aQmAnonymousClientId), sizeof(m_aQmAnonymousClientId) - 1);
-		secure_random_password(m_aQmAnonymousSessionId, sizeof(m_aQmAnonymousSessionId), sizeof(m_aQmAnonymousSessionId) - 1);
-		SendQmAnonymousEmoteHello();
-		LogQmAnonymousEmoteEvent("connected", m_aQmAnonymousEmoteUrl);
-	}
-
-	SQmWebSocketMessage Message;
-	for(int Count = 0; Count < 8 && m_pQmAnonymousEmote->PollMessage(Message); ++Count)
-	{
-		if(Message.m_Type != EQmWebSocketMessageType::TEXT)
-			continue;
-		SQmRealtimeMessage Parsed;
-		if(!ParseQmRealtimeMessage(Message.m_Data.c_str(), Message.m_Data.size(), Parsed))
-			continue;
-		if(Parsed.m_Type == "hello_ack")
-			LogQmAnonymousEmoteEvent("hello_ack", Message.m_Data.c_str());
-		else if(Parsed.m_Type == "error")
-			LogQmAnonymousEmoteEvent("server_error", Message.m_Data.c_str());
-		else if(Parsed.m_Event == EQmRealtimeEvent::PING)
-			m_pQmAnonymousEmote->SendText("{\"type\":\"pong\"}", 15);
-		else if(Parsed.m_Event == EQmRealtimeEvent::EMOTICON)
-			QueueQmAnonymousEmoticonEvent(Parsed);
-	}
-
-	const int64_t Now = time_get_impl();
-	if(Now >= m_QmAnonymousEmoteNextHelloCheck)
-	{
-		m_QmAnonymousEmoteNextHelloCheck = Now + time_freq() / 4;
-		const std::string Body = BuildQmAnonymousEmoteHello();
-		if(Body != m_QmAnonymousEmoteHelloBody)
-			SendQmAnonymousEmoteHello();
 	}
 }
 
@@ -2130,167 +2941,6 @@ static const char *TitleJsonString(const json_value *pRoot, const char *pKey)
 	return pValue->type == json_string ? pValue->u.string.ptr : "";
 }
 
-std::string CQmClient::BuildQmRealtimePresence(bool Hello) const
-{
-	char aServer[NETADDR_MAXSTRSIZE] = "";
-	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
-		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("type");
-	Writer.WriteStrValue(Hello ? "hello" : "presence");
-	if(Hello)
-	{
-		Writer.WriteAttribute("v");
-		Writer.WriteIntValue(QMCLIENT_REALTIME_PROTOCOL_VERSION);
-		Writer.WriteAttribute("client_version");
-		Writer.WriteStrValue(QMCLIENT_VERSION);
-		Writer.WriteAttribute("machine_hash");
-		Writer.WriteStrValue(m_aQmClientMachineHash);
-		Writer.WriteAttribute("client_id");
-		Writer.WriteStrValue(m_aQmClientPlaytimeClientId);
-		Writer.WriteAttribute("player_name");
-		Writer.WriteStrValue(g_Config.m_PlayerName);
-		if(m_QmClientAwaitingRecoveryStop)
-		{
-			Writer.WriteAttribute("recovery_stop_at");
-			Writer.WriteIntValue((int)std::clamp<int64_t>(m_QmClientRecoveryStopAt, 0, std::numeric_limits<int>::max()));
-		}
-	}
-	Writer.WriteAttribute("server_address");
-	Writer.WriteStrValue(aServer);
-	Writer.WriteAttribute("session_id");
-	Writer.WriteStrValue(m_aQmDeveloperSessionId);
-	if(QmRealtimeAllowsCredentials(m_aQmRealtimeUrl))
-	{
-		Writer.WriteAttribute("title_token");
-		Writer.WriteStrValue(m_aTitleToken);
-		Writer.WriteAttribute("developer_token");
-		Writer.WriteStrValue(m_aQmDeveloperToken);
-	}
-	Writer.WriteAttribute("players");
-	Writer.BeginArray();
-	if(aServer[0] && m_aQmDeveloperSessionId[0])
-	{
-		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
-		{
-			const int Id = GameClient()->m_aLocalIds[Dummy];
-			if((Dummy == 1 && !Client()->DummyConnected()) || Id < 0 || Id >= MAX_CLIENTS || !GameClient()->m_aClients[Id].m_Active)
-				continue;
-			Writer.BeginObject();
-			Writer.WriteAttribute("player_id");
-			Writer.WriteIntValue(Id);
-			Writer.WriteAttribute("player_name");
-			Writer.WriteStrValue(GameClient()->m_aClients[Id].m_aName);
-			Writer.WriteAttribute("dummy");
-			Writer.WriteBoolValue(Dummy == 1);
-			Writer.WriteAttribute("voice_supported");
-			Writer.WriteBoolValue(true);
-			Writer.EndObject();
-		}
-	}
-	Writer.EndArray();
-	Writer.EndObject();
-	return Writer.GetOutputString();
-}
-
-void CQmClient::SendQmRealtimeStop()
-{
-	if(!QmRealtimeConnected())
-		return;
-	CJsonStringWriter Writer;
-	Writer.BeginObject();
-	Writer.WriteAttribute("type");
-	Writer.WriteStrValue("stop");
-	Writer.WriteAttribute("stop_at");
-	Writer.WriteIntValue((int)std::clamp<int64_t>(time_timestamp(), 0, std::numeric_limits<int>::max()));
-	Writer.EndObject();
-	const std::string Body = Writer.GetOutputString();
-	m_pQmRealtime->SendText(Body.c_str(), Body.size());
-}
-
-void CQmClient::ApplyQmRealtimeTitleProfile(const json_value *pPayload)
-{
-	if(TitleBusy())
-		return;
-	const char *pTitle = TitleJsonString(pPayload, "title");
-	const char *pName = TitleJsonString(pPayload, "bound_name");
-	const char *pStyle = TitleJsonString(pPayload, "style");
-	const json_value *pStatus = JsonObjectField(pPayload, "status");
-	const bool Authenticated = pStatus->type == json_integer && pStatus->u.integer == 200 && IsValidQmTitle(pTitle);
-	const bool Changed = m_TitleAuthenticated != Authenticated || str_comp(m_aTitleText, pTitle) || str_comp(m_aTitleBoundName, pName) || str_comp(m_aTitleProfileStyle, pStyle);
-	m_TitleAuthenticated = Authenticated;
-	str_copy(m_aTitleText, pTitle);
-	str_copy(m_aTitleBoundName, pName);
-	str_copy(m_aTitleProfileStyle, pStyle);
-	m_pTitleStatus = Authenticated ? Localizable("Permanent sponsor verified") : Localizable("Enter your sponsor code");
-	if(Changed)
-		++m_TitleRevision;
-}
-
-void CQmClient::ApplyQmRealtimeServices(const SQmRealtimeMessage &Message)
-{
-	const json_value *pPayload = Message.m_pPayload.get();
-	if(!pPayload)
-		return;
-	if(Message.m_Event == EQmRealtimeEvent::USERS)
-	{
-		char aServer[NETADDR_MAXSTRSIZE] = "";
-		if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
-			net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
-		const json_value *pAddress = JsonObjectField(pPayload, "server_address");
-		if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0)
-			return;
-		if(JsonObjectField(pPayload, "users")->type != json_array)
-			return;
-		m_pQmRealtimeUsersPayload = Message.m_pPayload;
-		str_copy(m_aQmRealtimeUsersServer, aServer);
-		m_QmRealtimeUsersExpireTick = time_get_impl() + 20 * time_freq();
-	}
-	else if(Message.m_Event == EQmRealtimeEvent::DEVELOPERS)
-		ApplyQmRealtimeDevelopers(pPayload);
-	else if(Message.m_Event == EQmRealtimeEvent::TITLE_PROFILE)
-		ApplyQmRealtimeTitleProfile(pPayload);
-	else if(Message.m_Event == EQmRealtimeEvent::TITLE_STATUS)
-	{
-		const json_value *pStatus = JsonObjectField(pPayload, "status");
-		if(pStatus->type == json_integer && pStatus->u.integer == 409)
-			m_pTitleStatus = Localizable("Four IP addresses are already online");
-	}
-	else if(Message.m_Event == EQmRealtimeEvent::TIME || Message.m_Event == EQmRealtimeEvent::PLAYTIME)
-	{
-		int64_t Value = 0;
-		if(JsonReadNonNegativeInt64(JsonObjectField(pPayload, "ts"), Value) && Value > 0)
-		{
-			m_QmClientServerNow = Value;
-			m_QmClientServerTimeLastSync = time_get();
-		}
-		if(Message.m_Event == EQmRealtimeEvent::PLAYTIME)
-		{
-			if(JsonReadNonNegativeInt64(JsonObjectField(pPayload, "total_seconds"), Value))
-				m_QmClientServerPlaytimeSeconds = Value;
-			if(JsonReadNonNegativeInt64(JsonObjectField(pPayload, "last_start_at"), Value) && Value > 0)
-				m_QmClientServerSessionStart = Value;
-			m_QmClientPlaytimeLastSync = time_get();
-			if(str_comp(TitleJsonString(pPayload, "action"), "start") == 0)
-			{
-				if(!m_QmClientStartupSent)
-				{
-					m_QmClientMarkerStartedAt = time_timestamp();
-					m_QmClientMarkerLastSeenAt = m_QmClientMarkerStartedAt;
-					m_QmClientStartupSent = true;
-					m_QmClientAwaitingRecoveryStop = false;
-					WriteQmClientLifecycleMarker();
-				}
-			}
-			else if(str_comp(TitleJsonString(pPayload, "action"), "stop") == 0)
-				ClearQmClientLifecycleMarker();
-		}
-	}
-	else if(Message.m_Event == EQmRealtimeEvent::ERROR)
-		LogQmRealtimeEvent("service_error", TitleJsonString(pPayload, "error"));
-}
-
 static constexpr const char *TITLE_TOKEN_FILE = "qmclient/title_token.txt";
 
 void CQmClient::InitTitleAuthentication()
@@ -2304,7 +2954,7 @@ void CQmClient::InitTitleAuthentication()
 	free(pToken);
 }
 
-void CQmClient::StartTitleRequest(const char *pPath, const char *pBody, std::shared_ptr<CHttpRequest> &pTask)
+void CQmClient::StartTitleRequest(const char *pPath, const char *pBody, std::shared_ptr<IHttpRequest> &pTask)
 {
 	char aUrl[512];
 	str_format(aUrl, sizeof(aUrl), "https://qmclient.icu/api/v1/titles/%s", pPath);
@@ -2386,7 +3036,6 @@ void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, con
 		m_pTitleStatus = Localizable("Title too long or contains unsupported characters");
 		return;
 	}
-	// 只上传服务端认得的风格 id，避免把本地拼写错误写进账号。
 	const char *pStyleId = pStyle != nullptr ? pStyle : "";
 	if(pStyleId[0] != '\0' && QmTitleStyleById(pStyleId) == nullptr)
 	{
@@ -2409,7 +3058,6 @@ void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, con
 void CQmClient::ResetTitlePresences()
 {
 	mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
-	m_TitleLastSync = 0;
 }
 
 const char *CQmClient::PlayerTitle(int ClientId) const
@@ -2427,16 +3075,12 @@ const char *CQmClient::PlayerTitleStyle(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))
 		return "";
-	// 与 PlayerTitle 使用同一套有效期与绑定名校验，避免出现「有风格但没有头衔」的状态。
-	if(m_aTitleExpires[ClientId] <= time_get() || str_comp(m_aaTitleNames[ClientId], GameClient()->m_aClients[ClientId].m_aName) != 0)
-		return "";
-	return m_aaPlayerStyles[ClientId];
+	return m_aaPlayerTitleStyles[ClientId];
 }
 
 double CQmClient::TitleAnimationTime() const
 {
-	// 对齐服务端时间后再取模，保证所有客户端在同一时刻得到相同相位。
-	return QmTitleAnimationTime((double)Client()->GlobalTime(), m_ServerTimeOffset, m_ServerTimeOffsetValid);
+	return QmTitleAnimationTime(Client()->GlobalTime(), m_TitleServerTimeOffset, m_TitleServerTimeOffsetValid);
 }
 
 void CQmClient::UpdateTitleAuthentication()
@@ -2484,5 +3128,6 @@ void CQmClient::UpdateTitleAuthentication()
 		}
 		json_value_free(pRoot);
 		m_pTitleOperation.reset();
+		RequestQmRealtimeTitleRefresh();
 	}
 }

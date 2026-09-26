@@ -5,6 +5,7 @@
 #include "editor_actions.h"
 
 #include <base/color.h>
+#include <base/fs.h>
 
 #include <engine/graphics.h>
 #include <engine/input.h>
@@ -14,6 +15,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/gameclient.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/ui_scrollregion.h>
 #include <game/editor/mapitems/image.h>
 #include <game/editor/mapitems/sound.h>
@@ -23,6 +25,82 @@
 #include <limits>
 
 using namespace FontIcons;
+
+CUi::EPopupMenuFunctionResult CEditor::CPopupMapTab::Render(void *pContext, CUIRect View, bool Active)
+{
+	CPopupMapTab *pPopupMapTab = static_cast<CPopupMapTab *>(pContext);
+	CEditor *pEditor = pPopupMapTab->m_pEditor;
+	if(!pEditor)
+		return CUi::POPUP_CLOSE_CURRENT;
+
+	auto MapIt = std::find_if(pEditor->m_vpMaps.begin(), pEditor->m_vpMaps.end(), [pPopupMapTab](const auto &pMap) {
+		return pMap.get() == pPopupMapTab->m_pSelectedMap;
+	});
+	if(MapIt == pEditor->m_vpMaps.end())
+		return CUi::POPUP_CLOSE_CURRENT;
+	const size_t SelectedMapIndex = MapIt - pEditor->m_vpMaps.begin();
+	CEditorMap *pSelectedMap = MapIt->get();
+	const bool Saving = pEditor->IsSaving(pSelectedMap);
+	const bool Saved = pSelectedMap->m_aFilename[0] != '\0';
+
+	CUIRect Slot;
+	View.HSplitTop(12.0f, &Slot, &View);
+	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CloseButtonId, "Close", Saving ? -1 : 0, &Slot, BUTTONFLAG_LEFT, "Close this map."))
+	{
+		pEditor->CloseMap(SelectedMapIndex, true);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	View.HSplitTop(10.0f, nullptr, &View);
+	View.HSplitTop(12.0f, &Slot, &View);
+	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CopyNameButtonId, "Copy name", Saved ? 0 : -1, &Slot, BUTTONFLAG_LEFT, "Copy the name of this map to the clipboard."))
+	{
+		char aFilename[IO_MAX_PATH_LENGTH];
+		fs_split_file_extension(fs_filename(pSelectedMap->m_aFilename), aFilename, sizeof(aFilename));
+		pEditor->Input()->SetClipboardText(aFilename);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	View.HSplitTop(2.0f, nullptr, &View);
+	View.HSplitTop(12.0f, &Slot, &View);
+	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_CopyPathButtonId, "Copy path", Saved ? 0 : -1, &Slot, BUTTONFLAG_LEFT, "Copy the path of this map to the clipboard."))
+	{
+		pEditor->Input()->SetClipboardText(pSelectedMap->m_aFilename);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	View.HSplitTop(10.0f, nullptr, &View);
+	View.HSplitTop(12.0f, &Slot, &View);
+	if(pEditor->DoButton_MenuItem(&pPopupMapTab->m_ShowFileButtonId, "Show file", Saved ? 0 : -1, &Slot, BUTTONFLAG_LEFT, "Show this map in the file browser."))
+	{
+		bool FoundMap = false;
+		for(int CheckStorageType = IStorage::TYPE_SAVE; CheckStorageType < pEditor->Storage()->NumPaths(); ++CheckStorageType)
+		{
+			if(!pEditor->Storage()->FileExists(pSelectedMap->m_aFilename, CheckStorageType))
+				continue;
+
+			char aParentDirectory[IO_MAX_PATH_LENGTH];
+			str_copy(aParentDirectory, pSelectedMap->m_aFilename);
+			if(fs_parent_dir(aParentDirectory) != 0)
+			{
+				pEditor->ShowFileDialogError("Failed to determine parent folder for map file '%s'.", pSelectedMap->m_aFilename);
+				FoundMap = true;
+				break;
+			}
+			char aCompletePath[IO_MAX_PATH_LENGTH];
+			pEditor->Storage()->GetCompletePath(CheckStorageType, aParentDirectory, aCompletePath, sizeof(aCompletePath));
+			if(!pEditor->Client()->ViewFile(aCompletePath))
+				pEditor->ShowFileDialogError("Failed to open the folder '%s'.", aCompletePath);
+			FoundMap = true;
+			break;
+		}
+		if(!FoundMap)
+			pEditor->ShowFileDialogError("The map file '%s' could not be found.", pSelectedMap->m_aFilename);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	return CUi::POPUP_KEEP_OPEN;
+}
 
 namespace
 {
@@ -83,15 +161,8 @@ CUi::EPopupMenuFunctionResult CEditor::PopupMenuFile(void *pContext, CUIRect Vie
 	View.HSplitTop(12.0f, &Slot, &View);
 	if(pEditor->DoButton_MenuItem(&s_NewMapButton, Localize("New", "Editor"), 0, &Slot, BUTTONFLAG_LEFT, Localize("[Ctrl+N] Create a new map.", "Editor")))
 	{
-		if(pEditor->HasUnsavedData())
-		{
-			pEditor->m_PopupEventType = POPEVENT_NEW;
-			pEditor->m_PopupEventActivated = true;
-		}
-		else
-		{
-			pEditor->Reset();
-		}
+		pEditor->AddDefaultMap();
+		pEditor->Reset(false);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
@@ -99,15 +170,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupMenuFile(void *pContext, CUIRect Vie
 	View.HSplitTop(12.0f, &Slot, &View);
 	if(pEditor->DoButton_MenuItem(&s_OpenButton, Localize("Load", "Editor"), 0, &Slot, BUTTONFLAG_LEFT, Localize("[Ctrl+L] Open a map for editing.", "Editor")))
 	{
-		if(pEditor->HasUnsavedData())
-		{
-			pEditor->m_PopupEventType = POPEVENT_LOAD;
-			pEditor->m_PopupEventActivated = true;
-		}
-		else
-		{
-			pEditor->m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::MAP, Localize("Load map", "Editor"), Localize("Load", "Editor"), "maps", "", CallbackOpenMap, pEditor);
-		}
+		pEditor->m_FileBrowser.ShowFileDialog(IStorage::TYPE_ALL, CFileBrowser::EFileType::MAP, Localize("Load map", "Editor"), Localize("Load", "Editor"), "maps", "", CallbackOpenMap, pEditor);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
@@ -131,9 +194,9 @@ CUi::EPopupMenuFunctionResult CEditor::PopupMenuFile(void *pContext, CUIRect Vie
 	View.HSplitTop(12.0f, &Slot, &View);
 	if(pEditor->DoButton_MenuItem(&s_SaveButton, Localize("Save", "Editor"), 0, &Slot, BUTTONFLAG_LEFT, Localize("[Ctrl+S] Save the current map.", "Editor")))
 	{
-		if(pEditor->m_Map.m_aFilename[0] != '\0' && pEditor->m_Map.m_ValidSaveFilename)
+		if(pEditor->Map()->m_aFilename[0] != '\0' && pEditor->Map()->m_ValidSaveFilename)
 		{
-			CallbackSaveMap(pEditor->m_Map.m_aFilename, IStorage::TYPE_SAVE, pEditor);
+			CallbackSaveMap(pEditor->Map()->m_aFilename, IStorage::TYPE_SAVE, pEditor);
 		}
 		else
 		{
@@ -155,7 +218,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupMenuFile(void *pContext, CUIRect Vie
 	if(pEditor->DoButton_MenuItem(&s_SaveCopyButton, Localize("Save copy", "Editor"), 0, &Slot, BUTTONFLAG_LEFT, Localize("[Ctrl+Shift+Alt+S] Save a copy of the current map under a new name.", "Editor")))
 	{
 		char aDefaultName[IO_MAX_PATH_LENGTH];
-		fs_split_file_extension(fs_filename(pEditor->m_Map.m_aFilename), aDefaultName, sizeof(aDefaultName));
+		fs_split_file_extension(fs_filename(pEditor->Map()->m_aFilename), aDefaultName, sizeof(aDefaultName));
 		pEditor->m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, Localize("Save map", "Editor"), Localize("Save copy", "Editor"), "maps", aDefaultName, CallbackSaveCopyMap, pEditor);
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
@@ -236,13 +299,11 @@ CUi::EPopupMenuFunctionResult CEditor::PopupMenuTools(void *pContext, CUIRect Vi
 		}
 	}
 
-	static int s_GotoButton = 0;
 	View.HSplitTop(2.0f, nullptr, &View);
 	View.HSplitTop(12.0f, &Slot, &View);
-	if(pEditor->DoButton_MenuItem(&s_GotoButton, Localize("Goto position", "Editor"), 0, &Slot, BUTTONFLAG_LEFT, Localize("Go to a specified coordinate point on the map.", "Editor")))
+	if(pEditor->DoButton_MenuItem(&pEditor->m_QuickActionGotoPosition, pEditor->m_QuickActionGotoPosition.Label(), 0, &Slot, BUTTONFLAG_LEFT, pEditor->m_QuickActionGotoPosition.Description()))
 	{
-		static SPopupMenuId s_PopupGotoId;
-		pEditor->Ui()->DoPopupMenu(&s_PopupGotoId, Slot.x, Slot.y + Slot.h, 120, 52, pEditor, PopupGoto);
+		pEditor->m_QuickActionGotoPosition.Call();
 	}
 
 	static int s_TileartButton = 0;
@@ -599,11 +660,11 @@ CUi::EPopupMenuFunctionResult CEditor::PopupMenuSettings(void *pContext, CUIRect
 
 		static int s_ButtonNo = 0;
 		static int s_ButtonYes = 0;
-		if(pEditor->DoButton_Ex(&s_ButtonNo, Localize("No", "Editor"), !g_Config.m_EdShowIngameEntities, &No, BUTTONFLAG_LEFT, Localize("Do not show how weapons, shields, hearts and flags appear ingame.", "Editor"), IGraphics::CORNER_L))
+		if(pEditor->DoButton_Ex(&s_ButtonNo, Localize("No", "Editor"), !g_Config.m_EdShowIngameEntities, &No, BUTTONFLAG_LEFT, Localize("Do not show how weapons, shields, snowflakes and flags appear ingame.", "Editor"), IGraphics::CORNER_L))
 		{
 			g_Config.m_EdShowIngameEntities = false;
 		}
-		if(pEditor->DoButton_Ex(&s_ButtonYes, Localize("Yes", "Editor"), g_Config.m_EdShowIngameEntities, &Yes, BUTTONFLAG_LEFT, Localize("Show how weapons, shields, hearts and flags appear ingame.", "Editor"), IGraphics::CORNER_R))
+		if(pEditor->DoButton_Ex(&s_ButtonYes, Localize("Yes", "Editor"), g_Config.m_EdShowIngameEntities, &Yes, BUTTONFLAG_LEFT, Localize("Show how weapons, shields, snowflakes and flags appear ingame.", "Editor"), IGraphics::CORNER_R))
 		{
 			g_Config.m_EdShowIngameEntities = true;
 		}
@@ -2196,6 +2257,11 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEvent(void *pContext, CUIRect View, 
 		pTitle = Localize("New map", "Editor");
 		pMessage = Localize("The map contains unsaved data, you might want to save it before you create a new map.\n\nContinue anyway?", "Editor");
 	}
+	else if(pEditor->m_PopupEventType == POPEVENT_CLOSE_MAP)
+	{
+		pTitle = Localize("Save changes?", "Editor");
+		pMessage = Localize("Do you want to save your changes before closing this map?\n\nYour changes will be lost if you discard them.", "Editor");
+	}
 	else if(pEditor->m_PopupEventType == POPEVENT_LARGELAYER)
 	{
 		pTitle = Localize("Large layer", "Editor");
@@ -2349,7 +2415,22 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEvent(void *pContext, CUIRect View, 
 		}
 		else if(pEditor->m_PopupEventType == POPEVENT_NEW)
 		{
-			pEditor->Reset();
+			pEditor->AddDefaultMap();
+			pEditor->Reset(false);
+		}
+		else if(pEditor->m_PopupEventType == POPEVENT_CLOSE_MAP)
+		{
+			pEditor->Map()->m_CloseOnSave = true;
+			if(pEditor->Map()->m_aFilename[0] != '\0' && pEditor->Map()->m_ValidSaveFilename)
+			{
+				CallbackSaveMap(pEditor->Map()->m_aFilename, IStorage::TYPE_SAVE, pEditor);
+			}
+			else
+			{
+				char aDefaultName[IO_MAX_PATH_LENGTH];
+				fs_split_file_extension(fs_filename(pEditor->Map()->m_aFilename), aDefaultName, sizeof(aDefaultName));
+				pEditor->m_FileBrowser.ShowFileDialog(IStorage::TYPE_SAVE, CFileBrowser::EFileType::MAP, Localize("Save map", "Editor"), Localize("Save as", "Editor"), "maps", aDefaultName, CallbackSaveMap, pEditor);
+			}
 		}
 		else if(pEditor->m_PopupEventType == POPEVENT_PLACE_BORDER_TILES)
 		{
@@ -2389,6 +2470,18 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEvent(void *pContext, CUIRect View, 
 		}
 		pEditor->m_PopupEventWasActivated = false;
 		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
+	if(pEditor->m_PopupEventType == POPEVENT_CLOSE_MAP)
+	{
+		static int s_DiscardButton = 0;
+		ButtonBar.VMargin((ButtonBar.w - 110.0f) / 2.0f, &Button);
+		if(pEditor->DoButton_Editor(&s_DiscardButton, Localize("Discard changes", "Editor"), EditorButtonChecked::DANGEROUS_ACTION, &Button, BUTTONFLAG_LEFT, nullptr))
+		{
+			pEditor->CloseMap(pEditor->m_PopupCloseMapIndex, false);
+			pEditor->m_PopupEventWasActivated = false;
+			return CUi::POPUP_CLOSE_CURRENT;
+		}
 	}
 
 	return CUi::POPUP_KEEP_OPEN;
@@ -2597,6 +2690,25 @@ CUi::EPopupMenuFunctionResult CEditor::PopupSelectConfigAutoMap(void *pContext, 
 	const float ButtonHeight = 12.0f;
 	const float ButtonMargin = 2.0f;
 
+	CUIRect Button;
+	View.HSplitBottom(ButtonHeight, &View, &Button);
+	static char s_ShowDirectoryButton;
+	if(pEditor->DoButton_MenuItem(&s_ShowDirectoryButton, Localize("Show directory", "Editor"), 0, &Button, BUTTONFLAG_LEFT, Localize("Open the directory for automapper rules in the file browser.", "Editor")))
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		pEditor->Storage()->GetCompletePath(IStorage::TYPE_SAVE, "editor/automap", aPath, sizeof(aPath));
+		pEditor->Storage()->CreateFolder("editor", IStorage::TYPE_SAVE);
+		pEditor->Storage()->CreateFolder("editor/automap", IStorage::TYPE_SAVE);
+		pEditor->Client()->ViewFile(aPath);
+	}
+
+	View.HSplitBottom(5.0f, &View, &Button);
+	IGraphics::CLineItem LineItem(Button.x, Button.y + Button.h / 2, Button.x + Button.w, Button.y + Button.h / 2);
+	pEditor->Graphics()->TextureClear();
+	pEditor->Graphics()->LinesBegin();
+	pEditor->Graphics()->LinesDraw(&LineItem, 1);
+	pEditor->Graphics()->LinesEnd();
+
 	static CListBox s_ListBox;
 	s_ListBox.DoStart(ButtonHeight, pAutoMapper->ConfigNamesNum() + 1, 1, 4, s_AutoMapConfigCurrent + 1, &View, false);
 	s_ListBox.SetScrollbarWidth(15.0f);
@@ -2633,7 +2745,7 @@ void CEditor::PopupSelectConfigAutoMapInvoke(int Current, float x, float y)
 	std::shared_ptr<CLayerTiles> pLayer = std::static_pointer_cast<CLayerTiles>(Map()->SelectedLayer(0));
 	const int ItemCount = minimum(Map()->m_vpImages[pLayer->m_Image]->m_AutoMapper.ConfigNamesNum() + 1, 10); // +1 for None-entry
 	// Width for buttons is 120, 15 is the scrollbar width, 2 is the margin between both.
-	Ui()->DoPopupMenu(&s_PopupSelectConfigAutoMapId, x, y, 120.0f + 15.0f + 2.0f, 10.0f + 12.0f * ItemCount + 2.0f * (ItemCount - 1), this, PopupSelectConfigAutoMap);
+	Ui()->DoPopupMenu(&s_PopupSelectConfigAutoMapId, x, y, 120.0f + 15.0f + 2.0f, 10.0f + 12.0f * ItemCount + 2.0f * (ItemCount - 1) + 5.0f + 12.0f, this, PopupSelectConfigAutoMap);
 }
 
 int CEditor::PopupSelectConfigAutoMapResult()
@@ -3188,6 +3300,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupProofMode(void *pContext, CUIRect Vi
 CUi::EPopupMenuFunctionResult CEditor::PopupAnimateSettings(void *pContext, CUIRect View, bool Active)
 {
 	CEditor *pEditor = static_cast<CEditor *>(pContext);
+	CMapEnvelopeEvaluator &EnvelopeEvaluator = pEditor->Map()->m_EnvelopeEvaluator;
 
 	static constexpr float MIN_ANIM_SPEED = 0.001f;
 	static constexpr float MAX_ANIM_SPEED = 1000000.0f;
@@ -3201,53 +3314,53 @@ CUi::EPopupMenuFunctionResult CEditor::PopupAnimateSettings(void *pContext, CUIR
 	View.HSplitBottom(12.0f, &View, &ButtonReset);
 	pEditor->Ui()->DoLabel(&Label, Localize("Speed", "Editor"), 10.0f, TEXTALIGN_ML);
 
-	const float OldAnimateSpeed = pEditor->m_AnimateSpeed;
+	const float OldAnimateSpeed = EnvelopeEvaluator.m_AnimateSpeed;
 
 	static char s_DecreaseButton;
-	if(pEditor->DoButton_FontIcon(&s_DecreaseButton, FONT_ICON_MINUS, 0, &ButtonDecrease, BUTTONFLAG_LEFT, Localize("Decrease animation speed.", "Editor"), IGraphics::CORNER_L, 7.0f))
+	if(pEditor->DoButton_QmIcon(&s_DecreaseButton, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &ButtonDecrease, BUTTONFLAG_LEFT, Localize("Decrease animation speed.", "Editor"), IGraphics::CORNER_L, 7.0f))
 	{
-		pEditor->m_AnimateSpeed -= pEditor->m_AnimateSpeed <= 1.0f ? 0.1f : 0.5f;
-		pEditor->m_AnimateSpeed = maximum(pEditor->m_AnimateSpeed, MIN_ANIM_SPEED);
-		pEditor->m_AnimateUpdatePopup = true;
+		EnvelopeEvaluator.m_AnimateSpeed -= EnvelopeEvaluator.m_AnimateSpeed <= 1.0f ? 0.1f : 0.5f;
+		EnvelopeEvaluator.m_AnimateSpeed = maximum(EnvelopeEvaluator.m_AnimateSpeed, MIN_ANIM_SPEED);
+		EnvelopeEvaluator.m_AnimateUpdatePopup = true;
 	}
 
 	static char s_IncreaseButton;
-	if(pEditor->DoButton_FontIcon(&s_IncreaseButton, FONT_ICON_PLUS, 0, &ButtonIncrease, BUTTONFLAG_LEFT, Localize("Increase animation speed.", "Editor"), IGraphics::CORNER_R, 7.0f))
+	if(pEditor->DoButton_QmIcon(&s_IncreaseButton, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &ButtonIncrease, BUTTONFLAG_LEFT, Localize("Increase animation speed.", "Editor"), IGraphics::CORNER_R, 7.0f))
 	{
-		if(pEditor->m_AnimateSpeed < 0.1f)
-			pEditor->m_AnimateSpeed = 0.1f;
+		if(EnvelopeEvaluator.m_AnimateSpeed < 0.1f)
+			EnvelopeEvaluator.m_AnimateSpeed = 0.1f;
 		else
-			pEditor->m_AnimateSpeed += pEditor->m_AnimateSpeed < 1.0f ? 0.1f : 0.5f;
-		pEditor->m_AnimateSpeed = minimum(pEditor->m_AnimateSpeed, MAX_ANIM_SPEED);
-		pEditor->m_AnimateUpdatePopup = true;
+			EnvelopeEvaluator.m_AnimateSpeed += EnvelopeEvaluator.m_AnimateSpeed < 1.0f ? 0.1f : 0.5f;
+		EnvelopeEvaluator.m_AnimateSpeed = minimum(EnvelopeEvaluator.m_AnimateSpeed, MAX_ANIM_SPEED);
+		EnvelopeEvaluator.m_AnimateUpdatePopup = true;
 	}
 
 	static char s_DefaultButton;
 	if(pEditor->DoButton_Ex(&s_DefaultButton, Localize("Default", "Editor"), 0, &ButtonReset, BUTTONFLAG_LEFT, Localize("Reset to normal animation speed.", "Editor"), IGraphics::CORNER_ALL))
 	{
-		pEditor->m_AnimateSpeed = 1.0f;
-		pEditor->m_AnimateUpdatePopup = true;
+		EnvelopeEvaluator.m_AnimateSpeed = 1.0f;
+		EnvelopeEvaluator.m_AnimateUpdatePopup = true;
 	}
 
 	static CLineInputNumber s_SpeedInput;
-	if(pEditor->m_AnimateUpdatePopup)
+	if(EnvelopeEvaluator.m_AnimateUpdatePopup)
 	{
-		s_SpeedInput.SetFloat(pEditor->m_AnimateSpeed);
-		pEditor->m_AnimateUpdatePopup = false;
+		s_SpeedInput.SetFloat(EnvelopeEvaluator.m_AnimateSpeed);
+		EnvelopeEvaluator.m_AnimateUpdatePopup = false;
 	}
 
 	if(pEditor->DoEditBox(&s_SpeedInput, &EditBox, 10.0f, IGraphics::CORNER_NONE, Localize("The animation speed.", "Editor")))
 	{
-		pEditor->m_AnimateSpeed = std::clamp(s_SpeedInput.GetFloat(), MIN_ANIM_SPEED, MAX_ANIM_SPEED);
+		EnvelopeEvaluator.m_AnimateSpeed = std::clamp(s_SpeedInput.GetFloat(), MIN_ANIM_SPEED, MAX_ANIM_SPEED);
 	}
 
 	// 调整起始时间，避免动画速度变化时跳变。
-	const float AnimateSpeedRatio = OldAnimateSpeed / pEditor->m_AnimateSpeed;
+	const float AnimateSpeedRatio = OldAnimateSpeed / EnvelopeEvaluator.m_AnimateSpeed;
 	const float Time = pEditor->Client()->GlobalTime();
-	pEditor->m_AnimateStart = Time + (pEditor->m_AnimateStart - Time) * AnimateSpeedRatio;
-	if(!pEditor->m_Animate)
+	EnvelopeEvaluator.m_AnimateStart = Time + (EnvelopeEvaluator.m_AnimateStart - Time) * AnimateSpeedRatio;
+	if(!EnvelopeEvaluator.m_Animate)
 	{
-		pEditor->m_AnimateTime *= AnimateSpeedRatio;
+		EnvelopeEvaluator.m_AnimateTime *= AnimateSpeedRatio;
 	}
 
 	return CUi::POPUP_KEEP_OPEN;

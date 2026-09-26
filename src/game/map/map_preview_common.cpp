@@ -534,7 +534,7 @@ namespace MapPreview
 		m_TimeNanos = TimeNanos;
 	}
 
-	void CPreviewEnvelopeEvalBase::EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, ColorRGBA &Result, size_t Channels)
+	void CPreviewEnvelopeEvalBase::EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, ColorRGBA &Result, size_t Channels) const
 	{
 		if(!m_pMap || !m_pEnvelopePoints)
 			return;

@@ -9,6 +9,11 @@
 
 #include <engine/map.h>
 
+#include <set>
+
+class CMapItemLayerTilemap;
+class CMapItemLayerTilemap_v2;
+
 class CMap : public IEngineMap
 {
 	CDataFileReader m_DataFile;
@@ -33,6 +38,7 @@ public:
 	int NumItems() const override;
 
 	[[nodiscard]] bool Load(const char *pMapName, int StorageType) override;
+	void Adopt(CMap &&Other);
 	void Unload() override;
 	bool IsLoaded() const override;
 	IOHANDLE File() const override;
@@ -41,7 +47,15 @@ public:
 	unsigned Crc() const override;
 	int Size() const override;
 
-	static void ExtractTiles(class CTile *pDest, size_t DestSize, const class CTile *pSrc, size_t SrcSize);
+	// map_generator 等本地工具需要直接解包 tileskip 数据
+	static bool ExtractTiles(class CTile *pDest, size_t DestSize, const class CTile *pSrc, size_t SrcSize);
+
+private:
+	static bool ValidateMapVersion(CDataFileReader &NewDataFile);
+	bool UpgradeAndValidateTilesLayerItem(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex,
+		CMapItemLayerTilemap_v2 *pLayerTilemapBase, int LayerItemIndex, size_t LayerItemSize);
+	bool ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int GroupIndex, int LayerIndex, const CMapItemLayerTilemap *pLayerTilemap,
+		const CMapItemLayerTilemap &GameLayer, std::set<int> &UsedDataIndices);
 };
 
 #endif

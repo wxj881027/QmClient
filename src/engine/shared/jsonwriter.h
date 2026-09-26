@@ -85,6 +85,8 @@ public:
 class CJsonFileWriter : public CJsonWriter
 {
 	IOHANDLE m_IO;
+	bool m_Success = true;
+	bool m_Closed = false;
 
 protected:
 	void WriteInternal(const char *pStr, int Length = -1) override;
@@ -96,6 +98,8 @@ public:
 	 */
 	CJsonFileWriter(IOHANDLE IO);
 	~CJsonFileWriter() override;
+	bool Finish();
+	bool IsSuccess() const { return m_Success; }
 };
 
 /**

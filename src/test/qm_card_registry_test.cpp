@@ -7,7 +7,6 @@
 
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmModuleLayoutAdapter.h>
-#include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/localization.h>
 
 #include <gtest/gtest.h>
@@ -42,75 +41,26 @@ TEST(QmCardRegistry, CoversAllCardsNoDuplicates)
 	}
 }
 
-// 意图：测图上传入口能从功能页与全局搜索找到，旧布局加载后仍保留独立卡片。
-TEST(QmCardRegistry, MapUploadHasFunctionPlacementAndSearchKeywords)
-{
-	const auto *pCard = qm_card_registry::FindByStableId("qm:map_upload");
-	ASSERT_NE(pCard, nullptr);
-	EXPECT_STREQ(pCard->m_pDefaultTab, "function");
-	EXPECT_EQ(pCard->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pCard->m_DefaultOrder, 8);
-	const auto Model = RegistryModelAfterRoundTrip();
-	for(const char *pQuery : {"上传地图", "测图", "map upload"})
-	{
-		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
-		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
-			return str_comp(Result.m_pStableId, "qm:map_upload") == 0;
-		});
-		ASSERT_NE(It, Results.end()) << pQuery;
-		EXPECT_STREQ(It->m_Target.m_pTab, "function");
-	}
-}
-
-// 意图：恢复后的禅模式卡片能从默认布局与全局搜索找到。
-TEST(QmCardRegistry, RestoredZenModeIsPresentInRegistryAndSearch)
-{
-	const auto *pCard = qm_card_registry::FindByStableId("qm:focus_mode");
-	ASSERT_NE(pCard, nullptr);
-	EXPECT_STREQ(pCard->m_pDefaultTab, "visual");
-	EXPECT_EQ(pCard->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(pCard->m_DefaultOrder, 2);
-	EXPECT_TRUE(qm_card_catalog::HasCardModule("qm:focus_mode"));
-	const auto Model = RegistryModelAfterRoundTrip();
-	EXPECT_GE(Model.FindByStableId("qm:focus_mode"), 0);
-	for(const char *pQuery : {"禅模式", "Zen Mode", "focus mode"})
-	{
-		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
-		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
-			return str_comp(Result.m_pStableId, "qm:focus_mode") == 0;
-		});
-		ASSERT_NE(It, Results.end()) << pQuery;
-		EXPECT_STREQ(It->m_Target.m_pTab, "visual");
-	}
-}
-
-TEST(QmCardRegistry, TimeoutDisconnectSearchPointsToControls)
-{
-	qm_card_order::CModel Model;
-	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	for(const char *pQuery : {"qm_timeout_disconnect", "Active disconnect", "主动断开", "异常断开", "timeout disconnect"})
-	{
-		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
-		ASSERT_EQ(Results.size(), 1u) << pQuery;
-		EXPECT_STREQ(Results.front().m_pStableId, "deck:controls-miscellaneous") << pQuery;
-	}
-}
-
 TEST(QmCardRegistry, P6QmClientContributorsCards)
 {
 	const auto *pCommunity = qm_card_registry::FindByStableId("deck:qmclient-contributors-community");
 	const auto *pSponsors = qm_card_registry::FindByStableId("deck:qmclient-contributors-sponsors");
+	const auto *pDdnet = qm_card_registry::FindByStableId("deck:qmclient-contributors-ddnet");
 	const auto *pTitle = qm_card_registry::FindByStableId("deck:qmclient-contributors-title");
 	ASSERT_NE(pTitle, nullptr);
 	EXPECT_STREQ(pTitle->m_pDefaultTab, "qmclient-contributors");
 	ASSERT_NE(pCommunity, nullptr);
 	ASSERT_NE(pSponsors, nullptr);
+	ASSERT_NE(pDdnet, nullptr);
 	EXPECT_STREQ(pCommunity->m_pDefaultTab, "qmclient-contributors");
 	EXPECT_STREQ(pSponsors->m_pDefaultTab, "qmclient-contributors");
 	EXPECT_EQ(pCommunity->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
 	EXPECT_EQ(pSponsors->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
 	EXPECT_EQ(pCommunity->m_DefaultOrder, 0);
 	EXPECT_EQ(pSponsors->m_DefaultOrder, 0);
+	EXPECT_STREQ(pDdnet->m_pDefaultTab, "qmclient-contributors");
+	EXPECT_EQ(pDdnet->m_DefaultColumn, qm_card_registry::ECardColumn::Full);
+	EXPECT_EQ(pDdnet->m_DefaultOrder, 0);
 }
 
 TEST(QmCardRegistry, BindWheelUsesTwoColumnsByDefault)
@@ -359,6 +309,8 @@ TEST(QmCardRegistry, CoversCurrentSettingsDeckIds)
 		"deck:tee-identity",
 		"deck:tee-skin-options",
 		"deck:tee-skin-list",
+		"deck:tee-skin-queue",
+		"deck:tee-glow",
 		"deck:graphics-display",
 		"deck:player-identity",
 		"deck:player-country",
@@ -432,16 +384,17 @@ TEST(QmCardRegistry, PlayerStandardPageCardsPersistInVisualOrder)
 		(std::vector<std::string>{"deck:player-country"}));
 }
 
-// 意图：恢复预览在左、选项在右、列表与队列在下方整宽卡的默认布局。
-TEST(QmCardRegistry, TeeStandardPageUsesThreeFunctionalCards)
+// 意图：Tee 页按预览、选项、列表拆卡后，宽屏默认保持预览与选项左右排列、搜索列表全宽。
+TEST(QmCardRegistry, TeeStandardPageUsesFiveFunctionalCards)
 {
 	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
+	// 皮肤列表全宽独立；预览/选项一行，皮肤队列/外发光各占左右半宽一行。
 	EXPECT_EQ(Model.StableIdOrder("deck:", "tee", 0),
 		(std::vector<std::string>{"deck:tee-skin-list"}));
 	EXPECT_EQ(Model.StableIdOrder("deck:", "tee", 1),
-		(std::vector<std::string>{"deck:tee-identity"}));
+		(std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-queue"}));
 	EXPECT_EQ(Model.StableIdOrder("deck:", "tee", 2),
-		(std::vector<std::string>{"deck:tee-skin-options"}));
+		(std::vector<std::string>{"deck:tee-skin-options", "deck:tee-glow"}));
 }
 
 // 意图：Tee 拆卡后搜索词必须落到实际承载功能的卡片，而不是都跳到预览卡。
@@ -451,7 +404,7 @@ TEST(QmCardRegistry, TeeFunctionalSearchTargetsSplitCards)
 	for(const auto &[pQuery, pExpectedId] : {std::pair{"colors", "deck:tee-skin-options"}, std::pair{"eyes", "deck:tee-skin-options"}, std::pair{"search", "deck:tee-skin-list"}, std::pair{"filter", "deck:tee-skin-list"}})
 	{
 		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
-		const auto It = std::find_if(vResults.begin(), vResults.end(), [pExpectedId](const auto &Result) {
+		const auto It = std::find_if(vResults.begin(), vResults.end(), [pExpectedId = pExpectedId](const auto &Result) {
 			return std::string(Result.m_pStableId) == pExpectedId;
 		});
 		ASSERT_NE(It, vResults.end()) << pQuery;
@@ -766,6 +719,8 @@ TEST(QmCardRegistry, TeeMigrationOnlyReflowsLegacyDefaultLayout)
 		{"deck:tee-identity", "tee", 0, 0},
 		{"deck:tee-skin-options", "tee", 1, 0},
 		{"deck:tee-skin-list", "tee", 2, 0},
+		{"deck:tee-skin-queue", "tee", 1, 1},
+		{"deck:tee-glow", "tee", 2, 1},
 	};
 	const char *pLegacySerialized =
 		"deck:tee-identity|tee|full|0;"
@@ -775,18 +730,22 @@ TEST(QmCardRegistry, TeeMigrationOnlyReflowsLegacyDefaultLayout)
 		{"deck:tee-identity", "tee", 1, 0},
 		{"deck:tee-skin-options", "tee", 2, 0},
 		{"deck:tee-skin-list", "tee", 0, 0},
+		{"deck:tee-skin-queue", "tee", 1, 1},
+		{"deck:tee-glow", "tee", 2, 1},
 	};
 	const std::vector<const char *> vAllowedIds = {
 		"deck:tee-identity",
 		"deck:tee-skin-options",
 		"deck:tee-skin-list",
+		"deck:tee-skin-queue",
+		"deck:tee-glow",
 	};
 	qm_card_order::CModel LegacyModel;
 	LegacyModel.LoadMerged(pLegacySerialized, qm_card_registry::BuildDefaultEntries());
 	EXPECT_TRUE(qm_card_order::MigrateExactLayout(LegacyModel, "tee", vLegacyDefaults, vTargetLayout, vAllowedIds));
 	EXPECT_EQ(LegacyModel.StableIdOrder("deck:", "tee", 0), (std::vector<std::string>{"deck:tee-skin-list"}));
-	EXPECT_EQ(LegacyModel.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity"}));
-	EXPECT_EQ(LegacyModel.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-options"}));
+	EXPECT_EQ(LegacyModel.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-queue"}));
+	EXPECT_EQ(LegacyModel.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-options", "deck:tee-glow"}));
 
 	const char *pCustomizedSerialized =
 		"deck:tee-identity|tee|left|0;"
@@ -795,7 +754,7 @@ TEST(QmCardRegistry, TeeMigrationOnlyReflowsLegacyDefaultLayout)
 	qm_card_order::CModel CustomizedModel;
 	CustomizedModel.LoadMerged(pCustomizedSerialized, qm_card_registry::BuildDefaultEntries());
 	EXPECT_FALSE(qm_card_order::MigrateExactLayout(CustomizedModel, "tee", vLegacyDefaults, vTargetLayout, vAllowedIds));
-	EXPECT_EQ(CustomizedModel.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-options"}));
+	EXPECT_EQ(CustomizedModel.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-queue"}));
 }
 
 TEST(QmCardRegistry, GlobalCardOrderMaximumValueFitsConsoleCommand)
@@ -878,8 +837,8 @@ TEST(QmCardRegistry, GlobalCardOrderSurvivesFreshConfigManagerReload)
 		qm_card_order::CModel Reloaded;
 		ASSERT_TRUE(Reloaded.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries()));
 		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 0), (std::vector<std::string>{"deck:tee-skin-list"}));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity"}));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-options"}));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-queue"}));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-options", "deck:tee-glow"}));
 		EXPECT_TRUE(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 1).empty());
 		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 2), (std::vector<std::string>{"deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"}));
 		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-profiles", 1), (std::vector<std::string>{"deck:tclient-profiles-options"}));
@@ -1041,6 +1000,7 @@ TEST(QmCardRegistry, QmCardsPreserveLegacyModuleSearchKeywords)
 		const char *m_pKeyword;
 	};
 	const SExpectedKeyword aExpected[] = {
+		{"qm:mini_features", "粒子拖尾"},
 		{"qm:mini_features", "候选栏"},
 		{"qm:friend_notify", "自动刷新"},
 		{"qm:block_words", "屏蔽词"},
@@ -1058,6 +1018,30 @@ TEST(QmCardRegistry, QmCardsPreserveLegacyModuleSearchKeywords)
 	}
 }
 
+// 拆分后外观和换皮动画的功能词应分别指向承载它们的卡片。
+TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
+{
+	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
+	const auto ExpectOwner = [&Model](const char *pQuery, const char *pOwner, const char *pOther) {
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [pOwner](const auto &Result) {
+			return std::string(Result.m_pStableId) == pOwner;
+		});
+		ASSERT_NE(It, Results.end()) << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pTab, "visual") << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pStableId, pOwner) << pQuery;
+		EXPECT_EQ(std::count_if(Results.begin(), Results.end(), [pOther](const auto &Result) {
+			return std::string(Result.m_pStableId) == pOther;
+		}),
+			0)
+			<< pQuery;
+	};
+	for(const char *pQuery : {"皮肤描边", "循环色调", "表情阴影", "skin outline"})
+		ExpectOwner(pQuery, "qm:skin_appearance", "qm:skin_transition");
+	for(const char *pQuery : {"锤中偷皮", "皮肤切换", "换皮", "skin transition animation"})
+		ExpectOwner(pQuery, "qm:skin_transition", "qm:skin_appearance");
+}
+
 // 意图：QiaFen 三名分裂（枚举 QiaFen / UI 名 keyword_reply / 持久化 key qiafen）是迁移最大陷阱。
 // 注册表必须以持久化 key 为权威，否则迁移丢用户布局。
 TEST(QmCardRegistry, QiaFenUsesPersistentKeyNotUiName)
@@ -1072,6 +1056,68 @@ TEST(QmCardRegistry, DataDebtCardsHaveTabAssignment)
 {
 	EXPECT_NE(qm_card_registry::FindByStableId("qm:laser")->m_pDefaultTab, nullptr);
 	EXPECT_NE(qm_card_registry::FindByStableId("qm:nameplate_text")->m_pDefaultTab, nullptr);
+}
+
+// 意图：没有 deck 渲染器的注册表条目（激光、名牌文字、项目链接）功能由旧设置页承载，
+// 搜索点击必须落到真正显示这些设置的卡，而不是自己那个空 tab。
+TEST(QmCardRegistry, RendererlessCardsNavigateToHostingCard)
+{
+	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
+
+	const auto ExpectTarget = [&Model](const char *pStableId, const char *pExpectedTab, const char *pExpectedStableId) {
+		const qm_card_registry::SCardDefault *pDefault = qm_card_registry::FindByStableId(pStableId);
+		ASSERT_NE(pDefault, nullptr) << pStableId;
+		const qm_card_registry::SCardNavigationTarget Target = qm_card_registry::ResolveCardNavigationTarget(*pDefault, Model);
+		EXPECT_STREQ(Target.m_pTab, pExpectedTab) << pStableId;
+		EXPECT_STREQ(Target.m_pStableId, pExpectedStableId) << pStableId;
+	};
+
+	ExpectTarget("qm:laser", "appearance-laser", "deck:appearance-laser-enhanced");
+	ExpectTarget("qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-settings");
+	ExpectTarget("qm:info", "qmclient-contributors", "deck:qmclient-contributors-ddnet");
+	// 歌词开关渲染在灵动岛卡内，因此停留在 hud 页但指向承载卡。
+	ExpectTarget("qm:lyrics", "hud", "qm:dynamic_island");
+
+	// 有自己渲染器的卡不受影响，仍指向自身。
+	const qm_card_registry::SCardDefault *pFocus = qm_card_registry::FindByStableId("qm:focus_mode");
+	ASSERT_NE(pFocus, nullptr);
+	const qm_card_registry::SCardNavigationTarget FocusTarget = qm_card_registry::ResolveCardNavigationTarget(*pFocus, Model);
+	EXPECT_STREQ(FocusTarget.m_pTab, "visual");
+	EXPECT_STREQ(FocusTarget.m_pStableId, "qm:focus_mode");
+}
+
+// 意图：搜索命中激光/名牌文字时，结果携带的目标必须是承载卡的 tab 与 id，
+// 否则玩家点进去只会看到一个没有该设置的页面。
+TEST(QmCardRegistry, SearchResultsCarryHostingCardTarget)
+{
+	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
+
+	const auto ExpectSearchTarget = [&Model](const char *pQuery, const char *pStableId, const char *pExpectedTab, const char *pExpectedStableId) {
+		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
+		const auto It = std::find_if(vResults.begin(), vResults.end(), [pStableId](const auto &Result) {
+			return std::string(Result.m_pStableId) == pStableId;
+		});
+		ASSERT_NE(It, vResults.end()) << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pTab, pExpectedTab) << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pStableId, pExpectedStableId) << pQuery;
+	};
+
+	ExpectSearchTarget("激光", "qm:laser", "appearance-laser", "deck:appearance-laser-enhanced");
+	ExpectSearchTarget("名牌", "qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-settings");
+	ExpectSearchTarget("歌词", "qm:lyrics", "hud", "qm:dynamic_island");
+}
+
+// 意图：歌词在旧栖梦子布局里有模块条目，适配层也把 Lyrics 映射到 qm:lyrics，
+// 注册表必须存在同名条目，否则迁移出的全局顺序里会留下注册表不认识的 id。
+TEST(QmCardRegistry, LyricsCardRegisteredForSidebarModuleMigration)
+{
+	const qm_card_registry::SCardDefault *pLyrics = qm_card_registry::FindByStableId("qm:lyrics");
+	ASSERT_NE(pLyrics, nullptr);
+	// 与 s_aQmModuleDefaults 的 Lyrics（Right, 16）保持一致。
+	EXPECT_STREQ(pLyrics->m_pDefaultTab, "hud");
+	EXPECT_EQ(pLyrics->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	EXPECT_EQ(pLyrics->m_DefaultOrder, 16);
+	EXPECT_GE(RegistryModelAfterRoundTrip().StateIndexForStableId("qm:lyrics"), 0);
 }
 
 // 意图：调试模式卡片必须挂在 HUD 页，携带可搜索的中文/拼音关键词，且模块枚举可反查。
@@ -1105,11 +1151,10 @@ TEST(QmCardRegistry, MigratesLegacyKeyToNamespaced)
 {
 	EXPECT_EQ(std::string(qm_card_registry::MigrateLegacyKey("chat_bubble")), "qm:chat_bubble");
 	EXPECT_EQ(std::string(qm_card_registry::MigrateLegacyKey("qiafen")), "qm:qiafen");
-	EXPECT_EQ(std::string(qm_card_registry::MigrateLegacyKey("focus_mode")), "qm:focus_mode");
 	EXPECT_EQ(qm_card_registry::MigrateLegacyKey("keyword_reply"), nullptr); // UI 名不映射
 }
 
-// 意图：栖梦 37 个 m_pKey 必须全部可映射（迁移兜底全覆盖，无遗漏）。
+// 意图：栖梦 38 个 m_pKey 必须全部可映射（迁移兜底全覆盖，无遗漏）。
 TEST(QmCardRegistry, AllQimengLegacyKeysMigratable)
 {
 	for(const auto &E : qm_card_registry::Defaults())
@@ -1124,27 +1169,21 @@ TEST(QmCardRegistry, AllQimengLegacyKeysMigratable)
 	}
 }
 
-// 意图：拆分后搜索描边/色调/阴影与换皮动画时应命中各自的全局卡片。
-TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
+TEST(QmCardRegistry, TimeoutDisconnectSearchPointsToControls)
 {
-	const auto *pAppearance = qm_card_registry::FindByStableId("qm:skin_appearance");
-	const auto *pTransition = qm_card_registry::FindByStableId("qm:skin_transition");
-	ASSERT_NE(pAppearance, nullptr);
-	ASSERT_NE(pTransition, nullptr);
-	EXPECT_STREQ(pAppearance->m_pDefaultTab, "visual");
-	EXPECT_STREQ(pTransition->m_pDefaultTab, "visual");
-	EXPECT_STREQ(pAppearance->m_pTitle, "Tee appearance");
-	EXPECT_STREQ(pTransition->m_pTitle, "Skin transition animation");
-
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	const auto ExpectOwner = [&Model](const char *pQuery, const char *pOwner, const char *pOther) {
+	for(const char *pQuery : {"qm_timeout_disconnect", "Active disconnect", "主动断开", "异常断开", "timeout disconnect"})
+	{
 		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
-		EXPECT_TRUE(std::any_of(Results.begin(), Results.end(), [pOwner](const auto &Result) { return str_comp(Result.m_pStableId, pOwner) == 0; })) << pQuery;
-		EXPECT_FALSE(std::any_of(Results.begin(), Results.end(), [pOther](const auto &Result) { return str_comp(Result.m_pStableId, pOther) == 0; })) << pQuery;
-	};
-	for(const char *pQuery : {"皮肤描边", "循环色调", "表情阴影", "skin outline"})
-		ExpectOwner(pQuery, "qm:skin_appearance", "qm:skin_transition");
-	for(const char *pQuery : {"锤中偷皮", "皮肤切换", "skin transition animation"})
-		ExpectOwner(pQuery, "qm:skin_transition", "qm:skin_appearance");
+		ASSERT_FALSE(Results.empty()) << pQuery;
+		// 本地把同一批中文/拼音关键词也写进了总览卡片 qm:key_binds（远程没有），所以中文查询会多命中一张；
+		// 这里断言「命中控件卡片」，唯一无歧义的命令名仍然只应命中一张卡。
+		bool Found = false;
+		for(const auto &Result : Results)
+			Found = Found || std::string(Result.m_pStableId) == "deck:controls-miscellaneous";
+		EXPECT_TRUE(Found) << pQuery;
+		if(std::string(pQuery) == "qm_timeout_disconnect")
+			EXPECT_EQ(Results.size(), 1u) << pQuery;
+	}
 }

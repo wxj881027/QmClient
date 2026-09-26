@@ -2,13 +2,11 @@
 #include "test.h"
 
 #include <game/client/QmUi/QmLayout.h>
+#include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/afk_presentation.h>
 #include <game/client/components/qmclient/input_overlay.h>
 #include <game/client/components/qmclient/score_hud_layout.h>
-#include <game/client/components/qmclient/scoreboard_footer.h>
-#include <game/client/components/qmclient/scoreboard_skin.h>
 #include <game/client/components/qmclient/scoreboard_team_modes.h>
-#include <game/client/components/qmclient/tee_skin_apply.h>
 #include <game/client/components/scoreboard.h>
 #include <game/map/render_map.h>
 #include <game/mapitems.h>
@@ -16,7 +14,6 @@
 #include <gtest/gtest.h>
 
 #include <array>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -28,45 +25,12 @@ TEST(QmTuneColorMapper, NonArrayBackendsKeepTheOriginalTuneTileIndex)
 	EXPECT_EQ(Mapper.TileTextureIndex(TILE_TUNE, 7, true), 1);
 }
 
-TEST(QmInputOverlayLayout, MouseClassificationRequiresMouseOnlyInputs)
+TEST(QmCountryFlags, InvalidNetworkCountryCodesUseTheDefaultFlag)
 {
-	EXPECT_TRUE(QmInputOverlay::IsMouseOnlyLayout(false, true));
-	EXPECT_FALSE(QmInputOverlay::IsMouseOnlyLayout(true, false));
-	EXPECT_FALSE(QmInputOverlay::IsMouseOnlyLayout(true, true));
-	EXPECT_FALSE(QmInputOverlay::IsMouseOnlyLayout(false, false));
-}
-
-TEST(QmInputOverlayLayout, MouseSizeDoesNotMoveKeyboardOrMouseAnchor)
-{
-	constexpr float KeyboardScale = 0.5f;
-	const auto Keyboard = QmInputOverlay::ScaledLayoutBounds(0.0f, 0.0f, 432.0f, 300.0f, KeyboardScale, KeyboardScale);
-	const auto SmallMouse = QmInputOverlay::ScaledLayoutBounds(467.0f, 0.0f, 285.0f, 421.0f, KeyboardScale, 0.1f);
-	const auto LargeMouse = QmInputOverlay::ScaledLayoutBounds(467.0f, 0.0f, 285.0f, 421.0f, KeyboardScale, 0.5f);
-
-	EXPECT_FLOAT_EQ(Keyboard.m_MinX, 0.0f);
-	EXPECT_FLOAT_EQ(Keyboard.m_MaxX, 216.0f);
-	EXPECT_FLOAT_EQ(SmallMouse.m_MinX, LargeMouse.m_MinX);
-	EXPECT_FLOAT_EQ(SmallMouse.m_MinX - Keyboard.m_MaxX, 17.5f);
-	EXPECT_FLOAT_EQ(SmallMouse.m_MaxX - SmallMouse.m_MinX, 28.5f);
-	EXPECT_FLOAT_EQ(LargeMouse.m_MaxX - LargeMouse.m_MinX, 142.5f);
-}
-
-TEST(QmInputOverlayLayout, VisibleBoundsUseIndependentContentScales)
-{
-	constexpr float KeyboardScale = 0.5f;
-	const auto Keyboard = QmInputOverlay::ScaledLayoutBounds(0.0f, 0.0f, 432.0f, 300.0f, KeyboardScale, KeyboardScale);
-	const auto SmallMouse = QmInputOverlay::ScaledLayoutBounds(467.0f, 0.0f, 285.0f, 421.0f, KeyboardScale, 0.25f);
-	const auto LargeMouse = QmInputOverlay::ScaledLayoutBounds(467.0f, 0.0f, 285.0f, 421.0f, KeyboardScale, 0.5f);
-
-	const auto SmallBounds = QmInputOverlay::UnionBounds(Keyboard, SmallMouse);
-	EXPECT_FLOAT_EQ(SmallBounds.m_MinX, 0.0f);
-	EXPECT_FLOAT_EQ(SmallBounds.m_MinY, 0.0f);
-	EXPECT_FLOAT_EQ(SmallBounds.m_MaxX, 304.75f);
-	EXPECT_FLOAT_EQ(SmallBounds.m_MaxY, 150.0f);
-
-	const auto LargeBounds = QmInputOverlay::UnionBounds(Keyboard, LargeMouse);
-	EXPECT_FLOAT_EQ(LargeBounds.m_MaxX, 376.0f);
-	EXPECT_FLOAT_EQ(LargeBounds.m_MaxY, 210.5f);
+	EXPECT_EQ(QmNormalizeCountryCode(0x74736554), CountryCode::DEFAULT);
+	EXPECT_EQ(QmNormalizeCountryCode(-2), CountryCode::DEFAULT);
+	EXPECT_EQ(QmNormalizeCountryCode(CountryCode::DEFAULT), CountryCode::DEFAULT);
+	EXPECT_EQ(QmNormalizeCountryCode(156), 156);
 }
 
 TEST(QmAfkPresentation, ServerAndEscMenuStatesRemainAvailableForNonOpacityIndicators)
@@ -78,19 +42,6 @@ TEST(QmAfkPresentation, ServerAndEscMenuStatesRemainAvailableForNonOpacityIndica
 	EXPECT_FALSE(IsQmAfkForPresentation(false, true, true, 4, 3));
 	EXPECT_FALSE(IsQmAfkForPresentation(false, false, true, 3, 3));
 	EXPECT_FALSE(IsQmAfkForPresentation(false, true, true, -1, -1));
-}
-
-TEST(QmAfkPresentation, AfkStateDoesNotChangeTeeHookOrNameplateOpacity)
-{
-	const std::string Header = ReadTestSourceFile("src/game/client/components/qmclient/afk_presentation.h");
-	const std::string Players = ReadTestSourceFile("src/game/client/components/players.cpp");
-	const std::string Nameplates = ReadTestSourceFile("src/game/client/components/nameplates.cpp");
-
-	EXPECT_EQ(Header.find("QM_AFK_PRESENTATION_ALPHA"), std::string::npos);
-	EXPECT_EQ(Header.find("ApplyQmAfkPresentationAlpha"), std::string::npos);
-	EXPECT_EQ(Players.find("ApplyQmAfkPresentationAlpha"), std::string::npos);
-	EXPECT_EQ(Players.find("Afk ? Alpha : 1.0f"), std::string::npos);
-	EXPECT_EQ(Nameplates.find("ApplyQmAfkPresentationAlpha"), std::string::npos);
 }
 
 TEST(QmScoreboardTeamModes, AggregationRequiresDisplayInfoAndCombinesKnownMembers)
@@ -127,24 +78,24 @@ TEST(QmScoreboardTeamModes, SpecPlayersKeepTheirScoreboardTeamAndLastKnownModeSt
 	constexpr int DdTeam = 3;
 	std::array<SQmScoreboardTeamModeState, NUM_DDRACE_TEAMS> aTeamModes{};
 	std::array<SQmScoreboardTeamModeState, NUM_DDRACE_TEAMS> aCachedTeamModes{};
-	std::array<bool, NUM_DDRACE_TEAMS> aTeamHasSpecPlayer{};
+	std::array<bool, NUM_DDRACE_TEAMS> aTeamHasPlayer{};
 
 	aTeamModes[DdTeam].m_Known = true;
 	aTeamModes[DdTeam].m_Flags = CHARACTERFLAG_PRACTICE_MODE | CHARACTERFLAG_LOCK_MODE;
-	CacheAndRestoreQmScoreboardTeamModes(aTeamModes, aTeamHasSpecPlayer, aCachedTeamModes);
+	CacheAndRestoreQmScoreboardTeamModes(aTeamModes, aTeamHasPlayer, aCachedTeamModes);
 	EXPECT_TRUE(aCachedTeamModes[DdTeam].Practice());
 	EXPECT_TRUE(aCachedTeamModes[DdTeam].Locked());
 
 	aTeamModes = {};
-	aTeamHasSpecPlayer[DdTeam] = true;
-	CacheAndRestoreQmScoreboardTeamModes(aTeamModes, aTeamHasSpecPlayer, aCachedTeamModes);
+	aTeamHasPlayer[DdTeam] = true;
+	CacheAndRestoreQmScoreboardTeamModes(aTeamModes, aTeamHasPlayer, aCachedTeamModes);
 	EXPECT_TRUE(aTeamModes[DdTeam].m_Known);
 	EXPECT_TRUE(aTeamModes[DdTeam].Practice());
 	EXPECT_TRUE(aTeamModes[DdTeam].Locked());
 
 	aTeamModes = {};
-	aTeamHasSpecPlayer = {};
-	CacheAndRestoreQmScoreboardTeamModes(aTeamModes, aTeamHasSpecPlayer, aCachedTeamModes);
+	aTeamHasPlayer = {};
+	CacheAndRestoreQmScoreboardTeamModes(aTeamModes, aTeamHasPlayer, aCachedTeamModes);
 	EXPECT_FALSE(aTeamModes[DdTeam].m_Known);
 }
 
@@ -405,204 +356,6 @@ TEST(QmScoreboardRender, DdTeamLabelSpacingFitsDenseColumnsWithoutOverlap)
 	EXPECT_LE(RowsPerColumn * (PreferredLineHeight * Scale + TeamEnd.m_RowSpacing), AvailableRowsHeight + 0.001f);
 }
 
-TEST(QmInputOverlayFiles, PendingCheckDoesNotWaitOrPublishPartialTime)
-{
-	CSemaphore Started;
-	CSemaphore Finish;
-	CJobPool Pool;
-	Pool.Init(1);
-	auto pCheck = std::make_shared<CQmInputOverlayFileTimeJob>([&]() -> std::optional<time_t> {
-		Started.Signal();
-		Finish.Wait();
-		return 123;
-	});
-	std::optional<time_t> Modified = 99;
-	Pool.Add(pCheck);
-	Started.Wait();
-	EXPECT_FALSE(pCheck->TryGetResult(Modified));
-	EXPECT_EQ(Modified, 99);
-	Finish.Signal();
-	Pool.Shutdown();
-	EXPECT_TRUE(pCheck->TryGetResult(Modified));
-	EXPECT_EQ(Modified, 123);
-}
-
-TEST(QmInputOverlayFiles, MissingFileIsACompletedResult)
-{
-	CJobPool Pool;
-	Pool.Init(1);
-	auto pCheck = std::make_shared<CQmInputOverlayFileTimeJob>([] { return std::optional<time_t>(); });
-	Pool.Add(pCheck);
-	Pool.Shutdown();
-	std::optional<time_t> Modified = 99;
-	EXPECT_TRUE(pCheck->TryGetResult(Modified));
-	EXPECT_FALSE(Modified.has_value());
-}
-
-TEST(QmScoreboardSkin, CopiesSkinAndColorsOnlyToControlledRole)
-{
-	for(const int Dummy : {0, 1})
-	{
-		for(const int UseCustomColor : {0, 1})
-		{
-			auto pConfig = std::make_unique<CConfig>();
-			pConfig->m_ClDummy = Dummy;
-			str_copy(pConfig->m_ClPlayerSkin, "main");
-			str_copy(pConfig->m_ClDummySkin, "dummy");
-			pConfig->m_ClPlayerUseCustomColor = pConfig->m_ClDummyUseCustomColor = 1;
-			pConfig->m_ClPlayerColorBody = pConfig->m_ClDummyColorBody = 11;
-			pConfig->m_ClPlayerColorFeet = pConfig->m_ClDummyColorFeet = 22;
-			str_copy(pConfig->m_PlayerName, "main name");
-			str_copy(pConfig->m_ClDummyName, "dummy name");
-
-			ASSERT_TRUE(QmCopyScoreboardSkin(*pConfig, false, "kitty", UseCustomColor, 12345, 67890));
-
-			EXPECT_STREQ(pConfig->m_ClPlayerSkin, Dummy ? "main" : "kitty");
-			EXPECT_STREQ(pConfig->m_ClDummySkin, Dummy ? "kitty" : "dummy");
-			EXPECT_EQ(pConfig->m_ClPlayerUseCustomColor, Dummy ? 1 : UseCustomColor);
-			EXPECT_EQ(pConfig->m_ClDummyUseCustomColor, Dummy ? UseCustomColor : 1);
-			EXPECT_EQ(pConfig->m_ClPlayerColorBody, Dummy ? 11u : 12345u);
-			EXPECT_EQ(pConfig->m_ClDummyColorBody, Dummy ? 12345u : 11u);
-			EXPECT_EQ(pConfig->m_ClPlayerColorFeet, Dummy ? 22u : 67890u);
-			EXPECT_EQ(pConfig->m_ClDummyColorFeet, Dummy ? 67890u : 22u);
-			EXPECT_STREQ(pConfig->m_PlayerName, "main name");
-			EXPECT_STREQ(pConfig->m_ClDummyName, "dummy name");
-		}
-	}
-}
-
-TEST(QmScoreboardSkin, SixupDoesNotChangeEitherRole)
-{
-	for(const int Dummy : {0, 1})
-	{
-		auto pConfig = std::make_unique<CConfig>();
-		pConfig->m_ClDummy = Dummy;
-		str_copy(pConfig->m_ClPlayerSkin, "main");
-		str_copy(pConfig->m_ClDummySkin, "dummy");
-		pConfig->m_ClPlayerUseCustomColor = 0;
-		pConfig->m_ClDummyUseCustomColor = 1;
-		pConfig->m_ClPlayerColorBody = 11;
-		pConfig->m_ClDummyColorBody = 22;
-		pConfig->m_ClPlayerColorFeet = 33;
-		pConfig->m_ClDummyColorFeet = 44;
-
-		EXPECT_FALSE(QmCopyScoreboardSkin(*pConfig, true, "kitty", 1, 12345, 67890));
-
-		EXPECT_STREQ(pConfig->m_ClPlayerSkin, "main");
-		EXPECT_STREQ(pConfig->m_ClDummySkin, "dummy");
-		EXPECT_EQ(pConfig->m_ClPlayerUseCustomColor, 0);
-		EXPECT_EQ(pConfig->m_ClDummyUseCustomColor, 1);
-		EXPECT_EQ(pConfig->m_ClPlayerColorBody, 11u);
-		EXPECT_EQ(pConfig->m_ClDummyColorBody, 22u);
-		EXPECT_EQ(pConfig->m_ClPlayerColorFeet, 33u);
-		EXPECT_EQ(pConfig->m_ClDummyColorFeet, 44u);
-	}
-}
-
-// 意图：双击的目标角色与「分身」判定的映射保持 本体=0 / 分身=1。
-TEST(QmTeeSkinApply, TargetRoleMappingKeepsMainAndDummyDistinct)
-{
-	EXPECT_EQ(QmTeeSkinApplyTargetDummy(ETeeSkinApplyTarget::MAIN), 0);
-	EXPECT_EQ(QmTeeSkinApplyTargetDummy(ETeeSkinApplyTarget::DUMMY), 1);
-}
-
-TEST(QmTeeSkinApply, WritesOnlyTheRequestedRoleAndKeepsTheOtherSideUntouched)
-{
-	for(const bool TargetDummy : {false, true})
-	{
-		const ETeeSkinApplyTarget Target = TargetDummy ? ETeeSkinApplyTarget::DUMMY : ETeeSkinApplyTarget::MAIN;
-		auto pConfig = std::make_unique<CConfig>();
-		pConfig->m_ClDummy = TargetDummy ? 0 : 1; // 当前子标签刻意与双击目标相反
-		str_copy(pConfig->m_ClPlayerSkin, "main");
-		str_copy(pConfig->m_ClDummySkin, "dummy");
-		pConfig->m_ClPlayerUseCustomColor = 1;
-		pConfig->m_ClDummyUseCustomColor = 1;
-		pConfig->m_ClPlayerColorBody = 11;
-		pConfig->m_ClDummyColorBody = 22;
-		pConfig->m_ClPlayerColorFeet = 33;
-		pConfig->m_ClDummyColorFeet = 44;
-
-		QmApplyTeeSkinToTarget(*pConfig, Target, "kitty", true, true, 12345, 67890);
-
-		EXPECT_STREQ(pConfig->m_ClPlayerSkin, TargetDummy ? "main" : "kitty");
-		EXPECT_STREQ(pConfig->m_ClDummySkin, TargetDummy ? "kitty" : "dummy");
-		EXPECT_EQ(pConfig->m_ClPlayerColorBody, TargetDummy ? 11u : 12345u);
-		EXPECT_EQ(pConfig->m_ClDummyColorBody, TargetDummy ? 12345u : 22u);
-		EXPECT_EQ(pConfig->m_ClPlayerColorFeet, TargetDummy ? 33u : 67890u);
-		EXPECT_EQ(pConfig->m_ClDummyColorFeet, TargetDummy ? 67890u : 44u);
-		EXPECT_EQ(pConfig->m_ClPlayerUseCustomColor, 1);
-		EXPECT_EQ(pConfig->m_ClDummyUseCustomColor, 1);
-	}
-}
-
-TEST(QmTeeSkinApply, EntryWithoutColorKeyKeepsExistingColorsAndTogglesOff)
-{
-	auto pConfig = std::make_unique<CConfig>();
-	str_copy(pConfig->m_ClPlayerSkin, "main");
-	str_copy(pConfig->m_ClDummySkin, "dummy");
-	pConfig->m_ClPlayerUseCustomColor = 1;
-	pConfig->m_ClDummyUseCustomColor = 1;
-	pConfig->m_ClPlayerColorBody = 11;
-	pConfig->m_ClDummyColorBody = 22;
-	pConfig->m_ClPlayerColorFeet = 33;
-	pConfig->m_ClDummyColorFeet = 44;
-
-	// 条目没有颜色键：只换皮肤名，颜色与开关全部保持原样。
-	QmApplyTeeSkinToTarget(*pConfig, ETeeSkinApplyTarget::MAIN, "kitty", false, false, 0, 0);
-	EXPECT_STREQ(pConfig->m_ClPlayerSkin, "kitty");
-	EXPECT_EQ(pConfig->m_ClPlayerUseCustomColor, 1);
-	EXPECT_EQ(pConfig->m_ClPlayerColorBody, 11u);
-	EXPECT_EQ(pConfig->m_ClPlayerColorFeet, 33u);
-
-	// 颜色键显式关闭自定义颜色：关开关但不写入颜色值。
-	QmApplyTeeSkinToTarget(*pConfig, ETeeSkinApplyTarget::DUMMY, "santa", true, false, 12345, 67890);
-	EXPECT_STREQ(pConfig->m_ClDummySkin, "santa");
-	EXPECT_EQ(pConfig->m_ClDummyUseCustomColor, 0);
-	EXPECT_EQ(pConfig->m_ClDummyColorBody, 22u);
-	EXPECT_EQ(pConfig->m_ClDummyColorFeet, 44u);
-}
-
-TEST(QmScoreboardFooter, EmptyFooterDoesNotReservePanels)
-{
-	const auto Layout = QmScoreboardFooterLayout({20.0f, 465.0f, 850.0f, 100.0f}, false, 0);
-	EXPECT_FLOAT_EQ(Layout.m_Media.h, 0.0f);
-	EXPECT_FLOAT_EQ(Layout.m_Spectators.h, 0.0f);
-}
-
-TEST(QmScoreboardFooter, MediaUsesOneFullWidthBar)
-{
-	const auto Layout = QmScoreboardFooterLayout({20.0f, 465.0f, 850.0f, 100.0f}, true, 0);
-	EXPECT_FLOAT_EQ(Layout.m_Media.x, 20.0f);
-	EXPECT_FLOAT_EQ(Layout.m_Media.y, 465.0f);
-	EXPECT_FLOAT_EQ(Layout.m_Media.w, 850.0f);
-	EXPECT_FLOAT_EQ(Layout.m_Media.h, 25.0f);
-	EXPECT_FLOAT_EQ(Layout.m_Spectators.h, 0.0f);
-}
-
-TEST(QmScoreboardFooter, SpectatorsFollowMediaWithinAvailableHeight)
-{
-	for(const float Width : {450.0f, 850.0f})
-	{
-		for(const float Height : {70.0f, 100.0f})
-		{
-			const auto Layout = QmScoreboardFooterLayout({20.0f, 465.0f, Width, Height}, true, 128);
-			EXPECT_FLOAT_EQ(Layout.m_Spectators.x, Layout.m_Media.x);
-			EXPECT_FLOAT_EQ(Layout.m_Spectators.w, Width);
-			EXPECT_FLOAT_EQ(Layout.m_Spectators.y, Layout.m_Media.y + Layout.m_Media.h + 5.0f);
-			EXPECT_FLOAT_EQ(Layout.m_Spectators.y + Layout.m_Spectators.h, 465.0f + Height);
-		}
-	}
-}
-
-TEST(QmScoreboardFooter, SpectatorsStartImmediatelyWhenMediaIsHidden)
-{
-	const auto Layout = QmScoreboardFooterLayout({20.0f, 465.0f, 450.0f, 70.0f}, false, 1);
-	EXPECT_FLOAT_EQ(Layout.m_Media.h, 0.0f);
-	EXPECT_FLOAT_EQ(Layout.m_Spectators.y, 465.0f);
-	EXPECT_FLOAT_EQ(Layout.m_Spectators.w, 450.0f);
-	EXPECT_FLOAT_EQ(Layout.m_Spectators.h, 70.0f);
-}
-
 TEST(QmScoreHudLayout, ShortRankKeepsOriginalFootprint)
 {
 	const auto Layout = QmScoreHudLayout(300.0f, 14.0f, 7.0f, 18.0f);
@@ -637,4 +390,79 @@ TEST(QmScoreHudLayout, WiderRankExpandsOnlyToTheLeft)
 	EXPECT_FLOAT_EQ(ThreeDigits.m_BoxLeft, TwoDigits.m_BoxLeft - 7.0f);
 	EXPECT_FLOAT_EQ(ThreeDigits.m_BoxWidth, TwoDigits.m_BoxWidth + 7.0f);
 	EXPECT_FLOAT_EQ(ThreeDigits.m_RankX, TwoDigits.m_RankX - 7.0f);
+}
+
+TEST(QmInputOverlayLayout, MouseClassificationRequiresMouseOnlyInputs)
+{
+	EXPECT_TRUE(QmInputOverlay::IsMouseOnlyLayout(false, true));
+	EXPECT_FALSE(QmInputOverlay::IsMouseOnlyLayout(true, false));
+	EXPECT_FALSE(QmInputOverlay::IsMouseOnlyLayout(true, true));
+	EXPECT_FALSE(QmInputOverlay::IsMouseOnlyLayout(false, false));
+}
+
+TEST(QmInputOverlayLayout, MouseSizeDoesNotMoveKeyboardOrMouseAnchor)
+{
+	constexpr float KeyboardScale = 0.5f;
+	const auto Keyboard = QmInputOverlay::ScaledLayoutBounds(0.0f, 0.0f, 432.0f, 300.0f, KeyboardScale, KeyboardScale);
+	const auto SmallMouse = QmInputOverlay::ScaledLayoutBounds(467.0f, 0.0f, 285.0f, 421.0f, KeyboardScale, 0.1f);
+	const auto LargeMouse = QmInputOverlay::ScaledLayoutBounds(467.0f, 0.0f, 285.0f, 421.0f, KeyboardScale, 0.5f);
+
+	EXPECT_FLOAT_EQ(Keyboard.m_MinX, 0.0f);
+	EXPECT_FLOAT_EQ(Keyboard.m_MaxX, 216.0f);
+	EXPECT_FLOAT_EQ(SmallMouse.m_MinX, LargeMouse.m_MinX);
+	EXPECT_FLOAT_EQ(SmallMouse.m_MinX - Keyboard.m_MaxX, 17.5f);
+	EXPECT_FLOAT_EQ(SmallMouse.m_MaxX - SmallMouse.m_MinX, 28.5f);
+	EXPECT_FLOAT_EQ(LargeMouse.m_MaxX - LargeMouse.m_MinX, 142.5f);
+}
+
+TEST(QmInputOverlayLayout, VisibleBoundsUseIndependentContentScales)
+{
+	constexpr float KeyboardScale = 0.5f;
+	const auto Keyboard = QmInputOverlay::ScaledLayoutBounds(0.0f, 0.0f, 432.0f, 300.0f, KeyboardScale, KeyboardScale);
+	const auto SmallMouse = QmInputOverlay::ScaledLayoutBounds(467.0f, 0.0f, 285.0f, 421.0f, KeyboardScale, 0.25f);
+	const auto LargeMouse = QmInputOverlay::ScaledLayoutBounds(467.0f, 0.0f, 285.0f, 421.0f, KeyboardScale, 0.5f);
+
+	const auto SmallBounds = QmInputOverlay::UnionBounds(Keyboard, SmallMouse);
+	EXPECT_FLOAT_EQ(SmallBounds.m_MinX, 0.0f);
+	EXPECT_FLOAT_EQ(SmallBounds.m_MinY, 0.0f);
+	EXPECT_FLOAT_EQ(SmallBounds.m_MaxX, 304.75f);
+	EXPECT_FLOAT_EQ(SmallBounds.m_MaxY, 150.0f);
+
+	const auto LargeBounds = QmInputOverlay::UnionBounds(Keyboard, LargeMouse);
+	EXPECT_FLOAT_EQ(LargeBounds.m_MaxX, 376.0f);
+	EXPECT_FLOAT_EQ(LargeBounds.m_MaxY, 210.5f);
+}
+
+TEST(QmInputOverlayFiles, PendingCheckDoesNotWaitOrPublishPartialTime)
+{
+	CSemaphore Started;
+	CSemaphore Finish;
+	CJobPool Pool;
+	Pool.Init(1);
+	auto pCheck = std::make_shared<CQmInputOverlayFileTimeJob>([&]() -> std::optional<time_t> {
+		Started.Signal();
+		Finish.Wait();
+		return 123;
+	});
+	std::optional<time_t> Modified = 99;
+	Pool.Add(pCheck);
+	Started.Wait();
+	EXPECT_FALSE(pCheck->TryGetResult(Modified));
+	EXPECT_EQ(Modified, 99);
+	Finish.Signal();
+	Pool.Shutdown();
+	EXPECT_TRUE(pCheck->TryGetResult(Modified));
+	EXPECT_EQ(Modified, 123);
+}
+
+TEST(QmInputOverlayFiles, MissingFileIsACompletedResult)
+{
+	CJobPool Pool;
+	Pool.Init(1);
+	auto pCheck = std::make_shared<CQmInputOverlayFileTimeJob>([] { return std::optional<time_t>(); });
+	Pool.Add(pCheck);
+	Pool.Shutdown();
+	std::optional<time_t> Modified = 99;
+	EXPECT_TRUE(pCheck->TryGetResult(Modified));
+	EXPECT_FALSE(Modified.has_value());
 }

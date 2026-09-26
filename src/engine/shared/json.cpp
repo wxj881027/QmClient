@@ -2,6 +2,7 @@
 
 #include <engine/shared/json.h>
 
+#include <memory>
 #include <vector>
 
 static bool JsonValidateUtf8(const json_value *pRoot)
@@ -45,36 +46,34 @@ static bool JsonValidateUtf8(const json_value *pRoot)
 
 json_value *JsonParse(const json_char *pJson, size_t Length)
 {
-	json_value *pValue = json_parse(pJson, Length);
+	std::unique_ptr<json_value, decltype(&json_value_free)> pValue(json_parse(pJson, Length), json_value_free);
 	if(pValue == nullptr)
 	{
 		return nullptr;
 	}
-	if(!JsonValidateUtf8(pValue))
+	if(!JsonValidateUtf8(pValue.get()))
 	{
-		json_value_free(pValue);
 		return nullptr;
 	}
-	return pValue;
+	return pValue.release();
 }
 
 json_value *JsonParseEx(json_settings *pSettings, const json_char *pJson, size_t Length, char *pError)
 {
-	json_value *pValue = json_parse_ex(pSettings, pJson, Length, pError);
+	std::unique_ptr<json_value, decltype(&json_value_free)> pValue(json_parse_ex(pSettings, pJson, Length, pError), json_value_free);
 	if(pValue == nullptr)
 	{
 		return nullptr;
 	}
-	if(!JsonValidateUtf8(pValue))
+	if(!JsonValidateUtf8(pValue.get()))
 	{
 		if(pError)
 		{
 			str_copy(pError, "invalid utf-8 in string literal", json_error_max);
 		}
-		json_value_free(pValue);
 		return nullptr;
 	}
-	return pValue;
+	return pValue.release();
 }
 
 const struct _json_value *json_object_get(const json_value *pObject, const char *pIndex)
@@ -166,8 +165,7 @@ char *EscapeJson(char *pBuffer, int BufferSize, const char *pString)
 			{
 				break;
 			}
-			// +1 for null termination or this would be truncated with `BufferSize == 6`.
-			// We know this fits because space for null termination is reserved early.
+			// BufferSize 已扣除终止符空间，格式化时加回以保留完整的六字节转义。
 			str_format(pBuffer, BufferSize + 1, "\\u%04x", c);
 			pBuffer += 6;
 			BufferSize -= 6;

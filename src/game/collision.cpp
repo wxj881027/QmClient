@@ -99,6 +99,7 @@ void CCollision::Init(class CLayers *pLayers)
 		Unload();
 		return;
 	}
+	m_HasHookTeleIns = false;
 
 	if(m_pLayers->TeleLayer())
 	{
@@ -190,6 +191,8 @@ void CCollision::Init(class CLayers *pLayers)
 				else
 				{
 					m_TeleOthers[Number - 1].push_back(TelePos);
+					if(Type == TILE_TELEINHOOK)
+						m_HasHookTeleIns = true;
 				}
 			}
 		}
@@ -204,6 +207,7 @@ void CCollision::Unload()
 	m_pLayers = nullptr;
 
 	m_HighestSwitchNumber = 0;
+	m_HasHookTeleIns = false;
 
 	m_TeleIns.clear();
 	m_TeleOuts.clear();
@@ -915,6 +919,11 @@ int CCollision::MoverSpeed(int x, int y, vec2 *pSpeed) const
 	}
 	*pSpeed = Target;
 	return Index;
+}
+
+bool CCollision::HasHookTeleIns() const
+{
+	return m_HasHookTeleIns || (g_Config.m_SvOldTeleportHook && !m_TeleIns.empty());
 }
 
 int CCollision::GetPureMapIndex(float x, float y) const

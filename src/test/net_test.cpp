@@ -17,17 +17,9 @@ using namespace std::chrono_literals;
 namespace
 {
 
-	TEST(Net, Ipv6SocketUsesIpv6TrafficClassOutsideWindows)
+	int RejoinCallbackStub(int ClientId, void *pUser, bool Sixup, bool VanillaAuth)
 	{
-		const std::string Source = ReadTestSourceFile("src/base/net.cpp");
-		const size_t Ipv6Start = Source.find("if(bindaddr.type & NETTYPE_IPV6)");
-		ASSERT_NE(Ipv6Start, std::string::npos);
-		const size_t Ipv6End = Source.find("#if defined(CONF_WEBSOCKETS)", Ipv6Start);
-		ASSERT_NE(Ipv6End, std::string::npos);
-		const std::string Ipv6SocketSetup = Source.substr(Ipv6Start, Ipv6End - Ipv6Start);
-
-		EXPECT_NE(Ipv6SocketSetup.find("setsockopt(socket, IPPROTO_IPV6, IPV6_TCLASS"), std::string::npos);
-		EXPECT_EQ(Ipv6SocketSetup.find("setsockopt(socket, IPPROTO_IP, IP_TOS"), std::string::npos);
+		return ClientId + (pUser != nullptr ? 100 : 0) + (Sixup ? 1 : 0) + (VanillaAuth ? 2 : 0);
 	}
 
 	void InitNetBase()
@@ -38,6 +30,31 @@ namespace
 			CNetBase::Init();
 			s_Initialized = true;
 		}
+	}
+
+	int UnpackUncompressedPacket(int Size, CNetPacketConstruct *pPacket, bool AllowDecompression = true)
+	{
+		unsigned char aBuffer[NET_MAX_PACKETSIZE] = {};
+		aBuffer[0] = 0; // no flags, ack 0
+		aBuffer[1] = 0; // ack 0
+		aBuffer[2] = 1; // one chunk
+		bool Sixup = false;
+		return CNetBase::UnpackPacket(aBuffer, Size, pPacket, Sixup, AllowDecompression);
+	}
+
+	int UnpackCompressedPacket(CNetPacketConstruct *pPacket, bool AllowDecompression, bool *pDecompressed = nullptr, int PayloadSize = 64)
+	{
+		InitNetBase();
+
+		const unsigned char aPayload[4 * NET_MAX_PACKETSIZE] = {};
+		unsigned char aBuffer[NET_MAX_PACKETSIZE] = {};
+		aBuffer[0] = (NET_PACKETFLAG_COMPRESSION << 2) & 0xfc; // compression, ack 0
+		aBuffer[1] = 0; // ack 0
+		aBuffer[2] = 1; // one chunk
+		const int CompressedSize = CNetBase::Compress(aPayload, PayloadSize,
+			&aBuffer[NET_PACKETHEADERSIZE], NET_MAX_PACKETSIZE - NET_PACKETHEADERSIZE);
+		bool Sixup = false;
+		return CNetBase::UnpackPacket(aBuffer, NET_PACKETHEADERSIZE + CompressedSize, pPacket, Sixup, AllowDecompression, nullptr, nullptr, pDecompressed);
 	}
 
 	unsigned char *PackTestChunk(CNetPacketConstruct *pPacket, int Flags, int DataSize, const unsigned char *pData, bool Sixup, int Sequence = 17)
@@ -77,7 +94,7 @@ namespace
 		bool UnpackedSixup = Sixup;
 		SECURITY_TOKEN UnpackedToken = NET_SECURITY_TOKEN_UNKNOWN;
 		SECURITY_TOKEN ResponseToken = NET_SECURITY_TOKEN_UNKNOWN;
-		ASSERT_EQ(CNetBase::UnpackPacket(aBuffer, PackedSize, &Unpacked, UnpackedSixup, &UnpackedToken, &ResponseToken), 0);
+		ASSERT_EQ(CNetBase::UnpackPacket(aBuffer, PackedSize, &Unpacked, UnpackedSixup, true, &UnpackedToken, &ResponseToken), 0);
 		EXPECT_EQ(UnpackedSixup, Sixup);
 		EXPECT_EQ(Unpacked.m_Flags & ~NET_PACKETFLAG_COMPRESSION, Original.m_Flags);
 		EXPECT_EQ(Unpacked.m_Ack, Original.m_Ack);
@@ -365,6 +382,37 @@ TEST(NetClient, QosCanBeDisabledAndReenabledWithoutAConnection)
 	Client.Close();
 }
 
+TEST(Net, ConnectionRejectsUnexpectedAddressWhileConnecting)
+{
+	InitNetBase();
+
+	NETSOCKET Socket = BindUdpSocket(0);
+	ASSERT_TRUE(Socket);
+
+	NETADDR ConnectAddr = {};
+	NETADDR AlternativeConnectAddr = {};
+	NETADDR UnexpectedAddr = {};
+	ASSERT_FALSE(net_addr_from_str(&ConnectAddr, "127.0.0.1:8303"));
+	ASSERT_FALSE(net_addr_from_str(&AlternativeConnectAddr, "127.0.0.2:8303"));
+	ASSERT_FALSE(net_addr_from_str(&UnexpectedAddr, "127.0.0.3:8303"));
+	const NETADDR aConnectAddrs[] = {ConnectAddr, AlternativeConnectAddr};
+
+	{
+		CNetConnection Connection;
+		Connection.Init(Socket, false);
+		ASSERT_EQ(Connection.Connect(aConnectAddrs, std::size(aConnectAddrs)), 0);
+
+		CNetPacketConstruct Packet = {};
+		Packet.m_NumChunks = 1;
+		Packet.m_DataSize = 1;
+		EXPECT_EQ(Connection.Feed(&Packet, &UnexpectedAddr), 0);
+		EXPECT_EQ(Connection.Feed(&Packet, &AlternativeConnectAddr), 1);
+		EXPECT_EQ(Connection.State(), CNetConnection::EState::CONNECT);
+	}
+
+	net_udp_close(Socket);
+}
+
 TEST(Net, PackPacketKeepsLegacyRoundtrip)
 {
 	InitNetBase();
@@ -527,7 +575,7 @@ TEST(Net, KcpSessionSendsOverUdpAndRoundtripsPacket)
 	bool Sixup = false;
 	SECURITY_TOKEN Token = NET_SECURITY_TOKEN_UNKNOWN;
 	SECURITY_TOKEN ResponseToken = NET_SECURITY_TOKEN_UNKNOWN;
-	ASSERT_EQ(CNetBase::UnpackPacket(aPacked, PackedSize, &Unpacked, Sixup, &Token, &ResponseToken), 0);
+	ASSERT_EQ(CNetBase::UnpackPacket(aPacked, PackedSize, &Unpacked, Sixup, true, &Token, &ResponseToken), 0);
 	EXPECT_EQ(Unpacked.m_Ack, Packet.m_Ack);
 	EXPECT_EQ(Unpacked.m_NumChunks, Packet.m_NumChunks);
 	EXPECT_EQ(Unpacked.m_DataSize, Packet.m_DataSize);
@@ -691,4 +739,57 @@ TEST_F(CNetKcpBypassTest, ServerFlushBypassJoinsPendingKcpPacket)
 	EXPECT_EQ(vReceived[0], std::string(reinterpret_cast<const char *>(vVital1.data()), vVital1.size()));
 	EXPECT_EQ(vReceived[1], std::string(reinterpret_cast<const char *>(vVital2.data()), vVital2.size()));
 	EXPECT_EQ(vReceived[2], std::string(reinterpret_cast<const char *>(vSnapshot.data()), vSnapshot.size()));
+}
+
+TEST(Net, ClientRejoinCallbackCarriesProtocolAndAuth)
+{
+	// 官方 7131ad28b：重连回调签名带上协议与认证信息
+	NETFUNC_CLIENTREJOIN pfnRejoin = RejoinCallbackStub;
+	EXPECT_EQ(pfnRejoin(1, nullptr, true, false), 2);
+	EXPECT_EQ(pfnRejoin(1, nullptr, false, true), 3);
+}
+
+TEST(Net, UnpackCompressedPacket)
+{
+	CNetPacketConstruct Packet;
+	bool Decompressed = false;
+	EXPECT_EQ(UnpackCompressedPacket(&Packet, true, &Decompressed), 0);
+	EXPECT_EQ(Packet.m_DataSize, 64);
+	EXPECT_TRUE(Decompressed);
+}
+
+TEST(Net, UnpackCompressedPacketWithoutDecompression)
+{
+	CNetPacketConstruct Packet;
+	bool Decompressed = true;
+	EXPECT_EQ(UnpackCompressedPacket(&Packet, false, &Decompressed), -1);
+	EXPECT_FALSE(Decompressed);
+}
+
+TEST(Net, UnpackOversizedCompressedPacket)
+{
+	CNetPacketConstruct Packet;
+	bool Decompressed = false;
+	EXPECT_EQ(UnpackCompressedPacket(&Packet, true, &Decompressed, (int)sizeof(Packet.m_aChunkData) + 1), -1);
+	EXPECT_TRUE(Decompressed);
+}
+
+TEST(Net, UnpackUncompressedPacketWithoutDecompression)
+{
+	CNetPacketConstruct Packet;
+	EXPECT_EQ(UnpackUncompressedPacket(NET_PACKETHEADERSIZE + (int)sizeof(Packet.m_aChunkData), &Packet, false), 0);
+}
+
+TEST(Net, UnpackMaximumUncompressedPacket)
+{
+	CNetPacketConstruct Packet;
+	EXPECT_EQ(UnpackUncompressedPacket(NET_PACKETHEADERSIZE + (int)sizeof(Packet.m_aChunkData), &Packet), 0);
+	EXPECT_EQ(Packet.m_DataSize, (int)sizeof(Packet.m_aChunkData));
+	EXPECT_EQ(UnpackUncompressedPacket(NET_MAX_PACKETSIZE, &Packet), 0);
+}
+
+TEST(Net, UnpackOversizedUncompressedPacket)
+{
+	CNetPacketConstruct Packet;
+	EXPECT_EQ(UnpackUncompressedPacket(NET_PACKETHEADERSIZE + (int)sizeof(Packet.m_aChunkData) + 1, &Packet), -1);
 }

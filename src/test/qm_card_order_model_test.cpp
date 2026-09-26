@@ -7,17 +7,6 @@
 #include <limits>
 #include <string>
 
-// 意图：全局卡片顺序已经迁移到 stableId|tab|column|order 格式；
-// 头文件注释必须同步说明旧冒号格式仅为兼容解析，避免后续实现继续按旧格式扩展。
-TEST(QmCardOrderModel, HeaderDocumentsPipeFormatAndLegacyCompatibility)
-{
-	const std::string Header = ReadTestSourceFile("src/game/client/QmUi/QmCardOrderModel.h");
-
-	EXPECT_NE(Header.find("格式 \"stableId|tab|column|order;\""), std::string::npos);
-	EXPECT_NE(Header.find("兼容旧 \"id:col:order\""), std::string::npos);
-	EXPECT_EQ(Header.find("格式 \"id:col:order;\""), std::string::npos);
-}
-
 TEST(QmCardOrderModel, MoveReordersWithinColumn)
 {
 	qm_card_order::CModel M;

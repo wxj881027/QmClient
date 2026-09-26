@@ -64,6 +64,7 @@ qmclient_scripts/languages_qmclient/extracted_strings.txt whitespace=-trailing-s
 *.wav binary
 *.ogg binary
 *.opus binary
+*.mp3 binary
 *.wv binary
 *.zip binary
 *.gz binary

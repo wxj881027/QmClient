@@ -24,7 +24,7 @@ int CMenus::QmMapUploadScan(const CFsFileInfo *pInfo, int IsDir, int StorageType
 {
 	auto *pPicker = static_cast<CQmMapUploadPicker *>(pUser);
 	if(str_comp(pInfo->m_pName, ".") == 0 || str_comp(pInfo->m_pName, "..") == 0 ||
-		(!IsDir && !qm_map_upload::IsMapFilename(pInfo->m_pName)))
+		(!IsDir && !QmMapUpload::IsMapFilename(pInfo->m_pName)))
 		return 0;
 	SQmMapUploadFile File;
 	if(str_length(pPicker->m_aFolder) + str_length(pInfo->m_pName) + 2 > (int)sizeof(File.m_aPath))
@@ -207,7 +207,7 @@ void CMenus::RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight
 	SingleLine.m_EnableWidthCheck = false;
 	char aText[IO_MAX_PATH_LENGTH + 128];
 	CUIRect Row = NextRow(LineHeight);
-	str_format(aText, sizeof(aText), Localize("Target server: %s"), "shengyan北京服");
+	str_format(aText, sizeof(aText), Localize("Target server: %s"), g_Config.m_QmMapUploadEndpoint[0] ? g_Config.m_QmMapUploadEndpoint : Localize("None"));
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-map-upload-server", &Row, aText, BodySize, TEXTALIGN_ML, SingleLine);
 	Row = NextRow(LineHeight);
 	str_format(aText, sizeof(aText), Localize("File: %s"), m_aQmMapUploadPath[0] ? m_aQmMapUploadPath : Localize("No map selected"));
@@ -236,7 +236,7 @@ void CMenus::RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight
 	}
 	if(Busy)
 	{
-		const bool CanCancel = !ReadOnly && m_QmMapUpload.Status() == qm_map_upload::EStatus::UPLOADING;
+		const bool CanCancel = !ReadOnly && m_QmMapUpload.Status() == QmMapUpload::EStatus::UPLOADING;
 		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_CancelButton, "qmclient-map-upload-cancel", Localize("Cancel"), CanCancel ? 0 : -1, &ActionButton) && CanCancel)
 			m_QmMapUpload.Cancel();
 	}
@@ -247,28 +247,32 @@ void CMenus::RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight
 		{
 			// 提交时快照当前控制角色的服务端名字，随后切换分身不会改变本次上传。
 			str_copy(m_aQmMapUploadPlayer, QmMapUploadPlayerName());
-			m_QmMapUpload.Start(Storage(), Http(), Engine(), m_aQmMapUploadPath, m_QmMapUploadStorageType, m_aQmMapUploadPlayer);
+			// 本地差异：远程的 CUpload::Start 已去掉 endpoint 参数（内部固定），
+			// 本地保留「endpoint 可由用户配置」（g_Config.m_QmMapUploadEndpoint，界面上可填），
+			// 故此处按本地 7 参签名补上该参数，不牺牲本地能力。
+			m_QmMapUpload.Start(Storage(), Http(), Engine(), g_Config.m_QmMapUploadEndpoint, m_aQmMapUploadPath, m_QmMapUploadStorageType, m_aQmMapUploadPlayer);
 		}
 	}
 
 	const char *pStatus = Localize("Select a saved .map file (client limit: 64 MiB).");
 	switch(m_QmMapUpload.Status())
 	{
-	case qm_map_upload::EStatus::IDLE: break;
-	case qm_map_upload::EStatus::UPLOADING: pStatus = Localize("Map upload in progress..."); break;
-	case qm_map_upload::EStatus::SUCCESS: pStatus = Localize("Map uploaded successfully."); break;
-	case qm_map_upload::EStatus::CANCELLED: pStatus = Localize("Map upload cancelled."); break;
-	case qm_map_upload::EStatus::INVALID_FILE: pStatus = Localize("Invalid map file or filename."); break;
-	case qm_map_upload::EStatus::TOO_LARGE: pStatus = Localize("Map exceeds the client limit of 64 MiB."); break;
-	case qm_map_upload::EStatus::READ_FAILED: pStatus = Localize("Could not read the map file."); break;
-	case qm_map_upload::EStatus::NETWORK_ERROR: pStatus = Localize("Map upload network error."); break;
-	case qm_map_upload::EStatus::SERVER_ERROR: pStatus = Localize("The server rejected the map upload."); break;
-	case qm_map_upload::EStatus::INVALID_RESPONSE: pStatus = Localize("Unexpected map upload response."); break;
-	case qm_map_upload::EStatus::MISSING_PLAYER: pStatus = Localize("A player name is required."); break;
+	case QmMapUpload::EStatus::IDLE: break;
+	case QmMapUpload::EStatus::UPLOADING: pStatus = Localize("Map upload in progress..."); break;
+	case QmMapUpload::EStatus::SUCCESS: pStatus = Localize("Map uploaded successfully."); break;
+	case QmMapUpload::EStatus::CANCELLED: pStatus = Localize("Map upload cancelled."); break;
+	case QmMapUpload::EStatus::INVALID_FILE: pStatus = Localize("Invalid map file or filename."); break;
+	case QmMapUpload::EStatus::TOO_LARGE: pStatus = Localize("Map exceeds the client limit of 64 MiB."); break;
+	case QmMapUpload::EStatus::READ_FAILED: pStatus = Localize("Could not read the map file."); break;
+	case QmMapUpload::EStatus::NETWORK_ERROR: pStatus = Localize("Map upload network error."); break;
+	case QmMapUpload::EStatus::SERVER_ERROR: pStatus = Localize("The server rejected the map upload."); break;
+	case QmMapUpload::EStatus::INVALID_RESPONSE: pStatus = Localize("Unexpected map upload response."); break;
+	case QmMapUpload::EStatus::MISSING_PLAYER: pStatus = Localize("A player name is required."); break;
+	case QmMapUpload::EStatus::INVALID_ENDPOINT: pStatus = Localize("Map upload endpoint must use HTTP or HTTPS"); break;
 	}
 	char aStatus[256];
 	if(m_QmMapUpload.Detail().empty() && m_QmMapUpload.StatusCode() > 0 &&
-		(m_QmMapUpload.Status() == qm_map_upload::EStatus::SERVER_ERROR || m_QmMapUpload.Status() == qm_map_upload::EStatus::INVALID_RESPONSE))
+		(m_QmMapUpload.Status() == QmMapUpload::EStatus::SERVER_ERROR || m_QmMapUpload.Status() == QmMapUpload::EStatus::INVALID_RESPONSE))
 	{
 		str_format(aStatus, sizeof(aStatus), "%s (HTTP %d)", pStatus, m_QmMapUpload.StatusCode());
 		pStatus = aStatus;

@@ -3,6 +3,7 @@
 #include "theme_scan.h"
 
 #include <base/lock.h>
+#include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
 
@@ -238,6 +239,38 @@ CMenuBackground::CMenuBackground() :
 	m_Loading = false;
 }
 
+void CMenuBackground::InitializeLoadedMap()
+{
+	m_pLayers->Init(m_pMap, true);
+	m_pImages->LoadBackground(m_pLayers, m_pMap);
+	CMapLayers::OnMapLoad();
+
+	CMapItemLayerTilemap *pTLayer = m_pLayers->GameLayer();
+	if(!pTLayer)
+		return;
+
+	const int DataIndex = pTLayer->m_Data;
+	const unsigned int Size = m_pLayers->Map()->GetDataSize(DataIndex);
+	void *pTiles = m_pLayers->Map()->GetData(DataIndex);
+	const unsigned int TileSize = sizeof(CTile);
+	if(Size < pTLayer->m_Width * pTLayer->m_Height * TileSize)
+		return;
+
+	for(int y = 0; y < pTLayer->m_Height; ++y)
+	{
+		for(int x = 0; x < pTLayer->m_Width; ++x)
+		{
+			const unsigned char Index = ((CTile *)pTiles)[y * pTLayer->m_Width + x].m_Index;
+			if(Index >= TILE_TIME_CHECKPOINT_FIRST && Index <= TILE_TIME_CHECKPOINT_LAST)
+			{
+				const int ArrayIndex = std::clamp<int>((Index - TILE_TIME_CHECKPOINT_FIRST), 0, NUM_POS);
+				m_aPositions[ArrayIndex] = vec2(x * 32.0f + 16.0f, y * 32.0f + 16.0f);
+			}
+			x += ((CTile *)pTiles)[y * pTLayer->m_Width + x].m_Skip;
+		}
+	}
+}
+
 CBackgroundEngineMap *CMenuBackground::CreateBGMap()
 {
 	return new CMenuMap;
@@ -252,6 +285,9 @@ void CMenuBackground::OnInterfacesInit(CGameClient *pClient)
 
 void CMenuBackground::OnInit()
 {
+	if(m_IsInit)
+		return;
+
 	m_pBackgroundMap = CreateBGMap();
 	m_pMap = m_pBackgroundMap;
 
@@ -263,8 +299,65 @@ void CMenuBackground::OnInit()
 	if(g_Config.m_ClMenuMap[0] != '\0')
 		LoadMenuBackground();
 
+	// 启动路径：首个加载帧呈现之前必须完成菜单背景的图层初始化。
+	// 菜单背景图层是分帧初始化的（CMapRenderer::LoadStep），若拖到加载循环里逐帧推进，
+	// 前几帧 Render() 只能返回 false，调用方就会回退到程序化背景（(none) 棋盘格），
+	// 即启动时看到的灰屏 / None 背景。这里一次性走完，让首个加载帧就有主题背景；
+	// 运行时切换主题仍走分帧（那时有 m_pPreviousBackground 顶着）。
+	if(m_Loading)
+	{
+		// 上限仅作保险，正常主题的图层数远小于此。
+		for(int Guard = 0; m_Loading && Guard < 4096; Guard++)
+			AdvanceLoading();
+		if(m_Loading)
+		{
+			log_warn("menuthemes", "menu background layer initialization did not finish during init");
+			m_Loading = false;
+		}
+	}
+
 	m_Camera.m_ZoomSet = false;
 	m_Camera.m_ZoomSmoothingTarget = 0;
+}
+
+void CMenuBackground::AdvanceLoading()
+{
+	if(!m_Loading)
+		return;
+	// 非地图背景（图片/视频/加载失败）没有分帧工作，直接结束等待。
+	if(!m_Loaded || m_ImageBackground || m_VideoBackground || AdvanceMapLoad())
+		m_Loading = false;
+}
+
+void CMenuBackground::PreserveCurrentBackground()
+{
+	if(!m_Loaded || m_ImageBackground || m_VideoBackground || m_pBackgroundMap == nullptr || m_pBackgroundLayers == nullptr || m_pBackgroundImages == nullptr)
+		return;
+
+	m_pPreviousBackground = std::make_unique<SPreviousBackground>();
+	m_pPreviousBackground->m_pMap.reset(static_cast<CMenuMap *>(m_pBackgroundMap));
+	m_pPreviousBackground->m_pLayers.reset(m_pBackgroundLayers);
+	m_pPreviousBackground->m_pImages.reset(m_pBackgroundImages);
+	m_pPreviousBackground->m_pRenderer = std::make_unique<CMapLayers>(ERenderType::RENDERTYPE_FULL_DESIGN, false);
+	m_pPreviousBackground->m_pRenderer->OnInterfacesInit(GameClient());
+	SwapState(*m_pPreviousBackground->m_pRenderer);
+
+	m_pBackgroundMap = CreateBGMap();
+	m_pBackgroundLayers = new CLayers;
+	m_pBackgroundImages = new CMapImages;
+	m_pMap = m_pBackgroundMap;
+	m_pLayers = m_pBackgroundLayers;
+	m_pImages = m_pBackgroundImages;
+	m_pImages->OnInterfacesInit(GameClient());
+}
+
+void CMenuBackground::ReleasePreviousBackground()
+{
+	if(!m_pPreviousBackground)
+		return;
+	if(m_pPreviousBackground->m_pImages)
+		m_pPreviousBackground->m_pImages->Unload();
+	m_pPreviousBackground.reset();
 }
 
 void CMenuBackground::ResetPositions()
@@ -383,7 +476,9 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 	if(!m_IsInit)
 		return;
 
-	if(m_Loaded && !m_ImageBackground && !m_VideoBackground && m_pMap == m_pBackgroundMap)
+	ReleasePreviousBackground();
+	PreserveCurrentBackground();
+	if(m_pMap != nullptr && m_pMap == m_pBackgroundMap && m_pPreviousBackground == nullptr)
 		m_pMap->Unload();
 
 	m_Loaded = false;
@@ -578,6 +673,7 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 			{
 				str_format(aBuf, sizeof(aBuf), "failed to load menu theme '%s'", pMenuMap);
 				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "menuthemes", aBuf);
+				ReleasePreviousBackground();
 				m_Loading = false;
 				return;
 			}
@@ -608,45 +704,22 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 		}
 
 		if(m_Loaded && !m_ImageBackground && !m_VideoBackground)
-		{
-			m_pLayers->Init(m_pMap, true);
-
-			m_pImages->LoadBackground(m_pLayers, m_pMap);
-			CMapLayers::OnMapLoad();
-
-			// look for custom positions
-			CMapItemLayerTilemap *pTLayer = m_pLayers->GameLayer();
-			if(pTLayer)
-			{
-				int DataIndex = pTLayer->m_Data;
-				unsigned int Size = m_pLayers->Map()->GetDataSize(DataIndex);
-				void *pTiles = m_pLayers->Map()->GetData(DataIndex);
-				unsigned int TileSize = sizeof(CTile);
-
-				if(Size >= pTLayer->m_Width * pTLayer->m_Height * TileSize)
-				{
-					for(int y = 0; y < pTLayer->m_Height; ++y)
-					{
-						for(int x = 0; x < pTLayer->m_Width; ++x)
-						{
-							unsigned char Index = ((CTile *)pTiles)[y * pTLayer->m_Width + x].m_Index;
-							if(Index >= TILE_TIME_CHECKPOINT_FIRST && Index <= TILE_TIME_CHECKPOINT_LAST)
-							{
-								int ArrayIndex = std::clamp<int>((Index - TILE_TIME_CHECKPOINT_FIRST), 0, NUM_POS);
-								m_aPositions[ArrayIndex] = vec2(x * 32.0f + 16.0f, y * 32.0f + 16.0f);
-							}
-
-							x += ((CTile *)pTiles)[y * pTLayer->m_Width + x].m_Skip;
-						}
-					}
-				}
-			}
-		}
+			InitializeLoadedMap();
 		if(!m_Loaded)
 		{
 			str_format(aBuf, sizeof(aBuf), "failed to load menu theme '%s'", pMenuMap);
 			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "menuthemes", aBuf);
+			ReleasePreviousBackground();
 		}
+		else if(pMenuMap[0] == '\0')
+		{
+			ReleasePreviousBackground();
+		}
+		m_Loading = m_Loaded && !m_ImageBackground && !m_VideoBackground && !IsMapLoaded();
+	}
+	else
+	{
+		ReleasePreviousBackground();
 		m_Loading = false;
 	}
 }
@@ -665,19 +738,60 @@ bool CMenuBackground::Render()
 	if(!InterfacesInitialized())
 		return false;
 
-	if(!m_Loaded)
+	if(!m_Loaded && !m_pPreviousBackground)
 		return false;
 
-	if(RenderBackgroundTexture())
+	if(m_Loaded && RenderBackgroundTexture())
 		return true;
 
+	const bool MapReady = AdvanceMapLoad();
+
+	// 位置未选定且相机处于退化态时，下面的位置插值会变成不动点：
+	// 启动首帧 m_RotationCenter 与 m_Camera.m_Center 都是构造函数里的 (0,0)，
+	// 而 LoadMenuBackground() 又通过 InvalidateCurrentPosition() 把 m_CurrentPosition 设回 -1。
+	// 于是 DistToCenter = 0（≠ cl_rotation_radius）走插值分支，DirToCenter 与 Distance 都是零向量，
+	// 且 m_CurrentPosition < 0 会每帧把 m_MoveTime 清零 → 相机永久停在 (0,0)。
+	// 唯一出口本来是菜单页渲染里的 ChangePosition()，而启动加载界面（声音/菜单图片加载）
+	// 期间没有任何菜单页渲染，所以加载界面背后的主题背景完全静止。
+	// 这里把相机种子到起始位置的轨道半径上，交给上面的旋转分支（cl_rotation_speed 默认 40 秒一圈）。
+	// 额外的距离判断保证只在退化态生效：切换主题时相机已在轨道上，不会被拽回 POS_START。
+	//
+	// 同时把 m_CurrentPosition 记为 POS_START：相机确实已经停在起始位置的轨道上。
+	// 否则等菜单页真正渲染时 RenderStartMenuImpl() 里的 ChangePosition(POS_START) 会通过
+	// NewPosition != m_CurrentPosition 的检查，置 m_ChangedPosition=true 走插值分支；
+	// 而那时 m_AnimationStartPos 与 TargetPos 重合（Distance==0），插值分支会把
+	// m_CurrentDirection 重置成 (1,0)，让已经转了一会儿的背景在一帧内跳回起始角度。
+	// 记为 POS_START 后 ChangePosition() 直接早退，旋转无跳变地继续。
+	if(m_CurrentPosition < 0 && distance(m_Camera.m_Center, m_RotationCenter) <= 0.5f)
+	{
+		m_RotationCenter = m_aPositions[POS_START];
+		m_CurrentDirection = vec2(1.0f, 0.0f);
+		m_Camera.m_Center = m_RotationCenter + m_CurrentDirection * (float)g_Config.m_ClRotationRadius;
+		m_AnimationStartPos = m_Camera.m_Center;
+		m_CurrentPosition = POS_START;
+		m_ChangedPosition = false;
+		m_MoveTime = 0.0f;
+	}
+
 	m_Camera.m_Zoom = 0.7f;
+
+	// 相机动画的时间步长在这里自己取墙钟差值，不用 Client()->RenderFrameTime()。
+	// 原因：启动阶段的加载界面（GameClient()->OnInit() 加载声音/菜单图片时，由 CSounds
+	// 与菜单图片回调调用的 RenderLoading）整个跑在 CClient::Run() 主循环之前，而
+	// m_RenderFrameTime 只在主循环的 render 分支里被赋值，在那之前恒为 client.h 的初值
+	// 0.0001f。用它算旋转量只有 360/40*0.0001 ≈ 0.0009°/帧，加载界面背后的主题背景
+	// 看上去仍然是静止的。主循环里两者本就相等（m_RenderFrameTime 就是两次 render 的
+	// 墙钟差），所以换成墙钟差不会改变正常菜单阶段的观感。
+	const std::chrono::nanoseconds CameraNow = time_get_nanoseconds();
+	const float CameraFrameTime = std::clamp(
+		(CameraNow - m_LastCameraFrameTime).count() / 1000000000.0f, 0.0f, 0.1f);
+	m_LastCameraFrameTime = CameraNow;
 
 	float DistToCenter = distance(m_Camera.m_Center, m_RotationCenter);
 	if(!m_ChangedPosition && absolute(DistToCenter - (float)g_Config.m_ClRotationRadius) <= 0.5f)
 	{
 		// do little rotation
-		float RotPerTick = 360.0f / (float)g_Config.m_ClRotationSpeed * std::clamp(Client()->RenderFrameTime(), 0.0f, 0.1f);
+		float RotPerTick = 360.0f / (float)g_Config.m_ClRotationSpeed * CameraFrameTime;
 		m_CurrentDirection = rotate(m_CurrentDirection, RotPerTick);
 		m_Camera.m_Center = m_RotationCenter + m_CurrentDirection * (float)g_Config.m_ClRotationRadius;
 	}
@@ -697,7 +811,7 @@ bool CMenuBackground::Render()
 			m_CurrentDirection = vec2(1.0f, 0.0f);
 
 		// move time
-		m_MoveTime += std::clamp(Client()->RenderFrameTime(), 0.0f, 0.1f) * g_Config.m_ClCameraSpeed / 10.0f;
+		m_MoveTime += CameraFrameTime * g_Config.m_ClCameraSpeed / 10.0f;
 		float XVal = 1 - m_MoveTime;
 		XVal = std::pow(XVal, 7.0f);
 
@@ -711,6 +825,18 @@ bool CMenuBackground::Render()
 		m_ChangedPosition = false;
 	}
 
+	if(!MapReady)
+	{
+		if(m_pPreviousBackground && m_pPreviousBackground->m_pRenderer)
+		{
+			m_pPreviousBackground->m_pRenderer->RenderCustomWithCamera(m_Camera.m_Center, m_Camera.m_Zoom);
+			return true;
+		}
+		return false;
+	}
+
+	m_Loading = false;
+	ReleasePreviousBackground();
 	CMapLayers::OnRender();
 
 	return true;

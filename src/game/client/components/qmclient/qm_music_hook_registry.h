@@ -21,29 +21,28 @@ struct SQmMusicHookEntry
 	const wchar_t *m_pProcessName;
 };
 
-// 用一条快照记录匹配所有 Hook；结果可按位合并，重复子进程不会重复计数。
+// 对一条进程快照同时匹配所有已注册 Hook，避免为每个应用重复遍历系统进程表。
 inline uint64_t QmMusicHookMaskForProcess(const wchar_t *pProcessName, const SQmMusicHookEntry *pHooks, size_t Count)
 {
-	// 进程名大小写不敏感比较。
-	const auto ProcessNameEquals = [](const wchar_t *pLeft, const wchar_t *pRight) {
+	if(pProcessName == nullptr || pHooks == nullptr)
+		return 0;
+	const auto EqualsIgnoreCase = [](const wchar_t *pLeft, const wchar_t *pRight) {
 		for(;;)
 		{
-			const wchar_t A = *pLeft++;
-			const wchar_t B = *pRight++;
-			const wchar_t LowerA = (A >= L'A' && A <= L'Z') ? (wchar_t)(A - L'A' + L'a') : A;
-			const wchar_t LowerB = (B >= L'A' && B <= L'Z') ? (wchar_t)(B - L'A' + L'a') : B;
-			if(LowerA != LowerB)
+			const wchar_t Left = *pLeft++;
+			const wchar_t Right = *pRight++;
+			const wchar_t LowerLeft = Left >= L'A' && Left <= L'Z' ? (wchar_t)(Left - L'A' + L'a') : Left;
+			const wchar_t LowerRight = Right >= L'A' && Right <= L'Z' ? (wchar_t)(Right - L'A' + L'a') : Right;
+			if(LowerLeft != LowerRight)
 				return false;
-			if(LowerA == L'\0')
+			if(LowerLeft == L'\0')
 				return true;
 		}
 	};
 	uint64_t Mask = 0;
-	for(size_t i = 0; i < Count; ++i)
-	{
-		if(pHooks[i].m_pProcessName != nullptr && ProcessNameEquals(pProcessName, pHooks[i].m_pProcessName))
+	for(size_t i = 0; i < Count && i < 64; ++i)
+		if(pHooks[i].m_pProcessName != nullptr && EqualsIgnoreCase(pProcessName, pHooks[i].m_pProcessName))
 			Mask |= uint64_t(1) << i;
-	}
 	return Mask;
 }
 

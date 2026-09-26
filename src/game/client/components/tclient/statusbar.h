@@ -15,6 +15,11 @@
 
 namespace tclient_statusbar
 {
+	inline bool IsValidPlayerId(int PlayerId)
+	{
+		return PlayerId >= 0 && PlayerId < MAX_CLIENTS;
+	}
+
 	inline bool FormatPlayerPoints(char *pBuf, int BufSize, EPointsStatus Status, int Points)
 	{
 		if(BufSize <= 0)
@@ -140,6 +145,7 @@ private:
 	bool m_HasFormattedPoints = false;
 
 	int m_CurrentRaceTime = 0;
+	int CalculateRaceTime();
 	float GetDurationWidth(int Duration);
 	int GetDigitsIndex(int Value, int Max);
 	float AngleWidth();
@@ -210,6 +216,8 @@ private:
 
 	void LabelRender(const char *pLabel);
 	float LabelWidth(const char *pLabel);
+
+	char m_aAppliedStatusBarScheme[STATUSBAR_MAX_SIZE + 1] = {};
 };
 
 #endif

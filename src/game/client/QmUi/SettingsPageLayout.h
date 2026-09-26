@@ -325,6 +325,7 @@ inline float ResolveSettingsGeneralClientContentHeight(const SSettingsContentMet
 
 inline float ResolveSettingsGeneralGameContentHeight(const SSettingsContentMetrics &Metrics, const bool DynamicCameraExpanded)
 {
+	// 默认重生武器已移除（远程同名删除），本卡只剩 3 行：动态镜头、拾取换枪、弹药耗尽换枪。
 	return ResolveSettingsRowsHeight(3 + (DynamicCameraExpanded ? 1 : 0), Metrics.m_LineHeight, Metrics.m_LineSpacing);
 }
 
@@ -451,7 +452,6 @@ inline float ResolveQmVisualCollisionHitboxHeight(const SSettingsContentMetrics 
 	return (Enabled ? 16.0f : 1.0f) * Metrics.m_RowStep;
 }
 
-// 禅模式：主开关 + 双列子开关（接口/玩家/特效/音频/聊天）+ 底部快捷键行。
 inline float ResolveQmVisualFocusModeHeight(const SSettingsContentMetrics &Metrics)
 {
 	const float Section = Metrics.m_SmallSize + Metrics.m_LineSpacing;
@@ -675,7 +675,6 @@ inline SSettingsSegmentedRowLayout ResolveSettingsSegmentedRowLayout(const CUIRe
 	Layout.m_Height = Radio.m_Height;
 	return Layout;
 }
-
 inline float ResolveSettingsControllerAxisPickerHeight(const int AxisCount, const int MaxAxisCount, const float RowHeight, const float RowSpacing)
 {
 	return (std::clamp(AxisCount, 0, std::max(0, MaxAxisCount)) + 1) * (std::max(0.0f, RowHeight) + std::max(0.0f, RowSpacing));
@@ -761,8 +760,8 @@ inline float ResolveQmHudInputOverlayHeight(const SSettingsContentMetrics &Metri
 {
 	if(!Enabled)
 		return Metrics.m_LineHeight;
-	// 复选框 + 五个数值项，外加键/鼠布局预览区（与测试契约一致：标准尺度下 300）。
-	return 12.0f * Metrics.m_RowStep;
+	// 总开关与五个数值项共六行。
+	return 6.0f * Metrics.m_RowStep;
 }
 
 inline float ResolveQmHudDummyMiniViewHeight(const SSettingsContentMetrics &Metrics, const bool Expanded)
@@ -797,6 +796,8 @@ inline float ResolveQmHudVoiceHeight(const SSettingsContentMetrics &Metrics, con
 
 	// 高级固定区域：状态开关、服务器/设备/编码/降噪、AGC、播放、立体声、半径和房间范围。
 	Height += 11.0f * Metrics.m_RowStep + Metrics.m_LineSpacing * 1.15f;
+	// 可选 WebSocket endpoint 与 UDP 地址并列显示，始终占一行避免配置切换时卡片跳动。
+	Height += Metrics.m_RowStep;
 	if(NoiseSuppressMode != 0)
 		Height += Metrics.m_RowStep;
 #if !defined(CONF_RNNOISE)

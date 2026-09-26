@@ -1,17 +1,24 @@
+#include <base/crashdump.h>
 #include <base/detect.h>
 
 #ifndef CONF_BACKEND_OPENGL_ES
 #include <GL/glew.h>
+#else
+#include <GLES3/gl3.h>
 #endif
 
 #include <base/log.h>
 #include <base/math.h>
 #include <base/sphore.h>
+#include <base/str.h>
 #include <base/thread.h>
 
-#include <engine/client/plausible_sizes.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
+
+#if defined(CONF_PLATFORM_IOS)
+#include <ios/ios_main.h>
+#endif
 
 #include <SDL.h>
 #include <SDL_messagebox.h>
@@ -40,214 +47,13 @@
 #endif
 
 #include "graphics_threaded.h"
+#include "qm_festive_message_box.h"
 
 #include <engine/graphics.h>
 
 #include <algorithm>
-#include <cstdlib>
 
 class IStorage;
-
-// ------------ CGraphicsBackend_Threaded
-
-// Run everything single threaded when compiling for Emscripten, as context binding does not work outside of the main thread with SDL2.
-// TODO SDL3: Check if SDL3 supports threaded graphics and PROXY_TO_PTHREAD, OFFSCREENCANVAS_SUPPORT and OFFSCREEN_FRAMEBUFFER correctly.
-#if !defined(CONF_PLATFORM_EMSCRIPTEN)
-void CGraphicsBackend_Threaded::ThreadFunc(void *pUser)
-{
-	auto *pSelf = (CGraphicsBackend_Threaded *)pUser;
-	std::unique_lock<std::mutex> Lock(pSelf->m_BufferSwapMutex);
-	// notify, that the thread started
-	pSelf->m_Started = true;
-	pSelf->m_BufferSwapCond.notify_all();
-	while(!pSelf->m_Shutdown)
-	{
-		pSelf->m_BufferSwapCond.wait(Lock, [&pSelf] { return pSelf->m_pBuffer != nullptr || pSelf->m_Shutdown; });
-		if(pSelf->m_pBuffer)
-		{
-#ifdef CONF_PLATFORM_MACOS
-			CAutoreleasePool AutoreleasePool;
-#endif
-			pSelf->m_pProcessor->RunBuffer(pSelf->m_pBuffer);
-
-			pSelf->m_pBuffer = nullptr;
-			pSelf->m_BufferInProcess.store(false, std::memory_order_relaxed);
-			pSelf->m_BufferSwapCond.notify_all();
-
-#if defined(CONF_VIDEORECORDER)
-			if(IVideo::Current())
-				IVideo::Current()->NextVideoFrameThread();
-#endif
-		}
-	}
-}
-#endif
-
-CGraphicsBackend_Threaded::CGraphicsBackend_Threaded(TTranslateFunc &&TranslateFunc) :
-	m_TranslateFunc(std::move(TranslateFunc))
-{
-	m_pProcessor = nullptr;
-	m_Shutdown = true;
-#if !defined(CONF_PLATFORM_EMSCRIPTEN)
-	m_pBuffer = nullptr;
-	m_BufferInProcess.store(false, std::memory_order_relaxed);
-#endif
-}
-
-void CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor)
-{
-	dbg_assert(m_Shutdown, "Processor was already not shut down.");
-	m_Shutdown = false;
-	m_pProcessor = pProcessor;
-#if !defined(CONF_PLATFORM_EMSCRIPTEN)
-	std::unique_lock<std::mutex> Lock(m_BufferSwapMutex);
-	m_pThread = thread_init(ThreadFunc, this, "Graphics thread");
-	// wait for the thread to start
-	m_BufferSwapCond.wait(Lock, [this]() -> bool { return m_Started; });
-#endif
-}
-
-void CGraphicsBackend_Threaded::StopProcessor()
-{
-	dbg_assert(!m_Shutdown, "Processor was already shut down.");
-#if defined(CONF_PLATFORM_EMSCRIPTEN)
-	m_Shutdown = true;
-	m_Warning = m_pProcessor->GetWarning();
-#else
-	{
-		std::unique_lock<std::mutex> Lock(m_BufferSwapMutex);
-		m_Shutdown = true;
-		m_Warning = m_pProcessor->GetWarning();
-		m_BufferSwapCond.notify_all();
-	}
-	thread_wait(m_pThread);
-#endif
-}
-
-void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
-{
-	SGfxErrorContainer Error;
-#if defined(CONF_PLATFORM_EMSCRIPTEN)
-	Error = m_pProcessor->GetError();
-	if(Error.m_ErrorType == GFX_ERROR_TYPE_NONE)
-	{
-		RunBufferSingleThreadedUnsafe(pBuffer);
-#if defined(CONF_VIDEORECORDER)
-		if(IVideo::Current())
-			IVideo::Current()->NextVideoFrameThread();
-#endif
-	}
-#else
-	WaitForIdle();
-	{
-		std::unique_lock<std::mutex> Lock(m_BufferSwapMutex);
-		Error = m_pProcessor->GetError();
-		if(Error.m_ErrorType == GFX_ERROR_TYPE_NONE)
-		{
-			m_pBuffer = pBuffer;
-			m_BufferInProcess.store(true, std::memory_order_relaxed);
-			m_BufferSwapCond.notify_all();
-		}
-	}
-#endif
-
-	// Process error after lock is released to prevent deadlock
-	if(Error.m_ErrorType != GFX_ERROR_TYPE_NONE)
-	{
-		ProcessError(Error);
-	}
-}
-
-void CGraphicsBackend_Threaded::RunBufferSingleThreadedUnsafe(CCommandBuffer *pBuffer)
-{
-	m_pProcessor->RunBuffer(pBuffer);
-}
-
-bool CGraphicsBackend_Threaded::IsIdle() const
-{
-#if defined(CONF_PLATFORM_EMSCRIPTEN)
-	return true;
-#else
-	return !m_BufferInProcess.load(std::memory_order_relaxed);
-#endif
-}
-
-void CGraphicsBackend_Threaded::WaitForIdle()
-{
-#if !defined(CONF_PLATFORM_EMSCRIPTEN)
-	std::unique_lock<std::mutex> Lock(m_BufferSwapMutex);
-	m_BufferSwapCond.wait(Lock, [this]() { return m_pBuffer == nullptr; });
-#endif
-}
-
-void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error)
-{
-	m_FatalError = "";
-	for(const auto &ErrStr : Error.m_vErrors)
-	{
-		if(!m_FatalError.empty())
-		{
-			m_FatalError.append("\n");
-		}
-		if(ErrStr.m_RequiresTranslation)
-			m_FatalError.append(m_TranslateFunc(ErrStr.m_Err.c_str(), ""));
-		else
-			m_FatalError.append(ErrStr.m_Err);
-	}
-	std::string LogMessage = "Graphics Error:\n" + m_FatalError;
-	dbg_assert_failed("%s", LogMessage.c_str());
-}
-
-const char *CGraphicsBackend_Threaded::GetFatalError() const
-{
-	return m_FatalError.c_str();
-}
-
-bool CGraphicsBackend_Threaded::HasFatalError() const
-{
-	if(m_pProcessor == nullptr)
-		return false;
-	return m_pProcessor->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE;
-}
-
-bool CGraphicsBackend_Threaded::TakeFatalError()
-{
-	if(m_pProcessor == nullptr)
-		return false;
-	if(m_pProcessor->GetError().m_ErrorType == GFX_ERROR_TYPE_NONE)
-		return false;
-	m_pProcessor->ClearFatalError();
-	return true;
-}
-
-bool CGraphicsBackend_Threaded::GetWarning(std::vector<std::string> &WarningStrings)
-{
-	if(m_Warning.m_WarningType != GFX_WARNING_TYPE_NONE)
-	{
-		m_Warning.m_WarningType = GFX_WARNING_TYPE_NONE;
-		WarningStrings = m_Warning.m_vWarnings;
-		return true;
-	}
-	return false;
-}
-
-// ------------ CCommandProcessorFragment_General
-
-void CCommandProcessorFragment_General::Cmd_Signal(const CCommandBuffer::SCommand_Signal *pCommand)
-{
-	pCommand->m_pSemaphore->Signal();
-}
-
-bool CCommandProcessorFragment_General::RunCommand(const CCommandBuffer::SCommand *pBaseCommand)
-{
-	switch(pBaseCommand->m_Cmd)
-	{
-	case CCommandBuffer::CMD_SIGNAL: Cmd_Signal(static_cast<const CCommandBuffer::SCommand_Signal *>(pBaseCommand)); break;
-	default: return false;
-	}
-
-	return true;
-}
 
 // ------------ CCommandProcessorFragment_SDL
 void CCommandProcessorFragment_SDL::Cmd_Init(const SCommand_Init *pCommand)
@@ -267,7 +73,27 @@ void CCommandProcessorFragment_SDL::Cmd_Shutdown(const SCommand_Shutdown *pComma
 void CCommandProcessorFragment_SDL::Cmd_Swap(const CCommandBuffer::SCommand_Swap *pCommand)
 {
 	if(m_GLContext)
+	{
+		static bool s_MetadataLogged = false;
+		if(g_Config.m_QmGraphicsTrace >= 1 && !s_MetadataLogged)
+		{
+			const char *pVendor = reinterpret_cast<const char *>(glGetString(GL_VENDOR));
+			const char *pRenderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
+			const char *pVersion = reinterpret_cast<const char *>(glGetString(GL_VERSION));
+			dbg_msg("perf/graphics/opengl", "event=context vendor=%s renderer=%s version=%s vsync=%d", pVendor ? pVendor : "unknown", pRenderer ? pRenderer : "unknown", pVersion ? pVersion : "unknown", g_Config.m_GfxVsync);
+			s_MetadataLogged = true;
+		}
+		else if(g_Config.m_QmGraphicsTrace == 0)
+			s_MetadataLogged = false;
+		const auto SwapStart = g_Config.m_QmGraphicsTrace >= 2 ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 		SDL_GL_SwapWindow(m_pWindow);
+		if(g_Config.m_QmGraphicsTrace >= 2)
+		{
+			const double SwapMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - SwapStart).count();
+			if(SwapMs >= 8.0)
+				dbg_msg("perf/graphics/opengl", "event=slow_swap duration_ms=%.3f vsync=%d", SwapMs, g_Config.m_GfxVsync);
+		}
+	}
 }
 
 void CCommandProcessorFragment_SDL::Cmd_VSync(const CCommandBuffer::SCommand_VSync *pCommand)
@@ -301,7 +127,7 @@ void CCommandProcessorFragment_SDL::Cmd_WindowDestroyNtf(const CCommandBuffer::S
 	// Unbind the graphic context from the window, so it does not get destroyed
 #ifdef CONF_PLATFORM_ANDROID
 	if(m_GLContext)
-		SDL_GL_MakeCurrent(NULL, NULL);
+		SDL_GL_MakeCurrent(nullptr, nullptr);
 #endif
 }
 
@@ -685,23 +511,114 @@ static bool BackendInitGlew(EBackendType BackendType, int &GlewMajor, int &GlewM
 
 static int IsVersionSupportedGlew(EBackendType BackendType, int VersionMajor, int VersionMinor, int VersionPatch, int GlewMajor, int GlewMinor, int GlewPatch)
 {
-	if(BackendType == BACKEND_TYPE_OPENGL && !IsOpenGLVersionAtLeast({GlewMajor, GlewMinor, GlewPatch}, {VersionMajor, VersionMinor, VersionPatch}))
-		return -1;
+	if(BackendType == BACKEND_TYPE_OPENGL)
+	{
+		if(VersionMajor >= 4 && GlewMajor < 4)
+		{
+			return -1;
+		}
+		else if(VersionMajor >= 3 && GlewMajor < 3)
+		{
+			return -1;
+		}
+		else if(VersionMajor == 3 && GlewMajor == 3)
+		{
+			if(VersionMinor >= 3 && GlewMinor < 3)
+			{
+				return -1;
+			}
+			if(VersionMinor >= 2 && GlewMinor < 2)
+			{
+				return -1;
+			}
+			if(VersionMinor >= 1 && GlewMinor < 1)
+			{
+				return -1;
+			}
+			if(VersionMinor >= 0 && GlewMinor < 0)
+			{
+				return -1;
+			}
+		}
+		else if(VersionMajor >= 2 && GlewMajor < 2)
+		{
+			return -1;
+		}
+		else if(VersionMajor == 2 && GlewMajor == 2)
+		{
+			if(VersionMinor >= 1 && GlewMinor < 1)
+			{
+				return -1;
+			}
+			if(VersionMinor >= 0 && GlewMinor < 0)
+			{
+				return -1;
+			}
+		}
+		else if(VersionMajor >= 1 && GlewMajor < 1)
+		{
+			return -1;
+		}
+		else if(VersionMajor == 1 && GlewMajor == 1)
+		{
+			if(VersionMinor >= 5 && GlewMinor < 5)
+			{
+				return -1;
+			}
+			if(VersionMinor >= 4 && GlewMinor < 4)
+			{
+				return -1;
+			}
+			if(VersionMinor >= 3 && GlewMinor < 3)
+			{
+				return -1;
+			}
+			if(VersionMinor >= 2 && GlewMinor < 2)
+			{
+				return -1;
+			}
+			else if(VersionMinor == 2 && GlewMinor == 2)
+			{
+				if(VersionPatch >= 1 && GlewPatch < 1)
+				{
+					return -1;
+				}
+				if(VersionPatch >= 0 && GlewPatch < 0)
+				{
+					return -1;
+				}
+			}
+			if(VersionMinor >= 1 && GlewMinor < 1)
+			{
+				return -1;
+			}
+			if(VersionMinor >= 0 && GlewMinor < 0)
+			{
+				return -1;
+			}
+		}
+	}
 	return 0;
 }
 #endif // !CONF_HEADLESS_CLIENT
 
-EBackendType CGraphicsBackend_SDL_GL::DetectBackend()
+EBackendType CGraphicsBackend_SDL_GL::DetectBackend() const
 {
 	EBackendType RetBackendType = BACKEND_TYPE_OPENGL;
 #if defined(CONF_BACKEND_VULKAN)
 	const char *pEnvDriver = SDL_getenv("DDNET_DRIVER");
 	if(pEnvDriver && str_comp_nocase(pEnvDriver, "GLES") == 0)
+	{
 		RetBackendType = BACKEND_TYPE_OPENGL_ES;
+	}
 	else if(pEnvDriver && str_comp_nocase(pEnvDriver, "Vulkan") == 0)
+	{
 		RetBackendType = BACKEND_TYPE_VULKAN;
+	}
 	else if(pEnvDriver && str_comp_nocase(pEnvDriver, "OpenGL") == 0)
+	{
 		RetBackendType = BACKEND_TYPE_OPENGL;
+	}
 	else if(pEnvDriver == nullptr)
 	{
 		// load the config backend
@@ -726,26 +643,10 @@ EBackendType CGraphicsBackend_SDL_GL::DetectBackend()
 	return RetBackendType;
 }
 
-static void ResetOpenGLFallbackConfig()
-{
-	str_copy(g_Config.m_GfxBackend, "OpenGL");
-	// 让下一次初始化根据当前系统实际支持的 context 自动探测版本。
-	g_Config.m_GfxGLMajor = 0;
-	g_Config.m_GfxGLMinor = 0;
-	g_Config.m_GfxGLPatch = 0;
-}
-
 void CGraphicsBackend_SDL_GL::ClampDriverVersion(EBackendType BackendType)
 {
 	if(BackendType == BACKEND_TYPE_OPENGL)
 	{
-		if(g_Config.m_GfxGLMajor == 0)
-		{
-			const SOpenGLVersion ProbeVersion = AutoOpenGLProbeVersion(BackendType);
-			g_Config.m_GfxGLMajor = ProbeVersion.m_Major;
-			g_Config.m_GfxGLMinor = ProbeVersion.m_Minor;
-			g_Config.m_GfxGLPatch = ProbeVersion.m_Patch;
-		}
 		// clamp the versions to existing versions(only for OpenGL major <= 3)
 		if(g_Config.m_GfxGLMajor == 1)
 		{
@@ -771,13 +672,6 @@ void CGraphicsBackend_SDL_GL::ClampDriverVersion(EBackendType BackendType)
 	else if(BackendType == BACKEND_TYPE_OPENGL_ES)
 	{
 #if !defined(CONF_BACKEND_OPENGL_ES3)
-		if(g_Config.m_GfxGLMajor == 0)
-		{
-			const SOpenGLVersion ProbeVersion = AutoOpenGLProbeVersion(BackendType);
-			g_Config.m_GfxGLMajor = ProbeVersion.m_Major;
-			g_Config.m_GfxGLMinor = ProbeVersion.m_Minor;
-			g_Config.m_GfxGLPatch = ProbeVersion.m_Patch;
-		}
 		// Make sure GLES is set to 1.0 (which is equivalent to OpenGL 1.3), if its not set to >= 3.0(which is equivalent to OpenGL 3.3)
 		if(g_Config.m_GfxGLMajor < 3)
 		{
@@ -791,6 +685,14 @@ void CGraphicsBackend_SDL_GL::ClampDriverVersion(EBackendType BackendType)
 #else
 		g_Config.m_GfxGLMajor = 3;
 		g_Config.m_GfxGLMinor = 0;
+		g_Config.m_GfxGLPatch = 0;
+#endif
+	}
+	else if(BackendType == BACKEND_TYPE_VULKAN)
+	{
+#if defined(CONF_BACKEND_VULKAN)
+		g_Config.m_GfxGLMajor = gs_BackendVulkanMinimumVersion.m_Major;
+		g_Config.m_GfxGLMinor = gs_BackendVulkanMinimumVersion.m_Minor;
 		g_Config.m_GfxGLPatch = 0;
 #endif
 	}
@@ -814,6 +716,12 @@ static Uint32 MessageBoxTypeToSdlFlags(IGraphics::EMessageBoxType Type)
 static std::optional<int> ShowMessageBoxImpl(const IGraphics::CMessageBox &MessageBox, SDL_Window *pWindow)
 {
 	dbg_assert(!MessageBox.m_vButtons.empty(), "At least one button is required");
+	if(MessageBox.m_Style == IGraphics::EMessageBoxStyle::QM_FESTIVE)
+	{
+		const std::optional<int> FestiveResult = ShowQmFestiveMessageBox(MessageBox);
+		if(FestiveResult)
+			return FestiveResult;
+	}
 
 	std::vector<SDL_MessageBoxButtonData> vButtonData;
 	vButtonData.reserve(MessageBox.m_vButtons.size());
@@ -853,13 +761,19 @@ std::optional<int> ShowMessageBoxWithoutGraphics(const IGraphics::CMessageBox &M
 
 std::optional<int> CGraphicsBackend_SDL_GL::ShowMessageBox(const IGraphics::CMessageBox &MessageBox)
 {
-	// macOS 上 MoltenVK 仍有 CAMetalDrawable 回调时销毁 Vulkan 窗口，
-	// 回调线程可能抛出异常，导致原始图形错误被 SIGABRT 覆盖。
+	// 图形后端已经报告 fatal error 时，窗口/上下文可能正处于驱动错误状态。
+	// 不要再次调用 ErroneousCleanup 或 SDL_DestroyWindow；NVIDIA 驱动可能在这里
+	// 触发第二次访问违规。改用不依赖图形窗口的系统消息框，随后由主循环执行
+	// 安全图形设置恢复并退出。
+	if(HasFatalError())
+	{
+		log_warn("graphics", "showing graphics error without destroying the SDL window");
+		return ShowMessageBoxWithoutGraphics(MessageBox);
+	}
 #if defined(CONF_PLATFORM_MACOS)
 	if(m_BackendType == EBackendType::BACKEND_TYPE_VULKAN)
 		return ShowMessageBoxImpl(MessageBox, nullptr);
 #endif
-
 	if(m_pProcessor != nullptr)
 	{
 		m_pProcessor->ErroneousCleanup();
@@ -1004,10 +918,6 @@ static void DisplayToVideoMode(CVideoMode *pVMode, SDL_DisplayMode *pMode, float
 	pVMode->m_WindowWidth = pMode->w;
 	pVMode->m_WindowHeight = pMode->h;
 	pVMode->m_RefreshRate = RefreshRate;
-	pVMode->m_Red = SDL_BITSPERPIXEL(pMode->format);
-	pVMode->m_Green = SDL_BITSPERPIXEL(pMode->format);
-	pVMode->m_Blue = SDL_BITSPERPIXEL(pMode->format);
-	pVMode->m_Format = pMode->format;
 }
 
 void CGraphicsBackend_SDL_GL::GetVideoModes(CVideoMode *pModes, int MaxModes, int *pNumModes, float HiDPIScale, int MaxWindowWidth, int MaxWindowHeight, int ScreenId)
@@ -1115,6 +1025,7 @@ CGraphicsBackend_SDL_GL::CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc)
 
 int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, int *pHeight, int *pRefreshRate, int *pFsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight, int *pCurrentWidth, int *pCurrentHeight, IStorage *pStorage)
 {
+	crashdump_set_graphics_backend(nullptr);
 #if defined(CONF_HEADLESS_CLIENT)
 	m_BackendType = BACKEND_TYPE_OPENGL;
 	g_Config.m_GfxGLMajor = 0;
@@ -1159,24 +1070,17 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		}
 	}
 
-	// 每次后端重试都从干净状态开始，避免 Vulkan 失败后的 GPU 与能力残留到 OpenGL。
-	m_GpuList = {};
-	m_Capabilities.Reset();
-	m_ReadPresentedImageDataFunc = nullptr;
-	m_aVendorString[0] = '\0';
-	m_aVersionString[0] = '\0';
-	m_aRendererString[0] = '\0';
-
-	bool ConfiguredVulkanUnavailable = false;
-#if !defined(CONF_BACKEND_VULKAN)
-	ConfiguredVulkanUnavailable = SDL_getenv("DDNET_DRIVER") == nullptr && str_comp_nocase(g_Config.m_GfxBackend, "Vulkan") == 0;
-#endif
+	EBackendType OldBackendType = m_BackendType;
 	m_BackendType = DetectBackend();
 	// little fallback for Vulkan
-	if(ConfiguredVulkanUnavailable)
+	if(OldBackendType != BACKEND_TYPE_AUTO &&
+		m_BackendType == BACKEND_TYPE_VULKAN)
 	{
-		// 使用现代 OpenGL 回退，同时修复未编译 Vulkan 时遗留的 Vulkan 配置。
-		ResetOpenGLFallbackConfig();
+		// try default opengl settings
+		str_copy(g_Config.m_GfxBackend, "OpenGL");
+		g_Config.m_GfxGLMajor = 3;
+		g_Config.m_GfxGLMinor = 0;
+		g_Config.m_GfxGLPatch = 0;
 		// do another analysis round too, just in case
 		g_Config.m_Gfx3DTextureAnalysisRan = 0;
 		g_Config.m_GfxDriverIsBlocked = 0;
@@ -1209,14 +1113,7 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	default:
 		dbg_assert_failed("Invalid m_BackendType: %d", m_BackendType);
 	}
-	if(m_BackendType == BACKEND_TYPE_VULKAN)
-		log_info("gfx", "Creating Vulkan context with configured API selection");
-	else
-		log_info("gfx", "Created %s %d.%d context", pBackendName, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor);
-
-	// 崩溃报告要写实际生效的后端：Vulkan 失败后 InitWindow 会改配置再按 OpenGL 重试，
-	// 只看 g_Config.m_GfxBackend 会把崩溃归因到根本没跑起来的后端上。
-	CGraphics_Threaded::SetGraphicsBackendForCrashReport(pBackendName);
+	log_info("gfx", "Created %s %d.%d context", pBackendName, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor);
 
 	if(m_BackendType == BACKEND_TYPE_OPENGL)
 	{
@@ -1269,17 +1166,6 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 
 	*pDesktopWidth = DisplayMode.w;
 	*pDesktopHeight = DisplayMode.h;
-	if(!IsPlausibleWindowSize(*pWidth, *pHeight))
-	{
-		log_warn("gfx", "Ignoring implausible configured window size: %dx%d", *pWidth, *pHeight);
-		*pWidth = DisplayMode.w;
-		*pHeight = DisplayMode.h;
-	}
-	if(!IsPlausibleRefreshRate(*pRefreshRate))
-	{
-		log_warn("gfx", "Ignoring implausible configured refresh rate: %d", *pRefreshRate);
-		*pRefreshRate = 0;
-	}
 
 	// fetch supported video modes
 	bool SupportedResolution = false;
@@ -1300,7 +1186,10 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	}
 
 	// set flags
-	int SdlFlags = SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_ALLOW_HIGHDPI;
+	// QmClient: 窗口先以隐藏状态创建。首帧（CClient::Run() 里那帧纯黑清屏）到
+	// 加载界面真正 present 之间隔着语言/声音/视频初始化和主题加载，窗口若一开始就可见，
+	// 这段时间用户看到的就是整屏黑在"闪"。等第一帧有内容后再由 ShowWindow() 显示。
+	int SdlFlags = SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN;
 	SdlFlags |= (IsOpenGLFamilyBackend) ? SDL_WINDOW_OPENGL : SDL_WINDOW_VULKAN;
 	if(Flags & IGraphicsBackend::INITFLAG_RESIZABLE)
 		SdlFlags |= SDL_WINDOW_RESIZABLE;
@@ -1311,11 +1200,10 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	else if(Flags & (IGraphicsBackend::INITFLAG_DESKTOP_FULLSCREEN))
 		SdlFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 
-	const bool IsWindowedFullscreen = g_Config.m_GfxFullscreen == 3;
-	bool IsFullscreen = (SdlFlags & SDL_WINDOW_FULLSCREEN) != 0 || IsWindowedFullscreen;
+	bool IsFullscreen = (SdlFlags & SDL_WINDOW_FULLSCREEN) != 0 || g_Config.m_GfxFullscreen == 3;
 	// use desktop resolution as default resolution, clamp resolution if users's display is smaller than we remembered
 	// if the user starts in fullscreen, and the resolution was not found use the desktop one
-	if(IsWindowedFullscreen || (IsFullscreen && !SupportedResolution) || *pWidth == 0 || *pHeight == 0 || (IsDesktopChanged && (!SupportedResolution || !IsFullscreen) && (*pWidth > *pDesktopWidth || *pHeight > *pDesktopHeight)))
+	if((IsFullscreen && !SupportedResolution) || *pWidth == 0 || *pHeight == 0 || (IsDesktopChanged && (!SupportedResolution || !IsFullscreen) && (*pWidth > *pDesktopWidth || *pHeight > *pDesktopHeight)))
 	{
 		*pWidth = *pDesktopWidth;
 		*pHeight = *pDesktopHeight;
@@ -1402,7 +1290,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 			SDL_Vulkan_GetDrawableSize(m_pWindow, pCurrentWidth, pCurrentHeight);
 	}
 	else
+	{
 		SDL_GetWindowSize(m_pWindow, pCurrentWidth, pCurrentHeight);
+	}
 	SDL_GetWindowSize(m_pWindow, pWidth, pHeight);
 
 	if(IsOpenGLFamilyBackend)
@@ -1432,9 +1322,15 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	}
 #endif // !CONF_HEADLESS_CLIENT
 
+	// gfx_gl_major=0 表示自动探测。命令处理器必须使用实际可用的
+	// OpenGL 版本，否则会误选旧版几何后端并跳过现代 shader 初始化。
+	const int EffectiveGLMajor = g_Config.m_GfxGLMajor > 0 ? g_Config.m_GfxGLMajor : GlewMajor;
+	const int EffectiveGLMinor = g_Config.m_GfxGLMajor > 0 ? g_Config.m_GfxGLMinor : GlewMinor;
+	const int EffectiveGLPatch = g_Config.m_GfxGLMajor > 0 ? g_Config.m_GfxGLPatch : GlewPatch;
+
 	// start the command processor
 	dbg_assert(m_pProcessor == nullptr, "Processor was not cleaned up properly.");
-	m_pProcessor = new CCommandProcessor_SDL_GL(m_BackendType, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch);
+	m_pProcessor = new CCommandProcessor_SDL_GL(m_BackendType, EffectiveGLMajor, EffectiveGLMinor, EffectiveGLPatch);
 	StartProcessor(m_pProcessor);
 
 	// issue init commands for OpenGL and SDL
@@ -1476,9 +1372,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		CmdGL.m_pStorage = pStorage;
 		CmdGL.m_pCapabilities = &m_Capabilities;
 		CmdGL.m_pInitError = &InitError;
-		CmdGL.m_RequestedMajor = g_Config.m_GfxGLMajor;
-		CmdGL.m_RequestedMinor = g_Config.m_GfxGLMinor;
-		CmdGL.m_RequestedPatch = g_Config.m_GfxGLPatch;
+		CmdGL.m_RequestedMajor = EffectiveGLMajor;
+		CmdGL.m_RequestedMinor = EffectiveGLMinor;
+		CmdGL.m_RequestedPatch = EffectiveGLPatch;
 		CmdGL.m_GlewMajor = GlewMajor;
 		CmdGL.m_GlewMinor = GlewMinor;
 		CmdGL.m_GlewPatch = GlewPatch;
@@ -1543,21 +1439,14 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED;
 	}
 
-	const SOpenGLVersion RequestedVersion{g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch};
-	const SOpenGLVersion ActualVersion{m_Capabilities.m_DetectedContextMajor, m_Capabilities.m_DetectedContextMinor, m_Capabilities.m_DetectedContextPatch};
-	if(ShouldSyncActualOpenGLVersion(m_BackendType, RequestedVersion, ActualVersion))
-	{
-		g_Config.m_GfxGLMajor = ActualVersion.m_Major;
-		g_Config.m_GfxGLMinor = ActualVersion.m_Minor;
-		g_Config.m_GfxGLPatch = ActualVersion.m_Patch;
-	}
-
 	{
 		CCommandBuffer::SCommand_Update_Viewport CmdSDL2;
 		CmdSDL2.m_X = 0;
 		CmdSDL2.m_Y = 0;
 		CmdSDL2.m_Width = *pCurrentWidth;
 		CmdSDL2.m_Height = *pCurrentHeight;
+		CmdSDL2.m_DrawableWidth = *pCurrentWidth;
+		CmdSDL2.m_DrawableHeight = *pCurrentHeight;
 		CmdSDL2.m_ByResize = true;
 		CmdBuffer.AddCommandUnsafe(CmdSDL2);
 		RunBuffer(&CmdBuffer);
@@ -1565,6 +1454,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		CmdBuffer.Reset();
 	}
 
+#if !defined(CONF_HEADLESS_CLIENT)
+	crashdump_set_graphics_backend(pBackendName);
+#endif
 	return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_NONE;
 }
 
@@ -1634,6 +1526,25 @@ const TTwGraphicsGpuList &CGraphicsBackend_SDL_GL::GetGpus() const
 void CGraphicsBackend_SDL_GL::Minimize()
 {
 	SDL_MinimizeWindow(m_pWindow);
+}
+
+void CGraphicsBackend_SDL_GL::HideWindow()
+{
+	if(m_pWindow != nullptr)
+		SDL_HideWindow(m_pWindow);
+}
+
+void CGraphicsBackend_SDL_GL::ShowWindow()
+{
+	// QmClient: 窗口以 SDL_WINDOW_HIDDEN 创建，等第一帧真有内容后再显示，
+	// 避免启动时先闪一帧纯黑。终端启动时窗口可能沿用最小化状态或被终端置于后方，
+	// 因此显示前先恢复，再请求 SDL 将其抬到前台。重复调用无副作用。
+	if(m_pWindow != nullptr)
+	{
+		SDL_RestoreWindow(m_pWindow);
+		SDL_ShowWindow(m_pWindow);
+		SDL_RaiseWindow(m_pWindow);
+	}
 }
 
 void CGraphicsBackend_SDL_GL::SetWindowParams(int FullscreenMode, bool IsBorderless)
@@ -1804,6 +1715,16 @@ void CGraphicsBackend_SDL_GL::GetViewportSize(int &w, int &h)
 		SDL_GL_GetDrawableSize(m_pWindow, &w, &h);
 	else
 		SDL_Vulkan_GetDrawableSize(m_pWindow, &w, &h);
+}
+
+void CGraphicsBackend_SDL_GL::GetDisplayCutoutInsets(int &Left, int &Right)
+{
+#if defined(CONF_PLATFORM_IOS)
+	IosDisplayCutoutInsets(m_pWindow, &Left, &Right);
+#else
+	Left = 0;
+	Right = 0;
+#endif
 }
 
 void CGraphicsBackend_SDL_GL::NotifyWindow()

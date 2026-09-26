@@ -31,7 +31,7 @@ void CPickup::Tick()
 			// player picked us up, is someone was hooking us, let them go
 			switch(m_Type)
 			{
-			case POWERUP_HEALTH:
+			case POWERUP_FREEZE:
 				if(!GameWorld()->m_WorldConfig.m_PredictDDRace)
 					continue;
 				if(pChr->Freeze())
@@ -67,7 +67,7 @@ void CPickup::Tick()
 			case POWERUP_ARMOR_SHOTGUN:
 				if(!GameWorld()->m_WorldConfig.m_IsDDRace || !GameWorld()->m_WorldConfig.m_PredictDDRace)
 					continue;
-				if(pChr->Team() == TEAM_SUPER)
+				if(pChr->Team() == pChr->TeamsCore()->TeamSuper())
 					continue;
 				if(pChr->GetWeaponGot(WEAPON_SHOTGUN))
 				{
@@ -83,7 +83,7 @@ void CPickup::Tick()
 			case POWERUP_ARMOR_GRENADE:
 				if(!GameWorld()->m_WorldConfig.m_IsDDRace || !GameWorld()->m_WorldConfig.m_PredictDDRace)
 					continue;
-				if(pChr->Team() == TEAM_SUPER)
+				if(pChr->Team() == pChr->TeamsCore()->TeamSuper())
 					continue;
 				if(pChr->GetWeaponGot(WEAPON_GRENADE))
 				{
@@ -99,7 +99,7 @@ void CPickup::Tick()
 			case POWERUP_ARMOR_NINJA:
 				if(!GameWorld()->m_WorldConfig.m_IsDDRace || !GameWorld()->m_WorldConfig.m_PredictDDRace)
 					continue;
-				if(pChr->Team() == TEAM_SUPER)
+				if(pChr->Team() == pChr->TeamsCore()->TeamSuper())
 					continue;
 				pChr->SetNinjaActivationDir(vec2(0, 0));
 				pChr->SetNinjaActivationTick(-500);
@@ -109,7 +109,7 @@ void CPickup::Tick()
 			case POWERUP_ARMOR_LASER:
 				if(!GameWorld()->m_WorldConfig.m_IsDDRace || !GameWorld()->m_WorldConfig.m_PredictDDRace)
 					continue;
-				if(pChr->Team() == TEAM_SUPER)
+				if(pChr->Team() == pChr->TeamsCore()->TeamSuper())
 					continue;
 				if(pChr->GetWeaponGot(WEAPON_LASER))
 				{

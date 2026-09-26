@@ -1,0 +1,1867 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="dcterms.date" content="2026-06-20" />
+  <meta name="qm.status" content="superseded" />
+  <meta name="qm.superseded-by" content="../计划/性能优化方案.md" />
+  <meta name="qm.note" content="P0/P1 高优先级项多数已完成或已删除，本文仅作历史证据，不再作为执行依据" />
+  <meta name="status" content="active" />
+  <meta name="supersedes" content="2026-06-18-long-term-performance-optimization-roadmap.html, 2026-06-19-long-term-performance-optimization-roadmap-v2.html, archive/2026-06-14-设置页性能优化总纲-全局调度版.html" />
+  <title>[已停用] QmClient 长期性能优化路线图 v3（2026-06-20 历史存档）</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --paper: #fffdfa;
+      --paper-2: #f7f2ea;
+      --ink: #2d2924;
+      --muted: #6f675f;
+      --line: #ded4c6;
+      --accent: #4f6f73;
+      --accent-2: #b8795b;
+      --ok: #5f7f55;
+      --warn: #a57536;
+      --bad: #a94d45;
+      --shadow: 0 18px 45px rgba(62, 50, 39, 0.12);
+      --code-bg: #ede6dc;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(184, 121, 91, 0.16), transparent 30rem),
+        radial-gradient(circle at 88% 8%, rgba(79, 111, 115, 0.14), transparent 28rem),
+        linear-gradient(180deg, #f7f3ec 0%, var(--bg) 100%);
+      font-family: "Noto Sans SC", "Segoe UI", "Microsoft YaHei", sans-serif;
+      line-height: 1.72;
+    }
+    .page { max-width: 1180px; margin: 0 auto; padding: 28px 20px 56px; }
+    .hero, .card {
+      background: var(--paper);
+      border: 1px solid rgba(222, 212, 198, 0.95);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+    }
+    .hero { padding: 28px 28px 24px; margin-bottom: 18px; }
+    .card { padding: 22px 24px; margin-top: 18px; }
+    h1, h2, h3, h4 { margin: 0 0 12px; line-height: 1.2; }
+    h1 { font-size: 28px; letter-spacing: -0.02em; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 17px; margin-top: 18px; }
+    h4 { font-size: 15px; margin: 14px 0 6px; color: #4a4038; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 0 22px; padding: 0; }
+    li { margin: 4px 0; }
+    code {
+      padding: 0.12em 0.36em;
+      border-radius: 6px;
+      background: var(--code-bg);
+      color: #613c2e;
+      font-size: 0.94em;
+    }
+    pre {
+      margin: 12px 0;
+      padding: 14px 16px;
+      background: #29251f;
+      color: #f7efe2;
+      border-radius: 14px;
+      overflow-x: auto;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    pre code { padding: 0; background: transparent; color: inherit; font-size: inherit; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+      display: block;
+      overflow-x: auto;
+    }
+    th, td {
+      border-top: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #faf5ed; color: #4f463d; font-weight: 700; white-space: nowrap; }
+    tr:hover td { background: rgba(184, 121, 91, 0.03); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(79, 111, 115, 0.10); color: var(--accent);
+      font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+    }
+    .pill.secondary { background: rgba(184, 121, 91, 0.10); color: var(--accent-2); }
+    .pill.warn { background: rgba(165, 117, 54, 0.12); color: var(--warn); }
+    .pill.bad { background: rgba(169, 77, 69, 0.12); color: var(--bad); }
+    .pill.ok { background: rgba(95, 127, 85, 0.12); color: var(--ok); }
+    .muted { color: var(--muted); }
+    .note {
+      border-left: 4px solid var(--accent);
+      padding: 10px 12px;
+      background: rgba(79, 111, 115, 0.06);
+      border-radius: 0 10px 10px 0;
+      color: #4c4238;
+    }
+    .note.warn { border-left-color: var(--warn); background: rgba(165, 117, 54, 0.08); }
+    .note.bad { border-left-color: var(--bad); background: rgba(169, 77, 69, 0.08); }
+    .note.ok { border-left-color: var(--ok); background: rgba(95, 127, 85, 0.08); }
+    .toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 14px; }
+    .toc a {
+      display: block; padding: 10px 12px;
+      border: 1px solid var(--line); border-radius: 12px;
+      color: var(--ink); text-decoration: none;
+      background: rgba(255,255,255,0.72);
+    }
+    .toc a:hover { border-color: rgba(184, 121, 91, 0.45); }
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap;
+    }
+    .badge.ok { background: rgba(95, 127, 85, 0.12); color: var(--ok); }
+    .badge.warn { background: rgba(165, 117, 54, 0.12); color: var(--warn); }
+    .badge.bad { background: rgba(169, 77, 69, 0.12); color: var(--bad); }
+    .small { font-size: 13px; color: var(--muted); }
+    details {
+      margin-top: 10px; border: 1px solid var(--line);
+      border-radius: 12px; background: rgba(255,255,255,0.65); padding: 10px 12px;
+    }
+    summary { cursor: pointer; font-weight: 700; color: #423b33; }
+    .footer { margin-top: 18px; color: var(--muted); font-size: 13px; }
+    .ref-block {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: rgba(184, 121, 91, 0.05);
+      border: 1px dashed rgba(184, 121, 91, 0.35);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .ref-block code { font-size: 12px; }
+    .src-tag {
+      display: inline-block; padding: 1px 6px; border-radius: 4px;
+      font-size: 11px; font-weight: 700; color: var(--accent);
+      background: rgba(79, 111, 115, 0.08); margin-left: 6px;
+    }
+    .verified {
+      display: inline-block; padding: 1px 6px; border-radius: 4px;
+      font-size: 11px; font-weight: 700; color: var(--ok);
+      background: rgba(95, 127, 85, 0.08); margin-left: 6px;
+    }
+    @media (max-width: 920px) {
+      .hero, .card { padding-left: 18px; padding-right: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="meta">
+        <span class="pill ok">active</span>
+        <span class="pill secondary">2026-06-20</span>
+        <span class="pill secondary">codegraph CLI 验证</span>
+        <span class="pill warn">v3 合并版</span>
+        <span class="pill">合并 v1 + v2，删除旧文档</span>
+      </div>
+      <h1>QmClient 长期性能优化路线图 v3（合并版）</h1>
+      <p class="muted">本文档合并了原 v1（2026-06-18）和 v2（2026-06-19）路线图的全部内容，并以 2026-06-20 的 codegraph CLI + search 工具对当前 HEAD（QmClient <strong>2.71.6</strong>）做了完整复核。<strong>v1 和 v2 已删除，v3 是唯一的权威路线图。</strong>合并原则：以 v2 为骨架（v2 基于实际代码调研修正了 v1 的 5 个重大判断），融入 v1 中 v2 未覆盖的详细内容（量化脚本规划、游戏内 FPS PRD、UI 首帧专项、字频采集、telemetry 合同、实跑日志结论），并修正了所有经 codegraph 验证发现的行号偏差。</p>
+
+      <div class="note">
+        <strong>v1/v2/v3 关系</strong>：v1（2026-06-18）给出大方向和完整的 PRD/telemetry 规格；v2（2026-06-19）基于四份 SubAgent 调研修正 v1 的 5 个判断；v3（2026-06-20）合并两者并按 codegraph CLI 验证修正行号。v1 和 v2 的原始文件已删除，其有价值的内容全部保留在本文档中。<strong>标注 <code class="verified">codegraph 验证</code> 的代码指针经过 2026-06-20 的 <code>codegraph query</code> + <code>search</code> 双重验证。</strong>
+      </div>
+
+      <div class="note ok">
+        <strong>权威入口</strong>：本文档是当前性能优化架构的唯一执行准则。<a href="archive/2026-06-14-设置页性能优化总纲-全局调度版.html">2026-06-14 设置页性能优化总纲</a> 已降级为 settings 专项历史参考，只用于查看 <code>m_MenuTextPool</code>、visible guard、loading/prebuild 工作流和 settings-only 归因细节；若两者冲突，以本文档的 Phase B/B.5、QmRuntime、scheduler coverage 和长期图形/文本路线为准。
+      </div>
+
+      <h3 style="margin-top: 18px;">v3 相对 v1/v2 的关键修正</h3>
+      <table>
+        <thead><tr><th>修正项</th><th>v1/v2 原始说法</th><th>v3 验证后修正</th><th>验证方式</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Vulkan frame profiler 行号</td>
+            <td>v2 说 <code>m_FrameProfileStats</code> 在行 7632-7666</td>
+            <td><code>SFrameProfileStats</code> 结构定义在行 <strong>969-1078</strong>，实例 <code>m_FrameProfileStats</code> 在行 <strong>1094</strong>，使用点遍布帧管线</td>
+            <td><code class="verified">codegraph 验证</code></td>
+          </tr>
+          <tr>
+            <td>Vulkan wait idle 调用点</td>
+            <td>v2 说 <code>vkQueueWaitIdle</code>/<code>vkDeviceWaitIdle</code> 4 处（行 1791、6310、7886、9087）</td>
+            <td><code>vkQueueWaitIdle</code> 包装函数在行 <strong>7653</strong>，<code>vkDeviceWaitIdle</code> 包装在 <strong>7662</strong>；<code>DeviceWaitIdle()</code> 的 4 个调用者在 <strong>1791</strong>(内存恢复)、<strong>6307</strong>(RecreateSwapChain)、<strong>7884</strong>(Cmd_Shutdown)、<strong>9079</strong>(WindowDestroyNtf)——<strong>全在非帧热路径</strong></td>
+            <td><code class="verified">codegraph 验证</code></td>
+          </tr>
+          <tr>
+            <td>vkWaitForFences 行号</td>
+            <td>v2 说行 2840</td>
+            <td>实际包装函数在行 <strong>7644</strong></td>
+            <td><code class="verified">codegraph 验证</code></td>
+          </tr>
+          <tr>
+            <td>若干 scheduler/text pool 行号</td>
+            <td>v2 说 <code>BuildSettingsMenuTextPlan</code> 5129-5154、<code>DrainIngameUiTextRuntime</code> 1731-1738、<code>CScopedMenuTextVisibleGuard</code> 4953-5001</td>
+            <td>修正为 <code>BuildSettingsMenuTextPlan</code> <strong>5150/5159</strong>、<code>DrainIngameUiTextRuntime</code> <strong>1734</strong>、<code>CScopedMenuTextVisibleGuard</code> 构造 <strong>4975</strong> / 析构 <strong>5009</strong></td>
+            <td><code class="verified">codegraph 验证</code></td>
+          </tr>
+          <tr>
+            <td>QmUI 布局引擎行号</td>
+            <td>v2 说 <code>CUiV2LayoutEngine</code> QmLayout.h:100</td>
+            <td>实际在 <strong>QmLayout.h:94</strong>，<code>ComputeChildren</code> 在 <strong>QmLayout.cpp:84</strong></td>
+            <td><code class="verified">codegraph 验证</code></td>
+          </tr>
+          <tr>
+            <td>perf 脚本规划实现状态</td>
+            <td>v1 规划了 baselines.ts/compare.ts/ci.ts/scenarios/</td>
+            <td>当前 <code>qmclient_scripts/perf/lib/</code> 只有 quality.ts/stats.ts/report.ts/quality_core.ts/parse.ts——<strong>规划模块尚未实现</strong></td>
+            <td><code class="verified">codegraph 验证</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="toc">
+        <a href="#context">① 当前代码真相</a>
+        <a href="#corrections">② 五大判断修正详解</a>
+        <a href="#pillars">③ 六根支柱</a>
+        <a href="#quantify">④ 量化系统脚本规划</a>
+        <a href="#ingame-prd">⑤ 游戏内 FPS PRD</a>
+        <a href="#first-frame">⑥ UI 首帧专项指南</a>
+        <a href="#scheduler">⑦ scheduler/text pool 架构深读</a>
+        <a href="#backend">⑧ 图形后端可行性</a>
+        <a href="#text">⑨ 文本渲染真因与字频采集</a>
+        <a href="#latest-log">⑩ 最新实跑日志结论</a>
+        <a href="#phases">⑪ Phase 划分</a>
+        <a href="#code-index">⑫ 关键代码指针索引</a>
+        <a href="#contracts">⑬ 遥测与测试合同</a>
+        <a href="#risks">⑭ 风险与边界</a>
+        <a href="#open">⑮ 未解决问题</a>
+        <a href="#refs">⑯ 调研参考来源</a>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2 id="context">① 当前代码真相（2026-06-20 codegraph 验证）</h2>
+      <p class="muted">不凭印象，只看当前索引到的代码。这些事实是后续所有优化的现实着落点。<span class="verified">codegraph 验证</span> 标注的指针经过 <code>codegraph query</code> 验证。</p>
+
+      <h3>1.1 性能量化系统：基础已厚，缺自动化</h3>
+      <ul>
+        <li><code>qmclient_scripts/perf/lib/stats.ts</code> 已具备 <code>budgetCorrelationSummary</code>、<code>BudgetCorrelationWindow</code>、UI section 归因、操作签名对比。</li>
+        <li><code>qmclient_scripts/perf/lib/quality.ts</code> 已实现 aggregate-only 失败检测（<code>AggregateOnlyTargetFpsFailures</code>），但<strong>尚未实现按操作的 p99/max/menuMax 基线</strong>。</li>
+        <li><code>qmclient_scripts/perf/lib/report.ts</code> 生成离线 HTML，但 report 未接入自动化回归对比，也无 CI 输出。</li>
+        <li><code>qmclient_scripts/perf/lib/quality_core.ts</code> 和 <code>qmclient_scripts/perf/lib/parse.ts</code> 提供核心解析与质量判定能力。</li>
+        <li><strong>v1 规划的 <code>lib/baselines.ts</code>、<code>lib/compare.ts</code>、<code>lib/ci.ts</code>、<code>scenarios/</code> 目录、<code>run_scenario.ts</code> 均尚未实现</strong>。</li>
+        <li>C++ 侧已有 <code>QmPerfLogStage</code> 统一输出到 <code>perf/menu</code>、<code>perf/assets</code>、<code>perf/fps</code>、<code>perf/ui_runtime</code> 等系统。</li>
+      </ul>
+
+      <h3>1.2 QmUI：骨架已有，渲染侧仍是透传</h3>
+      <p>QmUI 位于 <code>src/game/client/QmUi/</code>，当前状态：</p>
+      <table>
+        <thead><tr><th>模块</th><th>现状</th><th>gap</th></tr></thead>
+        <tbody>
+          <tr><td><code>CUiV2LayoutEngine</code><span class="verified">codegraph 验证</span></td><td>已实现 flex 类布局（ROW/COLUMN、AUTO/PX/PERCENT/FLEX、gap、align、min/max），定义于 <code>QmLayout.h:94</code>，<code>ComputeChildren</code> 在 <code>QmLayout.cpp:84</code></td><td>无缓存，每帧全量；无 dirty reason；函数内部仍有临时 <code>std::vector&lt;float&gt;</code></td></tr>
+          <tr><td><code>CUiV2AnimationRuntime</code></td><td>tween/spring 双驱动、优先级/队列/merge 策略齐全</td><td>动画推进成本未拆分 per-property，缺少可见性裁剪</td></tr>
+          <tr><td><code>CUiV2Tree</code></td><td>每帧 <code>BeginFrame/TouchNode/EndFrame</code> 追踪 node key</td><td>node 键未暴露为查询接口，无法做 retained 缓存</td></tr>
+          <tr><td><code>CUiV2RenderBridge</code></td><td>仅记录 draw_calls / clip_pushes</td><td><strong>不做 batch、不做 draw list 缓存</strong></td></tr>
+          <tr><td><code>CUiRuntimeV2</code></td><td>每帧执行 tree → anim → render bridge → end frame；已输出 <code>perf/ui_runtime</code></td><td>未和 CUI 绘制解耦，底层仍走 <code>DoLabel/DoButtonLogic</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>1.3 CUI：immediate-mode 仍是主路径，但已具备部分 ImGui 同类优化</h3>
+      <ul>
+        <li><code>CUi</code>（<code>src/game/client/ui.cpp</code>）是典型的 immediate-mode：每帧重建所有可见 widget。</li>
+        <li><code>CUi::RenderQuadContainerBatchable</code>（<code>ui.cpp:599</code><span class="verified">codegraph 验证</span>）已实现 draw call 合并。</li>
+        <li><code>CUi::QuadBatchRectContainer</code>（<code>ui.cpp:579</code><span class="verified">codegraph 验证</span>）按 <code>(w,h,rounding,corners)</code> 缓存 QuadContainer。</li>
+        <li><code>CUiScopedQuadBatch</code> 提供 RAII batch scope。</li>
+        <li><code>CListBox</code> + <code>CScrollRegion::RectClipped()</code> 已实现 list virtualization，<strong>且比 ImGui 原生 clipper 更强（支持变高行）</strong>。</li>
+        <li><code>DoLabel</code> 有 47 个调用方跨菜单组件，是最高频文本入口。</li>
+        <li><code>CUIElement::SUIElementRect</code> 已缓存 quad container 与 text container，但使用面未覆盖全部菜单路径。</li>
+        <li><code>CUi::m_vQuadBatchSprites.clear()</code>（<code>ui.cpp:643</code><span class="verified">codegraph 验证</span>）需确认是否释放 capacity（另有 <code>ui.cpp:165</code>、<code>ui.cpp:224</code> 处也有 clear）。</li>
+      </ul>
+      <div class="note ok">
+        <strong>关键修正（v2 核心发现）</strong>：CUI 不是"裸 immediate-mode"，它已具备 QuadBatch、QuadContainer 缓存、变高行 clipper。v1 误判为"裸 immediate-mode"需要 retained node 重写——<strong>这是错误的</strong>。
+      </div>
+
+      <h3>1.4 图形后端：真 graphics 线程 + Vulkan 5 项基础优化已实现</h3>
+      <ul>
+        <li><code>CGraphics_Threaded</code>（<code>src/engine/client/graphics_threaded.cpp</code>）是命令缓冲/线程化架构。</li>
+        <li><strong>真 graphics 线程</strong>：<code>CGraphicsBackend_Threaded</code>（<code>backend_sdl.cpp:84</code><span class="verified">codegraph 验证</span>）的 <code>ThreadFunc</code>（<code>backend_sdl.cpp:54</code><span class="verified">codegraph 验证</span>）独立线程跑 GPU 命令，mutex + condition_variable 同步，双缓冲 pipeline。仅 Emscripten 退化到单线程。</li>
+        <li>已有 <code>QuadContainer</code>、tile buffer、quad buffer 批处理机制。</li>
+        <li>纹理管理带 generation 跟踪（<code>m_vTextureIndices</code> / <code>m_vTextureGenerations</code>，<code>graphics_threaded.cpp:389-399</code><span class="verified">codegraph 验证</span>），可识别 stale handle。</li>
+        <li><strong>Vulkan backend 5 项基础优化已实现</strong>（"已实现"≠"已最优"），详见 ⑧ 图形后端可行性。</li>
+        <li>UI 未使用统一批处理层；47 个文件用 <code>QuadsBegin/End</code>，仅 14 个用 <code>RenderQuadContainer</code>。</li>
+      </ul>
+
+      <h3>1.5 文本渲染：atlas + container，中文首字是尖峰，但纯英文卡顿另有真因</h3>
+      <ul>
+        <li><code>ITextRender</code>（<code>src/engine/textrender.h</code>）提供 text container、glyph 图集、paragraph layout。</li>
+        <li><code>SQmTextRuntimeBudgetSnapshot</code> 已监控 glyph/container 新建、上传、耗时。</li>
+        <li>稳定文本池（stable text pool）已落地，通过 <code>PrebuildSettingsMenuTextPool</code> / <code>BuildIngameMenuTextPlan</code> 提前创建 container。</li>
+        <li>字形图集扩容时全量重传仍是潜在尖峰；未实现动态子图集或 LRU eviction 策略。</li>
+        <li><strong>关键反常</strong>：6/19 log 显示纯英文场景也卡顿，<code>frameMsP99=299ms</code> 但 backend/upload/glyph 各项<strong>全为 0</strong>——说明纯英文卡顿主因不在字符集，详见 ⑨。</li>
+      </ul>
+
+      <h3>1.6 游戏内 FPS：已有局部优化，但缺统一 optimizer 与后端归因</h3>
+      <ul>
+        <li><strong>Windows 高优先级已有基础实现</strong>：<code>qm_process_high_priority</code>（<code>config_variables_qmclient.h:16</code><span class="verified">codegraph 验证</span>）默认关闭，启动时在 Windows 上调用 <code>SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS)</code>。它只能缓解 CPU 调度抢占，不能替代渲染、粒子、HUD、GPU upload 的实际减负。</li>
+        <li><strong>游戏主渲染路径仍是组件顺序遍历</strong>：<code>CGameClient::OnRender()</code> 逐个调用 <code>m_vpAll</code> 组件；当前只对 <code>component_menus</code>、<code>components_total</code> 等少量桶有 stage，粒子、HUD、TClient、NamePlates、Trails 等仍缺独立归因。</li>
+        <li><strong>粒子不是完全无优化</strong>：<code>CParticles::RenderGroup()</code>（<code>particles.cpp:209</code><span class="verified">codegraph 验证</span>）已有 <code>ParticleIsVisibleOnScreen</code>（<code>particles.cpp:194</code><span class="verified">codegraph 验证</span>）和 <code>RenderQuadContainerAsSpriteMultiple</code>（<code>graphics_threaded.cpp:2821</code><span class="verified">codegraph 验证</span>）；缺口在 spawn/update/render 预算、按组限流、碰撞成本上限。</li>
+        <li><strong>HUD/TClient 文本和图元仍有 per-frame 成本</strong>：<code>statusbar.cpp</code> 已有少量静态宽度缓存，但大量 <code>TextWidth</code>、<code>Text</code>、<code>DoLabel</code> 仍跟随每帧刷新。</li>
+        <li><strong>BestClient 参考显示可行方向</strong>：其 optimizer 包含进程优先级、FPS fog、map tile culling、粒子最大渲染数、拖尾采样上限、碰撞检查上限。</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2 id="corrections">② 五大判断修正详解</h2>
+      <p class="muted">原 v1 基于印象中的代码做判断，v2 基于实际代码调研修正，v3 按 codegraph CLI 再次验证。<span class="src-tag">源自 v2</span></p>
+
+      <h3>修正 1：CUI 已具备部分 ImGui 同类优化，不需要 retained node</h3>
+      <p>v1 4.1.4 计划把 <code>CUiV2Tree</code> 扩展为可持久化 node 表（retained-mode）。但实际读代码发现：</p>
+      <ul>
+        <li><code>CUi::RenderQuadContainerBatchable</code>（<code>ui.cpp:599-626</code><span class="verified">codegraph 验证</span>）已实现 draw call 合并</li>
+        <li><code>CUi::QuadBatchRectContainer</code>（<code>ui.cpp:579-597</code><span class="verified">codegraph 验证</span>）按 <code>(w,h,rounding,corners)</code> 缓存 QuadContainer</li>
+        <li><code>CUiScopedQuadBatch</code> 提供 RAII batch scope</li>
+        <li><code>CListBox</code> + <code>CScrollRegion::RectClipped()</code>（<code>ui_listbox.cpp</code>）已实现 list virtualization，<strong>且比 ImGui 原生 clipper 更强（支持变高行）</strong></li>
+      </ul>
+      <div class="note ok">
+        <strong>修正后方向</strong>：删除 v1 的 retained node 计划。QmUI 真正的三大短板是：(1) <strong>hot layout buffer 需要 arena/复用</strong>（<code>ComputeChildren</code> 的入参 vector 可由调用点复用，函数内部临时数组仍需 PoC）；(2) <strong>DrawCmd header 不统一</strong>（没把 ClipRect 纳入 memcmp，跨 clip 不能合并）；(3) <strong>动态文本走"重建容器"</strong>（聊天、计时这种每帧变化的文本应该先做局部 PoC，再决定是否扩展到 <code>ITextRender</code> 公共契约）。
+      </div>
+
+      <h3>修正 2：纯英文卡顿首要嫌疑不在字符集</h3>
+      <p>v1 把文本渲染卡顿主因归咎于"中文图集扩容"，建议"sparse atlas 化"。但 6/19 fresh log 显示 <code>frameMsP99=299ms</code> 时 backend/upload/glyph 各项<strong>全为 0</strong>，且<strong>纯英文 UI 也会卡顿</strong>。基于业界经验（ImGui FONTS.md、Hypersect 博客、Unreal Slate、Qt QTextLayout）锁定真因：</p>
+      <ul>
+        <li><span class="badge bad">最高嫌疑</span> 每帧重建 text container / quad buffer（CPU 侧 alloc + memcpy）</li>
+        <li><span class="badge bad">高匹配</span> Paragraph layout / wrap / word-break 每帧重算</li>
+        <li><span class="badge warn">次要</span> Per-frame TextWidth 调用累积</li>
+        <li><span class="badge ok">排除</span> GPU upload 同步阻塞（log 中 upload=0）；字形 atlas 全量重传（这是中文次因，不是英文主因）</li>
+      </ul>
+      <div class="note ok">
+        <strong>修正后方向</strong>：放弃"sparse atlas 是答案"的预设。文本优化先按 ImGui 持久 buffer + Unreal dirty-cache 路线做 profiling/PoC：(1) text container 加 dirty 标记 + (string,font,size,wrap) 缓存；(2) 持久 arena 分配器消除每帧 malloc/free；(3) 验证每帧 per-label TextWidth 调用是否累积。CJK 可借鉴 ImGui 1.92 动态字体系统的"按需增量扩展 atlas + 仅对新增 glyph 上传"机制，但必须先解决旧 text container UV 失效、跨 backend texture update 和 frame 内上传预算。
+      </div>
+
+      <h3>修正 3：scheduler 已 service 化，但同步渲染路径覆盖仍不足</h3>
+      <p>v1 ⑧.7.3 提出 <code>scheduler_coverage</code> 口径。2026-06-20 codegraph 复核当前 HEAD 后确认 Phase A 的 service 化子项已落地：<span class="verified">codegraph 验证</span></p>
+      <ul>
+        <li><code>IFrameScheduler</code>（<code>frame_scheduler.h:26</code>）已是 kernel service，<code>CFrameScheduler</code> 实现在 <code>frame_scheduler.cpp:9</code>。</li>
+        <li><code>CGameClient</code> 通过 <code>FrameScheduler()</code>（<code>gameclient.h:444</code>）暴露。</li>
+        <li><code>CGameClient::OnRender</code> 已在帧入口/出口调用 <code>BeginFrame</code> / <code>EndFrame</code>。</li>
+        <li>旧 <code>CMenus</code> 独立 state 字段已合并到 service 内部 per-consumer state。</li>
+        <li><code>SettingsText</code>、<code>DemoBrowser</code>、<code>Assets</code>、<code>IngameServerInfo</code> 等 consumer 已有生产调用。</li>
+      </ul>
+      <p><strong>当前核心边界</strong>：<code>RenderServerInfo</code> / ingame runtime 已部分消费 scheduler token。同步渲染路径 <code>DoIngameMenuLabel</code>（<code>menus.cpp:4598</code><span class="verified">codegraph 验证</span>）系列保留首帧可见 fallback，但当 stable container 未命中且执行实时 <code>Ui()-&gt;DoLabel</code> 时，已显式计入 <code>fallback_immediate</code> 和 <code>scheduler_coverage=uncovered</code>。</p>
+      <div class="note ok">
+        <strong>当前结论</strong>：Phase A 可按当前口径收口。service 化、frame scope、per-consumer state、Reset 生命周期、guard 栈式语义、4px bucket、同步 fallback telemetry 和 perf gate 结构测试已落地；后续进入 Phase B，聚焦更细的 <code>budgeted_work_ms</code>、<code>immediate_render_ms</code>、scenario 和阈值。
+      </div>
+
+      <h3>修正 4：图形后端优化方向是 Vulkan 主战场（OpenGL 暂缓）</h3>
+      <p>v1 把图形后端优化放在 Phase F 条件触发。用户判断"长期必然要优化，FPS 的提高需要它"——方向对。代码现状比 v1 假设的好得多，但<strong>仍有具体优化空间</strong>：</p>
+      <ul>
+        <li><code>CGraphics_Threaded</code> + <code>backend_sdl.cpp:54</code> 真有 graphics thread（<code>ThreadFunc</code>，不是伪线程化，仅 Emscripten 退化）</li>
+        <li>Vulkan backend 5 项基础优化已实现（详见 ⑧）</li>
+        <li>Vulkan 同步原语全在非帧热路径（纠正 6/18 误判）：<span class="verified">codegraph 验证</span>
+          <ul>
+            <li><code>vkQueueWaitIdle</code> 包装在行 <strong>7653</strong>，<code>vkDeviceWaitIdle</code> 包装在行 <strong>7662</strong></li>
+            <li><code>DeviceWaitIdle()</code> 的 4 个调用者（行 <strong>1791</strong> 内存恢复、<strong>6307</strong> RecreateSwapChain、<strong>7884</strong> Cmd_Shutdown、<strong>9079</strong> WindowDestroyNtf）<strong>全在 shutdown / swapchain recreate / surface destroy / 内存恢复路径</strong></li>
+            <li><code>vkWaitForFences</code> 行 <strong>7644</strong> 是每帧开始的标准 N-buffer swapchain image fence 等待，是必要同步</li>
+            <li><code>vkMapMemory</code>（行 1526、1860、1921、7196）是 buffer/stream buffer 创建时调用，非每帧 map/unmap</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="note warn">
+        <strong>OpenGL backend 严重落后</strong>（暂缓）：<code>backend_opengl.cpp</code>（2344 行）无 PBO、无 <code>glMapBufferRange</code>、无 persistent mapping、无 staging buffer、无内存子分配器。<strong>用户决策：OpenGL 放放，先优化 Vulkan 和其他方向。</strong>
+      </div>
+      <div class="note ok">
+        <strong>修正后方向</strong>：图形后端从 Phase F 提前到 Phase D 并行。<strong>Vulkan 是主战场</strong>，Phase D 优先级：
+        <ol>
+          <li><strong>暴露 Vulkan 内置 frame profiler</strong>到 perf report——所有后续优化的前置基线</li>
+          <li><strong>UI 渲染路径 telemetry</strong>（QuadsBegin/End vs RenderQuadContainer 调用频次 + 各自耗时）</li>
+          <li>基于 profile 数据决定后续优化</li>
+        </ol>
+        <strong>暂缓</strong>：AMD GPU 多线程 fallback（无 AMD 测试环境）、OpenGL backend 补 staging/PBO。
+      </div>
+
+      <h3>修正 5：粒子 budget 简化，不做完整优先级系统</h3>
+      <p>v1 FR-3 列了 4 层 budget（spawn/update/render/碰撞）。用户反馈："DDNet 粒子和拖尾，实际游戏中就是一个视觉的效果，所以一般而言不会引入物理检测"。代码复核补充：粒子语义仍以视觉为主，但 <code>m_Collides</code> 粒子会调用 <code>Collision()-&gt;MovePoint</code>，因此不能把 update/collision 成本从观测口径中删除。</p>
+      <div class="note ok">
+        <strong>修正后方向</strong>：不做完整 per-particle priority / 玩法级碰撞预算系统，简化为 spawn budget + viewport culling + group render budget；但必须增加 update/collision telemetry，确认 <code>m_Collides</code> 粒子占比和 <code>MovePoint</code> 时间后再决定是否需要更细 budget。
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 id="pillars">③ 六根支柱</h2>
+      <p class="muted">基于四份调研，原 v1 的"四支柱 + 文本 + 图形后端"重构为六个独立支柱。每个支柱都标注：现状、真问题、优化方向、代码指针。<span class="src-tag">源自 v2</span></p>
+
+      <h3>Pillar 1：CUI/QmUI 优化（借鉴 ImGui，不 retained）</h3>
+      <h4>现状</h4>
+      <ul>
+        <li>CUI 已实现 QuadBatch + QuadContainer 缓存 + 变高行 clipper（v1 误判为"裸 immediate-mode"）</li>
+        <li>QmUi 是新写的 declarative-style，但大量用 <code>std::vector</code>，无 frame-local arena</li>
+      </ul>
+      <h4>真问题</h4>
+      <ol>
+        <li><strong>QmUi hot layout buffer 需要 arena/复用策略</strong>：<code>ComputeChildren</code>（<code>QmLayout.cpp:84</code><span class="verified">codegraph 验证</span>）入参 <code>std::vector&lt;SUiLayoutChild&gt;</code> 可由调用点复用，但函数内部仍有临时 <code>std::vector&lt;float&gt;</code>，应先在高频页面 PoC。</li>
+        <li><strong>DrawCmd header 不统一</strong>：<code>UiPlanQuadBatchSubmission</code> 基于 color/containerIndex 判断，没把 ClipRect 纳入 memcmp，跨 clip 不能合并</li>
+        <li><strong>动态文本走"重建容器"</strong>：聊天、滚动数字、计时器每帧变化的文本走 <code>CreateTextContainer</code> 全量重建，应该走 ImGui 风格 inline reserve/unreserve</li>
+        <li><strong>潜在退化点</strong>：<code>CUi::m_vQuadBatchSprites.clear()</code>（<code>ui.cpp:643</code><span class="verified">codegraph 验证</span>）需确认是否释放 capacity</li>
+      </ol>
+      <h4>优化方向</h4>
+      <ul>
+        <li><span class="badge ok">P0</span> 在 QmUi layout 临时 buffer / 高频页面 PoC <code>CQmFrameArena</code>（bump allocator）+ <code>std::pmr::vector</code>，只替换已 profile 证明的热路径。</li>
+        <li><span class="badge ok">P0</span> 引入 <code>SDrawCmdHeader</code> POD，把 (ClipRect, TextureHandle, QuadContainerIndex, Color) 塞成连续 32 字节做 memcmp</li>
+        <li><span class="badge warn">P1</span> 先在菜单/HUD 适配层 PoC 动态文本 inline 路径；只有 PoC 证明收益和旧 container 失效模型清晰后，才考虑扩展 <code>ITextRender</code> 公共接口。</li>
+        <li><span class="badge warn">P1</span> <code>CQmUiStorage</code>（有序 vector + 二分）替代散落的 <code>std::unordered_map</code></li>
+      </ul>
+      <h4>明确不做</h4>
+      <ul>
+        <li>❌ retained node 表（v1 4.1.4 删除）</li>
+        <li>❌ ImGuiListClipper 等高假设（QmClient 变高行 clipper 已经更好）</li>
+        <li>❌ 直接搬 ImFontAtlas（DDNet textrender 已有等价机制）</li>
+        <li>❌ Docking/multi-viewport（单窗口游戏 UI 不适用）</li>
+      </ul>
+
+      <h3>Pillar 2：粒子简化 budget</h3>
+      <h4>现状</h4>
+      <ul>
+        <li><code>CParticles::RenderGroup()</code>（<code>particles.cpp:209</code><span class="verified">codegraph 验证</span>）已有 <code>ParticleIsVisibleOnScreen</code> 和 <code>RenderQuadContainerAsSpriteMultiple</code></li>
+        <li>DDNet 粒子以视觉效果为主；部分 <code>m_Collides</code> 粒子 update 会调用 collision 查询，不能从 telemetry 中忽略。</li>
+      </ul>
+      <h4>优化方向（三层 budget + update/collision telemetry）</h4>
+      <ul>
+        <li><span class="badge ok">P0</span> <strong>spawn budget</strong>：按 group 限流，同一帧同一组最多新增 N 个</li>
+        <li><span class="badge ok">P0</span> <strong>viewport culling</strong>：扩展现有 <code>ParticleIsVisibleOnScreen</code>，远端粒子降低更新频率（2-4 帧更新一次）</li>
+        <li><span class="badge warn">P1</span> <strong>group render budget</strong>：按 group 限制最大渲染数，超了降采样（优先保留爆炸、命中、玩家附近粒子）</li>
+      </ul>
+      <h4>明确不做</h4>
+      <ul>
+        <li>❌ 玩法级碰撞预算系统（但必须保留 <code>MovePoint</code> 成本观测）</li>
+        <li>❌ 优先级丢弃系统（DDNet 粒子无 per-particle priority 概念，强加等于重写）</li>
+      </ul>
+
+      <h3>Pillar 3：文本渲染真因分析（重新做）</h3>
+      <h4>现状</h4>
+      <ul>
+        <li>稳定文本池 + plan collection + prebuild（ad-hoc 实现）</li>
+        <li><code>SQmTextRuntimeBudgetSnapshot</code> 监控 glyph/container 新建、上传、耗时</li>
+        <li><strong>关键反常</strong>：6/19 log 显示纯英文场景也卡顿，frameMsP99=299ms 但 backend/upload/glyph 全为 0</li>
+      </ul>
+      <h4>首要假设（基于业界调研 + 6/19 log）</h4>
+      <p>纯英文卡顿首要嫌疑在 <strong>CPU 侧、draw 提交之前</strong>，与字符集弱相关；最终归因必须由 fresh profile 证明：</p>
+      <ol>
+        <li>每帧重建 text container / quad buffer（immediate-mode 经典问题）</li>
+        <li>Paragraph layout / wrap / word-break 每帧重算</li>
+        <li>Per-frame TextWidth 调用累积</li>
+      </ol>
+      <h4>优化方向</h4>
+      <table>
+        <thead><tr><th>优先级</th><th>措施</th><th>借鉴来源</th><th>预期收益</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge ok">P0</span></td><td>text container vertex buffer 加 dirty 标记 + (string,font,size,wrap) 缓存</td><td>Unreal FCachedGeometry、Qt QTextLayout</td><td>验证并压低纯英文卡顿首要嫌疑</td></tr>
+          <tr><td><span class="badge ok">P0</span></td><td>text container 改用持久 arena/线性分配器</td><td>ImGui ImDrawList</td><td>纯英文+中文通吃</td></tr>
+          <tr><td><span class="badge warn">P1</span></td><td>验证并消除每帧 per-label TextWidth 调用（缓存 advance 之和）</td><td>通用</td><td>中-高</td></tr>
+          <tr><td><span class="badge warn">P1</span></td><td>CJK 走"按需栅格化 + 增量 patch 纹理子区域"</td><td>ImGui 1.92 动态字体系统、Hypersect</td><td>解决中文卡顿</td></tr>
+        </tbody>
+      </table>
+      <h4>明确不做</h4>
+      <ul>
+        <li>⏳ SDF/MSDF 字体暂不作为当前首帧卡顿第一刀：它解决任意尺寸/缩放质量和部分 glyph atlas 压力，但不能替代 text container dirty、layout cache、warmup budget 和 visible guard。可在 Phase E 后作为独立 PoC。</li>
+        <li>⏳ GPU-resident text / compute-shader raster 暂列长期研究：它可能减少 CPU 侧 vertex/container 生产和部分 upload，但需要先证明当前卡顿来自 text pipeline 而不是 uncovered immediate UI 调度；PoC 必须覆盖 OpenGL/Vulkan、旧 container UV、fallback 字体、CJK、截图/录制一致性。</li>
+        <li>❌ 整体引入 Qt/Unreal 文本栈（工程量大，收益小）</li>
+      </ul>
+      <div class="ref-block">
+        <strong>关键参考</strong>：Hypersect "Improving the Font Pipeline"（<a href="https://blog.hypersect.com/improving-the-font-pipeline/">blog.hypersect.com/improving-the-font-pipeline</a>）—— 业界 CJK 字体工程经验，作者明确承认"自己也没全做对"，业界没有银弹。
+      </div>
+
+      <h3>Pillar 3.5：QmRuntime 资源系统（整合方向）</h3>
+      <p><strong>结论</strong>：QmClient 需要一套 runtime resource facade，但不应一次性新增大而全的 <code>QmRuntime/QmScheduler/QmWarmupManager/QmTextCache/QmPoolRegistry/QmJobSystem/QmThreadSystem/QmRuntimeMetrics</code> 平行体系。正确路线是先收敛现有 ad-hoc 调度、文本池、monitoring 和 job 能力，再抽出固定 consumer 的 runtime facade。</p>
+      <h4>核心不变量</h4>
+      <ul>
+        <li><strong>Render/UI 可见路径只消费，不生产重资源</strong>：可见帧不做 glyph 栅格化、atlas 扩容、完整 text container 首建、慢系统指标采样、无预算 job completion。</li>
+        <li><strong>预热是 runtime 调度问题，不是 text.cpp 内部小功能</strong>：启动、ESC、settings、monitoring、语言/字体/UI scale 变化都必须走同一套有状态、有预算、有取消、有 telemetry 的入口。</li>
+        <li><strong>复用 6/14 设置页工作流</strong>：loading/prewarm → plan collection → prebuild → visible guard → background jobs → telemetry → report；不要另起一套绕过 <code>m_MenuTextPool</code> / visible guard 的缓存系统。</li>
+        <li><strong>CPU/GPU 未吃满不等于没有性能问题</strong>：无限制帧率下总体 CPU/GPU 利用率不满、平均 FPS 很高，但仍有瞬时卡顿，通常说明瓶颈在 frame pacing、主线程长尾、同步 fallback、无预算 completion 或 scheduler coverage 缺口，而不是硬件算力不足。</li>
+      </ul>
+      <div class="note warn">
+        <strong>调度器判定原则</strong>：如果 CPU/GPU utilization 都不高、backend/upload 指标也不高，但 <code>frame_ms_p99/max</code> 仍然爆炸，应优先判定为调度失败：重活没有被预算化，或者预算化 work 与 immediate render work 没有进入同一套 frame pressure 模型。此时继续堆 GPU/字体技术通常只会掩盖问题，不能替代 scheduler coverage 收口。
+      </div>
+      <h4>第一版模块边界</h4>
+      <table>
+        <thead><tr><th>模块</th><th>第一版职责</th><th>暂不做</th></tr></thead>
+        <tbody>
+          <tr><td><code>QmRuntimeMetrics</code></td><td>汇总 text snapshot、monitoring snapshot、graphics memory、device perf、warmup/job/pool 计数；monitoring 只读快照</td><td>不让 monitoring 自己成为性能系统</td></tr>
+          <tr><td><code>QmWarmupManager</code></td><td>管理 glyph warmup 和现有 stable text prebuild；按场景预算推进；支持 language/font/ui-scale epoch 失效</td><td>不吞并所有资源页、对象池、线程池和 UI cache</td></tr>
+          <tr><td><code>QmJobSystem</code></td><td>在现有 <code>CJobPool</code> 上补 lane、背压、duplicate merge、owner cancellation、main-thread completion budget</td><td>不重写 DDNet worker pool，不把 GPU/context 工作丢进 worker</td></tr>
+          <tr><td><code>QmPoolRegistry</code></td><td>只登记 QmClient runtime 小对象、warmup work item、monitoring 图表项、layout scratch 的 pool stats</td><td>不动 game world 固定 ID 池，不把所有 vector 都池化</td></tr>
+          <tr><td><code>QmTextCache</code></td><td>先作为菜单/HUD 适配层，复用 stable text pool 和未来 glyph warmup API</td><td>不第一步扩展 <code>ITextRender</code> 大公共接口</td></tr>
+        </tbody>
+      </table>
+      <h4>当前代码依据</h4>
+      <ul>
+        <li>文本同步链路真实存在：<code>CreateTextContainer → AppendTextContainer → GetGlyph → RenderGlyph → IncreaseGlyphMapSize</code>，atlas 扩容会 <code>UnloadTextures()</code> 后 <code>UploadTextures()</code>。</li>
+        <li><code>SQmTextRuntimeBudgetSnapshot</code> 已有 glyph/container 新建、上传和耗时，是 runtime metrics 的种子，不是完整 runtime metrics。</li>
+        <li><code>CJobPool</code> 只有 queued/running/done/aborted + FIFO 队列，缺 lane、背压、completion budget；适合作为底层，不适合作为直接策略层。</li>
+        <li><code>CQmMonitoring::OnRender()</code> 仍每 50ms 采样并更新 history；应改为读 <code>QmRuntimeMetrics</code> 的低频快照。</li>
+      </ul>
+      <h4>Runtime 数据流</h4>
+      <pre><code>UI / Config / Language / Client State
+        ↓
+QmRuntime Facade
+        ↓
+QmWarmupManager  ←  manifest / epoch / trigger / priority
+        ↓
+Budgeted Main Thread Work
+        ↓
+QmTextCache Adapter  →  ITextRender / CUIElement stable text pool
+        ↓
+QmRuntimeMetrics Snapshot
+        ↓
+Monitoring HUD / perf log / quality gate</code></pre>
+      <p>后台 worker 只能产出 <code>manifest</code>、去重后的 glyph/container request、文件/配置/统计结果；GPU upload、text texture update、CUIElement container 创建和任何 graphics context 相关工作都必须回到主线程/graphics 安全路径并受预算控制。</p>
+      <h4>资源状态模型</h4>
+      <table>
+        <thead><tr><th>状态</th><th>含义</th><th>允许的线程/路径</th></tr></thead>
+        <tbody>
+          <tr><td><code>Cold</code></td><td>未进入计划，首次可见会记录 miss，但不应同步生产重资源</td><td>visible guard 只记录，不首建</td></tr>
+          <tr><td><code>Planned</code></td><td>已进入 manifest / queue，等待预算推进</td><td>main thread / worker 可写队列元数据</td></tr>
+          <tr><td><code>Preparing</code></td><td>CPU-only 准备中，例如 UTF-8 解码、去重、manifest 构建、慢指标采样</td><td>worker 可执行，但不能碰 graphics/text container</td></tr>
+          <tr><td><code>GpuPending</code></td><td>需要主线程或 graphics 安全路径提交，例如 glyph upload / text container upload</td><td>main thread budget tick</td></tr>
+          <tr><td><code>Ready</code></td><td>可见路径可直接复用</td><td>render/UI 路径只读</td></tr>
+          <tr><td><code>Failed</code></td><td>本轮失败并记录 reason，避免每帧重复尝试</td><td>metrics/report 可读</td></tr>
+          <tr><td><code>Invalidated</code></td><td>language/font/ui-scale/backend/style epoch 已变化</td><td>visible guard 记录 stale，不现场重建</td></tr>
+        </tbody>
+      </table>
+      <h4>触发器与预算</h4>
+      <table>
+        <thead><tr><th>触发器</th><th>目标</th><th>预算策略</th><th>验收信号</th></tr></thead>
+        <tbody>
+          <tr><td><code>Startup</code></td><td>ASCII、数字、核心 UI glyph、主菜单少量稳定文本</td><td>低预算分帧；不拖慢冷启动</td><td>启动后核心 UI glyph miss 下降</td></tr>
+          <tr><td><code>BeforeOpenMenu</code></td><td>ESC 核心按钮、标题、常用 ingame menu label</td><td>高优先级，小窗口快速推进</td><td><code>ingame_esc_open</code> 首帧 text_new/fallback 接近 0</td></tr>
+          <tr><td><code>BeforeOpenSettings</code></td><td>当前 tab / subtab 的 stable text plan + glyph</td><td>按 visible/near/far 分组，优先 visible</td><td>settings target window 无首建、无 stale 现场重建</td></tr>
+          <tr><td><code>BeforeOpenMonitoring</code></td><td>monitoring 固定 label、图表 legend、低频指标快照</td><td>慢指标独立低频刷新；HUD 只读</td><td>monitoring 打开额外 frametime 接近 0</td></tr>
+          <tr><td><code>Language/Font/UiScaleChanged</code></td><td>epoch 失效并重建对应 manifest</td><td>取消旧任务，按当前可见页面优先</td><td>stale reason 可解释，切换后不全量同步 Clear/rebuild</td></tr>
+        </tbody>
+      </table>
+      <h4>Frame pacing 与调度诊断</h4>
+      <table>
+        <thead><tr><th>现象</th><th>优先判断</th><th>需要的 telemetry</th><th>处理方向</th></tr></thead>
+        <tbody>
+          <tr><td>平均 FPS 高，但 <code>frame_ms_max</code> 偶发 100ms+</td><td>主线程长尾或同步 fallback</td><td><code>immediate_render_ms</code>、<code>scheduler_coverage</code>、text/container new、job completion count</td><td>把首建/重建/completion 移到预算 tick；visible guard 下只复用</td></tr>
+          <tr><td>CPU/GPU 都未满，打开 ESC/settings 瞬时卡</td><td>调度器覆盖不足</td><td>target window 的 budgeted vs uncovered work、fallback_immediate、warmup pending</td><td>扩展 fixed consumer 覆盖；未覆盖路径进入 quality hard fail</td></tr>
+          <tr><td>GPU utilization 不高但 swap/wait 高</td><td>frame pacing / vsync / sleep 抖动</td><td>render CPU、sleep wait、swap/vsync wait、backend frame profiler</td><td>先做 pacing telemetry，再调 cap/vsync 策略</td></tr>
+          <tr><td>text upload/glyph 为 0 仍卡</td><td>layout/container/quad 或 UI immediate 成本</td><td>paragraph/layout ms、TextWidth 次数、container create ms、draw submit ms</td><td>dirty cache、arena、stable text 覆盖和 section 级裁剪</td></tr>
+        </tbody>
+      </table>
+      <h4>第一版文件落点</h4>
+      <ul>
+        <li><code>src/game/client/components/qmclient/runtime/</code>：QmClient 策略层，放 <code>qm_runtime_metrics</code>、<code>qm_warmup_manager</code>、<code>qm_job_system</code>、<code>qm_pool_registry</code> 等 facade。</li>
+        <li><code>src/game/client/components/menus.cpp</code> / settings 相关文件：只做适配，把现有 stable text plan/prebuild 接入 runtime facade，不迁移大块菜单渲染逻辑。</li>
+        <li><code>src/game/client/components/qmclient/monitoring/</code>：改成读取 <code>QmRuntimeMetrics</code> 快照，保留 HUD 布局/绘制职责。</li>
+        <li><code>src/engine/textrender.h</code> / <code>src/engine/client/text.cpp</code>：只放最小 engine 能力和 stats；<code>WarmGlyph</code> 进入公共接口前必须先完成 PoC 和 blast-radius 评估。</li>
+      </ul>
+      <h4>最小接口草案</h4>
+      <pre><code>class CQmRuntime
+{
+public:
+    void Init(...);
+    void Shutdown();
+    void TickMainThread(float BudgetMs);
+    CQmRuntimeMetrics *Metrics();
+    CQmWarmupManager *WarmupManager();
+};
+
+class CQmWarmupManager
+{
+public:
+    void Request(EQmWarmupTrigger Trigger, int Priority);
+    void CancelOwner(const char *pOwnerTag);
+    void TickMainThread(float BudgetMs);
+    SQmWarmupSnapshot Snapshot() const;
+};
+
+class CQmRuntimeMetrics
+{
+public:
+    void PublishFrameSnapshot();
+    SQmRuntimeMetricsSnapshot LatestSnapshot() const;
+};</code></pre>
+      <p>接口保持窄：外部只 request、tick、读 snapshot；具体 queue、dedupe、budget、epoch 和 owner cancellation 留在实现内部。这样可以避免把 runtime facade 变成新的全局 mutable service。</p>
+
+      <h3>Pillar 3.6：SDF/MSDF 与 Vulkan GPU text 调研报告</h3>
+      <p class="muted">2026-07-01 补充。用户提供的 ChatGPT share 链接当前只能访问到登录页，未能读取正文；本节只基于当前仓库代码、CodeGraph 和源码核对。</p>
+      <h4>当前代码事实</h4>
+      <ul>
+        <li><strong>当前文字是 FreeType bitmap atlas</strong>：<code>RenderGlyph</code> 调 <code>FT_Load_Glyph(... FT_LOAD_RENDER ...)</code> 得到灰度 bitmap，CPU 生成 fill/outline，随后 <code>UploadGlyph</code> 更新 text texture。</li>
+        <li><strong>当前 shader 是 bitmap alpha 合成</strong>：<code>data/shader/vulkan/text.frag</code> 采样 <code>gTextSampler</code> 和 <code>gTextOutlineSampler</code> 的 <code>.r</code> 作为 alpha，没有 distance field 计算。</li>
+        <li><strong>当前 Vulkan text 是独立 pipeline</strong>：Vulkan backend 通过 <code>CreateTextGraphicsPipeline("shader/vulkan/text.vert.spv", "shader/vulkan/text.frag.spv")</code> 创建 text pipeline；<code>Cmd_RenderText</code> 绑定 text pipeline、descriptor set、vertex/index buffer 后 draw。</li>
+        <li><strong>当前 text command 只表达 bitmap text</strong>：<code>SCommand_RenderText</code> 只带 buffer container、texture size、fill texture、outline texture、draw count、颜色；没有 render mode、distance range、MSDF median 参数或 glyph instance buffer。</li>
+        <li><strong>当前已有两套 icon 基础</strong>：Font Awesome icon font 走 <code>EFontPreset::ICON_FONT</code> 和普通 text renderer；QmClient 自己的 <code>CQmIconManager</code> 走 build-time SVG→PNG 多倍率 atlas，runtime 直接 PNG UV 绘制。</li>
+        <li><strong>当前仓库没有现成 SDF/MSDF 管线</strong>：源码和资源中未发现 SDF/MSDF shader、distance field atlas manifest 或 runtime SDF icon/text renderer。</li>
+      </ul>
+      <h4>路线拆分</h4>
+      <table>
+        <thead><tr><th>路线</th><th>解决什么</th><th>不解决什么</th><th>推荐位置</th></tr></thead>
+        <tbody>
+          <tr><td>Bitmap atlas + runtime 调度</td><td>首帧卡顿、glyph miss、container 首建、调度覆盖不足</td><td>大缩放文字/图标发糊</td><td>Phase B/B.5 当前主线</td></tr>
+          <tr><td>SDF/MSDF icon atlas</td><td>图标库缩放质量、未来 Tabler/Font Awesome 图标统一渲染</td><td>中文 settings 首帧卡顿、layout/container CPU 长尾</td><td>Phase E 前置 PoC，优先从 <code>CQmIconManager</code> 做</td></tr>
+          <tr><td>SDF/MSDF large-text atlas</td><td>ingame 放大后 HUD/nameplate/大字号 UI 文本发糊</td><td>小字号中文 hinting、CJK 首次 glyph 生成</td><td>Phase E PoC，只覆盖大字号/稳定文本</td></tr>
+          <tr><td>Vulkan-only GPU text</td><td>减少 Vulkan 路径 CPU text container/quad churn，探索长期复杂 UI 文本架构</td><td>OpenGL 兼容路径；未调度的首帧同步任务</td><td>Phase E+，独立 experimental backend</td></tr>
+        </tbody>
+      </table>
+      <h4>Vulkan-only 策略</h4>
+      <p>新鲜文本渲染功能优先只做 Vulkan：OpenGL 保留现有 bitmap atlas 兼容路径，不阻塞 Vulkan-only SDF/MSDF/GPU text 实验。文档和配置上必须把这类能力标成 <code>renderer=vulkan</code>，并提供 bitmap fallback，避免把兼容后端拖进长期架构实验。</p>
+      <h4>推荐 PoC 顺序</h4>
+      <ol>
+        <li><strong>Icon SDF/MSDF PoC</strong>：以 <code>CQmIconManager</code> 为入口，把现有 PNG atlas manifest 扩展为 <code>kind=bitmap|sdf|msdf</code>、<code>px_range</code>、<code>em_size</code>。新增 Vulkan-only icon distance shader；OpenGL/旧 renderer 继续用 PNG atlas。</li>
+        <li><strong>Large-text SDF PoC</strong>：只覆盖 HUD 数字、nameplate 超大字号、缩放后明显发糊的稳定文本。仍由主线程预算 tick 生成/上传 atlas，不允许可见帧同步生成。</li>
+        <li><strong>Vulkan GPU text container PoC</strong>：新增 Vulkan text render mode 和 command，不替换现有 <code>SCommand_RenderText</code>。目标是把稳定文本实例数据常驻 GPU，减少重复 container/quad buffer 生产；layout 仍先保留 CPU 侧。</li>
+      </ol>
+      <h4>验收标准</h4>
+      <ul>
+        <li><strong>质量</strong>：ingame 高缩放下大字号文本/图标边缘明显优于 bitmap；小字号中文不得比现有 FreeType bitmap 更糊。</li>
+        <li><strong>性能</strong>：PoC 不能增加首帧同步工作；所有 atlas 生成、上传、pipeline/descriptor 创建必须受 runtime budget 或 loading 阶段约束。</li>
+        <li><strong>调度</strong>：即使启用 SDF/MSDF/GPU text，<code>scheduler_coverage</code> 仍必须能解释 target window 中的 covered/uncovered work。</li>
+        <li><strong>后端</strong>：Vulkan-only 功能必须有 bitmap fallback；OpenGL 不实现新功能也不能破坏现有渲染。</li>
+        <li><strong>可维护</strong>：不能把 Font Awesome icon font、Qm PNG icon atlas、未来 SDF/MSDF icon atlas 三套入口继续无限分叉；PoC 成功后需要收敛到统一 Qm icon API。</li>
+      </ul>
+
+      <h3>Pillar 4：图形后端提前可行性</h3>
+      <p class="muted">基于 2026-06-20 完整代码调研（读 <code>backend_vulkan.cpp</code> 9269 行 + <code>backend_opengl.cpp</code> 2344 行 + <code>graphics_threaded.cpp</code> 4000 行 + <code>backend_sdl.cpp</code> graphics 线程）。<strong>方向：Vulkan 是主战场，OpenGL 暂缓。</strong> 详见 ⑧。</p>
+      <h4>4.1 Vulkan pipeline cache 与启动预热</h4>
+      <p class="muted">2026-07-01 codegraph + 源码核对补充。结论：Vulkan shader 已在构建期编译为 SPIR-V，但 QmClient 当前没有自有的持久化 <code>VkPipelineCache</code>；启动/重建 swapchain 时仍需要驱动创建 graphics pipeline。</p>
+      <ul>
+        <li><strong>不是运行时 GLSL 编译问题</strong>：<code>cmake/BuildVulkanShaders.cmake:83</code> 调 <code>glslangValidator</code> 输出 <code>.spv</code>，<code>text.frag/text.vert</code> 也在构建期生成 <code>data/shader/vulkan/text.*.spv</code>（行 115-117）。</li>
+        <li><strong>运行时读取的是 SPIR-V</strong>：<code>backend_vulkan.cpp:5274-5294</code> 的 <code>LoadShader</code> 从 storage 读取 <code>shader/vulkan/*.spv</code>，随后 <code>CreateShaderModule</code> 调 <code>vkCreateShaderModule</code>。</li>
+        <li><strong>当前 pipeline 创建未用 cache</strong>：<code>backend_vulkan.cpp:5484</code> 调 <code>vkCreateGraphicsPipelines(m_VKDevice, VK_NULL_HANDLE, ...)</code>；仓库源码未发现 <code>vkCreatePipelineCache</code> / <code>vkGetPipelineCacheData</code> / <code>vkDestroyPipelineCache</code> 接入。</li>
+        <li><strong>pipeline 创建集中在启动/重建路径</strong>：<code>InitVulkanSwapChain</code>（<code>backend_vulkan.cpp:6911</code>）在 render pass/framebuffer 后连续创建 prim、text、tile、quad、sprite 等 pipeline（行 6940-7000）。</li>
+      </ul>
+      <p><strong>架构方向：</strong>新增 Vulkan-only 的 <code>CQmVulkanPipelineCache</code>，由 Vulkan backend 拥有，不放进 OpenGL 兼容路径。它在 device 创建后、pipeline 创建前读取本机 cache blob；所有 <code>vkCreateGraphicsPipelines</code> 改为传入 cache handle；pipeline 创建后和 shutdown/device destroy 前用 <code>vkGetPipelineCacheData</code> 保存。</p>
+      <pre><code>启动顺序：
+Vulkan device ready
+  -> LoadPipelineCache(qmclient/cache/vulkan_pipeline/*.bin)
+  -> CreateGraphicsPipelines(cache_handle)
+  -> Publish pipeline_create_ms / cache_hit / cache_bytes
+  -> QmRuntime::RequestWarmup(Startup)
+  -> QmWarmupManager 按预算推进 glyph/page/text/icon warmup</code></pre>
+      <p><strong>cache key 必须保守：</strong>至少包含 QmClient build/cache version、renderer backend、<code>vendorID</code>、<code>deviceID</code>、<code>driverVersion</code>、<code>pipelineCacheUUID</code>、SPIR-V manifest/hash、MSAA/render pass format、pipeline layout schema、clip/dynamic mode、相关图形配置。缓存损坏、驱动变更或 key mismatch 时直接丢弃并重建，不能阻塞启动。</p>
+      <p><strong>和预热系统的关系：</strong>pipeline cache 只加速 graphics backend init，不缓存 UI page/glyph/text container 本身。cache miss 时，启动阶段不要同时把页面预热塞满主线程；应先完成 pipeline 创建并记录耗时，再让 <code>QmWarmupManager</code> 用较低 startup budget 推进。cache hit 时，warmup 可以按正常启动预算更早开始。</p>
+
+      <h3>Pillar 5：测试深化</h3>
+      <h4>现状</h4>
+      <ul>
+        <li>source-contract 测试形式主义多，断言字符串存在不能 catch 行为 bug</li>
+        <li>单元测试覆盖率优先，没有"为什么这个测试存在"的 intent</li>
+        <li>缺集成测试，gate 里跑不了渲染相关的东西</li>
+        <li>性能测试是 happy path，没覆盖 stress 场景</li>
+      </ul>
+      <h4>优化方向</h4>
+      <table>
+        <thead><tr><th>测试类型</th><th>问题</th><th>改造方向</th></tr></thead>
+        <tbody>
+          <tr><td>source-contract 测试</td><td>形式主义，断言字符串存在</td><td>改成行为断言（function call + output verification）</td></tr>
+          <tr><td>单元测试</td><td>无 intent 文档</td><td>每个测试加 intent 文档（说明它 catch 什么 bug）</td></tr>
+          <tr><td>集成测试</td><td>缺失</td><td>加 visual regression gate（reference screenshot + PSNR/SSIM）</td></tr>
+          <tr><td>性能测试</td><td>happy path</td><td>加 stress scenarios（大量 text、长列表、多语言切换）</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Pillar 6：scheduler/text pool 架构（最大问题）</h3>
+      <p>详见 <a href="#scheduler">⑦ scheduler/text pool 架构深读</a>。这是 v2 最重要的修正。</p>
+    </section>
+
+    <section class="card">
+      <h2 id="quantify">④ 量化系统脚本规划</h2>
+      <p class="muted">把 <code>qmclient_scripts/perf</code> 从"离线诊断工具"升级为"持续性能契约系统"。<span class="src-tag">源自 v1 第三节</span></p>
+
+      <h3>4.1 当前已落地能力</h3>
+      <ul>
+        <li>日志解析、百分位、尖峰检测、采样偏差检测；</li>
+        <li>FPS window 与 budget culprit 时间序列关联；</li>
+        <li>UI section 归因（<code>ui_section:&lt;stage&gt;</code>）取代 aggregate 归因；</li>
+        <li>offline HTML report 自包含。</li>
+      </ul>
+      <div class="note warn">
+        <strong>当前文件清单</strong>（2026-06-20 codegraph 验证）：<code>qmclient_scripts/perf/lib/</code> 只有 <code>quality.ts</code>、<code>stats.ts</code>、<code>report.ts</code>、<code>quality_core.ts</code>、<code>parse.ts</code>。v1 规划的下述模块<strong>尚未实现</strong>。
+      </div>
+
+      <h3>4.2 待补齐能力</h3>
+      <table>
+        <thead><tr><th>能力</th><th>目标</th><th>验收</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>操作级 FPS 基线</strong></td>
+            <td>为 <code>ingame_esc_open</code>、<code>settings_assets_tab_switch</code>、<code>settings_tab_switch</code> 等定义 p99/max/menuMax/1% low 阈值</td>
+            <td><code>quality.ts</code> 按操作独立 fail，report 渲染 baseline table</td>
+            <td><span class="badge bad">未实现</span></td>
+          </tr>
+          <tr>
+            <td><strong>回归对比模式</strong></td>
+            <td>给定两份同路径 log，输出 delta report（不是简单看最新 log）</td>
+            <td>CLI 支持 <code>analyze.ts --baseline &lt;log&gt;</code></td>
+            <td><span class="badge bad">未实现</span></td>
+          </tr>
+          <tr>
+            <td><strong>CI 输出格式</strong></td>
+            <td>让 gate 能消费 perf report 结论（JSON / JUnit / 纯文本摘要）</td>
+            <td><code>check_gate.py</code> 可调用 perf report 判定 verdict</td>
+            <td><span class="badge bad">未实现</span></td>
+          </tr>
+          <tr>
+            <td><strong>固定场景录制</strong></td>
+            <td>将"打开设置页→切 Tee tab→滚动一屏"等操作脚本化，产出稳定 log</td>
+            <td>新增 <code>qmclient_scripts/perf/scenarios/</code> 与操作清单</td>
+            <td><span class="badge bad">未实现</span></td>
+          </tr>
+          <tr>
+            <td><strong>backend 分离证据</strong></td>
+            <td>明确区分 UI/layout、text、GPU upload、backend render 四类成本</td>
+            <td>report 在 target window 中分别列出四类贡献</td>
+            <td><span class="badge warn">部分实现</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.3 新增脚本模块规划</h3>
+      <pre><code>qmclient_scripts/perf/
+├── lib/
+│   ├── baselines.ts          # 操作级阈值表与判定
+│   ├── compare.ts            # 双日志 delta / 回归检测
+│   └── ci.ts                 # JSON/JUnit 输出适配
+├── scenarios/
+│   ├── settings_tabs.json    # 操作路径、停留帧数、触发事件
+│   └── assets_scroll.json
+├── run_scenario.ts           # 读取 scenario + 启动 client + 收集 log
+└── analyze.ts                # 扩展：支持 --baseline、--ci-out</code></pre>
+
+      <h3>4.4 关键合同</h3>
+      <ul>
+        <li>新增字段必须有 TypeScript 单测 + C++ source-contract 测试；</li>
+        <li>阈值变更必须同步更新 report 的 KPI、verdict、图表；</li>
+        <li>所有 sample 来源必须标注 <code>fps_1pct_source=real_sampled</code> 或 <code>cap_limited</code>；</li>
+        <li>缺失数据一律显示 unavailable/N/A，禁止伪造成绩。</li>
+      </ul>
+
+      <h3>4.5 scheduler_coverage / budgeted_work / immediate_render 口径</h3>
+      <p class="muted">这是 v1 7.3 节提出的诊断口径，让低帧窗口能直接回答"这个成本是否受 scheduler 控制"。<span class="src-tag">源自 v1 第七节</span></p>
+      <table>
+        <thead><tr><th>新增口径</th><th>目的</th><th>示例字段</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>scheduler_coverage</code></td>
+            <td>区分窗口内成本是否进入 adaptive token 管理。</td>
+            <td><code>covered</code> / <code>partial</code> / <code>uncovered</code></td>
+          </tr>
+          <tr>
+            <td><code>budgeted_work_ms</code></td>
+            <td>汇总 assets、text prebuild、glyph/upload、demo metadata 等可预算工作。</td>
+            <td><code>text_ms</code>、<code>resource_upload_ms</code>、<code>metadata_layout_ms</code></td>
+          </tr>
+          <tr>
+            <td><code>immediate_render_ms</code></td>
+            <td>汇总 <code>general_page_total</code>、<code>function_tab_total</code>、<code>ingame_esc_button_column</code> 等未预算同步 UI。</td>
+            <td><code>top_immediate_stage</code>、<code>top_immediate_ms</code></td>
+          </tr>
+          <tr>
+            <td><code>first_frame_policy</code></td>
+            <td>标记首帧是否执行 shell-only / light path。</td>
+            <td><code>shell_only=1</code>、<code>light_path=1</code>、<code>deferred_modules=N</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2 id="ingame-prd">⑤ 游戏内 FPS PRD</h2>
+      <p class="muted">本节面向长期游戏内帧率、帧时间稳定性、画面撕裂/延迟权衡、粒子与 HUD 体验保留。目标是让 QmClient 在不要求用户关闭视觉效果的前提下，通过预算、裁剪、缓存、批处理和后端归因提高稳定 FPS。<span class="src-tag">源自 v1 第五节</span></p>
+
+      <h3>5.1 PRD：问题定义</h3>
+      <p>用户反馈的核心不是"某个特效能不能关"，而是：游戏内应保持流畅、输入延迟可控、画面不撕裂，同时粒子、拖尾、HUD、提示、QmClient/TClient 增强功能仍然可用。当前代码已有局部能力，但缺少统一的游戏内性能产品面、统一 optimizer 状态、和能解释"这一帧为什么慢"的后端/组件级归因。</p>
+
+      <table>
+        <thead><tr><th>用户问题</th><th>当前体验</th><th>产品目标</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>DDNet/QmClient 画面撕裂常见，开 VSync 又感觉延迟高</td>
+            <td>用户只能在撕裂和延迟之间手动取舍</td>
+            <td>提供可理解的 frame pacing 模式：低延迟、平衡、抗撕裂，并用 telemetry 解释 swap/sleep/vsync 成本。</td>
+          </tr>
+          <tr>
+            <td>粒子、拖尾、HUD 是体验，不希望靠关闭解决</td>
+            <td>部分功能高峰期可能造成帧时间尖峰</td>
+            <td>默认保留视觉效果，通过预算化、LOD、裁剪、分组批处理降低尖峰。</td>
+          </tr>
+          <tr>
+            <td>游戏内 FPS 和设置页首帧优化混在一起</td>
+            <td>report 容易只看到总桶或 UI 桶</td>
+            <td>分离 <code>perf/game_render</code>、<code>perf/render_backend</code>、<code>perf/effects</code>、<code>perf/hud</code>，明确是 CPU 渲染、GPU upload、后端 swap 还是文本问题。</td>
+          </tr>
+          <tr>
+            <td>Windows 高优先级是否有效不清楚</td>
+            <td>QmClient 当前只在启动时可选设置 high priority</td>
+            <td>升级为可开关、可恢复、可观测的 optimizer 子功能，并标注其收益边界。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>5.2 PRD：目标与非目标</h3>
+      <h4>目标</h4>
+      <ul>
+        <li>在不默认关闭粒子、拖尾、HUD、提示、增强渲染的前提下，降低游戏内 frame time p95/p99/max。</li>
+        <li>把 <code>CGameClient::OnRender()</code> 下的主要组件拆成可解释的阶段：map layers、particles、trails、HUD、nameplates、TClient/QmClient overlays、backend swap。</li>
+        <li>建立游戏内 optimizer：优先级、frame pacing、效果预算、可见区域裁剪、HUD 文本缓存都由统一状态和 telemetry 管理。</li>
+        <li>参考 BestClient 的已验证思路，但不直接照搬用户可见语义；只吸收"预算、上限、可见性裁剪、恢复机制"的工程模式。</li>
+      </ul>
+
+      <h4>非目标</h4>
+      <ul>
+        <li>不要求用户关闭粒子或 HUD 作为默认性能方案。</li>
+        <li>不改变 DDNet 协议、物理、预测、地图语义、rank 可达性。</li>
+        <li>不把 Vulkan/OpenGL 后端作为第一步大重构；后端改动必须由 telemetry 证明。</li>
+        <li>不把进程高优先级宣传为"FPS 优化主方案"；它只是调度辅助。</li>
+      </ul>
+
+      <h3>5.3 当前代码落点</h3>
+      <table>
+        <thead><tr><th>区域</th><th>当前代码依据</th><th>优化含义</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Windows 高优先级</td>
+            <td><code>config_variables_qmclient.h:16</code> 的 <code>qm_process_high_priority</code><span class="verified">codegraph 验证</span>；<code>src/engine/client/client.cpp</code> 启动时调用 <code>SetPriorityClass</code></td>
+            <td>已实现"启动一次设置"。长期应改成 optimizer runtime：开启时记录旧优先级，关闭时恢复，避免重复系统调用，输出成功/失败 telemetry。</td>
+          </tr>
+          <tr>
+            <td>游戏主渲染循环</td>
+            <td><code>CGameClient::OnRender()</code> 中遍历 <code>m_vpAll</code>，目前只对 menus 和 components_total 等少量阶段记录</td>
+            <td>需要 per-component / per-group stage，否则无法判断是粒子、HUD、TClient、map layers 还是 backend 慢。</td>
+          </tr>
+          <tr>
+            <td>粒子渲染</td>
+            <td><code>CParticles::RenderGroup()</code>（<code>particles.cpp:209</code><span class="verified">codegraph 验证</span>）已有 <code>ParticleIsVisibleOnScreen</code> 和 <code>RenderQuadContainerAsSpriteMultiple</code></td>
+            <td>已有批量基础；下一步不是关闭粒子，而是控制 spawn/update/render 数量、按组限流、记录 texture switch/draw count。</td>
+          </tr>
+          <tr>
+            <td>HUD / statusbar</td>
+            <td><code>statusbar.cpp</code> 有静态宽度缓存，但仍大量实时 <code>TextWidth</code>/<code>Text</code></td>
+            <td>把每帧变化值和稳定标签分开：稳定标签 text container 化，动态数值按变化/采样周期更新。</td>
+          </tr>
+          <tr>
+            <td>图形后端</td>
+            <td><code>CGraphics_Threaded</code> 有 command buffer、QuadContainer、Vulkan/OpenGL/GLES backend、VSync command</td>
+            <td>先增加 draw calls、texture binds、buffer uploads、swap wait、vsync wait 的统计，再按证据优化。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>5.4 参考项目：BestClient 可借鉴点</h3>
+      <p>BestClient 的实现证明，游戏客户端优化不等于减少功能，而是把功能工作量纳入预算。可借鉴的是工程模式，不是直接复制配置名或 UI。</p>
+      <table>
+        <thead><tr><th>BestClient 参考</th><th>观察</th><th>QmClient 可转化方案</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Optimizer priority</td>
+            <td>支持 DDNet 高优先级、Discord 降优先级，并缓存上次设置，避免每帧重复系统调用；关闭后恢复旧优先级。</td>
+            <td>把 <code>qm_process_high_priority</code> 从启动开关升级为 runtime optimizer 子功能，保留默认关闭和 Windows-only 边界。</td>
+          </tr>
+          <tr>
+            <td>FPS fog</td>
+            <td>按相机周围矩形/缩放百分比裁剪非必要渲染，并可选择 map tile culling。</td>
+            <td>QmClient 可先做"非关键视觉效果 fog"：粒子、拖尾、远端装饰、非交互 overlay 先裁剪；map tile culling 作为后续实验项。</td>
+          </tr>
+          <tr>
+            <td>3D particles</td>
+            <td>有最大渲染数、delta clamp、view margin、碰撞检查上限。</td>
+            <td>给 QmClient 粒子加 group budget：每组 spawn/update/render 上限，frame pressure 下自适应降采样，但不改变开关语义。</td>
+          </tr>
+          <tr>
+            <td>Trail / afterimage</td>
+            <td>限制采样数、跳变距离和历史帧数量。</td>
+            <td>TClient trails / afterimage 类功能按距离、速度、屏幕可见性控制采样密度，避免高速/多人时爆发。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>5.5 功能需求（FR-1 ~ FR-6）</h3>
+      <h4>FR-1：Runtime Optimizer 状态机</h4>
+      <ul>
+        <li>新增统一 optimizer 状态，不直接把每个优化散落在各组件开关里。</li>
+        <li>状态包含：<code>enabled</code>、<code>profile=quality|balanced|low_latency|performance</code>、<code>frame_pressure</code>、<code>backend_mode</code>、<code>effects_budget_scale</code>。</li>
+        <li>Windows 高优先级：开启时记录旧 priority，关闭时恢复；调用失败必须日志和 telemetry 可见；默认关闭。</li>
+        <li>禁止在 render hot path 每帧枚举系统进程；类似 BestClient 的 Discord 降优先级如果未来要做，必须节流到秒级并默认关闭。</li>
+      </ul>
+
+      <h4>FR-2：游戏内组件级 perf stage</h4>
+      <ul>
+        <li><code>CGameClient::OnRender()</code> 对主要组件输出稳定 stage：<code>component_particles_update</code>、<code>component_particles_render_group</code>、<code>component_hud</code>、<code>component_tclient</code>、<code>component_qmclient_overlay</code>、<code>component_nameplates</code>、<code>component_trails</code>、<code>component_map_layers</code>。</li>
+        <li>每个 stage 附带 <code>state</code>、<code>spectating</code>、<code>particles_visible</code>、<code>draw_calls_delta</code>、<code>texture_binds_delta</code> 等可选字段。</li>
+        <li>report 必须把游戏内 FPS 归因从 <code>components_total</code> 拆到具体组件，否则不能声称定位完成。</li>
+      </ul>
+
+      <h4>FR-3：粒子/拖尾保体验预算化（简化版，参见修正 5）</h4>
+      <ul>
+        <li>按 group 设置预算：general、extra、trail、explosion、background 等分别统计和限流。</li>
+        <li><strong>spawn budget</strong>：同一帧同一组最多新增 N 个；超过后按优先级丢弃低影响粒子或合并为更少粒子。</li>
+        <li><strong>update budget</strong>：视口外粒子降低更新频率；远端粒子可按 2–4 帧更新一次，但生命周期视觉上连续。</li>
+        <li><strong>render budget</strong>：超过 budget 时优先保留爆炸、命中、玩家附近粒子；背景/低 alpha/远端粒子优先降采样。</li>
+        <li><strong>不做</strong>玩法级碰撞预算系统，但必须保留 <code>m_Collides</code> 粒子的 <code>Collision()-&gt;MovePoint</code> 成本观测。</li>
+      </ul>
+
+      <h4>FR-4：HUD / TClient 文本与图元缓存</h4>
+      <ul>
+        <li>稳定标签：FPS、Ping、Velocity、Position 等 label 部分使用 text container 或 width cache。</li>
+        <li>动态值：按值变化或采样周期更新，例如网络统计、监控面板可 5–10Hz 更新，玩家坐标/速度仍按需要实时。</li>
+        <li>HUD icon/shape：优先使用已有 QuadContainer，减少每帧 <code>QuadsBegin/End</code>。</li>
+        <li>监控 overlay 默认不应成为 FPS 测试噪声；开启时单独输出 <code>perf/hud_monitoring</code>。</li>
+      </ul>
+
+      <h4>FR-5：Frame pacing 与抗撕裂模式</h4>
+      <ul>
+        <li>保留 DDNet 现有 <code>gfx_vsync</code>，但新增用户可理解的建议模式文案：低延迟、平衡、抗撕裂。</li>
+        <li>低延迟模式：VSync off，支持 FPS cap 建议值（例如显示器刷新率的 2x/3x 或略高于刷新率），重点减少输入延迟。</li>
+        <li>平衡模式：VSync off + 稳定 frame cap + frame pacing 观测，目标降低撕裂感和 sleep 抖动。</li>
+        <li>抗撕裂模式：VSync on 或后续支持 adaptive vsync/late swap；明确提示可能增加输入延迟。</li>
+        <li>telemetry 必须区分：render CPU 时间、sleep wait、swap/vsync wait、GPU upload wait。</li>
+      </ul>
+
+      <h4>FR-6：图形后端统计与条件优化</h4>
+      <ul>
+        <li>新增后端统计：每帧 draw calls、texture binds、quad container renders、buffer uploads、text texture updates、swap 耗时。</li>
+        <li>OpenGL/Vulkan 分别输出 backend name 和 capability：<code>quad_container_buffering</code>、<code>text_buffering</code>、<code>tile_buffering</code>。</li>
+        <li>只有当 report 显示 backend-bound 时，才进入 UI atlas、ring buffer、scissor batching、async upload 等后端优化。</li>
+      </ul>
+
+      <h3>5.6 技术规格草案</h3>
+      <pre><code>system=perf/game_render
+  stage=component_particles_update group=N active=N updated=N skipped=N ms=...
+  stage=component_particles_render group=trail visible=N rendered=N culled=N texture_binds=N draw_calls=N ms=...
+  stage=component_hud labels=N text_cache_hits=N text_cache_misses=N quad_containers=N ms=...
+  stage=component_tclient substage=statusbar|trails|vote|focus_mode ms=...
+  stage=component_map_layers fps_fog=0/1 tiles_culled=N quads=N ms=...
+
+system=perf/render_backend
+  stage=frame_submit backend=OpenGL|Vulkan draw_calls=N texture_binds=N buffer_uploads=N
+  stage=graphics_swap vsync=0/1 swap_ms=... wait_ms=...
+  stage=gpu_upload kind=glyph|texture|quad_container bytes=N count=N budget=N
+  stage=vulkan_pipeline_cache action=load|create|save enabled=0/1 hit=0/1 valid=0/1 bytes=N pipelines=N ms=...
+
+system=perf/optimizer
+  stage=priority windows=1 requested=high previous=normal applied=1 error=0
+  stage=frame_pressure profile=balanced fps=... frame_ms_p95=... effects_budget_scale=...
+  stage=fps_fog enabled=1 mode=radius radius_tiles=N visual_only=1 map_tiles=0</code></pre>
+
+      <h3>5.7 验收指标</h3>
+      <table>
+        <thead><tr><th>指标</th><th>目标</th><th>验收方式</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>游戏内 p99 frame time</td>
+            <td>开启默认视觉效果时，相同地图/人数/视角下 p99 明显下降，max spike 可解释</td>
+            <td>固定 scenario 生成新旧 report 对比；不能用旧 log 证明完成。</td>
+          </tr>
+          <tr>
+            <td>粒子体验</td>
+            <td>默认配置不减少用户可见功能；frame pressure 下只做低影响降采样</td>
+            <td>视觉检查 + <code>particles_spawn_dropped_by_budget</code>、<code>particles_render_culled</code> 可观测。</td>
+          </tr>
+          <tr>
+            <td>高优先级模式</td>
+            <td>开启/关闭都可恢复；失败可诊断；默认关闭</td>
+            <td>source-contract 测试 + Windows 实跑日志。</td>
+          </tr>
+          <tr>
+            <td>后端归因</td>
+            <td>report 能回答"慢在 CPU 渲染、GPU upload、swap/vsync、还是 UI/text"</td>
+            <td><code>perf/render_backend</code> 字段完整，report 有 backend contribution 区块。</td>
+          </tr>
+          <tr>
+            <td>HUD/TClient 缓存</td>
+            <td>稳定标签不再每帧重复计算宽度和创建文本资源</td>
+            <td>text cache hit/miss、statusbar stage 耗时、TextWidth 调用计数下降。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>5.8 推进顺序</h3>
+      <ol>
+        <li><strong>先补归因</strong>：组件级 stage + 后端统计，不先改行为。</li>
+        <li><strong>再做低风险缓存</strong>：HUD/statusbar 稳定文本、QuadContainer 复用、监控 overlay 降采样。</li>
+        <li><strong>再做效果预算</strong>：粒子/拖尾按组预算、视口外降频。</li>
+        <li><strong>再做 optimizer 产品化</strong>：高优先级 runtime 状态、frame pacing 模式、FPS fog 实验项。</li>
+        <li><strong>最后做后端改造</strong>：只有 report 证明 backend-bound 后才动 OpenGL/Vulkan 层。</li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2 id="first-frame">⑥ UI 首帧专项指南</h2>
+      <p class="muted">本节补充 2026-06-19 的 UI 首帧卡顿分析：当前短期问题不是单纯"文本渲染慢"，而是首帧同步工作分配不当、文本计划覆盖不足、以及热点功能模块在首帧构建过多控件。<span class="src-tag">源自 v1 第六节</span></p>
+
+      <h3>6.1 ESC 首帧：可以复用文本池缓存，但不能首帧补齐缓存</h3>
+      <p>当前 ESC 打开入口在 <code>src/game/client/components/menus.cpp</code> 的 <code>CMenus::OnRender()</code>。正确策略是：打开 <code>PAGE_GAME</code> 首帧只使用 ingame 文本池里已经 ready 的文本容器；如果命中失败，只允许排队到后续帧预算 drain，不允许为了"让缓存可用"在首帧同步创建 text container 或 paragraph layout。</p>
+      <div class="note warn">
+        <strong>不可访问崩溃的根因边界：</strong>文本池复用本身不是问题；风险来自未注册/未 ready 的 <code>CUIElement::SUIElementRect</code>、已失效 text container、或 cache miss 后仍直接访问 Rect/container。防线应放在渲染入口：ready 才渲染，miss 只入队，必要时用极小范围 immediate fallback 显示关键 chrome。
+      </div>
+      <table>
+        <thead><tr><th>路径</th><th>允许</th><th>禁止</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>ingame_esc_open</code> / <code>PAGE_GAME</code> 首帧</td>
+            <td>复用 <code>MENU_TEXT_SCOPE_INGAME</code> 中已有 ready container；预构建少量固定 tab/button 文本；渲染旧缓存或关键按钮 fallback</td>
+            <td>同步调用 server info 文本准备；同帧强制 <code>DrainIngameUiTextRuntime(true)</code>；创建 MOTD paragraph container</td>
+          </tr>
+          <tr>
+            <td>进入 <code>PAGE_SERVER_INFO</code></td>
+            <td>触发 <code>PrepareIngameServerInfoTextRuntime()</code>，并用预算 drain 准备 snapshot text / MOTD paragraph</td>
+            <td>在 render 函数里直接 <code>TextRender()-&gt;RecreateTextContainer</code> 或绕过预算同步 layout</td>
+          </tr>
+          <tr>
+            <td>帧尾 <code>ingame_text_runtime_drain</code></td>
+            <td>只在当前页相关时按 token drain；没有 server info 可见需求时只 drain 已有 snapshot 队列</td>
+            <td>因为存在 MOTD 就后台同步 prepare server info，导致 Esc 首帧背锅</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>6.2 文本池命中率：不要把 fallback 当优化成果</h3>
+      <p><code>fallbackImmediate</code> 和 <code>unplannedVisibleCount</code> 高时，优先解释为"计划收集覆盖率不足"或"style key/page/tab/subtab 不一致"，而不是文本池没用。文本池正确路线是提高 plan collection 覆盖，保证首帧可见文本先有 descriptor，再由预算化 prebuild/drain 建好 container。</p>
+      <ul>
+        <li>普通 settings 文本：cache miss 只入队，不能扩大 immediate fallback。</li>
+        <li>ingame 关键 chrome：tab、按钮、标题允许极小范围 fallback，避免不可读。</li>
+        <li>动态文本：服务器名、玩家名、资源标题应走 snapshot/LRU 类缓存，不纳入 static stable 文本命中率分母。</li>
+        <li>验收口径：<code>planCollectionComplete=true</code>、<code>unplannedVisibleCount</code> 下降、<code>fallbackImmediate</code> 只保留在白名单 chrome。</li>
+      </ul>
+
+      <h3>6.3 QmClient Functions：首帧轻量路径优先级</h3>
+      <p>当前 functions 页热点集中在 <code>pie_menu</code>、<code>block_words</code>、<code>gores</code>。这些主要是功能 UI 构建问题，不是通用文本渲染问题。当前代码已具备 <code>FunctionFirstFrameLightPath</code> / <code>function_first_frame_light_path</code> 形态，应把它固化成长期规则。</p>
+      <table>
+        <thead><tr><th>模块</th><th>首帧只做</th><th>延后到后续帧</th><th>建议 stage</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>pie_menu</code></td>
+            <td>卡片壳、标题、启用开关</td>
+            <td>扇形预览、颜色 picker、图标/标签循环、reset 控件</td>
+            <td><code>pie_menu_layout</code>、<code>pie_menu_controls</code>、<code>pie_menu_preview_draw</code></td>
+          </tr>
+          <tr>
+            <td><code>block_words</code></td>
+            <td>标题、启用开关、控制台显示开关</td>
+            <td>颜色控件、多行输入高度计算、输入同步、长列表解析</td>
+            <td><code>block_words_layout</code>、<code>block_words_controls</code>、<code>block_words_list_sync</code></td>
+          </tr>
+          <tr>
+            <td><code>gores</code></td>
+            <td>标题、核心开关</td>
+            <td>绑定查询、key reader、密码输入框、条件分支控件</td>
+            <td><code>gores_layout</code>、<code>gores_controls</code>、<code>gores_bind_lookup</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>6.4 DDNet / Controls / TClient / HUD：先拆桶，再优化</h3>
+      <p>当前 <code>settings_page_content</code> 仍是太大的归因桶。长期规则是每个设置页至少拆出 shell、section/list、interactive layer、text/cache layer。TClient 已有 <code>LogTClientPerfStageEx()</code> 模式，可作为其他页面的参照。</p>
+      <ul>
+        <li><strong>DDNet</strong>：拆 <code>ddnet_demo_section</code>、<code>ddnet_gameplay_section</code>、<code>ddnet_controls_section</code>、<code>ddnet_text_cache</code>。</li>
+        <li><strong>Controls</strong>：入口是 <code>CMenusSettingsControls::Render()</code>，拆 search/reset、bind list、mouse/controller、interactive、text cache。</li>
+        <li><strong>TClient</strong>：保留现有 <code>tclient_*_layout/list/buttons</code> 风格，补齐 tab 3/4/5 没覆盖到的 shell 和 section。</li>
+        <li><strong>HUD</strong>：Appearance HUD 分支拆 core HUD、DDRace HUD、dummy/key status、freeze bars，避免继续落到 <code>settings_page_content</code>。</li>
+      </ul>
+
+      <h3>6.5 当前热点性质判定</h3>
+      <table>
+        <thead><tr><th>热点</th><th>性质</th><th>优先动作</th></tr></thead>
+        <tbody>
+          <tr><td><code>ingame_esc_open</code></td><td>调度/首帧预算问题，夹杂 server info 文本 runtime</td><td>首帧禁止 server info prepare，同页相关 drain，缓存 ready 才渲染</td></tr>
+          <tr><td><code>pie_menu</code></td><td>功能 UI 绘制与预览构建问题</td><td>首帧轻量路径 + 预览绘制单独 stage</td></tr>
+          <tr><td><code>block_words</code></td><td>输入控件/列表同步问题</td><td>输入同步预算化，长文本高度缓存</td></tr>
+          <tr><td><code>gores</code></td><td>绑定查询与复杂控件构建问题</td><td>绑定 cache 化，key reader 延后</td></tr>
+          <tr><td><code>fallbackImmediate</code></td><td>文本计划覆盖问题</td><td>单独修 plan collection，不和模块热点混改</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2 id="scheduler">⑦ scheduler/text pool 架构深读</h2>
+      <p class="muted">这是 v2 最重要的修正。2026-06-19 的原始调研指出 scheduler 不通用；2026-06-20 codegraph 复核当前 HEAD 后，service 化已落地，同步 fallback 已按 uncovered telemetry 进入 gate；text pool 双路径和更细耗时归因仍是后续风险。<span class="src-tag">源自 v2 第四节</span></p>
+
+      <h3>7.1 Scheduler 架构问题</h3>
+
+      <h4>7.1.1 当前工作模型：纯 opt-in，不是自动发现</h4>
+      <p>当前调度器已经是 <code>IFrameScheduler</code> kernel service（<code>frame_scheduler.h:26</code><span class="verified">codegraph 验证</span>），<code>CFrameScheduler</code> 实现在 <code>frame_scheduler.cpp:9</code>。<code>CGameClient::OnRender</code> 已调用 <code>BeginFrame</code> / <code>EndFrame</code>，不再是 <code>CMenus</code> 私有 state。但 consumer 仍是显式 opt-in：只有调用 <code>GameClient()-&gt;FrameScheduler()-&gt;ComputeBudget(...)</code> 的路径才受控，未接入的 immediate-mode fallback 不会自动限流。</p>
+
+      <h4>7.1.2 不通用的具体表现（代码事实）</h4>
+      <ol>
+        <li><strong>consumer 仍需手动接入</strong>：service 已统一 state，但没有自动发现机制；新路径必须明确选择 <code>EFrameSchedulerConsumer</code> 并调用 <code>ComputeBudget</code>。</li>
+        <li><strong>覆盖语义仍需继续细化</strong>：demos/assets/settings/ingame server info 已有部分 consumer；但这不等于所有 text/layout work 都被 budget 约束。</li>
+        <li><strong>同步 fallback 已显式归类</strong>：<code>DoIngameMenuLabel</code>（<code>menus.cpp:4598</code><span class="verified">codegraph 验证</span>）系列保留首帧可见 fallback，但已通过 <code>fallback_immediate</code> / <code>scheduler_coverage=uncovered</code> 进入 perf gate。</li>
+        <li><strong>跨场景继承策略未定义</strong>：service 内部已有 per-consumer state，但 settings / ingame / assets / demo 的 HealthyFrames/Window 是否应该继承或隔离仍需 profile 决定。</li>
+        <li><strong>fallback 语义已可观测但仍需压低</strong>：<code>RequestMenuTextContainerBuild</code> 当 token ≤ 0 直接返回 false，drain 队列可能堆积；当前先把用户实际看到的同步 fallback 计入 uncovered，Phase B 再按场景量化阈值和耗时。</li>
+      </ol>
+
+      <h4>7.1.3 与业界对比</h4>
+      <table>
+        <thead><tr><th>业界做法</th><th>是否有"plan collection"概念</th><th>失效机制</th></tr></thead>
+        <tbody>
+          <tr><td>Dear ImGui</td><td>❌ 没有，每帧重建</td><td>声明即渲染，无状态分歧</td></tr>
+          <tr><td>Unreal UMG / Slate</td><td>❌ 没有，retained widget tree</td><td><code>Invalidate(EInvalidateWidgetReason)</code> 精粒度</td></tr>
+          <tr><td>Qt QML</td><td>❌ 没有，scene graph batch</td><td>属性变更信号触发</td></tr>
+          <tr><td><strong>QmClient 当前</strong></td><td>✅ 三阶段分离（plan→prebuild→visible）</td><td>Generation bump + dirty 标志</td></tr>
+        </tbody>
+      </table>
+      <p><strong>核心洞察</strong>：业界都没有"先收集 plan、再后台 prebuild、再 visible 命中"这种三阶段分离。QmClient 实际上试图把 immediate-mode UI 拆成两个虚拟执行路径，但 immediate-mode 的强项（声明即渲染、无状态分歧）被这个拆分破坏了。</p>
+
+      <h3>7.2 Stable Text Pool 架构问题</h3>
+
+      <h4>7.2.1 key mismatch 的剩余风险（设计层面，不只是 bucket bug）</h4>
+      <p>mismatch 的判定是 <code>HasDescriptor && !KeyPlanned</code>。历史根因之一是 plan 收集时算的 Rect 用 <code>MenuTextSettingsContentView(Screen)</code>（重放路径），visible 渲染时算的 Rect 用真实 <code>MainView</code>，两者亚像素差异再被过细 MaxWidthBucket 放大。当前 <code>BuildMenuTextStyleKey</code>（<code>menus.cpp:287</code><span class="verified">codegraph 验证</span>）已改为 4px bucket，亚像素抖动已缓解；剩余风险是 plan collection 重放路径本身仍可能和 visible 路径分歧。</p>
+      <div class="note bad">
+        <strong>这是设计层面问题</strong>：plan collection 试图"重放渲染"但重放路径不可能和真实路径完全一致（UI 状态、time-based 动画、scroll position、tab 切换瞬间都不一样）。
+      </div>
+
+      <h4>7.2.2 双重记账根因（设计 bug + 实现 bug 组合）</h4>
+      <ul>
+        <li><strong>历史问题</strong>：guard 曾假设全帧只有一次 guard，违反 RAII 可组合性。</li>
+        <li><strong>当前状态</strong>：guard（<code>CScopedMenuTextVisibleGuard</code>，构造 <code>menus.cpp:4975</code> / 析构 <code>menus.cpp:5009</code><span class="verified">codegraph 验证</span>）已保存 previous 状态，最外层负责清零/输出，析构恢复 previous，具备栈式语义。</li>
+        <li><strong>剩余风险</strong>：后续新增 guard 时必须保持同样的栈式契约，并用行为测试锁住 nested guard 语义。</li>
+      </ul>
+
+      <h3>7.3 三个改造方向</h3>
+
+      <h4>方向 A（当前短期）：收口已 service 化 scheduler 的覆盖语义</h4>
+      <ul>
+        <li><strong>工程量</strong>：小-中（service 已存在，主要是补覆盖、telemetry 和测试）</li>
+        <li><strong>收益</strong>：让 5-8 个固定 consumer 的覆盖范围可解释，避免"token 算了但同步 fallback 照跑"。</li>
+        <li><strong>风险</strong>：当前魔法数（threshold 1.35x、HealthyFrames=2 等）需重新调参</li>
+        <li><strong>关键边界</strong>：5-8 个固定 consumer，service 内部硬编码 list，<strong>不要完全动态注册</strong>（避免 microservice 反模式）</li>
+      </ul>
+
+      <h4>方向 B（长期）：删除 plan collection 双路径</h4>
+      <ul>
+        <li><strong>工程量</strong>：中-大（删除约 15+ 个 <code>m_SettingsMenuTextPlan*</code> 成员，但代码净减）</li>
+        <li><strong>收益</strong>：自动消除 key mismatch（不再有两套 key 路径）；自动消除双重记账（不再需要 visible guard 区分）；新加 tab/页面零接入成本</li>
+        <li><strong>风险</strong>：失去"planned vs unplanned"区分能力；失去对"invisible-but-planned"的预热能力</li>
+        <li><strong>前置 PoC</strong>：临时短路 <code>BuildVisibleSettingsMenuTextPlan</code> / <code>PrebuildSettingsMenuTextPool</code>，跑 perf benchmark；如果差异 &lt;5%，方向 B 可直接执行</li>
+      </ul>
+
+      <h4>方向 C（短期止痛）：局部修复</h4>
+      <ul>
+        <li><strong>MaxWidthBucket</strong>：已改为 4 像素粒度；后续只需继续观测 key mismatch 是否接近 0。</li>
+        <li><strong>guard 栈式语义</strong>：已具备 previous/restore 语义；后续用测试防止退化。</li>
+        <li><strong>工程量</strong>：小（1-2 天）</li>
+        <li><strong>风险</strong>：这些局部修复治标不治本，plan collection 双路径复杂度仍在</li>
+      </ul>
+
+      <h3>7.4 综合建议</h3>
+      <p>推荐 <strong>C 短期止痛 → A 中期重构 → B 长期简化</strong> 的组合路径。</p>
+      <div class="note ok">
+        <strong>不要为了"通用"把 scheduler 设计成完全动态注册式 microservice</strong>。QmClient 是单线程游戏 client，过度抽象（generic token consumer 注册）反而引入间接调用成本和调试难度。方向 A 的边界应该是"5-8 个固定 consumer，service 内部硬编码 list"。
+      </div>
+      <div class="note warn">
+        <strong>方向 B 不是"完全 ImGui 化"</strong>——DDNet 的 <code>CUi</code>/<code>CUIElement</code> 是 retained-mode（CUIElement 跨帧存活），完全 ImGui 化需要重写 UI 框架，工作量超出 QmClient 范围。方向 B 是"保留 CUIElement 但删除 plan collection 这层"。
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 id="backend">⑧ 图形后端可行性</h2>
+      <p class="muted">详细分析基于 2026-06-20 完整代码调研（读 <code>backend_vulkan.cpp</code> 9269 行 + <code>backend_opengl.cpp</code> 2344 行 + <code>graphics_threaded.cpp</code> 4000 行 + <code>backend_sdl.cpp</code> graphics 线程）。纠正 6/18 命中率核验文档里的多处错误判断。<strong>方向：Vulkan 主战场，OpenGL 暂缓。</strong><span class="src-tag">源自 v2 第五节，行号已按 codegraph 修正</span></p>
+
+      <h3>8.1 现状（重新核实）</h3>
+      <ul>
+        <li><strong>真 graphics 线程</strong>：<code>CGraphicsBackend_Threaded</code>（<code>backend_sdl.cpp:84</code><span class="verified">codegraph 验证</span>）的 <code>ThreadFunc</code>（<code>backend_sdl.cpp:54</code><span class="verified">codegraph 验证</span>）独立线程跑 GPU 命令，mutex + condition_variable 同步，双缓冲 pipeline（<code>m_apCommandBuffers[2]</code>）。仅 Emscripten 退化到单线程。</li>
+        <li><strong>Vulkan backend 5 项基础优化已实现</strong>（"已实现"≠"已最优"）：
+          <ul>
+            <li>✅ <strong>持久映射 ring buffer</strong>：<code>CreateStreamBuffer</code>（<code>backend_vulkan.cpp:7157</code><span class="verified">codegraph 验证</span>），一次 <code>vkMapMemory</code>（行 <strong>7196</strong><span class="verified">codegraph 验证</span>），按 <code>m_CurImageIndex</code> 分桶；<code>HOST_VISIBLE | HOST_CACHED</code> + 显式 <code>FlushMappedMemoryRanges</code>（行 7559-7561）</li>
+            <li>✅ <strong>staging buffer + device local memory 两阶段上传</strong>：<code>CreateImage(OPTIMAL)</code> + <code>vkCmdCopyBufferToImage</code></li>
+            <li>✅ <strong>内存子分配器</strong>：<code>SMemoryBlockCache</code> + <code>SMemoryHeap</code></li>
+            <li>✅ <strong>多线程 command buffer 录制</strong>：默认 on（<code>gfx_render_thread_count=3</code>，<code>config_variables.h:832</code><span class="verified">codegraph 验证</span>），clamp 到 [3, hardware_concurrency]。<strong>但 AMD GPU 强制设为 1</strong>（<code>backend_vulkan.cpp:9122-9123</code><span class="verified">codegraph 验证</span>："forcing single-threaded rendering on AMD to avoid driver crashes with dynamic viewport usage"）</li>
+            <li>✅ <strong>详尽内置 frame profiler</strong>：<code>SFrameProfileStats</code> 结构定义在行 <strong>969-1078</strong>（<code>m_FrameProfileStats</code> 实例行 1094<span class="verified">codegraph 验证</span>），包含 <code>m_CPUQueueSubmitTime</code>（行 1014）、<code>m_FenceWaits</code>（行 1005）、<code>m_CPUCommandPrepareTime</code>（行 1010）、<code>m_MainCommandRecords</code>（行 971）等 —— <strong>未暴露到客户端 perf report</strong></li>
+          </ul>
+        </li>
+        <li><strong>Vulkan 同步原语真相</strong>（纠正 6/18 误判）：<span class="verified">codegraph 验证</span>
+          <ul>
+            <li><code>vkQueueWaitIdle</code> / <code>vkDeviceWaitIdle</code> 包装函数在行 <strong>7653</strong> / <strong>7662</strong>；<code>DeviceWaitIdle()</code> 的 4 个调用者（行 <strong>1791</strong> 内存恢复、<strong>6307</strong> RecreateSwapChain、<strong>7884</strong> Cmd_Shutdown、<strong>9079</strong> WindowDestroyNtf）<strong>全在 shutdown / swapchain recreate / surface destroy / 内存恢复路径</strong>，<strong>不是帧热路径</strong></li>
+            <li><code>vkWaitForFences</code> 行 <strong>7644</strong><span class="verified">codegraph 验证</span> 是每帧开始的标准 N-buffer swapchain image fence 等待，是必要同步不是浪费</li>
+            <li><code>vkMapMemory</code>（行 1526、1860、1921、7196）是 buffer/stream buffer 创建时一次性调用，非每帧 map/unmap</li>
+          </ul>
+        </li>
+        <li><strong>OpenGL backend 严重落后</strong>（暂缓优化）：无 PBO、无 <code>glMapBufferRange</code>、无 persistent mapping、无 staging buffer、无内存子分配器；纹理上传直接 <code>glTexImage2D</code>，缓冲上传 <code>glBufferData/glBufferSubData</code>。<strong>用户决策：OpenGL 放放，先优化 Vulkan 和其他方向。</strong></li>
+      </ul>
+
+      <h3>8.2 优化方向速查表（Vulkan 优先，按收益重排）</h3>
+      <table>
+        <thead><tr><th>方向</th><th>现状</th><th>优先级</th><th>工程量</th><th>收益</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>暴露 Vulkan 内置 frame profiler 到 perf report</strong></td>
+            <td>已有详尽字段（<code>SFrameProfileStats</code> 行 969-1078），未暴露到客户端。当前无法判断是否 GPU-bound</td>
+            <td><span class="badge ok">P0</span></td>
+            <td>低</td>
+            <td><strong>高</strong>——所有后续优化的前置基线</td>
+          </tr>
+          <tr>
+            <td><strong>UI 层推广 QuadContainer</strong></td>
+            <td>47 个文件用 <code>QuadsBegin/End</code>，仅 14 个用 <code>RenderQuadContainer</code>。每次 <code>QuadsEnd</code> 触发主线程顶点 transform + 命令写入</td>
+            <td><span class="badge ok">P0</span></td>
+            <td>中（纯上层，可逐 widget 迁移）</td>
+            <td><strong>高</strong>——CPU 侧主瓶颈之一，对 Vulkan/OpenGL 都有效</td>
+          </tr>
+          <tr>
+            <td><strong>AMD GPU 多线程录制 fallback 替代方案</strong></td>
+            <td>行 9122-9123 AMD 强制 <code>m_ThreadCount = 1</code>（dynamic viewport 驱动崩溃 workaround）</td>
+            <td><span class="badge warn">暂缓</span></td>
+            <td>—</td>
+            <td>—（用户无 AMD 测试环境，暂不做）</td>
+          </tr>
+          <tr>
+            <td><strong>Vulkan Descriptor set / Pipeline cache 优化</strong></td>
+            <td>已确认当前 <code>vkCreateGraphicsPipelines</code> 传 <code>VK_NULL_HANDLE</code>，无 QmClient 自有持久化 <code>VkPipelineCache</code>；descriptor 仍需 profile</td>
+            <td><span class="badge warn">P1</span></td>
+            <td>中</td>
+            <td>中-高（pipeline cache 可先做低风险 PoC；descriptor 需 frame profiler 暴露后定位）</td>
+          </tr>
+          <tr>
+            <td><strong>scissor batching</strong>（合并同 clip draw call）</td>
+            <td>当前每个 clip 独立 <code>ClipEnable</code> 命令，无自动合并</td>
+            <td><span class="badge warn">P1</span></td>
+            <td>中（在 <code>AddCmd</code> 层做）</td>
+            <td>中-高</td>
+          </tr>
+          <tr>
+            <td><strong>glyph atlas memcpy 优化</strong></td>
+            <td>每次扩容主线程 malloc 整块 + <code>mem_copy</code>（<code>graphics_threaded.cpp:1160</code><span class="verified">codegraph 验证</span>）</td>
+            <td><span class="badge warn">P1</span></td>
+            <td>中</td>
+            <td>中</td>
+          </tr>
+          <tr>
+            <td><strong>HOST_CACHED vs HOST_COHERENT 按 vendor 适配</strong></td>
+            <td>当前固定 <code>HOST_VISIBLE | HOST_CACHED</code> + 显式 flush。Intel iGPU 上 <code>HOST_COHERENT</code> 可能更快</td>
+            <td><span class="badge warn">P2</span></td>
+            <td>低-中</td>
+            <td>低-中（依赖 frame profiler 实测）</td>
+          </tr>
+          <tr>
+            <td><strong>pipeline 深度 2 → 3</strong></td>
+            <td>双缓冲；多处显式 <code>WaitForIdle</code> 阻塞主线程</td>
+            <td><span class="badge warn">P2</span></td>
+            <td>低-中</td>
+            <td>中（多 1 帧延迟换 CPU/GPU 重叠）</td>
+          </tr>
+          <tr>
+            <td><strong>UI 专用 texture atlas</strong></td>
+            <td>sprite 和游戏纹理混合</td>
+            <td><span class="badge warn">P2</span></td>
+            <td>中-高</td>
+            <td>中（DDNet 实际切换不多）</td>
+          </tr>
+          <tr><td colspan="5"><strong>Vulkan 已实现的基础优化（不要再做）</strong>：</td></tr>
+          <tr><td>持久映射 ring buffer</td><td colspan="4">✅ <code>CreateStreamBuffer</code>（行 7157），<code>HOST_VISIBLE | HOST_CACHED</code> + 显式 flush</td></tr>
+          <tr><td>staging buffer + device local 两阶段上传</td><td colspan="4">✅ Vulkan 已实现</td></tr>
+          <tr><td>内存子分配器</td><td colspan="4">✅ <code>SMemoryHeap</code></td></tr>
+          <tr><td>多线程 command buffer 录制</td><td colspan="4">✅ 默认 on（除 AMD 强制 1）</td></tr>
+          <tr><td colspan="5"><strong>明确不做</strong>：</td></tr>
+          <tr><td>Vulkan backend 推倒重写</td><td colspan="4">❌ 5 项基础已对，做具体优化即可</td></tr>
+          <tr><td>OpenGL backend 补 staging/PBO</td><td colspan="4">❌ <strong>暂缓</strong>（用户决策：先优化 Vulkan 和其他方向）</td></tr>
+          <tr><td>多 backend 统一抽象</td><td colspan="4">❌ 投入大、回归风险高</td></tr>
+          <tr><td>render graph / frame graph</td><td colspan="4">❌ DDNet pass 数量很少</td></tr>
+          <tr><td>3D 引擎优化（indirect draw、GPU-driven pipeline）</td><td colspan="4">❌ DDNet 是 2D tile-based</td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <strong>第一件事</strong>：暴露 Vulkan 内置 frame profiler（建立 GPU-bound 判断基线）+ 给 UI 渲染路径加 telemetry（QuadsBegin/End vs RenderQuadContainer 调用频次和耗时）。在拿到实际 profile 数据之前，不预设优化方向。
+      </div>
+      <div class="note warn">
+        <strong>已知但暂缓：AMD 单线程 fallback</strong>——<code>backend_vulkan.cpp:9122-9123</code> 强制 AMD GPU <code>m_ThreadCount = 1</code>（dynamic viewport 驱动崩溃 workaround）。<strong>用户决策：暂缓</strong>（本地无 AMD 测试环境）。
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 id="text">⑨ 文本渲染真因与字频采集</h2>
+      <p class="muted">详细分析见 Pillar 3。这里给纯英文卡顿真因排除表 + 真实 UI 字频采集方案。<span class="src-tag">源自 v2 第六节 + v1 第六节 5.3</span></p>
+
+      <h3>9.1 纯英文卡顿真因排除表</h3>
+      <table>
+        <thead><tr><th>候选根因</th><th>业界判断</th><th>适配 QmClient</th><th>验证方式</th></tr></thead>
+        <tbody>
+          <tr><td>每帧重建 text container / quad buffer</td><td>ImGui 经典问题，持久 buffer + arena 规避</td><td><span class="badge bad">最高嫌疑</span></td><td>profile per-frame alloc 次数</td></tr>
+          <tr><td>Paragraph layout / wrap / word-break 每帧重算</td><td>Qt/Unreal 都做 layout 缓存层</td><td><span class="badge bad">高匹配</span></td><td>profile paragraph_layout_ms</td></tr>
+          <tr><td>Per-frame TextWidth 调用累积</td><td>业界随 hash 缓存 measure 结果</td><td><span class="badge warn">次要</span></td><td>profile TextWidth 调用次数</td></tr>
+          <tr><td>Font fallback 查找</td><td>ImGui 线性 merge 查询足够便宜</td><td><span class="badge ok">先 profile 再说</span></td><td>profile fallback 调用次数</td></tr>
+          <tr><td>GPU upload 同步阻塞</td><td>排除</td><td><span class="badge ok">彻底排除</span></td><td>6/19 log 显示 upload=0</td></tr>
+          <tr><td>字形 atlas 全量重传</td><td>排除为英文卡顿主因</td><td><span class="badge ok">中文次因</span></td><td>仅 CJK 场景验证</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.2 真实 UI 字频驱动的中文 glyph 预热</h3>
+      <p>中文 glyph 预热不应以"常用汉字 1500/3500"作为第一方案。更准确的做法是采集 QmClient 实际可见 UI 文本，按页面、操作、字号和语言字体变体生成预热计划。这样预热的是用户真实会看到的字形，而不是通用语料中的高频字。</p>
+
+      <h4>9.2.1 采集口径</h4>
+      <ul>
+        <li>采集入口：<code>DoMenuLabelStreamed</code>、<code>DoSettingsMenuLabel</code>、<code>DoIngameMenuLabel</code>、server-info snapshot text 等稳定 UI 文本路径。</li>
+        <li>记录字段：codepoint、font size bucket、font face / language variant、page、tab、operation、是否首帧可见、是否触发 <code>glyph_new</code> / <code>glyph_upload</code>。</li>
+        <li>输出产物：<code>qmclient_scripts/perf</code> 生成 <code>ui_glyph_frequency_zh.json</code>，并按权重导出预热 plan。</li>
+      </ul>
+
+      <h4>9.2.2 预热分层</h4>
+      <table>
+        <thead><tr><th>集合</th><th>来源</th><th>预热时机</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>boot_core</code></td>
+            <td>主菜单、设置 shell、通用按钮、基础标点/数字/单位</td>
+            <td>字体加载完成后、主菜单可交互前</td>
+            <td>体量最小，目标是避免基础 UI 首见字形上传。</td>
+          </tr>
+          <tr>
+            <td><code>pre_ingame_core</code></td>
+            <td>ingame ESC、继续游戏、断开连接、设置、投票、server info 固定标签</td>
+            <td>连接服务器 / 加载地图 / 进入游戏前</td>
+            <td><strong>主预热应放在这里</strong>，不要等用户按 Esc 后才补。</td>
+          </tr>
+          <tr>
+            <td><code>settings_core</code></td>
+            <td>Settings、QmClient、TClient、Controls、HUD 常见 tab 与 section 标题</td>
+            <td>打开设置页前的 prebuild window 或 settings loading 期</td>
+            <td>覆盖切 tab 首帧的高频 UI 字形。</td>
+          </tr>
+          <tr>
+            <td><code>idle_tail</code></td>
+            <td>低频页面、长列表、较少访问模块</td>
+            <td>主菜单/游戏空闲帧，低 FPS 自动暂停</td>
+            <td>只做补漏，不能承担主要预热任务。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4>9.2.3 预算规则</h4>
+      <ul>
+        <li>预热计划必须绑定 <code>language</code>、font face / variant、font size bucket；语言或字体变体变化后计划失效。</li>
+        <li>进入游戏前可使用较高预算，但仍需要分帧，例如每帧 32–64 个 glyph，避免 loading 卡死。</li>
+        <li>空闲预热只允许低预算，例如每帧 4–16 个 glyph，并在 frame time 高于阈值时暂停。</li>
+        <li>首帧交互窗口（Esc、切 tab、滚动第一帧）禁止执行大批量 glyph warmup，只能复用已 ready 的 glyph 或入队。</li>
+        <li>预热 API 应直接 warmup glyph，不应通过创建隐藏 text container 伪装预热，避免污染 text container 命中率和 container 统计。</li>
+      </ul>
+
+      <h4>9.2.4 建议产物格式</h4>
+      <pre><code>{
+  "language": "simplified_chinese",
+  "fontVariant": "languages/simplified_chinese.txt",
+  "fontSizeBuckets": [12, 14, 16, 20],
+  "sets": {
+    "boot_core": "设置返回刷新确认取消...",
+    "pre_ingame_core": "继续游戏断开连接服务器信息投票...",
+    "settings_core": "图像声音控制客户端资源外观...",
+    "idle_tail": "低频模块与长列表补漏字形..."
+  }
+}</code></pre>
+      <div class="ref-block">
+        <strong>关键参考</strong>：Dear ImGui FONTS.md（<a href="https://github.com/ocornut/imgui/blob/master/docs/FONTS.md">官方文档</a>）+ 1.92 动态字体系统（<a href="https://github.com/ocornut/imgui/issues/8465">issue #8465</a>）+ Hypersect "Improving the Font Pipeline"（<a href="https://blog.hypersect.com/improving-the-font-pipeline/">强推一读</a>）。
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 id="latest-log">⑩ 最新实跑日志结论</h2>
+      <p class="muted">本节基于 <code>qm_perf_2026-06-19_21-51-10.log</code> 生成的 report / summary。报告路径：<code>%APPDATA%/DDNet/dumps/QmClient_Perf/Perf_Report/qm_perf_2026-06-19_21-51-10_report.html</code>。结论只针对这份日志，不替代后续 A/B 复测。<span class="src-tag">源自 v1 第八节</span></p>
+
+      <h3>10.1 当前结论：调度器在运行，但没有覆盖最重同步 UI</h3>
+      <div class="note warn">
+        <strong>关键判断：</strong>现有 adaptive scheduler 并未失效。日志中 <code>adaptiveBudget.available=true</code>、<code>eventCount=2478</code>、<code>framePressureCount=110</code>，说明它确实在压缩资源、上传、文本预构建和 server-info snapshot text 等 token 化工作。低帧仍然发生，是因为最重成本落在 immediate-mode <code>Render()</code> 的同步 UI 绘制路径，而这些路径没有消费 scheduler token。
+      </div>
+      <table>
+        <thead><tr><th>对象</th><th>当前受调度器控制</th><th>当前未被调度器控制</th><th>影响</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>assets</code> / resource preview</td>
+            <td>metadata、preview artifact、texture upload、decode start、visible/prefetch/background token</td>
+            <td>少量 shell / visible card draw 仍需要局部检查</td>
+            <td>本轮不是主要瓶颈；<code>settings:assets</code> 仍有首帧可见纹理未 ready 风险。</td>
+          </tr>
+          <tr>
+            <td>stable text prebuild</td>
+            <td>plan collection、text container prebuild、glyph/paragraph token</td>
+            <td>visible render 遇到未 ready 文本时的 immediate fallback</td>
+            <td><code>fallbackImmediate=36903</code>，是验收 blocker，但不是本轮 300ms 级尖峰主因。</td>
+          </tr>
+          <tr>
+            <td>ingame server info text</td>
+            <td>snapshot text budget、frame pressure token</td>
+            <td>页面布局和首帧 tab/button chrome</td>
+            <td>ESC 后续帧仍有 <code>ingame_text_runtime_drain</code>，但最大尖峰来自按钮列同步绘制。</td>
+          </tr>
+          <tr>
+            <td>settings / QmClient / TClient immediate UI</td>
+            <td>基本未接入，只能被外层 report 观察</td>
+            <td><code>general_page_total</code>、<code>function_tab_total</code>、<code>visual_tab_total</code>、<code>ingame_esc_button_column</code></td>
+            <td>本轮 1% low 低于 120Hz 的主因。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>10.2 低帧窗口复盘</h3>
+      <p>本轮 report 判定为 <span class="badge bad">FAIL</span>：总样本 <code>49505</code> 帧，<code>323</code> 个 &gt;16.67ms spike，<code>36</code> 个 FPS window 中 <code>20</code> 个低于 240Hz，其中 <code>19</code> 个窗口低于 120Hz。所有低于 120Hz 的窗口都被归到 <code>ui_section:render_body</code>，进一步看同帧事件后，真实热点如下。</p>
+      <table>
+        <thead><tr><th>窗口</th><th>1% low / p99</th><th>窗口内最大子阶段</th><th>判断</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>ingame_esc_open</code></td>
+            <td><span class="badge bad">3.3 FPS</span> / <code>299.4ms</code></td>
+            <td><code>ingame_esc_button_column=149.6ms</code>，后续 <code>ingame_text_runtime_drain=26.7ms</code></td>
+            <td>ESC 首帧按钮列仍是同步 UI；server-info text budget 有作用，但不能限制按钮列。</td>
+          </tr>
+          <tr>
+            <td><code>settings:general</code></td>
+            <td><span class="badge bad">6.3 FPS</span> / <code>158.2ms</code></td>
+            <td><code>general_page_total=156.2ms</code>，已拆出的子阶段只有 <code>general_auto_record_core=3.2ms</code>、<code>general_auto_record_extended=2.4ms</code></td>
+            <td>General 页缺更细粒度 stage；直接优化总桶风险高。</td>
+          </tr>
+          <tr>
+            <td><code>settings:qmclient</code> functions</td>
+            <td><span class="badge bad">7.7 FPS</span> / <code>130.3ms</code></td>
+            <td><code>function_tab_total=128.6ms</code>，其中 <code>translate=50.7ms</code>、<code>pie_menu_controls=39.9ms</code>、<code>block_words_controls=14.1ms</code></td>
+            <td>已有 <code>function_first_frame_light_path</code>，但覆盖范围和触发时机不足。</td>
+          </tr>
+          <tr>
+            <td><code>settings:qmclient</code> visuals</td>
+            <td><span class="badge bad">9.0 FPS</span> / <code>111.5ms</code></td>
+            <td><code>visual_tab_total=97.4ms</code>，其中 <code>focus_mode=32.7ms</code>、<code>laser=24.2ms</code></td>
+            <td>视觉模块需要和 functions 一样引入首帧轻量路径。</td>
+          </tr>
+          <tr>
+            <td><code>settings:tclient</code></td>
+            <td><span class="badge bad">8.0-42.2 FPS</span> / <code>23.7-125.5ms</code></td>
+            <td>可见细分中 <code>tclient_settings_left_visual_total=38.5ms</code>、<code>tclient_settings_right_column=20.6ms</code>；部分 tab 缺细分 stage</td>
+            <td>先补 telemetry，再做左右列分帧展开。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>10.3 下一步计划：从资源调度升级到 UI 首帧调度</h3>
+      <ol>
+        <li><strong>第一刀：report 诊断口径</strong>。扩展 <code>qmclient_scripts/perf</code>，让低帧窗口显示 <code>budgeted_work</code>、<code>immediate_render</code> 和 <code>scheduler_coverage</code>。验收：同一份日志能直接指出 <code>ingame_esc_button_column</code>、<code>general_page_total</code> 等属于 <code>uncovered immediate_render</code>。</li>
+        <li><strong>第二刀：ESC 首帧 shell-only</strong>。打开 ESC 的第 1 帧只画 tab、标题、核心按钮和已 ready 文本；secondary utility、tooltip、复杂状态检查、server-info 延后到后续帧。验收：<code>ingame_esc_open</code> 1% low 高于 120Hz，p99 低于 16.7ms，<code>ingame_esc_button_column</code> 不再出现百毫秒级耗时。</li>
+        <li><strong>第三刀：General 页先拆桶</strong>。给 language、client、theme、file buttons、auto-record、misc section 分别加 stage；只有拆出真实热点后再做首帧轻量路径。验收：<code>general_page_total</code> 不再是唯一可见热点。</li>
+        <li><strong>第四刀：QmClient functions / visuals 模块化 light path</strong>。把 <code>translate</code>、<code>pie_menu</code>、<code>block_words</code>、<code>focus_mode</code>、<code>laser</code> 接入模块级首帧策略；首帧只画 card shell、标题和核心开关，预览、长列表、复杂输入后移。验收：<code>function_tab_total</code>、<code>visual_tab_total</code> 首帧低于 8ms。</li>
+        <li><strong>第五刀：TClient / DDNet / Controls 补齐 coverage</strong>。未拆桶的低帧窗口先补 stage，再决定是否分帧展开。验收：report 不再只显示 <code>render_body</code> 或 <code>settings_page_content</code>。</li>
+        <li><strong>第六刀：stable text 单独收口</strong>。修 <code>key_mismatch</code> 与 <code>unplannedVisibleCount</code>，减少 <code>fallbackImmediate</code>。验收：<code>renderReadyHitRate</code> 上升，<code>fallbackImmediate</code> 明显下降；不得把文本池 blocker 和 UI 首帧降温混在同一补丁。</li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h2 id="phases">⑪ Phase 划分</h2>
+      <p class="muted">v1 按量化→QmUI→CUI→游戏内→文本→图形后端顺序。v2 把 scheduler 架构重审提到最前（因为它是最大问题），其他 Phase 按依赖重排。v3 继承 v2 的 7 Phase 结构（A-G），补充 v1 的详细退出条件。<span class="src-tag">合并 v1 第九节 + v2 第三节</span></p>
+
+      <h3>Phase A：scheduler/text pool 架构重审（0-1 个月，最高优先级）</h3>
+      <p class="muted">2026-06-20 状态：service 化、OnRender frame scope、per-consumer state、Reset 生命周期、guard 栈式语义、4px bucket、同步 fallback telemetry 和 perf gate 结构测试已在当前 HEAD 落地；Phase A 可按当前 uncovered fallback 口径收口。</p>
+      <p><strong>退出条件</strong>：</p>
+      <ul>
+        <li>锁定现有 <code>IFrameScheduler</code>（<code>frame_scheduler.h:26</code><span class="verified">codegraph 验证</span>）service 契约：Reset / BeginFrame / EndFrame / per-consumer state 的行为测试覆盖。</li>
+        <li>明确 5-8 个固定 consumer 的语义和 owner；避免完全动态注册，但要记录每个 consumer 的覆盖范围。</li>
+        <li>同步渲染路径 <code>DoIngameMenuLabel</code>（<code>menus.cpp:4598</code><span class="verified">codegraph 验证</span>）系列保留首帧 fallback，并已显式标记为 uncovered immediate fallback 进入 perf gate。</li>
+        <li>scheduler coverage telemetry 已能区分 budgeted stable text work 与 immediate fallback；snapshot/paragraph drain 的更细耗时拆分进入 Phase B。</li>
+        <li>更新 text pool/key mismatch 文档和测试，避免把已修复的 guard / bucket 问题当作待办。</li>
+      </ul>
+
+      <h3>Phase B：量化口径扩展 + scheduler_coverage 硬规则（1-2 个月）</h3>
+      <p>原 v1 Phase A 的内容，但加 <code>scheduler_coverage</code> / <code>budgeted_work_ms</code> / <code>immediate_render_ms</code> / <code>first_frame_policy</code> 四个口径。</p>
+      <p><strong>退出条件</strong>：</p>
+      <ul>
+        <li>fresh log 能直接指出 <code>ingame_esc_button_column</code>、<code>general_page_total</code> 等属于 <code>uncovered immediate_render</code></li>
+        <li>quality.ts 硬规则：target window 若 <code>schedulerCoverage=uncovered</code> 且 <code>immediateRenderMs > 阈值</code> 必须 fail</li>
+        <li>scenarios/ 目录建立，固定 reference hardware + reference scene</li>
+      </ul>
+
+      <h3>Phase B.5：Runtime 资源层收敛（与 Phase B 同步）</h3>
+      <p>对应 Pillar 3.5。目标不是另建大框架，而是把现有 text budget snapshot、settings stable text prebuild、monitoring snapshot、job pool 使用点收敛成一个固定 consumer 的 runtime facade。</p>
+      <p><strong>退出条件</strong>：</p>
+      <ul>
+        <li><code>QmRuntimeMetrics</code> 快照层落地，monitoring 改为只读快照；CPU/内存/GPU/磁盘等慢指标按低频刷新，不挂在 HUD 绘制路径主动采样。</li>
+        <li>资源预热和 UI cache/text prebuild 从 <code>PrewarmVisibleSettingsResources</code> 分离为两条独立 telemetry 链路。</li>
+        <li>glyph warmup API 完成小 PoC：不通过"画不可见字符"预热，且不在 worker 线程触碰 graphics context。</li>
+        <li>现有 settings/ingame stable text 的 plan/prebuild 可被统一 warmup budget 推进，visible guard 下不发生首建或 stale 现场重建。</li>
+        <li><code>CJobPool</code> 上层 lane/backpressure/duplicate merge PoC 完成；不改底层 worker pool 语义。</li>
+      </ul>
+      <p><strong>新增 telemetry 合同</strong>：</p>
+      <pre><code>system=perf/qm_runtime
+  stage=snapshot_publish text_frame=N warmup_stage=... jobs_queued=N jobs_running=N pools_used=N cpu_util=... gpu_util=... ms=...
+
+system=perf/frame_pacing
+  stage=headroom frame_ms=... cpu_util=... gpu_util=... render_cpu_ms=... sleep_wait_ms=... swap_wait_ms=... scheduler_coverage=covered|partial|uncovered
+
+system=perf/qm_warmup
+  stage=tick trigger=startup|before_menu|before_settings|monitoring|language|font|ui_scale
+  budget_us=N used_us=N glyph_done=N glyph_pending=N container_done=N container_pending=N dropped=N duplicate=N
+
+system=perf/qm_jobs
+  stage=lane_snapshot high=N normal=N low=N io=N running=N completed=N aborted=N oldest_wait_ms=...
+
+system=perf/qm_pools
+  stage=pool_snapshot name=... used=N peak=N capacity=N alloc_fail=N grow=N bytes=N</code></pre>
+      <p><strong>最小测试合同</strong>：</p>
+      <ul>
+        <li>source-contract：monitoring 不再在 <code>OnRender()</code> 中直接调用 CPU/内存/GPU 慢采样；只读 <code>QmRuntimeMetrics</code> 快照。</li>
+        <li>source-contract：worker warmup 代码不得调用 <code>UploadTextContainer</code>、<code>Graphics()</code> texture update 或 CUIElement container 创建。</li>
+        <li>单元测试：warmup queue duplicate merge、owner cancellation、epoch invalidation、budget 不超限。</li>
+        <li>fresh runtime：打开 ESC、settings、monitoring 三个目标窗口时，<code>glyph_new</code>、<code>text_container_new</code>、<code>warmup_used_us</code>、CPU/GPU utilization、frame pacing wait 和 frame spike 能按同一 frame/window 对齐。</li>
+      </ul>
+
+      <h3>Phase C：CUI/QmUI 优化（2-4 个月）</h3>
+      <p>对应 Pillar 1。</p>
+      <p><strong>退出条件</strong>：</p>
+      <ul>
+        <li>QmUi 在已 profile 证明的 layout hot path 引入 <code>CQmFrameArena</code> / buffer 复用；不做全局 <code>std::vector</code> 大替换。</li>
+        <li>CUi <code>SDrawCmdHeader</code> / ClipRect memcmp 先做影响面评估和局部 PoC，再决定是否进入公共 UI 路径。</li>
+        <li>菜单/HUD 适配层的动态文本 inline PoC 落地；改 <code>ITextRender</code> 公共接口必须另立设计和兼容性验证。</li>
+        <li>fresh log 显示 QmUi 渲染开销下降 ≥30%</li>
+      </ul>
+
+      <h3>Phase D：图形后端提前（4-6 个月，与 Phase C 并行）</h3>
+      <p>对应 Pillar 4。<strong>方向：Vulkan 主战场，OpenGL 暂缓。</strong> Vulkan 5 项基础优化已实现，但仍有具体优化空间。<strong>第一件事是建立 telemetry 基线；第二件低风险 PoC 是持久化 <code>VkPipelineCache</code>，用于降低第二次启动/重建 graphics pipeline 的驱动成本</strong>。</p>
+      <p><strong>退出条件</strong>：</p>
+      <ul>
+        <li><strong>暴露 Vulkan <code>m_FrameProfileStats</code>（<code>SFrameProfileStats</code> 结构行 969-1078）全部字段到 perf report</strong>（所有后续优化的前置基线）</li>
+        <li><strong>Vulkan persistent pipeline cache PoC 落地</strong>：cache blob 从用户 storage 读取/保存，key 覆盖 <code>pipelineCacheUUID</code>、vendor/device/driver、SPIR-V manifest/hash 和 pipeline schema；cache miss/corrupt 自动重建。</li>
+        <li><strong>启动预热顺序收敛</strong>：graphics pipeline 创建先完成并发布 <code>vulkan_pipeline_cache</code> telemetry，再启动 <code>QmRuntime</code> 页面/glyph/text warmup；cache miss 时降低 startup warmup budget，避免 pipeline 创建和页面预热争同一段主线程时间。</li>
+        <li><strong>UI 渲染路径 telemetry</strong>（QuadsBegin/End vs RenderQuadContainer 调用频次和耗时）落地，能判断"UI QuadContainer 推广"的真实收益</li>
+        <li>基于 profile 数据完成 GPU/CPU-bound 判定；具体 Vulkan 优化只在数据证明后作为候选项进入独立计划。</li>
+      </ul>
+      <p><strong>不做</strong>：Vulkan backend 推倒重写、OpenGL backend 补 staging/PBO、AMD 多线程 fallback（无 AMD 测试环境）、多 backend 统一抽象、render graph、3D 引擎优化。</p>
+
+      <h3>Phase E：文本渲染纵深（6-8 个月）</h3>
+      <p>对应 Pillar 3 和 Pillar 3.6。<strong>第一目标仍是 ImGui 持久 buffer + Unreal dirty-cache + runtime warmup 调度</strong>，SDF/MSDF/GPU text 作为质量与长期架构 PoC 并行评估，不替代 scheduler coverage 收口。</p>
+      <p><strong>退出条件</strong>：</p>
+      <ul>
+        <li>text container vertex buffer 加 dirty 标记 + (string,font,size,wrap) 缓存</li>
+        <li>纯英文场景 fresh log 显示 <code>text_container_create_ms</code> 接近 0</li>
+        <li>CJK 动态 glyph atlas PoC 完成：覆盖 atlas 增长、旧 text container UV 失效、跨 backend texture update、frame 内上传预算。</li>
+        <li>真实 UI 字频采集落地（反 v1 "通用语料 1500/3500 字"路线）</li>
+        <li>Icon SDF/MSDF Vulkan-only PoC 完成：基于 <code>CQmIconManager</code>，manifest 支持 bitmap/SDF/MSDF，OpenGL 保持 bitmap fallback。</li>
+        <li>Large-text SDF/MSDF PoC 完成：只覆盖 ingame 高缩放大字号文本/图标，证明质量收益且不增加首帧同步工作。</li>
+        <li>Vulkan GPU text container 实验完成设计评审：明确是否继续推进到实现；若推进，必须新增 Vulkan-only command/pipeline，不替换现有 bitmap <code>SCommand_RenderText</code>。</li>
+      </ul>
+
+      <h3>Phase F：粒子简化 budget + 游戏内 FPS（8-10 个月）</h3>
+      <p>对应 Pillar 2 + v1 原计划的游戏内 FPS 部分。<strong>粒子是三层视觉 budget，但必须观测 update/collision 成本</strong>。</p>
+      <p><strong>退出条件</strong>：</p>
+      <ul>
+        <li>spawn budget + viewport culling + group render budget 三层全部落地</li>
+        <li><code>m_Collides</code> 粒子占比和 <code>Collision()-&gt;MovePoint</code> 耗时可观测；profile 证明不需要更细 collision budget。</li>
+        <li>HUD/statusbar 稳定文本走 text container 缓存</li>
+        <li>fresh log 显示粒子尖峰可解释、可观测</li>
+      </ul>
+
+      <h3>Phase G：测试深化（持续，但每个 Phase 都要同步做）</h3>
+      <p>对应 Pillar 5。<strong>不作为独立 Phase，而是每个 Phase 同步推进</strong>。</p>
+    </section>
+
+    <section class="card">
+      <h2 id="code-index">⑫ 关键代码指针索引</h2>
+      <p class="muted">这是最实用的部分——后续 Agent 直接查阅代码指针，不用重新调研。所有路径都是相对仓库根的相对路径。行号经 2026-06-20 codegraph CLI + search 双重验证。</p>
+
+      <h3>12.1 Scheduler（settings_resource_jobs + frame_scheduler + menus）</h3>
+      <table>
+        <thead><tr><th>符号 / 文件</th><th>位置</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>IFrameScheduler</code></td><td><code>src/game/client/frame_scheduler.h:26</code></td><td>scheduler service 接口<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>CFrameScheduler</code></td><td><code>src/game/client/frame_scheduler.cpp:9</code></td><td>scheduler 实现（ConsumerIndex/ComputeBudget/Reset/BeginFrame/EndFrame）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>SettingsAdaptiveBudgetStep</code></td><td><code>src/game/client/components/settings_resource_jobs.cpp:839</code></td><td>scheduler 算法核心（状态机：WINDOW_INACTIVE → FRAME_PRESSURE → SCROLL_ACTIVE → POST_SCROLL_RECOVERY → IDLE）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>SSettingsAdaptiveBudgetInput/State/Output</code></td><td><code>src/game/client/components/settings_resource_jobs.h</code></td><td>状态/输入/输出结构</td></tr>
+          <tr><td><code>FrameScheduler()</code></td><td><code>src/game/client/gameclient.h:444</code></td><td>CGameClient 暴露的 scheduler 访问入口<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td>同步 fallback 覆盖口径</td><td><code>src/game/client/components/menus.cpp</code> / <code>qmclient_scripts/perf/lib/stats.ts</code></td><td><code>DoIngameMenuLabel</code> 系列的同步 <code>Ui()-&gt;DoLabel</code> fallback 已计入 <code>scheduler_coverage=uncovered</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>12.2 Stable Text Pool（menus.cpp / menus_settings.cpp / menus_ingame.cpp）</h3>
+      <table>
+        <thead><tr><th>符号 / 文件</th><th>位置</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>BuildMenuTextStyleKey</code></td><td><code>src/game/client/components/menus.cpp:287</code></td><td>style key 计算；MaxWidthBucket 已改为 4px 粒度<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>MenuTextElement</code></td><td><code>src/game/client/components/menus.cpp</code></td><td>visible 路径查询与 keyMismatch/unplannedVisible 计数</td></tr>
+          <tr><td><code>CScopedMenuTextVisibleGuard</code></td><td>构造 <code>menus.cpp:4975</code>，析构 <code>menus.cpp:5009</code>，声明 <code>menus.h:2140</code></td><td>当前已具备 previous/restore 栈式语义；后续需测试防退化<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>BuildSettingsMenuTextPlan</code></td><td><code>src/game/client/components/menus.cpp:5150/5159</code></td><td>plan collection 主入口（opt-in 接入现场）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>BuildVisibleSettingsMenuTextPlan</code></td><td><code>src/game/client/components/menus.cpp</code></td><td>visible 重放（plan-vs-visible 分裂源头）</td></tr>
+          <tr><td><code>DoIngameMenuLabel</code></td><td><code>src/game/client/components/menus.cpp:4598</code></td><td>同步 fallback 核心方法<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>DrainIngameUiTextRuntime</code></td><td><code>src/game/client/components/menus_ingame.cpp:1734</code></td><td>ingame drain 入口<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>SMenuTextPoolEntry</code> / <code>m_MenuTextPool</code></td><td><code>src/game/client/components/menus.h</code></td><td>text pool 类型定义和实例</td></tr>
+        </tbody>
+      </table>
+
+      <h3>12.3 CUI / QmUI</h3>
+      <table>
+        <thead><tr><th>符号 / 文件</th><th>位置</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>CUi::RenderQuadContainerBatchable</code></td><td><code>src/game/client/ui.cpp:599</code></td><td>draw call 合并（已实现）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>CUi::QuadBatchRectContainer</code></td><td><code>src/game/client/ui.cpp:579</code></td><td>按 (w,h,rounding,corners) 缓存 QuadContainer<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>CUi::m_vQuadBatchSprites.clear()</code></td><td><code>src/game/client/ui.cpp:643</code>（另有 165、224）</td><td>潜在退化点（需验证是否释放 capacity）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>CUiScopedQuadBatch</code></td><td><code>src/game/client/ui.h</code></td><td>RAII batch scope</td></tr>
+          <tr><td><code>CListBox::DoNextRow</code></td><td><code>src/game/client/ui_listbox.cpp</code></td><td>变高行 clipper（比 ImGui 原生强）</td></tr>
+          <tr><td><code>CScrollRegion::AddRect</code> / <code>RectClipped</code></td><td><code>src/game/client/ui_scrollregion.cpp</code></td><td>视口裁剪核心</td></tr>
+          <tr><td><code>CUiV2LayoutEngine</code></td><td><code>src/game/client/QmUi/QmLayout.h:94</code></td><td>flex 布局引擎<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>CUiV2LayoutEngine::ComputeChildren</code></td><td><code>src/game/client/QmUi/QmLayout.cpp:84</code></td><td>布局计算（frame-local arena 缺失的根因）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>SettingsRuntimeCacheAllowsVisibleCompactText</code></td><td><code>src/game/client/components/settings_runtime_cache.cpp</code></td><td>直接返回 false（compact text 缓存未开放）</td></tr>
+        </tbody>
+      </table>
+
+      <h3>12.4 图形后端</h3>
+      <table>
+        <thead><tr><th>符号 / 文件</th><th>位置</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>CGraphics_Threaded</code></td><td><code>src/engine/client/graphics_threaded.cpp</code> / <code>.h</code></td><td>主线程构造命令 API 层</td></tr>
+          <tr><td><code>CGraphicsBackend_Threaded</code></td><td><code>src/engine/client/backend_sdl.cpp:84</code></td><td>graphics thread 容器<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td>graphics thread 启动</td><td><code>src/engine/client/backend_sdl.cpp:54</code></td><td><code>ThreadFunc</code><span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>CreateStreamBuffer</code>（持久映射 ring buffer）</td><td><code>src/engine/client/backend/vulkan/backend_vulkan.cpp:7157</code></td><td>Vulkan stream buffer 创建<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>vkMapMemory</code>（stream buffer 映射）</td><td><code>backend_vulkan.cpp:7196</code>（另有 1526/1860/1921）</td><td>一次性映射，非每帧 map/unmap<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>SFrameProfileStats</code> 结构</td><td><code>backend_vulkan.cpp:969-1078</code></td><td>Vulkan 内置 frame profiler 字段定义<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>m_FrameProfileStats</code> 实例</td><td><code>backend_vulkan.cpp:1094</code></td><td>frame profiler 实例<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td>Vulkan SPIR-V 构建</td><td><code>cmake/BuildVulkanShaders.cmake:83</code> / <code>:115-117</code></td><td>构建期用 <code>glslangValidator</code> 生成 <code>shader/vulkan/*.spv</code>，包括 text shader</td></tr>
+          <tr><td><code>CreateGraphicsPipeline</code></td><td><code>backend_vulkan.cpp:5484</code></td><td>当前 <code>vkCreateGraphicsPipelines</code> 第二参数为 <code>VK_NULL_HANDLE</code>，未接入 <code>VkPipelineCache</code><span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>InitVulkanSwapChain</code> pipeline 创建</td><td><code>backend_vulkan.cpp:6940-7000</code></td><td>启动/重建 swapchain 时集中创建 prim/text/tile/quad/sprite pipeline<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>vkQueueWaitIdle</code> 包装</td><td><code>backend_vulkan.cpp:7653</code></td><td>队列等待（非热路径）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>vkDeviceWaitIdle</code> 包装</td><td><code>backend_vulkan.cpp:7662</code></td><td>设备等待（非热路径）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>DeviceWaitIdle()</code> 调用者</td><td>1791(内存恢复) / 6307(RecreateSwapChain) / 7884(Cmd_Shutdown) / 9079(WindowDestroyNtf)</td><td>全在非帧热路径<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>vkWaitForFences</code> 包装</td><td><code>backend_vulkan.cpp:7644</code></td><td>每帧 swapchain image fence 等待（必要同步）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td>AMD 单线程 fallback</td><td><code>backend_vulkan.cpp:9122-9123</code></td><td><code>m_ThreadCount = 1</code>（dynamic viewport workaround）<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>gfx_render_thread_count</code></td><td><code>src/engine/shared/config_variables.h:832</code></td><td>默认 3，clamp [3, hardware_concurrency]<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td>OpenGL 同步上传</td><td><code>src/engine/client/backend/opengl/backend_opengl3.cpp</code></td><td>glBufferSubData（无 PBO，无 ring）</td></tr>
+        </tbody>
+      </table>
+
+      <h3>12.5 粒子 / 游戏内 FPS</h3>
+      <table>
+        <thead><tr><th>符号 / 文件</th><th>位置</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>CParticles::RenderGroup</code></td><td><code>src/game/client/components/particles.cpp:209</code></td><td>粒子组渲染<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>CParticles::ParticleIsVisibleOnScreen</code></td><td><code>src/game/client/components/particles.cpp:194</code></td><td>粒子视口裁剪<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>RenderQuadContainerAsSpriteMultiple</code></td><td><code>src/engine/client/graphics_threaded.cpp:2821</code></td><td>批量 sprite 渲染<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td><code>qm_process_high_priority</code></td><td><code>src/engine/shared/config_variables_qmclient.h:16</code></td><td>Windows 进程优先级（默认关闭）<span class="verified">codegraph 验证</span></td></tr>
+        </tbody>
+      </table>
+
+      <h3>12.6 Perf 系统</h3>
+      <table>
+        <thead><tr><th>符号 / 文件</th><th>位置</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code>budgetCorrelationSummary</code> / <code>BudgetCorrelationWindow</code></td><td><code>qmclient_scripts/perf/lib/stats.ts</code></td><td>FPS window 归因（需修 stage 归并逻辑）</td></tr>
+          <tr><td><code>AggregateOnlyTargetFpsFailures</code></td><td><code>qmclient_scripts/perf/lib/quality.ts</code></td><td>aggregate-only 失败检测</td></tr>
+          <tr><td>当前文件清单</td><td><code>qmclient_scripts/perf/lib/</code></td><td>只有 quality.ts/stats.ts/report.ts/quality_core.ts/parse.ts<span class="verified">codegraph 验证</span></td></tr>
+          <tr><td>6/19 fresh log</td><td><code>%APPDATA%/DDNet/dumps/QmClient_Perf/qm_perf_2026-06-19_21-51-10.log</code></td><td>当前 baseline</td></tr>
+          <tr><td>6/19 fresh summary</td><td><code>%APPDATA%/DDNet/dumps/QmClient_Perf/Perf_Report/qm_perf_2026-06-19_21-51-10_summary.json</code></td><td>verdict=FAIL, sampleCount=49505, 323 spike</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2 id="contracts">⑬ 遥测与测试合同</h2>
+      <p class="muted">每个优化方向必须有可验证的遥测名称和测试守护。<span class="src-tag">源自 v1 第十节</span></p>
+
+      <h3>13.1 新增/扩展的 C++ telemetry</h3>
+      <pre><code>system=perf/ui_runtime
+  stage=layout_compute       layout_dirty=0/1 dirty_reason=style|size|content|none
+  stage=anim_advance         active_anims=N suspended_anims=N
+  stage=render_bridge        draw_calls=N clip_pushes=N batches=N
+  stage=tree_end_frame       node_count=N new_nodes=N reused_nodes=N
+
+system=perf/ui_batch
+  stage=quad_batch_builder   merged=N rejected=N texture_switches=N
+
+system=perf/text_cache
+  stage=text_container_cache hit=N miss=N evict=N
+  stage=paragraph_layout_cache hit=N miss=N
+  stage=glyph_subset          common_hits=N fallback_hits=N
+  stage=glyph_warmup          set=boot_core|pre_ingame_core|settings_core|idle_tail planned=N warmed=N skipped=N budget=N paused=0/1
+
+system=perf/game_render
+  stage=component_particles_update group=N active=N updated=N skipped=N ms=...
+  stage=component_particles_render group=N visible=N rendered=N culled=N texture_binds=N draw_calls=N ms=...
+  stage=component_hud labels=N text_cache_hits=N text_cache_misses=N quad_containers=N ms=...
+  stage=component_tclient substage=statusbar|trails|vote|focus_mode ms=...
+  stage=component_map_layers fps_fog=0/1 tiles_culled=N quads=N ms=...
+
+system=perf/render_backend
+  stage=frame_submit backend=OpenGL|Vulkan draw_calls=N texture_binds=N buffer_uploads=N
+  stage=graphics_swap vsync=0/1 swap_ms=... wait_ms=...
+  stage=gpu_upload kind=glyph|texture|quad_container bytes=N count=N budget=N
+
+system=perf/optimizer
+  stage=priority windows=1 requested=high previous=normal applied=1 error=0
+  stage=frame_pressure profile=balanced fps=... frame_ms_p95=... effects_budget_scale=...
+  stage=fps_fog enabled=1 mode=radius radius_tiles=N visual_only=1 map_tiles=0</code></pre>
+
+      <h3>13.2 测试合同</h3>
+      <table>
+        <thead><tr><th>改动</th><th>最小测试</th></tr></thead>
+        <tbody>
+          <tr><td><code>qmclient_scripts/perf</code> 统计/报表</td><td><code>bun test.ts</code> + <code>npx tsc --noEmit</code> + 新增阈值/归因单测</td></tr>
+          <tr><td>QmUI 缓存/dirty/裁剪</td><td><code>qmclient_monitoring_test</code> source-contract + 运行后 telemetry 字段断言</td></tr>
+          <tr><td>CUI batch / dirty flag</td><td>相关单测 + 目标页面视觉/输入/UI scale 检查</td></tr>
+          <tr><td>游戏内组件级埋点</td><td><code>qmclient_monitoring_test</code> source-contract 确认 <code>perf/game_render</code> stage 字符串 + 用户实跑 report 验证不再只归到 <code>components_total</code></td></tr>
+          <tr><td>粒子/拖尾预算化</td><td>预算算法单测 + 固定场景 visual sanity + perf log 中 dropped/culled/rendered/update-skipped 字段验证</td></tr>
+          <tr><td>Windows optimizer priority</td><td>Windows-only source-contract：配置默认关闭、开启记录旧值、关闭恢复、失败日志可见；非 Windows 编译路径不调用 WinAPI</td></tr>
+          <tr><td>frame pacing / backend 统计</td><td>report 能拆出 render CPU、sleep wait、swap/vsync wait、GPU upload；OpenGL/Vulkan 字段可缺省但不可伪造</td></tr>
+          <tr><td>Vulkan pipeline cache</td><td>source-contract：启用时 pipeline 创建不能继续传 <code>VK_NULL_HANDLE</code>；运行验证：第二次启动 cache hit 且 <code>pipeline_create_ms</code> 下降；损坏 cache blob 能被丢弃并重建</td></tr>
+          <tr><td>文本缓存</td><td>LRU 行为单测 + perf log 中 miss/hit 字段验证</td></tr>
+          <tr><td>backend 改动</td><td>渲染正确性 gate + 多 renderer（OpenGL/Vulkan）冒烟测试</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2 id="risks">⑭ 风险与边界</h2>
+
+      <h3>14.1 scheduler 改造边界</h3>
+      <ul>
+        <li><strong>不要做完全动态注册 microservice</strong>：5-8 个固定 consumer，service 内部硬编码 list。完全动态注册会引入间接调用成本和调试难度。</li>
+        <li><strong>QmRuntime 是 facade，不是平行引擎</strong>：第一版只收敛 metrics、warmup、job wrapper 和 pool stats；不要一次性新增并强行迁移所有线程、资源、文本、对象池所有权。</li>
+        <li><strong>方向 B 不是完全 ImGui 化</strong>：保留 CUIElement 跨帧存活（retained-mode），只删除 plan collection 这层。</li>
+        <li><strong>魔法数调参风险</strong>：当前 state machine 是手工调参的（threshold 1.35x、1.60x、HealthyFrames=2 等），重构后需要重新调参，可能短期回归。</li>
+      </ul>
+
+      <h3>14.2 图形后端改造边界</h3>
+      <ul>
+        <li><strong>Vulkan 不要大改</strong>：已有 staging、stream buffer、frame profiler 等基础设施；先暴露 telemetry 和判断 GPU/CPU-bound，再决定是否做 descriptor/scissor/glyph memcpy 等小修。</li>
+        <li><strong>Vulkan pipeline cache 是本机缓存，不是可发布资源</strong>：<code>VkPipelineCache</code> blob 依赖驱动、GPU、pipeline schema 和 shader 内容，只能存在用户 storage；失效、损坏、驱动升级都必须 fail-open 重建。</li>
+        <li><strong>pipeline cache 不替代 runtime warmup</strong>：它只降低 graphics pipeline 创建成本，不能缓存 glyph atlas、text container、页面资源或 UI layout；首帧卡顿仍必须由 scheduler coverage、dirty cache 和 budgeted warmup 收口。</li>
+        <li><strong>OpenGL PBO/staging 不是低风险通用升级</strong>：PBO 对上传收益依赖驱动和 workload，persistent mapped 需要 OpenGL 4.4+/扩展；必须绑定最低 GL 版本、驱动矩阵和 OpenGL 用户占比。</li>
+        <li><strong>图形后端提前可能与 CPU 侧优化竞争资源</strong>：6/19 log 显示当前卡顿是 CPU 侧，图形后端优化短期内不解决眼前问题，是长期方向。</li>
+      </ul>
+
+      <h3>14.3 文本渲染边界</h3>
+      <ul>
+        <li><strong>不预设答案</strong>：纯英文卡顿真因必须先 profile 验证（per-label TextWidth 调用次数、text container 每帧 alloc/free、layout/wrap 重算次数）。</li>
+        <li><strong>ImGui 1.92 动态字体系统是 CJK 长期可借鉴方案</strong>，但不是可直接搬运的实现；需要 PoC 证明 atlas 增长、旧 container UV、backend texture update、上传预算都可控。</li>
+        <li><strong><code>ITextRender</code> 是 engine-wide API</strong>：直接新增公共接口会影响 chat、HUD、demo browser、menus、QmUI、map render、editor。优先在菜单/HUD 适配层验证。</li>
+        <li><strong>SDF/MSDF/GPU text 不是当前 Phase 的主修复</strong>：它们可以作为 Phase E 后的独立技术路线 PoC，但不能绕过当前必须完成的 scheduler coverage、dirty cache、warmup budget 和 runtime metrics。</li>
+        <li><strong>新鲜文本渲染功能优先 Vulkan-only</strong>：OpenGL 是兼容后端，保持 bitmap fallback；不要为了 OpenGL 同步实现而阻塞 Vulkan SDF/MSDF/GPU text PoC。</li>
+        <li><strong>GPU text PoC 必须证明端到端收益</strong>：不仅看 glyph 渲染质量或 GPU 利用率，还要证明 frame tail、fallback 字体、CJK、旧 container UV、OpenGL/Vulkan 行为、截图/录制一致性都可控。</li>
+      </ul>
+
+      <h3>14.4 QmUI/CUI 改造边界</h3>
+      <ul>
+        <li><strong>QmUI 不要变成 retained-mode 大框架</strong>：保留 immediate-mode 的灵活性，只在必要处叠加缓存；node 生命周期必须可预测，避免 dangling 状态。</li>
+        <li><strong>CUI 基础路径谨慎改动</strong>：涉及 <code>DoLabel</code>、<code>DoButtonLogic</code>、<code>CScrollRegion</code> 等高频上游 API 时，默认走外围适配，确需改动时要有更小补丁、更强测试和 rollback 方案。</li>
+      </ul>
+
+      <h3>14.5 上游 cherry-pick 边界</h3>
+      <p>用户已确认 QmClient 已偏离 DDNet 上游太远，现在是 cherry-pick 模式。因此：</p>
+      <ul>
+        <li>✅ 不需要追求整仓 rebase 友好；不以"是否方便回上游"作为性能路线的主要约束。</li>
+        <li>⚠️ 这里的"不考虑上游兼容性"只指源码同步/贡献回官方层面，不等于可以无审批改变用户可见运行时契约。</li>
+        <li>⚠️ 若某项优化会触碰协议、demo/skin/map/config 格式、物理、预测、snapshot、输入、时序或回放语义，需要单独批准和专门验证。</li>
+        <li>⚠️ 碰 <code>ITextRender</code> / graphics backend / CUI 公共接口时，不需要为上游贡献让路，但仍需要 feature flag、跨 backend/平台验证和回退路径。</li>
+      </ul>
+
+      <h3>14.6 测试深化边界</h3>
+      <ul>
+        <li><strong>visual regression gate 不能替代功能测试</strong>：PSNR/SSIM 只能 catch 视觉回归，不能 catch 行为 bug。</li>
+        <li><strong>重审现有测试时不要一刀切</strong>：先识别"形式主义"测试（断言字符串存在），逐个改造为行为断言。</li>
+        <li><strong>每个测试加 intent 文档</strong>：说明它 catch 什么 bug，方便后续 Agent 判断测试是否还有价值。</li>
+      </ul>
+
+      <h3>14.7 内存预算约束</h3>
+      <ul>
+        <li>所有缓存（layout cache、text LRU、texture atlas）都会增加内存占用</li>
+        <li>每个新增缓存的内存上限必须显式声明，超过预算时降级或 evict</li>
+        <li>建议内存预算：PC 上 1-2GB（含游戏纹理+UI+font atlas+缓存）</li>
+      </ul>
+
+      <h3>14.8 telemetry 字段膨胀</h3>
+      <ul>
+        <li>每个新增 stage 必须按 frame pressure 节流，不能让 perf logging 本身成为 hot path</li>
+        <li>当前 6/19 log 已经 694425 行，再加新 stage 需要谨慎</li>
+        <li>建议：低优先级 stage（如 glyph_warmup）用阈值触发输出，不每帧输出</li>
+      </ul>
+
+      <h3>14.9 通用原则</h3>
+      <ul>
+        <li><strong>性能优化不绑定视觉重设计</strong>：每轮保持显示、输入、滚动、选择、资源 fallback 语义不变。</li>
+        <li><strong>避免过度工程</strong>：每引入一层缓存，必须同时引入命中率/成本/收益 telemetry；证明收益为负时立即回退。</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2 id="open">⑮ 未解决问题（PoC 验证项）</h2>
+      <p class="muted">这些是调研中识别出但需要 PoC 或 profile 才能回答的问题。建议在动手相应 Phase 前先做 PoC。<span class="src-tag">合并 v1 + v2</span></p>
+
+      <h3>15.1 scheduler/text pool 相关</h3>
+      <ul>
+        <li><strong>plan collection 的实际收益未量化</strong>：临时把 <code>BuildVisibleSettingsMenuTextPlan</code> / <code>PrebuildSettingsMenuTextPool</code> 短路（return immediately），跑 perf benchmark 对比 settings 页滚动 FPS。如果差异 &lt;5%，方向 B 可直接执行。</li>
+        <li><strong>scheduler token 在 FRAME_PRESSURE 下过度砍半是否合理</strong>：<code>settings_resource_jobs.cpp</code> 把所有 window 砍半，需要 profiling：FRAME_PRESSURE 模式下 visible 路径 fallback 到同步构建的占比是多少。</li>
+        <li><strong>CPU/GPU headroom 下的卡顿归因</strong>：无限制帧率时 CPU/GPU 未吃满但仍有 spike，必须用 <code>frame_pacing</code> + <code>scheduler_coverage</code> 证明到底是 immediate render、job completion、sleep/swap wait 还是 OS 调度抖动。</li>
+        <li><strong>Assets / DemoBrowser consumer 已在用</strong>：后续问题不是删死字段，而是确认这些 consumer 的 coverage telemetry 是否能解释实际 work。</li>
+        <li><strong>跨场景状态继承</strong>：从 settings 切到 ingame 时，service 内 per-consumer state 的 HealthyFrames/Window 是否应该迁移到新场景？</li>
+        <li><strong><code>DoIngameMenuLabel</code> 同步 fallback 阈值</strong>：当前已作为 uncovered immediate fallback 进入 gate；Phase B 需要用 fresh log 确定不同场景的阈值和是否进一步限流。</li>
+        <li><strong>Runtime facade 粒度</strong>：<code>QmWarmupManager</code> 第一版只管 glyph + stable text，还是也接入 assets/demo resource jobs，需要用 <code>PrewarmVisibleSettingsResources</code> 分离后的 telemetry 决定。</li>
+      </ul>
+
+      <h3>15.2 文本渲染相关</h3>
+      <ul>
+        <li><strong>纯英文卡顿真因的 A/B profile</strong>：准备两份 fresh log（纯英文 UI 切换 + 纯中文 UI 切换），对比 <code>text_container_create_ms</code>、<code>glyph_rasterize_ms</code>、<code>glyph_upload_ms</code>、<code>paragraph_layout_ms</code> 在两份 log 里的占比。</li>
+        <li><strong>per-label TextWidth 调用次数</strong>：当前是否每个 label 每帧都调？是否随 hash 缓存？</li>
+        <li><strong>text container 每帧 alloc/free 次数</strong>：是否走 std::vector 默认分配器？是否可改为 arena？</li>
+        <li><strong><code>WarmGlyph</code> API 边界</strong>：应暴露在 <code>ITextRender</code> 还是仅作为 <code>IEngineTextRender</code> / QmClient 适配层接口，需要先做 blast-radius 评估。</li>
+        <li><strong>layout cache 后台化边界</strong>：当前 text layout 是否能完全脱离 graphics/text renderer state；如果不能，后台线程只能产出 manifest/plan，不能产出最终 layout/container。</li>
+        <li><strong>SDF/MSDF/GPU text 技术路线</strong>：是否值得做取决于 Phase E 前置数据；PoC 至少要比较现有 atlas/container、SDF/MSDF atlas、Vulkan GPU-resident text 三种路线在质量、内存、上传、CPU tail、跨 backend fallback 复杂度上的真实成本。</li>
+        <li><strong>图标库渲染统一</strong>：现有 Font Awesome icon font 与 Qm PNG icon atlas 并存；SDF/MSDF icon PoC 成功后，需要决定是否统一到 <code>CQmIconManager</code>，还是继续保留两套入口。</li>
+      </ul>
+
+      <h3>15.3 图形后端相关</h3>
+      <ul>
+        <li><strong>OpenGL 用户的实际占比和卡顿数据</strong>：DDNet 默认 OpenGL 还是 Vulkan？QmClient 是否改了默认？如果 OpenGL 用户占比小，OpenGL 后端优化收益有限。</li>
+        <li><strong>Vulkan StreamBuffer / staging 行为已基本确认</strong>：后续重点是把 frame profiler 暴露到 QmClient perf report，而不是重查是否存在。</li>
+        <li><strong><code>m_FrameProfileStats</code> 输出路径</strong>：当前主要是 backend verbose/profile 信息，仍需接入 QmClient perf report 和 gate scenario。</li>
+        <li><strong>Vulkan pipeline cache 收益量化</strong>：需要 fresh profile 对比首次启动、第二次启动、删除 cache 后启动、损坏 cache 启动四种场景，确认 <code>pipeline_create_ms</code> 降幅和 fallback 行为。</li>
+        <li><strong>OpenGL program binary cache 是否值得做</strong>：用户已明确新功能优先 Vulkan；OpenGL 可作为后续兼容优化，但要先看 OpenGL 用户占比和启动耗时，避免为兼容后端扩大维护面。</li>
+      </ul>
+
+      <h3>15.4 CUI 相关</h3>
+      <ul>
+        <li><strong><code>CUi::m_vQuadBatchSprites.clear()</code> 是否释放 capacity</strong>：std::vector::clear() 按 C++ 标准不释放 capacity（GCC/Clang 实现），但应显式注释表明意图，避免后续误改。</li>
+        <li><strong>QmUi 引入 frame arena 后的实际收益</strong>：先在 settings:qmclient 页 PoC，再决定是否推广。</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2 id="refs">⑯ 调研参考来源</h2>
+
+      <h3>16.1 Dear ImGui 官方</h3>
+      <ul>
+        <li>源码 v1.91.5：imgui.h / imgui_draw.cpp / imgui_widgets.cpp / imgui_clipper.cpp</li>
+        <li>官方字体文档（含 1.92 动态字体系统）：<a href="https://github.com/ocornut/imgui/blob/master/docs/FONTS.md">docs/FONTS.md</a></li>
+        <li>1.92 动态字体 issue：<a href="https://github.com/ocornut/imgui/issues/8465">issue #8465</a></li>
+        <li>FAQ（ID stack / storage / clipping 思路）：<a href="https://github.com/ocornut/imgui/blob/master/docs/FAQ.md">docs/FAQ.md</a></li>
+      </ul>
+
+      <h3>16.2 业界文本渲染</h3>
+      <ul>
+        <li><strong>Hypersect "Improving the Font Pipeline"</strong>（CJK 工程经验，强推）：<a href="https://blog.hypersect.com/improving-the-font-pipeline/">blog.hypersect.com/improving-the-font-pipeline</a></li>
+        <li>Valve Developer Community — Authoring and Using TrueType Fonts（Source/VGUI）：<a href="https://developer.valvesoftware.com/wiki/Authoring_and_Using_TrueType_Fonts">wiki</a></li>
+        <li>benui.ca Unreal Slate UI 性能分析（社区）</li>
+      </ul>
+
+      <h3>16.3 QmClient 内部参考</h3>
+      <ul>
+        <li>短期计划：<code>docs/superpowers/plans/2026-06-18-ui-frame-pacing-full-performance-plan.md</code></li>
+        <li>6/18 稳定文本命中率核验：<code>docs/superpowers/explore/2026-06-18-稳定文本命中率真实性核验.md</code></li>
+        <li>页面性能框架：<code>docs/superpowers/specs/archive/2026-06-08-页面性能优化框架设计.md</code></li>
+        <li>性能量化工作流：<code>docs/ai-workflow/advanced/perf-system-workflow.md</code></li>
+      </ul>
+
+      <h3>16.4 外部参考</h3>
+      <ul>
+        <li><code>BestProjectTeam/BestClient</code> 的 optimizer、FPS fog、particles、trails、graphics backend 相关实现。</li>
+      </ul>
+
+      <h3>16.5 调研受限说明</h3>
+      <p>本次合并基于以下来源的调研成果：</p>
+      <ul>
+        <li><strong>ImGui 优化经验</strong>：基于 v1.91.5 源码 + 官方文档，可信度高</li>
+        <li><strong>文本渲染业界方案</strong>：ImGui/Source 直接读源码/wiki；Unreal Slate、bgfx、Qt 因搜索 API 限额/反爬未直接读源码，相关描述基于公开文档与社区分析（benui.ca 等），实施前建议直接读 Epic/Qt 源码二次确认</li>
+        <li><strong>scheduler/text pool 架构重审</strong>：完全基于 QmClient 实际代码，可信度高</li>
+        <li><strong>图形后端提前可行性</strong>：基于实际代码 + 行号指针，可信度高（原 SubAgent 被 API 限流中断，主 Agent 直接读代码完成）</li>
+        <li><strong>v3 codegraph 验证</strong>：2026-06-20 使用 <code>codegraph query</code> + <code>search</code> 工具对当前 HEAD（QmClient 2.71.6）做了 30+ 个关键符号的验证，修正了多处行号偏差</li>
+      </ul>
+    </section>
+
+    <div class="footer">
+      <p>文档状态：active · 编写日期：2026-06-20 · 合并自 v1（2026-06-18）和 v2（2026-06-19）路线图 · 基于：四份 SubAgent 调研 + 6/19 fresh log 分析 + 2026-06-20 codegraph CLI 验证 · 编写约定：路径使用前斜杠，阈值按 60Hz（16.67ms）/ 120Hz（8.33ms）语义。</p>
+      <p>当前版本：QmClient <strong>2.71.6</strong>（<code>src/game/version.h:23</code>）· v1 和 v2 文档已删除，v3 是唯一的权威路线图。标注 <code class="verified">codegraph 验证</code> 的代码指针经过 2026-06-20 的 <code>codegraph query</code> + <code>search</code> 双重验证。若本文件后续与当前代码冲突，应先重新做 codegraph 复核再执行。</p>
+    </div>
+  </div>
+</body>
+</html>

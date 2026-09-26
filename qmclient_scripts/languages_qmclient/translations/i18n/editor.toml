@@ -5979,3 +5979,92 @@ key = "X: %.1f, Y: %.1f, Z: %.1f, T: %.1f, A: %.1f, G: %i  %s"
 context = "Editor"
 [message.translations]
 simplified_chinese = "坐标 X: %.1f, 坐标 Y: %.1f, 缩放: %.1f, 时间: %.1f, 动画: %.1f, 网格: %i  %s"
+
+[[message]]
+key = "[Ctrl+F4] Close the current map."
+context = "Editor"
+[message.translations]
+simplified_chinese = "[Ctrl+F4] 关闭当前地图。"
+
+[[message]]
+key = "Close map"
+context = "Editor"
+[message.translations]
+simplified_chinese = "关闭地图"
+
+[[message]]
+key = "Discard changes"
+context = "Editor"
+[message.translations]
+simplified_chinese = "放弃更改"
+
+[[message]]
+key = "Do not show how weapons, shields, snowflakes and flags appear ingame."
+context = "Editor"
+[message.translations]
+simplified_chinese = "不显示武器、护盾、雪花和旗帜在游戏中的外观。"
+
+[[message]]
+key = "Do you want to save your changes before closing this map?\\n\\nYour changes will be lost if you discard them."
+context = "Editor"
+[message.translations]
+simplified_chinese = "关闭此地图前要保存更改吗？\\n\\n如果放弃更改，所有更改都会丢失。"
+
+[[message]]
+key = "Open the directory for automapper rules in the file browser."
+context = "Editor"
+[message.translations]
+simplified_chinese = "在文件浏览器中打开自动映射规则目录。"
+
+[[message]]
+key = "Save changes?"
+context = "Editor"
+[message.translations]
+simplified_chinese = "保存更改吗？"
+
+[[message]]
+key = "Show directory"
+context = "Editor"
+[message.translations]
+simplified_chinese = "显示目录"
+
+[[message]]
+key = "Show how weapons, shields, snowflakes and flags appear ingame."
+context = "Editor"
+[message.translations]
+simplified_chinese = "显示武器、护盾、雪花和旗帜在游戏中的外观。"
+
+[[message]]
+key = "SNOWFLAKE: Works like a FREEZE tile. Freezes tees for 3 seconds by default."
+context = "Editor"
+[message.translations]
+simplified_chinese = "雪花：作用类似冻结砖块，默认将 Tee 冻结 3 秒。"
+
+[[message]]
+key = "SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move quickly."
+context = "Editor"
+[message.translations]
+simplified_chinese = "加速器：使武器、护盾、雪花和旋转激光快速移动。"
+
+[[message]]
+key = "SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move slowly."
+context = "Editor"
+[message.translations]
+simplified_chinese = "加速器：使武器、护盾、雪花和旋转激光缓慢移动。"
+
+[[message]]
+key = "Collaboration connection lost; please try again"
+context = "Editor"
+[message.translations]
+simplified_chinese = "协作连接已断开，请重试"
+traditional_chinese = "協作連線已中斷，請重試"
+japanese = "共同編集の接続が切れました。もう一度お試しください"
+korean = "공동 편집 연결이 끊어졌습니다. 다시 시도하세요"
+russian = "Соединение для совместного редактирования потеряно; попробуйте ещё раз"
+german = "Verbindung zur Zusammenarbeit verloren; bitte erneut versuchen"
+spanish = "Se perdió la conexión de colaboración; inténtalo de nuevo"
+french = "Connexion de collaboration perdue ; veuillez réessayer"
+brazilian_portuguese = "Conexão de colaboração perdida; tente novamente"
+portuguese = "Ligação de colaboração perdida; tente novamente"
+turkish = "Ortak düzenleme bağlantısı koptu; tekrar deneyin"
+polish = "Utracono połączenie współpracy; spróbuj ponownie"

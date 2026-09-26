@@ -12,6 +12,12 @@
 #   TODO: Many changes
 # misc-use-anonymous-namespace
 #   We don't want to use anonymous namespaces instead of static functions.
+# misc-use-internal-linkage
+#   Same tradeoff as misc-use-anonymous-namespace: it is the renamed/extended version
+#   of that check and would force anonymous namespaces for internal-linkage entities.
+#   Keep this rationale outside the 'Checks' folded block: a '#' line inside that block
+#   is literal content, so it merges with the next disable entry and the check stays
+#   silently enabled.
 # bugprone-suspicious-realloc-usage
 #   We generally don't handle memory allocation failures.
 # bugprone-crtp-constructor-accessibility
@@ -67,7 +73,6 @@ Checks: >
   -misc-static-assert,
   -misc-unused-parameters,
   -misc-use-anonymous-namespace,
-  # 与 misc-use-anonymous-namespace 同一取舍：不为内部链接强行改匿名命名空间。
   -misc-use-internal-linkage,
   modernize-avoid-bind,
   modernize-concat-nested-namespaces,

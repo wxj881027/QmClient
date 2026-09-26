@@ -195,7 +195,12 @@ bool QmFinalizeConfigMigration(IStorage *pStorage)
 	char aCurrentDirPath[IO_MAX_PATH_LENGTH];
 	pStorage->GetCompletePath(IStorage::TYPE_SAVE, QM_CONFIG_V1_DIR, aV1DirPath, sizeof(aV1DirPath));
 	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient", aCurrentDirPath, sizeof(aCurrentDirPath));
-	if(str_comp_nocase(aV1DirPath, aCurrentDirPath) != 0)
+#if defined(CONF_FAMILY_WINDOWS) || defined(CONF_PLATFORM_MACOS)
+	const bool SeparateV1Directory = str_comp_nocase(aV1DirPath, aCurrentDirPath) != 0;
+#else
+	const bool SeparateV1Directory = str_comp(aV1DirPath, aCurrentDirPath) != 0;
+#endif
+	if(SeparateV1Directory)
 	{
 		pStorage->RemoveFile("QmClient/settings_ddnet.cfg", IStorage::TYPE_SAVE);
 		pStorage->RemoveFile("QmClient/settings_qmclient.cfg", IStorage::TYPE_SAVE);
@@ -237,9 +242,7 @@ bool SConfigVariable::CheckReadOnly() const
 {
 	if(!m_ReadOnly)
 		return false;
-	char aBuf[IConsole::CMDLINE_LENGTH + 64];
-	str_format(aBuf, sizeof(aBuf), "The config variable '%s' cannot be changed right now.", m_pScriptName);
-	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+	log_error("config", "The config variable '%s' cannot be changed right now.", m_pScriptName);
 	return true;
 }
 
@@ -271,9 +274,7 @@ void SIntConfigVariable::CommandCallback(IConsole::IResult *pResult, void *pUser
 	}
 	else
 	{
-		char aBuf[32];
-		str_format(aBuf, sizeof(aBuf), "Value: %d", *pData->m_pVariable);
-		pData->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+		log_info("config", "Value: %d", *pData->m_pVariable);
 	}
 }
 
@@ -284,7 +285,8 @@ void SIntConfigVariable::Register()
 
 bool SIntConfigVariable::IsDefault() const
 {
-	return *m_pVariable == m_Default;
+	// 写盘覆盖生效时必须按用户真实值判断，否则会把临时状态当成用户设置写进配置文件。
+	return (m_HasSaveValueOverride ? m_SaveValueOverride : *m_pVariable) == m_Default;
 }
 
 size_t SIntConfigVariable::MaxSerializedSize() const
@@ -299,7 +301,7 @@ void SIntConfigVariable::Serialize(char *pOut, size_t Size, int Value) const
 
 void SIntConfigVariable::Serialize(char *pOut, size_t Size) const
 {
-	Serialize(pOut, Size, *m_pVariable);
+	Serialize(pOut, Size, m_HasSaveValueOverride ? m_SaveValueOverride : *m_pVariable);
 }
 
 void SIntConfigVariable::SetValue(int Value)
@@ -326,7 +328,6 @@ void SIntConfigVariable::ResetToOld()
 void SColorConfigVariable::CommandCallback(IConsole::IResult *pResult, void *pUserData)
 {
 	SColorConfigVariable *pData = static_cast<SColorConfigVariable *>(pUserData);
-	char aBuf[IConsole::CMDLINE_LENGTH + 64];
 	if(pResult->NumArguments())
 	{
 		if(pData->CheckReadOnly())
@@ -342,21 +343,17 @@ void SColorConfigVariable::CommandCallback(IConsole::IResult *pResult, void *pUs
 	}
 	else
 	{
-		str_format(aBuf, sizeof(aBuf), "Value: %u", *pData->m_pVariable);
-		pData->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+		log_info("config", "Value: %u", *pData->m_pVariable);
 
 		const ColorHSLA Hsla = ColorHSLA(*pData->m_pVariable, true).UnclampLighting(pData->m_DarkestLighting);
-		str_format(aBuf, sizeof(aBuf), "H: %d°, S: %d%%, L: %d%%", round_to_int(Hsla.h * 360), round_to_int(Hsla.s * 100), round_to_int(Hsla.l * 100));
-		pData->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+		log_info("config", "H: %d°, S: %d%%, L: %d%%", round_to_int(Hsla.h * 360), round_to_int(Hsla.s * 100), round_to_int(Hsla.l * 100));
 
 		const ColorRGBA Rgba = color_cast<ColorRGBA>(Hsla);
-		str_format(aBuf, sizeof(aBuf), "R: %d, G: %d, B: %d, #%06X", round_to_int(Rgba.r * 255), round_to_int(Rgba.g * 255), round_to_int(Rgba.b * 255), Rgba.Pack(false));
-		pData->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+		log_info("config", "R: %d, G: %d, B: %d, #%06X", round_to_int(Rgba.r * 255), round_to_int(Rgba.g * 255), round_to_int(Rgba.b * 255), Rgba.Pack(false));
 
 		if(pData->m_Alpha)
 		{
-			str_format(aBuf, sizeof(aBuf), "A: %d%%", round_to_int(Hsla.a * 100));
-			pData->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+			log_info("config", "A: %d%%", round_to_int(Hsla.a * 100));
 		}
 	}
 }
@@ -435,9 +432,7 @@ void SStringConfigVariable::CommandCallback(IConsole::IResult *pResult, void *pU
 	}
 	else
 	{
-		char aBuf[1024];
-		str_format(aBuf, sizeof(aBuf), "Value: %s", pData->m_pStr);
-		pData->m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+		log_info("config", "Value: %s", pData->m_pStr);
 	}
 }
 
@@ -515,28 +510,48 @@ void CConfigManager::Init()
 		pVariable->Register();
 	};
 
+	const auto &&AddIntVariable = [this, AddVariable](const char *pScriptName, int Flags, const char *pDesc, int *pVariable, int Default, int Min, int Max) {
+		dbg_assert(Min == 0 || Max == 0 || Min < Max, "MACRO_CONFIG_INT(%s): minimum (%d) must be less than maximum (%d)", pScriptName, Min, Max);
+		dbg_assert((Min == 0 || Default >= Min) && (Max == 0 || Default <= Max), "MACRO_CONFIG_INT(%s): default (%d) must be in range of minimum (%d) and maximum (%d)", pScriptName, Default, Min, Max);
+		char aHelp[512];
+		size_t HelpSize;
+		if(Min == 0 && Max == 0)
+			HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: %d)", pDesc, Default);
+		else if(Max == 0)
+			HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: %d, min: %d)", pDesc, Default, Min);
+		else
+			HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: %d, min: %d, max: %d)", pDesc, Default, Min, Max);
+		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_INT(%s): help text possibly truncated. Increase size of aHelp.", pScriptName);
+
+		AddVariable(m_ConfigHeap.Allocate<SIntConfigVariable>(
+			m_pConsole, pScriptName, SConfigVariable::VAR_INT, Flags, m_ConfigHeap.StoreString(aHelp), pDesc, pVariable, Default, Min, Max));
+	};
+
 #define MACRO_CONFIG_INT(Name, ScriptName, Def, Min, Max, Flags, Desc) \
 	{ \
-		const char *pHelp = Min == Max ? Desc " (default: " #Def ")" : (Max == 0 ? Desc " (default: " #Def ", min: " #Min ")" : Desc " (default: " #Def ", min: " #Min ", max: " #Max ")"); \
-		AddVariable(m_ConfigHeap.Allocate<SIntConfigVariable>(m_pConsole, #ScriptName, SConfigVariable::VAR_INT, Flags, pHelp, Desc, &g_Config.m_##Name, Def, Min, Max)); \
+		AddIntVariable(#ScriptName, Flags, Desc, &g_Config.m_##Name, Def, Min, Max); \
 	}
 
 #define MACRO_CONFIG_COL(Name, ScriptName, Def, Flags, Desc) \
 	{ \
-		const size_t HelpSize = (size_t)str_length(Desc) + 32; \
-		char *pHelp = static_cast<char *>(m_ConfigHeap.Allocate(HelpSize)); \
+		const char *pScriptName = #ScriptName; \
 		const bool Alpha = ((Flags) & CFGFLAG_COLALPHA) != 0; \
-		str_format(pHelp, HelpSize, "%s (default: $%0*X)", Desc, Alpha ? 8 : 6, color_cast<ColorRGBA>(ColorHSLA(Def, Alpha)).Pack(Alpha)); \
-		AddVariable(m_ConfigHeap.Allocate<SColorConfigVariable>(m_pConsole, #ScriptName, SConfigVariable::VAR_COLOR, Flags, pHelp, Desc, &g_Config.m_##Name, Def)); \
+		char aHelp[512]; \
+		const size_t HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: $%0*X)", Desc, Alpha ? 8 : 6, color_cast<ColorRGBA>(ColorHSLA(Def, Alpha)).Pack(Alpha)); \
+		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_COL(%s): help text possibly truncated. Increase size of aHelp.", pScriptName); \
+		AddVariable(m_ConfigHeap.Allocate<SColorConfigVariable>( \
+			m_pConsole, pScriptName, SConfigVariable::VAR_COLOR, Flags, m_ConfigHeap.StoreString(aHelp), Desc, &g_Config.m_##Name, Def)); \
 	}
 
 #define MACRO_CONFIG_STR(Name, ScriptName, Len, Def, Flags, Desc) \
 	{ \
-		const size_t HelpSize = (size_t)str_length(Desc) + str_length(Def) + 64; \
-		char *pHelp = static_cast<char *>(m_ConfigHeap.Allocate(HelpSize)); \
-		str_format(pHelp, HelpSize, "%s (default: \"%s\", max length: %d)", Desc, Def, Len - 1); \
+		const char *pScriptName = #ScriptName; \
+		char aHelp[512]; \
+		const size_t HelpSize = str_format(aHelp, sizeof(aHelp), "%s (default: \"%s\", max length: %d)", Desc, Def, Len - 1); \
+		dbg_assert(HelpSize < sizeof(aHelp) - UTF8_BYTE_LENGTH - 1, "MACRO_CONFIG_STR(%s): help text possibly truncated. Increase size of aHelp.", pScriptName); \
 		char *pOldValue = static_cast<char *>(m_ConfigHeap.Allocate(Len)); \
-		AddVariable(m_ConfigHeap.Allocate<SStringConfigVariable>(m_pConsole, #ScriptName, SConfigVariable::VAR_STRING, Flags, pHelp, Desc, g_Config.m_##Name, Def, Len, pOldValue)); \
+		AddVariable(m_ConfigHeap.Allocate<SStringConfigVariable>( \
+			m_pConsole, pScriptName, SConfigVariable::VAR_STRING, Flags, m_ConfigHeap.StoreString(aHelp), Desc, g_Config.m_##Name, Def, Len, pOldValue)); \
 	}
 #define SET_CONFIG_DOMAIN(_ConfigDomain) ConfigDomain = _ConfigDomain;
 #include "config_includes.h"
@@ -561,9 +576,7 @@ void CConfigManager::Reset(const char *pScriptName)
 		}
 	}
 
-	char aBuf[IConsole::CMDLINE_LENGTH + 32];
-	str_format(aBuf, sizeof(aBuf), "Invalid command: '%s'.", pScriptName);
-	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+	log_error("config", "Invalid command: '%s'.", pScriptName);
 }
 
 void CConfigManager::ResetGameSettings()
@@ -585,6 +598,59 @@ void CConfigManager::SetReadOnly(const char *pScriptName, bool ReadOnly)
 		}
 	}
 	dbg_assert_failed("Invalid command for SetReadOnly: '%s'", pScriptName);
+}
+
+void CConfigManager::SetSaveValueOverride(const char *pScriptName, bool Active, int Value, const char *pOwnerId)
+{
+	for(SConfigVariable *pVariable : m_vpAllVariables)
+	{
+		if(str_comp(pScriptName, pVariable->m_pScriptName) == 0)
+		{
+			// 每个配置项只允许一个临时接管来源：两个接管者会互相清除对方的写盘保护，
+			// 静默地把接管值写进配置文件。
+			const bool Conflicting = Active && pVariable->m_HasSaveValueOverride && pVariable->m_SaveValueOverride != Value;
+			if(Conflicting)
+				log_error("config", "Conflicting save value override for '%s'", pScriptName);
+			dbg_assert(!Conflicting, "config variable '%s' already has a different save value override", pScriptName);
+			pVariable->SetSaveValueOverride(Active, Value, pOwnerId);
+			return;
+		}
+	}
+	// Debug 构建断言，release 构建留下日志：名字写错会让写盘保护静默失效。
+	log_error("config", "Invalid config variable for SetSaveValueOverride: '%s'", pScriptName);
+	dbg_assert_failed("Invalid config variable for SetSaveValueOverride: '%s'", pScriptName);
+}
+
+const char *CConfigManager::SaveValueOverrideOwner(const int *pValue) const
+{
+	if(pValue == nullptr)
+		return nullptr;
+	for(const SConfigVariable *pVariable : m_vpAllVariables)
+	{
+		if(pVariable->m_Type != SConfigVariable::VAR_INT)
+			continue;
+		const SIntConfigVariable *pIntVariable = static_cast<const SIntConfigVariable *>(pVariable);
+		if(pIntVariable->m_pVariable != pValue)
+			continue;
+		return pVariable->m_HasSaveValueOverride ? pVariable->m_pSaveValueOverrideOwner : nullptr;
+	}
+	return nullptr;
+}
+
+int CConfigManager::RealValue(const int *pValue) const
+{
+	if(pValue == nullptr)
+		return 0;
+	for(const SConfigVariable *pVariable : m_vpAllVariables)
+	{
+		if(pVariable->m_Type != SConfigVariable::VAR_INT)
+			continue;
+		const SIntConfigVariable *pIntVariable = static_cast<const SIntConfigVariable *>(pVariable);
+		if(pIntVariable->m_pVariable != pValue)
+			continue;
+		return pVariable->m_HasSaveValueOverride ? pVariable->m_SaveValueOverride : *pIntVariable->m_pVariable;
+	}
+	return *pValue;
 }
 
 void CConfigManager::SetGameSettingsReadOnly(bool ReadOnly)
@@ -793,9 +859,7 @@ void CConfigManager::Con_Toggle(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
-	char aBuf[IConsole::CMDLINE_LENGTH + 32];
-	str_format(aBuf, sizeof(aBuf), "Invalid command: '%s'.", pScriptName);
-	pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+	log_error("config", "Invalid command: '%s'.", pScriptName);
 }
 
 void CConfigManager::Con_ToggleStroke(IConsole::IResult *pResult, void *pUserData)
@@ -818,9 +882,7 @@ void CConfigManager::Con_ToggleStroke(IConsole::IResult *pResult, void *pUserDat
 		return;
 	}
 
-	char aBuf[IConsole::CMDLINE_LENGTH + 32];
-	str_format(aBuf, sizeof(aBuf), "Invalid command: '%s'.", pScriptName);
-	pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "config", aBuf);
+	log_error("config", "Invalid command: '%s'.", pScriptName);
 }
 
 void CConfigManager::Con_ToggleRestore(IConsole::IResult *pResult, void *pUserData)

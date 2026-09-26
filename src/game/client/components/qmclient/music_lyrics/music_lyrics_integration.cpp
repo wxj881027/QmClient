@@ -65,7 +65,7 @@ namespace
 			m_Result.m_SongId = m_SongId;
 			m_Result.m_Generation = m_Generation;
 			m_Result.m_Epoch = m_Epoch;
-			std::ifstream File(std::filesystem::u8path(m_Path), std::ios::binary);
+			std::ifstream File(std::filesystem::path(reinterpret_cast<const char8_t *>(m_Path.c_str())), std::ios::binary);
 			if(!File)
 				return;
 			std::ostringstream Buffer;

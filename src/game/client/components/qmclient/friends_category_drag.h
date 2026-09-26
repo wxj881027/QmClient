@@ -83,4 +83,4 @@ struct SFriendsPlayerDragState
 	}
 };
 
-#endif // GAME_CLIENT_COMPONENTS_QMCLIENT_FRIENDS_CATEGORY_DRAG_H
+#endif

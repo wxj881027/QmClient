@@ -9,7 +9,7 @@ class CCommandProcessorFragment_GLBase;
 
 class CQmVulkanRenderScheduler
 {
-	// 避免为少量 2D 绘制唤醒多个线程；具体粒度仍需实机对比。
+	// 少量绘制不启动工作线程；粒度需要实机帧时间比较。
 	static constexpr size_t MIN_DRAWS_PER_WORKER = 64;
 	size_t m_WorkerCount = 0;
 	size_t m_DrawsPerWorker = 1;
@@ -36,7 +36,7 @@ public:
 			UseMainThread();
 		if(m_MainThreadOnly)
 			return 0;
-		// 按连续绘制工作段分配，不能回到已经封口的较早线程。
+		// 工作段保持单调，避免跨命令缓冲回到已经提交的线程。
 		const size_t Worker = std::min(m_RecordedDraws / m_DrawsPerWorker, m_WorkerCount - 1);
 		m_ThreadIndex = std::max(m_ThreadIndex, Worker + 1);
 		return m_ThreadIndex;
@@ -51,7 +51,7 @@ public:
 
 	void NewFrame()
 	{
-		// 帧内主线程尾段执行在所有工作线程之后，跨命令缓冲也必须维持此顺序。
+		// 主线程尾段执行在所有工作线程之后，只能在帧边界恢复工作线程。
 		m_ThreadIndex = 1;
 		m_MainThreadOnly = false;
 	}
@@ -64,6 +64,7 @@ struct SVulkanVersion
 	int m_Patch;
 };
 
+static constexpr SVulkanVersion gs_BackendVulkanFallbackVersion = {1, 1, 0};
 static constexpr SVulkanVersion gs_BackendVulkanMinimumVersion = {1, 1, 0};
 static constexpr SVulkanVersion gs_BackendVulkanMaximumVersion = {1, 4, 0};
 
@@ -90,7 +91,20 @@ constexpr SVulkanVersion ClampVulkanVersionToSupportedRange(const SVulkanVersion
 
 constexpr SVulkanVersion ResolveConfiguredVulkanApiVersion(int ConfigValue)
 {
-	return ConfigValue == 14 ? gs_BackendVulkanMaximumVersion : gs_BackendVulkanMinimumVersion;
+	if(ConfigValue == 14)
+		return gs_BackendVulkanMaximumVersion;
+	if(ConfigValue == 13)
+		return {1, 3, 0};
+	return gs_BackendVulkanMinimumVersion;
+}
+
+constexpr SVulkanVersion ResolveVulkanVersionForLoader(const SVulkanVersion &Requested, const SVulkanVersion &Loader)
+{
+	if(IsVulkanVersionAtLeast(Loader, Requested))
+		return Requested;
+	if(IsVulkanVersionAtLeast(Requested, {1, 4, 0}) && IsVulkanVersionAtLeast(Loader, {1, 3, 0}))
+		return {1, 3, 0};
+	return gs_BackendVulkanMinimumVersion;
 }
 
 CCommandProcessorFragment_GLBase *CreateVulkanCommandProcessorFragment();

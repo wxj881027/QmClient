@@ -9,8 +9,8 @@
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/external/json-parser/json.h>
+#include <engine/http.h>
 #include <engine/serverbrowser.h>
-#include <engine/shared/http.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/linereader.h>
 #include <engine/shared/serverinfo.h>
@@ -60,6 +60,7 @@ namespace
 		virtual ~CChooseMaster();
 
 		bool GetBestUrl(const char **pBestUrl) const;
+		void Shutdown();
 		void Reset();
 		bool IsRefreshing() const { return m_pJob && !m_pJob->Done(); }
 		void Refresh();
@@ -81,8 +82,8 @@ namespace
 			CChooseMaster *m_pParent;
 			CLock m_Lock;
 			std::shared_ptr<CData> m_pData;
-			std::shared_ptr<CHttpRequest> m_pHead;
-			std::shared_ptr<CHttpRequest> m_pGet;
+			std::shared_ptr<IHttpRequest> m_pHead;
+			std::shared_ptr<IHttpRequest> m_pGet;
 
 		protected:
 			void Run() override REQUIRES(!m_Lock);
@@ -124,10 +125,7 @@ namespace
 
 	CChooseMaster::~CChooseMaster()
 	{
-		if(m_pJob)
-		{
-			m_pJob->Abort();
-		}
+		dbg_assert(m_pJob == nullptr, "Choose master job was not cleared");
 	}
 
 	int CChooseMaster::GetBestIndex() const
@@ -153,6 +151,15 @@ namespace
 		}
 		*ppBestUrl = m_pData->m_aaUrls[Index];
 		return false;
+	}
+
+	void CChooseMaster::Shutdown()
+	{
+		if(m_pJob)
+		{
+			m_pJob->Abort();
+			m_pJob = nullptr;
+		}
 	}
 
 	void CChooseMaster::Reset()
@@ -220,15 +227,19 @@ namespace
 			aTimeMs[i] = -1;
 			aAgeS[i] = SanitizeAge({});
 			const char *pUrl = m_pData->m_aaUrls[aRandomized[i]];
-			std::shared_ptr<CHttpRequest> pHead = HttpHead(pUrl);
+			std::shared_ptr<IHttpRequest> pHead = HttpHead(pUrl);
 			pHead->Timeout(Timeout);
 			pHead->LogProgress(HTTPLOG::FAILURE);
 			{
 				const CLockScope LockScope(m_Lock);
+				if(State() == IJob::STATE_ABORTED)
+				{
+					return;
+				}
 				m_pHead = pHead;
+				m_pParent->m_pHttp->Run(pHead);
 			}
 
-			m_pParent->m_pHttp->Run(pHead);
 			pHead->Wait();
 			if(pHead->State() == EHttpState::ABORTED || State() == IJob::STATE_ABORTED)
 			{
@@ -241,15 +252,19 @@ namespace
 			}
 
 			auto StartTime = time_get_nanoseconds();
-			std::shared_ptr<CHttpRequest> pGet = HttpGet(pUrl);
+			std::shared_ptr<IHttpRequest> pGet = HttpGet(pUrl);
 			pGet->Timeout(Timeout);
 			pGet->LogProgress(HTTPLOG::FAILURE);
 			{
 				const CLockScope LockScope(m_Lock);
+				if(State() == IJob::STATE_ABORTED)
+				{
+					return;
+				}
 				m_pGet = pGet;
+				m_pParent->m_pHttp->Run(pGet);
 			}
 
-			m_pParent->m_pHttp->Run(pGet);
 			pGet->Wait();
 
 			auto Time = std::chrono::duration_cast<std::chrono::milliseconds>(time_get_nanoseconds() - StartTime);
@@ -308,10 +323,10 @@ namespace
 		m_pData->m_BestIndex.store(BestIndex);
 	}
 
-	// 仅持有已完成的 HTTP 响应，不引用浏览器对象；浏览器销毁后任务也能安全收尾。
+	// 解析任务只持有 HTTP 响应，不引用浏览器的生命周期。
 	class CServerListParseJob : public IJob
 	{
-		std::shared_ptr<CHttpRequest> m_pResponse;
+		std::shared_ptr<IHttpRequest> m_pResponse;
 
 		void Run() override
 		{
@@ -322,12 +337,11 @@ namespace
 				json_value_free(pJson);
 				m_Age = SanitizeAge(m_pResponse->ResultAgeSeconds());
 			}
-			// 在任务线程释放本任务持有的响应引用。
 			m_pResponse.reset();
 		}
 
 	public:
-		explicit CServerListParseJob(std::shared_ptr<CHttpRequest> pResponse) :
+		explicit CServerListParseJob(std::shared_ptr<IHttpRequest> pResponse) :
 			m_pResponse(std::move(pResponse))
 		{
 		}
@@ -342,6 +356,7 @@ namespace
 	public:
 		CServerBrowserHttp(IEngine *pEngine, IHttp *pHttp, const char **ppUrls, int NumUrls, int PreviousBestIndex);
 		~CServerBrowserHttp() override;
+		void Shutdown() override;
 		void Update() override;
 		bool IsRefreshing() const override { return m_State != STATE_DONE && m_State != STATE_NO_MASTER; }
 		bool IsError() const override { return m_State == STATE_NO_MASTER; }
@@ -373,7 +388,7 @@ namespace
 		IHttp *m_pHttp;
 
 		int m_State = STATE_WANTREFRESH;
-		std::shared_ptr<CHttpRequest> m_pGetServers;
+		std::shared_ptr<IHttpRequest> m_pGetServers;
 		std::shared_ptr<CServerListParseJob> m_pParseJob;
 		std::unique_ptr<CChooseMaster> m_pChooseMaster;
 
@@ -390,10 +405,19 @@ namespace
 
 	CServerBrowserHttp::~CServerBrowserHttp()
 	{
+		dbg_assert(m_pGetServers == nullptr, "Server browser load job was not cleared");
+		dbg_assert(m_pParseJob == nullptr, "Server browser parse job was not cleared");
+	}
+
+	void CServerBrowserHttp::Shutdown()
+	{
 		if(m_pGetServers != nullptr)
 		{
 			m_pGetServers->Abort();
+			m_pGetServers = nullptr;
 		}
+		m_pParseJob.reset();
+		m_pChooseMaster->Shutdown();
 	}
 
 	void CServerBrowserHttp::Update()
@@ -429,7 +453,6 @@ namespace
 		}
 		else if(m_State == STATE_PARSING)
 		{
-			// 只有任务完成才读取结果，解析期间保留上次发布的服务器列表。
 			if(m_pParseJob->State() != IJob::STATE_DONE)
 				return;
 			const bool Success = m_pParseJob->m_Success;
@@ -459,7 +482,7 @@ namespace
 	}
 	void CServerBrowserHttp::Refresh()
 	{
-		if(m_State == STATE_WANTREFRESH || m_State == STATE_REFRESHING || m_State == STATE_NO_MASTER)
+		if(m_State == STATE_WANTREFRESH || m_State == STATE_REFRESHING || m_State == STATE_PARSING || m_State == STATE_NO_MASTER)
 		{
 			if(m_State == STATE_NO_MASTER)
 			{
@@ -484,7 +507,6 @@ namespace
 		std::vector<CServerInfo> vServers;
 		return ServerBrowserParseHttpList(pJson, &vServers);
 	}
-
 	const char *DEFAULT_SERVERLIST_URLS[] = {
 		"https://master1.ddnet.org/ddnet/15/servers.json",
 		"https://master2.ddnet.org/ddnet/15/servers.json",

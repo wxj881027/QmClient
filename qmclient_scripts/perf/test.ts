@@ -1446,7 +1446,7 @@ function testReportSamplesLargeEmbeddedChartData() {
   }
 
   const html = generateReport(parseLog(lines.join('\n')), 'qm_perf_large_report.log', null);
-  const match = html.match(/const DATA = ([\s\S]*?);\n\n\(function/);
+  const match = html.match(/^const DATA = ([^\n]*);$/m);
   assert.ok(match);
   const data = JSON.parse(match[1]);
 

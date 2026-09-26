@@ -146,7 +146,7 @@ void CMapView::RenderEditorMap()
 	for(auto &pGroup : Map()->m_vpGroups)
 	{
 		if(pGroup->m_Visible)
-			pGroup->Render();
+			pGroup->Render(Map());
 	}
 
 	// render the game, tele, speedup, front, tune and switch above everything else
@@ -156,7 +156,7 @@ void CMapView::RenderEditorMap()
 		for(auto &pLayer : Map()->m_pGameGroup->m_vpLayers)
 		{
 			if(pLayer->m_Visible && pLayer->IsEntitiesLayer())
-				pLayer->Render();
+				pLayer->Render(Map());
 		}
 	}
 
@@ -226,7 +226,7 @@ void CEditor::DoMapEditor(CUIRect View)
 			m_pTilesetPicker->m_HasSwitch = pTileLayer->m_HasSwitch;
 			m_pTilesetPicker->m_HasTune = pTileLayer->m_HasTune;
 
-			m_pTilesetPicker->Render(true);
+			m_pTilesetPicker->Render(Map());
 
 			if(m_ShowTileInfo != SHOW_TILE_OFF)
 				m_pTilesetPicker->ShowInfo();
@@ -247,7 +247,7 @@ void CEditor::DoMapEditor(CUIRect View)
 				m_pQuadsetPicker->m_vQuads[0].m_aPoints[3].y = f2fx((View.y + View.h));
 				m_pQuadsetPicker->m_vQuads[0].m_aPoints[4].x = f2fx((View.x + View.w / 2));
 				m_pQuadsetPicker->m_vQuads[0].m_aPoints[4].y = f2fx((View.y + View.h / 2));
-				m_pQuadsetPicker->Render();
+				m_pQuadsetPicker->Render(Map());
 			}
 		}
 	}
@@ -584,7 +584,7 @@ void CEditor::DoMapEditor(CUIRect View)
 						m_pBrush->m_OffsetY += pGroup->m_OffsetY;
 						m_pBrush->m_ParallaxX = pGroup->m_ParallaxX;
 						m_pBrush->m_ParallaxY = pGroup->m_ParallaxY;
-						m_pBrush->Render();
+						m_pBrush->Render(Map());
 
 						CUIRect BorderRect;
 						BorderRect.x = 0.0f;

@@ -42,11 +42,11 @@ GUARD_OVERRIDES = {
     "src/qm-soda-hook/qm_soda_watchdog.h": "QM_SODA_HOOK_QM_SODA_WATCHDOG_H",
     "src/qm-soda-hook/qm_soda_writer.h": "QM_SODA_HOOK_QM_SODA_WRITER_H",
     "src/qm-music-hook/qm_kugou_protocol.h": "QM_MUSIC_HOOK_QM_KUGOU_PROTOCOL_H",
-    "src/qm-music-hook/qm_kugou_source.h": "QM_MUSIC_HOOK_QM_KUGOU_SOURCE_H",
-    "src/qm-music-hook/qm_music_publication.h": "QM_MUSIC_HOOK_QM_MUSIC_PUBLICATION_H",
     "src/qm-music-hook/qm_music_source.h": "QM_MUSIC_HOOK_QM_MUSIC_SOURCE_H",
     "src/qm-music-hook/qm_qqmusic_protocol.h": "QM_MUSIC_HOOK_QM_QQMUSIC_PROTOCOL_H",
+    "src/qm-music-hook/qm_kugou_source.h": "QM_MUSIC_HOOK_QM_KUGOU_SOURCE_H",
     "src/qm-music-hook/qm_qqmusic_source.h": "QM_MUSIC_HOOK_QM_QQMUSIC_SOURCE_H",
+    "src/qm-music-hook/qm_music_publication.h": "QM_MUSIC_HOOK_QM_MUSIC_PUBLICATION_H",
 }
 
 QMCLIENT_DIRS = [

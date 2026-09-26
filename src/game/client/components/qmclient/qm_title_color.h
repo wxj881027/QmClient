@@ -1,4 +1,3 @@
-// 请抬头享受阳光｜日子很好 我很我---------致咩子
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QM_TITLE_COLOR_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QM_TITLE_COLOR_H
 
@@ -21,7 +20,6 @@ inline void QmAddTitleRainbowSplits(CTextCursor &Cursor, const char *pTitle, con
 	if(CharCount <= 0)
 		return;
 
-	// 同一个文本容器内多次追加时，字符序号在游标上是累加的（与 CColoredParts 一致）。
 	const int BaseIndex = Cursor.m_CharCount;
 	Cursor.m_vColorSplits.reserve(Cursor.m_vColorSplits.size() + CharCount);
 	const char *pCurrent = pTitle;

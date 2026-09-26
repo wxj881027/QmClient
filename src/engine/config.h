@@ -53,6 +53,15 @@ public:
 	virtual void ResetGameSettings() = 0;
 	virtual void SetReadOnly(const char *pScriptName, bool ReadOnly) = 0;
 	virtual void SetGameSettingsReadOnly(bool ReadOnly) = 0;
+	// 临时写盘覆盖：程序在运行时临时改写某个整数配置项（例如禅模式临时隐藏 HUD/名字板）时，
+	// 登记用户真实值，使 Save() 写出该值而不是运行时值，配置文件不会记录临时状态。
+	// pOwnerId 标识接管来源（如 "qm_zen_mode"），供设置页显示"由谁接管"。
+	virtual void SetSaveValueOverride(const char *pScriptName, bool Active, int Value = 0, const char *pOwnerId = nullptr) = 0;
+	// 查询某个整数配置项是否正被临时接管；返回接管来源标识，未被接管返回 nullptr。
+	virtual const char *SaveValueOverrideOwner(const int *pValue) const = 0;
+	// 返回某整数配置项的"用户真实值"：被临时接管时为接管前保存的值，未接管时等于运行时值。
+	// 供录制等"不应受临时接管影响"的路径读取。
+	virtual int RealValue(const int *pValue) const = 0;
 	virtual bool Save(bool Force = false) = 0;
 	virtual class CConfig *Values() = 0;
 

@@ -1,4 +1,5 @@
 # 请抬头享受阳光｜日子很好 我很我---------致咩子
+
 [[message]]
 key = " min"
 [message.translations]
@@ -1934,6 +1935,22 @@ brazilian_portuguese = "Atraso antes de executar tc_execute_on_join (milissegund
 portuguese = "Atraso antes de executar tc_execute_on_join (milissegundos)"
 turkish = "tc_execute_on_join'i yürütmeden önceki gecikme (milisaniye)"
 polish = "Opóźnienie przed wykonaniem tc_execute_on_join (milisekundy)"
+
+[[message]]
+key = "Tick delay before executing tc_execute_on_join"
+[message.translations]
+simplified_chinese = "执行 tc_execute_on_join 前的延迟（tick）"
+traditional_chinese = "執行 tc_execute_on_join 前的延遲（tick）"
+japanese = "tc_execute_on_join 実行前の遅延（tick）"
+korean = "tc_execute_on_join 실행 전 지연 시간 (tick)"
+russian = "Задержка в тиках перед выполнением tc_execute_on_join"
+german = "Tick-Verzögerung vor Ausführung von tc_execute_on_join"
+spanish = "Retraso en ticks antes de ejecutar tc_execute_on_join"
+french = "Délai en ticks avant l'exécution de tc_execute_on_join"
+brazilian_portuguese = "Atraso em ticks antes de executar tc_execute_on_join"
+portuguese = "Atraso em ticks antes de executar tc_execute_on_join"
+turkish = "tc_execute_on_join yürütülmeden önceki tick gecikmesi"
+polish = "Opóźnienie w tickach przed wykonaniem tc_execute_on_join"
 
 [[message]]
 key = "Deprecated: jump hint color, migrated to qm_jump_hint_color on startup"
@@ -6192,22 +6209,6 @@ turkish = "Çekici diğer silahlar gibi imleçle döndür"
 polish = "Obracaj młotek kursorem jak inne bronie"
 
 [[message]]
-key = "Saiko+ others"
-[message.translations]
-simplified_chinese = "Saiko+ 他人"
-traditional_chinese = "Saiko+ 其他"
-japanese = "Saiko+ その他"
-korean = "Saiko+ 기타"
-russian = "Saiko+ других"
-german = "Saiko+ andere"
-spanish = "Saiko+ otros"
-french = "Saiko+ autres"
-brazilian_portuguese = "Saiko+ outros"
-portuguese = "Saiko+ outros"
-turkish = "Saiko+ diğerleri"
-polish = "Saiko+ innych"
-
-[[message]]
 key = "Save drawings to a given csv file (defaults to map name)"
 [message.translations]
 simplified_chinese = "将绘图保存到给定的 csv 文件（默认为地图名称）"
@@ -8192,159 +8193,6 @@ turkish = "Tee izi renk modu (1=Düz, 2=Geçerli Tee rengi, 3=Gökkuşağı, 4=T
 polish = "Tryb koloru śladu Tee (1=Jednolity, 2=Bieżący kolor Tee, 3=Tęcza, 4=Prędkość Tee, 5=Losowy)"
 
 [[message]]
-key = "Black Flash"
-[message.translations]
-simplified_chinese = "黑闪"
-traditional_chinese = "黑閃"
-japanese = "黒閃"
-korean = "흑섬"
-russian = "Чёрная вспышка"
-german = "Schwarzer Blitz"
-spanish = "Destello negro"
-french = "Éclair noir"
-brazilian_portuguese = "Clarão negro"
-portuguese = "Clarão negro"
-turkish = "Kara parıltı"
-polish = "Czarny błysk"
-
-
-[[message]]
-key = "Inferno"
-[message.translations]
-simplified_chinese = "冥火"
-traditional_chinese = "冥火"
-japanese = "冥炎"
-korean = "지옥불"
-russian = "Адское пламя"
-german = "Höllenfeuer"
-spanish = "Fuego infernal"
-french = "Feu infernal"
-brazilian_portuguese = "Fogo infernal"
-portuguese = "Fogo infernal"
-turkish = "Cehennem ateşi"
-polish = "Piekielny ogień"
-
-
-[[message]]
-key = "Original"
-[message.translations]
-simplified_chinese = "原版"
-traditional_chinese = "原版"
-japanese = "オリジナル"
-korean = "기본"
-russian = "Оригинал"
-german = "Original"
-spanish = "Original"
-french = "Original"
-brazilian_portuguese = "Original"
-portuguese = "Original"
-turkish = "Özgün"
-polish = "Oryginalny"
-
-
-[[message]]
-key = "Spirit"
-[message.translations]
-simplified_chinese = "灵光"
-traditional_chinese = "靈光"
-japanese = "霊光"
-korean = "영혼의 빛"
-russian = "Свет духа"
-german = "Geistlicht"
-spanish = "Luz espiritual"
-french = "Lumière spirituelle"
-brazilian_portuguese = "Luz espiritual"
-portuguese = "Luz espiritual"
-turkish = "Ruh ışığı"
-polish = "Światło ducha"
-
-
-[[message]]
-key = "Tee trail style (0=Original, 1=Black Flash, 2=Exo, 3=Spirit, 4=Void, 5=Inferno)"
-[message.translations]
-simplified_chinese = "Tee 拖尾样式 (0=原版，1=黑闪，2=高能科技，3=灵光，4=虚空，5=冥火)"
-traditional_chinese = "Tee 拖尾樣式 (0=原版, 1=黑閃, 2=高能科技, 3=靈光, 4=虛空, 5=冥火)"
-japanese = "Tee トレイルのスタイル (0=オリジナル, 1=黒閃, 2=Exo エネルギー, 3=霊光, 4=虚無, 5=冥炎)"
-korean = "Tee 궤적 스타일  (0=기본, 1=흑섬, 2=Exo 에너지, 3=영혼의 빛, 4=공허, 5=지옥불)"
-russian = "Стиль следа Tee  (0=Оригинал, 1=Чёрная вспышка, 2=Экзоэнергия, 3=Свет духа, 4=Пустота, 5=Адское пламя)"
-german = "Tee-Spur-Stil  (0=Original, 1=Schwarzer Blitz, 2=Exo-Energie, 3=Geistlicht, 4=Leere, 5=Höllenfeuer)"
-spanish = "Estilo del rastro de Tee  (0=Original, 1=Destello negro, 2=Energía Exo, 3=Luz espiritual, 4=Vacío, 5=Fuego infernal)"
-french = "Style de traînée de Tee  (0=Original, 1=Éclair noir, 2=Énergie Exo, 3=Lumière spirituelle, 4=Vide, 5=Feu infernal)"
-brazilian_portuguese = "Estilo do rastro do Tee  (0=Original, 1=Clarão negro, 2=Energia Exo, 3=Luz espiritual, 4=Vazio, 5=Fogo infernal)"
-portuguese = "Estilo do rasto do Tee  (0=Original, 1=Clarão negro, 2=Energia Exo, 3=Luz espiritual, 4=Vazio, 5=Fogo infernal)"
-turkish = "Tee izi stili  (0=Özgün, 1=Kara parıltı, 2=Exo enerjisi, 3=Ruh ışığı, 4=Boşluk, 5=Cehennem ateşi)"
-polish = "Styl śladu Tee  (0=Oryginalny, 1=Czarny błysk, 2=Energia Exo, 3=Światło ducha, 4=Pustka, 5=Piekielny ogień)"
-
-
-[[message]]
-key = "Use each Tee trail style's own palette instead of the trail color mode"
-[message.translations]
-simplified_chinese = "使用各 Tee 拖尾样式自带的配色，而不是拖尾颜色模式"
-traditional_chinese = "使用各 Tee 拖尾樣式自帶的配色，而不是拖尾顏色模式"
-japanese = "トレイルの色モードではなく、各スタイル固有の配色を使う"
-korean = "Tee 궤적 색상 모드 대신 각 스타일 고유의 색상을 사용"
-russian = "Использовать собственную палитру стиля следа Tee вместо режима цвета"
-german = "Die eigene Farbpalette des Tee-Spur-Stils statt des Spur-Farbmodus verwenden"
-spanish = "Usar la paleta propia de cada estilo de estela de Tee en lugar del modo de color"
-french = "Utiliser la palette propre au style de traînée de Tee au lieu du mode de couleur"
-brazilian_portuguese = "Usar a paleta própria de cada estilo de rastro do Tee em vez do modo de cor"
-portuguese = "Usar a paleta própria de cada estilo de rasto do Tee em vez do modo de cor"
-turkish = "Tee izi renk modu yerine her stilin kendi paletini kullan"
-polish = "Użyj własnej palety stylu śladu Tee zamiast trybu koloru"
-
-
-[[message]]
-key = "Use style colors"
-[message.translations]
-simplified_chinese = "使用样式专属配色"
-traditional_chinese = "使用樣式專屬配色"
-japanese = "スタイル固有の配色を使う"
-korean = "스타일 고유 색상 사용"
-russian = "Использовать цвета стиля"
-german = "Stilfarben verwenden"
-spanish = "Usar colores del estilo"
-french = "Utiliser les couleurs du style"
-brazilian_portuguese = "Usar cores do estilo"
-portuguese = "Usar cores do estilo"
-turkish = "Stil renklerini kullan"
-polish = "Użyj kolorów stylu"
-
-
-[[message]]
-key = "Exo"
-[message.translations]
-simplified_chinese = "高能科技"
-traditional_chinese = "高能科技"
-japanese = "Exo エネルギー"
-korean = "Exo 에너지"
-russian = "Экзоэнергия"
-german = "Exo-Energie"
-spanish = "Energía Exo"
-french = "Énergie Exo"
-brazilian_portuguese = "Energia Exo"
-portuguese = "Energia Exo"
-turkish = "Exo enerjisi"
-polish = "Energia Exo"
-
-
-[[message]]
-key = "Void"
-[message.translations]
-simplified_chinese = "虚空"
-traditional_chinese = "虛空"
-japanese = "虚無"
-korean = "공허"
-russian = "Пустота"
-german = "Leere"
-spanish = "Vacío"
-french = "Vide"
-brazilian_portuguese = "Vazio"
-portuguese = "Vazio"
-turkish = "Boşluk"
-polish = "Pustka"
-
-
-[[message]]
 key = "Tee Trails"
 [message.translations]
 simplified_chinese = "Tee 拖尾"
@@ -9599,6 +9447,310 @@ turkish = "Güncelleme hazır ve çıkışta kurulacak."
 polish = "Aktualizacja jest gotowa i zostanie zainstalowana przy wyjściu."
 
 [[message]]
+key = "Custom font weight (variable fonts)"
+[message.translations]
+simplified_chinese = "自定义字体字重（可变字体）"
+traditional_chinese = "自訂字型字重（可變字型）"
+japanese = "カスタムフォントの太さ（可変フォント）"
+korean = "사용자 지정 글꼴 굵기(가변 글꼴)"
+russian = "Толщина своего шрифта (вариативные шрифты)"
+german = "Schriftstärke der eigenen Schrift (variable Schriften)"
+spanish = "Grosor de la fuente personalizada (fuentes variables)"
+french = "Graisse de la police personnalisée (polices variables)"
+brazilian_portuguese = "Espessura da fonte personalizada (fontes variáveis)"
+portuguese = "Espessura da fonte personalizada (fontes variáveis)"
+turkish = "Özel yazı tipi kalınlığı (değişken yazı tipleri)"
+polish = "Grubość niestandardowej czcionki (czcionki zmienne)"
+
+[[message]]
+key = "Font style:"
+[message.translations]
+simplified_chinese = "字体样式："
+traditional_chinese = "字型樣式："
+japanese = "フォントスタイル:"
+korean = "글꼴 스타일:"
+russian = "Стиль шрифта:"
+german = "Schriftstil:"
+spanish = "Estilo de fuente:"
+french = "Style de police :"
+brazilian_portuguese = "Estilo da fonte:"
+portuguese = "Estilo da fonte:"
+turkish = "Yazı tipi stili:"
+polish = "Styl czcionki:"
+
+[[message]]
+key = "Variable custom font weight"
+[message.translations]
+simplified_chinese = "可变字体的自定义字重"
+traditional_chinese = "可變字型的自訂字重"
+japanese = "可変フォントのカスタム太さ"
+korean = "가변 글꼴의 사용자 지정 굵기"
+russian = "Толщина вариативного пользовательского шрифта"
+german = "Schriftstärke der variablen eigenen Schrift"
+spanish = "Grosor de la fuente personalizada variable"
+french = "Graisse de la police personnalisée variable"
+brazilian_portuguese = "Espessura da fonte personalizada variável"
+portuguese = "Espessura da fonte personalizada variável"
+turkish = "Değişken özel yazı tipi kalınlığı"
+polish = "Grubość zmiennej niestandardowej czcionki"
+
+[[message]]
+key = "Available for this bundled font"
+[message.translations]
+simplified_chinese = "该随包字体可用"
+traditional_chinese = "此隨包字型可用"
+japanese = "この同梱フォントで利用可能"
+korean = "이 번들 글꼴에서 사용 가능"
+russian = "Доступно для этого встроенного шрифта"
+german = "Für diese mitgelieferte Schrift verfügbar"
+spanish = "Disponible para esta fuente incluida"
+french = "Disponible pour cette police fournie"
+brazilian_portuguese = "Disponível para esta fonte incluída"
+portuguese = "Disponível para esta fonte incluída"
+turkish = "Bu paketlenmiş yazı tipi için kullanılabilir"
+polish = "Dostępne dla tej dołączonej czcionki"
+
+[[message]]
+key = "Bundled vector profile:"
+[message.translations]
+simplified_chinese = "随包矢量配置："
+traditional_chinese = "隨包向量設定檔："
+japanese = "同梱ベクタープロファイル:"
+korean = "번들 벡터 프로필:"
+russian = "Встроенный векторный профиль:"
+german = "Mitgeliefertes Vektorprofil:"
+spanish = "Perfil vectorial incluido:"
+french = "Profil vectoriel fourni :"
+brazilian_portuguese = "Perfil vetorial incluído:"
+portuguese = "Perfil vetorial incluído:"
+turkish = "Paketlenmiş vektör profili:"
+polish = "Dołączony profil wektorowy:"
+
+[[message]]
+key = "Not available; FreeType is used"
+[message.translations]
+simplified_chinese = "不可用；将使用 FreeType"
+traditional_chinese = "不可用；將使用 FreeType"
+japanese = "利用できません。FreeType を使用します"
+korean = "사용할 수 없음. FreeType을 사용합니다"
+russian = "Недоступно; используется FreeType"
+german = "Nicht verfügbar; FreeType wird verwendet"
+spanish = "No disponible; se usa FreeType"
+french = "Non disponible ; FreeType est utilisé"
+brazilian_portuguese = "Indisponível; o FreeType é usado"
+portuguese = "Indisponível; o FreeType é usado"
+turkish = "Kullanılamaz; FreeType kullanılır"
+polish = "Niedostępne; używany jest FreeType"
+
+[[message]]
+key = "Only selected bundled fonts have vector nameplate atlases. Other fonts use FreeType."
+[message.translations]
+simplified_chinese = "只有部分随包字体带有铭牌矢量图集，其他字体会使用 FreeType。"
+traditional_chinese = "只有部分隨包字型帶有名牌向量圖集，其他字型會使用 FreeType。"
+japanese = "一部の同梱フォントのみベクターのネームプレートアトラスを持ちます。それ以外のフォントは FreeType を使用します。"
+korean = "일부 번들 글꼴에만 벡터 이름표 아틀라스가 있습니다. 다른 글꼴은 FreeType을 사용합니다."
+russian = "Только у некоторых встроенных шрифтов есть векторные атласы табличек. Остальные шрифты используют FreeType."
+german = "Nur ausgewählte mitgelieferte Schriften haben Vektor-Namensschildatlanten. Andere Schriften verwenden FreeType."
+spanish = "Solo algunas fuentes incluidas tienen atlas vectoriales de placas. Las demás usan FreeType."
+french = "Seules certaines polices fournies disposent d'atlas vectoriels de plaques. Les autres utilisent FreeType."
+brazilian_portuguese = "Apenas algumas fontes incluídas têm atlas vetoriais de plaquinhas. As demais usam FreeType."
+portuguese = "Apenas algumas fontes incluídas têm atlas vetoriais de placas. As restantes usam FreeType."
+turkish = "Yalnızca seçili paketlenmiş yazı tiplerinde vektör ad plakası atlası vardır. Diğer yazı tipleri FreeType kullanır."
+polish = "Tylko wybrane dołączone czcionki mają wektorowe atlasy tabliczek. Pozostałe używają FreeType."
+
+[[message]]
+key = "This font has no bundled vector profile. Nameplates will use FreeType."
+[message.translations]
+simplified_chinese = "该字体没有随包矢量配置，铭牌将使用 FreeType。"
+traditional_chinese = "此字型沒有隨包向量設定檔，名牌將使用 FreeType。"
+japanese = "このフォントには同梱ベクタープロファイルがありません。ネームプレートは FreeType を使用します。"
+korean = "이 글꼴에는 번들 벡터 프로필이 없습니다. 이름표는 FreeType을 사용합니다."
+russian = "У этого шрифта нет встроенного векторного профиля. Таблички будут использовать FreeType."
+german = "Diese Schrift hat kein mitgeliefertes Vektorprofil. Namensschilder verwenden FreeType."
+spanish = "Esta fuente no tiene perfil vectorial incluido. Las placas usarán FreeType."
+french = "Cette police n'a pas de profil vectoriel fourni. Les plaques utiliseront FreeType."
+brazilian_portuguese = "Esta fonte não tem perfil vetorial incluído. As plaquinhas usarão FreeType."
+portuguese = "Esta fonte não tem perfil vetorial incluído. As placas usarão FreeType."
+turkish = "Bu yazı tipinin paketlenmiş vektör profili yok. Ad plakaları FreeType kullanacak."
+polish = "Ta czcionka nie ma dołączonego profilu wektorowego. Tabliczki będą używać FreeType."
+
+[[message]]
+key = "Use vector font rendering for nameplates"
+[message.translations]
+simplified_chinese = "使用铭牌矢量字体"
+traditional_chinese = "使用名牌向量字型"
+japanese = "ネームプレートにベクター文字描画を使用"
+korean = "이름표에 벡터 글꼴 렌더링 사용"
+russian = "Использовать векторный шрифт для табличек"
+german = "Vektor-Schriftdarstellung für Namensschilder verwenden"
+spanish = "Usar renderizado de fuente vectorial para las placas"
+french = "Utiliser le rendu de police vectorielle pour les plaques"
+brazilian_portuguese = "Usar renderização de fonte vetorial nas plaquinhas"
+portuguese = "Usar renderização de fonte vetorial nas placas"
+turkish = "Ad plakaları için vektör yazı tipi oluşturmayı kullan"
+polish = "Używaj renderowania czcionki wektorowej dla tabliczek"
+
+[[message]]
+key = "Vector nameplate text"
+[message.translations]
+simplified_chinese = "铭牌矢量字体"
+traditional_chinese = "名牌向量字型"
+japanese = "ネームプレートのベクター文字"
+korean = "이름표 벡터 텍스트"
+russian = "Векторный текст табличек"
+german = "Vektor-Namensschildtext"
+spanish = "Texto vectorial de la placa"
+french = "Texte vectoriel de plaque"
+brazilian_portuguese = "Texto vetorial da plaquinha"
+portuguese = "Texto vetorial da placa"
+turkish = "Vektör ad plakası metni"
+polish = "Tekst wektorowy tabliczki"
+
+[[message]]
+key = "Cursed Flame"
+[message.translations]
+simplified_chinese = "咒焰"
+traditional_chinese = "咒焰"
+japanese = "呪いの炎"
+korean = "저주받은 불꽃"
+russian = "Проклятое пламя"
+german = "Verfluchte Flamme"
+spanish = "Llama maldita"
+french = "Flamme maudite"
+brazilian_portuguese = "Chama amaldiçoada"
+portuguese = "Chama amaldiçoada"
+turkish = "Lanetli Alev"
+polish = "Przeklęty płomień"
+
+[[message]]
+key = "Golden Grace"
+[message.translations]
+simplified_chinese = "黄金恩泽"
+traditional_chinese = "黃金恩澤"
+japanese = "黄金の恵み"
+korean = "황금의 은총"
+russian = "Золотая благодать"
+german = "Goldene Gnade"
+spanish = "Gracia dorada"
+french = "Grâce dorée"
+brazilian_portuguese = "Graça dourada"
+portuguese = "Graça dourada"
+turkish = "Altın Lütuf"
+polish = "Złota łaska"
+
+[[message]]
+key = "Original"
+[message.translations]
+simplified_chinese = "原版"
+traditional_chinese = "原版"
+japanese = "オリジナル"
+korean = "기본"
+russian = "Оригинал"
+german = "Originalstil"
+spanish = "Estilo original"
+french = "Style d'origine"
+brazilian_portuguese = "Estilo original"
+portuguese = "Estilo original"
+turkish = "Özgün"
+polish = "Oryginalny"
+
+[[message]]
+key = "Spirit Light"
+[message.translations]
+simplified_chinese = "灵光"
+traditional_chinese = "靈光"
+japanese = "精霊の光"
+korean = "영혼의 빛"
+russian = "Свет духа"
+german = "Geisteslicht"
+spanish = "Luz espiritual"
+french = "Lumière spirituelle"
+brazilian_portuguese = "Luz espiritual"
+portuguese = "Luz espiritual"
+turkish = "Ruh Işığı"
+polish = "Światło ducha"
+
+[[message]]
+key = "Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)"
+[message.translations]
+simplified_chinese = "Tee 拖尾样式（0=原版，1=咒焰，2=紫电，3=灵光，4=虚空，5=黄金恩泽）"
+traditional_chinese = "Tee 拖尾樣式（0=原版，1=咒焰，2=紫電，3=靈光，4=虛空，5=黃金恩澤）"
+japanese = "Tee トレイルスタイル（0=オリジナル、1=呪いの炎、2=紫電、3=精霊の光、4=虚空の影、5=黄金の恵み）"
+korean = "Tee 트레일 스타일(0=기본, 1=저주받은 불꽃, 2=보라 번개, 3=영혼의 빛, 4=공허의 그림자, 5=황금의 은총)"
+russian = "Стиль следа Tee (0=Оригинал, 1=Проклятое пламя, 2=Фиолетовая молния, 3=Свет духа, 4=Тень пустоты, 5=Золотая благодать)"
+german = "Tee-Spur-Stil (0=Originalstil, 1=Verfluchte Flamme, 2=Violetter Blitz, 3=Geisteslicht, 4=Schatten der Leere, 5=Goldene Gnade)"
+spanish = "Estilo de estela del Tee (0=Estilo original, 1=Llama maldita, 2=Rayo violeta, 3=Luz espiritual, 4=Sombra del vacío, 5=Gracia dorada)"
+french = "Style de traînée du Tee (0=Style d'origine, 1=Flamme maudite, 2=Éclair violet, 3=Lumière spirituelle, 4=Ombre du vide, 5=Grâce dorée)"
+brazilian_portuguese = "Estilo de rastro do Tee (0=Estilo original, 1=Chama amaldiçoada, 2=Raio violeta, 3=Luz espiritual, 4=Sombra do vazio, 5=Graça dourada)"
+portuguese = "Estilo de rasto do Tee (0=Estilo original, 1=Chama amaldiçoada, 2=Raio violeta, 3=Luz espiritual, 4=Sombra do vazio, 5=Graça dourada)"
+turkish = "Tee iz stili (0=Özgün, 1=Lanetli Alev, 2=Mor Şimşek, 3=Ruh Işığı, 4=Boşluk Gölgesi, 5=Altın Lütuf)"
+polish = "Styl smugi Tee (0=Oryginalny, 1=Przeklęty płomień, 2=Fioletowa błyskawica, 3=Światło ducha, 4=Cień pustki, 5=Złota łaska)"
+
+[[message]]
+key = "Use style colors"
+[message.translations]
+simplified_chinese = "使用样式颜色"
+traditional_chinese = "使用樣式顏色"
+japanese = "スタイルの色を使用"
+korean = "스타일 색상 사용"
+russian = "Использовать цвета стиля"
+german = "Stilfarben verwenden"
+spanish = "Usar colores del estilo"
+french = "Utiliser les couleurs du style"
+brazilian_portuguese = "Usar cores do estilo"
+portuguese = "Usar cores do estilo"
+turkish = "Stil renklerini kullan"
+polish = "Użyj kolorów stylu"
+
+[[message]]
+key = "Use the selected tee trail style palette"
+[message.translations]
+simplified_chinese = "使用所选 Tee 拖尾样式的色板"
+traditional_chinese = "使用所選 Tee 拖尾樣式的色板"
+japanese = "選択した Tee トレイルスタイルのパレットを使用"
+korean = "선택한 Tee 트레일 스타일 팔레트 사용"
+russian = "Использовать палитру выбранного стиля следа Tee"
+german = "Palette des gewählten Tee-Spur-Stils verwenden"
+spanish = "Usar la paleta del estilo de estela del Tee seleccionado"
+french = "Utiliser la palette du style de traînée du Tee sélectionné"
+brazilian_portuguese = "Usar a paleta do estilo de rastro do Tee selecionado"
+portuguese = "Usar a paleta do estilo de rasto do Tee selecionado"
+turkish = "Seçili Tee iz stili paletini kullan"
+polish = "Użyj palety wybranego stylu smugi Tee"
+
+[[message]]
+key = "Violet Bolt"
+[message.translations]
+simplified_chinese = "紫电"
+traditional_chinese = "紫電"
+japanese = "紫電"
+korean = "보라 번개"
+russian = "Фиолетовая молния"
+german = "Violetter Blitz"
+spanish = "Rayo violeta"
+french = "Éclair violet"
+brazilian_portuguese = "Raio violeta"
+portuguese = "Raio violeta"
+turkish = "Mor Şimşek"
+polish = "Fioletowa błyskawica"
+
+[[message]]
+key = "Void Shadow"
+[message.translations]
+simplified_chinese = "虚空"
+traditional_chinese = "虛空"
+japanese = "虚空の影"
+korean = "공허의 그림자"
+russian = "Тень пустоты"
+german = "Schatten der Leere"
+spanish = "Sombra del vacío"
+french = "Ombre du vide"
+brazilian_portuguese = "Sombra do vazio"
+portuguese = "Sombra do vazio"
+turkish = "Boşluk Gölgesi"
+polish = "Cień pustki"
+
+[[message]]
 key = "Save loaded; local record removed."
 [message.translations]
 simplified_chinese = "存档读取成功，已删除本地记录。"
@@ -9837,3 +9989,19 @@ brazilian_portuguese = "%d. %s | principal: %s | dummy: %s"
 portuguese = "%d. %s | principal: %s | dummy: %s"
 turkish = "%d. %s | ana oyuncu: %s | kukla: %s"
 polish = "%d. %s | główny: %s | dummy: %s"
+
+[[message]]
+key = "Legacy realtime WebSocket URL (migrated to qm_websocket_url)"
+[message.translations]
+simplified_chinese = "旧实时 WebSocket 地址（已迁移至 qm_websocket_url）"
+traditional_chinese = "舊即時 WebSocket 位址（已遷移至 qm_websocket_url）"
+japanese = "旧リアルタイム WebSocket URL（qm_websocket_url に移行済み）"
+korean = "기존 실시간 WebSocket URL (qm_websocket_url로 이전됨)"
+russian = "Старый адрес WebSocket для канала реального времени (перенесён в qm_websocket_url)"
+german = "Alte Echtzeit WebSocket URL (nach qm_websocket_url migriert)"
+spanish = "URL WebSocket anterior en tiempo real (migrada a qm_websocket_url)"
+french = "Ancienne URL WebSocket temps réel (migrée vers qm_websocket_url)"
+brazilian_portuguese = "URL WebSocket em tempo real antiga (migrada para qm_websocket_url)"
+portuguese = "URL WebSocket em tempo real antiga (migrada para qm_websocket_url)"
+turkish = "Eski gerçek zamanlı WebSocket URL'si (qm_websocket_url adresine taşındı)"
+polish = "Stary adres WebSocket czasu rzeczywistego (przeniesiony do qm_websocket_url)"

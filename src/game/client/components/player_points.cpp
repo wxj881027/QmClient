@@ -5,23 +5,23 @@
 #include <base/system.h>
 
 #include <engine/engine.h>
-#include <engine/shared/http.h>
-#include <engine/shared/jobs.h>
+#include <engine/http.h>
 #include <engine/shared/json.h>
 
 #include <game/client/gameclient.h>
 
-#include <utility>
+#include <cstring>
 
 namespace
 {
+	// JSON 解析放到后台任务：响应体较大时主线程解析会打帧。
 	class CPlayerPointsParseJob final : public IJob
 	{
 	public:
 		using SResult = SPlayerPointsParseResult;
 
 	private:
-		std::shared_ptr<CHttpRequest> m_pRequest;
+		std::shared_ptr<IHttpRequest> m_pRequest;
 		SResult m_Result;
 
 	protected:
@@ -30,6 +30,7 @@ namespace
 			if(!m_pRequest || m_pRequest->State() != EHttpState::DONE || m_pRequest->StatusCode() != 200)
 				return;
 
+			// ResultJson 每次调用新建解析树，所有权在本函数。
 			json_value *pRoot = m_pRequest->ResultJson();
 			if(!pRoot)
 				return;
@@ -39,7 +40,7 @@ namespace
 		}
 
 	public:
-		explicit CPlayerPointsParseJob(std::shared_ptr<CHttpRequest> pRequest) :
+		explicit CPlayerPointsParseJob(std::shared_ptr<IHttpRequest> pRequest) :
 			m_pRequest(std::move(pRequest))
 		{
 		}
@@ -50,7 +51,6 @@ namespace
 		}
 	};
 }
-
 void CPlayerPoints::OnRender()
 {
 	ProcessCompletedRequests();
@@ -141,11 +141,10 @@ void CPlayerPoints::StartRequest(const char *pPlayerName)
 	str_format(aUrl, sizeof(aUrl), "https://ddnet.org/players/?json2=%s", aEncodedName);
 
 	// 创建并配置 HTTP 请求。
-	static constexpr size_t MAX_RESPONSE_BYTES = 1024 * 1000; // 最大响应体大小（约 1000KB）
-	auto pRequest = std::make_shared<CHttpRequest>(aUrl);
+	std::shared_ptr<IHttpRequest> pRequest = HttpGet(aUrl);
+	pRequest->MaxResponseSize(1024 * 1000);
 	pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
 	pRequest->LogProgress(HTTPLOG::FAILURE);
-	pRequest->MaxResponseSize(MAX_RESPONSE_BYTES);
 
 	// 先把缓存状态标记为请求中。
 	std::string Name(pPlayerName);
@@ -162,7 +161,7 @@ void CPlayerPoints::ProcessCompletedRequests()
 	while(Iter != m_ActiveRequests.end())
 	{
 		const std::string &Name = Iter->first;
-		std::shared_ptr<CHttpRequest> pRequest = Iter->second;
+		std::shared_ptr<IHttpRequest> pRequest = Iter->second;
 
 		if(!pRequest->Done())
 		{
@@ -191,6 +190,7 @@ void CPlayerPoints::ProcessCompletedRequests()
 				continue;
 			}
 
+			// 解析下放到后台任务；每个玩家同时只跑一个解析任务。
 			auto ParseIter = m_ParseJobs.find(Name);
 			if(ParseIter == m_ParseJobs.end())
 			{

@@ -130,6 +130,8 @@ namespace
 		uint64_t Irq = 0;
 		uint64_t Softirq = 0;
 		uint64_t Steal = 0;
+		// fscanf 不报告哪个转换失败；ReadCount < 5 已把字段缺失/非数字当作读取失败处理。
+		// NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion)
 		const int ReadCount = std::fscanf(pFile, "%7s %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64, aLabel, &User, &Nice, &System, &Idle, &Iowait, &Irq, &Softirq, &Steal);
 		std::fclose(pFile);
 		if(ReadCount < 5 || std::strcmp(aLabel, "cpu") != 0)

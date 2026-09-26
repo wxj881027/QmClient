@@ -7,10 +7,9 @@
 
 inline bool QmCopyScoreboardSkin(CConfig &Config, bool Sixup, const char *pSkinName, int UseCustomColor, int ColorBody, int ColorFeet)
 {
-	// 0.7 使用独立部件配置，不能把兼容皮肤名写入 0.6 配置。
-	if(Sixup)
+	// 0.7 uses separate skin-part configuration; do not write a compatible name into 0.6 settings.
+	if(Sixup || !pSkinName || !pSkinName[0])
 		return false;
-
 	const bool Dummy = Config.m_ClDummy != 0;
 	str_copy(Dummy ? Config.m_ClDummySkin : Config.m_ClPlayerSkin, pSkinName, sizeof(Config.m_ClPlayerSkin));
 	(Dummy ? Config.m_ClDummyUseCustomColor : Config.m_ClPlayerUseCustomColor) = UseCustomColor;

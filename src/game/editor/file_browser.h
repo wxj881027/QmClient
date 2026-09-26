@@ -158,7 +158,8 @@ private:
 	bool CanPreviewFile() const;
 	void UpdateFilePreview();
 	void RenderFilePreview(CUIRect Preview);
-	const char *DetermineFileFontIcon(const CFilelistItem *pItem) const;
+	// 返回图集图标，同时输出回退字形（FontIcons::FONT_ICON_*）。
+	EQmIcon DetermineFileQmIcon(const CFilelistItem *pItem, const char **ppFallbackIcon) const;
 	void UpdateFilenameInput();
 	void UpdateSelectedIndex(const char *pDisplayName);
 	void SortFilteredFileList();

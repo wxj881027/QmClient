@@ -88,6 +88,17 @@ inline float ResolveSettingsCardBorderWidth(const float UiScale, const float Pix
 	return AlignSettingsCardValueToPixels(std::max(2.0f, 2.0f * std::max(0.0f, UiScale)), PixelSize);
 }
 
+inline CUIRect ResolveSettingsCardChromeRect(const CUIRect &Rect, const float PixelSize)
+{
+	if(PixelSize <= 0.0f)
+		return Rect;
+	const float Left = AlignSettingsCardValueToPixels(Rect.x, PixelSize);
+	const float Top = AlignSettingsCardValueToPixels(Rect.y, PixelSize);
+	const float Right = AlignSettingsCardValueToPixels(Rect.x + Rect.w, PixelSize);
+	const float Bottom = AlignSettingsCardValueToPixels(Rect.y + Rect.h, PixelSize);
+	return {Left, Top, std::max(0.0f, Right - Left), std::max(0.0f, Bottom - Top)};
+}
+
 inline CUIRect ResolveSettingsFocusSafeClipRect(const CUIRect &Rect, const float UiScale)
 {
 	const float Scale = std::max(0.1f, UiScale);
@@ -147,6 +158,30 @@ inline ColorRGBA ResolveSettingsCardInnerSurfaceColor(const ColorRGBA Surface, C
 		InnerAlpha);
 }
 
+inline ColorRGBA ResolveSettingsCardEffectiveBorderColor(ColorRGBA Border, const ColorRGBA Surface)
+{
+	const float SurfaceAlpha = std::clamp(Surface.a, 0.0f, 1.0f);
+	float MaxBorderAlpha = std::max(0.0f, SurfaceAlpha - 0.001f);
+	const auto RestrictChannel = [&](const float SurfaceChannel, const float BorderChannel) {
+		const float ClampedSurfaceChannel = std::clamp(SurfaceChannel, 0.0f, 1.0f);
+		const float ClampedBorderChannel = std::clamp(BorderChannel, 0.0f, 1.0f);
+		const float SurfacePremultiplied = ClampedSurfaceChannel * SurfaceAlpha;
+		const float LowerDenominator = SurfacePremultiplied + ClampedBorderChannel * (1.0f - SurfaceAlpha);
+		if(LowerDenominator > 0.000001f)
+			MaxBorderAlpha = std::min(MaxBorderAlpha, SurfacePremultiplied / LowerDenominator);
+
+		const float UpperNumerator = SurfaceAlpha * (1.0f - ClampedSurfaceChannel);
+		const float UpperDenominator = 1.0f - SurfacePremultiplied - ClampedBorderChannel * (1.0f - SurfaceAlpha);
+		if(UpperDenominator > 0.000001f)
+			MaxBorderAlpha = std::min(MaxBorderAlpha, UpperNumerator / UpperDenominator);
+	};
+	RestrictChannel(Surface.r, Border.r);
+	RestrictChannel(Surface.g, Border.g);
+	RestrictChannel(Surface.b, Border.b);
+	Border.a = std::clamp(Border.a, 0.0f, std::max(0.0f, MaxBorderAlpha));
+	return Border;
+}
+
 using FSettingsCardMeasure = std::function<float(float ContentWidth)>;
 using FSettingsCardRender = std::function<void(CUIRect ContentRect)>;
 using FSettingsCardRenderMeasured = std::function<void(CUIRect &ContentRect)>;
@@ -154,6 +189,7 @@ using FSettingsCardPreLayoutInput = std::function<bool(CUIRect ContentRect)>;
 using FSettingsCardHasPendingPreLayoutInput = std::function<bool()>;
 using FSettingsCardPreLayoutHeaderInput = std::function<bool(const SSettingsCardFrame &Frame, bool Collapsed)>;
 using FSettingsCardHeaderAction = std::function<void(const SSettingsCardFrame &Frame, bool Collapsed)>;
+using FSettingsCardCollapseChanged = std::function<void(bool Collapsed)>;
 
 void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, bool Collapsed, float DrawAlpha = 1.0f);
 

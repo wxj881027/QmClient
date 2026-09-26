@@ -7,6 +7,7 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/components/binds.h>
 #include <game/client/gameclient.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
@@ -49,8 +50,8 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 		const float ClearSurfaceAlpha = 0.22f * Ui()->ButtonColorMul(pClearButton);
 		DrawRoundedSurface(Ui(), ClearButton, ColorRGBA(1.0f, 1.0f, 1.0f, ClearSurfaceAlpha), ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_R);
 	}
-	const int ClearButtonResult = Ui()->DoButton_FontIcon(
-		pClearButton, FONT_ICON_TRASH,
+	const int ClearButtonResult = Ui()->DoButton_QmIcon(
+		pClearButton, EQmIcon::TRASH, FONT_ICON_TRASH,
 		ClearChecked, &ClearButton, BUTTONFLAG_LEFT, IGraphics::CORNER_R, true, ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
 
 	const int ButtonResult = Ui()->DoButtonLogic(pReaderButton, 0, &KeyReaderButton, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);

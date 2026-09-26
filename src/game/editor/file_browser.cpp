@@ -7,6 +7,7 @@
 #include <engine/sound.h>
 #include <engine/storage.h>
 
+#include <game/client/qm_icon_manager.h>
 #include <game/editor/editor.h>
 #include <game/localization.h>
 
@@ -189,15 +190,6 @@ void CFileBrowser::OnRender(CUIRect _)
 		Ui()->DoLabel(&FileBoxLabel, Localize("Filename:", "Editor"), 10.0f, TEXTALIGN_ML);
 		if(Ui()->DoEditBox(&m_FilenameInput, &FileBox, 10.0f))
 		{
-			// Remove '/' and '\'
-			for(int i = 0; m_FilenameInput.GetString()[i]; ++i)
-			{
-				if(m_FilenameInput.GetString()[i] == '/' || m_FilenameInput.GetString()[i] == '\\')
-				{
-					m_FilenameInput.SetRange(m_FilenameInput.GetString() + i + 1, i, m_FilenameInput.GetLength());
-					--i;
-				}
-			}
 			UpdateSelectedIndex(m_FilenameInput.GetString());
 		}
 	}
@@ -267,11 +259,9 @@ void CFileBrowser::OnRender(CUIRect _)
 		Button.VSplitRight(100.0f, &Button, &TimeModified);
 		Button.VSplitRight(5.0f, &Button, nullptr);
 
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-		Ui()->DoLabel(&FileIcon, DetermineFileFontIcon(m_vpFilteredFileList[i]), 12.0f, TEXTALIGN_ML);
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		const char *pFileIconFallback = nullptr;
+		const EQmIcon FileIconType = DetermineFileQmIcon(m_vpFilteredFileList[i], &pFileIconFallback);
+		Ui()->DoLabel_QmIcon(&FileIcon, FileIconType, pFileIconFallback, 12.0f, TEXTALIGN_ML);
 
 		Ui()->DoLabel(&Button, m_vpFilteredFileList[i]->m_aDisplayName, 10.0f, TEXTALIGN_ML, {.m_MaxWidth = Button.w, .m_EllipsisAtEnd = true});
 
@@ -369,15 +359,17 @@ void CFileBrowser::OnRender(CUIRect _)
 		else // file
 		{
 			const int StorageType = m_SelectedFileIndex >= 0 ? m_vpFilteredFileList[m_SelectedFileIndex]->m_StorageType : m_StorageType;
-			char aSaveFilePath[IO_MAX_PATH_LENGTH];
-			str_format(aSaveFilePath, sizeof(aSaveFilePath), "%s/%s", m_pCurrentPath, m_FilenameInput.GetString());
-			if(!str_endswith(aSaveFilePath, FILETYPE_EXTENSIONS[(int)m_FileType]))
-			{
-				str_append(aSaveFilePath, FILETYPE_EXTENSIONS[(int)m_FileType]);
-			}
 
 			char aFilename[IO_MAX_PATH_LENGTH];
-			fs_split_file_extension(fs_filename(aSaveFilePath), aFilename, sizeof(aFilename));
+			str_copy(aFilename, m_FilenameInput.GetString());
+			if(!str_endswith(aFilename, FILETYPE_EXTENSIONS[(int)m_FileType]))
+			{
+				str_append(aFilename, FILETYPE_EXTENSIONS[(int)m_FileType]);
+			}
+
+			char aSaveFilePath[IO_MAX_PATH_LENGTH];
+			str_format(aSaveFilePath, sizeof(aSaveFilePath), "%s/%s", m_pCurrentPath, aFilename);
+
 			if(m_SaveAction && !str_valid_filename(aFilename))
 			{
 				Editor()->ShowFileDialogError(Localize("This name cannot be used for files and folders.", "Editor"));
@@ -586,29 +578,36 @@ void CFileBrowser::RenderFilePreview(CUIRect Preview)
 	}
 }
 
-const char *CFileBrowser::DetermineFileFontIcon(const CFilelistItem *pItem) const
+EQmIcon CFileBrowser::DetermineFileQmIcon(const CFilelistItem *pItem, const char **ppFallbackIcon) const
 {
 	if(!pItem->m_IsDir)
 	{
 		switch(m_FileType)
 		{
 		case EFileType::MAP:
-			return FONT_ICON_MAP;
+			*ppFallbackIcon = FONT_ICON_MAP;
+			return EQmIcon::MAP;
 		case EFileType::IMAGE:
-			return FONT_ICON_IMAGE;
+			*ppFallbackIcon = FONT_ICON_IMAGE;
+			return EQmIcon::IMAGE;
 		case EFileType::SOUND:
-			return FONT_ICON_MUSIC;
+			*ppFallbackIcon = FONT_ICON_MUSIC;
+			return EQmIcon::MUSIC;
 		default:
 			dbg_assert_failed("m_FileType invalid: %d", (int)m_FileType);
+			*ppFallbackIcon = FONT_ICON_FILE;
+			return EQmIcon::FILE;
 		}
 	}
 	else if(pItem->m_IsLink || str_comp(pItem->m_aFilename, "..") == 0)
 	{
-		return FONT_ICON_FOLDER_TREE;
+		*ppFallbackIcon = FONT_ICON_FOLDER_TREE;
+		return EQmIcon::FOLDER_TREE;
 	}
 	else
 	{
-		return FONT_ICON_FOLDER;
+		*ppFallbackIcon = FONT_ICON_FOLDER;
+		return EQmIcon::FOLDER;
 	}
 }
 

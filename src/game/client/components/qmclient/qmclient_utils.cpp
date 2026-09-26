@@ -8,13 +8,13 @@
 
 #include <algorithm>
 #include <cctype>
+#include <string>
 #include <unordered_map>
 #include <utility>
 
 namespace
 {
-
-	// 头衔彩虹分色的饱和度与亮度，与名牌原有的开发者标签彩虹保持一致。
+	// 彩虹档的饱和度与明度：与既有名牌彩虹（以及开发者彩虹）保持同一观感。
 	constexpr float QM_TITLE_RAINBOW_SATURATION = 0.8f;
 	constexpr float QM_TITLE_RAINBOW_LIGHTNESS = 0.65f;
 
@@ -86,9 +86,7 @@ std::string NormalizeQmServerAddress(const char *pServerAddress)
 		Address.erase(Address.begin());
 	while(!Address.empty() && std::isspace((unsigned char)Address.back()))
 		Address.pop_back();
-	std::transform(Address.begin(), Address.end(), Address.begin(), [](unsigned char Character) {
-		return (char)std::tolower(Character);
-	});
+	std::transform(Address.begin(), Address.end(), Address.begin(), [](unsigned char Character) { return (char)std::tolower(Character); });
 	const size_t Scheme = Address.find("://");
 	if(Scheme != std::string::npos)
 		Address.erase(0, Scheme + 3);
@@ -96,7 +94,6 @@ std::string NormalizeQmServerAddress(const char *pServerAddress)
 		Address.pop_back();
 	if(Address.empty())
 		return {};
-
 	std::string Host = Address;
 	std::string Port;
 	if(Address.front() == '[')
@@ -116,11 +113,7 @@ std::string NormalizeQmServerAddress(const char *pServerAddress)
 	}
 	while(!Host.empty() && Host.back() == '.')
 		Host.pop_back();
-	if(Host.empty())
-		return {};
-	if(!Port.empty() && !std::all_of(Port.begin(), Port.end(), [](unsigned char Character) {
-		return std::isdigit(Character) != 0;
-	}))
+	if(Host.empty() || (!Port.empty() && !std::all_of(Port.begin(), Port.end(), [](unsigned char Character) { return std::isdigit(Character) != 0; })))
 		return {};
 	if(!Port.empty())
 	{
@@ -136,9 +129,7 @@ std::string NormalizeQmServerAddress(const char *pServerAddress)
 			return {};
 		}
 	}
-	if(Host.find(':') != std::string::npos)
-		return "[" + Host + "]" + (Port.empty() ? "" : ":" + Port);
-	return Host + (Port.empty() ? "" : ":" + Port);
+	return Host.find(':') != std::string::npos ? "[" + Host + "]" + (Port.empty() ? "" : ":" + Port) : Host + (Port.empty() ? "" : ":" + Port);
 }
 
 bool SQmClientDistributionSnapshot::Apply(SQmClientUsersParseResult &Result, int64_t ExpireTick)
@@ -227,6 +218,12 @@ bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress,
 		const json_value *pQidField = JsonObjectField(pEntry, "qid");
 		if(pQidField != &json_value_none && pQidField->type == json_string)
 			Mark.m_Qid = pQidField->u.string.ptr;
+
+		const json_value *pFootParticlesEnabled = JsonObjectField(pEntry, "foot_particles_enabled");
+		JsonReadBoolean(pFootParticlesEnabled, Mark.m_FootParticlesEnabled);
+
+		const json_value *pRemoteParticlesEnabled = JsonObjectField(pEntry, "remote_particles_enabled");
+		JsonReadBoolean(pRemoteParticlesEnabled, Mark.m_RemoteParticlesEnabled);
 
 		Mark.m_VoiceSupported = true;
 		const json_value *pVoiceSupported = JsonObjectField(pEntry, "voice_supported");
@@ -372,14 +369,17 @@ bool IsValidQmTitle(const char *pTitle)
 	return true;
 }
 
-std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pOutServerTime)
+std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime)
 {
 	std::vector<SQmTitlePresence> Result;
+	if(pServerTime)
+		*pServerTime = 0;
+	const json_value *pServerTimeValue = JsonObjectField(pRoot, "server_time");
+	if(pServerTime && pServerTimeValue && pServerTimeValue->type == json_integer)
+		*pServerTime = pServerTimeValue->u.integer;
 	int64_t Now;
 	if(!pServerAddress || !JsonReadInteger(JsonObjectField(pRoot, "server_time"), Now) || Now <= 0)
 		return Result;
-	if(pOutServerTime != nullptr)
-		*pOutServerTime = Now;
 	const json_value *pEntries = JsonObjectField(pRoot, "presences");
 	if(pEntries->type != json_array)
 		return Result;
@@ -389,9 +389,7 @@ std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, con
 		const json_value *pServer = JsonObjectField(pEntry, "server_address");
 		const json_value *pName = JsonObjectField(pEntry, "player_name");
 		const json_value *pTitle = JsonObjectField(pEntry, "title");
-		// style 是可选字段：老服务端不返回它，此时留空并由客户端回退到本地配置。
 		const json_value *pStyle = JsonObjectField(pEntry, "style");
-		const char *pStyleId = pStyle->type == json_string ? pStyle->u.string.ptr : "";
 		int64_t Id, Issued, Expires;
 		if(pServer->type != json_string || str_comp(pServer->u.string.ptr, pServerAddress) != 0 ||
 			pName->type != json_string || !pName->u.string.ptr[0] || pName->u.string.length >= MAX_NAME_LENGTH ||
@@ -400,7 +398,7 @@ std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, con
 			!JsonReadInteger(JsonObjectField(pEntry, "issued_at"), Issued) || Issued > Now ||
 			!JsonReadInteger(JsonObjectField(pEntry, "expires_at"), Expires) || Expires <= Now)
 			continue;
-		Result.push_back({(int)Id, pName->u.string.ptr, pTitle->u.string.ptr, std::min<int64_t>(Expires - Now, 15), pStyleId});
+		Result.push_back({(int)Id, pName->u.string.ptr, pTitle->u.string.ptr, pStyle && pStyle->type == json_string ? pStyle->u.string.ptr : "", std::min<int64_t>(Expires - Now, 15)});
 	}
 	return Result;
 }

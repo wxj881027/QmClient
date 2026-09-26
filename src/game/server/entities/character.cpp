@@ -48,6 +48,16 @@ CCharacter::CCharacter(CGameWorld *pWorld, CNetObj_PlayerInput LastInput) :
 	{
 		CurrentTimeCp = 0.0f;
 	}
+
+	for(auto &Id : m_aUntranslatedId)
+		Id = Server()->SnapNewId();
+}
+
+CCharacter::~CCharacter()
+{
+	for(auto Id : m_aUntranslatedId)
+		if(Id)
+			Server()->SnapFreeId(*Id);
 }
 
 void CCharacter::Reset()
@@ -783,7 +793,7 @@ void CCharacter::PreTick()
 		// Prevent the player from getting a negative time
 		// The main reason why this can happen is because of time penalty tiles
 		// However, other reasons are hereby also excluded
-		GameServer()->SendChatTarget(m_pPlayer->GetCid(), "You died of old age");
+		GameServer()->SendChatTarget(m_pPlayer->GetCid(), "你老死了");
 		Die(m_pPlayer->GetCid(), WEAPON_WORLD);
 	}
 
@@ -898,23 +908,25 @@ void CCharacter::TickDeferred()
 		int Events = m_Core.m_TriggeredEvents;
 		int CID = m_pPlayer->GetCid();
 
-		// Some sounds are triggered client-side for the acting player (or for all players on Sixup)
-		// so we need to avoid duplicating them
-		CClientMask TeamMaskExceptSelfAndSixup = Teams()->TeamMask(Team(), CID, CID, CGameContext::FLAG_SIX);
-		// Some are triggered client-side but only on Sixup
-		CClientMask TeamMaskExceptSixup = Teams()->TeamMask(Team(), -1, CID, CGameContext::FLAG_SIX);
+		const int SoundEvents = COREEVENT_GROUND_JUMP | COREEVENT_HOOK_ATTACH_PLAYER |
+					COREEVENT_HOOK_ATTACH_GROUND | COREEVENT_HOOK_HIT_NOHOOK;
+		if(Events & SoundEvents)
+		{
+			CClientMask TeamMaskExceptSelfAndSixup = Teams()->TeamMask(Team(), CID, CID, CGameContext::FLAG_SIX);
+			CClientMask TeamMaskExceptSixup = Teams()->TeamMask(Team(), -1, CID, CGameContext::FLAG_SIX);
 
-		if(Events & COREEVENT_GROUND_JUMP)
-			GameServer()->CreateSound(m_Pos, SOUND_PLAYER_JUMP, TeamMaskExceptSelfAndSixup);
+			if(Events & COREEVENT_GROUND_JUMP)
+				GameServer()->CreateSound(m_Pos, SOUND_PLAYER_JUMP, TeamMaskExceptSelfAndSixup);
 
-		if(Events & COREEVENT_HOOK_ATTACH_PLAYER)
-			GameServer()->CreateSound(m_Pos, SOUND_HOOK_ATTACH_PLAYER, TeamMaskExceptSixup);
+			if(Events & COREEVENT_HOOK_ATTACH_PLAYER)
+				GameServer()->CreateSound(m_Pos, SOUND_HOOK_ATTACH_PLAYER, TeamMaskExceptSixup);
 
-		if(Events & COREEVENT_HOOK_ATTACH_GROUND)
-			GameServer()->CreateSound(m_Pos, SOUND_HOOK_ATTACH_GROUND, TeamMaskExceptSelfAndSixup);
+			if(Events & COREEVENT_HOOK_ATTACH_GROUND)
+				GameServer()->CreateSound(m_Pos, SOUND_HOOK_ATTACH_GROUND, TeamMaskExceptSelfAndSixup);
 
-		if(Events & COREEVENT_HOOK_HIT_NOHOOK)
-			GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH, TeamMaskExceptSelfAndSixup);
+			if(Events & COREEVENT_HOOK_HIT_NOHOOK)
+				GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH, TeamMaskExceptSelfAndSixup);
+		}
 
 		if(Events & COREEVENT_GROUND_JUMP)
 			m_TriggeredEvents7 |= protocol7::COREEVENTFLAG_GROUND_JUMP;
@@ -1068,7 +1080,7 @@ void CCharacter::CancelSwapRequests()
 	GetPlayer()->m_SwapTargetsClientId = -1;
 }
 
-void CCharacter::SnapCharacter(int SnappingClient, int Id)
+void CCharacter::SnapCharacter(int SnappingClient, int MapId)
 {
 	int SnappingClientVersion = GameServer()->GetClientVersion(SnappingClient);
 	CCharacterCore *pCore;
@@ -1141,11 +1153,8 @@ void CCharacter::SnapCharacter(int SnappingClient, int Id)
 		Character.m_Tick = Tick;
 		Character.m_Emote = Emote;
 
-		if(Character.m_HookedPlayer != -1)
-		{
-			if(!Server()->Translate(Character.m_HookedPlayer, SnappingClient))
-				Character.m_HookedPlayer = -1;
-		}
+		if(!Server()->Translate(Character.m_HookedPlayer, SnappingClient))
+			Character.m_HookedPlayer = -1;
 
 		Character.m_AttackTick = m_AttackTick;
 		Character.m_Direction = m_Input.m_Direction;
@@ -1155,7 +1164,7 @@ void CCharacter::SnapCharacter(int SnappingClient, int Id)
 		Character.m_Armor = Armor;
 		Character.m_PlayerFlags = GetPlayer()->m_PlayerFlags;
 
-		Server()->SnapNewItem(Id, Character);
+		Server()->SnapNewItem(MapId, Character);
 	}
 	else
 	{
@@ -1166,6 +1175,9 @@ void CCharacter::SnapCharacter(int SnappingClient, int Id)
 		{
 			Character.m_Angle -= (int)(2.0f * pi * 256.0f);
 		}
+
+		if(!Server()->Translate(Character.m_HookedPlayer, SnappingClient))
+			Character.m_HookedPlayer = -1;
 
 		// m_HookTick can be negative when using the hook_duration tune, which 0.7 clients
 		// will consider invalid. https://github.com/ddnet/ddnet/issues/3915
@@ -1187,7 +1199,7 @@ void CCharacter::SnapCharacter(int SnappingClient, int Id)
 		Character.m_Armor = Armor;
 		Character.m_TriggeredEvents = m_TriggeredEvents7;
 
-		Server()->SnapNewItem(Id, Character);
+		Server()->SnapNewItem(MapId, Character);
 	}
 }
 
@@ -1214,8 +1226,6 @@ bool CCharacter::CanSnapCharacter(int SnappingClient)
 
 bool CCharacter::IsSnappingCharacterInView(int SnappingClientId)
 {
-	int Id = m_pPlayer->GetCid();
-
 	// A player may not be clipped away if their hook or a hook attached to them is in the field of view
 	bool PlayerAndHookNotInView = NetworkClippedLine(SnappingClientId, m_Pos, m_Core.m_HookPos);
 	bool AttachedHookInView = false;
@@ -1224,7 +1234,7 @@ bool CCharacter::IsSnappingCharacterInView(int SnappingClientId)
 		for(const auto &AttachedPlayerId : m_Core.m_AttachedPlayers)
 		{
 			const CCharacter *pOtherPlayer = GameServer()->GetPlayerChar(AttachedPlayerId);
-			if(pOtherPlayer && pOtherPlayer->m_Core.HookedPlayer() == Id)
+			if(pOtherPlayer && pOtherPlayer->m_Core.HookedPlayer() == m_pPlayer->GetCid())
 			{
 				if(!NetworkClippedLine(SnappingClientId, m_Pos, pOtherPlayer->m_Pos))
 				{
@@ -1243,24 +1253,43 @@ bool CCharacter::IsSnappingCharacterInView(int SnappingClientId)
 
 void CCharacter::Snap(int SnappingClient)
 {
-	int Id = m_pPlayer->GetCid();
-
-	if(!Server()->Translate(Id, SnappingClient))
-		return;
-
 	if(!CanSnapCharacter(SnappingClient))
 	{
 		return;
 	}
 
 	// always snap the snapping client, even if it is not in view
-	if(!IsSnappingCharacterInView(SnappingClient) && Id != SnappingClient)
+	if(!IsSnappingCharacterInView(SnappingClient) && m_pPlayer->GetCid() != SnappingClient)
 		return;
 
-	SnapCharacter(SnappingClient, Id);
+	int SnappingClientVersion = GameServer()->GetClientVersion(SnappingClient);
+
+	// Translate id, if we are not in the map of the other person display us as weapon and our hook as a laser.
+	// This shouldn't happen but is realistically impossible to avoid as soon as you zoom out a little or simply
+	// more than 62 tees are around you. A bug might also occur in the playermapping algorithm, so best practice is to never let
+	// a player be confused by why they got hooked or why some projectiles randomly appear by showing the player as weapon.
+	int TranslatedId = m_pPlayer->GetCid();
+	if(SnappingClient > -1 && !Server()->Translate(TranslatedId, SnappingClient))
+	{
+		CSnapContext SnapContext = CSnapContext(SnappingClientVersion, Server()->IsSixup(SnappingClient), SnappingClient);
+
+		int Subtype = GetActiveWeapon();
+		int Type = Subtype == WEAPON_NINJA ? POWERUP_NINJA : POWERUP_WEAPON;
+		if(m_aUntranslatedId[EUntranslatedMap::ID_WEAPON])
+			GameServer()->SnapPickup(SnapContext, *m_aUntranslatedId[EUntranslatedMap::ID_WEAPON], m_Pos, Type, Subtype, 0, PICKUPFLAG_NO_PREDICT);
+
+		if(m_Core.m_HookState != HOOK_IDLE && m_Core.m_HookState != HOOK_RETRACTED && m_aUntranslatedId[EUntranslatedMap::ID_HOOK])
+		{
+			int StartTick = Server()->Tick() - 3;
+			GameServer()->SnapLaserObject(SnapContext, *m_aUntranslatedId[EUntranslatedMap::ID_HOOK], m_Core.m_HookPos, m_Pos, StartTick, -1, LASERTYPE_RIFLE);
+		}
+		return;
+	}
+
+	// otherwise show our normal tee and send ddnet character stuff
+	SnapCharacter(SnappingClient, TranslatedId);
 
 	CNetObj_DDNetCharacter DDNetCharacter = {};
-
 	DDNetCharacter.m_Flags = 0;
 	if(m_Core.m_Solo)
 		DDNetCharacter.m_Flags |= CHARACTERFLAG_SOLO;
@@ -1310,7 +1339,11 @@ void CCharacter::Snap(int SnappingClient)
 	DDNetCharacter.m_FreezeEnd = m_Core.m_DeepFrozen ? -1 : (m_FreezeTime == 0 ? 0 : Server()->Tick() + m_FreezeTime);
 	DDNetCharacter.m_Jumps = m_Core.m_Jumps;
 	DDNetCharacter.m_TeleCheckpoint = m_TeleCheckpoint;
-	DDNetCharacter.m_StrongWeakId = m_StrongWeakId;
+
+	int StrongWeakId = m_StrongWeakId;
+	if(!Server()->ClientSupportsServerMaxClients(SnappingClient) && SnappingClient >= 0 && GameServer()->m_apPlayers[SnappingClient])
+		StrongWeakId = GameServer()->m_apPlayers[SnappingClient]->m_aStrongWeakId[TranslatedId];
+	DDNetCharacter.m_StrongWeakId = StrongWeakId;
 
 	// Display Information
 	DDNetCharacter.m_JumpedTotal = m_Core.m_JumpedTotal;
@@ -1338,7 +1371,7 @@ void CCharacter::Snap(int SnappingClient)
 	// OVERRIDE_NONE is the default value, SnapNewItem zeroes the object, so it would incorrectly become 0
 	DDNetCharacter.m_TuneZoneOverride = TuneZone::OVERRIDE_NONE;
 
-	Server()->SnapNewItem(Id, DDNetCharacter);
+	Server()->SnapNewItem(TranslatedId, DDNetCharacter);
 }
 
 void CCharacter::PostGlobalSnap()
@@ -1657,7 +1690,7 @@ void CCharacter::HandleTiles(int Index)
 	// hit others
 	if(((m_TileIndex == TILE_HIT_DISABLE) || (m_TileFIndex == TILE_HIT_DISABLE)) && (!m_Core.m_HammerHitDisabled || !m_Core.m_ShotgunHitDisabled || !m_Core.m_GrenadeHitDisabled || !m_Core.m_LaserHitDisabled))
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can't hit others");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在不能攻击其他玩家");
 		m_Core.m_HammerHitDisabled = true;
 		m_Core.m_ShotgunHitDisabled = true;
 		m_Core.m_GrenadeHitDisabled = true;
@@ -1665,7 +1698,7 @@ void CCharacter::HandleTiles(int Index)
 	}
 	else if(((m_TileIndex == TILE_HIT_ENABLE) || (m_TileFIndex == TILE_HIT_ENABLE)) && (m_Core.m_HammerHitDisabled || m_Core.m_ShotgunHitDisabled || m_Core.m_GrenadeHitDisabled || m_Core.m_LaserHitDisabled))
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can hit others");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在可以攻击其他玩家");
 		m_Core.m_ShotgunHitDisabled = false;
 		m_Core.m_GrenadeHitDisabled = false;
 		m_Core.m_HammerHitDisabled = false;
@@ -1675,36 +1708,36 @@ void CCharacter::HandleTiles(int Index)
 	// collide with others
 	if(((m_TileIndex == TILE_NPC_DISABLE) || (m_TileFIndex == TILE_NPC_DISABLE)) && !m_Core.m_CollisionDisabled)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can't collide with others");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在不能与其他玩家碰撞");
 		m_Core.m_CollisionDisabled = true;
 	}
 	else if(((m_TileIndex == TILE_NPC_ENABLE) || (m_TileFIndex == TILE_NPC_ENABLE)) && m_Core.m_CollisionDisabled)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can collide with others");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在可以与其他玩家碰撞");
 		m_Core.m_CollisionDisabled = false;
 	}
 
 	// hook others
 	if(((m_TileIndex == TILE_NPH_DISABLE) || (m_TileFIndex == TILE_NPH_DISABLE)) && !m_Core.m_HookHitDisabled)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can't hook others");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在不能钩中其他玩家");
 		m_Core.m_HookHitDisabled = true;
 	}
 	else if(((m_TileIndex == TILE_NPH_ENABLE) || (m_TileFIndex == TILE_NPH_ENABLE)) && m_Core.m_HookHitDisabled)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can hook others");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在可以钩中其他玩家");
 		m_Core.m_HookHitDisabled = false;
 	}
 
 	// unlimited air jumps
 	if(((m_TileIndex == TILE_UNLIMITED_JUMPS_ENABLE) || (m_TileFIndex == TILE_UNLIMITED_JUMPS_ENABLE)) && !m_Core.m_EndlessJump)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You have unlimited air jumps");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你拥有无限空中跳");
 		m_Core.m_EndlessJump = true;
 	}
 	else if(((m_TileIndex == TILE_UNLIMITED_JUMPS_DISABLE) || (m_TileFIndex == TILE_UNLIMITED_JUMPS_DISABLE)) && m_Core.m_EndlessJump)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You don't have unlimited air jumps");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你不再拥有无限空中跳");
 		m_Core.m_EndlessJump = false;
 	}
 
@@ -1722,12 +1755,12 @@ void CCharacter::HandleTiles(int Index)
 	// jetpack gun
 	if(((m_TileIndex == TILE_JETPACK_ENABLE) || (m_TileFIndex == TILE_JETPACK_ENABLE)) && !m_Core.m_Jetpack)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You have a jetpack gun");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在拥有喷气枪");
 		m_Core.m_Jetpack = true;
 	}
 	else if(((m_TileIndex == TILE_JETPACK_DISABLE) || (m_TileFIndex == TILE_JETPACK_DISABLE)) && m_Core.m_Jetpack)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You lost your jetpack gun");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你失去了喷气枪");
 		m_Core.m_Jetpack = false;
 	}
 
@@ -1748,39 +1781,39 @@ void CCharacter::HandleTiles(int Index)
 	{
 		m_Core.m_HasTelegunGun = true;
 
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "Teleport gun enabled");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "传送枪已开启");
 	}
 	else if(((m_TileIndex == TILE_TELE_GUN_DISABLE) || (m_TileFIndex == TILE_TELE_GUN_DISABLE)) && m_Core.m_HasTelegunGun)
 	{
 		m_Core.m_HasTelegunGun = false;
 
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "Teleport gun disabled");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "传送枪已关闭");
 	}
 
 	if(((m_TileIndex == TILE_TELE_GRENADE_ENABLE) || (m_TileFIndex == TILE_TELE_GRENADE_ENABLE)) && !m_Core.m_HasTelegunGrenade)
 	{
 		m_Core.m_HasTelegunGrenade = true;
 
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "Teleport grenade enabled");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "传送榴弹枪已开启");
 	}
 	else if(((m_TileIndex == TILE_TELE_GRENADE_DISABLE) || (m_TileFIndex == TILE_TELE_GRENADE_DISABLE)) && m_Core.m_HasTelegunGrenade)
 	{
 		m_Core.m_HasTelegunGrenade = false;
 
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "Teleport grenade disabled");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "传送榴弹枪已关闭");
 	}
 
 	if(((m_TileIndex == TILE_TELE_LASER_ENABLE) || (m_TileFIndex == TILE_TELE_LASER_ENABLE)) && !m_Core.m_HasTelegunLaser)
 	{
 		m_Core.m_HasTelegunLaser = true;
 
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "Teleport laser enabled");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "传送激光已开启");
 	}
 	else if(((m_TileIndex == TILE_TELE_LASER_DISABLE) || (m_TileFIndex == TILE_TELE_LASER_DISABLE)) && m_Core.m_HasTelegunLaser)
 	{
 		m_Core.m_HasTelegunLaser = false;
 
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "Teleport laser disabled");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "传送激光已关闭");
 	}
 
 	// stopper
@@ -1856,42 +1889,42 @@ void CCharacter::HandleTiles(int Index)
 	}
 	else if(SwitchType == TILE_HIT_ENABLE && m_Core.m_HammerHitDisabled && SwitchDelay == WEAPON_HAMMER)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can hammer hit others");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在可以用锤子攻击其他玩家");
 		m_Core.m_HammerHitDisabled = false;
 	}
 	else if(SwitchType == TILE_HIT_DISABLE && !(m_Core.m_HammerHitDisabled) && SwitchDelay == WEAPON_HAMMER)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can't hammer hit others");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在不能用锤子攻击其他玩家");
 		m_Core.m_HammerHitDisabled = true;
 	}
 	else if(SwitchType == TILE_HIT_ENABLE && m_Core.m_ShotgunHitDisabled && SwitchDelay == WEAPON_SHOTGUN)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can shoot others with shotgun");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在可以用散弹枪攻击其他玩家");
 		m_Core.m_ShotgunHitDisabled = false;
 	}
 	else if(SwitchType == TILE_HIT_DISABLE && !(m_Core.m_ShotgunHitDisabled) && SwitchDelay == WEAPON_SHOTGUN)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can't shoot others with shotgun");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在不能用散弹枪攻击其他玩家");
 		m_Core.m_ShotgunHitDisabled = true;
 	}
 	else if(SwitchType == TILE_HIT_ENABLE && m_Core.m_GrenadeHitDisabled && SwitchDelay == WEAPON_GRENADE)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can shoot others with grenade");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在可以用榴弹枪攻击其他玩家");
 		m_Core.m_GrenadeHitDisabled = false;
 	}
 	else if(SwitchType == TILE_HIT_DISABLE && !(m_Core.m_GrenadeHitDisabled) && SwitchDelay == WEAPON_GRENADE)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can't shoot others with grenade");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在不能用榴弹枪攻击其他玩家");
 		m_Core.m_GrenadeHitDisabled = true;
 	}
 	else if(SwitchType == TILE_HIT_ENABLE && m_Core.m_LaserHitDisabled && SwitchDelay == WEAPON_LASER)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can shoot others with laser");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在可以用激光攻击其他玩家");
 		m_Core.m_LaserHitDisabled = false;
 	}
 	else if(SwitchType == TILE_HIT_DISABLE && !(m_Core.m_LaserHitDisabled) && SwitchDelay == WEAPON_LASER)
 	{
-		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "You can't shoot others with laser");
+		GameServer()->SendChatTarget(GetPlayer()->GetCid(), "你现在不能用激光攻击其他玩家");
 		m_Core.m_LaserHitDisabled = true;
 	}
 	else if(SwitchType == TILE_JUMP)
@@ -1906,11 +1939,11 @@ void CCharacter::HandleTiles(int Index)
 		{
 			char aBuf[256];
 			if(NewJumps == -1)
-				str_copy(aBuf, "You only have your ground jump now");
+				str_copy(aBuf, "你现在只有地面跳了");
 			else if(NewJumps == 1)
-				str_format(aBuf, sizeof(aBuf), "You can jump %d time", NewJumps);
+				str_format(aBuf, sizeof(aBuf), "你现在可以跳 %d 次", NewJumps);
 			else
-				str_format(aBuf, sizeof(aBuf), "You can jump %d times", NewJumps);
+				str_format(aBuf, sizeof(aBuf), "你现在可以跳 %d 次", NewJumps);
 			GameServer()->SendChatTarget(GetPlayer()->GetCid(), aBuf);
 			m_Core.m_Jumps = NewJumps;
 		}
@@ -2151,8 +2184,8 @@ bool CCharacter::TrySetRescue(int RescueMode)
 	bool Set = false;
 	if(g_Config.m_SvRescue || ((g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO || Team() > TEAM_FLOCK) && Teams()->IsValidTeamNumber(Team())))
 	{
-		// check for nearby health pickups (also freeze)
-		bool InHealthPickup = false;
+		// check for nearby freeze pickups
+		bool InFreezePickup = false;
 		if(!m_Core.m_IsInFreeze)
 		{
 			CEntity *apEnts[9];
@@ -2160,19 +2193,19 @@ bool CCharacter::TrySetRescue(int RescueMode)
 			for(int i = 0; i < Num; ++i)
 			{
 				CPickup *pPickup = static_cast<CPickup *>(apEnts[i]);
-				if(pPickup->Type() == POWERUP_HEALTH)
+				if(pPickup->Type() == POWERUP_FREEZE)
 				{
-					// This uses a separate variable InHealthPickup instead of setting m_Core.m_IsInFreeze
+					// This uses a separate variable InFreezePickup instead of setting m_Core.m_IsInFreeze
 					// as the latter causes freezebars to flicker when standing in the freeze range of a
-					// health pickup. When the same code for client prediction is added, the freezebars
-					// still flicker, but only when standing at the edge of the health pickup's freeze range.
-					InHealthPickup = true;
+					// freeze pickup. When the same code for client prediction is added, the freezebars
+					// still flicker, but only when standing at the edge of the freeze pickup's freeze range.
+					InFreezePickup = true;
 					break;
 				}
 			}
 		}
 
-		if(!m_Core.m_IsInFreeze && IsGrounded() && !m_Core.m_DeepFrozen && !InHealthPickup)
+		if(!m_Core.m_IsInFreeze && IsGrounded() && !m_Core.m_DeepFrozen && !InFreezePickup)
 		{
 			ForceSetRescue(RescueMode);
 			Set = true;
@@ -2415,7 +2448,7 @@ void CCharacter::SetEndlessHook(bool Enable)
 	{
 		return;
 	}
-	GameServer()->SendChatTarget(GetPlayer()->GetCid(), Enable ? "Endless hook has been activated" : "Endless hook has been deactivated");
+	GameServer()->SendChatTarget(GetPlayer()->GetCid(), Enable ? "无限钩已开启" : "无限钩已关闭");
 
 	m_Core.m_EndlessHook = Enable;
 }
@@ -2500,16 +2533,16 @@ void CCharacter::DDRaceInit()
 	}
 }
 
-void CCharacter::Rescue()
+bool CCharacter::Rescue()
 {
 	if(m_SetSavePos[GetPlayer()->m_RescueMode] && !m_Core.m_Super && !m_Core.m_Invincible)
 	{
 		if(m_LastRescue + (int64_t)g_Config.m_SvRescueDelay * Server()->TickSpeed() > Server()->Tick() && !Teams()->IsPractice(Team()))
 		{
 			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "You have to wait %d seconds until you can rescue yourself", (int)((m_LastRescue + (int64_t)g_Config.m_SvRescueDelay * Server()->TickSpeed() - Server()->Tick()) / Server()->TickSpeed()));
+			str_format(aBuf, sizeof(aBuf), "你还需要等待 %d 秒才能自救", (int)((m_LastRescue + (int64_t)g_Config.m_SvRescueDelay * Server()->TickSpeed() - Server()->Tick()) / Server()->TickSpeed()));
 			GameServer()->SendChatTarget(GetPlayer()->GetCid(), aBuf);
-			return;
+			return false;
 		}
 
 		m_LastRescue = Server()->Tick();
@@ -2529,7 +2562,9 @@ void CCharacter::Rescue()
 		m_SavedInput.m_Fire &= INPUT_STATE_MASK;
 		m_SavedInput.m_Hook = 0;
 		m_pPlayer->Pause(CPlayer::PAUSE_NONE, true);
+		return true;
 	}
+	return false;
 }
 
 CClientMask CCharacter::TeamMask()

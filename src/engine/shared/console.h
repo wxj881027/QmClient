@@ -34,6 +34,7 @@ class CConsole : public IConsole
 		const char *Name() const override { return m_pName; }
 		const char *Help() const override { return m_pHelp; }
 		const char *Params() const override { return m_pParams; }
+		bool TakesClientId() const override;
 		int Flags() const override { return m_Flags; }
 		EAccessLevel GetAccessLevel() const override { return m_AccessLevel; }
 		void SetAccessLevel(EAccessLevel AccessLevel);
@@ -116,19 +117,20 @@ class CConsole : public IConsole
 
 		// DDRace
 
-		enum
+		class CVictim
 		{
-			VICTIM_NONE = -3,
-			VICTIM_ME = -2,
-			VICTIM_ALL = -1,
+		public:
+			static constexpr unsigned MAX_VICTIM_LENGTH = 16;
+			// 特殊 victim（me/all）在回调执行前解析成真实客户端 id
+			char m_aSpecialVictim[MAX_VICTIM_LENGTH] = "";
+			std::optional<int> m_Id;
 		};
-
-		int m_Victim;
+		std::vector<CVictim> m_vVictims;
 		void ResetVictim();
 		bool HasVictim() const;
-		void SetVictim(int Victim);
-		void SetVictim(const char *pVictim);
-		int GetVictim() const override;
+		void AddVictim(const char *pVictim);
+		void SetVictim(unsigned Slot, int Victim);
+		int GetVictim(unsigned Slot) const override;
 	};
 
 	int ParseStart(CResult *pResult, const char *pString, int Length);
@@ -150,7 +152,8 @@ class CConsole : public IConsole
 	returns '\0' if there is no next parameter; expects pFormat to point at a
 	parameter
 	*/
-	char NextParam(const char *&pFormat);
+	// 官方 f586be3e0：NextParam 不依赖实例状态，改成静态函数以便 const 成员调用
+	static char NextParam(const char *&pFormat);
 
 	class CExecutionQueueEntry
 	{
@@ -218,7 +221,7 @@ public:
 
 	// DDRace
 
-	static void ConCmdlistChat(IConsole::IResult *pResult, void *pUser);
+	static void ConUserCommandStatus(IConsole::IResult *pResult, void *pUser);
 
 	bool Cheated() const override { return m_Cheated; }
 

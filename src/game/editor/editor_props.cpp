@@ -3,6 +3,7 @@
 
 #include <engine/textrender.h>
 
+#include <game/client/qm_icon_manager.h>
 #include <game/editor/mapitems/image.h>
 #include <game/editor/mapitems/sound.h>
 
@@ -48,13 +49,13 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 				}
 				State = NewValueRes.m_State;
 			}
-			if(DoButton_FontIcon((char *)&pIds[i] + 1, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Decrease value.", "Editor"), IGraphics::CORNER_L, 7.0f))
+			if(DoButton_QmIcon((char *)&pIds[i] + 1, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Decrease value.", "Editor"), IGraphics::CORNER_L, 7.0f))
 			{
 				*pNewVal = std::clamp(pProps[i].m_Value - 1, pProps[i].m_Min, pProps[i].m_Max);
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
-			if(DoButton_FontIcon(((char *)&pIds[i]) + 2, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Increase value.", "Editor"), IGraphics::CORNER_R, 7.0f))
+			if(DoButton_QmIcon(((char *)&pIds[i]) + 2, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Increase value.", "Editor"), IGraphics::CORNER_R, 7.0f))
 			{
 				*pNewVal = std::clamp(pProps[i].m_Value + 1, pProps[i].m_Min, pProps[i].m_Max);
 				Change = i;
@@ -88,14 +89,14 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 
 			auto NewValueRes = UiDoValueSelector(&pIds[i], &Shifter, "", pProps[i].m_Value, pProps[i].m_Min, pProps[i].m_Max, Shift ? 1 : 45, Shift ? 1.0f : 10.0f, Localize("Use left mouse button to drag and change the value. Hold shift to be more precise. Right click to edit as text.", "Editor"), false, false, 0);
 			int NewValue = NewValueRes.m_Value;
-			if(DoButton_FontIcon(&pIds[i] + 1, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Decrease value.", "Editor"), IGraphics::CORNER_L, 7.0f))
+			if(DoButton_QmIcon(&pIds[i] + 1, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Decrease value.", "Editor"), IGraphics::CORNER_L, 7.0f))
 			{
 				NewValue = (std::ceil((pProps[i].m_Value / (float)Step)) - 1) * Step;
 				if(NewValue < 0)
 					NewValue += 360;
 				NewValueRes.m_State = EEditState::ONE_GO;
 			}
-			if(DoButton_FontIcon(&pIds[i] + 2, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Increase value.", "Editor"), IGraphics::CORNER_R, 7.0f))
+			if(DoButton_QmIcon(&pIds[i] + 2, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Increase value.", "Editor"), IGraphics::CORNER_R, 7.0f))
 			{
 				NewValue = (pProps[i].m_Value + Step) / Step * Step;
 				NewValueRes.m_State = EEditState::ONE_GO;
@@ -159,25 +160,25 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 			Shifter.VSplitRight(10.0f, &Shifter, &Down);
 			Shifter.Draw(ColorRGBA(1, 1, 1, 0.5f), IGraphics::CORNER_NONE, 0.0f);
 			Ui()->DoLabel(&Shifter, "Y", 10.0f, TEXTALIGN_MC);
-			if(DoButton_FontIcon(&pIds[i], FONT_ICON_MINUS, 0, &Left, BUTTONFLAG_LEFT, Localize("Shift left.", "Editor"), IGraphics::CORNER_L, 7.0f))
+			if(DoButton_QmIcon(&pIds[i], EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Left, BUTTONFLAG_LEFT, Localize("Shift left.", "Editor"), IGraphics::CORNER_L, 7.0f))
 			{
 				*pNewVal = (int)EShiftDirection::LEFT;
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
-			if(DoButton_FontIcon(((char *)&pIds[i]) + 3, FONT_ICON_PLUS, 0, &Right, BUTTONFLAG_LEFT, Localize("Shift right.", "Editor"), IGraphics::CORNER_R, 7.0f))
+			if(DoButton_QmIcon(((char *)&pIds[i]) + 3, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Right, BUTTONFLAG_LEFT, Localize("Shift right.", "Editor"), IGraphics::CORNER_R, 7.0f))
 			{
 				*pNewVal = (int)EShiftDirection::RIGHT;
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
-			if(DoButton_FontIcon(((char *)&pIds[i]) + 1, FONT_ICON_MINUS, 0, &Up, BUTTONFLAG_LEFT, Localize("Shift up.", "Editor"), IGraphics::CORNER_L, 7.0f))
+			if(DoButton_QmIcon(((char *)&pIds[i]) + 1, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Up, BUTTONFLAG_LEFT, Localize("Shift up.", "Editor"), IGraphics::CORNER_L, 7.0f))
 			{
 				*pNewVal = (int)EShiftDirection::UP;
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
-			if(DoButton_FontIcon(((char *)&pIds[i]) + 2, FONT_ICON_PLUS, 0, &Down, BUTTONFLAG_LEFT, Localize("Shift down.", "Editor"), IGraphics::CORNER_R, 7.0f))
+			if(DoButton_QmIcon(((char *)&pIds[i]) + 2, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Down, BUTTONFLAG_LEFT, Localize("Shift down.", "Editor"), IGraphics::CORNER_R, 7.0f))
 			{
 				*pNewVal = (int)EShiftDirection::DOWN;
 				Change = i;
@@ -280,13 +281,13 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 				State = NewValueRes.m_State;
 			}
 
-			if(DoButton_FontIcon((char *)&pIds[i] + 1, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Select previous envelope.", "Editor envelope selector"), IGraphics::CORNER_L, 7.0f))
+			if(DoButton_QmIcon((char *)&pIds[i] + 1, EQmIcon::MINUS, FONT_ICON_MINUS, 0, &Dec, BUTTONFLAG_LEFT, Localize("Select previous envelope.", "Editor envelope selector"), IGraphics::CORNER_L, 7.0f))
 			{
 				*pNewVal = pProps[i].m_Value - 1;
 				Change = i;
 				State = EEditState::ONE_GO;
 			}
-			if(DoButton_FontIcon(((char *)&pIds[i]) + 2, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Select next envelope.", "Editor envelope selector"), IGraphics::CORNER_R, 7.0f))
+			if(DoButton_QmIcon(((char *)&pIds[i]) + 2, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &Inc, BUTTONFLAG_LEFT, Localize("Select next envelope.", "Editor envelope selector"), IGraphics::CORNER_R, 7.0f))
 			{
 				*pNewVal = pProps[i].m_Value + 1;
 				Change = i;

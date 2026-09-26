@@ -9,7 +9,7 @@
 #include <mutex>
 #include <utility>
 
-// 聊天记录按入队顺序写入；文件操作期间不持有主线程入队所需的锁。
+// 日志写入按入队顺序执行，磁盘操作时不占用主线程的入队锁。
 class CQmChatLogWriteQueue
 {
 	struct SState
@@ -18,9 +18,11 @@ class CQmChatLogWriteQueue
 		std::deque<std::function<void()>> m_Actions;
 		bool m_Running = false;
 	};
+
 	class CWriteJob : public IJob
 	{
 		std::shared_ptr<SState> m_pState;
+
 		void Run() override
 		{
 			while(true)
@@ -44,6 +46,7 @@ class CQmChatLogWriteQueue
 		explicit CWriteJob(std::shared_ptr<SState> pState) :
 			m_pState(std::move(pState)) {}
 	};
+
 	std::shared_ptr<SState> m_pState = std::make_shared<SState>();
 
 public:

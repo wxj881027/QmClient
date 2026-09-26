@@ -234,6 +234,7 @@ public:
 		m_pPrefixLogger(std::move(pPrefixLogger)),
 		m_pFallbackLogger(std::move(pFallbackLogger))
 	{
+		m_Filter.m_MaxLevel.store(LEVEL_TRACE, std::memory_order_relaxed);
 		str_copy(m_aSystemPrefix, pSystemPrefix);
 	}
 	void Log(const CLogMessage *pMessage) override

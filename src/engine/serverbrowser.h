@@ -92,7 +92,6 @@ public:
 
 	int m_Type;
 	uint64_t m_ReceivedPackets;
-	int m_NumReceivedClients;
 
 	int m_NumAddresses;
 	NETADDR m_aAddresses[MAX_SERVER_ADDRESSES];
@@ -115,6 +114,9 @@ public:
 	int m_Location;
 	bool m_LatencyIsEstimated;
 	int m_Latency; // in ms
+	// 延迟测量上限：达到该值表示这次测量触到 1 秒超时，不视为可用延迟。
+	// 浏览器只在存在可用实测值时才显示数字，否则显示地区名（见 FormatServerbrowserPing）。
+	static constexpr int LATENCY_UNKNOWN = 999;
 	ERankState m_HasRank;
 	char m_aGameType[16];
 	ColorRGBA m_GametypeColor;
@@ -124,11 +126,11 @@ public:
 	int m_MapSize;
 	char m_aVersion[32];
 	char m_aAddress[MAX_SERVER_ADDRESSES * NETADDR_MAXSTRSIZE];
-	CClient m_aClients[SERVERINFO_MAX_CLIENTS];
+	std::vector<CClient> m_vClients;
 	int m_NumFilteredPlayers;
 	bool m_RequiresLogin;
-	// 游戏层推送的该服在线梦客户端人数（含 Arg）；引擎只在排序时用它，见 SetQmClientServerCounts。
-	int m_QmClientCount;
+	// 游戏层推送的该服在线梦客户端人数（含 Arg）。
+	int m_QmClientCount = 0;
 
 	static int EstimateLatency(int Loc1, int Loc2);
 	static bool ParseLocation(int *pResult, const char *pString);
@@ -288,7 +290,7 @@ public:
 		SORT_NUMPLAYERS - Sort after how many players there are on the server.
 		SORT_NUMFRIENDS - Sort after how many friends there are on the server.
 		SORT_FAVORITES - Sort by favorite status, number of players and then ping.
-		SORT_QM_CLIENTS - Sort after how many Qm clients are online on the server (pushed by the game layer).
+		SORT_QM_CLIENTS - Sort by the number of Qm clients online on the server.
 	*/
 	enum
 	{
@@ -334,9 +336,9 @@ public:
 		int64_t m_RequestTime;
 		bool m_RequestIgnoreInfo;
 		int m_GotInfo;
-		bool m_FriendStateValid;
-		uint64_t m_FriendStateRevision;
-		bool m_FriendStateIgnoreClan;
+		bool m_FriendStateValid = false;
+		uint64_t m_FriendStateRevision = 0;
+		bool m_FriendStateIgnoreClan = false;
 		CServerInfo m_Info;
 
 		CServerEntry *m_pPrevReq; // request list
@@ -362,9 +364,8 @@ public:
 	virtual bool IsGettingServerlist() const = 0;
 	virtual bool IsServerlistError() const = 0;
 	virtual int LoadingProgression() const = 0;
-
-	// 好友行复制的数据变化或条目地址失效时递增；延迟等字段由行持有的条目直接读取。
 	virtual uint64_t FriendListRevision() const = 0;
+
 	virtual int NumServers() const = 0;
 	virtual const CServerInfo *Get(int Index) const = 0;
 	virtual int NumHttpServers() const = 0;
@@ -376,9 +377,7 @@ public:
 	virtual int NumSortedServers() const = 0;
 	virtual int NumSortedPlayers() const = 0;
 	virtual const CServerInfo *SortedGet(int Index) const = 0;
-
-	// 中心服下发的在线梦客户端分布（"ip:port" → 人数），游戏层在分布更新时推送。
-	// 引擎保存最近一次推送，并在按 SORT_QM_CLIENTS 排序前物化到 CServerInfo::m_QmClientCount。
+	// 中心服下发的在线分布（"ip:port" → 人数），游戏层在分布更新时推送。
 	virtual void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) = 0;
 
 	virtual const std::vector<CCommunity> &Communities() const = 0;

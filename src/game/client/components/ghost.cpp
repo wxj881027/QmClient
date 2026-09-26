@@ -9,12 +9,15 @@
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
+#include <generated/client_data.h>
+
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
-#include <game/client/components/qmclient/qm_item_culling_logic.h>
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
+
+#include <algorithm>
 
 const char *CGhost::ms_pGhostDir = "ghosts";
 
@@ -139,7 +142,7 @@ void CGhost::GetPath(char *pBuf, int Size, const char *pPlayerName, int Time) co
 	str_timestamp_format(aTimestamp, sizeof(aTimestamp), FORMAT_NOSPACE);
 
 	if(Time < 0)
-		str_format(pBuf, Size, "%s/%s_%s_%s_tmp_%d.gho", ms_pGhostDir, pMap, aPlayerName, aSha256, process_id());
+		str_format(pBuf, Size, "%s/%s_%s_%s_tmp_%d.gho", ms_pGhostDir, pMap, aPlayerName, aSha256, pid());
 	else
 		str_format(pBuf, Size, "%s/%s_%s_%d.%03d_%s_%s.gho", ms_pGhostDir, pMap, aPlayerName, Time / 1000, Time % 1000, aTimestamp, aSha256);
 }
@@ -273,6 +276,9 @@ void CGhost::TryRenderStart(int Tick, bool ServerControl)
 
 void CGhost::OnNewSnapshot()
 {
+	// QmClient: 查看模式由手动时间线驱动，跑图起跑检测不参与
+	if(m_ManualMode)
+		return;
 	if(!GameClient()->m_GameInfo.m_Race || !g_Config.m_ClRaceGhost || Client()->State() != IClient::STATE_ONLINE)
 		return;
 	if(!GameClient()->m_Snap.m_pGameInfoObj || GameClient()->m_Snap.m_SpecInfo.m_Active || !GameClient()->m_Snap.m_pLocalCharacter || !GameClient()->m_Snap.m_pLocalPrevCharacter)
@@ -292,6 +298,8 @@ void CGhost::OnNewSnapshot()
 
 void CGhost::OnNewPredictedSnapshot()
 {
+	if(m_ManualMode)
+		return;
 	if(!GameClient()->m_GameInfo.m_Race || !g_Config.m_ClRaceGhost || Client()->State() != IClient::STATE_ONLINE)
 		return;
 	if(!GameClient()->m_Snap.m_pGameInfoObj || GameClient()->m_Snap.m_SpecInfo.m_Active || !GameClient()->m_Snap.m_pLocalCharacter || !GameClient()->m_Snap.m_pLocalPrevCharacter)
@@ -313,19 +321,42 @@ void CGhost::OnRender()
 	if(!m_Rendering || !g_Config.m_ClRaceShowGhost)
 		return;
 
-	int PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy) - m_StartRenderTick;
-
-	// QmClient: 上游 ada53c8cb3 —— ghost 也做屏外裁剪（200x200 盒）。
-	// 本地的玩家/钩子裁剪在 CPlayers 调用层完成，ghost 走不到那条路径，所以在这里补。
-	CScreenRect GhostScreenRect = Graphics()->GetScreen();
-	GhostScreenRect.Expand(qm_item_culling::GHOST_MARGIN);
-
-	for(auto &Ghost : m_aActiveGhosts)
+	int PlaybackTick;
+	if(m_ManualMode)
 	{
+		// 查看模式：独立时间线，播到尽头自动停在最后一帧
+		PlaybackTick = ManualPlaybackTick();
+		if(m_ManualPlaying && m_ManualEndTick > 0 && PlaybackTick >= m_ManualEndTick)
+		{
+			ManualSeek(m_ManualEndTick);
+			PlaybackTick = m_ManualBaseTick;
+		}
+	}
+	else
+		PlaybackTick = Client()->PredGameTick(g_Config.m_ClDummy) - m_StartRenderTick;
+
+	CScreenRect ScreenRect = Graphics()->GetScreen();
+
+	// 玩家周围 200x200 的盒子
+	ScreenRect.Expand(100.0f);
+
+	// QmClient: 先算出本帧每个可见虚影的插值数据再统一绘制。
+	// 查看模式必须先把所有 hook 画完再画所有 Tee——与 demo 播放的玩家渲染
+	// 顺序（CPlayers::OnRender：先全部 hook，再全部 Tee）一致；否则多轨回放里
+	// 靠后虚影的 hook 会压在前一个虚影的 Tee 上，出现“hook 盖住 Tee”。
+	// 跑图模式仍按上游的逐槽位顺序绘制。
+	m_vGhostDraws.clear();
+	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
+	{
+		CGhostItem &Ghost = m_aActiveGhosts[Slot];
 		if(Ghost.Empty())
 			continue;
 
 		int GhostTick = Ghost.m_StartTick + PlaybackTick;
+		// QmClient：查看模式把播放头钳在轨迹首尾采样内——播到尽头时虚影停在最后一帧，
+		// 而不是让只前进的快照游标越界置 -1 后整只虚影消失（跑图模式保持原语义）
+		if(m_ManualMode)
+			GhostTick = std::clamp(GhostTick, Ghost.m_Path.Get(0)->m_Tick, Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick);
 		while(Ghost.m_PlaybackPos >= 0 && Ghost.m_Path.Get(Ghost.m_PlaybackPos)->m_Tick < GhostTick)
 		{
 			if(Ghost.m_PlaybackPos < Ghost.m_Path.Size() - 1)
@@ -342,40 +373,156 @@ void CGhost::OnRender()
 		if(Ghost.m_Path.Get(PrevPos)->m_Tick > GhostTick)
 			continue;
 
-		CNetObj_Character Player, Prev;
-		GetNetObjCharacter(&Player, Ghost.m_Path.Get(CurPos));
-		GetNetObjCharacter(&Prev, Ghost.m_Path.Get(PrevPos));
+		SGhostDrawData Draw;
+		Draw.m_Slot = Slot;
+		GetNetObjCharacter(&Draw.m_Player, Ghost.m_Path.Get(CurPos));
+		GetNetObjCharacter(&Draw.m_Prev, Ghost.m_Path.Get(PrevPos));
 
-		int TickDiff = Player.m_Tick - Prev.m_Tick;
-		float IntraTick = 0.f;
+		int TickDiff = Draw.m_Player.m_Tick - Draw.m_Prev.m_Tick;
 		if(TickDiff > 0)
-			IntraTick = (GhostTick - Prev.m_Tick - 1 + Client()->PredIntraGameTick(g_Config.m_ClDummy)) / TickDiff;
-
-		Player.m_AttackTick += Client()->GameTick(g_Config.m_ClDummy) - GhostTick;
-
-		// 屏外 ghost 不进入后面的皮肤/忍者渲染信息准备，避免无谓开销。
-		const vec2 GhostPos = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), IntraTick);
-		if(!GhostScreenRect.Inside(GhostPos))
-			continue;
-
-		const CTeeRenderInfo *pRenderInfo = &Ghost.m_pManagedTeeRenderInfo->TeeRenderInfo();
-		CTeeRenderInfo GhostNinjaRenderInfo;
-		if(Player.m_Weapon == WEAPON_NINJA && g_Config.m_ClShowNinja)
 		{
-			// change the skin for the ghost to the ninja
-			GhostNinjaRenderInfo = Ghost.m_pManagedTeeRenderInfo->TeeRenderInfo();
-			GhostNinjaRenderInfo.ApplySkin(GameClient()->m_Players.NinjaTeeRenderInfo()->TeeRenderInfo());
-			GhostNinjaRenderInfo.m_CustomColoredSkin = GameClient()->IsTeamPlay();
-			if(!GhostNinjaRenderInfo.m_CustomColoredSkin)
-			{
-				GhostNinjaRenderInfo.m_ColorBody = ColorRGBA(1, 1, 1);
-				GhostNinjaRenderInfo.m_ColorFeet = ColorRGBA(1, 1, 1);
-			}
-			pRenderInfo = &GhostNinjaRenderInfo;
+			// QmClient：查看模式使用手动时间线的插值相位；本地预测相位会持续波动，
+			// 暂停/播完时直接沿用会让虚影在末段两点间抖动
+			const float IntraPhase = m_ManualMode ? ManualRenderIntra() : Client()->PredIntraGameTick(g_Config.m_ClDummy);
+			Draw.m_IntraTick = (GhostTick - Draw.m_Prev.m_Tick - 1 + IntraPhase) / TickDiff;
 		}
 
-		GameClient()->m_Players.RenderHook(&Prev, &Player, pRenderInfo, -2, IntraTick);
-		GameClient()->m_Players.RenderPlayer(&Prev, &Player, pRenderInfo, -2, IntraTick);
+		Draw.m_Player.m_AttackTick += Client()->GameTick(g_Config.m_ClDummy) - GhostTick;
+
+		// QmClient：转换侧以 WEAPON_NINJA 标记冻结段（幽灵格式无独立冻结字段）。
+		// 冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：冰冻着色 + 隐藏武器、
+		// 旧版卡塔纳手随 TClient 的 tc_frozen_katana、忍者皮肤随 cl_show_ninja
+		const bool GhostFrozen = Draw.m_Player.m_Weapon == WEAPON_NINJA;
+		unsigned FrozenFlags = 0;
+		int RenderWeapon = Draw.m_Player.m_Weapon;
+		if(GhostFrozen)
+		{
+			FrozenFlags = TEE_EFFECT_FROZEN | TEE_NO_WEAPON;
+			// 数据中武器被用作冻结标记，还原为原始武器（DDRace 默认为锤）；
+			// 开启 tc_frozen_katana 时保留忍者武器以复现旧版卡塔纳手
+			RenderWeapon = WEAPON_HAMMER;
+			if(g_Config.m_TcFreezeKatana > 0)
+			{
+				RenderWeapon = WEAPON_NINJA;
+				FrozenFlags &= ~TEE_NO_WEAPON;
+			}
+		}
+		Draw.m_Player.m_Weapon = RenderWeapon;
+		Draw.m_Prev.m_Weapon = RenderWeapon;
+
+		Draw.m_pSharedRenderInfo = &Ghost.m_pManagedTeeRenderInfo->TeeRenderInfo();
+		if(GhostFrozen)
+		{
+			Draw.m_UseOwnRenderInfo = true;
+			Draw.m_OwnRenderInfo = *Draw.m_pSharedRenderInfo;
+			Draw.m_OwnRenderInfo.m_TeeRenderFlags |= FrozenFlags;
+			if(g_Config.m_ClShowNinja)
+			{
+				// change the skin for the ghost to the ninja
+				Draw.m_OwnRenderInfo.ApplySkin(GameClient()->m_Players.NinjaTeeRenderInfo()->TeeRenderInfo());
+				Draw.m_OwnRenderInfo.m_CustomColoredSkin = GameClient()->IsTeamPlay();
+				if(!Draw.m_OwnRenderInfo.m_CustomColoredSkin)
+				{
+					Draw.m_OwnRenderInfo.m_ColorBody = ColorRGBA(1, 1, 1);
+					Draw.m_OwnRenderInfo.m_ColorFeet = ColorRGBA(1, 1, 1);
+
+					// 与玩家侧 TClient 的彩色冻结皮肤一致（tc_color_freeze）
+					if(g_Config.m_TcColorFreeze)
+					{
+						const CTeeRenderInfo &OwnInfo = *Draw.m_pSharedRenderInfo;
+						Draw.m_OwnRenderInfo.m_CustomColoredSkin = OwnInfo.m_CustomColoredSkin;
+						Draw.m_OwnRenderInfo.m_ColorFeet = g_Config.m_TcColorFreezeFeet ? OwnInfo.m_ColorFeet : ColorRGBA(1, 1, 1);
+						const float Darken = (g_Config.m_TcColorFreezeDarken / 100.0f) * 0.5f + 0.5f;
+						const ColorRGBA Body = OwnInfo.m_CustomColoredSkin ? OwnInfo.m_ColorBody : ColorRGBA(1, 1, 1);
+						Draw.m_OwnRenderInfo.m_ColorBody = ColorRGBA(Body.r * Darken, Body.g * Darken, Body.b * Darken, 1.0f);
+					}
+				}
+			}
+		}
+
+		// QmClient: 查看模式记录每个槽位虚影的插值位置（镜头跟随用）
+		Draw.m_Pos = mix(vec2(Draw.m_Prev.m_X, Draw.m_Prev.m_Y), vec2(Draw.m_Player.m_X, Draw.m_Player.m_Y), Draw.m_IntraTick);
+		if(m_ManualMode)
+		{
+			m_aManualRenderPos[Slot] = Draw.m_Pos;
+			m_aManualRenderPosValid[Slot] = true;
+		}
+
+		m_vGhostDraws.push_back(Draw);
+	}
+
+	// 每帧解析该虚影实际使用的渲染信息（冻结换肤时用本帧副本，否则用共享信息）
+	auto ResolveRenderInfo = [](const SGhostDrawData &Draw) {
+		return Draw.m_UseOwnRenderInfo ? &Draw.m_OwnRenderInfo : Draw.m_pSharedRenderInfo;
+	};
+
+	if(!m_ManualMode)
+	{
+		// 跑图模式：保持上游逐槽位顺序（每个虚影的 hook 紧跟自己的 Tee）
+		for(const SGhostDrawData &Draw : m_vGhostDraws)
+		{
+			GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+			GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+		}
+		return;
+	}
+
+	// 查看模式：全部 hook -> 全部 Tee -> 名字与方向指示叠加
+	for(const SGhostDrawData &Draw : m_vGhostDraws)
+		GameClient()->m_Players.RenderHook(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+	for(const SGhostDrawData &Draw : m_vGhostDraws)
+		GameClient()->m_Players.RenderPlayer(ScreenRect, &Draw.m_Prev, &Draw.m_Player, ResolveRenderInfo(Draw), -2, Draw.m_IntraTick);
+
+	// QmClient: 查看模式下为每个虚影标注名字（多轨回放的信息可读性，对齐 demo 播放器）
+	// 名字尺寸跟随客户端名字牌大小设置；方向键指示与名字牌共用 cl_show_direction 数据
+	for(const SGhostDrawData &Draw : m_vGhostDraws)
+	{
+		const CGhostItem &Ghost = m_aActiveGhosts[Draw.m_Slot];
+		const vec2 TeePos = Draw.m_Pos;
+		if(Ghost.m_aPlayer[0] != '\0')
+		{
+			const float NameFontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
+			const float NameWidth = TextRender()->TextWidth(NameFontSize, Ghost.m_aPlayer, -1);
+			TextRender()->TextColor(1, 1, 1, 1);
+			TextRender()->TextOutlineColor(0, 0, 0, 0.6f);
+			TextRender()->Text(TeePos.x - NameWidth / 2, TeePos.y - 56.0f, NameFontSize, Ghost.m_aPlayer);
+		}
+
+		// QmClient: 查看模式方向键指示（面板开关持久化于 qm_rank_ghost_show_direction），
+		// 数据来自影子路径的完整角色快照，与名字牌的方向指示同一来源
+		if(!g_Config.m_QmRankGhostShowDirection)
+			continue;
+		const float DirSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
+		const bool DirLeft = Draw.m_Player.m_Direction == -1;
+		const bool DirRight = Draw.m_Player.m_Direction == 1;
+		const bool DirJump = (Draw.m_Player.m_Jumped & 1) != 0;
+		if(!DirLeft && !DirRight && !DirJump)
+			continue;
+		const vec2 Center = TeePos - vec2(0.0f, 78.0f);
+		const float Spacing = DirSize * 0.9f;
+		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_ARROW].m_Id);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.9f);
+		if(DirLeft)
+		{
+			IGraphics::CQuadItem Quad(Center.x - Spacing - DirSize / 2.0f, Center.y - DirSize / 2.0f, DirSize, DirSize);
+			Graphics()->QuadsSetRotation(pi);
+			Graphics()->QuadsDrawTL(&Quad, 1);
+		}
+		if(DirJump)
+		{
+			IGraphics::CQuadItem Quad(Center.x - DirSize / 2.0f, Center.y - DirSize / 2.0f, DirSize, DirSize);
+			Graphics()->QuadsSetRotation(pi / -2.0f);
+			Graphics()->QuadsDrawTL(&Quad, 1);
+		}
+		if(DirRight)
+		{
+			IGraphics::CQuadItem Quad(Center.x + Spacing - DirSize / 2.0f, Center.y - DirSize / 2.0f, DirSize, DirSize);
+			Graphics()->QuadsSetRotation(0.0f);
+			Graphics()->QuadsDrawTL(&Quad, 1);
+		}
+		Graphics()->QuadsEnd();
+		Graphics()->QuadsSetRotation(0.0f);
 	}
 }
 
@@ -460,6 +607,7 @@ void CGhost::StopRecord(int Time)
 void CGhost::StartRender(int Tick)
 {
 	m_Rendering = true;
+	m_ManualMode = false;
 	m_StartRenderTick = Tick;
 	for(auto &Ghost : m_aActiveGhosts)
 		Ghost.m_PlaybackPos = 0;
@@ -469,6 +617,130 @@ void CGhost::StopRender()
 {
 	m_Rendering = false;
 	m_NewRenderTick = -1;
+	m_ManualMode = false;
+	m_ManualPlaying = false;
+	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
+}
+
+void CGhost::ManualSetSpeed(float Speed)
+{
+	if(!m_ManualMode)
+		return;
+	Speed = std::clamp(Speed, 0.1f, 4.0f);
+	if(m_ManualSpeed == Speed)
+		return;
+	if(m_ManualPlaying)
+	{
+		// 以当前播放头为基准重整时间轴，变速瞬间不跳帧
+		const float Elapsed = ManualElapsedTicks();
+		m_ManualBaseTick = (int)Elapsed;
+		m_ManualStartTime = Client()->LocalTime();
+	}
+	m_ManualSpeed = Speed;
+}
+
+void CGhost::StartRenderManual()
+{
+	bool HaveGhost = false;
+	m_ManualEndTick = 0;
+	for(auto &Ghost : m_aActiveGhosts)
+	{
+		if(Ghost.Empty())
+			continue;
+		HaveGhost = true;
+		// 总时长取所有激活影子中最长的一条轨迹（相对 tick）：团队/接力回放里先
+		// 完成、中途加入或提前离开的玩家轨迹更短，取最短会把整组截断在最早那下；
+		// 短轨迹播到自己的末帧后停在原处（查看模式按各自轨迹范围钳制）
+		const int EndTick = Ghost.m_Path.Get(Ghost.m_Path.Size() - 1)->m_Tick - Ghost.m_StartTick;
+		if(EndTick > m_ManualEndTick)
+			m_ManualEndTick = EndTick;
+		Ghost.m_PlaybackPos = 0;
+	}
+	if(!HaveGhost || m_ManualEndTick <= 0)
+		return;
+	m_ManualMode = true;
+	m_Rendering = true;
+	m_RenderingStartedByServer = false;
+	m_ManualPlaying = true;
+	m_ManualBaseTick = 0;
+	m_ManualStartTime = Client()->LocalTime();
+	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
+}
+
+int CGhost::ManualPlaybackTick() const
+{
+	if(!m_ManualMode)
+		return 0;
+	if(!m_ManualPlaying)
+		return m_ManualBaseTick;
+	return m_ManualBaseTick + (int)ManualElapsedTicks();
+}
+
+float CGhost::ManualElapsedTicks() const
+{
+	// 相对手动播放头的 tick 数（含小数相位），按倍速缩放。
+	// 用 LocalTime（单调）而非本地预测 tick：预测会回滚，导致播放头倒退、
+	// 快照游标（只前进）与 tick 错位，表现为虚影闪烁/左右乱跳。
+	return maximum(0.0f, (Client()->LocalTime() - m_ManualStartTime) * (float)Client()->GameTickSpeed() * m_ManualSpeed);
+}
+
+float CGhost::ManualRenderIntra() const
+{
+	if(!m_ManualMode)
+		return 0.0f;
+	if(!m_ManualPlaying)
+		return m_ManualPauseIntra;
+	const float Elapsed = ManualElapsedTicks();
+	return Elapsed - (int)Elapsed;
+}
+
+void CGhost::ManualSetPlaying(bool Playing)
+{
+	if(!m_ManualMode || Playing == m_ManualPlaying)
+		return;
+	if(Playing)
+	{
+		m_ManualStartTime = Client()->LocalTime();
+	}
+	else
+	{
+		// 暂停时把播放头冻结在当前进度，并锁存 tick 内相位：
+		// 本地预测的插值相位会持续波动，直接沿用会让暂停后的画面抖动
+		const float Elapsed = ManualElapsedTicks();
+		m_ManualBaseTick = (int)Elapsed;
+		m_ManualPauseIntra = Elapsed - (int)Elapsed;
+	}
+	m_ManualPlaying = Playing;
+}
+
+void CGhost::ManualSeek(int RelativeTick)
+{
+	if(!m_ManualMode)
+		return;
+	const int MaxTick = maximum(1, m_ManualEndTick);
+	m_ManualBaseTick = std::clamp(RelativeTick, 0, MaxTick);
+	m_ManualStartTime = Client()->LocalTime();
+	m_ManualPauseIntra = 0.0f;
+	if(m_ManualBaseTick >= MaxTick)
+		m_ManualPlaying = false;
+
+	// 快照游标只前进，seek 后必须重扫定位
+	const int PlaybackTick = m_ManualBaseTick;
+	for(auto &Ghost : m_aActiveGhosts)
+	{
+		if(Ghost.Empty())
+			continue;
+		const int TargetTick = Ghost.m_StartTick + PlaybackTick;
+		const int Size = Ghost.m_Path.Size();
+		int Pos = 0;
+		int Last = 0;
+		while(Pos < Size && Ghost.m_Path.Get(Pos)->m_Tick <= TargetTick)
+		{
+			Last = Pos;
+			++Pos;
+		}
+		Ghost.m_PlaybackPos = Pos >= Size ? Size - 1 : Last;
+	}
 }
 
 int CGhost::Load(const char *pFilename)
@@ -649,7 +921,9 @@ void CGhost::OnMessage(int MsgType, void *pRawMsg)
 		{
 			if(m_Recording)
 				StopRecord();
-			StopRender();
+			// QmClient: 查看模式与玩家生死无关，继续播放
+			if(!m_ManualMode)
+				StopRender();
 			m_LastDeathTick = Client()->GameTick(g_Config.m_ClDummy);
 		}
 	}
@@ -662,7 +936,8 @@ void CGhost::OnMessage(int MsgType, void *pRawMsg)
 			{
 				if(m_Recording)
 					StopRecord();
-				StopRender();
+				if(!m_ManualMode)
+					StopRender();
 				m_LastDeathTick = Client()->GameTick(g_Config.m_ClDummy);
 			}
 		}
@@ -678,7 +953,9 @@ void CGhost::OnMessage(int MsgType, void *pRawMsg)
 			{
 				if(m_Recording)
 					StopRecord(Time);
-				StopRender();
+				// QmClient: 查看模式不受本人完赛影响，继续独立时间线播放
+				if(!m_ManualMode)
+					StopRender();
 			}
 		}
 	}
@@ -689,7 +966,8 @@ void CGhost::OnMessage(int MsgType, void *pRawMsg)
 		{
 			if(m_Recording)
 				StopRecord(pMsg->m_Time);
-			StopRender();
+			if(!m_ManualMode)
+				StopRender();
 		}
 	}
 }

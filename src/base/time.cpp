@@ -44,12 +44,6 @@ int64_t time_get()
 	return last;
 }
 
-int64_t time_freq()
-{
-	using namespace std::chrono_literals;
-	return std::chrono::nanoseconds(1s).count();
-}
-
 int64_t time_timestamp()
 {
 	return time(nullptr);
@@ -180,6 +174,7 @@ void str_timestamp_ex(time_t time_data, char *buffer, int buffer_size, const cha
 bool timestamp_from_str(const char *string, const char *format, time_t *timestamp)
 {
 	std::tm tm{};
+	tm.tm_isdst = -1; // 根据解析出的日期自动判定夏令时
 	std::istringstream ss(string);
 	ss >> std::get_time(&tm, format);
 	if(ss.fail() || !ss.eof())

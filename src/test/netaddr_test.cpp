@@ -171,4 +171,15 @@ TEST(NetAddr, IsLocal)
 
 	net_addr_from_str(&Addr, "[2001:db8::1]");
 	EXPECT_FALSE(net_addr_is_local(&Addr));
+
+	net_addr_from_str(&Addr, "[fc00::1]");
+	EXPECT_TRUE(net_addr_is_local(&Addr));
+	net_addr_from_str(&Addr, "[fd12:3456::1]");
+	EXPECT_TRUE(net_addr_is_local(&Addr));
+	net_addr_from_str(&Addr, "[fe80::1]");
+	EXPECT_TRUE(net_addr_is_local(&Addr));
+	net_addr_from_str(&Addr, "[febf::1]");
+	EXPECT_TRUE(net_addr_is_local(&Addr));
+	net_addr_from_str(&Addr, "[fec0::1]");
+	EXPECT_FALSE(net_addr_is_local(&Addr));
 }

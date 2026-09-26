@@ -47,26 +47,24 @@ namespace VoiceUtils
 			m_TokenHash = TokenHash;
 			m_ProtocolVersion = ProtocolVersion;
 			m_Enabled = Enabled;
+			m_Error.clear();
 			SQmWebSocketConnectConfig Config;
 			m_Error = ParseQmWebSocketUrl(m_Url.c_str(), Config);
 			m_UrlValid = m_Error.empty();
 			if(m_Enabled && m_UrlValid)
 			{
-				// 通用后端下限为 128 KiB，语音消息在本层限制为 VOICE_MAX_PACKET。
 				Config.m_MaxMessageSize = 128 * 1024;
 				if(!m_pClient->Available())
 					m_Error = m_pClient->UnavailableReason();
 				else if(!m_pClient->Connect(Config, m_Error) && m_Error.empty())
-					m_Error = "语音 WebSocket 连接失败";
+					m_Error = "voice WebSocket connection failed";
 			}
 		}
-
 		const bool IsConnected = m_Enabled && m_UrlValid && m_pClient->Desired() && m_pClient->State() == EQmWebSocketState::CONNECTED;
 		const int64_t ConnectedTick = IsConnected ? m_pClient->LastConnectedTick() : 0;
 		ResetRuntime = ResetRuntime || m_Connected != IsConnected || (IsConnected && m_LastConnectedTick != ConnectedTick);
 		m_Connected = IsConnected;
 		m_LastConnectedTick = ConnectedTick;
-		// 连接成功后清掉上一次断线留下的错误，否则界面会一直显示旧错误。
 		if(IsConnected)
 			m_Error.clear();
 		return ResetRuntime;
@@ -82,7 +80,6 @@ namespace VoiceUtils
 
 	bool CVoiceWebSocketTransport::Connected() const
 	{
-		// 快速重连也必须先经过 Update 的 runtime 重置，不能提前应用新会话。
 		return m_Connected && m_pClient->Desired() && m_pClient->State() == EQmWebSocketState::CONNECTED && m_pClient->LastConnectedTick() == m_LastConnectedTick;
 	}
 
@@ -978,7 +975,7 @@ namespace VoiceUtils
 		double Sum = 0.0;
 		for(int i = 0; i < Count; i++)
 		{
-			const float X = pSamples[i] / 32768.0f;
+			const double X = static_cast<double>(pSamples[i]) / 32768.0;
 			Sum += X * X;
 		}
 		return (float)std::sqrt(Sum / (double)Count);

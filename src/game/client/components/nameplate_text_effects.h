@@ -50,14 +50,14 @@ inline int QmNameplateEffectLodSmoothCount(int PreviousCount, int CurrentCount, 
 	return std::max(CurrentCount, PreviousCount - MaxStepDown);
 }
 
-// 理想档位：名牌数不超过满档阈值时返回 QM_TEXT_EFFECT_DRAWS_UNLIMITED（一个绘制都不少），
+// 理想档位：名牌数不超过满档阈值时返回满档绘制次数（一个绘制都不少），
 // 超过后把「满档阈值对应的特效绘制预算」按人数比例摊到每个名牌文本行上。
 // 由于按人均摊，每帧特效绘制总量不会超过「满档时 FullQualityNameplates 个名牌」的开销。
 // 向上取整：人数再多也至少留下最内圈一层特效。
 inline int QmNameplateEffectLodIdealDraws(int SmoothedCount, int FullDraws, int FullQualityNameplates)
 {
 	if(FullDraws <= 0 || FullQualityNameplates <= 0)
-		return QM_TEXT_EFFECT_DRAWS_UNLIMITED;
+		return FullDraws;
 	if(SmoothedCount <= FullQualityNameplates)
 		return FullDraws;
 	const int Scaled = (FullDraws * FullQualityNameplates + SmoothedCount - 1) / SmoothedCount;

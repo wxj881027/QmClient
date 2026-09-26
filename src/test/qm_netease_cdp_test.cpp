@@ -82,6 +82,7 @@ TEST(QmNeteaseCdp, UsesSharedDynamicPortCandidateSequence)
 	EXPECT_LT(DYNAMIC_PORT_CANDIDATE_COUNT, DYNAMIC_PORT_RANGE);
 }
 
+#if defined(_WIN32)
 TEST(QmNeteaseBootstrap, BuildsLoopbackArgumentsForMainCloudMusicProcess)
 {
 	std::wstring Patched;
@@ -101,6 +102,7 @@ TEST(QmNeteaseBootstrap, SkipsCefChildProcessesAndKeepsExplicitPort)
 	EXPECT_TRUE(QmNeteaseBootstrap::BuildLoopbackDebuggingCommandLine(L"D:\\CloudMusic\\cloudmusic.exe", Existing, 45380, &Patched));
 	EXPECT_EQ(Patched, Existing);
 }
+#endif
 
 TEST(QmNeteaseCdp, FrontendScriptUsesWebpackPlayerStateInsteadOfDesktopLyrics)
 {

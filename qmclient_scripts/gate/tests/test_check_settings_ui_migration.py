@@ -1,6 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from qmclient_scripts.gate.check_settings_ui_migration import _contains_forbidden_token, _find_legacy_color_picker_geometry, _find_raw_font_literals, _find_rect_derived_font_arguments, _find_rect_derived_font_assignments, PAGE_STABLE_IDS, PRODUCER_COMPLETE_PAGES, audit_page, audit_shared_contracts
 
@@ -93,7 +94,8 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 			"src/game/client/components/menus_settings.cpp": "Ui()->SetDropDownFontSize(m_SettingsContentMetrics.m_BodySize);",
 			"src/game/client/components/qmclient/menus_qmclient.cpp": "",
 			"src/game/client/components/tclient/menus_tclient.cpp": "VMargin, 0.0f, FontSize",
-			"src/game/client/ui.cpp": "Props.m_FontSize = ResolvedFontSize; State.m_SelectionPopupContext.m_FontSize = ResolvedFontSize;",
+			"src/game/client/ui.cpp": "",
+			"src/game/client/ui_popups.cpp": "Props.m_FontSize = ResolvedFontSize; State.m_SelectionPopupContext.m_FontSize = ResolvedFontSize;",
 		}
 		for relative, content in files.items():
 			path = self.root / relative
@@ -149,21 +151,52 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 			}.issubset(PAGE_STABLE_IDS)
 		)
 		self.assertIn("qm:dummy_miniview", PAGE_STABLE_IDS["qmclient_hud"])
+		self.assertIn("qm:lyrics", PAGE_STABLE_IDS["qmclient_hud"])
+		self.assertIn("qm:bind_status_hud", PAGE_STABLE_IDS["qmclient_hud"])
+		self.assertIn("qm:emoticons", PAGE_STABLE_IDS["qmclient_function"])
+		self.assertIn("qm:map_upload", PAGE_STABLE_IDS["qmclient_function"])
+		self.assertIn("qm:solo_split", PAGE_STABLE_IDS["qmclient_function"])
 		self.assertIn("qm:favorite_maps", PAGE_STABLE_IDS["qmclient_function"])
 		self.assertIn("qm:skin_appearance", PAGE_STABLE_IDS["qmclient_visual"])
 		self.assertIn("qm:skin_transition", PAGE_STABLE_IDS["qmclient_visual"])
 		self.assertTrue({"appearance", "qmclient_hud", "qmclient_function", "qmclient_visual", "contributors", "tclient_configs", "tclient_warlist"}.issubset(PRODUCER_COMPLETE_PAGES))
 
+	def test_visual_page_requires_its_catalogue_call_and_own_category_entry(self):
+		page = self.root / "src/game/client/components/qmclient/menus_qmclient.cpp"
+		page.parent.mkdir(parents=True, exist_ok=True)
+		page.write_text("""void CMenus::RenderSettingsQmClientVisualDeck()
+{
+    SettingsPageLayout(MainView, 1.0f);
+    SSettingsPageLayoutFrame Frame;
+    SSettingsCardDefinition Card;
+    QmResolveScrollPolicy(Request, 1.0f, 0.1f);
+    EQmScrollProfile::SETTINGS_OUTER;
+    SSettingsCardDeckResult Result;
+    ResolveSettingsContentMetrics(MainView.w);
+    CardDeck.RenderCached(Context);
+    ResolveSettingsCardDefinitionsRevision();
+    qm_card_catalog::VisualCardStableIds();
+}
+""", encoding="utf-8")
+		registry = self.root / "src/game/client/QmUi/QmCardRegistry.cpp"
+		registry.parent.mkdir(parents=True, exist_ok=True)
+		registry.write_text('"qm:skin_appearance"', encoding="utf-8")
+		navigation = self.root / "src/game/client/components/menus.cpp"
+		navigation.parent.mkdir(parents=True, exist_ok=True)
+		navigation.write_text('bool CMenus::SetSettingsPageFromCardTab(const char *pTab) { return str_comp(pTab, "visual") == 0; }', encoding="utf-8")
+		catalogue = self.root / "src/game/client/QmUi/cards/QmCardCatalogIds.cpp"
+		catalogue.parent.mkdir(parents=True, exist_ok=True)
+		catalogue.write_text('s_vHudCards = {"qm:skin_appearance"};\ns_vVisualCards = {"qm:skin_appearance"};', encoding="utf-8")
+		with patch.dict(PAGE_STABLE_IDS, {"qmclient_visual": ("qm:skin_appearance",)}):
+			self.assertEqual(audit_page(self.root, "qmclient_visual"), [])
+			page.write_text(page.read_text(encoding="utf-8").replace("qm_card_catalog::VisualCardStableIds();", ""), encoding="utf-8")
+			self.assertTrue(any("page producer entry missing" in error for error in audit_page(self.root, "qmclient_visual")))
+			page.write_text(page.read_text(encoding="utf-8").replace("ResolveSettingsCardDefinitionsRevision();", "ResolveSettingsCardDefinitionsRevision();\n    qm_card_catalog::VisualCardStableIds();"), encoding="utf-8")
+			catalogue.write_text('s_vHudCards = {"qm:skin_appearance"};\ns_vVisualCards = {"qm:other"};', encoding="utf-8")
+			self.assertTrue(any("catalogue category entry missing" in error for error in audit_page(self.root, "qmclient_visual")))
+
 	def test_warlist_single_card_contract_passes(self):
 		self.assertEqual(audit_page(self.make_warlist_repo(), "tclient_warlist"), [])
-
-	def test_card_catalog_counts_as_producer_source(self):
-		"""卡片构造迁到全局卡片目录后，stableId 登记在卡片模块里也算页面生产者契约成立。"""
-		root = self.make_warlist_repo(drop='Card.m_Spec = {"deck:tclient-warlist", "War List", nullptr};')
-		catalog_path = root / "src/game/client/QmUi/cards/QmCardCatalogHud.cpp"
-		catalog_path.parent.mkdir(parents=True, exist_ok=True)
-		catalog_path.write_text('SSettingsCardDefinition Card;\nCard.m_Spec = {"deck:tclient-warlist", "War List", nullptr};\n', encoding="utf-8")
-		self.assertEqual(audit_page(root, "tclient_warlist"), [])
 
 	def test_warlist_missing_producer_card_fails(self):
 		errors = audit_page(
@@ -313,7 +346,7 @@ Clean.m_FontSize = Metrics.m_BodySize;
 		qmclient.write_text("Options.m_FontSize = std::min(BodySize, ControlColumn.h * 0.8f);", encoding="utf-8")
 		self.assertTrue(any("settings font assignment still derives" in item for item in audit_shared_contracts(root)))
 		qmclient.write_text("", encoding="utf-8")
-		ui = root / "src/game/client/ui.cpp"
+		ui = root / "src/game/client/ui_popups.cpp"
 		ui.write_text("Props.m_FontSize = ResolvedFontSize;", encoding="utf-8")
 		self.assertTrue(any("dropdown trigger and popup" in item for item in audit_shared_contracts(root)))
 

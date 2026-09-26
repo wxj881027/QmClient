@@ -82,7 +82,8 @@ TEST(QmHammerHitDetection, RejectsStaleNonHammerAndHitDisabledAttacks)
 	SQmHammerAttackSample Disabled = Attack(3, 100, vec2(0.0f, 0.0f), vec2(1.0f, 0.0f));
 	Disabled.m_HammerHitEnabled = false;
 	const SQmHammerAttackSample aAttacks[] = {
-		Attack(1, 98, vec2(0.0f, 0.0f), vec2(1.0f, 0.0f)),
+		// 事件缓冲跨快照后最多晚 3 tick 送达（实机日志证实 Age=2 常见），更旧的拒绝。
+		Attack(1, 96, vec2(0.0f, 0.0f), vec2(1.0f, 0.0f)),
 		Attack(2, 100, vec2(0.0f, 0.0f), vec2(1.0f, 0.0f), 1, WEAPON_GUN),
 		Disabled,
 	};
@@ -90,6 +91,20 @@ TEST(QmHammerHitDetection, RejectsStaleNonHammerAndHitDisabledAttacks)
 
 	const SQmHammerHitMatch Match = QmMatchHammerHitEvent(vec2(21.0f, 0.0f), 100, aAttacks, 3, &TargetSample, 1);
 	EXPECT_EQ(Match.m_AttackerId, -1);
+}
+
+TEST(QmHammerHitDetection, AcceptsAttackDeliveredAcrossSnapshotBoundaries)
+{
+	// 快照 tick 落后挥锤 tick 2-3 tick 时攻击者仍可被推断（实机数据：Age=2 常见）。
+	const SQmHammerAttackSample aAttacks[] = {
+		Attack(1, 97, vec2(0.0f, 0.0f), vec2(1.0f, 0.0f)),
+		Attack(2, 98, vec2(0.0f, 0.0f), vec2(1.0f, 0.0f)),
+	};
+	const SQmHammerTargetSample TargetSample = Target(4, vec2(21.0f, 0.0f), vec2(21.0f, 0.0f));
+
+	const SQmHammerHitMatch Match = QmMatchHammerHitEvent(vec2(21.0f, 0.0f), 100, aAttacks, 2, &TargetSample, 1);
+	EXPECT_EQ(Match.m_AttackerId, -1); // 两个候选都合法，归属歧义仍保持保守
+	EXPECT_EQ(QmMatchHammerHitEvent(vec2(21.0f, 0.0f), 100, aAttacks, 1, &TargetSample, 1).m_AttackerId, 1);
 }
 
 TEST(QmHammerHitDetection, MatchesOneTickOldAttackWithoutTrustingCurrentAim)
@@ -140,6 +155,10 @@ TEST(QmHammerHitDetection, SupportsCurrentAndLegacySuperTeams)
 	EXPECT_FALSE(QmIsHammerSuperTeam(VANILLA_TEAM_SUPER, false));
 	EXPECT_TRUE(QmIsHammerSuperTeam(VANILLA_TEAM_SUPER, true));
 	EXPECT_FALSE(QmIsHammerSuperTeam(TEAM_SUPER, true));
+	EXPECT_TRUE(QmIsHammerSuperTeam(VANILLA_TEAM_SUPER, VANILLA_MAX_CLIENTS + 1));
+	EXPECT_TRUE(QmIsHammerSuperTeam(LEGACY_TEAM_SUPER, LEGACY_MAX_CLIENTS + 1));
+	EXPECT_TRUE(QmIsHammerSuperTeam(TEAM_SUPER, NUM_DDRACE_TEAMS));
+	EXPECT_FALSE(QmIsHammerSuperTeam(TEAM_SUPER, 0));
 
 	SQmHammerAttackSample SuperAttack = Attack(1, 100, vec2(0.0f, 0.0f), vec2(1.0f, 0.0f), TEAM_SUPER);
 	SuperAttack.m_Super = true;

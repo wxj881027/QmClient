@@ -245,19 +245,9 @@ namespace
 		const float Omega = 2.0f * QM_PI / std::max(Response, 1e-4f);
 		Spring.m_Stiffness = Omega * Omega;
 		Spring.m_Damping = 2.0f * TAKEOVER_DAMPING_RATIO * Omega;
-		// 静止阈值按「可感知」而非机器精度：CompleteTrack 会吸附到目标并派发完成事件，
-		// 阈值过紧会让接管弹簧拖过调用方给定的时间窗（测试与 UI 节奏都按响应时长验收）。
-		Spring.m_RestEpsilon = 0.05f;
-		Spring.m_RestVelocity = 0.25f;
+		Spring.m_RestEpsilon = 0.001f;
+		Spring.m_RestVelocity = 0.05f;
 		return Spring;
-	}
-
-	// 按位移放大静止阈值：位移越大，「看起来已经停住」的容差越大，避免小阈值拖满时间窗。
-	void ScaleSpringRestForDisplacement(SUiSpringConfig &Spring, float Displacement)
-	{
-		const float Magnitude = std::abs(Displacement);
-		Spring.m_RestEpsilon = std::max(Spring.m_RestEpsilon, Magnitude * 0.01f);
-		Spring.m_RestVelocity = std::max(Spring.m_RestVelocity, Magnitude * 0.05f);
 	}
 } // namespace
 
@@ -268,17 +258,16 @@ bool CQmAnimationBackend::StartTrackInterrupt(const STrackKey &Key, const SUiAni
 	const float StartVelocity = Active.m_Velocity;
 	const uint32_t ActiveTrackId = Active.m_TrackId;
 
-	// 目标值与当前值重合：瞬移完成，不留下被替换轨道，也不转弹簧。
-	// （REPLACE 到当前位置时 RequestAnimation 应返回 false。）
-	constexpr float NO_DISPLACEMENT_EPSILON = 0.0001f;
-	if(std::abs(Request.m_Target - StartValue) <= NO_DISPLACEMENT_EPSILON)
+	// 同值替换应结束旧轨道；继承旧速度会让已经到位的目标再次偏移。
+	if(Request.m_Transition.m_Interrupt == EUiAnimInterruptPolicy::REPLACE &&
+		Request.m_Transition.m_DelaySec <= 0.0f && std::abs(StartValue - Request.m_Target) <= 0.0001f)
 	{
 		const uint32_t TrackId = Request.m_TrackId != 0 ? Request.m_TrackId : ActiveTrackId;
 		m_Values[Key] = Request.m_Target;
 		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, TrackId});
+		CompleteAwaitedTrack(TrackId);
 		if(TrackId != ActiveTrackId)
 			CancelAwaitedTrack(ActiveTrackId);
-		CompleteAwaitedTrack(TrackId);
 		m_ActiveTracks.erase(Key);
 		StartQueuedTracks(Key, Request.m_Target);
 		return false;
@@ -308,7 +297,6 @@ bool CQmAnimationBackend::StartTrackInterrupt(const STrackKey &Key, const SUiAni
 	Takeover.m_Transition.m_DelaySec = 0.0f;
 	if(Request.m_Transition.m_Driver != EUiAnimDriver::SPRING)
 		Takeover.m_Transition.m_Spring = InterruptSpringFromTween(Request.m_Transition);
-	ScaleSpringRestForDisplacement(Takeover.m_Transition.m_Spring, Request.m_Target - StartValue);
 	if(Takeover.m_TrackId != ActiveTrackId)
 		CancelAwaitedTrack(ActiveTrackId);
 	m_ActiveTracks.erase(Key);

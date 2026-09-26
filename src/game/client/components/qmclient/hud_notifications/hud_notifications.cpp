@@ -165,6 +165,12 @@ void CQmHudNotifications::OnRender()
 		return;
 	if(!HudEditorPreview && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
+#if defined(CONF_VIDEORECORDER)
+	// 通知内容来自聊天消息（被路由成通知的聊天行会被抑制），因此渲染（录制）视频时
+	// 跟随聊天框的 cl_video_showchat，避免出现「聊天被抑制但通知又不录」的丢消息
+	if(!HudEditorPreview && IVideo::Current() && !g_Config.m_ClVideoShowChat)
+		return;
+#endif
 
 	const int HoldMs = QmHudNotifications::ClampHoldMs(g_Config.m_QmHudNotificationsHoldMs);
 	const int AnimMs = QmHudNotifications::ClampAnimationMs(g_Config.m_QmHudNotificationsAnimMs);

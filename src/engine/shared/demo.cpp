@@ -87,7 +87,7 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 	bool CloseMapFile = false;
 
 	if(MapFile)
-		io_seek(MapFile, 0, EIoSeekOrigin::START);
+		io_seek(MapFile, 0, IOSEEK_START);
 
 	char aSha256[SHA256_MAXSTRSIZE];
 	sha256_str(Sha256, aSha256, sizeof(aSha256));
@@ -197,7 +197,7 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 		if(CloseMapFile)
 			io_close(MapFile);
 		else
-			io_seek(MapFile, 0, EIoSeekOrigin::START);
+			io_seek(MapFile, 0, IOSEEK_START);
 	}
 
 	m_LastKeyFrame = -1;
@@ -274,13 +274,24 @@ void CDemoRecorder::WriteTickMarker(int Tick, bool Keyframe)
 		m_FirstTick = Tick;
 }
 
-void CDemoRecorder::Write(int Type, const void *pData, int Size)
+bool CDemoRecorder::Write(int Type, const void *pData, int Size)
 {
 	if(!m_File)
-		return;
+		return false;
+
+	// 官方 be3e5e6a3：负长度是上游 create delta 的失败返回值，必须在这里拒绝，
+	// 否则会以 size_t 参与 mem_copy。
+	if(Size < 0)
+	{
+		log_error("demo_recorder", "Dropped chunk of type %d, invalid size %d", Type, Size);
+		return false;
+	}
 
 	if(Size > 64 * 1024)
-		return;
+	{
+		log_error("demo_recorder", "Dropped chunk of type %d, size %d is too large", Type, Size);
+		return false;
+	}
 
 	/* pad the data with 0 so we get an alignment of 4,
 	else the compression won't work and miss some bytes */
@@ -291,11 +302,11 @@ void CDemoRecorder::Write(int Type, const void *pData, int Size)
 		aBuffer2[Size++] = 0;
 	Size = CVariableInt::Compress(aBuffer2, Size, aBuffer, sizeof(aBuffer)); // buffer2 -> buffer
 	if(Size < 0)
-		return;
+		return false;
 
 	Size = CNetBase::Compress(aBuffer, Size, aBuffer2, sizeof(aBuffer2)); // buffer -> buffer2
 	if(Size < 0)
-		return;
+		return false;
 
 	unsigned char aChunk[3];
 	aChunk[0] = ((Type & 0x3) << 5);
@@ -322,6 +333,7 @@ void CDemoRecorder::Write(int Type, const void *pData, int Size)
 	}
 
 	io_write(m_File, aBuffer2, Size);
+	return true;
 }
 
 void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
@@ -336,8 +348,10 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 		// write full tickmarker
 		WriteTickMarker(Tick, true);
 
-		// write snapshot
-		Write(CHUNKTYPE_SNAPSHOT, pData, Size);
+		// write snapshot。官方 be3e5e6a3：只有 chunk 真正写进文件才推进 delta 基准，
+		// 否则回放会用没写进去的快照去解后续 delta。
+		if(!Write(CHUNKTYPE_SNAPSHOT, pData, Size))
+			return;
 
 		m_LastKeyFrame = Tick;
 		mem_copy(&m_LastSnapshotData, pData, Size);
@@ -348,13 +362,17 @@ void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size, bool K
 		WriteTickMarker(Tick, false);
 
 		// create delta
-		int32_t aDeltaData[CSnapshot::MAX_SIZE / sizeof(int32_t)];
-		const int DeltaSize = m_pSnapshotDelta->CreateDelta(*m_LastSnapshotData.AsSnapshot(), *(CSnapshot *)pData, rust::Slice(aDeltaData, std::size(aDeltaData)));
-		if(DeltaSize)
+		CSnapshotDeltaBuffer DeltaData;
+		const int DeltaSize = m_pSnapshotDelta->CreateDelta(*m_LastSnapshotData.AsSnapshot(), *(CSnapshot *)pData, DeltaData.AsMutSlice());
+		if(DeltaSize > 0)
 		{
 			// record delta
-			Write(CHUNKTYPE_DELTA, aDeltaData, DeltaSize);
-			mem_copy(&m_LastSnapshotData, pData, Size);
+			if(Write(CHUNKTYPE_DELTA, DeltaData.m_aData, DeltaSize))
+				mem_copy(&m_LastSnapshotData, pData, Size);
+		}
+		else if(DeltaSize < 0)
+		{
+			log_error("demo_recorder", "Failed to create delta for tick %d, dropping snapshot", Tick);
 		}
 	}
 }
@@ -384,13 +402,13 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 	if(Mode == IDemoRecorder::EStopMode::KEEP_FILE)
 	{
 		// add the demo length to the header
-		io_seek(m_File, offsetof(CDemoHeader, m_aLength), EIoSeekOrigin::START);
+		io_seek(m_File, offsetof(CDemoHeader, m_aLength), IOSEEK_START);
 		unsigned char aLength[sizeof(int32_t)];
 		uint_to_bytes_be(aLength, Length());
 		io_write(m_File, aLength, sizeof(aLength));
 
 		// add the timeline markers to the header
-		io_seek(m_File, sizeof(CDemoHeader) + offsetof(CTimelineMarkers, m_aNumTimelineMarkers), EIoSeekOrigin::START);
+		io_seek(m_File, sizeof(CDemoHeader) + offsetof(CTimelineMarkers, m_aNumTimelineMarkers), IOSEEK_START);
 		unsigned char aNumMarkers[sizeof(int32_t)];
 		uint_to_bytes_be(aNumMarkers, m_NumTimelineMarkers);
 		io_write(m_File, aNumMarkers, sizeof(aNumMarkers));
@@ -606,7 +624,7 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 
 	const auto &ResetToStartPosition = [&](EScanFileResult Result) -> EScanFileResult {
 		// Cannot play or seek without at least one keyframe, also when the scan stopped early
-		if(io_seek(m_File, StartPos, EIoSeekOrigin::START) != 0 || m_vKeyFrames.empty())
+		if(io_seek(m_File, StartPos, IOSEEK_START) != 0 || m_vKeyFrames.empty())
 		{
 			m_vKeyFrames.clear();
 			return EScanFileResult::ERROR_UNRECOVERABLE;
@@ -617,7 +635,7 @@ CDemoPlayer::EScanFileResult CDemoPlayer::ScanFile()
 	int ChunkTick = -1;
 	if(!m_vKeyFrames.empty())
 	{
-		if(io_seek(m_File, m_vKeyFrames.back().m_Filepos, EIoSeekOrigin::START) != 0)
+		if(io_seek(m_File, m_vKeyFrames.back().m_Filepos, IOSEEK_START) != 0)
 		{
 			return ResetToStartPosition(EScanFileResult::ERROR_RECOVERABLE);
 		}
@@ -921,11 +939,11 @@ unsigned char *CDemoPlayer::GetMapData(class IStorage *pStorage)
 		return nullptr;
 
 	const int64_t CurSeek = io_tell(m_File);
-	if(CurSeek < 0 || io_seek(m_File, m_MapOffset, EIoSeekOrigin::START) != 0)
+	if(CurSeek < 0 || io_seek(m_File, m_MapOffset, IOSEEK_START) != 0)
 		return nullptr;
 	unsigned char *pMapData = (unsigned char *)malloc(m_MapInfo.m_Size);
 	if(io_read(m_File, pMapData, m_MapInfo.m_Size) != m_MapInfo.m_Size ||
-		io_seek(m_File, CurSeek, EIoSeekOrigin::START) != 0)
+		io_seek(m_File, CurSeek, IOSEEK_START) != 0)
 	{
 		free(pMapData);
 		return nullptr;
@@ -1110,7 +1128,7 @@ bool CDemoPlayer::SetPos(int WantedTick)
 		m_Info.m_Info.m_CurrentTick < m_vKeyFrames[KeyFrame].m_Tick || // we are before the wanted KeyFrame OR
 		(KeyFrame != m_vKeyFrames.size() - 1 && m_Info.m_Info.m_CurrentTick >= m_vKeyFrames[KeyFrame + 1].m_Tick)) // we are after the wanted KeyFrame
 	{
-		if(io_seek(m_File, m_vKeyFrames[KeyFrame].m_Filepos, EIoSeekOrigin::START) != 0)
+		if(io_seek(m_File, m_vKeyFrames[KeyFrame].m_Filepos, IOSEEK_START) != 0)
 		{
 			Stop("Error seeking keyframe position");
 			return false;
@@ -1388,7 +1406,7 @@ bool CDemoPlayer::GetDemoInfo(IStorage *pStorage, IConsole *pConsole, const char
 			{
 				pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "demo_player", "Demo version incremented, but not by DDNet");
 			}
-			if(io_seek(File, -(int64_t)ExtensionUuidSize, EIoSeekOrigin::CURRENT) != 0)
+			if(io_seek(File, -(int64_t)ExtensionUuidSize, IOSEEK_CUR) != 0)
 			{
 				if(pErrorMessage != nullptr)
 					str_copy(pErrorMessage, "Error rewinding SHA256 extension UUID", ErrorMessageSize);

@@ -152,9 +152,9 @@ protected:
 	template<class T>
 	void MakeBanInfo(const CBan<T> *pBan, char *pBuf, unsigned BuffSize, int Type) const;
 	template<class T>
-	int Ban(T *pBanPool, const T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason);
+	int Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason); // NOLINT(readability-redundant-typename)
 	template<class T>
-	int Unban(T *pBanPool, const T::CDataType *pData);
+	int Unban(T *pBanPool, const typename T::CDataType *pData); // NOLINT(readability-redundant-typename)
 
 	class IConsole *m_pConsole;
 	class IStorage *m_pStorage;

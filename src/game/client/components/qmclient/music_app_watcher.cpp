@@ -16,14 +16,12 @@ namespace
 {
 	constexpr int CHECK_INTERVAL_SECONDS = 2;
 
-	// 返回当前正在运行的已注册音乐应用的位掩码(按注册表下标)。
 	uint64_t BuildRunningMask()
 	{
 		uint64_t Mask = 0;
 #if defined(CONF_FAMILY_WINDOWS)
 		size_t HookCount = 0;
-		const SQmMusicHookEntry *apHooks = QmMusicHookRegistry(&HookCount);
-		// 每轮只创建一次全系统快照，所有已注册应用共享同一次采样。
+		const SQmMusicHookEntry *pHooks = QmMusicHookRegistry(&HookCount);
 		HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 		if(hSnapshot == INVALID_HANDLE_VALUE)
 			return 0;
@@ -33,7 +31,7 @@ namespace
 		{
 			do
 			{
-				Mask |= QmMusicHookMaskForProcess(Entry.szExeFile, apHooks, HookCount);
+				Mask |= QmMusicHookMaskForProcess(Entry.szExeFile, pHooks, HookCount);
 			} while(Process32NextW(hSnapshot, &Entry));
 		}
 		CloseHandle(hSnapshot);
@@ -52,7 +50,6 @@ void CQmMusicAppWatcher::OnInit()
 
 void CQmMusicAppWatcher::OnShutdown()
 {
-	// 任务池保留自己的引用，worker 不访问组件；退出时不在主线程等待系统枚举。
 	m_pScanJob.reset();
 }
 
@@ -66,15 +63,16 @@ void CQmMusicAppWatcher::OnUpdate()
 		m_pScanJob.reset();
 		ApplyRunningApps(RunningMask);
 	}
-
 	const int64_t Now = time_get();
 	if(Now - m_LastCheckTick < time_freq() * CHECK_INTERVAL_SECONDS)
 		return;
 	m_LastCheckTick = Now;
 #if defined(CONF_FAMILY_WINDOWS)
-	// 一次只排一个任务；任务积压时不追加进程扫描，也不等待 worker。
-	m_pScanJob = std::make_shared<CQmMusicAppScanJob>(BuildRunningMask);
-	Engine()->AddJob(m_pScanJob);
+	if(!m_pScanJob)
+	{
+		m_pScanJob = std::make_shared<CQmMusicAppScanJob>(BuildRunningMask);
+		Engine()->AddJob(m_pScanJob);
+	}
 #else
 	ApplyRunningApps(BuildRunningMask());
 #endif

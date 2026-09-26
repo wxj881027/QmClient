@@ -244,7 +244,7 @@ mod ffi {
         /// ```
         pub fn NumArguments(self: &IConsole_IResult) -> i32;
 
-        /// Get the value of the sole victim (`v`) parameter.
+        /// Get the value of the victim (`v`) parameter with the given index.
         ///
         /// This is mostly important for commands that have optional parameters
         /// and thus support variable numbers of arguments.
@@ -266,61 +266,17 @@ mod ffi {
         /// # let mut console = CreateConsole(CFGFLAG_SERVER);
         /// # let mut executed: u32 = 0;
         /// # console.pin_mut().Register(s!("command"), s!("v"), CFGFLAG_SERVER, IConsole_FCommandCallback(callback), UserPtr::from(&mut executed), s!(""));
-        /// # console.pin_mut().ExecuteLine(s!(r#"command me"#), 33, true);
-        /// # console.pin_mut().ExecuteLine(s!(r#"command string"#), 33, true);
         /// # console.pin_mut().ExecuteLine(s!(r#"command 42"#), 33, true);
-        /// # console.pin_mut().ExecuteLine(s!(r#"command all"#), 33, true);
         /// # extern "C" fn callback(result_param: &IConsole_IResult, mut user: UserPtr) {
         /// # let executed;
         /// # unsafe { executed = *user.cast_mut::<u32>(); *user.cast_mut::<u32>() += 1; }
-        /// # match executed {
-        /// # 0 => {
-        /// let result: &IConsole_IResult /* = `command me` */;
-        /// # result = result_param;
-        /// // Assume the executing client ID is 33.
-        /// assert_eq!(result.GetVictim(), 33);
-        ///
-        /// # }
-        /// # 1 => {
-        /// let result: &IConsole_IResult /* = `command string` */;
-        /// # result = result_param;
-        /// assert_eq!(result.GetVictim(), 0);
-        ///
-        /// # }
-        /// # 2 => {
         /// let result: &IConsole_IResult /* = `command 42` */;
         /// # result = result_param;
-        /// assert_eq!(result.GetVictim(), 42);
-        ///
+        /// assert_eq!(result.GetVictim(0), 42);
         /// # }
-        /// # 3 => {
-        /// let result: &IConsole_IResult /* = `command all` first invocation */;
-        /// # result = result_param;
-        /// assert_eq!(result.GetVictim(), 0);
-        /// # }
-        /// # 4 => {
-        /// let result: &IConsole_IResult /* = `command all` second invocation */;
-        /// # result = result_param;
-        /// assert_eq!(result.GetVictim(), 1);
-        /// # }
-        /// // …
-        /// # 66 => {
-        /// let result: &IConsole_IResult /* = `command all` last invocation */;
-        /// # result = result_param;
-        /// assert_eq!(result.GetVictim(), 63);
-        /// # }
-        /// // …
-        /// # 130 => {
-        /// let result: &IConsole_IResult /* = `command all` last invocation */;
-        /// # result = result_param;
-        /// assert_eq!(result.GetVictim(), 127);
-        /// # }
-        /// # _ => {}
-        /// # }
-        /// # }
-        /// # assert!(executed == 131);
+        /// # assert!(executed == 1);
         /// ```
-        pub fn GetVictim(self: &IConsole_IResult) -> i32;
+        pub fn GetVictim(self: &IConsole_IResult, Slot: u32) -> i32;
 
         /// Console interface, consists of logging output and command execution.
         ///

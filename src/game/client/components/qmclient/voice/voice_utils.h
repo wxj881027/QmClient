@@ -36,7 +36,7 @@ namespace VoiceUtils
 {
 	const char *EffectiveVoiceWebSocketUrl(const char *pUrl);
 
-	// 由语音 worker 独占，停线程后才可从主线程断开。
+	// 语音 worker 独占传输对象，停止 worker 后才从外部销毁。
 	class CVoiceWebSocketTransport
 	{
 		std::unique_ptr<IQmWebSocketClient> m_pClient;
@@ -53,7 +53,6 @@ namespace VoiceUtils
 	public:
 		CVoiceWebSocketTransport();
 		explicit CVoiceWebSocketTransport(std::unique_ptr<IQmWebSocketClient> pClient);
-		// 返回 true 时调用方先清空语音 runtime，再处理新会话的收发。
 		bool Update(const char *pUrl, bool Enabled, uint32_t ContextHash, uint32_t TokenHash, uint8_t ProtocolVersion);
 		void Disconnect();
 		bool Connected() const;
@@ -63,7 +62,6 @@ namespace VoiceUtils
 		bool SendPacket(const uint8_t *pData, size_t Size);
 		bool PollPacket(SQmWebSocketMessage &Out);
 	};
-
 	struct SVoicePacketHeader
 	{
 		// Keep this layout in sync with WriteVoicePacketHeader/ReadVoicePacketHeader.

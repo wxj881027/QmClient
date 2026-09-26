@@ -102,34 +102,35 @@ float RoundedRectPerimeterLength(vec4 Rect, float Radius)
 {
 	vec2 HalfSize = max(Rect.zw * 0.5, vec2(0.0));
 	float CornerRadius = clamp(Radius, 0.0, min(HalfSize.x, HalfSize.y));
-	return 4.0 * max(HalfSize.x - CornerRadius, 0.0) + 2.0 * PI * CornerRadius;
+	return 4.0 * (HalfSize.x + HalfSize.y - 2.0 * CornerRadius) + 2.0 * PI * CornerRadius;
 }
 
 // 轮廓周长位置：从正上方中点起顺时针量到 Point 的垂足，返回 0 → 1 的比例。
-// 直边按 x 线性推进，两端圆弧按角度推进；与 C++ 侧 RoundedRectPerimeterPoint 互为逆映射。
+// 四段直边和四段圆弧与 C++ 侧 RoundedRectPerimeterPoint 互为逆映射。
 float RoundedRectPerimeterFraction(vec2 Point, vec4 Rect, float Radius)
 {
 	vec2 HalfSize = max(Rect.zw * 0.5, vec2(0.0));
 	float CornerRadius = clamp(Radius, 0.0, min(HalfSize.x, HalfSize.y));
-	float StraightHalf = max(HalfSize.x - CornerRadius, 0.0);
-	float CapLength = PI * CornerRadius;
-	float Perimeter = 4.0 * StraightHalf + 2.0 * CapLength;
+	float HorizontalHalf = HalfSize.x - CornerRadius;
+	float VerticalHalf = HalfSize.y - CornerRadius;
+	float QuarterArc = PI * CornerRadius * 0.5;
+	float Perimeter = 4.0 * (HorizontalHalf + VerticalHalf + QuarterArc);
 	if(Perimeter <= 0.0001)
 		return 0.0;
 	vec2 Local = Point - (Rect.xy + HalfSize);
-	float Distance;
-	if(abs(Local.x) <= StraightHalf)
-	{
-		Distance = Local.y <= 0.0 ? abs(Local.x) : 2.0 * StraightHalf + CapLength - abs(Local.x);
-	}
+	float X = abs(Local.x);
+	float Along;
+	if(X < HorizontalHalf)
+		Along = Local.y <= 0.0 ? X : 2.0 * HorizontalHalf + 2.0 * QuarterArc + 2.0 * VerticalHalf - X;
+	else if(Local.y < -VerticalHalf)
+		Along = HorizontalHalf + (atan(Local.y + VerticalHalf, X - HorizontalHalf) + PI * 0.5) * CornerRadius;
+	else if(Local.y > VerticalHalf)
+		Along = HorizontalHalf + QuarterArc + 2.0 * VerticalHalf + atan(Local.y - VerticalHalf, X - HorizontalHalf) * CornerRadius;
 	else
-	{
-		float Angle = atan(Local.y, abs(Local.x) - StraightHalf);
-		Distance = StraightHalf + (Angle + PI * 0.5) * CornerRadius;
-	}
+		Along = HorizontalHalf + QuarterArc + Local.y + VerticalHalf;
 	if(Local.x < 0.0)
-		Distance = Perimeter - Distance;
-	return fract(Distance / Perimeter);
+		Along = Perimeter - Along;
+	return fract(Along / Perimeter);
 }
 
 void Composite(inout vec3 PremulColor, inout float Alpha, vec4 Color, float ShapeCoverage)

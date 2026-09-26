@@ -613,14 +613,24 @@ void CTouchControls::CJoystickTouchButtonBehavior::OnDeactivate(bool ByFinger)
 void CTouchControls::CJoystickTouchButtonBehavior::OnUpdate()
 {
 	CControls &Controls = m_pTouchControls->GameClient()->m_Controls;
+	const float Zoom = m_pTouchControls->GameClient()->m_Snap.m_SpecInfo.m_Active ? m_pTouchControls->GameClient()->m_Camera.m_Zoom : 1.0f;
 	if(m_pTouchControls->GameClient()->m_Snap.m_SpecInfo.m_Active)
 	{
 		vec2 WorldScreenSize;
-		m_pTouchControls->Graphics()->CalcScreenParams(m_pTouchControls->Graphics()->GameScreenAspect(), m_pTouchControls->GameClient()->m_Camera.m_Zoom, &WorldScreenSize.x, &WorldScreenSize.y);
+		m_pTouchControls->Graphics()->CalcScreenParams(m_pTouchControls->Graphics()->GameScreenAspect(), Zoom, &WorldScreenSize.x, &WorldScreenSize.y);
 		Controls.m_aMousePos[g_Config.m_ClDummy] += -m_AccumulatedDelta * WorldScreenSize;
 		Controls.m_aMouseInputType[g_Config.m_ClDummy] = CControls::EMouseInputType::RELATIVE;
 		Controls.m_aMousePos[g_Config.m_ClDummy].x = std::clamp(Controls.m_aMousePos[g_Config.m_ClDummy].x, -201.0f * 32, (m_pTouchControls->Collision()->GetWidth() + 201.0f) * 32.0f);
 		Controls.m_aMousePos[g_Config.m_ClDummy].y = std::clamp(Controls.m_aMousePos[g_Config.m_ClDummy].y, -201.0f * 32, (m_pTouchControls->Collision()->GetHeight() + 201.0f) * 32.0f);
+		m_AccumulatedDelta = vec2(0.0f, 0.0f);
+	}
+	else if(IsRelative())
+	{
+		vec2 WorldScreenSize;
+		m_pTouchControls->Graphics()->CalcScreenParams(m_pTouchControls->Graphics()->GameScreenAspect(), Zoom, &WorldScreenSize.x, &WorldScreenSize.y);
+		Controls.m_aMousePos[g_Config.m_ClDummy] += m_AccumulatedDelta * WorldScreenSize;
+		Controls.m_aMouseInputType[g_Config.m_ClDummy] = CControls::EMouseInputType::RELATIVE;
+		Controls.ClampMousePos();
 		m_AccumulatedDelta = vec2(0.0f, 0.0f);
 	}
 	else
@@ -644,6 +654,12 @@ int CTouchControls::CJoystickActionTouchButtonBehavior::SelectedAction() const
 
 // Joystick that only aims.
 int CTouchControls::CJoystickAimTouchButtonBehavior::SelectedAction() const
+{
+	return ACTION_AIM;
+}
+
+// 只瞄准并相对移动鼠标指针的摇杆。
+int CTouchControls::CJoystickAimRelativeTouchButtonBehavior::SelectedAction() const
 {
 	return ACTION_AIM;
 }
@@ -777,7 +793,7 @@ void CTouchControls::OnWindowResize()
 	}
 }
 
-bool CTouchControls::OnTouchState(const std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
+bool CTouchControls::OnTouchState(std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
 {
 	if(!g_Config.m_ClTouchControls)
 		return false;
@@ -798,6 +814,7 @@ bool CTouchControls::OnTouchState(const std::vector<IInput::CTouchFingerState> &
 		UpdateButtonsEditor(vTouchFingerStates);
 	else
 		UpdateButtonsGame(vTouchFingerStates);
+	vTouchFingerStates.clear();
 	return true;
 }
 
@@ -960,6 +977,7 @@ int CTouchControls::NextDirectTouchAction() const
 		case EDirectTouchIngameMode::ACTION:
 			return m_ActionSelected;
 		case EDirectTouchIngameMode::AIM:
+		case EDirectTouchIngameMode::AIM_RELATIVE:
 			return ACTION_AIM;
 		case EDirectTouchIngameMode::FIRE:
 			return ACTION_FIRE;
@@ -969,6 +987,13 @@ int CTouchControls::NextDirectTouchAction() const
 			dbg_assert_failed("m_DirectTouchIngame invalid");
 		}
 	}
+}
+
+static auto MatchFingerStateFinger(const IInput::CTouchFinger &Finger)
+{
+	return [Finger](const IInput::CTouchFingerState &TouchFingerState) {
+		return TouchFingerState.m_Finger == Finger;
+	};
 }
 
 void CTouchControls::UpdateButtonsGame(const std::vector<IInput::CTouchFingerState> &vTouchFingerStates)
@@ -989,9 +1014,7 @@ void CTouchControls::UpdateButtonsGame(const std::vector<IInput::CTouchFingerSta
 		// Remove stale fingers that are not pressed anymore.
 		m_vStaleFingers.erase(
 			std::remove_if(m_vStaleFingers.begin(), m_vStaleFingers.end(), [&](const IInput::CTouchFinger &Finger) {
-				return std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), [&](const IInput::CTouchFingerState &TouchFingerState) {
-					return TouchFingerState.m_Finger == Finger;
-				}) == vRemainingTouchFingerStates.end();
+				return std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), MatchFingerStateFinger(Finger)) == vRemainingTouchFingerStates.end();
 			}),
 			m_vStaleFingers.end());
 		// Prevent stale fingers from activating touch buttons and direct touch.
@@ -1015,9 +1038,7 @@ void CTouchControls::UpdateButtonsGame(const std::vector<IInput::CTouchFingerSta
 			continue;
 		}
 
-		const auto ActiveFinger = std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), [&](const IInput::CTouchFingerState &TouchFingerState) {
-			return TouchFingerState.m_Finger == m_aDirectTouchActionStates[Action].m_Finger;
-		});
+		const auto ActiveFinger = std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), MatchFingerStateFinger(m_aDirectTouchActionStates[Action].m_Finger));
 		if(ActiveFinger == vRemainingTouchFingerStates.end() || DirectTouchAction == NUM_ACTIONS)
 		{
 			m_aDirectTouchActionStates[Action].m_Active = false;
@@ -1089,9 +1110,7 @@ void CTouchControls::UpdateButtonsGame(const std::vector<IInput::CTouchFingerSta
 				// Remember fingers responsible for buttons that were deactivated due to becoming invisible,
 				// to ensure that these fingers will not activate direct touch input or touch buttons.
 				m_vStaleFingers.push_back(TouchButton.m_pBehavior->m_Finger);
-				const auto ActiveFinger = std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), [&](const IInput::CTouchFingerState &TouchFingerState) {
-					return TouchFingerState.m_Finger == TouchButton.m_pBehavior->m_Finger;
-				});
+				const auto ActiveFinger = std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), MatchFingerStateFinger(TouchButton.m_pBehavior->m_Finger));
 				// ActiveFinger could be released during this progress.
 				if(ActiveFinger != vRemainingTouchFingerStates.end())
 					vRemainingTouchFingerStates.erase(ActiveFinger);
@@ -1103,9 +1122,7 @@ void CTouchControls::UpdateButtonsGame(const std::vector<IInput::CTouchFingerSta
 		{
 			continue;
 		}
-		const auto ActiveFinger = std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), [&](const IInput::CTouchFingerState &TouchFingerState) {
-			return TouchFingerState.m_Finger == TouchButton.m_pBehavior->m_Finger;
-		});
+		const auto ActiveFinger = std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), MatchFingerStateFinger(TouchButton.m_pBehavior->m_Finger));
 		if(ActiveFinger == vRemainingTouchFingerStates.end())
 		{
 			TouchButton.m_pBehavior->SetInactive(true);
@@ -1124,9 +1141,7 @@ void CTouchControls::UpdateButtonsGame(const std::vector<IInput::CTouchFingerSta
 		{
 			continue;
 		}
-		const auto ActiveFinger = std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), [&](const IInput::CTouchFingerState &TouchFingerState) {
-			return TouchFingerState.m_Finger == TouchButton.m_pBehavior->m_Finger;
-		});
+		const auto ActiveFinger = std::find_if(vRemainingTouchFingerStates.begin(), vRemainingTouchFingerStates.end(), MatchFingerStateFinger(TouchButton.m_pBehavior->m_Finger));
 		dbg_assert(ActiveFinger != vRemainingTouchFingerStates.end(), "Active button finger not found");
 		vRemainingTouchFingerStates.erase(ActiveFinger);
 	}

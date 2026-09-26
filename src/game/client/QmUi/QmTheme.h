@@ -141,7 +141,7 @@ namespace qm_theme
 
 	inline constexpr SImeTheme IME = IME_LIGHT;
 
-	inline constexpr const SImeTheme &ImeTheme(bool Dark)
+	constexpr const SImeTheme &ImeTheme(bool Dark)
 	{
 		return Dark ? IME_DARK : IME_LIGHT;
 	}

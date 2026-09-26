@@ -15,13 +15,12 @@
 
 namespace
 {
-	constexpr const char *QM_ICON_MANIFEST_PATTERN = "qmclient/icons/qm_icons_%s_%dx.json";
 	constexpr const char *QM_ICON_MSDF_MANIFEST_PATTERN = "qmclient/icons/qm_icons_%s_msdf.json";
 	constexpr int QM_ICON_RELOAD_RETRY_DELAY_SECONDS = 2;
 
 	bool IconDiagnosticsEnabled()
 	{
-		return g_Config.m_QmPerfDebug != 0;
+		return g_Config.m_QmPerfDebug != 0 || g_Config.m_QmPerfLogfile != 0 || g_Config.m_QmPerfStutterDiagnostics != 0;
 	}
 
 	const char *IconAtlasWeightName(const int Weight)
@@ -30,46 +29,31 @@ namespace
 		{
 		case 0: return "regular";
 		case 1: return "bold";
-		case 2: return "thin";
+		// Thin 字体未随包：weight 2 复用 Light 图集（配置值保留兼容）。
+		case 2: return "light";
 		case 3: return "fill";
+		case 4: return "light";
+		case 5: return "duotone";
 		}
 		return "bold";
 	}
 
 	EQmIcon IconFromName(const char *pName)
 	{
-		if(str_comp(pName, "star") == 0)
-			return EQmIcon::STAR;
-		if(str_comp(pName, "bookmark") == 0)
-			return EQmIcon::BOOKMARK;
-		if(str_comp(pName, "magnifying-glass") == 0 || str_comp(pName, "search") == 0)
+		for(int IconIndex = 0; IconIndex < static_cast<int>(EQmIcon::COUNT); ++IconIndex)
+		{
+			const EQmIcon Icon = static_cast<EQmIcon>(IconIndex);
+			const char *pIconName = CQmIconManager::IconName(Icon);
+			if(pIconName[0] != '\0' && str_comp(pName, pIconName) == 0)
+				return Icon;
+		}
+		// 兼容历史 manifest 名
+		if(str_comp(pName, "search") == 0)
 			return EQmIcon::SEARCH;
 		if(str_comp(pName, "close") == 0)
 			return EQmIcon::CLOSE;
-		if(str_comp(pName, "eye") == 0)
-			return EQmIcon::EYE;
 		if(str_comp(pName, "eye-off") == 0)
 			return EQmIcon::EYE_OFF;
-		if(str_comp(pName, "chevron-down") == 0)
-			return EQmIcon::CHEVRON_DOWN;
-		if(str_comp(pName, "plus") == 0)
-			return EQmIcon::PLUS;
-		if(str_comp(pName, "trash") == 0)
-			return EQmIcon::TRASH;
-		if(str_comp(pName, "satellite-swap-incoming") == 0)
-			return EQmIcon::SATELLITE_SWAP_INCOMING;
-		if(str_comp(pName, "satellite-swap-outgoing") == 0)
-			return EQmIcon::SATELLITE_SWAP_OUTGOING;
-		if(str_comp(pName, "satellite-switch") == 0)
-			return EQmIcon::SATELLITE_SWITCH;
-		if(str_comp(pName, "satellite-mute") == 0)
-			return EQmIcon::SATELLITE_MUTE;
-		if(str_comp(pName, "satellite-check") == 0)
-			return EQmIcon::SATELLITE_CHECK;
-		if(str_comp(pName, "satellite-spectator-eye") == 0)
-			return EQmIcon::SATELLITE_SPECTATOR_EYE;
-		if(str_comp(pName, "satellite-spectator-eye-closed") == 0)
-			return EQmIcon::SATELLITE_SPECTATOR_EYE_CLOSED;
 		return EQmIcon::COUNT;
 	}
 
@@ -95,15 +79,44 @@ namespace
 		if(pConsole != nullptr)
 			pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "qm_icons", pText);
 	}
-}
 
-ColorRGBA ConfiguredQmUiIconColor(const ColorRGBA &Color)
-{
-	if(g_Config.m_QmUiIconColor != 4)
-		return QmUiIconColor(Color, g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColor);
+	void FillEntryUv(CQmIconAtlas::SEntry &Entry, const int X, const int Y, const int W, const int H, const int AtlasWidth, const int AtlasHeight)
+	{
+		Entry.m_Valid = true;
+		Entry.m_U0 = (X + 0.5f) / static_cast<float>(AtlasWidth);
+		Entry.m_V0 = (Y + 0.5f) / static_cast<float>(AtlasHeight);
+		Entry.m_U1 = (X + W - 0.5f) / static_cast<float>(AtlasWidth);
+		Entry.m_V1 = (Y + H - 0.5f) / static_cast<float>(AtlasHeight);
+		Entry.m_BoxW = W;
+		Entry.m_BoxH = H;
+	}
 
-	const float Time = static_cast<float>(time_get()) / static_cast<float>(time_freq());
-	return QmUiIconColor(Color, g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColor, Time);
+	// 解析 morph 关键帧段。缺省或任一帧非法都返回 0（全有或全无），
+	// 调用方据此回退到几何 morph / 交叉淡化，不会出现半套帧的错乱动画。
+	int ParseMorphFrames(const json_value *pRoot, const int AtlasWidth, const int AtlasHeight, std::array<CQmIconAtlas::SEntry, static_cast<size_t>(CQmIconAtlas::MORPH_FRAME_CAPACITY)> &aOut)
+	{
+		const json_value *pFrames = json_object_get(pRoot, "morph_frames");
+		if(pFrames == &json_value_none || pFrames->type != json_array)
+			return 0;
+
+		int Count = 0;
+		for(unsigned int Index = 0; Index < pFrames->u.array.length; ++Index)
+		{
+			const json_value *pFrame = pFrames->u.array.values[Index];
+			if(pFrame == nullptr || pFrame->type != json_object || Count >= CQmIconAtlas::MORPH_FRAME_CAPACITY)
+				return 0;
+			int X = 0;
+			int Y = 0;
+			int W = 0;
+			int H = 0;
+			if(!JsonIntField(pFrame, "x", X) || !JsonIntField(pFrame, "y", Y) || !JsonIntField(pFrame, "w", W) || !JsonIntField(pFrame, "h", H) ||
+				X < 0 || Y < 0 || W <= 1 || H <= 1 || X + W > AtlasWidth || Y + H > AtlasHeight)
+				return 0;
+			FillEntryUv(aOut[Count], X, Y, W, H, AtlasWidth, AtlasHeight);
+			++Count;
+		}
+		return Count;
+	}
 }
 
 ColorRGBA SQmIconStyle::Color(EQmIconState State) const
@@ -133,13 +146,15 @@ void CQmIconAtlas::ResetForDeviceRecreate()
 	m_Texture.Invalidate();
 	for(SEntry &Entry : m_aEntries)
 		Entry = {};
+	for(SEntry &Entry : m_aMorphFrames)
+		Entry = {};
+	m_MorphFrameCount = 0;
 	m_LoadedIconCount = 0;
-	m_AtlasScale = 0;
 	m_Width = 0;
 	m_Height = 0;
-	m_Padding = 0;
 	m_PxRange = 0.0f;
-	m_Type = EType::ALPHA;
+	m_UseTrueSdf = false;
+	m_SecondaryMask = false;
 }
 
 void CQmIconManager::Init(IGraphics *pGraphics, IStorage *pStorage, IConsole *pConsole)
@@ -162,7 +177,6 @@ void CQmIconManager::OnGraphicsResourcesReset()
 	m_Atlas.ResetForDeviceRecreate();
 	m_AtlasWeight = -1;
 	m_NextReloadAttemptTime = 0;
-	m_NextMsdfProbeTime = 0;
 	m_HasFailedReloadTarget = false;
 	Reload();
 }
@@ -174,13 +188,9 @@ void CQmIconManager::Shutdown()
 	m_pGraphics = nullptr;
 	m_pStorage = nullptr;
 	m_pConsole = nullptr;
-	m_PreferredScale = 0;
 	m_AtlasWeight = -1;
-	m_MsdfManifestAvailable = false;
 	m_NextReloadAttemptTime = 0;
-	m_NextMsdfProbeTime = 0;
 	m_FailedReloadWeight = -1;
-	m_FailedReloadScale = 0;
 	m_FailedReloadMsdfSupported = false;
 	m_HasFailedReloadTarget = false;
 	m_Diagnostics = {};
@@ -228,52 +238,20 @@ bool CQmIconManager::Reload()
 	if(m_DiagnosticsEnabled)
 		m_Diagnostics.m_ReloadAttempts++;
 
-	const int PreferredScale = PreferredAtlasScale();
 	const bool MsdfSupported = m_pGraphics->HasTexturedMsdf();
 	const int Weight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
 	CQmIconAtlas Candidate;
-	bool Success = false;
-	bool LoadedMsdf = false;
-	if(MsdfSupported)
-	{
-		if(m_DiagnosticsEnabled)
-			m_Diagnostics.m_MsdfProbes++;
-		if(LoadMsdfManifest(Candidate))
-		{
-			Success = true;
-			LoadedMsdf = true;
-			if(m_DiagnosticsEnabled)
-				m_Diagnostics.m_MsdfProbeSuccesses++;
-		}
-	}
+	const bool Success = MsdfSupported && LoadMsdfManifest(Candidate);
 	if(!Success)
 	{
-		for(const int Scale : QmIconAtlasScaleFallbackOrder(PreferredScale))
-		{
-			if(LoadManifestForScale(Candidate, Scale))
-			{
-				Success = true;
-				break;
-			}
-		}
-	}
-
-	const bool MsdfProbeFailed = MsdfSupported && !LoadedMsdf;
-	if(!Success)
-	{
+		// 图集不可用（后端无 MSDF 或 manifest/贴图缺失）：没有位图中间层，
+		// 直接清空图集交给调用方走 TTF 字形兜底；冷却期内不重试 IO。
 		m_NextReloadAttemptTime = time_get() + time_freq() * QM_ICON_RELOAD_RETRY_DELAY_SECONDS;
 		m_FailedReloadWeight = Weight;
-		m_FailedReloadScale = PreferredScale;
 		m_FailedReloadMsdfSupported = MsdfSupported;
 		m_HasFailedReloadTarget = true;
-		const bool RetainedResidentAtlas = QmIconAtlasCanRetainOnReloadFailure(IsReady(), m_Atlas.Type(), MsdfSupported);
-		if(!RetainedResidentAtlas)
-		{
+		if(IsReady())
 			ClearAtlas(m_Atlas);
-			m_MsdfManifestAvailable = false;
-			m_PreferredScale = PreferredScale;
-			m_AtlasWeight = Weight;
-		}
 		return false;
 	}
 
@@ -284,64 +262,27 @@ bool CQmIconManager::Reload()
 		m_Diagnostics.m_ReloadSuccesses++;
 		m_Diagnostics.m_AtlasSwaps++;
 	}
-	m_MsdfManifestAvailable = LoadedMsdf;
-	m_PreferredScale = LoadedMsdf ? 0 : PreferredScale;
 	m_AtlasWeight = Weight;
 	m_NextReloadAttemptTime = 0;
 	m_HasFailedReloadTarget = false;
-	m_NextMsdfProbeTime = MsdfProbeFailed ? time_get() + time_freq() * QM_ICON_RELOAD_RETRY_DELAY_SECONDS : 0;
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "MTSDF icon atlas ready: weight=%s icons=%d", IconAtlasWeightName(Weight), m_Atlas.m_LoadedIconCount);
+	LogIconAtlas(m_pConsole, aBuf);
 	return true;
-}
-
-bool CQmIconManager::RetryMsdfAtlas()
-{
-	if(m_DiagnosticsEnabled)
-		m_Diagnostics.m_MsdfProbes++;
-	CQmIconAtlas Candidate;
-	if(!LoadMsdfManifest(Candidate))
-	{
-		m_MsdfManifestAvailable = false;
-		m_NextMsdfProbeTime = time_get() + time_freq() * QM_ICON_RELOAD_RETRY_DELAY_SECONDS;
-		return false;
-	}
-
-	m_Atlas.Swap(Candidate);
-	ClearAtlas(Candidate);
-	if(m_DiagnosticsEnabled)
-	{
-		m_Diagnostics.m_MsdfProbeSuccesses++;
-		m_Diagnostics.m_AtlasSwaps++;
-	}
-	m_MsdfManifestAvailable = true;
-	m_PreferredScale = 0;
-	m_AtlasWeight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
-	m_NextMsdfProbeTime = 0;
-	return true;
-}
-
-bool CQmIconManager::LoadManifestForScale(CQmIconAtlas &Atlas, const int Scale)
-{
-	char aManifestPath[IO_MAX_PATH_LENGTH];
-	str_format(aManifestPath, sizeof(aManifestPath), QM_ICON_MANIFEST_PATTERN, IconAtlasWeightName(NormalizeQmIconWeight(g_Config.m_QmUiIconWeight)), Scale);
-	return LoadManifest(Atlas, aManifestPath, Scale, false);
 }
 
 bool CQmIconManager::LoadMsdfManifest(CQmIconAtlas &Atlas)
 {
 	char aManifestPath[IO_MAX_PATH_LENGTH];
 	str_format(aManifestPath, sizeof(aManifestPath), QM_ICON_MSDF_MANIFEST_PATTERN, IconAtlasWeightName(NormalizeQmIconWeight(g_Config.m_QmUiIconWeight)));
-	return LoadManifest(Atlas, aManifestPath, 0, true);
-}
 
-bool CQmIconManager::LoadManifest(CQmIconAtlas &Atlas, const char *pManifestPath, const int Scale, const bool Msdf)
-{
 	ClearAtlas(Atlas);
-	if(!m_pStorage->FileExists(pManifestPath, IStorage::TYPE_ALL))
+	if(!m_pStorage->FileExists(aManifestPath, IStorage::TYPE_ALL))
 		return false;
 
 	void *pFileData = nullptr;
 	unsigned FileSize = 0;
-	if(!m_pStorage->ReadFile(pManifestPath, IStorage::TYPE_ALL, &pFileData, &FileSize))
+	if(!m_pStorage->ReadFile(aManifestPath, IStorage::TYPE_ALL, &pFileData, &FileSize))
 		return false;
 
 	char aError[256] = "";
@@ -351,7 +292,7 @@ bool CQmIconManager::LoadManifest(CQmIconAtlas &Atlas, const char *pManifestPath
 	if(pRoot == nullptr)
 	{
 		char aBuf[320];
-		str_format(aBuf, sizeof(aBuf), "Failed to parse %s: %s", pManifestPath, aError);
+		str_format(aBuf, sizeof(aBuf), "Failed to parse %s: %s", aManifestPath, aError);
 		LogIconAtlas(m_pConsole, aBuf);
 		return false;
 	}
@@ -360,12 +301,9 @@ bool CQmIconManager::LoadManifest(CQmIconAtlas &Atlas, const char *pManifestPath
 	do
 	{
 		int PxRange = 0;
-		if(Msdf)
-		{
-			const char *pKind = JsonStringField(pRoot, "kind");
-			if(str_comp(pKind, "msdf") != 0 || !JsonIntField(pRoot, "px_range", PxRange) || PxRange <= 0)
-				break;
-		}
+		const char *pKind = JsonStringField(pRoot, "kind");
+		if(str_comp(pKind, "mtsdf") != 0 || json_object_get(pRoot, "alpha_sdf") == &json_value_none || !JsonIntField(pRoot, "px_range", PxRange) || PxRange <= 0)
+			break;
 
 		const json_value *pAtlas = json_object_get(pRoot, "atlas");
 		const json_value *pIcons = json_object_get(pRoot, "icons");
@@ -376,8 +314,6 @@ bool CQmIconManager::LoadManifest(CQmIconAtlas &Atlas, const char *pManifestPath
 		int AtlasHeight = 0;
 		if(!JsonIntField(pAtlas, "width", AtlasWidth) || !JsonIntField(pAtlas, "height", AtlasHeight) || AtlasWidth <= 0 || AtlasHeight <= 0)
 			break;
-		int AtlasPadding = 0;
-		JsonIntField(pAtlas, "padding", AtlasPadding);
 
 		const char *pImagePath = JsonStringField(pAtlas, "image");
 		if(pImagePath[0] == '\0')
@@ -415,16 +351,15 @@ bool CQmIconManager::LoadManifest(CQmIconAtlas &Atlas, const char *pManifestPath
 				InvalidKnownEntry = true;
 				continue;
 			}
-			Entry.m_Valid = true;
-			Entry.m_U0 = (X + 0.5f) / static_cast<float>(AtlasWidth);
-			Entry.m_V0 = (Y + 0.5f) / static_cast<float>(AtlasHeight);
-			Entry.m_U1 = (X + W - 0.5f) / static_cast<float>(AtlasWidth);
-			Entry.m_V1 = (Y + H - 0.5f) / static_cast<float>(AtlasHeight);
+			FillEntryUv(Entry, X, Y, W, H, AtlasWidth, AtlasHeight);
 			++LoadedIconCount;
 		}
 
 		if(InvalidKnownEntry || LoadedIconCount != static_cast<int>(EQmIcon::COUNT))
 			break;
+
+		std::array<CQmIconAtlas::SEntry, static_cast<size_t>(CQmIconAtlas::MORPH_FRAME_CAPACITY)> aMorphFrames{};
+		const int MorphFrameCount = ParseMorphFrames(pRoot, AtlasWidth, AtlasHeight, aMorphFrames);
 
 		IGraphics::CTextureHandle Texture = m_pGraphics->LoadTexture(pImagePath, IStorage::TYPE_ALL, IGraphics::TEXLOAD_NO_MIPMAPS);
 		if(!QmIconTextureCanCommit(Texture.IsValid(), Texture.IsNullTexture()))
@@ -442,13 +377,14 @@ bool CQmIconManager::LoadManifest(CQmIconAtlas &Atlas, const char *pManifestPath
 
 		Atlas.m_Texture = Texture;
 		Atlas.m_aEntries = aEntries;
+		Atlas.m_aMorphFrames = aMorphFrames;
+		Atlas.m_MorphFrameCount = MorphFrameCount;
 		Atlas.m_LoadedIconCount = LoadedIconCount;
-		Atlas.m_AtlasScale = Scale;
 		Atlas.m_Width = AtlasWidth;
 		Atlas.m_Height = AtlasHeight;
-		Atlas.m_Padding = AtlasPadding;
 		Atlas.m_PxRange = static_cast<float>(PxRange);
-		Atlas.m_Type = Msdf ? CQmIconAtlas::EType::MSDF : CQmIconAtlas::EType::ALPHA;
+		Atlas.m_UseTrueSdf = json_object_get(pRoot, "alpha_sdf") != &json_value_none;
+		Atlas.m_SecondaryMask = json_object_get(pRoot, "secondary_mask") != &json_value_none;
 		if(m_DiagnosticsEnabled)
 			m_Diagnostics.m_TextureLoads++;
 		Success = true;
@@ -472,38 +408,22 @@ void CQmIconManager::RefreshForCurrentDpi()
 		m_DiagnosticsEnabled = DiagnosticsEnabled;
 	}
 
-	const int PreferredScale = PreferredAtlasScale();
 	const bool MsdfSupported = m_pGraphics->HasTexturedMsdf();
 	const int Weight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
-	if(QmIconAtlasMustDropMsdf(MsdfSupported, m_Atlas.Type()))
+	// 能力丢失（如切到无 MSDF 的后端）时立即清空图集，交给字体兜底。
+	if(!MsdfSupported && IsReady())
 	{
 		ClearAtlas(m_Atlas);
-		m_MsdfManifestAvailable = false;
-		m_PreferredScale = PreferredScale;
 		m_AtlasWeight = Weight;
-		m_NextReloadAttemptTime = 0;
 		m_HasFailedReloadTarget = false;
+		m_NextReloadAttemptTime = 0;
+		return;
 	}
-	const EQmIconAtlasType DesiredType = SelectQmIconAtlasType(MsdfSupported, m_MsdfManifestAvailable);
-	const bool MsdfProbeNeedsRetry = QmIconAtlasNeedsMsdfProbe(MsdfSupported, m_MsdfManifestAvailable);
-	const bool NeedsReload = QmIconAtlasNeedsReload(IsReady(), m_Atlas.Type(), DesiredType, m_AtlasWeight, Weight, m_PreferredScale, PreferredScale);
+
 	const int64_t Now = time_get();
-	const bool ReloadCooldownActive = QmIconReloadCooldownActive(Now, m_NextReloadAttemptTime, m_HasFailedReloadTarget, m_FailedReloadWeight, m_FailedReloadScale, m_FailedReloadMsdfSupported, Weight, PreferredScale, MsdfSupported);
-	const bool MsdfProbeCooldownActive = QmIconAtlasRetryCooldownActive(Now, m_NextMsdfProbeTime);
-	const SQmIconRefreshState RefreshState{NeedsReload, ReloadCooldownActive, MsdfProbeNeedsRetry, MsdfProbeCooldownActive};
-	const EQmIconRefreshAction RefreshAction = QmIconRefreshAction(RefreshState);
-	if(RefreshAction == EQmIconRefreshAction::RELOAD)
+	const bool ReloadCooldownActive = QmIconReloadCooldownActive(Now, m_NextReloadAttemptTime, m_HasFailedReloadTarget, m_FailedReloadWeight, m_FailedReloadMsdfSupported, Weight, MsdfSupported);
+	if(QmIconAtlasNeedsReload(IsReady(), m_AtlasWeight, Weight) && !ReloadCooldownActive)
 		Reload();
-	else if(RefreshAction == EQmIconRefreshAction::RETRY_MSDF)
-		RetryMsdfAtlas();
-}
-
-int CQmIconManager::PreferredAtlasScale() const
-{
-	if(m_pGraphics == nullptr)
-		return 1;
-
-	return QmIconPreferredAtlasScale(m_pGraphics->ScreenHiDPIScale());
 }
 
 CUIRect CQmIconManager::PixelAlignedRect(const CUIRect &Rect) const
@@ -533,102 +453,67 @@ CUIRect CQmIconManager::PixelAlignedRect(const CUIRect &Rect) const
 	return Out;
 }
 
-bool CQmIconManager::RenderIcon(EQmIcon Icon, const CUIRect &Rect, const ColorRGBA &Color) const
+bool CQmIconManager::RenderAtlasEntry(const CQmIconAtlas::SEntry &Entry, const CUIRect &Rect, const ColorRGBA &Color, const bool PreserveAspect, const float Rotation) const
 {
-	const size_t IconIndex = static_cast<size_t>(Icon);
-	if(!IsReady() || IconIndex >= m_Atlas.m_aEntries.size() || !m_Atlas.m_aEntries[IconIndex].m_Valid || Color.a <= 0.0f)
+	if(!Entry.m_Valid || Color.a <= 0.0f)
 		return false;
 
-	const CQmIconAtlas::SEntry &Entry = m_Atlas.m_aEntries[IconIndex];
-	const CUIRect Aligned = PixelAlignedRect(Rect);
-	if(m_Atlas.IsMsdf())
-	{
-		if(m_DiagnosticsEnabled)
-		{
-			m_Diagnostics.m_MsdfIconDraws++;
-			m_CurrentMsdfManagerCallRun++;
-			m_Diagnostics.m_MaxMsdfManagerCallRun = maximum(m_Diagnostics.m_MaxMsdfManagerCallRun, m_CurrentMsdfManagerCallRun);
-		}
-		IGraphics::STexturedMsdfParams Params;
-		Params.m_Texture = m_Atlas.m_Texture;
-		Params.m_Rect = vec4(Aligned.x, Aligned.y, Aligned.w, Aligned.h);
-		Params.m_UvRect = vec4(Entry.m_U0, Entry.m_V0, Entry.m_U1, Entry.m_V1);
-		Params.m_Color = Color;
-		Params.m_PxRange = m_Atlas.m_PxRange;
-		Params.m_AtlasWidth = static_cast<float>(m_Atlas.m_Width);
-		Params.m_AtlasHeight = static_cast<float>(m_Atlas.m_Height);
-		m_pGraphics->RenderTexturedMsdf(Params);
-		return true;
-	}
-
+	const CUIRect Aligned = PreserveAspect ? QmIconAspectFittedRect(PixelAlignedRect(Rect), Entry.m_BoxW, Entry.m_BoxH) : PixelAlignedRect(Rect);
 	if(m_DiagnosticsEnabled)
 	{
-		m_Diagnostics.m_AlphaIconDraws++;
-		FinishMsdfManagerCallRun();
+		m_Diagnostics.m_MsdfIconDraws++;
+		m_CurrentMsdfManagerCallRun++;
+		m_Diagnostics.m_MaxMsdfManagerCallRun = maximum(m_Diagnostics.m_MaxMsdfManagerCallRun, m_CurrentMsdfManagerCallRun);
 	}
-	m_pGraphics->WrapClamp();
-	m_pGraphics->TextureSet(m_Atlas.m_Texture);
-	m_pGraphics->QuadsBegin();
-	m_pGraphics->SetColor(Color.r, Color.g, Color.b, Color.a);
-	m_pGraphics->QuadsSetSubset(Entry.m_U0, Entry.m_V0, Entry.m_U1, Entry.m_V1);
-	IGraphics::CQuadItem Quad(Aligned.x, Aligned.y, Aligned.w, Aligned.h);
-	m_pGraphics->QuadsDrawTL(&Quad, 1);
-	m_pGraphics->QuadsEnd();
-	m_pGraphics->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
-	m_pGraphics->WrapNormal();
+	IGraphics::STexturedMsdfParams Params;
+	Params.m_Texture = m_Atlas.m_Texture;
+	Params.m_Rect = vec4(Aligned.x, Aligned.y, Aligned.w, Aligned.h);
+	Params.m_UvRect = vec4(Entry.m_U0, Entry.m_V0, Entry.m_U1, Entry.m_V1);
+	Params.m_Color = Color;
+	Params.m_SecondaryColor = ConfiguredQmUiIconSecondaryColor(Color);
+	Params.m_PxRange = m_Atlas.m_PxRange;
+	Params.m_AtlasWidth = static_cast<float>(m_Atlas.m_Width);
+	Params.m_AtlasHeight = static_cast<float>(m_Atlas.m_Height);
+	Params.m_UseTrueSdf = m_Atlas.m_UseTrueSdf && !m_Atlas.HasSecondaryMask();
+	Params.m_UseSecondarySdf = m_Atlas.HasSecondaryMask();
+	Params.m_Rotation = Rotation;
+	m_pGraphics->RenderTexturedMsdf(Params);
 	return true;
 }
 
-bool CQmIconManager::RenderIconRotated(EQmIcon Icon, const CUIRect &Rect, const ColorRGBA &Color, float Rotation) const
+bool CQmIconManager::RenderIcon(EQmIcon Icon, const CUIRect &Rect, const ColorRGBA &Color, const bool PreserveAspect) const
 {
 	const size_t IconIndex = static_cast<size_t>(Icon);
-	if(!IsReady() || IconIndex >= m_Atlas.m_aEntries.size() || !m_Atlas.m_aEntries[IconIndex].m_Valid || Color.a <= 0.0f)
+	if(!IsReady() || IconIndex >= m_Atlas.m_aEntries.size())
 		return false;
-
-	const CQmIconAtlas::SEntry &Entry = m_Atlas.m_aEntries[IconIndex];
-	const CUIRect Aligned = PixelAlignedRect(Rect);
-	if(m_Atlas.IsMsdf())
-	{
-		if(m_DiagnosticsEnabled)
-		{
-			m_Diagnostics.m_MsdfIconDraws++;
-			m_CurrentMsdfManagerCallRun++;
-			m_Diagnostics.m_MaxMsdfManagerCallRun = maximum(m_Diagnostics.m_MaxMsdfManagerCallRun, m_CurrentMsdfManagerCallRun);
-		}
-		IGraphics::STexturedMsdfParams Params;
-		Params.m_Texture = m_Atlas.m_Texture;
-		Params.m_Rect = vec4(Aligned.x, Aligned.y, Aligned.w, Aligned.h);
-		Params.m_UvRect = vec4(Entry.m_U0, Entry.m_V0, Entry.m_U1, Entry.m_V1);
-		Params.m_Color = Color;
-		Params.m_PxRange = m_Atlas.m_PxRange;
-		Params.m_AtlasWidth = static_cast<float>(m_Atlas.m_Width);
-		Params.m_AtlasHeight = static_cast<float>(m_Atlas.m_Height);
-		Params.m_Rotation = Rotation;
-		m_pGraphics->RenderTexturedMsdf(Params);
-		return true;
-	}
-
-	if(m_DiagnosticsEnabled)
-	{
-		m_Diagnostics.m_AlphaIconDraws++;
-		FinishMsdfManagerCallRun();
-	}
-	m_pGraphics->WrapClamp();
-	m_pGraphics->TextureSet(m_Atlas.m_Texture);
-	m_pGraphics->QuadsBegin();
-	m_pGraphics->SetColor(Color.r, Color.g, Color.b, Color.a);
-	m_pGraphics->QuadsSetSubset(Entry.m_U0, Entry.m_V0, Entry.m_U1, Entry.m_V1);
-	m_pGraphics->QuadsSetRotation(Rotation);
-	IGraphics::CQuadItem Quad(Aligned.x, Aligned.y, Aligned.w, Aligned.h);
-	m_pGraphics->QuadsDrawTL(&Quad, 1);
-	m_pGraphics->QuadsSetRotation(0.0f);
-	m_pGraphics->QuadsEnd();
-	m_pGraphics->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
-	m_pGraphics->WrapNormal();
-	return true;
+	return RenderAtlasEntry(m_Atlas.m_aEntries[IconIndex], Rect, Color, PreserveAspect);
 }
 
-bool CQmIconManager::RenderIcon(EQmIcon Icon, const CUIRect &Rect, EQmIconState State, const SQmIconStyle &Style) const
+bool CQmIconManager::RenderIconRotated(EQmIcon Icon, const CUIRect &Rect, const ColorRGBA &Color, float Rotation, const bool PreserveAspect) const
 {
-	return RenderIcon(Icon, Rect, Style.Color(State));
+	const size_t IconIndex = static_cast<size_t>(Icon);
+	if(!IsReady() || IconIndex >= m_Atlas.m_aEntries.size())
+		return false;
+	return RenderAtlasEntry(m_Atlas.m_aEntries[IconIndex], Rect, Color, PreserveAspect, Rotation);
+}
+
+bool CQmIconManager::RenderMorphFrames(const CUIRect &Rect, const ColorRGBA &Color, const float Progress) const
+{
+	const int FrameCount = m_Atlas.m_MorphFrameCount;
+	if(FrameCount <= 0 || !IsReady() || Color.a <= 0.0f)
+		return false;
+
+	// 相邻两帧做 alpha 混合：预烘焙帧本身是 MSDF，形变与图标走同一条抗锯齿路径。
+	const SQmIconMorphFrameBlend Blend = QmIconMorphFrameBlend(Progress, FrameCount);
+	bool Drawn = false;
+	if(Blend.m_Alpha0 > 0.001f)
+		Drawn = RenderAtlasEntry(m_Atlas.m_aMorphFrames[Blend.m_Index0], Rect, ColorRGBA(Color.r, Color.g, Color.b, Color.a * Blend.m_Alpha0), true);
+	if(Blend.m_Alpha1 > 0.001f)
+		Drawn = RenderAtlasEntry(m_Atlas.m_aMorphFrames[Blend.m_Index1], Rect, ColorRGBA(Color.r, Color.g, Color.b, Color.a * Blend.m_Alpha1), true) || Drawn;
+	return Drawn;
+}
+
+bool CQmIconManager::RenderIcon(EQmIcon Icon, const CUIRect &Rect, EQmIconState State, const SQmIconStyle &Style, const bool PreserveAspect) const
+{
+	return RenderIcon(Icon, Rect, Style.Color(State), PreserveAspect);
 }

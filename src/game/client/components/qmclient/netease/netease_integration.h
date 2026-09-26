@@ -11,7 +11,7 @@
 #include <string>
 
 class CUIRect;
-struct ColorRGBA;
+class ColorRGBA;
 
 // 网易云专用歌词集成。标准媒体状态由 CSystemMediaControls 提供，本组件只消费
 // v5 songId/精确进度/当前句，并负责展示开关与切歌清理。

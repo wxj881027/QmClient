@@ -1,75 +1,55 @@
-# Q1menG Client
+# QmClient Qm客户端
 
 <p align="center">
-   <img src="data/qmclient/gui_logo.png" alt="Q1menG Client Logo" style="width:60%; max-width:760px;" />
+   <img src="data/qmclient/gui_logo.png" alt="Q1menG 客户端标志" style="width:60%; max-width:760px;" />
 </p>
 
 <p align="center">
-  A project to rebuild a customised client based on DDNet / TaterClient
+  基于 DDNet / TaterClient 构建的定制客户端项目
 </p>
 
-<p align="center">
-  <a href="https://github.com/wxj881027/QmClient/actions/workflows/build.yml"><img src="https://github.com/wxj881027/QmClient/actions/workflows/build.yml/badge.svg" alt="Build and Release" /></a>
-  <a href="https://github.com/wxj881027/QmClient/actions/workflows/nightly.yml"><img src="https://github.com/wxj881027/QmClient/actions/workflows/nightly.yml/badge.svg" alt="Nightly" /></a>
-  <a href="https://github.com/wxj881027/QmClient/releases/latest"><img src="https://img.shields.io/github/v/release/wxj881027/QmClient?label=release&sort=semver" alt="Latest release" /></a>
-  <a href="https://github.com/wxj881027/QmClient/stargazers"><img src="https://img.shields.io/github/stars/wxj881027/QmClient?label=stars" alt="Stars" /></a>
-  <a href="LICENSE-QMCLIENT.md"><img src="https://img.shields.io/badge/license-layered-blue" alt="Licensed under layered terms" /></a>
-</p>
+> 本文档另有 <a href="README_en.md"> 版本 English</p>
+>
+>
+>
 
-> 📄 This document is available in <a href="README_zh.md">中文</a></p>
+## [📝 项目概述](README.md)
 
-## 📝 Project Overview
+[QmClient 客户端是基于 DDNet 和 TaterClient 构建的定制版本。
+项目旨在提供更现代的 UI 体验、更丰富的视觉效果配置选项，同时保持与核心游戏玩法的兼容性。](README.md)
 
-Q1menG Client is a customised client built upon DDNet and TaterClient.\
-The aim is to provide a more modern UI experience, a wider range of configurable visual effects, and more user-friendly day-to-day features, whilst maintaining compatibility with the core gameplay.
+## ✨ 功能特性
 
-> 🤖 **AI agents / contributors**: workflow rules (commit, PR, release, build) live in [`AGENTS.md`](AGENTS.md). Start there.
+- 流畅的 UI 过渡和 HUD 动画
+- 增强的输入和交互体验
+- 更丰富的客户端配置选项和自定义设置
+- 保持与 DDNet 生态系统的核心兼容性
 
-## 📥 Download
+## ❤️ 贡献者
 
-Prebuilt packages are published on the [Releases](https://github.com/wxj881027/QmClient/releases/latest) page.
+感谢所有为该项目提交代码、报告问题和提出改进建议的贡献者。
 
-| Platform | Package |
-| --- | --- |
-| Windows | `QmClient-windows.zip` |
-| Linux | `QmClient-ubuntu.tar.xz` |
-| macOS | `QmClient-macOS.dmg` |
-| Android | APK asset on the release page |
+[![贡献者](https://contrib.rocks/image?repo=wxj881027/QmClient)](https://github.com/wxj881027/QmClient/graphs/contributors)
 
-All four packages are built by [`build.yml`](https://github.com/wxj881027/QmClient/actions/workflows/build.yml); nightly builds come from [`nightly.yml`](https://github.com/wxj881027/QmClient/actions/workflows/nightly.yml). To build from source instead, see [Build](#-build).
-
-## ✨ Features
-
-- Smooth UI transitions and HUD animations
-- Enhanced input and interaction experience
-- More client configuration options and customisation settings
-- Core capabilities that remain compatible with the DDNet ecosystem
-
-## ❤️ Contributors
-
-We would like to thank all contributors who have submitted code, reported issues and suggested improvements for this project.
-
-[![Contributors](https://contrib.rocks/image?repo=wxj881027/QmClient)](https://github.com/wxj881027/QmClient/graphs/contributors)
-
-## 🚀 Build
+## 🚀 构建
 
 ### Windows
 
-Use the repository wrapper so `cmake` always runs inside a configured MSVC developer environment, even from a normal PowerShell or `cmd.exe` session:
+使用仓库包装脚本，`cmake` 始终在配置的 MSVC 开发环境中运行，即使从普通的 PowerShell 或 `cmd.exe` 会话：
 
 ```bat
 qmclient_scripts/cmake-windows.cmd -S . -B cmake-build-release
 qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 14
 ```
 
-### macOS / Linux / already-initialised developer shell
+### macOS / Linux / 已初始化的开发人员环境
 
 ```sh
 cmake -S . -B cmake-build-release
 cmake --build cmake-build-release --target game-client -j 14
 ```
 
-## ✅ Test
+## ✅ 测试
 
 ### Windows
 
@@ -79,7 +59,7 @@ qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target run_rust
 qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target run_tests
 ```
 
-### macOS / Linux / already-initialised developer shell
+### macOS / Linux / 已初始化的开发人员环境
 
 ```sh
 cmake --build cmake-build-release --target run_cxx_tests
@@ -87,30 +67,20 @@ cmake --build cmake-build-release --target run_rust_tests
 cmake --build cmake-build-release --target run_tests
 ```
 
-## 📊 Project Activity
+## 🙏 特别感谢
 
-Both charts are generated daily by [`readme-charts.yml`](.github/workflows/readme-charts.yml) and stored in this repository, so they load without depending on any third-party chart service.
+- DDNet、Teeworlds、DDRace、TaterClient、RClient、Best Client 和 Cactus Client 的所有贡献者
+- 参与测试、提供反馈和启发灵感的朋友们
+- 继续为开源社区做出贡献的每一个人
+- 所有捐赠者 – 感谢你们
 
-> Commit counts cover QmClient contributors only. This repository is forked from DDNet and its Git history carries over 27,000 upstream commits going back to 2007, so an unfiltered activity chart would show upstream work rather than this project's.
-
-![Star history](.github/assets/star-history.svg)
-
-![Monthly commits](.github/assets/commit-activity.svg)
-
-## 🙏 Special Thanks
-
-- All contributors to DDNet, Teeworlds, DDRace, TaterClient, Best Client, RClient and CactusClient
-- Friends who have taken part in testing, provided feedback and offered inspiration
-- Everyone who continues to contribute to the open-source community
-- All donors – thank you
-
-## 🏛 Credits
+## 🏛 致谢
 
 - Teeworlds — Magnus Auvinen
 - DDRace — Shereef Marzouk
-- DDNet — Dennis Felsing and contributors
-- TaterClient — Community modifications
-- Best Client — Community modifications
+- DDNet — Dennis Felsing 和贡献者
+- TaterClient — 社区修改版本
+- Best Client — 社区修改版本
 - [BetterLyrics](https://github.com/jayfunc/BetterLyrics) — [jayfunc](https://github.com/jayfunc)
 - [Lyricify Lyrics Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper) — [XY Wang (WXRIW)](https://github.com/WXRIW)
 - [163MusicLyrics](https://github.com/jitwxs/163MusicLyrics)
@@ -118,20 +88,15 @@ Both charts are generated daily by [`readme-charts.yml`](.github/workflows/readm
 - [qq-music-api](https://github.com/Rain120/qq-music-api)
 - [QQMusicApi](https://github.com/jsososo/QQMusicApi)
 - [LyricCapture](https://github.com/ElliottSilence/LyricCapture)
+- [QRCD](https://github.com/xmcp/QRCD)
 - [ntextcat](https://github.com/ivanakcheurov/ntextcat)
 - [LyricParser](https://github.com/HyPlayer/LyricParser)
 
-## 📜 License
+## 📜 许可证
 
-This project is based on DDNet and TaterClient and uses **layered licensing**:
+本项目基于 DDNet 和 TaterClient。上游代码仍遵循 zlib/libpng 许可证。
+修改版本必须明确标注来源，不得歪曲原作者身份。
 
-- **Inherited from upstream** — code and `data/` from Teeworlds, DDRace, DDNet and TaterClient, including this project's modifications to those files, remain under the zlib/libpng licence and CC BY-SA 3.0 respectively. Modified versions must be clearly attributed and must not misrepresent the identity of the original authors.
-- **QmClient original code** — all rights reserved.
-- **QmClient original assets** (`data/qmclient` chat emojis and logo) — [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/): attribution, non-commercial, no derivatives.
-- **Third-party material** — fonts, icon atlases (Phosphor Icons, MIT), ported music-platform code and dependencies keep their own licences.
+## 📮 说明
 
-The exact scope of each layer is defined in [`LICENSE-QMCLIENT.md`](LICENSE-QMCLIENT.md), which also states the intent behind the music-platform interoperability code; upstream notices and third-party attributions are collected in [`license.txt`](license.txt).
-
-## 📮 Notes
-
-This project is a personalised customisation and does not represent the official stance of DDNet or TaterClient.
+本项目为个人定制版本，不代表 DDNet 或 TaterClient 的官方立场。

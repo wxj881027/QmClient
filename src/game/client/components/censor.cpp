@@ -204,7 +204,7 @@ void CCensor::CCensorListDownloadJob::Run()
 	const CTimeout Timeout{10000, 0, 8192, 10};
 	const size_t MaxResponseSize = 50 * 1024 * 1024; // 50 MiB
 
-	std::shared_ptr<CHttpRequest> pGet = HttpGetBoth(m_aUrl, m_pCensor->Storage(), m_aSaveFilePath, IStorage::TYPE_SAVE);
+	std::shared_ptr<IHttpRequest> pGet = HttpGetBoth(m_aUrl, m_pCensor->Storage(), m_aSaveFilePath, IStorage::TYPE_SAVE);
 	pGet->Timeout(Timeout);
 	pGet->MaxResponseSize(MaxResponseSize);
 	pGet->SkipByFileTime(true);

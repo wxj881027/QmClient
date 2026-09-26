@@ -1,0 +1,4 @@
+interface:
+  display_name: "QmClient 客户端质量审计"
+  short_description: "按实际范围检查功能状态、兼容性和回归风险"
+  default_prompt: "使用 $audit-qmclient-quality 审计指定范围；未指定时检查当前 diff 及直接影响面，按需选择场景参考，输出已验证问题和真实验证限制。"

@@ -33,16 +33,19 @@ constexpr int QmScoreboardEffectivePlayerTeam(int PlayerTeam, bool IsSpec, bool 
 	return !IsTeamPlay && IsSpec && PlayerTeam == TEAM_SPECTATORS ? TEAM_GAME : PlayerTeam;
 }
 
+// aTeamHasPlayer[Team] 表示该队伍本帧仍有成员行（角色数据可能缺失：整队死亡、进旁观镜头等）。
+// 成员行存在但 m_Known 为假时，用缓存恢复上一次已知的模式状态，避免练习/锁队图标闪没。
+// 队伍解散（成员行消失）时不恢复，防止残留旧状态。
 inline void CacheAndRestoreQmScoreboardTeamModes(
 	std::array<SQmScoreboardTeamModeState, NUM_DDRACE_TEAMS> &aTeamModes,
-	const std::array<bool, NUM_DDRACE_TEAMS> &aTeamHasSpecPlayer,
+	const std::array<bool, NUM_DDRACE_TEAMS> &aTeamHasPlayer,
 	std::array<SQmScoreboardTeamModeState, NUM_DDRACE_TEAMS> &aCachedTeamModes)
 {
 	for(int Team = TEAM_FLOCK; Team < NUM_DDRACE_TEAMS; ++Team)
 	{
 		if(aTeamModes[Team].m_Known)
 			aCachedTeamModes[Team] = aTeamModes[Team];
-		else if(aTeamHasSpecPlayer[Team] && aCachedTeamModes[Team].m_Known)
+		else if(aTeamHasPlayer[Team] && aCachedTeamModes[Team].m_Known)
 			aTeamModes[Team] = aCachedTeamModes[Team];
 	}
 }

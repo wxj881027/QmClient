@@ -15,6 +15,7 @@
 #include <generated/client_data.h>
 #include <generated/client_data7.h>
 #include <generated/protocol.h>
+#include <generated/protocol7.h>
 
 #include <game/client/animstate.h>
 #include <game/client/components/controls.h>
@@ -147,6 +148,8 @@ static void BuildQmJellyExtraImpulse(const CGameClient *pGameClient, const CColl
 	}
 }
 
+// 描边参数统一在渲染前写进 render info；绘制本身由 CRenderTools::RenderTee6 / RenderTee7 按
+// 部件完成，避免每个调用点各写一份内联描边逻辑。
 static void ConfigureSkinOutline(CGameClient *pGameClient, int ClientId, CTeeRenderInfo &RenderInfo)
 {
 	const bool Enabled = !pGameClient->IsRenderingDummyMiniMap() && QmShouldDrawSkinOutline(ClientId,
@@ -154,7 +157,6 @@ static void ConfigureSkinOutline(CGameClient *pGameClient, int ClientId, CTeeRen
 	RenderInfo.m_QmSkinOutlineWidth = Enabled ? g_Config.m_QmSkinOutlineWidth : 0;
 	RenderInfo.m_QmSkinOutlineColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmSkinOutlineColor)).WithAlpha(g_Config.m_QmSkinOutlineAlpha / 100.0f);
 }
-
 static bool GetWarListTeeGlowColor(CGameClient *pGameClient, int ClientId, ColorRGBA &Color)
 {
 	if(!g_Config.m_TcWarList || ClientId < 0 || ClientId >= MAX_CLIENTS)
@@ -166,11 +168,86 @@ static bool GetWarListTeeGlowColor(CGameClient *pGameClient, int ClientId, Color
 	return Color.a > 0.0f;
 }
 
+// 按队伍取 tee 外发光颜色：team 1..N 用 DDTeam 颜色，team 0（未组队）按配置模式取色
+static bool GetTeamTeeGlowColor(CGameClient *pGameClient, int ClientId, const CTeeRenderInfo &RenderInfo, ColorRGBA &Color)
+{
+	if(!g_Config.m_QmTeamTeeGlow || ClientId < 0 || ClientId >= MAX_CLIENTS)
+		return false;
+	if(!pGameClient->m_aClients[ClientId].m_Active)
+		return false;
+
+	const int Team = pGameClient->m_Teams.Team(ClientId);
+	if(Team == VANILLA_TEAM_SUPER)
+		return false;
+	if(Team > 0)
+	{
+		Color = pGameClient->GetDDTeamColor(Team, 0.75f);
+		return true;
+	}
+
+	switch(g_Config.m_QmTeamTeeGlowTeam0Mode)
+	{
+	case 1:
+		// tee 自身颜色：0.7 渲染路径读 sixup 部件色，0.6 读皮肤整体自定义色，都未自定义则回退白光
+		{
+			const CTeeRenderInfo::CSixup &Sixup = RenderInfo.m_aSixup[g_Config.m_ClDummy];
+			if(CTeeRenderInfo::IsDrawableTexture(Sixup.PartTexture(protocol7::SKINPART_BODY)) && Sixup.m_aUseCustomColors[protocol7::SKINPART_BODY])
+				Color = Sixup.m_aColors[protocol7::SKINPART_BODY];
+			else if(RenderInfo.m_CustomColoredSkin)
+				Color = RenderInfo.m_ColorBody;
+			else
+				Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		}
+		return true;
+	case 2:
+		Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTeamTeeGlowColor, true));
+		return true;
+	case 3:
+	{
+		// 彩虹：随时间循环，玩家之间用黄金角错开相位便于旁观区分。
+		// 回放按 demo 时间轴取相位，暂停即冻结，保证同一回放发光颜色可复现。
+		float Seconds;
+		if(pGameClient->Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		{
+			const IDemoPlayer::CInfo *pDemoInfo = pGameClient->DemoPlayer()->BaseInfo();
+			Seconds = (pDemoInfo->m_CurrentTick - pDemoInfo->m_FirstTick) / (float)pGameClient->Client()->GameTickSpeed();
+		}
+		else
+		{
+			Seconds = time_get_nanoseconds().count() / 1000000000.0f;
+		}
+		const float Hue = std::fmod(Seconds / 10.0f + ClientId * normalized_golden_angle, 1.0f);
+		Color = color_cast<ColorRGBA>(ColorHSLA(Hue, 1.0f, 0.75f));
+		return true;
+	}
+	default:
+		return false;
+	}
+}
+
+// 只画 tee outline 层并多次放大叠加，形成外发光光晕
+static void RenderTeeGlow(CRenderTools *pRenderTools, const CAnimState *pAnim, const CTeeRenderInfo &RenderInfo, int Emote, vec2 Direction, vec2 Position, float Alpha, const SQmJellyDeform &JellyDeform, ColorRGBA GlowColor)
+{
+	CTeeRenderInfo GlowRenderInfo = RenderInfo;
+	GlowRenderInfo.m_TeeRenderFlags = (GlowRenderInfo.m_TeeRenderFlags & ~TEE_PREVIEW_LAYER_ALL) | TEE_PREVIEW_LAYER_OUTLINE | TEE_CUSTOM_OUTLINE_COLOR;
+	GlowRenderInfo.m_OutlineColor = GlowColor;
+
+	static constexpr float s_aGlowScales[] = {1.13f, 1.08f, 1.035f};
+	static constexpr float s_aGlowAlphas[] = {0.10f, 0.18f, 0.30f};
+	for(size_t i = 0; i < std::size(s_aGlowScales); ++i)
+	{
+		pRenderTools->RenderTee(pAnim, &GlowRenderInfo, Emote, Direction, Position,
+			Alpha * s_aGlowAlphas[i] * GlowColor.a,
+			JellyDeform.m_BodyScale * s_aGlowScales[i],
+			JellyDeform.m_FeetScale * s_aGlowScales[i],
+			JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle);
+	}
+}
+
 void CPlayers::RenderHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset, float Alpha)
 {
 	const vec2 HandPos = CalculateHandPosition(CenterPos, Dir, PostRotOffset);
 	const float HandAngle = CalculateHandAngle(Dir, AngleOffset);
-	// 句柄失效（设备重建、槽位复用）时当成不可绘制，否则手也会画成没有贴图的实心块。
 	if(CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), pInfo->m_aSixup[g_Config.m_ClDummy].PartTexture(protocol7::SKINPART_HANDS)))
 	{
 		RenderHand7(pInfo, HandPos, HandAngle, Alpha);
@@ -284,11 +361,12 @@ float CPlayers::GetPlayerTargetAngle(
 }
 
 void CPlayers::RenderHookCollLine(
+	const CScreenRect &ScreenRect,
 	const CNetObj_Character *pPrevChar,
 	const CNetObj_Character *pPlayerChar,
 	int ClientId)
 {
-	if(ShouldHideFocusGuideLines(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideGuideLines != 0))
+	if(GetQmFocusModeDecisions().m_HideGuideLines)
 		return;
 
 	const bool ManualHookCollVisible = GameClient()->m_Controls.m_aShowHookColl[g_Config.m_ClDummy] != 0;
@@ -613,6 +691,7 @@ void CPlayers::RenderWeaponTrajectory(
 }
 
 void CPlayers::RenderHook(
+	const CScreenRect &ScreenRect,
 	const CNetObj_Character *pPrevChar,
 	const CNetObj_Character *pPlayerChar,
 	const CTeeRenderInfo *pRenderInfo,
@@ -642,7 +721,11 @@ void CPlayers::RenderHook(
 	bool OtherTeam = GameClient()->IsOtherTeam(ClientId);
 	float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
 	if(ClientId == -2) // ghost
-		Alpha = g_Config.m_ClRaceGhostAlpha / 100.0f;
+	{
+		// QmClient: 查看模式（独立时间线）下回放是主内容，用不透明渲染；
+		// 跑图模式保持半透明参照物语义
+		Alpha = GameClient()->m_Ghost.ManualModeActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
+	}
 	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
 		Alpha = std::min(Alpha, 0.5f);
 
@@ -653,6 +736,11 @@ void CPlayers::RenderHook(
 		Position = GameClient()->m_aClients[ClientId].m_RenderPos;
 	else
 		Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), Intra);
+
+	// draw hook
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	if(ClientId < 0)
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
 
 	vec2 Pos = Position;
 	vec2 HookPos;
@@ -670,27 +758,11 @@ void CPlayers::RenderHook(
 		HookPos = mix(vec2(Prev.m_HookX, Prev.m_HookY), vec2(Player.m_HookX, Player.m_HookY), Intra);
 	}
 
-	// 屏幕外的钩子（钩头、钩链与手）不会产生任何像素：按「玩家位置 ∪ 钩头位置」的 AABB 剔除。
-	// 缓冲与 Tee 剔除一致（100 世界单位），保证跨屏幕边缘的半可见钩子不被误裁。
-	// 早退发生在任何 Graphics 状态写入之前；后续绘制要么经 QuadsBegin 归位、要么自行设置颜色与旋转，
-	// 因此被裁掉的钩子不会给后续绘制留下状态差异。
-	{
-		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		const float BorderBuffer = 100.0f;
-		if(std::max(Pos.x, HookPos.x) < ScreenX0 - BorderBuffer ||
-			std::min(Pos.x, HookPos.x) > ScreenX1 + BorderBuffer ||
-			std::max(Pos.y, HookPos.y) < ScreenY0 - BorderBuffer ||
-			std::min(Pos.y, HookPos.y) > ScreenY1 + BorderBuffer)
-		{
-			return;
-		}
-	}
-
-	// draw hook
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-	if(ClientId < 0)
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
+	if((Pos.x < ScreenRect.m_TopLeft.x && HookPos.x < ScreenRect.m_TopLeft.x) ||
+		(Pos.x > ScreenRect.m_BottomRight.x && HookPos.x > ScreenRect.m_BottomRight.x) ||
+		(Pos.y < ScreenRect.m_TopLeft.y && HookPos.y < ScreenRect.m_TopLeft.y) ||
+		(Pos.y > ScreenRect.m_BottomRight.y && HookPos.y > ScreenRect.m_BottomRight.y))
+		return;
 
 	float d = distance(Pos, HookPos);
 	vec2 Dir = normalize(Pos - HookPos);
@@ -734,12 +806,15 @@ void CPlayers::RenderHook(
 }
 
 void CPlayers::RenderPlayer(
+	const CScreenRect &ScreenRect,
 	const CNetObj_Character *pPrevChar,
 	const CNetObj_Character *pPlayerChar,
 	const CTeeRenderInfo *pRenderInfo,
 	int ClientId,
 	float Intra)
 {
+	// 禅模式判定只取一次，避免在逐玩家渲染路径里重复解析配置。
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	CNetObj_Character Prev;
 	CNetObj_Character Player;
 	Prev = *pPrevChar;
@@ -764,7 +839,11 @@ void CPlayers::RenderPlayer(
 		Alpha = 1.0f;
 
 	if(ClientId == -2) // ghost
-		Alpha = g_Config.m_ClRaceGhostAlpha / 100.0f;
+	{
+		// QmClient: 查看模式（独立时间线）下回放是主内容，用不透明渲染；
+		// 跑图模式保持半透明参照物语义
+		Alpha = GameClient()->m_Ghost.ManualModeActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
+	}
 	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
 		Alpha = std::min(Alpha, 0.5f);
 	const bool Afk = ClientId >= 0 && IsQmAfkForPresentation(
@@ -819,6 +898,9 @@ void CPlayers::RenderPlayer(
 			vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y),
 			vec2(GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y),
 			Client()->IntraGameTick(g_Config.m_ClDummy));
+
+	if(!ScreenRect.Inside(Position))
+		return;
 
 	if(AllowEffects)
 		GameClient()->m_Flow.Add(Position, Vel * 100.0f, 10.0f);
@@ -963,7 +1045,10 @@ void CPlayers::RenderPlayer(
 			bool IsSit = Inactive && !InAir && Stationary;
 			vec2 WeaponSwitchOffset = vec2(0.0f, 0.0f);
 			float WeaponSwitchAngle = 0.0f;
-			const bool WeaponSwitchAnimEnabled = g_Config.m_QmWeaponSwitchAnim && ShouldRenderWeaponAnimation(ClientId);
+			// Gores 自动切锤来回换武器，按选项跳过由此产生的切换动画。
+			const bool SkipGoresSwitchAnim = ClientId >= 0 && ClientId < MAX_CLIENTS &&
+							 GameClient()->m_TClient.ShouldSkipGoresHammerSwitchAnimation(ClientId, m_aWeaponSwitchLastWeapons[ClientId], Player.m_Weapon);
+			const bool WeaponSwitchAnimEnabled = g_Config.m_QmWeaponSwitchAnim && ShouldRenderWeaponAnimation(ClientId) && !SkipGoresSwitchAnim;
 			const bool WeaponReloadAnimEnabled = g_Config.m_QmWeaponReloadAnim && ShouldRenderWeaponAnimation(ClientId);
 			if(ClientId >= 0 && ClientId < MAX_CLIENTS)
 			{
@@ -1107,7 +1192,7 @@ void CPlayers::RenderPlayer(
 				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
 
 				// HADOKEN
-				if(!ShouldHideFocusMuzzleEffects(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideMuzzleEffects != 0) &&
+				if(!Focus.m_HideMuzzleEffects &&
 					AttackTime <= 1.0f / 6.0f &&
 					g_pData->m_Weapons.m_aId[CurrentWeapon].m_NumSpriteMuzzles)
 				{
@@ -1174,8 +1259,8 @@ void CPlayers::RenderPlayer(
 				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
 			}
 
-			if((Player.m_Weapon == WEAPON_GUN || Player.m_Weapon == WEAPON_SHOTGUN) &&
-				!ShouldHideFocusMuzzleEffects(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideMuzzleEffects != 0) &&
+			if(!Focus.m_HideMuzzleEffects &&
+				(Player.m_Weapon == WEAPON_GUN || Player.m_Weapon == WEAPON_SHOTGUN) &&
 				g_pData->m_Weapons.m_aId[CurrentWeapon].m_NumSpriteMuzzles)
 			{
 				float AlphaMuzzle = 0.0f;
@@ -1267,25 +1352,15 @@ void CPlayers::RenderPlayer(
 		}
 	}
 
-	ColorRGBA WarListGlowColor;
+	ColorRGBA WarListGlowColor, TeamGlowColor;
 	if(GetWarListTeeGlowColor(GameClient(), ClientId, WarListGlowColor))
 	{
-		CTeeRenderInfo GlowRenderInfo = RenderInfo;
-		GlowRenderInfo.m_TeeRenderFlags = (GlowRenderInfo.m_TeeRenderFlags & ~TEE_PREVIEW_LAYER_ALL) | TEE_PREVIEW_LAYER_OUTLINE | TEE_CUSTOM_OUTLINE_COLOR;
-		GlowRenderInfo.m_OutlineColor = WarListGlowColor;
-
-		static constexpr float s_aGlowScales[] = {1.13f, 1.08f, 1.035f};
-		static constexpr float s_aGlowAlphas[] = {0.10f, 0.18f, 0.30f};
-		for(size_t i = 0; i < std::size(s_aGlowScales); ++i)
-		{
-			RenderTools()->RenderTee(&State, &GlowRenderInfo, Player.m_Emote, Direction, Position,
-				Alpha * s_aGlowAlphas[i] * WarListGlowColor.a,
-				JellyDeform.m_BodyScale * s_aGlowScales[i],
-				JellyDeform.m_FeetScale * s_aGlowScales[i],
-				JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle);
-		}
+		RenderTeeGlow(RenderTools(), &State, RenderInfo, Player.m_Emote, Direction, Position, Alpha, JellyDeform, WarListGlowColor);
 	}
-
+	else if(GetTeamTeeGlowColor(GameClient(), ClientId, RenderInfo, TeamGlowColor))
+	{
+		RenderTeeGlow(RenderTools(), &State, RenderInfo, Player.m_Emote, Direction, Position, Alpha, JellyDeform, TeamGlowColor);
+	}
 	ConfigureSkinOutline(GameClient(), ClientId, RenderInfo);
 	CTeeRenderInfo PreviousSkinInfoOutline;
 	if(pPreviousSkinInfo != nullptr && RenderInfo.m_QmSkinOutlineWidth > 0)
@@ -1294,6 +1369,7 @@ void CPlayers::RenderPlayer(
 		ConfigureSkinOutline(GameClient(), ClientId, PreviousSkinInfoOutline);
 		pPreviousSkinInfo = &PreviousSkinInfoOutline;
 	}
+
 	RenderTools()->RenderTeeWithSkinChangeTransition(&State, pPreviousSkinInfo, &RenderInfo, Player.m_Emote, Direction, Position, SkinTransitionProgress, Alpha, JellyDeform.m_BodyScale, JellyDeform.m_FeetScale, JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle);
 
 	float TeeAnimScale, TeeBaseSize;
@@ -1377,6 +1453,7 @@ void CPlayers::RenderPlayer(
 
 			int QuadOffset = QuadOffsetToEmoticon + GameClient()->m_aClients[ClientId].m_Emoticon;
 			Graphics()->TextureSet(GameClient()->m_EmoticonsSkin.m_aSpriteEmoticons[GameClient()->m_aClients[ClientId].m_Emoticon]);
+			// 头顶大表情（super emote）放大并抬高，避免和普通表情叠在一起。
 			const bool IsSuperEmote = GameClient()->m_Emoticon.IsLocalSuperHeadEmoticon(ClientId, GameClient()->m_aClients[ClientId].m_Emoticon);
 			const float EmoticonScale = IsSuperEmote ? 2.35f : 1.0f;
 			const float SuperYOffset = IsSuperEmote ? 44.0f * h : 0.0f;
@@ -1401,6 +1478,8 @@ void CPlayers::RenderPlayerGhost(
 	int ClientId,
 	float Intra)
 {
+	// 禅模式判定只取一次，避免在逐玩家渲染路径里重复解析配置。
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	CNetObj_Character Prev;
 	CNetObj_Character Player;
 	Prev = *pPrevChar;
@@ -1411,7 +1490,8 @@ void CPlayers::RenderPlayerGhost(
 	bool Local = GameClient()->m_Snap.m_LocalClientId == ClientId;
 	bool OtherTeam = GameClient()->IsOtherTeam(ClientId);
 	float Alpha = 1.0f;
-	const bool AllowEffects = !GameClient()->IsRenderingDummyMiniMap();
+	// 残影仅用于位置对比，不得重复发射武器和状态粒子。
+	const bool AllowEffects = false;
 
 	RenderTools()->m_LocalTeeRender = Local; // TClient
 
@@ -1700,7 +1780,7 @@ void CPlayers::RenderPlayerGhost(
 				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
 
 				// HADOKEN
-				if(!ShouldHideFocusMuzzleEffects(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideMuzzleEffects != 0) &&
+				if(AllowEffects && !Focus.m_HideMuzzleEffects &&
 					AttackTime <= 1.0f / 6.0f &&
 					g_pData->m_Weapons.m_aId[CurrentWeapon].m_NumSpriteMuzzles)
 				{
@@ -1766,8 +1846,8 @@ void CPlayers::RenderPlayerGhost(
 				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
 			}
 
-			if((Player.m_Weapon == WEAPON_GUN || Player.m_Weapon == WEAPON_SHOTGUN) &&
-				!ShouldHideFocusMuzzleEffects(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideMuzzleEffects != 0) &&
+			if(AllowEffects && !Focus.m_HideMuzzleEffects &&
+				(Player.m_Weapon == WEAPON_GUN || Player.m_Weapon == WEAPON_SHOTGUN) &&
 				g_pData->m_Weapons.m_aId[CurrentWeapon].m_NumSpriteMuzzles)
 			{
 				float AlphaMuzzle = 0.0f;
@@ -1886,7 +1966,6 @@ void CPlayers::OnRender()
 	const bool IsTeamPlay = GameClient()->IsTeamPlay();
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
-		// 后续 Tee 和钩子绘制均要求这些信息，空槽无需复制皮肤或计算冻结外观。
 		if(!IsPlayerInfoAvailable(i))
 			continue;
 		const auto &ClientData = GameClient()->m_aClients[i];
@@ -1962,11 +2041,26 @@ void CPlayers::OnRender()
 				}
 			}
 		}
+
+		// 仅对可见渲染路径中的同队玩家变色，提示其在死亡/冻结区域持续按锤。
+		if(GameClient()->QmWaterHammerIndicator().IsMarked(i))
+		{
+			const ColorRGBA BodyColor(1.0f, 0.25f, 0.08f, 1.0f);
+			const ColorRGBA FeetColor(1.0f, 0.55f, 0.12f, 1.0f);
+			aRenderInfo[i].m_CustomColoredSkin = true;
+			aRenderInfo[i].m_ColorBody = BodyColor;
+			aRenderInfo[i].m_ColorFeet = FeetColor;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aUseCustomColors[protocol7::SKINPART_BODY] = true;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aUseCustomColors[protocol7::SKINPART_FEET] = true;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_BODY] = BodyColor;
+			aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_FEET] = FeetColor;
+		}
 	}
 
 	// get screen edges to avoid rendering offscreen
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const CScreenRect ScreenRect = Graphics()->GetScreen();
 	// expand the edges to prevent popping in/out onscreen
 	float BorderBuffer = 100;
 	ScreenX0 -= BorderBuffer;
@@ -1982,56 +2076,17 @@ void CPlayers::OnRender()
 		{
 			continue;
 		}
-		RenderHook(&GameClient()->m_aClients[ClientId].m_RenderPrev, &GameClient()->m_aClients[ClientId].m_RenderCur, &aRenderInfo[ClientId], ClientId);
+		RenderHook(ScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &GameClient()->m_aClients[ClientId].m_RenderCur, &aRenderInfo[ClientId], ClientId);
 	}
 	if(LocalClientId != -1 && IsPlayerInfoAvailable(LocalClientId))
 	{
 		const CGameClient::CClientData *pLocalClientData = &GameClient()->m_aClients[LocalClientId];
-		RenderHook(&pLocalClientData->m_RenderPrev, &pLocalClientData->m_RenderCur, &aRenderInfo[LocalClientId], LocalClientId);
+		RenderHook(ScreenRect, &pLocalClientData->m_RenderPrev, &pLocalClientData->m_RenderCur, &aRenderInfo[LocalClientId], LocalClientId);
 	}
 
 	// Render everyone else's tee, then either our own or the tee we are spectating.
 	const bool FollowingPlayer = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW && GameClient()->m_Snap.m_SpecInfo.m_Active;
 	const int RenderLastId = FollowingPlayer ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : LocalClientId;
-
-	// render spectating players
-	// 观战幽灵皮肤与渲染信息在本帧内是循环不变量：循环外解析一次，
-	// 避免每个 spec char（满员时可达上百个）重复做皮肤名查找与加载请求。
-	const bool SpectatorTeeRenderable =
-		GameClient()->m_Skins.FindOrNullptr("x_spec") != nullptr &&
-		SpectatorTeeRenderInfo() != nullptr &&
-		SpectatorTeeRenderInfo()->TeeRenderInfo().Valid();
-	if(SpectatorTeeRenderable)
-	{
-		for(const auto &Client : GameClient()->m_aClients)
-		{
-			if(!Client.m_SpecCharPresent)
-			{
-				continue;
-			}
-
-			// 屏幕外的观战幽灵不会产生任何像素，裁剪窗口与上方 Tee 循环一致（100 世界单位缓冲，
-			// 远大于 Tee 的最大可视半径，因此不会裁掉任何可见像素）。
-			if(!in_range(Client.m_SpecChar.x, ScreenX0, ScreenX1) || !in_range(Client.m_SpecChar.y, ScreenY0, ScreenY1))
-			{
-				continue;
-			}
-
-			const int ClientId = Client.ClientId();
-			if(FollowingPlayer && ClientId == RenderLastId && IsPlayerInfoAvailable(ClientId))
-				continue;
-
-			float Alpha = 1.0f;
-			const bool LocalSpecChar = GameClient()->IsLocalClientId(ClientId);
-			const bool OtherSpecChar = !LocalSpecChar && (GameClient()->IsOtherTeam(ClientId) || ClientId < 0);
-			Alpha = OtherSpecChar ? g_Config.m_ClShowOthersAlpha / 100.f : 1.f;
-			if(ClientId == -2) // ghost
-			{
-				Alpha = g_Config.m_ClRaceGhostAlpha / 100.f;
-			}
-			RenderTools()->RenderTee(CAnimState::GetIdle(), &SpectatorTeeRenderInfo()->TeeRenderInfo(), EMOTE_BLINK, vec2(1, 0), Client.m_SpecChar, Alpha);
-		}
-	}
 
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
@@ -2040,7 +2095,7 @@ void CPlayers::OnRender()
 			continue;
 		}
 
-		RenderHookCollLine(&GameClient()->m_aClients[ClientId].m_RenderPrev, &GameClient()->m_aClients[ClientId].m_RenderCur, ClientId);
+		RenderHookCollLine(ScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &GameClient()->m_aClients[ClientId].m_RenderCur, ClientId);
 
 		if(!in_range(GameClient()->m_aClients[ClientId].m_RenderPos.x, ScreenX0, ScreenX1) || !in_range(GameClient()->m_aClients[ClientId].m_RenderPos.y, ScreenY0, ScreenY1))
 		{
@@ -2066,14 +2121,14 @@ void CPlayers::OnRender()
 		if(RenderGhost && g_Config.m_TcShowOthersGhosts && !Spec && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			RenderPlayerGhost(&GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
 
-		RenderPlayer(&GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
+		RenderPlayer(ScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
 	}
 	if(RenderLastId != -1 && IsPlayerInfoAvailable(RenderLastId))
 	{
 		const CGameClient::CClientData *pClientData = &GameClient()->m_aClients[RenderLastId];
-		RenderHookCollLine(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
+		RenderHookCollLine(ScreenRect, &pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
 		RenderWeaponTrajectory(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
-		RenderPlayer(&pClientData->m_RenderPrev, &aRenderCurForTee[RenderLastId], &aRenderInfo[RenderLastId], RenderLastId);
+		RenderPlayer(ScreenRect, &pClientData->m_RenderPrev, &aRenderCurForTee[RenderLastId], &aRenderInfo[RenderLastId], RenderLastId);
 	}
 }
 
@@ -2085,17 +2140,6 @@ void CPlayers::CreateNinjaTeeRenderInfo()
 	NinjaSkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
 	str_copy(NinjaSkinDescriptor.m_aSkinName, "x_ninja");
 	m_pNinjaTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(NinjaTeeRenderInfo, NinjaSkinDescriptor);
-}
-
-void CPlayers::CreateSpectatorTeeRenderInfo()
-{
-	CTeeRenderInfo SpectatorTeeRenderInfo;
-	SpectatorTeeRenderInfo.m_Size = 64.0f;
-	SpectatorTeeRenderInfo.m_TeeRenderFlags = TEE_PREVIEW_LAYER_BODY_OUTLINE;
-	CSkinDescriptor SpectatorSkinDescriptor;
-	SpectatorSkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
-	str_copy(SpectatorSkinDescriptor.m_aSkinName, "x_spec");
-	m_pSpectatorTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(SpectatorTeeRenderInfo, SpectatorSkinDescriptor);
 }
 
 void CPlayers::OnMapLoad()
@@ -2187,5 +2231,4 @@ void CPlayers::OnInit()
 	Graphics()->QuadsSetRotation(0.f);
 
 	CreateNinjaTeeRenderInfo();
-	CreateSpectatorTeeRenderInfo();
 }

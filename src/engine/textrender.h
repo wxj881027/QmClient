@@ -167,6 +167,97 @@ namespace FontIcons
 
 	// TClient
 	[[maybe_unused]] static const char *FONT_ICON_USERS = "\xEE\x93\x96";
+
+	// 全部图标字形，供图标字体自检与测试遍历使用；新增 FONT_ICON_* 常量时必须同步加入。
+	inline const char *const FONT_ICON_ALL[] = {
+		FONT_ICON_PLUS,
+		FONT_ICON_MINUS,
+		FONT_ICON_LOCK,
+		FONT_ICON_MAGNIFYING_GLASS,
+		FONT_ICON_HEART,
+		FONT_ICON_HEART_CRACK,
+		FONT_ICON_STAR,
+		FONT_ICON_XMARK,
+		FONT_ICON_CIRCLE,
+		FONT_ICON_ARROW_ROTATE_LEFT,
+		FONT_ICON_ARROW_ROTATE_RIGHT,
+		FONT_ICON_FLAG_CHECKERED,
+		FONT_ICON_BAN,
+		FONT_ICON_CIRCLE_CHEVRON_DOWN,
+		FONT_ICON_KEY,
+		FONT_ICON_LANGUAGE,
+		FONT_ICON_SQUARE_MINUS,
+		FONT_ICON_SQUARE_PLUS,
+		FONT_ICON_SORT_UP,
+		FONT_ICON_SORT_DOWN,
+		FONT_ICON_TRIANGLE_EXCLAMATION,
+		FONT_ICON_HOUSE,
+		FONT_ICON_BOOKMARK,
+		FONT_ICON_NEWSPAPER,
+		FONT_ICON_POWER_OFF,
+		FONT_ICON_GEAR,
+		FONT_ICON_PEN_TO_SQUARE,
+		FONT_ICON_CLAPPERBOARD,
+		FONT_ICON_EARTH_AMERICAS,
+		FONT_ICON_NETWORK_WIRED,
+		FONT_ICON_LIST_UL,
+		FONT_ICON_INFO,
+		FONT_ICON_TERMINAL,
+		FONT_ICON_USER,
+		FONT_ICON_SLASH,
+		FONT_ICON_PLAY,
+		FONT_ICON_PAUSE,
+		FONT_ICON_STOP,
+		FONT_ICON_CHEVRON_LEFT,
+		FONT_ICON_CHEVRON_RIGHT,
+		FONT_ICON_CHEVRON_UP,
+		FONT_ICON_CHEVRON_DOWN,
+		FONT_ICON_BACKWARD,
+		FONT_ICON_FORWARD,
+		FONT_ICON_RIGHT_FROM_BRACKET,
+		FONT_ICON_RIGHT_TO_BRACKET,
+		FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE,
+		FONT_ICON_BACKWARD_STEP,
+		FONT_ICON_FORWARD_STEP,
+		FONT_ICON_BACKWARD_FAST,
+		FONT_ICON_FORWARD_FAST,
+		FONT_ICON_KEYBOARD,
+		FONT_ICON_ELLIPSIS,
+		FONT_ICON_FOLDER,
+		FONT_ICON_FOLDER_OPEN,
+		FONT_ICON_FOLDER_TREE,
+		FONT_ICON_FILM,
+		FONT_ICON_VIDEO,
+		FONT_ICON_MAP,
+		FONT_ICON_IMAGE,
+		FONT_ICON_MUSIC,
+		FONT_ICON_FILE,
+		FONT_ICON_PENCIL,
+		FONT_ICON_COPY,
+		FONT_ICON_TRASH,
+		FONT_ICON_ARROWS_LEFT_RIGHT,
+		FONT_ICON_ARROWS_UP_DOWN,
+		FONT_ICON_CIRCLE_PLAY,
+		FONT_ICON_BORDER_ALL,
+		FONT_ICON_EYE,
+		FONT_ICON_EYE_SLASH,
+		FONT_ICON_EYE_DROPPER,
+		FONT_ICON_COMMENT,
+		FONT_ICON_COMMENT_SLASH,
+		FONT_ICON_DICE_ONE,
+		FONT_ICON_DICE_TWO,
+		FONT_ICON_DICE_THREE,
+		FONT_ICON_DICE_FOUR,
+		FONT_ICON_DICE_FIVE,
+		FONT_ICON_DICE_SIX,
+		FONT_ICON_LAYER_GROUP,
+		FONT_ICON_UNDO,
+		FONT_ICON_REDO,
+		FONT_ICON_ARROWS_ROTATE,
+		FONT_ICON_QUESTION,
+		FONT_ICON_CAMERA,
+		FONT_ICON_USERS,
+	};
 }
 
 enum ETextCursorSelectionMode
@@ -349,12 +440,15 @@ class ITextRender : public IInterface
 	MACRO_INTERFACE("textrender")
 public:
 	virtual std::vector<std::string> *GetCustomFaces() = 0; // TClient
+	virtual std::vector<std::string> *GetCustomFontStyles(const char *pFamily) = 0; // TClient
 	virtual void SetCustomFace(const char *pFace) = 0; // TClient
+	virtual void SetCustomFontWeight(int Weight) = 0; // TClient
+	virtual bool CustomFontHasVariableWeight(const char *pFace) const = 0; // TClient
 
 	virtual bool LoadFonts() = 0;
 	virtual void SetFontPreset(EFontPreset FontPreset) = 0;
 	virtual EFontPreset GetFontPreset() const = 0;
-	virtual void SetIconFontWeight(bool Bold) = 0;
+	virtual void SetIconFontWeight(int Weight) = 0;
 	virtual void SetFontLanguageVariant(const char *pLanguageFile) = 0;
 
 	virtual void SetRenderFlags(unsigned Flags) = 0;
@@ -378,6 +472,20 @@ public:
 	virtual void UploadTextContainer(STextContainerIndex TextContainerIndex) = 0;
 	virtual void FlushQmTextRuntimeBudgetLog() {}
 	virtual SQmTextRuntimeBudgetSnapshot QmTextRuntimeBudgetSnapshot() const { return {}; }
+	// QmClient: 渲染帧结束时由主循环调用，统计当帧的文本容器创建数与字形
+	// 光栅化耗时（FlushQmTextRuntimeBudgetLog 是跨帧累计观测，无法反映单帧
+	// 尖峰；本钩子提供单帧粒度数据用于定位文本渲染卡顿）。
+	virtual void QmTextFrameEnd() {}
+	// QmClient: 预热单个字形（命中缓存时零成本，未命中则光栅化并写入图集）。
+	// 字形光栅化幂等且可中断，菜单可在构建文本容器前分帧调用，避免一次容器
+	// 创建触发 100+ 新字形导致单帧 20–30ms 尖峰。
+	virtual void QmPrewarmGlyph(int Chr, int FontSize) {}
+	// QmClient: 空闲帧预热“最近缺失字形”（菜单关闭时调用），返回本次实际预热数量。
+	virtual int QmPrewarmRecentGlyphs(int MaxCount) { return 0; }
+	virtual int QmRecentGlyphMissCount() const { return 0; }
+	// QmClient: 跨会话持久化缺失字形集合，供下次启动后立即预热（文本格式 "Chr Size"）。
+	virtual void QmLoadRecentGlyphs(class IStorage *pStorage, const char *pPath) {}
+	virtual void QmSaveRecentGlyphs(class IStorage *pStorage, const char *pPath) {}
 
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) = 0;
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float X, float Y) = 0;

@@ -151,7 +151,7 @@ class CRClientVoice
 	IConsole *m_pConsole = nullptr;
 	IEngineGraphics *m_pGraphics = nullptr;
 
-	std::unique_ptr<VoiceUtils::CVoiceWebSocketTransport> m_pTransport;
+	std::unique_ptr<VoiceUtils::CVoiceWebSocketTransport> m_pVoiceTransport;
 	std::atomic<bool> m_ServerAddrValid = false;
 	char m_aServerAddrStr[256] = {0};
 
@@ -281,9 +281,10 @@ class CRClientVoice
 	std::array<uint8_t, MAX_CLIENTS> m_aClientActiveSnap = {};
 	std::array<uint8_t, MAX_CLIENTS> m_aClientSpecSnap = {};
 
+	void UpdateVoiceTransport() NO_THREAD_SAFETY_ANALYSIS;
+	bool SendVoicePacket(const uint8_t *pData, size_t Size) NO_THREAD_SAFETY_ANALYSIS;
 	bool EnsureAudio() NO_THREAD_SAFETY_ANALYSIS;
 	void UpdateServerAddrConfig();
-	void UpdateTransport();
 	bool UpdateContext();
 	void UpdateClientSnapshot(bool Force = false);
 	void UpdateConfigSnapshot(bool Force = false);

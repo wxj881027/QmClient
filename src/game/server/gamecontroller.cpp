@@ -286,7 +286,7 @@ bool IGameController::OnEntity(int Index, int x, int y, int Layer, int Flags, bo
 	else if(Index == ENTITY_ARMOR_LASER)
 		Type = POWERUP_ARMOR_LASER;
 	else if(Index == ENTITY_HEALTH_1)
-		Type = POWERUP_HEALTH;
+		Type = POWERUP_FREEZE;
 	else if(Index == ENTITY_WEAPON_SHOTGUN)
 	{
 		Type = POWERUP_WEAPON;
@@ -410,26 +410,6 @@ void IGameController::OnPlayerConnect(CPlayer *pPlayer)
 		str_format(aBuf, sizeof(aBuf), "team_join player='%d:%s' team=%d", ClientId, Server()->ClientName(ClientId), pPlayer->GetTeam());
 		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 	}
-
-	if(Server()->IsSixup(ClientId))
-	{
-		{
-			protocol7::CNetMsg_Sv_GameInfo Msg;
-			Msg.m_GameFlags = m_GameFlags;
-			Msg.m_MatchCurrent = 1;
-			Msg.m_MatchNum = 0;
-			Msg.m_ScoreLimit = 0;
-			Msg.m_TimeLimit = 0;
-			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientId);
-		}
-
-		// /team is essential
-		{
-			protocol7::CNetMsg_Sv_CommandInfoRemove Msg;
-			Msg.m_pName = "team";
-			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientId);
-		}
-	}
 }
 
 void IGameController::OnPlayerDisconnect(class CPlayer *pPlayer, const char *pReason)
@@ -440,10 +420,10 @@ void IGameController::OnPlayerDisconnect(class CPlayer *pPlayer, const char *pRe
 	{
 		char aBuf[512];
 		if(pReason && *pReason)
-			str_format(aBuf, sizeof(aBuf), "'%s' has left the game (%s)", Server()->ClientName(ClientId), pReason);
+			str_format(aBuf, sizeof(aBuf), "'%s' 离开了游戏（%s）", Server()->ClientName(ClientId), pReason);
 		else
-			str_format(aBuf, sizeof(aBuf), "'%s' has left the game", Server()->ClientName(ClientId));
-		GameServer()->SendChat(-1, TEAM_ALL, aBuf, -1, CGameContext::FLAG_SIX);
+			str_format(aBuf, sizeof(aBuf), "'%s' 离开了游戏", Server()->ClientName(ClientId));
+		GameServer()->SendChat(-1, TEAM_ALL, aBuf, -1);
 
 		str_format(aBuf, sizeof(aBuf), "leave player='%d:%s'", ClientId, Server()->ClientName(ClientId));
 		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "game", aBuf);
@@ -654,10 +634,18 @@ void IGameController::Snap(int SnappingClient)
 		GAMEINFOFLAG_ENTITIES_DDRACE |
 		GAMEINFOFLAG_ENTITIES_RACE |
 		GAMEINFOFLAG_RACE;
-	GameInfoEx.m_Flags2 = GAMEINFOFLAG2_HUD_DDRACE | GAMEINFOFLAG2_DDRACE_TEAM | GAMEINFOFLAG2_PREDICT_EVENTS;
+	GameInfoEx.m_Flags2 = GAMEINFOFLAG2_HUD_DDRACE |
+			      GAMEINFOFLAG2_DDRACE_TEAM |
+			      GAMEINFOFLAG2_PREDICT_EVENTS;
 	if(g_Config.m_SvNoWeakHook)
 		GameInfoEx.m_Flags2 |= GAMEINFOFLAG2_NO_WEAK_HOOK;
+	// 官方 79184e826：把服务端 old laser 状态同步给客户端预测，避免预测与命中不一致。
+	if(g_Config.m_SvOldLaser)
+		GameInfoEx.m_Flags2 |= GAMEINFOFLAG2_OLD_LASER;
 	GameInfoEx.m_Version = GAMEINFO_CURVERSION;
+	GameInfoEx.m_MinTeamSize = g_Config.m_SvMinTeamSize;
+	GameInfoEx.m_MaxTeamSize = g_Config.m_SvMaxTeamSize;
+	GameInfoEx.m_NumDDRaceTeams = NUM_DDRACE_TEAMS;
 	Server()->SnapNewItem(0, GameInfoEx);
 
 	if(Server()->IsSixup(SnappingClient))
@@ -714,7 +702,7 @@ bool IGameController::CanJoinTeam(int Team, int NotThisId, char *pErrorReason, i
 	if(pPlayer && pPlayer->IsPaused())
 	{
 		if(pErrorReason)
-			str_copy(pErrorReason, "Use /pause first then you can kill", ErrorReasonSize);
+			str_copy(pErrorReason, "请先使用 /pause，然后才能自杀", ErrorReasonSize);
 		return false;
 	}
 	if(Team == TEAM_SPECTATORS || (pPlayer && pPlayer->GetTeam() != TEAM_SPECTATORS))
@@ -734,7 +722,7 @@ bool IGameController::CanJoinTeam(int Team, int NotThisId, char *pErrorReason, i
 		return true;
 
 	if(pErrorReason)
-		str_format(pErrorReason, ErrorReasonSize, "Only %d active players are allowed", Server()->MaxClients() - g_Config.m_SvSpectatorSlots);
+		str_format(pErrorReason, ErrorReasonSize, "最多只允许 %d 名活跃玩家", Server()->MaxClients() - g_Config.m_SvSpectatorSlots);
 	return false;
 }
 
@@ -760,7 +748,7 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
 	char aBuf[128];
 	if(DoChatMsg)
 	{
-		str_format(aBuf, sizeof(aBuf), "'%s' joined the %s", Server()->ClientName(ClientId), GameServer()->m_pController->GetTeamName(Team));
+		str_format(aBuf, sizeof(aBuf), "'%s' 加入了 %s", Server()->ClientName(ClientId), GameServer()->m_pController->GetTeamName(Team));
 		GameServer()->SendChat(-1, TEAM_ALL, aBuf);
 	}
 

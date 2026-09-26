@@ -110,6 +110,7 @@ namespace QmHudNotifications
 	EServerMessageRoute ServerMessageRoute(const char *pMessage, ESoloPrompt PendingCompatPrompt, bool RouteSystemMessages);
 	EServerMessageClass ServerMessageClass(const char *pMessage, ESoloPrompt PendingCompatPrompt);
 	bool TryFormatLocalizedNotificationMessage(const char *pMessage, char *pBuf, size_t BufSize);
+	bool TryFormatLocalizedServerChatMessage(const char *pMessage, char *pBuf, size_t BufSize);
 } // namespace QmHudNotifications
 
 #endif

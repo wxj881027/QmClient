@@ -145,8 +145,6 @@ void CScore::LoadPlayerData(int ClientId, const char *pName)
 
 void CScore::LoadPlayerTimeCp(int ClientId, const char *pName)
 {
-	if(RateLimitPlayer(ClientId))
-		return;
 	ExecPlayerThread(CScoreWorker::LoadPlayerTimeCp, "load player timecp", ClientId, pName, 0);
 }
 
@@ -316,12 +314,12 @@ void CScore::SaveTeam(int ClientId, const char *pCode, const char *pServer)
 	int Team = pController->Teams().m_Core.Team(ClientId);
 	if(pController->Teams().GetSaving(Team))
 	{
-		GameServer()->SendChatTarget(ClientId, "Team save already in progress");
+		GameServer()->SendChatTarget(ClientId, "队伍存档尚未完成");
 		return;
 	}
 	if(pController->Teams().IsPractice(Team))
 	{
-		GameServer()->SendChatTarget(ClientId, "Team save disabled for teams in practice mode");
+		GameServer()->SendChatTarget(ClientId, "练习模式下不能保存队伍存档");
 		return;
 	}
 
@@ -363,27 +361,27 @@ void CScore::LoadTeam(const char *pCode, int ClientId)
 	int Team = pController->Teams().m_Core.Team(ClientId);
 	if(pController->Teams().GetSaving(Team))
 	{
-		GameServer()->SendChatTarget(ClientId, "Team load already in progress");
+		GameServer()->SendChatTarget(ClientId, "队伍读档尚未完成");
 		return;
 	}
 	if(!pController->Teams().IsValidTeamNumber(Team) || (g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO && Team == TEAM_FLOCK))
 	{
-		GameServer()->SendChatTarget(ClientId, "You have to be in a team (from 1-63)");
+		GameServer()->SendChatTarget(ClientId, "必须处于 1–127 号队伍中");
 		return;
 	}
 	if(pController->Teams().GetTeamState(Team) != ETeamState::OPEN)
 	{
-		GameServer()->SendChatTarget(ClientId, "Team can't be loaded while racing");
+		GameServer()->SendChatTarget(ClientId, "比赛中不能读档");
 		return;
 	}
 	if(pController->Teams().TeamFlock(Team))
 	{
-		GameServer()->SendChatTarget(ClientId, "Team can't be loaded while in team 0 mode");
+		GameServer()->SendChatTarget(ClientId, "处于 0 队模式时不能读档");
 		return;
 	}
 	if(pController->Teams().IsPractice(Team))
 	{
-		GameServer()->SendChatTarget(ClientId, "Team can't be loaded while practice is enabled");
+		GameServer()->SendChatTarget(ClientId, "开启练习模式时不能读档");
 		return;
 	}
 	auto SaveResult = std::make_shared<CScoreSaveResult>(ClientId, Server()->ClientName(ClientId), g_Config.m_SvSqlServerName);

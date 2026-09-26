@@ -19,6 +19,12 @@ MAIN_EXECUTABLE="$APP_PATH/Contents/MacOS/DDNet"
 test -d "$APP_PATH"
 test -x "$MAIN_EXECUTABLE"
 test -x "$APP_PATH/Contents/Frameworks/SDL2.framework/Versions/A/SDL2"
+test -f "$APP_PATH/Contents/Resources/data/shader/metal/qmclient.metallib"
+
+# Apple 发布包仅使用原生 Metal，不应残留旧 Vulkan 运行库或 ICD。
+test ! -e "$APP_PATH/Contents/Frameworks/libMoltenVK.dylib"
+test ! -e "$APP_PATH/Contents/Frameworks/libvulkan.1.dylib"
+test ! -e "$APP_PATH/Contents/Resources/vulkan/icd.d"
 
 # SDL2.framework contains a versioned framework symlink that makes Apple's
 # recursive bundle verifier report an ambiguous bundle. Verify the signed

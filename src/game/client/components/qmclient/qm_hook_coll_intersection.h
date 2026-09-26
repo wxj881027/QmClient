@@ -59,7 +59,7 @@ int QmIntersectHookCollTargets(const SQmHookCollSegment &Segment, vec2 &Hit, con
 		if(distance(Position, ClosestPoint) < Radius)
 		{
 			const float CandidateDistance = distance(Segment.m_Start, Position);
-			// 同距离保留先出现的候选，未命中时不写输出参数。
+			// 同距离保留先出现的候选；未命中时不写输出参数。
 			if(ClosestId == -1 || CandidateDistance < Distance)
 			{
 				Hit = ClosestPoint;

@@ -164,6 +164,14 @@ protected:
 	virtual void OnCompletion(EHttpState State) {}
 
 public:
+	class IProgressCallback
+	{
+	public:
+		virtual ~IProgressCallback() = default;
+		virtual void OnProgress() = 0;
+		virtual void OnCompletion(EHttpState State) = 0;
+	};
+
 	CHttpRequest(const char *pUrl);
 	virtual ~CHttpRequest();
 
@@ -253,6 +261,7 @@ public:
 	double Current() const { return m_Current.load(std::memory_order_relaxed); }
 	double Size() const { return m_Size.load(std::memory_order_relaxed); }
 	int Progress() const { return m_Progress.load(std::memory_order_relaxed); }
+	void SetProgressCallback(IProgressCallback *pCallback) { m_pProgressCallback = pCallback; }
 	EHttpState State() const { return m_State; }
 	bool Done() const
 	{
@@ -277,6 +286,9 @@ public:
 	int StatusCode() const;
 	std::optional<int64_t> ResultAgeSeconds() const;
 	std::optional<int64_t> ResultLastModified() const;
+
+private:
+	IProgressCallback *m_pProgressCallback = nullptr;
 };
 
 inline std::unique_ptr<CHttpRequest> HttpHead(const char *pUrl)

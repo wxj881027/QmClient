@@ -110,7 +110,7 @@ std::optional<CMute> CMutes::IsMuted(const NETADDR *pAddr, bool RespectInitialDe
 	{
 		return std::nullopt;
 	}
-	if(!RespectInitialDelay && !It->second.m_InitialDelay)
+	if(!RespectInitialDelay && It->second.m_InitialDelay)
 	{
 		return std::nullopt;
 	}
@@ -207,11 +207,11 @@ void CGameContext::MuteWithMessage(const NETADDR *pAddr, int Seconds, const char
 	char aChatMessage[256];
 	if(pReason[0] != '\0')
 	{
-		str_format(aChatMessage, sizeof(aChatMessage), "'%s' has been muted for %d seconds (%s)", pDisplayName, Seconds, pReason);
+		str_format(aChatMessage, sizeof(aChatMessage), "'%s' 已被禁言 %d 秒（%s）", pDisplayName, Seconds, pReason);
 	}
 	else
 	{
-		str_format(aChatMessage, sizeof(aChatMessage), "'%s' has been muted for %d seconds", pDisplayName, Seconds);
+		str_format(aChatMessage, sizeof(aChatMessage), "'%s' 已被禁言 %d 秒", pDisplayName, Seconds);
 	}
 	SendChat(-1, TEAM_ALL, aChatMessage);
 }
@@ -226,11 +226,11 @@ void CGameContext::VoteMuteWithMessage(const NETADDR *pAddr, int Seconds, const 
 	char aChatMessage[256];
 	if(pReason[0] != '\0')
 	{
-		str_format(aChatMessage, sizeof(aChatMessage), "'%s' has been banned from voting for %d seconds (%s)", pDisplayName, Seconds, pReason);
+		str_format(aChatMessage, sizeof(aChatMessage), "'%s' 已被禁止投票 %d 秒（%s）", pDisplayName, Seconds, pReason);
 	}
 	else
 	{
-		str_format(aChatMessage, sizeof(aChatMessage), "'%s' has been banned from voting for %d seconds", pDisplayName, Seconds);
+		str_format(aChatMessage, sizeof(aChatMessage), "'%s' 已被禁止投票 %d 秒", pDisplayName, Seconds);
 	}
 	SendChat(-1, TEAM_ALL, aChatMessage);
 }
@@ -244,7 +244,7 @@ void CGameContext::ConMuteId(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
-	const int Victim = pResult->GetVictim();
+	const int Victim = pResult->GetVictim(0);
 	if(!CheckClientId(Victim) || !pSelf->m_apPlayers[Victim])
 	{
 		log_info("mutes", "Client ID not found: %d", Victim);
@@ -282,7 +282,7 @@ void CGameContext::ConUnmuteId(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
-	const int Victim = pResult->GetVictim();
+	const int Victim = pResult->GetVictim(0);
 	if(!CheckClientId(Victim) || !pSelf->m_apPlayers[Victim])
 	{
 		log_info("mutes", "Client ID not found: %d", Victim);
@@ -322,7 +322,7 @@ void CGameContext::ConVoteMuteId(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
-	const int Victim = pResult->GetVictim();
+	const int Victim = pResult->GetVictim(0);
 	if(!CheckClientId(Victim) || !pSelf->m_apPlayers[Victim])
 	{
 		log_info("votemutes", "Client ID not found: %d", Victim);
@@ -360,7 +360,7 @@ void CGameContext::ConVoteUnmuteId(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 
-	const int Victim = pResult->GetVictim();
+	const int Victim = pResult->GetVictim(0);
 	if(!CheckClientId(Victim) || !pSelf->m_apPlayers[Victim])
 	{
 		log_info("votemutes", "Client ID not found: %d", Victim);

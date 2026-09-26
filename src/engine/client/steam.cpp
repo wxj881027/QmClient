@@ -10,6 +10,8 @@
 namespace
 {
 
+	constexpr const char *STEAM_SILENT_ARGUMENT = "-silent";
+
 	class CSteam : public ISteam
 	{
 		HSteamPipe m_SteamPipe;
@@ -157,6 +159,16 @@ namespace
 	};
 
 } // namespace
+
+bool SteamOpenClient()
+{
+#if defined(CONF_PLATFORM_ANDROID)
+	return false;
+#else
+	const char *apArguments[] = {STEAM_SILENT_ARGUMENT};
+	return shell_execute("steam.exe", EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
+#endif
+}
 
 ISteam *CreateSteam()
 {

@@ -13,7 +13,11 @@
 
 namespace
 {
-	constexpr int MAX_ATTACK_AGE = 1;
+	// 事件可能比产生它的 tick 晚 1-2 个快照才送达（事件缓冲跨快照、抖动）。
+	// 实机日志证实快照 tick 与挥锤 tick 差可达 2；只允许 1 会让攻击者推断
+	// 频繁失败，导致已被预测播放的锤击特效被快照再播一次（粒子"延迟两下"）。
+	// 边界由 QmHammerHitDetection 测试锁定（stale 样本使用 Age=4）。
+	constexpr int MAX_ATTACK_AGE = 3;
 	constexpr float ATTACK_POSITION_SLACK = 16.0f;
 	constexpr float TARGET_POSITION_SLACK = 16.0f;
 	constexpr float CONTINUOUS_MOVE_RADIUS_MULTIPLIER = 4.0f;
@@ -37,16 +41,20 @@ namespace
 
 	bool IsAttackCandidate(const SQmHammerAttackSample &Sample, vec2 EventPos, int EventTick)
 	{
-		if(Sample.m_ClientId < 0 || Sample.m_ClientId >= MAX_CLIENTS || Sample.m_Weapon != WEAPON_HAMMER ||
+		if(Sample.m_ClientId < 0 || Sample.m_ClientId >= MAX_CLIENTS ||
 			!Sample.m_HammerHitEnabled || Sample.m_ProximityRadius <= 0.0f)
 		{
 			return false;
 		}
+		// 快照里的武器已经是挥锤之后的状态（锤完立刻切枪很常见），
+		// 因此当前或上一 tick 拿着锤都算候选。
+		if(Sample.m_Weapon != WEAPON_HAMMER && Sample.m_PrevWeapon != WEAPON_HAMMER)
+			return false;
 		const int AttackAge = EventTick - Sample.m_AttackTick;
 		if(AttackAge < 0 || AttackAge > MAX_ATTACK_AGE)
 			return false;
 
-		if(AttackAge == 1)
+		if(AttackAge >= 1)
 		{
 			// The current angle belongs to the next tick. Only use the movement envelope.
 			const float MaxEventDistance = Sample.m_ProximityRadius * 1.75f + ATTACK_POSITION_SLACK;
@@ -94,7 +102,12 @@ namespace
 
 bool QmIsHammerSuperTeam(int DDTeam, bool IsDDRace16)
 {
-	return DDTeam == (IsDDRace16 ? VANILLA_TEAM_SUPER : TEAM_SUPER);
+	return QmIsHammerSuperTeam(DDTeam, IsDDRace16 ? VANILLA_MAX_CLIENTS + 1 : NUM_DDRACE_TEAMS);
+}
+
+bool QmIsHammerSuperTeam(int DDTeam, int NumDDRaceTeams)
+{
+	return DDTeam == QmNormalizeNumDDRaceTeams(NumDDRaceTeams) - 1;
 }
 
 bool QmIsHammerWakeupTransition(int PrevFreezeEnd, int CurFreezeEnd, int EventTick)

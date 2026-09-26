@@ -927,13 +927,13 @@ TEST(GraphicsQuadRotation, AngleChangesAndRepeatedDrawsKeepExactDirections)
 	for(const float Angle : {0.75f, 0.75f, Adjacent, -0.75f, 8.0f * pi, 0.75f})
 	{
 		const vec2 Direction = Cache.Get(Angle);
-		EXPECT_FLOAT_EQ(Direction.x, std::cos(Angle));
-		EXPECT_FLOAT_EQ(Direction.y, std::sin(Angle));
+		EXPECT_EQ(Direction.x, std::cos(Angle));
+		EXPECT_EQ(Direction.y, std::sin(Angle));
 	}
 	CQmQuadRotationCache Other;
 	Other.Get(-1.0f);
-	EXPECT_FLOAT_EQ(Cache.Get(0.75f).x, std::cos(0.75f));
-	EXPECT_FLOAT_EQ(Cache.Get(0.75f).y, std::sin(0.75f));
+	EXPECT_EQ(Cache.Get(0.75f).x, std::cos(0.75f));
+	EXPECT_EQ(Cache.Get(0.75f).y, std::sin(0.75f));
 }
 
 TEST(GraphicsQuadRotation, NonFiniteAnglesDoNotContaminateLaterDraws)
@@ -945,7 +945,7 @@ TEST(GraphicsQuadRotation, NonFiniteAnglesDoNotContaminateLaterDraws)
 		EXPECT_TRUE(std::isnan(Invalid.x));
 		EXPECT_TRUE(std::isnan(Invalid.y));
 		const vec2 Valid = Cache.Get(-0.5f);
-		EXPECT_FLOAT_EQ(Valid.x, std::cos(-0.5f));
-		EXPECT_FLOAT_EQ(Valid.y, std::sin(-0.5f));
+		EXPECT_EQ(Valid.x, std::cos(-0.5f));
+		EXPECT_EQ(Valid.y, std::sin(-0.5f));
 	}
 }

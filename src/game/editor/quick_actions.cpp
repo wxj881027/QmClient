@@ -217,7 +217,7 @@ void CEditor::DeleteSelectedLayer()
 
 void CEditor::TestMapLocally()
 {
-	const char *pFilenameNoMaps = str_startswith(m_Map.m_aFilename, "maps/");
+	const char *pFilenameNoMaps = str_startswith(Map()->m_aFilename, "maps/");
 	if(!pFilenameNoMaps)
 	{
 		ShowFileDialogError(Localize("The map isn't saved in the maps/ folder. It must be saved there to load on the server.", "Editor"));
@@ -261,4 +261,11 @@ void CEditor::TestMapLocally()
 			ShowFileDialogError("Local server could not be started.");
 		}
 	}
+}
+
+void CEditor::GotoPosition()
+{
+	static SPopupMenuId s_PopupGotoId;
+	Ui()->DoPopupMenu(&s_PopupGotoId, Ui()->MouseX(), Ui()->MouseY(), 120.0f, 52.0f, this, PopupGoto);
+	Ui()->SetActiveItem(nullptr);
 }

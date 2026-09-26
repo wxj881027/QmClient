@@ -12,6 +12,8 @@
 #include <game/client/components/hud_media_island_logic.h>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
 // 灵动岛式通知：一颗黑球从屏幕顶部滑下 → 液体形变成胶囊 → 外轮廓环绕一圈倒计时
 // → 时间到先收缩回黑球、再上滑离场。
@@ -104,6 +106,11 @@ namespace qm_island
 		float SettledEpsilon = NOTICE_SETTLED_EPSILON)
 	{
 		const SNoticeTargets Targets = ResolveTargets(State, Visible, SettledEpsilon);
+		// 首次显示时运行时尚无轨道；显式从隐藏态起步，避免默认值取目标 1 而直接完成入场。
+		if(Visible && std::isnan(AnimRuntime.GetValue(DropNode, EUiAnimProperty::ALPHA, std::numeric_limits<float>::quiet_NaN())))
+			AnimRuntime.SetValue(DropNode, EUiAnimProperty::ALPHA, State.m_DropProgress);
+		if(Visible && std::isnan(AnimRuntime.GetValue(ExpandNode, EUiAnimProperty::ALPHA, std::numeric_limits<float>::quiet_NaN())))
+			AnimRuntime.SetValue(ExpandNode, EUiAnimProperty::ALPHA, State.m_ExpandProgress);
 		const float DropProgress = ResolveUiPresentationStateValue(AnimRuntime, DropNode, EUiAnimProperty::ALPHA, Targets.m_Drop, QmHudMediaIslandEntranceDropSpring(), 3, SettledEpsilon);
 		const float ExpandTarget = Targets.m_Expand && DropProgress >= 1.0f - SettledEpsilon ? 1.0f : 0.0f;
 		const float ExpandProgress = ResolveUiPresentationStateValue(AnimRuntime, ExpandNode, EUiAnimProperty::ALPHA, ExpandTarget, QmHudMediaIslandEntranceExpandSpring(), 3, SettledEpsilon);

@@ -94,6 +94,43 @@ TEST(AssetsResourceRegistry, EntityBgWorkshopInstallFolderUsesAssetsDirectory)
 	EXPECT_STREQ(pEntityBg->m_pInstallFolder, "assets/entity_bg");
 }
 
+TEST(AssetsResourceRegistry, BlankAssetIsVirtualProtectedEntryOrderedAfterDefault)
+{
+	EXPECT_TRUE(IsBlankAssetName("blank"));
+	EXPECT_FALSE(IsBlankAssetName("default"));
+	EXPECT_TRUE(IsProtectedAssetName("blank"));
+	EXPECT_TRUE(IsProtectedAssetName("default"));
+	EXPECT_FALSE(IsProtectedAssetName("my_pack"));
+
+	std::vector<std::string> vNames = {"my_pack", "default"};
+	EnsureBlankAssetVisible(vNames);
+	ASSERT_EQ(vNames.size(), 3u);
+	EXPECT_EQ(vNames[0], "default");
+	EXPECT_EQ(vNames[1], "blank");
+	EXPECT_EQ(vNames[2], "my_pack");
+
+	// 幂等：已有 blank 时不重复插入。
+	EnsureBlankAssetVisible(vNames);
+	EXPECT_EQ(vNames.size(), 3u);
+}
+
+TEST(AssetsResourceRegistry, BlankAssetIsOfferedForImageCategoriesOnly)
+{
+	const SAssetResourceCategory *pHud = FindAssetResourceCategory("hud");
+	const SAssetResourceCategory *pArrow = FindAssetResourceCategory("arrow");
+	const SAssetResourceCategory *pEntities = FindAssetResourceCategory("entities");
+	const SAssetResourceCategory *pEntityBg = FindAssetResourceCategory("entity_bg");
+	ASSERT_NE(pHud, nullptr);
+	ASSERT_NE(pArrow, nullptr);
+	ASSERT_NE(pEntities, nullptr);
+	ASSERT_NE(pEntityBg, nullptr);
+
+	EXPECT_TRUE(AssetResourceSupportsBlank(*pHud));
+	EXPECT_TRUE(AssetResourceSupportsBlank(*pArrow));
+	EXPECT_TRUE(AssetResourceSupportsBlank(*pEntities));
+	EXPECT_FALSE(AssetResourceSupportsBlank(*pEntityBg));
+}
+
 TEST(AssetsResourceRegistry, NamedSingleFileAssetCandidatesPreferCategoryAssetThenLegacyThenBuiltin)
 {
 	const auto aCandidates = BuildNamedSingleFileAssetCandidates("gui_cursor", "legacy");

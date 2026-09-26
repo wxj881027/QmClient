@@ -5,144 +5,111 @@
 
 #include <engine/client/friends.h>
 #include <engine/client/serverbrowser.h>
-#include <engine/client/serverbrowser_http.h>
 #include <engine/client/serverbrowser_http_parse.h>
 #include <engine/client/serverbrowser_ping_cache.h>
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/favorites.h>
-#include <engine/friends.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/sqlite.h>
 #include <engine/storage.h>
 
+#include <game/client/components/qmclient/browser_column_layout.h>
 #include <game/client/components/qmclient/browser_friend_list.h>
 
 #include <gtest/gtest.h>
+#include <sqlite3.h>
 
-#include <functional>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
+
+TEST(ServerBrowserColumnLayout, ReservesNameAndMapBeforeAllocatingFixedColumns)
+{
+	const SQmBrowserNameMapLayout Wide = QmBrowserNameMapLayout(680.0f, 210.0f, 120.0f, 90.0f, 0.6f);
+	EXPECT_FLOAT_EQ(Wide.m_RightScale, 1.0f);
+	EXPECT_FLOAT_EQ(Wide.m_NameWidth, 276.0f);
+	EXPECT_FLOAT_EQ(Wide.m_MapWidth, 194.0f);
+
+	const SQmBrowserNameMapLayout Narrow = QmBrowserNameMapLayout(300.0f, 210.0f, 120.0f, 90.0f, 0.6f);
+	EXPECT_NEAR(Narrow.m_RightScale, 90.0f / 210.0f, 0.0001f);
+	EXPECT_FLOAT_EQ(Narrow.m_NameWidth, 120.0f);
+	EXPECT_FLOAT_EQ(Narrow.m_MapWidth, 90.0f);
+
+	const SQmBrowserNameMapLayout Tiny = QmBrowserNameMapLayout(100.0f, 210.0f, 120.0f, 90.0f, 0.6f);
+	EXPECT_FLOAT_EQ(Tiny.m_RightScale, 0.0f);
+	EXPECT_GE(Tiny.m_NameWidth, 0.0f);
+	EXPECT_GE(Tiny.m_MapWidth, 0.0f);
+	EXPECT_FLOAT_EQ(Tiny.m_NameWidth + Tiny.m_MapWidth, 100.0f);
+}
 
 class CServerBrowserTestAccess
 {
 public:
-	static void Initialize(CServerBrowser &Browser, IFriends *pFriends, IFavorites *pFavorites, IServerBrowserHttp *pHttp, IServerBrowserPingCache *pPingCache)
+	static void Initialize(CServerBrowser &Browser, IFriends *pFriends, IFavorites *pFavorites)
 	{
 		Browser.m_pFriends = pFriends;
 		Browser.m_pFavorites = pFavorites;
-		Browser.m_pHttp = pHttp;
-		Browser.m_pPingCache = pPingCache;
-		Browser.m_ServerlistType = IServerBrowser::TYPE_INTERNET;
 	}
-	static void SetFirstInfo(CServerBrowser &Browser, const CServerInfo &Info) { Browser.SetInfo(Browser.m_vpServerlist[0], Info); }
-	static void SetFriends(CServerBrowser &Browser, IFriends *pFriends) { Browser.m_pFriends = pFriends; }
-	static void CompleteHttpRefresh(CServerBrowser &Browser) { Browser.m_RefreshingHttp = true; }
-	static bool NeedsResort(const CServerBrowser &Browser) { return Browser.m_NeedResort; }
-	static void Sort(CServerBrowser &Browser) { Browser.Sort(); }
-	static void CleanUp(CServerBrowser &Browser) { Browser.CleanUp(); }
+	static void Add(CServerBrowser &Browser, const NETADDR &Address, const CServerInfo &Info)
+	{
+		Browser.SetInfo(Browser.Add(&Address, 1), Info);
+	}
 	static void ReplaceFirstAddress(CServerBrowser &Browser, const NETADDR &Address)
 	{
 		Browser.ReplaceEntry(Browser.m_vpServerlist[0], &Address, 1);
+	}
+	static void SetFirstInfo(CServerBrowser &Browser, const CServerInfo &Info)
+	{
+		Browser.SetInfo(Browser.m_vpServerlist[0], Info);
+	}
+	static void Sort(CServerBrowser &Browser) { Browser.Sort(); }
+	static void CleanUp(CServerBrowser &Browser) { Browser.CleanUp(); }
+	static bool NeedsResort(const CServerBrowser &Browser) { return Browser.m_NeedResort; }
+	static void SetPingCache(CServerBrowser &Browser, IServerBrowserPingCache *pCache)
+	{
+		Browser.m_pPingCache = pCache;
+	}
+	static void SetLatency(CServerBrowser &Browser, NETADDR Address, int Latency)
+	{
+		Browser.SetLatency(Address, Latency);
 	}
 };
 
 namespace
 {
-	class CBrowserTestFriends : public IFriends
+	class CTestPingCache : public IServerBrowserPingCache
+	{
+		int m_Ping = -1;
+
+	public:
+		void Load() override {}
+		int NumEntries() const override { return m_Ping < 0 ? 0 : 1; }
+		void CachePing(const NETADDR &, int Ping) override { m_Ping = Ping; }
+		int GetPing(const NETADDR *, int) const override { return m_Ping; }
+	};
+
+	class CCountingFriends : public CFriends
 	{
 	public:
 		mutable int m_Queries = 0;
-		mutable uint64_t m_Revision = 0;
-		mutable std::function<void()> m_NextQuery;
-		void Init(bool) override {}
-		int NumFriends() const override { return 0; }
-		uint64_t Revision() const override { return m_Revision; }
-		const CFriendInfo *GetFriend(int) const override { return nullptr; }
-		int GetFriendState(const char *, const char *) const override
+
+		int GetFriendState(const char *pName, const char *pClan) const override
 		{
 			++m_Queries;
-			auto Callback = std::move(m_NextQuery);
-			m_NextQuery = {};
-			if(Callback)
-				Callback();
-			return FRIEND_NO;
-		}
-		bool IsFriend(const char *, const char *, bool) const override { return false; }
-		const char *GetFriendCategory(const char *, const char *) const override { return ""; }
-		const char *GetFriendNote(const char *, const char *) const override { return ""; }
-		bool SetFriendNote(const char *, const char *, const char *) override { return false; }
-		bool ClearFriendNote(const char *, const char *) override { return false; }
-		const char *DefaultCategory() const override { return DEFAULT_CATEGORY; }
-		int NumCategories() const override { return 0; }
-		const char *GetCategory(int) const override { return ""; }
-		int FindCategory(const char *) const override { return -1; }
-		bool AddCategory(const char *) override { return false; }
-		bool MoveCategory(int, int) override { return false; }
-		bool RenameCategory(const char *, const char *) override { return false; }
-		bool RemoveCategory(const char *) override { return false; }
-		bool SetFriendCategory(const char *, const char *, const char *) override { return false; }
-		void AddFriend(const char *, const char *, const char *) override {}
-		void RemoveFriend(const char *, const char *) override {}
-	};
-
-	class CBrowserTestFavorites : public IFavorites
-	{
-		void OnConfigSave(IConfigManager *) override {}
-
-	public:
-		TRISTATE m_Favorite = TRISTATE::NONE;
-		TRISTATE m_AllowPing = TRISTATE::NONE;
-		TRISTATE IsFavorite(const NETADDR *, int) const override { return m_Favorite; }
-		TRISTATE IsPingAllowed(const NETADDR *, int) const override { return m_AllowPing; }
-		void Add(const NETADDR *, int) override {}
-		void AllowPing(const NETADDR *, int, bool) override {}
-		void Remove(const NETADDR *, int) override {}
-		void AllEntries(const CEntry **ppEntries, int *pNumEntries) override
-		{
-			*ppEntries = nullptr;
-			*pNumEntries = 0;
+			return CFriends::GetFriendState(pName, pClan);
 		}
 	};
 
-	class CBrowserTestHttp : public IServerBrowserHttp
-	{
-	public:
-		std::vector<CServerInfo> m_vServers;
-		bool m_Refreshing = false;
-		void Update() override {}
-		bool IsRefreshing() const override { return m_Refreshing; }
-		bool IsError() const override { return false; }
-		void Refresh() override { m_Refreshing = true; }
-		bool GetBestUrl(const char **ppBestUrl) const override
-		{
-			*ppBestUrl = nullptr;
-			return true;
-		}
-		int NumServers() const override { return m_vServers.size(); }
-		const CServerInfo &Server(int Index) const override { return m_vServers[Index]; }
-	};
-
-	class CBrowserTestPingCache : public IServerBrowserPingCache
-	{
-	public:
-		void Load() override {}
-		int NumEntries() const override { return 0; }
-		void CachePing(const NETADDR &, int) override {}
-		int GetPing(const NETADDR *, int) const override { return 30; }
-	};
-
-	class CServerBrowserFilterTest : public ::testing::Test
+	class CServerBrowserStateTest : public ::testing::Test
 	{
 	protected:
 		std::unique_ptr<CConfig> m_pSavedConfig;
-		CBrowserTestFriends m_Friends;
-		CBrowserTestFavorites m_Favorites;
+		CCountingFriends m_Friends;
+		std::unique_ptr<IFavorites> m_pFavorites = CreateFavorites();
 		CServerBrowser m_Browser;
-		CBrowserTestHttp *m_pHttp = nullptr;
 
 		void SetUp() override
 		{
@@ -154,199 +121,339 @@ namespace
 			g_Config.m_BrFilterString[0] = g_Config.m_BrExcludeString[0] = '\0';
 			g_Config.m_BrSort = IServerBrowser::SORT_NAME;
 			g_Config.m_BrSortOrder = 0;
-			str_copy(g_Config.m_BrLocation, "auto");
-			m_pHttp = new CBrowserTestHttp;
-			CServerBrowserTestAccess::Initialize(m_Browser, &m_Friends, &m_Favorites, m_pHttp, new CBrowserTestPingCache);
+			g_Config.m_ClFriendsIgnoreClan = 0;
+			CServerBrowserTestAccess::Initialize(m_Browser, &m_Friends, m_pFavorites.get());
 		}
+
 		void TearDown() override { g_Config = *m_pSavedConfig; }
 
-		void AddHttpServer(const char *pName, const char *pMap = "Map", const char *pPlayer = "Player", const char *pClan = "Clan")
+		void AddServer(const NETADDR &Address)
 		{
 			CServerInfo Info{};
-			Info.m_NumAddresses = 1;
-			ASSERT_FALSE(net_addr_from_str(&Info.m_aAddresses[0], "127.0.0.1:8303"));
-			Info.m_aAddresses[0].port += m_pHttp->m_vServers.size();
-			str_copy(Info.m_aName, pName);
-			str_copy(Info.m_aMap, pMap);
-			str_copy(Info.m_aGameType, "DDRace");
-			Info.m_NumClients = Info.m_NumPlayers = Info.m_NumReceivedClients = 1;
+			str_copy(Info.m_aName, "Example");
+			Info.m_NumClients = Info.m_NumPlayers = 1;
 			Info.m_MaxClients = Info.m_MaxPlayers = 16;
-			str_copy(Info.m_aClients[0].m_aName, pPlayer);
-			str_copy(Info.m_aClients[0].m_aClan, pClan);
-			Info.m_aClients[0].m_Player = true;
-			m_pHttp->m_vServers.push_back(Info);
+			CServerInfo::CClient Client{};
+			str_copy(Client.m_aName, "Alice");
+			str_copy(Client.m_aClan, "Clan");
+			Client.m_Player = true;
+			Info.m_vClients.push_back(Client);
+			CServerBrowserTestAccess::Add(m_Browser, Address, Info);
 		}
-		void FinishHttp()
+
+		void AddServer(const char *pAddress, const char *pName, int NumPlayers, int NumClients, std::vector<CServerInfo::CClient> vClients)
 		{
-			CServerBrowserTestAccess::CompleteHttpRefresh(m_Browser);
-			m_Browser.Update();
+			NETADDR Address;
+			ASSERT_FALSE(net_addr_from_str(&Address, pAddress));
+			CServerInfo Info{};
+			str_copy(Info.m_aName, pName);
+			Info.m_NumPlayers = NumPlayers;
+			Info.m_NumClients = NumClients;
+			Info.m_MaxPlayers = Info.m_MaxClients = 16;
+			Info.m_vClients = std::move(vClients);
+			CServerBrowserTestAccess::Add(m_Browser, Address, Info);
 		}
-	};
-}
 
-TEST_F(CServerBrowserFilterTest, CompletedHttpListDoesNotSortAgainWithoutANewRequest)
-{
-	m_Favorites.m_Favorite = TRISTATE::ALL;
-	m_Favorites.m_AllowPing = TRISTATE::SOME;
-	AddHttpServer("Alpha");
-	FinishHttp();
-	ASSERT_EQ(m_Friends.m_Queries, 1);
-	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
-	ASSERT_EQ(m_Browser.NumSortedServers(), 1);
-	EXPECT_EQ(m_Browser.SortedGet(0)->m_Favorite, TRISTATE::ALL);
-	EXPECT_EQ(m_Browser.SortedGet(0)->m_FavoriteAllowPing, TRISTATE::SOME);
-	m_Browser.Update();
-	EXPECT_EQ(m_Friends.m_Queries, 1);
-	ASSERT_EQ(m_Browser.NumSortedServers(), 1);
-	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Alpha");
-}
-
-TEST_F(CServerBrowserFilterTest, CachedHttpListConsumesItsImmediateSortRequest)
-{
-	m_Favorites.m_Favorite = TRISTATE::SOME;
-	m_Favorites.m_AllowPing = TRISTATE::NONE;
-	AddHttpServer("Alpha");
-	m_Browser.Refresh(IServerBrowser::TYPE_INTERNET, true);
-	ASSERT_EQ(m_Friends.m_Queries, 1);
-	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
-	ASSERT_EQ(m_Browser.NumSortedServers(), 1);
-	EXPECT_EQ(m_Browser.SortedGet(0)->m_Favorite, TRISTATE::SOME);
-	EXPECT_EQ(m_Browser.SortedGet(0)->m_FavoriteAllowPing, TRISTATE::NONE);
-	m_Browser.Update();
-	EXPECT_EQ(m_Friends.m_Queries, 1);
-}
-
-TEST_F(CServerBrowserFilterTest, RequestRaisedWhileSortingRemainsPendingForTheNextUpdate)
-{
-	AddHttpServer("Alpha");
-	FinishHttp();
-	m_Browser.RequestResort();
-	m_Friends.m_NextQuery = [this] { m_Browser.RequestResort(); };
-	// 友状态缓存（d297a1eb0）按 Revision 失效：递增版本号才能让下一次 Sort 重新查询好友，
-	// 从而在排序过程中真的产生新的 resort 请求。
-	m_Friends.m_Revision = 1;
-	m_Browser.Update();
-	EXPECT_EQ(m_Friends.m_Queries, 2);
-	EXPECT_TRUE(CServerBrowserTestAccess::NeedsResort(m_Browser));
-	m_Friends.m_Revision = 2;
-	m_Browser.Update();
-	EXPECT_EQ(m_Friends.m_Queries, 3);
-	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
-}
-
-TEST_F(CServerBrowserFilterTest, SearchTokensPreserveUtf8QuotesPlayerHitsExclusionsAndOrder)
-{
-	AddHttpServer("Gamma", "Race", "(connecting)", "");
-	AddHttpServer("beta", "红色地图", "bob", "Équipe");
-	AddHttpServer("Alpha", "Novice", "Alice", "Clan");
-	FinishHttp();
-	struct SCase
-	{
-		const char *m_pSearch;
-		const char *m_pExclude;
-		bool m_HideConnecting;
-		std::vector<std::pair<const char *, int>> m_vExpected;
-	};
-	const SCase aCases[] = {
-		{" ALPHA ; 红色 ; équipe ", "", false, {{"Alpha", IServerBrowser::QUICK_SERVERNAME}, {"beta", IServerBrowser::QUICK_MAPNAME | IServerBrowser::QUICK_PLAYER}}},
-		{"　\"Alpha\"　; \"beta\"", "", false, {{"Alpha", IServerBrowser::QUICK_SERVERNAME}, {"beta", IServerBrowser::QUICK_SERVERNAME}}},
-		{"\"alpha\"", "", false, {}},
-		{"alice", "", false, {{"Alpha", IServerBrowser::QUICK_PLAYER}}},
-		{"connecting", "", false, {{"Gamma", IServerBrowser::QUICK_PLAYER}}},
-		{"connecting", "", true, {}},
-		{"alpha;beta;gamma", " novice ; 红色 ", false, {{"Gamma", IServerBrowser::QUICK_SERVERNAME}}},
-		{"alpha;beta", "alice", false, {{"Alpha", IServerBrowser::QUICK_SERVERNAME}, {"beta", IServerBrowser::QUICK_SERVERNAME}}},
-		{"alpha;beta", " \"Alpha\" ", false, {{"beta", IServerBrowser::QUICK_SERVERNAME}}},
-		{"alpha", "\"ALPHA\"", false, {{"Alpha", IServerBrowser::QUICK_SERVERNAME}}},
-		{"alpha;beta", " DDRACE ", false, {}},
-		{" ;　; ", "", false, {}},
-		{"\"\"", "", false, {{"Gamma", IServerBrowser::QUICK_PLAYER}}},
-		{"\"", "", false, {{"Gamma", IServerBrowser::QUICK_PLAYER}}},
-	};
-	for(const SCase &Case : aCases)
-	{
-		SCOPED_TRACE(Case.m_pSearch);
-		SCOPED_TRACE(Case.m_pExclude);
-		str_copy(g_Config.m_BrFilterString, Case.m_pSearch);
-		str_copy(g_Config.m_BrExcludeString, Case.m_pExclude);
-		g_Config.m_BrFilterConnectingPlayers = Case.m_HideConnecting;
-		CServerBrowserTestAccess::Sort(m_Browser);
-		ASSERT_EQ(m_Browser.NumSortedServers(), (int)Case.m_vExpected.size());
-		for(size_t Index = 0; Index < Case.m_vExpected.size(); ++Index)
+		static CServerInfo::CClient Client(const char *pName, const char *pClan)
 		{
-			EXPECT_STREQ(m_Browser.SortedGet(Index)->m_aName, Case.m_vExpected[Index].first);
-			EXPECT_EQ(m_Browser.SortedGet(Index)->m_QuickSearchHit, Case.m_vExpected[Index].second);
+			CServerInfo::CClient Client{};
+			str_copy(Client.m_aName, pName);
+			str_copy(Client.m_aClan, pClan);
+			Client.m_Player = true;
+			return Client;
 		}
-	}
+	};
 }
 
-TEST_F(CServerBrowserFilterTest, SearchPreservesTheInputOrderOfEqualSortKeys)
+TEST_F(CServerBrowserStateTest, PlayerCountSortUsesFilteredPopulationAndReversesOrder)
 {
-	AddHttpServer("Same", "First");
-	AddHttpServer("Same", "Second");
-	str_copy(g_Config.m_BrFilterString, " same ");
-	FinishHttp();
-	ASSERT_EQ(m_Browser.NumSortedServers(), 2);
-	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aMap, "First");
-	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aMap, "Second");
-}
-
-// 意图：「梦」列排序键来自游戏层推送的在线分布（address → 人数），
-// 默认人数多的在前，再点一次表头变人数少的在前；没有梦客户端的服务器计 0 排在后面。
-TEST_F(CServerBrowserFilterTest, QmClientCountColumnSortsByPushedDistribution)
-{
-	AddHttpServer("Alpha");
-	AddHttpServer("Beta");
-	AddHttpServer("Gamma");
-	FinishHttp();
+	AddServer("127.0.0.1:8303", "Two", 2, 2, {});
+	AddServer("127.0.0.1:8304", "Three clients", 1, 3, {});
+	AddServer("127.0.0.1:8305", "One", 1, 1, {});
+	g_Config.m_BrSort = IServerBrowser::SORT_NUMPLAYERS;
+	g_Config.m_BrFilterSpectators = 1;
+	CServerBrowserTestAccess::Sort(m_Browser);
 	ASSERT_EQ(m_Browser.NumSortedServers(), 3);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Two");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Three clients");
 
-	std::unordered_map<std::string, int> Counts;
-	Counts["127.0.0.1:8304"] = 5; // Beta
-	Counts["127.0.0.1:8305"] = 2; // Gamma，Alpha 不在分布里
-	m_Browser.SetQmClientServerCounts(Counts);
+	g_Config.m_BrFilterSpectators = 0;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Three clients");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Two");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "One");
+	g_Config.m_BrSortOrder = 1;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "One");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "Three clients");
+}
 
+TEST_F(CServerBrowserStateTest, FriendCountSortBreaksTiesByPopulationAndRefreshesOnFriendChange)
+{
+	m_Friends.AddFriend("Alice", "Clan");
+	m_Friends.AddFriend("Bob", "Clan");
+	AddServer("127.0.0.1:8303", "Few friends", 2, 2, {Client("Alice", "Clan"), Client("Other", "")});
+	AddServer("127.0.0.1:8304", "More friends", 2, 2, {Client("Alice", "Clan"), Client("Bob", "Clan")});
+	AddServer("127.0.0.1:8305", "Tie with more players", 3, 3, {Client("Alice", "Clan"), Client("Other", ""), Client("Third", "")});
+	g_Config.m_BrSort = IServerBrowser::SORT_NUMFRIENDS;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	ASSERT_EQ(m_Browser.NumSortedServers(), 3);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "More friends");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Tie with more players");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "Few friends");
+
+	m_Friends.RemoveFriend("Bob", "Clan");
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Tie with more players");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "More friends");
+}
+
+TEST_F(CServerBrowserStateTest, QmClientCountSortFollowsPushedDistributionInBothDirections)
+{
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	AddServer("127.0.0.1:8304", "Beta", 1, 1, {});
+	AddServer("127.0.0.1:8305", "Gamma", 1, 1, {});
 	g_Config.m_BrSort = IServerBrowser::SORT_QM_CLIENTS;
-	g_Config.m_BrSortOrder = 0;
-	m_Browser.Update();
+	CServerBrowserTestAccess::Sort(m_Browser);
 	ASSERT_EQ(m_Browser.NumSortedServers(), 3);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Alpha");
+
+	m_Browser.SetQmClientServerCounts({{"127.0.0.1:8304", 5}, {"127.0.0.1:8305", 2}});
+	EXPECT_TRUE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+	CServerBrowserTestAccess::Sort(m_Browser);
 	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Beta");
-	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Gamma");
-	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "Alpha");
 	EXPECT_EQ(m_Browser.SortedGet(0)->m_QmClientCount, 5);
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Gamma");
+	EXPECT_EQ(m_Browser.SortedGet(1)->m_QmClientCount, 2);
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "Alpha");
 	EXPECT_EQ(m_Browser.SortedGet(2)->m_QmClientCount, 0);
 
 	g_Config.m_BrSortOrder = 1;
-	m_Browser.Update();
-	ASSERT_EQ(m_Browser.NumSortedServers(), 3);
+	CServerBrowserTestAccess::Sort(m_Browser);
 	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Alpha");
 	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Gamma");
 	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "Beta");
+
+	m_Browser.SetQmClientServerCounts({{"127.0.0.1:8303", 7}, {"127.0.0.1:8304", 1}});
+	EXPECT_TRUE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Gamma");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Beta");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "Alpha");
+	EXPECT_EQ(m_Browser.SortedGet(2)->m_QmClientCount, 7);
 }
 
-// 意图：服务器列表重载（CleanUp + 重新填充）会把计数清零，
-// 新条目从最近一次推送的分布取值，避免刷新后整列按 0 排。
-TEST_F(CServerBrowserFilterTest, QmClientCountsRestoreAfterServerListReload)
+TEST_F(CServerBrowserStateTest, QmClientCountsStayCurrentWhileSortingByName)
 {
-	AddHttpServer("Alpha");
-	AddHttpServer("Beta");
-	FinishHttp();
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	AddServer("127.0.0.1:8304", "Beta", 1, 1, {});
+	CServerBrowserTestAccess::Sort(m_Browser);
 
-	std::unordered_map<std::string, int> Counts;
-	Counts["127.0.0.1:8304"] = 3; // Beta
-	m_Browser.SetQmClientServerCounts(Counts);
-	g_Config.m_BrSort = IServerBrowser::SORT_QM_CLIENTS;
-	g_Config.m_BrSortOrder = 0;
-	m_Browser.Update();
+	m_Browser.SetQmClientServerCounts({{"127.0.0.1:8304", 7}});
+	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
 	ASSERT_EQ(m_Browser.NumSortedServers(), 2);
-	ASSERT_STREQ(m_Browser.SortedGet(0)->m_aName, "Beta");
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Alpha");
+	EXPECT_EQ(m_Browser.SortedGet(0)->m_QmClientCount, 0);
+	EXPECT_EQ(m_Browser.SortedGet(1)->m_QmClientCount, 7);
 
-	CServerBrowserTestAccess::CleanUp(m_Browser);
-	FinishHttp();
+	// 服务器信息的计数不能覆盖游戏层推送的分布。
+	CServerInfo Updated = *m_Browser.Get(0);
+	Updated.m_QmClientCount = 99;
+	CServerBrowserTestAccess::SetFirstInfo(m_Browser, Updated);
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 0);
+	m_Browser.SetQmClientServerCounts({});
+	EXPECT_EQ(m_Browser.SortedGet(1)->m_QmClientCount, 0);
+	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
+}
+
+TEST_F(CServerBrowserStateTest, QmClientCountsApplyBeforeFirstServerAndAfterListReload)
+{
+	m_Browser.SetQmClientServerCounts({{"127.0.0.1:8304", 3}});
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	AddServer("127.0.0.1:8304", "Beta", 1, 1, {});
+	g_Config.m_BrSort = IServerBrowser::SORT_QM_CLIENTS;
+	CServerBrowserTestAccess::Sort(m_Browser);
 	ASSERT_EQ(m_Browser.NumSortedServers(), 2);
 	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Beta");
 	EXPECT_EQ(m_Browser.SortedGet(0)->m_QmClientCount, 3);
+
+	CServerBrowserTestAccess::CleanUp(m_Browser);
+	EXPECT_EQ(m_Browser.NumServers(), 0);
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	AddServer("127.0.0.1:8304", "Beta", 1, 1, {});
+	CServerBrowserTestAccess::Sort(m_Browser);
+	ASSERT_EQ(m_Browser.NumSortedServers(), 2);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Beta");
+	EXPECT_EQ(m_Browser.SortedGet(0)->m_QmClientCount, 3);
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Alpha");
 	EXPECT_EQ(m_Browser.SortedGet(1)->m_QmClientCount, 0);
+}
+
+TEST_F(CServerBrowserStateTest, QmClientCountFollowsReplacedServerAddress)
+{
+	AddServer("127.0.0.1:8303", "Alpha", 1, 1, {});
+	m_Browser.SetQmClientServerCounts({{"127.0.0.1:8303", 4}, {"127.0.0.1:8304", 9}});
+	ASSERT_EQ(m_Browser.Get(0)->m_QmClientCount, 4);
+
+	NETADDR OriginalAddress;
+	ASSERT_FALSE(net_addr_from_str(&OriginalAddress, "127.0.0.1:8303"));
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8304"));
+	CServerBrowserTestAccess::ReplaceFirstAddress(m_Browser, Address);
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 9);
+	EXPECT_EQ(m_Browser.Find(OriginalAddress), nullptr);
+	EXPECT_NE(m_Browser.Find(Address), nullptr);
+
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8305"));
+	CServerBrowserTestAccess::ReplaceFirstAddress(m_Browser, Address);
+	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 0);
+	EXPECT_NE(m_Browser.Find(Address), nullptr);
+}
+
+TEST_F(CServerBrowserStateTest, FriendListMovesOnlineEntriesAndKeepsServerSnapshots)
+{
+	ASSERT_TRUE(m_Friends.AddCategory("Team"));
+	m_Friends.AddFriend("Alice", "Clan", "Team");
+	m_Friends.AddFriend("Bob", "Clan");
+	m_Friends.AddFriend("", "Guild");
+	CQmBrowserFriendList List;
+	List.Update(m_Friends, m_Browser, false);
+	const int Offline = m_Friends.FindCategory(IFriends::OFFLINE_CATEGORY);
+	ASSERT_EQ(List.Groups()[Offline].size(), 2u);
+	EXPECT_EQ(List.Groups()[Offline][0].ServerInfo(), nullptr);
+
+	AddServer("127.0.0.1:8303", "Old server", 2, 2, {Client("Alice", "Clan"), Client("Member", "Guild")});
+	CServerBrowserTestAccess::Sort(m_Browser);
+	List.Update(m_Friends, m_Browser, false);
+	const int Team = m_Friends.FindCategory("Team");
+	const int Clan = m_Friends.FindCategory(IFriends::CLAN_MEMBERS_CATEGORY);
+	ASSERT_EQ(List.Groups()[Team].size(), 1u);
+	EXPECT_STREQ(List.Groups()[Team][0].Name(), "Alice");
+	ASSERT_NE(List.Groups()[Team][0].ServerInfo(), nullptr);
+	EXPECT_STREQ(List.Groups()[Team][0].ServerInfo()->m_aName, "Old server");
+	ASSERT_EQ(List.Groups()[Clan].size(), 1u);
+	EXPECT_EQ(List.Groups()[Clan][0].FriendState(), IFriends::FRIEND_CLAN);
+	ASSERT_EQ(List.Groups()[Offline].size(), 1u);
+	EXPECT_STREQ(List.Groups()[Offline][0].Name(), "Bob");
+
+	const CServerInfo *pPreviousSnapshot = List.Groups()[Team][0].ServerInfo();
+	CServerInfo Updated = *m_Browser.Get(0);
+	str_copy(Updated.m_aName, "New server");
+	CServerBrowserTestAccess::SetFirstInfo(m_Browser, Updated);
+	EXPECT_STREQ(pPreviousSnapshot->m_aName, "Old server");
+	CServerBrowserTestAccess::Sort(m_Browser);
+	List.Update(m_Friends, m_Browser, false);
+	EXPECT_STREQ(List.Groups()[Team][0].ServerInfo()->m_aName, "New server");
+
+	ASSERT_TRUE(m_Friends.SetFriendCategory("Alice", "Clan", IFriends::DEFAULT_CATEGORY));
+	List.Update(m_Friends, m_Browser, false);
+	EXPECT_TRUE(List.Groups()[Team].empty());
+	const int Default = m_Friends.FindCategory(IFriends::DEFAULT_CATEGORY);
+	ASSERT_EQ(List.Groups()[Default].size(), 1u);
+	EXPECT_STREQ(List.Groups()[Default][0].Name(), "Alice");
+}
+
+TEST_F(CServerBrowserStateTest, FriendListRefreshesLatencyAfterPingUpdate)
+{
+	m_Friends.AddFriend("Alice", "Clan");
+	AddServer("127.0.0.1:8303", "Server", 1, 1, {Client("Alice", "Clan")});
+	CServerBrowserTestAccess::Sort(m_Browser);
+	CQmBrowserFriendList List;
+	List.Update(m_Friends, m_Browser, false);
+	const int Default = m_Friends.FindCategory(IFriends::DEFAULT_CATEGORY);
+	ASSERT_EQ(List.Groups()[Default].size(), 1u);
+	const int OldLatency = List.Groups()[Default][0].ServerInfo()->m_Latency;
+
+	CServerBrowserTestAccess::SetPingCache(m_Browser, new CTestPingCache());
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	CServerBrowserTestAccess::SetLatency(m_Browser, Address, 42);
+	List.Update(m_Friends, m_Browser, false);
+	ASSERT_EQ(List.Groups()[Default].size(), 1u);
+	EXPECT_NE(OldLatency, 42);
+	EXPECT_EQ(List.Groups()[Default][0].ServerInfo()->m_Latency, 42);
+}
+
+TEST_F(CServerBrowserStateTest, FriendListIgnoreClanMovesMatchedNameOutOfOffline)
+{
+	m_Friends.AddFriend("Alice", "OldClan");
+	AddServer("127.0.0.1:8303", "Server", 1, 1, {Client("Alice", "NewClan")});
+	CQmBrowserFriendList List;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	List.Update(m_Friends, m_Browser, false);
+	const int Offline = m_Friends.FindCategory(IFriends::OFFLINE_CATEGORY);
+	ASSERT_EQ(List.Groups()[Offline].size(), 1u);
+	EXPECT_EQ(List.Groups()[Offline][0].ServerInfo(), nullptr);
+
+	g_Config.m_ClFriendsIgnoreClan = 1;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	List.Update(m_Friends, m_Browser, true);
+	EXPECT_TRUE(List.Groups()[Offline].empty());
+	const int Default = m_Friends.FindCategory(IFriends::DEFAULT_CATEGORY);
+	ASSERT_EQ(List.Groups()[Default].size(), 1u);
+	EXPECT_STREQ(List.Groups()[Default][0].Clan(), "NewClan");
+	EXPECT_NE(List.Groups()[Default][0].ServerInfo(), nullptr);
+}
+
+TEST_F(CServerBrowserStateTest, FriendStateIsReusedUntilFriendRevisionOrClanModeChanges)
+{
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	AddServer(Address);
+	CServerBrowserTestAccess::Sort(m_Browser);
+	ASSERT_EQ(m_Friends.m_Queries, 1);
+	EXPECT_EQ(m_Browser.Get(0)->m_FriendState, IFriends::FRIEND_NO);
+
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_EQ(m_Friends.m_Queries, 1);
+	m_Friends.AddFriend("Alice", "Clan");
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_EQ(m_Friends.m_Queries, 2);
+	EXPECT_EQ(m_Browser.Get(0)->m_FriendState, IFriends::FRIEND_PLAYER);
+
+	g_Config.m_ClFriendsIgnoreClan = 1;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_EQ(m_Friends.m_Queries, 3);
+
+	CServerInfo Updated = *m_Browser.Get(0);
+	str_copy(Updated.m_vClients[0].m_aName, "Bob");
+	CServerBrowserTestAccess::SetFirstInfo(m_Browser, Updated);
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_EQ(m_Friends.m_Queries, 4);
+	EXPECT_EQ(m_Browser.Get(0)->m_FriendState, IFriends::FRIEND_NO);
+}
+
+TEST_F(CServerBrowserStateTest, AddressReplacementInvalidatesFriendStateAndFriendListRevision)
+{
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	const uint64_t EmptyRevision = m_Browser.FriendListRevision();
+	AddServer(Address);
+	EXPECT_NE(m_Browser.FriendListRevision(), EmptyRevision);
+	CServerBrowserTestAccess::Sort(m_Browser);
+	ASSERT_EQ(m_Friends.m_Queries, 1);
+
+	const uint64_t LoadedRevision = m_Browser.FriendListRevision();
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8304"));
+	CServerBrowserTestAccess::ReplaceFirstAddress(m_Browser, Address);
+	EXPECT_NE(m_Browser.FriendListRevision(), LoadedRevision);
+	ASSERT_NE(m_Browser.Find(Address), nullptr);
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_EQ(m_Friends.m_Queries, 2);
+	EXPECT_EQ(m_Browser.Get(0)->m_aAddresses[0], Address);
+}
+
+TEST_F(CServerBrowserStateTest, UpdatingExistingServerInfoInvalidatesFriendListSnapshot)
+{
+	NETADDR Address;
+	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8303"));
+	AddServer(Address);
+	const uint64_t Revision = m_Browser.FriendListRevision();
+	CServerInfo Updated = m_Browser.Find(Address)->m_Info;
+	str_copy(Updated.m_aName, "Updated server");
+	CServerBrowserTestAccess::SetFirstInfo(m_Browser, Updated);
+	EXPECT_NE(m_Browser.FriendListRevision(), Revision);
+	EXPECT_STREQ(m_Browser.Find(Address)->m_Info.m_aName, "Updated server");
 }
 
 TEST(ServerBrowser, PingCache)
@@ -446,6 +553,44 @@ TEST(ServerBrowser, PingCache)
 	EXPECT_EQ(pPingCache->GetPing(&Localhost6, 1), 345);
 }
 
+TEST(ServerBrowser, PingCacheIgnoresExpiredEntries)
+{
+	// 过期缓存值不能当实测延迟用：延迟列应回落到地区估算，而不是显示很久以前的测量值。
+	CTestInfo Info;
+	Info.m_DeleteTestStorageFilesOnSuccess = true;
+
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr) << "Error creating test storage";
+
+	NETADDR OldAddr, FreshAddr;
+	ASSERT_FALSE(net_addr_from_str(&OldAddr, "127.0.0.1:8303"));
+	ASSERT_FALSE(net_addr_from_str(&FreshAddr, "127.0.0.2:8303"));
+
+	// 直接写入缓存数据库：一条 30 天前的记录和一条刚写入的记录。
+	{
+		CSqlite pDisk = SqliteOpen(pConsole.get(), pStorage.get(), "ddnet-cache.sqlite3");
+		ASSERT_TRUE(pDisk) << "Error opening ping cache database";
+		ASSERT_EQ(sqlite3_exec(pDisk.get(), "CREATE TABLE IF NOT EXISTS server_pings (ip_address TEXT PRIMARY KEY NOT NULL, ping INTEGER NOT NULL, utc_timestamp TEXT NOT NULL)", nullptr, nullptr, nullptr), SQLITE_OK);
+		ASSERT_EQ(sqlite3_exec(pDisk.get(), "INSERT OR REPLACE INTO server_pings (ip_address, ping, utc_timestamp) VALUES ('127.0.0.1', 171, datetime('now', '-30 days')), ('127.0.0.2', 123, datetime('now'))", nullptr, nullptr, nullptr), SQLITE_OK);
+	}
+
+	const int OldMaxAgeHours = g_Config.m_QmPingCacheMaxAgeHours;
+	g_Config.m_QmPingCacheMaxAgeHours = 72;
+
+	auto pPingCache = std::unique_ptr<IServerBrowserPingCache>(CreateServerBrowserPingCache(pConsole.get(), pStorage.get()));
+	pPingCache->Load();
+	EXPECT_EQ(pPingCache->NumEntries(), 2);
+	EXPECT_EQ(pPingCache->GetPing(&OldAddr, 1), -1);
+	EXPECT_EQ(pPingCache->GetPing(&FreshAddr, 1), 123);
+
+	// 0 表示永不过期：旧记录重新可见。
+	g_Config.m_QmPingCacheMaxAgeHours = 0;
+	EXPECT_EQ(pPingCache->GetPing(&OldAddr, 1), 171);
+
+	g_Config.m_QmPingCacheMaxAgeHours = OldMaxAgeHours;
+}
+
 namespace
 {
 	std::string HttpListEntry(const char *pAddresses, const char *pName = "Example")
@@ -478,7 +623,7 @@ TEST(ServerBrowserHttpParse, PreservesAddressPreferenceAndSkipsUnsupportedServer
 	EXPECT_EQ(vServers[1].m_aAddresses[0].port, 8305);
 }
 
-TEST(ServerBrowserHttpParse, FailureAfterValidEntryPreservesPublishedList)
+TEST(ServerBrowserHttpParse, InvalidResponsePreservesPublishedList)
 {
 	std::vector<CServerInfo> vServers(1);
 	str_copy(vServers[0].m_aName, "Old list");
@@ -491,7 +636,7 @@ TEST(ServerBrowserHttpParse, FailureAfterValidEntryPreservesPublishedList)
 	}
 }
 
-TEST(ServerBrowserHttpParse, EmptySuccessReplacesOldListAndInvalidInfoIsSkipped)
+TEST(ServerBrowserHttpParse, EmptySuccessReplacesOldListAndSkipsInvalidInfo)
 {
 	std::vector<CServerInfo> vServers(1);
 	EXPECT_FALSE(ParseHttpListForTest(R"({"servers":[]})", vServers));
@@ -501,189 +646,4 @@ TEST(ServerBrowserHttpParse, EmptySuccessReplacesOldListAndInvalidInfoIsSkipped)
 	ASSERT_FALSE(ParseHttpListForTest(Text, vServers));
 	ASSERT_EQ(vServers.size(), 1u);
 	EXPECT_EQ(vServers[0].m_aAddresses[0].port, 8304);
-}
-
-TEST_F(CServerBrowserFilterTest, QmClientCountsStayCurrentWithoutCountSorting)
-{
-	AddHttpServer("Alpha");
-	AddHttpServer("Beta");
-	FinishHttp();
-	g_Config.m_BrSort = IServerBrowser::SORT_NAME;
-	m_Browser.Update();
-	m_Browser.SetQmClientServerCounts({{"127.0.0.1:8304", 7}});
-	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
-	ASSERT_EQ(m_Browser.NumSortedServers(), 2);
-	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aName, "Alpha");
-	EXPECT_EQ(m_Browser.SortedGet(0)->m_QmClientCount, 0);
-	EXPECT_EQ(m_Browser.SortedGet(1)->m_QmClientCount, 7);
-	// 刷新来自 HTTP 的信息也必须保留游戏层推送的计数，不能信任输入里的计数。
-	m_pHttp->m_vServers[1].m_QmClientCount = 99;
-	FinishHttp();
-	EXPECT_EQ(m_Browser.SortedGet(1)->m_QmClientCount, 7);
-	m_Browser.SetQmClientServerCounts({});
-	EXPECT_EQ(m_Browser.SortedGet(1)->m_QmClientCount, 0);
-	EXPECT_FALSE(CServerBrowserTestAccess::NeedsResort(m_Browser));
-}
-
-TEST_F(CServerBrowserFilterTest, QmClientCountsPushedBeforeHttpListAppearOnFirstPublish)
-{
-	g_Config.m_BrSort = IServerBrowser::SORT_NAME;
-	m_Browser.SetQmClientServerCounts({{"127.0.0.1:8303", 4}});
-	AddHttpServer("Alpha");
-	FinishHttp();
-	ASSERT_EQ(m_Browser.NumSortedServers(), 1);
-	EXPECT_EQ(m_Browser.SortedGet(0)->m_QmClientCount, 4);
-}
-
-TEST_F(CServerBrowserFilterTest, QmClientCountFollowsReplacedServerAddress)
-{
-	AddHttpServer("Alpha");
-	FinishHttp();
-	m_Browser.SetQmClientServerCounts({{"127.0.0.1:8303", 4}, {"127.0.0.1:8304", 9}});
-	ASSERT_EQ(m_Browser.Get(0)->m_QmClientCount, 4);
-	NETADDR Address;
-	ASSERT_FALSE(net_addr_from_str(&Address, "127.0.0.1:8304"));
-	CServerBrowserTestAccess::ReplaceFirstAddress(m_Browser, Address);
-	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 9);
-	Address.port = 8305;
-	CServerBrowserTestAccess::ReplaceFirstAddress(m_Browser, Address);
-	EXPECT_EQ(m_Browser.Get(0)->m_QmClientCount, 0);
-}
-
-TEST_F(CServerBrowserFilterTest, FriendPanelReusesStableRowsAndRefreshesPlayerData)
-{
-	auto pFriends = std::make_unique<CFriends>();
-	CFriends &Friends = *pFriends;
-	Friends.AddFriend("Alice", "Clan");
-	CServerBrowserTestAccess::SetFriends(m_Browser, &Friends);
-	AddHttpServer("Alpha", "Map", "Alice");
-	FinishHttp();
-	CQmBrowserFriendList List;
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	const int Category = Friends.FindCategory(IFriends::DEFAULT_CATEGORY);
-	ASSERT_EQ(List.Groups()[Category].size(), 1u);
-	const auto *pRows = List.Groups()[Category].data();
-	EXPECT_FALSE(List.Update(Friends, m_Browser, false));
-	EXPECT_EQ(List.Groups()[Category].data(), pRows);
-	EXPECT_TRUE(List.Groups()[Friends.FindCategory(IFriends::OFFLINE_CATEGORY)].empty());
-
-	str_copy(m_pHttp->m_vServers[0].m_aClients[0].m_aSkin, "bluekitty");
-	m_pHttp->m_vServers[0].m_aClients[0].m_Afk = true;
-	FinishHttp();
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	ASSERT_EQ(List.Groups()[Category].size(), 1u);
-	EXPECT_STREQ(List.Groups()[Category][0].Skin(), "bluekitty");
-	EXPECT_TRUE(List.Groups()[Category][0].IsAfk());
-	EXPECT_EQ(List.Groups()[Category][0].ServerInfo(), m_Browser.Get(0));
-
-	CServerBrowserTestAccess::CleanUp(m_Browser);
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	EXPECT_TRUE(List.Groups()[Category].empty());
-	const auto &Offline = List.Groups()[Friends.FindCategory(IFriends::OFFLINE_CATEGORY)];
-	ASSERT_EQ(Offline.size(), 1u);
-	EXPECT_EQ(Offline[0].ServerInfo(), nullptr);
-}
-
-TEST_F(CServerBrowserFilterTest, FriendPanelTracksCategoryEditsWithoutServerRefresh)
-{
-	auto pFriends = std::make_unique<CFriends>();
-	CFriends &Friends = *pFriends;
-	Friends.AddFriend("Alice", "Clan");
-	CServerBrowserTestAccess::SetFriends(m_Browser, &Friends);
-	AddHttpServer("Alpha", "Map", "Alice");
-	FinishHttp();
-	CQmBrowserFriendList List;
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	ASSERT_TRUE(Friends.AddCategory("Practice"));
-	ASSERT_TRUE(Friends.SetFriendCategory("Alice", "Clan", "Practice"));
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	ASSERT_EQ(List.Groups()[Friends.FindCategory("Practice")].size(), 1u);
-	Friends.AddFriend("Alice", "Clan", IFriends::DEFAULT_CATEGORY);
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	EXPECT_EQ(List.Groups()[Friends.FindCategory(IFriends::DEFAULT_CATEGORY)].size(), 1u);
-	Friends.AddFriend("Alice", "Clan", IFriends::DEFAULT_CATEGORY);
-	EXPECT_FALSE(List.Update(Friends, m_Browser, false));
-	ASSERT_TRUE(Friends.SetFriendCategory("Alice", "Clan", "Practice"));
-	ASSERT_TRUE(Friends.RenameCategory("Practice", "Race"));
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	EXPECT_STREQ(List.Groups()[Friends.FindCategory("Race")][0].Category(), "Race");
-	ASSERT_TRUE(Friends.MoveCategory(Friends.FindCategory("Race"), 0));
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	ASSERT_EQ(List.Groups()[0].size(), 1u);
-	EXPECT_STREQ(List.Groups()[0][0].Name(), "Alice");
-	ASSERT_TRUE(Friends.RemoveCategory("Race"));
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	EXPECT_EQ(List.Groups()[Friends.FindCategory(IFriends::DEFAULT_CATEGORY)].size(), 1u);
-	EXPECT_FALSE(List.Update(Friends, m_Browser, false));
-}
-
-TEST_F(CServerBrowserFilterTest, FriendPanelKeepsDuplicateOnlineRowsClanMatchesAndOfflineRules)
-{
-	g_Config.m_ClFriendsIgnoreClan = 0;
-	auto pFriends = std::make_unique<CFriends>();
-	CFriends &Friends = *pFriends;
-	Friends.AddFriend("Alice", "Clan");
-	Friends.AddFriend("Alice", "Other");
-	Friends.AddFriend("", "Team");
-	Friends.AddFriend("Zoe", "Clan");
-	CServerBrowserTestAccess::SetFriends(m_Browser, &Friends);
-	AddHttpServer("Alpha", "Map", "Alice");
-	AddHttpServer("Beta", "Map", "Alice");
-	AddHttpServer("Team", "Map", "Bob", "Team");
-	FinishHttp();
-	CQmBrowserFriendList List;
-	ASSERT_TRUE(List.Update(Friends, m_Browser, false));
-	EXPECT_EQ(List.Groups()[Friends.FindCategory(IFriends::DEFAULT_CATEGORY)].size(), 2u);
-	EXPECT_EQ(List.Groups()[Friends.FindCategory(IFriends::CLAN_MEMBERS_CATEGORY)].size(), 1u);
-	const int Offline = Friends.FindCategory(IFriends::OFFLINE_CATEGORY);
-	ASSERT_EQ(List.Groups()[Offline].size(), 2u);
-	EXPECT_STREQ(List.Groups()[Offline][0].Name(), "Alice");
-	EXPECT_STREQ(List.Groups()[Offline][0].Clan(), "Other");
-	EXPECT_STREQ(List.Groups()[Offline][1].Name(), "Zoe");
-	g_Config.m_ClFriendsIgnoreClan = 1;
-	ASSERT_TRUE(List.Update(Friends, m_Browser, true));
-	ASSERT_EQ(List.Groups()[Offline].size(), 1u);
-	EXPECT_STREQ(List.Groups()[Offline][0].Name(), "Zoe");
-}
-
-TEST_F(CServerBrowserFilterTest, FriendListRevisionChangesOnReloadResortAddressReplacementAndCleanup)
-{
-	AddHttpServer("Alpha");
-	const auto EmptyRevision = m_Browser.FriendListRevision();
-	FinishHttp();
-	EXPECT_NE(m_Browser.FriendListRevision(), EmptyRevision);
-	const auto LoadedRevision = m_Browser.FriendListRevision();
-	m_Browser.Update();
-	EXPECT_EQ(m_Browser.FriendListRevision(), LoadedRevision);
-	m_Browser.RequestResort();
-	m_Browser.Update();
-	EXPECT_NE(m_Browser.FriendListRevision(), LoadedRevision);
-	const auto SortedRevision = m_Browser.FriendListRevision();
-	CServerInfo Info = *m_Browser.Get(0);
-	str_copy(Info.m_aClients[0].m_aName, "New player");
-	CServerBrowserTestAccess::SetFirstInfo(m_Browser, Info);
-	EXPECT_NE(m_Browser.FriendListRevision(), SortedRevision);
-	const auto InfoRevision = m_Browser.FriendListRevision();
-	NETADDR NewAddress;
-	ASSERT_FALSE(net_addr_from_str(&NewAddress, "127.0.0.1:9303"));
-	CServerBrowserTestAccess::ReplaceFirstAddress(m_Browser, NewAddress);
-	EXPECT_NE(m_Browser.FriendListRevision(), InfoRevision);
-	const auto AddressRevision = m_Browser.FriendListRevision();
-	CServerBrowserTestAccess::CleanUp(m_Browser);
-	EXPECT_NE(m_Browser.FriendListRevision(), AddressRevision);
-}
-
-TEST_F(CServerBrowserFilterTest, FriendPanelTracksOfflineFriendRemovalAndAddition)
-{
-	auto pFriends = std::make_unique<CFriends>();
-	CQmBrowserFriendList List;
-	ASSERT_TRUE(List.Update(*pFriends, m_Browser, false));
-	pFriends->AddFriend("Alice", "Clan");
-	ASSERT_TRUE(List.Update(*pFriends, m_Browser, false));
-	const int Offline = pFriends->FindCategory(IFriends::OFFLINE_CATEGORY);
-	ASSERT_EQ(List.Groups()[Offline].size(), 1u);
-	pFriends->RemoveFriend("Alice", "Clan");
-	ASSERT_TRUE(List.Update(*pFriends, m_Browser, false));
-	EXPECT_TRUE(List.Groups()[Offline].empty());
-	EXPECT_FALSE(List.Update(*pFriends, m_Browser, false));
 }

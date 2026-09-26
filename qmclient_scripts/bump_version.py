@@ -13,9 +13,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VERSION_H_PATH = REPO_ROOT / "src/game/version.h"
-VERSION_RE = re.compile(r"^\d+\.\d+(?:\.\d+)?$")
+VERSION_RE = re.compile(r"^\d+(?:\.\d+){0,2}$")
+DEV_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 VERSION_DEFINE_RE = re.compile(
-    r'^(#define\s+QMCLIENT_VERSION\s+)"[^"]+"(?=\r?$)', re.MULTILINE
+    r'^(#define\s+QMCLIENT_STABLE_VERSION\s+)"[^"]+"(?=\r?$)', re.MULTILINE
+)
+DEV_VERSION_DEFINE_RE = re.compile(
+    r'^(#define\s+QMCLIENT_DEV_VERSION\s+)"[^"]+"(?=\r?$)', re.MULTILINE
 )
 
 def configure_stdio() -> None:
@@ -34,18 +38,18 @@ def normalize_version(version: str | None, tag: str | None) -> str:
     assert raw is not None
     normalized = raw[1:] if raw[:1] in {"v", "V"} else raw
     if not VERSION_RE.fullmatch(normalized):
-        raise ValueError(
-            f"版本格式非法：{raw}。期望格式为 X.Y 或 X.Y.Z，tag 可写成 vX.Y.Z。"
-        )
+        raise ValueError(f"正式版本格式非法：{raw}。期望格式为 X、X.Y 或 X.Y.Z。")
     return normalized
 
 
-def update_version_h(version: str) -> None:
+def update_version_h(version: str, *, development: bool = False) -> None:
     with VERSION_H_PATH.open("r", encoding="utf-8", newline="") as version_file:
         content = version_file.read()
-    updated, count = VERSION_DEFINE_RE.subn(rf'\1"{version}"', content, count=1)
+    define_re = DEV_VERSION_DEFINE_RE if development else VERSION_DEFINE_RE
+    updated, count = define_re.subn(rf'\1"{version}"', content, count=1)
     if count != 1:
-        raise RuntimeError("未找到 QMCLIENT_VERSION 宏，无法更新 src/game/version.h。")
+        name = "QMCLIENT_DEV_VERSION" if development else "QMCLIENT_STABLE_VERSION"
+        raise RuntimeError(f"未找到 {name} 宏，无法更新 src/game/version.h。")
     with VERSION_H_PATH.open("w", encoding="utf-8", newline="") as version_file:
         version_file.write(updated)
 
@@ -106,21 +110,29 @@ def main() -> int:
     configure_stdio()
 
     parser = argparse.ArgumentParser(description="统一更新 QmClient 版本号")
-    parser.add_argument("--version", help="目标版本号，如 2.58.1")
-    parser.add_argument("--tag", help="目标 tag，如 v2.58.1")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--version", help="正式版本号，如 3、3.1 或 3.1.1")
+    group.add_argument("--tag", help="正式版本 tag，如 v3 或 v3.1")
+    group.add_argument("--dev-version", help="开发测试版本号，必须为 X.Y.Z")
     parser.add_argument(
         "--dry-run", action="store_true", help="只打印解析后的版本，不写回文件"
     )
     args = parser.parse_args()
 
-    normalized = normalize_version(args.version, args.tag)
+    development = args.dev_version is not None
+    if development:
+        normalized = args.dev_version
+        if not DEV_VERSION_RE.fullmatch(normalized):
+            raise ValueError(f"开发测试版本格式非法：{normalized}。期望格式为 X.Y.Z。")
+    else:
+        normalized = normalize_version(args.version, args.tag)
+        warn_if_not_progressing(normalized)
     print(f"目标版本：{normalized}")
-    warn_if_not_progressing(normalized)
     if args.dry_run:
         print("Dry-run：未写回文件。")
         return 0
 
-    update_version_h(normalized)
+    update_version_h(normalized, development=development)
     print(f"已更新：{VERSION_H_PATH}")
     return 0
 

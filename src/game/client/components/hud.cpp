@@ -9,7 +9,6 @@
 #include "voting.h"
 
 #include <base/color.h>
-#include <base/log.h>
 #include <base/str.h>
 
 #include <engine/graphics.h>
@@ -26,7 +25,8 @@
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/modes.h>
-#include <game/client/components/qmclient/qm_bind_status_hud.h>
+#include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/rank_ghost.h>
 #include <game/client/components/qmclient/score_hud_layout.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
@@ -69,6 +69,7 @@ namespace
 		return str_comp_nocase(g_Config.m_GfxBackend, "OpenGL") == 0;
 	}
 
+	// island 背景模糊按 1/4 分辨率准备渲染目标（与 UI 半透明面板的模糊分辨率一致）
 	int MediaIslandBlurTargetDimension(int ScreenDimension)
 	{
 		return ScreenDimension > 0 ? (ScreenDimension + 3) / 4 : 0;
@@ -455,6 +456,29 @@ namespace
 	SHudGameTimerInfo BuildHudGameTimerInfo(const CGameClient &GameClient, const IClient &Client, ITextRender *pTextRender, float HudWidth)
 	{
 		SHudGameTimerInfo Result;
+		// Rank 1 查看模式有自己的 demo 播放头，不能从当前在线快照的 round start tick
+		// 计算本地游戏时间；直接使用该回放的实际成绩与播放进度。
+		CRankGhost::SViewState ViewState;
+		if(GameClient.m_RankGhost.GetViewState(ViewState))
+		{
+			const int64_t TimeCentiseconds = (int64_t)std::llround(ViewState.m_CurSeconds * 100.0f);
+			str_time(TimeCentiseconds, TIME_DAYS, Result.m_aText, sizeof(Result.m_aText));
+
+			static float s_TextWidthM = pTextRender->TextWidth(Result.m_FontSize, "00:00", -1, -1.0f);
+			static float s_TextWidthH = pTextRender->TextWidth(Result.m_FontSize, "00:00:00", -1, -1.0f);
+			static float s_TextWidth0D = pTextRender->TextWidth(Result.m_FontSize, "0d 00:00:00", -1, -1.0f);
+			static float s_TextWidth00D = pTextRender->TextWidth(Result.m_FontSize, "00d 00:00:00", -1, -1.0f);
+			static float s_TextWidth000D = pTextRender->TextWidth(Result.m_FontSize, "000d 00:00:00", -1, -1.0f);
+			Result.m_W = TimeCentiseconds >= 3600 * 24 * 100 ? s_TextWidth000D :
+									   (TimeCentiseconds >= 3600 * 24 * 10 ? s_TextWidth00D :
+														 (TimeCentiseconds >= 3600 * 24 ? s_TextWidth0D :
+																		  (TimeCentiseconds >= 3600 ? s_TextWidthH : s_TextWidthM)));
+			Result.m_X = HudWidth * 0.5f - Result.m_W * 0.5f;
+			Result.m_Left = Result.m_X;
+			Result.m_Visible = true;
+			return Result;
+		}
+
 		const CNetObj_GameInfo *pGameInfoObj = GameClient.m_Snap.m_pGameInfoObj;
 		if(pGameInfoObj == nullptr || (pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_SUDDENDEATH) != 0)
 			return Result;
@@ -787,18 +811,26 @@ namespace
 		}
 	}
 
-	// 屏幕映射单位 → 物理像素比例。写在绘制前：绘制期间 HUD 编辑器会改写屏幕映射，
-	// 那时再算出来的是缩放后的尺寸（会连带放大羽化宽度），不是 SDF 需要的像素密度。
-	float CurrentScreenPixelSize(IGraphics *pGraphics)
+	// 两处录制状态共用同一个 SDF 圆点；不支持 SDF 时保留几何圆。
+	void DrawHudRecordingStatusDot(IGraphics *pGraphics, vec2 Center, float DotSize, float Alpha, float ScreenPixelSize)
 	{
-		if(pGraphics == nullptr)
-			return 1.0f;
-		float ScreenX0 = 0.0f;
-		float ScreenY0 = 0.0f;
-		float ScreenX1 = 0.0f;
-		float ScreenY1 = 0.0f;
-		pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		return QmHudMediaIslandScreenPixelSize(ScreenX0, ScreenY0, ScreenX1, ScreenY1, pGraphics->ScreenWidth(), pGraphics->ScreenHeight());
+		if(pGraphics == nullptr || DotSize <= 0.0f || Alpha <= 0.0f)
+			return;
+
+		if(!pGraphics->HasMediaIslandSdf())
+		{
+			DrawSmoothCircle(pGraphics, Center, DotSize * 0.5f, ColorRGBA(1.0f, 0.15f, 0.15f, Alpha));
+			return;
+		}
+
+		const SHudMediaIslandSdfRenderState State = QmHudRecordingDotSdfState(Center, DotSize, Alpha, ScreenPixelSize);
+		IGraphics::SMediaIslandSdfParams GpuSdfParams;
+		if(QmHudMediaIslandBuildGpuSdfParams(State, GpuSdfParams))
+		{
+			pGraphics->RenderMediaIslandSdf(GpuSdfParams);
+			return;
+		}
+		DrawSmoothCircle(pGraphics, Center, DotSize * 0.5f, ColorRGBA(1.0f, 0.15f, 0.15f, Alpha));
 	}
 
 	void DrawMediaIslandCountdownSatellite(
@@ -845,49 +877,30 @@ namespace
 			DrawMediaIslandGeometryFallback(pGraphics, State);
 	}
 
-	// 录制红点：走灵动岛同一条 SDF 绘制链路，只画一个「宽高 = 直径、圆角 = 半径」的圆，
-	// 因此轮廓是逐像素抗锯齿出来的，不再有几何多边形的硬边。呼吸透明度仍由调用方传入的
-	// Alpha 决定，大小、颜色、显示条件都不变。灵动岛与独立计时胶囊共用本函数。
-	// 不支持 SDF 的后端（HasMediaIslandSdf 为假）退回原来的几何圆。
-	void DrawHudRecordingStatusDot(IGraphics *pGraphics, vec2 Center, float DotSize, float Alpha, float ScreenPixelSize)
-	{
-		if(pGraphics == nullptr || DotSize <= 0.0f || Alpha <= 0.0f)
-			return;
-
-		const float Radius = DotSize * 0.5f;
-		if(!pGraphics->HasMediaIslandSdf())
-		{
-			DrawSmoothCircle(pGraphics, Center, Radius, ColorRGBA(1.0f, 0.15f, 0.15f, Alpha));
-			return;
-		}
-
-		SHudMediaIslandSdfRenderState State;
-		State.m_BackgroundColor = ColorRGBA(1.0f, 0.15f, 0.15f, Alpha);
-		State.m_MainRect = {Center.x - Radius, Center.y - Radius, DotSize, DotSize};
-		// 圆角取半径：在正方形里就是正圆；不设 item/capsule/轮廓环，避免 SDF 去画岛的其他部分。
-		State.m_MainRadius = Radius;
-		State.m_MainCorners = IGraphics::CORNER_ALL;
-		State.m_ScreenPixelSize = std::max(ScreenPixelSize, 0.0001f);
-		// 不加外阴影，也不取模糊底图：红点要的是纯色圆点，任何一层都会让它发灰。
-		State.m_Rect = QmHudMediaIslandSdfOuterRect(State);
-
-		IGraphics::SMediaIslandSdfParams GpuSdfParams;
-		if(!QmHudMediaIslandBuildGpuSdfParams(State, GpuSdfParams))
-			return;
-		pGraphics->RenderMediaIslandSdf(GpuSdfParams);
-	}
-
 	EQmIcon MediaIslandCountdownIcon(EHudMediaIslandCountdownType Type, bool Completed = false, bool SwapOutgoing = false)
 	{
 		if(Completed)
-			return EQmIcon::SATELLITE_CHECK;
+			return EQmIcon::CHECK;
 		switch(Type)
 		{
-		case EHudMediaIslandCountdownType::SWAP: return SwapOutgoing ? EQmIcon::SATELLITE_SWAP_OUTGOING : EQmIcon::SATELLITE_SWAP_INCOMING;
-		case EHudMediaIslandCountdownType::SWITCH: return EQmIcon::SATELLITE_SWITCH;
-		case EHudMediaIslandCountdownType::MUTE: return EQmIcon::SATELLITE_MUTE;
+		case EHudMediaIslandCountdownType::SWAP: return SwapOutgoing ? EQmIcon::ARROWS_OUT : EQmIcon::ARROWS_IN;
+		case EHudMediaIslandCountdownType::SWITCH: return EQmIcon::SWAP;
+		case EHudMediaIslandCountdownType::MUTE: return EQmIcon::SPEAKER_SLASH;
 		}
 		return EQmIcon::COUNT;
+	}
+
+	const char *MediaIslandCountdownFontIcon(EQmIcon Icon)
+	{
+		switch(Icon)
+		{
+		case EQmIcon::CHECK: return "\xEE\x86\x82";
+		case EQmIcon::ARROWS_IN: return "\xEE\x82\x9A";
+		case EQmIcon::ARROWS_OUT: return "\xEE\x82\xA2";
+		case EQmIcon::SWAP: return "\xEE\xA0\xBC";
+		case EQmIcon::SPEAKER_SLASH: return "\xEE\x91\x9A";
+		default: return nullptr;
+		}
 	}
 
 	void DrawTexturedQuad(IGraphics *pGraphics, IGraphics::CTextureHandle Texture, vec2 Center, float Radius, float Alpha = 1.0f)
@@ -1002,6 +1015,7 @@ namespace
 
 		return Count;
 	}
+
 }
 
 CHud::CHud()
@@ -1014,7 +1028,6 @@ CHud::CHud()
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_MediaIslandBlurReady = false;
 	m_MediaIslandBlurLastAttemptFrame = 0;
 	m_MediaIslandBlurAttemptInitialized = false;
 	m_WeaponPresentationState.Reset();
@@ -1107,7 +1120,6 @@ void CHud::ResetHudContainers()
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
-	m_MediaIslandBlurReady = false;
 	m_MediaIslandBlurLastAttemptFrame = 0;
 	m_MediaIslandBlurAttemptInitialized = false;
 	m_WeaponPresentationState.Reset();
@@ -1185,6 +1197,7 @@ void CHud::DestroyMediaIslandBlurTargets()
 	Graphics()->DestroyRenderTarget(&m_MediaIslandBlurTarget);
 	m_MediaIslandBlurWidth = 0;
 	m_MediaIslandBlurHeight = 0;
+	m_MediaIslandBlurMode = -1;
 	m_MediaIslandBlurReady = false;
 	m_MediaIslandBlurLastAttemptFrame = 0;
 	m_MediaIslandBlurAttemptInitialized = false;
@@ -1197,25 +1210,26 @@ void CHud::DestroyDummyMiniViewRenderTarget()
 	m_DummyMiniViewRenderTargetHeight = 0;
 }
 
-bool CHud::PrepareMediaIslandBlur()
+IGraphics::CRenderTargetHandle CHud::MediaIslandBlurBackdrop()
 {
 	if(!QmHudMediaIslandShouldPrepareBackdropBlur(g_Config.m_QmHudIslandBgOpacity, g_Config.m_QmGaussianBlur != 0) || !Graphics()->HasMediaIslandSdf())
-		return false;
+		return IGraphics::CRenderTargetHandle();
 	if(!Graphics()->IsBackbufferCaptureSupported() || !Graphics()->IsRenderTargetGaussianBlurSupported())
 	{
 		if(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurDownsample.IsValid() || m_MediaIslandBlurDownsampleTemporary.IsValid() || m_MediaIslandBlurDownsampleTarget.IsValid() || m_MediaIslandBlurTarget.IsValid())
 			DestroyMediaIslandBlurTargets();
-		return false;
+		return IGraphics::CRenderTargetHandle();
 	}
 
 	const int BlurWidth = MediaIslandBlurTargetDimension(Graphics()->ScreenWidth());
 	const int BlurHeight = MediaIslandBlurTargetDimension(Graphics()->ScreenHeight());
+	const int BlurMode = std::clamp(g_Config.m_QmBlurMode, 0, 2);
 	if(BlurWidth <= 0 || BlurHeight <= 0)
 	{
 		m_MediaIslandBlurReady = false;
 		m_MediaIslandBlurLastAttemptFrame = 0;
 		m_MediaIslandBlurAttemptInitialized = false;
-		return false;
+		return IGraphics::CRenderTargetHandle();
 	}
 
 	const bool SizeChanged = BlurWidth != m_MediaIslandBlurWidth || BlurHeight != m_MediaIslandBlurHeight;
@@ -1232,22 +1246,35 @@ bool CHud::PrepareMediaIslandBlur()
 		if(!m_MediaIslandBlurSource.IsValid() || !m_MediaIslandBlurDownsample.IsValid() || !m_MediaIslandBlurDownsampleTemporary.IsValid() || !m_MediaIslandBlurDownsampleTarget.IsValid() || !m_MediaIslandBlurTarget.IsValid())
 		{
 			DestroyMediaIslandBlurTargets();
-			return false;
+			return IGraphics::CRenderTargetHandle();
 		}
 		m_MediaIslandBlurWidth = BlurWidth;
 		m_MediaIslandBlurHeight = BlurHeight;
+		m_MediaIslandBlurMode = BlurMode;
 	}
 
 	const uint64_t CurrentFrame = Client()->PerfFrame();
-	if(!QmHudMediaIslandShouldRefreshBackdropBlur(CurrentFrame, m_MediaIslandBlurLastAttemptFrame, m_MediaIslandBlurAttemptInitialized))
-		return m_MediaIslandBlurReady;
-	m_MediaIslandBlurLastAttemptFrame = CurrentFrame;
-	m_MediaIslandBlurAttemptInitialized = true;
+	const bool Refresh = QmHudMediaIslandShouldRefreshBackdropBlur(CurrentFrame, m_MediaIslandBlurLastAttemptFrame, m_MediaIslandBlurAttemptInitialized);
+	if(Refresh)
+	{
+		m_MediaIslandBlurLastAttemptFrame = CurrentFrame;
+		m_MediaIslandBlurAttemptInitialized = true;
+		Ui()->PrepareGaussianBlur();
+	}
+
+	// QmClient：island 背景与 UI 半透明面板参数一致（同为 1/4 分辨率），UI 已准备同一次捕获/模糊
+	// 结果时直接复用，避免重复模糊；UI 句柄销毁重建期间自然回退到下面的独立渲染目标管线。
+	if(Ui()->GaussianBlurTargetReady())
+		return Ui()->GaussianBlurTarget();
+
+	// 独立管线：非刷新帧沿用上一帧结果，避免每帧重复捕获与模糊
+	if(!Refresh)
+		return m_MediaIslandBlurReady ? m_MediaIslandBlurTarget : IGraphics::CRenderTargetHandle();
 
 	if(!Graphics()->CaptureBackbufferToRenderTarget(m_MediaIslandBlurSource))
 	{
 		m_MediaIslandBlurReady = false;
-		return false;
+		return IGraphics::CRenderTargetHandle();
 	}
 
 	IGraphics::SGaussianBlurParams BlurParams;
@@ -1260,7 +1287,7 @@ bool CHud::PrepareMediaIslandBlur()
 		m_MediaIslandBlurDownsampleTarget,
 		m_MediaIslandBlurTarget,
 		BlurParams);
-	return m_MediaIslandBlurReady;
+	return m_MediaIslandBlurReady ? m_MediaIslandBlurTarget : IGraphics::CRenderTargetHandle();
 }
 
 void CHud::OnRelease()
@@ -1288,9 +1315,6 @@ void CHud::RenderGameTimer()
 		TimerInfo.m_IsCritical = false;
 	}
 
-	// 录制红点羽化比例与岛共用同一份实现，必须在 HUD 编辑器改写屏幕映射之前取值。
-	const float RecordingDotScreenPixelSize = CurrentScreenPixelSize(Graphics());
-
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 	{
 		m_RecordingStatusAnimState.Reset();
@@ -1312,6 +1336,11 @@ void CHud::RenderGameTimer()
 	const SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
 	if(!TimerCapsule.m_Visible)
 		return;
+
+	float RecordingScreenX0, RecordingScreenY0, RecordingScreenX1, RecordingScreenY1;
+	Graphics()->GetScreen(&RecordingScreenX0, &RecordingScreenY0, &RecordingScreenX1, &RecordingScreenY1);
+	const float RecordingDotScreenPixelSize = QmHudMediaIslandScreenPixelSize(
+		RecordingScreenX0, RecordingScreenY0, RecordingScreenX1, RecordingScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
 
 	constexpr float TimerRadius = QmHudMediaIslandScaled(8.0f);
 	constexpr float StatusSectionGap = QmHudMediaIslandScaled(3.0f);
@@ -1599,20 +1628,19 @@ void CHud::RenderScoreHud()
 				if(apPlayerInfo[t])
 				{
 					if(Client()->IsSixup() && GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & protocol7::GAMEFLAG_RACE)
-						str_time((int64_t)absolute(apPlayerInfo[t]->m_Score) / 10, TIME_MINS_CENTISECS, aScore[t], sizeof(aScore[t]));
+						str_time(absolute(static_cast<int64_t>(apPlayerInfo[t]->m_Score)) / 10, TIME_MINS_CENTISECS, aScore[t], sizeof(aScore[t]));
 					else if(GameClient()->m_GameInfo.m_TimeScore)
 					{
-						CGameClient::CClientData &ClientData = GameClient()->m_aClients[apPlayerInfo[t]->m_ClientId];
+						const CGameClient::CClientData &ClientData = GameClient()->m_aClients[apPlayerInfo[t]->m_ClientId];
 						if(GameClient()->m_ReceivedDDNetPlayerFinishTimes && ClientData.m_FinishTimeSeconds != FinishTime::NOT_FINISHED_MILLIS)
 						{
-							int64_t TimeSeconds = static_cast<int64_t>(absolute(ClientData.m_FinishTimeSeconds));
-							int64_t TimeMillis = TimeSeconds * 1000 + (absolute(ClientData.m_FinishTimeMillis) % 1000);
+							const int64_t TimeMillis = static_cast<int64_t>(ClientData.m_FinishTimeSeconds) * 1000 + ClientData.m_FinishTimeMillis % 1000;
 
 							str_time(TimeMillis / 10, TIME_HOURS, aScore[t], sizeof(aScore[t]));
 						}
 						else if(apPlayerInfo[t]->m_Score != FinishTime::NOT_FINISHED_TIMESCORE)
 						{
-							str_time((int64_t)absolute(apPlayerInfo[t]->m_Score) * 100, TIME_HOURS, aScore[t], sizeof(aScore[t]));
+							str_time(absolute(static_cast<int64_t>(apPlayerInfo[t]->m_Score)) * 100, TIME_HOURS, aScore[t], sizeof(aScore[t]));
 						}
 						else
 							aScore[t][0] = 0;
@@ -2226,8 +2254,8 @@ void CHud::RenderDummyMiniMap()
 		DrawSmoothCircle(Graphics(), vec2(PlaceholderCenter.x, PlaceholderCenter.y - 7.5f), PlaceholderIconSize * 0.9f, ViewState.m_TargetAccent.WithAlpha(0.16f));
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.68f);
-		const float CameraWidth = TextRender()->TextWidth(PlaceholderIconSize, FontIcons::FONT_ICON_CAMERA);
-		TextRender()->Text(PlaceholderCenter.x - CameraWidth * 0.5f, PlaceholderCenter.y - PlaceholderIconSize - 8.0f, PlaceholderIconSize, FontIcons::FONT_ICON_CAMERA, -1.0f);
+		const float CameraWidth = PlaceholderIconSize;
+		Ui()->DrawQmIconAt(PlaceholderCenter.x - CameraWidth * 0.5f, PlaceholderCenter.y - PlaceholderIconSize - 8.0f, PlaceholderIconSize, EQmIcon::CAMERA, FontIcons::FONT_ICON_CAMERA, TextRender()->GetTextColor());
 
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		TextRender()->TextColor(0.97f, 0.98f, 1.0f, 0.90f);
@@ -2399,6 +2427,12 @@ void CHud::RenderTextInfo()
 		TextY = MiniY + MiniH + 4.0f;
 	}
 	CHudEditor::STransformScope TextInfoScope;
+	float FpsX = m_Width - 10.0f - DisplayFpsWidth;
+	float FpsY = 5.0f;
+	float PredX = m_Width - 10.0f - DisplayPredWidth;
+	float PredY = RenderFps ? 18.0f : 5.0f;
+	float LossX = m_Width - 10.0f - DisplayLossWidth;
+	float LossY = RenderPred ? PredY + 13.0f : (RenderFps ? 18.0f : 5.0f);
 	if(RenderFps || RenderPred || RenderLoss)
 	{
 		bool BoundsInitialized = false;
@@ -2478,8 +2512,6 @@ void CHud::RenderTextInfo()
 	if(RenderFps)
 	{
 		CTextCursor Cursor;
-		float FpsX = m_Width - 10 - DisplayFpsWidth;
-		float FpsY = 5.0f;
 		if(UseV2TextInfoLayout)
 		{
 			if(pAnimRuntime != nullptr)
@@ -2521,8 +2553,6 @@ void CHud::RenderTextInfo()
 	}
 	if(RenderPred)
 	{
-		float PredX = m_Width - 10 - DisplayPredWidth;
-		float PredY = RenderFps ? 18.0f : 5.0f;
 		if(UseV2TextInfoLayout)
 		{
 			if(pAnimRuntime != nullptr)
@@ -2565,8 +2595,6 @@ void CHud::RenderTextInfo()
 	}
 	if(RenderLoss)
 	{
-		float LossX = m_Width - 10.0f - DisplayLossWidth;
-		float LossY = RenderPred ? 31.0f : (RenderFps ? 18.0f : 5.0f);
 		if(UseV2TextInfoLayout)
 		{
 			if(pAnimRuntime != nullptr)
@@ -2597,6 +2625,43 @@ void CHud::RenderTextInfo()
 		TextRender()->Text(LossX, LossY, TextInfoFontSize, pLossText, -1.0f);
 		TextRender()->TextColor(OldColor);
 		TextRender()->TextOutlineColor(OldOutlineColor);
+	}
+
+	if(QmMacosGraphicsDiagnosticsEnabled())
+	{
+		const auto AlphaBucket = [](float Alpha) { return std::clamp((int)std::round(Alpha * 10.0f), 0, 10); };
+		const auto PositionBucket = [](float Position) { return std::clamp((int)std::round(Position), -32768, 32767); };
+		const auto LogTextInfo = [&](const char *pName, uint64_t &LastSignature, bool Enabled, bool Rendered, float TargetAlpha, float ResolvedAlpha, float TargetX, float TargetY, float ResolvedX, float ResolvedY, int ContainerIndex, bool ContainerValid, const char *pText) {
+			auto AppendSignature = [](uint64_t Signature, int Value) {
+				return (Signature ^ static_cast<uint32_t>(Value)) * 1099511628211ULL;
+			};
+			uint64_t Signature = 1469598103934665603ULL;
+			Signature = AppendSignature(Signature, Enabled ? 1 : 0);
+			Signature = AppendSignature(Signature, Rendered ? 1 : 0);
+			Signature = AppendSignature(Signature, ContainerValid ? 1 : 0);
+			Signature = AppendSignature(Signature, AlphaBucket(TargetAlpha));
+			Signature = AppendSignature(Signature, AlphaBucket(ResolvedAlpha));
+			Signature = AppendSignature(Signature, PositionBucket(TargetX));
+			Signature = AppendSignature(Signature, PositionBucket(TargetY));
+			Signature = AppendSignature(Signature, PositionBucket(ResolvedX));
+			Signature = AppendSignature(Signature, PositionBucket(ResolvedY));
+			Signature = AppendSignature(Signature, ContainerIndex);
+			Signature = AppendSignature(Signature, str_length(pText != nullptr ? pText : ""));
+			if(Signature == LastSignature)
+				return;
+			char aPayload[384];
+			str_format(aPayload, sizeof(aPayload), "event=hud_text_info item=%s enabled=%d rendered=%d target_alpha=%.3f resolved_alpha=%.3f target_x=%.1f target_y=%.1f resolved_x=%.1f resolved_y=%.1f text_container=%d text_container_valid=%d text_len=%d",
+				pName, Enabled ? 1 : 0, Rendered ? 1 : 0, TargetAlpha, ResolvedAlpha, TargetX, TargetY, ResolvedX, ResolvedY,
+				ContainerIndex, ContainerValid ? 1 : 0, str_length(pText != nullptr ? pText : ""));
+			QmMacosGraphicsDiagnosticsLogPayload("perf/autodiag_hud", aPayload, Client());
+			LastSignature = Signature;
+		};
+		LogTextInfo("fps", AnimState.m_DiagnosticFpsSignature, Showfps, RenderFps, Showfps ? 1.0f : 0.0f, FpsAlpha,
+			V2Layout.m_FpsX, V2Layout.m_FpsY, FpsX, FpsY, m_FPSTextContainerIndex.m_Index, m_FPSTextContainerIndex.Valid(), pFpsText);
+		LogTextInfo("pred", AnimState.m_DiagnosticPredSignature, Showpred, RenderPred, Showpred ? 1.0f : 0.0f, PredAlpha,
+			V2Layout.m_PredX, V2Layout.m_PredY, PredX, PredY, -1, false, pPredText);
+		LogTextInfo("loss", AnimState.m_DiagnosticLossSignature, ShowLoss, RenderLoss, ShowLoss ? 1.0f : 0.0f, LossAlpha,
+			V2Layout.m_LossX, V2Layout.m_LossY, LossX, LossY, -1, false, pLossText);
 	}
 
 	GameClient()->m_HudEditor.EndTransform(TextInfoScope);
@@ -2867,7 +2932,10 @@ void CHud::UpdateSwitchCountdownTracker()
 
 		const int CurTick = Client()->GameTick(Connection);
 		const int Delay = Collision()->GetSwitchDelay(MapIndex);
-		m_SwitchCountdownTracker.Track(Team, SwitchNumber, CurTick + 1 + Delay * TickSpeed, CurTick, ClientId, Connection);
+		m_SwitchCountdownTracker.m_aaEndTick[Team][SwitchNumber] = CurTick + 1 + Delay * TickSpeed;
+		m_SwitchCountdownTracker.m_aaTouchTick[Team][SwitchNumber] = CurTick;
+		m_SwitchCountdownTracker.m_aaClientId[Team][SwitchNumber] = ClientId;
+		m_SwitchCountdownTracker.m_aaConnection[Team][SwitchNumber] = Connection;
 	};
 
 	UpdateSwitchCountdownFromClient(GameClient()->m_aLocalIds[0], 0, GameClient()->Predict());
@@ -2876,9 +2944,6 @@ void CHud::UpdateSwitchCountdownTracker()
 
 	for(int Team = 0; Team < NUM_DDRACE_TEAMS; ++Team)
 	{
-		// 未写入过的队伍没有可过期的倒计时，跳过整行空槽。
-		if(!m_SwitchCountdownTracker.m_aTouchedTeams[Team])
-			continue;
 		for(int SwitchNumber = 1; SwitchNumber < 256; ++SwitchNumber)
 		{
 			if(m_SwitchCountdownTracker.m_aaEndTick[Team][SwitchNumber] <= 0)
@@ -3297,7 +3362,9 @@ void CHud::RenderFollowSwitchCountdowns()
 	constexpr float SatelliteRadius = 9.0f + 2.5f * 0.5f;
 	constexpr float RingRadius = SatelliteRadius * MEDIA_ISLAND_SATELLITE_RING_RADIUS_SCALE;
 	const float RingThickness = std::max(1.0f, SatelliteRadius * MEDIA_ISLAND_SATELLITE_RING_THICKNESS_SCALE);
-	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
+	const float ScreenPixelSize = std::max(
+		(ScreenX1 - ScreenX0) / std::max(1, Graphics()->ScreenWidth()),
+		(ScreenY1 - ScreenY0) / std::max(1, Graphics()->ScreenHeight()));
 	const ColorRGBA RingColor = MediaIslandCountdownColor(EHudMediaIslandCountdownType::SWITCH);
 	ColorRGBA BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandBgColor));
 	BackgroundColor.a = std::clamp(g_Config.m_QmHudIslandBgOpacity / 100.0f, 0.0f, 1.0f);
@@ -3791,21 +3858,22 @@ void CHud::EnsureMediaIslandFrameCache() const
 	Cache.Reset();
 	Cache.m_Frame = CurrentFrame;
 	Cache.m_Valid = true;
-	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || g_Config.m_QmSodaHookEnable != 0 || g_Config.m_QmSpotifyEnable != 0 || g_Config.m_QmKugouHookEnable != 0 || g_Config.m_QmQQMusicHookEnable != 0);
+	const bool MusicLyricsEnabled = QmHudMusicLyricsSourceEnabled(g_Config.m_QmSodaHookEnable != 0, g_Config.m_QmKugouHookEnable != 0, g_Config.m_QmQQMusicHookEnable != 0);
+	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || MusicLyricsEnabled || g_Config.m_QmSpotifyEnable != 0);
 	Cache.m_HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(Cache.m_MediaState);
 	if(g_Config.m_QmHudIslandUseOriginalStyle)
 		return;
 
 	// 歌词来源选择:各来源可同时开启(菜单已保证同一时间只启用一个 Hook)。
-	// 若用户手动同时开启,网易云优先,汽水兜底,Spotify 再后备。
+	// 若用户手动同时开启，网易云优先，统一歌词组件次之，Spotify 再后备。
 	if(g_Config.m_QmNeteaseHookEnable != 0)
 	{
 		Cache.m_LyricsActive = GameClient()->m_NeteaseIntegration.HasActiveLyrics();
 		Cache.m_ShowLyrics = GameClient()->m_NeteaseIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics), &Cache.m_LyricsColor);
 	}
-	if(!Cache.m_ShowLyrics && (g_Config.m_QmSodaHookEnable != 0 || g_Config.m_QmKugouHookEnable != 0 || g_Config.m_QmQQMusicHookEnable != 0))
+	if(!Cache.m_ShowLyrics && MusicLyricsEnabled)
 	{
-		// 汽水、酷狗和 QQ 音乐由统一歌词组件提供当前句。
+		// 统一歌词组件按开关选择汽水、酷狗或 QQ 音乐。
 		Cache.m_LyricsActive = GameClient()->m_MusicLyricsIntegration.HasActiveLyrics();
 		Cache.m_ShowLyrics = GameClient()->m_MusicLyricsIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics));
 	}
@@ -3952,9 +4020,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 		str_copy(aTimeBuf, "00:00", sizeof(aTimeBuf));
 
 	const bool ShowWaveform = HasMediaState;
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	const float TeamIconWidth = TextRender()->TextWidth(MetaFontSize, FontIcons::FONT_ICON_USERS);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	const float TeamIconWidth = MetaFontSize;
 	const float SpectatorTextWidth = ShowSpectatorSatellite ? TextRender()->TextWidth(MetaFontSize, aSpectatorBuf) : 0.0f;
 	const float SpectatorSatelliteContentWidth = SpectatorSatelliteIconSize + SpectatorGap + SpectatorTextWidth;
 	const float SpectatorSatelliteWidth = std::max(BaseIslandHeight, SpectatorSatelliteContentWidth + SpectatorSatellitePaddingX * 2.0f);
@@ -4359,7 +4425,7 @@ void CHud::RenderMediaIsland()
 		str_format(aCheckpointBuf, sizeof(aCheckpointBuf), "CP%d", Checkpoint);
 
 	constexpr float BaseIslandHeight = QmHudMediaIslandScaled(16.0f);
-	const float IslandY = 1.0f;
+	const float IslandY = 0.0f;
 	constexpr float CoverSize = QmHudMediaIslandScaled(12.0f);
 	constexpr float PaddingX = QmHudMediaIslandScaled(2.0f);
 	constexpr float Gap = QmHudMediaIslandScaled(2.0f);
@@ -4392,10 +4458,8 @@ void CHud::RenderMediaIsland()
 		IncomingSwapTextWidth = std::max(IncomingSwapTextWidth, std::round(TextRender()->TextBoundingBox(BottomFontSize, aIncomingSwapInfos[i]->m_aRequestText).m_W));
 
 	const bool ShowWaveform = HasMediaState;
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	const float TeamIconWidth = TextRender()->TextWidth(MetaFontSize, FontIcons::FONT_ICON_USERS);
-	const float PlaceholderWidth = TextRender()->TextWidth(MetaFontSize, FontIcons::FONT_ICON_MUSIC);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	const float TeamIconWidth = MetaFontSize;
+	const float PlaceholderWidth = MetaFontSize;
 	const float SpectatorTextWidth = HasSpectatorSatellitePresentation ? TextRender()->TextWidth(MetaFontSize, aSpectatorBuf) : 0.0f;
 	const float SpectatorSatelliteContentWidth = SpectatorSatelliteIconSize + SpectatorGap + SpectatorTextWidth;
 	const float SpectatorSatelliteWidth = std::max(BaseIslandHeight, SpectatorSatelliteContentWidth + SpectatorSatellitePaddingX * 2.0f);
@@ -4963,7 +5027,9 @@ void CHud::RenderMediaIsland()
 		SdfItem.m_RingColor = MediaIslandCountdownColor(Item.m_Type);
 	}
 
-	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(TransformedScreenX0, TransformedScreenY0, TransformedScreenX1, TransformedScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
+	const float ScreenPixelSize = std::max(
+		(TransformedScreenX1 - TransformedScreenX0) / std::max(1, Graphics()->ScreenWidth()),
+		(TransformedScreenY1 - TransformedScreenY0) / std::max(1, Graphics()->ScreenHeight()));
 	CurrentSdfState.m_MainRect = MainIslandSdfRect;
 	CurrentSdfState.m_MainRadius = EntrancePose.m_Radius;
 	CurrentSdfState.m_MainCorners = HudEditorScope.m_Corners;
@@ -4978,21 +5044,9 @@ void CHud::RenderMediaIsland()
 	CurrentSdfState.m_OuterShadowSize = ScreenPixelSize * MEDIA_ISLAND_OUTER_SHADOW_PIXELS;
 	CurrentSdfState.m_OuterShadowOpacity = MEDIA_ISLAND_OUTER_SHADOW_OPACITY * EntrancePose.m_BackgroundColor.a;
 	CurrentSdfState.m_Rect = QmHudMediaIslandSdfOuterRect(CurrentSdfState);
-	IGraphics::CRenderTargetHandle Backdrop;
-	const bool BlurPrepared = PrepareMediaIslandBlur();
-	if(!m_QmMediaIslandBlurProbeDone)
+	const IGraphics::CRenderTargetHandle Backdrop = MediaIslandBlurBackdrop();
+	if(Backdrop.IsValid())
 	{
-		// 一次性诊断：背板模糊是静默降级型特性，被跳过后只在岛里少一层模糊，玩家看不出来。
-		// 这一行写清每个门槛的实测值，用来区分「没准备模糊」与「准备了但纹理是空的」。
-		m_QmMediaIslandBlurProbeDone = true;
-		log_info("hud", "media island backdrop probe: prepared=%d handle_valid=%d gaussian_blur=%d opacity=%d original_style=%d sdf=%d capture_supported=%d rt_blur_supported=%d",
-			(int)BlurPrepared, (int)m_MediaIslandBlurTarget.IsValid(), g_Config.m_QmGaussianBlur, g_Config.m_QmHudIslandBgOpacity,
-			g_Config.m_QmHudIslandUseOriginalStyle, (int)Graphics()->HasMediaIslandSdf(),
-			(int)Graphics()->IsBackbufferCaptureSupported(), (int)Graphics()->IsRenderTargetGaussianBlurSupported());
-	}
-	if(BlurPrepared)
-	{
-		Backdrop = m_MediaIslandBlurTarget;
 		const CUIRect BackdropScreenRect = {
 			TransformedScreenX0,
 			TransformedScreenY0,
@@ -5025,26 +5079,36 @@ void CHud::RenderMediaIsland()
 			return CUIRect{ContentX + (IconSize - Width) * 0.5f, SatelliteCenterY - Height * 0.5f, Width, Height};
 		};
 		const float IconAlpha = 0.88f * SpectatorLiquidCapsule.m_ContentAlpha * EntranceContentAlpha;
-		// Keep the spectator eye on the text path when OpenGL loses this atlas draw.
+		const auto RenderTextEye = [&](const char *pGlyph, const CUIRect &Rect, float Alpha) {
+			if(Alpha <= 0.001f)
+				return;
+			const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+			const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			const float GlyphSize = Rect.h;
+			const float GlyphWidth = TextRender()->TextWidth(GlyphSize, pGlyph);
+			TextRender()->TextColor(0.98f, 0.99f, 1.0f, IconAlpha * Alpha);
+			TextRender()->Text(Rect.x + (Rect.w - GlyphWidth) * 0.5f, Rect.y, GlyphSize, pGlyph, -1.0f);
+			TextRender()->TextColor(PreviousColor);
+			TextRender()->SetFontPreset(PreviousPreset);
+		};
 		if(IsOpenGlBackend())
 		{
-			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-			const auto RenderTextEye = [&](const char *pGlyph, const CUIRect &Rect, float Alpha) {
-				if(Alpha <= 0.001f)
-					return;
-				const float GlyphSize = Rect.h;
-				const float GlyphWidth = TextRender()->TextWidth(GlyphSize, pGlyph);
-				TextRender()->TextColor(0.98f, 0.99f, 1.0f, IconAlpha * Alpha);
-				TextRender()->Text(Rect.x + (Rect.w - GlyphWidth) * 0.5f, Rect.y, GlyphSize, pGlyph, -1.0f);
-			};
 			RenderTextEye(FontIcons::FONT_ICON_EYE_SLASH, IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale), SpectatorIconPose.m_ClosedAlpha);
 			RenderTextEye(FontIcons::FONT_ICON_EYE, IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY), SpectatorIconPose.m_OpenAlpha);
-			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		}
-		else if(CQmIconManager *pIconManager = GameClient()->QmIconManager())
+		else
 		{
-			pIconManager->RenderIcon(EQmIcon::SATELLITE_SPECTATOR_EYE_CLOSED, IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale), ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * SpectatorIconPose.m_ClosedAlpha));
-			pIconManager->RenderIcon(EQmIcon::SATELLITE_SPECTATOR_EYE, IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY), ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * SpectatorIconPose.m_OpenAlpha));
+			// 等比契约的显式豁免只作用于这条眼睛动画（见常量处的说明）。
+			CQmIconManager *pIconManager = GameClient()->QmIconManager();
+			const CUIRect ClosedRect = IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale);
+			const CUIRect OpenRect = IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY);
+			if(!pIconManager || pIconManager->PreferFontFallback() ||
+				!pIconManager->RenderIcon(EQmIcon::EYE_OFF, ClosedRect, ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * SpectatorIconPose.m_ClosedAlpha), QM_HUD_SPECTATOR_EYE_PRESERVE_ASPECT))
+				RenderTextEye(FontIcons::FONT_ICON_EYE_SLASH, ClosedRect, SpectatorIconPose.m_ClosedAlpha);
+			if(!pIconManager || pIconManager->PreferFontFallback() ||
+				!pIconManager->RenderIcon(EQmIcon::EYE, OpenRect, ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * SpectatorIconPose.m_OpenAlpha), QM_HUD_SPECTATOR_EYE_PRESERVE_ASPECT))
+				RenderTextEye(FontIcons::FONT_ICON_EYE, OpenRect, SpectatorIconPose.m_OpenAlpha);
 		}
 		const float CountAlpha = QmHudMediaIslandSpectatorCountAlpha(ShowSpectator, SpectatorIconPose);
 		if(CountAlpha > 0.001f)
@@ -5061,11 +5125,9 @@ void CHud::RenderMediaIsland()
 			continue;
 		const float IconSize = SatelliteIconSize * Item.m_ContentScale * EntranceContentAlpha;
 		const CUIRect IconRect = {Item.m_Center.x - IconSize * 0.5f, Item.m_Center.y - IconSize * 0.5f, IconSize, IconSize};
-		if(CQmIconManager *pIconManager = GameClient()->QmIconManager())
-		{
-			const ColorRGBA IconColor = Item.m_Completed ? ColorRGBA(0.20f, 1.0f, 0.42f, 0.96f * Item.m_ContentAlpha * EntranceContentAlpha) : ColorRGBA(0.98f, 0.99f, 1.0f, 0.94f * Item.m_ContentAlpha * EntranceContentAlpha);
-			pIconManager->RenderIcon(MediaIslandCountdownIcon(Item.m_Type, Item.m_Completed, Item.m_SwapOutgoing), IconRect, IconColor);
-		}
+		const ColorRGBA IconColor = Item.m_Completed ? ColorRGBA(0.20f, 1.0f, 0.42f, 0.96f * Item.m_ContentAlpha * EntranceContentAlpha) : ColorRGBA(0.98f, 0.99f, 1.0f, 0.94f * Item.m_ContentAlpha * EntranceContentAlpha);
+		const EQmIcon Icon = MediaIslandCountdownIcon(Item.m_Type, Item.m_Completed, Item.m_SwapOutgoing);
+		Ui()->DrawQmIcon(IconRect, Icon, MediaIslandCountdownFontIcon(Icon), IconColor);
 	}
 
 	const auto BuildTrackMetaText = [](const SHudMediaIslandTrackSnapshot &Track, char *pBuf, size_t BufSize) {
@@ -5104,10 +5166,7 @@ void CHud::RenderMediaIsland()
 
 		DrawSmoothCircle(Graphics(), CoverCenter, CoverDrawRadius, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f * Alpha));
 		const float PlaceholderFontSize = MetaFontSize * Scale;
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.35f * Alpha);
-		TextRender()->Text(CoverCenter.x - PlaceholderWidth * Scale * 0.5f, CoverCenter.y - PlaceholderFontSize * 0.5f - QmHudMediaIslandScaled(0.5f), PlaceholderFontSize, FontIcons::FONT_ICON_MUSIC, -1.0f);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		Ui()->DrawQmIconAt(CoverCenter.x - PlaceholderWidth * Scale * 0.5f, CoverCenter.y - PlaceholderFontSize * 0.5f - QmHudMediaIslandScaled(0.5f), PlaceholderFontSize, EQmIcon::MUSIC, FontIcons::FONT_ICON_MUSIC, ColorRGBA(1.0f, 1.0f, 1.0f, 0.35f * Alpha));
 	};
 	const auto RenderTrackText = [&](const SHudMediaIslandTrackSnapshot &Track, const char *pMeta, bool HasMeta, float TitleLayerAlpha, float MetaLayerAlpha, float TitleLayerOffset, float MetaLayerOffset) {
 		if(!ShowCover || TitleAlpha <= 0.001f || TitleAvailableWidth <= QmHudMediaIslandScaled(2.0f))
@@ -5145,11 +5204,8 @@ void CHud::RenderMediaIsland()
 
 	if(ShowTeam)
 	{
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.82f * EntranceContentAlpha);
-		TextRender()->Text(TeamX, MetaY, MetaFontSize, FontIcons::FONT_ICON_USERS, -1.0f);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.82f * EntranceContentAlpha);
+		Ui()->DrawQmIconAt(TeamX, MetaY, MetaFontSize, EQmIcon::USERS, FontIcons::FONT_ICON_USERS, TextRender()->GetTextColor());
 		TextRender()->Text(TeamX + TeamIconWidth + SpectatorGap, MetaY, MetaFontSize, aTeamBuf, -1.0f);
 	}
 
@@ -5986,9 +6042,7 @@ void CHud::RenderSpectatorCount()
 		const float y = StartY + BoxHeight / 3.0f;
 		const float x = StartX + 2.0f;
 
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->Text(x, y, Fontsize, FontIcons::FONT_ICON_EYE, -1.0f);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		Ui()->DrawQmIconAt(x, y, Fontsize, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, TextRender()->GetTextColor());
 		TextRender()->Text(x + Fontsize + 3.0f, y, Fontsize, aBuf, -1.0f);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 		return;
@@ -5997,7 +6051,7 @@ void CHud::RenderSpectatorCount()
 	{
 		const float Fontsize = 5.0f;
 		const float BoxHeight = 12.5f;
-		const float IconWidth = TextRender()->TextWidth(Fontsize, FontIcons::FONT_ICON_EYE);
+		const float IconWidth = Fontsize;
 		const float TextWidth = TextRender()->TextWidth(Fontsize, aBuf);
 		const float BoxWidth = IconWidth + 3.0f + TextWidth + 10.0f;
 
@@ -6016,9 +6070,7 @@ void CHud::RenderSpectatorCount()
 		const float y = StartY + (BoxHeight - Fontsize) / 2.0f;
 		float x = StartX + 5.0f;
 
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->Text(x, y, Fontsize, FontIcons::FONT_ICON_EYE, -1.0f);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		Ui()->DrawQmIconAt(x, y, Fontsize, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, TextRender()->GetTextColor());
 		x += IconWidth + 3.0f;
 		TextRender()->Text(x, y, Fontsize, aBuf, -1.0f);
 		GameClient()->m_HudEditor.EndTransform(HudEditorScope);
@@ -6071,6 +6123,52 @@ void CHud::RenderDummyActions()
 
 namespace
 {
+	// 内置状态行的语义配色档位。
+	enum class EQmBindStatusTone
+	{
+		NONE = 0,
+		OK,
+		WARNING,
+		DANGER,
+	};
+
+	// 内置状态行标识。
+	enum class EQmBindStatusLine
+	{
+		KEY_STICKING = 0,
+		HAMMER,
+		DUMMY_CONTROL,
+		DUMMY_COPY,
+	};
+
+	EQmBindStatusTone ResolveBuiltinBindStatusTone(EQmBindStatusLine Line, int Value)
+	{
+		switch(Line)
+		{
+		case EQmBindStatusLine::KEY_STICKING:
+			switch(Value)
+			{
+			case 0: return EQmBindStatusTone::OK;
+			case 1: return EQmBindStatusTone::DANGER;
+			case 2: return EQmBindStatusTone::WARNING;
+			default: return EQmBindStatusTone::NONE;
+			}
+		case EQmBindStatusLine::HAMMER:
+			switch(Value)
+			{
+			case 0: return EQmBindStatusTone::OK;
+			case 1: return EQmBindStatusTone::DANGER;
+			case 2:
+			case 3: return EQmBindStatusTone::WARNING;
+			default: return EQmBindStatusTone::NONE;
+			}
+		case EQmBindStatusLine::DUMMY_CONTROL:
+		case EQmBindStatusLine::DUMMY_COPY:
+			return Value != 0 ? EQmBindStatusTone::OK : EQmBindStatusTone::DANGER;
+		}
+		return EQmBindStatusTone::NONE;
+	}
+
 	struct SKeyStatusLines
 	{
 		const char *m_pKeyStatusText;
@@ -6129,7 +6227,7 @@ namespace
 
 		if(Lines.m_ShowKey)
 		{
-			Lines.m_KeyTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::KEY_STICKING, DummyResetOnSwitch);
+			Lines.m_KeyTone = ResolveBuiltinBindStatusTone(EQmBindStatusLine::KEY_STICKING, DummyResetOnSwitch);
 			Lines.m_pKeyStatusText = Localize("Key Sticking: ?");
 			if(DummyResetOnSwitch == 0)
 				Lines.m_pKeyStatusText = Localize("Key Sticking: On");
@@ -6141,7 +6239,7 @@ namespace
 
 		if(Lines.m_ShowHammer)
 		{
-			Lines.m_HammerTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, DeepflyMode);
+			Lines.m_HammerTone = ResolveBuiltinBindStatusTone(EQmBindStatusLine::HAMMER, DeepflyMode);
 			const char *pHammerState = Localize("Normal");
 			if(DeepflyMode == 1)
 				pHammerState = Localize("DF");
@@ -6154,14 +6252,14 @@ namespace
 
 		if(Lines.m_ShowControl)
 		{
-			Lines.m_ControlTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_CONTROL, DummyControl ? 1 : 0);
+			Lines.m_ControlTone = ResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_CONTROL, DummyControl ? 1 : 0);
 			const char *pControlState = DummyControl ? Localize("On") : Localize("Off");
 			str_format(Lines.m_aControlLine, sizeof(Lines.m_aControlLine), Localize("Dummy Control: %s"), pControlState);
 		}
 
 		if(Lines.m_ShowSync)
 		{
-			Lines.m_SyncTone = QmResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_COPY, DummyCopyMoves ? 1 : 0);
+			Lines.m_SyncTone = ResolveBuiltinBindStatusTone(EQmBindStatusLine::DUMMY_COPY, DummyCopyMoves ? 1 : 0);
 			const char *pSyncState = DummyCopyMoves ? Localize("On") : Localize("Off");
 			// 对应 cl_dummy_copy_moves：英文用 Dummy copy，中文术语「分身同步」
 			str_format(Lines.m_aSyncLine, sizeof(Lines.m_aSyncLine), Localize("Dummy copy: %s"), pSyncState);
@@ -6210,7 +6308,7 @@ namespace
 		}
 
 		Layout.m_W = MaxWidth + Layout.m_PaddingX * 2.0f;
-		Layout.m_H = Layout.m_LineHeight * LineCount + Layout.m_PaddingY * 2.0f;
+		Layout.m_H = Layout.m_LineHeight * (float)LineCount + Layout.m_PaddingY * 2.0f;
 		const float MaxX = maximum(HudWidth - Layout.m_W, 0.0f);
 		Layout.m_X = std::clamp(HudWidth - Layout.m_W - KEY_STATUS_RIGHT_MARGIN, 0.0f, MaxX);
 		return Layout;
@@ -6396,7 +6494,8 @@ void CHud::RenderMovementInformation()
 	const float KeyStatusGap = 2.0f;
 
 	const SKeyStatusLines KeyStatusLines = GetKeyStatusLines(GameClient());
-	SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines, m_Width);
+
+	const SKeyStatusLayout KeyStatusLayout = GetKeyStatusLayout(TextRender(), KeyStatusLines, m_Width);
 	const bool ShowKeyStatus = KeyStatusLayout.m_H > 0.0f;
 
 	float MovementBoxHeight = ShowMovementInfo ? GetMovementInformationBoxHeight() : 0.0f;
@@ -6692,7 +6791,7 @@ void CHud::RenderMovementInformation()
 		ColorRGBA KeyRainbowColor = color_cast<ColorRGBA>(KeyRainbowHsla);
 
 		const ColorRGBA DefaultKeyStatusColor = TextRender()->DefaultTextColor();
-		// 彩虹色 HUD 开启时四项共用同一彩虹色；关闭时逐行按状态语义着色
+		// 彩虹色 HUD 开启时所有行共用同一彩虹色；关闭时内置行按状态语义着色。
 		const auto KeyStatusLineColor = [&](EQmBindStatusTone Tone) {
 			return g_Config.m_ClHudRainbowColors ? KeyRainbowColor : KeyStatusToneColor(Tone, DefaultKeyStatusColor);
 		};
@@ -6762,15 +6861,20 @@ void CHud::RenderJumpHint()
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
-void CHud::RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, bool AnimateTee)
+void CHud::RenderProgressBar(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, int Corners)
 {
 	Progress = std::clamp(Progress, 0.0f, 1.0f);
 	const float BarRadius = BarRect.h * 0.5f;
 	const ColorRGBA TrackColor = LerpColor(ColorRGBA(0.02f, 0.03f, 0.03f, 0.78f), FillColor.WithAlpha(0.26f), 0.32f);
-	DrawSmoothRoundedRect(Graphics(), BarRect.x, BarRect.y, BarRect.w, BarRect.h, BarRadius, TrackColor, IGraphics::CORNER_ALL);
+	DrawSmoothRoundedRect(Graphics(), BarRect.x, BarRect.y, BarRect.w, BarRect.h, BarRadius, TrackColor, Corners);
 	const float FillWidth = BarRect.w * Progress;
 	if(FillWidth > 0.0f)
-		DrawSmoothRoundedRect(Graphics(), BarRect.x, BarRect.y, FillWidth, BarRect.h, BarRadius, FillColor, IGraphics::CORNER_ALL);
+		DrawSmoothRoundedRect(Graphics(), BarRect.x, BarRect.y, FillWidth, BarRect.h, BarRadius, FillColor, Corners);
+}
+
+void CHud::RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, bool AnimateTee, int Corners)
+{
+	RenderProgressBar(BarRect, Progress, FillColor, Corners);
 
 	int TeeClientId = GameClient()->m_aLocalIds[g_Config.m_ClDummy ? 1 : 0];
 	if(TeeClientId < 0 || TeeClientId >= MAX_CLIENTS)
@@ -6801,8 +6905,7 @@ void CHud::RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, cons
 void CHud::RenderMapProgressBar()
 {
 	const bool Preview = GameClient()->m_HudEditor.IsActive();
-	// 禅模式：隐藏地图进度时直接跳过（预览仍显示，便于 HUD 编辑器布局）。
-	if(!Preview && ShouldHideFocusMapProgress(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideMapProgress != 0))
+	if(GetQmFocusModeDecisions().m_HideMapProgress && !Preview)
 		return;
 	if(!g_Config.m_QmPlayerStatsMapProgress && !Preview)
 		return;
@@ -6840,6 +6943,7 @@ void CHud::RenderMapProgressBar()
 	const float RawBarY = m_Height * (g_Config.m_QmPlayerStatsMapProgressPosY / 100.0f);
 	const float BarX = std::round(std::clamp(RawBarX, 6.0f, maximum(6.0f, m_Width - BarWidth - 6.0f)));
 	const float BarY = std::round(std::clamp(RawBarY, 6.0f, maximum(6.0f, m_Height - BarHeight - 6.0f)));
+
 	char aProgressText[32];
 	if(HasProgress)
 		str_format(aProgressText, sizeof(aProgressText), "%.1f%%", DisplayedProgress * 100.0f);
@@ -6853,7 +6957,7 @@ void CHud::RenderMapProgressBar()
 	const float TextY = std::round(std::clamp(BarY - TextSize - TextGap, 2.0f, maximum(2.0f, m_Height - TextSize - 2.0f)));
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MapProgressBar, {BarX, TextY, BarWidth, BarY + BarHeight - TextY});
 
-	RenderProgressBarWithTee({BarX, BarY, BarWidth, BarHeight}, DisplayedProgress, FillColor, ProgressIncreased);
+	RenderProgressBarWithTee({BarX, BarY, BarWidth, BarHeight}, DisplayedProgress, FillColor, ProgressIncreased, HudEditorScope.m_Corners);
 
 	const unsigned int PrevTextFlags = TextRender()->GetRenderFlags();
 	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
@@ -6930,9 +7034,7 @@ void CHud::RenderSpectatorHud()
 		const float TagX = m_Width - RightMargin - TagWidth;
 		Graphics()->DrawRect(TagX, m_Height - 12.0f, TagWidth, 10.0f, ColorRGBA(1.0f, 1.0f, 1.0f, AutoSpecCameraEnabled ? 0.50f : 0.10f), IGraphics::CORNER_ALL, 2.5f);
 		TextRender()->TextColor(1, 1, 1, AutoSpecCameraEnabled ? 1.0f : 0.65f);
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->Text(TagX + Padding, m_Height - 10.0f, 6.0f, FontIcons::FONT_ICON_CAMERA, -1.0f);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		Ui()->DrawQmIconAt(TagX + Padding, m_Height - 10.0f, 6.0f, EQmIcon::CAMERA, FontIcons::FONT_ICON_CAMERA, TextRender()->GetTextColor());
 		TextRender()->Text(TagX + Padding + IconWidth + Padding, m_Height - 10.0f, 6.0f, pLabelText, -1.0f);
 		TextRender()->TextColor(1, 1, 1, 1);
 	}
@@ -7285,7 +7387,13 @@ void CHud::OnRender()
 #else
 	const bool VideoRendering = false;
 #endif
+	// 回放/导出走独立显示选项；其余情况沿用 cl_showhud / cl_video_showhud。
 	const bool MainHudVisible = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK, VideoRendering).m_Hud;
+	const bool FocusSpectatorHudVisible = ShouldRenderFocusSpectatorHud(
+		GameClient()->m_Snap.m_SpecInfo.m_Active,
+		g_Config.m_ClShowhudSpectator != 0,
+		MainHudVisible,
+		GetQmFocusModeDecisions().m_HideHud);
 	const bool LocalCharacterHudVisible = GameClient()->m_Snap.m_pLocalCharacter &&
 					      !GameClient()->m_Snap.m_SpecInfo.m_Active &&
 					      !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER);
@@ -7323,9 +7431,9 @@ void CHud::OnRender()
 			}
 			RenderJumpHint();
 		}
-		else if(GameClient()->m_Snap.m_SpecInfo.m_Active)
+		else if(GameClient()->m_Snap.m_SpecInfo.m_Active || GameClient()->m_RankGhost.IsViewModeActive())
 		{
-			int SpectatorId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
+			const int SpectatorId = GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : SPEC_FREEVIEW;
 			if(SpectatorId != SPEC_FREEVIEW && g_Config.m_ClShowhudHealthAmmo)
 			{
 				float HudMainHeight = 0.0f;
@@ -7373,7 +7481,7 @@ void CHud::OnRender()
 			RenderLocalTime((m_Width / 7) * 3);
 			RenderLegacyMediaInfo();
 		}
-		if(LocalCharacterHudVisible)
+		if(LocalCharacterHudVisible || GameClient()->m_RankGhost.IsViewModeActive())
 			RenderDDRaceEffects();
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			RenderConnectionWarning();
@@ -7382,9 +7490,7 @@ void CHud::OnRender()
 		if(g_Config.m_ClShowRecord)
 			RenderRecord();
 	}
-	// 禅模式隐藏主 HUD 时，仍可在围观状态下保留围观 HUD（ShouldRenderFocusSpectatorHud）。
-	if(!MainHudVisible && GameClient()->m_Snap.m_SpecInfo.m_Active &&
-		ShouldRenderFocusSpectatorHud(true, g_Config.m_ClShowhudSpectator != 0, false, g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideHud != 0))
+	else if(FocusSpectatorHudVisible)
 	{
 		RenderSpectatorHud();
 	}
@@ -7440,6 +7546,97 @@ void CHud::OnMessage(int MsgType, void *pRawMsg)
 
 void CHud::RenderDDRaceEffects()
 {
+	// Rank 1 查看模式没有在线服务器的 SV_DDRACETIME/SV_RACEFINISH 实时消息；
+	// 用回放时间线里的成绩消息驱动同一套原生 Finish / 检查点差值表现，
+	// 停留 4 秒 + 淡出 2 秒也随独立播放头推进。
+	CRankGhost::SViewState ViewState;
+	if(GameClient()->m_RankGhost.GetViewState(ViewState))
+	{
+		const float FinishAge = maximum(0.0f, ViewState.m_CurSeconds - ViewState.m_FinishSeconds);
+		const bool FinishVisible = ViewState.m_Finished && FinishAge < 6.0f;
+		const bool CpDiffVisible = !FinishVisible && ViewState.m_HasCpDiff &&
+					   ViewState.m_CpDiffAgeSeconds < 6.0f && g_Config.m_ClShowhudTimeCpDiff != 0;
+		if(!FinishVisible && !CpDiffVisible)
+			return;
+
+		char aBuf[64];
+		char aTime[32];
+		float Alpha = 0.0f;
+		// 检查点差值是单行小字（10），终点成绩是 12，带差值时再占一行
+		float EffectHeight = 10.0f;
+		if(FinishVisible)
+		{
+			str_time((int64_t)std::llround(ViewState.m_FinishSeconds * 100.0f), TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
+			str_format(aBuf, sizeof(aBuf), "Finish time: %s", aTime);
+			// 与原生一致：差值行存在时整体高度按两行算，避开媒体岛
+			EffectHeight = ViewState.m_HasFinishDiff ? 24.0f : 12.0f;
+		}
+		else
+		{
+			// 与原生检查点差值同一格式：负值绿色、正值红色、零白色
+			if(ViewState.m_CpDiffSeconds < 0.0f)
+			{
+				str_time_float(-ViewState.m_CpDiffSeconds, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
+				str_format(aBuf, sizeof(aBuf), "-%s", aTime);
+			}
+			else
+			{
+				str_time_float(ViewState.m_CpDiffSeconds, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
+				str_format(aBuf, sizeof(aBuf), "+%s", aTime);
+			}
+		}
+		Alpha = FinishVisible ? (FinishAge <= 4.0f ? 1.0f : (6.0f - FinishAge) / 2.0f) :
+					(ViewState.m_CpDiffAgeSeconds <= 4.0f ? 1.0f : (6.0f - ViewState.m_CpDiffAgeSeconds) / 2.0f);
+
+		if(FinishVisible)
+			TextRender()->TextColor(1.0f, 1.0f, 1.0f, Alpha);
+		else if(ViewState.m_CpDiffSeconds > 0.0f)
+			TextRender()->TextColor(1.0f, 0.5f, 0.5f, Alpha); // red
+		else if(ViewState.m_CpDiffSeconds < 0.0f)
+			TextRender()->TextColor(0.5f, 1.0f, 0.5f, Alpha); // green
+		else
+			TextRender()->TextColor(1.0f, 1.0f, 1.0f, Alpha);
+
+		const float MainFontSize = FinishVisible ? 12.0f : 10.0f;
+		const float EffectWidth = TextRender()->TextWidth(MainFontSize, aBuf);
+		const float EffectX = 150 * Graphics()->ScreenAspect() - EffectWidth / 2;
+		const float EffectY = QmHudTopEffectY(20.0f, EffectHeight, EffectX, EffectX + EffectWidth, m_MediaIslandLastVisibleRect, m_MediaIslandLastVisibleRectValid);
+		CTextCursor Cursor;
+		Cursor.SetPosition(vec2(EffectX, EffectY));
+		Cursor.m_FontSize = MainFontSize;
+		TextRender()->RecreateTextContainer(m_DDRaceEffectsTextContainerIndex, &Cursor, aBuf);
+
+		if(FinishVisible && ViewState.m_HasFinishDiff && m_DDRaceEffectsTextContainerIndex.Valid())
+		{
+			const float Diff = ViewState.m_FinishDiffSeconds;
+			if(Diff < 0.0f)
+			{
+				str_time_float(-Diff, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
+				str_format(aBuf, sizeof(aBuf), "-%s", aTime);
+				TextRender()->TextColor(0.5f, 1.0f, 0.5f, Alpha); // green
+			}
+			else
+			{
+				str_time_float(Diff, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
+				str_format(aBuf, sizeof(aBuf), "+%s", aTime);
+				TextRender()->TextColor(1.0f, 0.5f, 0.5f, Alpha); // red
+			}
+			CTextCursor DiffCursor;
+			DiffCursor.SetPosition(vec2(150 * Graphics()->ScreenAspect() - TextRender()->TextWidth(10, aBuf) / 2, EffectY + 14.0f));
+			DiffCursor.m_FontSize = 10.0f;
+			TextRender()->AppendTextContainer(m_DDRaceEffectsTextContainerIndex, &DiffCursor, aBuf);
+		}
+
+		if(m_DDRaceEffectsTextContainerIndex.Valid())
+		{
+			auto OutlineColor = TextRender()->DefaultTextOutlineColor();
+			OutlineColor.a *= Alpha;
+			TextRender()->RenderTextContainer(m_DDRaceEffectsTextContainerIndex, TextRender()->DefaultTextColor(), OutlineColor);
+		}
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+		return;
+	}
+
 	if(m_DDRaceTime)
 	{
 		char aBuf[64];

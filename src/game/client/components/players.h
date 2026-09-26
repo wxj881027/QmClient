@@ -11,6 +11,7 @@
 #include <game/client/components/qmclient/weapon_animation.h>
 #include <game/client/render.h>
 
+#include <memory>
 #include <vector>
 
 // 每次钩子提示线绘制独占使用，跨玩家与小窗调用只保留容量，不保留几何。
@@ -46,6 +47,7 @@ class CPlayers : public CComponent
 
 	void RenderHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset, float Alpha);
 	void RenderPlayer(
+		const CScreenRect &ScreenRect,
 		const CNetObj_Character *pPrevChar,
 		const CNetObj_Character *pPlayerChar,
 		const CTeeRenderInfo *pRenderInfo,
@@ -59,12 +61,14 @@ class CPlayers : public CComponent
 		float Intra = 0.f);
 
 	void RenderHook(
+		const CScreenRect &ScreenRect,
 		const CNetObj_Character *pPrevChar,
 		const CNetObj_Character *pPlayerChar,
 		const CTeeRenderInfo *pRenderInfo,
 		int ClientId,
 		float Intra = 0.f);
 	void RenderHookCollLine(
+		const CScreenRect &ScreenRect,
 		const CNetObj_Character *pPrevChar,
 		const CNetObj_Character *pPlayerChar,
 		int ClientId);
@@ -84,10 +88,11 @@ class CPlayers : public CComponent
 	SQmWeaponReloadAnimationState m_aWeaponReloadAnimationStates[MAX_CLIENTS];
 
 	void CreateNinjaTeeRenderInfo();
-	void CreateSpectatorTeeRenderInfo();
 
 	std::shared_ptr<CManagedTeeRenderInfo> m_pNinjaTeeRenderInfo;
-	std::shared_ptr<CManagedTeeRenderInfo> m_pSpectatorTeeRenderInfo;
+
+	// 钩子辅助线在拥挤服务器上对每个可见玩家各绘制一次；复用暂存缓冲
+	// 避免每名玩家每帧重新分配线段与四边形。
 
 public:
 	float GetPlayerTargetAngle(
@@ -103,7 +108,6 @@ public:
 	void OnRender() override;
 
 	const std::shared_ptr<CManagedTeeRenderInfo> &NinjaTeeRenderInfo() const { return m_pNinjaTeeRenderInfo; }
-	const std::shared_ptr<CManagedTeeRenderInfo> &SpectatorTeeRenderInfo() const { return m_pSpectatorTeeRenderInfo; }
 };
 
 #endif

@@ -11,6 +11,7 @@
 	X("Unknown emote... Say /emote", UnknownEmote) \
 	X("未知表情。输入 /emote 查看帮助", UnknownEmote) \
 	X("你的超时保护码已设置。0.7 客户端在超时后无法重新认领自己的 tee；不过 0.6 客户端可以认领你的 tee ", TimeoutCodeSet) \
-	X("队伍存档已在进行中", TeamSaveInProgress)
+	X("队伍存档已在进行中", TeamSaveInProgress) \
+	X("队伍存档尚未完成", TeamSaveInProgress)
 
 #endif

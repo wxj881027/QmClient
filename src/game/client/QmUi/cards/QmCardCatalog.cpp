@@ -6,10 +6,23 @@
 
 #include <algorithm>
 
-// stableId 清单 / HasCardModule / MeasureContentRevision 见 QmCardCatalogIds.cpp
-// （纯数据模块，testrunner 可单独链接，不必拉入 UI 与菜单）。
 namespace qm_card_catalog
 {
+	namespace
+	{
+		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
+		{
+			if(pStableId == nullptr)
+				return false;
+			return std::any_of(vStableIds.begin(), vStableIds.end(), [pStableId](const char *pCandidate) { return str_comp(pCandidate, pStableId) == 0; });
+		}
+
+		uint64_t FoldRevision(uint64_t Hash, const uint64_t Revision)
+		{
+			return Hash * 1099511628211ULL ^ Revision;
+		}
+	} // namespace
+
 	void MakeModuleCard(
 		const SQmCardBuildContext &Ctx,
 		const qm_module::EQmModuleId Id,
@@ -46,8 +59,8 @@ namespace qm_card_catalog
 			void *pExpandedUser = Ctx.m_pOnCardExpandedUser;
 			const bool ReadOnly = Ctx.m_ReadOnly;
 			CMenus *pMenus = Ctx.m_pMenus;
-			Out.m_PreLayoutHeaderInput = [Ctx, pMenus, pCollapseButtons, Index, pToggleCollapsed, pToggleUser, pOnCardExpanded, pExpandedUser, ReadOnly, Id](const SSettingsCardFrame &Frame, const bool IsCollapsed) {
-				if(ReadOnly || !QmCardRenderHook::DoButtonLogic(Ctx.m_pMenus, &pCollapseButtons[Index], IsCollapsed, &Frame.m_HandleRect, BUTTONFLAG_LEFT))
+			Out.m_PreLayoutHeaderInput = [pMenus, pCollapseButtons, Index, pToggleCollapsed, pToggleUser, pOnCardExpanded, pExpandedUser, ReadOnly, Id](const SSettingsCardFrame &Frame, const bool IsCollapsed) {
+				if(ReadOnly || !QmCardRenderHook::DoButtonLogic(pMenus, &pCollapseButtons[Index], IsCollapsed, &Frame.m_HandleRect, BUTTONFLAG_LEFT))
 					return false;
 				pToggleCollapsed(pToggleUser, Id);
 				// 展开时让页面按需让测量缓存失效（折叠态与展开态的行数口径不同）。
@@ -55,9 +68,10 @@ namespace qm_card_catalog
 					pOnCardExpanded(pExpandedUser, Id);
 				return true;
 			};
+			// 自定义折叠状态由此处的回调切换，卡头只绘制与该输入处理对应的按钮。
+			const IUiContext CardCtx = Ctx.m_UiContext;
+			Out.m_HeaderAction = [CardCtx](const SSettingsCardFrame &Frame, const bool Collapsed) { RenderSettingsCardCollapseButton(CardCtx, Frame.m_HandleRect, Collapsed); };
 		}
-		const IUiContext CardCtx = Ctx.m_UiContext;
-		Out.m_HeaderAction = [CardCtx](const SSettingsCardFrame &Frame, const bool Collapsed) { RenderSettingsCardCollapseButton(CardCtx, Frame.m_HandleRect, Collapsed); };
 		Out.m_MeasureRevision = MeasureRevision;
 		Out.m_PreLayoutInput = std::move(PreLayoutInput);
 	}
@@ -67,14 +81,13 @@ namespace qm_card_catalog
 		qm_module::EQmModuleId Id = qm_module::EQmModuleId::Info;
 		if(!qm_module::QmModuleIdFromStableId(pStableId, &Id))
 			return false;
-		const auto Contains = [pStableId](const std::vector<const char *> &vIds) {
-			return std::any_of(vIds.begin(), vIds.end(), [pStableId](const char *pCandidate) { return str_comp(pCandidate, pStableId) == 0; });
-		};
-		if(Contains(VisualCardStableIds()))
+		if(str_comp(pStableId, "qm:steam") == 0)
+			return BuildSteamCard(Ctx, Id, Out);
+		if(ContainsStableId(VisualCardStableIds(), pStableId))
 			return BuildVisualCard(Ctx, Id, Out);
-		if(Contains(FunctionCardStableIds()))
+		if(ContainsStableId(FunctionCardStableIds(), pStableId))
 			return BuildFunctionCard(Ctx, Id, Out);
-		if(Contains(HudCardStableIds()))
+		if(ContainsStableId(HudCardStableIds(), pStableId))
 			return BuildHudCard(Ctx, Id, Out);
 		return false;
 	}

@@ -30,6 +30,8 @@ from checks import (  # noqa: E402
 	headers,
 	identifiers,
 	python,
+	python_tests,
+	qm_smoke,
 	shell,
 	settings_ui,
 	strict_build,
@@ -107,6 +109,8 @@ _CHECK_SPECS = (
 	CheckSpec("headers", headers, _ALL_MODES, skip_attr="skip_header_checks"),
 	CheckSpec("style", style, _ALL_MODES, skip_attr="skip_style_check"),
 	CheckSpec("python", python, _ALL_MODES, skip_attr="skip_ruff_check"),
+	CheckSpec("python_tests", python_tests, frozenset({"default", "full"}), skip_attr="skip_python_tests"),
+	CheckSpec("qm_smoke", qm_smoke, frozenset(), enable_attr="run_qm_smoke", enable_modes=frozenset({"default", "full"}), scope_kind="changed"),
 	CheckSpec("shell", shell, _ALL_MODES, skip_attr="skip_shell_check"),
 	CheckSpec("settings_ui", settings_ui, _SOURCE_MODES, scope_kind="changed"),
 	CheckSpec("strict_build", strict_build, frozenset({"full"}), skip_attr="skip_strict_debug", needs_base_ref=True),
@@ -163,6 +167,8 @@ def _parse_args() -> argparse.Namespace:
 	parser.add_argument("--enable-clang-format-check", action="store_true")
 	parser.add_argument("--enable-full-clang-tidy-warn", action="store_true")
 	parser.add_argument("--skip-ruff-check", action="store_true")
+	parser.add_argument("--skip-python-tests", action="store_true")
+	parser.add_argument("--run-qm-smoke", action="store_true")
 	parser.add_argument("--skip-shell-check", action="store_true")
 	parser.add_argument("--skip-dilate-check", action="store_true")
 	parser.add_argument(
@@ -197,7 +203,10 @@ def _run_checks(context: GateContext, results: ResultCollector) -> None:
 		if spec.needs_base_ref:
 			spec.module.run(results, files, args.dry_run, base_ref=args.base_ref)
 		else:
-			spec.module.run(results, files, args.dry_run)
+			if spec.name == "qm_smoke":
+				spec.module.run(results, files, args.dry_run, build_dir=args.build_dir)
+			else:
+				spec.module.run(results, files, args.dry_run)
 
 
 def _run_tests(context: GateContext, results: ResultCollector) -> None:

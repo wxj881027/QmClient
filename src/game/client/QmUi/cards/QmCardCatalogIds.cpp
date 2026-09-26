@@ -23,6 +23,7 @@ namespace qm_card_catalog
 			"qm:streamer",
 			"qm:entity_overlay",
 			"qm:collision_hitbox",
+			"qm:water_hammer",
 		};
 
 		const std::vector<const char *> s_vFunctionCards = {
@@ -42,6 +43,8 @@ namespace qm_card_catalog
 			"qm:map_upload",
 			"qm:favorite_maps",
 			"qm:hj_assist",
+			"qm:solo_split",
+			"qm:steam",
 		};
 
 		const std::vector<const char *> s_vHudCards = {

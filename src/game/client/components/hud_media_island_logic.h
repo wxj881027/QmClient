@@ -60,28 +60,11 @@ struct SHudSwitchCountdownTracker
 		}
 	}
 };
-
 constexpr float QmHudMediaIslandDesignScale = 0.7f;
 
 constexpr float QmHudMediaIslandScaled(float Value)
 {
 	return Value * QmHudMediaIslandDesignScale;
-}
-
-// SDF 抗锯齿羽化宽度用的「屏幕映射单位 → 物理像素」比例：取 x/y 两个方向里较大的那个，
-// 保证非等比拉伸时羽化在较细的方向上也够宽。灵动岛与录制红点共用同一口径。
-inline float QmHudMediaIslandScreenPixelSize(float ScreenX0, float ScreenY0, float ScreenX1, float ScreenY1, int ScreenWidth, int ScreenHeight)
-{
-	return std::max(
-		(ScreenX1 - ScreenX0) / (float)std::max(1, ScreenWidth),
-		(ScreenY1 - ScreenY0) / (float)std::max(1, ScreenHeight));
-}
-
-// 两处录制红点共用 2.4 秒呼吸周期，透明度保持在 65%～95%，不影响布局和显隐条件。
-inline float QmHudRecordingDotAlpha(double Seconds)
-{
-	const double Phase = std::fmod(Seconds, 2.4) / 2.4;
-	return static_cast<float>(0.80 + 0.15 * std::cos(Phase * 2.0 * pi));
 }
 
 struct SHudMediaIslandExpansionState
@@ -146,6 +129,27 @@ inline bool QmHudMediaIslandShouldShowTrackDetails(int64_t Now, int64_t DetailsU
 inline bool QmHudMediaIslandShouldResetMarquee(const char *pPrevious, const char *pCurrent)
 {
 	return str_comp(pPrevious != nullptr ? pPrevious : "", pCurrent != nullptr ? pCurrent : "") != 0;
+}
+
+// SDF 抗锯齿羽化宽度用的「屏幕映射单位 → 物理像素」比例：取 x/y 两个方向里较大的那个，
+// 保证非等比拉伸时羽化在较细的方向上也够宽。灵动岛与录制红点共用同一口径。
+inline float QmHudMediaIslandScreenPixelSize(float ScreenX0, float ScreenY0, float ScreenX1, float ScreenY1, int ScreenWidth, int ScreenHeight)
+{
+	return std::max(
+		(ScreenX1 - ScreenX0) / (float)std::max(1, ScreenWidth),
+		(ScreenY1 - ScreenY0) / (float)std::max(1, ScreenHeight));
+}
+
+// 两处录制红点共用 2.4 秒呼吸周期，透明度保持在 65%～95%，不影响布局和显隐条件。
+inline float QmHudRecordingDotAlpha(double Seconds)
+{
+	const double Phase = std::fmod(Seconds, 2.4) / 2.4;
+	return static_cast<float>(0.80 + 0.15 * std::cos(Phase * 2.0 * pi));
+}
+
+inline bool QmHudMusicLyricsSourceEnabled(bool Soda, bool Kugou, bool QQMusic)
+{
+	return Soda || Kugou || QQMusic;
 }
 
 inline float QmHudMediaIslandMarqueeOffset(float TextWidth, float ViewportWidth, float ElapsedSeconds, float Speed = 32.0f)
@@ -794,6 +798,9 @@ inline void QmHudMediaIslandBlobSpringAdvance(SHudMediaIslandBlobSpring &Spring,
 	if(DeltaSeconds > 0.0f)
 	{
 		const float Period = std::max(0.0f, PeriodSeconds);
+		// 把"已消耗的子步时间"累加后再取整，未满一个子步的余量留在累加器里。
+		// 关键是累加器只保存余量（< 一个子步），所以同一总时长无论被切成多少帧，
+		// 走过的子步序列都一样 —— 帧率不影响结果。
 		// 静止状态无需重复求解；长帧也只求解一次，不截断时间或积压追帧。
 		if(Spring.m_Value != Target || Spring.m_Velocity != 0.0f)
 			QmHudMediaIslandBlobSpringIntegrate(Spring, Target, DeltaSeconds);
@@ -919,6 +926,11 @@ struct SHudMediaIslandSpectatorIconPose
 	float m_CountAlpha = 0.0f;
 	float m_CountOffsetX = -QmHudMediaIslandScaled(3.0f);
 };
+
+// 观战眼睛的睁眼动画**刻意**使用各向异性缩放（纵向压扁 0.44 → 1.0 展开），
+// 因此显式豁免「图标等比绘制」契约：这是全工程唯一一处允许非等比缩放的图标动画。
+// 静止态 X/Y 缩放均为 1.0，所以静止时仍按 1:1 绘制。
+inline constexpr bool QM_HUD_SPECTATOR_EYE_PRESERVE_ASPECT = false;
 
 inline float QmHudAdvanceMediaIslandSpectatorIconProgress(float Current, float DeltaSeconds, int MotionLevel)
 {
@@ -1098,6 +1110,19 @@ inline vec4 QmHudMediaIslandSdfRectVec4(const CUIRect &Rect)
 	return vec4(Rect.x, Rect.y, Rect.w, Rect.h);
 }
 
+inline SHudMediaIslandSdfRenderState QmHudRecordingDotSdfState(vec2 Center, float DotSize, float Alpha, float ScreenPixelSize)
+{
+	const float Radius = DotSize * 0.5f;
+	SHudMediaIslandSdfRenderState State;
+	State.m_MainRect = {Center.x - Radius, Center.y - Radius, DotSize, DotSize};
+	State.m_MainRadius = Radius;
+	State.m_MainCorners = IGraphics::CORNER_ALL;
+	State.m_BackgroundColor = ColorRGBA(1.0f, 0.15f, 0.15f, Alpha);
+	State.m_ScreenPixelSize = std::max(ScreenPixelSize, 0.0001f);
+	State.m_Rect = QmHudMediaIslandSdfOuterRect(State);
+	return State;
+}
+
 inline bool QmHudMediaIslandBuildGpuSdfParams(const SHudMediaIslandSdfRenderState &State, IGraphics::SMediaIslandSdfParams &Params)
 {
 	if(State.m_Rect.w <= 0.0f || State.m_Rect.h <= 0.0f || State.m_MainRect.w <= 0.0f || State.m_MainRect.h <= 0.0f || State.m_ItemCount < 0 || State.m_ItemCount > QmHudMediaIslandSdfMaxItems)
@@ -1256,10 +1281,23 @@ namespace HudMediaIslandDetail
 		if(str_length(pText) <= NameLength + 1 || str_comp_num(pText + 1, pExpected, NameLength) != 0 || pText[NameLength + 1] != '\'')
 			return false;
 
+		// 服务端文案已中文化（'%s' 已被禁言 %d 秒（Spam protection）），两种语言都要认；
+		// 禁言原因本身仍是英文常量 "Spam protection"，所以只有前后缀需要分语言。
 		constexpr const char *pMutedPrefix = " has been muted for ";
-		const char *pSeconds = str_startswith(pText + NameLength + 2, pMutedPrefix);
+		constexpr const char *pMutedPrefixZh = " 已被禁言 ";
+		constexpr const char *pMutedSuffix = " seconds (Spam protection)";
+		constexpr const char *pMutedSuffixZh = " 秒（Spam protection）";
+
+		const char *pRest = pText + NameLength + 2;
+		const char *pSeconds = str_startswith(pRest, pMutedPrefix);
+		const char *pSuffix = pMutedSuffix;
+		if(pSeconds == nullptr)
+		{
+			pSeconds = str_startswith(pRest, pMutedPrefixZh);
+			pSuffix = pMutedSuffixZh;
+		}
 		const char *pEnd = nullptr;
-		return pSeconds != nullptr && ParsePositiveSeconds(pSeconds, Seconds, &pEnd) && str_comp(pEnd, " seconds (Spam protection)") == 0;
+		return pSeconds != nullptr && ParsePositiveSeconds(pSeconds, Seconds, &pEnd) && str_comp(pEnd, pSuffix) == 0;
 	}
 }
 
@@ -1269,11 +1307,24 @@ inline EHudMediaIslandMuteMessage QmHudParseSpamProtectionMute(const char *pText
 	if(pText == nullptr)
 		return EHudMediaIslandMuteMessage::NONE;
 
+	// 服务端禁言提示已中文化（你在接下来的 %d 秒内不能发言。），中英并列匹配；
+	// 初始聊天延迟提示（本服务器有初始聊天延迟…）在两种语言下都不算禁言，与英文侧行为一致。
 	constexpr const char *pRemainingPrefix = "You are not permitted to talk for the next ";
-	if(const char *pSeconds = str_startswith(pText, pRemainingPrefix))
+	constexpr const char *pRemainingPrefixZh = "你在接下来的 ";
+	constexpr const char *pRemainingSuffix = " seconds.";
+	constexpr const char *pRemainingSuffixZh = " 秒内不能发言。";
+
+	const char *pSeconds = str_startswith(pText, pRemainingPrefix);
+	const char *pRemainingSuffixUsed = pRemainingSuffix;
+	if(pSeconds == nullptr)
+	{
+		pSeconds = str_startswith(pText, pRemainingPrefixZh);
+		pRemainingSuffixUsed = pRemainingSuffixZh;
+	}
+	if(pSeconds != nullptr)
 	{
 		const char *pEnd = nullptr;
-		if(HudMediaIslandDetail::ParsePositiveSeconds(pSeconds, Seconds, &pEnd) && str_comp(pEnd, " seconds.") == 0)
+		if(HudMediaIslandDetail::ParsePositiveSeconds(pSeconds, Seconds, &pEnd) && str_comp(pEnd, pRemainingSuffixUsed) == 0)
 			return EHudMediaIslandMuteMessage::REMAINING;
 		Seconds = 0;
 		return EHudMediaIslandMuteMessage::NONE;

@@ -33,6 +33,7 @@
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/update_manifest.h>
 #include <game/client/components/qmclient/update_version.h>
+#include <game/client/components/qmclient/weapon_animation.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/render.h>
@@ -636,7 +637,8 @@ void CTClient::OnInit()
 
 void CTClient::OnShutdown()
 {
-	auto AbortTask = [](std::shared_ptr<CHttpRequest> &pTask) {
+	ResetGoresConfigOverrides();
+	auto AbortTask = [](std::shared_ptr<IHttpRequest> &pTask) {
 		if(pTask)
 		{
 			pTask->Abort();
@@ -1575,6 +1577,69 @@ void CTClient::SpecId(int ClientId)
 	GameClient()->m_Chat.SendChat(0, aBuf);
 }
 
+void CTClient::ConSoloSplit(IConsole::IResult *pResult, void *pUserData)
+{
+	((CTClient *)pUserData)->SoloSplitToggle();
+}
+
+void CTClient::SoloSplitToggle()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return;
+	if(!Client()->DummyConnected())
+		return;
+
+	const int MainId = GameClient()->m_aLocalIds[0];
+	const int DummyId = GameClient()->m_aLocalIds[1];
+	if(MainId < 0 || DummyId < 0)
+		return;
+
+	const int MainTeam = GameClient()->m_Teams.Team(MainId);
+	const int DummyTeam = GameClient()->m_Teams.Team(DummyId);
+
+	// 已分队（各自在非 0 的不同 team）→ 恢复：两者都回 team 0
+	if(MainTeam > 0 && DummyTeam > 0 && MainTeam != DummyTeam)
+	{
+		GameClient()->m_Chat.SendChatOnConn(IClient::CONN_MAIN, 0, "/team 0");
+		GameClient()->m_Chat.SendChatOnConn(IClient::CONN_DUMMY, 0, "/team 0");
+		return;
+	}
+
+	// 未分队 → 找两个未被占用的合法 team（DDRace team 从 1 开始；0 是公共队，TEAM_SUPER 保留）
+	const int TeamSuper = GameClient()->m_Teams.TeamSuper();
+	bool aTeamUsed[NUM_DDRACE_TEAMS] = {};
+	for(int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		if(!GameClient()->m_aClients[i].m_Active)
+			continue;
+		const int Team = GameClient()->m_Teams.Team(i);
+		if(Team > 0 && Team < TeamSuper && Team < NUM_DDRACE_TEAMS)
+			aTeamUsed[Team] = true;
+	}
+
+	int First = -1, Second = -1;
+	for(int Team = 1; Team < TeamSuper && Team < NUM_DDRACE_TEAMS; ++Team)
+	{
+		if(aTeamUsed[Team])
+			continue;
+		if(First < 0)
+			First = Team;
+		else if(Second < 0)
+		{
+			Second = Team;
+			break;
+		}
+	}
+	if(First < 0 || Second < 0)
+		return; // 无两个空闲 team 可用
+
+	char aCmd[32];
+	str_format(aCmd, sizeof(aCmd), "/team %d", First);
+	GameClient()->m_Chat.SendChatOnConn(IClient::CONN_MAIN, 0, aCmd);
+	str_format(aCmd, sizeof(aCmd), "/team %d", Second);
+	GameClient()->m_Chat.SendChatOnConn(IClient::CONN_DUMMY, 0, aCmd);
+}
+
 void CTClient::ConEmoteCycle(IConsole::IResult *pResult, void *pUserData)
 {
 	CTClient &This = *(CTClient *)pUserData;
@@ -1657,6 +1722,9 @@ void CTClient::OnConsoleInit()
 
 	Console()->Register("spec_id", "v[id]", CFGFLAG_CLIENT, ConSpecId, this, "Spectate a player by Id");
 
+	// 单刷模式：一键分队（本体/分身各进一个空闲 team），再按恢复 team 0
+	Console()->Register("qm_solo_split", "", CFGFLAG_CLIENT, ConSoloSplit, this, "Split main/dummy into two free teams; press again to return to team 0");
+
 	Console()->Register("emote_cycle", "", CFGFLAG_CLIENT, ConEmoteCycle, this, "Cycle through emotes");
 
 	// 复读功能命令
@@ -1674,7 +1742,7 @@ void CTClient::OnConsoleInit()
 	ConfigManager()->RegisterCallback(ConfigSaveFavoriteMaps, this);
 
 	Console()->Chain(
-		"tc_allow_any_resolution", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
+		"tc_allow_any_res", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
 			pfnCallback(pResult, pCallbackUserData);
 			((CTClient *)pUserData)->QueueAspectApply();
 		},
@@ -1690,7 +1758,7 @@ void CTClient::OnConsoleInit()
 	Console()->Chain(
 		"qm_gores", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
 			pfnCallback(pResult, pCallbackUserData);
-			((CTClient *)pUserData)->ApplyGoresFastInputLink(false);
+			((CTClient *)pUserData)->ApplyGoresFastInputLink();
 		},
 		this);
 
@@ -2023,8 +2091,8 @@ void CTClient::OnUpdate()
 	UpdateMapHistorySession();
 	MaybeSaveMapCategoryCache();
 	MaybeSaveMapNotes();
-	ApplyGoresFastInputLink();
 	ApplyFocusModeEffects();
+	ApplyGoresFastInputLink();
 }
 
 void CTClient::OnRender()
@@ -2575,12 +2643,18 @@ void CTClient::CheckFriendOnline()
 		m_FriendNotifyPrevEnabled = Enabled;
 		m_FriendNotifyPrevIgnoreClan = IgnoreClanSetting;
 		m_FriendNotifyPrevRevision = FriendRevision;
+		m_FriendNotifyNextCheck = 0.0f;
+		m_FriendOnline.clear();
 		m_FriendOnlineTracker.Reset();
-		m_FriendOnlineRefreshPending = false;
+		m_vFriendOnlineScan.clear();
+		m_FriendOnlineAvailableServers.clear();
+		m_FriendOnlineNames.clear();
+		m_FriendNotifyScanRunning = false;
+		m_FriendNotifyScanIndex = 0;
 		m_FriendAutoRefreshNext = 0.0f;
 	}
 
-	if(!Enabled || GameClient()->Friends()->NumFriends() <= 0)
+	if(!Enabled)
 		return;
 
 	IServerBrowser *pServerBrowser = ServerBrowser();
@@ -2596,67 +2670,133 @@ void CTClient::CheckFriendOnline()
 		m_FriendAutoRefreshNext = 0.0f;
 	}
 
-	if(m_FriendOnlineRefreshPending && !pServerBrowser->IsGettingServerlist())
+	const float RefreshInterval = maximum(5.0f, (float)g_Config.m_QmFriendOnlineRefreshSeconds);
+	if(Now >= m_FriendAutoRefreshNext && !pServerBrowser->IsGettingServerlist())
 	{
-		m_FriendOnlineRefreshPending = false;
-		if(!pServerBrowser->IsServerlistError())
+		const int CurrentType = pServerBrowser->GetCurrentType();
+		// LAN 标签不消费主服务器列表；自动刷新关闭时跳过后台 HTTP 刷新，避免好友扫描在局域网页面触发主服务器请求
+		const bool AutoRefresh = g_Config.m_QmFriendOnlineAutoRefresh != 0;
+		if(!(CurrentType == IServerBrowser::TYPE_LAN && !AutoRefresh))
 		{
-			// 一次刷新只提交一次观测；同帧收集，避免分帧索引混入下一代名单。
-			const bool IgnoreClan = IgnoreClanSetting != 0;
-			std::unordered_set<std::string> FriendKeys;
-			std::unordered_set<std::string> FriendNames;
-			std::string Key;
-			for(int Index = 0; Index < GameClient()->Friends()->NumFriends(); ++Index)
-			{
-				const CFriendInfo *pFriend = GameClient()->Friends()->GetFriend(Index);
-				if(pFriend->m_aName[0] == '\0')
-					continue;
-				BuildFriendNotifyKey(pFriend->m_aName, pFriend->m_aClan, IgnoreClan, Key);
-				FriendKeys.insert(Key);
-				FriendNames.insert(pFriend->m_aName);
-			}
+			if(AutoRefresh && CurrentType != IServerBrowser::TYPE_LAN)
+				pServerBrowser->Refresh(CurrentType, false);
+			else
+				pServerBrowser->RefreshHttpServerList();
+		}
+		m_FriendAutoRefreshNext = Now + RefreshInterval;
+	}
 
-			std::vector<qm_friend_notify::CFriend> vCurrentFriends;
-			std::unordered_set<std::string> AvailableServers;
-			for(int Index = 0; Index < pServerBrowser->NumHttpServers(); ++Index)
-			{
-				const CServerInfo *pEntry = pServerBrowser->HttpGet(Index);
-				if(!pEntry || pEntry->m_NumAddresses <= 0)
-					continue;
-				char aAddress[NETADDR_MAXSTRSIZE];
-				net_addr_str(&pEntry->m_aAddresses[0], aAddress, sizeof(aAddress), true);
-				if(pEntry->m_NumReceivedClients == pEntry->m_NumClients)
-					AvailableServers.insert(aAddress);
-				for(int ClientIndex = 0; ClientIndex < pEntry->m_NumReceivedClients; ++ClientIndex)
-				{
-					const auto &Client = pEntry->m_aClients[ClientIndex];
-					if(Client.m_aName[0] == '\0' || FriendNames.find(Client.m_aName) == FriendNames.end())
-						continue;
-					BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
-					// 同名玩家改战队时继续跟踪在服状态，避免改回后被误判为上线。
-					vCurrentFriends.push_back({Key, Client.m_aName, pEntry->m_aMap, aAddress, FriendKeys.find(Key) != FriendKeys.end()});
-				}
-			}
+	if(GameClient()->Friends()->NumFriends() <= 0)
+	{
+		m_FriendOnline.clear();
+		m_FriendOnlineTracker.Reset();
+		m_vFriendOnlineScan.clear();
+		m_FriendOnlineAvailableServers.clear();
+		m_FriendOnlineNames.clear();
+		m_FriendNotifyScanRunning = false;
+		m_FriendNotifyScanIndex = 0;
+		return;
+	}
 
-			for(const auto &Friend : m_FriendOnlineTracker.Update(vCurrentFriends, AvailableServers))
+	constexpr float FriendOfflineTimeout = 10.0f;
+	auto PruneFriendOffline = [&]() {
+		for(auto It = m_FriendOnline.begin(); It != m_FriendOnline.end();)
+		{
+			if(Now - It->second.m_LastSeen > FriendOfflineTimeout)
+				It = m_FriendOnline.erase(It);
+			else
+				++It;
+		}
+	};
+	PruneFriendOffline();
+
+	const bool IgnoreClan = IgnoreClanSetting != 0;
+	if(pServerBrowser->IsGettingServerlist() || pServerBrowser->IsServerlistError())
+	{
+		m_FriendNotifyScanRunning = false;
+		m_FriendNotifyScanIndex = 0;
+		m_vFriendOnlineScan.clear();
+		m_FriendOnlineAvailableServers.clear();
+		return;
+	}
+	if(!m_FriendNotifyScanRunning)
+	{
+		if(Now < m_FriendNotifyNextCheck)
+			return;
+
+		m_FriendNotifyScanRunning = true;
+		m_FriendNotifyScanIndex = 0;
+		m_vFriendOnlineScan.clear();
+		m_FriendOnlineAvailableServers.clear();
+		m_FriendOnlineNames.clear();
+		for(int Index = 0; Index < GameClient()->Friends()->NumFriends(); ++Index)
+		{
+			const CFriendInfo *pFriend = GameClient()->Friends()->GetFriend(Index);
+			if(pFriend->m_aName[0] != '\0')
+				m_FriendOnlineNames.insert(pFriend->m_aName);
+		}
+	}
+
+	const int NumServers = pServerBrowser->NumHttpServers();
+	if(NumServers <= 0)
+	{
+		m_FriendNotifyScanRunning = false;
+		m_FriendNotifyScanIndex = 0;
+		m_vFriendOnlineScan.clear();
+		m_FriendOnlineAvailableServers.clear();
+		m_FriendNotifyNextCheck = Now + 1.0f;
+	}
+	else
+	{
+		constexpr int ServersPerFrame = 32;
+		int ProcessedServers = 0;
+		std::string Key;
+		Key.reserve(MAX_NAME_LENGTH + MAX_CLAN_LENGTH + 1);
+		while(m_FriendNotifyScanIndex < NumServers && ProcessedServers < ServersPerFrame)
+		{
+			const CServerInfo *pEntry = pServerBrowser->HttpGet(m_FriendNotifyScanIndex);
+			++m_FriendNotifyScanIndex;
+			++ProcessedServers;
+			if(!pEntry || pEntry->m_NumAddresses <= 0)
+				continue;
+			char aAddress[NETADDR_MAXSTRSIZE];
+			net_addr_str(&pEntry->m_aAddresses[0], aAddress, sizeof(aAddress), true);
+			if(pEntry->m_NumClients >= 0 && pEntry->m_vClients.size() >= (size_t)pEntry->m_NumClients)
+				m_FriendOnlineAvailableServers.insert(aAddress);
+
+			for(const CServerInfo::CClient &Client : pEntry->m_vClients)
 			{
+				if(Client.m_aName[0] == '\0' || m_FriendOnlineNames.find(Client.m_aName) == m_FriendOnlineNames.end())
+					continue;
+
+				BuildFriendNotifyKey(Client.m_aName, Client.m_aClan, IgnoreClan, Key);
+				m_vFriendOnlineScan.push_back({Key, Client.m_aName, pEntry->m_aMap, aAddress,
+					GameClient()->Friends()->IsFriend(Client.m_aName, Client.m_aClan, true)});
+			}
+		}
+
+		if(m_FriendNotifyScanIndex >= NumServers)
+		{
+			// 仅在整轮扫描后提交快照，首次看到某服务器时只建立静默基线。
+			const auto vNotifications = m_FriendOnlineTracker.Update(m_vFriendOnlineScan, m_FriendOnlineAvailableServers);
+			for(const auto &Friend : vNotifications)
+			{
+				if(m_FriendOnline.find(Friend.m_Key) != m_FriendOnline.end())
+					continue;
 				char aBuf[256];
 				const char *pMap = Friend.m_Map.empty() ? Localize("Unknown") : Friend.m_Map.c_str();
 				str_format(aBuf, sizeof(aBuf), Localize("Your friend %s is online and currently on map %s!"), Friend.m_Name.c_str(), pMap);
 				GameClient()->m_Chat.Echo(aBuf);
 			}
+			for(const auto &Friend : m_vFriendOnlineScan)
+				if(Friend.m_IsFriend)
+					m_FriendOnline[Friend.m_Key].m_LastSeen = Now;
+			m_vFriendOnlineScan.clear();
+			m_FriendOnlineAvailableServers.clear();
+			m_FriendNotifyScanRunning = false;
+			m_FriendNotifyScanIndex = 0;
+			m_FriendNotifyNextCheck = Now + 1.0f;
 		}
-	}
-
-	if(Now >= m_FriendAutoRefreshNext && !pServerBrowser->IsGettingServerlist())
-	{
-		const int CurrentType = pServerBrowser->GetCurrentType();
-		if(g_Config.m_QmFriendOnlineAutoRefresh && CurrentType != IServerBrowser::TYPE_LAN)
-			pServerBrowser->Refresh(CurrentType, false);
-		else
-			pServerBrowser->RefreshHttpServerList();
-		m_FriendOnlineRefreshPending = true;
-		m_FriendAutoRefreshNext = Now + maximum(5.0f, (float)g_Config.m_QmFriendOnlineRefreshSeconds);
 	}
 }
 
@@ -2732,6 +2872,7 @@ void CTClient::CheckFriendEnterGreet()
 	const int LocalMain = GameClient()->m_aLocalIds[0];
 	const int LocalDummy = GameClient()->m_aLocalIds[1];
 	const bool HasDummy = Client()->DummyConnected();
+
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
 		const auto &Client = GameClient()->m_aClients[ClientId];
@@ -2813,7 +2954,7 @@ void CTClient::StartUpdateDownload()
 	IStorage::FormatTmpPath(m_aUpdateManifestTmp, sizeof(m_aUpdateManifestTmp), QMCLIENT_UPDATE_MANIFEST_NAME);
 	IStorage::FormatTmpPath(m_aUpdateManifestSignatureTmp, sizeof(m_aUpdateManifestSignatureTmp), QMCLIENT_UPDATE_MANIFEST_SIGNATURE_NAME);
 
-	const auto StartDownload = [&](std::shared_ptr<CHttpRequest> &pTask, const char *pUrl, const char *pDestination, int64_t MaxResponseSize) {
+	const auto StartDownload = [&](std::shared_ptr<IHttpRequest> &pTask, const char *pUrl, const char *pDestination, int64_t MaxResponseSize) {
 		pTask = HttpGet(pUrl);
 		pTask->Timeout(CTimeout{10000, 0, 8192, 20});
 		pTask->MaxResponseSize(MaxResponseSize);
@@ -2831,7 +2972,7 @@ void CTClient::StartUpdateDownload()
 
 void CTClient::ResetUpdateDownloadTasks()
 {
-	const auto ResetTask = [](std::shared_ptr<CHttpRequest> &pTask) {
+	const auto ResetTask = [](std::shared_ptr<IHttpRequest> &pTask) {
 		if(pTask)
 			pTask->Abort();
 		pTask = nullptr;
@@ -2907,7 +3048,7 @@ void CTClient::FinishQmClientUpdateInfo()
 	m_pQmClientUpdateInfoTask->Result(&pResult, &ResultSize);
 	char aError[256];
 	SQmClientUpdateRelease Release;
-	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_VERSION, Release, aError, sizeof(aError)))
+	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_STABLE_VERSION, Release, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD))
 	{
 		m_FetchedQmClientUpdateInfo = true;
 		m_aQmClientLatestVersionStr[0] = '0';
@@ -2960,7 +3101,7 @@ void CTClient::FinishUpdateDownloads()
 		}
 	};
 
-	const auto IsSuccessful = [](const std::shared_ptr<CHttpRequest> &pTask) {
+	const auto IsSuccessful = [](const std::shared_ptr<IHttpRequest> &pTask) {
 		return pTask && pTask->State() == EHttpState::DONE;
 	};
 	if(!IsSuccessful(m_pUpdatePackageTask) || !IsSuccessful(m_pUpdatePackageSignatureTask) ||
@@ -3010,7 +3151,7 @@ void CTClient::FinishUpdateDownloads()
 	}
 
 	SQmClientUpdateManifest Manifest;
-	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_VERSION, Manifest, aError, sizeof(aError)) ||
+	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_STABLE_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD) ||
 		str_comp(Manifest.m_aVersion, m_UpdateRelease.m_aVersion) != 0 ||
 		Manifest.m_PackageSize != SignedPackageSize || mem_comp(Manifest.m_PackageSha256.data, aSignedPackageDigest, sizeof(aSignedPackageDigest)) != 0)
 	{
@@ -3041,7 +3182,7 @@ void CTClient::FinishUpdateDownloads()
 	char aPackagePath[IO_MAX_PATH_LENGTH] = "";
 	char aInstallerPath[IO_MAX_PATH_LENGTH] = "";
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aPackagePath, sizeof(aPackagePath));
-	str_format(m_aUpdateInstallerTmp, sizeof(m_aUpdateInstallerTmp), "qmclient/QmClient-Updater-%d.exe", process_id());
+	str_format(m_aUpdateInstallerTmp, sizeof(m_aUpdateInstallerTmp), "qmclient/QmClient-Updater-%d.exe", pid());
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateInstallerTmp, aInstallerPath, sizeof(aInstallerPath));
 	str_copy(m_aUpdateInstallerTmp, aInstallerPath, sizeof(m_aUpdateInstallerTmp));
 	Storage()->RemoveFile(aInstallerPath, IStorage::TYPE_ABSOLUTE);
@@ -3088,7 +3229,7 @@ bool CTClient::LaunchUpdateInstaller()
 	}
 
 	char aPid[32];
-	str_format(aPid, sizeof(aPid), "%d", process_id());
+	str_format(aPid, sizeof(aPid), "%d", pid());
 	const char *apArguments[] = {
 		"--parent-pid",
 		aPid,
@@ -3103,7 +3244,7 @@ bool CTClient::LaunchUpdateInstaller()
 		"--install",
 		aInstallPath,
 	};
-	const PROCESS Process = process_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
+	const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
 	if(Process == INVALID_PROCESS)
 	{
 		RemoveUpdateTempFiles();
@@ -3200,7 +3341,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	SetForcedAspect();
 	if(NewState != IClient::STATE_ONLINE)
 	{
-		ResetGoresDummyHammerOverride();
+		ResetGoresConfigOverrides();
 		m_LocalSaveRestore.Reset();
 		m_LocalSaveConfirmation.Reset();
 		m_vLocalSaveCandidates.clear();
@@ -3217,8 +3358,6 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	{
 		m_GoresModeStateKnown = false;
 		m_PrevGoresModeActive = false;
-		m_GoresAutoMapKnown = false;
-		m_GoresAutoMapToken = 0;
 		ClearSwapCountdown();
 		m_aLastChatMessage[0] = '\0';
 		m_LastChatTeam = 0;
@@ -3244,10 +3383,15 @@ void CTClient::OnStateChange(int NewState, int OldState)
 		}
 		ResetComboState();
 		InvalidateGoresDistanceField();
-		ResetFriendEnter();
+		m_FriendOnline.clear();
 		m_FriendOnlineTracker.Reset();
-		m_FriendOnlineRefreshPending = false;
-		m_FriendAutoRefreshNext = 0.0f;
+		m_vFriendOnlineScan.clear();
+		m_FriendOnlineAvailableServers.clear();
+		m_FriendOnlineNames.clear();
+		m_FriendNotifyScanRunning = false;
+		m_FriendNotifyScanIndex = 0;
+		m_FriendNotifyNextCheck = 0.0f;
+		ResetFriendEnter();
 		m_aLastLocalSaveHintMap[0] = '\0';
 	}
 	m_aLastGameplayLogicTick[0] = -1;
@@ -3257,8 +3401,6 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	{
 		m_GoresModeStateKnown = false;
 		m_PrevGoresModeActive = IsGoresModuleEnabled();
-		m_GoresAutoMapKnown = false;
-		m_GoresAutoMapToken = 0;
 	}
 
 	// 进入服务器时重置统计数据
@@ -3273,7 +3415,7 @@ void CTClient::OnNewSnapshot()
 	CheckHammerWakeupActions();
 	// snapshot 处理期间不能同步触发全局 resize，延迟到下一次常规更新处理。
 	QueueAspectApply();
-	ApplyGoresFastInputLink(true);
+	ApplyGoresFastInputLink();
 	MaybeShowLocalSaveJoinHint();
 	// Update volleyball
 	bool IsVolleyBall = false;
@@ -3684,6 +3826,26 @@ bool CTClient::ShouldAppendGoresPrevWeapon() const
 	       !HasExtraGoresWeapon();
 }
 
+bool CTClient::IsGoresWeaponCycleActive() const
+{
+	if(Client()->State() != IClient::STATE_ONLINE ||
+		GameClient()->m_Snap.m_SpecInfo.m_Active ||
+		GameClient()->m_Snap.m_pLocalCharacter == nullptr ||
+		!IsGoresModuleEnabled() ||
+		g_Config.m_QmGoresAutoWeaponSwitch == 0)
+		return false;
+	// 没有额外武器时走"锤后自动切回"，拿到额外武器时只有允许禁用才走脉冲模式。
+	return !HasExtraGoresWeapon() || g_Config.m_QmGoresDisableIfWeapons != 0;
+}
+
+bool CTClient::ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const
+{
+	// 只作用于自己的武器循环：动画范围设成"所有玩家"时不应连带压掉别人的切换动画。
+	return ClientId >= 0 &&
+	       ClientId == GameClient()->m_aLocalIds[g_Config.m_ClDummy] &&
+	       QmShouldSkipGoresHammerSwitchAnimation(g_Config.m_QmGoresSuppressSwitchAnim != 0, IsGoresWeaponCycleActive(), PreviousWeapon, CurrentWeapon);
+}
+
 void CTClient::UpdateGoresWeaponCycle()
 {
 	const int Dummy = g_Config.m_ClDummy;
@@ -3696,14 +3858,7 @@ void CTClient::UpdateGoresWeaponCycle()
 	m_aGoresHammerWakeupFirePendingRelease[Dummy] = false;
 
 	const bool GoresCycleActive = ShouldAppendGoresPrevWeapon();
-	const bool MultiWeaponPulseActive =
-		Client()->State() == IClient::STATE_ONLINE &&
-		!GameClient()->m_Snap.m_SpecInfo.m_Active &&
-		GameClient()->m_Snap.m_pLocalCharacter != nullptr &&
-		IsGoresModuleEnabled() &&
-		g_Config.m_QmGoresAutoWeaponSwitch != 0 &&
-		g_Config.m_QmGoresDisableIfWeapons != 0 &&
-		HasExtraGoresWeapon();
+	const bool MultiWeaponPulseActive = IsGoresWeaponCycleActive() && !GoresCycleActive;
 	if(!GoresCycleActive && !MultiWeaponPulseActive)
 	{
 		for(bool &WasInFreeze : m_aWasInFreezeForGoresHammer)
@@ -3797,7 +3952,6 @@ void CTClient::InvalidateGoresDistanceField()
 	m_vvGoresDirectTeleOuts.clear();
 	m_vGoresDistanceToFinish.clear();
 	m_GoresRouteStartIndex.Reset();
-	m_GoresDebugRouteVisited.Reset();
 	ResetGoresDistanceFieldBuild();
 	for(int i = 0; i < NUM_DUMMIES; ++i)
 	{
@@ -3851,6 +4005,8 @@ void CTClient::ResetGoresDistanceFieldBuild()
 	m_GoresDistanceFieldBuildLayer = 0;
 	m_GoresDistanceFieldBuildLoadedVisualLayerData = -1;
 	m_GoresDistanceFieldBuildHadStart = false;
+	// 访问位图在本轮构建收尾释放，成功构建的起点索引留给路线消费者。
+	m_GoresDebugRouteVisited.Reset();
 	m_pGoresDistanceFieldBuildMap = nullptr;
 	m_pGoresDistanceFieldBuildGameLayer = nullptr;
 	m_pGoresDistanceFieldBuildFrontLayer = nullptr;
@@ -4015,6 +4171,7 @@ void CTClient::StepGoresDistanceFieldTileScan(int Budget)
 	{
 		const int Tile = pGame[Index].m_Index;
 		const int FrontTile = pFront ? pFront[Index].m_Index : TILE_AIR;
+		// 顺带记录潜在起点（游戏层/前景层同格只记一次），供路线显示按需查询，避免每帧全图扫描。
 		const bool IsStart = m_GoresRouteStartIndex.AddTile(Index, Tile, FrontTile);
 		const bool IsFinish = Tile == TILE_FINISH || FrontTile == TILE_FINISH;
 		const bool HasPenalty = IsPenaltyTileForGoresDistanceField(Tile) || IsPenaltyTileForGoresDistanceField(FrontTile);
@@ -4348,90 +4505,38 @@ void CTClient::StepGoresDistanceFieldReachableStartCheck(int Budget)
 	FailGoresDistanceFieldBuild();
 }
 
-void CTClient::ApplyGoresFastInputLink(bool AutoMapCheck)
-{
-	if(Client()->State() != IClient::STATE_ONLINE)
-	{
-		m_GoresModeStateKnown = false;
-		m_PrevGoresModeActive = false;
-		m_GoresAutoMapKnown = false;
-		m_GoresAutoMapToken = 0;
-		return;
-	}
-
-	bool FastInputConfigChanged = false;
-	const unsigned GoresMapToken = str_quickhash(Client()->GetCurrentMap());
-	const bool MapChanged = !m_GoresAutoMapKnown || m_GoresAutoMapToken != GoresMapToken;
-	if(AutoMapCheck && MapChanged)
-	{
-		const bool GoresGameMode = IsGoresGameMode();
-		if(g_Config.m_QmGoresAutoEnable != 0 && g_Config.m_QmGores != (GoresGameMode ? 1 : 0))
-			g_Config.m_QmGores = GoresGameMode ? 1 : 0;
-		m_GoresAutoMapKnown = true;
-		m_GoresAutoMapToken = GoresMapToken;
-	}
-
-	const bool StateWasKnown = m_GoresModeStateKnown;
-	if(!m_GoresModeStateKnown)
-	{
-		m_GoresModeStateKnown = true;
-	}
-
-	bool TcFastInputChanged = false;
-	bool TcFastInputOthersChanged = false;
-	const bool GoresActive = g_Config.m_QmGores != 0;
-	const bool TcFastInput = ApplyQmGoresLinkedConfig(GoresActive, g_Config.m_QmGoresFastInput != 0, g_Config.m_TcFastInput != 0, TcFastInputChanged);
-	const bool TcFastInputOthers = ApplyQmGoresLinkedConfig(GoresActive, g_Config.m_QmGoresFastInputOthers != 0, g_Config.m_TcFastInputOthers != 0, TcFastInputOthersChanged);
-	if(TcFastInputChanged)
-		g_Config.m_TcFastInput = TcFastInput ? 1 : 0;
-	if(TcFastInputOthersChanged)
-		g_Config.m_TcFastInputOthers = TcFastInputOthers ? 1 : 0;
-	bool DummyHammerChanged = false;
-	const int DummyHammer = ApplyQmGoresDummyHammerOverride(m_GoresDummyHammerOverride, GoresActive, g_Config.m_QmGoresDisableDummyHammer != 0, g_Config.m_ClDummyHammer, DummyHammerChanged);
-	if(DummyHammerChanged)
-		g_Config.m_ClDummyHammer = DummyHammer;
-	if(!StateWasKnown)
-		m_PrevGoresModeActive = GoresActive;
-	if(StateWasKnown && GoresActive != m_PrevGoresModeActive)
-	{
-		char aGoresMsg[128];
-		str_format(aGoresMsg, sizeof(aGoresMsg), "%s%s: %s",
-			GoresActive ? "[[$FF7F7F]]" : "[[$A5FFA5]]",
-			Localize("Gores Mode"),
-			Localize(GoresActive ? "On" : "Off"));
-		GameClient()->Echo(aGoresMsg);
-	}
-
-	FastInputConfigChanged = TcFastInputChanged || TcFastInputOthersChanged || DummyHammerChanged;
-
-	m_PrevGoresModeActive = GoresActive;
-
-	if(FastInputConfigChanged)
-	{
-		GameClient()->RequestPredictionRefresh();
-	}
-}
-
-void CTClient::ResetGoresDummyHammerOverride()
-{
-	if(m_GoresDummyHammerOverride.m_WasActive && m_GoresDummyHammerOverride.m_AutoChangedValue && g_Config.m_ClDummyHammer == 0)
-		g_Config.m_ClDummyHammer = m_GoresDummyHammerOverride.m_SavedValue;
-	m_GoresDummyHammerOverride = {};
-}
-
 void CTClient::ApplyFocusModeEffects()
 {
-	const bool FocusActive = g_Config.m_QmFocusMode != 0;
-	const auto ApplyFocusOverride = [](SQmConfigOverrideState &State, bool HideActive, int &ConfigValue, int HiddenValue) {
-		bool Changed = false;
-		const int NextValue = ApplyQmConfigOverride(State, HideActive, ConfigValue, HiddenValue, Changed);
-		if(Changed)
-			ConfigValue = NextValue;
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
+	const bool FocusActive = Focus.m_FocusActive;
+	// 被禅模式临时改写的配置项集中在这张表里：配置名、运行值、隐藏值与覆盖状态一一对应，
+	// 新增目标只需加一行。改写值只属于运行时状态，因此同时登记写盘覆盖，让 Save() 仍写出
+	// 用户自己的设置；否则隐藏值会落盘，下次启动无法还原（名字板/HUD 关不掉）。
+	struct SFocusOverrideTarget
+	{
+		const char *m_pScriptName;
+		int *m_pValue;
+		int m_HiddenValue;
+		bool m_HideActive;
+		SQmFocusConfigOverrideState *m_pState;
+	};
+	const SFocusOverrideTarget aTargets[] = {
+		{"cl_showhud", &g_Config.m_ClShowhud, 0, Focus.m_HideHud, &m_FocusHudOverrideState},
+		{"tc_statusbar", &g_Config.m_TcStatusBar, 0, Focus.m_HideHud, &m_FocusStatusBarOverrideState},
+		// 名字文本行：禅模式"隐藏名字"与"隐藏名字板"都会隐藏它；坐标行只跟随"隐藏名字板"。
+		// 昵称显示范围是六档枚举，隐藏时压到 0（无）；旧的两开关保留在同表内，避免残留接管状态。
+		{"qm_nameplate_show_scope", &g_Config.m_QmNameplateShowScope, 0, Focus.m_HideNames || Focus.m_HideNameplates, &m_FocusNameplateShowScopeOverrideState},
+		{"cl_nameplates", &g_Config.m_ClNamePlates, 0, Focus.m_HideNames || Focus.m_HideNameplates, &m_FocusNamePlatesOverrideState},
+		{"cl_nameplates_own", &g_Config.m_ClNamePlatesOwn, 0, Focus.m_HideNames || Focus.m_HideNameplates, &m_FocusNamePlatesOwnOverrideState},
+		{"qm_nameplate_coords", &g_Config.m_QmNameplateCoords, 0, Focus.m_HideNameplates, &m_FocusNameplateCoordsOverrideState},
+		{"qm_nameplate_coords_own", &g_Config.m_QmNameplateCoordsOwn, 0, Focus.m_HideNameplates, &m_FocusNameplateCoordsOwnOverrideState},
+		{"qm_nameplate_coord_x", &g_Config.m_QmNameplateCoordX, 0, Focus.m_HideNameplates, &m_FocusNameplateCoordXOverrideState},
+		{"qm_nameplate_coord_y", &g_Config.m_QmNameplateCoordY, 0, Focus.m_HideNameplates, &m_FocusNameplateCoordYOverrideState},
+		{"cl_show_direction", &g_Config.m_ClShowDirection, 0, Focus.m_HideDirectionIndicators, &m_FocusDirectionOverrideState},
+		// 禅模式只接管实时观感，不接管录像配置（cl_video_showhud / cl_video_show_direction）：
+		// 那两个是录像输出的独立偏好，进出禅模式时改动它们会让录制中途画面突变。
 	};
 	const bool StateWasKnown = m_FocusModeStateKnown;
-	const bool HideFocusHud = ShouldHideFocusHud(FocusActive, g_Config.m_QmFocusModeHideHud != 0);
-	const bool HideFocusNameplates = ShouldHideFocusNameplates(FocusActive, g_Config.m_QmFocusModeHideNameplates != 0);
-	const bool HideFocusDirectionIndicators = ShouldHideFocusDirectionIndicators(FocusActive, g_Config.m_QmFocusModeHideDirectionIndicators != 0);
 	if(!m_FocusModeStateKnown)
 	{
 		m_FocusModeStateKnown = true;
@@ -4453,22 +4558,119 @@ void CTClient::ApplyFocusModeEffects()
 		GameClient()->Echo(aFocusMsg);
 	}
 
-	ApplyFocusOverride(m_FocusHudOverrideState, HideFocusHud, g_Config.m_ClShowhud, 0);
-	// 昵称由六档范围 qm_nameplate_show_scope 统一决定，「无」即隐藏全部昵称。
+	for(const SFocusOverrideTarget &Target : aTargets)
 	{
-		int NamePlateShowScope = g_Config.m_QmNameplateShowScope;
-		ApplyFocusOverride(m_FocusNamePlatesOverrideState, HideFocusNameplates, NamePlateShowScope, QM_NAMEPLATE_SHOW_SCOPE_OFF);
-		ApplyFocusOverride(m_FocusNamePlatesOwnOverrideState, HideFocusNameplates, NamePlateShowScope, QM_NAMEPLATE_SHOW_SCOPE_OFF);
-		g_Config.m_QmNameplateShowScope = NamePlateShowScope;
+		bool Changed = false;
+		const bool OwnedBefore = Target.m_pState->m_AutoChangedValue;
+		const int NextValue = ApplyQmFocusConfigOverride(*Target.m_pState, Target.m_HideActive, *Target.m_pValue, Target.m_HiddenValue, Changed);
+		if(Changed)
+			*Target.m_pValue = NextValue;
+		if(Target.m_pState->m_AutoChangedValue != OwnedBefore)
+			ConfigManager()->SetSaveValueOverride(Target.m_pScriptName, Target.m_pState->m_AutoChangedValue, Target.m_pState->m_SavedValue, "qm_zen_mode");
 	}
-	ApplyFocusOverride(m_FocusNameplateCoordsOverrideState, HideFocusNameplates, g_Config.m_QmNameplateCoords, 0);
-	ApplyFocusOverride(m_FocusNameplateCoordsOwnOverrideState, HideFocusNameplates, g_Config.m_QmNameplateCoordsOwn, 0);
-	ApplyFocusOverride(m_FocusNameplateCoordXOverrideState, HideFocusNameplates, g_Config.m_QmNameplateCoordX, 0);
-	ApplyFocusOverride(m_FocusNameplateCoordYOverrideState, HideFocusNameplates, g_Config.m_QmNameplateCoordY, 0);
-	ApplyFocusOverride(m_FocusDirectionOverrideState, HideFocusDirectionIndicators, g_Config.m_ClShowDirection, 0);
-	ApplyFocusOverride(m_FocusVideoHudOverrideState, HideFocusHud, g_Config.m_ClVideoShowhud, 0);
-	ApplyFocusOverride(m_FocusVideoDirectionOverrideState, HideFocusDirectionIndicators, g_Config.m_ClVideoShowDirection, 0);
 	m_PrevFocusModeActive = FocusActive;
+}
+
+void CTClient::ApplyGoresFastInputLink()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+	{
+		ResetGoresConfigOverrides();
+		m_GoresModeStateKnown = false;
+		m_PrevGoresModeActive = false;
+		m_GoresGameModeStateKnown = false;
+		m_PrevGoresGameMode = false;
+		return;
+	}
+
+	const bool StateWasKnown = m_GoresModeStateKnown;
+	const bool GoresGameMode = IsGoresGameMode();
+	// 状态未知时也必须以"当前确实处于 Gores 模式"为准，否则进入任意服务器
+	// 都会被当成进入 Gores 模式，从而误触发 qm_gores 自动开启。
+	const bool GoresGameModeEntered = GoresGameMode && (!m_GoresGameModeStateKnown || !m_PrevGoresGameMode);
+	const bool GoresGameModeLeft = m_GoresGameModeStateKnown && m_PrevGoresGameMode && !GoresGameMode;
+	// 与禅模式同理：临时接管生效期间必须登记写盘覆盖，否则在 Gores 状态下退出会把这几个
+	// 接管值写进配置，下次启动就分不清是自动接管还是用户自己开的。
+	// pOwnerId 为空 = 只保护落盘、不锁定设置页开关：用于"进入时启用一次"的一次性接管，
+	// 用户随后仍可手动开关（用户改值时纯函数会自行释放接管）；持续强制的项才传来源并灰化。
+	const auto ApplyGoresSaveOverride = [this](const char *pScriptName, const SQmFocusConfigOverrideState &State, bool OwnedBefore, const char *pOwnerId) {
+		if(State.m_AutoChangedValue != OwnedBefore)
+			ConfigManager()->SetSaveValueOverride(pScriptName, State.m_AutoChangedValue, State.m_SavedValue, pOwnerId);
+	};
+	const bool GoresAutoEnableOwnedBefore = m_GoresAutoEnableOverride.m_AutoChangedValue;
+	bool GoresAutoEnableChanged = false;
+	const int GoresEnabled = ApplyQmGoresAutoEnableConfig(m_GoresAutoEnableOverride, GoresGameModeEntered, GoresGameModeLeft, g_Config.m_QmGoresAutoEnable != 0, g_Config.m_QmGores, GoresAutoEnableChanged);
+	if(GoresAutoEnableChanged)
+		g_Config.m_QmGores = GoresEnabled;
+	// 总开关是一次性启用：进入 Gores 服务器时打开一次即撒手，之后用户可随手关，
+	// 只保留"退出不把自动值写进配置"的落盘保护。
+	ApplyGoresSaveOverride("qm_gores", m_GoresAutoEnableOverride, GoresAutoEnableOwnedBefore, nullptr);
+	m_GoresGameModeStateKnown = true;
+	m_PrevGoresGameMode = GoresGameMode;
+	if(!m_GoresModeStateKnown)
+		m_GoresModeStateKnown = true;
+
+	bool TcFastInputChanged = false;
+	bool TcFastInputOthersChanged = false;
+	const bool GoresActive = g_Config.m_QmGores != 0;
+	const bool TcFastInputOwnedBefore = m_GoresFastInputOverride.m_AutoChangedValue;
+	const bool TcFastInputOthersOwnedBefore = m_GoresFastInputOthersOverride.m_AutoChangedValue;
+	const int TcFastInput = ApplyQmGoresLinkedConfig(m_GoresFastInputOverride, GoresActive, g_Config.m_QmGoresFastInput != 0, g_Config.m_TcFastInput, TcFastInputChanged);
+	const int TcFastInputOthers = ApplyQmGoresLinkedConfig(m_GoresFastInputOthersOverride, GoresActive, g_Config.m_QmGoresFastInputOthers != 0, g_Config.m_TcFastInputOthers, TcFastInputOthersChanged);
+	if(TcFastInputChanged)
+		g_Config.m_TcFastInput = TcFastInput;
+	if(TcFastInputOthersChanged)
+		g_Config.m_TcFastInputOthers = TcFastInputOthers;
+	// 快速输入联动随 Gores 模式持续强制，保持灰化与来源提示。
+	ApplyGoresSaveOverride("tc_fast_input", m_GoresFastInputOverride, TcFastInputOwnedBefore, "qm_gores_mode");
+	ApplyGoresSaveOverride("tc_fast_input_others", m_GoresFastInputOthersOverride, TcFastInputOthersOwnedBefore, "qm_gores_mode");
+	// 分身锤只在"进入 Gores 模式"那一帧关一次，之后不再持续接管 cl_dummy_hammer：
+	// 持续覆盖会让用户重新打开的分身锤被反复压回 0，看起来像开关被锁住。
+	// 激活/去激活边界：qm_gores 0→1 视为进入（含自动启用在连服首帧打开的情况），1→0 视为退出。
+	const bool GoresModeActivated = GoresActive && !m_PrevGoresModeActive;
+	const bool GoresModeDeactivated = StateWasKnown && m_PrevGoresModeActive && !GoresActive;
+	const bool DummyHammerOwnedBefore = m_GoresDummyHammerOverride.m_AutoChangedValue;
+	bool DummyHammerChanged = false;
+	const int DummyHammer = ApplyQmGoresDummyHammerConfig(m_GoresDummyHammerOverride, GoresModeActivated, GoresModeDeactivated, g_Config.m_QmGoresDisableDummyHammer != 0, g_Config.m_ClDummyHammer, DummyHammerChanged);
+	if(DummyHammerChanged)
+		g_Config.m_ClDummyHammer = DummyHammer;
+	ApplyGoresSaveOverride("cl_dummy_hammer", m_GoresDummyHammerOverride, DummyHammerOwnedBefore, nullptr);
+	if(!StateWasKnown)
+		m_PrevGoresModeActive = GoresActive;
+	if(StateWasKnown && GoresActive != m_PrevGoresModeActive)
+	{
+		char aGoresMsg[128];
+		str_format(aGoresMsg, sizeof(aGoresMsg), "%s%s: %s",
+			GoresActive ? "[[$FF7F7F]]" : "[[$A5FFA5]]",
+			Localize("Gores Mode"),
+			Localize(GoresActive ? "On" : "Off"));
+		GameClient()->Echo(aGoresMsg);
+	}
+
+	const bool FastInputConfigChanged = TcFastInputChanged || TcFastInputOthersChanged || DummyHammerChanged;
+
+	m_PrevGoresModeActive = GoresActive;
+
+	if(FastInputConfigChanged)
+	{
+		GameClient()->RequestPredictionRefresh();
+	}
+}
+
+void CTClient::ResetGoresConfigOverrides()
+{
+	bool Changed = false;
+	g_Config.m_QmGores = ResetQmConfigOverride(m_GoresAutoEnableOverride, g_Config.m_QmGores, 1, Changed);
+	g_Config.m_TcFastInput = ResetQmConfigOverride(m_GoresFastInputOverride, g_Config.m_TcFastInput, 1, Changed);
+	g_Config.m_TcFastInputOthers = ResetQmConfigOverride(m_GoresFastInputOthersOverride, g_Config.m_TcFastInputOthers, 1, Changed);
+	g_Config.m_ClDummyHammer = ResetQmConfigOverride(m_GoresDummyHammerOverride, g_Config.m_ClDummyHammer, 0, Changed);
+	// 恢复之后必须解除写盘覆盖，否则这些配置项会一直按接管前的旧值保存。
+	ConfigManager()->SetSaveValueOverride("qm_gores", false);
+	ConfigManager()->SetSaveValueOverride("tc_fast_input", false);
+	ConfigManager()->SetSaveValueOverride("tc_fast_input_others", false);
+	ConfigManager()->SetSaveValueOverride("cl_dummy_hammer", false);
+	m_GoresGameModeStateKnown = false;
+	m_PrevGoresGameMode = false;
 }
 
 bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) const
@@ -4530,14 +4732,22 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) 
 	};
 
 	int StartIndex = pCollision->GetPureMapIndex(RefPos);
+	// 起点候选已在距离场构建期随递增扫描登记，此处不再全图扫描。
+	// 保留原有的「玩家所在格不可达时才改选起点格」守卫：远程在同一重构里去掉了该守卫，
+	// 但那会让「可达但非起点格」的情形改从最近的起点格出发——属可观察行为变化，
+	// 且与本次性能优化的意图（消除全图扫描）无关，故此处只吸收缓存收益、不改判定。
 	if(!IsReachableIndex(StartIndex))
 	{
-		StartIndex = m_GoresRouteStartIndex.FindClosest(RefPos, StartIndex, [&](int Index) { return IsReachableIndex(Index) && (pGame[Index].m_Index == TILE_START || (pFront && pFront[Index].m_Index == TILE_START)); }, [&](int Index) { return pCollision->GetPos(Index); });
+		StartIndex = m_GoresRouteStartIndex.FindClosest(
+			RefPos, StartIndex,
+			[&](int Index) { return IsReachableIndex(Index) && (pGame[Index].m_Index == TILE_START || (pFront && pFront[Index].m_Index == TILE_START)); },
+			[&](int Index) { return pCollision->GetPos(Index); });
 	}
 
 	if(!IsReachableIndex(StartIndex))
 		return false;
 
+	// 只清零上一条路径触及的位图字，不再每帧分配并清零整张地图。
 	m_GoresDebugRouteVisited.Begin((size_t)MapCellCount);
 	vRoutePoints.reserve(256);
 	int CurrentIndex = StartIndex;
@@ -5555,21 +5765,12 @@ bool CTClient::RemoveLocalSaveByCode(const char *pMap, const char *pCode)
 		Storage()->RemoveFile(pTempFile, IStorage::TYPE_SAVE);
 		return false;
 	}
-	if(Storage()->RenameFile(pTempFile, SAVES_FILE, IStorage::TYPE_SAVE))
+	char aBackupFile[IO_MAX_PATH_LENGTH];
+	if(IStorage::ReplaceFileSafely(Storage(), pTempFile, SAVES_FILE, aBackupFile, sizeof(aBackupFile)))
 		return true;
 
-	// Windows 的现有重命名实现可能先移除目标；失败时恢复原列表，临时文件仍保留完整的新列表。
-	if(!Storage()->FileExists(SAVES_FILE, IStorage::TYPE_SAVE))
-	{
-		File = Storage()->OpenFile(SAVES_FILE, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-		if(File)
-		{
-			const bool Restored = io_write(File, Original.data(), (unsigned)Original.size()) == Original.size() && io_flush(File) == 0;
-			const int RestoreCloseResult = io_close(File);
-			if(!Restored || RestoreCloseResult != 0)
-				log_error("saves", "Failed to restore saves file; remaining records are in %s", pTempFile);
-		}
-	}
+	// 替换失败时保留临时文件与备份，便于恢复其他存档记录。
+	log_error("saves", "Failed to replace saves file; remaining records are in %s, backup %s", pTempFile, aBackupFile);
 	return false;
 }
 

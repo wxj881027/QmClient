@@ -1,24 +1,51 @@
 {
     "font files": [
         "DejaVuSans.ttf",
-        "Phosphor-Regular.ttf",
-        "Phosphor-Bold.ttf",
         "GlowSansJ-Compressed-Book.otf",
-        "SourceHanSans.ttc",
+        "NotoSansSC-VF.ttf",
         "NotoEmoji-Regular.ttf",
-        "NotoSansThai-Regular.ttf"
+        "NotoSansThai-Regular.ttf",
+        "SourceHanSans.ttc",
+        "NotoSansSymbols-Regular.ttf",
+        "NotoSansSymbols2-Regular.ttf",
+        "NotoSansMath-Regular.ttf",
+        "NotoSansJavanese-Regular.ttf",
+        "NotoSerifTibetan-Regular.ttf",
+        "NotoSansYi-Regular.ttf",
+        "NotoSansOriya-Regular.ttf",
+        "NotoSansBalinese-Regular.ttf",
+        "NotoSansTaiLe-Regular.ttf",
+        "NotoSansBatak-Regular.ttf",
+        "NotoSansVai-Regular.ttf",
+        "NotoSansBamum-Regular.ttf",
+        "NotoSansEgyptianHieroglyphs-Regular.ttf"
     ],
     "default": "DejaVu Sans",
     "language variants": {
         "japanese": "Glow Sans J Compressed Book",
         "korean": "Source Han Sans K",
-        "simplified_chinese": "Source Han Sans SC",
-        "traditional_chinese": "Source Han Sans TC"
+        "simplified_chinese": "Noto Sans SC",
+        "traditional_chinese": "Noto Sans SC"
     },
     "fallbacks": [
-        "Source Han Sans",
+        "Noto Sans SC",
         "Noto Sans Thai",
-        "Noto Emoji"
+        "Noto Emoji",
+        "Phosphor",
+        "Source Han Sans K",
+        "Noto Sans Symbols",
+        "Noto Sans Symbols 2",
+        "Noto Sans Math",
+        "Noto Sans Javanese",
+        "Noto Serif Tibetan",
+        "Noto Sans Yi",
+        "Noto Sans Oriya",
+        "Noto Sans Balinese",
+        "Noto Sans Tai Le",
+        "Noto Sans Batak",
+        "Noto Sans Vai",
+        "Noto Sans Bamum",
+        "Noto Sans Egyptian Hieroglyphs"
     ],
     "icon": "Phosphor",
     "icon bold": "Phosphor-Bold"

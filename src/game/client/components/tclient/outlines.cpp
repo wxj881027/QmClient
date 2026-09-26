@@ -1,13 +1,12 @@
 #include "outlines.h"
 
-#include "qm_outline_neighbors.h"
-
 #include <base/log.h>
 
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
 #include <game/client/animstate.h>
+#include <game/client/components/tclient/qm_outline_neighbors.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/mapitems.h>
@@ -205,6 +204,8 @@ void COutlines::OnRender()
 	auto GetTile = [&](int x, int y) {
 		x = std::clamp(x, 0, m_MapDataSize.x - 1);
 		y = std::clamp(y, 0, m_MapDataSize.y - 1);
+		// 必须掩掉高位：邻接缓存把 8 邻域位写在 tile 高位（见 qm_outline_neighbors.h），
+		// 不掩码会让 `GetTile(...) >= Type` 的邻域比较被缓存位污染。
 		return m_vMapData[y * m_MapDataSize.x + x] & 7;
 	};
 
@@ -243,10 +244,21 @@ void COutlines::OnRender()
 			const int Type = GetTile(x, y);
 			if(Type == OUTLINE_NONE)
 				continue;
+			if(Type < OUTLINE_NONE || Type > OUTLINE_SOLID)
+			{
+				static bool s_InvalidOutlineTypeWarned = false;
+				if(!s_InvalidOutlineTypeWarned)
+				{
+					s_InvalidOutlineTypeWarned = true;
+					log_warn("outlines", "Invalid outline type %d at %d,%d on %dx%d map", Type, x, y, m_MapDataSize.x, m_MapDataSize.y);
+				}
+				continue;
+			}
 			const COutlineConfig &Config = aConfigs[Type];
 			const ColorRGBA &OutlineColor = aColors[Type];
 			if(!Config.m_Enable || Config.m_Width <= 0 || OutlineColor.a <= 0.0f)
 				continue;
+			// Find neighbours：8 邻域位缓存在 tile 高位（低三位仍是地图类型），避免逐帧重算。
 			int &Tile = m_vMapData[std::clamp(y, 0, m_MapDataSize.y - 1) * m_MapDataSize.x + std::clamp(x, 0, m_MapDataSize.x - 1)];
 			const int Neighbors = QmOutlineCachedNeighbors(Tile, x, y, m_MapDataSize.x, m_MapDataSize.y, GetTile);
 			bool aNeighbors[8];

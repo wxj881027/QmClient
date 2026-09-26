@@ -75,10 +75,7 @@ namespace
 			if(Length == 0)
 				continue;
 			if(aTrimmed[0] == '"' && aTrimmed[Length - 1] == '"')
-			{
-				// 保留单个引号和空引号均精确匹配空字符串的既有语义。
 				vTokens.push_back({Length > 1 ? std::string(aTrimmed + 1, Length - 2) : std::string(), MatchesExactly});
-			}
 			else
 				vTokens.push_back({aTrimmed, MatchesPart});
 		}
@@ -119,6 +116,14 @@ CServerBrowser::~CServerBrowser()
 	m_pPingCache = nullptr;
 }
 
+void CServerBrowser::Shutdown()
+{
+	if(m_pHttp != nullptr)
+	{
+		m_pHttp->Shutdown();
+	}
+}
+
 void CServerBrowser::SetBaseInfo(class CNetClient *pClient, const char *pNetVersion)
 {
 	m_pNetClient = pClient;
@@ -149,6 +154,8 @@ void CServerBrowser::RegisterCommands()
 	m_pConsole->Register("remove_excluded_community", "s[community_id]", CFGFLAG_CLIENT, Con_RemoveExcludedCommunity, this, "Remove a community from the exclusion filter");
 	m_pConsole->Register("add_excluded_country", "s[community_id] s[country_code]", CFGFLAG_CLIENT, Con_AddExcludedCountry, this, "Add a country to the exclusion filter for a specific community (ISO 3166-1 numeric)");
 	m_pConsole->Register("remove_excluded_country", "s[community_id] s[country_code]", CFGFLAG_CLIENT, Con_RemoveExcludedCountry, this, "Remove a country from the exclusion filter for a specific community (ISO 3166-1 numeric)");
+	m_pConsole->Register("add_allowed_country", "s[community_id] s[country_code]", CFGFLAG_CLIENT, Con_AddAllowedCountry, this, "Add a country to the allowed filter list for a specific community (kept visible while its country filter is active)");
+	m_pConsole->Register("remove_allowed_country", "s[community_id] s[country_code]", CFGFLAG_CLIENT, Con_RemoveAllowedCountry, this, "Remove a country from the allowed filter list for a specific community");
 	m_pConsole->Register("add_excluded_type", "s[community_id] s[type]", CFGFLAG_CLIENT, Con_AddExcludedType, this, "Add a type to the exclusion filter for a specific community");
 	m_pConsole->Register("remove_excluded_type", "s[community_id] s[type]", CFGFLAG_CLIENT, Con_RemoveExcludedType, this, "Remove a type from the exclusion filter for a specific community");
 	m_pConsole->Register("leak_ip_address_to_all_servers", "", CFGFLAG_CLIENT, Con_LeakIpAddress, this, "Leaks your IP address to all servers by pinging each of them, also acquiring the latency in the process");
@@ -217,6 +224,26 @@ void CServerBrowser::Con_RemoveExcludedCountry(IConsole::IResult *pResult, void 
 	if(!pThis->ValidateCommunityId(pCommunityId) || !pThis->ValidateCountryName(pCountryName))
 		return;
 	pThis->CountriesFilter().Remove(pCommunityId, pCountryName);
+}
+
+void CServerBrowser::Con_AddAllowedCountry(IConsole::IResult *pResult, void *pUserData)
+{
+	CServerBrowser *pThis = static_cast<CServerBrowser *>(pUserData);
+	const char *pCommunityId = pResult->GetString(0);
+	const char *pCountryName = pResult->GetString(1);
+	if(!pThis->ValidateCommunityId(pCommunityId) || !pThis->ValidateCountryName(pCountryName))
+		return;
+	pThis->CountriesFilter().AddAllowed(pCommunityId, pCountryName);
+}
+
+void CServerBrowser::Con_RemoveAllowedCountry(IConsole::IResult *pResult, void *pUserData)
+{
+	CServerBrowser *pThis = static_cast<CServerBrowser *>(pUserData);
+	const char *pCommunityId = pResult->GetString(0);
+	const char *pCountryName = pResult->GetString(1);
+	if(!pThis->ValidateCommunityId(pCommunityId) || !pThis->ValidateCountryName(pCountryName))
+		return;
+	pThis->CountriesFilter().RemoveAllowed(pCommunityId, pCountryName);
 }
 
 void CServerBrowser::Con_AddExcludedType(IConsole::IResult *pResult, void *pUserData)
@@ -479,9 +506,7 @@ bool CServerBrowser::SortCompareFavoritesNumPlayersAndPing(int Index1, int Index
 
 bool CServerBrowser::SortCompareQmClients(int Index1, int Index2) const
 {
-	const CServerEntry *pIndex1 = m_vpServerlist[Index1];
-	const CServerEntry *pIndex2 = m_vpServerlist[Index2];
-	return pIndex1->m_Info.m_QmClientCount > pIndex2->m_Info.m_QmClientCount;
+	return m_vpServerlist[Index1]->m_Info.m_QmClientCount > m_vpServerlist[Index2]->m_Info.m_QmClientCount;
 }
 
 void CServerBrowser::SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts)
@@ -490,7 +515,6 @@ void CServerBrowser::SetQmClientServerCounts(const std::unordered_map<std::strin
 		return;
 	m_QmClientServerCounts = Counts;
 	UpdateQmClientServerCounts();
-	// 只有当前就按「梦」列排序时才立刻重排；否则等切到该列时 SortHash 变化本来就会重排。
 	if(g_Config.m_BrSort == IServerBrowser::SORT_QM_CLIENTS)
 		RequestResort();
 }
@@ -507,7 +531,6 @@ int CServerBrowser::QmClientCountForServer(const CServerInfo &Info) const
 
 void CServerBrowser::UpdateQmClientServerCounts()
 {
-	// 推送变化时更新一次，页面读取计数，不在每帧重建分布索引。
 	for(CServerEntry *pEntry : m_vpServerlist)
 		pEntry->m_Info.m_QmClientCount = QmClientCountForServer(pEntry->m_Info);
 }
@@ -516,7 +539,7 @@ void CServerBrowser::Filter()
 {
 	m_NumSortedPlayers = 0;
 	const uint64_t FriendsRevision = m_pFriends->Revision();
-	// 查询在本次过滤期间不变，只分词、裁剪和解析引号一次。
+	const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
 	const auto vFilterTokens = ParseServerFilterTokens(g_Config.m_BrFilterString);
 	const auto vExcludeTokens = ParseServerFilterTokens(g_Config.m_BrExcludeString);
 
@@ -587,9 +610,9 @@ void CServerBrowser::Filter()
 			{
 				Filtered = true;
 				// match against player country
-				for(int p = 0; p < minimum(Info.m_NumClients, (int)MAX_CLIENTS); p++)
+				for(const auto &Client : Info.m_vClients)
 				{
-					if(Info.m_aClients[p].m_Country == g_Config.m_BrFilterCountryIndex)
+					if(Client.m_Country == g_Config.m_BrFilterCountryIndex)
 					{
 						Filtered = false;
 						break;
@@ -613,14 +636,14 @@ void CServerBrowser::Filter()
 					}
 
 					// match against players
-					for(int p = 0; p < minimum(Info.m_NumClients, (int)MAX_CLIENTS); p++)
+					for(const auto &Client : Info.m_vClients)
 					{
-						if(MatchesFn(Info.m_aClients[p].m_aName, pFilterStr) ||
-							MatchesFn(Info.m_aClients[p].m_aClan, pFilterStr))
+						if(MatchesFn(Client.m_aName, pFilterStr) ||
+							MatchesFn(Client.m_aClan, pFilterStr))
 						{
 							if(g_Config.m_BrFilterConnectingPlayers &&
-								str_comp(Info.m_aClients[p].m_aName, "(connecting)") == 0 &&
-								Info.m_aClients[p].m_aClan[0] == '\0')
+								str_comp(Client.m_aName, "(connecting)") == 0 &&
+								Client.m_aClan[0] == '\0')
 							{
 								continue;
 							}
@@ -671,14 +694,12 @@ void CServerBrowser::Filter()
 			}
 		}
 
-		if(!pEntry->m_FriendStateValid ||
-			pEntry->m_FriendStateRevision != FriendsRevision ||
-			pEntry->m_FriendStateIgnoreClan != (g_Config.m_ClFriendsIgnoreClan != 0))
+		if(!pEntry->m_FriendStateValid || pEntry->m_FriendStateRevision != FriendsRevision || pEntry->m_FriendStateIgnoreClan != IgnoreClan)
 		{
 			UpdateServerFriends(&Info);
 			pEntry->m_FriendStateRevision = FriendsRevision;
+			pEntry->m_FriendStateIgnoreClan = IgnoreClan;
 			pEntry->m_FriendStateValid = true;
-			pEntry->m_FriendStateIgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
 		}
 
 		if(!Filtered)
@@ -727,7 +748,6 @@ int CServerBrowser::SortHash() const
 void CServerBrowser::Sort()
 {
 	++m_FriendListRevision;
-	// 先消费本次请求；过滤过程中若产生新请求，保留到下一次更新。
 	m_NeedResort = false;
 	// update number of filtered players
 	for(CServerEntry *pEntry : m_vpServerlist)
@@ -826,10 +846,10 @@ static void ServerBrowserFormatAddresses(char *pBuffer, int BufferSize, NETADDR 
 void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info)
 {
 	++m_FriendListRevision;
-	const int QmClientCount = pEntry->m_Info.m_QmClientCount;
 	const TRISTATE Favorite = pEntry->m_Info.m_Favorite;
 	const TRISTATE FavoriteAllowPing = pEntry->m_Info.m_FavoriteAllowPing;
 	const int ServerIndex = pEntry->m_Info.m_ServerIndex;
+	const int QmClientCount = pEntry->m_Info.m_QmClientCount;
 	const int NumAddresses = pEntry->m_Info.m_NumAddresses;
 	NETADDR aAddresses[MAX_SERVER_ADDRESSES];
 	mem_copy(aAddresses, pEntry->m_Info.m_aAddresses, sizeof(aAddresses));
@@ -840,10 +860,10 @@ void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info)
 	str_copy(aCommunityCountry, pEntry->m_Info.m_aCommunityCountry);
 	str_copy(aCommunityType, pEntry->m_Info.m_aCommunityType);
 	pEntry->m_Info = Info;
-	pEntry->m_Info.m_QmClientCount = QmClientCount;
 	pEntry->m_Info.m_Favorite = Favorite;
 	pEntry->m_Info.m_FavoriteAllowPing = FavoriteAllowPing;
 	pEntry->m_Info.m_ServerIndex = ServerIndex;
+	pEntry->m_Info.m_QmClientCount = QmClientCount;
 	mem_copy(pEntry->m_Info.m_aAddresses, aAddresses, sizeof(aAddresses));
 	pEntry->m_Info.m_NumAddresses = NumAddresses;
 	ServerBrowserFormatAddresses(pEntry->m_Info.m_aAddress, sizeof(pEntry->m_Info.m_aAddress), pEntry->m_Info.m_aAddresses, pEntry->m_Info.m_NumAddresses);
@@ -909,13 +929,25 @@ void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info)
 		}
 	};
 
-	std::sort(pEntry->m_Info.m_aClients, pEntry->m_Info.m_aClients + Info.m_NumReceivedClients, CPlayerScoreNameLess(pEntry->m_Info.m_ClientScoreKind));
+	std::sort(pEntry->m_Info.m_vClients.begin(), pEntry->m_Info.m_vClients.end(), CPlayerScoreNameLess(pEntry->m_Info.m_ClientScoreKind));
 
 	pEntry->m_GotInfo = 1;
+	++m_FriendListRevision;
+}
+
+// 可用延迟：未测量（-1）或触到 1 秒测量上限的值都不能当作实测延迟使用。
+static bool IsUsableLatency(int Latency)
+{
+	return Latency >= 0 && Latency < CServerInfo::LATENCY_UNKNOWN;
 }
 
 void CServerBrowser::SetLatency(NETADDR Addr, int Latency)
 {
+	if(!IsUsableLatency(Latency))
+	{
+		// 触到上限等于超时：不要把它写进缓存并广播给同一 IP 的其他服务器。
+		return;
+	}
 	m_pPingCache->CachePing(Addr, Latency);
 
 	Addr.port = 0;
@@ -945,6 +977,8 @@ void CServerBrowser::SetLatency(NETADDR Addr, int Latency)
 		{
 			continue;
 		}
+		if(pEntry->m_Info.m_Latency != Ping || pEntry->m_Info.m_LatencyIsEstimated)
+			++m_FriendListRevision;
 		pEntry->m_Info.m_Latency = Ping;
 		pEntry->m_Info.m_LatencyIsEstimated = false;
 	}
@@ -954,8 +988,7 @@ CServerBrowser::CServerEntry *CServerBrowser::Add(const NETADDR *pAddrs, int Num
 {
 	++m_FriendListRevision;
 	// create new pEntry
-	CServerEntry *pEntry = m_ServerlistHeap.Allocate<CServerEntry>();
-	*pEntry = {};
+	CServerEntry *pEntry = &m_ServerlistStorage.emplace_back();
 
 	// set the info
 	mem_copy(pEntry->m_Info.m_aAddresses, pAddrs, NumAddrs * sizeof(pAddrs[0]));
@@ -992,6 +1025,7 @@ CServerBrowser::CServerEntry *CServerBrowser::Add(const NETADDR *pAddrs, int Num
 CServerBrowser::CServerEntry *CServerBrowser::ReplaceEntry(CServerEntry *pEntry, const NETADDR *pAddrs, int NumAddrs)
 {
 	++m_FriendListRevision;
+	pEntry->m_FriendStateValid = false;
 	for(int i = 0; i < pEntry->m_Info.m_NumAddresses; i++)
 	{
 		m_ByAddr.erase(pEntry->m_Info.m_aAddresses[i]);
@@ -1087,7 +1121,7 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 	if(m_ServerlistType == IServerBrowser::TYPE_LAN)
 	{
 		SetInfo(pEntry, *pInfo);
-		pEntry->m_Info.m_Latency = minimum(static_cast<int>((time_get() - m_BroadcastTime) * 1000 / time_freq()), 999);
+		pEntry->m_Info.m_Latency = minimum(static_cast<int>((time_get() - m_BroadcastTime) * 1000 / time_freq()), CServerInfo::LATENCY_UNKNOWN);
 	}
 	else if(pEntry->m_RequestTime > 0)
 	{
@@ -1096,10 +1130,18 @@ void CServerBrowser::OnServerInfoUpdate(const NETADDR &Addr, int Token, const CS
 			SetInfo(pEntry, *pInfo);
 		}
 
-		int Latency = minimum(static_cast<int>((time_get() - pEntry->m_RequestTime) * 1000 / time_freq()), 999);
+		const int Latency = minimum(static_cast<int>((time_get() - pEntry->m_RequestTime) * 1000 / time_freq()), CServerInfo::LATENCY_UNKNOWN);
 		if(!pEntry->m_RequestIgnoreInfo)
 		{
-			pEntry->m_Info.m_Latency = Latency;
+			if(IsUsableLatency(Latency))
+			{
+				pEntry->m_Info.m_Latency = Latency;
+			}
+			else
+			{
+				// 这次 GETINFO 往返触到测量上限：回落到缓存/地区估算，避免把上限值当成实测延迟。
+				UpdateServerLatency(&pEntry->m_Info, DetermineOwnLocation());
+			}
 		}
 		else
 		{
@@ -1272,7 +1314,7 @@ void CServerBrowser::RequestCurrentServerWithRandomToken(const NETADDR &Addr, in
 
 void CServerBrowser::SetCurrentServerPing(const NETADDR &Addr, int Ping)
 {
-	SetLatency(Addr, minimum(Ping, 999));
+	SetLatency(Addr, minimum(Ping, CServerInfo::LATENCY_UNKNOWN));
 }
 
 void CServerBrowser::UpdateFromHttp()
@@ -1364,17 +1406,17 @@ void CServerBrowser::UpdateFromHttp()
 
 void CServerBrowser::CleanUp()
 {
-	++m_FriendListRevision;
 	// clear out everything
 	m_vSortedServerlist.clear();
 	m_vpServerlist.clear();
-	m_ServerlistHeap.Reset();
+	m_ServerlistStorage.clear();
 	m_NumSortedPlayers = 0;
 	m_ByAddr.clear();
 	m_pFirstReqServer = nullptr;
 	m_pLastReqServer = nullptr;
 	m_NumRequests = 0;
 	m_CurrentMaxRequests = g_Config.m_BrMaxRequests;
+	++m_FriendListRevision;
 }
 
 void CServerBrowser::Update()
@@ -1554,6 +1596,15 @@ bool CServerBrowser::ParseCommunityServers(CCommunity *pCommunity, const json_va
 		{
 			log_error("serverbrowser", "invalid server attribute (ServerIndex=%u)", ServerIndex);
 			return false;
+		}
+		// communities JSON 由第三方维护，超范围 flagId 会在浏览器渲染国家过滤器时
+		// 触发 CCountryFlags::GetByCountryCode 的 dbg_assert（Invalid CountryCode）。
+		// 范围与 countryflags.h 的 CODE_LB/CODE_UB 保持一致。
+		if(FlagId.u.integer < -999 || FlagId.u.integer > 999)
+		{
+			log_error("serverbrowser", "community country flagId out of range (ServerIndex=%u, flagId=%" PRId64 "), skipping country '%s'",
+				ServerIndex, FlagId.u.integer, Name.u.string.ptr);
+			continue;
 		}
 		if(Types.u.object.length == 0)
 			continue;
@@ -1748,6 +1799,19 @@ void CServerBrowser::LoadDDNetServers()
 		m_vCommunities.push_back(std::move(NoneCommunity));
 	}
 
+	// 社区数据（含 m_CommunityServersByAddr）被整体重建，服务器上缓存的社区/国家信息需要重新计算，
+	// 否则旧值（例如 none）会残留到下一次服务器信息刷新，让服务器不受当前国家筛选约束。
+	for(CServerEntry *pEntry : m_vpServerlist)
+	{
+		UpdateServerCommunity(&pEntry->m_Info);
+		UpdateServerRank(&pEntry->m_Info);
+	}
+	RequestResort();
+
+	// 社区缓存里的 m_vpSelectedCommunities/m_vpSelectableCountries 是指向 m_vCommunities 内部的裸指针，
+	// 重建后必须让缓存重新构建，否则会读到已释放内存。
+	m_CommunityCache.Invalidate();
+
 	// Remove unknown elements from exclude lists
 	CleanFilters();
 }
@@ -1757,7 +1821,7 @@ void CServerBrowser::UpdateServerFilteredPlayers(CServerInfo *pInfo) const
 	pInfo->m_NumFilteredPlayers = g_Config.m_BrFilterSpectators ? pInfo->m_NumPlayers : pInfo->m_NumClients;
 	if(g_Config.m_BrFilterConnectingPlayers)
 	{
-		for(const auto &Client : pInfo->m_aClients)
+		for(const auto &Client : pInfo->m_vClients)
 		{
 			if((!g_Config.m_BrFilterSpectators || Client.m_Player) && str_comp(Client.m_aName, "(connecting)") == 0 && Client.m_aClan[0] == '\0')
 				pInfo->m_NumFilteredPlayers--;
@@ -1769,11 +1833,11 @@ void CServerBrowser::UpdateServerFriends(CServerInfo *pInfo) const
 {
 	pInfo->m_FriendState = IFriends::FRIEND_NO;
 	pInfo->m_FriendNum = 0;
-	for(int ClientIndex = 0; ClientIndex < minimum(pInfo->m_NumReceivedClients, (int)MAX_CLIENTS); ClientIndex++)
+	for(auto &Client : pInfo->m_vClients)
 	{
-		pInfo->m_aClients[ClientIndex].m_FriendState = m_pFriends->GetFriendState(pInfo->m_aClients[ClientIndex].m_aName, pInfo->m_aClients[ClientIndex].m_aClan);
-		pInfo->m_FriendState = maximum(pInfo->m_FriendState, pInfo->m_aClients[ClientIndex].m_FriendState);
-		if(pInfo->m_aClients[ClientIndex].m_FriendState != IFriends::FRIEND_NO)
+		Client.m_FriendState = m_pFriends->GetFriendState(Client.m_aName, Client.m_aClan);
+		pInfo->m_FriendState = std::max(pInfo->m_FriendState, Client.m_FriendState);
+		if(Client.m_FriendState != IFriends::FRIEND_NO)
 			pInfo->m_FriendNum++;
 	}
 }
@@ -1804,8 +1868,10 @@ void CServerBrowser::UpdateServerRank(CServerInfo *pInfo) const
 
 void CServerBrowser::UpdateServerLatency(CServerInfo *pInfo, int OwnLocation) const
 {
-	int Ping = m_pPingCache->GetPing(pInfo->m_aAddresses, pInfo->m_NumAddresses);
-	pInfo->m_LatencyIsEstimated = Ping == -1;
+	const int Ping = m_pPingCache->GetPing(pInfo->m_aAddresses, pInfo->m_NumAddresses);
+	// 没有缓存值（-1，含已过期条目）或缓存值触到测量上限时都按"没有实测"处理，
+	// 让延迟列显示地区名而不是一个看似实测的数字。
+	pInfo->m_LatencyIsEstimated = !IsUsableLatency(Ping);
 	if(pInfo->m_LatencyIsEstimated)
 	{
 		pInfo->m_Latency = CServerInfo::EstimateLatency(OwnLocation, pInfo->m_Location);
@@ -1984,11 +2050,34 @@ std::vector<const CCommunity *> CServerBrowser::CurrentCommunities() const
 
 unsigned CServerBrowser::CurrentCommunitiesHash() const
 {
-	std::vector<const CCommunity *> vpCommunities = CurrentCommunities();
 	unsigned Hash = 5381;
-	for(const CCommunity *pCommunity : CurrentCommunities())
+	if(m_ServerlistType == IServerBrowser::TYPE_INTERNET || m_ServerlistType == IServerBrowser::TYPE_FAVORITES)
 	{
-		Hash = (Hash << 5) + Hash + str_quickhash(pCommunity->Id());
+		// Keep this hot-path hash allocation-free. CurrentCommunities() returns
+		// a temporary vector, but this function runs once per browser frame even
+		// when the cache is unchanged.
+		for(const auto &Community : Communities())
+		{
+			if(!CommunitiesFilter().Filtered(Community.Id()))
+				Hash = (Hash << 5) + Hash + str_quickhash(Community.Id());
+		}
+	}
+	else if(m_ServerlistType >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && m_ServerlistType <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
+	{
+		const size_t CommunityIndex = m_ServerlistType - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
+		size_t CurrentIndex = 0;
+		for(const auto &CommunityId : FavoriteCommunitiesFilter().Entries())
+		{
+			const CCommunity *pCommunity = Community(CommunityId.Id());
+			if(pCommunity == nullptr)
+				continue;
+			if(CurrentIndex == CommunityIndex)
+			{
+				Hash = (Hash << 5) + Hash + str_quickhash(pCommunity->Id());
+				break;
+			}
+			++CurrentIndex;
+		}
 	}
 	return Hash;
 }
@@ -2216,6 +2305,8 @@ void CExcludedCommunityCountryFilterList::Add(const char *pCountryName)
 	}
 
 	Add(m_pCommunityCache->CountryTypeFilterKey(), pCountryName);
+	// 被排除的国家不再是"保留可见"的，避免它之后重新出现时被当成用户特意保留。
+	RemoveAllowed(pCountryName);
 }
 
 void CExcludedCommunityCountryFilterList::Add(const char *pCommunityId, const char *pCountryName)
@@ -2228,9 +2319,100 @@ void CExcludedCommunityCountryFilterList::Add(const char *pCommunityId, const ch
 	m_Entries[CommunityId].emplace(pCountryName);
 }
 
+void CExcludedCommunityCountryFilterList::AddAllowed(const char *pCountryName)
+{
+	EnsureAllowedBaseline();
+	AddAllowed(m_pCommunityCache->CountryTypeFilterKey(), pCountryName);
+}
+
+void CExcludedCommunityCountryFilterList::EnsureAllowedBaseline()
+{
+	const CCommunityId Key(m_pCommunityCache->CountryTypeFilterKey());
+	if(m_AllowedCountries.contains(Key))
+		return;
+
+	auto DeniedEntry = m_Entries.find(Key);
+	m_AllowedCountries[Key] = {};
+	for(const CCommunityCountry *pCountry : m_pCommunityCache->SelectableCountries())
+	{
+		if(DeniedEntry == m_Entries.end() || !DeniedEntry->second.contains(CCommunityCountryName(pCountry->Name())))
+		{
+			m_AllowedCountries[Key].emplace(pCountry->Name());
+		}
+	}
+}
+
+void CExcludedCommunityCountryFilterList::AddAllowed(const char *pCommunityId, const char *pCountryName)
+{
+	CCommunityId CommunityId(pCommunityId);
+	if(!m_AllowedCountries.contains(CommunityId))
+	{
+		m_AllowedCountries[CommunityId] = {};
+	}
+	m_AllowedCountries[CommunityId].emplace(pCountryName);
+}
+
+void CExcludedCommunityCountryFilterList::RemoveAllowed(const char *pCountryName)
+{
+	RemoveAllowed(m_pCommunityCache->CountryTypeFilterKey(), pCountryName);
+}
+
+void CExcludedCommunityCountryFilterList::RemoveAllowed(const char *pCommunityId, const char *pCountryName)
+{
+	auto CommunityEntry = m_AllowedCountries.find(CCommunityId(pCommunityId));
+	if(CommunityEntry != m_AllowedCountries.end())
+	{
+		CommunityEntry->second.erase(pCountryName);
+	}
+}
+
+bool CExcludedCommunityCountryFilterList::AutoExcludeNewCountries()
+{
+	auto DeniedEntry = m_Entries.find(CCommunityId(m_pCommunityCache->CountryTypeFilterKey()));
+	if(DeniedEntry == m_Entries.end() || DeniedEntry->second.empty())
+		return false; // 未设置国家筛选，没有需要保持的结果
+
+	const auto &vpSelectable = m_pCommunityCache->SelectableCountries();
+	const auto &CountryEntries = DeniedEntry->second;
+	// 排除名单覆盖了全部可选国家时筛选等价于不过滤（与 Filtered/Empty 的判断一致），
+	// 此时用户没有"只看某些国家"的结果需要保持。
+	if(std::none_of(vpSelectable.begin(), vpSelectable.end(), [&](const CCommunityCountry *pCountry) {
+		   return !CountryEntries.contains(CCommunityCountryName(pCountry->Name()));
+	   }))
+	{
+		return false;
+	}
+
+	const CCommunityId Key(m_pCommunityCache->CountryTypeFilterKey());
+	const bool HadBaseline = m_AllowedCountries.contains(Key);
+	// 旧配置或本次会话第一次同步：没有保留基线，无法区分"新出现的国家"和"用户保留的国家"。
+	// 按当前可见的国家建立基线，本次不自动排除任何国家，用户已有的结果原样保留。
+	EnsureAllowedBaseline();
+	if(!HadBaseline)
+		return false;
+
+	const auto &AllowedCountries = m_AllowedCountries[Key];
+	bool Changed = false;
+	for(const CCommunityCountry *pCountry : vpSelectable)
+	{
+		if(str_comp(pCountry->Name(), IServerBrowser::COMMUNITY_COUNTRY_NONE) == 0)
+		{
+			// 与筛选网格一致：未分类(none) 不参与排除。
+			continue;
+		}
+		if(CountryEntries.contains(CCommunityCountryName(pCountry->Name())) || AllowedCountries.contains(CCommunityCountryName(pCountry->Name())))
+			continue;
+		DeniedEntry->second.emplace(pCountry->Name());
+		Changed = true;
+	}
+	return Changed;
+}
+
 void CExcludedCommunityCountryFilterList::Remove(const char *pCountryName)
 {
 	Remove(m_pCommunityCache->CountryTypeFilterKey(), pCountryName);
+	// 用户显式让这个国家可见，之后新国家出现时不能把它一并排除。
+	AddAllowed(pCountryName);
 }
 
 void CExcludedCommunityCountryFilterList::Remove(const char *pCommunityId, const char *pCountryName)
@@ -2249,6 +2431,8 @@ void CExcludedCommunityCountryFilterList::Clear()
 	{
 		CommunityEntry->second.clear();
 	}
+	// 筛选被清空后没有需要保持的结果，丢弃保留基线，下次设置筛选时按当时状态重建。
+	m_AllowedCountries.erase(CCommunityId(m_pCommunityCache->CountryTypeFilterKey()));
 }
 
 bool CExcludedCommunityCountryFilterList::Filtered(const char *pCountryName) const
@@ -2271,13 +2455,23 @@ bool CExcludedCommunityCountryFilterList::Empty() const
 
 void CExcludedCommunityCountryFilterList::Clean(const std::vector<CCommunity> &vAllowedCommunities)
 {
+	std::set<CCommunityId> ExistingCommunityIds;
+	for(const CCommunity &AllowedCommunity : vAllowedCommunities)
+	{
+		ExistingCommunityIds.emplace(AllowedCommunity.Id());
+	}
+	CleanCountries(ExistingCommunityIds);
+}
+
+void CExcludedCommunityCountryFilterList::CleanCountries(const std::set<CCommunityId> &vExistingCommunityIds)
+{
+	// 只清理"社区本身已不存在"的条目。不再因为某个国家暂时不在当前社区列表里就删除它：社区国家
+	// 列表由当时的服务器聚合而成，服务器掉线或换位置会让国家临时消失，删掉条目会让用户"只看某国"
+	// 的结果永久漂移（该国回来后就再也不会被排除）。
 	for(auto It = m_Entries.begin(); It != m_Entries.end();)
 	{
 		const bool AllEntry = str_comp(It->first.Id(), IServerBrowser::COMMUNITY_ALL) == 0;
-		const bool Found = AllEntry || std::find_if(vAllowedCommunities.begin(), vAllowedCommunities.end(), [&](const CCommunity &AllowedCommunity) {
-			return str_comp(It->first.Id(), AllowedCommunity.Id()) == 0;
-		}) != vAllowedCommunities.end();
-		if(Found)
+		if(AllEntry || vExistingCommunityIds.contains(It->first))
 		{
 			++It;
 		}
@@ -2286,61 +2480,22 @@ void CExcludedCommunityCountryFilterList::Clean(const std::vector<CCommunity> &v
 			It = m_Entries.erase(It);
 		}
 	}
-
-	for(const CCommunity &AllowedCommunity : vAllowedCommunities)
+	for(auto It = m_AllowedCountries.begin(); It != m_AllowedCountries.end();)
 	{
-		auto CommunityEntry = m_Entries.find(CCommunityId(AllowedCommunity.Id()));
-		if(CommunityEntry != m_Entries.end())
+		const bool AllEntry = str_comp(It->first.Id(), IServerBrowser::COMMUNITY_ALL) == 0;
+		if(AllEntry || vExistingCommunityIds.contains(It->first))
 		{
-			auto &CountryEntries = CommunityEntry->second;
-			for(auto It = CountryEntries.begin(); It != CountryEntries.end();)
-			{
-				if(AllowedCommunity.HasCountry(It->Name()))
-				{
-					++It;
-				}
-				else
-				{
-					It = CountryEntries.erase(It);
-				}
-			}
-			// Prevent filter that would exclude all allowed countries
-			if(CountryEntries.size() == AllowedCommunity.Countries().size())
-			{
-				CountryEntries.clear();
-			}
+			++It;
+		}
+		else
+		{
+			It = m_AllowedCountries.erase(It);
 		}
 	}
 
-	auto AllCommunityEntry = m_Entries.find(CCommunityId(IServerBrowser::COMMUNITY_ALL));
-	if(AllCommunityEntry != m_Entries.end())
-	{
-		auto &CountryEntries = AllCommunityEntry->second;
-		for(auto It = CountryEntries.begin(); It != CountryEntries.end();)
-		{
-			if(std::any_of(vAllowedCommunities.begin(), vAllowedCommunities.end(), [&](const auto &Community) { return Community.HasCountry(It->Name()); }))
-			{
-				++It;
-			}
-			else
-			{
-				It = CountryEntries.erase(It);
-			}
-		}
-		// Prevent filter that would exclude all allowed countries
-		std::set<CCommunityCountryName> UniqueCountries;
-		for(const CCommunity &AllowedCommunity : vAllowedCommunities)
-		{
-			for(const CCommunityCountry &Country : AllowedCommunity.Countries())
-			{
-				UniqueCountries.emplace(Country.Name());
-			}
-		}
-		if(CountryEntries.size() == UniqueCountries.size())
-		{
-			CountryEntries.clear();
-		}
-	}
+	// 这里不再做"排除名单覆盖了社区全部国家就清空名单"的处理：Filtered()/Empty() 已经把这种状态
+	// 当作"没有筛选"（全部显示）处理，而清空会把用户设置的名单永久丢掉。社区国家列表只是当时
+	// 服务器的快照，某个国家临时缺失也会让名单看起来覆盖了全部国家，清空同样会误伤用户设置。
 }
 
 void CExcludedCommunityCountryFilterList::Save(IConfigManager *pConfigManager) const
@@ -2351,6 +2506,22 @@ void CExcludedCommunityCountryFilterList::Save(IConfigManager *pConfigManager) c
 		for(const auto &Country : Countries)
 		{
 			str_copy(aBuf, "add_excluded_country \"");
+			str_append(aBuf, Community.Id());
+			str_append(aBuf, "\" \"");
+			str_append(aBuf, Country.Name());
+			str_append(aBuf, "\"");
+			pConfigManager->WriteLine(aBuf);
+		}
+	}
+	// 只持久化仍然生效（排除名单非空）的筛选所对应的保留基线，未设置筛选时不写入整份国家列表。
+	for(const auto &[Community, Countries] : m_AllowedCountries)
+	{
+		const auto DeniedEntry = m_Entries.find(Community);
+		if(DeniedEntry == m_Entries.end() || DeniedEntry->second.empty())
+			continue;
+		for(const auto &Country : Countries)
+		{
+			str_copy(aBuf, "add_allowed_country \"");
 			str_append(aBuf, Community.Id());
 			str_append(aBuf, "\" \"");
 			str_append(aBuf, Country.Name());

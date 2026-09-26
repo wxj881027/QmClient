@@ -36,7 +36,7 @@
 #include <utility>
 #include <vector>
 
-class CHttpRequest;
+class IHttpRequest;
 class CSkins : public CComponent
 {
 private:
@@ -50,6 +50,8 @@ private:
 		CImageInfo m_InfoGrayscale;
 		CSkin::CSkinMetrics m_Metrics;
 		ColorRGBA m_BloodColor;
+		// 解码任务在 CPU 侧备好素材，主线程只做纹理上传与接管（避免主线程重复提取精灵）。
+		// 纹理预备按精灵粒度记录可用性，越界精灵留待主线程走空白素材回退。
 		SQmPreparedSkinVisuals m_PreparedVisuals;
 		std::unique_ptr<CQmPreparedSkinTextures> m_pPreparedTextures;
 		size_t m_SourceWidth = 0;
@@ -188,10 +190,6 @@ public:
 			bool m_ShouldTouch = false;
 			bool m_ShouldErase = false;
 		};
-		static bool ShouldDiscardPendingUpload(EState OldState, EState NewState)
-		{
-			return OldState == EState::LOADING && NewState != EState::LOADING && NewState != EState::LOADED;
-		}
 		static bool TracksUsage(EState State, bool AlwaysLoaded)
 		{
 			return !AlwaysLoaded &&
@@ -225,13 +223,13 @@ public:
 		{
 			return (OldState == EState::NOT_FOUND) != (NewState == EState::NOT_FOUND);
 		}
-		/**
-		 * 皮肤已确定无法解析（不存在或加载失败）。
-		 * 排队与加载中的状态不算：那时回退会用 default 皮肤覆盖掉稍后加载完成的真实皮肤。
-		 */
+		static bool ShouldDiscardPendingUpload(EState OldState, EState NewState)
+		{
+			return OldState == EState::LOADING && NewState != EState::LOADING && NewState != EState::LOADED;
+		}
 		static bool IsUnresolved(EState State)
 		{
-			return State == EState::NOT_FOUND || State == EState::ERROR;
+			return State == EState::ERROR || State == EState::NOT_FOUND;
 		}
 		static EStatusIndicator StatusIndicator(EState State)
 		{
@@ -271,9 +269,6 @@ public:
 		bool m_AlwaysLoaded;
 
 		EState m_State = EState::UNLOADED;
-		/**
-		 * 已就本次失败状态通知过调用方（用于未知皮肤回退）。状态一旦变化即复位，避免每次皮肤更新都重复回调。
-		 */
 		bool m_UnresolvedNotified = false;
 		ESettingsResourcePriority m_LoadPriority = ESettingsResourcePriority::BACKGROUND;
 		std::unique_ptr<CSkin> m_pSkin = nullptr;
@@ -305,6 +300,20 @@ public:
 		void TouchBackgroundUsage();
 		void ClearBackgroundUsage();
 		void SetState(EState State, ESettingsResourcePriority Priority = ESettingsResourcePriority::VISIBLE);
+	};
+
+	class CUnresolvedSkinScanState
+	{
+	public:
+		void OnStateChange(CSkinContainer::EState OldState, CSkinContainer::EState NewState)
+		{
+			if(OldState != NewState && CSkinContainer::IsUnresolved(NewState))
+				m_Pending = true;
+		}
+		bool Consume() { return std::exchange(m_Pending, false); }
+
+	private:
+		bool m_Pending = false;
 	};
 
 	/**
@@ -388,21 +397,6 @@ public:
 		bool m_NeedsUpdate = true;
 	};
 
-	class CUnresolvedSkinScanState
-	{
-	public:
-		void OnStateChange(CSkinContainer::EState OldState, CSkinContainer::EState NewState)
-		{
-			if(OldState != NewState && CSkinContainer::IsUnresolved(NewState))
-				m_Pending = true;
-		}
-
-		bool Consume() { return std::exchange(m_Pending, false); }
-
-	private:
-		bool m_Pending = false;
-	};
-
 	class CSkinLoadingStats
 	{
 	public:
@@ -418,27 +412,13 @@ public:
 		{
 			switch(State)
 			{
-			case CSkinContainer::EState::UNLOADED:
-				m_NumUnloaded++;
-				break;
-			case CSkinContainer::EState::BACKGROUND_REQUESTED:
-				m_NumBackgroundRequested++;
-				break;
-			case CSkinContainer::EState::PENDING:
-				m_NumPending++;
-				break;
-			case CSkinContainer::EState::LOADING:
-				m_NumLoading++;
-				break;
-			case CSkinContainer::EState::LOADED:
-				m_NumLoaded++;
-				break;
-			case CSkinContainer::EState::ERROR:
-				m_NumError++;
-				break;
-			case CSkinContainer::EState::NOT_FOUND:
-				m_NumNotFound++;
-				break;
+			case CSkinContainer::EState::UNLOADED: ++m_NumUnloaded; break;
+			case CSkinContainer::EState::BACKGROUND_REQUESTED: ++m_NumBackgroundRequested; break;
+			case CSkinContainer::EState::PENDING: ++m_NumPending; break;
+			case CSkinContainer::EState::LOADING: ++m_NumLoading; break;
+			case CSkinContainer::EState::LOADED: ++m_NumLoaded; break;
+			case CSkinContainer::EState::ERROR: ++m_NumError; break;
+			case CSkinContainer::EState::NOT_FOUND: ++m_NumNotFound; break;
 			}
 		}
 
@@ -568,11 +548,6 @@ public:
 	bool PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady = false);
 
 	const CSkinContainer *FindContainerOrNullptr(const char *pName);
-	/**
-	 * 只读查找皮肤容器：未登记的皮肤名返回 nullptr，不会新建容器、不会发起加载请求。
-	 * 用于判断“皮肤名已知但资源解析失败”，因为 FindContainerOrNullptr 会重新请求加载。
-	 */
-	const CSkinContainer *LookupContainerOrNullptr(const char *pName) const;
 	const CSkin *FindOrNullptr(const char *pName);
 	const CSkin *Find(const char *pName);
 
@@ -671,6 +646,7 @@ public:
 	void MoveSkinQueueItem(size_t FromIndex, size_t ToIndex, int Dummy);
 	void MoveActiveSkinQueueItem(size_t FromIndex, size_t ToIndex, int Dummy);
 	bool ApplySkinQueueIndex(size_t QueueIndex, int Dummy);
+	bool RandomSkinQueueIndex(int Dummy);
 	void TrimSkinQueueToLimit(int Dummy);
 	void TrimActiveSkinQueueToLimit(int Dummy);
 	bool AddSkinQueuePresetFromCurrent(int Dummy);
@@ -685,17 +661,6 @@ public:
 	const char *SkinPrefix() const;
 
 	static bool IsSpecialSkin(const char *pName);
-
-	/**
-	 * 旧 Tee 渲染信息只有在它引用的 6.x 皮肤贴图仍然驻留时才能继续复用。
-	 * 皮肤贴图被资源预算卸载（或目录扫描重建）后，句柄依旧 IsValid()，但纹理已经释放；
-	 * 继续复用会把这些句柄画到屏幕上，表现为一只没有贴图的纯白块 Tee。
-	 */
-	static bool CanReusePreviousSixSkin(bool SixFlagSet, bool SkinNameValid, bool SkinResident)
-	{
-		return !SixFlagSet || !SkinNameValid || SkinResident;
-	}
-
 	static int ParseOfficialSkinReleaseDateKey(const char *pDate)
 	{
 		if(pDate == nullptr)
@@ -844,7 +809,7 @@ private:
 
 	private:
 		CLock m_Lock;
-		std::shared_ptr<CHttpRequest> m_pGetRequest GUARDED_BY(m_Lock);
+		std::shared_ptr<IHttpRequest> m_pGetRequest GUARDED_BY(m_Lock);
 	};
 
 	struct SSkinListSnapshotEntry
@@ -953,6 +918,8 @@ private:
 	static void ConAddDummySkinQueue(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddSkinQueueEx(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddDummySkinQueueEx(IConsole::IResult *pResult, void *pUserData);
+	static void ConRandomSkinQueue(IConsole::IResult *pResult, void *pUserData);
+	static void ConRandomDummySkinQueue(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddSkinQueuePreset(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddDummySkinQueuePreset(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddSkinQueuePresetItem(IConsole::IResult *pResult, void *pUserData);
@@ -979,16 +946,8 @@ private:
 	CSkinContainer *m_pSkinPreviewUpload = nullptr;
 	size_t m_NumLoadingSkins = 0;
 	CQmSkinUploadFrameBudget m_SkinUploadFrameBudget;
-	/**
-	 * 本帧内状态落到 NOT_FOUND/ERROR 的皮肤名。皮肤的加载是异步的，调用方第一次解析时皮肤通常还在
-	 * LOADING，因此必须在解析彻底失败后重新通知一次，回退皮肤才会生效。
-	 */
-	std::vector<std::string> m_vSkinsUnresolvedThisFrame;
 	CUnresolvedSkinScanState m_UnresolvedSkinScanState;
-	/**
-	 * 本帧内 6.x 贴图被卸载的皮肤名。旧句柄在渲染信息里依旧 IsValid()，不重新通知一次，
-	 * 引用它的玩家、聊天头像与击杀提示会继续绑定已释放的纹理，画出没有贴图的白块。
-	 */
+	std::vector<std::string> m_vSkinsUnresolvedThisFrame;
 	std::vector<std::string> m_vSkinsTexturesUnloadedThisFrame;
 	/**
 	 * Sorted from most recently to least recently used. Must be kept synchronized with the skin containers.
@@ -1000,7 +959,7 @@ private:
 	CSkinList m_SkinList;
 	std::shared_ptr<CSkinDirectoryScanJob> m_pSkinDirectoryScanJob;
 	std::shared_ptr<CSkinListPlanJob> m_pSkinListPlanJob;
-	std::shared_ptr<CHttpRequest> m_pOfficialSkinIndexRequest;
+	std::shared_ptr<IHttpRequest> m_pOfficialSkinIndexRequest;
 	std::vector<SSettingsSkinListEntry> m_vPendingSkinListMergeEntries;
 	std::vector<CSkinListEntry> m_vPendingSkinListEntries;
 	size_t m_SkinListMergeCursor = 0;
@@ -1035,7 +994,7 @@ private:
 	/**
 	 * Maximum number of skins to process per frame in UpdateFinishLoading.
 	 * This limit prevents frame stuttering caused by uploading too many textures at once.
-	 * Each skin requires approximately 24 texture uploads (12 original + 12 colorable).
+	 * Each skin requires approximately 14 texture uploads (7 original + 7 colorable).
 	 */
 	static constexpr int MAX_SKINS_PER_FRAME = 12;
 

@@ -26,7 +26,7 @@ TRIGGER_PATHS = {
 	"src/game/client/components/tclient/menus_tclient.cpp",
 }
 
-TRIGGER_PREFIXES = ("src/game/client/QmUi/SettingsCard",)
+TRIGGER_PREFIXES = ("src/game/client/QmUi/SettingsCard", "src/game/client/QmUi/cards/QmCardCatalog")
 
 
 def should_run(changed: list[str]) -> bool:

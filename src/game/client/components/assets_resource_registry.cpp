@@ -154,12 +154,25 @@ std::string NextLegacyAssetName(std::span<const std::string> ExistingNames)
 	}
 }
 
+namespace
+{
+	// 内置虚拟条目的固定次序：default 最前，blank 其次，其余按名称排序。
+	int AssetResourceNameRank(std::string_view AssetName)
+	{
+		if(IsProtectedDefaultAsset(AssetName))
+			return 0;
+		if(IsBlankAssetName(AssetName))
+			return 1;
+		return 2;
+	}
+} // namespace
+
 bool AssetResourceNameLess(std::string_view LeftName, std::string_view RightName)
 {
-	const bool LeftIsDefault = IsProtectedDefaultAsset(LeftName);
-	const bool RightIsDefault = IsProtectedDefaultAsset(RightName);
-	if(LeftIsDefault != RightIsDefault)
-		return LeftIsDefault;
+	const int LeftRank = AssetResourceNameRank(LeftName);
+	const int RightRank = AssetResourceNameRank(RightName);
+	if(LeftRank != RightRank)
+		return LeftRank < RightRank;
 
 	return LeftName < RightName;
 }
@@ -174,6 +187,19 @@ void EnsureDefaultAssetVisible(std::vector<std::string> &vAssetNames)
 
 	std::sort(vAssetNames.begin(), vAssetNames.end(), [](const std::string &LeftName, const std::string &RightName) {
 		// NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
+		return AssetResourceNameLess(LeftName, RightName);
+	});
+}
+
+void EnsureBlankAssetVisible(std::vector<std::string> &vAssetNames)
+{
+	const auto HasBlank = std::any_of(vAssetNames.begin(), vAssetNames.end(), [](const std::string &Name) {
+		return IsBlankAssetName(Name);
+	});
+	if(!HasBlank)
+		vAssetNames.emplace_back(QM_BLANK_ASSET_NAME);
+
+	std::sort(vAssetNames.begin(), vAssetNames.end(), [](const std::string &LeftName, const std::string &RightName) {
 		return AssetResourceNameLess(LeftName, RightName);
 	});
 }

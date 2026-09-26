@@ -2,8 +2,6 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_PERF_LOGGING_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_PERF_LOGGING_H
 
-#include "stutter_diagnostics.h"
-
 #include <base/log.h>
 #include <base/system.h>
 
@@ -18,12 +16,30 @@
 
 inline bool QmPerfEnabled()
 {
-	return g_Config.m_QmPerfDebug != 0;
+	return g_Config.m_QmPerfDebug != 0 || g_Config.m_QmPerfLogfile != 0 || g_Config.m_QmPerfStutterDiagnostics != 0;
+}
+
+inline int QmGraphicsTraceLevel()
+{
+	const int Configured = g_Config.m_QmGraphicsTrace < 0 ? 0 : (g_Config.m_QmGraphicsTrace > 3 ? 3 : g_Config.m_QmGraphicsTrace);
+	return g_Config.m_QmMacosGraphicsDiagnostics != 0 && Configured < 1 ? 1 : Configured;
+}
+
+inline bool QmGraphicsTraceEnabled(int MinimumLevel = 1)
+{
+	return QmGraphicsTraceLevel() >= MinimumLevel;
+}
+
+inline bool QmMacosGraphicsDiagnosticsEnabled()
+{
+	return QmGraphicsTraceEnabled();
 }
 
 inline double QmPerfThresholdMs()
 {
-	return QmStutterFrameBudgetMs();
+	const double Configured = g_Config.m_QmPerfDebugThresholdMs > 0 ? g_Config.m_QmPerfDebugThresholdMs : 1.0;
+	const double StutterBudget = 1000.0 / 300.0;
+	return g_Config.m_QmPerfStutterDiagnostics != 0 && Configured > StutterBudget ? StutterBudget : Configured;
 }
 
 inline bool QmPerfShouldLogDuration(double DurationMs, bool Force = false)
@@ -31,22 +47,8 @@ inline bool QmPerfShouldLogDuration(double DurationMs, bool Force = false)
 	return Force || DurationMs >= QmPerfThresholdMs();
 }
 
-inline std::atomic<uint64_t> &QmPerfSessionStorage()
-{
-	static std::atomic<uint64_t> s_SessionId{(uint64_t)time_timestamp() * 1000000};
-	return s_SessionId;
-}
-
-inline uint64_t QmPerfSessionId()
-{
-	return QmPerfSessionStorage().load(std::memory_order_relaxed);
-}
-
-inline void QmPerfBeginSession()
-{
-	QmPerfSessionStorage().fetch_add(1, std::memory_order_relaxed);
-}
-
+// 明细限流：每会话每秒至多记录 LIMIT 条非关键事件，其余计入 dropped 并
+// 在秒边界或会话收尾时汇报；完整帧统计、交互窗口与卡顿汇总不参与限流。
 class CQmPerfDetailBudget
 {
 	uint64_t m_Second = 0;
@@ -90,6 +92,23 @@ inline SQmPerfLogBudget &QmPerfLogBudget()
 {
 	static SQmPerfLogBudget s_Budget;
 	return s_Budget;
+}
+
+inline std::atomic<uint64_t> &QmPerfSessionStorage()
+{
+	static std::atomic<uint64_t> s_SessionId{(uint64_t)time_timestamp() * 1000000};
+	return s_SessionId;
+}
+
+inline uint64_t QmPerfSessionId()
+{
+	return QmPerfSessionStorage().load(std::memory_order_relaxed);
+}
+
+// 每打开一次性能日志文件就开一个诊断会话：同一进程内重开会话可被区分。
+inline void QmPerfBeginSession()
+{
+	QmPerfSessionStorage().fetch_add(1, std::memory_order_relaxed);
 }
 
 inline uint64_t QmPerfFrameId(const IClient *pClient)
@@ -141,7 +160,7 @@ inline void QmPerfAppendJsonField(char *pBuf, int BufSize, bool &First, const ch
 {
 	if(BufSize <= 0 || pKey == nullptr || pKey[0] == '\0' || pValue == nullptr)
 		return;
-	// 从末尾追加，避免每个标点都重新扫描、校验整条日志的 UTF-8 前缀。
+	// 从尾部追加，避免每段文本重复扫描已有 JSON 前缀。
 	const int PrefixLength = str_length(pBuf);
 	char *pTail = pBuf + PrefixLength;
 	int Remaining = BufSize - PrefixLength;
@@ -347,6 +366,13 @@ inline void QmPerfLogPayloadForce(const char *pSystem, const char *pPayload, con
 	QmPerfLogPayloadUnchecked(pSystem, pPayload, pClient, pPage, pTab);
 }
 
+inline void QmMacosGraphicsDiagnosticsLogPayload(const char *pSystem, const char *pPayload, const IClient *pClient = nullptr)
+{
+	if(!QmMacosGraphicsDiagnosticsEnabled())
+		return;
+	QmPerfLogPayloadUnchecked(pSystem, pPayload, pClient);
+}
+
 inline void QmPerfLogStage(const char *pSystem, const char *pStage, double DurationMs, bool Force = false, const IClient *pClient = nullptr, const char *pPage = nullptr, const char *pTab = nullptr, const char *pExtra = nullptr)
 {
 	if(!QmPerfEnabled())
@@ -363,6 +389,19 @@ inline void QmPerfLogStage(const char *pSystem, const char *pStage, double Durat
 		QmPerfLogPayloadForce(pSystem, aPayload, pClient, pPage, pTab);
 	else
 		QmPerfLogPayload(pSystem, aPayload, pClient, pPage, pTab);
+}
+
+inline void QmPerfLogStageForce(const char *pSystem, const char *pStage, double DurationMs, const IClient *pClient = nullptr, const char *pPage = nullptr, const char *pTab = nullptr, const char *pExtra = nullptr)
+{
+	if(!QmPerfShouldLogDuration(DurationMs))
+		return;
+
+	char aPayload[1024];
+	if(pExtra != nullptr && pExtra[0] != '\0')
+		str_format(aPayload, sizeof(aPayload), "stage=%s duration_ms=%.3f %s", pStage, DurationMs, pExtra);
+	else
+		str_format(aPayload, sizeof(aPayload), "stage=%s duration_ms=%.3f", pStage, DurationMs);
+	QmPerfLogPayloadForce(pSystem, aPayload, pClient, pPage, pTab);
 }
 
 #endif

@@ -82,6 +82,9 @@ struct SQmPerformanceMetrics
 	float m_Fps = 0.0f;
 	float m_FrameTimeMs = 0.0f;
 	float m_FrameTimeP95Ms = -1.0f;
+	float m_FrameTimeP99Ms = -1.0f;
+	float m_FpsOnePctLow = -1.0f;
+	int m_LongFrameCount = 0;
 	float m_FrameTimeUs = 0.0f;
 	float m_CpuUsagePct = -1.0f;
 	float m_TotalCpuUsagePct = -1.0f;
@@ -119,6 +122,21 @@ struct SQmDevicePerfSnapshot
 {
 	SQmDevicePerfSample m_Sample;
 	uint64_t m_Version = 0;
+};
+
+class CQmDevicePerfVersionTracker
+{
+	uint64_t m_LastSeenVersion = 0;
+
+public:
+	void Reset() { m_LastSeenVersion = 0; }
+	bool Observe(uint64_t Version)
+	{
+		if(Version == 0 || Version == m_LastSeenVersion)
+			return false;
+		m_LastSeenVersion = Version;
+		return true;
+	}
 };
 
 class CQmDevicePerfSnapshotCache
@@ -201,13 +219,33 @@ struct SQmHistoryStats
 	bool m_HasData = false;
 };
 
+struct SQmGraphSeriesCache
+{
+	SQmHistoryStats m_Stats;
+	int m_PeakIndex = -1;
+};
+
+struct SQmMonitoringGraphCache
+{
+	SQmGraphSeriesCache m_Rtt;
+	SQmGraphSeriesCache m_Prediction;
+	SQmGraphSeriesCache m_SnapshotGap;
+	SQmGraphSeriesCache m_PredictionJitter;
+	SQmGraphSeriesCache m_Fps;
+	SQmGraphSeriesCache m_GameTimeMargin;
+	float m_MainGraphMaxValue = 30.0f;
+	float m_FpsGraphMaxValue = 30.0f;
+	float m_GameTimeMarginMaxAbs = 25.0f;
+	bool m_Valid = false;
+};
+
 inline constexpr float QM_MONITORING_PANEL_PADDING = 12.0f;
-inline constexpr float QM_MONITORING_HEADER_HEIGHT = 56.0f;
+inline constexpr float QM_MONITORING_HEADER_HEIGHT = 50.0f;
 inline constexpr float QM_MONITORING_SECTION_GAP = 8.0f;
-inline constexpr float QM_MONITORING_MAIN_GRAPH_HEIGHT = 280.0f;
-inline constexpr float QM_MONITORING_FPS_GRAPH_HEIGHT = 180.0f;
-inline constexpr float QM_MONITORING_PRIMARY_CARDS_HEIGHT = 112.0f;
-inline constexpr float QM_MONITORING_SECONDARY_CARDS_HEIGHT = 96.0f;
+inline constexpr float QM_MONITORING_MAIN_GRAPH_HEIGHT = 220.0f;
+inline constexpr float QM_MONITORING_FPS_GRAPH_HEIGHT = 140.0f;
+inline constexpr float QM_MONITORING_PRIMARY_CARDS_HEIGHT = 96.0f;
+inline constexpr float QM_MONITORING_SECONDARY_CARDS_HEIGHT = 136.0f;
 inline constexpr int QM_MONITORING_HISTORY_CAPACITY = 180;
 
 inline float QmComputeMonitoringUiScale(float ScreenWidth, float ScreenHeight)
@@ -495,12 +533,12 @@ inline SQmMonitoringHudLayout QmComputeMonitoringHudLayout(float ScreenWidth, fl
 	const float UiScale = QmComputeMonitoringUiScale(ScreenWidth, ScreenHeight);
 	const float Padding = std::round(QM_MONITORING_PANEL_PADDING * UiScale);
 
-	float PanelW = std::round(ScreenWidth * 0.48f);
-	float PanelH = std::round(ScreenHeight * 0.66f);
-	PanelW = std::max(PanelW, 760.0f * UiScale);
-	PanelH = std::max(PanelH, 650.0f * UiScale);
-	PanelW = std::min(PanelW, 1040.0f * UiScale);
-	PanelH = std::min(PanelH, 1000.0f * UiScale);
+	float PanelW = std::round(ScreenWidth * 0.42f);
+	float PanelH = std::round(ScreenHeight * 0.78f);
+	PanelW = std::max(PanelW, 620.0f * UiScale);
+	PanelH = std::max(PanelH, 560.0f * UiScale);
+	PanelW = std::min(PanelW, 760.0f * UiScale);
+	PanelH = std::min(PanelH, 860.0f * UiScale);
 	const float PreferredContentHeight = (QM_MONITORING_HEADER_HEIGHT +
 						     QM_MONITORING_SECTION_GAP * 4.0f +
 						     QM_MONITORING_MAIN_GRAPH_HEIGHT +
@@ -583,9 +621,15 @@ class CQmMonitoring : public CComponent
 	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aGameTimeMarginHistory = {};
 	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aFpsHistory = {};
 	std::array<float, QM_MONITORING_HISTORY_CAPACITY> m_aFrameTimeHistory = {};
+	SQmMonitoringGraphCache m_GraphCache;
 	int m_HistoryHead = 0;
 	int m_HistoryCount = 0;
 	int64_t m_LastSampleTick = 0;
+	int64_t m_LastPercentileTick = 0;
+	float m_CachedFrameTimeP95Ms = -1.0f;
+	float m_CachedFrameTimeP99Ms = -1.0f;
+	float m_CachedFpsOnePctLow = -1.0f;
+	int m_CachedLongFrameCount = 0;
 	int64_t m_LastSnapshotRateSampleTime = 0;
 	uint64_t m_LastSnapshotCount = 0;
 	uint64_t m_LastSnapshotPartCount = 0;
@@ -604,6 +648,7 @@ class CQmMonitoring : public CComponent
 	void UpdateDiagnosticVerdict(SQmDiagnosticVerdict &Verdict, const SQmNetworkMetrics &Net, const SQmPerformanceMetrics &Perf);
 	void PushFrameTimeSample(float FrameTimeMs);
 	void PushHistorySample(float RttMs, float PredMs, float SnapshotGapMs, float PredictionJitterMs, float GameTimeMarginMs, float Fps);
+	void UpdateGraphCache();
 	void RenderHeader(CUIRect Rect) const;
 	void RenderMainGraph(CUIRect Rect) const;
 	void RenderFpsGraph(CUIRect Rect) const;

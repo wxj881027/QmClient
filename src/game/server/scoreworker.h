@@ -24,6 +24,8 @@ enum
 {
 	NUM_CHECKPOINTS = MAX_CHECKPOINTS,
 	TIMESTAMP_STR_LENGTH = 20, // 2019-04-02 19:38:36
+	// 最坏情况下所有队员姓名及分隔符的总长度。
+	MAX_TEAM_NAMES_LENGTH = MAX_CLIENTS * (MAX_NAME_LENGTH + 2),
 };
 
 struct CScorePlayerResult : ISqlResult
@@ -268,6 +270,7 @@ struct CTeamrank
 	CUuid m_TeamId;
 	char m_aaNames[MAX_CLIENTS][MAX_NAME_LENGTH];
 	unsigned int m_NumNames;
+	unsigned int m_TotalNames;
 	CTeamrank();
 
 	// Assumes that a database query equivalent to
@@ -285,6 +288,11 @@ struct CTeamrank
 	bool NextSqlResult(IDbConnection *pSqlServer, bool *pEnd, char *pError, int ErrorSize);
 
 	bool SamePlayers(const std::vector<std::string> *pvSortedNames);
+
+	// 将队员姓名按聊天格式拼接，超出空间的部分用“还有 N 人”概括。
+	void FormatNames(char *pBuf, int BufSize) const;
+
+	void FormatTeamTopLine(char *pMessage, int MessageSize, int Rank, const char *pTime) const;
 
 	static bool GetSqlTop5Team(IDbConnection *pSqlServer, bool *pEnd, char *pError, int ErrorSize, char (*paMessages)[512], int *StartLine, int Count);
 };

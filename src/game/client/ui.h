@@ -12,6 +12,7 @@
 #include <engine/textrender.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -19,6 +20,8 @@
 #include <vector>
 
 class CScrollRegion;
+class CQmIconManager;
+enum class EQmIcon;
 class IClient;
 class IGraphics;
 class IKernel;
@@ -439,12 +442,42 @@ struct SPopupMenuId
 {
 };
 
+/**
+ * 跨帧保留文本容器、仅在文本或布局变化时重建的文本，用于每帧渲染的文本。
+ * 颜色在渲染时应用，因此修改颜色不会重建容器。
+ *
+ * 容器必须在文本渲染丢弃其容器前用 @link Reset @endlink 释放，
+ * 这发生在窗口大小变化与语言切换时。
+ */
+class CCachedText
+{
+	STextContainerIndex m_TextContainerIndex;
+	std::string m_Text;
+	float m_FontSize = -1.0f;
+	float m_LineWidth = -1.0f;
+	int m_CursorFlags = 0;
+	STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
+	float m_MaxCharacterHeight = 0.0f;
+
+public:
+	CCachedText() = default;
+	// 复制会导致两个所有者共享同一个文本容器。
+	CCachedText(const CCachedText &) = delete;
+	CCachedText &operator=(const CCachedText &) = delete;
+
+	void Update(ITextRender *pTextRender, const char *pText, float FontSize, float LineWidth = -1.0f, int CursorFlags = TEXTFLAG_RENDER);
+	void Render(ITextRender *pTextRender, vec2 Pos, ColorRGBA Color) const;
+	void Reset(ITextRender *pTextRender);
+
+	float Width() const { return m_BoundingBox.m_W; }
+	float MaxCharacterHeight() const { return m_MaxCharacterHeight; }
+};
+
 struct SPopupMenuProperties
 {
 	int m_Corners = IGraphics::CORNER_ALL;
 	ColorRGBA m_BorderColor = ColorRGBA(0.5f, 0.5f, 0.5f, 0.75f);
 	ColorRGBA m_BackgroundColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.75f);
-	bool m_AnimateAlpha = true;
 	bool m_AutoReposition = true;
 	bool m_ClipToViewport = false;
 	bool m_BlockUnderlyingScroll = false;
@@ -641,10 +674,11 @@ private:
 	std::vector<float> m_vGaussianBlurScopeAlphas;
 	int m_GaussianBlurSuppressionDepth = 0;
 	IGraphics::CRenderTargetHandle m_GaussianBlurSource;
-	IGraphics::CRenderTargetHandle m_GaussianBlurTemporary;
+	std::array<IGraphics::CRenderTargetHandle, IGraphics::DUAL_KAWASE_PYRAMID_LEVELS> m_aGaussianBlurTemporary;
 	IGraphics::CRenderTargetHandle m_GaussianBlurTarget;
 	int m_GaussianBlurWidth = 0;
 	int m_GaussianBlurHeight = 0;
+	int m_GaussianBlurMode = -1;
 	bool m_GaussianBlurPrepared = false;
 	uint64_t m_GaussianBlurPreparedFrame = 0;
 
@@ -730,7 +764,6 @@ private:
 		const SPopupMenuId *m_pId;
 		SPopupMenuProperties m_Props;
 		CUIRect m_Rect;
-		float m_OpenTime = 0.0f;
 		void *m_pContext;
 		FPopupMenuFunction m_pfnFunc;
 	};
@@ -748,6 +781,7 @@ private:
 	IGraphics *m_pGraphics;
 	IInput *m_pInput;
 	ITextRender *m_pTextRender;
+	CQmIconManager *m_pQmIconManager = nullptr;
 	float m_BackgroundAlphaScale = 1.0f;
 
 	std::vector<CUIElement *> m_vpOwnUIElements; // ui elements maintained by CUi class
@@ -756,7 +790,6 @@ private:
 	int QuadBatchRectContainer(float Width, float Height, float Rounding, int Corners) const;
 	void RenderQuadContainerBatchable(int QuadContainerIndex, float X, float Y, const ColorRGBA &Color) const;
 	void DestroyGaussianBlurTargets();
-	bool PrepareGaussianBlur();
 
 public:
 	static const CLinearScrollbarScale ms_LinearScrollbarScale;
@@ -824,6 +857,12 @@ public:
 	bool GaussianBlurScopeActive() const { return !m_vGaussianBlurScopeAlphas.empty() && m_GaussianBlurSuppressionDepth == 0; }
 	float GaussianBlurScopeAlpha() const { return GaussianBlurScopeActive() ? m_vGaussianBlurScopeAlphas.back() : 0.0f; }
 	void RenderGaussianBlur(const CUIRect &Rect, float Alpha = 1.0f, int Corners = IGraphics::CORNER_NONE, float Rounding = 0.0f);
+
+	// 供 HUD Dynamic Island 等外部消费者复用同一份模糊结果。准备按 PerfFrame 缓存，
+	// 目标内容在两次准备之间保持不变；句柄随窗口尺寸/开关销毁重建，消费方须每帧重新取用。
+	bool PrepareGaussianBlur();
+	bool GaussianBlurTargetReady() const { return m_GaussianBlurPrepared && m_GaussianBlurTarget.IsValid(); }
+	IGraphics::CRenderTargetHandle GaussianBlurTarget() const { return m_GaussianBlurTarget; }
 
 	void SetEnabled(bool Enabled) { m_Enabled = Enabled; }
 	bool Enabled() const { return m_Enabled; }
@@ -1054,7 +1093,22 @@ public:
 	bool DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled, const SEditBoxRenderOptions &RenderOptions);
 
 	int DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const std::function<const char *()> &GetTextLambda, const CUIRect *pRect, const SMenuButtonProperties &Props = {});
+	void DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL, bool Enabled = true);
 	int DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt);
+	// 图集优先、字形回退的图标绘制：pFallbackIcon 为 FontIcons::FONT_ICON_* 字形。
+	void SetQmIconManager(CQmIconManager *pQmIconManager) { m_pQmIconManager = pQmIconManager; }
+	bool DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const;
+	bool DrawQmIconAt(float x, float y, float Size, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const
+	{
+		CUIRect Rect;
+		Rect.x = x;
+		Rect.y = y;
+		Rect.w = Size;
+		Rect.h = Size;
+		return DrawQmIcon(Rect, Icon, pFallbackIcon, Color);
+	}
+	CLabelResult DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align, const SLabelProperties &LabelProps = {}) const;
+	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt);
 	// only used for popup menus
 	int DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding = 0.0f, bool TransparentInactive = false, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, float MinimumFontSize = -1.0f);
 
@@ -1079,7 +1133,13 @@ public:
 	void RenderProgressBar(CUIRect ProgressBar, float Progress);
 
 	// render time with hundredths or thousands aligned to the right of the UIRect
-	void RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFinished, int Millis, bool TrueMilliseconds) const;
+	void RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFinished, int Millis, bool TrueMilliseconds, CCachedText &SecondsText, CCachedText &MillisText, ColorRGBA Color) const;
+	void RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFinished, int Millis, bool TrueMilliseconds) const
+	{
+		CCachedText SecondsText;
+		CCachedText MillisText;
+		RenderTime(TimeRect, FontSize, Seconds, NotFinished, Millis, TrueMilliseconds, SecondsText, MillisText, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+	}
 
 	// progress spinner
 	void RenderProgressSpinner(vec2 Center, float OuterRadius, const SProgressSpinnerProperties &Props = {}) const;
@@ -1091,7 +1151,7 @@ public:
 	// Fired the moment the back button transitions to active (mouse-down inside it).
 	void SetOnBackButtonPressedCallback(std::function<void()> pfnCallback) { m_OnBackButtonPressedFunction = std::move(pfnCallback); }
 
-	// popup menu
+	// 弹窗实现位于 ui_popups.cpp
 	static constexpr float PopupMenuContentInset() { return (SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN) * 2.0f; }
 	void DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, float Height, void *pContext, FPopupMenuFunction pfnFunc, const SPopupMenuProperties &Props = {});
 	void RenderPopupMenus();
@@ -1148,22 +1208,9 @@ public:
 
 	struct SSelectionPopupContext : public SPopupMenuId
 	{
-		// 条目自定义前景：弹层在「条目背景之上、条目文字之下」逐条调用，
-		// 供调用方补画普通文本表达不了的效果（例：头衔动态风格的实时预览）。
-		// 绘制坐标已是屏幕坐标，回调内不要再叠加卡片/滚动偏移。
-		struct SEntryCustomRenderContext
-		{
-			const CUIRect &m_RowRect; // 整个条目矩形，与 PopupSelection 的 slot 同源
-			float m_Padding; // 条目按钮自身的内边距，自定义前景应避让
-			float m_FontSize; // 条目文字字号，供预览按同一字号对齐
-		};
-		typedef void (*FEntryCustomRenderCallback)(void *pContext, const SEntryCustomRenderContext &EntryCtx, int Index, const char *pEntry);
-
 		CUi *m_pUI; // set by CUi when popup is shown
 		CScrollRegion *m_pScrollRegion;
 		SPopupMenuProperties m_Props;
-		FEntryCustomRenderCallback m_pfnEntryCustomRender = nullptr;
-		void *m_pEntryCustomRenderContext = nullptr;
 		char m_aMessage[256];
 		std::vector<std::string> m_vEntries;
 		std::vector<CButtonContainer> m_vButtonContainers;
@@ -1256,9 +1303,6 @@ public:
 		const CUIRect *m_pAnchorViewport;
 		const CUIRect *m_pPopupViewport;
 		SQmDropdownVisualStyle m_VisualStyle;
-		// 弹层条目的自定义前景绘制。上下文必须比本帧的弹层绘制活得更久（调用方通常用 static）。
-		SSelectionPopupContext::FEntryCustomRenderCallback m_pfnEntryCustomRender = nullptr;
-		void *m_pEntryCustomRenderContext = nullptr;
 	};
 	int DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps = {});
 	int DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, bool Enabled);

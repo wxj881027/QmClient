@@ -1,9 +1,27 @@
 cmake_minimum_required(VERSION 3.12...3.27.4)
 
-set(DEFAULT_MACOS_DEPLOYMENT_TARGET "11.0")
-set(CMAKE_OSX_DEPLOYMENT_TARGET "${DEFAULT_MACOS_DEPLOYMENT_TARGET}" CACHE STRING "Minimum macOS deployment version")
-if(CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 11.0)
-  message(WARNING "Building for macOS < 11.0 is not supported")
+# In-source builds can leave generated files in the source tree and contaminate
+# later out-of-source builds.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR
+    "In-source builds are not supported. Configure an out-of-source build, for example:\n"
+    "  cmake -B build -G Ninja\n"
+    "  cmake --build build")
+endif()
+
+set(IS_IOS FALSE)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(IS_IOS TRUE)
+elseif(DEFINED CMAKE_OSX_SYSROOT AND CMAKE_OSX_SYSROOT MATCHES "iphoneos|iphonesimulator")
+  set(IS_IOS TRUE)
+endif()
+
+if(NOT IS_IOS)
+  set(DEFAULT_MACOS_DEPLOYMENT_TARGET "11.0")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "${DEFAULT_MACOS_DEPLOYMENT_TARGET}" CACHE STRING "Minimum macOS deployment version")
+  if(CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 11.0)
+    message(WARNING "Building for macOS < 11.0 is not supported")
+  endif()
 endif()
 
 file(STRINGS src/game/version.h VERSION_LINE
@@ -30,27 +48,45 @@ file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/data")
 
 file(WRITE "${DATA_VERSION_FILE}" "DDNet ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}\n")
 
+option(QMCLIENT_STABLE_BUILD "Build QmClient with its formal stable version" OFF)
+
+if(QMCLIENT_STABLE_BUILD)
+  set(QMCLIENT_VERSION_DEFINE QMCLIENT_STABLE_VERSION)
+else()
+  set(QMCLIENT_VERSION_DEFINE QMCLIENT_DEV_VERSION)
+endif()
+
 file(STRINGS src/game/version.h QMCLIENT_VERSION_LINE
   LIMIT_COUNT 1
-  REGEX "^#define QMCLIENT_VERSION "
+  REGEX "^#define ${QMCLIENT_VERSION_DEFINE} "
 )
 
-if(QMCLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
-  set(QMCLIENT_VERSION_MAJOR ${CMAKE_MATCH_1})
-  set(QMCLIENT_VERSION_MINOR ${CMAKE_MATCH_2})
-  set(QMCLIENT_VERSION_PATCH ${CMAKE_MATCH_3})
-elseif(QMCLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)")
-  set(QMCLIENT_VERSION_MAJOR ${CMAKE_MATCH_1})
-  set(QMCLIENT_VERSION_MINOR ${CMAKE_MATCH_2})
-  set(QMCLIENT_VERSION_PATCH "0")
-else()
+string(REGEX REPLACE "^#define ${QMCLIENT_VERSION_DEFINE} \"" "" QMCLIENT_VERSION_NUMBER "${QMCLIENT_VERSION_LINE}")
+string(REGEX REPLACE "\"$" "" QMCLIENT_VERSION_NUMBER "${QMCLIENT_VERSION_NUMBER}")
+if(NOT QMCLIENT_VERSION_NUMBER MATCHES "^[0-9]+(\\.[0-9]+)?(\\.[0-9]+)?$")
   message(FATAL_ERROR "Couldn't parse QmClient version from src/game/version.h")
+endif()
+
+string(REPLACE "." ";" QMCLIENT_VERSION_PARTS "${QMCLIENT_VERSION_NUMBER}")
+list(LENGTH QMCLIENT_VERSION_PARTS QMCLIENT_VERSION_PART_COUNT)
+list(GET QMCLIENT_VERSION_PARTS 0 QMCLIENT_VERSION_MAJOR)
+set(QMCLIENT_VERSION_MINOR 0)
+set(QMCLIENT_VERSION_PATCH 0)
+if(QMCLIENT_VERSION_PART_COUNT GREATER 1)
+  list(GET QMCLIENT_VERSION_PARTS 1 QMCLIENT_VERSION_MINOR)
+endif()
+if(QMCLIENT_VERSION_PART_COUNT GREATER 2)
+  list(GET QMCLIENT_VERSION_PARTS 2 QMCLIENT_VERSION_PATCH)
 endif()
 
 if(QMCLIENT_VERSION_PATCH STREQUAL "0")
   project(QmClient VERSION ${QMCLIENT_VERSION_MAJOR}.${QMCLIENT_VERSION_MINOR})
 else()
   project(QmClient VERSION ${QMCLIENT_VERSION_MAJOR}.${QMCLIENT_VERSION_MINOR}.${QMCLIENT_VERSION_PATCH})
+endif()
+
+if(QMCLIENT_STABLE_BUILD)
+  add_compile_definitions(QMCLIENT_STABLE_BUILD)
 endif()
 
 file(APPEND "${DATA_VERSION_FILE}" "QmClient ${QMCLIENT_VERSION_MAJOR}.${QMCLIENT_VERSION_MINOR}.${QMCLIENT_VERSION_PATCH}\n")
@@ -85,7 +121,9 @@ else()
   endif()
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if(IS_IOS)
+  set(TARGET_OS "ios")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   set(TARGET_OS "windows")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(TARGET_OS "linux")
@@ -120,13 +158,17 @@ set(AUTO_VULKAN_BACKEND ON)
 if(TARGET_OS STREQUAL "windows")
   set(AUTO_DEPENDENCIES_DEFAULT ON)
   set(AUTO_VULKAN_BACKEND OFF)
-elseif(TARGET_OS STREQUAL "mac")
-  # macOS 通过 MoltenVK 使用 Vulkan，开发与默认构建均启用该后端。
-  set(AUTO_VULKAN_BACKEND ON)
+elseif(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
+  # Apple 平台使用原生 Metal，不再构建 MoltenVK 后端。
+  set(AUTO_VULKAN_BACKEND OFF)
 endif()
 
-# QmClient 的 WSS 通道由 Rust 提供，不受服务端 libwebsockets 开关影响。
-option(WEBSOCKETS "Enable websockets support for server" OFF)
+set(AUTO_METAL_BACKEND OFF)
+if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
+  set(AUTO_METAL_BACKEND ON)
+endif()
+
+option(WEBSOCKETS "Enable websockets support" OFF)
 option(MYSQL "Enable mysql support" OFF)
 option(TEST_MYSQL "Test mysql support in unit tests (also sets -DMYSQL=ON)" OFF)
 if(WIN32)
@@ -149,15 +191,18 @@ option(DISCORD_DYNAMIC "Enable discovering Discord rich presence libraries at ru
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
 option(DEV "Don't generate stuff necessary for packaging" OFF)
 option(VULKAN "Enable the vulkan backend" ${AUTO_VULKAN_BACKEND})
+option(METAL "Enable the native Metal backend" ${AUTO_METAL_BACKEND})
+include(cmake/QmAppleGraphics.cmake)
 option(EXCEPTION_HANDLING "Enable crashdumps (only works with Windows)" ON)
 option(IPO "Enable interprocedural optimizations" ON)
+option(PRECOMPILE_HEADERS "Precompile commonly used headers to speed up compilation (requires CMake 3.16)" ON)
 option(FUSE_LD "Linker to use" OFF)
-option(SECURITY_COMPILER_FLAGS "Whether to set security-relevant compiler flags like -D_FORTIFY_SOURCE=2 and -fstack-protector-strong" ON)
+option(SECURITY_COMPILER_FLAGS "Whether to set security-relevant compiler flags like -D_FORTIFY_SOURCE=3 and -fstack-protector-strong" ON)
 option(QM_DISABLE_PARALLEL_COMPILE "Disable /MP for compiler warnings-sensitive gates" OFF)
 option(QM_MSVC_USE_EMBEDDED_DEBUG_INFO "Use embedded MSVC debug information instead of per-target PDB files" OFF)
 option(QM_MSVC_ANALYZE "Enable MSVC /analyze static analysis (Windows only)" OFF)
 option(QM_STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
-option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor PNG icon atlases from SVG sources" ON)
+option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bundled fonts" OFF)
 
 if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   add_subdirectory(vendor/minhook EXCLUDE_FROM_ALL)
@@ -170,11 +215,11 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   )
   set_target_properties(qm-nmt-hook64 PROPERTIES OUTPUT_NAME "qm-nmt-hook64")
   set_property(TARGET qm-nmt-hook64 PROPERTY CXX_STANDARD 20)
-  set_property(TARGET qm-nmt-hook64 PROPERTY CXX_STANDARD_REQUIRED ON)
-  set_property(TARGET qm-nmt-hook64 PROPERTY CXX_EXTENSIONS OFF)
+    set_property(TARGET qm-nmt-hook64 PROPERTY CXX_STANDARD_REQUIRED ON)
+    set_property(TARGET qm-nmt-hook64 PROPERTY CXX_EXTENSIONS OFF)
+    target_compile_options(qm-nmt-hook64 PRIVATE /utf-8)
   target_include_directories(qm-nmt-hook64 PRIVATE src vendor/minhook/include)
   target_compile_definitions(qm-nmt-hook64 PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-  target_compile_options(qm-nmt-hook64 PRIVATE /utf-8) # 源文件为 UTF-8 无 BOM，中文注释需要 /utf-8
   target_link_libraries(qm-nmt-hook64 PRIVATE minhook windowsapp bcrypt)
 
   # 网易云启动期 Bootstrap 在 QmClient 目录中使用独立文件名；部署器只在
@@ -187,11 +232,11 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   )
   set_target_properties(qm-nmt-bootstrap PROPERTIES OUTPUT_NAME "qm-nmt-bootstrap")
   set_property(TARGET qm-nmt-bootstrap PROPERTY CXX_STANDARD 20)
-  set_property(TARGET qm-nmt-bootstrap PROPERTY CXX_STANDARD_REQUIRED ON)
-  set_property(TARGET qm-nmt-bootstrap PROPERTY CXX_EXTENSIONS OFF)
+    set_property(TARGET qm-nmt-bootstrap PROPERTY CXX_STANDARD_REQUIRED ON)
+    set_property(TARGET qm-nmt-bootstrap PROPERTY CXX_EXTENSIONS OFF)
+    target_compile_options(qm-nmt-bootstrap PRIVATE /utf-8)
   target_include_directories(qm-nmt-bootstrap PRIVATE src)
   target_compile_definitions(qm-nmt-bootstrap PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-  target_compile_options(qm-nmt-bootstrap PRIVATE /utf-8)
   target_link_libraries(qm-nmt-bootstrap PRIVATE ws2_32)
 
   add_executable(qm-nmt-helper src/qm-nmt-hook/qm_netease_hook_helper.cpp)
@@ -199,6 +244,9 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
     src/qm-nmt-hook/qm_netease_bootstrap.cpp
     src/qm-nmt-hook/qm_netease_cdp.cpp
     src/qm-nmt-hook/qm_netease_cdp_client.cpp
+    src/qm-music-hook/qm_music_source.h
+    src/qm-music-hook/qm_kugou_protocol.h
+    src/qm-music-hook/qm_qqmusic_protocol.h
     src/qm-nmt-hook/qm_netease_frontend_bridge.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
@@ -209,11 +257,11 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   )
   set_target_properties(qm-nmt-helper PROPERTIES OUTPUT_NAME "qm-nmt-helper")
   set_property(TARGET qm-nmt-helper PROPERTY CXX_STANDARD 20)
-  set_property(TARGET qm-nmt-helper PROPERTY CXX_STANDARD_REQUIRED ON)
-  set_property(TARGET qm-nmt-helper PROPERTY CXX_EXTENSIONS OFF)
+    set_property(TARGET qm-nmt-helper PROPERTY CXX_STANDARD_REQUIRED ON)
+    set_property(TARGET qm-nmt-helper PROPERTY CXX_EXTENSIONS OFF)
+    target_compile_options(qm-nmt-helper PRIVATE /utf-8)
   target_include_directories(qm-nmt-helper PRIVATE src)
   target_compile_definitions(qm-nmt-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-  target_compile_options(qm-nmt-helper PRIVATE /utf-8)
   target_link_libraries(qm-nmt-helper PRIVATE bcrypt winhttp ws2_32)
 
   # 汽水音乐 Hook Helper:发现 SodaMusic.exe 主进程,激活 Node inspector(9229),
@@ -232,17 +280,20 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
     src/qm-nmt-hook/qm_netease_cdp.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
+    src/qm-music-hook/qm_music_source.h
+    src/qm-music-hook/qm_kugou_protocol.h
+    src/qm-music-hook/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/engine/external/json-parser/json.c
   )
   set_target_properties(qm-soda-helper PROPERTIES OUTPUT_NAME "qm-soda-helper")
   set_property(TARGET qm-soda-helper PROPERTY CXX_STANDARD 20)
-  set_property(TARGET qm-soda-helper PROPERTY CXX_STANDARD_REQUIRED ON)
-  set_property(TARGET qm-soda-helper PROPERTY CXX_EXTENSIONS OFF)
+    set_property(TARGET qm-soda-helper PROPERTY CXX_STANDARD_REQUIRED ON)
+    set_property(TARGET qm-soda-helper PROPERTY CXX_EXTENSIONS OFF)
+    target_compile_options(qm-soda-helper PRIVATE /utf-8)
   set_property(TARGET qm-soda-helper PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   target_include_directories(qm-soda-helper PRIVATE src)
   target_compile_definitions(qm-soda-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-  target_compile_options(qm-soda-helper PRIVATE /utf-8)
   target_link_libraries(qm-soda-helper PRIVATE bcrypt winhttp ws2_32)
 
   # 酷狗与 QQ 音乐共用独立采集进程，网络与进程读取不进入游戏主线程。
@@ -274,15 +325,19 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
     CXX_EXTENSIONS OFF
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
   )
+  target_compile_options(qm-music-helper PRIVATE /utf-8)
   target_include_directories(qm-music-helper PRIVATE src)
   target_compile_definitions(qm-music-helper PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-  target_compile_options(qm-music-helper PRIVATE /utf-8)
   target_link_libraries(qm-music-helper PRIVATE bcrypt winhttp ws2_32 iphlpapi version advapi32 user32)
 endif()
 
 if(TARGET_OS STREQUAL "android")
   set(DISCORD OFF)
   set(STEAM OFF)
+elseif(TARGET_OS STREQUAL "ios")
+  set(DISCORD OFF)
+  set(STEAM OFF)
+  set(VULKAN OFF)
 endif()
 
 if(TARGET_OS STREQUAL "emscripten")
@@ -338,10 +393,19 @@ endif()
 
 set(SERVER_EXECUTABLE DDNet-Server CACHE STRING "Name of the built server executable")
 set(CLIENT_EXECUTABLE DDNet CACHE STRING "Name of the build client executable")
+set(IOS_BUNDLE_IDENTIFIER "org.qmclient.client" CACHE STRING "iOS bundle identifier")
+option(IOS_USE_ASSET_CATALOG "Compile the iOS app icon asset catalog" ON)
 
 ########################################################################
 # Compiler flags
 ########################################################################
+
+check_cxx_compiler_flag(-Werror=unused-command-line-argument FLAG_SUPPORTED_Werror_unused_command_line_argument)
+if(FLAG_SUPPORTED_Werror_unused_command_line_argument)
+  set(FLAG_CHECK_FLAGS "-Werror=unused-command-line-argument")
+else()
+  set(FLAG_CHECK_FLAGS "")
+endif()
 
 function(add_c_compiler_flag_if_supported VARIABLE FLAG)
   if(ARGC GREATER 2)
@@ -350,6 +414,7 @@ function(add_c_compiler_flag_if_supported VARIABLE FLAG)
     set(CHECKED_FLAG "${FLAG}")
   endif()
   string(REGEX REPLACE "[^A-Za-z0-9]" "_" CONFIG_VARIABLE "FLAG_SUPPORTED${CHECKED_FLAG}")
+  set(CMAKE_REQUIRED_FLAGS "${FLAG_CHECK_FLAGS}")
   check_c_compiler_flag("${CHECKED_FLAG}" ${CONFIG_VARIABLE})
   if(${CONFIG_VARIABLE})
     if(${VARIABLE})
@@ -367,6 +432,7 @@ function(add_cxx_compiler_flag_if_supported VARIABLE FLAG)
     set(CHECKED_FLAG "${FLAG}")
   endif()
   string(REGEX REPLACE "[^A-Za-z0-9]" "_" CONFIG_VARIABLE "FLAG_SUPPORTED${CHECKED_FLAG}")
+  set(CMAKE_REQUIRED_FLAGS "${FLAG_CHECK_FLAGS}")
   check_cxx_compiler_flag("${CHECKED_FLAG}" ${CONFIG_VARIABLE})
   if(${CONFIG_VARIABLE})
     if(${VARIABLE})
@@ -430,7 +496,8 @@ if(NOT MSVC AND NOT HAIKU)
             endif()
           endif()
         endif()
-      else()
+      elseif(NOT TARGET_OS STREQUAL "windows")
+        # GCC LTO cannot use the gold linker for PE binaries.
         add_linker_flag_if_supported(OUR_FLAGS_LINK -fuse-ld=gold)
         if(FLAG_SUPPORTED_fuse_ld_gold)
           message(STATUS "Using gold linker")
@@ -446,8 +513,18 @@ if(NOT MSVC AND NOT HAIKU)
   if(SECURITY_COMPILER_FLAGS)
     # Protect the stack pointer.
     add_cxx_compiler_flag_if_supported(OUR_FLAGS -fstack-protector-strong)
+    # 探测大栈分配的每个页面，降低 stack clash 攻击风险。
+    add_cxx_compiler_flag_if_supported(OUR_FLAGS -fstack-clash-protection)
+    # 在目标编译器支持时启用前向控制流保护。
+    add_cxx_compiler_flag_if_supported(OUR_FLAGS -fcf-protection=full)
+    add_cxx_compiler_flag_if_supported(OUR_FLAGS -mbranch-protection=standard)
     if(MINGW)
       add_linker_flag_if_supported(OUR_FLAGS_LINK -lssp)
+    endif()
+    if(NOT TARGET_OS STREQUAL "windows" AND NOT TARGET_OS STREQUAL "mac")
+      # 启动时解析动态符号，随后将 GOT 设为只读。
+      add_linker_flag_if_supported(OUR_FLAGS_LINK -Wl,-z,relro)
+      add_linker_flag_if_supported(OUR_FLAGS_LINK -Wl,-z,now)
     endif()
   endif()
 
@@ -519,7 +596,15 @@ if(NOT MSVC AND NOT HAIKU)
 endif()
 
 if(NOT MSVC AND NOT HAIKU AND SECURITY_COMPILER_FLAGS)
+  check_c_compiler_flag("-O2;-Wp,-Werror;-D_FORTIFY_SOURCE=3" DEFINE_FORTIFY_SOURCE_3)
   check_c_compiler_flag("-O2;-Wp,-Werror;-D_FORTIFY_SOURCE=2" DEFINE_FORTIFY_SOURCE) # Some distributions define _FORTIFY_SOURCE by themselves.
+  if(NOT CMAKE_VERSION VERSION_LESS 3.14 AND NOT TARGET_OS STREQUAL "emscripten")
+    include(CheckPIESupported)
+    check_pie_supported(LANGUAGES C CXX)
+    if(CMAKE_C_LINK_PIE_SUPPORTED AND CMAKE_CXX_LINK_PIE_SUPPORTED)
+      set(ENABLE_PIE TRUE)
+    endif()
+  endif()
 endif()
 
 ########################################################################
@@ -603,6 +688,13 @@ if(FAT)
   set(LIB_DIR "${TARGET_OS}/libfat")
 elseif(TARGET_OS STREQUAL "emscripten")
   set(LIB_DIR "webasm/libwasm")
+elseif(TARGET_OS STREQUAL "ios")
+  set(LIB_DIR "ios")
+  if(CMAKE_OSX_SYSROOT MATCHES "iphonesimulator")
+    set(IOS_XCFRAMEWORK_SLICE "ios-arm64_x86_64-simulator")
+  else()
+    set(IOS_XCFRAMEWORK_SLICE "ios-arm64")
+  endif()
 elseif(TARGET_CPU_ARCHITECTURE STREQUAL "arm" OR TARGET_CPU_ARCHITECTURE STREQUAL "arm64")
   set(LIB_DIR "${TARGET_OS}/lib${TARGET_CPU_ARCHITECTURE}")
 else()
@@ -617,7 +709,11 @@ function(set_extra_dirs_lib VARIABLE NAME)
   else()
     set(TYPE PATHS)
   endif()
-  if(TARGET_BITS AND TARGET_OS)
+  if(TARGET_OS STREQUAL "ios")
+    file(GLOB DIR "${PROJECT_SOURCE_DIR}/ddnet-libs/${NAME}/${LIB_DIR}/*.xcframework/${IOS_XCFRAMEWORK_SLICE}")
+    set("${TYPE}_${VARIABLE}_LIBDIR" "${DIR}" PARENT_SCOPE)
+    set("EXTRA_${VARIABLE}_LIBDIR" "${DIR}" PARENT_SCOPE)
+  elseif(TARGET_BITS AND TARGET_OS)
     set(DIR "ddnet-libs/${NAME}/${LIB_DIR}")
     set("${TYPE}_${VARIABLE}_LIBDIR" "${DIR}" PARENT_SCOPE)
     set("EXTRA_${VARIABLE}_LIBDIR" "${DIR}" PARENT_SCOPE)
@@ -638,7 +734,7 @@ function(set_extra_dirs_include VARIABLE NAME LIBRARY)
 endfunction()
 
 if(CMAKE_CROSSCOMPILING)
-  if(TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "emscripten")
+  if(TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "emscripten" OR TARGET_OS STREQUAL "ios")
     # be more aggressive with android toolchain
     set(CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH NO_CMAKE_SYSTEM_PATH NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
   else()
@@ -670,19 +766,28 @@ if(TARGET_OS STREQUAL "android")
   find_package(Android)
 endif()
 find_package(ZLIB)
-# 歌词 Helper 在 find_package 之前定义，这里补链接 zlib。
-foreach(qm_lyrics_helper qm-soda-helper qm-music-helper)
-  if(TARGET ${qm_lyrics_helper})
-    if(ZLIB_DEP)
-      target_sources(${qm_lyrics_helper} PRIVATE ${ZLIB_DEP})
-      target_include_directories(${qm_lyrics_helper} PRIVATE ${ZLIB_INCLUDE_DIRS})
-    elseif(ZLIB_LIBRARIES)
-      target_link_libraries(${qm_lyrics_helper} PRIVATE ${ZLIB_LIBRARIES})
-    endif()
+# 汽水 Helper 与网易云 Helper 都在 find_package 之前定义,这里补链接 zlib。
+if(TARGET qm-soda-helper)
+  if(ZLIB_DEP)
+    target_sources(qm-soda-helper PRIVATE ${ZLIB_DEP})
+    target_include_directories(qm-soda-helper PRIVATE ${ZLIB_INCLUDE_DIRS})
+  elseif(ZLIB_LIBRARIES)
+    target_link_libraries(qm-soda-helper PRIVATE ${ZLIB_LIBRARIES})
   endif()
-endforeach()
+endif()
+# 音乐 Helper 同样在 find_package 之前定义（酷狗/QQ 音乐采集），这里补链接 zlib。
+if(TARGET qm-music-helper)
+  if(ZLIB_DEP)
+    target_sources(qm-music-helper PRIVATE ${ZLIB_DEP})
+    target_include_directories(qm-music-helper PRIVATE ${ZLIB_INCLUDE_DIRS})
+  elseif(ZLIB_LIBRARIES)
+    target_link_libraries(qm-music-helper PRIVATE ${ZLIB_LIBRARIES})
+  endif()
+endif()
 find_package(Crypto)
-find_package(Curl)
+if(NOT TARGET_OS STREQUAL "emscripten")
+  find_package(Curl)
+endif()
 if(CLIENT AND VIDEORECORDER)
   find_package(FFMPEG)
 endif()
@@ -690,9 +795,10 @@ find_package(Freetype)
 if(DOWNLOAD_GTEST)
   find_package(Git)
 endif()
-if(NOT(TARGET_OS STREQUAL "android"))
+if(NOT(TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "ios"))
   find_package(GLEW)
 endif()
+find_package(EGL QUIET)
 find_package(GTest)
 if(UPNP)
   find_package(Miniupnpc)
@@ -750,9 +856,44 @@ else()
   set(VULKAN_INCLUDE_DIRS)
 endif()
 
+set(METAL_SHADER_FILE_LIST "" CACHE STRING "Metal shader file list")
+if(CLIENT AND METAL)
+  if(NOT (TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios"))
+    message(FATAL_ERROR "METAL=ON is only supported on macOS and iOS")
+  endif()
+  if(TARGET_OS STREQUAL "ios")
+    if(CMAKE_OSX_SYSROOT MATCHES "iphonesimulator")
+      set(METAL_SDK iphonesimulator)
+    else()
+      set(METAL_SDK iphoneos)
+    endif()
+  else()
+    set(METAL_SDK macosx)
+  endif()
+  find_program(XCRUN_PROGRAM xcrun)
+  if(NOT XCRUN_PROGRAM)
+    message(FATAL_ERROR "METAL=ON requires xcrun from Xcode or the macOS Command Line Tools")
+  endif()
+  execute_process(COMMAND ${XCRUN_PROGRAM} --sdk ${METAL_SDK} --find metal
+    OUTPUT_VARIABLE METAL_COMPILER
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE METAL_COMPILER_RESULT)
+  execute_process(COMMAND ${XCRUN_PROGRAM} --sdk ${METAL_SDK} --find metallib
+    OUTPUT_VARIABLE METALLIB_COMPILER
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE METALLIB_COMPILER_RESULT)
+  if(METAL_COMPILER_RESULT OR NOT EXISTS "${METAL_COMPILER}" OR METALLIB_COMPILER_RESULT OR NOT EXISTS "${METALLIB_COMPILER}")
+    message(FATAL_ERROR "METAL=ON requires both xcrun metal and metallib; install Xcode or the macOS Command Line Tools")
+  endif()
+  enable_language(OBJCXX)
+  include(cmake/BuildMetalShaders.cmake)
+endif()
+
 message(STATUS "******** ${CMAKE_PROJECT_NAME} ********")
 set(TARGET "Target OS: ${TARGET_OS} ${CMAKE_SYSTEM_PROCESSOR}")
-if(TARGET_OS STREQUAL "mac")
+if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
   set(TARGET "${TARGET} (SDK: ${CMAKE_OSX_SYSROOT}, architectures: ${CMAKE_OSX_ARCHITECTURES})")
 endif()
 message(STATUS ${TARGET})
@@ -773,7 +914,9 @@ function(show_dependency_status OUTPUT_NAME NAME)
   endif()
 endfunction()
 
-show_dependency_status("Curl" CURL)
+if(NOT TARGET_OS STREQUAL "emscripten")
+  show_dependency_status("Curl" CURL)
+endif()
 if(CLIENT AND VIDEORECORDER)
   show_dependency_status("FFmpeg" FFMPEG)
 endif()
@@ -813,8 +956,7 @@ endif()
 if(CLIENT AND VULKAN)
   show_dependency_status("Vulkan" VULKAN)
 endif()
-
-if(NOT(CURL_FOUND))
+if(NOT(CURL_FOUND) AND NOT TARGET_OS STREQUAL "emscripten")
   message(SEND_ERROR "You must install Curl to compile ${CMAKE_PROJECT_NAME}")
 endif()
 if(NOT(Python3_FOUND))
@@ -851,6 +993,9 @@ if(DISCORD_DYNAMIC)
 endif()
 if((CLIENT OR TOOLS) AND NOT(PNG_FOUND))
   message(SEND_ERROR "You must install libpng to compile ${CMAKE_PROJECT_NAME}")
+endif()
+if(TOOLS)
+  show_dependency_status("EGL" EGL)
 endif()
 if(CLIENT AND NOT(FREETYPE_FOUND))
   message(SEND_ERROR "You must install Freetype to compile the ${CMAKE_PROJECT_NAME} client")
@@ -889,7 +1034,7 @@ endif()
 
 if(TARGET_OS STREQUAL "windows")
   set(PLATFORM_CLIENT)
-  set(PLATFORM_CLIENT_LIBS opengl32.lib winmm.lib imm32.lib oleaut32.lib ole32.lib windowscodecs.lib mfplat.lib mfreadwrite.lib mfuuid.lib)
+  set(PLATFORM_CLIENT_LIBS opengl32.lib gdi32.lib winmm.lib imm32.lib oleaut32.lib ole32.lib windowscodecs.lib mfplat.lib mfreadwrite.lib mfuuid.lib)
   if(MSVC)
     list(APPEND PLATFORM_CLIENT_LIBS windowsapp.lib)
   endif()
@@ -915,6 +1060,26 @@ elseif(TARGET_OS STREQUAL "mac")
   )
   set(PLATFORM_CLIENT_LIBS ${COCOA} ${OPENGL} ${USERNOTIFICATIONS})
   set(PLATFORM_LIBS ${CARBON} ${SECURITY})
+elseif(TARGET_OS STREQUAL "ios")
+  find_library(AUDIOTOOLBOX AudioToolbox)
+  find_library(AVFOUNDATION AVFoundation)
+  find_library(COREBLUETOOTH CoreBluetooth)
+  find_library(COREFOUNDATION CoreFoundation)
+  find_library(COREGRAPHICS CoreGraphics)
+  find_library(COREHAPTICS CoreHaptics)
+  find_library(COREMOTION CoreMotion)
+  find_library(FOUNDATION Foundation)
+  find_library(GAMECONTROLLER GameController)
+  find_library(IOS_METAL Metal)
+  find_library(OPENGLES OpenGLES)
+  find_library(QUARTZCORE QuartzCore)
+  find_library(SECURITY Security)
+  find_library(SYSTEMCONFIGURATION SystemConfiguration)
+  find_library(UIKIT UIKit)
+  set(PLATFORM_CLIENT src/ios/ios_main.mm)
+  set(PLATFORM_CLIENT_LIBS ${AUDIOTOOLBOX} ${AVFOUNDATION} ${COREBLUETOOTH} ${COREFOUNDATION} ${COREGRAPHICS} ${COREHAPTICS} ${COREMOTION} ${FOUNDATION} ${GAMECONTROLLER} ${IOS_METAL} ${OPENGLES} ${QUARTZCORE} ${SECURITY} ${SYSTEMCONFIGURATION} ${UIKIT})
+  set(PLATFORM_LIBS)
+  set(PLATFORM_CLIENT_INCLUDE_DIRS)
 elseif(TARGET_OS STREQUAL "haiku")
     set(PLATFORM_CLIENT)
     find_package(OpenGL)
@@ -1119,6 +1284,14 @@ else()
   set(CARGO_TEST ${CMAKE_COMMAND} -E env ${CARGO_TEST_ENV} ${RUST_CARGO} test --locked)
 
 endif()
+if(TARGET_OS STREQUAL "ios")
+  if(NOT DEFINED CMAKE_RUST_COMPILER_TARGET)
+    message(SEND_ERROR "iOS builds require CMAKE_RUST_COMPILER_TARGET")
+  endif()
+  list(APPEND CARGO_BUILD --target ${CMAKE_RUST_COMPILER_TARGET})
+  list(APPEND CARGO_TEST --target ${CMAKE_RUST_COMPILER_TARGET})
+  set(CARGO_BUILD_DIR "${CMAKE_RUST_COMPILER_TARGET}/")
+endif()
 if(MSVC)
   list(INSERT CARGO_BUILD 0 ${CMAKE_COMMAND} -E env $<$<CONFIG:Debug>:CFLAGS=/MTd> $<$<CONFIG:Debug>:CXXFLAGS=/MTd>)
   list(INSERT CARGO_TEST 0 ${CMAKE_COMMAND} -E env RUSTFLAGS=-Ctarget-feature=+crt-static)
@@ -1138,6 +1311,8 @@ if(NOT CMAKE_OSX_ARCHITECTURES AND (DEFINED CMAKE_RUST_COMPILER_TARGET OR RUST_N
 endif()
 set(CARGO_BUILD_DIR_DEBUG "${CARGO_BUILD_DIR}debug")
 set(CARGO_BUILD_DIR_RELEASE "${CARGO_BUILD_DIR}release")
+set(CARGO_BUILD_DIR_RELWITHDEBINFO "${CARGO_BUILD_DIR}relwithdebinfo")
+set(CARGO_BUILD_DIR_MINSIZEREL "${CARGO_BUILD_DIR}minsizerel")
 
 # We can't check this directly; it is a cmake property, not a variable
 get_cmake_property(MULTI_CONFIG_BUILD GENERATOR_IS_MULTI_CONFIG)
@@ -1145,19 +1320,46 @@ if(MULTI_CONFIG_BUILD)
   if(CMAKE_VERSION VERSION_LESS 3.20)
     message(SEND_ERROR "Multi-config generators only supported from CMake 3.20 and up")
   else()
-    set(CARGO_BUILD_DIR "${CARGO_BUILD_DIR}$<$<CONFIG:Debug>:debug>$<$<NOT:$<CONFIG:Debug>>:release>")
+    set(CARGO_BUILD_DIR "${CARGO_BUILD_DIR}$<IF:$<CONFIG:Debug>,debug,$<IF:$<CONFIG:RelWithDebInfo>,relwithdebinfo,$<IF:$<CONFIG:MinSizeRel>,minsizerel,release>>>")
+    list(APPEND CARGO_BUILD
+      $<$<CONFIG:RelWithDebInfo>:--profile>
+      $<$<CONFIG:RelWithDebInfo>:relwithdebinfo>
+      $<$<CONFIG:MinSizeRel>:--profile>
+      $<$<CONFIG:MinSizeRel>:minsizerel>
+      $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>>:--release>)
   endif()
 else()
   if(CMAKE_BUILD_TYPE STREQUAL Debug)
     set(CARGO_BUILD_DIR "${CARGO_BUILD_DIR_DEBUG}")
+  elseif(CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo)
+    set(CARGO_BUILD_DIR "${CARGO_BUILD_DIR_RELWITHDEBINFO}")
+    list(APPEND CARGO_BUILD --profile relwithdebinfo)
+  elseif(CMAKE_BUILD_TYPE STREQUAL MinSizeRel)
+    set(CARGO_BUILD_DIR "${CARGO_BUILD_DIR_MINSIZEREL}")
+    list(APPEND CARGO_BUILD --profile minsizerel)
   else()
     set(CARGO_BUILD_DIR "${CARGO_BUILD_DIR_RELEASE}")
+    list(APPEND CARGO_BUILD --release)
   endif()
 endif()
-list(APPEND CARGO_BUILD $<$<NOT:$<CONFIG:Debug>>:--release>)
-list(APPEND CARGO_TEST $<$<NOT:$<CONFIG:Debug>>:--release>)
+if(MULTI_CONFIG_BUILD)
+  list(APPEND CARGO_TEST
+    $<$<CONFIG:RelWithDebInfo>:--profile>
+    $<$<CONFIG:RelWithDebInfo>:relwithdebinfo>
+    $<$<CONFIG:MinSizeRel>:--profile>
+    $<$<CONFIG:MinSizeRel>:minsizerel>
+    $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>>:--release>)
+else()
+  if(CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo)
+    list(APPEND CARGO_TEST --profile relwithdebinfo)
+  elseif(CMAKE_BUILD_TYPE STREQUAL MinSizeRel)
+    list(APPEND CARGO_TEST --profile minsizerel)
+  elseif(NOT CMAKE_BUILD_TYPE STREQUAL Debug)
+    list(APPEND CARGO_TEST --release)
+  endif()
+endif()
 
-if(CMAKE_OSX_ARCHITECTURES)
+if(CMAKE_OSX_ARCHITECTURES AND TARGET_OS STREQUAL "mac")
   set(RUST_OSX_ARCHITECTURES)
   foreach(arch ${CMAKE_OSX_ARCHITECTURES})
     if(${arch} STREQUAL arm64)
@@ -1182,7 +1384,7 @@ set(RUST_TARGETS engine_shared)
 if(TARGET_OS STREQUAL "windows")
   list(APPEND RUST_TARGETS qm_update)
 endif()
-if(NOT CMAKE_OSX_ARCHITECTURES)
+if(NOT CMAKE_OSX_ARCHITECTURES OR TARGET_OS STREQUAL "ios")
   set(RUST_OUTPUTS)
   foreach(rust_target ${RUST_TARGETS})
     if(rust_target STREQUAL "qm_update")
@@ -1196,6 +1398,8 @@ if(NOT CMAKE_OSX_ARCHITECTURES)
     set_target_properties(rust_${rust_target} PROPERTIES
       IMPORTED_LOCATION "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR_RELEASE}/${LIBRARY_NAME}"
       IMPORTED_LOCATION_DEBUG "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR_DEBUG}/${LIBRARY_NAME}"
+      IMPORTED_LOCATION_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR_RELWITHDEBINFO}/${LIBRARY_NAME}"
+      IMPORTED_LOCATION_MINSIZEREL "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR_MINSIZEREL}/${LIBRARY_NAME}"
     )
     list(APPEND RUST_OUTPUTS "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR}/${LIBRARY_NAME}")
   endforeach()
@@ -1217,6 +1421,8 @@ else()
     set_target_properties(rust_${rust_target} PROPERTIES
       IMPORTED_LOCATION "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR_RELEASE}/${LIBRARY_NAME}"
       IMPORTED_LOCATION_DEBUG "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR_DEBUG}/${LIBRARY_NAME}"
+      IMPORTED_LOCATION_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR_RELWITHDEBINFO}/${LIBRARY_NAME}"
+      IMPORTED_LOCATION_MINSIZEREL "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR_MINSIZEREL}/${LIBRARY_NAME}"
     )
     add_custom_target(rust_${rust_target}_target DEPENDS "${PROJECT_BINARY_DIR}/${CARGO_BUILD_DIR}/${LIBRARY_NAME}")
     add_dependencies(rust_${rust_target} rust_${rust_target}_target)
@@ -1291,6 +1497,7 @@ set(EXPECTED_DATA
   audio/hook_noattach-02.wv
   audio/hook_noattach-03.wv
   audio/music_menu.wv
+  audio/qm_festive_haoyunlai.mp3
   audio/sfx_ctf_cap_pl.wv
   audio/sfx_ctf_drop.wv
   audio/sfx_ctf_grab_en.wv
@@ -1694,11 +1901,23 @@ set(EXPECTED_DATA
   emoticons.png
   extras.png
   fonts/DejaVuSans.ttf
-  fonts/Phosphor-Regular.ttf
-  fonts/Phosphor-Bold.ttf
   fonts/GlowSansJ-Compressed-Book.otf
   fonts/NotoEmoji-Regular.ttf
+  fonts/NotoSansBalinese-Regular.ttf
+  fonts/NotoSansBamum-Regular.ttf
+  fonts/NotoSansBatak-Regular.ttf
+  fonts/NotoSansEgyptianHieroglyphs-Regular.ttf
+  fonts/NotoSansJavanese-Regular.ttf
+  fonts/NotoSansMath-Regular.ttf
+  fonts/NotoSansOriya-Regular.ttf
+  fonts/NotoSansSC-VF.ttf
+  fonts/NotoSansSymbols-Regular.ttf
+  fonts/NotoSansSymbols2-Regular.ttf
+  fonts/NotoSansTaiLe-Regular.ttf
   fonts/NotoSansThai-Regular.ttf
+  fonts/NotoSansVai-Regular.ttf
+  fonts/NotoSansYi-Regular.ttf
+  fonts/NotoSerifTibetan-Regular.ttf
   fonts/SourceHanSans.ttc
   fonts/index.json
   game.png
@@ -1755,38 +1974,16 @@ set(EXPECTED_DATA
   languages/turkish.txt
   languages/ukrainian.txt
   qmclient/icons/README.md
-  qmclient/icons/qm_icons_bold_1x.json
-  qmclient/icons/qm_icons_bold_1x.png
-  qmclient/icons/qm_icons_bold_2x.json
-  qmclient/icons/qm_icons_bold_2x.png
-  qmclient/icons/qm_icons_bold_4x.json
-  qmclient/icons/qm_icons_bold_4x.png
   qmclient/icons/qm_icons_bold_msdf.json
   qmclient/icons/qm_icons_bold_msdf.png
-  qmclient/icons/qm_icons_fill_1x.json
-  qmclient/icons/qm_icons_fill_1x.png
-  qmclient/icons/qm_icons_fill_2x.json
-  qmclient/icons/qm_icons_fill_2x.png
-  qmclient/icons/qm_icons_fill_4x.json
-  qmclient/icons/qm_icons_fill_4x.png
   qmclient/icons/qm_icons_fill_msdf.json
   qmclient/icons/qm_icons_fill_msdf.png
-  qmclient/icons/qm_icons_regular_1x.json
-  qmclient/icons/qm_icons_regular_1x.png
-  qmclient/icons/qm_icons_regular_2x.json
-  qmclient/icons/qm_icons_regular_2x.png
-  qmclient/icons/qm_icons_regular_4x.json
-  qmclient/icons/qm_icons_regular_4x.png
+  qmclient/icons/qm_icons_light_msdf.json
+  qmclient/icons/qm_icons_light_msdf.png
+  qmclient/icons/qm_icons_duotone_msdf.json
+  qmclient/icons/qm_icons_duotone_msdf.png
   qmclient/icons/qm_icons_regular_msdf.json
   qmclient/icons/qm_icons_regular_msdf.png
-  qmclient/icons/qm_icons_thin_1x.json
-  qmclient/icons/qm_icons_thin_1x.png
-  qmclient/icons/qm_icons_thin_2x.json
-  qmclient/icons/qm_icons_thin_2x.png
-  qmclient/icons/qm_icons_thin_4x.json
-  qmclient/icons/qm_icons_thin_4x.png
-  qmclient/icons/qm_icons_thin_msdf.json
-  qmclient/icons/qm_icons_thin_msdf.png
   mapres/basic_freeze.png
   mapres/bg_cloud1.png
   mapres/bg_cloud2.png
@@ -1876,7 +2073,6 @@ set(EXPECTED_DATA
   menuimages/play_game.png
   menuimages/settings.png
   particles.png
-  qmclient/LICENSE.txt
   qmclient/builtinscripts/sayemoticon.chai
   qmclient/chat_emojis/agree.png
   qmclient/chat_emojis/angry.png
@@ -1894,15 +2090,6 @@ set(EXPECTED_DATA
   qmclient/chat_emojis/smell.png
   qmclient/chat_emojis/support.png
   qmclient/chat_emojis/surrender.png
-  qmclient/fonts/Cabin-Regular.ttf
-  qmclient/fonts/FreeSansBold.ttf
-  qmclient/fonts/GoogleSans-Regular.ttf
-  qmclient/fonts/Inter_24pt-Regular.ttf
-  qmclient/fonts/Inter_24pt-SemiBold.ttf
-  qmclient/fonts/Montserrat-Regular.ttf
-  qmclient/fonts/Nunito-Black.ttf
-  qmclient/fonts/Rubik-Regular.ttf
-  qmclient/fonts/minecraft_font.ttf
   qmclient/gui_logo.png
   race_flag.png
   shader/gaussian_blur.frag
@@ -2203,7 +2390,13 @@ set(EXPECTED_DATA
   wordlist.txt
 )
 
-set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;otf;png;rules;ttc;ttf;txt;vert;wv" data ${EXPECTED_DATA})
+file(GLOB_RECURSE QMCLIENT_BUNDLED_FONT_FILES
+  LIST_DIRECTORIES false
+  RELATIVE "${PROJECT_SOURCE_DIR}/data"
+  "${PROJECT_SOURCE_DIR}/data/qmclient/fonts/*"
+)
+list(APPEND EXPECTED_DATA ${QMCLIENT_BUNDLED_FONT_FILES})
+set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;otf;OTF;png;rules;ttc;TTC;ttf;TTF;txt;vert;wv" data ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND SHARED LIBS
@@ -2236,6 +2429,7 @@ set(COPY_FILES
   ${SDL2_COPY_FILES}
   ${SQLite3_COPY_FILES}
   ${FFMPEG_COPY_FILES}
+  ${WAVPACK_COPY_FILES}
   ${WEBSOCKETS_COPY_FILES}
   ${DISCORDSDK_COPY_FILES}
   ${VULKAN_COPY_FILES}
@@ -2332,6 +2526,25 @@ add_custom_target(generate_content_types
     src/generated/data_types.h
 )
 
+# 眼睛 morph 的采样几何数据：从随包 Phosphor-Bold.ttf 提取字形轮廓生成，
+# 被 src/game/client/qm_icon_morph.cpp 直接包含（见 qm_build_icon_morph.py）。
+set(QM_ICON_MORPH_GENERATED ${PROJECT_BINARY_DIR}/src/generated/qm_icon_morph_generated.inc)
+add_custom_command(OUTPUT ${QM_ICON_MORPH_GENERATED}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/src/generated
+  COMMAND ${Python3_EXECUTABLE}
+    qmclient_scripts/qm_build_icon_morph.py
+    --fonts-dir data/qmclient/fonts/Phosphor
+    --codepoints datasrc/qm_icons/phosphor.codepoints
+    --output ${QM_ICON_MORPH_GENERATED}
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  DEPENDS
+    qmclient_scripts/qm_build_icon_morph.py
+    datasrc/qm_icons/phosphor.codepoints
+    data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
+  COMMENT "Building QmClient eye path morph data"
+)
+add_custom_target(qm-icon-morph DEPENDS ${QM_ICON_MORPH_GENERATED})
+
 generate_source7("src/generated/protocol7.cpp" "network_source")
 generate_source7("src/generated/protocol7.h" "network_header")
 generate_source7("src/generated/client_data7.cpp" "client_content_source")
@@ -2354,93 +2567,33 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
     scripts/wordlist.py
 )
 
-file(GLOB QM_ICON_ATLAS_SVG_SOURCES
-  datasrc/qm_icons/phosphor_bold/*.svg
-  datasrc/qm_icons/phosphor_fill/*.svg
-  datasrc/qm_icons/phosphor_regular/*.svg
-  datasrc/qm_icons/phosphor_thin/*.svg
-  datasrc/qm_icons/tabler/*.svg
-)
-add_custom_target(qm-icon-atlas
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_atlas.py
-    --source datasrc/qm_icons/phosphor_bold
-    --source datasrc/qm_icons/tabler
-    --output data/qmclient/icons
-    --atlas-name qm_icons_bold
-    --sizes 1 2 4
-    --base-size 24
-    --padding 4
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_atlas.py
-    --source datasrc/qm_icons/phosphor_fill
-    --source datasrc/qm_icons/tabler
-    --output data/qmclient/icons
-    --atlas-name qm_icons_fill
-    --sizes 1 2 4
-    --base-size 24
-    --padding 4
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_atlas.py
-    --source datasrc/qm_icons/phosphor_regular
-    --source datasrc/qm_icons/tabler
-    --output data/qmclient/icons
-    --atlas-name qm_icons_regular
-    --sizes 1 2 4
-    --base-size 24
-    --padding 4
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_atlas.py
-    --source datasrc/qm_icons/phosphor_thin
-    --source datasrc/qm_icons/tabler
-    --output data/qmclient/icons
-    --atlas-name qm_icons_thin
-    --sizes 1 2 4
-    --base-size 24
-    --padding 4
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS
-    qmclient_scripts/qm_build_icon_atlas.py
-    ${QM_ICON_ATLAS_SVG_SOURCES}
-  COMMENT "Building QmClient Phosphor icon PNG atlases"
-)
-
-# msdfgen 只用于资源制作。生成产物已提交，普通构建不依赖本机安装。
+# 图标源是随包 Phosphor TTF（全量字形）+ 官方码点映射；精选 SVG 子集已移除。
+# msdfgen / msdf-atlas-gen 只用于资源制作。生成产物已提交，普通构建不依赖本机安装。
+set(QM_ICON_MSDF_STYLES duotone light regular bold fill)
 add_custom_target(qm-icon-msdf-atlas
   COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_msdf.py
-    --source datasrc/qm_icons/phosphor_bold
-    --source datasrc/qm_icons/tabler
+    qmclient_scripts/qm_build_icon_msdf_font.py
+    --tool cmake-build-official/bin/Release/msdf-atlas-gen.exe
+    --fonts-dir data/qmclient/fonts/Phosphor
+    --codepoints datasrc/qm_icons/phosphor.codepoints
     --output data/qmclient/icons
-    --atlas-name qm_icons_bold
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_msdf.py
-    --source datasrc/qm_icons/phosphor_fill
-    --source datasrc/qm_icons/tabler
-    --output data/qmclient/icons
-    --atlas-name qm_icons_fill
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_msdf.py
-    --source datasrc/qm_icons/phosphor_regular
-    --source datasrc/qm_icons/tabler
-    --output data/qmclient/icons
-    --atlas-name qm_icons_regular
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_msdf.py
-    --source datasrc/qm_icons/phosphor_thin
-    --source datasrc/qm_icons/tabler
-    --output data/qmclient/icons
-    --atlas-name qm_icons_thin
+    --styles ${QM_ICON_MSDF_STYLES}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   DEPENDS
-    qmclient_scripts/qm_build_icon_msdf.py
-    ${QM_ICON_ATLAS_SVG_SOURCES}
-  COMMENT "Building QmClient Phosphor MSDF icon atlases"
+    qmclient_scripts/qm_build_icon_msdf_font.py
+    qmclient_scripts/qm_icon_msdf_official.py
+    datasrc/qm_icons/phosphor.codepoints
+    data/qmclient/fonts/Phosphor/Phosphor-Regular.ttf
+    data/qmclient/fonts/Phosphor/Phosphor-Light.ttf
+    data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
+    data/qmclient/fonts/Phosphor/Phosphor-Fill.ttf
+    data/qmclient/fonts/Phosphor/Phosphor-Duotone.ttf
+  COMMENT "Building QmClient Phosphor MSDF icon atlases from bundled fonts"
 )
 
 if(QM_BUILD_ICON_ATLAS)
   if(TARGET sync_runtime_data)
-    add_dependencies(sync_runtime_data qm-icon-atlas)
+    add_dependencies(sync_runtime_data qm-icon-msdf-atlas)
   endif()
 endif()
 
@@ -2450,10 +2603,6 @@ endif()
 
 # Sources
 set_src(BASE GLOB_RECURSE src/base
-aio.cpp
-aio.h
-bytes.cpp
-bytes.h
   bezier.cpp
   bezier.h
   color.cpp
@@ -2472,30 +2621,24 @@ bytes.h
   hash_ctxt.h
   hash_libtomcrypt.cpp
   hash_openssl.cpp
-io.cpp
-io.h
   lock.h
   log.cpp
   log.h
+  log_color.h
   logger.h
   math.h
   mem.cpp
   mem.h
   perf_timer.h
-net.cpp
-net.h
-os.cpp
-os.h
   rust.h
-process.cpp
-process.h
   secure.cpp
   secure.h
   sphore.cpp
   sphore.h
   str.cpp
   str.h
-    system.h
+  system.cpp
+  system.h
   thread.cpp
   thread.h
   time.cpp
@@ -2525,6 +2668,7 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   ghost.h
   graphics.cpp
   graphics.h
+  http.cpp
   http.h
   image.h
   input.h
@@ -2578,8 +2722,10 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   global_uuid_manager.cpp
   host_lookup.cpp
   host_lookup.h
-  http.cpp
-  http.h
+  http_curl.cpp
+  http_curl.h
+  http_emscripten.cpp
+  http_emscripten.h
   huffman.cpp
   huffman.h
   jobs.cpp
@@ -2792,6 +2938,10 @@ add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_EXTERNAL} ${ENGINE_IN
 add_library(game-shared EXCLUDE_FROM_ALL OBJECT ${GAME_SHARED} ${GAME_GENERATED_SHARED})
 add_dependencies(engine-shared generate_protocol)
 add_dependencies(game-shared generate_protocol)
+add_dependencies(game-shared qm-icon-morph)
+if(TARGET_OS STREQUAL "ios")
+  add_dependencies(game-shared generate_content_types)
+endif()
 list(APPEND TARGETS_OWN engine-gfx engine-shared game-shared)
 
 if(DISCORD AND NOT DISCORD_DYNAMIC)
@@ -2834,6 +2984,13 @@ if(CLIENT)
   set_src(ENGINE_CLIENT GLOB_RECURSE src/engine/client
     backend/backend_base.cpp
     backend/backend_base.h
+    backend/graphics_backend_contract.cpp
+    backend/graphics_backend_contract.h
+    backend/metal/metal_frame_state.cpp
+    backend/metal/metal_frame_state.h
+    backend/metal/metal_render_target_state.cpp
+    backend/metal/metal_render_target_state.h
+    backend/metal/metal_types.h
     backend/glsl_shader_compiler.cpp
     backend/glsl_shader_compiler.h
     backend/null/backend_null.cpp
@@ -2856,8 +3013,13 @@ if(CLIENT)
     backend/vulkan/backend_vulkan.h
     backend/vulkan/backend_vulkan_qm_ext.cpp
     backend/vulkan/backend_vulkan_qm_ext.h
+    backend_egl.cpp
+    backend_egl.h
     backend_sdl.cpp
     backend_sdl.h
+    backend_threaded.cpp
+    qm_festive_message_box.cpp
+    qm_festive_message_box.h
     blocklist_driver.cpp
     blocklist_driver.h
     checksum.h
@@ -2906,6 +3068,12 @@ if(CLIENT)
     video.h
     warning.cpp
   )
+
+  if((TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios") AND METAL)
+    list(APPEND ENGINE_CLIENT
+      src/engine/client/backend/metal/backend_metal.mm
+    )
+  endif()
   set_src(GAME_CLIENT GLOB_RECURSE src/game/client
     QmUi/QmAnimationBackend.cpp
     QmUi/QmAnimationBackend.h
@@ -2959,6 +3127,20 @@ if(CLIENT)
     QmUi/QmCardOrderModel.h
     QmUi/QmCardRegistry.cpp
     QmUi/QmCardRegistry.h
+    QmUi/cards/QmCardCatalog.cpp
+    QmUi/cards/QmCardCatalog.h
+    QmUi/cards/QmCardCatalogIds.cpp
+    QmUi/cards/QmCardCatalogFunction.cpp
+    QmUi/cards/QmCardCatalogSteam.cpp
+    QmUi/cards/QmCardCatalogFunctionMetrics.h
+    QmUi/cards/QmCardCatalogHud.cpp
+    QmUi/cards/QmCardCatalogInternal.h
+    QmUi/cards/QmCardCatalogSkin.cpp
+    QmUi/cards/QmCardCatalogSkinMetrics.h
+    QmUi/cards/QmCardCatalogVisual.cpp
+    QmUi/cards/QmCardCatalogWaterHammer.cpp
+    QmUi/cards/QmCardRenderBridge.cpp
+    QmUi/cards/QmMapUpload.cpp
     QmUi/SettingsCardDeckLogic.cpp
     QmUi/SettingsCardDeckLogic.h
     QmUi/SettingsCardDeck.cpp
@@ -2966,19 +3148,6 @@ if(CLIENT)
     QmUi/QmModuleLayoutAdapter.cpp
     QmUi/QmModuleLayoutAdapter.h
     QmUi/QmModuleTypes.h
-    QmUi/cards/QmCardCatalog.cpp
-    QmUi/cards/QmCardCatalog.h
-    QmUi/cards/QmCardCatalogIds.cpp
-    QmUi/cards/QmCardCatalogFunction.cpp
-    QmUi/cards/QmCardCatalogFunctionMetrics.h
-    QmUi/cards/QmCardCatalogHud.cpp
-    QmUi/cards/QmCardCatalogInternal.h
-    QmUi/cards/QmCardCatalogSkin.cpp
-    QmUi/cards/QmCardCatalogSkinMetrics.h
-    QmUi/cards/QmCardCatalogVisual.cpp
-    QmUi/cards/QmCardRenderBridge.cpp
-    QmUi/cards/QmMapUpload.cpp
-    QmUi/cards/QmMapUploadSearch.h
     animstate.cpp
     animstate.h
     component.cpp
@@ -3086,12 +3255,15 @@ if(CLIENT)
     components/qmclient/axiom_scores.h
     components/qmclient/axiom_scores_data.cpp
     components/qmclient/axiom_scores_data.h
+    components/qmclient/chat_command_preview.h
     components/qmclient/chat_emoji.cpp
     components/qmclient/chat_emoji.h
     components/qmclient/collision_hitbox.cpp
     components/qmclient/collision_hitbox.h
     components/qmclient/colored_parts.h
     components/qmclient/data_version.h
+    components/qmclient/demo_ui.h
+    components/qmclient/emoticon_commands.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
     components/qmclient/hud_notifications/hud_notification_catalog.cpp
@@ -3106,9 +3278,11 @@ if(CLIENT)
     components/qmclient/jelly_tee.cpp
     components/qmclient/jelly_tee.h
     components/qmclient/keyword_reply_rules.h
+    components/qmclient/markdown_cache_writer.h
     components/qmclient/menus_qmclient.cpp
     components/qmclient/modes.cpp
     components/qmclient/modes.h
+    components/qmclient/nameplate_layout.h
     components/qmclient/monitoring/monitoring.cpp
     components/qmclient/monitoring/monitoring_device_perf.cpp
     components/qmclient/monitoring/monitoring.h
@@ -3134,6 +3308,7 @@ if(CLIENT)
     components/qmclient/music_lyrics/qm_spotify_token.cpp
     components/qmclient/music_lyrics/qm_spotify_token.h
     ../../qm-soda-hook/qm_soda_protocol.cpp
+    components/qmclient/nameplate_text_cache.h
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
     components/qmclient/netease/netease_lyric_parser.cpp
@@ -3150,25 +3325,34 @@ if(CLIENT)
     components/qmclient/netease_hook/qm_netease_hook_v5_writer.h
     components/qmclient/netease_hook/qm_netease_hook_provider.cpp
     components/qmclient/netease_hook/qm_netease_hook_provider.h
-    components/qmclient/qm_bind_status_hud.cpp
-    components/qmclient/qm_bind_status_hud.h
+    components/qmclient/qm_music_hook_registry.h
+    components/qmclient/qm_sponsor_authors.cpp
+    components/qmclient/qm_sponsor_authors.h
     components/qmclient/qm_markdown.cpp
     components/qmclient/qm_markdown.h
-    components/qmclient/qm_music_hook_registry.h
+    components/qmclient/qm_markdown_broadcast.cpp
+    components/qmclient/qm_markdown_broadcast.h
     components/qmclient/qm_realtime.cpp
     components/qmclient/qm_realtime.h
-    components/qmclient/qm_title_render.cpp
-    components/qmclient/qm_title_render.h
-    components/qmclient/qm_title_style.cpp
-    components/qmclient/qm_title_style.h
     components/qmclient/qmclient.cpp
     components/qmclient/qmclient.h
     components/qmclient/qmclient_utils.cpp
+    components/qmclient/qm_map_upload.cpp
+    components/qmclient/qm_title_style.cpp
+    components/qmclient/qm_title_render.cpp
     components/qmclient/qmclient_utils.h
+    components/qmclient/rank_ghost.cpp
+    components/qmclient/rank_ghost.h
+    components/qmclient/route_start_index.h
+    components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
     components/qmclient/settings_resource_preview.h
     components/qmclient/scripting.cpp
     components/qmclient/scripting.h
+    components/qmclient/skin_prepared_textures.h
+    components/qmclient/skin_prepared_visuals.h
+    components/qmclient/snapshot_entities.h
+    components/qmclient/spectator_tele_search.h
     components/qmclient/stutter_diagnostics.h
     components/qmclient/tee_hue_cycle.cpp
     components/qmclient/tee_hue_cycle.h
@@ -3192,8 +3376,11 @@ if(CLIENT)
     components/qmclient/voice/voice_core.h
     components/qmclient/voice/voice_utils.cpp
     components/qmclient/voice/voice_utils.h
+    components/qmclient/water_hammer_indicator.cpp
+    components/qmclient/water_hammer_indicator.h
     components/qmclient/weapon_trajectory.cpp
     components/qmclient/weapon_trajectory.h
+    components/qmclient/friend_heart_icon.h
     components/race_demo.cpp
     components/race_demo.h
     components/scoreboard.cpp
@@ -3246,8 +3433,6 @@ if(CLIENT)
     components/tclient/pet.h
     components/tclient/player_indicator.cpp
     components/tclient/player_indicator.h
-    components/tclient/qm_tee_trail.cpp
-    components/tclient/qm_tee_trail.h
     components/tclient/rainbow.cpp
     components/tclient/rainbow.h
     components/tclient/skinprofiles.cpp
@@ -3258,10 +3443,13 @@ if(CLIENT)
     components/tclient/swap_countdown_message.h
     components/tclient/tclient.cpp
     components/tclient/tclient.h
+    components/tclient/qm_tee_trail.cpp
+    components/tclient/qm_tee_trail.h
     components/tclient/trails.cpp
     components/tclient/trails.h
     components/tclient/warlist.cpp
     components/tclient/warlist.h
+    components/tclient/qm_outline_neighbors.h
     components/theme_scan.h
     components/tooltips.cpp
     components/tooltips.h
@@ -3303,6 +3491,8 @@ if(CLIENT)
     projectile_data.h
     qm_icon_manager.cpp
     qm_icon_manager.h
+    qm_icon_morph.cpp
+    qm_icon_morph.h
     qm_ime_candidate_popup.cpp
     qm_ime_candidate_popup.h
     qm_ime_manager.cpp
@@ -3319,6 +3509,7 @@ if(CLIENT)
     skin.h
     ui.cpp
     ui.h
+    ui_popups.cpp
     ui_listbox.cpp
     ui_listbox.h
     ui_rect.cpp
@@ -3365,8 +3556,12 @@ if(CLIENT)
     map_view.cpp
     map_view.h
     mapitems.h
+    envelope_editor.cpp
+    envelope_editor.h
     mapitems/envelope.cpp
     mapitems/envelope.h
+    mapitems/envelope_evaluator.cpp
+    mapitems/envelope_evaluator.h
     mapitems/image.cpp
     mapitems/image.h
     mapitems/layer.cpp
@@ -3474,6 +3669,7 @@ if(CLIENT)
 
   add_library(game-client-common INTERFACE)
   target_link_libraries(game-client-common INTERFACE ${LIBS_CLIENT})
+  target_compile_definitions(game-client-common INTERFACE _USE_MATH_DEFINES)
 
   # Silence warnings from ChaiScript
   target_include_directories(game-client-common SYSTEM INTERFACE
@@ -3526,6 +3722,13 @@ if(CLIENT)
     target_compile_definitions(game-client-common INTERFACE CONF_BACKEND_VULKAN)
     target_compile_definitions(engine-shared PRIVATE CONF_BACKEND_VULKAN)
   endif()
+  if(METAL)
+    target_compile_definitions(game-client-common INTERFACE CONF_BACKEND_METAL)
+    target_compile_definitions(game-client-common INTERFACE CONF_BACKEND_METAL_READY)
+    target_compile_definitions(engine-shared PRIVATE CONF_BACKEND_METAL)
+    target_compile_definitions(engine-shared PRIVATE CONF_BACKEND_METAL_READY)
+    target_link_libraries(game-client-common INTERFACE "-framework Metal" "-framework QuartzCore")
+  endif()
 
   if(TARGET_OS STREQUAL "windows")
     set(VERSION_EXECUTABLE "${CLIENT_EXECUTABLE}")
@@ -3559,6 +3762,18 @@ if(CLIENT)
       $<TARGET_OBJECTS:game-shared>
       $<TARGET_OBJECTS:rust-bridge-shared>
     )
+  elseif(TARGET_OS STREQUAL "ios")
+    add_executable(game-client MACOSX_BUNDLE
+      ${CLIENT_SRC}
+      ${CLIENT_ICON}
+      ${CLIENT_VERSIONINFO}
+      ${CLIENT_MANIFEST}
+      ${DEPS_CLIENT}
+      $<TARGET_OBJECTS:engine-gfx>
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+    )
   else()
     add_executable(game-client WIN32
       ${CLIENT_SRC}
@@ -3573,6 +3788,9 @@ if(CLIENT)
     )
   endif()
   add_dependencies(game-client generate_content_types)
+# qm_icon_morph.cpp（game-client）直接包含生成的 morph 数据，必须等生成目标完成：
+# 只挂在 game-shared 上无法保证干净构建时对象先于 .inc 编译。
+add_dependencies(game-client qm-icon-morph)
   if(TARGET qm-nmt-hook64)
     add_dependencies(game-client qm-nmt-hook64 qm-nmt-helper qm-nmt-bootstrap)
     add_custom_command(TARGET game-client POST_BUILD
@@ -3596,10 +3814,33 @@ if(CLIENT)
   if(VULKAN)
     add_dependencies(game-client build_vulkan_shaders)
   endif()
+  if(METAL)
+    add_dependencies(game-client build_metal_shaders)
+  endif()
   set_property(TARGET game-client
       PROPERTY OUTPUT_NAME ${CLIENT_EXECUTABLE}
   )
   target_link_libraries(game-client game-client-common)
+  if(TARGET_OS STREQUAL "ios")
+    set(IOS_INFO_PLIST "${PROJECT_BINARY_DIR}/ios-Info.plist")
+    configure_file("${PROJECT_SOURCE_DIR}/scripts/ios/files/Info.plist.in" "${IOS_INFO_PLIST}")
+    set_target_properties(game-client PROPERTIES
+      MACOSX_BUNDLE_INFO_PLIST "${IOS_INFO_PLIST}"
+      MACOSX_BUNDLE_GUI_IDENTIFIER "${IOS_BUNDLE_IDENTIFIER}"
+      XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${IOS_BUNDLE_IDENTIFIER}"
+      XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
+    )
+    if(IOS_USE_ASSET_CATALOG)
+      target_sources(game-client PRIVATE "${PROJECT_SOURCE_DIR}/scripts/ios/files/Assets.xcassets")
+      set_source_files_properties("${PROJECT_SOURCE_DIR}/scripts/ios/files/Assets.xcassets" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+      set_target_properties(game-client PROPERTIES XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon")
+    endif()
+    target_link_options(game-client PRIVATE "-ObjC")
+    add_custom_command(TARGET game-client POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/data $<TARGET_BUNDLE_DIR:game-client>/data
+      COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/storage.cfg $<TARGET_BUNDLE_DIR:game-client>/storage.cfg
+    )
+  endif()
   if(STEAMAPI_RUNTIME_FILE)
     add_custom_command(TARGET game-client POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${STEAMAPI_RUNTIME_FILE}" "$<TARGET_FILE_DIR:game-client>/${STEAMAPI_RUNTIME_FILE_NAME}"
@@ -3617,7 +3858,7 @@ if(CLIENT)
       COMPILE_OPTIONS "$<$<CONFIG:Release>:/GL->;$<$<CONFIG:RelWithDebInfo>:/GL->")
   endif()
 
-  if(WIN32 AND NOT MSVC)
+  if(WIN32 AND NOT MSVC AND NOT ENABLE_IPO)
     target_compile_options(game-client PRIVATE -Wa,-mbig-obj) # TClient, required for ChaiScript
   endif()
 
@@ -3627,6 +3868,19 @@ if(CLIENT)
 
   if(TARGET sync_runtime_data)
     add_dependencies(game-client sync_runtime_data)
+  endif()
+
+  if(GLEW_BUNDLED)
+    target_compile_definitions(game-client PRIVATE CONF_GLEW_HAS_CONTEXT_INIT)
+  endif()
+
+  if(VULKAN)
+    target_compile_definitions(game-client PRIVATE CONF_BACKEND_VULKAN)
+  endif()
+
+  if(TARGET_OS STREQUAL "emscripten")
+    target_link_options(game-client PRIVATE
+      "-sEXPORTED_FUNCTIONS=['_main','_EmscriptenCallbackDropFile','_EmscriptenCallbackQuit']")
   endif()
 
   list(APPEND TARGETS_OWN game-client)
@@ -3730,6 +3984,8 @@ if(SERVER)
     mutes.cpp
     player.cpp
     player.h
+    playermapping.cpp
+    playermapping.h
     save.cpp
     save.h
     score.cpp
@@ -3866,6 +4122,7 @@ if(TOOLS)
     map_diff.cpp
     map_extract.cpp
     map_find_env.cpp
+    map_render.cpp
     map_generator.cpp
     map_optimize.cpp
     map_replace_area.cpp
@@ -3882,6 +4139,9 @@ if(TOOLS)
     file(RELATIVE_PATH T "${PROJECT_SOURCE_DIR}/src/tools/" ${ABS_T})
     if(T MATCHES "\\.cpp$")
       string(REGEX REPLACE "\\.cpp$" "" TOOL "${T}")
+      if(TOOL MATCHES "^map_render$" AND NOT EGL_FOUND)
+        continue()
+      endif()
       set(TOOL_DEPS ${DEPS})
       set(TOOL_LIBS ${LIBS} rust_engine_shared)
       unset(EXTRA_TOOL_SRC)
@@ -3899,6 +4159,11 @@ if(TOOLS)
           "src/tools/map_generator/generator.h"
         )
       endif()
+      if(TOOL MATCHES "^map_render$")
+        list(APPEND TOOL_INCLUDE_DIRS ${PNG_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
+        list(APPEND TOOL_DEPS $<TARGET_OBJECTS:engine-gfx> ${GLEW_DEP})
+        list(APPEND TOOL_LIBS ${PNG_LIBRARIES} ${FREETYPE_LIBRARIES} ${WebP_LIBRARIES} ${GLEW_LIBRARIES} ${CMAKE_DL_LIBS} ${EGL_LIBRARY} ${OPENGL_gl_LIBRARY})
+      endif()
       set(EXCLUDE_FROM_ALL)
       if(DEV)
         set(EXCLUDE_FROM_ALL EXCLUDE_FROM_ALL)
@@ -3913,6 +4178,32 @@ if(TOOLS)
       )
       target_include_directories(${TOOL} SYSTEM PRIVATE ${TOOL_INCLUDE_DIRS})
       target_link_libraries(${TOOL} ${TOOL_LIBS})
+      if(TOOL MATCHES "^map_render$")
+        target_sources(map_render PRIVATE
+          src/engine/client/graphics_threaded.cpp
+          src/engine/client/backend_egl.cpp
+          src/engine/client/backend/opengl/backend_opengl.cpp
+          src/engine/client/backend/opengl/backend_opengl3.cpp
+          src/engine/client/backend/opengl/opengl_sl.cpp
+          src/engine/client/backend/opengl/opengl_sl_program.cpp
+          src/engine/client/backend/glsl_shader_compiler.cpp
+          src/engine/client/backend/backend_base.cpp
+          src/engine/client/backend_threaded.cpp
+          src/engine/client/blocklist_driver.cpp
+          src/engine/client/warning.cpp
+          src/game/map/map_renderer.cpp
+          src/game/map/render_layer.cpp
+          src/game/map/render_map.cpp
+          src/game/map/render_component.cpp
+          src/game/map/envelope_extrema.cpp
+          ${PROJECT_BINARY_DIR}/src/generated/client_data.h
+        )
+        target_include_directories(map_render PRIVATE ${PROJECT_BINARY_DIR})
+        target_compile_definitions(map_render PRIVATE BACKEND_NO_SDL)
+        if(GLEW_BUNDLED)
+          target_compile_definitions(map_render PRIVATE CONF_GLEW_HAS_CONTEXT_INIT)
+        endif()
+      endif()
       list(APPEND TARGETS_TOOLS ${TOOL})
     endif()
   endforeach()
@@ -3961,13 +4252,38 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   set_src(TESTS GLOB src/test
     QmAnimTest.cpp
-    QmIconAtlasTest.cpp
+    QmAnimSpringTest.cpp
+    QmAnimCoreTest.cpp
+    qm_anim_contract_test.cpp
+    QmAnimDropdownTest.cpp
+    QmAnimFormsTest.cpp
+    QmAnimScrollTest.cpp
+    QmAnimTreeTest.cpp
+    qm_icon_atlas_contract_test.cpp
+    qm_font_icon_cmap_test.cpp
+    qm_icon_shader_contract_test.cpp
+    qm_msdf_param_encoding_test.cpp
+    qm_icon_loader_contract_test.cpp
+    qm_icon_opengl_contract_test.cpp
+    qm_icon_vulkan_contract_test.cpp
+    qm_icon_glyph_contract_test.cpp
+    qm_phosphor_resource_contract_test.cpp
+    qm_icon_weight_contract_test.cpp
+    qm_font_icon_resource_contract_test.cpp
     QmLayoutTest.cpp
+    qm_afk_presentation_contract_test.cpp
+    qm_blank_asset_fallback_test.cpp
+    qm_spectator_tele_search_test.cpp
+    qm_spectator_friend_priority_test.cpp
+    qm_friend_enter_tracker_test.cpp
+    qm_friends_category_drag_test.cpp
+    friends_revision_test.cpp
+    qm_perf_diagnostics_test.cpp
+    qm_music_hook_protocol_test.cpp
     QmUiTokensTest.cpp
     qm_card_order_model_test.cpp
+    qm_card_order_model_contract_test.cpp
     qm_card_registry_test.cpp
-qm_hook_coll_visibility_test.cpp
-qm_item_culling_logic_test.cpp
     qm_module_layout_adapter_test.cpp
     aio_test.cpp
     assets_editor_layout_test.cpp
@@ -3981,77 +4297,183 @@ qm_item_culling_logic_test.cpp
     bytes_be_test.cpp
     chunk_header_test.cpp
     color_test.cpp
+    color_contract_test.cpp
     compression_test.cpp
+    console_test.cpp
     csv_test.cpp
-    db_connection_test.cpp
-datafile_test.cpp
+    datafile_test.cpp
     dbg_test.cpp
-    ddnet_19_9_sync_test.cpp
+    ddnet_19_9_sync_contract_test.cpp
+    demo_player_test.cpp
     editor_test.cpp
     fs_test.cpp
     gameworld_test.cpp
+    gameinfo_ex_test.cpp
     git_revision_test.cpp
+    graphics_backend_contract_test.cpp
     hash_test.cpp
     huffman_test.cpp
+    http_shutdown_lifecycle_contract_test.cpp
     image_test.cpp
     io_test.cpp
+    ios_runtime_contract_test.cpp
     jobs_test.cpp
     json_test.cpp
     jsonwriter_test.cpp
     keyword_reply_rules_test.cpp
     logger_test.cpp
     map_history_test.cpp
+    map_load_test.cpp
     linereader_test.cpp
     mapbugs_test.cpp
     mapitems_test.cpp
     math_test.cpp
+    metal_backend_contract_test.cpp
+    metal_backend_runtime_test.cpp
+    metal_frame_state_test.cpp
+    metal_render_target_state_test.cpp
+    metal_types_test.cpp
     mem_test.cpp
+    mutes_test.cpp
     name_ban_test.cpp
     net_test.cpp
+    net_protocol_contract_test.cpp
     netaddr_test.cpp
+    network_test.cpp
     os_test.cpp
     packer_test.cpp
     prng_test.cpp
     qm_background_particles_test.cpp
     qm_axiom_scores_test.cpp
-    qm_bind_status_hud_test.cpp
+    qm_axiom_scores_contract_test.cpp
     qm_chat_emoji_test.cpp
     qm_chat_interactions_test.cpp
     qm_console_log_filter_test.cpp
+    qm_red_packet_auto_claim_test.cpp
+    qm_tclient_warlist_test.cpp
+    qm_chat_contract_test.cpp
+    qm_chat_message_merge_contract_test.cpp
+    qm_gores_mode_test.cpp
     qm_hammer_hit_detection_test.cpp
+    qm_water_hammer_indicator_test.cpp
+    qm_demo_display_test.cpp
+    qm_demo_ui_test.cpp
+    qm_jump_hint_utils_test.cpp
+    qm_hud_hook_countdown_test.cpp
     qm_hud_media_island_logic_test.cpp
     qm_vulkan_enhanced_test.cpp
-    qm_hud_notifications_test.cpp
+    qm_hud_notifications_catalog_test.cpp
+    qm_hud_notifications_formatting_test.cpp
+    qm_hud_notifications_state_test.cpp
+    qm_hud_notifications_presentation_test.cpp
+    qm_hud_notifications_geometry_test.cpp
+    qm_hud_notifications_rules_test.cpp
+    qm_hud_notifications_contract_test.cpp
+    qm_hud_notifications_legacy_contract_test.cpp
+    qm_hud_editor_contract_test.cpp
     qm_ime_platform_test.cpp
-    qm_markdown_test.cpp
     qm_new_ui_menu_branch_test.cpp
-    qm_realtime_test.cpp
+    qm_new_ui_menu_tooltips_contract_test.cpp
+    qm_camera_effects_contract_test.cpp
+    qm_ui_scale_contract_test.cpp
+    qm_camera_aspect_ratio_contract_test.cpp
+    settings_card_translation_contract_test.cpp
+    settings_player_info_contract_test.cpp
+    settings_page_layout_test.cpp
+    qm_plausible_sizes_contract_test.cpp
+    qm_tclient_statusbar_score_contract_test.cpp
+    qm_tclient_statusbar_contract_test.cpp
+    qm_tclient_warlist_contract_test.cpp
+    qm_graphics_shutdown_contract_test.cpp
+    qm_crashdump_shutdown_suppression_test.cpp
+    qm_graphics_backend_fallback_contract_test.cpp
+    qm_graphics_recovery_test.cpp
+    qm_graphics_opengl_probe_contract_test.cpp
+    qm_demo_cut_contract_test.cpp
+    qm_demo_cut_test.cpp
+    qm_local_saves_test.cpp
+    qm_ui_scale_popup_contract_test.cpp
+    qm_localization_contract_test.cpp
+    qm_storage_path_contract_test.cpp
+    qm_new_ui_menu_hitbox_contract_test.cpp
+    qm_new_ui_menu_cards_surface_contract_test.cpp
+    qm_new_ui_menu_cards_deck_contract_test.cpp
+    qm_new_ui_menu_cards_catalogue_contract_test.cpp
+    qm_new_ui_menu_cards_warlist_contract_test.cpp
+    qm_new_ui_menu_gameplay_prediction_contract_test.cpp
+    qm_new_ui_menu_gameplay_hud_contract_test.cpp
+    qm_new_ui_menu_gameplay_scoreboard_contract_test.cpp
+    qm_new_ui_menu_gameplay_blur_contract_test.cpp
+    qm_new_ui_menu_gameplay_social_contract_test.cpp
+    qm_new_ui_menu_localization_contract_test.cpp
+    qm_new_ui_menu_render_engine_contract_test.cpp
+    qm_new_ui_menu_render_browser_contract_test.cpp
+    qm_new_ui_menu_render_dropdown_contract_test.cpp
+    qm_new_ui_menu_render_settings_pages_contract_test.cpp
+    qm_new_ui_menu_render_surface_contract_test.cpp
+    qm_new_ui_menu_settings_colors_contract_test.cpp
+    qm_new_ui_menu_settings_features_contract_test.cpp
+    qm_new_ui_menu_settings_config_contract_test.cpp
+    qm_new_ui_menu_settings_nameplate_contract_test.cpp
+    qm_new_ui_menu_settings_textinput_contract_test.cpp
+    qm_new_ui_menu_shell_chrome_contract_test.cpp
+    qm_new_ui_menu_shell_browser_contract_test.cpp
+    qm_new_ui_menu_shell_settings_contract_test.cpp
+    ddnet_19_9_sync_test.cpp
     qm_update_arguments_test.cpp
-    websocket_client_test.cpp
     netease_lyric_parser_test.cpp
     netease_lyric_timeline_test.cpp
     netease_lyric_state_test.cpp
     netease_shared_memory_test.cpp
     qm_netease_hook_protocol_test.cpp
-    music_lyrics_krc_test.cpp
-    music_lyrics_qrc_test.cpp
-    qm_music_registry_test.cpp
+    qm_music_app_watcher_test.cpp
+    qm_qqmusic_protocol_test.cpp
     qm_music_transport_test.cpp
     qm_kugou_protocol_test.cpp
     qm_kugou_patch_test.cpp
-    qm_qqmusic_protocol_test.cpp
+    qm_music_registry_test.cpp
+    music_lyrics_krc_test.cpp
+    music_lyrics_qrc_test.cpp
     qm_spotify_crypto_test.cpp
     qm_spotify_token_test.cpp
     qm_spotify_parser_test.cpp
     qm_modes_test.cpp
+    qm_map_progress_test.cpp
+    qm_config_save_value_override_test.cpp
+    qm_prediction_contract_test.cpp
     qm_tee_hue_cycle_test.cpp
+    qm_tee_trail_test.cpp
+    qm_sponsor_authors_test.cpp
+    qm_sponsors_test.cpp
+    qm_markdown_test.cpp
+    qm_markdown_broadcast_test.cpp
+    qm_emoticon_projectile_test.cpp
+    qm_realtime_test.cpp
+    qm_prepared_media_art_test.cpp
+    websocket_client_test.cpp
+    qm_map_upload_test.cpp
     qm_title_style_test.cpp
+    qm_skin_outline_test.cpp
+    qm_scoreboard_skin_test.cpp
     qm_weapon_trajectory_test.cpp
+    qm_weapon_trajectory_contract_test.cpp
+    qm_rank_demo_manifest_test.cpp
     qmclient_update_version_test.cpp
     qmclient_update_manifest_test.cpp
-    QmUiTokensTest.cpp
-    qm_map_upload_search.cpp
-    qmclient_monitoring_test.cpp
+    qmclient_monitoring_assets_contract_test.cpp
+    qmclient_monitoring_card_order_contract_test.cpp
+    qmclient_monitoring_graphics_contract_test.cpp
+    qmclient_monitoring_metrics_contract_test.cpp
+    qmclient_monitoring_misc_contract_test.cpp
+    qmclient_monitoring_persistence_contract_test.cpp
+    qmclient_monitoring_settings_structure_contract_test.cpp
+    qmclient_monitoring_settings_plan_contract_test.cpp
+    qmclient_monitoring_settings_perf_contract_test.cpp
+    qmclient_monitoring_text_plan_contract_test.cpp
+    qmclient_monitoring_frame_budget_contract_test.cpp
+    qmclient_monitoring_text_runtime_contract_test.cpp
+    qmclient_monitoring_motd_contract_test.cpp
+    qmclient_monitoring_runtime_test.cpp
     race_test.cpp
     score_test.cpp
     storage_replace_test.cpp
@@ -4059,20 +4481,74 @@ datafile_test.cpp
     swap_countdown_message_test.cpp
     secure_random_test.cpp
     server_test.cpp
+    serverbrowser_country_filter_test.cpp
     serverbrowser_test.cpp
     serverinfo_test.cpp
     settings_card_deck_logic_test.cpp
+    settings_resource_jobs_assets_contract_test.cpp
+    settings_resource_jobs_assets_test.cpp
+    settings_resource_jobs_skin_plan_test.cpp
+    settings_resource_jobs_skin_throughput_test.cpp
+    settings_resource_jobs_adaptive_budget_test.cpp
+    settings_resource_jobs_background_test.cpp
+    settings_loading_prewarm_test.cpp
+    settings_skin_plan_test.cpp
+    settings_skin_preview_test.cpp
+    settings_card_order_revision_test.cpp
+    settings_card_order_drop_test.cpp
+    settings_card_interaction_test.cpp
+    settings_card_animation_test.cpp
+    settings_card_view_key_test.cpp
+    settings_country_flag_plan_test.cpp
+    settings_resource_budget_test.cpp
+    settings_asset_loading_test.cpp
+    settings_asset_preview_budget_test.cpp
+    settings_asset_preview_lifecycle_test.cpp
+    settings_asset_priority_test.cpp
+    settings_asset_admission_test.cpp
+    settings_resource_visible_range_test.cpp
+    settings_resource_jobs_contract_test.cpp
+    settings_runtime_cache_test.cpp
     settings_warmup_test.cpp
+    settings_warmup_loading_contract_test.cpp
+    settings_warmup_tclient_contract_test.cpp
+    settings_warmup_layout_contract_test.cpp
+    settings_warmup_cleanup_contract_test.cpp
     skin_transition_test.cpp
     skins_test.cpp
-    render_target_test.cpp
+    skins_preview_layers_test.cpp
+    skins_resource_contract_test.cpp
+    skins_render_contract_test.cpp
+    skins_queue_contract_test.cpp
+    skins_preview_contract_test.cpp
+    skins_preset_contract_test.cpp
+    skins_official_index_contract_test.cpp
+    render_target_contract_test.cpp
+    qm_quad_rotation_cache_test.cpp
     windows_test.cpp
+    netobj_secure_unpack_test.cpp
     snapshot_test.cpp
-    steam_presence_test.cpp
-    str_test.cpp
+    steam_presence_contract_test.cpp
+    str_search_test.cpp
+    str_utf8_test.cpp
+    str_format_test.cpp
+    str_codec_test.cpp
+    str_copy_test.cpp
+    str_whitespace_test.cpp
+    str_filename_test.cpp
+    str_integer_packing_test.cpp
     strip_path_and_extension_test.cpp
     swap_endian_test.cpp
     teehistorian_test.cpp
+    text_layout_string_test.cpp
+    qm_nameplate_effect_lod_test.cpp
+    qm_scoreboard_footer_test.cpp
+    glyph_lookup_cache_test.cpp
+    font_size_cache_test.cpp
+    qm_hook_coll_intersection_test.cpp
+    qm_chat_avatar_test.cpp
+    qm_chat_export_test.cpp
+    qm_chat_log_jobs_test.cpp
     test.cpp
     test.h
     theme_scan_test.cpp
@@ -4091,19 +4567,31 @@ datafile_test.cpp
     uuid_test.cpp
     vmath_test.cpp
     voice_core_test.cpp
+    voice_qmclient_contract_test.cpp
+    voice_sequence_test.cpp
+    voice_qmclient_test.cpp
+    voice_packet_utils_test.cpp
+    voice_state_utils_test.cpp
+    voice_processing_utils_test.cpp
+    voice_audio_utils_test.cpp
+    voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
+    src/engine/client/backend/graphics_backend_contract.cpp
+    src/engine/client/backend/metal/metal_frame_state.cpp
+    src/engine/client/backend/metal/metal_render_target_state.cpp
     src/game/client/animstate.cpp
+    src/qm-music-hook/qm_kugou_protocol.cpp
+    src/qm-music-hook/qm_qqmusic_protocol.cpp
     src/game/client/race_parse.cpp
     src/game/client/skin.cpp
     src/game/client/components/tclient/map_history.cpp
-    src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/tclient/swap_countdown_message.cpp
+    src/game/client/components/tclient/qm_tee_trail.cpp
+    src/game/client/components/jump_hint_utils.cpp
     src/test/render_tee_offset_helpers.cpp
     src/game/client/components/section_loader.cpp
-    src/game/client/components/qmclient/qm_markdown.cpp
-    src/game/client/components/qmclient/qm_realtime.cpp
     src/game/client/components/settings_runtime_cache.cpp
     src/game/client/components/settings_resource_jobs.cpp
     src/game/client/components/settings_warmup.cpp
@@ -4139,33 +4627,41 @@ datafile_test.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
     src/qm-soda-hook/qm_soda_protocol.cpp
-    src/qm-music-hook/qm_music_publication.cpp
     src/qm-music-hook/qm_kugou_protocol.cpp
     src/qm-music-hook/qm_qqmusic_protocol.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
+    src/qm-music-hook/qm_music_publication.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
     src/game/client/components/qmclient/netease/netease_shared_memory.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
+    src/qm-music-hook/qm_music_source.h
+    src/qm-music-hook/qm_kugou_protocol.h
+    src/qm-music-hook/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/modes.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
+    src/game/client/components/qmclient/qm_sponsor_authors.cpp
+    src/game/client/components/qmclient/qm_markdown.cpp
+    src/game/client/components/qmclient/qm_markdown_broadcast.cpp
+    src/game/client/components/qmclient/qm_realtime.cpp
     src/game/client/components/qmclient/update_version.cpp
     src/game/client/components/qmclient/update_manifest.cpp
     src/game/client/components/qmclient/qmclient_utils.cpp
+    src/game/client/components/qmclient/qm_map_upload.cpp
     src/game/client/components/qmclient/qm_title_style.cpp
+    src/game/client/components/qmclient/qm_title_render.cpp
     src/game/client/components/qmclient/translate/translate_parse.cpp
     src/game/client/components/qmclient/voice/voice_capture_pipeline.cpp
     src/game/client/components/qmclient/voice/voice_utils.cpp
-    src/game/client/components/qmclient/qm_bind_status_hud.cpp
     src/game/client/frame_scheduler.cpp
-    src/engine/client/friends.cpp
-    src/engine/client/friends.h
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
+    src/engine/client/favorites.cpp
+    src/engine/client/friends.cpp
     src/engine/client/serverbrowser.cpp
     src/engine/client/serverbrowser.h
     src/engine/client/serverbrowser_http.cpp
@@ -4181,6 +4677,13 @@ datafile_test.cpp
       src/qm-nmt-hook/qm_netease_bootstrap.cpp
       src/qm-nmt-hook/qm_netease_cdp.cpp
       src/qm-nmt-hook/qm_netease_cdp_client.cpp
+    )
+  endif()
+
+  if(METAL)
+    list(APPEND TESTS_EXTRA
+      src/engine/client/backend/backend_base.cpp
+      src/engine/client/backend/metal/backend_metal.mm
     )
   endif()
 
@@ -4209,6 +4712,11 @@ datafile_test.cpp
   target_compile_definitions(${TARGET_TESTRUNNER} PRIVATE
     DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
   )
+  if(METAL)
+    add_dependencies(${TARGET_TESTRUNNER} build_metal_shaders)
+    target_compile_definitions(${TARGET_TESTRUNNER} PRIVATE CONF_BACKEND_METAL CONF_BACKEND_METAL_READY)
+    target_link_libraries(${TARGET_TESTRUNNER} ${SDL2_LIBRARIES} "-framework Metal" "-framework QuartzCore")
+  endif()
   if(MSVC)
     target_compile_options(${TARGET_TESTRUNNER} PRIVATE /bigobj)
   endif()
@@ -4226,15 +4734,11 @@ datafile_test.cpp
   elseif(TARGET gtest_main)
     set(QM_NMT_GTEST_MAIN_TARGET gtest_main)
   endif()
-  if(QM_NMT_GTEST_MAIN_TARGET)
+  if(QM_NMT_GTEST_MAIN_TARGET AND TARGET_OS STREQUAL "windows")
     add_executable(qm-nmt-tests EXCLUDE_FROM_ALL
       src/test/music_lyrics_krc_test.cpp
       src/test/music_lyrics_qrc_test.cpp
       src/test/qm_soda_lyric_file_test.cpp
-      src/test/qm_music_transport_test.cpp
-      src/test/qm_kugou_protocol_test.cpp
-      src/test/qm_kugou_patch_test.cpp
-      src/test/qm_qqmusic_protocol_test.cpp
       src/test/qm_soda_probe_test.cpp
       src/test/qm_soda_protocol_test.cpp
       src/test/netease_lyric_parser_test.cpp
@@ -4245,9 +4749,11 @@ datafile_test.cpp
       src/test/qm_spotify_crypto_test.cpp
       src/test/qm_spotify_token_test.cpp
       src/test/qm_spotify_parser_test.cpp
-      src/qm-music-hook/qm_music_publication.cpp
-      src/qm-music-hook/qm_kugou_protocol.cpp
-      src/qm-music-hook/qm_qqmusic_protocol.cpp
+      src/test/qm_qqmusic_protocol_test.cpp
+      src/test/qm_music_transport_test.cpp
+      src/test/qm_kugou_protocol_test.cpp
+      src/test/qm_kugou_patch_test.cpp
+      src/test/qm_music_registry_test.cpp
       src/qm-soda-hook/qm_soda_probe.cpp
       src/qm-soda-hook/qm_soda_protocol.cpp
       src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
@@ -4256,12 +4762,16 @@ datafile_test.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
+      src/qm-music-hook/qm_music_publication.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
       src/game/client/components/qmclient/netease/netease_lyric_state.cpp
       src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
       src/game/client/components/qmclient/netease/netease_shared_memory.cpp
       src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
       src/qm-nmt-hook/qm_netease_cdp.cpp
+      src/qm-music-hook/qm_music_source.h
+      src/qm-music-hook/qm_kugou_protocol.h
+      src/qm-music-hook/qm_qqmusic_protocol.h
       src/engine/external/json-parser/json.c
     )
     target_include_directories(qm-nmt-tests PRIVATE src)
@@ -4271,7 +4781,6 @@ datafile_test.cpp
     # 使用 plain 签名，与文件内 target_link_libraries 循环（无 keyword）保持一致
     target_link_libraries(qm-nmt-tests ${QM_NMT_GTEST_MAIN_TARGET})
     if(TARGET_OS STREQUAL "windows")
-      # Windows 专用：bootstrap/cdp_client 依赖 winsock2，测试也使用宽字符路径
       target_sources(qm-nmt-tests PRIVATE
         src/test/qm_netease_cdp_test.cpp
         src/qm-nmt-hook/qm_netease_bootstrap.cpp
@@ -4304,7 +4813,7 @@ datafile_test.cpp
   add_custom_target(run_tests
     DEPENDS run_cxx_tests
   )
-  if(NOT MSVC OR (NOT CMAKE_CONFIGURATION_TYPES AND CMAKE_BUILD_TYPE STREQUAL Release))
+  if(NOT MSVC OR CMAKE_BUILD_TYPE STREQUAL Release OR CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo OR CMAKE_BUILD_TYPE STREQUAL MinSizeRel)
     # On MSVC, Rust tests only work in the release mode because we link our C++
     # code with the debug C standard library (/MTd) but Rust only supports
     # linking to the release C standard library (/MT).
@@ -4317,46 +4826,48 @@ datafile_test.cpp
   endif()
 endif()
 
-add_library(rust_test STATIC EXCLUDE_FROM_ALL
-  $<TARGET_OBJECTS:engine-gfx>
-  $<TARGET_OBJECTS:engine-shared>
-  $<TARGET_OBJECTS:game-shared>
-  $<TARGET_OBJECTS:rust-bridge-shared>
-  ${DEPS}
-)
-# 避免在链接 doctest 时与 Rust 自带的 librust_test.a 冲突。
-set_target_properties(rust_test PROPERTIES OUTPUT_NAME ddnet_rust_test)
+if(NOT TARGET_OS STREQUAL "ios")
+  add_library(rust_test STATIC EXCLUDE_FROM_ALL
+    $<TARGET_OBJECTS:engine-gfx>
+    $<TARGET_OBJECTS:engine-shared>
+    $<TARGET_OBJECTS:game-shared>
+    $<TARGET_OBJECTS:rust-bridge-shared>
+    ${DEPS}
+  )
+  # 避免在链接 doctest 时与 Rust 自带的 librust_test.a 冲突。
+  set_target_properties(rust_test PROPERTIES OUTPUT_NAME ddnet_rust_test)
 
-list(APPEND TARGETS_OWN rust_test)
-list(APPEND TARGETS_LINK rust_test)
+  list(APPEND TARGETS_OWN rust_test)
+  list(APPEND TARGETS_LINK rust_test)
 
-set(RUST_TEST_LIBS $<TARGET_FILE:rust_test> ${WebP_LIBRARIES} ${LIBS})
-list(REMOVE_ITEM RUST_TEST_LIBS "rust_engine_shared")
-list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
-if(MSVC)
-  set(RUST_TEST_LIB_ALIAS_DIR "${PROJECT_BINARY_DIR}/rust_test_lib_aliases")
-  file(MAKE_DIRECTORY "${RUST_TEST_LIB_ALIAS_DIR}")
-  foreach(WebPLib ${WebP_LIBRARIES})
-    get_filename_component(WebPLibName "${WebPLib}" NAME)
-    if(WebPLibName MATCHES "^lib(.+)\\.lib$")
-      set(WebPLibAlias "${RUST_TEST_LIB_ALIAS_DIR}/${CMAKE_MATCH_1}.lib")
-      configure_file("${WebPLib}" "${WebPLibAlias}" COPYONLY)
-      list(REMOVE_ITEM RUST_TEST_LIBS "${WebPLib}")
-      list(APPEND RUST_TEST_LIBS "${WebPLibAlias}")
-    endif()
-  endforeach()
+  set(RUST_TEST_LIBS ${WebP_LIBRARIES} ${LIBS} $<TARGET_FILE:rust_test>)
+  list(REMOVE_ITEM RUST_TEST_LIBS "rust_engine_shared")
+  list(REMOVE_ITEM RUST_TEST_LIBS "-pthread")
+  if(MSVC)
+    set(RUST_TEST_LIB_ALIAS_DIR "${PROJECT_BINARY_DIR}/rust_test_lib_aliases")
+    file(MAKE_DIRECTORY "${RUST_TEST_LIB_ALIAS_DIR}")
+    foreach(WebPLib ${WebP_LIBRARIES})
+      get_filename_component(WebPLibName "${WebPLib}" NAME)
+      if(WebPLibName MATCHES "^lib(.+)\\.lib$")
+        set(WebPLibAlias "${RUST_TEST_LIB_ALIAS_DIR}/${CMAKE_MATCH_1}.lib")
+        configure_file("${WebPLib}" "${WebPLibAlias}" COPYONLY)
+        list(REMOVE_ITEM RUST_TEST_LIBS "${WebPLib}")
+        list(APPEND RUST_TEST_LIBS "${WebPLibAlias}")
+      endif()
+    endforeach()
+  endif()
+  list(JOIN RUST_TEST_LIBS "\n" RUST_TEST_LIBS_FILE_CONTENT)
+  file(GENERATE
+    OUTPUT "${PROJECT_BINARY_DIR}/rust_test_libraries.txt"
+    CONTENT "${RUST_TEST_LIBS_FILE_CONTENT}\n"
+  )
+  add_custom_target(run_rust_tests
+    COMMAND ${CARGO_TEST}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    USES_TERMINAL
+    DEPENDS rust_test
+  )
 endif()
-list(JOIN RUST_TEST_LIBS "\n" RUST_TEST_LIBS_FILE_CONTENT)
-file(GENERATE
-  OUTPUT "${PROJECT_BINARY_DIR}/rust_test_libraries.txt"
-  CONTENT "${RUST_TEST_LIBS_FILE_CONTENT}\n"
-)
-add_custom_target(run_rust_tests
-  COMMAND ${CARGO_TEST}
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  USES_TERMINAL
-  DEPENDS rust_test
-)
 
 ########################################################################
 # INSTALLATION
@@ -4483,20 +4994,17 @@ set(CPACK_ARCHIVE_PORTABLE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-src)
 set(CPACK_SOURCE_FILES
   CMakeLists.txt
-  LICENSE-QMCLIENT.md
   README.md
   cmake/
   data/
   datasrc/
   ddnet-libs/
   license.txt
-  lsan.supp
   memcheck.supp
   other/
   scripts/
   src/
   storage.cfg
-  ubsan.supp
   valgrind.supp
 )
 set(CPACK_SOURCE_IGNORE_FILES
@@ -4525,6 +5033,9 @@ if(TOOLS)
     map_diff
     map_extract
   )
+  if(EGL_FOUND)
+    list(APPEND TARGET_TOOLS map_render)
+  endif()
 else()
   set(TARGET_TOOLS)
 endif()
@@ -4538,12 +5049,13 @@ if(TARGET game-client)
       list(APPEND CPACK_TARGETS ${qm_nmt_runtime_target})
     endif()
   endforeach()
-  # 音乐采集 Helper 与客户端同级发布。
-  foreach(qm_lyrics_helper qm-soda-helper qm-music-helper)
-    if(TARGET ${qm_lyrics_helper})
-      list(APPEND CPACK_TARGETS ${qm_lyrics_helper})
-    endif()
-  endforeach()
+  # 汽水音乐 Hook Helper 与客户端同级发布。
+  if(TARGET qm-soda-helper)
+    list(APPEND CPACK_TARGETS qm-soda-helper)
+  endif()
+  if(TARGET qm-music-helper)
+    list(APPEND CPACK_TARGETS qm-music-helper)
+  endif()
 endif()
 if(TARGET qm-client-updater)
   list(APPEND CPACK_TARGETS qm-client-updater)
@@ -4561,7 +5073,6 @@ set(CPACK_DIRS
   ${COPY_DIRS}
 )
 set(CPACK_FILES
-  LICENSE-QMCLIENT.md
   license.txt
   storage.cfg
   steam_appid.txt
@@ -4573,6 +5084,7 @@ endif()
 
 set(CPACK_GEN_FILES
   ${VULKAN_SHADER_FILE_LIST}
+  ${METAL_SHADER_FILE_LIST}
 )
 
 if(TARGET_OS STREQUAL "windows")
@@ -4614,6 +5126,9 @@ if(NOT DEV)
   endforeach()
   foreach(file ${VULKAN_SHADER_FILE_LIST})
     install(FILES "${PROJECT_BINARY_DIR}/${file}" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/ddnet/data/shader/vulkan COMPONENT client)
+  endforeach()
+  foreach(file ${METAL_SHADER_FILE_LIST})
+    install(FILES "${PROJECT_BINARY_DIR}/${file}" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/ddnet/data/shader/metal COMPONENT client)
   endforeach()
 endif()
 
@@ -4741,6 +5256,16 @@ if(CLIENT AND DMGBUILD_FOUND)
     endforeach()
   endif()
 
+  set(DMG_METAL_SHADER_COPY_COMMANDS)
+  if(METAL)
+    list(APPEND DMG_METAL_SHADER_COPY_COMMANDS
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/data/shader/metal)
+    foreach(file ${METAL_SHADER_FILE_LIST})
+      list(APPEND DMG_METAL_SHADER_COPY_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/${file} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/${file})
+    endforeach()
+  endif()
+
   set(DMG_FFMPEG_COPY_COMMANDS)
   if(VIDEORECORDER AND FFMPEG_FOUND AND FFMPEG_COPY_FILES)
     foreach(file ${FFMPEG_COPY_FILES})
@@ -4757,6 +5282,7 @@ if(CLIENT AND DMGBUILD_FOUND)
     # CLIENT
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/data ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/data
     ${DMG_VULKAN_SHADER_COPY_COMMANDS}
+    ${DMG_METAL_SHADER_COPY_COMMANDS}
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/other/icons/${CLIENT_EXECUTABLE}.icns ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/Resources/
     COMMAND ${CMAKE_COMMAND} -E copy bundle/client/Info.plist ${PROJECT_SOURCE_DIR}/other/bundle/client/PkgInfo ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:game-client> ${TARGET_TOOLS_FILES} ${DMG_TMPDIR}/${CLIENT_EXECUTABLE}.app/Contents/MacOS/
@@ -4777,6 +5303,7 @@ if(CLIENT AND DMGBUILD_FOUND)
 
     # SERVER
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/data/maps ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/Resources/data/maps
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/data/autoexec_server.cfg ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/Resources/data/
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/other/icons/${SERVER_EXECUTABLE}.icns ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/Resources/
     COMMAND ${CMAKE_COMMAND} -E copy bundle/server/Info.plist ${PROJECT_SOURCE_DIR}/other/bundle/server/PkgInfo ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:game-server> $<TARGET_FILE:game-server-launcher> ${DMG_TMPDIR}/${SERVER_EXECUTABLE}.app/Contents/MacOS/
@@ -4914,7 +5441,7 @@ source_group_tree(src)
 
 if(ANTIBOT)
   # Allow the antibot library to use functions from the server binary.
-  add_linker_flag_if_supported(OUR_FLAGS_LINK -rdynamic)
+  add_cxx_compiler_flag_if_supported(OUR_FLAGS_LINK -rdynamic)
   set_own_rpath(game-server)
 endif()
 
@@ -4962,18 +5489,23 @@ foreach(target ${TARGETS})
       target_compile_options(${target} PRIVATE /WX)
     endif()
   endif()
-  if(OUR_FLAGS_LINK)
-    target_link_libraries(${target} ${OUR_FLAGS_LINK})
-  endif()
+	if(OUR_FLAGS_LINK)
+		target_link_libraries(${target} ${OUR_FLAGS_LINK})
+	endif()
   if(OUR_FLAGS)
     target_compile_options(${target} PRIVATE ${OUR_FLAGS})
   endif()
-  if(DEFINE_FORTIFY_SOURCE)
+  if(DEFINE_FORTIFY_SOURCE_3 OR DEFINE_FORTIFY_SOURCE)
     if(MINGW)
       target_compile_definitions(${target} PRIVATE $<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=0>) # Currently broken in MinGW, see https://sourceforge.net/p/mingw-w64/discussion/723798/thread/b9d24f041f/
+    elseif(DEFINE_FORTIFY_SOURCE_3)
+      target_compile_definitions(${target} PRIVATE $<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=3>) # 在支持的平台上检查动态大小缓冲区溢出。
     else()
       target_compile_definitions(${target} PRIVATE $<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=2>) # Detect some buffer overflows.
     endif()
+  endif()
+  if(ENABLE_PIE)
+    set_property(TARGET ${target} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
   endif()
   if(ENABLE_IPO)
     # Keep debug iteration fast and stable; use IPO/LTO for optimized configs.
@@ -4985,6 +5517,14 @@ foreach(target ${TARGETS})
     target_link_options(${target} PRIVATE --preload-file data)
   endif()
 endforeach()
+
+if(ENABLE_IPO AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  foreach(target engine-gfx engine-shared game-shared rust-bridge-shared json md5 zlib)
+    if(TARGET ${target})
+      target_compile_options(${target} PRIVATE -ffat-lto-objects)
+    endif()
+  endforeach()
+endif()
 
 foreach(target ${TARGETS_LINK})
   if(MSVC)
@@ -5001,6 +5541,17 @@ foreach(target ${TARGETS_LINK})
     target_link_libraries(${target} -static-libstdc++)
   endif()
 endforeach()
+
+if(PRECOMPILE_HEADERS AND NOT CMAKE_VERSION VERSION_LESS 3.16)
+  foreach(target engine-shared game-client game-server-without-main game-shared testrunner)
+    if(TARGET ${target})
+      target_precompile_headers(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h>")
+    endif()
+  endforeach()
+  if(TARGET testrunner)
+    target_precompile_headers(testrunner PRIVATE <gtest/gtest.h>)
+  endif()
+endif()
 
 foreach(target ${TARGETS_OWN})
   set_property(TARGET ${target} PROPERTY CXX_STANDARD 20)

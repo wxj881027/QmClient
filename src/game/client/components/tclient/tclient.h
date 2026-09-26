@@ -7,8 +7,8 @@
 #include <engine/client/enums.h>
 #include <engine/external/regex.h>
 #include <engine/graphics.h>
+#include <engine/http.h>
 #include <engine/shared/console.h>
-#include <engine/shared/http.h>
 #include <engine/shared/json.h>
 #include <engine/shared/protocol.h>
 #include <engine/textrender.h>
@@ -128,6 +128,10 @@ class CTClient : public CComponent
 	static void ConSpecId(IConsole::IResult *pResult, void *pUserData);
 	void SpecId(int ClientId);
 
+	// 单刷模式：一键把本体与分身分到两个空闲 team；已分队时一键回 team 0。
+	static void ConSoloSplit(IConsole::IResult *pResult, void *pUserData);
+	void SoloSplitToggle();
+
 	int m_EmoteCycle = 0;
 	static void ConEmoteCycle(IConsole::IResult *pResult, void *pUserData);
 
@@ -222,7 +226,7 @@ class CTClient : public CComponent
 	void UpdatePlayerStats();
 	void TrackHookDirection(int Dummy);
 
-	// 地图进度：Gores 全图估算，DDRace 支持计时 CP 分段。
+	// 地图进度：保留 Gores 距离场，DDRace 使用计时 CP 分段路径场。
 	QmMapProgress::CMap m_QmDDraceProgressMap;
 	QmMapProgress::CPlayer m_aQmDDraceProgress[NUM_DUMMIES];
 	const void *m_pQmDDraceProgressGame = nullptr;
@@ -237,6 +241,7 @@ class CTClient : public CComponent
 	bool IsDDraceMapProgressMap() const;
 	void ResetDDraceMapProgress();
 	void UpdateDDraceMapProgress();
+
 	enum class EGoresDistanceFieldBuildStage
 	{
 		IDLE,
@@ -255,6 +260,8 @@ class CTClient : public CComponent
 	std::vector<unsigned char> m_vGoresCMap; // 0=normal 1=blocked 2=tele 3=penalty 4=reward
 	std::vector<std::vector<int>> m_vvGoresDirectTeleOuts;
 	std::vector<int> m_vGoresDistanceToFinish;
+	// 路线显示的两处每帧开销：起点靠扫描全图、访问位图整张分配并清零。
+	// 前者沿用距离场已有的递增地图扫描记录潜在起点，后者只清理上一条路径触及的位图字。
 	CQmRouteStartIndex m_GoresRouteStartIndex;
 	mutable CQmRouteVisited m_GoresDebugRouteVisited;
 	EGoresDistanceFieldBuildStage m_GoresDistanceFieldBuildStage = EGoresDistanceFieldBuildStage::IDLE;
@@ -383,12 +390,22 @@ class CTClient : public CComponent
 	void StartSwapCountdown(int Dummy, const char *pCounterpart, bool Outgoing);
 	void ClearSwapCountdown(int Dummy = -1);
 
-	// 好友上线提醒只消费本功能发起的完整刷新结果。
+	// 好友上线提醒
+	struct SFriendOnlineState
+	{
+		float m_LastSeen = 0.0f;
+	};
+	std::unordered_map<std::string, SFriendOnlineState> m_FriendOnline;
 	qm_friend_notify::COnlineTracker m_FriendOnlineTracker;
+	std::vector<qm_friend_notify::CFriend> m_vFriendOnlineScan;
+	std::unordered_set<std::string> m_FriendOnlineAvailableServers;
+	std::unordered_set<std::string> m_FriendOnlineNames;
+	float m_FriendNotifyNextCheck = 0.0f;
 	int m_FriendNotifyPrevEnabled = -1;
 	int m_FriendNotifyPrevIgnoreClan = -1;
 	uint64_t m_FriendNotifyPrevRevision = 0;
-	bool m_FriendOnlineRefreshPending = false;
+	bool m_FriendNotifyScanRunning = false;
+	int m_FriendNotifyScanIndex = 0;
 	float m_FriendAutoRefreshNext = 0.0f;
 	int m_FriendAutoRefreshPrevEnabled = -1;
 	int m_FriendAutoRefreshPrevSeconds = -1;
@@ -419,6 +436,10 @@ public:
 	void OnRender() override;
 	bool OnInput(const IInput::CEvent &Event) override;
 	bool ShouldAppendGoresPrevWeapon() const;
+	// Gores 自动切锤是否正在接管武器（锤后自动切回，或拿到额外武器后的脉冲模式）。
+	bool IsGoresWeaponCycleActive() const;
+	// Gores 自动切锤引起的锤子切换是否要跳过切换动画（受 qm_gores_suppress_switch_anim 控制）。
+	bool ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const;
 	bool IsFinishRenamePending(int Dummy) const { return Dummy >= 0 && Dummy < NUM_DUMMIES && m_aFinishRenamePending[Dummy]; }
 
 	void OnStateChange(int NewState, int OldState) override;
@@ -431,11 +452,11 @@ public:
 	const char *UpdateShutdownMessage() const;
 	bool IsPreparingUpdateForShutdown() const { return m_UpdateShutdownRequested; }
 
-	std::shared_ptr<CHttpRequest> m_pQmClientUpdateInfoTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pUpdatePackageTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pUpdatePackageSignatureTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pUpdateManifestTask = nullptr;
-	std::shared_ptr<CHttpRequest> m_pUpdateManifestSignatureTask = nullptr;
+	std::shared_ptr<IHttpRequest> m_pQmClientUpdateInfoTask = nullptr;
+	std::shared_ptr<IHttpRequest> m_pUpdatePackageTask = nullptr;
+	std::shared_ptr<IHttpRequest> m_pUpdatePackageSignatureTask = nullptr;
+	std::shared_ptr<IHttpRequest> m_pUpdateManifestTask = nullptr;
+	std::shared_ptr<IHttpRequest> m_pUpdateManifestSignatureTask = nullptr;
 	void FetchQmClientUpdateInfo();
 	void FinishQmClientUpdateInfo();
 	void ResetQmClientUpdateInfoTask();
@@ -517,29 +538,34 @@ public:
 		return m_aGoresMapProgress[Idx];
 	}
 
-	// Gores FastInput Link
-	bool m_GoresModeStateKnown = false;
-	bool m_PrevGoresModeActive = false;
-	SQmConfigOverrideState m_GoresDummyHammerOverride;
+	// Focus Mode (Zen Mode)
 	bool m_FocusModeStateKnown = false;
 	bool m_PrevFocusModeActive = false;
-	SQmConfigOverrideState m_FocusHudOverrideState;
-	SQmConfigOverrideState m_FocusNamePlatesOverrideState;
-	SQmConfigOverrideState m_FocusNamePlatesOwnOverrideState;
-	SQmConfigOverrideState m_FocusNameplateCoordsOverrideState;
-	SQmConfigOverrideState m_FocusNameplateCoordsOwnOverrideState;
-	SQmConfigOverrideState m_FocusNameplateCoordXOverrideState;
-	SQmConfigOverrideState m_FocusNameplateCoordYOverrideState;
-	SQmConfigOverrideState m_FocusDirectionOverrideState;
-	SQmConfigOverrideState m_FocusVideoHudOverrideState;
-	SQmConfigOverrideState m_FocusVideoDirectionOverrideState;
+	SQmFocusConfigOverrideState m_FocusHudOverrideState;
+	SQmFocusConfigOverrideState m_FocusStatusBarOverrideState;
+	SQmFocusConfigOverrideState m_FocusNamePlatesOverrideState;
+	SQmFocusConfigOverrideState m_FocusNamePlatesOwnOverrideState;
+	SQmFocusConfigOverrideState m_FocusNameplateShowScopeOverrideState;
+	SQmFocusConfigOverrideState m_FocusNameplateCoordsOverrideState;
+	SQmFocusConfigOverrideState m_FocusNameplateCoordsOwnOverrideState;
+	SQmFocusConfigOverrideState m_FocusNameplateCoordXOverrideState;
+	SQmFocusConfigOverrideState m_FocusNameplateCoordYOverrideState;
+	SQmFocusConfigOverrideState m_FocusDirectionOverrideState;
 	void ApplyFocusModeEffects();
-	void ResetGoresDummyHammerOverride();
-	bool m_GoresAutoMapKnown = false;
-	unsigned m_GoresAutoMapToken = 0;
+
+	// Gores 快速输入临时覆盖
+	bool m_GoresModeStateKnown = false;
+	bool m_PrevGoresModeActive = false;
+	bool m_GoresGameModeStateKnown = false;
+	bool m_PrevGoresGameMode = false;
+	SQmFocusConfigOverrideState m_GoresAutoEnableOverride;
+	SQmFocusConfigOverrideState m_GoresFastInputOverride;
+	SQmFocusConfigOverrideState m_GoresFastInputOthersOverride;
+	SQmFocusConfigOverrideState m_GoresDummyHammerOverride;
+	void ResetGoresConfigOverrides();
 	bool IsFastInputActive() const;
 	bool IsFastInputOthersActive() const;
-	void ApplyGoresFastInputLink(bool AutoMapCheck = false);
+	void ApplyGoresFastInputLink();
 };
 
 #endif

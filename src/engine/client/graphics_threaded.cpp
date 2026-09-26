@@ -1,18 +1,18 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
-#include <base/crashdump.h>
 #include <base/detect.h>
 #include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
 
+#include <engine/client/backend/graphics_backend_contract.h>
+#include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
-#include <engine/gfx/sprite_image.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
@@ -25,6 +25,10 @@
 #include <cinttypes>
 #include <limits>
 #include <thread>
+
+#if defined(CONF_BACKEND_VULKAN)
+#include <SDL.h>
+#endif
 
 #if defined(CONF_PLATFORM_MACOS)
 #include <os/log.h>
@@ -41,7 +45,8 @@ class CSemaphore;
 
 static std::thread::id gs_MainThreadId;
 static bool gs_MainThreadIdInitialized = false;
-static constexpr int RECT_CORNER_SEGMENTS = CQmRoundedRectDirections::MAX_SEGMENTS; // 圆角段数上限（栈数组大小）
+// 圆角段数上限（栈数组大小）与预计算表的上限保持同一来源，避免两侧不一致。
+static constexpr int RECT_CORNER_SEGMENTS = CQmRoundedRectDirections::MAX_SEGMENTS;
 static inline int RoundedRectSegmentCount()
 {
 	return std::clamp(g_Config.m_QmRectCornerSegments & ~1, CQmRoundedRectDirections::MIN_SEGMENTS, RECT_CORNER_SEGMENTS);
@@ -82,6 +87,7 @@ static ColorRGBA ColorWithAlpha(ColorRGBA Color, float Alpha)
 	return Color;
 }
 
+// 方向向量由 CQmRoundedRectDirections 按档位预计算，这里不再逐段算 cos/sin。
 static IGraphics::CFreeformItem RoundedRectAntialiasSegment(float CenterX, float CenterY, float InnerRadius, float OuterRadius, const vec2 &DirectionStart, const vec2 &DirectionEnd, float XDirection, float YDirection)
 {
 	const float InnerStartX = CenterX + XDirection * DirectionStart.x * InnerRadius;
@@ -231,6 +237,8 @@ CGraphics_Threaded::CGraphics_Threaded()
 
 	m_ScreenWidth = -1;
 	m_ScreenHeight = -1;
+	m_DrawableWidth = -1;
+	m_DrawableHeight = -1;
 	m_ScreenRefreshRate = -1;
 
 	m_Rotation = 0;
@@ -343,7 +351,7 @@ void CGraphics_Threaded::LinesBegin()
 {
 	dbg_assert(m_Drawing == EDrawing::NONE, "called Graphics()->LinesBegin twice");
 	m_Drawing = EDrawing::LINES;
-	SetColor(1, 1, 1, 1);
+	SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 void CGraphics_Threaded::LinesEnd()
@@ -363,13 +371,13 @@ void CGraphics_Threaded::LinesDraw(const CLineItem *pArray, size_t Num)
 		m_aVertices[VertexIndex].m_Pos.x = pArray[i].m_X0;
 		m_aVertices[VertexIndex].m_Pos.y = pArray[i].m_Y0;
 		m_aVertices[VertexIndex].m_Tex = m_aTexture[0];
-		SetColor(&m_aVertices[VertexIndex], 0);
+		m_aVertices[VertexIndex].m_Color = m_aColor[0];
 		++VertexIndex;
 
 		m_aVertices[VertexIndex].m_Pos.x = pArray[i].m_X1;
 		m_aVertices[VertexIndex].m_Pos.y = pArray[i].m_Y1;
 		m_aVertices[VertexIndex].m_Tex = m_aTexture[1];
-		SetColor(&m_aVertices[VertexIndex], 1);
+		m_aVertices[VertexIndex].m_Color = m_aColor[1];
 		++VertexIndex;
 	}
 
@@ -430,6 +438,9 @@ IGraphics::CTextureHandle CGraphics_Threaded::FindFreeTextureIndex()
 void CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
 {
 	++m_TextureHandleEpoch;
+	// 设备重建会丢失引擎自己持有的占位纹理，通知流程负责重新创建。
+	m_NullTexture.Invalidate();
+	m_BlankTexture.Invalidate();
 	m_vTextureIndices.resize(CCommandBuffer::MAX_TEXTURES);
 	m_vTextureGenerations.resize(CCommandBuffer::MAX_TEXTURES);
 	// 已经空闲过的槽位也必须再进一次代数，避免「槽位 + 代数」组合和旧句柄撞车。
@@ -440,9 +451,7 @@ void CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
 	m_FirstFreeTexture = 0;
 }
 
-// 句柄里的槽位代数与纪元必须和当前状态一致，才算真的还分配着纹理；
-// 设备重建或槽位复用后，旧句柄会在这里被判定为失效（绘制期据此兜底）。
-bool CGraphics_Threaded::IsTextureHandleAllocated(CTextureHandle TextureId) const
+bool CGraphics_Threaded::IsTextureHandleAllocated(IGraphics::CTextureHandle TextureId) const
 {
 	if(!TextureId.IsValid())
 		return false;
@@ -494,49 +503,55 @@ void CGraphics_Threaded::UnloadTexture(CTextureHandle *pIndex)
 	FreeTextureIndex(pIndex);
 }
 
-IGraphics::CTextureHandle CGraphics_Threaded::LoadSpriteTexture(const CImageInfo &FromImageInfo, const CDataSprite *pSprite)
+static bool GetSpriteImageRect(const CImageInfo &ImageInfo, const CDataSprite *pSprite, size_t &x, size_t &y, size_t &w, size_t &h, bool *pOutOfBounds = nullptr);
+
+IGraphics::CTextureHandle CGraphics_Threaded::LoadSpriteTexture(const CImageInfo &FromImageInfo, const std::optional<CImageInfo> &FallbackImageInfo, const CDataSprite *pSprite)
 {
+	const char *pSpriteName = pSprite && pSprite->m_pName ? pSprite->m_pName : "(no name)";
+	size_t x = 0;
+	size_t y = 0;
+	size_t w = 0;
+	size_t h = 0;
+	bool OutOfBounds = false;
+	if(FromImageInfo.m_pData == nullptr || !GetSpriteImageRect(FromImageInfo, pSprite, x, y, w, h, &OutOfBounds))
+	{
+		if(OutOfBounds)
+		{
+			// 自定义图集比默认图集小（例如只做了部分区域的空白材质包）：
+			// 越界的 sprite 按「未提供」处理，不再让整包被拒而静默回退官方默认图。
+			if(FallbackImageInfo.has_value() && g_Config.m_QmBlankAssetFallback != 0)
+			{
+				log_warn("graphics/texture", "Sprite '%s' exceeds the %dx%d atlas, falling back to the default asset.", pSpriteName, FromImageInfo.m_Width, FromImageInfo.m_Height);
+				return LoadSpriteTexture(FallbackImageInfo.value(), std::nullopt, pSprite);
+			}
+			log_warn("graphics/texture", "Sprite '%s' exceeds the %dx%d atlas, keeping it invisible.", pSpriteName, FromImageInfo.m_Width, FromImageInfo.m_Height);
+			return m_BlankTexture;
+		}
+		log_error("graphics/texture", "Ignoring invalid sprite texture '%s'.", pSpriteName);
+		return m_NullTexture;
+	}
+
+	// 检查不可见纹理（可能是过时的游戏资源，或用户故意留白的屏蔽材质）。
+	// qm_blank_asset_fallback 开启时回退默认资源（官方行为）；
+	// 关闭时保持不可见，让空白材质屏蔽雪花等粒子特效的意图生效。
+	if(FallbackImageInfo.has_value() && g_Config.m_QmBlankAssetFallback != 0 && IsImageSubFullyTransparent(FromImageInfo, (int)x, (int)y, (int)w, (int)h))
+	{
+		log_warn("graphics", "Asset '%s' appears to be invisible, falling back to default", pSpriteName);
+		return LoadSpriteTexture(FallbackImageInfo.value(), std::nullopt, pSprite);
+	}
+
 	CImageInfo SpriteInfo;
 	if(!ExtractSpriteImage(FromImageInfo, pSprite, SpriteInfo))
 		return m_NullTexture;
-	const char *pSpriteName = pSprite && pSprite->m_pName ? pSprite->m_pName : "(no name)";
 	return LoadTextureRawMove(SpriteInfo, 0, pSpriteName);
 }
 
 bool CGraphics_Threaded::IsImageSubFullyTransparent(const CImageInfo &FromImageInfo, int x, int y, int w, int h)
 {
-	if(FromImageInfo.m_Format == CImageInfo::FORMAT_R || FromImageInfo.m_Format == CImageInfo::FORMAT_RA || FromImageInfo.m_Format == CImageInfo::FORMAT_RGBA)
-	{
-		if(FromImageInfo.m_pData == nullptr || x < 0 || y < 0 || w <= 0 || h <= 0)
-			return false;
-		if(static_cast<size_t>(x) > FromImageInfo.m_Width || static_cast<size_t>(y) > FromImageInfo.m_Height ||
-			static_cast<size_t>(w) > FromImageInfo.m_Width - static_cast<size_t>(x) ||
-			static_cast<size_t>(h) > FromImageInfo.m_Height - static_cast<size_t>(y))
-		{
-			return false;
-		}
-		size_t ImageDataSize = 0;
-		if(!FromImageInfo.DataSize(ImageDataSize))
-			return false;
-		const uint8_t *pImgData = FromImageInfo.m_pData;
-		const size_t PixelSize = FromImageInfo.PixelSize();
-		for(int iy = 0; iy < h; ++iy)
-		{
-			for(int ix = 0; ix < w; ++ix)
-			{
-				const size_t PixelX = static_cast<size_t>(x) + static_cast<size_t>(ix);
-				const size_t PixelY = static_cast<size_t>(y) + static_cast<size_t>(iy);
-				const size_t RealOffset = (PixelY * FromImageInfo.m_Width + PixelX) * PixelSize;
-				if(RealOffset >= ImageDataSize || PixelSize - 1 >= ImageDataSize - RealOffset)
-					return false;
-				if(pImgData[RealOffset + (PixelSize - 1)] > 0)
-					return false;
-			}
-		}
-
-		return true;
-	}
-	return false;
+	if(x < 0 || y < 0 || w <= 0 || h <= 0)
+		return false;
+	// 判定逻辑复用 engine/gfx 的纯函数，保证与客户端侧的空白 sprite 回退使用同一套语义。
+	return IsImageRectFullyTransparent(FromImageInfo, static_cast<size_t>(x), static_cast<size_t>(y), static_cast<size_t>(w), static_cast<size_t>(h));
 }
 
 bool CGraphics_Threaded::IsSpriteTextureFullyTransparent(const CImageInfo &FromImageInfo, const CDataSprite *pSprite)
@@ -615,6 +630,17 @@ static bool TextureDataSizeGrayscale(size_t Width, size_t Height, size_t &DataSi
 	}
 	DataSize = Width * Height;
 	return true;
+}
+
+static bool GetSpriteImageRect(const CImageInfo &ImageInfo, const CDataSprite *pSprite, size_t &x, size_t &y, size_t &w, size_t &h, bool *pOutOfBounds)
+{
+	if(pSprite == nullptr || pSprite->m_pSet == nullptr)
+		return false;
+	// 换算规则集中放在 engine/gfx 的纯函数里，客户端侧的单图资源空白回退复用同一实现。
+	return ResolveSpritePixelRect(ImageInfo.m_Width, ImageInfo.m_Height,
+		pSprite->m_pSet->m_Gridx, pSprite->m_pSet->m_Gridy,
+		pSprite->m_X, pSprite->m_Y, pSprite->m_W, pSprite->m_H,
+		x, y, w, h, pOutOfBounds);
 }
 
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &Image, int Flags, const char *pTexName)
@@ -728,12 +754,12 @@ bool CGraphics_Threaded::IsRenderTargetSupported() const
 
 bool CGraphics_Threaded::IsRenderTargetGaussianBlurSupported() const
 {
-	return m_GLRenderTargetGaussianBlurSupported && (!m_GLRenderTargetExternalPassRequiresSingleSample || m_MultiSamplingCount == 0);
+	return IGraphics::SingleSampleFeatureAllowedUnderMsaa(m_GLRenderTargetGaussianBlurSupported, m_GLRenderTargetExternalPassRequiresSingleSample, m_MultiSamplingCount);
 }
 
 bool CGraphics_Threaded::IsBackbufferCaptureSupported() const
 {
-	return m_GLBackbufferCaptureSupported && (!m_GLRenderTargetExternalPassRequiresSingleSample || m_MultiSamplingCount == 0);
+	return IGraphics::SingleSampleFeatureAllowedUnderMsaa(m_GLBackbufferCaptureSupported, m_GLRenderTargetExternalPassRequiresSingleSample, m_MultiSamplingCount);
 }
 
 const char *CGraphics_Threaded::RenderTargetSupportReason() const
@@ -955,16 +981,16 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	Cmd.m_State = m_State;
 	Cmd.m_State.m_WrapMode = EWrapMode::CLAMP;
 
-	// 每角最多产生段数 / 2 个四边形，另有五块主体；直角替换只会减少数量。
+	// 四角每角至多 NumSegments / 2 个四边形，另有中心和四条边。
 	static_assert(RECT_CORNER_SEGMENTS >= 2 && RECT_CORNER_SEGMENTS % 2 == 0);
-	constexpr size_t MaxVertices = (RECT_CORNER_SEGMENTS / 2 * 4 + 5) * 4;
+	constexpr size_t MaxVertices = (RECT_CORNER_SEGMENTS / 2 * 4 + 9) * 4;
 	CCommandBuffer::SVertex aVertices[MaxVertices];
 	size_t NumVertices = 0;
 	const float InvW = 1.0f / Params.m_W;
 	const float InvH = 1.0f / Params.m_H;
 	const uint8_t Alpha = (uint8_t)(Cmd.m_Alpha * 255.0f + 0.5f);
 	auto AddQuad = [&](vec2 Point0, vec2 Point1, vec2 Point2, vec2 Point3) {
-		dbg_assert(NumVertices + 4 <= std::size(aVertices), "render target vertex capacity exceeded");
+		dbg_assert(NumVertices + 4 <= MaxVertices, "render target vertex capacity exceeded");
 		const vec2 aPositions[] = {Point0, Point1, Point2, Point3};
 		for(const vec2 Position : aPositions)
 		{
@@ -1090,44 +1116,81 @@ bool CGraphics_Threaded::CaptureBackbufferToRenderTarget(CRenderTargetHandle Tar
 	return true;
 }
 
-bool CGraphics_Threaded::GaussianBlurRenderTarget(CRenderTargetHandle Source, CRenderTargetHandle Temporary, CRenderTargetHandle Destination, const SGaussianBlurParams &Params)
+bool CGraphics_Threaded::GaussianBlurRenderTarget(CRenderTargetHandle Source, const std::array<CRenderTargetHandle, DUAL_KAWASE_PYRAMID_LEVELS> &aTemporary, CRenderTargetHandle Destination, const SGaussianBlurParams &Params)
 {
-	if(!IsRenderTargetGaussianBlurSupported() || !Source.IsValid() || !Temporary.IsValid() || !Destination.IsValid())
+	const bool DualKawase = Params.m_Mode == EBlurMode::DUAL;
+	const int TemporaryCount = DualKawase ? DUAL_KAWASE_PYRAMID_LEVELS : 1;
+	if(!IsRenderTargetGaussianBlurSupported() || !Source.IsValid() || !Destination.IsValid())
 		return false;
-	if(Source.Id() == Temporary.Id() || Source.Id() == Destination.Id() || Temporary.Id() == Destination.Id())
+	int MaxTargetId = std::max(Source.Id(), Destination.Id());
+	for(int Index = 0; Index < TemporaryCount; ++Index)
+	{
+		if(!aTemporary[Index].IsValid() || aTemporary[Index].Id() == Source.Id() || aTemporary[Index].Id() == Destination.Id())
+			return false;
+		for(int Previous = 0; Previous < Index; ++Previous)
+			if(aTemporary[Index].Id() == aTemporary[Previous].Id())
+				return false;
+		MaxTargetId = std::max(MaxTargetId, aTemporary[Index].Id());
+	}
+	if((size_t)MaxTargetId >= m_vRenderTargetIndices.size() || (size_t)MaxTargetId >= m_vRenderTargetSizes.size())
 		return false;
-	const size_t MaxTargetId = (size_t)std::max({Source.Id(), Temporary.Id(), Destination.Id()});
-	if(MaxTargetId >= m_vRenderTargetIndices.size() || MaxTargetId >= m_vRenderTargetSizes.size())
-		return false;
-	if(m_vRenderTargetIndices[Source.Id()] != -1 || m_vRenderTargetIndices[Temporary.Id()] != -1 || m_vRenderTargetIndices[Destination.Id()] != -1)
+	if(m_vRenderTargetIndices[Source.Id()] != -1 || m_vRenderTargetIndices[Destination.Id()] != -1)
 		return false;
 	const ivec2 Size = m_vRenderTargetSizes[Source.Id()];
-	if(Size.x <= 0 || Size.y <= 0 || m_vRenderTargetSizes[Temporary.Id()] != Size || m_vRenderTargetSizes[Destination.Id()] != Size)
+	const ivec2 DestinationSize = m_vRenderTargetSizes[Destination.Id()];
+	if(Size.x <= 0 || Size.y <= 0 || DestinationSize != Size)
 		return false;
+	ivec2 PreviousExpectedSize = Size;
+	for(int Index = 0; Index < TemporaryCount; ++Index)
+	{
+		if(m_vRenderTargetIndices[aTemporary[Index].Id()] != -1)
+			return false;
+		const ivec2 ExpectedSize = DualKawase ? ivec2(DualKawasePyramidDimension(Size.x, Index), DualKawasePyramidDimension(Size.y, Index)) : Size;
+		if(ExpectedSize.x <= 0 || ExpectedSize.y <= 0 || (DualKawase && (ExpectedSize.x >= PreviousExpectedSize.x || ExpectedSize.y >= PreviousExpectedSize.y)) || m_vRenderTargetSizes[aTemporary[Index].Id()] != ExpectedSize)
+			return false;
+		PreviousExpectedSize = ExpectedSize;
+	}
 
 	std::array<float, GAUSSIAN_BLUR_MAX_RADIUS + 1> aWeights{};
-	if(!CalculateGaussianBlurKernel(Params, aWeights))
+	if(Params.m_Mode == EBlurMode::GAUSSIAN && !CalculateGaussianBlurKernel(Params, aWeights))
 		return false;
 
-	if(!BeginRenderTarget(Temporary, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
-		return false;
-	CCommandBuffer::SCommand_RenderTarget_GaussianBlurPass Horizontal;
-	Horizontal.m_SourceTargetId = Source.Id();
-	Horizontal.m_Radius = Params.m_Radius;
-	Horizontal.m_Horizontal = true;
-	Horizontal.m_aWeights = aWeights;
-	AddCmd(Horizontal);
-	EndRenderTarget();
+	const auto AddBlurPass = [&](CRenderTargetHandle PassSource, CRenderTargetHandle PassDestination, int Pass, bool Horizontal, bool Upsample) {
+		if(!BeginRenderTarget(PassDestination, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
+			return false;
+		CCommandBuffer::SCommand_RenderTarget_GaussianBlurPass Command;
+		Command.m_SourceTargetId = PassSource.Id();
+		Command.m_Radius = Params.m_Radius;
+		Command.m_Horizontal = Horizontal;
+		Command.m_Mode = Params.m_Mode;
+		Command.m_Pass = Pass;
+		Command.m_Upsample = Upsample;
+		Command.m_aWeights = aWeights;
+		AddCmd(Command);
+		EndRenderTarget();
+		return true;
+	};
 
-	if(!BeginRenderTarget(Destination, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
-		return false;
-	CCommandBuffer::SCommand_RenderTarget_GaussianBlurPass Vertical;
-	Vertical.m_SourceTargetId = Temporary.Id();
-	Vertical.m_Radius = Params.m_Radius;
-	Vertical.m_Horizontal = false;
-	Vertical.m_aWeights = aWeights;
-	AddCmd(Vertical);
-	EndRenderTarget();
+	if(!DualKawase)
+	{
+		if(!AddBlurPass(Source, aTemporary[0], 0, true, false))
+			return false;
+		return AddBlurPass(aTemporary[0], Destination, 1, false, false);
+	}
+
+	CRenderTargetHandle PassSource = Source;
+	for(int Level = 0; Level < DUAL_KAWASE_PYRAMID_LEVELS; ++Level)
+	{
+		if(!AddBlurPass(PassSource, aTemporary[Level], 0, false, false))
+			return false;
+		PassSource = aTemporary[Level];
+	}
+	for(int Level = DUAL_KAWASE_PYRAMID_LEVELS - 1; Level >= 0; --Level)
+	{
+		const CRenderTargetHandle PassDestination = Level == 0 ? Destination : aTemporary[Level - 1];
+		if(!AddBlurPass(aTemporary[Level], PassDestination, 1, false, true))
+			return false;
+	}
 	return true;
 }
 
@@ -1159,10 +1222,11 @@ bool CGraphics_Threaded::DualBlurRenderTarget(CRenderTargetHandle Source, CRende
 		m_vRenderTargetSizes[Destination.Id()] != SourceSize || DownsampleSize.x > SourceSize.x || DownsampleSize.y > SourceSize.y)
 		return false;
 
-	// 重采样顶点使用纹理像素尺寸，不能沿用 HUD 编辑器缩放、平移后的屏幕映射。
-	// 每次绘制后立即恢复，保证后续阶段失败返回时也不会污染 HUD 坐标。
-	const vec2 SavedScreenTL = m_State.m_ScreenTL;
-	const vec2 SavedScreenBR = m_State.m_ScreenBR;
+	const CCommandBuffer::SPoint SavedScreenTL = m_State.m_ScreenTL;
+	const CCommandBuffer::SPoint SavedScreenBR = m_State.m_ScreenBR;
+	const auto RestoreScreen = [&]() {
+		MapScreen(SavedScreenTL.x, SavedScreenTL.y, SavedScreenBR.x, SavedScreenBR.y);
+	};
 
 	// 普通渲染目标绘制使用线性过滤，因此无需新增 shader 即可完成低成本降采样和柔和升采样。
 	if(!BeginRenderTarget(Downsample, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
@@ -1173,9 +1237,11 @@ bool CGraphics_Threaded::DualBlurRenderTarget(CRenderTargetHandle Source, CRende
 	DownsampleParams.m_H = (float)DownsampleSize.y;
 	DrawRenderTarget(Source, DownsampleParams);
 	EndRenderTarget();
-	MapScreen(SavedScreenTL.x, SavedScreenTL.y, SavedScreenBR.x, SavedScreenBR.y);
+	RestoreScreen();
 
-	if(!GaussianBlurRenderTarget(Downsample, DownsampleTemporary, DownsampleBlurred, Params))
+	std::array<CRenderTargetHandle, DUAL_KAWASE_PYRAMID_LEVELS> aDualBlurTemporary{};
+	aDualBlurTemporary[0] = DownsampleTemporary;
+	if(!GaussianBlurRenderTarget(Downsample, aDualBlurTemporary, DownsampleBlurred, Params))
 		return false;
 
 	if(!BeginRenderTarget(Destination, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
@@ -1186,7 +1252,7 @@ bool CGraphics_Threaded::DualBlurRenderTarget(CRenderTargetHandle Source, CRende
 	UpsampleParams.m_H = (float)SourceSize.y;
 	DrawRenderTarget(DownsampleBlurred, UpsampleParams);
 	EndRenderTarget();
-	MapScreen(SavedScreenTL.x, SavedScreenTL.y, SavedScreenBR.x, SavedScreenBR.y);
+	RestoreScreen();
 	return true;
 }
 
@@ -1690,7 +1756,7 @@ void CGraphics_Threaded::QuadsBegin()
 
 	QuadsSetSubset(0, 0, 1, 1);
 	QuadsSetRotation(0);
-	SetColor(1, 1, 1, 1);
+	SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 void CGraphics_Threaded::QuadsEnd()
@@ -1719,7 +1785,7 @@ void CGraphics_Threaded::TrianglesBegin()
 
 	QuadsSetSubset(0, 0, 1, 1);
 	QuadsSetRotation(0);
-	SetColor(1, 1, 1, 1);
+	SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 void CGraphics_Threaded::TrianglesEnd()
@@ -1748,9 +1814,19 @@ void CGraphics_Threaded::QuadsSetRotation(float Angle)
 	m_Rotation = Angle;
 }
 
-static unsigned char NormalizeColorComponent(float ColorComponent)
+constexpr static unsigned char NormalizeColorComponent(float ColorComponent)
 {
 	return (unsigned char)(std::clamp(ColorComponent, 0.0f, 1.0f) * 255.0f + 0.5f); // +0.5f to round to nearest
+}
+
+constexpr static CCommandBuffer::SColor NormalizeColor(ColorRGBA Color)
+{
+	CCommandBuffer::SColor NormalizedColor;
+	NormalizedColor.r = NormalizeColorComponent(Color.r);
+	NormalizedColor.g = NormalizeColorComponent(Color.g);
+	NormalizedColor.b = NormalizeColorComponent(Color.b);
+	NormalizedColor.a = NormalizeColorComponent(Color.a);
+	return NormalizedColor;
 }
 
 void CGraphics_Threaded::SetColorVertex(const CColorVertex *pArray, size_t Num)
@@ -1760,37 +1836,26 @@ void CGraphics_Threaded::SetColorVertex(const CColorVertex *pArray, size_t Num)
 	for(size_t i = 0; i < Num; ++i)
 	{
 		const CColorVertex &Vertex = pArray[i];
-		CCommandBuffer::SColor &Color = m_aColor[Vertex.m_Index];
-		Color.r = NormalizeColorComponent(Vertex.m_R);
-		Color.g = NormalizeColorComponent(Vertex.m_G);
-		Color.b = NormalizeColorComponent(Vertex.m_B);
-		Color.a = NormalizeColorComponent(Vertex.m_A);
+		m_aColor[Vertex.m_Index] = NormalizeColor(ColorRGBA(Vertex.m_R, Vertex.m_G, Vertex.m_B, Vertex.m_A));
 	}
 }
 
 void CGraphics_Threaded::SetColor(float r, float g, float b, float a)
 {
-	CCommandBuffer::SColor NewColor;
-	NewColor.r = NormalizeColorComponent(r);
-	NewColor.g = NormalizeColorComponent(g);
-	NewColor.b = NormalizeColorComponent(b);
-	NewColor.a = NormalizeColorComponent(a);
-	std::fill(std::begin(m_aColor), std::end(m_aColor), NewColor);
+	SetColor(ColorRGBA(r, g, b, a));
 }
 
 void CGraphics_Threaded::SetColor(ColorRGBA Color)
 {
-	SetColor(Color.r, Color.g, Color.b, Color.a);
+	std::fill(std::begin(m_aColor), std::end(m_aColor), NormalizeColor(Color));
 }
 
-void CGraphics_Threaded::SetColor4(ColorRGBA TopLeft, ColorRGBA TopRight, ColorRGBA BottomLeft, ColorRGBA BottomRight)
+void CGraphics_Threaded::SetColor2(ColorRGBA First, ColorRGBA Second)
 {
-	CColorVertex aArray[] = {
-		CColorVertex(0, TopLeft),
-		CColorVertex(1, TopRight),
-		CColorVertex(2, BottomRight),
-		CColorVertex(3, BottomLeft)};
-	SetColorVertex(aArray, std::size(aArray));
+	dbg_assert(m_Drawing == EDrawing::LINES, "Called Graphics()->SetColor2 while not drawing lines");
+
+	m_aColor[0] = NormalizeColor(First);
+	m_aColor[1] = NormalizeColor(Second);
 }
 
 void CGraphics_Threaded::SetColor4Raw(ColorRGBA TopLeft, ColorRGBA TopRight, ColorRGBA BottomLeft, ColorRGBA BottomRight)
@@ -1801,17 +1866,14 @@ void CGraphics_Threaded::SetColor4Raw(ColorRGBA TopLeft, ColorRGBA TopRight, Col
 	m_aColor[3] = ColorRGBAToCommandColor(BottomLeft);
 }
 
-void CGraphics_Threaded::ChangeColorOfCurrentQuadVertices(float r, float g, float b, float a)
+void CGraphics_Threaded::SetColor4(ColorRGBA TopLeft, ColorRGBA TopRight, ColorRGBA BottomLeft, ColorRGBA BottomRight)
 {
-	m_aColor[0].r = NormalizeColorComponent(r);
-	m_aColor[0].g = NormalizeColorComponent(g);
-	m_aColor[0].b = NormalizeColorComponent(b);
-	m_aColor[0].a = NormalizeColorComponent(a);
+	dbg_assert(m_Drawing == EDrawing::QUADS || m_Drawing == EDrawing::TRIANGLES, "Called Graphics()->SetColor4 while not drawing quads or triangles");
 
-	for(int i = 0; i < m_NumVertices; ++i)
-	{
-		SetColor(&m_aVertices[i], 0);
-	}
+	m_aColor[0] = NormalizeColor(TopLeft);
+	m_aColor[1] = NormalizeColor(TopRight);
+	m_aColor[2] = NormalizeColor(BottomRight);
+	m_aColor[3] = NormalizeColor(BottomLeft);
 }
 
 void CGraphics_Threaded::ChangeColorOfQuadVertices(size_t QuadOffset, unsigned char r, unsigned char g, unsigned char b, unsigned char a)
@@ -1895,32 +1957,32 @@ void CGraphics_Threaded::QuadsDrawFreeform(const CFreeformItem *pArray, int Num)
 			m_aVertices[m_NumVertices + 6 * i].m_Pos.x = pArray[i].m_X0;
 			m_aVertices[m_NumVertices + 6 * i].m_Pos.y = pArray[i].m_Y0;
 			m_aVertices[m_NumVertices + 6 * i].m_Tex = m_aTexture[0];
-			SetColor(&m_aVertices[m_NumVertices + 6 * i], 0);
+			m_aVertices[m_NumVertices + 6 * i].m_Color = m_aColor[0];
 
 			m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.x = pArray[i].m_X1;
 			m_aVertices[m_NumVertices + 6 * i + 1].m_Pos.y = pArray[i].m_Y1;
 			m_aVertices[m_NumVertices + 6 * i + 1].m_Tex = m_aTexture[1];
-			SetColor(&m_aVertices[m_NumVertices + 6 * i + 1], 1);
+			m_aVertices[m_NumVertices + 6 * i + 1].m_Color = m_aColor[1];
 
 			m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.x = pArray[i].m_X3;
 			m_aVertices[m_NumVertices + 6 * i + 2].m_Pos.y = pArray[i].m_Y3;
 			m_aVertices[m_NumVertices + 6 * i + 2].m_Tex = m_aTexture[3];
-			SetColor(&m_aVertices[m_NumVertices + 6 * i + 2], 3);
+			m_aVertices[m_NumVertices + 6 * i + 2].m_Color = m_aColor[3];
 
 			m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.x = pArray[i].m_X0;
 			m_aVertices[m_NumVertices + 6 * i + 3].m_Pos.y = pArray[i].m_Y0;
 			m_aVertices[m_NumVertices + 6 * i + 3].m_Tex = m_aTexture[0];
-			SetColor(&m_aVertices[m_NumVertices + 6 * i + 3], 0);
+			m_aVertices[m_NumVertices + 6 * i + 3].m_Color = m_aColor[0];
 
 			m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.x = pArray[i].m_X3;
 			m_aVertices[m_NumVertices + 6 * i + 4].m_Pos.y = pArray[i].m_Y3;
 			m_aVertices[m_NumVertices + 6 * i + 4].m_Tex = m_aTexture[3];
-			SetColor(&m_aVertices[m_NumVertices + 6 * i + 4], 3);
+			m_aVertices[m_NumVertices + 6 * i + 4].m_Color = m_aColor[3];
 
 			m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.x = pArray[i].m_X2;
 			m_aVertices[m_NumVertices + 6 * i + 5].m_Pos.y = pArray[i].m_Y2;
 			m_aVertices[m_NumVertices + 6 * i + 5].m_Tex = m_aTexture[2];
-			SetColor(&m_aVertices[m_NumVertices + 6 * i + 5], 2);
+			m_aVertices[m_NumVertices + 6 * i + 5].m_Color = m_aColor[2];
 		}
 
 		AddVertices(3 * 2 * Num);
@@ -1932,22 +1994,22 @@ void CGraphics_Threaded::QuadsDrawFreeform(const CFreeformItem *pArray, int Num)
 			m_aVertices[m_NumVertices + 4 * i].m_Pos.x = pArray[i].m_X0;
 			m_aVertices[m_NumVertices + 4 * i].m_Pos.y = pArray[i].m_Y0;
 			m_aVertices[m_NumVertices + 4 * i].m_Tex = m_aTexture[0];
-			SetColor(&m_aVertices[m_NumVertices + 4 * i], 0);
+			m_aVertices[m_NumVertices + 4 * i].m_Color = m_aColor[0];
 
 			m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.x = pArray[i].m_X1;
 			m_aVertices[m_NumVertices + 4 * i + 1].m_Pos.y = pArray[i].m_Y1;
 			m_aVertices[m_NumVertices + 4 * i + 1].m_Tex = m_aTexture[1];
-			SetColor(&m_aVertices[m_NumVertices + 4 * i + 1], 1);
+			m_aVertices[m_NumVertices + 4 * i + 1].m_Color = m_aColor[1];
 
 			m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.x = pArray[i].m_X3;
 			m_aVertices[m_NumVertices + 4 * i + 2].m_Pos.y = pArray[i].m_Y3;
 			m_aVertices[m_NumVertices + 4 * i + 2].m_Tex = m_aTexture[3];
-			SetColor(&m_aVertices[m_NumVertices + 4 * i + 2], 3);
+			m_aVertices[m_NumVertices + 4 * i + 2].m_Color = m_aColor[3];
 
 			m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.x = pArray[i].m_X2;
 			m_aVertices[m_NumVertices + 4 * i + 3].m_Pos.y = pArray[i].m_Y2;
 			m_aVertices[m_NumVertices + 4 * i + 3].m_Tex = m_aTexture[2];
-			SetColor(&m_aVertices[m_NumVertices + 4 * i + 3], 2);
+			m_aVertices[m_NumVertices + 4 * i + 3].m_Color = m_aColor[2];
 		}
 
 		AddVertices(4 * Num);
@@ -2691,6 +2753,19 @@ void CGraphics_Threaded::RenderQuadLayer(int BufferContainerIndex, SQuadRenderIn
 
 void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, int TextureTextIndex, int TextureTextOutlineIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)
 {
+#if defined(CONF_PLATFORM_MACOS)
+	if(m_MacosGraphicsDiagnosticsEnabled)
+	{
+		if(BufferContainerIndex == -1)
+		{
+			m_BufferedTextNoContainerCount++;
+			return;
+		}
+		m_BufferedTextCommandCount++;
+		if(TextQuadNum <= 0)
+			m_BufferedTextZeroQuadCount++;
+	}
+#endif
 	if(BufferContainerIndex == -1)
 		return;
 
@@ -2810,7 +2885,7 @@ void CGraphics_Threaded::DrawRoundedRectAntialias(const float x, const float y, 
 
 void CGraphics_Threaded::RenderTexturedMsdf(const IGraphics::STexturedMsdfParams &Params)
 {
-	if(!Params.m_Texture.IsValid() || !IsTextureHandleAllocated(Params.m_Texture) || Params.m_Rect.z <= 0.0f || Params.m_Rect.w <= 0.0f || Params.m_PxRange <= 0.0f || Params.m_AtlasWidth <= 0.0f || Params.m_AtlasHeight <= 0.0f || Params.m_Color.a <= 0.0f)
+	if((!Params.m_ProceduralRing && (!Params.m_Texture.IsValid() || !IsTextureHandleAllocated(Params.m_Texture) || Params.m_PxRange <= 0.0f || Params.m_AtlasWidth <= 0.0f || Params.m_AtlasHeight <= 0.0f)) || Params.m_Rect.z <= 0.0f || Params.m_Rect.w <= 0.0f || Params.m_Color.a <= 0.0f)
 		return;
 
 	if(m_NumVertices > 0)
@@ -2826,8 +2901,16 @@ void CGraphics_Threaded::RenderTexturedMsdf(const IGraphics::STexturedMsdfParams
 	Cmd.m_State = m_State;
 	Cmd.m_State.m_BlendMode = EBlendMode::ALPHA;
 	Cmd.m_State.m_WrapMode = EWrapMode::CLAMP;
-	Cmd.m_State.m_Texture = Params.m_Texture.Id();
-	Cmd.m_MsdfParams = vec4(Params.m_PxRange, Params.m_AtlasWidth, Params.m_AtlasHeight, 0.0f);
+	Cmd.m_State.m_Texture = Params.m_ProceduralRing ? m_NullTexture.Id() : Params.m_Texture.Id();
+	float MsdfW = qm_msdf_param::EncodeMsdf(std::abs(Params.m_OutlineWidthPx));
+	// w 的三种状态互斥（普通 MSDF / Alpha 真 SDF / Duotone），编码契约见 qm_msdf_param。
+	// 必须用 else if：若两个分支都执行，Duotone 哨兵会被真 SDF 编码覆盖。
+	if(!Params.m_ProceduralRing && Params.m_UseSecondarySdf)
+		MsdfW = qm_msdf_param::DUOTONE_W;
+	else if(!Params.m_ProceduralRing && Params.m_UseTrueSdf)
+		MsdfW = qm_msdf_param::EncodeTrueSdf(std::abs(Params.m_OutlineWidthPx));
+	Cmd.m_MsdfParams = Params.m_ProceduralRing ? vec4(-Params.m_RingInnerRadius, Params.m_RingOuterRadius, Params.m_RingStartAngle, Params.m_RingEndAngle) : vec4(Params.m_PxRange, Params.m_AtlasWidth, Params.m_AtlasHeight, MsdfW);
+	Cmd.m_MsdfSecondaryColor = vec4(Params.m_SecondaryColor.r, Params.m_SecondaryColor.g, Params.m_SecondaryColor.b, Params.m_SecondaryColor.a);
 
 	const float CenterX = Params.m_Rect.x + Params.m_Rect.z * 0.5f;
 	const float CenterY = Params.m_Rect.y + Params.m_Rect.w * 0.5f;
@@ -2844,10 +2927,11 @@ void CGraphics_Threaded::RenderTexturedMsdf(const IGraphics::STexturedMsdfParams
 	aVertices[1].m_Pos = Rotate(Params.m_Rect.x + Params.m_Rect.z, Params.m_Rect.y);
 	aVertices[2].m_Pos = Rotate(Params.m_Rect.x + Params.m_Rect.z, Params.m_Rect.y + Params.m_Rect.w);
 	aVertices[3].m_Pos = Rotate(Params.m_Rect.x, Params.m_Rect.y + Params.m_Rect.w);
-	aVertices[0].m_Tex = vec2(Params.m_UvRect.x, Params.m_UvRect.y);
-	aVertices[1].m_Tex = vec2(Params.m_UvRect.z, Params.m_UvRect.y);
-	aVertices[2].m_Tex = vec2(Params.m_UvRect.z, Params.m_UvRect.w);
-	aVertices[3].m_Tex = vec2(Params.m_UvRect.x, Params.m_UvRect.w);
+	const vec4 UvRect = Params.m_ProceduralRing ? vec4(0.0f, 0.0f, 1.0f, 1.0f) : Params.m_UvRect;
+	aVertices[0].m_Tex = vec2(UvRect.x, UvRect.y);
+	aVertices[1].m_Tex = vec2(UvRect.z, UvRect.y);
+	aVertices[2].m_Tex = vec2(UvRect.z, UvRect.w);
+	aVertices[3].m_Tex = vec2(UvRect.x, UvRect.w);
 	const CCommandBuffer::SColor Color = ColorRGBAToCommandColor(Params.m_Color);
 	for(auto &Vertex : aVertices)
 		Vertex.m_Color = Color;
@@ -2972,22 +3056,22 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pAr
 		Quad.m_aVertices[0].m_Pos.x = pArray[i].m_X;
 		Quad.m_aVertices[0].m_Pos.y = pArray[i].m_Y;
 		Quad.m_aVertices[0].m_Tex = m_aTexture[0];
-		SetColor(&Quad.m_aVertices[0], 0);
+		Quad.m_aVertices[0].m_Color = m_aColor[0];
 
 		Quad.m_aVertices[1].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
 		Quad.m_aVertices[1].m_Pos.y = pArray[i].m_Y;
 		Quad.m_aVertices[1].m_Tex = m_aTexture[1];
-		SetColor(&Quad.m_aVertices[1], 1);
+		Quad.m_aVertices[1].m_Color = m_aColor[1];
 
 		Quad.m_aVertices[2].m_Pos.x = pArray[i].m_X + pArray[i].m_Width;
 		Quad.m_aVertices[2].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
 		Quad.m_aVertices[2].m_Tex = m_aTexture[2];
-		SetColor(&Quad.m_aVertices[2], 2);
+		Quad.m_aVertices[2].m_Color = m_aColor[2];
 
 		Quad.m_aVertices[3].m_Pos.x = pArray[i].m_X;
 		Quad.m_aVertices[3].m_Pos.y = pArray[i].m_Y + pArray[i].m_Height;
 		Quad.m_aVertices[3].m_Tex = m_aTexture[3];
-		SetColor(&Quad.m_aVertices[3], 3);
+		Quad.m_aVertices[3].m_Color = m_aColor[3];
 
 		if(m_Rotation != 0)
 		{
@@ -3025,22 +3109,22 @@ int CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem 
 		Quad.m_aVertices[0].m_Pos.x = pArray[i].m_X0;
 		Quad.m_aVertices[0].m_Pos.y = pArray[i].m_Y0;
 		Quad.m_aVertices[0].m_Tex = m_aTexture[0];
-		SetColor(&Quad.m_aVertices[0], 0);
+		Quad.m_aVertices[0].m_Color = m_aColor[0];
 
 		Quad.m_aVertices[1].m_Pos.x = pArray[i].m_X1;
 		Quad.m_aVertices[1].m_Pos.y = pArray[i].m_Y1;
 		Quad.m_aVertices[1].m_Tex = m_aTexture[1];
-		SetColor(&Quad.m_aVertices[1], 1);
+		Quad.m_aVertices[1].m_Color = m_aColor[1];
 
 		Quad.m_aVertices[2].m_Pos.x = pArray[i].m_X3;
 		Quad.m_aVertices[2].m_Pos.y = pArray[i].m_Y3;
 		Quad.m_aVertices[2].m_Tex = m_aTexture[3];
-		SetColor(&Quad.m_aVertices[2], 3);
+		Quad.m_aVertices[2].m_Color = m_aColor[3];
 
 		Quad.m_aVertices[3].m_Pos.x = pArray[i].m_X2;
 		Quad.m_aVertices[3].m_Pos.y = pArray[i].m_Y2;
 		Quad.m_aVertices[3].m_Tex = m_aTexture[2];
-		SetColor(&Quad.m_aVertices[3], 2);
+		Quad.m_aVertices[3].m_Color = m_aColor[2];
 	}
 
 	if(Container.m_AutomaticUpload)
@@ -3215,8 +3299,7 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 				{
 					m_aVertices[i * 6 + n].m_Pos.x *= ScaleX;
 					m_aVertices[i * 6 + n].m_Pos.y *= ScaleY;
-
-					SetColor(&m_aVertices[i * 6 + n], 0);
+					m_aVertices[i * 6 + n].m_Color = m_aColor[0];
 				}
 
 				if(m_Rotation != 0)
@@ -3245,7 +3328,7 @@ void CGraphics_Threaded::RenderQuadContainerEx(int ContainerIndex, int QuadOffse
 				{
 					m_aVertices[i * 4 + n].m_Pos.x *= ScaleX;
 					m_aVertices[i * 4 + n].m_Pos.y *= ScaleY;
-					SetColor(&m_aVertices[i * 4 + n], 0);
+					m_aVertices[i * 4 + n].m_Color = m_aColor[0];
 				}
 
 				if(m_Rotation != 0)
@@ -3664,6 +3747,8 @@ int CGraphics_Threaded::IssueInit()
 	}
 
 	const int Result = m_pBackend->Init("DDNet Client", &g_Config.m_GfxScreen, &g_Config.m_GfxScreenWidth, &g_Config.m_GfxScreenHeight, &g_Config.m_GfxScreenRefreshRate, &g_Config.m_GfxFsaaSamples, Flags, &m_DesktopSize.x, &m_DesktopSize.y, &m_ScreenWidth, &m_ScreenHeight, m_pStorage);
+	m_DrawableWidth = m_ScreenWidth;
+	m_DrawableHeight = m_ScreenHeight;
 	AddBackEndWarningIfExists();
 	if(Result == 0)
 	{
@@ -3723,6 +3808,12 @@ void CGraphics_Threaded::SetGameScreenAspectOverride(float Aspect)
 
 void CGraphics_Threaded::AdjustViewport(bool SendViewportChangeToBackend)
 {
+	int InsetLeft = 0;
+	int InsetRight = 0;
+	m_pBackend->GetDisplayCutoutInsets(InsetLeft, InsetRight);
+	m_ViewportX = InsetLeft;
+	m_ScreenWidth = m_DrawableWidth - InsetLeft - InsetRight;
+
 	// adjust the viewport to only allow certain aspect ratios
 	// keep this in sync with backend_vulkan GetSwapImageSize's check
 	if(m_ScreenHeight > 4 * m_ScreenWidth / 5 && g_GraphicsForcedAspect)
@@ -3732,7 +3823,7 @@ void CGraphics_Threaded::AdjustViewport(bool SendViewportChangeToBackend)
 
 		if(SendViewportChangeToBackend)
 		{
-			UpdateViewport(0, 0, m_ScreenWidth, m_ScreenHeight, true);
+			UpdateViewport(m_ViewportX, 0, m_ScreenWidth, m_ScreenHeight, true);
 		}
 	}
 	else
@@ -3748,6 +3839,8 @@ void CGraphics_Threaded::UpdateViewport(int X, int Y, int W, int H, bool ByResiz
 	Cmd.m_Y = Y;
 	Cmd.m_Width = W;
 	Cmd.m_Height = H;
+	Cmd.m_DrawableWidth = m_DrawableWidth;
+	Cmd.m_DrawableHeight = m_DrawableHeight;
 	Cmd.m_ByResize = ByResize;
 	AddCmd(Cmd);
 }
@@ -3763,17 +3856,54 @@ void CGraphics_Threaded::AddBackEndWarningIfExists()
 	}
 }
 
-// 崩溃报告里要写「实际跑起来」的后端，而不是配置里写的那个：
-// Vulkan 初始化失败后 InitWindow 会把配置改成 OpenGL 再重试，
-// 只看配置会把崩溃归因到根本没跑起来的后端上。
-void CGraphics_Threaded::SetGraphicsBackendForCrashReport(const char *pBackendName)
-{
-	crashdump_set_graphics_backend(pBackendName);
-}
-
 int CGraphics_Threaded::InitWindow()
 {
-	const bool VulkanRequested = str_comp_nocase(g_Config.m_GfxBackend, "Vulkan") == 0;
+	if(g_Config.m_QmGraphicsMode == graphics_backend::GRAPHICS_MODE_COMPATIBILITY || g_Config.m_QmGraphicsMode == graphics_backend::GRAPHICS_MODE_PERFORMANCE)
+	{
+		const char *pModeBackend = graphics_backend::BackendNameForGraphicsMode(g_Config.m_QmGraphicsMode);
+		if(str_comp_nocase(g_Config.m_GfxBackend, pModeBackend) != 0)
+		{
+			str_copy(g_Config.m_GfxBackend, pModeBackend);
+			g_Config.m_GfxGLMajor = 0;
+			g_Config.m_GfxGLMinor = 0;
+			g_Config.m_GfxGLPatch = 0;
+		}
+	}
+#if defined(CONF_BACKEND_VULKAN)
+	const char *pEnvDriver = SDL_getenv("DDNET_DRIVER");
+	const bool VulkanForcedByEnvironment = pEnvDriver != nullptr && str_comp_nocase(pEnvDriver, "Vulkan") == 0;
+	const bool VulkanConfigured = pEnvDriver == nullptr && str_comp_nocase(g_Config.m_GfxBackend, "Vulkan") == 0;
+#else
+	const bool VulkanForcedByEnvironment = false;
+	const bool VulkanConfigured = false;
+#endif
+	const bool VulkanRequested = VulkanForcedByEnvironment || VulkanConfigured;
+	const SOpenGLVersion ForcedVulkanConfigVersion{g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch};
+	const auto SetAutomaticVulkanVersion = [VulkanRequested]() {
+		if(VulkanRequested)
+		{
+			g_Config.m_GfxGLMajor = 0;
+			g_Config.m_GfxGLMinor = 0;
+			g_Config.m_GfxGLPatch = 0;
+		}
+	};
+	const auto RestoreAutomaticVulkanConfig = [VulkanConfigured]() {
+		if(VulkanConfigured && str_comp_nocase(g_Config.m_GfxBackend, "Vulkan") == 0)
+		{
+			g_Config.m_GfxGLMajor = 0;
+			g_Config.m_GfxGLMinor = 0;
+			g_Config.m_GfxGLPatch = 0;
+		}
+	};
+	const auto RestoreForcedVulkanConfig = [VulkanForcedByEnvironment, ForcedVulkanConfigVersion]() {
+		if(VulkanForcedByEnvironment)
+		{
+			g_Config.m_GfxGLMajor = ForcedVulkanConfigVersion.m_Major;
+			g_Config.m_GfxGLMinor = ForcedVulkanConfigVersion.m_Minor;
+			g_Config.m_GfxGLPatch = ForcedVulkanConfigVersion.m_Patch;
+		}
+	};
+	SetAutomaticVulkanVersion();
 	bool RestoreAutomaticOpenGLConfig = g_Config.m_GfxGLMajor == 0 && (str_comp_nocase(g_Config.m_GfxBackend, "OpenGL") == 0 || str_comp_nocase(g_Config.m_GfxBackend, "GLES") == 0);
 	const auto RestoreAutomaticOpenGLConfigFn = [&RestoreAutomaticOpenGLConfig]() {
 		if(RestoreAutomaticOpenGLConfig)
@@ -3783,18 +3913,41 @@ int CGraphics_Threaded::InitWindow()
 			g_Config.m_GfxGLPatch = 0;
 		}
 	};
-	const auto FinishSuccessfulInit = [VulkanRequested, &RestoreAutomaticOpenGLConfig, &RestoreAutomaticOpenGLConfigFn]() {
-		if(VulkanRequested && (str_comp_nocase(g_Config.m_GfxBackend, "OpenGL") == 0 || str_comp_nocase(g_Config.m_GfxBackend, "GLES") == 0))
+	const auto FinishSuccessfulInit = [VulkanConfigured, &RestoreAutomaticOpenGLConfig, &RestoreAutomaticOpenGLConfigFn, &RestoreAutomaticVulkanConfig, &RestoreForcedVulkanConfig]() {
+		if(VulkanConfigured && (str_comp_nocase(g_Config.m_GfxBackend, "OpenGL") == 0 || str_comp_nocase(g_Config.m_GfxBackend, "GLES") == 0))
 			RestoreAutomaticOpenGLConfig = true;
 		RestoreAutomaticOpenGLConfigFn();
+		RestoreAutomaticVulkanConfig();
+		RestoreForcedVulkanConfig();
 		return 0;
 	};
 	int ErrorCode = IssueInit();
 	if(ErrorCode == 0)
 		return FinishSuccessfulInit();
 
+	bool MetalFallbackAttempted = false;
+	if(IsGraphicsBackendMetalInitError(ErrorCode))
+	{
+		MetalFallbackAttempted = true;
+		// DDNET_DRIVER has precedence over the config, so force the fallback backend
+		// explicitly for this second initialization attempt.
+		m_pBackend->SetBackendOverride(BACKEND_TYPE_OPENGL);
+		const auto SafeConfig = graphics_backend::SafeBackendConfig();
+		str_copy(g_Config.m_GfxBackend, SafeConfig.m_pBackend);
+		g_Config.m_GfxGLMajor = SafeConfig.m_GLMajor;
+		g_Config.m_GfxGLMinor = SafeConfig.m_GLMinor;
+		g_Config.m_GfxGLPatch = SafeConfig.m_GLPatch;
+		g_Config.m_GfxFsaaSamples = SafeConfig.m_FsaaSamples;
+		g_Config.m_GfxFullscreen = SafeConfig.m_Fullscreen;
+		g_Config.m_GfxBorderless = SafeConfig.m_Borderless;
+		log_warn("gfx", "Failed to initialize Metal. Falling back once to OpenGL %d.%d.%d in windowed mode without FSAA.", SafeConfig.m_GLMajor, SafeConfig.m_GLMinor, SafeConfig.m_GLPatch);
+		ErrorCode = IssueInit();
+		if(ErrorCode == 0)
+			return FinishSuccessfulInit();
+	}
+
 	// try disabling fsaa
-	while(g_Config.m_GfxFsaaSamples)
+	while(!MetalFallbackAttempted && g_Config.m_GfxFsaaSamples)
 	{
 		// 4 is the minimum required by OpenGL ES spec (GL_MAX_SAMPLES - https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glGet.xhtml),
 		// so can probably also be assumed for OpenGL
@@ -3827,8 +3980,7 @@ int CGraphics_Threaded::InitWindow()
 	}
 
 	size_t GLInitTryCount = 0;
-	while(ErrorCode == EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED ||
-		ErrorCode == EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_VERSION_FAILED)
+	while(IsGraphicsBackendOpenGLRetryableError(ErrorCode))
 	{
 		if(ErrorCode == EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_GL_CONTEXT_FAILED)
 		{
@@ -3939,6 +4091,8 @@ int CGraphics_Threaded::InitWindow()
 
 int CGraphics_Threaded::Init()
 {
+	const bool WasInitialized = m_pBackend != nullptr;
+
 	// fetch pointers
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
@@ -3972,9 +4126,6 @@ int CGraphics_Threaded::Init()
 	m_pBackend = CreateGraphicsBackend(Localize);
 	if(InitWindow() != 0)
 	{
-		// 失败时把半初始化的 backend 一并收掉：否则 Init() 返回 -1 之后它仍留在
-		// m_pBackend 上，等 CClient::Run 的错误路径再调 Shutdown() 时就会对着已释放的
-		// 对象做虚调用，表现为「启动即崩」而不是那句初始化失败提示。
 		Shutdown();
 		return -1;
 	}
@@ -3992,6 +4143,8 @@ int CGraphics_Threaded::Init()
 	m_pCommandBuffer = m_apCommandBuffers[0];
 
 	CreateNullTexture();
+	if(WasInitialized)
+		NotifyGraphicsResourcesReset();
 
 	static constexpr LOG_COLOR GPU_INFO_LOG_COLOR = LOG_COLOR{153, 127, 255};
 	log_info_color(GPU_INFO_LOG_COLOR, "gfx", "GPU vendor: %s", GetVendorString());
@@ -4058,6 +4211,20 @@ void CGraphics_Threaded::Minimize()
 
 	for(auto &PropChangedListener : m_vPropChangeListeners)
 		PropChangedListener();
+}
+
+void CGraphics_Threaded::HideWindow()
+{
+	// QmClient: 退出清理前隐藏窗口。直接转发到后端的 SDL 调用，不经过渲染线程，
+	// 避免渲染队列卡住时窗口无法隐藏。
+	m_pBackend->HideWindow();
+}
+
+void CGraphics_Threaded::ShowWindow()
+{
+	// QmClient: 与 HideWindow 对称，同样直接转发到后端。启动时窗口是隐藏创建的，
+	// 等第一帧真有内容 present 之后再显示（重复调用无副作用）。
+	m_pBackend->ShowWindow();
 }
 
 void CGraphics_Threaded::WarnPngliteIncompatibleImages(bool Warn)
@@ -4150,6 +4317,13 @@ void CGraphics_Threaded::Move(int x, int y)
 		PropChangedListener();
 }
 
+void CGraphics_Threaded::SetScreenSize(int Width, int Height)
+{
+	m_ScreenWidth = Width;
+	m_ScreenHeight = Height;
+	UpdateViewport(0, 0, m_ScreenWidth, m_ScreenHeight, true);
+}
+
 bool CGraphics_Threaded::Resize(int w, int h, int RefreshRate)
 {
 #if defined(CONF_VIDEORECORDER)
@@ -4216,6 +4390,8 @@ void CGraphics_Threaded::GotResized(int w, int h, int RefreshRate)
 	auto PrevCanvasWidth = m_ScreenWidth;
 	auto PrevCanvasHeight = m_ScreenHeight;
 	m_pBackend->GetViewportSize(m_ScreenWidth, m_ScreenHeight);
+	m_DrawableWidth = m_ScreenWidth;
+	m_DrawableHeight = m_ScreenHeight;
 
 	AdjustViewport(false);
 
@@ -4236,7 +4412,7 @@ void CGraphics_Threaded::GotResized(int w, int h, int RefreshRate)
 			PropChangedListener();
 	}
 
-	UpdateViewport(0, 0, m_ScreenWidth, m_ScreenHeight, true);
+	UpdateViewport(m_ViewportX, 0, m_ScreenWidth, m_ScreenHeight, true);
 
 	// kick the command buffer and wait
 	KickCommandBuffer();
@@ -4304,13 +4480,27 @@ void CGraphics_Threaded::CreateNullTexture()
 	m_NullTexture.Invalidate();
 	m_NullTexture = LoadTextureRaw(NullTextureInfo, TextureLoadFlags, "null-texture");
 	dbg_assert(m_NullTexture.IsNullTexture(), "Null texture invalid");
+
+	// 全透明占位纹理（16x16，与空纹理同尺寸以满足整除校验，避免触发警告弹窗）：
+	// sprite 超出自定义图集范围时按「不可见」处理用。
+	constexpr size_t BlankTextureDimension = 16;
+	unsigned char aBlankData[BlankTextureDimension * BlankTextureDimension * PixelSize] = {0};
+	CImageInfo BlankTextureInfo;
+	BlankTextureInfo.m_Width = BlankTextureDimension;
+	BlankTextureInfo.m_Height = BlankTextureDimension;
+	BlankTextureInfo.m_Format = CImageInfo::FORMAT_RGBA;
+	BlankTextureInfo.m_pData = aBlankData;
+	m_BlankTexture.Invalidate();
+	m_BlankTexture = LoadTextureRaw(BlankTextureInfo, TextureLoadFlags, "blank-texture");
+	dbg_assert(m_BlankTexture.IsValid(), "Blank texture invalid");
 }
 
 void CGraphics_Threaded::NotifyGraphicsResourcesReset()
 {
 	// 引擎自己持有的 GPU 资源（空纹理）已经随设备一起丢失，先重建，
 	// 否则监听者在重建期间拿到的空纹理句柄也是失效的。
-	CreateNullTexture();
+	if(!m_NullTexture.IsValid() || !m_BlankTexture.IsValid())
+		CreateNullTexture();
 
 	++m_GraphicsResourcesResetVersion;
 	for(const GRAPHICS_RESOURCES_RESET_FUNC &Listener : m_vGraphicsResourcesResetListeners)
@@ -4419,16 +4609,35 @@ void CGraphics_Threaded::TakeCustomScreenshot(const char *pFilename)
 	m_DoScreenshot = true;
 }
 
+void CGraphics_Threaded::ReadFramebuffer(CImageInfo &Image)
+{
+	CCommandBuffer::SCommand_TrySwapAndScreenshot Cmd;
+	Cmd.m_pImage = &Image;
+	bool Swapped = false;
+	Cmd.m_pSwapped = &Swapped;
+	AddCmd(Cmd);
+	KickCommandBuffer();
+	WaitForIdle();
+}
+
 void CGraphics_Threaded::Swap()
 {
+#if defined(CONF_PLATFORM_IOS)
+	int InsetLeft = 0;
+	int InsetRight = 0;
+	m_pBackend->GetDisplayCutoutInsets(InsetLeft, InsetRight);
+	if(InsetLeft != m_ViewportX || m_DrawableWidth - InsetLeft - InsetRight != m_ScreenWidth)
+		GotResized(g_Config.m_GfxScreenWidth, g_Config.m_GfxScreenHeight, -1);
+#endif
+
 #if defined(CONF_PLATFORM_MACOS)
 	const bool PreviousMacosDiagnostics = m_MacosGraphicsDiagnosticsEnabled;
 	const bool MacosDiagnostics = MacosGraphicsDiagnosticsEnabled();
 	m_MacosGraphicsDiagnosticsEnabled = MacosDiagnostics;
 	const auto SubmitStart = MacosDiagnostics ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 	double SubmitMs = 0.0;
-	double MetalWaitForIdleMs = 0.0;
-	bool MetalWaitForIdle = false;
+	double FrameSerializationWaitMs = 0.0;
+	bool FrameSerializationWait = false;
 #endif
 	bool Swapped = false;
 	ScreenshotDirect(&Swapped);
@@ -4445,14 +4654,15 @@ void CGraphics_Threaded::Swap()
 	if(MacosDiagnostics)
 		SubmitMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - SubmitStart).count();
 
-	// TODO: Remove when https://github.com/libsdl-org/SDL/issues/5203 is fixed
-	if(str_find(GetVersionString(), "Metal"))
+	// MoltenVK needs serialized frame submission while SDL may destroy a drawable.
+	// Native Metal must not inherit this Vulkan-only workaround.
+	if(graphics_backend::RequiresFrameSerializationWorkaround(m_pBackend->GetBackendType()))
 	{
-		MetalWaitForIdle = true;
+		FrameSerializationWait = true;
 		const auto WaitForIdleStart = MacosDiagnostics ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 		WaitForIdle();
 		if(MacosDiagnostics)
-			MetalWaitForIdleMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - WaitForIdleStart).count();
+			FrameSerializationWaitMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - WaitForIdleStart).count();
 	}
 
 	if(!MacosDiagnostics)
@@ -4461,42 +4671,48 @@ void CGraphics_Threaded::Swap()
 		{
 			m_MacosGraphicsDiagnosticFrameCount = 0;
 			m_MacosGraphicsDiagnosticSubmitMsSum = 0.0;
-			m_MacosMetalWaitForIdleMsSum = 0.0;
-			m_MacosMetalWaitForIdleCount = 0;
+			m_MacosFrameSerializationWaitMsSum = 0.0;
+			m_MacosFrameSerializationWaitCount = 0;
 			m_MsdfCommandCount = 0;
 			m_MsdfFlushCount = 0;
 			m_RoundedRectSdfCommandCount = 0;
 			m_RoundedRectSdfFlushCount = 0;
+			m_BufferedTextCommandCount = 0;
+			m_BufferedTextNoContainerCount = 0;
+			m_BufferedTextZeroQuadCount = 0;
 		}
 	}
 	else
 	{
 		const char *pBackend = GetVersionString();
-		os_signpost_event_emit(MacosGraphicsSignpostLog(), OS_SIGNPOST_ID_EXCLUSIVE, "frame_submit", "submit_duration_ms=%{public}.3f metal_wait_for_idle_ms=%{public}.3f backend=%{public}s drawable=%dx%d hidpi=%.3f", SubmitMs, MetalWaitForIdleMs, pBackend, m_ScreenWidth, m_ScreenHeight, m_ScreenHiDPIScale);
+		os_signpost_event_emit(MacosGraphicsSignpostLog(), OS_SIGNPOST_ID_EXCLUSIVE, "frame_submit", "submit_duration_ms=%{public}.3f frame_serialization_wait_ms=%{public}.3f backend=%{public}s drawable=%dx%d hidpi=%.3f", SubmitMs, FrameSerializationWaitMs, pBackend, m_ScreenWidth, m_ScreenHeight, m_ScreenHiDPIScale);
 
 		if(PreviousMacosDiagnostics)
 		{
 			++m_MacosGraphicsDiagnosticFrameCount;
 			m_MacosGraphicsDiagnosticSubmitMsSum += SubmitMs;
-			if(MetalWaitForIdle)
+			if(FrameSerializationWait)
 			{
-				m_MacosMetalWaitForIdleMsSum += MetalWaitForIdleMs;
-				m_MacosMetalWaitForIdleCount++;
+				m_MacosFrameSerializationWaitMsSum += FrameSerializationWaitMs;
+				m_MacosFrameSerializationWaitCount++;
 			}
 			if(m_MacosGraphicsDiagnosticFrameCount == 120)
 			{
-				const double MetalWaitForIdleMsAvg = m_MacosMetalWaitForIdleCount > 0 ? m_MacosMetalWaitForIdleMsSum / (double)m_MacosMetalWaitForIdleCount : 0.0;
+				const double FrameSerializationWaitMsAvg = m_MacosFrameSerializationWaitCount > 0 ? m_MacosFrameSerializationWaitMsSum / (double)m_MacosFrameSerializationWaitCount : 0.0;
 				const int UnlimitedConfig = g_Config.m_GfxVsync == 0 && g_Config.m_GfxRefreshRate == 0 && g_Config.m_ClRefreshRate == 0;
-				dbg_msg("perf/macos_graphics", "event=frame_submit sample_frames=120 submit_duration_ms_sum=%.3f submit_duration_ms_avg=%.3f metal_wait_for_idle_count=%" PRIu64 " metal_wait_for_idle_ms_sum=%.3f metal_wait_for_idle_ms_avg=%.3f unlimited_config=%d vsync=%d gfx_refresh_rate=%d cl_refresh_rate=%d cl_refresh_rate_inactive=%d debug=%d dbg_graphs=%d async_render_old=%d backend=%s renderer=%s vendor=%s drawable_width=%d drawable_height=%d hidpi_scale=%.3f fullscreen=%d fsaa=%u refresh_hz=%d msdf_commands_sum=%" PRIu64 " msdf_flushes_sum=%" PRIu64 " rounded_sdf_commands_sum=%" PRIu64 " rounded_sdf_flushes_sum=%" PRIu64,
-					m_MacosGraphicsDiagnosticSubmitMsSum, m_MacosGraphicsDiagnosticSubmitMsSum / 120.0, m_MacosMetalWaitForIdleCount, m_MacosMetalWaitForIdleMsSum, MetalWaitForIdleMsAvg, UnlimitedConfig, g_Config.m_GfxVsync, g_Config.m_GfxRefreshRate, g_Config.m_ClRefreshRate, g_Config.m_ClRefreshRateInactive, g_Config.m_Debug, g_Config.m_DbgGraphs, g_Config.m_GfxAsyncRenderOld, pBackend, GetRendererString(), GetVendorString(), m_ScreenWidth, m_ScreenHeight, m_ScreenHiDPIScale, g_Config.m_GfxFullscreen, m_MultiSamplingCount, m_ScreenRefreshRate, m_MsdfCommandCount, m_MsdfFlushCount, m_RoundedRectSdfCommandCount, m_RoundedRectSdfFlushCount);
+				dbg_msg("perf/macos_graphics", "event=frame_submit sample_frames=120 submit_duration_ms_sum=%.3f submit_duration_ms_avg=%.3f frame_serialization_wait_count=%" PRIu64 " frame_serialization_wait_ms_sum=%.3f frame_serialization_wait_ms_avg=%.3f unlimited_config=%d vsync=%d gfx_refresh_rate=%d cl_refresh_rate=%d cl_refresh_rate_inactive=%d debug=%d dbg_graphs=%d async_render_old=%d backend=%s renderer=%s vendor=%s drawable_width=%d drawable_height=%d hidpi_scale=%.3f fullscreen=%d fsaa=%u refresh_hz=%d msdf_commands_sum=%" PRIu64 " msdf_flushes_sum=%" PRIu64 " rounded_sdf_commands_sum=%" PRIu64 " rounded_sdf_flushes_sum=%" PRIu64 " buffered_text_commands_sum=%" PRIu64 " buffered_text_no_container_sum=%" PRIu64 " buffered_text_zero_quad_sum=%" PRIu64,
+					m_MacosGraphicsDiagnosticSubmitMsSum, m_MacosGraphicsDiagnosticSubmitMsSum / 120.0, m_MacosFrameSerializationWaitCount, m_MacosFrameSerializationWaitMsSum, FrameSerializationWaitMsAvg, UnlimitedConfig, g_Config.m_GfxVsync, g_Config.m_GfxRefreshRate, g_Config.m_ClRefreshRate, g_Config.m_ClRefreshRateInactive, g_Config.m_Debug, g_Config.m_DbgGraphs, g_Config.m_GfxAsyncRenderOld, pBackend, GetRendererString(), GetVendorString(), m_ScreenWidth, m_ScreenHeight, m_ScreenHiDPIScale, g_Config.m_GfxFullscreen, m_MultiSamplingCount, m_ScreenRefreshRate, m_MsdfCommandCount, m_MsdfFlushCount, m_RoundedRectSdfCommandCount, m_RoundedRectSdfFlushCount, m_BufferedTextCommandCount, m_BufferedTextNoContainerCount, m_BufferedTextZeroQuadCount);
 				m_MacosGraphicsDiagnosticFrameCount = 0;
 				m_MacosGraphicsDiagnosticSubmitMsSum = 0.0;
-				m_MacosMetalWaitForIdleMsSum = 0.0;
-				m_MacosMetalWaitForIdleCount = 0;
+				m_MacosFrameSerializationWaitMsSum = 0.0;
+				m_MacosFrameSerializationWaitCount = 0;
 				m_MsdfCommandCount = 0;
 				m_MsdfFlushCount = 0;
 				m_RoundedRectSdfCommandCount = 0;
 				m_RoundedRectSdfFlushCount = 0;
+				m_BufferedTextCommandCount = 0;
+				m_BufferedTextNoContainerCount = 0;
+				m_BufferedTextZeroQuadCount = 0;
 			}
 		}
 	}
@@ -4579,7 +4795,15 @@ bool CGraphics_Threaded::IsIdle() const
 
 void CGraphics_Threaded::WaitForIdle()
 {
+	const bool GraphicsTrace = g_Config.m_QmGraphicsTrace >= 2;
+	const auto WaitStart = GraphicsTrace ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 	m_pBackend->WaitForIdle();
+	if(GraphicsTrace)
+	{
+		const double WaitMs = std::chrono::duration<double, std::milli>(time_get_nanoseconds() - WaitStart).count();
+		if(WaitMs >= 8.0)
+			dbg_msg("perf/graphics/thread", "event=wait_for_idle duration_ms=%.3f backend=%s", WaitMs, GetVersionString());
+	}
 }
 
 void CGraphics_Threaded::AddWarning(const SWarning &Warning)

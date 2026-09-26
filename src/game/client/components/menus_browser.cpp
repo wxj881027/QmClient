@@ -5,6 +5,7 @@
 #include <base/log.h>
 #include <base/perf_timer.h>
 
+#include <engine/client/serverbrowser.h>
 #include <engine/engine.h>
 #include <engine/favorites.h>
 #include <engine/friends.h>
@@ -23,31 +24,31 @@
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
-#include <game/client/components/qmclient/friend_heart_icon.h>
+#include <game/client/components/qmclient/browser_column_layout.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
+#include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
+#include <game/voting.h>
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <ctime>
+#include <limits>
 #include <unordered_map>
 
 using namespace FontIcons;
 
 static constexpr ColorRGBA gs_HighlightedTextColor = ColorRGBA(0.4f, 0.4f, 1.0f, 1.0f);
-// 「梦」列的人数颜色，与计分板 Qm 客户端标签同色。
-static constexpr ColorRGBA QM_CLIENT_COUNT_COLOR = ColorRGBA(0.38f, 0.89f, 1.0f, 1.0f);
-// 服务器列表正文字号。所有列都常显，所以字号比菜单正文（12）小一号，
-// 用行高 15（见 ms_ListheaderHeight）换出横向空间给名称和地图。
+static constexpr ColorRGBA gs_QmClientCountColor = ColorRGBA(0.75f, 0.55f, 1.0f, 1.0f);
 static constexpr float SERVER_LIST_TEXT_SIZE = 11.0f;
-// 列表滚动条轨道的底色倍率。轨道本身是白色 25%，直接叠在已经变暗的列表正文上会形成
-// 一条比卡片亮得多的竖带，看起来像第二个框；按倍率压暗后仍能看见，但不抢卡片整体。
 static constexpr float SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE = 0.28f;
 
 static ColorRGBA BrowserOpacityColor(ColorRGBA Color, float AlphaScale = 1.0f)
@@ -158,6 +159,42 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 	return Localize("Unknown");
 }
 
+static const CServerInfo *FindSortedServerByAddress(IServerBrowser *pServerBrowser, const char *pAddress, int *pIndex = nullptr)
+{
+	if(pIndex != nullptr)
+		*pIndex = -1;
+	if(pServerBrowser == nullptr || pAddress == nullptr || pAddress[0] == '\0')
+		return nullptr;
+
+	for(int i = 0; i < pServerBrowser->NumSortedServers(); ++i)
+	{
+		const CServerInfo *pServerInfo = pServerBrowser->SortedGet(i);
+		if(pServerInfo != nullptr && str_comp(pServerInfo->m_aAddress, pAddress) == 0)
+		{
+			if(pIndex != nullptr)
+				*pIndex = i;
+			return pServerInfo;
+		}
+	}
+
+	return nullptr;
+}
+
+static const CServerInfo *FindServerByAddress(IServerBrowser *pServerBrowser, const char *pAddress)
+{
+	if(pServerBrowser == nullptr || pAddress == nullptr || pAddress[0] == '\0')
+		return nullptr;
+
+	for(int i = 0; i < pServerBrowser->NumServers(); ++i)
+	{
+		const CServerInfo *pServerInfo = pServerBrowser->Get(i);
+		if(pServerInfo != nullptr && str_comp(pServerInfo->m_aAddress, pAddress) == 0)
+			return pServerInfo;
+	}
+
+	return nullptr;
+}
+
 static bool IsClanMembersCategory(const char *pCategory)
 {
 	return pCategory != nullptr && str_comp_nocase(pCategory, IFriends::CLAN_MEMBERS_CATEGORY) == 0;
@@ -242,9 +279,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	CUIRect Headers;
 	View.HSplitTop(ms_ListheaderHeight, &Headers, &View);
 	const CUIRect ListView = View;
-	// 表头与正文都直接用卡片自身的底色，不再各自铺一层半透明表面。原先表头的白 25% 与正文的
-	// 黑 15% 会在同一张卡片里做出两种底色、两种圆角（表头只圆上边、正文无圆角），叠起来就是
-	// 用户看到的「框里还有一层」。
 	Headers.VSplitRight(s_ListBox.ScrollbarWidthMax(), &Headers, nullptr);
 
 	{
@@ -252,11 +286,12 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		Headers.VSplitLeft(ms_ListheaderHeight, &ResetBtn, &Headers);
 		ResetBtn.Margin(3.0f, &ResetBtn);
 		static CButtonContainer s_ResetColsButton;
-		if(Ui()->DoButton_FontIcon(&s_ResetColsButton, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetBtn, BUTTONFLAG_LEFT))
+		if(Ui()->DoButton_QmIcon(&s_ResetColsButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetBtn, BUTTONFLAG_LEFT))
 		{
 			g_Config.m_BrColWidthName = 120;
 			g_Config.m_BrColNameSplit = 600;
 			g_Config.m_BrColWidthGametype = 68;
+			g_Config.m_BrColWidthMap = 120;
 			g_Config.m_BrColWidthFriends = 14;
 			g_Config.m_BrColWidthPlayers = 40;
 			g_Config.m_BrColWidthQmClients = 24;
@@ -304,34 +339,27 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		UI_ELEM_MAP_3,
 		UI_ELEM_FINISH_ICON,
 		UI_ELEM_PLAYERS,
-		UI_ELEM_QM_CLIENTS,
 		UI_ELEM_FRIEND_ICON,
+		UI_ELEM_QM_CLIENTS,
 		UI_ELEM_PING,
 		UI_ELEM_KEY_ICON,
 		NUM_UI_ELEMS,
 	};
 
-	// 服务器列表按「所有列都常显」排布：不隐藏任何列，靠小字号（SERVER_LIST_TEXT_SIZE）、
-	// 紧凑行高（ms_ListheaderHeight）和贴内容定宽把宽度让回给名称与地图。
 	constexpr float ClickableIconSpace = 20.0f;
 
 	static SColumn s_aCols[] = {
 		{-1, -1, "", -1, 2.0f, {0}},
 		{COL_FLAG_LOCK, -1, "", -1, 14.0f, {0}},
 		{COL_FLAG_FAV, IServerBrowser::SORT_FAVORITES, "", -1, ClickableIconSpace, {0}},
-		{COL_COMMUNITY, -1, "", -1, 24.0f, {0}},
+		{COL_COMMUNITY, -1, "", -1, 28.0f, {0}},
 		{COL_NAME, IServerBrowser::SORT_NAME, Localizable("Name"), 0, 50.0f, {0}},
-		// 类型列按最长常见值 "DDraceNetwork" 定宽，别再把它裁成 "DDraceN"。
-		{COL_GAMETYPE, IServerBrowser::SORT_GAMETYPE, Localizable("Type"), 1, 68.0f, {0}},
-		// 地图列宽度在下面按「名称 : 地图 = 6 : 4」重新分配，这里的值只是初值。
-		{COL_MAP, IServerBrowser::SORT_MAP, Localizable("Map"), 1, 110.0f, {0}},
-		{COL_FRIENDS, IServerBrowser::SORT_NUMFRIENDS, "", 1, 14.0f, {0}},
-		{COL_PLAYERS, IServerBrowser::SORT_NUMPLAYERS, Localizable("Players"), 1, 40.0f, {0}},
-		// 「梦」列：统计该服在线梦客户端（含 Arg）人数。人数来自中心服下发的在线分布，
-		// 排序键由 CQmClient 在分布更新时推给服务器浏览器（见 SetQmClientServerCounts）；
-		// 列头是品牌字，不走 Localize。
-		{COL_QM_CLIENTS, IServerBrowser::SORT_QM_CLIENTS, "梦", 1, 24.0f, {0}},
+		{COL_GAMETYPE, IServerBrowser::SORT_GAMETYPE, Localizable("Type"), 1, 50.0f, {0}},
+		{COL_MAP, IServerBrowser::SORT_MAP, Localizable("Map"), 0, 90.0f, {0}},
+		{COL_FRIENDS, IServerBrowser::SORT_NUMFRIENDS, "", 1, ClickableIconSpace, {0}},
+		{COL_PLAYERS, IServerBrowser::SORT_NUMPLAYERS, Localizable("Players"), 1, 60.0f, {0}},
 		{-1, -1, "", 1, 4.0f, {0}},
+		{COL_QM_CLIENTS, IServerBrowser::SORT_QM_CLIENTS, "梦", 1, 24.0f, {0}},
 		{COL_PING, IServerBrowser::SORT_PING, Localizable("Ping"), 1, 30.0f, {0}},
 	};
 
@@ -342,8 +370,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	s_aCols[5].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthGametype, 62, 300);
 	s_aCols[7].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthFriends, 12, 120);
 	s_aCols[8].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthPlayers, 34, 240);
-	s_aCols[9].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthQmClients, 20, 120);
+	s_aCols[10].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthQmClients, 20, 120);
 	s_aCols[11].m_Width = (float)ClampConfigWidth(g_Config.m_BrColWidthPing, 26, 180);
+	const float MinNameWidth = (float)ClampConfigWidth(g_Config.m_BrColWidthName, 60, 1000);
+	constexpr float MinMapWidth = 90.0f;
 
 	const int NumCols = std::size(s_aCols);
 
@@ -351,6 +381,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		switch(ColId)
 		{
 		case COL_GAMETYPE: return &g_Config.m_BrColWidthGametype;
+		case COL_MAP: return nullptr;
 		case COL_FRIENDS: return &g_Config.m_BrColWidthFriends;
 		case COL_PLAYERS: return &g_Config.m_BrColWidthPlayers;
 		case COL_QM_CLIENTS: return &g_Config.m_BrColWidthQmClients;
@@ -363,6 +394,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		switch(ColId)
 		{
 		case COL_GAMETYPE: return 62.0f;
+		case COL_MAP: return 90.0f;
 		case COL_FRIENDS: return 12.0f;
 		case COL_PLAYERS: return 34.0f;
 		case COL_QM_CLIENTS: return 20.0f;
@@ -375,6 +407,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		switch(ColId)
 		{
 		case COL_GAMETYPE: return 300.0f;
+		case COL_MAP: return 800.0f;
 		case COL_FRIENDS: return 120.0f;
 		case COL_PLAYERS: return 240.0f;
 		case COL_QM_CLIENTS: return 120.0f;
@@ -396,27 +429,27 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		float m_MaxWidth;
 	};
 
-	// 列间空白。所有列都常显，所以这里从 2px 起步，宽度全部让给内容。
-	constexpr float ColumnGapWidth = 2.0f;
-
 	static std::vector<SResizeHandle> s_vResizeHandles;
 	s_vResizeHandles.clear();
 
+	// 先给名称/地图预留空间；窄窗口按比例收缩固定列，避免右侧列把名称挤成负宽。
+	const float LeftWidth = s_aCols[0].m_Width + s_aCols[1].m_Width + s_aCols[2].m_Width + s_aCols[3].m_Width + 4.0f * 2.0f;
+	const float LeftScale = LeftWidth > 0.0f ? std::clamp(Headers.w / LeftWidth, 0.0f, 1.0f) : 1.0f;
+	const float LeftGap = 2.0f * LeftScale;
 	// do layout - left columns
 	for(int i = 0; i < NumCols; i++)
 	{
 		if(s_aCols[i].m_Direction == -1)
 		{
-			Headers.VSplitLeft(s_aCols[i].m_Width, &s_aCols[i].m_Rect, &Headers);
+			Headers.VSplitLeft(s_aCols[i].m_Width * LeftScale, &s_aCols[i].m_Rect, &Headers);
 
 			if(i + 1 < NumCols)
 			{
 				CUIRect Gap;
-				Headers.VSplitLeft(ColumnGapWidth, &Gap, &Headers);
+				Headers.VSplitLeft(LeftGap, &Gap, &Headers);
 				int *pConfig = GetColWidthConfig(s_aCols[i].m_Id);
 				if(pConfig)
 				{
-					// 手柄 6px：右侧列间距只有 2px，8px 手柄会和后一列的手柄叠在一起抢悬停。
 					Gap.x -= 2.0f;
 					Gap.w = 6.0f;
 					s_vResizeHandles.push_back({Gap, i, pConfig, GetColMinWidth(s_aCols[i].m_Id), GetColMaxWidth(s_aCols[i].m_Id)});
@@ -425,17 +458,23 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 	}
 
+	float RightWidth = 0.0f;
+	for(const auto &Col : s_aCols)
+		if(Col.m_Direction == 1)
+			RightWidth += Col.m_Width + 2.0f;
+	const SQmBrowserNameMapLayout NameMapLayout = QmBrowserNameMapLayout(Headers.w, RightWidth, MinNameWidth, MinMapWidth, (float)g_Config.m_BrColNameSplit / 1000.0f);
+	const float RightScale = NameMapLayout.m_RightScale;
+	const float RightGap = 2.0f * RightScale;
 	for(int i = NumCols - 1; i >= 0; i--)
 	{
 		if(s_aCols[i].m_Direction == 1)
 		{
-			Headers.VSplitRight(s_aCols[i].m_Width, &Headers, &s_aCols[i].m_Rect);
+			Headers.VSplitRight(s_aCols[i].m_Width * RightScale, &Headers, &s_aCols[i].m_Rect);
 			CUIRect Gap;
-			Headers.VSplitRight(ColumnGapWidth, &Headers, &Gap);
+			Headers.VSplitRight(RightGap, &Headers, &Gap);
 			int *pConfig = GetColWidthConfig(s_aCols[i].m_Id);
 			if(pConfig)
 			{
-				// 与左侧列手柄同理，6px 才不与相邻列抢悬停。
 				Gap.x -= 2.0f;
 				Gap.w = 6.0f;
 				s_vResizeHandles.push_back({Gap, i, pConfig, GetColMinWidth(s_aCols[i].m_Id), GetColMaxWidth(s_aCols[i].m_Id)});
@@ -443,31 +482,26 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 	}
 
-	// 名称与地图分掉剩余宽度。地图宽度由比例推导，所以没有自己的拖拽手柄
-	// （拖名称列的右边界就是在两者之间挪比例）。
-	const float MinNameFlexWidth = (float)ClampConfigWidth(g_Config.m_BrColWidthName, 60, 1000);
-	float SplitNameWidth = 0.0f;
-	float SplitMapWidth = 0.0f;
-	{
-		const float MinMap = 90.0f;
-		const float Split = std::clamp((float)g_Config.m_BrColNameSplit / 1000.0f, 0.35f, 0.75f);
-		const float FreeWidth = maximum(Headers.w - MinNameFlexWidth - MinMap, 0.0f);
-		SplitNameWidth = MinNameFlexWidth + FreeWidth * Split;
-		SplitMapWidth = MinMap + FreeWidth * (1.0f - Split);
-		for(auto &Col : s_aCols)
-		{
-			if(Col.m_Id == COL_NAME)
-				Col.m_Width = SplitNameWidth;
-			else if(Col.m_Id == COL_MAP)
-				Col.m_Width = SplitMapWidth;
-		}
-	}
-
+	// 固定列落位后，再把实际剩余宽度按配置比例分给名称与地图。
+	const float NameMapWidth = NameMapLayout.m_NameWidth + NameMapLayout.m_MapWidth;
+	const float FreeNameMapWidth = std::max(0.0f, NameMapWidth - MinNameWidth - MinMapWidth);
+	const float SplitNameWidth = NameMapLayout.m_NameWidth;
+	const float SplitMapWidth = NameMapWidth - SplitNameWidth;
 	for(auto &Col : s_aCols)
 	{
-		if(Col.m_Direction == 0)
-			Col.m_Rect = Headers;
+		if(Col.m_Id == COL_NAME)
+		{
+			Col.m_Width = SplitNameWidth;
+			Headers.VSplitLeft(SplitNameWidth, &Col.m_Rect, nullptr);
+		}
+		else if(Col.m_Id == COL_MAP)
+		{
+			Col.m_Width = SplitMapWidth;
+			Headers.VSplitRight(SplitMapWidth, nullptr, &Col.m_Rect);
+		}
 	}
+	CUIRect NameSplitHandle{s_aCols[4].m_Rect.x + SplitNameWidth - 3.0f, Headers.y, 6.0f, Headers.h};
+	s_vResizeHandles.push_back({NameSplitHandle, 4, &g_Config.m_BrColNameSplit, MinNameWidth, NameMapWidth - MinMapWidth});
 
 	const bool PlayersOrPing = (g_Config.m_BrSort == IServerBrowser::SORT_NUMPLAYERS || g_Config.m_BrSort == IServerBrowser::SORT_PING);
 
@@ -478,7 +512,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		if(PlayersOrPing && g_Config.m_BrSortOrder == 2 && (Col.m_Sort == IServerBrowser::SORT_NUMPLAYERS || Col.m_Sort == IServerBrowser::SORT_PING))
 			Checked = 2;
 
-		if(DoButton_GridHeader(&Col.m_Id, Col.m_Id == COL_QM_CLIENTS ? Col.m_pCaption : Localize(Col.m_pCaption), Checked, &Col.m_Rect))
+		const char *pCaption = Col.m_Id == COL_QM_CLIENTS ? Col.m_pCaption : Localize(Col.m_pCaption);
+		if(DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect))
 		{
 			if(Col.m_Sort != -1)
 			{
@@ -492,10 +527,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 		if(Col.m_Id == COL_FRIENDS)
 		{
-			// 好友爱心用默认字体的实体心形：图标字体 Phosphor 只有中空心形。
-			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-			Ui()->DoLabel(&Col.m_Rect, QM_FRIEND_HEART_ICON, 14.0f, TEXTALIGN_MC);
+			Ui()->DoLabel_QmIcon(&Col.m_Rect, EQmIcon::HEART, FONT_ICON_HEART, 14.0f, TEXTALIGN_MC);
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		}
@@ -503,7 +537,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		{
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-			Ui()->DoLabel(&Col.m_Rect, FONT_ICON_STAR, 14.0f, TEXTALIGN_MC);
+			Ui()->DoLabel_QmIcon(&Col.m_Rect, EQmIcon::STAR, FONT_ICON_STAR, 14.0f, TEXTALIGN_MC);
 			TextRender()->SetRenderFlags(0);
 			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		}
@@ -512,14 +546,32 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	static int s_ResizeDragColIndex = -1;
 	static float s_ResizeDragStartMouseX = 0.0f;
 	static float s_ResizeDragStartWidth = 0.0f;
+	static float s_ResizeDragStartFlexWidth = 0.0f;
 	static float s_ResizeDragCurrentWidth = 0.0f;
 
-	for(const auto &Handle : s_vResizeHandles)
+	int HoveredHandle = -1;
+	float HoverDistance = std::numeric_limits<float>::max();
+	for(int Index = 0; Index < (int)s_vResizeHandles.size(); ++Index)
 	{
+		const SResizeHandle &Handle = s_vResizeHandles[Index];
+		const SColumn &Col = s_aCols[Handle.m_ColIndex];
+		if((Col.m_Id == COL_NAME && FreeNameMapWidth <= 0.0f) ||
+			(Col.m_Direction == 1 && Col.m_Rect.w < 6.0f) || !Ui()->MouseHovered(&Handle.m_Rect))
+			continue;
+		const float Distance = std::abs(Ui()->MouseX() - (Handle.m_Rect.x + Handle.m_Rect.w * 0.5f));
+		if(Distance < HoverDistance)
+		{
+			HoverDistance = Distance;
+			HoveredHandle = Index;
+		}
+	}
+
+	for(int HandleIndex = 0; HandleIndex < (int)s_vResizeHandles.size(); ++HandleIndex)
+	{
+		const SResizeHandle &Handle = s_vResizeHandles[HandleIndex];
 		const void *pHandleId = &s_aCols[Handle.m_ColIndex].m_Width;
 		const int ColIdx = Handle.m_ColIndex;
 		const bool IsRightCol = s_aCols[ColIdx].m_Direction == 1;
-		// 名称列不是固定宽度，而是「名称 : 地图」比例，所以拖它改的是比例。
 		const bool IsNameSplit = s_aCols[ColIdx].m_Id == COL_NAME;
 
 		if(s_ResizeDragColIndex == ColIdx)
@@ -536,31 +588,33 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			{
 				float DeltaX = Ui()->MouseX() - s_ResizeDragStartMouseX;
 				float NewWidth = s_ResizeDragStartWidth + (IsRightCol ? -DeltaX : DeltaX);
-
 				if(IsNameSplit)
 				{
-					const float MinMap = 90.0f;
-					NewWidth = std::clamp(NewWidth, MinNameFlexWidth, s_ResizeDragStartWidth + SplitMapWidth - MinMap);
-					const float FreeWidth = SplitMapWidth + SplitNameWidth - MinNameFlexWidth - MinMap;
-					if(FreeWidth > 0.0f)
-						g_Config.m_BrColNameSplit = std::clamp((int)((NewWidth - MinNameFlexWidth) / FreeWidth * 1000.0f + 0.5f), 0, 1000);
+					if(FreeNameMapWidth > 0.0f)
+					{
+						NewWidth = std::clamp(NewWidth, MinNameWidth + FreeNameMapWidth * 0.35f, MinNameWidth + FreeNameMapWidth * 0.75f);
+						g_Config.m_BrColNameSplit = std::clamp((int)((NewWidth - MinNameWidth) / FreeNameMapWidth * 1000.0f + 0.5f), 350, 750);
+					}
 				}
 				else
 				{
 					NewWidth = std::clamp(NewWidth, Handle.m_MinWidth, Handle.m_MaxWidth);
+					if(IsRightCol)
+						NewWidth = std::clamp(NewWidth, Handle.m_MinWidth, std::max(Handle.m_MinWidth, s_ResizeDragStartWidth + s_ResizeDragStartFlexWidth - MinNameWidth - MinMapWidth));
 					s_ResizeDragCurrentWidth = NewWidth;
 					SetColWidthConfig(Handle.m_pWidthConfig, NewWidth, Handle.m_MinWidth, Handle.m_MaxWidth);
 				}
 			}
 		}
-		else if(Ui()->MouseHovered(&Handle.m_Rect))
+		else if(HandleIndex == HoveredHandle)
 		{
 			Ui()->SetHotItem(pHandleId);
 			if(Ui()->MouseButtonClicked(0))
 			{
 				s_ResizeDragColIndex = ColIdx;
 				s_ResizeDragStartMouseX = Ui()->MouseX();
-				s_ResizeDragStartWidth = IsNameSplit ? SplitNameWidth : s_aCols[ColIdx].m_Width;
+				s_ResizeDragStartWidth = s_aCols[ColIdx].m_Width;
+				s_ResizeDragStartFlexWidth = NameMapWidth;
 				s_ResizeDragCurrentWidth = s_ResizeDragStartWidth;
 				Ui()->SetActiveItem(pHandleId);
 			}
@@ -602,7 +656,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	// display important messages in the middle of the screen so no
 	// users misses it
 	{
-		if(!ServerBrowser()->NumServers() && ServerBrowser()->IsGettingServerlist())
+		// 局域网标签不查询主服务器，后台 HTTP 刷新（如好友在线扫描）时不应显示主服务器加载提示
+		const bool IsLanTab = ServerBrowser()->GetCurrentType() == IServerBrowser::TYPE_LAN;
+		if(!ServerBrowser()->NumServers() && !IsLanTab && ServerBrowser()->IsGettingServerlist())
 		{
 			char aLoadingLabel[256];
 			const int LoadingDotsCount = static_cast<int>(Client()->GlobalTime() * 3.0f) % 7;
@@ -611,7 +667,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 		else if(!ServerBrowser()->NumServers())
 		{
-			if(ServerBrowser()->GetCurrentType() == IServerBrowser::TYPE_LAN)
+			if(IsLanTab)
 			{
 				CUIRect Label, Button;
 				View.HMargin((View.h - (16.0f + 18.0f + 8.0f)) / 2.0f, &Label);
@@ -664,65 +720,77 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	const bool PerfListFrameEnabled = QmPerfEnabled();
 	const auto ListFrameStartTime = PerfListFrameEnabled ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 	int SelectedServerIndex = -1;
-	for(int i = 0; i < NumServers; ++i)
-	{
-		const CServerInfo *pItem = ServerBrowser()->SortedGet(i);
-		if(pItem != nullptr && str_comp(pItem->m_aAddress, g_Config.m_UiServerAddress) == 0)
-		{
-			SelectedServerIndex = i;
-			break;
-		}
-	}
+	FindSortedServerByAddress(ServerBrowser(), g_Config.m_UiServerAddress, &SelectedServerIndex);
 	s_ListBox.DoStart(ms_ListheaderHeight, NumServers, 1, 3, SelectedServerIndex, &View, false);
 
+	const bool RevealSelection = m_ServerBrowserShouldRevealSelection;
 	if(m_ServerBrowserShouldRevealSelection)
 	{
 		s_ListBox.ScrollToSelected();
 		m_ServerBrowserShouldRevealSelection = false;
 	}
-	// 列表只渲染可见区内的行（下面用 SkipItems 虚拟化），选中行滚出可见区后渲染循环不会再碰到它。
-	// 所以「选中项」只能取自排序后的真实选中服务器，不能用本帧渲染结果：一旦这里预置成 -1，
-	// 下面 NewSelected != m_SelectedIndex 会每帧成立 → 每帧 ScrollToSelected()，
-	// 把列表钉死在选中行上，用户永远无法把选中行滚出视野。
 	m_SelectedIndex = SelectedServerIndex;
 
-	const auto &&RenderBrowserIcons = [this](CUIElement::SUIElementRect &UIRect, CUIRect *pRect, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, const char *pText, int TextAlign, bool SmallFont = false, EFontPreset FontPreset = EFontPreset::ICON_FONT) {
+	// 列表框仍需为所有项目维护滚动几何，但只有可见行需要命中测试、文本布局和绘制命令。
+	// 两侧各保留一行，避免滚轮/滚动动画结算时出现空行；显式要求显示选中项时保留全量遍历，
+	// 让 DoNextItem 继续执行原有的选中项定位逻辑。
+	int FirstVisibleItem = 0;
+	int EndVisibleItem = NumServers;
+	if(!RevealSelection && NumServers > 0)
+	{
+		const float RowHeight = ms_ListheaderHeight;
+		const float ScrollY = std::max(0.0f, s_ListBox.ScrollOffsetY());
+		const float ViewHeight = std::max(0.0f, s_ListBox.ViewHeight());
+		const int ExtraRows = 1;
+		const int FirstVisibleRow = std::max(0, (int)std::floor(ScrollY / RowHeight) - ExtraRows);
+		const int LastVisibleRowExclusive = std::min(
+			NumServers,
+			(int)std::ceil((ScrollY + ViewHeight) / RowHeight) + ExtraRows);
+		FirstVisibleItem = std::min(FirstVisibleRow, NumServers);
+		EndVisibleItem = std::max(FirstVisibleItem, LastVisibleRowExclusive);
+	}
+	if(FirstVisibleItem > 0)
+		s_ListBox.SkipItems(FirstVisibleItem);
+
+	const auto &&RenderBrowserIcons = [this](CUIElement::SUIElementRect &UIRect, CUIRect *pRect, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, EQmIcon Icon, const char *pText, int TextAlign, bool SmallFont = false) {
 		const float FontSize = SmallFont ? 6.0f : 14.0f;
-		TextRender()->SetFontPreset(FontPreset);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		TextRender()->TextColor(TextColor);
 		TextRender()->TextOutlineColor(TextOutlineColor);
-		Ui()->DoLabelStreamed(UIRect, pRect, pText, FontSize, TextAlign);
+		if(Icon != EQmIcon::COUNT)
+		{
+			// 图集优先；pText 为回退字形。
+			Ui()->DoLabel_QmIcon(pRect, Icon, pText, FontSize, TextAlign);
+		}
+		else
+		{
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+			Ui()->DoLabelStreamed(UIRect, pRect, pText, FontSize, TextAlign);
+			TextRender()->SetRenderFlags(0);
+			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		}
 		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	};
 
 	std::vector<CUIElement *> &vpServerBrowserUiElements = m_avpServerBrowserUiElements[ServerBrowser()->GetCurrentType()];
-	if(vpServerBrowserUiElements.size() < (size_t)NumServers)
-		vpServerBrowserUiElements.resize(NumServers, nullptr);
-	const SSettingsSkinListVisibleRange VisibleRange = SettingsSkinListVisibleRangeForScroll(
-		s_ListBox.ScrollOffsetY(), s_ListBox.ViewHeight(), ms_ListheaderHeight, 1, NumServers, 1);
-	if(VisibleRange.m_FirstItem > 0)
-		s_ListBox.SkipItems(VisibleRange.m_FirstItem);
+	// 按服务器稳定索引保存文本容器，而不是按排序后位置保存。排序按延迟/玩家
+	// 数变化时，位置会频繁交换；按位置缓存会让滚动每帧重建可见行的文字。
+	const int ServerCacheSize = maximum(ServerBrowser()->NumServers(), NumServers);
+	if(vpServerBrowserUiElements.size() < (size_t)ServerCacheSize)
+		vpServerBrowserUiElements.resize(ServerCacheSize, nullptr);
 
 	int RowsVisible = 0;
 	int RowsRendered = 0;
 	int RowsIterated = 0;
-	for(int i = VisibleRange.m_FirstItem; i < VisibleRange.m_EndItem; i++)
+	for(int i = FirstVisibleItem; i < EndVisibleItem; i++)
 	{
 		const CServerInfo *pItem = ServerBrowser()->SortedGet(i);
 		RowsIterated += PerfListFrameEnabled ? 1 : 0;
-		const CCommunity *pCommunity = ServerBrowser()->Community(pItem->m_aCommunityId);
 
-		if(vpServerBrowserUiElements[i] == nullptr)
-		{
-			vpServerBrowserUiElements[i] = Ui()->GetNewUIElement(NUM_UI_ELEMS);
-		}
-		CUIElement *pUiElement = vpServerBrowserUiElements[i];
-
-		const CListboxItem ListItem = s_ListBox.DoNextItem(pItem, i == SelectedServerIndex);
+		const CListboxItem ListItem = s_ListBox.DoNextItem(pItem, str_comp(pItem->m_aAddress, g_Config.m_UiServerAddress) == 0);
+		if(ListItem.m_Selected)
+			m_SelectedIndex = i;
 
 		if(!ListItem.m_Visible)
 		{
@@ -733,6 +801,17 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			// don't render invisible items
 			continue;
 		}
+
+		// Resolve row-only data after visibility is known. The list can contain
+		// hundreds of servers while only a few rows are on screen; doing these
+		// lookups and allocating the streamed UI element for every hidden row
+		// made the server browser pay an unnecessary per-frame cost.
+		const CCommunity *pCommunity = ServerBrowser()->Community(pItem->m_aCommunityId);
+		const int CacheIndex = pItem->m_ServerIndex >= 0 && pItem->m_ServerIndex < ServerCacheSize ? pItem->m_ServerIndex : i;
+		if(vpServerBrowserUiElements[CacheIndex] == nullptr)
+			vpServerBrowserUiElements[CacheIndex] = Ui()->GetNewUIElement(NUM_UI_ELEMS);
+		CUIElement *pUiElement = vpServerBrowserUiElements[CacheIndex];
+
 		if(PerfListFrameEnabled)
 		{
 			RowsVisible++;
@@ -754,18 +833,18 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			{
 				if(pItem->m_Flags & SERVER_FLAG_PASSWORD)
 				{
-					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_LOCK_ICON), &Button, ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f), TextRender()->DefaultTextOutlineColor(), FONT_ICON_LOCK, TEXTALIGN_MC);
+					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_LOCK_ICON), &Button, ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::LOCK, FONT_ICON_LOCK, TEXTALIGN_MC);
 				}
 				else if(pItem->m_RequiresLogin)
 				{
-					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_KEY_ICON), &Button, ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f), TextRender()->DefaultTextOutlineColor(), FONT_ICON_KEY, TEXTALIGN_MC);
+					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_KEY_ICON), &Button, ColorRGBA(0.75f, 0.75f, 0.75f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::KEY, FONT_ICON_KEY, TEXTALIGN_MC);
 				}
 			}
 			else if(Id == COL_FLAG_FAV)
 			{
 				if(pItem->m_Favorite != TRISTATE::NONE)
 				{
-					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FAVORITE_ICON), &Button, ColorRGBA(1.0f, 0.85f, 0.3f, 1.0f), TextRender()->DefaultTextOutlineColor(), FONT_ICON_STAR, TEXTALIGN_MC);
+					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FAVORITE_ICON), &Button, ColorRGBA(1.0f, 0.85f, 0.3f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::STAR, FONT_ICON_STAR, TEXTALIGN_MC);
 				}
 			}
 			else if(Id == COL_COMMUNITY)
@@ -785,8 +864,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_NAME)
 			{
-				// 左侧留 3px：列间距被压到 2px 后，文字会贴上前一列的图标/分隔线。
-				Button.VSplitLeft(3.0f, nullptr, &Button);
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
@@ -807,8 +884,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_GAMETYPE)
 			{
-				// 与名称列同样留 3px，避免高亮色文字贴住左侧分隔线。
-				Button.VSplitLeft(3.0f, nullptr, &Button);
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
@@ -824,53 +899,56 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			{
 				{
 					CUIRect Icon;
-					Button.VMargin(4.0f, &Button);
-					Button.VSplitLeft(Button.h, &Icon, &Button);
-					if(g_Config.m_BrIndicateFinished && pItem->m_HasRank == CServerInfo::RANK_RANKED)
+					Button.VMargin(std::min(4.0f, std::max(0.0f, Button.w) * 0.5f), &Button);
+					Button.VSplitLeft(std::min(std::max(0.0f, Button.w), std::max(0.0f, Button.h)), &Icon, &Button);
+					if(Icon.w > 4.0f && g_Config.m_BrIndicateFinished && pItem->m_HasRank == CServerInfo::RANK_RANKED)
 					{
 						Icon.Margin(2.0f, &Icon);
-						RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FINISH_ICON), &Icon, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), FONT_ICON_FLAG_CHECKERED, TEXTALIGN_MC);
+						RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FINISH_ICON), &Icon, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), EQmIcon::FLAG_CHECKERED, FONT_ICON_FLAG_CHECKERED, TEXTALIGN_MC);
 					}
 				}
 
-				// 检查是否是收藏地图
-				const bool IsFavoriteMap = GameClient()->m_TClient.IsFavoriteMap(pItem->m_aMap);
-				if(IsFavoriteMap)
-					TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f); // 金色
-
-				SLabelProperties Props;
-				Props.m_MaxWidth = Button.w;
-				Props.m_StopAtEnd = true;
-				Props.m_EnableWidthCheck = false;
-				bool Printed = false;
-				if(g_Config.m_BrFilterString[0] && (pItem->m_QuickSearchHit & IServerBrowser::QUICK_MAPNAME))
-					Printed = PrintHighlighted(pItem->m_aMap, [&](const char *pFilteredStr, const int FilterLen) {
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_1), &Button, pItem->m_aMap, FontSize, TEXTALIGN_ML, Props, (int)(pFilteredStr - pItem->m_aMap));
-						TextRender()->TextColor(gs_HighlightedTextColor);
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_2), &Button, pFilteredStr, FontSize, TEXTALIGN_ML, Props, FilterLen, &pUiElement->Rect(UI_ELEM_MAP_1)->m_Cursor);
-						TextRender()->TextColor(TextRender()->DefaultTextColor());
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_3), &Button, pFilteredStr + FilterLen, FontSize, TEXTALIGN_ML, Props, -1, &pUiElement->Rect(UI_ELEM_MAP_2)->m_Cursor);
-					});
-				if(!Printed)
-					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_1), &Button, pItem->m_aMap, FontSize, TEXTALIGN_ML, Props);
-
-				const char *pMapNote = GameClient()->m_TClient.GetMapNote(pItem->m_aMap);
-				if(pMapNote && pMapNote[0] != '\0' && Ui()->MouseHovered(&Button))
+				if(Button.w > 0.0f)
 				{
-					static char s_aMapNoteTooltip[512];
-					str_format(s_aMapNoteTooltip, sizeof(s_aMapNoteTooltip), "%s: %s", Localize("Note"), pMapNote);
-					Ui()->DoButtonLogic(&pItem->m_aMap, 0, &Button, BUTTONFLAG_NONE);
-					GameClient()->m_Tooltips.DoToolTip(&pItem->m_aMap, &Button, s_aMapNoteTooltip, 320.0f);
-				}
+					// 检查是否是收藏地图
+					const bool IsFavoriteMap = GameClient()->m_TClient.IsFavoriteMap(pItem->m_aMap);
+					if(IsFavoriteMap)
+						TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f); // 金色
 
-				if(IsFavoriteMap)
-					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					SLabelProperties Props;
+					Props.m_MaxWidth = Button.w;
+					Props.m_StopAtEnd = true;
+					Props.m_EnableWidthCheck = false;
+					bool Printed = false;
+					if(g_Config.m_BrFilterString[0] && (pItem->m_QuickSearchHit & IServerBrowser::QUICK_MAPNAME))
+						Printed = PrintHighlighted(pItem->m_aMap, [&](const char *pFilteredStr, const int FilterLen) {
+							Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_1), &Button, pItem->m_aMap, FontSize, TEXTALIGN_ML, Props, (int)(pFilteredStr - pItem->m_aMap));
+							TextRender()->TextColor(gs_HighlightedTextColor);
+							Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_2), &Button, pFilteredStr, FontSize, TEXTALIGN_ML, Props, FilterLen, &pUiElement->Rect(UI_ELEM_MAP_1)->m_Cursor);
+							TextRender()->TextColor(TextRender()->DefaultTextColor());
+							Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_3), &Button, pFilteredStr + FilterLen, FontSize, TEXTALIGN_ML, Props, -1, &pUiElement->Rect(UI_ELEM_MAP_2)->m_Cursor);
+						});
+					if(!Printed)
+						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_MAP_1), &Button, pItem->m_aMap, FontSize, TEXTALIGN_ML, Props);
+
+					const char *pMapNote = GameClient()->m_TClient.GetMapNote(pItem->m_aMap);
+					if(pMapNote && pMapNote[0] != '\0' && Ui()->MouseHovered(&Button))
+					{
+						static char s_aMapNoteTooltip[512];
+						str_format(s_aMapNoteTooltip, sizeof(s_aMapNoteTooltip), "%s: %s", Localize("Note"), pMapNote);
+						Ui()->DoButtonLogic(&pItem->m_aMap, 0, &Button, BUTTONFLAG_NONE);
+						GameClient()->m_Tooltips.DoToolTip(&pItem->m_aMap, &Button, s_aMapNoteTooltip, 320.0f);
+					}
+
+					if(IsFavoriteMap)
+						TextRender()->TextColor(TextRender()->DefaultTextColor());
+				}
 			}
 			else if(Id == COL_FRIENDS)
 			{
 				if(pItem->m_FriendState != IFriends::FRIEND_NO)
 				{
-					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FRIEND_ICON), &Button, ColorRGBA(0.94f, 0.4f, 0.4f, 1.0f), TextRender()->DefaultTextOutlineColor(), QM_FRIEND_HEART_ICON, TEXTALIGN_MC, false, EFontPreset::DEFAULT_FONT);
+					RenderBrowserIcons(*pUiElement->Rect(UI_ELEM_FRIEND_ICON), &Button, ColorRGBA(0.94f, 0.4f, 0.4f, 1.0f), TextRender()->DefaultTextOutlineColor(), EQmIcon::HEART, FONT_ICON_HEART, TEXTALIGN_MC);
 
 					if(pItem->m_FriendNum > 1)
 					{
@@ -883,7 +961,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_PLAYERS)
 			{
-				Button.VMargin(2.0f, &Button);
 				str_format(aTemp, sizeof(aTemp), "%i/%i", pItem->m_NumFilteredPlayers, ServerBrowser()->Max(*pItem));
 				if(g_Config.m_BrFilterString[0] && (pItem->m_QuickSearchHit & IServerBrowser::QUICK_PLAYER))
 				{
@@ -895,19 +972,18 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			else if(Id == COL_QM_CLIENTS)
 			{
 				const int QmClients = pItem->m_QmClientCount;
-				// 没有梦客户端的服务器留空，避免整列都是 0 的噪音。
 				if(QmClients > 0)
 				{
 					Button.VMargin(2.0f, &Button);
 					str_format(aTemp, sizeof(aTemp), "%d", QmClients);
-					TextRender()->TextColor(QM_CLIENT_COUNT_COLOR);
+					TextRender()->TextColor(gs_QmClientCountColor);
 					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_QM_CLIENTS), &Button, aTemp, FontSize, TEXTALIGN_MR);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 				}
 			}
 			else if(Id == COL_PING)
 			{
-				Button.VMargin(2.0f, &Button);
+				Button.VMargin(4.0f, &Button);
 				FormatServerbrowserPing(aTemp, pItem);
 				if(g_Config.m_UiColorizePing)
 				{
@@ -918,8 +994,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 		}
 	}
-	if(VisibleRange.m_EndItem < NumServers)
-		s_ListBox.SkipItems(NumServers - VisibleRange.m_EndItem);
+	if(EndVisibleItem < NumServers)
+		s_ListBox.SkipItems(NumServers - EndVisibleItem);
 
 	const int NewSelected = s_ListBox.DoEnd();
 	const bool ListScrollActive = QmMenuUiScrollPerfActive(s_ListBox.WheelConsumedThisFrame(), s_ListBox.ScrollbarActive(), s_ListBox.ScrollbarAnimating());
@@ -958,8 +1034,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		constexpr float FadeHeight = 44.0f;
 		Fade.y += maximum(Fade.h - FadeHeight, 0.0f);
 		Fade.h = minimum(Fade.h, FadeHeight);
-		// 底部渐隐只是提示还能继续滚动。它是直角矩形，铺到卡片底边上会切出一条横向暗带，
-		// 所以压到刚好能看出来即可。
 		Fade.Draw4(
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)),
 			BrowserOpacityColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)),
@@ -1006,11 +1080,8 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 	}
 
 	const float SearchExcludeAddrStrMax = 130.0f;
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	const float ExcludeIconWidth = TextRender()->TextWidth(16.0f, FONT_ICON_BAN);
-	TextRender()->SetRenderFlags(0);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	// 图集图标按方形绘制，宽度即字号。
+	const float ExcludeIconWidth = 16.0f;
 	const float SearchExcludeAddrInputOffset = SearchExcludeAddrStrMax + 5.0f + ExcludeIconWidth + 5.0f;
 
 	CUIRect SearchInfoAndAddr, ServersAndConnect, ServersPlayersOnline, SearchAndInfo, ServerAddr, ConnectButtons;
@@ -1055,13 +1126,10 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 
 	// render quick exclude
 	{
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		Ui()->DoLabel(&QuickExclude, FONT_ICON_BAN, 16.0f, TEXTALIGN_ML);
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		// 标签不再带图标（与「搜索:」同行对齐）：排除语义由图标的输入框自身表达，
+		// 输入框内用 BAN 图标并把占位符写成「排除」。
 		CUIRect ExcludeLabel;
-		QuickExclude.VSplitLeft(ExcludeIconWidth + 5.0f, nullptr, &ExcludeLabel);
+		QuickExclude.VSplitLeft(SearchExcludeAddrStrMax, &ExcludeLabel, nullptr);
 		QuickExclude.VSplitLeft(SearchExcludeAddrInputOffset, nullptr, &QuickExclude);
 
 		char aBufExclude[64];
@@ -1078,11 +1146,14 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 			s_ExcludeInput.SelectAll();
 		}
 		const IUiContext ServerBrowserExcludeCtx = SettingsUiContext("server_browser_exclude");
-		ui_widget::SInputFieldOptions SearchOptions;
-		SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
-		SearchOptions.m_Clearable = true;
-		SearchOptions.m_FontSize = 12.0f;
-		if(ui_widget::InputField(ServerBrowserExcludeCtx, &s_ExcludeInput, QuickExclude, SearchOptions).m_Changed)
+		ui_widget::SInputFieldOptions ExcludeOptions;
+		ExcludeOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+		ExcludeOptions.m_Clearable = true;
+		ExcludeOptions.m_FontSize = 12.0f;
+		ExcludeOptions.m_pPlaceholder = Localize("Exclude");
+		ExcludeOptions.m_pLeadingIcon = FONT_ICON_BAN;
+		ExcludeOptions.m_LeadingQmIcon = static_cast<int>(EQmIcon::BAN);
+		if(ui_widget::InputField(ServerBrowserExcludeCtx, &s_ExcludeInput, QuickExclude, ExcludeOptions).m_Changed)
 			Client()->ServerBrowserUpdate();
 	}
 
@@ -1102,28 +1173,6 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 			str_format(aBuf, sizeof(aBuf), Localize("%d players"), ServerBrowser()->NumSortedPlayers());
 		else
 			str_format(aBuf, sizeof(aBuf), Localize("%d player"), ServerBrowser()->NumSortedPlayers());
-		Ui()->DoLabel(&PlayersOnline, aBuf, 12.0f, TEXTALIGN_MR);
-	}
-
-	// status box
-	{
-		CUIRect ServersOnline, PlayersOnline;
-		ServersPlayersOnline.HSplitMid(&PlayersOnline, &ServersOnline);
-
-		char aBuf[128];
-		if(ServerBrowser()->NumServers() != 1)
-			str_format(aBuf, sizeof(aBuf), Localize("%d of %d servers"), ServerBrowser()->NumSortedServers(), ServerBrowser()->NumServers());
-		else
-			str_format(aBuf, sizeof(aBuf), Localize("%d of %d server"), ServerBrowser()->NumSortedServers(), ServerBrowser()->NumServers());
-		Ui()->DoLabel(&ServersOnline, aBuf, 12.0f, TEXTALIGN_MR);
-
-		// 过滤阶段已经维护了相同口径的总人数，避免每帧重新遍历全部服务器。
-		const int NumPlayers = ServerBrowser()->NumSortedPlayers();
-
-		if(NumPlayers != 1)
-			str_format(aBuf, sizeof(aBuf), Localize("%d players"), NumPlayers);
-		else
-			str_format(aBuf, sizeof(aBuf), Localize("%d player"), NumPlayers);
 		Ui()->DoLabel(&PlayersOnline, aBuf, 12.0f, TEXTALIGN_MR);
 	}
 
@@ -1612,7 +1661,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 		str_format(aNumPlayersLabel, sizeof(aNumPlayersLabel), "%d", Community.NumPlayers());
 		Ui()->DoLabel(&PlayerCountLabel, aNumPlayersLabel, 7.0f, TEXTALIGN_MR);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		Ui()->DoLabel(&PlayerCountIcon, FONT_ICON_USER, 7.0f, TEXTALIGN_MC);
+		Ui()->DoLabel_QmIcon(&PlayerCountIcon, EQmIcon::USER, FONT_ICON_USER, 7.0f, TEXTALIGN_MC);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 
@@ -1851,11 +1900,11 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 	static CListBox s_ListBox;
 	View.VSplitLeft(5.0f, nullptr, &View);
 	s_ListBox.DoAutoSpacing(2.0f);
-	s_ListBox.DoStart(25.0f, pSelectedServer->m_NumReceivedClients, 1, 3, -1, &View, false, IGraphics::CORNER_NONE);
+	s_ListBox.DoStart(25.0f, (int)pSelectedServer->m_vClients.size(), 1, 3, -1, &View, false, IGraphics::CORNER_NONE);
 
-	for(int i = 0; i < pSelectedServer->m_NumReceivedClients; i++)
+	for(size_t i = 0; i < pSelectedServer->m_vClients.size(); i++)
 	{
-		const CServerInfo::CClient &CurrentClient = pSelectedServer->m_aClients[i];
+		const CServerInfo::CClient &CurrentClient = pSelectedServer->m_vClients[i];
 		const CListboxItem Item = s_ListBox.DoNextItem(&CurrentClient);
 		if(!Item.m_Visible)
 			continue;
@@ -1926,13 +1975,7 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 		}
 		else if(CurrentClient.m_aaSkin7[protocol7::SKINPART_BODY][0] != '\0')
 		{
-			CTeeRenderInfo TeeInfo;
-			TeeInfo.m_Size = minimum(Skin.w, Skin.h);
-			for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
-			{
-				GameClient()->m_Skins7.FindSkinPart(Part, CurrentClient.m_aaSkin7[Part], true)->ApplyTo(TeeInfo.m_aSixup[g_Config.m_ClDummy]);
-				GameClient()->m_Skins7.ApplyColorTo(TeeInfo.m_aSixup[g_Config.m_ClDummy], CurrentClient.m_aUseCustomSkinColor7[Part], CurrentClient.m_aCustomSkinColor7[Part], Part);
-			}
+			const CTeeRenderInfo TeeInfo = GetTeeRenderInfo(vec2(Skin.w, Skin.h), "default", false, 0, 0);
 			const CAnimState *pIdleState = CAnimState::GetIdle();
 			vec2 OffsetToMid;
 			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
@@ -1985,7 +2028,7 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 	const int NewSelected = s_ListBox.DoEnd();
 	if(s_ListBox.WasItemSelected())
 	{
-		const CServerInfo::CClient &SelectedClient = pSelectedServer->m_aClients[NewSelected];
+		const CServerInfo::CClient &SelectedClient = pSelectedServer->m_vClients[NewSelected];
 		if(SelectedClient.m_FriendState == IFriends::FRIEND_PLAYER)
 		{
 			GameClient()->Friends()->RemoveFriend(SelectedClient.m_aName, SelectedClient.m_aClan);
@@ -2019,15 +2062,15 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 	m_BrowserFriendList.Update(*GameClient()->Friends(), *ServerBrowser(), g_Config.m_ClFriendsIgnoreClan != 0);
 	const auto &vvFriends = m_BrowserFriendList.Groups();
+
 	bool OpenRemovePopup = false;
 	static CScrollRegion s_FriendsMoveCategoryPopupScrollRegion;
 	static CScrollRegion s_FriendsActionPopupScrollRegion;
-
 	bool FollowTargetOnline = false;
 	const char *pFollowTargetAddress = "";
 	for(const auto &vFriends : vvFriends)
 	{
-		for(const CFriendItem &Friend : vFriends)
+		for(const auto &Friend : vFriends)
 		{
 			if(Friend.ServerInfo() == nullptr)
 				continue;
@@ -2051,6 +2094,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	int TotalFriendItems = 0;
 	for(const auto &vFriends : vvFriends)
 		TotalFriendItems += (int)vFriends.size();
+	m_vFriendTooltipText.clear();
 	m_vFriendTooltipText.resize(TotalFriendItems);
 	int VisibleFriendItems = 0;
 
@@ -2146,7 +2190,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		ResetCategoryDragState();
 	if(s_CategoryDragState.Update(vec2(Ui()->MouseX(), Ui()->MouseY()), Ui()->MouseButton(0)))
 	{
-		// 拖动期间只显示分组标题，不修改或保存各分组原本的展开状态。
 		List.y -= ScrollOffset.y;
 		s_ScrollRegion.SetScrollOffsetY(0.0f);
 	}
@@ -2158,7 +2201,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			ResetFriendDragState();
 		else if(s_FriendDragState.Update(vec2(Ui()->MouseX(), Ui()->MouseY()), Ui()->MouseButton(0)))
 		{
-			// 好友行临时隐藏后，使用独立 ID 持续接收拖动，避免松手被识别为加入服务器。
+			// 列表行临时隐藏后使用独立 ID 持续拖动，避免松手被识别为加入服务器。
 			Ui()->SetActiveItem(&s_FriendDragState);
 			List.y -= ScrollOffset.y;
 			s_ScrollRegion.SetScrollOffsetY(0.0f);
@@ -2190,7 +2233,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		const bool FriendDropAllowed = s_FriendDragState.CanDropTo(pCategoryName);
 		if(FriendDropHovered && FriendDropAllowed)
 			FriendDropCategoryIndex = CategoryIndex;
-
 		const bool DraggingThisHeader = s_CategoryDragState.m_DraggingIndex == CategoryIndex;
 		const bool HeaderHovered = HeaderInside || DraggingThisHeader;
 		const bool PopupOpen = Ui()->IsPopupOpen(&m_FriendsCategoryPopupContext) && m_FriendsCategoryPopupContext.m_CategoryIndex == CategoryIndex;
@@ -2207,7 +2249,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 		GroupIcon.Margin(2.0f, &GroupIcon);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(HeaderHovered ? TextRender()->DefaultTextColor() : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
-		Ui()->DoLabel(&GroupIcon, m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		Ui()->DoLabel_QmIcon(&GroupIcon, m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend ? EQmIcon::SQUARE_MINUS : EQmIcon::SQUARE_PLUS, m_vFriendsCategoryExpanded[CategoryIndex] && !DraggingAnyHeader && !DraggingFriend ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		SplitFriendsCategoryHeaderRects(Header, nullptr, &ManageButton);
@@ -2225,7 +2267,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			const CUIRect Panel = CMenus::SecondaryPanelRect(Ui()->MouseX(), Ui()->MouseY(), 300.0f, CMenus::FriendsCategoryActionsPopupHeight(), *Ui()->Screen());
 			Ui()->DoPopupMenu(&m_FriendsCategoryPopupContext, Panel.x, Panel.y, Panel.w, Panel.h, &m_FriendsCategoryPopupContext, PopupFriendsCategory);
 		};
-		if(Ui()->DoButton_FontIcon(&m_vFriendsCategoryManageButtons[CategoryIndex], FONT_ICON_GEAR, 0, &ManageButton, BUTTONFLAG_LEFT) && !DraggingAnyHeader && !DraggingFriend)
+		if(Ui()->DoButton_QmIcon(&m_vFriendsCategoryManageButtons[CategoryIndex], EQmIcon::GEAR, FONT_ICON_GEAR, 0, &ManageButton, BUTTONFLAG_LEFT) && !DraggingAnyHeader && !DraggingFriend)
 		{
 			OpenCategoryManagePopup();
 		}
@@ -2355,13 +2397,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				}
 				else if(Friend.Skin7(protocol7::SKINPART_BODY)[0] != '\0')
 				{
-					CTeeRenderInfo TeeInfo;
-					TeeInfo.m_Size = minimum(Skin.w, Skin.h);
-					for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
-					{
-						GameClient()->m_Skins7.FindSkinPart(Part, Friend.Skin7(Part), true)->ApplyTo(TeeInfo.m_aSixup[g_Config.m_ClDummy]);
-						GameClient()->m_Skins7.ApplyColorTo(TeeInfo.m_aSixup[g_Config.m_ClDummy], Friend.UseCustomSkinColor7(Part), Friend.CustomSkinColor7(Part), Part);
-					}
+					const CTeeRenderInfo TeeInfo = GetTeeRenderInfo(vec2(Skin.w, Skin.h), "default", false, 0, 0);
 					const CAnimState *pIdleState = CAnimState::GetIdle();
 					vec2 OffsetToMid;
 					CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
@@ -2415,12 +2451,12 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					if(Friend.ServerInfo())
 					{
 						TextRender()->TextColor(FollowingThisFriend || Ui()->HotItem() == pFollowButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
-						Ui()->DoLabel(&FollowButton, FollowingThisFriend ? FONT_ICON_STOP : FONT_ICON_PLAY, FollowButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+						Ui()->DoLabel_QmIcon(&FollowButton, FollowingThisFriend ? EQmIcon::STOP : EQmIcon::PLAY, FollowingThisFriend ? FONT_ICON_STOP : FONT_ICON_PLAY, FollowButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 					}
 					TextRender()->TextColor(Ui()->HotItem() == pCopyButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
-					Ui()->DoLabel(&CopyButton, FONT_ICON_COPY, CopyButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+					Ui()->DoLabel_QmIcon(&CopyButton, EQmIcon::COPY, FONT_ICON_COPY, CopyButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 					TextRender()->TextColor(Ui()->HotItem() == pRemoveButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
-					Ui()->DoLabel(&RemoveButton, FONT_ICON_TRASH, RemoveButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+					Ui()->DoLabel_QmIcon(&RemoveButton, EQmIcon::TRASH, FONT_ICON_TRASH, RemoveButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 					TextRender()->SetRenderFlags(0);
 					TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -2456,7 +2492,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				if(IsPlayerFriend && Ui()->MouseButtonClicked(0) && Inside && !InsideFriendAction && !Ui()->IsPopupOpen() && (Ui()->IsActiveItem(pListItemId) || Ui()->ActiveItem() == nullptr))
 				{
 					s_FriendDragState.Begin(pListItemId, Friend.FriendState(), Friend.Name(), Friend.Clan(), GameClient()->Friends()->GetFriendCategory(Friend.Name(), Friend.Clan()), FriendRow, vec2(Ui()->MouseX(), Ui()->MouseY()));
-					// 头像等提示区域没有按钮 ActiveItem，也允许从这些位置起拖。
 					if(Ui()->ActiveItem() == nullptr)
 						Ui()->SetActiveItem(&s_FriendDragState);
 				}
@@ -2923,7 +2958,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			DropDownSelection = Ui()->DoDropDown(&CategoryDropDown, DropDownSelection, vpCategories.data(), (int)vpCategories.size(), m_FriendsAddCategoryDropDownState);
 			if(DropDownSelection >= 0 && DropDownSelection < (int)vCategoryIndices.size())
 				m_FriendAddCategoryIndex = vCategoryIndices[DropDownSelection];
-			if(Ui()->DoButton_FontIcon(&m_FriendsAddCategoryCreateButton, FONT_ICON_PLUS, 0, &CreateCategoryButton, BUTTONFLAG_LEFT))
+			if(Ui()->DoButton_QmIcon(&m_FriendsAddCategoryCreateButton, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &CreateCategoryButton, BUTTONFLAG_LEFT))
 			{
 				m_FriendsCategoryPopupContext.m_pMenus = this;
 				m_FriendsCategoryPopupContext.m_CategoryIndex = m_FriendAddCategoryIndex;
@@ -3659,7 +3694,7 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 				RenderMetric(DeathMetric, Localize("Deaths"), aDeaths, TEXTALIGN_MC);
 				RenderMetric(LastEnteredMetric, Localize("Last entered"), aLastEntered, TEXTALIGN_MR);
 
-				if(Ui()->DoButton_FontIcon(&s_vMapHistoryRemoveButtons[HistoryIndex], FONT_ICON_XMARK, 0, &RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
+				if(Ui()->DoButton_QmIcon(&s_vMapHistoryRemoveButtons[HistoryIndex], EQmIcon::CLOSE, FONT_ICON_XMARK, 0, &RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
 					RemoveMapId = Record.m_MapId;
 				if(Ui()->HotItem() == &s_vMapHistoryRemoveButtons[HistoryIndex])
 					GameClient()->m_Tooltips.DoToolTip(&s_vMapHistoryRemoveButtons[HistoryIndex], &RemoveButton, Localize("Remove from history"));
@@ -3733,8 +3768,16 @@ enum
 	NUM_UI_TOOLBOX_PAGES,
 };
 
+static void NormalizeServerbrowserToolboxPage()
+{
+	// 旧版本把栖梦页签保存为 3；加载旧配置时回到好友页，不进入无效分支。
+	if(g_Config.m_UiToolboxPage >= NUM_UI_TOOLBOX_PAGES)
+		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
+}
+
 void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 {
+	NormalizeServerbrowserToolboxPage();
 	CUIRect FilterTabButton, InfoTabButton, FriendsTabButton;
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 	TabBar.VSplitLeft(TabBar.w / 3.0f, &FilterTabButton, &TabBar);
@@ -3743,6 +3786,7 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 	InfoTabButton.VSplitLeft(3.0f, nullptr, &InfoTabButton);
 	InfoTabButton.VSplitRight(3.0f, &InfoTabButton, nullptr);
 	FriendsTabButton.VSplitLeft(3.0f, nullptr, &FriendsTabButton);
+	FriendsTabButton.VSplitRight(3.0f, &FriendsTabButton, nullptr);
 
 	const ColorRGBA ColorActive = UseNewUi ? BrowserPanelElevatedColor(0.92f) : ms_ColorTabbarActive;
 	const ColorRGBA ColorInactive = UseNewUi ? BrowserPanelColor(0.70f) : ms_ColorTabbarInactive;
@@ -3781,10 +3825,8 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
 		GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
 
-		// 好友页签画实体爱心，临时切到默认字体所在的心形。
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		static CButtonContainer s_FriendsTabButton;
-		if(DoButton_MenuTab(&s_FriendsTabButton, QM_FRIEND_HEART_ICON, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+		if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
 			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
 		GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
 
@@ -3797,23 +3839,21 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
 	static CButtonContainer s_FilterTabButton;
-	if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], &ColorInactive, &ColorActive, &ColorHover))
+	if(DoButton_MenuTab_QmIcon(&s_FilterTabButton, EQmIcon::LIST_UL, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], &ColorInactive, &ColorActive, &ColorHover))
 	{
 		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_FilterTabButton, &FilterTabButton, Localize("Server filter"));
 
 	static CButtonContainer s_InfoTabButton;
-	if(DoButton_MenuTab(&s_InfoTabButton, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], &ColorInactive, &ColorActive, &ColorHover))
+	if(DoButton_MenuTab_QmIcon(&s_InfoTabButton, EQmIcon::INFO, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], &ColorInactive, &ColorActive, &ColorHover))
 	{
 		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
 
-	// 好友页签画实体爱心，临时切到默认字体所在的心形。
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	static CButtonContainer s_FriendsTabButton;
-	if(DoButton_MenuTab(&s_FriendsTabButton, QM_FRIEND_HEART_ICON, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], &ColorInactive, &ColorActive, &ColorHover))
+	if(DoButton_MenuTab_QmIcon(&s_FriendsTabButton, EQmIcon::HEART, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], &ColorInactive, &ColorActive, &ColorHover))
 	{
 		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
 	}
@@ -3825,6 +3865,7 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 
 void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 {
+	NormalizeServerbrowserToolboxPage();
 	static int s_PrevToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
 	static float s_ToolboxDirection = 0.0f;
 	if(g_Config.m_UiToolboxPage != s_PrevToolboxPage)
@@ -3856,7 +3897,7 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 		RenderServerbrowserFriends(ToolBox);
 		break;
 	default:
-		dbg_assert_failed("ui_toolbox_page invalid");
+		RenderServerbrowserFilters(ToolBox);
 		break;
 	}
 
@@ -3872,7 +3913,10 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 {
 	CUiBackgroundAlphaScaleScope BackgroundAlphaScaleScope(Ui(), g_Config.m_QmMapBrowserOpacity / 100.0f);
 
-	UpdateCommunityCache(false);
+	// 首次打开菜单时先复用现有 community 选择结果。缓存哈希、过滤器重建
+	// 和列表刷新放到下一帧，避免 ESC 首帧同步执行后台元数据整理。
+	if(m_MenuOpenFrame > 0)
+		UpdateCommunityCache(false);
 
 	switch(g_Config.m_UiPage)
 	{
@@ -3955,11 +3999,9 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	ServerListBase.h = maximum(StatusBox.y - ColumnGap - ServerListBase.y, 0.0f);
 	if(UseNewUi)
 	{
+		ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 		StatusBox.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 		ToolBoxBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-		// 服务器列表只保留这一张卡片当外框：表头与列表内容直接画到卡片上，
-		// 不再额外内缩，避免同色半透明叠加出「框中框」的深色内块。
-		ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 		ServerListBase.Margin(2.0f, &ServerListBase);
 		StatusBox.Margin(10.0f, &StatusBox);
 		ToolBoxBase.Margin(10.0f, &ToolBoxBase);
@@ -3977,8 +4019,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	float TransitionAlpha = UiSwitchAnimationAlpha(TransitionStrength);
 	if(DoClip)
 	{
-		CUIRect TransitionView = View;
-		TransitionOffset = ApplyUiSwitchOffset(TransitionView, TransitionStrength, m_BrowserTabTransitionDirection, false, 0.08f, 24.0f, 120.0f);
+		TransitionOffset = TransitionStrength * std::clamp(View.w * 0.08f, 24.0f, 120.0f) * m_BrowserTabTransitionDirection;
 	}
 
 	bool WasListboxItemActivated = false;
@@ -3989,8 +4030,6 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 			Ui()->ClipEnable(&ServerListBase);
 			ServerList.x += TransitionOffset;
 		}
-		// 滚动条轨道与滑块由 Ui()->ScaleBackgroundAlpha() 缩放。列表正文不再额外压暗后，
-		// 轨道要按倍率调低，否则它会成为卡片里最亮的一块。
 		{
 			CUiBackgroundAlphaScaleScope ListOpacityScope(Ui(), SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE);
 			RenderServerbrowserServerList(ServerList, WasListboxItemActivated);
@@ -4141,5 +4180,11 @@ void CMenus::UpdateCommunityCache(bool Force)
 	else
 	{
 		ServerBrowser()->CommunityCache().Update(Force);
+		// 社区数据刷新后，把国家筛选名单与新出现的可选国家对齐，避免"只看某几个国家"的结果漂移。
+		auto *pServerBrowser = dynamic_cast<CServerBrowser *>(ServerBrowser());
+		if(pServerBrowser != nullptr && pServerBrowser->CountriesFilter().AutoExcludeNewCountries())
+		{
+			Client()->ServerBrowserUpdate();
+		}
 	}
 }

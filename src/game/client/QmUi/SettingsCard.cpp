@@ -29,6 +29,20 @@ namespace
 		return Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Fallback;
 	}
 
+	void RenderSettingsCardLabel(const IUiContext &Ctx, const SSettingsCardSpec &Spec, bool Subtitle, const CUIRect &Rect, const char *pText, float Size, const SLabelProperties &Props)
+	{
+		if(g_Config.m_QmNewUi == 0 || Ctx.m_pMenus == nullptr || Spec.m_pStableId == nullptr || Spec.m_pStableId[0] == '\0')
+		{
+			Ctx.m_pUi->DoLabel(&Rect, pText, Size, TEXTALIGN_ML, Props);
+			return;
+		}
+
+		// 卡片 stable ID 跨设置页唯一；公开的设置文字池入口同时处理预布局收集与渲染。
+		char aTextId[256];
+		str_format(aTextId, sizeof(aTextId), "settings-card-%s:%s", Subtitle ? "subtitle" : "title", Spec.m_pStableId);
+		Ctx.m_pMenus->DoSettingsMenuLabel(-1, -1, -1, aTextId, &Rect, pText, Size, TEXTALIGN_ML, Props);
+	}
+
 }
 
 void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, const bool Collapsed, const float DrawAlpha)
@@ -38,6 +52,7 @@ void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect
 	const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
 	const bool Hovered = Ctx.m_pUi->MouseHovered(&Rect);
 	const float Alpha = std::clamp(DrawAlpha, 0.0f, 1.0f);
+	const float PixelSize = Ctx.m_pUi->PixelSize();
 	const CUIRect &ChromeRect = Rect;
 	const float Radius = std::min(ui_token::radius::TIGHT * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.25f);
 	const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? 0.28f : 0.18f) * Alpha);
@@ -53,7 +68,7 @@ void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect
 	pTextRender->TextColor(IconColor);
 	pTextRender->SetFontPreset(EFontPreset::ICON_FONT_BOLD);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	Ctx.m_pUi->DoLabel(&ChromeRect, Collapsed ? FontIcons::FONT_ICON_CHEVRON_DOWN : FontIcons::FONT_ICON_CHEVRON_UP, IconSize, TEXTALIGN_MC);
+	Ctx.m_pUi->DoLabel_QmIcon(&ChromeRect, Collapsed ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP, Collapsed ? FontIcons::FONT_ICON_CHEVRON_DOWN : FontIcons::FONT_ICON_CHEVRON_UP, IconSize, TEXTALIGN_MC);
 	pTextRender->SetRenderFlags(PreviousFlags);
 	pTextRender->SetFontPreset(PreviousPreset);
 	pTextRender->TextOutlineColor(PreviousOutlineColor);
@@ -95,7 +110,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 	Border.a *= DrawState.m_DrawAlpha;
 	ColorRGBA Surface = ResolveSettingsCardSurfaceColor(VisualOptions.m_UseSurfaceColor ? VisualOptions.m_SurfaceColor : Theme.m_Surface, DrawState);
 	const float PixelSize = Ctx.m_pUi != nullptr ? Ctx.m_pUi->PixelSize() : 0.0f;
-	// 始终使用同一份连续几何，避免开始/停止动画时切换像素吸附造成跳变。
+	// 绘制和命中、内容使用同一份连续几何，避免滑动时边缘逐像素跳动。
 	const CUIRect &ChromeRect = DrawFrame.m_Rect;
 	const float CardRadius = std::min(ui_token::settings::CARD_RADIUS * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.5f);
 	// 焦点与拖放只能改变边框颜色，普通 hover 不参与 chrome；任何状态都不能改变
@@ -123,10 +138,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		SLabelProperties TitleProps;
 		TitleProps.m_MaxWidth = DrawFrame.m_TitleRect.w;
 		TitleProps.m_EllipsisAtEnd = true;
-		if(Ctx.m_pMenus != nullptr)
-			Ctx.m_pMenus->DoSettingsCardLabel(Spec.m_pStableId, false, &DrawFrame.m_TitleRect, Spec.m_pTitle != nullptr ? Spec.m_pTitle : "", ui_token::font::TITLE * UiScale, TitleProps);
-		else
-			Ctx.m_pUi->DoLabel(&DrawFrame.m_TitleRect, Spec.m_pTitle != nullptr ? Spec.m_pTitle : "", ui_token::font::TITLE * UiScale, TEXTALIGN_ML, TitleProps);
+		RenderSettingsCardLabel(Ctx, Spec, false, DrawFrame.m_TitleRect, Spec.m_pTitle != nullptr ? Spec.m_pTitle : "", ui_token::font::TITLE * UiScale, TitleProps);
 		const char *pSubtitle = Spec.m_pSubtitle;
 		if(pSubtitle != nullptr && SettingsCardSubtitleVisible(DrawState.m_Hovered, DrawState.m_SubtitleVisibleDuringMotion, DrawState.m_Focused))
 		{
@@ -137,10 +149,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 			SubtitleProps.m_MaxWidth = DrawFrame.m_SubtitleRect.w;
 			SubtitleProps.m_EllipsisAtEnd = true;
 			const float SubtitleSize = ResolveSettingsSmallFontSize(UiScale);
-			if(Ctx.m_pMenus != nullptr)
-				Ctx.m_pMenus->DoSettingsCardLabel(Spec.m_pStableId, true, &DrawFrame.m_SubtitleRect, pSubtitle, SubtitleSize, SubtitleProps);
-			else
-				Ctx.m_pUi->DoLabel(&DrawFrame.m_SubtitleRect, pSubtitle, SubtitleSize, TEXTALIGN_ML, SubtitleProps);
+			RenderSettingsCardLabel(Ctx, Spec, true, DrawFrame.m_SubtitleRect, pSubtitle, SubtitleSize, SubtitleProps);
 		}
 		// 标题和副标题只影响本卡片，不能把调用方的文本状态写死为默认白色。
 		Ctx.m_pTextRender->SetRenderFlags(PreviousRenderFlags);

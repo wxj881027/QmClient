@@ -252,11 +252,50 @@ bool CMysqlConnection::ConnectImpl()
 		mysql_options(&m_Mysql, MYSQL_OPT_BIND, m_Config.m_aBindaddr);
 	}
 
+	if(m_Config.m_UseSsl)
+	{
+		if(m_Config.m_aSslCert[0])
+		{
+			mysql_options(&m_Mysql, MYSQL_OPT_SSL_CERT, m_Config.m_aSslCert);
+		}
+		if(m_Config.m_aSslCa[0])
+		{
+			mysql_options(&m_Mysql, MYSQL_OPT_SSL_CA, m_Config.m_aSslCa);
+		}
+		// 客户端库依据这些选项自行启用 TLS，CLIENT_SSL 标志由库内部设置
+#if defined(MARIADB_VERSION_ID)
+		my_bool OptSslEnforce = 1;
+		mysql_options(&m_Mysql, MYSQL_OPT_SSL_ENFORCE, &OptSslEnforce);
+		my_bool OptVerifyServerCert = m_Config.m_aSslCa[0] != '\0';
+		mysql_options(&m_Mysql, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &OptVerifyServerCert);
+#else
+		// MySQL 8.0 中 MYSQL_OPT_SSL_VERIFY_SERVER_CERT 已废弃/移除，改用 MYSQL_OPT_SSL_MODE
+		unsigned int OptSslMode = m_Config.m_aSslCa[0] != '\0' ? SSL_MODE_VERIFY_IDENTITY : SSL_MODE_REQUIRED;
+		mysql_options(&m_Mysql, MYSQL_OPT_SSL_MODE, &OptSslMode);
+#endif
+	}
+
 	if(!mysql_real_connect(&m_Mysql, m_Config.m_aIp, m_Config.m_aUser, m_Config.m_aPass, nullptr, m_Config.m_Port, nullptr, CLIENT_IGNORE_SIGPIPE))
 	{
 		StoreErrorMysql("real_connect");
 		return false;
 	}
+
+	// 校验 SSL 状态
+	if(m_Config.m_UseSsl)
+	{
+		const char *pSslCipher = mysql_get_ssl_cipher(&m_Mysql);
+		if(!pSslCipher)
+		{
+			str_copy(m_aErrorDetail, "(ssl_cipher): connection not encrypted despite m_UseSsl (server ssl disabled?)", sizeof(m_aErrorDetail));
+			mysql_close(&m_Mysql);
+			mem_zero(&m_Mysql, sizeof(m_Mysql));
+			mysql_init(&m_Mysql);
+			return false;
+		}
+		dbg_msg("mysql", "using ssl cipher: %s", pSslCipher);
+	}
+
 	m_HaveConnection = true;
 
 	m_pStmt = std::unique_ptr<MYSQL_STMT, CStmtDeleter>(mysql_stmt_init(&m_Mysql));

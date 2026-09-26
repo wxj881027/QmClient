@@ -13,7 +13,6 @@
 
 #include <game/client/components/effects.h>
 #include <game/client/components/qmclient/modes.h>
-#include <game/client/components/qmclient/qm_item_culling_logic.h>
 #include <game/client/gameclient.h>
 #include <game/client/laser_data.h>
 #include <game/client/pickup_data.h>
@@ -28,10 +27,11 @@
 #define m_RiBetterLasers m_QmLaserEnhanced
 #define m_RiLaserGlowIntensity m_QmLaserGlowIntensity
 
-void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId)
+void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId, const CScreenRect &ScreenRect)
 {
 	int CurWeapon = std::clamp(pCurrent->m_Type, 0, NUM_WEAPONS - 1);
 	const bool AllowEffects = !GameClient()->IsRenderingDummyMiniMap();
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 
 	// get positions
 	float Curvature = 0;
@@ -95,6 +95,8 @@ void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId)
 	}
 
 	vec2 Pos = CalcPos(pCurrent->m_StartPos, pCurrent->m_StartVel, Curvature, Speed, Ct);
+	if(!ScreenRect.Inside(Pos))
+		return;
 	vec2 PrevPos = CalcPos(pCurrent->m_StartPos, pCurrent->m_StartVel, Curvature, Speed, Ct - 0.001f);
 
 	float Alpha = 1.0f;
@@ -109,7 +111,7 @@ void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId)
 	// don't check for validity of the projectile for the current weapon here, so particle effects are rendered for mod compatibility
 	if(CurWeapon == WEAPON_GRENADE)
 	{
-		if(AllowEffects && !ShouldHideFocusExplosionEffects(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideExplosionEffects != 0))
+		if(AllowEffects && !Focus.m_HideExplosionEffects)
 			GameClient()->m_Effects.SmokeTrail(Pos, Vel * -1, Alpha, 0.0f);
 		static float s_Time = 0.0f;
 		static float s_LastLocalTime = LocalTime();
@@ -148,6 +150,11 @@ void CItems::RenderPickup(const CNetObj_Pickup *pPrev, const CNetObj_Pickup *pCu
 		QuadOffset = m_PickupHealthOffset;
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_SpritePickupHealth);
 	}
+	else if(pCurrent->m_Type == POWERUP_FREEZE)
+	{
+		QuadOffset = m_PickupFreezeOffset;
+		Graphics()->TextureSet(GameClient()->m_GameSkin.m_SpritePickupFreeze);
+	}
 	else if(pCurrent->m_Type == POWERUP_ARMOR)
 	{
 		QuadOffset = m_PickupArmorOffset;
@@ -175,6 +182,10 @@ void CItems::RenderPickup(const CNetObj_Pickup *pPrev, const CNetObj_Pickup *pCu
 	{
 		QuadOffset = m_aPickupWeaponArmorOffset[pCurrent->m_Type - POWERUP_ARMOR_SHOTGUN];
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpritePickupWeaponArmor[pCurrent->m_Type - POWERUP_ARMOR_SHOTGUN]);
+	}
+	else
+	{
+		return;
 	}
 	Graphics()->QuadsSetRotation(0);
 	Graphics()->SetColor(1.f, 1.f, 1.f, 1.f);
@@ -601,19 +612,22 @@ void CItems::OnRender()
 	bool UsePredicted = !RenderingMini && GameClient()->Predict() && GameClient()->AntiPingGunfire();
 	auto &aSwitchers = GameClient()->Switchers();
 
-	// QmClient: 屏幕外实体裁剪（对齐上游 14fc1e9d1e）。边距与判定集中在 qm_item_culling_logic.h，便于单测。
-	const CScreenRect ScreenRect = Graphics()->GetScreen();
-	const qm_item_culling::SRect ScreenCullingRect{ScreenRect.m_TopLeft.x, ScreenRect.m_TopLeft.y, ScreenRect.m_BottomRight.x, ScreenRect.m_BottomRight.y};
+	CScreenRect ScreenRectLaser = Graphics()->GetScreen();
+	CScreenRect ScreenRectProjectile = ScreenRectLaser;
+	CScreenRect ScreenRectPickup = ScreenRectLaser;
 
-	auto IsProjectileInside = [&](const CProjectileData &Data) -> bool {
-		return qm_item_culling::IsProjectileInside(ScreenCullingRect, Data.m_StartPos);
-	};
-	auto IsPickupInside = [&](const CPickupData &Data) -> bool {
-		return qm_item_culling::IsPickupInside(ScreenCullingRect, Data.m_Pos);
-	};
+	constexpr float TileSize = 64.0f;
+	ScreenRectProjectile.Expand(TileSize);
+	ScreenRectLaser.Expand(TileSize / 2.0f);
+	ScreenRectPickup.Expand(1.75f * TileSize, 0.75f * TileSize);
+
 	auto IsLaserInside = [&](const CLaserData &LaserData) -> bool {
-		return qm_item_culling::IsLaserInside(ScreenCullingRect, LaserData.m_From, LaserData.m_To);
+		const vec2 &From = LaserData.m_From;
+		const vec2 &To = LaserData.m_To;
+		return !((From.x < ScreenRectLaser.m_TopLeft.x && To.x < ScreenRectLaser.m_TopLeft.x) || (From.x > ScreenRectLaser.m_BottomRight.x && To.x > ScreenRectLaser.m_BottomRight.x) ||
+			 (From.y < ScreenRectLaser.m_TopLeft.y && To.y < ScreenRectLaser.m_TopLeft.y) || (From.y > ScreenRectLaser.m_BottomRight.y && To.y > ScreenRectLaser.m_BottomRight.y));
 	};
+
 	if(UsePredicted)
 	{
 		for(auto *pProj = (CProjectile *)GameClient()->m_PrevPredictedWorld.FindFirst(CGameWorld::ENTTYPE_PROJECTILE); pProj; pProj = (CProjectile *)pProj->NextEntity())
@@ -622,9 +636,7 @@ void CItems::OnRender()
 				continue;
 
 			CProjectileData Data = pProj->GetData();
-			if(!IsProjectileInside(Data))
-				continue;
-			RenderProjectile(&Data, pProj->GetId());
+			RenderProjectile(&Data, pProj->GetId(), ScreenRectProjectile);
 		}
 		for(CEntity *pEnt = GameClient()->m_PrevPredictedWorld.FindFirst(CGameWorld::ENTTYPE_LASER); pEnt; pEnt = pEnt->NextEntity())
 		{
@@ -663,8 +675,6 @@ void CItems::OnRender()
 		if(Item.m_Type == NETOBJTYPE_PROJECTILE || Item.m_Type == NETOBJTYPE_DDRACEPROJECTILE || Item.m_Type == NETOBJTYPE_DDNETPROJECTILE)
 		{
 			CProjectileData Data = ExtractProjectileInfo(Item.m_Type, pData, &GameClient()->m_GameWorld, pEntEx);
-			if(!IsProjectileInside(Data))
-				continue;
 			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
 			if(Inactive && (Data.m_Explosive ? BlinkingProjEx : BlinkingProj))
 				continue;
@@ -686,13 +696,11 @@ void CItems::OnRender()
 						continue;
 				}
 			}
-			RenderProjectile(&Data, Item.m_Id);
+			RenderProjectile(&Data, Item.m_Id, ScreenRectProjectile);
 		}
 		else if(Item.m_Type == NETOBJTYPE_PICKUP || Item.m_Type == NETOBJTYPE_DDNETPICKUP)
 		{
 			CPickupData Data = ExtractPickupInfo(Item.m_Type, pData, pEntEx);
-			if(!IsPickupInside(Data))
-				continue;
 			bool Inactive = !IsSuper && Data.m_SwitchNumber > 0 && Data.m_SwitchNumber < (int)aSwitchers.size() && !aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
 
 			if(Inactive && BlinkingPickup)
@@ -703,6 +711,8 @@ void CItems::OnRender()
 				if(pPickup && pPickup->InDDNetTile())
 					continue;
 			}
+			if(!ScreenRectPickup.Inside(Data.m_Pos))
+				continue;
 			const void *pPrev = Client()->SnapFindItem(IClient::SNAP_PREV, Item.m_Type, Item.m_Id);
 			if(pPrev)
 				RenderPickup((const CNetObj_Pickup *)pPrev, (const CNetObj_Pickup *)pData, false, Data.m_Flags);
@@ -792,6 +802,9 @@ void CItems::OnInit()
 	Graphics()->GetSpriteScale(SPRITE_PICKUP_ARMOR, ScaleX, ScaleY);
 	Graphics()->QuadsSetSubset(0, 0, 1, 1);
 	m_PickupArmorOffset = Graphics()->QuadContainerAddSprite(m_ItemsQuadContainerIndex, 64.f * ScaleX, 64.f * ScaleY);
+	Graphics()->GetSpriteScale(SPRITE_PICKUP_FREEZE, ScaleX, ScaleY);
+	Graphics()->QuadsSetSubset(0, 0, 1, 1);
+	m_PickupFreezeOffset = Graphics()->QuadContainerAddSprite(m_ItemsQuadContainerIndex, 64.f * ScaleX, 64.f * ScaleY);
 
 	for(int i = 0; i < NUM_WEAPONS; ++i)
 	{
@@ -849,6 +862,7 @@ void CItems::ReconstructSmokeTrail(const CProjectileData *pCurrent, int DestroyT
 		return;
 
 	int PredictionTick = Client()->GetPredictionTick();
+	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 
 	if(PredictionTick == pCurrent->m_StartTick)
 		return;
@@ -903,7 +917,7 @@ void CItems::ReconstructSmokeTrail(const CProjectileData *pCurrent, int DestroyT
 		if(Pt - MinTrailSpan > 0.01f)
 			TimePassed = minimum(TimePassed, (TimePassed - MinTrailSpan) / (Pt - MinTrailSpan) * (MinTrailSpan * 0.5f) + MinTrailSpan);
 		// add particle for this projectile
-		if(pCurrent->m_Type == WEAPON_GRENADE && !ShouldHideFocusExplosionEffects(g_Config.m_QmFocusMode != 0, g_Config.m_QmFocusModeHideExplosionEffects != 0))
+		if(pCurrent->m_Type == WEAPON_GRENADE && !Focus.m_HideExplosionEffects)
 			GameClient()->m_Effects.SmokeTrail(Pos, Vel * -1, Alpha, TimePassed);
 		else
 			GameClient()->m_Effects.BulletTrail(Pos, Alpha, TimePassed);

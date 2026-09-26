@@ -13,6 +13,7 @@
 #include <base/system.h>
 
 #include <engine/client/backend/backend_base.h>
+#include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
 
 #include <limits>
@@ -52,6 +53,9 @@ protected:
 	};
 	std::vector<CTexture> m_vTextures;
 	std::atomic<uint64_t> *m_pTextureMemoryUsage;
+	// OpenGL viewport 原点在 drawable 左下角，记录转换后的实际原点。
+	int m_ViewportX = 0;
+	int m_ViewportY = 0;
 
 	struct SOpenGLRenderTarget
 	{
@@ -68,6 +72,7 @@ protected:
 
 	uint32_t m_CanvasWidth = 0;
 	uint32_t m_CanvasHeight = 0;
+	bool m_HasDisplayCutout = false;
 
 	TWGLint m_MaxTexSize;
 

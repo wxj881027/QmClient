@@ -1,0 +1,15 @@
+# 同时覆盖旧 cache 与命令行参数，避免 Apple 构建重新引入 Vulkan。
+if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
+  if(VULKAN)
+    message(STATUS "Apple graphics builds use Metal; overriding VULKAN=ON")
+  endif()
+  set(VULKAN OFF CACHE BOOL "Enable the vulkan backend" FORCE)
+  set(VULKAN OFF)
+  # 旧构建目录中的着色器清单不能继续进入安装或打包目标。
+  set(VULKAN_SHADER_FILE_LIST "" CACHE STRING "Vulkan shader file list" FORCE)
+  set(VULKAN_SHADER_FILE_LIST "")
+  if(CLIENT AND NOT HEADLESS_CLIENT)
+    set(METAL ON CACHE BOOL "Enable the native Metal backend" FORCE)
+    set(METAL ON)
+  endif()
+endif()

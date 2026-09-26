@@ -9,6 +9,7 @@
 
 #include <game/client/ui_rect.h>
 
+#include <algorithm>
 #include <cstdint>
 
 struct SQmDropdownVisualStyle
@@ -18,18 +19,16 @@ struct SQmDropdownVisualStyle
 	ColorRGBA m_PopupBorderColor = ColorRGBA(0.7f, 0.7f, 0.7f, 0.9f);
 	ColorRGBA m_ActiveEntryColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.22f);
 	bool m_TransparentEntries = true;
-	bool m_AnimatePopupAlpha = true;
 };
 
 inline SQmDropdownVisualStyle QmSettingsDropdownVisualStyle(const SUiTheme &Theme)
 {
 	SQmDropdownVisualStyle Style;
 	Style.m_TriggerColor = Theme.m_InputSurface;
-	// 弹层必须遮住底层内容，背景与高亮边框不随卡片透明度或入场动画变淡。
+	// 弹层遮住底层内容，边框保持强调色。
 	Style.m_PopupBackgroundColor = ui_token::color::SURFACE_ELEVATED.WithAlpha(1.0f);
 	Style.m_PopupBorderColor = Theme.m_Accent.WithAlpha(1.0f);
 	Style.m_ActiveEntryColor = Theme.m_Selected;
-	Style.m_AnimatePopupAlpha = false;
 	return Style;
 }
 
@@ -39,6 +38,10 @@ struct SQmDropdownGeometryConfig
 	float m_Height = 0.0f;
 	float m_Gap = 0.0f;
 	float m_Margin = 0.0f;
+	float m_RowHeight = 0.0f;
+	float m_RowSpacing = 0.0f;
+	float m_FixedHeight = 0.0f;
+	float m_LeadingRowSpacing = 0.0f;
 	bool m_PreferBelow = true;
 };
 
@@ -79,6 +82,11 @@ struct SQmDropdownUpdateResult
 	bool m_Selected = false;
 	int m_SelectedIndex = -1;
 };
+
+inline float QmDropdownFixedHeight(const bool HasMessage, const float MessageHeight, const float OuterHeight)
+{
+	return std::max(0.0f, OuterHeight) + (HasMessage ? std::max(0.0f, MessageHeight) : 0.0f);
+}
 
 SQmDropdownGeometryResult QmComputeDropdownPopupGeometry(const CUIRect &AnchorRect, const CUIRect &ViewportRect, const SQmDropdownGeometryConfig &Config);
 SQmDropdownPopupPolicy QmResolveDropdownPopupPolicy(int ItemCount, float EntryHeight, float EntrySpacing, bool HasMessage, float MessageHeight, float OuterHeight, int MinimumVisibleItems = 0);

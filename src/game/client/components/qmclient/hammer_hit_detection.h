@@ -19,6 +19,9 @@ struct SQmHammerAttackSample
 	int m_ClientId = -1;
 	int m_AttackTick = -1;
 	int m_Weapon = -1;
+	// QmClient: 挥锤后攻击者可能已经切换武器，快照到达时当前武器不再是锤，
+	// 仅凭 m_Weapon 会漏判这一次的挥锤。
+	int m_PrevWeapon = -1;
 	bool m_HammerHitEnabled = true;
 	vec2 m_PrevPos = vec2(0.0f, 0.0f);
 	vec2 m_CurPos = vec2(0.0f, 0.0f);
@@ -59,6 +62,7 @@ struct SQmHammerHitRecord
 };
 
 bool QmIsHammerSuperTeam(int DDTeam, bool IsDDRace16);
+bool QmIsHammerSuperTeam(int DDTeam, int NumDDRaceTeams);
 bool QmIsHammerWakeupTransition(int PrevFreezeEnd, int CurFreezeEnd, int EventTick);
 
 SQmHammerHitMatch QmMatchHammerHitEvent(

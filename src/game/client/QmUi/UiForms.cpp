@@ -14,6 +14,7 @@
 
 #include <game/client/lineinput.h>
 #include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon_morph.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
 #include <game/localization.h>
@@ -60,21 +61,6 @@ namespace ui_widget
 			return str_comp(aTrimmed, "∞") == 0 || str_comp_nocase(aTrimmed, "inf") == 0 || str_comp_nocase(aTrimmed, "infinite") == 0;
 		}
 
-		void DrawTextFieldPlate(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, const STextFieldOptions &Options)
-		{
-			const SUiTheme &Theme = ThemeFor(Ctx);
-			const bool Active = pInput->IsActive();
-			const bool Hovered = Ctx.m_pUi->HotItem() == pInput;
-			const ColorRGBA PlateColor = Hovered && !Active ? Theme.m_SurfaceHovered : Theme.m_InputSurface;
-			DrawTextFieldShell(Ctx, Rect, PlateColor, Options.m_Corners, Options.m_CornerRadius);
-			if(Ctx.m_pAnim == nullptr)
-				return;
-
-			const float TargetAlpha = pInput->IsActive() ? 1.0f : 0.0f;
-			const float Alpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, TargetAlpha, ui_curve::DECELERATE);
-			DrawTextFieldFocusBorder(Ctx, Rect, Alpha);
-		}
-
 		void DrawTextFieldFocusBorder(const IUiContext &Ctx, const CUIRect &Rect, float Alpha)
 		{
 			if(Alpha <= 0.01f)
@@ -116,20 +102,52 @@ namespace ui_widget
 			return Active;
 		}
 
-		void DrawInputFieldIcon(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const ColorRGBA &Color, const int QmIcon = -1)
+		void DrawInputFieldIcon(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const ColorRGBA &Color, const int QmIcon = -1, const void *pAnimationId = nullptr)
 		{
 			const bool HasQmIcon = QmIcon >= 0 && QmIcon < static_cast<int>(EQmIcon::COUNT);
 			if((pIcon == nullptr && !HasQmIcon) || Rect.w <= 0.0f || Rect.h <= 0.0f)
 				return;
-			// Phosphor 的 eye-off 将眼睛拆分给对角线，主体比 eye 更窄。
-			// 仅补偿这对密码可见性图标，避免改变其他图标的既有比例。
-			const float EyeOffScale = QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? 1.25f : 1.15f;
-			const float IconScale = QmIcon == static_cast<int>(EQmIcon::EYE_OFF) ? EyeOffScale : 1.0f;
+			// eye 与 eye-slash 在 Phosphor 里是同一套眼眶几何（斜线只是额外伸出眼框），
+			// 图集也按 em 框归一化，所以两者以**同一尺寸**绘制即可。历史上给 eye-off
+			// 乘过 1.15 / 1.25 的补偿，反而让眼睛看起来一大一小。
+			const bool IsEyeMorphIcon = QmIcon == static_cast<int>(EQmIcon::EYE) || QmIcon == static_cast<int>(EQmIcon::EYE_OFF);
+			const float BaseIconSide = minimum(Rect.w, Rect.h) * 0.58f;
+			const float IconSide = BaseIconSide;
 			if(HasQmIcon && Ctx.m_pIconManager != nullptr)
 			{
-				const float IconSide = minimum(Rect.w, Rect.h) * 0.58f * IconScale;
 				const CUIRect IconRect{Rect.x + (Rect.w - IconSide) * 0.5f, Rect.y + (Rect.h - IconSide) * 0.5f, IconSide, IconSide};
-				if(Ctx.m_pIconManager->RenderIcon(static_cast<EQmIcon>(QmIcon), IconRect, Color))
+				if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pAnim != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0)
+				{
+					const uint64_t MorphNodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xE1E0A11ull, reinterpret_cast<uint64_t>(pAnimationId));
+					const float MorphTarget = QmIcon == static_cast<int>(EQmIcon::EYE_OFF) ? 1.0f : 0.0f;
+					const float MorphProgress = ResolveUiAnimSpringValue(*Ctx.m_pAnim, MorphNodeKey, EUiAnimProperty::SCALE, MorphTarget, ui_token::motion::TOGGLE, 2);
+					const bool MorphActive = Ctx.m_pAnim->HasActiveAnimation(MorphNodeKey, EUiAnimProperty::SCALE);
+					// 眼睛切换优先用几何 morph（带状四边形插值）：样例来自随包
+					// Phosphor-Bold.ttf，几何映射与历史 SVG 逐轮廓对齐过（含 y 翻转，
+					// 见 qmclient_scripts/qm_build_icon_morph.py），同一表面的内外轮廓
+					// 共享一套刚体参数。无样例（非 Bold 字重）时退回交叉淡化。
+					if(MorphActive)
+					{
+						// 优先走预烘焙 MSDF 关键帧：形变与图标同一条抗锯齿路径，
+						// 不依赖 FSAA，也不会有几何直出的亚像素散点；
+						// 图集没有关键帧（非 Bold 或旧数据）时退回几何 morph。
+						if(Ctx.m_pIconManager->RenderMorphFrames(IconRect, Color, MorphProgress))
+							return;
+						if(RenderQmEyeMorph(Ctx.m_pUi->Graphics(), g_Config.m_QmUiIconWeight, IconRect, Color, MorphProgress))
+							return;
+						const float CrossProgress = std::clamp(MorphProgress, 0.0f, 1.0f);
+						const float AlphaEye = Color.a * (1.0f - CrossProgress);
+						const float AlphaOff = Color.a * CrossProgress;
+						bool Drawn = false;
+						if(AlphaEye > 0.01f)
+							Drawn = Ctx.m_pIconManager->RenderIcon(EQmIcon::EYE, IconRect, ColorRGBA(Color.r, Color.g, Color.b, AlphaEye));
+						if(AlphaOff > 0.01f)
+							Drawn = Ctx.m_pIconManager->RenderIcon(EQmIcon::EYE_OFF, IconRect, ColorRGBA(Color.r, Color.g, Color.b, AlphaOff)) || Drawn;
+						if(Drawn)
+							return;
+					}
+				}
+				if(!Ctx.m_pIconManager->PreferFontFallback() && Ctx.m_pIconManager->RenderIcon(static_cast<EQmIcon>(QmIcon), IconRect, Color))
 					return;
 			}
 			if(pIcon == nullptr)
@@ -141,9 +159,10 @@ namespace ui_widget
 			const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 			const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
 			pTextRender->TextColor(Color);
-			pTextRender->SetFontPreset(QmIconWeightUsesBoldFontFallback(g_Config.m_QmUiIconWeight) ? EFontPreset::ICON_FONT_BOLD : EFontPreset::ICON_FONT);
+			pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 			pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-			Ctx.m_pUi->DoLabel(&Rect, pIcon, Rect.h * 0.65f * IconScale, TEXTALIGN_MC);
+			const float FallbackFontSize = HasQmIcon ? IconSide * 0.8f : std::min(Rect.w, Rect.h) * 0.65f;
+			Ctx.m_pUi->DoLabel(&Rect, pIcon, FallbackFontSize, TEXTALIGN_MC);
 			pTextRender->SetRenderFlags(PreviousFlags);
 			pTextRender->SetFontPreset(PreviousPreset);
 			pTextRender->TextOutlineColor(PreviousOutlineColor);
@@ -199,6 +218,16 @@ namespace ui_widget
 		const ColorRGBA PlateColor = Hovered && !pInput->IsActive() ? Theme.m_SurfaceHovered : Theme.m_InputSurface;
 		DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE);
 		pInput->SetEmptyText(Options.m_pPlaceholder != nullptr ? Options.m_pPlaceholder : (Search ? Localize("Search") : nullptr));
+		if(!Options.m_ProcessInput)
+		{
+			pInput->Deactivate();
+			Ctx.m_pUi->ClipEnable(&TextRect);
+			pInput->Render(&TextRect, FontSize, TextAlign, false, -1.0f, 0.0f);
+			Ctx.m_pUi->ClipDisable();
+			if(Options.m_pTrailingText != nullptr && TrailingRect.w > 0.0f)
+				Ctx.m_pUi->DoLabel(&TrailingRect, Options.m_pTrailingText, FontSize * 0.82f, TEXTALIGN_MC);
+			return {};
+		}
 
 		if(Options.m_SearchHotkeyEnabled && Search && Ctx.m_pUi->Input()->ModifierIsPressed() && Ctx.m_pUi->Input()->KeyPress(KEY_F))
 		{
@@ -208,7 +237,9 @@ namespace ui_widget
 		DrawTextFieldFocusBorder(Ctx, pInput, Layout.m_FocusRingRect, Options.m_Mode == EInputFieldMode::MULTILINE);
 
 		const ColorRGBA InputIconColor = ConfiguredQmUiIconColor(SQmIconStyle().Color(EQmIconState::NORMAL));
-		DrawInputFieldIcon(Ctx, Layout.m_IconRect, Options.m_pLeadingIcon != nullptr ? Options.m_pLeadingIcon : (Search ? FontIcons::FONT_ICON_MAGNIFYING_GLASS : nullptr), InputIconColor, Search ? static_cast<int>(EQmIcon::SEARCH) : -1);
+		const char *pLeadingIcon = Options.m_pLeadingIcon != nullptr ? Options.m_pLeadingIcon : (Search ? FontIcons::FONT_ICON_MAGNIFYING_GLASS : nullptr);
+		const int LeadingQmIcon = Options.m_LeadingQmIcon >= 0 ? Options.m_LeadingQmIcon : (Search ? static_cast<int>(EQmIcon::SEARCH) : -1);
+		DrawInputFieldIcon(Ctx, Layout.m_IconRect, pLeadingIcon, InputIconColor, LeadingQmIcon);
 		CUi::SEditBoxRenderOptions RenderOptions;
 		RenderOptions.m_DrawBackground = false;
 		CUIRect InputHitRect = Layout.m_ShellRect;
@@ -500,10 +531,12 @@ namespace ui_widget
 		const float InfiniteEndpointStart = Infinite ? NumericFieldInfiniteEndpointStart(ScrollBar.w, Ctx.m_UiScale) : 1.0f;
 		const float Normalized = IsInfinite ? 1.0f : std::clamp(pScale->ToRelative(SliderValue, SliderMin, FiniteSliderMax), 0.0f, 1.0f) * InfiniteEndpointStart;
 		const bool SliderWasActive = pState->m_SliderWasActive;
-		if(HasSlider && !RenderOnly && !pInput->IsActive())
+		const bool SliderOwnsInput = Ctx.m_pUi->CheckActiveItem(pId);
+		bool SliderActive = SliderOwnsInput;
+		if(HasSlider && !RenderOnly && (!pInput->IsActive() || SliderOwnsInput))
 		{
 			const float NewNormalized = Ctx.m_pUi->DoScrollbarH(pId, &ScrollBar, Normalized);
-			const bool SliderActive = Ctx.m_pUi->CheckActiveItem(pId);
+			SliderActive = Ctx.m_pUi->CheckActiveItem(pId);
 			const bool SliderReleased = SliderWasActive && !SliderActive;
 			const bool NewInfiniteValue = Infinite && NewNormalized >= (1.0f + InfiniteEndpointStart) * 0.5f;
 			const int NewSliderValue = NewInfiniteValue ? SliderMax : pScale->ToAbsolute(NewNormalized / InfiniteEndpointStart, SliderMin, FiniteSliderMax);
@@ -556,6 +589,7 @@ namespace ui_widget
 		FieldOptions.m_TextAlign = TEXTALIGN_MC;
 		FieldOptions.m_pTrailingText = HasSuffix ? Options.m_pSuffix : nullptr;
 		FieldOptions.m_InlineTrailingText = HasSuffix;
+		FieldOptions.m_ProcessInput = !SliderActive;
 		SInputFieldResult Result = ui_widget::InputField(Ctx, pInput, InputField, FieldOptions);
 
 		if(bShowMaxText)

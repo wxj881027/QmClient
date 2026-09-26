@@ -203,12 +203,11 @@ bool CRenderLayerTile::CTileLayerVisuals::Init(unsigned int Width, unsigned int 
 CRenderLayer::CRenderLayer(int GroupId, int LayerId, int Flags) :
 	m_GroupId(GroupId), m_LayerId(LayerId), m_Flags(Flags) {}
 
-void CRenderLayer::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, std::optional<FRenderUploadCallback> &FRenderUploadCallbackOptional)
+void CRenderLayer::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages)
 {
 	CRenderComponent::OnInit(pGraphics, pTextRender, pRenderMap);
 	m_pMap = pMap;
 	m_pMapImages = pMapImages;
-	m_RenderUploadCallback = FRenderUploadCallbackOptional;
 	m_pEnvelopeManager = pEnvelopeManager;
 }
 
@@ -218,14 +217,6 @@ void CRenderLayer::UseTexture(IGraphics::CTextureHandle TextureHandle)
 		Graphics()->TextureSet(TextureHandle);
 	else
 		Graphics()->TextureClear();
-}
-
-void CRenderLayer::RenderLoading() const
-{
-	const char *pLoadingTitle = Localize("Loading map");
-	const char *pLoadingMessage = Localize("Uploading map data to GPU");
-	if(m_RenderUploadCallback.has_value())
-		(*m_RenderUploadCallback)(pLoadingTitle, pLoadingMessage, 0);
 }
 
 bool CRenderLayer::IsVisibleInClipRegion(const std::optional<CClipRegion> &ClipRegion) const
@@ -250,6 +241,10 @@ bool CRenderLayer::IsVisibleInClipRegion(const std::optional<CClipRegion> &ClipR
 
 CRenderLayerGroup::CRenderLayerGroup(int GroupId, CMapItemGroup *pGroup) :
 	CRenderLayer(GroupId, 0, 0), m_pGroup(pGroup) {}
+
+void CRenderLayerGroup::Init()
+{
+}
 
 bool CRenderLayerGroup::DoRender(const CRenderLayerParams &Params)
 {
@@ -863,12 +858,10 @@ void CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &VisualsO
 		!CheckedAddSize(TileTexCoordsDataSize, TileDataSize, UploadDataSize))
 	{
 		log_error("map/render", "Tile layer upload data size overflow.");
-		RenderLoading();
 		return;
 	}
 	if(UploadDataSize == 0)
 	{
-		RenderLoading();
 		return;
 	}
 
@@ -876,7 +869,6 @@ void CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &VisualsO
 	if(pUploadData == nullptr)
 	{
 		log_error("map/render", "Failed to allocate tile layer upload data.");
-		RenderLoading();
 		return;
 	}
 
@@ -940,8 +932,6 @@ void CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &VisualsO
 	Visuals.m_BufferContainerIndex = Graphics()->CreateBufferContainer(&ContainerInfo);
 	// and finally inform the backend how many indices are required
 	Graphics()->IndicesNumRequiredNotify(vTmpTiles.size() * 6);
-
-	RenderLoading();
 }
 
 void CRenderLayerTile::Unload()
@@ -958,28 +948,19 @@ void CRenderLayerTile::CTileLayerVisuals::Unload()
 	Graphics()->DeleteBufferContainer(m_BufferContainerIndex);
 }
 
-int CRenderLayerTile::GetDataIndex(unsigned int &TileSize) const
+int CRenderLayerTile::GetDataIndex() const
 {
-	TileSize = sizeof(CTile);
 	return m_pLayerTilemap->m_Data;
 }
 
 void *CRenderLayerTile::GetRawData() const
 {
-	unsigned int TileSize;
-	unsigned int DataIndex = GetDataIndex(TileSize);
-	void *pTiles = m_pMap->GetData(DataIndex);
-	int Size = m_pMap->GetDataSize(DataIndex);
-
-	if(!pTiles || Size < m_pLayerTilemap->m_Width * m_pLayerTilemap->m_Height * (int)TileSize)
-		return nullptr;
-
-	return pTiles;
+	return m_pMap->GetData(GetDataIndex());
 }
 
-void CRenderLayerTile::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, std::optional<FRenderUploadCallback> &FRenderUploadCallbackOptional)
+void CRenderLayerTile::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages)
 {
-	CRenderLayer::OnInit(pGraphics, pTextRender, pRenderMap, pEnvelopeManager, pMap, pMapImages, FRenderUploadCallbackOptional);
+	CRenderLayer::OnInit(pGraphics, pTextRender, pRenderMap, pEnvelopeManager, pMap, pMapImages);
 	InitTileData();
 
 	// set clip region
@@ -1082,7 +1063,6 @@ void CRenderLayerQuads::RenderQuadLayer(float Alpha, const CRenderLayerParams &P
 				if(Color.a < 0.0f)
 					Color.a = 0.0f;
 				QInfo.m_Color = Color;
-
 				if(Color.a > 0.0f)
 				{
 					AnyVisible = true;
@@ -1138,9 +1118,9 @@ void CRenderLayerQuads::RenderQuadLayer(float Alpha, const CRenderLayerParams &P
 	}
 }
 
-void CRenderLayerQuads::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages, std::optional<FRenderUploadCallback> &FRenderUploadCallbackOptional)
+void CRenderLayerQuads::OnInit(IGraphics *pGraphics, ITextRender *pTextRender, CRenderMap *pRenderMap, std::shared_ptr<CEnvelopeManager> &pEnvelopeManager, IMap *pMap, IMapImages *pMapImages)
 {
-	CRenderLayer::OnInit(pGraphics, pTextRender, pRenderMap, pEnvelopeManager, pMap, pMapImages, FRenderUploadCallbackOptional);
+	CRenderLayer::OnInit(pGraphics, pTextRender, pRenderMap, pEnvelopeManager, pMap, pMapImages);
 	int DataSize = m_pMap->GetDataSize(m_pLayerQuads->m_Data);
 	if(m_pLayerQuads->m_NumQuads > 0 && DataSize / (int)sizeof(CQuad) >= m_pLayerQuads->m_NumQuads)
 		m_pQuads = (CQuad *)m_pMap->GetDataSwapped(m_pLayerQuads->m_Data);
@@ -1234,12 +1214,12 @@ void CRenderLayerQuads::Init()
 	};
 
 	m_vQuadClusters.clear();
-	CQuadCluster QuadCluster;
 
 	// create quad clusters
 	int QuadStart = 0;
 	while(QuadStart < m_pLayerQuads->m_NumQuads)
 	{
+		CQuadCluster QuadCluster;
 		QuadCluster.m_StartIndex = QuadStart;
 		QuadCluster.m_Grouped = true;
 		QuadCluster.m_ColorEnv = m_pQuads[QuadStart].m_ColorEnv;
@@ -1291,7 +1271,6 @@ void CRenderLayerQuads::Init()
 	if(Textured ? !CheckedDataSize(vTmpQuadsTextured.size(), sizeof(CTmpQuadTextured), UploadDataSize) : !CheckedDataSize(vTmpQuads.size(), sizeof(CTmpQuad), UploadDataSize))
 	{
 		log_error("map/render", "Quad layer upload data size overflow.");
-		RenderLoading();
 		return;
 	}
 
@@ -1337,7 +1316,6 @@ void CRenderLayerQuads::Init()
 		// and finally inform the backend how many indices are required
 		Graphics()->IndicesNumRequiredNotify(m_pLayerQuads->m_NumQuads * 6);
 	}
-	RenderLoading();
 }
 
 void CRenderLayerQuads::Unload()
@@ -1795,9 +1773,8 @@ ColorRGBA CRenderLayerEntityGame::GetDeathBorderColor() const
 CRenderLayerEntityFront::CRenderLayerEntityFront(int GroupId, int LayerId, int Flags, CMapItemLayerTilemap *pLayerTilemap) :
 	CRenderLayerEntityBase(GroupId, LayerId, Flags, pLayerTilemap) {}
 
-int CRenderLayerEntityFront::GetDataIndex(unsigned int &TileSize) const
+int CRenderLayerEntityFront::GetDataIndex() const
 {
-	TileSize = sizeof(CTile);
 	return m_pLayerTilemap->m_Front;
 }
 
@@ -1933,9 +1910,8 @@ void CRenderLayerEntityFront::RenderTileLayerNoTileBuffer(const ColorRGBA &Color
 CRenderLayerEntityTele::CRenderLayerEntityTele(int GroupId, int LayerId, int Flags, CMapItemLayerTilemap *pLayerTilemap) :
 	CRenderLayerEntityBase(GroupId, LayerId, Flags, pLayerTilemap) {}
 
-int CRenderLayerEntityTele::GetDataIndex(unsigned int &TileSize) const
+int CRenderLayerEntityTele::GetDataIndex() const
 {
-	TileSize = sizeof(CTeleTile);
 	return m_pLayerTilemap->m_Tele;
 }
 
@@ -2085,9 +2061,8 @@ IGraphics::CTextureHandle CRenderLayerEntitySpeedup::GetTexture() const
 	return m_pMapImages->GetSpeedupArrow();
 }
 
-int CRenderLayerEntitySpeedup::GetDataIndex(unsigned int &TileSize) const
+int CRenderLayerEntitySpeedup::GetDataIndex() const
 {
-	TileSize = sizeof(CSpeedupTile);
 	return m_pLayerTilemap->m_Speedup;
 }
 
@@ -2165,9 +2140,8 @@ IGraphics::CTextureHandle CRenderLayerEntitySwitch::GetTexture() const
 	return m_pMapImages->GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_SWITCH);
 }
 
-int CRenderLayerEntitySwitch::GetDataIndex(unsigned int &TileSize) const
+int CRenderLayerEntitySwitch::GetDataIndex() const
 {
-	TileSize = sizeof(CSwitchTile);
 	return m_pLayerTilemap->m_Switch;
 }
 
@@ -2392,6 +2366,10 @@ CRenderLayerEntityTune::CRenderLayerEntityTune(int GroupId, int LayerId, int Fla
 
 IGraphics::CTextureHandle CRenderLayerEntityTune::GetTexture() const
 {
+	// 关闭着色时改用普通实体贴图：编号颜色图集的每个切片都带色相，
+	// 用原始 TILE_TUNE 序号采样会得到固定杂色而不是灰色 tune tile。
+	if(!g_Config.m_QmShowTuneZoneColors)
+		return m_pMapImages->GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH);
 	return m_pMapImages->GetTuneColors();
 }
 
@@ -2399,7 +2377,8 @@ void CRenderLayerEntityTune::GetTileData(unsigned char *pIndex, unsigned char *p
 {
 	const CTuneTile &Tile = m_pTuneTiles[y * m_pLayerTilemap->m_Width + x];
 	// Assign color indices in encounter order for higher adjacent color distance.
-	*pIndex = m_TuneColorMapper.TileTextureIndex(Tile.m_Type, Tile.m_Number, Graphics()->HasTextureArraysSupport());
+	// 开关关闭时保留原始 tune tile，不按编号着色。
+	*pIndex = g_Config.m_QmShowTuneZoneColors ? m_TuneColorMapper.TileTextureIndex(Tile.m_Type, Tile.m_Number, Graphics()->HasTextureArraysSupport()) : Tile.m_Type;
 	*pFlags = 0;
 }
 
@@ -2409,9 +2388,8 @@ void CRenderLayerEntityTune::Init()
 	CRenderLayerTile::Init();
 }
 
-int CRenderLayerEntityTune::GetDataIndex(unsigned int &TileSize) const
+int CRenderLayerEntityTune::GetDataIndex() const
 {
-	TileSize = sizeof(CTuneTile);
 	return m_pLayerTilemap->m_Tune;
 }
 
@@ -2422,8 +2400,10 @@ void CRenderLayerEntityTune::InitTileData()
 
 void CRenderLayerEntityTune::RenderTileLayerNoTileBuffer(const ColorRGBA &Color, const CRenderLayerParams &Params)
 {
+	// 开关关闭时传空 mapper，RenderTunemap 会退回原始单色 tile。
+	CTuneColorMapper *pTuneColorMapper = g_Config.m_QmShowTuneZoneColors ? &m_TuneColorMapper : nullptr;
 	Graphics()->BlendNone();
-	RenderMap()->RenderTunemap(m_pTuneTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_OPAQUE, &m_TuneColorMapper);
+	RenderMap()->RenderTunemap(m_pTuneTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_OPAQUE, pTuneColorMapper);
 	Graphics()->BlendNormal();
-	RenderMap()->RenderTunemap(m_pTuneTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_TRANSPARENT, &m_TuneColorMapper);
+	RenderMap()->RenderTunemap(m_pTuneTiles, m_pLayerTilemap->m_Width, m_pLayerTilemap->m_Height, 32.0f, Color, (Params.m_RenderTileBorder ? TILERENDERFLAG_EXTEND : 0) | LAYERRENDERFLAG_TRANSPARENT, pTuneColorMapper);
 }

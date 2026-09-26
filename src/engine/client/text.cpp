@@ -1,16 +1,15 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include "font_size_cache.h"
+#include "glyph_lookup_cache.h"
+#include "glyph_outline.h"
+#include "text_layout_string.h"
+#include "text_word_cursor.h"
+
 #include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
 
-#include <engine/client/font_size_cache.h>
-#include <engine/client/glyph_atlas.h>
-#include <engine/client/glyph_atlas_image.h>
-#include <engine/client/glyph_lookup_cache.h>
-#include <engine/client/glyph_outline.h>
-#include <engine/client/text_layout_string.h>
-#include <engine/client/text_word_cursor.h>
 #include <engine/console.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -23,13 +22,19 @@
 // ft2 texture
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_MULTIPLE_MASTERS_H
 
 #include <chrono>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 using namespace std::chrono_literals;
@@ -100,6 +105,206 @@ struct SGlyphKeyEquals
 	}
 };
 
+class CAtlas
+{
+	struct SSectionKeyHash
+	{
+		size_t operator()(const std::tuple<size_t, size_t> &Key) const
+		{
+			// Width and height should never be above 2^16 so this hash should cause no collisions
+			return (std::get<0>(Key) << 16) ^ std::get<1>(Key);
+		}
+	};
+
+	struct SSectionKeyEquals
+	{
+		bool operator()(const std::tuple<size_t, size_t> &Lhs, const std::tuple<size_t, size_t> &Rhs) const
+		{
+			return std::get<0>(Lhs) == std::get<0>(Rhs) && std::get<1>(Lhs) == std::get<1>(Rhs);
+		}
+	};
+
+	struct SSection
+	{
+		size_t m_X;
+		size_t m_Y;
+		size_t m_W;
+		size_t m_H;
+
+		SSection() = default;
+
+		SSection(size_t X, size_t Y, size_t W, size_t H) :
+			m_X(X), m_Y(Y), m_W(W), m_H(H)
+		{
+		}
+	};
+
+	/**
+	 * Sections with a smaller width or height will not be created
+	 * when cutting larger sections, to prevent collecting many
+	 * small, mostly unusable sections.
+	 */
+	static constexpr size_t MIN_SECTION_DIMENSION = 6;
+
+	/**
+	 * Sections with larger width or height will be stored in m_vSections.
+	 * Sections with width and height equal or smaller will be stored in m_SectionsMap.
+	 * This achieves a good balance between the size of the vector storing all large
+	 * sections and the map storing vectors of all sections with specific small sizes.
+	 * Lowering this value will result in the size of m_vSections becoming the bottleneck.
+	 * Increasing this value will result in the map becoming the bottleneck.
+	 */
+	static constexpr size_t MAX_SECTION_DIMENSION_MAPPED = 8 * MIN_SECTION_DIMENSION;
+
+	size_t m_TextureDimension;
+	std::vector<SSection> m_vSections;
+	std::unordered_map<std::tuple<size_t, size_t>, std::vector<SSection>, SSectionKeyHash, SSectionKeyEquals> m_SectionsMap;
+
+	void AddSection(size_t X, size_t Y, size_t W, size_t H)
+	{
+		std::vector<SSection> &vSections = W <= MAX_SECTION_DIMENSION_MAPPED && H <= MAX_SECTION_DIMENSION_MAPPED ? m_SectionsMap[std::make_tuple(W, H)] : m_vSections;
+		vSections.emplace_back(X, Y, W, H);
+	}
+
+	void UseSection(const SSection &Section, size_t Width, size_t Height, int &PosX, int &PosY)
+	{
+		PosX = Section.m_X;
+		PosY = Section.m_Y;
+
+		// Create cut sections
+		const size_t CutW = Section.m_W - Width;
+		const size_t CutH = Section.m_H - Height;
+		if(CutW == 0)
+		{
+			if(CutH >= MIN_SECTION_DIMENSION)
+				AddSection(Section.m_X, Section.m_Y + Height, Section.m_W, CutH);
+		}
+		else if(CutH == 0)
+		{
+			if(CutW >= MIN_SECTION_DIMENSION)
+				AddSection(Section.m_X + Width, Section.m_Y, CutW, Section.m_H);
+		}
+		else if(CutW > CutH)
+		{
+			if(CutW >= MIN_SECTION_DIMENSION)
+				AddSection(Section.m_X + Width, Section.m_Y, CutW, Section.m_H);
+			if(CutH >= MIN_SECTION_DIMENSION)
+				AddSection(Section.m_X, Section.m_Y + Height, Width, CutH);
+		}
+		else
+		{
+			if(CutH >= MIN_SECTION_DIMENSION)
+				AddSection(Section.m_X, Section.m_Y + Height, Section.m_W, CutH);
+			if(CutW >= MIN_SECTION_DIMENSION)
+				AddSection(Section.m_X + Width, Section.m_Y, CutW, Height);
+		}
+	}
+
+public:
+	void Clear(size_t TextureDimension)
+	{
+		m_TextureDimension = TextureDimension;
+		m_vSections.clear();
+		m_vSections.emplace_back(0, 0, m_TextureDimension, m_TextureDimension);
+		m_SectionsMap.clear();
+	}
+
+	void IncreaseDimension(size_t NewTextureDimension)
+	{
+		dbg_assert(NewTextureDimension == m_TextureDimension * 2, "New atlas dimension must be twice the old one");
+		// Create 3 square sections to cover the new area, add the sections
+		// to the beginning of the vector so they are considered last.
+		m_vSections.emplace_back(m_TextureDimension, m_TextureDimension, m_TextureDimension, m_TextureDimension);
+		m_vSections.emplace_back(m_TextureDimension, 0, m_TextureDimension, m_TextureDimension);
+		m_vSections.emplace_back(0, m_TextureDimension, m_TextureDimension, m_TextureDimension);
+		std::rotate(m_vSections.rbegin(), m_vSections.rbegin() + 3, m_vSections.rend());
+		m_TextureDimension = NewTextureDimension;
+	}
+
+	bool Add(size_t Width, size_t Height, int &PosX, int &PosY)
+	{
+		if(m_vSections.empty() || m_TextureDimension < Width || m_TextureDimension < Height)
+			return false;
+
+		// Find small section more efficiently by using maps
+		if(Width <= MAX_SECTION_DIMENSION_MAPPED && Height <= MAX_SECTION_DIMENSION_MAPPED)
+		{
+			const auto UseSectionFromMap = [&](size_t CheckWidth, size_t CheckHeight) {
+				// 查询不存在的尺寸不应创建空桶，只有实际切出空区时才插入。
+				const auto It = m_SectionsMap.find(std::make_tuple(CheckWidth, CheckHeight));
+				if(It == m_SectionsMap.end())
+					return false;
+				std::vector<SSection> &vSections = It->second;
+				if(!vSections.empty())
+				{
+					const SSection Section = vSections.back();
+					vSections.pop_back();
+					UseSection(Section, Width, Height, PosX, PosY);
+					return true;
+				}
+				return false;
+			};
+
+			if(UseSectionFromMap(Width, Height))
+				return true;
+
+			for(size_t CheckWidth = Width + 1; CheckWidth <= MAX_SECTION_DIMENSION_MAPPED; ++CheckWidth)
+			{
+				if(UseSectionFromMap(CheckWidth, Height))
+					return true;
+			}
+
+			for(size_t CheckHeight = Height + 1; CheckHeight <= MAX_SECTION_DIMENSION_MAPPED; ++CheckHeight)
+			{
+				if(UseSectionFromMap(Width, CheckHeight))
+					return true;
+			}
+
+			// We don't iterate sections in the map with increasing width and height at the same time,
+			// because it's slower and doesn't noticeable increase the atlas utilization.
+		}
+
+		// Check vector for larger section
+		size_t SmallestLossValue = std::numeric_limits<size_t>::max();
+		size_t SmallestLossIndex = m_vSections.size();
+		size_t SectionIndex = m_vSections.size();
+		do
+		{
+			--SectionIndex;
+			const SSection &Section = m_vSections[SectionIndex];
+			if(Section.m_W < Width || Section.m_H < Height)
+				continue;
+
+			const size_t LossW = Section.m_W - Width;
+			const size_t LossH = Section.m_H - Height;
+
+			size_t Loss;
+			if(LossW == 0)
+				Loss = LossH;
+			else if(LossH == 0)
+				Loss = LossW;
+			else
+				Loss = LossW * LossH;
+
+			if(Loss < SmallestLossValue)
+			{
+				SmallestLossValue = Loss;
+				SmallestLossIndex = SectionIndex;
+				if(SmallestLossValue == 0)
+					break;
+			}
+		} while(SectionIndex > 0);
+		if(SmallestLossIndex == m_vSections.size())
+			return false; // No usable section found in vector
+
+		// Use the section with the smallest loss
+		const SSection Section = m_vSections[SmallestLossIndex];
+		m_vSections.erase(m_vSections.begin() + SmallestLossIndex);
+		UseSection(Section, Width, Height, PosX, PosY);
+		return true;
+	}
+};
+
 class CGlyphMap
 {
 public:
@@ -111,18 +316,23 @@ public:
 	};
 
 private:
+	FT_Library m_FTLibrary = nullptr;
 	/**
 	 * The initial dimension of the atlas textures.
 	 *
-	 * QmClient: 提高到 2048 (4 MB per texture; NUM_FONT_TEXTURES=2 → 8 MB total).
-	 * 原因：中文界面字形密度远高于英文 (GBK 常用 3500+ 字)，1024 (1 MB) 几乎必然
-	 * 在首帧渲染设置页时填满，触发 IncreaseGlyphMapSize → UnloadTextures + 翻倍
-	 * 重分配 + UploadTextures 全量重传，造成 ESC 打开 / 切 tab 首帧的 GPU 上传尖峰
-	 * (实测 settings_page_content 单次 355ms 的一部分来自此)。2048 容纳约 4000
-	 * 字形，足以覆盖中文常用字集，从源头消除运行时扩容。
-	 * 代价：启动多占 6 MB 显存，对所有桌面 GPU 可接受。
+	 * QmClient: 提高到 4096 (16 MB per texture; NUM_FONT_TEXTURES=2 → 33 MB total，
+	 * 单通道 alpha 纹理)。
+	 * 历史：1024 → 2048 消除了设置页首帧扩容（中文常用字集 ~3500 字）。
+	 * 4096 原因：实测进服后其他玩家名/MOTD/聊天的生僻字形仍会把 2048 (~4000
+	 * 字形) 的图集挤满，触发运行时 IncreaseGlyphMapSize → UnloadTextures +
+	 * 全量重传——该耗时计入 glyph_rasterize_ms，perf 实测单帧 794ms/253ms
+	 * 尖峰，表现为"进服后锤的前几下某一下突然卡顿，之后不再出现"（扩容后
+	 * 图集翻倍不再触发；重启后图集重置，每次进服复现）。4096 容纳约 16000
+	 * 字形，覆盖中文常用字集 + 多人玩家名/聊天字形，从源头消除进服后的
+	 * 运行时扩容。代价：显存 33 MB（比 2048 多 25 MB），现代 GPU 可接受；
+	 * 极端情况仍保留向 8192 的运行时扩容路径。
 	 */
-	static constexpr int INITIAL_ATLAS_DIMENSION = 2048;
+	static constexpr int INITIAL_ATLAS_DIMENSION = 4096;
 
 	/**
 	 * The maximum dimension of the atlas textures.
@@ -156,20 +366,39 @@ private:
 	uint8_t *m_apTextureData[NUM_FONT_TEXTURES];
 	CAtlas m_TextureAtlas;
 	std::unordered_map<std::tuple<FT_Face, int, int>, SGlyph, SGlyphKeyHash, SGlyphKeyEquals> m_Glyphs;
+	// QmClient: 近期字形命中的直接索引。字形表在热路径上被按 (face, chr, size) 反复查询，
+	// 这里用固定容量、零分配的缓存挡掉大部分哈希查找；冲突只导致回落到原查找路径。
 	CQmGlyphLookupCache<SGlyph> m_GlyphLookupCache;
+	// QmClient: 记录最近一次成功的 FT_Set_Pixel_Sizes(Face, Size)，避免同一 face
+	// 在同一字号上每帧重复设置；绕过该入口的调用必须显式失效。
+	mutable CQmFontSizeCache m_FacePixelSizeCache;
+
+	// QmClient: 最近缓存未命中（需要光栅化）的字形 (Chr, FontSize)，供菜单在关闭时的
+	// 空闲帧分帧预热，避免下次打开菜单时一次性光栅化上百个字形造成掉帧；集合会持久化，
+	// 使重启客户端后的第一次打开也能命中缓存。
+	static constexpr size_t QM_MAX_RECENT_GLYPH_MISSES = 4096;
+	std::vector<std::pair<int, int>> m_vQmRecentGlyphMisses;
+	std::unordered_set<uint64_t> m_QmRecentGlyphMissKeys;
+	// 预热进度游标：集合本身保留（供退出时持久化），游标只前进不回退；
+	// 游标之后新增的缺失字形会被继续预热。
+	size_t m_QmRecentGlyphPrewarmCursor = 0;
+	bool m_QmRecordGlyphMisses = true;
 
 	// Font faces
 	FT_Face m_DefaultFace = nullptr;
 	FT_Face m_IconFace = nullptr;
 	FT_Face m_IconRegularFace = nullptr;
 	FT_Face m_IconBoldFace = nullptr;
+	FT_Face m_IconLightFace = nullptr;
+	FT_Face m_IconFillFace = nullptr;
+	FT_Face m_IconDuotoneFace = nullptr;
 	FT_Face m_VariantFace = nullptr;
 	FT_Face m_SelectedFace = nullptr;
+	int m_CustomFontWeight = 400;
 	std::vector<FT_Face> m_vFallbackFaces;
 	std::vector<FT_Face> m_vFtFaces;
 	int m_QmPerfGlyphNew = 0;
 	int m_QmPerfGlyphUploads = 0;
-	mutable CQmFontSizeCache m_FacePixelSizeCache;
 	double m_QmPerfGlyphRasterizeMs = 0.0;
 	double m_QmPerfGlyphUploadMs = 0.0;
 
@@ -179,21 +408,33 @@ private:
 			return nullptr;
 
 		FT_Face FamilyNameMatch = nullptr;
+		FT_Face PreferredFamilyMatch = nullptr;
 		char aFamilyStyleName[FONT_NAME_SIZE];
+		char aRequestedName[FONT_NAME_SIZE];
+		str_copy(aRequestedName, pFamilyName);
+		ReplaceHyphensWithSpaces(aRequestedName);
 
 		for(const auto &CurrentFace : m_vFtFaces)
 		{
 			// Best match: font face with matching family and style name
 			str_format(aFamilyStyleName, sizeof(aFamilyStyleName), "%s %s", CurrentFace->family_name, CurrentFace->style_name);
-			if(str_comp(pFamilyName, aFamilyStyleName) == 0)
+			char aNormalizedFamilyStyle[FONT_NAME_SIZE];
+			str_copy(aNormalizedFamilyStyle, aFamilyStyleName);
+			ReplaceHyphensWithSpaces(aNormalizedFamilyStyle);
+			if(str_comp_nocase(aRequestedName, aNormalizedFamilyStyle) == 0)
 			{
 				return CurrentFace;
 			}
 
 			// Second best match: font face with matching family
-			if(!FamilyNameMatch && str_comp(pFamilyName, CurrentFace->family_name) == 0)
+			char aNormalizedFamily[FONT_NAME_SIZE];
+			str_copy(aNormalizedFamily, CurrentFace->family_name != nullptr ? CurrentFace->family_name : "");
+			ReplaceHyphensWithSpaces(aNormalizedFamily);
+			if(!FamilyNameMatch && str_comp_nocase(aRequestedName, aNormalizedFamily) == 0)
 			{
 				FamilyNameMatch = CurrentFace;
+				if(CurrentFace->style_name != nullptr && (str_comp_nocase(CurrentFace->style_name, "Regular") == 0 || str_comp_nocase(CurrentFace->style_name, "Book") == 0 || str_comp_nocase(CurrentFace->style_name, "Normal") == 0 || str_comp_nocase(CurrentFace->style_name, "Medium") == 0))
+					PreferredFamilyMatch = CurrentFace;
 			}
 
 			// TClient
@@ -201,13 +442,13 @@ private:
 			char aBuf[256];
 			str_copy(aBuf, FT_Get_Postscript_Name(CurrentFace));
 			ReplaceHyphensWithSpaces(aBuf);
-			if(!FamilyNameMatch && str_comp(pFamilyName, aBuf) == 0)
+			if(!FamilyNameMatch && str_comp_nocase(aRequestedName, aBuf) == 0)
 			{
 				FamilyNameMatch = CurrentFace;
 			}
 		}
 
-		return FamilyNameMatch;
+		return PreferredFamilyMatch != nullptr ? PreferredFamilyMatch : FamilyNameMatch;
 	}
 
 	bool IncreaseGlyphMapSize()
@@ -222,7 +463,12 @@ private:
 		for(auto &pTextureData : m_apTextureData)
 		{
 			uint8_t *pTmpTexBuffer = new uint8_t[NewTextureDimension * NewTextureDimension];
-			QmCopyExpandedGlyphAtlas(pTmpTexBuffer, pTextureData, m_TextureDimension, NewTextureDimension);
+			for(size_t y = 0; y < m_TextureDimension; ++y)
+			{
+				mem_copy(&pTmpTexBuffer[y * NewTextureDimension], &pTextureData[y * m_TextureDimension], m_TextureDimension);
+				mem_zero(&pTmpTexBuffer[y * NewTextureDimension + m_TextureDimension], NewTextureDimension - m_TextureDimension);
+			}
+			mem_zero(&pTmpTexBuffer[m_TextureDimension * NewTextureDimension], (NewTextureDimension - m_TextureDimension) * NewTextureDimension);
 			delete[] pTextureData;
 			pTextureData = pTmpTexBuffer;
 		}
@@ -305,6 +551,8 @@ private:
 
 	void EnsureFacePixelSize(FT_Face Face, int FontSize) const
 	{
+		// 同一 face 连续用同一字号时跳过重复的 FT_Set_Pixel_Sizes；
+		// 任何绕过此入口直接设置字号的路径都必须先 InvalidateFacePixelSizeCache()。
 		m_FacePixelSizeCache.Ensure(Face, FontSize, [&]() { return FT_Set_Pixel_Sizes(Face, 0, FontSize); });
 	}
 
@@ -325,7 +573,6 @@ private:
 			mem_copy(&m_apTextureData[TextureIndex][PosX + ((y + PosY) * m_TextureDimension)], &pData[y * Width], Width);
 		}
 		Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], PosX, PosY, Width, Height, pData, true);
-		// 诊断关闭时不采样：计数与耗时只在开启时更新，开启时数值与过去一致。
 		if(!QmPerfEnabled())
 			return;
 		++m_QmPerfGlyphUploads;
@@ -436,8 +683,9 @@ private:
 	}
 
 public:
-	CGlyphMap(IGraphics *pGraphics)
+	CGlyphMap(IGraphics *pGraphics, FT_Library FtLibrary)
 	{
+		m_FTLibrary = FtLibrary;
 		m_pGraphics = pGraphics;
 		for(auto &pTextureData : m_apTextureData)
 		{
@@ -473,6 +721,12 @@ public:
 		return m_DefaultFace;
 	}
 
+	// 供绕过 EnsureFacePixelSize 直接调用 FT_Set_Pixel_Sizes 的调用方使用。
+	void InvalidateFacePixelSizeCache()
+	{
+		m_FacePixelSizeCache.Reset();
+	}
+
 	FT_Face IconFace() const
 	{
 		return m_IconFace;
@@ -485,6 +739,7 @@ public:
 
 	bool SetDefaultFaceByName(const char *pFamilyName)
 	{
+		// 默认字体变化会改变 GetCharGlyph 的解析结果，近期索引必须失效。
 		m_GlyphLookupCache.Reset();
 		m_DefaultFace = GetFaceByName(pFamilyName);
 		if(!m_DefaultFace)
@@ -496,6 +751,26 @@ public:
 			log_error("textrender", "The default font face '%s' could not be found", pFamilyName);
 			return false;
 		}
+		return true;
+	}
+
+	// 用户配置可能保留了旧机器上的系统字体名；自定义字体不可用时只返回失败，
+	// 由调用方保留当前默认面，避免把正常的配置迁移显示成错误。
+	bool TrySetDefaultFaceByName(const char *pFamilyName)
+	{
+		FT_Face Face = GetFaceByName(pFamilyName);
+		if(!Face)
+			return false;
+		if(m_DefaultFace != Face)
+		{
+			m_GlyphLookupCache.Reset();
+			m_DefaultFace = Face;
+			// 字重数值未变化时 SetCustomFontWeight 会直接返回；切换字体面后仍需
+			// 把当前字重轴重新写入新字体，并重建受影响的字形图集。
+			ApplyCustomFontWeight();
+			return true;
+		}
+		m_DefaultFace = Face;
 		return true;
 	}
 
@@ -524,6 +799,49 @@ public:
 		return true;
 	}
 
+	// 旧版 font index 可能没有 'icon bold' 键：沿用 regular 图标面，
+	// 避免 ICON_FONT_BOLD（qm_ui_icon_weight 默认取 1）退化到默认正文字体而缺字形。
+	void UseRegularFaceForIconBold()
+	{
+		m_IconBoldFace = m_IconRegularFace;
+	}
+
+	// 当前图标面缺失多少 FONT_ICON_* 码位；0 表示图标字体与码位匹配。
+	int CountMissingIconGlyphs(const char *const *apIcons, size_t NumIcons) const
+	{
+		if(m_IconFace == nullptr)
+			return static_cast<int>(NumIcons);
+		int Missing = 0;
+		for(size_t IconIndex = 0; IconIndex < NumIcons; ++IconIndex)
+		{
+			const char *pIcon = apIcons[IconIndex];
+			const int Codepoint = str_utf8_decode(&pIcon);
+			if(Codepoint <= 0 || FT_Get_Char_Index(m_IconFace, Codepoint) == 0)
+				++Missing;
+		}
+		return Missing;
+	}
+
+	// 回退路径专用：找不到时只返回 false，不写错误日志。
+	bool TrySetIconFaceByName(const char *pFamilyName)
+	{
+		FT_Face Face = GetFaceByName(pFamilyName);
+		if(Face == nullptr)
+			return false;
+		m_IconRegularFace = Face;
+		m_IconFace = Face;
+		return true;
+	}
+
+	bool TrySetIconBoldFaceByName(const char *pFamilyName)
+	{
+		FT_Face Face = GetFaceByName(pFamilyName);
+		if(Face == nullptr)
+			return false;
+		m_IconBoldFace = Face;
+		return true;
+	}
+
 	bool AddFallbackFaceByName(const char *pFamilyName)
 	{
 		FT_Face Face = GetFaceByName(pFamilyName);
@@ -537,6 +855,7 @@ public:
 			log_warn("textrender", "The fallback font face '%s' was specified multiple times", pFamilyName);
 			return true;
 		}
+		// 回退链变化同样会改变 GetCharGlyph 的解析结果，近期索引必须失效。
 		m_GlyphLookupCache.Reset();
 		m_vFallbackFaces.push_back(Face);
 		return true;
@@ -574,9 +893,94 @@ public:
 		}
 	}
 
-	void SetIconFontWeight(const bool Bold)
+	bool TrySetIconStyleFaceByName(const char *pFamilyName, FT_Face &Face)
 	{
-		m_IconFace = Bold && m_IconBoldFace != nullptr ? m_IconBoldFace : m_IconRegularFace;
+		Face = GetFaceByName(pFamilyName);
+		return Face != nullptr;
+	}
+
+	void SetIconStyleFacesByName()
+	{
+		TrySetIconStyleFaceByName("Phosphor-Light", m_IconLightFace);
+		TrySetIconStyleFaceByName("Phosphor-Fill", m_IconFillFace);
+		TrySetIconStyleFaceByName("Phosphor-Duotone", m_IconDuotoneFace);
+	}
+
+	void SetIconFontWeight(const int Weight)
+	{
+		// 与图集侧保持相同的旧配置归一化：非法值按 Bold 处理，避免
+		// MTSDF 已切到 Bold 而字体回退仍落到 Regular。
+		const int NormalizedWeight = Weight >= 0 && Weight <= 5 ? Weight : 1;
+		FT_Face Face = m_IconRegularFace;
+		switch(NormalizedWeight)
+		{
+		case 1: Face = m_IconBoldFace; break;
+		case 2:
+		case 4: Face = m_IconLightFace; break;
+		case 3: Face = m_IconFillFace; break;
+		case 5: Face = m_IconDuotoneFace; break;
+		default: break;
+		}
+		if(Face == nullptr)
+			Face = m_IconRegularFace;
+		if(m_IconFace != Face)
+		{
+			m_IconFace = Face;
+			m_GlyphLookupCache.Reset();
+		}
+	}
+
+	void ApplyCustomFontWeight()
+	{
+		bool HasVariableWeightAxis = false;
+		for(FT_Face Face : m_vFtFaces)
+		{
+			bool FaceHasWeightAxis = false;
+			FT_MM_Var *pMaster = nullptr;
+			if(FT_Get_MM_Var(Face, &pMaster) != 0 || pMaster == nullptr)
+				continue;
+			std::vector<FT_Fixed> vCoords(pMaster->num_axis);
+			for(FT_UInt AxisIndex = 0; AxisIndex < pMaster->num_axis; ++AxisIndex)
+			{
+				const FT_Var_Axis &Axis = pMaster->axis[AxisIndex];
+				vCoords[AxisIndex] = Axis.def;
+				if(Axis.tag == FT_MAKE_TAG('w', 'g', 'h', 't'))
+				{
+					const FT_Fixed Requested = static_cast<FT_Fixed>(m_CustomFontWeight * 65536);
+					vCoords[AxisIndex] = std::clamp(Requested, Axis.minimum, Axis.maximum);
+					FaceHasWeightAxis = true;
+				}
+			}
+			if(FaceHasWeightAxis)
+			{
+				HasVariableWeightAxis = true;
+				FT_Set_Var_Design_Coordinates(Face, pMaster->num_axis, vCoords.data());
+			}
+			FT_Done_MM_Var(m_FTLibrary, pMaster);
+		}
+		if(HasVariableWeightAxis)
+			Clear();
+	}
+
+	void SetCustomFontWeight(const int Weight)
+	{
+		const int ClampedWeight = std::clamp(Weight, 100, 900);
+		if(m_CustomFontWeight == ClampedWeight)
+			return;
+		m_CustomFontWeight = ClampedWeight;
+		ApplyCustomFontWeight();
+	}
+
+	bool CustomFontHasVariableWeight(const char *pFace) const
+	{
+		if(pFace == nullptr)
+			return false;
+		FT_Face Face = const_cast<CGlyphMap *>(this)->GetFaceByName(pFace);
+		FT_MM_Var *pMaster = nullptr;
+		const bool HasVariable = Face != nullptr && FT_Get_MM_Var(Face, &pMaster) == 0 && pMaster != nullptr;
+		if(pMaster != nullptr)
+			FT_Done_MM_Var(m_FTLibrary, pMaster);
+		return HasVariable;
 	}
 
 	bool IsIconFaceSelected() const
@@ -586,8 +990,6 @@ public:
 
 	void Clear()
 	{
-		m_GlyphLookupCache.Reset();
-		InvalidateFacePixelSizeCache();
 		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
 		{
 			mem_zero(m_apTextureData[TextureIndex], m_TextureDimension * m_TextureDimension * sizeof(uint8_t));
@@ -596,11 +998,56 @@ public:
 
 		m_TextureAtlas.Clear(m_TextureDimension);
 		m_Glyphs.clear();
+		m_GlyphLookupCache.Reset();
+		InvalidateFacePixelSizeCache();
+	}
+
+	// QmClient: 记录/消费“最近缺失字形”。预热集合与缓存无关，字体图集重建（语言切换）
+	// 后正好需要重新预热，因此这里不清空集合。
+	static uint64_t QmRecentGlyphMissKey(int Chr, int FontSize)
+	{
+		return ((uint64_t)(uint32_t)Chr << 32) | (uint32_t)FontSize;
+	}
+
+	void QmRecordRecentGlyphMiss(int Chr, int FontSize)
+	{
+		if(Chr <= 0 || m_vQmRecentGlyphMisses.size() >= QM_MAX_RECENT_GLYPH_MISSES)
+			return;
+		if(m_QmRecentGlyphMissKeys.insert(QmRecentGlyphMissKey(Chr, FontSize)).second)
+			m_vQmRecentGlyphMisses.emplace_back(Chr, FontSize);
+	}
+
+	size_t QmRecentGlyphMissCount() const
+	{
+		return m_vQmRecentGlyphMisses.size();
+	}
+
+	const std::vector<std::pair<int, int>> &QmRecentGlyphMisses() const
+	{
+		return m_vQmRecentGlyphMisses;
+	}
+
+	// 按游标预热缺失字形（集合保留，供持久化）；已缓存时 GetGlyph 几乎零成本。
+	int QmPrewarmRecentGlyphMisses(int MaxCount)
+	{
+		const bool PreviousRecording = m_QmRecordGlyphMisses;
+		m_QmRecordGlyphMisses = false;
+		int Prewarmed = 0;
+		while(Prewarmed < MaxCount && m_QmRecentGlyphPrewarmCursor < m_vQmRecentGlyphMisses.size())
+		{
+			const std::pair<int, int> Miss = m_vQmRecentGlyphMisses[m_QmRecentGlyphPrewarmCursor++];
+			if(GetGlyph(Miss.first, Miss.second) != nullptr)
+				++Prewarmed;
+		}
+		m_QmRecordGlyphMisses = PreviousRecording;
+		return Prewarmed;
 	}
 
 	const SGlyph *GetGlyph(int Chr, int FontSize)
 	{
 		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
+
+		// 命中近期索引时直接返回，省掉一次哈希查找；索引与字形表同生共死。
 		if(const SGlyph *pCached = m_GlyphLookupCache.Find(m_SelectedFace, Chr, FontSize))
 			return pCached;
 		const auto RememberGlyph = [&](const SGlyph *pGlyph) {
@@ -626,11 +1073,15 @@ public:
 			return nullptr;
 
 		// Else, render it.
+		if(m_QmRecordGlyphMisses)
+			QmRecordRecentGlyphMiss(Chr, FontSize);
 		Glyph.m_FontSize = FontSize;
 		Glyph.m_Face = Face;
 		Glyph.m_Chr = Chr;
 		Glyph.m_GlyphIndex = GlyphIndex;
-		if(RenderGlyph(Glyph))
+
+		const bool Rendered = RenderGlyph(Glyph);
+		if(Rendered)
 			return RememberGlyph(&Glyph);
 
 		// Use replacement character if the glyph could not be rendered,
@@ -646,11 +1097,6 @@ public:
 		// but set its state to ERROR so we don't return it to the text render.
 		Glyph.m_State = SGlyph::EState::ERROR;
 		return nullptr;
-	}
-
-	void InvalidateFacePixelSizeCache()
-	{
-		m_FacePixelSizeCache.Reset();
 	}
 
 	vec2 Kerning(const SGlyph *pLeft, const SGlyph *pRight) const
@@ -813,7 +1259,6 @@ struct STextContainer
 	// prefix of the container's text stored for debugging purposes
 	char m_aDebugText[32];
 
-	// 仅绘制容器借用外部索引的引用计数；临时测量和空闲容器不创建计数对象。
 	std::shared_ptr<STextContainerUsages> m_pContainerUseCount;
 
 	void Reset()
@@ -910,8 +1355,15 @@ class CTextRender : public IEngineTextRender
 	double m_QmPerfTextContainerUploadMs = 0.0;
 	SQmTextRuntimeBudgetSnapshot m_QmLastTextRuntimeBudgetSnapshot;
 
+	// QmClient: 单帧文本统计（QmTextFrameEnd 时消费并按阈值打日志）。
+	int m_QmFrameContainerCreates = 0;
+	int m_QmPeakFrameContainerCreates = 0;
+	double m_QmPeakFrameRasterizeMs = 0.0;
+	int m_QmPeakFrameGlyphNew = 0;
+
 	// TClient
 	std::vector<std::string> m_CustomFontFaces;
+	std::vector<std::string> m_CustomFontStyles;
 	std::vector<std::string> m_DefaultFontFaces;
 
 	void ResetQmTextRuntimeBudgetCounters(bool ConsumeGlyphStats)
@@ -988,6 +1440,137 @@ class CTextRender : public IEngineTextRender
 	SQmTextRuntimeBudgetSnapshot QmTextRuntimeBudgetSnapshot() const override
 	{
 		return m_QmLastTextRuntimeBudgetSnapshot;
+	}
+
+	// QmClient: 每渲染帧末尾由主循环调用。消费本帧的字形统计，容器创建数
+	// 由 CreateTextContainer 递增。单帧超过阈值时打 text_frame_stats 日志，
+	// 用于定位"进服后前几下卡顿"这类单帧文本渲染尖峰。
+	void QmTextFrameEnd() override
+	{
+		if(m_pGlyphMap == nullptr)
+			return;
+
+		int FrameGlyphNew = 0;
+		int FrameGlyphUploads = 0;
+		double FrameRasterizeMs = 0.0;
+		double FrameUploadMs = 0.0;
+		m_pGlyphMap->ConsumeQmPerfGlyphStats(FrameGlyphNew, FrameGlyphUploads, FrameRasterizeMs, FrameUploadMs);
+		constexpr int ContainerCreatesThreshold = 256;
+		constexpr double RasterizeThresholdMs = 4.0;
+		constexpr int GlyphNewThreshold = 96;
+
+		if(FrameRasterizeMs > m_QmPeakFrameRasterizeMs)
+			m_QmPeakFrameRasterizeMs = FrameRasterizeMs;
+		if(m_QmFrameContainerCreates > m_QmPeakFrameContainerCreates)
+			m_QmPeakFrameContainerCreates = m_QmFrameContainerCreates;
+		if(FrameGlyphNew > m_QmPeakFrameGlyphNew)
+			m_QmPeakFrameGlyphNew = FrameGlyphNew;
+
+		if(QmPerfEnabled() && (m_QmFrameContainerCreates >= ContainerCreatesThreshold ||
+					      FrameRasterizeMs >= RasterizeThresholdMs || FrameGlyphNew >= GlyphNewThreshold))
+		{
+			char aPayload[224];
+			str_format(aPayload, sizeof(aPayload),
+				"event=text_frame_stats container_creates=%d glyph_new=%d glyph_uploads=%d glyph_rasterize_ms=%.3f peak_creates=%d peak_rasterize_ms=%.3f peak_glyph_new=%d",
+				m_QmFrameContainerCreates, FrameGlyphNew, FrameGlyphUploads, FrameRasterizeMs,
+				m_QmPeakFrameContainerCreates, m_QmPeakFrameRasterizeMs, m_QmPeakFrameGlyphNew);
+			QmPerfLogPayload("perf/text", aPayload);
+		}
+
+		m_QmFrameContainerCreates = 0;
+	}
+
+	// QmClient: 预热单个字形。命中缓存时零成本；未命中则光栅化并写入图集。
+	// 供菜单在构建文本容器前分帧调用（字形光栅化幂等可中断，文本容器构建不可）。
+	void QmPrewarmGlyph(int Chr, int FontSize) override
+	{
+		if(m_pGlyphMap == nullptr || Chr <= 0)
+			return;
+		m_pGlyphMap->GetGlyph(Chr, FontSize);
+	}
+
+	// QmClient: 空闲帧预热“最近缺失字形”，返回本次实际预热数量。
+	int QmPrewarmRecentGlyphs(int MaxCount) override
+	{
+		if(m_pGlyphMap == nullptr || MaxCount <= 0)
+			return 0;
+		return m_pGlyphMap->QmPrewarmRecentGlyphMisses(MaxCount);
+	}
+
+	int QmRecentGlyphMissCount() const override
+	{
+		return m_pGlyphMap == nullptr ? 0 : (int)m_pGlyphMap->QmRecentGlyphMissCount();
+	}
+
+	// QmClient: 跨会话持久化缺失字形集合（文本格式，每行 "Chr Size"）。
+	void QmLoadRecentGlyphs(IStorage *pStorage, const char *pPath) override
+	{
+		if(m_pGlyphMap == nullptr || pStorage == nullptr || pPath == nullptr)
+			return;
+		void *pData = nullptr;
+		unsigned DataSize = 0;
+		if(!pStorage->ReadFile(pPath, IStorage::TYPE_SAVE, &pData, &DataSize) || pData == nullptr || DataSize == 0)
+			return;
+		const char *pCursor = (const char *)pData;
+		const char *pEnd = pCursor + DataSize;
+		while(pCursor < pEnd)
+		{
+			const char *pLineEnd = pCursor;
+			while(pLineEnd < pEnd && *pLineEnd != '\n' && *pLineEnd != '\r')
+				++pLineEnd;
+			int Chr = -1;
+			int Size = -1;
+			bool HasSize = false;
+			const char *pParse = pCursor;
+			while(pParse < pLineEnd)
+			{
+				while(pParse < pLineEnd && (*pParse < '0' || *pParse > '9'))
+					++pParse;
+				int Value = 0;
+				bool HasValue = false;
+				while(pParse < pLineEnd && *pParse >= '0' && *pParse <= '9')
+				{
+					Value = Value * 10 + (*pParse - '0');
+					++pParse;
+					HasValue = true;
+				}
+				if(!HasValue)
+					break;
+				if(Chr < 0)
+					Chr = Value;
+				else
+				{
+					Size = Value;
+					HasSize = true;
+					break;
+				}
+			}
+			if(Chr > 0 && HasSize && Size > 0)
+				m_pGlyphMap->QmRecordRecentGlyphMiss(Chr, Size);
+			pCursor = pLineEnd;
+			while(pCursor < pEnd && (*pCursor == '\n' || *pCursor == '\r'))
+				++pCursor;
+		}
+		free(pData);
+	}
+
+	void QmSaveRecentGlyphs(IStorage *pStorage, const char *pPath) override
+	{
+		if(m_pGlyphMap == nullptr || pStorage == nullptr || pPath == nullptr)
+			return;
+		const std::vector<std::pair<int, int>> &vMisses = m_pGlyphMap->QmRecentGlyphMisses();
+		if(vMisses.empty())
+			return;
+		IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		if(!File)
+			return;
+		for(const std::pair<int, int> &Miss : vMisses)
+		{
+			char aBuf[48];
+			str_format(aBuf, sizeof(aBuf), "%d %d\n", Miss.first, Miss.second);
+			io_write(File, aBuf, str_length(aBuf));
+		}
+		io_close(File);
 	}
 
 	int GetFreeTextContainerIndex()
@@ -1123,7 +1706,7 @@ public:
 		m_pGraphics = Kernel()->RequestInterface<IGraphics>();
 		m_pStorage = Kernel()->RequestInterface<IStorage>();
 		FT_Init_FreeType(&m_FTLibrary);
-		m_pGlyphMap = new CGlyphMap(m_pGraphics);
+		m_pGlyphMap = new CGlyphMap(m_pGraphics, m_FTLibrary);
 
 		// print freetype version
 		{
@@ -1195,15 +1778,44 @@ public:
 		pVector->emplace_back(pFilename);
 		return 0;
 	}
+	// TClient：递归收集字体文件，保留目录名以支持 qmclient/fonts 下的字体包。
+	struct SRecursiveFontScan
+	{
+		CTextRender *m_pThis;
+		std::string m_Directory;
+		std::vector<std::string> *m_pFiles;
+	};
+	static int RecursiveFontFileCallback(const char *pFilename, int IsDir, int StorageType, void *pUser)
+	{
+		auto *pScan = static_cast<SRecursiveFontScan *>(pUser);
+		if(pFilename == nullptr || pFilename[0] == '.' || pScan == nullptr)
+			return 0;
+		char aRelativePath[IO_MAX_PATH_LENGTH];
+		str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pScan->m_Directory.c_str(), pFilename);
+		if(IsDir)
+		{
+			SRecursiveFontScan Child{pScan->m_pThis, aRelativePath, pScan->m_pFiles};
+			pScan->m_pThis->Storage()->ListDirectory(IStorage::TYPE_ALL, aRelativePath, RecursiveFontFileCallback, &Child);
+			return 0;
+		}
+		if(str_endswith_nocase(pFilename, ".ttf") != nullptr || str_endswith_nocase(pFilename, ".otf") != nullptr || str_endswith_nocase(pFilename, ".ttc") != nullptr)
+			pScan->m_pFiles->emplace_back(aRelativePath);
+		return 0;
+	}
 	// TClient
 	void CheckDefaultFaces()
 	{
 		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
 		{
-			char aBuf[256];
-			str_copy(aBuf, FT_Get_Postscript_Name(CurrentFace));
-			ReplaceHyphensWithSpaces(aBuf);
-			m_DefaultFontFaces.emplace_back(aBuf);
+			char aFamilyStyle[256];
+			const char *pFamily = CurrentFace->family_name != nullptr ? CurrentFace->family_name : "";
+			const char *pStyle = CurrentFace->style_name != nullptr ? CurrentFace->style_name : "";
+			if(pFamily[0] != '\0' && pStyle[0] != '\0' && str_comp_nocase(pStyle, "Regular") != 0)
+				str_format(aFamilyStyle, sizeof(aFamilyStyle), "%s %s", pFamily, pStyle);
+			else
+				str_copy(aFamilyStyle, pFamily[0] != '\0' ? pFamily : FT_Get_Postscript_Name(CurrentFace));
+			ReplaceHyphensWithSpaces(aFamilyStyle);
+			m_DefaultFontFaces.emplace_back(aFamilyStyle);
 		}
 	}
 	// TClient
@@ -1212,34 +1824,124 @@ public:
 		std::vector<std::string> vAllFaces;
 		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
 		{
-			char aBuf[256];
-			str_copy(aBuf, FT_Get_Postscript_Name(CurrentFace));
-			ReplaceHyphensWithSpaces(aBuf);
-			vAllFaces.emplace_back(aBuf);
+			char aFamilyStyle[256];
+			const char *pFamily = CurrentFace->family_name != nullptr ? CurrentFace->family_name : "";
+			const char *pStyle = CurrentFace->style_name != nullptr ? CurrentFace->style_name : "";
+			if(pFamily[0] != '\0' && pStyle[0] != '\0' && str_comp_nocase(pStyle, "Regular") != 0)
+				str_format(aFamilyStyle, sizeof(aFamilyStyle), "%s %s", pFamily, pStyle);
+			else
+				str_copy(aFamilyStyle, pFamily[0] != '\0' ? pFamily : FT_Get_Postscript_Name(CurrentFace));
+			ReplaceHyphensWithSpaces(aFamilyStyle);
+			std::string DisplayName = aFamilyStyle;
+			// 下拉框按字体族展示，样式由族内的静态 face 或可变字重控制。
+			for(const char *pSuffix : {" Regular", " Light", " Thin", " ExtraLight", " Medium", " SemiBold", " Bold", " ExtraBold", " Black", " Heavy"})
+			{
+				if(DisplayName.size() > std::strlen(pSuffix) && DisplayName.compare(DisplayName.size() - std::strlen(pSuffix), std::strlen(pSuffix), pSuffix) == 0)
+				{
+					DisplayName.erase(DisplayName.size() - std::strlen(pSuffix));
+					break;
+				}
+			}
+			vAllFaces.emplace_back(DisplayName);
 		}
 
 		m_CustomFontFaces.clear();
 		m_CustomFontFaces.emplace_back("DejaVu Sans");
 		for(const auto &Face : vAllFaces)
-			if(std::find(m_DefaultFontFaces.begin(), m_DefaultFontFaces.end(), Face) == m_DefaultFontFaces.end())
+		{
+			// 图标字体不作为正文字体候选。
+			if(str_find_nocase(Face.c_str(), "Phosphor") != nullptr)
+				continue;
+			if(std::find_if(m_DefaultFontFaces.begin(), m_DefaultFontFaces.end(), [&Face](const std::string &DefaultFace) { return str_comp_nocase(DefaultFace.c_str(), Face.c_str()) == 0; }) != m_DefaultFontFaces.end())
+				continue;
+			if(std::find_if(m_CustomFontFaces.begin(), m_CustomFontFaces.end(), [&Face](const std::string &Existing) { return str_comp_nocase(Existing.c_str(), Face.c_str()) == 0; }) == m_CustomFontFaces.end())
 				m_CustomFontFaces.push_back(Face);
+		}
 	}
+
+	void UpdateCustomFontStyles(const char *pFamily)
+	{
+		m_CustomFontStyles.clear();
+		if(pFamily == nullptr || pFamily[0] == '\0')
+			return;
+		const char *pTargetFamily = pFamily;
+		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
+		{
+			if(CurrentFace->family_name == nullptr || CurrentFace->style_name == nullptr)
+				continue;
+			char aFamilyStyle[FONT_NAME_SIZE];
+			str_format(aFamilyStyle, sizeof(aFamilyStyle), "%s %s", CurrentFace->family_name, CurrentFace->style_name);
+			if(str_comp_nocase(aFamilyStyle, pFamily) == 0)
+			{
+				pTargetFamily = CurrentFace->family_name;
+				break;
+			}
+		}
+		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
+		{
+			if(CurrentFace->family_name == nullptr || str_comp_nocase(CurrentFace->family_name, pTargetFamily) != 0)
+				continue;
+			char aName[FONT_NAME_SIZE];
+			str_format(aName, sizeof(aName), "%s %s", CurrentFace->family_name, CurrentFace->style_name != nullptr ? CurrentFace->style_name : "Regular");
+			if(std::find_if(m_CustomFontStyles.begin(), m_CustomFontStyles.end(), [&aName](const std::string &Existing) { return str_comp_nocase(Existing.c_str(), aName) == 0; }) == m_CustomFontStyles.end())
+				m_CustomFontStyles.emplace_back(aName);
+		}
+		std::sort(m_CustomFontStyles.begin(), m_CustomFontStyles.end());
+	}
+	// TClient
+	// 随包图标字体首次使用时复制到用户目录，让 qmclient/fonts 自包含，用户无需手工放置。
+	void InstallBundledIconFonts()
+	{
+		for(const char *pName : {"Phosphor/Phosphor-Regular.ttf", "Phosphor/Phosphor-Bold.ttf", "Phosphor/Phosphor-Light.ttf", "Phosphor/Phosphor-Fill.ttf", "Phosphor/Phosphor-Duotone.ttf"})
+		{
+			char aPath[IO_MAX_PATH_LENGTH];
+			str_format(aPath, sizeof(aPath), "qmclient/fonts/%s", pName);
+			if(Storage()->FileExists(aPath, IStorage::TYPE_SAVE))
+				continue;
+			void *pData = nullptr;
+			unsigned DataSize = 0;
+			if(!Storage()->ReadFile(aPath, IStorage::TYPE_ALL, &pData, &DataSize))
+			{
+				log_error("textrender", "Bundled icon font '%s' is missing", aPath);
+				continue;
+			}
+			Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+			Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
+			Storage()->CreateFolder("qmclient/fonts/Phosphor", IStorage::TYPE_SAVE);
+			IOHANDLE File = Storage()->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			if(File == nullptr)
+			{
+				log_error("textrender", "Failed to install bundled icon font '%s'", aPath);
+			}
+			else
+			{
+				const bool Written = io_write(File, pData, DataSize) == DataSize;
+				io_close(File);
+				if(Written)
+					log_info("textrender", "Installed bundled icon font '%s'", aPath);
+				else
+					log_error("textrender", "Failed to write bundled icon font '%s'", aPath);
+			}
+			free(pData);
+		}
+	}
+
 	// TClient
 	void LoadCustomFonts()
 	{
 		CheckDefaultFaces();
+		InstallBundledIconFonts();
 		std::vector<std::string> vCustomFonts;
-		Storage()->ListDirectory(IStorage::TYPE_ALL, "qmclient/fonts", LaziestFileCallback, &vCustomFonts);
+		SRecursiveFontScan Scan{this, "qmclient/fonts", &vCustomFonts};
+		Storage()->ListDirectory(IStorage::TYPE_ALL, "qmclient/fonts", RecursiveFontFileCallback, &Scan);
 		std::sort(vCustomFonts.begin(), vCustomFonts.end());
 		for(const std::string &FilePath : vCustomFonts)
 		{
-			char aFontName[IO_MAX_PATH_LENGTH];
-			str_format(aFontName, sizeof(aFontName), "qmclient/fonts/%s", FilePath.c_str());
 			void *pFontData;
 			unsigned FontDataSize;
-			if(Storage()->ReadFile(aFontName, IStorage::TYPE_ALL, &pFontData, &FontDataSize))
+			if(Storage()->ReadFile(FilePath.c_str(), IStorage::TYPE_ALL, &pFontData, &FontDataSize))
 			{
-				if(LoadFontCollection(aFontName, static_cast<FT_Byte *>(pFontData), (FT_Long)FontDataSize))
+				if(LoadFontCollection(FilePath.c_str(), static_cast<FT_Byte *>(pFontData), (FT_Long)FontDataSize))
 				{
 					m_vpFontData.push_back(pFontData);
 				}
@@ -1250,7 +1952,7 @@ public:
 			}
 			else
 			{
-				log_error("textrender", "Failed to open/read font file '%s'", aFontName);
+				log_error("textrender", "Failed to open/read font file '%s'", FilePath.c_str());
 			}
 		}
 		UpdateCustomFontList();
@@ -1260,10 +1962,27 @@ public:
 	{
 		return &m_CustomFontFaces;
 	}
+
+	std::vector<std::string> *GetCustomFontStyles(const char *pFamily) override
+	{
+		UpdateCustomFontStyles(pFamily);
+		return &m_CustomFontStyles;
+	}
 	// TClient
 	void SetCustomFace(const char *pFace) override
 	{
-		m_pGlyphMap->SetDefaultFaceByName(pFace);
+		if(!m_pGlyphMap->TrySetDefaultFaceByName(pFace))
+			log_info("textrender", "Configured custom font face '%s' is not bundled; using the default bundled face", pFace != nullptr ? pFace : "");
+	}
+
+	void SetCustomFontWeight(const int Weight) override
+	{
+		m_pGlyphMap->SetCustomFontWeight(Weight);
+	}
+
+	bool CustomFontHasVariableWeight(const char *pFace) const override
+	{
+		return m_pGlyphMap->CustomFontHasVariableWeight(pFace);
 	}
 
 	bool LoadFonts() override
@@ -1353,6 +2072,7 @@ public:
 		}
 		// TClient
 		LoadCustomFonts();
+		m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
 		m_pGlyphMap->AddFallbackFaceByName("DejaVu Sans");
 
 		// extract language variant family names
@@ -1406,36 +2126,28 @@ public:
 			Success = false;
 		}
 
-		// ICON_FONT 跟随保存的图标粗细，ICON_FONT_BOLD 供必须使用粗体字形的控件使用。
-		const json_value &IconFace = (*pJsonData)["icon"];
-		if(IconFace.type == json_string)
+		// FONT_ICON_* 与 QmIcon 的字形回退统一固定到随包 Phosphor，避免用户目录
+		// 中旧版 Font Awesome 索引触发无意义的缺字和粗体告警。
+		if(!m_pGlyphMap->TrySetIconFaceByName("Phosphor"))
 		{
-			if(!m_pGlyphMap->SetIconFaceByName(IconFace.u.string.ptr))
-			{
-				Success = false;
-			}
-		}
-		else
-		{
-			log_error("textrender", "Font index malformed: 'icon' must be a string");
+			log_error("textrender", "Bundled 'Phosphor' icon face is unavailable; icon glyphs will be missing");
 			Success = false;
 		}
-
-		const json_value &IconBoldFace = (*pJsonData)["icon bold"];
-		if(IconBoldFace.type == json_string)
+		if(!m_pGlyphMap->TrySetIconBoldFaceByName("Phosphor-Bold"))
 		{
-			if(!m_pGlyphMap->SetIconBoldFaceByName(IconBoldFace.u.string.ptr))
-			{
-				Success = false;
-			}
+			if(!m_pGlyphMap->TrySetIconBoldFaceByName("Phosphor"))
+				m_pGlyphMap->UseRegularFaceForIconBold();
 		}
-		else
+		m_pGlyphMap->SetIconStyleFacesByName();
+
+		if(const FT_Face IconFace = m_pGlyphMap->IconFace())
 		{
-			log_error("textrender", "Font index malformed: 'icon bold' must be a string");
-			Success = false;
+			// 图标字体来自哪一份 index.json 直接决定 FONT_ICON_* 能否显示，
+			// 用户目录的同名文件会覆盖 data/fonts/index.json，这里留一条可排查的记录。
+			log_info("textrender", "Icon font face: '%s'", IconFace->family_name != nullptr ? IconFace->family_name : "(unknown)");
 		}
 
-		m_pGlyphMap->SetIconFontWeight(g_Config.m_QmUiIconWeight == 1);
+		m_pGlyphMap->SetIconFontWeight(g_Config.m_QmUiIconWeight);
 
 		json_value_free(pJsonData);
 		return Success;
@@ -1453,9 +2165,9 @@ public:
 		return m_FontPreset;
 	}
 
-	void SetIconFontWeight(bool Bold) override
+	void SetIconFontWeight(int Weight) override
 	{
-		m_pGlyphMap->SetIconFontWeight(Bold);
+		m_pGlyphMap->SetIconFontWeight(Weight);
 		if(m_FontPreset == EFontPreset::ICON_FONT)
 			m_pGlyphMap->SetFontPreset(EFontPreset::ICON_FONT);
 	}
@@ -1619,11 +2331,12 @@ public:
 	bool CreateTextContainer(STextContainerIndex &TextContainerIndex, CTextCursor *pCursor, const char *pText, int Length = -1) override
 	{
 		dbg_assert(!TextContainerIndex.Valid(), "Text container index was not cleared.");
-		// 诊断关闭时不读取高精度时钟；开启时采样口径与过去完全一致。
+
 		const bool PerfEnabled = QmPerfEnabled();
 		const auto CreateStart = PerfEnabled ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
 		if(PerfEnabled)
 			++m_QmPerfTextContainerNew;
+		++m_QmFrameContainerCreates;
 
 		TextContainerIndex.Reset();
 		TextContainerIndex.m_Index = GetFreeTextContainerIndex();
@@ -1682,26 +2395,22 @@ public:
 		pCursor->m_AlignedFontSize = ActualSize / FakeToScreen.y;
 		pCursor->m_AlignedLineSpacing = round_truncate(pCursor->m_LineSpacing * FakeToScreen.y) / FakeToScreen.y;
 
-		Length = QmTextLayoutByteLength(pText, Length);
+		// string length
+		if(Length < 0)
+			Length = str_length(pText);
+		else
+			Length = QmTextLayoutByteLength(pText, Length);
 
 		const char *pCurrent = pText;
 		const char *pEnd = pCurrent + Length;
 		const char *pPrevBatchEnd = nullptr;
 		const char *pEllipsis = "…";
 		const SGlyph *pEllipsisGlyph = nullptr;
-		if(pCursor->m_Flags & TEXTFLAG_ELLIPSIS_AT_END)
-		{
-			if(pCursor->m_LineWidth > 0.0f && pCursor->m_LineWidth < TextWidth(pCursor->m_FontSize, pText))
-			{
-				pEllipsisGlyph = m_pGlyphMap->GetGlyph(0x2026, ActualSize); // …
-				if(pEllipsisGlyph == nullptr)
-				{
-					// no ellipsis char in font, just stop at end instead
-					pCursor->m_Flags &= ~TEXTFLAG_ELLIPSIS_AT_END;
-					pCursor->m_Flags |= TEXTFLAG_STOP_AT_END;
-				}
-			}
-		}
+		// Only text that does not fit as a whole is ellipsized. Both the ellipsis glyph and
+		// the width of the whole text are only determined once the line width is nearly
+		// exhausted, so text that stays well within it is never measured a second time.
+		bool EllipsisGlyphResolved = false;
+		bool EllipsisFitResolved = false;
 
 		const unsigned RenderFlags = TextContainer.m_RenderFlags;
 
@@ -1889,6 +2598,10 @@ public:
 			{
 				int Wlen = minimum(WordLength(pCurrent), (int)(pEnd - pCurrent));
 				CTextCursor Compare = QmTextWordMeasureCursor(*pCursor, DrawX, DrawY);
+				Compare.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_NONE;
+				Compare.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_NONE;
+				Compare.m_Flags &= ~TEXTFLAG_RENDER;
+				Compare.m_Flags |= TEXTFLAG_DISALLOW_NEWLINE;
 				Compare.m_LineWidth = -1.0f;
 				TextEx(&Compare, pCurrent, Wlen);
 
@@ -1896,9 +2609,12 @@ public:
 				{
 					// word can't be fitted in one line, cut it
 					CTextCursor Cutter = QmTextWordMeasureCursor(*pCursor, DrawX, DrawY);
+					Cutter.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_NONE;
+					Cutter.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_NONE;
 					Cutter.m_GlyphCount = 0;
 					Cutter.m_CharCount = 0;
-					Cutter.m_Flags |= TEXTFLAG_STOP_AT_END;
+					Cutter.m_Flags &= ~TEXTFLAG_RENDER;
+					Cutter.m_Flags |= TEXTFLAG_STOP_AT_END | TEXTFLAG_DISALLOW_NEWLINE;
 
 					TextEx(&Cutter, pCurrent, Wlen);
 					Wlen = str_utf8_rewind(pCurrent, Cutter.m_CharCount); // rewind once to skip the last character that did not fit
@@ -1967,22 +2683,44 @@ public:
 						CharKerning = m_pGlyphMap->Kerning(pLastGlyph, pGlyph).x * Scale * pCursor->m_AlignedFontSize;
 					pLastGlyph = pGlyph;
 
-					if(pEllipsisGlyph != nullptr && pCursor->m_Flags & TEXTFLAG_ELLIPSIS_AT_END && pCurrent < pBatchEnd && pCurrent != pEllipsis)
+					if((pCursor->m_Flags & TEXTFLAG_ELLIPSIS_AT_END) != 0 && pCursor->m_LineWidth > 0.0f && pCurrent < pBatchEnd && pCurrent != pEllipsis)
 					{
-						float AdvanceEllipsis = (((RenderFlags & TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH) != 0) ? (pEllipsisGlyph->m_Width) : (pEllipsisGlyph->m_AdvanceX + ((!ApplyBearingX) ? (-pEllipsisGlyph->m_OffsetX) : 0.f))) * Scale * pCursor->m_AlignedFontSize;
-						float CharKerningEllipsis = 0.0f;
-						if((RenderFlags & TEXT_RENDER_FLAG_KERNING) != 0)
+						if(!EllipsisGlyphResolved)
 						{
-							CharKerningEllipsis = m_pGlyphMap->Kerning(pGlyph, pEllipsisGlyph).x * Scale * pCursor->m_AlignedFontSize;
+							EllipsisGlyphResolved = true;
+							pEllipsisGlyph = m_pGlyphMap->GetGlyph(0x2026, ActualSize); // …
+							if(pEllipsisGlyph == nullptr)
+							{
+								// no ellipsis char in font, just stop at end instead
+								pCursor->m_Flags &= ~TEXTFLAG_ELLIPSIS_AT_END;
+								pCursor->m_Flags |= TEXTFLAG_STOP_AT_END;
+							}
 						}
-						if(pCursor->m_LineWidth > 0.0f &&
-							DrawX + CharKerning + Advance + CharKerningEllipsis + AdvanceEllipsis - pCursor->m_StartX > pCursor->m_LineWidth)
+						if(pEllipsisGlyph != nullptr)
 						{
-							// we hit the end, only render ellipsis and finish
-							pTmp = pEllipsis;
-							NextCharacter = 0x2026;
-							pCursor->m_Truncated = true;
-							continue;
+							float AdvanceEllipsis = (((RenderFlags & TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH) != 0) ? (pEllipsisGlyph->m_Width) : (pEllipsisGlyph->m_AdvanceX + ((!ApplyBearingX) ? (-pEllipsisGlyph->m_OffsetX) : 0.f))) * Scale * pCursor->m_AlignedFontSize;
+							float CharKerningEllipsis = 0.0f;
+							if((RenderFlags & TEXT_RENDER_FLAG_KERNING) != 0)
+							{
+								CharKerningEllipsis = m_pGlyphMap->Kerning(pGlyph, pEllipsisGlyph).x * Scale * pCursor->m_AlignedFontSize;
+							}
+							if(DrawX + CharKerning + Advance + CharKerningEllipsis + AdvanceEllipsis - pCursor->m_StartX > pCursor->m_LineWidth)
+							{
+								if(!EllipsisFitResolved)
+								{
+									EllipsisFitResolved = true;
+									if(pCursor->m_LineWidth >= TextWidth(pCursor->m_FontSize, pText))
+										pEllipsisGlyph = nullptr;
+								}
+								if(pEllipsisGlyph != nullptr)
+								{
+									// we hit the end, only render ellipsis and finish
+									pTmp = pEllipsis;
+									NextCharacter = 0x2026;
+									pCursor->m_Truncated = true;
+									continue;
+								}
+							}
 						}
 					}
 

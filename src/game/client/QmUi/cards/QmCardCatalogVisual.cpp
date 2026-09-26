@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-// 视觉分类卡片入口（9 张，含恢复的禅模式）：皮肤卡委托独立模块，其他卡在此提供测量、输入和渲染。
+// 视觉分类卡片入口（10 张，含恢复的禅模式与卡锤高亮）：皮肤卡与卡锤卡委托独立模块，其他卡在此提供测量、输入和渲染。
 // 页面（栖梦「视觉」页、搜索页）只声明"这一页有这些卡"。
 namespace qm_card_catalog
 {
@@ -24,7 +24,7 @@ namespace qm_card_catalog
 			case EQmModuleId::ChatBubble:
 				return g_Config.m_QmChatBubble ? Rows(5.0f) + 2.0f * Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing : Rows(1.0f);
 			case EQmModuleId::CameraView:
-				return Rows(5.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;
+				return Rows(6.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;
 			case EQmModuleId::WeaponAnimation:
 				return ResolveQmVisualWeaponAnimationHeight(Metrics, g_Config.m_QmWeaponSwitchAnim != 0, g_Config.m_QmWeaponReloadAnim != 0);
 			case EQmModuleId::Streamer: return Rows(3.0f);
@@ -169,6 +169,8 @@ namespace qm_card_catalog
 		case EQmModuleId::CollisionHitbox:
 			Add(Id, "qm:collision_hitbox", "Hitbox mode", "Show collision and weapon interaction", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualCollisionHitboxContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
+		case EQmModuleId::WaterHammerHighlight:
+			return BuildWaterHammerCard(Ctx, Id, Out);
 		default:
 			return false;
 		}

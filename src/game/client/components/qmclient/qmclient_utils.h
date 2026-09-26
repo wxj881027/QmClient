@@ -12,21 +12,18 @@
 
 typedef struct _json_value json_value;
 
+std::string NormalizeQmServerAddress(const char *pServerAddress);
+
 struct SQmTitlePresence
 {
 	int m_PlayerId = -1;
 	std::string m_PlayerName;
 	std::string m_Title;
-	int64_t m_RemainingSeconds = 0;
-	// 服务端分配的头衔动态风格 id；为空表示服务端未分配（回退到本地配置）。
 	std::string m_Style;
+	int64_t m_RemainingSeconds = 0;
 };
 
-std::string NormalizeQmServerAddress(const char *pServerAddress);
-
-// 解析在线头衔列表。pOutServerTime 非空时回传服务端时间（Unix 秒），
-// 客户端用它把动画相位对齐到所有客户端一致的基准。
-std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pOutServerTime = nullptr);
+std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime = nullptr);
 bool IsValidQmTitle(const char *pTitle);
 
 struct SQmClientServerDistribution
@@ -39,6 +36,8 @@ struct SQmClientServerDistribution
 struct SQmClientRecognitionMark
 {
 	std::string m_Name;
+	bool m_FootParticlesEnabled = false;
+	bool m_RemoteParticlesEnabled = false;
 	bool m_VoiceSupported = false;
 	EClientBrand m_ClientBrand = EClientBrand::QM;
 	std::string m_Qid;
@@ -55,7 +54,7 @@ struct SQmClientUsersParseResult
 
 bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress, SQmClientUsersParseResult &OutResult);
 
-// 分布列表保留最近一次有效快照；租约只决定同步提示，不删除展示数据。
+// 展示沿用最近一次有效分布；租约到期只标记需要同步，不清空列表与计数。
 struct SQmClientDistributionSnapshot
 {
 	std::vector<SQmClientServerDistribution> m_vServers;

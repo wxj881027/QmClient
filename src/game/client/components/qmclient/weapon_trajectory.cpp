@@ -24,6 +24,9 @@
 
 bool CQmWeaponTrajectory::IsVisible() const
 {
+	if(GetQmFocusModeDecisions().m_HideGuideLines)
+		return false;
+
 	const int TrajectoryMode = std::clamp(g_Config.m_QmWeaponTrajectory, 0, 2);
 	const bool ManualTrajectoryVisible = GameClient()->m_Controls.m_aShowWeaponTrajectory[g_Config.m_ClDummy] != 0;
 	const bool TrajectoryVisible = TrajectoryMode == 2 || (TrajectoryMode == 1 && ManualTrajectoryVisible);
@@ -303,8 +306,10 @@ void CQmWeaponTrajectory::Render(
 			int Res = Collision()->IntersectLineTeleWeapon(From, To, &ColTile, &HitPos);
 			vec2 SegmentEnd = Res ? HitPos : To;
 			vec2 TeeHitPos;
+			// 官方 79184e826：old laser 状态来自服务器广播的 GameInfoEx，
+			// 不能再用本地 sv_old_laser 配置，否则预测轨迹与实际命中不一致。
 			const bool IgnoreShooter =
-				Bounces == 0 || g_Config.m_SvOldLaser || !GameClient()->m_GameWorld.m_WorldConfig.m_IsDDRace;
+				Bounces == 0 || GameClient()->m_GameWorld.m_WorldConfig.m_OldLaser || !GameClient()->m_GameWorld.m_WorldConfig.m_IsDDRace;
 			if(FindBlockingTee(From, SegmentEnd, IgnoreShooter, TeeHitPos))
 			{
 				m_vLineSegments.emplace_back(From, TeeHitPos);

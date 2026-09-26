@@ -90,7 +90,7 @@ namespace ui_widget
 		CUIRect Indicator = Target;
 		if(Ctx.m_pAnim != nullptr)
 		{
-			// 导航使用统一弹簧，快速切换时从当前速度续接，接近目标时平稳收住。
+			// 胶囊与嵌套分段共用导航弹簧，切换时保留当前速度。
 			const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
 			Indicator.x = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, ui_token::motion::NAVIGATION_SPRING, 2);
 			Indicator.y = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_Y, Target.y, ui_token::motion::NAVIGATION_SPRING, 2);

@@ -61,12 +61,12 @@ namespace
 					return false;
 			}
 		}
-		return PartCount >= 2;
+		return PartCount >= 1;
 	}
 
 } // namespace
 
-bool IsQmClientRemoteVersionNewer(const char *pRemoteVersion, const char *pLocalVersion)
+bool IsQmClientRemoteVersionNewer(const char *pRemoteVersion, const char *pLocalVersion, bool LocalIsDevelopmentBuild)
 {
 	char aRemote[64];
 	char aLocal[64];
@@ -86,5 +86,5 @@ bool IsQmClientRemoteVersionNewer(const char *pRemoteVersion, const char *pLocal
 		if(aRemoteParts[Index] != aLocalParts[Index])
 			return aRemoteParts[Index] > aLocalParts[Index];
 	}
-	return false;
+	return LocalIsDevelopmentBuild;
 }

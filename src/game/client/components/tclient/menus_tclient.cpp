@@ -16,6 +16,7 @@
 #include <engine/shared/localization.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
+#include <engine/warning.h>
 
 #include <game/client/QmUi/QmCardOrderModel.h>
 #include <game/client/QmUi/QmCardRegistry.h>
@@ -37,6 +38,7 @@
 #include <game/client/components/tclient/bindwheel.h>
 #include <game/client/components/tclient/trails.h>
 #include <game/client/gameclient.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/render.h>
 #include <game/client/skin.h>
 #include <game/client/ui.h>
@@ -308,9 +310,6 @@ namespace
 #undef MACRO_CONFIG_STR
 #undef SET_CONFIG_DOMAIN
 		Hash = HashValueFnv1a64(Hash, g_Config.m_QmAutoMargin);
-		Hash = HashValueFnv1a64(Hash, g_Config.m_QmFastInputMode);
-		Hash = HashValueFnv1a64(Hash, g_Config.m_QmSaikoPlusAmount);
-		Hash = HashValueFnv1a64(Hash, g_Config.m_QmSaikoPlusOthers);
 		Hash = HashValueFnv1a64(Hash, g_Config.m_QmJellyTee);
 		Hash = HashValueFnv1a64(Hash, g_Config.m_QmJellyTeeDuration);
 		Hash = HashValueFnv1a64(Hash, g_Config.m_QmJellyTeeOthers);
@@ -321,8 +320,10 @@ namespace
 	uint64_t HashTClientSettingsCardLayout(const char *pStableCardId)
 	{
 		uint64_t Hash = 1469598103934665603ull;
-		if(str_comp(pStableCardId, "tclient:visual-font-cursor") == 0)
-			return HashValueFnv1a64(Hash, g_Config.m_TcAnimateWheelTime > 0);
+		if(str_comp(pStableCardId, "tclient:font") == 0)
+			return HashValueFnv1a64(Hash, g_Config.m_TcCustomFontWeight);
+		if(str_comp(pStableCardId, "tclient:cursor") == 0)
+			return Hash;
 		if(str_comp(pStableCardId, "tclient:visual-nameplates") == 0)
 			return HashValueFnv1a64(Hash, g_Config.m_TcWhiteFeet);
 		if(str_comp(pStableCardId, "tclient:visual-effects") == 0)
@@ -330,8 +331,6 @@ namespace
 			Hash = HashValueFnv1a64(Hash, g_Config.m_TcTinyTees > 0);
 			return HashValueFnv1a64(Hash, g_Config.m_QmJellyTee);
 		}
-		if(str_comp(pStableCardId, "tclient:input") == 0)
-			return HashValueFnv1a64(Hash, QmFastInputNormalizedMode(g_Config.m_QmFastInputMode));
 		if(str_comp(pStableCardId, "tclient:anti-latency-tools") == 0)
 		{
 			Hash = HashValueFnv1a64(Hash, g_Config.m_TcRemoveAnti);
@@ -359,11 +358,7 @@ namespace
 		if(str_comp(pStableCardId, "tclient:finish-name") == 0)
 			return HashValueFnv1a64(Hash, g_Config.m_TcChangeNameNearFinish != 0);
 		if(str_comp(pStableCardId, "tclient:tee-trails") == 0)
-		{
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcTeeTrailStyle);
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcTeeTrailStyle != qm_tee_trail::STYLE_ORIGINAL);
 			return HashValueFnv1a64(Hash, g_Config.m_TcTeeTrailColorMode == CTrails::COLORMODE_SOLID);
-		}
 		return Hash;
 	}
 
@@ -551,27 +546,11 @@ static float MarginBetweenSections = ui_token::settings::ROW_GAP * 2.0f;
 static float ColorPickerLabelSize = ui_token::font::BODY;
 static float ColorPickerLineSpacing = ui_token::settings::ROW_GAP;
 static std::vector<CButtonContainer> s_vTinyTeeModeButtons = {{}, {}, {}};
-static CButtonContainer s_FastInputModeFast;
-static CButtonContainer s_FastInputModeSaikoPlus;
 static int s_CountFrozenText = 0;
 static CUi::SDropDownState s_TrailDropDownState;
 static CScrollRegion s_TrailDropDownScrollRegion;
 static CUi::SDropDownState s_TrailStyleDropDownState;
 static CScrollRegion s_TrailStyleDropDownScrollRegion;
-
-// 下拉弹层在选择后立刻写入状态，卡片内容要等下一帧才绘制，
-// 因此测高前必须先把待提交的选择提交进配置，否则条件行会晚一帧才出现。
-static bool HasPendingTrailColorModeSelection()
-{
-	const int Selected = s_TrailDropDownState.m_SelectionPopupContext.m_SelectionIndex;
-	return Selected >= 0 && Selected < 4;
-}
-
-static bool HasPendingTrailStyleSelection()
-{
-	const int SelectedStyle = s_TrailStyleDropDownState.m_SelectionPopupContext.m_SelectionIndex;
-	return SelectedStyle >= 0 && SelectedStyle < (int)qm_tee_trail::STYLE_COUNT;
-}
 
 static float TClientSettingsRowsHeight(const int NumRows)
 {
@@ -1065,6 +1044,12 @@ void CMenus::RenderFontIcon(const CUIRect Rect, const char *pText, float Size, i
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 }
 
+void CMenus::RenderFontIcon_QmIcon(const CUIRect Rect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align)
+{
+	// 图集优先；图集未就绪时 DoLabel_QmIcon 内部回退到 pFallbackIcon 字形。
+	Ui()->DoLabel_QmIcon(&Rect, Icon, pFallbackIcon, Size, Align);
+}
+
 int CMenus::DoButtonNoRect_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
@@ -1081,6 +1066,23 @@ int CMenus::DoButtonNoRect_FontIcon(CButtonContainer *pButtonContainer, const ch
 	Ui()->DoLabel(&Temp, pText, CurrentSettingsContentMetrics().m_BodySize, TEXTALIGN_MC);
 	TextRender()->SetRenderFlags(0);
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, BUTTONFLAG_LEFT);
+}
+
+int CMenus::DoButtonNoRect_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners)
+{
+	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+	TextRender()->TextColor(TextRender()->DefaultTextSelectionColor());
+	if(Ui()->HotItem() == pButtonContainer)
+	{
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+	}
+	CUIRect Temp;
+	pRect->HMargin(0.0f, &Temp);
+	Ui()->DoLabel_QmIcon(&Temp, Icon, pFallbackIcon, CurrentSettingsContentMetrics().m_BodySize, TEXTALIGN_MC);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, BUTTONFLAG_LEFT);
 }
@@ -1301,8 +1303,8 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	CurrentColumn.HSplitTop(HeadlineHeight, Render ? &Label : &TmpLabel, &CurrentColumn);
 	if(Render)
 	{
-		CUIElement &TitleElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-visual-font-cursor-title");
-		DoSettingsLabelStreamed(TitleElement, &Label, Localize("Visual: Font & Cursor"), HeadlineFontSize, TEXTALIGN_ML, TClientFixedLabelProperties(HeadlineFontSize, Label.w));
+		CUIElement &TitleElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-visual-font-title");
+		DoSettingsLabelStreamed(TitleElement, &Label, Localize("Font"), HeadlineFontSize, TEXTALIGN_ML, TClientFixedLabelProperties(HeadlineFontSize, Label.w));
 	}
 	CurrentColumn.HSplitTop(MarginSmall, nullptr, &CurrentColumn);
 	CTClientSettingsRowAllocator Rows(CurrentColumn);
@@ -1331,7 +1333,9 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		int FontSelectedOld = -1;
 		for(size_t i = 0; i < CustomFaces.size(); ++i)
 		{
-			if(str_find_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()))
+			const bool ExactFamily = str_comp_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()) == 0;
+			const bool FamilyWithStyle = str_startswith_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()) && g_Config.m_TcCustomFont[str_length(CustomFaces[i].c_str())] == ' ';
+			if(ExactFamily || FamilyWithStyle)
 				FontSelectedOld = (int)i;
 		}
 		CUIRect FontDirectory;
@@ -1345,15 +1349,13 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
 			InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
-			TextRender()->OnPreWindowResize();
 			GameClient()->OnWindowResize();
 			GameClient()->Editor()->OnWindowResize();
-			TextRender()->OnWindowResize();
 			GameClient()->m_MapImages.SetTextureScale(101);
 			GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
 		}
 		static CButtonContainer s_FontDirectoryId;
-		if(Ui()->DoButton_FontIcon(&s_FontDirectoryId, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
+		if(Ui()->DoButton_QmIcon(&s_FontDirectoryId, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
 		{
 			Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 			Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
@@ -1365,25 +1367,44 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	Button = Rows.Next();
 	if(Render)
 	{
-		Button.VSplitLeft(120.0f, &Label, &Button);
-		DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Hammer Mode:"), FontSize, TEXTALIGN_ML);
-		static std::vector<const char *> s_DropDownNames;
-		s_DropDownNames = {Localize("Normal", "Hammer Mode"), Localize("Rotate with cursor", "Hammer Mode"), Localize("Rotate with cursor like gun", "Hammer Mode")};
-		static CUi::SDropDownState s_DropDownState;
-		static CScrollRegion s_DropDownScrollRegion;
-		s_DropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_DropDownScrollRegion;
-		g_Config.m_TcHammerRotatesWithCursor = DoSettingsDropDown(&Button, g_Config.m_TcHammerRotatesWithCursor, s_DropDownNames.data(), s_DropDownNames.size(), s_DropDownState);
+		const auto &Styles = *TextRender()->GetCustomFontStyles(g_Config.m_TcCustomFont);
+		if(Styles.size() > 1)
+		{
+			Button.VSplitLeft(100.0f, &Label, &Button);
+			CUIElement &StyleLabel = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-custom-font-style-label");
+			DoSettingsLabelStreamed(StyleLabel, &Label, Localize("Font style:"), FontSize, TEXTALIGN_ML, TClientFixedLabelProperties(FontSize, Label.w));
+			static std::vector<std::string> s_StyleNamesOwned;
+			static std::vector<const char *> s_StyleNames;
+			static CUi::SDropDownState s_StyleDropDownState;
+			static CScrollRegion s_StyleDropDownScrollRegion;
+			s_StyleDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_StyleDropDownScrollRegion;
+			s_StyleDropDownState.m_SelectionPopupContext.m_SpecialFontRenderMode = true;
+			if(s_StyleNamesOwned != Styles)
+			{
+				s_StyleNamesOwned = Styles;
+				s_StyleNames.clear();
+				for(const auto &Style : s_StyleNamesOwned)
+					s_StyleNames.push_back(Style.c_str());
+			}
+			int SelectedStyle = -1;
+			for(size_t i = 0; i < Styles.size(); ++i)
+				if(str_comp_nocase(g_Config.m_TcCustomFont, Styles[i].c_str()) == 0)
+					SelectedStyle = (int)i;
+			const int NewStyle = DoSettingsDropDown(&Button, SelectedStyle, s_StyleNames.data(), s_StyleNames.size(), s_StyleDropDownState);
+			if(NewStyle >= 0 && NewStyle != SelectedStyle && (size_t)NewStyle < Styles.size())
+			{
+				str_copy(g_Config.m_TcCustomFont, Styles[NewStyle].c_str());
+				TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
+				GameClient()->OnWindowResize();
+			}
+		}
 	}
-	Button = Rows.Next();
-	if(Render)
-		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_TcCursorScale, &g_Config.m_TcCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
-	Button = Rows.Next();
-	if(Render)
+	if(TextRender()->CustomFontHasVariableWeight(g_Config.m_TcCustomFont))
 	{
-		if(g_Config.m_TcAnimateWheelTime > 0)
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-wheel-animate-ms", &g_Config.m_TcAnimateWheelTime, &g_Config.m_TcAnimateWheelTime, &Button, Localize("Wheel animate"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
-		else
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-wheel-animate-ms", &g_Config.m_TcAnimateWheelTime, &g_Config.m_TcAnimateWheelTime, &Button, Localize("Wheel animate"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms (off)");
+		Button = Rows.Next();
+		if(Render)
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-custom-font-weight", &g_Config.m_TcCustomFontWeight, &g_Config.m_TcCustomFontWeight, &Button, Localize("Custom font weight (variable fonts)"), 100, 900, &CUi::ms_LinearScrollbarScale, 0, "");
 	}
 	BoxRect.h = CurrentColumn.y - BoxRect.y;
 	return CurrentColumn.y - SavedY;
@@ -1552,9 +1573,30 @@ float CMenus::LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render)
 SSettingsSection CMenus::BuildTClientThemeCacheSection()
 {
 	SSettingsSection S;
-	S.m_pName = "Visual: Font & Cursor";
-	ConfigureSettingsCardSection(S, Localizable("Visual: Font & Cursor"), "tclient:visual-font-cursor", [this](CUIRect &Col, bool Render) -> float { return LayoutTClientThemeCacheSection(Col, Render); }, Margin);
-	S.m_DependencyConfigInts = {&g_Config.m_TcCursorScale, &g_Config.m_TcAnimateWheelTime, &g_Config.m_TcHammerRotatesWithCursor};
+	S.m_pName = "Font";
+	ConfigureSettingsCardSection(S, Localizable("Font"), "tclient:font", [this](CUIRect &Col, bool Render) -> float { return LayoutTClientThemeCacheSection(Col, Render); }, Margin);
+	S.m_DependencyConfigInts = {&g_Config.m_TcCustomFontWeight};
+	return S;
+}
+
+SSettingsSection CMenus::BuildTClientCursorCacheSection()
+{
+	SSettingsSection S;
+	S.m_pName = "Visual: Cursor";
+	ConfigureSettingsCardSection(S, Localizable("Visual: Cursor"), "tclient:cursor", [this](CUIRect &Col, bool Render) -> float {
+		CUIRect Label, Button, Tmp;
+		const float SavedY = Col.y;
+		Col.HSplitTop(Margin, nullptr, &Col);
+		Col.HSplitTop(HeadlineHeight, Render ? &Label : &Tmp, &Col);
+		if(Render)
+			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-title", &Label, Localize("Visual: Cursor"), HeadlineFontSize, TEXTALIGN_ML);
+		Col.HSplitTop(MarginSmall, nullptr, &Col);
+		CTClientSettingsRowAllocator Rows(Col);
+		Button = Rows.Next();
+		if(Render)
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_TcCursorScale, &g_Config.m_TcCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+		return Col.y - SavedY; }, Margin);
+	S.m_DependencyConfigInts = {&g_Config.m_TcCursorScale};
 	return S;
 }
 
@@ -1600,6 +1642,7 @@ std::vector<SSettingsSection> CMenus::BuildTClientLeftCacheSections()
 {
 	std::vector<SSettingsSection> vSections;
 	vSections.push_back(BuildTClientThemeCacheSection());
+	vSections.push_back(BuildTClientCursorCacheSection());
 	vSections.push_back(BuildTClientAutoReplyCacheSection());
 	vSections.push_back(BuildTClientPetCacheSection());
 	return vSections;
@@ -1731,7 +1774,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 		};
 		Section.m_RenderFullFn = Section.m_RenderCompactFn;
 	};
-	static std::array<CTClientSettingsCardFrameBinding, 19> s_aDeckCardBindings;
+	static std::array<CTClientSettingsCardFrameBinding, 20> s_aDeckCardBindings;
 	size_t DeckCardBindingIndex = 0;
 	auto AppendDeckCards = [&](std::vector<SSettingsSection> &vSections) {
 		if(ReadOnly)
@@ -1810,7 +1853,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			BoxRect = CurrentColumn;
 			CurrentColumn.HSplitTop(HeadlineHeight, Render ? &Label : &TmpLabel, &CurrentColumn);
 			if(Render)
-				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-visual-font-cursor-title", &Label, Localize("Visual: Font & Cursor"), HeadlineFontSize, TEXTALIGN_ML);
+				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-visual-font-title", &Label, Localize("Font"), HeadlineFontSize, TEXTALIGN_ML);
 			CurrentColumn.HSplitTop(MarginSmall, nullptr, &CurrentColumn);
 
 			const bool RenderFontDropdown = Render && ShouldRenderSection(CurrentColumn, 0.0f, LineSize);
@@ -1847,7 +1890,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					int FontSelectedOld = -1;
 					for(size_t i = 0; i < CustomFaces.size(); ++i)
 					{
-						if(str_find_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()))
+						if(str_comp_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()) == 0)
 							FontSelectedOld = i;
 					}
 					CUIRect FontDirectory;
@@ -1862,16 +1905,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 						RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 						TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
 						InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
-						TextRender()->OnPreWindowResize();
 						GameClient()->OnWindowResize();
 						GameClient()->Editor()->OnWindowResize();
-						TextRender()->OnWindowResize();
 						GameClient()->m_MapImages.SetTextureScale(101);
 						GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
 					}
 
 					static CButtonContainer s_FontDirectoryId;
-					if(Ui()->DoButton_FontIcon(&s_FontDirectoryId, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
+					if(Ui()->DoButton_QmIcon(&s_FontDirectoryId, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
 					{
 						Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 						Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
@@ -1881,6 +1922,17 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					}
 					LogSettingsStage("tclient_settings_left_visual_font_dropdown", FontDropDownTimer);
 				}
+			}
+			else
+			{
+				SkipSection(CurrentColumn, 0.0f, LineSize);
+			}
+
+			if(ShouldRenderVisualBlock(LineSize))
+			{
+				CUIRect WeightRow;
+				CurrentColumn.HSplitTop(LineSize, &WeightRow, &CurrentColumn);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-custom-font-weight", &g_Config.m_TcCustomFontWeight, &g_Config.m_TcCustomFontWeight, &WeightRow, Localize("Custom font weight (variable fonts)"), 100, 900, &CUi::ms_LinearScrollbarScale, 0, "");
 			}
 			else
 			{
@@ -1913,11 +1965,6 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			{
 				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
 				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_TcCursorScale, &g_Config.m_TcCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
-				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-				if(g_Config.m_TcAnimateWheelTime > 0)
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-wheel-animate-ms", &g_Config.m_TcAnimateWheelTime, &g_Config.m_TcAnimateWheelTime, &Button, Localize("Wheel animate"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
-				else
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-wheel-animate-off", &g_Config.m_TcAnimateWheelTime, &g_Config.m_TcAnimateWheelTime, &Button, Localize("Wheel animate"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms (off)");
 			}
 			else
 			{
@@ -1959,7 +2006,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				int FontSelectedOld = -1;
 				for(size_t i = 0; i < CustomFaces.size(); ++i)
 				{
-					if(str_find_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()))
+					if(str_comp_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()) == 0)
 						FontSelectedOld = i;
 				}
 				CUIRect FontDirectory;
@@ -1973,15 +2020,13 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 					TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
 					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
-					TextRender()->OnPreWindowResize();
 					GameClient()->OnWindowResize();
 					GameClient()->Editor()->OnWindowResize();
-					TextRender()->OnWindowResize();
 					GameClient()->m_MapImages.SetTextureScale(101);
 					GameClient()->m_MapImages.SetTextureScale(g_Config.m_ClTextEntitiesSize);
 				}
 				static CButtonContainer s_FontDirectoryId;
-				if(Ui()->DoButton_FontIcon(&s_FontDirectoryId, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
+				if(Ui()->DoButton_QmIcon(&s_FontDirectoryId, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
 				{
 					Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 					Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
@@ -2020,11 +2065,6 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			{
 				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
 				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_TcCursorScale, &g_Config.m_TcCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
-				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-				if(g_Config.m_TcAnimateWheelTime > 0)
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-wheel-animate-ms", &g_Config.m_TcAnimateWheelTime, &g_Config.m_TcAnimateWheelTime, &Button, Localize("Wheel animate"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms");
-				else
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-wheel-animate-ms", &g_Config.m_TcAnimateWheelTime, &g_Config.m_TcAnimateWheelTime, &Button, Localize("Wheel animate"), 0, 1000, &CUi::ms_LinearScrollbarScale, 0, "ms (off)");
 			}
 			else
 			{
@@ -2190,44 +2230,10 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoMargin, "qm-auto-margin", Localize("Auto margin"), &g_Config.m_QmAutoMargin, &Row, LineSize);
 			Button = Rows.Next();
 			if(Render)
-			{
-				CUIRect FastButton, SaikoButton, ButtonsRest;
-				const float Spacing = MarginSmall;
-				const float ButtonWidth = (Button.w - Spacing) / 2.0f;
-				Button.VSplitLeft(ButtonWidth, &FastButton, &ButtonsRest);
-				ButtonsRest.VSplitLeft(Spacing, nullptr, &ButtonsRest);
-				SaikoButton = ButtonsRest;
-				FastButton.HMargin(2.0f, &FastButton);
-				SaikoButton.HMargin(2.0f, &SaikoButton);
-				const int UiMode = QmFastInputNormalizedMode(g_Config.m_QmFastInputMode);
-				if(DoButton_Menu(&s_FastInputModeFast, Localize("Fast input"), UiMode == 0, &FastButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_L))
-					g_Config.m_QmFastInputMode = 0;
-				if(DoButton_Menu(&s_FastInputModeSaikoPlus, "Saiko+", UiMode == 4, &SaikoButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_R))
-					g_Config.m_QmFastInputMode = 4;
-			}
-			if(Render)
-			{
-				const int UiMode = QmFastInputNormalizedMode(g_Config.m_QmFastInputMode);
-				Button = Rows.Next();
-				if(UiMode == 0)
-					DoSliderWithScaledValue(&g_Config.m_TcFastInputAmount, &g_Config.m_TcFastInputAmount, &Button, Localize("Amount"), 1, 40, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
-				else
-					DoSliderWithScaledValue(&g_Config.m_QmSaikoPlusAmount, &g_Config.m_QmSaikoPlusAmount, &Button, "Saiko+", 0, 500, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ticks");
-			}
-			else
-			{
-				// 模式专属滑块恒为一行，量算路径必须同样吃掉这一行。
-				Rows.Next();
-			}
+				DoSliderWithScaledValue(&g_Config.m_TcFastInputAmount, &g_Config.m_TcFastInputAmount, &Button, Localize("Amount"), 1, 40, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 			Row = Rows.Next();
 			if(Render)
-			{
-				const int UiMode = QmFastInputNormalizedMode(g_Config.m_QmFastInputMode);
-				if(UiMode == 0)
-					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, "tclient-fast-input-others", Localize("Fast input others"), &g_Config.m_TcFastInputOthers, &Row, LineSize);
-				else
-					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSaikoPlusOthers, "qm-saiko-plus-others", Localize("Saiko+ others"), &g_Config.m_QmSaikoPlusOthers, &Row, LineSize);
-			}
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, "tclient-fast-input-others", Localize("Fast input others"), &g_Config.m_TcFastInputOthers, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSubTickAiming, "tclient-sub-tick-aiming", Localize("Sub-Tick aiming"), &g_Config.m_ClSubTickAiming, &Row, LineSize);
@@ -2664,8 +2670,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			std::vector<SSettingsSection> vLeftSections;
 			SSettingsSection S;
 
-			// -- Visual: Font & Cursor --
+			// -- Font / Visual: Cursor --
 			vLeftSections.push_back(BuildTClientThemeCacheSection());
+			vLeftSections.push_back(BuildTClientCursorCacheSection());
 
 			// -- Visual: Nameplates --
 			S = SSettingsSection{};
@@ -3238,6 +3245,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CUIRect TrailOthersRow = Rows.Next();
 			CUIRect TrailFadeRow = Rows.Next();
 			CUIRect TrailTaperRow = Rows.Next();
+			CUIRect TrailStyleColorsRow = Rows.Next();
 			if(Render)
 			{
 				CPerfTimer BaseTimer;
@@ -3245,28 +3253,8 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailOthers, "tclient-tee-trail-others", Localize("Show other tees' trails"), &g_Config.m_TcTeeTrailOthers, &TrailOthersRow, LineSize);
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailFade, "tclient-tee-trail-fade", Localize("Fade trail alpha"), &g_Config.m_TcTeeTrailFade, &TrailFadeRow, LineSize);
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailTaper, "tclient-tee-trail-taper", Localize("Taper trail width"), &g_Config.m_TcTeeTrailTaper, &TrailTaperRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailStyleColors, "tclient-tee-trail-style-colors", Localize("Use style colors"), &g_Config.m_TcTeeTrailStyleColors, &TrailStyleColorsRow, LineSize);
 				LogSettingsStage("tclient_settings_right_tee_trails_base", BaseTimer);
-			}
-			// 样式下拉：0 = 原版拖尾，1..5 共用采样与带状网格，取值与配置一一对应。
-			static std::vector<const char *> s_TrailStyleDropDownNames;
-			s_TrailStyleDropDownNames = {Localize("Original"), Localize("Black Flash"), Localize("Exo"), Localize("Spirit"), Localize("Void"), Localize("Inferno")};
-			s_TrailStyleDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TrailStyleDropDownScrollRegion;
-			const int TrailStyleOld = qm_tee_trail::ResolveStyle(g_Config.m_TcTeeTrailStyle);
-			CUIRect TrailStyleRow = Rows.Next();
-			if(Render)
-			{
-				CPerfTimer StyleDropDownTimer;
-				const int TrailStyleNew = DoSettingsDropDown(&TrailStyleRow, TrailStyleOld, s_TrailStyleDropDownNames.data(), s_TrailStyleDropDownNames.size(), s_TrailStyleDropDownState);
-				if(TrailStyleNew != TrailStyleOld && TrailStyleNew >= 0 && TrailStyleNew < (int)qm_tee_trail::STYLE_COUNT)
-					g_Config.m_TcTeeTrailStyle = TrailStyleNew;
-				LogSettingsStage("tclient_settings_right_tee_trails_style_dropdown", StyleDropDownTimer);
-			}
-			// 新样式默认使用各自的标志性配色；关掉后改用上面的颜色模式着色。
-			if(g_Config.m_TcTeeTrailStyle != qm_tee_trail::STYLE_ORIGINAL)
-			{
-				CUIRect StyleColorsRow = Rows.Next();
-				if(Render)
-					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailStyleColors, "tclient-tee-trail-style-colors", Localize("Use style colors"), &g_Config.m_TcTeeTrailStyleColors, &StyleColorsRow, LineSize);
 			}
 			static std::vector<const char *> s_TrailDropDownNames;
 			s_TrailDropDownNames = {Localize("Solid"), Localize("Tee"), Localize("Rainbow"), Localize("Speed")};
@@ -3280,6 +3268,16 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				if(TrailSelectedOld != TrailSelectedNew)
 					g_Config.m_TcTeeTrailColorMode = TrailSelectedNew + 1;
 				LogSettingsStage("tclient_settings_right_tee_trails_dropdown", DropDownTimer);
+			}
+			static std::vector<const char *> s_TrailStyleNames;
+			s_TrailStyleNames = {Localize("Original"), Localize("Cursed Flame"), Localize("Violet Bolt"), Localize("Spirit Light"), Localize("Void Shadow"), Localize("Golden Grace")};
+			s_TrailStyleDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TrailStyleDropDownScrollRegion;
+			CUIRect TrailStyleDropDownRect = Rows.Next();
+			if(Render)
+			{
+				const int TrailStyleNew = DoSettingsDropDown(&TrailStyleDropDownRect, g_Config.m_TcTeeTrailStyle, s_TrailStyleNames.data(), s_TrailStyleNames.size(), s_TrailStyleDropDownState);
+				if(TrailStyleNew != g_Config.m_TcTeeTrailStyle)
+					g_Config.m_TcTeeTrailStyle = TrailStyleNew;
 			}
 			if(g_Config.m_TcTeeTrailColorMode == CTrails::COLORMODE_SOLID)
 			{
@@ -3539,8 +3537,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 	}
 	if(!ReadOnly)
 	{
-		static constexpr std::array<std::pair<const char *, const char *>, 19> s_aDeckCardSpecs = {{
-			{"tclient:visual-font-cursor", "Visual: Font & Cursor"},
+		static constexpr std::array<std::pair<const char *, const char *>, 20> s_aDeckCardSpecs = {{
+			{"tclient:font", "Font"},
+			{"tclient:cursor", "Visual: Cursor"},
 			{"tclient:visual-nameplates", "Visual: Nameplates"},
 			{"tclient:visual-effects", "Visual: Effects"},
 			{"tclient:input", "Input"},
@@ -3753,31 +3752,8 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcFastInput);
 					Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmAutoMargin) || Changed;
 
-					CUIRect Button = Rows.Next();
-					CUIRect FastButton, SaikoButton, ButtonsRest;
-					const float Spacing = MarginSmall;
-					const float ButtonWidth = (Button.w - Spacing) / 2.0f;
-					Button.VSplitLeft(ButtonWidth, &FastButton, &ButtonsRest);
-					ButtonsRest.VSplitLeft(Spacing, nullptr, &ButtonsRest);
-					SaikoButton = ButtonsRest;
-					FastButton.HMargin(2.0f, &FastButton);
-					SaikoButton.HMargin(2.0f, &SaikoButton);
-					const int UiMode = QmFastInputNormalizedMode(g_Config.m_QmFastInputMode);
-					if(Ui()->DoButtonLogic(&s_FastInputModeFast, UiMode == 0, &FastButton, BUTTONFLAG_LEFT))
-					{
-						g_Config.m_QmFastInputMode = 0;
-						Changed = true;
-					}
-					if(Ui()->DoButtonLogic(&s_FastInputModeSaikoPlus, UiMode == 4, &SaikoButton, BUTTONFLAG_LEFT))
-					{
-						g_Config.m_QmFastInputMode = 4;
-						Changed = true;
-					}
-
-					const int ActiveMode = QmFastInputNormalizedMode(g_Config.m_QmFastInputMode);
-					// 模式专属滑块恒为一行，与实际渲染路径保持一致。
 					Rows.Next();
-					Changed = ProcessToggle(Rows.Next(), ActiveMode == 0 ? &g_Config.m_TcFastInputOthers : &g_Config.m_QmSaikoPlusOthers) || Changed;
+					Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcFastInputOthers) || Changed;
 					Changed = ProcessToggle(Rows.Next(), &g_Config.m_ClSubTickAiming) || Changed;
 					return Changed;
 				};
@@ -3787,25 +3763,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return [](CUIRect) {
 					// 下拉弹层先于卡片内容绘制写入选择项；这里仅提前提交选择，
 					// 正式 DoSettingsDropDown 仍负责清理状态和绘制弹层。
-					bool Changed = false;
 					const int Selected = s_TrailDropDownState.m_SelectionPopupContext.m_SelectionIndex;
-					if(Selected >= 0 && Selected < 4)
-					{
-						const int NewColorMode = Selected + 1;
-						if(g_Config.m_TcTeeTrailColorMode != NewColorMode)
-						{
-							g_Config.m_TcTeeTrailColorMode = NewColorMode;
-							Changed = true;
-						}
-					}
-					// 样式决定卡片里多不多一行「样式配色」开关，所以同样要提前提交。
-					const int SelectedStyle = s_TrailStyleDropDownState.m_SelectionPopupContext.m_SelectionIndex;
-					if(HasPendingTrailStyleSelection() && g_Config.m_TcTeeTrailStyle != SelectedStyle)
-					{
-						g_Config.m_TcTeeTrailStyle = SelectedStyle;
-						Changed = true;
-					}
-					return Changed;
+					if(Selected < 0 || Selected >= 4)
+						return false;
+					const int NewColorMode = Selected + 1;
+					if(g_Config.m_TcTeeTrailColorMode == NewColorMode)
+						return false;
+					g_Config.m_TcTeeTrailColorMode = NewColorMode;
+					return true;
 				};
 			}
 			return {};
@@ -3824,7 +3789,8 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				if(str_comp(s_aDeckCardSpecs[Index].first, "tclient:tee-trails") == 0)
 				{
 					Definition.m_HasPendingPreLayoutInput = [] {
-						return HasPendingTrailColorModeSelection() || HasPendingTrailStyleSelection();
+						const int Selected = s_TrailDropDownState.m_SelectionPopupContext.m_SelectionIndex;
+						return Selected >= 0 && Selected < 4;
 					};
 				}
 				vCards.push_back(std::move(Definition));
@@ -4329,7 +4295,7 @@ void CMenus::RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly)
 
 		static CButtonContainer s_ReverseEntries;
 		static bool s_Reversed = true;
-		if(!ReadOnly && Ui()->DoButton_FontIcon(&s_ReverseEntries, s_Reversed ? FONT_ICON_CHEVRON_UP : FONT_ICON_CHEVRON_DOWN, 0, &Button, IGraphics::CORNER_ALL))
+		if(!ReadOnly && Ui()->DoButton_QmIcon(&s_ReverseEntries, s_Reversed ? EQmIcon::CHEVRON_UP : EQmIcon::CHEVRON_DOWN, s_Reversed ? FONT_ICON_CHEVRON_UP : FONT_ICON_CHEVRON_DOWN, 0, &Button, IGraphics::CORNER_ALL))
 			s_Reversed = !s_Reversed;
 		Column.HSplitTop(MarginSmall, nullptr, &Column);
 		Column.HSplitTop(LineSize, &EntriesSearch, &Column);
@@ -4394,7 +4360,7 @@ void CMenus::RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly)
 			DeleteButton.HMargin(7.5f, &DeleteButton);
 			DeleteButton.VSplitLeft(MarginSmall, nullptr, &DeleteButton);
 			DeleteButton.VSplitRight(MarginExtraSmall, &DeleteButton, nullptr);
-			if(!ReadOnly && Ui()->DoButton_FontIcon(&s_vDeleteButtons[i], FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL))
+			if(!ReadOnly && Ui()->DoButton_QmIcon(&s_vDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL))
 			{
 				pEntryToRemove = pEntry;
 			}
@@ -4414,7 +4380,7 @@ void CMenus::RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly)
 			if(!ReadOnly)
 			{
 				if(IsClan)
-					RenderFontIcon(EntryTypeRect, FONT_ICON_USERS, 18.0f, TEXTALIGN_MC);
+					RenderFontIcon_QmIcon(EntryTypeRect, EQmIcon::USERS, FONT_ICON_USERS, 18.0f, TEXTALIGN_MC);
 				else
 					RenderDevSkin(EntryTypeRect.Center(), ListRowHeight, "default", "default", false, 0, 0, 0, false, false);
 			}
@@ -4423,7 +4389,7 @@ void CMenus::RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly)
 			{
 				EntryRect.VSplitRight(20.0f, &EntryRect, &ToolTip);
 				if(!ReadOnly)
-					RenderFontIcon(ToolTip, FONT_ICON_COMMENT, 18.0f, TEXTALIGN_MC);
+					RenderFontIcon_QmIcon(ToolTip, EQmIcon::COMMENT, FONT_ICON_COMMENT, 18.0f, TEXTALIGN_MC);
 				GameClient()->m_Tooltips.DoToolTip(&s_vItemIds[i], &ToolTip, pEntry->m_aReason);
 				GameClient()->m_Tooltips.SetFadeTime(&s_vItemIds[i], 0.0f);
 			}
@@ -4629,7 +4595,7 @@ void CMenus::RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly)
 				TypeRect.VSplitRight(20.0f, &TypeRect, &DeleteButton);
 				DeleteButton.HSplitTop(20.0f, &DeleteButton, nullptr);
 				DeleteButton.Margin(2.0f, &DeleteButton);
-				if(!ReadOnly && DoButtonNoRect_FontIcon(&s_vTypeDeleteButtons[i], FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL))
+				if(!ReadOnly && DoButtonNoRect_QmIcon(&s_vTypeDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL))
 					m_pRemoveWarType = pType;
 			}
 			TextRender()->TextColor(pType->m_Color);
@@ -5050,10 +5016,23 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 		CUIRect CheckBoxRect, Button, Label;
 		CTClientSettingsRowAllocator Rows(View);
 		CheckBoxRect = Rows.Next();
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_TcStatusBar, "tclient-statusbar-show", Localize("Show status bar"), g_Config.m_TcStatusBar, &CheckBoxRect))
+		// 禅模式接管状态栏时：灰化、拒绝点击并提示接管来源（与 ReadOnly 同样只显示标签）。
+		const char *pStatusBarOverrideTooltip = TemporaryOverrideTooltip(&g_Config.m_TcStatusBar);
+		SLabelProperties StatusBarLabelProps;
+		if(pStatusBarOverrideTooltip != nullptr)
+		{
+			StatusBarLabelProps.SetColor(ui_token::color::TEXT_DISABLED);
+			if(!m_MenuTextPlanCollecting)
+			{
+				// 接管时该行只画标签、没有控件占 hover，先补一次只读按钮逻辑让提示能激活。
+				Ui()->DoButtonLogic(&g_Config.m_TcStatusBar, 0, &CheckBoxRect, BUTTONFLAG_LEFT);
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_TcStatusBar, &CheckBoxRect, pStatusBarOverrideTooltip);
+			}
+		}
+		if(!ReadOnly && pStatusBarOverrideTooltip == nullptr && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_TcStatusBar, "tclient-statusbar-show", Localize("Show status bar"), g_Config.m_TcStatusBar, &CheckBoxRect))
 			g_Config.m_TcStatusBar ^= 1;
-		else if(ReadOnly)
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show", &CheckBoxRect, Localize("Show status bar"), FontSize, TEXTALIGN_ML);
+		else if(ReadOnly || pStatusBarOverrideTooltip != nullptr)
+			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show", &CheckBoxRect, Localize("Show status bar"), FontSize, TEXTALIGN_ML, StatusBarLabelProps);
 		CheckBoxRect = Rows.Next();
 		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_TcStatusBarLabels, "tclient-statusbar-show-labels", Localize("Show labels on status bar items"), g_Config.m_TcStatusBarLabels, &CheckBoxRect))
 			g_Config.m_TcStatusBarLabels ^= 1;
@@ -5487,7 +5466,7 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView, bool PrewarmOnly)
 			Button.h = LineSize;
 			Button.y = Label.y + (Label.h - Button.h) * 0.5f;
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_INFO, s_aDevelopers[Index].m_pName, &Label, s_aDevelopers[Index].m_pName, DeveloperFontSize, TEXTALIGN_ML);
-			if(!ReadOnly && Ui()->DoButton_FontIcon(&s_aLinkButtons[Index], FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, IGraphics::CORNER_ALL))
+			if(!ReadOnly && Ui()->DoButton_QmIcon(&s_aLinkButtons[Index], EQmIcon::ARROW_UP_RIGHT_FROM_SQUARE, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, IGraphics::CORNER_ALL))
 				Client()->ViewLink(s_aDevelopers[Index].m_pUrl);
 			RenderDevSkin(TeeRect.Center(), TeeSize, s_aDevelopers[Index].m_pSkin, s_aDevelopers[Index].m_pUseCustomColors, s_aDevelopers[Index].m_CustomColors, 0, 0, 0, false, true, s_aDevelopers[Index].m_BodyColor, s_aDevelopers[Index].m_FeetColor);
 		}

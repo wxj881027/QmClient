@@ -1,13 +1,17 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QM_SPONSORS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QM_SPONSORS_H
 
+#include <base/str.h>
+
+#include <engine/shared/json.h>
+
 #include <cstddef>
+#include <limits>
 #include <string>
 #include <vector>
 
 namespace qm_sponsors
 {
-	// 每个非空列表条目对应一名赞助者；姓名保留字面内容，不解释行内 Markdown。
 	inline std::vector<std::string> ParseNames(const char *pMarkdown)
 	{
 		std::vector<std::string> vNames;
@@ -33,11 +37,16 @@ namespace qm_sponsors
 			while(Position < Length && pMarkdown[Position] != '\n' && pMarkdown[Position] != '\r')
 				++Position;
 			size_t End = Position;
-			// 字节上限落在行内时舍弃整行，避免把 UTF-8 姓名截成残缺内容。
+			// 字节上限落在行内时舍弃整行，避免截断 UTF-8 姓名。
 			if(Position == Length && Truncated)
 				break;
-			if(Position < Length && pMarkdown[Position++] == '\r' && Position < Length && pMarkdown[Position] == '\n')
+			if(Position < Length)
+			{
+				const bool CarriageReturn = pMarkdown[Position] == '\r';
 				++Position;
+				if(CarriageReturn && Position < Length && pMarkdown[Position] == '\n')
+					++Position;
+			}
 
 			while(Begin < End && IsBlank(pMarkdown[Begin]))
 				++Begin;
@@ -66,6 +75,47 @@ namespace qm_sponsors
 		}
 		return vNames;
 	}
+
+	class CSnapshot
+	{
+		std::string m_Markdown;
+		std::vector<std::string> m_vNames;
+		int m_Version = -1;
+		int m_Revision = 0;
+
+	public:
+		bool Apply(const json_value *pPayload, bool &Changed)
+		{
+			Changed = false;
+			if(!pPayload || pPayload->type != json_object)
+				return false;
+			const json_value *pMarkdown = json_object_get(pPayload, "markdown");
+			const json_value *pVersion = json_object_get(pPayload, "version");
+			if(!pMarkdown || pMarkdown->type != json_string || pMarkdown->u.string.length > 64 * 1024 ||
+				!pVersion || pVersion->type != json_integer || pVersion->u.integer < 0 ||
+				pVersion->u.integer > std::numeric_limits<int>::max() ||
+				static_cast<size_t>(str_length(pMarkdown->u.string.ptr)) != pMarkdown->u.string.length ||
+				!str_utf8_check(pMarkdown->u.string.ptr))
+				return false;
+			const int Version = static_cast<int>(pVersion->u.integer);
+			if(Version < m_Version)
+				return true;
+			const std::string Markdown(pMarkdown->u.string.ptr, pMarkdown->u.string.length);
+			if(Version == m_Version && Markdown == m_Markdown)
+				return true;
+			m_Markdown = Markdown;
+			m_vNames = ParseNames(m_Markdown.c_str());
+			m_Version = Version;
+			++m_Revision;
+			Changed = true;
+			return true;
+		}
+
+		const std::string &Markdown() const { return m_Markdown; }
+		const std::vector<std::string> &Names() const { return m_vNames; }
+		int Version() const { return m_Version; }
+		int Revision() const { return m_Revision; }
+	};
 }
 
 #endif

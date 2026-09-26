@@ -302,7 +302,7 @@ size_t CCountryFlags::Num() const
 
 const CCountryFlags::CCountryFlag &CCountryFlags::GetByCountryCode(int CountryCode) const
 {
-	dbg_assert(CountryCode >= CODE_LB && CountryCode <= CODE_UB, "Invalid CountryCode: %d", CountryCode);
+	CountryCode = QmNormalizeCountryCode(CountryCode);
 	size_t Index = m_aCodeIndexLUT[maximum(0, (CountryCode - CODE_LB) % CODE_RANGE)];
 	const_cast<CCountryFlags *>(this)->StartFlagLoadJob(Index);
 	return m_vCountryFlags[Index];
@@ -319,6 +319,7 @@ void CCountryFlags::PrewarmByCountryCodes(const std::vector<int> &vCountryCodes)
 {
 	for(int CountryCode : vCountryCodes)
 	{
+		CountryCode = QmNormalizeCountryCode(CountryCode);
 		size_t Index = m_aCodeIndexLUT[maximum(0, (CountryCode - CODE_LB) % CODE_RANGE)];
 		StartFlagLoadJob((int)Index);
 	}
@@ -336,6 +337,7 @@ bool CCountryFlags::PrewarmByCountryCodesReady(const std::vector<int> &vCountryC
 	int StartsThisCall = 0;
 	for(int CountryCode : vCountryCodes)
 	{
+		CountryCode = QmNormalizeCountryCode(CountryCode);
 		size_t Index = m_aCodeIndexLUT[maximum(0, (CountryCode - CODE_LB) % CODE_RANGE)];
 		if(Index >= m_vCountryFlags.size() || m_vLoadTriggered[Index])
 			continue;
@@ -346,6 +348,7 @@ bool CCountryFlags::PrewarmByCountryCodesReady(const std::vector<int> &vCountryC
 	ProcessCompletedJobs();
 	for(int CountryCode : vCountryCodes)
 	{
+		CountryCode = QmNormalizeCountryCode(CountryCode);
 		size_t Index = m_aCodeIndexLUT[maximum(0, (CountryCode - CODE_LB) % CODE_RANGE)];
 		if(Index >= m_vCountryFlags.size() || !m_vCountryFlags[Index].m_Loaded)
 			return false;

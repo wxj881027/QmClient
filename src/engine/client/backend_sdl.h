@@ -7,17 +7,24 @@
 #include <engine/client/graphics_threaded.h>
 #include <engine/graphics.h>
 
+#ifndef BACKEND_NO_SDL
 #include <SDL_video.h>
+#else
+struct SDL_Window;
+typedef void *SDL_GLContext;
+#endif
 
 #include <atomic>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <string>
 #include <vector>
 
-#if defined(CONF_PLATFORM_MACOS)
-#include <objc/objc-runtime.h>
+#if defined(CONF_PLATFORM_MACOS) || defined(CONF_PLATFORM_IOS)
+#include <objc/message.h>
+#include <objc/runtime.h>
 
 class CAutoreleasePool
 {
@@ -48,6 +55,7 @@ private:
 	TTranslateFunc m_TranslateFunc;
 	std::string m_FatalError;
 	SGfxWarningContainer m_Warning;
+	std::atomic_bool m_SubmissionStopped = false;
 
 public:
 	// constructed on the main thread, the rest of the functions is run on the render thread
@@ -58,6 +66,7 @@ public:
 		virtual void RunBuffer(CCommandBuffer *pBuffer) = 0;
 
 		virtual const SGfxErrorContainer &GetError() const = 0;
+		virtual void ClearError() = 0;
 		virtual void ErroneousCleanup() = 0;
 		// 清除已记录的致命错误。默认什么都不做，只有能安全重置错误状态的后端
 		// 才需要覆写它。@see CGraphicsBackend_Threaded::TakeFatalError
@@ -78,6 +87,10 @@ public:
 protected:
 	void StartProcessor(ICommandProcessor *pProcessor);
 	void StopProcessor();
+	void ResetSubmissionStopForCleanup()
+	{
+		m_SubmissionStopped.store(false, std::memory_order_relaxed);
+	}
 
 	bool HasWarning() const
 	{
@@ -99,12 +112,11 @@ private:
 
 public:
 	const char *GetFatalError() const override;
-	// 非破坏性查询：图形后端是否已记录致命错误。致命错误一旦被提交处理
-	// （ProcessError）就会断言退出，所以主循环需要提前轮询这个状态，
-	// 才能在设备丢失这类可恢复故障上做恢复，而不是卡在弹出的错误框里。
+	// 非破坏性查询：图形后端是否已记录致命错误。运行时错误会停止后续提交，
+	// 由主循环消费并进入恢复流程；初始化错误仍由 ProcessError 直接报告。
 	bool HasFatalError() const override;
-	// 原子地「检查并清除」致命错误标记：返回 true 表示刚刚消费掉一个致命错误。
-	// 收尾流程仍会向后端提交清理命令，清掉标记可以让这些提交不再重复断言。
+	// 「检查并清除」致命错误标记：返回 true 表示刚刚消费掉一个致命错误。
+	// 收尾流程仍可能向后端提交清理命令，停止标志保证这些提交不会再次执行。
 	bool TakeFatalError();
 	bool GetWarning(std::vector<std::string> &WarningStrings) override;
 };
@@ -120,32 +132,32 @@ public:
 
 struct SBackendCapabilities
 {
-	bool m_TileBuffering;
-	bool m_QuadBuffering;
-	bool m_TextBuffering;
-	bool m_QuadContainerBuffering;
+	bool m_TileBuffering = false;
+	bool m_QuadBuffering = false;
+	bool m_TextBuffering = false;
+	bool m_QuadContainerBuffering = false;
 
-	bool m_MipMapping;
-	bool m_NPOTTextures;
-	bool m_3DTextures;
-	bool m_2DArrayTextures;
-	bool m_2DArrayTexturesAsExtension;
-	bool m_ShaderSupport;
+	bool m_MipMapping = false;
+	bool m_NPOTTextures = false;
+	bool m_3DTextures = false;
+	bool m_2DArrayTextures = false;
+	bool m_2DArrayTexturesAsExtension = false;
+	bool m_ShaderSupport = false;
 	bool m_MediaIslandSdf = false;
 	bool m_RoundedRectSdf = false;
 	std::atomic<bool> m_TexturedMsdf{false};
-	bool m_RenderTargets;
+	bool m_RenderTargets = false;
 	bool m_RenderTargetGaussianBlur = false;
 	bool m_BackbufferCapture = false;
 	bool m_RenderTargetExternalPassRequiresSingleSample = false;
 	const char *m_pRenderTargetSupportReason = "not_initialized";
 
 	// use quads as much as possible, even if the user config says otherwise
-	bool m_TrianglesAsQuads;
+	bool m_TrianglesAsQuads = false;
 
-	int m_ContextMajor;
-	int m_ContextMinor;
-	int m_ContextPatch;
+	int m_ContextMajor = 0;
+	int m_ContextMinor = 0;
+	int m_ContextPatch = 0;
 
 	// 只保存从 GL_VERSION/GLES_VERSION 解析出的真实上下文版本。
 	// m_Context* 可能因兼容性降级而变化，不能用于展示实际驱动版本。
@@ -243,6 +255,7 @@ public:
 	void RunBuffer(CCommandBuffer *pBuffer) override;
 
 	const SGfxErrorContainer &GetError() const override;
+	void ClearError() override { m_Error = {}; }
 	void ErroneousCleanup() override;
 	// 清除已记录的致命错误。只允许在「已经决定不再信任本帧图形输出」时调用，
 	// 目的是让随后的收尾流程（Shutdown 仍会提交清理命令）不再重复触发断言。
@@ -280,14 +293,16 @@ class CGraphicsBackend_SDL_GL : public CGraphicsBackend_Threaded
 	char m_aRendererString[gs_GpuInfoStringSize] = {};
 
 	EBackendType m_BackendType = BACKEND_TYPE_AUTO;
+	EBackendType m_BackendOverride = BACKEND_TYPE_AUTO;
 
 	char m_aErrorString[256];
 
-	static EBackendType DetectBackend();
+	EBackendType DetectBackend() const;
 	static void ClampDriverVersion(EBackendType BackendType);
 
 public:
 	CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc);
+	void SetBackendOverride(EBackendType BackendType) override { m_BackendOverride = BackendType; }
 	int Init(const char *pName, int *pScreen, int *pWidth, int *pHeight, int *pRefreshRate, int *pFsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight, int *pCurrentWidth, int *pCurrentHeight, class IStorage *pStorage) override;
 	int Shutdown() override;
 
@@ -305,6 +320,8 @@ public:
 	void GetCurrentVideoMode(CVideoMode &CurMode, float HiDPIScale, int MaxWindowWidth, int MaxWindowHeight, int ScreenId) override;
 
 	void Minimize() override;
+	void HideWindow() override;
+	void ShowWindow() override;
 	void SetWindowParams(int FullscreenMode, bool IsBorderless) override;
 	bool SetWindowScreen(int Index, bool MoveToCenter, ivec2 *pDesktopSize) override;
 	bool UpdateDisplayMode(int Index, ivec2 *pDesktopSize) override;
@@ -314,6 +331,7 @@ public:
 	void SetWindowGrab(bool Grab) override;
 	bool ResizeWindow(int w, int h, int RefreshRate) override;
 	void GetViewportSize(int &w, int &h) override;
+	void GetDisplayCutoutInsets(int &Left, int &Right) override;
 	void NotifyWindow() override;
 	bool IsScreenKeyboardShown() override;
 
@@ -371,6 +389,8 @@ public:
 	{
 		return m_aRendererString;
 	}
+
+	EBackendType GetBackendType() const override { return m_BackendType; }
 
 	TGLBackendReadPresentedImageData &GetReadPresentedImageDataFuncUnsafe() override;
 

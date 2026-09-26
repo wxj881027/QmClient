@@ -16,7 +16,6 @@
 #include <engine/image.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
-#include <engine/shared/jobs.h>
 #include <engine/shared/ringbuffer.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -32,6 +31,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <iterator>
 #include <set>
 #include <string>
@@ -233,6 +233,32 @@ static void BuildLinkColorSplits(const std::vector<SLinkRange> &vRanges, std::ve
 	vSplits.emplace_back(Cursor, 9999, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
 }
 
+bool CGameConsole::DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released)
+{
+	const bool PressedInside = Rect.Inside(m_ButtonPressPosition);
+	const bool MouseInside = Rect.Inside(MousePosition);
+	const bool Active = CurrentConsole()->m_MouseIsPress && PressedInside;
+	if(Active)
+		m_ButtonPressed = true;
+
+	const float ColorMul = Active ? Ui()->ButtonColorMulActive() : (MouseInside ? Ui()->ButtonColorMulHot() : Ui()->ButtonColorMulDefault());
+	Ui()->DrawButton_FontIcon(pIcon, &Rect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ColorMul), IGraphics::CORNER_B);
+	return m_ConsoleState == CONSOLE_OPEN && Released && PressedInside && MouseInside;
+}
+
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+static void TrimAsciiSpaces(std::string &Text)
+{
+	size_t Start = 0;
+	while(Start < Text.size() && (Text[Start] == ' ' || Text[Start] == '\t' || Text[Start] == '\r' || Text[Start] == '\n'))
+		++Start;
+	size_t End = Text.size();
+	while(End > Start && (Text[End - 1] == ' ' || Text[End - 1] == '\t' || Text[End - 1] == '\r' || Text[End - 1] == '\n'))
+		--End;
+	if(Start != 0 || End != Text.size())
+		Text = Text.substr(Start, End - Start);
+}
+
 static bool TryParseChatExportLine(const char *pText, const char *pLocalName, QmChatExport::SLine &Line)
 {
 	struct SChatPrefix
@@ -263,6 +289,13 @@ static bool TryParseChatExportLine(const char *pText, const char *pLocalName, Qm
 	if(str_length(pText) >= 19 && pText[4] == '-' && pText[7] == '-' && pText[10] == ' ' && pText[13] == ':' && pText[16] == ':')
 		Line.m_Time.assign(pText, 19);
 
+	// 悄悄话日志形如 "→ 对方: 内容"（发出）或 "← 对方: 内容"（收到）。
+	// 箭头方向就是气泡方向：不识别它会把自己发出的悄悄话渲染成对方发来的，
+	// 且箭头会被当成玩家名的一部分参与本地作者比较。
+	bool WhisperOutgoing = false;
+	if(pMessage[0] == '\xe2' && pMessage[1] == '\x86' && (pMessage[2] == '\x92' || pMessage[2] == '\x90'))
+		WhisperOutgoing = pMessage[2] == '\x92'; // U+2192 发出，U+2190 收到
+
 	const char *pNameEnd = str_find(pMessage, ": ");
 	if(pNameEnd && pNameEnd > pMessage)
 	{
@@ -274,11 +307,12 @@ static bool TryParseChatExportLine(const char *pText, const char *pLocalName, Qm
 		Line.m_Sender.clear();
 		Line.m_Message = pMessage;
 	}
-	Line.m_Local = pLocalName && pLocalName[0] != '\0' && !Line.m_Sender.empty() && str_comp(Line.m_Sender.c_str(), pLocalName) == 0;
+	// 发出的悄悄话里，名字位置是收件人；本地作者判定只能依据箭头方向。
+	Line.m_Local = WhisperOutgoing || (pLocalName && pLocalName[0] != '\0' && !Line.m_Sender.empty() && str_comp(Line.m_Sender.c_str(), pLocalName) == 0);
 	return true;
 }
 
-// 字形仅在主线程准备，后台任务不访问字体、图形或客户端组件。
+// 导出任务：字形由主线程分帧光栅化，条目排版、头像合成与 PNG 编码都在后台线程做。
 class CQmChatExportJob : public IJob
 {
 	IStorage *m_pStorage;
@@ -336,13 +370,14 @@ public:
 		return m_vGlyphKeys.empty() ? 100 : (int)(100 * m_NextGlyph / m_vGlyphKeys.size());
 	}
 
+	// 每帧只做一小段：避免导出准备卡住主线程，同时不让后台任务碰到渲染资源。
 	bool PrepareGlyphs(ITextRender *pTextRender, IGraphics *pGraphics)
 	{
 		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 		const EFontPreset PreviousFont = pTextRender->GetFontPreset();
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		// 像素映射使导出尺寸不受控制台开关、UI缩放和窗口大小影响。
+		// 像素映射使导出尺寸不受控制台开关、UI 缩放和窗口大小影响。
 		pGraphics->MapScreen(0, 0, pGraphics->ScreenWidth(), pGraphics->ScreenHeight());
 		pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		pTextRender->SetRenderFlags(TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
@@ -471,8 +506,8 @@ void CConsoleLogger::ClearPendingColorSpans()
 	const CLockScope LockScope(m_PendingColorSpansLock);
 	m_PendingColorSpansSystem.clear();
 	m_PendingColorSpansMessage.clear();
-	m_pPendingChatMetadata.reset();
 	m_vPendingColorSpans.clear();
+	m_pPendingChatMetadata.reset();
 }
 
 void CConsoleLogger::OnConsoleDeletion()
@@ -676,12 +711,7 @@ CGameConsole::CInstance::CInstance(int Type)
 		m_PendingChatMetadataByExportId.erase(pEntry->m_ExportId);
 	});
 
-	m_Input.SetClipboardLineCallback([this](const char *pStr) {
-		if(pStr[0] != '\0')
-		{
-			ExecuteLine(pStr);
-		}
-	});
+	m_Input.SetClipboardLineCallback([this](const char *pStr) { ExecuteLine(pStr); });
 
 	m_CurrentMatchIndex = -1;
 	m_aCurrentSearchString[0] = '\0';
@@ -1215,25 +1245,15 @@ void CGameConsole::CInstance::PrintLine(const char *pLine, int Len, ColorRGBA Pr
 	pEntry->m_YOffset = -1.0f;
 	pEntry->m_PrintColor = PrintColor;
 	pEntry->m_Length = Len;
-	pEntry->m_LogCategory = ClassifyLogCategory(pLine, (size_t)Len);
+	pEntry->m_LogCategory = QmClassifyConsoleLogLine(pLine, (size_t)Len);
 	pEntry->m_ExportId = m_NextExportId++;
 	pEntry->m_ExportSelected = false;
-	if(pChatMetadata)
-		m_PendingChatMetadataByExportId[pEntry->m_ExportId] = std::move(pChatMetadata);
 	if(NumColorSpans > 0)
 		m_PendingColorSpansByExportId[pEntry->m_ExportId].assign(pColorSpans, pColorSpans + NumColorSpans);
+	if(pChatMetadata)
+		m_PendingChatMetadataByExportId[pEntry->m_ExportId] = std::move(pChatMetadata);
 	pEntry->m_LineCount = -1;
 	str_copy(pEntry->m_aText, pLine, Len + 1);
-}
-
-int CGameConsole::CInstance::ClassifyLogCategory(const char *pLine, size_t Length)
-{
-	return QmClassifyConsoleLogLine(pLine, Length);
-}
-
-bool CGameConsole::CInstance::MatchesLogFilter(const CBacklogEntry *pEntry) const
-{
-	return QmConsoleLogCategoryPassesFilter(pEntry->m_LogCategory, m_LogFilterMask);
 }
 
 int CGameConsole::CInstance::LogFilterCategoryForButton(int ButtonIndex)
@@ -1249,8 +1269,15 @@ int CGameConsole::CInstance::LogFilterCategoryForButton(int ButtonIndex)
 	}
 }
 
+bool CGameConsole::CInstance::MatchesLogFilter(const CBacklogEntry *pEntry) const
+{
+	// 分类在 PrintLine 时已存进条目，这里不再按行文本重新分类。
+	return pEntry != nullptr && QmConsoleLogCategoryPassesFilter(pEntry->m_LogCategory, m_LogFilterMask);
+}
+
 void CGameConsole::CInstance::SetLogFilterMask(int Mask)
 {
+	// 空掩码会让控制台一行不剩，用户也没有可点的按钮能走出来，因此不保留这个状态。
 	const int Normalized = QmNormalizeConsoleLogFilterMask(Mask);
 	if(m_LogFilterMask == Normalized)
 		return;
@@ -1297,7 +1324,8 @@ void CGameConsole::CInstance::InvalidateTotalBacklogLines()
 
 bool CGameConsole::CInstance::IsChatExportableEntry(const CBacklogEntry *pEntry) const
 {
-	return pEntry && pEntry->m_LogCategory == QM_CONSOLE_LOG_CATEGORY_PLAYER;
+	// 导出只针对玩家聊天行；分类已存进条目，直接按位判断。
+	return pEntry != nullptr && (pEntry->m_LogCategory & QM_CONSOLE_LOG_CATEGORY_PLAYER) != 0;
 }
 
 void CGameConsole::CInstance::ClearChatExportSelection()
@@ -1330,7 +1358,7 @@ int CGameConsole::CInstance::SelectedChatExportCount()
 
 void CGameConsole::CInstance::ToggleChatExportEntry(CBacklogEntry *pEntry, bool RangeSelect)
 {
-	if(m_pChatExportJob || !IsChatExportableEntry(pEntry))
+	if(!IsChatExportableEntry(pEntry))
 		return;
 
 	const bool Select = !pEntry->m_ExportSelected;
@@ -1622,6 +1650,7 @@ bool CGameConsole::CInstance::ExportSelectedChat()
 {
 	if(m_pChatExportJob)
 		return false;
+	PumpBacklogPending();
 
 	const char *pLocalName = "";
 	const int LocalClientId = m_pGameConsole->GameClient()->m_Snap.m_LocalClientId;
@@ -1636,6 +1665,7 @@ bool CGameConsole::CInstance::ExportSelectedChat()
 		QmChatExport::SLine Line;
 		if(!TryParseChatExportLine(pEntry->m_aText, pLocalName, Line))
 			continue;
+		// 打印时记下的身份与头像优先于事后解析：改名或换皮肤不影响历史消息。
 		const auto Metadata = m_ChatMetadataByExportId.find(pEntry->m_ExportId);
 		if(Metadata != m_ChatMetadataByExportId.end())
 		{
@@ -1646,6 +1676,7 @@ bool CGameConsole::CInstance::ExportSelectedChat()
 		}
 		vLines.push_back(std::move(Line));
 	}
+
 	if(vLines.empty())
 	{
 		m_pGameConsole->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", Localize("No chat log selected"));
@@ -1667,6 +1698,7 @@ void CGameConsole::CInstance::CancelChatExport()
 		return;
 	if(m_pChatExportJob->m_Queued)
 	{
+		// 已经交给后台：只发取消请求，等它自己收尾，避免拆掉正在使用的数据。
 		if(m_pChatExportJob->State() != IJob::STATE_DONE)
 			m_pChatExportJob->m_Cancelled.store(true);
 	}
@@ -1690,7 +1722,7 @@ void CGameConsole::CInstance::UpdateChatExport()
 		}
 		return;
 	}
-	// 取消仅发请求；STATE_DONE后才能读取后台结果并释放任务。
+	// 取消仅发请求；STATE_DONE 后才能读取后台结果并释放任务。
 	if(m_pChatExportJob->State() != IJob::STATE_DONE)
 		return;
 	const auto pJob = std::move(m_pChatExportJob);
@@ -1854,6 +1886,7 @@ void CGameConsole::Prompt(char (&aPrompt)[32])
 
 void CGameConsole::OnRender()
 {
+	// 导出准备每帧推进一步，完成后任务才交给后台线程。
 	m_LocalConsole.UpdateChatExport();
 	CUIRect Screen = *Ui()->Screen();
 	CInstance *pConsole = CurrentConsole();
@@ -1999,7 +2032,10 @@ void CGameConsole::OnRender()
 		{
 			pConsole->m_MouseIsPress = true;
 			pConsole->m_MousePress = GetMousePosition();
+			m_ButtonPressPosition = pConsole->m_MousePress;
 		}
+		if(!pConsole->m_MouseIsPress)
+			m_ButtonPressed = false;
 		if(pConsole->m_MouseIsPress && !m_TouchState.m_PrimaryPressed && !Input()->NativeMousePressed(1))
 		{
 			const vec2 ReleasePos = GetMousePosition();
@@ -2017,6 +2053,16 @@ void CGameConsole::OnRender()
 				LinkClickPress = pConsole->m_MousePress;
 			}
 		}
+		const bool ButtonReleased = WasMousePressed && !pConsole->m_MouseIsPress;
+		const vec2 ButtonMousePosition = ButtonReleased ? pConsole->m_MouseRelease : GetMousePosition();
+#if defined(CONF_PLATFORM_IOS)
+		CUIRect CloseButtonBar, CloseButton;
+		Screen.HSplitTop(RowHeight, &CloseButtonBar, nullptr);
+		CloseButtonBar.VSplitRight(10.0f, &CloseButtonBar, nullptr);
+		CloseButtonBar.VSplitRight(RowHeight, &CloseButtonBar, &CloseButton);
+		if(DoButton(CloseButton, FontIcon::XMARK, ButtonMousePosition, ButtonReleased))
+			Toggle(m_ConsoleType);
+#endif
 		if(pConsole->m_MouseIsPress)
 		{
 			pConsole->m_MouseRelease = GetMousePosition();
@@ -2335,7 +2381,8 @@ void CGameConsole::OnRender()
 			// stop rendering when lines reach the top
 			const bool Outside = y - OffsetY <= RowHeight;
 			const bool CanRenderOneLine = y - LocalOffsetY > RowHeight;
-			if(Outside && !CanRenderOneLine)
+			const bool SelectionActive = !pConsole->m_ChatExportMode && m_ConsoleState == CONSOLE_OPEN && (pConsole->m_MouseIsPress || pConsole->m_HasSelection || pConsole->m_CurSelStart != pConsole->m_CurSelEnd);
+			if(Outside && !CanRenderOneLine && !SelectionActive)
 				break;
 
 			const int LinesNotRendered = pEntry->m_LineCount - minimum((int)std::floor((y - LocalOffsetY) / RowHeight), pEntry->m_LineCount);
@@ -2370,7 +2417,7 @@ void CGameConsole::OnRender()
 			EntryCursor.m_LineWidth = EntryLineWidth;
 			EntryCursor.m_MaxLines = pEntry->m_LineCount;
 			EntryCursor.m_LineSpacing = LINE_SPACING;
-			EntryCursor.m_CalculateSelectionMode = (!pConsole->m_ChatExportMode && m_ConsoleState == CONSOLE_OPEN && pConsole->m_MousePress.y < pConsole->m_BoundingBox.m_Y && (pConsole->m_MouseIsPress || (pConsole->m_CurSelStart != pConsole->m_CurSelEnd) || pConsole->m_HasSelection)) ? TEXT_CURSOR_SELECTION_MODE_CALCULATE : TEXT_CURSOR_SELECTION_MODE_NONE;
+			EntryCursor.m_CalculateSelectionMode = (!pConsole->m_ChatExportMode && m_ConsoleState == CONSOLE_OPEN && !m_ButtonPressed && pConsole->m_MousePress.y < pConsole->m_BoundingBox.m_Y && (pConsole->m_MouseIsPress || (pConsole->m_CurSelStart != pConsole->m_CurSelEnd) || pConsole->m_HasSelection)) ? TEXT_CURSOR_SELECTION_MODE_CALCULATE : TEXT_CURSOR_SELECTION_MODE_NONE;
 			EntryCursor.m_PressMouse = pConsole->m_MousePress;
 			EntryCursor.m_ReleaseMouse = pConsole->m_MouseRelease;
 
@@ -2450,7 +2497,7 @@ void CGameConsole::OnRender()
 #if defined(CONF_PLATFORM_ANDROID)
 						Opened = Client()->ViewLink(aNormalized);
 #else
-						Opened = os_open_link(aNormalized) != 0;
+						Opened = open_link(aNormalized) != 0;
 #endif
 					}
 					else if(str_startswith_nocase(aLink, "www."))
@@ -2582,7 +2629,10 @@ void CGameConsole::OnRender()
 		const float FilterY = (RowHeight - FilterHeight) / 2.0f;
 		const float FilterPadding = 6.0f;
 		const float FilterSpacing = 4.0f;
-		const float TopbarRightMargin = 10.0f;
+		float TopbarRightMargin = 10.0f;
+#if defined(CONF_PLATFORM_IOS)
+		TopbarRightMargin += RowHeight + 10.0f;
+#endif
 
 		vec2 UiMousePos = Input()->NativeMousePos();
 		if(WindowSize.x > 0.0f && WindowSize.y > 0.0f)
@@ -2628,6 +2678,7 @@ void CGameConsole::OnRender()
 			float ButtonRight = Screen.w - TopbarRightMargin;
 			for(const SExportButton &ExportButton : aButtons)
 			{
+				// 导出进行中只保留取消，避免重复发起或改动正在导出的选择。
 				if(pConsole->m_pChatExportJob && ExportButton.m_Action != EExportAction::CANCEL)
 					continue;
 				const float ButtonWidth = TextRender()->TextWidth(FilterFontSize, ExportButton.m_pLabel) + FilterPadding * 2.0f;

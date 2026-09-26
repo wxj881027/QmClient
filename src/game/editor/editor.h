@@ -18,8 +18,8 @@
 
 #include <engine/editor.h>
 #include <engine/graphics.h>
+#include <engine/http.h>
 #include <engine/shared/datafile.h>
-#include <engine/shared/http.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/localization.h>
 #include <engine/shared/websocket_client.h>
@@ -27,6 +27,7 @@
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/editor/enums.h>
+#include <game/editor/envelope_editor.h>
 #include <game/editor/file_browser.h>
 #include <game/editor/mapitems/envelope.h>
 #include <game/editor/mapitems/layer.h>
@@ -44,13 +45,13 @@
 #include <game/editor/prompt.h>
 #include <game/editor/quick_action.h>
 #include <game/localization.h>
-#include <game/map/render_interfaces.h>
 #include <game/mapitems.h>
 
 #include <deque>
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -111,7 +112,7 @@ enum
 	PROPTYPE_AUTOMAPPER_REFERENCE,
 };
 
-class CEditor : public IEditor, public IEnvelopeEval
+class CEditor : public IEditor
 {
 	friend class CEditorDrawingTools;
 
@@ -170,8 +171,9 @@ public:
 	CUi *Ui() { return &m_UI; }
 	CRenderMap *RenderMap() { return &m_RenderMap; }
 
-	CEditorMap *Map() { return &m_Map; }
-	const CEditorMap *Map() const { return &m_Map; }
+	CEditorMap *Map();
+	const CEditorMap *Map() const;
+	CMapSettingsBackend &MapSettingsBackend() { return m_MapSettingsBackend; }
 	CMapView *MapView() { return &m_MapView; }
 	const CMapView *MapView() const { return &m_MapView; }
 	CQuadKnife *QuadKnife() { return &m_QuadKnife; }
@@ -195,6 +197,7 @@ public:
 	bool IsNonGameTileLayerSelected() const;
 	void MapDetails();
 	void TestMapLocally();
+	void GotoPosition();
 #define REGISTER_QUICK_ACTION(name, text, callback, disabled, active, button_color, description) CQuickAction m_QuickAction##name;
 #include <game/editor/quick_actions.h>
 #undef REGISTER_QUICK_ACTION
@@ -203,10 +206,7 @@ public:
 #define REGISTER_QUICK_ACTION(name, text, callback, disabled, active, button_color, description) m_QuickAction##name(text, description, callback, disabled, active, button_color),
 #include <game/editor/quick_actions.h>
 #undef REGISTER_QUICK_ACTION
-		m_ZoomEnvelopeX(1.0f, 0.1f, 600.0f),
-		m_ZoomEnvelopeY(640.0f, 0.1f, 32000.0f),
-		m_MapSettingsCommandContext(m_MapSettingsBackend.NewContext(&m_SettingsCommandInput)),
-		m_Map(this)
+		m_MapSettingsBackend()
 	{
 		m_EntitiesTexture.Invalidate();
 		m_FrontTexture.Invalidate();
@@ -229,22 +229,11 @@ public:
 
 		m_SelectEntitiesImage = "DDNet";
 
-		m_ResetZoomEnvelope = true;
-		m_OffsetEnvelopeX = 0.1f;
-		m_OffsetEnvelopeY = 0.5f;
-
 		m_ShowMousePointer = true;
 
 		m_GuiActive = true;
-		m_PreviewZoom = false;
 
 		m_ShowTileInfo = SHOW_TILE_OFF;
-		m_ShowDetail = true;
-		m_Animate = false;
-		m_AnimateStart = 0.0f;
-		m_AnimateTime = 0.0f;
-		m_AnimateSpeed = 1.0f;
-		m_AnimateUpdatePopup = false;
 
 		for(size_t i = 0; i < std::size(m_aSavedColors); ++i)
 		{
@@ -284,7 +273,7 @@ public:
 	void OnWindowResize() override;
 	void OnClose() override;
 	void OnDialogClose();
-	bool HasUnsavedData() const override { return Map()->m_Modified; }
+	bool HasUnsavedData() const override;
 	void UpdateMentions() override { m_Mentions++; }
 	void ResetMentions() override { m_Mentions = 0; }
 	void OnIngameMoved() override { m_IngameMoved = true; }
@@ -310,6 +299,9 @@ public:
 	float m_LastAutosaveUpdateTime = -1.0f;
 	void HandleAutosave();
 	void HandleWriterFinishJobs();
+	bool IsSaving(const char *pFilename) const;
+	bool IsSaving(const CEditorMap *pMap) const;
+	void UpdateMapDisplayNames();
 
 	enum class ECollabState
 	{
@@ -319,14 +311,15 @@ public:
 		CONNECTED,
 		LEAVING,
 	};
-	// 只记录 WS 请求状态，沿用原来的房间响应解析和地图应用流程。
 	struct SCollabRequest
 	{
+		CEditorMap *m_pMap = nullptr;
 		int m_Id = 0;
 		int m_Status = 0;
 		int64_t m_Deadline = 0;
 		bool m_Sent = false;
 		bool m_Done = false;
+		bool m_JoinTransport = false;
 		std::string m_Body;
 		std::string m_Response;
 		bool Done() const { return m_Done; }
@@ -345,6 +338,13 @@ public:
 	int m_CollabNextRequestId = 1;
 	int64_t m_CollabConnectedTick = 0;
 	bool m_CollabJoinedTransport = false;
+	CEditorMap *m_pCollabMap = nullptr;
+	std::shared_ptr<CDataFileWriterFinishJob> m_pCollabSnapshotJob;
+	bool m_CollabSnapshotReady = false;
+	int m_CollabSnapshotRevision = 0;
+	bool IsCollabMapValid() const;
+	bool IsCollabMapActive() const;
+	void ResetCollabSession();
 	bool EnsureCollabRealtime();
 	void UpdateCollabRealtime();
 	ECollabState m_CollabState = ECollabState::DISCONNECTED;
@@ -354,6 +354,7 @@ public:
 	std::shared_ptr<SCollabRequest> m_pCollabLeaveTask;
 	std::shared_ptr<SCollabRequest> m_pCollabPushTask;
 	std::shared_ptr<SCollabRequest> m_pCollabPullTask;
+	std::shared_ptr<SCollabRequest> m_pCollabBroadcastTask;
 	char m_aCollabClientId[64] = "";
 	char m_aCollabRoomCode[16] = "";
 	char m_aCollabStatus[160] = "Not in a collaboration room";
@@ -392,6 +393,8 @@ public:
 	[[gnu::format(printf, 2, 3)]] void ShowFileDialogError(const char *pFormat, ...);
 
 	void Reset(bool CreateDefault = true);
+	void AddDefaultMap();
+	void CloseMap(size_t Index, bool Confirm);
 	bool Save(const char *pFilename) override;
 	bool Load(const char *pFilename, int StorageType) override;
 	bool HandleMapDrop(const char *pFilename, int StorageType) override;
@@ -432,6 +435,7 @@ public:
 		POPEVENT_LOADCURRENT,
 		POPEVENT_LOADDROP,
 		POPEVENT_NEW,
+		POPEVENT_CLOSE_MAP,
 		POPEVENT_LARGELAYER,
 		POPEVENT_PREVENTUNUSEDTILES,
 		POPEVENT_IMAGEDIV16,
@@ -451,6 +455,7 @@ public:
 	int m_PopupEventType;
 	int m_PopupEventActivated;
 	int m_PopupEventWasActivated;
+	size_t m_PopupCloseMapIndex = 0;
 	bool m_LargeLayerWasWarned;
 	bool m_PreventUnusedTilesWasWarned;
 
@@ -474,18 +479,10 @@ public:
 	std::string m_SelectEntitiesImage;
 
 	// Zooming
-	CSmoothValue m_ZoomEnvelopeX;
-	CSmoothValue m_ZoomEnvelopeY;
-
-	bool m_ResetZoomEnvelope;
-
-	float m_OffsetEnvelopeX;
-	float m_OffsetEnvelopeY;
 
 	bool m_ShowMousePointer;
 	bool m_GuiActive;
 
-	bool m_PreviewZoom;
 	const void *m_pContainerPanned;
 	const void *m_pContainerPannedLast;
 
@@ -496,13 +493,6 @@ public:
 		SHOW_TILE_HEXADECIMAL
 	};
 	EShowTile m_ShowTileInfo;
-	bool m_ShowDetail;
-
-	bool m_Animate;
-	float m_AnimateStart;
-	float m_AnimateTime;
-	float m_AnimateSpeed;
-	bool m_AnimateUpdatePopup;
 
 	enum EExtraEditor
 	{
@@ -553,6 +543,8 @@ public:
 
 	IGraphics::CTextureHandle GetEntitiesTexture();
 
+	CEnvelopeEditor m_EnvelopeEditor;
+	std::unique_ptr<CEditorMap> m_pToolsMap;
 	std::shared_ptr<CLayerGroup> m_pBrush;
 	std::shared_ptr<CLayerTiles> m_pTilesetPicker;
 	std::shared_ptr<CLayerQuads> m_pQuadsetPicker;
@@ -562,11 +554,7 @@ public:
 
 	std::deque<std::shared_ptr<CDataFileWriterFinishJob>> m_WriterFinishJobs;
 
-	void EnvelopeEval(int TimeOffsetMillis, int EnvelopeIndex, ColorRGBA &Result, size_t Channels) override;
-
-	CLineInputBuffered<256> m_SettingsCommandInput;
 	CMapSettingsBackend m_MapSettingsBackend;
-	CMapSettingsBackend::CContext m_MapSettingsCommandContext;
 
 	CImageInfo m_TileartImageInfo;
 	char m_aTileartFilename[IO_MAX_PATH_LENGTH];
@@ -582,6 +570,8 @@ public:
 	int DoButton_Env(const void *pId, const char *pText, int Checked, const CUIRect *pRect, const char *pToolTip, ColorRGBA Color, int Corners);
 	int DoButton_Ex(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners, float FontSize = EditorFontSizes::MENU, int Align = TEXTALIGN_MC);
 	int DoButton_FontIcon(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners, float FontSize = 10.0f);
+	// 图集优先、字形回退（pFallbackIcon 为 FontIcons::FONT_ICON_* 字形）。
+	int DoButton_QmIcon(const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners, float FontSize = 10.0f);
 	int DoButton_MenuItem(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, const char *pToolTip = nullptr);
 	int DoButton_DraggableEx(const void *pId, const char *pText, int Checked, const CUIRect *pRect, bool *pClicked, bool *pAbrupted, int Flags, const char *pToolTip = nullptr, int Corners = IGraphics::CORNER_ALL, float FontSize = 10.0f);
 	bool DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners = IGraphics::CORNER_ALL, const char *pToolTip = nullptr, const std::vector<STextColorSplit> &vColorSplits = {});
@@ -600,6 +590,19 @@ public:
 	static CUi::EPopupMenuFunctionResult PopupMenuTools(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupMenuSettings(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupCollab(void *pContext, CUIRect View, bool Active);
+	class CPopupMapTab : public SPopupMenuId
+	{
+	public:
+		CEditor *m_pEditor = nullptr;
+		CEditorMap *m_pSelectedMap = nullptr;
+		static CUi::EPopupMenuFunctionResult Render(void *pContext, CUIRect View, bool Active);
+
+		const char m_CloseButtonId = 0;
+		const char m_CopyNameButtonId = 0;
+		const char m_CopyPathButtonId = 0;
+		const char m_ShowFileButtonId = 0;
+	};
+	CPopupMapTab m_PopupMapTab;
 	static CUi::EPopupMenuFunctionResult PopupGroup(void *pContext, CUIRect View, bool Active);
 	struct SLayerPopupContext : public SPopupMenuId
 	{
@@ -758,9 +761,6 @@ public:
 	void RenderStatusbar(CUIRect View, CUIRect *pTooltipRect);
 	void RenderTooltip(CUIRect TooltipRect);
 
-	void RenderEnvelopeEditor(CUIRect View);
-	void RenderEnvelopeEditorColorBar(CUIRect ColorBar, const std::shared_ptr<CEnvelope> &pEnvelope);
-
 	void RenderMapSettingsErrorDialog();
 	void RenderServerSettingsEditor(CUIRect View, bool ShowServerSettingsEditorLast);
 	static void MapSettingsDropdownRenderCallback(const SPossibleValueMatch &Match, char (&aOutput)[128], std::vector<STextColorSplit> &vColorSplits);
@@ -776,28 +776,11 @@ public:
 	};
 	void DoEditorDragBar(CUIRect View, CUIRect *pDragBar, EDragSide Side, float *pValue, float MinValue = 100.0f, float MaxValue = 400.0f);
 
-	void UpdateHotEnvelopeObject(const CUIRect &View, const CEnvelope *pEnvelope, int ActiveChannels);
-
 	void RenderMenubar(CUIRect Menubar);
 	void ShowHelp();
+	void DoMapTabs(CUIRect MapTabs);
 
 	void DoAudioPreview(CUIRect View, const void *pPlayPauseButtonId, const void *pStopButtonId, const void *pSeekBarId, int SampleId);
-
-	// Zooming
-	void ZoomAdaptOffsetX(float ZoomFactor, const CUIRect &View);
-	void UpdateZoomEnvelopeX(const CUIRect &View);
-
-	void ZoomAdaptOffsetY(float ZoomFactor, const CUIRect &View);
-	void UpdateZoomEnvelopeY(const CUIRect &View);
-
-	void ResetZoomEnvelope(const std::shared_ptr<CEnvelope> &pEnvelope, int ActiveChannels);
-	void RemoveTimeOffsetEnvelope(const std::shared_ptr<CEnvelope> &pEnvelope);
-	float ScreenToEnvelopeX(const CUIRect &View, float x) const;
-	float EnvelopeToScreenX(const CUIRect &View, float x) const;
-	float ScreenToEnvelopeY(const CUIRect &View, float y) const;
-	float EnvelopeToScreenY(const CUIRect &View, float y) const;
-	float ScreenToEnvelopeDX(const CUIRect &View, float DeltaX);
-	float ScreenToEnvelopeDY(const CUIRect &View, float DeltaY);
 
 	// DDRace
 
@@ -826,7 +809,10 @@ public:
 	void AdjustBrushSpecialTiles(bool UseNextFree, int AdjustModifiers, int AdjustValue);
 
 private:
-	CEditorMap m_Map;
+	std::vector<std::unique_ptr<CEditorMap>> m_vpMaps;
+	size_t m_SelectedMap = 0;
+	bool m_MapTabsRevealSelected = false;
+	CScrollRegion m_MapTabsScrollRegion;
 
 	CEditorHistory &ActiveHistory();
 

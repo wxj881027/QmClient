@@ -256,11 +256,11 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case TILE_CP:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return Localize("SPEEDER: Causes weapons, SHIELD, HEART and SPINNING LASER to move slowly.", "Editor");
+			return Localize("SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move slowly.", "Editor");
 		break;
 	case TILE_CP_F:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return Localize("SPEEDER: Causes weapons, SHIELD, HEART and SPINNING LASER to move quickly.", "Editor");
+			return Localize("SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move quickly.", "Editor");
 		break;
 	case TILE_TUNE:
 		if(Layer == LAYER_TUNE)
@@ -369,7 +369,7 @@ const char *CExplanations::ExplainDDNet(int Tile, int Layer)
 		break;
 	case ENTITY_OFFSET + ENTITY_HEALTH_1:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)
-			return Localize("HEART: Works like a FREEZE tile. Freezes tees for 3 seconds by default.", "Editor");
+			return Localize("SNOWFLAKE: Works like a FREEZE tile. Freezes tees for 3 seconds by default.", "Editor");
 		break;
 	case ENTITY_OFFSET + ENTITY_WEAPON_SHOTGUN:
 		if(Layer == LAYER_GAME || Layer == LAYER_FRONT || Layer == LAYER_SWITCH)

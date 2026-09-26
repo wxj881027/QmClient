@@ -100,6 +100,9 @@ class CHud : public CComponent
 		bool m_PredPositionInitialized = false;
 		bool m_LossPositionInitialized = false;
 		bool m_AlphaInitialized = false;
+		uint64_t m_DiagnosticFpsSignature = UINT64_MAX;
+		uint64_t m_DiagnosticPredSignature = UINT64_MAX;
+		uint64_t m_DiagnosticLossSignature = UINT64_MAX;
 
 		void Reset()
 		{
@@ -122,6 +125,9 @@ class CHud : public CComponent
 			m_PredPositionInitialized = false;
 			m_LossPositionInitialized = false;
 			m_AlphaInitialized = false;
+			m_DiagnosticFpsSignature = UINT64_MAX;
+			m_DiagnosticPredSignature = UINT64_MAX;
+			m_DiagnosticLossSignature = UINT64_MAX;
 		}
 	};
 	SHudTextInfoV2AnimState m_TextInfoV2AnimState;
@@ -349,11 +355,10 @@ class CHud : public CComponent
 	IGraphics::CRenderTargetHandle m_MediaIslandBlurTarget;
 	int m_MediaIslandBlurWidth = 0;
 	int m_MediaIslandBlurHeight = 0;
+	int m_MediaIslandBlurMode = -1;
 	bool m_MediaIslandBlurReady = false;
 	uint64_t m_MediaIslandBlurLastAttemptFrame = 0;
 	bool m_MediaIslandBlurAttemptInitialized = false;
-	// 背板模糊诊断只打一次（见 RenderMediaIsland）。
-	bool m_QmMediaIslandBlurProbeDone = false;
 	IGraphics::CRenderTargetHandle m_DummyMiniViewRenderTarget;
 	int m_DummyMiniViewRenderTargetWidth = 0;
 	int m_DummyMiniViewRenderTargetHeight = 0;
@@ -449,6 +454,27 @@ class CHud : public CComponent
 		}
 	};
 	std::array<SHudSwitchCountdownRingState, SWITCH_COUNTDOWN_MAX_LINES> m_aSwitchCountdownRings{};
+	struct SHudSwitchCountdownTracker
+	{
+		int m_aaEndTick[NUM_DDRACE_TEAMS][256] = {};
+		int m_aaTouchTick[NUM_DDRACE_TEAMS][256] = {};
+		int m_aaClientId[NUM_DDRACE_TEAMS][256] = {};
+		int m_aaConnection[NUM_DDRACE_TEAMS][256] = {};
+
+		void Reset()
+		{
+			for(int t = 0; t < NUM_DDRACE_TEAMS; ++t)
+			{
+				for(int i = 0; i < 256; ++i)
+				{
+					m_aaEndTick[t][i] = 0;
+					m_aaTouchTick[t][i] = 0;
+					m_aaClientId[t][i] = -1;
+					m_aaConnection[t][i] = -1;
+				}
+			}
+		}
+	};
 	SHudSwitchCountdownTracker m_SwitchCountdownTracker;
 	struct SHudHookCountdownRingState
 	{
@@ -521,7 +547,7 @@ class CHud : public CComponent
 	bool HasVisibleMediaIsland() const;
 	float GetTopIslandAvoidanceRight() const;
 	void DestroyMediaIslandBlurTargets();
-	bool PrepareMediaIslandBlur();
+	IGraphics::CRenderTargetHandle MediaIslandBlurBackdrop();
 	void RenderMediaIsland();
 
 	int m_LastSpectatorCountTick;
@@ -577,7 +603,8 @@ public:
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	void HandleSpamProtectionMessage(const char *pMessage);
 	void RenderNinjaBarPos(float x, float y, float Width, float Height, float Progress, float Alpha = 1.0f);
-	void RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, bool AnimateTee = true);
+	void RenderProgressBarWithTee(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, bool AnimateTee = true, int Corners = IGraphics::CORNER_ALL);
+	void RenderProgressBar(const CUIRect &BarRect, float Progress, const ColorRGBA &FillColor, int Corners = IGraphics::CORNER_ALL);
 
 private:
 	void RenderRecord();

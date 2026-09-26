@@ -23,7 +23,6 @@
 
 #include <generated/client_data7.h>
 
-#include <game/client/components/qmclient/qm_chat_avatar.h>
 #include <game/client/components/qmclient/qm_skin_outline.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
@@ -67,6 +66,9 @@ static ColorRGBA DetermineBloodColorFromInfo(const CImageInfo &Info)
 	const vec3 NormalizedColor = normalize(vec3(aColors[0], aColors[1], aColors[2]));
 	return ColorRGBA(NormalizedColor.x, NormalizedColor.y, NormalizedColor.z);
 }
+
+static std::shared_ptr<CQmSkinOutline> CreateSkinPartOutline(const CImageInfo &Image, int Part);
+static std::shared_ptr<const QmChatAvatar::SSource> CreateChatAvatarPartSource(const CImageInfo &Image, int Part);
 
 CSkins7::CSkinPartLoadJob::CSkinPartLoadJob(const char *pPath, const char *pPartName, IStorage *pStorage, int StorageType, int PartType, int Flags) :
 	m_Path(pPath),
@@ -131,12 +133,18 @@ void CSkins7::CSkinPartLoadJob::Run()
 	ConvertToGrayscale(GrayscaleImage);
 
 	ColorRGBA BloodColor = DetermineBloodColorFromInfo(OriginalImage);
+	auto pOutline = CreateSkinPartOutline(OriginalImage, m_PartType);
+	auto pAvatarOriginal = CreateChatAvatarPartSource(OriginalImage, m_PartType);
+	auto pAvatarColorable = CreateChatAvatarPartSource(GrayscaleImage, m_PartType);
 
 	{
 		CLockScope Lock(m_Mutex);
 		m_Result.m_OriginalImage = std::move(OriginalImage);
 		m_Result.m_GrayscaleImage = std::move(GrayscaleImage);
 		m_Result.m_BloodColor = BloodColor;
+		m_Result.m_QmSkinOutline = std::move(pOutline);
+		m_Result.m_pChatAvatarOriginal = std::move(pAvatarOriginal);
+		m_Result.m_pChatAvatarColorable = std::move(pAvatarColorable);
 		m_Result.m_Success = true;
 		m_Completed = true;
 	}
@@ -145,6 +153,7 @@ void CSkins7::CSkinPartLoadJob::Run()
 // TODO: uncomment
 // const float MIN_EYE_BODY_COLOR_DIST = 80.f; // between body and eyes (LAB color space)
 
+// 六个部件各自的描边：从原图取「填充 + 描边」两个素材生成遮罩，供 sixup 渲染按部件画描边。
 static std::shared_ptr<CQmSkinOutline> CreateSkinPartOutline(const CImageInfo &Image, int Part)
 {
 	if(Part == protocol7::SKINPART_BODY)
@@ -155,7 +164,7 @@ static std::shared_ptr<CQmSkinOutline> CreateSkinPartOutline(const CImageInfo &I
 		return QmCreateSkinOutline(Image, client_data7::g_pData->m_aSprites[client_data7::SPRITE_TEE_DECORATION], client_data7::g_pData->m_aSprites[client_data7::SPRITE_TEE_DECORATION_OUTLINE], vec2(64, 64));
 	return nullptr;
 }
-
+// 六人皮肤按部件拆成独立图片：这里把每个部件用到的素材缩成 CPU 副本供聊天导出复用。
 static std::shared_ptr<const QmChatAvatar::SSource> CreateChatAvatarPartSource(const CImageInfo &Image, int Part)
 {
 	using namespace QmChatAvatar;
@@ -195,7 +204,7 @@ void CSkins7::CSkinPart::ApplyTo(CTeeRenderInfo::CSixup &SixupRenderInfo) const
 {
 	SixupRenderInfo.m_aOriginalTextures[m_Type] = m_OriginalTexture;
 	SixupRenderInfo.m_aColorableTextures[m_Type] = m_ColorableTexture;
-	SixupRenderInfo.m_apQmSkinOutlines[m_Type] = m_pQmSkinOutline;
+	SixupRenderInfo.m_apQmSkinOutlines[m_Type] = m_QmSkinOutline;
 	SixupRenderInfo.m_apChatAvatarOriginal[m_Type] = m_pChatAvatarOriginal;
 	SixupRenderInfo.m_apChatAvatarColorable[m_Type] = m_pChatAvatarColorable;
 	if(m_Type == protocol7::SKINPART_BODY)
@@ -283,9 +292,10 @@ bool CSkins7::LoadSkinPart(int PartType, const char *pName, int DirType)
 	Part.m_OriginalTexture = Graphics()->LoadTextureRaw(Info, 0, aFilename);
 	GameClient()->GpuUploadLimiter()->OnUploaded();
 	Part.m_BloodColor = DetermineBloodColorFromInfo(Info);
-	Part.m_pQmSkinOutline = CreateSkinPartOutline(Info, PartType);
+	Part.m_QmSkinOutline = CreateSkinPartOutline(Info, PartType);
 	Part.m_pChatAvatarOriginal = CreateChatAvatarPartSource(Info, PartType);
 	ConvertToGrayscale(Info);
+	// 素材必须在 LoadTextureRawMove 取走图片数据之前取出（原顺序依赖调用后数据仍在，脆弱）。
 	Part.m_pChatAvatarColorable = CreateChatAvatarPartSource(Info, PartType);
 	Part.m_ColorableTexture = Graphics()->LoadTextureRawMove(Info, 0, aFilename);
 	GameClient()->GpuUploadLimiter()->OnUploaded();
@@ -356,12 +366,12 @@ void CSkins7::ProcessCompletedJobs()
 			Part.m_OriginalTexture = Graphics()->LoadTextureRaw(Result.m_OriginalImage, 0, Result.m_aName);
 			GameClient()->GpuUploadLimiter()->OnUploaded();
 			Part.m_BloodColor = Result.m_BloodColor;
-			Part.m_pQmSkinOutline = CreateSkinPartOutline(Result.m_OriginalImage, Result.m_PartType);
-			Part.m_pChatAvatarOriginal = CreateChatAvatarPartSource(Result.m_OriginalImage, Result.m_PartType);
-			Part.m_pChatAvatarColorable = CreateChatAvatarPartSource(Result.m_GrayscaleImage, Result.m_PartType);
+			// CPU 素材已随任务结果发布；主线程只接管并上传纹理。
+			Part.m_QmSkinOutline = std::move(Result.m_QmSkinOutline);
+			Part.m_pChatAvatarOriginal = std::move(Result.m_pChatAvatarOriginal);
+			Part.m_pChatAvatarColorable = std::move(Result.m_pChatAvatarColorable);
 			Part.m_ColorableTexture = Graphics()->LoadTextureRawMove(Result.m_GrayscaleImage, 0, Result.m_aName);
 			GameClient()->GpuUploadLimiter()->OnUploaded();
-			// LoadTextureRaw 只拷贝像素，不接管所有权；必须手动释放，否则本地 Result 析构不会 Free（CImageInfo 无析构）。
 			Result.m_OriginalImage.Free();
 
 			if(Config()->m_Debug)
@@ -636,8 +646,8 @@ void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 		{
 			Graphics()->UnloadTexture(&SkinPart.m_OriginalTexture);
 			Graphics()->UnloadTexture(&SkinPart.m_ColorableTexture);
-			if(SkinPart.m_pQmSkinOutline)
-				SkinPart.m_pQmSkinOutline->Unload(Graphics());
+			if(SkinPart.m_QmSkinOutline)
+				SkinPart.m_QmSkinOutline->Unload(Graphics());
 		}
 		m_avSkinParts[Part].clear();
 

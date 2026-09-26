@@ -490,6 +490,8 @@ int CHttpRequest::ProgressCallback(void *pUser, double DlTotal, double DlCurr, d
 	pTask->m_Size.store(DlTotal, std::memory_order_relaxed);
 	pTask->m_Progress.store(DlTotal == 0.0 ? 0 : (100 * DlCurr) / DlTotal, std::memory_order_relaxed);
 	pTask->OnProgress();
+	if(pTask->m_pProgressCallback)
+		pTask->m_pProgressCallback->OnProgress();
 	const bool AbortRequested = pTask->m_Abort.load();
 	if(AbortRequested)
 		pTask->m_AbortTriggeredByProgressCallback.store(true);
@@ -594,6 +596,8 @@ void CHttpRequest::OnCompletionInternal(void *pHandle, unsigned int Result)
 	// or other threads may try to access the result of a completed HTTP request,
 	// before the result has been initialized/updated in OnCompletion.
 	OnCompletion(State);
+	if(m_pProgressCallback)
+		m_pProgressCallback->OnCompletion(State);
 	{
 		std::unique_lock WaitLock(m_WaitMutex);
 		m_State = State;
