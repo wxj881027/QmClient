@@ -861,7 +861,8 @@ TEST(QmNewUiMenuBranches, LegacyMenusKeepTabAndPanelShellConnected)
 	EXPECT_NE(MenusSource.find(MenuShellSplit, MenusSource.find("case IClient::STATE_ONLINE:")), std::string::npos);
 
 	const std::string QmClientSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	EXPECT_NE(QmClientSource.find("const bool UseNewUi = g_Config.m_QmNewUi != 0;"), std::string::npos);
+	// 设置页不再缓存 UseNewUi 局部量，直接读配置，避免未使用变量。
+	EXPECT_EQ(QmClientSource.find("UseNewUi"), std::string::npos);
 	EXPECT_NE(QmClientSource.find("if(g_Config.m_QmNewUi != 0)"), std::string::npos);
 	EXPECT_EQ(QmClientSource.find("if(UseNewUi)\n\t\t\tMainView.HSplitTop(Margin, nullptr, &MainView);"), std::string::npos);
 }

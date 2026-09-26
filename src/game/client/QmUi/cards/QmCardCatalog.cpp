@@ -58,9 +58,8 @@ namespace qm_card_catalog
 			void (*pOnCardExpanded)(void *, qm_module::EQmModuleId) = Ctx.m_pOnCardExpanded;
 			void *pExpandedUser = Ctx.m_pOnCardExpandedUser;
 			const bool ReadOnly = Ctx.m_ReadOnly;
-			CMenus *pMenus = Ctx.m_pMenus;
-			Out.m_PreLayoutHeaderInput = [pMenus, pCollapseButtons, Index, pToggleCollapsed, pToggleUser, pOnCardExpanded, pExpandedUser, ReadOnly, Id](const SSettingsCardFrame &Frame, const bool IsCollapsed) {
-				if(ReadOnly || !QmCardRenderHook::DoButtonLogic(pMenus, &pCollapseButtons[Index], IsCollapsed, &Frame.m_HandleRect, BUTTONFLAG_LEFT))
+			Out.m_PreLayoutHeaderInput = [Ctx, pCollapseButtons, Index, pToggleCollapsed, pToggleUser, pOnCardExpanded, pExpandedUser, ReadOnly, Id](const SSettingsCardFrame &Frame, const bool IsCollapsed) {
+				if(ReadOnly || !QmCardRenderHook::DoButtonLogic(Ctx.m_pMenus, &pCollapseButtons[Index], IsCollapsed, &Frame.m_HandleRect, BUTTONFLAG_LEFT))
 					return false;
 				pToggleCollapsed(pToggleUser, Id);
 				// 展开时让页面按需让测量缓存失效（折叠态与展开态的行数口径不同）。
