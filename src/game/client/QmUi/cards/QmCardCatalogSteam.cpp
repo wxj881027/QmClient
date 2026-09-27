@@ -10,17 +10,16 @@ namespace qm_card_catalog
 	{
 		void RenderSteamContent(const SQmCardBuildContext &Ctx, CUIRect &Content)
 		{
-			CUIRect Row;
-			Content.HSplitTop(Ctx.m_Metrics.m_LineHeight, &Row, &Content);
-			QmCardRenderHook::RenderQmFunctionCheckbox(
+			QmCardRenderHook::RenderQmFunctionCheckboxRow(
 				Ctx.m_pMenus,
+				Content,
+				Ctx.m_Metrics.m_LineHeight,
+				Ctx.m_Metrics.m_LineSpacing,
 				&g_Config.m_QmSteamAutoLaunch,
 				"qm-steam-auto-launch",
 				Localize("Launch Steam automatically when starting externally"),
 				&g_Config.m_QmSteamAutoLaunch,
-				&Row,
 				Ctx.m_ReadOnly);
-			Content.HSplitTop(Ctx.m_Metrics.m_LineSpacing, nullptr, &Content);
 		}
 
 		float MeasureSteamContent(const SQmCardBuildContext &Ctx, const float)

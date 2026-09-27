@@ -274,6 +274,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			{
 				if(Input.m_pDiagnostics != nullptr)
 					m_FrameRuntime.CountMeasure();
+				// m_Measure 是卡片定义的布局合同。模块卡片在构建时把它绑定到
+				// 内容探针；TClient 等旧卡片则继续使用自己的稳定高度测量，
+				// 因为部分预览内容只绘制到矩形，并不会消费 CUIRect。
 				CachedContentHeight = pDefinition->m_Measure ? std::max(0.0f, pDefinition->m_Measure(ContentWidth)) : 0.0f;
 				MeasuredGeometryChanged = MeasuredGeometryChanged || SettingsCardDeckContentHeightChanged(PreviousContentHeight, CachedContentHeight);
 			}

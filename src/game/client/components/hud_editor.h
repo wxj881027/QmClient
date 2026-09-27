@@ -16,9 +16,12 @@
 
 namespace QmHudEditor
 {
+	// 对齐参考线（屏幕中线、其它 HUD 模块）的邻近吸附半径。
 	inline constexpr float SNAP_DISTANCE = 6.0f;
-	inline constexpr float MEDIA_ISLAND_EDGE_SNAP_DISTANCE = 2.0f;
 	inline constexpr float EPSILON = 0.001f;
+	// 屏幕边吸附没有邻近半径：只有 HUD 边与窗口边真正重合时才吸附，
+	// 未重合时保留拖拽后的原始位置与样式。容差只用于吸收浮点误差。
+	inline constexpr float EDGE_COINCIDENCE_DISTANCE = EPSILON;
 
 	struct SAxisReference
 	{
@@ -45,40 +48,41 @@ namespace QmHudEditor
 		ESnapGuideKind m_GuideKind = ESnapGuideKind::None;
 	};
 
-	inline float SnapAxisToScreenEdges(float Position, float Size, float ScreenStart, float ScreenSize)
+	// 与屏幕边吸附：Position 是锚点（变换空间的最小坐标），VisibleEdgeOffset 是可见矩形相对锚点的位移。
+	// 约束按可见矩形取，保证可见边不会被推出屏幕；可见边没有贴到窗口边时不改动传入位置。
+	inline float SnapAxisToScreenEdgesEx(float Position, float Size, float ScreenStart, float ScreenSize, float VisibleEdgeOffset = 0.0f)
 	{
 		const float ScreenEnd = ScreenStart + ScreenSize;
-		const float MinPosition = ScreenStart;
-		const float MaxPosition = Size >= ScreenSize ? ScreenStart : ScreenEnd - Size;
+		const float MinPosition = ScreenStart - VisibleEdgeOffset;
+		const float MaxPosition = Size >= ScreenSize ? MinPosition : ScreenEnd - Size - VisibleEdgeOffset;
 		float SnappedPosition = std::clamp(Position, MinPosition, MaxPosition);
-		float BestDistance = SNAP_DISTANCE + EPSILON;
 
-		const auto TrySnap = [&](float Candidate, float Distance) {
-			if(Distance <= SNAP_DISTANCE && Distance < BestDistance)
-			{
-				SnappedPosition = std::clamp(Candidate, MinPosition, MaxPosition);
-				BestDistance = Distance;
-			}
-		};
-
-		TrySnap(ScreenStart, std::fabs(Position - ScreenStart));
-		TrySnap(ScreenEnd - Size, std::fabs(Position + Size - ScreenEnd));
+		if(std::fabs(SnappedPosition + VisibleEdgeOffset - ScreenStart) <= EDGE_COINCIDENCE_DISTANCE)
+			return ScreenStart - VisibleEdgeOffset;
+		if(std::fabs(SnappedPosition + VisibleEdgeOffset + Size - ScreenEnd) <= EDGE_COINCIDENCE_DISTANCE)
+			return ScreenEnd - Size - VisibleEdgeOffset;
 		return SnappedPosition;
 	}
 
-	inline SSnapAxisResult SnapAxisToGuidesEx(float Position, float Size, float ScreenStart, float ScreenSize, const SAxisReference *pReferences, int ReferenceCount, float ScreenEdgeSnapDistance = SNAP_DISTANCE)
+	inline float SnapAxisToScreenEdges(float Position, float Size, float ScreenStart, float ScreenSize)
+	{
+		return SnapAxisToScreenEdgesEx(Position, Size, ScreenStart, ScreenSize);
+	}
+
+	// 一个轴上的最终落点：先试屏幕边重合吸附，再试屏幕中线与其它 HUD 模块的对齐参考线。
+	// 屏幕边只认重合，对齐参考线仍保留 SNAP_DISTANCE 邻近吸附。
+	inline SSnapAxisResult ResolveAxisSnapEx(float Position, float Size, float ScreenStart, float ScreenSize, const SAxisReference *pReferences, int ReferenceCount, float VisibleEdgeOffset = 0.0f)
 	{
 		const float ScreenEnd = ScreenStart + ScreenSize;
 		const float ScreenCenter = ScreenStart + ScreenSize * 0.5f;
-		const float MinPosition = ScreenStart;
-		const float MaxPosition = Size >= ScreenSize ? ScreenStart : ScreenEnd - Size;
-		const float EdgeSnapDistance = std::max(0.0f, ScreenEdgeSnapDistance);
+		const float MinPosition = ScreenStart - VisibleEdgeOffset;
+		const float MaxPosition = Size >= ScreenSize ? MinPosition : ScreenEnd - Size - VisibleEdgeOffset;
 		SSnapAxisResult Result;
-		Result.m_Position = std::clamp(Position, MinPosition, MaxPosition);
-		float BestDistance = std::max(SNAP_DISTANCE, EdgeSnapDistance) + EPSILON;
+		Result.m_Position = SnapAxisToScreenEdgesEx(Position, Size, ScreenStart, ScreenSize, VisibleEdgeOffset);
+		float BestDistance = SNAP_DISTANCE + EPSILON;
 
-		const auto TrySnap = [&](float Candidate, float Distance, float GuidePosition, ESnapGuideKind GuideKind, float MaxDistance) {
-			if(Distance <= MaxDistance && Distance < BestDistance)
+		const auto TrySnap = [&](float Candidate, float Distance, float GuidePosition, ESnapGuideKind GuideKind) {
+			if(Distance <= SNAP_DISTANCE && Distance < BestDistance)
 			{
 				Result.m_Position = std::clamp(Candidate, MinPosition, MaxPosition);
 				Result.m_HasGuide = true;
@@ -88,9 +92,20 @@ namespace QmHudEditor
 			}
 		};
 
-		TrySnap(ScreenStart, std::fabs(Position - ScreenStart), ScreenStart, ESnapGuideKind::ScreenStart, EdgeSnapDistance);
-		TrySnap(ScreenEnd - Size, std::fabs(Position + Size - ScreenEnd), ScreenEnd, ESnapGuideKind::ScreenEnd, EdgeSnapDistance);
-		TrySnap(ScreenCenter - Size * 0.5f, std::fabs(Position + Size * 0.5f - ScreenCenter), ScreenCenter, ESnapGuideKind::ScreenCenter, SNAP_DISTANCE);
+		if(std::fabs(Result.m_Position + VisibleEdgeOffset - ScreenStart) <= EDGE_COINCIDENCE_DISTANCE)
+		{
+			Result.m_HasGuide = true;
+			Result.m_GuidePosition = ScreenStart;
+			Result.m_GuideKind = ESnapGuideKind::ScreenStart;
+		}
+		else if(std::fabs(Result.m_Position + VisibleEdgeOffset + Size - ScreenEnd) <= EDGE_COINCIDENCE_DISTANCE)
+		{
+			Result.m_HasGuide = true;
+			Result.m_GuidePosition = ScreenEnd;
+			Result.m_GuideKind = ESnapGuideKind::ScreenEnd;
+		}
+
+		TrySnap(ScreenCenter - Size * 0.5f, std::fabs(Result.m_Position + Size * 0.5f - ScreenCenter), ScreenCenter, ESnapGuideKind::ScreenCenter);
 
 		if(pReferences != nullptr)
 		{
@@ -99,9 +114,9 @@ namespace QmHudEditor
 				const float ReferenceStart = pReferences[i].m_Position;
 				const float ReferenceEnd = pReferences[i].m_Position + pReferences[i].m_Size;
 				const float ReferenceCenter = pReferences[i].m_Position + pReferences[i].m_Size * 0.5f;
-				TrySnap(ReferenceStart, std::fabs(Position - ReferenceStart), ReferenceStart, ESnapGuideKind::ReferenceStart, SNAP_DISTANCE);
-				TrySnap(ReferenceCenter - Size * 0.5f, std::fabs(Position + Size * 0.5f - ReferenceCenter), ReferenceCenter, ESnapGuideKind::ReferenceCenter, SNAP_DISTANCE);
-				TrySnap(ReferenceEnd - Size, std::fabs(Position + Size - ReferenceEnd), ReferenceEnd, ESnapGuideKind::ReferenceEnd, SNAP_DISTANCE);
+				TrySnap(ReferenceStart, std::fabs(Result.m_Position - ReferenceStart), ReferenceStart, ESnapGuideKind::ReferenceStart);
+				TrySnap(ReferenceCenter - Size * 0.5f, std::fabs(Result.m_Position + Size * 0.5f - ReferenceCenter), ReferenceCenter, ESnapGuideKind::ReferenceCenter);
+				TrySnap(ReferenceEnd - Size, std::fabs(Result.m_Position + Size - ReferenceEnd), ReferenceEnd, ESnapGuideKind::ReferenceEnd);
 			}
 		}
 		return Result;
@@ -109,7 +124,7 @@ namespace QmHudEditor
 
 	inline float SnapAxisToGuides(float Position, float Size, float ScreenStart, float ScreenSize, const SAxisReference *pReferences, int ReferenceCount)
 	{
-		return SnapAxisToGuidesEx(Position, Size, ScreenStart, ScreenSize, pReferences, ReferenceCount).m_Position;
+		return ResolveAxisSnapEx(Position, Size, ScreenStart, ScreenSize, pReferences, ReferenceCount).m_Position;
 	}
 
 	inline float SnapAxisToScreenGuides(float Position, float Size, float ScreenStart, float ScreenSize)
@@ -198,6 +213,7 @@ enum class EHudEditorElement
 	VoiceOverlay,
 	InputOverlay,
 	HudNotifications,
+	GoresDrownBoard,
 
 	Count,
 };
@@ -232,6 +248,7 @@ namespace QmHudEditor
 		case EHudEditorElement::VoiceOverlay: return "voice_overlay";
 		case EHudEditorElement::InputOverlay: return "input_overlay";
 		case EHudEditorElement::HudNotifications: return "hud_notifications";
+		case EHudEditorElement::GoresDrownBoard: return "gores_drown_board";
 		case EHudEditorElement::Count: break;
 		}
 		return "";

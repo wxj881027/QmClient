@@ -226,6 +226,14 @@ class CTClient : public CComponent
 	void UpdatePlayerStats();
 	void TrackHookDirection(int Dummy);
 
+	// Kog 组队落水榜：只记录未冻结到冻结的边沿，避免冻结期间重复计数。
+	int m_aGoresDrownCounts[MAX_CLIENTS] = {};
+	bool m_aGoresFreezeState[MAX_CLIENTS] = {};
+	bool m_aGoresFreezeSeen[MAX_CLIENTS] = {};
+	bool m_GoresDrownModeActive = false;
+	char m_aGoresDrownMap[128] = "";
+	void UpdateGoresDrownCounts();
+
 	// 地图进度：保留 Gores 距离场，DDRace 使用计时 CP 分段路径场。
 	QmMapProgress::CMap m_QmDDraceProgressMap;
 	QmMapProgress::CPlayer m_aQmDDraceProgress[NUM_DUMMIES];
@@ -292,7 +300,6 @@ class CTClient : public CComponent
 	int m_aGoresPreHammerWeapon[NUM_DUMMIES] = {WEAPON_GUN, WEAPON_GUN};
 	bool m_aGoresHasPreHammerWeapon[NUM_DUMMIES] = {false, false};
 	bool m_aPrevFireForGores[NUM_DUMMIES] = {false, false};
-	bool IsGoresGameMode() const;
 	bool IsGoresMapProgressMap() const;
 	bool IsGoresModuleEnabled() const;
 	bool HasBlockingGoresWeapon() const;
@@ -440,7 +447,10 @@ public:
 	bool IsGoresWeaponCycleActive() const;
 	// Gores 自动切锤引起的锤子切换是否要跳过切换动画（受 qm_gores_suppress_switch_anim 控制）。
 	bool ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const;
+	bool IsGoresGameMode() const;
 	bool IsFinishRenamePending(int Dummy) const { return Dummy >= 0 && Dummy < NUM_DUMMIES && m_aFinishRenamePending[Dummy]; }
+	int GetGoresDrownCount(int ClientId) const { return ClientId >= 0 && ClientId < MAX_CLIENTS ? m_aGoresDrownCounts[ClientId] : 0; }
+	void ResetGoresDrownCounts();
 
 	void OnStateChange(int NewState, int OldState) override;
 	void OnNewSnapshot() override;

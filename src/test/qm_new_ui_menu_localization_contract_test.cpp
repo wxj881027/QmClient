@@ -79,7 +79,8 @@ TEST(QmNewUiMenuLocalizationContract, HudDummyStatusLabelsUseEnglishKeys)
 TEST(QmNewUiMenuLocalizationContract, TranslationAndDemoUiLabelsUseEnglishKeys)
 {
 	const std::string ChatSource = ReadTextFile("src/game/client/components/chat.cpp");
-	const std::string DemoSource = ReadTextFile("src/game/client/components/menus_demo.cpp");
+	// 截图画廊把菜单文案搬到了 menus_demo_screenshots.cpp，两份源码一起检查。
+	const std::string DemoSource = ReadTextFile("src/game/client/components/menus_demo.cpp") + ReadTextFile("src/game/client/components/menus_demo_screenshots.cpp");
 	const std::string BrowserSource = ReadTextFile("src/game/client/components/menus_browser.cpp");
 
 	EXPECT_NE(ChatSource.find("Localize(\"Translation Settings\")"), std::string::npos);

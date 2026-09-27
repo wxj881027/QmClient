@@ -8066,8 +8066,17 @@ TEST(QmMonitoringHelpers, QmClientContentOwnersPreserveInteractiveContracts)
 	EXPECT_NE(FriendNotify.find("m_QmFriendOnlineAutoRefresh"), std::string::npos);
 	EXPECT_NE(FriendNotify.find("m_QmFriendEnterAutoGreet"), std::string::npos);
 	EXPECT_NE(FriendNotify.find("m_QmFriendEnterBroadcast"), std::string::npos);
-	// 地图上传路径必须自带缓冲区；默认构造的 CLineInput 在 Render 中没有可显示字符串。
-	EXPECT_NE(FavoriteMaps.find("static CLineInputBuffered<IO_MAX_PATH_LENGTH> s_MapUploadPath;"), std::string::npos);
+	// 收藏地图卡片只负责收藏列表；地图上传控件由独立的 map_upload 卡片承载。
+	EXPECT_EQ(FavoriteMaps.find("Map upload endpoint"), std::string::npos);
+	EXPECT_EQ(FavoriteMaps.find("Upload map"), std::string::npos);
+	EXPECT_EQ(FavoriteMaps.find("Search local maps"), std::string::npos);
+	EXPECT_EQ(FavoriteMaps.find("qmclient-map-upload-"), std::string::npos);
+	EXPECT_EQ(FavoriteMaps.find("QmMapUpload"), std::string::npos);
+	EXPECT_NE(FunctionCatalog.find("case EQmModuleId::MapUpload:"), std::string::npos);
+	EXPECT_NE(FunctionCatalog.find("RenderQmFunctionMapUploadContent"), std::string::npos);
+	EXPECT_NE(FunctionMeasure.find("case EQmModuleId::FavoriteMaps:"), std::string::npos);
+	EXPECT_NE(FunctionMeasure.find("QmCardRenderHook::FavoriteMapCount"), std::string::npos);
+	EXPECT_EQ(FunctionMeasure.find("m_FavoriteMapSearchRows"), std::string::npos);
 	EXPECT_NE(FavoriteMaps.find("UpdateMapCategoryCache"), std::string::npos);
 	EXPECT_NE(FavoriteMaps.find("RemoveFavoriteMap"), std::string::npos);
 	EXPECT_NE(PieMenu.find("ShowPopupColorPicker"), std::string::npos);

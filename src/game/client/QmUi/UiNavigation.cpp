@@ -67,6 +67,23 @@ namespace ui_widget
 		return *pActive;
 	}
 
+	int CapsuleTabBarPressedIndex(const IUiContext &Ctx, const CUIRect *pSlots, int Count, float HitSlop)
+	{
+		if(Ctx.m_pUi == nullptr || pSlots == nullptr || Count <= 0)
+			return -1;
+		if(Ctx.m_pUi->IsPopupOpen() || !Ctx.m_pUi->MouseButtonClicked(0))
+			return -1;
+
+		// 先确认整排（含容差）真的可见可点：RenderOnly 帧、被裁剪、被阻断弹窗压住时整排都不响应。
+		const float Slop = std::max(0.0f, HitSlop);
+		CUIRect Row = CapsuleTabBarRowRect(pSlots, Count);
+		Row.y -= Slop;
+		Row.h += Slop * 2.0f;
+		if(!Ctx.m_pUi->MouseHovered(&Row))
+			return -1;
+		return CapsuleTabBarSlotAtPoint(pSlots, Count, Ctx.m_pUi->MouseX(), Ctx.m_pUi->MouseY(), Slop);
+	}
+
 	void CapsuleTabBarChrome(const IUiContext &Ctx, const uint64_t GroupId, const CUIRect &RowRect, const CUIRect *pActiveSlot, const SCapsuleTabBarStyle &Style)
 	{
 		if(Ctx.m_pUi == nullptr || RowRect.w <= 0.0f || RowRect.h <= 0.0f)

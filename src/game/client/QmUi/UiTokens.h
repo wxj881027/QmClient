@@ -204,6 +204,9 @@ namespace ui_token::motion
 	inline constexpr SUiSpringConfig NAVIGATION_SPRING{1.0f, 500.0f, 42.0f, 0.05f, 0.4f};
 	inline constexpr SUiSpringConfig TOGGLE_SPRING{1.0f, 620.0f, 44.0f, 0.01f, 0.05f};
 	inline constexpr SUiSpringConfig CARD_REORDER{1.0f, 900.0f, 48.0f, 0.01f, 0.05f};
+	// 离散滑条专用：档位切换时旋钮与填充带阻尼滑过去（ζ≈0.70），悬停/拖动只放大旋钮不改色。
+	inline constexpr SUiSpringConfig SLIDER_SPRING{1.0f, 340.0f, 26.0f, 0.01f, 0.05f};
+	inline constexpr SUiSpringConfig SLIDER_KNOB_SPRING{1.0f, 520.0f, 26.0f, 0.01f, 0.05f};
 
 	inline constexpr const SUiAnimTransition &BTN_HOVER = HOVER_FADE;
 	inline constexpr const SUiAnimTransition &BTN_PRESS = PRESS_SCALE;

@@ -68,6 +68,17 @@ TEST(QmScoreboardTeamModes, AggregationRequiresDisplayInfoAndCombinesKnownMember
 	EXPECT_TRUE(State.Locked());
 }
 
+TEST(QmScoreboardRender, TitleTimeUsesTheSharedContentAlpha)
+{
+	const ColorRGBA Color = ScoreboardTitleTimeColor(0.35f);
+	EXPECT_FLOAT_EQ(Color.r, 1.0f);
+	EXPECT_FLOAT_EQ(Color.g, 1.0f);
+	EXPECT_FLOAT_EQ(Color.b, 1.0f);
+	EXPECT_FLOAT_EQ(Color.a, 0.35f);
+	EXPECT_FLOAT_EQ(ScoreboardTitleTimeColor(0.0f).a, 0.0f);
+	EXPECT_FLOAT_EQ(ScoreboardTitleTimeColor(1.0f).a, 1.0f);
+}
+
 TEST(QmScoreboardTeamModes, SpecPlayersKeepTheirScoreboardTeamAndLastKnownModeState)
 {
 	EXPECT_EQ(QmScoreboardEffectivePlayerTeam(TEAM_GAME, false, false), TEAM_GAME);

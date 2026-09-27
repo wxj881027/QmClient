@@ -87,7 +87,7 @@ static const char *FavoriteMapCategoryKeyFromText(const char *pText)
 {
 	if(!pText || pText[0] == '\0')
 		return nullptr;
-	if(str_find_nocase(pText, "DDmaX"))
+	if(str_find_nocase(pText, "DDmaX") || str_find(pText, "古典"))
 	{
 		if(str_find_nocase(pText, "Easy"))
 			return "DDmaX Easy";
@@ -99,26 +99,26 @@ static const char *FavoriteMapCategoryKeyFromText(const char *pText)
 			return "DDmaX Nut";
 		return "DDmaX";
 	}
-	if(str_find_nocase(pText, "Oldschool"))
+	if(str_find_nocase(pText, "Oldschool") || str_find(pText, "传统"))
 		return "Oldschool";
-	if(str_find_nocase(pText, "Novice"))
+	if(str_find_nocase(pText, "Novice") || str_find(pText, "普通") || str_find(pText, "简单"))
 		return "Novice";
-	if(str_find_nocase(pText, "Moderate"))
+	if(str_find_nocase(pText, "Moderate") || str_find(pText, "中阶"))
 		return "Moderate";
-	if(str_find_nocase(pText, "Brutal"))
+	if(str_find_nocase(pText, "Brutal") || str_find(pText, "高阶") || str_find(pText, "困难"))
 		return "Brutal";
-	if(str_find_nocase(pText, "Insane"))
+	if(str_find_nocase(pText, "Insane") || str_find(pText, "疯狂"))
 		return "Insane";
-	if(str_find_nocase(pText, "Dummy"))
+	if(str_find_nocase(pText, "Dummy") || str_find(pText, "分身"))
 		return "Dummy";
-	if(str_find_nocase(pText, "Solo"))
+	if(str_find_nocase(pText, "Solo") || str_find(pText, "单人"))
 		return "Solo";
 	if(str_find_nocase(pText, "Race"))
 		return "Race";
-	if(str_find_nocase(pText, "Fun"))
-		return "Fun";
-	if(str_find_nocase(pText, "Event"))
+	if(str_find_nocase(pText, "Event") || str_find(pText, "活动"))
 		return "Event";
+	if(str_find_nocase(pText, "Fun") || str_find(pText, "娱乐"))
+		return "Fun";
 	return nullptr;
 }
 
@@ -159,40 +159,44 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 	return Localize("Unknown");
 }
 
-static const CServerInfo *FindSortedServerByAddress(IServerBrowser *pServerBrowser, const char *pAddress, int *pIndex = nullptr)
+static const char *MapDifficultyStars(int Stars)
 {
-	if(pIndex != nullptr)
-		*pIndex = -1;
-	if(pServerBrowser == nullptr || pAddress == nullptr || pAddress[0] == '\0')
-		return nullptr;
-
-	for(int i = 0; i < pServerBrowser->NumSortedServers(); ++i)
-	{
-		const CServerInfo *pServerInfo = pServerBrowser->SortedGet(i);
-		if(pServerInfo != nullptr && str_comp(pServerInfo->m_aAddress, pAddress) == 0)
-		{
-			if(pIndex != nullptr)
-				*pIndex = i;
-			return pServerInfo;
-		}
-	}
-
-	return nullptr;
+	static constexpr const char *s_apStarLabels[] = {
+		"☆☆☆☆☆",
+		"★☆☆☆☆",
+		"★★☆☆☆",
+		"★★★☆☆",
+		"★★★★☆",
+		"★★★★★",
+	};
+	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
 }
 
-static const CServerInfo *FindServerByAddress(IServerBrowser *pServerBrowser, const char *pAddress)
+// 名称列的地图难度后缀：星级跟在服务器名后面。服务器名本身已写明难度分类
+//（如 "DDNet CHN2 上海 - Moderate 中阶"）时只补星级，否则补上分类词，
+// 让名称看不出难度的服务器（如 "Cartoon"）仍能读出难度。
+static void FormatMapDifficultySuffix(const char *pDisplayName, const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
 {
-	if(pServerBrowser == nullptr || pAddress == nullptr || pAddress[0] == '\0')
+	if(pOut == nullptr || OutSize == 0)
+		return;
+	pOut[0] = '\0';
+	if(pDifficulty == nullptr)
+		return;
+	const char *pStars = MapDifficultyStars(pDifficulty->m_Stars);
+	if(pStars[0] == '\0')
+		return;
+	if(FavoriteMapCategoryKeyFromText(pDisplayName) != nullptr)
+		str_copy(pOut, pStars, OutSize);
+	else
+		str_format(pOut, OutSize, "%s%s", FavoriteMapCategoryDisplayName(pDifficulty->m_Category.c_str()), pStars);
+}
+
+static const char *MapCategoryHintFromServer(const CServerInfo *pServer)
+{
+	if(pServer == nullptr)
 		return nullptr;
-
-	for(int i = 0; i < pServerBrowser->NumServers(); ++i)
-	{
-		const CServerInfo *pServerInfo = pServerBrowser->Get(i);
-		if(pServerInfo != nullptr && str_comp(pServerInfo->m_aAddress, pAddress) == 0)
-			return pServerInfo;
-	}
-
-	return nullptr;
+	const char *pCategory = FavoriteMapCategoryKeyFromText(pServer->m_aName);
+	return pCategory != nullptr ? pCategory : FavoriteMapCategoryKeyFromText(pServer->m_aCommunityType);
 }
 
 static bool IsClanMembersCategory(const char *pCategory)
@@ -333,6 +337,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		UI_ELEM_NAME_1,
 		UI_ELEM_NAME_2,
 		UI_ELEM_NAME_3,
+		UI_ELEM_NAME_DIFFICULTY,
 		UI_ELEM_GAMETYPE,
 		UI_ELEM_MAP_1,
 		UI_ELEM_MAP_2,
@@ -651,7 +656,20 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		Line.Draw(BrowserOpacityColor(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha)), IGraphics::CORNER_NONE, 0.0f);
 	}
 
-	const int NumServers = ServerBrowser()->NumSortedServers();
+	std::vector<int> vVisibleServerIndices;
+	vVisibleServerIndices.reserve(ServerBrowser()->NumSortedServers());
+	for(int SortedIndex = 0; SortedIndex < ServerBrowser()->NumSortedServers(); ++SortedIndex)
+	{
+		const CServerInfo *pServer = ServerBrowser()->SortedGet(SortedIndex);
+		if(pServer == nullptr)
+			continue;
+		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.Find(pServer->m_aMap, MapCategoryHintFromServer(pServer));
+		const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
+		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
+		if(QmMapVotes::MatchesFilter(Stars, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
+			vVisibleServerIndices.push_back(SortedIndex);
+	}
+	const int NumServers = (int)vVisibleServerIndices.size();
 
 	// display important messages in the middle of the screen so no
 	// users misses it
@@ -720,7 +738,15 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	const bool PerfListFrameEnabled = QmPerfEnabled();
 	const auto ListFrameStartTime = PerfListFrameEnabled ? time_get_nanoseconds() : std::chrono::nanoseconds::zero();
 	int SelectedServerIndex = -1;
-	FindSortedServerByAddress(ServerBrowser(), g_Config.m_UiServerAddress, &SelectedServerIndex);
+	for(int VisibleIndex = 0; VisibleIndex < NumServers; ++VisibleIndex)
+	{
+		const CServerInfo *pServer = ServerBrowser()->SortedGet(vVisibleServerIndices[VisibleIndex]);
+		if(pServer != nullptr && str_comp(pServer->m_aAddress, g_Config.m_UiServerAddress) == 0)
+		{
+			SelectedServerIndex = VisibleIndex;
+			break;
+		}
+	}
 	s_ListBox.DoStart(ms_ListheaderHeight, NumServers, 1, 3, SelectedServerIndex, &View, false);
 
 	const bool RevealSelection = m_ServerBrowserShouldRevealSelection;
@@ -785,7 +811,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	int RowsIterated = 0;
 	for(int i = FirstVisibleItem; i < EndVisibleItem; i++)
 	{
-		const CServerInfo *pItem = ServerBrowser()->SortedGet(i);
+		const CServerInfo *pItem = ServerBrowser()->SortedGet(vVisibleServerIndices[i]);
 		RowsIterated += PerfListFrameEnabled ? 1 : 0;
 
 		const CListboxItem ListItem = s_ListBox.DoNextItem(pItem, str_comp(pItem->m_aAddress, g_Config.m_UiServerAddress) == 0);
@@ -807,7 +833,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		// lookups and allocating the streamed UI element for every hidden row
 		// made the server browser pay an unnecessary per-frame cost.
 		const CCommunity *pCommunity = ServerBrowser()->Community(pItem->m_aCommunityId);
-		const int CacheIndex = pItem->m_ServerIndex >= 0 && pItem->m_ServerIndex < ServerCacheSize ? pItem->m_ServerIndex : i;
+		const int CacheIndex = pItem->m_ServerIndex >= 0 && pItem->m_ServerIndex < ServerCacheSize ? pItem->m_ServerIndex : vVisibleServerIndices[i];
 		if(vpServerBrowserUiElements[CacheIndex] == nullptr)
 			vpServerBrowserUiElements[CacheIndex] = Ui()->GetNewUIElement(NUM_UI_ELEMS);
 		CUIElement *pUiElement = vpServerBrowserUiElements[CacheIndex];
@@ -864,23 +890,38 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_NAME)
 			{
+				char aDisplayServerName[sizeof(pItem->m_aName)];
+				const char *pDisplayServerName = g_Config.m_QmShortServerNames ? CMenus::GetServerbrowserDisplayName(pItem, aDisplayServerName, sizeof(aDisplayServerName)) : pItem->m_aName;
+
+				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.Find(pItem->m_aMap, MapCategoryHintFromServer(pItem));
+				char aDifficulty[64];
+				FormatMapDifficultySuffix(pDisplayServerName, pDifficulty, aDifficulty, sizeof(aDifficulty));
+
 				SLabelProperties Props;
 				Props.m_MaxWidth = Button.w;
 				Props.m_StopAtEnd = true;
 				Props.m_EnableWidthCheck = false;
-				char aDisplayServerName[sizeof(pItem->m_aName)];
-				const char *pDisplayServerName = g_Config.m_QmShortServerNames ? CMenus::GetServerbrowserDisplayName(pItem, aDisplayServerName, sizeof(aDisplayServerName)) : pItem->m_aName;
+				// 名称先让出难度后缀的宽度，长名截断后星级仍完整可见。
+				SLabelProperties NameProps = Props;
+				if(aDifficulty[0] != '\0')
+					NameProps.m_MaxWidth = std::max(Button.w * 0.4f, Button.w - TextRender()->TextWidth(FontSize, aDifficulty) - 2.0f);
+
 				bool Printed = false;
+				CUIElement::SUIElementRect *pNameEndRect = pUiElement->Rect(UI_ELEM_NAME_1);
 				if(g_Config.m_BrFilterString[0] && (g_Config.m_QmShortServerNames || (pItem->m_QuickSearchHit & IServerBrowser::QUICK_SERVERNAME)))
 					Printed = PrintHighlighted(pDisplayServerName, [&](const char *pFilteredStr, const int FilterLen) {
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_1), &Button, pDisplayServerName, FontSize, TEXTALIGN_ML, Props, (int)(pFilteredStr - pDisplayServerName));
+						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_1), &Button, pDisplayServerName, FontSize, TEXTALIGN_ML, NameProps, (int)(pFilteredStr - pDisplayServerName));
 						TextRender()->TextColor(gs_HighlightedTextColor);
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_2), &Button, pFilteredStr, FontSize, TEXTALIGN_ML, Props, FilterLen, &pUiElement->Rect(UI_ELEM_NAME_1)->m_Cursor);
+						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_2), &Button, pFilteredStr, FontSize, TEXTALIGN_ML, NameProps, FilterLen, &pUiElement->Rect(UI_ELEM_NAME_1)->m_Cursor);
 						TextRender()->TextColor(TextRender()->DefaultTextColor());
-						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_3), &Button, pFilteredStr + FilterLen, FontSize, TEXTALIGN_ML, Props, -1, &pUiElement->Rect(UI_ELEM_NAME_2)->m_Cursor);
+						Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_3), &Button, pFilteredStr + FilterLen, FontSize, TEXTALIGN_ML, NameProps, -1, &pUiElement->Rect(UI_ELEM_NAME_2)->m_Cursor);
+						pNameEndRect = pUiElement->Rect(UI_ELEM_NAME_3);
 					});
 				if(!Printed)
-					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_1), &Button, pDisplayServerName, FontSize, TEXTALIGN_ML, Props);
+					Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_1), &Button, pDisplayServerName, FontSize, TEXTALIGN_ML, NameProps);
+
+				// 星级续在可见名称之后（名称被截断时从截断处开始）；无难度时空串会清掉该行旧文本。
+				Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_NAME_DIFFICULTY), &Button, aDifficulty, FontSize, TEXTALIGN_ML, Props, -1, pDisplayServerName[0] != '\0' ? &pNameEndRect->m_Cursor : nullptr);
 			}
 			else if(Id == COL_GAMETYPE)
 			{
@@ -914,7 +955,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					const bool IsFavoriteMap = GameClient()->m_TClient.IsFavoriteMap(pItem->m_aMap);
 					if(IsFavoriteMap)
 						TextRender()->TextColor(1.0f, 0.85f, 0.0f, 1.0f); // 金色
-
 					SLabelProperties Props;
 					Props.m_MaxWidth = Button.w;
 					Props.m_StopAtEnd = true;
@@ -1047,7 +1087,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		if(m_SelectedIndex >= 0)
 		{
 			// select the new server
-			const CServerInfo *pItem = ServerBrowser()->SortedGet(NewSelected);
+			const CServerInfo *pItem = NewSelected >= 0 && NewSelected < NumServers ? ServerBrowser()->SortedGet(vVisibleServerIndices[NewSelected]) : nullptr;
 			if(pItem)
 			{
 				str_copy(g_Config.m_UiServerAddress, pItem->m_aAddress);
@@ -1057,6 +1097,71 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	}
 
 	WasListboxItemActivated = s_ListBox.WasItemActivated();
+}
+
+void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
+{
+	if(Selector.w < 150.0f || Selector.h <= 0.0f)
+		return;
+
+	static int s_MapFilterSliderId;
+	static int s_MapFilterFavoriteId;
+	const IUiContext Context = SettingsUiContext("server_browser_map_filter");
+
+	const int CurrentLevel = QmMapVotes::MapBrowserFilterLevel(g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
+	int SliderLevel = CurrentLevel >= 0 ? CurrentLevel : QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE;
+
+	CUIRect CurrentLabel, SliderRect, FavoriteRect;
+	// 档位名最长是非中文的「No filter」一类短语，标签列留够宽度避免溢出到滑条上。
+	Selector.VSplitLeft(68.0f, &CurrentLabel, &Selector);
+	Selector.VSplitRight(52.0f, &SliderRect, &FavoriteRect);
+	CurrentLabel.VMargin(1.0f, &CurrentLabel);
+	SliderRect.VMargin(1.0f, &SliderRect);
+	FavoriteRect.VMargin(1.0f, &FavoriteRect);
+
+	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_MapFilterSliderId, &SliderLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR, SliderRect);
+	if(SliderChanged)
+	{
+		QmMapVotes::ApplyMapBrowserFilterLevel(SliderLevel, g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
+		Client()->ServerBrowserUpdate();
+	}
+
+	char aCurrentLabel[32];
+	const int DisplayLevel = CurrentLevel >= 0 || SliderChanged ? SliderLevel : -1;
+	if(DisplayLevel < 0)
+	{
+		// 只有无法用单一档位表达的配置才会走到这里（星级多选，或星级与空服叠加）。
+		str_copy(aCurrentLabel, Localize("Custom"));
+	}
+	else if(DisplayLevel == QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE)
+		str_copy(aCurrentLabel, Localize("No filter"));
+	else if(DisplayLevel == QmMapVotes::MAP_BROWSER_FILTER_LEVEL_EMPTY)
+		str_format(aCurrentLabel, sizeof(aCurrentLabel), "0 %s", Localize("Players"));
+	else
+		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%d★", QmMapVotes::MapBrowserFilterStars(DisplayLevel));
+	Ui()->DoLabel(&CurrentLabel, aCurrentLabel, 11.0f, TEXTALIGN_ML);
+
+	bool FavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly != 0;
+	CUIRect FavoriteToggle, FavoriteIcon;
+	FavoriteRect.VSplitLeft(28.0f, &FavoriteToggle, &FavoriteIcon);
+	if(ui_widget::Toggle(Context, &s_MapFilterFavoriteId, &FavoriteOnly, FavoriteToggle))
+	{
+		g_Config.m_QmMapBrowserFavoriteOnly = FavoriteOnly ? 1 : 0;
+		Client()->ServerBrowserUpdate();
+	}
+	FavoriteIcon.VMargin(1.0f, &FavoriteIcon);
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+	TextRender()->TextColor(FavoriteOnly ? ColorRGBA(1.0f, 0.85f, 0.2f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.62f));
+	Ui()->DoLabel_QmIcon(&FavoriteIcon, EQmIcon::STAR, FONT_ICON_STAR, 13.0f, TEXTALIGN_MC);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+	char aTooltip[192];
+	str_format(aTooltip, sizeof(aTooltip), "%s → %s → %s", Localize("No filter"), Localize("Filter empty servers in browser"), Localize("Difficulty stars"));
+	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterSliderId, &SliderRect, aTooltip);
+	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterFavoriteId, &FavoriteRect, Localize("Favorite maps"));
 }
 
 void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated)
@@ -1085,9 +1190,10 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 	const float SearchExcludeAddrInputOffset = SearchExcludeAddrStrMax + 5.0f + ExcludeIconWidth + 5.0f;
 
 	CUIRect SearchInfoAndAddr, ServersAndConnect, ServersPlayersOnline, SearchAndInfo, ServerAddr, ConnectButtons;
+	CUIRect MapFilterControls{};
 	StatusBox.VSplitRight(135.0f, &SearchInfoAndAddr, &ServersAndConnect);
 	if(SearchInfoAndAddr.w > 350.0f)
-		SearchInfoAndAddr.VSplitLeft(350.0f, &SearchInfoAndAddr, nullptr);
+		SearchInfoAndAddr.VSplitLeft(350.0f, &SearchInfoAndAddr, &MapFilterControls);
 	SearchInfoAndAddr.HSplitTop(40.0f, &SearchAndInfo, &ServerAddr);
 	ServersAndConnect.HSplitTop(35.0f, &ServersPlayersOnline, &ConnectButtons);
 	ConnectButtons.HSplitTop(5.0f, nullptr, &ConnectButtons);
@@ -1155,6 +1261,16 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 		ExcludeOptions.m_LeadingQmIcon = static_cast<int>(EQmIcon::BAN);
 		if(ui_widget::InputField(ServerBrowserExcludeCtx, &s_ExcludeInput, QuickExclude, ExcludeOptions).m_Changed)
 			Client()->ServerBrowserUpdate();
+	}
+
+	if(MapFilterControls.w > 0.0f)
+	{
+		CUIRect Selector = MapFilterControls;
+		Selector.x += 12.0f;
+		Selector.w = std::min(430.0f, std::max(0.0f, Selector.w - 24.0f));
+		Selector.y = QuickExclude.y;
+		Selector.h = QuickExclude.h;
+		RenderServerbrowserMapFilterSelector(Selector);
 	}
 
 	// render status
@@ -1462,6 +1578,9 @@ void CMenus::ResetServerbrowserFilters()
 	g_Config.m_BrFilterConnectingPlayers = 1;
 	g_Config.m_BrFilterServerAddress[0] = '\0';
 	g_Config.m_BrFilterLogin = false; // TClient
+	g_Config.m_QmMapBrowserEmptyOnly = 0;
+	g_Config.m_QmMapBrowserFavoriteOnly = 0;
+	g_Config.m_QmMapBrowserStarMask = 0;
 
 	if(g_Config.m_UiPage != PAGE_LAN)
 	{
@@ -3410,10 +3529,9 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	};
 
 	auto GetFavoriteMapDifficulty = [&](const char *pMapName, char *pOut, int OutSize) {
-		const CVoting &Voting = GameClient()->m_Voting;
-		const int Stars = m_MapVoteDifficulty.Find(Voting.OptionsRevision(), Voting.FirstOption(), pMapName);
-		if(Stars >= 0)
-			str_format(pOut, OutSize, "%d/5 ★", Stars);
+		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.Find(pMapName);
+		if(pDifficulty != nullptr)
+			str_format(pOut, OutSize, "%d/5 ★", pDifficulty->m_Stars);
 		else
 			str_copy(pOut, Localize("Unknown"), OutSize);
 	};

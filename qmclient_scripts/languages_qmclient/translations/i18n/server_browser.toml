@@ -1392,6 +1392,22 @@ turkish = "Henüz favori harita yok"
 polish = "Brak ulubionych map"
 
 [[message]]
+key = "No filter"
+[message.translations]
+simplified_chinese = "不筛选"
+traditional_chinese = "不篩選"
+japanese = "指定なし"
+korean = "필터 없음"
+russian = "Без фильтра"
+german = "Ohne Filter"
+spanish = "Sin filtro"
+french = "Sans filtre"
+brazilian_portuguese = "Sem filtro"
+portuguese = "Sem filtro"
+turkish = "Filtresiz"
+polish = "Bez filtra"
+
+[[message]]
 key = "No local servers found (ports %d-%d)"
 [message.translations]
 simplified_chinese = "未找到本地服务器（端口 %d-%d）"

@@ -95,12 +95,14 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::Background3D, EQmModuleColumn::Right, 17, "background_3d"},
 		{EQmModuleId::DebugMode, EQmModuleColumn::Right, 19, "debug_mode"},
 		{EQmModuleId::BindStatusHud, EQmModuleColumn::Right, 20, "bind_status_hud"},
-		// 本轮新增的三张卡：模块集合必须覆盖全部 QmModuleCount 项，
+		// 本地新增卡：模块集合必须覆盖全部 QmModuleCount 项，
 		// 否则 MakeAllDefaults().size() 会少于 QmModuleCount（本测试与 roundtrip 均依赖此不变量）。
 		{EQmModuleId::Emoticons, EQmModuleColumn::Left, 18, "emoticons"},
 		{EQmModuleId::MapUpload, EQmModuleColumn::Right, 21, "map_upload"},
 		{EQmModuleId::Steam, EQmModuleColumn::Right, 22, "steam"},
 		{EQmModuleId::WaterHammerHighlight, EQmModuleColumn::Right, 4, "water_hammer"},
+		{EQmModuleId::GoresDrownBoard, EQmModuleColumn::Right, 23, "gores_drown_board"},
+		{EQmModuleId::BetterScoreboard, EQmModuleColumn::Left, 7, "better_scoreboard"},
 	};
 }
 

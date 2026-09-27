@@ -970,6 +970,8 @@ void CRankGhost::OnMapLoad()
 
 void CRankGhost::OnReset()
 {
+	if(GameClient() != nullptr && GameClient()->m_Ghost.ManualModeActive())
+		GameClient()->m_Ghost.StopManual();
 	const bool KeepRetryLoad = m_RetryLoadPending && m_aGhostStoragePath[0] != '\0';
 	if(m_Stage != EStage::IDLE)
 		AbortTask();
@@ -2122,10 +2124,11 @@ bool CRankGhost::GetViewState(SViewState &Out) const
 	const int EndTick = GameClient()->m_Ghost.ManualEndTick();
 	if(EndTick <= 0)
 		return false;
-	// 总时长必须与播放头同一时间基（EndTick 个 tick @ SERVER_TICK_SPEED）。
+	// 总时长必须与播放头同一时间基（EndTick 个 tick @ 当前客户端 tick 频率）。
 	// manifest 里的成绩时间只覆盖 run 本身：回放文件往往还带起点前的等待段，
 	// 甚至可能被最短轨迹截断，用它当总时长会让计时飞转、进度条与虚影位置对不上
-	const float TotalSeconds = EndTick / (float)SERVER_TICK_SPEED;
+	const float TickSpeed = maximum(1, Client()->GameTickSpeed());
+	const float TotalSeconds = EndTick / TickSpeed;
 	const int CurTick = std::clamp(GameClient()->m_Ghost.ManualPlaybackTick(), 0, EndTick);
 	Out.m_Active = true;
 	Out.m_Playing = GameClient()->m_Ghost.ManualPlaying();
@@ -2174,7 +2177,7 @@ bool CRankGhost::GetViewState(SViewState &Out) const
 			// 检查点差值：与原生 HUD 的 m_TimeCpDiff 同一语义，附带播放头年龄
 			Out.m_HasCpDiff = true;
 			Out.m_CpDiffSeconds = pRaceTime->m_aData[1] / 100.0f;
-			Out.m_CpDiffAgeSeconds = (CurTick - pRaceTime->m_RelTick) * TotalSeconds / (float)EndTick;
+			Out.m_CpDiffAgeSeconds = (CurTick - pRaceTime->m_RelTick) / TickSpeed;
 		}
 	}
 	return true;
@@ -2205,14 +2208,15 @@ void CRankGhost::ViewSeek(float Fraction)
 
 void CRankGhost::ViewStop()
 {
-	if(!m_ViewMode)
+	if(!m_ViewMode && !GameClient()->m_Ghost.ManualModeActive())
 		return;
 	m_ViewMode = false;
 	m_ViewSelected = 0;
 	m_ViewCameraMode = EViewCameraMode::MEMBER;
 	m_ViewFreeCameraValid = false;
 	m_ViewZoomPersonal = 0.0f;
-	GameClient()->m_Ghost.StopManual();
+	if(GameClient()->m_Ghost.ManualModeActive())
+		GameClient()->m_Ghost.StopManual();
 	Echo(Localize("Ghost view mode off. The ghost follows your runs again."));
 }
 

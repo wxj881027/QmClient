@@ -32,7 +32,6 @@ int SettingsCanonicalPage(int Page)
 	case CMenus::SETTINGS_LANGUAGE: return CMenus::SETTINGS_GENERAL;
 	case CMenus::SETTINGS_PLAYER: return CMenus::SETTINGS_TEE;
 	case CMenus::SETTINGS_CONFIGS:
-	case CMenus::SETTINGS_CONTRIBUTORS:
 		return CMenus::SETTINGS_QMCLIENT;
 	default:
 		return Page;
@@ -47,7 +46,6 @@ bool SettingsPageVisibleInRightTabBar(int Page)
 	case CMenus::SETTINGS_PLAYER:
 	case CMenus::SETTINGS_PROFILES:
 	case CMenus::SETTINGS_CONFIGS:
-	case CMenus::SETTINGS_CONTRIBUTORS:
 		return false;
 	default:
 		return Page >= 0 && Page < CMenus::SETTINGS_LENGTH;
@@ -263,6 +261,7 @@ static std::string SettingsRuntimePageName(int Page)
 	case CMenus::SETTINGS_TCLIENT: return "tclient";
 	case CMenus::SETTINGS_QMCLIENT: return "qmclient";
 	case CMenus::SETTINGS_SEARCH: return "search";
+	case CMenus::SETTINGS_CONTRIBUTORS: return "contributors";
 	default: return "unknown";
 	}
 }

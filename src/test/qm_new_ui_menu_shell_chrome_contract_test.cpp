@@ -143,6 +143,28 @@ TEST(QmNewUiMenuShellChromeContract, MenubarUsesExplicitQmNewUiColorBranch)
 	EXPECT_NE(OldUiBlock.find("DoIngameMenuTab(&s_GameButton, PAGE_GAME, \"ingame-tab-game\", Localize(\"Game\"), ActivePage == PAGE_GAME, &Button, IGraphics::CORNER_TL)"), std::string::npos);
 }
 
+TEST(QmNewUiMenuShellChromeContract, ScreenshotBrowserHasSiblingMenuButtonsInEveryShell)
+{
+	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
+	const std::string RenderMenubar = FunctionBody(MenusSource, "void CMenus::RenderMenubar(");
+
+	EXPECT_EQ(CountSubstring(RenderMenubar, "EQmIcon::IMAGE, FONT_ICON_IMAGE"), 4u);
+	EXPECT_EQ(CountSubstring(RenderMenubar, "OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS)"), 4u);
+	EXPECT_EQ(CountSubstring(RenderMenubar, "OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS)"), 4u);
+	EXPECT_EQ(CountSubstring(RenderMenubar, "Localize(\"Screenshots\")"), 4u);
+	EXPECT_NE(RenderMenubar.find("const bool DemoBrowserScreenshotsActive = ActivePage == PAGE_DEMOS && DemoBrowserBrowsingScreenshots();"), std::string::npos);
+	EXPECT_NE(RenderMenubar.find("const bool DemoBrowserReplaysActive = ActivePage == PAGE_DEMOS && !DemoBrowserBrowsingScreenshots();"), std::string::npos);
+
+	// SetDemoBrowserSource 随截图画廊一起搬到了 menus_demo.cpp。
+	const std::string DemoFileSource = ReadTextFile("src/game/client/components/menus_demo.cpp");
+	const std::string DemoSource = FunctionBody(DemoFileSource, "void CMenus::SetDemoBrowserSource(");
+	ASSERT_FALSE(DemoSource.empty());
+	EXPECT_NE(DemoSource.find("ResetDemoBrowserFolder();"), std::string::npos);
+	EXPECT_NE(DemoSource.find("m_DemoSearchInput.Clear();"), std::string::npos);
+	EXPECT_NE(DemoSource.find("DemolistPopulate();"), std::string::npos);
+	EXPECT_NE(DemoSource.find("DemolistOnUpdate(true);"), std::string::npos);
+}
+
 TEST(QmNewUiMenuShellChromeContract, IngameGameButtonBarRoundsAllCornersOnlyInNewUi)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_ingame.cpp");

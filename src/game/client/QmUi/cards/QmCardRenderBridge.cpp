@@ -4,11 +4,33 @@
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
 
+float qm_card_catalog::QmCardRenderHook::MeasureContent(CMenus *pMenus, const FSettingsCardRenderMeasured &Render, const float ContentWidth)
+{
+	if(pMenus == nullptr || !Render)
+		return 0.0f;
+
+	// 内容回调中既有纯布局控件，也有会在普通 UI 帧里处理输入的控件。
+	// 测量必须进入 render-only scope，避免探测渲染改变配置或 UI 状态。
+	CUi *pUi = pMenus->Ui();
+	const bool AlreadyRenderOnly = pUi != nullptr && pUi->RenderOnly();
+	if(pUi != nullptr && !AlreadyRenderOnly)
+		pUi->BeginRenderOnly();
+	const float Height = ResolveSettingsCardContentHeight(Render, ContentWidth);
+	if(pUi != nullptr && !AlreadyRenderOnly)
+		pUi->EndRenderOnly();
+	return Height;
+}
+
 // 卡片目录与菜单内容渲染之间的受控桥接：卡片模块是独立文件，
 // 这里把"卡片可以调用哪些渲染/输入助手"显式列出来（CMenus 只对本结构开放友元）。
 bool qm_card_catalog::QmCardRenderHook::RenderQmFunctionCheckbox(CMenus *pMenus, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly)
 {
 	return pMenus->RenderQmFunctionCheckbox(pId, pTextId, pText, pValue, pRect, PrewarmOnly);
+}
+
+bool qm_card_catalog::QmCardRenderHook::RenderQmFunctionCheckboxRow(CMenus *pMenus, CUIRect &Content, const float LineHeight, const float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, const bool PrewarmOnly, const char *pTooltip)
+{
+	return pMenus->RenderQmFunctionCheckboxRow(Content, LineHeight, LineSpacing, pId, pTextId, pText, pValue, PrewarmOnly, pTooltip);
 }
 
 bool qm_card_catalog::QmCardRenderHook::RenderQmVisualCheckbox(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue)
@@ -94,6 +116,11 @@ void qm_card_catalog::QmCardRenderHook::RenderQmFunctionEmoticonsContent(CMenus 
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmFunctionMiniFeaturesContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmFunctionBetterScoreboardContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmFunctionBetterScoreboardContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 }
 
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionJumpHintContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -214,6 +241,11 @@ void qm_card_catalog::QmCardRenderHook::RenderQmHudBackground3DContent(CMenus *p
 void qm_card_catalog::QmCardRenderHook::RenderQmHudBindStatusContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmHudBindStatusContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmHudGoresDrownBoardContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmHudGoresDrownBoardContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 }
 
 bool qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue)

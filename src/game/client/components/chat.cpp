@@ -1435,6 +1435,38 @@ void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)
 					static_cast<int>(ServerMessageAnalysis.m_Route), static_cast<int>(ServerMessageAnalysis.m_Class), str_length(pMsg->m_pMessage));
 				QmMacosGraphicsDiagnosticsLogPayload("perf/autodiag_chat", aPayload, Client());
 			}
+			if(g_Config.m_QmAutoAcceptTeamInvite &&
+				Client()->State() != IClient::STATE_DEMOPLAYBACK &&
+				ServerMessageAnalysis.m_Domain == QmHudNotifications::EServerMessageDomain::Team &&
+				ServerMessageAnalysis.m_Class == QmHudNotifications::EServerMessageClass::Prompt)
+			{
+				const char *pRaw = pMsg->m_pMessage;
+				char aTeamNum[32] = {};
+				if(pRaw[0] == '\'' && str_find(pRaw + 1, "' invited you to team ") != nullptr)
+				{
+					const char *pTeamPos = str_find(pRaw, "' invited you to team ");
+					const char *pUsePos = pTeamPos ? str_find(pTeamPos + str_length("' invited you to team "), ". Use /team ") : nullptr;
+					if(pTeamPos && pUsePos)
+						str_truncate(aTeamNum, sizeof(aTeamNum), pTeamPos + str_length("' invited you to team "), pUsePos - (pTeamPos + str_length("' invited you to team ")));
+				}
+				else if(pRaw[0] == '\'' && str_find(pRaw + 1, "' 邀请你加入 ") != nullptr && str_find(pRaw, "。输入 /team ") != nullptr)
+				{
+					const char *pTeamPos = str_find(pRaw, "' 邀请你加入 ");
+					const char *pUsePos = pTeamPos ? str_find(pTeamPos + str_length("' 邀请你加入 "), "。输入 /team ") : nullptr;
+					if(pTeamPos && pUsePos)
+					{
+						str_truncate(aTeamNum, sizeof(aTeamNum), pTeamPos + str_length("' 邀请你加入 "), pUsePos - (pTeamPos + str_length("' 邀请你加入 ")));
+						if(str_endswith(aTeamNum, " 队"))
+							aTeamNum[str_length(aTeamNum) - str_length(" 队")] = '\0';
+					}
+				}
+				if(aTeamNum[0] != '\0')
+				{
+					char aCmd[64];
+					str_format(aCmd, sizeof(aCmd), "/team %s", aTeamNum);
+					SendChat(0, aCmd);
+				}
+			}
 			// 区间把「按隐藏标志吞消息」改成只按分析结果判定：单机/单人路由消息在聊天里被抑制。
 			if(ServerMessageHandled && QmHudNotifications::ShouldSuppressServerMessageChat(ServerMessageAnalysis))
 			{

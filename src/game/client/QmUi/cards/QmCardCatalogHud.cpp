@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-// HUD 分类卡片模块（13 张）：卡片的高度测量、重测版本、预布局输入与内容渲染都在这里，
+// HUD 分类卡片模块（14 张）：卡片的高度测量、重测版本、预布局输入与内容渲染都在这里，
 // 页面（栖梦「HUD」页、搜索页）只声明"这一页有这些卡"。
 namespace qm_card_catalog
 {
@@ -59,6 +59,7 @@ namespace qm_card_catalog
 			case EQmModuleId::Background3D: return ResolveQmHudBackground3DHeight(Metrics, ContentWidth, g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
 			case EQmModuleId::BindStatusHud:
 				return Rows(6.0f); // 4 个状态开关 + 自定义列表编辑行 + 格式提示行
+			case EQmModuleId::GoresDrownBoard: return Rows(g_Config.m_QmGoresDrownBoard != 0 ? 4.0f : 1.0f);
 			default: return Rows(1.0f);
 			}
 		}
@@ -84,6 +85,7 @@ namespace qm_card_catalog
 			case EQmModuleId::SystemMediaControls: return g_Config.m_QmSmtcEnable ? 1u : 0u;
 			case EQmModuleId::Lyrics: return (g_Config.m_QmSpotifyEnable ? 1u : 0u) | (g_Config.m_QmKugouHookEnable ? 2u : 0u) | (g_Config.m_QmQQMusicHookEnable ? 4u : 0u); // 来源附加行影响布局高度
 			case EQmModuleId::Background3D: return ResolveQmHudBackground3DRevision(g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
+			case EQmModuleId::GoresDrownBoard: return g_Config.m_QmGoresDrownBoard != 0 ? 1u : 0u;
 			default: return 0u;
 			}
 		}
@@ -296,6 +298,16 @@ namespace qm_card_catalog
 					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusSync, &g_Config.m_ClShowhudKeyStatusSync) || Changed;
 					return Changed;
 				};
+			case EQmModuleId::GoresDrownBoard:
+				return [pMenus, Metrics](CUIRect Content) {
+					bool Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, Metrics.m_LineHeight, Metrics.m_LineSpacing, &g_Config.m_QmGoresDrownBoard, &g_Config.m_QmGoresDrownBoard);
+					if(!g_Config.m_QmGoresDrownBoard)
+						return Changed;
+					ConsumeQmHudRow(Content, Metrics);
+					ConsumeQmHudRow(Content, Metrics);
+					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, Metrics.m_LineHeight, Metrics.m_LineSpacing, &g_Config.m_QmGoresDrownBoardShowTee, &g_Config.m_QmGoresDrownBoardShowTee) || Changed;
+					return Changed;
+				};
 			default:
 				return {};
 			}
@@ -376,6 +388,9 @@ namespace qm_card_catalog
 			return true;
 		case EQmModuleId::BindStatusHud:
 			Add(Id, "qm:bind_status_hud", "DDRace HUD Pro", "Dummy key/hammer/control/copy status switches", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudBindStatusContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
+			return true;
+		case EQmModuleId::GoresDrownBoard:
+			Add(Id, "qm:gores_drown_board", "Gores drown board", "Team drown death leaderboard", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmHudGoresDrownBoardContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		default:
 			return false;

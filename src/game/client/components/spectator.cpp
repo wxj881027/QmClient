@@ -328,6 +328,10 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 			{
 				m_GhostEscapeArmed = false;
 				m_GhostPanelOpen = m_GhostPanelOpenBeforeEscape;
+				// 双 Esc 交给游戏菜单前先真正退出 Rank 1 查看模式，
+				// 否则菜单关闭后会继续停留在手动影子播放状态。
+				GameClient()->m_RankGhost.ViewStop();
+				m_GhostPanelOpen = false;
 				return false;
 			}
 			m_GhostPanelOpenBeforeEscape = m_GhostPanelOpen;

@@ -351,6 +351,22 @@ bool CMenus::DemoBrowserSupportedFile(const char *pName) const
 	return DemoBrowserBrowsingScreenshots() ? IsScreenshotBrowserFile(pName) : str_endswith_nocase(pName, ".demo") != nullptr;
 }
 
+void CMenus::SetDemoBrowserSource(EDemoBrowserSource Source)
+{
+	if(Source < DEMO_BROWSER_SOURCE_DEMOS || Source >= NUM_DEMO_BROWSER_SOURCES)
+		return;
+
+	// 来源切换只由菜单栏入口发起，避免目录与选择状态残留。
+	m_DemoBrowserSource = Source;
+	if(DemoBrowserBrowsingScreenshots() && (g_Config.m_BrDemoSort == SORT_MARKERS || g_Config.m_BrDemoSort == SORT_LENGTH))
+		g_Config.m_BrDemoSort = SORT_DATE;
+	ResetDemoBrowserFolder();
+	m_DemoSearchInput.Clear();
+	ResetDemoScreenshotPreview();
+	DemolistPopulate();
+	DemolistOnUpdate(true);
+}
+
 void CMenus::ResetDemoBrowserFolder()
 {
 	str_copy(m_aCurrentDemoFolder, DemoBrowserBaseFolder());
@@ -1783,6 +1799,7 @@ void CMenus::AdvanceDemoBrowserMetadata(int HeaderBudget, int DateBudget, const 
 void CMenus::DemolistPopulate()
 {
 	CPerfTimer StartupTimer;
+	m_ScreenshotManager.ClearThumbnails(Graphics());
 	m_vDemos.clear();
 
 	int NumStoragesWithDemos = 0;
@@ -1881,6 +1898,11 @@ void CMenus::DemolistPopulate()
 		}
 
 		std::stable_sort(m_vDemos.begin(), m_vDemos.end());
+	}
+	if(DemoBrowserBrowsingScreenshots())
+	{
+		const char *pFolder = m_aCurrentDemoFolder[0] != '\0' ? m_aCurrentDemoFolder : DemoBrowserBaseFolder();
+		m_ScreenshotManager.Refresh(Storage(), pFolder, m_DemolistStorageType);
 	}
 	ResetDemoBrowserMetadataProgress();
 	RefreshFilteredDemos();
@@ -2242,35 +2264,6 @@ bool CMenus::LoadDemoScreenshotPreviewTexture(const CDemoItem &Item)
 		QmPerfLogPayload("perf/interaction", aPayload, Client(), "demo_browser");
 	}
 	return true;
-}
-
-void CMenus::RenderDemoScreenshotPreview(CUIRect PreviewRect, const CDemoItem &Item)
-{
-	PreviewRect.Margin(3.0f, &PreviewRect);
-	PreviewRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.28f), IGraphics::CORNER_ALL, 6.0f);
-	PreviewRect.Margin(5.0f, &PreviewRect);
-
-	if(!LoadDemoScreenshotPreviewTexture(Item) || m_DemoScreenshotPreviewWidth <= 0 || m_DemoScreenshotPreviewHeight <= 0)
-	{
-		Ui()->DoLabel(&PreviewRect, Localize("Could not preview this image"), 12.0f, TEXTALIGN_MC);
-		return;
-	}
-
-	const float Scale = minimum(PreviewRect.w / m_DemoScreenshotPreviewWidth, PreviewRect.h / m_DemoScreenshotPreviewHeight);
-	CUIRect ImageRect;
-	ImageRect.w = m_DemoScreenshotPreviewWidth * Scale;
-	ImageRect.h = m_DemoScreenshotPreviewHeight * Scale;
-	ImageRect.x = PreviewRect.x + (PreviewRect.w - ImageRect.w) * 0.5f;
-	ImageRect.y = PreviewRect.y + (PreviewRect.h - ImageRect.h) * 0.5f;
-
-	Graphics()->TextureSet(m_DemoScreenshotPreviewTexture);
-	Graphics()->WrapClamp();
-	Graphics()->QuadsBegin();
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-	IGraphics::CQuadItem QuadItem(ImageRect.x, ImageRect.y, ImageRect.w, ImageRect.h);
-	Graphics()->QuadsDrawTL(&QuadItem, 1);
-	Graphics()->QuadsEnd();
-	Graphics()->WrapNormal();
 }
 
 void CMenus::DemolistOnUpdate(bool Reset)
@@ -2649,33 +2642,6 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	{
 		if(Col.m_pCaption[0] != '\0' && Col.m_Sort != -1)
 		{
-			if(Col.m_Id == COL_DEMONAME)
-			{
-				static CUi::SDropDownState s_DemoSourceDropDownState;
-				static CScrollRegion s_DemoSourceDropDownScrollRegion;
-				s_DemoSourceDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_DemoSourceDropDownScrollRegion;
-				const char *apBrowserSources[NUM_DEMO_BROWSER_SOURCES] = {
-					Localize("Replay"),
-					Localize("Screenshots"),
-				};
-				CUIRect DropDownRect = Col.m_Rect;
-				DropDownRect.HMargin(1.0f, &DropDownRect);
-				const int NewSource = Ui()->DoDropDown(&DropDownRect, m_DemoBrowserSource, apBrowserSources, NUM_DEMO_BROWSER_SOURCES, s_DemoSourceDropDownState);
-				if(NewSource != m_DemoBrowserSource && NewSource >= 0 && NewSource < NUM_DEMO_BROWSER_SOURCES)
-				{
-					m_DemoBrowserSource = (EDemoBrowserSource)NewSource;
-					if(DemoBrowserBrowsingScreenshots() && (g_Config.m_BrDemoSort == SORT_MARKERS || g_Config.m_BrDemoSort == SORT_LENGTH))
-						g_Config.m_BrDemoSort = SORT_DATE;
-					ResetDemoBrowserFolder();
-					m_DemoSearchInput.Clear();
-					DemolistPopulate();
-					DemolistOnUpdate(true);
-					WasListboxItemActivated = false;
-					return;
-				}
-				GameClient()->m_Tooltips.DoToolTip(&s_DemoSourceDropDownState.m_ButtonContainer, &DropDownRect, Localize("Choose whether to browse replays or screenshots"));
-				continue;
-			}
 			if(BrowsingScreenshots && (Col.m_Id == COL_MARKERS || Col.m_Id == COL_LENGTH))
 				continue;
 			if(Col.m_FontIcon)
@@ -2713,6 +2679,12 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 				DemolistOnUpdate(false);
 			}
 		}
+	}
+
+	if(BrowsingScreenshots)
+	{
+		RenderDemoScreenshotGallery(ListBox, WasListboxItemActivated);
+		return;
 	}
 
 	if(m_DemolistSelectedReveal)
@@ -2830,14 +2802,6 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 				}
 			}
 		}
-
-		if(BrowsingScreenshots && IsDemoScreenshotPreviewItem(*pItem))
-		{
-			const float PreviewHeight = minimum(240.0f, maximum(120.0f, ListBox.w * 0.36f));
-			const CListboxItem PreviewItem = s_ListBox.DoCustomRow(PreviewHeight, Focused);
-			if(PreviewItem.m_Visible)
-				RenderDemoScreenshotPreview(PreviewItem.m_Rect, *pItem);
-		}
 	}
 
 	// QmClient：Rank 1 缓存目录里没有任何回放时给出引导，避免空列表只有上级目录项让人困惑
@@ -2862,7 +2826,6 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	const bool WasItemSelected = s_ListBox.WasItemSelected();
 	const int NewSelected = s_ListBox.DoEnd();
 	const bool ListScrollActive = QmMenuUiScrollPerfActive(s_ListBox.WheelConsumedThisFrame(), s_ListBox.ScrollbarActive(), s_ListBox.ScrollbarAnimating());
-	const bool PlainItemClick = WasItemSelected && !Input()->ShiftIsPressed() && !Input()->ModifierIsPressed();
 	if(WasItemSelected && NewSelected >= 0)
 	{
 		if(Input()->ShiftIsPressed())
@@ -2880,8 +2843,6 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		{
 			SetDemoSelectionSingle(NewSelected);
 		}
-		if(PlainItemClick && BrowsingScreenshots && IsValidDemoIndex(NewSelected))
-			ToggleDemoScreenshotPreview(*m_vpFilteredDemos[NewSelected]);
 	}
 	else if(NewSelected != OldSelected)
 	{
@@ -2958,6 +2919,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 {
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
+	const bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
 	CUIRect Contents, Header;
 	DetailsView.HSplitTop(ms_ListheaderHeight, &Header, &Contents);
 	if(UseNewUi)
@@ -3019,6 +2981,13 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 
 	if(pItem == nullptr || pItem->m_IsDir)
 		return;
+
+	if(BrowsingScreenshots)
+	{
+		// 截图详情交给独立模块绘制，窄面板内按纵向表单排列，避免本页继续堆叠截图专属控件。
+		RenderDemoScreenshotDetails(Contents, *pItem, FontSize);
+		return;
+	}
 
 	char aBuf[256];
 	CUIRect Left, Right;
@@ -3189,6 +3158,9 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			NumRightButtons++;
 		if(HasSingleSelection)
 			NumRightButtons++;
+		if(BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir &&
+			(str_endswith_nocase(pSelectedItem->m_aFilename, ".png") != nullptr || str_endswith_nocase(pSelectedItem->m_aFilename, ".webp") != nullptr))
+			NumRightButtons++;
 		if(CanRenderDemo)
 			NumRightButtons++;
 		if(CanDownloadRankDemo)
@@ -3241,6 +3213,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				DemolistOnUpdate(false);
 			}
 			SetIconMode(false);
+			GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButton, Localize("Refresh the demo list"));
 		}
 
 		// fetch info checkbox
@@ -3286,6 +3259,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			static CButtonContainer s_PlayButton;
 			const EQmIcon OpenIcon = pSelectedItem->m_IsDir ? EQmIcon::FOLDER_OPEN : (BrowsingScreenshots ? EQmIcon::IMAGE : EQmIcon::PLAY);
 			const char *pOpenIcon = pSelectedItem->m_IsDir ? FONT_ICON_FOLDER_OPEN : (BrowsingScreenshots ? FONT_ICON_IMAGE : FONT_ICON_PLAY);
+			// 提示文本在点击处理前取好：点击文件夹会在本帧重建列表，之后 pSelectedItem 可能已失效
+			const char *pPlayTooltip = pSelectedItem->m_IsDir ? Localize("Open the selected folder") : (BrowsingScreenshots ? Localize("Open the selected screenshot") : Localize("Play the selected demo"));
 			if(DoButton_Menu_QmIcon(&s_PlayButton, OpenIcon, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (!BrowsingScreenshots && Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 			{
 				SetIconMode(false);
@@ -3368,6 +3343,23 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				}
 			}
 			SetIconMode(false);
+			GameClient()->m_Tooltips.DoToolTip(&s_PlayButton, &PlayButton, pPlayTooltip);
+		}
+
+		if(BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir &&
+			(str_endswith_nocase(pSelectedItem->m_aFilename, ".png") != nullptr || str_endswith_nocase(pSelectedItem->m_aFilename, ".webp") != nullptr))
+		{
+			CUIRect WatermarkButton;
+			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &WatermarkButton);
+			if(RightGroup.w > TightSpacing)
+				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
+			if(DoDemoScreenshotWatermarkButton(WatermarkButton))
+			{
+				if(ApplyDemoScreenshotWatermark(*pSelectedItem))
+					PopupMessage(Localize("Screenshot saved"), Localize("The watermarked screenshot was saved next to the original"), Localize("Ok"));
+				else
+					PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
+			}
 		}
 
 		HasSingleSelection =
@@ -3426,6 +3418,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 					Ui()->SetActiveItem(&m_DemoRenameInput);
 					return;
 				}
+				const char *pRenameTooltip = pSelectedItem->m_IsDir ? Localize("Rename folder") : (BrowsingScreenshots ? Localize("Rename screenshot") : Localize("Rename demo"));
+				GameClient()->m_Tooltips.DoToolTip(&s_RenameButton, &RenameButton, pRenameTooltip);
 				SetIconMode(false);
 			}
 
@@ -3458,6 +3452,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 					}
 					return;
 				}
+				const char *pDeleteTooltip = NumSelectedDeletable > 1 ? Localize("Delete selected items") : (pSelectedItem != nullptr && pSelectedItem->m_IsDir ? Localize("Delete folder") : (BrowsingScreenshots ? Localize("Delete screenshot") : Localize("Delete demo")));
+				GameClient()->m_Tooltips.DoToolTip(&s_DeleteButton, &DeleteButton, pDeleteTooltip);
 				SetIconMode(false);
 			}
 
@@ -3483,6 +3479,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 					Ui()->SetActiveItem(&m_DemoRenderInput);
 					return;
 				}
+				GameClient()->m_Tooltips.DoToolTip(&s_RenderButton, &RenderButton, Localize("Render demo"));
 				SetIconMode(false);
 			}
 #endif

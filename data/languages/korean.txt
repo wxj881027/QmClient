@@ -821,6 +821,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == 이 프리셋 적용
 
+Apply watermark
+== 워터마크 적용
+
 Are you sure that you want to delete %d selected items?
 == %d개의 선택된 항목을 삭제하시겠습니까?
 
@@ -1075,6 +1078,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 
 Auto weapon switch
 == 자동 무기 전환
+
+Auto-accept team invites by sending /team <n>
+== /team <n>을 보내 팀 초대 자동 수락
 
 Auto-close chat after unfreeze
 == 얼음 해제 후 자동 채팅 닫기
@@ -1511,6 +1517,12 @@ Both
 Both sides of keyword rules must be filled
 == 키워드 규칙의 양쪽을 모두 입력해야 합니다
 
+Bottom left
+== 왼쪽 아래
+
+Bottom right
+== 오른쪽 아래
+
 Bounce
 == 바운스
 
@@ -1646,9 +1658,6 @@ Can't swap with yourself
 Cancel
 == 취소
 
-Cancel upload
-== 업로드 취소
-
 Cancel your swap request
 == 스왑 요청 취소
 
@@ -1663,6 +1672,9 @@ Card height animation
 
 Card list entry animation
 == 설정 카드 목록 진입 애니메이션
+
+Card opacity
+== 카드 불투명도
 
 Card reflow animation
 == 설정 카드 재배치 애니메이션
@@ -1834,9 +1846,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose whether to browse replays or screenshots
-== 리플레이 또는 스크린샷 중에서 탐색할 항목 선택
 
 Choose which TClient settings tabs are visible
 == Choose which TClient settings tabs are visible
@@ -2255,6 +2264,9 @@ Configure Tee appearance and skins
 Configure the companion appearance and movement
 == Configure the companion appearance and movement
 
+Configure the Gores team drown board
+== Gores 팀 익사 보드 설정
+
 Configure the ingame cursor scale
 == 게임 내 커서 크기 설정
 
@@ -2612,6 +2624,9 @@ Custom title
 Custom translation prompt (overrides built-in)
 == 사용자 정의 번역 프롬프트 (내장 프롬프트 덮어쓰기)
 
+Custom watermark text
+== 사용자 지정 워터마크 텍스트
+
 Customize additional nameplate text
 == Customize additional nameplate text
 
@@ -2704,6 +2719,9 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet 클라이언트를 다시 시작해야 업데이트가 완료됩니다!
+
+DDNet contributors and staff credits
+== DDNet 기여자 및 스태프
 
 DDNet Memory
 == DDNet 메모리
@@ -3287,6 +3305,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == 오른쪽 캔버스에 드롭하여 한 부품을 교체합니다.
 
+Drown deaths
+== 익사 사망
+
 Dual Kawase
 == 듀얼 Kawase
 
@@ -3383,9 +3404,6 @@ Dummy mini view zoom (percent)
 Dummy name
 == 더미 이름
 
-Dummy not connected
-== 분신 미연결
-
 Dummy skin
 == 더미 스킨
 
@@ -3472,9 +3490,6 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == 다이나믹 아일랜드 배경 색상
-
-Each joins a separate team so solo runs start in sync (useful on maps where team-0 start is unreliable)
-== 각자 다른 팀에 들어가 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
 
 Ease in out quad
 == 이즈 인 아웃 쿼드
@@ -4181,6 +4196,9 @@ Fade opacity along trail length
 Fade out
 == 페이드 아웃
 
+Fade paused spectators in water
+== 물속에서 일시정지한 관전자를 반투명하게 표시
+
 Fade trail alpha
 == 꼬리 알파 페이드
 
@@ -4303,6 +4321,9 @@ File executed on map change/reload to set default server settings
 
 File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 == sv_use_sql 이 비활성화되거나 백업 SQL 서버로 사용될 때 순위 저장용 파일
+
+File information
+== 파일 정보
 
 File with announcements, one per line.
 == 공지사항이 포함된 파일, 한 줄에 하나씩
@@ -4835,11 +4856,17 @@ Gores actor
 Gores auto weapon switch
 == Gores 자동 무기 전환
 
+Gores drown board
+== Gores 익사 보드
+
 Gores Mode
 == Gores 모드
 
 Gores mode key
 == Gores 모드 키
+
+Gores team drown board opacity
+== Gores 팀 익사 보드 불투명도
 
 Gores · Axiom
 == Gores · Axiom
@@ -5251,9 +5278,6 @@ HTTP map download: low speed limit (in bytes/s, 0=disabled)
 
 HTTP map download: low speed limit period (0=disabled)
 == HTTP 맵 다운로드: 저속 제한 기간 (0=비활성화)
-
-HTTPS endpoint
-== HTTPS 엔드포인트
 
 https://ddnet.org/discord
 == https://ddnet.org/discord
@@ -6203,9 +6227,6 @@ Main Asset
 Main menu
 == 메인 메뉴
 
-Main team %d / Dummy team %d
-== 본체 팀 %d / 분신 팀 %d
-
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 얼은 플레이어를 배구공처럼 보이게 만들기 (0=비활성화, 1=배구 맵만, 2=항상)
 
@@ -6275,6 +6296,9 @@ Manual target
 Map
 == 맵
 
+Map browser difficulty star filter bitmask (bits 1-5)
+== 맵 브라우저 난이도 별 필터 비트마스크 (비트 1-5)
+
 Map browser surface
 == 맵 브라우저 표면
 
@@ -6283,6 +6307,12 @@ Map browser surface color
 
 Map browser transparency
 == 맵 브라우저 투명도
+
+Map browser: show empty servers only
+== 맵 브라우저: 빈 서버만 표시
+
+Map browser: show favorite maps only
+== 맵 브라우저: 즐겨찾는 맵만 표시
 
 Map danger border
 == 맵 위험 경계
@@ -6298,9 +6328,6 @@ Map folders
 
 Map name
 == 맵 이름
-
-Map path in save folder
-== 저장 폴더의 맵 경로
 
 Map play history
 == 맵 플레이 기록
@@ -6353,9 +6380,6 @@ Map upload
 Map upload cancelled.
 == 맵 업로드를 취소했습니다.
 
-Map upload endpoint
-== 맵 업로드 엔드포인트
-
 Map upload endpoint (empty disables map upload)
 == 맵 업로드 엔드포인트(비워 두면 맵 업로드 사용 안 함)
 
@@ -6373,9 +6397,6 @@ Map uploaded successfully.
 
 Maps finished
 == 완료한 맵
-
-maps/example.map
-== maps/example.map
 
 Margin when notification is docked
 == 알림바가 가장자리에 붙을 때 여백
@@ -6514,6 +6535,9 @@ Maximum number of vanilla antispoof handshakes answered per second (0 = unlimite
 
 Maximum players participating in a vote (0 = unlimited)
 == 투표에 참여할 수 있는 최대 플레이어 수 (0 = 무제한)
+
+Maximum players shown in the Gores team drown board
+== Gores 팀 익사 보드에 표시할 최대 플레이어 수
 
 Maximum reduction
 == 최대 감소량
@@ -6712,6 +6736,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee의 안정적인 방향을 따라 더 낙관적인 예측, 안정화 지연 감소
+
+More teammates...
+== 팀원이 더 있습니다...
 
 MOTD
 == 공지
@@ -7142,6 +7169,9 @@ No empty team left.
 No favorite maps yet
 == 아직 즐겨찾는 맵 없음
 
+No filter
+== 필터 없음
+
 No input device available
 == 사용 가능한 입력 장치 없음
 
@@ -7234,6 +7264,9 @@ No saves found on this map
 
 No screenshot selected
 == 선택된 스크린샷 없음
+
+No screenshots
+== 스크린샷 없음
 
 No server selected
 == 선택된 서버 없음
@@ -7781,6 +7814,9 @@ Pause voice when window unfocused
 Pause/unpause game
 == 게임 일시정지/재개
 
+Paused spectator opacity (percent)
+== 관전자 불투명도(퍼센트)
+
 Penalty in seconds for saving or swapping positions
 == 위치 저장 또는 교체에 대한 초 단위 패널티
 
@@ -7855,6 +7891,9 @@ Pistol
 
 Pistol guide line
 == 권총 보조선
+
+Place title on a separate line above the player name instead of inline
+== 제목을 이름과 같은 줄에 표시하지 않고 플레이어 이름 위의 별도 줄에 배치
 
 Plasma gun shots per second
 == 플라즈마 건 초당 발사 수
@@ -8047,6 +8086,9 @@ Players hook time is limited
 
 Players hook time is unlimited
 == 이 서버에서는 훅 지속 시간이 무제한입니다
+
+Players shown
+== 표시된 플레이어 수
 
 Players weapons affect others
 == 이 서버에서는 무기가 다른 플레이어에게 영향을 줍니다
@@ -8777,9 +8819,6 @@ Reduced
 Reduced: uses shorter transitions and disables presentation animations
 == 간소화: 더 짧은 전환을 사용하고 연출 애니메이션을 비활성화합니다
 
-Refine the search to see more maps
-== 검색어를 좁히면 더 많은 맵을 볼 수 있습니다
-
 Refresh
 == 새로고침
 
@@ -9335,11 +9374,17 @@ Rifle laser outline color
 Right jump
 == 오른쪽 점프
 
+Right-click to add to favorites
+== 마우스 오른쪽 버튼으로 즐겨찾기에 추가
+
 Right-click to disable auto-translate
 == 우클릭하여 자동 번역 비활성화
 
 Right-click to enable auto-translate
 == 우클릭하여 자동 번역 활성화
+
+Right-click to remove from favorites
+== 마우스 오른쪽 버튼으로 즐겨찾기에서 제거
 
 Ring
 == 링
@@ -9650,6 +9695,24 @@ Screen resolution width (only fullscreen)
 Screenshot
 == 스크린샷
 
+Screenshot error
+== 스크린샷 처리 실패
+
+Screenshot saved
+== 스크린샷 저장됨
+
+Screenshot watermark custom text
+== 스크린샷 워터마크 사용자 지정 텍스트
+
+Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right
+== 스크린샷 워터마크 위치: 0=왼쪽 아래, 1=오른쪽 아래, 2=왼쪽 위, 3=오른쪽 위
+
+Screenshot watermark: include map name
+== 스크린샷 워터마크: 맵 이름 포함
+
+Screenshot watermark: include timestamp
+== 스크린샷 워터마크: 타임스탬프 포함
+
 Screenshots
 == 스크린샷
 
@@ -9670,9 +9733,6 @@ Search and navigate settings
 
 Search donor asset
 == 기증자 에셋 검색
-
-Search local maps
-== 로컬 맵 검색
 
 Search main asset
 == 메인 에셋 검색
@@ -10310,6 +10370,9 @@ Show ghost
 Show ghost at unpredictable position of other players
 == 다른 플레이어의 예측 불가능한 위치에 유령 표시
 
+Show Gores drown board
+== Gores 익사 보드 표시
+
 Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).
 == GPU가 지원하는 경우 그래픽 라이브러리 경고 및 오류 표시 (0=없음, 1=최소, 2=성능 영향, 3=상세, 4=모두)
 
@@ -10667,6 +10730,9 @@ Show player stats HUD
 Show player target angle
 == 플레이어 조준 각도 표시
 
+Show player Tee
+== 플레이어 Tee 표시
+
 Show players' key presses
 == 플레이어 키 입력 표시
 
@@ -10690,6 +10756,9 @@ Show Qm badge: identify via central server and mark QmClient users on nameplate/
 
 Show QmClient config variables
 == QmClient 설정 변수 표시
+
+Show QmClient title in player nameplate (0 = hide)
+== 플레이어 이름표에 QmClient 제목 표시 (0 = 숨김)
 
 Show radial indicators of other Tees
 == 다른 Tee의 방사형 표시기 표시
@@ -10790,6 +10859,9 @@ Show tee status bar
 Show Tee trail for others
 == 다른 플레이어의 Tee 궤적 표시
 
+Show Tees in the Gores team drown board
+== Gores 팀 익사 보드에 Tee 표시
+
 Show teleporter tile outlines
 == 텔레포터 타일 윤곽선 표시
 
@@ -10798,6 +10870,9 @@ Show text entities
 
 Show the cursor while free spectating
 == 자유 관전 중 커서 표시
+
+Show the Gores team drown board
+== Gores 팀 익사 보드 표시
 
 Show the number of frozen tees
 == 얼어붙은 Tee 수 표시
@@ -11801,6 +11876,9 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == 팀 티 외부 발광
 
+Teammate
+== 팀원
+
 Teams
 == 팀
 
@@ -12038,6 +12116,9 @@ The server rejected the map upload.
 The update is ready and will be installed when you exit.
 == 업데이트가 준비되었습니다. 종료할 때 설치됩니다.
 
+The watermarked screenshot was saved next to the original
+== 워터마크가 적용된 스크린샷을 원본 옆에 저장했습니다
+
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 텍스처 %s의 너비가 %d로 나누어 떨어지지 않거나 높이가 %d로 나누어 떨어지지 않아 시각적 버그가 발생할 수 있습니다.
 
@@ -12236,6 +12317,9 @@ Timer is displayed in %s
 Timer isn't displayed.
 == 타이머가 표시되지 않습니다
 
+Timestamp
+== 타임스탬프
+
 Tiny Tee Size
 == 아주 작은 Tee 크기
 
@@ -12415,6 +12499,12 @@ Too many translation tasks
 
 Toolbox page
 == 도구 상자 페이지
+
+Top left
+== 왼쪽 위
+
+Top right
+== 오른쪽 위
 
 Total
 == 합계
@@ -12670,6 +12760,9 @@ Unable to save the skin
 
 Unable to save the skin with a reserved name
 == 예약된 이름으로 스킨을 저장할 수 없습니다
+
+Unable to save the watermarked screenshot
+== 워터마크가 적용된 스크린샷을 저장할 수 없습니다
 
 Unavailable
 == 사용할 수 없음
@@ -13327,6 +13420,9 @@ Warning
 
 Water hammer highlight
 == 수중 해머 하이라이트
+
+Watermark
+== 워터마크
 
 Wave amount
 == 파도 크기

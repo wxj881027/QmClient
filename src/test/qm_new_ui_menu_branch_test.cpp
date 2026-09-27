@@ -176,6 +176,39 @@ TEST(QmNewUiMenuBranches, CapsuleTabBarRowRectSpansSlotsAndGaps)
 	EXPECT_FLOAT_EQ(ui_widget::CapsuleTabBarRowRect(aSlots, 0).h, 0.0f);
 }
 
+TEST(QmNewUiMenuBranches, CapsuleTabSlotHitTestKeepsSlotsSeparateAndToleratesVerticalSlip)
+{
+	// 意图：胶囊 Tab 的命中判定按槽位横向半开区间（相邻页签不互相抢点击），
+	// 纵向给少量容差，这样按在胶囊上下边缘或按下后轻微移动不会落空。
+	const CUIRect aSlots[] = {
+		{0.0f, 100.0f, 60.0f, 26.0f},
+		{60.0f, 100.0f, 60.0f, 26.0f},
+		{120.0f, 100.0f, 60.0f, 26.0f},
+	};
+
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 30.0f, 113.0f), 0);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 90.0f, 113.0f), 1);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 150.0f, 113.0f), 2);
+	// 槽位边界属于右侧槽位，与 CUIRect::Inside 的半开区间一致。
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 60.0f, 113.0f), 1);
+
+	const float Top = 100.0f;
+	const float Bottom = 100.0f + 26.0f;
+	const float Slop = ui_widget::CAPSULE_TAB_HIT_SLOP;
+	EXPECT_GT(Slop, 0.0f);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 30.0f, Top - Slop + 0.5f), 0);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 30.0f, Bottom + Slop - 0.5f), 0);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 30.0f, Top - Slop - 1.0f), -1);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 30.0f, Bottom + Slop + 1.0f), -1);
+	// 横向不外扩：容差只作用于纵向。
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, -1.0f, 113.0f), -1);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 180.0f, 113.0f), -1);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 30.0f, 113.0f, 0.0f), 0);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 3, 30.0f, Top - 1.0f, 0.0f), -1);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(nullptr, 3, 30.0f, 113.0f), -1);
+	EXPECT_EQ(ui_widget::CapsuleTabBarSlotAtPoint(aSlots, 0, 30.0f, 113.0f), -1);
+}
+
 TEST(QmNewUiMenuBranches, CapsuleTabBarChromeDrawsContainerThenSpringIndicatorUnderLabels)
 {
 	// 意图：滑块胶囊必须由容器的同一入口画在文字之前，并且由弹簧驱动、可被打断续接，
@@ -1409,16 +1442,20 @@ TEST(QmNewUiMenuBranches, PlayerTitlePrecedesInlineClientIdAndNameWithoutOverrid
 	const std::string RenderNamePlateGame = FunctionBody(Source, "void CNamePlates::RenderNamePlateGame");
 
 	const size_t FriendMark = AddNameRow.find("AddPart<CNamePlatePartFriendMark>(This);");
-	const size_t Developer = AddNameRow.find("AddPart<CNamePlatePartTitle>(This);");
+	const size_t InlineTitle = AddNameRow.find("AddPart<CNamePlatePartTitle>(This, false);");
 	const size_t InlineClientId = AddNameRow.find("AddPart<CNamePlatePartClientId>(This, false);");
 	const size_t Name = AddNameRow.find("AddPart<CNamePlatePartName>(This);");
 	ASSERT_NE(FriendMark, std::string::npos);
-	ASSERT_NE(Developer, std::string::npos);
+	ASSERT_NE(InlineTitle, std::string::npos);
 	ASSERT_NE(InlineClientId, std::string::npos);
 	ASSERT_NE(Name, std::string::npos);
-	EXPECT_LT(FriendMark, Developer);
-	EXPECT_LT(Developer, InlineClientId);
+	EXPECT_LT(FriendMark, InlineTitle);
+	EXPECT_LT(InlineTitle, InlineClientId);
 	EXPECT_LT(InlineClientId, Name);
+	// 上方独立行实例挂在名字行之后，由 m_AboveName 与内联实例互斥显示。
+	const size_t AboveTitle = AddNameRow.find("AddPart<CNamePlatePartTitle>(This, true);");
+	ASSERT_NE(AboveTitle, std::string::npos);
+	EXPECT_LT(Name, AboveTitle);
 	EXPECT_NE(RenderNamePlateGame.find("Data.m_ShowClientId = Data.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;"), std::string::npos);
 }
 
@@ -1703,7 +1740,8 @@ TEST(QmNewUiMenuBranches, HudDummyStatusLabelsUseEnglishKeys)
 TEST(QmNewUiMenuBranches, TranslationAndDemoUiLabelsUseEnglishKeys)
 {
 	const std::string ChatSource = ReadTextFile("src/game/client/components/chat.cpp");
-	const std::string DemoSource = ReadTextFile("src/game/client/components/menus_demo.cpp");
+	// 截图画廊把菜单文案搬到了 menus_demo_screenshots.cpp，两份源码一起检查。
+	const std::string DemoSource = ReadTextFile("src/game/client/components/menus_demo.cpp") + ReadTextFile("src/game/client/components/menus_demo_screenshots.cpp");
 	const std::string BrowserSource = ReadTextFile("src/game/client/components/menus_browser.cpp");
 
 	EXPECT_NE(ChatSource.find("Localize(\"Translation Settings\")"), std::string::npos);

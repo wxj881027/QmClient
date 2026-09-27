@@ -821,6 +821,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == Zastosuj ten preset
 
+Apply watermark
+== Zastosuj znak wodny
+
 Are you sure that you want to delete %d selected items?
 == Czy na pewno chcesz usunąć %d wybranych elementów?
 
@@ -1075,6 +1078,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 
 Auto weapon switch
 == Automatyczne przełączanie broni
+
+Auto-accept team invites by sending /team <n>
+== Automatycznie akceptuj zaproszenia do drużyny, wysyłając /team <n>
 
 Auto-close chat after unfreeze
 == Automatyczne zamykanie czatu po odmrożeniu
@@ -1511,6 +1517,12 @@ Both
 Both sides of keyword rules must be filled
 == Obie strony reguł słów kluczowych muszą być wypełnione
 
+Bottom left
+== Lewy dół
+
+Bottom right
+== Prawy dół
+
 Bounce
 == Odbicie
 
@@ -1646,9 +1658,6 @@ Can't swap with yourself
 Cancel
 == Anuluj
 
-Cancel upload
-== Anuluj przesyłanie
-
 Cancel your swap request
 == Anuluj swoją prośbę o zamianę
 
@@ -1663,6 +1672,9 @@ Card height animation
 
 Card list entry animation
 == Animacja wejścia listy kart ustawień
+
+Card opacity
+== Krycie karty
 
 Card reflow animation
 == Animacja przeorganizowania kart ustawień
@@ -1834,9 +1846,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose whether to browse replays or screenshots
-== Wybierz, czy przeglądać dema, czy zrzuty ekranu
 
 Choose which TClient settings tabs are visible
 == Choose which TClient settings tabs are visible
@@ -2255,6 +2264,9 @@ Configure Tee appearance and skins
 Configure the companion appearance and movement
 == Configure the companion appearance and movement
 
+Configure the Gores team drown board
+== Skonfiguruj tablicę utonięć drużyny Gores
+
 Configure the ingame cursor scale
 == Konfiguracja skali kursora w grze
 
@@ -2612,6 +2624,9 @@ Custom title
 Custom translation prompt (overrides built-in)
 == Niestandardowy prompt tłumaczenia (zastępuje domyślny prompt)
 
+Custom watermark text
+== Niestandardowy tekst znaku wodnego
+
 Customize additional nameplate text
 == Customize additional nameplate text
 
@@ -2704,6 +2719,9 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == Klient DDNet wymaga ponownego uruchomienia, aby zakończyć aktualizację!
+
+DDNet contributors and staff credits
+== DDNet — współtwórcy i zespół
 
 DDNet Memory
 == Pamięć DDNet
@@ -3287,6 +3305,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == Upuść na prawym płótnie, aby zastąpić jedną część.
 
+Drown deaths
+== Zgony przez utonięcie
+
 Dual Kawase
 == Podwójny Kawase
 
@@ -3383,9 +3404,6 @@ Dummy mini view zoom (percent)
 Dummy name
 == Nazwa dummy
 
-Dummy not connected
-== Dummy niepołączony
-
 Dummy skin
 == Skóra dummy
 
@@ -3472,9 +3490,6 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == Kolor tła Dynamic Island
-
-Each joins a separate team so solo runs start in sync (useful on maps where team-0 start is unreliable)
-== Każdy dołącza do osobnej drużyny, aby biegi solo zaczynały się synchronicznie (przydatne na mapach, gdzie start w drużynie 0 jest zawodny)
 
 Ease in out quad
 == Łagodne wejście-wyjście kwadratowe
@@ -4181,6 +4196,9 @@ Fade opacity along trail length
 Fade out
 == Zanikanie wyjścia
 
+Fade paused spectators in water
+== Wyblaknij wstrzymanych widzów w wodzie
+
 Fade trail alpha
 == Zanikanie przezroczystości śladu
 
@@ -4303,6 +4321,9 @@ File executed on map change/reload to set default server settings
 
 File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 == Plik do przechowywania rankingów, jeśli sv_use_sql jest wyłączone lub jako zapasowy serwer SQL
+
+File information
+== Informacje o pliku
 
 File with announcements, one per line.
 == Plik z ogłoszeniami, jedno na linię
@@ -4835,11 +4856,17 @@ Gores actor
 Gores auto weapon switch
 == Automatyczne przełączanie broni Gores
 
+Gores drown board
+== Tablica utonięć Gores
+
 Gores Mode
 == Tryb Gores
 
 Gores mode key
 == Klawisz trybu Gores
+
+Gores team drown board opacity
+== Krycie tablicy utonięć drużyny Gores
 
 Gores · Axiom
 == Gores · Axiom
@@ -5251,9 +5278,6 @@ HTTP map download: low speed limit (in bytes/s, 0=disabled)
 
 HTTP map download: low speed limit period (0=disabled)
 == Pobieranie mapy HTTP: okres limitu niskiej prędkości (0=wyłączone)
-
-HTTPS endpoint
-== Punkt końcowy HTTPS
 
 https://ddnet.org/discord
 == https://ddnet.org/discord
@@ -6203,9 +6227,6 @@ Main Asset
 Main menu
 == Menu główne
 
-Main team %d / Dummy team %d
-== Drużyna główna %d / drużyna dummy %d
-
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == Spraw, aby zamrożeni gracze wyglądali bardziej jak piłki do siatkówki (0=Wyłączone, 1=Tylko mapy siatkówki, 2=Zawsze)
 
@@ -6275,6 +6296,9 @@ Manual target
 Map
 == Mapa
 
+Map browser difficulty star filter bitmask (bits 1-5)
+== Maska bitowa filtra gwiazdek trudności w przeglądarce map (bity 1-5)
+
 Map browser surface
 == Powierzchnia przeglądarki map
 
@@ -6283,6 +6307,12 @@ Map browser surface color
 
 Map browser transparency
 == Przezroczystość przeglądarki map
+
+Map browser: show empty servers only
+== Przeglądarka map: pokazuj tylko puste serwery
+
+Map browser: show favorite maps only
+== Przeglądarka map: pokazuj tylko ulubione mapy
 
 Map danger border
 == Niebezpieczna granica mapy
@@ -6298,9 +6328,6 @@ Map folders
 
 Map name
 == Nazwa mapy
-
-Map path in save folder
-== Ścieżka mapy w folderze zapisu
 
 Map play history
 == Historia gry na mapach
@@ -6353,9 +6380,6 @@ Map upload
 Map upload cancelled.
 == Anulowano przesyłanie mapy.
 
-Map upload endpoint
-== Punkt końcowy przesyłania map
-
 Map upload endpoint (empty disables map upload)
 == Punkt końcowy przesyłania map (puste wyłącza przesyłanie)
 
@@ -6373,9 +6397,6 @@ Map uploaded successfully.
 
 Maps finished
 == Ukończone mapy
-
-maps/example.map
-== maps/example.map
 
 Margin when notification is docked
 == Margines przy krawędzi ekranu dla panelu powiadomień
@@ -6514,6 +6535,9 @@ Maximum number of vanilla antispoof handshakes answered per second (0 = unlimite
 
 Maximum players participating in a vote (0 = unlimited)
 == Maksymalna liczba graczy uczestniczących w głosowaniu (0 = bez ograniczeń)
+
+Maximum players shown in the Gores team drown board
+== Maksymalna liczba graczy wyświetlanych na tablicy utonięć drużyny Gores
 
 Maximum reduction
 == Maksymalne zmniejszenie
@@ -6712,6 +6736,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Bardziej optymistyczne przewidywanie wzdłuż stabilnego kierunku Tee, zmniejsza opóźnienie stabilizacji
+
+More teammates...
+== Więcej członków drużyny...
 
 MOTD
 == MOTD
@@ -7142,6 +7169,9 @@ No empty team left.
 No favorite maps yet
 == Brak ulubionych map
 
+No filter
+== Bez filtra
+
 No input device available
 == Brak dostępnego urządzenia wejściowego
 
@@ -7234,6 +7264,9 @@ No saves found on this map
 
 No screenshot selected
 == Nie wybrano zrzutu ekranu
+
+No screenshots
+== Brak zrzutów ekranu
 
 No server selected
 == Nie wybrano serwera
@@ -7781,6 +7814,9 @@ Pause voice when window unfocused
 Pause/unpause game
 == Wstrzymaj/wznów grę
 
+Paused spectator opacity (percent)
+== Nieprzezroczystość wstrzymanego widza (procent)
+
 Penalty in seconds for saving or swapping positions
 == Kara w sekundach za zapisywanie lub zamianę pozycji
 
@@ -7855,6 +7891,9 @@ Pistol
 
 Pistol guide line
 == Linia pomocnicza pistoletu
+
+Place title on a separate line above the player name instead of inline
+== Umieść tytuł w osobnym wierszu nad nazwą gracza zamiast w tym samym wierszu
 
 Plasma gun shots per second
 == Strzały z pistoletu plazmowego na sekundę
@@ -8047,6 +8086,9 @@ Players hook time is limited
 
 Players hook time is unlimited
 == Czas haka graczy jest nieograniczony
+
+Players shown
+== Wyświetlani gracze
 
 Players weapons affect others
 == Broń graczy wpływa na innych
@@ -8777,9 +8819,6 @@ Reduced
 Reduced: uses shorter transitions and disables presentation animations
 == Ograniczone: używa krótszych przejść i wyłącza animacje prezentacji
 
-Refine the search to see more maps
-== Zawęź wyszukiwanie, aby zobaczyć więcej map
-
 Refresh
 == Odśwież
 
@@ -9335,11 +9374,17 @@ Rifle laser outline color
 Right jump
 == Prawy skok
 
+Right-click to add to favorites
+== Kliknij prawym przyciskiem, aby dodać do ulubionych
+
 Right-click to disable auto-translate
 == Kliknij prawym przyciskiem, aby wyłączyć automatyczne tłumaczenie
 
 Right-click to enable auto-translate
 == Kliknij prawym przyciskiem, aby włączyć automatyczne tłumaczenie
+
+Right-click to remove from favorites
+== Kliknij prawym przyciskiem, aby usunąć z ulubionych
 
 Ring
 == Pierścień
@@ -9650,6 +9695,24 @@ Screen resolution width (only fullscreen)
 Screenshot
 == Zrzut ekranu
 
+Screenshot error
+== Błąd zrzutu ekranu
+
+Screenshot saved
+== Zapisano zrzut ekranu
+
+Screenshot watermark custom text
+== Niestandardowy tekst znaku wodnego zrzutu ekranu
+
+Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right
+== Pozycja znaku wodnego zrzutu ekranu: 0=lewy dół, 1=prawy dół, 2=lewy górny, 3=prawy górny
+
+Screenshot watermark: include map name
+== Znak wodny zrzutu ekranu: uwzględnij nazwę mapy
+
+Screenshot watermark: include timestamp
+== Znak wodny zrzutu ekranu: uwzględnij znacznik czasu
+
 Screenshots
 == Zrzuty ekranu
 
@@ -9670,9 +9733,6 @@ Search and navigate settings
 
 Search donor asset
 == Szukaj zasobu dawcy
-
-Search local maps
-== Szukaj lokalnych map
 
 Search main asset
 == Szukaj głównego zasobu
@@ -10310,6 +10370,9 @@ Show ghost
 Show ghost at unpredictable position of other players
 == Pokaż ducha w nieprzewidywalnej pozycji innych graczy
 
+Show Gores drown board
+== Pokaż tablicę utonięć Gores
+
 Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).
 == Pokaż ostrzeżenia i błędy biblioteki graficznej, jeśli GPU obsługuje (0 = brak, 1 = minimalne, 2 = wpływające na wydajność, 3 = szczegółowe, 4 = wszystkie).
 
@@ -10667,6 +10730,9 @@ Show player stats HUD
 Show player target angle
 == Pokaż kąt celowania gracza
 
+Show player Tee
+== Pokaż Tee gracza
+
 Show players' key presses
 == Pokaż naciśnięcia klawiszy graczy
 
@@ -10690,6 +10756,9 @@ Show Qm badge: identify via central server and mark QmClient users on nameplate/
 
 Show QmClient config variables
 == Pokaż zmienne konfiguracyjne QmClient
+
+Show QmClient title in player nameplate (0 = hide)
+== Pokaż tytuł QmClient na tabliczce nazwy gracza (0 = ukryj)
 
 Show radial indicators of other Tees
 == Pokaż radialne wskaźniki innych Tee
@@ -10790,6 +10859,9 @@ Show tee status bar
 Show Tee trail for others
 == Pokaż ślad Tee dla innych
 
+Show Tees in the Gores team drown board
+== Pokaż Tees na tablicy utonięć drużyny Gores
+
 Show teleporter tile outlines
 == Pokaż kontury kafelków teleportu
 
@@ -10798,6 +10870,9 @@ Show text entities
 
 Show the cursor while free spectating
 == Pokaż kursor podczas wolnej obserwacji
+
+Show the Gores team drown board
+== Pokaż tablicę utonięć drużyny Gores
 
 Show the number of frozen tees
 == Pokaż liczbę zamrożonych tee
@@ -11801,6 +11876,9 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == Poświata tee według drużyn
 
+Teammate
+== Towarzysz z drużyny
+
 Teams
 == Drużyny
 
@@ -12038,6 +12116,9 @@ The server rejected the map upload.
 The update is ready and will be installed when you exit.
 == Aktualizacja jest gotowa i zostanie zainstalowana przy wyjściu.
 
+The watermarked screenshot was saved next to the original
+== Zrzut z dodanym znakiem wodnym zapisano obok oryginału
+
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == Szerokość tekstury %s nie jest podzielna przez %d, lub wysokość nie jest podzielna przez %d, co może powodować błędy wizualne.
 
@@ -12236,6 +12317,9 @@ Timer is displayed in %s
 Timer isn't displayed.
 == Licznik czasu nie jest wyświetlany.
 
+Timestamp
+== Znacznik czasu
+
 Tiny Tee Size
 == Rozmiar małego tee
 
@@ -12415,6 +12499,12 @@ Too many translation tasks
 
 Toolbox page
 == Strona skrzynki narzędziowej
+
+Top left
+== Lewy górny
+
+Top right
+== Prawy górny
 
 Total
 == Łącznie
@@ -12670,6 +12760,9 @@ Unable to save the skin
 
 Unable to save the skin with a reserved name
 == Nie można zapisać skórki o zastrzeżonej nazwie
+
+Unable to save the watermarked screenshot
+== Nie można zapisać zrzutu ze znakiem wodnym
 
 Unavailable
 == Niedostępne
@@ -13327,6 +13420,9 @@ Warning
 
 Water hammer highlight
 == Podświetlenie młota w wodzie
+
+Watermark
+== Znak wodny
 
 Wave amount
 == Amplituda fali

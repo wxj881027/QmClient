@@ -39,7 +39,6 @@ namespace qm_card_catalog
 		size_t m_KeywordRulesCount = 0;
 		bool m_KeywordRulesHalfFilled = false;
 		uint64_t m_FavoriteMapsRevision = 1;
-		size_t m_FavoriteMapSearchRows = 1;
 	};
 
 	// 卡片构造上下文：页面把自己的 UI 尺度、布局帧、折叠状态与持久化回调注入进来。
@@ -95,7 +94,11 @@ namespace qm_card_catalog
 	// 这里显式列出“卡片可以调用哪些渲染/输入助手”，避免把整类成员公开出去。
 	struct QmCardRenderHook
 	{
+		// 在 render-only UI scope 内运行内容回调，量出它实际消费的内容高度。
+		// Deck 的测量阶段不处于正式绘制帧，因此必须由桥接层隔离输入和配置提交。
+		static float MeasureContent(CMenus *pMenus, const FSettingsCardRenderMeasured &Render, float ContentWidth);
 		static bool RenderQmFunctionCheckbox(CMenus *pMenus, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly);
+		static bool RenderQmFunctionCheckboxRow(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);
 		static bool RenderQmVisualCheckbox(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue);
 		static void RenderQmVisualTranslateUiContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing);
 		static void RenderQmVisualStreamerContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing);
@@ -114,6 +117,7 @@ namespace qm_card_catalog
 		// CMenus::RenderQmFunctionMiniFeaturesContent / RenderQmHudBindStatusContent 仍需要
 		// 它们来排版，故桥接按**本地签名**保留并透传这两个参数（以本地实现为准，不改本地行为）。
 		static void RenderQmFunctionMiniFeaturesContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+		static void RenderQmFunctionBetterScoreboardContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionJumpHintContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionWeaponTrajectoryContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionFriendNotifyContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
@@ -138,6 +142,7 @@ namespace qm_card_catalog
 		static void RenderQmHudLyricsContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, bool PrewarmOnly);
 		static void RenderQmHudBackground3DContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmHudBindStatusContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+		static void RenderQmHudGoresDrownBoardContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static bool HandleQmHudCheckboxInput(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
 		static bool ToggleQmHudCountdownLocation(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
 		// 本地专属卡片的渲染入口（远程目录不含这两张：禅模式 / 单机分割）。

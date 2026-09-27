@@ -44,7 +44,6 @@
 
 namespace
 {
-	constexpr float HUD_CURRENT_WEAPON_SCALE = 1.2f;
 	constexpr float MEDIA_ISLAND_SATELLITE_RING_RADIUS_SCALE = 0.75f;
 	constexpr float MEDIA_ISLAND_SATELLITE_RING_THICKNESS_SCALE = 0.15f;
 	constexpr float MEDIA_ISLAND_OUTER_SHADOW_PIXELS = 5.0f;
@@ -223,12 +222,6 @@ namespace
 	{
 		static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_media_island_satellite_item"));
 		return (s_BaseKey << 32) | (static_cast<uint64_t>(static_cast<int>(Type) & 0xff) << 24) | static_cast<uint64_t>(Id & 0x00ffffff);
-	}
-
-	uint64_t HudWeaponPresentationNodeKey(int ClientId, int Weapon)
-	{
-		static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_weapon_presentation"));
-		return (s_BaseKey << 32) | static_cast<uint64_t>((ClientId & 0xff) << 8) | static_cast<uint64_t>(Weapon & 0xff);
 	}
 
 	uint64_t HudRecordingStatusNodeKey(const char *pScope)
@@ -1030,7 +1023,6 @@ CHud::CHud()
 	m_MediaIslandFrameCache.Reset();
 	m_MediaIslandBlurLastAttemptFrame = 0;
 	m_MediaIslandBlurAttemptInitialized = false;
-	m_WeaponPresentationState.Reset();
 	m_RecordingStatusAnimState.Reset();
 	m_SwitchCountdownAnimState.Reset();
 	ResetSwitchCountdownRings();
@@ -1122,7 +1114,6 @@ void CHud::ResetHudContainers()
 	m_MediaIslandFrameCache.Reset();
 	m_MediaIslandBlurLastAttemptFrame = 0;
 	m_MediaIslandBlurAttemptInitialized = false;
-	m_WeaponPresentationState.Reset();
 	m_RecordingStatusAnimState.Reset();
 	m_SwitchCountdownAnimState.Reset();
 	ResetSwitchCountdownRings();
@@ -1156,7 +1147,6 @@ void CHud::OnReset()
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
 	m_MediaIslandMuteState.Reset();
-	m_WeaponPresentationState.Reset();
 	m_RecordingStatusAnimState.Reset();
 
 	ResetHudContainers();
@@ -2789,11 +2779,12 @@ void CHud::RenderTextInfo()
 			MaxTees = std::max(1, std::min(MaxTees, (int)std::floor(AvailableRowWidth / TeeSize)));
 
 			int TotalRows = std::min(MaxRows, (NumInTeam + MaxTees - 1) / MaxTees);
-			Graphics()->TextureClear();
-			Graphics()->QuadsBegin();
-			Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.4f);
-			Graphics()->DrawRectExt(StartPos - TeeSize / 2.0f, 0.0f, TeeSize * std::min(NumInTeam, MaxTees), TeeSize + 3.0f + (TotalRows - 1) * TeeSize, 5.0f, IGraphics::CORNER_B);
-			Graphics()->QuadsEnd();
+			const float FrozenHudX = StartPos - TeeSize / 2.0f;
+			const float FrozenHudY = 0.0f;
+			const float FrozenHudW = TeeSize * std::min(NumInTeam, MaxTees);
+			const float FrozenHudH = TeeSize + 3.0f + (TotalRows - 1) * TeeSize;
+			Ui()->RenderGaussianBlur({FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH}, 1.0f, IGraphics::CORNER_B, ui_token::radius::BASE);
+			Graphics()->DrawRect(FrozenHudX, FrozenHudY, FrozenHudW, FrozenHudH, ui_token::color::SURFACE_GLASS, IGraphics::CORNER_B, ui_token::radius::BASE);
 
 			bool Overflow = NumInTeam > MaxTees * MaxRows;
 
@@ -5563,78 +5554,18 @@ void CHud::RenderPlayerState(const int ClientId)
 		}
 
 		const float WeaponLayoutEndX = WeaponLayoutX;
-		SUiSpringConfig WeaponSpring;
-		WeaponSpring.m_Stiffness = 420.0f;
-		WeaponSpring.m_Damping = 40.0f;
-		WeaponSpring.m_RestEpsilon = 0.008f;
-		WeaponSpring.m_RestVelocity = 0.05f;
 
-		if(ClientId >= 0 && ClientId < MAX_CLIENTS)
+		for(int Weapon = 0; Weapon < NUM_WEAPONS; ++Weapon)
 		{
-			CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
-			SHudWeaponPresentationState &Presentation = m_WeaponPresentationState;
-			if(!Presentation.m_aClientInitialized[ClientId])
-			{
-				for(int Weapon = 0; Weapon < NUM_WEAPONS; ++Weapon)
-				{
-					const bool ActiveWeapon = pPlayer->m_Weapon == Weapon;
-					const float TargetX = aWeaponVisible[Weapon] ? aWeaponTargetX[Weapon] : WeaponLayoutEndX;
-					const float TargetAlpha = aWeaponVisible[Weapon] ? (ActiveWeapon ? 1.0f : 0.4f) : 0.0f;
-					const float TargetScale = aWeaponVisible[Weapon] ? (ActiveWeapon ? HUD_CURRENT_WEAPON_SCALE : 1.0f) : 0.92f;
-					const uint64_t WeaponNode = HudWeaponPresentationNodeKey(ClientId, Weapon);
-					Presentation.m_aaTargetX[ClientId][Weapon] = TargetX;
-					Presentation.m_aaTargetY[ClientId][Weapon] = y;
-					Presentation.m_aaTargetAlpha[ClientId][Weapon] = TargetAlpha;
-					Presentation.m_aaTargetScale[ClientId][Weapon] = TargetScale;
-					SetUiPresentationStateValue(AnimRuntime, WeaponNode, EUiAnimProperty::POS_X, TargetX);
-					SetUiPresentationStateValue(AnimRuntime, WeaponNode, EUiAnimProperty::POS_Y, y);
-					SetUiPresentationStateValue(AnimRuntime, WeaponNode, EUiAnimProperty::ALPHA, TargetAlpha);
-					SetUiPresentationStateValue(AnimRuntime, WeaponNode, EUiAnimProperty::SCALE, TargetScale);
-				}
-				Presentation.m_aClientInitialized[ClientId] = true;
-			}
-
-			for(int Weapon = 0; Weapon < NUM_WEAPONS; ++Weapon)
-			{
-				const bool ActiveWeapon = pPlayer->m_Weapon == Weapon;
-				const float TargetX = aWeaponVisible[Weapon] ? aWeaponTargetX[Weapon] : Presentation.m_aaTargetX[ClientId][Weapon];
-				const float TargetAlpha = aWeaponVisible[Weapon] ? (ActiveWeapon ? 1.0f : 0.4f) : 0.0f;
-				const float TargetScale = aWeaponVisible[Weapon] ? (ActiveWeapon ? HUD_CURRENT_WEAPON_SCALE : 1.0f) : 0.92f;
-				const uint64_t WeaponNode = HudWeaponPresentationNodeKey(ClientId, Weapon);
-				Presentation.m_aaTargetX[ClientId][Weapon] = TargetX;
-				Presentation.m_aaTargetY[ClientId][Weapon] = y;
-				Presentation.m_aaTargetAlpha[ClientId][Weapon] = TargetAlpha;
-				Presentation.m_aaTargetScale[ClientId][Weapon] = TargetScale;
-				const float WeaponX = ResolveUiPresentationStateValue(AnimRuntime, WeaponNode, EUiAnimProperty::POS_X, Presentation.m_aaTargetX[ClientId][Weapon], WeaponSpring, 2, 0.01f);
-				const float WeaponY = ResolveUiPresentationStateValue(AnimRuntime, WeaponNode, EUiAnimProperty::POS_Y, Presentation.m_aaTargetY[ClientId][Weapon], WeaponSpring, 2, 0.01f);
-				const float WeaponAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, WeaponNode, EUiAnimProperty::ALPHA, Presentation.m_aaTargetAlpha[ClientId][Weapon], WeaponSpring, 2, 0.004f), 0.0f, 1.0f);
-				const float WeaponScale = std::max(0.01f, ResolveUiPresentationStateValue(AnimRuntime, WeaponNode, EUiAnimProperty::SCALE, Presentation.m_aaTargetScale[ClientId][Weapon], WeaponSpring, 2, 0.004f));
-				if(!aWeaponVisible[Weapon] && WeaponAlpha <= 0.01f && !AnimRuntime.HasActiveAnimation(WeaponNode, EUiAnimProperty::ALPHA))
-					continue;
-
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, WeaponAlpha);
-				Graphics()->QuadsSetRotation(pi * 7 / 4);
-				Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpritePickupWeapons[Weapon]);
-				Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aWeaponOffset[Weapon], WeaponX, WeaponY, WeaponScale, WeaponScale);
-				Graphics()->QuadsSetRotation(0);
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-			}
-		}
-		else
-		{
-			for(int Weapon = 0; Weapon < NUM_WEAPONS; ++Weapon)
-			{
-				if(!aWeaponVisible[Weapon])
-					continue;
-				const bool ActiveWeapon = pPlayer->m_Weapon == Weapon;
-				const float WeaponScale = ActiveWeapon ? HUD_CURRENT_WEAPON_SCALE : 1.0f;
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, ActiveWeapon ? 1.0f : 0.4f);
-				Graphics()->QuadsSetRotation(pi * 7 / 4);
-				Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpritePickupWeapons[Weapon]);
-				Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aWeaponOffset[Weapon], aWeaponTargetX[Weapon], y, WeaponScale, WeaponScale);
-				Graphics()->QuadsSetRotation(0);
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-			}
+			if(!aWeaponVisible[Weapon])
+				continue;
+			const bool ActiveWeapon = pPlayer->m_Weapon == Weapon;
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, ActiveWeapon ? 1.0f : 0.4f);
+			Graphics()->QuadsSetRotation(pi * 7 / 4);
+			Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpritePickupWeapons[Weapon]);
+			Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aWeaponOffset[Weapon], aWeaponTargetX[Weapon], y);
+			Graphics()->QuadsSetRotation(0);
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 		x = WeaponLayoutEndX;
 
@@ -7483,6 +7414,7 @@ void CHud::OnRender()
 		}
 		if(LocalCharacterHudVisible || GameClient()->m_RankGhost.IsViewModeActive())
 			RenderDDRaceEffects();
+		RenderGoresDrownBoard();
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			RenderConnectionWarning();
 		RenderTeambalanceWarning();
@@ -7735,6 +7667,135 @@ void CHud::RenderDDRaceEffects()
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 		}
 	}
+}
+
+void CHud::RenderGoresDrownBoard()
+{
+	if(!g_Config.m_QmGoresDrownBoard)
+		return;
+
+	const bool Preview = GameClient()->m_HudEditor.IsActive();
+	if(!GameClient()->m_TClient.IsGoresGameMode() && !Preview)
+		return;
+
+	const float BoardAlpha = std::clamp(g_Config.m_QmGoresDrownBoardOpacity / 100.0f, 0.0f, 1.0f);
+	if(BoardAlpha <= 0.0f && !Preview)
+		return;
+	// 编辑器中即使透明度被调到 0，也保留一个可选中的预览卡片。
+	const float RenderAlpha = Preview ? maximum(BoardAlpha, 0.55f) : BoardAlpha;
+
+	const int LocalId = GameClient()->m_aLocalIds[g_Config.m_ClDummy] >= 0 ? GameClient()->m_aLocalIds[g_Config.m_ClDummy] : GameClient()->m_Snap.m_LocalClientId;
+	const bool HasLocalClient = LocalId >= 0 && LocalId < MAX_CLIENTS && GameClient()->m_aClients[LocalId].m_Active;
+	if(!HasLocalClient && !Preview)
+		return;
+	const int LocalTeam = HasLocalClient ? GameClient()->m_aClients[LocalId].m_Team : -1;
+
+	struct SEntry
+	{
+		int m_ClientId;
+		int m_Count;
+	};
+	std::vector<SEntry> vEntries;
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	{
+		if(!GameClient()->m_aClients[ClientId].m_Active ||
+			!GameClient()->m_Snap.m_apPlayerInfos[ClientId] ||
+			(LocalTeam >= 0 && GameClient()->m_aClients[ClientId].m_Team != LocalTeam))
+			continue;
+		vEntries.push_back({ClientId, GameClient()->m_TClient.GetGoresDrownCount(ClientId)});
+	}
+	if(vEntries.empty() && Preview)
+		vEntries.push_back({-1, 0});
+	if(vEntries.empty())
+		return;
+
+	std::stable_sort(vEntries.begin(), vEntries.end(), [](const SEntry &Left, const SEntry &Right) {
+		if(Left.m_Count != Right.m_Count)
+			return Left.m_Count > Right.m_Count;
+		return Left.m_ClientId < Right.m_ClientId;
+	});
+
+	const int MaxRows = std::clamp(g_Config.m_QmGoresDrownBoardMaxPlayers, 1, 16);
+	const int RowCount = minimum((int)vEntries.size(), MaxRows);
+	const bool HasMoreRows = (int)vEntries.size() > RowCount;
+	const bool ShowTee = g_Config.m_QmGoresDrownBoardShowTee != 0;
+	const char *pTitle = Localize("Drown deaths");
+	constexpr float TitleFontSize = 10.0f;
+	constexpr float RowFontSize = 9.0f;
+	constexpr float MoreFontSize = 8.0f;
+	constexpr float PaddingX = 7.0f;
+	constexpr float PaddingY = 6.0f;
+	constexpr float TitleHeight = 12.0f;
+	constexpr float RowHeight = 11.0f;
+	constexpr float MoreHeight = 10.0f;
+	constexpr float TeeSize = 10.0f;
+	constexpr float TeeGap = 3.0f;
+
+	float BoardWidth = TextRender()->TextWidth(TitleFontSize, pTitle);
+	for(int Index = 0; Index < RowCount; ++Index)
+	{
+		char aLine[128];
+		const char *pName = vEntries[Index].m_ClientId >= 0 ? GameClient()->m_aClients[vEntries[Index].m_ClientId].m_aName : Localize("Teammate");
+		str_format(aLine, sizeof(aLine), "%s: %d", pName, vEntries[Index].m_Count);
+		BoardWidth = maximum(BoardWidth, TextRender()->TextWidth(RowFontSize, aLine) + (ShowTee ? TeeSize + TeeGap : 0.0f));
+	}
+	if(HasMoreRows)
+		BoardWidth = maximum(BoardWidth, TextRender()->TextWidth(MoreFontSize, Localize("More teammates...")));
+
+	BoardWidth = maximum(BoardWidth + PaddingX * 2.0f, 72.0f);
+	const float BoardHeight = PaddingY * 2.0f + TitleHeight + RowCount * RowHeight + (HasMoreRows ? MoreHeight : 0.0f);
+	const float CenterX = 150.0f * Graphics()->ScreenAspect();
+	const float BoardX = std::clamp(CenterX - BoardWidth / 2.0f, 0.0f, maximum(0.0f, m_Width - BoardWidth));
+	const float BoardY = QmHudTopEffectY(35.0f, BoardHeight, BoardX, BoardX + BoardWidth, m_MediaIslandLastVisibleRect, m_MediaIslandLastVisibleRectValid);
+	const CUIRect BoardRect{BoardX, BoardY, BoardWidth, BoardHeight};
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::GoresDrownBoard, BoardRect);
+
+	Ui()->RenderGaussianBlur(BoardRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	ColorRGBA BackgroundColor = ui_token::color::SURFACE_GLASS;
+	BackgroundColor.a *= RenderAlpha;
+	Graphics()->DrawRect(BoardX, BoardY, BoardWidth, BoardHeight, BackgroundColor, HudEditorScope.m_Corners, ui_token::radius::BASE);
+
+	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
+	ColorRGBA BoardTextColor = TextRender()->DefaultTextColor();
+	BoardTextColor.a *= RenderAlpha;
+	ColorRGBA BoardOutlineColor = TextRender()->DefaultTextOutlineColor();
+	BoardOutlineColor.a *= RenderAlpha;
+	TextRender()->TextColor(BoardTextColor);
+	TextRender()->TextOutlineColor(BoardOutlineColor);
+
+	const float ContentCenterX = BoardX + BoardWidth / 2.0f;
+	TextRender()->Text(ContentCenterX - TextRender()->TextWidth(TitleFontSize, pTitle) / 2.0f, BoardY + PaddingY, TitleFontSize, pTitle);
+	for(int Index = 0; Index < RowCount; ++Index)
+	{
+		char aLine[128];
+		const int ClientId = vEntries[Index].m_ClientId;
+		const char *pName = ClientId >= 0 ? GameClient()->m_aClients[ClientId].m_aName : Localize("Teammate");
+		str_format(aLine, sizeof(aLine), "%s: %d", pName, vEntries[Index].m_Count);
+		const float Y = BoardY + PaddingY + TitleHeight + Index * RowHeight;
+		const float TextWidth = TextRender()->TextWidth(RowFontSize, aLine);
+		const float RowWidth = TextWidth + (ShowTee ? TeeSize + TeeGap : 0.0f);
+		const float RowLeft = ContentCenterX - RowWidth / 2.0f;
+		if(ShowTee && ClientId >= 0)
+		{
+			CTeeRenderInfo TeeInfo = GameClient()->m_aClients[ClientId].m_RenderInfo;
+			TeeInfo.m_Size = TeeSize;
+			const CAnimState *pIdleState = CAnimState::GetIdle();
+			vec2 OffsetToMid;
+			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
+			RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(RowLeft + TeeSize / 2.0f, Y + RowHeight * 0.5f + OffsetToMid.y), RenderAlpha);
+		}
+		TextRender()->Text(RowLeft + (ShowTee ? TeeSize + TeeGap : 0.0f), Y, RowFontSize, aLine);
+	}
+	if(HasMoreRows)
+	{
+		const char *pMore = Localize("More teammates...");
+		TextRender()->Text(ContentCenterX - TextRender()->TextWidth(MoreFontSize, pMore) / 2.0f, BoardY + PaddingY + TitleHeight + RowCount * RowHeight, MoreFontSize, pMore);
+	}
+
+	TextRender()->TextColor(PreviousTextColor);
+	TextRender()->TextOutlineColor(PreviousOutlineColor);
+	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
 void CHud::RenderRecord()

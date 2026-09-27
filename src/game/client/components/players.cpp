@@ -2088,6 +2088,40 @@ void CPlayers::OnRender()
 	const bool FollowingPlayer = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW && GameClient()->m_Snap.m_SpecInfo.m_Active;
 	const int RenderLastId = FollowingPlayer ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : LocalClientId;
 
+	// 旁观/暂停玩家自身的 Tee 不随快照下发，用 x_spec 幽灵画在其旁观位置上，
+	// 否则玩家进入旁观后在世界里完全不可见。皮肤与渲染信息本帧内不变。
+	const bool SpectatorTeeRenderable =
+		GameClient()->m_Skins.FindOrNullptr("x_spec") != nullptr &&
+		SpectatorTeeRenderInfo() != nullptr &&
+		SpectatorTeeRenderInfo()->TeeRenderInfo().Valid();
+	if(SpectatorTeeRenderable)
+	{
+		// render spectating players
+		for(const auto &Client : GameClient()->m_aClients)
+		{
+			if(!Client.m_SpecCharPresent)
+				continue;
+
+			const int ClientId = Client.ClientId();
+			float Alpha = (GameClient()->IsOtherTeam(ClientId) || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.f : 1.f;
+			if(ClientId == -2) // ghost
+			{
+				Alpha = g_Config.m_ClRaceGhostAlpha / 100.f;
+			}
+			if(!ScreenRect.Inside(Client.m_SpecChar))
+				continue;
+			// HJ大佬辅助：/pause 的旁观者保存在世界里的 x_spec 幽灵可整体调暗，
+			// Alpha 只在这里乘算一次，不影响未暂停的旁观者。
+			Alpha = ResolveQmPausedSpectatorAlpha(
+				g_Config.m_QmPausedSpectatorFade != 0,
+				g_Config.m_QmPausedSpectatorAlpha,
+				Client.m_Paused,
+				Client.m_SpecCharPresent,
+				Alpha);
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &SpectatorTeeRenderInfo()->TeeRenderInfo(), EMOTE_BLINK, vec2(1, 0), Client.m_SpecChar, Alpha);
+		}
+	}
+
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
 	{
 		if(ClientId == RenderLastId || !IsPlayerInfoAvailable(ClientId))
@@ -2140,6 +2174,17 @@ void CPlayers::CreateNinjaTeeRenderInfo()
 	NinjaSkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
 	str_copy(NinjaSkinDescriptor.m_aSkinName, "x_ninja");
 	m_pNinjaTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(NinjaTeeRenderInfo, NinjaSkinDescriptor);
+}
+
+void CPlayers::CreateSpectatorTeeRenderInfo()
+{
+	CTeeRenderInfo SpectatorTeeRenderInfo;
+	SpectatorTeeRenderInfo.m_Size = 64.0f;
+	SpectatorTeeRenderInfo.m_TeeRenderFlags = TEE_PREVIEW_LAYER_BODY_OUTLINE;
+	CSkinDescriptor SpectatorSkinDescriptor;
+	SpectatorSkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SIX;
+	str_copy(SpectatorSkinDescriptor.m_aSkinName, "x_spec");
+	m_pSpectatorTeeRenderInfo = GameClient()->CreateManagedTeeRenderInfo(SpectatorTeeRenderInfo, SpectatorSkinDescriptor);
 }
 
 void CPlayers::OnMapLoad()
@@ -2231,4 +2276,5 @@ void CPlayers::OnInit()
 	Graphics()->QuadsSetRotation(0.f);
 
 	CreateNinjaTeeRenderInfo();
+	CreateSpectatorTeeRenderInfo();
 }

@@ -33,6 +33,33 @@ namespace ui_widget
 		float m_IndicatorInset = 2.0f; // 滑块相对 Tab 槽的内缩
 	};
 
+	// 胶囊 Tab 的纵向命中容差：胶囊只有一行高（SUB_TAB_HEIGHT），按在上下边缘、或按下后
+	// 轻微移动几像素都会被判定成"点到了胶囊外面"。槽位只在纵向额外外扩这么多，横向不外扩，
+	// 避免相邻页签互相抢点击。
+	inline constexpr float CAPSULE_TAB_HIT_SLOP = 4.0f;
+
+	// 纯几何命中判定：返回 (X, Y) 落在哪个槽位上，未命中返回 -1。X 用半开区间（与
+	// CUIRect::Inside 一致），Y 额外给 Slop 的上下容差。
+	inline int CapsuleTabBarSlotAtPoint(const CUIRect *pSlots, int Count, float X, float Y, float HitSlop = CAPSULE_TAB_HIT_SLOP)
+	{
+		if(pSlots == nullptr || Count <= 0)
+			return -1;
+		const float Slop = std::max(0.0f, HitSlop);
+		for(int i = 0; i < Count; ++i)
+		{
+			const CUIRect &Slot = pSlots[i];
+			if(X >= Slot.x && X < Slot.x + Slot.w && Y >= Slot.y - Slop && Y < Slot.y + Slot.h + Slop)
+				return i;
+		}
+		return -1;
+	}
+
+	// 直接命中判定：本帧左键刚按下时返回被按下的页签下标，否则返回 -1。
+	// DoButton_MenuTab 的 hot→active 两帧链路要求「上一帧已经 hot」且「抬起时仍在同一槽内」
+	// 才提交选择，胶囊按在边缘或按下后轻微移动都会静默丢点击（页签有 hover 反馈却不切换）；
+	// 这里按当前鼠标位置直接判定，可见性要求与按钮一致（非 RenderOnly、未被裁剪、无弹窗遮挡）。
+	int CapsuleTabBarPressedIndex(const IUiContext &Ctx, const CUIRect *pSlots, int Count, float HitSlop = CAPSULE_TAB_HIT_SLOP);
+
 	// 槽位并集：胶囊容器覆盖整排 Tab（含 Tab 之间的间隙）。
 	inline CUIRect CapsuleTabBarRowRect(const CUIRect *pSlots, int Count)
 	{

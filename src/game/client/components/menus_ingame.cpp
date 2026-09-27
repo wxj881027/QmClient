@@ -2079,8 +2079,14 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 			pMapPrefix += 4; // 跳过 "Map:"
 			while(*pMapPrefix == ' ')
 				pMapPrefix++;
-			str_copy(pMapName, pMapPrefix, MaxLen);
-			return true;
+			const char *pSuffix = str_find(pMapPrefix, " | ");
+			int MapNameLen = pSuffix != nullptr ? (int)(pSuffix - pMapPrefix) : str_length(pMapPrefix);
+			while(MapNameLen > 0 && (pMapPrefix[MapNameLen - 1] == ' ' || pMapPrefix[MapNameLen - 1] == '\t'))
+				--MapNameLen;
+			if(MapNameLen <= 0)
+				return false;
+			str_copy(pMapName, pMapPrefix, minimum(MapNameLen + 1, MaxLen));
+			return pMapName[0] != '\0';
 		}
 
 		// 尝试匹配 "Name by Author" 格式
@@ -2095,7 +2101,7 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 		return false;
 	};
 
-	auto IsVisibleBySortMode = [this](int Stars) {
+	auto IsVisibleBySortMode = [this, &ExtractMapName](const CVoteOptionClient *pOption, int Stars) {
 		switch(m_CallvoteMapSort)
 		{
 		case ECallvoteMapSort::ALL:
@@ -2110,6 +2116,11 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 			return Stars == 4;
 		case ECallvoteMapSort::STAR_5:
 			return Stars == 5;
+		case ECallvoteMapSort::FAVORITES:
+		{
+			char aMapName[128];
+			return ExtractMapName(pOption->m_aDescription, aMapName, sizeof(aMapName)) && GameClient()->m_TClient.IsFavoriteMap(aMapName);
+		}
 		case ECallvoteMapSort::LOW_TO_HIGH:
 		case ECallvoteMapSort::HIGH_TO_LOW:
 			return Stars > 0;
@@ -2125,7 +2136,7 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 		if(!QmTextMatchesIncludeExcludeFilter(pOption->m_aDescription, m_FilterInput.GetString(), m_ExcludeInput.GetString()))
 			continue;
 		const int Stars = ParseCallvoteMapStars(pOption->m_aDescription);
-		if(!IsVisibleBySortMode(Stars))
+		if(!IsVisibleBySortMode(pOption, Stars))
 			continue;
 
 		aOptions[NumVoteOptions] = {pOption, i, Stars};
@@ -2170,6 +2181,9 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 
 		CUIRect Label;
 		Item.m_Rect.VMargin(2.0f, &Label);
+		CUIRect FavoriteButton;
+		Label.VSplitRight(24.0f, &Label, &FavoriteButton);
+		FavoriteButton.VMargin(1.0f, &FavoriteButton);
 
 		// 检查是否是收藏地图，用金色高亮
 		char aMapName[128];
@@ -2200,6 +2214,23 @@ bool CMenus::RenderServerControlServer(CUIRect MainView, bool UpdateScroll)
 		else
 		{
 			Ui()->DoLabel(&Label, pOption->m_aDescription, 13.0f, TEXTALIGN_ML);
+		}
+
+		if(ExtractMapName(pOption->m_aDescription, aMapName, sizeof(aMapName)))
+		{
+			if(Ui()->DoButtonLogic(pOption, 0, &FavoriteButton, BUTTONFLAG_RIGHT))
+			{
+				if(IsFavorite)
+					GameClient()->m_TClient.RemoveFavoriteMap(aMapName);
+				else
+					GameClient()->m_TClient.AddFavoriteMap(aMapName);
+				IsFavorite = !IsFavorite;
+			}
+			const char *pFavoriteIcon = IsFavorite ? "★" : "☆";
+			TextRender()->TextColor(IsFavorite ? ColorRGBA(1.0f, 0.85f, 0.0f, 1.0f) : TextRender()->DefaultTextColor());
+			Ui()->DoLabel(&FavoriteButton, pFavoriteIcon, 13.0f, TEXTALIGN_MC);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+			GameClient()->m_Tooltips.DoToolTip(pOption, &FavoriteButton, IsFavorite ? Localize("Right-click to remove from favorites") : Localize("Right-click to add to favorites"));
 		}
 	}
 
@@ -2406,6 +2437,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 			Localize("3 stars"),
 			Localize("4 stars"),
 			Localize("5 stars"),
+			Localize("Favorites"),
 			Localize("Low to high"),
 			Localize("High to low"),
 		};

@@ -362,30 +362,6 @@ class CHud : public CComponent
 	IGraphics::CRenderTargetHandle m_DummyMiniViewRenderTarget;
 	int m_DummyMiniViewRenderTargetWidth = 0;
 	int m_DummyMiniViewRenderTargetHeight = 0;
-	struct SHudWeaponPresentationState
-	{
-		bool m_aClientInitialized[MAX_CLIENTS] = {};
-		float m_aaTargetX[MAX_CLIENTS][NUM_WEAPONS] = {};
-		float m_aaTargetY[MAX_CLIENTS][NUM_WEAPONS] = {};
-		float m_aaTargetAlpha[MAX_CLIENTS][NUM_WEAPONS] = {};
-		float m_aaTargetScale[MAX_CLIENTS][NUM_WEAPONS] = {};
-
-		void Reset()
-		{
-			for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
-			{
-				m_aClientInitialized[ClientId] = false;
-				for(int Weapon = 0; Weapon < NUM_WEAPONS; ++Weapon)
-				{
-					m_aaTargetX[ClientId][Weapon] = 0.0f;
-					m_aaTargetY[ClientId][Weapon] = 0.0f;
-					m_aaTargetAlpha[ClientId][Weapon] = 0.0f;
-					m_aaTargetScale[ClientId][Weapon] = 1.0f;
-				}
-			}
-		}
-	};
-	SHudWeaponPresentationState m_WeaponPresentationState;
 	struct SHudRecordingStatusAnimState
 	{
 		float m_TargetWidth = 0.0f;
@@ -609,6 +585,7 @@ public:
 private:
 	void RenderRecord();
 	void RenderDDRaceEffects();
+	void RenderGoresDrownBoard();
 	float m_TimeCpDiff;
 	float m_aPlayerRecord[NUM_DUMMIES];
 	float m_FinishTimeDiff;

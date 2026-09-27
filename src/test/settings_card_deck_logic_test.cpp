@@ -161,6 +161,54 @@ TEST(SettingsPageLayout, ContentRowFlowKeepsConditionalRowsAndMeasuredHeightInSy
 	EXPECT_FLOAT_EQ(1000.0f - Content.h, ResolveSettingsContentFlowHeight(Metrics, {Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_LineHeight}));
 }
 
+TEST(SettingsPageLayout, AutoRowHeightUsesNaturalTextHeight)
+{
+	EXPECT_FLOAT_EQ(24.0f, ResolveSettingsAutoRowHeight(24.0f, 12.0f));
+	EXPECT_FLOAT_EQ(36.0f, ResolveSettingsAutoRowHeight(24.0f, 36.0f));
+	EXPECT_FLOAT_EQ(24.0f, ResolveSettingsAutoRowHeight(24.0f, -4.0f));
+}
+
+TEST(SettingsPageLayout, ColumnFlowUsesLongestColumnAndPreservesBottom)
+{
+	CUIRect Content{0.0f, 0.0f, 400.0f, 500.0f};
+	Content.HSplitTop(20.0f, nullptr, &Content);
+	CUIRect LeftColumn = Content;
+	CUIRect RightColumn = Content;
+	LeftColumn.HSplitTop(180.0f, nullptr, &LeftColumn);
+	RightColumn.HSplitTop(320.0f, nullptr, &RightColumn);
+
+	CommitSettingsColumnContentFlow(Content, LeftColumn, RightColumn);
+
+	EXPECT_FLOAT_EQ(340.0f, Content.y);
+	EXPECT_FLOAT_EQ(160.0f, Content.h);
+}
+
+TEST(SettingsCard, ContentMeasureProbeMatchesConsumedLayout)
+{
+	const float Measured = ResolveSettingsCardContentHeight([](CUIRect &Content) {
+		Content.HSplitTop(18.0f, nullptr, &Content);
+		Content.HSplitTop(6.0f, nullptr, &Content);
+	},
+		320.0f);
+	EXPECT_FLOAT_EQ(24.0f, Measured);
+
+	EXPECT_FLOAT_EQ(0.0f, ResolveSettingsCardContentHeight(FSettingsCardRenderMeasured{}, 320.0f));
+}
+
+TEST(SettingsCard, ContentMeasureProbeClampsInvalidWidthAndOverconsumption)
+{
+	EXPECT_FLOAT_EQ(0.0f, ResolveSettingsCardContentHeight([](CUIRect &Content) {
+		Content.HSplitTop(Content.w, nullptr, &Content);
+	},
+				      -10.0f));
+
+	const float Measured = ResolveSettingsCardContentHeight([](CUIRect &Content) {
+		Content.HSplitTop(SETTINGS_CARD_CONTENT_MEASURE_PROBE_HEIGHT + 100.0f, nullptr, &Content);
+	},
+		320.0f);
+	EXPECT_FLOAT_EQ(SETTINGS_CARD_CONTENT_MEASURE_PROBE_HEIGHT, Measured);
+}
+
 TEST(SettingsCard, ContentClipAllowsFocusRingButNeverEscapesTheCard)
 {
 	const CUIRect Card{10.0f, 20.0f, 200.0f, 100.0f};

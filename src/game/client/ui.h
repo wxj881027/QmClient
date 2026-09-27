@@ -458,12 +458,18 @@ class CCachedText
 	int m_CursorFlags = 0;
 	STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
 	float m_MaxCharacterHeight = 0.0f;
+	// 记录创建容器的渲染器，析构时才能归还容器；仅 Update 成功创建后非空。
+	ITextRender *m_pTextContainerOwner = nullptr;
 
 public:
 	CCachedText() = default;
 	// 复制会导致两个所有者共享同一个文本容器。
 	CCachedText(const CCachedText &) = delete;
 	CCachedText &operator=(const CCachedText &) = delete;
+	// 析构必须归还容器：CUi::RenderTime 等便捷重载会在栈上创建临时对象，
+	// 漏归还的容器会一直留在文本渲染器的容器表里（use_count 归 1），
+	// 下次窗口尺寸/UI 缩放变化时触发 text.cpp 的“container was forgotten”断言。
+	~CCachedText();
 
 	void Update(ITextRender *pTextRender, const char *pText, float FontSize, float LineWidth = -1.0f, int CursorFlags = TEXTFLAG_RENDER);
 	void Render(ITextRender *pTextRender, vec2 Pos, ColorRGBA Color) const;
@@ -1134,11 +1140,11 @@ public:
 
 	// render time with hundredths or thousands aligned to the right of the UIRect
 	void RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFinished, int Millis, bool TrueMilliseconds, CCachedText &SecondsText, CCachedText &MillisText, ColorRGBA Color) const;
-	void RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFinished, int Millis, bool TrueMilliseconds) const
+	void RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFinished, int Millis, bool TrueMilliseconds, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const
 	{
 		CCachedText SecondsText;
 		CCachedText MillisText;
-		RenderTime(TimeRect, FontSize, Seconds, NotFinished, Millis, TrueMilliseconds, SecondsText, MillisText, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		RenderTime(TimeRect, FontSize, Seconds, NotFinished, Millis, TrueMilliseconds, SecondsText, MillisText, Color);
 	}
 
 	// progress spinner

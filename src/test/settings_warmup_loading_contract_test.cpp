@@ -218,7 +218,8 @@ TEST(SettingsWarmupLoadingContract, TextPlanCollectionUsesPrewarmOnlyRenderers)
 	const std::string QmClient = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 
 	EXPECT_NE(Settings.find("RenderSettingsTClient(ContentView, CollectingMenuTextPlan);"), std::string::npos);
-	EXPECT_NE(Settings.find("RenderSettingsQmClient(ContentView, false, CollectingMenuTextPlan);"), std::string::npos);
+	// 贡献者页独立后 QmClient 页走默认 ContributorsPage=false，预热调用只带文本计划参数。
+	EXPECT_NE(Settings.find("RenderSettingsQmClient(ContentView, CollectingMenuTextPlan);"), std::string::npos);
 	EXPECT_NE(QmClient.find("Ctx.m_pAnim = PrewarmOnly ? nullptr"), std::string::npos);
 	EXPECT_NE(QmClient.find("if(!PrewarmOnly)"), std::string::npos);
 	EXPECT_EQ(QmClient.find("m_SettingsPageSwitchActive = m_SettingsPageSwitchActive || TabTransitionActive;"), std::string::npos);

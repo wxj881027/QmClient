@@ -293,6 +293,31 @@ TEST(QmNameplateHookStrongWeak, ScopeFiltersExpectedPlayers)
 	EXPECT_FALSE(ShouldShowQmHookStrongWeakScope(99, false, true, false));
 }
 
+// 水中旁观者虚化只作用于「已 /pause 且世界里还留着旁观 Tee」的玩家，
+// 其余玩家（含未暂停的旁观者）必须保持原有透明度。
+TEST(QmPausedSpectatorFade, OnlyFadesPausedPlayersWithSpectatorTeeInWorld)
+{
+	constexpr float BaseAlpha = 0.8f;
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, 40, true, true, BaseAlpha), 0.32f);
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, 40, false, true, BaseAlpha), BaseAlpha);
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, 40, true, false, BaseAlpha), BaseAlpha);
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, 40, false, false, BaseAlpha), BaseAlpha);
+}
+
+TEST(QmPausedSpectatorFade, DisabledOrFullOpacityKeepsBaseAlpha)
+{
+	constexpr float BaseAlpha = 0.4f;
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(false, 0, true, true, BaseAlpha), BaseAlpha);
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, 100, true, true, BaseAlpha), BaseAlpha);
+}
+
+TEST(QmPausedSpectatorFade, ZeroOpacityHidesAndOutOfRangeValuesClamp)
+{
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, 0, true, true, 1.0f), 0.0f);
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, -20, true, true, 1.0f), 0.0f);
+	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, 250, true, true, 1.0f), 1.0f);
+}
+
 TEST(QmNameplateNameScope, OwnCharactersRespectCurrentAndLocalScopes)
 {
 	// 当前：只有当前操控角色显示自己的昵称（= 旧 cl_nameplates_own 行为）。

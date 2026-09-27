@@ -161,8 +161,15 @@ namespace qm_card_catalog
 			Add(Id, "qm:streamer", "Streamer Mode", "Protect names and skins while streaming", [pMenus, LineHeight, LineSpacing](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualStreamerContent(pMenus, Content, LineHeight, LineSpacing); });
 			return true;
 		case EQmModuleId::FocusMode:
+		{
 			Add(Id, "qm:focus_mode", "Zen Mode", "Hide UI for focused gameplay", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualFocusModeContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LineSpacing, LabelWidth); });
+			// 禅模式卡是目录里唯一的双列内容：左右两列各自消费自己的列矩形，父内容区只被推到底部、
+			// 高度不变；而通用内容探针统计的是 Content.h 的减少量，会把这张卡量成「总开关 + 按键」
+			// 两行高，卡片随之塌陷、内容画到卡外。因此这张卡单独判定高度：直接按自己的双列布局
+			// 推导，不经过探针，也不改动探针与 TClient 等自带测量卡片的路径。
+			Out.m_Measure = [Metrics](float) { return ResolveQmVisualFocusModeHeight(Metrics); };
 			return true;
+		}
 		case EQmModuleId::EntityOverlay:
 			Add(Id, "qm:entity_overlay", "Entity Layer Colors", "Adjust opacity of entity layers", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualEntityOverlayContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;

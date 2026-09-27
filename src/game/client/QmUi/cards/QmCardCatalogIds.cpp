@@ -32,6 +32,7 @@ namespace qm_card_catalog
 			"qm:key_binds",
 			"qm:emoticons",
 			"qm:mini_features",
+			"qm:better_scoreboard",
 			"qm:jump_hint",
 			"qm:weapon_trajectory",
 			"qm:friend_notify",
@@ -61,6 +62,7 @@ namespace qm_card_catalog
 			"qm:lyrics",
 			"qm:background_3d",
 			"qm:bind_status_hud",
+			"qm:gores_drown_board",
 		};
 
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)

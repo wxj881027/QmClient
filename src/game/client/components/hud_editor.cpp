@@ -21,12 +21,7 @@
 namespace
 {
 	constexpr float EPSILON = QmHudEditor::EPSILON;
-	constexpr float HUD_EDITOR_EDGE_ANCHOR_DISTANCE = QmHudEditor::SNAP_DISTANCE;
-
-	float HudEditorEdgeSnapDistance(EHudEditorElement Element)
-	{
-		return Element == EHudEditorElement::MediaIsland ? QmHudEditor::MEDIA_ISLAND_EDGE_SNAP_DISTANCE : HUD_EDITOR_EDGE_ANCHOR_DISTANCE;
-	}
+	constexpr float HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE = QmHudEditor::EDGE_COINCIDENCE_DISTANCE;
 
 	float Clamp01(float Value)
 	{
@@ -410,23 +405,26 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	Scope.m_ScreenY0 = ScreenY0;
 	Scope.m_ScreenX1 = ScreenX1;
 	Scope.m_ScreenY1 = ScreenY1;
-	Scope.m_EdgeMargin = EdgeMargin;
-	const float EdgeAnchorDistance = HudEditorEdgeSnapDistance(Element);
-	Scope.m_AnchoredLeft = std::fabs(Scope.m_VisibleRect.x - EffScreenX0) <= EdgeAnchorDistance;
-	Scope.m_AnchoredRight = std::fabs(Scope.m_VisibleRect.x + Scope.m_VisibleRect.w - (EffScreenX0 + EffScreenW)) <= EdgeAnchorDistance;
-	Scope.m_AnchoredTop = std::fabs(Scope.m_VisibleRect.y - EffScreenY0) <= EdgeAnchorDistance;
-	Scope.m_AnchoredBottom = std::fabs(Scope.m_VisibleRect.y + Scope.m_VisibleRect.h - (EffScreenY0 + EffScreenH)) <= EdgeAnchorDistance;
-	const bool TouchesScreenLeft = std::fabs(Scope.m_VisibleRect.x - ScreenX0) <= EdgeAnchorDistance;
-	const bool TouchesScreenRight = std::fabs(Scope.m_VisibleRect.x + Scope.m_VisibleRect.w - ScreenX1) <= EdgeAnchorDistance;
-	const bool TouchesScreenTop = std::fabs(Scope.m_VisibleRect.y - ScreenY0) <= EdgeAnchorDistance;
-	const bool TouchesScreenBottom = std::fabs(Scope.m_VisibleRect.y + Scope.m_VisibleRect.h - ScreenY1) <= EdgeAnchorDistance;
-	if(TouchesScreenLeft)
+	// 贴边判定只认重合：HUD 可见边与窗口边真正重合时才算贴边。
+	// 邻近但未重合的元素保持普通圆角、不输出贴边锚定，也不施加贴边边距。
+	Scope.m_AnchoredLeft = std::fabs(Scope.m_VisibleRect.x - ScreenX0) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
+	Scope.m_AnchoredRight = std::fabs(Scope.m_VisibleRect.x + Scope.m_VisibleRect.w - ScreenX1) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
+	Scope.m_AnchoredTop = std::fabs(Scope.m_VisibleRect.y - ScreenY0) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
+	Scope.m_AnchoredBottom = std::fabs(Scope.m_VisibleRect.y + Scope.m_VisibleRect.h - ScreenY1) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
+	// 可见边已经贴到窗口边时，该方向不再额外缩进边距：仍按原配置缩进会把元素推出屏幕。
+	// m_Anchored* 已按同一套重合判定得出，调用方的 ApplyEdgeMargin 因此自动退化为恒等变换。
+	Scope.m_EdgeMargin = {
+		Scope.m_AnchoredLeft ? 0.0f : SafeLeft,
+		Scope.m_AnchoredRight ? 0.0f : SafeRight,
+		Scope.m_AnchoredTop ? 0.0f : SafeTop,
+		Scope.m_AnchoredBottom ? 0.0f : SafeBottom};
+	if(Scope.m_AnchoredLeft)
 		Scope.m_Corners &= ~IGraphics::CORNER_L;
-	if(TouchesScreenRight)
+	if(Scope.m_AnchoredRight)
 		Scope.m_Corners &= ~IGraphics::CORNER_R;
-	if(TouchesScreenTop)
+	if(Scope.m_AnchoredTop)
 		Scope.m_Corners &= ~IGraphics::CORNER_T;
-	if(TouchesScreenBottom)
+	if(Scope.m_AnchoredBottom)
 		Scope.m_Corners &= ~IGraphics::CORNER_B;
 
 	if(pVisible != nullptr)
@@ -442,7 +440,7 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 		pVisible->m_StateOffsetX = TransformToVisibleOffsetX * pUiScreen->w / ScreenW;
 		pVisible->m_StateOffsetY = TransformToVisibleOffsetY * pUiScreen->h / ScreenH;
 		pVisible->m_Scalable = Scalable;
-		pVisible->m_EdgeMargin = EdgeMargin;
+		pVisible->m_EdgeMargin = Scope.m_EdgeMargin;
 	}
 	return true;
 }
@@ -819,6 +817,8 @@ void CHudEditor::OnRender()
 			const float Scale = std::clamp(State.m_ScalePercent / 100.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
 			const float Width = Visible.m_BaseWidth * Scale;
 			const float Height = Visible.m_BaseHeight * Scale;
+			const float VisibleOffsetX = Visible.m_StateOffsetX * Scale;
+			const float VisibleOffsetY = Visible.m_StateOffsetY * Scale;
 			const SAlignmentReferences References = BuildAlignmentReferences(Visible.m_Element);
 			const float SafeLeft = maximum(0.0f, Visible.m_EdgeMargin.m_Left);
 			const float SafeRight = maximum(0.0f, Visible.m_EdgeMargin.m_Right);
@@ -828,21 +828,23 @@ void CHudEditor::OnRender()
 			const float SafeScreenY = pUiScreen->y + SafeTop;
 			const float SafeScreenW = maximum(QmHudEditor::EPSILON, pUiScreen->w - SafeLeft - SafeRight);
 			const float SafeScreenH = maximum(QmHudEditor::EPSILON, pUiScreen->h - SafeTop - SafeBottom);
-			const float ScreenEdgeSnapDistance = HudEditorEdgeSnapDistance(Visible.m_Element);
-			const QmHudEditor::SSnapAxisResult SnapX = QmHudEditor::SnapAxisToGuidesEx(Ui()->MouseX() - m_DragGrabOffset.x, Width, SafeScreenX, SafeScreenW, References.m_aXReferences.data(), References.m_XCount, ScreenEdgeSnapDistance);
-			const QmHudEditor::SSnapAxisResult SnapY = QmHudEditor::SnapAxisToGuidesEx(Ui()->MouseY() - m_DragGrabOffset.y, Height, SafeScreenY, SafeScreenH, References.m_aYReferences.data(), References.m_YCount, ScreenEdgeSnapDistance);
+			// 屏幕边只在与可见边真正重合时吸附；对齐参考线继续按邻近半径吸附。
+			const QmHudEditor::SSnapAxisResult SnapX = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseX() - m_DragGrabOffset.x, Width, SafeScreenX, SafeScreenW, References.m_aXReferences.data(), References.m_XCount, VisibleOffsetX);
+			const QmHudEditor::SSnapAxisResult SnapY = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseY() - m_DragGrabOffset.y, Height, SafeScreenY, SafeScreenH, References.m_aYReferences.data(), References.m_YCount, VisibleOffsetY);
 			const float X = SnapX.m_Position;
 			const float Y = SnapY.m_Position;
 			ShowDragGuideX = SnapX.m_HasGuide;
 			ShowDragGuideY = SnapY.m_HasGuide;
 			DragGuideX = SnapX.m_GuidePosition;
 			DragGuideY = SnapY.m_GuidePosition;
-			const bool SnapLeft = std::fabs(X - (pUiScreen->x + SafeLeft)) <= ScreenEdgeSnapDistance;
-			const bool SnapRight = std::fabs(X + Width - (pUiScreen->x + pUiScreen->w - SafeRight)) <= ScreenEdgeSnapDistance;
-			const bool SnapTop = std::fabs(Y - (pUiScreen->y + SafeTop)) <= ScreenEdgeSnapDistance;
-			const bool SnapBottom = std::fabs(Y + Height - (pUiScreen->y + pUiScreen->h - SafeBottom)) <= ScreenEdgeSnapDistance;
-			State.m_PosXPermille = SnapLeft ? 0 : (SnapRight ? POSITION_SCALE : std::clamp(round_to_int((X - Visible.m_StateOffsetX * Scale - pUiScreen->x) / pUiScreen->w * POSITION_SCALE), 0, POSITION_SCALE));
-			State.m_PosYPermille = SnapTop ? 0 : (SnapBottom ? POSITION_SCALE : std::clamp(round_to_int((Y - Visible.m_StateOffsetY * Scale - pUiScreen->y) / pUiScreen->h * POSITION_SCALE), 0, POSITION_SCALE));
+			const float VisibleX = X + VisibleOffsetX;
+			const float VisibleY = Y + VisibleOffsetY;
+			const bool SnapLeft = std::fabs(VisibleX - (pUiScreen->x + SafeLeft)) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
+			const bool SnapRight = std::fabs(VisibleX + Width - (pUiScreen->x + pUiScreen->w - SafeRight)) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
+			const bool SnapTop = std::fabs(VisibleY - (pUiScreen->y + SafeTop)) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
+			const bool SnapBottom = std::fabs(VisibleY + Height - (pUiScreen->y + pUiScreen->h - SafeBottom)) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
+			State.m_PosXPermille = SnapLeft ? 0 : (SnapRight ? POSITION_SCALE : std::clamp(round_to_int((X - VisibleOffsetX - pUiScreen->x) / pUiScreen->w * POSITION_SCALE), 0, POSITION_SCALE));
+			State.m_PosYPermille = SnapTop ? 0 : (SnapBottom ? POSITION_SCALE : std::clamp(round_to_int((Y - VisibleOffsetY - pUiScreen->y) / pUiScreen->h * POSITION_SCALE), 0, POSITION_SCALE));
 			m_DirtyLayout = true;
 		}
 	}

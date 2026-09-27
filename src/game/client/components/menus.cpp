@@ -787,6 +787,22 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardOrderMigrated = 1;
 	}
+	// DDNet 署名卡搬到了顶层「贡献者」页的独立 deck；旧布局可能把它记在栖梦贡献者 tab 下，
+	// 那样新 deck 找不到它，页面会整页空白。这里无条件把它归位到自己的 deck tab。
+	{
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		const int DdnetCreditsIndex = Candidate.FindByStableId("deck:qmclient-contributors-ddnet");
+		if(DdnetCreditsIndex >= 0 && str_comp(Candidate.Entry(DdnetCreditsIndex).m_pDefaultTab, "qmclient-contributors-ddnet") != 0)
+		{
+			Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "qmclient-contributors-ddnet", 0, 0);
+			if(!PersistCandidate(Candidate, true))
+			{
+				m_SettingsCardOrderLoaded = true;
+				return;
+			}
+		}
+	}
 	if(g_Config.m_QmCardLayoutVersion < 1)
 	{
 		qm_card_order::CModel Candidate;
@@ -802,12 +818,10 @@ void CMenus::LoadSettingsCardOrderModel()
 		const std::vector<const char *> vContributorIds = {
 			"deck:qmclient-contributors-community",
 			"deck:qmclient-contributors-sponsors",
-			"deck:qmclient-contributors-ddnet",
 		};
 		const bool ContributorsStillOldDefault =
 			IsAtOldDefault("deck:qmclient-contributors-community", "qmclient-contributors", 0, 0) &&
 			IsAtOldDefault("deck:qmclient-contributors-sponsors", "qmclient-contributors", 0, 1) &&
-			IsAtOldDefault("deck:qmclient-contributors-ddnet", "qmclient-contributors", 0, 0) &&
 			qm_card_order::TabContainsOnlyStableIds(Candidate, "qmclient-contributors", vContributorIds);
 		if(ContributorsStillOldDefault)
 		{
@@ -2253,6 +2267,12 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
+	const bool DemoBrowserScreenshotsActive = ActivePage == PAGE_DEMOS && DemoBrowserBrowsingScreenshots();
+	const bool DemoBrowserReplaysActive = ActivePage == PAGE_DEMOS && !DemoBrowserBrowsingScreenshots();
+	auto OpenDemoBrowser = [&](const EDemoBrowserSource Source) {
+		SetDemoBrowserSource(Source);
+		NewPage = PAGE_DEMOS;
+	};
 	auto RenderFavoriteMapsIcon = [&](const CUIRect &Tab, const bool OnIndicator) {
 		const float IconSide = minimum(Tab.w, Tab.h) * 0.56f;
 		const CUIRect IconRect{Tab.x + (Tab.w - IconSide) * 0.5f, Tab.y + (Tab.h - IconSide) * 0.5f, IconSide, IconSide};
@@ -2343,16 +2363,28 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 
 		if(ClientState == IClient::STATE_ONLINE)
 		{
-			// 在线菜单右侧始终保留回放、编辑器、设置、退出四个图标。
+			// 在线菜单右侧始终保留截图、回放、编辑器、设置、退出五个图标。
 			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
 			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
 			static CButtonContainer s_DemoButton;
-			if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, ActivePage == PAGE_DEMOS, &Button, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover))
+			if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &Button, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover))
 			{
-				NewPage = PAGE_DEMOS;
+				OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
 			}
-			MenubarTrackActive(PAGE_DEMOS, Button);
+			if(DemoBrowserReplaysActive)
+				MenubarTrackActive(PAGE_DEMOS, Button);
 			GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &Button, Localize("Demos"));
+
+			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
+			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
+			static CButtonContainer s_ScreenshotButton;
+			if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &Button, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover))
+			{
+				OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
+			}
+			if(DemoBrowserScreenshotsActive)
+				MenubarTrackActive(PAGE_DEMOS, Button);
+			GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &Button, Localize("Screenshots"));
 
 			CompactOnlineMenuTabs = Graphics()->ScreenAspect() <= 1.45f || Box.w < 690.0f;
 		}
@@ -2367,13 +2399,31 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 				const float CircleSize = minimum(DemoButton.w, DemoButton.h);
 				DemoButton.x += (DemoButton.w - CircleSize) / 2.0f;
 				DemoButton.w = CircleSize;
-				if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, ActivePage == PAGE_DEMOS, &DemoButton, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
+				if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &DemoButton, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
 				{
-					NewPage = PAGE_DEMOS;
+					OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
 				}
-				MenubarTrackActive(PAGE_DEMOS, DemoButton);
+				if(DemoBrowserReplaysActive)
+					MenubarTrackActive(PAGE_DEMOS, DemoButton);
 			}
 			GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &Button, Localize("Demos"));
+
+			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
+			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
+			static CButtonContainer s_ScreenshotButton;
+			{
+				CUIRect ScreenshotButton = Button;
+				const float CircleSize = minimum(ScreenshotButton.w, ScreenshotButton.h);
+				ScreenshotButton.x += (ScreenshotButton.w - CircleSize) / 2.0f;
+				ScreenshotButton.w = CircleSize;
+				if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &ScreenshotButton, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
+				{
+					OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
+				}
+				if(DemoBrowserScreenshotsActive)
+					MenubarTrackActive(PAGE_DEMOS, ScreenshotButton);
+			}
+			GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &Button, Localize("Screenshots"));
 			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
 
 			Box.VSplitLeft(MenubarIconButtonSize, &Button, &Box);
@@ -2686,24 +2736,48 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			Box.VSplitRight(10.0f, &Box, nullptr);
 			Box.VSplitRight(33.0f, &Box, &Button);
 			static CButtonContainer s_DemoButton;
-			if(DoButton_MenuTab_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, ActivePage == PAGE_DEMOS, &Button, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_DEMOBUTTON]))
+			if(DoButton_MenuTab_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &Button, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_DEMOBUTTON]))
 			{
-				NewPage = PAGE_DEMOS;
+				OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
 			}
-			MenubarTrackActive(PAGE_DEMOS, Button);
+			if(DemoBrowserReplaysActive)
+				MenubarTrackActive(PAGE_DEMOS, Button);
 			GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &Button, Localize("Demos"));
+
+			Box.VSplitRight(10.0f, &Box, nullptr);
+			Box.VSplitRight(33.0f, &Box, &Button);
+			static CButtonContainer s_ScreenshotButton;
+			if(DoButton_MenuTab_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &Button, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_SCREENSHOTBUTTON]))
+			{
+				OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
+			}
+			if(DemoBrowserScreenshotsActive)
+				MenubarTrackActive(PAGE_DEMOS, Button);
+			GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &Button, Localize("Screenshots"));
 		}
 		else if(ClientState == IClient::STATE_OFFLINE)
 		{
 			Box.VSplitRight(10.0f, &Box, nullptr);
 			Box.VSplitRight(33.0f, &Box, &Button);
 			static CButtonContainer s_DemoButton;
-			if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, ActivePage == PAGE_DEMOS, &Button))
+			if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &Button))
 			{
-				NewPage = PAGE_DEMOS;
+				OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
 			}
-			MenubarTrackActive(PAGE_DEMOS, Button);
+			if(DemoBrowserReplaysActive)
+				MenubarTrackActive(PAGE_DEMOS, Button);
 			GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &Button, Localize("Demos"));
+
+			Box.VSplitRight(10.0f, &Box, nullptr);
+			Box.VSplitRight(33.0f, &Box, &Button);
+			static CButtonContainer s_ScreenshotButton;
+			if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &Button))
+			{
+				OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
+			}
+			if(DemoBrowserScreenshotsActive)
+				MenubarTrackActive(PAGE_DEMOS, Button);
+			GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &Button, Localize("Screenshots"));
 			Box.VSplitRight(10.0f, &Box, nullptr);
 
 			Box.VSplitLeft(33.0f, &Button, &Box);
@@ -3938,6 +4012,7 @@ void CMenus::OnInterfacesInit(CGameClient *pClient)
 void CMenus::OnInit()
 {
 	GameClient()->FrameScheduler()->Reset();
+	m_MapDifficultyCatalog.Load(Storage(), Console());
 
 	if(g_Config.m_ClShowWelcome)
 	{
@@ -5939,6 +6014,7 @@ const char *CMenus::CurrentQmUiPerfPage() const
 	case SETTINGS_TCLIENT: return "settings:tclient";
 	case SETTINGS_QMCLIENT: return "settings:qmclient";
 	case SETTINGS_SEARCH: return "settings:search";
+	case SETTINGS_CONTRIBUTORS: return "settings:contributors";
 	default: return "settings:unknown";
 	}
 }
@@ -5961,6 +6037,7 @@ const char *CMenus::CurrentQmUiPerfOperation() const
 	case SETTINGS_TCLIENT: return "settings_tclient";
 	case SETTINGS_QMCLIENT: return "settings_qmclient";
 	case SETTINGS_SEARCH: return "settings_search";
+	case SETTINGS_CONTRIBUTORS: return "settings_contributors";
 	default: return "settings_unknown";
 	}
 }
@@ -6111,6 +6188,8 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
 		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
 	}
+	else if(str_comp(pTab, "qmclient-contributors-ddnet") == 0)
+		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
 	else if(str_comp(pTab, "tclient") == 0)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
@@ -6337,6 +6416,7 @@ void CMenus::OnShutdown()
 	ClearSettingsTeePreviewCache();
 	ClearSettingsLanguageRowCache();
 	ResetDemoScreenshotPreview();
+	m_ScreenshotManager.ClearThumbnails(Graphics());
 	m_CommunityIcons.Shutdown();
 
 	// QmClient: 保存“最近缺失字形”集合，供下次启动后立即预热（详见 text.cpp）。

@@ -448,6 +448,22 @@ turkish = "Katkıda Bulunanlar"
 polish = "Współtwórcy"
 
 [[message]]
+key = "DDNet contributors and staff credits"
+[message.translations]
+simplified_chinese = "DDNet 贡献者与团队名单"
+traditional_chinese = "DDNet 貢獻者與團隊名單"
+japanese = "DDNet のコントリビューターとスタッフ"
+korean = "DDNet 기여자 및 스태프"
+russian = "Участники и команда DDNet"
+german = "DDNet-Mitwirkende und Team"
+spanish = "Contribuidores y equipo de DDNet"
+french = "Contributeurs et équipe DDNet"
+brazilian_portuguese = "Contribuidores e equipe do DDNet"
+portuguese = "Contribuidores e equipe do DDNet"
+turkish = "DDNet katkıda bulunanlar ve ekip"
+polish = "DDNet — współtwórcy i zespół"
+
+[[message]]
 key = "Controls"
 [message.translations]
 simplified_chinese = "控制"

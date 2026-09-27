@@ -57,6 +57,13 @@ MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color, 0x000000, CFGFLAG_CLIE
 MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color, 0x000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard surface color")
 MACRO_CONFIG_INT(QmUiOpacity, qm_ui_opacity, 30, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Interface transparency")
 MACRO_CONFIG_INT(QmMapBrowserOpacity, qm_map_browser_opacity, 30, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser transparency")
+MACRO_CONFIG_INT(QmMapBrowserEmptyOnly, qm_map_browser_empty_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser: show empty servers only")
+MACRO_CONFIG_INT(QmMapBrowserFavoriteOnly, qm_map_browser_favorite_only, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser: show favorite maps only")
+MACRO_CONFIG_INT(QmMapBrowserStarMask, qm_map_browser_star_mask, 0, 0, 62, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Map browser difficulty star filter bitmask (bits 1-5)")
+MACRO_CONFIG_INT(QmScreenshotWatermarkTimestamp, qm_screenshot_watermark_timestamp, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include timestamp")
+MACRO_CONFIG_INT(QmScreenshotWatermarkMap, qm_screenshot_watermark_map, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include map name")
+MACRO_CONFIG_INT(QmScreenshotWatermarkPosition, qm_screenshot_watermark_position, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right")
+MACRO_CONFIG_STR(QmScreenshotWatermarkText, qm_screenshot_watermark_text, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark custom text")
 MACRO_CONFIG_INT(QmScoreboardOpacity, qm_scoreboard_opacity, 30, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard transparency")
 MACRO_CONFIG_INT(QmShowOutdatedVersionWarning, qm_show_outdated_version_warning, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show outdated version warning")
 MACRO_CONFIG_INT(QmAutoUpdate, qm_auto_update, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically check for stable updates and install them on exit")
@@ -225,6 +232,8 @@ MACRO_CONFIG_INT(QmTitleShimmerSpeed, qm_title_shimmer_speed, 60, 0, 400, CFGFLA
 MACRO_CONFIG_INT(QmTitleBobWavelength, qm_title_bob_wavelength, 320, 16, 1024, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title bob wavelength in pixels")
 MACRO_CONFIG_INT(QmTitleBobSpeed, qm_title_bob_speed, 150, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title bob angular speed in 1/100 rad/s")
 MACRO_CONFIG_INT(QmTitleBobPixelSnap, qm_title_bob_pixel_snap, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Snap title bob offset to whole pixels (sharper glyphs, choppier motion)")
+MACRO_CONFIG_INT(QmShowNameplateTitle, qm_show_nameplate_title, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show QmClient title in player nameplate (0 = hide)")
+MACRO_CONFIG_INT(QmNameplateTitleAboveName, qm_nameplate_title_above_name, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Place title on a separate line above the player name instead of inline")
 MACRO_CONFIG_INT(QmWeaponTrajectory, qm_weapon_trajectory, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Weapon trajectory helper mode (0=Off, 1=On key, 2=Always)")
 MACRO_CONFIG_INT(QmWeaponTrajectoryGun, qm_weapon_trajectory_gun, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pistol guide line")
 MACRO_CONFIG_INT(QmWeaponTrajectoryNinja, qm_weapon_trajectory_ninja, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Predict ninja path")
@@ -250,6 +259,10 @@ MACRO_CONFIG_INT(QmAutoCloseChatOnUnfreeze, qm_auto_close_chat_on_unfreeze, 0, 0
 MACRO_CONFIG_INT(QmFreezeWakeupPopup, qm_freeze_wakeup_popup, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show hint at random top-left/right of player when main or dummy is hammered awake")
 MACRO_CONFIG_INT(QmAutoTeamLock, qm_auto_team_lock, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-lock after joining lockable team")
 MACRO_CONFIG_INT(QmAutoTeamLockDelay, qm_auto_team_lock_delay, 5, 0, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-lock delay (seconds)")
+MACRO_CONFIG_INT(QmAutoAcceptTeamInvite, qm_auto_accept_team_invite, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-accept team invites by sending /team <n>")
+// Paused spectator fade (HJ大佬辅助): 淡化身在水中且已 /pause 的旁观者
+MACRO_CONFIG_INT(QmPausedSpectatorFade, qm_paused_spectator_fade, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fade paused spectators in water")
+MACRO_CONFIG_INT(QmPausedSpectatorAlpha, qm_paused_spectator_alpha, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Paused spectator opacity (percent)")
 
 // Input Overlay / 输入叠加
 MACRO_CONFIG_INT(QmInputOverlay, qm_input_overlay, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show input overlay")
@@ -467,6 +480,12 @@ MACRO_CONFIG_INT(QmHudIslandShowTeam, qm_hud_island_show_team, 0, 0, 1, CFGFLAG_
 MACRO_CONFIG_COL(QmHudIslandBgColor, qm_hud_island_bg_color, 0x9C460E, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic Island background color")
 MACRO_CONFIG_INT(QmHudIslandBgOpacity, qm_hud_island_bg_opacity, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic Island background alpha")
 MACRO_CONFIG_STR(QmHudEditorLayout, qm_hud_editor_layout, 2048, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "HUD editor layout")
+
+// Gores 组队落水榜
+MACRO_CONFIG_INT(QmGoresDrownBoard, qm_gores_drown_board, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the Gores team drown board")
+MACRO_CONFIG_INT(QmGoresDrownBoardMaxPlayers, qm_gores_drown_board_max_players, 8, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Maximum players shown in the Gores team drown board")
+MACRO_CONFIG_INT(QmGoresDrownBoardOpacity, qm_gores_drown_board_opacity, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Gores team drown board opacity")
+MACRO_CONFIG_INT(QmGoresDrownBoardShowTee, qm_gores_drown_board_show_tee, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Tees in the Gores team drown board")
 
 // Camera / View - 相机、视野
 MACRO_CONFIG_INT(QmCameraDrift, qm_camera_drift, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable camera drift effect, slightly drags camera based on speed")

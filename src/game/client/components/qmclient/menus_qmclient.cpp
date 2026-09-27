@@ -310,7 +310,6 @@ static bool s_KeywordRulesLayoutHalfFilled = false;
 static char s_aKeywordRulesConfigCache[sizeof(g_Config.m_QmKeywordReplyRules)] = {};
 static uint64_t s_FavoriteMapsLayoutRevision = 1;
 static size_t s_FavoriteMapsLayoutCount = std::numeric_limits<size_t>::max();
-static size_t s_FavoriteMapSearchRows = 1;
 
 struct SQmTitleStylePreviewContext
 {
@@ -1379,6 +1378,140 @@ void CMenus::FinishSettingsQmScrollContainer(CQmScrollState &ScrollState, CQmScr
 	}
 }
 
+void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
+{
+	// 顶层「贡献者」页：只承载 DDNet 贡献者署名卡（栖梦的社区/头衔/赞助仍留在栖梦侧页签）。
+	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
+	const float UiScale = Metrics.m_UiScale;
+	const float LineHeight = Metrics.m_LineHeight;
+	const float LineSpacing = Metrics.m_LineSpacing;
+	const float TipSize = Metrics.m_SmallSize;
+	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
+	IUiContext CardCtx = SettingsUiContext("settings_contributors", UiScale);
+	if(ReadOnly)
+	{
+		CardCtx.m_pAnim = nullptr;
+		CardCtx.m_pTree = nullptr;
+	}
+	const SSettingsCardDeckVisualOptions VisualOptions = SettingsCardDeckVisualOptions();
+	static CScrollRegion s_ScrollRegion;
+	const uint64_t CardLayoutRevision = str_quickhash("qmclient-contributors-ddnet") ^ (ReadOnly ? 1u : 0u);
+	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, CardLayoutRevision);
+	const auto BuildDefinitions = [this, LineHeight, LineSpacing, TipSize, ReadOnly](std::vector<SSettingsCardDefinition> &vCards) {
+		vCards.reserve(1);
+
+		SSettingsCardDefinition DdnetCredits;
+		DdnetCredits.m_Spec = {"deck:qmclient-contributors-ddnet", Localize("DDNet"), qm_card_registry::ResolveLocalizedDescription("deck:qmclient-contributors-ddnet")};
+		static const char *const s_apDdnetContributors[] = {
+			"eeeee", "HMH", "east", "CookieMichal", "Learath2", "Savander", "laxa", "Tobii", "BeaR", "Wohoo", "nuborn", "timakro",
+			"Shiki", "trml", "Soreu", "hi_leute_gll", "Lady Saavik", "Chairn", "heinrich5991", "swick", "oy", "necropotame", "Ryozuki",
+			"Redix", "d3fault", "marcelherd", "BannZay", "ACTom", "SiuFuWong", "PathosEthosLogos", "TsFreddie", "Jupeyy", "noby",
+			"ChillerDragon", "ZombieToad", "weez15", "z6zzz", "Piepow", "QingGo", "RafaelFF", "sctt", "jao", "daverck", "fokkonaut",
+			"Bojidar", "FallenKN", "ardadem", "archimede67", "sirius1242", "Aerll", "trafilaw", "Zwelf", "Patiga", "Konsti", "ElXreno",
+			"MikiGamer", "Fireball", "Banana090", "axblk", "yangfl", "Kaffeine", "Zodiac", "c0d3d3v", "GiuCcc", "Ravie", "Robyt3",
+			"simpygirl", "Tater", "Cellegen", "srdante", "Nouaa", "Voxel", "luk51", "Vy0x2", "Avolicious", "louis", "Marmare314",
+			"hus3h", "ArijanJ", "tarunsamanta2k20", "Possseidon", "+KZ", "Teero", "furo", "dobrykafe", "Moiman", "JSaurusRex",
+			"Steinchen", "ewancg", "gerdoe-jr", "melon", "KebsCS", "bencie", "DynamoFox", "MilkeeyCat", "iMilchshake", "SchrodingerZhu",
+			"catseyenebulous", "Rei-Tw", "Matodor", "Emilcha", "art0007i", "SollyBunny", "0xfaulty", "AssassinTee", "Pioooooo",
+			"ASKLL-STAR", "K1nop1c0", "Bamcane", "qxdFox", "ZerolAcqua", "swarfeya", "Scrumplex", "12944qwerty", "Pointer31",
+			"ProfSapphire", "0xpixty", "GlimmeR", "horoni"};
+		const auto BuildDdnetContributorLines = [this, TipSize](float MaxLineWidth) {
+			static std::vector<std::string> Lines;
+			static float s_CachedMaxLineWidth = -1.0f;
+			static uint64_t s_CachedTextGeneration = UINT64_MAX;
+			if(std::abs(s_CachedMaxLineWidth - MaxLineWidth) <= 0.01f && s_CachedTextGeneration == m_MenuTextPoolGeneration)
+				return std::cref(Lines);
+
+			Lines.clear();
+			Lines.emplace_back();
+			const char *pSeparator = ", ";
+			const float SeparatorWidth = TextRender()->TextWidth(TipSize, pSeparator);
+			float LineWidth = 0.0f;
+			for(const char *pName : s_apDdnetContributors)
+			{
+				const float NameWidth = TextRender()->TextWidth(TipSize, pName);
+				if(Lines.back().empty())
+				{
+					Lines.back() = pName;
+					LineWidth = NameWidth;
+				}
+				else if(LineWidth + SeparatorWidth + NameWidth > MaxLineWidth)
+				{
+					Lines.emplace_back(pName);
+					LineWidth = NameWidth;
+				}
+				else
+				{
+					Lines.back().append(pSeparator);
+					Lines.back().append(pName);
+					LineWidth += SeparatorWidth + NameWidth;
+				}
+			}
+			s_CachedMaxLineWidth = MaxLineWidth;
+			s_CachedTextGeneration = m_MenuTextPoolGeneration;
+			return std::cref(Lines);
+		};
+		DdnetCredits.m_Measure = [LineHeight, LineSpacing, BuildDdnetContributorLines](float ContentWidth) {
+			return ResolveSettingsRowsHeight(2 + (int)BuildDdnetContributorLines(ContentWidth).get().size(), LineHeight, LineSpacing);
+		};
+		DdnetCredits.m_Render = [this, LineHeight, LineSpacing, TipSize, ReadOnly, BuildDdnetContributorLines](CUIRect Content) {
+			CUIRect Row;
+			static CButtonContainer s_DdnetStaffButton;
+			static CButtonContainer s_DdnetReleasesButton;
+
+			Content.HSplitTop(LineHeight, &Row, &Content);
+			if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetStaffButton, "qmclient-ddnet-staff", "DDNet staff", 0, &Row))
+				Client()->ViewLink("https://ddnet.org/staff");
+			Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+			Content.HSplitTop(LineHeight, &Row, &Content);
+			if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetReleasesButton, "qmclient-ddnet-releases", "DDNet releases", 0, &Row))
+				Client()->ViewLink("https://ddnet.org/releases/");
+			Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+			const std::vector<std::string> &ContributorLines = BuildDdnetContributorLines(Content.w).get();
+			for(size_t Index = 0; Index < ContributorLines.size(); ++Index)
+			{
+				Content.HSplitTop(LineHeight, &Row, &Content);
+				Ui()->DoLabel(&Row, ContributorLines[Index].c_str(), TipSize, TEXTALIGN_ML);
+				if(Index + 1 < ContributorLines.size())
+					Content.HSplitTop(LineSpacing, nullptr, &Content);
+			}
+		};
+		vCards.push_back(std::move(DdnetCredits));
+	};
+
+	const SQmScrollRequest ScrollRequest{EQmScrollProfile::SETTINGS_OUTER};
+	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy(ScrollRequest, UiScale, 0.0f);
+	const CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
+	CQmScrollState &ScrollState = s_ScrollRegion.State();
+	(void)ScrollState;
+	SSettingsCardDeckInput InputState;
+	InputState.m_MouseX = ReadOnly ? 0.0f : Ui()->MouseX();
+	InputState.m_MouseY = ReadOnly ? 0.0f : Ui()->MouseY();
+	InputState.m_MousePressed = !ReadOnly && Ui()->MouseButtonClicked(0);
+	InputState.m_MouseDown = !ReadOnly && Ui()->MouseButton(0);
+	InputState.m_MouseReleased = !ReadOnly && !InputState.m_MouseDown && Ui()->LastMouseButton(0);
+	InputState.m_CtrlPressed = !ReadOnly && Input()->ModifierIsPressed();
+	InputState.m_AllowHeaderDrag = !ReadOnly;
+	InputState.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
+	InputState.m_pScrollParams = ReadOnly ? nullptr : &ScrollParams;
+	static qm_card_order::CModel s_DdnetPrewarmOrderModel;
+	static bool s_DdnetPrewarmOrderModelInitialized = false;
+	static CSettingsCardDeck s_DdnetPrewarmDeck;
+	if(ReadOnly && !s_DdnetPrewarmOrderModelInitialized)
+	{
+		s_DdnetPrewarmOrderModel.LoadMerged("", qm_card_registry::BuildDefaultEntries());
+		s_DdnetPrewarmOrderModelInitialized = true;
+	}
+	qm_card_order::CModel &CardOrderModel = ReadOnly ? s_DdnetPrewarmOrderModel : SettingsCardOrderModel();
+	CSettingsCardDeck &CardDeck = ReadOnly ? s_DdnetPrewarmDeck : m_SettingsCardDeck;
+	const SSettingsCardDeckResult DeckResult = CardDeck.RenderCached(CardCtx, Page, "qmclient-contributors-ddnet", DefinitionsRevision, BuildDefinitions, CardOrderModel, ReadOnly ? nullptr : &s_ScrollRegion, InputState, SettingsCardMotionSpec(), VisualOptions);
+	if(!ReadOnly && DeckResult.m_OrderChanged)
+		SaveSettingsCardOrderModel();
+}
+
 void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly)
 {
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
@@ -1680,85 +1813,6 @@ void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOn
 		};
 		vCards.push_back(std::move(Sponsors));
 
-		SSettingsCardDefinition DdnetCredits;
-		DdnetCredits.m_Spec = {"deck:qmclient-contributors-ddnet", Localize("DDNet"), Localize("Credits")};
-		static const char *const s_apDdnetContributors[] = {
-			"eeeee", "HMH", "east", "CookieMichal", "Learath2", "Savander", "laxa", "Tobii", "BeaR", "Wohoo", "nuborn", "timakro",
-			"Shiki", "trml", "Soreu", "hi_leute_gll", "Lady Saavik", "Chairn", "heinrich5991", "swick", "oy", "necropotame", "Ryozuki",
-			"Redix", "d3fault", "marcelherd", "BannZay", "ACTom", "SiuFuWong", "PathosEthosLogos", "TsFreddie", "Jupeyy", "noby",
-			"ChillerDragon", "ZombieToad", "weez15", "z6zzz", "Piepow", "QingGo", "RafaelFF", "sctt", "jao", "daverck", "fokkonaut",
-			"Bojidar", "FallenKN", "ardadem", "archimede67", "sirius1242", "Aerll", "trafilaw", "Zwelf", "Patiga", "Konsti", "ElXreno",
-			"MikiGamer", "Fireball", "Banana090", "axblk", "yangfl", "Kaffeine", "Zodiac", "c0d3d3v", "GiuCcc", "Ravie", "Robyt3",
-			"simpygirl", "Tater", "Cellegen", "srdante", "Nouaa", "Voxel", "luk51", "Vy0x2", "Avolicious", "louis", "Marmare314",
-			"hus3h", "ArijanJ", "tarunsamanta2k20", "Possseidon", "+KZ", "Teero", "furo", "dobrykafe", "Moiman", "JSaurusRex",
-			"Steinchen", "ewancg", "gerdoe-jr", "melon", "KebsCS", "bencie", "DynamoFox", "MilkeeyCat", "iMilchshake", "SchrodingerZhu",
-			"catseyenebulous", "Rei-Tw", "Matodor", "Emilcha", "art0007i", "SollyBunny", "0xfaulty", "AssassinTee", "Pioooooo",
-			"ASKLL-STAR", "K1nop1c0", "Bamcane", "qxdFox", "ZerolAcqua", "swarfeya", "Scrumplex", "12944qwerty", "Pointer31",
-			"ProfSapphire", "0xpixty", "GlimmeR", "horoni"};
-		const auto BuildDdnetContributorLines = [this, TipSize](float MaxLineWidth) {
-			static std::vector<std::string> Lines;
-			static float s_CachedMaxLineWidth = -1.0f;
-			static uint64_t s_CachedTextGeneration = UINT64_MAX;
-			if(std::abs(s_CachedMaxLineWidth - MaxLineWidth) <= 0.01f && s_CachedTextGeneration == m_MenuTextPoolGeneration)
-				return std::cref(Lines);
-
-			Lines.clear();
-			Lines.emplace_back();
-			const char *pSeparator = ", ";
-			const float SeparatorWidth = TextRender()->TextWidth(TipSize, pSeparator);
-			float LineWidth = 0.0f;
-			for(const char *pName : s_apDdnetContributors)
-			{
-				const float NameWidth = TextRender()->TextWidth(TipSize, pName);
-				if(Lines.back().empty())
-				{
-					Lines.back() = pName;
-					LineWidth = NameWidth;
-				}
-				else if(LineWidth + SeparatorWidth + NameWidth > MaxLineWidth)
-				{
-					Lines.emplace_back(pName);
-					LineWidth = NameWidth;
-				}
-				else
-				{
-					Lines.back().append(pSeparator);
-					Lines.back().append(pName);
-					LineWidth += SeparatorWidth + NameWidth;
-				}
-			}
-			s_CachedMaxLineWidth = MaxLineWidth;
-			s_CachedTextGeneration = m_MenuTextPoolGeneration;
-			return std::cref(Lines);
-		};
-		DdnetCredits.m_Measure = [LineHeight, LineSpacing, BuildDdnetContributorLines](float ContentWidth) {
-			return ResolveSettingsRowsHeight(2 + (int)BuildDdnetContributorLines(ContentWidth).get().size(), LineHeight, LineSpacing);
-		};
-		DdnetCredits.m_Render = [this, LineHeight, LineSpacing, TipSize, ReadOnly, BuildDdnetContributorLines](CUIRect Content) {
-			CUIRect Row;
-			static CButtonContainer s_DdnetStaffButton;
-			static CButtonContainer s_DdnetReleasesButton;
-
-			Content.HSplitTop(LineHeight, &Row, &Content);
-			if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, &s_DdnetStaffButton, "qmclient-ddnet-staff", "DDNet staff", 0, &Row))
-				Client()->ViewLink("https://ddnet.org/staff");
-			Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-			Content.HSplitTop(LineHeight, &Row, &Content);
-			if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, &s_DdnetReleasesButton, "qmclient-ddnet-releases", "DDNet releases", 0, &Row))
-				Client()->ViewLink("https://ddnet.org/releases/");
-			Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-			const std::vector<std::string> &ContributorLines = BuildDdnetContributorLines(Content.w).get();
-			for(size_t Index = 0; Index < ContributorLines.size(); ++Index)
-			{
-				Content.HSplitTop(LineHeight, &Row, &Content);
-				Ui()->DoLabel(&Row, ContributorLines[Index].c_str(), TipSize, TEXTALIGN_ML);
-				if(Index + 1 < ContributorLines.size())
-					Content.HSplitTop(LineSpacing, nullptr, &Content);
-			}
-		};
-		vCards.push_back(std::move(DdnetCredits));
 		SSettingsCardDefinition TitleCard;
 		TitleCard.m_Spec = {"deck:qmclient-contributors-title", Localize("Sponsor title"), Localize("Redeem your code and customize your title")};
 		TitleCard.m_Measure = [LineHeight, LineSpacing, TitleStyleExpanded, TitleAdvanced, TitlePreviewHeight](float) {
@@ -2279,28 +2333,7 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 	static CButtonContainer s_ReaderButtonSoloSplit, s_ClearButtonSoloSplit;
 	CUIRect Row, BindLabel, BindKey;
 
-	// 说明行：告诉用户这功能干嘛的——分队是为了让 solo 图开局同步。
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Ui()->DoLabel(&Row, Localize("Each joins a separate team so solo runs start in sync (useful on maps where team-0 start is unreliable)"), BodySize * 0.85f, TEXTALIGN_ML);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	// 状态行：本体/dummy 当前队伍，未连接 dummy 时提示。
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	char aStatus[128];
-	if(Client()->DummyConnected())
-	{
-		const int MainTeam = GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId);
-		const int DummyTeam = GameClient()->m_Teams.Team(GameClient()->m_aLocalIds[1]);
-		str_format(aStatus, sizeof(aStatus), Localize("Main team %d / Dummy team %d"), MainTeam, DummyTeam);
-	}
-	else
-	{
-		str_copy(aStatus, Localize("Dummy not connected"), sizeof(aStatus));
-	}
-	Ui()->DoLabel(&Row, aStatus, BodySize, TEXTALIGN_ML);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	// 键位行：按下触发 qm_solo_split（toggle 语义，非 toggle 命令）。
+	// 只保留键位行：按下触发 qm_solo_split（toggle 语义，非 toggle 命令）。
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	Row.VSplitLeft(LabelWidth, &BindLabel, &BindKey);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-solo-split-key", &BindLabel, Localize("Solo split key"), BodySize, TEXTALIGN_ML, {}, (int)BindLabel.w);
@@ -2478,36 +2511,13 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 		RenderQmFunctionCheckbox(pId, pText, Localize(pText), pValue, &Row, PrewarmOnly, pTooltip);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};
-	auto RenderValue = [this, &Content, &Row, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
-		Content.HSplitTop(LineHeight, &Row, &Content);
-		CUIRect LabelColumn, ControlColumn;
-		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
-		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	};
 	RenderCheckbox(&g_Config.m_QmFootParticles, "Local particle effects", &g_Config.m_QmFootParticles);
 	RenderCheckbox(&g_Config.m_QmClientMarkTrail, "Remote particle effects", &g_Config.m_QmClientMarkTrail);
 	RenderCheckbox(&g_Config.m_QmClientShowBadge, "Show Qm badge", &g_Config.m_QmClientShowBadge);
 	RenderCheckbox(&g_Config.m_QmAutoUpdate, "Automatic updates", &g_Config.m_QmAutoUpdate);
 	RenderCheckbox(&g_Config.m_QmShowOutdatedVersionWarning, "Show outdated version warning", &g_Config.m_QmShowOutdatedVersionWarning);
-	RenderCheckbox(&g_Config.m_QmBetterScoreboard, "Better scoreboard", &g_Config.m_QmBetterScoreboard);
-	RenderCheckbox(&g_Config.m_QmScoreboardPoints, "Scoreboard point check", &g_Config.m_QmScoreboardPoints);
-	RenderCheckbox(&g_Config.m_QmScoreboardOnDeath, "Show scoreboard after death", &g_Config.m_QmScoreboardOnDeath);
-	RenderCheckboxTipped(&g_Config.m_QmScoreboardScroll, "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers", Localize("Use the scoreboard cursor mode to scroll the list"), &g_Config.m_QmScoreboardScroll);
-	{
-		// 计分板过滤器：CLineInput 直接绑定配置缓冲，输入即时生效（控制台修改也会同步）。
-		IUiContext TextInputCtx = SettingsUiContext("qmclient-mini-scoreboard-filter-input", BodySize / ui_token::font::BODY);
-		Content.HSplitTop(LineHeight, &Row, &Content);
-		CUIRect LabelColumn;
-		CUIRect ControlColumn;
-		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-scoreboard-filter", &LabelColumn, Localize("Scoreboard filter: only show players whose name or clan contains this text"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
-		static CLineInput s_ScoreboardFilterInput(g_Config.m_QmScoreboardFilter, sizeof(g_Config.m_QmScoreboardFilter));
-		s_ScoreboardFilterInput.SetEmptyText(Localize("Leave empty to show everyone"));
-		ui_widget::InputField(TextInputCtx, &s_ScoreboardFilterInput, ControlColumn, Localize("Leave empty to show everyone"), BodySize);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	}
+	// 计分板相关的 5 项（更好的计分板/积分检查/死亡后显示/滚轮滚动/过滤器）只在 qm:better_scoreboard 卡里渲染一次，
+	// 这里不再重复，避免同一条配置在两张卡里各出现一遍。
 	RenderCheckbox(&g_Config.m_QmHideJoinServerInfo, "Hide server information on join", &g_Config.m_QmHideJoinServerInfo);
 	RenderCheckboxTipped(&g_Config.m_QmShowTuneZoneColors, "Show tune zone colors", Localize("Color map tune zones by their tune zone number"), &g_Config.m_QmShowTuneZoneColors);
 	// 回退语义在加载期读取：开关变化由 CGameClient::OnRender 的兜底轮询统一触发热重载，
@@ -3504,106 +3514,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 
 void CMenus::RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
 {
-	static CLineInput s_MapUploadEndpoint(g_Config.m_QmMapUploadEndpoint, sizeof(g_Config.m_QmMapUploadEndpoint));
-	static CLineInputBuffered<IO_MAX_PATH_LENGTH> s_MapUploadPath;
-	static CLineInputBuffered<128> s_MapUploadSearch;
-	static QmMapUpload::CSearchIndex s_MapUploadSearchIndex;
-	static CButtonContainer s_aMapUploadSearchResultButtons[8];
-	static bool s_MapUploadSearchInitialized = false;
-	static int s_MapUploadStorageType = IStorage::TYPE_SAVE;
-	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_map_upload_inputs", BodySize / ui_token::font::BODY);
-	CUIRect UploadRow, UploadLabel, UploadControl;
-	Content.HSplitTop(LineHeight, &UploadRow, &Content);
-	UploadRow.VSplitLeft(std::max(1.0f, Content.w * 0.34f), &UploadLabel, &UploadControl);
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-map-upload-endpoint", &UploadLabel, Localize("Map upload endpoint"), BodySize, TEXTALIGN_ML, {}, (int)UploadLabel.w);
-	s_MapUploadEndpoint.SetEmptyText(Localize("HTTPS endpoint"));
-	ui_widget::InputField(TextInputCtx, &s_MapUploadEndpoint, UploadControl, Localize("HTTPS endpoint"), BodySize);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-	Content.HSplitTop(LineHeight, &UploadRow, &Content);
-	UploadRow.VSplitLeft(std::max(1.0f, Content.w * 0.34f), &UploadLabel, &UploadControl);
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-map-upload-path", &UploadLabel, Localize("Map path in save folder"), BodySize, TEXTALIGN_ML, {}, (int)UploadLabel.w);
-	s_MapUploadPath.SetEmptyText(Localize("maps/example.map"));
-	ui_widget::InputField(TextInputCtx, &s_MapUploadPath, UploadControl, Localize("maps/example.map"), BodySize);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	if(!s_MapUploadSearchInitialized)
-	{
-		s_MapUploadSearchIndex.Reset(Storage()->NumPaths());
-		s_MapUploadSearchInitialized = true;
-	}
-	if(!PrewarmOnly)
-		s_MapUploadSearchIndex.ScanNext(Storage());
-	Content.HSplitTop(LineHeight, &UploadRow, &Content);
-	UploadRow.VSplitLeft(std::max(1.0f, Content.w * 0.34f), &UploadLabel, &UploadControl);
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-map-upload-search", &UploadLabel, Localize("Search local maps"), BodySize, TEXTALIGN_ML, {}, (int)UploadLabel.w);
-	s_MapUploadSearch.SetEmptyText(Localize("Map name"));
-	ui_widget::InputField(TextInputCtx, &s_MapUploadSearch, UploadControl, Localize("Map name"), BodySize);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	const auto vMapUploadMatches = s_MapUploadSearchIndex.Find(s_MapUploadSearch.GetString());
-	const size_t NumMapUploadMatches = std::min(vMapUploadMatches.size(), std::size(s_aMapUploadSearchResultButtons));
-	const size_t SearchRows = NumMapUploadMatches + (vMapUploadMatches.empty() || vMapUploadMatches.size() > NumMapUploadMatches ? 1 : 0);
-	if(s_FavoriteMapSearchRows != SearchRows)
-	{
-		s_FavoriteMapSearchRows = SearchRows;
-		++s_FavoriteMapsLayoutRevision;
-	}
-	for(size_t i = 0; i < NumMapUploadMatches; ++i)
-	{
-		Content.HSplitTop(LineHeight, &UploadRow, &Content);
-		char aButtonId[64];
-		str_format(aButtonId, sizeof(aButtonId), "qmclient-map-upload-result-%d", (int)i);
-		if(!PrewarmOnly && DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_aMapUploadSearchResultButtons[i], aButtonId, vMapUploadMatches[i].m_aPath, 0, &UploadRow))
-		{
-			s_MapUploadPath.Set(vMapUploadMatches[i].m_aPath);
-			s_MapUploadStorageType = vMapUploadMatches[i].m_StorageType;
-		}
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	}
-	if(vMapUploadMatches.empty())
-	{
-		Content.HSplitTop(LineHeight, &UploadRow, &Content);
-		const char *pSearchStatus = s_MapUploadSearchIndex.Busy() ? "Scanning local maps" : "No matching local maps";
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-map-upload-search-status", &UploadRow, Localize(pSearchStatus), BodySize * 0.9f, TEXTALIGN_ML, {}, (int)UploadRow.w);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	}
-	else if(vMapUploadMatches.size() > NumMapUploadMatches)
-	{
-		Content.HSplitTop(LineHeight, &UploadRow, &Content);
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-map-upload-search-more", &UploadRow, Localize("Refine the search to see more maps"), BodySize * 0.9f, TEXTALIGN_ML, {}, (int)UploadRow.w);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	}
-	Content.HSplitTop(LineHeight, &UploadRow, &Content);
-	static CButtonContainer s_MapUploadButton;
-	static CButtonContainer s_MapUploadCancelButton;
-	CUIRect UploadButton, CancelButton;
-	UploadRow.VSplitMid(&UploadButton, &CancelButton, 4.0f);
-	const bool UploadBusy = m_QmMapUpload.Busy();
-	if(!PrewarmOnly && !UploadBusy && DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_MapUploadButton, "qmclient-map-upload-start", Localize("Upload map"), 0, &UploadButton))
-		m_QmMapUpload.Start(Storage(), GameClient()->Http(), Engine(), g_Config.m_QmMapUploadEndpoint, s_MapUploadPath.GetString(), s_MapUploadStorageType, g_Config.m_PlayerName);
-	if(!PrewarmOnly && UploadBusy && DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_MapUploadCancelButton, "qmclient-map-upload-cancel", Localize("Cancel upload"), 0, &CancelButton))
-		m_QmMapUpload.Cancel();
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-	Content.HSplitTop(LineHeight, &UploadRow, &Content);
-	const char *pUploadStatus = "Map upload is disabled until an endpoint is configured";
-	switch(m_QmMapUpload.Status())
-	{
-	case QmMapUpload::EStatus::UPLOADING: pUploadStatus = "Uploading map"; break;
-	case QmMapUpload::EStatus::SUCCESS: pUploadStatus = "Map upload succeeded"; break;
-	case QmMapUpload::EStatus::CANCELLED: pUploadStatus = "Map upload cancelled"; break;
-	case QmMapUpload::EStatus::INVALID_FILE: pUploadStatus = "Map path or filename is invalid"; break;
-	case QmMapUpload::EStatus::TOO_LARGE: pUploadStatus = "Map is larger than 64 MiB"; break;
-	case QmMapUpload::EStatus::READ_FAILED: pUploadStatus = "Map could not be read"; break;
-	case QmMapUpload::EStatus::NETWORK_ERROR: pUploadStatus = "Map upload network error"; break;
-	case QmMapUpload::EStatus::SERVER_ERROR: pUploadStatus = "Map upload server rejected the request"; break;
-	case QmMapUpload::EStatus::INVALID_RESPONSE: pUploadStatus = "Map upload returned an invalid response"; break;
-	case QmMapUpload::EStatus::MISSING_PLAYER: pUploadStatus = "Set a player name before uploading"; break;
-	case QmMapUpload::EStatus::INVALID_ENDPOINT: pUploadStatus = "Map upload endpoint must use HTTP or HTTPS"; break;
-	default: break;
-	}
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-map-upload-status", &UploadRow, Localize(pUploadStatus), BodySize * 0.9f, TEXTALIGN_ML, {}, (int)UploadRow.w);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
 	const auto &FavMaps = GameClient()->TClientComponent().GetFavoriteMaps();
 	if(s_FavoriteMapsLayoutCount != FavMaps.size())
 	{
@@ -5410,7 +5320,7 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 // 与远程同名函数等价，字段顺序须与 qm_card_catalog::SQmFunctionCardLayoutState 一致。
 static qm_card_catalog::SQmFunctionCardLayoutState ResolveFunctionCardLayoutState()
 {
-	return {s_BlockWordsLayoutRevision, s_KeywordRulesLayoutRevision, s_KeywordRulesLayoutCount, s_KeywordRulesLayoutHalfFilled, s_FavoriteMapsLayoutRevision, s_FavoriteMapSearchRows};
+	return {s_BlockWordsLayoutRevision, s_KeywordRulesLayoutRevision, s_KeywordRulesLayoutCount, s_KeywordRulesLayoutHalfFilled, s_FavoriteMapsLayoutRevision};
 }
 
 void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly)
@@ -5503,10 +5413,10 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 			return Row() * (3.0f + (g_Config.m_QmAxiomAutoLogin ? 2.0f : 0.0f) + ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 7.0f : 0.0f)) + LineHeight;
 		case EQmModuleId::KeyBinds: return Rows(8.0f);
 		case EQmModuleId::MiniFeatures:
-			// 21 个 RenderCheckbox/Tipped + RenderValue(旁观者虚化不透明度) + CLineInput(计分板过滤器)
-			// + NewIme/SponsorNudge 两个手写 RenderQmFunctionCheckbox = 25 行。
+			// 16 个 RenderCheckbox/Tipped + CLineInput(计分板过滤器) 已迁出，不再计入。
+			// 19 行 = 16 个 RenderCheckbox/Tipped + NewIme/SponsorNudge 两个手写 RenderQmFunctionCheckbox + 赞助提醒行。
 			// 与 RenderQmFunctionMiniFeaturesContent 逐行对应；新增控件时须同步更新此计数。
-			return Rows(25.0f);
+			return Rows(19.0f);
 		case EQmModuleId::JumpHint: return Row() * 5.0f;
 		case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 6.0f;
 		case EQmModuleId::FriendNotify:
@@ -6869,4 +6779,35 @@ void CMenus::RenderQmNewFeaturesPopup(CUIRect Screen)
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}
 	s_ScrollRegion.End();
+}
+
+bool CMenus::RenderQmFunctionCheckboxRow(CUIRect &Content, const float LineHeight, const float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, const bool PrewarmOnly, const char *pTooltip)
+{
+	CUIRect Row;
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	const bool Changed = RenderQmFunctionCheckbox(pId, pTextId, pText, pValue, &Row, PrewarmOnly, pTooltip);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+	return Changed;
+}
+
+void CMenus::RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	// 行序与卡片目录的预布局输入一致：总开关、显示人数、不透明度、显示玩家 Tee。
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoard, "Show Gores drown board", Localize("Show Gores drown board"), &g_Config.m_QmGoresDrownBoard);
+	if(!g_Config.m_QmGoresDrownBoard)
+		return;
+
+	CUIRect Row, LabelColumn, ControlColumn;
+	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+		RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
+		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	};
+	static int s_QmGoresDrownBoardMaxPlayersInputId;
+	static int s_QmGoresDrownBoardOpacityInputId;
+	RenderValue("qmclient-gores-drown-board-max-players", "Players shown", &s_QmGoresDrownBoardMaxPlayersInputId, &g_Config.m_QmGoresDrownBoardMaxPlayers, 1, 16);
+	RenderValue("qmclient-gores-drown-board-opacity", "Card opacity", &s_QmGoresDrownBoardOpacityInputId, &g_Config.m_QmGoresDrownBoardOpacity, 0, 100, "%");
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoardShowTee, "Show player Tee", Localize("Show player Tee"), &g_Config.m_QmGoresDrownBoardShowTee);
 }

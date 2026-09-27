@@ -127,6 +127,30 @@ TEST(QmNewUiMenuSettingsFeaturesContract, ProcessPrioritySettingIsRemovedAndImeR
 	EXPECT_NE(MiniFeaturesBody.find("&g_Config.m_QmNewIme"), std::string::npos);
 }
 
+TEST(QmNewUiMenuSettingsFeaturesContract, ScoreboardSettingsLiveInDedicatedCardModule)
+{
+	const std::string MenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string ScoreboardCardSource = ReadTextFile("src/game/client/QmUi/cards/QmCardCatalogBetterScoreboard.cpp");
+	const std::string MiniFeaturesBody = FunctionBody(MenusSource, "void CMenus::RenderQmFunctionMiniFeaturesContent(");
+	ASSERT_FALSE(MiniFeaturesBody.empty());
+	ASSERT_FALSE(ScoreboardCardSource.empty());
+
+	for(const char *pConfig : {"m_QmBetterScoreboard", "m_QmScoreboardPoints", "m_QmScoreboardOnDeath", "m_QmScoreboardScroll", "m_QmScoreboardFilter"})
+	{
+		EXPECT_EQ(MiniFeaturesBody.find(pConfig), std::string::npos) << pConfig;
+		EXPECT_NE(ScoreboardCardSource.find(pConfig), std::string::npos) << pConfig;
+	}
+	EXPECT_NE(ScoreboardCardSource.find("void CMenus::RenderQmFunctionBetterScoreboardContent("), std::string::npos);
+	size_t PreviousControlPosition = 0;
+	for(const char *pControl : {"Better scoreboard", "Scoreboard point check", "Show scoreboard after death", "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers", "Scoreboard filter: only show players whose name or clan contains this text"})
+	{
+		const size_t Position = ScoreboardCardSource.find(pControl);
+		ASSERT_NE(Position, std::string::npos) << pControl;
+		EXPECT_GT(Position, PreviousControlPosition) << pControl;
+		PreviousControlPosition = Position;
+	}
+}
+
 TEST(QmNewUiMenuSettingsFeaturesContract, EmoticonShadowHasConfigRenderPassAndVisualToggle)
 {
 	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");

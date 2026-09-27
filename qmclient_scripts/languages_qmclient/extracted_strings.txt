@@ -272,6 +272,7 @@ Apply input early before next tick for prediction
 Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 Apply this preset
+Apply watermark
 Are you sure that you want to delete %d selected items?
 Are you sure that you want to delete '%s'?
 Are you sure that you want to delete the demo '%s'?
@@ -357,6 +358,7 @@ Auto unmute when speaking
 Auto unspec on unfreeze
 Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 Auto weapon switch
+Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 Auto-create CSV on game end
 Auto-fetch all players' skins for dummy rotation queue
@@ -502,6 +504,8 @@ Border range
 Borderless window (not for fullscreen)
 Both
 Both sides of keyword rules must be filled
+Bottom left
+Bottom right
 Bounce
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 Bracketed title opacity (0-100)
@@ -547,12 +551,12 @@ Can't invite this quickly
 Can't recognize specified arguments. Usage: /tpxy x y, e.g. /tpxy 9 3.
 Can't swap with yourself
 Cancel
-Cancel upload
 Cancel your swap request
 Candidate files
 Cannot swap: the other player is not in your team
 Card height animation
 Card list entry animation
+Card opacity
 Card reflow animation
 Category
 Category name
@@ -610,7 +614,6 @@ Choose the language used by the client
 Choose the menu font and cursor appearance
 Choose the menu font and font weight
 Choose the menu map and background colors
-Choose whether to browse replays or screenshots
 Choose which TClient settings tabs are visible
 Cinematic camera
 Clamp mouse to screen
@@ -750,6 +753,7 @@ Configure sound and audio packs
 Configure TClient tools and profiles
 Configure Tee appearance and skins
 Configure the companion appearance and movement
+Configure the Gores team drown board
 Configure the ingame cursor scale
 Configure the input overlay display
 Configure the lyrics display
@@ -869,6 +873,7 @@ Custom Provider endpoint
 Custom Provider model name
 Custom title
 Custom translation prompt (overrides built-in)
+Custom watermark text
 Customize additional nameplate text
 Customize animated rainbow colors
 Customize interface appearance and previews
@@ -900,6 +905,7 @@ DDmaX Pro
 DDNet
 DDNet / Total CPU
 DDNet Client needs to be restarted to complete update!
+DDNet contributors and staff credits
 DDNet Memory
 DDNet memory
 DDNet points
@@ -1094,6 +1100,7 @@ Drift direction
 Drift intensity
 Drift smoothness
 Drop on right canvas to replace one part.
+Drown deaths
 Dual Kawase
 Dummies are not allowed on this server
 Dummy
@@ -1126,7 +1133,6 @@ Dummy mini view
 Dummy mini view size (percent)
 Dummy mini view zoom (percent)
 Dummy name
-Dummy not connected
 Dummy skin
 Dummy skin decoration
 Dummy skin eyes
@@ -1156,7 +1162,6 @@ Dynamic FOV smoothness (0=instant, 100=smoothest)
 Dynamic island
 Dynamic Island background alpha
 Dynamic Island background color
-Each joins a separate team so solo runs start in sync (useful on maps where team-0 start is unreliable)
 Ease in out quad
 Ease out cubic
 Echo follows the original chat color
@@ -1392,6 +1397,7 @@ Fade in
 Fade only
 Fade opacity along trail length
 Fade out
+Fade paused spectators in water
 Fade trail alpha
 Failed
 Failed saving the replay!
@@ -1433,6 +1439,7 @@ File '%s' already exists, do you want to overwrite it?
 File already exists, do you want to overwrite it?
 File executed on map change/reload to set default server settings
 File for storing ranks if sv_use_sql is disabled or as backup SQL server.
+File information
 File with announcements, one per line.
 File: %s
 Fill
@@ -1610,8 +1617,10 @@ Golden Grace
 Gores
 Gores actor
 Gores auto weapon switch
+Gores drown board
 Gores Mode
 Gores mode key
+Gores team drown board opacity
 Gores · Axiom
 GPU name, chosen by backend (if supported)
 Grabs
@@ -1749,7 +1758,6 @@ HTTP is not available
 HTTP map download: connection phase timeout (in ms, 0=disabled)
 HTTP map download: low speed limit (in bytes/s, 0=disabled)
 HTTP map download: low speed limit period (0=disabled)
-HTTPS endpoint
 https://ddnet.org/discord
 https://wiki.ddnet.org/
 https://wiki.ddnet.org/wiki/Touch_controls
@@ -2066,7 +2074,6 @@ Low to high
 Lyrics
 Main Asset
 Main menu
-Main team %d / Dummy team %d
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 Make sure the backend supports OpenAI-compatible thinking parameters
 Make sure you use the same name as you had when saving. 
@@ -2090,15 +2097,17 @@ Manual scope
 Manual source file
 Manual target
 Map
+Map browser difficulty star filter bitmask (bits 1-5)
 Map browser surface
 Map browser surface color
 Map browser transparency
+Map browser: show empty servers only
+Map browser: show favorite maps only
 Map danger border
 Map download send window
 Map exceeds the client limit of 64 MiB.
 Map folders
 Map name
-Map path in save folder
 Map play history
 Map Preview TODO
 Map progress bar
@@ -2116,14 +2125,12 @@ Map to use on server
 Map type:
 Map upload
 Map upload cancelled.
-Map upload endpoint
 Map upload endpoint (empty disables map upload)
 Map upload endpoint must use HTTP or HTTPS
 Map upload in progress...
 Map upload network error.
 Map uploaded successfully.
 Maps finished
-maps/example.map
 Margin when notification is docked
 Mark demo
 Mark the beginning of a cut (right click to reset)
@@ -2170,6 +2177,7 @@ Maximum number of server info responses of any size sent per second (0 = unlimit
 Maximum number of skins loaded simultaneously
 Maximum number of vanilla antispoof handshakes answered per second (0 = unlimited).
 Maximum players participating in a vote (0 = unlimited)
+Maximum players shown in the Gores team drown board
 Maximum reduction
 Maximum rows
 Maximum team size.
@@ -2236,6 +2244,7 @@ Moderator alert
 Modified
 Modules snap to screen edges, center lines and other HUD modules while dragging
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
+More teammates...
 MOTD
 Motion and focus feedback
 Mouse
@@ -2379,6 +2388,7 @@ No demo with this filename exists
 No director players available
 No empty team left.
 No favorite maps yet
+No filter
 No input device available
 No items to write
 No local saves file found (ddnet-saves.txt)
@@ -2410,6 +2420,7 @@ No saved maps found
 No saved profiles available yet. Save one first.
 No saves found on this map
 No screenshot selected
+No screenshots
 No server selected
 No servers found
 No servers match your filter criteria
@@ -2592,6 +2603,7 @@ Pause the current demo
 Pause video rendering when demo playback is paused
 Pause voice when window unfocused
 Pause/unpause game
+Paused spectator opacity (percent)
 Penalty in seconds for saving or swapping positions
 Per-name volume (name=percent)
 Performance debug log threshold (ms)
@@ -2617,6 +2629,7 @@ Ping
 Ping the current server
 Pistol
 Pistol guide line
+Place title on a separate line above the player name instead of inline
 Plasma gun shots per second
 Play a flip animation while reloading weapons
 Play a slide-in rotation animation when switching weapons
@@ -2681,6 +2694,7 @@ Players can't hook each other on this server
 Players can't use the Callvote menu tab to kick offenders
 Players hook time is limited
 Players hook time is unlimited
+Players shown
 Players weapons affect others
 Players weapons has no affect on others
 Playing effects
@@ -2924,7 +2938,6 @@ Reduce antiping and player prediction when frozen
 Reduce prediction while frozen
 Reduced
 Reduced: uses shorter transitions and disables presentation animations
-Refine the search to see more maps
 Refresh
 Refresh interval
 Refresh Rate
@@ -3110,8 +3123,10 @@ Rifle laser inner color
 Rifle Laser Outline Color
 Rifle laser outline color
 Right jump
+Right-click to add to favorites
 Right-click to disable auto-translate
 Right-click to enable auto-translate
+Right-click to remove from favorites
 Ring
 RNNoise noise reduction
 RNNoise noise reduction (unavailable in this build)
@@ -3215,6 +3230,12 @@ Screen refresh rate (Hz, only fullscreen)
 Screen resolution height (only fullscreen)
 Screen resolution width (only fullscreen)
 Screenshot
+Screenshot error
+Screenshot saved
+Screenshot watermark custom text
+Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right
+Screenshot watermark: include map name
+Screenshot watermark: include timestamp
 Screenshots
 Screenshots directory
 Scroll mode: Off
@@ -3222,7 +3243,6 @@ Scroll mode: On
 Search
 Search and navigate settings
 Search donor asset
-Search local maps
 Search main asset
 Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
@@ -3435,6 +3455,7 @@ Show generated skin outline for local tees
 Show generated skin outline for other tees
 Show ghost
 Show ghost at unpredictable position of other players
+Show Gores drown board
 Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).
 Show grenade and laser trajectory preview
 Show Grid
@@ -3554,6 +3575,7 @@ Show player position
 Show player speed
 Show player stats HUD
 Show player target angle
+Show player Tee
 Show players' key presses
 Show position and angle (mini debug)
 Show position and angle debug info
@@ -3562,6 +3584,7 @@ Show pressed keys
 Show Qm badge
 Show Qm badge: identify via central server and mark QmClient users on nameplate/scoreboard
 Show QmClient config variables
+Show QmClient title in player nameplate (0 = hide)
 Show radial indicators of other Tees
 Show region rankings in /rank, /top5, and /top5team.
 Show score
@@ -3595,9 +3618,11 @@ Show Tee Collision in Hitbox Mode
 Show tee emotes
 Show tee status bar
 Show Tee trail for others
+Show Tees in the Gores team drown board
 Show teleporter tile outlines
 Show text entities
 Show the cursor while free spectating
+Show the Gores team drown board
 Show the number of frozen tees
 Show the number of tees still alive
 Show the occasional sponsor reminder in the main menu
@@ -3932,6 +3957,7 @@ Team save in progress. You'll be able to load with '/load %s' if save is success
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' on %s to continue
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' to continue
 Team tee glow
+Teammate
 Teams
 Teams are available on this server
 Teams are available on this server; if the team is locked, any team member dying will kill the whole team
@@ -4011,6 +4037,7 @@ The selected part stays highlighted while you adjust its color.
 The server is running a non-standard tuning on a pure game type.
 The server rejected the map upload.
 The update is ready and will be installed when you exit.
+The watermarked screenshot was saved next to the original
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 Theme
 Themes directory
@@ -4077,6 +4104,7 @@ Timeout in seconds before swap option expires
 Timeout seed
 Timer is displayed in %s
 Timer isn't displayed.
+Timestamp
 Tiny Tee Size
 Title bob angular speed in 1/100 rad/s
 Title bob wavelength in pixels
@@ -4137,6 +4165,8 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 Token to register this server to a specific community
 Too many translation tasks
 Toolbox page
+Top left
+Top right
 Total
 Total friends
 Total hours
@@ -4222,6 +4252,7 @@ Unable to rename the folder
 Unable to rename the screenshot
 Unable to save the skin
 Unable to save the skin with a reserved name
+Unable to save the watermarked screenshot
 Unavailable
 Unban a certain nickname
 Unban all entries
@@ -4441,6 +4472,7 @@ Warmup time before round (in seconds)
 Warn about team balance
 Warning
 Water hammer highlight
+Watermark
 Wave amount
 Wave speed (0.01 rad/s)
 Wave wavelength

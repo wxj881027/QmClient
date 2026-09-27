@@ -2084,6 +2084,7 @@ void CTClient::OnUpdate()
 		CheckComboPopup();
 		CheckWaterFall();
 		UpdatePlayerStats(); // 更新玩家统计
+		UpdateGoresDrownCounts();
 		UpdateGoresWeaponCycle(); // Gores 锤枪自动切换
 		UpdateGoresMapProgress(); // 更新 Gores 地图路径进度
 	}
@@ -3339,6 +3340,7 @@ void CTClient::SetForcedAspect()
 void CTClient::OnStateChange(int NewState, int OldState)
 {
 	SetForcedAspect();
+	ResetGoresDrownCounts();
 	if(NewState != IClient::STATE_ONLINE)
 	{
 		ResetGoresConfigOverrides();
@@ -3724,6 +3726,62 @@ void CTClient::UpdatePlayerStats()
 
 		// 跟踪出钩方向
 		TrackHookDirection(Dummy);
+	}
+}
+
+void CTClient::ResetGoresDrownCounts()
+{
+	std::fill_n(m_aGoresDrownCounts, MAX_CLIENTS, 0);
+	std::fill_n(m_aGoresFreezeState, MAX_CLIENTS, false);
+	std::fill_n(m_aGoresFreezeSeen, MAX_CLIENTS, false);
+	m_GoresDrownModeActive = false;
+	m_aGoresDrownMap[0] = '\0';
+}
+
+void CTClient::UpdateGoresDrownCounts()
+{
+	if(Client()->State() != IClient::STATE_ONLINE)
+		return;
+
+	const char *pMap = Client()->GetCurrentMap();
+	if(pMap != nullptr && str_comp(m_aGoresDrownMap, pMap) != 0)
+	{
+		ResetGoresDrownCounts();
+		str_copy(m_aGoresDrownMap, pMap);
+	}
+
+	const bool IsGores = IsGoresGameMode();
+	if(IsGores != m_GoresDrownModeActive)
+	{
+		ResetGoresDrownCounts();
+		m_GoresDrownModeActive = IsGores;
+		if(pMap != nullptr)
+			str_copy(m_aGoresDrownMap, pMap);
+	}
+	if(!IsGores)
+		return;
+
+	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	{
+		const bool Active = GameClient()->m_aClients[ClientId].m_Active && GameClient()->m_Snap.m_aCharacters[ClientId].m_Active;
+		if(!Active)
+		{
+			m_aGoresFreezeSeen[ClientId] = false;
+			m_aGoresFreezeState[ClientId] = false;
+			continue;
+		}
+
+		const bool Frozen = GameClient()->m_aClients[ClientId].m_FreezeEnd != 0;
+		if(!m_aGoresFreezeSeen[ClientId])
+		{
+			// 首次看到玩家时只建立基线，避免换图时把已经冻结的玩家算成一次落水。
+			m_aGoresFreezeSeen[ClientId] = true;
+			m_aGoresFreezeState[ClientId] = Frozen;
+			continue;
+		}
+		if(Frozen && !m_aGoresFreezeState[ClientId])
+			++m_aGoresDrownCounts[ClientId];
+		m_aGoresFreezeState[ClientId] = Frozen;
 	}
 }
 

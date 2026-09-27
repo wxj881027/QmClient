@@ -253,6 +253,22 @@ inline float ResolveSettingsContentFlowHeight(const SSettingsContentMetrics &Met
 	return Height;
 }
 
+// 一行控件的最小高度与文本自然高度取较大值。文本测量由调用方提供，
+// 这样行流和卡片高度可以共享同一条换行规则。
+inline float ResolveSettingsAutoRowHeight(const float MinimumHeight, const float ContentHeight)
+{
+	return std::max(std::max(0.0f, MinimumHeight), std::max(0.0f, ContentHeight));
+}
+
+// 双列内容各自消费自己的矩形后，把较长一列提交回父内容区。
+// 父区的底部保持不变，这样后续行和自动测量都能看到最长列的真实高度。
+inline void CommitSettingsColumnContentFlow(CUIRect &Content, const CUIRect &LeftColumn, const CUIRect &RightColumn)
+{
+	const float ContentBottom = Content.y + Content.h;
+	Content.y = std::max(LeftColumn.y, RightColumn.y);
+	Content.h = std::max(0.0f, ContentBottom - Content.y);
+}
+
 inline int ResolveSettingsSelectionWithCustomFallback(const int MatchedIndex, const int SupportedCount)
 {
 	return MatchedIndex >= 0 && MatchedIndex < SupportedCount ? MatchedIndex : std::max(0, SupportedCount);
@@ -454,8 +470,13 @@ inline float ResolveQmVisualCollisionHitboxHeight(const SSettingsContentMetrics 
 
 inline float ResolveQmVisualFocusModeHeight(const SSettingsContentMetrics &Metrics)
 {
+	// 禅模式卡的双列布局：总开关一行 + 较长一列（段标题 + 该段开关行）+ 底部按键绑定一行。
+	// 左列「界面 4 / 玩家 4 / 视觉 6」＝ 3 段 14 行，右列「语音音效 3 / 聊天 4」＝ 2 段 7 行，左列恒高；
+	// 末尾再加一个行距，作为最后一行与卡片底部内边距之间的留白。
 	const float Section = Metrics.m_SmallSize + Metrics.m_LineSpacing;
-	return 16.0f * Metrics.m_RowStep + 3.0f * Section + Metrics.m_LineSpacing;
+	const float LeftColumn = 3.0f * Section + 14.0f * Metrics.m_RowStep;
+	const float RightColumn = 2.0f * Section + 7.0f * Metrics.m_RowStep;
+	return Metrics.m_RowStep + std::max(LeftColumn, RightColumn) + Metrics.m_RowStep + Metrics.m_LineSpacing;
 }
 
 inline float ResolveSettingsHslaRowsHeight(const SSettingsContentMetrics &Metrics, const bool Alpha)

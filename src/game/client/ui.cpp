@@ -2525,6 +2525,7 @@ void CCachedText::Update(ITextRender *pTextRender, const char *pText, float Font
 		return;
 
 	pTextRender->DeleteTextContainer(m_TextContainerIndex);
+	m_pTextContainerOwner = nullptr;
 
 	m_Text = pText;
 	m_FontSize = FontSize;
@@ -2542,6 +2543,10 @@ void CCachedText::Update(ITextRender *pTextRender, const char *pText, float Font
 	pTextRender->CreateTextContainer(m_TextContainerIndex, &Cursor, m_Text.c_str());
 	pTextRender->TextColor(OldColor);
 
+	// 空文本不会留下容器，此时不记录所有者，析构时也就无需归还。
+	if(m_TextContainerIndex.Valid())
+		m_pTextContainerOwner = pTextRender;
+
 	m_BoundingBox = Cursor.BoundingBox();
 	m_MaxCharacterHeight = Cursor.m_MaxCharacterHeight;
 }
@@ -2557,12 +2562,21 @@ void CCachedText::Render(ITextRender *pTextRender, vec2 Pos, ColorRGBA Color) co
 void CCachedText::Reset(ITextRender *pTextRender)
 {
 	pTextRender->DeleteTextContainer(m_TextContainerIndex);
+	m_pTextContainerOwner = nullptr;
 	m_Text.clear();
 	m_FontSize = -1.0f;
 	m_LineWidth = -1.0f;
 	m_CursorFlags = 0;
 	m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
 	m_MaxCharacterHeight = 0.0f;
+}
+
+CCachedText::~CCachedText()
+{
+	// 由 Update/Reset 传入的渲染器归还容器；渲染器生命周期长于所有 CCachedText
+	// （客户端关闭时 CUi 会先清空缓存并停止使用文本渲染器）。
+	if(m_pTextContainerOwner != nullptr)
+		m_pTextContainerOwner->DeleteTextContainer(m_TextContainerIndex);
 }
 
 void CUi::RenderTime(CUIRect TimeRect, float FontSize, int Seconds, bool NotFinished, int Millis, bool TrueMilliseconds, CCachedText &SecondsText, CCachedText &MillisText, ColorRGBA Color) const

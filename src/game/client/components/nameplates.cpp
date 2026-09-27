@@ -790,11 +790,17 @@ private:
 	// 上一帧的内容是否随时间变化。由称号渲染器自己的判定回填，而不是在这里镜像它的条件：
 	// 逐字符浮动、掠光与本地配色档都会让顶点逐帧变化，漏判会让浮动/掠光停在第一帧。
 	bool m_TitleAnimated = false;
+	// true = 名字上方独立行；false = 名字行内联（默认）。
+	bool m_AboveName = false;
 
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
-		m_Visible = Data.m_aQmTitle[0] != '\0';
+		// 头衔全局开关；位置互斥：AboveName 实例仅在 above 模式下可见，内联实例反之。
+		const bool AboveMode = g_Config.m_QmNameplateTitleAboveName != 0;
+		m_Visible = g_Config.m_QmShowNameplateTitle != 0 &&
+			    Data.m_aQmTitle[0] != '\0' &&
+			    (m_AboveName == AboveMode);
 		m_Alpha = Data.m_Color.a;
 		if(!m_Visible)
 		{
@@ -946,8 +952,9 @@ protected:
 	}
 
 public:
-	CNamePlatePartTitle(CGameClient &This) :
-		CNamePlatePartText(This) {}
+	// aboveName=true: 独立行渲染于名字上方；false: 内联于名字行左侧（默认）。
+	explicit CNamePlatePartTitle(CGameClient &This, bool aboveName = false) :
+		CNamePlatePartText(This), m_AboveName(aboveName) {}
 };
 
 class CNamePlatePartName : public CNamePlatePartText
@@ -1644,9 +1651,13 @@ private:
 		AddPart<CNamePlatePartPing>(This); // TClient
 		AddPart<CNamePlatePartIgnoreMark>(This); // TClient
 		AddPart<CNamePlatePartFriendMark>(This);
-		AddPart<CNamePlatePartTitle>(This);
+		AddPart<CNamePlatePartTitle>(This, false); // 内联：名字左侧
 		AddPart<CNamePlatePartClientId>(This, false);
 		AddPart<CNamePlatePartName>(This);
+		AddPart<CNamePlatePartNewLine>(This);
+		// 上方独立行：仅在 QmNameplateTitleAboveName 开启时可见，
+		// 插在名字行之后（渲染时名字行先渲染，上方行在其上方）。
+		AddPart<CNamePlatePartTitle>(This, true); // 上方行
 		AddPart<CNamePlatePartNewLine>(This);
 	}
 
@@ -2987,7 +2998,15 @@ void CNamePlates::OnRender()
 			if(GameClient()->m_aClients[i].m_SpecCharPresent && RenderNameplates && !FollowedCharacterWillRender)
 			{
 				const vec2 RenderPos = GameClient()->m_aClients[i].m_SpecChar;
-				RenderNamePlateGame(RenderPos, pInfo, 0.4f, false);
+				// HJ大佬辅助：名牌与水中的 x_spec 幽灵共用同一个透明度，避免出现
+				// 「Tee 已经淡出、名字还挂着」的割裂观感。
+				const float SpecCharAlpha = ResolveQmPausedSpectatorAlpha(
+					g_Config.m_QmPausedSpectatorFade != 0,
+					g_Config.m_QmPausedSpectatorAlpha,
+					GameClient()->m_aClients[i].m_Paused,
+					GameClient()->m_aClients[i].m_SpecCharPresent,
+					1.0f);
+				RenderNamePlateGame(RenderPos, pInfo, 0.4f * SpecCharAlpha, false);
 			}
 			// Only render name plates for active characters
 			if(GameClient()->m_Snap.m_aCharacters[i].m_Active)

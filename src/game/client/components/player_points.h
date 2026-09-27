@@ -6,6 +6,7 @@
 #include <engine/http.h>
 #include <engine/shared/jobs.h>
 #include <engine/shared/json.h>
+#include <engine/sqlite.h>
 
 #include <game/client/component.h>
 
@@ -74,12 +75,18 @@ private:
 	static constexpr int64_t FAIL_RETRY_DELAY_MS = 30 * 1000; // 30 seconds
 	static constexpr int MAX_CONCURRENT_REQUESTS = 2;
 
+	CSqlite m_pDb;
+	CSqliteStmt m_pLoadStmt;
+	CSqliteStmt m_pStoreStmt;
+
 	// Helper functions
 	void StartRequest(const char *pPlayerName);
 	void ProcessCompletedRequests();
+	void StoreToDb(const char *pPlayerName, int Points);
 
 public:
 	int Sizeof() const override { return sizeof(*this); }
+	void OnInit() override;
 	void OnShutdown() override;
 	void OnRender() override;
 

@@ -821,6 +821,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == Bu ön ayarı uygula
 
+Apply watermark
+== Filigranı uygula
+
 Are you sure that you want to delete %d selected items?
 == %d seçili öğeyi silmek istediğinize emin misiniz?
 
@@ -1075,6 +1078,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 
 Auto weapon switch
 == Otomatik silah değiştirme
+
+Auto-accept team invites by sending /team <n>
+== /team <n> göndererek takım davetlerini otomatik kabul et
 
 Auto-close chat after unfreeze
 == Çözülmeden sonra sohbeti otomatik kapat
@@ -1511,6 +1517,12 @@ Both
 Both sides of keyword rules must be filled
 == Anahtar kelime kurallarının her iki tarafı da doldurulmalıdır
 
+Bottom left
+== Sol alt
+
+Bottom right
+== Sağ alt
+
 Bounce
 == Sekme
 
@@ -1646,9 +1658,6 @@ Can't swap with yourself
 Cancel
 == İptal
 
-Cancel upload
-== Yüklemeyi iptal et
-
 Cancel your swap request
 == Takas isteğini iptal et
 
@@ -1663,6 +1672,9 @@ Card height animation
 
 Card list entry animation
 == Ayar kartı listesi giriş animasyonu
+
+Card opacity
+== Kart opaklığı
 
 Card reflow animation
 == Ayar kartı yeniden düzenleme animasyonu
@@ -1834,9 +1846,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose whether to browse replays or screenshots
-== Demo mu yoksa ekran görüntüsü mü gezileceğini seçin
 
 Choose which TClient settings tabs are visible
 == Choose which TClient settings tabs are visible
@@ -2255,6 +2264,9 @@ Configure Tee appearance and skins
 Configure the companion appearance and movement
 == Configure the companion appearance and movement
 
+Configure the Gores team drown board
+== Gores takım boğulma panosunu yapılandır
+
 Configure the ingame cursor scale
 == Oyun içi imleç ölçeğini ayarlayın
 
@@ -2612,6 +2624,9 @@ Custom title
 Custom translation prompt (overrides built-in)
 == Özel Çeviri İstemi (Yerleşik İstemi Geçersiz Kılar)
 
+Custom watermark text
+== Özel filigran metni
+
 Customize additional nameplate text
 == Customize additional nameplate text
 
@@ -2704,6 +2719,9 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == Güncellemeyi tamamlamak için DDNet istemcisinin yeniden başlatılması gerekiyor!
+
+DDNet contributors and staff credits
+== DDNet katkıda bulunanlar ve ekip
 
 DDNet Memory
 == DDNet belleği
@@ -3287,6 +3305,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == Bir parçayı değiştirmek için sağ tuvalin üzerine bırakın.
 
+Drown deaths
+== Boğulma ölümleri
+
 Dual Kawase
 == Çift Kawase
 
@@ -3383,9 +3404,6 @@ Dummy mini view zoom (percent)
 Dummy name
 == Kukla adı
 
-Dummy not connected
-== Kukla bağlı değil
-
 Dummy skin
 == Kukla derisi
 
@@ -3472,9 +3490,6 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == Dinamik Ada arka plan rengi
-
-Each joins a separate team so solo runs start in sync (useful on maps where team-0 start is unreliable)
-== Her biri farklı bir takıma girer; böylece solo koşular senkron başlar (takım-0 başlangıcının güvenilmez olduğu haritalarda kullanışlı)
 
 Ease in out quad
 == Yavaş giriş yavaş çıkış ikinci derece
@@ -4181,6 +4196,9 @@ Fade opacity along trail length
 Fade out
 == Soldurarak kapat
 
+Fade paused spectators in water
+== Suda duraklatılmış izleyicileri saydamlaştır
+
 Fade trail alpha
 == İz alfasını soldur
 
@@ -4303,6 +4321,9 @@ File executed on map change/reload to set default server settings
 
 File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 == sv_use_sql devre dışıysa veya yedek SQL sunucusu olarak sıralamaları depolamak için dosya.
+
+File information
+== Dosya bilgileri
 
 File with announcements, one per line.
 == Duyuruları içeren dosya, her satırda bir tane.
@@ -4835,11 +4856,17 @@ Gores actor
 Gores auto weapon switch
 == Gores otomatik silah değiştirme
 
+Gores drown board
+== Gores boğulma panosu
+
 Gores Mode
 == Gores Modu
 
 Gores mode key
 == Gores modu tuşu
+
+Gores team drown board opacity
+== Gores takım boğulma panosu opaklığı
 
 Gores · Axiom
 == Gores · Axiom
@@ -5251,9 +5278,6 @@ HTTP map download: low speed limit (in bytes/s, 0=disabled)
 
 HTTP map download: low speed limit period (0=disabled)
 == HTTP harita indirme: düşük hız sınırı süresi (0=devre dışı)
-
-HTTPS endpoint
-== HTTPS uç noktası
 
 https://ddnet.org/discord
 == https://ddnet.org/discord
@@ -6203,9 +6227,6 @@ Main Asset
 Main menu
 == Ana menü
 
-Main team %d / Dummy team %d
-== Ana takım %d / kukla takım %d
-
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == Donmuş oyuncuları daha çok voleybol topuna benzet (0=Devre dışı, 1=Sadece voleybol haritaları, 2=Her zaman)
 
@@ -6275,6 +6296,9 @@ Manual target
 Map
 == Harita
 
+Map browser difficulty star filter bitmask (bits 1-5)
+== Harita tarayıcısı zorluk yıldızı filtresi bit maskesi (bitler 1-5)
+
 Map browser surface
 == Harita tarayıcısı yüzeyi
 
@@ -6283,6 +6307,12 @@ Map browser surface color
 
 Map browser transparency
 == Harita tarayıcısı şeffaflığı
+
+Map browser: show empty servers only
+== Harita tarayıcısı: yalnızca boş sunucuları göster
+
+Map browser: show favorite maps only
+== Harita tarayıcısı: yalnızca favori haritaları göster
 
 Map danger border
 == Harita tehlike sınırı
@@ -6298,9 +6328,6 @@ Map folders
 
 Map name
 == Harita adı
-
-Map path in save folder
-== Kayıt klasöründeki harita yolu
 
 Map play history
 == Harita oynama geçmişi
@@ -6353,9 +6380,6 @@ Map upload
 Map upload cancelled.
 == Harita yükleme iptal edildi.
 
-Map upload endpoint
-== Harita yükleme uç noktası
-
 Map upload endpoint (empty disables map upload)
 == Harita yükleme uç noktası (boşsa yükleme kapalı)
 
@@ -6373,9 +6397,6 @@ Map uploaded successfully.
 
 Maps finished
 == Tamamlanan haritalar
-
-maps/example.map
-== maps/example.map
 
 Margin when notification is docked
 == Bildirim çubuğu kenara yaslandığında kenar boşluğu bırak
@@ -6514,6 +6535,9 @@ Maximum number of vanilla antispoof handshakes answered per second (0 = unlimite
 
 Maximum players participating in a vote (0 = unlimited)
 == Bir oylamaya katılabilecek maksimum oyuncu sayısı (0 = sınırsız)
+
+Maximum players shown in the Gores team drown board
+== Gores takım boğulma panosunda gösterilen maksimum oyuncu sayısı
 
 Maximum reduction
 == Maksimum azaltma
@@ -6712,6 +6736,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee'nin sabit yönü boyunca daha iyimser tahmin, stabilize olma gecikmesini azaltır
+
+More teammates...
+== Daha fazla takım arkadaşı...
 
 MOTD
 == MOTD
@@ -7142,6 +7169,9 @@ No empty team left.
 No favorite maps yet
 == Henüz favori harita yok
 
+No filter
+== Filtresiz
+
 No input device available
 == Kullanılabilir giriş cihazı yok
 
@@ -7234,6 +7264,9 @@ No saves found on this map
 
 No screenshot selected
 == Ekran görüntüsü seçilmedi
+
+No screenshots
+== Ekran görüntüsü yok
 
 No server selected
 == Sunucu seçilmedi
@@ -7781,6 +7814,9 @@ Pause voice when window unfocused
 Pause/unpause game
 == Oyunu duraklat/duraklatmayı kaldır
 
+Paused spectator opacity (percent)
+== Duraklatılmış izleyici opaklığı (yüzde)
+
 Penalty in seconds for saving or swapping positions
 == Konum kaydetme veya değiştirme için saniye cinsinden ceza
 
@@ -7855,6 +7891,9 @@ Pistol
 
 Pistol guide line
 == Tabanca yardımcı çizgisi
+
+Place title on a separate line above the player name instead of inline
+== Unvanı satır içinde yerine oyuncu adının üstünde ayrı bir satıra yerleştir
 
 Plasma gun shots per second
 == Plazma tabancasının saniyedeki atış sayısı
@@ -8047,6 +8086,9 @@ Players hook time is limited
 
 Players hook time is unlimited
 == Oyuncuların kanca süresi sınırsızdır
+
+Players shown
+== Gösterilen oyuncular
 
 Players weapons affect others
 == Oyuncuların silahları diğerlerini etkiler
@@ -8777,9 +8819,6 @@ Reduced
 Reduced: uses shorter transitions and disables presentation animations
 == Azaltılmış: daha kısa geçişler kullanır ve sunum animasyonlarını devre dışı bırakır
 
-Refine the search to see more maps
-== Daha fazla harita görmek için aramayı daraltın
-
 Refresh
 == Yenile
 
@@ -9335,11 +9374,17 @@ Rifle laser outline color
 Right jump
 == Sağ zıplama
 
+Right-click to add to favorites
+== Favorilere eklemek için sağ tıklayın
+
 Right-click to disable auto-translate
 == Otomatik çeviriyi devre dışı bırakmak için sağ tıklayın
 
 Right-click to enable auto-translate
 == Otomatik çeviriyi etkinleştirmek için sağ tıklayın
+
+Right-click to remove from favorites
+== Favorilerden kaldırmak için sağ tıklayın
 
 Ring
 == Halka
@@ -9650,6 +9695,24 @@ Screen resolution width (only fullscreen)
 Screenshot
 == Ekran görüntüsü
 
+Screenshot error
+== Ekran görüntüsü hatası
+
+Screenshot saved
+== Ekran görüntüsü kaydedildi
+
+Screenshot watermark custom text
+== Ekran görüntüsü filigranı özel metni
+
+Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right
+== Ekran görüntüsü filigranı konumu: 0=sol alt, 1=sağ alt, 2=sol üst, 3=sağ üst
+
+Screenshot watermark: include map name
+== Ekran görüntüsü filigranı: harita adını içer
+
+Screenshot watermark: include timestamp
+== Ekran görüntüsü filigranı: zaman damgasını içer
+
 Screenshots
 == Ekran görüntüleri
 
@@ -9670,9 +9733,6 @@ Search and navigate settings
 
 Search donor asset
 == Kaynak varlık ara
-
-Search local maps
-== Yerel haritaları ara
 
 Search main asset
 == Ana varlık ara
@@ -10310,6 +10370,9 @@ Show ghost
 Show ghost at unpredictable position of other players
 == Diğer oyuncuların tahmin edilemeyen konumunda hayalet göster
 
+Show Gores drown board
+== Gores boğulma panosunu göster
+
 Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).
 == GPU destekliyorsa grafik kütüphanesi uyarılarını ve hatalarını göster (0 = hiçbiri, 1 = minimum, 2 = performansı etkileyen, 3 = ayrıntılı, 4 = tümü).
 
@@ -10667,6 +10730,9 @@ Show player stats HUD
 Show player target angle
 == Oyuncu nişan açısını göster
 
+Show player Tee
+== Oyuncu Tee'sini göster
+
 Show players' key presses
 == Oyuncuların tuş vuruşlarını göster
 
@@ -10690,6 +10756,9 @@ Show Qm badge: identify via central server and mark QmClient users on nameplate/
 
 Show QmClient config variables
 == QmClient yapılandırma değişkenlerini göster
+
+Show QmClient title in player nameplate (0 = hide)
+== Oyuncu isim levhasında QmClient unvanını göster (0 = gizle)
 
 Show radial indicators of other Tees
 == Diğer Tee'lerin dairesel göstergelerini göster
@@ -10790,6 +10859,9 @@ Show tee status bar
 Show Tee trail for others
 == Diğerleri için Tee izini göster
 
+Show Tees in the Gores team drown board
+== Gores takım boğulma panosunda Tee'leri göster
+
 Show teleporter tile outlines
 == Işınlanma döşemesi anahatlarını göster
 
@@ -10798,6 +10870,9 @@ Show text entities
 
 Show the cursor while free spectating
 == Serbest izlerken imleci göster
+
+Show the Gores team drown board
+== Gores takım boğulma panosunu göster
 
 Show the number of frozen tees
 == Donmuş tee sayısını göster
@@ -11801,6 +11876,9 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == Takım tee parlaması
 
+Teammate
+== Takım arkadaşı
+
 Teams
 == Takımlar
 
@@ -12038,6 +12116,9 @@ The server rejected the map upload.
 The update is ready and will be installed when you exit.
 == Güncelleme hazır ve çıkışta kurulacak.
 
+The watermarked screenshot was saved next to the original
+== Filigranlı ekran görüntüsü orijinalin yanına kaydedildi
+
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == %s dokusunun genişliği %d'ye bölünemiyor veya yüksekliği %d'ye bölünemiyor, bu da görsel hatalara neden olabilir.
 
@@ -12236,6 +12317,9 @@ Timer is displayed in %s
 Timer isn't displayed.
 == Zamanlayıcı görüntülenmiyor.
 
+Timestamp
+== Zaman damgası
+
 Tiny Tee Size
 == Minik Tee Boyutu
 
@@ -12415,6 +12499,12 @@ Too many translation tasks
 
 Toolbox page
 == Araç kutusu sayfası
+
+Top left
+== Sol üst
+
+Top right
+== Sağ üst
 
 Total
 == Toplam
@@ -12670,6 +12760,9 @@ Unable to save the skin
 
 Unable to save the skin with a reserved name
 == Ayrılmış bir isimle skin kaydedilemiyor
+
+Unable to save the watermarked screenshot
+== Filigranlı ekran görüntüsü kaydedilemedi
 
 Unavailable
 == Kullanılamıyor
@@ -13327,6 +13420,9 @@ Warning
 
 Water hammer highlight
 == Suda çekiç vurgusu
+
+Watermark
+== Filigran
 
 Wave amount
 == Dalga miktarı

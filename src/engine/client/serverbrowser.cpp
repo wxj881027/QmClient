@@ -558,7 +558,11 @@ void CServerBrowser::Filter()
 		CServerInfo &Info = pEntry->m_Info;
 		bool Filtered = false;
 
-		if(g_Config.m_BrFilterEmpty && Info.m_NumFilteredPlayers == 0)
+		if(g_Config.m_QmMapBrowserEmptyOnly && Info.m_NumFilteredPlayers != 0)
+		{
+			Filtered = true;
+		}
+		else if(g_Config.m_BrFilterEmpty && Info.m_NumFilteredPlayers == 0)
 		{
 			Filtered = true;
 		}
@@ -742,6 +746,7 @@ int CServerBrowser::SortHash() const
 	i |= g_Config.m_BrFilterCountry << 14;
 	i |= g_Config.m_BrFilterConnectingPlayers << 15;
 	i |= g_Config.m_BrFilterLogin << 16;
+	i |= g_Config.m_QmMapBrowserEmptyOnly << 17;
 	return i;
 }
 

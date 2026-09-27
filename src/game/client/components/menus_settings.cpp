@@ -5569,8 +5569,9 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 			s_AudioPackListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
 			s_AudioPackListBox.DoStart(LineHeight + LineSpacing, gs_vAudioPacks.size(), 1, 4, SelectedPack, &ListRow, false);
 
+			// 音频个数徽章：圆角样式，高度贴合列表行，只保留一条细缝区分相邻音频包。
 			const float BadgeFontSize = SoundMetrics.m_SmallSize;
-			const float BadgeHeight = SoundMetrics.m_BadgeHeight;
+			const float BadgeInset = maximum(1.0f, LineSpacing * 0.25f);
 			const float BuiltInBadgeW = minimum(72.0f, maximum(38.0f, TextRender()->TextWidth(BadgeFontSize, Localize("Built-in"), -1, -1.0f) + 16.0f));
 
 			for(size_t i = 0; i < gs_vAudioPacks.size(); ++i)
@@ -5593,11 +5594,11 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 				CUIRect NameRect, BadgeRect;
 				Item.m_Rect.VSplitRight(BuiltInBadgeW, &NameRect, &BadgeRect);
 				NameRect.VMargin(6.0f, &NameRect);
-				BadgeRect.VMargin(maximum(0.0f, (LineHeight - BadgeHeight) * 0.5f), &BadgeRect);
+				BadgeRect.VMargin(BadgeInset, &BadgeRect);
 
 				char aBadge[32];
 				str_format(aBadge, sizeof(aBadge), "%d", Entry.m_FileCount);
-				DrawRoundedSurface(Ui(), BadgeRect, SelectedPack == (int)i ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), ColorRGBA(), 4.0f);
+				DrawRoundedSurface(Ui(), BadgeRect, SelectedPack == (int)i ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), ColorRGBA(), ui_token::radius::TIGHT);
 
 				Ui()->DoLabel(&NameRect, aLabel, BodySize, TEXTALIGN_ML);
 				Ui()->DoLabel(&BadgeRect, aBadge, BadgeFontSize, TEXTALIGN_MC);
@@ -5885,11 +5886,6 @@ void CMenus::RenderSettings(CUIRect MainView)
 		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
 		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONFIG;
 	}
-	else if(g_Config.m_UiSettingsPage == SETTINGS_CONTRIBUTORS)
-	{
-		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
-		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
-	}
 	else
 	{
 		g_Config.m_UiSettingsPage = SettingsCanonicalPage(g_Config.m_UiSettingsPage);
@@ -5990,6 +5986,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 			SETTINGS_TCLIENT,
 			SETTINGS_QMCLIENT,
 			SETTINGS_SEARCH,
+			SETTINGS_CONTRIBUTORS,
 		};
 		// 竖排页签（设置页左栏）保持原来的分块选中/悬停底色，不做胶囊滑块。
 		const ColorRGBA SettingsNavigationSelected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.42f);
@@ -6157,7 +6154,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		{
 			if(!CollectingMenuTextPlan)
 				GameClient()->m_MenuBackground.ChangePosition(15);
-			RenderSettingsQmClient(ContentView, false, CollectingMenuTextPlan);
+			RenderSettingsQmClient(ContentView, CollectingMenuTextPlan);
 			if(!CollectingMenuTextPlan)
 				m_SettingsRuntimeMetadata.m_LastQmTab = m_QmClientSettingsTab;
 		}
@@ -6166,6 +6163,12 @@ void CMenus::RenderSettings(CUIRect MainView)
 			if(!CollectingMenuTextPlan)
 				GameClient()->m_MenuBackground.ChangePosition(15);
 			RenderSettingsGlobalSearch(ContentView, CollectingMenuTextPlan);
+		}
+		else if(g_Config.m_UiSettingsPage == SETTINGS_CONTRIBUTORS)
+		{
+			if(!CollectingMenuTextPlan)
+				GameClient()->m_MenuBackground.ChangePosition(15);
+			RenderSettingsContributors(ContentView, CollectingMenuTextPlan);
 		}
 		else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
 		{

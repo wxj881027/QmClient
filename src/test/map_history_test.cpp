@@ -390,3 +390,50 @@ TEST(MapVoteDifficulty, PreservesStarParsingAndRejectsMalformedDescriptions)
 	str_copy(Option.m_aDescription, "Map by author 2/5 then 4/5");
 	EXPECT_EQ(Cache.Find(5, &Option, "Map"), 2);
 }
+
+TEST(MapVoteDifficulty, BrowserFilterSliderMapsSingleDiscreteLevels)
+{
+	EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(false, 0), QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE);
+	EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(true, 0), QmMapVotes::MAP_BROWSER_FILTER_LEVEL_EMPTY);
+	for(int Star = 1; Star <= 5; ++Star)
+	{
+		const int Level = QmMapVotes::MAP_BROWSER_FILTER_LEVEL_FIRST_STAR + Star - 1;
+		EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(false, 1 << Star), Level);
+		EXPECT_EQ(QmMapVotes::MapBrowserFilterStars(Level), Star);
+	}
+	EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(true, 1 << 2), -1);
+	EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(false, (1 << 1) | (1 << 3)), -1);
+	EXPECT_EQ(QmMapVotes::MapBrowserFilterStars(QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE), 0);
+	EXPECT_EQ(QmMapVotes::MapBrowserFilterStars(QmMapVotes::MAP_BROWSER_FILTER_LEVEL_EMPTY), 0);
+
+	// 每个档位写入配置后都应读回自身，滑条位置与实际筛选条件保持一致。
+	for(int Level = QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE; Level <= QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR; ++Level)
+	{
+		int EmptyOnly = -1;
+		int StarMask = -1;
+		QmMapVotes::ApplyMapBrowserFilterLevel(Level, EmptyOnly, StarMask);
+		EXPECT_EQ(QmMapVotes::MapBrowserFilterLevel(EmptyOnly != 0, StarMask), Level) << "level " << Level;
+	}
+}
+
+TEST(MapVoteDifficulty, BrowserFilterFavoriteSwitchIsIndependent)
+{
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 4, false, 1 << 3, true, true));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(3, 4, false, 1 << 3, true, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 4, false, 1 << 3, false, false));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(2, 4, false, 1 << 3, true, true));
+}
+
+TEST(MapVoteDifficulty, BrowserFilterKeepsEmptyServersUnlessEmptyOnlyIsOn)
+{
+	// 「不筛选」档必须保留空服务器：引擎侧只在 empty_only 打开时隐藏有人的服务器，
+	// 客户端列表层的二次过滤不能把默认档的空服一并滤掉。
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 0, false, 0, false, false));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(-1, 0, false, 0, false, false));
+	// 打开「只看空服」后：空服保留，有人的服务器隐藏。
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 0, true, 0, false, false));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(3, 1, true, 0, false, false));
+	// 星级与空服条件叠加时两条都必须满足。
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(3, 0, true, 1 << 3, false, false));
+	EXPECT_FALSE(QmMapVotes::MatchesFilter(2, 0, true, 1 << 3, false, false));
+}

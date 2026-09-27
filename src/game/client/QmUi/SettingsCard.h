@@ -5,6 +5,7 @@
 
 #include "SettingsCardGeometry.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <functional>
@@ -190,6 +191,22 @@ using FSettingsCardHasPendingPreLayoutInput = std::function<bool()>;
 using FSettingsCardPreLayoutHeaderInput = std::function<bool(const SSettingsCardFrame &Frame, bool Collapsed)>;
 using FSettingsCardHeaderAction = std::function<void(const SSettingsCardFrame &Frame, bool Collapsed)>;
 using FSettingsCardCollapseChanged = std::function<void(bool Collapsed)>;
+
+// 卡片内容测量使用一个足够大的虚拟内容区。内容渲染函数只需要像正式渲染一样
+// 消费 CUIRect，Deck 就能得到实际布局高度，不再要求页面重复维护行数常量。
+inline constexpr float SETTINGS_CARD_CONTENT_MEASURE_PROBE_HEIGHT = 1000000.0f;
+
+inline float ResolveSettingsCardContentHeight(const FSettingsCardRenderMeasured &Render, const float ContentWidth)
+{
+	if(!Render)
+		return 0.0f;
+	const float Width = std::isfinite(ContentWidth) ? std::max(0.0f, ContentWidth) : 0.0f;
+	CUIRect Probe{0.0f, 0.0f, Width, SETTINGS_CARD_CONTENT_MEASURE_PROBE_HEIGHT};
+	Render(Probe);
+	if(!std::isfinite(Probe.h))
+		return 0.0f;
+	return std::clamp(SETTINGS_CARD_CONTENT_MEASURE_PROBE_HEIGHT - Probe.h, 0.0f, SETTINGS_CARD_CONTENT_MEASURE_PROBE_HEIGHT);
+}
 
 void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, bool Collapsed, float DrawAlpha = 1.0f);
 

@@ -2091,6 +2091,7 @@ set(EXPECTED_DATA
   qmclient/chat_emojis/support.png
   qmclient/chat_emojis/surrender.png
   qmclient/gui_logo.png
+  qmclient/map_difficulty.sql
   race_flag.png
   shader/gaussian_blur.frag
   shader/gaussian_blur.vert
@@ -2396,7 +2397,7 @@ file(GLOB_RECURSE QMCLIENT_BUNDLED_FONT_FILES
   "${PROJECT_SOURCE_DIR}/data/qmclient/fonts/*"
 )
 list(APPEND EXPECTED_DATA ${QMCLIENT_BUNDLED_FONT_FILES})
-set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;otf;OTF;png;rules;ttc;TTC;ttf;TTF;txt;vert;wv" data ${EXPECTED_DATA})
+set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;wv" data ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND SHARED LIBS
@@ -3131,6 +3132,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
+    QmUi/cards/QmCardCatalogBetterScoreboard.cpp
     QmUi/cards/QmCardCatalogSteam.cpp
     QmUi/cards/QmCardCatalogFunctionMetrics.h
     QmUi/cards/QmCardCatalogHud.cpp
@@ -3224,6 +3226,7 @@ if(CLIENT)
     components/menus_assets_editor.cpp
     components/menus_browser.cpp
     components/menus_demo.cpp
+    components/menus_demo_screenshots.cpp
     components/menus_ingame.cpp
     components/menus_ingame_touch_controls.cpp
     components/menus_ingame_touch_controls.h
@@ -3278,6 +3281,9 @@ if(CLIENT)
     components/qmclient/jelly_tee.cpp
     components/qmclient/jelly_tee.h
     components/qmclient/keyword_reply_rules.h
+    components/qmclient/map_difficulty_catalog.cpp
+    components/qmclient/map_difficulty_catalog.h
+    components/qmclient/map_vote_difficulty.h
     components/qmclient/markdown_cache_writer.h
     components/qmclient/menus_qmclient.cpp
     components/qmclient/modes.cpp
@@ -3347,6 +3353,8 @@ if(CLIENT)
     components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
     components/qmclient/settings_resource_preview.h
+    components/qmclient/screenshot_manager.cpp
+    components/qmclient/screenshot_manager.h
     components/qmclient/scripting.cpp
     components/qmclient/scripting.h
     components/qmclient/skin_prepared_textures.h
@@ -4322,6 +4330,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     jsonwriter_test.cpp
     keyword_reply_rules_test.cpp
     logger_test.cpp
+    map_difficulty_catalog_test.cpp
     map_history_test.cpp
     map_load_test.cpp
     linereader_test.cpp
@@ -4391,6 +4400,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_graphics_opengl_probe_contract_test.cpp
     qm_demo_cut_contract_test.cpp
     qm_demo_cut_test.cpp
+    qm_screenshot_gallery_contract_test.cpp
     qm_local_saves_test.cpp
     qm_ui_scale_popup_contract_test.cpp
     qm_localization_contract_test.cpp
@@ -4618,6 +4628,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/generated/client_data7.h
     src/game/client/components/qmclient/hud_notifications/hud_notification_catalog.cpp
     src/game/client/components/qmclient/hud_notifications/hud_notification_rules.cpp
+    src/game/client/components/qmclient/map_difficulty_catalog.cpp
     src/game/client/components/qmclient/hammer_hit_detection.cpp
     src/game/client/components/qmclient/axiom_scores.cpp
     src/game/client/components/qmclient/axiom_scores_data.cpp

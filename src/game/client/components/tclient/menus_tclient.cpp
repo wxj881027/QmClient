@@ -3866,11 +3866,6 @@ void CMenus::LoadSettingsRuntimeCacheMetadata()
 		m_SettingsRuntimeMetadata.m_LastPage = SETTINGS_QMCLIENT;
 		m_SettingsRuntimeMetadata.m_LastQmTab = QMCLIENT_SETTINGS_TAB_CONFIG;
 	}
-	else if(m_SettingsRuntimeMetadata.m_LastPage == SETTINGS_CONTRIBUTORS)
-	{
-		m_SettingsRuntimeMetadata.m_LastPage = SETTINGS_QMCLIENT;
-		m_SettingsRuntimeMetadata.m_LastQmTab = QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
-	}
 	if(SessionCache.m_LastTClientTab >= 0)
 		m_TClientSettingsTab = CanonicalizePersistedTClientTab(SessionCache.m_LastTClientTab);
 	m_SettingsTClientCurrentScrollY = RuntimeKeyMatches ? SessionCache.m_LastScrollY : 0.0f;

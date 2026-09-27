@@ -821,6 +821,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == このプリセットを適用
 
+Apply watermark
+== ウォーターマークを適用
+
 Are you sure that you want to delete %d selected items?
 == 選択した %d 個のアイテムを削除してもよろしいですか？
 
@@ -1075,6 +1078,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 
 Auto weapon switch
 == 自動武器切り替え
+
+Auto-accept team invites by sending /team <n>
+== /team <n> を送信してチーム招待を自動承認
 
 Auto-close chat after unfreeze
 == 凍結解除後にチャットを自動で閉じる
@@ -1511,6 +1517,12 @@ Both
 Both sides of keyword rules must be filled
 == キーワードルールの両側を入力する必要があります
 
+Bottom left
+== 左下
+
+Bottom right
+== 右下
+
 Bounce
 == バウンス
 
@@ -1646,9 +1658,6 @@ Can't swap with yourself
 Cancel
 == キャンセル
 
-Cancel upload
-== アップロードをキャンセル
-
 Cancel your swap request
 == 交換リクエストをキャンセル
 
@@ -1663,6 +1672,9 @@ Card height animation
 
 Card list entry animation
 == 設定カード一覧の入場アニメーション
+
+Card opacity
+== カードの不透明度
 
 Card reflow animation
 == 設定カードの再配置アニメーション
@@ -1834,9 +1846,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose whether to browse replays or screenshots
-== デモまたはスクリーンショットを閲覧するかを選択
 
 Choose which TClient settings tabs are visible
 == Choose which TClient settings tabs are visible
@@ -2255,6 +2264,9 @@ Configure Tee appearance and skins
 Configure the companion appearance and movement
 == Configure the companion appearance and movement
 
+Configure the Gores team drown board
+== Gores チーム溺死ボードを設定
+
 Configure the ingame cursor scale
 == ゲーム内カーソルスケールを設定
 
@@ -2612,6 +2624,9 @@ Custom title
 Custom translation prompt (overrides built-in)
 == カスタム翻訳プロンプト（内蔵プロンプトを上書き）
 
+Custom watermark text
+== カスタムウォーターマーク
+
 Customize additional nameplate text
 == Customize additional nameplate text
 
@@ -2704,6 +2719,9 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet クライアントを再起動してアップデートを完了する必要があります！
+
+DDNet contributors and staff credits
+== DDNet のコントリビューターとスタッフ
 
 DDNet Memory
 == DDNet メモリ
@@ -3287,6 +3305,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == 右側キャンバスにドロップして部品を1つ置き換える。
 
+Drown deaths
+== 溺死数
+
 Dual Kawase
 == デュアルKawase
 
@@ -3383,9 +3404,6 @@ Dummy mini view zoom (percent)
 Dummy name
 == ダミー名
 
-Dummy not connected
-== 分身未接続
-
 Dummy skin
 == ダミースキン
 
@@ -3472,9 +3490,6 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == ダイナミックアイランドの背景色
-
-Each joins a separate team so solo runs start in sync (useful on maps where team-0 start is unreliable)
-== それぞれ別のチームに入り、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
 
 Ease in out quad
 == イーズインアウトクワッド
@@ -4181,6 +4196,9 @@ Fade opacity along trail length
 Fade out
 == フェードアウト
 
+Fade paused spectators in water
+== 水中で一時停止中の観戦者を半透明にする
+
 Fade trail alpha
 == フェードトレイルアルファ
 
@@ -4303,6 +4321,9 @@ File executed on map change/reload to set default server settings
 
 File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 == sv_use_sql が無効な場合、またはバックアップ SQL サーバーとしてランクを保存するためのファイル
+
+File information
+== ファイル情報
 
 File with announcements, one per line.
 == 告知ファイル（1 行に 1 件）
@@ -4835,11 +4856,17 @@ Gores actor
 Gores auto weapon switch
 == Gores 自動武器切り替え
 
+Gores drown board
+== Gores 溺死ボード
+
 Gores Mode
 == Gores モード
 
 Gores mode key
 == Gores モードキー
+
+Gores team drown board opacity
+== Gores チーム溺死ボードの不透明度
 
 Gores · Axiom
 == Gores · Axiom
@@ -5251,9 +5278,6 @@ HTTP map download: low speed limit (in bytes/s, 0=disabled)
 
 HTTP map download: low speed limit period (0=disabled)
 == HTTP マップダウンロード：低速制限期間（0=無効）
-
-HTTPS endpoint
-== HTTPS エンドポイント
 
 https://ddnet.org/discord
 == https://ddnet.org/discord
@@ -6203,9 +6227,6 @@ Main Asset
 Main menu
 == メインメニュー
 
-Main team %d / Dummy team %d
-== 本体チーム %d / 分身チーム %d
-
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 凍結プレイヤーをバレーボールのように見せる（0=無効、1=バレーボールマップのみ、2=常時）
 
@@ -6275,6 +6296,9 @@ Manual target
 Map
 == マップ
 
+Map browser difficulty star filter bitmask (bits 1-5)
+== マップブラウザーの難易度星フィルターのビットマスク（ビット 1-5）
+
 Map browser surface
 == マップブラウザー表面
 
@@ -6283,6 +6307,12 @@ Map browser surface color
 
 Map browser transparency
 == マップブラウザの透明度
+
+Map browser: show empty servers only
+== マップブラウザー：空のサーバーのみ表示
+
+Map browser: show favorite maps only
+== マップブラウザー：お気に入りマップのみ表示
 
 Map danger border
 == マップ危険境界
@@ -6298,9 +6328,6 @@ Map folders
 
 Map name
 == マップ名
-
-Map path in save folder
-== 保存フォルダー内のマップパス
 
 Map play history
 == マッププレイ履歴
@@ -6353,9 +6380,6 @@ Map upload
 Map upload cancelled.
 == マップのアップロードをキャンセルしました。
 
-Map upload endpoint
-== マップアップロードのエンドポイント
-
 Map upload endpoint (empty disables map upload)
 == マップアップロードのエンドポイント（空欄で無効）
 
@@ -6373,9 +6397,6 @@ Map uploaded successfully.
 
 Maps finished
 == クリアしたマップ
-
-maps/example.map
-== maps/example.map
 
 Margin when notification is docked
 == 通知バーが端に寄ったときの余白
@@ -6514,6 +6535,9 @@ Maximum number of vanilla antispoof handshakes answered per second (0 = unlimite
 
 Maximum players participating in a vote (0 = unlimited)
 == 投票に参加できる最大プレイヤー数（0 = 無制限）
+
+Maximum players shown in the Gores team drown board
+== Gores チーム溺死ボードに表示するプレイヤー数の上限
 
 Maximum reduction
 == 最大削減量
@@ -6712,6 +6736,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee の安定方向に沿ったより楽観的な予測、安定までの遅延を削減
+
+More teammates...
+== さらにチームメイト…
 
 MOTD
 == MOTD
@@ -7142,6 +7169,9 @@ No empty team left.
 No favorite maps yet
 == まだお気に入りマップはありません
 
+No filter
+== 指定なし
+
 No input device available
 == 利用可能な入力デバイスがありません
 
@@ -7234,6 +7264,9 @@ No saves found on this map
 
 No screenshot selected
 == スクリーンショットが選択されていません
+
+No screenshots
+== スクリーンショットはありません
 
 No server selected
 == サーバーが選択されていません
@@ -7781,6 +7814,9 @@ Pause voice when window unfocused
 Pause/unpause game
 == ゲームを一時停止/再開
 
+Paused spectator opacity (percent)
+== 観戦者の不透明度（パーセント）
+
 Penalty in seconds for saving or swapping positions
 == 位置の保存または交換に対するペナルティ（秒単位）
 
@@ -7855,6 +7891,9 @@ Pistol
 
 Pistol guide line
 == ピストル補助線
+
+Place title on a separate line above the player name instead of inline
+== タイトルを名前と同じ行ではなく、プレイヤー名の上に別の行で表示
 
 Plasma gun shots per second
 == プラズマガンの毎秒発射数
@@ -8047,6 +8086,9 @@ Players hook time is limited
 
 Players hook time is unlimited
 == このサーバーではフックの持続時間が無制限です
+
+Players shown
+== 表示するプレイヤー数
 
 Players weapons affect others
 == このサーバーでは武器が他のプレイヤーに影響します
@@ -8777,9 +8819,6 @@ Reduced
 Reduced: uses shorter transitions and disables presentation animations
 == 軽減：短い遷移を使用し、演出アニメーションを無効にします
 
-Refine the search to see more maps
-== 検索条件を絞り込むとさらに表示されます
-
 Refresh
 == 更新
 
@@ -9335,11 +9374,17 @@ Rifle laser outline color
 Right jump
 == 右ジャンプ
 
+Right-click to add to favorites
+== 右クリックでお気に入りに追加
+
 Right-click to disable auto-translate
 == 右クリックで自動翻訳を無効化
 
 Right-click to enable auto-translate
 == 右クリックで自動翻訳を有効化
+
+Right-click to remove from favorites
+== 右クリックでお気に入りから削除
 
 Ring
 == リング
@@ -9650,6 +9695,24 @@ Screen resolution width (only fullscreen)
 Screenshot
 == スクリーンショット
 
+Screenshot error
+== スクリーンショットの処理に失敗しました
+
+Screenshot saved
+== スクリーンショットを保存しました
+
+Screenshot watermark custom text
+== スクリーンショットのウォーターマークのカスタムテキスト
+
+Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right
+== スクリーンショットのウォーターマーク位置：0=左下、1=右下、2=左上、3=右上
+
+Screenshot watermark: include map name
+== スクリーンショットのウォーターマーク：マップ名を含める
+
+Screenshot watermark: include timestamp
+== スクリーンショットのウォーターマーク：タイムスタンプを含める
+
 Screenshots
 == スクリーンショット
 
@@ -9670,9 +9733,6 @@ Search and navigate settings
 
 Search donor asset
 == ドナーアセットを検索
-
-Search local maps
-== ローカルマップを検索
 
 Search main asset
 == メインアセットを検索
@@ -10310,6 +10370,9 @@ Show ghost
 Show ghost at unpredictable position of other players
 == 他のプレイヤーの予測不可能な位置にゴーストを表示
 
+Show Gores drown board
+== Gores 溺死ボードを表示
+
 Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).
 == GPU がサポートする場合、グラフィックスライブラリの警告とエラーを表示（0 = なし、1 = 最小、2 = パフォーマンスに影響、3 = 詳細、4 = すべて）
 
@@ -10667,6 +10730,9 @@ Show player stats HUD
 Show player target angle
 == プレイヤーの照準角度を表示
 
+Show player Tee
+== プレイヤーのTeeを表示
+
 Show players' key presses
 == プレイヤーのキー入力を表示
 
@@ -10690,6 +10756,9 @@ Show Qm badge: identify via central server and mark QmClient users on nameplate/
 
 Show QmClient config variables
 == QmClient 設定変数を表示
+
+Show QmClient title in player nameplate (0 = hide)
+== プレイヤーのネームプレートにQmClientのタイトルを表示（0 = 非表示）
 
 Show radial indicators of other Tees
 == 他の Tee の放射状インジケーターを表示
@@ -10790,6 +10859,9 @@ Show tee status bar
 Show Tee trail for others
 == 他のプレイヤーに Tee トレイルを表示
 
+Show Tees in the Gores team drown board
+== Gores チーム溺死ボードにTeeを表示
+
 Show teleporter tile outlines
 == テレポータータイルのアウトラインを表示
 
@@ -10798,6 +10870,9 @@ Show text entities
 
 Show the cursor while free spectating
 == フリースペクテイト中にカーソルを表示
+
+Show the Gores team drown board
+== Gores チーム溺死ボードを表示
 
 Show the number of frozen tees
 == 凍結 Tee の数を表示
@@ -11801,6 +11876,9 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == チーム Tee の外側グロー
 
+Teammate
+== チームメイト
+
 Teams
 == チーム
 
@@ -12038,6 +12116,9 @@ The server rejected the map upload.
 The update is ready and will be installed when you exit.
 == アップデートの準備ができました。終了時にインストールされます。
 
+The watermarked screenshot was saved next to the original
+== ウォーターマーク付きのスクリーンショットを元画像の隣に保存しました
+
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == テクスチャ %s の幅が %d で割り切れないか、高さが %d で割り切れないため、表示に問題が発生する可能性があります。
 
@@ -12236,6 +12317,9 @@ Timer is displayed in %s
 Timer isn't displayed.
 == タイマーは表示されていません
 
+Timestamp
+== タイムスタンプ
+
 Tiny Tee Size
 == ミニ Tee のサイズ
 
@@ -12415,6 +12499,12 @@ Too many translation tasks
 
 Toolbox page
 == ツールボックスページ
+
+Top left
+== 左上
+
+Top right
+== 右上
 
 Total
 == 合計
@@ -12670,6 +12760,9 @@ Unable to save the skin
 
 Unable to save the skin with a reserved name
 == 予約された名前のスキンを保存できません
+
+Unable to save the watermarked screenshot
+== ウォーターマーク付きのスクリーンショットを保存できません
 
 Unavailable
 == 利用不可
@@ -13327,6 +13420,9 @@ Warning
 
 Water hammer highlight
 == 水中ハンマーのハイライト
+
+Watermark
+== ウォーターマーク
 
 Wave amount
 == 波の振幅

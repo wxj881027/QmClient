@@ -7,6 +7,7 @@
 
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmModuleLayoutAdapter.h>
+#include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/localization.h>
 
 #include <gtest/gtest.h>
@@ -41,6 +42,54 @@ TEST(QmCardRegistry, CoversAllCardsNoDuplicates)
 	}
 }
 
+TEST(QmCardRegistry, BetterScoreboardCardIsRegisteredInFunctionColumn)
+{
+	const auto *pCard = qm_card_registry::FindByStableId("qm:better_scoreboard");
+	ASSERT_NE(pCard, nullptr);
+	EXPECT_STREQ(pCard->m_pDefaultTab, "function");
+	EXPECT_EQ(pCard->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
+	EXPECT_EQ(pCard->m_DefaultOrder, 7);
+	EXPECT_STREQ(pCard->m_pTitle, "Better scoreboard");
+
+	const auto &vFunctionCards = qm_card_catalog::FunctionCardStableIds();
+	EXPECT_NE(std::find(vFunctionCards.begin(), vFunctionCards.end(), "qm:better_scoreboard"), vFunctionCards.end());
+	qm_card_order::CModel Model;
+	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
+	const int MiniFeaturesIndex = Model.FindByStableId("qm:mini_features");
+	const int BetterScoreboardIndex = Model.FindByStableId("qm:better_scoreboard");
+	const int JumpHintIndex = Model.FindByStableId("qm:jump_hint");
+	ASSERT_GE(MiniFeaturesIndex, 0);
+	ASSERT_GE(BetterScoreboardIndex, 0);
+	ASSERT_GE(JumpHintIndex, 0);
+	EXPECT_EQ(Model.Entry(BetterScoreboardIndex).m_OrderInColumn, Model.Entry(MiniFeaturesIndex).m_OrderInColumn + 1);
+	EXPECT_GT(Model.Entry(JumpHintIndex).m_OrderInColumn, Model.Entry(BetterScoreboardIndex).m_OrderInColumn);
+}
+
+TEST(QmCardRegistry, BetterScoreboardSearchTargetsItsFunctionCard)
+{
+	qm_card_order::CModel Model;
+	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
+	for(const char *pQuery : {"更好的计分板", "计分板积分检查", "显示死亡后计分板", "滚动计分板", "计分板筛选"})
+	{
+		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
+		const auto It = std::find_if(vResults.begin(), vResults.end(), [](const auto &Result) {
+			return Result.m_pStableId != nullptr && std::string(Result.m_pStableId) == "qm:better_scoreboard";
+		});
+		ASSERT_NE(It, vResults.end()) << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pTab, "function");
+		EXPECT_STREQ(It->m_Target.m_pStableId, "qm:better_scoreboard");
+	}
+}
+
+TEST(QmModuleLayoutAdapter, BetterScoreboardStableIdRoundTrips)
+{
+	// 注：EQmModuleId 及其 stableId 查询都在 qm_module 命名空间内，
+	// 与 qm_module_layout_adapter_test.cpp 一致，必须显式限定。
+	qm_module::EQmModuleId Id = qm_module::EQmModuleId::Info;
+	ASSERT_TRUE(qm_module::QmModuleIdFromStableId("qm:better_scoreboard", &Id));
+	EXPECT_STREQ(qm_module::QmModuleStableId(Id), "qm:better_scoreboard");
+}
+
 TEST(QmCardRegistry, P6QmClientContributorsCards)
 {
 	const auto *pCommunity = qm_card_registry::FindByStableId("deck:qmclient-contributors-community");
@@ -58,7 +107,7 @@ TEST(QmCardRegistry, P6QmClientContributorsCards)
 	EXPECT_EQ(pSponsors->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
 	EXPECT_EQ(pCommunity->m_DefaultOrder, 0);
 	EXPECT_EQ(pSponsors->m_DefaultOrder, 0);
-	EXPECT_STREQ(pDdnet->m_pDefaultTab, "qmclient-contributors");
+	EXPECT_STREQ(pDdnet->m_pDefaultTab, "qmclient-contributors-ddnet");
 	EXPECT_EQ(pDdnet->m_DefaultColumn, qm_card_registry::ECardColumn::Full);
 	EXPECT_EQ(pDdnet->m_DefaultOrder, 0);
 }
@@ -1074,7 +1123,7 @@ TEST(QmCardRegistry, RendererlessCardsNavigateToHostingCard)
 
 	ExpectTarget("qm:laser", "appearance-laser", "deck:appearance-laser-enhanced");
 	ExpectTarget("qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-settings");
-	ExpectTarget("qm:info", "qmclient-contributors", "deck:qmclient-contributors-ddnet");
+	ExpectTarget("qm:info", "qmclient-contributors", "deck:qmclient-contributors-community");
 	// 歌词开关渲染在灵动岛卡内，因此停留在 hud 页但指向承载卡。
 	ExpectTarget("qm:lyrics", "hud", "qm:dynamic_island");
 

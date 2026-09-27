@@ -252,19 +252,65 @@ TEST(QmHudNotificationsGeometry, EditorPreviewRightFlowBoxMatchesStableRightEdge
 	EXPECT_FLOAT_EQ(BoxX + BoxWidth, EditorRect.x + EditorRect.w);
 }
 
-TEST(QmHudEditorGeometry, SnapsOnlyToScreenEdges)
+TEST(QmHudEditorGeometry, KeepsUnchangedPositionWhenHudEdgeIsNearButNotCoincidentWithScreenEdge)
 {
-	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdges(101.0f, 40.0f, 0.0f, 300.0f), 101.0f);
-	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdges(4.0f, 40.0f, 0.0f, 300.0f), 0.0f);
-	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdges(257.0f, 40.0f, 0.0f, 300.0f), 260.0f);
+	// 邻近但未重合：位置保持不变，也不输出任何吸附参考线。
+	const QmHudEditor::SSnapAxisResult NearStart = QmHudEditor::ResolveAxisSnapEx(4.0f, 40.0f, 0.0f, 300.0f, nullptr, 0);
+	EXPECT_FALSE(NearStart.m_HasGuide);
+	EXPECT_FLOAT_EQ(NearStart.m_Position, 4.0f);
+
+	const QmHudEditor::SSnapAxisResult NearEnd = QmHudEditor::ResolveAxisSnapEx(257.0f, 40.0f, 0.0f, 300.0f, nullptr, 0);
+	EXPECT_FALSE(NearEnd.m_HasGuide);
+	EXPECT_FLOAT_EQ(NearEnd.m_Position, 257.0f);
+
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdges(4.0f, 40.0f, 0.0f, 300.0f), 4.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdges(257.0f, 40.0f, 0.0f, 300.0f), 257.0f);
+}
+
+TEST(QmHudEditorGeometry, SnapsToScreenEdgeWhenVisibleEdgeCoincides)
+{
+	const QmHudEditor::SSnapAxisResult Start = QmHudEditor::ResolveAxisSnapEx(0.0f, 40.0f, 0.0f, 300.0f, nullptr, 0);
+	EXPECT_TRUE(Start.m_HasGuide);
+	EXPECT_FLOAT_EQ(Start.m_Position, 0.0f);
+	EXPECT_FLOAT_EQ(Start.m_GuidePosition, 0.0f);
+	EXPECT_EQ(Start.m_GuideKind, QmHudEditor::ESnapGuideKind::ScreenStart);
+
+	const QmHudEditor::SSnapAxisResult End = QmHudEditor::ResolveAxisSnapEx(260.0f, 40.0f, 0.0f, 300.0f, nullptr, 0);
+	EXPECT_TRUE(End.m_HasGuide);
+	EXPECT_FLOAT_EQ(End.m_Position, 260.0f);
+	EXPECT_FLOAT_EQ(End.m_GuidePosition, 300.0f);
+	EXPECT_EQ(End.m_GuideKind, QmHudEditor::ESnapGuideKind::ScreenEnd);
+
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdges(0.0f, 40.0f, 0.0f, 300.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdges(260.0f, 40.0f, 0.0f, 300.0f), 260.0f);
+}
+
+TEST(QmHudEditorGeometry, CoincidentScreenEdgeSnapAccountsForVisibleEdgeOffset)
+{
+	// 可见矩形相对锚点偏移 8 时，锚点落在 -8 才算可见边与窗口左边重合；偏移把锚点范围整体左移 8。
+	const QmHudEditor::SSnapAxisResult NearMiss = QmHudEditor::ResolveAxisSnapEx(-4.0f, 40.0f, 0.0f, 300.0f, nullptr, 0, 8.0f);
+	EXPECT_FALSE(NearMiss.m_HasGuide);
+	EXPECT_FLOAT_EQ(NearMiss.m_Position, -4.0f);
+
+	const QmHudEditor::SSnapAxisResult Coincident = QmHudEditor::ResolveAxisSnapEx(-8.0f, 40.0f, 0.0f, 300.0f, nullptr, 0, 8.0f);
+	EXPECT_TRUE(Coincident.m_HasGuide);
+	EXPECT_FLOAT_EQ(Coincident.m_Position, -8.0f);
+	EXPECT_FLOAT_EQ(Coincident.m_GuidePosition, 0.0f);
+	EXPECT_EQ(Coincident.m_GuideKind, QmHudEditor::ESnapGuideKind::ScreenStart);
+
+	// 可见右边在 244+8+40=292，距窗口右边 8px：位置保持不变；锚点 252 才让可见右边落在 300。
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdgesEx(244.0f, 40.0f, 0.0f, 300.0f, 8.0f), 244.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenEdgesEx(252.0f, 40.0f, 0.0f, 300.0f, 8.0f), 252.0f);
 }
 
 TEST(QmHudEditorGeometry, SnapsToScreenCenterGuide)
 {
 	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(101.0f, 40.0f, 0.0f, 300.0f), 101.0f);
-	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(4.0f, 40.0f, 0.0f, 300.0f), 0.0f);
-	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(257.0f, 40.0f, 0.0f, 300.0f), 260.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(4.0f, 40.0f, 0.0f, 300.0f), 4.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(257.0f, 40.0f, 0.0f, 300.0f), 257.0f);
 	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(127.0f, 40.0f, 0.0f, 300.0f), 130.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(0.0f, 40.0f, 0.0f, 300.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(260.0f, 40.0f, 0.0f, 300.0f), 260.0f);
 }
 
 TEST(QmHudEditorGeometry, SnapsToOtherModuleAlignmentGuides)
@@ -285,43 +331,37 @@ TEST(QmHudEditorGeometry, ReportsVisibleSnapGuidePosition)
 		{40.0f, 60.0f},
 	};
 
-	const QmHudEditor::SSnapAxisResult ScreenCenter = QmHudEditor::SnapAxisToGuidesEx(127.0f, 40.0f, 0.0f, 300.0f, nullptr, 0);
+	const QmHudEditor::SSnapAxisResult ScreenCenter = QmHudEditor::ResolveAxisSnapEx(127.0f, 40.0f, 0.0f, 300.0f, nullptr, 0);
 	EXPECT_TRUE(ScreenCenter.m_HasGuide);
 	EXPECT_FLOAT_EQ(ScreenCenter.m_Position, 130.0f);
 	EXPECT_FLOAT_EQ(ScreenCenter.m_GuidePosition, 150.0f);
 	EXPECT_EQ(ScreenCenter.m_GuideKind, QmHudEditor::ESnapGuideKind::ScreenCenter);
 
-	const QmHudEditor::SSnapAxisResult ReferenceEnd = QmHudEditor::SnapAxisToGuidesEx(68.0f, 30.0f, 0.0f, 300.0f, aReferences, 1);
+	const QmHudEditor::SSnapAxisResult ReferenceEnd = QmHudEditor::ResolveAxisSnapEx(68.0f, 30.0f, 0.0f, 300.0f, aReferences, 1);
 	EXPECT_TRUE(ReferenceEnd.m_HasGuide);
 	EXPECT_FLOAT_EQ(ReferenceEnd.m_Position, 70.0f);
 	EXPECT_FLOAT_EQ(ReferenceEnd.m_GuidePosition, 100.0f);
 	EXPECT_EQ(ReferenceEnd.m_GuideKind, QmHudEditor::ESnapGuideKind::ReferenceEnd);
 
-	const QmHudEditor::SSnapAxisResult Free = QmHudEditor::SnapAxisToGuidesEx(120.0f, 30.0f, 0.0f, 300.0f, aReferences, 1);
+	const QmHudEditor::SSnapAxisResult Free = QmHudEditor::ResolveAxisSnapEx(120.0f, 30.0f, 0.0f, 300.0f, aReferences, 1);
 	EXPECT_FALSE(Free.m_HasGuide);
 	EXPECT_FLOAT_EQ(Free.m_Position, 120.0f);
 }
 
-TEST(QmHudEditorGeometry, MediaIslandUsesWeakerScreenEdgeSnapOnly)
+TEST(QmHudEditorGeometry, KeepsAlignmentGuideSnapIndependentOfScreenEdgeCoincidence)
 {
 	const QmHudEditor::SAxisReference aReferences[] = {
 		{40.0f, 60.0f},
 	};
 
-	const QmHudEditor::SSnapAxisResult FreeNearEdge = QmHudEditor::SnapAxisToGuidesEx(3.0f, 40.0f, 0.0f, 300.0f, nullptr, 0, QmHudEditor::MEDIA_ISLAND_EDGE_SNAP_DISTANCE);
-	EXPECT_FALSE(FreeNearEdge.m_HasGuide);
-	EXPECT_FLOAT_EQ(FreeNearEdge.m_Position, 3.0f);
+	// 屏幕边只认重合：左边离窗口 36px 时屏幕边不吸附，而 4px 外的参考线把左边吸到 40。
+	const QmHudEditor::SSnapAxisResult NearEdge = QmHudEditor::ResolveAxisSnapEx(36.0f, 30.0f, 0.0f, 300.0f, aReferences, 1);
+	EXPECT_TRUE(NearEdge.m_HasGuide);
+	EXPECT_FLOAT_EQ(NearEdge.m_Position, 40.0f);
+	EXPECT_EQ(NearEdge.m_GuideKind, QmHudEditor::ESnapGuideKind::ReferenceStart);
 
-	const QmHudEditor::SSnapAxisResult SnappedEdge = QmHudEditor::SnapAxisToGuidesEx(2.0f, 40.0f, 0.0f, 300.0f, nullptr, 0, QmHudEditor::MEDIA_ISLAND_EDGE_SNAP_DISTANCE);
-	EXPECT_TRUE(SnappedEdge.m_HasGuide);
-	EXPECT_FLOAT_EQ(SnappedEdge.m_Position, 0.0f);
-	EXPECT_EQ(SnappedEdge.m_GuideKind, QmHudEditor::ESnapGuideKind::ScreenStart);
-
-	const QmHudEditor::SSnapAxisResult ScreenCenter = QmHudEditor::SnapAxisToGuidesEx(127.0f, 40.0f, 0.0f, 300.0f, nullptr, 0, QmHudEditor::MEDIA_ISLAND_EDGE_SNAP_DISTANCE);
-	EXPECT_FLOAT_EQ(ScreenCenter.m_Position, 130.0f);
-	EXPECT_EQ(ScreenCenter.m_GuideKind, QmHudEditor::ESnapGuideKind::ScreenCenter);
-
-	const QmHudEditor::SSnapAxisResult ReferenceStart = QmHudEditor::SnapAxisToGuidesEx(44.0f, 30.0f, 0.0f, 300.0f, aReferences, 1, QmHudEditor::MEDIA_ISLAND_EDGE_SNAP_DISTANCE);
+	const QmHudEditor::SSnapAxisResult ReferenceStart = QmHudEditor::ResolveAxisSnapEx(44.0f, 30.0f, 0.0f, 300.0f, aReferences, 1);
+	EXPECT_TRUE(ReferenceStart.m_HasGuide);
 	EXPECT_FLOAT_EQ(ReferenceStart.m_Position, 40.0f);
 	EXPECT_EQ(ReferenceStart.m_GuideKind, QmHudEditor::ESnapGuideKind::ReferenceStart);
 }

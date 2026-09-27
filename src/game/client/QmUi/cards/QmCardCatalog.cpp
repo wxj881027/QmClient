@@ -5,6 +5,7 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <utility>
 
 namespace qm_card_catalog
 {
@@ -42,8 +43,15 @@ namespace qm_card_catalog
 
 		Out = {};
 		Out.m_Spec = {pStableId, pRegisteredTitle != nullptr ? pRegisteredTitle : Localize(pTitle), pRegisteredSubtitle != nullptr ? pRegisteredSubtitle : Localize(pSubtitle)};
-		Out.m_Measure = std::move(Measure);
+		// 统一使用内容回调探测实际消费高度。传入的静态 Measure 只作为桥接上下文
+		// 不可用时的兜底，避免新增卡片再次出现“渲染行数与测量常量不同步”。
+		Out.m_Measure = [pMenus = Ctx.m_pMenus, Render, Measure = std::move(Measure)](const float ContentWidth) {
+			if(pMenus != nullptr && Render)
+				return QmCardRenderHook::MeasureContent(pMenus, Render, ContentWidth);
+			return Measure ? std::max(0.0f, Measure(ContentWidth)) : 0.0f;
+		};
 		Out.m_Render = [Render](CUIRect Content) { Render(Content); };
+		Out.m_RenderMeasured = Render;
 		if(Ctx.m_pCollapsed != nullptr)
 		{
 			const int Index = std::clamp((int)Id, 0, (int)qm_module::QmModuleCount - 1);

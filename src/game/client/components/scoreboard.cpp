@@ -457,7 +457,7 @@ void CScoreboard::RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFont
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
 	const bool Race7 = Client()->IsSixup() && pGameInfoObj && pGameInfoObj->m_GameFlags & protocol7::GAMEFLAG_RACE;
-	if(GameClient()->m_ReceivedDDNetPlayerFinishTimes || TimeScore || Race7)
+	if(TimeScore || Race7)
 	{
 		if(GameClient()->m_MapBestTimeSeconds != FinishTime::UNSET)
 		{
@@ -466,7 +466,8 @@ void CScoreboard::RenderTitleScore(CUIRect ScoreLabel, int Team, float TitleFont
 				GameClient()->m_MapBestTimeSeconds,
 				GameClient()->m_MapBestTimeSeconds == FinishTime::NOT_FINISHED_MILLIS,
 				GameClient()->m_MapBestTimeMillis,
-				GameClient()->m_ReceivedDDNetPlayerFinishTimesMillis);
+				GameClient()->m_ReceivedDDNetPlayerFinishTimesMillis,
+				ScoreboardTitleTimeColor(m_AnimContentAlpha));
 			return;
 		}
 	}

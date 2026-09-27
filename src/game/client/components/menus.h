@@ -37,8 +37,10 @@
 #include <game/client/components/qmclient/browser_friend_list.h>
 #include <game/client/components/qmclient/demo_cut.h>
 #include <game/client/components/qmclient/local_save_display.h>
+#include <game/client/components/qmclient/map_difficulty_catalog.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
 #include <game/client/components/qmclient/qm_map_upload.h>
+#include <game/client/components/qmclient/screenshot_manager.h>
 #include <game/client/components/qmclient/settings_perf_windows.h>
 #include <game/client/components/section_loader.h>
 #include <game/client/components/settings_resource_jobs.h>
@@ -1664,6 +1666,7 @@ protected:
 		STAR_3,
 		STAR_4,
 		STAR_5,
+		FAVORITES,
 		LOW_TO_HIGH,
 		HIGH_TO_LOW,
 		NUM_MODES,
@@ -1866,6 +1869,10 @@ protected:
 	void SyncDemoScreenshotPreview();
 	bool LoadDemoScreenshotPreviewTexture(const CDemoItem &Item);
 	void RenderDemoScreenshotPreview(CUIRect PreviewRect, const CDemoItem &Item);
+	void RenderDemoScreenshotDetails(CUIRect Contents, const CDemoItem &Item, float FontSize);
+	void RenderDemoScreenshotWatermarkPreview(CUIRect PreviewRect, const CDemoItem &Item);
+	bool DoDemoScreenshotWatermarkButton(const CUIRect &Rect);
+	bool ApplyDemoScreenshotWatermark(const CDemoItem &Item);
 	void DemolistOnUpdate(bool Reset);
 	void DemolistSelectNeighbor();
 	static int DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
@@ -1877,6 +1884,7 @@ protected:
 	const char *DemoBrowserBaseFolder() const;
 	bool DemoBrowserBrowsingScreenshots() const;
 	bool DemoBrowserSupportedFile(const char *pName) const;
+	void SetDemoBrowserSource(EDemoBrowserSource Source);
 	void ResetDemoBrowserFolder();
 
 	// friends
@@ -2073,6 +2081,7 @@ protected:
 	bool m_DemoBrowserListInitialized = false;
 	void RenderDemoBrowser(CUIRect MainView);
 	void RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivated);
+	void RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemActivated);
 	void RenderDemoBrowserDetails(CUIRect DetailsView);
 	void RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemActivated);
 	void StartRankDemoDownload(const char *pMapName);
@@ -2263,6 +2272,7 @@ protected:
 	std::vector<CUIElement *> m_avpServerBrowserUiElements[IServerBrowser::NUM_TYPES];
 	void RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated);
 	void RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated);
+	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
 	enum class EConnectIntent
 	{
 		Manual,
@@ -2300,7 +2310,8 @@ protected:
 	void RenderServerbrowserInfo(CUIRect View);
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
-	CQmMapVoteDifficulty m_MapVoteDifficulty;
+	CQmMapDifficultyCatalog m_MapDifficultyCatalog;
+	CQmScreenshotManager m_ScreenshotManager;
 	CQmLocalSaveDisplayCache m_LocalSaveDisplay;
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
@@ -2496,6 +2507,8 @@ public:
 		QMCLIENT_SETTINGS_TAB_VISUAL = 0,
 		QMCLIENT_SETTINGS_TAB_FUNCTION,
 		QMCLIENT_SETTINGS_TAB_HUD,
+		// 贡献者内容已移到顶层贡献者页，这里只保留占位以维持持久化 tab 索引不变
+		//（旧配置可能仍是 3；直接删掉会让 CONFIG 前移，落到别人的页签上）。
 		QMCLIENT_SETTINGS_TAB_CONTRIBUTORS,
 		QMCLIENT_SETTINGS_TAB_CONFIG,
 
@@ -2526,6 +2539,7 @@ public:
 		SMALL_TAB_SETTINGS,
 		SMALL_TAB_EDITOR,
 		SMALL_TAB_DEMOBUTTON,
+		SMALL_TAB_SCREENSHOTBUTTON,
 		SMALL_TAB_SERVER,
 		SMALL_TAB_BROWSER_FILTER,
 		SMALL_TAB_BROWSER_INFO,
@@ -3102,12 +3116,14 @@ private:
 	void RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage = false, bool PrewarmOnly = false);
 	void RenderSettingsGlobalSearch(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnly = false);
+	void RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly);
 	void RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderQmSettingsSliderWithValueInput(const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix, bool PrewarmOnly, unsigned Flags = 0u);
 	bool RenderQmFunctionCheckbox(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly, const char *pTooltip = nullptr);
+	bool RenderQmFunctionCheckboxRow(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);
 	bool RenderQmVisualCheckbox(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue);
 	void RenderQmVisualLabel(const char *pTextId, CUIRect *pRect, const char *pText, float FontSize, int TextAlign = TEXTALIGN_ML, const SLabelProperties &LabelProps = {});
 	void RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, float LineSpacing);
@@ -3140,6 +3156,7 @@ private:
 	void RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	void RenderQmFunctionBetterScoreboardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
@@ -3159,6 +3176,7 @@ private:
 	void RenderQmHudCoordsContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
+	void RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly = false);
 	void ClearQmTitlePreviewContainers();
 	void RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha = 1.0f);

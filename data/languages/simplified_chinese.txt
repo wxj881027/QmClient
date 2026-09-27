@@ -821,6 +821,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == 应用此预设
 
+Apply watermark
+== 应用水印
+
 Are you sure that you want to delete %d selected items?
 == 确定要删除 %d 个选中项吗？
 
@@ -1075,6 +1078,9 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 
 Auto weapon switch
 == 自动切锤
+
+Auto-accept team invites by sending /team <n>
+== 通过发送 /team <n> 自动接受组队邀请
 
 Auto-close chat after unfreeze
 == 解冻后自动关闭聊天
@@ -1511,6 +1517,12 @@ Both
 Both sides of keyword rules must be filled
 == 关键词规则的两侧都必须填写
 
+Bottom left
+== 左下
+
+Bottom right
+== 右下
+
 Bounce
 == 弹跳
 
@@ -1646,9 +1658,6 @@ Can't swap with yourself
 Cancel
 == 取消
 
-Cancel upload
-== 取消上传
-
 Cancel your swap request
 == 取消你的交换请求
 
@@ -1663,6 +1672,9 @@ Card height animation
 
 Card list entry animation
 == 设置卡片列表入场动画
+
+Card opacity
+== 卡片不透明度
 
 Card reflow animation
 == 设置卡片重排动画
@@ -1834,9 +1846,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == 选择菜单地图和背景颜色
-
-Choose whether to browse replays or screenshots
-== 选择浏览录像还是截图
 
 Choose which TClient settings tabs are visible
 == 选择要显示的 TClient 设置标签页
@@ -2255,6 +2264,9 @@ Configure Tee appearance and skins
 Configure the companion appearance and movement
 == 配置伙伴的外观和移动
 
+Configure the Gores team drown board
+== 配置 Gores 团队落水榜
+
 Configure the ingame cursor scale
 == 配置游戏内光标缩放
 
@@ -2612,6 +2624,9 @@ Custom title
 Custom translation prompt (overrides built-in)
 == 自定义翻译提示词（覆盖内置提示词）
 
+Custom watermark text
+== 自定义水印文本
+
 Customize additional nameplate text
 == 自定义额外名牌文本
 
@@ -2704,6 +2719,9 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet 客户端需要重新启动才能完成更新！
+
+DDNet contributors and staff credits
+== DDNet 贡献者与团队名单
 
 DDNet Memory
 == DDNet 内存
@@ -3287,6 +3305,9 @@ Drift smoothness
 Drop on right canvas to replace one part.
 == 拖到右侧画布可替换一个部件。
 
+Drown deaths
+== 落水榜
+
 Dual Kawase
 == 双重 Kawase
 
@@ -3383,9 +3404,6 @@ Dummy mini view zoom (percent)
 Dummy name
 == 分身的名称
 
-Dummy not connected
-== 分身未连接
-
 Dummy skin
 == 分身皮肤
 
@@ -3472,9 +3490,6 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == 灵动岛背景颜色
-
-Each joins a separate team so solo runs start in sync (useful on maps where team-0 start is unreliable)
-== 本体和分身分别进队，让 solo 开局同步（部分地图 team-0 不好同步时使用）
 
 Ease in out quad
 == 缓入缓出二次
@@ -4181,6 +4196,9 @@ Fade opacity along trail length
 Fade out
 == 淡出
 
+Fade paused spectators in water
+== 虚化水中的暂停旁观者
+
 Fade trail alpha
 == 淡化拖尾
 
@@ -4304,6 +4322,9 @@ File executed on map change/reload to set default server settings
 File for storing ranks if sv_use_sql is disabled or as backup SQL server.
 == 用于存储排名的文件，以防 sv_use_sql 关闭或用作备份 sql 服务器
 
+File information
+== 文件信息
+
 File with announcements, one per line.
 == 包含公告的文件，每行一个
 
@@ -4389,7 +4410,7 @@ First page in console
 == 控制台第一页
 
 Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
-== 人多的服务器使用固定行高的计分板，滚轮滚动查看其余玩家
+== 满人服务器改用固定行高计分板，滚轮翻看其余玩家
 
 Flip:
 == 翻转：
@@ -4835,11 +4856,17 @@ Gores actor
 Gores auto weapon switch
 == Gores 自动武器切换
 
+Gores drown board
+== Gores 落水榜
+
 Gores Mode
 == Gores 模式
 
 Gores mode key
 == Gores 模式按键
+
+Gores team drown board opacity
+== Gores 团队落水榜不透明度
 
 Gores · Axiom
 == Gores · Axiom
@@ -5251,9 +5278,6 @@ HTTP map download: low speed limit (in bytes/s, 0=disabled)
 
 HTTP map download: low speed limit period (0=disabled)
 == HTTP 地图下载：设置低速限制时间段（0 为禁用）
-
-HTTPS endpoint
-== HTTPS 端点
 
 https://ddnet.org/discord
 == https://ddnet.org/discord
@@ -5886,7 +5910,7 @@ Leave empty to join public room
 == 留空以进入公共房间
 
 Leave empty to show everyone
-== 留空则显示所有玩家
+== 留空显示所有玩家
 
 Leave empty to use default prompt
 == 留空使用默认提示词
@@ -6203,9 +6227,6 @@ Main Asset
 Main menu
 == 主菜单
 
-Main team %d / Dummy team %d
-== 本体队伍 %d / 分身队伍 %d
-
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 让排球模式中的冻结玩家看起来更像排球（0=禁用，1=仅排球地图，2=始终）
 
@@ -6275,6 +6296,9 @@ Manual target
 Map
 == 地图
 
+Map browser difficulty star filter bitmask (bits 1-5)
+== 地图浏览器难度星级筛选位掩码（位 1-5）
+
 Map browser surface
 == 地图浏览器表面
 
@@ -6283,6 +6307,12 @@ Map browser surface color
 
 Map browser transparency
 == 地图浏览器透明度
+
+Map browser: show empty servers only
+== 地图浏览器：仅显示空服务器
+
+Map browser: show favorite maps only
+== 地图浏览器：仅显示收藏地图
 
 Map danger border
 == 地图危险边界
@@ -6298,9 +6328,6 @@ Map folders
 
 Map name
 == 地图名称
-
-Map path in save folder
-== 存档目录中的地图路径
 
 Map play history
 == 地图游玩历史
@@ -6353,9 +6380,6 @@ Map upload
 Map upload cancelled.
 == 已取消地图上传。
 
-Map upload endpoint
-== 地图上传端点
-
 Map upload endpoint (empty disables map upload)
 == 地图上传端点（留空则禁用地图上传）
 
@@ -6373,9 +6397,6 @@ Map uploaded successfully.
 
 Maps finished
 == 已过地图
-
-maps/example.map
-== maps/example.map
 
 Margin when notification is docked
 == 通知栏贴边时预留边距
@@ -6514,6 +6535,9 @@ Maximum number of vanilla antispoof handshakes answered per second (0 = unlimite
 
 Maximum players participating in a vote (0 = unlimited)
 == 最多可有多少玩家参与投票（0 = 无限制）
+
+Maximum players shown in the Gores team drown board
+== Gores 团队落水榜显示的最大玩家数
 
 Maximum reduction
 == 最大降低量
@@ -6712,6 +6736,9 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == 沿 Tee 的稳定方向进行更乐观的预测，减少稳定下来所需的延迟
+
+More teammates...
+== 更多队友……
 
 MOTD
 == 公告
@@ -7142,6 +7169,9 @@ No empty team left.
 No favorite maps yet
 == 暂无收藏地图
 
+No filter
+== 不筛选
+
 No input device available
 == 系统没有可用输入设备
 
@@ -7234,6 +7264,9 @@ No saves found on this map
 
 No screenshot selected
 == 未选择截图
+
+No screenshots
+== 没有截图
 
 No server selected
 == 未选择服务器
@@ -7781,6 +7814,9 @@ Pause voice when window unfocused
 Pause/unpause game
 == 暂停/恢复游戏
 
+Paused spectator opacity (percent)
+== 旁观者透明度（百分比）
+
 Penalty in seconds for saving or swapping positions
 == 保存或交换位置的惩罚时间（秒）
 
@@ -7855,6 +7891,9 @@ Pistol
 
 Pistol guide line
 == 手枪辅助线
+
+Place title on a separate line above the player name instead of inline
+== 将头衔单独显示在玩家名称上方，而不是显示在同一行
 
 Plasma gun shots per second
 == 等离子枪每秒发射多少发子弹
@@ -8047,6 +8086,9 @@ Players hook time is limited
 
 Players hook time is unlimited
 == 本服务器的钩子时长不受限制
+
+Players shown
+== 显示的玩家数
 
 Players weapons affect others
 == 本服务器允许武器影响其他玩家
@@ -8777,9 +8819,6 @@ Reduced
 Reduced: uses shorter transitions and disables presentation animations
 == 精简：保留更短的过渡效果，并停用展示动画
 
-Refine the search to see more maps
-== 请细化搜索关键字以查看更多地图
-
 Refresh
 == 刷新
 
@@ -9335,11 +9374,17 @@ Rifle laser outline color
 Right jump
 == 右跳
 
+Right-click to add to favorites
+== 右键点击以添加到收藏夹
+
 Right-click to disable auto-translate
 == 右键关闭自动翻译
 
 Right-click to enable auto-translate
 == 右键开启自动翻译
+
+Right-click to remove from favorites
+== 右键点击以从收藏夹移除
 
 Ring
 == 圆环
@@ -9603,7 +9648,7 @@ Scoreboard cursor
 == 计分板光标
 
 Scoreboard filter: only show players whose name or clan contains this text
-== 计分板筛选：仅显示名字或战队包含此文本的玩家
+== 计分板筛选：匹配名字或战队
 
 Scoreboard point check
 == 计分板积分检查
@@ -9650,6 +9695,24 @@ Screen resolution width (only fullscreen)
 Screenshot
 == 截图
 
+Screenshot error
+== 截图处理失败
+
+Screenshot saved
+== 截图已保存
+
+Screenshot watermark custom text
+== 截图水印自定义文本
+
+Screenshot watermark position: 0=bottom-left, 1=bottom-right, 2=top-left, 3=top-right
+== 截图水印位置：0=左下，1=右下，2=左上，3=右上
+
+Screenshot watermark: include map name
+== 截图水印：包含地图名称
+
+Screenshot watermark: include timestamp
+== 截图水印：包含时间戳
+
 Screenshots
 == 截图
 
@@ -9670,9 +9733,6 @@ Search and navigate settings
 
 Search donor asset
 == 搜索来源材质
-
-Search local maps
-== 搜索本地地图
 
 Search main asset
 == 搜索主材质
@@ -10310,6 +10370,9 @@ Show ghost
 Show ghost at unpredictable position of other players
 == 在其他玩家的不可预测位置显示幽灵
 
+Show Gores drown board
+== 显示 Gores 落水榜
+
 Show graphics library warnings and errors if GPU supports (0 = none, 1 = minimal, 2 = impacting performance, 3 = verbose, 4 = all).
 == 如果 GPU 支持，则显示图形库警告和错误（0：无、1：最小、2：影响性能、3：详细、4：全部）
 
@@ -10667,6 +10730,9 @@ Show player stats HUD
 Show player target angle
 == 显示玩家瞄准角度
 
+Show player Tee
+== 显示玩家 Tee
+
 Show players' key presses
 == 显示按键
 
@@ -10690,6 +10756,9 @@ Show Qm badge: identify via central server and mark QmClient users on nameplate/
 
 Show QmClient config variables
 == 显示栖梦配置变量
+
+Show QmClient title in player nameplate (0 = hide)
+== 在玩家名牌中显示 QmClient 头衔（0 = 隐藏）
 
 Show radial indicators of other Tees
 == 显示其他 Tee 的径向指示器
@@ -10790,6 +10859,9 @@ Show tee status bar
 Show Tee trail for others
 == 为其他玩家显示 Tee 轨迹
 
+Show Tees in the Gores team drown board
+== 在 Gores 团队落水榜中显示 Tee
+
 Show teleporter tile outlines
 == 显示传送图块轮廓
 
@@ -10798,6 +10870,9 @@ Show text entities
 
 Show the cursor while free spectating
 == 自由观战时显示光标
+
+Show the Gores team drown board
+== 显示 Gores 团队落水榜
 
 Show the number of frozen tees
 == 显示冻结 Tee 的数量
@@ -11801,6 +11876,9 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == 队伍 Tee 外发光
 
+Teammate
+== 队友
+
 Teams
 == 组队
 
@@ -12038,6 +12116,9 @@ The server rejected the map upload.
 The update is ready and will be installed when you exit.
 == 更新已准备就绪，将在退出客户端时安装。
 
+The watermarked screenshot was saved next to the original
+== 带水印的截图已保存到原图旁边
+
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 纹理文件 %s 的宽度无法被 %d 整除，或者高度无法被 %d 整除，这可能会导致显示错误。
 
@@ -12236,6 +12317,9 @@ Timer is displayed in %s
 Timer isn't displayed.
 == 计时器当前不显示
 
+Timestamp
+== 时间戳
+
 Tiny Tee Size
 == 迷你 Tee 大小
 
@@ -12415,6 +12499,12 @@ Too many translation tasks
 
 Toolbox page
 == 工具箱页面
+
+Top left
+== 左上
+
+Top right
+== 右上
 
 Total
 == 总计
@@ -12670,6 +12760,9 @@ Unable to save the skin
 
 Unable to save the skin with a reserved name
 == 无法保存使用保留名称的皮肤
+
+Unable to save the watermarked screenshot
+== 无法保存带水印的截图
 
 Unavailable
 == 不可用
@@ -13327,6 +13420,9 @@ Warning
 
 Water hammer highlight
 == 水域卡锤高亮
+
+Watermark
+== 水印
 
 Wave amount
 == 波浪幅度

@@ -72,6 +72,12 @@ constexpr float ScoreboardRowsVerticalScale(float AvailableHeight, int NumRows, 
 	return AvailableHeight > FixedHeight ? (AvailableHeight - FixedHeight) / ScalableHeight : 0.0f;
 }
 
+// 标题计分时间沿用计分板内容的统一淡出透明度。
+constexpr ColorRGBA ScoreboardTitleTimeColor(float ContentAlpha)
+{
+	return ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f).WithMultipliedAlpha(ContentAlpha);
+}
+
 class CScoreboard : public CComponent
 {
 	struct CScoreboardRenderState

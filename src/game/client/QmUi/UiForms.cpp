@@ -20,6 +20,7 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 namespace ui_widget
@@ -695,6 +696,128 @@ namespace ui_widget
 		else
 			std::snprintf(aBuf, sizeof(aBuf), "%.2f", *pValue);
 		Ctx.m_pUi->DoLabel(&Label, aBuf, ui_token::font::BODY, TEXTALIGN_MR);
+
+		return Changed;
+	}
+
+	namespace
+	{
+		// 满档渐变：左端保持填充本色，向右做色相偏移（对齐 Codex 滑条拉满时的渐变），
+		// 方角渐变块从圆角末端开始、到旋钮圆心结束，完全落在填充胶囊内部。
+		// Alpha 用于淡入，避免最后一档切换时整条颜色跳变。
+		void DrawDiscreteSliderBloom(const CUIRect &Fill, const ColorRGBA &BaseColor, const float Alpha)
+		{
+			const float CapRadius = Fill.h * 0.5f;
+			CUIRect Bloom = Fill;
+			Bloom.x += CapRadius;
+			Bloom.w -= CapRadius;
+			if(Bloom.w <= 0.0f)
+				return;
+
+			ColorHSLA MidHue = color_cast<ColorHSLA>(BaseColor);
+			MidHue.h = std::fmod(MidHue.h + 0.075f, 1.0f);
+			ColorHSLA EndHue = color_cast<ColorHSLA>(BaseColor);
+			EndHue.h = std::fmod(EndHue.h + 0.15f, 1.0f);
+			const float BaseAlpha = BaseColor.a * std::clamp(Alpha, 0.0f, 1.0f);
+			const ColorRGBA StartColor = BaseColor.WithAlpha(BaseAlpha);
+			const ColorRGBA MidColor = color_cast<ColorRGBA>(MidHue).WithAlpha(BaseAlpha);
+			const ColorRGBA EndColor = color_cast<ColorRGBA>(EndHue).WithAlpha(BaseAlpha);
+
+			CUIRect LeftHalf = Bloom;
+			LeftHalf.w = Bloom.w * 0.52f;
+			CUIRect RightHalf = Bloom;
+			RightHalf.x += LeftHalf.w;
+			RightHalf.w = Bloom.w - LeftHalf.w;
+			LeftHalf.Draw4(StartColor, MidColor, StartColor, MidColor, IGraphics::CORNER_NONE, 0.0f);
+			RightHalf.Draw4(MidColor, EndColor, MidColor, EndColor, IGraphics::CORNER_NONE, 0.0f);
+		}
+	} // namespace
+
+	bool DiscreteSlider(const IUiContext &Ctx, const void *pId, int *pValue, const int Min, const int Max, const CUIRect &Rect)
+	{
+		if(Ctx.m_pUi == nullptr || pValue == nullptr || pId == nullptr || Max <= Min || Rect.w <= 0.0f || Rect.h <= 0.0f)
+			return false;
+
+		*pValue = std::clamp(*pValue, Min, Max);
+		const float Range = static_cast<float>(Max - Min);
+		const float TargetNormalized = std::clamp((*pValue - Min) / Range, 0.0f, 1.0f);
+
+		// 旋钮直径略大于轨道高度；圆心行程同时用于命中换算与自绘，鼠标不会与旋钮错位。
+		const float KnobSize = std::clamp(Rect.h * 1.15f, 10.0f, 26.0f);
+		const float TrackStart = Rect.x + KnobSize * 0.5f;
+		const float TrackWidth = std::max(0.0f, Rect.w - KnobSize);
+
+		const bool WasHot = Ctx.m_pUi->HotItem() == pId || Ctx.m_pUi->CheckActiveItem(pId);
+		float InputNormalized = Ctx.m_pUi->DoScrollbarH(pId, &Rect, TargetNormalized);
+		// DoScrollbarH 只对上一帧已悬停的控件响应按下；悬停与按下同帧的首次点击会丢输入，
+		// 这里按圆心行程补一次命中，保证点在哪里就跳到最近档位。
+		if(!WasHot && Ctx.m_pUi->MouseButtonClicked(0) && Ctx.m_pUi->MouseHovered(&Rect))
+			InputNormalized = TrackWidth > 0.0f ? std::clamp((Ctx.m_pUi->MouseX() - TrackStart) / TrackWidth, 0.0f, 1.0f) : 0.0f;
+		const int NewValue = std::clamp(Min + static_cast<int>(std::round(InputNormalized * Range)), Min, Max);
+		const bool Changed = NewValue != *pValue;
+		*pValue = NewValue;
+
+		float VisualNormalized = std::clamp((*pValue - Min) / Range, 0.0f, 1.0f);
+		if(Ctx.m_pAnim != nullptr)
+		{
+			const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pId));
+			VisualNormalized = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, VisualNormalized, ui_token::motion::SLIDER_SPRING, 2);
+		}
+		VisualNormalized = std::clamp(VisualNormalized, 0.0f, 1.0f);
+
+		// 胶囊本身即滑轨：整行铺满以覆盖 DoScrollbarH 的旧式预览，填充色从轨道左端延伸到旋钮圆心。
+		const bool Hovered = Ctx.m_pUi->HotItem() == pId || Ctx.m_pUi->CheckActiveItem(pId);
+		const bool Dragging = Ctx.m_pUi->CheckActiveItem(pId);
+		const ColorRGBA TrackColor = ui_token::color::SURFACE_ELEVATED.WithAlpha(1.0f);
+		DrawRoundedSurface(Ctx, Rect, TrackColor, TrackColor, Rect.h * 0.5f);
+
+		const float CenterX = TrackStart + TrackWidth * VisualNormalized;
+		// 悬停与拖动的反馈只走动效（旋钮放大），填充颜色始终取主题色，不因悬停换成固定色。
+		float KnobEmphasis = Dragging ? 1.0f : (Hovered ? 0.6f : 0.0f);
+		if(Ctx.m_pAnim != nullptr)
+		{
+			const uint64_t EmphasisKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x6B6Bull, reinterpret_cast<uint64_t>(pId));
+			KnobEmphasis = std::clamp(ResolveUiAnimSpringValue(*Ctx.m_pAnim, EmphasisKey, EUiAnimProperty::SCALE, KnobEmphasis, ui_token::motion::SLIDER_KNOB_SPRING, 2), 0.0f, 1.5f);
+		}
+
+		const ColorRGBA FillColor = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
+		CUIRect Fill = Rect;
+		Fill.w = std::max(0.0f, CenterX - Rect.x);
+		if(Fill.w > 0.0f)
+		{
+			DrawRoundedSurface(Ctx, Fill, FillColor, FillColor, Rect.h * 0.5f);
+			float BloomAlpha = *pValue == Max ? 1.0f : 0.0f;
+			if(Ctx.m_pAnim != nullptr)
+			{
+				const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pId));
+				BloomAlpha = std::clamp(ResolveUiAnimValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::ALPHA, BloomAlpha, 0.315f, EEasing::EASE_IN_OUT), 0.0f, 1.0f);
+			}
+			if(BloomAlpha > 0.001f)
+				DrawDiscreteSliderBloom(Fill, FillColor, BloomAlpha);
+		}
+
+		// 档位刻度与旋钮圆心对齐；端点刻度会被旋钮盖住，滑到端点时自然消失。
+		const float DotSize = std::clamp(Rect.h * 0.24f, 2.0f, 4.0f);
+		const int NumStops = Max - Min + 1;
+		for(int Stop = 0; Stop < NumStops; ++Stop)
+		{
+			const float StopOffset = NumStops > 1 ? Stop / static_cast<float>(NumStops - 1) : 0.0f;
+			CUIRect Dot;
+			Dot.w = DotSize;
+			Dot.h = DotSize;
+			Dot.x = TrackStart + TrackWidth * StopOffset - DotSize * 0.5f;
+			Dot.y = Rect.y + (Rect.h - DotSize) * 0.5f;
+			DrawRoundedSurface(Ctx, Dot, ui_token::color::TEXT_PRIMARY.WithAlpha(0.38f), ColorRGBA(), DotSize * 0.5f);
+		}
+
+		// 命中换算始终用基准尺寸，悬停放大只影响绘制，避免鼠标与旋钮错位。
+		const float DrawnKnobSize = KnobSize * (1.0f + 0.16f * KnobEmphasis);
+		CUIRect Knob;
+		Knob.w = DrawnKnobSize;
+		Knob.h = DrawnKnobSize;
+		Knob.x = CenterX - DrawnKnobSize * 0.5f;
+		Knob.y = Rect.y + (Rect.h - DrawnKnobSize) * 0.5f;
+		DrawRoundedSurface(Ctx, Knob, ui_token::color::TEXT_PRIMARY, ui_token::color::TEXT_PRIMARY, DrawnKnobSize * 0.5f);
 
 		return Changed;
 	}

@@ -4,11 +4,16 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/http.h>
 #include <engine/shared/json.h>
+#include <engine/sqlite.h>
+#include <engine/storage.h>
 
 #include <game/client/gameclient.h>
+
+#include <sqlite3.h>
 
 #include <cstring>
 
@@ -51,9 +56,75 @@ namespace
 		}
 	};
 }
+void CPlayerPoints::OnInit()
+{
+	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	m_pDb = SqliteOpen(Console(), Storage(), "qmclient/score_cache.sqlite3");
+	if(!m_pDb)
+	{
+		log_warn("player_points", "failed to open qmclient/score_cache.sqlite3");
+		return;
+	}
+	sqlite3 *pSqlite = m_pDb.get();
+	static const char TABLE[] =
+		"CREATE TABLE IF NOT EXISTS player_points "
+		"(name TEXT PRIMARY KEY NOT NULL, points INTEGER NOT NULL)";
+	if(SqliteHandleError(Console(), sqlite3_exec(pSqlite, TABLE, nullptr, nullptr, nullptr), pSqlite, TABLE) != SQLITE_OK)
+	{
+		m_pDb = nullptr;
+		return;
+	}
+	m_pLoadStmt = SqlitePrepare(Console(), pSqlite, "SELECT name, points FROM player_points");
+	m_pStoreStmt = SqlitePrepare(Console(), pSqlite, "INSERT OR REPLACE INTO player_points (name, points) VALUES (?, ?)");
+	if(!m_pLoadStmt || !m_pStoreStmt)
+	{
+		m_pDb = nullptr;
+		return;
+	}
+
+	// 加载全部缓存行：标记为 READY 但 LastSuccessTime=0，
+	// 使 EnsureQueried 在下次调用时立即触发后台刷新（stale-while-revalidate）。
+	bool Error = false;
+	Error = Error || SqliteHandleError(Console(), sqlite3_reset(m_pLoadStmt.get()), pSqlite, "reset load") != SQLITE_OK;
+	while(!Error)
+	{
+		const int Step = sqlite3_step(m_pLoadStmt.get());
+		if(Step == SQLITE_DONE)
+			break;
+		if(Step != SQLITE_ROW)
+		{
+			SqliteHandleError(Console(), Step, pSqlite, "step load");
+			Error = true;
+			break;
+		}
+		const char *pName = reinterpret_cast<const char *>(sqlite3_column_text(m_pLoadStmt.get(), 0));
+		const int Points = sqlite3_column_int(m_pLoadStmt.get(), 1);
+		if(!pName || pName[0] == '\0')
+			continue;
+		SPlayerPointsEntry &Entry = m_Cache[pName];
+		Entry.m_Points = Points;
+		Entry.m_Status = EPointsStatus::READY;
+		Entry.m_LastSuccessTime = 0; // TTL 已过期，触发后台刷新
+	}
+}
+
 void CPlayerPoints::OnRender()
 {
 	ProcessCompletedRequests();
+}
+
+void CPlayerPoints::StoreToDb(const char *pPlayerName, int Points)
+{
+	if(!m_pDb || !m_pStoreStmt)
+		return;
+	sqlite3 *pSqlite = m_pDb.get();
+	bool Error = false;
+	Error = Error || SqliteHandleError(Console(), sqlite3_reset(m_pStoreStmt.get()), pSqlite, "reset store") != SQLITE_OK;
+	Error = Error || SqliteHandleError(Console(), sqlite3_bind_text(m_pStoreStmt.get(), 1, pPlayerName, -1, SQLITE_TRANSIENT), pSqlite, "bind name") != SQLITE_OK;
+	Error = Error || SqliteHandleError(Console(), sqlite3_bind_int(m_pStoreStmt.get(), 2, Points), pSqlite, "bind points") != SQLITE_OK;
+	Error = Error || SqliteHandleError(Console(), sqlite3_step(m_pStoreStmt.get()), pSqlite, "step store") != SQLITE_DONE;
+	if(Error)
+		log_warn("player_points", "failed to store points for '%s'", pPlayerName);
 }
 
 void CPlayerPoints::OnShutdown()
@@ -92,6 +163,13 @@ void CPlayerPoints::EnsureQueried(const char *pPlayerName)
 			int64_t ElapsedMs = (Now - Entry.m_LastSuccessTime) * 1000 / time_freq();
 			if(ElapsedMs < CACHE_TTL_MS)
 				return;
+			// TTL 过期，但上次刷新失败时先等退避期再重试，避免每帧发请求。
+			if(Entry.m_LastFailTime > 0)
+			{
+				int64_t FailElapsedMs = (Now - Entry.m_LastFailTime) * 1000 / time_freq();
+				if(FailElapsedMs < FAIL_RETRY_DELAY_MS)
+					return;
+			}
 		}
 
 		// 上次失败后在退避时间内，不重试。
@@ -146,9 +224,12 @@ void CPlayerPoints::StartRequest(const char *pPlayerName)
 	pRequest->Timeout(CTimeout{10000, 30000, 100, 10});
 	pRequest->LogProgress(HTTPLOG::FAILURE);
 
-	// 先把缓存状态标记为请求中。
+	// 保留已有 READY 数据可见；只有在没有任何缓存时才切换到 FETCHING，
+	// 避免重新获取过程中记分板短暂显示 "..."。
 	std::string Name(pPlayerName);
-	m_Cache[Name].m_Status = EPointsStatus::FETCHING;
+	SPlayerPointsEntry &CacheEntry = m_Cache[Name];
+	if(CacheEntry.m_Status != EPointsStatus::READY)
+		CacheEntry.m_Status = EPointsStatus::FETCHING;
 
 	// 记录活跃请求并提交执行。
 	m_ActiveRequests[Name] = pRequest;
@@ -183,7 +264,8 @@ void CPlayerPoints::ProcessCompletedRequests()
 				pRequest->Result(&pData, &DataSize);
 				// 仅失败时记录详细日志。
 				dbg_msg("player_points", "Response for '%s': %zu bytes, status=%d (failed)", Name.c_str(), DataSize, Code);
-				Entry.m_Status = EPointsStatus::FAILED;
+				if(Entry.m_Status != EPointsStatus::READY)
+					Entry.m_Status = EPointsStatus::FAILED;
 				Entry.m_LastFailTime = time_get();
 				m_ParseJobs.erase(Name);
 				Iter = m_ActiveRequests.erase(Iter);
@@ -212,14 +294,16 @@ void CPlayerPoints::ProcessCompletedRequests()
 			m_ParseJobs.erase(ParseIter);
 			if(!Result.m_JsonParsed)
 			{
-				Entry.m_Status = EPointsStatus::FAILED;
+				if(Entry.m_Status != EPointsStatus::READY)
+					Entry.m_Status = EPointsStatus::FAILED;
 				Entry.m_LastFailTime = time_get();
 				dbg_msg("player_points", "'%s' -> JSON parse failed", Name.c_str());
 			}
 			else if(!Result.m_PointsFound)
 			{
 				// 常见情况：玩家不存在时 DDNet 会返回 {}。
-				Entry.m_Status = EPointsStatus::FAILED;
+				if(Entry.m_Status != EPointsStatus::READY)
+					Entry.m_Status = EPointsStatus::FAILED;
 				Entry.m_LastFailTime = time_get();
 				dbg_msg("player_points", "'%s' -> points missing (maybe player not found)", Name.c_str());
 			}
@@ -228,12 +312,14 @@ void CPlayerPoints::ProcessCompletedRequests()
 				Entry.m_Points = Result.m_Points;
 				Entry.m_Status = EPointsStatus::READY;
 				Entry.m_LastSuccessTime = time_get();
+				StoreToDb(Name.c_str(), Result.m_Points);
 				// 成功路径默认不打日志，避免刷屏。
 			}
 		}
 		else
 		{
-			Entry.m_Status = EPointsStatus::FAILED;
+			if(Entry.m_Status != EPointsStatus::READY)
+				Entry.m_Status = EPointsStatus::FAILED;
 			Entry.m_LastFailTime = time_get();
 			const char *pStateStr = nullptr;
 			switch(State)

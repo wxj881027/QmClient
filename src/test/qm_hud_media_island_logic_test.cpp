@@ -1452,8 +1452,10 @@ TEST(QmHudMediaIslandSource, RenderPathKeepsStableNodesAndEditorRect)
 	EXPECT_NE(RenderBody.find("BeginTransform(EHudEditorElement::MediaIsland, EditorTransformRect, EditorVisibleRect);"), std::string::npos);
 	EXPECT_EQ(RenderBody.find("QmHudIslandEdgeMargin"), std::string::npos);
 	const std::string HudEditorSource = ReadTestSourceFile("src/game/client/components/hud_editor.cpp");
-	EXPECT_NE(HudEditorSource.find("Element == EHudEditorElement::MediaIsland ? QmHudEditor::MEDIA_ISLAND_EDGE_SNAP_DISTANCE : HUD_EDITOR_EDGE_ANCHOR_DISTANCE"), std::string::npos);
-	EXPECT_NE(HudEditorSource.find("const float ScreenEdgeSnapDistance = HudEditorEdgeSnapDistance(Visible.m_Element);"), std::string::npos);
+	// 灵动岛不再有独立的邻近吸附半径：所有 HUD 元素共用同一套「屏幕边只认重合」判定。
+	EXPECT_EQ(HudEditorSource.find("MEDIA_ISLAND_EDGE_SNAP_DISTANCE"), std::string::npos);
+	EXPECT_EQ(HudEditorSource.find("HudEditorEdgeSnapDistance"), std::string::npos);
+	EXPECT_NE(HudEditorSource.find("const QmHudEditor::SSnapAxisResult SnapX = QmHudEditor::ResolveAxisSnapEx("), std::string::npos);
 }
 
 TEST(QmHudMediaIslandSource, IslandRendersBeforeCheckpointAndFinishEffects)
@@ -1670,7 +1672,7 @@ TEST(QmHudMediaIslandSource, BackdropAndOuterShadowFollowTheSameCombinedSdf)
 	}
 }
 
-TEST(QmHudPresentationSource, MediaIslandAndWeaponHudUseContinuousPresentationState)
+TEST(QmHudPresentationSource, MediaIslandUsesContinuousPresentationState)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/hud.cpp");
 	const std::string Header = ReadTestSourceFile("src/game/client/components/hud.h");
@@ -1690,16 +1692,12 @@ TEST(QmHudPresentationSource, MediaIslandAndWeaponHudUseContinuousPresentationSt
 	EXPECT_NE(IslandBody.find("ExitTimeScale"), std::string::npos);
 	EXPECT_EQ(IslandBody.find("EUiAnimInterruptPolicy::QUEUE"), std::string::npos);
 
-	const size_t PlayerStateBegin = Source.find("void CHud::RenderPlayerState");
-	ASSERT_NE(PlayerStateBegin, std::string::npos);
-	const size_t PlayerStateEnd = Source.find("void CHud::RenderNinjaBarPos", PlayerStateBegin);
-	ASSERT_NE(PlayerStateEnd, std::string::npos);
-	const std::string PlayerStateBody = Source.substr(PlayerStateBegin, PlayerStateEnd - PlayerStateBegin);
-	EXPECT_NE(Source.find("HudWeaponPresentationNodeKey"), std::string::npos);
-	EXPECT_NE(Header.find("SHudWeaponPresentationState"), std::string::npos);
-	EXPECT_NE(PlayerStateBody.find("ResolveUiPresentationStateValue(AnimRuntime, WeaponNode"), std::string::npos);
+	// 武器切换弹簧动画已移除：武器图标回到固定缩放与 40% 非当前透明度，
+	// 旧的按时间戳启动动画的实现与新的 presentation state 都不应重新出现。
 	EXPECT_EQ(Source.find("m_aHudWeaponSwitchStartTimes"), std::string::npos);
 	EXPECT_EQ(Source.find("HudActiveWeaponSwitchScale"), std::string::npos);
+	EXPECT_EQ(Source.find("HudWeaponPresentationNodeKey"), std::string::npos);
+	EXPECT_EQ(Header.find("SHudWeaponPresentationState"), std::string::npos);
 }
 
 TEST(QmHudMediaIslandLayout, InfoStackMirrorsRowsAroundTopAnchoredHorizontalMidlineWithCompactGap)

@@ -3328,7 +3328,41 @@ public:
 			}
 		}
 
-		dbg_assert(!HasNonEmptyTextContainer, "text container was not empty");
+		if(!HasNonEmptyTextContainer)
+			return;
+
+		// QmClient: 上面只记录，不在这里断言。真正被遗忘的容器（use_count 归 1，说明
+		// 已经没有任何所有者会归还它）就地回收，避免它的 quad 继续挂在渲染器上：
+		// 遗留 quad 会被重绘成幽灵文本，而且每次窗口尺寸或 UI 缩放变化都会再次触发
+		// text.cpp 的“container was forgotten”断言。回收只针对已无所有者的槽位，
+		// 不会影响仍有所有者的容器。
+		for(auto *pTextContainer : m_vpTextContainers)
+		{
+			if(pTextContainer->m_pContainerUseCount == nullptr || pTextContainer->m_pContainerUseCount.use_count() > 1)
+				continue;
+
+			// 用槽位下标构造索引，保证归还的是同一个文本容器。
+			int ContainerIndex = -1;
+			for(size_t i = 0; i < m_vpTextContainers.size(); ++i)
+			{
+				if(m_vpTextContainers[i] == pTextContainer)
+				{
+					ContainerIndex = (int)i;
+					break;
+				}
+			}
+			if(ContainerIndex < 0)
+				continue;
+
+			STextContainerIndex OrphanIndex;
+			OrphanIndex.m_Index = ContainerIndex;
+			STextContainer &Orphan = GetTextContainer(OrphanIndex);
+			if(Graphics()->IsTextBufferingEnabled())
+				Graphics()->DeleteBufferContainer(Orphan.m_StringInfo.m_QuadBufferContainerIndex, true);
+			Graphics()->DeleteQuadContainer(Orphan.m_StringInfo.m_SelectionQuadContainerIndex);
+			log_error("textrender", "Reclaimed forgotten text container '%s'", pTextContainer->m_aDebugText);
+			FreeTextContainer(OrphanIndex);
+		}
 	}
 };
 
