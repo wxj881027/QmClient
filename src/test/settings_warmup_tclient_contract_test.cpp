@@ -116,8 +116,10 @@ TEST(SettingsWarmupTClientContract, TClientVisualSettingsUseStableTextIdsForPreb
 
 	EXPECT_NE(TClient.find("DoSettingsLabelStreamed(TitleElement, &Label, Localize(\"Font\")"), std::string::npos);
 	EXPECT_NE(TClient.find("\"tclient-cursor-title\""), std::string::npos);
-	EXPECT_NE(TClient.find("DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, \"tclient-hammer-mode\""), std::string::npos);
 	EXPECT_NE(TClient.find("DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, \"tclient-cursor-scale\""), std::string::npos);
 	EXPECT_EQ(TClient.find("tclient-wheel-animate-ms"), std::string::npos);
 	EXPECT_EQ(TClient.find("tclient-wheel-animate-off"), std::string::npos);
+	// 锤子旋转模式已从视觉字体区迁至武器动画卡（qmclient 卡片体系），稳定 ID 跟随迁移。
+	const std::string QmClientSource = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	EXPECT_NE(QmClientSource.find("RenderQmVisualLabel(\"qmclient-hammer-mode\""), std::string::npos);
 }

@@ -1085,6 +1085,25 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponReloadAnim, "Play a flip animation while reloading weapons", Localize("Play a flip animation while reloading weapons"), &g_Config.m_QmWeaponReloadAnim);
 	Content.HSplitTop(ContentGap, nullptr, &Content);
 
+	// 锤子旋转模式：锤子像其他武器一样跟随准星旋转。独立于开关动画选项，
+	// 不受上方动画开关 early-return 影响（自视觉页字体区迁移至此武器动画卡片）。
+	{
+		CUIRect HammerRow, HammerLabel, HammerControl;
+		Content.HSplitTop(LineHeight, &HammerRow, &Content);
+		HammerRow.VSplitLeft(LabelWidth, &HammerLabel, &HammerControl);
+		RenderQmVisualLabel("qmclient-hammer-mode", &HammerLabel, Localize("Hammer Mode"), BodySize);
+		static std::vector<const char *> s_HammerModeDropDownNames;
+		s_HammerModeDropDownNames = {Localize("Normal", "Hammer Mode"), Localize("Rotate with cursor", "Hammer Mode"), Localize("Rotate with cursor like gun", "Hammer Mode")};
+		static CUi::SDropDownState s_HammerModeDropDownState;
+		static CScrollRegion s_HammerModeDropDownScrollRegion;
+		s_HammerModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_HammerModeDropDownScrollRegion;
+		const int HammerMode = std::clamp(g_Config.m_TcHammerRotatesWithCursor, 0, 2);
+		const int NewHammerMode = DoSettingsDropDown(&HammerControl, HammerMode, s_HammerModeDropDownNames.data(), s_HammerModeDropDownNames.size(), s_HammerModeDropDownState);
+		if(g_Config.m_TcHammerRotatesWithCursor != NewHammerMode)
+			g_Config.m_TcHammerRotatesWithCursor = NewHammerMode;
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int Min, int Max, const char *pSuffix = "") {
 		Content.HSplitTop(LineHeight, &Row, &Content);
