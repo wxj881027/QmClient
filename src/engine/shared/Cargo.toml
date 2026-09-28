@@ -23,7 +23,7 @@ uuid = "1.0"
 tungstenite = { version = "0.21", default-features = false, features = ["handshake", "rustls-tls-webpki-roots"] }
 
 [target.'cfg(windows)'.dependencies]
-qm-update = { path = "../../qm-update" }
+qm-update = { path = "../../qm/update" }
 
 [dev-dependencies]
 ddnet-test = { path = "../../rust-bridge/test", features = ["link-test-libraries"] }

@@ -1,5 +1,5 @@
-#ifndef QM_SODA_HOOK_QM_SODA_WATCHDOG_H
-#define QM_SODA_HOOK_QM_SODA_WATCHDOG_H
+#ifndef QM_HOOKS_SODA_QM_SODA_WATCHDOG_H
+#define QM_HOOKS_SODA_QM_SODA_WATCHDOG_H
 
 #include <cstdint>
 #include <string>

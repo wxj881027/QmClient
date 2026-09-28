@@ -273,7 +273,7 @@ from Tavmjong Bah. For further information, contact: tavmjong @ free
 
 ------------------------------------------------------------------------
 
-Kugou and QQ Music capture adaptations (src/qm-music-hook):
+Kugou and QQ Music capture adaptations (src/qm/music):
 Adapted from VTB-LINK/Metabox-Nexus-PlayerCap.
 
 MIT License

@@ -8,7 +8,7 @@
 
 #include <windows.h>
 
-#include <qm-soda-hook/qm_soda_writer.h>
+#include <qm/hooks/soda/qm_soda_writer.h>
 
 #include <algorithm>
 #include <atomic>

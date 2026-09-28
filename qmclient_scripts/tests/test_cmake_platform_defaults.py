@@ -100,7 +100,7 @@ class CmakePlatformDefaultsTest(unittest.TestCase):
 
 	def test_windows_defines_update_target(self) -> None:
 		cmake_source = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
-		self.assertIn('add_executable(qm-client-updater WIN32 src/qm-update/updater_main.cpp)', cmake_source)
+		self.assertIn('add_executable(qm-client-updater WIN32 src/qm/update/updater_main.cpp)', cmake_source)
 		self.assertIn('set_property(TARGET qm-client-updater PROPERTY OUTPUT_NAME QmClient-Updater)', cmake_source)
 
 

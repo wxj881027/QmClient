@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include <qm-nmt-hook/qm_netease_bootstrap.h>
-#include <qm-nmt-hook/qm_netease_cdp.h>
-#include <qm-nmt-hook/qm_netease_cdp_client.h>
+#include <qm/hooks/netease/qm_netease_bootstrap.h>
+#include <qm/hooks/netease/qm_netease_cdp.h>
+#include <qm/hooks/netease/qm_netease_cdp_client.h>
 
 using namespace QmNeteaseCdp;
 

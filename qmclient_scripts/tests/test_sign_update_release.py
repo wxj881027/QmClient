@@ -245,7 +245,7 @@ class SignUpdateReleaseTest(unittest.TestCase):
         self.assertNotIn("rust_engine_shared", updater_block)
         self.assertIn('rust_target STREQUAL "qm_update"', cmake)
         self.assertIn("CMAKE_STATIC_LIBRARY_PREFIX}qm_update", cmake)
-        update_library = (REPO_ROOT / "src/qm-update/lib.rs").read_text(
+        update_library = (REPO_ROOT / "src/qm/update/lib.rs").read_text(
             encoding="utf-8"
         )
         self.assertIn('extern "C" fn qm_update_apply', update_library)

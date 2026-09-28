@@ -1,5 +1,5 @@
-#ifndef QM_SODA_HOOK_QM_SODA_PROTOCOL_H
-#define QM_SODA_HOOK_QM_SODA_PROTOCOL_H
+#ifndef QM_HOOKS_SODA_QM_SODA_PROTOCOL_H
+#define QM_HOOKS_SODA_QM_SODA_PROTOCOL_H
 
 #include <cstddef>
 #include <cstdint>

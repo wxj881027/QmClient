@@ -207,7 +207,7 @@ option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bund
 if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   add_subdirectory(vendor/minhook EXCLUDE_FROM_ALL)
   add_library(qm-nmt-hook64 SHARED
-    src/qm-nmt-hook/qm_netease_hook_dll.cpp
+    src/qm/hooks/netease/qm_netease_hook_dll.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_hook_v5_writer.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.h
@@ -225,10 +225,10 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   # 网易云启动期 Bootstrap 在 QmClient 目录中使用独立文件名；部署器只在
   # 网易云安装目录内将它安装为 version.dll，并拒绝覆盖未知同名 DLL。
   add_library(qm-nmt-bootstrap SHARED
-    src/qm-nmt-hook/qm_netease_version_proxy.cpp
-    src/qm-nmt-hook/qm_netease_bootstrap.cpp
-    src/qm-nmt-hook/qm_netease_bootstrap.h
-    src/qm-nmt-hook/qm_netease_version_proxy.def
+    src/qm/hooks/netease/qm_netease_version_proxy.cpp
+    src/qm/hooks/netease/qm_netease_bootstrap.cpp
+    src/qm/hooks/netease/qm_netease_bootstrap.h
+    src/qm/hooks/netease/qm_netease_version_proxy.def
   )
   set_target_properties(qm-nmt-bootstrap PROPERTIES OUTPUT_NAME "qm-nmt-bootstrap")
   set_property(TARGET qm-nmt-bootstrap PROPERTY CXX_STANDARD 20)
@@ -239,15 +239,15 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   target_compile_definitions(qm-nmt-bootstrap PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
   target_link_libraries(qm-nmt-bootstrap PRIVATE ws2_32)
 
-  add_executable(qm-nmt-helper src/qm-nmt-hook/qm_netease_hook_helper.cpp)
+  add_executable(qm-nmt-helper src/qm/hooks/netease/qm_netease_hook_helper.cpp)
   target_sources(qm-nmt-helper PRIVATE
-    src/qm-nmt-hook/qm_netease_bootstrap.cpp
-    src/qm-nmt-hook/qm_netease_cdp.cpp
-    src/qm-nmt-hook/qm_netease_cdp_client.cpp
-    src/qm-music-hook/qm_music_source.h
-    src/qm-music-hook/qm_kugou_protocol.h
-    src/qm-music-hook/qm_qqmusic_protocol.h
-    src/qm-nmt-hook/qm_netease_frontend_bridge.cpp
+    src/qm/hooks/netease/qm_netease_bootstrap.cpp
+    src/qm/hooks/netease/qm_netease_cdp.cpp
+    src/qm/hooks/netease/qm_netease_cdp_client.cpp
+    src/qm/music/qm_music_source.h
+    src/qm/music/qm_kugou_protocol.h
+    src/qm/music/qm_qqmusic_protocol.h
+    src/qm/hooks/netease/qm_netease_frontend_bridge.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
@@ -267,22 +267,22 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   # 汽水音乐 Hook Helper:发现 SodaMusic.exe 主进程,激活 Node inspector(9229),
   # 提取 sharedState 播放态(整首 KRC 歌词 + 逐字 + 翻译)。复用网易云 CDP 会话。
   add_executable(qm-soda-helper
-    src/qm-soda-hook/qm_soda_helper.cpp
-    src/qm-soda-hook/qm_soda_probe.cpp
-    src/qm-soda-hook/qm_soda_probe.h
-    src/qm-soda-hook/qm_soda_protocol.cpp
-    src/qm-soda-hook/qm_soda_protocol.h
-    src/qm-soda-hook/qm_soda_watchdog.cpp
-    src/qm-soda-hook/qm_soda_watchdog.h
-    src/qm-soda-hook/qm_soda_writer.cpp
-    src/qm-soda-hook/qm_soda_writer.h
-    src/qm-nmt-hook/qm_netease_cdp_client.cpp
-    src/qm-nmt-hook/qm_netease_cdp.cpp
+    src/qm/hooks/soda/qm_soda_helper.cpp
+    src/qm/hooks/soda/qm_soda_probe.cpp
+    src/qm/hooks/soda/qm_soda_probe.h
+    src/qm/hooks/soda/qm_soda_protocol.cpp
+    src/qm/hooks/soda/qm_soda_protocol.h
+    src/qm/hooks/soda/qm_soda_watchdog.cpp
+    src/qm/hooks/soda/qm_soda_watchdog.h
+    src/qm/hooks/soda/qm_soda_writer.cpp
+    src/qm/hooks/soda/qm_soda_writer.h
+    src/qm/hooks/netease/qm_netease_cdp_client.cpp
+    src/qm/hooks/netease/qm_netease_cdp.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
-    src/qm-music-hook/qm_music_source.h
-    src/qm-music-hook/qm_kugou_protocol.h
-    src/qm-music-hook/qm_qqmusic_protocol.h
+    src/qm/music/qm_music_source.h
+    src/qm/music/qm_kugou_protocol.h
+    src/qm/music/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/engine/external/json-parser/json.c
   )
@@ -298,22 +298,22 @@ if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
 
   # 酷狗与 QQ 音乐共用独立采集进程，网络与进程读取不进入游戏主线程。
   add_executable(qm-music-helper
-    src/qm-music-hook/qm_music_helper.cpp
-    src/qm-music-hook/qm_music_source.h
-    src/qm-music-hook/qm_music_publication.cpp
-    src/qm-music-hook/qm_music_publication.h
-    src/qm-music-hook/qm_kugou_source.cpp
-    src/qm-music-hook/qm_kugou_source.h
-    src/qm-music-hook/qm_kugou_protocol.cpp
-    src/qm-music-hook/qm_kugou_protocol.h
-    src/qm-music-hook/qm_qqmusic_source.cpp
-    src/qm-music-hook/qm_qqmusic_source.h
-    src/qm-music-hook/qm_qqmusic_protocol.cpp
-    src/qm-music-hook/qm_qqmusic_protocol.h
-    src/qm-soda-hook/qm_soda_protocol.cpp
-    src/qm-soda-hook/qm_soda_writer.cpp
-    src/qm-nmt-hook/qm_netease_cdp_client.cpp
-    src/qm-nmt-hook/qm_netease_cdp.cpp
+    src/qm/music/qm_music_helper.cpp
+    src/qm/music/qm_music_source.h
+    src/qm/music/qm_music_publication.cpp
+    src/qm/music/qm_music_publication.h
+    src/qm/music/qm_kugou_source.cpp
+    src/qm/music/qm_kugou_source.h
+    src/qm/music/qm_kugou_protocol.cpp
+    src/qm/music/qm_kugou_protocol.h
+    src/qm/music/qm_qqmusic_source.cpp
+    src/qm/music/qm_qqmusic_source.h
+    src/qm/music/qm_qqmusic_protocol.cpp
+    src/qm/music/qm_qqmusic_protocol.h
+    src/qm/hooks/soda/qm_soda_protocol.cpp
+    src/qm/hooks/soda/qm_soda_writer.cpp
+    src/qm/hooks/netease/qm_netease_cdp_client.cpp
+    src/qm/hooks/netease/qm_netease_cdp.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
@@ -1223,7 +1223,7 @@ set_glob(RUST_ENGINE_SHARED GLOB_RECURSE "rs;toml" src/engine/shared
   uuid_manager.rs
 )
 
-set_glob(RUST_QM_UPDATE GLOB_RECURSE "rs;toml" src/qm-update
+set_glob(RUST_QM_UPDATE GLOB_RECURSE "rs;toml" src/qm/update
   Cargo.toml
   lib.rs
 )
@@ -3313,7 +3313,7 @@ if(CLIENT)
     components/qmclient/music_lyrics/qm_spotify_parser.h
     components/qmclient/music_lyrics/qm_spotify_token.cpp
     components/qmclient/music_lyrics/qm_spotify_token.h
-    ../../qm-soda-hook/qm_soda_protocol.cpp
+    ../../qm/hooks/soda/qm_soda_protocol.cpp
     components/qmclient/nameplate_text_cache.h
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
@@ -3895,7 +3895,7 @@ add_dependencies(game-client qm-icon-morph)
   list(APPEND TARGETS_LINK game-client)
 
   if(TARGET_OS STREQUAL "windows")
-    add_executable(qm-client-updater WIN32 src/qm-update/updater_main.cpp)
+    add_executable(qm-client-updater WIN32 src/qm/update/updater_main.cpp)
     set_property(TARGET qm-client-updater PROPERTY OUTPUT_NAME QmClient-Updater)
     target_link_libraries(qm-client-updater rust_qm_update ${PLATFORM_LIBS} comctl32.lib)
     if(MSVC)
@@ -4594,8 +4594,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/engine/client/backend/metal/metal_frame_state.cpp
     src/engine/client/backend/metal/metal_render_target_state.cpp
     src/game/client/animstate.cpp
-    src/qm-music-hook/qm_kugou_protocol.cpp
-    src/qm-music-hook/qm_qqmusic_protocol.cpp
+    src/qm/music/qm_kugou_protocol.cpp
+    src/qm/music/qm_qqmusic_protocol.cpp
     src/game/client/race_parse.cpp
     src/game/client/skin.cpp
     src/game/client/components/tclient/map_history.cpp
@@ -4639,21 +4639,21 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
     src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
-    src/qm-soda-hook/qm_soda_protocol.cpp
-    src/qm-music-hook/qm_kugou_protocol.cpp
-    src/qm-music-hook/qm_qqmusic_protocol.cpp
+    src/qm/hooks/soda/qm_soda_protocol.cpp
+    src/qm/music/qm_kugou_protocol.cpp
+    src/qm/music/qm_qqmusic_protocol.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
     src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
-    src/qm-music-hook/qm_music_publication.cpp
+    src/qm/music/qm_music_publication.cpp
     src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
     src/game/client/components/qmclient/netease/netease_lyric_state.cpp
     src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
     src/game/client/components/qmclient/netease/netease_shared_memory.cpp
     src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
-    src/qm-music-hook/qm_music_source.h
-    src/qm-music-hook/qm_kugou_protocol.h
-    src/qm-music-hook/qm_qqmusic_protocol.h
+    src/qm/music/qm_music_source.h
+    src/qm/music/qm_kugou_protocol.h
+    src/qm/music/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/modes.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
@@ -4687,9 +4687,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   if(TARGET_OS STREQUAL "windows")
     list(APPEND TESTS src/test/qm_netease_cdp_test.cpp)
     list(APPEND TESTS_EXTRA
-      src/qm-nmt-hook/qm_netease_bootstrap.cpp
-      src/qm-nmt-hook/qm_netease_cdp.cpp
-      src/qm-nmt-hook/qm_netease_cdp_client.cpp
+      src/qm/hooks/netease/qm_netease_bootstrap.cpp
+      src/qm/hooks/netease/qm_netease_cdp.cpp
+      src/qm/hooks/netease/qm_netease_cdp_client.cpp
     )
   endif()
 
@@ -4767,24 +4767,24 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/qm_kugou_protocol_test.cpp
       src/test/qm_kugou_patch_test.cpp
       src/test/qm_music_registry_test.cpp
-      src/qm-soda-hook/qm_soda_probe.cpp
-      src/qm-soda-hook/qm_soda_protocol.cpp
+      src/qm/hooks/soda/qm_soda_probe.cpp
+      src/qm/hooks/soda/qm_soda_protocol.cpp
       src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
       src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
       src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_crypto.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
-      src/qm-music-hook/qm_music_publication.cpp
+      src/qm/music/qm_music_publication.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
       src/game/client/components/qmclient/netease/netease_lyric_state.cpp
       src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
       src/game/client/components/qmclient/netease/netease_shared_memory.cpp
       src/game/client/components/qmclient/netease_hook/qm_netease_hook_protocol.cpp
-      src/qm-nmt-hook/qm_netease_cdp.cpp
-      src/qm-music-hook/qm_music_source.h
-      src/qm-music-hook/qm_kugou_protocol.h
-      src/qm-music-hook/qm_qqmusic_protocol.h
+      src/qm/hooks/netease/qm_netease_cdp.cpp
+      src/qm/music/qm_music_source.h
+      src/qm/music/qm_kugou_protocol.h
+      src/qm/music/qm_qqmusic_protocol.h
       src/engine/external/json-parser/json.c
     )
     target_include_directories(qm-nmt-tests PRIVATE src)
@@ -4796,8 +4796,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     if(TARGET_OS STREQUAL "windows")
       target_sources(qm-nmt-tests PRIVATE
         src/test/qm_netease_cdp_test.cpp
-        src/qm-nmt-hook/qm_netease_bootstrap.cpp
-        src/qm-nmt-hook/qm_netease_cdp_client.cpp
+        src/qm/hooks/netease/qm_netease_bootstrap.cpp
+        src/qm/hooks/netease/qm_netease_cdp_client.cpp
       )
       target_compile_definitions(qm-nmt-tests PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
       target_link_libraries(qm-nmt-tests bcrypt winhttp ws2_32)

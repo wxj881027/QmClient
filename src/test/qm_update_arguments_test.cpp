@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <qm-update/updater_arguments.h>
+#include <qm/update/updater_arguments.h>
 
 #include <filesystem>
 #include <vector>

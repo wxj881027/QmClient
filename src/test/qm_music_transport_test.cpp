@@ -1,7 +1,7 @@
 #include <game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.h>
 
 #include <gtest/gtest.h>
-#include <qm-music-hook/qm_music_publication.h>
+#include <qm/music/qm_music_publication.h>
 
 namespace
 {

@@ -1,9 +1,9 @@
-#ifndef QM_MUSIC_HOOK_QM_MUSIC_PUBLICATION_H
-#define QM_MUSIC_HOOK_QM_MUSIC_PUBLICATION_H
+#ifndef QM_MUSIC_QM_MUSIC_PUBLICATION_H
+#define QM_MUSIC_QM_MUSIC_PUBLICATION_H
 
 #include "qm_music_source.h"
 
-#include <qm-soda-hook/qm_soda_protocol.h>
+#include <qm/hooks/soda/qm_soda_protocol.h>
 
 namespace QmMusicHook
 {
