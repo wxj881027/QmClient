@@ -1801,7 +1801,10 @@ class CTextRender : public IEngineTextRender
 	}
 
 	// pvLoadedFaces 可选：收集本次实际加载成功的 face（商店预览加载用它标记预览 face）。
-	bool LoadFontCollection(const char *pFontName, const FT_Byte *pFontData, FT_Long FontDataSize, std::vector<FT_Face> *pvLoadedFaces = nullptr)
+	// QmLogLoadedFaces 可选：按需加载路径（商店预览/分类字体）传 false——这类加载完全由
+	// UI 触发，一次可能批量加载几十个族，逐 face 的成功日志只保留给启动期静态加载
+	// （fonts/ 与 qmclient/fonts），避免控制台刷屏；加载失败的错误日志不受影响。
+	bool LoadFontCollection(const char *pFontName, const FT_Byte *pFontData, FT_Long FontDataSize, std::vector<FT_Face> *pvLoadedFaces = nullptr, bool QmLogLoadedFaces = true)
 	{
 		FT_Face FtFace;
 		FT_Error CollectionLoadError = FT_New_Memory_Face(m_FTLibrary, pFontData, FontDataSize, -1, &FtFace);
@@ -1815,6 +1818,7 @@ class CTextRender : public IEngineTextRender
 		FT_Done_Face(FtFace);
 
 		bool LoadedAny = false;
+		FT_Long LoadedFaces = 0;
 		for(FT_Long FaceIndex = 0; FaceIndex < NumFaces; ++FaceIndex)
 		{
 			FT_Error FaceLoadError = FT_New_Memory_Face(m_FTLibrary, pFontData, FontDataSize, FaceIndex, &FtFace);
@@ -1828,10 +1832,14 @@ class CTextRender : public IEngineTextRender
 			m_pGlyphMap->AddFace(FtFace);
 			if(pvLoadedFaces != nullptr)
 				pvLoadedFaces->push_back(FtFace);
-
-			log_debug("textrender", "Loaded font face %ld '%s %s' from font file '%s'", FaceIndex, FtFace->family_name, FtFace->style_name, pFontName);
+			++LoadedFaces;
 			LoadedAny = true;
 		}
+
+		// 成功路径每文件只打一条汇总：逐 face 打点会随字体库增长刷屏
+		// （单 ttc 可达 10 face），失败时仍有逐 face error 可查。
+		if(QmLogLoadedFaces && LoadedFaces > 0)
+			log_debug("textrender", "Loaded %ld font face(s) from '%s'", LoadedFaces, pFontName);
 
 		if(!LoadedAny)
 		{
@@ -2226,7 +2234,9 @@ public:
 		if(!Storage()->ReadFile(pFilePath, IStorage::TYPE_ALL, &pFontData, &FontDataSize))
 			return false;
 		std::vector<FT_Face> vLoadedFaces;
-		if(LoadFontCollection(pFilePath, static_cast<const FT_Byte *>(pFontData), (FT_Long)FontDataSize, &vLoadedFaces))
+		// 预览加载不逐 face 打成功日志（QmLogLoadedFaces=false）：商店一次可能
+		// 批量加载几十个族，刷屏无诊断价值；失败仍走错误日志。
+		if(LoadFontCollection(pFilePath, static_cast<const FT_Byte *>(pFontData), (FT_Long)FontDataSize, &vLoadedFaces, false))
 		{
 			m_vpFontData.push_back(pFontData);
 			m_vQmPreviewLoadedPaths.push_back(Path);

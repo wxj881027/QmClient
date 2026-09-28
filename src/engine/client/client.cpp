@@ -5213,14 +5213,15 @@ void CClient::Con_AddFavorite(IConsole::IResult *pResult, void *pUserData)
 			log_error("client", "discarding %s because groups can have at most a size of %d", aAddr, pSelf->m_FavoritesGroupNum);
 			return;
 		}
-		log_info("client", "adding %s to favorites group", aAddr);
+		// 启动执行 favorites.cfg 恢复收藏会复用本命令，降为 debug 避免启动期刷屏。
+		log_debug("client", "adding %s to favorites group", aAddr);
 		pSelf->m_aFavoritesGroupAddresses[pSelf->m_FavoritesGroupNum] = Addr;
 		pSelf->m_FavoritesGroupAllowPing = pSelf->m_FavoritesGroupAllowPing || AllowPing;
 		pSelf->m_FavoritesGroupNum += 1;
 	}
 	else
 	{
-		log_info("client", "adding %s to favorites", aAddr);
+		log_debug("client", "adding %s to favorites", aAddr);
 		pSelf->m_pFavorites->Add(&Addr, 1);
 		if(AllowPing)
 		{

@@ -5190,7 +5190,8 @@ void CTClient::AddFavoriteMap(const char *pMapName)
 	if(!pMapName || pMapName[0] == '\0')
 		return;
 	m_FavoriteMaps.insert(std::string(pMapName));
-	log_info("qmclient", "Added favorite map: %s", pMapName);
+	// 启动恢复收藏会复用本方法，成功路径不打 info 避免启动期刷屏。
+	log_debug("qmclient", "Added favorite map: %s", pMapName);
 }
 
 void CTClient::RemoveFavoriteMap(const char *pMapName)
@@ -5198,7 +5199,7 @@ void CTClient::RemoveFavoriteMap(const char *pMapName)
 	if(!pMapName || pMapName[0] == '\0')
 		return;
 	m_FavoriteMaps.erase(std::string(pMapName));
-	log_info("qmclient", "Removed favorite map: %s", pMapName);
+	log_debug("qmclient", "Removed favorite map: %s", pMapName);
 }
 
 void CTClient::ClearFavoriteMaps()
