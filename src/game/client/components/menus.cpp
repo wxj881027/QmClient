@@ -2375,7 +2375,10 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 	};
 	if(UseNewUi)
 	{
-		const float MenubarOuterInsetX = 6.0f;
+		// 水平不额外内缩：槽位行与下方页面背景卡片同宽同位（左缘都落在
+		// Screen.Margin(10) 的内容基准线上），胶囊滑块保留 IndicatorInset
+		// 的 2px 视觉内衬；垂直间隙维持原有的呼吸感。
+		const float MenubarOuterInsetX = 0.0f;
 		const float MenubarBaseOuterInsetY = 2.5f;
 		const float MenubarOuterInsetY = (Box.h - (Box.h - 2.0f * MenubarBaseOuterInsetY) * MENU_MENUBAR_CONTENT_SCALE_NEW) * 0.5f;
 		// 导航栏不再自绘整条背景，直接透出下方的菜单背景；观感由左侧页签胶囊
@@ -3264,7 +3267,7 @@ void CMenus::RenderNews(CUIRect MainView)
 	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, ui_token::radius::CARD);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
-	MainView.VSplitLeft(15.0f, nullptr, &MainView);
+	MainView.VSplitLeft(10.0f, nullptr, &MainView);
 
 	CUIRect Label;
 
@@ -3296,7 +3299,15 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 
 	CUIRect Window = MainView;
-	Window.Margin(UseNewUi ? 8.0f : 20.0f, &Window);
+	if(UseNewUi)
+	{
+		// 内容左右与其他页面的卡片内容线对齐（窗口 10px + 内容 10px = 20px），
+		// 垂直维持原间隙。
+		Window.VMargin(10.0f, &Window);
+		Window.HMargin(8.0f, &Window);
+	}
+	else
+		Window.Margin(20.0f, &Window);
 	if(!UseNewUi)
 		Window.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
 

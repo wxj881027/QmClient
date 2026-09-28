@@ -4128,7 +4128,8 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 		if(UseNewUi)
 		{
 			CUIRect View = MainView;
-			View.Margin(6.0f, &View);
+			// 左右与设置页背景卡片同边距（直接落在内容基准线上），垂直保留间隙。
+			View.HMargin(6.0f, &View);
 			RenderServerbrowserFavoriteMaps(View);
 		}
 		else
@@ -4140,7 +4141,10 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 
 	CUIRect View = MainView;
 	if(UseNewUi)
-		View.Margin(6.0f, &View);
+	{
+		// 左右与设置页背景卡片同边距（内容基准线 10px），垂直保留间隙。
+		View.HMargin(6.0f, &View);
+	}
 	else
 	{
 		View.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
