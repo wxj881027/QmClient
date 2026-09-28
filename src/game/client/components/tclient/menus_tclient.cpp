@@ -2093,7 +2093,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 			pTextRender->Text(Preview.x, PreviewY, 12.0f, Family.m_Name.c_str(), Preview.w);
 			// 固定样例文案：拉丁+数字 与 CJK（汉字/假名）各一行，直观展示该
 			// 字体的实际字形效果；未就绪的族同样渲染（压暗），视觉密度一致。
-			pTextRender->Text(Preview.x, PreviewY + 16.0f, 10.0f, "Aa Bb Gg 123", Preview.w);
+			pTextRender->Text(Preview.x, PreviewY + 16.0f, 10.0f, "Aa Bb Gg 0123456789", Preview.w);
 			pTextRender->Text(Preview.x, PreviewY + 30.0f, 10.0f, "永久 字体 テスト", Preview.w);
 			if(pHint != nullptr)
 				pTextRender->Text(Preview.x, PreviewY + 44.0f, 9.0f, pHint, Preview.w);
