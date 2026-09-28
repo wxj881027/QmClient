@@ -145,6 +145,11 @@ public:
 	ui_widget::SCapsuleTabBarStyle SettingsCapsuleTabBarStyle() const;
 	// 通用胶囊配色：轨道在给定容器表面上压一层暗色，滑块与文字按该表面明暗自适应。
 	ui_widget::SCapsuleTabBarStyle CapsuleTabBarStyleFor(const ColorRGBA &SurfaceColor) const;
+	// 多选一分段选择器：新 UI 渲染为胶囊滑块（先画容器与滑块，再画分段文字，滑块压在
+	// 文字之下），旧 UI 保持分段圆角按钮。槽位在 Segments 内均分；返回点击后的新下标，
+	// 无点击返回 Current。pLegacy* 三色仅用于旧 UI 分段外观（nullptr 用默认）；胶囊样式
+	// 缺省用 SettingsCapsuleTabBarStyle()，浏览器等同源面板处显式传 CapsuleTabBarStyleFor(表面色)。
+	int DoSegmentedChoice(CButtonContainer *pButtons, const char *const *ppLabels, int Count, int Current, const CUIRect &Segments, float Rounding = 5.0f, const ColorRGBA *pLegacyDefault = nullptr, const ColorRGBA *pLegacyActive = nullptr, const ColorRGBA *pLegacyHover = nullptr, const ui_widget::SCapsuleTabBarStyle *pCapsuleStyle = nullptr);
 	ColorRGBA MenuPanelColor(float AlphaScale = 1.0f) const;
 	ColorRGBA MenuPanelElevatedColor(float AlphaScale = 1.0f) const;
 	ColorRGBA BrowserPanelColor(float AlphaScale = 1.0f) const;
@@ -2299,6 +2304,8 @@ protected:
 		bool m_New;
 	};
 	static CUi::EPopupMenuFunctionResult PopupCountrySelection(void *pContext, CUIRect View, bool Active);
+	// QmClient: 字体商店弹层（可搜索的在线字体卡片网格）。
+	static CUi::EPopupMenuFunctionResult PopupFontStore(void *pContext, CUIRect View, bool Active);
 	struct SPopupSettingsCountrySelectionContext
 	{
 		CMenus *m_pMenus;

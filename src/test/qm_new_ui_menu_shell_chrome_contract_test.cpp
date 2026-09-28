@@ -111,9 +111,20 @@ TEST(QmNewUiMenuShellChromeContract, MenubarUsesExplicitQmNewUiColorBranch)
 	EXPECT_NE(Source.find("ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash(\"menubar_capsule_ingame_tabs\")"), std::string::npos);
 	EXPECT_NE(RenderMenubar.find("if(!UseNewUi && MenubarHaveActive && !Ui()->RenderOnly())"), std::string::npos);
 	EXPECT_NE(RenderMenubar.find("if(UseNewUi)"), std::string::npos);
-	EXPECT_NE(UseNewUiBlock.find("Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f)"), std::string::npos);
+	// 导航栏不再自绘整条背景，直接透出下方菜单背景；新旧 UI 都不得出现硬编码底色条。
+	EXPECT_EQ(UseNewUiBlock.find("Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f)"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("Box.VMargin(MenubarOuterInsetX, &Box);"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("Box.HMargin(MenubarOuterInsetY, &Box);"), std::string::npos);
+	// 离线右侧图标簇改为滑块式胶囊导航（截图/回放/编辑器/设置/退出），不再有主菜单按钮。
+	EXPECT_NE(UseNewUiBlock.find("ui_widget::CapsuleTabBarChrome(RightNavCtx, MakeUiScopeHash(\"menubar_capsule_right_nav\")"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("if(DoMenuTabV2_QmIcon(&s_QuitButton, EQmIcon::POWER_OFF, FONT_ICON_POWER_OFF, false, &aRightNavSlots[4]"), std::string::npos);
+	EXPECT_EQ(UseNewUiBlock.find("s_RightHomeButton"), std::string::npos);
+	// 主菜单入口并入左侧滑块导航（第一个页签槽位）。
+	EXPECT_NE(UseNewUiBlock.find("AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE"), std::string::npos);
+	// 胶囊 hover 反馈与激活滑块同几何（同一内缩），不得比滑块大出一圈。
+	EXPECT_NE(DoMenuTabV2.find("pRect->Margin(ui_widget::CAPSULE_TAB_INDICATOR_INSET, &HoverRect);"), std::string::npos);
+	// 导航栏胶囊容器与服务器列表面板同源配色（qm_map_browser_*），不再走 qm_ui_color。
+	EXPECT_NE(Source.find("Style.m_CapsuleColor = MenuCapsuleSurfaceColor();"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float BrowserButtonWidth = 58.0f * MENU_MENUBAR_CONTENT_SCALE_NEW;"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float GameButtonWidth = (CompactOnlineMenuTabs ? 56.0f : 64.0f) * MENU_MENUBAR_CONTENT_SCALE_NEW;"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("const float ServerInfoButtonWidth = (CompactOnlineMenuTabs ? 94.0f : 104.0f) * MENU_MENUBAR_CONTENT_SCALE_NEW;"), std::string::npos);
@@ -125,6 +136,13 @@ TEST(QmNewUiMenuShellChromeContract, MenubarUsesExplicitQmNewUiColorBranch)
 	// 起始页签改为「先收集槽位、再画胶囊容器与滑块、最后画图标」的循环，槽位数组取代了逐页签的内联绘制。
 	EXPECT_NE(UseNewUiBlock.find("if(DoMenuTabV2_QmIcon(&s_aStartTabButtons[TabIndex], Tab.m_Icon, Tab.m_pIcon, TabActive, &aStartTabSlots[TabIndex]"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash(\"menubar_capsule_start_tabs\")"), std::string::npos);
+	// 胶囊组件支持单槽位自定义底色（画在容器之上、滑块之下）：未读新闻/更新时
+	// 主菜单入口槽位用绿色高亮提醒，底色数组随 chrome 一起下发。
+	const std::string UiNavigationSource = ReadTextFile("src/game/client/QmUi/UiNavigation.h");
+	EXPECT_NE(UiNavigationSource.find("const SCapsuleTabBarTints &Tints = {})"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("ColorRGBA aStartTabTints[std::size(s_aStartTabButtons)] = {};"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("aStartTabTints[0] = ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f);"), std::string::npos);
+	EXPECT_NE(UseNewUiBlock.find("MenuCapsuleTabBarStyle(), aStartTabTints);"), std::string::npos);
 	EXPECT_EQ(UseNewUiBlock.find("DoButton_MenuTab(&s_SettingsButton"), std::string::npos);
 	EXPECT_EQ(UseNewUiBlock.find("DoButton_MenuTab(&s_InternetButton"), std::string::npos);
 	EXPECT_EQ(OldUiBlock.find("Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f)"), std::string::npos);
