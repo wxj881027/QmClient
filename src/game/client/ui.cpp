@@ -366,11 +366,16 @@ bool CUi::PrepareGaussianBlur()
 	const uint64_t PerfFrame = Client()->PerfFrame();
 	if(m_GaussianBlurPrepared && m_GaussianBlurPreparedFrame == PerfFrame)
 		return true;
+	// 同帧失败闩：GPU 侧失败在帧内不会自行恢复，后续矩形重试只会重复
+	// FlushQuadBatch + 背板捕获 + 模糊提交的开销，直接跳过。
+	if(m_GaussianBlurFailedFrame == PerfFrame)
+		return false;
 
 	FlushQuadBatch();
 	Graphics()->FlushVertices();
 	if(!Graphics()->CaptureBackbufferToRenderTarget(m_GaussianBlurSource))
 	{
+		m_GaussianBlurFailedFrame = PerfFrame;
 		m_GaussianBlurPrepared = false;
 		return false;
 	}
@@ -381,6 +386,7 @@ bool CUi::PrepareGaussianBlur()
 	BlurParams.m_Mode = static_cast<IGraphics::EBlurMode>(BlurMode);
 	if(!Graphics()->GaussianBlurRenderTarget(m_GaussianBlurSource, m_aGaussianBlurTemporary, m_GaussianBlurTarget, BlurParams))
 	{
+		m_GaussianBlurFailedFrame = PerfFrame;
 		m_GaussianBlurPrepared = false;
 		return false;
 	}

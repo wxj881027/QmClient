@@ -193,6 +193,10 @@ TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurSkipsButtonsAndKeepsSurfaceRou
 	EXPECT_NE(FunctionBody(UiSource, "int CUi::DoButton_PopupMenu(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(UiSource, "bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, const SEditBoxRenderOptions &RenderOptions)").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(UiSource, "SEditResult<int64_t> CUi::DoValueSelectorWithState(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
+	// 颜色选择器弹窗内容画在已模糊的弹窗背板之上，必须抑制模糊，否则明度叠加层
+	// 的半透明角点会把饱和度渐变覆盖成模糊背板（方块呈灰度、不随色相变化）。
+	const std::string UiPopupsSource = ReadTextFile("src/game/client/ui_popups.cpp");
+	EXPECT_NE(FunctionBody(UiPopupsSource, "CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_MenuInternal(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_MenuTabInternal(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_Toggle(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);

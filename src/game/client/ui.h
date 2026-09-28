@@ -697,6 +697,9 @@ private:
 	int m_GaussianBlurMode = -1;
 	bool m_GaussianBlurPrepared = false;
 	uint64_t m_GaussianBlurPreparedFrame = 0;
+	// 同帧失败闩：捕获/模糊在某一帧失败后，同帧后续矩形直接跳过重试，
+	// 避免对同一帧反复 FlushQuadBatch + 背板捕获 + 模糊提交（失败风暴）。
+	uint64_t m_GaussianBlurFailedFrame = 0;
 
 	const void *m_pHotItem = nullptr;
 	const void *m_pActiveItem = nullptr;
