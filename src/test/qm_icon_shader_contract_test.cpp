@@ -43,7 +43,7 @@ TEST(QmIconShaderContract, AllBackendsShareNonOverlappingMsdfModeThresholds)
 		const char *m_pTrueSdfExpr;
 	};
 	const SBackend aBackends[] = {
-		{"data/shader/textured_msdf.frag", "const bool UseTrueSdf = gMsdfParams.w <= -0.001;"},
+		{"data/shader/textured_msdf.frag", "bool UseTrueSdf = gMsdfParams.w <= -0.001;"},
 		{"data/shader/vulkan/textured_msdf.frag", "const bool UseTrueSdf = gMsdf.gMsdfParams.w <= -0.001;"},
 		{"data/shader/metal/qmclient.metal", "const bool UseTrueSdf = MsdfParams.w <= -0.001;"},
 	};
