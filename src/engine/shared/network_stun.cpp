@@ -34,6 +34,11 @@ static int RetryWaitSeconds(int NumUnsuccessfulTries)
 	return (1 << std::clamp(NumUnsuccessfulTries, 0, 9));
 }
 
+// 连续发送失败达到该次数后停止该地址族的 STUN 尝试：发送层持续失败基本意味着
+// 本机没有该地址族的路由（典型：无 IPv6 出口），指数退避重试只会长期刷日志。
+// Refresh()/FeedStunServer() 重新武装时会清零计数。
+static constexpr int STUN_SEND_FAILURES_BEFORE_GIVEUP = 3;
+
 CStun::CProtocol::CProtocol(int Index, NETSOCKET Socket) :
 	m_Index(Index),
 	m_Socket(Socket)
@@ -59,6 +64,7 @@ void CStun::CProtocol::FeedStunServer(NETADDR StunServer)
 void CStun::CProtocol::Refresh()
 {
 	m_NextTry = time_get();
+	m_NumSendFailures = 0;
 }
 
 void CStun::CProtocol::Update()
@@ -74,9 +80,23 @@ void CStun::CProtocol::Update()
 	int Size = StunMessagePrepare(aBuf, sizeof(aBuf), &m_Stun);
 	if(net_udp_send(m_Socket, &m_StunServer, aBuf, Size) == -1)
 	{
-		log_debug(IndexToSystem(m_Index), "couldn't send stun request");
+		m_NumSendFailures += 1;
+		// 首次失败照常记录便于诊断；连续失败达阈值则止损：停止重试直到
+		// Refresh()/FeedStunServer() 重新武装，并把未成功次数推到
+		// HaveTriedALittle 阈值，让 GetConnectivity 尽快报告 UNREACHABLE。
+		if(m_NumSendFailures == 1)
+		{
+			log_debug(IndexToSystem(m_Index), "couldn't send stun request");
+		}
+		else if(m_NumSendFailures >= STUN_SEND_FAILURES_BEFORE_GIVEUP)
+		{
+			log_debug(IndexToSystem(m_Index), "couldn't send stun request %d times in a row, giving up until refresh", m_NumSendFailures);
+			m_NextTry = -1;
+			m_NumUnsuccessfulTries = std::max(m_NumUnsuccessfulTries, 5);
+		}
 		return;
 	}
+	m_NumSendFailures = 0;
 }
 
 bool CStun::CProtocol::OnPacket(NETADDR Addr, unsigned char *pData, int DataSize)
