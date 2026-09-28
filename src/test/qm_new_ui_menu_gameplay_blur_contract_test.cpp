@@ -78,6 +78,9 @@ TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurUsesSharedUiBackdropWithTransp
 	EXPECT_NE(PrepareBlur.find("m_GaussianBlurPrepared && m_GaussianBlurPreparedFrame == PerfFrame"), std::string::npos);
 	EXPECT_NE(PrepareBlur.find("m_GaussianBlurPreparedFrame = PerfFrame"), std::string::npos);
 	EXPECT_NE(PrepareBlur.find("m_GaussianBlurPrepared = true"), std::string::npos);
+	// 同帧失败闩：GPU 侧失败后同帧不得反复重试（背板捕获/模糊提交开销）。
+	EXPECT_NE(PrepareBlur.find("m_GaussianBlurFailedFrame == PerfFrame"), std::string::npos);
+	EXPECT_NE(PrepareBlur.find("m_GaussianBlurFailedFrame = PerfFrame"), std::string::npos);
 	EXPECT_NE(UiSource.find("Graphics()->GetScreen"), std::string::npos);
 	EXPECT_NE(UiSource.find("UiGaussianBlurTargetDimension"), std::string::npos);
 	EXPECT_NE(CachedRectDraw.find("GaussianBlurScopeAlpha()"), std::string::npos);

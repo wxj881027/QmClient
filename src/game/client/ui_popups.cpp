@@ -646,6 +646,12 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 	CUi *pUI = pColorPicker->m_pUI;
 	pColorPicker->m_State = EEditState::NONE;
 
+	// 弹窗背板（含高斯模糊）已在 RenderPopupMenus 中绘制完成，弹窗内容一律画在
+	// 背板之上。若不抑制模糊，饱和度/明度渐变里透明→黑色的明度叠加层会因顶角
+	// alpha < 1 触发 CUIRect::Draw4 的 DrawRectBackdrop，把已画好的色相底色覆盖
+	// 成模糊背板，选择方块因此显示为灰度渐变、不随所选色相变化。
+	CUiScopedGaussianBlurSuppression PickerBlurSuppression(pUI);
+
 	CUIRect ColorsArea, HueArea, BottomArea, ModeButtonArea, HueRect, SatRect, ValueRect, HexRect, AlphaRect;
 
 	View.HSplitTop(140.0f, &ColorsArea, &BottomArea);
