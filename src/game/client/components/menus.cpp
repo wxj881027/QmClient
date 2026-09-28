@@ -2375,10 +2375,10 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 	};
 	if(UseNewUi)
 	{
-		// 水平不额外内缩：槽位行与下方页面背景卡片同宽同位（左缘都落在
-		// Screen.Margin(10) 的内容基准线上），胶囊滑块保留 IndicatorInset
-		// 的 2px 视觉内衬；垂直间隙维持原有的呼吸感。
-		const float MenubarOuterInsetX = 0.0f;
+		// 水平外扩 2px 补偿胶囊滑块的 IndicatorInset 内衬：滑块/槽位高亮的
+		// 可见左缘因此精确落在页面背景卡片的 10px 基准线上（容器与卡片同色，
+		// 反向凸出的 2px 不可察觉）；垂直间隙维持原有的呼吸感。
+		const float MenubarOuterInsetX = -2.0f;
 		const float MenubarBaseOuterInsetY = 2.5f;
 		const float MenubarOuterInsetY = (Box.h - (Box.h - 2.0f * MenubarBaseOuterInsetY) * MENU_MENUBAR_CONTENT_SCALE_NEW) * 0.5f;
 		// 导航栏不再自绘整条背景，直接透出下方的菜单背景；观感由左侧页签胶囊
