@@ -603,6 +603,11 @@ void CTClient::ConchainRandomColor(IConsole::IResult *pResult, void *pUserData, 
 void CTClient::OnInit()
 {
 	TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+	// QmClient: 分类字体（中文/图标符号）随主字体一并应用。
+	TextRender()->SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
+	TextRender()->SetCustomFaceIcons(g_Config.m_TcCustomFontIcons);
+	TextRender()->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
+	TextRender()->SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
 	m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
 	m_UpdateAutoEnabled = g_Config.m_QmAutoUpdate != 0;
 	if(g_Config.m_QmAutoUpdate)

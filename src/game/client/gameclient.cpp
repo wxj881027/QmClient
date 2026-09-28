@@ -1299,7 +1299,8 @@ void CGameClient::SyncQmUiIconWeight()
 
 void CGameClient::SyncQmCustomFontWeight()
 {
-	const int Weight = std::clamp(g_Config.m_TcCustomFontWeight, 100, 900);
+	// 只做安全网钳制：真实生效范围由渲染层按所选字体的 wght 轴范围钳制。
+	const int Weight = std::clamp(g_Config.m_TcCustomFontWeight, 1, 1000);
 	if(m_AppliedQmCustomFontWeight == Weight)
 		return;
 	m_AppliedQmCustomFontWeight = Weight;

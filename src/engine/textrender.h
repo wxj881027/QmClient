@@ -442,8 +442,25 @@ public:
 	virtual std::vector<std::string> *GetCustomFaces() = 0; // TClient
 	virtual std::vector<std::string> *GetCustomFontStyles(const char *pFamily) = 0; // TClient
 	virtual void SetCustomFace(const char *pFace) = 0; // TClient
+	// 分类字体：中文/中日韩字形与图标符号字形可分别指定；空串表示跟随主字体链。
+	virtual void SetCustomFaceCjk(const char *pFace) = 0; // TClient
+	virtual void SetCustomFaceIcons(const char *pFace) = 0; // TClient
+	// 重新扫描用户字体目录并按当前配置重新解析各字体面（字体商店下载完成后调用）。
+	virtual void ReloadCustomFonts() = 0; // TClient
 	virtual void SetCustomFontWeight(int Weight) = 0; // TClient
+	// 中文/中日韩分类面的独立可变字重；与拉丁面重合（同一族）时以拉丁字重为准。
+	virtual void SetCustomFontWeightCjk(int Weight) = 0; // QmClient
+	// 可变字重轴范围（100~900 整数），非可变字体返回 false。
+	virtual bool CustomFontWeightRange(const char *pFace, int &Min, int &Max) = 0; // QmClient
 	virtual bool CustomFontHasVariableWeight(const char *pFace) const = 0; // TClient
+	// 该名字是否可解析为已加载的字体面（含预览面），供弹层按条目安全切换预览字体。
+	virtual bool QmHasCustomFace(const char *pFace) = 0; // QmClient
+	// 该 face 是否覆盖任一 CJK 字形（代表性码点采样：汉字/假名/谚文/CJK 标点），
+	// 供 CJK 字体下拉过滤纯拉丁字体。
+	virtual bool QmFaceHasCjk(const char *pFace) = 0; // QmClient
+	// 预览面：把未安装的字体文件临时加载进 face 池（不进字体族列表），供商店
+	// 弹层按条目渲染预览；已加载（含已安装）时直接返回 true。路径重复调用安全。
+	virtual bool QmEnsurePreviewFace(const char *pFamily, const char *pFilePath) = 0; // QmClient
 
 	virtual bool LoadFonts() = 0;
 	virtual void SetFontPreset(EFontPreset FontPreset) = 0;

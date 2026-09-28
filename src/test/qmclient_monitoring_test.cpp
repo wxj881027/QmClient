@@ -1,3 +1,22 @@
+// ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
+// 【死文件警告】本文件未注册进根 CMakeLists.txt 的测试源列表，编译产物中
+// 不存在本文件的任何测试——里面全部 TEST 从未被执行，也不会被执行。
+//
+// 背景：2026-09 测试拆分时，其中有用的行为测试已迁往按域拆分的注册文件
+//（qmclient_monitoring_*_contract_test.cpp 等），本文件作为拆分遗留被
+// 有意留在仓库外构建体系之外，仅作历史参考。
+//
+// 教训（2026-09-29 实录）：曾有人向本文件新增合同测试并看到
+// "run_cxx_tests 全过"，误以为测试生效——实际是从未编译的假闭环。
+//
+// 后来人请遵守：
+//   1. 禁止向本文件添加任何测试（写了也等于没写）；
+//   2. 新增测试必须新建 `qmclient_monitoring_<域>_contract_test.cpp`
+//      并在根 CMakeLists.txt 显式注册；
+//   3. 优先写行为测试，不要写按当前实现逐行断言源码字符串的影子合同。
+// 死测试名清单备份：tmp/dead_test_names.txt（抽查迁移是否有漏网有用测试用）。
+// ⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠⚠
+
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #define CONF_TEST 1
 #include <engine/client/font_size_cache.h>
@@ -4249,7 +4268,7 @@ TEST(QmMonitoringHelpers, VulkanDeviceLostLogsDeviceFaultInfo)
 	EXPECT_NE(OptionalExtBody.find("VK_EXT_DEVICE_FAULT_EXTENSION_NAME"), std::string::npos);
 }
 
-TEST(QmMonitoringHelpers, GraphicsRecoveryRunsBeforeFatalErrorIsSubmitted)
+TEST(QmMonitoringHelpers, GraphicsFatalErrorStopsClientWithoutBackendWindowFallback)
 {
 	const std::string ClientSource = ReadRepoFile("src/engine/client/client.cpp");
 	const std::string BackendSource = ReadRepoFile("src/engine/client/backend_sdl.cpp");
@@ -4267,7 +4286,7 @@ TEST(QmMonitoringHelpers, GraphicsRecoveryRunsBeforeFatalErrorIsSubmitted)
 	EXPECT_EQ(TakeErrorBody.find("ProcessError"), std::string::npos);
 	EXPECT_NE(BackendSource.find("void CCommandProcessor_SDL_GL::ClearFatalError()"), std::string::npos);
 
-	// 主循环必须在处理输入/渲染之前轮询该状态，并立即结束循环交给重启流程。
+	// 主循环必须在处理输入/渲染之前轮询该状态，并立即结束循环交给退出流程。
 	const size_t RunStart = ClientSource.find("void CClient::Run()");
 	ASSERT_NE(RunStart, std::string::npos);
 	const size_t ProbePos = ClientSource.find("if(Graphics()->TakeFatalError())", RunStart);
@@ -4278,63 +4297,36 @@ TEST(QmMonitoringHelpers, GraphicsRecoveryRunsBeforeFatalErrorIsSubmitted)
 	ASSERT_NE(InputPos, std::string::npos);
 	EXPECT_LT(ProbePos, InputPos);
 
-	// 恢复入口只能尝试一次，避免无限重启循环。
+	// 收口入口只能尝试一次，避免重入。
 	const std::string HandlerBody = ExtractSourceFunctionBody(ClientSource, "bool CClient::HandleQmGraphicsFatalError()");
 	ASSERT_FALSE(HandlerBody.empty());
-	EXPECT_NE(HandlerBody.find("if(m_QmGraphicsRecoveryAttempted)"), std::string::npos);
-	EXPECT_NE(HandlerBody.find("m_QmGraphicsRecoveryAttempted = true;"), std::string::npos);
-	EXPECT_NE(HandlerBody.find("Restart();"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("if(m_QmGraphicsFatalErrorHandled)"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("m_QmGraphicsFatalErrorHandled = true;"), std::string::npos);
 
-	// 报告文件名必须能被下次启动的驱动崩溃恢复流程识别（_fatal_report.txt 前缀匹配）。
+	// 图形致命错误只写诊断报告并退出，用户的显式设置（渲染后端、窗口模式、
+	// 图形模式）不得被回退；无条件重启也必须保持缺席。
+	EXPECT_EQ(HandlerBody.find("Restart();"), std::string::npos);
+	EXPECT_EQ(HandlerBody.find("g_Config.m_GfxBackend"), std::string::npos);
+	EXPECT_EQ(HandlerBody.find("g_Config.m_GfxFullscreen"), std::string::npos);
+	EXPECT_EQ(HandlerBody.find("g_Config.m_QmGraphicsMode"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("SetState(IClient::STATE_QUITTING);"), std::string::npos);
+
+	// 唯一例外：device lost 且 qm_enhanced_rendering=AUTO 时按 qm_vulkan_ext
+	// 的设计语义持久化写回 0 并自动重启一次（下次会话为 OFF，重启有界）。
+	EXPECT_NE(HandlerBody.find("str_find(pFatalError, \"device lost\")"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("g_Config.m_QmEnhancedRendering == 1"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("g_Config.m_QmEnhancedRendering = 0;"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("SetState(IClient::STATE_RESTARTING);"), std::string::npos);
+	EXPECT_NE(HandlerBody.find("QmEnhancedAutoFallback"), std::string::npos);
+
+	// 报告文件名与 echndl 的崩溃报告保持一致，统一归档在崩溃目录。
 	ASSERT_NE(HandlerBody.find("_fatal_report.txt"), std::string::npos);
 	EXPECT_NE(HandlerBody.find("gs_pQmCrashDumpDir"), std::string::npos);
-}
 
-TEST(QmMonitoringHelpers, GraphicsDriverFaultSwitchesBackendToOpenGL)
-{
-	const std::string ClientSource = ReadRepoFile("src/engine/client/client.cpp");
-
-	const std::string RecoveryBody = ExtractSourceFunctionBody(ClientSource, "static bool ApplyQmSafeGraphicsRecovery(const char *pCrashedBackend, const char *pFailedBackends)");
-	ASSERT_FALSE(RecoveryBody.empty());
-	// 驱动故障时必须换掉后端，否则下次启动还会走同一个后端再炸一次。
-	// 旧实现无条件切 OpenGL，崩在 wglSwapBuffers 上时等于把用户按回崩点，
-	// 因此这里只要求「换」这个动作存在，具体换到哪个由 SwitchQmGraphicsBackendAwayFrom 决定。
-	const size_t SwitchCallPos = RecoveryBody.find("Changed |= SwitchQmGraphicsBackendAwayFrom(pCrashedBackend, pFailedBackends);");
-	ASSERT_NE(SwitchCallPos, std::string::npos);
-	EXPECT_EQ(RecoveryBody.find("str_copy(g_Config.m_GfxBackend, \"OpenGL\");"), std::string::npos);
-	const size_t FallbackMajorPos = RecoveryBody.find("const int FallbackGLMajor = 0;", SwitchCallPos);
-	ASSERT_NE(FallbackMajorPos, std::string::npos);
-	EXPECT_LT(SwitchCallPos, FallbackMajorPos);
-
-	// 选择必须对称：崩在 OpenGL 家族上往 Vulkan 走，崩在 Vulkan 上才回 OpenGL。
-	const std::string SwitchBody = ExtractSourceFunctionBody(ClientSource, "static bool SwitchQmGraphicsBackendAwayFrom(const char *pCrashedBackend, const char *pFailedBackends)");
-	ASSERT_FALSE(SwitchBody.empty());
-	EXPECT_NE(SwitchBody.find("str_comp_nocase(pCrashedBackend, \"OpenGL\") == 0"), std::string::npos);
-	EXPECT_NE(SwitchBody.find("str_comp_nocase(pCrashedBackend, \"GLES\") == 0"), std::string::npos);
-	EXPECT_NE(SwitchBody.find("s_pFallback = \"Vulkan\""), std::string::npos);
-	EXPECT_NE(SwitchBody.find("str_copy(g_Config.m_GfxBackend, s_pFallback);"), std::string::npos);
-	// 两个备选都崩过就停手，不然就是 OpenGL/Vulkan 乒乓。
-	EXPECT_NE(SwitchBody.find(">= 2"), std::string::npos);
-	EXPECT_NE(SwitchBody.find("instead of switching back and forth"), std::string::npos);
-
-	// 调用点必须把报告里记录的实际崩溃后端 + 已崩后端计数传进去。
-	EXPECT_NE(ClientSource.find("ApplyQmSafeGraphicsRecovery(aCrashedBackend, pFailedState)"), std::string::npos);
-	EXPECT_NE(ClientSource.find("ParseQmCrashReportGraphicsBackend(pCrashReport, aCrashedBackend, sizeof(aCrashedBackend))"), std::string::npos);
-	EXPECT_EQ(ClientSource.find("ApplyQmSafeGraphicsRecovery()"), std::string::npos);
-	EXPECT_EQ(ClientSource.find("ApplyQmSafeGraphicsRecovery(HasGraphicsDriverFault)"), std::string::npos);
-
-	// 只认「Exception module:」那一行、且偏移非零，否则 Loaded modules 清单里的同名 DLL 会误判。
-	const std::string DetectorBody = ExtractSourceFunctionBody(ClientSource, "static bool QmCrashTextExceptionModuleIsGraphicsDriver(const char *pText)");
-	ASSERT_FALSE(DetectorBody.empty());
-	EXPECT_NE(DetectorBody.find("str_startswith(aLine, gs_pQmCrashReportModulePrefix)"), std::string::npos);
-	EXPECT_NE(DetectorBody.find("str_toint_base(pOffset, 16) == 0"), std::string::npos);
-
-	// 状态文件指纹只比前半段：后面挂着崩溃计数，整串比较在追加计数后永远不相等，
-	// 会让「已经自愈过」永远为假。
-	const std::string WasRecoveredBody = ExtractSourceFunctionBody(ClientSource, "static bool WasQmGraphicsCrashReportRecovered(IStorage *pStorage, const SQmLatestCrashReport &Report, const char *pCrashedBackend)");
-	ASSERT_FALSE(WasRecoveredBody.empty());
-	EXPECT_NE(WasRecoveredBody.find("str_startswith(pState, aFingerprint)"), std::string::npos);
-	EXPECT_EQ(WasRecoveredBody.find("str_comp(pState, aFingerprint) == 0"), std::string::npos);
+	// 崩溃驱动的启动期恢复必须彻底移除：不再根据崩溃报告改写图形配置。
+	EXPECT_EQ(ClientSource.find("RecoverQmGraphicsSettingsAfterDriverCrash"), std::string::npos);
+	EXPECT_EQ(ClientSource.find("ApplyQmSafeGraphicsRecovery"), std::string::npos);
+	EXPECT_EQ(ClientSource.find("graphics_recovery.marker"), std::string::npos);
 }
 
 TEST(QmMonitoringHelpers, GraphicsDeviceRecycleInvalidatesStaleResources)
@@ -10113,6 +10105,11 @@ TEST(QmMonitoringHelpers, DropdownPopupUsesComputedGeometrySize)
 	EXPECT_NE(SelectionResetBody.find("m_AnchorVisible = true;"), std::string::npos);
 	EXPECT_NE(SelectionResetBody.find("m_PopupVisible = true;"), std::string::npos);
 	EXPECT_NE(PopupBody.find("if(Props.m_AutoReposition)"), std::string::npos);
+	// 二级界面弹窗能力：居中标志在属性结构中默认关闭，DoPopupMenu 打开时据此改写为视口居中坐标。
+	EXPECT_NE(UiHeader.find("bool m_CenterInViewport = false;"), std::string::npos);
+	EXPECT_NE(PopupBody.find("if(Props.m_CenterInViewport)"), std::string::npos);
+	EXPECT_NE(PopupBody.find("X = Screen()->x + (Screen()->w - Width) / 2.0f;"), std::string::npos);
+	EXPECT_NE(PopupBody.find("Y = Screen()->y + (Screen()->h - Height) / 2.0f;"), std::string::npos);
 	EXPECT_NE(DropdownHeader.find("bool m_PopupVisible = false;"), std::string::npos);
 	EXPECT_NE(DropdownSource.find("Result.m_PopupVisible = Result.m_Rect.w > 0.0f && Result.m_Rect.h > 0.0f && RectsOverlap(Result.m_Rect, ViewportRect);"), std::string::npos);
 	EXPECT_NE(UiHeader.find("bool m_ClipToViewport = false;"), std::string::npos);
@@ -10149,6 +10146,10 @@ TEST(QmMonitoringHelpers, DropdownPopupUsesComputedGeometrySize)
 	EXPECT_NE(Body.find("DoPopupMenu(pContext, X, Y, PopupWidth, PopupHeightResolved, pContext, PopupSelection, pContext->m_Props);"), std::string::npos);
 	EXPECT_EQ(Body.find("DoPopupMenu(pContext, X, Y, pContext->m_Width, PopupHeight, pContext, PopupSelection, pContext->m_Props);"), std::string::npos);
 }
+
+// 字体商店的弹窗接线与预览 face 边界合同已迁至
+// qmclient_monitoring_font_store_contract_test.cpp（本文件未注册进构建，
+// 留在此处的测试不会被执行）。
 
 // 下拉弹层支持「条目自定义前景」：调用方补画普通文本表达不了的内容（例：头衔风格预览）。
 // 钩子必须逐条可见项调用、画在条目背景之后条目文字之前，且不改变既有条目按钮契约。

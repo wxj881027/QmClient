@@ -3,6 +3,7 @@
 #include "font_size_cache.h"
 #include "glyph_lookup_cache.h"
 #include "glyph_outline.h"
+#include "qm_font_category.h"
 #include "text_layout_string.h"
 #include "text_word_cursor.h"
 
@@ -395,7 +396,29 @@ private:
 	FT_Face m_VariantFace = nullptr;
 	FT_Face m_SelectedFace = nullptr;
 	int m_CustomFontWeight = 400;
+	// 中文/中日韩分类面的独立可变字重；分类面未设置或与默认面重合时不用此值。
+	int m_QmCjkCustomFontWeight = 400;
+	// 每个字体面的可变字重轴缓存：fvar 表解析开销大，且字重坐标未变化时
+	// 不应重复写入，更不能反复清空整个字形图集（下拉框预览每帧多次切换字体面）。
+	// m_vFtFaces 中的 face 与 CGlyphMap 同生命周期，按指针作键安全。
+	struct SQmFaceWeightState
+	{
+		bool m_Initialized = false;
+		bool m_HasWeightAxis = false;
+		int m_WeightAxisIndex = -1;
+		FT_Fixed m_WeightMin = 0;
+		FT_Fixed m_WeightMax = 0;
+		std::vector<FT_Fixed> m_vAppliedCoords;
+	};
+	std::unordered_map<FT_Face, SQmFaceWeightState> m_FaceWeightStates;
 	std::vector<FT_Face> m_vFallbackFaces;
+	// 分类字体面：中文/图标符号可由用户单独指定，字形解析时按字符分类优先尝试。
+	// nullptr 表示该分类未设置，直接走原有回退链。
+	FT_Face m_QmCjkFace = nullptr;
+	FT_Face m_QmIconsFace = nullptr;
+	// QmClient: 字体商店预览 face（未安装字体的临时加载面）。face 会话内不释放，
+	// 指针作键安全；仅用于商店卡片渲染，不得进入字体族选择列表。
+	std::vector<FT_Face> m_QmPreviewFaces;
 	std::vector<FT_Face> m_vFtFaces;
 	int m_QmPerfGlyphNew = 0;
 	int m_QmPerfGlyphUploads = 0;
@@ -506,6 +529,36 @@ private:
 
 	FT_UInt GetCharGlyph(int Chr, FT_Face *pFace, bool AllowReplacementCharacter)
 	{
+		// QmClient: 分类字体只在正文字体预设下生效。图标字体渲染（ICON_FONT 预设）
+		// 时 m_SelectedFace 指向图标面，其私用区映射必须保持原样，不能被分类面截胡。
+		FT_Face aCategoryFaces[2] = {nullptr, nullptr};
+		if(m_SelectedFace == nullptr)
+		{
+			if(QmIsCjkCodepoint(Chr))
+			{
+				aCategoryFaces[0] = m_QmCjkFace;
+			}
+			else if(QmIsIconSymbolCodepoint(Chr))
+			{
+				aCategoryFaces[0] = m_QmIconsFace;
+				// 图标符号的兜底语义：未指定图标字体时该分类字形优先取中文字体；
+				// 指定了则按图标字体自身渲染，缺字继续走默认回退链。
+				if(m_QmIconsFace == nullptr)
+					aCategoryFaces[1] = m_QmCjkFace;
+			}
+		}
+		for(FT_Face CategoryFace : aCategoryFaces)
+		{
+			if(CategoryFace && CategoryFace->charmap)
+			{
+				if(FT_UInt GlyphIndex = FT_Get_Char_Index(CategoryFace, (FT_ULong)Chr))
+				{
+					*pFace = CategoryFace;
+					return GlyphIndex;
+				}
+			}
+		}
+
 		for(FT_Face Face : {m_SelectedFace, m_DefaultFace, m_VariantFace})
 		{
 			if(Face && Face->charmap)
@@ -774,6 +827,41 @@ public:
 		return true;
 	}
 
+	// QmClient: 查询名字能否解析为已加载 face（含商店预览面），供弹层按条目
+	// 安全切换预览字体时使用。
+	bool QmHasFace(const char *pFace)
+	{
+		return pFace != nullptr && pFace[0] != '\0' && GetFaceByName(pFace) != nullptr;
+	}
+
+	// QmClient: 查询名字（族名或族名+样式）对应的 face 是否覆盖任一 CJK 字形。
+	// 取代表性码点采样（汉字/假名/片假名/谚文/CJK 标点各一），任一命中即视为
+	// CJK 字体；CJK 字体下拉用它在 face 池里过滤掉纯拉丁字体。
+	bool QmFaceHasCjk(const char *pFace)
+	{
+		FT_Face pFtFace = pFace != nullptr && pFace[0] != '\0' ? GetFaceByName(pFace) : nullptr;
+		if(pFtFace == nullptr || pFtFace->charmap == nullptr)
+			return false;
+		static constexpr int aSampleCodepoints[] = {0x4E2D, 0x6C38, 0x3042, 0x30A2, 0xAC00, 0x3001};
+		for(int Chr : aSampleCodepoints)
+			if(FT_Get_Char_Index(pFtFace, (FT_ULong)Chr) != 0)
+				return true;
+		return false;
+	}
+
+	// QmClient: 标记/查询商店预览 face——预览面只服务商店卡片渲染，
+	// UpdateCustomFontList 构建字体族选择列表时必须跳过它们。
+	void QmMarkPreviewFace(FT_Face Face)
+	{
+		if(Face != nullptr && std::find(m_QmPreviewFaces.begin(), m_QmPreviewFaces.end(), Face) == m_QmPreviewFaces.end())
+			m_QmPreviewFaces.push_back(Face);
+	}
+
+	bool QmIsPreviewFace(FT_Face Face) const
+	{
+		return std::find(m_QmPreviewFaces.begin(), m_QmPreviewFaces.end(), Face) != m_QmPreviewFaces.end();
+	}
+
 	bool SetIconFaceByName(const char *pFamilyName)
 	{
 		m_IconRegularFace = GetFaceByName(pFamilyName);
@@ -877,6 +965,35 @@ public:
 		return true;
 	}
 
+	// QmClient: 分类字体面（中文/图标符号）。空名字表示清除该分类设置、跟随主链；
+	// 名字非空但找不到对应 face 时返回 false，由调用方记录日志。
+	bool SetCjkFaceByName(const char *pFamilyName)
+	{
+		FT_Face Face = GetFaceByName(pFamilyName);
+		if(!Face && pFamilyName != nullptr && pFamilyName[0] != '\0')
+			return false;
+		if(m_QmCjkFace != Face)
+		{
+			// 分类变化会改变 GetCharGlyph 的解析结果，近期索引必须失效。
+			m_GlyphLookupCache.Reset();
+			m_QmCjkFace = Face;
+		}
+		return true;
+	}
+
+	bool SetIconsFaceByName(const char *pFamilyName)
+	{
+		FT_Face Face = GetFaceByName(pFamilyName);
+		if(!Face && pFamilyName != nullptr && pFamilyName[0] != '\0')
+			return false;
+		if(m_QmIconsFace != Face)
+		{
+			m_GlyphLookupCache.Reset();
+			m_QmIconsFace = Face;
+		}
+		return true;
+	}
+
 	void SetFontPreset(EFontPreset FontPreset)
 	{
 		switch(FontPreset)
@@ -930,57 +1047,102 @@ public:
 		}
 	}
 
+	// 拿到（并按需初始化）某个 face 的可变字重轴缓存：fvar 解析开销大，每 face 只做一次。
+	SQmFaceWeightState &QmEnsureFaceWeightState(FT_Face Face)
+	{
+		SQmFaceWeightState &State = m_FaceWeightStates[Face];
+		if(!State.m_Initialized)
+		{
+			State.m_Initialized = true;
+			FT_MM_Var *pMaster = nullptr;
+			if(FT_Get_MM_Var(Face, &pMaster) == 0 && pMaster != nullptr)
+			{
+				State.m_vAppliedCoords.resize(pMaster->num_axis);
+				for(FT_UInt AxisIndex = 0; AxisIndex < pMaster->num_axis; ++AxisIndex)
+				{
+					const FT_Var_Axis &Axis = pMaster->axis[AxisIndex];
+					State.m_vAppliedCoords[AxisIndex] = Axis.def;
+					if(Axis.tag == FT_MAKE_TAG('w', 'g', 'h', 't'))
+					{
+						State.m_HasWeightAxis = true;
+						State.m_WeightAxisIndex = static_cast<int>(AxisIndex);
+						State.m_WeightMin = Axis.minimum;
+						State.m_WeightMax = Axis.maximum;
+					}
+				}
+				FT_Done_MM_Var(m_FTLibrary, pMaster);
+			}
+		}
+		return State;
+	}
+
 	void ApplyCustomFontWeight()
 	{
-		bool HasVariableWeightAxis = false;
+		bool WeightCoordsChanged = false;
 		for(FT_Face Face : m_vFtFaces)
 		{
-			bool FaceHasWeightAxis = false;
-			FT_MM_Var *pMaster = nullptr;
-			if(FT_Get_MM_Var(Face, &pMaster) != 0 || pMaster == nullptr)
+			SQmFaceWeightState &State = QmEnsureFaceWeightState(Face);
+			if(!State.m_HasWeightAxis)
 				continue;
-			std::vector<FT_Fixed> vCoords(pMaster->num_axis);
-			for(FT_UInt AxisIndex = 0; AxisIndex < pMaster->num_axis; ++AxisIndex)
-			{
-				const FT_Var_Axis &Axis = pMaster->axis[AxisIndex];
-				vCoords[AxisIndex] = Axis.def;
-				if(Axis.tag == FT_MAKE_TAG('w', 'g', 'h', 't'))
-				{
-					const FT_Fixed Requested = static_cast<FT_Fixed>(m_CustomFontWeight * 65536);
-					vCoords[AxisIndex] = std::clamp(Requested, Axis.minimum, Axis.maximum);
-					FaceHasWeightAxis = true;
-				}
-			}
-			if(FaceHasWeightAxis)
-			{
-				HasVariableWeightAxis = true;
-				FT_Set_Var_Design_Coordinates(Face, pMaster->num_axis, vCoords.data());
-			}
-			FT_Done_MM_Var(m_FTLibrary, pMaster);
+			// 分类字重：中文/中日韩面使用独立字重；与默认面重合（同一族同一 face）
+			// 时以拉丁字重为准——同一物理 face 无法承载两套可变坐标。
+			const int TargetWeight = (Face == m_QmCjkFace && Face != m_DefaultFace) ? m_QmCjkCustomFontWeight : m_CustomFontWeight;
+			// 字重设置可能已变化：基于缓存的轴范围重算期望坐标，只在真正变化时写入。
+			const FT_Fixed Requested = static_cast<FT_Fixed>(TargetWeight * 65536);
+			const FT_Fixed Clamped = std::clamp(Requested, State.m_WeightMin, State.m_WeightMax);
+			if(State.m_vAppliedCoords[State.m_WeightAxisIndex] == Clamped)
+				continue;
+			State.m_vAppliedCoords[State.m_WeightAxisIndex] = Clamped;
+			FT_Set_Var_Design_Coordinates(Face, static_cast<FT_UInt>(State.m_vAppliedCoords.size()), State.m_vAppliedCoords.data());
+			WeightCoordsChanged = true;
 		}
-		if(HasVariableWeightAxis)
+		// 只有字重坐标真正变化时才重建字形图集；单纯切换字体面不应清空图集，
+		// 否则同一帧内已排版的文本会采样到被清空的纹理而全部消失。
+		if(WeightCoordsChanged)
 			Clear();
 	}
 
 	void SetCustomFontWeight(const int Weight)
 	{
-		const int ClampedWeight = std::clamp(Weight, 100, 900);
+		// 只防垃圾值：真实生效范围由 ApplyCustomFontWeight 按各 face 的 wght 轴
+		// 范围钳制（可变字体轴上限可达 1000，不能在此写死 900）。
+		const int ClampedWeight = std::clamp(Weight, 1, 5000);
 		if(m_CustomFontWeight == ClampedWeight)
 			return;
 		m_CustomFontWeight = ClampedWeight;
 		ApplyCustomFontWeight();
 	}
 
+	void SetCustomFontWeightCjk(const int Weight)
+	{
+		const int ClampedWeight = std::clamp(Weight, 1, 5000);
+		if(m_QmCjkCustomFontWeight == ClampedWeight)
+			return;
+		m_QmCjkCustomFontWeight = ClampedWeight;
+		ApplyCustomFontWeight();
+	}
+
+	// 可变字重轴范围（整数字重 100~900 语义）；非可变字体返回 false。
+	bool CustomFontWeightRange(const char *pFace, int &Min, int &Max)
+	{
+		FT_Face Resolved = GetFaceByName(pFace);
+		if(Resolved == nullptr)
+			return false;
+		const SQmFaceWeightState &State = QmEnsureFaceWeightState(Resolved);
+		if(!State.m_HasWeightAxis)
+			return false;
+		Min = static_cast<int>((State.m_WeightMin + 32768) / 65536);
+		Max = static_cast<int>((State.m_WeightMax + 32768) / 65536);
+		return true;
+	}
+
 	bool CustomFontHasVariableWeight(const char *pFace) const
 	{
+		// 复用按 face 缓存的轴状态，避免每次调用都做 FT_Get_MM_Var。
 		if(pFace == nullptr)
 			return false;
-		FT_Face Face = const_cast<CGlyphMap *>(this)->GetFaceByName(pFace);
-		FT_MM_Var *pMaster = nullptr;
-		const bool HasVariable = Face != nullptr && FT_Get_MM_Var(Face, &pMaster) == 0 && pMaster != nullptr;
-		if(pMaster != nullptr)
-			FT_Done_MM_Var(m_FTLibrary, pMaster);
-		return HasVariable;
+		int Min = 0, Max = 0;
+		return const_cast<CGlyphMap *>(this)->CustomFontWeightRange(pFace, Min, Max);
 	}
 
 	bool IsIconFaceSelected() const
@@ -1364,7 +1526,13 @@ class CTextRender : public IEngineTextRender
 	// TClient
 	std::vector<std::string> m_CustomFontFaces;
 	std::vector<std::string> m_CustomFontStyles;
+	// 字体商店预览缓存：已通过 QmEnsurePreviewFace 加载过的文件路径（face 池内
+	// 的预览面与 face 同生命周期，会话内不卸载，避免字形图集残留悬空 face 指针）。
+	std::vector<std::string> m_vQmPreviewLoadedPaths;
 	std::vector<std::string> m_DefaultFontFaces;
+	// QmClient: 已加载的用户字体文件路径（重扫时跳过）与 CheckDefaultFaces 防重入标记。
+	std::vector<std::string> m_vLoadedCustomFontPaths;
+	bool m_QmDefaultFacesChecked = false;
 
 	void ResetQmTextRuntimeBudgetCounters(bool ConsumeGlyphStats)
 	{
@@ -1632,7 +1800,8 @@ class CTextRender : public IEngineTextRender
 		}
 	}
 
-	bool LoadFontCollection(const char *pFontName, const FT_Byte *pFontData, FT_Long FontDataSize)
+	// pvLoadedFaces 可选：收集本次实际加载成功的 face（商店预览加载用它标记预览 face）。
+	bool LoadFontCollection(const char *pFontName, const FT_Byte *pFontData, FT_Long FontDataSize, std::vector<FT_Face> *pvLoadedFaces = nullptr)
 	{
 		FT_Face FtFace;
 		FT_Error CollectionLoadError = FT_New_Memory_Face(m_FTLibrary, pFontData, FontDataSize, -1, &FtFace);
@@ -1657,6 +1826,8 @@ class CTextRender : public IEngineTextRender
 			}
 
 			m_pGlyphMap->AddFace(FtFace);
+			if(pvLoadedFaces != nullptr)
+				pvLoadedFaces->push_back(FtFace);
 
 			log_debug("textrender", "Loaded font face %ld '%s %s' from font file '%s'", FaceIndex, FtFace->family_name, FtFace->style_name, pFontName);
 			LoadedAny = true;
@@ -1805,6 +1976,9 @@ public:
 	// TClient
 	void CheckDefaultFaces()
 	{
+		if(m_QmDefaultFacesChecked)
+			return;
+		m_QmDefaultFacesChecked = true;
 		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
 		{
 			char aFamilyStyle[256];
@@ -1824,6 +1998,11 @@ public:
 		std::vector<std::string> vAllFaces;
 		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
 		{
+			// 商店预览 face（未安装字体的临时加载面）不是已安装字体，
+			// 不得进入字体族选择列表；用户真正安装后其文件会从字体目录
+			// 加载出独立 face，正常出现在列表中。
+			if(m_pGlyphMap->QmIsPreviewFace(CurrentFace))
+				continue;
 			char aFamilyStyle[256];
 			const char *pFamily = CurrentFace->family_name != nullptr ? CurrentFace->family_name : "";
 			const char *pStyle = CurrentFace->style_name != nullptr ? CurrentFace->style_name : "";
@@ -1937,6 +2116,12 @@ public:
 		std::sort(vCustomFonts.begin(), vCustomFonts.end());
 		for(const std::string &FilePath : vCustomFonts)
 		{
+			// 字体商店下载后会触发重扫：跳过已加载的文件，避免重复建 face 与重复占内存。
+			const bool AlreadyLoaded = std::find_if(m_vLoadedCustomFontPaths.begin(), m_vLoadedCustomFontPaths.end(), [&FilePath](const std::string &Loaded) {
+				return str_comp_nocase(Loaded.c_str(), FilePath.c_str()) == 0;
+			}) != m_vLoadedCustomFontPaths.end();
+			if(AlreadyLoaded)
+				continue;
 			void *pFontData;
 			unsigned FontDataSize;
 			if(Storage()->ReadFile(FilePath.c_str(), IStorage::TYPE_ALL, &pFontData, &FontDataSize))
@@ -1944,6 +2129,7 @@ public:
 				if(LoadFontCollection(FilePath.c_str(), static_cast<FT_Byte *>(pFontData), (FT_Long)FontDataSize))
 				{
 					m_vpFontData.push_back(pFontData);
+					m_vLoadedCustomFontPaths.push_back(FilePath);
 				}
 				else
 				{
@@ -1975,9 +2161,85 @@ public:
 			log_info("textrender", "Configured custom font face '%s' is not bundled; using the default bundled face", pFace != nullptr ? pFace : "");
 	}
 
+	// QmClient: 分类字体（中文/图标符号）。找不到配置的面时保持回退链并记录日志。
+	void SetCustomFaceCjk(const char *pFace) override
+	{
+		if(!m_pGlyphMap->SetCjkFaceByName(pFace))
+			log_info("textrender", "Configured Chinese font face '%s' is not available; following the default chain", pFace != nullptr ? pFace : "");
+	}
+
+	void SetCustomFaceIcons(const char *pFace) override
+	{
+		if(!m_pGlyphMap->SetIconsFaceByName(pFace))
+			log_info("textrender", "Configured icon/symbol font face '%s' is not available; following the default chain", pFace != nullptr ? pFace : "");
+	}
+
+	// QmClient: 字体商店下载完成后重扫用户字体目录，并按当前配置重新解析各字体面。
+	void ReloadCustomFonts() override
+	{
+		LoadCustomFonts();
+		m_pGlyphMap->TrySetDefaultFaceByName(g_Config.m_TcCustomFont);
+		m_pGlyphMap->SetCjkFaceByName(g_Config.m_TcCustomFontCjk);
+		m_pGlyphMap->SetIconsFaceByName(g_Config.m_TcCustomFontIcons);
+		m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
+		m_pGlyphMap->SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
+	}
+
 	void SetCustomFontWeight(const int Weight) override
 	{
 		m_pGlyphMap->SetCustomFontWeight(Weight);
+	}
+
+	void SetCustomFontWeightCjk(const int Weight) override
+	{
+		m_pGlyphMap->SetCustomFontWeightCjk(Weight);
+	}
+
+	bool CustomFontWeightRange(const char *pFace, int &Min, int &Max) override
+	{
+		return m_pGlyphMap->CustomFontWeightRange(pFace, Min, Max);
+	}
+
+	bool QmHasCustomFace(const char *pFace) override
+	{
+		return m_pGlyphMap->QmHasFace(pFace);
+	}
+
+	bool QmFaceHasCjk(const char *pFace) override
+	{
+		return m_pGlyphMap->QmFaceHasCjk(pFace);
+	}
+
+	// QmClient: 商店预览面。字体文件尚未安装时从预览缓存目录临时加载进 face 池
+	// （不刷新字体族列表，不会出现在字体下拉框）；已加载直接返回 true。
+	bool QmEnsurePreviewFace(const char *pFamily, const char *pFilePath) override
+	{
+		if(pFamily == nullptr || pFamily[0] == '\0' || pFilePath == nullptr || pFilePath[0] == '\0')
+			return false;
+		if(m_pGlyphMap->QmHasFace(pFamily))
+			return true;
+		const std::string Path(pFilePath);
+		if(std::find_if(m_vQmPreviewLoadedPaths.begin(), m_vQmPreviewLoadedPaths.end(), [&Path](const std::string &Loaded) { return str_comp_nocase(Loaded.c_str(), Path.c_str()) == 0; }) != m_vQmPreviewLoadedPaths.end())
+			return m_pGlyphMap->QmHasFace(pFamily);
+		void *pFontData = nullptr;
+		unsigned FontDataSize = 0;
+		if(!Storage()->ReadFile(pFilePath, IStorage::TYPE_ALL, &pFontData, &FontDataSize))
+			return false;
+		std::vector<FT_Face> vLoadedFaces;
+		if(LoadFontCollection(pFilePath, static_cast<const FT_Byte *>(pFontData), (FT_Long)FontDataSize, &vLoadedFaces))
+		{
+			m_vpFontData.push_back(pFontData);
+			m_vQmPreviewLoadedPaths.push_back(Path);
+			// 标记为预览 face：只服务商店卡片渲染，不进字体族选择列表。
+			for(FT_Face Face : vLoadedFaces)
+				m_pGlyphMap->QmMarkPreviewFace(Face);
+			// 新 face 可能是可变字体：把当前分类字重立即应用上去（坐标未变化时不会动图集）。
+			m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
+			m_pGlyphMap->SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
+			return m_pGlyphMap->QmHasFace(pFamily);
+		}
+		free(pFontData);
+		return false;
 	}
 
 	bool CustomFontHasVariableWeight(const char *pFace) const override

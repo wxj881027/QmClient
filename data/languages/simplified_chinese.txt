@@ -5531,9 +5531,6 @@ Input switch
 Insane
 == 疯狂
 
-Install to preview
-== 文件较大，安装后才能预览
-
 Installing update. Please wait...
 == 正在安装更新，请稍等……
 
@@ -18528,6 +18525,15 @@ Included
 
 English font:
 == 英文字体：
+
+Total fonts:
+== 字体总数：
+
+Font weight:
+== 字重：
+
+CJK font weight:
+== CJK 字重：
 
 Chinese font:
 == CJK 字体（中日韩）：

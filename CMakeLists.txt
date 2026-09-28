@@ -4398,6 +4398,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_graphics_backend_fallback_contract_test.cpp
     qm_graphics_recovery_test.cpp
     qm_graphics_opengl_probe_contract_test.cpp
+    qm_font_category_test.cpp
     qm_demo_cut_contract_test.cpp
     qm_demo_cut_test.cpp
     qm_screenshot_gallery_contract_test.cpp
@@ -4484,6 +4485,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qmclient_monitoring_text_runtime_contract_test.cpp
     qmclient_monitoring_motd_contract_test.cpp
     qmclient_monitoring_runtime_test.cpp
+    qmclient_monitoring_font_store_contract_test.cpp
     race_test.cpp
     score_test.cpp
     storage_replace_test.cpp

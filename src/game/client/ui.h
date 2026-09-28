@@ -1261,6 +1261,9 @@ public:
 		SQmDropdownPopupPolicy m_PopupPolicy;
 
 		bool m_SpecialFontRenderMode = false; // TClient
+		// QmClient: 按条目渲染字体前先检查该名字能否解析为已加载的 face（商店
+		// 搜索弹层的条目是未安装的在线字体，缺字时静默跳过切换，避免逐帧失败日志）。
+		bool m_FontFaceAvailabilityCheck = false;
 
 		SSelectionPopupContext();
 		void Reset();
