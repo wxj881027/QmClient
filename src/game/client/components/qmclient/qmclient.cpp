@@ -69,6 +69,10 @@
 // 限制文件与内存的增长；达到上限后只更新已有条目，不再新建。
 static constexpr int QMCLIENT_MAX_LOCAL_MODE_STATS = 256;
 static constexpr int QMCLIENT_REALTIME_PROTOCOL_VERSION = 2;
+// 后端 USERS 全局广播快照的 server_address 标记：data.server_address=="users"
+// 表示多服分布总览（定时全量推送，任意客户端状态可收），区别于按服定向
+// 推送里的真实服务器地址（实测 2026-09-29）。
+static constexpr const char *QMCLIENT_REALTIME_USERS_GLOBAL = "users";
 
 static void LogQmWebSocketEvent(const char *pChannel, const char *pStage)
 {
@@ -1457,12 +1461,9 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 
 void CQmClient::ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message)
 {
-	// 诊断日志（qm_websocket_log 1 时输出）：确认后端 USERS 推送范围。
-	// 在主菜单（未连服，client_state=offline）停留观察：
-	// - 若 offline 态也能持续收到 USERS，且 payload_server 各不相同 → 后端为全局广播，
-	//   可放宽下方 STATE_ONLINE 门槛，让菜单态也解析“梦”数量；
-	// - 若 offline 态从不出现该日志（仅进服后出现）→ 后端按 presence 的 server_address
-	//   定向推送，菜单态需要另寻数据源（恢复轮询或新增订阅/请求接口）。
+	// 诊断日志（qm_websocket_log 1 时输出）：每条 USERS 事件到达时的客户端状态与
+	// payload 顶层 server_address。实测结论（2026-09-29）：后端以 "users" 标记全局
+	// 分布快照，菜单态(offline)也定时推送，users 数组人数实时增减。
 	if(g_Config.m_QmWebSocketLog)
 	{
 		if(!Message.m_pPayload)
@@ -1482,16 +1483,26 @@ void CQmClient::ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message)
 				pUsers->type == json_array ? (int)pUsers->u.array.length : -1);
 		}
 	}
-	if(!Message.m_pPayload || Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
+	if(!Message.m_pPayload)
 		return;
-	char aServer[NETADDR_MAXSTRSIZE] = "";
-	net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
 	const json_value *pPayload = Message.m_pPayload.get();
 	const json_value *pAddress = JsonObjectField(pPayload, "server_address");
-	if(pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0 ||
-		JsonObjectField(pPayload, "users")->type != json_array)
+	char aServer[NETADDR_MAXSTRSIZE] = "";
+	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
+		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+	// 接收两种快照（梦 列与本地玩家识别的数据源）：
+	// - 全局广播：server_address=="users"，任意客户端状态（菜单态靠它显示梦数量）；
+	// - 按服定向：server_address==当前游戏服，仅游戏态（兼容后端定向推送）。
+	const bool GlobalSnapshot = pAddress->type == json_string &&
+				    str_comp(pAddress->u.string.ptr, QMCLIENT_REALTIME_USERS_GLOBAL) == 0;
+	if(!GlobalSnapshot &&
+		(aServer[0] == '\0' || pAddress->type != json_string || str_comp(pAddress->u.string.ptr, aServer) != 0))
+		return;
+	if(JsonObjectField(pPayload, "users")->type != json_array)
 		return;
 	m_pQmRealtimeUsersPayload = Message.m_pPayload;
+	// 存本地上下文服地址（解析任务用于标记本服玩家与过期校验）：游戏态存当前服，
+	// 菜单态为空串——FinishQmClientUsers 与当前服比对时空串==空串天然通过。
 	str_copy(m_aQmRealtimeUsersServer, aServer);
 	m_QmRealtimeUsersExpireTick = time_get() + 20 * time_freq();
 }
