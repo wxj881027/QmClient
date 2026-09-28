@@ -48,7 +48,7 @@ SQmDropdownGeometryResult QmComputeDropdownPopupGeometry(const CUIRect &AnchorRe
 	const float AvailableWidth = std::max(0.0f, MaxX - MinX);
 	const float AvailableHeight = std::max(0.0f, MaxY - MinY);
 
-	Result.m_Rect.w = std::min(std::max(0.0f, Config.m_Width), AvailableWidth);
+	Result.m_Rect.w = Config.m_AlignToAnchor ? std::max(0.0f, Config.m_Width) : std::min(std::max(0.0f, Config.m_Width), AvailableWidth);
 	const float RequestedHeight = std::max(0.0f, Config.m_Height);
 
 	const float BelowY = AnchorRect.y + AnchorRect.h + Gap;
@@ -81,7 +81,9 @@ SQmDropdownGeometryResult QmComputeDropdownPopupGeometry(const CUIRect &AnchorRe
 	Result.m_Rect.x = AnchorRect.x;
 	Result.m_Rect.y = Result.m_PlacedBelow ? BelowY : AnchorRect.y - Gap - Result.m_Rect.h;
 
-	const float ClampedX = std::clamp(Result.m_Rect.x, MinX, std::max(MinX, MaxX - Result.m_Rect.w));
+	// 对齐模式保持左缘与锚点严格相等（外框包裹的对齐判定依赖它），
+	// 不做水平钳制；普通模式钳进 viewport 防溢出。
+	const float ClampedX = Config.m_AlignToAnchor ? Result.m_Rect.x : std::clamp(Result.m_Rect.x, MinX, std::max(MinX, MaxX - Result.m_Rect.w));
 	const float ClampedY = std::clamp(Result.m_Rect.y, MinY, std::max(MinY, MaxY - Result.m_Rect.h));
 	Result.m_Clamped = ClampedX != Result.m_Rect.x || ClampedY != Result.m_Rect.y || Result.m_Rect.w != Config.m_Width || Result.m_Rect.h != Config.m_Height;
 	Result.m_Rect.x = ClampedX;

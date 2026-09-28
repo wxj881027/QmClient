@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 
@@ -74,22 +75,26 @@ TEST(UiV2DropdownGeometry, RejectsPartiallyVisibleAnchorBeforeOpening)
 
 	EXPECT_FALSE(Result.m_AnchorVisible);
 }
-TEST(UiV2DropdownVisuals, SettingsStyleUsesOpaqueElevatedPopupAndAccentBorder)
+TEST(UiV2DropdownVisuals, SettingsStyleUsesThemeSurfacePopupAndCardBorder)
 {
 	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(0.20f, 0.50f, 0.40f, 1.0f), 0.75f);
-	const SQmDropdownVisualStyle Style = QmSettingsDropdownVisualStyle(Theme);
+	// 弹层边框由调用点显式传入（与设置卡片边框同源），不再取主题强调色。
+	const ColorRGBA CardBorder = ColorRGBA(0.30f, 0.42f, 0.55f, 0.80f);
+	const SQmDropdownVisualStyle Style = QmSettingsDropdownVisualStyle(Theme, CardBorder);
 	EXPECT_FLOAT_EQ(Style.m_TriggerColor.r, Theme.m_InputSurface.r);
 	EXPECT_FLOAT_EQ(Style.m_TriggerColor.g, Theme.m_InputSurface.g);
 	EXPECT_FLOAT_EQ(Style.m_TriggerColor.b, Theme.m_InputSurface.b);
-	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.r, ui_token::color::SURFACE_ELEVATED.r);
-	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.g, ui_token::color::SURFACE_ELEVATED.g);
-	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.b, ui_token::color::SURFACE_ELEVATED.b);
-	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.a, 1.0f);
+	// 弹层背景跟随用户主题表面色（压暗一档表达悬浮层级），并保持最低
+	// 不透明度 0.90 维持可读性；不再使用硬编码的 SURFACE_ELEVATED。
+	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.r, std::clamp(Theme.m_Surface.r * 0.82f, 0.0f, 1.0f));
+	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.g, std::clamp(Theme.m_Surface.g * 0.82f, 0.0f, 1.0f));
+	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.b, std::clamp(Theme.m_Surface.b * 0.82f, 0.0f, 1.0f));
+	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.a, std::clamp(std::max(Theme.m_Surface.a, 0.90f), 0.0f, 1.0f));
 	EXPECT_TRUE(Style.m_TransparentEntries);
-	EXPECT_FLOAT_EQ(Style.m_PopupBorderColor.r, Theme.m_Accent.r);
-	EXPECT_FLOAT_EQ(Style.m_PopupBorderColor.g, Theme.m_Accent.g);
-	EXPECT_FLOAT_EQ(Style.m_PopupBorderColor.b, Theme.m_Accent.b);
-	EXPECT_FLOAT_EQ(Style.m_PopupBorderColor.a, 1.0f);
+	EXPECT_FLOAT_EQ(Style.m_PopupBorderColor.r, CardBorder.r);
+	EXPECT_FLOAT_EQ(Style.m_PopupBorderColor.g, CardBorder.g);
+	EXPECT_FLOAT_EQ(Style.m_PopupBorderColor.b, CardBorder.b);
+	EXPECT_FLOAT_EQ(Style.m_PopupBorderColor.a, CardBorder.a);
 	EXPECT_FLOAT_EQ(Style.m_ActiveEntryColor.r, Theme.m_Selected.r);
 	EXPECT_FLOAT_EQ(Style.m_ActiveEntryColor.g, Theme.m_Selected.g);
 	EXPECT_FLOAT_EQ(Style.m_ActiveEntryColor.b, Theme.m_Selected.b);
@@ -137,6 +142,31 @@ TEST(UiV2DropdownGeometry, ClipsToCompleteRowsInsteadOfShowingAHalfRow)
 	EXPECT_FALSE(Result.m_PlacedBelow);
 	EXPECT_NEAR(Result.m_Rect.h, 140.0f, 0.001f);
 	EXPECT_NEAR(std::fmod(Result.m_Rect.h, Config.m_RowHeight + Config.m_RowSpacing), 20.0f, 0.001f);
+}
+TEST(UiV2DropdownGeometry, AlignToAnchorSkipsHorizontalClamping)
+{
+	const CUIRect Viewport{0.0f, 0.0f, 320.0f, 240.0f};
+	// 锚点右缘贴住 viewport 右缘（水平方向超出可用区 Margin）。
+	const CUIRect Anchor{200.0f, 40.0f, 120.0f, 24.0f};
+	SQmDropdownGeometryConfig Config;
+	Config.m_Width = Anchor.w;
+	Config.m_Height = 80.0f;
+	Config.m_Gap = 4.0f;
+	Config.m_Margin = 8.0f;
+	Config.m_AlignToAnchor = true;
+
+	// 对齐模式（外框包裹下拉）：宽度与左缘严格保持，不做水平钳制，
+	// 渲染端的锚点对齐判定才能稳定成立。
+	const SQmDropdownGeometryResult Aligned = QmComputeDropdownPopupGeometry(Anchor, Viewport, Config);
+	EXPECT_NEAR(Aligned.m_Rect.x, Anchor.x, 0.001f);
+	EXPECT_NEAR(Aligned.m_Rect.w, Anchor.w, 0.001f);
+	EXPECT_TRUE(Aligned.m_PopupVisible);
+	EXPECT_TRUE(Aligned.m_PlacedBelow);
+
+	// 普通模式：同样的布局会被钳进 viewport（左缘左移）。
+	Config.m_AlignToAnchor = false;
+	const SQmDropdownGeometryResult Clamped = QmComputeDropdownPopupGeometry(Anchor, Viewport, Config);
+	EXPECT_LT(Clamped.m_Rect.x, Anchor.x - 0.5f);
 }
 TEST(UiV2DropdownGeometry, EmptyMessageDoesNotReservePhantomTextHeight)
 {

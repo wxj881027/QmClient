@@ -562,6 +562,9 @@ void CUi::Update()
 	m_UnderlyingScrollBlocked = false;
 	for(const SPopupMenu &PopupMenu : m_vPopupMenus)
 	{
+		// 出场动画中的弹窗已逻辑关闭，不再锁定下层页面滚动。
+		if(PopupMenu.m_Closing)
+			continue;
 		if(PopupMenu.m_Props.m_BlockUnderlyingScroll && MouseInside(&PopupMenu.m_Rect) && (!PopupMenu.m_Props.m_ClipToViewport || MouseInside(&PopupMenu.m_Props.m_Viewport)))
 		{
 			m_UnderlyingScrollBlocked = true;
@@ -606,7 +609,8 @@ bool CUi::UnderlyingPointerInputBlocked() const
 		return false;
 
 	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [](const SPopupMenu &PopupMenu) {
-		return PopupMenu.m_Props.m_BlockUnderlyingPointerInput;
+		// 出场动画中的弹窗已逻辑关闭，不再锁定下层页面指针交互。
+		return !PopupMenu.m_Closing && PopupMenu.m_Props.m_BlockUnderlyingPointerInput;
 	});
 }
 
@@ -2102,6 +2106,29 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 	{
 		SetActiveItem(&m_ActiveValueSelectorState.m_NumberInput);
 		m_ActiveValueSelectorState.m_NumberInput.Activate(EInputPriority::UI);
+		// 编辑态同步鼠标选择状态到行输入：CLineInput::Render 只在
+		// m_MouseSelection.m_Selecting 时按鼠标位置反算光标/选区，不同步的
+		// 话点击文本之间无法把插入条放到对应位置（DoEditBox 同款机制）。
+		// 值选择器没有水平滚动，偏移恒为 0。
+		CLineInput::SMouseSelection *pMouseSelection = m_ActiveValueSelectorState.m_NumberInput.GetMouseSelection();
+		if(Inside)
+		{
+			if(!pMouseSelection->m_Selecting && MouseButtonClicked(0))
+			{
+				pMouseSelection->m_Selecting = true;
+				pMouseSelection->m_PressMouse = MousePos();
+				pMouseSelection->m_Offset.x = 0.0f;
+			}
+		}
+		if(pMouseSelection->m_Selecting)
+		{
+			pMouseSelection->m_ReleaseMouse = MousePos();
+			if(!MouseButton(0))
+			{
+				pMouseSelection->m_Selecting = false;
+				Input()->EnsureScreenKeyboardShown();
+			}
+		}
 		RenderValueSelectorDisplay(false);
 		const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 		const char *pEditText = m_ActiveValueSelectorState.m_NumberInput.GetDisplayedString();

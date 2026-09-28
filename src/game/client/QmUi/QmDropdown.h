@@ -21,13 +21,22 @@ struct SQmDropdownVisualStyle
 	bool m_TransparentEntries = true;
 };
 
-inline SQmDropdownVisualStyle QmSettingsDropdownVisualStyle(const SUiTheme &Theme)
+inline SQmDropdownVisualStyle QmSettingsDropdownVisualStyle(const SUiTheme &Theme, const ColorRGBA &PopupBorderColor)
 {
 	SQmDropdownVisualStyle Style;
 	Style.m_TriggerColor = Theme.m_InputSurface;
-	// 弹层遮住底层内容，边框保持强调色。
-	Style.m_PopupBackgroundColor = ui_token::color::SURFACE_ELEVATED.WithAlpha(1.0f);
-	Style.m_PopupBorderColor = Theme.m_Accent.WithAlpha(1.0f);
+	// 弹层遮住底层内容：背景跟随用户主题表面色（qm_ui_color / qm_ui_opacity 可调），
+	// 仅整体压暗一档以表达悬浮层级，并保证最低不透明度维持可读性；
+	// 边框与设置卡片边框同源（qm_ui_card_border_color 可调），不再使用强调色，
+	// 避免下拉弹层出现突兀的高亮蓝框。
+	const float ElevatedScale = 0.82f;
+	const ColorRGBA Elevated = ColorRGBA(
+		std::clamp(Theme.m_Surface.r * ElevatedScale, 0.0f, 1.0f),
+		std::clamp(Theme.m_Surface.g * ElevatedScale, 0.0f, 1.0f),
+		std::clamp(Theme.m_Surface.b * ElevatedScale, 0.0f, 1.0f),
+		Theme.m_Surface.a);
+	Style.m_PopupBackgroundColor = Elevated.WithAlpha(std::clamp(std::max(Elevated.a, 0.90f), 0.0f, 1.0f));
+	Style.m_PopupBorderColor = PopupBorderColor;
 	Style.m_ActiveEntryColor = Theme.m_Selected;
 	return Style;
 }
@@ -43,6 +52,11 @@ struct SQmDropdownGeometryConfig
 	float m_FixedHeight = 0.0f;
 	float m_LeadingRowSpacing = 0.0f;
 	bool m_PreferBelow = true;
+	// 锚点对齐模式（外框包裹触发按钮+列表）：弹层宽度恒等于请求宽度、
+	// 左缘恒对齐锚点，跳过水平钳制/压缩——否则几像素的水平偏移会让
+	// 渲染端的锚点对齐判定失败，退回独立画边框，按钮与列表视觉断开。
+	// 垂直方向（放不下时收缩/翻转到上方）不受影响。
+	bool m_AlignToAnchor = false;
 };
 
 struct SQmDropdownGeometryResult
