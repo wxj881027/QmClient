@@ -5,7 +5,6 @@
 
 #include <engine/graphics.h>
 
-#include <limits>
 #include <string_view>
 
 namespace graphics_backend
@@ -31,29 +30,6 @@ namespace graphics_backend
 	{
 		return {"OpenGL", 4, 1, 0, 0, 0, 0};
 	}
-
-	// 图形崩溃恢复时避免把全屏用户缩进普通窗口：窗口模式保持窗口，
-	// 其他模式统一降级为桌面全屏，绕开独占全屏但保留桌面尺寸。
-	constexpr int RecoveryFullscreenMode(int CurrentFullscreenMode)
-	{
-		return CurrentFullscreenMode == 0 ? 0 : 2;
-	}
-
-	struct SRecoveryFailures
-	{
-		int m_aCount[BACKEND_TYPE_AUTO] = {};
-
-		void Record(EBackendType Backend)
-		{
-			if(Backend >= BACKEND_TYPE_OPENGL && Backend < BACKEND_TYPE_AUTO && m_aCount[Backend] < std::numeric_limits<int>::max())
-				++m_aCount[Backend];
-		}
-
-		bool IsBlocked(EBackendType Backend) const
-		{
-			return Backend >= BACKEND_TYPE_OPENGL && Backend < BACKEND_TYPE_AUTO && m_aCount[Backend] >= 2;
-		}
-	};
 
 	inline EBackendType BackendFromCrashReport(std::string_view Report)
 	{
@@ -167,26 +143,6 @@ namespace graphics_backend
 	EBackendType ParseBackendName(const char *pName, EBackendType Fallback);
 	EBackendType ResolveBackend(EBackendType Requested, EBackendType Fallback);
 	bool MatchesConfiguredBackend(EBackendType CandidateBackend, const char *pCandidateName, int CandidateMajor, int CandidateMinor, int CandidatePatch, const char *pConfiguredName, int ConfiguredMajor, int ConfiguredMinor, int ConfiguredPatch);
-
-	inline int ModeForRecoveryBackend(EBackendType Backend)
-	{
-		return Backend == ParseBackendName(BackendNameForGraphicsMode(GRAPHICS_MODE_COMPATIBILITY), BACKEND_TYPE_AUTO) ?
-			       GRAPHICS_MODE_COMPATIBILITY :
-			       GRAPHICS_MODE_PERFORMANCE;
-	}
-
-	inline EBackendType RecoveryBackend(const SRecoveryFailures &Failures, EBackendType CrashedBackend)
-	{
-		if(CrashedBackend == BACKEND_TYPE_AUTO)
-			return BACKEND_TYPE_AUTO;
-		for(int Mode = GRAPHICS_MODE_COMPATIBILITY; Mode <= GRAPHICS_MODE_PERFORMANCE; ++Mode)
-		{
-			const EBackendType Candidate = ParseBackendName(BackendNameForGraphicsMode(Mode), BACKEND_TYPE_AUTO);
-			if(Candidate != BACKEND_TYPE_AUTO && Candidate != CrashedBackend && !Failures.IsBlocked(Candidate))
-				return Candidate;
-		}
-		return BACKEND_TYPE_AUTO;
-	}
 } // namespace graphics_backend
 
 #endif

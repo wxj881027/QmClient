@@ -45,7 +45,6 @@ static std::atomic<bool> gs_ShutdownGraphicsFault{false};
 
 // 退出清理期间允许被忽略的图形驱动模块。这些 DLL 内的崩溃发生在驱动释放
 // GPU 对象的过程中，进程已进入退出，重新弹窗既无意义也打扰用户。
-// 与 client.cpp 中 QmCrashTextHasGraphicsDriverFault 的驱动清单保持一致。
 static constexpr const char *gs_apShutdownIgnorableDriverModules[] = {
 	"nvoglv64.dll",
 	"nvoglv32.dll",

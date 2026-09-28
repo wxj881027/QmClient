@@ -4396,7 +4396,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_graphics_shutdown_contract_test.cpp
     qm_crashdump_shutdown_suppression_test.cpp
     qm_graphics_backend_fallback_contract_test.cpp
-    qm_graphics_recovery_test.cpp
     qm_graphics_opengl_probe_contract_test.cpp
     qm_font_category_test.cpp
     qm_demo_cut_contract_test.cpp

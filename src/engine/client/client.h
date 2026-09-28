@@ -136,9 +136,8 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
 	int m_NetworkPumpFirstConn = 0;
 
-	// 本进程内是否已经尝试过图形致命错误恢复：只尝试一次，避免
-	// 「图形故障 -> 重启 -> 又故障」形成无限重启循环。
-	bool m_QmGraphicsRecoveryAttempted = false;
+	// 本进程内是否已经处理过图形致命错误：只处理一次，避免收口流程重入。
+	bool m_QmGraphicsFatalErrorHandled = false;
 
 	IGraphics::CTextureHandle m_DebugFont;
 

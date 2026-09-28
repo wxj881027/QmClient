@@ -2036,6 +2036,10 @@ protected:
 				VkResult WaitIdleResult = DeviceWaitIdle();
 				if(WaitIdleResult != VK_SUCCESS)
 				{
+					// 与 QueueSubmit/RecreateSwapChain 路径一致：AUTO 模式下
+					// 设备丢失时按会话禁用增强管线。
+					if(WaitIdleResult == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
+						QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
 					const char *pCritErrorMsg = CheckVulkanCriticalError(WaitIdleResult);
 					if(pCritErrorMsg != nullptr)
 						SetError(EGfxErrorType::GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "Waiting for device idle during memory recovery failed.", pCritErrorMsg);
@@ -6984,6 +6988,10 @@ public:
 		VkResult WaitIdleResult = DeviceWaitIdle();
 		if(WaitIdleResult != VK_SUCCESS)
 		{
+			// 与 QueueSubmit 路径一致：AUTO 模式下设备丢失时按会话禁用增强管线；
+			// 配置持久化与自动重启由客户端收口（CClient::HandleQmGraphicsFatalError）完成。
+			if(WaitIdleResult == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
+				QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
 			const char *pCritErrorMsg = CheckVulkanCriticalError(WaitIdleResult);
 			if(pCritErrorMsg != nullptr)
 				SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "Waiting for device idle before recreating swap chain failed.", pCritErrorMsg);
@@ -8506,13 +8514,16 @@ public:
 
 	[[nodiscard]] ERunCommandReturnTypes RunCommand(const CCommandBuffer::SCommand *pBaseCommand) override
 	{
-		if(m_HasError)
+		// 图形故障后仍须执行 POST_SHUTDOWN：它会 join 渲染工作线程。
+		// 否则处理器析构时，仍可 join 的 std::thread 会触发 std::terminate。
+		const bool PostShutdown = pBaseCommand->m_Cmd == CCommandProcessorFragment_GLBase::CMD_POST_SHUTDOWN;
+		if(m_HasError && !PostShutdown)
 		{
 			// ignore all further commands
 			return ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR;
 		}
 
-		if(m_VulkanInitializationComplete && !m_RenderingPaused && !m_FramePrepared)
+		if(!PostShutdown && m_VulkanInitializationComplete && !m_RenderingPaused && !m_FramePrepared)
 		{
 			// StartCommands 已经把本命令缓冲的统计计入当前帧；
 			// PrepareFrame 会重置帧画像，这里在成功准备后补回，避免丢计数。
