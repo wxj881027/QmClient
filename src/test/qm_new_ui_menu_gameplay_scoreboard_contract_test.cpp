@@ -75,17 +75,17 @@ TEST(QmNewUiMenuGameplayScoreboardContract, NewColorControlsUseIndependentUiDoma
 	const std::string ScoreboardSource = ReadTextFile("src/game/client/components/scoreboard.cpp");
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmUiColor, qm_ui_color"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
+	EXPECT_EQ(ConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color"), std::string::npos);
 	EXPECT_NE(MenusSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
-	EXPECT_NE(MenusSource.find("ColorHSLA(g_Config.m_QmMapBrowserColor)"), std::string::npos);
+	EXPECT_EQ(MenusSource.find("ColorHSLA(g_Config.m_QmMapBrowserColor)"), std::string::npos);
 	EXPECT_EQ(MenusSource.find("ColorHSLA(g_Config.m_ClMenuPanelColor)"), std::string::npos);
 	const std::string UpdateColors = FunctionBody(MenusSource, "void CMenus::UpdateColors()");
 	const std::string RenderBackground = FunctionBody(MenusSource, "void CMenus::RenderBackground()");
 	EXPECT_NE(UpdateColors.find("ColorHSLA(g_Config.m_UiColor, true)"), std::string::npos);
 	EXPECT_NE(RenderBackground.find("ms_GuiColor.WithAlpha(1.0f)"), std::string::npos);
 	EXPECT_EQ(RenderBackground.find("g_Config.m_QmUiColor"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("ColorHSLA(g_Config.m_QmMapBrowserColor)"), std::string::npos);
+	EXPECT_NE(BrowserSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
 	EXPECT_NE(ScoreboardSource.find("ColorHSLA(g_Config.m_QmScoreboardColor)"), std::string::npos);
 }
 

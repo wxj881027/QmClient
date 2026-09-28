@@ -51,16 +51,18 @@ static constexpr ColorRGBA gs_QmClientCountColor = ColorRGBA(0.75f, 0.55f, 1.0f,
 static constexpr float SERVER_LIST_TEXT_SIZE = 11.0f;
 static constexpr float SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE = 0.28f;
 
+// 浏览器内灰度描边/覆盖色的统一透明通道：灰度色按「界面表面」（qm_ui_color）
+// 染色，alpha 跟随「界面背景」透明度（qm_ui_opacity）。
 static ColorRGBA BrowserOpacityColor(ColorRGBA Color, float AlphaScale = 1.0f)
 {
 	if(Color.r == Color.g && Color.g == Color.b)
 	{
-		const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmMapBrowserColor));
+		const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
 		Color.r = std::clamp(Base.r * (0.35f + Color.r * 0.65f), 0.0f, 1.0f);
 		Color.g = std::clamp(Base.g * (0.35f + Color.g * 0.65f), 0.0f, 1.0f);
 		Color.b = std::clamp(Base.b * (0.35f + Color.b * 0.65f), 0.0f, 1.0f);
 	}
-	Color.a = std::clamp(Color.a * (g_Config.m_QmMapBrowserOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f);
+	Color.a = std::clamp(Color.a * (g_Config.m_QmUiOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f);
 	return Color;
 }
 
@@ -4071,7 +4073,7 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 
 void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 {
-	CUiBackgroundAlphaScaleScope BackgroundAlphaScaleScope(Ui(), g_Config.m_QmMapBrowserOpacity / 100.0f);
+	CUiBackgroundAlphaScaleScope BackgroundAlphaScaleScope(Ui(), g_Config.m_QmUiOpacity / 100.0f);
 
 	// 首次打开菜单时先复用现有 community 选择结果。缓存哈希、过滤器重建
 	// 和列表刷新放到下一帧，避免 ESC 首帧同步执行后台元数据整理。

@@ -272,14 +272,15 @@ namespace
 	}
 
 	// 胶囊 Tabbar：整排共用一个容器胶囊，激活位置由一枚滑块胶囊标记。
-	// 容器与服务器列表面板同源（qm_map_browser_color / qm_map_browser_opacity，
-	// 与 CMenus::BrowserPanelColor(1.0f) 一致），保证导航栏和下方列表底色一致；
+	// 容器与服务器列表面板同源（qm_ui_color / qm_ui_opacity「界面表面」，
+	// 与 CMenus::BrowserPanelColor(1.0f) 一致），保证导航栏和下方列表底色一致，
+	// 并统一跟随设置页「界面背景」配置；
 	// 滑块与文字按容器明暗自适应 —— 默认暗色界面是「深容器 + 亮滑块 + 深字」，
 	// 浅色界面自动反向，避免白底白滑块看不见。自适应规则本体在 ui_widget::CapsuleTabBar*。
 	ColorRGBA MenuCapsuleSurfaceColor()
 	{
-		const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmMapBrowserColor));
-		return Base.WithAlpha(std::clamp(g_Config.m_QmMapBrowserOpacity / 100.0f, 0.0f, 1.0f));
+		const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
+		return Base.WithAlpha(std::clamp(g_Config.m_QmUiOpacity / 100.0f, 0.0f, 1.0f));
 	}
 
 	ColorRGBA MenuCapsuleTabIndicatorColor()
@@ -1150,16 +1151,18 @@ ColorRGBA CMenus::MenuPanelElevatedColor(float AlphaScale) const
 	return Base.WithAlpha(std::clamp((g_Config.m_QmUiOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f));
 }
 
+// 服务器列表面板底色：跟随设置页「界面表面」（qm_ui_color / qm_ui_opacity），
+// 与主导航胶囊容器（MenuCapsuleSurfaceColor）同源。
 ColorRGBA CMenus::BrowserPanelColor(float AlphaScale) const
 {
-	const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmMapBrowserColor));
-	return Base.WithAlpha(std::clamp((g_Config.m_QmMapBrowserOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f));
+	const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
+	return Base.WithAlpha(std::clamp((g_Config.m_QmUiOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f));
 }
 
 ColorRGBA CMenus::BrowserPanelElevatedColor(float AlphaScale) const
 {
-	const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmMapBrowserColor));
-	return Base.WithAlpha(std::clamp((g_Config.m_QmMapBrowserOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f));
+	const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
+	return Base.WithAlpha(std::clamp((g_Config.m_QmUiOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f));
 }
 
 ColorRGBA CMenus::SettingsTabbarColor(float AlphaScale) const
@@ -1527,7 +1530,7 @@ void CMenus::PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth
 int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-	const float SortedAlpha = std::clamp(0.34f + g_Config.m_QmMapBrowserOpacity / 100.0f * 0.6f, 0.0f, 0.55f);
+	const float SortedAlpha = std::clamp(0.34f + g_Config.m_QmUiOpacity / 100.0f * 0.6f, 0.0f, 0.55f);
 	if(Checked == 2)
 		DrawRoundedSurface(Ui(), *pRect, ColorRGBA(1, 0.98f, 0.5f, SortedAlpha), ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_T);
 	else if(Checked)
