@@ -76,6 +76,22 @@ static void LogQmWebSocketEvent(const char *pChannel, const char *pStage)
 		log_info("qmclient", "%s websocket %s", pChannel, pStage);
 }
 
+// 实时链路诊断日志专用：把客户端状态枚举转成可读名称。
+static const char *QmRealtimeClientStateName(int State)
+{
+	switch(State)
+	{
+	case IClient::STATE_OFFLINE: return "offline";
+	case IClient::STATE_CONNECTING: return "connecting";
+	case IClient::STATE_LOADING: return "loading";
+	case IClient::STATE_ONLINE: return "online";
+	case IClient::STATE_DEMOPLAYBACK: return "demoplayback";
+	case IClient::STATE_QUITTING: return "quitting";
+	case IClient::STATE_RESTARTING: return "restarting";
+	default: return "unknown";
+	}
+}
+
 static void LogQmClientDistributionEvent(const char *pStage, int Users, int Dummies, int LocalMarks)
 {
 	log_info("qmclient", "distribution %s: users=%d dummies=%d local_marks=%d", pStage, Users, Dummies, LocalMarks);
@@ -1441,6 +1457,31 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 
 void CQmClient::ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message)
 {
+	// 诊断日志（qm_websocket_log 1 时输出）：确认后端 USERS 推送范围。
+	// 在主菜单（未连服，client_state=offline）停留观察：
+	// - 若 offline 态也能持续收到 USERS，且 payload_server 各不相同 → 后端为全局广播，
+	//   可放宽下方 STATE_ONLINE 门槛，让菜单态也解析“梦”数量；
+	// - 若 offline 态从不出现该日志（仅进服后出现）→ 后端按 presence 的 server_address
+	//   定向推送，菜单态需要另寻数据源（恢复轮询或新增订阅/请求接口）。
+	if(g_Config.m_QmWebSocketLog)
+	{
+		if(!Message.m_pPayload)
+		{
+			log_info("qmclient", "realtime users: no payload, client_state=%s",
+				QmRealtimeClientStateName(Client()->State()));
+		}
+		else
+		{
+			const json_value *pPayload = Message.m_pPayload.get();
+			const json_value *pAddress = JsonObjectField(pPayload, "server_address");
+			const json_value *pUsers = JsonObjectField(pPayload, "users");
+			log_info("qmclient", "realtime users: client_state=%s payload_server='%s' users_array=%s users_count=%d",
+				QmRealtimeClientStateName(Client()->State()),
+				pAddress->type == json_string ? pAddress->u.string.ptr : "",
+				pUsers->type == json_array ? "yes" : "no",
+				pUsers->type == json_array ? (int)pUsers->u.array.length : -1);
+		}
+	}
 	if(!Message.m_pPayload || Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
 		return;
 	char aServer[NETADDR_MAXSTRSIZE] = "";
