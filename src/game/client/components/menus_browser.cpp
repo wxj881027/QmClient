@@ -17,6 +17,7 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
@@ -1119,12 +1120,12 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	if(Selector.w < 150.0f || Selector.h <= 0.0f)
 		return;
 
+	static ui_widget::SDiscreteSliderState s_MapFilterSliderState;
 	static int s_MapFilterSliderId;
 	static int s_MapFilterFavoriteId;
 	const IUiContext Context = SettingsUiContext("server_browser_map_filter");
 
-	const int CurrentLevel = QmMapVotes::MapBrowserFilterLevel(g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
-	int SliderLevel = CurrentLevel >= 0 ? CurrentLevel : QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE;
+	int SliderLevel = QmMapVotes::MapBrowserFilterLevel(g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
 
 	// 纵向三段：标题行（「服务器筛选」，居中，字号与「服务器地址：」一致）→ 滑块行 → 收藏开关行。
 	CUIRect Heading, Body, SliderRow, FavoriteRow;
@@ -1143,7 +1144,7 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	SliderRect.x += 4.0f;
 	SliderRect.w = std::max(0.0f, SliderRect.w - 4.0f);
 
-	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_MapFilterSliderId, &SliderLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR, SliderRect);
+	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_MapFilterSliderId, s_MapFilterSliderState, &SliderLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR, SliderRect);
 	if(SliderChanged)
 	{
 		QmMapVotes::ApplyMapBrowserFilterLevel(SliderLevel, g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
@@ -1151,7 +1152,7 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	}
 
 	char aCurrentLabel[32];
-	const int DisplayLevel = CurrentLevel >= 0 || SliderChanged ? SliderLevel : -1;
+	const int DisplayLevel = SliderLevel;
 	if(DisplayLevel < 0)
 	{
 		// 只有无法用单一档位表达的配置才会走到这里（星级多选，或星级与空服叠加）。
@@ -1163,7 +1164,10 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 		str_format(aCurrentLabel, sizeof(aCurrentLabel), "0 %s", Localize("Players"));
 	else
 		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%d★", QmMapVotes::MapBrowserFilterStars(DisplayLevel));
+	if(DisplayLevel >= 0)
+		TextRender()->TextColor(ui_widget::ResolveDiscreteSliderStyle(DisplayLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR).m_Color);
 	Ui()->DoLabel(&CurrentLabel, aCurrentLabel, 11.0f, TEXTALIGN_MR);
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 	// 收藏开关移到滑块下方，与滑块上下并列：左侧「收藏地图」文本说明 + 开关 + 星标，
 	// 整组在滑块列内水平居中；说明文字与上行档位文字同为 11px 右对齐，方向一致。

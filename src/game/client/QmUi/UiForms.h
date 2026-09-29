@@ -305,9 +305,6 @@ namespace ui_widget
 	// Returns true when the value changed this frame.
 	bool Slider(const IUiContext &Ctx, const void *pId, float *pValue, float Min, float Max, const CUIRect &Rect, const char *pSuffix = "");
 
-	// 离散胶囊滑块：值按整数档位量化，滑块通过共享弹簧动画运行时跟随目标。
-	bool DiscreteSlider(const IUiContext &Ctx, const void *pId, int *pValue, int Min, int Max, const CUIRect &Rect);
-
 } // namespace ui_widget
 
 #endif

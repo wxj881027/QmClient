@@ -33,6 +33,11 @@ namespace ui_token::color
 	inline constexpr ColorRGBA ACCENT_PRIMARY_PRESS{0.30f, 0.65f, 0.88f, 1.0f};
 	inline constexpr ColorRGBA ACCENT_PRIMARY_DIM{0.4f, 0.753f, 0.957f, 0.18f};
 
+	// slider
+	// 离散滑块的空槽底色：填充与档位文字按难度档位取色，槽底保持中性灰，
+	// 因此这里刻意不使用 SURFACE_ELEVATED/主题强调色。
+	inline constexpr ColorRGBA SLIDER_TRACK{0.27f, 0.27f, 0.27f, 1.0f};
+
 	// text
 	inline constexpr ColorRGBA TEXT_PRIMARY{1.0f, 1.0f, 1.0f, 1.0f};
 	inline constexpr ColorRGBA TEXT_SECONDARY{1.0f, 1.0f, 1.0f, 0.72f};

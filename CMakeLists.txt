@@ -3112,6 +3112,9 @@ if(CLIENT)
     QmUi/UiButtons.h
     QmUi/UiContainers.h
     QmUi/UiContext.h
+    QmUi/UiDiscreteSlider.cpp
+    QmUi/UiDiscreteSlider.h
+    QmUi/UiDiscreteSliderLogic.cpp
     QmUi/UiDogfood.cpp
     QmUi/UiDogfood.h
     QmUi/UiFormLogic.cpp
@@ -4265,6 +4268,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_anim_contract_test.cpp
     QmAnimDropdownTest.cpp
     QmAnimFormsTest.cpp
+    QmDiscreteSliderTest.cpp
+    map_browser_filter_slider_test.cpp
     QmAnimScrollTest.cpp
     QmAnimTreeTest.cpp
     qm_icon_atlas_contract_test.cpp
@@ -4614,6 +4619,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmAnimResolve.cpp
     src/game/client/QmUi/QmLayout.cpp
     src/game/client/QmUi/UiFormLogic.cpp
+    src/game/client/QmUi/UiDiscreteSliderLogic.cpp
     src/game/client/QmUi/QmCardOrderModel.cpp
     src/game/client/QmUi/QmDropdown.cpp
     src/game/client/QmUi/QmScroll.cpp

@@ -188,6 +188,9 @@ namespace QmMapVotes
 
 	inline void ApplyMapBrowserFilterLevel(int Level, int &EmptyOnly, int &StarMask)
 	{
+		// 越界档位不表达任何筛选：保持现有配置，避免把「无法用单档表达」误写成为不筛选。
+		if(Level < MAP_BROWSER_FILTER_LEVEL_NONE)
+			return;
 		EmptyOnly = Level == MAP_BROWSER_FILTER_LEVEL_EMPTY ? 1 : 0;
 		const int Stars = MapBrowserFilterStars(Level);
 		StarMask = Stars > 0 ? 1 << Stars : 0;

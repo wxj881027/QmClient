@@ -3250,6 +3250,7 @@ TEST(QmNewUiMenuBranches, LegacyRoundedRectDrawSitesRequireExplicitAllowlist)
 		"src/game/client/ui.cpp",
 		"src/game/client/QmUi/UiButtons.cpp",
 		"src/game/client/QmUi/UiForms.cpp",
+		"src/game/client/QmUi/UiDiscreteSlider.cpp",
 		"src/game/client/QmUi/SettingsCard.cpp",
 		"src/game/client/QmUi/SettingsCardDeck.cpp",
 		"src/game/client/QmUi/UiContainers.h",
