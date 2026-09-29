@@ -8,14 +8,14 @@
 // 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
 // 注意：带参数化 fixture 必须用 BENCHMARK_DEFINE_F + BENCHMARK_REGISTER_F(...)->Arg(n)；
 // BENCHMARK_F 会自动注册一个无参裸实例，State.range(0) 读空参数向量直接 0xC0000005。
-#include <benchmark/benchmark.h>
-
 #include <engine/shared/config.h>
 
 #include <game/client/QmUi/QmAnim.h>
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/UiTokens.h>
+
+#include <benchmark/benchmark.h>
 
 #include <memory>
 #include <vector>

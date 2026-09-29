@@ -5,11 +5,12 @@
 //  2. str_utf8_decode UTF-8 解码（聊天/输入框/文本布局逐字符入口）
 //  3. str_utf8_forward/rewind 光标导航（CLineInput 每键击的左右移动路径）
 // 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
-#include <benchmark/benchmark.h>
-
 #include <base/str.h>
 #include <base/system.h>
+
 #include <engine/client/qm_font_category.h>
+
+#include <benchmark/benchmark.h>
 
 // main / IsInterrupted 桩统一在 qm_benchmark_main.cpp 提供
 
@@ -17,9 +18,30 @@
 static void BM_FontCategoryClassify(benchmark::State &State)
 {
 	static const int aMixedCodepoints[] = {
-		0x41, 0x4E2D, 0x2600, 0x62, 0x6C38, 0x2603, 0x43, 0x6D53, 0x2713,
-		0x64, 0x3042, 0x2665, 0x65, 0xAC00, 0x25B2, 0x66, 0xFF01, 0x266A,
-		0x67, 0x4E00, 0xE000, 0x68, 0x30A2, 0x2728,
+		0x41,
+		0x4E2D,
+		0x2600,
+		0x62,
+		0x6C38,
+		0x2603,
+		0x43,
+		0x6D53,
+		0x2713,
+		0x64,
+		0x3042,
+		0x2665,
+		0x65,
+		0xAC00,
+		0x25B2,
+		0x66,
+		0xFF01,
+		0x266A,
+		0x67,
+		0x4E00,
+		0xE000,
+		0x68,
+		0x30A2,
+		0x2728,
 	};
 	const int NumCodepoints = static_cast<int>(sizeof(aMixedCodepoints) / sizeof(aMixedCodepoints[0]));
 	for(auto _ : State)

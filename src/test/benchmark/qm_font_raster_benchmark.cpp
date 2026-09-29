@@ -6,7 +6,6 @@
 // GPU 上传开销不在本基准内，游戏内 QmPerf 计数器（ConsumeQmPerfGlyphStats）可直接实测。
 // 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
 #include <benchmark/benchmark.h>
-
 #include <ft2build.h>
 #include FT_FREETYPE_H
 

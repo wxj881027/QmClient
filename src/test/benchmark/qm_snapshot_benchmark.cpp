@@ -6,9 +6,9 @@
 // 位置 +1（模拟一 tick 移动，全量更新是位置数据每 tick 的典型形态）。
 // 夹具模式参照 src/test/snapshot_test.cpp（Rust 后端 API）。
 // 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
-#include <benchmark/benchmark.h>
-
 #include <engine/shared/snapshot.h>
+
+#include <benchmark/benchmark.h>
 
 #include <array>
 #include <cstdint>

@@ -4,9 +4,9 @@
 // 静态树权重偏置 0 字节，与 delta 快照数据分布吻合（engine/docs/snapshots.txt:47），
 // 故输入数据构造为「大部分 0 + 周期性结构化载荷」。
 // 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
-#include <benchmark/benchmark.h>
-
 #include <engine/shared/network.h>
+
+#include <benchmark/benchmark.h>
 
 #include <cstdint>
 #include <vector>
