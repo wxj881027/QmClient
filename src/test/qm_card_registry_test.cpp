@@ -48,7 +48,7 @@ TEST(QmCardRegistry, BetterScoreboardCardIsRegisteredInFunctionColumn)
 	ASSERT_NE(pCard, nullptr);
 	EXPECT_STREQ(pCard->m_pDefaultTab, "function");
 	EXPECT_EQ(pCard->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(pCard->m_DefaultOrder, 7);
+	EXPECT_EQ(pCard->m_DefaultOrder, 6);
 	EXPECT_STREQ(pCard->m_pTitle, "Better scoreboard");
 
 	const auto &vFunctionCards = qm_card_catalog::FunctionCardStableIds();

@@ -87,7 +87,7 @@ PAGE_STABLE_IDS = {
 		"qm:collision_hitbox",
 		"qm:streamer",
 	),
-	"contributors": ("deck:qmclient-contributors-community", "deck:qmclient-contributors-sponsors"),
+	"contributors": ("deck:qmclient-contributors-community", "deck:qmclient-contributors-title", "deck:qmclient-contributors-sponsors", "deck:credits-friend-links", "deck:qmclient-contributors-ddnet", "deck:tclient-info-developers"),
 	"global_search": ("deck:global-search-input", "deck:global-search-results"),
 	"tclient": (
 		"tclient:visual-font-cursor",
@@ -114,7 +114,6 @@ PAGE_STABLE_IDS = {
 	"tclient_chat_binds": ("deck:tclient-chat-binds-kaomoji", "deck:tclient-chat-binds-warlist", "deck:tclient-chat-binds-other"),
 	"tclient_warlist": ("deck:tclient-warlist",),
 	"tclient_status_bar": ("deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"),
-	"tclient_info": ("deck:tclient-info-links", "deck:tclient-info-files", "deck:tclient-info-developers", "deck:tclient-info-tabs"),
 	"tclient_profiles": ("deck:tclient-profiles-actions", "deck:tclient-profiles-options", "deck:tclient-profiles-list"),
 	"tclient_configs": ("deck:tclient-configs-actions",),
 	"assets": (),
@@ -133,14 +132,13 @@ PAGE_FUNCTIONS = {
 	"qmclient_hud": ("CMenus::RenderSettingsQmClientHudDeck",),
 	"qmclient_function": ("CMenus::RenderSettingsQmClientFunctionDeck",),
 	"qmclient_visual": ("CMenus::RenderSettingsQmClientVisualDeck",),
-	"contributors": ("CMenus::RenderSettingsQmClientContributors",),
+	"contributors": ("CMenus::RenderSettingsContributors",),
 	"global_search": ("CMenus::RenderSettingsGlobalSearchContent",),
 	"tclient": ("CMenus::RenderSettingsTClientSettings",),
 	"tclient_bind_wheel": ("CMenus::RenderSettingsTClientBindWheel",),
 	"tclient_chat_binds": ("CMenus::RenderSettingsTClientChatBinds",),
 	"tclient_warlist": ("CMenus::RenderSettingsTClientWarList",),
 	"tclient_status_bar": ("CMenus::RenderSettingsTClientStatusBar",),
-	"tclient_info": ("CMenus::RenderSettingsTClientInfo",),
 	"tclient_profiles": ("CMenus::RenderSettingsTClientProfiles",),
 	"tclient_configs": ("CMenus::RenderSettingsTClientConfigs",),
 	"assets": ("CMenus::RenderSettingsCustom",),
@@ -154,6 +152,15 @@ PRODUCER_COMPLETE_PAGES = {
 	"contributors",
 	"tclient_configs",
 	"tclient_warlist",
+}
+
+PAGE_PRODUCER_REQUIRED = {
+	"contributors": (
+		"AppendQmClientContributorCards(vCards",
+		"AppendFriendLinkCards(vCards",
+		"AppendDdnetContributorCard(vCards",
+		"AppendTClientDeveloperCard(vCards",
+	),
 }
 
 PAGE_ROUTE_TABS = {
@@ -183,7 +190,6 @@ PAGE_ROUTE_TABS = {
 	"tclient_chat_binds": ("tclient-chat-binds",),
 	"tclient_warlist": ("tclient-warlist",),
 	"tclient_status_bar": ("tclient-status-bar",),
-	"tclient_info": ("tclient-info",),
 	"tclient_profiles": ("tclient-profiles",),
 	"tclient_configs": ("tclient-configs",),
 	"assets": (),
@@ -243,7 +249,6 @@ PAGE_REQUIRED = {
 	"tclient_chat_binds": ("CardDeck.RenderCached(",),
 	"tclient_warlist": ("CardDeck.RenderCached(",),
 	"tclient_status_bar": ("CardDeck.RenderCached(",),
-	"tclient_info": ("CardDeck.RenderCached(",),
 	"tclient_profiles": ("CardDeck.RenderCached(",),
 	"tclient_configs": ("CardDeck.RenderCached(",),
 	"assets": (
@@ -259,7 +264,6 @@ PAGE_METRICS_REQUIRED = {
 	"tclient_chat_binds": "ApplyTClientContentMetrics(MainView.w)",
 	"tclient_warlist": "ApplyTClientContentMetrics(MainView.w)",
 	"tclient_status_bar": "ApplyTClientContentMetrics(MainView.w)",
-	"tclient_info": "ApplyTClientContentMetrics(MainView.w)",
 	"tclient_profiles": "ApplyTClientContentMetrics(MainView.w)",
 	"tclient_configs": "ApplyTClientContentMetrics(MainView.w)",
 }
@@ -283,9 +287,7 @@ PAGE_FORBIDDEN = {
 	),
 }
 
-PAGE_PRODUCER_REQUIRED = {
-	"tclient_warlist": ('m_Spec = {"deck:tclient-warlist"',),
-}
+PAGE_PRODUCER_REQUIRED["tclient_warlist"] = ('m_Spec = {"deck:tclient-warlist"',)
 
 REGISTRY_FORBIDDEN = {
 	"tclient_warlist": PAGE_FORBIDDEN["tclient_warlist"],
@@ -297,14 +299,13 @@ _PAGE_SOURCE = {
 	"qmclient_hud": Path("src/game/client/components/qmclient/menus_qmclient.cpp"),
 	"qmclient_function": Path("src/game/client/components/qmclient/menus_qmclient.cpp"),
 	"qmclient_visual": Path("src/game/client/components/qmclient/menus_qmclient.cpp"),
-	"contributors": Path("src/game/client/components/qmclient/menus_qmclient.cpp"),
+	"contributors": Path("src/game/client/components/menus_credits.cpp"),
 	"global_search": Path("src/game/client/components/qmclient/menus_qmclient.cpp"),
 	"tclient": Path("src/game/client/components/tclient/menus_tclient.cpp"),
 	"tclient_bind_wheel": Path("src/game/client/components/tclient/menus_tclient.cpp"),
 	"tclient_chat_binds": Path("src/game/client/components/tclient/menus_tclient.cpp"),
 	"tclient_warlist": Path("src/game/client/components/tclient/menus_tclient.cpp"),
 	"tclient_status_bar": Path("src/game/client/components/tclient/menus_tclient.cpp"),
-	"tclient_info": Path("src/game/client/components/tclient/menus_tclient.cpp"),
 	"tclient_profiles": Path("src/game/client/components/tclient/menus_tclient.cpp"),
 	"tclient_configs": Path("src/game/client/components/tclient/menus_tclient.cpp"),
 	"assets": Path("src/game/client/components/menus_settings_assets.cpp"),

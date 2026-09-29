@@ -1189,7 +1189,7 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 		{
 			TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
 			const int Corners = VisibleTabIndex == 0 ? IGraphics::CORNER_L : VisibleTabIndex == NUMBER_OF_TCLIENT_TABS - 1 ? IGraphics::CORNER_R :
-															   IGraphics::CORNER_NONE;
+																	 IGraphics::CORNER_NONE;
 			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
 			{
 				m_TClientSettingsTab = Tab;

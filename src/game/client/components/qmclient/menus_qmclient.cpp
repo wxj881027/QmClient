@@ -5124,9 +5124,9 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 				{
 					const int PageTab = aVisibleQmTabs[Tab];
 					TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-					const int Corners = Tab == 0                 ? IGraphics::CORNER_L :
+					const int Corners = Tab == 0             ? IGraphics::CORNER_L :
 							    Tab == NumQmTabs - 1 ? IGraphics::CORNER_R :
-									   IGraphics::CORNER_NONE;
+										   IGraphics::CORNER_NONE;
 					const char *pTabName = apQmTabNames[PageTab];
 					const bool ClickedTab = DoButton_MenuTab(&s_aPageTabs[PageTab], pTabName, m_QmClientSettingsTab == PageTab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f);
 					if(!PrewarmOnly && ClickedTab)

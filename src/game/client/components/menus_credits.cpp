@@ -361,7 +361,7 @@ namespace
 			if(s_SponsorQrTextureTried)
 				return false;
 			s_SponsorQrTextureTried = true;
-	
+
 			std::string CleanBase64;
 			size_t Base64Size = 0;
 			for(const char *pChunk : s_apSponsorQrPngBase64)
@@ -381,23 +381,23 @@ namespace
 			}
 			if(CleanBase64.empty())
 				return false;
-	
+
 			const int MaxDecodedSize = static_cast<int>((CleanBase64.size() * 3) / 4 + 4);
 			std::vector<uint8_t> vDecoded(MaxDecodedSize);
 			const int DecodedSize = str_base64_decode(vDecoded.data(), MaxDecodedSize, CleanBase64.c_str());
 			if(DecodedSize <= 0)
 				return false;
 			vDecoded.resize(DecodedSize);
-	
+
 			CImageInfo QrImage;
 			if(!pGraphics->LoadPng(QrImage, vDecoded.data(), vDecoded.size(), "qmclient_sponsor_qr_base64"))
 				return false;
-	
+
 			s_SponsorQrTexture = pGraphics->LoadTextureRawMove(QrImage, 0, "qmclient_sponsor_qr");
 			s_SponsorQrTextureReady = s_SponsorQrTexture.IsValid();
 			return s_SponsorQrTextureReady;
 		};
-	return DecodeSponsorQrTexture();
+		return DecodeSponsorQrTexture();
 	}
 
 	void RenderSponsorQrTexture(IGraphics *pGraphics, const CUIRect &Rect, float Alpha)
@@ -465,9 +465,9 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 			for(int Tab = 0; Tab < CREDITS_SETTINGS_TAB_NUM; ++Tab)
 			{
 				TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-				const int Corners = Tab == 0                              ? IGraphics::CORNER_L :
+				const int Corners = Tab == 0                            ? IGraphics::CORNER_L :
 						    Tab == CREDITS_SETTINGS_TAB_NUM - 1 ? IGraphics::CORNER_R :
-										   IGraphics::CORNER_NONE;
+											  IGraphics::CORNER_NONE;
 				if(DoButton_MenuTab(&s_aPageTabs[Tab], apCreditsTabNames[Tab], m_CreditsSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
 					m_CreditsSettingsTab = Tab;
 			}
@@ -476,8 +476,8 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 
 	const int ActiveTab = m_CreditsSettingsTab;
 	const char *pDeckTab = ActiveTab == CREDITS_SETTINGS_TAB_LINKS ? "credits-links" :
-				    ActiveTab == CREDITS_SETTINGS_TAB_OTHER  ? "credits-other" :
-									       "credits-qmclient";
+			       ActiveTab == CREDITS_SETTINGS_TAB_OTHER ? "credits-other" :
+									 "credits-qmclient";
 	const int SponsorsRevision = GameClient()->m_QmClient.QmSponsorsRevision();
 	const bool HasSponsorDeveloper = GameClient()->m_QmClient.HasDeveloperCredential();
 	const bool SponsorImageVisible = FindMenuImage("sponsor") != nullptr;
