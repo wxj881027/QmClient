@@ -185,6 +185,7 @@ option(CLIENT "Compile client" ON)
 option(SERVER "Compile server" ON)
 option(TOOLS "Compile tools" ON)
 option(DOWNLOAD_GTEST "Download and compile GTest" ${AUTO_DEPENDENCIES_DEFAULT})
+option(DOWNLOAD_BENCHMARK "Download and compile Google Benchmark (enables the qm-benchmarks target)" OFF)
 option(STEAM "Build the Steam release version" ON)
 option(DISCORD "Enable Discord rich presence support" OFF)
 option(DISCORD_DYNAMIC "Enable discovering Discord rich presence libraries at runtime (Linux only)" OFF)
@@ -1170,6 +1171,59 @@ if(NOT(GTEST_FOUND) AND DOWNLOAD_GTEST)
 
       set(GTEST_LIBRARIES gtest gmock)
       set(GTEST_INCLUDE_DIRS)
+    endif()
+  endif()
+endif()
+
+########################################################################
+# DOWNLOAD BENCHMARK（可选，供 qm-benchmarks 目标使用）
+########################################################################
+
+find_package(benchmark 1.9 CONFIG QUIET)
+if(NOT(TARGET benchmark::benchmark) AND DOWNLOAD_BENCHMARK)
+  set(QM_BENCHMARK_VERSION v1.9.4)
+  configure_file(cmake/Download_Benchmark_CMakeLists.txt.in benchmark-download/CMakeLists.txt)
+  set(BENCHMARK_CMAKE_ARGS -G "${CMAKE_GENERATOR}")
+  if(CMAKE_MAKE_PROGRAM)
+    list(APPEND BENCHMARK_CMAKE_ARGS "-DCMAKE_MAKE_PROGRAM:FILEPATH=${CMAKE_MAKE_PROGRAM}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} ${BENCHMARK_CMAKE_ARGS} .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/benchmark-download
+  )
+  if(result)
+    message(WARNING "CMake step for benchmark failed: ${result}")
+    set(DOWNLOAD_BENCHMARK OFF)
+  else()
+    execute_process(COMMAND ${CMAKE_COMMAND} --build .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/benchmark-download
+    )
+    if(result)
+      message(WARNING "Build step for benchmark failed: ${result}")
+      set(DOWNLOAD_BENCHMARK OFF)
+    else()
+      # 关闭 benchmark 自带的测试与安装，必须在 add_subdirectory 之前设置
+      set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+      set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+      set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+      set(BENCHMARK_ENABLE_WERROR OFF CACHE BOOL "" FORCE)
+
+      # 将 benchmark 直接加入当前构建（定义 benchmark / benchmark_main 目标）
+      add_subdirectory(
+        ${PROJECT_BINARY_DIR}/benchmark-src
+        ${PROJECT_BINARY_DIR}/benchmark-build
+        EXCLUDE_FROM_ALL
+      )
+
+      if(MSVC)
+        if(TARGET benchmark)
+          # 运行库与主项目对齐（同 googletest 的 gtest_force_shared_crt 处理）
+          set_property(TARGET benchmark PROPERTY MSVC_RUNTIME_LIBRARY MultiThreaded$<${DBG}:Debug>)
+          # `/w` 关闭全部警告：benchmark 上游启用 -Werror，MSVC 新警告会破坏构建
+          target_compile_options(benchmark PRIVATE /w)
+        endif()
+      endif()
     endif()
   endif()
 endif()
@@ -4842,6 +4896,60 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     # See also https://github.com/rust-lang/rust/issues/39016.
     add_dependencies(run_tests run_rust_tests)
   endif()
+endif()
+
+########################################################################
+# C++ BENCHMARKS（Google Benchmark，-DDOWNLOAD_BENCHMARK=ON 或系统已装 benchmark>=1.9 时启用）
+########################################################################
+
+if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
+  # 对象库集合与 testrunner 一致，基准可覆盖 base/engine/game 各层代码
+  add_executable(qm-benchmarks EXCLUDE_FROM_ALL
+    src/test/benchmark/qm_benchmark_main.cpp
+    src/test/benchmark/qm_str_benchmark.cpp
+    src/test/benchmark/qm_anim_benchmark.cpp
+    src/test/benchmark/qm_text_benchmark.cpp
+    src/test/benchmark/qm_net_benchmark.cpp
+    src/test/benchmark/qm_snapshot_benchmark.cpp
+    src/test/benchmark/qm_font_raster_benchmark.cpp
+    # 动画实现（testrunner 的 TESTS_EXTRA 同款集合）
+    src/game/client/QmUi/QmAnim.cpp
+    src/game/client/QmUi/QmAnimationBackend.cpp
+    src/game/client/QmUi/QmAnimResolve.cpp
+    src/game/client/QmUi/QmTree.cpp
+    $<TARGET_OBJECTS:game-server-without-main>
+    $<TARGET_OBJECTS:engine-gfx>
+    $<TARGET_OBJECTS:engine-shared>
+    $<TARGET_OBJECTS:game-shared>
+    $<TARGET_OBJECTS:rust-bridge-shared>
+    ${DEPS}
+  )
+  add_dependencies(qm-benchmarks generate_protocol)
+  target_link_libraries(qm-benchmarks ${PNG_LIBRARIES} ${WebP_LIBRARIES} benchmark::benchmark ${FREETYPE_LIBRARIES} ${LIBS_SERVER})
+  target_include_directories(qm-benchmarks PRIVATE ${FREETYPE_INCLUDE_DIRS})
+  if(TARGET_OS STREQUAL "windows")
+    target_link_libraries(qm-benchmarks bcrypt winhttp ws2_32)
+  endif()
+  # 加入公共属性循环（src include 路径、MSVC 警告抑制、Windows 宏等）
+  list(APPEND TARGETS_OWN qm-benchmarks)
+  list(APPEND TARGETS_LINK qm-benchmarks)
+  target_compile_definitions(qm-benchmarks PRIVATE
+    DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+  )
+  if(MSVC)
+    target_compile_options(qm-benchmarks PRIVATE /bigobj /utf-8)
+  endif()
+  if(PRECOMPILE_HEADERS)
+    target_precompile_headers(qm-benchmarks PRIVATE <benchmark/benchmark.h>)
+  endif()
+
+  add_custom_target(run_cxx_benchmarks
+    COMMAND $<TARGET_FILE:qm-benchmarks>
+    COMMENT Running C++ benchmarks
+    DEPENDS qm-benchmarks
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+    USES_TERMINAL
+  )
 endif()
 
 if(NOT TARGET_OS STREQUAL "ios")
