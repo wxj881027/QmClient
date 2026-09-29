@@ -200,7 +200,11 @@ void CUiV2Tree::ResolveEndFrame(CUiV2AnimationRuntime *pAnimRuntime)
 
 void CUiV2Tree::PruneLayoutTransitionCache(uint64_t CurrentUseCounter)
 {
-	if(CurrentUseCounter < 4096)
+	// 剪枝按调用次数节流（每 1024 次扫描一次），否则 counter>=4096 后每次
+	// Resolve/Sync 都全表扫描，单帧 O(N²)（基准 BM_AnimLayoutCacheChurn 实证，
+	// 4096 键下单次 resolve ~10µs）；节流方式对照运行时侧 PruneResolveTargetCache。
+	// 未到首个 4096 计数前缓存不可能积累陈旧项，直接跳过。
+	if(CurrentUseCounter < 4096 || (CurrentUseCounter % 1024) != 0)
 		return;
 
 	const uint64_t StaleThreshold = CurrentUseCounter - 4096;
