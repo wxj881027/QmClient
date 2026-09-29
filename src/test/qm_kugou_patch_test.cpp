@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <qm-music-hook/qm_kugou_protocol.h>
+#include <qm/music/qm_kugou_protocol.h>
 
 #include <cstring>
 

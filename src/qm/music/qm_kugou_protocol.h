@@ -1,5 +1,5 @@
-#ifndef QM_MUSIC_HOOK_QM_KUGOU_PROTOCOL_H
-#define QM_MUSIC_HOOK_QM_KUGOU_PROTOCOL_H
+#ifndef QM_MUSIC_QM_KUGOU_PROTOCOL_H
+#define QM_MUSIC_QM_KUGOU_PROTOCOL_H
 
 #include "qm_music_source.h"
 

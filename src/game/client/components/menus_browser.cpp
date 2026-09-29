@@ -51,16 +51,18 @@ static constexpr ColorRGBA gs_QmClientCountColor = ColorRGBA(0.75f, 0.55f, 1.0f,
 static constexpr float SERVER_LIST_TEXT_SIZE = 11.0f;
 static constexpr float SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE = 0.28f;
 
+// 浏览器内灰度描边/覆盖色的统一透明通道：灰度色按「界面表面」（qm_ui_color）
+// 染色，alpha 跟随「界面背景」透明度（qm_ui_opacity）。
 static ColorRGBA BrowserOpacityColor(ColorRGBA Color, float AlphaScale = 1.0f)
 {
 	if(Color.r == Color.g && Color.g == Color.b)
 	{
-		const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmMapBrowserColor));
+		const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
 		Color.r = std::clamp(Base.r * (0.35f + Color.r * 0.65f), 0.0f, 1.0f);
 		Color.g = std::clamp(Base.g * (0.35f + Color.g * 0.65f), 0.0f, 1.0f);
 		Color.b = std::clamp(Base.b * (0.35f + Color.b * 0.65f), 0.0f, 1.0f);
 	}
-	Color.a = std::clamp(Color.a * (g_Config.m_QmMapBrowserOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f);
+	Color.a = std::clamp(Color.a * (g_Config.m_QmUiOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f);
 	return Color;
 }
 
@@ -161,12 +163,13 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 
 static const char *MapDifficultyStars(int Stars)
 {
+	// 只显示实心星：空心星（☆）在列表里视觉噪音大，0 星不显示任何星级。
 	static constexpr const char *s_apStarLabels[] = {
-		"☆☆☆☆☆",
-		"★☆☆☆☆",
-		"★★☆☆☆",
-		"★★★☆☆",
-		"★★★★☆",
+		"",
+		"★",
+		"★★",
+		"★★★",
+		"★★★★",
 		"★★★★★",
 	};
 	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
@@ -174,7 +177,7 @@ static const char *MapDifficultyStars(int Stars)
 
 // 名称列的地图难度后缀：星级跟在服务器名后面。服务器名本身已写明难度分类
 //（如 "DDNet CHN2 上海 - Moderate 中阶"）时只补星级，否则补上分类词，
-// 让名称看不出难度的服务器（如 "Cartoon"）仍能读出难度。
+// 让名称看不出难度的服务器（如 "Cartoon"）仍能读出难度。后缀与名称之间留一个空格。
 static void FormatMapDifficultySuffix(const char *pDisplayName, const CQmMapDifficultyCatalog::SEntry *pDifficulty, char *pOut, size_t OutSize)
 {
 	if(pOut == nullptr || OutSize == 0)
@@ -185,10 +188,12 @@ static void FormatMapDifficultySuffix(const char *pDisplayName, const CQmMapDiff
 	const char *pStars = MapDifficultyStars(pDifficulty->m_Stars);
 	if(pStars[0] == '\0')
 		return;
+	char aSuffix[64];
 	if(FavoriteMapCategoryKeyFromText(pDisplayName) != nullptr)
-		str_copy(pOut, pStars, OutSize);
+		str_copy(aSuffix, pStars, sizeof(aSuffix));
 	else
-		str_format(pOut, OutSize, "%s%s", FavoriteMapCategoryDisplayName(pDifficulty->m_Category.c_str()), pStars);
+		str_format(aSuffix, sizeof(aSuffix), "%s%s", FavoriteMapCategoryDisplayName(pDifficulty->m_Category.c_str()), pStars);
+	str_format(pOut, OutSize, " %s", aSuffix);
 }
 
 static const char *MapCategoryHintFromServer(const CServerInfo *pServer)
@@ -274,6 +279,16 @@ static void FormatServerbrowserPing(char (&aBuffer)[N], const CServerInfo *pInfo
 static ColorRGBA GetPingTextColor(int Latency)
 {
 	return color_cast<ColorRGBA>(ColorHSLA((300.0f - std::clamp(Latency, 0, 300)) / 1000.0f, 1.0f, 0.5f));
+}
+
+// QmClient: 延迟列着色。估计延迟（无实测值）按地区匹配而非估计数值：
+// 服务器与本机同地区即视为低延迟显示绿色——按地区分、不看 VPN 实测
+// （估计延迟受代理/路由影响，同区也可能被高估成橙色）。
+static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocation)
+{
+	if(pInfo->m_LatencyIsEstimated && pInfo->m_Location >= 0 && pInfo->m_Location == OwnLocation)
+		return GetPingTextColor(0);
+	return GetPingTextColor(pInfo->m_Latency);
 }
 
 void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated)
@@ -1027,7 +1042,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				FormatServerbrowserPing(aTemp, pItem);
 				if(g_Config.m_UiColorizePing)
 				{
-					TextRender()->TextColor(GetPingTextColor(pItem->m_Latency));
+					TextRender()->TextColor(GetServerListPingColor(pItem, ServerBrowser()->GetCurrentClientLocation()));
 				}
 				Ui()->DoLabelStreamed(*pUiElement->Rect(UI_ELEM_PING), &Button, aTemp, FontSize, TEXTALIGN_MR);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -1111,13 +1126,22 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	const int CurrentLevel = QmMapVotes::MapBrowserFilterLevel(g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
 	int SliderLevel = CurrentLevel >= 0 ? CurrentLevel : QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE;
 
-	CUIRect CurrentLabel, SliderRect, FavoriteRect;
-	// 档位名最长是非中文的「No filter」一类短语，标签列留够宽度避免溢出到滑条上。
-	Selector.VSplitLeft(68.0f, &CurrentLabel, &Selector);
-	Selector.VSplitRight(52.0f, &SliderRect, &FavoriteRect);
+	// 纵向三段：标题行（「服务器筛选」，居中，字号与「服务器地址：」一致）→ 滑块行 → 收藏开关行。
+	CUIRect Heading, Body, SliderRow, FavoriteRow;
+	Selector.HSplitTop(14.0f, &Heading, &Body);
+	Body.HSplitTop(4.0f, nullptr, &Body);
+	Body.HSplitTop(20.0f, &SliderRow, &FavoriteRow);
+	FavoriteRow.HSplitTop(2.0f, nullptr, &FavoriteRow);
+	Ui()->DoLabel(&Heading, Localize("Server filter"), 14.0f, TEXTALIGN_MC);
+
+	CUIRect CurrentLabel, SliderRect;
+	// 档位名最长是非中文的「No filter」一类短语，标签列留够宽度避免溢出到滑条上；
+	// 标签右对齐后与滑块之间保留一小段呼吸间距，不完全贴死。
+	SliderRow.VSplitLeft(58.0f, &CurrentLabel, &SliderRect);
 	CurrentLabel.VMargin(1.0f, &CurrentLabel);
 	SliderRect.VMargin(1.0f, &SliderRect);
-	FavoriteRect.VMargin(1.0f, &FavoriteRect);
+	SliderRect.x += 4.0f;
+	SliderRect.w = std::max(0.0f, SliderRect.w - 4.0f);
 
 	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_MapFilterSliderId, &SliderLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR, SliderRect);
 	if(SliderChanged)
@@ -1139,11 +1163,27 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 		str_format(aCurrentLabel, sizeof(aCurrentLabel), "0 %s", Localize("Players"));
 	else
 		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%d★", QmMapVotes::MapBrowserFilterStars(DisplayLevel));
-	Ui()->DoLabel(&CurrentLabel, aCurrentLabel, 11.0f, TEXTALIGN_ML);
+	Ui()->DoLabel(&CurrentLabel, aCurrentLabel, 11.0f, TEXTALIGN_MR);
 
+	// 收藏开关移到滑块下方，与滑块上下并列：左侧「收藏地图」文本说明 + 开关 + 星标，
+	// 整组在滑块列内水平居中；说明文字与上行档位文字同为 11px 右对齐，方向一致。
 	bool FavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly != 0;
 	CUIRect FavoriteToggle, FavoriteIcon;
-	FavoriteRect.VSplitLeft(28.0f, &FavoriteToggle, &FavoriteIcon);
+	const float FavoriteToggleWidth = 28.0f;
+	const float FavoriteIconWidth = 18.0f;
+	const float FavoriteLabelGap = 6.0f;
+	const float FavoriteLabelWidth = TextRender()->TextWidth(11.0f, Localize("Favorite maps"));
+	const float FavoriteGroupWidth = FavoriteLabelWidth + FavoriteLabelGap + FavoriteToggleWidth + FavoriteIconWidth;
+	CUIRect FavoriteGroup = FavoriteRow;
+	FavoriteGroup.x += (FavoriteGroup.w - FavoriteGroupWidth) * 0.5f;
+	FavoriteGroup.w = FavoriteGroupWidth;
+	FavoriteGroup.h = minimum(FavoriteGroup.h, 18.0f);
+	FavoriteGroup.y += (FavoriteRow.h - FavoriteGroup.h) * 0.5f;
+	CUIRect FavoriteLabel;
+	FavoriteGroup.VSplitLeft(FavoriteLabelWidth, &FavoriteLabel, &FavoriteGroup);
+	FavoriteGroup.VSplitLeft(FavoriteLabelGap, nullptr, &FavoriteGroup);
+	FavoriteGroup.VSplitLeft(FavoriteToggleWidth, &FavoriteToggle, &FavoriteIcon);
+	Ui()->DoLabel(&FavoriteLabel, Localize("Favorite maps"), 11.0f, TEXTALIGN_MR);
 	if(ui_widget::Toggle(Context, &s_MapFilterFavoriteId, &FavoriteOnly, FavoriteToggle))
 	{
 		g_Config.m_QmMapBrowserFavoriteOnly = FavoriteOnly ? 1 : 0;
@@ -1161,7 +1201,7 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	char aTooltip[192];
 	str_format(aTooltip, sizeof(aTooltip), "%s → %s → %s", Localize("No filter"), Localize("Filter empty servers in browser"), Localize("Difficulty stars"));
 	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterSliderId, &SliderRect, aTooltip);
-	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterFavoriteId, &FavoriteRect, Localize("Favorite maps"));
+	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterFavoriteId, &FavoriteGroup, Localize("Favorite maps"));
 }
 
 void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated)
@@ -1184,10 +1224,9 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 		RefreshBar.Draw(BrowserOpacityColor(ColorRGBA(1.0f, 1.0f, 1.0f, RefreshBarAlpha)), IGraphics::CORNER_NONE, 0.0f);
 	}
 
-	const float SearchExcludeAddrStrMax = 130.0f;
-	// 图集图标按方形绘制，宽度即字号。
-	const float ExcludeIconWidth = 16.0f;
-	const float SearchExcludeAddrInputOffset = SearchExcludeAddrStrMax + 5.0f + ExcludeIconWidth + 5.0f;
+	const float SearchExcludeAddrStrMax = 120.0f;
+	// 标签列与输入列的间距：排除图标改由输入框内部绘制后，列偏移不再需要预留图标宽度。
+	const float SearchExcludeAddrInputOffset = SearchExcludeAddrStrMax + 10.0f;
 
 	CUIRect SearchInfoAndAddr, ServersAndConnect, ServersPlayersOnline, SearchAndInfo, ServerAddr, ConnectButtons;
 	CUIRect MapFilterControls{};
@@ -1268,8 +1307,9 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 		CUIRect Selector = MapFilterControls;
 		Selector.x += 12.0f;
 		Selector.w = std::min(430.0f, std::max(0.0f, Selector.w - 24.0f));
-		Selector.y = QuickExclude.y;
-		Selector.h = QuickExclude.h;
+		// 筛选列纵跨状态盒：标题行在滑块上方居中，收藏开关在滑块下方，与左侧三行输入同高。
+		Selector.y = MapFilterControls.y;
+		Selector.h = MapFilterControls.h;
 		RenderServerbrowserMapFilterSelector(Selector);
 	}
 
@@ -1295,8 +1335,16 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 	// address info
 	{
 		CUIRect ServerAddrLabel, ServerAddrEditBox;
-		ServerAddr.Margin(2.0f, &ServerAddr);
 		ServerAddr.VSplitLeft(SearchExcludeAddrInputOffset, &ServerAddrLabel, &ServerAddrEditBox);
+		// 与搜索/排除行同规格：输入框统一 16px 高、左右各内缩 2px，并在行余高里垂直居中。
+		// 状态盒余高随界面缩放变化，直接 Margin 会让「服务器地址」行比上两行矮。
+		ServerAddrEditBox.h = 16.0f;
+		ServerAddrEditBox.y += (ServerAddr.h - ServerAddrEditBox.h) * 0.5f;
+		ServerAddrEditBox.x += 2.0f;
+		ServerAddrEditBox.w -= 4.0f;
+		// 搜索/排除两行的标签来自 Margin(2) 后的行矩形，「服务器地址」行不再整行 Margin，
+		// 标签单独补同样的 2px 内缩，保证三行标签左缘对齐。
+		ServerAddrLabel.x += 2.0f;
 
 		Ui()->DoLabel(&ServerAddrLabel, Localize("Server address:"), 14.0f, TEXTALIGN_ML);
 		static CLineInput s_ServerAddressInput(g_Config.m_UiServerAddress, sizeof(g_Config.m_UiServerAddress));
@@ -1997,7 +2045,7 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		SLabelProperties PingLabelProps;
 		if(g_Config.m_UiColorizePing)
 		{
-			PingLabelProps.SetColor(GetPingTextColor(pSelectedServer->m_Latency));
+			PingLabelProps.SetColor(GetServerListPingColor(pSelectedServer, ServerBrowser()->GetCurrentClientLocation()));
 		}
 		char aPingLabel[8];
 		FormatServerbrowserPing(aPingLabel, pSelectedServer);
@@ -3428,14 +3476,12 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	const ColorRGBA TabActiveColor = BrowserPanelElevatedColor(0.98f);
 	const ColorRGBA TabInactiveColor = BrowserPanelColor(0.68f);
 	const ColorRGBA TabHoverColor = BrowserPanelElevatedColor(0.84f);
-	for(int TabIndex = 0; TabIndex < 3; ++TabIndex)
-	{
-		CUIRect TabButton;
-		WorkspaceTabs.VSplitLeft(WorkspaceTabs.w / (float)(3 - TabIndex), &TabButton, &WorkspaceTabs);
-		const int Corners = TabIndex == 0 ? IGraphics::CORNER_L : (TabIndex == 2 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-		if(DoButton_MenuTab(&s_aFavoriteMapsWorkspaceTabButtons[TabIndex], aaWorkspaceTabLabels[TabIndex], s_FavoriteMapsWorkspaceTab == TabIndex, &TabButton, Corners, nullptr, &TabInactiveColor, &TabActiveColor, &TabHoverColor, Layout.m_TabHeight * 0.20f))
-			s_FavoriteMapsWorkspaceTab = TabIndex;
-	}
+	const char *apWorkspaceTabLabelPtrs[3] = {aaWorkspaceTabLabels[0], aaWorkspaceTabLabels[1], aaWorkspaceTabLabels[2]};
+	// 多选一分段选择器：新 UI 为胶囊滑块（配色按浏览器面板表面自适应），旧 UI 为分段圆角按钮。
+	const ui_widget::SCapsuleTabBarStyle WorkspaceTabStyle = CapsuleTabBarStyleFor(TabInactiveColor);
+	const int NewWorkspaceTab = DoSegmentedChoice(s_aFavoriteMapsWorkspaceTabButtons, apWorkspaceTabLabelPtrs, 3, s_FavoriteMapsWorkspaceTab, WorkspaceTabs, Layout.m_TabHeight * 0.20f, &TabInactiveColor, &TabActiveColor, &TabHoverColor, &WorkspaceTabStyle);
+	if(NewWorkspaceTab != s_FavoriteMapsWorkspaceTab)
+		s_FavoriteMapsWorkspaceTab = NewWorkspaceTab;
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 
 	View.Draw(BrowserPanelColor(0.82f), IGraphics::CORNER_ALL, Layout.m_PanelMargin);
@@ -3669,14 +3715,12 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 		str_format(aaFilterLabels[0], sizeof(aaFilterLabels[0]), "%s (%d)", Localize("Unfinished"), UnfinishedCount);
 		str_format(aaFilterLabels[1], sizeof(aaFilterLabels[1]), "%s (%d)", Localize("Finished"), FinishedCount);
 		str_format(aaFilterLabels[2], sizeof(aaFilterLabels[2]), "%s (%d)", Localize("Recent"), (int)HistoryEntries.size());
-		for(int i = 0; i < 3; ++i)
-		{
-			CUIRect Button;
-			FilterArea.VSplitLeft(FilterArea.w / (float)(3 - i), &Button, &FilterArea);
-			const int Corners = i == 0 ? IGraphics::CORNER_L : (i == 2 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-			if(DoButton_MenuTab(&s_aMapHistoryFilterButtons[i], aaFilterLabels[i], s_MapHistoryFilter == i, &Button, Corners, nullptr, &TabInactiveColor, &TabActiveColor, &TabHoverColor, 5.0f))
-				s_MapHistoryFilter = i;
-		}
+		// 多选一分段选择器：新 UI 为胶囊滑块（配色按浏览器面板表面自适应），旧 UI 为分段圆角按钮。
+		const char *apFilterLabels[3] = {aaFilterLabels[0], aaFilterLabels[1], aaFilterLabels[2]};
+		const ui_widget::SCapsuleTabBarStyle FilterStyle = CapsuleTabBarStyleFor(TabInactiveColor);
+		const int NewMapHistoryFilter = DoSegmentedChoice(s_aMapHistoryFilterButtons, apFilterLabels, 3, s_MapHistoryFilter, FilterArea, 5.0f, &TabInactiveColor, &TabActiveColor, &TabHoverColor, &FilterStyle);
+		if(NewMapHistoryFilter != s_MapHistoryFilter)
+			s_MapHistoryFilter = NewMapHistoryFilter;
 
 		CUIRect ClearFinishedButton, ClearAllButton;
 		ClearArea.VSplitMid(&ClearFinishedButton, &ClearAllButton, 4.0f);
@@ -4029,7 +4073,7 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 
 void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 {
-	CUiBackgroundAlphaScaleScope BackgroundAlphaScaleScope(Ui(), g_Config.m_QmMapBrowserOpacity / 100.0f);
+	CUiBackgroundAlphaScaleScope BackgroundAlphaScaleScope(Ui(), g_Config.m_QmUiOpacity / 100.0f);
 
 	// 首次打开菜单时先复用现有 community 选择结果。缓存哈希、过滤器重建
 	// 和列表刷新放到下一帧，避免 ESC 首帧同步执行后台元数据整理。
@@ -4084,7 +4128,8 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 		if(UseNewUi)
 		{
 			CUIRect View = MainView;
-			View.Margin(6.0f, &View);
+			// 左右与设置页背景卡片同边距（直接落在内容基准线上），垂直保留间隙。
+			View.HMargin(6.0f, &View);
 			RenderServerbrowserFavoriteMaps(View);
 		}
 		else
@@ -4096,7 +4141,10 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 
 	CUIRect View = MainView;
 	if(UseNewUi)
-		View.Margin(6.0f, &View);
+	{
+		// 左右与设置页背景卡片同边距（内容基准线 10px），垂直保留间隙。
+		View.HMargin(6.0f, &View);
+	}
 	else
 	{
 		View.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);

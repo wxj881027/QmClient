@@ -3,7 +3,7 @@ members = [
   "src/base",
   "src/engine",
   "src/engine/shared",
-  "src/qm-update",
+  "src/qm/update",
   "src/rust-bridge/test",
 ]
 

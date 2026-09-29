@@ -365,6 +365,9 @@ public:
 	virtual bool IsServerlistError() const = 0;
 	virtual int LoadingProgression() const = 0;
 	virtual uint64_t FriendListRevision() const = 0;
+	// QmClient: 当前客户端自身的位置分类（br_location 或 geoip 推断）。
+	// 与服务器 m_Location 同一套枚举；用于「同地区服务器延迟列显示绿色」。
+	virtual int GetCurrentClientLocation() const = 0;
 
 	virtual int NumServers() const = 0;
 	virtual const CServerInfo *Get(int Index) const = 0;

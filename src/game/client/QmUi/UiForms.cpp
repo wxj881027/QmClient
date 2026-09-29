@@ -700,39 +700,6 @@ namespace ui_widget
 		return Changed;
 	}
 
-	namespace
-	{
-		// 满档渐变：左端保持填充本色，向右做色相偏移（对齐 Codex 滑条拉满时的渐变），
-		// 方角渐变块从圆角末端开始、到旋钮圆心结束，完全落在填充胶囊内部。
-		// Alpha 用于淡入，避免最后一档切换时整条颜色跳变。
-		void DrawDiscreteSliderBloom(const CUIRect &Fill, const ColorRGBA &BaseColor, const float Alpha)
-		{
-			const float CapRadius = Fill.h * 0.5f;
-			CUIRect Bloom = Fill;
-			Bloom.x += CapRadius;
-			Bloom.w -= CapRadius;
-			if(Bloom.w <= 0.0f)
-				return;
-
-			ColorHSLA MidHue = color_cast<ColorHSLA>(BaseColor);
-			MidHue.h = std::fmod(MidHue.h + 0.075f, 1.0f);
-			ColorHSLA EndHue = color_cast<ColorHSLA>(BaseColor);
-			EndHue.h = std::fmod(EndHue.h + 0.15f, 1.0f);
-			const float BaseAlpha = BaseColor.a * std::clamp(Alpha, 0.0f, 1.0f);
-			const ColorRGBA StartColor = BaseColor.WithAlpha(BaseAlpha);
-			const ColorRGBA MidColor = color_cast<ColorRGBA>(MidHue).WithAlpha(BaseAlpha);
-			const ColorRGBA EndColor = color_cast<ColorRGBA>(EndHue).WithAlpha(BaseAlpha);
-
-			CUIRect LeftHalf = Bloom;
-			LeftHalf.w = Bloom.w * 0.52f;
-			CUIRect RightHalf = Bloom;
-			RightHalf.x += LeftHalf.w;
-			RightHalf.w = Bloom.w - LeftHalf.w;
-			LeftHalf.Draw4(StartColor, MidColor, StartColor, MidColor, IGraphics::CORNER_NONE, 0.0f);
-			RightHalf.Draw4(MidColor, EndColor, MidColor, EndColor, IGraphics::CORNER_NONE, 0.0f);
-		}
-	} // namespace
-
 	bool DiscreteSlider(const IUiContext &Ctx, const void *pId, int *pValue, const int Min, const int Max, const CUIRect &Rect)
 	{
 		if(Ctx.m_pUi == nullptr || pValue == nullptr || pId == nullptr || Max <= Min || Rect.w <= 0.0f || Rect.h <= 0.0f)
@@ -742,8 +709,9 @@ namespace ui_widget
 		const float Range = static_cast<float>(Max - Min);
 		const float TargetNormalized = std::clamp((*pValue - Min) / Range, 0.0f, 1.0f);
 
-		// 旋钮直径略大于轨道高度；圆心行程同时用于命中换算与自绘，鼠标不会与旋钮错位。
-		const float KnobSize = std::clamp(Rect.h * 1.15f, 10.0f, 26.0f);
+		// 旋钮直径略小于轨道高度，端点收在轨道内部；圆心行程同时用于命中换算与自绘，
+		// 鼠标不会与旋钮错位。
+		const float KnobSize = std::clamp(Rect.h * 0.82f, 9.0f, 18.0f);
 		const float TrackStart = Rect.x + KnobSize * 0.5f;
 		const float TrackWidth = std::max(0.0f, Rect.w - KnobSize);
 
@@ -782,22 +750,26 @@ namespace ui_widget
 
 		const ColorRGBA FillColor = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
 		CUIRect Fill = Rect;
-		Fill.w = std::max(0.0f, CenterX - Rect.x);
+		// 填充常规延伸到旋钮圆心；弹簧收敛到最小档时完全不画（轨道上只有旋钮），
+		// 最大档时铺满整条轨道（旋钮小于轨道高，盖不住右端圆角帽，会露出深色月牙）。
+		// 两端判定切换瞬间的跳变区完全被旋钮遮挡。
+		const bool AtMin = VisualNormalized <= 0.0001f;
+		const bool AtMax = VisualNormalized >= 1.0f - 0.0001f;
+		Fill.w = AtMin ? 0.0f : (AtMax ? Rect.w : std::max(0.0f, CenterX - Rect.x));
 		if(Fill.w > 0.0f)
 		{
-			DrawRoundedSurface(Ctx, Fill, FillColor, FillColor, Rect.h * 0.5f);
-			float BloomAlpha = *pValue == Max ? 1.0f : 0.0f;
-			if(Ctx.m_pAnim != nullptr)
-			{
-				const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pId));
-				BloomAlpha = std::clamp(ResolveUiAnimValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::ALPHA, BloomAlpha, 0.315f, EEasing::EASE_IN_OUT), 0.0f, 1.0f);
-			}
-			if(BloomAlpha > 0.001f)
-				DrawDiscreteSliderBloom(Fill, FillColor, BloomAlpha);
+			// 填充与右向色相偏移渐变合并为一次圆角四色绘制：拆成多段半透明 Draw4
+			// 会各自触发模糊背板（顶点 alpha < 1 时 Draw4 先垫背板），段与段的背板
+			// 接缝会在填充中间形成一条明显分界线。
+			ColorHSLA EndHsla = color_cast<ColorHSLA>(FillColor);
+			EndHsla.h = std::fmod(EndHsla.h + 0.15f, 1.0f);
+			const ColorRGBA EndColor = color_cast<ColorRGBA>(EndHsla);
+			Fill.Draw4(FillColor, EndColor, FillColor, EndColor, IGraphics::CORNER_ALL, Rect.h * 0.5f);
 		}
 
 		// 档位刻度与旋钮圆心对齐；端点刻度会被旋钮盖住，滑到端点时自然消失。
-		const float DotSize = std::clamp(Rect.h * 0.24f, 2.0f, 4.0f);
+		// 刻度圆点刻意做小（约为旋钮的 1/5），只做档位提示，避免在细滑条上喧宾夺主。
+		const float DotSize = std::clamp(Rect.h * 0.15f, 1.5f, 2.5f);
 		const int NumStops = Max - Min + 1;
 		for(int Stop = 0; Stop < NumStops; ++Stop)
 		{

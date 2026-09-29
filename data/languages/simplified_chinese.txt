@@ -887,6 +887,9 @@ Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 确定保存该皮肤？若已有同名皮肤，将被覆盖。
 
+Arabic
+== 阿拉伯文
+
 Arrow assets
 == 箭头资源
 
@@ -1552,6 +1555,9 @@ Broadcast shown to players without DDNet client
 
 Browse and activate custom audio packs
 == 浏览并启用自定义音频包
+
+Browse font store…
+== 浏览字体商店…
 
 Browse profiles saved on this device
 == 浏览保存在此设备上的配置档
@@ -2540,6 +2546,15 @@ Ctrl+right-click a tile to select its layer in editor
 Cube
 == 方块
 
+Chinese (Simplified)
+== 中文（简体）
+
+Chinese (Traditional)
+== 中文（繁体）
+
+Cyrillic
+== 西里尔
+
 Current
 == 当前
 
@@ -2599,9 +2614,6 @@ Custom community list fetch URL (must be https, leave empty to disable)
 
 Custom font
 == 自定义字体
-
-Custom font weight (variable fonts)
-== 自定义字体字重（可变字体）
 
 Custom Font:
 == 自定义字体：
@@ -3094,6 +3106,9 @@ Disconnected
 
 Discord
 == Discord
+
+Display
+== 展示
 
 Display index
 == 画面索引
@@ -4439,9 +4454,6 @@ Font cursor
 Font size
 == 字体大小
 
-Font style:
-== 字体样式：
-
 For more info: /cmdlist
 == 更多命令请查看：/cmdlist
 
@@ -4916,6 +4928,9 @@ Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=de
 Greeting text
 == 打招呼文本
 
+Greek
+== 希腊文
+
 Grenade
 == 榴弹枪
 
@@ -4936,6 +4951,9 @@ Hammer interaction
 
 Hammer Mode:
 == 锤子模式：
+
+Hammer Mode
+== 锤子模式
 
 Hammer skin steal
 == 锤中偷皮
@@ -5535,10 +5553,10 @@ Interface settings page
 == 界面设置页面
 
 Interface surface
-== 界面表面
+== 界面背景
 
 Interface surface color
-== 界面表面颜色
+== 界面背景颜色
 
 Interface transparency
 == 通用界面透明度
@@ -5696,11 +5714,17 @@ Jump hint vertical position (% of screen height)
 k = Resend loss
 == k = 重发丢包率
 
+Japanese
+== 日文
+
 Kaomoji
 == 表情符号
 
 Kawase
 == Kawase
+
+Korean
+== 韩文
 
 Keep hook when teleporting
 == 传送时保持钩索
@@ -6299,12 +6323,6 @@ Map
 Map browser difficulty star filter bitmask (bits 1-5)
 == 地图浏览器难度星级筛选位掩码（位 1-5）
 
-Map browser surface
-== 地图浏览器表面
-
-Map browser surface color
-== 地图浏览器表面颜色
-
 Map browser transparency
 == 地图浏览器透明度
 
@@ -6733,6 +6751,9 @@ Modified
 
 Modules snap to screen edges, center lines and other HUD modules while dragging
 == 拖动时模块会吸附到屏幕边缘、中线和其他 HUD 模块
+
+Monospace
+== 等宽
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == 沿 Tee 的稳定方向进行更乐观的预测，减少稳定下来所需的延迟
@@ -7333,6 +7354,9 @@ Not downloaded
 
 Not enabled
 == 未启用
+
+Not installed
+== 未安装
 
 Not open, check input device or mic permission
 == 未打开，请检查输入设备或麦克风权限
@@ -8281,6 +8305,12 @@ Preview
 
 Preview 'Hook collisions' being pressed
 == 预览按下时的钩子辅助线
+
+Preview loading…
+== 预览加载中…
+
+Preview unavailable
+== 预览不可用
 
 Preview built with %d skipped slot(s).
 == 预览已生成，但跳过了 %d 个槽位。
@@ -9887,8 +9917,14 @@ Sending, waiting for peer echo
 Sends a command to the antibot
 == 向反机器人发送命令
 
+Sans-serif
+== 无衬线
+
 Separate with commas
 == 用 , 分隔
+
+Serif
+== 衬线
 
 Server
 == 服务器
@@ -13136,8 +13172,11 @@ VAD threshold (percent)
 Vanilla skins only
 == 只显示原生皮肤
 
-Variable custom font weight
-== 可变字体的自定义字重
+Variable custom font weight for Latin text
+== 英文字体的可变字重
+
+Variable custom font weight for Chinese/CJK text
+== CJK 字体的可变字重
 
 Velocity
 == 速度
@@ -18353,6 +18392,9 @@ Feet
 Hands
 == 手
 
+Handwriting
+== 手写
+
 [skins]
 Marking
 == 标记
@@ -18480,6 +18522,48 @@ Ignore
 [Touch button visibility preview]
 Included
 == 包含
+
+English font:
+== 英文字体：
+
+Total fonts:
+== 字体总数：
+
+Font weight:
+== 字重：
+
+CJK font weight:
+== CJK 字重：
+
+Chinese font:
+== CJK 字体（中日韩）：
+
+Icon symbols:
+== 图标符号：
+
+(Follow English font)
+== （跟随英文字体）
+
+(Follow Chinese font)
+== （跟随 CJK 字体）
+
+Font store:
+== 字体商店：
+
+Search online fonts…
+== 搜索在线字体…
+
+Download
+== 下载
+
+Retry
+== 重试
+
+Installed
+== 已安装
+
+Download fonts from the internet instead of shipping them with the client
+== 从网络下载字体，不随客户端打包；点击搜索结果即可安装
 
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <qm-music-hook/qm_qqmusic_protocol.h>
+#include <qm/music/qm_qqmusic_protocol.h>
 
 #include <array>
 #include <cstring>

@@ -931,18 +931,18 @@ TEST(QmNewUiMenuBranches, SettingsColorLabelsUseQmLocalizedKeys)
 	EXPECT_NE(Source.find("CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);"), std::string::npos);
 	EXPECT_NE(Source.find("CUIRect UiColorRow = Rows.NextButton();"), std::string::npos);
 	EXPECT_NE(Source.find("DoLine_AlphaColorPicker(&s_UiColorResetId, ColorMetrics, &UiColorRow, Localize(\"Interface surface\"), &g_Config.m_QmUiColor, &g_Config.m_QmUiOpacity"), std::string::npos);
-	EXPECT_NE(Source.find("CUIRect MapBrowserColorRow = Rows.NextButton();"), std::string::npos);
-	EXPECT_NE(Source.find("DoLine_AlphaColorPicker(&s_MapBrowserColorResetId, ColorMetrics, &MapBrowserColorRow, Localize(\"Map browser surface\"), &g_Config.m_QmMapBrowserColor, &g_Config.m_QmMapBrowserOpacity"), std::string::npos);
+	EXPECT_EQ(Source.find("CUIRect MapBrowserColorRow = Rows.NextButton();"), std::string::npos);
+	EXPECT_EQ(Source.find("DoLine_AlphaColorPicker(&s_MapBrowserColorResetId, ColorMetrics, &MapBrowserColorRow, Localize(\"Map browser surface\"), &g_Config.m_QmMapBrowserColor, &g_Config.m_QmMapBrowserOpacity"), std::string::npos);
 	EXPECT_NE(Source.find("CUIRect ScoreboardColorRow = Rows.NextButton();"), std::string::npos);
 	EXPECT_NE(Source.find("DoLine_AlphaColorPicker(&s_ScoreboardColorResetId, ColorMetrics, &ScoreboardColorRow, Localize(\"Scoreboard surface\"), &g_Config.m_QmScoreboardColor, &g_Config.m_QmScoreboardOpacity"), std::string::npos);
 	EXPECT_NE(Source.find("g_Config.m_QmUiColor"), std::string::npos);
-	EXPECT_NE(Source.find("g_Config.m_QmMapBrowserColor"), std::string::npos);
+	EXPECT_EQ(Source.find("g_Config.m_QmMapBrowserColor"), std::string::npos);
 	EXPECT_NE(Source.find("g_Config.m_QmScoreboardColor"), std::string::npos);
 	EXPECT_NE(Source.find("g_Config.m_QmUiOpacity"), std::string::npos);
-	EXPECT_NE(Source.find("g_Config.m_QmMapBrowserOpacity"), std::string::npos);
+	EXPECT_EQ(Source.find("g_Config.m_QmMapBrowserOpacity"), std::string::npos);
 	EXPECT_NE(Source.find("g_Config.m_QmScoreboardOpacity"), std::string::npos);
 	EXPECT_NE(Source.find("Localize(\"Interface surface\")"), std::string::npos);
-	EXPECT_NE(Source.find("Localize(\"Map browser surface\")"), std::string::npos);
+	EXPECT_EQ(Source.find("Localize(\"Map browser surface\")"), std::string::npos);
 	EXPECT_NE(Source.find("Localize(\"Scoreboard surface\")"), std::string::npos);
 	EXPECT_EQ(Source.find("Localize(\"UI opacity\")"), std::string::npos);
 	EXPECT_EQ(Source.find("Localize(\"Map browser opacity\")"), std::string::npos);
@@ -964,8 +964,8 @@ TEST(QmNewUiMenuBranches, SettingsGraphicsColorPickersExposeIndependentAlphaDoma
 	EXPECT_NE(Graphics.find("CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);"), std::string::npos);
 	EXPECT_NE(Graphics.find("CUIRect UiColorRow = Rows.NextButton();"), std::string::npos);
 	EXPECT_NE(Graphics.find("DoLine_AlphaColorPicker(&s_UiColorResetId, ColorMetrics, &UiColorRow, Localize(\"Interface surface\"), &g_Config.m_QmUiColor, &g_Config.m_QmUiOpacity"), std::string::npos);
-	EXPECT_NE(Graphics.find("CUIRect MapBrowserColorRow = Rows.NextButton();"), std::string::npos);
-	EXPECT_NE(Graphics.find("DoLine_AlphaColorPicker(&s_MapBrowserColorResetId, ColorMetrics, &MapBrowserColorRow, Localize(\"Map browser surface\"), &g_Config.m_QmMapBrowserColor, &g_Config.m_QmMapBrowserOpacity"), std::string::npos);
+	EXPECT_EQ(Graphics.find("CUIRect MapBrowserColorRow = Rows.NextButton();"), std::string::npos);
+	EXPECT_EQ(Graphics.find("DoLine_AlphaColorPicker(&s_MapBrowserColorResetId, ColorMetrics, &MapBrowserColorRow, Localize(\"Map browser surface\"), &g_Config.m_QmMapBrowserColor, &g_Config.m_QmMapBrowserOpacity"), std::string::npos);
 	EXPECT_NE(Graphics.find("CUIRect ScoreboardColorRow = Rows.NextButton();"), std::string::npos);
 	EXPECT_NE(Graphics.find("DoLine_AlphaColorPicker(&s_ScoreboardColorResetId, ColorMetrics, &ScoreboardColorRow, Localize(\"Scoreboard surface\"), &g_Config.m_QmScoreboardColor, &g_Config.m_QmScoreboardOpacity"), std::string::npos);
 	EXPECT_EQ(Graphics.find("graphics-ui-opacity"), std::string::npos);
@@ -1245,11 +1245,11 @@ TEST(QmNewUiMenuBranches, DefaultUiSurfacesUseBlackThirtyPercent)
 	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables.h");
 
 	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_COL(QmUiColor, qm_ui_color, 0x000000"), std::string::npos);
-	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color, 0x000000"), std::string::npos);
+	EXPECT_EQ(QmConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
 	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color, 0x000000"), std::string::npos);
 	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_INT(QmUiOpacity, qm_ui_opacity, 30"), std::string::npos);
 	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_INT(QmUiCardOpacity, qm_ui_card_opacity, 30"), std::string::npos);
-	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_INT(QmMapBrowserOpacity, qm_map_browser_opacity, 30"), std::string::npos);
+	EXPECT_EQ(QmConfigSource.find("MACRO_CONFIG_INT(QmMapBrowserOpacity, qm_map_browser_opacity"), std::string::npos);
 	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_INT(QmScoreboardOpacity, qm_scoreboard_opacity, 30"), std::string::npos);
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(UiColor, ui_color, 0x4D000000"), std::string::npos);
@@ -1566,17 +1566,17 @@ TEST(QmNewUiMenuBranches, NewColorControlsUseIndependentUiDomains)
 	const std::string ScoreboardSource = ReadTextFile("src/game/client/components/scoreboard.cpp");
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmUiColor, qm_ui_color"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
+	EXPECT_EQ(ConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color"), std::string::npos);
 	EXPECT_NE(MenusSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
-	EXPECT_NE(MenusSource.find("ColorHSLA(g_Config.m_QmMapBrowserColor)"), std::string::npos);
+	EXPECT_EQ(MenusSource.find("ColorHSLA(g_Config.m_QmMapBrowserColor)"), std::string::npos);
 	EXPECT_EQ(MenusSource.find("ColorHSLA(g_Config.m_ClMenuPanelColor)"), std::string::npos);
 	const std::string UpdateColors = FunctionBody(MenusSource, "void CMenus::UpdateColors()");
 	const std::string RenderBackground = FunctionBody(MenusSource, "void CMenus::RenderBackground()");
 	EXPECT_NE(UpdateColors.find("ColorHSLA(g_Config.m_UiColor, true)"), std::string::npos);
 	EXPECT_NE(RenderBackground.find("ms_GuiColor.WithAlpha(1.0f)"), std::string::npos);
 	EXPECT_EQ(RenderBackground.find("g_Config.m_QmUiColor"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("ColorHSLA(g_Config.m_QmMapBrowserColor)"), std::string::npos);
+	EXPECT_NE(BrowserSource.find("ColorHSLA(g_Config.m_QmUiColor)"), std::string::npos);
 	EXPECT_NE(ScoreboardSource.find("ColorHSLA(g_Config.m_QmScoreboardColor)"), std::string::npos);
 }
 
@@ -2803,7 +2803,7 @@ TEST(QmNewUiMenuBranches, SettingsDropdownWrapperAndNestedListsKeepSharedVisualA
 
 	ASSERT_FALSE(Tee.empty());
 	ASSERT_FALSE(Wrapper.empty());
-	EXPECT_NE(Wrapper.find("Properties.m_VisualStyle = QmSettingsDropdownVisualStyle(m_SettingsUiTheme);"), std::string::npos);
+	EXPECT_NE(Wrapper.find("Properties.m_VisualStyle = QmSettingsDropdownVisualStyle(m_SettingsUiTheme, SettingsCardDeckVisualOptions().m_BorderColor);"), std::string::npos);
 	EXPECT_NE(ListBoxHeader.find("void SetScrollbarAlwaysReserved(bool AlwaysReserved)"), std::string::npos);
 	EXPECT_NE(ListBoxSource.find("ScrollParams.m_ScrollbarAlwaysReserved = m_ScrollbarAlwaysReserved;"), std::string::npos);
 	EXPECT_NE(Tee.find("s_QueueListBox.SetScrollbarAlwaysReserved(true);"), std::string::npos);

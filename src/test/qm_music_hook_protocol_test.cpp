@@ -1,8 +1,8 @@
 #include "test.h"
 
 #include <gtest/gtest.h>
-#include <qm-music-hook/qm_kugou_protocol.h>
-#include <qm-music-hook/qm_qqmusic_protocol.h>
+#include <qm/music/qm_kugou_protocol.h>
+#include <qm/music/qm_qqmusic_protocol.h>
 
 #include <string>
 

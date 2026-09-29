@@ -289,6 +289,7 @@ public:
 	bool IsServerlistError() const override;
 	int LoadingProgression() const override;
 	uint64_t FriendListRevision() const override { return m_FriendListRevision; }
+	int GetCurrentClientLocation() const override { return DetermineOwnLocation(); }
 	void RequestResort() { m_NeedResort = true; }
 
 	int NumServers() const override { return m_vpServerlist.size(); }

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <qm-soda-hook/qm_soda_probe.h>
+#include <qm/hooks/soda/qm_soda_probe.h>
 
 using namespace QmSodaProbe;
 

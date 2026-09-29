@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <qm-soda-hook/qm_soda_protocol.h>
+#include <qm/hooks/soda/qm_soda_protocol.h>
 
 #include <cstring>
 

@@ -423,3 +423,17 @@ TEST(GraphicsBackendContract, VulkanDeclaresSingleSampleExternalPassConstraint)
 	const std::string Source = ReadTestSourceFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
 	EXPECT_NE(Source.find("m_RenderTargetExternalPassRequiresSingleSample = true"), std::string::npos);
 }
+
+TEST(GraphicsBackendContract, CrashReportIdentifiesActualBackend)
+{
+	// 运行期图形故障报告按实际崩溃后端归类，供诊断与打包反馈使用。
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Graphics backend: Vulkan 1.4.0\nGraphics error:/nDevice lost\n"), BACKEND_TYPE_VULKAN);
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Exception module: opengl32.dll\r\nGraphics backend: OpenGL\r\n"), BACKEND_TYPE_OPENGL);
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Graphics backend: OpenGL ES 3.0.0\n"), BACKEND_TYPE_OPENGL_ES);
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Graphics backend: GLES 3.0.0\n"), BACKEND_TYPE_OPENGL_ES);
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Graphics backend: Metal 3.0.0\n"), BACKEND_TYPE_METAL);
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Report type: graphics_fatal_error\nConfigured graphics backend: Vulkan API 1.4\n"), BACKEND_TYPE_VULKAN);
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Report type: graphics_fatal_error\nGraphics backend: Vulkan\nConfigured graphics backend: OpenGL\nGraphics error:/nVK_ERROR_DEVICE_LOST/n"), BACKEND_TYPE_VULKAN);
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Graphics backend: headless\n"), BACKEND_TYPE_AUTO);
+	EXPECT_EQ(graphics_backend::BackendFromCrashReport("Graphics error: Vulkan\n"), BACKEND_TYPE_AUTO);
+}

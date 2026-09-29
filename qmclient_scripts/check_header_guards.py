@@ -32,21 +32,21 @@ EXCEPTIONS = [
 ]
 
 GUARD_OVERRIDES = {
-    "src/qm-update/updater_arguments.h": "QM_UPDATE_UPDATER_ARGUMENTS_H",
-    "src/qm-nmt-hook/qm_netease_bootstrap.h": "QM_NMT_HOOK_QM_NETEASE_BOOTSTRAP_H",
-    "src/qm-nmt-hook/qm_netease_cdp.h": "QM_NMT_HOOK_QM_NETEASE_CDP_H",
-    "src/qm-nmt-hook/qm_netease_cdp_client.h": "QM_NMT_HOOK_QM_NETEASE_CDP_CLIENT_H",
-    "src/qm-nmt-hook/qm_netease_frontend_bridge.h": "QM_NMT_HOOK_QM_NETEASE_FRONTEND_BRIDGE_H",
-    "src/qm-soda-hook/qm_soda_probe.h": "QM_SODA_HOOK_QM_SODA_PROBE_H",
-    "src/qm-soda-hook/qm_soda_protocol.h": "QM_SODA_HOOK_QM_SODA_PROTOCOL_H",
-    "src/qm-soda-hook/qm_soda_watchdog.h": "QM_SODA_HOOK_QM_SODA_WATCHDOG_H",
-    "src/qm-soda-hook/qm_soda_writer.h": "QM_SODA_HOOK_QM_SODA_WRITER_H",
-    "src/qm-music-hook/qm_kugou_protocol.h": "QM_MUSIC_HOOK_QM_KUGOU_PROTOCOL_H",
-    "src/qm-music-hook/qm_music_source.h": "QM_MUSIC_HOOK_QM_MUSIC_SOURCE_H",
-    "src/qm-music-hook/qm_qqmusic_protocol.h": "QM_MUSIC_HOOK_QM_QQMUSIC_PROTOCOL_H",
-    "src/qm-music-hook/qm_kugou_source.h": "QM_MUSIC_HOOK_QM_KUGOU_SOURCE_H",
-    "src/qm-music-hook/qm_qqmusic_source.h": "QM_MUSIC_HOOK_QM_QQMUSIC_SOURCE_H",
-    "src/qm-music-hook/qm_music_publication.h": "QM_MUSIC_HOOK_QM_MUSIC_PUBLICATION_H",
+    "src/qm/update/updater_arguments.h": "QM_UPDATE_UPDATER_ARGUMENTS_H",
+    "src/qm/hooks/netease/qm_netease_bootstrap.h": "QM_HOOKS_NETEASE_QM_NETEASE_BOOTSTRAP_H",
+    "src/qm/hooks/netease/qm_netease_cdp.h": "QM_HOOKS_NETEASE_QM_NETEASE_CDP_H",
+    "src/qm/hooks/netease/qm_netease_cdp_client.h": "QM_HOOKS_NETEASE_QM_NETEASE_CDP_CLIENT_H",
+    "src/qm/hooks/netease/qm_netease_frontend_bridge.h": "QM_HOOKS_NETEASE_QM_NETEASE_FRONTEND_BRIDGE_H",
+    "src/qm/hooks/soda/qm_soda_probe.h": "QM_HOOKS_SODA_QM_SODA_PROBE_H",
+    "src/qm/hooks/soda/qm_soda_protocol.h": "QM_HOOKS_SODA_QM_SODA_PROTOCOL_H",
+    "src/qm/hooks/soda/qm_soda_watchdog.h": "QM_HOOKS_SODA_QM_SODA_WATCHDOG_H",
+    "src/qm/hooks/soda/qm_soda_writer.h": "QM_HOOKS_SODA_QM_SODA_WRITER_H",
+    "src/qm/music/qm_kugou_protocol.h": "QM_MUSIC_QM_KUGOU_PROTOCOL_H",
+    "src/qm/music/qm_music_source.h": "QM_MUSIC_QM_MUSIC_SOURCE_H",
+    "src/qm/music/qm_qqmusic_protocol.h": "QM_MUSIC_QM_QQMUSIC_PROTOCOL_H",
+    "src/qm/music/qm_kugou_source.h": "QM_MUSIC_QM_KUGOU_SOURCE_H",
+    "src/qm/music/qm_qqmusic_source.h": "QM_MUSIC_QM_QQMUSIC_SOURCE_H",
+    "src/qm/music/qm_music_publication.h": "QM_MUSIC_QM_MUSIC_PUBLICATION_H",
 }
 
 QMCLIENT_DIRS = [

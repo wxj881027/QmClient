@@ -7,7 +7,7 @@
 #include <windows.h>
 
 #include <commctrl.h>
-#include <qm-update/updater_arguments.h>
+#include <qm/update/updater_arguments.h>
 #include <shellapi.h>
 #include <winver.h>
 

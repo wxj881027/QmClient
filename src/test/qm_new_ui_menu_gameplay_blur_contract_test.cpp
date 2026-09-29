@@ -78,6 +78,9 @@ TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurUsesSharedUiBackdropWithTransp
 	EXPECT_NE(PrepareBlur.find("m_GaussianBlurPrepared && m_GaussianBlurPreparedFrame == PerfFrame"), std::string::npos);
 	EXPECT_NE(PrepareBlur.find("m_GaussianBlurPreparedFrame = PerfFrame"), std::string::npos);
 	EXPECT_NE(PrepareBlur.find("m_GaussianBlurPrepared = true"), std::string::npos);
+	// 同帧失败闩：GPU 侧失败后同帧不得反复重试（背板捕获/模糊提交开销）。
+	EXPECT_NE(PrepareBlur.find("m_GaussianBlurFailedFrame == PerfFrame"), std::string::npos);
+	EXPECT_NE(PrepareBlur.find("m_GaussianBlurFailedFrame = PerfFrame"), std::string::npos);
 	EXPECT_NE(UiSource.find("Graphics()->GetScreen"), std::string::npos);
 	EXPECT_NE(UiSource.find("UiGaussianBlurTargetDimension"), std::string::npos);
 	EXPECT_NE(CachedRectDraw.find("GaussianBlurScopeAlpha()"), std::string::npos);
@@ -190,6 +193,10 @@ TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurSkipsButtonsAndKeepsSurfaceRou
 	EXPECT_NE(FunctionBody(UiSource, "int CUi::DoButton_PopupMenu(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(UiSource, "bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, const SEditBoxRenderOptions &RenderOptions)").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(UiSource, "SEditResult<int64_t> CUi::DoValueSelectorWithState(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
+	// 颜色选择器弹窗内容画在已模糊的弹窗背板之上，必须抑制模糊，否则明度叠加层
+	// 的半透明角点会把饱和度渐变覆盖成模糊背板（方块呈灰度、不随色相变化）。
+	const std::string UiPopupsSource = ReadTextFile("src/game/client/ui_popups.cpp");
+	EXPECT_NE(FunctionBody(UiPopupsSource, "CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_MenuInternal(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_MenuTabInternal(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
 	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_Toggle(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);

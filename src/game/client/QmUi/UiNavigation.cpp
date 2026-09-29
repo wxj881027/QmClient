@@ -84,7 +84,7 @@ namespace ui_widget
 		return CapsuleTabBarSlotAtPoint(pSlots, Count, Ctx.m_pUi->MouseX(), Ctx.m_pUi->MouseY(), Slop);
 	}
 
-	void CapsuleTabBarChrome(const IUiContext &Ctx, const uint64_t GroupId, const CUIRect &RowRect, const CUIRect *pActiveSlot, const SCapsuleTabBarStyle &Style)
+	void CapsuleTabBarChrome(const IUiContext &Ctx, const uint64_t GroupId, const CUIRect &RowRect, const CUIRect *pActiveSlot, const SCapsuleTabBarStyle &Style, const SCapsuleTabBarTints &Tints)
 	{
 		if(Ctx.m_pUi == nullptr || RowRect.w <= 0.0f || RowRect.h <= 0.0f)
 			return;
@@ -96,6 +96,19 @@ namespace ui_widget
 		CUIRect Capsule;
 		RowRect.Margin(-Style.m_CapsulePadding, &Capsule);
 		DrawRoundedSurface(Ctx, Capsule, Style.m_CapsuleColor, ColorRGBA(), ui_token::radius::PILL);
+
+		// 单槽位自定义底色：压在容器上、藏在滑块下，几何与滑块一致（同内缩的胶囊形），
+		// alpha 为 0 视为该槽位无底色。
+		for(int i = 0; i < Tints.m_Count; ++i)
+		{
+			if(Tints.m_pColors[i].a <= 0.0f || Tints.m_pSlots[i].w <= 0.0f || Tints.m_pSlots[i].h <= 0.0f)
+				continue;
+			CUIRect TintRect;
+			Tints.m_pSlots[i].Margin(Style.m_IndicatorInset, &TintRect);
+			if(TintRect.w <= 0.0f || TintRect.h <= 0.0f)
+				continue;
+			DrawRoundedSurface(Ctx, TintRect, Tints.m_pColors[i], ColorRGBA(), ui_token::radius::PILL);
+		}
 
 		if(pActiveSlot == nullptr)
 			return;

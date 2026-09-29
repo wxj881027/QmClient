@@ -296,6 +296,7 @@ class CStun
 		int64_t m_LastResponse = -1;
 		int64_t m_NextTry = -1;
 		int m_NumUnsuccessfulTries = -1;
+		int m_NumSendFailures = 0;
 
 	public:
 		CProtocol(int Index, NETSOCKET Socket);

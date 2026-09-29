@@ -485,12 +485,22 @@ struct SPopupMenuProperties
 	ColorRGBA m_BorderColor = ColorRGBA(0.5f, 0.5f, 0.5f, 0.75f);
 	ColorRGBA m_BackgroundColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.75f);
 	bool m_AutoReposition = true;
+	// 二级界面大弹窗：打开时在当前视口内居中显示，不锚定触发元素；
+	// 搭配 m_BlockUnderlyingScroll / m_BlockUnderlyingPointerInput 锁定下层页面的滚动与指针交互。
+	bool m_CenterInViewport = false;
+	// 开关缩放动画：入场从 92% 放大到 100%，出场收缩渐隐后移除；
+	// 仅二级界面大弹窗启用，经典下拉/消息弹窗默认关闭零影响。
+	bool m_Animate = false;
 	bool m_ClipToViewport = false;
 	bool m_BlockUnderlyingScroll = false;
 	bool m_BlockUnderlyingPointerInput = false;
 	bool m_RequireSourceRefresh = false;
 	uint64_t m_SourceFrame = 0;
 	CUIRect m_Viewport{};
+	// 有效时弹窗外框同时包裹该锚点矩形（如下拉框的触发按钮），边框把按钮
+	// 与列表画成一个整体；仅当锚点与弹窗水平对齐时才实际包裹。
+	bool m_HasAnchorSurface = false;
+	CUIRect m_AnchorSurface{};
 };
 
 enum class EUiWheelOwnerPriority
@@ -687,6 +697,9 @@ private:
 	int m_GaussianBlurMode = -1;
 	bool m_GaussianBlurPrepared = false;
 	uint64_t m_GaussianBlurPreparedFrame = 0;
+	// 同帧失败闩：捕获/模糊在某一帧失败后，同帧后续矩形直接跳过重试，
+	// 避免对同一帧反复 FlushQuadBatch + 背板捕获 + 模糊提交（失败风暴）。
+	uint64_t m_GaussianBlurFailedFrame = 0;
 
 	const void *m_pHotItem = nullptr;
 	const void *m_pActiveItem = nullptr;
@@ -766,12 +779,21 @@ private:
 	{
 		static constexpr float POPUP_BORDER = 1.0f;
 		static constexpr float POPUP_MARGIN = 4.0f;
+		// 开关缩放动画时长（秒）：入场放大 + 出场收缩。
+		static constexpr float POPUP_OPEN_DURATION = 0.12f;
+		static constexpr float POPUP_CLOSE_DURATION = 0.09f;
 
 		const SPopupMenuId *m_pId;
 		SPopupMenuProperties m_Props;
 		CUIRect m_Rect;
 		void *m_pContext;
 		FPopupMenuFunction m_pfnFunc;
+		// 动画状态（仅 m_Props.m_Animate 弹窗使用）：
+		// m_OpenStart < 0 表示无入场动画；m_Closing 表示逻辑已关闭、
+		// 正在播放出场动画（期间不参与任何输入判定），结束后移除。
+		float m_OpenStart = -1.0f;
+		bool m_Closing = false;
+		float m_CloseStart = 0.0f;
 	};
 	std::vector<SPopupMenu> m_vPopupMenus;
 	FPopupMenuClosedCallback m_pfnPopupMenuClosedCallback = nullptr;
@@ -1242,6 +1264,9 @@ public:
 		SQmDropdownPopupPolicy m_PopupPolicy;
 
 		bool m_SpecialFontRenderMode = false; // TClient
+		// QmClient: 按条目渲染字体前先检查该名字能否解析为已加载的 face（商店
+		// 搜索弹层的条目是未安装的在线字体，缺字时静默跳过切换，避免逐帧失败日志）。
+		bool m_FontFaceAvailabilityCheck = false;
 
 		SSelectionPopupContext();
 		void Reset();

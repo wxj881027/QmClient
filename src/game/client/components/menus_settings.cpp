@@ -4265,11 +4265,6 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			if(DoLine_AlphaColorPicker(&s_UiCardColorResetId, ColorMetrics, &UiCardColorRow, Localize("Settings card background"), &g_Config.m_QmUiCardColor, &g_Config.m_QmUiCardOpacity, DefaultConfig::QmUiCardColor, DefaultConfig::QmUiCardOpacity))
 				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 
-			static CButtonContainer s_MapBrowserColorResetId;
-			CUIRect MapBrowserColorRow = Rows.NextButton();
-			if(DoLine_AlphaColorPicker(&s_MapBrowserColorResetId, ColorMetrics, &MapBrowserColorRow, Localize("Map browser surface"), &g_Config.m_QmMapBrowserColor, &g_Config.m_QmMapBrowserOpacity, DefaultConfig::QmMapBrowserColor, DefaultConfig::QmMapBrowserOpacity))
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
-
 			static CButtonContainer s_ScoreboardColorResetId;
 			CUIRect ScoreboardColorRow = Rows.NextButton();
 			if(DoLine_AlphaColorPicker(&s_ScoreboardColorResetId, ColorMetrics, &ScoreboardColorRow, Localize("Scoreboard surface"), &g_Config.m_QmScoreboardColor, &g_Config.m_QmScoreboardOpacity, DefaultConfig::QmScoreboardColor, DefaultConfig::QmScoreboardOpacity))
@@ -4290,15 +4285,12 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			Button.VSplitLeft(std::clamp(Button.w * 0.36f, 96.0f, 150.0f), &BlurModeLabel, &BlurModeSegments);
 			BlurModeSegments.VSplitLeft(8.0f, nullptr, &BlurModeSegments);
 			Ui()->DoLabel(&BlurModeLabel, Localize("Blur mode"), BodySize, TEXTALIGN_ML);
-			for(int i = 0; i < (int)std::size(apBlurModeLabels); ++i)
-			{
-				CUIRect Segment;
-				BlurModeSegments.VSplitLeft(BlurModeSegments.w / (std::size(apBlurModeLabels) - i), &Segment, &BlurModeSegments);
-				const int Corners = i == 0 ? IGraphics::CORNER_L : (i == (int)std::size(apBlurModeLabels) - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-				if(DoButton_MenuTab(&s_aGraphicsBlurModeButtons[i], apBlurModeLabels[i], g_Config.m_QmBlurMode == i, &Segment, Corners, nullptr, nullptr, nullptr, nullptr, 5.0f))
-					g_Config.m_QmBlurMode = i;
-				GameClient()->m_Tooltips.DoToolTip(&s_aGraphicsBlurModeButtons[i], &Segment, apBlurModeTooltips[i]);
-			}
+			// 多选一分段选择器：新 UI 为胶囊滑块，旧 UI 为分段圆角按钮。
+			const int NewBlurMode = DoSegmentedChoice(s_aGraphicsBlurModeButtons, apBlurModeLabels, (int)std::size(apBlurModeLabels), g_Config.m_QmBlurMode, BlurModeSegments);
+			if(NewBlurMode != g_Config.m_QmBlurMode)
+				g_Config.m_QmBlurMode = NewBlurMode;
+			// 整行 tooltip 跟随当前模式，保留原先逐段的说明文案。
+			GameClient()->m_Tooltips.DoToolTip(&s_aGraphicsBlurModeButtons[0], &Button, apBlurModeTooltips[std::clamp(g_Config.m_QmBlurMode, 0, (int)std::size(apBlurModeTooltips) - 1)]);
 
 			Button = Rows.NextLine();
 			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardBorders, "show-settings-card-borders", Localize("Show settings card borders"), g_Config.m_QmUiCardBorders, &Button))
@@ -4324,34 +4316,10 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				Row.VSplitLeft(std::clamp(Row.w * 0.36f, 96.0f, 150.0f), &Label, &Segments);
 				Segments.VSplitLeft(8.0f, nullptr, &Segments);
 				Ui()->DoLabel(&Label, pLabel, BodySize, TEXTALIGN_ML);
-				if(g_Config.m_QmNewUi != 0)
-				{
-					// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画分段文字。
-					// 同一函数里有多行选择器，行标识要带上按钮数组地址，避免共用一条滑块轨道。
-					CUIRect aSegmentSlots[8];
-					CUIRect SegmentsRemainder = Segments;
-					const int SegmentCount = std::clamp(Count, 0, (int)std::size(aSegmentSlots));
-					for(int i = 0; i < SegmentCount; ++i)
-						SegmentsRemainder.VSplitLeft(SegmentsRemainder.w / (SegmentCount - i), &aSegmentSlots[i], &SegmentsRemainder);
-					const uint64_t SegmentGroup = BuildUiAnimNodeKey(MakeUiScopeHash("settings_choice_row_capsule"), reinterpret_cast<uint64_t>(pButtons));
-					ui_widget::CapsuleTabBarChrome(TabBarUiContext(), SegmentGroup, aSegmentSlots, SegmentCount, Current, SettingsCapsuleTabBarStyle());
-					for(int i = 0; i < SegmentCount; ++i)
-					{
-						if(DoButton_MenuTab(&pButtons[i], ppLabels[i], Current == i, &aSegmentSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
-							OnChanged(i);
-					}
-				}
-				else
-				{
-					for(int i = 0; i < Count; ++i)
-					{
-						CUIRect Segment;
-						Segments.VSplitLeft(Segments.w / (Count - i), &Segment, &Segments);
-						const int Corners = i == 0 ? IGraphics::CORNER_L : (i == Count - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-						if(DoButton_MenuTab(&pButtons[i], ppLabels[i], Current == i, &Segment, Corners, nullptr, nullptr, nullptr, nullptr, 5.0f))
-							OnChanged(i);
-					}
-				}
+				// 多选一分段选择器：新 UI 为胶囊滑块（SettingsCapsuleTabBarStyle 为辅助函数缺省样式），旧 UI 为分段圆角按钮。
+				const int ClickedSegment = DoSegmentedChoice(pButtons, ppLabels, Count, Current, Segments);
+				if(ClickedSegment != Current)
+					OnChanged(ClickedSegment);
 			};
 			const char *apIconColorLabels[] = {Localize("White"), Localize("Black"), Localize("Custom"), Localize("Rainbow")};
 			// Thin 未随包字体，不再提供该样式；weight 2 配置值仍兼容（渲染为 Light）。
@@ -4473,14 +4441,10 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-ui-motion-level-label", &Label, Localize("UI motion level"), BodySize, TEXTALIGN_ML);
 			static CButtonContainer s_aMotionButtons[3];
 			const char *apMotionLabels[] = {Localize("Off"), Localize("Reduced"), Localize("Full")};
-			for(int i = 0; i < 3; ++i)
-			{
-				CUIRect Segment;
-				Segments.VSplitLeft(Segments.w / (3 - i), &Segment, &Segments);
-				const int Corners = i == 0 ? IGraphics::CORNER_L : (i == 2 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-				if(DoButton_MenuTab(&s_aMotionButtons[i], apMotionLabels[i], g_Config.m_QmUiMotionLevel == i, &Segment, Corners, nullptr, nullptr, nullptr, nullptr, 5.0f))
-					g_Config.m_QmUiMotionLevel = i;
-			}
+			// 多选一分段选择器：新 UI 为胶囊滑块，旧 UI 为分段圆角按钮。
+			const int NewMotionLevel = DoSegmentedChoice(s_aMotionButtons, apMotionLabels, 3, g_Config.m_QmUiMotionLevel, Segments);
+			if(NewMotionLevel != g_Config.m_QmUiMotionLevel)
+				g_Config.m_QmUiMotionLevel = NewMotionLevel;
 			const char *pMotionDescription = nullptr;
 			if(g_Config.m_QmUiMotionLevel == 0)
 				pMotionDescription = Localize("Off: disables all interface animations while preserving the options below");
@@ -7736,6 +7700,8 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				for(const int Input : aInputs)
 					Revision = (Revision ^ static_cast<uint64_t>(static_cast<uint32_t>(Input))) * 1099511628211ull;
 				Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFont)) * 1099511628211ull;
+				Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFontCjk)) * 1099511628211ull;
+				Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFontIcons)) * 1099511628211ull;
 				Revision = (Revision ^ str_quickhash(Client()->PlayerName())) * 1099511628211ull;
 				Revision = (Revision ^ str_quickhash(Client()->DummyName())) * 1099511628211ull;
 				Revision = (Revision ^ str_quickhash(g_Config.m_PlayerClan)) * 1099511628211ull;

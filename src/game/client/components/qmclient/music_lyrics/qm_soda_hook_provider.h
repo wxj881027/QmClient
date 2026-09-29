@@ -2,7 +2,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_QM_SODA_HOOK_PROVIDER_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_MUSIC_LYRICS_QM_SODA_HOOK_PROVIDER_H
 
-#include <qm-soda-hook/qm_soda_protocol.h>
+#include <qm/hooks/soda/qm_soda_protocol.h>
 
 #include <cstddef>
 #include <cstdint>

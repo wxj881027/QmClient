@@ -603,6 +603,11 @@ void CTClient::ConchainRandomColor(IConsole::IResult *pResult, void *pUserData, 
 void CTClient::OnInit()
 {
 	TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+	// QmClient: 分类字体（中文/图标符号）随主字体一并应用。
+	TextRender()->SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
+	TextRender()->SetCustomFaceIcons(g_Config.m_TcCustomFontIcons);
+	TextRender()->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
+	TextRender()->SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
 	m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
 	m_UpdateAutoEnabled = g_Config.m_QmAutoUpdate != 0;
 	if(g_Config.m_QmAutoUpdate)
@@ -5185,7 +5190,8 @@ void CTClient::AddFavoriteMap(const char *pMapName)
 	if(!pMapName || pMapName[0] == '\0')
 		return;
 	m_FavoriteMaps.insert(std::string(pMapName));
-	log_info("qmclient", "Added favorite map: %s", pMapName);
+	// 启动恢复收藏会复用本方法，成功路径不打 info 避免启动期刷屏。
+	log_debug("qmclient", "Added favorite map: %s", pMapName);
 }
 
 void CTClient::RemoveFavoriteMap(const char *pMapName)
@@ -5193,7 +5199,7 @@ void CTClient::RemoveFavoriteMap(const char *pMapName)
 	if(!pMapName || pMapName[0] == '\0')
 		return;
 	m_FavoriteMaps.erase(std::string(pMapName));
-	log_info("qmclient", "Removed favorite map: %s", pMapName);
+	log_debug("qmclient", "Removed favorite map: %s", pMapName);
 }
 
 void CTClient::ClearFavoriteMaps()

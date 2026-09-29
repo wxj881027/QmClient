@@ -23,6 +23,10 @@ namespace ui_widget
 	// 胶囊 Tabbar：整排 Tab 共用一个胶囊容器，激活位置由一枚弹簧驱动的滑块胶囊标记。
 	// 绘制顺序是硬约束 —— 先 CapsuleTabBarChrome，再画各 Tab 的文字/图标，滑块必须压在
 	// 文字之下，否则滑动途中会盖住经过的 Tab 文字。
+
+	// 滑块与 hover 胶囊共用的内缩量：hover 反馈必须与激活滑块同几何，不能大出一圈。
+	inline constexpr float CAPSULE_TAB_INDICATOR_INSET = 2.0f;
+
 	struct SCapsuleTabBarStyle
 	{
 		ColorRGBA m_CapsuleColor = ui_token::color::SURFACE_HIGHLIGHT; // 整排容器底色
@@ -30,7 +34,7 @@ namespace ui_widget
 		ColorRGBA m_ActiveLabelColor = ui_token::color::TEXT_ON_ACCENT; // 滑块上的激活文字
 		ColorRGBA m_InactiveLabelColor = ui_token::color::TEXT_PRIMARY; // 容器上的普通文字
 		float m_CapsulePadding = 0.0f; // 容器相对 Tab 行的外扩（0 = 与 Tab 行同尺寸）
-		float m_IndicatorInset = 2.0f; // 滑块相对 Tab 槽的内缩
+		float m_IndicatorInset = CAPSULE_TAB_INDICATOR_INSET; // 滑块相对 Tab 槽的内缩
 	};
 
 	// 胶囊 Tab 的纵向命中容差：胶囊只有一行高（SUB_TAB_HEIGHT），按在上下边缘、或按下后
@@ -85,12 +89,29 @@ namespace ui_widget
 	// v2 动画运行时的弹簧轨道按帧求解，切换 Tab 时带速度续接地滑过去。
 	// RowRect 为 CapsuleTabBarRowRect 的结果，pActiveSlot 为当前激活 Tab 槽
 	// （nullptr 表示本帧没有激活项，此时只画容器）。
-	void CapsuleTabBarChrome(const IUiContext &Ctx, uint64_t GroupId, const CUIRect &RowRect, const CUIRect *pActiveSlot, const SCapsuleTabBarStyle &Style);
+	// Tints 为可选的单槽位自定义底色：画在容器之上、滑块之下，几何与滑块一致
+	// （同 m_IndicatorInset 内缩），alpha 为 0 的槽位不画。
+	struct SCapsuleTabBarTints
+	{
+		const CUIRect *m_pSlots = nullptr;
+		const ColorRGBA *m_pColors = nullptr;
+		int m_Count = 0;
+	};
+
+	void CapsuleTabBarChrome(const IUiContext &Ctx, uint64_t GroupId, const CUIRect &RowRect, const CUIRect *pActiveSlot, const SCapsuleTabBarStyle &Style, const SCapsuleTabBarTints &Tints = {});
 
 	// 直接给槽位表的重载：容器取槽位并集，激活项取 ActiveIndex（越界则只画容器）。
-	inline void CapsuleTabBarChrome(const IUiContext &Ctx, uint64_t GroupId, const CUIRect *pSlots, int Count, int ActiveIndex, const SCapsuleTabBarStyle &Style)
+	// pSlotTints 为与槽位表等长的颜色数组（可为 nullptr），alpha 为 0 表示该槽位无自定义底色。
+	inline void CapsuleTabBarChrome(const IUiContext &Ctx, uint64_t GroupId, const CUIRect *pSlots, int Count, int ActiveIndex, const SCapsuleTabBarStyle &Style, const ColorRGBA *pSlotTints = nullptr)
 	{
-		CapsuleTabBarChrome(Ctx, GroupId, CapsuleTabBarRowRect(pSlots, Count), pSlots != nullptr && ActiveIndex >= 0 && ActiveIndex < Count ? &pSlots[ActiveIndex] : nullptr, Style);
+		SCapsuleTabBarTints Tints;
+		if(pSlotTints != nullptr)
+		{
+			Tints.m_pSlots = pSlots;
+			Tints.m_pColors = pSlotTints;
+			Tints.m_Count = Count;
+		}
+		CapsuleTabBarChrome(Ctx, GroupId, CapsuleTabBarRowRect(pSlots, Count), pSlots != nullptr && ActiveIndex >= 0 && ActiveIndex < Count ? &pSlots[ActiveIndex] : nullptr, Style, Tints);
 	}
 
 	// 胶囊配色推导：滑块与文字色由容器表面色明暗自适应 —— 容器偏暗用亮滑块 + 深字，

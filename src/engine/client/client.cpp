@@ -128,51 +128,10 @@ static bool gs_QmTestMainThreadAssert = false;
 static bool gs_QmTestMainThreadStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
 static constexpr const char *gs_pQmLifecycleMarkerFile = "qmclient/lifecycle_pending.marker";
-static constexpr const char *gs_pQmGraphicsRecoveryStateFile = "qmclient/graphics_recovery.marker";
 #if defined(CONF_FAMILY_WINDOWS)
 static constexpr const char *gs_pQmCrashReporterBaselineFile = "qmclient/crash_reporter_started_at.marker";
 #endif
 static bool gs_aLoadedPreviousConfigPath[ConfigDomain::NUM] = {};
-
-struct SQmLatestCrashReport
-{
-	char m_aPath[IO_MAX_PATH_LENGTH] = "";
-	time_t m_TimeModified = 0;
-	time_t m_MinTimeModified = 0;
-	int m_Rank = 0;
-};
-
-static int QmCrashReportRank(const char *pName)
-{
-	if(str_endswith_nocase(pName, "_fatal_report.txt") != nullptr)
-		return 2;
-	if(str_endswith_nocase(pName, ".RTP") != nullptr)
-		return 1;
-	return 0;
-}
-
-static int FindLatestQmCrashReportCallback(const CFsFileInfo *pInfo, int IsDir, int Type, void *pUser)
-{
-	(void)Type;
-	if(IsDir || pInfo == nullptr || pInfo->m_pName == nullptr)
-		return 0;
-
-	SQmLatestCrashReport *pLatest = static_cast<SQmLatestCrashReport *>(pUser);
-	const int Rank = QmCrashReportRank(pInfo->m_pName);
-	if(Rank == 0 || pInfo->m_TimeModified < pLatest->m_MinTimeModified)
-		return 0;
-	if(pLatest->m_aPath[0] != '\0' &&
-		(pInfo->m_TimeModified < pLatest->m_TimeModified ||
-			(pInfo->m_TimeModified == pLatest->m_TimeModified && Rank <= pLatest->m_Rank)))
-	{
-		return 0;
-	}
-
-	str_format(pLatest->m_aPath, sizeof(pLatest->m_aPath), "%s/%s", gs_pQmCrashDumpDir, pInfo->m_pName);
-	pLatest->m_TimeModified = pInfo->m_TimeModified;
-	pLatest->m_Rank = Rank;
-	return 0;
-}
 
 // QmClient: 退出流程兜底。个别图形驱动会让进程停留在退出清理阶段不再响应，
 // 用户只能手动结束进程（证据见 dumps/QmClient_Crash 下的 hang report）。
@@ -390,336 +349,6 @@ static bool ReadQmLifecycleMarkerStartedAt(IStorage *pStorage, int64_t &StartedA
 	}
 	free(pMarker);
 	return StartedAt > 0;
-}
-
-// 图形崩溃恢复状态：记录触发恢复的崩溃报告指纹和被安全设置覆盖前的用户偏好，
-// 用于在下一次启动时把用户偏好还回去，避免恢复逻辑永久改写用户配置。
-struct SQmGraphicsRecoveryState
-{
-	int64_t m_ReportTimeModified = 0;
-	char m_aReportPath[IO_MAX_PATH_LENGTH] = "";
-	int m_Mode = 0;
-	char m_aBackend[256] = "";
-	char m_aRecoveryBackend[32] = "OpenGL";
-	char m_aFailedBackend[32] = "";
-	int m_GLMajor = 0;
-	int m_GLMinor = 0;
-	int m_GLPatch = 0;
-	int m_FsaaSamples = 0;
-	int m_Fullscreen = 0;
-	int m_Borderless = 0;
-	int m_3DTextureAnalysisRan = 0;
-	int m_DriverIsBlocked = 0;
-	bool m_HasFullPreference = false;
-	graphics_backend::SRecoveryFailures m_Failures;
-	bool m_Applied = false;
-};
-
-static bool ReadQmGraphicsRecoveryState(IStorage *pStorage, SQmGraphicsRecoveryState &State)
-{
-	State = {};
-	char *pState = pStorage->ReadFileStr(gs_pQmGraphicsRecoveryStateFile, IStorage::TYPE_SAVE);
-	if(pState == nullptr)
-		return false;
-
-	char aLine[IO_MAX_PATH_LENGTH + 64];
-	const char *pStr = pState;
-	while((pStr = str_next_token(pStr, "\n", aLine, sizeof(aLine))))
-	{
-		if(const char *pValue = str_startswith(aLine, "report_time="))
-			State.m_ReportTimeModified = str_toint64_base(pValue);
-		else if(const char *pValue = str_startswith(aLine, "report_path="))
-			str_copy(State.m_aReportPath, pValue);
-		else if(const char *pValue = str_startswith(aLine, "mode="))
-			State.m_Mode = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "backend="))
-			str_copy(State.m_aBackend, pValue);
-		else if(const char *pValue = str_startswith(aLine, "recovery_backend="))
-			str_copy(State.m_aRecoveryBackend, pValue);
-		else if(const char *pValue = str_startswith(aLine, "failed_backend="))
-			str_copy(State.m_aFailedBackend, pValue);
-		else if(const char *pValue = str_startswith(aLine, "gl_major="))
-			State.m_GLMajor = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "gl_minor="))
-			State.m_GLMinor = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "gl_patch="))
-			State.m_GLPatch = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "fsaa_samples="))
-			State.m_FsaaSamples = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "fullscreen="))
-			State.m_Fullscreen = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "borderless="))
-			State.m_Borderless = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "analysis_ran="))
-			State.m_3DTextureAnalysisRan = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "driver_blocked="))
-			State.m_DriverIsBlocked = str_toint_base(pValue, 10);
-		else if(const char *pValue = str_startswith(aLine, "pref_complete="))
-			State.m_HasFullPreference = str_toint_base(pValue, 10) != 0;
-		else if(const char *pValue = str_startswith(aLine, "failed_opengl="))
-			State.m_Failures.m_aCount[BACKEND_TYPE_OPENGL] = std::max(str_toint_base(pValue, 10), 0);
-		else if(const char *pValue = str_startswith(aLine, "failed_gles="))
-			State.m_Failures.m_aCount[BACKEND_TYPE_OPENGL_ES] = std::max(str_toint_base(pValue, 10), 0);
-		else if(const char *pValue = str_startswith(aLine, "failed_vulkan="))
-			State.m_Failures.m_aCount[BACKEND_TYPE_VULKAN] = std::max(str_toint_base(pValue, 10), 0);
-		else if(const char *pValue = str_startswith(aLine, "failed_metal="))
-			State.m_Failures.m_aCount[BACKEND_TYPE_METAL] = std::max(str_toint_base(pValue, 10), 0);
-		else if(const char *pValue = str_startswith(aLine, "applied="))
-			State.m_Applied = str_toint_base(pValue, 10) != 0;
-	}
-	free(pState);
-	return State.m_ReportTimeModified > 0 && State.m_aReportPath[0] != '\0';
-}
-
-static bool WriteQmGraphicsRecoveryState(IStorage *pStorage, const SQmGraphicsRecoveryState &State)
-{
-	pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-	IOHANDLE File = pStorage->OpenFile(gs_pQmGraphicsRecoveryStateFile, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-
-	char aBuf[IO_MAX_PATH_LENGTH + 1280];
-	str_format(aBuf, sizeof(aBuf), "report_time=%lld\nreport_path=%s\nmode=%d\nbackend=%s\nrecovery_backend=%s\nfailed_backend=%s\n"
-				       "gl_major=%d\ngl_minor=%d\ngl_patch=%d\nfsaa_samples=%d\nfullscreen=%d\nborderless=%d\nanalysis_ran=%d\ndriver_blocked=%d\npref_complete=%d\n"
-				       "failed_opengl=%d\nfailed_gles=%d\nfailed_vulkan=%d\nfailed_metal=%d\napplied=%d\n",
-		(long long)State.m_ReportTimeModified, State.m_aReportPath, State.m_Mode, State.m_aBackend, State.m_aRecoveryBackend, State.m_aFailedBackend,
-		State.m_GLMajor, State.m_GLMinor, State.m_GLPatch, State.m_FsaaSamples, State.m_Fullscreen, State.m_Borderless,
-		State.m_3DTextureAnalysisRan, State.m_DriverIsBlocked, State.m_HasFullPreference ? 1 : 0,
-		State.m_Failures.m_aCount[BACKEND_TYPE_OPENGL], State.m_Failures.m_aCount[BACKEND_TYPE_OPENGL_ES],
-		State.m_Failures.m_aCount[BACKEND_TYPE_VULKAN], State.m_Failures.m_aCount[BACKEND_TYPE_METAL], State.m_Applied ? 1 : 0);
-	const bool Success = io_write(File, aBuf, str_length(aBuf)) == str_length(aBuf);
-	io_close(File);
-	return Success;
-}
-
-static bool QmCrashTextHasGraphicsDriverFault(const char *pText)
-{
-	if(pText == nullptr || pText[0] == '\0')
-		return false;
-	if(str_find(pText, "Report type: graphics_fatal_error\n") != nullptr)
-		return true;
-
-	static constexpr const char *s_apGraphicsDriverFaults[] = {
-		"Exception module: nvoglv64.dll",
-		" in module nvoglv64.dll",
-		"Exception module: nvd3dumx.dll",
-		" in module nvd3dumx.dll",
-		"Exception module: nvwgf2umx.dll",
-		" in module nvwgf2umx.dll",
-		"Exception module: amdvlk64.dll",
-		" in module amdvlk64.dll",
-		"Exception module: atio6axx.dll",
-		" in module atio6axx.dll",
-		"Exception module: ig9icd64.dll",
-		" in module ig9icd64.dll",
-		"Exception module: igvk64.dll",
-		" in module igvk64.dll",
-		"Exception module: opengl32.dll",
-		" in module opengl32.dll",
-		"Exception module: vulkan-1.dll",
-		" in module vulkan-1.dll",
-		"Exception module: D3D12Core.dll",
-		" in module D3D12Core.dll",
-		"Exception module: d3d12.dll",
-		" in module d3d12.dll",
-		"Exception module: dxgi.dll",
-		" in module dxgi.dll",
-	};
-	for(const char *pNeedle : s_apGraphicsDriverFaults)
-	{
-		if(str_find_nocase(pText, pNeedle) != nullptr)
-			return true;
-	}
-	return false;
-}
-
-static bool ApplyQmSafeGraphicsRecovery(EBackendType RecoveryBackend)
-{
-	const auto SafeConfig = graphics_backend::SafeBackendConfig();
-	const int RecoveryFullscreen = graphics_backend::RecoveryFullscreenMode(g_Config.m_GfxFullscreen);
-	bool Changed = false;
-	// 图形设备已丢失后，下一次启动必须真正绕开触发故障的后端。
-	// InitWindow 会按模式覆盖后端，恢复模式必须与候选后端一致。
-	const char *pRecoveryBackend = graphics_backend::BackendName(RecoveryBackend);
-	if(str_comp_nocase(g_Config.m_GfxBackend, pRecoveryBackend) != 0)
-	{
-		str_copy(g_Config.m_GfxBackend, pRecoveryBackend);
-		Changed = true;
-	}
-	const int RecoveryMode = graphics_backend::ModeForRecoveryBackend(RecoveryBackend);
-	if(g_Config.m_QmGraphicsMode != RecoveryMode)
-	{
-		g_Config.m_QmGraphicsMode = RecoveryMode;
-		Changed = true;
-	}
-	if(g_Config.m_GfxGLMajor != SafeConfig.m_GLMajor || g_Config.m_GfxGLMinor != SafeConfig.m_GLMinor || g_Config.m_GfxGLPatch != SafeConfig.m_GLPatch)
-	{
-		g_Config.m_GfxGLMajor = SafeConfig.m_GLMajor;
-		g_Config.m_GfxGLMinor = SafeConfig.m_GLMinor;
-		g_Config.m_GfxGLPatch = SafeConfig.m_GLPatch;
-		Changed = true;
-	}
-	if(g_Config.m_GfxFsaaSamples != SafeConfig.m_FsaaSamples)
-	{
-		g_Config.m_GfxFsaaSamples = SafeConfig.m_FsaaSamples;
-		Changed = true;
-	}
-	if(g_Config.m_GfxFullscreen != RecoveryFullscreen)
-	{
-		g_Config.m_GfxFullscreen = RecoveryFullscreen;
-		Changed = true;
-	}
-	if(RecoveryFullscreen == 0 && g_Config.m_GfxBorderless != SafeConfig.m_Borderless)
-	{
-		g_Config.m_GfxBorderless = SafeConfig.m_Borderless;
-		Changed = true;
-	}
-	if(g_Config.m_Gfx3DTextureAnalysisRan != 0)
-	{
-		g_Config.m_Gfx3DTextureAnalysisRan = 0;
-		Changed = true;
-	}
-	if(g_Config.m_GfxDriverIsBlocked != 0)
-	{
-		g_Config.m_GfxDriverIsBlocked = 0;
-		Changed = true;
-	}
-	return Changed;
-}
-
-static bool QmGraphicsRecoverySettingsUntouched(const SQmGraphicsRecoveryState &State)
-{
-	const auto SafeConfig = graphics_backend::SafeBackendConfig();
-	const EBackendType RecoveryBackend = graphics_backend::ParseBackendName(State.m_aRecoveryBackend, BACKEND_TYPE_AUTO);
-	return g_Config.m_QmGraphicsMode == graphics_backend::ModeForRecoveryBackend(RecoveryBackend) &&
-	       str_comp_nocase(g_Config.m_GfxBackend, State.m_aRecoveryBackend) == 0 &&
-	       (!State.m_HasFullPreference ||
-		       (g_Config.m_GfxFsaaSamples == SafeConfig.m_FsaaSamples &&
-			       g_Config.m_GfxFullscreen == graphics_backend::RecoveryFullscreenMode(State.m_Fullscreen) &&
-			       (g_Config.m_GfxFullscreen != 0 || g_Config.m_GfxBorderless == SafeConfig.m_Borderless)));
-}
-
-static bool RecoverQmGraphicsSettingsAfterDriverCrash(IStorage *pStorage)
-{
-	if(pStorage == nullptr)
-		return true;
-
-	SQmGraphicsRecoveryState State;
-	const bool HasState = ReadQmGraphicsRecoveryState(pStorage, State);
-
-	// 崩溃基线：lifecycle marker 只在上一次会话异常结束时保留，其 started_at
-	// 是异常会话的启动时间，用于圈定本次需要处理的崩溃报告。
-	char aLatestReport[IO_MAX_PATH_LENGTH] = "";
-	time_t LatestReportTime = 0;
-	if(pStorage->FileExists(gs_pQmLifecycleMarkerFile, IStorage::TYPE_SAVE))
-	{
-		int64_t SessionStartedAt = 0;
-		if(ReadQmLifecycleMarkerStartedAt(pStorage, SessionStartedAt))
-		{
-			SQmLatestCrashReport Latest;
-			Latest.m_MinTimeModified = (time_t)SessionStartedAt;
-			pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, FindLatestQmCrashReportCallback, &Latest);
-			str_copy(aLatestReport, Latest.m_aPath);
-			LatestReportTime = Latest.m_TimeModified;
-		}
-	}
-
-	const bool IsRecoveredReport = HasState &&
-				       State.m_ReportTimeModified == (int64_t)LatestReportTime &&
-				       str_comp(State.m_aReportPath, aLatestReport) == 0;
-
-	// 新的图形驱动崩溃：把用户当前图形偏好记入恢复状态，本次启动使用安全设置；
-	// 下一次启动（无新图形崩溃时）自动还回用户偏好，不再永久改写用户配置。
-	if(aLatestReport[0] != '\0' && !IsRecoveredReport)
-	{
-		char *pCrashReport = pStorage->ReadFileStr(aLatestReport, IStorage::TYPE_SAVE);
-		if(pCrashReport != nullptr)
-		{
-			const bool HasGraphicsDriverFault = QmCrashTextHasGraphicsDriverFault(pCrashReport);
-			if(HasGraphicsDriverFault)
-			{
-				EBackendType CrashedBackend = graphics_backend::BackendFromCrashReport(pCrashReport);
-				if(CrashedBackend == BACKEND_TYPE_AUTO)
-					CrashedBackend = graphics_backend::ParseBackendName(g_Config.m_GfxBackend, BACKEND_TYPE_AUTO);
-				free(pCrashReport);
-				SQmGraphicsRecoveryState NewState = HasState ? State : SQmGraphicsRecoveryState{};
-				NewState.m_ReportTimeModified = (int64_t)LatestReportTime;
-				str_copy(NewState.m_aReportPath, aLatestReport);
-				if(!HasState || !State.m_Applied ||
-					!QmGraphicsRecoverySettingsUntouched(State))
-				{
-					NewState.m_Mode = g_Config.m_QmGraphicsMode;
-					str_copy(NewState.m_aBackend, g_Config.m_GfxBackend);
-					NewState.m_GLMajor = g_Config.m_GfxGLMajor;
-					NewState.m_GLMinor = g_Config.m_GfxGLMinor;
-					NewState.m_GLPatch = g_Config.m_GfxGLPatch;
-					NewState.m_FsaaSamples = g_Config.m_GfxFsaaSamples;
-					NewState.m_Fullscreen = g_Config.m_GfxFullscreen;
-					NewState.m_Borderless = g_Config.m_GfxBorderless;
-					NewState.m_3DTextureAnalysisRan = g_Config.m_Gfx3DTextureAnalysisRan;
-					NewState.m_DriverIsBlocked = g_Config.m_GfxDriverIsBlocked;
-					NewState.m_HasFullPreference = true;
-				}
-				NewState.m_Failures.Record(CrashedBackend);
-				str_copy(NewState.m_aFailedBackend, graphics_backend::BackendName(CrashedBackend));
-				const EBackendType Candidate = graphics_backend::RecoveryBackend(NewState.m_Failures, CrashedBackend);
-				NewState.m_Applied = Candidate != BACKEND_TYPE_AUTO;
-				if(NewState.m_Applied)
-				{
-					str_copy(NewState.m_aRecoveryBackend, graphics_backend::BackendName(Candidate));
-					ApplyQmSafeGraphicsRecovery(Candidate);
-				}
-				if(WriteQmGraphicsRecoveryState(pStorage, NewState))
-				{
-					log_warn("client", "previous graphics crash '%s' on backend '%s'; recovery backend '%s', user preference (mode=%d backend='%s')",
-						aLatestReport, graphics_backend::BackendName(CrashedBackend),
-						NewState.m_Applied ? NewState.m_aRecoveryBackend : "(none available)", NewState.m_Mode, NewState.m_aBackend);
-				}
-				else
-				{
-					log_warn("client", "failed to write graphics recovery state");
-				}
-				// 无候选时不再带着同一故障配置进入图形初始化。
-				return NewState.m_Applied;
-			}
-			free(pCrashReport);
-		}
-	}
-
-	if(HasState && !State.m_Applied && State.m_aFailedBackend[0] != '\0' &&
-		str_comp_nocase(g_Config.m_GfxBackend, State.m_aFailedBackend) == 0 &&
-		graphics_backend::RecoveryBackend(State.m_Failures, graphics_backend::ParseBackendName(State.m_aFailedBackend, BACKEND_TYPE_AUTO)) == BACKEND_TYPE_AUTO)
-		return false;
-
-	// 上一次启动执行过安全恢复且本次没有发现新的图形崩溃：把用户偏好还回去。
-	// 用户若已在安全会话中自行修改了图形设置（与安全值不一致），尊重用户改动。
-	if(HasState && State.m_Applied)
-	{
-		const bool UntouchedByUser = QmGraphicsRecoverySettingsUntouched(State);
-		const bool PreferenceDiffers = State.m_Mode != g_Config.m_QmGraphicsMode ||
-					       str_comp_nocase(State.m_aBackend, g_Config.m_GfxBackend) != 0 || State.m_HasFullPreference;
-		if(UntouchedByUser && PreferenceDiffers && !State.m_Failures.IsBlocked(graphics_backend::ParseBackendName(State.m_aBackend, BACKEND_TYPE_AUTO)))
-		{
-			g_Config.m_QmGraphicsMode = State.m_Mode;
-			str_copy(g_Config.m_GfxBackend, State.m_aBackend);
-			if(State.m_HasFullPreference)
-			{
-				g_Config.m_GfxGLMajor = State.m_GLMajor;
-				g_Config.m_GfxGLMinor = State.m_GLMinor;
-				g_Config.m_GfxGLPatch = State.m_GLPatch;
-				g_Config.m_GfxFsaaSamples = State.m_FsaaSamples;
-				g_Config.m_GfxFullscreen = State.m_Fullscreen;
-				g_Config.m_GfxBorderless = State.m_Borderless;
-				g_Config.m_Gfx3DTextureAnalysisRan = State.m_3DTextureAnalysisRan;
-				g_Config.m_GfxDriverIsBlocked = State.m_DriverIsBlocked;
-			}
-			log_info("client", "restoring user graphics preference after safe recovery launch: mode=%d backend='%s'", State.m_Mode, State.m_aBackend);
-		}
-		State.m_Applied = false;
-		if(!WriteQmGraphicsRecoveryState(pStorage, State))
-			log_warn("client", "failed to persist graphics recovery failure counts");
-	}
-	return true;
 }
 
 static const char *ClientStateToString(int State)
@@ -5584,14 +5213,15 @@ void CClient::Con_AddFavorite(IConsole::IResult *pResult, void *pUserData)
 			log_error("client", "discarding %s because groups can have at most a size of %d", aAddr, pSelf->m_FavoritesGroupNum);
 			return;
 		}
-		log_info("client", "adding %s to favorites group", aAddr);
+		// 启动执行 favorites.cfg 恢复收藏会复用本命令，降为 debug 避免启动期刷屏。
+		log_debug("client", "adding %s to favorites group", aAddr);
 		pSelf->m_aFavoritesGroupAddresses[pSelf->m_FavoritesGroupNum] = Addr;
 		pSelf->m_FavoritesGroupAllowPing = pSelf->m_FavoritesGroupAllowPing || AllowPing;
 		pSelf->m_FavoritesGroupNum += 1;
 	}
 	else
 	{
-		log_info("client", "adding %s to favorites", aAddr);
+		log_debug("client", "adding %s to favorites", aAddr);
 		pSelf->m_pFavorites->Add(&Addr, 1);
 		if(AllowPing)
 		{
@@ -6162,12 +5792,28 @@ bool CClient::HandleQmGraphicsFatalError()
 	// 图形后端已经记录了致命错误（例如 Vulkan VK_ERROR_DEVICE_LOST）。
 	// 一旦这个错误被提交（CGraphicsBackend_Threaded::ProcessError）就会断言退出，
 	// 而断言弹窗会阻塞主线程、停掉心跳，看门狗随后写出误导性的 hang 报告。
-	// 这里在提交之前主动收口：写诊断报告 -> 干净重启走安全图形设置。
-	if(m_QmGraphicsRecoveryAttempted)
+	// 这里在提交之前主动收口：写诊断报告 -> 干净退出。用户的渲染后端与窗口
+	// 模式等显式设置保持原样。
+	// 例外（qm_vulkan_ext 的设计语义）：device lost 且 qm_enhanced_rendering
+	// 处于 AUTO 时，把配置持久化写回 0（纯净 Vulkan）并自动重启一次。AUTO
+	// 的含义就是「自动回退」，后端运行期已按会话禁用增强管线，这里完成持久
+	// 化。下一次会话已是 OFF，不会再进入本分支，因此重启有界、无循环风险。
+	if(m_QmGraphicsFatalErrorHandled)
 		return false;
-	m_QmGraphicsRecoveryAttempted = true;
+	m_QmGraphicsFatalErrorHandled = true;
 
 	const char *pFatalError = Graphics()->GetFatalError();
+
+	bool QmEnhancedAutoFallback = false;
+	char aQmFallbackInfo[256] = "none";
+	if(pFatalError[0] != '\0' && str_find(pFatalError, "device lost") != nullptr && g_Config.m_QmEnhancedRendering == 1)
+	{
+		g_Config.m_QmEnhancedRendering = 0;
+		QmEnhancedAutoFallback = true;
+		str_copy(aQmFallbackInfo, "device lost with qm_enhanced_rendering=AUTO; persisted qm_enhanced_rendering=0 (pure Vulkan) and requested auto-restart");
+		log_error("gfx", "device lost while qm_enhanced_rendering=AUTO; persisting qm_enhanced_rendering=0 and auto-restarting with pure Vulkan");
+	}
+
 	char aGpuInfo[512];
 	GetGpuInfoString(aGpuInfo);
 	char aDate[64];
@@ -6184,8 +5830,7 @@ bool CClient::HandleQmGraphicsFatalError()
 	else
 		net_addr_str(pAddr, aServerAddr, sizeof(aServerAddr), true);
 	char aFilename[IO_MAX_PATH_LENGTH];
-	// 文件名必须与 echndl 的崩溃报告一致，才能在下次启动时被
-	// RecoverQmGraphicsSettingsAfterDriverCrash 识别并做安全图形恢复。
+	// 文件名保持与 echndl 的崩溃报告一致，便于统一归档与反馈。
 	str_format(aFilename, sizeof(aFilename), "%s/" GAME_NAME "_%s_crash_log_%s_%d_%s_fatal_report.txt",
 		gs_pQmCrashDumpDir, CONF_PLATFORM_STRING, aDate, pid(), GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
 
@@ -6205,6 +5850,7 @@ bool CClient::HandleQmGraphicsFatalError()
 			"Graphics backend: %s\n"
 			"Configured graphics backend: %s\n"
 			"Client state: %s (%d)\n"
+			"Qm enhanced rendering fallback: %s\n"
 			"Current map: %s\n"
 			"Server address: %s\n"
 			"Game version: %s %s %s\n"
@@ -6213,6 +5859,7 @@ bool CClient::HandleQmGraphicsFatalError()
 			"\n"
 			"%s\n",
 			aDate, pid(), graphics_backend::BackendName(FailedBackend), aBackend, ClientStateToString(m_State), m_State,
+			aQmFallbackInfo,
 			m_aCurrentMap[0] != '\0' ? m_aCurrentMap : "(none)",
 			aServerAddr,
 			GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "",
@@ -6227,19 +5874,19 @@ bool CClient::HandleQmGraphicsFatalError()
 		log_error("gfx", "could not write runtime graphics fault report to '%s'", aPath);
 	}
 
-	SQmGraphicsRecoveryState RecoveryState;
-	ReadQmGraphicsRecoveryState(Storage(), RecoveryState);
-	RecoveryState.m_Failures.Record(FailedBackend);
-	if(graphics_backend::RecoveryBackend(RecoveryState.m_Failures, FailedBackend) == BACKEND_TYPE_AUTO)
-	{
-		log_error("gfx", "graphics recovery has no available backend; stopping instead of restarting: %s",
-			pFatalError[0] != '\0' ? pFatalError : "(no details)");
-		SetState(IClient::STATE_QUITTING);
-		return true;
-	}
-	log_error("gfx", "graphics backend reported a fatal error, restarting the client with safe graphics settings: %s",
+	log_error("gfx", "graphics backend reported a fatal error, stopping the client: %s",
 		pFatalError[0] != '\0' ? pFatalError : "(no details)");
-	Restart();
+	if(QmEnhancedAutoFallback)
+	{
+		// 配置会在 Run() 主循环结束后的正常保存流程里落盘；
+		// 下一次启动即以纯净 Vulkan 运行，不再进入本分支。
+		log_info("gfx", "auto-restarting client to finish the enhanced-rendering fallback");
+		SetState(IClient::STATE_RESTARTING);
+	}
+	else
+	{
+		SetState(IClient::STATE_QUITTING);
+	}
 	return true;
 }
 
@@ -7325,13 +6972,6 @@ int main(int argc, const char **argv)
 		g_Config.m_QmGraphicsMode = str_comp_nocase(g_Config.m_GfxBackend, pPerformanceBackend) == 0 ? graphics_backend::GRAPHICS_MODE_PERFORMANCE : graphics_backend::GRAPHICS_MODE_COMPATIBILITY;
 	}
 	g_Config.m_ClConfigVersion = 5;
-
-	if(!RecoverQmGraphicsSettingsAfterDriverCrash(pStorage))
-	{
-		log_error("client", "graphics recovery has no available backend; change gfx_backend manually before restarting");
-		PerformAllCleanup();
-		return -1;
-	}
 
 	// parse the command line arguments
 	pConsole->SetUnknownCommandCallback(UnknownArgumentCallback, pClient);

@@ -13,7 +13,7 @@
 
 #include <windows.h>
 
-#include <qm-nmt-hook/qm_netease_cdp_client.h>
+#include <qm/hooks/netease/qm_netease_cdp_client.h>
 #include <winhttp.h>
 
 #include <algorithm>

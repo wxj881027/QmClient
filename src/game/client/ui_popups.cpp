@@ -33,6 +33,13 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 {
 	if(RenderOnly())
 		return;
+	if(Props.m_CenterInViewport)
+	{
+		// 二级界面弹窗：在当前视口内居中，忽略调用点传入的锚定坐标；
+		// 之后的 AutoReposition 仍兜底弹窗超出视口的情形。
+		X = Screen()->x + (Screen()->w - Width) / 2.0f;
+		Y = Screen()->y + (Screen()->h - Height) / 2.0f;
+	}
 	if(Props.m_AutoReposition)
 	{
 		constexpr float Margin = SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN;
@@ -52,6 +59,12 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 		ExistingPopupMenu->m_Rect.h = Height;
 		ExistingPopupMenu->m_pContext = pContext;
 		ExistingPopupMenu->m_pfnFunc = pfnFunc;
+		// 出场动画期间被重新打开：取消关闭状态并重放入场动画。
+		if(ExistingPopupMenu->m_Closing)
+		{
+			ExistingPopupMenu->m_Closing = false;
+			ExistingPopupMenu->m_OpenStart = Props.m_Animate ? Client()->LocalTime() : -1.0f;
+		}
 		return;
 	}
 
@@ -65,6 +78,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	pNewMenu->m_Rect.h = Height;
 	pNewMenu->m_pContext = pContext;
 	pNewMenu->m_pfnFunc = pfnFunc;
+	pNewMenu->m_OpenStart = Props.m_Animate ? Client()->LocalTime() : -1.0f;
 	if(Props.m_BlockUnderlyingPointerInput)
 	{
 		if(CLineInput *pActiveInput = CLineInput::GetActiveInput())
@@ -79,10 +93,36 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 void CUi::RenderPopupMenus()
 {
 	m_RenderingPopupMenus = true;
+	const float Now = Client()->LocalTime();
 	for(size_t i = 0; i < m_vPopupMenus.size(); ++i)
 	{
 		const SPopupMenu &PopupMenu = m_vPopupMenus[i];
 		const SPopupMenuId *pId = PopupMenu.m_pId;
+
+		// 出场动画中：逻辑已关闭，不参与任何输入判定与回调，只画收缩渐隐，
+		// 动画结束后由本循环移除（不触发关闭回调，逻辑关闭时已触发过）。
+		if(PopupMenu.m_Closing)
+		{
+			const float Progress = std::clamp((Now - PopupMenu.m_CloseStart) / SPopupMenu::POPUP_CLOSE_DURATION, 0.0f, 1.0f);
+			CUIRect ShrinkRect = PopupMenu.m_Rect;
+			const float Scale = 1.0f - 0.08f * Progress;
+			ShrinkRect.x += ShrinkRect.w * (1.0f - Scale) * 0.5f;
+			ShrinkRect.y += ShrinkRect.h * (1.0f - Scale) * 0.5f;
+			ShrinkRect.w *= Scale;
+			ShrinkRect.h *= Scale;
+			const float Alpha = 1.0f - Progress;
+			DrawRoundedSurface(this, ShrinkRect,
+				PopupMenu.m_Props.m_BackgroundColor.WithAlpha(PopupMenu.m_Props.m_BackgroundColor.a * Alpha),
+				PopupMenu.m_Props.m_BorderColor.WithAlpha(PopupMenu.m_Props.m_BorderColor.a * Alpha),
+				ui_token::radius::BASE, SPopupMenu::POPUP_BORDER, PopupMenu.m_Props.m_Corners);
+			if(Progress >= 1.0f)
+			{
+				m_vPopupMenus.erase(m_vPopupMenus.begin() + i);
+				--i;
+			}
+			continue;
+		}
+
 		if(PopupMenu.m_Props.m_RequireSourceRefresh && !QmDropdownSourceAlive(Client()->PerfFrame(), PopupMenu.m_Props.m_SourceFrame, true))
 		{
 			ClosePopupMenu(pId);
@@ -90,11 +130,27 @@ void CUi::RenderPopupMenus()
 			continue;
 		}
 		const bool Inside = MouseInside(&PopupMenu.m_Rect) && (!PopupMenu.m_Props.m_ClipToViewport || MouseInside(&PopupMenu.m_Props.m_Viewport));
-		const bool Active = i == m_vPopupMenus.size() - 1;
+		// 活跃弹窗 = 栈顶未处于出场动画的弹窗（closing 弹窗不接管输入，
+		// 下层的活跃弹窗/页面交互在短动画期间照常）。
+		bool Active = true;
+		for(size_t j = i + 1; j < m_vPopupMenus.size(); ++j)
+		{
+			if(!m_vPopupMenus[j].m_Closing)
+			{
+				Active = false;
+				break;
+			}
+		}
 		const bool ClipToViewport = PopupMenu.m_Props.m_ClipToViewport;
 		const bool AllowPopupPointerInput = Active && PopupMenu.m_Props.m_BlockUnderlyingPointerInput;
 		if(AllowPopupPointerInput)
 			++m_PopupInputDepth;
+
+		// 非阻断弹窗沿用上游机制：栈顶弹窗每帧接管热项，既阻止弹窗打开期间
+		// 底层 UI 被悬停/激活，也保证「弹窗外按下 → 成为活动项 → 弹窗外
+		// 松开即关闭」的链路可用（编辑器菜单栏等非阻断弹窗依赖它）。
+		if(Active && !PopupMenu.m_Props.m_BlockUnderlyingPointerInput)
+			SetHotItem(pId);
 
 		// 点击弹窗外释放左键时关闭弹窗。这里必须先记下关闭意图并走完本帧渲染流程，
 		// 不能提前 continue：m_PopupInputDepth 一旦漏掉配对递减就会永久泄漏，
@@ -132,7 +188,58 @@ void CUi::RenderPopupMenus()
 				ClipEnable(&PopupMenu.m_Props.m_Viewport);
 
 			CUIRect PopupRect = PopupMenu.m_Rect;
-			DrawRoundedSurface(this, PopupRect, PopupMenu.m_Props.m_BackgroundColor, PopupMenu.m_Props.m_BorderColor, 3.0f, SPopupMenu::POPUP_BORDER, PopupMenu.m_Props.m_Corners);
+			const SPopupMenuProperties &PopupProps = PopupMenu.m_Props;
+			// 入场缩放动画：矩形从 92% 平滑放大到 100%（内容随矩形重排），
+			// 背景/边框同步渐显；非动画弹窗乘子恒 1，路径零变化。
+			float AnimAlphaMul = 1.0f;
+			if(PopupProps.m_Animate && PopupMenu.m_OpenStart >= 0.0f)
+			{
+				const float Progress = std::clamp((Now - PopupMenu.m_OpenStart) / SPopupMenu::POPUP_OPEN_DURATION, 0.0f, 1.0f);
+				const float Eased = 1.0f - (1.0f - Progress) * (1.0f - Progress);
+				const float Scale = 0.92f + 0.08f * Eased;
+				PopupRect.x += PopupRect.w * (1.0f - Scale) * 0.5f;
+				PopupRect.y += PopupRect.h * (1.0f - Scale) * 0.5f;
+				PopupRect.w *= Scale;
+				PopupRect.h *= Scale;
+				AnimAlphaMul = Eased;
+			}
+			// 对齐判定留浮点余量：几何端 AlignToAnchor 已保证严格相等，
+			// 余量只吸收布局趟/渲染趟的舍入误差。
+			const bool HasAlignedAnchor = PopupProps.m_HasAnchorSurface &&
+				PopupProps.m_AnchorSurface.w > 0.0f && PopupProps.m_AnchorSurface.h > 0.0f &&
+				std::fabs(PopupProps.m_AnchorSurface.x - PopupRect.x) < 1.5f &&
+				std::fabs(PopupProps.m_AnchorSurface.w - PopupRect.w) < 1.5f;
+			if(HasAlignedAnchor)
+			{
+				// 边框把触发按钮与列表包成一个整体：外框只描边，填充由按钮
+				//（页面阶段已绘制）与列表各自负责，接缝一侧用直角贴合。
+				const CUIRect &Anchor = PopupProps.m_AnchorSurface;
+				const bool Below = PopupRect.y > Anchor.y;
+				CUIRect UnionRect;
+				if(Below)
+					UnionRect = CUIRect{Anchor.x, Anchor.y, Anchor.w, PopupRect.y + PopupRect.h - Anchor.y};
+				else
+					UnionRect = CUIRect{Anchor.x, PopupRect.y, Anchor.w, Anchor.y + Anchor.h - PopupRect.y};
+				DrawRoundedSurface(this, UnionRect, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), PopupProps.m_BorderColor, ui_token::radius::BASE, SPopupMenu::POPUP_BORDER, IGraphics::CORNER_ALL);
+				CUIRect FillRect = PopupRect;
+				FillRect.x += SPopupMenu::POPUP_BORDER;
+				FillRect.w -= SPopupMenu::POPUP_BORDER * 2.0f;
+				if(Below)
+					FillRect.h -= SPopupMenu::POPUP_BORDER;
+				else
+				{
+					FillRect.y += SPopupMenu::POPUP_BORDER;
+					FillRect.h -= SPopupMenu::POPUP_BORDER;
+				}
+				DrawRoundedSurface(this, FillRect, PopupProps.m_BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), ui_token::radius::BASE, 0.0f, Below ? IGraphics::CORNER_B : IGraphics::CORNER_T);
+			}
+			else
+			{
+				DrawRoundedSurface(this, PopupRect,
+					PopupProps.m_BackgroundColor.WithAlpha(PopupProps.m_BackgroundColor.a * AnimAlphaMul),
+					PopupProps.m_BorderColor.WithAlpha(PopupProps.m_BorderColor.a * AnimAlphaMul),
+					ui_token::radius::BASE, SPopupMenu::POPUP_BORDER, PopupProps.m_Corners);
+			}
 			PopupRect.Margin(SPopupMenu::POPUP_BORDER, &PopupRect);
 			PopupRect.Margin(SPopupMenu::POPUP_MARGIN, &PopupRect);
 
@@ -162,6 +269,22 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants)
 	auto PopupMenuToClose = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
 	if(PopupMenuToClose != m_vPopupMenus.end())
 	{
+		// 出场动画已在播放：等待渲染循环自然移除，避免重置动画起点或重复回调。
+		if(!IncludeDescendants && PopupMenuToClose->m_Closing)
+			return;
+		// 带出场动画的弹窗（仅二级界面大弹窗启用）：后代立即移除，自身标记
+		// closing 播放收缩渐隐后由渲染循环移除；逻辑关闭（输入解除、关闭回调）
+		// 在标记瞬间完成，与立即关闭语义一致。
+		if(!IncludeDescendants && PopupMenuToClose->m_Props.m_Animate)
+		{
+			m_vPopupMenus.erase(PopupMenuToClose + 1, m_vPopupMenus.end());
+			PopupMenuToClose->m_Closing = true;
+			PopupMenuToClose->m_CloseStart = Client()->LocalTime();
+			SetActiveItem(nullptr);
+			if(m_pfnPopupMenuClosedCallback)
+				m_pfnPopupMenuClosedCallback();
+			return;
+		}
 		if(IncludeDescendants)
 			m_vPopupMenus.erase(PopupMenuToClose, m_vPopupMenus.end());
 		else
@@ -195,7 +318,7 @@ bool CUi::IsPopupOpen(const SPopupMenuId *pId) const
 
 bool CUi::IsPopupHovered() const
 {
-	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [this](const SPopupMenu PopupMenu) { return MouseHovered(&PopupMenu.m_Rect); });
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [this](const SPopupMenu PopupMenu) { return !PopupMenu.m_Closing && MouseHovered(&PopupMenu.m_Rect); });
 }
 
 void CUi::SetPopupMenuClosedCallback(FPopupMenuClosedCallback pfnCallback)
@@ -325,6 +448,7 @@ void CUi::SSelectionPopupContext::Reset()
 	m_Viewport = {};
 	m_PopupPolicy = {};
 	m_SpecialFontRenderMode = false;
+	m_FontFaceAvailabilityCheck = false;
 }
 
 CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, bool Active)
@@ -372,10 +496,6 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 	int VisibleEntries = 0;
 	for(const auto &Entry : pSelectionPopup->m_vEntries)
 	{
-		// TClient
-		if(pSelectionPopup->m_SpecialFontRenderMode)
-			pUI->TextRender()->SetCustomFace(Entry.c_str());
-
 		if(pSelectionPopup->m_aMessage[0] != '\0' || Index != 0)
 			View.HSplitTop(pSelectionPopup->m_EntrySpacing, nullptr, &View);
 		View.HSplitTop(pSelectionPopup->m_EntryHeight, &Slot, &View);
@@ -383,6 +503,13 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 		if(pScrollRegion->AddRect(Slot, QmDropdownActiveItemShouldScrollIntoView(pSelectionPopup->m_ScrollToActiveItem, ActiveEntry)))
 		{
 			++VisibleEntries;
+			// TClient: 字体预览只对实际渲染的条目切换字体面。此前对所有条目
+			// （含滚动区外的）每帧切换，条目多时每帧反复解析字面并触发字重
+			// 应用，是字体下拉框打开即卡死的直接原因。
+			// QmClient: m_FontFaceAvailabilityCheck 供商店搜索弹层使用——条目是
+			// 未安装的在线字体，只有预览面已加载的条目才切换，避免逐帧失败日志。
+			if(pSelectionPopup->m_SpecialFontRenderMode && (!pSelectionPopup->m_FontFaceAvailabilityCheck || pUI->TextRender()->QmHasCustomFace(Entry.c_str())))
+				pUI->TextRender()->SetCustomFace(Entry.c_str());
 			// 活动项与悬浮项使用同一种整行背景，避免左侧竖条与条目背景重叠。
 			const std::optional<ColorRGBA> ActiveColor = ActiveEntry ? std::optional<ColorRGBA>(pSelectionPopup->m_ActiveEntryColor) : std::nullopt;
 			if(pUI->DoButton_PopupMenu(&pSelectionPopup->m_vButtonContainers[Index], Entry.c_str(), &Slot, pSelectionPopup->m_FontSize, TEXTALIGN_ML, pSelectionPopup->m_EntryPadding, pSelectionPopup->m_TransparentButtons, true, ActiveColor))
@@ -431,6 +558,12 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 	pContext->m_pSelection = nullptr;
 	pContext->m_SelectionIndex = -1;
 	pContext->m_Props.m_Corners = IGraphics::CORNER_ALL;
+	// 对齐模式下记录锚点（触发按钮），让弹窗外框把按钮与列表包成一个整体。
+	pContext->m_Props.m_HasAnchorSurface = pContext->m_AlignmentHeight >= 0.0f;
+	pContext->m_Props.m_AnchorSurface = CUIRect{X, Y, pContext->m_Width, pContext->m_Props.m_HasAnchorSurface ? pContext->m_AlignmentHeight : 0.0f};
+	// 阻断底层指针输入：点击弹窗（含触发按钮）以外区域时立即关闭弹窗。
+	// 几何判定不可见的路径会在下方直接 ClosePopupMenu，阻断标志无副作用。
+	pContext->m_Props.m_BlockUnderlyingPointerInput = true;
 	float PopupWidth = pContext->m_Width;
 	float PopupHeightResolved = PopupHeight;
 	if(pContext->m_AlignmentHeight >= 0.0f)
@@ -449,6 +582,9 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 		GeometryConfig.m_RowSpacing = pContext->m_EntrySpacing;
 		GeometryConfig.m_FixedHeight = QmDropdownFixedHeight(HasMessage, TextBoundingBox.m_H, OuterHeight);
 		GeometryConfig.m_LeadingRowSpacing = HasMessage ? pContext->m_EntrySpacing : 0.0f;
+		// 外框包裹模式：弹层与锚点按钮严格对齐（宽度/左缘），渲染端的
+		// HasAlignedAnchor 判定才能稳定成立，边框连成一个整体。
+		GeometryConfig.m_AlignToAnchor = true;
 		const SQmDropdownGeometryResult Geometry = QmComputeDropdownPopupGeometry(AnchorRect, Viewport, GeometryConfig);
 		pContext->m_AnchorVisible = Geometry.m_AnchorVisible;
 		pContext->m_PopupVisible = Geometry.m_PopupVisible;
@@ -589,9 +725,11 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	{
 		CScrollRegion *pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion;
 		const bool SpecialFontRenderMode = State.m_SelectionPopupContext.m_SpecialFontRenderMode;
+		const bool FontFaceAvailabilityCheck = State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck;
 		State.m_SelectionPopupContext.Reset();
 		State.m_SelectionPopupContext.m_pScrollRegion = pScrollRegion != nullptr ? pScrollRegion : State.m_pScrollRegion;
 		State.m_SelectionPopupContext.m_SpecialFontRenderMode = SpecialFontRenderMode;
+		State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = FontFaceAvailabilityCheck;
 		State.m_SelectionPopupContext.m_Props.m_BorderColor = DropDownProps.m_VisualStyle.m_PopupBorderColor;
 		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = DropDownProps.m_VisualStyle.m_PopupBackgroundColor;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
@@ -645,6 +783,12 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 	SColorPickerPopupContext *pColorPicker = static_cast<SColorPickerPopupContext *>(pContext);
 	CUi *pUI = pColorPicker->m_pUI;
 	pColorPicker->m_State = EEditState::NONE;
+
+	// 弹窗背板（含高斯模糊）已在 RenderPopupMenus 中绘制完成，弹窗内容一律画在
+	// 背板之上。若不抑制模糊，饱和度/明度渐变里透明→黑色的明度叠加层会因顶角
+	// alpha < 1 触发 CUIRect::Draw4 的 DrawRectBackdrop，把已画好的色相底色覆盖
+	// 成模糊背板，选择方块因此显示为灰度渐变、不随所选色相变化。
+	CUiScopedGaussianBlurSuppression PickerBlurSuppression(pUI);
 
 	CUIRect ColorsArea, HueArea, BottomArea, ModeButtonArea, HueRect, SatRect, ValueRect, HexRect, AlphaRect;
 
