@@ -552,6 +552,8 @@ static float LineSize = ui_token::settings::ROW_HEIGHT;
 static float ColorPickerLineSize = ui_token::settings::ROW_HEIGHT + ui_token::settings::ROW_GAP;
 static float HeadlineFontSize = ui_token::font::HEADLINE;
 static float StandardFontSize = ui_token::font::BODY;
+// 卡片角标一类的小字：与设置页小字号度量同源，避免在业务页散落裸字号。
+static float SmallFontSize = ui_token::font::SMALL;
 
 static float HeadlineHeight = ui_token::font::HEADLINE;
 const float Margin = 10.0f;
@@ -609,6 +611,7 @@ static void ApplyTClientContentMetrics(const float ContentWidth)
 	ColorPickerLineSize = Metrics.m_ButtonHeight;
 	HeadlineFontSize = Metrics.m_HeadlineSize;
 	StandardFontSize = Metrics.m_BodySize;
+	SmallFontSize = Metrics.m_SmallSize;
 	HeadlineHeight = Metrics.m_LineHeight;
 	MarginSmall = Metrics.m_LineSpacing;
 	MarginExtraSmall = Metrics.m_LineSpacing;
@@ -2064,7 +2067,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 						str_append(aSubsets, aMore, sizeof(aSubsets));
 					}
 					pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(0.55f));
-					pUi->DoLabel(&SubsetsRect, aSubsets, 9.0f, TEXTALIGN_ML);
+					pUi->DoLabel(&SubsetsRect, aSubsets, SmallFontSize, TEXTALIGN_ML);
 					pTextRender->TextColor(pTextRender->DefaultTextColor());
 				}
 			}
