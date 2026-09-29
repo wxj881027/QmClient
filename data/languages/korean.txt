@@ -175,6 +175,12 @@
 (Fetching Update Info)
 == (업데이트 정보를 가져오는 중)
 
+(Follow Chinese font)
+== (중국어 글꼴 따르기)
+
+(Follow English font)
+== (영어 글꼴 따르기)
+
 (On Latest)
 == (최신 버전)
 
@@ -823,6 +829,9 @@ Apply this preset
 
 Apply watermark
 == 워터마크 적용
+
+Arabic
+== 아랍어
 
 Are you sure that you want to delete %d selected items?
 == %d개의 선택된 항목을 삭제하시겠습니까?
@@ -1553,6 +1562,9 @@ Broadcast shown to players without DDNet client
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
 
+Browse font store…
+== 글꼴 상점 둘러보기…
+
 Browse profiles saved on this device
 == Browse profiles saved on this device
 
@@ -1820,6 +1832,15 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == 사용자 이름과 일치하는 기존 플레이어 확인 중
 
+Chinese (Simplified)
+== 중국어(간체)
+
+Chinese (Traditional)
+== 중국어(번체)
+
+Chinese font:
+== 중국어 글꼴:
+
 CHN
 == 중국
 
@@ -1852,6 +1873,9 @@ Choose which TClient settings tabs are visible
 
 Cinematic camera
 == 시네마틱 카메라
+
+CJK font weight:
+== CJK 글꼴 굵기:
 
 Clamp mouse to screen
 == 마우스를 화면에 고정
@@ -2597,8 +2621,14 @@ Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
 == 사용자 정의 커뮤니티 목록 가져오기 URL (https여야 함, 비우면 비활성화)
 
-Custom font
-== 사용자 정의 글꼴
+Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
+== 중국어/CJK 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일), 비우면 라틴 사용자 정의 글꼴을 따릅니다
+
+Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
+== 아이콘/기호 글리프용 사용자 정의 글꼴, 비우면 CJK 또는 라틴 글꼴을 따릅니다
+
+Custom font for Latin text (family, or family + style)
+== 라틴 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일)
 
 Custom font weight (variable fonts)
 == 사용자 지정 글꼴 굵기(가변 글꼴)
@@ -2677,6 +2707,9 @@ Cycle custom Tee hue speed (deg/s)
 
 Cycle through emotes
 == 이모트 순환 표시
+
+Cyrillic
+== 키릴 문자
 
 d = Prediction latency
 == d = 예측 지연 시간
@@ -3095,6 +3128,9 @@ Disconnected
 Discord
 == Discord
 
+Display
+== 디스플레이
+
 Display index
 == 디스플레이 인덱스
 
@@ -3212,11 +3248,17 @@ Door Laser Outline Color
 Door laser outline color
 == 문 레이저 외곽선 색상
 
+Download
+== 다운로드
+
 Download community skins
 == 커뮤니티 스킨 다운로드
 
 Download failed
 == 다운로드 실패
+
+Download fonts from the internet instead of shipping them with the client
+== 글꼴을 클라이언트에 포함하지 않고 인터넷에서 다운로드합니다
 
 Download replay
 == リプレイ ダウンロード
@@ -4004,6 +4046,9 @@ Endpoint
 Endpoint (optional)
 == 엔드포인트 (선택 사항)
 
+English font:
+== 영어 글꼴:
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice 모드를 입력하거나 재시작하세요. 그렇지 않으면 60초 후에 팀 전체가 사망합니다
 
@@ -4439,8 +4484,11 @@ Font cursor
 Font size
 == 글꼴 크기
 
-Font style:
-== 글꼴 스타일:
+Font store:
+== 글꼴 상점:
+
+Font weight:
+== 글꼴 굵기:
 
 For more info: /cmdlist
 == 더 많은 정보: /cmdlist
@@ -4913,6 +4961,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 그래픽 추적 수준: 0 = 끄기, 1 = 주기적 요약, 2 = 요약 및 느린 프레임, 3 = 상세 백엔드 추적
 
+Greek
+== 그리스 문자
+
 Greeting text
 == 인사말 텍스트
 
@@ -4934,14 +4985,17 @@ Hammer
 Hammer interaction
 == 망치 상호작용
 
-Hammer Mode:
-== 망치 모드:
+Hammer Mode
+== 해머 모드
 
 Hammer skin steal
 == 망치 스킨 도용
 
 Hammer: %s
 == 망치: %s
+
+Handwriting
+== 손글씨
 
 Has people playing
 == 플레이 중인 사람 있음
@@ -5327,6 +5381,9 @@ I muted you
 Icon and number
 == 아이콘과 숫자
 
+Icon symbols:
+== 아이콘 기호:
+
 Icons
 == 아이콘
 
@@ -5513,6 +5570,9 @@ Input switch
 Insane
 == 미친
 
+Installed
+== 설치됨
+
 Installing update. Please wait...
 == 업데이트 설치 중입니다. 잠시 기다려 주세요...
 
@@ -5620,6 +5680,9 @@ Item type
 
 j = Latency jitter
 == j = 지연 지터
+
+Japanese
+== 일본어
 
 Jelly duration
 == 젤리 지속 시간
@@ -5788,6 +5851,9 @@ Kills a player and announces the kill
 
 Kills team and disables practice mode
 == 팀을 처형하고 연습 모드를 비활성화합니다
+
+Korean
+== 한국어
 
 Kugou hook heartbeat timeout (milliseconds)
 == Kugou Hook 하트비트 시간 초과(밀리초)
@@ -6299,15 +6365,6 @@ Map
 Map browser difficulty star filter bitmask (bits 1-5)
 == 맵 브라우저 난이도 별 필터 비트마스크 (비트 1-5)
 
-Map browser surface
-== 맵 브라우저 표면
-
-Map browser surface color
-== 맵 브라우저 표면 색상
-
-Map browser transparency
-== 맵 브라우저 투명도
-
 Map browser: show empty servers only
 == 맵 브라우저: 빈 서버만 표시
 
@@ -6733,6 +6790,9 @@ Modified
 
 Modules snap to screen edges, center lines and other HUD modules while dragging
 == 모듈을 드래그하면 화면 가장자리, 중심선 및 기타 HUD 모듈에 스냅됩니다
+
+Monospace
+== 고정폭
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee의 안정적인 방향을 따라 더 낙관적인 예측, 안정화 지연 감소
@@ -7333,6 +7393,9 @@ Not downloaded
 
 Not enabled
 == 활성화되지 않음
+
+Not installed
+== 설치되지 않음
 
 Not open, check input device or mic permission
 == 열려 있지 않음, 입력 장치 또는 마이크 권한 확인
@@ -8303,6 +8366,9 @@ Preview import file
 Preview laser bodies, outlines, and impacts
 == Preview laser bodies, outlines, and impacts
 
+Preview loading…
+== 미리보기 불러오는 중…
+
 Preview player and dummy appearance
 == Preview player and dummy appearance
 
@@ -8326,6 +8392,9 @@ Preview the current chat appearance
 
 Preview the sponsor reminder without changing the launch count
 == 실행 횟수를 바꾸지 않고 후원 알림 미리보기
+
+Preview unavailable
+== 미리보기를 사용할 수 없음
 
 Preview visibilities
 == 미리보기 가시성
@@ -9344,6 +9413,9 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 == 저장 데이터 %d 복원 중: 본체 '%s', 더미 '%s'.
 
+Retry
+== 다시 시도
+
 Retry remote stats
 == 원격 통계 재시도
 
@@ -9490,6 +9562,9 @@ Same clan color in scoreboard
 
 Same group full map listening
 == 같은 그룹 전체 맵 듣기
+
+Sans-serif
+== 산세리프
 
 Sat.
 == 채도
@@ -9743,6 +9818,9 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Rank 1 리플레이가 있는 맵 검색 ...
 
+Search online fonts…
+== 온라인 글꼴 검색…
+
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
 
@@ -9889,6 +9967,9 @@ Sends a command to the antibot
 
 Separate with commas
 == 쉼표로 구분
+
+Serif
+== 세리프
 
 Server
 == 서버
@@ -12509,6 +12590,9 @@ Top right
 Total
 == 합계
 
+Total fonts:
+== 전체 글꼴:
+
 Total friends
 == 전체 친구 수
 
@@ -13136,8 +13220,11 @@ VAD threshold (percent)
 Vanilla skins only
 == 바닐라 스킨만 표시
 
-Variable custom font weight
-== 가변 글꼴의 사용자 지정 굵기
+Variable custom font weight for Chinese/CJK text
+== 중국어/CJK 텍스트용 가변 사용자 정의 글꼴 굵기
+
+Variable custom font weight for Latin text
+== 라틴 텍스트용 가변 사용자 정의 글꼴 굵기
 
 Velocity
 == 속도

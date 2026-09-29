@@ -175,6 +175,12 @@
 (Fetching Update Info)
 == (Güncelleme Bilgisi Alınıyor)
 
+(Follow Chinese font)
+== (Çince yazı tipini izle)
+
+(Follow English font)
+== (İngilizce yazı tipini izle)
+
 (On Latest)
 == (En Son Sürüm)
 
@@ -823,6 +829,9 @@ Apply this preset
 
 Apply watermark
 == Filigranı uygula
+
+Arabic
+== Arapça
 
 Are you sure that you want to delete %d selected items?
 == %d seçili öğeyi silmek istediğinize emin misiniz?
@@ -1553,6 +1562,9 @@ Broadcast shown to players without DDNet client
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
 
+Browse font store…
+== Yazı tipi mağazasına göz at…
+
 Browse profiles saved on this device
 == Browse profiles saved on this device
 
@@ -1820,6 +1832,15 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == Adınızla mevcut bir oyuncu kontrol ediliyor
 
+Chinese (Simplified)
+== Çince (Basitleştirilmiş)
+
+Chinese (Traditional)
+== Çince (Geleneksel)
+
+Chinese font:
+== Çince yazı tipi:
+
 CHN
 == Çin
 
@@ -1852,6 +1873,9 @@ Choose which TClient settings tabs are visible
 
 Cinematic camera
 == Sinematik kamera
+
+CJK font weight:
+== CJK yazı tipi kalınlığı:
 
 Clamp mouse to screen
 == Fareyi ekrana sıkıştır
@@ -2597,8 +2621,14 @@ Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
 == Özel topluluk listesi getirme URL'si (https olmalı, devre dışı bırakmak için boş bırakın)
 
-Custom font
-== Özel yazı tipi
+Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
+== Çince/CJK metin için özel yazı tipi (aile veya aile + stil); boş = Latin özel yazı tipini izle
+
+Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
+== Simge/sembol glifleri için özel yazı tipi; boş = CJK veya Latin yazı tipini izle
+
+Custom font for Latin text (family, or family + style)
+== Latin metin için özel yazı tipi (aile veya aile + stil)
 
 Custom font weight (variable fonts)
 == Özel yazı tipi kalınlığı (değişken yazı tipleri)
@@ -2677,6 +2707,9 @@ Cycle custom Tee hue speed (deg/s)
 
 Cycle through emotes
 == Emojiler arasında döngü yap
+
+Cyrillic
+== Kiril
 
 d = Prediction latency
 == d = Tahmin gecikmesi
@@ -3095,6 +3128,9 @@ Disconnected
 Discord
 == Discord
 
+Display
+== Gösteri
+
 Display index
 == Görüntü indeksi
 
@@ -3212,11 +3248,17 @@ Door Laser Outline Color
 Door laser outline color
 == Kapı lazer dış çizgi rengi
 
+Download
+== İndir
+
 Download community skins
 == Topluluk görünümlerini indir
 
 Download failed
 == İndirme başarısız
+
+Download fonts from the internet instead of shipping them with the client
+== Yazı tiplerini istemciyle birlikte göndermek yerine internetten indir
 
 Download replay
 == Tekrarı indir
@@ -4004,6 +4046,9 @@ Endpoint
 Endpoint (optional)
 == Uç nokta (isteğe bağlı)
 
+English font:
+== İngilizce yazı tipi:
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice yazın veya yeniden başlatın, aksi takdirde tüm takım 60 saniye içinde öldürülecek
 
@@ -4439,8 +4484,11 @@ Font cursor
 Font size
 == Yazı tipi boyutu
 
-Font style:
-== Yazı tipi stili:
+Font store:
+== Yazı tipi mağazası:
+
+Font weight:
+== Yazı tipi kalınlığı:
 
 For more info: /cmdlist
 == Daha fazla bilgi: /cmdlist
@@ -4913,6 +4961,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Grafik izleme düzeyi: 0 = kapalı, 1 = dönemsel özet, 2 = özet ve yavaş kareler, 3 = ayrıntılı arka uç izlemesi
 
+Greek
+== Yunanca
+
 Greeting text
 == Selamlama metni
 
@@ -4934,14 +4985,17 @@ Hammer
 Hammer interaction
 == Çekiç etkileşimi
 
-Hammer Mode:
-== Çekiç Modu:
+Hammer Mode
+== Çekiç modu
 
 Hammer skin steal
 == Çekiç deri çalma
 
 Hammer: %s
 == Çekiç: %s
+
+Handwriting
+== El yazısı
 
 Has people playing
 == Oynayan kişi var
@@ -5327,6 +5381,9 @@ I muted you
 Icon and number
 == Simge ve sayı
 
+Icon symbols:
+== Simge sembolleri:
+
 Icons
 == Simgeler
 
@@ -5513,6 +5570,9 @@ Input switch
 Insane
 == Çılgın
 
+Installed
+== Yüklü
+
 Installing update. Please wait...
 == Güncelleme yükleniyor. Lütfen bekleyin...
 
@@ -5620,6 +5680,9 @@ Item type
 
 j = Latency jitter
 == j = Gecikme titreşimi
+
+Japanese
+== Japonca
 
 Jelly duration
 == Jelly süresi
@@ -5788,6 +5851,9 @@ Kills a player and announces the kill
 
 Kills team and disables practice mode
 == Takımı öldürür ve pratik modunu devre dışı bırakır
+
+Korean
+== Korece
 
 Kugou hook heartbeat timeout (milliseconds)
 == Kugou Hook heartbeat zaman aşımı (milisaniye)
@@ -6299,15 +6365,6 @@ Map
 Map browser difficulty star filter bitmask (bits 1-5)
 == Harita tarayıcısı zorluk yıldızı filtresi bit maskesi (bitler 1-5)
 
-Map browser surface
-== Harita tarayıcısı yüzeyi
-
-Map browser surface color
-== Harita tarayıcısı yüzey rengi
-
-Map browser transparency
-== Harita tarayıcısı şeffaflığı
-
 Map browser: show empty servers only
 == Harita tarayıcısı: yalnızca boş sunucuları göster
 
@@ -6733,6 +6790,9 @@ Modified
 
 Modules snap to screen edges, center lines and other HUD modules while dragging
 == Modüller sürüklerken ekran kenarlarına, orta çizgilere ve diğer HUD modüllerine yapışır
+
+Monospace
+== Eşaralıklı
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee'nin sabit yönü boyunca daha iyimser tahmin, stabilize olma gecikmesini azaltır
@@ -7333,6 +7393,9 @@ Not downloaded
 
 Not enabled
 == Etkin değil
+
+Not installed
+== Yüklü değil
 
 Not open, check input device or mic permission
 == Açık değil, giriş cihazını veya mikrofon iznini kontrol edin
@@ -8303,6 +8366,9 @@ Preview import file
 Preview laser bodies, outlines, and impacts
 == Preview laser bodies, outlines, and impacts
 
+Preview loading…
+== Önizleme yükleniyor…
+
 Preview player and dummy appearance
 == Preview player and dummy appearance
 
@@ -8326,6 +8392,9 @@ Preview the current chat appearance
 
 Preview the sponsor reminder without changing the launch count
 == Başlatma sayısını değiştirmeden hatırlatmayı önizle
+
+Preview unavailable
+== Önizleme kullanılamıyor
 
 Preview visibilities
 == Önizleme görünürlükleri
@@ -9344,6 +9413,9 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 == %d numaralı kayıt geri yükleniyor: ana oyuncu '%s', kukla '%s'.
 
+Retry
+== Yeniden dene
+
 Retry remote stats
 == Uzak istatistikleri yeniden dene
 
@@ -9490,6 +9562,9 @@ Same clan color in scoreboard
 
 Same group full map listening
 == Aynı Gruptaki Herkesi Haritada Duy
+
+Sans-serif
+== Serifsiz
 
 Sat.
 == Doy.
@@ -9743,6 +9818,9 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Rank 1 demosu olan haritaları ara ...
 
+Search online fonts…
+== Çevrimiçi yazı tiplerini ara…
+
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
 
@@ -9889,6 +9967,9 @@ Sends a command to the antibot
 
 Separate with commas
 == Virgülle ayır
+
+Serif
+== Serifli
 
 Server
 == Sunucu
@@ -12509,6 +12590,9 @@ Top right
 Total
 == Toplam
 
+Total fonts:
+== Toplam yazı tipi:
+
 Total friends
 == Toplam arkadaş
 
@@ -13136,8 +13220,11 @@ VAD threshold (percent)
 Vanilla skins only
 == Sadece orijinal skinler
 
-Variable custom font weight
-== Değişken özel yazı tipi kalınlığı
+Variable custom font weight for Chinese/CJK text
+== Çince/CJK metin için değişken özel yazı tipi kalınlığı
+
+Variable custom font weight for Latin text
+== Latin metin için değişken özel yazı tipi kalınlığı
 
 Velocity
 == Hız
