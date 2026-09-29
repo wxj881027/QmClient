@@ -4083,6 +4083,9 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		const auto DoGraphicsChoiceRow = [this, GraphicsMetrics, GraphicsPage](CUIRect Row, const char *pLabel, const char *pId, const char **ppNames, size_t Count, int Current, CUi::SDropDownState &State, CScrollRegion &ScrollRegion, auto &&OnChanged) {
 			if(ppNames == nullptr || Count == 0)
 				return;
+			for(size_t Index = 0; Index < Count; ++Index)
+				if(ppNames[Index] == nullptr)
+					return;
 			Current = std::clamp(Current, 0, static_cast<int>(Count) - 1);
 			CUIRect Label, DropDown;
 			Row.VSplitLeft(std::clamp(Row.w * 0.38f, 120.0f * GraphicsMetrics.m_UiScale, 220.0f * GraphicsMetrics.m_UiScale), &Label, &DropDown);
