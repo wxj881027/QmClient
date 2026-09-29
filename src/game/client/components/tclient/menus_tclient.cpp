@@ -1323,10 +1323,10 @@ namespace fontstore
 {
 	struct SEntry
 	{
-		std::string m_Family;    // 字体族显示名
-		std::string m_Category;  // serif / sans-serif / ...
-		std::string m_RepoPath;  // google/fonts 仓库相对路径
-		std::string m_File;      // 落盘文件名（仓库路径基名，目录内由生成器保证唯一）
+		std::string m_Family; // 字体族显示名
+		std::string m_Category; // serif / sans-serif / ...
+		std::string m_RepoPath; // google/fonts 仓库相对路径
+		std::string m_File; // 落盘文件名（仓库路径基名，目录内由生成器保证唯一）
 		std::string m_DirectUrl; // 国内直链（fonts.gstatic.cn，生成器只给静态单文件拉丁族），可空
 		// 覆盖的脚本子集（生成器白名单：japanese/korean/cyrillic/...），供商店
 		// 按界面语言排序与徽标标注；仅 latin 覆盖的族为空。
@@ -1342,9 +1342,9 @@ namespace fontstore
 		// 族内条目的脚本子集（同族条目一致，取首条）。
 		std::vector<std::string> m_vSubsets;
 		std::vector<size_t> m_vEntryIndices; // 首条为主文件（预览/默认下载）
-		bool m_Installed = false;            // 目录加载与重扫后按文件存在性刷新
-		bool m_PreviewReady = false;         // 预览面已可渲染
-		bool m_PreviewFailed = false;        // 预览下载或解析失败：不再自动重试
+		bool m_Installed = false; // 目录加载与重扫后按文件存在性刷新
+		bool m_PreviewReady = false; // 预览面已可渲染
+		bool m_PreviewFailed = false; // 预览下载或解析失败：不再自动重试
 	};
 
 	// 安装任务：一个族一条，文件逐个串行下载，单文件失败自动换镜像。
@@ -1352,7 +1352,7 @@ namespace fontstore
 	{
 		size_t m_FamilyIndex = 0;
 		size_t m_FileCursor = 0; // 族内文件游标（也等于已完成文件数）
-		size_t m_UrlIndex = 0;   // 当前文件的镜像游标
+		size_t m_UrlIndex = 0; // 当前文件的镜像游标
 		std::shared_ptr<IHttpRequest> m_pRequest = nullptr;
 		bool m_Done = false;
 		bool m_Failed = false;
@@ -1450,16 +1450,16 @@ namespace fontstore
 					std::string LowerFamily = Parsed.m_Family;
 					std::transform(LowerFamily.begin(), LowerFamily.end(), LowerFamily.begin(), [](unsigned char c) { return (char)std::tolower(c); });
 					auto It = FamilyIndex.find(LowerFamily);
-				if(It == FamilyIndex.end())
-				{
-					SFamily Family;
-					Family.m_Name = Parsed.m_Family;
-					Family.m_Category = Parsed.m_Category;
-					Family.m_vSubsets = Parsed.m_vSubsets;
-					Family.m_vEntryIndices.push_back(vEntries.size());
-					vFamilies.push_back(std::move(Family));
-					It = FamilyIndex.emplace(LowerFamily, vFamilies.size() - 1).first;
-				}
+					if(It == FamilyIndex.end())
+					{
+						SFamily Family;
+						Family.m_Name = Parsed.m_Family;
+						Family.m_Category = Parsed.m_Category;
+						Family.m_vSubsets = Parsed.m_vSubsets;
+						Family.m_vEntryIndices.push_back(vEntries.size());
+						vFamilies.push_back(std::move(Family));
+						It = FamilyIndex.emplace(LowerFamily, vFamilies.size() - 1).first;
+					}
 					else
 						vFamilies[It->second].m_vEntryIndices.push_back(vEntries.size());
 					vEntries.push_back(std::move(Parsed));
@@ -1843,7 +1843,7 @@ struct SFontStorePopupContext
 	CLineInput m_SearchInput;
 	int m_Category = 0; // 0=全部，1..5 = sans-serif/serif/display/handwriting/monospace
 	int m_CategoryPrev = 0;
-	int m_InstallFilter = 0;     // 0=全部，1=未安装，2=已安装
+	int m_InstallFilter = 0; // 0=全部，1=未安装，2=已安装
 	int m_InstallFilterPrev = 0;
 	size_t m_InstalledCountPrev = (size_t)-1; // 已安装族数量：任何安装完成都会变化，驱动筛选结果刷新
 	std::vector<size_t> m_vResults; // 过滤后的族索引
@@ -1874,7 +1874,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 		std::clamp(CardVisual.m_SurfaceColor.g * ElevatedScale, 0.0f, 1.0f),
 		std::clamp(CardVisual.m_SurfaceColor.b * ElevatedScale, 0.0f, 1.0f),
 		CardVisual.m_SurfaceColor.a)
-		.WithAlpha(std::clamp(std::max(CardVisual.m_SurfaceColor.a, 0.90f), 0.0f, 1.0f));
+						    .WithAlpha(std::clamp(std::max(CardVisual.m_SurfaceColor.a, 0.90f), 0.0f, 1.0f));
 
 	// 推进下载状态机：弹层每帧必然渲染，字体卡滚出屏幕也不中断安装/预览。
 	fontstore::Update(pSelf->Http(), pStorage, pTextRender, true);
@@ -2165,7 +2165,7 @@ namespace
 	{
 		std::string m_Label;
 		const std::string *m_pFullStyle = nullptr; // 静态条目指向的完整 "Family Style"
-		int m_Value = 400;                         // 可变条目的数值字重
+		int m_Value = 400; // 可变条目的数值字重
 		bool m_Variable = false;
 	};
 
@@ -2263,50 +2263,50 @@ namespace
 			if(Best >= 0)
 				return Best;
 		}
-	for(size_t i = 0; i < vEntries.size(); ++i)
-		if(str_comp_nocase(vEntries[i].m_Label.c_str(), "Regular") == 0)
-			return (int)i;
-	return 0;
-}
+		for(size_t i = 0; i < vEntries.size(); ++i)
+			if(str_comp_nocase(vEntries[i].m_Label.c_str(), "Regular") == 0)
+				return (int)i;
+		return 0;
+	}
 
-// 可变字重滑杆的节流应用状态：ApplyRender 推进渲染层字重（渲染层按 face 轴
-// 钳制、坐标真变才清图集），FinishHeavy 执行拖动结束后的重量级收尾（布局失效
-// 与窗口重排，拖动中反复调用会造成明显卡顿）。
-struct SQmWeightThrottleState
-{
-	int m_AppliedWeight = std::numeric_limits<int>::min(); // 已推进到渲染层的值
-	int m_SeenWeight = std::numeric_limits<int>::min();    // 上帧读到的滑杆值
-	int m_FinishedWeight = std::numeric_limits<int>::min(); // 已执行收尾的值
-	float m_LastApplyTime = -10.0f;
-	float m_LastChangeTime = 0.0f;
-};
+	// 可变字重滑杆的节流应用状态：ApplyRender 推进渲染层字重（渲染层按 face 轴
+	// 钳制、坐标真变才清图集），FinishHeavy 执行拖动结束后的重量级收尾（布局失效
+	// 与窗口重排，拖动中反复调用会造成明显卡顿）。
+	struct SQmWeightThrottleState
+	{
+		int m_AppliedWeight = std::numeric_limits<int>::min(); // 已推进到渲染层的值
+		int m_SeenWeight = std::numeric_limits<int>::min(); // 上帧读到的滑杆值
+		int m_FinishedWeight = std::numeric_limits<int>::min(); // 已执行收尾的值
+		float m_LastApplyTime = -10.0f;
+		float m_LastChangeTime = 0.0f;
+	};
 
-void QmTickVariableWeightThrottle(SQmWeightThrottleState &State, int Weight, float Now, const std::function<void(int)> &ApplyRender, const std::function<void()> &FinishHeavy)
-{
-	constexpr float ApplyInterval = 0.10f; // 拖动中最小应用间隔
-	constexpr float SettleDelay = 0.15f;   // 值稳定该时长视为停手
-	if(Weight != State.m_SeenWeight)
+	void QmTickVariableWeightThrottle(SQmWeightThrottleState &State, int Weight, float Now, const std::function<void(int)> &ApplyRender, const std::function<void()> &FinishHeavy)
 	{
-		State.m_SeenWeight = Weight;
-		State.m_LastChangeTime = Now;
+		constexpr float ApplyInterval = 0.10f; // 拖动中最小应用间隔
+		constexpr float SettleDelay = 0.15f; // 值稳定该时长视为停手
+		if(Weight != State.m_SeenWeight)
+		{
+			State.m_SeenWeight = Weight;
+			State.m_LastChangeTime = Now;
+		}
+		if(State.m_AppliedWeight == std::numeric_limits<int>::min())
+			State.m_AppliedWeight = Weight;
+		if(State.m_FinishedWeight == std::numeric_limits<int>::min())
+			State.m_FinishedWeight = Weight;
+		if(Weight != State.m_AppliedWeight &&
+			(Now - State.m_LastApplyTime >= ApplyInterval || Now - State.m_LastChangeTime >= SettleDelay))
+		{
+			ApplyRender(Weight);
+			State.m_AppliedWeight = Weight;
+			State.m_LastApplyTime = Now;
+		}
+		if(Weight != State.m_FinishedWeight && Now - State.m_LastChangeTime >= SettleDelay)
+		{
+			FinishHeavy();
+			State.m_FinishedWeight = Weight;
+		}
 	}
-	if(State.m_AppliedWeight == std::numeric_limits<int>::min())
-		State.m_AppliedWeight = Weight;
-	if(State.m_FinishedWeight == std::numeric_limits<int>::min())
-		State.m_FinishedWeight = Weight;
-	if(Weight != State.m_AppliedWeight &&
-		(Now - State.m_LastApplyTime >= ApplyInterval || Now - State.m_LastChangeTime >= SettleDelay))
-	{
-		ApplyRender(Weight);
-		State.m_AppliedWeight = Weight;
-		State.m_LastApplyTime = Now;
-	}
-	if(Weight != State.m_FinishedWeight && Now - State.m_LastChangeTime >= SettleDelay)
-	{
-		FinishHeavy();
-		State.m_FinishedWeight = Weight;
-	}
-}
 } // namespace
 
 float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render)
@@ -2474,9 +2474,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		static int s_LatinWeightSliderId;
 		RenderQmSettingsSliderWithValueInput(&s_LatinWeightSliderId, Button, &g_Config.m_TcCustomFontWeight, LatinVarMin, LatinVarMax, "", false);
 		static SQmWeightThrottleState s_LatinWeightThrottle;
-		QmTickVariableWeightThrottle(s_LatinWeightThrottle, g_Config.m_TcCustomFontWeight, Client()->GlobalTime(),
-			[this](int Weight) { TextRender()->SetCustomFontWeight(Weight); },
-			[&]() {
+		QmTickVariableWeightThrottle(s_LatinWeightThrottle, g_Config.m_TcCustomFontWeight, Client()->GlobalTime(), [this](int Weight) { TextRender()->SetCustomFontWeight(Weight); }, [&]() {
 				// 归一为族名：可变字重只对族 face 生效，样式段配置会挡住轴调节。
 				if(str_comp_nocase(g_Config.m_TcCustomFont, aLatinFamily) != 0)
 				{
@@ -2486,8 +2484,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 				s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
-				GameClient()->OnWindowResize();
-			});
+				GameClient()->OnWindowResize(); });
 	}
 	// QmClient: CJK 字体行（中日韩共用槽位，码点分类含假名/谚文/汉字）——
 	// 只影响 CJK 字形，留空跟随英文字体（原回退链）；日语用户建议选
@@ -2523,8 +2520,8 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			for(const auto &FaceName : CustomFaces)
 			{
 				const bool IsCurrentConfig = g_Config.m_TcCustomFontCjk[0] != '\0' &&
-																						 (str_comp_nocase(FaceName.c_str(), g_Config.m_TcCustomFontCjk) == 0 ||
-																							 (str_startswith_nocase(g_Config.m_TcCustomFontCjk, FaceName.c_str()) && g_Config.m_TcCustomFontCjk[FaceName.size()] == ' '));
+							     (str_comp_nocase(FaceName.c_str(), g_Config.m_TcCustomFontCjk) == 0 ||
+								     (str_startswith_nocase(g_Config.m_TcCustomFontCjk, FaceName.c_str()) && g_Config.m_TcCustomFontCjk[FaceName.size()] == ' '));
 				if(IsCurrentConfig || TextRender()->QmFaceHasCjk(FaceName.c_str()))
 					s_CjkDropDownNamesOwned.push_back(FaceName);
 			}
@@ -2629,9 +2626,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		static int s_CjkWeightSliderId;
 		RenderQmSettingsSliderWithValueInput(&s_CjkWeightSliderId, Button, &g_Config.m_TcCustomFontWeightCjk, CjkVarMin, CjkVarMax, "", false);
 		static SQmWeightThrottleState s_CjkWeightThrottle;
-		QmTickVariableWeightThrottle(s_CjkWeightThrottle, g_Config.m_TcCustomFontWeightCjk, Client()->GlobalTime(),
-			[this](int Weight) { TextRender()->SetCustomFontWeightCjk(Weight); },
-			[&]() {
+		QmTickVariableWeightThrottle(s_CjkWeightThrottle, g_Config.m_TcCustomFontWeightCjk, Client()->GlobalTime(), [this](int Weight) { TextRender()->SetCustomFontWeightCjk(Weight); }, [&]() {
 				// 归一为族名：可变字重只对族 face 生效，样式段配置会挡住轴调节。
 				if(str_comp_nocase(g_Config.m_TcCustomFontCjk, aCjkFamily) != 0)
 				{
@@ -2641,8 +2636,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 				s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
-				GameClient()->OnWindowResize();
-			});
+				GameClient()->OnWindowResize(); });
 	}
 	// QmClient: 图标符号行 —— 星号、心形、几何形状等符号字形与私用区图标。
 	Button = Rows.Next();
@@ -2739,7 +2733,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 					std::clamp(CardVisual.m_SurfaceColor.g * ElevatedScale, 0.0f, 1.0f),
 					std::clamp(CardVisual.m_SurfaceColor.b * ElevatedScale, 0.0f, 1.0f),
 					CardVisual.m_SurfaceColor.a)
-					.WithAlpha(std::clamp(std::max(CardVisual.m_SurfaceColor.a, 0.90f), 0.0f, 1.0f));
+									    .WithAlpha(std::clamp(std::max(CardVisual.m_SurfaceColor.a, 0.90f), 0.0f, 1.0f));
 				SPopupMenuProperties PopupProps;
 				// 二级界面语义：视口居中（不锚定按钮），并锁定下层页面的滚轮与指针交互。
 				PopupProps.m_CenterInViewport = true;
