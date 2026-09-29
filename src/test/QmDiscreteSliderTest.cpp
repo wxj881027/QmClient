@@ -1,3 +1,6 @@
+// 单元测试：离散滑块的几何、输入状态机与档位样式（纯逻辑层）。
+// UiDiscreteSlider.cpp 不在测试目标内：它与 CUi 的 active/hot item 交接依赖 CUi::FinishCheck
+// 在未渲染帧清理 active item，这里只固定状态机对外承诺的 m_Active 语义。
 #include <game/client/QmUi/UiDiscreteSlider.h>
 
 #include <gtest/gtest.h>
@@ -60,6 +63,9 @@ TEST_F(CDiscreteSliderTest, ThumbGrabKeepsItsOffsetWhileCrossingStops)
 	m_Value = 3;
 	const float GrabOffset = m_Geometry.m_KnobSize * 0.4f;
 	EXPECT_FALSE(Update(StopX(3) + GrabOffset, true, true).m_Changed);
+	EXPECT_EQ(m_Value, 3);
+	// 指针停在偏移后的位置：保留抓取偏移时应留在第 3 档，忽略偏移则会跳到第 4 档。
+	EXPECT_FALSE(Update(StopX(3) + 20.0f, false, true).m_Changed);
 	EXPECT_EQ(m_Value, 3);
 	EXPECT_TRUE(Update(StopX(4) + GrabOffset, false, true).m_Changed);
 	EXPECT_EQ(m_Value, 4);
@@ -152,6 +158,54 @@ TEST_F(CDiscreteSliderTest, IndeterminateSelectionStaysUntouchedUntilExplicitCho
 	EXPECT_EQ(m_Value, 0);
 }
 
+TEST(DiscreteSliderInputContract, ActiveOnlyTracksTheHeldGrab)
+{
+	struct SCase
+	{
+		const char *m_pName;
+		float m_Stop;
+		bool m_Pressed;
+		bool m_Down;
+		bool m_Hovered;
+		bool m_CanActivate;
+		bool m_Enabled;
+		bool m_AlreadyActive;
+		bool m_ExpectActive;
+		int m_ExpectValue;
+	};
+	// 覆盖调用点交给状态机的每一种输入组合：只有「指针在控件内按下且没有别的控件占用」或
+	// 「已经在拖动且按键仍未松开」才对外报告 active。
+	const SCase aCases[] = {
+		{"hover-only", 5.0f / 6.0f, false, false, true, true, true, false, false, 3},
+		{"held-button-without-fresh-press", 5.0f / 6.0f, false, true, true, true, true, false, false, 3},
+		{"press-outside-rect", 5.0f / 6.0f, true, true, false, true, true, false, false, 3},
+		{"press-while-other-widget-active", 5.0f / 6.0f, true, true, true, false, true, false, false, 3},
+		{"press-while-disabled", 5.0f / 6.0f, true, true, true, true, false, false, false, 3},
+		{"press-on-track-captures", 5.0f / 6.0f, true, true, true, true, true, false, true, 5},
+		{"release-ends-grab", 3.0f / 6.0f, false, false, true, true, true, true, false, 3},
+		{"drag-continues-outside-rect", 5.0f / 6.0f, false, true, false, true, true, true, true, 5},
+	};
+
+	for(const SCase &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pName);
+		ui_widget::SDiscreteSliderState State;
+		const ui_widget::SDiscreteSliderGeometry Geometry = ui_widget::ResolveDiscreteSliderGeometry({0.0f, 0.0f, 240.0f, 20.0f});
+		ui_widget::SDiscreteSliderInput Input;
+		Input.m_MouseX = Geometry.Position(Case.m_Stop);
+		Input.m_Pressed = Case.m_Pressed;
+		Input.m_Down = Case.m_Down;
+		Input.m_Hovered = Case.m_Hovered;
+		Input.m_CanActivate = Case.m_CanActivate;
+		Input.m_Enabled = Case.m_Enabled;
+		Input.m_Active = Case.m_AlreadyActive;
+		const ui_widget::SDiscreteSliderResult Result = ui_widget::UpdateDiscreteSlider(State, Geometry, Input, 3, 0, 6);
+		EXPECT_EQ(Result.m_Active, Case.m_ExpectActive);
+		EXPECT_EQ(Result.m_Value, Case.m_ExpectValue);
+		EXPECT_EQ(Result.m_Changed, Case.m_ExpectValue != 3);
+	}
+}
+
 TEST(DiscreteSliderGeometry, DrawnStopsMatchClicksAtDifferentSizesAndOrigins)
 {
 	const CUIRect aRects[] = {{0.0f, 0.0f, 150.0f, 16.0f}, {42.0f, 10.0f, 300.0f, 24.0f}, {-40.0f, 80.0f, 430.0f, 32.0f}};
@@ -178,6 +232,33 @@ TEST(DiscreteSliderGeometry, DrawnStopsMatchClicksAtDifferentSizesAndOrigins)
 			const auto Result = ui_widget::UpdateDiscreteSlider(State, Geometry, Input, -1, 0, 6);
 			EXPECT_EQ(Result.m_Value, Stop);
 			EXPECT_TRUE(Result.m_Active);
+		}
+	}
+}
+
+TEST(DiscreteSliderGeometry, UiScaleKeepsKnobInsideRectAndStopMappingStable)
+{
+	// UiScale 是布局缩放（Ctx.m_UiScale），只在 Rect 收边允许范围内放大旋钮与圆点。
+	const CUIRect Rect{0.0f, 0.0f, 240.0f, 24.0f};
+	for(const float Scale : {0.78f, 1.0f, 1.25f, 2.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const auto Geometry = ui_widget::ResolveDiscreteSliderGeometry(Rect, Scale);
+		ASSERT_TRUE(Geometry.IsUsable());
+		EXPECT_LE(Geometry.m_KnobSize, 18.0f * Scale + 0.001f);
+		EXPECT_LE(Geometry.m_KnobSize, Rect.h / 1.12f + 0.001f);
+		const CUIRect FirstKnob = Geometry.KnobRect(0.0f, 1.0f);
+		const CUIRect LastKnob = Geometry.KnobRect(1.0f, 1.0f);
+		EXPECT_GE(FirstKnob.x, Rect.x - 0.001f);
+		EXPECT_LE(LastKnob.x + LastKnob.w, Rect.x + Rect.w + 0.001f);
+		for(int Stop = 0; Stop <= 6; ++Stop)
+		{
+			SCOPED_TRACE(Stop);
+			ui_widget::SDiscreteSliderState State;
+			ui_widget::SDiscreteSliderInput Input;
+			Input.m_MouseX = Geometry.Position(Stop / 6.0f);
+			Input.m_Hovered = Input.m_Pressed = Input.m_Down = true;
+			EXPECT_EQ(ui_widget::UpdateDiscreteSlider(State, Geometry, Input, -1, 0, 6).m_Value, Stop);
 		}
 	}
 }

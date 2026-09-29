@@ -533,6 +533,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, LegacyRoundedRectDrawSitesRequireExplicit
 		"src/game/client/ui_popups.cpp",
 		"src/game/client/QmUi/UiButtons.cpp",
 		"src/game/client/QmUi/UiForms.cpp",
+		"src/game/client/QmUi/UiDiscreteSlider.cpp",
 		"src/game/client/QmUi/SettingsCard.cpp",
 		"src/game/client/QmUi/SettingsCardDeck.cpp",
 		"src/game/client/QmUi/UiContainers.h",

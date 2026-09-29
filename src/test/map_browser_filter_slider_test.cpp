@@ -38,6 +38,17 @@ TEST(MapBrowserFilterSlider, IdleCustomSelectionDoesNotRequestConfigRewrite)
 	EXPECT_EQ(Result.m_Value, -1);
 }
 
+TEST(MapBrowserFilterSlider, OutOfRangeLevelKeepsConfiguredFilters)
+{
+	// 越界档位不表达任何筛选：即使被误传到写回接口，也不能清掉用户已配好的筛选。
+	int EmptyOnly = 1;
+	int StarMask = (1 << 2) | (1 << 4);
+	QmMapVotes::ApplyMapBrowserFilterLevel(-1, EmptyOnly, StarMask);
+	EXPECT_EQ(EmptyOnly, 1);
+	EXPECT_EQ(StarMask, (1 << 2) | (1 << 4));
+	EXPECT_TRUE(QmMapVotes::MatchesFilter(4, 0, EmptyOnly, StarMask, false, false));
+}
+
 TEST(MapBrowserFilterSlider, DragFromEmptyToStarsUpdatesMatchingBeforeRelease)
 {
 	int EmptyOnly = 0;

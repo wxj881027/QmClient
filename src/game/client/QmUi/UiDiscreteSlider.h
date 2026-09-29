@@ -31,10 +31,10 @@ namespace ui_widget
 
 	struct SDiscreteSliderStyle
 	{
-		ColorRGBA m_Color;
-		ColorRGBA m_GradientStart;
-		ColorRGBA m_GradientMiddle;
-		ColorRGBA m_GradientEnd;
+		ColorRGBA m_Color{};
+		ColorRGBA m_GradientStart{};
+		ColorRGBA m_GradientMiddle{};
+		ColorRGBA m_GradientEnd{};
 		bool m_Gradient = false;
 		int m_ParticleCount = 0;
 	};
@@ -63,6 +63,8 @@ namespace ui_widget
 		bool m_Active = false;
 	};
 
+	// UiScale 是调用方的布局缩放（Ctx.m_UiScale），不是像素缩放：Rect 已按布局单位给出，
+	// 缩放只影响旋钮/圆点的基准尺寸，且始终受 Rect 收边约束。
 	SDiscreteSliderGeometry ResolveDiscreteSliderGeometry(const CUIRect &Rect, float UiScale = 1.0f);
 	float DiscreteSliderNormalizedValue(int Value, int Min, int Max);
 	SDiscreteSliderStyle ResolveDiscreteSliderStyle(int Value, int Min, int Max);

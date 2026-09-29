@@ -1121,6 +1121,7 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 		return;
 
 	static ui_widget::SDiscreteSliderState s_MapFilterSliderState;
+	static int s_MapFilterSliderId;
 	static int s_MapFilterFavoriteId;
 	const IUiContext Context = SettingsUiContext("server_browser_map_filter");
 
@@ -1143,7 +1144,7 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	SliderRect.x += 4.0f;
 	SliderRect.w = std::max(0.0f, SliderRect.w - 4.0f);
 
-	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_MapFilterSliderState, s_MapFilterSliderState, &SliderLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR, SliderRect);
+	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_MapFilterSliderId, s_MapFilterSliderState, &SliderLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR, SliderRect);
 	if(SliderChanged)
 	{
 		QmMapVotes::ApplyMapBrowserFilterLevel(SliderLevel, g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
@@ -1203,7 +1204,7 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 
 	char aTooltip[192];
 	str_format(aTooltip, sizeof(aTooltip), "%s → %s → %s", Localize("No filter"), Localize("Filter empty servers in browser"), Localize("Difficulty stars"));
-	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterSliderState, &SliderRect, aTooltip);
+	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterSliderId, &SliderRect, aTooltip);
 	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterFavoriteId, &FavoriteGroup, Localize("Favorite maps"));
 }
 

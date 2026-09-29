@@ -82,10 +82,13 @@ namespace ui_widget
 			if(Hovered && (Active || !Input.m_Down))
 				pUi->SetHotItem(pId);
 		}
+		// 本控件未渲染时（页面切走、调用点提前返回）active item 由 CUi::FinishCheck 当帧清理，
+		// 因此不需要在这里额外兜底；抓取偏移在任一非拖动帧都会归零。
 
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
 		const float Alpha = pUi->Enabled() ? 1.0f : 0.45f;
-		const ColorRGBA TrackColor = ColorRGBA(0.27f, 0.27f, 0.27f, Alpha);
+		// 槽底固定用中性灰：填充与标签按难度档位取色，槽底不跟随主题强调色，否则同档位颜色会互相干扰。
+		const ColorRGBA TrackColor = ui_token::color::SLIDER_TRACK.WithAlpha(Alpha);
 		DrawRoundedSurface(Ctx, Geometry.m_Track, TrackColor, ColorRGBA(), Geometry.m_Track.h * 0.5f);
 
 		const bool HasSelection = *pValue >= Min && *pValue <= Max;
@@ -98,14 +101,22 @@ namespace ui_widget
 			DrawSliderFill(Ctx, Fill, Style, Alpha);
 		}
 
-		for(int Stop = Min; Stop <= Max; ++Stop)
+		// 档位圆点数量与量程同阶：正常量程逐档绘制，异常大的量程直接跳过，
+		// 避免 O(量程) 次绘制，也避免 int 递增在 Max == INT_MAX 时溢出。
+		constexpr int64_t MAX_DRAWN_STOPS = 64;
+		const int64_t NumStops = static_cast<int64_t>(Max) - static_cast<int64_t>(Min) + 1;
+		if(NumStops <= MAX_DRAWN_STOPS)
 		{
-			CUIRect Dot;
-			Dot.w = Dot.h = Geometry.m_DotSize;
-			Dot.x = Geometry.Position(DiscreteSliderNormalizedValue(Stop, Min, Max)) - Dot.w * 0.5f;
-			Dot.y = Rect.y + (Rect.h - Dot.h) * 0.5f;
-			const float DotAlpha = HasSelection && Stop <= *pValue ? 0.42f : 0.30f;
-			DrawRoundedSurface(Ctx, Dot, ui_token::color::TEXT_PRIMARY.WithAlpha(DotAlpha * Alpha), ColorRGBA(), Dot.w * 0.5f);
+			for(int64_t Index = 0; Index < NumStops; ++Index)
+			{
+				const int Stop = Min + static_cast<int>(Index);
+				CUIRect Dot;
+				Dot.w = Dot.h = Geometry.m_DotSize;
+				Dot.x = Geometry.Position(DiscreteSliderNormalizedValue(Stop, Min, Max)) - Dot.w * 0.5f;
+				Dot.y = Rect.y + (Rect.h - Dot.h) * 0.5f;
+				const float DotAlpha = HasSelection && Stop <= *pValue ? 0.42f : 0.30f;
+				DrawRoundedSurface(Ctx, Dot, ui_token::color::TEXT_PRIMARY.WithAlpha(DotAlpha * Alpha), ColorRGBA(), Dot.w * 0.5f);
+			}
 		}
 
 		float Emphasis = Active ? 1.0f : (Hovered ? 0.5f : 0.0f);
