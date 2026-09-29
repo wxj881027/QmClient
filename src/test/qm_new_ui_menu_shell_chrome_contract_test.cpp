@@ -113,8 +113,10 @@ TEST(QmNewUiMenuShellChromeContract, MenubarUsesExplicitQmNewUiColorBranch)
 	EXPECT_NE(RenderMenubar.find("if(UseNewUi)"), std::string::npos);
 	// 导航栏不再自绘整条背景，直接透出下方菜单背景；新旧 UI 都不得出现硬编码底色条。
 	EXPECT_EQ(UseNewUiBlock.find("Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.12f)"), std::string::npos);
-	EXPECT_NE(UseNewUiBlock.find("Box.VMargin(MenubarOuterInsetX, &Box);"), std::string::npos);
-	EXPECT_NE(UseNewUiBlock.find("Box.HMargin(MenubarOuterInsetY, &Box);"), std::string::npos);
+	// 统一边距模型：胶囊行显式切出（21px），不再有 VMargin/HMargin 内缩补偿。
+	EXPECT_NE(UseNewUiBlock.find("Box.HSplitTop(MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW, &Box, nullptr);"), std::string::npos);
+	EXPECT_EQ(UseNewUiBlock.find("Box.VMargin(MenubarOuterInsetX, &Box);"), std::string::npos);
+	EXPECT_EQ(UseNewUiBlock.find("Box.HMargin(MenubarOuterInsetY, &Box);"), std::string::npos);
 	// 离线右侧图标簇改为滑块式胶囊导航（截图/回放/编辑器/设置/退出），不再有主菜单按钮。
 	EXPECT_NE(UseNewUiBlock.find("ui_widget::CapsuleTabBarChrome(RightNavCtx, MakeUiScopeHash(\"menubar_capsule_right_nav\")"), std::string::npos);
 	EXPECT_NE(UseNewUiBlock.find("if(DoMenuTabV2_QmIcon(&s_QuitButton, EQmIcon::POWER_OFF, FONT_ICON_POWER_OFF, false, &aRightNavSlots[4]"), std::string::npos);
@@ -166,10 +168,12 @@ TEST(QmNewUiMenuShellChromeContract, ScreenshotBrowserHasSiblingMenuButtonsInEve
 	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
 	const std::string RenderMenubar = FunctionBody(MenusSource, "void CMenus::RenderMenubar(");
 
-	EXPECT_EQ(CountSubstring(RenderMenubar, "EQmIcon::IMAGE, FONT_ICON_IMAGE"), 4u);
-	EXPECT_EQ(CountSubstring(RenderMenubar, "OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS)"), 4u);
-	EXPECT_EQ(CountSubstring(RenderMenubar, "OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS)"), 4u);
-	EXPECT_EQ(CountSubstring(RenderMenubar, "Localize(\"Screenshots\")"), 4u);
+	// 新 UI 的离线/在线壳共用同一份右侧滑块导航（截图/回放并入槽位统一绘制），
+	// 因此截图/回放按钮代码出现 3 次：新 UI 统一块 + 旧 UI 离线 + 旧 UI 在线。
+	EXPECT_EQ(CountSubstring(RenderMenubar, "EQmIcon::IMAGE, FONT_ICON_IMAGE"), 3u);
+	EXPECT_EQ(CountSubstring(RenderMenubar, "OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS)"), 3u);
+	EXPECT_EQ(CountSubstring(RenderMenubar, "OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS)"), 3u);
+	EXPECT_EQ(CountSubstring(RenderMenubar, "Localize(\"Screenshots\")"), 3u);
 	EXPECT_NE(RenderMenubar.find("const bool DemoBrowserScreenshotsActive = ActivePage == PAGE_DEMOS && DemoBrowserBrowsingScreenshots();"), std::string::npos);
 	EXPECT_NE(RenderMenubar.find("const bool DemoBrowserReplaysActive = ActivePage == PAGE_DEMOS && !DemoBrowserBrowsingScreenshots();"), std::string::npos);
 
@@ -206,13 +210,21 @@ TEST(QmNewUiMenuShellChromeContract, MenuDefersGaussianBlurPreparationOnFirstOpe
 TEST(QmNewUiMenuShellChromeContract, LegacyMenusKeepTabAndPanelShellConnected)
 {
 	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string MenuShellSplit = "const bool UseNewUi = g_Config.m_QmNewUi != 0;\n\t\t\tScreen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);\n\t\t\tif(UseNewUi)\n\t\t\t\tMainView.HSplitTop(6.0f, nullptr, &MainView);";
-	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_HEIGHT_NEW = 24.0f;"), std::string::npos);
+	// 统一边距模型：全局安全区 Screen.Margin(8) 提供到窗口四边的 8px 基准，
+	// 导航胶囊行（21px）直接对齐安全区边缘，导航栏高度余下的 8px 即导航→内容间隙，
+	// 壳层只做一次 HSplitTop，内部不再叠加边距或额外下移。
+	const std::string MenuShellSplit = "const bool UseNewUi = g_Config.m_QmNewUi != 0;\n\t\t\tScreen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);";
+	EXPECT_NE(MenusSource.find("Screen.Margin(8.0f, &Screen);"), std::string::npos);
+	EXPECT_EQ(MenusSource.find("Screen.Margin(10.0f, &Screen);"), std::string::npos);
+	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f;"), std::string::npos);
+	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_GAP_NEW = 8.0f;"), std::string::npos);
+	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;"), std::string::npos);
 	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_HEIGHT_LEGACY = 30.0f;"), std::string::npos);
 	EXPECT_NE(MenusSource.find("constexpr float MenuMenubarHeight(bool UseNewUi)"), std::string::npos);
 	EXPECT_NE(MenusSource.find(MenuShellSplit), std::string::npos);
 	EXPECT_NE(MenusSource.find("case IClient::STATE_ONLINE:"), std::string::npos);
 	EXPECT_NE(MenusSource.find(MenuShellSplit, MenusSource.find("case IClient::STATE_ONLINE:")), std::string::npos);
+	EXPECT_EQ(MenusSource.find("MainView.HSplitTop(6.0f, nullptr, &MainView);"), std::string::npos);
 
 	const std::string QmClientSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 	// 设置页不再缓存 UseNewUi 局部量，直接读配置，避免未使用变量。

@@ -72,7 +72,9 @@ extern bool gs_SettingsAssetsEntityGamePreview;
 
 namespace
 {
-	constexpr float MENU_MENUBAR_HEIGHT_NEW = 24.0f;
+	constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f; // 导航胶囊行高
+	constexpr float MENU_MENUBAR_GAP_NEW = 8.0f; // 导航→内容间隙（统一边距基准）
+	constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;
 	constexpr float MENU_MENUBAR_HEIGHT_LEGACY = 30.0f;
 	constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
@@ -470,8 +472,7 @@ namespace
 		CUIRect TabBar, MainView;
 		const bool UseNewUi = g_Config.m_QmNewUi != 0;
 		Screen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);
-		if(UseNewUi)
-			MainView.HSplitTop(6.0f, nullptr, &MainView);
+		// 新 UI 的导航→内容 8px 间隙已折算进 MenuMenubarHeight，不再额外下移。
 		return MainView;
 	}
 
@@ -2375,199 +2376,119 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 	};
 	if(UseNewUi)
 	{
-		// 水平外扩 2px 补偿胶囊滑块的 IndicatorInset 内衬：滑块/槽位高亮的
-		// 可见左缘因此精确落在页面背景卡片的 10px 基准线上（容器与卡片同色，
-		// 反向凸出的 2px 不可察觉）；垂直间隙维持原有的呼吸感。
-		const float MenubarOuterInsetX = -2.0f;
-		const float MenubarBaseOuterInsetY = 2.5f;
-		const float MenubarOuterInsetY = (Box.h - (Box.h - 2.0f * MenubarBaseOuterInsetY) * MENU_MENUBAR_CONTENT_SCALE_NEW) * 0.5f;
-		// 导航栏不再自绘整条背景，直接透出下方的菜单背景；观感由左侧页签胶囊
+		// 统一边距基准：全局安全区（8px）已提供到窗口上/左/右的距离，
+		// 导航胶囊行直接对齐安全区边缘、不再额外内缩；导航栏高度余下的
+		// MENU_MENUBAR_GAP_NEW（8px）就是导航→内容的间隙。
+		// 导航栏不自绘整条背景，直接透出下方的菜单背景；观感由左侧页签胶囊
 		// 与右侧图标簇胶囊自身承担，避免硬编码一条与背景脱节的底色。
-		Box.VMargin(MenubarOuterInsetX, &Box);
-		Box.HMargin(MenubarOuterInsetY, &Box);
+		Box.HSplitTop(MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW, &Box, nullptr);
 
 		const float MenubarIconButtonSize = Box.h;
 		const float MenubarIconGap = 6.0f;
 		const float MenubarItemGap = 4.0f;
-		const ColorRGBA IconButtonDefault = MenuIconButtonDefaultColor();
-		const ColorRGBA IconButtonActive = MenuTabActiveColor();
-		const ColorRGBA IconButtonHover = MenuMenubarHoverColor();
 		const ColorRGBA QuitButtonDefault = MenuDangerTabDefaultColor();
 		const ColorRGBA QuitButtonHover = MenuDangerTabHoverColor();
 		bool CompactOnlineMenuTabs = false;
-		// 离线新 UI：右侧图标簇（截图/回放/编辑器/设置/退出）改为滑块式胶囊导航，
-		// 槽位先收集、再画胶囊与滑块、最后画图标；在线 UI 仍保持独立圆形按钮。
+		// 新 UI 右侧图标簇（截图/回放/编辑器/设置/退出）为滑块式胶囊导航，
+		// 离线与在线（游戏内 ESC）共用：槽位先收集、再画胶囊与滑块、最后画图标。
 		CUIRect aRightNavSlots[5];
 		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
 		static CButtonContainer s_QuitButton;
-		if(ClientState == IClient::STATE_OFFLINE)
-		{
-			// 离线：退出按钮并入右侧滑块导航（最右槽位），统一绘制推迟到离线分支。
-			aRightNavSlots[4] = Button;
-		}
-		else
-		{
-			CUIRect QuitButton = Button;
-			const float CircleSize = minimum(QuitButton.w, QuitButton.h);
-			QuitButton.x += (QuitButton.w - CircleSize) / 2.0f;
-			QuitButton.w = CircleSize;
-			if(DoMenuTabV2_QmIcon(&s_QuitButton, EQmIcon::POWER_OFF, FONT_ICON_POWER_OFF, false, &QuitButton, IGraphics::CORNER_ALL, &QuitButtonDefault, nullptr, &QuitButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
-			{
-				if(GameClient()->Editor()->HasUnsavedData() || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0) || m_MenusIngameTouchControls.UnsavedChanges() || GameClient()->m_TouchControls.HasEditingChanges())
-				{
-					m_Popup = POPUP_QUIT;
-				}
-				else
-				{
-					Client()->Quit();
-				}
-			}
-		}
+		// 退出按钮并入右侧滑块导航（最右槽位），统一绘制在槽位收集完成后。
+		aRightNavSlots[4] = Button;
 		GameClient()->m_Tooltips.DoToolTip(&s_QuitButton, &Button, Localize("Quit"));
 
 		Box.VSplitRight(MenubarIconGap, &Box, nullptr);
 		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
 		static CButtonContainer s_SettingsButton;
-		if(ClientState == IClient::STATE_OFFLINE)
-		{
-			// 离线：槽位并入右侧滑块导航，统一绘制推迟到离线分支。
-			aRightNavSlots[3] = Button;
-		}
-		else
-		{
-			CUIRect SettingsButton = Button;
-			const float CircleSize = minimum(SettingsButton.w, SettingsButton.h);
-			SettingsButton.x += (SettingsButton.w - CircleSize) / 2.0f;
-			SettingsButton.w = CircleSize;
-			if(DoMenuTabV2_QmIcon(&s_SettingsButton, EQmIcon::GEAR, FONT_ICON_GEAR, ActivePage == PAGE_SETTINGS, &SettingsButton, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
-			{
-				NewPage = PAGE_SETTINGS;
-			}
-			MenubarTrackActive(PAGE_SETTINGS, SettingsButton);
-		}
+		// 设置按钮并入右侧滑块导航，统一绘制在槽位收集完成后。
+		aRightNavSlots[3] = Button;
 		GameClient()->m_Tooltips.DoToolTip(&s_SettingsButton, &Button, Localize("Settings"));
 
 		Box.VSplitRight(MenubarIconGap, &Box, nullptr);
 		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
 		static CButtonContainer s_EditorButton;
-		if(ClientState == IClient::STATE_OFFLINE)
-		{
-			// 离线：槽位并入右侧滑块导航，统一绘制推迟到离线分支。
-			aRightNavSlots[2] = Button;
-		}
-		else
-		{
-			CUIRect EditorButton = Button;
-			const float CircleSize = minimum(EditorButton.w, EditorButton.h);
-			EditorButton.x += (EditorButton.w - CircleSize) / 2.0f;
-			EditorButton.w = CircleSize;
-			if(DoMenuTabV2_QmIcon(&s_EditorButton, EQmIcon::PEN_TO_SQUARE, FONT_ICON_PEN_TO_SQUARE, false, &EditorButton, IGraphics::CORNER_ALL, &IconButtonDefault, nullptr, &IconButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
-			{
-				g_Config.m_ClEditor = 1;
-			}
-		}
+		// 编辑器按钮并入右侧滑块导航，统一绘制在槽位收集完成后。
+		aRightNavSlots[2] = Button;
 		GameClient()->m_Tooltips.DoToolTip(&s_EditorButton, &Button, Localize("Editor"));
+
+		// 截图/回放并入滑块导航槽位（离线与在线同构）。
+		Box.VSplitRight(MenubarIconGap, &Box, nullptr);
+		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
+		aRightNavSlots[1] = Button;
+
+		Box.VSplitRight(MenubarIconGap, &Box, nullptr);
+		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
+		aRightNavSlots[0] = Button;
 
 		if(ClientState == IClient::STATE_ONLINE)
 		{
-			// 在线菜单右侧始终保留截图、回放、编辑器、设置、退出五个图标。
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
-			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
-			static CButtonContainer s_DemoButton;
-			if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &Button, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover))
-			{
-				OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
-			}
-			if(DemoBrowserReplaysActive)
-				MenubarTrackActive(PAGE_DEMOS, Button);
-			GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &Button, Localize("Demos"));
-
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
-			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
-			static CButtonContainer s_ScreenshotButton;
-			if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &Button, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover))
-			{
-				OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
-			}
-			if(DemoBrowserScreenshotsActive)
-				MenubarTrackActive(PAGE_DEMOS, Button);
-			GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &Button, Localize("Screenshots"));
-
 			CompactOnlineMenuTabs = Graphics()->ScreenAspect() <= 1.45f || Box.w < 690.0f;
 		}
 
+		// 胶囊 Tabbar：右侧滑块导航同样先收集槽位，再画容器与滑块，最后画图标。
+		// 槽位从左到右为 截图/回放/编辑器/设置/退出；主菜单入口在左侧导航栏。
+		int ActiveRightNavTab = -1;
+		if(ActivePage == PAGE_SETTINGS)
+			ActiveRightNavTab = 3;
+		else if(ActivePage == PAGE_DEMOS)
+			ActiveRightNavTab = DemoBrowserScreenshotsActive ? 0 : 1;
+		const IUiContext RightNavCtx = TabBarUiContext();
+		// 退出槽位保留旧 UI 的红色危险底色（与独立退出按钮的 QuitButtonDefault 同源），
+		// 其余槽位 alpha 为 0 不画 tint。
+		ColorRGBA aRightNavTintColors[(int)std::size(aRightNavSlots)] = {};
+		aRightNavTintColors[4] = QuitButtonDefault;
+		ui_widget::CapsuleTabBarChrome(RightNavCtx, MakeUiScopeHash("menubar_capsule_right_nav"), aRightNavSlots, (int)std::size(aRightNavSlots), ActiveRightNavTab, MenuCapsuleTabBarStyle(), aRightNavTintColors);
+
+		static CButtonContainer s_ScreenshotButton;
+		if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &aRightNavSlots[0], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
+		}
+		if(DemoBrowserScreenshotsActive)
+			MenubarTrackActive(PAGE_DEMOS, aRightNavSlots[0]);
+		GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &aRightNavSlots[0], Localize("Screenshots"));
+
+		static CButtonContainer s_DemoButton;
+		if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &aRightNavSlots[1], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
+		}
+		if(DemoBrowserReplaysActive)
+			MenubarTrackActive(PAGE_DEMOS, aRightNavSlots[1]);
+		GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &aRightNavSlots[1], Localize("Demos"));
+
+		if(DoMenuTabV2_QmIcon(&s_EditorButton, EQmIcon::PEN_TO_SQUARE, FONT_ICON_PEN_TO_SQUARE, false, &aRightNavSlots[2], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			g_Config.m_ClEditor = 1;
+		}
+		GameClient()->m_Tooltips.DoToolTip(&s_EditorButton, &aRightNavSlots[2], Localize("Editor"));
+
+		if(DoMenuTabV2_QmIcon(&s_SettingsButton, EQmIcon::GEAR, FONT_ICON_GEAR, ActivePage == PAGE_SETTINGS, &aRightNavSlots[3], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			NewPage = PAGE_SETTINGS;
+		}
+		MenubarTrackActive(PAGE_SETTINGS, aRightNavSlots[3]);
+		GameClient()->m_Tooltips.DoToolTip(&s_SettingsButton, &aRightNavSlots[3], Localize("Settings"));
+
+		if(DoMenuTabV2_QmIcon(&s_QuitButton, EQmIcon::POWER_OFF, FONT_ICON_POWER_OFF, false, &aRightNavSlots[4], IGraphics::CORNER_ALL, &QuitButtonDefault, nullptr, &QuitButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			if(GameClient()->Editor()->HasUnsavedData() || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0) || m_MenusIngameTouchControls.UnsavedChanges() || GameClient()->m_TouchControls.HasEditingChanges())
+			{
+				m_Popup = POPUP_QUIT;
+			}
+			else
+			{
+				Client()->Quit();
+			}
+		}
+		GameClient()->m_Tooltips.DoToolTip(&s_QuitButton, &aRightNavSlots[4], Localize("Quit"));
+
 		if(ClientState == IClient::STATE_OFFLINE)
 		{
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
-			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
-			aRightNavSlots[1] = Button;
-
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
-			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
-			aRightNavSlots[0] = Button;
-
-			// 胶囊 Tabbar：右侧滑块导航同样先收集槽位，再画容器与滑块，最后画图标。
-			// 槽位从左到右为 截图/回放/编辑器/设置/退出；主菜单入口在左侧导航栏。
-			int ActiveRightNavTab = -1;
-			if(ActivePage == PAGE_SETTINGS)
-				ActiveRightNavTab = 3;
-			else if(ActivePage == PAGE_DEMOS)
-				ActiveRightNavTab = DemoBrowserScreenshotsActive ? 0 : 1;
-			const IUiContext RightNavCtx = TabBarUiContext();
-			// 退出槽位保留旧 UI 的红色危险底色（与独立退出按钮的 QuitButtonDefault 同源），
-			// 其余槽位 alpha 为 0 不画 tint。
-			ColorRGBA aRightNavTintColors[(int)std::size(aRightNavSlots)] = {};
-			aRightNavTintColors[4] = QuitButtonDefault;
-			ui_widget::CapsuleTabBarChrome(RightNavCtx, MakeUiScopeHash("menubar_capsule_right_nav"), aRightNavSlots, (int)std::size(aRightNavSlots), ActiveRightNavTab, MenuCapsuleTabBarStyle(), aRightNavTintColors);
-
-			static CButtonContainer s_ScreenshotButton;
-			if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &aRightNavSlots[0], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
-			}
-			if(DemoBrowserScreenshotsActive)
-				MenubarTrackActive(PAGE_DEMOS, aRightNavSlots[0]);
-			GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &aRightNavSlots[0], Localize("Screenshots"));
-
-			static CButtonContainer s_DemoButton;
-			if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &aRightNavSlots[1], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
-			}
-			if(DemoBrowserReplaysActive)
-				MenubarTrackActive(PAGE_DEMOS, aRightNavSlots[1]);
-			GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &aRightNavSlots[1], Localize("Demos"));
-
-			if(DoMenuTabV2_QmIcon(&s_EditorButton, EQmIcon::PEN_TO_SQUARE, FONT_ICON_PEN_TO_SQUARE, false, &aRightNavSlots[2], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				g_Config.m_ClEditor = 1;
-			}
-			GameClient()->m_Tooltips.DoToolTip(&s_EditorButton, &aRightNavSlots[2], Localize("Editor"));
-
-			if(DoMenuTabV2_QmIcon(&s_SettingsButton, EQmIcon::GEAR, FONT_ICON_GEAR, ActivePage == PAGE_SETTINGS, &aRightNavSlots[3], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				NewPage = PAGE_SETTINGS;
-			}
-			MenubarTrackActive(PAGE_SETTINGS, aRightNavSlots[3]);
-			GameClient()->m_Tooltips.DoToolTip(&s_SettingsButton, &aRightNavSlots[3], Localize("Settings"));
-
-			if(DoMenuTabV2_QmIcon(&s_QuitButton, EQmIcon::POWER_OFF, FONT_ICON_POWER_OFF, false, &aRightNavSlots[4], IGraphics::CORNER_ALL, &QuitButtonDefault, nullptr, &QuitButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				if(GameClient()->Editor()->HasUnsavedData() || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0) || m_MenusIngameTouchControls.UnsavedChanges() || GameClient()->m_TouchControls.HasEditingChanges())
-				{
-					m_Popup = POPUP_QUIT;
-				}
-				else
-				{
-					Client()->Quit();
-				}
-			}
-			GameClient()->m_Tooltips.DoToolTip(&s_QuitButton, &aRightNavSlots[4], Localize("Quit"));
-
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
+			Box.VSplitRight(8.0f, &Box, nullptr);
 
 			const float BrowserButtonWidth = 58.0f * MENU_MENUBAR_CONTENT_SCALE_NEW;
-			Box.VSplitLeft(6.0f, nullptr, &Box);
 
 			// 胶囊 Tabbar：页签槽位（含收藏社区页签的展开宽度）先全部算完，再画容器与滑块，
 			// 最后画图标 —— 滑块必须压在图标之下，布局与绘制不能混在同一遍里做。
@@ -4449,7 +4370,9 @@ void CMenus::Render()
 	CUIRect Screen = *Ui()->Screen();
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK || m_Popup != POPUP_NONE)
 	{
-		Screen.Margin(10.0f, &Screen);
+		// 全局安全区 = 统一边距基准（8px）：菜单内所有页面到窗口四边的基础距离，
+		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
+		Screen.Margin(8.0f, &Screen);
 	}
 
 	switch(ClientState)
@@ -4499,8 +4422,6 @@ void CMenus::Render()
 			CUIRect TabBar, MainView;
 			const bool UseNewUi = g_Config.m_QmNewUi != 0;
 			Screen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);
-			if(UseNewUi)
-				MainView.HSplitTop(6.0f, nullptr, &MainView);
 			const CUIRect MainViewClip = MainView;
 			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"));
 			const bool TransitionActive = TransitionStrength > 0.0f && m_MenuPageTransitionDirection != 0.0f;
@@ -4598,8 +4519,6 @@ void CMenus::Render()
 			CUIRect TabBar, MainView;
 			const bool UseNewUi = g_Config.m_QmNewUi != 0;
 			Screen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);
-			if(UseNewUi)
-				MainView.HSplitTop(6.0f, nullptr, &MainView);
 			const CUIRect MainViewClip = MainView;
 			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("game_page_switch"));
 			const bool TransitionActive = TransitionStrength > 0.0f && m_GamePageTransitionDirection != 0.0f;
@@ -7360,8 +7279,6 @@ void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUI
 	CUIRect TabBar, ContentView;
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 	MainView.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &ContentView);
-	if(UseNewUi)
-		ContentView.HSplitTop(6.0f, nullptr, &ContentView);
 
 	m_MenuTextPlanCollecting = true;
 	m_pMenuTextPlanCollection = &vItems;
