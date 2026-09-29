@@ -294,11 +294,11 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 	// 旧 UI 仍按 CORNER_L/R/NONE 的分段外观逐段切分。
 	EXPECT_NE(RenderTClient.find("ActiveTab == Tab, &Button, Corners"), std::string::npos);
 
-	const std::string RenderQmClient = FunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly)");
+	const std::string RenderQmClient = FunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)");
 	ASSERT_FALSE(RenderQmClient.empty());
 	const size_t QmGrid = RenderQmClient.find("QmTabsRemainder.VSplitLeft(TabWidth, &aQmTabSlots[Tab], &QmTabsRemainder);");
 	const size_t QmChrome = RenderQmClient.find("ui_widget::CapsuleTabBarChrome(QmTabBarCtx, MakeUiScopeHash(\"settings_qmclient_tabs_capsule\")");
-	const size_t QmDraw = RenderQmClient.find("DoButton_MenuTab(&s_aPageTabs[Tab], apQmTabNames[Tab], m_QmClientSettingsTab == Tab, &aQmTabSlots[Tab]");
+	const size_t QmDraw = RenderQmClient.find("DoButton_MenuTab(&s_aPageTabs[PageTab], apQmTabNames[PageTab], m_QmClientSettingsTab == PageTab, &aQmTabSlots[Tab]");
 	ASSERT_NE(QmGrid, std::string::npos);
 	ASSERT_NE(QmChrome, std::string::npos);
 	ASSERT_NE(QmDraw, std::string::npos);
@@ -736,7 +736,8 @@ TEST(QmNewUiMenuBranches, QmClientTabLabelsDoNotCacheLocalizedPointers)
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_VISUAL] = Localize(\"Visuals\");"), std::string::npos);
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_FUNCTION] = Localize(\"Functions\");"), std::string::npos);
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_HUD] = Localize(\"HUD\");"), std::string::npos);
-	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONTRIBUTORS] = Localize(\"Contributors\");"), std::string::npos);
+	// 贡献者页签并入顶层贡献者页：页签栏不再分配 Contributors 标签，枚举值仅作持久化占位。
+	EXPECT_EQ(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONTRIBUTORS]"), std::string::npos);
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONFIG] = Localize(\"Config\");"), std::string::npos);
 }
 
@@ -885,13 +886,21 @@ TEST(QmNewUiMenuBranches, SettingsShellKeepsExplicitQmNewUiContainerBranch)
 TEST(QmNewUiMenuBranches, LegacyMenusKeepTabAndPanelShellConnected)
 {
 	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string MenuShellSplit = "const bool UseNewUi = g_Config.m_QmNewUi != 0;\n\t\t\tScreen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);\n\t\t\tif(UseNewUi)\n\t\t\t\tMainView.HSplitTop(6.0f, nullptr, &MainView);";
-	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_HEIGHT_NEW = 24.0f;"), std::string::npos);
+	// 统一边距模型：全局安全区 Screen.Margin(8) 提供到窗口四边的 8px 基准，
+	// 导航胶囊行（21px）直接对齐安全区边缘，导航栏高度余下的 8px 即导航→内容间隙，
+	// 壳层只做一次 HSplitTop，内部不再叠加边距或额外下移。
+	const std::string MenuShellSplit = "const bool UseNewUi = g_Config.m_QmNewUi != 0;\n\t\t\tScreen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);";
+	EXPECT_NE(MenusSource.find("Screen.Margin(8.0f, &Screen);"), std::string::npos);
+	EXPECT_EQ(MenusSource.find("Screen.Margin(10.0f, &Screen);"), std::string::npos);
+	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f;"), std::string::npos);
+	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_GAP_NEW = 8.0f;"), std::string::npos);
+	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;"), std::string::npos);
 	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_HEIGHT_LEGACY = 30.0f;"), std::string::npos);
 	EXPECT_NE(MenusSource.find("constexpr float MenuMenubarHeight(bool UseNewUi)"), std::string::npos);
 	EXPECT_NE(MenusSource.find(MenuShellSplit), std::string::npos);
 	EXPECT_NE(MenusSource.find("case IClient::STATE_ONLINE:"), std::string::npos);
 	EXPECT_NE(MenusSource.find(MenuShellSplit, MenusSource.find("case IClient::STATE_ONLINE:")), std::string::npos);
+	EXPECT_EQ(MenusSource.find("MainView.HSplitTop(6.0f, nullptr, &MainView);"), std::string::npos);
 
 	const std::string QmClientSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 	// 设置页不再缓存 UseNewUi 局部量，直接读配置，避免未使用变量。
@@ -2427,36 +2436,40 @@ TEST(QmNewUiMenuBranches, LaserEntityTypesUseDdnetEndpointRendering)
 	EXPECT_EQ(FreezeBranch.find("m_aParticleSplatOffset"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, TClientSettingsTabsPreserveHiddenStateAndVisibleCorners)
+TEST(QmNewUiMenuBranches, TClientSettingsTabsRenderAllSlotsWithVisibleCorners)
 {
+	// 信息 tab 删除后 TClient 页签不再支持隐藏：全部页签常驻渲染，旧隐藏位图随配置一起删除。
 	const std::string Source = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
 	const std::string RenderSettingsTClient = FunctionBody(Source, "void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)");
-	const std::string RenderSettingsTClientInfo = FunctionBody(Source, "void CMenus::RenderSettingsTClientInfo(CUIRect MainView, bool PrewarmOnly)");
 
-	EXPECT_NE(RenderSettingsTClient.find("if(TabCount <= 0)"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClient.find("FirstVisibleTab"), std::string::npos);
+	EXPECT_EQ(Source.find("m_TcTClientSettingsTabs"), std::string::npos);
+	EXPECT_EQ(Source.find("TCLIENT_TAB_INFO"), std::string::npos);
+	EXPECT_NE(RenderSettingsTClient.find("TabBar.w / NUMBER_OF_TCLIENT_TABS"), std::string::npos);
 	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex"), std::string::npos);
 	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == 0"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == TabCount - 1"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClientInfo.find("s_aShowTabs[i] = IsFlagSet(g_Config.m_TcTClientSettingsTabs, i);"), std::string::npos);
+	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == NUMBER_OF_TCLIENT_TABS - 1"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, TClientInfoUsesPublicCardDeck)
+TEST(QmNewUiMenuBranches, TClientDeveloperCardMergesLinksAndLivesOnCreditsPage)
 {
-	const std::string Source = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
+	// 「TClient 链接」卡并入开发人员卡；合并卡与 DDNet 卡都在贡献者页「其他」子页签，
+	// 配置文件卡移到常规页。卡片构建统一收在独立的 menus_credits.cpp。
+	const std::string Source = ReadTextFile("src/game/client/components/menus_credits.cpp");
 	const std::string Registry = ReadTextFile("src/game/client/QmUi/QmCardRegistry.cpp");
-	const std::string Body = FunctionBody(Source, "void CMenus::RenderSettingsTClientInfo(CUIRect MainView, bool PrewarmOnly)");
+	const std::string General = FunctionBody(ReadTextFile("src/game/client/components/menus_settings.cpp"), "void CMenus::RenderSettingsGeneral(CUIRect MainView)");
+	const std::string Body = FunctionBody(Source, "void CMenus::AppendTClientDeveloperCard(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly)");
 	ASSERT_FALSE(Body.empty());
 
-	EXPECT_NE(Body.find("const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();"), std::string::npos);
-	EXPECT_NE(Body.find("SettingsPageLayout(MainView, UiScale);"), std::string::npos);
-	EXPECT_NE(Body.find("CSettingsCardDeck &CardDeck = ReadOnly ? s_InfoPrewarmDeck : m_SettingsCardDeck;"), std::string::npos);
-	EXPECT_NE(Body.find("CardDeck.RenderCached("), std::string::npos);
-	EXPECT_EQ(Body.find("MainView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-links\", \"tclient-info\", ECardColumn::Left, 0"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-files\", \"tclient-info\", ECardColumn::Left, 1"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-developers\", \"tclient-info\", ECardColumn::Right, 0"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-tabs\", \"tclient-info\", ECardColumn::Right, 1"), std::string::npos);
+	EXPECT_NE(Body.find("{\"deck:tclient-info-developers\", Localize(\"TClient Developers\")"), std::string::npos);
+	EXPECT_NE(Body.find("Localize(\"Discord\")"), std::string::npos);
+	EXPECT_NE(Body.find("Localize(\"Support ♥\")"), std::string::npos);
+	EXPECT_EQ(Registry.find("deck:tclient-info-links"), std::string::npos);
+	EXPECT_EQ(Registry.find("\"tclient-info\""), std::string::npos);
+	EXPECT_NE(Registry.find("{\"deck:tclient-info-files\", \"general\", ECardColumn::Right, 2"), std::string::npos);
+	EXPECT_NE(Registry.find("{\"deck:credits-friend-links\", \"credits-links\", ECardColumn::Full, 0"), std::string::npos);
+	EXPECT_NE(General.find("FindByStableId(\"deck:tclient-info-files\")"), std::string::npos);
+	EXPECT_NE(General.find("\"tclient-files-qmclient-settings\""), std::string::npos);
+	EXPECT_EQ(Source.find("deck:tclient-info-files"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, TClientProfilesUsesPublicCardDeck)
@@ -2508,14 +2521,17 @@ TEST(QmNewUiMenuBranches, TClientConfigsUsesPublicCardDeck)
 TEST(QmNewUiMenuBranches, QmClientDecksIsolateRenderOnlyState)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string CreditsSource = ReadTextFile("src/game/client/components/menus_credits.cpp");
 	for(const char *pSignature : {
 		    "void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)",
 		    "void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly)",
 		    "void CMenus::RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly)",
-		    "void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly)",
+		    "void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)",
 	    })
 	{
-		const std::string Body = FunctionBody(Source, pSignature);
+		// 贡献者页已拆到 menus_credits.cpp；其余栖梦 deck 仍在 menus_qmclient.cpp。
+		const std::string &SourceFile = str_startswith(pSignature, "void CMenus::RenderSettingsContributors") != nullptr ? CreditsSource : Source;
+		const std::string Body = FunctionBody(SourceFile, pSignature);
 		ASSERT_FALSE(Body.empty());
 		EXPECT_NE(Body.find("const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();"), std::string::npos);
 		EXPECT_NE(Body.find("CSettingsCardDeck &CardDeck = ReadOnly ?"), std::string::npos);
@@ -2902,9 +2918,9 @@ TEST(QmNewUiMenuBranches, GeneralStandardPageUsesUnifiedSettingsStack)
 TEST(QmNewUiMenuBranches, SettingsCardContentHeightsExcludeSharedHeaderChrome)
 {
 	const std::string ControlsSource = ReadTextFile("src/game/client/components/menus_settings_controls.cpp");
-	const std::string ContributorsSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string ContributorsSource = ReadTextFile("src/game/client/components/menus_credits.cpp");
 	const std::string MouseMeasure = FunctionBody(ControlsSource, "float CMenusSettingsControls::MeasureSettingsMouseHeight() const");
-	const std::string Contributors = FunctionBody(ContributorsSource, "void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly)");
+	const std::string Contributors = FunctionBody(ContributorsSource, "void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly, int SponsorsRevision, bool HasSponsorDeveloper)");
 	ASSERT_FALSE(MouseMeasure.empty());
 	ASSERT_FALSE(Contributors.empty());
 	EXPECT_NE(MouseMeasure.find("return 2.0f * BUTTON_HEIGHT + BUTTON_SPACING;"), std::string::npos);
@@ -3020,7 +3036,7 @@ TEST(QmNewUiMenuBranches, SettingsSubTabPagesUseTheSharedLayoutContract)
 	EXPECT_NE(FunctionBody(Assets, "void CMenus::RenderSettingsCustom(CUIRect MainView)").find("ResolveSettingsSubTabLayout("), std::string::npos);
 	EXPECT_NE(FunctionBody(TClient, "void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)").find("TClientSettingsContentView("), std::string::npos);
 	EXPECT_NE(TClient.find("ResolveSettingsSubTabLayout(MainView, Metrics.m_UiScale)"), std::string::npos);
-	EXPECT_NE(FunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly)").find("ResolveSettingsSubTabLayout("), std::string::npos);
+	EXPECT_NE(FunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)").find("ResolveSettingsSubTabLayout("), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, GraphicsAndSoundNestedListsOwnWheel)

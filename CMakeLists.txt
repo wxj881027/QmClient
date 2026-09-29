@@ -3282,6 +3282,7 @@ if(CLIENT)
     components/menus.h
     components/menus_assets_editor.cpp
     components/menus_browser.cpp
+    components/menus_credits.cpp
     components/menus_demo.cpp
     components/menus_demo_screenshots.cpp
     components/menus_ingame.cpp

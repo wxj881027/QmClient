@@ -92,24 +92,44 @@ TEST(QmModuleLayoutAdapter, BetterScoreboardStableIdRoundTrips)
 
 TEST(QmCardRegistry, P6QmClientContributorsCards)
 {
+	// 贡献者页分三个子页签 deck：栖梦（社区/头衔/赞助）、友链、其他（DDNet/TClient 署名）；
+	// 配置文件卡在常规页；「TClient 链接」卡已并入开发人员卡。
 	const auto *pCommunity = qm_card_registry::FindByStableId("deck:qmclient-contributors-community");
 	const auto *pSponsors = qm_card_registry::FindByStableId("deck:qmclient-contributors-sponsors");
 	const auto *pDdnet = qm_card_registry::FindByStableId("deck:qmclient-contributors-ddnet");
 	const auto *pTitle = qm_card_registry::FindByStableId("deck:qmclient-contributors-title");
+	const auto *pTcDevelopers = qm_card_registry::FindByStableId("deck:tclient-info-developers");
+	const auto *pTcFiles = qm_card_registry::FindByStableId("deck:tclient-info-files");
+	const auto *pFriendLinks = qm_card_registry::FindByStableId("deck:credits-friend-links");
 	ASSERT_NE(pTitle, nullptr);
-	EXPECT_STREQ(pTitle->m_pDefaultTab, "qmclient-contributors");
+	EXPECT_STREQ(pTitle->m_pDefaultTab, "credits-qmclient");
 	ASSERT_NE(pCommunity, nullptr);
 	ASSERT_NE(pSponsors, nullptr);
 	ASSERT_NE(pDdnet, nullptr);
-	EXPECT_STREQ(pCommunity->m_pDefaultTab, "qmclient-contributors");
-	EXPECT_STREQ(pSponsors->m_pDefaultTab, "qmclient-contributors");
+	ASSERT_NE(pTcDevelopers, nullptr);
+	ASSERT_NE(pTcFiles, nullptr);
+	ASSERT_NE(pFriendLinks, nullptr);
+	EXPECT_STREQ(pCommunity->m_pDefaultTab, "credits-qmclient");
+	EXPECT_STREQ(pSponsors->m_pDefaultTab, "credits-qmclient");
+	EXPECT_STREQ(pFriendLinks->m_pDefaultTab, "credits-links");
+	EXPECT_STREQ(pDdnet->m_pDefaultTab, "credits-other");
+	EXPECT_STREQ(pTcDevelopers->m_pDefaultTab, "credits-other");
+	EXPECT_STREQ(pTcFiles->m_pDefaultTab, "general");
 	EXPECT_EQ(pCommunity->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
 	EXPECT_EQ(pSponsors->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	EXPECT_EQ(pDdnet->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
+	EXPECT_EQ(pTcDevelopers->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	EXPECT_EQ(pTcFiles->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	EXPECT_EQ(pFriendLinks->m_DefaultColumn, qm_card_registry::ECardColumn::Full);
 	EXPECT_EQ(pCommunity->m_DefaultOrder, 0);
+	EXPECT_EQ(pTitle->m_DefaultOrder, 1);
 	EXPECT_EQ(pSponsors->m_DefaultOrder, 0);
-	EXPECT_STREQ(pDdnet->m_pDefaultTab, "qmclient-contributors-ddnet");
-	EXPECT_EQ(pDdnet->m_DefaultColumn, qm_card_registry::ECardColumn::Full);
 	EXPECT_EQ(pDdnet->m_DefaultOrder, 0);
+	EXPECT_EQ(pTcDevelopers->m_DefaultOrder, 0);
+	EXPECT_EQ(pTcFiles->m_DefaultOrder, 2);
+	EXPECT_EQ(pFriendLinks->m_DefaultOrder, 0);
+	EXPECT_EQ(qm_card_registry::FindByStableId("deck:tclient-info-links"), nullptr);
+	EXPECT_EQ(qm_card_registry::FindByStableId("deck:tclient-info-tabs"), nullptr);
 }
 
 TEST(QmCardRegistry, BindWheelUsesTwoColumnsByDefault)
@@ -418,8 +438,9 @@ TEST(QmCardRegistry, GeneralStandardPageCardsPersistInVisualOrder)
 	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
 	EXPECT_EQ(Model.StableIdOrder("deck:", "general", 1),
 		(std::vector<std::string>{"deck:general-game", "deck:general-client"}));
+	// 配置文件卡（原 TClient 信息 tab）排在常规页右列末尾。
 	EXPECT_EQ(Model.StableIdOrder("deck:", "general", 2),
-		(std::vector<std::string>{"deck:general-language", "deck:general-recording"}));
+		(std::vector<std::string>{"deck:general-language", "deck:general-recording", "deck:tclient-info-files"}));
 } // 意图：appearance deck 的默认 placement 必须与运行时子页和列顺序对齐。
 
 // 意图：Player 页的身份和国家选择必须在重启后保持左右两列的默认 placement，
@@ -1123,7 +1144,7 @@ TEST(QmCardRegistry, RendererlessCardsNavigateToHostingCard)
 
 	ExpectTarget("qm:laser", "appearance-laser", "deck:appearance-laser-enhanced");
 	ExpectTarget("qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-settings");
-	ExpectTarget("qm:info", "qmclient-contributors", "deck:qmclient-contributors-community");
+	ExpectTarget("qm:info", "credits-qmclient", "deck:qmclient-contributors-community");
 	// 歌词开关渲染在灵动岛卡内，因此停留在 hud 页但指向承载卡。
 	ExpectTarget("qm:lyrics", "hud", "qm:dynamic_island");
 

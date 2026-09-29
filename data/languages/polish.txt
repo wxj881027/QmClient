@@ -1457,9 +1457,6 @@ Bind Wheel Key
 Binds
 == Wiązania
 
-Bit flags for disabling settings tabs
-== Flagi bitowe do wyłączania zakładek ustawień
-
 Black
 == Czarny
 
@@ -1867,9 +1864,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose which TClient settings tabs are visible
-== Choose which TClient settings tabs are visible
 
 Cinematic camera
 == Kamera filmowa
@@ -2764,6 +2758,15 @@ DDNet memory
 
 DDNet points
 == Punkty DDNet
+
+DDNet releases
+== Wydania DDNet
+
+DDNet staff
+== Zespół DDNet
+
+DDNet Website
+== Strona DDNet
 
 ddnet-saves.txt is empty
 == ddnet-saves.txt jest pusty
@@ -4613,6 +4616,9 @@ Friend entry color in friend list
 Friend heart
 == Serduszko znajomego
 
+Friend links
+== Przyjazne linki
+
 Friend message
 == Wiadomość od znajomego
 
@@ -5158,9 +5164,6 @@ Hide server prompt notifications
 
 Hide server tip notifications (including notification bar) in Zen mode
 == Ukryj powiadomienia serwera (włącznie z paskiem powiadomień) w trybie Zen
-
-Hide Settings Tabs
-== Ukryj zakładki ustawień
 
 Hide sponsor QR code
 == Ukryj kod QR sponsora
@@ -7598,9 +7601,6 @@ Open settings
 Open spectator mode selector
 == Otwórz selektor trybu obserwacji
 
-Open TClient community and source links
-== Open TClient community and source links
-
 Open TClient configuration file locations
 == Open TClient configuration file locations
 
@@ -8456,6 +8456,9 @@ Progress bar height
 Progress bar width
 == Szerokość paska postępu
 
+Project and community websites
+== Strony projektu i społeczności
+
 Projectile / explosion range
 == Zasięg pocisku / eksplozji
 
@@ -8575,6 +8578,9 @@ QmClient sidebar module collapse state
 
 QmClient sidebar module order
 == Kolejność modułów paska bocznego QmDream
+
+QmClient Website
+== Strona QmClient
 
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 == Siła efektów QmUi: 0=Wyłączone 1=Zmniejszone 2=Pełne
@@ -11858,9 +11864,6 @@ TClient
 TClient Developers
 == Deweloperzy TClient
 
-TClient Links
-== Linki TClient
-
 Tclient settings card ordering (format: id:col:order; semicolon-separated)
 == Tclient Sortowanie kart ustawień (format id:col:order; średnik jako separator)
 
@@ -13271,8 +13274,8 @@ View switch found (at offset) with given number
 View tele found (at offset) with given number
 == Wyświetl teleport znaleziony (z offsetem) o podanym numerze
 
-View the developers and contributors
-== View the developers and contributors
+View the developers, contributors, and project links
+== Zobacz deweloperów, współtwórców i linki do projektu
 
 View the people supporting QmClient development
 == View the people supporting QmClient development

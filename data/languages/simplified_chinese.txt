@@ -1457,9 +1457,6 @@ Bind Wheel Key
 Binds
 == 绑定
 
-Bit flags for disabling settings tabs
-== 用于禁用设置标签页的位标志
-
 Black
 == 黑色
 
@@ -1867,9 +1864,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == 选择菜单地图和背景颜色
-
-Choose which TClient settings tabs are visible
-== 选择要显示的 TClient 设置标签页
 
 Cinematic camera
 == 电影镜头
@@ -2764,6 +2758,15 @@ DDNet memory
 
 DDNet points
 == DDNet 分数
+
+DDNet releases
+== DDNet 发布包
+
+DDNet staff
+== DDNet 官方开发者
+
+DDNet Website
+== DDNet 官网
 
 ddnet-saves.txt is empty
 == ddnet-saves.txt 为空
@@ -4613,6 +4616,9 @@ Friend entry color in friend list
 Friend heart
 == 好友爱心
 
+Friend links
+== 友链
+
 Friend message
 == 好友消息
 
@@ -5158,9 +5164,6 @@ Hide server prompt notifications
 
 Hide server tip notifications (including notification bar) in Zen mode
 == 禅模式下隐藏服务器提示通知（包括通知栏）
-
-Hide Settings Tabs
-== 隐藏设置选项卡
 
 Hide sponsor QR code
 == 隐藏赞助码
@@ -7598,9 +7601,6 @@ Open settings
 Open spectator mode selector
 == 打开旁观者模式选择器
 
-Open TClient community and source links
-== 打开 TClient 社区和源码链接
-
 Open TClient configuration file locations
 == 打开 TClient 配置文件位置
 
@@ -8456,6 +8456,9 @@ Progress bar height
 Progress bar width
 == 进度条宽度
 
+Project and community websites
+== 项目与社区站点入口
+
 Projectile / explosion range
 == 投射物/爆炸范围
 
@@ -8575,6 +8578,9 @@ QmClient sidebar module collapse state
 
 QmClient sidebar module order
 == 栖梦侧栏模块排序
+
+QmClient Website
+== QmClient 官网
 
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 == QmUi 动效强度：0=关闭，1=降低，2=完整
@@ -11858,9 +11864,6 @@ TClient
 TClient Developers
 == TClient 开发人员
 
-TClient Links
-== TClient 链接
-
 Tclient settings card ordering (format: id:col:order; semicolon-separated)
 == Tclient 设置卡片排序（格式 id:col:order; 分号分隔）
 
@@ -13271,8 +13274,8 @@ View switch found (at offset) with given number
 View tele found (at offset) with given number
 == 查看给定编号找到的传送点（在偏移处）
 
-View the developers and contributors
-== 查看开发者和贡献者
+View the developers, contributors, and project links
+== 查看开发者、贡献者与项目链接
 
 View the people supporting QmClient development
 == 查看支持 QmClient 开发的成员

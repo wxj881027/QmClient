@@ -161,7 +161,8 @@ TEST(QmNewUiMenuShellSettingsContract, QmClientTabLabelsDoNotCacheLocalizedPoint
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_VISUAL] = Localize(\"Visuals\");"), std::string::npos);
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_FUNCTION] = Localize(\"Functions\");"), std::string::npos);
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_HUD] = Localize(\"HUD\");"), std::string::npos);
-	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONTRIBUTORS] = Localize(\"Contributors\");"), std::string::npos);
+	// 贡献者页签并入顶层贡献者页：页签栏不再分配 Contributors 标签，枚举值仅作持久化占位。
+	EXPECT_EQ(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONTRIBUTORS]"), std::string::npos);
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONFIG] = Localize(\"Config\");"), std::string::npos);
 }
 

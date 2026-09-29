@@ -162,20 +162,10 @@ namespace
 
 	int CanonicalizeTClientCacheTab(int Tab)
 	{
-		static constexpr int TCLIENT_CACHE_SLOTS = 6;
-		auto IsTabHidden = [](int Candidate) {
-			return (g_Config.m_TcTClientSettingsTabs & (1 << Candidate)) != 0;
-		};
-		if(Tab < 0 || Tab >= TCLIENT_CACHE_SLOTS || IsTabHidden(Tab))
-		{
-			for(int Candidate = 0; Candidate < TCLIENT_CACHE_SLOTS; ++Candidate)
-			{
-				if(!IsTabHidden(Candidate))
-					return Candidate;
-			}
-			return 0;
-		}
-		return Tab;
+		// TClient 页签不再支持隐藏，缓存槽位只需收敛到合法 tab 区间。
+		// TCLIENT_TAB_* 枚举是 menus_tclient.cpp / menus_qmclient.cpp 的文件级枚举，这里按槽位数收敛。
+		constexpr int NumTClientTabs = 5;
+		return std::clamp(Tab, 0, NumTClientTabs - 1);
 	}
 
 }
@@ -836,22 +826,6 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardOrderMigrated = 1;
 	}
-	// DDNet 署名卡搬到了顶层「贡献者」页的独立 deck；旧布局可能把它记在栖梦贡献者 tab 下，
-	// 那样新 deck 找不到它，页面会整页空白。这里无条件把它归位到自己的 deck tab。
-	{
-		qm_card_order::CModel Candidate;
-		MakeCandidate(Candidate);
-		const int DdnetCreditsIndex = Candidate.FindByStableId("deck:qmclient-contributors-ddnet");
-		if(DdnetCreditsIndex >= 0 && str_comp(Candidate.Entry(DdnetCreditsIndex).m_pDefaultTab, "qmclient-contributors-ddnet") != 0)
-		{
-			Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "qmclient-contributors-ddnet", 0, 0);
-			if(!PersistCandidate(Candidate, true))
-			{
-				m_SettingsCardOrderLoaded = true;
-				return;
-			}
-		}
-	}
 	if(g_Config.m_QmCardLayoutVersion < 1)
 	{
 		qm_card_order::CModel Candidate;
@@ -1063,6 +1037,59 @@ void CMenus::LoadSettingsCardOrderModel()
 			return;
 		}
 		g_Config.m_QmCardLayoutVersion = 9;
+	}
+	if(g_Config.m_QmCardLayoutVersion < 10)
+	{
+		// TClient 信息 tab 与栖梦贡献者 tab 的卡片统一并入顶层「贡献者」页（deck=qmclient-contributors），
+		// 「隐藏设置选项卡」卡随之删除。旧 deck（tclient-info / qmclient-contributors-ddnet）不复存在，
+		// 旧 deck 里的卡无条件搬走，否则会因 tab 失配而从页面上消失。
+		// 栖梦侧三张卡的 deck 未变，仅默认列位让位给新卡：先记录是否仍在旧默认位，
+		// 再统一搬移，避免移动过程中列位变化污染判断，同时保留用户自定义布局。
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		const auto IsAtOldDefault = [&Candidate](const char *pStableId, int OldColumn, int OldOrder) {
+			const int Index = Candidate.FindByStableId(pStableId);
+			if(Index < 0)
+				return false;
+			const qm_card_order::SEntry &Entry = Candidate.Entry(Index);
+			return str_comp(Entry.m_pDefaultTab, "qmclient-contributors") == 0 && Entry.m_Column == OldColumn && Entry.m_OrderInColumn == OldOrder;
+		};
+		const bool CommunityAtOldDefault = IsAtOldDefault("deck:qmclient-contributors-community", 1, 0);
+		const bool TitleAtOldDefault = IsAtOldDefault("deck:qmclient-contributors-title", 1, 1);
+		Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "qmclient-contributors", 1, 0);
+		Candidate.MoveToTab("deck:tclient-info-links", "qmclient-contributors", 1, 1);
+		Candidate.MoveToTab("deck:tclient-info-files", "qmclient-contributors", 1, 2);
+		Candidate.MoveToTab("deck:tclient-info-developers", "qmclient-contributors", 2, 0);
+		if(CommunityAtOldDefault)
+			Candidate.MoveToTab("deck:qmclient-contributors-community", "qmclient-contributors", 2, 2);
+		if(TitleAtOldDefault)
+			Candidate.MoveToTab("deck:qmclient-contributors-title", "qmclient-contributors", 1, 3);
+		if(!PersistCandidate(Candidate, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 10;
+	}
+	if(g_Config.m_QmCardLayoutVersion < 11)
+	{
+		// 贡献者页拆出三个子页签 deck（credits-qmclient / credits-links / credits-other），
+		// 配置文件卡并入常规页；「TClient 链接」卡并入开发人员卡后从注册表移除，
+		// LoadMerged 会丢弃该 stable id，强制写回避免每次启动重复参与合并。
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		Candidate.MoveToTab("deck:qmclient-contributors-community", "credits-qmclient", 1, 0);
+		Candidate.MoveToTab("deck:qmclient-contributors-title", "credits-qmclient", 1, 1);
+		Candidate.MoveToTab("deck:qmclient-contributors-sponsors", "credits-qmclient", 2, 0);
+		Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "credits-other", 1, 0);
+		Candidate.MoveToTab("deck:tclient-info-developers", "credits-other", 2, 0);
+		Candidate.MoveToTab("deck:tclient-info-files", "general", 2, 2);
+		if(!PersistCandidate(Candidate, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 11;
 	}
 	m_SettingsCardOrderLoaded = true;
 }
@@ -6241,13 +6268,22 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
 		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 	}
-	else if(str_comp(pTab, "qmclient-contributors") == 0)
+	else if(str_comp(pTab, "qmclient-contributors") == 0 || str_comp(pTab, "credits-qmclient") == 0)
 	{
-		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
-		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
-	}
-	else if(str_comp(pTab, "qmclient-contributors-ddnet") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
+		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_QMCLIENT;
+	}
+	else if(str_comp(pTab, "credits-links") == 0)
+	{
+		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
+		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_LINKS;
+	}
+	else if(str_comp(pTab, "qmclient-contributors-ddnet") == 0 || str_comp(pTab, "tclient-info") == 0 || str_comp(pTab, "credits-other") == 0)
+	{
+		// DDNet 与 TClient 署名卡都在「其他」子页签；旧深链接（含已删除的信息 tab）落到这里。
+		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
+		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_OTHER;
+	}
 	else if(str_comp(pTab, "tclient") == 0)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
@@ -6275,8 +6311,8 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	}
 	else if(str_comp(pTab, "tclient-info") == 0)
 	{
-		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
-		m_TClientSettingsTab = 5;
+		// 信息 tab 已删除，卡片并入贡献者页；旧深链接继续可用，落到贡献者页。
+		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
 	}
 	else if(str_comp(pTab, "tclient-profiles") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_PROFILES;
@@ -7321,14 +7357,17 @@ void CMenus::BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, C
 		BuildTClientSettingsMenuTextPlan(vItems, MainView, m_SettingsRuntimeMetadata.m_LastTClientTab);
 		BuildQmClientSettingsMenuTextPlan(vItems, MainView, m_SettingsRuntimeMetadata.m_LastQmTab);
 	}
-	constexpr int NumTClientTextPlanTabs = 6;
-	for(int Tab = 0; Tab < NumTClientTextPlanTabs; ++Tab)
+	constexpr int NumTClientTabs = 5; // 与 menus_tclient.cpp 的 NUMBER_OF_TCLIENT_TABS 保持一致
+	for(int Tab = 0; Tab < NumTClientTabs; ++Tab)
 	{
 		if(Tab != CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab))
 			BuildTClientSettingsMenuTextPlan(vItems, MainView, Tab);
 	}
 	for(int Tab = 0; Tab < NUMBER_OF_QMCLIENT_SETTINGS_TABS; ++Tab)
 	{
+		// 贡献者页签的枚举值只是持久化占位，不再渲染内容，文本计划按可见页签收集。
+		if(Tab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+			continue;
 		if(Tab != std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1))
 			BuildQmClientSettingsMenuTextPlan(vItems, MainView, Tab);
 	}
@@ -7376,7 +7415,10 @@ void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 
 	const bool PreferQmClient = SettingsCanonicalPage(m_SettingsRuntimeMetadata.m_LastPage) == SETTINGS_QMCLIENT;
 	const int LastTClientTab = CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab);
-	const int LastQmClientTab = std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1);
+	int LastQmClientTab = std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1);
+	// 贡献者页签的枚举值只是持久化占位，回落到首个子页签。
+	if(LastQmClientTab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+		LastQmClientTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 	if(PreferQmClient)
 	{
 		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, LastQmClientTab});
@@ -7388,14 +7430,16 @@ void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, LastQmClientTab});
 	}
 
-	constexpr int NumTClientTextPlanTabs = 6;
-	for(int Tab = 0; Tab < NumTClientTextPlanTabs; ++Tab)
+	constexpr int NumTClientTabs = 5; // 与 menus_tclient.cpp 的 NUMBER_OF_TCLIENT_TABS 保持一致
+	for(int Tab = 0; Tab < NumTClientTabs; ++Tab)
 	{
 		if(Tab != LastTClientTab)
 			m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_TCLIENT_TAB, SETTINGS_TCLIENT, Tab});
 	}
 	for(int Tab = 0; Tab < NUMBER_OF_QMCLIENT_SETTINGS_TABS; ++Tab)
 	{
+		if(Tab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+			continue;
 		if(Tab != LastQmClientTab)
 			m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, Tab});
 	}

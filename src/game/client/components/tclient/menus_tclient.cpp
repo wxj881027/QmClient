@@ -71,7 +71,6 @@ enum
 	TCLIENT_TAB_WARLIST,
 	TCLIENT_TAB_BINDCHAT,
 	TCLIENT_TAB_STATUSBAR,
-	TCLIENT_TAB_INFO,
 	NUMBER_OF_TCLIENT_TABS
 };
 
@@ -231,6 +230,9 @@ namespace
 
 	int CanonicalizePersistedQmClientTab(int Tab)
 	{
+		// 贡献者子页签并入顶层贡献者页后枚举值只作占位；持久化里的旧值回落到首个子页签。
+		if(Tab == CMenus::QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+			return CMenus::QMCLIENT_SETTINGS_TAB_VISUAL;
 		if(Tab < 0 || Tab >= CMenus::NUMBER_OF_QMCLIENT_SETTINGS_TABS)
 			return CMenus::QMCLIENT_SETTINGS_TAB_VISUAL;
 		return Tab;
@@ -880,19 +882,6 @@ static bool CopyTrimmedString(const char *pSrc, char *pOut, size_t OutSize)
 	return maximum(MinHeight, Box.m_H + VPadding * 2.0f);
 }
 
-static void SetFlag(int32_t &Flags, int n, bool Value)
-{
-	if(Value)
-		Flags |= (1 << n);
-	else
-		Flags &= ~(1 << n);
-}
-
-static bool IsFlagSet(int32_t Flags, int n)
-{
-	return (Flags & (1 << n)) != 0;
-}
-
 bool CMenus::DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand)
 {
 	CBindSlot Bind(0, 0);
@@ -1133,36 +1122,13 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 
 	CUIRect TabBar, Button;
 	int ActiveTab = m_TClientSettingsTab;
-	int TabCount = NUMBER_OF_TCLIENT_TABS;
-	for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
-	{
-		if(IsFlagSet(g_Config.m_TcTClientSettingsTabs, Tab))
-		{
-			TabCount--;
-			if(ActiveTab == Tab)
-				ActiveTab++;
-		}
-	}
-	if(TabCount <= 0)
-	{
-		if(!ReadOnly)
-			SetFlag(g_Config.m_TcTClientSettingsTabs, TCLIENT_TAB_INFO, false);
-		TabCount = 1;
-		ActiveTab = TCLIENT_TAB_INFO;
-	}
-	auto FirstVisibleTab = []() -> int {
-		for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
-			if(!IsFlagSet(g_Config.m_TcTClientSettingsTabs, Tab))
-				return Tab;
-		return TCLIENT_TAB_INFO;
-	};
-	if(ActiveTab < 0 || ActiveTab >= NUMBER_OF_TCLIENT_TABS || IsFlagSet(g_Config.m_TcTClientSettingsTabs, ActiveTab))
-		ActiveTab = FirstVisibleTab();
+	if(ActiveTab < 0 || ActiveTab >= NUMBER_OF_TCLIENT_TABS)
+		ActiveTab = TCLIENT_TAB_SETTINGS;
 	if(!ReadOnly)
 		m_TClientSettingsTab = ActiveTab;
 
 	MainView = TClientSettingsContentView(MainView, &TabBar);
-	const float TabWidth = TabBar.w / TabCount;
+	const float TabWidth = TabBar.w / NUMBER_OF_TCLIENT_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_TCLIENT_TABS] = {};
 	static const char *s_apTClientTabNames[NUMBER_OF_TCLIENT_TABS] = {};
 	static char s_aTClientLanguageFile[IO_MAX_PATH_LENGTH] = {};
@@ -1181,7 +1147,6 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 		s_apTClientTabNames[TCLIENT_TAB_WARLIST] = Localize("War List");
 		s_apTClientTabNames[TCLIENT_TAB_BINDCHAT] = Localize("Chat Binds");
 		s_apTClientTabNames[TCLIENT_TAB_STATUSBAR] = Localize("Status Bar");
-		s_apTClientTabNames[TCLIENT_TAB_INFO] = Localize("Info");
 	}
 
 	int VisibleTabIndex = 0;
@@ -1196,8 +1161,6 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 			CUIRect TabsRemainder = TabBar;
 			for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
 			{
-				if(IsFlagSet(g_Config.m_TcTClientSettingsTabs, Tab))
-					continue;
 				TabsRemainder.VSplitLeft(TabWidth, &aTClientTabSlots[NumTClientTabs], &TabsRemainder);
 				aTClientTabPages[NumTClientTabs] = Tab;
 				if(ActiveTab == Tab)
@@ -1224,11 +1187,8 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 	{
 		for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
 		{
-			if(IsFlagSet(g_Config.m_TcTClientSettingsTabs, Tab))
-				continue;
-
 			TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-			const int Corners = VisibleTabIndex == 0 ? IGraphics::CORNER_L : VisibleTabIndex == TabCount - 1 ? IGraphics::CORNER_R :
+			const int Corners = VisibleTabIndex == 0 ? IGraphics::CORNER_L : VisibleTabIndex == NUMBER_OF_TCLIENT_TABS - 1 ? IGraphics::CORNER_R :
 															   IGraphics::CORNER_NONE;
 			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
 			{
@@ -1257,8 +1217,6 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 			RenderSettingsTClientWarList(ContentView, ReadOnly);
 		if(ActiveTab == TCLIENT_TAB_STATUSBAR)
 			RenderSettingsTClientStatusBar(ContentView, ReadOnly);
-		if(ActiveTab == TCLIENT_TAB_INFO)
-			RenderSettingsTClientInfo(ContentView, ReadOnly);
 		char aExtra[96];
 		str_format(aExtra, sizeof(aExtra), "tab=%d transition=%d", ActiveTab, TransitionActive ? 1 : 0);
 		LogTClientPerfStageEx("tclient_tab", nullptr, ETClientSettingsPerfStage::TAB_SHELL, StageTimer.ElapsedMs(), TransitionActive, aExtra);
@@ -1267,7 +1225,6 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 		{
 		case TCLIENT_TAB_BINDCHAT: pTabShellStage = "tclient_tab_3_shell"; break;
 		case TCLIENT_TAB_STATUSBAR: pTabShellStage = "tclient_tab_4_shell"; break;
-		case TCLIENT_TAB_INFO: pTabShellStage = "tclient_tab_5_shell"; break;
 		default: break;
 		}
 		if(pTabShellStage != nullptr)
@@ -6734,208 +6691,6 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 		Binding.Clear();
 	if(!ReadOnly && DeckResult.m_OrderChanged)
 		SaveSettingsCardOrderModel();
-}
-
-void CMenus::RenderSettingsTClientInfo(CUIRect MainView, bool PrewarmOnly)
-{
-	ApplyTClientContentMetrics(MainView.w);
-	CPerfTimer RenderTimer;
-	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
-	const float UiScale = SettingsPageUiScale(MainView.w);
-	const SSettingsPageLayoutFrame Page = SettingsPageLayout(MainView, UiScale);
-	std::unique_ptr<CUiRenderOnlyGuard> pRenderOnlyGuard;
-	if(ReadOnly && !Ui()->RenderOnly())
-		pRenderOnlyGuard = std::make_unique<CUiRenderOnlyGuard>(Ui());
-	IUiContext InfoCtx = SettingsUiContext("settings_tclient_info", UiScale);
-	if(ReadOnly)
-	{
-		InfoCtx.m_pAnim = nullptr;
-		InfoCtx.m_pTree = nullptr;
-	}
-
-	auto RenderLinks = [this, ReadOnly](CUIRect Content) {
-		CPerfTimer LinksTimer;
-		static CButtonContainer s_DiscordButton, s_WebsiteButton, s_GithubButton, s_SupportButton;
-		CUIRect Row, LeftButton, RightButton;
-		Content.HSplitTop(LineSize * 2.0f, &Row, &Content);
-		Row.VSplitMid(&LeftButton, &RightButton, MarginSmall);
-		if(!ReadOnly && DoButtonLineSize_Menu(&s_DiscordButton, Localize("Discord"), 0, &LeftButton, LineSize))
-			Client()->ViewLink("https://discord.gg/fBvhH93Bt6");
-		if(!ReadOnly && DoButtonLineSize_Menu(&s_WebsiteButton, Localize("Website"), 0, &RightButton, LineSize))
-			Client()->ViewLink("https://tclient.app/");
-		Content.HSplitTop(MarginSmall, nullptr, &Content);
-		Content.HSplitTop(LineSize * 2.0f, &Row, &Content);
-		Row.VSplitMid(&LeftButton, &RightButton, MarginSmall);
-		if(!ReadOnly && DoButtonLineSize_Menu(&s_GithubButton, Localize("Github"), 0, &LeftButton, LineSize))
-			Client()->ViewLink("https://github.com/sjrc6/TaterClient-ddnet");
-		if(!ReadOnly && DoButtonLineSize_Menu(&s_SupportButton, Localize("Support ♥"), 0, &RightButton, LineSize))
-			Client()->ViewLink("https://ko-fi.com/Totar");
-		LogTClientPerfStageEx("tclient_info", "links", ETClientSettingsPerfStage::INTERACTIVE_LAYER, LinksTimer.ElapsedMs());
-	};
-
-	auto RenderFiles = [this, ReadOnly](CUIRect Content) {
-		CPerfTimer FilesTimer;
-		static CButtonContainer s_Config, s_Profiles, s_Warlist, s_Chatbinds;
-		auto OpenFile = [this, ReadOnly](ConfigDomain Domain) {
-			if(ReadOnly)
-				return;
-			char aBuf[IO_MAX_PATH_LENGTH];
-			Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[Domain].m_aConfigPath, aBuf, sizeof(aBuf));
-			Client()->ViewFile(aBuf);
-		};
-		CUIRect Row, LeftButton, RightButton;
-		Content.HSplitTop(LineSize * 2.0f, &Row, &Content);
-		Row.VSplitMid(&LeftButton, &RightButton, MarginSmall);
-		if(!ReadOnly && DoButtonLineSize_Menu(&s_Config, Localize("QmClient Settings"), 0, &LeftButton, LineSize))
-			OpenFile(ConfigDomain::QMCLIENT);
-		if(!ReadOnly && DoButtonLineSize_Menu(&s_Profiles, Localize("Profiles"), 0, &RightButton, LineSize))
-			OpenFile(ConfigDomain::TCLIENTPROFILES);
-		Content.HSplitTop(MarginSmall, nullptr, &Content);
-		Content.HSplitTop(LineSize * 2.0f, &Row, &Content);
-		Row.VSplitMid(&LeftButton, &RightButton, MarginSmall);
-		if(!ReadOnly && DoButtonLineSize_Menu(&s_Warlist, Localize("War List"), 0, &LeftButton, LineSize))
-			OpenFile(ConfigDomain::TCLIENTWARLIST);
-		if(!ReadOnly && DoButtonLineSize_Menu(&s_Chatbinds, Localize("Chat Binds"), 0, &RightButton, LineSize))
-			OpenFile(ConfigDomain::TCLIENTCHATBINDS);
-		LogTClientPerfStageEx("tclient_info", "files", ETClientSettingsPerfStage::RESOURCE_PRETRIGGER, FilesTimer.ElapsedMs());
-	};
-
-	auto RenderDevelopers = [this, ReadOnly](CUIRect Content) {
-		struct SDeveloper
-		{
-			const char *m_pName;
-			const char *m_pUrl;
-			const char *m_pSkin;
-			const char *m_pUseCustomColors;
-			bool m_CustomColors;
-			ColorRGBA m_BodyColor;
-			ColorRGBA m_FeetColor;
-		};
-		static const SDeveloper s_aDevelopers[] = {
-			{"Tater", "https://github.com/sjrc6", "glow_mermyfox", "mermyfox", true, ColorRGBA(0.92f, 0.29f, 0.48f, 1.0f), ColorRGBA(0.55f, 0.64f, 0.76f, 1.0f)},
-			{"SollyBunny / bun bun", "https://github.com/SollyBunny", "tuzi", "tuzi", false, ColorRGBA(), ColorRGBA()},
-			{"PeBox", "https://github.com/danielkempf", "greyfox", "greyfox", true, ColorRGBA(0.0f, 0.09f, 1.0f, 1.0f), ColorRGBA(1.0f, 0.92f, 0.0f, 1.0f)},
-			{"Teero", "https://github.com/Teero888", "glow_mermyfox", "mermyfox", true, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), ColorRGBA(1.0f, 0.02f, 0.13f, 1.0f)},
-			{"ChillerDragon", "https://github.com/ChillerDragon", "glow_greensward", "greensward", true, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), ColorRGBA(1.0f, 0.02f, 0.13f, 1.0f)},
-		};
-		static std::array<CButtonContainer, std::size(s_aDevelopers)> s_aLinkButtons;
-		constexpr float TeeSize = 50.0f;
-		for(size_t Index = 0; Index < std::size(s_aDevelopers); ++Index)
-		{
-			CUIRect Row, TeeRect, Label, Button;
-			Content.HSplitTop(TeeSize + MarginSmall, &Row, &Content);
-			Row.VSplitLeft(TeeSize + MarginSmall, &TeeRect, &Label);
-			TeeRect.w = TeeSize;
-			const float DeveloperFontSize = CurrentSettingsContentMetrics().m_BodySize;
-			Label.VSplitLeft(TextRender()->TextWidth(DeveloperFontSize, s_aDevelopers[Index].m_pName), &Label, &Button);
-			Button.VSplitLeft(MarginSmall, nullptr, &Button);
-			Button.w = LineSize;
-			Button.h = LineSize;
-			Button.y = Label.y + (Label.h - Button.h) * 0.5f;
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_INFO, s_aDevelopers[Index].m_pName, &Label, s_aDevelopers[Index].m_pName, DeveloperFontSize, TEXTALIGN_ML);
-			if(!ReadOnly && Ui()->DoButton_QmIcon(&s_aLinkButtons[Index], EQmIcon::ARROW_UP_RIGHT_FROM_SQUARE, FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE, 0, &Button, IGraphics::CORNER_ALL))
-				Client()->ViewLink(s_aDevelopers[Index].m_pUrl);
-			RenderDevSkin(TeeRect.Center(), TeeSize, s_aDevelopers[Index].m_pSkin, s_aDevelopers[Index].m_pUseCustomColors, s_aDevelopers[Index].m_CustomColors, 0, 0, 0, false, true, s_aDevelopers[Index].m_BodyColor, s_aDevelopers[Index].m_FeetColor);
-		}
-	};
-
-	auto RenderTabs = [this, ReadOnly](CUIRect Content) {
-		CPerfTimer TabsTimer;
-		const char *apTabNames[] = {
-			Localize("Settings"), Localize("Bind Wheel"), Localize("War List"), Localize("Chat Binds"), Localize("Status Bar"), Localize("Info")};
-		static int s_aShowTabs[NUMBER_OF_TCLIENT_TABS] = {};
-		CUIRect LeftColumn, RightColumn;
-		Content.VSplitMid(&LeftColumn, &RightColumn, MarginSmall);
-		for(int i = 0; i < NUMBER_OF_TCLIENT_TABS - 1; ++i)
-		{
-			s_aShowTabs[i] = IsFlagSet(g_Config.m_TcTClientSettingsTabs, i);
-			CUIRect &Column = i % 2 == 0 ? LeftColumn : RightColumn;
-			CUIRect CheckBoxRect;
-			Column.HSplitTop(LineSize, &CheckBoxRect, &Column);
-			char aTextId[64];
-			str_format(aTextId, sizeof(aTextId), "tclient-info-hide-tab-%d", i);
-			if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_INFO, TCLIENT_TAB_INFO, &s_aShowTabs[i], aTextId, apTabNames[i], s_aShowTabs[i], &CheckBoxRect))
-				s_aShowTabs[i] ^= 1;
-			if(!ReadOnly)
-				SetFlag(g_Config.m_TcTClientSettingsTabs, i, s_aShowTabs[i]);
-		}
-		LogTClientPerfStageEx("tclient_info", "settings_tabs", ETClientSettingsPerfStage::INTERACTIVE_LAYER, TabsTimer.ElapsedMs());
-	};
-
-	const std::array<float, 4> aCardHeights = {
-		LineSize * 4.0f + MarginSmall,
-		LineSize * 4.0f + MarginSmall,
-		(50.0f + MarginSmall) * 5.0f,
-		LineSize * 3.0f,
-	};
-	const auto MeasureCard = [&](size_t Index, float) { return aCardHeights[Index]; };
-	const auto RenderCard = [&](size_t Index, CUIRect &Content) {
-		switch(Index)
-		{
-		case 0: RenderLinks(Content); break;
-		case 1: RenderFiles(Content); break;
-		case 2: RenderDevelopers(Content); break;
-		case 3: RenderTabs(Content); break;
-		default: break;
-		}
-	};
-	static std::array<CTClientSettingsCardFrameBinding, 4> s_aCardBindings;
-	for(size_t Index = 0; Index < s_aCardBindings.size(); ++Index)
-		s_aCardBindings[Index].BindIndexed(MeasureCard, RenderCard, Index);
-	auto BuildDefinitions = [&](std::vector<SSettingsCardDefinition> &vCards) {
-		constexpr std::array<std::pair<const char *, const char *>, 4> aSpecs = {{
-			{"deck:tclient-info-links", "TClient Links"},
-			{"deck:tclient-info-files", "Config Files"},
-			{"deck:tclient-info-developers", "TClient Developers"},
-			{"deck:tclient-info-tabs", "Hide Settings Tabs"},
-		}};
-		vCards.reserve(aSpecs.size());
-		for(size_t Index = 0; Index < aSpecs.size(); ++Index)
-		{
-			CTClientSettingsCardFrameBinding *pBinding = &s_aCardBindings[Index];
-			SSettingsCardDefinition Definition;
-			Definition.m_Spec = {aSpecs[Index].first, Localize(aSpecs[Index].second), qm_card_registry::ResolveLocalizedDescription(aSpecs[Index].first)};
-			Definition.m_Measure = [pBinding](float ContentWidth) { return pBinding->Measure(ContentWidth); };
-			Definition.m_Render = [pBinding](CUIRect Content) { pBinding->Render(Content); };
-			vCards.push_back(std::move(Definition));
-		}
-	};
-	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, TClientCardDefinitionsLayoutRevision(ReadOnly, m_TClientSettingsTab, "tclient-info"));
-
-	const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy({EQmScrollProfile::SETTINGS_OUTER}, UiScale, 0.0f);
-	const CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(ScrollPolicy);
-	SSettingsCardDeckInput InputState;
-	InputState.m_MouseX = ReadOnly ? 0.0f : Ui()->MouseX();
-	InputState.m_MouseY = ReadOnly ? 0.0f : Ui()->MouseY();
-	InputState.m_MousePressed = !ReadOnly && Ui()->MouseButtonClicked(0);
-	InputState.m_MouseDown = !ReadOnly && Ui()->MouseButton(0);
-	InputState.m_MouseReleased = !ReadOnly && !InputState.m_MouseDown && Ui()->LastMouseButton(0);
-	InputState.m_CtrlPressed = !ReadOnly && Input()->ModifierIsPressed();
-	InputState.m_AllowHeaderDrag = !ReadOnly;
-	InputState.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
-	InputState.m_pScrollParams = ReadOnly ? nullptr : &ScrollParams;
-	static CScrollRegion s_InfoScrollRegion;
-	static qm_card_order::CModel s_InfoPrewarmOrderModel;
-	static bool s_InfoPrewarmOrderModelInitialized = false;
-	static CSettingsCardDeck s_InfoPrewarmDeck;
-	if(ReadOnly && !s_InfoPrewarmOrderModelInitialized)
-	{
-		s_InfoPrewarmOrderModel.LoadMerged("", qm_card_registry::BuildDefaultEntries());
-		s_InfoPrewarmOrderModelInitialized = true;
-	}
-	qm_card_order::CModel &CardOrderModel = ReadOnly ? s_InfoPrewarmOrderModel : SettingsCardOrderModel();
-	CSettingsCardDeck &CardDeck = ReadOnly ? s_InfoPrewarmDeck : m_SettingsCardDeck;
-	if(!ReadOnly && str_startswith(m_SettingsCardFocusStableId.c_str(), "deck:tclient-info-") != nullptr)
-	{
-		CardDeck.RequestReveal(m_SettingsCardFocusStableId.c_str());
-		m_SettingsCardFocusStableId.clear();
-	}
-	const SSettingsCardDeckResult DeckResult = CardDeck.RenderCached(InfoCtx, Page, "tclient-info", DefinitionsRevision, BuildDefinitions, CardOrderModel, ReadOnly ? nullptr : &s_InfoScrollRegion, InputState, SettingsCardMotionSpec(), SettingsCardDeckVisualOptions());
-	for(CTClientSettingsCardFrameBinding &Binding : s_aCardBindings)
-		Binding.Clear();
-	if(!ReadOnly && DeckResult.m_OrderChanged)
-		SaveSettingsCardOrderModel();
-	LogTClientPerfStage("tclient_info_total", RenderTimer.ElapsedMs(), false);
 }
 
 void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)

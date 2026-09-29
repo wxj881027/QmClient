@@ -208,36 +208,40 @@ TEST(QmNewUiMenuCardsDeckContract, SettingsCardFeedbackFixesUseStableLayouts)
 	EXPECT_EQ(QmSource.find("RenderNameplateTextSettings(CardContent);"), std::string::npos);
 }
 
-TEST(QmNewUiMenuCardsDeckContract, TClientSettingsTabsPreserveHiddenStateAndVisibleCorners)
+TEST(QmNewUiMenuCardsDeckContract, TClientSettingsTabsRenderAllSlotsWithVisibleCorners)
 {
+	// 信息 tab 删除后 TClient 页签不再支持隐藏：全部页签常驻渲染，旧隐藏位图随配置一起删除。
 	const std::string Source = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
 	const std::string RenderSettingsTClient = FunctionBody(Source, "void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)");
-	const std::string RenderSettingsTClientInfo = FunctionBody(Source, "void CMenus::RenderSettingsTClientInfo(CUIRect MainView, bool PrewarmOnly)");
 
-	EXPECT_NE(RenderSettingsTClient.find("if(TabCount <= 0)"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClient.find("FirstVisibleTab"), std::string::npos);
+	EXPECT_EQ(Source.find("m_TcTClientSettingsTabs"), std::string::npos);
+	EXPECT_EQ(Source.find("TCLIENT_TAB_INFO"), std::string::npos);
+	EXPECT_NE(RenderSettingsTClient.find("TabBar.w / NUMBER_OF_TCLIENT_TABS"), std::string::npos);
 	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex"), std::string::npos);
 	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == 0"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == TabCount - 1"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClientInfo.find("s_aShowTabs[i] = IsFlagSet(g_Config.m_TcTClientSettingsTabs, i);"), std::string::npos);
+	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == NUMBER_OF_TCLIENT_TABS - 1"), std::string::npos);
 }
 
-TEST(QmNewUiMenuCardsDeckContract, TClientInfoUsesPublicCardDeck)
+TEST(QmNewUiMenuCardsDeckContract, TClientDeveloperCardMergesLinksAndLivesOnCreditsPage)
 {
-	const std::string Source = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
+	// 「TClient 链接」卡并入开发人员卡；合并卡与 DDNet 卡都在贡献者页「其他」子页签，
+	// 配置文件卡移到常规页。卡片构建统一收在独立的 menus_credits.cpp。
+	const std::string Source = ReadTextFile("src/game/client/components/menus_credits.cpp");
 	const std::string Registry = ReadTextFile("src/game/client/QmUi/QmCardRegistry.cpp");
-	const std::string Body = FunctionBody(Source, "void CMenus::RenderSettingsTClientInfo(CUIRect MainView, bool PrewarmOnly)");
+	const std::string General = FunctionBody(ReadTextFile("src/game/client/components/menus_settings.cpp"), "void CMenus::RenderSettingsGeneral(CUIRect MainView)");
+	const std::string Body = FunctionBody(Source, "void CMenus::AppendTClientDeveloperCard(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly)");
 	ASSERT_FALSE(Body.empty());
 
-	EXPECT_NE(Body.find("const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();"), std::string::npos);
-	EXPECT_NE(Body.find("SettingsPageLayout(MainView, UiScale);"), std::string::npos);
-	EXPECT_NE(Body.find("CSettingsCardDeck &CardDeck = ReadOnly ? s_InfoPrewarmDeck : m_SettingsCardDeck;"), std::string::npos);
-	EXPECT_NE(Body.find("CardDeck.RenderCached("), std::string::npos);
-	EXPECT_EQ(Body.find("MainView.VSplitMid(&LeftView, &RightView, MarginBetweenViews);"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-links\", \"tclient-info\", ECardColumn::Left, 0"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-files\", \"tclient-info\", ECardColumn::Left, 1"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-developers\", \"tclient-info\", ECardColumn::Right, 0"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-tabs\", \"tclient-info\", ECardColumn::Right, 1"), std::string::npos);
+	EXPECT_NE(Body.find("{\"deck:tclient-info-developers\", Localize(\"TClient Developers\")"), std::string::npos);
+	EXPECT_NE(Body.find("Localize(\"Discord\")"), std::string::npos);
+	EXPECT_NE(Body.find("Localize(\"Support ♥\")"), std::string::npos);
+	EXPECT_EQ(Registry.find("deck:tclient-info-links"), std::string::npos);
+	EXPECT_EQ(Registry.find("\"tclient-info\""), std::string::npos);
+	EXPECT_NE(Registry.find("{\"deck:tclient-info-files\", \"general\", ECardColumn::Right, 2"), std::string::npos);
+	EXPECT_NE(Registry.find("{\"deck:credits-friend-links\", \"credits-links\", ECardColumn::Full, 0"), std::string::npos);
+	EXPECT_NE(General.find("FindByStableId(\"deck:tclient-info-files\")"), std::string::npos);
+	EXPECT_NE(General.find("\"tclient-files-qmclient-settings\""), std::string::npos);
+	EXPECT_EQ(Source.find("deck:tclient-info-files"), std::string::npos);
 }
 
 TEST(QmNewUiMenuCardsDeckContract, TClientProfilesUsesPublicCardDeck)
@@ -289,14 +293,17 @@ TEST(QmNewUiMenuCardsDeckContract, TClientConfigsUsesPublicCardDeck)
 TEST(QmNewUiMenuCardsDeckContract, QmClientDecksIsolateRenderOnlyState)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string CreditsSource = ReadTextFile("src/game/client/components/menus_credits.cpp");
 	for(const char *pSignature : {
 		    "void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)",
 		    "void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly)",
 		    "void CMenus::RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly)",
-		    "void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly)",
+		    "void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)",
 	    })
 	{
-		const std::string Body = FunctionBody(Source, pSignature);
+		// 贡献者页已拆到 menus_credits.cpp；其余栖梦 deck 仍在 menus_qmclient.cpp。
+		const std::string &SourceFile = str_startswith(pSignature, "void CMenus::RenderSettingsContributors") != nullptr ? CreditsSource : Source;
+		const std::string Body = FunctionBody(SourceFile, pSignature);
 		ASSERT_FALSE(Body.empty());
 		EXPECT_NE(Body.find("const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();"), std::string::npos);
 		EXPECT_NE(Body.find("CSettingsCardDeck &CardDeck = ReadOnly ?"), std::string::npos);

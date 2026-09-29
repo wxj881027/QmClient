@@ -1457,9 +1457,6 @@ Bind Wheel Key
 Binds
 == Tuş atamaları
 
-Bit flags for disabling settings tabs
-== Ayarlar sekmelerini devre dışı bırakmak için bit bayrakları
-
 Black
 == Siyah
 
@@ -1867,9 +1864,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose which TClient settings tabs are visible
-== Choose which TClient settings tabs are visible
 
 Cinematic camera
 == Sinematik kamera
@@ -2764,6 +2758,15 @@ DDNet memory
 
 DDNet points
 == DDNet puanı
+
+DDNet releases
+== DDNet sürümleri
+
+DDNet staff
+== DDNet Ekibi
+
+DDNet Website
+== DDNet web sitesi
 
 ddnet-saves.txt is empty
 == ddnet-saves.txt boş
@@ -4613,6 +4616,9 @@ Friend entry color in friend list
 Friend heart
 == Arkadaş kalbi
 
+Friend links
+== Dost bağlantılar
+
 Friend message
 == Arkadaş mesajı
 
@@ -5158,9 +5164,6 @@ Hide server prompt notifications
 
 Hide server tip notifications (including notification bar) in Zen mode
 == Zen modunda sunucu ipucu bildirimlerini (bildirim çubuğu dahil) gizle
-
-Hide Settings Tabs
-== Ayarlar Sekmelerini Gizle
 
 Hide sponsor QR code
 == Sponsor QR kodunu gizle
@@ -7598,9 +7601,6 @@ Open settings
 Open spectator mode selector
 == İzleyici modu seçiciyi aç
 
-Open TClient community and source links
-== Open TClient community and source links
-
 Open TClient configuration file locations
 == Open TClient configuration file locations
 
@@ -8456,6 +8456,9 @@ Progress bar height
 Progress bar width
 == İlerleme çubuğu genişliği
 
+Project and community websites
+== Proje ve topluluk web siteleri
+
 Projectile / explosion range
 == Mermi / patlama menzili
 
@@ -8575,6 +8578,9 @@ QmClient sidebar module collapse state
 
 QmClient sidebar module order
 == Qimeng kenar çubuğu modülü sıralaması
+
+QmClient Website
+== QmClient web sitesi
 
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 == QmUi animasyon şiddeti: 0=Kapalı 1=Azaltılmış 2=Tam
@@ -11858,9 +11864,6 @@ TClient
 TClient Developers
 == TClient Geliştiricileri
 
-TClient Links
-== TClient Bağlantıları
-
 Tclient settings card ordering (format: id:col:order; semicolon-separated)
 == Tclient kart sıralama ayarı (biçim id:col:order; noktalı virgülle ayrılmış)
 
@@ -13271,8 +13274,8 @@ View switch found (at offset) with given number
 View tele found (at offset) with given number
 == Verilen numaraya sahip tele'yi (ofsette) bul ve görüntüle
 
-View the developers and contributors
-== View the developers and contributors
+View the developers, contributors, and project links
+== Geliştiricileri, katkıda bulunanları ve proje bağlantılarını gör
 
 View the people supporting QmClient development
 == View the people supporting QmClient development

@@ -14928,6 +14928,102 @@ turkish = "QmClient Topluluğu"
 polish = "Społeczność QmClient"
 
 [[message]]
+key = "DDNet staff"
+[message.translations]
+simplified_chinese = "DDNet 官方开发者"
+traditional_chinese = "DDNet 官方開發者"
+japanese = "DDNet スタッフ"
+korean = "DDNet 스태프"
+russian = "Команда DDNet"
+german = "DDNet-Team"
+spanish = "Equipo de DDNet"
+french = "Équipe DDNet"
+brazilian_portuguese = "Equipe do DDNet"
+portuguese = "Equipa do DDNet"
+turkish = "DDNet Ekibi"
+polish = "Zespół DDNet"
+
+[[message]]
+key = "DDNet releases"
+[message.translations]
+simplified_chinese = "DDNet 发布包"
+traditional_chinese = "DDNet 發布包"
+japanese = "DDNet リリース"
+korean = "DDNet 릴리스"
+russian = "Релизы DDNet"
+german = "DDNet-Veröffentlichungen"
+spanish = "Versiones de DDNet"
+french = "Versions de DDNet"
+brazilian_portuguese = "Versões do DDNet"
+portuguese = "Versões do DDNet"
+turkish = "DDNet sürümleri"
+polish = "Wydania DDNet"
+
+[[message]]
+key = "Friend links"
+[message.translations]
+simplified_chinese = "友链"
+traditional_chinese = "友鏈"
+japanese = "相互リンク"
+korean = "우호 링크"
+russian = "Дружественные ссылки"
+german = "Partnerlinks"
+spanish = "Enlaces amigos"
+french = "Liens amis"
+brazilian_portuguese = "Links amigos"
+portuguese = "Links amigos"
+turkish = "Dost bağlantılar"
+polish = "Przyjazne linki"
+
+[[message]]
+key = "DDNet Website"
+[message.translations]
+simplified_chinese = "DDNet 官网"
+traditional_chinese = "DDNet 官網"
+japanese = "DDNet 公式サイト"
+korean = "DDNet 공식 사이트"
+russian = "Сайт DDNet"
+german = "DDNet-Website"
+spanish = "Sitio web de DDNet"
+french = "Site web de DDNet"
+brazilian_portuguese = "Site do DDNet"
+portuguese = "Site do DDNet"
+turkish = "DDNet web sitesi"
+polish = "Strona DDNet"
+
+[[message]]
+key = "QmClient Website"
+[message.translations]
+simplified_chinese = "QmClient 官网"
+traditional_chinese = "QmClient 官網"
+japanese = "QmClient 公式サイト"
+korean = "QmClient 공식 사이트"
+russian = "Сайт QmClient"
+german = "QmClient-Website"
+spanish = "Sitio web de QmClient"
+french = "Site web de QmClient"
+brazilian_portuguese = "Site do QmClient"
+portuguese = "Site do QmClient"
+turkish = "QmClient web sitesi"
+polish = "Strona QmClient"
+
+[[message]]
+key = "Project and community websites"
+[message.translations]
+simplified_chinese = "项目与社区站点入口"
+traditional_chinese = "專案與社群站點入口"
+japanese = "プロジェクトとコミュニティのサイト"
+korean = "프로젝트 및 커뮤니티 사이트"
+russian = "Сайты проекта и сообщества"
+german = "Projekt- und Community-Websites"
+spanish = "Sitios web del proyecto y la comunidad"
+french = "Sites web du projet et de la communauté"
+brazilian_portuguese = "Sites do projeto e da comunidade"
+portuguese = "Sites do projeto e da comunidade"
+turkish = "Proje ve topluluk web siteleri"
+polish = "Strony projektu i społeczności"
+
+[[message]]
 key = "QmClient overview"
 [message.translations]
 simplified_chinese = "栖梦边栏概览"
@@ -24638,6 +24734,22 @@ brazilian_portuguese = "View the developers and contributors"
 portuguese = "View the developers and contributors"
 turkish = "View the developers and contributors"
 polish = "View the developers and contributors"
+
+[[message]]
+key = "View the developers, contributors, and project links"
+[message.translations]
+simplified_chinese = "查看开发者、贡献者与项目链接"
+traditional_chinese = "查看開發者、貢獻者與專案連結"
+japanese = "開発者・コントリビューター・プロジェクトリンクを見る"
+korean = "개발자, 기여자 및 프로젝트 링크 보기"
+russian = "Разработчики, участники и ссылки на проект"
+german = "Entwickler, Mitwirkende und Projektlinks ansehen"
+spanish = "Ver desarrolladores, contribuidores y enlaces del proyecto"
+french = "Voir les développeurs, contributeurs et liens du projet"
+brazilian_portuguese = "Ver desenvolvedores, contribuidores e links do projeto"
+portuguese = "Ver desenvolvedores, contribuidores e links do projeto"
+turkish = "Geliştiricileri, katkıda bulunanları ve proje bağlantılarını gör"
+polish = "Zobacz deweloperów, współtwórców i linki do projektu"
 
 [[message]]
 key = "Choose which TClient settings tabs are visible"

@@ -145,7 +145,8 @@ TEST(SettingsWarmupLoadingContract, SettingsPageCachePrewarmRespectsDisabledConf
 	EXPECT_LT(DisabledGuard, SkinListAccess);
 	EXPECT_NE(Menus.find("void CMenus::EnsureSettingsBindCache()"), std::string::npos);
 	EXPECT_NE(TClient.find("if(!ReadOnly)\n\t\tEnsureSettingsBindCache();"), std::string::npos);
-	EXPECT_NE(QmClient.find("if(!PrewarmOnly)\n\t\tEnsureSettingsBindCache();"), std::string::npos);
+	// QmClient 包装函数无条件调用（EnsureSettingsBindCache 自身幂等），文本计划收集路径也覆盖。
+	EXPECT_NE(QmClient.find("\tEnsureSettingsBindCache();\n\n\tRenderSettingsQmClientContent(MainView, PrewarmOnly);"), std::string::npos);
 }
 
 TEST(SettingsWarmupLoadingContract, MenuTextPrebuildDoesNotRenderPages)
@@ -218,7 +219,7 @@ TEST(SettingsWarmupLoadingContract, TextPlanCollectionUsesPrewarmOnlyRenderers)
 	const std::string QmClient = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 
 	EXPECT_NE(Settings.find("RenderSettingsTClient(ContentView, CollectingMenuTextPlan);"), std::string::npos);
-	// 贡献者页独立后 QmClient 页走默认 ContributorsPage=false，预热调用只带文本计划参数。
+	// 预热调用只带文本计划参数：RenderSettingsQmClient 的第二个参数即 PrewarmOnly。
 	EXPECT_NE(Settings.find("RenderSettingsQmClient(ContentView, CollectingMenuTextPlan);"), std::string::npos);
 	EXPECT_NE(QmClient.find("Ctx.m_pAnim = PrewarmOnly ? nullptr"), std::string::npos);
 	EXPECT_NE(QmClient.find("if(!PrewarmOnly)"), std::string::npos);

@@ -107,7 +107,7 @@ namespace qm_card_registry
 		// clang-format off
 		static const std::vector<SCardDefault> s_aDefaults = {
 			// === 栖梦侧栏模块（45）· qm:<key>（显式默认值齐全，来源 s_aQmModuleDefaults + 数据债补录）===
-			{"qm:info", "visual", ECardColumn::Full, 0, "QmClient", "qmclient info", "QmClient information and project links", "qmclient-contributors", "deck:qmclient-contributors-community"},
+			{"qm:info", "visual", ECardColumn::Full, 0, "QmClient", "qmclient info", "QmClient information and project links", "credits-qmclient", "deck:qmclient-contributors-community"},
 			{"qm:chat_bubble", "visual", ECardColumn::Left, 0, "Chat bubble", "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao visual", "Show chat messages above players"},
 			{"qm:focus_mode", "visual", ECardColumn::Left, 2, "Zen Mode", "禅模式 zhuanzhi moshi focus mode zen mode 隐藏 yincang hud 名字 mingzi 特效 texiao 计分板 jifenban 沉浸 chenjing 无干扰 wuganrao 聊天 liaotian chat 非必要UI visual", "Hide UI for focused gameplay"},
 			{"qm:camera_view", "visual", ECardColumn::Right, 0, "Camera view", "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao visual", "Adjust game camera and FOV settings"},
@@ -180,16 +180,20 @@ namespace qm_card_registry
 			{"tclient:cursor", "tclient", ECardColumn::Left, 1, "Visual: Cursor", "cursor tclient visual", "Configure the ingame cursor scale"},
 
 			// === 设置 deck · deck:<page>-<card>（原无持久化；tab=归属页/子页，column/order 按运行时卡片顺序显式化）===
-			{"deck:qmclient-contributors-community", "qmclient-contributors", ECardColumn::Left, 0, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
-			{"deck:qmclient-contributors-title", "qmclient-contributors", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname", Localizable("Redeem your code and customize your title")},
-			{"deck:qmclient-contributors-sponsors", "qmclient-contributors", ECardColumn::Right, 0, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
-			{"deck:qmclient-contributors-ddnet", "qmclient-contributors-ddnet", ECardColumn::Full, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
+			// 贡献者页分三个子页签（credits-qmclient / credits-links / credits-other）；配置文件卡在常规页。
+			{"deck:qmclient-contributors-community", "credits-qmclient", ECardColumn::Left, 0, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
+			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname", Localizable("Redeem your code and customize your title")},
+			{"deck:qmclient-contributors-sponsors", "credits-qmclient", ECardColumn::Right, 0, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
+			{"deck:credits-friend-links", "credits-links", ECardColumn::Full, 0, "Friend links", "friend links ddnet workshop website qmclient homepage", "Project and community websites"},
+			{"deck:qmclient-contributors-ddnet", "credits-other", ECardColumn::Left, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
+			{"deck:tclient-info-developers", "credits-other", ECardColumn::Right, 0, "TClient Developers", "tclient developers links discord website github support tater sollybunny pebox teero chillerdragon", "View the developers, contributors, and project links"},
 			{"deck:global-search-input", "global-search", ECardColumn::Full, 0, "Feature Search", "global search feature cards", "Search settings by title, feature, or keyword"},
 			{"deck:global-search-results", "global-search", ECardColumn::Full, 1, "Search", "global search result cards", "Open a matching settings card directly"},
 			{"deck:general-game", "general", ECardColumn::Left, 0, Localizable("Game"), "general game camera weapon", "Configure camera, weapon, and gameplay defaults"},
 			{"deck:general-language", "general", ECardColumn::Right, 0, Localizable("Language"), "general language localization", "Choose the language used by the client"},
 			{"deck:general-client", "general", ECardColumn::Left, 1, Localizable("Client"), "general client theme files", "Manage client theme and menu preferences"},
 			{"deck:general-recording", "general", ECardColumn::Right, 1, Localizable("Demo"), "general demo screenshot csv recording", "Automate demos, screenshots, and match exports"},
+			{"deck:tclient-info-files", "general", ECardColumn::Right, 2, "Config Files", "config files settings profiles war list chat binds", "Open TClient configuration file locations"},
 			{"deck:player-identity", "player", ECardColumn::Left, 0, Localizable("Player"), "player dummy name clan identity", "Edit player and dummy identity information"},
 			{"deck:player-country", "player", ECardColumn::Right, 0, Localizable("Choose country flag"), "player dummy country flag", "Select the country flag for each player"},
 			{"deck:tee-identity", "tee", ECardColumn::Left, 0, "Player preview", "tee player dummy identity preview", "Preview player and dummy appearance"},
@@ -218,10 +222,6 @@ namespace qm_card_registry
 			{"deck:tclient-chat-binds-warlist", "tclient-chat-binds", ECardColumn::Right, 0, "Warlist", "chat binds warlist tclient", "Manage hostile-list chat shortcuts"},
 			{"deck:tclient-chat-binds-other", "tclient-chat-binds", ECardColumn::Left, 1, "Other", "chat binds other tclient", "Manage additional custom chat shortcuts"},
 			{"deck:tclient-warlist", "tclient-warlist", ECardColumn::Full, 0, "War List", "enemy hostile war list entries groups players settings tclient", "Manage hostile players, groups, and display rules"},
-			{"deck:tclient-info-links", "tclient-info", ECardColumn::Left, 0, "TClient Links", "tclient links discord website github support", "Open TClient community and source links"},
-			{"deck:tclient-info-files", "tclient-info", ECardColumn::Left, 1, "Config Files", "config files settings profiles war list chat binds", "Open TClient configuration file locations"},
-			{"deck:tclient-info-developers", "tclient-info", ECardColumn::Right, 0, "TClient Developers", "tclient developers tater sollybunny pebox teero chillerdragon", "View the developers and contributors"},
-			{"deck:tclient-info-tabs", "tclient-info", ECardColumn::Right, 1, "Hide Settings Tabs", "hide settings tabs bind wheel war list chat binds status bar", "Choose which TClient settings tabs are visible"},
 			{"deck:tclient-profiles-actions", "tclient-profiles", ECardColumn::Left, 0, "Profiles", "profiles save load delete", "Load, save, overwrite, or delete profiles"},
 			{"deck:tclient-profiles-options", "tclient-profiles", ECardColumn::Right, 0, "Profile Options", "profiles options dummy colors fields", "Select which player fields a profile stores"},
 			{"deck:tclient-profiles-list", "tclient-profiles", ECardColumn::Left, 1, "Saved Profiles", "profiles saved list", "Browse profiles saved on this device"},

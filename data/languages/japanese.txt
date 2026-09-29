@@ -1457,9 +1457,6 @@ Bind Wheel Key
 Binds
 == バインド
 
-Bit flags for disabling settings tabs
-== 設定タブを無効化するためのビットフラグ
-
 Black
 == 黒
 
@@ -1867,9 +1864,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose which TClient settings tabs are visible
-== Choose which TClient settings tabs are visible
 
 Cinematic camera
 == シネマティックカメラ
@@ -2764,6 +2758,15 @@ DDNet memory
 
 DDNet points
 == DDNet ポイント
+
+DDNet releases
+== DDNet リリース
+
+DDNet staff
+== DDNet スタッフ
+
+DDNet Website
+== DDNet 公式サイト
 
 ddnet-saves.txt is empty
 == ddnet-saves.txt は空です
@@ -4613,6 +4616,9 @@ Friend entry color in friend list
 Friend heart
 == フレンドハート
 
+Friend links
+== 相互リンク
+
 Friend message
 == フレンドメッセージ
 
@@ -5158,9 +5164,6 @@ Hide server prompt notifications
 
 Hide server tip notifications (including notification bar) in Zen mode
 == 禅モードでサーバー通知（通知バーを含む）を非表示
-
-Hide Settings Tabs
-== 設定タブを非表示
 
 Hide sponsor QR code
 == スポンサーQRコードを非表示
@@ -7598,9 +7601,6 @@ Open settings
 Open spectator mode selector
 == 観戦モードセレクターを開く
 
-Open TClient community and source links
-== Open TClient community and source links
-
 Open TClient configuration file locations
 == Open TClient configuration file locations
 
@@ -8456,6 +8456,9 @@ Progress bar height
 Progress bar width
 == プログレスバーの幅
 
+Project and community websites
+== プロジェクトとコミュニティのサイト
+
 Projectile / explosion range
 == 投射物 / 爆発範囲
 
@@ -8575,6 +8578,9 @@ QmClient sidebar module collapse state
 
 QmClient sidebar module order
 == 栖夢サイドバーモジュール並び順
+
+QmClient Website
+== QmClient 公式サイト
 
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 == QmUi アニメーション強度：0=オフ 1=低減 2=フル
@@ -11858,9 +11864,6 @@ TClient
 TClient Developers
 == TClient 開発者
 
-TClient Links
-== TClient リンク
-
 Tclient settings card ordering (format: id:col:order; semicolon-separated)
 == Tclient 設定カード並び順（形式 id:col:order; セミコロン区切り）
 
@@ -13271,8 +13274,8 @@ View switch found (at offset) with given number
 View tele found (at offset) with given number
 == 指定された番号のテレポート（オフセット位置）を表示
 
-View the developers and contributors
-== View the developers and contributors
+View the developers, contributors, and project links
+== View the developers, contributors, and project links
 
 View the people supporting QmClient development
 == View the people supporting QmClient development

@@ -256,7 +256,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, RoundedUiSurfacesUseClampedGeometryAndSha
 	const std::string Ui = ReadTextFile("src/game/client/ui.cpp") + ReadTextFile("src/game/client/ui_popups.cpp");
 	const std::string Menus = ReadTextFile("src/game/client/components/menus.cpp");
 	const std::string IngameMenus = ReadTextFile("src/game/client/components/menus_ingame.cpp");
-	const std::string QmClientMenus = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string QmClientMenus = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp") + ReadTextFile("src/game/client/components/menus_credits.cpp");
 	const std::string TClientMenus = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
 	const std::string ScrollRegion = ReadTextFile("src/game/client/ui_scrollregion.cpp");
 	const std::string ImePopup = ReadTextFile("src/game/client/qm_ime_candidate_popup.cpp");
@@ -307,7 +307,8 @@ TEST(QmNewUiMenuRenderSurfaceContract, RoundedUiSurfacesUseClampedGeometryAndSha
 	EXPECT_NE(FunctionBody(ScrollRegion, "void CScrollRegion::DoSlider()").find("DrawRoundedSurface(Ui(), Slider"), std::string::npos);
 	EXPECT_NE(QmClientMenus.find("DrawRoundedSurface(Ui(), Frame.m_Frame.m_ScrollbarTrackRect"), std::string::npos);
 	EXPECT_NE(QmClientMenus.find("DrawRoundedSurface(Ui(), QrRect"), std::string::npos);
-	EXPECT_NE(QmClientMenus.find("g_QmClientRenderTexture(QrRect, 1.0f)"), std::string::npos);
+	// QR hook 已上移为具名渲染函数（hook 随栖梦贡献者 tab 一起删除）。
+	EXPECT_NE(QmClientMenus.find("RenderSponsorQrTexture(Graphics(), QrRect, 1.0f)"), std::string::npos);
 	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), PlayerRect, NameButtonColor"), std::string::npos);
 	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), ClanRect, ClanButtonColor"), std::string::npos);
 	EXPECT_NE(TClientMenus.find("if(!ReadOnly && NameButtonColor.a > 0.0f)"), std::string::npos);
