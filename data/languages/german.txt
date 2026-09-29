@@ -175,6 +175,12 @@
 (Fetching Update Info)
 == (Update-Info wird abgerufen)
 
+(Follow Chinese font)
+== (Chinesischer Schrift folgen)
+
+(Follow English font)
+== (Englischer Schrift folgen)
+
 (On Latest)
 == (Auf dem neuesten Stand)
 
@@ -823,6 +829,9 @@ Apply this preset
 
 Apply watermark
 == Wasserzeichen anwenden
+
+Arabic
+== Arabisch
 
 Are you sure that you want to delete %d selected items?
 == Sind Sie sicher, dass Sie %d ausgewählte Elemente löschen möchten?
@@ -1553,6 +1562,9 @@ Broadcast shown to players without DDNet client
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
 
+Browse font store…
+== Schriftspeicher durchsuchen…
+
 Browse profiles saved on this device
 == Browse profiles saved on this device
 
@@ -1820,6 +1832,15 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == Prüfe auf existierenden Spieler mit deinem Namen
 
+Chinese (Simplified)
+== Chinesisch (vereinfacht)
+
+Chinese (Traditional)
+== Chinesisch (traditionell)
+
+Chinese font:
+== Chinesische Schrift:
+
 CHN
 == CHN
 
@@ -1852,6 +1873,9 @@ Choose which TClient settings tabs are visible
 
 Cinematic camera
 == Filmische Kamera
+
+CJK font weight:
+== CJK-Schriftstärke:
 
 Clamp mouse to screen
 == Maus an Bildschirmgrenzen festhalten
@@ -2597,8 +2621,14 @@ Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
 == Benutzerdefinierte Community-Listen-URL (muss https sein, leer zum Deaktivieren)
 
-Custom font
-== Eigene Schrift
+Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
+== Eigene Schrift für chinesischen/CJK-Text (Familie oder Familie + Stil); leer = der eigenen lateinischen Schrift folgen
+
+Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
+== Eigene Schrift für Symbol-/Icon-Glyphen; leer = der CJK- oder lateinischen Schrift folgen
+
+Custom font for Latin text (family, or family + style)
+== Eigene Schrift für lateinischen Text (Familie oder Familie + Stil)
 
 Custom font weight (variable fonts)
 == Schriftstärke der eigenen Schrift (variable Schriften)
@@ -2677,6 +2707,9 @@ Cycle custom Tee hue speed (deg/s)
 
 Cycle through emotes
 == Durch Emotes wechseln
+
+Cyrillic
+== Kyrillisch
 
 d = Prediction latency
 == d = Vorhersage-Latenz
@@ -3095,6 +3128,9 @@ Disconnected
 Discord
 == Discord
 
+Display
+== Display-Schrift
+
 Display index
 == Anzeigeindex
 
@@ -3212,11 +3248,17 @@ Door Laser Outline Color
 Door laser outline color
 == Tür-Laser-Konturfarbe
 
+Download
+== Herunterladen
+
 Download community skins
 == Community-Skins herunterladen
 
 Download failed
 == Download fehlgeschlagen
+
+Download fonts from the internet instead of shipping them with the client
+== Schriften aus dem Internet laden, statt sie mit dem Client auszuliefern
 
 Download replay
 == Wiederholung herunterladen
@@ -4004,6 +4046,9 @@ Endpoint
 Endpoint (optional)
 == Endpunkt (optional)
 
+English font:
+== Englische Schrift:
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == Gib /practice ein oder starte neu, sonst wird das gesamte Team in 60 Sekunden getötet
 
@@ -4439,8 +4484,11 @@ Font cursor
 Font size
 == Schriftgröße
 
-Font style:
-== Schriftstil:
+Font store:
+== Schriftspeicher:
+
+Font weight:
+== Schriftstärke:
 
 For more info: /cmdlist
 == Mehr Infos: /cmdlist
@@ -4913,6 +4961,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Grafik-Trace-Stufe: 0 = aus, 1 = regelmäßige Zusammenfassung, 2 = Zusammenfassung und langsame Frames, 3 = detaillierter Backend-Trace
 
+Greek
+== Griechisch
+
 Greeting text
 == Begrüßungstext
 
@@ -4934,14 +4985,17 @@ Hammer
 Hammer interaction
 == Hammer-Interaktion
 
-Hammer Mode:
-== Hammer-Modus:
+Hammer Mode
+== Hammermodus
 
 Hammer skin steal
 == Hammer-Skin-Diebstahl
 
 Hammer: %s
 == Hammer: %s
+
+Handwriting
+== Handschrift
 
 Has people playing
 == Hat spielende Personen
@@ -5327,6 +5381,9 @@ I muted you
 Icon and number
 == Symbol und Zahl
 
+Icon symbols:
+== Symbolzeichen:
+
 Icons
 == Symbole
 
@@ -5513,6 +5570,9 @@ Input switch
 Insane
 == Irrsinnig
 
+Installed
+== Installiert
+
 Installing update. Please wait...
 == Update wird installiert. Bitte warten...
 
@@ -5620,6 +5680,9 @@ Item type
 
 j = Latency jitter
 == j = Latenz-Jitter
+
+Japanese
+== Japanisch
 
 Jelly duration
 == Jelly-Dauer
@@ -5788,6 +5851,9 @@ Kills a player and announces the kill
 
 Kills team and disables practice mode
 == Tötet Team und deaktiviert den Übungsmodus
+
+Korean
+== Koreanisch
 
 Kugou hook heartbeat timeout (milliseconds)
 == Kugou-Hook-Heartbeat-Timeout (Millisekunden)
@@ -6299,15 +6365,6 @@ Map
 Map browser difficulty star filter bitmask (bits 1-5)
 == Bitmaske des Schwierigkeits-Sternfilters im Kartenbrowser (Bits 1-5)
 
-Map browser surface
-== Oberfläche des Kartenbrowsers
-
-Map browser surface color
-== Farbe der Kartenbrowser-Oberfläche
-
-Map browser transparency
-== Karten-Browser-Transparenz
-
 Map browser: show empty servers only
 == Kartenbrowser: nur leere Server anzeigen
 
@@ -6733,6 +6790,9 @@ Modified
 
 Modules snap to screen edges, center lines and other HUD modules while dragging
 == Module rasten beim Ziehen an Bildschirmrändern, Mittellinien und anderen HUD-Modulen ein
+
+Monospace
+== Monospace-Schrift
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Optimistischere Vorhersage entlang der stabilen Richtung des Tees, reduziert Verzögerung zur Stabilisierung
@@ -7333,6 +7393,9 @@ Not downloaded
 
 Not enabled
 == Nicht aktiviert
+
+Not installed
+== Nicht installiert
 
 Not open, check input device or mic permission
 == Nicht geöffnet, überprüfe Eingabegerät oder Mikrofonberechtigung
@@ -8303,6 +8366,9 @@ Preview import file
 Preview laser bodies, outlines, and impacts
 == Preview laser bodies, outlines, and impacts
 
+Preview loading…
+== Vorschau wird geladen…
+
 Preview player and dummy appearance
 == Preview player and dummy appearance
 
@@ -8326,6 +8392,9 @@ Preview the current chat appearance
 
 Preview the sponsor reminder without changing the launch count
 == Unterstützer-Hinweis ohne Änderung der Startzahl ansehen
+
+Preview unavailable
+== Vorschau nicht verfügbar
 
 Preview visibilities
 == Vorschau-Sichtbarkeiten
@@ -9344,6 +9413,9 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 == Spielstand %d wird wiederhergestellt: Hauptspieler '%s', Dummy '%s'.
 
+Retry
+== Wiederholen
+
 Retry remote stats
 == Remote-Statistiken erneut abrufen
 
@@ -9490,6 +9562,9 @@ Same clan color in scoreboard
 
 Same group full map listening
 == Gleiche Gruppe auf ganzer Karte hören
+
+Sans-serif
+== Serifenlos
 
 Sat.
 == Sättigung
@@ -9743,6 +9818,9 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Maps mit Rank-1-Replays durchsuchen ...
 
+Search online fonts…
+== Onlineschriften suchen…
+
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
 
@@ -9889,6 +9967,9 @@ Sends a command to the antibot
 
 Separate with commas
 == Mit Kommas trennen
+
+Serif
+== Serifenschrift
 
 Server
 == Server
@@ -12509,6 +12590,9 @@ Top right
 Total
 == Gesamt
 
+Total fonts:
+== Schriften gesamt:
+
 Total friends
 == Freunde insgesamt
 
@@ -13136,8 +13220,11 @@ VAD threshold (percent)
 Vanilla skins only
 == Nur Vanilla-Skins
 
-Variable custom font weight
-== Schriftstärke der variablen eigenen Schrift
+Variable custom font weight for Chinese/CJK text
+== Variable eigene Schriftstärke für chinesischen/CJK-Text
+
+Variable custom font weight for Latin text
+== Variable eigene Schriftstärke für lateinischen Text
 
 Velocity
 == Geschwindigkeit

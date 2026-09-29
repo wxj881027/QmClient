@@ -175,6 +175,12 @@
 (Fetching Update Info)
 == （更新情報を取得中）
 
+(Follow Chinese font)
+== （中国語フォントに従う）
+
+(Follow English font)
+== （英語フォントに従う）
+
 (On Latest)
 == （最新版です）
 
@@ -823,6 +829,9 @@ Apply this preset
 
 Apply watermark
 == ウォーターマークを適用
+
+Arabic
+== アラビア語
 
 Are you sure that you want to delete %d selected items?
 == 選択した %d 個のアイテムを削除してもよろしいですか？
@@ -1553,6 +1562,9 @@ Broadcast shown to players without DDNet client
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
 
+Browse font store…
+== フォントストアを見る…
+
 Browse profiles saved on this device
 == Browse profiles saved on this device
 
@@ -1820,6 +1832,15 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == 同じ名前のプレイヤーがいるか確認中
 
+Chinese (Simplified)
+== 中国語（簡体字）
+
+Chinese (Traditional)
+== 中国語（繁体字）
+
+Chinese font:
+== 中国語フォント：
+
 CHN
 == 中国
 
@@ -1852,6 +1873,9 @@ Choose which TClient settings tabs are visible
 
 Cinematic camera
 == シネマティックカメラ
+
+CJK font weight:
+== CJK フォントの太さ：
 
 Clamp mouse to screen
 == マウスを画面内に固定
@@ -2597,8 +2621,14 @@ Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
 == カスタムコミュニティリスト取得 URL（https 必須、空欄で無効）
 
-Custom font
-== カスタムフォント
+Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
+== 中国語/CJK テキスト用のカスタムフォント（ファミリー、またはファミリー + スタイル）。空欄ならラテン用カスタムフォントに従います
+
+Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
+== アイコン/記号グリフ用のカスタムフォント。空欄なら CJK またはラテンフォントに従います
+
+Custom font for Latin text (family, or family + style)
+== ラテン文字用のカスタムフォント（ファミリー、またはファミリー + スタイル）
 
 Custom font weight (variable fonts)
 == カスタムフォントの太さ（可変フォント）
@@ -2677,6 +2707,9 @@ Cycle custom Tee hue speed (deg/s)
 
 Cycle through emotes
 == エモートを循環表示
+
+Cyrillic
+== キリル文字
 
 d = Prediction latency
 == d = 予測レイテンシ
@@ -3095,6 +3128,9 @@ Disconnected
 Discord
 == Discord
 
+Display
+== ディスプレイ
+
 Display index
 == 表示インデックス
 
@@ -3212,11 +3248,17 @@ Door Laser Outline Color
 Door laser outline color
 == ドアレーザーアウトライン色
 
+Download
+== ダウンロード
+
 Download community skins
 == コミュニティスキンをダウンロード
 
 Download failed
 == ダウンロード失敗
+
+Download fonts from the internet instead of shipping them with the client
+== フォントをクライアントに同梱せず、インターネットからダウンロードします
 
 Download replay
 == リプレイをダウンロード
@@ -4004,6 +4046,9 @@ Endpoint
 Endpoint (optional)
 == エンドポイント（オプション）
 
+English font:
+== 英語フォント：
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == /practice モードに入るか再起動してください。そうしないと 60 秒後にチーム全員が処刑されます
 
@@ -4439,8 +4484,11 @@ Font cursor
 Font size
 == フォントサイズ
 
-Font style:
-== フォントスタイル:
+Font store:
+== フォントストア：
+
+Font weight:
+== フォントの太さ：
 
 For more info: /cmdlist
 == 詳細は /cmdlist を参照
@@ -4913,6 +4961,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == グラフィックス追跡レベル：0 = オフ、1 = 定期サマリー、2 = サマリーと遅いフレーム、3 = 詳細なバックエンド追跡
 
+Greek
+== ギリシャ文字
+
 Greeting text
 == 挨拶テキスト
 
@@ -4934,14 +4985,17 @@ Hammer
 Hammer interaction
 == ハンマーの相互作用
 
-Hammer Mode:
-== ハンマーモード：
+Hammer Mode
+== ハンマーモード
 
 Hammer skin steal
 == ハンマースキンスティール
 
 Hammer: %s
 == ハンマー：%s
+
+Handwriting
+== 手書き
 
 Has people playing
 == プレイヤーがいる
@@ -5327,6 +5381,9 @@ I muted you
 Icon and number
 == アイコンと数値
 
+Icon symbols:
+== アイコン記号：
+
 Icons
 == アイコン
 
@@ -5513,6 +5570,9 @@ Input switch
 Insane
 == インセイン
 
+Installed
+== インストール済み
+
 Installing update. Please wait...
 == アップデートをインストールしています。お待ちください...
 
@@ -5620,6 +5680,9 @@ Item type
 
 j = Latency jitter
 == j = レイテンシジッター
+
+Japanese
+== 日本語
 
 Jelly duration
 == ゼリー持続時間
@@ -5788,6 +5851,9 @@ Kills a player and announces the kill
 
 Kills team and disables practice mode
 == チームをキルし、プラクティスモードを無効にします
+
+Korean
+== 韓国語
 
 Kugou hook heartbeat timeout (milliseconds)
 == Kugou Hook のハートビートタイムアウト（ミリ秒）
@@ -6299,15 +6365,6 @@ Map
 Map browser difficulty star filter bitmask (bits 1-5)
 == マップブラウザーの難易度星フィルターのビットマスク（ビット 1-5）
 
-Map browser surface
-== マップブラウザー表面
-
-Map browser surface color
-== マップブラウザー表面の色
-
-Map browser transparency
-== マップブラウザの透明度
-
 Map browser: show empty servers only
 == マップブラウザー：空のサーバーのみ表示
 
@@ -6733,6 +6790,9 @@ Modified
 
 Modules snap to screen edges, center lines and other HUD modules while dragging
 == ドラッグ中、モジュールは画面端、中央線、および他の HUD モジュールにスナップします
+
+Monospace
+== 等幅
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == Tee の安定方向に沿ったより楽観的な予測、安定までの遅延を削減
@@ -7333,6 +7393,9 @@ Not downloaded
 
 Not enabled
 == 有効ではありません
+
+Not installed
+== 未インストール
 
 Not open, check input device or mic permission
 == 開いていません。入力デバイスまたはマイクの許可を確認してください
@@ -8303,6 +8366,9 @@ Preview import file
 Preview laser bodies, outlines, and impacts
 == Preview laser bodies, outlines, and impacts
 
+Preview loading…
+== プレビューを読み込み中…
+
 Preview player and dummy appearance
 == Preview player and dummy appearance
 
@@ -8326,6 +8392,9 @@ Preview the current chat appearance
 
 Preview the sponsor reminder without changing the launch count
 == 起動回数を変えずにスポンサー通知をプレビュー
+
+Preview unavailable
+== プレビューを利用できません
 
 Preview visibilities
 == 表示状態をプレビュー
@@ -9344,6 +9413,9 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 == セーブ %d を復元中：メイン「%s」、ダミー「%s」。
 
+Retry
+== 再試行
+
 Retry remote stats
 == リモート統計を再試行
 
@@ -9490,6 +9562,9 @@ Same clan color in scoreboard
 
 Same group full map listening
 == 同じグループ内でマップ全体の音声を聞く
+
+Sans-serif
+== サンセリフ
 
 Sat.
 == 彩度
@@ -9743,6 +9818,9 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Rank 1 リプレイのあるマップを検索 ...
 
+Search online fonts…
+== オンラインフォントを検索…
+
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
 
@@ -9889,6 +9967,9 @@ Sends a command to the antibot
 
 Separate with commas
 == カンマで区切る
+
+Serif
+== セリフ
 
 Server
 == サーバー
@@ -12509,6 +12590,9 @@ Top right
 Total
 == 合計
 
+Total fonts:
+== フォント総数：
+
 Total friends
 == フレンド総数
 
@@ -13136,8 +13220,11 @@ VAD threshold (percent)
 Vanilla skins only
 == バニラスキンのみ
 
-Variable custom font weight
-== 可変フォントのカスタム太さ
+Variable custom font weight for Chinese/CJK text
+== 中国語/CJK テキスト用の可変カスタムフォントの太さ
+
+Variable custom font weight for Latin text
+== ラテン文字用の可変カスタムフォントの太さ
 
 Velocity
 == 速度

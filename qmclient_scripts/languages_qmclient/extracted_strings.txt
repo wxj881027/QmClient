@@ -57,6 +57,8 @@
 '%s' was force-paused for %s seconds
 '%s' would have timed out, but can use timeout protection now
 (Fetching Update Info)
+(Follow Chinese font)
+(Follow English font)
 (On Latest)
 (paused)
 (Update required)
@@ -273,6 +275,7 @@ Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 Apply this preset
 Apply watermark
+Arabic
 Are you sure that you want to delete %d selected items?
 Are you sure that you want to delete '%s'?
 Are you sure that you want to delete the demo '%s'?
@@ -516,6 +519,7 @@ Broadcast shown to players using old DDNet client
 Broadcast shown to players with known bot client
 Broadcast shown to players without DDNet client
 Browse and activate custom audio packs
+Browse font store…
 Browse profiles saved on this device
 Browser
 Brutal
@@ -605,6 +609,9 @@ Check if voice server address is reachable
 Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
+Chinese (Simplified)
+Chinese (Traditional)
+Chinese font:
 CHN
 Choose colors for weapons and entity lasers
 Choose country flag
@@ -616,6 +623,7 @@ Choose the menu font and font weight
 Choose the menu map and background colors
 Choose which TClient settings tabs are visible
 Cinematic camera
+CJK font weight:
 Clamp mouse to screen
 Clan
 Clan color in friends list
@@ -864,7 +872,9 @@ Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 Custom color
 Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
-Custom font
+Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
+Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
+Custom font for Latin text (family, or family + style)
 Custom font weight (variable fonts)
 Custom Font:
 Custom prompt template
@@ -891,6 +901,7 @@ Cycle custom Tee hue for dummy simultaneously
 Cycle custom Tee hue for main
 Cycle custom Tee hue speed (deg/s)
 Cycle through emotes
+Cyrillic
 d = Prediction latency
 Darken Tee color when frozen (0-100)
 Data
@@ -1030,6 +1041,7 @@ Disconnect dummy
 Disconnect from the server
 Disconnected
 Discord
+Display
 Display index
 Display mode
 Display modes
@@ -1069,8 +1081,10 @@ Door Laser Inner Color
 Door laser inner color
 Door Laser Outline Color
 Door laser outline color
+Download
 Download community skins
 Download failed
+Download fonts from the internet instead of shipping them with the client
 Download replay
 Download skins
 Download skins immediately from cl_skin_download_url
@@ -1333,6 +1347,7 @@ Endless hook has been activated
 Endless hook has been deactivated
 Endpoint
 Endpoint (optional)
+English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 Enter a CP number from 1 to 255.
 Enter Password
@@ -1478,7 +1493,8 @@ Following
 Font
 Font cursor
 Font size
-Font style:
+Font store:
+Font weight:
 For more info: /cmdlist
 Force a vote to yes/no
 Force a voting option
@@ -1636,6 +1652,7 @@ Graphics library texture sampling lod bias multiplied by 1000
 Graphics mode
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
+Greek
 Greeting text
 Grenade
 Group name
@@ -1643,9 +1660,10 @@ GUI cursor assets
 Guide line color
 Hammer
 Hammer interaction
-Hammer Mode:
+Hammer Mode
 Hammer skin steal
 Hammer: %s
+Handwriting
 Has people playing
 Has save
 Has unread news
@@ -1774,6 +1792,7 @@ i = Receive rate
 I am away from the game window
 I muted you
 Icon and number
+Icon symbols:
 Icons
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 If 1, current driver is in blocking error state.
@@ -1836,6 +1855,7 @@ Input overlay X position (percent)
 Input overlay Y position (percent)
 Input switch
 Insane
+Installed
 Installing update. Please wait...
 Instant zoom reverse
 Interface
@@ -1872,6 +1892,7 @@ It's recommended that you check the settings to adjust them to your liking befor
 Item
 Item type
 j = Latency jitter
+Japanese
 Jelly duration
 Jelly others
 Jelly strength
@@ -1928,6 +1949,7 @@ Kill yourself when kill-protected during a long game (use f1, kill for regular k
 killed themselves
 Kills a player and announces the kill
 Kills team and disables practice mode
+Korean
 Kugou hook heartbeat timeout (milliseconds)
 Kugou hook helper path (empty=beside QmClient)
 l = Local time
@@ -2098,9 +2120,6 @@ Manual source file
 Manual target
 Map
 Map browser difficulty star filter bitmask (bits 1-5)
-Map browser surface
-Map browser surface color
-Map browser transparency
 Map browser: show empty servers only
 Map browser: show favorite maps only
 Map danger border
@@ -2243,6 +2262,7 @@ Moderate
 Moderator alert
 Modified
 Modules snap to screen edges, center lines and other HUD modules while dragging
+Monospace
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 More teammates...
 MOTD
@@ -2443,6 +2463,7 @@ Not connected to a game server
 Not connected to server
 Not downloaded
 Not enabled
+Not installed
 Not open, check input device or mic permission
 Not open, check output device
 Not requested
@@ -2766,6 +2787,7 @@ Preview dummy nameplate
 Preview hook collision colors and line styles
 Preview import file
 Preview laser bodies, outlines, and impacts
+Preview loading…
 Preview player and dummy appearance
 Preview player and dummy nameplates
 Preview player nameplate
@@ -2774,6 +2796,7 @@ Preview the bind wheel layout and selection
 Preview the composed status bar output
 Preview the current chat appearance
 Preview the sponsor reminder without changing the launch count
+Preview unavailable
 Preview visibilities
 Previous
 Previous page in console
@@ -3113,6 +3136,7 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 Restore Kugou files
 Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
+Retry
 Retry remote stats
 Retrying…
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
@@ -3162,6 +3186,7 @@ SA
 Same as "vote no"
 Same clan color in scoreboard
 Same group full map listening
+Sans-serif
 Sat.
 Save
 Save a replay of the last defined amount of seconds
@@ -3246,6 +3271,7 @@ Search donor asset
 Search main asset
 Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
+Search online fonts…
 Search settings by title, feature, or keyword
 Search, filter, and manage skins
 Searching
@@ -3295,6 +3321,7 @@ Sending locally, suggest the other party unmute or confirm they can receive
 Sending, waiting for peer echo
 Sends a command to the antibot
 Separate with commas
+Serif
 Server
 Server address to filter
 Server address:
@@ -4168,6 +4195,7 @@ Toolbox page
 Top left
 Top right
 Total
+Total fonts:
 Total friends
 Total hours
 Total play time
@@ -4377,7 +4405,8 @@ VAD allow list (comma-separated)
 VAD release delay (ms)
 VAD threshold (percent)
 Vanilla skins only
-Variable custom font weight
+Variable custom font weight for Chinese/CJK text
+Variable custom font weight for Latin text
 Velocity
 Version
 Version performing the analysis

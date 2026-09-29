@@ -175,6 +175,12 @@
 (Fetching Update Info)
 == (正在獲取更新信息)
 
+(Follow Chinese font)
+== （跟隨中文字型）
+
+(Follow English font)
+== （跟隨英文字型）
+
 (On Latest)
 == (已是最新版本)
 
@@ -823,6 +829,9 @@ Apply this preset
 
 Apply watermark
 == 套用浮水印
+
+Arabic
+== 阿拉伯文
 
 Are you sure that you want to delete %d selected items?
 == 確定要刪除 %d 個選中項嗎？
@@ -1553,6 +1562,9 @@ Broadcast shown to players without DDNet client
 Browse and activate custom audio packs
 == Browse and activate custom audio packs
 
+Browse font store…
+== 瀏覽字型商店…
+
 Browse profiles saved on this device
 == Browse profiles saved on this device
 
@@ -1820,6 +1832,15 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == 正在查找該暱稱的 DDNet 記錄
 
+Chinese (Simplified)
+== 中文（簡體）
+
+Chinese (Traditional)
+== 中文（繁體）
+
+Chinese font:
+== 中文字型：
+
 CHN
 == 中國
 
@@ -1852,6 +1873,9 @@ Choose which TClient settings tabs are visible
 
 Cinematic camera
 == 電影鏡頭
+
+CJK font weight:
+== 中日韓字型字重：
 
 Clamp mouse to screen
 == 將鼠標限制在屏幕範圍內
@@ -2597,8 +2621,14 @@ Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
 == 自定義社區列表的獲取 URL（必須是 https，留空則禁用）
 
-Custom font
-== 自定義字體
+Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
+== 中文/CJK 文字的自訂字型（字族，或字族 + 樣式）；留空則跟隨拉丁自訂字型
+
+Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
+== 圖示/符號字形的自訂字型；留空則跟隨中日韓或拉丁字型
+
+Custom font for Latin text (family, or family + style)
+== 拉丁文字的自訂字型（字族，或字族 + 樣式）
 
 Custom font weight (variable fonts)
 == 自訂字型字重（可變字型）
@@ -2677,6 +2707,9 @@ Cycle custom Tee hue speed (deg/s)
 
 Cycle through emotes
 == 循環顯示錶情
+
+Cyrillic
+== 西里爾文
 
 d = Prediction latency
 == d = 預測延遲
@@ -3095,6 +3128,9 @@ Disconnected
 Discord
 == Discord
 
+Display
+== 展示體
+
 Display index
 == 畫面索引
 
@@ -3212,11 +3248,17 @@ Door Laser Outline Color
 Door laser outline color
 == 門的激光輪廓顏色
 
+Download
+== 下載
+
 Download community skins
 == 下載社群皮膚
 
 Download failed
 == 下載失敗
+
+Download fonts from the internet instead of shipping them with the client
+== 從網路下載字型，而不是隨客戶端一起發布
 
 Download replay
 == 下載回放
@@ -4004,6 +4046,9 @@ Endpoint
 Endpoint (optional)
 == 端點（可選）
 
+English font:
+== 英文字型：
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == 請輸入 /practice 或重新開始，否則整隊將在 60 秒後被處死
 
@@ -4439,8 +4484,11 @@ Font cursor
 Font size
 == 字體大小
 
-Font style:
-== 字型樣式：
+Font store:
+== 字型商店：
+
+Font weight:
+== 字型字重：
 
 For more info: /cmdlist
 == 更多指令請查看: /cmdlist
@@ -4913,6 +4961,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 圖形追蹤等級：0 = 關閉，1 = 定期摘要，2 = 摘要與慢影格，3 = 詳細後端追蹤
 
+Greek
+== 希臘文
+
 Greeting text
 == 打招呼文本
 
@@ -4934,14 +4985,17 @@ Hammer
 Hammer interaction
 == 鎚子互動
 
-Hammer Mode:
-== 錘子模式：
+Hammer Mode
+== 錘子模式
 
 Hammer skin steal
 == 錘中偷皮
 
 Hammer: %s
 == 錘：%s
+
+Handwriting
+== 手寫體
 
 Has people playing
 == 有玩家
@@ -5327,6 +5381,9 @@ I muted you
 Icon and number
 == 圖示與數字
 
+Icon symbols:
+== 圖示符號：
+
 Icons
 == 圖示
 
@@ -5513,6 +5570,9 @@ Input switch
 Insane
 == 瘋狂
 
+Installed
+== 已安裝
+
 Installing update. Please wait...
 == 正在安裝更新，請稍等...
 
@@ -5620,6 +5680,9 @@ Item type
 
 j = Latency jitter
 == j = 延遲抖動
+
+Japanese
+== 日文
 
 Jelly duration
 == 回彈時長
@@ -5788,6 +5851,9 @@ Kills a player and announces the kill
 
 Kills team and disables practice mode
 == 處死隊伍並關閉練習模式
+
+Korean
+== 韓文
 
 Kugou hook heartbeat timeout (milliseconds)
 == 酷狗音樂 Hook 心跳逾時時間（毫秒）
@@ -6299,15 +6365,6 @@ Map
 Map browser difficulty star filter bitmask (bits 1-5)
 == 地圖瀏覽器難度星級篩選位元遮罩（位元 1-5）
 
-Map browser surface
-== 地圖瀏覽器表面
-
-Map browser surface color
-== 地圖瀏覽器表面顏色
-
-Map browser transparency
-== 地圖瀏覽器透明度
-
 Map browser: show empty servers only
 == 地圖瀏覽器：僅顯示空伺服器
 
@@ -6733,6 +6790,9 @@ Modified
 
 Modules snap to screen edges, center lines and other HUD modules while dragging
 == 拖動時模塊會吸附到屏幕邊緣、中線和其他 HUD 模塊
+
+Monospace
+== 等寬體
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == 沿 Tee 的穩定方向進行更樂觀的預測，減少穩定下來所需的延遲
@@ -7333,6 +7393,9 @@ Not downloaded
 
 Not enabled
 == 未啟用
+
+Not installed
+== 未安裝
 
 Not open, check input device or mic permission
 == 未打開，請檢查輸入設備或麥克風權限
@@ -8303,6 +8366,9 @@ Preview import file
 Preview laser bodies, outlines, and impacts
 == Preview laser bodies, outlines, and impacts
 
+Preview loading…
+== 預覽載入中…
+
 Preview player and dummy appearance
 == Preview player and dummy appearance
 
@@ -8326,6 +8392,9 @@ Preview the current chat appearance
 
 Preview the sponsor reminder without changing the launch count
 == 預覽贊助提醒，不影響啟動計數
+
+Preview unavailable
+== 預覽無法使用
 
 Preview visibilities
 == 預覽可見性
@@ -9344,6 +9413,9 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 == 正在恢復存檔 %d：本體「%s」，分身「%s」。
 
+Retry
+== 重試
+
 Retry remote stats
 == 重試遠程統計
 
@@ -9490,6 +9562,9 @@ Same clan color in scoreboard
 
 Same group full map listening
 == 同組全圖收聽
+
+Sans-serif
+== 無襯線體
 
 Sat.
 == 飽和度
@@ -9743,6 +9818,9 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == 搜尋有 Rank 1 回放的地圖……
 
+Search online fonts…
+== 搜尋線上字型…
+
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
 
@@ -9889,6 +9967,9 @@ Sends a command to the antibot
 
 Separate with commas
 == 用 , 分隔
+
+Serif
+== 襯線體
 
 Server
 == 伺服器
@@ -12509,6 +12590,9 @@ Top right
 Total
 == 總計
 
+Total fonts:
+== 字型總數：
+
 Total friends
 == 好友總數
 
@@ -13136,8 +13220,11 @@ VAD threshold (percent)
 Vanilla skins only
 == 只顯示原生皮膚
 
-Variable custom font weight
-== 可變字型的自訂字重
+Variable custom font weight for Chinese/CJK text
+== 中文/CJK 文字的可變自訂字型字重
+
+Variable custom font weight for Latin text
+== 拉丁文字的可變自訂字型字重
 
 Velocity
 == 速度

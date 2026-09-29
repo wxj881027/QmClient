@@ -175,6 +175,12 @@
 (Fetching Update Info)
 == (正在获取更新信息)
 
+(Follow Chinese font)
+== （跟随中文字体）
+
+(Follow English font)
+== （跟随英文字体）
+
 (On Latest)
 == (已是最新版本)
 
@@ -824,6 +830,9 @@ Apply this preset
 Apply watermark
 == 应用水印
 
+Arabic
+== 阿拉伯文
+
 Are you sure that you want to delete %d selected items?
 == 确定要删除 %d 个选中项吗？
 
@@ -886,9 +895,6 @@ Are you sure you want to delete this asset?
 
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 确定保存该皮肤？若已有同名皮肤，将被覆盖。
-
-Arabic
-== 阿拉伯文
 
 Arrow assets
 == 箭头资源
@@ -1826,6 +1832,15 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == 正在查找该昵称的 DDNet 记录
 
+Chinese (Simplified)
+== 中文（简体）
+
+Chinese (Traditional)
+== 中文（繁體）
+
+Chinese font:
+== 中文字体：
+
 CHN
 == 中国
 
@@ -1858,6 +1873,9 @@ Choose which TClient settings tabs are visible
 
 Cinematic camera
 == 电影镜头
+
+CJK font weight:
+== 中日韩字体字重：
 
 Clamp mouse to screen
 == 将鼠标限制在屏幕范围内
@@ -2546,15 +2564,6 @@ Ctrl+right-click a tile to select its layer in editor
 Cube
 == 方块
 
-Chinese (Simplified)
-== 中文（简体）
-
-Chinese (Traditional)
-== 中文（繁体）
-
-Cyrillic
-== 西里尔
-
 Current
 == 当前
 
@@ -2612,8 +2621,17 @@ Custom colors
 Custom community list fetch URL (must be https, leave empty to disable)
 == 自定义社区列表的获取 URL（必须是 https，留空则禁用）
 
-Custom font
-== 自定义字体
+Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
+== 中文 /CJK 文本的自定义字体（字族，或字族 + 样式）；留空则跟随拉丁自定义字体
+
+Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
+== 图标/符号字形的自定义字体；留空则跟随中日韩或拉丁字体
+
+Custom font for Latin text (family, or family + style)
+== 拉丁文本的自定义字体（字族，或字族 + 样式）
+
+Custom font weight (variable fonts)
+== 自定义字体字重（可变字体）
 
 Custom Font:
 == 自定义字体：
@@ -2689,6 +2707,9 @@ Cycle custom Tee hue speed (deg/s)
 
 Cycle through emotes
 == 循环显示表情
+
+Cyrillic
+== 西里尔文
 
 d = Prediction latency
 == d = 预测延迟
@@ -3108,7 +3129,7 @@ Discord
 == Discord
 
 Display
-== 展示
+== 展示体
 
 Display index
 == 画面索引
@@ -3227,11 +3248,17 @@ Door Laser Outline Color
 Door laser outline color
 == 门的激光轮廓颜色
 
+Download
+== 下载
+
 Download community skins
 == 下载社区皮肤
 
 Download failed
 == 下载失败
+
+Download fonts from the internet instead of shipping them with the client
+== 从网络下载字体，而不是随客户端一起分发
 
 Download replay
 == 下载回放
@@ -4019,6 +4046,9 @@ Endpoint
 Endpoint (optional)
 == 端点（可选）
 
+English font:
+== 英文字体：
+
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 == 请输入 /practice 或重新开始，否则整队将在 60 秒后被处死
 
@@ -4453,6 +4483,12 @@ Font cursor
 
 Font size
 == 字体大小
+
+Font store:
+== 字体商店：
+
+Font weight:
+== 字体字重：
 
 For more info: /cmdlist
 == 更多命令请查看：/cmdlist
@@ -4925,11 +4961,11 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 图形跟踪级别：0 = 关闭，1 = 定期摘要，2 = 摘要和慢帧，3 = 详细后端跟踪
 
-Greeting text
-== 打招呼文本
-
 Greek
 == 希腊文
+
+Greeting text
+== 打招呼文本
 
 Grenade
 == 榴弹枪
@@ -4949,9 +4985,6 @@ Hammer
 Hammer interaction
 == 锤子交互
 
-Hammer Mode:
-== 锤子模式：
-
 Hammer Mode
 == 锤子模式
 
@@ -4960,6 +4993,9 @@ Hammer skin steal
 
 Hammer: %s
 == 锤：%s
+
+Handwriting
+== 手写体
 
 Has people playing
 == 有玩家
@@ -5345,6 +5381,9 @@ I muted you
 Icon and number
 == 图标与数字
 
+Icon symbols:
+== 图标符号：
+
 Icons
 == 图标
 
@@ -5531,6 +5570,9 @@ Input switch
 Insane
 == 疯狂
 
+Installed
+== 已安装
+
 Installing update. Please wait...
 == 正在安装更新，请稍等……
 
@@ -5553,10 +5595,10 @@ Interface settings page
 == 界面设置页面
 
 Interface surface
-== 界面背景
+== 界面表面
 
 Interface surface color
-== 界面背景颜色
+== 界面表面颜色
 
 Interface transparency
 == 通用界面透明度
@@ -5639,6 +5681,9 @@ Item type
 j = Latency jitter
 == j = 延迟抖动
 
+Japanese
+== 日文
+
 Jelly duration
 == 回弹时长
 
@@ -5714,17 +5759,11 @@ Jump hint vertical position (% of screen height)
 k = Resend loss
 == k = 重发丢包率
 
-Japanese
-== 日文
-
 Kaomoji
 == 表情符号
 
 Kawase
 == Kawase
-
-Korean
-== 韩文
 
 Keep hook when teleporting
 == 传送时保持钩索
@@ -5812,6 +5851,9 @@ Kills a player and announces the kill
 
 Kills team and disables practice mode
 == 处死队伍并关闭练习模式
+
+Korean
+== 韩文
 
 Kugou hook heartbeat timeout (milliseconds)
 == 酷狗音乐 Hook 心跳超时时间（毫秒）
@@ -6323,9 +6365,6 @@ Map
 Map browser difficulty star filter bitmask (bits 1-5)
 == 地图浏览器难度星级筛选位掩码（位 1-5）
 
-Map browser transparency
-== 地图浏览器透明度
-
 Map browser: show empty servers only
 == 地图浏览器：仅显示空服务器
 
@@ -6753,7 +6792,7 @@ Modules snap to screen edges, center lines and other HUD modules while dragging
 == 拖动时模块会吸附到屏幕边缘、中线和其他 HUD 模块
 
 Monospace
-== 等宽
+== 等宽体
 
 More optimistic prediction along Tee's stable direction, reduces delay to stabilize
 == 沿 Tee 的稳定方向进行更乐观的预测，减少稳定下来所需的延迟
@@ -8306,12 +8345,6 @@ Preview
 Preview 'Hook collisions' being pressed
 == 预览按下时的钩子辅助线
 
-Preview loading…
-== 预览加载中…
-
-Preview unavailable
-== 预览不可用
-
 Preview built with %d skipped slot(s).
 == 预览已生成，但跳过了 %d 个槽位。
 
@@ -8332,6 +8365,9 @@ Preview import file
 
 Preview laser bodies, outlines, and impacts
 == 预览激光主体、轮廓和碰撞效果
+
+Preview loading…
+== 预览加载中…
 
 Preview player and dummy appearance
 == 预览玩家和分身外观
@@ -8356,6 +8392,9 @@ Preview the current chat appearance
 
 Preview the sponsor reminder without changing the launch count
 == 预览赞助提醒，不影响启动计数
+
+Preview unavailable
+== 预览不可用
 
 Preview visibilities
 == 预览可见度
@@ -9374,6 +9413,9 @@ Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
 == 正在恢复存档 %d：本体“%s”，分身“%s”。
 
+Retry
+== 重试
+
 Retry remote stats
 == 重试远程统计
 
@@ -9520,6 +9562,9 @@ Same clan color in scoreboard
 
 Same group full map listening
 == 同组全图收听
+
+Sans-serif
+== 无衬线体
 
 Sat.
 == 饱和度
@@ -9773,6 +9818,9 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == 搜索有 Rank 1 回放的地图……
 
+Search online fonts…
+== 搜索在线字体…
+
 Search settings by title, feature, or keyword
 == 按标题、功能或关键字搜索设置
 
@@ -9917,14 +9965,11 @@ Sending, waiting for peer echo
 Sends a command to the antibot
 == 向反机器人发送命令
 
-Sans-serif
-== 无衬线
-
 Separate with commas
 == 用 , 分隔
 
 Serif
-== 衬线
+== 衬线体
 
 Server
 == 服务器
@@ -12545,6 +12590,9 @@ Top right
 Total
 == 总计
 
+Total fonts:
+== 字体总数：
+
 Total friends
 == 好友总数
 
@@ -13172,11 +13220,11 @@ VAD threshold (percent)
 Vanilla skins only
 == 只显示原生皮肤
 
-Variable custom font weight for Latin text
-== 英文字体的可变字重
-
 Variable custom font weight for Chinese/CJK text
-== CJK 字体的可变字重
+== 中文 /CJK 文本的可变自定义字体字重
+
+Variable custom font weight for Latin text
+== 拉丁文本的可变自定义字体字重
 
 Velocity
 == 速度
@@ -18392,9 +18440,6 @@ Feet
 Hands
 == 手
 
-Handwriting
-== 手写
-
 [skins]
 Marking
 == 标记
@@ -18522,48 +18567,6 @@ Ignore
 [Touch button visibility preview]
 Included
 == 包含
-
-English font:
-== 英文字体：
-
-Total fonts:
-== 字体总数：
-
-Font weight:
-== 字重：
-
-CJK font weight:
-== CJK 字重：
-
-Chinese font:
-== CJK 字体（中日韩）：
-
-Icon symbols:
-== 图标符号：
-
-(Follow English font)
-== （跟随英文字体）
-
-(Follow Chinese font)
-== （跟随 CJK 字体）
-
-Font store:
-== 字体商店：
-
-Search online fonts…
-== 搜索在线字体…
-
-Download
-== 下载
-
-Retry
-== 重试
-
-Installed
-== 已安装
-
-Download fonts from the internet instead of shipping them with the client
-== 从网络下载字体，不随客户端打包；点击搜索结果即可安装
 
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
