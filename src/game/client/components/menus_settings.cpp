@@ -7931,6 +7931,31 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 				const int TileScale = 32.0f;
 
+				// 预览 tile 取图：优先预览专用小图（避免菜单会话加载完整 entities），
+				// 完整 entities 已在显存时沿用原路径；空白/缺失/解码中则跳过绘制。
+				const auto DrawHookPreviewTile = [&](int TileIndex, const CUIRect &Rect) {
+					IGraphics::CTextureHandle TileTexture;
+					const auto Source = GameClient()->m_MapImages.GetHookPreviewTileSource(TileIndex, TileTexture);
+					if(Source == CMapImages::EHookPreviewTileSource::SMALL_TEXTURE)
+					{
+						Graphics()->TextureClear();
+						Graphics()->TextureSet(TileTexture);
+						Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+						Graphics()->QuadsBegin();
+						Graphics()->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
+						IGraphics::CQuadItem QuadItem(Rect.x, Rect.y, TileScale, TileScale);
+						Graphics()->QuadsDrawTL(&QuadItem, 1);
+						Graphics()->QuadsEnd();
+					}
+					else if(Source == CMapImages::EHookPreviewTileSource::FULL_ENTITIES_LOADED)
+					{
+						Graphics()->TextureClear();
+						Graphics()->TextureSet(GameClient()->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
+						Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+						RenderMap()->RenderTile(Rect.x, Rect.y, TileIndex, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+					}
+				};
+
 				// Toggled via checkbox later, inverts some previews
 				static bool s_HookCollPressed = false;
 
@@ -7955,10 +7980,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				NoHookTileRect.Margin(10.0f, &NoHookTileRect);
 
 				// Render unhookable tile
-				Graphics()->TextureClear();
-				Graphics()->TextureSet(GameClient()->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-				RenderMap()->RenderTile(NoHookTileRect.x, NoHookTileRect.y, TILE_NOHOOK, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+				DrawHookPreviewTile(TILE_NOHOOK, NoHookTileRect);
 
 				// ***** Hookable Tile Preview *****
 				RightView.HSplitTop(50.0f, &PreviewColl, &RightView);
@@ -7974,10 +7996,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				HookTileRect.Margin(10.0f, &HookTileRect);
 
 				// Render hookable tile
-				Graphics()->TextureClear();
-				Graphics()->TextureSet(GameClient()->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-				RenderMap()->RenderTile(HookTileRect.x, HookTileRect.y, TILE_SOLID, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+				DrawHookPreviewTile(TILE_SOLID, HookTileRect);
 
 				// ***** Hook Dummy Preview *****
 				RightView.HSplitTop(50.0f, &PreviewColl, &RightView);
