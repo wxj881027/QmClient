@@ -328,6 +328,7 @@ namespace
 	{
 		std::shared_ptr<IHttpRequest> m_pResponse;
 
+	protected:
 		void Run() override
 		{
 			if(m_pResponse->State() == EHttpState::DONE)

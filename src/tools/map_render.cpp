@@ -340,30 +340,30 @@ int main(int argc, const char **argv)
 		}
 		else if(str_comp(argv[i], "-w") == 0 && i + 1 < argc)
 		{
-			OutputWidth = std::max(1, atoi(argv[++i]));
+			OutputWidth = std::max(1, str_toint(argv[++i]));
 		}
 		else if(str_comp(argv[i], "-h") == 0 && i + 1 < argc)
 		{
-			OutputHeight = std::max(1, atoi(argv[++i]));
+			OutputHeight = std::max(1, str_toint(argv[++i]));
 		}
 		else if(str_comp(argv[i], "-z") == 0 && i + 1 < argc)
 		{
 			AutoZoom = false;
-			Zoom = std::max(0.001f, (float)atof(argv[++i]));
+			Zoom = std::max(0.001f, str_tofloat(argv[++i]));
 		}
 		else if(str_comp(argv[i], "-x") == 0 && i + 1 < argc)
 		{
 			AutoPosition = false;
-			Position.x = std::max(0.0f, (float)atof(argv[++i]));
+			Position.x = std::max(0.0f, str_tofloat(argv[++i]));
 		}
 		else if(str_comp(argv[i], "-y") == 0 && i + 1 < argc)
 		{
 			AutoPosition = false;
-			Position.y = std::max(0.0f, (float)atof(argv[++i]));
+			Position.y = std::max(0.0f, str_tofloat(argv[++i]));
 		}
 		else if(str_comp(argv[i], "-t") == 0 && i + 1 < argc)
 		{
-			TimeOffsetMillis = std::max(0, atoi(argv[++i]));
+			TimeOffsetMillis = std::max(0, str_toint(argv[++i]));
 		}
 		else if(argv[i][0] != '-')
 		{
