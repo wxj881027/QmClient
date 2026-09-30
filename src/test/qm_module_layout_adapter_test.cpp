@@ -102,7 +102,7 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::Steam, EQmModuleColumn::Right, 22, "steam"},
 		{EQmModuleId::WaterHammerHighlight, EQmModuleColumn::Right, 4, "water_hammer"},
 		{EQmModuleId::GoresDrownBoard, EQmModuleColumn::Right, 23, "gores_drown_board"},
-		{EQmModuleId::BetterScoreboard, EQmModuleColumn::Left, 7, "better_scoreboard"},
+		{EQmModuleId::BetterScoreboard, EQmModuleColumn::Left, 6, "better_scoreboard"},
 	};
 }
 

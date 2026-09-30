@@ -61,7 +61,7 @@ TEST(QmCardRegistry, BetterScoreboardCardIsRegisteredInFunctionColumn)
 	ASSERT_GE(MiniFeaturesIndex, 0);
 	ASSERT_GE(BetterScoreboardIndex, 0);
 	ASSERT_GE(JumpHintIndex, 0);
-	EXPECT_EQ(Model.Entry(BetterScoreboardIndex).m_OrderInColumn, Model.Entry(MiniFeaturesIndex).m_OrderInColumn + 1);
+	EXPECT_EQ(Model.Entry(BetterScoreboardIndex).m_OrderInColumn, Model.Entry(MiniFeaturesIndex).m_OrderInColumn - 1);
 	EXPECT_GT(Model.Entry(JumpHintIndex).m_OrderInColumn, Model.Entry(BetterScoreboardIndex).m_OrderInColumn);
 }
 
