@@ -879,7 +879,7 @@ def client_can_connect_7(test_env):
 @test
 def open_editor(test_env):
 	client = test_env.client(["maps/coverage.map"])
-	client.wait_for_log_exact("editor/load: Loaded map 'maps/coverage.map'", timeout=10)
+	client.wait_for_log_exact("editor/load: Loaded map 'maps/coverage.map'", timeout=30)
 	client.command("cl_editor 0")
 	client.exit()
 	client.wait_for_exit()

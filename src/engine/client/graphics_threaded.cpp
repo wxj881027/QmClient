@@ -444,8 +444,8 @@ void CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
 	m_vTextureIndices.resize(CCommandBuffer::MAX_TEXTURES);
 	m_vTextureGenerations.resize(CCommandBuffer::MAX_TEXTURES);
 	// 已经空闲过的槽位也必须再进一次代数，避免「槽位 + 代数」组合和旧句柄撞车。
-	for(size_t i = 0; i < m_vTextureGenerations.size(); ++i)
-		++m_vTextureGenerations[i];
+	for(uint32_t &Generation : m_vTextureGenerations)
+		++Generation;
 	for(size_t i = 0; i < m_vTextureIndices.size(); ++i)
 		m_vTextureIndices[i] = i + 1;
 	m_FirstFreeTexture = 0;

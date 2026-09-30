@@ -46,7 +46,7 @@ class CServerBan : public CNetBan
 	class CServer *m_pServer;
 
 	template<class T>
-	int BanExt(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason);
+	int BanExt(T *pBanPool, const T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason);
 
 public:
 	class CServer *Server() const { return m_pServer; }
