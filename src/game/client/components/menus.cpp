@@ -72,7 +72,9 @@ extern bool gs_SettingsAssetsEntityGamePreview;
 
 namespace
 {
-	constexpr float MENU_MENUBAR_HEIGHT_NEW = 24.0f;
+	constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f; // 导航胶囊行高
+	constexpr float MENU_MENUBAR_GAP_NEW = 8.0f; // 导航→内容间隙（统一边距基准）
+	constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;
 	constexpr float MENU_MENUBAR_HEIGHT_LEGACY = 30.0f;
 	constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
@@ -160,20 +162,10 @@ namespace
 
 	int CanonicalizeTClientCacheTab(int Tab)
 	{
-		static constexpr int TCLIENT_CACHE_SLOTS = 6;
-		auto IsTabHidden = [](int Candidate) {
-			return (g_Config.m_TcTClientSettingsTabs & (1 << Candidate)) != 0;
-		};
-		if(Tab < 0 || Tab >= TCLIENT_CACHE_SLOTS || IsTabHidden(Tab))
-		{
-			for(int Candidate = 0; Candidate < TCLIENT_CACHE_SLOTS; ++Candidate)
-			{
-				if(!IsTabHidden(Candidate))
-					return Candidate;
-			}
-			return 0;
-		}
-		return Tab;
+		// TClient 页签不再支持隐藏，缓存槽位只需收敛到合法 tab 区间。
+		// TCLIENT_TAB_* 枚举是 menus_tclient.cpp / menus_qmclient.cpp 的文件级枚举，这里按槽位数收敛。
+		constexpr int NumTClientTabs = 5;
+		return std::clamp(Tab, 0, NumTClientTabs - 1);
 	}
 
 }
@@ -470,8 +462,7 @@ namespace
 		CUIRect TabBar, MainView;
 		const bool UseNewUi = g_Config.m_QmNewUi != 0;
 		Screen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);
-		if(UseNewUi)
-			MainView.HSplitTop(6.0f, nullptr, &MainView);
+		// 新 UI 的导航→内容 8px 间隙已折算进 MenuMenubarHeight，不再额外下移。
 		return MainView;
 	}
 
@@ -835,22 +826,6 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardOrderMigrated = 1;
 	}
-	// DDNet 署名卡搬到了顶层「贡献者」页的独立 deck；旧布局可能把它记在栖梦贡献者 tab 下，
-	// 那样新 deck 找不到它，页面会整页空白。这里无条件把它归位到自己的 deck tab。
-	{
-		qm_card_order::CModel Candidate;
-		MakeCandidate(Candidate);
-		const int DdnetCreditsIndex = Candidate.FindByStableId("deck:qmclient-contributors-ddnet");
-		if(DdnetCreditsIndex >= 0 && str_comp(Candidate.Entry(DdnetCreditsIndex).m_pDefaultTab, "qmclient-contributors-ddnet") != 0)
-		{
-			Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "qmclient-contributors-ddnet", 0, 0);
-			if(!PersistCandidate(Candidate, true))
-			{
-				m_SettingsCardOrderLoaded = true;
-				return;
-			}
-		}
-	}
 	if(g_Config.m_QmCardLayoutVersion < 1)
 	{
 		qm_card_order::CModel Candidate;
@@ -1062,6 +1037,59 @@ void CMenus::LoadSettingsCardOrderModel()
 			return;
 		}
 		g_Config.m_QmCardLayoutVersion = 9;
+	}
+	if(g_Config.m_QmCardLayoutVersion < 10)
+	{
+		// TClient 信息 tab 与栖梦贡献者 tab 的卡片统一并入顶层「贡献者」页（deck=qmclient-contributors），
+		// 「隐藏设置选项卡」卡随之删除。旧 deck（tclient-info / qmclient-contributors-ddnet）不复存在，
+		// 旧 deck 里的卡无条件搬走，否则会因 tab 失配而从页面上消失。
+		// 栖梦侧三张卡的 deck 未变，仅默认列位让位给新卡：先记录是否仍在旧默认位，
+		// 再统一搬移，避免移动过程中列位变化污染判断，同时保留用户自定义布局。
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		const auto IsAtOldDefault = [&Candidate](const char *pStableId, int OldColumn, int OldOrder) {
+			const int Index = Candidate.FindByStableId(pStableId);
+			if(Index < 0)
+				return false;
+			const qm_card_order::SEntry &Entry = Candidate.Entry(Index);
+			return str_comp(Entry.m_pDefaultTab, "qmclient-contributors") == 0 && Entry.m_Column == OldColumn && Entry.m_OrderInColumn == OldOrder;
+		};
+		const bool CommunityAtOldDefault = IsAtOldDefault("deck:qmclient-contributors-community", 1, 0);
+		const bool TitleAtOldDefault = IsAtOldDefault("deck:qmclient-contributors-title", 1, 1);
+		Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "qmclient-contributors", 1, 0);
+		Candidate.MoveToTab("deck:tclient-info-links", "qmclient-contributors", 1, 1);
+		Candidate.MoveToTab("deck:tclient-info-files", "qmclient-contributors", 1, 2);
+		Candidate.MoveToTab("deck:tclient-info-developers", "qmclient-contributors", 2, 0);
+		if(CommunityAtOldDefault)
+			Candidate.MoveToTab("deck:qmclient-contributors-community", "qmclient-contributors", 2, 2);
+		if(TitleAtOldDefault)
+			Candidate.MoveToTab("deck:qmclient-contributors-title", "qmclient-contributors", 1, 3);
+		if(!PersistCandidate(Candidate, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 10;
+	}
+	if(g_Config.m_QmCardLayoutVersion < 11)
+	{
+		// 贡献者页拆出三个子页签 deck（credits-qmclient / credits-links / credits-other），
+		// 配置文件卡并入常规页；「TClient 链接」卡并入开发人员卡后从注册表移除，
+		// LoadMerged 会丢弃该 stable id，强制写回避免每次启动重复参与合并。
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		Candidate.MoveToTab("deck:qmclient-contributors-community", "credits-qmclient", 1, 0);
+		Candidate.MoveToTab("deck:qmclient-contributors-title", "credits-qmclient", 1, 1);
+		Candidate.MoveToTab("deck:qmclient-contributors-sponsors", "credits-qmclient", 2, 0);
+		Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "credits-other", 1, 0);
+		Candidate.MoveToTab("deck:tclient-info-developers", "credits-other", 2, 0);
+		Candidate.MoveToTab("deck:tclient-info-files", "general", 2, 2);
+		if(!PersistCandidate(Candidate, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 11;
 	}
 	m_SettingsCardOrderLoaded = true;
 }
@@ -2375,199 +2403,119 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 	};
 	if(UseNewUi)
 	{
-		// 水平外扩 2px 补偿胶囊滑块的 IndicatorInset 内衬：滑块/槽位高亮的
-		// 可见左缘因此精确落在页面背景卡片的 10px 基准线上（容器与卡片同色，
-		// 反向凸出的 2px 不可察觉）；垂直间隙维持原有的呼吸感。
-		const float MenubarOuterInsetX = -2.0f;
-		const float MenubarBaseOuterInsetY = 2.5f;
-		const float MenubarOuterInsetY = (Box.h - (Box.h - 2.0f * MenubarBaseOuterInsetY) * MENU_MENUBAR_CONTENT_SCALE_NEW) * 0.5f;
-		// 导航栏不再自绘整条背景，直接透出下方的菜单背景；观感由左侧页签胶囊
+		// 统一边距基准：全局安全区（8px）已提供到窗口上/左/右的距离，
+		// 导航胶囊行直接对齐安全区边缘、不再额外内缩；导航栏高度余下的
+		// MENU_MENUBAR_GAP_NEW（8px）就是导航→内容的间隙。
+		// 导航栏不自绘整条背景，直接透出下方的菜单背景；观感由左侧页签胶囊
 		// 与右侧图标簇胶囊自身承担，避免硬编码一条与背景脱节的底色。
-		Box.VMargin(MenubarOuterInsetX, &Box);
-		Box.HMargin(MenubarOuterInsetY, &Box);
+		Box.HSplitTop(MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW, &Box, nullptr);
 
 		const float MenubarIconButtonSize = Box.h;
 		const float MenubarIconGap = 6.0f;
 		const float MenubarItemGap = 4.0f;
-		const ColorRGBA IconButtonDefault = MenuIconButtonDefaultColor();
-		const ColorRGBA IconButtonActive = MenuTabActiveColor();
-		const ColorRGBA IconButtonHover = MenuMenubarHoverColor();
 		const ColorRGBA QuitButtonDefault = MenuDangerTabDefaultColor();
 		const ColorRGBA QuitButtonHover = MenuDangerTabHoverColor();
 		bool CompactOnlineMenuTabs = false;
-		// 离线新 UI：右侧图标簇（截图/回放/编辑器/设置/退出）改为滑块式胶囊导航，
-		// 槽位先收集、再画胶囊与滑块、最后画图标；在线 UI 仍保持独立圆形按钮。
+		// 新 UI 右侧图标簇（截图/回放/编辑器/设置/退出）为滑块式胶囊导航，
+		// 离线与在线（游戏内 ESC）共用：槽位先收集、再画胶囊与滑块、最后画图标。
 		CUIRect aRightNavSlots[5];
 		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
 		static CButtonContainer s_QuitButton;
-		if(ClientState == IClient::STATE_OFFLINE)
-		{
-			// 离线：退出按钮并入右侧滑块导航（最右槽位），统一绘制推迟到离线分支。
-			aRightNavSlots[4] = Button;
-		}
-		else
-		{
-			CUIRect QuitButton = Button;
-			const float CircleSize = minimum(QuitButton.w, QuitButton.h);
-			QuitButton.x += (QuitButton.w - CircleSize) / 2.0f;
-			QuitButton.w = CircleSize;
-			if(DoMenuTabV2_QmIcon(&s_QuitButton, EQmIcon::POWER_OFF, FONT_ICON_POWER_OFF, false, &QuitButton, IGraphics::CORNER_ALL, &QuitButtonDefault, nullptr, &QuitButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
-			{
-				if(GameClient()->Editor()->HasUnsavedData() || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0) || m_MenusIngameTouchControls.UnsavedChanges() || GameClient()->m_TouchControls.HasEditingChanges())
-				{
-					m_Popup = POPUP_QUIT;
-				}
-				else
-				{
-					Client()->Quit();
-				}
-			}
-		}
+		// 退出按钮并入右侧滑块导航（最右槽位），统一绘制在槽位收集完成后。
+		aRightNavSlots[4] = Button;
 		GameClient()->m_Tooltips.DoToolTip(&s_QuitButton, &Button, Localize("Quit"));
 
 		Box.VSplitRight(MenubarIconGap, &Box, nullptr);
 		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
 		static CButtonContainer s_SettingsButton;
-		if(ClientState == IClient::STATE_OFFLINE)
-		{
-			// 离线：槽位并入右侧滑块导航，统一绘制推迟到离线分支。
-			aRightNavSlots[3] = Button;
-		}
-		else
-		{
-			CUIRect SettingsButton = Button;
-			const float CircleSize = minimum(SettingsButton.w, SettingsButton.h);
-			SettingsButton.x += (SettingsButton.w - CircleSize) / 2.0f;
-			SettingsButton.w = CircleSize;
-			if(DoMenuTabV2_QmIcon(&s_SettingsButton, EQmIcon::GEAR, FONT_ICON_GEAR, ActivePage == PAGE_SETTINGS, &SettingsButton, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
-			{
-				NewPage = PAGE_SETTINGS;
-			}
-			MenubarTrackActive(PAGE_SETTINGS, SettingsButton);
-		}
+		// 设置按钮并入右侧滑块导航，统一绘制在槽位收集完成后。
+		aRightNavSlots[3] = Button;
 		GameClient()->m_Tooltips.DoToolTip(&s_SettingsButton, &Button, Localize("Settings"));
 
 		Box.VSplitRight(MenubarIconGap, &Box, nullptr);
 		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
 		static CButtonContainer s_EditorButton;
-		if(ClientState == IClient::STATE_OFFLINE)
-		{
-			// 离线：槽位并入右侧滑块导航，统一绘制推迟到离线分支。
-			aRightNavSlots[2] = Button;
-		}
-		else
-		{
-			CUIRect EditorButton = Button;
-			const float CircleSize = minimum(EditorButton.w, EditorButton.h);
-			EditorButton.x += (EditorButton.w - CircleSize) / 2.0f;
-			EditorButton.w = CircleSize;
-			if(DoMenuTabV2_QmIcon(&s_EditorButton, EQmIcon::PEN_TO_SQUARE, FONT_ICON_PEN_TO_SQUARE, false, &EditorButton, IGraphics::CORNER_ALL, &IconButtonDefault, nullptr, &IconButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW))
-			{
-				g_Config.m_ClEditor = 1;
-			}
-		}
+		// 编辑器按钮并入右侧滑块导航，统一绘制在槽位收集完成后。
+		aRightNavSlots[2] = Button;
 		GameClient()->m_Tooltips.DoToolTip(&s_EditorButton, &Button, Localize("Editor"));
+
+		// 截图/回放并入滑块导航槽位（离线与在线同构）。
+		Box.VSplitRight(MenubarIconGap, &Box, nullptr);
+		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
+		aRightNavSlots[1] = Button;
+
+		Box.VSplitRight(MenubarIconGap, &Box, nullptr);
+		Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
+		aRightNavSlots[0] = Button;
 
 		if(ClientState == IClient::STATE_ONLINE)
 		{
-			// 在线菜单右侧始终保留截图、回放、编辑器、设置、退出五个图标。
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
-			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
-			static CButtonContainer s_DemoButton;
-			if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &Button, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover))
-			{
-				OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
-			}
-			if(DemoBrowserReplaysActive)
-				MenubarTrackActive(PAGE_DEMOS, Button);
-			GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &Button, Localize("Demos"));
-
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
-			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
-			static CButtonContainer s_ScreenshotButton;
-			if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &Button, IGraphics::CORNER_ALL, &IconButtonDefault, &IconButtonActive, &IconButtonHover))
-			{
-				OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
-			}
-			if(DemoBrowserScreenshotsActive)
-				MenubarTrackActive(PAGE_DEMOS, Button);
-			GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &Button, Localize("Screenshots"));
-
 			CompactOnlineMenuTabs = Graphics()->ScreenAspect() <= 1.45f || Box.w < 690.0f;
 		}
 
+		// 胶囊 Tabbar：右侧滑块导航同样先收集槽位，再画容器与滑块，最后画图标。
+		// 槽位从左到右为 截图/回放/编辑器/设置/退出；主菜单入口在左侧导航栏。
+		int ActiveRightNavTab = -1;
+		if(ActivePage == PAGE_SETTINGS)
+			ActiveRightNavTab = 3;
+		else if(ActivePage == PAGE_DEMOS)
+			ActiveRightNavTab = DemoBrowserScreenshotsActive ? 0 : 1;
+		const IUiContext RightNavCtx = TabBarUiContext();
+		// 退出槽位保留旧 UI 的红色危险底色（与独立退出按钮的 QuitButtonDefault 同源），
+		// 其余槽位 alpha 为 0 不画 tint。
+		ColorRGBA aRightNavTintColors[(int)std::size(aRightNavSlots)] = {};
+		aRightNavTintColors[4] = QuitButtonDefault;
+		ui_widget::CapsuleTabBarChrome(RightNavCtx, MakeUiScopeHash("menubar_capsule_right_nav"), aRightNavSlots, (int)std::size(aRightNavSlots), ActiveRightNavTab, MenuCapsuleTabBarStyle(), aRightNavTintColors);
+
+		static CButtonContainer s_ScreenshotButton;
+		if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &aRightNavSlots[0], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
+		}
+		if(DemoBrowserScreenshotsActive)
+			MenubarTrackActive(PAGE_DEMOS, aRightNavSlots[0]);
+		GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &aRightNavSlots[0], Localize("Screenshots"));
+
+		static CButtonContainer s_DemoButton;
+		if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &aRightNavSlots[1], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
+		}
+		if(DemoBrowserReplaysActive)
+			MenubarTrackActive(PAGE_DEMOS, aRightNavSlots[1]);
+		GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &aRightNavSlots[1], Localize("Demos"));
+
+		if(DoMenuTabV2_QmIcon(&s_EditorButton, EQmIcon::PEN_TO_SQUARE, FONT_ICON_PEN_TO_SQUARE, false, &aRightNavSlots[2], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			g_Config.m_ClEditor = 1;
+		}
+		GameClient()->m_Tooltips.DoToolTip(&s_EditorButton, &aRightNavSlots[2], Localize("Editor"));
+
+		if(DoMenuTabV2_QmIcon(&s_SettingsButton, EQmIcon::GEAR, FONT_ICON_GEAR, ActivePage == PAGE_SETTINGS, &aRightNavSlots[3], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			NewPage = PAGE_SETTINGS;
+		}
+		MenubarTrackActive(PAGE_SETTINGS, aRightNavSlots[3]);
+		GameClient()->m_Tooltips.DoToolTip(&s_SettingsButton, &aRightNavSlots[3], Localize("Settings"));
+
+		if(DoMenuTabV2_QmIcon(&s_QuitButton, EQmIcon::POWER_OFF, FONT_ICON_POWER_OFF, false, &aRightNavSlots[4], IGraphics::CORNER_ALL, &QuitButtonDefault, nullptr, &QuitButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			if(GameClient()->Editor()->HasUnsavedData() || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0) || m_MenusIngameTouchControls.UnsavedChanges() || GameClient()->m_TouchControls.HasEditingChanges())
+			{
+				m_Popup = POPUP_QUIT;
+			}
+			else
+			{
+				Client()->Quit();
+			}
+		}
+		GameClient()->m_Tooltips.DoToolTip(&s_QuitButton, &aRightNavSlots[4], Localize("Quit"));
+
 		if(ClientState == IClient::STATE_OFFLINE)
 		{
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
-			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
-			aRightNavSlots[1] = Button;
-
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
-			Box.VSplitRight(MenubarIconButtonSize, &Box, &Button);
-			aRightNavSlots[0] = Button;
-
-			// 胶囊 Tabbar：右侧滑块导航同样先收集槽位，再画容器与滑块，最后画图标。
-			// 槽位从左到右为 截图/回放/编辑器/设置/退出；主菜单入口在左侧导航栏。
-			int ActiveRightNavTab = -1;
-			if(ActivePage == PAGE_SETTINGS)
-				ActiveRightNavTab = 3;
-			else if(ActivePage == PAGE_DEMOS)
-				ActiveRightNavTab = DemoBrowserScreenshotsActive ? 0 : 1;
-			const IUiContext RightNavCtx = TabBarUiContext();
-			// 退出槽位保留旧 UI 的红色危险底色（与独立退出按钮的 QuitButtonDefault 同源），
-			// 其余槽位 alpha 为 0 不画 tint。
-			ColorRGBA aRightNavTintColors[(int)std::size(aRightNavSlots)] = {};
-			aRightNavTintColors[4] = QuitButtonDefault;
-			ui_widget::CapsuleTabBarChrome(RightNavCtx, MakeUiScopeHash("menubar_capsule_right_nav"), aRightNavSlots, (int)std::size(aRightNavSlots), ActiveRightNavTab, MenuCapsuleTabBarStyle(), aRightNavTintColors);
-
-			static CButtonContainer s_ScreenshotButton;
-			if(DoMenuTabV2_QmIcon(&s_ScreenshotButton, EQmIcon::IMAGE, FONT_ICON_IMAGE, DemoBrowserScreenshotsActive, &aRightNavSlots[0], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				OpenDemoBrowser(DEMO_BROWSER_SOURCE_SCREENSHOTS);
-			}
-			if(DemoBrowserScreenshotsActive)
-				MenubarTrackActive(PAGE_DEMOS, aRightNavSlots[0]);
-			GameClient()->m_Tooltips.DoToolTip(&s_ScreenshotButton, &aRightNavSlots[0], Localize("Screenshots"));
-
-			static CButtonContainer s_DemoButton;
-			if(DoMenuTabV2_QmIcon(&s_DemoButton, EQmIcon::CLAPPERBOARD, FONT_ICON_CLAPPERBOARD, DemoBrowserReplaysActive, &aRightNavSlots[1], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				OpenDemoBrowser(DEMO_BROWSER_SOURCE_DEMOS);
-			}
-			if(DemoBrowserReplaysActive)
-				MenubarTrackActive(PAGE_DEMOS, aRightNavSlots[1]);
-			GameClient()->m_Tooltips.DoToolTip(&s_DemoButton, &aRightNavSlots[1], Localize("Demos"));
-
-			if(DoMenuTabV2_QmIcon(&s_EditorButton, EQmIcon::PEN_TO_SQUARE, FONT_ICON_PEN_TO_SQUARE, false, &aRightNavSlots[2], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				g_Config.m_ClEditor = 1;
-			}
-			GameClient()->m_Tooltips.DoToolTip(&s_EditorButton, &aRightNavSlots[2], Localize("Editor"));
-
-			if(DoMenuTabV2_QmIcon(&s_SettingsButton, EQmIcon::GEAR, FONT_ICON_GEAR, ActivePage == PAGE_SETTINGS, &aRightNavSlots[3], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				NewPage = PAGE_SETTINGS;
-			}
-			MenubarTrackActive(PAGE_SETTINGS, aRightNavSlots[3]);
-			GameClient()->m_Tooltips.DoToolTip(&s_SettingsButton, &aRightNavSlots[3], Localize("Settings"));
-
-			if(DoMenuTabV2_QmIcon(&s_QuitButton, EQmIcon::POWER_OFF, FONT_ICON_POWER_OFF, false, &aRightNavSlots[4], IGraphics::CORNER_ALL, &QuitButtonDefault, nullptr, &QuitButtonHover, nullptr, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				if(GameClient()->Editor()->HasUnsavedData() || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0) || m_MenusIngameTouchControls.UnsavedChanges() || GameClient()->m_TouchControls.HasEditingChanges())
-				{
-					m_Popup = POPUP_QUIT;
-				}
-				else
-				{
-					Client()->Quit();
-				}
-			}
-			GameClient()->m_Tooltips.DoToolTip(&s_QuitButton, &aRightNavSlots[4], Localize("Quit"));
-
-			Box.VSplitRight(MenubarIconGap, &Box, nullptr);
+			Box.VSplitRight(8.0f, &Box, nullptr);
 
 			const float BrowserButtonWidth = 58.0f * MENU_MENUBAR_CONTENT_SCALE_NEW;
-			Box.VSplitLeft(6.0f, nullptr, &Box);
 
 			// 胶囊 Tabbar：页签槽位（含收藏社区页签的展开宽度）先全部算完，再画容器与滑块，
 			// 最后画图标 —— 滑块必须压在图标之下，布局与绘制不能混在同一遍里做。
@@ -4449,7 +4397,9 @@ void CMenus::Render()
 	CUIRect Screen = *Ui()->Screen();
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK || m_Popup != POPUP_NONE)
 	{
-		Screen.Margin(10.0f, &Screen);
+		// 全局安全区 = 统一边距基准（8px）：菜单内所有页面到窗口四边的基础距离，
+		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
+		Screen.Margin(8.0f, &Screen);
 	}
 
 	switch(ClientState)
@@ -4499,8 +4449,6 @@ void CMenus::Render()
 			CUIRect TabBar, MainView;
 			const bool UseNewUi = g_Config.m_QmNewUi != 0;
 			Screen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);
-			if(UseNewUi)
-				MainView.HSplitTop(6.0f, nullptr, &MainView);
 			const CUIRect MainViewClip = MainView;
 			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"));
 			const bool TransitionActive = TransitionStrength > 0.0f && m_MenuPageTransitionDirection != 0.0f;
@@ -4598,8 +4546,6 @@ void CMenus::Render()
 			CUIRect TabBar, MainView;
 			const bool UseNewUi = g_Config.m_QmNewUi != 0;
 			Screen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);
-			if(UseNewUi)
-				MainView.HSplitTop(6.0f, nullptr, &MainView);
 			const CUIRect MainViewClip = MainView;
 			const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("game_page_switch"));
 			const bool TransitionActive = TransitionStrength > 0.0f && m_GamePageTransitionDirection != 0.0f;
@@ -6322,13 +6268,22 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
 		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 	}
-	else if(str_comp(pTab, "qmclient-contributors") == 0)
+	else if(str_comp(pTab, "qmclient-contributors") == 0 || str_comp(pTab, "credits-qmclient") == 0)
 	{
-		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
-		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_CONTRIBUTORS;
-	}
-	else if(str_comp(pTab, "qmclient-contributors-ddnet") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
+		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_QMCLIENT;
+	}
+	else if(str_comp(pTab, "credits-links") == 0)
+	{
+		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
+		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_LINKS;
+	}
+	else if(str_comp(pTab, "qmclient-contributors-ddnet") == 0 || str_comp(pTab, "tclient-info") == 0 || str_comp(pTab, "credits-other") == 0)
+	{
+		// DDNet 与 TClient 署名卡都在「其他」子页签；旧深链接（含已删除的信息 tab）落到这里。
+		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
+		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_OTHER;
+	}
 	else if(str_comp(pTab, "tclient") == 0)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
@@ -6356,8 +6311,8 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	}
 	else if(str_comp(pTab, "tclient-info") == 0)
 	{
-		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
-		m_TClientSettingsTab = 5;
+		// 信息 tab 已删除，卡片并入贡献者页；旧深链接继续可用，落到贡献者页。
+		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
 	}
 	else if(str_comp(pTab, "tclient-profiles") == 0)
 		g_Config.m_UiSettingsPage = SETTINGS_PROFILES;
@@ -7360,8 +7315,6 @@ void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUI
 	CUIRect TabBar, ContentView;
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 	MainView.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &ContentView);
-	if(UseNewUi)
-		ContentView.HSplitTop(6.0f, nullptr, &ContentView);
 
 	m_MenuTextPlanCollecting = true;
 	m_pMenuTextPlanCollection = &vItems;
@@ -7404,14 +7357,17 @@ void CMenus::BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, C
 		BuildTClientSettingsMenuTextPlan(vItems, MainView, m_SettingsRuntimeMetadata.m_LastTClientTab);
 		BuildQmClientSettingsMenuTextPlan(vItems, MainView, m_SettingsRuntimeMetadata.m_LastQmTab);
 	}
-	constexpr int NumTClientTextPlanTabs = 6;
-	for(int Tab = 0; Tab < NumTClientTextPlanTabs; ++Tab)
+	constexpr int NumTClientTabs = 5; // 与 menus_tclient.cpp 的 NUMBER_OF_TCLIENT_TABS 保持一致
+	for(int Tab = 0; Tab < NumTClientTabs; ++Tab)
 	{
 		if(Tab != CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab))
 			BuildTClientSettingsMenuTextPlan(vItems, MainView, Tab);
 	}
 	for(int Tab = 0; Tab < NUMBER_OF_QMCLIENT_SETTINGS_TABS; ++Tab)
 	{
+		// 贡献者页签的枚举值只是持久化占位，不再渲染内容，文本计划按可见页签收集。
+		if(Tab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+			continue;
 		if(Tab != std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1))
 			BuildQmClientSettingsMenuTextPlan(vItems, MainView, Tab);
 	}
@@ -7459,7 +7415,10 @@ void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 
 	const bool PreferQmClient = SettingsCanonicalPage(m_SettingsRuntimeMetadata.m_LastPage) == SETTINGS_QMCLIENT;
 	const int LastTClientTab = CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab);
-	const int LastQmClientTab = std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1);
+	int LastQmClientTab = std::clamp(m_SettingsRuntimeMetadata.m_LastQmTab, 0, NUMBER_OF_QMCLIENT_SETTINGS_TABS - 1);
+	// 贡献者页签的枚举值只是持久化占位，回落到首个子页签。
+	if(LastQmClientTab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+		LastQmClientTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 	if(PreferQmClient)
 	{
 		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, LastQmClientTab});
@@ -7471,14 +7430,16 @@ void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, LastQmClientTab});
 	}
 
-	constexpr int NumTClientTextPlanTabs = 6;
-	for(int Tab = 0; Tab < NumTClientTextPlanTabs; ++Tab)
+	constexpr int NumTClientTabs = 5; // 与 menus_tclient.cpp 的 NUMBER_OF_TCLIENT_TABS 保持一致
+	for(int Tab = 0; Tab < NumTClientTabs; ++Tab)
 	{
 		if(Tab != LastTClientTab)
 			m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_TCLIENT_TAB, SETTINGS_TCLIENT, Tab});
 	}
 	for(int Tab = 0; Tab < NUMBER_OF_QMCLIENT_SETTINGS_TABS; ++Tab)
 	{
+		if(Tab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
+			continue;
 		if(Tab != LastQmClientTab)
 			m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, Tab});
 	}
@@ -7523,6 +7484,7 @@ void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollecti
 		m_MenuTextPlanCollecting = true;
 		m_pMenuTextPlanCollection = &m_vSettingsMenuTextPrebuildPlan;
 		m_MenuTextPlanPendingActive = false;
+		Ui()->MapScreen();
 		Ui()->BeginRenderOnly();
 		RenderSettings(SettingsMainView);
 		Ui()->EndRenderOnly();
@@ -7766,7 +7728,9 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 				// 否则预热使用的字号键与运行时不匹配。
 				float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 				Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-				const float FakeToScreenY = ScreenY1 == ScreenY0 ? 1.0f : Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0);
+				const float ScreenHeight = ScreenY1 - ScreenY0;
+				const float GraphicsHeight = Graphics()->ScreenHeight();
+				const float FakeToScreenY = ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) && GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight / ScreenHeight : 1.0f;
 				const int ActualSize = round_truncate(PrewarmItem.m_FontSize * FakeToScreenY);
 				std::unordered_set<int> SeenChars;
 				for(const char *pCursor = PrewarmItem.m_Text.c_str(); *pCursor != '\0';)

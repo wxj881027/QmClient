@@ -1457,9 +1457,6 @@ Bind Wheel Key
 Binds
 == 바인드
 
-Bit flags for disabling settings tabs
-== 설정 탭 비활성화를 위한 비트 플래그
-
 Black
 == 검정
 
@@ -1867,9 +1864,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose which TClient settings tabs are visible
-== Choose which TClient settings tabs are visible
 
 Cinematic camera
 == 시네마틱 카메라
@@ -2764,6 +2758,15 @@ DDNet memory
 
 DDNet points
 == DDNet 점수
+
+DDNet releases
+== DDNet 릴리스
+
+DDNet staff
+== DDNet 스태프
+
+DDNet Website
+== DDNet 공식 사이트
 
 ddnet-saves.txt is empty
 == ddnet-saves.txt 가 비어 있습니다
@@ -4613,6 +4616,9 @@ Friend entry color in friend list
 Friend heart
 == 친구 하트
 
+Friend links
+== 우호 링크
+
 Friend message
 == 친구 메시지
 
@@ -5158,9 +5164,6 @@ Hide server prompt notifications
 
 Hide server tip notifications (including notification bar) in Zen mode
 == 선 모드에서 서버 알림 숨기기 (알림 표시줄 포함)
-
-Hide Settings Tabs
-== 설정 탭 숨기기
 
 Hide sponsor QR code
 == 스폰서 QR 코드 숨기기
@@ -7598,9 +7601,6 @@ Open settings
 Open spectator mode selector
 == 관전자 모드 선택기 열기
 
-Open TClient community and source links
-== Open TClient community and source links
-
 Open TClient configuration file locations
 == Open TClient configuration file locations
 
@@ -8456,6 +8456,9 @@ Progress bar height
 Progress bar width
 == 진행 표시줄 너비
 
+Project and community websites
+== 프로젝트 및 커뮤니티 사이트
+
 Projectile / explosion range
 == 투사체 / 폭발 범위
 
@@ -8575,6 +8578,9 @@ QmClient sidebar module collapse state
 
 QmClient sidebar module order
 == 치멍 사이드바 모듈 정렬
+
+QmClient Website
+== QmClient 공식 사이트
 
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 == QmUi 애니메이션 강도: 0=끄기 1=낮음 2=전체
@@ -11858,9 +11864,6 @@ TClient
 TClient Developers
 == TClient 개발자
 
-TClient Links
-== TClient 링크
-
 Tclient settings card ordering (format: id:col:order; semicolon-separated)
 == Tclient 설정 카드 정렬（형식 id:col:order; 세미콜론 구분）
 
@@ -13271,8 +13274,8 @@ View switch found (at offset) with given number
 View tele found (at offset) with given number
 == 주어진 번호로 찾은 텔레포트 보기 (오프셋 위치)
 
-View the developers and contributors
-== View the developers and contributors
+View the developers, contributors, and project links
+== View the developers, contributors, and project links
 
 View the people supporting QmClient development
 == View the people supporting QmClient development

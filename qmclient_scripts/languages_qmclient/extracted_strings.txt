@@ -484,7 +484,6 @@ Bind weapon selection and switching actions
 Bind Wheel
 Bind Wheel Key
 Binds
-Bit flags for disabling settings tabs
 Black
 Blank asset auto fallback
 Blank material
@@ -621,7 +620,6 @@ Choose the language used by the client
 Choose the menu font and cursor appearance
 Choose the menu font and font weight
 Choose the menu map and background colors
-Choose which TClient settings tabs are visible
 Cinematic camera
 CJK font weight:
 Clamp mouse to screen
@@ -920,6 +918,9 @@ DDNet contributors and staff credits
 DDNet Memory
 DDNet memory
 DDNet points
+DDNet releases
+DDNet staff
+DDNet Website
 ddnet-saves.txt is empty
 ddnet-saves.txt not found
 DDNet.org map stats
@@ -1536,6 +1537,7 @@ Friend bar category expand state (1=expanded, 0=collapsed)
 Friend color in friends list
 Friend entry color in friend list
 Friend heart
+Friend links
 Friend message
 Friend message color
 Friend message heart color
@@ -1718,7 +1720,6 @@ Hide sensitive info like /save password
 Hide server information on join
 Hide server prompt notifications
 Hide server tip notifications (including notification bar) in Zen mode
-Hide Settings Tabs
 Hide sponsor QR code
 Hide system message prefix
 Hide the *** prefix before server chat messages
@@ -2531,7 +2532,6 @@ Open pie menu
 Open rename dialog
 Open settings
 Open spectator mode selector
-Open TClient community and source links
 Open TClient configuration file locations
 Open the directory that contains the configuration and user files
 Open the directory to add custom assets
@@ -2817,6 +2817,7 @@ Profiles file
 Progress bar color
 Progress bar height
 Progress bar width
+Project and community websites
 Projectile / explosion range
 Protect names and skins while streaming
 PTT release delay (ms)
@@ -2857,6 +2858,7 @@ QmClient information and project links
 QmClient Settings
 QmClient sidebar module collapse state
 QmClient sidebar module order
+QmClient Website
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform
 QQ group: 1076765929 (click to copy)
@@ -3951,7 +3953,6 @@ Target server: %s
 Task running ...
 TClient
 TClient Developers
-TClient Links
 Tclient settings card ordering (format: id:col:order; semicolon-separated)
 Team
 Team %d
@@ -4422,7 +4423,7 @@ View margin
 View replay
 View switch found (at offset) with given number
 View tele found (at offset) with given number
-View the developers and contributors
+View the developers, contributors, and project links
 View the people supporting QmClient development
 Violet Bolt
 Virtual joystick which always uses fire.

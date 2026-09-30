@@ -28,7 +28,7 @@ class CUpdaterFetchTask : public IHttpRequest::IProgressCallback
 	CUpdater *m_pUpdater;
 	std::shared_ptr<IHttpRequest> m_pHttpRequest;
 
-protected:
+public:
 	void OnProgress() override;
 
 	void OnCompletion(EHttpState State) override;

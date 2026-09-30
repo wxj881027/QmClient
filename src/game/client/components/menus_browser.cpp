@@ -4129,27 +4129,14 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 	if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
 	{
-		if(UseNewUi)
-		{
-			CUIRect View = MainView;
-			// 左右与设置页背景卡片同边距（直接落在内容基准线上），垂直保留间隙。
-			View.HMargin(6.0f, &View);
-			RenderServerbrowserFavoriteMaps(View);
-		}
-		else
-		{
-			RenderServerbrowserFavoriteMaps(MainView);
-		}
+		// 新 UI：面板直接对齐全局安全区边缘（距窗口 8px 统一基准），
+		// 垂直不额外内缩，面板顶边与其他页面的卡片同线。
+		RenderServerbrowserFavoriteMaps(MainView);
 		return;
 	}
 
 	CUIRect View = MainView;
-	if(UseNewUi)
-	{
-		// 左右与设置页背景卡片同边距（内容基准线 10px），垂直保留间隙。
-		View.HMargin(6.0f, &View);
-	}
-	else
+	if(!UseNewUi)
 	{
 		View.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 		View.Margin(10.0f, &View);
@@ -4159,7 +4146,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	CUIRect ContentLayout = View;
 	CUIRect ServerListWithGap;
 	const float ToolBoxWidth = UseNewUi ? 205.0f : 188.0f;
-	const float ColumnGap = UseNewUi ? 10.0f : 6.0f;
+	const float ColumnGap = UseNewUi ? 8.0f : 6.0f; // 板块间距统一用 8px 基准边距
 	const float StatusHeight = UseNewUi ? 84.0f : 76.0f;
 	ContentLayout.VSplitRight(ToolBoxWidth, &ServerListWithGap, &ToolBoxBase);
 	ServerListWithGap.VSplitRight(ColumnGap, &ServerListBase, nullptr);

@@ -40,6 +40,20 @@
 
 using namespace std::chrono_literals;
 
+// 屏幕尚未初始化或尺寸异常时，跳过会触发整数溢出的像素对齐。
+static float SafePixelAlign(float Value, float Scale)
+{
+	if(!std::isfinite(Value) || !std::isfinite(Scale) || Scale <= 0.0f)
+		return Value;
+	const double PixelValue = static_cast<double>(Value) * static_cast<double>(Scale);
+	const double MinSafe = static_cast<double>(std::numeric_limits<int>::min()) + 1.0;
+	const double MaxSafe = static_cast<double>(std::numeric_limits<int>::max()) - 1.0;
+	if(!std::isfinite(PixelValue) || PixelValue < MinSafe || PixelValue > MaxSafe)
+		return Value;
+	const double RoundedPixelValue = std::floor(PixelValue + (PixelValue >= 0.0 ? 0.5 : -0.5));
+	return static_cast<float>(RoundedPixelValue / static_cast<double>(Scale));
+}
+
 // TClient
 static void ReplaceHyphensWithSpaces(char *pStr)
 {
@@ -424,6 +438,21 @@ private:
 	int m_QmPerfGlyphUploads = 0;
 	double m_QmPerfGlyphRasterizeMs = 0.0;
 	double m_QmPerfGlyphUploadMs = 0.0;
+	// QmClient: 字形上传合批。UploadGlyph 只写 CPU 图集并记录脏区，不再逐字形
+	// 提交驱动上传；FlushPendingGlyphUploads 在渲染前把脏区按行带合并为少量
+	// 矩形一次性提交。首开界面/切换字重时单帧可产生上千次逐字形小上传，是
+	// 阻塞尖峰的主因之一。
+	struct SQmPendingGlyphUpload
+	{
+		int m_X;
+		int m_Y;
+		size_t m_Width;
+		size_t m_Height;
+	};
+	std::vector<SQmPendingGlyphUpload> m_avQmPendingGlyphUploads[NUM_FONT_TEXTURES];
+	int m_QmPendingGlyphUploadCount = 0;
+	int m_QmPerfGlyphUploadBatches = 0;
+	double m_QmPerfGlyphUploadBatchMs = 0.0;
 
 	FT_Face GetFaceByName(const char *pFamilyName)
 	{
@@ -501,6 +530,8 @@ private:
 		m_TextureDimension = NewTextureDimension;
 
 		UploadTextures();
+		// QmClient: 扩容已整张重建纹理，脏区数据随之失效。
+		DiscardPendingGlyphUploads();
 		return true;
 	}
 
@@ -625,13 +656,90 @@ private:
 		{
 			mem_copy(&m_apTextureData[TextureIndex][PosX + ((y + PosY) * m_TextureDimension)], &pData[y * Width], Width);
 		}
-		Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], PosX, PosY, Width, Height, pData, true);
+		// QmClient: 延迟上传——只写 CPU 图集并记录脏区，渲染前由
+		// FlushPendingGlyphUploads 合并提交；调用方的临时缓冲至此消费完毕，
+		// 原实现通过 UpdateTextTexture(IsMovedPointer) 移交所有权，此处直接释放。
+		m_avQmPendingGlyphUploads[TextureIndex].push_back({PosX, PosY, Width, Height});
+		++m_QmPendingGlyphUploadCount;
+		free(pData);
 		if(!QmPerfEnabled())
 			return;
 		++m_QmPerfGlyphUploads;
 		m_QmPerfGlyphUploadMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - UploadStart).count();
 	}
 
+public:
+	// QmClient: 把积累的字形脏区按行带（Y 区间重叠的相邻区域）合并为少量外接
+	// 矩形提交。必须在任何采样字形纹理的渲染（RenderTextContainer）之前调用；
+	// 脏区为空时零成本。合并后的矩形可能覆盖未使用的图集空隙（内容为 0），
+	// 重传与 GPU 现状一致，无副作用。
+	void FlushPendingGlyphUploads()
+	{
+		if(m_QmPendingGlyphUploadCount == 0)
+			return;
+		const auto FlushStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
+		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
+		{
+			auto &vRegions = m_avQmPendingGlyphUploads[TextureIndex];
+			if(vRegions.empty())
+				continue;
+			std::sort(vRegions.begin(), vRegions.end(), [](const SQmPendingGlyphUpload &a, const SQmPendingGlyphUpload &b) {
+				return a.m_Y < b.m_Y || (a.m_Y == b.m_Y && a.m_X < b.m_X);
+			});
+			size_t Index = 0;
+			while(Index < vRegions.size())
+			{
+				int BandY0 = vRegions[Index].m_Y;
+				int BandY1 = BandY0 + static_cast<int>(vRegions[Index].m_Height);
+				int MinX = vRegions[Index].m_X;
+				int MaxX = MinX + static_cast<int>(vRegions[Index].m_Width);
+				size_t MergeIndex = Index + 1;
+				while(MergeIndex < vRegions.size() && vRegions[MergeIndex].m_Y < BandY1)
+				{
+					BandY1 = std::max(BandY1, vRegions[MergeIndex].m_Y + static_cast<int>(vRegions[MergeIndex].m_Height));
+					MinX = std::min(MinX, vRegions[MergeIndex].m_X);
+					MaxX = std::max(MaxX, vRegions[MergeIndex].m_X + static_cast<int>(vRegions[MergeIndex].m_Width));
+					++MergeIndex;
+				}
+				const size_t Width = static_cast<size_t>(MaxX - MinX);
+				const size_t Height = static_cast<size_t>(BandY1 - BandY0);
+				// 数据必须从 CPU 图集拷出：图集内存随后会被新字形继续覆写，
+				// 而纹理更新命令是异步交给渲染线程执行的。
+				uint8_t *pCopy = static_cast<uint8_t *>(malloc(Width * Height));
+				if(pCopy != nullptr)
+				{
+					for(size_t y = 0; y < Height; ++y)
+					{
+						mem_copy(&pCopy[y * Width], &m_apTextureData[TextureIndex][(BandY0 + static_cast<int>(y)) * m_TextureDimension + MinX], Width);
+					}
+					Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], MinX, BandY0, Width, Height, pCopy, true);
+				}
+				else
+				{
+					log_error("textrender", "Failed to allocate merged glyph upload buffer (%" PRIzu "x%" PRIzu ").", Width, Height);
+				}
+				Index = MergeIndex;
+			}
+			vRegions.clear();
+		}
+		m_QmPendingGlyphUploadCount = 0;
+		if(QmPerfEnabled())
+		{
+			++m_QmPerfGlyphUploadBatches;
+			m_QmPerfGlyphUploadBatchMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - FlushStart).count();
+		}
+	}
+
+	// QmClient: 图集重置（Clear/扩容）后 CPU 图集已全量重传，积累的脏区坐标
+	// 不再有意义，必须丢弃以免重传过期区域。
+	void DiscardPendingGlyphUploads()
+	{
+		for(auto &vRegions : m_avQmPendingGlyphUploads)
+			vRegions.clear();
+		m_QmPendingGlyphUploadCount = 0;
+	}
+
+private:
 	bool FitGlyph(size_t Width, size_t Height, int &PosX, int &PosY)
 	{
 		return m_TextureAtlas.Add(Width, Height, PosX, PosY);
@@ -1162,6 +1270,8 @@ public:
 		m_Glyphs.clear();
 		m_GlyphLookupCache.Reset();
 		InvalidateFacePixelSizeCache();
+		// QmClient: Clear 已整张重传纹理，积累的脏区随之失效。
+		DiscardPendingGlyphUploads();
 	}
 
 	// QmClient: 记录/消费“最近缺失字形”。预热集合与缓存无关，字体图集重建（语言切换）
@@ -1345,16 +1455,20 @@ public:
 		return m_aTextures[TextureIndex];
 	}
 
-	void ConsumeQmPerfGlyphStats(int &GlyphNew, int &GlyphUploads, double &GlyphRasterizeMs, double &GlyphUploadMs)
+	void ConsumeQmPerfGlyphStats(int &GlyphNew, int &GlyphUploads, double &GlyphRasterizeMs, double &GlyphUploadMs, int &GlyphUploadBatches, double &GlyphUploadBatchMs)
 	{
 		GlyphNew = m_QmPerfGlyphNew;
 		GlyphUploads = m_QmPerfGlyphUploads;
 		GlyphRasterizeMs = m_QmPerfGlyphRasterizeMs;
 		GlyphUploadMs = m_QmPerfGlyphUploadMs;
+		GlyphUploadBatches = m_QmPerfGlyphUploadBatches;
+		GlyphUploadBatchMs = m_QmPerfGlyphUploadBatchMs;
 		m_QmPerfGlyphNew = 0;
 		m_QmPerfGlyphUploads = 0;
 		m_QmPerfGlyphRasterizeMs = 0.0;
 		m_QmPerfGlyphUploadMs = 0.0;
+		m_QmPerfGlyphUploadBatches = 0;
+		m_QmPerfGlyphUploadBatchMs = 0.0;
 	}
 };
 
@@ -1542,7 +1656,9 @@ class CTextRender : public IEngineTextRender
 			int GlyphUploads = 0;
 			double GlyphRasterizeMs = 0.0;
 			double GlyphUploadMs = 0.0;
-			m_pGlyphMap->ConsumeQmPerfGlyphStats(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs);
+			int GlyphUploadBatches = 0;
+			double GlyphUploadBatchMs = 0.0;
+			m_pGlyphMap->ConsumeQmPerfGlyphStats(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs, GlyphUploadBatches, GlyphUploadBatchMs);
 		}
 		m_QmPerfTextContainerNew = 0;
 		m_QmPerfTextContainerUploads = 0;
@@ -1585,7 +1701,9 @@ class CTextRender : public IEngineTextRender
 		int GlyphUploads = 0;
 		double GlyphRasterizeMs = 0.0;
 		double GlyphUploadMs = 0.0;
-		m_pGlyphMap->ConsumeQmPerfGlyphStats(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs);
+		int GlyphUploadBatches = 0;
+		double GlyphUploadBatchMs = 0.0;
+		m_pGlyphMap->ConsumeQmPerfGlyphStats(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs, GlyphUploadBatches, GlyphUploadBatchMs);
 		UpdateQmTextRuntimeBudgetSnapshot(GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs);
 		if(!QmPerfEnabled())
 		{
@@ -1597,10 +1715,10 @@ class CTextRender : public IEngineTextRender
 			ResetQmTextRuntimeBudgetCounters(false);
 			return;
 		}
-		char aPayload[384];
+		char aPayload[448];
 		str_format(aPayload, sizeof(aPayload),
-			"event=text_runtime_budget glyph_new=%d glyph_uploads=%d glyph_rasterize_ms=%.3f glyph_upload_ms=%.3f text_container_new=%d text_container_uploads=%d text_container_create_ms=%.3f text_container_upload_ms=%.3f",
-			GlyphNew, GlyphUploads, GlyphRasterizeMs, GlyphUploadMs, m_QmPerfTextContainerNew, m_QmPerfTextContainerUploads, m_QmPerfTextContainerCreateMs, m_QmPerfTextContainerUploadMs);
+			"event=text_runtime_budget glyph_new=%d glyph_uploads=%d glyph_upload_batches=%d glyph_rasterize_ms=%.3f glyph_upload_ms=%.3f glyph_upload_batch_ms=%.3f text_container_new=%d text_container_uploads=%d text_container_create_ms=%.3f text_container_upload_ms=%.3f",
+			GlyphNew, GlyphUploads, GlyphUploadBatches, GlyphRasterizeMs, GlyphUploadMs, GlyphUploadBatchMs, m_QmPerfTextContainerNew, m_QmPerfTextContainerUploads, m_QmPerfTextContainerCreateMs, m_QmPerfTextContainerUploadMs);
 		QmPerfLogPayload("perf/text", aPayload);
 		ResetQmTextRuntimeBudgetCounters(false);
 	}
@@ -1618,11 +1736,17 @@ class CTextRender : public IEngineTextRender
 		if(m_pGlyphMap == nullptr)
 			return;
 
+		// QmClient: 帧末兜底提交——本帧只构建未渲染时（如菜单预构建）脏区
+		// 不残留到下一帧；先 flush 再消费统计，帧成本统计包含合批提交。
+		m_pGlyphMap->FlushPendingGlyphUploads();
+
 		int FrameGlyphNew = 0;
 		int FrameGlyphUploads = 0;
 		double FrameRasterizeMs = 0.0;
 		double FrameUploadMs = 0.0;
-		m_pGlyphMap->ConsumeQmPerfGlyphStats(FrameGlyphNew, FrameGlyphUploads, FrameRasterizeMs, FrameUploadMs);
+		int FrameUploadBatches = 0;
+		double FrameUploadBatchMs = 0.0;
+		m_pGlyphMap->ConsumeQmPerfGlyphStats(FrameGlyphNew, FrameGlyphUploads, FrameRasterizeMs, FrameUploadMs, FrameUploadBatches, FrameUploadBatchMs);
 		constexpr int ContainerCreatesThreshold = 256;
 		constexpr double RasterizeThresholdMs = 4.0;
 		constexpr int GlyphNewThreshold = 96;
@@ -1637,10 +1761,10 @@ class CTextRender : public IEngineTextRender
 		if(QmPerfEnabled() && (m_QmFrameContainerCreates >= ContainerCreatesThreshold ||
 					      FrameRasterizeMs >= RasterizeThresholdMs || FrameGlyphNew >= GlyphNewThreshold))
 		{
-			char aPayload[224];
+			char aPayload[288];
 			str_format(aPayload, sizeof(aPayload),
-				"event=text_frame_stats container_creates=%d glyph_new=%d glyph_uploads=%d glyph_rasterize_ms=%.3f peak_creates=%d peak_rasterize_ms=%.3f peak_glyph_new=%d",
-				m_QmFrameContainerCreates, FrameGlyphNew, FrameGlyphUploads, FrameRasterizeMs,
+				"event=text_frame_stats container_creates=%d glyph_new=%d glyph_uploads=%d glyph_upload_batches=%d glyph_rasterize_ms=%.3f glyph_upload_batch_ms=%.3f peak_creates=%d peak_rasterize_ms=%.3f peak_glyph_new=%d",
+				m_QmFrameContainerCreates, FrameGlyphNew, FrameGlyphUploads, FrameUploadBatches, FrameRasterizeMs, FrameUploadBatchMs,
 				m_QmPeakFrameContainerCreates, m_QmPeakFrameRasterizeMs, m_QmPeakFrameGlyphNew);
 			QmPerfLogPayload("perf/text", aPayload);
 		}
@@ -2559,9 +2683,17 @@ public:
 
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		const vec2 FakeToScreen = vec2(Graphics()->ScreenWidth() / (ScreenX1 - ScreenX0), Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0));
-		TextContainer.m_AlignedStartX = round_to_int(pCursor->m_X * FakeToScreen.x) / FakeToScreen.x;
-		TextContainer.m_AlignedStartY = round_to_int(pCursor->m_Y * FakeToScreen.y) / FakeToScreen.y;
+		const float ScreenWidth = ScreenX1 - ScreenX0;
+		const float ScreenHeight = ScreenY1 - ScreenY0;
+		const float GraphicsWidth = Graphics()->ScreenWidth();
+		const float GraphicsHeight = Graphics()->ScreenHeight();
+		const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
+		const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
+		const vec2 FakeToScreen = vec2(
+			ScreenWidth >= 1.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
+			ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
+		TextContainer.m_AlignedStartX = SafePixelAlign(pCursor->m_X, FakeToScreen.x);
+		TextContainer.m_AlignedStartY = SafePixelAlign(pCursor->m_Y, FakeToScreen.y);
 		TextContainer.m_X = pCursor->m_X;
 		TextContainer.m_Y = pCursor->m_Y;
 		TextContainer.m_Flags = pCursor->m_Flags;
@@ -2660,9 +2792,17 @@ public:
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-		const vec2 FakeToScreen = vec2(Graphics()->ScreenWidth() / (ScreenX1 - ScreenX0), Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0));
-		const float CursorX = round_to_int(pCursor->m_X * FakeToScreen.x) / FakeToScreen.x;
-		const float CursorY = round_to_int(pCursor->m_Y * FakeToScreen.y) / FakeToScreen.y;
+		const float ScreenWidth = ScreenX1 - ScreenX0;
+		const float ScreenHeight = ScreenY1 - ScreenY0;
+		const float GraphicsWidth = Graphics()->ScreenWidth();
+		const float GraphicsHeight = Graphics()->ScreenHeight();
+		const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
+		const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
+		const vec2 FakeToScreen = vec2(
+			ScreenWidth >= 1.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
+			ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
+		const float CursorX = SafePixelAlign(pCursor->m_X, FakeToScreen.x);
+		const float CursorY = SafePixelAlign(pCursor->m_Y, FakeToScreen.y);
 		const int ActualSize = round_truncate(pCursor->m_FontSize * FakeToScreen.y);
 		pCursor->m_AlignedFontSize = ActualSize / FakeToScreen.y;
 		pCursor->m_AlignedLineSpacing = round_truncate(pCursor->m_LineSpacing * FakeToScreen.y) / FakeToScreen.y;
@@ -2702,7 +2842,7 @@ public:
 
 		const bool IsRendered = (pCursor->m_Flags & TEXTFLAG_RENDER) != 0;
 
-		const float CursorInnerWidth = ((ScreenX1 - ScreenX0) / Graphics()->ScreenWidth()) * 2;
+		const float CursorInnerWidth = GraphicsWidth > 0.0f ? (ScreenWidth / GraphicsWidth) * 2 : 0.0f;
 		const float CursorOuterWidth = CursorInnerWidth * 2;
 		const float CursorOuterInnerDiff = (CursorOuterWidth - CursorInnerWidth) / 2;
 
@@ -2834,8 +2974,8 @@ public:
 			DrawY += pCursor->m_AlignedFontSize + pCursor->m_AlignedLineSpacing;
 			if((RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) == 0)
 			{
-				DrawX = round_to_int(DrawX * FakeToScreen.x) / FakeToScreen.x; // realign
-				DrawY = round_to_int(DrawY * FakeToScreen.y) / FakeToScreen.y;
+				DrawX = SafePixelAlign(DrawX, FakeToScreen.x); // realign
+				DrawY = SafePixelAlign(DrawY, FakeToScreen.y);
 			}
 			LastSelX = DrawX;
 			LastSelWidth = 0;
@@ -3368,6 +3508,9 @@ public:
 
 	void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
 	{
+		// QmClient: 渲染采样字形纹理前，把本帧积累的字形上传合并提交；
+		// 唯一渲染入口（特效多 pass 也经此函数），脏区为空时零成本。
+		m_pGlyphMap->FlushPendingGlyphUploads();
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 
 		if(!TextContainer.m_StringInfo.m_vCharacterQuads.empty())
@@ -3466,9 +3609,17 @@ public:
 
 		if((TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) == 0)
 		{
-			const vec2 FakeToScreen = vec2(Graphics()->ScreenWidth() / (ScreenX1 - ScreenX0), Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0));
-			const float AlignedX = round_to_int((TextContainer.m_X + X) * FakeToScreen.x) / FakeToScreen.x;
-			const float AlignedY = round_to_int((TextContainer.m_Y + Y) * FakeToScreen.y) / FakeToScreen.y;
+			const float ScreenWidth = ScreenX1 - ScreenX0;
+			const float ScreenHeight = ScreenY1 - ScreenY0;
+			const float GraphicsWidth = Graphics()->ScreenWidth();
+			const float GraphicsHeight = Graphics()->ScreenHeight();
+			const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
+			const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
+			const vec2 FakeToScreen = vec2(
+				ScreenWidth >= 1.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
+				ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
+			const float AlignedX = SafePixelAlign(TextContainer.m_X + X, FakeToScreen.x);
+			const float AlignedY = SafePixelAlign(TextContainer.m_Y + Y, FakeToScreen.y);
 			X = AlignedX - TextContainer.m_AlignedStartX;
 			Y = AlignedY - TextContainer.m_AlignedStartY;
 		}

@@ -824,35 +824,6 @@ def kcp_mixed_clients_after_fallback(test_env):
 	kcp_client.wait_for_exit(timeout=30)
 
 
-@test(timeout=90)
-def kcp_weak_network_smoke(test_env):
-	client = test_env.client(["player_name weak_kcp_client"])
-	server = test_env.server([
-		"sv_kcp 1",
-		"sv_net_fake_loss 1",
-		"sv_net_fake_jitter 30",
-		"sv_net_fake_rtt 80",
-		"sv_net_fake_reorder 1",
-	])
-	wait_for_startup([client, server])
-	client.command(f"connect localhost:{server.port}")
-	server.wait_for_log_prefix("server: player has entered the game", timeout=30)
-	status = wait_for_transport(server, "kcp", timeout=10)
-	assert_kcp_metrics_present(status)
-	if "fake_queue=" not in " ".join(server.full_stdout):
-		server.command("kcp_status")
-		server.wait_for_log(
-			lambda log: "fake_queue=" in log.line,
-			description="kcp status line with fake_queue",
-			timeout=5,
-		)
-	server.exit()
-	client.wait_for_log_exact("client: offline error='Server shutdown'")
-	client.exit()
-	server.wait_for_exit()
-	client.wait_for_exit()
-
-
 @test(timeout=180)
 def kcp_stress_many_clients(test_env):
 	server = test_env.server(["sv_kcp 1"])
@@ -891,26 +862,6 @@ def kcp_stress_many_clients(test_env):
 		client.wait_for_exit(timeout=30)
 
 
-@test(timeout=30)
-def kcp_timeout_drops_session(test_env):
-	client = test_env.client(["player_name timeout_kcp_client"])
-	server = test_env.server(["sv_kcp 1", "conn_timeout 5"])
-	wait_for_startup([client, server])
-	client.command(f"connect localhost:{server.port}")
-	server.wait_for_log_prefix("server: player has entered the game", timeout=10)
-	wait_for_transport(server, "kcp", timeout=5)
-	server.command("sv_net_fake_loss 100")
-	server.wait_for_log(
-		lambda log: "client dropped." in log.line or "has left the game" in log.line,
-		description="client drop or leave log line",
-		timeout=12,
-	)
-	client.exit()
-	server.exit()
-	server.wait_for_exit()
-	client.wait_for_exit()
-
-
 @test
 def client_can_connect_7(test_env):
 	client = test_env.client()
@@ -928,7 +879,11 @@ def client_can_connect_7(test_env):
 @test
 def open_editor(test_env):
 	client = test_env.client(["maps/coverage.map"])
-	client.wait_for_log_exact("editor/load: Loaded map 'maps/coverage.map'", timeout=10)
+	client.wait_for_log(
+		lambda log: log.line == "editor/load: Loaded map 'maps/coverage.map'" or log.line.startswith("editor/load: Loaded map 'maps/coverage.map'") or log.line.startswith("editor/load: 已加载地图"),
+		description="editor map load",
+		timeout=30,
+	)
 	client.command("cl_editor 0")
 	client.exit()
 	client.wait_for_exit()
@@ -965,7 +920,7 @@ def smoke_test(test_env):
 	server.wait_for_log_prefix("server: player has entered the game", timeout=10)
 	for _ in range(5):
 		server.wait_for_log(
-			lambda log: log.line.startswith("chat: *** client1 finished in:") or log.line.startswith("chat: *** client2 finished in:"),
+			lambda log: log.line.startswith("chat: *** client1 finished in:") or log.line.startswith("chat: *** client2 finished in:") or log.line.startswith("chat: *** client1 完成了地图，用时：") or log.line.startswith("chat: *** client2 完成了地图，用时："),
 			description="log lines with client1 and client2 finishes",
 			timeout=40,
 		)

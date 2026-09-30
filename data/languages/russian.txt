@@ -1457,9 +1457,6 @@ Bind Wheel Key
 Binds
 == Привязки
 
-Bit flags for disabling settings tabs
-== Битовые флаги для отключения вкладок настроек
-
 Black
 == Чёрный
 
@@ -1867,9 +1864,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose which TClient settings tabs are visible
-== Choose which TClient settings tabs are visible
 
 Cinematic camera
 == Кинематографическая камера
@@ -2764,6 +2758,15 @@ DDNet memory
 
 DDNet points
 == Очки DDNet
+
+DDNet releases
+== Релизы DDNet
+
+DDNet staff
+== Команда DDNet
+
+DDNet Website
+== Сайт DDNet
 
 ddnet-saves.txt is empty
 == ddnet-saves.txt пуст
@@ -4613,6 +4616,9 @@ Friend entry color in friend list
 Friend heart
 == Сердце друга
 
+Friend links
+== Дружественные ссылки
+
 Friend message
 == Сообщение друга
 
@@ -5158,9 +5164,6 @@ Hide server prompt notifications
 
 Hide server tip notifications (including notification bar) in Zen mode
 == Скрыть уведомления сервера (включая панель уведомлений) в режиме дзен
-
-Hide Settings Tabs
-== Скрыть вкладки настроек
 
 Hide sponsor QR code
 == Скрыть QR-код спонсора
@@ -7598,9 +7601,6 @@ Open settings
 Open spectator mode selector
 == Открыть выбор режима наблюдателя
 
-Open TClient community and source links
-== Open TClient community and source links
-
 Open TClient configuration file locations
 == Open TClient configuration file locations
 
@@ -8456,6 +8456,9 @@ Progress bar height
 Progress bar width
 == Ширина индикатора прогресса
 
+Project and community websites
+== Сайты проекта и сообщества
+
 Projectile / explosion range
 == Радиус снаряда / взрыва
 
@@ -8575,6 +8578,9 @@ QmClient sidebar module collapse state
 
 QmClient sidebar module order
 == Порядок модулей боковой панели Qimeng
+
+QmClient Website
+== Сайт QmClient
 
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 == Интенсивность анимации QmUi: 0=Выкл 1=Пониженная 2=Полная
@@ -11858,9 +11864,6 @@ TClient
 TClient Developers
 == Разработчики TClient
 
-TClient Links
-== Ссылки TClient
-
 Tclient settings card ordering (format: id:col:order; semicolon-separated)
 == Tclient Порядок карточек настроек (формат id:col:order; разделитель точка с запятой)
 
@@ -13271,8 +13274,8 @@ View switch found (at offset) with given number
 View tele found (at offset) with given number
 == Просмотр найденного телепорта (со смещением) с заданным номером
 
-View the developers and contributors
-== View the developers and contributors
+View the developers, contributors, and project links
+== View the developers, contributors, and project links
 
 View the people supporting QmClient development
 == View the people supporting QmClient development

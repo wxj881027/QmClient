@@ -790,8 +790,9 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 	const qm_card_registry::SCardDefault *pLanguageDefault = qm_card_registry::FindByStableId("deck:general-language");
 	const qm_card_registry::SCardDefault *pClientDefault = qm_card_registry::FindByStableId("deck:general-client");
 	const qm_card_registry::SCardDefault *pRecordingDefault = qm_card_registry::FindByStableId("deck:general-recording");
-	dbg_assert(pGameDefault != nullptr && pLanguageDefault != nullptr && pClientDefault != nullptr && pRecordingDefault != nullptr, "general settings cards must be registered");
-	if(pGameDefault == nullptr || pLanguageDefault == nullptr || pClientDefault == nullptr || pRecordingDefault == nullptr)
+	const qm_card_registry::SCardDefault *pConfigFilesDefault = qm_card_registry::FindByStableId("deck:tclient-info-files");
+	dbg_assert(pGameDefault != nullptr && pLanguageDefault != nullptr && pClientDefault != nullptr && pRecordingDefault != nullptr && pConfigFilesDefault != nullptr, "general settings cards must be registered");
+	if(pGameDefault == nullptr || pLanguageDefault == nullptr || pClientDefault == nullptr || pRecordingDefault == nullptr || pConfigFilesDefault == nullptr)
 		return;
 
 	const auto DoNumericField = [this, GeneralCardCtx, BodySize](const char *pTextId, const void *pId, int *pOption, const CUIRect &Rect, const char *pLabel, int Min, int Max, unsigned Flags, const char *pSuffix = "") {
@@ -809,8 +810,8 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 	};
 
 	const bool RenderOnly = Ui()->RenderOnly();
-	const auto BuildDefinitions = [this, pGameDefault, pLanguageDefault, pClientDefault, pRecordingDefault, GeneralMetrics, BodySize, GeneralGameContentHeight, GeneralLanguageListHeight, GeneralThemeListHeight, DoNumericField, IsGeneralDynamicCameraEnabled](std::vector<SSettingsCardDefinition> &vCards) {
-		vCards.reserve(4);
+	const auto BuildDefinitions = [this, pGameDefault, pLanguageDefault, pClientDefault, pRecordingDefault, pConfigFilesDefault, GeneralMetrics, BodySize, GeneralGameContentHeight, GeneralLanguageListHeight, GeneralThemeListHeight, DoNumericField, IsGeneralDynamicCameraEnabled](std::vector<SSettingsCardDefinition> &vCards) {
+		vCards.reserve(5);
 		const SSettingsCardSpec GameSpec{pGameDefault->m_pStableId, Localize(pGameDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pGameDefault)};
 		const SSettingsCardSpec LanguageSpec{pLanguageDefault->m_pStableId, Localize(pLanguageDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pLanguageDefault)};
 		const SSettingsCardSpec ClientSpec{pClientDefault->m_pStableId, Localize(pClientDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pClientDefault)};
@@ -1001,6 +1002,36 @@ void CMenus::RenderSettingsGeneral(CUIRect MainView)
 			DoAutoRecord(&g_Config.m_ClAutoCSV, &g_Config.m_ClAutoCSVMax, "general-auto-csv", Localize("Automatically create statboard csv"), "general-auto-csv-max", Localize("Max CSVs"));
 		};
 		vCards.push_back(std::move(RecordingDefinition));
+
+		// 配置文件卡：原 TClient 信息 tab 的入口，并入常规页。
+		SSettingsCardDefinition ConfigFilesDefinition;
+		ConfigFilesDefinition.m_Spec = {pConfigFilesDefault->m_pStableId, Localize(pConfigFilesDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pConfigFilesDefault)};
+		ConfigFilesDefinition.m_Measure = [GeneralMetrics](float) {
+			return ResolveSettingsRowsHeight(2, GeneralMetrics.m_ButtonHeight, GeneralMetrics.m_LineSpacing);
+		};
+		ConfigFilesDefinition.m_Render = [this, GeneralMetrics](CUIRect Content) {
+			static CButtonContainer s_Config, s_Profiles, s_Warlist, s_Chatbinds;
+			const auto OpenFile = [this](ConfigDomain Domain) {
+				char aBuf[IO_MAX_PATH_LENGTH];
+				Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[Domain].m_aConfigPath, aBuf, sizeof(aBuf));
+				Client()->ViewFile(aBuf);
+			};
+			const auto DoFileButton = [this, GeneralMetrics, &OpenFile](CButtonContainer &Id, const char *pTextId, const char *pText, const CUIRect &ButtonRect, ConfigDomain Domain) {
+				if(DoSettingsButton_Menu(SETTINGS_GENERAL, -1, -1, &Id, pTextId, pText, 0, &ButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, GeneralMetrics.m_BodySize))
+					OpenFile(Domain);
+			};
+			CUIRect Row, LeftButton, RightButton;
+			Content.HSplitTop(GeneralMetrics.m_ButtonHeight, &Row, &Content);
+			Row.VSplitMid(&LeftButton, &RightButton, GeneralMetrics.m_LineSpacing);
+			DoFileButton(s_Config, "tclient-files-qmclient-settings", Localize("QmClient Settings"), LeftButton, ConfigDomain::QMCLIENT);
+			DoFileButton(s_Profiles, "tclient-files-profiles", Localize("Profiles"), RightButton, ConfigDomain::TCLIENTPROFILES);
+			Content.HSplitTop(GeneralMetrics.m_LineSpacing, nullptr, &Content);
+			Content.HSplitTop(GeneralMetrics.m_ButtonHeight, &Row, &Content);
+			Row.VSplitMid(&LeftButton, &RightButton, GeneralMetrics.m_LineSpacing);
+			DoFileButton(s_Warlist, "tclient-files-warlist", Localize("War List"), LeftButton, ConfigDomain::TCLIENTWARLIST);
+			DoFileButton(s_Chatbinds, "tclient-files-chatbinds", Localize("Chat Binds"), RightButton, ConfigDomain::TCLIENTCHATBINDS);
+		};
+		vCards.push_back(std::move(ConfigFilesDefinition));
 	};
 	const uint64_t GeneralToggleMask =
 		((uint64_t)(g_Config.m_ClAutoDemoRecord != 0) << 0) |
@@ -4050,6 +4081,12 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		}
 
 		const auto DoGraphicsChoiceRow = [this, GraphicsMetrics, GraphicsPage](CUIRect Row, const char *pLabel, const char *pId, const char **ppNames, size_t Count, int Current, CUi::SDropDownState &State, CScrollRegion &ScrollRegion, auto &&OnChanged) {
+			if(ppNames == nullptr || Count == 0)
+				return;
+			for(size_t Index = 0; Index < Count; ++Index)
+				if(ppNames[Index] == nullptr)
+					return;
+			Current = std::clamp(Current, 0, static_cast<int>(Count) - 1);
 			CUIRect Label, DropDown;
 			Row.VSplitLeft(std::clamp(Row.w * 0.38f, 120.0f * GraphicsMetrics.m_UiScale, 220.0f * GraphicsMetrics.m_UiScale), &Label, &DropDown);
 			DropDown.VSplitLeft(GraphicsMetrics.m_LineSpacing, nullptr, &DropDown);
@@ -7931,6 +7968,31 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 				const int TileScale = 32.0f;
 
+				// 预览 tile 取图：优先预览专用小图（避免菜单会话加载完整 entities），
+				// 完整 entities 已在显存时沿用原路径；空白/缺失/解码中则跳过绘制。
+				const auto DrawHookPreviewTile = [&](int TileIndex, const CUIRect &Rect) {
+					IGraphics::CTextureHandle TileTexture;
+					const auto Source = GameClient()->m_MapImages.GetHookPreviewTileSource(TileIndex, TileTexture);
+					if(Source == CMapImages::EHookPreviewTileSource::SMALL_TEXTURE)
+					{
+						Graphics()->TextureClear();
+						Graphics()->TextureSet(TileTexture);
+						Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+						Graphics()->QuadsBegin();
+						Graphics()->QuadsSetSubset(0.0f, 0.0f, 1.0f, 1.0f);
+						IGraphics::CQuadItem QuadItem(Rect.x, Rect.y, TileScale, TileScale);
+						Graphics()->QuadsDrawTL(&QuadItem, 1);
+						Graphics()->QuadsEnd();
+					}
+					else if(Source == CMapImages::EHookPreviewTileSource::FULL_ENTITIES_LOADED)
+					{
+						Graphics()->TextureClear();
+						Graphics()->TextureSet(GameClient()->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
+						Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+						RenderMap()->RenderTile(Rect.x, Rect.y, TileIndex, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+					}
+				};
+
 				// Toggled via checkbox later, inverts some previews
 				static bool s_HookCollPressed = false;
 
@@ -7955,10 +8017,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				NoHookTileRect.Margin(10.0f, &NoHookTileRect);
 
 				// Render unhookable tile
-				Graphics()->TextureClear();
-				Graphics()->TextureSet(GameClient()->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-				RenderMap()->RenderTile(NoHookTileRect.x, NoHookTileRect.y, TILE_NOHOOK, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+				DrawHookPreviewTile(TILE_NOHOOK, NoHookTileRect);
 
 				// ***** Hookable Tile Preview *****
 				RightView.HSplitTop(50.0f, &PreviewColl, &RightView);
@@ -7974,10 +8033,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				HookTileRect.Margin(10.0f, &HookTileRect);
 
 				// Render hookable tile
-				Graphics()->TextureClear();
-				Graphics()->TextureSet(GameClient()->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
-				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-				RenderMap()->RenderTile(HookTileRect.x, HookTileRect.y, TILE_SOLID, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+				DrawHookPreviewTile(TILE_SOLID, HookTileRect);
 
 				// ***** Hook Dummy Preview *****
 				RightView.HSplitTop(50.0f, &PreviewColl, &RightView);

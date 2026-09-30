@@ -144,7 +144,6 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 				"tclient_chat_binds",
 				"tclient_warlist",
 				"tclient_status_bar",
-				"tclient_info",
 				"tclient_profiles",
 				"tclient_configs",
 				"assets",

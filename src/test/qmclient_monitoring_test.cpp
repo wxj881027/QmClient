@@ -6964,11 +6964,11 @@ TEST(QmMonitoringHelpers, GlobalSearchUsesDedicatedSettingsPage)
 	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
 	const std::string RuntimeCache = ReadRepoFile("src/game/client/components/settings_runtime_cache.cpp");
 	const std::string QmClient = ReadRepoFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string QmWrapperBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly)");
-	const std::string QmMainBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly)");
+	const std::string QmWrapperBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsQmClient(CUIRect MainView, bool PrewarmOnly)");
+	const std::string QmMainBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)");
 	const std::string SearchBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsGlobalSearch(CUIRect MainView, bool PrewarmOnly)");
 	const std::string SearchContentBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnly)");
-	const std::string SharedBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly)");
+	const std::string SharedBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)");
 	ASSERT_FALSE(QmWrapperBody.empty());
 	ASSERT_FALSE(QmMainBody.empty());
 	ASSERT_FALSE(SearchBody.empty());
@@ -6988,8 +6988,8 @@ TEST(QmMonitoringHelpers, GlobalSearchUsesDedicatedSettingsPage)
 	EXPECT_EQ(QmClient.find("case CMenus::QMCLIENT_SETTINGS_TAB_SEARCH: return \"search\";"), std::string::npos);
 	EXPECT_EQ(QmClient.find("s_apQmTabNames[QMCLIENT_SETTINGS_TAB_SEARCH] = Localize(\"Search\");"), std::string::npos);
 	EXPECT_NE(Header.find("RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnly = false);"), std::string::npos);
-	EXPECT_NE(Header.find("RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly);"), std::string::npos);
-	EXPECT_NE(QmWrapperBody.find("RenderSettingsQmClientContent(MainView, ContributorsPage, PrewarmOnly);"), std::string::npos);
+	EXPECT_NE(Header.find("RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly);"), std::string::npos);
+	EXPECT_NE(QmWrapperBody.find("RenderSettingsQmClientContent(MainView, PrewarmOnly);"), std::string::npos);
 	EXPECT_NE(SearchBody.find("RenderSettingsGlobalSearchContent(MainView, PrewarmOnly);"), std::string::npos);
 	EXPECT_EQ(SearchBody.find("RenderSettingsQmClientContent("), std::string::npos);
 	EXPECT_EQ(QmMainBody.find("SETTINGS_SEARCH"), std::string::npos);
@@ -7078,7 +7078,7 @@ TEST(QmMonitoringHelpers, QmClientSearchTabUsesGlobalCardRegistry)
 TEST(QmMonitoringHelpers, QmClientMainPageRemovesLegacyModuleSearchPipeline)
 {
 	const std::string QmClient = ReadRepoFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string QmMainBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly)");
+	const std::string QmMainBody = ExtractSourceFunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)");
 	ASSERT_FALSE(QmMainBody.empty());
 
 	EXPECT_EQ(QmMainBody.find("HasModuleSearch"), std::string::npos);

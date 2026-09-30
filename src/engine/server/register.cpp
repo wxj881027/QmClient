@@ -77,6 +77,8 @@ class CRegister : public IRegister
 			std::shared_ptr<CShared> m_pShared;
 			std::shared_ptr<IHttpRequest> m_pRegister;
 			IHttp *m_pHttp;
+
+		protected:
 			void Run() override;
 
 		public:

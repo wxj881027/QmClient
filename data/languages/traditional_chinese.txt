@@ -1457,9 +1457,6 @@ Bind Wheel Key
 Binds
 == 綁定
 
-Bit flags for disabling settings tabs
-== 用於禁用設置標籤頁的位標誌
-
 Black
 == 黑色
 
@@ -1867,9 +1864,6 @@ Choose the menu font and font weight
 
 Choose the menu map and background colors
 == Choose the menu map and background colors
-
-Choose which TClient settings tabs are visible
-== Choose which TClient settings tabs are visible
 
 Cinematic camera
 == 電影鏡頭
@@ -2764,6 +2758,15 @@ DDNet memory
 
 DDNet points
 == DDNet 分數
+
+DDNet releases
+== DDNet 發布包
+
+DDNet staff
+== DDNet 官方開發者
+
+DDNet Website
+== DDNet 官網
 
 ddnet-saves.txt is empty
 == ddnet-saves.txt 為空
@@ -4613,6 +4616,9 @@ Friend entry color in friend list
 Friend heart
 == 好友愛心
 
+Friend links
+== 友鏈
+
 Friend message
 == 好友訊息
 
@@ -5158,9 +5164,6 @@ Hide server prompt notifications
 
 Hide server tip notifications (including notification bar) in Zen mode
 == 禪模式下隱藏伺服器提示通知（包括通知欄）
-
-Hide Settings Tabs
-== 隱藏設置選項卡
 
 Hide sponsor QR code
 == 隱藏贊助碼
@@ -7598,9 +7601,6 @@ Open settings
 Open spectator mode selector
 == 打開旁觀者模式選擇器
 
-Open TClient community and source links
-== Open TClient community and source links
-
 Open TClient configuration file locations
 == Open TClient configuration file locations
 
@@ -8456,6 +8456,9 @@ Progress bar height
 Progress bar width
 == 進度條寬度
 
+Project and community websites
+== 專案與社群站點入口
+
 Projectile / explosion range
 == 投射物 / 爆炸範圍
 
@@ -8575,6 +8578,9 @@ QmClient sidebar module collapse state
 
 QmClient sidebar module order
 == 棲夢側欄模塊排序
+
+QmClient Website
+== QmClient 官網
 
 QmUi animation intensity: 0=Off, 1=Reduced, 2=Full
 == QmUi 動效強度：0=關閉 1=降低 2=完整
@@ -11858,9 +11864,6 @@ TClient
 TClient Developers
 == TClient 開發人員
 
-TClient Links
-== TClient 鏈接
-
 Tclient settings card ordering (format: id:col:order; semicolon-separated)
 == Tclient 設置卡片排序（格式 id:col:order; 分號分隔）
 
@@ -13271,8 +13274,8 @@ View switch found (at offset) with given number
 View tele found (at offset) with given number
 == 查看給定編號找到的傳送點（在偏移處）
 
-View the developers and contributors
-== View the developers and contributors
+View the developers, contributors, and project links
+== View the developers, contributors, and project links
 
 View the people supporting QmClient development
 == View the people supporting QmClient development

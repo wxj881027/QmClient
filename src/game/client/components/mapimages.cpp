@@ -5,9 +5,11 @@
 #include <base/log.h>
 #include <base/math.h>
 
+#include <engine/gfx/image_loader.h>
 #include <engine/gfx/image_manipulation.h>
 #include <engine/graphics.h>
 #include <engine/map.h>
+#include <engine/shared/jobs.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -23,6 +25,122 @@ static bool ImageDataSizeValid(const CImageInfo &Image, size_t &DataSize)
 {
 	return Image.DataSize(DataSize) && DataSize != 0;
 }
+
+namespace
+{
+	// 钩子碰撞预览需要的两个 tile（下标即 CMapImages::m_aHookPreviewTileTextures 槽位）。
+	constexpr int gs_aHookPreviewTileIndices[] = {TILE_NOHOOK, TILE_SOLID};
+
+	static int HookPreviewTileSlot(int TileIndex)
+	{
+		for(size_t i = 0; i < std::size(gs_aHookPreviewTileIndices); ++i)
+		{
+			if(gs_aHookPreviewTileIndices[i] == TileIndex)
+				return static_cast<int>(i);
+		}
+		return -1;
+	}
+
+	// 钩子碰撞预览小图解码 job：worker 只做文件探测/读取与 PNG 解码，不触碰 GPU；
+	// 自包含（不回指 CMapImages），主线程 poll 到完成后校验 key 仍一致才上传。
+	class CHookPreviewDecodeJob : public IJob
+	{
+	public:
+		CHookPreviewDecodeJob(IStorage *pStorage, const char *pEntitiesPath, int ModType, bool Masked) :
+			m_pStorage(pStorage),
+			m_ModType(ModType),
+			m_Masked(Masked)
+		{
+			str_copy(m_aEntitiesPath, pEntitiesPath, sizeof(m_aEntitiesPath));
+		}
+
+		~CHookPreviewDecodeJob() override
+		{
+			FreeTiles();
+		}
+
+		void Run() override
+		{
+			const char *pModName = gs_apModEntitiesNames[m_ModType];
+			char aPath[IO_MAX_PATH_LENGTH];
+			// 与 GetEntities 相同的探测顺序；先 FileExists，避免对缺失路径刷解码报错
+			str_format(aPath, sizeof(aPath), "%s/%s.png", m_aEntitiesPath, pModName);
+			if(!m_pStorage->FileExists(aPath, IStorage::TYPE_ALL))
+			{
+				bool Found = false;
+				if(m_ModType == MAP_IMAGE_MOD_TYPE_DDNET)
+				{
+					str_format(aPath, sizeof(aPath), "%s.png", m_aEntitiesPath);
+					Found = m_pStorage->FileExists(aPath, IStorage::TYPE_ALL);
+				}
+				if(!Found)
+					str_format(aPath, sizeof(aPath), "editor/entities_clear/%s.png", pModName);
+			}
+
+			void *pFileData = nullptr;
+			unsigned FileSize = 0;
+			if(!m_pStorage->ReadFile(aPath, IStorage::TYPE_ALL, &pFileData, &FileSize))
+			{
+				log_error("mapimages", "Hook preview tile decode: failed to read '%s'.", aPath);
+				return;
+			}
+			str_copy(m_aSourcePath, aPath, sizeof(m_aSourcePath));
+
+			CImageInfo Info;
+			if(!CImageLoader::LoadPng(pFileData, FileSize, aPath, Info))
+			{
+				free(pFileData);
+				log_error("mapimages", "Hook preview tile decode: failed to decode '%s'.", aPath);
+				return;
+			}
+			free(pFileData);
+
+			if(Info.m_Width < 16 || Info.m_Height < 16 || Info.m_Format == CImageInfo::FORMAT_UNDEFINED)
+			{
+				Info.Free();
+				return;
+			}
+
+			const size_t TileWidth = Info.m_Width / 16;
+			const size_t TileHeight = Info.m_Height / 16;
+			for(size_t i = 0; i < std::size(gs_aHookPreviewTileIndices); ++i)
+			{
+				CImageInfo &Tile = m_aTileImages[i];
+				Tile.m_Width = TileWidth;
+				Tile.m_Height = TileHeight;
+				Tile.m_Format = Info.m_Format;
+				size_t TileDataSize = 0;
+				if(!Tile.DataSize(TileDataSize) || TileDataSize == 0 || (Tile.m_pData = static_cast<uint8_t *>(malloc(TileDataSize))) == nullptr)
+				{
+					Info.Free();
+					FreeTiles();
+					return;
+				}
+				const size_t OffsetX = static_cast<size_t>(gs_aHookPreviewTileIndices[i] % 16) * TileWidth;
+				const size_t OffsetY = static_cast<size_t>(gs_aHookPreviewTileIndices[i] / 16) * TileHeight;
+				Tile.CopyRectFrom(Info, OffsetX, OffsetY, TileWidth, TileHeight, 0, 0);
+			}
+			Info.Free();
+			m_Success = true;
+		}
+
+		void FreeTiles()
+		{
+			for(auto &Tile : m_aTileImages)
+				Tile.Free();
+		}
+
+		CImageInfo m_aTileImages[std::size(gs_aHookPreviewTileIndices)];
+		char m_aSourcePath[IO_MAX_PATH_LENGTH] = "";
+		char m_aEntitiesPath[IO_MAX_PATH_LENGTH] = "";
+		int m_ModType = MAP_IMAGE_MOD_TYPE_DDNET;
+		bool m_Masked = false;
+		bool m_Success = false;
+
+	private:
+		IStorage *m_pStorage;
+	};
+} // namespace
 
 CMapImages::CMapImages()
 {
@@ -49,8 +167,14 @@ void CMapImages::OnInit()
 	{
 		str_format(m_aEntitiesPath, sizeof(m_aEntitiesPath), "assets/entities/%s", g_Config.m_ClAssetsEntities);
 	}
+	// blank 状态与 ChangeEntitiesPath 保持一致（原先仅在 ChangeEntitiesPath 设置，启动期恒为 false）
+	m_EntitiesIsBlank = IsBlankAssetName(g_Config.m_ClAssetsEntities);
 
 	Console()->Chain("cl_text_entities_size", ConchainClTextEntitiesSize, this);
+
+	// 空闲预热：后台解码钩子碰撞预览所需的两块 tile，
+	// 把 PNG 解码成本挪离设置页首次点击，菜单会话不再加载完整 entities。
+	RequestHookPreviewTileTextures();
 }
 
 void CMapImages::Unload()
@@ -287,20 +411,24 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 		CImageInfo ImgInfo;
 		char aPath[IO_MAX_PATH_LENGTH];
 		str_format(aPath, sizeof(aPath), "%s/%s.png", m_aEntitiesPath, gs_apModEntitiesNames[EntitiesModType]);
-		Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+		// 先探测存在性再解码：缺失路径不进 LoadPng，避免每次会话刷无害报错
+		if(Storage()->FileExists(aPath, IStorage::TYPE_ALL))
+			Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
 
 		// try as single ddnet replacement
 		if(ImgInfo.m_pData == nullptr && EntitiesModType == MAP_IMAGE_MOD_TYPE_DDNET)
 		{
 			str_format(aPath, sizeof(aPath), "%s.png", m_aEntitiesPath);
-			Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+			if(Storage()->FileExists(aPath, IStorage::TYPE_ALL))
+				Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
 		}
 
 		// try default
 		if(ImgInfo.m_pData == nullptr)
 		{
 			str_format(aPath, sizeof(aPath), "editor/entities_clear/%s.png", gs_apModEntitiesNames[EntitiesModType]);
-			Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
+			if(Storage()->FileExists(aPath, IStorage::TYPE_ALL))
+				Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
 		}
 
 		// 选中内置空白材质 "blank"：按默认实体图的尺寸与格式解码后整张清空，
@@ -461,6 +589,8 @@ void CMapImages::ChangeEntitiesPath(const char *pPath)
 	}
 
 	ReloadEntitiesTextures();
+	// 实体包变化：预览小图缓存随之失效，后台重新解码（key 不变时为幂等空操作）
+	RequestHookPreviewTileTextures();
 }
 
 void CMapImages::ConchainClTextEntitiesSize(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -486,6 +616,125 @@ void CMapImages::ReloadEntitiesTextures()
 			m_aEntitiesIsLoaded[ModType] = false;
 		}
 	}
+}
+
+void CMapImages::OnRender()
+{
+	HookPreviewPollJob();
+}
+
+bool CMapImages::HookPreviewKeyMatches(int ModType, bool Masked) const
+{
+	return m_HookPreviewModType == ModType && m_HookPreviewMasked == Masked &&
+	       str_comp(m_aHookPreviewEntitiesPath, m_aEntitiesPath) == 0;
+}
+
+void CMapImages::HookPreviewInvalidate()
+{
+	for(auto &Texture : m_aHookPreviewTileTextures)
+	{
+		if(Texture.IsValid())
+			Graphics()->UnloadTexture(&Texture);
+	}
+	m_aHookPreviewEntitiesPath[0] = '\0';
+	m_HookPreviewModType = -1;
+	m_HookPreviewMasked = false;
+	m_HookPreviewFailed = false;
+}
+
+void CMapImages::HookPreviewKickJob()
+{
+	dbg_assert(!m_HookPreviewJobPending, "hook preview decode job already pending");
+	HookPreviewInvalidate();
+
+	const bool Masked = !GameClient()->m_GameInfo.m_DontMaskEntities;
+	const int ModType = GetEntitiesModType(GameClient()->m_GameInfo);
+	m_HookPreviewModType = ModType;
+	m_HookPreviewMasked = Masked;
+	str_copy(m_aHookPreviewEntitiesPath, m_aEntitiesPath, sizeof(m_aHookPreviewEntitiesPath));
+	m_pHookPreviewJob = std::make_shared<CHookPreviewDecodeJob>(Storage(), m_aEntitiesPath, ModType, Masked);
+	Engine()->AddJob(m_pHookPreviewJob);
+	m_HookPreviewJobPending = true;
+}
+
+void CMapImages::HookPreviewPollJob()
+{
+	if(!m_HookPreviewJobPending || m_pHookPreviewJob == nullptr || !m_pHookPreviewJob->Done())
+		return;
+
+	std::shared_ptr<IJob> pJob = std::move(m_pHookPreviewJob);
+	m_HookPreviewJobPending = false;
+	auto *pDecode = static_cast<CHookPreviewDecodeJob *>(pJob.get());
+
+	const bool Masked = !GameClient()->m_GameInfo.m_DontMaskEntities;
+	const int ModType = GetEntitiesModType(GameClient()->m_GameInfo);
+	// 发布前校验 key：解码期间实体包或游戏信息可能已变化，过期结果直接丢弃
+	if(pDecode->m_ModType != ModType || pDecode->m_Masked != Masked ||
+		str_comp(pDecode->m_aEntitiesPath, m_aEntitiesPath) != 0)
+	{
+		pDecode->FreeTiles();
+		return;
+	}
+	if(!pDecode->m_Success)
+	{
+		// 包缺失/损坏：保持失败状态，key 变化前不再重试
+		m_HookPreviewFailed = true;
+		pDecode->FreeTiles();
+		return;
+	}
+
+	for(size_t i = 0; i < std::size(gs_aHookPreviewTileIndices); ++i)
+	{
+		m_aHookPreviewTileTextures[i] = Graphics()->LoadTextureRawMove(pDecode->m_aTileImages[i], 0, pDecode->m_aSourcePath);
+	}
+	m_HookPreviewFailed = false;
+}
+
+void CMapImages::RequestHookPreviewTileTextures()
+{
+	HookPreviewPollJob();
+	if(m_EntitiesIsBlank || m_HookPreviewJobPending || m_HookPreviewFailed)
+		return;
+
+	const bool Masked = !GameClient()->m_GameInfo.m_DontMaskEntities;
+	const int ModType = GetEntitiesModType(GameClient()->m_GameInfo);
+	if(HookPreviewKeyMatches(ModType, Masked) &&
+		m_aHookPreviewTileTextures[0].IsValid() && m_aHookPreviewTileTextures[1].IsValid())
+		return;
+
+	HookPreviewKickJob();
+}
+
+CMapImages::EHookPreviewTileSource CMapImages::GetHookPreviewTileSource(int TileIndex, IGraphics::CTextureHandle &Texture)
+{
+	Texture = IGraphics::CTextureHandle();
+	const bool Masked = !GameClient()->m_GameInfo.m_DontMaskEntities;
+	const int ModType = GetEntitiesModType(GameClient()->m_GameInfo);
+
+	// 完整 entities 已在显存：GetEntities 直接命中加载闩，零成本，沿用原渲染路径
+	if(m_aEntitiesIsLoaded[(ModType * 2) + (int)Masked])
+		return EHookPreviewTileSource::FULL_ENTITIES_LOADED;
+
+	// 空白包：完整路径会造全透明层，预览等价于不绘制
+	if(m_EntitiesIsBlank)
+		return EHookPreviewTileSource::UNAVAILABLE;
+
+	HookPreviewPollJob();
+
+	if(HookPreviewKeyMatches(ModType, Masked))
+	{
+		const int Slot = HookPreviewTileSlot(TileIndex);
+		if(Slot != -1 && m_aHookPreviewTileTextures[Slot].IsValid())
+		{
+			Texture = m_aHookPreviewTileTextures[Slot];
+			return EHookPreviewTileSource::SMALL_TEXTURE;
+		}
+	}
+
+	// 兜底：预热未覆盖（如启动后实体包/游戏信息变化）时补一次后台解码
+	if(!m_HookPreviewJobPending && !m_HookPreviewFailed)
+		HookPreviewKickJob();
+	return EHookPreviewTileSource::UNAVAILABLE;
 }
 
 void CMapImages::SetTextureScale(int Scale)

@@ -638,7 +638,7 @@ void CRenderLayerTile::Init()
 	UploadTileData(m_VisualTiles, 0, false);
 }
 
-void CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &VisualsOptional, int CurOverlay, bool AddAsSpeedup, bool IsGameLayer, FTileFilter Filter)
+void CRenderLayerTile::UploadTileData(std::optional<CTileLayerVisuals> &VisualsOptional, int CurOverlay, bool AddAsSpeedup, bool IsGameLayer, const FTileFilter &Filter)
 {
 	if(!Graphics()->IsTileBufferingEnabled())
 		return;

@@ -68,7 +68,7 @@ void CServerBan::InitServerBan(IConsole *pConsole, IStorage *pStorage, CServer *
 }
 
 template<class T>
-int CServerBan::BanExt(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason)
+int CServerBan::BanExt(T *pBanPool, const T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason)
 {
 	// validate address
 	if(Server()->m_RconClientId >= 0 && Server()->m_RconClientId < MAX_CLIENTS &&

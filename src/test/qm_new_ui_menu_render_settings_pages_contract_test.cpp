@@ -77,9 +77,9 @@ TEST(QmNewUiMenuRenderSettingsPagesContract, GeneralStandardPageUsesUnifiedSetti
 TEST(QmNewUiMenuRenderSettingsPagesContract, SettingsCardContentHeightsExcludeSharedHeaderChrome)
 {
 	const std::string ControlsSource = ReadTextFile("src/game/client/components/menus_settings_controls.cpp");
-	const std::string ContributorsSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string ContributorsSource = ReadTextFile("src/game/client/components/menus_credits.cpp");
 	const std::string MouseMeasure = FunctionBody(ControlsSource, "float CMenusSettingsControls::MeasureSettingsMouseHeight() const");
-	const std::string Contributors = FunctionBody(ContributorsSource, "void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly)");
+	const std::string Contributors = FunctionBody(ContributorsSource, "void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly, int SponsorsRevision, bool HasSponsorDeveloper)");
 	ASSERT_FALSE(MouseMeasure.empty());
 	ASSERT_FALSE(Contributors.empty());
 	EXPECT_NE(MouseMeasure.find("return 2.0f * BUTTON_HEIGHT + BUTTON_SPACING;"), std::string::npos);
@@ -196,7 +196,7 @@ TEST(QmNewUiMenuRenderSettingsPagesContract, SettingsSubTabPagesUseTheSharedLayo
 	EXPECT_NE(FunctionBody(Assets, "void CMenus::RenderSettingsCustom(CUIRect MainView)").find("ResolveSettingsSubTabLayout("), std::string::npos);
 	EXPECT_NE(FunctionBody(TClient, "void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)").find("TClientSettingsContentView("), std::string::npos);
 	EXPECT_NE(TClient.find("ResolveSettingsSubTabLayout(MainView, Metrics.m_UiScale)"), std::string::npos);
-	EXPECT_NE(FunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly)").find("ResolveSettingsSubTabLayout("), std::string::npos);
+	EXPECT_NE(FunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)").find("ResolveSettingsSubTabLayout("), std::string::npos);
 }
 
 TEST(QmNewUiMenuRenderSettingsPagesContract, GraphicsAndSoundNestedListsOwnWheel)

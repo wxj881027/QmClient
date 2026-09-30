@@ -2522,6 +2522,15 @@ public:
 		NUMBER_OF_QMCLIENT_SETTINGS_TABS,
 	};
 
+	// 顶层「贡献者」页的子页签。
+	enum
+	{
+		CREDITS_SETTINGS_TAB_QMCLIENT = 0,
+		CREDITS_SETTINGS_TAB_LINKS,
+		CREDITS_SETTINGS_TAB_OTHER,
+		CREDITS_SETTINGS_TAB_NUM,
+	};
+
 	enum
 	{
 		BIG_TAB_NEWS = 0,
@@ -2573,6 +2582,7 @@ public:
 	std::array<CUIElement, SETTINGS_LENGTH> m_aSettingsTabLabelElements;
 	std::array<const char *, SETTINGS_LENGTH> m_apSettingsTabs{};
 	int m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
+	int m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_QMCLIENT;
 	// 启动赞助提醒（灵动岛）的两段式状态（掉落/展开进度 + 停留倒计时）。
 	qm_island::SNoticeState m_QmSponsorNudgeNotice;
 	bool m_QmNewFeaturesScrollReset = true;
@@ -3115,16 +3125,19 @@ private:
 	void RenderSettingsTClientBindWheel(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsTClientChatBinds(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly);
-	void RenderSettingsTClientInfo(CUIRect MainView, bool PrewarmOnly);
+	void AppendTClientDeveloperCard(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly);
+	void AppendDdnetContributorCard(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly);
+	void AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly);
 	void RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsTClientSidebar(CUIRect MainView);
-	void RenderSettingsQmClient(CUIRect MainView, bool ContributorsPage = false, bool PrewarmOnly = false);
+	void RenderSettingsQmClient(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsGlobalSearch(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnly = false);
 	void RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly = false);
-	void RenderSettingsQmClientContent(CUIRect MainView, bool ContributorsPage, bool PrewarmOnly);
+	void RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly);
+	void AppendQmClientContributorCards(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly, int SponsorsRevision, bool HasSponsorDeveloper);
 	void RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly);
@@ -3184,7 +3197,6 @@ private:
 	void RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-	void RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly = false);
 	void ClearQmTitlePreviewContainers();
 	void RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha = 1.0f);
 

@@ -579,4 +579,5 @@ TEST(QmIconAtlasContract, BoldAtlasCarriesMorphKeyFrames)
 	EXPECT_NEAR(JsonInt(pFirst, "h"), JsonInt(pEye, "h"), 2);
 	EXPECT_NEAR(JsonInt(pLast, "w"), JsonInt(pEyeSlash, "w"), 4);
 	EXPECT_NEAR(JsonInt(pLast, "h"), JsonInt(pEyeSlash, "h"), 4);
+	json_value_free(pRoot);
 }

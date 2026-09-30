@@ -514,19 +514,19 @@ bool CSectionLoader::LoadSessionCache(SSessionUiCache &Cache, const char *pFilen
 		while(*pValEnd && *pValEnd != '\r' && *pValEnd != '\n')
 			++pValEnd;
 		if(KeyLen == 13 && strncmp(p, "settings_page", 13) == 0)
-			Cache.m_LastSettingsPage = atoi(pVal);
+			Cache.m_LastSettingsPage = str_toint(pVal);
 		else if(KeyLen == 11 && strncmp(p, "tab_tclient", 11) == 0)
-			Cache.m_LastTClientTab = atoi(pVal);
+			Cache.m_LastTClientTab = str_toint(pVal);
 		else if(KeyLen == 6 && strncmp(p, "tab_qm", 6) == 0)
-			Cache.m_LastQmTab = atoi(pVal);
+			Cache.m_LastQmTab = str_toint(pVal);
 		else if(KeyLen == 8 && strncmp(p, "scroll_y", 8) == 0)
-			Cache.m_LastScrollY = (float)atof(pVal);
+			Cache.m_LastScrollY = str_tofloat(pVal);
 		else if(KeyLen == 14 && strncmp(p, "viewport_width", 14) == 0)
-			Cache.m_RuntimeKey.m_ViewportWidth = atoi(pVal);
+			Cache.m_RuntimeKey.m_ViewportWidth = str_toint(pVal);
 		else if(KeyLen == 15 && strncmp(p, "viewport_height", 15) == 0)
-			Cache.m_RuntimeKey.m_ViewportHeight = atoi(pVal);
+			Cache.m_RuntimeKey.m_ViewportHeight = str_toint(pVal);
 		else if(KeyLen == 8 && strncmp(p, "ui_scale", 8) == 0)
-			Cache.m_RuntimeKey.m_UiScale = atoi(pVal);
+			Cache.m_RuntimeKey.m_UiScale = str_toint(pVal);
 		else if(KeyLen == 11 && strncmp(p, "config_hash", 11) == 0)
 			Cache.m_RuntimeKey.m_ConfigHash = ParseSessionCacheU64(pVal);
 		else if(KeyLen == 13 && strncmp(p, "language_hash", 13) == 0)
