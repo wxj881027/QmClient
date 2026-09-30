@@ -7484,6 +7484,7 @@ void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollecti
 		m_MenuTextPlanCollecting = true;
 		m_pMenuTextPlanCollection = &m_vSettingsMenuTextPrebuildPlan;
 		m_MenuTextPlanPendingActive = false;
+		Ui()->MapScreen();
 		Ui()->BeginRenderOnly();
 		RenderSettings(SettingsMainView);
 		Ui()->EndRenderOnly();
