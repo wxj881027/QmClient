@@ -2782,9 +2782,11 @@ public:
 		const float ScreenHeight = ScreenY1 - ScreenY0;
 		const float GraphicsWidth = Graphics()->ScreenWidth();
 		const float GraphicsHeight = Graphics()->ScreenHeight();
+		const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
+		const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
 		const vec2 FakeToScreen = vec2(
-			ScreenWidth > 0.0f && std::isfinite(ScreenWidth) && GraphicsWidth > 0.0f ? GraphicsWidth / ScreenWidth : 1.0f,
-			ScreenHeight > 0.0f && std::isfinite(ScreenHeight) && GraphicsHeight > 0.0f ? GraphicsHeight / ScreenHeight : 1.0f);
+			ScreenWidth > 0.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
+			ScreenHeight > 0.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
 		const float CursorX = round_to_int(pCursor->m_X * FakeToScreen.x) / FakeToScreen.x;
 		const float CursorY = round_to_int(pCursor->m_Y * FakeToScreen.y) / FakeToScreen.y;
 		const int ActualSize = round_truncate(pCursor->m_FontSize * FakeToScreen.y);
@@ -2826,7 +2828,7 @@ public:
 
 		const bool IsRendered = (pCursor->m_Flags & TEXTFLAG_RENDER) != 0;
 
-		const float CursorInnerWidth = ((ScreenX1 - ScreenX0) / Graphics()->ScreenWidth()) * 2;
+		const float CursorInnerWidth = GraphicsWidth > 0.0f ? (ScreenWidth / GraphicsWidth) * 2 : 0.0f;
 		const float CursorOuterWidth = CursorInnerWidth * 2;
 		const float CursorOuterInnerDiff = (CursorOuterWidth - CursorInnerWidth) / 2;
 
@@ -3593,7 +3595,13 @@ public:
 
 		if((TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) == 0)
 		{
-			const vec2 FakeToScreen = vec2(Graphics()->ScreenWidth() / (ScreenX1 - ScreenX0), Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0));
+			const float ScreenWidth = ScreenX1 - ScreenX0;
+			const float ScreenHeight = ScreenY1 - ScreenY0;
+			const float GraphicsWidth = Graphics()->ScreenWidth();
+			const float GraphicsHeight = Graphics()->ScreenHeight();
+			const vec2 FakeToScreen = vec2(
+				ScreenWidth > 0.0f && std::isfinite(ScreenWidth) ? (GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f) / ScreenWidth : 1.0f,
+				ScreenHeight > 0.0f && std::isfinite(ScreenHeight) ? (GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f) / ScreenHeight : 1.0f);
 			const float AlignedX = round_to_int((TextContainer.m_X + X) * FakeToScreen.x) / FakeToScreen.x;
 			const float AlignedY = round_to_int((TextContainer.m_Y + Y) * FakeToScreen.y) / FakeToScreen.y;
 			X = AlignedX - TextContainer.m_AlignedStartX;
