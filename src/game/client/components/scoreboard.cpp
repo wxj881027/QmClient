@@ -412,8 +412,12 @@ bool CScoreboard::OnInput(const IInput::CEvent &Event)
 		m_LastMousePos = Ui()->MousePos();
 		return true;
 	}
+	if(!IsActive() || !m_MouseUnlocked)
+		return false;
 
-	return IsActive() && m_MouseUnlocked;
+	// 光标模式接管输入时也要把滚轮事件交给 UI，滚动所有权系统才能收集本帧滚轮量。
+	Ui()->OnInput(Event);
+	return true;
 }
 
 void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, float TitleFontSize)
@@ -1935,7 +1939,7 @@ void CScoreboard::OnRender()
 		BuildPlayerRowPlan(TEAM_BLUE, BluePlayerRows);
 	const int NumPlayers = Teams ? maximum(RedPlayerRows.m_Count, BluePlayerRows.m_Count) : RedPlayerRows.m_Count;
 	// 滚动模式：非队伍玩法且人数超过一屏时，固定行高只显示一列，滚轮查看其余玩家。
-	const bool ScrollMode = !Teams && g_Config.m_QmScoreboardScroll && NumPlayers > 16;
+	const bool ScrollMode = ScoreboardScrollModeEnabled(Teams, g_Config.m_QmScoreboardScroll, NumPlayers);
 	const int ScrollVisibleRows = 16;
 	const int ScrollMaxStart = ScrollMode ? maximum(0, RedPlayerRows.m_Count - ScrollVisibleRows) : 0;
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;
@@ -2194,7 +2198,7 @@ void CScoreboard::OnRender()
 			static int s_ScoreboardWheelOwner = 0;
 			CUIRect ScoreboardPlayerArea = ScoreboardContentBody;
 			CUIRect ScrollBarArea;
-			if(ScrollMaxStart > 0)
+			if(ScoreboardScrollbarVisible(ScrollMode, m_RenderInteractions, g_Config.m_QmScoreboardScroll, ScrollMaxStart))
 			{
 				// 延迟列固定占用右侧 27.5px + 10px，滚动条再放到它的右侧保留区。
 				ScoreboardPlayerArea.VSplitRight(27.5f + 10.0f, &ScoreboardPlayerArea, &ScrollBarArea);

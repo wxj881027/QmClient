@@ -2518,6 +2518,8 @@ public:
 		//（旧配置可能仍是 3；直接删掉会让 CONFIG 前移，落到别人的页签上）。
 		QMCLIENT_SETTINGS_TAB_CONTRIBUTORS,
 		QMCLIENT_SETTINGS_TAB_CONFIG,
+		// 新增页签追加到末尾，避免旧配置中的 tab 索引改变含义。
+		QMCLIENT_SETTINGS_TAB_BIND,
 
 		NUMBER_OF_QMCLIENT_SETTINGS_TABS,
 	};
@@ -3141,6 +3143,8 @@ private:
 	void RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly);
+	void RenderSettingsQmClientBindDeck(CUIRect MainView, bool PrewarmOnly);
+	void RenderSettingsQmClientBindCard(CUIRect &Content, bool ReadOnly);
 	void RenderQmSettingsSliderWithValueInput(const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix, bool PrewarmOnly, unsigned Flags = 0u);
 	bool RenderQmFunctionCheckbox(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly, const char *pTooltip = nullptr);
 	bool RenderQmFunctionCheckboxRow(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);
@@ -3198,6 +3202,8 @@ private:
 	void RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly);
 	void RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void ClearQmTitlePreviewContainers();
+	bool QmTitleStyleExpanded() const;
+	void AppendQmTitleCard(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly);
 	void RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha = 1.0f);
 
 	const CWarType *m_pRemoveWarType = nullptr;

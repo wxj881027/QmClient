@@ -11,7 +11,7 @@ namespace qm_card_catalog
 {
 	namespace
 	{
-		// 三个分类的卡片清单（stableId 与 QmCardRegistry 的默认 Placement 表同源）。
+		// 分类页的卡片清单（stableId 与 QmCardRegistry 的默认 Placement 表同源）。
 		// 页面从这里取"该有哪些卡"，卡片实现则分派到对应的卡片模块文件。
 		const std::vector<const char *> s_vVisualCards = {
 			"qm:chat_bubble",
@@ -65,6 +65,10 @@ namespace qm_card_catalog
 			"qm:gores_drown_board",
 		};
 
+		const std::vector<const char *> s_vBindCards = {
+			"qm:bind_editor",
+		};
+
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
 		{
 			if(pStableId == nullptr)
@@ -93,9 +97,14 @@ namespace qm_card_catalog
 		return s_vHudCards;
 	}
 
+	const std::vector<const char *> &BindCardStableIds()
+	{
+		return s_vBindCards;
+	}
+
 	bool HasCardModule(const char *pStableId)
 	{
-		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId);
+		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId);
 	}
 
 	uint64_t MeasureContentRevision()
@@ -103,6 +112,7 @@ namespace qm_card_catalog
 		uint64_t Revision = FoldRevision(0, (uint64_t)s_vVisualCards.size());
 		Revision = FoldRevision(Revision, (uint64_t)s_vFunctionCards.size());
 		Revision = FoldRevision(Revision, (uint64_t)s_vHudCards.size());
+		Revision = FoldRevision(Revision, (uint64_t)s_vBindCards.size());
 		return Revision;
 	}
 } // namespace qm_card_catalog

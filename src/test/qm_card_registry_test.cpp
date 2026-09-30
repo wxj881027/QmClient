@@ -99,6 +99,7 @@ TEST(QmCardRegistry, P6QmClientContributorsCards)
 	// 配置文件卡在常规页；「TClient 链接」卡已并入开发人员卡。
 	const auto *pCommunity = qm_card_registry::FindByStableId("deck:qmclient-contributors-community");
 	const auto *pSponsors = qm_card_registry::FindByStableId("deck:qmclient-contributors-sponsors");
+	const auto *pSponsorInfo = qm_card_registry::FindByStableId("deck:qmclient-contributors-sponsor-info");
 	const auto *pDdnet = qm_card_registry::FindByStableId("deck:qmclient-contributors-ddnet");
 	const auto *pTitle = qm_card_registry::FindByStableId("deck:qmclient-contributors-title");
 	const auto *pTcDevelopers = qm_card_registry::FindByStableId("deck:tclient-info-developers");
@@ -108,6 +109,7 @@ TEST(QmCardRegistry, P6QmClientContributorsCards)
 	EXPECT_STREQ(pTitle->m_pDefaultTab, "credits-qmclient");
 	ASSERT_NE(pCommunity, nullptr);
 	ASSERT_NE(pSponsors, nullptr);
+	ASSERT_NE(pSponsorInfo, nullptr);
 	ASSERT_NE(pDdnet, nullptr);
 	ASSERT_NE(pTcDevelopers, nullptr);
 	ASSERT_NE(pTcFiles, nullptr);

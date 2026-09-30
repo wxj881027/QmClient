@@ -69,10 +69,6 @@
 // 限制文件与内存的增长；达到上限后只更新已有条目，不再新建。
 static constexpr int QMCLIENT_MAX_LOCAL_MODE_STATS = 256;
 static constexpr int QMCLIENT_REALTIME_PROTOCOL_VERSION = 2;
-// 后端 USERS 全局广播快照的 server_address 标记：data.server_address=="users"
-// 表示多服分布总览（定时全量推送，任意客户端状态可收），区别于按服定向
-// 推送里的真实服务器地址（实测 2026-09-29）。
-static constexpr const char *QMCLIENT_REALTIME_USERS_GLOBAL = "users";
 
 static void LogQmWebSocketEvent(const char *pChannel, const char *pStage)
 {
@@ -787,6 +783,7 @@ void CQmClient::OnInit()
 	// 先把上次会话缓存的广播内容读回来，界面不必等下一次服务端推送。
 	LoadQmMarkdownBroadcastCache();
 	LoadQmSponsorsCache();
+	QmSponsorsReloadDraft();
 	if(!m_QmStatisticsFileExists)
 		SaveQmClientStatistics();
 	InitQmDeveloperAuthentication();
@@ -1823,11 +1820,15 @@ void CQmClient::QmSponsorsReloadDraft()
 	if(QmSponsorsPublishing())
 		return;
 	m_QmSponsorsDraft.clear();
+	m_vQmSponsorDraftNames.clear();
 	char *pDraft = Storage()->ReadFileStr(QMCLIENT_SPONSORS_DRAFT_FILE, IStorage::TYPE_SAVE);
 	if(pDraft)
 	{
 		if(str_length(pDraft) <= QMCLIENT_SPONSORS_MAX_BYTES)
+		{
 			m_QmSponsorsDraft = pDraft;
+			m_vQmSponsorDraftNames = qm_sponsors::ParseNames(m_QmSponsorsDraft.c_str());
+		}
 		free(pDraft);
 	}
 	++m_QmSponsorsStatusRevision;

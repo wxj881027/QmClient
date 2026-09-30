@@ -8,7 +8,6 @@
 #include <array>
 #include <cstdint>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 class CScrollRegion;
@@ -150,7 +149,6 @@ private:
 	std::vector<float> m_vContentHeights;
 	std::vector<float> m_vContentWidths;
 	std::vector<uint64_t> m_vMeasureRevisions;
-	std::unordered_map<std::string, bool> m_DefaultCollapsedByStableId;
 	std::vector<SSettingsCardDefinition> m_vCachedDefinitions;
 	std::string m_CachedDefinitionsTab;
 	uint64_t m_CachedDefinitionsRevision = 0;

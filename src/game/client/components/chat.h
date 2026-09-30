@@ -17,6 +17,7 @@
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
 #include <game/client/components/qmclient/qm_title_render.h>
+#include <game/client/components/qmclient/translate/translate_ui_popup.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
@@ -328,54 +329,7 @@ private:
 	};
 	STranslateButtonState m_TranslateButton;
 
-	// 翻译菜单下拉框展开状态
-	enum class ETranslateDropdown : int
-	{
-		NONE = 0,
-		INBOUND_LANG,
-		OUTBOUND_LANG,
-		BACKEND,
-	};
-
-	// 语言菜单
-	class CLanguagePopupContext : public SPopupMenuId
-	{
-	public:
-		CChat *m_pChat = nullptr;
-
-		// DoDropDown 状态（使用游戏自带下拉框组件）
-		CUi::SDropDownState m_InboundLangDropDownState;
-		CUi::SDropDownState m_OutboundLangDropDownState;
-		CUi::SDropDownState m_BackendDropDownState;
-
-		enum
-		{
-			LABEL_TITLE = 0,
-			LABEL_INBOUND_TOGGLE,
-			LABEL_OUTBOUND_TOGGLE,
-			LABEL_INBOUND_LANG,
-			LABEL_OUTBOUND_LANG,
-			LABEL_BACKEND,
-			LABEL_WARNING,
-			LABEL_COUNT,
-		};
-		CUIElement m_aLabelUiElements[LABEL_COUNT];
-		bool m_LabelUiElementsInit = false;
-
-		// 菜单动画状态
-		int64_t m_OpenTime = 0;
-		float m_AnimationProgress = 1.0f;
-
-		void InitLabelUiElements(CUi *pUi)
-		{
-			if(m_LabelUiElementsInit)
-				return;
-			for(CUIElement &LabelUiElement : m_aLabelUiElements)
-				LabelUiElement.Init(pUi, 1);
-			m_LabelUiElementsInit = true;
-		}
-	};
-	CLanguagePopupContext m_LanguagePopupContext;
+	CTranslateSettingsPopup m_LanguagePopupContext;
 	bool m_LanguageMenuOpen = false;
 
 	class CChatLinePopupContext : public SPopupMenuId
@@ -583,7 +537,6 @@ public:
 		}
 		return true;
 	}
-	static CUi::EPopupMenuFunctionResult PopupLanguageMenu(void *pContext, CUIRect View, bool Active);
 	void OpenChatLineMenu(const CLine &Line, vec2 UiMousePos);
 	void CloseChatLineMenu();
 	static CUi::EPopupMenuFunctionResult PopupChatLineMenu(void *pContext, CUIRect View, bool Active);

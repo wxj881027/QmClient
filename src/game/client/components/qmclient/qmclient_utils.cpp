@@ -143,6 +143,23 @@ bool SQmClientDistributionSnapshot::Apply(SQmClientUsersParseResult &Result, int
 	return true;
 }
 
+bool IsQmClientUsersSnapshotForContext(const json_value *pRoot, const char *pCurrentServerAddress)
+{
+	if(!pRoot || pRoot->type != json_object)
+		return false;
+
+	const json_value *pAddress = JsonObjectField(pRoot, "server_address");
+	const json_value *pUsers = JsonObjectField(pRoot, "users");
+	if(pAddress->type != json_string || pUsers->type != json_array)
+		return false;
+
+	if(str_comp(pAddress->u.string.ptr, QMCLIENT_REALTIME_USERS_GLOBAL) == 0)
+		return true;
+
+	return pCurrentServerAddress != nullptr && pCurrentServerAddress[0] != '\0' &&
+		str_comp(pAddress->u.string.ptr, pCurrentServerAddress) == 0;
+}
+
 bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress, SQmClientUsersParseResult &OutResult)
 {
 	OutResult = SQmClientUsersParseResult();

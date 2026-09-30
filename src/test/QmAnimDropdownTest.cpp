@@ -19,6 +19,7 @@
 #include <game/client/QmUi/UiOverlays.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/components/qmclient/translate/translate_ui_common.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_rect.h>
 #include <game/client/ui_scrollregion.h>
@@ -349,6 +350,42 @@ TEST(UiV2DropdownLifecycle, SourceMustRefreshInTheCurrentFrame)
 	EXPECT_TRUE(QmDropdownSourceAlive(42, 42, true));
 	EXPECT_FALSE(QmDropdownSourceAlive(42, 41, true));
 	EXPECT_FALSE(QmDropdownSourceAlive(42, 42, false));
+}
+TEST(UiV2DropdownLifecycle, InactiveParentKeepsOpenChildSourceFresh)
+{
+	EXPECT_TRUE(QmDropdownShouldKeepPopupAliveWhenDisabled(true, false));
+	EXPECT_FALSE(QmDropdownShouldKeepPopupAliveWhenDisabled(true, true));
+	EXPECT_FALSE(QmDropdownShouldKeepPopupAliveWhenDisabled(false, false));
+}
+TEST(UiV2TranslateSettings, ChatAndSettingsShareCanonicalChoices)
+{
+	EXPECT_STREQ(NTranslateUi::LanguageCodes()[0], "zh");
+	EXPECT_STREQ(NTranslateUi::LanguageCodes()[4], "zh-TW");
+	EXPECT_STREQ(NTranslateUi::BackendCodes()[NTranslateUi::BACKEND_LLM], "llm");
+	EXPECT_STREQ(NTranslateUi::BackendCodes()[NTranslateUi::BACKEND_TENCENT_CLOUD], "tencentcloud");
+	EXPECT_EQ(NTranslateUi::FindBackendIndex("腾讯云"), NTranslateUi::BACKEND_TENCENT_CLOUD);
+	EXPECT_EQ(NTranslateUi::BackendIndexForDisplay("invalid-backend"), NTranslateUi::BACKEND_LLM);
+	char Backend[32] = "腾讯云";
+	EXPECT_TRUE(NTranslateUi::NormalizeBackend(Backend, sizeof(Backend)));
+	EXPECT_STREQ(Backend, "tencentcloud");
+}
+TEST(UiV2TranslateSettings, UnknownCustomCodeIsNotOverwrittenByRedraw)
+{
+	char aLanguage[16] = "x-custom";
+	const int DisplayedIndex = NTranslateUi::DisplayIndex(NTranslateUi::FindLanguageIndex(aLanguage), 0, NTranslateUi::LANGUAGE_COUNT);
+	EXPECT_FALSE(NTranslateUi::CommitLanguage(aLanguage, sizeof(aLanguage), DisplayedIndex, DisplayedIndex));
+	EXPECT_STREQ(aLanguage, "x-custom");
+	EXPECT_TRUE(NTranslateUi::CommitLanguage(aLanguage, sizeof(aLanguage), DisplayedIndex, 1));
+	EXPECT_STREQ(aLanguage, "en");
+}
+TEST(UiV2TranslateSettings, BackendNormalizationKeepsCanonicalValueAfterRepeatedDraws)
+{
+	char aBackend[32] = "TENCENTCLOUD";
+	EXPECT_TRUE(NTranslateUi::NormalizeBackend(aBackend, sizeof(aBackend)));
+	EXPECT_STREQ(aBackend, "tencentcloud");
+	EXPECT_FALSE(NTranslateUi::NormalizeBackend(aBackend, sizeof(aBackend)));
+	EXPECT_TRUE(NTranslateUi::CommitBackend(aBackend, sizeof(aBackend), NTranslateUi::BACKEND_TENCENT_CLOUD, NTranslateUi::BACKEND_LIBRETRANSLATE));
+	EXPECT_STREQ(aBackend, "libretranslate");
 }
 TEST(UiV2DropdownPolicy, MapPickerIncludesPopupChromeBeforeTestingEightRowOverflow)
 {

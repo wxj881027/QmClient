@@ -8,6 +8,7 @@
 
 #include <game/client/component.h>
 
+#include <cstdint>
 #include <vector>
 
 class IConfigManager;
@@ -76,6 +77,7 @@ public:
 	void Bind(int KeyId, const char *pStr, bool FreeOnly = false, int ModifierCombination = KeyModifier::NONE);
 	void SetDefaults();
 	void UnbindAll();
+	uint64_t Revision() const { return m_Revision; }
 	const char *Get(int KeyId, int ModifierCombination) const;
 	const char *Get(const CBindSlot &BindSlot) const;
 	void GetKey(const char *pBindStr, char *pBuf, size_t BufSize) const;
@@ -116,5 +118,6 @@ public:
 private:
 	char *m_aapKeyBindings[KeyModifier::COMBINATION_COUNT][KEY_LAST];
 	std::vector<CBindSlot> m_vActiveBinds;
+	uint64_t m_Revision = 0;
 };
 #endif

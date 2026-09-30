@@ -92,6 +92,7 @@ class CQmClient : public CComponent
 	CQmMarkdownCacheWriter m_QmSponsorsCacheWriter;
 	qm_sponsors::CSnapshot m_QmSponsors;
 	std::string m_QmSponsorsDraft;
+	std::vector<std::string> m_vQmSponsorDraftNames;
 	std::shared_ptr<IHttpRequest> m_pQmSponsorsPublishTask;
 	enum class EQmSponsorsStatus
 	{
@@ -238,6 +239,8 @@ public:
 	void QmNewsPublishDraft();
 	using ESponsorsStatus = EQmSponsorsStatus;
 	const std::vector<std::string> &QmSponsorNames() const { return m_QmSponsors.Names(); }
+	const std::vector<std::string> &QmSponsorDraftNames() const { return m_vQmSponsorDraftNames; }
+	const std::vector<std::string> &QmSponsorDisplayNames() const { return m_vQmSponsorDraftNames.empty() ? m_QmSponsors.Names() : m_vQmSponsorDraftNames; }
 	const char *QmSponsorsDraft() const { return m_QmSponsorsDraft.c_str(); }
 	ESponsorsStatus QmSponsorsStatus() const { return m_QmSponsorsStatus; }
 	int QmSponsorsRevision() const { return m_QmSponsors.Revision() + m_QmSponsorsStatusRevision; }

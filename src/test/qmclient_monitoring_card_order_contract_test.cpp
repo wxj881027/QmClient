@@ -81,6 +81,7 @@ TEST(QmMonitoringCardOrderContract, SettingsCardLayoutVersionMigrationRequiresWh
 	EXPECT_NE(LoadBody.find("const bool ContributorsStillOldDefault"), std::string::npos);
 	EXPECT_NE(LoadBody.find("IsAtOldDefault(\"deck:qmclient-contributors-community\""), std::string::npos);
 	EXPECT_NE(LoadBody.find("IsAtOldDefault(\"deck:qmclient-contributors-sponsors\""), std::string::npos);
+	EXPECT_NE(LoadBody.find("MoveToTab(\"deck:qmclient-contributors-sponsors\", \"qmclient-contributors-ddnet\""), std::string::npos);
 	EXPECT_NE(LoadBody.find("const bool BindWheelStillOldDefault"), std::string::npos);
 	EXPECT_NE(LoadBody.find("IsAtOldDefault(\"deck:tclient-bind-wheel-editor\""), std::string::npos);
 	EXPECT_NE(LoadBody.find("IsAtOldDefault(\"deck:tclient-bind-wheel-preview\""), std::string::npos);

@@ -87,6 +87,29 @@ TEST(QmNewUiMenuRenderSettingsPagesContract, SettingsCardContentHeightsExcludeSh
 	EXPECT_NE(Contributors.find("Community.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(3, LineHeight, LineSpacing); };"), std::string::npos);
 }
 
+TEST(QmNewUiMenuRenderSettingsPagesContract, SponsorRosterControlsBelongToExternalContributorsPage)
+{
+	const std::string Source = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string ExternalContributors = FunctionBody(Source, "void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)");
+	const std::string QmContributors = FunctionBody(Source, "void CMenus::RenderSettingsQmClientContributors(CUIRect MainView, bool PrewarmOnly)");
+	ASSERT_FALSE(ExternalContributors.empty());
+	ASSERT_FALSE(QmContributors.empty());
+
+	EXPECT_NE(ExternalContributors.find("deck:qmclient-contributors-sponsors"), std::string::npos);
+	EXPECT_NE(ExternalContributors.find("QmSponsorDisplayNames()"), std::string::npos);
+	EXPECT_NE(ExternalContributors.find("QmSponsorsRefresh()"), std::string::npos);
+	EXPECT_NE(ExternalContributors.find("QmSponsorsReloadDraft()"), std::string::npos);
+	EXPECT_NE(ExternalContributors.find("QmSponsorsPublishDraft()"), std::string::npos);
+	EXPECT_NE(ExternalContributors.find("Localize(\"DDNet contributors\")"), std::string::npos);
+
+	EXPECT_NE(QmContributors.find("deck:qmclient-contributors-sponsor-info"), std::string::npos);
+	EXPECT_EQ(QmContributors.find("QmSponsorNames()"), std::string::npos);
+	EXPECT_EQ(QmContributors.find("QmSponsorsRefresh()"), std::string::npos);
+	EXPECT_EQ(QmContributors.find("QmSponsorsReloadDraft()"), std::string::npos);
+	EXPECT_EQ(QmContributors.find("QmSponsorsPublishDraft()"), std::string::npos);
+	EXPECT_EQ(ExternalContributors.find("DDNet staff"), std::string::npos);
+}
+
 TEST(QmNewUiMenuRenderSettingsPagesContract, Tee7NestedGridsOwnWheelAndCacheRefreshes)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_settings7.cpp");

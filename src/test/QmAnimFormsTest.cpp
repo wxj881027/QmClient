@@ -43,6 +43,14 @@ TEST(InputField, ClearAndTrailingSlotsDoNotOverlap)
 	EXPECT_LE(Layout.m_TrailingRect.x + Layout.m_TrailingRect.w, Layout.m_ClearRect.x);
 	EXPECT_LT(Layout.m_ContentRect.x + Layout.m_ContentRect.w, Layout.m_TrailingRect.x);
 }
+
+TEST(InputField, ActivationRequiresPressStartingInsideField)
+{
+	EXPECT_TRUE(QmEditBoxShouldStartActivation(true, true));
+	EXPECT_FALSE(QmEditBoxShouldStartActivation(true, false));
+	EXPECT_FALSE(QmEditBoxShouldStartActivation(false, true));
+}
+
 TEST(SettingsPageLayout, ConfigRowsIncludePaddingAndResponsiveControlBlock)
 {
 	const SSettingsConfigRowMetrics Wide = ResolveSettingsConfigRowMetrics(false, false, 20.0f, 5.0f, 10.0f, 20.0f, 5.0f);

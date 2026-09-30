@@ -1454,7 +1454,9 @@ namespace QmHudNotifications
 
 	bool ShouldSuppressServerMessageChat(const SServerMessageAnalysis &Analysis)
 	{
-		return Analysis.m_Route == EServerMessageRoute::Solo;
+		// 调用方只在通知栏已经成功接管消息时调用这里；所有可入队的分析结果
+		// 都必须从聊天框隐藏，包括 route 为 None 的基础信息/帮助信息。
+		return Analysis.m_Route != EServerMessageRoute::None || Analysis.m_Class != EServerMessageClass::None;
 	}
 
 	EServerMessageRoute ServerMessageRoute(const char *pMessage, ESoloPrompt PendingCompatPrompt, bool RouteSystemMessages)
