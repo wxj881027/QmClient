@@ -13,7 +13,7 @@
 const char *Localize(const char *pStr, const char *pContext)
 {
 	const bool AllowDefaultContextFallback = !std::string_view(pContext).starts_with("Editor");
-	const char *pNewStr = g_Localization.FindString(str_quickhash(pStr), str_quickhash(pContext), AllowDefaultContextFallback);
+	const char *pNewStr = LocalizationDatabase().FindString(str_quickhash(pStr), str_quickhash(pContext), AllowDefaultContextFallback);
 	return pNewStr ? pNewStr : pStr;
 }
 
@@ -278,4 +278,8 @@ const char *CLocalizationDatabase::FindString(unsigned Hash, unsigned ContextHas
 	return nullptr;
 }
 
-CLocalizationDatabase g_Localization;
+CLocalizationDatabase &LocalizationDatabase()
+{
+	static CLocalizationDatabase s_Localization;
+	return s_Localization;
+}

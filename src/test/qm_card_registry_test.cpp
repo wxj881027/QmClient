@@ -52,7 +52,10 @@ TEST(QmCardRegistry, BetterScoreboardCardIsRegisteredInFunctionColumn)
 	EXPECT_STREQ(pCard->m_pTitle, "Better scoreboard");
 
 	const auto &vFunctionCards = qm_card_catalog::FunctionCardStableIds();
-	EXPECT_NE(std::find(vFunctionCards.begin(), vFunctionCards.end(), "qm:better_scoreboard"), vFunctionCards.end());
+	const auto BetterScoreboardIt = std::find_if(vFunctionCards.begin(), vFunctionCards.end(), [](const char *pStableId) {
+		return pStableId != nullptr && std::string(pStableId) == "qm:better_scoreboard";
+	});
+	EXPECT_NE(BetterScoreboardIt, vFunctionCards.end());
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
 	const int MiniFeaturesIndex = Model.FindByStableId("qm:mini_features");

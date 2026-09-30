@@ -75,6 +75,8 @@ int CMap::NumItems() const
 
 bool CMap::Load(const char *pMapName, int StorageType)
 {
+	if(Kernel() == nullptr)
+		return false;
 	IStorage *pStorage = Kernel()->RequestInterface<IStorage>();
 	if(!pStorage)
 		return false;

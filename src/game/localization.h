@@ -67,7 +67,8 @@ public:
 	const char *FindString(unsigned Hash, unsigned ContextHash, bool AllowDefaultContextFallback = true) const;
 };
 
-extern CLocalizationDatabase g_Localization;
+CLocalizationDatabase &LocalizationDatabase();
+#define g_Localization LocalizationDatabase()
 
 [[gnu::format_arg(1)]] extern const char *Localize(const char *pStr, const char *pContext = "");
 
