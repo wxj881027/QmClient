@@ -54,6 +54,11 @@ namespace
 			str_copy(m_aEntitiesPath, pEntitiesPath, sizeof(m_aEntitiesPath));
 		}
 
+		~CHookPreviewDecodeJob() override
+		{
+			FreeTiles();
+		}
+
 		void Run() override
 		{
 			const char *pModName = gs_apModEntitiesNames[m_ModType];
