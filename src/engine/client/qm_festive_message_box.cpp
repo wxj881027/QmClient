@@ -259,6 +259,24 @@ namespace
 			return L"访问违例操作：执行";
 		if(Line.starts_with(L"Access violation target address: "))
 			return L"访问违例目标地址：" + Line.substr(33);
+		if(Line.starts_with(L"Context flags: "))
+			return L"CPU 上下文标志：" + Line.substr(15);
+		if(Line.starts_with(L"RIP="))
+			return L"CPU 寄存器：" + Line;
+		if(Line.starts_with(L"RAX=") || Line.starts_with(L"RSI=") || Line.starts_with(L"R10="))
+			return L"CPU 寄存器：" + Line;
+		if(Line.starts_with(L"R14="))
+			return L"CPU 寄存器：" + Line;
+		if(Line.starts_with(L"Instruction bytes near RIP:"))
+			return L"RIP 附近指令字节：" + Line.substr(29);
+		if(Line.starts_with(L"Stack bytes near RSP:"))
+			return L"RSP 附近栈字节：" + Line.substr(23);
+		if(Line.starts_with(L"Instruction bytes near EIP:"))
+			return L"EIP 附近指令字节：" + Line.substr(29);
+		if(Line.starts_with(L"Stack bytes near ESP:"))
+			return L"ESP 附近栈字节：" + Line.substr(23);
+		if(Line == L"Loaded modules:")
+			return L"已加载模块：";
 		if(Line.starts_with(L"Signal: "))
 			return L"致命信号：" + Line.substr(8);
 		if(Line.starts_with(L"Hang timeout threshold: "))
