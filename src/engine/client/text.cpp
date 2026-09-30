@@ -2673,9 +2673,11 @@ public:
 		const float ScreenHeight = ScreenY1 - ScreenY0;
 		const float GraphicsWidth = Graphics()->ScreenWidth();
 		const float GraphicsHeight = Graphics()->ScreenHeight();
+		const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
+		const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
 		const vec2 FakeToScreen = vec2(
-			ScreenWidth > 0.0f && std::isfinite(ScreenWidth) && GraphicsWidth > 0.0f ? GraphicsWidth / ScreenWidth : 1.0f,
-			ScreenHeight > 0.0f && std::isfinite(ScreenHeight) && GraphicsHeight > 0.0f ? GraphicsHeight / ScreenHeight : 1.0f);
+			ScreenWidth > 0.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
+			ScreenHeight > 0.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
 		TextContainer.m_AlignedStartX = round_to_int(pCursor->m_X * FakeToScreen.x) / FakeToScreen.x;
 		TextContainer.m_AlignedStartY = round_to_int(pCursor->m_Y * FakeToScreen.y) / FakeToScreen.y;
 		TextContainer.m_X = pCursor->m_X;
