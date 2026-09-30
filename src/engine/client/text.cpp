@@ -2676,8 +2676,8 @@ public:
 		const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
 		const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
 		const vec2 FakeToScreen = vec2(
-			ScreenWidth > 0.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
-			ScreenHeight > 0.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
+			ScreenWidth > 0.0f && std::isfinite(ScreenWidth) && SafeGraphicsWidth / ScreenWidth < 1000000.0f ? SafeGraphicsWidth / ScreenWidth : 1.0f,
+			ScreenHeight > 0.0f && std::isfinite(ScreenHeight) && SafeGraphicsHeight / ScreenHeight < 1000000.0f ? SafeGraphicsHeight / ScreenHeight : 1.0f);
 		TextContainer.m_AlignedStartX = round_to_int(pCursor->m_X * FakeToScreen.x) / FakeToScreen.x;
 		TextContainer.m_AlignedStartY = round_to_int(pCursor->m_Y * FakeToScreen.y) / FakeToScreen.y;
 		TextContainer.m_X = pCursor->m_X;
@@ -2785,8 +2785,8 @@ public:
 		const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
 		const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
 		const vec2 FakeToScreen = vec2(
-			ScreenWidth > 0.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
-			ScreenHeight > 0.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
+			ScreenWidth > 0.0f && std::isfinite(ScreenWidth) && SafeGraphicsWidth / ScreenWidth < 1000000.0f ? SafeGraphicsWidth / ScreenWidth : 1.0f,
+			ScreenHeight > 0.0f && std::isfinite(ScreenHeight) && SafeGraphicsHeight / ScreenHeight < 1000000.0f ? SafeGraphicsHeight / ScreenHeight : 1.0f);
 		const float CursorX = round_to_int(pCursor->m_X * FakeToScreen.x) / FakeToScreen.x;
 		const float CursorY = round_to_int(pCursor->m_Y * FakeToScreen.y) / FakeToScreen.y;
 		const int ActualSize = round_truncate(pCursor->m_FontSize * FakeToScreen.y);
