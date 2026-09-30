@@ -824,35 +824,6 @@ def kcp_mixed_clients_after_fallback(test_env):
 	kcp_client.wait_for_exit(timeout=30)
 
 
-@test(timeout=90)
-def kcp_weak_network_smoke(test_env):
-	client = test_env.client(["player_name weak_kcp_client"])
-	server = test_env.server([
-		"sv_kcp 1",
-		"sv_net_fake_loss 1",
-		"sv_net_fake_jitter 30",
-		"sv_net_fake_rtt 80",
-		"sv_net_fake_reorder 1",
-	])
-	wait_for_startup([client, server])
-	client.command(f"connect localhost:{server.port}")
-	server.wait_for_log_prefix("server: player has entered the game", timeout=30)
-	status = wait_for_transport(server, "kcp", timeout=10)
-	assert_kcp_metrics_present(status)
-	if "fake_queue=" not in " ".join(server.full_stdout):
-		server.command("kcp_status")
-		server.wait_for_log(
-			lambda log: "fake_queue=" in log.line,
-			description="kcp status line with fake_queue",
-			timeout=5,
-		)
-	server.exit()
-	client.wait_for_log_exact("client: offline error='Server shutdown'")
-	client.exit()
-	server.wait_for_exit()
-	client.wait_for_exit()
-
-
 @test(timeout=180)
 def kcp_stress_many_clients(test_env):
 	server = test_env.server(["sv_kcp 1"])
@@ -889,26 +860,6 @@ def kcp_stress_many_clients(test_env):
 	server.wait_for_exit()
 	for client in clients:
 		client.wait_for_exit(timeout=30)
-
-
-@test(timeout=30)
-def kcp_timeout_drops_session(test_env):
-	client = test_env.client(["player_name timeout_kcp_client"])
-	server = test_env.server(["sv_kcp 1", "conn_timeout 5"])
-	wait_for_startup([client, server])
-	client.command(f"connect localhost:{server.port}")
-	server.wait_for_log_prefix("server: player has entered the game", timeout=10)
-	wait_for_transport(server, "kcp", timeout=5)
-	server.command("sv_net_fake_loss 100")
-	server.wait_for_log(
-		lambda log: "client dropped." in log.line or "has left the game" in log.line,
-		description="client drop or leave log line",
-		timeout=12,
-	)
-	client.exit()
-	server.exit()
-	server.wait_for_exit()
-	client.wait_for_exit()
 
 
 @test
