@@ -37,6 +37,9 @@
 %d players
 == %d Spieler
 
+%d points
+== %d Punkte
+
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d ausgewählte Elemente wurden gelöscht, aber %d Elemente konnten nicht gelöscht werden. Das erste fehlgeschlagene Element war '%s'.
 
@@ -105,6 +108,9 @@
 
 %s wins!
 == %s gewinnt!
+
+%s: %d points
+== %s: %d Punkte
 
 '%s' called for vote to force-pause '%s' for %s seconds (reason: %s)
 == '%s' hat eine Abstimmung zum erzwungenen Pausieren von '%s' für %s Sekunden gestartet (Grund: %s)
@@ -503,6 +509,9 @@ Add to category
 Add to queue
 == Zur Warteschlange hinzufügen
 
+Add typed command
+== Eingegebenen Befehl hinzufügen
+
 Add war clan:
 == Kriegs-Clan hinzufügen:
 
@@ -692,6 +701,9 @@ Alpha
 Also apply to dummy
 == Auch auf Dummy anwenden
 
+Alt
+== Alt
+
 Always show
 == Immer anzeigen
 
@@ -793,6 +805,9 @@ Append to log file instead of overwriting
 
 Applied to %d same-family part(s).
 == Angewendet auf %d Teile derselben Familie.
+
+Applies to single-color and rainbow overrides.
+== Gilt für einfarbige und regenbogenfarbige Farbüberlagerungen.
 
 Apply
 == Anwenden
@@ -1421,6 +1436,9 @@ Best
 Better scoreboard
 == Verbesserte Bestenliste
 
+Bind
+== Bindung
+
 Bind address for client/server
 == Bindeadresse für Client/Server
 
@@ -1531,6 +1549,9 @@ Bottom right
 
 Bounce
 == Abprallen
+
+Bound functions
+== Gebundene Funktionen
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Farbe des Titels in Klammern: 0 = Server folgen, 1 = einfarbig, 2 = Regenbogen
@@ -1672,6 +1693,9 @@ Cancel your swap request
 
 Candidate files
 == Kandidatendateien
+
+Cannot join the target player's team
+== Dem Team dieses Spielers kann nicht beigetreten werden
 
 Cannot swap: the other player is not in your team
 == Tausch nicht möglich: der andere Spieler ist nicht in deinem Team
@@ -1891,6 +1915,9 @@ Clan Name
 
 Clan name size on nameplate
 == Clan-Name-Größe auf dem Namensschild
+
+Clan of the player followed from the pie menu
+== Clan des über das Kreismenü verfolgten Spielers
 
 Clan plates size
 == Größe der Clan-Schilder
@@ -2126,6 +2153,9 @@ Command:
 Commands
 == Befehle
 
+Commands cannot contain a line break.
+== Befehle dürfen keinen Zeilenumbruch enthalten.
+
 Commands run in the console
 == In der Konsole ausgeführte Befehle
 
@@ -2242,6 +2272,9 @@ Configure HUD island appearance
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
+
+Configure keyboard, mouse, wheel, and modifier bindings
+== Tastatur-, Maus-, Rad- und Modifikatortasten-Bindings konfigurieren
 
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
@@ -2459,6 +2492,9 @@ Copy skin
 Copy skin option color
 == Farbe der Skin-Optionen kopieren
 
+Could not add the player as a friend
+== Spieler konnte nicht als Freund hinzugefügt werden
+
 Could not check for existing player with your name. Check your internet connection.
 == Konnte nicht nach einem existierenden Spieler mit deinem Namen suchen. Überprüfe deine Internetverbindung.
 
@@ -2497,6 +2533,9 @@ Could not load touch controls from file. See local console for details.
 
 Could not preview this image
 == Dieses Bild konnte nicht in der Vorschau angezeigt werden
+
+Could not query points for %s
+== Punkte von %s konnten nicht abgefragt werden
 
 Could not read the map file.
 == Die Kartendatei konnte nicht gelesen werden.
@@ -2549,8 +2588,14 @@ Crescent
 CRF value for libx264 video encoding (0=best quality, 51=worst)
 == CRF-Wert für libx264-Videokodierung (0=beste Qualität, 51=schlechteste)
 
+Cross-server following stopped
+== Serverübergreifendes Folgen beendet
+
 Crosshair opacity in free spectate
 == Fadenkreuz-Deckkraft im freien Zuschauermodus
+
+Ctrl
+== Strg
 
 Ctrl+right-click a tile to select its layer in editor
 == Strg+Rechtsklick auf eine Kachel, um deren Ebene im Editor auszuwählen
@@ -2746,6 +2791,9 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet Client muss neu gestartet werden, um das Update abzuschließen!
+
+DDNet contributors
+== DDNet contributors
 
 DDNet contributors and staff credits
 == DDNet-Mitwirkende und Team
@@ -3373,6 +3421,9 @@ Dummy clan
 
 Dummy Control
 == Dummy steuern
+
+Dummy control
+== Dummy-Steuerung
 
 Dummy Control: %s
 == Dummy-Steuerung: %s
@@ -4472,11 +4523,23 @@ Folder Link
 Follow
 == Folgen
 
+Follow option color
+== Farbe des Folgens
+
+Follow server
+== Serverübergreifend folgen
+
 Follow Tee
 == Tee folgen
 
 Following
 == Folgend
+
+Following %s across servers
+== %s wird serverübergreifend gefolgt
+
+Following: %s
+== Folge: %s
 
 Font
 == Schrift
@@ -4979,6 +5042,9 @@ Grenade
 Group name
 == Gruppenname
 
+Gui
+== GUI
+
 GUI cursor assets
 == GUI-Cursor-Assets
 
@@ -5195,6 +5261,9 @@ High Detail
 High to low
 == Hoch zu niedrig
 
+Higher values make the wave move faster. Zero stops the movement.
+== Höhere Werte lassen die Welle schneller laufen. Null stoppt die Bewegung.
+
 Highlight Color
 == Hervorhebungsfarbe
 
@@ -5203,6 +5272,9 @@ Highlight game type
 
 Highlight message text gradient color
 == Farbverlauf für hervorgehobene Nachrichtentexte
+
+Highlight movement in Polished mode. Zero turns it off.
+== Bewegung des Glanzlichts im Modus Poliert. Null schaltet sie aus.
 
 Highlight ping value
 == Ping-Wert hervorheben
@@ -5299,6 +5371,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == Hostname des DNSBL-Anbieters für IP-Überprüfung
+
+Hover a key to inspect its bind, then click to edit it.
+== Bewege den Mauszeiger über eine Taste, um ihre Bindung zu sehen, und klicke zum Bearbeiten.
 
 Hover for tooltip
 == Für Tooltip bewegen
@@ -5579,6 +5654,9 @@ Installed
 Installing update. Please wait...
 == Update wird installiert. Bitte warten...
 
+Instant compact hints
+== Sofortige kompakte Hinweise
+
 Instant zoom reverse
 == Zoomrichtung sofort umkehren
 
@@ -5669,6 +5747,12 @@ Invite %s to the locked team
 Invite a person to a locked team
 == Eine Person zu einem gesperrten Team einladen
 
+Invite team option color
+== Farbe der Teameinladung
+
+Invite to team
+== Ins Team einladen
+
 Invites are disabled
 == Einladungen sind deaktiviert
 
@@ -5699,6 +5783,9 @@ Jelly strength
 Jitter
 == Jitter
 
+Join a team before inviting another player
+== Tritt einem Team bei, bevor du andere Spieler einlädst
+
 Join a team to enable practice mode, which means you can use /r, but can't earn a rank.
 == Tritt einem Team bei, um den Übungsmodus zu aktivieren. Das bedeutet, du kannst /r verwenden, aber keine Rangliste erhalten.
 
@@ -5717,8 +5804,14 @@ Join QQ group
 Join red
 == Rot beitreten
 
+Join team
+== Team beitreten
+
 Join team %s
 == Team %s beitreten
+
+Join team option color
+== Farbe des Teambeitritts
 
 Join the team of the specified player
 == Dem Team des angegebenen Spielers beitreten
@@ -5999,6 +6092,9 @@ Legacy option: connections that skip TLS verification are rejected
 Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 == Alte Echtzeit WebSocket URL (nach qm_websocket_url migriert)
 
+Legacy settings card collapse states migrated
+== Alte Einklappzustände der Einstellungskarten wurden übernommen
+
 Length
 == Länge
 
@@ -6029,11 +6125,17 @@ LibreTranslate endpoint
 Light
 == Leicht
 
+Light band
+== Lichtband
+
 Light band (0 = style default)
 == Farbphase (0 = Stilvorgabe)
 
 Limit information in spectator mode
 == Informationen im Zuschauermodus einschränken
+
+Limit the title to the exact nickname below.
+== Den Titel nur beim exakt unten angegebenen Namen anzeigen.
 
 Limiter threshold (percent)
 == Schwellwert des Limiters (Prozent)
@@ -6103,6 +6205,9 @@ Live director
 
 LLM API
 == LLM API
+
+LLM API key not configured
+== LLM-API-Schlüssel nicht eingerichtet
 
 LLM provider
 == LLM-Anbieter
@@ -7235,6 +7340,9 @@ No favorite maps yet
 No filter
 == Ohne Filter
 
+No functions bound
+== Keine Funktionen gebunden
+
 No input device available
 == Kein Eingabegerät verfügbar
 
@@ -8114,6 +8222,9 @@ Player stats
 Player stats and info display
 == Spielerstatistiken und Informationsanzeige
 
+Player to follow across servers until cancelled; empty disables following
+== Spieler für serverübergreifendes Folgen bis zum Abbruch; leer deaktiviert das Folgen
+
 Player: %s
 == Spieler: %s
 
@@ -8194,6 +8305,9 @@ Please wait…
 
 Points
 == Punkte
+
+Points unavailable
+== Punkte nicht verfügbar
 
 Polished
 == Poliert
@@ -8617,6 +8731,12 @@ Query server setting: %s
 
 Query team rank for %s
 == Teamrang für %s abfragen
+
+Querying points for %s...
+== Punkte von %s werden abgefragt...
+
+Querying points...
+== Punkte werden abgefragt...
 
 Queue is empty
 == Warteschlange ist leer
@@ -9344,6 +9464,9 @@ Reset all or one tuning variable to default
 Reset chat on escape
 == Chat bei Escape zurücksetzen
 
+Reset colors
+== Farben zurücksetzen
+
 Reset column widths
 == Spaltenbreiten zurücksetzen
 
@@ -9721,6 +9844,9 @@ Score earned
 
 Score limit
 == Punktegrenze
+
+Score option color
+== Farbe der Punkteabfrage
 
 Scoreboard
 == Bestenliste
@@ -10139,8 +10265,14 @@ Settings card background transparency
 Settings card border color
 == Farbe der Einstellungs-Kartenränder
 
+Settings card collapse state (collapsed stableId; semicolon-separated)
+== Einklappstatus der Einstellungskarten (eingeklappte stableId; durch Semikolons getrennt)
+
 Settings card default layout migration version
 == Standard-Layout-Migrationsversion der Einstellungskarten
+
+Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
+== Einstellungskarten: stableId für eingeklappt, !stableId für ausgeklappt, durch Semikolons getrennt
 
 Settings card titles use rainbow colors
 == Titel der Einstellungskarten in Regenbogenfarben
@@ -10159,6 +10291,12 @@ Shape
 
 Share of the server browser name/map split given to the name column (per mille)
 == Anteil der Name/Karte-Aufteilung im Serverbrowser für die Namensspalte (Promille)
+
+Shift
+== Umschalt
+
+Shimmer speed
+== Schimmergeschwindigkeit
 
 Shimmer speed (polished)
 == Glanztempo (poliert)
@@ -10312,6 +10450,9 @@ Show coordinates above players
 
 Show country flags in nameplates
 == Länderflaggen in Namensschildern anzeigen
+
+Show cross-server follow option
+== Serverübergreifendes Folgen anzeigen
 
 Show current Netease lyric in Media Island
 == Aktuellen Netease-Liedtext in der Media Island anzeigen
@@ -10598,6 +10739,9 @@ Show inputs
 Show IP addresses in rcon commands (1 = on, 0 = off)
 == IP-Adressen in Rcon-Befehlen anzeigen (1 = an, 0 = aus)
 
+Show join team option
+== Teambeitritt anzeigen
+
 Show jump hint based on fractional part of position
 == Sprungtipp basierend auf dem Dezimalteil der Position anzeigen
 
@@ -10808,6 +10952,9 @@ Show player names in team color
 Show player position
 == Spielerposition anzeigen
 
+Show player score option
+== Spielerpunkte anzeigen
+
 Show player speed
 == Spielergeschwindigkeit anzeigen
 
@@ -10931,6 +11078,9 @@ Show team
 Show team group players
 == Teamgruppen-Spieler anzeigen
 
+Show team invite option
+== Teameinladung anzeigen
+
 Show team on HUD Dynamic Island
 == HUD Dynamic Island zeigt Team an
 
@@ -10981,6 +11131,9 @@ Show the server rules
 
 Show tiles layers from BG map
 == Kachelebenen aus der Hintergrundkarte anzeigen
+
+Show title setting hints immediately in small text
+== Hinweise zu Titeleinstellungen sofort in kleiner Schrift anzeigen
 
 Show toast
 == Toast anzeigen
@@ -11504,6 +11657,9 @@ Sponsor code
 Sponsor code already claimed
 == Code bereits eingelöst
 
+Sponsor information
+== Sponsor information
+
 Sponsor reminder
 == Unterstützer-Hinweis
 
@@ -11620,6 +11776,12 @@ Steam profile name
 
 Still free after %d sponsors. Take a look?
 == Getragen von %d Unterstützern. Mal ansehen?
+
+Stop following
+== Folgen beenden
+
+Stop following a player across servers
+== Serverübergreifendes Folgen beenden
 
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == Tasteneingabe beim Wechsel stoppen (0=aus, 1=Dummy, 2=Spieler)
@@ -12113,6 +12275,9 @@ Temporary free camera
 Tencent Cloud
 == Tencent Cloud
 
+Tencent Cloud API not configured
+== Tencent-Cloud-API nicht eingerichtet
+
 Tencent Cloud SecretId
 == Tencent Cloud Secret-ID
 
@@ -12137,6 +12302,9 @@ Text alpha
 Text color
 == Textfarbe
 
+Text effect
+== Texteffekt
+
 Text input focus ring color
 == Farbe des Fokusrings für Texteingaben
 
@@ -12151,6 +12319,9 @@ The audio device couldn't be initialised.
 
 The auth level you need to tele others
 == Die benötigte Berechtigungsstufe zum Teleportieren anderer Spieler
+
+The command is empty, incomplete, or exceeds the local config line limit.
+== Der Befehl ist leer, unvollständig oder überschreitet das Zeilenlimit der lokalen Konfiguration.
 
 The downloaded file is not a valid demo
 == Die heruntergeladene Datei ist keine gültige Demo
@@ -12254,6 +12425,12 @@ There's an unsaved map in the editor, you might want to save it.
 Thinking mode requires a reasoning model
 == Der Denkmodus erfordert ein Reasoning-Modell
 
+This bind contains an unfinished quote and cannot be edited safely.
+== Diese Bindung enthält ein nicht geschlossenes Anführungszeichen und kann nicht sicher bearbeitet werden.
+
+This bind is already over the local config line limit.
+== Diese Bindung überschreitet bereits das Zeilenlimit der lokalen Konfiguration.
+
 This connection cannot change names while connected. Reconnect with the saved names first.
 == Diese Verbindung erlaubt keine Namensänderung während der Verbindung. Zuerst mit den gespeicherten Namen neu verbinden.
 
@@ -12277,6 +12454,9 @@ This save is no longer in the local save file.
 
 This save-code already exists
 == Dieser Speichercode existiert bereits
+
+This server does not support race teams
+== Dieser Server unterstützt keine Rennteams
 
 This server has an initial chat delay, you will be able to talk in %s seconds.
 == Dieser Server hat eine anfängliche Chat-Verzögerung, du kannst in %s Sekunden sprechen.
@@ -12421,6 +12601,9 @@ Title color (single color)
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == Tempo des Titellichtstreifens in 1/100 Zeile pro Sekunde (0 = aus)
+
+Title opacity
+== Titeldeckkraft
 
 Title opacity (custom color)
 == Deckkraft (eigene Farbe)
@@ -13238,6 +13421,9 @@ Version
 Version performing the analysis
 == Version, die die Analyse durchführt
 
+Vertical movement of each character. Zero keeps the title still.
+== Vertikale Bewegung jedes Zeichens. Bei null bleibt der Titel still.
+
 Vertical position
 == Vertikale Position
 
@@ -13264,6 +13450,9 @@ View latest updates
 
 View margin
 == Ansichtsrand
+
+View points
+== Punkte ansehen
 
 View replay
 == Replay ansehen
@@ -13516,6 +13705,12 @@ Watermark
 
 Wave amount
 == Wellenhöhe
+
+Wave spacing
+== Wellenabstand
+
+Wave speed
+== Wellengeschwindigkeit
 
 Wave speed (0.01 rad/s)
 == Wellentempo (0,01 rad/s)
@@ -13801,6 +13996,9 @@ You and other player need to have started the map
 
 You and the other player must not be paused.
 == Du und der andere Spieler dürfen nicht pausiert sein.
+
+You are already in the same team
+== Ihr seid bereits im selben Team
 
 You are already on the latest version
 == Du hast bereits die neueste Version
@@ -14111,6 +14309,9 @@ Zen Mode
 Zen mode key
 == Zen-Modus-Taste
 
+Zero uses the style default. Higher values make color bands narrower.
+== Null verwendet den Standardwert des Stils. Höhere Werte machen die Farbbänder schmaler.
+
 Zhipu AI
 == Zhipu AI
 
@@ -14242,6 +14443,10 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == Für diesen Spieler nicht verfügbar
+
+[Bind keyboard key]
+Menu
+== Menü
 
 [Config help]
 %s (default: "%s", max length: %d)

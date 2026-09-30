@@ -11,6 +11,7 @@
 %d of %d servers
 %d player
 %d players
+%d points
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 %d teams
 %d. %s | main: %s | dummy: %s
@@ -34,6 +35,7 @@
 %s translating to %s before send
 %s translating to %s failed: %s
 %s wins!
+%s: %d points
 '%s' called for vote to force-pause '%s' for %s seconds (reason: %s)
 '%s' called for vote to kick '%s' (reason: %s)
 '%s' called for vote to kick you
@@ -166,6 +168,7 @@ Add to %s
 Add to blocked words
 Add to category
 Add to queue
+Add typed command
 Add war clan:
 Add war name:
 Add/remove Client-IDs to spectate them exclusively (-1 to reset)
@@ -229,6 +232,7 @@ Allow voting to pause players (instead of moving to spectators)
 Allows maps to render with more detail
 Alpha
 Also apply to dummy
+Alt
 Always show
 Always show chat
 Always show local time
@@ -263,6 +267,7 @@ API key
 Appearance
 Append to log file instead of overwriting
 Applied to %d same-family part(s).
+Applies to single-color and rainbow overrides.
 Apply
 Apply a preset first
 Apply a random skin from the dummy queue
@@ -472,6 +477,7 @@ Behavior type
 Benchmark frame times for number of seconds to file, then quit
 Best
 Better scoreboard
+Bind
 Bind address for client/server
 Bind chat, team chat, and history actions
 Bind dummy control and copy actions
@@ -509,6 +515,7 @@ Both sides of keyword rules must be filled
 Bottom left
 Bottom right
 Bounce
+Bound functions
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 Bracketed title opacity (0-100)
 Bracketed title single color
@@ -556,6 +563,7 @@ Can't swap with yourself
 Cancel
 Cancel your swap request
 Candidate files
+Cannot join the target player's team
 Cannot swap: the other player is not in your team
 Card height animation
 Card list entry animation
@@ -629,6 +637,7 @@ Clan member entry color in friend list
 Clan Members
 Clan Name
 Clan name size on nameplate
+Clan of the player followed from the pie menu
 Clan plates size
 Clan: %s
 Classic
@@ -707,6 +716,7 @@ Command is not available on solo servers
 Command to run when joining server
 Command:
 Commands
+Commands cannot contain a line break.
 Commands run in the console
 Common key bindings
 Communities
@@ -746,6 +756,7 @@ Configure HJ unfreeze assistance
 Configure hook range and collision guide lines
 Configure HUD island appearance
 Configure input helpers and cursor behavior
+Configure keyboard, mouse, wheel, and modifier bindings
 Configure keyword-based automatic replies
 Configure laser shape, glow, and animation
 Configure nameplate text, badges, and visibility
@@ -818,6 +829,7 @@ Copy info
 Copy name
 Copy skin
 Copy skin option color
+Could not add the player as a friend
 Could not check for existing player with your name. Check your internet connection.
 Could not connect dummy
 Could not create report scan request
@@ -831,6 +843,7 @@ Could not load sponsor QR code. Check the Base64 data
 Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
 Could not preview this image
+Could not query points for %s
 Could not read the map file.
 Could not resolve connect address '%s'. See local console for details.
 Could not save downloaded map. Try manually deleting this file: %s
@@ -848,7 +861,9 @@ Created
 Credits
 Crescent
 CRF value for libx264 video encoding (0=best quality, 51=worst)
+Cross-server following stopped
 Crosshair opacity in free spectate
+Ctrl
 Ctrl+right-click a tile to select its layer in editor
 Cube
 Current
@@ -1123,6 +1138,7 @@ Dummy body color
 Dummy body skin
 Dummy clan
 Dummy Control
+Dummy control
 Dummy Control: %s
 Dummy copy
 Dummy copy: %s
@@ -1489,8 +1505,12 @@ Flip:
 Folder
 Folder Link
 Follow
+Follow option color
+Follow server
 Follow Tee
 Following
+Following %s across servers
+Following: %s
 Font
 Font cursor
 Font size
@@ -1553,7 +1573,6 @@ Friends only
 Frozen prediction margin
 FSAA samples
 FSAA samples (may cause lag)
-FTAPI
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 Full
 Full map listen in same room
@@ -1658,6 +1677,7 @@ Greek
 Greeting text
 Grenade
 Group name
+Gui
 GUI cursor assets
 Guide line color
 Hammer
@@ -1730,9 +1750,11 @@ Hide weapon fire effects in Zen Mode
 Hide weapon muzzle flashes
 High Detail
 High to low
+Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 Highlight game type
 Highlight message text gradient color
+Highlight movement in Polished mode. Zero turns it off.
 Highlight ping value
 Highlight selected players in the game world
 Highlight teammates hammering in death or freeze areas
@@ -1765,6 +1787,7 @@ Hookable/unhookable tile outline width
 Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 Hostname of DNSBL provider for IP verification
+Hover a key to inspect its bind, then click to edit it.
 Hover for tooltip
 How far the plasma gun tracks a tee
 How far the tractor tracks a tee
@@ -1858,6 +1881,7 @@ Input switch
 Insane
 Installed
 Installing update. Please wait...
+Instant compact hints
 Instant zoom reverse
 Interface
 Interface accent color
@@ -1888,6 +1912,8 @@ Invalid Y coordinate.
 Invert camera drift direction
 Invite %s to the locked team
 Invite a person to a locked team
+Invite team option color
+Invite to team
 Invites are disabled
 It's recommended that you check the settings to adjust them to your liking before joining a server.
 Item
@@ -1898,13 +1924,16 @@ Jelly duration
 Jelly others
 Jelly strength
 Jitter
+Join a team before inviting another player
 Join a team to enable practice mode, which means you can use /r, but can't earn a rank.
 Join a team to use swap feature, which means you can swap positions with each other.
 Join blue
 Join game
 Join QQ group
 Join red
+Join team
 Join team %s
+Join team option color
 Join the team of the specified player
 Join Tutorial Server
 Join, version, rules, and help messages stay in chat instead of popups
@@ -1998,18 +2027,19 @@ Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-cli
 Left/right channel width
 Legacy option: connections that skip TLS verification are rejected
 Legacy realtime WebSocket URL (migrated to qm_websocket_url)
+Legacy settings card collapse states migrated
 Length
 Lenny:
 Let server start ghost
 Let server start race recorder
 Lets you join team i (shows your team if left blank)
 Lht.
-LibreTranslate
 LibreTranslate API Key
 LibreTranslate endpoint
 Light
-Light band (0 = style default)
+Light band
 Limit information in spectator mode
+Limit the title to the exact nickname below.
 Limiter threshold (percent)
 Line width
 Linear
@@ -2033,6 +2063,7 @@ Listen from camera center when spectating
 Literal
 Live director
 LLM API
+LLM API key not configured
 LLM provider
 LLM Provider (0=ZhipuAI, 1=DeepSeek, 2=OpenAI, 3=Custom)
 LLM translation concurrency (0=auto)
@@ -2410,6 +2441,7 @@ No director players available
 No empty team left.
 No favorite maps yet
 No filter
+No functions bound
 No input device available
 No items to write
 No local saves file found (ddnet-saves.txt)
@@ -2522,7 +2554,6 @@ Opacity
 Opacity of freeze bars inside freeze
 Open a matching settings card directly
 Open bindwheel selector
-Open color picker
 Open DDNet Wiki
 Open emote selector
 Open folder
@@ -2703,6 +2734,7 @@ Player skin marking
 Player skin used for volleyball appearance
 Player stats
 Player stats and info display
+Player to follow across servers until cancelled; empty disables following
 Player: %s
 Players
 Players are just kicked and not banned if they get voted off
@@ -2730,6 +2762,7 @@ Please use %s as friend name
 Please use a different filename
 Please wait…
 Points
+Points unavailable
 Polished
 Popup animation
 Port for client to server connection (0=random, >=1024 sets manual port)
@@ -2871,6 +2904,8 @@ Query points for %s
 Query rank for %s
 Query server setting: %s
 Query team rank for %s
+Querying points for %s...
+Querying points...
 Queue is empty
 Queue preset: %s
 Quick action menu for players
@@ -3113,6 +3148,7 @@ Reset All
 Reset all drawings on the background
 Reset all or one tuning variable to default
 Reset chat on escape
+Reset colors
 Reset column widths
 Reset controls
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
@@ -3239,6 +3275,7 @@ Scanning current server...
 Score
 Score earned
 Score limit
+Score option color
 Scoreboard
 Scoreboard cursor
 Scoreboard filter: only show players whose name or clan contains this text
@@ -3274,6 +3311,7 @@ Search main asset
 Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 Search online fonts…
+Search or type a console command
 Search settings by title, feature, or keyword
 Search, filter, and manage skins
 Searching
@@ -3379,13 +3417,15 @@ Settings card background color
 Settings card background transparency
 Settings card border color
 Settings card default layout migration version
+Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
 Settings card titles use rainbow colors
 Settings file
 Settings page right panel opacity
 Severe
 Shape
 Share of the server browser name/map split given to the name column (per mille)
-Shimmer speed (polished)
+Shift
+Shimmer speed
 Short server names
 Shotgun
 Shotgun Laser Inner Color
@@ -3436,6 +3476,7 @@ Show compact vote HUD
 Show configurable outlines around map tiles
 Show coordinates above players
 Show country flags in nameplates
+Show cross-server follow option
 Show current Netease lyric in Media Island
 Show daily message to client
 Show Danger Tiles in Hitbox Mode
@@ -3531,6 +3572,7 @@ Show ingame HUD
 Show input overlay
 Show inputs
 Show IP addresses in rcon commands (1 = on, 0 = off)
+Show join team option
 Show jump hint based on fractional part of position
 Show jumps indicator
 Show katan on frozen players
@@ -3601,6 +3643,7 @@ Show player hitboxes (1=predicted only, 2=predicted and unpredicted)
 Show player key presses when rendering video (1=others, 2=include self, 3=self only)
 Show player names in team color
 Show player position
+Show player score option
 Show player speed
 Show player stats HUD
 Show player target angle
@@ -3642,6 +3685,7 @@ Show system media info on HUD
 Show TClient config variables
 Show team
 Show team group players
+Show team invite option
 Show team on HUD Dynamic Island
 Show Tee Collision in Hitbox Mode
 Show tee emotes
@@ -3659,6 +3703,7 @@ Show the pet
 Show the screen center line
 Show the server rules
 Show tiles layers from BG map
+Show title setting hints immediately in small text
 Show toast
 Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
@@ -3803,7 +3848,6 @@ Source file is empty.
 Source language code for translation (auto=auto-detect)
 Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
-Spatial effect
 Speaker
 Specifies whether zoom should be limited in game (0 = unlimited)
 Specify command accessibility for given access level
@@ -3872,6 +3916,8 @@ Status Scheme:
 Steam integration
 Steam profile name
 Still free after %d sponsors. Take a look?
+Stop following
+Stop following a player across servers
 Stop key input on switch (0=off, 1=dummy, 2=player)
 Stop practice
 Stop preview (P)
@@ -3908,7 +3954,6 @@ Swap is disabled on this server.
 Swap is not available on forced solo servers.
 Swap option color
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
-Switch
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 Switch failed
 Switch interval
@@ -4036,6 +4081,7 @@ Temporarily disable dummy hammering in Gores mode
 Temporarily set a config value while pressed
 Temporary free camera
 Tencent Cloud
+Tencent Cloud API not configured
 Tencent Cloud SecretId
 Tencent Cloud SecretKey
 Tencent Cloud Translation endpoint
@@ -4044,11 +4090,13 @@ Tencent Cloud Translation SecretId
 Tencent Cloud Translation SecretKey
 Text alpha
 Text color
+Text effect
 Text input focus ring color
 Thank you for your company and trust. This is what gives me the courage to keep going.
 Thanks for supporting QmClient
 The audio device couldn't be initialised.
 The auth level you need to tele others
+The command is empty, incomplete, or exceeds the local config line limit.
 The downloaded file is not a valid demo
 The extra menu button which toggles visibility of buttons with "Extra Menu" visibilities. Also opens the ingame menu on long press.
 The extra menu with the given number is activated.
@@ -4083,6 +4131,8 @@ There's a %s second wait time between kick votes for each player please wait %s 
 There's an unsaved change in the touch controls editor, you might want to save it.
 There's an unsaved map in the editor, you might want to save it.
 Thinking mode requires a reasoning model
+This bind contains an unfinished quote and cannot be edited safely.
+This bind is already over the local config line limit.
 This connection cannot change names while connected. Reconnect with the saved names first.
 This ID is not connected
 This is the master switch for all interface animation categories
@@ -4091,6 +4141,7 @@ This person has disabled receiving whispers
 This save exists, but you are not part of it. 
 This save is no longer in the local save file.
 This save-code already exists
+This server does not support race teams
 This server has an initial chat delay, you will be able to talk in %s seconds.
 This skin name cannot be used.
 This team already has the maximum allowed size of %s players
@@ -4137,9 +4188,8 @@ Tiny Tee Size
 Title bob angular speed in 1/100 rad/s
 Title bob wavelength in pixels
 Title color
-Title color (single color)
 Title light sweep speed in 1/100 row per second (0 = off)
-Title opacity (custom color)
+Title opacity
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 Title per-character vertical bob amplitude in pixels (0 = off)
 Title preview
@@ -4411,6 +4461,7 @@ Variable custom font weight for Latin text
 Velocity
 Version
 Version performing the analysis
+Vertical movement of each character. Zero keeps the title still.
 Vertical position
 Vertical sync (may cause lag)
 Video Background
@@ -4420,6 +4471,7 @@ Video was saved to '%s'
 Videos directory
 View latest updates
 View margin
+View points
 View replay
 View switch found (at offset) with given number
 View tele found (at offset) with given number
@@ -4504,8 +4556,8 @@ Warning
 Water hammer highlight
 Watermark
 Wave amount
-Wave speed (0.01 rad/s)
-Wave wavelength
+Wave spacing
+Wave speed
 Weak hook
 Weak hook color
 Weak network test: server receive extra reorder probability percentage
@@ -4599,6 +4651,7 @@ y = DDNet memory usage
 Yes
 You and other player need to have started the map
 You and the other player must not be paused.
+You are already in the same team
 You are already on the latest version
 You are force-paused for %s seconds.
 You are in team %s having %s players
@@ -4702,6 +4755,7 @@ yourself
 z = Zoom
 Zen Mode
 Zen mode key
+Zero uses the style default. Higher values make color bands narrower.
 Zhipu AI
 Zhipu API key
 ZhipuAI API Key
@@ -4715,9 +4769,6 @@ Zoom is allowed on this server.
 Zoom out
 Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
-⚠️ LibreTranslate API Key not set
-⚠️ LLM API Key not configured
-⚠️ Tencent Cloud API not configured
 [Assets editor blend mode]	Color
 [Assets editor blend mode]	Color Burn
 [Assets editor blend mode]	Color Dodge
@@ -4739,6 +4790,7 @@ Zoom to current mouse target
 [Auto camera]	Enabled
 [Auto camera]	Inactive
 [Auto camera]	Unavailable for this player
+[Bind keyboard key]	Menu
 [Config help]	%s (default: "%s", max length: %d)
 [Config help]	%s (default: $%0*X)
 [Config help]	%s (default: %d)

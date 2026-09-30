@@ -50,6 +50,12 @@ inline int QmUiVisibleRows(float AvailableHeight, float ReservedHeight, float Ro
 	return std::min({RowsByHeight, ItemCount, MaxRows});
 }
 
+// 输入框只能在当前帧于命中区内按下左键时接管，避免拖动其他控件时跨入输入框抢占焦点。
+inline bool QmEditBoxShouldStartActivation(bool Inside, bool MouseButtonClicked)
+{
+	return Inside && MouseButtonClicked;
+}
+
 constexpr int UiGaussianBlurTargetDimension(int ScreenDimension)
 {
 	return ScreenDimension > 0 ? (ScreenDimension + 3) / 4 : 0;

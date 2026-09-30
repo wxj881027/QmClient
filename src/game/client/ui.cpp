@@ -1500,14 +1500,11 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 			SetActiveItem(nullptr);
 		}
 	}
-	else if(Inside)
+	else if(QmEditBoxShouldStartActivation(Inside, MouseButtonClicked(0)))
 	{
-		if(MouseButton(0))
-		{
-			if(!Active)
-				JustGotActive = true;
-			SetActiveItem(pLineInput);
-		}
+		if(!Active)
+			JustGotActive = true;
+		SetActiveItem(pLineInput);
 	}
 
 	if(Inside && !MouseButton(0))
@@ -1619,14 +1616,11 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 			SetActiveItem(nullptr);
 		}
 	}
-	else if(HotItem() == pLineInput)
+	else if(QmEditBoxShouldStartActivation(Inside, MouseButtonClicked(0)))
 	{
-		if(MouseButton(0))
-		{
-			if(!Active)
-				JustGotActive = true;
-			SetActiveItem(pLineInput);
-		}
+		if(!Active)
+			JustGotActive = true;
+		SetActiveItem(pLineInput);
 	}
 
 	if(Inside && !MouseButton(0))

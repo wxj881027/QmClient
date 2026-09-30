@@ -338,36 +338,6 @@ static bool ApplyBlockWords(std::string &Text, std::vector<std::string> *pMatche
 	return Replaced;
 }
 
-static void DoCachedChatPopupLabel(CUi *pUi, CUIElement &LabelUiElement, const CUIRect &Rect, const char *pText, float Size, int Align)
-{
-	SLabelProperties LabelProps;
-	LabelProps.m_MaxWidth = maximum(0.0f, Rect.w - 2.0f);
-	LabelProps.m_EllipsisAtEnd = true;
-	pUi->DoLabelStreamed(*LabelUiElement.Rect(0), &Rect, pText, Size, Align, LabelProps);
-}
-
-static const char *ChatTranslateBackendWarning()
-{
-	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
-	{
-		if(g_Config.m_QmTranslateTcSecretId[0] == '\0' || g_Config.m_QmTranslateTcSecretKey[0] == '\0')
-			return Localize("⚠️ Tencent Cloud API not configured");
-	}
-	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
-	{
-		if(g_Config.m_QmTranslateLibreKey[0] == '\0')
-			return Localize("⚠️ LibreTranslate API Key not set");
-	}
-	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
-	{
-		if(g_Config.m_QmTranslateLlmKeyZhipu[0] == '\0' &&
-			g_Config.m_QmTranslateLlmKeyDeepseek[0] == '\0' &&
-			g_Config.m_QmTranslateLlmKeyOpenai[0] == '\0' &&
-			g_Config.m_QmTranslateLlmKeyCustom[0] == '\0')
-			return Localize("⚠️ LLM API Key not configured");
-	}
-	return nullptr;
-}
 
 CChat::CLine::CLine()
 {
@@ -1467,7 +1437,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)
 					SendChat(0, aCmd);
 				}
 			}
-			// 区间把「按隐藏标志吞消息」改成只按分析结果判定：单机/单人路由消息在聊天里被抑制。
+			// 通知栏成功接管的服务端消息不再重复进入聊天框；未入队的消息继续显示。
 			if(ServerMessageHandled && QmHudNotifications::ShouldSuppressServerMessageChat(ServerMessageAnalysis))
 			{
 				PrintSuppressedServerMessage();
@@ -3719,48 +3689,12 @@ void CChat::OpenLanguageMenu()
 		CloseLanguageMenu();
 		return;
 	}
-
 	m_LanguageMenuOpen = true;
-	m_LanguagePopupContext.m_pChat = this;
-	m_LanguagePopupContext.m_OpenTime = time();
-	m_LanguagePopupContext.m_AnimationProgress = 1.0f;
-
-	constexpr float MenuWidth = 240.0f;
-	constexpr float TitleHeight = 16.0f;
-	constexpr float ToggleHeight = 16.0f;
-	constexpr float DropdownLabelHeight = 11.0f;
-	constexpr float DropdownHeight = 18.0f;
-	constexpr float SectionSpacing = 4.0f;
-	constexpr float ContentMargin = 3.0f;
-	// Matches the popup border and margin trimmed by CUi::RenderPopupMenus.
-	constexpr float PopupChromeHeight = 10.0f;
-	const bool HasWarning = ChatTranslateBackendWarning() != nullptr;
-	const float ContentHeight =
-		TitleHeight +
-		SectionSpacing +
-		ToggleHeight +
-		SectionSpacing +
-		ToggleHeight +
-		SectionSpacing +
-		DropdownLabelHeight + DropdownHeight +
-		SectionSpacing +
-		DropdownLabelHeight + DropdownHeight +
-		SectionSpacing +
-		DropdownLabelHeight + DropdownHeight +
-		(HasWarning ? (SectionSpacing + ToggleHeight) : 0.0f) +
-		ContentMargin * 2.0f;
-	const float MenuHeight = ContentHeight + PopupChromeHeight;
-
-	const float Height = 300.0f;
-	const float Width = Height * Graphics()->ScreenAspect();
-	const vec2 ChatToUiScale(Ui()->Screen()->w / Width, Ui()->Screen()->h / Height);
-	vec2 MenuPos = vec2(m_TranslateButton.m_X + m_TranslateButton.m_W, m_TranslateButton.m_Y) * ChatToUiScale;
-	MenuPos.x -= MenuWidth;
-	MenuPos.y -= MenuHeight;
-	MenuPos.x = std::clamp(MenuPos.x, 0.0f, maximum(0.0f, Ui()->Screen()->w - MenuWidth));
-	MenuPos.y = std::clamp(MenuPos.y, 0.0f, maximum(0.0f, Ui()->Screen()->h - MenuHeight));
-
-	Ui()->DoPopupMenu(&m_LanguagePopupContext, MenuPos.x, MenuPos.y, MenuWidth, MenuHeight, &m_LanguagePopupContext, PopupLanguageMenu);
+	const float ChatHeight = 300.0f;
+	const float ChatWidth = ChatHeight * Graphics()->ScreenAspect();
+	const vec2 ChatToUiScale(Ui()->Screen()->w / ChatWidth, Ui()->Screen()->h / ChatHeight);
+	const vec2 Anchor = vec2(m_TranslateButton.m_X + m_TranslateButton.m_W, m_TranslateButton.m_Y) * ChatToUiScale;
+	m_LanguagePopupContext.Open(Ui(), Anchor);
 }
 
 void CChat::CloseLanguageMenu()
@@ -3983,151 +3917,6 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 	return CUi::POPUP_KEEP_OPEN;
 }
 
-CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect View, bool Active)
-{
-	CLanguagePopupContext *pPopupContext = static_cast<CLanguagePopupContext *>(pContext);
-	CChat *pChat = pPopupContext->m_pChat;
-	CUi *pUi = pChat->Ui();
-	pPopupContext->InitLabelUiElements(pUi);
-
-	const float Margin = 3.0f;
-	View.Margin(Margin, &View);
-
-	const float FontSize = 7.5f;
-	const float TitleHeight = 16.0f;
-	const float ToggleHeight = 16.0f;
-	const float DropdownLabelHeight = 11.0f;
-	const float DropdownHeight = 18.0f;
-	const float SectionSpacing = 4.0f;
-
-	ColorRGBA OptionSelectedColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionSelected, true));
-	ColorRGBA OptionNormalColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionNormal, true));
-
-	// 标题
-	CUIRect TitleRect;
-	View.HSplitTop(TitleHeight, &TitleRect, &View);
-	static CButtonContainer s_CloseButton;
-	CUIRect CloseButton;
-	TitleRect.VSplitRight(22.0f, &TitleRect, &CloseButton);
-	if(pUi->DoButton_QmIcon(&s_CloseButton, EQmIcon::CLOSE, FontIcons::FONT_ICON_XMARK, 0, &CloseButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
-		return CUi::POPUP_CLOSE_CURRENT;
-	DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_TITLE], TitleRect, Localize("Translation Settings"), FontSize, TEXTALIGN_MC);
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 自动入站翻译开关
-	{
-		CUIRect ToggleRect;
-		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		View.HSplitTop(ToggleHeight, &ToggleRect, &View);
-
-		const bool InboundEnabled = g_Config.m_QmTranslateAuto != 0;
-		const ColorRGBA ToggleColor = InboundEnabled ? OptionSelectedColor : OptionNormalColor;
-		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
-
-		static int s_InboundToggleId = 0;
-		if(Active && pUi->DoButtonLogic(&s_InboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
-		{
-			g_Config.m_QmTranslateAuto = InboundEnabled ? 0 : 1;
-			return CUi::POPUP_KEEP_OPEN;
-		}
-
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto-translate incoming messages"), InboundEnabled ? Localize("On") : Localize("Off"));
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_INBOUND_TOGGLE], ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
-	}
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 自动出站翻译开关
-	{
-		CUIRect ToggleRect;
-		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		View.HSplitTop(ToggleHeight, &ToggleRect, &View);
-
-		const bool OutboundEnabled = g_Config.m_QmTranslateAutoOutgoing != 0;
-		const ColorRGBA ToggleColor = OutboundEnabled ? OptionSelectedColor : OptionNormalColor;
-		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
-
-		static int s_OutboundToggleId = 0;
-		if(Active && pUi->DoButtonLogic(&s_OutboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
-		{
-			g_Config.m_QmTranslateAutoOutgoing = OutboundEnabled ? 0 : 1;
-			return CUi::POPUP_KEEP_OPEN;
-		}
-
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto-translate outgoing messages"), OutboundEnabled ? Localize("On") : Localize("Off"));
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_OUTBOUND_TOGGLE], ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
-	}
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 语言/后端名称数组（用于 DoDropDown）
-	static const char *s_apLangNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
-	static const char *s_apLangCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
-	const char *apBackendNames[] = {Localize("LLM API"), Localize("Tencent Cloud"), Localize("LibreTranslate"), Localize("FTAPI")};
-	static const char *s_apBackendCodes[] = {"llm", "tencentcloud", "libretranslate", "ftapi"};
-
-	auto FindIndex = [](const char *pValue, const char **apCodes, int Count) -> int {
-		for(int i = 0; i < Count; ++i)
-			if(str_comp(pValue, apCodes[i]) == 0)
-				return i;
-		return 0;
-	};
-
-	// 入站语言标签 + 下拉框
-	{
-		CUIRect LabelRect, DropdownRect;
-		View.HSplitTop(DropdownLabelHeight, &LabelRect, &View);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_INBOUND_LANG], LabelRect, Localize("Incoming language"), FontSize, TEXTALIGN_ML);
-		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
-
-		const int OldSel = FindIndex(g_Config.m_QmTranslateTarget, s_apLangCodes, std::size(s_apLangCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_InboundLangDropDownState, Active);
-		if(NewSel != OldSel)
-			str_copy(g_Config.m_QmTranslateTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateTarget));
-	}
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 出站语言标签 + 下拉框
-	{
-		CUIRect LabelRect, DropdownRect;
-		View.HSplitTop(DropdownLabelHeight, &LabelRect, &View);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_OUTBOUND_LANG], LabelRect, Localize("Outgoing language"), FontSize, TEXTALIGN_ML);
-		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
-
-		const int OldSel = FindIndex(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes, std::size(s_apLangCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_OutboundLangDropDownState, Active);
-		if(NewSel != OldSel)
-			str_copy(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateOutgoingTarget));
-	}
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 翻译后端标签 + 下拉框
-	{
-		CUIRect LabelRect, DropdownRect;
-		View.HSplitTop(DropdownLabelHeight, &LabelRect, &View);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_BACKEND], LabelRect, Localize("Translation service"), FontSize, TEXTALIGN_ML);
-		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
-
-		const int OldSel = FindIndex(g_Config.m_QmTranslateBackend, s_apBackendCodes, std::size(s_apBackendCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, apBackendNames, std::size(apBackendNames), pPopupContext->m_BackendDropDownState, Active);
-		if(NewSel != OldSel)
-			str_copy(g_Config.m_QmTranslateBackend, s_apBackendCodes[NewSel], sizeof(g_Config.m_QmTranslateBackend));
-	}
-
-	// 后端未配置警告
-	const char *pConfigWarning = ChatTranslateBackendWarning();
-	if(pConfigWarning != nullptr)
-	{
-		View.HSplitTop(SectionSpacing, nullptr, &View);
-		CUIRect WarningRect, WarningLabelRect;
-		View.HSplitTop(ToggleHeight, &WarningRect, &View);
-		WarningRect.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, 4.0f);
-		WarningRect.VMargin(4.0f, &WarningLabelRect);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_WARNING], WarningLabelRect, pConfigWarning, FontSize, TEXTALIGN_ML);
-	}
-
-	return CUi::POPUP_KEEP_OPEN;
-}
 
 bool CChat::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {

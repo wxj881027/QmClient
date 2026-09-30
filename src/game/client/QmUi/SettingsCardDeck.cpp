@@ -1,6 +1,7 @@
 #include "SettingsCardDeck.h"
 
 #include "QmAnimResolve.h"
+#include "SettingsCardCollapseState.h"
 #include "UiContext.h"
 
 #include <base/system.h>
@@ -105,12 +106,6 @@ void CSettingsCardDeck::PrepareDefinitions(const std::vector<SSettingsCardDefini
 	m_vContentHeights.resize(Model.Count(), -1.0f);
 	m_vContentWidths.resize(Model.Count(), -1.0f);
 	m_vMeasureRevisions.resize(Model.Count(), UINT64_MAX);
-	for(const int StateIndex : m_vBoundDefinitionStateIndices)
-	{
-		const SSettingsCardDefinition *pDefinition = m_vDefinitionsByState[StateIndex];
-		if(pDefinition != nullptr)
-			m_vRuntimeStates[StateIndex].m_DefaultCollapsed = SettingsCardDeckLoadCollapsed(m_DefaultCollapsedByStableId, pDefinition->m_Spec.m_pStableId, m_vRuntimeStates[StateIndex].m_DefaultCollapsed);
-	}
 }
 
 void CSettingsCardDeck::RequestReveal(const char *pStableId)
@@ -203,6 +198,19 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 		m_vPreparedStableIds.resize(vCards.size());
 		for(size_t i = 0; i < vCards.size(); ++i)
 			m_vPreparedStableIds[i] = vCards[i].m_Spec.m_pStableId;
+	}
+	// 定义缓存可跨页保留；每帧从同一状态源读取，让搜索页和原页面立即同步。
+	const qm_card_collapse::CState &CollapseState = qm_card_collapse::CurrentState();
+	for(const int StateIndex : m_vBoundDefinitionStateIndices)
+	{
+		const SSettingsCardDefinition *pDefinition = m_vDefinitionsByState[StateIndex];
+		if(pDefinition == nullptr || pDefinition->m_IsCollapsed)
+			continue;
+		const bool Collapsed = CollapseState.IsCollapsed(pDefinition->m_Spec.m_pStableId, false);
+		SRuntimeState &Runtime = m_vRuntimeStates[StateIndex];
+		if(Runtime.m_DefaultCollapsed != Collapsed)
+			m_vContentHeights[StateIndex] = -1.0f;
+		Runtime.m_DefaultCollapsed = Collapsed;
 	}
 	auto RebuildActiveStateIndices = [&]() {
 		m_vActiveStateIndices.clear();
@@ -397,10 +405,13 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			else if((ControllerVisible || HasActiveHeaderContinuation) && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && SettingsCardDeckUsesDefaultCollapseControl(HasCustomCollapsedState, static_cast<bool>(Card.m_pDefinition->m_PreLayoutHeaderInput)) &&
 				Ctx.m_pUi->DoButtonLogic(&Runtime.m_DefaultCollapseButtonId, CollapsedBeforeHeader, &PreLayoutFrame.m_HandleRect, BUTTONFLAG_LEFT))
 			{
-				Runtime.m_DefaultCollapsed = SettingsCardDeckApplyDefaultCollapseToggle(HasCustomCollapsedState, Runtime.m_DefaultCollapsed, true, false);
-				SettingsCardDeckStoreCollapsed(m_DefaultCollapsedByStableId, Card.m_pDefinition->m_Spec.m_pStableId, Runtime.m_DefaultCollapsed);
-				CardGeometryChanged = true;
-				HeaderGeometryChanged = true;
+				const bool Collapsed = SettingsCardDeckApplyDefaultCollapseToggle(HasCustomCollapsedState, Runtime.m_DefaultCollapsed, true, false);
+				if(qm_card_collapse::SetCollapsed(Card.m_pDefinition->m_Spec.m_pStableId, Collapsed))
+				{
+					Runtime.m_DefaultCollapsed = Collapsed;
+					CardGeometryChanged = true;
+					HeaderGeometryChanged = true;
+				}
 			}
 			if(HeaderGeometryChanged)
 				Ctx.m_pUi->ClosePopupMenus();

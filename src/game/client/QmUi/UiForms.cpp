@@ -4,6 +4,7 @@
 #include "UiForms.h"
 
 #include "UiFormLogic.h"
+#include "UiDiscreteSliderStyle.h"
 #include "UiMotion.h"
 #include "UiSurface.h"
 #include "UiTheme.h"

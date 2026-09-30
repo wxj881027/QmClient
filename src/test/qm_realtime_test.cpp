@@ -163,6 +163,53 @@ TEST(QmRealtime, KeepsServicePayloadAliveForMainThreadConsumers)
 	EXPECT_EQ(json_object_get(Message.m_pPayload.get(), "total_seconds")->u.integer, 42);
 }
 
+TEST(QmRealtime, GlobalUsersSnapshotProvidesDistributionWhileOffline)
+{
+	SQmRealtimeMessage Message;
+	const char *pUsers = R"({"type":"users","data":{"server_address":"users","users":[{"server_address":"127.0.0.1:8303","player_name":"Alice"},{"server_address":"127.0.0.1:8303","player_name":"Dummy","dummy":true},{"server_address":"127.0.0.1:8304","player_name":"Bob"}]}})";
+	ASSERT_TRUE(ParseQmRealtimeMessage(pUsers, std::strlen(pUsers), Message));
+	ASSERT_EQ(Message.m_Event, EQmRealtimeEvent::USERS);
+	ASSERT_NE(Message.m_pPayload, nullptr);
+
+	// 菜单态没有当前服务器地址，但全局快照仍应被接受并用于“梦”列。
+	ASSERT_TRUE(IsQmClientUsersSnapshotForContext(Message.m_pPayload.get(), ""));
+	SQmClientUsersParseResult Result;
+	ASSERT_TRUE(ParseQmClientUsersJson(Message.m_pPayload.get(), "", Result));
+	EXPECT_EQ(Result.m_OnlineUserCount, 2);
+	EXPECT_EQ(Result.m_OnlineDummyCount, 1);
+
+	int Server8303Users = -1;
+	int Server8303Dummies = -1;
+	int Server8304Users = -1;
+	for(const SQmClientServerDistribution &Distribution : Result.m_vServerDistribution)
+	{
+		if(Distribution.m_ServerAddress == "127.0.0.1:8303")
+		{
+			Server8303Users = Distribution.m_UserCount;
+			Server8303Dummies = Distribution.m_DummyCount;
+		}
+		else if(Distribution.m_ServerAddress == "127.0.0.1:8304")
+		{
+			Server8304Users = Distribution.m_UserCount;
+		}
+	}
+	EXPECT_EQ(Server8303Users, 1);
+	EXPECT_EQ(Server8303Dummies, 1);
+	EXPECT_EQ(Server8304Users, 1);
+}
+
+TEST(QmRealtime, TargetedUsersSnapshotRequiresMatchingServerContext)
+{
+	SQmRealtimeMessage Message;
+	const char *pUsers = R"({"type":"users","data":{"server_address":"127.0.0.1:8303","users":[]}})";
+	ASSERT_TRUE(ParseQmRealtimeMessage(pUsers, std::strlen(pUsers), Message));
+	ASSERT_NE(Message.m_pPayload, nullptr);
+
+	EXPECT_TRUE(IsQmClientUsersSnapshotForContext(Message.m_pPayload.get(), "127.0.0.1:8303"));
+	EXPECT_FALSE(IsQmClientUsersSnapshotForContext(Message.m_pPayload.get(), ""));
+	EXPECT_FALSE(IsQmClientUsersSnapshotForContext(Message.m_pPayload.get(), "127.0.0.1:8304"));
+}
+
 TEST(QmRealtime, ClampsLargeOnlineCountBeforeNarrowing)
 {
 	SQmRealtimeMessage Message;

@@ -240,8 +240,7 @@ void CEmoticon::SetActive(bool Active)
 
 void CEmoticon::ToggleLaunchMode()
 {
-	if(!m_Active)
-		return;
+	// 发射模式是轮盘的持久选择，绑定命令可以在轮盘打开前切换。
 	m_LaunchModeActive = !m_LaunchModeActive;
 	GameClient()->Echo(m_LaunchModeActive ? "表情发射：开启" : "表情发射：关闭");
 }

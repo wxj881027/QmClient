@@ -79,6 +79,22 @@ TEST(QmScoreboardRender, TitleTimeUsesTheSharedContentAlpha)
 	EXPECT_FLOAT_EQ(ScoreboardTitleTimeColor(1.0f).a, 1.0f);
 }
 
+TEST(QmScoreboardScroll, ModeRequiresCrowdedNonTeamGames)
+{
+	EXPECT_FALSE(ScoreboardScrollModeEnabled(true, true, 32));
+	EXPECT_FALSE(ScoreboardScrollModeEnabled(false, false, 32));
+	EXPECT_FALSE(ScoreboardScrollModeEnabled(false, true, 16));
+	EXPECT_TRUE(ScoreboardScrollModeEnabled(false, true, 17));
+}
+
+TEST(QmScoreboardScroll, ScrollbarDisappearsWhenInteractionCloses)
+{
+	EXPECT_TRUE(ScoreboardScrollbarVisible(true, true, true, 1));
+	EXPECT_FALSE(ScoreboardScrollbarVisible(true, false, true, 1));
+	EXPECT_FALSE(ScoreboardScrollbarVisible(true, true, false, 1));
+	EXPECT_FALSE(ScoreboardScrollbarVisible(true, true, true, 0));
+}
+
 TEST(QmScoreboardTeamModes, SpecPlayersKeepTheirScoreboardTeamAndLastKnownModeState)
 {
 	EXPECT_EQ(QmScoreboardEffectivePlayerTeam(TEAM_GAME, false, false), TEAM_GAME);

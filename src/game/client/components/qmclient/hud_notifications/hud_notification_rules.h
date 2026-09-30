@@ -106,6 +106,7 @@ namespace QmHudNotifications
 	SServerMessageAnalysis AnalyzeServerMessage(const char *pMessage, ESoloPrompt PendingCompatPrompt);
 	SServerMessageEntryDecision DecideServerMessageEntry(const SServerMessageAnalysis &Analysis, const SServerMessageRouteConfig &Config);
 	SServerMessageEntryDecision DecideServerMessageEntry(const SServerMessageAnalysis &Analysis, bool RouteSystemMessages);
+	// 仅在通知栏已经接管消息后调用；未入队的消息由调用方继续保留在聊天框。
 	bool ShouldSuppressServerMessageChat(const SServerMessageAnalysis &Analysis);
 	EServerMessageRoute ServerMessageRoute(const char *pMessage, ESoloPrompt PendingCompatPrompt, bool RouteSystemMessages);
 	EServerMessageClass ServerMessageClass(const char *pMessage, ESoloPrompt PendingCompatPrompt);

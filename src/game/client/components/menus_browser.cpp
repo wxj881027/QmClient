@@ -2239,6 +2239,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	static CScrollRegion s_FriendsActionPopupScrollRegion;
 	bool FollowTargetOnline = false;
 	const char *pFollowTargetAddress = "";
+	if(GameClient()->m_PieMenu.IsFollowing())
+		StopFriendAutoFollow(m_FriendAutoFollowState);
 	for(const auto &vFriends : vvFriends)
 	{
 		for(const auto &Friend : vFriends)
@@ -2618,7 +2620,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					const ColorRGBA InactiveIconColor = ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f);
 					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-					const bool FollowingThisFriend = m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0;
+					const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
+						(m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 					if(Friend.ServerInfo())
 					{
 						TextRender()->TextColor(FollowingThisFriend || Ui()->HotItem() == pFollowButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
@@ -2640,9 +2643,15 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					if(Friend.ServerInfo() && Ui()->DoButtonLogic(pFollowButtonId, 0, &FollowButton, BUTTONFLAG_LEFT))
 					{
 						if(FollowingThisFriend)
+						{
+							GameClient()->m_PieMenu.CancelFollow();
 							StopFriendAutoFollow(m_FriendAutoFollowState);
+						}
 						else
+						{
+							GameClient()->m_PieMenu.CancelFollow();
 							StartFriendAutoFollow(m_FriendAutoFollowState, Friend.Name(), Friend.Clan(), Friend.ServerInfo()->m_aAddress);
+						}
 						ButtonResult = 0;
 					}
 					if(Friend.ServerInfo())
@@ -2699,7 +2708,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 					if(Friend.ServerInfo())
 					{
-						const bool FollowingThisFriend = m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0;
+						const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
+							(m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 						m_FriendsActionPopupContext.m_vEntries.emplace_back(FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
 						m_vFriendsActionEntries.push_back(FollowingThisFriend ? FRIEND_ACTION_STOP_FOLLOW : FRIEND_ACTION_FOLLOW);
 					}
@@ -2970,10 +2980,12 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			}
 			else if(Action == FRIEND_ACTION_FOLLOW)
 			{
+				GameClient()->m_PieMenu.CancelFollow();
 				StartFriendAutoFollow(m_FriendAutoFollowState, m_aFriendActionName, m_aFriendActionClan, m_aFriendActionAddress);
 			}
 			else if(Action == FRIEND_ACTION_STOP_FOLLOW)
 			{
+				GameClient()->m_PieMenu.CancelFollow();
 				StopFriendAutoFollow(m_FriendAutoFollowState);
 			}
 			else if(Action == FRIEND_ACTION_REMOVE)

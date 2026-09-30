@@ -127,6 +127,7 @@ void CBinds::Bind(int KeyId, const char *pStr, bool FreeOnly, int ModifierCombin
 		log_info_color(BIND_PRINT_COLOR, "binds", "bound %s = %s", aBindName, m_aapKeyBindings[ModifierCombination][KeyId]);
 	}
 
+	++m_Revision;
 	g_Config.m_QmDeepflyMode = DetectDeepflyModeFromAllBinds();
 }
 
@@ -327,6 +328,7 @@ void CBinds::UnbindAll()
 		}
 	}
 
+	++m_Revision;
 	g_Config.m_QmDeepflyMode = DetectDeepflyModeFromAllBinds();
 }
 

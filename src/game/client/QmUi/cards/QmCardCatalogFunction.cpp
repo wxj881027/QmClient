@@ -62,9 +62,7 @@ namespace qm_card_catalog
 			case EQmModuleId::QiaFen:
 				return Row() * (4.0f + (float)Layout.m_KeywordRulesCount) + (Layout.m_KeywordRulesHalfFilled ? Row() : 0.0f);
 			case EQmModuleId::PieMenu:
-				if(!g_Config.m_QmPieMenuEnabled)
-					return Row();
-				return Row() * 5.0f + BodySize + LineSpacing * 3.0f + std::min(ContentWidth, std::clamp(ContentWidth * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f)) * 0.8f;
+				return QmPieMenuContentHeight(ContentWidth, LineHeight, BodySize, LineSpacing, g_Config.m_QmPieMenuEnabled != 0, g_Config.m_QmPieFollowName[0] != '\0');
 			case EQmModuleId::FavoriteMaps:
 			{
 				const size_t FavoriteCount = QmCardRenderHook::FavoriteMapCount(pMenus);
@@ -111,7 +109,7 @@ namespace qm_card_catalog
 					return 4u | ((g_Config.m_QmTranslateLlmEnableThinking && (g_Config.m_QmTranslateLlmProvider == 2 || g_Config.m_QmTranslateLlmProvider == 3)) ? 8u : 0u);
 				return 0u;
 			case EQmModuleId::QiaFen: return Layout.m_KeywordRulesRevision;
-			case EQmModuleId::PieMenu: return g_Config.m_QmPieMenuEnabled ? 1u : 0u;
+			case EQmModuleId::PieMenu: return (g_Config.m_QmPieMenuEnabled ? 1u : 0u) | (g_Config.m_QmPieFollowName[0] != '\0' ? 2u : 0u);
 			case EQmModuleId::FavoriteMaps: return Layout.m_FavoriteMapsRevision;
 			case EQmModuleId::MapUpload: return 1u;
 			case EQmModuleId::HJAssist: return (g_Config.m_QmAutoTeamLock ? 1u : 0u) | (g_Config.m_QmPausedSpectatorFade ? 2u : 0u);

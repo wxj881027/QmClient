@@ -7260,19 +7260,6 @@ TEST(QmMonitoringHelpers, QmClientGoresActorChatInputUsesSharedQmTextField)
 	EXPECT_EQ(Body.find("Ui()->DoEditBox(&s_FreezeChatMessageQmClient"), std::string::npos);
 }
 
-TEST(QmMonitoringHelpers, QmClientPieMenuRenameQueueUsesSharedQmTextField)
-{
-	const std::string Source = ReadRepoFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string Body = ExtractSourceFunctionBody(Source, "void CMenus::RenderQmFunctionPieMenuContent(");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Source.find("#include <game/client/QmUi/UiForms.h>"), std::string::npos);
-	EXPECT_NE(Body.find("SettingsUiContext(\"settings_qmclient_pie_menu_text_inputs\", UiScale)"), std::string::npos);
-	EXPECT_NE(Body.find("s_PieMenuRenameQueue.SetEmptyText(Localize(\"Example: name1|name2|name3\"));"), std::string::npos);
-	EXPECT_NE(Body.find("ui_widget::InputField(TextInputCtx, &s_PieMenuRenameQueue, ControlColumn, Localize(\"Example: name1|name2|name3\"), BodySize);"), std::string::npos);
-	EXPECT_EQ(Body.find("Ui()->DoEditBox(&s_PieMenuRenameQueue"), std::string::npos);
-}
-
 TEST(QmMonitoringHelpers, QmClientTranslateSettingsInputsUseSharedQmTextField)
 {
 	const std::string Source = ReadRepoFile("src/game/client/components/qmclient/menus_qmclient.cpp");
@@ -7469,7 +7456,7 @@ TEST(QmMonitoringHelpers, SettingsRenderOnlyTraversalDoesNotConsumeDeckAnimation
 	EXPECT_NE(Controls.find("else if(!ReadOnly && !m_vSearchMatches.empty()"), std::string::npos);
 	EXPECT_NE(Controls.find("if(!ReadOnly && m_SearchMatchReveal"), std::string::npos);
 	EXPECT_NE(Controls.find("if(!ReadOnly && DeckResult.m_OrderChanged)"), std::string::npos);
-	EXPECT_NE(Controls.find("if(!ReadOnly && (m_BindOptionsDirty || GameClient()->m_KeyBinder.IsActive()))"), std::string::npos);
+	EXPECT_NE(Controls.find("if(!ReadOnly && (m_BindOptionsDirty || GameClient()->m_KeyBinder.IsActive() || m_BindOptionsRevision != GameClient()->m_Binds.Revision()))"), std::string::npos);
 	const std::string BindRows = ExtractSourceFunctionBody(ControlsSource, "void CMenusSettingsControls::RenderSettingsBinds(");
 	ASSERT_FALSE(BindRows.empty());
 	EXPECT_NE(BindRows.find("if(!ReadOnly && !m_SettingsScrollRegion.AddRect(KeyReaders)"), std::string::npos);
@@ -8024,7 +8011,6 @@ TEST(QmMonitoringHelpers, QmClientContentOwnersPreserveInteractiveContracts)
 	const std::string KeyBinds = ExtractSourceFunctionBody(Source, "void CMenus::RenderQmFunctionKeyBindsContent(");
 	const std::string FriendNotify = ExtractSourceFunctionBody(Source, "void CMenus::RenderQmFunctionFriendNotifyContent(");
 	const std::string FavoriteMaps = ExtractSourceFunctionBody(Source, "void CMenus::RenderQmFunctionFavoriteMapsContent(");
-	const std::string PieMenu = ExtractSourceFunctionBody(Source, "void CMenus::RenderQmFunctionPieMenuContent(");
 	const std::string Translate = ExtractSourceFunctionBody(Source, "void CMenus::RenderQmFunctionTranslateContent(");
 	const std::string NotificationsBasic = ExtractSourceFunctionBody(Source, "void CMenus::RenderQmHudNotificationsBasicContent(");
 	const std::string NotificationsAdvanced = ExtractSourceFunctionBody(Source, "void CMenus::RenderQmHudNotificationsAdvancedContent(");
@@ -8041,7 +8027,6 @@ TEST(QmMonitoringHelpers, QmClientContentOwnersPreserveInteractiveContracts)
 	ASSERT_FALSE(KeyBinds.empty());
 	ASSERT_FALSE(FriendNotify.empty());
 	ASSERT_FALSE(FavoriteMaps.empty());
-	ASSERT_FALSE(PieMenu.empty());
 	ASSERT_FALSE(Translate.empty());
 	ASSERT_FALSE(NotificationsBasic.empty());
 	ASSERT_FALSE(NotificationsAdvanced.empty());
@@ -8071,8 +8056,6 @@ TEST(QmMonitoringHelpers, QmClientContentOwnersPreserveInteractiveContracts)
 	EXPECT_EQ(FunctionMeasure.find("m_FavoriteMapSearchRows"), std::string::npos);
 	EXPECT_NE(FavoriteMaps.find("UpdateMapCategoryCache"), std::string::npos);
 	EXPECT_NE(FavoriteMaps.find("RemoveFavoriteMap"), std::string::npos);
-	EXPECT_NE(PieMenu.find("ShowPopupColorPicker"), std::string::npos);
-	EXPECT_NE(PieMenu.find("qmclient-pie-menu-reset-colors"), std::string::npos);
 	EXPECT_NE(Translate.find("RenderLanguageDropDownWithCustomInput"), std::string::npos);
 	EXPECT_NE(Translate.find("m_QmTranslateLlmEnableThinking"), std::string::npos);
 	EXPECT_NE(NotificationsBasic.find("m_QmHudNotificationsShowAdvanced"), std::string::npos);

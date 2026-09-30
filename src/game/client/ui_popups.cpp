@@ -657,6 +657,13 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	};
 	if(!DropDownProps.m_Enabled)
 	{
+		if(QmDropdownShouldKeepPopupAliveWhenDisabled(PopupOpen, DropDownProps.m_ClosePopupWhenDisabled))
+		{
+			// 父弹层失去 Active 时，子下拉弹层仍属于当前交互链，必须刷新来源帧。
+			// 触发器本身保持禁用，输入仍由最上层子弹层处理。
+			State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = true;
+			State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
+		}
 		if(DropDownProps.m_ClosePopupWhenDisabled)
 		{
 			if(State.m_DropDownState.Disable(PopupOpen))

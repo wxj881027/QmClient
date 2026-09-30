@@ -127,6 +127,13 @@ bool QmDropdownSourceAlive(const uint64_t CurrentFrame, const uint64_t LastSourc
 	return AnchorFullyVisible && CurrentFrame == LastSourceFrame;
 }
 
+bool QmDropdownShouldKeepPopupAliveWhenDisabled(const bool PopupOpen, const bool ClosePopupWhenDisabled)
+{
+	// 下拉触发器所在的父弹层失去 Active 后，子弹层仍需刷新来源帧；真正要求关闭的
+	// 禁用控件由 ClosePopupWhenDisabled 控制，不能因为父层失焦而误关子弹层。
+	return PopupOpen && !ClosePopupWhenDisabled;
+}
+
 bool QmDropdownAnchorFullyVisible(const CUIRect &AnchorRect, const CUIRect &ViewportRect)
 {
 	constexpr float EdgeTolerance = 0.01f;

@@ -37,6 +37,9 @@
 %d players
 == %d 在線玩家
 
+%d points
+== %d 分
+
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == 已刪除 %d 個選中項，但有 %d 項無法刪除。第一個失敗項是“%s”。
 
@@ -105,6 +108,9 @@
 
 %s wins!
 == %s 勝利！
+
+%s: %d points
+== %s：%d 分
 
 '%s' called for vote to force-pause '%s' for %s seconds (reason: %s)
 == '%s' 發起了暫停 '%s' %s 秒的投票（原因：%s）
@@ -503,6 +509,9 @@ Add to category
 Add to queue
 == 加入隊列
 
+Add typed command
+== 新增輸入的命令
+
 Add war clan:
 == 添加敵對戰隊：
 
@@ -692,6 +701,9 @@ Alpha
 Also apply to dummy
 == 同時應用到分身
 
+Alt
+== 替代
+
 Always show
 == 始終顯示
 
@@ -793,6 +805,9 @@ Append to log file instead of overwriting
 
 Applied to %d same-family part(s).
 == 已應用到 %d 個同族部件。
+
+Applies to single-color and rainbow overrides.
+== 用於單色和彩虹配色。
 
 Apply
 == 應用
@@ -1421,6 +1436,9 @@ Best
 Better scoreboard
 == 更好的計分板
 
+Bind
+== 綁定
+
 Bind address for client/server
 == 綁定客戶端/伺服器的地址
 
@@ -1531,6 +1549,9 @@ Bottom right
 
 Bounce
 == 彈跳
+
+Bound functions
+== 已綁定功能
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 方括號頭銜顏色：0 = 跟隨伺服器，1 = 單色，2 = 彩虹
@@ -1672,6 +1693,9 @@ Cancel your swap request
 
 Candidate files
 == 候選文件
+
+Cannot join the target player's team
+== 無法加入目標玩家的隊伍
 
 Cannot swap: the other player is not in your team
 == 無法交換：對方不在你的隊伍中
@@ -1891,6 +1915,9 @@ Clan Name
 
 Clan name size on nameplate
 == 銘牌上戰隊名稱的大小
+
+Clan of the player followed from the pie menu
+== 餅選單跟隨目標的戰隊名
 
 Clan plates size
 == 戰隊名稱大小
@@ -2126,6 +2153,9 @@ Command:
 Commands
 == 指令
 
+Commands cannot contain a line break.
+== 命令不能包含換行符。
+
 Commands run in the console
 == 在控制台中執行的命令
 
@@ -2242,6 +2272,9 @@ Configure HUD island appearance
 
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
+
+Configure keyboard, mouse, wheel, and modifier bindings
+== 設定鍵盤、滑鼠、滾輪與修飾鍵綁定
 
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
@@ -2459,6 +2492,9 @@ Copy skin
 Copy skin option color
 == 複製皮膚選項顏色
 
+Could not add the player as a friend
+== 無法將該玩家加入好友
+
 Could not check for existing player with your name. Check your internet connection.
 == 無法驗證是否已存在相同名稱的玩家。請檢查你的網絡連接。
 
@@ -2497,6 +2533,9 @@ Could not load touch controls from file. See local console for details.
 
 Could not preview this image
 == 無法預覽這張圖片
+
+Could not query points for %s
+== 無法查詢 %s 的積分
 
 Could not read the map file.
 == 無法讀取地圖檔案。
@@ -2549,8 +2588,14 @@ Crescent
 CRF value for libx264 video encoding (0=best quality, 51=worst)
 == 使用 libx264 編碼視頻時的 CRF 值（0 為最高質量，51 為最低）
 
+Cross-server following stopped
+== 已停止跨服跟隨
+
 Crosshair opacity in free spectate
 == 自由視角旁觀時準星透明度
+
+Ctrl
+== 控制
 
 Ctrl+right-click a tile to select its layer in editor
 == Ctrl+右鍵單擊圖塊以在編輯器中選擇其圖層
@@ -2746,6 +2791,9 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet 客戶端需要重新啟動才能完成更新！
+
+DDNet contributors
+== DDNet contributors
 
 DDNet contributors and staff credits
 == DDNet 貢獻者與團隊名單
@@ -3372,6 +3420,9 @@ Dummy clan
 == 分身戰隊
 
 Dummy Control
+== 分身控制
+
+Dummy control
 == 分身控制
 
 Dummy Control: %s
@@ -4472,11 +4523,23 @@ Folder Link
 Follow
 == 跟隨
 
+Follow option color
+== 跟隨顏色
+
+Follow server
+== 跨服跟隨
+
 Follow Tee
 == 跟隨 Tee
 
 Following
 == 當前
+
+Following %s across servers
+== 正在跨服跟隨 %s
+
+Following: %s
+== 正在跟隨：%s
 
 Font
 == 字型
@@ -4979,6 +5042,9 @@ Grenade
 Group name
 == 分組名稱
 
+Gui
+== GUI
+
 GUI cursor assets
 == GUI 光標資源
 
@@ -5195,6 +5261,9 @@ High Detail
 High to low
 == 由高到低
 
+Higher values make the wave move faster. Zero stops the movement.
+== 數值越大，波浪越快；設為零時停止運動。
+
 Highlight Color
 == 相關信息顏色
 
@@ -5203,6 +5272,9 @@ Highlight game type
 
 Highlight message text gradient color
 == 提及訊息文字漸變色
+
+Highlight movement in Polished mode. Zero turns it off.
+== 調整精緻模式中的流光速度，設為零時關閉。
 
 Highlight ping value
 == 高亮顯示 ping 值
@@ -5299,6 +5371,9 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == 用於 IP 驗證的 DNSBL 提供商的主機名
+
+Hover a key to inspect its bind, then click to edit it.
+== 將滑鼠停留在按鍵上查看綁定，然後點擊編輯。
 
 Hover for tooltip
 == 懸停查看提示
@@ -5579,6 +5654,9 @@ Installed
 Installing update. Please wait...
 == 正在安裝更新，請稍等...
 
+Instant compact hints
+== 即時小字提示
+
 Instant zoom reverse
 == 反向縮放立即生效
 
@@ -5669,6 +5747,12 @@ Invite %s to the locked team
 Invite a person to a locked team
 == 邀請某人加入鎖定的隊伍
 
+Invite team option color
+== 組隊邀請顏色
+
+Invite to team
+== 邀請組隊
+
 Invites are disabled
 == 本伺服器已禁用隊伍邀請
 
@@ -5699,6 +5783,9 @@ Jelly strength
 Jitter
 == 抖動
 
+Join a team before inviting another player
+== 請先加入隊伍，再邀請其他玩家
+
 Join a team to enable practice mode, which means you can use /r, but can't earn a rank.
 == 先加入隊伍才能開啟練習模式。開啟後可以使用 /r，但不會獲得排名
 
@@ -5717,8 +5804,14 @@ Join QQ group
 Join red
 == 加入紅隊
 
+Join team
+== 加入隊伍
+
 Join team %s
 == 加入隊伍 %s
+
+Join team option color
+== 加入隊伍顏色
 
 Join the team of the specified player
 == 加入指定玩家的隊伍
@@ -5999,6 +6092,9 @@ Legacy option: connections that skip TLS verification are rejected
 Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 == 舊即時 WebSocket 位址（已遷移至 qm_websocket_url）
 
+Legacy settings card collapse states migrated
+== 舊版設定卡片收合狀態已遷移
+
 Length
 == 時長
 
@@ -6029,11 +6125,17 @@ LibreTranslate endpoint
 Light
 == 輕體
 
+Light band
+== 色帶寬度
+
 Light band (0 = style default)
 == 色帶相位（0 = 風格預設）
 
 Limit information in spectator mode
 == 限制觀戰模式中的信息
+
+Limit the title to the exact nickname below.
+== 僅在使用下方暱稱時顯示頭銜。
 
 Limiter threshold (percent)
 == 限幅器閾值（百分比）
@@ -6103,6 +6205,9 @@ Live director
 
 LLM API
 == LLM API
+
+LLM API key not configured
+== 尚未設定大型語言模型 API 金鑰
 
 LLM provider
 == LLM 提供商
@@ -7235,6 +7340,9 @@ No favorite maps yet
 No filter
 == 不篩選
 
+No functions bound
+== 沒有綁定功能
+
 No input device available
 == 系統沒有可用輸入設備
 
@@ -8114,6 +8222,9 @@ Player stats
 Player stats and info display
 == 玩家統計與信息顯示
 
+Player to follow across servers until cancelled; empty disables following
+== 持續跨服跟隨的玩家，主動取消後停止；留空關閉
+
 Player: %s
 == 玩家：%s
 
@@ -8194,6 +8305,9 @@ Please wait…
 
 Points
 == 分數
+
+Points unavailable
+== 積分暫不可用
 
 Polished
 == 拋光
@@ -8617,6 +8731,12 @@ Query server setting: %s
 
 Query team rank for %s
 == 查詢玩家 %s 所在隊伍的排名
+
+Querying points for %s...
+== 正在查詢 %s 的積分...
+
+Querying points...
+== 正在查詢積分...
 
 Queue is empty
 == 隊列為空
@@ -9344,6 +9464,9 @@ Reset all or one tuning variable to default
 Reset chat on escape
 == 按退出鍵時重置聊天
 
+Reset colors
+== 重設顏色
+
 Reset column widths
 == 重置列寬
 
@@ -9721,6 +9844,9 @@ Score earned
 
 Score limit
 == 目標得分
+
+Score option color
+== 查分顏色
 
 Scoreboard
 == 計分板
@@ -10139,8 +10265,14 @@ Settings card background transparency
 Settings card border color
 == 設定卡片邊框顏色
 
+Settings card collapse state (collapsed stableId; semicolon-separated)
+== 設定卡片折疊狀態（折疊的 stableId；分號分隔）
+
 Settings card default layout migration version
 == 設定卡片預設佈局遷移版本
+
+Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
+== 設定卡片狀態：stableId 表示收合，!stableId 表示展開，以分號分隔
 
 Settings card titles use rainbow colors
 == 設定卡片標題使用彩虹色
@@ -10159,6 +10291,12 @@ Shape
 
 Share of the server browser name/map split given to the name column (per mille)
 == 伺服器瀏覽器名稱/地圖分欄中分配給名稱列的千分比
+
+Shift
+== 上檔
+
+Shimmer speed
+== 流光速度
 
 Shimmer speed (polished)
 == 掠光速度（拋光檔）
@@ -10312,6 +10450,9 @@ Show coordinates above players
 
 Show country flags in nameplates
 == 在玩家暱稱旁顯示國旗
+
+Show cross-server follow option
+== 顯示跨服跟隨
 
 Show current Netease lyric in Media Island
 == 在靈動島中顯示目前網易雲音樂歌詞
@@ -10598,6 +10739,9 @@ Show inputs
 Show IP addresses in rcon commands (1 = on, 0 = off)
 == 在 rcon 命令中顯示 IP 地址（1 = 打開，0 = 關閉）
 
+Show join team option
+== 顯示加入隊伍
+
 Show jump hint based on fractional part of position
 == 根據位置小數部分顯示跳躍提示
 
@@ -10808,6 +10952,9 @@ Show player names in team color
 Show player position
 == 顯示玩家座標
 
+Show player score option
+== 顯示玩家查分
+
 Show player speed
 == 顯示玩家速度
 
@@ -10931,6 +11078,9 @@ Show team
 Show team group players
 == 顯示隊伍組玩家
 
+Show team invite option
+== 顯示組隊邀請
+
 Show team on HUD Dynamic Island
 == HUD 靈動島顯示隊伍
 
@@ -10981,6 +11131,9 @@ Show the server rules
 
 Show tiles layers from BG map
 == 顯示實體層背景地圖的圖塊層
+
+Show title setting hints immediately in small text
+== 立即以小字顯示頭銜設定提示
 
 Show toast
 == 顯示提示
@@ -11504,6 +11657,9 @@ Sponsor code
 Sponsor code already claimed
 == 此認證碼已被領取
 
+Sponsor information
+== 贊助資訊
+
 Sponsor reminder
 == 贊助提醒
 
@@ -11620,6 +11776,12 @@ Steam profile name
 
 Still free after %d sponsors. Take a look?
 == 已經靠 %d 位贊助者撐到現在，要看看嗎？
+
+Stop following
+== 停止跟隨
+
+Stop following a player across servers
+== 停止跨服跟隨玩家
 
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == 切換時分身或玩家是否停止按鍵（0 = 關閉，1 = 分身，2 = 玩家）
@@ -12113,6 +12275,9 @@ Temporary free camera
 Tencent Cloud
 == 騰訊雲
 
+Tencent Cloud API not configured
+== 尚未設定騰訊雲 API
+
 Tencent Cloud SecretId
 == 騰訊雲密鑰 ID
 
@@ -12137,6 +12302,9 @@ Text alpha
 Text color
 == 文本顏色
 
+Text effect
+== 文字效果
+
 Text input focus ring color
 == 文字輸入焦點環顏色
 
@@ -12151,6 +12319,9 @@ The audio device couldn't be initialised.
 
 The auth level you need to tele others
 == 傳送其他玩家所需的權限等級
+
+The command is empty, incomplete, or exceeds the local config line limit.
+== 命令為空、不完整，或超過本機設定行限制。
 
 The downloaded file is not a valid demo
 == 下載的檔案不是有效的示範
@@ -12254,6 +12425,12 @@ There's an unsaved map in the editor, you might want to save it.
 Thinking mode requires a reasoning model
 == 啟用思考模式需要使用推理模型
 
+This bind contains an unfinished quote and cannot be edited safely.
+== 此綁定包含未結束的引號，無法安全編輯。
+
+This bind is already over the local config line limit.
+== 此綁定已超過本機設定行限制。
+
 This connection cannot change names while connected. Reconnect with the saved names first.
 == 此連線不支援線上改名，請使用存檔中的名字重新連線。
 
@@ -12277,6 +12454,9 @@ This save is no longer in the local save file.
 
 This save-code already exists
 == 這個存檔碼已存在
+
+This server does not support race teams
+== 此伺服器不支援競速隊伍
 
 This server has an initial chat delay, you will be able to talk in %s seconds.
 == 本伺服器啟用了初始發言延遲，你還需要等待 %s 秒才能說話
@@ -12421,6 +12601,9 @@ Title color (single color)
 
 Title light sweep speed in 1/100 row per second (0 = off)
 == 頭銜掠光速度（每秒 1/100 行，0 = 關閉）
+
+Title opacity
+== 頭銜不透明度
 
 Title opacity (custom color)
 == 透明度（自訂配色）
@@ -13238,6 +13421,9 @@ Version
 Version performing the analysis
 == 執行分析的版本
 
+Vertical movement of each character. Zero keeps the title still.
+== 調整文字上下起伏的幅度，設為零時保持靜止。
+
 Vertical position
 == 垂直位置
 
@@ -13264,6 +13450,9 @@ View latest updates
 
 View margin
 == 視野外邊距
+
+View points
+== 查看積分
 
 View replay
 == 檢視回放
@@ -13516,6 +13705,12 @@ Watermark
 
 Wave amount
 == 波浪幅度
+
+Wave spacing
+== 波浪間距
+
+Wave speed
+== 波浪速度
 
 Wave speed (0.01 rad/s)
 == 波浪速度（0.01 弧度/秒）
@@ -13801,6 +13996,9 @@ You and other player need to have started the map
 
 You and the other player must not be paused.
 == 你和對方都不能處於暫停狀態，才能交換位置
+
+You are already in the same team
+== 你們已經在同一隊伍
 
 You are already on the latest version
 == 當前已是最新版本
@@ -14111,6 +14309,9 @@ Zen Mode
 Zen mode key
 == 禪模式按鍵
 
+Zero uses the style default. Higher values make color bands narrower.
+== 設為零時使用樣式預設值；數值越大，色帶越窄。
+
 Zhipu AI
 == 智譜清言
 
@@ -14242,6 +14443,10 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == 此玩家不可用
+
+[Bind keyboard key]
+Menu
+== 選單
 
 [Config help]
 %s (default: "%s", max length: %d)

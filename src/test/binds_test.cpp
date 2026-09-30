@@ -27,6 +27,21 @@ TEST(Binds, KeepsPlainKeyFallbackForNonScreenshotCombinations)
 	EXPECT_FALSE(CBinds::AllowsUnmodifiedFallback(KEY_C, (1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)));
 }
 
+TEST(Binds, RevisionTracksExternalBindReplacementAndPreservesModifierSlots)
+{
+	CBinds Binds;
+	const uint64_t InitialRevision = Binds.Revision();
+	Binds.Bind(KEY_MOUSE_2, "+hook");
+	const uint64_t HookRevision = Binds.Revision();
+	Binds.Bind(KEY_MOUSE_2, "+hook", false, 1 << KeyModifier::CTRL);
+	Binds.Bind(KEY_MOUSE_2, "+bindwheel");
+
+	EXPECT_GT(HookRevision, InitialRevision);
+	EXPECT_GT(Binds.Revision(), HookRevision);
+	EXPECT_STREQ(Binds.Get(KEY_MOUSE_2, KeyModifier::NONE), "+bindwheel");
+	EXPECT_STREQ(Binds.Get(KEY_MOUSE_2, 1 << KeyModifier::CTRL), "+hook");
+}
+
 TEST(Binds, ReleasesShiftOnlyBindWhenScreenshotModifierIsPressedLater)
 {
 	EXPECT_TRUE(CBinds::ShouldReleaseUnmodifiedModifierBindOnModifierPress(CBindSlot(KEY_LSHIFT, KeyModifier::NONE), 1 << KeyModifier::CTRL));
