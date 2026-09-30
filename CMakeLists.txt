@@ -3480,6 +3480,7 @@ if(CLIENT)
     components/qmclient/pie_menu_follow.cpp
     components/qmclient/pie_menu_points.h
     components/qmclient/pie_menu_settings.cpp
+    components/qmclient/predicted_event_queue.h
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
     components/qmclient/netease/netease_lyric_parser.cpp
@@ -4624,6 +4625,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_map_progress_test.cpp
     qm_config_save_value_override_test.cpp
     qm_prediction_contract_test.cpp
+    qm_predicted_event_queue_test.cpp
     qm_tee_hue_cycle_test.cpp
     qm_tee_trail_test.cpp
     qm_sponsor_authors_test.cpp
