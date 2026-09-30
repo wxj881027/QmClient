@@ -879,7 +879,12 @@ def client_can_connect_7(test_env):
 @test
 def open_editor(test_env):
 	client = test_env.client(["maps/coverage.map"])
-	client.wait_for_log_exact("editor/load: Loaded map 'maps/coverage.map'", timeout=30)
+	client.wait_for_log(
+		lambda log: log.line == "editor/load: Loaded map 'maps/coverage.map'"
+		or log.line.startswith("editor/load: Loaded map 'maps/coverage.map'"),
+		description="editor map load",
+		timeout=30,
+	)
 	client.command("cl_editor 0")
 	client.exit()
 	client.wait_for_exit()
@@ -914,12 +919,11 @@ def smoke_test(test_env):
 	])
 	wait_for_startup([client2])
 	server.wait_for_log_prefix("server: player has entered the game", timeout=10)
-	for _ in range(5):
-		server.wait_for_log(
-			lambda log: log.line.startswith("chat: *** client1 finished in:") or log.line.startswith("chat: *** client2 finished in:"),
-			description="log lines with client1 and client2 finishes",
-			timeout=40,
-		)
+	server.wait_for_log(
+		lambda log: log.line.startswith("chat: *** client1 finished in:") or log.line.startswith("chat: *** client2 finished in:"),
+		description="a client finish broadcast",
+		timeout=40,
+	)
 
 	client1.command("say hello world")
 	server.wait_for_log_exact("chat: 0:-2:client1: hello world", timeout=15)

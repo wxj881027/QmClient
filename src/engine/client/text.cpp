@@ -50,7 +50,8 @@ static float SafePixelAlign(float Value, float Scale)
 	const double MaxSafe = static_cast<double>(std::numeric_limits<int>::max()) - 1.0;
 	if(!std::isfinite(PixelValue) || PixelValue < MinSafe || PixelValue > MaxSafe)
 		return Value;
-	return round_to_int(static_cast<float>(PixelValue)) / Scale;
+	const double RoundedPixelValue = std::floor(PixelValue + (PixelValue >= 0.0 ? 0.5 : -0.5));
+	return static_cast<float>(RoundedPixelValue / static_cast<double>(Scale));
 }
 
 // TClient
