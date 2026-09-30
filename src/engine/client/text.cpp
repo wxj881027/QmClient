@@ -40,6 +40,19 @@
 
 using namespace std::chrono_literals;
 
+// 屏幕尚未初始化或尺寸异常时，跳过会触发整数溢出的像素对齐。
+static float SafePixelAlign(float Value, float Scale)
+{
+	if(!std::isfinite(Value) || !std::isfinite(Scale) || Scale <= 0.0f)
+		return Value;
+	const double PixelValue = static_cast<double>(Value) * static_cast<double>(Scale);
+	const double MinSafe = static_cast<double>(std::numeric_limits<int>::min()) + 1.0;
+	const double MaxSafe = static_cast<double>(std::numeric_limits<int>::max()) - 1.0;
+	if(!std::isfinite(PixelValue) || PixelValue < MinSafe || PixelValue > MaxSafe)
+		return Value;
+	return round_to_int(static_cast<float>(PixelValue)) / Scale;
+}
+
 // TClient
 static void ReplaceHyphensWithSpaces(char *pStr)
 {
@@ -2678,8 +2691,8 @@ public:
 		const vec2 FakeToScreen = vec2(
 			ScreenWidth >= 1.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
 			ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
-		TextContainer.m_AlignedStartX = round_to_int(pCursor->m_X * FakeToScreen.x) / FakeToScreen.x;
-		TextContainer.m_AlignedStartY = round_to_int(pCursor->m_Y * FakeToScreen.y) / FakeToScreen.y;
+		TextContainer.m_AlignedStartX = SafePixelAlign(pCursor->m_X, FakeToScreen.x);
+		TextContainer.m_AlignedStartY = SafePixelAlign(pCursor->m_Y, FakeToScreen.y);
 		TextContainer.m_X = pCursor->m_X;
 		TextContainer.m_Y = pCursor->m_Y;
 		TextContainer.m_Flags = pCursor->m_Flags;
@@ -2787,8 +2800,8 @@ public:
 		const vec2 FakeToScreen = vec2(
 			ScreenWidth >= 1.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
 			ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
-		const float CursorX = round_to_int(pCursor->m_X * FakeToScreen.x) / FakeToScreen.x;
-		const float CursorY = round_to_int(pCursor->m_Y * FakeToScreen.y) / FakeToScreen.y;
+		const float CursorX = SafePixelAlign(pCursor->m_X, FakeToScreen.x);
+		const float CursorY = SafePixelAlign(pCursor->m_Y, FakeToScreen.y);
 		const int ActualSize = round_truncate(pCursor->m_FontSize * FakeToScreen.y);
 		pCursor->m_AlignedFontSize = ActualSize / FakeToScreen.y;
 		pCursor->m_AlignedLineSpacing = round_truncate(pCursor->m_LineSpacing * FakeToScreen.y) / FakeToScreen.y;
@@ -2960,8 +2973,8 @@ public:
 			DrawY += pCursor->m_AlignedFontSize + pCursor->m_AlignedLineSpacing;
 			if((RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) == 0)
 			{
-				DrawX = round_to_int(DrawX * FakeToScreen.x) / FakeToScreen.x; // realign
-				DrawY = round_to_int(DrawY * FakeToScreen.y) / FakeToScreen.y;
+				DrawX = SafePixelAlign(DrawX, FakeToScreen.x); // realign
+				DrawY = SafePixelAlign(DrawY, FakeToScreen.y);
 			}
 			LastSelX = DrawX;
 			LastSelWidth = 0;
@@ -3604,8 +3617,8 @@ public:
 			const vec2 FakeToScreen = vec2(
 				ScreenWidth >= 1.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
 				ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
-			const float AlignedX = round_to_int((TextContainer.m_X + X) * FakeToScreen.x) / FakeToScreen.x;
-			const float AlignedY = round_to_int((TextContainer.m_Y + Y) * FakeToScreen.y) / FakeToScreen.y;
+			const float AlignedX = SafePixelAlign(TextContainer.m_X + X, FakeToScreen.x);
+			const float AlignedY = SafePixelAlign(TextContainer.m_Y + Y, FakeToScreen.y);
 			X = AlignedX - TextContainer.m_AlignedStartX;
 			Y = AlignedY - TextContainer.m_AlignedStartY;
 		}
