@@ -7728,7 +7728,9 @@ int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperatio
 				// 否则预热使用的字号键与运行时不匹配。
 				float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 				Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-				const float FakeToScreenY = ScreenY1 == ScreenY0 ? 1.0f : Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0);
+				const float ScreenHeight = ScreenY1 - ScreenY0;
+				const float GraphicsHeight = Graphics()->ScreenHeight();
+				const float FakeToScreenY = ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) && GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight / ScreenHeight : 1.0f;
 				const int ActualSize = round_truncate(PrewarmItem.m_FontSize * FakeToScreenY);
 				std::unordered_set<int> SeenChars;
 				for(const char *pCursor = PrewarmItem.m_Text.c_str(); *pCursor != '\0';)
