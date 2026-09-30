@@ -880,8 +880,7 @@ def client_can_connect_7(test_env):
 def open_editor(test_env):
 	client = test_env.client(["maps/coverage.map"])
 	client.wait_for_log(
-		lambda log: log.line == "editor/load: Loaded map 'maps/coverage.map'"
-		or log.line.startswith("editor/load: Loaded map 'maps/coverage.map'"),
+		lambda log: log.line == "editor/load: Loaded map 'maps/coverage.map'" or log.line.startswith("editor/load: Loaded map 'maps/coverage.map'"),
 		description="editor map load",
 		timeout=30,
 	)
