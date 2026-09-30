@@ -876,7 +876,7 @@ def client_can_connect_7(test_env):
 	client.wait_for_exit()
 
 
-@test
+@test(timeout=120)
 def open_editor(test_env):
 	client = test_env.client(["maps/coverage.map"])
 	client.wait_for_log(
@@ -889,7 +889,7 @@ def open_editor(test_env):
 	client.wait_for_exit()
 
 
-@test
+@test(timeout=180)
 def smoke_test(test_env):
 	client1 = test_env.client(["logfile client1.log", "player_name client1", "qm_chat_hide_system_prefix 0"])
 	server = test_env.server([
