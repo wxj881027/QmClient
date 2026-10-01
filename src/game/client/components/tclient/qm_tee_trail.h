@@ -21,6 +21,7 @@ public:
 	double m_Distance = 0.0;
 	float m_Speed = -1.0f;
 	float m_Life = 0.0f;
+	unsigned m_Segment = 0;
 };
 
 namespace qm_tee_trail
@@ -41,6 +42,24 @@ namespace qm_tee_trail
 	constexpr float SAMPLE_SPACING = 6.0f;
 	constexpr float MIN_SPEED = 0.15f; // 世界单位 / 游戏 tick
 
+	// 连接切换只重对齐时钟来源，不改已有采样的出生时间。
+	class CTrailClock
+	{
+		double m_LastGameTime = -1.0;
+		double m_Time = 0.0;
+
+	public:
+		void Reset();
+		double Update(double GameTime, double FrameTicks, bool SwitchSource);
+	};
+
+	enum class EUpdateMode
+	{
+		NORMAL,
+		RESET,
+		KEEP_HISTORY,
+	};
+
 	// 每个玩家独立的等距环形队列；渲染头只是端帽，不占用距离采样点。
 	class CTrailState
 	{
@@ -56,8 +75,8 @@ namespace qm_tee_trail
 
 	public:
 		void Reset();
-		// 时间以游戏 tick 为单位；Break 显式处理传送、复活与渲染时间源切换。
-		void Update(vec2 Position, double Time, float Speed, float Life, bool Break = false);
+		// 时间以游戏 tick 为单位；切换控制权保留历史，预测位置跳变另起一段。
+		void Update(vec2 Position, double Time, float Speed, float Life, EUpdateMode Mode = EUpdateMode::NORMAL);
 		void Export(std::vector<CTrailPart> &vOut) const;
 	};
 

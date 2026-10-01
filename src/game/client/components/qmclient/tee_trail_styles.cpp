@@ -454,6 +454,7 @@ namespace
 	void Pixels(const SStyleSample *pSamples, size_t Count, bool Preset, float Width, unsigned Seed, std::vector<SQuad> &vOut)
 	{
 		SPixelGrid Grid;
+		const size_t FirstQuad = vOut.size();
 		// 世界网格仅由设置宽度确定；普通移动、缩放和老化不会改变像素尺度。
 		float CellSize = std::max(2.0f, std::ceil(std::sqrt(Width)));
 		for(int Attempt = 0; Attempt < 8; ++Attempt, CellSize *= 2.0f)
@@ -461,13 +462,13 @@ namespace
 			if(!RasterizePixels(Grid, pSamples, Count, CellSize))
 				continue;
 			ShadePixels(Grid, Preset, Seed);
-			size_t QuadCount = 0;
+			size_t QuadCount = FirstQuad;
 			PixelPass(Grid, CellSize, false, QuadCount, vOut);
 			PixelPass(Grid, CellSize, true, QuadCount, vOut);
 			if(QuadCount <= MAX_QUADS)
 				return;
 			// 异常长的输入按整条轨迹降低分辨率，不能耗尽预算后直接截掉尾部。
-			vOut.clear();
+			vOut.resize(FirstQuad);
 		}
 	}
 }
